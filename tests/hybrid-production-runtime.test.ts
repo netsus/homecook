@@ -1,17 +1,34 @@
 import { createHmac } from "node:crypto";
-import { readFileSync } from "node:fs";
+import {
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  statSync,
+} from "node:fs";
+import { createServer } from "node:http";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
 import {
+  assertPinnedImageInspection,
+  assertPreRestoreBackupBinding,
   assertDockerEnginePlatform,
   assertProductionComposeModel,
   assertRestoreAllowed,
   assertSafeTarArchive,
+  buildAclRestoreList,
   buildPostDataRestoreList,
+  canonicalCatalogManifest,
+  compareCatalogManifests,
   evaluateCapacityPreflight,
   evaluateMemoryCapacityPreflight,
+  evaluateRuntimeStatus,
   planOrderedRecovery,
+  runRestorePublicationGate,
+  runtimeImageRefsForPlatform,
+  synchronizeRemoteJwks,
   validateHybridProductionConfig,
   validateSemanticRestoreEvidence,
 } from "../scripts/lib/hybrid-production-runtime.mjs";
@@ -38,6 +55,7 @@ function legacyJwt(role: "anon" | "service_role", secret = LEGACY_SECRET) {
 }
 
 function validConfig(overrides: Record<string, string> = {}) {
+  const images = runtimeImageRefsForPlatform("linux/arm64");
   return {
     AUTH_SUPABASE_EXPECTED_ISSUER:
       "https://example-project.supabase.co/auth/v1",
@@ -49,7 +67,11 @@ function validConfig(overrides: Record<string, string> = {}) {
     HOMECOOK_HYBRID_GATEWAY_PORT: "54381",
     HOMECOOK_HYBRID_SECRET_SOURCE: "process-env",
     HYBRID_DOCKER_PLATFORM: "linux/arm64",
+    HYBRID_NODE_IMAGE: images.node,
+    HYBRID_POSTGRES_IMAGE: images.postgres,
     HYBRID_POSTGRES_VOLUME_NAME: "homecook-hybrid-test-postgres",
+    HYBRID_POSTGREST_IMAGE: images.postgrest,
+    HYBRID_STORAGE_IMAGE: images.storage,
     HYBRID_STORAGE_VOLUME_NAME: "homecook-hybrid-test-storage",
     ...overrides,
   };
@@ -207,6 +229,105 @@ describe("hybrid production environment validation", () => {
     ).toBe("linux/arm64");
   });
 
+  it("pins every runtime image to the expected platform RepoDigest", () => {
+    const arm64 = runtimeImageRefsForPlatform("linux/arm64");
+    const amd64 = runtimeImageRefsForPlatform("linux/amd64");
+
+    for (const images of [arm64, amd64]) {
+      for (const image of Object.values(images)) {
+        expect(image).toMatch(
+          /^[^:@\s]+(?:\/[^:@\s]+)+@sha256:[0-9a-f]{64}$/u,
+        );
+        expect(image).not.toContain(":v");
+      }
+    }
+    expect(arm64).not.toEqual(amd64);
+    expect(() =>
+      validateHybridProductionConfig({
+        config: validConfig({
+          HYBRID_POSTGREST_IMAGE: "postgrest/postgrest:v14.12",
+        }),
+        configFileMode: 0o600,
+        secrets: validSecrets(),
+      }),
+    ).toThrow(/RepoDigest|HYBRID_POSTGREST_IMAGE/u);
+    expect(() =>
+      assertPinnedImageInspection({
+        actualPlatform: "linux/arm64",
+        configuredPlatform: "linux/arm64",
+        expectedReference: arm64.postgrest,
+        repoDigests: [
+          arm64.postgrest.replace(
+            /@sha256:[0-9a-f]{64}$/u,
+            `@${"sha256:" + "f".repeat(64)}`,
+          ),
+        ],
+      }),
+    ).toThrow(/digest/u);
+  });
+
+  it("syncs the exact live remote JWKS atomically and fails closed on rotation or network loss", async () => {
+    const directory = mkdtempSync(join(tmpdir(), "hybrid-jwks-test-"));
+    const cachePath = join(directory, "remote-jwks.json");
+    let remoteKeys = [
+      JSON.parse(validSecrets().HYBRID_COMBINED_JWKS).keys[0],
+    ];
+    const server = createServer((_request, response) => {
+      response.writeHead(200, { "content-type": "application/json" });
+      response.end(JSON.stringify({ keys: remoteKeys }));
+    });
+    await new Promise<void>((resolve) =>
+      server.listen(0, "127.0.0.1", resolve));
+    const address = server.address();
+    if (!address || typeof address === "string") {
+      throw new Error("JWKS fixture did not bind a loopback port.");
+    }
+    const url = `http://127.0.0.1:${address.port}/jwks`;
+
+    try {
+      const result = await synchronizeRemoteJwks({
+        allowInsecureLoopback: true,
+        cachePath,
+        combinedJwks: validSecrets().HYBRID_COMBINED_JWKS,
+        url,
+      });
+      expect(result).toMatchObject({ keyCount: 1 });
+      expect(result.digest).toMatch(/^[0-9a-f]{64}$/u);
+      expect(statSync(cachePath).mode & 0o777).toBe(0o600);
+      expect(JSON.parse(readFileSync(cachePath, "utf8"))).toEqual({
+        keys: remoteKeys,
+      });
+
+      const previousCache = readFileSync(cachePath, "utf8");
+      remoteKeys = [{
+        ...remoteKeys[0],
+        kid: "rotated-without-combined-key-update",
+      }];
+      await expect(
+        synchronizeRemoteJwks({
+          allowInsecureLoopback: true,
+          cachePath,
+          combinedJwks: validSecrets().HYBRID_COMBINED_JWKS,
+          url,
+        }),
+      ).rejects.toThrow(/JWKS|rotation|mismatch/u);
+      expect(readFileSync(cachePath, "utf8")).toBe(previousCache);
+    } finally {
+      await new Promise<void>((resolve, reject) =>
+        server.close((error) => error ? reject(error) : resolve()));
+    }
+
+    await expect(
+      synchronizeRemoteJwks({
+        allowInsecureLoopback: true,
+        cachePath,
+        combinedJwks: validSecrets().HYBRID_COMBINED_JWKS,
+        url,
+      }),
+    ).rejects.toThrow(/JWKS|network|fetch/u);
+    rmSync(directory, { force: true, recursive: true });
+  });
+
   it.each([
     ["placeholder", { DATA_SUPABASE_SECRET_KEY: "replace-me" }],
     [
@@ -324,6 +445,18 @@ describe("hybrid production environment validation", () => {
 });
 
 describe("hybrid production restore safety", () => {
+  const catalogSections = {
+    dependencies: [{ dependent: "public.items", referenced: "private.guard" }],
+    extensions: [{ name: "pgcrypto", schema: "extensions", version: "1.3" }],
+    guard_functions: [{ name: "private.verify_hybrid_request_authority()" }],
+    memberships: [{ member: "authenticator", role: "authenticated" }],
+    object_owners_acls: [{ acl: "anon=r", name: "public.items", owner: "admin" }],
+    private_data: [{ rows: 1, schema: "private", sha256: "a".repeat(64), table: "epochs" }],
+    rls_policies: [{ force: true, policy: "owner", rls: true, table: "public.items" }],
+    roles: [{ bypassrls: false, login: false, name: "authenticated", superuser: false }],
+    triggers: [{ definition: "execute function private.guard()", name: "guard", table: "public.items" }],
+  };
+
   it("rejects traversal, links, and unexpected complete-v2 archive entries", () => {
     expect(() =>
       assertSafeTarArchive({
@@ -367,12 +500,34 @@ describe("hybrid production restore safety", () => {
     expect(buildPostDataRestoreList(restoreList, false)).toBe(restoreList);
   });
 
+  it("restores archive ACL entries that pg_restore sections omit", () => {
+    const restoreList = [
+      "; Archive created at 2026-07-30",
+      "101; 2615 2200 SCHEMA - public pg_database_owner",
+      "102; 0 0 ACL - SCHEMA public pg_database_owner",
+      "103; 1255 123 FUNCTION public gin_extract_value_trgm(text, internal) supabase_admin",
+      "104; 0 0 ACL public FUNCTION gin_extract_value_trgm(text, internal) supabase_admin",
+      "105; 0 0 DEFAULT ACL - DEFAULT PRIVILEGES FOR FUNCTIONS supabase_admin",
+      "106; 0 0 COMMENT public FUNCTION gin_extract_value_trgm(text, internal) supabase_admin",
+    ].join("\n");
+
+    expect(buildAclRestoreList(restoreList)).toBe([
+      "; Archive created at 2026-07-30",
+      ";101; 2615 2200 SCHEMA - public pg_database_owner",
+      "102; 0 0 ACL - SCHEMA public pg_database_owner",
+      ";103; 1255 123 FUNCTION public gin_extract_value_trgm(text, internal) supabase_admin",
+      "104; 0 0 ACL public FUNCTION gin_extract_value_trgm(text, internal) supabase_admin",
+      "105; 0 0 DEFAULT ACL - DEFAULT PRIVILEGES FOR FUNCTIONS supabase_admin",
+      ";106; 0 0 COMMENT public FUNCTION gin_extract_value_trgm(text, internal) supabase_admin",
+    ].join("\n"));
+  });
+
   it("refuses destructive restore without an explicit flag and pre-restore backup", () => {
     expect(() =>
       assertRestoreAllowed({
         destructive: false,
         preRestoreBackupPath: null,
-        preRestoreBackupVerified: false,
+        preRestoreBackupAbsent: false,
       }),
     ).toThrow(/destructive/u);
 
@@ -380,9 +535,87 @@ describe("hybrid production restore safety", () => {
       assertRestoreAllowed({
         destructive: true,
         preRestoreBackupPath: null,
-        preRestoreBackupVerified: false,
+        preRestoreBackupAbsent: false,
       }),
     ).toThrow(/pre-restore backup/u);
+  });
+
+  it("binds the immediate pre-restore backup to the exact current project and manifests", () => {
+    const expected = {
+      catalogDigest: "c".repeat(64),
+      createdAfterMs: Date.parse("2026-07-30T00:00:00.000Z"),
+      databaseDigest: "d".repeat(64),
+      postgresVolume: "target-postgres",
+      project: "target-project",
+      storageDigest: "s".repeat(64),
+      storageVolume: "target-storage",
+    };
+    const metadata = {
+      created_at: "2026-07-30T00:00:01.000Z",
+      manifest: {
+        catalog: { digest: expected.catalogDigest },
+        database: { digest: expected.databaseDigest },
+        storage: { digest: expected.storageDigest },
+      },
+      runtime: {
+        compose_project: expected.project,
+        postgres_volume: expected.postgresVolume,
+        storage_volume: expected.storageVolume,
+      },
+    };
+
+    expect(assertPreRestoreBackupBinding({ expected, metadata })).toBe(true);
+    expect(() =>
+      assertPreRestoreBackupBinding({
+        expected,
+        metadata: {
+          ...metadata,
+          created_at: "2026-07-29T23:59:59.000Z",
+        },
+      }),
+    ).toThrow(/current|timestamp|pre-restore/u);
+    expect(() =>
+      assertPreRestoreBackupBinding({
+        expected,
+        metadata: {
+          ...metadata,
+          manifest: {
+            ...metadata.manifest,
+            database: { digest: "past-archive-digest" },
+          },
+        },
+      }),
+    ).toThrow(/current|manifest|pre-restore/u);
+  });
+
+  it.each(Object.keys(catalogSections))(
+    "rejects intentional %s catalog drift",
+    (section) => {
+      const source = canonicalCatalogManifest(catalogSections);
+      const targetSections = structuredClone(catalogSections);
+      targetSections[section as keyof typeof targetSections] = [
+        ...targetSections[section as keyof typeof targetSections],
+        { injected_drift: section },
+      ] as never;
+      const target = canonicalCatalogManifest(targetSections);
+      expect(() => compareCatalogManifests(source, target))
+        .toThrow(new RegExp(section, "u"));
+    },
+  );
+
+  it("keeps the gateway private when final restore validation fails", () => {
+    const calls: string[] = [];
+    expect(() =>
+      runRestorePublicationGate({
+        forcePrivate: () => calls.push("force-private"),
+        publish: () => calls.push("publish"),
+        verify: () => {
+          calls.push("verify");
+          throw new Error("catalog mismatch");
+        },
+      }),
+    ).toThrow(/catalog mismatch/u);
+    expect(calls).toEqual(["verify", "force-private"]);
   });
 
   it("requires the exact semantic restore order", () => {
@@ -396,6 +629,7 @@ describe("hybrid production restore safety", () => {
         ],
         authUsers: 0,
         authUsersResidual: 0,
+        catalogManifest: { source: "catalog-a", target: "catalog-a" },
         publicManifest: { source: "digest-a", target: "digest-a" },
         storageManifest: { source: "digest-b", target: "digest-b" },
       }),
@@ -415,6 +649,7 @@ describe("hybrid production restore safety", () => {
           "post-data-validation",
         ],
         ...counts,
+        catalogManifest: { source: "catalog-a", target: "catalog-a" },
         publicManifest: { source: "digest-a", target: "digest-a" },
         storageManifest: { source: "digest-b", target: "digest-b" },
       }),
@@ -432,6 +667,7 @@ describe("hybrid production restore safety", () => {
         ],
         authUsers: 0,
         authUsersResidual: 0,
+        catalogManifest: { source: "catalog-a", target: "catalog-a" },
         publicManifest: { source: "digest-a", target: "digest-other" },
         storageManifest: { source: "digest-b", target: "digest-b" },
       }),
@@ -440,6 +676,39 @@ describe("hybrid production restore safety", () => {
 });
 
 describe("hybrid production recovery and capacity", () => {
+  it("reports stopped and unhealthy runtimes as BLOCKED with distinct states", () => {
+    expect(evaluateRuntimeStatus([])).toMatchObject({
+      pass: false,
+      runtimeState: "STOPPED",
+      status: "BLOCKED",
+    });
+    expect(
+      evaluateRuntimeStatus([
+        { health: "healthy", service: "postgres", state: "running" },
+        { health: "none", service: "postgrest", state: "running" },
+        { health: "unhealthy", service: "postgrest-probe", state: "running" },
+        { health: "healthy", service: "storage", state: "running" },
+        { health: "healthy", service: "gateway", state: "running" },
+      ]),
+    ).toMatchObject({
+      pass: false,
+      runtimeState: "DEGRADED",
+      status: "BLOCKED",
+    });
+    expect(
+      evaluateRuntimeStatus([
+        { health: "healthy", service: "postgres", state: "running" },
+        { health: "none", service: "postgrest", state: "running" },
+        { health: "healthy", service: "postgrest-probe", state: "running" },
+        { health: "healthy", service: "storage", state: "running" },
+        { health: "healthy", service: "gateway", state: "running" },
+      ], { gatewayReady: true }),
+    ).toMatchObject({
+      pass: true,
+      runtimeState: "READY",
+      status: "PASS",
+    });
+  });
   it("refuses to advance when an ordered dependency is unhealthy", () => {
     expect(() =>
       planOrderedRecovery({
@@ -555,7 +824,8 @@ describe("hybrid production verification routing", () => {
     expect(cli).toMatch(
       /delete env\.DOCKER_DEFAULT_PLATFORM/u,
     );
-    expect(cli).toMatch(/Docker image architecture mismatch/u);
+    expect(cli).toMatch(/assertPinnedImageInspection/u);
+    expect(cli).toMatch(/RepoDigests/u);
     expect(cli).not.toContain("runtime-storage-bootstrap.sql");
     expect(cli).not.toContain("runtime-bootstrap.sql");
     expect(cli).toContain("auth_users_external_depend_residual");

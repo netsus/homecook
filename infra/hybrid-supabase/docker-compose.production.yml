@@ -2,7 +2,7 @@ name: homecook-hybrid-production
 
 services:
   postgres:
-    image: public.ecr.aws/supabase/postgres:17.6.1.136
+    image: ${HYBRID_POSTGRES_IMAGE:?HYBRID_POSTGRES_IMAGE is required}
     platform: ${HYBRID_DOCKER_PLATFORM:?HYBRID_DOCKER_PLATFORM is required}
     environment:
       POSTGRES_DB: ${HYBRID_POSTGRES_DB:?HYBRID_POSTGRES_DB is required}
@@ -48,7 +48,7 @@ services:
       - ./hybrid-role-passwords.sh:/docker-entrypoint-initdb.d/zz-homecook-role-passwords.sh:ro
 
   postgrest:
-    image: postgrest/postgrest:v14.12
+    image: ${HYBRID_POSTGREST_IMAGE:?HYBRID_POSTGREST_IMAGE is required}
     platform: ${HYBRID_DOCKER_PLATFORM:?HYBRID_DOCKER_PLATFORM is required}
     command: ["postgrest", "+RTS", "-N2", "-RTS"]
     depends_on:
@@ -71,7 +71,7 @@ services:
       - no-new-privileges:true
 
   postgrest-probe:
-    image: public.ecr.aws/docker/library/node:22.20.0-alpine
+    image: ${HYBRID_NODE_IMAGE:?HYBRID_NODE_IMAGE is required}
     platform: ${HYBRID_DOCKER_PLATFORM:?HYBRID_DOCKER_PLATFORM is required}
     command:
       - node
@@ -97,7 +97,7 @@ services:
       - no-new-privileges:true
 
   storage:
-    image: supabase/storage-api:v1.60.4
+    image: ${HYBRID_STORAGE_IMAGE:?HYBRID_STORAGE_IMAGE is required}
     platform: ${HYBRID_DOCKER_PLATFORM:?HYBRID_DOCKER_PLATFORM is required}
     depends_on:
       postgres:
@@ -137,6 +137,8 @@ services:
     image: homecook-hybrid-gateway:production
     platform: ${HYBRID_DOCKER_PLATFORM:?HYBRID_DOCKER_PLATFORM is required}
     build:
+      args:
+        NODE_IMAGE: ${HYBRID_NODE_IMAGE:?HYBRID_NODE_IMAGE is required}
       context: ../..
       dockerfile: infra/hybrid-supabase/Dockerfile.gateway
     depends_on:
@@ -151,6 +153,7 @@ services:
       AUTH_SUPABASE_JWKS_URL: ${AUTH_SUPABASE_JWKS_URL:?AUTH_SUPABASE_JWKS_URL is required}
       AUTH_SUPABASE_PUBLISHABLE_KEY: ${AUTH_SUPABASE_PUBLISHABLE_KEY:?AUTH_SUPABASE_PUBLISHABLE_KEY is required}
       AUTH_SUPABASE_URL: ${AUTH_SUPABASE_URL:?AUTH_SUPABASE_URL is required}
+      ALLOW_INSECURE_LOCAL_AUTH_STUB: ${ALLOW_INSECURE_LOCAL_AUTH_STUB:?ALLOW_INSECURE_LOCAL_AUTH_STUB is required}
       DATA_SUPABASE_PUBLISHABLE_KEY: ${DATA_SUPABASE_PUBLISHABLE_KEY:?DATA_SUPABASE_PUBLISHABLE_KEY is required}
       DATA_SUPABASE_SECRET_KEY: ${DATA_SUPABASE_SECRET_KEY:?DATA_SUPABASE_SECRET_KEY is required}
       GATEWAY_PORT: "8080"

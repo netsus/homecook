@@ -170,9 +170,21 @@ export function validateConfig(config) {
   const issuer = new URL(config.issuer);
   const jwks = new URL(config.jwksUrl);
   const allowHttp = config.allowInsecureLocalAuthStub === true;
+  const localFixtureHost = [
+    "127.0.0.1",
+    "localhost",
+    "host.docker.internal",
+    "auth-stub",
+  ].includes(authUrl.hostname);
   if (
     (!allowHttp && authUrl.protocol !== "https:")
-    || (allowHttp && !["http:", "https:"].includes(authUrl.protocol))
+    || (
+      allowHttp
+      && (
+        !["http:", "https:"].includes(authUrl.protocol)
+        || (authUrl.protocol === "http:" && !localFixtureHost)
+      )
+    )
     || issuer.origin !== authUrl.origin
     || issuer.pathname !== "/auth/v1"
     || jwks.origin !== authUrl.origin
@@ -660,7 +672,7 @@ function systemAttestation({ kind, scope, method, path, now, config }) {
   };
 }
 
-function forwardedHeaders(request, proof, accessToken) {
+function forwardedHeaders(request, proof, accessToken, apiKey) {
   const headers = new Headers();
   for (const [name, value] of Object.entries(request.headers)) {
     if (
@@ -669,6 +681,8 @@ function forwardedHeaders(request, proof, accessToken) {
         "connection",
         "content-length",
         "host",
+        "apikey",
+        "authorization",
         "x-homecook-session-attestation",
         "x-homecook-session-attestation-signature",
       ].includes(name)
@@ -680,6 +694,11 @@ function forwardedHeaders(request, proof, accessToken) {
     headers.set("authorization", `Bearer ${accessToken}`);
   } else {
     headers.delete("authorization");
+  }
+  if (apiKey) {
+    headers.set("apikey", apiKey);
+  } else {
+    headers.delete("apikey");
   }
   headers.set("x-homecook-session-attestation", proof.payload);
   headers.set(
@@ -714,7 +733,7 @@ async function proxyInternalControlPlaneRequest(
   try {
     upstreamResponse = await fetchImpl(`${upstream.url}${requestUrl.search}`, {
       method,
-      headers: forwardedHeaders(request, proof, accessToken),
+      headers: forwardedHeaders(request, proof, accessToken, accessToken),
       body: ["GET", "HEAD"].includes(method) ? undefined : body,
       duplex: "half",
       signal: timeoutSignal(config.upstreamTimeoutMs),
@@ -875,7 +894,12 @@ export function createGatewayRequestHandler({
         try {
           anonymousResponse = await fetchImpl(`${upstream.url}${requestUrl.search}`, {
             method,
-            headers: forwardedHeaders(request, proof, null),
+            headers: forwardedHeaders(
+              request,
+              proof,
+              resolvedConfig.dataPublishableKey,
+              resolvedConfig.dataPublishableKey,
+            ),
             body: ["GET", "HEAD"].includes(method) ? undefined : bufferedBody,
             duplex: "half",
             signal: timeoutSignal(resolvedConfig.upstreamTimeoutMs),
@@ -934,7 +958,12 @@ export function createGatewayRequestHandler({
         config: resolvedConfig,
       });
 
-      const headers = forwardedHeaders(request, proof, accessToken);
+      const headers = forwardedHeaders(
+        request,
+        proof,
+        accessToken,
+        resolvedConfig.dataPublishableKey,
+      );
 
       let upstreamResponse;
       try {

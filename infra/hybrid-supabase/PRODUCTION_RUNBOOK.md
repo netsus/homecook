@@ -30,17 +30,30 @@ local Data의 publishable/service key는 임의 문자열이 아니다. 같은
 `HYBRID_STORAGE_LEGACY_JWT_SECRET`으로 서명된 유효한 HS256 JWT이고 role이 각각
 `anon`, `service_role`이어야 한다. `HYBRID_COMBINED_JWKS`에는 remote Auth 공개
 검증키와 이 local HS256 키가 같이 있어야 한다. validator는 값 자체를 출력하지
-않고 서명 관계, role, 시간 claim, 중복/placeholder를 검사한다.
+않고 서명 관계, role, 시간 claim, 중복/placeholder를 검사한다. 모든 CLI 명령은
+remote JWKS를 다시 fetch해 remote `kid/kty/alg/use/key material`을 combined
+JWKS와 canonical 비교한다. 일치한 remote 공개키만 config 옆
+`.remote-jwks.json`에 mode `0600`으로 atomic 교체한다. 네트워크 오류나 예고되지
+않은 rotation은 기존 cache를 보존하고 fail closed하며 local oct key와 다른
+secret은 cache에 기록하지 않는다.
 
 `process-env`는 격리 rehearsal 전용이다. 설정에서 명시한 뒤 모든 명령에
 `--allow-process-env-secrets`를 붙여야만 동작한다.
 
 `HYBRID_DOCKER_PLATFORM`은 Docker engine의 native platform과 같아야 한다.
 Apple Silicon은 `linux/arm64`, Intel Mac은 `linux/amd64`다. CLI는 전역
-`DOCKER_DEFAULT_PLATFORM` 값을 신뢰하지 않고, 같은 고정 버전의 native
-multi-architecture 이미지를 명시적으로 pull한 뒤 실제 image architecture를
-검사한다. `HYBRID_POSTGRES_PASSWORD`는 connection URI에 안전한
+`DOCKER_DEFAULT_PLATFORM` 값을 신뢰하지 않는다. 아래 플랫폼별 manifest
+digest를 그대로 설정하고 exact digest pull 뒤 실제 `RepoDigests`와 image
+architecture를 모두 검사한다. gateway Dockerfile의 Node base도 같은 digest
+authority를 사용한다. `HYBRID_POSTGRES_PASSWORD`는 connection URI에 안전한
 `A-Z a-z 0-9 . _ ~ -` 문자만 사용한다.
+
+| image config | `linux/arm64` digest | `linux/amd64` digest |
+| --- | --- | --- |
+| `HYBRID_POSTGRES_IMAGE` | `public.ecr.aws/supabase/postgres@sha256:a9946f08d31e8eb1149229c94e5c26603a9233116807cbbd93d75179cbac516a` | `public.ecr.aws/supabase/postgres@sha256:5a4314708484bec672de2c09653a5c01fb1c84a998564ac231b0325e2238ed5b` |
+| `HYBRID_POSTGREST_IMAGE` | `postgrest/postgrest@sha256:844785450d6b046ee97f1c67ea37e3ff6b4ed7ee3570b1b91c03f66f032c4805` | `postgrest/postgrest@sha256:560895fc1f6cb78f36ae64682c85bfc923c73da2d3a473ae2f55755fd7991ad1` |
+| `HYBRID_STORAGE_IMAGE` | `supabase/storage-api@sha256:9326eb9c6b74c0a5ba393ab46a08a51d16bc5ea5f2978fc5b0f17fc67c64a4de` | `supabase/storage-api@sha256:6f706c1184d97b081446527bb62a3193d3d47ad0daafcf738fd5c3e5a62aed97` |
+| `HYBRID_NODE_IMAGE` | `docker.io/library/node@sha256:74e144386aaec923ce092c3371b351d96c4f977a4ac3f58431fa9164b9399534` | `docker.io/library/node@sha256:aa83e8f13963f17f7f6bd497085112bf12ea6f20b4b826d9b33f2d99594325b6` |
 
 ## 2. 설치와 일상 명령
 
@@ -63,6 +76,13 @@ application migration과 Storage bootstrap을 적용한 뒤 hybrid authority 함
 순서를 지키며 이미 정상인 경우에도 안전하게 재실행할 수 있다.
 production gateway의 `/healthz`는 upstream 포트만 보지 않는다. local anon JWT와
 attestation으로 `ingredients`의 0-row 안전 읽기까지 성공해야 healthy가 된다.
+허용된 실제 익명 GET도 같은 local anon JWT와 apikey를 주입한다. remote user
+bearer가 있으면 remote issuer/JWKS/liveness/binding을 검증한 뒤 그 bearer를
+Authorization으로 전달하고 local anon key는 apikey로만 사용한다.
+
+`status`는 필수 service state/health와 실제 gateway readiness를 함께 평가한다.
+정상은 `PASS/READY`, 전체 정지는 `BLOCKED/STOPPED`, 부분 정지·unhealthy 또는
+readiness 실패는 `BLOCKED/DEGRADED`이며 BLOCKED는 exit code `2`다.
 
 `capacity`는 DB+Storage disk뿐 아니라 Postgres, PostgREST, Storage, gateway의
 `docker stats`, cgroup `memory.current/events`, process high-water RSS, Docker
@@ -87,17 +107,20 @@ pnpm hybrid-production:backup -- \
 ```
 
 결과 archive와 `.sha256`은 mode `0600`이다. archive는 AES-256-CBC,
-PBKDF2 200000회로 암호화되며 DB dump, Storage payload, DB/Storage manifest를
+PBKDF2 200000회로 암호화되며 DB dump, Storage payload,
+DB/Storage/catalog manifest를
 포함한다. backup key는 runtime secret과 다른 Keychain item이어야 한다.
-일반 backup은 gateway를 자동 복구한다. destructive restore 직전에 만드는
-pre-restore backup만 `--leave-stopped`를 붙여 정지 상태를 유지할 수 있다.
+일반 backup은 gateway를 자동 복구한다.
 Storage manifest는 DB reference별 object ID/version/path/bytes/MIME와 named volume의 실제
 파일 SHA-256을 연결하며, 누락·orphan·크기 불일치가 하나라도 있으면 중단한다.
 
 ## 4. destructive restore
 
-restore는 대상 named volume을 지우므로 명시적 flag와 이미 검증 가능한
-pre-restore backup 없이는 거부한다.
+restore는 대상 named volume을 지우므로 명시적 flag와 새 pre-restore backup
+출력 경로 없이는 거부한다. 경로는 미리 존재하면 안 된다. restore가 gateway를
+먼저 비공개로 만들고 현재 DB/Storage/catalog digest와 project/volume/timestamp에
+결합된 encrypted backup을 직접 생성·복호화 재검증한 뒤에만 volume을 교체한다.
+임의의 과거 archive를 prebackup으로 재사용할 수 없다.
 
 ```bash
 pnpm hybrid-production:restore -- \
@@ -111,11 +134,22 @@ pnpm hybrid-production:restore -- \
 1. pre-data schema
 2. hybrid compatibility/FK replacement
 3. application data
-4. post-data validation
+4. post-data + archive ACL replay + validation
 
-마지막 단계는 local `auth.users=0`, application-owned `auth.users` residual 0,
-public table count/digest, Storage count/bytes/MIME/hash/reference manifest가
-source와 같은지 확인한다. 하나라도 다르면 성공으로 보고하지 않는다.
+마지막 단계는 gateway가 아직 비공개인 동안 local `auth.users=0`,
+application-owned `auth.users` residual 0, public table count/digest,
+Storage count/bytes/MIME/hash/reference와 canonical catalog manifest가 source와
+같은지 확인한다. catalog에는 private table count/hash(원문 비노출), role
+attributes/membership, schema/relation/function owner+ACL, RLS/FORCE RLS/policy,
+trigger, extension, guard schema/function, application object의 `pg_depend`
+graph가 포함된다. section restore에서 빠지는 archive `ACL`/`DEFAULT ACL` entry도
+별도 allowlist로 재생하고, schema dump에서 빠지는 pinned `pg_trgm` extension
+member ACL도 extension selection으로 함께 보존한다. ACL은 `NULL`과 명시된
+기본 owner privilege를 `acldefault` 기준의 같은 effective grant로 정규화한다.
+restore마다 바뀌는 PostgreSQL 내부 TOAST/FK trigger OID는 소유
+table/constraint에 결합한 이름으로만 정규화하고 dependency type과 개수는
+그대로 해시한다. 모든 검증 성공 후에만 gateway를 ordered recovery로 공개한다.
+어느 단계든 실패하면 gateway는 강제 정지/비공개 상태로 남는다.
 
 ## 5. 이 PR 밖의 수동 gate
 

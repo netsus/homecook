@@ -1,4 +1,5 @@
-FROM public.ecr.aws/docker/library/node:22.20.0-alpine
+ARG NODE_IMAGE
+FROM ${NODE_IMAGE}
 
 WORKDIR /workspace
 COPY infra/hybrid-supabase/loopback-gateway.mjs infra/hybrid-supabase/loopback-gateway.mjs

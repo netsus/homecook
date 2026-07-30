@@ -1,7 +1,14 @@
 import {
+  createHash,
   createHmac,
   timingSafeEqual,
 } from "node:crypto";
+import {
+  chmodSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 
 const GIB = 1024 ** 3;
 const SUPPORTED_DOCKER_PLATFORMS = new Set([
@@ -21,6 +28,45 @@ const RESTORE_PHASES = Object.freeze([
   "post-data-validation",
 ]);
 const AUTHORITY_MODES = new Set(["remote", "local-shadow", "local"]);
+const RUNTIME_IMAGE_REFERENCES = Object.freeze({
+  "linux/amd64": Object.freeze({
+    node:
+      "docker.io/library/node@sha256:aa83e8f13963f17f7f6bd497085112bf12ea6f20b4b826d9b33f2d99594325b6",
+    postgres:
+      "public.ecr.aws/supabase/postgres@sha256:5a4314708484bec672de2c09653a5c01fb1c84a998564ac231b0325e2238ed5b",
+    postgrest:
+      "postgrest/postgrest@sha256:560895fc1f6cb78f36ae64682c85bfc923c73da2d3a473ae2f55755fd7991ad1",
+    storage:
+      "supabase/storage-api@sha256:6f706c1184d97b081446527bb62a3193d3d47ad0daafcf738fd5c3e5a62aed97",
+  }),
+  "linux/arm64": Object.freeze({
+    node:
+      "docker.io/library/node@sha256:74e144386aaec923ce092c3371b351d96c4f977a4ac3f58431fa9164b9399534",
+    postgres:
+      "public.ecr.aws/supabase/postgres@sha256:a9946f08d31e8eb1149229c94e5c26603a9233116807cbbd93d75179cbac516a",
+    postgrest:
+      "postgrest/postgrest@sha256:844785450d6b046ee97f1c67ea37e3ff6b4ed7ee3570b1b91c03f66f032c4805",
+    storage:
+      "supabase/storage-api@sha256:9326eb9c6b74c0a5ba393ab46a08a51d16bc5ea5f2978fc5b0f17fc67c64a4de",
+  }),
+});
+const RUNTIME_IMAGE_CONFIG_KEYS = Object.freeze({
+  node: "HYBRID_NODE_IMAGE",
+  postgres: "HYBRID_POSTGRES_IMAGE",
+  postgrest: "HYBRID_POSTGREST_IMAGE",
+  storage: "HYBRID_STORAGE_IMAGE",
+});
+const CATALOG_SECTIONS = Object.freeze([
+  "dependencies",
+  "extensions",
+  "guard_functions",
+  "memberships",
+  "object_owners_acls",
+  "private_data",
+  "rls_policies",
+  "roles",
+  "triggers",
+]);
 const PLACEHOLDER_PATTERN =
   /(?:change[-_ ]?me|example|placeholder|replace[-_ ]?me|test[-_ ]?only|your[-_ ]?|<[^>]+>)/iu;
 const VOLUME_NAME_PATTERN = /^[a-z0-9][a-z0-9_.-]{2,127}$/u;
@@ -48,15 +94,209 @@ function requiredValue(record, name) {
   return value.trim();
 }
 
-function exactRemoteAuthConfig(config) {
+function stableValue(value) {
+  if (Array.isArray(value)) {
+    return value.map(stableValue);
+  }
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.keys(value).sort().map((key) => [key, stableValue(value[key])]),
+    );
+  }
+  return value;
+}
+
+function stableJson(value) {
+  return JSON.stringify(stableValue(value));
+}
+
+function sha256Text(value) {
+  return createHash("sha256").update(value, "utf8").digest("hex");
+}
+
+export function runtimeImageRefsForPlatform(platform) {
+  const references = RUNTIME_IMAGE_REFERENCES[platform];
+  if (!references) {
+    throw new Error(`Unsupported runtime image platform: ${platform}.`);
+  }
+  return references;
+}
+
+export function assertPinnedImageInspection({
+  actualPlatform,
+  configuredPlatform,
+  expectedReference,
+  repoDigests,
+}) {
+  if (actualPlatform !== configuredPlatform) {
+    throw new Error(
+      `Docker image platform mismatch; expected ${configuredPlatform}, received ${actualPlatform}.`,
+    );
+  }
+  if (
+    typeof expectedReference !== "string"
+    || !/@sha256:[0-9a-f]{64}$/u.test(expectedReference)
+    || !Array.isArray(repoDigests)
+    || !repoDigests.some((repoDigest) =>
+      repoDigest.endsWith(`@${expectedReference.split("@").at(-1)}`))
+  ) {
+    throw new Error("Docker image RepoDigest does not match the pinned digest.");
+  }
+  return true;
+}
+
+function canonicalRemoteKey(key) {
+  if (
+    !key
+    || typeof key !== "object"
+    || typeof key.kid !== "string"
+    || key.kid.length === 0
+    || key.use !== "sig"
+    || key.d !== undefined
+  ) {
+    throw new Error("Remote JWKS contains an invalid verify key.");
+  }
+  if (
+    key.kty === "EC"
+    && key.alg === "ES256"
+    && key.crv === "P-256"
+    && typeof key.x === "string"
+    && key.x.length > 0
+    && typeof key.y === "string"
+    && key.y.length > 0
+  ) {
+    return stableValue({
+      alg: key.alg,
+      crv: key.crv,
+      kid: key.kid,
+      kty: key.kty,
+      use: key.use,
+      x: key.x,
+      y: key.y,
+    });
+  }
+  if (
+    key.kty === "RSA"
+    && key.alg === "RS256"
+    && typeof key.n === "string"
+    && key.n.length > 0
+    && typeof key.e === "string"
+    && key.e.length > 0
+  ) {
+    return stableValue({
+      alg: key.alg,
+      e: key.e,
+      kid: key.kid,
+      kty: key.kty,
+      n: key.n,
+      use: key.use,
+    });
+  }
+  throw new Error("Remote JWKS contains an unsupported verify key.");
+}
+
+function canonicalRemoteKeys(jwks) {
+  if (!jwks || typeof jwks !== "object" || !Array.isArray(jwks.keys)) {
+    throw new Error("Remote JWKS response is invalid.");
+  }
+  const keys = jwks.keys.map(canonicalRemoteKey)
+    .sort((a, b) => a.kid.localeCompare(b.kid));
+  if (
+    keys.length === 0
+    || new Set(keys.map((key) => key.kid)).size !== keys.length
+  ) {
+    throw new Error("Remote JWKS must contain unique verify keys.");
+  }
+  return keys;
+}
+
+export async function synchronizeRemoteJwks({
+  allowInsecureLoopback = false,
+  cachePath,
+  combinedJwks,
+  fetchImpl = globalThis.fetch,
+  url,
+}) {
+  const endpoint = new URL(url);
+  const insecureAllowed = allowInsecureLoopback
+    && endpoint.protocol === "http:"
+    && ["127.0.0.1", "localhost", "host.docker.internal"].includes(
+      endpoint.hostname,
+    );
+  if (endpoint.protocol !== "https:" && !insecureAllowed) {
+    throw new Error("Remote JWKS fetch requires HTTPS.");
+  }
+  if (typeof cachePath !== "string" || cachePath.length === 0) {
+    throw new Error("Remote JWKS cache path is required.");
+  }
+  let response;
+  try {
+    response = await fetchImpl(endpoint, {
+      headers: { accept: "application/json" },
+      redirect: "error",
+      signal: AbortSignal.timeout(5_000),
+    });
+  } catch {
+    throw new Error("Remote JWKS network fetch failed closed.");
+  }
+  if (!response.ok) {
+    throw new Error("Remote JWKS endpoint did not return success.");
+  }
+  const body = await response.text();
+  if (body.length === 0 || Buffer.byteLength(body, "utf8") > 1_048_576) {
+    throw new Error("Remote JWKS response size is invalid.");
+  }
+  let remoteJwks;
+  let combined;
+  try {
+    remoteJwks = JSON.parse(body);
+    combined = JSON.parse(combinedJwks);
+  } catch {
+    throw new Error("Remote or combined JWKS JSON is invalid.");
+  }
+  const remoteKeys = canonicalRemoteKeys(remoteJwks);
+  const combinedRemoteKeys = canonicalRemoteKeys({
+    keys: Array.isArray(combined?.keys)
+      ? combined.keys.filter((key) => key?.kty !== "oct")
+      : [],
+  });
+  if (stableJson(remoteKeys) !== stableJson(combinedRemoteKeys)) {
+    throw new Error(
+      "Remote JWKS rotation mismatch; combined JWKS update is required.",
+    );
+  }
+  const canonical = `${JSON.stringify({ keys: remoteKeys }, null, 2)}\n`;
+  const temporary = `${cachePath}.tmp-${process.pid}`;
+  try {
+    writeFileSync(temporary, canonical, { mode: 0o600 });
+    chmodSync(temporary, 0o600);
+    renameSync(temporary, cachePath);
+    chmodSync(cachePath, 0o600);
+  } catch (error) {
+    rmSync(temporary, { force: true });
+    throw error;
+  }
+  return Object.freeze({
+    cachePath,
+    digest: sha256Text(stableJson(remoteKeys)),
+    keyCount: remoteKeys.length,
+  });
+}
+
+function exactRemoteAuthConfig(config, allowInsecureLoopback = false) {
   const authUrl = new URL(requiredValue(config, "AUTH_SUPABASE_URL"));
   const issuer = new URL(
     requiredValue(config, "AUTH_SUPABASE_EXPECTED_ISSUER"),
   );
   const jwks = new URL(requiredValue(config, "AUTH_SUPABASE_JWKS_URL"));
 
+  const insecureFixture = allowInsecureLoopback
+    && authUrl.protocol === "http:"
+    && ["127.0.0.1", "localhost", "host.docker.internal"].includes(
+      authUrl.hostname,
+    );
   if (
-    authUrl.protocol !== "https:"
+    (authUrl.protocol !== "https:" && !insecureFixture)
     || authUrl.pathname !== "/"
     || authUrl.search
     || authUrl.hash
@@ -209,11 +449,12 @@ export function validateHybridProductionConfig({
   config,
   secrets,
   configFileMode,
+  allowInsecureLoopback = false,
 }) {
   if ((Number(configFileMode) & 0o777) !== 0o600) {
     throw new Error("Hybrid production config file mode must be exactly 0600.");
   }
-  exactRemoteAuthConfig(config);
+  exactRemoteAuthConfig(config, allowInsecureLoopback);
   const dockerPlatform = requiredValue(
     config,
     "HYBRID_DOCKER_PLATFORM",
@@ -222,6 +463,16 @@ export function validateHybridProductionConfig({
     throw new Error(
       "HYBRID_DOCKER_PLATFORM must be linux/arm64 or linux/amd64.",
     );
+  }
+  const expectedImages = runtimeImageRefsForPlatform(dockerPlatform);
+  for (const [imageName, configKey] of Object.entries(
+    RUNTIME_IMAGE_CONFIG_KEYS,
+  )) {
+    if (requiredValue(config, configKey) !== expectedImages[imageName]) {
+      throw new Error(
+        `${configKey} must match the reviewed ${dockerPlatform} RepoDigest.`,
+      );
+    }
   }
 
   const authority = requiredValue(config, "HOMECOOK_DATA_AUTHORITY");
@@ -407,8 +658,8 @@ export function assertProductionComposeModel(model) {
 
 export function assertRestoreAllowed({
   destructive,
+  preRestoreBackupAbsent,
   preRestoreBackupPath,
-  preRestoreBackupVerified,
 }) {
   if (destructive !== true) {
     throw new Error("Restore requires the explicit --destructive flag.");
@@ -416,11 +667,124 @@ export function assertRestoreAllowed({
   if (
     typeof preRestoreBackupPath !== "string"
     || preRestoreBackupPath.length === 0
-    || preRestoreBackupVerified !== true
+    || preRestoreBackupAbsent !== true
   ) {
-    throw new Error("Restore requires a verified pre-restore backup.");
+    throw new Error(
+      "Restore requires a new path for the immediate pre-restore backup.",
+    );
   }
   return true;
+}
+
+export function assertPreRestoreBackupBinding({ expected, metadata }) {
+  const createdAt = Date.parse(metadata?.created_at);
+  if (
+    !Number.isFinite(createdAt)
+    || createdAt < expected?.createdAfterMs
+    || (
+      Number.isFinite(expected?.createdBeforeMs)
+      && createdAt > expected.createdBeforeMs
+    )
+    || metadata?.runtime?.compose_project !== expected?.project
+    || metadata?.runtime?.postgres_volume !== expected?.postgresVolume
+    || metadata?.runtime?.storage_volume !== expected?.storageVolume
+    || metadata?.manifest?.database?.digest !== expected?.databaseDigest
+    || metadata?.manifest?.storage?.digest !== expected?.storageDigest
+    || metadata?.manifest?.catalog?.digest !== expected?.catalogDigest
+  ) {
+    throw new Error(
+      "Pre-restore backup is not bound to the exact current runtime manifest and timestamp.",
+    );
+  }
+  return true;
+}
+
+export function canonicalCatalogManifest(sections) {
+  const canonicalSections = {};
+  for (const section of CATALOG_SECTIONS) {
+    if (!Array.isArray(sections?.[section])) {
+      throw new Error(`Catalog section ${section} must be an array.`);
+    }
+    const items = sections[section].map(stableValue)
+      .sort((a, b) => stableJson(a).localeCompare(stableJson(b)));
+    canonicalSections[section] = Object.freeze({
+      count: items.length,
+      digest: sha256Text(stableJson(items)),
+      items,
+    });
+  }
+  return Object.freeze({
+    digest: sha256Text(stableJson(
+      Object.fromEntries(
+        CATALOG_SECTIONS.map((section) => [
+          section,
+          canonicalSections[section].digest,
+        ]),
+      ),
+    )),
+    sections: Object.freeze(canonicalSections),
+  });
+}
+
+export function compareCatalogManifests(source, target) {
+  const mismatched = CATALOG_SECTIONS.filter((section) =>
+      typeof source?.sections?.[section]?.digest !== "string"
+      || source.sections[section].digest
+        !== target?.sections?.[section]?.digest);
+  if (mismatched.length > 0) {
+    if (process.env.HYBRID_PRODUCTION_DEBUG === "1") {
+      const diagnostics = mismatched.map((section) => {
+        const sourceItems = source?.sections?.[section]?.items ?? [];
+        const targetItems = target?.sections?.[section]?.items ?? [];
+        const sourceSet = new Set(sourceItems.map(stableJson));
+        const targetSet = new Set(targetItems.map(stableJson));
+        const missing = sourceItems
+          .filter((item) => !targetSet.has(stableJson(item)))
+          .slice(0, 2);
+        const unexpected = targetItems
+          .filter((item) => !sourceSet.has(stableJson(item)))
+          .slice(0, 2);
+        const redactDefinition = (item) =>
+          section === "guard_functions" && typeof item.definition === "string"
+            ? {
+                ...item,
+                definition: `sha256:${sha256Text(item.definition)}`,
+              }
+            : item;
+        return {
+          missing: missing.map(redactDefinition),
+          section,
+          unexpected: unexpected.map(redactDefinition),
+        };
+      });
+      throw new Error(
+        `Catalog manifest mismatch; diagnostics=${JSON.stringify(diagnostics)}.`,
+      );
+    }
+    throw new Error(`Catalog manifest mismatch in ${mismatched.join(", ")}.`);
+  }
+  if (source.digest !== target.digest) {
+    throw new Error("Catalog manifest aggregate mismatch.");
+  }
+  return true;
+}
+
+export function runRestorePublicationGate({
+  forcePrivate,
+  publish,
+  verify,
+}) {
+  let published = false;
+  try {
+    const evidence = verify();
+    publish();
+    published = true;
+    return evidence;
+  } finally {
+    if (!published) {
+      forcePrivate();
+    }
+  }
 }
 
 /**
@@ -493,10 +857,26 @@ export function buildPostDataRestoreList(
     .join("\n");
 }
 
+export function buildAclRestoreList(restoreList) {
+  if (typeof restoreList !== "string") {
+    throw new Error("ACL restore list must be text.");
+  }
+  return restoreList
+    .split("\n")
+    .map((line) =>
+      line.startsWith(";")
+      || line.length === 0
+      || /\s(?:DEFAULT )?ACL\s/u.test(line)
+        ? line
+        : `;${line}`)
+    .join("\n");
+}
+
 export function validateSemanticRestoreEvidence({
   phases,
   authUsers,
   authUsersResidual,
+  catalogManifest,
   publicManifest,
   storageManifest,
 }) {
@@ -513,6 +893,7 @@ export function validateSemanticRestoreEvidence({
     );
   }
   for (const [name, manifest] of [
+    ["catalog", catalogManifest],
     ["public", publicManifest],
     ["storage", storageManifest],
   ]) {
@@ -525,6 +906,58 @@ export function validateSemanticRestoreEvidence({
     }
   }
   return true;
+}
+
+export function evaluateRuntimeStatus(
+  services,
+  { gatewayReady = false } = {},
+) {
+  const required = [
+    "gateway",
+    "postgres",
+    "postgrest",
+    "postgrest-probe",
+    "storage",
+  ];
+  const items = Array.isArray(services) ? services : [];
+  const byService = new Map(items.map((item) => [item.service, item]));
+  const present = required.map((service) => byService.get(service))
+    .filter(Boolean);
+  const stopped = present.length === 0
+    || present.every((item) =>
+      !["running", "restarting"].includes(String(item.state).toLowerCase()));
+  if (stopped) {
+    return Object.freeze({
+      blockers: required,
+      pass: false,
+      runtimeState: "STOPPED",
+      status: "BLOCKED",
+    });
+  }
+
+  const blockers = [];
+  for (const service of required) {
+    const item = byService.get(service);
+    if (!item || String(item.state).toLowerCase() !== "running") {
+      blockers.push(`${service}:not-running`);
+      continue;
+    }
+    if (
+      service !== "postgrest"
+      && String(item.health).toLowerCase() !== "healthy"
+    ) {
+      blockers.push(`${service}:not-healthy`);
+    }
+  }
+  if (!gatewayReady) {
+    blockers.push("gateway:not-ready");
+  }
+  return Object.freeze({
+    blockers,
+    pass: blockers.length === 0,
+    runtimeState: blockers.length === 0 ? "READY" : "DEGRADED",
+    status: blockers.length === 0 ? "PASS" : "BLOCKED",
+  });
 }
 
 export function planOrderedRecovery(statuses) {

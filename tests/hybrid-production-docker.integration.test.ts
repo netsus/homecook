@@ -1,5 +1,11 @@
-import { execFileSync } from "node:child_process";
 import {
+  execFileSync,
+  spawn,
+  spawnSync,
+  type ChildProcess,
+} from "node:child_process";
+import {
+  createHash,
   createHmac,
   generateKeyPairSync,
   randomBytes,
@@ -7,15 +13,20 @@ import {
 import {
   chmodSync,
   mkdtempSync,
+  readFileSync,
   readdirSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createServer } from "node:net";
+import { createServer as createNetServer } from "node:net";
 
 import { describe, expect, it } from "vitest";
+
+import {
+  runtimeImageRefsForPlatform,
+} from "../scripts/lib/hybrid-production-runtime.mjs";
 
 const run = process.env.HYBRID_PRODUCTION_DOCKER_SMOKE === "1"
   ? describe
@@ -30,6 +41,7 @@ function command(
   return execFileSync(executable, args, {
     cwd: process.cwd(),
     encoding: "utf8",
+    maxBuffer: 32 * 1024 * 1024,
     stdio: ["pipe", "pipe", "pipe"],
     ...options,
   }) as string;
@@ -37,7 +49,7 @@ function command(
 
 function freePort(): Promise<number> {
   return new Promise((resolve, reject) => {
-    const server = createServer();
+    const server = createNetServer();
     server.once("error", reject);
     server.listen(0, "127.0.0.1", () => {
       const address = server.address();
@@ -113,10 +125,68 @@ function fixtureSecrets() {
   };
 }
 
+function remoteJwks(secrets: ReturnType<typeof fixtureSecrets>) {
+  const combined = JSON.parse(secrets.HYBRID_COMBINED_JWKS) as {
+    keys: Array<Record<string, unknown>>;
+  };
+  return {
+    keys: combined.keys.filter((key) => key.kty !== "oct"),
+  };
+}
+
+async function startJwksFixture(path: string) {
+  const child = spawn(
+    process.execPath,
+    [
+      "-e",
+      `
+        const fs = require("node:fs");
+        const http = require("node:http");
+        const server = http.createServer((_request, response) => {
+          response.writeHead(200, { "content-type": "application/json" });
+          response.end(fs.readFileSync(process.env.JWKS_PATH, "utf8"));
+        });
+        server.listen(0, "127.0.0.1", () => {
+          process.stdout.write(String(server.address().port) + "\\n");
+        });
+        process.on("SIGTERM", () => server.close(() => process.exit(0)));
+      `,
+    ],
+    {
+      env: { ...process.env, JWKS_PATH: path },
+      stdio: ["ignore", "pipe", "pipe"],
+    },
+  );
+  const port = await new Promise<number>((resolve, reject) => {
+    let buffer = "";
+    child.once("error", reject);
+    child.stdout?.on("data", (chunk) => {
+      buffer += chunk.toString();
+      const newline = buffer.indexOf("\n");
+      if (newline !== -1) {
+        resolve(Number(buffer.slice(0, newline)));
+      }
+    });
+    child.once("exit", (code) => {
+      reject(new Error(`JWKS fixture exited before readiness: ${code}.`));
+    });
+  });
+  return { child, port };
+}
+
+async function stopFixture(child: ChildProcess) {
+  if (child.exitCode !== null) {
+    return;
+  }
+  child.kill("SIGTERM");
+  await new Promise<void>((resolve) => child.once("exit", () => resolve()));
+}
+
 function runtimeConfig(
   name: string,
   port: number,
   directory: string,
+  authPort: number,
 ) {
   const engineArchitecture = command(
     "docker",
@@ -125,13 +195,14 @@ function runtimeConfig(
   const dockerPlatform = ["aarch64", "arm64"].includes(engineArchitecture)
     ? "linux/arm64"
     : "linux/amd64";
+  const images = runtimeImageRefsForPlatform(dockerPlatform);
   const values = {
     AUTH_SUPABASE_EXPECTED_ISSUER:
-      "https://production-docker-fixture.supabase.co/auth/v1",
+      `http://127.0.0.1:${authPort}/auth/v1`,
     AUTH_SUPABASE_JWKS_URL:
-      "https://production-docker-fixture.supabase.co/auth/v1/.well-known/jwks.json",
+      `http://127.0.0.1:${authPort}/auth/v1/.well-known/jwks.json`,
     AUTH_SUPABASE_URL:
-      "https://production-docker-fixture.supabase.co",
+      `http://127.0.0.1:${authPort}`,
     HOMECOOK_DATA_AUTHORITY: "remote",
     HOMECOOK_HYBRID_BACKUP_KEY_ID:
       "homecook-hybrid-production-test-backup-v1",
@@ -141,10 +212,14 @@ function runtimeConfig(
     HYBRID_DOCKER_PLATFORM: dockerPlatform,
     HYBRID_GATEWAY_TIMEOUT_MS: "750",
     HYBRID_POSTGRES_DB: "homecook",
+    HYBRID_NODE_IMAGE: images.node,
+    HYBRID_POSTGRES_IMAGE: images.postgres,
     HYBRID_POSTGRES_VOLUME_NAME: `${name}-postgres`,
+    HYBRID_POSTGREST_IMAGE: images.postgrest,
     HYBRID_STORAGE_FILE_SIZE_LIMIT: "52428800",
     HYBRID_STORAGE_GLOBAL_BUCKET: name,
     HYBRID_STORAGE_TENANT_ID: name,
+    HYBRID_STORAGE_IMAGE: images.storage,
     HYBRID_STORAGE_VOLUME_NAME: `${name}-storage`,
   };
   const path = join(directory, `${name}.env`);
@@ -172,8 +247,33 @@ function cli(
       "--config",
       config.path,
       "--allow-process-env-secrets",
+      "--allow-insecure-loopback-auth-fixture",
     ],
     { env: { ...process.env, ...secrets } },
+  );
+}
+
+function cliResult(
+  config: ReturnType<typeof runtimeConfig>,
+  secrets: ReturnType<typeof fixtureSecrets>,
+  args: string[],
+) {
+  return spawnSync(
+    process.execPath,
+    [
+      "scripts/hybrid-production-runtime.mjs",
+      ...args,
+      "--config",
+      config.path,
+      "--allow-process-env-secrets",
+      "--allow-insecure-loopback-auth-fixture",
+    ],
+    {
+      cwd: process.cwd(),
+      encoding: "utf8",
+      env: { ...process.env, ...secrets },
+      stdio: ["ignore", "pipe", "pipe"],
+    },
   );
 }
 
@@ -186,6 +286,7 @@ function compose(
     ...process.env,
     ...config.values,
     ...secrets,
+    ALLOW_INSECURE_LOCAL_AUTH_STUB: "1",
   };
   delete env.DOCKER_DEFAULT_PLATFORM;
   return command(
@@ -263,6 +364,82 @@ function uploadStorageObject(
   return JSON.parse(result) as { body: string; status: number };
 }
 
+function tamperCatalogManifest(
+  source: string,
+  destination: string,
+  directory: string,
+  secrets: ReturnType<typeof fixtureSecrets>,
+) {
+  const work = join(directory, "tampered-backup");
+  const bundle = join(work, "complete-v2.tar.gz");
+  const rebuilt = join(work, "rebuilt.tar.gz");
+  command("mkdir", ["-p", work]);
+  command(
+    "openssl",
+    [
+      "enc",
+      "-d",
+      "-aes-256-cbc",
+      "-pbkdf2",
+      "-iter",
+      "200000",
+      "-pass",
+      "env:HOMECOOK_HYBRID_BACKUP_KEY",
+      "-in",
+      source,
+      "-out",
+      bundle,
+    ],
+    { env: { ...process.env, ...secrets } },
+  );
+  command("tar", ["-C", work, "-xzf", bundle]);
+  const manifestPath = join(work, "manifest.json");
+  const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
+  manifest.manifest.catalog.sections.dependencies.digest = "f".repeat(64);
+  manifest.manifest.catalog.digest = "e".repeat(64);
+  writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, {
+    mode: 0o600,
+  });
+  command(
+    "tar",
+    [
+      "-C",
+      work,
+      "-czf",
+      rebuilt,
+      "database.dump",
+      "storage.tar.gz",
+      "manifest.json",
+    ],
+  );
+  command(
+    "openssl",
+    [
+      "enc",
+      "-aes-256-cbc",
+      "-salt",
+      "-pbkdf2",
+      "-iter",
+      "200000",
+      "-pass",
+      "env:HOMECOOK_HYBRID_BACKUP_KEY",
+      "-in",
+      rebuilt,
+      "-out",
+      destination,
+    ],
+    { env: { ...process.env, ...secrets } },
+  );
+  const digest = createHash("sha256")
+    .update(readFileSync(destination))
+    .digest("hex");
+  writeFileSync(
+    `${destination}.sha256`,
+    `${digest}  ${destination.split("/").at(-1)}\n`,
+    { mode: 0o600 },
+  );
+}
+
 function cleanup(
   config: ReturnType<typeof runtimeConfig>,
   secrets: ReturnType<typeof fixtureSecrets>,
@@ -280,21 +457,41 @@ run("hybrid production Mac Docker runtime", () => {
       join(tmpdir(), "homecook-hybrid-production-docker-"),
     );
     const suffix = `${process.pid}-${randomBytes(4).toString("hex")}`;
+    const migrationCount = readdirSync("supabase/migrations")
+      .filter((name) => name.endsWith(".sql")).length;
     const secrets = fixtureSecrets();
+    const jwksPath = join(directory, "remote-jwks.json");
+    const originalRemoteJwks = remoteJwks(secrets);
+    writeFileSync(
+      jwksPath,
+      `${JSON.stringify(originalRemoteJwks)}\n`,
+      { mode: 0o600 },
+    );
+    const jwksFixture = await startJwksFixture(jwksPath);
     const source = runtimeConfig(
       `hc-prod-source-${suffix}`,
       await freePort(),
       directory,
+      jwksFixture.port,
     );
     const target = runtimeConfig(
       `hc-prod-target-${suffix}`,
       await freePort(),
       directory,
+      jwksFixture.port,
     );
     const sourceBackup = join(directory, "source-complete-v2.tar.gz.enc");
     const targetPreRestore = join(
       directory,
       "target-before-restore.tar.gz.enc",
+    );
+    const failedRestorePreBackup = join(
+      directory,
+      "target-before-failed-restore.tar.gz.enc",
+    );
+    const tamperedBackup = join(
+      directory,
+      "source-tampered-catalog.tar.gz.enc",
     );
 
     expect(source.values.HOMECOOK_HYBRID_GATEWAY_PORT).not.toBe("3100");
@@ -303,16 +500,39 @@ run("hybrid production Mac Docker runtime", () => {
     try {
       expect(JSON.parse(cli(source, secrets, ["validate"]))).toMatchObject({
         compose: "valid",
+        remote_jwks_key_count: 1,
         status: "PASS",
       });
+      const { publicKey: rotatedPublicKey } = generateKeyPairSync("ec", {
+        namedCurve: "prime256v1",
+      });
+      writeFileSync(
+        jwksPath,
+        JSON.stringify({
+          keys: [{
+            ...rotatedPublicKey.export({ format: "jwk" }),
+            alg: "ES256",
+            kid: "unattested-rotation",
+            use: "sig",
+          }],
+        }),
+        { mode: 0o600 },
+      );
+      const rotatedValidation = cliResult(source, secrets, ["validate"]);
+      expect(rotatedValidation.status).toBe(1);
+      expect(rotatedValidation.stderr).toMatch(/JWKS|rotation|mismatch/u);
+      writeFileSync(
+        jwksPath,
+        `${JSON.stringify(originalRemoteJwks)}\n`,
+        { mode: 0o600 },
+      );
       const installed = JSON.parse(cli(source, secrets, ["install"]));
       expect(installed.status).toBe("PASS");
       expect(installed.migrations).toBe(
-        readdirSync("supabase/migrations")
-          .filter((name) => name.endsWith(".sql")).length,
+        migrationCount,
       );
       expect(JSON.parse(cli(source, secrets, ["install"]))).toMatchObject({
-        migrations: 119,
+        migrations: migrationCount,
         status: "PASS",
       });
 
@@ -321,6 +541,10 @@ run("hybrid production Mac Docker runtime", () => {
       );
       expect(health.status).toBe(200);
       expect(await health.json()).toEqual({ status: "healthy" });
+      expect(JSON.parse(cli(source, secrets, ["status"]))).toMatchObject({
+        runtimeState: "READY",
+        status: "PASS",
+      });
 
       psql(
         source,
@@ -338,6 +562,18 @@ run("hybrid production Mac Docker runtime", () => {
       );
       const upload = uploadStorageObject(source, secrets);
       expect(upload.status, upload.body).toBe(200);
+      const anonymousRead = await fetch(
+        `http://127.0.0.1:${source.values.HOMECOOK_HYBRID_GATEWAY_PORT}/rest/v1/ingredients?select=id%2Cstandard_name%2Ccategory%2Ccategory_code&order=standard_name.asc`,
+        { headers: { "x-homecook-public-read-scope": "ingredients" } },
+      );
+      expect(anonymousRead.status).toBe(200);
+      expect(await anonymousRead.json()).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            id: "90000000-0000-4000-8000-000000000001",
+          }),
+        ]),
+      );
 
       const sourceManifest = JSON.parse(
         cli(source, secrets, ["manifest"]),
@@ -346,7 +582,7 @@ run("hybrid production Mac Docker runtime", () => {
         auth_users: 0,
         auth_users_residual: 0,
         invalid_constraints: 0,
-        migration_count: 119,
+        migration_count: migrationCount,
         runtime_ready: true,
       });
       expect(sourceManifest.storage.references.count).toBeGreaterThan(0);
@@ -356,10 +592,31 @@ run("hybrid production Mac Docker runtime", () => {
       expect(sourceManifest.storage.files.bytes).toBe(
         sourceManifest.storage.references.bytes,
       );
+      expect(sourceManifest.catalog.digest).toMatch(/^[0-9a-f]{64}$/u);
+      for (const section of [
+        "dependencies",
+        "extensions",
+        "guard_functions",
+        "memberships",
+        "object_owners_acls",
+        "private_data",
+        "rls_policies",
+        "roles",
+        "triggers",
+      ]) {
+        expect(sourceManifest.catalog.sections[section].digest)
+          .toMatch(/^[0-9a-f]{64}$/u);
+      }
 
       expect(JSON.parse(cli(source, secrets, ["stop"]))).toMatchObject({
         preserved_named_volumes: true,
         status: "PASS",
+      });
+      const stoppedStatus = cliResult(source, secrets, ["status"]);
+      expect(stoppedStatus.status).toBe(2);
+      expect(JSON.parse(stoppedStatus.stdout)).toMatchObject({
+        runtimeState: "STOPPED",
+        status: "BLOCKED",
       });
       expect(JSON.parse(cli(source, secrets, ["start"]))).toMatchObject({
         status: "PASS",
@@ -395,6 +652,7 @@ run("hybrid production Mac Docker runtime", () => {
       );
       expect(sourceBackupResult).toMatchObject({
         status: "PASS",
+        catalog_digest: sourceManifest.catalog.digest,
         database_digest: sourceManifest.database.digest,
         storage_digest: sourceManifest.storage.digest,
       });
@@ -405,16 +663,50 @@ run("hybrid production Mac Docker runtime", () => {
       expect(JSON.parse(cli(target, secrets, ["install"]))).toMatchObject({
         status: "PASS",
       });
+      const pastBackup = cliResult(target, secrets, [
+        "restore",
+        "--archive",
+        sourceBackup,
+        "--destructive",
+        "--pre-restore-backup",
+        sourceBackup,
+      ]);
+      expect(pastBackup.status).toBe(1);
+      expect(pastBackup.stderr).toMatch(/pre-restore backup|new path/u);
+
+      tamperCatalogManifest(
+        sourceBackup,
+        tamperedBackup,
+        directory,
+        secrets,
+      );
+      const failedRestore = cliResult(target, secrets, [
+        "restore",
+        "--archive",
+        tamperedBackup,
+        "--destructive",
+        "--pre-restore-backup",
+        failedRestorePreBackup,
+      ]);
+      expect(failedRestore.status).toBe(1);
+      expect(failedRestore.stderr).toMatch(
+        /Catalog manifest mismatch.*dependencies/u,
+      );
       expect(
-        JSON.parse(
-          cli(target, secrets, [
-            "backup",
-            "--output",
-            targetPreRestore,
-            "--leave-stopped",
-          ]),
-        ).status,
-      ).toBe("PASS");
+        command("docker", [
+          "ps",
+          "-q",
+          "--filter",
+          `label=com.docker.compose.project=${target.values.HYBRID_COMPOSE_PROJECT_NAME}`,
+          "--filter",
+          "label=com.docker.compose.service=gateway",
+        ]).trim(),
+      ).toBe("");
+      await expect(
+        fetch(
+          `http://127.0.0.1:${target.values.HOMECOOK_HYBRID_GATEWAY_PORT}/healthz`,
+        ),
+      ).rejects.toThrow();
 
       const restored = JSON.parse(
         cli(target, secrets, [
@@ -428,6 +720,7 @@ run("hybrid production Mac Docker runtime", () => {
       );
       expect(restored).toMatchObject({
         status: "PASS",
+        catalog_digest: sourceManifest.catalog.digest,
         phases: [
           "pre-data-schema",
           "hybrid-compatibility-fk-replacement",
@@ -437,6 +730,7 @@ run("hybrid production Mac Docker runtime", () => {
         database_digest: sourceManifest.database.digest,
         storage_digest: sourceManifest.storage.digest,
       });
+      expect(restored.pre_restore_backup).toBe(targetPreRestore);
 
       const targetManifest = JSON.parse(
         cli(target, secrets, ["manifest"]),
@@ -444,6 +738,7 @@ run("hybrid production Mac Docker runtime", () => {
       expect(targetManifest.database.digest).toBe(
         sourceManifest.database.digest,
       );
+      expect(targetManifest.catalog).toEqual(sourceManifest.catalog);
       expect(targetManifest.storage.digest).toBe(
         sourceManifest.storage.digest,
       );
@@ -470,10 +765,15 @@ run("hybrid production Mac Docker runtime", () => {
       expect(JSON.parse(cli(target, secrets, ["recover"]))).toMatchObject({
         status: "PASS",
       });
+      await stopFixture(jwksFixture.child);
+      const unavailableJwks = cliResult(target, secrets, ["validate"]);
+      expect(unavailableJwks.status).toBe(1);
+      expect(unavailableJwks.stderr).toMatch(/JWKS|network|fetch/u);
     } finally {
+      await stopFixture(jwksFixture.child);
       cleanup(source, secrets);
       cleanup(target, secrets);
       rmSync(directory, { force: true, recursive: true });
     }
-  }, 900_000);
+  }, 1_200_000);
 });

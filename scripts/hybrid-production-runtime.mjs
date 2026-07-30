@@ -19,13 +19,21 @@ import { basename, dirname, isAbsolute, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import {
+  assertPinnedImageInspection,
+  assertPreRestoreBackupBinding,
   assertDockerEnginePlatform,
   assertProductionComposeModel,
   assertRestoreAllowed,
   assertSafeTarArchive,
+  buildAclRestoreList,
   buildPostDataRestoreList,
+  canonicalCatalogManifest,
+  compareCatalogManifests,
   evaluateCapacityPreflight,
   evaluateMemoryCapacityPreflight,
+  evaluateRuntimeStatus,
+  runRestorePublicationGate,
+  synchronizeRemoteJwks,
   validateHybridProductionConfig,
   validateSemanticRestoreEvidence,
 } from "./lib/hybrid-production-runtime.mjs";
@@ -54,11 +62,11 @@ const BACKUP_FORMAT = "homecook-hybrid-complete-v2";
 const PBKDF2_ITERATIONS = 200_000;
 const MIGRATIONS_DIR = join(ROOT, "supabase/migrations");
 const POSTGRES_CONTAINERS = new Map();
-const RUNTIME_IMAGES = Object.freeze([
-  "public.ecr.aws/supabase/postgres:17.6.1.136",
-  "postgrest/postgrest:v14.12",
-  "public.ecr.aws/docker/library/node:22.20.0-alpine",
-  "supabase/storage-api:v1.60.4",
+const RUNTIME_IMAGE_CONFIG_KEYS = Object.freeze([
+  "HYBRID_NODE_IMAGE",
+  "HYBRID_POSTGRES_IMAGE",
+  "HYBRID_POSTGREST_IMAGE",
+  "HYBRID_STORAGE_IMAGE",
 ]);
 const MEMORY_SERVICES = Object.freeze([
   "gateway",
@@ -252,7 +260,7 @@ function postgresContainer(runtime) {
   return container;
 }
 
-function loadRuntime(args) {
+async function loadRuntime(args) {
   const configPath = resolve(optionValue(args, "--config") ?? DEFAULT_CONFIG);
   if (!existsSync(configPath)) {
     fail(`Production config does not exist: ${configPath}`);
@@ -264,6 +272,8 @@ function loadRuntime(args) {
     config,
     secrets,
     configFileMode: mode,
+    allowInsecureLoopback:
+      hasFlag(args, "--allow-insecure-loopback-auth-fixture"),
   });
   const [engineOs, engineArchitecture] = run(
     "docker",
@@ -279,8 +289,17 @@ function loadRuntime(args) {
     ...process.env,
     ...config,
     ...secrets,
+    ALLOW_INSECURE_LOCAL_AUTH_STUB:
+      hasFlag(args, "--allow-insecure-loopback-auth-fixture") ? "1" : "0",
   };
   delete env.DOCKER_DEFAULT_PLATFORM;
+  const jwks = await synchronizeRemoteJwks({
+    allowInsecureLoopback:
+      hasFlag(args, "--allow-insecure-loopback-auth-fixture"),
+    cachePath: `${configPath}.remote-jwks.json`,
+    combinedJwks: secrets.HYBRID_COMBINED_JWKS,
+    url: config.AUTH_SUPABASE_JWKS_URL,
+  });
   const modelText = run(
     "docker",
     [
@@ -303,13 +322,14 @@ function loadRuntime(args) {
     config,
     configPath,
     env,
+    jwks,
     secrets,
     validation,
   });
 }
 
-function inspectImagePlatform(image) {
-  const value = run(
+function inspectImage(image) {
+  const [platform, repoDigests] = run(
     "docker",
     [
       "image",
@@ -319,26 +339,46 @@ function inspectImagePlatform(image) {
       "{{.Os}}/{{.Architecture}}",
     ],
     { failure: `Required Docker image is unavailable: ${image}.` },
-  ).trim();
-  return value.replace("/aarch64", "/arm64").replace("/x86_64", "/amd64");
+  ).trim().replace("/aarch64", "/arm64").replace("/x86_64", "/amd64")
+    .concat("\n", run(
+      "docker",
+      [
+        "image",
+        "inspect",
+        image,
+        "--format",
+        "{{json .RepoDigests}}",
+      ],
+      { failure: `Required Docker image is unavailable: ${image}.` },
+    ).trim()).split("\n");
+  return {
+    platform,
+    repoDigests: JSON.parse(repoDigests || "[]"),
+  };
 }
 
 function assertNativeRuntimeImages(runtime, includeGateway = true) {
-  const images = includeGateway
-    ? [...RUNTIME_IMAGES, "homecook-hybrid-gateway:production"]
-    : RUNTIME_IMAGES;
-  for (const image of images) {
-    const actual = inspectImagePlatform(image);
-    if (actual !== runtime.config.HYBRID_DOCKER_PLATFORM) {
-      fail(
-        `Docker image architecture mismatch for ${image}; expected ${runtime.config.HYBRID_DOCKER_PLATFORM}, received ${actual}.`,
-      );
+  for (const configKey of RUNTIME_IMAGE_CONFIG_KEYS) {
+    const image = runtime.config[configKey];
+    const inspected = inspectImage(image);
+    assertPinnedImageInspection({
+      actualPlatform: inspected.platform,
+      configuredPlatform: runtime.config.HYBRID_DOCKER_PLATFORM,
+      expectedReference: image,
+      repoDigests: inspected.repoDigests,
+    });
+  }
+  if (includeGateway) {
+    const gateway = inspectImage("homecook-hybrid-gateway:production");
+    if (gateway.platform !== runtime.config.HYBRID_DOCKER_PLATFORM) {
+      fail("Loopback gateway image architecture does not match Docker.");
     }
   }
 }
 
 function pullNativeRuntimeImages(runtime) {
-  for (const image of RUNTIME_IMAGES) {
+  for (const configKey of RUNTIME_IMAGE_CONFIG_KEYS) {
+    const image = runtime.config[configKey];
     run(
       "docker",
       [
@@ -373,6 +413,7 @@ function psql(runtime, sql, options = {}) {
     {
       input: sql,
       env: runtime.env,
+      inheritStderr: process.env.HYBRID_PRODUCTION_DEBUG === "1",
       failure: options.failure ?? "PostgreSQL operation failed.",
     },
   );
@@ -626,6 +667,20 @@ function recover(runtime) {
   waitGateway(runtime);
 }
 
+function forceGatewayPrivate(runtime) {
+  compose(runtime, ["stop", "gateway"], {
+    failure: "Loopback gateway could not be forced private.",
+  });
+}
+
+function bestEffortGatewayPrivate(runtime) {
+  try {
+    forceGatewayPrivate(runtime);
+  } catch {
+    // Preserve the restore failure while keeping the cleanup attempt scoped.
+  }
+}
+
 function parseDockerBytes(value) {
   const match = /^([0-9]+(?:\.[0-9]+)?)\s*([KMGT]?i?B)$/iu.exec(
     String(value).trim(),
@@ -710,7 +765,7 @@ function cgroupMemory(runtime, container) {
         "host",
         "-v",
         "/sys/fs/cgroup:/host-cgroup:ro",
-        "public.ecr.aws/docker/library/node:22.20.0-alpine",
+        runtime.config.HYBRID_NODE_IMAGE,
         "node",
         "-e",
         script,
@@ -869,7 +924,7 @@ function capacity(runtime, dryRun = false) {
           runtime.config.HYBRID_DOCKER_PLATFORM,
           "-v",
           `${runtime.config.HYBRID_STORAGE_VOLUME_NAME}:/volume:ro`,
-          "public.ecr.aws/docker/library/node:22.20.0-alpine",
+          runtime.config.HYBRID_NODE_IMAGE,
           "node",
           "-e",
           `
@@ -966,6 +1021,491 @@ function databaseManifest(runtime) {
   return JSON.parse(output);
 }
 
+const CATALOG_SCHEMAS_SQL = `
+  'public',
+  'private',
+  'storage',
+  'supabase_migrations',
+  'account_generation_auth_hook',
+  'account_generation_storage_guard',
+  'recipe_visibility_guard'
+`;
+
+function catalogJson(runtime, sql) {
+  const output = psql(
+    runtime,
+    `
+      select coalesce(json_agg(item order by item::text), '[]'::json)::text
+      from (${sql}) as manifest_items(item);
+    `,
+    { tuples: true },
+  ).trim();
+  return JSON.parse(output);
+}
+
+function privateDataCatalog(runtime) {
+  return JSON.parse(
+    psql(
+      runtime,
+      `
+        create temp table hybrid_private_data_manifest (
+          schema_name text not null,
+          table_name text not null,
+          row_count bigint not null,
+          digest text not null
+        );
+        do $manifest$
+        declare
+          item record;
+        begin
+          for item in
+            select schemaname, tablename
+            from pg_catalog.pg_tables
+            where schemaname in (
+              'private',
+              'supabase_migrations',
+              'account_generation_auth_hook',
+              'account_generation_storage_guard',
+              'recipe_visibility_guard'
+            )
+            order by schemaname, tablename
+          loop
+            execute format(
+              'insert into hybrid_private_data_manifest
+               select %L, %L, count(*),
+                 encode(extensions.digest(
+                   coalesce(string_agg(to_jsonb(row_value)::text, E''\\n''
+                     order by to_jsonb(row_value)::text), ''''),
+                   ''sha256''
+                 ), ''hex'')
+               from %I.%I as row_value',
+              item.schemaname,
+              item.tablename,
+              item.schemaname,
+              item.tablename
+            );
+          end loop;
+        end;
+        $manifest$;
+        select coalesce(json_agg(json_build_object(
+          'schema', schema_name,
+          'table', table_name,
+          'rows', row_count,
+          'sha256', digest
+        ) order by schema_name, table_name), '[]'::json)::text
+        from hybrid_private_data_manifest;
+      `,
+      { tuples: true },
+    ).trim(),
+  );
+}
+
+function catalogManifest(runtime) {
+  const sections = {
+    roles: catalogJson(
+      runtime,
+      `
+        select json_build_object(
+          'name', rolname,
+          'superuser', rolsuper,
+          'inherit', rolinherit,
+          'create_role', rolcreaterole,
+          'create_db', rolcreatedb,
+          'login', rolcanlogin,
+          'replication', rolreplication,
+          'bypassrls', rolbypassrls,
+          'connection_limit', rolconnlimit
+        ) as item
+        from pg_catalog.pg_roles
+        where rolname !~ '^pg_'
+        order by rolname
+      `,
+    ),
+    memberships: catalogJson(
+      runtime,
+      `
+        select json_build_object(
+          'role', role_role.rolname,
+          'member', member_role.rolname,
+          'grantor', grantor_role.rolname,
+          'admin_option', membership.admin_option,
+          'inherit_option', membership.inherit_option,
+          'set_option', membership.set_option
+        ) as item
+        from pg_catalog.pg_auth_members as membership
+        join pg_catalog.pg_roles as role_role
+          on role_role.oid = membership.roleid
+        join pg_catalog.pg_roles as member_role
+          on member_role.oid = membership.member
+        join pg_catalog.pg_roles as grantor_role
+          on grantor_role.oid = membership.grantor
+        where role_role.rolname !~ '^pg_'
+           or member_role.rolname !~ '^pg_'
+        order by role_role.rolname, member_role.rolname, grantor_role.rolname
+      `,
+    ),
+    object_owners_acls: catalogJson(
+      runtime,
+      `
+        select json_build_object(
+          'kind', kind,
+          'name', object_name,
+          'owner', owner_name,
+          'acl', acl
+        ) as item
+        from (
+          select
+            'schema'::text as kind,
+            namespace.nspname::text as object_name,
+            pg_get_userbyid(namespace.nspowner) as owner_name,
+            coalesce((
+              select string_agg(entry::text, ',' order by entry::text)
+              from unnest(coalesce(
+                namespace.nspacl,
+                pg_catalog.acldefault('n', namespace.nspowner)
+              )) as entry
+            ), '') as acl
+          from pg_catalog.pg_namespace as namespace
+          where namespace.nspname in (${CATALOG_SCHEMAS_SQL})
+          union all
+          select
+            'relation:' || relation.relkind::text,
+            namespace.nspname || '.' || relation.relname,
+            pg_get_userbyid(relation.relowner),
+            coalesce((
+              select string_agg(entry::text, ',' order by entry::text)
+              from unnest(coalesce(
+                relation.relacl,
+                pg_catalog.acldefault(
+                  (
+                    case when relation.relkind = 'S' then 'S' else 'r' end
+                  )::"char",
+                  relation.relowner
+                )
+              )) as entry
+            ), '')
+          from pg_catalog.pg_class as relation
+          join pg_catalog.pg_namespace as namespace
+            on namespace.oid = relation.relnamespace
+          where namespace.nspname in (${CATALOG_SCHEMAS_SQL})
+          union all
+          select
+            'function:' || procedure.prokind::text,
+            namespace.nspname || '.' || procedure.proname || '('
+              || pg_get_function_identity_arguments(procedure.oid) || ')',
+            pg_get_userbyid(procedure.proowner),
+            coalesce((
+              select string_agg(entry::text, ',' order by entry::text)
+              from unnest(coalesce(
+                procedure.proacl,
+                pg_catalog.acldefault('f', procedure.proowner)
+              )) as entry
+            ), '')
+          from pg_catalog.pg_proc as procedure
+          join pg_catalog.pg_namespace as namespace
+            on namespace.oid = procedure.pronamespace
+          where namespace.nspname in (${CATALOG_SCHEMAS_SQL})
+        ) as objects
+        order by kind, object_name
+      `,
+    ),
+    rls_policies: catalogJson(
+      runtime,
+      `
+        select item
+        from (
+          select json_build_object(
+            'kind', 'table',
+            'table', namespace.nspname || '.' || relation.relname,
+            'rls', relation.relrowsecurity,
+            'force', relation.relforcerowsecurity
+          ) as item
+          from pg_catalog.pg_class as relation
+          join pg_catalog.pg_namespace as namespace
+            on namespace.oid = relation.relnamespace
+          where namespace.nspname in (${CATALOG_SCHEMAS_SQL})
+            and relation.relkind in ('r', 'p')
+          union all
+          select json_build_object(
+            'kind', 'policy',
+            'table', namespace.nspname || '.' || relation.relname,
+            'policy', policy.polname,
+            'permissive', policy.polpermissive,
+            'command', policy.polcmd,
+            'roles', coalesce((
+              select json_agg(role.rolname order by role.rolname)
+              from unnest(policy.polroles) as role_oid
+              join pg_catalog.pg_roles as role on role.oid = role_oid
+            ), '[]'::json),
+            'using', coalesce(pg_get_expr(policy.polqual, policy.polrelid), ''),
+            'check', coalesce(pg_get_expr(policy.polwithcheck, policy.polrelid), '')
+          ) as item
+          from pg_catalog.pg_policy as policy
+          join pg_catalog.pg_class as relation
+            on relation.oid = policy.polrelid
+          join pg_catalog.pg_namespace as namespace
+            on namespace.oid = relation.relnamespace
+          where namespace.nspname in (${CATALOG_SCHEMAS_SQL})
+        ) as policies
+      `,
+    ),
+    triggers: catalogJson(
+      runtime,
+      `
+        select json_build_object(
+          'table', namespace.nspname || '.' || relation.relname,
+          'name', trigger.tgname,
+          'enabled', trigger.tgenabled,
+          'definition', pg_get_triggerdef(trigger.oid, true)
+        ) as item
+        from pg_catalog.pg_trigger as trigger
+        join pg_catalog.pg_class as relation
+          on relation.oid = trigger.tgrelid
+        join pg_catalog.pg_namespace as namespace
+          on namespace.oid = relation.relnamespace
+        where namespace.nspname in (${CATALOG_SCHEMAS_SQL})
+          and not trigger.tgisinternal
+        order by namespace.nspname, relation.relname, trigger.tgname
+      `,
+    ),
+    extensions: catalogJson(
+      runtime,
+      `
+        select json_build_object(
+          'name', extension.extname,
+          'version', extension.extversion,
+          'schema', namespace.nspname,
+          'relocatable', extension.extrelocatable
+        ) as item
+        from pg_catalog.pg_extension as extension
+        join pg_catalog.pg_namespace as namespace
+          on namespace.oid = extension.extnamespace
+        order by extension.extname
+      `,
+    ),
+    guard_functions: catalogJson(
+      runtime,
+      `
+        select item
+        from (
+          select json_build_object(
+            'kind', 'schema',
+            'name', namespace.nspname,
+            'owner', pg_get_userbyid(namespace.nspowner)
+          ) as item
+          from pg_catalog.pg_namespace as namespace
+          where namespace.nspname in (
+            'account_generation_auth_hook',
+            'account_generation_storage_guard',
+            'recipe_visibility_guard'
+          )
+          union all
+          select json_build_object(
+            'kind', 'function',
+            'name', namespace.nspname || '.' || procedure.proname || '('
+              || pg_get_function_identity_arguments(procedure.oid) || ')',
+            'owner', pg_get_userbyid(procedure.proowner),
+            'language', language.lanname,
+            'security_definer', procedure.prosecdef,
+            'volatility', procedure.provolatile,
+            'parallel', procedure.proparallel,
+            'strict', procedure.proisstrict,
+            'config', coalesce((
+              select json_agg(setting order by setting)
+              from unnest(procedure.proconfig) as setting
+            ), '[]'::json),
+            'definition', pg_get_functiondef(procedure.oid)
+          ) as item
+          from pg_catalog.pg_proc as procedure
+          join pg_catalog.pg_namespace as namespace
+            on namespace.oid = procedure.pronamespace
+          join pg_catalog.pg_language as language
+            on language.oid = procedure.prolang
+          where namespace.nspname in (
+            'private',
+            'account_generation_auth_hook',
+            'account_generation_storage_guard',
+            'recipe_visibility_guard'
+          )
+        ) as guard_inventory
+      `,
+    ),
+    dependencies: catalogJson(
+      runtime,
+      `
+        with app_objects(classid, objid) as (
+          select 'pg_catalog.pg_namespace'::regclass::oid, namespace.oid
+          from pg_catalog.pg_namespace as namespace
+          where namespace.nspname in (${CATALOG_SCHEMAS_SQL})
+          union
+          select 'pg_catalog.pg_class'::regclass::oid, relation.oid
+          from pg_catalog.pg_class as relation
+          join pg_catalog.pg_namespace as namespace
+            on namespace.oid = relation.relnamespace
+          where namespace.nspname in (${CATALOG_SCHEMAS_SQL})
+          union
+          select 'pg_catalog.pg_proc'::regclass::oid, procedure.oid
+          from pg_catalog.pg_proc as procedure
+          join pg_catalog.pg_namespace as namespace
+            on namespace.oid = procedure.pronamespace
+          where namespace.nspname in (${CATALOG_SCHEMAS_SQL})
+          union
+          select 'pg_catalog.pg_type'::regclass::oid, type.oid
+          from pg_catalog.pg_type as type
+          join pg_catalog.pg_namespace as namespace
+            on namespace.oid = type.typnamespace
+          where namespace.nspname in (${CATALOG_SCHEMAS_SQL})
+          union
+          select 'pg_catalog.pg_constraint'::regclass::oid, table_constraint.oid
+          from pg_catalog.pg_constraint as table_constraint
+          join pg_catalog.pg_namespace as namespace
+            on namespace.oid = table_constraint.connamespace
+          where namespace.nspname in (${CATALOG_SCHEMAS_SQL})
+          union
+          select 'pg_catalog.pg_trigger'::regclass::oid, trigger.oid
+          from pg_catalog.pg_trigger as trigger
+          join pg_catalog.pg_class as relation on relation.oid = trigger.tgrelid
+          join pg_catalog.pg_namespace as namespace
+            on namespace.oid = relation.relnamespace
+          where namespace.nspname in (${CATALOG_SCHEMAS_SQL})
+          union
+          select 'pg_catalog.pg_policy'::regclass::oid, policy.oid
+          from pg_catalog.pg_policy as policy
+          join pg_catalog.pg_class as relation on relation.oid = policy.polrelid
+          join pg_catalog.pg_namespace as namespace
+            on namespace.oid = relation.relnamespace
+          where namespace.nspname in (${CATALOG_SCHEMAS_SQL})
+          union
+          select 'pg_catalog.pg_attrdef'::regclass::oid, attribute_default.oid
+          from pg_catalog.pg_attrdef as attribute_default
+          join pg_catalog.pg_class as relation
+            on relation.oid = attribute_default.adrelid
+          join pg_catalog.pg_namespace as namespace
+            on namespace.oid = relation.relnamespace
+          where namespace.nspname in (${CATALOG_SCHEMAS_SQL})
+          union
+          select 'pg_catalog.pg_rewrite'::regclass::oid, rewrite.oid
+          from pg_catalog.pg_rewrite as rewrite
+          join pg_catalog.pg_class as relation
+            on relation.oid = rewrite.ev_class
+          join pg_catalog.pg_namespace as namespace
+            on namespace.oid = relation.relnamespace
+          where namespace.nspname in (${CATALOG_SCHEMAS_SQL})
+        ),
+        described_dependencies as (
+          select
+            dependency.*,
+            dependent_relation.relkind as dependent_relkind,
+            dependent_owner_namespace.nspname
+              as dependent_owner_schema,
+            dependent_owner.relname as dependent_owner_table,
+            referenced_relation.relkind as referenced_relkind,
+            referenced_owner_namespace.nspname
+              as referenced_owner_schema,
+            referenced_owner.relname as referenced_owner_table
+          from pg_catalog.pg_depend as dependency
+          left join pg_catalog.pg_class as dependent_relation
+            on dependency.classid
+              = 'pg_catalog.pg_class'::regclass::oid
+            and dependent_relation.oid = dependency.objid
+          left join pg_catalog.pg_namespace as dependent_namespace
+            on dependent_namespace.oid = dependent_relation.relnamespace
+          left join pg_catalog.pg_index as dependent_index
+            on dependent_relation.relkind = 'i'
+            and dependent_index.indexrelid = dependent_relation.oid
+          left join pg_catalog.pg_class as dependent_toast
+            on dependent_namespace.nspname = 'pg_toast'
+            and dependent_toast.oid = case
+              when dependent_relation.relkind = 'i'
+                then dependent_index.indrelid
+              else dependent_relation.oid
+            end
+          left join pg_catalog.pg_class as dependent_owner
+            on dependent_owner.reltoastrelid = dependent_toast.oid
+          left join pg_catalog.pg_namespace as dependent_owner_namespace
+            on dependent_owner_namespace.oid = dependent_owner.relnamespace
+          left join pg_catalog.pg_class as referenced_relation
+            on dependency.refclassid
+              = 'pg_catalog.pg_class'::regclass::oid
+            and referenced_relation.oid = dependency.refobjid
+          left join pg_catalog.pg_namespace as referenced_namespace
+            on referenced_namespace.oid = referenced_relation.relnamespace
+          left join pg_catalog.pg_index as referenced_index
+            on referenced_relation.relkind = 'i'
+            and referenced_index.indexrelid = referenced_relation.oid
+          left join pg_catalog.pg_class as referenced_toast
+            on referenced_namespace.nspname = 'pg_toast'
+            and referenced_toast.oid = case
+              when referenced_relation.relkind = 'i'
+                then referenced_index.indrelid
+              else referenced_relation.oid
+            end
+          left join pg_catalog.pg_class as referenced_owner
+            on referenced_owner.reltoastrelid = referenced_toast.oid
+          left join pg_catalog.pg_namespace as referenced_owner_namespace
+            on referenced_owner_namespace.oid = referenced_owner.relnamespace
+        )
+        select json_build_object(
+          'dependent', regexp_replace(
+            case
+              when dependency.dependent_owner_table is not null then
+                case dependency.dependent_relkind
+                  when 'i' then 'toast index for table '
+                  else 'toast table for table '
+                end
+                || quote_ident(dependency.dependent_owner_schema)
+                || '.'
+                || quote_ident(dependency.dependent_owner_table)
+              else pg_describe_object(
+                dependency.classid,
+                dependency.objid,
+                dependency.objsubid
+              )
+            end,
+            'RI_ConstraintTrigger_[ac]_[0-9]+',
+            'RI_ConstraintTrigger_internal',
+            'g'
+          ),
+          'referenced', regexp_replace(
+            case
+              when dependency.referenced_owner_table is not null then
+                case dependency.referenced_relkind
+                  when 'i' then 'toast index for table '
+                  else 'toast table for table '
+                end
+                || quote_ident(dependency.referenced_owner_schema)
+                || '.'
+                || quote_ident(dependency.referenced_owner_table)
+              else pg_describe_object(
+                dependency.refclassid,
+                dependency.refobjid,
+                dependency.refobjsubid
+              )
+            end,
+            'RI_ConstraintTrigger_[ac]_[0-9]+',
+            'RI_ConstraintTrigger_internal',
+            'g'
+          ),
+          'type', dependency.deptype
+        ) as item
+        from described_dependencies as dependency
+        where exists (
+          select 1 from app_objects
+          where app_objects.classid = dependency.classid
+            and app_objects.objid = dependency.objid
+        )
+        or exists (
+          select 1 from app_objects
+          where app_objects.classid = dependency.refclassid
+            and app_objects.objid = dependency.refobjid
+        )
+      `,
+    ),
+    private_data: privateDataCatalog(runtime),
+  };
+  return canonicalCatalogManifest(sections);
+}
+
 function storageManifest(runtime) {
   const references = JSON.parse(
     psql(
@@ -1002,7 +1542,7 @@ function storageManifest(runtime) {
         runtime.config.HYBRID_DOCKER_PLATFORM,
         "-v",
         `${runtime.config.HYBRID_STORAGE_VOLUME_NAME}:/volume:ro`,
-        "public.ecr.aws/docker/library/node:22.20.0-alpine",
+        runtime.config.HYBRID_NODE_IMAGE,
         "node",
         "-e",
         `
@@ -1075,8 +1615,10 @@ function storageManifest(runtime) {
 
 function currentManifest(runtime) {
   const database = databaseManifest(runtime);
+  const catalog = catalogManifest(runtime);
   const storage = storageManifest(runtime);
   return {
+    catalog,
     database,
     storage,
     semantic: semanticState(runtime),
@@ -1118,6 +1660,7 @@ function dumpDatabase(runtime, destination) {
       "-d",
       runtime.config.HYBRID_POSTGRES_DB,
       "--format=custom",
+      "--extension=pg_trgm",
       "--schema=public",
       "--schema=private",
       "--schema=storage",
@@ -1145,7 +1688,7 @@ function dumpStorage(runtime, destinationDir) {
       `${runtime.config.HYBRID_STORAGE_VOLUME_NAME}:/volume:ro`,
       "-v",
       `${destinationDir}:/backup`,
-      "public.ecr.aws/docker/library/node:22.20.0-alpine",
+      runtime.config.HYBRID_NODE_IMAGE,
       "sh",
       "-c",
       "cd /volume && tar -czf /backup/storage.tar.gz .",
@@ -1154,7 +1697,11 @@ function dumpStorage(runtime, destinationDir) {
   );
 }
 
-function createBackup(runtime, args, { restartGateway = true } = {}) {
+function createBackup(
+  runtime,
+  args,
+  { manifest: suppliedManifest = null, restartGateway = true } = {},
+) {
   const outputOption = optionValue(args, "--output");
   if (!outputOption) {
     fail("backup requires --output <absolute .tar.gz.enc path>.");
@@ -1171,13 +1718,14 @@ function createBackup(runtime, args, { restartGateway = true } = {}) {
   chmodSync(temp, 0o700);
   try {
     compose(runtime, ["stop", "gateway"]);
-    const manifest = currentManifest(runtime);
+    const manifest = suppliedManifest ?? currentManifest(runtime);
     const dbDump = join(temp, "database.dump");
     dumpDatabase(runtime, dbDump);
     dumpStorage(runtime, temp);
+    const createdAt = new Date().toISOString();
     const metadata = {
       format: BACKUP_FORMAT,
-      created_at: new Date().toISOString(),
+      created_at: createdAt,
       encryption: {
         cipher: "AES-256-CBC",
         key_id: runtime.config.HOMECOOK_HYBRID_BACKUP_KEY_ID,
@@ -1188,6 +1736,11 @@ function createBackup(runtime, args, { restartGateway = true } = {}) {
         storage_sha256: sha256File(join(temp, "storage.tar.gz")),
       },
       manifest,
+      runtime: {
+        compose_project: runtime.config.HYBRID_COMPOSE_PROJECT_NAME,
+        postgres_volume: runtime.config.HYBRID_POSTGRES_VOLUME_NAME,
+        storage_volume: runtime.config.HYBRID_STORAGE_VOLUME_NAME,
+      },
     };
     writeFileSync(
       join(temp, "manifest.json"),
@@ -1234,6 +1787,8 @@ function createBackup(runtime, args, { restartGateway = true } = {}) {
     return {
       archive: output,
       archive_sha256: sha256File(output),
+      catalog_digest: manifest.catalog.digest,
+      created_at: createdAt,
       database_digest: manifest.database.digest,
       storage_digest: manifest.storage.digest,
       sidecar,
@@ -1303,13 +1858,15 @@ function extractBackup(runtime, args, archive, temp) {
   return manifest;
 }
 
-function verifyPreRestoreBackup(runtime, args, archive) {
+function verifyPreRestoreBackup(runtime, args, archive, expected) {
   const temp = mkdtempSync(
     join(tmpdir(), "homecook-hybrid-pre-restore-check-"),
   );
   chmodSync(temp, 0o700);
   try {
-    extractBackup(runtime, args, archive, temp);
+    const metadata = extractBackup(runtime, args, archive, temp);
+    assertPreRestoreBackupBinding({ expected, metadata });
+    return metadata;
   } finally {
     rmSync(temp, { force: true, recursive: true });
   }
@@ -1321,7 +1878,10 @@ function restoreDatabase(runtime, dumpPath) {
     `/tmp/homecook-hybrid-restore-${process.pid}.dump`;
   const containerList =
     `/tmp/homecook-hybrid-restore-${process.pid}.list`;
+  const containerAclList =
+    `/tmp/homecook-hybrid-restore-${process.pid}.acl.list`;
   const hostList = join(dirname(dumpPath), "post-data.list");
+  const hostAclList = join(dirname(dumpPath), "acl.list");
   run("docker", ["cp", dumpPath, `${container}:${containerDump}`], {
     failure: "Restore dump staging failed.",
   });
@@ -1462,9 +2022,18 @@ function restoreDatabase(runtime, dumpPath) {
       buildPostDataRestoreList(restoreList, compatibilityRequired),
       { mode: 0o600 },
     );
+    writeFileSync(
+      hostAclList,
+      buildAclRestoreList(restoreList),
+      { mode: 0o600 },
+    );
     chmodSync(hostList, 0o600);
+    chmodSync(hostAclList, 0o600);
     run("docker", ["cp", hostList, `${container}:${containerList}`], {
       failure: "Post-data restore list staging failed.",
+    });
+    run("docker", ["cp", hostAclList, `${container}:${containerAclList}`], {
+      failure: "ACL restore list staging failed.",
     });
     compose(
       runtime,
@@ -1487,10 +2056,53 @@ function restoreDatabase(runtime, dumpPath) {
         failure: "Restore phase post-data-validation failed.",
       },
     );
+    compose(
+      runtime,
+      [
+        "exec",
+        "-T",
+        "postgres",
+        "pg_restore",
+        "-U",
+        "supabase_admin",
+        "-d",
+        runtime.config.HYBRID_POSTGRES_DB,
+        "--exit-on-error",
+        `--use-list=${containerAclList}`,
+        containerDump,
+      ],
+      {
+        inheritStderr: process.env.HYBRID_PRODUCTION_DEBUG === "1",
+        failure: "Restore phase owner and ACL validation failed.",
+      },
+    );
+    psql(
+      runtime,
+      `
+        grant usage on schema public
+          to public,
+             anon,
+             authenticated,
+             service_role,
+             homecook_recipe_visibility_guard_owner,
+             postgres;
+      `,
+      {
+        failure: "Pinned public schema baseline ACL restoration failed.",
+      },
+    );
   } finally {
     run(
       "docker",
-      ["exec", container, "rm", "-f", containerDump, containerList],
+      [
+        "exec",
+        container,
+        "rm",
+        "-f",
+        containerDump,
+        containerList,
+        containerAclList,
+      ],
       { failure: "Restore staging cleanup failed." },
     );
   }
@@ -1516,7 +2128,7 @@ function restoreStorage(runtime, archivePath) {
       `${runtime.config.HYBRID_STORAGE_VOLUME_NAME}:/volume`,
       "-v",
       `${dirname(archivePath)}:/backup:ro`,
-      "public.ecr.aws/docker/library/node:22.20.0-alpine",
+      runtime.config.HYBRID_NODE_IMAGE,
       "sh",
       "-c",
       'find /volume -mindepth 1 -maxdepth 1 -exec rm -rf {} + && tar -xzf "/backup/$1" -C /volume',
@@ -1530,26 +2142,53 @@ function restoreStorage(runtime, archivePath) {
 function restore(runtime, args) {
   const archiveOption = optionValue(args, "--archive");
   const preRestoreOption = optionValue(args, "--pre-restore-backup");
+  const preRestoreBackup = preRestoreOption
+    ? resolve(preRestoreOption)
+    : "";
   assertRestoreAllowed({
     destructive: hasFlag(args, "--destructive"),
     preRestoreBackupPath: preRestoreOption,
-    preRestoreBackupVerified:
+    preRestoreBackupAbsent:
       typeof preRestoreOption === "string"
-      && existsSync(resolve(preRestoreOption))
-      && existsSync(`${resolve(preRestoreOption)}.sha256`),
+      && isAbsolute(preRestoreOption)
+      && !existsSync(preRestoreBackup)
+      && !existsSync(`${preRestoreBackup}.sha256`),
   });
   if (!archiveOption || !isAbsolute(archiveOption)) {
     fail("restore requires --archive <absolute path>.");
   }
   const archive = resolve(archiveOption);
-  const preRestoreBackup = resolve(preRestoreOption);
   if (archive === preRestoreBackup) {
     fail("Source archive and pre-restore backup must be different files.");
   }
-  verifyPreRestoreBackup(runtime, args, preRestoreBackup);
   const temp = mkdtempSync(join(tmpdir(), "homecook-hybrid-restore-"));
   chmodSync(temp, 0o700);
+  let published = false;
   try {
+    forceGatewayPrivate(runtime);
+    const preBackupStartedAt = Date.now();
+    const currentState = currentManifest(runtime);
+    createBackup(
+      runtime,
+      [
+        "--output",
+        preRestoreBackup,
+        ...(hasFlag(args, "--allow-process-env-secrets")
+          ? ["--allow-process-env-secrets"]
+          : []),
+      ],
+      { manifest: currentState, restartGateway: false },
+    );
+    verifyPreRestoreBackup(runtime, args, preRestoreBackup, {
+      catalogDigest: currentState.catalog.digest,
+      createdAfterMs: preBackupStartedAt,
+      createdBeforeMs: Date.now() + 60_000,
+      databaseDigest: currentState.database.digest,
+      postgresVolume: runtime.config.HYBRID_POSTGRES_VOLUME_NAME,
+      project: runtime.config.HYBRID_COMPOSE_PROJECT_NAME,
+      storageDigest: currentState.storage.digest,
+      storageVolume: runtime.config.HYBRID_STORAGE_VOLUME_NAME,
+    });
     const sourceManifest = extractBackup(runtime, args, archive, temp);
     compose(runtime, ["down", "--remove-orphans"]);
     POSTGRES_CONTAINERS.delete(
@@ -1569,37 +2208,54 @@ function restore(runtime, args) {
     restoreDatabase(runtime, join(temp, "database.dump"));
     restoreStorage(runtime, join(temp, "storage.tar.gz"));
     const state = assertInstalled(runtime);
-    recover(runtime);
     const targetManifest = currentManifest(runtime);
-    validateSemanticRestoreEvidence({
-      phases: [
-        "pre-data-schema",
-        "hybrid-compatibility-fk-replacement",
-        "application-data",
-        "post-data-validation",
-      ],
-      authUsers: state.auth_users,
-      authUsersResidual: state.auth_users_residual,
-      publicManifest: {
-        source: sourceManifest.manifest.database.digest,
-        target: targetManifest.database.digest,
+    const phases = [
+      "pre-data-schema",
+      "hybrid-compatibility-fk-replacement",
+      "application-data",
+      "post-data-validation",
+    ];
+    runRestorePublicationGate({
+      forcePrivate: () => bestEffortGatewayPrivate(runtime),
+      publish: () => {
+        recover(runtime);
+        published = true;
       },
-      storageManifest: {
-        source: sourceManifest.manifest.storage.digest,
-        target: targetManifest.storage.digest,
+      verify: () => {
+        compareCatalogManifests(
+          sourceManifest.manifest.catalog,
+          targetManifest.catalog,
+        );
+        validateSemanticRestoreEvidence({
+          phases,
+          authUsers: state.auth_users,
+          authUsersResidual: state.auth_users_residual,
+          catalogManifest: {
+            source: sourceManifest.manifest.catalog.digest,
+            target: targetManifest.catalog.digest,
+          },
+          publicManifest: {
+            source: sourceManifest.manifest.database.digest,
+            target: targetManifest.database.digest,
+          },
+          storageManifest: {
+            source: sourceManifest.manifest.storage.digest,
+            target: targetManifest.storage.digest,
+          },
+        });
       },
     });
     return {
+      catalog_digest: targetManifest.catalog.digest,
       database_digest: targetManifest.database.digest,
-      phases: [
-        "pre-data-schema",
-        "hybrid-compatibility-fk-replacement",
-        "application-data",
-        "post-data-validation",
-      ],
+      phases,
+      pre_restore_backup: preRestoreBackup,
       storage_digest: targetManifest.storage.digest,
     };
   } finally {
+    if (!published) {
+      bestEffortGatewayPrivate(runtime);
+    }
     rmSync(temp, { force: true, recursive: true });
   }
 }
@@ -1612,15 +2268,37 @@ function status(runtime) {
       ? JSON.parse(trimmed)
       : trimmed.split(/\r?\n/u).map((line) => JSON.parse(line))
     : [];
-  return items.map((item) => ({
+  const services = items.map((item) => ({
     health: item.Health || "none",
     service: item.Service,
     state: item.State,
   })).sort((a, b) => a.service.localeCompare(b.service));
+  const gatewayRunning = services.some((item) =>
+    item.service === "gateway" && item.state.toLowerCase() === "running");
+  const readyProbe = gatewayRunning
+    ? spawnSync(
+      process.execPath,
+      [
+        "--input-type=module",
+        "-e",
+        "const response = await fetch(process.argv[1], { signal: AbortSignal.timeout(3000) }); process.exit(response.status === 200 ? 0 : 1);",
+        `http://127.0.0.1:${runtime.validation.gatewayPort}/healthz`,
+      ],
+      {
+        cwd: ROOT,
+        env: runtime.env,
+        stdio: "ignore",
+      },
+    ).status === 0
+    : false;
+  return {
+    ...evaluateRuntimeStatus(services, { gatewayReady: readyProbe }),
+    services,
+  };
 }
 
 function network(runtime) {
-  const items = status(runtime);
+  const items = status(runtime).services;
   const exposures = [];
   for (const item of items) {
     const container = compose(
@@ -1677,7 +2355,7 @@ function help() {
       `Default config: ${DEFAULT_CONFIG}`,
       "",
       "Process-env secrets are test/rehearsal-only and require --allow-process-env-secrets.",
-      "Restore requires --destructive, --archive, and a verified --pre-restore-backup.",
+      "Restore requires --destructive, --archive, and a new absolute --pre-restore-backup output path.",
     ].join("\n") + "\n",
   );
 }
@@ -1688,12 +2366,14 @@ async function main() {
     help();
     return;
   }
-  const runtime = loadRuntime(args);
+  const runtime = await loadRuntime(args);
   switch (command) {
     case "validate":
       print({
         authority: runtime.validation.authority,
         compose: "valid",
+        remote_jwks_digest: runtime.jwks.digest,
+        remote_jwks_key_count: runtime.jwks.keyCount,
         secret_source: runtime.validation.secretSource,
         status: "PASS",
       });
@@ -1751,7 +2431,13 @@ async function main() {
       }
       break;
     case "status":
-      print({ services: status(runtime), status: "PASS" });
+      {
+        const result = status(runtime);
+        print(result);
+        if (!result.pass) {
+          process.exitCode = 2;
+        }
+      }
       break;
     case "stop":
       compose(runtime, ["stop"]);
@@ -1781,8 +2467,15 @@ async function main() {
         assertRestoreAllowed({
           destructive: hasFlag(args, "--destructive"),
           preRestoreBackupPath: optionValue(args, "--pre-restore-backup"),
-          preRestoreBackupVerified:
-            hasFlag(args, "--pre-restore-backup-verified"),
+          preRestoreBackupAbsent: (() => {
+            const path = optionValue(args, "--pre-restore-backup");
+            return Boolean(
+              path
+              && isAbsolute(path)
+              && !existsSync(resolve(path))
+              && !existsSync(`${resolve(path)}.sha256`),
+            );
+          })(),
         });
         print({
           phases: [

@@ -60,7 +60,7 @@
 | `account-session-generation-foundation` | merged | [ ] |
 | `recipe-visibility-read-hardening` | not activation prerequisite, but generation/image activation predecessor | [ ] |
 | off-Mac backup/rollback rehearsal | required before final cutover | [ ] |
-| storage capacity gate | current evidence pass: target free space 약 120GiB, current DB+Storage 약 4MiB; final 직전 재검증 필요 | [ ] |
+| production capacity gate | disk pass: target free space 약 120GiB, current DB+Storage 약 4MiB. 전체 gate는 swap free `650,840,637` bytes < conservative service peak `907,214,848` bytes로 BLOCKED; headroom 확보와 final 직전 재검증 필요 | [ ] |
 
 ## Backend First Contract
 
@@ -205,7 +205,7 @@
   - Storage object count/bytes/MIME/hash/reference manifest
   - replay idempotency
   - off-Mac encrypted backup evidence schema, key separation recovery, DB+Storage cut line, pre/post-write rollback rehearsal
-  - current capacity evidence: target free space 약 120GiB and current DB+Storage 약 4MiB pass the capacity gate; final preflight revalidates before cutover
+- current disk capacity evidence: target free space 약 120GiB and current DB+Storage 약 4MiB pass the disk gate, but encrypted swap headroom keeps the overall production capacity gate BLOCKED; final preflight revalidates every condition before shadow/cutover
 - external/manual:
   - real Google/Naver/Kakao login
   - Mac reboot/Docker ordered recovery
@@ -267,6 +267,6 @@
 - [ ] `local-shadow` 24시간 safe GET semantic digest mismatch 0을 기록한다 <!-- omo:id=delivery-hybrid-shadow-read;stage=2;scope=shared;review=3,6 -->
 - [ ] final cutover 전 off-Mac encrypted backup evidence schema, restore drill, DB+Storage cut line, key 분리 복구, pre/post-write rollback rehearsal이 있다 <!-- omo:id=delivery-hybrid-backup-restore;stage=2;scope=shared;review=3,6 -->
 - [ ] first local write rollback floor와 no-env-rollback guard가 문서/검증/운영 runbook에 반영된다 <!-- omo:id=delivery-hybrid-rollback-floor;stage=2;scope=shared;review=3,6 -->
-- [ ] current capacity evidence는 target free space 약 120GiB/current DB+Storage 약 4MiB로 gate pass이며 final 직전 재검증을 수행한다 <!-- omo:id=delivery-hybrid-current-capacity-evidence;stage=2;scope=shared;review=3,6 -->
+- [ ] current disk capacity evidence는 target free space 약 120GiB/current DB+Storage 약 4MiB로 pass지만 encrypted swap headroom 부족으로 전체 gate는 BLOCKED다. headroom 확보 후 final 직전 전체 preflight를 통과한다 <!-- omo:id=delivery-hybrid-current-capacity-evidence;stage=2;scope=shared;review=3,6 -->
 - [ ] Google/Naver/Kakao real login 후 local CRUD/Storage smoke가 통과한다 <!-- omo:id=delivery-hybrid-provider-smoke;stage=4;scope=shared;review=6 -->
 - [ ] independent Codex architecture/security review가 blocker 0으로 닫힌다 <!-- omo:id=delivery-hybrid-independent-review;stage=2;scope=shared;review=3,6 -->

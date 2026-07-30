@@ -10,6 +10,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   createGatewayConfig,
   createGatewayRequestHandler,
+  validateConfig,
 } from "@/infra/hybrid-supabase/loopback-gateway.mjs";
 
 const OWNER_UUID = "11111111-1111-4111-8111-111111111111";
@@ -106,6 +107,15 @@ function createConfig(overrides: Record<string, string> = {}) {
 }
 
 describe("hybrid loopback gateway runtime", () => {
+  it("limits the insecure auth fixture escape hatch to explicit local hosts", () => {
+    expect(() => validateConfig(createConfig({
+      AUTH_SUPABASE_URL: "http://attacker.example",
+      AUTH_SUPABASE_EXPECTED_ISSUER: "http://attacker.example/auth/v1",
+      AUTH_SUPABASE_JWKS_URL:
+        "http://attacker.example/auth/v1/.well-known/jwks.json",
+    }))).toThrow("authority configuration is invalid");
+  });
+
   it("reports healthy only after both internal upstreams answer", async () => {
     const fetchImpl = vi.fn(async () => new Response(null, { status: 200 }));
     const handler = createGatewayRequestHandler({
@@ -265,6 +275,16 @@ describe("hybrid loopback gateway runtime", () => {
     );
 
     expect(fetchImpl).toHaveBeenCalledTimes(1);
+    const [, anonymousOptions] = fetchImpl.mock.calls[0] as unknown as [
+      string,
+      { headers: Headers },
+    ];
+    expect(anonymousOptions.headers.get("authorization")).toBe(
+      "Bearer local-anon-jwt-0123456789abcdef0123456789abcdef",
+    );
+    expect(anonymousOptions.headers.get("apikey")).toBe(
+      "local-anon-jwt-0123456789abcdef0123456789abcdef",
+    );
     expect(response.snapshot().statusCode).toBe(200);
   });
 
@@ -309,6 +329,53 @@ describe("hybrid loopback gateway runtime", () => {
     };
     expect(response.snapshot().statusCode).toBe(503);
     expect(body.error.code).toBe("ACCOUNT_LIFECYCLE_MAINTENANCE");
+  });
+
+  it("verifies and forwards the remote bearer for authenticated user requests", async () => {
+    const fixture = createSigningFixture();
+    const token = createToken(fixture);
+    const fetchImpl = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes("/.well-known/jwks.json")) {
+        return new Response(JSON.stringify({ keys: [fixture.publicJwk] }), {
+          status: 200,
+        });
+      }
+      if (url.endsWith("/auth/v1/user")) {
+        return new Response(JSON.stringify({
+          created_at: "2026-07-29T00:00:00.000Z",
+          id: OWNER_UUID,
+        }), { status: 200 });
+      }
+      return new Response(null, { status: 200 });
+    });
+    const handler = createGatewayRequestHandler({
+      config: createConfig(),
+      fetchImpl,
+    });
+    const response = createResponseRecorder();
+
+    await handler(
+      {
+        headers: { authorization: `Bearer ${token}` },
+        method: "GET",
+        url: "http://gateway.internal/rest/v1/users?select=id",
+      },
+      response,
+    );
+
+    const [upstreamUrl, upstreamOptions] =
+      fetchImpl.mock.calls.at(-1) as unknown as [
+        string,
+        { headers: Headers },
+      ];
+    const headers = new Headers(upstreamOptions.headers);
+    expect(upstreamUrl).toBe("http://postgrest:3000/users?select=id");
+    expect(headers.get("authorization")).toBe(`Bearer ${token}`);
+    expect(headers.get("apikey")).toBe(
+      "local-anon-jwt-0123456789abcdef0123456789abcdef",
+    );
+    expect(response.snapshot().statusCode).toBe(200);
   });
 
   it("allows only scoped recipe-image Storage removal through the internal facade", async () => {
