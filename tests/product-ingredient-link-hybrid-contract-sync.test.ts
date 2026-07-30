@@ -94,4 +94,21 @@ describe("product ingredient link hybrid contract lock", () => {
 
     expect(bundle).toContain(target);
   });
+
+  it("keeps the hybrid verifier test in every executable verification projection", () => {
+    const target = "tests/product-ingredient-link-hybrid-verifier.test.ts";
+    const bundle = [
+      read(automationPath),
+      read(workItemPath),
+      read(".workflow-v2/status.json"),
+    ].join("\n");
+
+    expect(bundle).toContain(target);
+    expect(read(readmePath)).toContain("Hybrid verifier implementation evidence");
+    expect(read(readmePath)).toContain("No merged exact-SHA result");
+    expect(read(readmePath)).not.toContain("merged exact-SHA dry-run passed");
+    expect(read(acceptancePath)).toContain(
+      "verifier implementation alone does not satisfy",
+    );
+  });
 });

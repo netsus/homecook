@@ -54,6 +54,7 @@
     ],
     "verify_commands": [
       "pnpm exec vitest run tests/product-ingredient-link-hybrid-contract-sync.test.ts",
+      "pnpm exec vitest run tests/product-ingredient-link-hybrid-verifier.test.ts",
       "pnpm exec vitest run tests/product-ingredient-link-foundation.test.ts tests/product-ingredient-link-routes.test.ts tests/product-ingredient-link-security.test.ts tests/product-ingredient-link-readers.test.ts tests/product-ingredient-link-account-delete.test.ts",
       "pnpm test:product-ingredient-link-foundation:postgres",
       "pnpm verify:backend",
@@ -66,6 +67,7 @@
     ],
     "required_test_targets": [
       "tests/product-ingredient-link-hybrid-contract-sync.test.ts",
+      "tests/product-ingredient-link-hybrid-verifier.test.ts",
       "tests/product-ingredient-link-foundation.test.ts",
       "tests/product-ingredient-link-routes.test.ts",
       "tests/product-ingredient-link-security.test.ts",
@@ -168,5 +170,5 @@
     "backend": 4,
     "frontend": 4
   },
-  "notes": "This is a backend/data foundation with behavior-only Stage 4 regression for existing HOME/PANTRY consumers and no new visual scope. The current official POST /pantry contract accepts ingredient_ids only, shopping rows do not carry product/version provenance, and pantry product/version FK delete behavior is not locked. Those pantry identity/projection/public/direct-add/shopping paths remain unchecked until an approved Contract Evolution. A first small Stage 2 PR may implement only the additive link authority, promotion ACL and fail-closed eligible-link selector without changing pantry_items or public payloads. Link/reader/account-delete/consumer tests, PostgreSQL replay, backend/frontend verification, focused Playwright, and verify-product-ingredient-link-hybrid.mjs are future Stage 2/4/closeout artifacts. Hybrid verification reads local application DB/Storage plus minimal remote Auth exact-epoch/session evidence, requires local auth.users=0, and performs no production/staging/remote application writes. F0 and recipe-visibility-read-hardening are merged predecessors; production activation remains Manual Only."
+  "notes": "This is a backend/data foundation with behavior-only Stage 4 regression for existing HOME/PANTRY consumers and no new visual scope. The current official POST /pantry contract accepts ingredient_ids only, shopping rows do not carry product/version provenance, and pantry product/version FK delete behavior is not locked. Those pantry identity/projection/public/direct-add/shopping paths remain unchecked until an approved Contract Evolution. PR #1236 merged only the additive link authority, promotion ACL and fail-closed eligible-link selector without changing pantry_items or public payloads. The hybrid verifier follow-up is implemented test-first and reads local application DB/Storage plus strict sanitized remote Auth exact-epoch/session evidence, requires local auth.users=0, accepts a clean exact HEAD already merged into origin/master, and performs no production/staging/remote application writes. Its full merged-SHA local/remote evidence, deferred link/reader/account-delete/consumer tests, frontend verification and focused Playwright remain pending. F0 and recipe-visibility-read-hardening are merged predecessors; production activation remains Manual Only."
 }

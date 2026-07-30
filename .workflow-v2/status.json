@@ -2301,6 +2301,7 @@
         "node scripts/validate-automation-spec.mjs --slice product-ingredient-link-foundation",
         "pnpm validate:omo-bookkeeping",
         "pnpm exec vitest run tests/product-ingredient-link-hybrid-contract-sync.test.ts",
+        "pnpm exec vitest run tests/product-ingredient-link-hybrid-verifier.test.ts",
         "pnpm exec vitest run tests/product-ingredient-link-foundation.test.ts tests/product-ingredient-link-routes.test.ts tests/product-ingredient-link-security.test.ts tests/product-ingredient-link-readers.test.ts tests/product-ingredient-link-account-delete.test.ts",
         "pnpm test:product-ingredient-link-foundation:postgres",
         "pnpm verify:backend",
