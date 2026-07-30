@@ -279,11 +279,18 @@ function collectCommonJsRequireCalls(sourceFile) {
     rootNames: [fileName],
   }).getTypeChecker();
   const freeRequire = Symbol("free-commonjs-require");
+  const hasRuntimeDeclaration = (symbol) => symbol?.declarations?.some(
+    (declaration) => (
+      !declaration.getSourceFile().isDeclarationFile
+      && !(ts.getCombinedModifierFlags(declaration) & ts.ModifierFlags.Ambient)
+      && !ts.isTypeOnlyImportOrExportDeclaration(declaration)
+    ),
+  );
   const resolveIdentifier = (identifier) => {
     const symbol = checker.getSymbolAtLocation(identifier);
     if (
       identifier.text === "require"
-      && (!symbol || !symbol.declarations?.length)
+      && !hasRuntimeDeclaration(symbol)
     ) {
       return freeRequire;
     }
