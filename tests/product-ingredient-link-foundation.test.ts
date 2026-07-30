@@ -59,7 +59,7 @@ describe("product ingredient link foundation", () => {
       /insert into public\.food_product_ingredient_links[\s\S]*'pending'[\s\S]*false[\s\S]*false[\s\S]*returning id into v_candidate_id/i,
     );
     expect(sql).toMatch(
-      /provenance_json::text ~\*[\s\S]*owner[\s\S]*email[\s\S]*session[\s\S]*raw\[_-\]\?provider/i,
+      /jsonb_object_keys\(p_provenance_json\)[\s\S]*algorithm_version[\s\S]*candidate_rank[\s\S]*evidence_codes/i,
     );
     expect(sql).toMatch(
       /create(?: or replace)? function public\.select_food_product_effective_ingredient\([\s\S]*p_product_id uuid[\s\S]*p_requesting_user_id uuid[\s\S]*\)[\s\S]*returns uuid[\s\S]*language plpgsql[\s\S]*stable[\s\S]*security definer[\s\S]*set search_path = pg_catalog, public, pg_temp/i,

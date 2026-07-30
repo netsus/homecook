@@ -86,9 +86,63 @@ begin
       using errcode = '22023';
   end if;
 
-  if p_provenance_json::text ~* '"(owner(_id|_uuid)?|email|session|jwt|api[_-]?key|secret|token|raw[_-]?provider[_-]?payload)"[[:space:]]*:'
+  if exists (
+    select 1
+    from jsonb_object_keys(p_provenance_json) as provenance_key
+    where provenance_key not in (
+      'algorithm_version',
+      'candidate_rank',
+      'evidence_codes'
+    )
+  )
   then
-    raise exception 'food product ingredient link provenance contains a forbidden key'
+    raise exception 'food product ingredient link provenance contains an unsupported key or value'
+      using errcode = '22023';
+  end if;
+
+  if p_provenance_json ? 'algorithm_version'
+    and (
+      jsonb_typeof(p_provenance_json -> 'algorithm_version') <> 'string'
+      or (p_provenance_json ->> 'algorithm_version')
+        !~ '^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$'
+    )
+  then
+    raise exception 'food product ingredient link provenance contains an unsupported key or value'
+      using errcode = '22023';
+  end if;
+
+  if p_provenance_json ? 'candidate_rank'
+    and (
+      jsonb_typeof(p_provenance_json -> 'candidate_rank') <> 'number'
+      or (p_provenance_json ->> 'candidate_rank') !~ '^[0-9]{1,9}$'
+    )
+  then
+    raise exception 'food product ingredient link provenance contains an unsupported key or value'
+      using errcode = '22023';
+  end if;
+
+  if p_provenance_json ? 'evidence_codes'
+    and jsonb_typeof(p_provenance_json -> 'evidence_codes') <> 'array'
+  then
+    raise exception 'food product ingredient link provenance contains an unsupported key or value'
+      using errcode = '22023';
+  end if;
+
+  if p_provenance_json ? 'evidence_codes'
+    and (
+      jsonb_array_length(p_provenance_json -> 'evidence_codes') > 32
+      or exists (
+        select 1
+        from jsonb_array_elements(
+          p_provenance_json -> 'evidence_codes'
+        ) as evidence_code
+        where jsonb_typeof(evidence_code) <> 'string'
+          or (evidence_code #>> '{}')
+            !~ '^[A-Za-z0-9][A-Za-z0-9._:-]{0,63}$'
+      )
+    )
+  then
+    raise exception 'food product ingredient link provenance contains an unsupported key or value'
       using errcode = '22023';
   end if;
 

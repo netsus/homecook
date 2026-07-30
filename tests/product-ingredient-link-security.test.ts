@@ -63,16 +63,17 @@ describe("product ingredient link security boundary", () => {
     expect(selector).not.toMatch(/name|brand|ingredient_synonyms|order by/i);
   });
 
-  it("rejects sensitive provenance keys before candidate insertion", () => {
+  it("accepts only a compact non-identifying provenance allowlist", () => {
     const candidateWriter = migration.match(
       /create or replace function public\.create_food_product_ingredient_link_candidate[\s\S]*?\$function\$;/i,
     )?.[0];
 
     expect(candidateWriter).toBeDefined();
     expect(candidateWriter).toMatch(
-      /provenance_json::text ~\*[\s\S]*owner[\s\S]*email[\s\S]*session[\s\S]*raw\[_-\]\?provider/i,
+      /jsonb_object_keys\(p_provenance_json\)[\s\S]*algorithm_version[\s\S]*candidate_rank[\s\S]*evidence_codes/i,
     );
-    expect(candidateWriter).toMatch(/forbidden key[\s\S]*22023/i);
+    expect(candidateWriter).toMatch(/unsupported key or value[\s\S]*22023/i);
+    expect(candidateWriter).not.toMatch(/provenance_json::text ~\*/i);
   });
 
   it("does not add user identity or provider-secret columns to link authority", () => {

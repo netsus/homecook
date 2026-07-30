@@ -2290,7 +2290,7 @@
       "id": "product-ingredient-link-foundation",
       "preset": "vertical-slice-strict",
       "branch": "feature/be-product-ingredient-link-foundation",
-      "pr_path": "pending",
+      "pr_path": "https://github.com/netsus/homecook/pull/1236",
       "lifecycle": "in_progress",
       "approval_state": "not_started",
       "verification_status": "pending",

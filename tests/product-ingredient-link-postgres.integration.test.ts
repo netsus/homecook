@@ -245,7 +245,13 @@ function createCandidate(options: {
       '${options.ingredientId}',
       '${options.relation ?? "represents"}',
       'integration-fixture',
-      ${jsonSql(options.provenance ?? { mode: databaseMode })}
+      ${jsonSql(
+        options.provenance ?? {
+          algorithm_version: `integration-${databaseMode}`,
+          candidate_rank: 1,
+          evidence_codes: ["fixture"],
+        },
+      )}
     )::text;
   `));
 }
@@ -361,7 +367,19 @@ describe.runIf(enabled)(
             '{"nested":{"email":"must-not-persist@example.test"}}'::jsonb
           );
         `),
-        /provenance contains a forbidden key/i,
+        /provenance contains an unsupported key or value/i,
+      );
+      expectSqlFailure(
+        serviceSql(`
+          select public.create_food_product_ingredient_link_candidate(
+            '${product.id}',
+            '${ingredientId}',
+            'represents',
+            'integration-fixture',
+            '{"authorization":"Bearer must-not-persist"}'::jsonb
+          );
+        `),
+        /provenance contains an unsupported key or value/i,
       );
 
       psql(serviceSql(`
