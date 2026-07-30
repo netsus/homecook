@@ -1,0 +1,8 @@
+**
+!infra/
+!infra/hybrid-supabase/
+!infra/hybrid-supabase/loopback-gateway.mjs
+!lib/
+!lib/server/
+!lib/server/hybrid-auth/
+!lib/server/hybrid-auth/public-read-policy-runtime.mjs

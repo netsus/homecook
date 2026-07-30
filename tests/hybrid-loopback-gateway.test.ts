@@ -91,6 +91,8 @@ function createConfig(overrides: Record<string, string> = {}) {
     AUTH_SUPABASE_EXPECTED_ISSUER: ISSUER,
     AUTH_SUPABASE_JWKS_URL: `${ISSUER}/.well-known/jwks.json`,
     AUTH_SUPABASE_PUBLISHABLE_KEY: "publishable",
+    DATA_SUPABASE_PUBLISHABLE_KEY:
+      "local-anon-jwt-0123456789abcdef0123456789abcdef",
     DATA_SUPABASE_SECRET_KEY: "0123456789abcdef0123456789abcdef",
     HOMECOOK_SESSION_ATTESTATION_HMAC_KEY_V1:
       "0123456789abcdef0123456789abcdef",
@@ -104,6 +106,134 @@ function createConfig(overrides: Record<string, string> = {}) {
 }
 
 describe("hybrid loopback gateway runtime", () => {
+  it("reports healthy only after both internal upstreams answer", async () => {
+    const fetchImpl = vi.fn(async () => new Response(null, { status: 200 }));
+    const handler = createGatewayRequestHandler({
+      config: createConfig(),
+      fetchImpl,
+    });
+    const response = createResponseRecorder();
+
+    await handler(
+      {
+        headers: {},
+        method: "GET",
+        url: "http://gateway.internal/healthz",
+      },
+      response,
+    );
+
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+    expect(response.snapshot().statusCode).toBe(200);
+    expect(JSON.parse(response.snapshot().body)).toEqual({
+      status: "healthy",
+    });
+  });
+
+  it("keeps health and public reads fail closed before upstream readiness", async () => {
+    const healthFetch = vi.fn(async (input: RequestInfo | URL) =>
+      new Response(null, {
+        status: String(input).endsWith("/status") ? 503 : 200,
+      }));
+    const healthHandler = createGatewayRequestHandler({
+      config: createConfig(),
+      fetchImpl: healthFetch,
+    });
+    const healthResponse = createResponseRecorder();
+
+    await healthHandler(
+      {
+        headers: {},
+        method: "GET",
+        url: "http://gateway.internal/healthz",
+      },
+      healthResponse,
+    );
+
+    expect(healthResponse.snapshot().statusCode).toBe(503);
+    expect(JSON.parse(healthResponse.snapshot().body)).toEqual({
+      status: "unhealthy",
+    });
+
+    const publicHandler = createGatewayRequestHandler({
+      config: createConfig({ HYBRID_GATEWAY_REQUIRE_READY: "1" }),
+      fetchImpl: vi.fn(async (input: RequestInfo | URL) =>
+        new Response(null, {
+          status: String(input).endsWith("/status") ? 503 : 200,
+        })),
+    });
+    const publicResponse = createResponseRecorder();
+
+    await publicHandler(
+      {
+        headers: { "x-homecook-public-read-scope": "ingredients" },
+        method: "GET",
+        url: "http://gateway.internal/rest/v1/ingredients?select=id%2Cstandard_name%2Ccategory%2Ccategory_code&order=standard_name.asc",
+      },
+      publicResponse,
+    );
+
+    const body = JSON.parse(publicResponse.snapshot().body) as {
+      error: { code: string };
+    };
+    expect(publicResponse.snapshot().statusCode).toBe(503);
+    expect(body.error.code).toBe("ACCOUNT_LIFECYCLE_MAINTENANCE");
+
+    const userResponse = createResponseRecorder();
+    await publicHandler(
+      {
+        headers: { authorization: "Bearer user-token-before-ready" },
+        method: "GET",
+        url: "http://gateway.internal/rest/v1/users?select=id",
+      },
+      userResponse,
+    );
+    expect(userResponse.snapshot().statusCode).toBe(503);
+    expect(JSON.parse(userResponse.snapshot().body)).toMatchObject({
+      error: { code: "ACCOUNT_LIFECYCLE_MAINTENANCE" },
+    });
+  });
+
+  it("requires an attested local anon read before production readiness", async () => {
+    const fetchImpl = vi.fn(async () => new Response(null, { status: 200 }));
+    const handler = createGatewayRequestHandler({
+      config: createConfig({ HYBRID_GATEWAY_REQUIRE_READY: "1" }),
+      fetchImpl,
+    });
+    const response = createResponseRecorder();
+
+    await handler(
+      {
+        headers: {},
+        method: "GET",
+        url: "http://gateway.internal/healthz",
+      },
+      response,
+    );
+
+    expect(response.snapshot().statusCode).toBe(200);
+    expect(fetchImpl).toHaveBeenCalledTimes(3);
+    const [url, options] = fetchImpl.mock.calls[2] as unknown as [
+      string,
+      { headers: Headers },
+    ];
+    expect(url).toBe(
+      "http://postgrest:3000/ingredients?select=id&limit=0",
+    );
+    expect(options.headers.get("authorization")).toBe(
+      "Bearer local-anon-jwt-0123456789abcdef0123456789abcdef",
+    );
+    expect(options.headers.get("apikey")).toBe(
+      "local-anon-jwt-0123456789abcdef0123456789abcdef",
+    );
+    expect(
+      options.headers.get("x-homecook-session-attestation"),
+    ).toBeTruthy();
+    expect(
+      options.headers.get("x-homecook-session-attestation-signature"),
+    ).toMatch(/^[0-9a-f]{64}$/u);
+  });
+
   it("allows exact anon GET paths without remote auth", async () => {
     const fixture = createSigningFixture();
     const fetchImpl = vi.fn(async (input: RequestInfo | URL) => {

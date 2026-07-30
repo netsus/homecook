@@ -142,8 +142,13 @@ export function createGatewayConfig(env = process.env) {
     issuer: requiredEnv(env, "AUTH_SUPABASE_EXPECTED_ISSUER"),
     jwksUrl: requiredEnv(env, "AUTH_SUPABASE_JWKS_URL"),
     authPublishableKey: requiredEnv(env, "AUTH_SUPABASE_PUBLISHABLE_KEY"),
+    dataPublishableKey:
+      env.DATA_SUPABASE_PUBLISHABLE_KEY?.trim() ?? "",
     dataSecretKey: requiredEnv(env, "DATA_SUPABASE_SECRET_KEY"),
     postgrestUrl: requiredEnv(env, "POSTGREST_UPSTREAM_URL").replace(/\/+$/, ""),
+    postgrestHealthUrl:
+      env.POSTGREST_HEALTH_URL?.trim()
+      || `${requiredEnv(env, "POSTGREST_UPSTREAM_URL").replace(/\/+$/, "")}/`,
     storageUrl: requiredEnv(env, "STORAGE_UPSTREAM_URL").replace(/\/+$/, ""),
     attestationSecret: requiredEnv(
       env,
@@ -153,6 +158,8 @@ export function createGatewayConfig(env = process.env) {
       env,
       "HOMECOOK_SESSION_GENERATION_HMAC_KEY_V1",
     ),
+    requireReady:
+      String(env.HYBRID_GATEWAY_REQUIRE_READY ?? "") === "1",
     upstreamTimeoutMs: Number(env.HYBRID_GATEWAY_TIMEOUT_MS ?? "3000"),
     port: Number(env.GATEWAY_PORT ?? "8080"),
   };
@@ -174,6 +181,7 @@ export function validateConfig(config) {
     || jwks.hash
     || Buffer.byteLength(config.attestationSecret) < 32
     || Buffer.byteLength(config.bindingSecret) < 32
+    || (config.requireReady && !config.dataPublishableKey)
     || !Number.isFinite(config.upstreamTimeoutMs)
     || config.upstreamTimeoutMs < 100
   ) {
@@ -749,6 +757,45 @@ function forwardResponse(response, upstreamResponse) {
   }
 }
 
+async function probeGatewayHealth(config, fetchImpl) {
+  try {
+    const probes = [
+      fetchImpl(config.postgrestHealthUrl, {
+        signal: timeoutSignal(config.upstreamTimeoutMs),
+      }),
+      fetchImpl(`${config.storageUrl}/status`, {
+        signal: timeoutSignal(config.upstreamTimeoutMs),
+      }),
+    ];
+    if (config.requireReady) {
+      const proof = systemAttestation({
+        kind: "anonymous",
+        scope: "ingredients",
+        method: "GET",
+        path: "/ingredients",
+        now: Math.floor(Date.now() / 1_000),
+        config,
+      });
+      probes.push(fetchImpl(
+        `${config.postgrestUrl}/ingredients?select=id&limit=0`,
+        {
+          headers: new Headers({
+            apikey: config.dataPublishableKey,
+            authorization: `Bearer ${config.dataPublishableKey}`,
+            "x-homecook-session-attestation": proof.payload,
+            "x-homecook-session-attestation-signature": proof.signature,
+          }),
+          signal: timeoutSignal(config.upstreamTimeoutMs),
+        },
+      ));
+    }
+    const responses = await Promise.all(probes);
+    return responses.every((response) => response.ok);
+  } catch {
+    return false;
+  }
+}
+
 /**
  * @param {{
  *   config?: ReturnType<typeof createGatewayConfig>,
@@ -765,6 +812,33 @@ export function createGatewayRequestHandler({
   return async (request, response) => {
     try {
       const requestUrl = new URL(request.url ?? "/", "http://gateway.internal");
+      if (
+        request.method === "GET"
+        && requestUrl.pathname === "/healthz"
+        && requestUrl.search === ""
+      ) {
+        const healthy = await probeGatewayHealth(resolvedConfig, fetchImpl);
+        response.writeHead(healthy ? 200 : 503, {
+          "cache-control": "no-store",
+          "content-type": "application/json",
+        });
+        response.end(JSON.stringify({
+          status: healthy ? "healthy" : "unhealthy",
+        }));
+        return;
+      }
+      if (
+        resolvedConfig.requireReady
+        && !await probeGatewayHealth(resolvedConfig, fetchImpl)
+      ) {
+        writePublicError(
+          response,
+          503,
+          "ACCOUNT_LIFECYCLE_MAINTENANCE",
+          "잠시 후 다시 시도해 주세요.",
+        );
+        return;
+      }
       const upstream = upstreamFor(requestUrl.pathname, resolvedConfig);
       if (!upstream) {
         response.writeHead(404);

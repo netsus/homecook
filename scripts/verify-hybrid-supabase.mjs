@@ -44,12 +44,37 @@ const commands = {
   "isolated-runtime-measured": [
     ["pnpm", ["test:hybrid-supabase:runtime"]],
   ],
+  "production-runtime-artifacts": [
+    ["pnpm", ["vitest", "run", "tests/hybrid-production-runtime.test.ts"]],
+    ["node", ["--check", "scripts/lib/hybrid-production-runtime.mjs"]],
+    ["node", ["--check", "scripts/verify-hybrid-production-artifacts.mjs"]],
+    ["node", ["scripts/verify-hybrid-production-artifacts.mjs"]],
+  ],
+  "production-runtime-docker": [
+    ["pnpm", ["test:hybrid-production:runtime"]],
+  ],
+  "backup-restore-dry-run": [
+    ["node", ["scripts/verify-hybrid-production-artifacts.mjs"]],
+  ],
+  "ordered-recovery-dry-run": [
+    ["node", ["scripts/verify-hybrid-production-artifacts.mjs"]],
+  ],
+  "capacity-preflight-dry-run": [
+    ["node", ["scripts/verify-hybrid-production-artifacts.mjs"]],
+  ],
+  "network-loopback-fixture": [
+    ["node", ["scripts/verify-hybrid-production-artifacts.mjs"]],
+  ],
+  "backup-rollback-rehearsal": [
+    ["pnpm", ["test:hybrid-production:runtime"]],
+  ],
 };
 const manualOnlyModes = new Set([
-  "two-system-maintenance-barrier",
-  "backup-rollback-rehearsal",
   "capacity-final-preflight",
+  "two-system-maintenance-barrier",
+  "mac-reboot-ordered-recovery-live",
   "shadow-read",
+  "final-cutover",
 ]);
 
 if (!mode) {
@@ -90,14 +115,39 @@ for (const [command, args] of commands[mode]) {
   }
 }
 
+function evidenceScopeForMode(selectedMode) {
+  if (selectedMode === "migration-rehearsal") {
+    return "isolated-container-transaction";
+  }
+  if (selectedMode === "isolated-runtime-measured") {
+    return "isolated-container-measured-runtime";
+  }
+  if (
+    [
+      "backup-restore-dry-run",
+      "ordered-recovery-dry-run",
+      "capacity-preflight-dry-run",
+      "network-loopback-fixture",
+      "production-runtime-artifacts",
+    ].includes(selectedMode)
+  ) {
+    return "deterministic-production-artifact-dry-run";
+  }
+  if (
+    [
+      "backup-rollback-rehearsal",
+      "production-runtime-docker",
+    ].includes(selectedMode)
+  ) {
+    return "isolated-production-docker-runtime";
+  }
+  return "deterministic-static-unit";
+}
+
 process.stdout.write(`${JSON.stringify({
   mode,
   status: "PASS",
-  evidence_scope: mode === "migration-rehearsal"
-    ? "isolated-container-transaction"
-    : mode === "isolated-runtime-measured"
-      ? "isolated-container-measured-runtime"
-    : "deterministic-static-unit",
+  evidence_scope: evidenceScopeForMode(mode),
   production_writes: 0,
   cutover_writes: 0,
 })}\n`);
