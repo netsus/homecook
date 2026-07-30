@@ -154,6 +154,19 @@ describe("hybrid authority AST/static gate", () => {
       "components/dynamic-binding-client.tsx",
       "components/dynamic-binding-client.tsx",
       "components/dynamic-binding-client.tsx",
+      "components/dynamic-unknown-sdk-client.tsx",
+      "components/dynamic-unknown-sdk-client.tsx",
+      "components/dynamic-unknown-sdk-client.tsx",
+      "components/dynamic-unknown-sdk-client.tsx",
+      "components/dynamic-unknown-sdk-client.tsx",
+      "components/dynamic-unknown-sdk-client.tsx",
+      "components/live-binding-client.tsx",
+      "components/live-binding-client.tsx",
+      "components/live-binding-client.tsx",
+      "components/live-binding-client.tsx",
+      "components/live-binding-client.tsx",
+      "components/live-binding-client.tsx",
+      "components/live-binding-client.tsx",
       "features/unsafe.mjs",
       "lib/api/dynamic-sdk-alias.mjs",
       "lib/api/raw-delete.ts",
@@ -176,12 +189,24 @@ describe("hybrid authority AST/static gate", () => {
       expect.arrayContaining([
         "components/dynamic-client.tsx",
         "components/dynamic-binding-client.tsx",
+        "components/dynamic-unknown-sdk-client.tsx",
+        "components/live-binding-client.tsx",
+        "components/live-binding-safe-client.tsx",
         "components/safe-dynamic-client.tsx",
         "lib/api/complex/index.ts",
         "lib/api/cycle-a.ts",
         "lib/api/cycle-b.ts",
         "lib/api/fetch-barrel.ts",
         "lib/api/fetch-transport.ts",
+        "lib/api/computed-tools.ts",
+        "lib/api/live-barrel.ts",
+        "lib/api/live-conditional.ts",
+        "lib/api/live-dynamic-barrel.ts",
+        "lib/api/live-destructure.ts",
+        "lib/api/live-mutation.ts",
+        "lib/api/live-safe.ts",
+        "lib/api/live-unknown.ts",
+        "lib/api/live-update.ts",
         "lib/api/non-fetch-helper.ts",
         "lib/api/safe-dynamic-helper.ts",
         "lib/api/sdk-barrel.ts",
@@ -189,6 +214,7 @@ describe("hybrid authority AST/static gate", () => {
         "lib/api/sdk-transport.ts",
         "stores/aliased-rest.ts",
         "stores/imported-fetch.ts",
+        "stores/live-binding-store.ts",
         "stores/safe-imported-helper.ts",
         "stores/sdk-patterns.ts",
         "stores/sdk-store.ts",
@@ -218,6 +244,16 @@ describe("hybrid authority AST/static gate", () => {
     ).toHaveLength(6);
     expect(
       inventory.browserDirectStoragePaths.filter(
+        (entry) => entry.file === "components/dynamic-unknown-sdk-client.tsx",
+      ),
+    ).toHaveLength(6);
+    expect(
+      inventory.browserDirectStoragePaths.filter(
+        (entry) => entry.file === "components/live-binding-client.tsx",
+      ),
+    ).toHaveLength(7);
+    expect(
+      inventory.browserDirectStoragePaths.filter(
         (entry) => entry.file === "stores/sdk-patterns.ts",
       ),
     ).toHaveLength(3);
@@ -225,6 +261,13 @@ describe("hybrid authority AST/static gate", () => {
       expect.arrayContaining([
         expect.objectContaining({
           file: "components/safe-dynamic-client.tsx",
+        }),
+      ]),
+    );
+    expect(inventory.browserDirectStoragePaths).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          file: "components/live-binding-safe-client.tsx",
         }),
       ]),
     );

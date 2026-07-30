@@ -8,3 +8,9 @@ export async function inspectThroughSafeDynamicHelper() {
   );
   inspectStorageRequest(STORAGE_OBJECT_URL, { method: "DELETE" });
 }
+
+export function removeThroughSafeDynamicHelper() {
+  return import("../lib/api/safe-dynamic-helper").then(
+    (loaded) => loaded.remove(["safe.png"]),
+  );
+}

@@ -19,6 +19,7 @@ const STORAGE_NAMESPACE_VALUE = Symbol("storage-namespace");
 const STORAGE_FROM_VALUE = Symbol("storage-from");
 const STORAGE_BUCKET_VALUE = Symbol("storage-bucket");
 const STORAGE_MUTATOR_VALUE = Symbol("storage-mutator");
+const DYNAMIC_MODULE_NAMESPACE_VALUE = Symbol("dynamic-module-namespace");
 const DYNAMIC_IMPORT_REGISTRY = Symbol("dynamic-import-registry");
 const CONTROL_FLOW_TAINT = Symbol("control-flow-taint");
 const BINDING_INITIALIZED = "initialized";
@@ -28,6 +29,7 @@ const VALUE_SET_LIMIT = 32;
 const EXCEPTION_OUTCOME_LIMIT = 64;
 const SDK_MUTATION_METHODS = new Set([
   "copy",
+  "createSignedUploadUrl",
   "delete",
   "move",
   "remove",
@@ -84,6 +86,13 @@ function valueFromDescriptor(descriptor) {
   if (
     descriptor
     && typeof descriptor === "object"
+    && descriptor.kind === "constant"
+  ) {
+    return knownValue(String(descriptor.value));
+  }
+  if (
+    descriptor
+    && typeof descriptor === "object"
     && descriptor.kind === "union"
     && Array.isArray(descriptor.values)
   ) {
@@ -115,6 +124,12 @@ function valueFromDescriptor(descriptor) {
   if (descriptor === "unknown-storage-mutator") {
     return mergeValues(
       knownValue(STORAGE_MUTATOR_VALUE),
+      unknownValue(),
+    );
+  }
+  if (descriptor === "unknown-module-namespace") {
+    return mergeValues(
+      knownValue(DYNAMIC_MODULE_NAMESPACE_VALUE),
       unknownValue(),
     );
   }
@@ -479,6 +494,12 @@ function resolveMemberValue(expression, bindings) {
       ) {
         values.push(knownValue(STORAGE_MUTATOR_VALUE));
       }
+      if (
+        knownOwner === DYNAMIC_MODULE_NAMESPACE_VALUE
+        && SDK_MUTATION_METHODS.has(propertyName)
+      ) {
+        values.push(knownValue(STORAGE_MUTATOR_VALUE));
+      }
     }
   }
 
@@ -594,6 +615,7 @@ function resolveStaticValue(node, bindings) {
       const registry = bindings.get(DYNAMIC_IMPORT_REGISTRY);
       const importedValues = [];
       let importedUnknown = specifier.unknown || !registry;
+      let matchedRegistryEntry = false;
       if (registry) {
         for (const knownSpecifier of specifier.known) {
           if (typeof knownSpecifier !== "string") {
@@ -601,9 +623,16 @@ function resolveStaticValue(node, bindings) {
             continue;
           }
           const imported = valueForProperty(registry, knownSpecifier);
-          importedValues.push(imported);
-          importedUnknown ||= imported.unknown;
+          if (imported.known.size > 0) {
+            matchedRegistryEntry = true;
+            importedValues.push(imported);
+            importedUnknown ||= imported.unknown;
+          }
         }
+      }
+      if (!matchedRegistryEntry) {
+        importedValues.push(knownValue(DYNAMIC_MODULE_NAMESPACE_VALUE));
+        importedUnknown = true;
       }
       return importedValues.length > 0
         ? mergeValues(
@@ -731,6 +760,13 @@ function valueForProperty(value, propertyName) {
     }
     if (
       known === STORAGE_BUCKET_VALUE
+      && SDK_MUTATION_METHODS.has(propertyName)
+    ) {
+      values.push(knownValue(STORAGE_MUTATOR_VALUE));
+      continue;
+    }
+    if (
+      known === DYNAMIC_MODULE_NAMESPACE_VALUE
       && SDK_MUTATION_METHODS.has(propertyName)
     ) {
       values.push(knownValue(STORAGE_MUTATOR_VALUE));
@@ -1567,7 +1603,23 @@ function findStorageRestFetches(
           ? resolveStaticValue(node.right, inheritedBindings)
           : unknownValue();
         const target = unwrapExpression(node.left);
+        const previousTargetValue = ts.isIdentifier(target)
+          ? inheritedBindings.get(target.text)
+          : null;
         if (assignAssignmentPattern(target, nextValue, inheritedBindings)) {
+          if (
+            ts.isIdentifier(target)
+            && nextValue.unknown
+            && previousTargetValue
+          ) {
+            inheritedBindings.set(
+              target.text,
+              mergeValues(
+                previousTargetValue,
+                nextValue,
+              ),
+            );
+          }
           return;
         }
         if (
@@ -1668,6 +1720,60 @@ function findStorageRestFetches(
           kind: "supabase-storage-rest",
           snippet: node.getText(sourceFile).slice(0, 240),
         });
+      }
+
+      const calleeExpression = unwrapExpression(node.expression);
+      const isThenCall = (
+        (
+          ts.isPropertyAccessExpression(calleeExpression)
+          && calleeExpression.name.text === "then"
+        )
+        || (
+          ts.isElementAccessExpression(calleeExpression)
+          && calleeExpression.argumentExpression
+          && resolvePropertyNames(
+            calleeExpression.argumentExpression,
+            inheritedBindings,
+          ).known.has("then")
+        )
+      );
+      const callback = node.arguments[0]
+        ? unwrapExpression(node.arguments[0])
+        : null;
+      if (
+        isThenCall
+        && callback
+        && (
+          ts.isArrowFunction(callback)
+          || ts.isFunctionExpression(callback)
+        )
+      ) {
+        const moduleValue = resolveStaticValue(
+          calleeExpression.expression,
+          inheritedBindings,
+        );
+        const callbackBindings = new Map(inheritedBindings);
+        for (let index = 0; index < callback.parameters.length; index += 1) {
+          assignBindingPattern(
+            callback.parameters[index].name,
+            index === 0 ? moduleValue : unknownValue(),
+            callbackBindings,
+          );
+        }
+        const suspendedCollectors = exceptionCollectors.splice(0);
+        try {
+          visit(callback.body, callbackBindings);
+        } finally {
+          exceptionCollectors.push(...suspendedCollectors);
+        }
+        visit(node.expression, inheritedBindings);
+        for (const argument of node.arguments.slice(1)) {
+          visit(argument, inheritedBindings);
+        }
+        if (potentiallyThrowing) {
+          captureExceptionalOutcome(inheritedBindings);
+        }
+        return;
       }
     }
 

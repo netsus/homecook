@@ -6,3 +6,7 @@ export function inspectStorageRequest(
   void _options;
   return "safe";
 }
+
+export function remove(paths: string[]) {
+  return paths.length;
+}

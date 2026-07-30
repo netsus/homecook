@@ -91,6 +91,10 @@ describe("hybrid built browser bundle canary", () => {
     "let remove;const bucket=client.storage.from('recipe-images');[remove]=[bucket.remove];remove(['unsafe.png'])",
     "const bucket=client.storage.from('recipe-images');[bucket.remove][0](['unsafe.png'])",
     "const bucket=client.storage.from('recipe-images'),methods=[bucket.remove],remove=methods[0];remove(['unsafe.png'])",
+    "async function run(specifier){const module=await import(specifier);module.remove(['unsafe.png'])}",
+    "async function run(specifier){const {upload}=await import(specifier);upload('unsafe.png',file)}",
+    "async function run(specifier){const module=await import(specifier),update=module.update;update('unsafe.png',file)}",
+    "import('./storage-module.js').then(module=>module.createSignedUploadUrl('unsafe.png'))",
     "const storageUrl='/storage/v1/object/recipe-images/unsafe.png';let method='DELETE';ready&&(method='GET');fetch(storageUrl,{method})",
     "const storageUrl='/storage/v1/object/recipe-images/unsafe.png';let method='DELETE';ready||(method='GET');fetch(storageUrl,{method})",
     "const storageUrl='/storage/v1/object/recipe-images/unsafe.png';let method='DELETE';ready??(method='GET');fetch(storageUrl,{method})",
@@ -242,6 +246,22 @@ describe("hybrid built browser bundle canary", () => {
         path.join(bundleRoot, "unknown-head-safe.min.js"),
         "mystery('/storage/v1/object/x',{method:'HEAD'})",
       );
+      fs.writeFileSync(
+        path.join(bundleRoot, "dynamic-namespace.min.js"),
+        "async function f(x){const m=await import(x);m.remove(['x'])}",
+      );
+      fs.writeFileSync(
+        path.join(bundleRoot, "dynamic-destructure.min.js"),
+        "async function f(x){const{upload:u}=await import(x);u('x',b)}",
+      );
+      fs.writeFileSync(
+        path.join(bundleRoot, "dynamic-then.min.js"),
+        "import(x).then(m=>m.update('x',b))",
+      );
+      fs.writeFileSync(
+        path.join(bundleRoot, "dynamic-literal.min.js"),
+        "import('./x.js').then(m=>m.createSignedUploadUrl('x'))",
+      );
 
       expect(inspectBrowserBundle(bundleRoot)).toEqual(
         expect.arrayContaining(
@@ -291,10 +311,26 @@ describe("hybrid built browser bundle canary", () => {
               file: "sdk-array.min.js",
               kind: "supabase-storage-sdk",
             }),
+            expect.objectContaining({
+              file: "dynamic-destructure.min.js",
+              kind: "supabase-storage-sdk",
+            }),
+            expect.objectContaining({
+              file: "dynamic-literal.min.js",
+              kind: "supabase-storage-sdk",
+            }),
+            expect.objectContaining({
+              file: "dynamic-namespace.min.js",
+              kind: "supabase-storage-sdk",
+            }),
+            expect.objectContaining({
+              file: "dynamic-then.min.js",
+              kind: "supabase-storage-sdk",
+            }),
           ]),
         ),
       );
-      expect(inspectBrowserBundle(bundleRoot)).toHaveLength(32);
+      expect(inspectBrowserBundle(bundleRoot)).toHaveLength(36);
     } finally {
       fs.rmSync(bundleRoot, { recursive: true, force: true });
     }
@@ -342,6 +378,8 @@ describe("hybrid built browser bundle canary", () => {
     "mystery('/storage/v1/object/x',{method:'GET'})",
     "mystery('/storage/v1/object/x',{method:'HEAD'})",
     "const bucket=client.storage.from('recipe-images'),methods=[function inspect(){}];methods[0](['safe.png'])",
+    "const bundled={remove:function safeRemove(){}};bundled.remove(['safe.png'])",
+    "const unrelated=getCollection();unrelated.remove('safe.png')",
   ])("does not flag a non-mutation canary: %s", (source) => {
     expect(findBrowserBundleStorageMutations(source)).toEqual([]);
   });
