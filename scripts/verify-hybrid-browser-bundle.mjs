@@ -14,6 +14,8 @@ const STORAGE_REST_MUTATION_METHODS = new Set([
   "PUT",
 ]);
 const STORAGE_REST_PATH = "/storage/v1/object/";
+const FETCH_VALUE = Symbol("fetch");
+const UNKNOWN_VALUE = Symbol("unknown");
 
 function findPatternMatches(source, kind, pattern) {
   return [...source.matchAll(pattern)].map((match) => ({
@@ -64,9 +66,35 @@ function resolveStaticValue(node, bindings) {
   }
 
   if (ts.isIdentifier(expression)) {
-    return bindings.has(expression.text)
-      ? bindings.get(expression.text)
-      : null;
+    if (bindings.has(expression.text)) {
+      return bindings.get(expression.text);
+    }
+    return expression.text === "fetch" ? FETCH_VALUE : UNKNOWN_VALUE;
+  }
+
+  if (
+    ts.isPropertyAccessExpression(expression)
+    && ts.isIdentifier(expression.expression)
+    && (
+      expression.expression.text === "window"
+      || expression.expression.text === "globalThis"
+    )
+    && expression.name.text === "fetch"
+  ) {
+    return FETCH_VALUE;
+  }
+
+  if (
+    ts.isElementAccessExpression(expression)
+    && ts.isIdentifier(expression.expression)
+    && (
+      expression.expression.text === "window"
+      || expression.expression.text === "globalThis"
+    )
+    && expression.argumentExpression
+    && getPropertyName(expression.argumentExpression) === "fetch"
+  ) {
+    return FETCH_VALUE;
   }
 
   if (
@@ -114,7 +142,7 @@ function resolveStaticValue(node, bindings) {
     return properties;
   }
 
-  return null;
+  return UNKNOWN_VALUE;
 }
 
 function findStorageRestFetches(source) {
@@ -140,7 +168,7 @@ function findStorageRestFetches(source) {
       const bindings = new Map(inheritedBindings);
       for (const parameter of node.parameters) {
         if (ts.isIdentifier(parameter.name)) {
-          bindings.set(parameter.name.text, null);
+          bindings.set(parameter.name.text, UNKNOWN_VALUE);
         }
       }
       if (node.body) {
@@ -159,32 +187,76 @@ function findStorageRestFetches(source) {
             declaration.name.text,
             declaration.initializer
               ? resolveStaticValue(declaration.initializer, inheritedBindings)
-              : null,
+              : UNKNOWN_VALUE,
           );
         }
       }
       return;
     }
 
+    if (ts.isBinaryExpression(node)) {
+      const operator = node.operatorToken.kind;
+      const isAssignment = (
+        operator >= ts.SyntaxKind.FirstAssignment
+        && operator <= ts.SyntaxKind.LastAssignment
+      );
+      if (isAssignment) {
+        visit(node.right, inheritedBindings);
+        const nextValue = operator === ts.SyntaxKind.EqualsToken
+          ? resolveStaticValue(node.right, inheritedBindings)
+          : UNKNOWN_VALUE;
+        const target = unwrapExpression(node.left);
+        if (ts.isIdentifier(target)) {
+          inheritedBindings.set(target.text, nextValue);
+        } else if (
+          (
+            ts.isPropertyAccessExpression(target)
+            || ts.isElementAccessExpression(target)
+          )
+          && ts.isIdentifier(target.expression)
+        ) {
+          const objectValue = inheritedBindings.get(target.expression.text);
+          const propertyName = ts.isPropertyAccessExpression(target)
+            ? target.name.text
+            : target.argumentExpression
+              ? getPropertyName(target.argumentExpression)
+              : null;
+          if (objectValue instanceof Map && propertyName !== null) {
+            objectValue.set(propertyName, nextValue);
+          }
+        }
+        return;
+      }
+    }
+
     if (
       ts.isCallExpression(node)
-      && ts.isIdentifier(node.expression)
-      && node.expression.text === "fetch"
+      && resolveStaticValue(node.expression, inheritedBindings) === FETCH_VALUE
     ) {
       const url = node.arguments[0]
         ? stringValue(resolveStaticValue(node.arguments[0], inheritedBindings))
         : null;
-      const options = node.arguments[1]
+      const hasOptions = node.arguments.length > 1;
+      const options = hasOptions
         ? resolveStaticValue(node.arguments[1], inheritedBindings)
         : null;
-      const method = options instanceof Map
-        ? stringValue(options.get("method"))
-        : null;
+      const hasMethod = options instanceof Map && options.has("method");
+      const methodValue = hasMethod ? options.get("method") : null;
+      const method = stringValue(methodValue);
+      const couldMutate = hasOptions && (
+        !(options instanceof Map)
+        || (
+          hasMethod
+          && (
+            method === null
+            || STORAGE_REST_MUTATION_METHODS.has(method.toUpperCase())
+          )
+        )
+      );
 
       if (
         url?.includes(STORAGE_REST_PATH)
-        && method
-        && STORAGE_REST_MUTATION_METHODS.has(method.toUpperCase())
+        && couldMutate
       ) {
         matches.push({
           index: node.getStart(sourceFile),
