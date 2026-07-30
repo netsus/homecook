@@ -571,7 +571,7 @@
       "id": "baemin-prototype-planner-week-parity-contract",
       "preset": "docs-only",
       "branch": "docs/baemin-prototype-planner-week-parity-contract",
-      "pr_path": "pending",
+      "pr_path": "https://github.com/netsus/homecook/pull/1233",
       "lifecycle": "merged",
       "approval_state": "dual_approved",
       "verification_status": "passed",
