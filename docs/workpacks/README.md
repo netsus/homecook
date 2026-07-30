@@ -14,6 +14,7 @@
   - 2026-07-29 local-first 초기 배포의 `원격 프로젝트 삭제`, `실제 사용자 없음`, `local auth.users 단일 barrier` 전제를 대체한다.
   - Google/Naver/Kakao와 session identity는 remote Supabase Auth에 남기고 application DB/Storage는 서버 Mac의 local Supabase로 이전한다.
   - local `auth.users=0`, private identity epoch mirror, session-liveness HMAC binding, exact JWT claim guard, 기존 409/503 error mapping, remote Hook control-plane, service-role user path 0, semantic restore와 off-Mac rollback evidence를 final cutover gate로 둔다.
+  - 이 계약으로 다시 잠근 successor verifier는 `verify-*-hybrid.mjs` 이름을 사용해 local application Data와 remote Auth control-plane을 분리 검증한다. 기존 `verify-*-local-first.mjs` 예약은 해당 workpack이 hybrid relock되기 전까지의 역사적 계획이며 완료 증거가 아니다.
 
 - `v2` cooking/meal-log prepared-food search relevance closeout (2026-07-26 KST, UTC+09:00)
   - Stage 1 PR #1074, backend/data PRs #1097/#1099/#1100/#1101, merged-exact remote verifier PRs #1103/#1104, frontend Stage 4/5/6 PR #1105, official tuple consistency PR #1108이 모두 병합됐다.
@@ -24,12 +25,12 @@
   - Stage -1 SECURITY DEFINER 권한 hotfix의 production 배포·8개 anon mutation 무변경 검증·closeout merge를 계약 gate의 선행 증거로 고정한다.
   - 각 successor는 별도 Stage 1 docs PR과 mandatory internal 1.5 gate가 merge되기 전 구현할 수 없으며, `MEAL_LOG`, `PLANNER_WEEK`, `COOK_MODE`, `RECIPE_DETAIL` 변경은 해당 Stage 1에서 요구되는 wireframe/design critique/authority evidence 계획을 먼저 잠근다.
 
-- `v2` cooking/meal-log local-first MacBook relock (2026-07-29 KST, UTC+09:00)
+- `v2` cooking/meal-log local-first MacBook relock (2026-07-29 KST, UTC+09:00; 2026-07-30 hybrid 계약으로 대체된 역사적 기록)
   - 초기 production은 서버 MacBook의 local Next.js + local Supabase stack이고, staging은 서버 MacBook 또는 격리된 검증 MacBook의 local rehearsal stack으로 재정의됐다.
   - 초기 배포에서는 remote verifier, remote provider barrier, remote migration apply가 `N/A`이며, F0+#3 joint activation은 local Postgres `auth.users SHARE ROW EXCLUSIVE` write barrier와 서버 MacBook 재설치 LaunchAgent/secret/heartbeat를 authority로 사용한다. 이 lock은 전체 read freeze가 아니므로 Auth Admin/import/dashboard 동결, external attempt 0, 15분 간격 Storage inventory 2회 일치를 별도로 요구한다.
   - 다른 MacBook에서는 저장소 안의 `docs/sync/CURRENT_SOURCE_OF_TRUTH.md`를 portable entry로 사용하고, 그 문서에 잠긴 master plan SHA-256을 원본 외부 계획 파일과 대조한다. 사용자별 절대 경로는 계획의 위치 힌트일 뿐 배포 계약이 아니다.
   - 실제 사용자가 없으므로 최초 quiet window는 일회성 cutover 창으로 고정하고 기간 연장만으로 재승인을 요구하지 않는다. 다만 lock 상실, digest 불일치, 새 auth/external write, restart/restore, secret 교체, Auth 동결 해제는 현재 증거를 무효화하며 quiet 관측과 Storage inventory를 처음부터 다시 수집한다. legacy old-path/unknown-data delete는 자동 승인하지 않고 별도 Manual Only irreversible gate로 남긴다. 향후 remote provider는 별도 contract-evolution이 선행된다.
-  - successor 문서의 `verify-*-local-first.mjs`는 해당 Stage 2가 TDD로 만들어야 하는 planned artifact다. 파일이 아직 없으면 검증 완료를 뜻하지 않으며, 구현·RED/GREEN 증거 없이 N/A로 닫을 수 없다.
+  - 당시 successor 문서의 `verify-*-local-first.mjs`는 해당 Stage 2가 TDD로 만들 planned artifact였다. 2026-07-30 hybrid relock 대상은 위 `verify-*-hybrid.mjs` 규칙으로 교체하며, 어느 이름이든 파일 부재는 검증 완료를 뜻하지 않고 구현·RED/GREEN 증거 없이 N/A로 닫을 수 없다.
 
 - `v2` nutrition products/planner release QA Stage 2/3 (2026-07-19 KST, UTC+09:00)
   - repair PR #1052 merge `a3301e16` 이후 exact repaired head에서 ingredient `845`, recipe `34`, public products `287,041`, auth A/B anonymization/pin retention, SQL/route 성능을 처음부터 재검증했다.
@@ -251,7 +252,7 @@ Slice Order 표의 Status 값은 위 이벤트가 발생한 PR 또는 closeout b
 | `account-session-generation-foundation` | merged | JWT session-bound account generation, lifecycle watermark, DB cutover fence/Auth Hook/quarantine/outbox와 personal-writer inventory를 feature-off foundation으로 잠근다 |
 | `product-ingredient-link-foundation` | docs | 제품과 canonical ingredient의 검수 relation, RLS/admin promotion, pantry effective ingredient projection과 account-delete 결합 gate를 구현한다 |
 | `recipe-visibility-read-hardening` | merged | private personal recipe soft delete/public fork/tag visibility, quarantine visibility upper bound, generation-aware image registry·private storage·outbox를 먼저 잠근다 |
-| `recipe-snapshot-authority-foundation` | docs | nutrition snapshot을 exact pin하는 content snapshot 단일 authority와 Meal expand→mirror→contract/null·rollback floor를 additive하게 구축한다 |
+| `recipe-snapshot-authority-foundation` | docs | PR #1218/#1219의 snapshot authority와 consumer 회귀를 보존하고, PR #1220이 다시 연 검증 gate를 hybrid remote Auth/local Data 기준으로 재잠근다 |
 | `personal-recipe-editor-decoupling` | docs | 공개 원본 불변 fork 및 owner-only 개인 레시피 편집 진입을 RECIPE_DETAIL 중심으로 분리하고 기존 MYPAGE/RECIPEBOOK 상세과의 소유권 충돌을 피한다 |
 | `personal-recipe-customization-write-core` | docs | 개인 레시피 create/PATCH/soft DELETE, owner→recipe lock, session generation과 idempotent single-RPC write를 구현한다 |
 | `recipe-content-snapshot-future-propagation` | docs | future-plan impact preview/token, replace_all/keep, active cooking claim, shopping open reconcile와 completed read-only를 같은 transaction 경계에 잠근다 |
@@ -292,7 +293,7 @@ Slice Order 표의 Status 값은 위 이벤트가 발생한 PR 또는 closeout b
 | 1 | A | `prepared-food-search-relevance` | merged | PR #1074/#1097/#1099/#1100/#1101/#1103/#1104/#1105/#1108 merged; retained production read-only subset and current-head gates passed; original apply provenance remains pending Manual Only |
 | 2 | B | `product-ingredient-link-foundation` | docs | F0 + #3 server-MacBook local-first joint account-delete activation gate |
 | 3 | B | `recipe-visibility-read-hardening` | merged | F0 local runtime; `31-recipe-media-tags` merged; `36e-recipe-tags-frontend` merged |
-| 4 | B | `recipe-snapshot-authority-foundation` | docs | #3; existing recipe nutrition snapshot release merged |
+| 4 | B | `recipe-snapshot-authority-foundation` | docs | #3 merged; PR #1218 Stage 2 + PR #1219 Stage 4 merged, PR #1220 reopened hybrid delta/reverification pending |
 | 5 | C | `personal-recipe-editor-decoupling` | docs | #3; `31-recipe-media-tags` merged; `36e-recipe-tags-frontend` merged |
 | 6 | C | `personal-recipe-customization-write-core` | docs | #2 + #3 + #4 + #5 |
 | 7 | C | `recipe-content-snapshot-future-propagation` | docs | #4 + #6; `cook-mode-whole-board` merged |
