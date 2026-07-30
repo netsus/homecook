@@ -1,13 +1,19 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 
 import { inventoryHybridAuthorityPaths } from "../scripts/lib/hybrid-authority-inventory.mjs";
 
 describe("hybrid authority AST/static gate", () => {
+  let defaultInventory: ReturnType<typeof inventoryHybridAuthorityPaths>;
+
+  beforeAll(() => {
+    defaultInventory = inventoryHybridAuthorityPaths();
+  }, 30_000);
+
   it("has zero user-route service-role fallback or direct bypass", () => {
-    const inventory = inventoryHybridAuthorityPaths();
+    const inventory = defaultInventory;
 
     expect(inventory.userServiceRoleViolations).toEqual([]);
     expect(inventory.userDirectServiceRoleEntries).toEqual([]);
@@ -85,14 +91,14 @@ describe("hybrid authority AST/static gate", () => {
   });
 
   it("routes every local Data handler through the common API response boundary", () => {
-    const inventory = inventoryHybridAuthorityPaths();
+    const inventory = defaultInventory;
 
     expect(inventory.dataRouteResponseBoundaries).toHaveLength(52);
     expect(inventory.dataRouteResponseBoundaryViolations).toEqual([]);
   });
 
   it("links every official anonymous API route to an exact public-read scope", () => {
-    const inventory = inventoryHybridAuthorityPaths();
+    const inventory = defaultInventory;
 
     expect(inventory.publicRouteContractViolations).toEqual([]);
     expect(inventory.publicRouteContracts).toEqual([
@@ -128,7 +134,7 @@ describe("hybrid authority AST/static gate", () => {
   });
 
   it("has zero browser direct Storage mutations after Stage 4", () => {
-    const inventory = inventoryHybridAuthorityPaths();
+    const inventory = defaultInventory;
 
     expect(inventory.browserDirectStoragePaths).toEqual([]);
   });
@@ -153,7 +159,7 @@ describe("hybrid authority AST/static gate", () => {
   });
 
   it("keeps every remaining service-role call inside an exact allowlist", () => {
-    const inventory = inventoryHybridAuthorityPaths();
+    const inventory = defaultInventory;
 
     expect(inventory.serviceRoleEntries).toEqual([]);
     expect(inventory.genericLocalServiceRoleViolations).toEqual([]);
