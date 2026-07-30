@@ -1,6 +1,6 @@
 # Acceptance Checklist
 
-> This Stage 1 document locks future editor, design and release evidence. Unchecked items are not claims that #6 write APIs, Stage 4 UI, screenshots or production activation already exist.
+> This hybrid Stage 1 relock uses the current official tuple (`요구사항기준선-v1.7.26.md`, `화면정의서-v1.5.30.md`, `유저flow맵-v1.3.28.md`, `db설계-v1.3.27.md`, `api문서-v1.2.30.md`). The approved master plan remains design history, but its local-only Auth/deployment assumptions are superseded. Unchecked items are not claims that #6 write APIs, Stage 4 UI, hybrid verifier, screenshots or production activation already exist.
 
 ## Composition / Context
 
@@ -48,6 +48,9 @@
 - [ ] no history/timeline/trash/restore/public-publish UI or unofficial endpoint/field/status/error is introduced <!-- omo:id=accept-editor-no-extra-contract;stage=4;scope=shared;review=5,6 -->
 - [ ] #5 does not implement or claim #6 write/RLS/RPC, #7 impact propagation or #8 snapshot-v2 activation <!-- omo:id=accept-editor-successor-boundary;stage=4;scope=shared;review=5,6 -->
 - [ ] editor CTA and external personal writes remain dark until approved capability and snapshot-v2 activation gates <!-- omo:id=accept-editor-dark-ship;stage=4;scope=shared;review=5,6 -->
+- [ ] user-scoped preload and future mutation pass the remote Auth control-plane, current local identity epoch and session-liveness HMAC binding while `local auth.users=0` stays invariant <!-- omo:id=accept-editor-hybrid-session-boundary;stage=4;scope=shared;review=5,6 -->
+- [ ] browser direct local Data/Storage and service-role user fallback remain zero; existing server image APIs are the only managed-image mutation path <!-- omo:id=accept-editor-hybrid-client-boundary;stage=4;scope=shared;review=5,6 -->
+- [ ] merged-exact-SHA `verify-personal-recipe-editor-hybrid.mjs` reads local application Data/Storage plus minimal remote Auth control-plane evidence, keeps remote application DB/Storage writes at zero and proves external personal write remains dark <!-- omo:id=accept-editor-hybrid-verifier;stage=4;scope=shared;review=5,6 -->
 
 ## Design / Accessibility
 
@@ -61,7 +64,7 @@
 
 ## Verification / Delivery
 
-- [ ] Stage 1 claims only current docs validators, focused workflow tests, lint/typecheck, audit and diff check <!-- omo:id=accept-editor-stage1-honesty;stage=4;scope=shared;review=5,6 -->
+- [ ] Stage 1 claims only the RED→GREEN contract-sync test, current docs validators, focused workflow tests, lint/typecheck, audit and diff check <!-- omo:id=accept-editor-stage1-honesty;stage=4;scope=shared;review=5,6 -->
 - [ ] Stage 4 records failing component/navigation tests before production shell/CTA/dirty-guard edits <!-- omo:id=accept-editor-tdd-red;stage=4;scope=frontend;review=5,6 -->
 - [ ] future component, E2E, visual, a11y and capability-off regressions pass at exact implementation head <!-- omo:id=accept-editor-future-tests;stage=4;scope=frontend;review=5,6 -->
 - [ ] independent internal 1.5, security/ownership and five-axis reviewers finish with P0/P1/P2/P3 zero <!-- omo:id=accept-editor-independent-reviews;stage=4;scope=shared;review=5,6 -->
