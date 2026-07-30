@@ -954,6 +954,86 @@ describe("ManualRecipeCreateScreen", () => {
     );
   });
 
+  it("retries an interrupted expired read URL refresh without cancelling its managed object", async () => {
+    const compressedFile = new File(["compressed"], "expired-retry-compressed.png", {
+      type: "image/png",
+    });
+    vi.mocked(compressRecipeImageFile).mockResolvedValue(compressedFile);
+    vi.mocked(uploadRecipeImage)
+      .mockResolvedValueOnce(
+        managedUploadSuccess({
+          image_object_id: "550e8400-e29b-41d4-a716-446655440074",
+          read_url: "https://signed.example.com/expired-retry.png",
+          read_url_expires_at: "2000-01-01T00:00:00.000Z",
+        }),
+      )
+      .mockResolvedValueOnce({
+        success: false,
+        data: null,
+        error: {
+          code: "NETWORK_ERROR",
+          message: "네트워크 오류가 발생했어요.",
+          fields: [],
+        },
+      })
+      .mockResolvedValueOnce(
+        managedUploadSuccess({
+          image_object_id: "550e8400-e29b-41d4-a716-446655440074",
+          read_url: "https://signed.example.com/expired-retry-refreshed.png",
+          read_url_expires_at: "2099-07-30T03:30:00.000Z",
+        }),
+      );
+
+    const user = userEvent.setup();
+    render(<ManualRecipeCreateScreen {...DEFAULT_PROPS} />);
+
+    await user.upload(
+      screen.getByTestId("manual-image-file-input"),
+      new File(["original"], "expired-retry.png", { type: "image/png" }),
+    );
+    await waitFor(() => {
+      expect(screen.getByTestId("manual-image-replace-button")).toBeTruthy();
+    });
+
+    await user.type(screen.getByPlaceholderText("예: 김치찌개"), "만료 URL 재시도 요리");
+    await user.click(screen.getByRole("button", { name: "+ 재료 추가하기" }));
+    await user.click(await screen.findByRole("checkbox", { name: "양파" }));
+    await user.click(screen.getByRole("button", { name: "선택한 재료 1개 추가" }));
+    await user.click(screen.getByRole("button", { name: "준비" }));
+    await user.type(screen.getByLabelText("만들기 1 설명"), "양파를 볶아요");
+    await user.click(screen.getByRole("button", { name: "+ 만들기 추가" }));
+    await user.click(screen.getByRole("button", { name: "저장" }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("manual-image-retry-button")).toBeTruthy();
+    });
+    await user.click(screen.getByTestId("manual-image-retry-button"));
+
+    await waitFor(() => {
+      expect(uploadRecipeImage).toHaveBeenCalledTimes(3);
+    });
+    expect(uploadRecipeImage).toHaveBeenNthCalledWith(
+      2,
+      compressedFile,
+      expect.objectContaining({
+        idempotencyKey: "550e8400-e29b-41d4-a716-446655440101",
+      }),
+    );
+    expect(uploadRecipeImage).toHaveBeenNthCalledWith(
+      3,
+      compressedFile,
+      expect.objectContaining({
+        idempotencyKey: "550e8400-e29b-41d4-a716-446655440101",
+      }),
+    );
+    expect(cancelRecipeImage).not.toHaveBeenCalledWith(
+      "550e8400-e29b-41d4-a716-446655440074",
+    );
+    expect(
+      screen.getByRole("img", { name: "레시피 이미지 미리보기" }).getAttribute("src"),
+    ).toBe("https://signed.example.com/expired-retry-refreshed.png");
+  });
+
   it("upload failure shows error with retry and clears the error after success", async () => {
     vi.mocked(uploadRecipeImage)
       .mockResolvedValueOnce({

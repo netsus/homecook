@@ -143,7 +143,12 @@ Schema Change:
 
 ## Design Status
 
-`N/A`. No new screen or visual-system change. Stage 4 verifies existing picker states and browser `.remove()` removal behavior only.
+- [ ] 임시 UI (temporary)
+- [ ] 디자인 리뷰 대기 (pending-review)
+- [ ] 확정 (confirmed)
+- [x] N/A — 기존 MANUAL_RECIPE_CREATE 동작 통합만 수행하며 새 화면 또는 시각 변경 없음
+
+No new screen or visual-system change. Stage 4 verifies existing picker states and browser `.remove()` removal behavior only.
 
 ## Source Links
 
@@ -203,9 +208,10 @@ Schema Change:
 - [x] recipe visibility/origin/deleted/revision schema and existing-row compatibility are additive and replay safe <!-- omo:id=delivery-visibility-schema;stage=2;scope=backend;review=3,6 -->
 - [x] public list/detail/theme/tag/search/sitemap/cache/SEO enforce public+not-deleted+non-quarantined owner <!-- omo:id=delivery-public-read-matrix;stage=2;scope=backend;review=3,6 -->
 - [x] private owner detail 404 and soft-deleted new-selection denial are non-inferable <!-- omo:id=delivery-private-detail-delete;stage=2;scope=backend;review=3,6 -->
-- [ ] anchored historical readers preserve prior Meal/session/batch/log content without general bypass <!-- omo:id=delivery-historical-reader-scope;stage=2;scope=backend;review=3,6 -->
-  - 2026-07-28 partial evidence covers owned existing Meal, shopping-list and cooking-session FK readers plus rejection before service-role recipe lookup for another owner. Immutable content snapshots (#4), snapshot-v2 session reads (#7), batch (#8) and meal-log (#9) remain outside the current implementation, so this aggregate stays open.
-  - 2026-07-29 KST user-directed scope split: successor reader/snapshot workpacks own the remaining immutable content readers, so this unchecked aggregate is excluded from the local-only Stage 2 closeout.
+- [x] existing Meal/shopping/session historical readers preserve prior anchored content without general bypass; successor batch/log/snapshot readers remain in their owning workpacks <!-- omo:id=delivery-historical-reader-scope;stage=2;scope=backend;review=3,6 -->
+  - 2026-07-28 partial evidence covers owned existing Meal, shopping-list and cooking-session FK readers plus rejection before service-role recipe lookup for another owner. Immutable content snapshots (#4), snapshot-v2 session reads (#7), batch (#8) and meal-log (#9) remain outside the current implementation.
+  - 2026-07-29 KST user-directed scope split: successor reader/snapshot workpacks own the remaining immutable content readers, so they are excluded from this workpack's local-only Stage 2 closeout.
+  - 2026-07-30 KST Stage 6 scope projection: this item closes only the existing-reader portion implemented by this workpack. Successor-owned immutable snapshot, batch and meal-log readers remain explicitly out of scope and are not claimed complete here.
 - [x] recipe tag projection and every aggregate/cache reader recheck parent visibility <!-- omo:id=delivery-parent-bounded-tags;stage=2;scope=backend;review=3,6 -->
 - [x] quarantine recovery/delete and owner-neutral preservation consume F0 lifecycle exactly <!-- omo:id=delivery-quarantine-upper-bound;stage=2;scope=backend;review=3,6 -->
 - [x] private/public-neutral registry, references, RLS/grants and server-only Storage mutation are proven <!-- omo:id=delivery-image-registry-security;stage=2;scope=backend;review=3,6 -->
@@ -226,7 +232,7 @@ Schema Change:
   - 2026-07-29 KST local automatic cleaner evidence: `pnpm account-maintenance:local-scheduler:install -- --json` installed and loaded separate LaunchAgent `com.homecook.account-maintenance.local` at `/Users/shj/Library/LaunchAgents/com.homecook.account-maintenance.local.plist`; `pnpm account-maintenance:local-scheduler:verify -- --json` confirmed `RunAtLoad=true`, `StartInterval=300`, `checkedLaunchctl=true`, `installed=true`, `loaded=true`, and dry-run-only `scripts/account-maintenance-tick.mjs --dry-run --json`. Local stderr was zero bytes, and `plutil -lint /Users/shj/Library/LaunchAgents/com.homecook.account-maintenance.local.plist` passed.
   - Production power/login/sleep, approved external heartbeat/alert receiver, actual external 15-minute gap/alert fault evidence, 24-hour cleanup target and 10MB x 5 rotation stay Manual Only outside the local-only Stage 2 closeout.
 - [x] MANUAL_RECIPE_CREATE consumes object ID/cancel/signed-read states with no browser direct Storage mutation <!-- omo:id=delivery-image-existing-consumer;stage=4;scope=frontend;review=5,6 -->
-  - 2026-07-30 KST Stage 4 evidence: TDD began with 3 failed files / 8 failed tests and later review-specific RED for limited-key replay and remove-during-retry stale completion. Final focused Vitest passed 3 files / 41 tests; the locked automation pair passed 2 files / 8 tests; managed browser regression passed desktop/mobile 2/2. The client now consumes the managed object ID/read state, preserves the pre-activation legacy union, refreshes expired signed URLs with the same intent, rotates the key after a durable limited response, and owner-cancels managed abandoned or stale objects without browser Storage `.remove()`.
+  - 2026-07-30 KST Stage 4 evidence: TDD began with 3 failed files / 8 failed tests and later review-specific RED for limited-key replay, remove-during-retry stale completion and expired-read refresh retry cancellation. Final focused Vitest passed 3 files / 42 tests; the locked automation pair passed 2 files / 8 tests; managed browser regression passed desktop/mobile 2/2. The client now consumes the managed object ID/read state, preserves the pre-activation legacy union, refreshes expired signed URLs with the same intent without cancelling that object, rotates the key after a durable limited response, and owner-cancels managed abandoned or stale objects without browser Storage `.remove()`.
 - [x] existing screen composition, accessibility, loading/error/read-only and return-to-action behavior remain unchanged <!-- omo:id=delivery-visibility-ui-regression;stage=4;scope=frontend;review=5,6 -->
   - 2026-07-30 KST Stage 4 evidence: `pnpm verify:frontend:pr` and full `pnpm verify:frontend` passed. The full gate included 2,369 product tests, production build, Lighthouse 6/6, Playwright regression 909 passed / 132 skipped, accessibility 18 passed / 15 skipped, visual 23 passed / 22 skipped and security 12/12. Fresh independent code and security reviews both approved with P0/P1/P2/P3 findings 0.
 - [x] local existing/fresh/replay, live Storage fixtures and local read-only verifier evidence are green <!-- omo:id=delivery-visibility-verification;stage=2;scope=shared;review=3,6 -->

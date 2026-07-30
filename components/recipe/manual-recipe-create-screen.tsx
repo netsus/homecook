@@ -695,6 +695,7 @@ export function ManualRecipeCreateScreen({
   const areTagsDirtyRef = useRef(false);
   const pendingUploadIdempotencyKeyRef = useRef<string | null>(null);
   const processedUploadFileRef = useRef<File | null>(null);
+  const isManagedReadUrlRefreshRetryRef = useRef(false);
   const uploadedImageRef = useRef<UploadedRecipeImage | null>(null);
   const isMountedRef = useRef(true);
 
@@ -842,6 +843,8 @@ export function ManualRecipeCreateScreen({
       return currentImage;
     }
 
+    isManagedReadUrlRefreshRetryRef.current = false;
+    setImageStatus("uploading");
     const result = await uploadRecipeImage(replayFile, { idempotencyKey });
     if (!result) {
       setImageStatus("failed");
@@ -850,6 +853,7 @@ export function ManualRecipeCreateScreen({
       return null;
     }
     if (result.success && result.data === null && "in_progress" in result) {
+      isManagedReadUrlRefreshRetryRef.current = true;
       setImageStatus("failed");
       setImageErrorCode("IMAGE_UPLOAD_IN_PROGRESS");
       setImageError(formatUploadInProgressMessage(result.retry_after_seconds));
@@ -857,6 +861,9 @@ export function ManualRecipeCreateScreen({
     }
 
     if (!result.success || !result.data || !isManagedRecipeImage(result.data)) {
+      isManagedReadUrlRefreshRetryRef.current = (
+        !result.success && result.error?.code === "NETWORK_ERROR"
+      );
       setImageStatus("failed");
       setImageErrorCode(result.success ? "INVALID_RESPONSE" : result.error?.code ?? null);
       setImageError(
@@ -867,6 +874,7 @@ export function ManualRecipeCreateScreen({
       return null;
     }
 
+    isManagedReadUrlRefreshRetryRef.current = false;
     uploadedImageRef.current = result.data;
     setUploadedImage(result.data);
     setImagePreviewUrl(result.data.read_url);
@@ -888,6 +896,7 @@ export function ManualRecipeCreateScreen({
     const nextPreviewUrl = URL.createObjectURL(file);
     const previousUploadedImage = uploadedImageRef.current;
 
+    isManagedReadUrlRefreshRetryRef.current = false;
     uploadedImageRef.current = null;
     cancelManagedUpload(previousUploadedImage);
     revokePreviewUrl(imagePreviewUrl);
@@ -980,6 +989,11 @@ export function ManualRecipeCreateScreen({
   }, [doUpload]);
 
   const handleImageRetry = useCallback(() => {
+    if (isManagedReadUrlRefreshRetryRef.current) {
+      void refreshManagedReadUrlIfExpired();
+      return;
+    }
+
     const replayFile = processedUploadFileRef.current ?? pendingFile;
     if (replayFile) {
       const idempotencyKey = (
@@ -993,11 +1007,17 @@ export function ManualRecipeCreateScreen({
         processedFile: replayFile,
       });
     }
-  }, [doUpload, imageErrorCode, pendingFile]);
+  }, [
+    doUpload,
+    imageErrorCode,
+    pendingFile,
+    refreshManagedReadUrlIfExpired,
+  ]);
 
   const handleImageRemove = useCallback(() => {
     uploadRequestIdRef.current += 1;
     const currentImage = uploadedImageRef.current;
+    isManagedReadUrlRefreshRetryRef.current = false;
     uploadedImageRef.current = null;
     cancelManagedUpload(currentImage);
     revokePreviewUrl(imagePreviewUrl);
@@ -1195,6 +1215,7 @@ export function ManualRecipeCreateScreen({
 
     setCreatedRecipeId(response.data.id);
     setCreatedRecipeTitle(response.data.title);
+    isManagedReadUrlRefreshRetryRef.current = false;
     uploadedImageRef.current = null;
     pendingUploadIdempotencyKeyRef.current = null;
     processedUploadFileRef.current = null;
