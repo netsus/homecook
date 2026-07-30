@@ -1,6 +1,6 @@
 # Acceptance Checklist
 
-> Evidence is checked only after the owning implementation/review stage produces it. This hybrid relock fixes the current official tuple and safe implementation split; it does not claim future migration, PostgreSQL, route or hybrid production/rehearsal verifier artifacts already exist. Current authorization is the first link-only checklist item below; every item prefixed `after approved Contract Evolution` remains deferred and unchecked.
+> Evidence is checked only after the owning implementation/review stage produces it. This hybrid relock fixes the current official tuple and safe implementation split. The link-only subset is merged and the hybrid verifier is implemented test-first, but verifier implementation alone does not satisfy the unchecked merged-exact-SHA local Data/Storage plus sanitized remote Auth evidence gate. Every item prefixed `after approved Contract Evolution` remains deferred and unchecked.
 
 ## Happy Path
 
