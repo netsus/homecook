@@ -107,6 +107,12 @@ describe("personal recipe editor hybrid contract lock", () => {
     expect(backendVerifyCommands).not.toContain(
       "node scripts/verify-personal-recipe-editor-hybrid.mjs --mode post-merge-read-only",
     );
+    expect(backendVerifyCommands).toEqual(
+      expect.arrayContaining([
+        "pnpm exec vitest run tests/personal-recipe-editor-hybrid-verifier.test.ts",
+        "node scripts/generate-hybrid-authority-inventories.mjs --check",
+      ]),
+    );
     expect(externalSmokes).toEqual(futureExternalSmokes);
     expect(blockedConditions).toContain(
       "stage4-ready-before-external-smokes-relocked-from-work-item-full-lifecycle-gate",

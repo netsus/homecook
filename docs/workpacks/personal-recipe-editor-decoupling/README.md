@@ -76,8 +76,8 @@ Schema Change:
 - Google/Naver/Kakao session identity and the minimal Hook/lifecycle fence remain in the remote Auth control-plane. Application DB and Storage authority are local application Data/Storage on the server Mac.
 - `local auth.users=0` is intentional. User-scoped editor preload and future mutation paths must pass the server session-authority gateway, exact remote JWT claim checks, current private identity epoch and active session-liveness HMAC binding.
 - The browser must not call local PostgREST/Storage directly. The user path has service-role user path 0; managed image operations continue through the existing server image APIs.
-- The post-merge release verifier is planned as `node scripts/verify-personal-recipe-editor-hybrid.mjs --mode post-merge-read-only`. It must read local application Data/Storage plus the minimal remote Auth control-plane evidence, keep remote application DB/Storage writes remain zero, and prove the capability-off external personal write remains dark.
-- The verifier file and its RED/GREEN evidence do not exist in this Stage 1 relock and are not claimed complete. This relock makes no product API, DB, route, field, status or error change.
+- The post-merge release verifier is `node scripts/verify-personal-recipe-editor-hybrid.mjs --mode post-merge-read-only`. It reads local application Data/Storage plus minimal sanitized remote Auth control-plane evidence, keeps remote application DB/Storage writes at zero, and proves the capability-off external personal write is dark at the observation point.
+- The verifier is developed test-first in `tests/personal-recipe-editor-hybrid-verifier.test.ts`. A successful release result is claimed only when the command runs from a clean merged exact SHA with truthful local and Manual Only evidence. This verifier makes no product API, DB, route, field, status or error change.
 
 ## Context Contract
 
@@ -203,8 +203,17 @@ The independent product-design-authority recheck records `pass`, blocker/major/m
 - The implementation head `e177a882e0fbc35847895a7a0f1dd775ff4425d1` completed 20 GitHub checks successfully with one documented normal `full-regression` skip and no pending, failed, cancelled or Vercel check.
 - Independent code, security and exact-head verification finished with P0/P1/P2 `0/0/0`; the independent design authority finished with blocker/major/minor `0/0/0`.
 - Retained Codex native review paths: `/root/stage4_final4_code_review`, `/root/stage4_final4_security_review`, `/root/stage4_post_vercel_fresh_review`, `/root/stage4_exact_head_final_verifier`; reviewed input SHA `e177a882e0fbc35847895a7a0f1dd775ff4425d1`, result artifact is this closeout evidence plus PR #1243 Actual Verification.
-- The post-merge hybrid verifier and capability-on fork/edit/delete/login-return smokes remain future or Manual Only. They are not claimed as Stage 4 dark-ship evidence and do not authorize remote application DB/Storage writes.
-- Full Stage 6 lifecycle closeout remains pending until the required merged-SHA hybrid verifier exists, is developed test-first and passes with truthful local/Manual Only evidence.
+- The post-merge hybrid verifier implementation is separate from the Stage 4 evidence. Its merged-exact execution and capability-on fork/edit/delete/login-return smokes remain pending or Manual Only and do not authorize remote application DB/Storage writes.
+- Full Stage 6 lifecycle closeout remains pending until the verifier passes from the merged exact SHA with truthful local and Manual Only evidence.
+
+### Stage 6 verifier implementation evidence
+
+- RED: `pnpm exec vitest run tests/personal-recipe-editor-hybrid-verifier.test.ts` failed because the verifier module did not exist.
+- GREEN: the focused verifier, snapshot-hybrid, recipe-visibility local and hybrid static-gate set passed `25/25`.
+- The verifier accepts only a loopback local PostgreSQL URL, runs one read-only transaction, requires `local auth.users=0`, reuses the predecessor Data/Storage authority checks, rejects source authority drift and accepts only fresh sanitized remote Auth aggregate evidence bound to the exact merge SHA.
+- The predecessor Data/Storage subset on the running local Supabase returned `local_auth_user_count=0`, capability `legacy`, local writes `0`, and anon/authenticated direct Storage writes `0/0`. The complete Stage 6 query then failed closed because `private.remote_auth_identity_epochs` is not applied to this local instance; therefore no full local or merged-SHA release result is claimed. No secret or raw row was printed or recorded.
+- The exact source inventory proves user service-role fallback/direct paths `0`, browser direct Storage paths `0`, inactive personal-create entry, app/MYPAGE/RECIPEBOOK personal-entry markers `0`, shipping capability-on markers `0`, and no recipe `PATCH`/`DELETE` handler. It preserves the one legacy manual-create `POST /recipes` handler while requiring personal editor markers and `origin_recipe_id` inputs on that handler to remain `0`. The stale generated browser Storage inventory was refreshed to the current empty set.
+- Branch execution intentionally fails the merged-exact gate. No merged-SHA release result, other-Mac deployment evidence, production/staging write or remote application DB/Storage mutation is claimed here.
 
 ## QA / Test Data Plan
 
@@ -213,7 +222,7 @@ The independent product-design-authority recheck records `pass`, blocker/major/m
 - this docs PR first records RED and then GREEN in `tests/personal-recipe-editor-hybrid-contract-sync.test.ts`, and runs the current executable subset only: SOT/workflow/workpack/automation/bookkeeping validators, focused workflow Vitest, lint, typecheck, dependency audit and diff check.
 - `required_checks` remains the full-lifecycle closeout gate; `verify_commands` is the current Stage 1 executable subset.
 - Stage 4 first writes component/navigation regression tests and records RED before shell extraction, CTA or dirty guard production code.
-- future component/Playwright/visual/authority and `verify-personal-recipe-editor-hybrid.mjs` commands below are required implementation artifacts, not commands claimed executable in this docs PR.
+- capability-on component/Playwright/visual/authority smokes below remain future or Manual Only. The hybrid verifier unit/static checks are executable now, while its release command remains a merged-exact-SHA gate.
 
 ### Future fixtures
 
