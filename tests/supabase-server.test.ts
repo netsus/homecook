@@ -162,7 +162,13 @@ describe("supabase server helpers", () => {
     });
     getServiceRoleKey.mockReturnValue("local-service-secret");
     const client = {
-      from: vi.fn(),
+      from: vi.fn(() => ({
+        delete: vi.fn(),
+        insert: vi.fn(),
+        select: vi.fn(),
+        update: vi.fn(),
+        upsert: vi.fn(),
+      })),
       rpc: vi.fn(),
       storage: {},
     };
@@ -175,6 +181,8 @@ describe("supabase server helpers", () => {
     const imageClient = server.createRecipeImageInternalClient();
     const gamificationClient =
       server.createGamificationProjectionInternalClient();
+    const youtubeExtractionClient =
+      server.createYoutubeExtractionInternalClient();
     const lifecycleClient = server.createAccountLifecycleInternalRpcClient();
     server.createYoutubeIngredientRegistrationInternalRpcClient();
     const adminClient = server.createAdminDataInternalClient();
@@ -188,6 +196,7 @@ describe("supabase server helpers", () => {
       "session-logout",
       "recipe-image",
       "gamification-projection",
+      "youtube-extraction",
       "account-lifecycle",
       "youtube-ingredient-registration",
       "admin-data",
@@ -200,6 +209,24 @@ describe("supabase server helpers", () => {
     expect(() => gamificationClient?.from("user_progress_summary"))
       .not.toThrow();
     expect(() => gamificationClient?.from("users")).toThrow(
+      "Internal Data scope denied table: users",
+    );
+    expect(() => youtubeExtractionClient?.from("youtube_extraction_sessions"))
+      .not.toThrow();
+    const extractionSessions =
+      youtubeExtractionClient?.from("youtube_extraction_sessions");
+    expect(() => extractionSessions?.select()).not.toThrow();
+    expect(() => extractionSessions?.insert({})).not.toThrow();
+    expect(() => extractionSessions?.update({})).toThrow(
+      "Internal Data scope denied update on table: youtube_extraction_sessions",
+    );
+    expect(() => extractionSessions?.upsert({})).toThrow(
+      "Internal Data scope denied upsert on table: youtube_extraction_sessions",
+    );
+    expect(() => extractionSessions?.delete()).toThrow(
+      "Internal Data scope denied delete on table: youtube_extraction_sessions",
+    );
+    expect(() => youtubeExtractionClient?.from("users")).toThrow(
       "Internal Data scope denied table: users",
     );
     expect(() => lifecycleClient?.from("recipes")).toThrow(

@@ -84,6 +84,14 @@ describe("hybrid authority AST/static gate", () => {
         file: "lib/server/hybrid-auth/logout.ts",
       },
       {
+        factory: "createYoutubeExtractionInternalClient",
+        file: "lib/server/youtube-import.ts",
+      },
+      {
+        factory: "createYoutubeExtractionInternalClient",
+        file: "lib/server/youtube-import.ts",
+      },
+      {
         factory: "createYoutubeIngredientRegistrationInternalRpcClient",
         file: "lib/server/youtube-import.ts",
       },

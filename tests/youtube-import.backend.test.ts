@@ -21,6 +21,7 @@ import type {
 
 const createRouteHandlerClient = vi.fn();
 const createServiceRoleClient = vi.fn();
+const createYoutubeExtractionInternalClient = vi.fn();
 const createYoutubeIngredientRegistrationInternalRpcClient = vi.fn();
 const ensurePublicUserRow = vi.fn();
 const ensureUserBootstrapState = vi.fn();
@@ -35,6 +36,7 @@ const formatBootstrapErrorMessage = vi.fn((error: unknown, fallbackMessage: stri
 vi.mock("@/lib/supabase/server", () => ({
   createRouteHandlerClient,
   createServiceRoleClient,
+  createYoutubeExtractionInternalClient,
   createYoutubeIngredientRegistrationInternalRpcClient,
 }));
 
@@ -1312,11 +1314,15 @@ describe("20 youtube real import backend", () => {
     restoreYoutubeImportEnv();
     createRouteHandlerClient.mockReset();
     createServiceRoleClient.mockReset();
+    createYoutubeExtractionInternalClient.mockReset();
     createYoutubeIngredientRegistrationInternalRpcClient.mockReset();
     ensurePublicUserRow.mockReset();
     ensureUserBootstrapState.mockReset();
     formatBootstrapErrorMessage.mockClear();
     createServiceRoleClient.mockReturnValue(null);
+    createYoutubeExtractionInternalClient.mockImplementation(
+      () => createServiceRoleClient(),
+    );
     createYoutubeIngredientRegistrationInternalRpcClient.mockImplementation(
       () => createServiceRoleClient(),
     );
@@ -1963,7 +1969,7 @@ describe("20 youtube real import backend", () => {
 
   it("POST /api/v1/recipes/youtube/extract runs exact i031 without legacy or Gemini fallbacks", async () => {
     vi.stubEnv("YOUTUBE_RECIPE_EXTRACTOR_MODE", "i031_codex_vision");
-    mockAuth();
+    const routeClient = mockAuth();
 
     const { dbClient, sessionsTable } = createTranscriptFallbackExtractDbClient({
       ingredientLookupRows: [
@@ -1974,6 +1980,7 @@ describe("20 youtube real import backend", () => {
       cookingMethodLookupRows: buildCookingTaxonomyMethodLookupRows(),
     });
     createServiceRoleClient.mockReturnValue(dbClient);
+    createYoutubeExtractionInternalClient.mockReturnValue(dbClient);
 
     const i031Extractor: YoutubeI031Extractor = {
       extract: vi.fn(async () => ({
@@ -2133,6 +2140,8 @@ describe("20 youtube real import backend", () => {
     expect(llmExtractor.fetchStructuredRecipe).not.toHaveBeenCalled();
     expect(visualRecipeExtractor.fetchVisualRecipe).not.toHaveBeenCalled();
     expect(visualQuantityExtractor.fetchVisualQuantities).not.toHaveBeenCalled();
+    expect(createYoutubeExtractionInternalClient).toHaveBeenCalledTimes(1);
+    expect(routeClient.from).not.toHaveBeenCalled();
 
     expect(sessionsTable.insert).toHaveBeenCalledWith(expect.objectContaining({
       provider_version: "youtube-i031-direct-v1",
@@ -2163,6 +2172,31 @@ describe("20 youtube real import backend", () => {
     };
     expect(JSON.stringify(insertedSession.extraction_meta_json)).not.toContain("rawPrompt");
     expect(JSON.stringify(insertedSession.extraction_meta_json)).not.toContain("/private/tmp");
+  });
+
+  it("POST /api/v1/recipes/youtube/extract fails closed without scoped extraction authority", async () => {
+    vi.stubEnv("YOUTUBE_RECIPE_EXTRACTOR_MODE", "i031_codex_vision");
+    const routeClient = mockAuth();
+    createYoutubeExtractionInternalClient.mockReturnValue(null);
+    const i031Extractor: YoutubeI031Extractor = {
+      extract: vi.fn(async () => {
+        throw new Error("must not run without scoped database authority");
+      }),
+    };
+
+    const { response, body } = await withYoutubeI031Extractor(i031Extractor, () =>
+      postYoutubeExtract(recipeUrl),
+    );
+
+    expect(response.status).toBe(500);
+    expect(body).toMatchObject({
+      success: false,
+      data: null,
+      error: { code: "INTERNAL_ERROR" },
+    });
+    expect(createYoutubeExtractionInternalClient).toHaveBeenCalledTimes(1);
+    expect(i031Extractor.extract).not.toHaveBeenCalled();
+    expect(routeClient.from).not.toHaveBeenCalled();
   });
 
   it("POST /api/v1/recipes/youtube/extract does not bypass YouTube provider for known live sample IDs", async () => {
@@ -4182,7 +4216,7 @@ describe("20 youtube real import backend", () => {
   });
 
   it("POST /api/v1/recipes/youtube/candidate-drafts promotes one multi-recipe candidate into a child draft", async () => {
-    mockAuth();
+    const routeClient = mockAuth();
 
     const parentCandidate = buildYoutubeRecipeCandidate();
     const parentSession = buildYoutubeSession({
@@ -4225,6 +4259,7 @@ describe("20 youtube real import backend", () => {
       throw new Error(`unexpected table: ${table}`);
     });
     createServiceRoleClient.mockReturnValue({ from });
+    createYoutubeExtractionInternalClient.mockReturnValue({ from });
 
     const { POST } = await importCandidateDraftRoute();
     const response = await POST(new Request("http://localhost:3000/api/v1/recipes/youtube/candidate-drafts", {
@@ -4289,6 +4324,8 @@ describe("20 youtube real import backend", () => {
     }));
     expect(candidatesTable.__updateQuery.eq).toHaveBeenCalledWith("extraction_session_id", extractionId);
     expect(candidatesTable.__updateQuery.eq).toHaveBeenCalledWith("candidate_id", "candidate-1");
+    expect(createYoutubeExtractionInternalClient).toHaveBeenCalledTimes(1);
+    expect(routeClient.from).toHaveBeenCalledTimes(1);
   });
 
   it("POST /api/v1/recipes/youtube/candidate-drafts returns an existing child draft idempotently", async () => {
@@ -4419,6 +4456,49 @@ describe("20 youtube real import backend", () => {
       error: { code: "EXTRACTION_EXPIRED", fields: [] },
     });
     expect(candidatesTable.select).not.toHaveBeenCalled();
+    expect(sessionsTable.insert).not.toHaveBeenCalled();
+  });
+
+  it("POST /api/v1/recipes/youtube/candidate-drafts rejects another user's parent before internal authority", async () => {
+    mockAuth();
+
+    const sessionsTable = createYoutubeSessionsTable({
+      selectResult: {
+        data: buildYoutubeSession({
+          session_kind: "multi_parent",
+          user_id: "550e8400-e29b-41d4-a716-446655449999",
+        }),
+        error: null,
+      },
+    });
+    createServiceRoleClient.mockReturnValue({
+      from: vi.fn((table: string) => {
+        if (table === "youtube_extraction_sessions") return sessionsTable;
+        throw new Error(`unexpected table: ${table}`);
+      }),
+    });
+
+    const { POST } = await importCandidateDraftRoute();
+    const response = await POST(new Request(
+      "http://localhost:3000/api/v1/recipes/youtube/candidate-drafts",
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          extraction_id: extractionId,
+          candidate_id: "candidate-1",
+        }),
+      },
+    ));
+    const body = await response.json();
+
+    expect(response.status).toBe(404);
+    expect(body).toMatchObject({
+      success: false,
+      data: null,
+      error: { code: "EXTRACTION_NOT_FOUND", fields: [] },
+    });
+    expect(createYoutubeExtractionInternalClient).not.toHaveBeenCalled();
     expect(sessionsTable.insert).not.toHaveBeenCalled();
   });
 

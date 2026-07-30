@@ -494,6 +494,137 @@ describe("hybrid loopback gateway runtime", () => {
     expect(response.snapshot().statusCode).toBe(409);
   });
 
+  it.each([
+    {
+      method: "GET",
+      path: "/rest/v1/ingredients?select=id%2Cstandard_name",
+    },
+    {
+      method: "POST",
+      path: "/rest/v1/youtube_extraction_sessions?columns=id%2Cuser_id",
+    },
+    {
+      method: "PATCH",
+      path: "/rest/v1/youtube_transcript_cache?id=eq.cache-id",
+    },
+  ])("allows exact $method youtube extraction paths", async ({
+    method,
+    path,
+  }) => {
+    const dataSecret = "0123456789abcdef0123456789abcdef";
+    const fetchImpl = vi.fn(async () => new Response(null, { status: 200 }));
+    const handler = createGatewayRequestHandler({
+      config: createConfig(),
+      fetchImpl,
+    });
+    const request = Readable.from(
+      method === "GET" ? [] : [JSON.stringify({ user_id: OWNER_UUID })],
+    ) as Readable & {
+      headers: Record<string, string>;
+      method: string;
+      url: string;
+    };
+    request.headers = {
+      authorization: `Bearer ${dataSecret}`,
+      "content-type": "application/json",
+      "x-homecook-internal-scope": "youtube-extraction",
+    };
+    request.method = method;
+    request.url = `http://gateway.internal${path}`;
+    const response = createResponseRecorder();
+
+    await handler(request, response);
+    await response.completed;
+
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+    expect(response.snapshot().statusCode).toBe(200);
+  });
+
+  it.each([
+    {
+      method: "POST",
+      path: "/rest/v1/ingredients?columns=id",
+    },
+    {
+      method: "PATCH",
+      path: "/rest/v1/youtube_llm_extraction_events?id=eq.event-id",
+    },
+    {
+      method: "PATCH",
+      path: "/rest/v1/youtube_extraction_sessions?id=eq.session-id",
+    },
+    {
+      method: "GET",
+      path: "/rest/v1/users?select=id",
+    },
+  ])("rejects out-of-scope $method youtube extraction paths", async ({
+    method,
+    path,
+  }) => {
+    const dataSecret = "0123456789abcdef0123456789abcdef";
+    const fetchImpl = vi.fn(async () => new Response(null, { status: 200 }));
+    const handler = createGatewayRequestHandler({
+      config: createConfig(),
+      fetchImpl,
+    });
+    const request = Readable.from(
+      method === "GET" ? [] : [JSON.stringify({ user_id: OWNER_UUID })],
+    ) as Readable & {
+      headers: Record<string, string>;
+      method: string;
+      url: string;
+    };
+    request.headers = {
+      authorization: `Bearer ${dataSecret}`,
+      "content-type": "application/json",
+      "x-homecook-internal-scope": "youtube-extraction",
+    };
+    request.method = method;
+    request.url = `http://gateway.internal${path}`;
+    const response = createResponseRecorder();
+
+    await handler(request, response);
+    await response.completed;
+
+    expect(fetchImpl).not.toHaveBeenCalled();
+    expect(response.snapshot().statusCode).toBe(409);
+  });
+
+  it.each([
+    { header: "x-http-method-override" },
+    { header: "x-method-override" },
+  ])("does not let $header override a denied youtube extraction method", async ({
+    header,
+  }) => {
+    const dataSecret = "0123456789abcdef0123456789abcdef";
+    const fetchImpl = vi.fn(async () => new Response(null, { status: 200 }));
+    const handler = createGatewayRequestHandler({
+      config: createConfig(),
+      fetchImpl,
+    });
+    const request = Readable.from([JSON.stringify({ user_id: OWNER_UUID })]) as Readable & {
+      headers: Record<string, string>;
+      method: string;
+      url: string;
+    };
+    request.headers = {
+      authorization: `Bearer ${dataSecret}`,
+      "content-type": "application/json",
+      "x-homecook-internal-scope": "youtube-extraction",
+      [header]: "POST",
+    };
+    request.method = "PATCH";
+    request.url =
+      "http://gateway.internal/rest/v1/youtube_extraction_sessions?id=eq.session-id";
+    const response = createResponseRecorder();
+
+    await handler(request, response);
+    await response.completed;
+
+    expect(fetchImpl).not.toHaveBeenCalled();
+    expect(response.snapshot().statusCode).toBe(409);
+  });
+
   it("allows only scoped recipe-image Storage removal through the internal facade", async () => {
     const dataSecret = "0123456789abcdef0123456789abcdef";
     const fetchImpl = vi.fn(async (

@@ -69,6 +69,7 @@ import {
 } from "@/lib/server/gemini-key-failover";
 import {
   createRouteHandlerClient,
+  createYoutubeExtractionInternalClient,
   createYoutubeIngredientRegistrationInternalRpcClient,
 } from "@/lib/supabase/server";
 import { YOUTUBE_PREVIEW_ONLY_CLASSIFICATION_REASON } from "@/lib/youtube-import-constants";
@@ -9248,7 +9249,7 @@ export async function handleYoutubeExtract(request: Request) {
     return buildFeatureDisabledResponse();
   }
 
-  const { routeClient, user } = await requireUser();
+  const { user } = await requireUser();
 
   if (!user) {
     return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
@@ -9275,7 +9276,11 @@ export async function handleYoutubeExtract(request: Request) {
     return fail("NOT_RECIPE_VIDEO", "이 영상은 요리 레시피가 아닌 것 같아요.", 422);
   }
 
-  const dbClient = routeClient as unknown as DbClient;
+  const internalClient = createYoutubeExtractionInternalClient();
+  if (!internalClient) {
+    return fail("INTERNAL_ERROR", "유튜브 추출 서비스를 준비하지 못했어요.", 500);
+  }
+  const dbClient = internalClient as unknown as DbClient;
   let extractorMode;
   try {
     extractorMode = resolveYoutubeRecipeExtractorMode();
@@ -10512,8 +10517,10 @@ export async function handleYoutubeCandidateDraft(request: Request) {
     return fail("VALIDATION_ERROR", "요청 값을 확인해 주세요.", 422, fields);
   }
 
-  const dbClient = routeClient as unknown as DbClient;
-  const parentResult = await findExtractionSession(dbClient, parsed.extractionId);
+  const parentResult = await findExtractionSession(
+    routeClient as unknown as DbClient,
+    parsed.extractionId,
+  );
   if (parentResult.error) {
     return fail("INTERNAL_ERROR", "추출 세션을 확인하지 못했어요.", 500);
   }
@@ -10523,6 +10530,11 @@ export async function handleYoutubeCandidateDraft(request: Request) {
     return parentFailure;
   }
 
+  const internalClient = createYoutubeExtractionInternalClient();
+  if (!internalClient) {
+    return fail("INTERNAL_ERROR", "레시피 후보 서비스를 준비하지 못했어요.", 500);
+  }
+  const dbClient = internalClient as unknown as DbClient;
   const parentSession = parentResult.data as YoutubeExtractionSessionRow;
   const candidateResult = await findExtractionCandidate(
     dbClient,

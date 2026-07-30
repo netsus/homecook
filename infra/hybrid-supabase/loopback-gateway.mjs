@@ -85,6 +85,22 @@ const INTERNAL_SCOPE_RULES = Object.freeze({
       "/rest/v1/user_quest_progress",
     ]),
   },
+  "youtube-extraction": {
+    methods: new Set(["GET", "PATCH", "POST"]),
+    paths: new Set([
+      "/rest/v1/cooking_methods",
+      "/rest/v1/ingredient_synonyms",
+      "/rest/v1/ingredients",
+      "/rest/v1/youtube_extraction_candidates",
+      "/rest/v1/youtube_extraction_sessions",
+      "/rest/v1/youtube_llm_extraction_cache",
+      "/rest/v1/youtube_llm_extraction_events",
+      "/rest/v1/youtube_transcript_cache",
+      "/rest/v1/youtube_transcript_fetch_events",
+      "/rest/v1/youtube_visual_extraction_cache",
+      "/rest/v1/youtube_visual_extraction_events",
+    ]),
+  },
   "not-found-feedback": {
     methods: new Set(["POST"]),
     paths: new Set([
@@ -610,6 +626,25 @@ function isExactInternalScopeRequest(scope, rule, method, pathname) {
     return rule.paths.has(pathname)
       && (method === "GET" || method === "PATCH" || method === "POST");
   }
+  if (scope === "youtube-extraction") {
+    if (
+      pathname === "/rest/v1/ingredients"
+      || pathname === "/rest/v1/ingredient_synonyms"
+    ) {
+      return method === "GET";
+    }
+    if (
+      pathname === "/rest/v1/cooking_methods"
+      || pathname === "/rest/v1/youtube_llm_extraction_events"
+      || pathname === "/rest/v1/youtube_transcript_fetch_events"
+      || pathname === "/rest/v1/youtube_visual_extraction_events"
+      || pathname === "/rest/v1/youtube_extraction_sessions"
+    ) {
+      return method === "GET" || method === "POST";
+    }
+    return rule.paths.has(pathname)
+      && (method === "GET" || method === "PATCH" || method === "POST");
+  }
   if (scope !== "recipe-image") {
     return rule.methods.has(method) && rule.paths.has(pathname);
   }
@@ -662,6 +697,7 @@ function isInternalControlPlaneRequest(request, requestUrl, accessToken, config)
       requestUrl.search === ""
       || scope === "admin-data"
       || scope === "gamification-projection"
+      || scope === "youtube-extraction"
     )
     && isExactInternalScopeRequest(
       scope,

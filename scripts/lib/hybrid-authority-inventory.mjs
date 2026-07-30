@@ -90,6 +90,10 @@ const INTERNAL_OPERATION_ALLOWLIST = new Map([
     new Set(["app/api/v1/users/me/gamification/_helpers.ts"]),
   ],
   [
+    "createYoutubeExtractionInternalClient",
+    new Set(["lib/server/youtube-import.ts"]),
+  ],
+  [
     "createOperationalEventInternalClient",
     new Set(["lib/server/admin-events.ts"]),
   ],

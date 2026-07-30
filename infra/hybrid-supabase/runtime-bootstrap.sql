@@ -812,6 +812,50 @@ begin
           )
         )
         or (
+          v_attestation_scope = 'youtube-extraction'
+          and (
+            (
+              v_method = 'GET'
+              and v_path in (
+                '/cooking_methods',
+                '/ingredient_synonyms',
+                '/ingredients',
+                '/youtube_extraction_candidates',
+                '/youtube_extraction_sessions',
+                '/youtube_llm_extraction_cache',
+                '/youtube_llm_extraction_events',
+                '/youtube_transcript_cache',
+                '/youtube_transcript_fetch_events',
+                '/youtube_visual_extraction_cache',
+                '/youtube_visual_extraction_events'
+              )
+            )
+            or (
+              v_method = 'POST'
+              and v_path in (
+                '/cooking_methods',
+                '/youtube_extraction_candidates',
+                '/youtube_extraction_sessions',
+                '/youtube_llm_extraction_cache',
+                '/youtube_llm_extraction_events',
+                '/youtube_transcript_cache',
+                '/youtube_transcript_fetch_events',
+                '/youtube_visual_extraction_cache',
+                '/youtube_visual_extraction_events'
+              )
+            )
+            or (
+              v_method = 'PATCH'
+              and v_path in (
+                '/youtube_extraction_candidates',
+                '/youtube_llm_extraction_cache',
+                '/youtube_transcript_cache',
+                '/youtube_visual_extraction_cache'
+              )
+            )
+          )
+        )
+        or (
           v_attestation_scope = 'recipe-image'
           and v_method = 'POST'
           and v_path in (

@@ -340,6 +340,7 @@ type LocalInternalScope =
   | "recipe-image"
   | "request-authority"
   | "session-logout"
+  | "youtube-extraction"
   | "youtube-ingredient-registration";
 
 function createScopedDataServiceRoleClient(
@@ -368,12 +369,28 @@ function createScopedDataServiceRoleClient(
 function exactInternalFrom(
   client: NonNullable<ReturnType<typeof createScopedDataServiceRoleClient>>,
   allowedTables: ReadonlySet<string>,
+  deniedMethodsByTable: ReadonlyMap<string, ReadonlySet<string>> = new Map(),
 ) {
   return (table: string) => {
     if (!allowedTables.has(table)) {
       throw new Error(`Internal Data scope denied table: ${table}`);
     }
-    return client.from(table);
+    const query = client.from(table);
+    const deniedMethods = deniedMethodsByTable.get(table);
+    if (!deniedMethods?.size) {
+      return query;
+    }
+
+    return new Proxy(query, {
+      get(target, property, receiver) {
+        if (typeof property === "string" && deniedMethods.has(property)) {
+          throw new Error(
+            `Internal Data scope denied ${property} on table: ${table}`,
+          );
+        }
+        return Reflect.get(target, property, receiver);
+      },
+    });
   };
 }
 
@@ -576,6 +593,32 @@ export function createGamificationProjectionInternalClient() {
           "user_progress_notifications",
           "user_progress_summary",
           "user_quest_progress",
+        ])),
+      }
+    : null;
+}
+
+export function createYoutubeExtractionInternalClient() {
+  const client = createScopedDataServiceRoleClient("youtube-extraction");
+  return client
+    ? {
+        from: exactInternalFrom(client, new Set([
+          "cooking_methods",
+          "ingredient_synonyms",
+          "ingredients",
+          "youtube_extraction_candidates",
+          "youtube_extraction_sessions",
+          "youtube_llm_extraction_cache",
+          "youtube_llm_extraction_events",
+          "youtube_transcript_cache",
+          "youtube_transcript_fetch_events",
+          "youtube_visual_extraction_cache",
+          "youtube_visual_extraction_events",
+        ]), new Map([
+          [
+            "youtube_extraction_sessions",
+            new Set(["delete", "update", "upsert"]),
+          ],
         ])),
       }
     : null;
