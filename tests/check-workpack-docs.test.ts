@@ -64,6 +64,17 @@ describe("resolveBaseRef", () => {
 });
 
 describe("resolveWorkpackSlice", () => {
+  it("maps the approved contract-runtime branch to its foundation workpack", () => {
+    const spawnSyncFn = () => ({ status: 0, stdout: "" });
+    expect(
+      resolveWorkpackSlice({
+        slice: "product-ingredient-link-contract-runtime",
+        baseRef: "master",
+        spawnSyncFn,
+      }),
+    ).toBe("product-ingredient-link-foundation");
+  });
+
   it("keeps normal slice names unchanged", () => {
     const spawnSyncFn = () => ({ status: 0, stdout: "" });
     expect(
