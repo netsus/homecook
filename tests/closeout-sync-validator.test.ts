@@ -271,7 +271,7 @@ function validateIncrementalBackendFixture(rootDir: string, baseRootDir: string)
 }
 
 describe("closeout sync validator", () => {
-  it("uses the tracked workflow branch mapping for a non-draft backend PR", () => {
+  it("enforces Ready validation against the tracked workflow branch mapping", () => {
     const checklistMeta = metadata("mapped-stage2-item", 2, "backend", "3,6");
     const { baseRootDir, rootDir } = createIncrementalBackendFixture({
       baseDeliveryItems: [
@@ -283,7 +283,7 @@ describe("closeout sync validator", () => {
       ],
       currentDeliveryItems: [
         {
-          checked: true,
+          checked: false,
           text: "mapped Stage 2 behavior",
           meta: checklistMeta,
         },
@@ -311,14 +311,26 @@ describe("closeout sync validator", () => {
         PR_IS_DRAFT: "false",
       },
       changedFiles: [],
-      readBaseChecklistContract: () =>
-        readWorkpackChecklistContract({
-          rootDir: baseRootDir,
-          slice: "05-planner-week-core",
-        }),
+      readBaseChecklistContract: ({ slice }) =>
+        slice === "05-planner-week-core"
+          ? readWorkpackChecklistContract({
+              rootDir: baseRootDir,
+              slice,
+            })
+          : null,
     });
 
-    expect(results).toEqual([]);
+    expect(results).toEqual([
+      {
+        name: "closeout-sync:05-planner-week-core",
+        errors: [
+          expect.objectContaining({
+            message:
+              "Ready-for-review backend PRs must newly close at least one Stage 2-owned checklist item relative to the base branch.",
+          }),
+        ],
+      },
+    ]);
   });
 
   it("does not enforce strict closeout on draft frontend PRs", () => {
