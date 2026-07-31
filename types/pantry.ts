@@ -11,17 +11,30 @@ export interface PantryItem {
   created_at: string;
 }
 
+export interface PantryProductItem {
+  id: string;
+  food_product_id: string;
+  food_product_nutrition_version_id: string;
+  name: string;
+  brand: string | null;
+  created_at: string;
+}
+
 export interface PantryListData {
   items: PantryItem[];
+  product_items: PantryProductItem[];
 }
 
 export interface PantryMutationBody {
   ingredient_ids?: unknown;
+  product_items?: unknown;
 }
 
 export interface PantryAddData {
   added: number;
   items: PantryItem[];
+  product_added: number;
+  product_items: PantryProductItem[];
 }
 
 export interface PantryDeleteData {

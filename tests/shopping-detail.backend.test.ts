@@ -186,6 +186,9 @@ describe("10a shopping detail backend", () => {
           {
             id: "item-1",
             ingredient_id: "ing-1",
+            source_type: "ingredient",
+            food_product_id: null,
+            food_product_nutrition_version_id: null,
             display_text: "양파 1개",
             amounts_json: [{ amount: 1, unit: "개" }],
             is_checked: false,
@@ -196,6 +199,9 @@ describe("10a shopping detail backend", () => {
           {
             id: "item-2",
             ingredient_id: "ing-2",
+            source_type: "ingredient",
+            food_product_id: null,
+            food_product_nutrition_version_id: null,
             display_text: "소금 1작은술",
             amounts_json: [{ amount: 1, unit: "작은술" }],
             is_checked: false,
@@ -285,6 +291,9 @@ describe("10a shopping detail backend", () => {
           {
             id: "item-1",
             ingredient_id: "ing-1",
+            source_type: "ingredient",
+            food_product_id: null,
+            food_product_nutrition_version_id: null,
             category: "채소",
             display_text: "양파 1개",
             amounts_json: [{ amount: 1, unit: "개" }],
@@ -296,6 +305,9 @@ describe("10a shopping detail backend", () => {
           {
             id: "item-2",
             ingredient_id: "ing-2",
+            source_type: "ingredient",
+            food_product_id: null,
+            food_product_nutrition_version_id: null,
             category: "양념",
             display_text: "소금 1작은술",
             amounts_json: [{ amount: 1, unit: "작은술" }],

@@ -4,6 +4,10 @@ export function resolveSliceFromBranch(branchName) {
 }
 
 export function resolveWorkpackSlice({ slice, baseRef, spawnSyncFn }) {
+  if (slice === "product-ingredient-link-contract-runtime") {
+    return "product-ingredient-link-foundation";
+  }
+
   if (!/^\d{2}-retrofit$/.test(slice)) {
     return slice;
   }

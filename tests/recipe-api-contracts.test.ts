@@ -1475,7 +1475,17 @@ describe("recipe API contracts", () => {
           data: { user: { id: "user-1" } },
         })),
       },
-      rpc: vi.fn(async () => ({ data: [], error: null })),
+      rpc: vi.fn(async (functionName: string) => (
+        functionName === "select_pantry_effective_ingredients"
+          ? {
+              data: [
+                { ingredient_id: "ing-egg" },
+                { ingredient_id: "ing-rice" },
+              ],
+              error: null,
+            }
+          : { data: [], error: null }
+      )),
       from: vi.fn((table: string) => {
         if (table === "recipes") {
           const query = recipeQueries.shift();

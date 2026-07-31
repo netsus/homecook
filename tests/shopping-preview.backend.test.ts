@@ -1115,6 +1115,8 @@ describe("shopping stage2 backend", () => {
       p_item_rows: [
         {
           ingredient_id: "ing-onion",
+          food_product_id: null,
+          food_product_nutrition_version_id: null,
           display_text: "양파 1개",
           amounts_json: [{ amount: 1, unit: "개" }],
           is_pantry_excluded: false,
@@ -1290,6 +1292,8 @@ describe("shopping stage2 backend", () => {
         p_item_rows: [
           {
             ingredient_id: "ing-onion",
+            food_product_id: null,
+            food_product_nutrition_version_id: null,
             display_text: "양파 600g",
             amounts_json: [{ amount: 600, unit: "g" }],
             is_pantry_excluded: false,
@@ -1608,6 +1612,8 @@ describe("shopping stage2 backend", () => {
       p_item_rows: [
         {
           ingredient_id: "ing-onion",
+          food_product_id: null,
+          food_product_nutrition_version_id: null,
           display_text: "양파 1개",
           amounts_json: [{ amount: 1, unit: "개" }],
           is_pantry_excluded: true,

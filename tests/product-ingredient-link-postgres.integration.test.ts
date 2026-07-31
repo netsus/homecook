@@ -555,6 +555,173 @@ describe.runIf(enabled)(
       `)).toBe("1");
     }, 10_000);
 
+    it("enforces exact pantry and shopping provenance constraints", () => {
+      const ingredientId = createIngredient("exact-identity");
+      const product = createPrivateProduct(ownerA, "exact-identity");
+      const listId = randomUUID();
+
+      psql(serviceSql(`
+        insert into public.shopping_lists (
+          id, user_id, title, date_range_start, date_range_end
+        ) values (
+          '${listId}', '${ownerA}', 'exact identity', current_date, current_date
+        );
+      `));
+
+      expectSqlFailure(serviceSql(`
+        insert into public.pantry_items (
+          user_id, ingredient_id, food_product_id, food_product_nutrition_version_id
+        ) values (
+          '${ownerA}', '${ingredientId}', '${product.id}', '${product.nutrition_version_id}'
+        );
+      `), /pantry_items_identity_xor_check/i);
+
+      expectSqlFailure(serviceSql(`
+        insert into public.pantry_items (user_id, food_product_id)
+        values ('${ownerA}', '${product.id}');
+      `), /pantry_items_identity_xor_check/i);
+
+      expectSqlFailure(serviceSql(`
+        insert into public.pantry_items (
+          user_id, food_product_id, food_product_nutrition_version_id
+        ) values (
+          '${ownerA}', '${product.id}', '${randomUUID()}'
+        );
+      `), /pantry_items_product_version_fkey|foreign key/i);
+
+      psql(serviceSql(`
+        insert into public.pantry_items (
+          user_id, food_product_id, food_product_nutrition_version_id
+        ) values (
+          '${ownerA}', '${product.id}', '${product.nutrition_version_id}'
+        );
+      `));
+      expectSqlFailure(serviceSql(`
+        insert into public.pantry_items (
+          user_id, food_product_id, food_product_nutrition_version_id
+        ) values (
+          '${ownerA}', '${product.id}', '${product.nutrition_version_id}'
+        );
+      `), /pantry_items_user_product_version_unique|duplicate key/i);
+
+      expectSqlFailure(serviceSql(`
+        insert into public.shopping_list_items (
+          shopping_list_id,
+          ingredient_id,
+          food_product_id,
+          food_product_nutrition_version_id,
+          display_text,
+          amounts_json
+        ) values (
+          '${listId}',
+          '${ingredientId}',
+          '${product.id}',
+          '${product.nutrition_version_id}',
+          'invalid dual',
+          '[]'::jsonb
+        );
+      `), /shopping_list_items_identity_xor_check/i);
+
+      expectSqlFailure(serviceSql(`
+        insert into public.shopping_list_items (
+          shopping_list_id,
+          display_text,
+          amounts_json
+        ) values (
+          '${listId}',
+          'new all-null provenance is forbidden',
+          '[]'::jsonb
+        );
+      `), /shopping_list_items_identity_xor_check/i);
+
+      psql(serviceSql(`
+        insert into public.shopping_list_items (
+          shopping_list_id,
+          food_product_id,
+          food_product_nutrition_version_id,
+          display_text,
+          amounts_json
+        ) values (
+          '${listId}',
+          '${product.id}',
+          '${product.nutrition_version_id}',
+          'pinned product',
+          '[]'::jsonb
+        );
+      `));
+
+      expectSqlFailure(serviceSql(`
+        delete from public.food_product_nutrition_versions
+        where id = '${product.nutrition_version_id}';
+      `), /permission denied|IMMUTABLE_PRODUCT_NUTRITION_VERSION|violates foreign key/i);
+    });
+
+    it("projects distinct generic plus approved product links for authenticated self only", () => {
+      const ingredientId = createIngredient("effective-reader");
+      const product = createPrivateProduct(ownerA, "effective-reader");
+      const candidateId = createCandidate({
+        productId: product.id,
+        ingredientId,
+      });
+
+      psql(serviceSql(`
+        select public.promote_food_product_ingredient_link(
+          '${candidateId}', null, 'reader fixture'
+        );
+        insert into public.pantry_items (user_id, ingredient_id)
+        values ('${ownerA}', '${ingredientId}');
+        insert into public.pantry_items (
+          user_id, food_product_id, food_product_nutrition_version_id
+        ) values (
+          '${ownerA}', '${product.id}', '${product.nutrition_version_id}'
+        );
+      `));
+
+      expect(psql(authenticatedSql(ownerA, `
+        select count(*)::text
+        from public.select_pantry_effective_ingredients('${ownerA}');
+      `))).toBe("1");
+      expect(psql(authenticatedSql(ownerB, `
+        select count(*)::text
+        from public.select_pantry_effective_ingredients('${ownerA}');
+      `))).toBe("0");
+      expectSqlFailure(serviceSql(`
+        select * from public.select_pantry_effective_ingredients('${ownerA}');
+      `), /permission denied/i);
+    });
+
+    it("keeps the effective reader bounded by owner and product lookup indexes", () => {
+      const explain = psqlResult(`
+        set enable_seqscan = off;
+        explain (costs off)
+        select distinct effective.ingredient_id
+        from (
+          select pantry.ingredient_id
+          from public.pantry_items as pantry
+          where pantry.user_id = '${ownerA}'
+            and pantry.ingredient_id is not null
+          union
+          select link.ingredient_id
+          from public.pantry_items as pantry
+          join public.food_product_ingredient_links as link
+            on link.product_id = pantry.food_product_id
+           and link.relation = 'represents'
+           and link.review_status = 'approved'
+           and link.is_primary
+           and link.is_active
+          where pantry.user_id = '${ownerA}'
+            and pantry.food_product_id is not null
+        ) as effective;
+      `);
+
+      expect(explain.status, explain.stderr).toBe(0);
+      expect(explain.stdout).toMatch(
+        /pantry_items_user_ingredient_unique|pantry_items_user_ingredient_idx/i,
+      );
+      expect(explain.stdout).toMatch(/pantry_items_user_product_lookup_idx/i);
+      expect(explain.stdout).toMatch(/food_product_ingredient_links/i);
+    });
+
     it("enforces ingredient restrict and product cleanup cascade", () => {
       const ingredientId = createIngredient("fk");
       const product = createPrivateProduct(ownerA, "fk");
@@ -573,13 +740,11 @@ describe.runIf(enabled)(
       psql(`
         begin;
         select set_config(
-          'homecook.account_delete_user_id',
+          'homecook.private_product_cleanup_user_id',
           '${ownerA}',
           true
         );
         set constraints food_products_current_version_fk deferred;
-        delete from public.food_product_nutrition_versions
-        where product_id = '${product.id}';
         delete from public.food_products where id = '${product.id}';
         commit;
       `);

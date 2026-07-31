@@ -46,6 +46,18 @@ interface ShoppingCreateRpcData {
   message?: string;
 }
 
+interface PinnedIngredientSnapshot {
+  ingredient_id: string | null;
+  food_product_id?: string | null;
+  food_product_nutrition_version_id?: string | null;
+  amount: number | null;
+  unit: string | null;
+  ingredient_type: "QUANT" | "TO_TASTE";
+  display_text: string | null;
+  scalable?: boolean;
+  sort_order?: number;
+}
+
 interface MealsRow {
   id: string;
   user_id: string;
@@ -54,27 +66,11 @@ interface MealsRow {
   recipe_content_snapshots:
     | {
       base_servings: number | null;
-      ingredients_json: Array<{
-        ingredient_id: string;
-        amount: number | null;
-        unit: string | null;
-        ingredient_type: "QUANT" | "TO_TASTE";
-        display_text: string | null;
-        scalable?: boolean;
-        sort_order?: number;
-      }> | null;
+      ingredients_json: PinnedIngredientSnapshot[] | null;
     }
     | Array<{
       base_servings: number | null;
-      ingredients_json: Array<{
-        ingredient_id: string;
-        amount: number | null;
-        unit: string | null;
-        ingredient_type: "QUANT" | "TO_TASTE";
-        display_text: string | null;
-        scalable?: boolean;
-        sort_order?: number;
-      }> | null;
+      ingredients_json: PinnedIngredientSnapshot[] | null;
     }>
     | null;
   plan_date: string;
@@ -263,16 +259,20 @@ interface PantryItemsTable {
 
 interface ShoppingListItemsTable {
   select(columns: string): ShoppingListItemsSelectForHistoryQuery;
-  insert(values: Array<{
-    shopping_list_id: string;
-    ingredient_id: string;
-    display_text: string;
-    amounts_json: Array<{ amount: number; unit: string }>;
-    is_pantry_excluded: boolean;
-    is_checked: false;
-    added_to_pantry: false;
-    sort_order: number;
-  }>): ShoppingListItemsInsertQuery;
+  insert(
+    values: Array<{
+      shopping_list_id: string;
+      ingredient_id: string | null;
+      food_product_id: string | null;
+      food_product_nutrition_version_id: string | null;
+      display_text: string;
+      amounts_json: Array<{ amount: number; unit: string }>;
+      is_pantry_excluded: boolean;
+      is_checked: false;
+      added_to_pantry: false;
+      sort_order: number;
+    }>,
+  ): ShoppingListItemsInsertQuery;
 }
 
 interface ShoppingCreateDbClient {
@@ -643,6 +643,15 @@ export async function POST(request: Request) {
       planned_servings: number;
     }
   > = [];
+  const productAggregationRows: Array<{
+    food_product_id: string;
+    food_product_nutrition_version_id: string;
+    display_text: string;
+    amount: number | null;
+    unit: string | null;
+    shopping_servings: number;
+    planned_servings: number;
+  }> = [];
 
   if (legacyRecipeIds.length > 0) {
     const recipeRowsResult = await dbClient
@@ -699,6 +708,27 @@ export async function POST(request: Request) {
       : mealConfigMap.get(meal.id)?.shopping_servings ?? meal.planned_servings;
 
     for (const ingredient of contentSnapshot.ingredients_json ?? []) {
+      if (
+        ingredient.food_product_id &&
+        ingredient.food_product_nutrition_version_id
+      ) {
+        productAggregationRows.push({
+          food_product_id: ingredient.food_product_id,
+          food_product_nutrition_version_id:
+            ingredient.food_product_nutrition_version_id,
+          display_text: ingredient.display_text?.trim() || "상품",
+          amount: ingredient.amount,
+          unit: ingredient.unit,
+          shopping_servings: shoppingServings,
+          planned_servings: contentSnapshot.base_servings,
+        });
+        continue;
+      }
+
+      if (!ingredient.ingredient_id) {
+        continue;
+      }
+
       ingredientAggregationRows.push({
         recipe_id: meal.recipe_id,
         ingredient_id: ingredient.ingredient_id,
@@ -777,11 +807,59 @@ export async function POST(request: Request) {
   }));
   const shoppingItemPayloadRows = aggregatedIngredients.map((ingredient, index) => ({
     ingredient_id: ingredient.ingredient_id,
+    food_product_id: null,
+    food_product_nutrition_version_id: null,
     display_text: ingredient.display_text,
     amounts_json: ingredient.amounts_json,
     is_pantry_excluded: pantryIngredientIds.has(ingredient.ingredient_id),
     sort_order: index,
   }));
+  const productPayloadByPair = new Map<
+    string,
+    {
+      ingredient_id: null;
+      food_product_id: string;
+      food_product_nutrition_version_id: string;
+      display_text: string;
+      amounts_json: Array<{ amount: number; unit: string }>;
+      is_pantry_excluded: false;
+      sort_order: number;
+    }
+  >();
+
+  productAggregationRows.forEach((product) => {
+    const pair = `${product.food_product_id}:${product.food_product_nutrition_version_id}`;
+    const existing = productPayloadByPair.get(pair);
+    const scaledAmount =
+      typeof product.amount === "number" && product.planned_servings > 0
+        ? (product.amount * product.shopping_servings) / product.planned_servings
+        : null;
+    const nextAmount =
+      scaledAmount !== null && product.unit
+        ? [{ amount: scaledAmount, unit: product.unit }]
+        : [];
+
+    if (existing) {
+      existing.amounts_json.push(...nextAmount);
+      return;
+    }
+
+    productPayloadByPair.set(pair, {
+      ingredient_id: null,
+      food_product_id: product.food_product_id,
+      food_product_nutrition_version_id:
+        product.food_product_nutrition_version_id,
+      display_text: product.display_text,
+      amounts_json: nextAmount,
+      is_pantry_excluded: false,
+      sort_order: shoppingItemPayloadRows.length + productPayloadByPair.size,
+    });
+  });
+
+  const allShoppingItemPayloadRows = [
+    ...shoppingItemPayloadRows,
+    ...productPayloadByPair.values(),
+  ];
 
   if (typeof dbClient.rpc === "function") {
     const createResult = await dbClient.rpc("create_shopping_list_from_payload", {
@@ -808,7 +886,7 @@ export async function POST(request: Request) {
         planned_servings: splitMeal.shoppingServings,
       })),
       p_recipe_rows: shoppingRecipePayloadRows,
-      p_item_rows: shoppingItemPayloadRows,
+      p_item_rows: allShoppingItemPayloadRows,
       p_pantry_item_count: aggregatedIngredients.length,
     });
 
@@ -1028,19 +1106,22 @@ export async function POST(request: Request) {
     }
   }
 
-  if (aggregatedIngredients.length > 0) {
+  if (allShoppingItemPayloadRows.length > 0) {
     const itemsInsertResult = await dbClient
       .from("shopping_list_items")
       .insert(
-        aggregatedIngredients.map((ingredient, index) => ({
+        allShoppingItemPayloadRows.map((item) => ({
           shopping_list_id: shoppingList.id,
-          ingredient_id: ingredient.ingredient_id,
-          display_text: ingredient.display_text,
-          amounts_json: ingredient.amounts_json,
-          is_pantry_excluded: pantryIngredientIds.has(ingredient.ingredient_id),
+          ingredient_id: item.ingredient_id,
+          food_product_id: item.food_product_id,
+          food_product_nutrition_version_id:
+            item.food_product_nutrition_version_id,
+          display_text: item.display_text,
+          amounts_json: item.amounts_json,
+          is_pantry_excluded: item.is_pantry_excluded,
           is_checked: false,
           added_to_pantry: false,
-          sort_order: index,
+          sort_order: item.sort_order,
         })),
       );
 

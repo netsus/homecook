@@ -291,6 +291,7 @@ describe("13 pantry core backend", () => {
             created_at: "2026-04-27T09:00:00Z",
           },
         ],
+        product_items: [],
       },
       error: null,
     });
@@ -316,6 +317,10 @@ describe("13 pantry core backend", () => {
               ingredients: { standard_name: "두부", category: "단백질" },
             },
           ],
+          error: null,
+        },
+        {
+          data: [],
           error: null,
         },
       ],
@@ -375,7 +380,7 @@ describe("13 pantry core backend", () => {
     expect(response.status).toBe(200);
     expect(body).toEqual({
       success: true,
-      data: { items: [] },
+      data: { items: [], product_items: [] },
       error: null,
     });
     expect(pantryItemsTable.select).not.toHaveBeenCalled();
@@ -453,6 +458,8 @@ describe("13 pantry core backend", () => {
             created_at: "2026-04-28T10:00:00Z",
           },
         ],
+        product_added: 0,
+        product_items: [],
       },
       error: null,
     });
@@ -635,6 +642,158 @@ describe("13 pantry core backend", () => {
     expect(insertQuery.select).toHaveBeenCalledWith(
       expect.not.stringContaining("category_code"),
     );
+  });
+
+  it("POST /pantry adds an exact visible product with its pinned nutrition version", async () => {
+    const ingredientsTable = createTable({
+      selectResults: [{ data: [], error: null }],
+    });
+    const versionsTable = createTable({
+      selectResults: [
+        {
+          data: [{ id: "version-1", product_id: "product-1" }],
+          error: null,
+        },
+      ],
+    });
+    const productsTable = createTable({
+      selectResults: [
+        {
+          data: [
+            {
+              id: "product-1",
+              name: "현미밥",
+              brand: "집밥",
+              owner_user_id: null,
+              visibility: "public",
+              deleted_at: null,
+            },
+          ],
+          error: null,
+        },
+      ],
+    });
+    const pantryItemsTable = createTable({
+      selectResults: [{ data: [], error: null }],
+      insertResults: [
+        {
+          data: [
+            {
+              id: "pantry-product-1",
+              food_product_id: "product-1",
+              food_product_nutrition_version_id: "version-1",
+              created_at: "2026-07-31T03:00:00.000Z",
+              food_products: { name: "현미밥", brand: "집밥" },
+            },
+          ],
+          error: null,
+        },
+      ],
+    });
+
+    createRouteHandlerClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })),
+      },
+      from: vi.fn((table: string) => {
+        if (table === "ingredients") return ingredientsTable;
+        if (table === "food_product_nutrition_versions") return versionsTable;
+        if (table === "food_products") return productsTable;
+        if (table === "pantry_items") return pantryItemsTable;
+        throw new Error(`unexpected table: ${table}`);
+      }),
+    });
+
+    const { POST } = await importPantryRoute();
+    const response = await POST(
+      new Request("http://localhost:3000/api/v1/pantry", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          product_items: [
+            {
+              food_product_id: "product-1",
+              food_product_nutrition_version_id: "version-1",
+            },
+          ],
+        }),
+      }),
+    );
+
+    expect(response.status).toBe(201);
+    expect(await response.json()).toEqual({
+      success: true,
+      data: {
+        added: 0,
+        items: [],
+        product_added: 1,
+        product_items: [
+          {
+            id: "pantry-product-1",
+            food_product_id: "product-1",
+            food_product_nutrition_version_id: "version-1",
+            name: "현미밥",
+            brand: "집밥",
+            created_at: "2026-07-31T03:00:00.000Z",
+          },
+        ],
+      },
+      error: null,
+    });
+  });
+
+  it("POST /pantry returns the indexed validation field for a product/version mismatch", async () => {
+    const ingredientsTable = createTable({
+      selectResults: [{ data: [], error: null }],
+    });
+    const versionsTable = createTable({
+      selectResults: [
+        {
+          data: [{ id: "version-other", product_id: "product-other" }],
+          error: null,
+        },
+      ],
+    });
+
+    createRouteHandlerClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })),
+      },
+      from: vi.fn((table: string) => {
+        if (table === "ingredients") return ingredientsTable;
+        if (table === "food_product_nutrition_versions") return versionsTable;
+        if (table === "pantry_items") return createTable({});
+        throw new Error(`unexpected table: ${table}`);
+      }),
+    });
+
+    const { POST } = await importPantryRoute();
+    const response = await POST(
+      new Request("http://localhost:3000/api/v1/pantry", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          product_items: [
+            {
+              food_product_id: "product-1",
+              food_product_nutrition_version_id: "version-other",
+            },
+          ],
+        }),
+      }),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(422);
+    expect(body.error).toMatchObject({
+      code: "VALIDATION_ERROR",
+      fields: [
+        {
+          field: "product_items[0].food_product_nutrition_version_id",
+          reason: "product_version_mismatch",
+        },
+      ],
+    });
   });
 
   it("POST /pantry returns 422 for empty ingredient_ids", async () => {

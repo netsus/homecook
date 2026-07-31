@@ -94,9 +94,12 @@ interface ThemeDbClient {
     data: ThemeRecipeRow[] | null;
       error: { message: string } | null;
     }>;
+  rpc(
+    functionName: "select_pantry_effective_ingredients",
+    args: { p_user_id: string },
+  ): ArrayResult<PantryItemRow>;
 
   from(table: "meals"): ThemeTable<MealThemeRow>;
-  from(table: "pantry_items"): ThemeTable<PantryItemRow>;
   from(table: "recipe_ingredients"): ThemeTable<RecipeIngredientRow>;
   from(table: "recipe_steps"): ThemeTable<RecipeStepMethodRow>;
   from(table: "recipes"): ThemeTable<RecipeCardRow>;
@@ -266,10 +269,10 @@ async function readPantryMatchedRecipeIds(dbClient: ThemeDbClient, userId: strin
     return [];
   }
 
-  const pantryItemsResult = await dbClient
-    .from("pantry_items")
-    .select("ingredient_id")
-    .eq("user_id", userId);
+  const pantryItemsResult = await dbClient.rpc(
+    "select_pantry_effective_ingredients",
+    { p_user_id: userId },
+  );
 
   if (pantryItemsResult.error || !pantryItemsResult.data) {
     return [];

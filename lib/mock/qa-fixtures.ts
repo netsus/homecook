@@ -456,7 +456,7 @@ export function getQaFixturePantryItems({
       return matchesCategory && matchesQuery;
     });
 
-  return { items };
+  return { items, product_items: [] };
 }
 
 export function getMockRecipeList(

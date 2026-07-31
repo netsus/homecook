@@ -42,11 +42,6 @@ type ArrayResult<T> = PromiseLike<{
   error: QueryError | null;
 }>;
 
-interface PantryItemsSelectQuery {
-  eq(column: string, value: string): PantryItemsSelectQuery;
-  then: ArrayResult<PantryItemRow>["then"];
-}
-
 interface RecipeIngredientsSelectQuery {
   in(column: string, values: string[]): RecipeIngredientsSelectQuery;
   then: ArrayResult<RecipeIngredientRow>["then"];
@@ -62,10 +57,6 @@ interface IngredientsSelectQuery {
   then: ArrayResult<IngredientRow>["then"];
 }
 
-interface PantryItemsTable {
-  select(columns: string): PantryItemsSelectQuery;
-}
-
 interface RecipeIngredientsTable {
   select(columns: string): RecipeIngredientsSelectQuery;
 }
@@ -79,10 +70,13 @@ interface IngredientsTable {
 }
 
 interface PantryMatchDbClient {
-  from(table: "pantry_items"): PantryItemsTable;
   from(table: "recipe_ingredients"): RecipeIngredientsTable;
   from(table: "recipes"): RecipesTable;
   from(table: "ingredients"): IngredientsTable;
+  rpc(
+    functionName: "select_pantry_effective_ingredients",
+    args: { p_user_id: string },
+  ): ArrayResult<PantryItemRow>;
 }
 
 const DEFAULT_LIMIT = 20;
@@ -199,10 +193,10 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const pantryItemsResult = await dbClient
-    .from("pantry_items")
-    .select("ingredient_id")
-    .eq("user_id", user.id);
+  const pantryItemsResult = await dbClient.rpc(
+    "select_pantry_effective_ingredients",
+    { p_user_id: user.id },
+  );
 
   if (pantryItemsResult.error || !pantryItemsResult.data) {
     return fail("INTERNAL_ERROR", "팬트리 기반 추천을 불러오지 못했어요.", 500);

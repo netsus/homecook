@@ -9,14 +9,18 @@ import path from "node:path";
 const TOOLS = ["initdb", "pg_ctl", "createdb", "psql"];
 const TEST_FILE = "tests/product-ingredient-link-postgres.integration.test.ts";
 const TARGET_MIGRATION =
-  "supabase/migrations/20260730210000_product_ingredient_link_foundation.sql";
+  "supabase/migrations/20260731110000_product_ingredient_link_contract_runtime.sql";
 const PRE_TARGET_MIGRATIONS = [
   "supabase/migrations/20260301000000_core_schema_bootstrap.sql",
+  "supabase/migrations/20260425000000_08b_add_pantry_items_table.sql",
+  "supabase/migrations/20260426090000_09_shopping_tables.sql",
   "supabase/migrations/20260610170000_recipe_book_cover_metadata.sql",
   "supabase/migrations/20260714143000_ingredient_nutrition_conversion_model.sql",
   "supabase/migrations/20260716090000_add_recipe_nutrition_snapshots.sql",
   "supabase/migrations/20260716120000_prepared_food_catalog.sql",
+  "supabase/migrations/20260716150000_prepared_food_planner_entries.sql",
   "supabase/migrations/20260718090000_community_prepared_food_catalog.sql",
+  "supabase/migrations/20260730210000_product_ingredient_link_foundation.sql",
 ];
 const REPLAY_SEED_NAME = "product-link:replay-seed";
 const VITEST_BIN = path.join(process.cwd(), "node_modules/.bin/vitest");
@@ -132,6 +136,21 @@ create table if not exists public.operational_events (
 );
 `;
 
+const ACCOUNT_CLEANUP_COMPAT_SQL = `
+create or replace function public.delete_user_private_data(p_user_id uuid)
+returns jsonb
+language sql
+security definer
+set search_path = pg_catalog, public, pg_temp
+as $$
+  select jsonb_build_object('deleted', true, 'user_id', p_user_id)
+$$;
+revoke all on function public.delete_user_private_data(uuid)
+  from public, anon, authenticated, service_role;
+grant execute on function public.delete_user_private_data(uuid)
+  to service_role;
+`;
+
 function replaySeedSql() {
   return `
     insert into public.users (id, nickname, social_provider, social_id)
@@ -209,6 +228,11 @@ async function runMode(postgresBin, mode) {
       required(path.join(postgresBin, "psql"), [...args, "-f", migration]);
       process.stdout.write(`[product-link-pg] applied ${migration} mode=${mode}\n`);
     }
+
+    required(
+      path.join(postgresBin, "psql"),
+      [...args, "-c", ACCOUNT_CLEANUP_COMPAT_SQL],
+    );
 
     if (mode === "replay") {
       required(path.join(postgresBin, "psql"), [...args, "-c", replaySeedSql()]);
