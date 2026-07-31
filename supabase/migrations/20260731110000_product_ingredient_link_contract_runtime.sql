@@ -505,7 +505,7 @@ begin
     )::uuid;
 
     -- Only the service-only account cleanup function sets this transaction-local
-    -- owner token after its exact private-owner fence and zero-reference check.
+    -- token after its exact private-owner fence and zero-reference check.
     if v_cleanup_user_id is not null then
       return old;
     end if;
@@ -515,97 +515,7 @@ begin
 end;
 $function$;
 
-alter function public.delete_user_private_data(uuid)
-  rename to delete_user_private_data_without_exact_product_cleanup;
-
-create or replace function public.delete_user_private_data(p_user_id uuid)
-returns jsonb
-language plpgsql
-security definer
-set search_path = pg_catalog, public, pg_temp
-as $function$
-declare
-  v_owned_private_product_ids uuid[] := '{}'::uuid[];
-  v_private_profile_ids uuid[] := '{}'::uuid[];
-  v_remaining_private_reference_count integer := 0;
-  v_result jsonb;
-begin
-  if auth.uid() is not null and auth.uid() <> p_user_id then
-    raise exception 'cannot delete another user private data' using errcode = '42501';
-  end if;
-
-  select coalesce(array_agg(product.id), '{}'::uuid[])
-  into v_owned_private_product_ids
-  from public.food_products as product
-  where product.owner_user_id = p_user_id
-    and product.visibility = 'private'
-    and product.source_type = 'manual';
-
-  select coalesce(array_agg(version.nutrition_profile_id), '{}'::uuid[])
-  into v_private_profile_ids
-  from public.food_product_nutrition_versions as version
-  where version.product_id = any(v_owned_private_product_ids);
-
-  if cardinality(v_owned_private_product_ids) > 0 then
-    -- Remove exact owner-private references before aggregate cleanup.
-    delete from public.pantry_items
-    where food_product_id = any(v_owned_private_product_ids);
-
-    delete from public.shopping_list_items
-    where food_product_id = any(v_owned_private_product_ids);
-
-    delete from public.product_planner_entries
-    where product_id = any(v_owned_private_product_ids);
-
-    select
-      (select count(*) from public.pantry_items
-       where food_product_id = any(v_owned_private_product_ids))
-      +
-      (select count(*) from public.shopping_list_items
-       where food_product_id = any(v_owned_private_product_ids))
-    into v_remaining_private_reference_count;
-
-    if v_remaining_private_reference_count <> 0 then
-      raise exception 'private product references remain'
-        using errcode = '23503';
-    end if;
-
-    perform set_config(
-      'homecook.private_product_cleanup_user_id',
-      p_user_id::text,
-      true
-    );
-    set constraints food_products_current_version_fk deferred;
-
-    delete from public.nutrition_values
-    where profile_id = any(v_private_profile_ids);
-
-    delete from public.food_products
-    where id = any(v_owned_private_product_ids)
-      and owner_user_id = p_user_id
-      and visibility = 'private';
-
-    delete from public.nutrition_profiles
-    where id = any(v_private_profile_ids)
-      and not exists (
-        select 1
-        from public.food_product_nutrition_versions as version
-        where version.nutrition_profile_id = nutrition_profiles.id
-      );
-  end if;
-
-  -- owner_user_id is null public/shared products, versions, links and provenance are preserved.
-  v_result := public.delete_user_private_data_without_exact_product_cleanup(p_user_id);
-  return v_result;
-end;
-$function$;
-
-revoke all on function public.delete_user_private_data_without_exact_product_cleanup(uuid)
+revoke all on function public.protect_food_product_nutrition_version()
   from public, anon, authenticated, service_role;
-
-revoke all on function public.delete_user_private_data(uuid)
-  from public, anon, authenticated, service_role;
-grant execute on function public.delete_user_private_data(uuid)
-  to service_role;
 
 commit;

@@ -8,8 +8,10 @@ import path from "node:path";
 
 const TOOLS = ["initdb", "pg_ctl", "createdb", "psql"];
 const TEST_FILE = "tests/product-ingredient-link-postgres.integration.test.ts";
-const TARGET_MIGRATION =
-  "supabase/migrations/20260731110000_product_ingredient_link_contract_runtime.sql";
+const TARGET_MIGRATIONS = [
+  "supabase/migrations/20260731110000_product_ingredient_link_contract_runtime.sql",
+  "supabase/migrations/20260731111000_product_ingredient_link_account_cleanup.sql",
+];
 const PRE_TARGET_MIGRATIONS = [
   "supabase/migrations/20260301000000_core_schema_bootstrap.sql",
   "supabase/migrations/20260425000000_08b_add_pantry_items_table.sql",
@@ -239,10 +241,12 @@ async function runMode(postgresBin, mode) {
       process.stdout.write(`[product-link-pg] replay seed inserted mode=${mode}\n`);
     }
 
-    required(path.join(postgresBin, "psql"), [...args, "-f", TARGET_MIGRATION]);
-    process.stdout.write(
-      `[product-link-pg] applied ${TARGET_MIGRATION} mode=${mode}\n`,
-    );
+    for (const migration of TARGET_MIGRATIONS) {
+      required(path.join(postgresBin, "psql"), [...args, "-f", migration]);
+      process.stdout.write(
+        `[product-link-pg] applied ${migration} mode=${mode}\n`,
+      );
+    }
 
     const test = command(
       VITEST_BIN,
