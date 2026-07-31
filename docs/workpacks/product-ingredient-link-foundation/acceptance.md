@@ -1,6 +1,6 @@
 # Acceptance Checklist
 
-> Evidence is checked only after the owning implementation/review stage produces it. 2026-07-31 사용자 승인 Contract Evolution이 official tuple v1.7.27 / v1.5.31 / v1.3.29 / DB v1.3.28 / API v1.2.31에 반영됐지만, 이 Stage 1 작성 작업은 구현 evidence나 독립 internal 1.5 승인을 주장하지 않는다. The link-only subset and hybrid verifier remain historical merged evidence; all newly authorized pantry/shopping/reader/cleanup items stay unchecked until their owning stages close them.
+> Evidence is checked only after the owning implementation/review stage produces it. 2026-07-31 사용자 승인 Contract Evolution은 official tuple v1.7.27 / v1.5.31 / v1.3.29 / DB v1.3.28 / API v1.2.31에 반영됐다. Draft PR #1255의 Stage 2 구현·테스트로 확인된 항목만 체크하며, independent Stage 3/security-DB re-review, Stage 4/5/6, current-head CI와 Manual Only 항목은 계속 미완료다.
 
 ## Happy Path
 
@@ -18,10 +18,10 @@
 ## State / Policy
 
 - [x] production matching requires all four predicates: active, approved, primary and `relation='represents'` <!-- omo:id=accept-link-production-predicate;stage=2;scope=backend;review=3,6 -->
-- [ ] product-level partial unique prevents two active approved primary represents rows under concurrent promotion <!-- omo:id=accept-link-primary-unique;stage=2;scope=backend;review=3,6 -->
+- [x] product-level partial unique prevents two active approved primary represents rows under concurrent promotion <!-- omo:id=accept-link-primary-unique;stage=2;scope=backend;review=3,6 -->
 - [x] `contains|substitute` rows never participate in P0 recommendation matching <!-- omo:id=accept-link-nonrepresents-excluded;stage=2;scope=backend;review=3,6 -->
 - [x] no-link, inactive, pending, rejected, revoked, superseded and non-primary products remain unmatched rather than choosing a first row <!-- omo:id=accept-link-unapproved-fail-closed;stage=2;scope=backend;review=3,6 -->
-- [ ] candidate generation is deterministic and separate from explicit human-reviewed atomic promotion <!-- omo:id=accept-link-candidate-promotion-split;stage=2;scope=backend;review=3,6 -->
+- [x] candidate generation is deterministic and separate from explicit human-reviewed atomic promotion <!-- omo:id=accept-link-candidate-promotion-split;stage=2;scope=backend;review=3,6 -->
 - [ ] 287,041 catalog rows are not bulk-linked or auto-approved by product/brand name <!-- omo:id=accept-link-no-bulk-auto;stage=2;scope=backend;review=3,6 -->
 - [ ] brand-variable products stay product-first until a representative link is approved <!-- omo:id=accept-link-brand-variance;stage=2;scope=backend;review=3,6 -->
 - [ ] referenced `화이트크림` history is inventoried before hide/deprecate and is never hard-deleted by this slice <!-- omo:id=accept-link-broad-anchor-preserved;stage=2;scope=backend;review=3,6 -->
@@ -49,10 +49,10 @@
 
 ## Data Setup / Preconditions
 
-- [ ] fixture includes A/B owners, owner-null shared product, generic/product pantry and shopping rows, exact nutrition versions and product/version mismatch <!-- omo:id=accept-link-fixture-owners;stage=2;scope=shared;review=3,6 -->
-- [ ] link fixture includes active-approved-primary represents plus inactive, pending, rejected, revoked, superseded, secondary, contains and substitute rows <!-- omo:id=accept-link-fixture-states;stage=2;scope=backend;review=3,6 -->
-- [ ] concurrency fixture attempts two simultaneous primary promotions for one product <!-- omo:id=accept-link-fixture-concurrency;stage=2;scope=backend;review=3,6 -->
-- [ ] delete fixture covers private cascade, owner-null preservation and ingredient restrict <!-- omo:id=accept-link-fixture-delete;stage=2;scope=backend;review=3,6 -->
+- [x] fixture includes A/B owners, owner-null shared product, generic/product pantry and shopping rows, exact nutrition versions and product/version mismatch <!-- omo:id=accept-link-fixture-owners;stage=2;scope=shared;review=3,6 -->
+- [x] link fixture includes active-approved-primary represents plus inactive, pending, rejected, revoked, superseded, secondary, contains and substitute rows <!-- omo:id=accept-link-fixture-states;stage=2;scope=backend;review=3,6 -->
+- [x] concurrency fixture attempts two simultaneous primary promotions for one product <!-- omo:id=accept-link-fixture-concurrency;stage=2;scope=backend;review=3,6 -->
+- [x] delete fixture covers private cascade, owner-null preservation and ingredient restrict <!-- omo:id=accept-link-fixture-delete;stage=2;scope=backend;review=3,6 -->
 - [x] existing, fresh and replay databases produce identical schema signatures, grants and stable data digests <!-- omo:id=accept-link-db-replay;stage=2;scope=backend;review=3,6 -->
 - [x] implementation does not activate account-generation cleanup until F0 and #3 joint account-delete gate is satisfied <!-- omo:id=accept-link-joint-gate;stage=2;scope=shared;review=3,6 -->
 - [ ] local application DB has `local auth.users=0`, and the session-authority gateway proves the active exact epoch plus live HMAC binding before account cleanup <!-- omo:id=accept-link-hybrid-session-gate;stage=2;scope=shared;review=3,6 -->

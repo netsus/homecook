@@ -64,8 +64,21 @@ describe("resolveBaseRef", () => {
 });
 
 describe("resolveWorkpackSlice", () => {
-  it("maps the approved contract-runtime branch to its foundation workpack", () => {
-    const spawnSyncFn = () => ({ status: 0, stdout: "" });
+  it("maps an implementation branch through the workflow-v2 work item", () => {
+    const spawnSyncFn = (_cmd: string, args: string[]) =>
+      args.includes("HEAD:.workflow-v2/status.json")
+        ? {
+            status: 0,
+            stdout: JSON.stringify({
+              items: [
+                {
+                  id: "product-ingredient-link-foundation",
+                  branch: "feature/be-product-ingredient-link-contract-runtime",
+                },
+              ],
+            }),
+          }
+        : { status: 0, stdout: "" };
     expect(
       resolveWorkpackSlice({
         slice: "product-ingredient-link-contract-runtime",
@@ -181,8 +194,8 @@ describe("checkWorkpackDocs", () => {
       return { status: 0 };
     };
     checkWorkpackDocs({ slice: "03-recipe-like", baseRef: "master", spawnSyncFn });
-    expect(calls[0]).toContain("origin/master:docs/workpacks/03-recipe-like/README.md");
-    expect(calls[1]).toContain("origin/master:docs/workpacks/03-recipe-like/acceptance.md");
+    expect(calls[1]).toContain("origin/master:docs/workpacks/03-recipe-like/README.md");
+    expect(calls[2]).toContain("origin/master:docs/workpacks/03-recipe-like/acceptance.md");
   });
 
   it("uses the mapped workpack folder for retrofit branches", () => {
@@ -205,10 +218,10 @@ describe("checkWorkpackDocs", () => {
 
     checkWorkpackDocs({ slice: "01-retrofit", baseRef: "master", spawnSyncFn });
 
-    expect(calls[1]).toContain(
+    expect(calls[2]).toContain(
       "origin/master:docs/workpacks/01-discovery-detail-auth/README.md",
     );
-    expect(calls[2]).toContain(
+    expect(calls[3]).toContain(
       "origin/master:docs/workpacks/01-discovery-detail-auth/acceptance.md",
     );
   });
