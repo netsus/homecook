@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-07-31T01:07:04.000Z",
+  "updated_at": "2026-07-31T01:42:32.000Z",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -2312,7 +2312,7 @@
         "node scripts/verify-product-ingredient-link-hybrid.mjs --mode post-merge-read-only",
         "git diff --check"
       ],
-      "notes": "2026-07-31 사용자 승인 Contract Evolution Stage 1 docs authoring is active. Official tuple v1.7.27/v1.5.31/v1.3.29/DB v1.3.28/API v1.2.31 preserves ingredient_ids/generic items and adds exact product_items/product_added, shopping pinned provenance, composite RESTRICT FK, shared reader and owner-private reference-first cleanup. This author task does not self-approve; lifecycle/verification/evaluation remain in_progress/pending/not_started until separate internal 1.5 review and current-head checks. PR #1236 link-only authority and PR #1248 hybrid verifier remain historical merged evidence. New pantry/shopping/reader/account-delete implementation, full local/remote evidence and production activation remain pending/Manual Only with zero production/staging/remote application writes.",
+      "notes": "2026-07-31 사용자 승인 Contract Evolution Stage 1 docs authoring is active. Internal 1.5 task 019fb5c6-d036-7a50-a1de-d093159a7f0b requested changes at PR #1254 head 97d93f983ab8dd9c22ff8943eb8f3bc58e6caf17. Author repair narrows the shared reader to authenticated-self with auth.uid()=p_user_id and no user-path service-token fallback, adds shopping create/detail provenance automation, and returns custom-recipe/meal-log runtime ownership to successors. This author task does not self-approve; lifecycle/verification/evaluation remain in_progress/pending/not_started until fresh internal 1.5 re-review and new-head checks. PR #1236 link-only authority and PR #1248 hybrid verifier remain historical merged evidence. New implementation, full local/remote evidence and production activation remain pending/Manual Only with zero production/staging/remote application writes.",
       "evaluation_status": "not_started",
       "evaluation_round": 0,
       "last_evaluator_result": null,

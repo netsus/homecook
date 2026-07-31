@@ -15,16 +15,18 @@
 3. generic row는 `ingredient_id`만, product row는 `food_product_id + food_product_nutrition_version_id`만 저장한다. 이름·brand·synonym을 통한 generic backfill은 없다.
 4. `GET /pantry`는 기존 generic `items[]`와 additive `product_items[]`를 분리 반환한다. product row는 pantry row ID, exact product/version, `name`, `brand`, `created_at`을 표시하며 row identity를 collapse하지 않는다.
 5. `GET /recipes/pantry-match`와 HOME pantry-cleanout은 `select_pantry_effective_ingredients(p_user_id uuid)`의 `DISTINCT` 결과만 읽는다. generic은 직접 포함하고 product는 active + approved + primary + `relation='represents'`일 때만 linked ingredient를 포함한다.
-6. `contains|substitute`, inactive, pending, rejected, revoked, superseded, non-primary, ambiguous/no-link product는 추천에서 제외한다. 이는 error가 아니라 fail-closed absence이며 product pantry row는 계속 표시된다.
+6. shared reader는 `authenticated-self` caller만 실행하며 함수 내부에서 `auth.uid() = p_user_id`를 검증한다. missing auth, other-owner, stale generation/session은 기존 auth/session 오류로 fail closed하고 user-path service-token fallback은 사용하지 않는다.
+7. `contains|substitute`, inactive, pending, rejected, revoked, superseded, non-primary, ambiguous/no-link product는 추천에서 제외한다. 이는 error가 아니라 fail-closed absence이며 product pantry row는 계속 표시된다. custom recipe와 meal-log는 shared reader signature/semantics regression contract만 이어받고 실제 endpoint/runtime/UI consumption은 owning successor에서 수행한다.
 
 ## 0-PIL-SHOPPING. 생성 시 pin → 완료 시 반영
 
 1. shopping list 생성/reconcile은 source가 generic이면 `ingredient_id`, product이면 exact `food_product_id + food_product_nutrition_version_id`를 item에 pin한다. `display_text`는 표시 snapshot일 뿐 identity authority가 아니다.
-2. 이후 product current version이 바뀌어도 existing shopping item을 자동 repin하지 않는다.
-3. 완료 client는 기존 `add_to_pantry_item_ids`만 `null / [] / 선택값`으로 보낸다. product ID/version을 completion 시점에 재전송하지 않는다.
-4. server는 각 유효 shopping item의 pin을 사용해 generic 또는 product pantry row를 만들고 `added_to_pantry=true`를 한 번만 기록한다. `pantry_added`와 `pantry_added_item_ids` 의미는 기존과 같다.
-5. completed list는 계속 read-only이고 mutation은 기존 409다. `is_pantry_excluded=true`가 되면 `is_checked=false`로 정리한다.
-6. 기존 `ingredient_id`가 있는 legacy item은 generic으로 유지한다. identity가 모두 없는 legacy item은 product/display text를 추측하지 않고 pantry reflection/effective matching에서 제외하며 migration preflight finding으로 남긴다.
+2. `POST /shopping/lists`와 `GET /shopping/lists/{list_id}` response는 generic에 `source_type='ingredient'`와 null product fields, product에 `source_type='food_product'`와 exact product/version, all-null malformed legacy에 `source_type=null`과 null identity를 반환한다.
+3. 이후 product current version이 바뀌어도 existing shopping item을 자동 repin하지 않는다.
+4. 완료 client는 기존 `add_to_pantry_item_ids`만 `null / [] / 선택값`으로 보낸다. product ID/version을 completion 시점에 재전송하지 않는다.
+5. server는 각 유효 shopping item의 pin을 사용해 generic 또는 product pantry row를 만들고 `added_to_pantry=true`를 한 번만 기록한다. `pantry_added`와 `pantry_added_item_ids` 의미는 기존과 같다.
+6. completed list는 계속 read-only이고 mutation은 기존 409다. `is_pantry_excluded=true`가 되면 `is_checked=false`로 정리한다.
+7. 기존 `ingredient_id`가 있는 legacy item은 generic으로 유지한다. identity가 모두 없는 legacy item은 표시 기록만 보존하고 `source_type=null`로 반환하며 product/display text를 추측하지 않는다. pantry reflection/effective matching에서 제외하고 migration preflight finding으로 남긴다.
 
 ## 0-PIL-DELETE. account cleanup 순서
 

@@ -71,8 +71,9 @@ select_pantry_effective_ingredients(p_user_id uuid)
 - 첫 branch는 owner의 generic `pantry_items.ingredient_id`를 읽고, 둘째 branch는 product pantry row를 `food_product_ingredient_links`에 join한다. 두 branch는 `UNION`/`DISTINCT`로 한 ingredient를 한 번만 반환한다.
 - product branch predicate는 `is_active=true AND review_status='approved' AND is_primary=true AND relation='represents'`다. partial unique가 product당 authority를 1개로 제한한다.
 - `contains|substitute`, inactive, pending, rejected, revoked, superseded, non-primary, ambiguous/no-link는 0 row다. 이름/brand/synonym/first-row/stable-ID fallback은 없다.
-- function은 `SECURITY DEFINER`, safe `search_path`, service-role-only execute, PUBLIC/anon/authenticated revoke를 사용한다. route는 authenticated caller와 `p_user_id` 일치를 먼저 검증하고 user-scoped query 전체를 bounded set operation으로 실행한다.
-- `GET /recipes/pantry-match`와 HOME pantry-cleanout이 current owner다. custom recipe validation과 meal-log picker는 successor에서 동일 signature/semantics를 소비하며 raw ingredient-only fallback regression을 허용하지 않는다.
+- function은 `SECURITY DEFINER`, safe `search_path`, `authenticated-self` execute authority를 사용한다. 함수 첫 guard는 `auth.uid() = p_user_id`이며 `auth.uid()`가 null이거나 다른 owner면 mutation/read 0으로 fail closed한다. `PUBLIC`/`anon` execute는 revoke하고 user-path service-token fallback은 금지한다. hybrid pre-request의 active exact epoch와 live binding을 선행 조건으로 유지해 stale generation/session도 기존 오류로 차단한다.
+- negative contract는 missing auth, other-owner, stale generation/session, user-path service-token fallback 각각에 대한 실행 거부와 cross-owner row/count/error 비노출을 요구한다.
+- `GET /recipes/pantry-match`와 HOME pantry-cleanout이 current #2 owner다. custom recipe validation과 meal-log picker는 shared reader signature/semantics regression contract만 successor에 제공하며 실제 endpoint/runtime/UI consumption은 각 owning successor가 구현한다.
 
 ## 0-PIL-D. immutable pin과 FK delete / cleanup order
 

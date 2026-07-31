@@ -1,7 +1,7 @@
 {
   "id": "product-ingredient-link-foundation",
   "title": "Product ingredient link foundation",
-  "summary": "제품과 canonical ingredient의 사람 승인 대표 관계를 additive하게 잠그고, exact product/version identity를 보존한 DISTINCT effective-ingredient projection을 모든 required reader와 account-delete 경계에 적용한다.",
+  "summary": "제품과 canonical ingredient의 사람 승인 대표 관계를 additive하게 잠그고, exact product/version identity를 보존한 authenticated-self DISTINCT effective-ingredient projection을 #2 소유 pantry-match/HOME consumer와 account-delete 경계에 적용하며 successor에는 signature/semantics regression contract만 제공한다.",
   "project_profile": "homecook",
   "change_type": "product",
   "surface": "fullstack",
@@ -115,9 +115,12 @@
       "pantry-additive-product-items-product-added-shape",
       "pantry-and-shopping-xor-composite-restrict-fk-and-partial-unique",
       "shopping-version-pinned-at-creation-and-completion-client-resend-forbidden",
+      "shopping-create-detail-source-type-nullable-provenance-and-three-branch-contract",
       "legacy-shopping-generic-preserved-and-all-null-never-guessed",
       "generic-plus-approved-product-distinct-effective-projection",
-      "five-required-reader-raw-ingredient-only-regressions",
+      "authenticated-self-reader-auth-uid-parameter-match-without-service-token-fallback",
+      "two-owned-reader-raw-ingredient-only-regressions",
+      "successor-reader-signature-semantics-contract-without-runtime-ownership",
       "existing-home-and-pantry-behavior-only-consumer-regression",
       "owner-private-reference-first-cleanup-and-public-shared-preservation",
       "f0-plus-slice3-joint-account-delete-activation-gate",
@@ -153,5 +156,5 @@
     "Out-of-scope candidate: product pantry row deletion needs a separately approved DELETE /pantry additive contract before implementation",
     "Manual release decision: account-generation cleanup activation remains gated by F0 plus slice #3 joint production evidence"
   ],
-  "notes": "2026-07-31 사용자 승인 Contract Evolution authoring is active on docs/product-ingredient-link-contract-evolution. Official tuple v1.7.27/v1.5.31/v1.3.29/DB v1.3.28/API v1.2.31 preserves ingredient_ids/generic items and adds exact product_items/product_added, shopping pinned provenance, composite RESTRICT FK, shared reader and owner-private reference-first cleanup. This author task does not self-approve; lifecycle/verification/evaluation remain in_progress/pending/not_started until separate internal 1.5 review and current-head checks. PR #1236 link-only authority and PR #1248 hybrid verifier remain historical merged evidence. New pantry/shopping/reader/account-delete implementation, full local/remote evidence and production activation remain pending/Manual Only with zero production/staging/remote application writes."
+  "notes": "2026-07-31 사용자 승인 Contract Evolution authoring is active on docs/product-ingredient-link-contract-evolution. Internal 1.5 task 019fb5c6-d036-7a50-a1de-d093159a7f0b requested changes at PR #1254 head 97d93f983ab8dd9c22ff8943eb8f3bc58e6caf17; author repair narrows reader authority to authenticated-self with auth.uid()=p_user_id and no user-path service-token fallback, adds shopping create/detail provenance automation, and returns custom-recipe/meal-log runtime ownership to successors. Official tuple v1.7.27/v1.5.31/v1.3.29/DB v1.3.28/API v1.2.31 remains unchanged. This author task does not self-approve; lifecycle/verification/evaluation remain in_progress/pending/not_started until fresh internal 1.5 re-review. PR #1236 link-only authority and PR #1248 hybrid verifier remain historical merged evidence. New implementation, full local/remote evidence and production activation remain pending/Manual Only with zero production/staging/remote application writes."
 }

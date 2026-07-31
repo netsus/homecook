@@ -10,10 +10,10 @@
 - [ ] generic and multiple product rows resolving to the same ingredient produce one DISTINCT effective ingredient without collapsing exact pantry row IDs <!-- omo:id=accept-link-distinct-union;stage=2;scope=backend;review=3,6 -->
 - [ ] official `GET /recipes/pantry-match` (implemented at `/api/v1/recipes/pantry-match`) recognizes an eligible product row as the linked canonical ingredient <!-- omo:id=accept-link-pantry-match;stage=2;scope=backend;review=3,6 -->
 - [ ] HOME pantry-cleanout recommendation uses the same projection and returns the same eligibility decision <!-- omo:id=accept-link-home-cleanout;stage=2;scope=backend;review=3,6 -->
-- [ ] custom recipe product validation preserves product/version provenance and checks the approved representative link <!-- omo:id=accept-link-custom-recipe;stage=2;scope=backend;review=3,6 -->
+- [ ] shared reader signature/semantics regression contract only is published for custom-recipe and meal-log owning successors; their runtime endpoints/UI are not #2 acceptance targets <!-- omo:id=accept-link-successor-reader-contract;stage=2;scope=backend;review=3,6 -->
 - [ ] pantry display/direct add preserves existing generic `items`/`ingredient_ids` and additive exact `product_items` <!-- omo:id=accept-link-pantry-display-add;stage=2;scope=backend;review=3,6 -->
 - [ ] shopping creation pins generic/product provenance and completion uses it without client product/version resend <!-- omo:id=accept-link-shopping-provenance;stage=2;scope=backend;review=3,6 -->
-- [ ] meal-log product/ingredient picker reads the shared effective projection without converting a product into a generic stored row <!-- omo:id=accept-link-meal-log-picker;stage=2;scope=backend;review=3,6 -->
+- [ ] shopping create/detail response exposes source_type and nullable exact product/version provenance for generic, product and all-null legacy fail-closed branches <!-- omo:id=accept-link-shopping-response-provenance;stage=2;scope=backend;review=3,6 -->
 
 ## State / Policy
 
@@ -32,6 +32,7 @@
 - [ ] PUBLIC/anon/ordinary authenticated execution is denied and only the exact intended internal/admin principal can promote <!-- omo:id=accept-link-exact-principal;stage=2;scope=backend;review=3,6 -->
 - [ ] another owner's private product/link is absent from rows, counts, effective sets and error details <!-- omo:id=accept-link-owner-isolation;stage=2;scope=backend;review=3,6 -->
 - [ ] missing or ambiguous link data returns valid fail-closed absence without a new public error code or guessed ingredient <!-- omo:id=accept-link-no-public-error-drift;stage=2;scope=backend;review=3,6 -->
+- [ ] shared reader execution is authenticated-self, verifies `auth.uid() = p_user_id`, and rejects missing auth, other-owner, stale generation/session and user-path service-token fallback <!-- omo:id=accept-link-reader-auth-self;stage=2;scope=backend;review=3,6 -->
 - [ ] existing JSON endpoints retain `{ success, data, error }` and `{ code, message, fields[] }` <!-- omo:id=accept-link-envelope;stage=2;scope=backend;review=3,6 -->
 
 ## Data Integrity
@@ -44,7 +45,7 @@
 - [ ] a later current product-version change does not silently rewrite the version pinned by an existing pantry or shopping product row <!-- omo:id=accept-link-version-pin;stage=2;scope=backend;review=3,6 -->
 - [ ] pantry/shopping XOR CHECK, partial uniques and composite product/version `ON DELETE RESTRICT` FKs reject mismatched or half-present identity <!-- omo:id=accept-link-tagged-identity-fk;stage=2;scope=backend;review=3,6 -->
 - [ ] account cleanup removes exact owner-private references before private product/version/link aggregate cleanup and preserves owner-null public/shared rows <!-- omo:id=accept-link-cleanup-order;stage=2;scope=backend;review=3,6 -->
-- [ ] each required reader has a regression that fails when reduced to raw `pantry_items.ingredient_id` only <!-- omo:id=accept-link-raw-reader-regressions;stage=2;scope=backend;review=3,6 -->
+- [ ] #2-owned pantry-match and HOME readers have regressions that fail when reduced to raw `pantry_items.ingredient_id` only; successor regression checks stop at shared signature/semantics <!-- omo:id=accept-link-raw-reader-regressions;stage=2;scope=backend;review=3,6 -->
 
 ## Data Setup / Preconditions
 

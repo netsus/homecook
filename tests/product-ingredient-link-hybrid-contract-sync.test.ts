@@ -127,16 +127,125 @@ describe("product ingredient link hybrid contract lock", () => {
 
     expect(api).toContain('"ingredient_ids": ["uuid"]');
     expect(api).toContain('"product_items": [');
+    expect(api).toContain('"product_added": 1');
     expect(api).toContain('"food_product_id": "uuid"');
     expect(api).toContain('"food_product_nutrition_version_id": "uuid"');
     expect(api).toContain('"name": "연세우유 생크림빵"');
     expect(api).toContain('"brand": "연세우유"');
+    expect(api).toContain(
+      "두 collection은 각각 optional이지만 적어도 하나는 non-empty",
+    );
     expect(api).toContain("기존 `items`");
     expect(api).toContain("기존 `422 VALIDATION_ERROR`");
     expect(api).toContain("product/version mismatch");
+    expect(api).toContain(
+      "field는 `product_items[n].food_product_nutrition_version_id`",
+    );
+    expect(api).toContain("reason은 `product_version_mismatch`");
+    expect(api).toContain("기존 `404 RESOURCE_NOT_FOUND`");
+    expect(api).toContain("존재 여부를 노출하지 않도록");
+    expect(api).toContain("`q`는 `name`/`brand`에 적용");
+    expect(api).toContain("`product_items=[]`");
     expect(api).toContain("신규 endpoint");
     expect(api).toContain("신규 public status");
     expect(api).toContain("신규 public error code");
+  });
+
+  it("locks authenticated-self reader authority without a user-path service token fallback", () => {
+    const officialDocs = [
+      read(requirementsPath),
+      read(screensPath),
+      read(flowPath),
+      read(dbPath),
+      read(apiPath),
+    ];
+    const sliceBundle = [
+      read(readmePath),
+      read(acceptancePath),
+      read(automationPath),
+    ].join("\n");
+
+    for (const officialDoc of officialDocs) {
+      expect(officialDoc).toContain("authenticated-self");
+      expect(officialDoc).toContain("`auth.uid() = p_user_id`");
+      expect(officialDoc).toContain("user-path service-token fallback");
+    }
+
+    expect(read(dbPath)).not.toContain(
+      "service-role-only execute, PUBLIC/anon/authenticated revoke",
+    );
+    expect(sliceBundle).toContain("missing auth");
+    expect(sliceBundle).toContain("other-owner");
+    expect(sliceBundle).toContain("stale generation/session");
+    expect(sliceBundle).toContain("user-path service-token fallback");
+  });
+
+  it("locks shopping create/detail provenance in automation and contract sections", () => {
+    const api = read(apiPath);
+    const acceptance = read(acceptancePath);
+    const automation = JSON.parse(read(automationPath)) as {
+      backend: {
+        required_endpoints: string[];
+        invariants: string[];
+        required_test_targets: string[];
+      };
+    };
+
+    expect(automation.backend.required_endpoints).toContain(
+      "POST /api/v1/shopping/lists",
+    );
+    expect(automation.backend.required_endpoints).toContain(
+      "GET /api/v1/shopping/lists/{list_id}",
+    );
+    expect(api).toContain("`POST /shopping/lists`");
+    expect(api).toContain("`GET /shopping/lists/{list_id}`");
+    expect(api).toContain(
+      '`source_type: "ingredient" | "food_product" | null`',
+    );
+    expect(api).toContain("nullable `food_product_id`");
+    expect(api).toContain("nullable `food_product_nutrition_version_id`");
+    expect(api).toContain("generic item은 기존 `ingredient_id`");
+    expect(api).toContain("product item은 `ingredient_id=null`");
+    expect(api).toContain("all-null malformed legacy row");
+    expect(automation.backend.invariants).toContain(
+      "shopping-create-detail-response-source-type-and-nullable-product-version-fields",
+    );
+    expect(automation.backend.required_test_targets).toContain(
+      "shopping create/detail generic product and all-null legacy response branch evidence",
+    );
+    expect(acceptance).toContain(
+      "shopping create/detail response exposes source_type and nullable exact product/version provenance",
+    );
+  });
+
+  it("keeps custom-recipe and meal-log runtime consumption with owning successors", () => {
+    const acceptance = read(acceptancePath);
+    const automation = JSON.parse(read(automationPath)) as {
+      backend: {
+        required_endpoints: string[];
+        invariants: string[];
+        required_test_targets: string[];
+      };
+    };
+    const requiredEndpoints = automation.backend.required_endpoints.join("\n");
+
+    expect(requiredEndpoints).not.toContain("custom recipe");
+    expect(requiredEndpoints).not.toContain("meal-log");
+    expect(acceptance).not.toMatch(
+      /custom recipe product validation.*stage=2.*scope=backend/,
+    );
+    expect(acceptance).not.toMatch(
+      /meal-log product\/ingredient picker.*stage=2.*scope=backend/,
+    );
+    expect(acceptance).toContain(
+      "shared reader signature/semantics regression contract only",
+    );
+    expect(automation.backend.invariants).toContain(
+      "successor-custom-recipe-and-meal-log-own-runtime-endpoint-and-ui-consumption",
+    );
+    expect(automation.backend.required_test_targets).toContain(
+      "successor regression contract preserves shared reader signature and semantics without runtime endpoint ownership",
+    );
   });
 
   it("locks the exact tagged DB identity, indexes, and delete order", () => {

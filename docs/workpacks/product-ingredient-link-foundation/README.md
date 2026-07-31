@@ -35,14 +35,15 @@
   - `GET /pantry`/POST response: 기존 generic `items` + additive `product_items`; generic count `added` + product count `product_added`
 - `shopping_list_items` generic/product provenance
   - generic은 `ingredient_id`, product는 exact `food_product_id + food_product_nutrition_version_id`를 생성 시 pin
+  - 기존 `POST /shopping/lists`, `GET /shopping/lists/{list_id}` response는 generic=`source_type='ingredient'`, product=`source_type='food_product'`, all-null malformed legacy=`source_type=null`과 nullable exact provenance로 분기
   - completion client는 product/version을 재전송하지 않고 existing `add_to_pantry_item_ids`만 사용
 - 최소 reader 전환과 회귀 잠금
   - official contract `GET /recipes/pantry-match` (implementation/deployed route `/api/v1/recipes/pantry-match`)
   - HOME pantry-cleanout recommendation reader
-  - custom recipe product validation reader
   - pantry display/direct add/shopping completion reflection reader
-  - meal-log product/ingredient picker reader
-  - 각 reader가 raw `pantry_items.ingredient_id`만 읽는 경로를 금지
+  - current #2 reader는 `authenticated-self` + 함수 내부 `auth.uid() = p_user_id` guard를 사용하고 user-path service-token fallback을 금지
+  - custom-recipe/meal-log에는 shared reader signature/semantics regression contract만 제공하고 실제 endpoint/runtime/UI consumption은 owning successor에 남김
+  - #2 소유 reader가 raw `pantry_items.ingredient_id`만 읽는 경로를 금지
 - account-delete compatibility
   - owner-only private product hard delete 시 product cascade로 link 제거
   - owner-null public/shared product, link와 non-PII provenance는 보존
@@ -100,12 +101,14 @@ Schema Change:
 - the effective ingredient set is a stable `DISTINCT` union of generic pantry ingredient IDs and product-link ingredient IDs admitted by the exact production predicate.
 - duplicate generic+product evidence for the same ingredient appears once in recommendation matching, while the distinct pantry row IDs and product/version identity remain available to row-level consumers.
 - internal `select_pantry_effective_ingredients(p_user_id uuid)`는 generic과 eligible product link를 `DISTINCT` union하고 official `GET /recipes/pantry-match`와 HOME cleanout이 직접 소비한다. custom recipe validation과 meal-log picker는 successor에서 동일 semantics를 소비하도록 regression contract만 잠근다.
+- shared reader 실행은 `authenticated-self` 전용이며 함수 내부 `auth.uid() = p_user_id` guard를 통과해야 한다. missing auth, other-owner, stale generation/session은 fail closed하고 user-path service-token fallback은 금지한다. custom-recipe/meal-log의 실제 runtime endpoint/UI consumption은 #2 구현 대상이 아니다.
 - `POST /pantry`는 기존 `ingredient_ids`와 additive `product_items[{food_product_id, food_product_nutrition_version_id}]`를 받는다. 둘 중 하나는 non-empty여야 하며 product/version mismatch는 기존 `422 VALIDATION_ERROR`다.
 - `GET /pantry`와 POST response는 기존 generic `items`/`added` 의미를 유지하고 additive `product_items`/`product_added`를 반환한다. product item은 exact pantry row ID, exact product/version, `name`, nullable `brand`, `created_at`을 포함한다.
 
 ### Shopping provenance and completion
 
 - `shopping_list_items`는 generic `ingredient_id` 또는 exact product/version pair 중 하나만 저장한다. existing non-null ingredient legacy row는 generic이며 all-null legacy row는 preflight blocker다.
+- 기존 `POST /shopping/lists`와 `GET /shopping/lists/{list_id}` response는 generic=`source_type='ingredient'`+null product fields, product=`source_type='food_product'`+exact pair, all-null malformed legacy=`source_type=null`+all-null identity로 반환한다. all-null row는 display snapshot만 보존하고 matching/reflection/`added_to_pantry` 전환에서 제외한다.
 - product source는 list 생성/reconcile 시 version을 pin하고 current version 변경으로 repin하지 않는다.
 - completion request/response와 `add_to_pantry_item_ids` null/[]/선택값 의미는 그대로다. server가 pinned provenance를 사용하며 client product/version 재전송은 금지한다.
 - completed read-only/409, exclude→uncheck, invalid item ignore, `pantry_added = pantry_added_item_ids.length`는 유지한다.

@@ -91,9 +91,33 @@ Request body의 두 collection은 각각 optional이지만 적어도 하나는 n
 
 ## 0-PIL-C. shopping item additive provenance
 
-- `POST /shopping/lists`와 `GET /shopping/lists/{list_id}`의 item은 additive `source_type: "ingredient" | "food_product"`, nullable `food_product_id`, nullable `food_product_nutrition_version_id`를 반환한다.
+- `POST /shopping/lists`와 `GET /shopping/lists/{list_id}`의 item은 additive `source_type: "ingredient" | "food_product" | null`, nullable `food_product_id`, nullable `food_product_nutrition_version_id`를 반환한다.
 - generic item은 기존 `ingredient_id`를 유지하고 product fields가 null이다. product item은 `ingredient_id=null`, exact product/version pair가 non-null이다. `display_text`, `amounts_json`, `sort_order`, `is_checked`, `is_pantry_excluded`, `added_to_pantry`는 기존 shape/의미를 유지한다.
-- existing non-null `ingredient_id` legacy row는 `source_type="ingredient"`다. all-null malformed legacy row를 product/display text로 추측하지 않으며 completion pantry reflection에서 제외한다.
+
+```json
+[
+  {
+    "source_type": "ingredient",
+    "ingredient_id": "ingredient-uuid",
+    "food_product_id": null,
+    "food_product_nutrition_version_id": null
+  },
+  {
+    "source_type": "food_product",
+    "ingredient_id": null,
+    "food_product_id": "product-uuid",
+    "food_product_nutrition_version_id": "version-uuid"
+  },
+  {
+    "source_type": null,
+    "ingredient_id": null,
+    "food_product_id": null,
+    "food_product_nutrition_version_id": null
+  }
+]
+```
+
+- existing non-null `ingredient_id` legacy row는 `source_type="ingredient"`다. all-null malformed legacy row는 기존 표시 snapshot을 보존하기 위해 `source_type=null`과 null identity로만 반환한다. product/display text에서 identity를 추측하지 않고 effective matching, completion pantry reflection, `added_to_pantry=true` 전환에서 제외한다.
 
 ## 0-PIL-D. shopping complete와 shared reader
 
@@ -101,6 +125,8 @@ Request body의 두 collection은 각각 optional이지만 적어도 하나는 n
 - server는 selected/default-valid item의 pinned generic 또는 product provenance로 pantry row를 만든다. product version이 current가 아니어도 item에 pin된 exact version을 사용하며 pair mismatch/all-null legacy item은 반영하지 않는다.
 - `add_to_pantry_item_ids`의 null/[]/선택값, invalid item ignore, `pantry_added = pantry_added_item_ids.length`, retry idempotency, `is_pantry_excluded=true -> is_checked=false`, completed read-only 409를 유지한다.
 - `GET /recipes/pantry-match`와 HOME pantry-cleanout은 internal `select_pantry_effective_ingredients(p_user_id uuid)` 결과를 사용한다. active + approved + primary + `relation='represents'`만 product ingredient로 인정하고 `contains|substitute`, inactive, pending, rejected, revoked, superseded, non-primary, ambiguous/no-link는 valid empty match다.
+- reader는 `authenticated-self` authority로 실행되고 함수 내부에서 `auth.uid() = p_user_id`를 검증한다. missing auth, other-owner, stale generation/session은 기존 unauthorized/session wrapper로 fail closed하며 user-path service-token fallback은 금지한다. 이는 hybrid authority를 완화하거나 새 endpoint/status/error를 추가하지 않는다.
+- custom recipe와 meal-log에는 shared reader signature/semantics regression contract만 제공한다. 실제 consumer endpoint/runtime/UI consumption은 각 owning successor의 계약과 Stage가 소유한다.
 
 > **2026-07-30 contract-evolution — remote Auth / local Data 내부 client 분리**
 >
