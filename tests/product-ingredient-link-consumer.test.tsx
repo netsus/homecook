@@ -2,6 +2,7 @@
 
 import React from "react";
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -81,6 +82,20 @@ const PREVIOUS_VERSION_PRODUCT_ITEM = {
   food_product_nutrition_version_id: "nutrition-version-pinned-6",
 };
 
+const OLD_SEARCH_PRODUCT = {
+  ...FOOD_PRODUCT,
+  id: "product-old-search",
+  name: "느린 이전 제품",
+  nutrition_version_id: "nutrition-version-old-search",
+};
+
+const NEW_SEARCH_PRODUCT = {
+  ...FOOD_PRODUCT,
+  id: "product-new-search",
+  name: "최신 검색 제품",
+  nutrition_version_id: "nutrition-version-new-search",
+};
+
 const PRODUCT_RECIPE = {
   ...MOCK_RECIPE_CARD,
   id: "recipe-product-only",
@@ -116,6 +131,16 @@ function jsonResponse(data: unknown, status = 200) {
           : { code: "INTERNAL_ERROR", message: "요청 실패", fields: [] },
     }),
   });
+}
+
+function createDeferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (reason: unknown) => void;
+  const promise = new Promise<T>((nextResolve, nextReject) => {
+    resolve = nextResolve;
+    reject = nextReject;
+  });
+  return { promise, reject, resolve };
 }
 
 function requestUrl(input: RequestInfo | URL) {
@@ -552,6 +577,256 @@ describe("product ingredient link existing consumers", () => {
     expect(
       within(dialog).getByRole("checkbox", { name: "대파" }),
     ).toBeTruthy();
+  });
+
+  it("keeps the newest exact product result when older search and category responses finish late", async () => {
+    authOverride = true;
+    const oldIngredientResponse = createDeferred<unknown>();
+    const oldProductResponse = createDeferred<unknown>();
+    const categoryIngredientResponse = createDeferred<unknown>();
+    const newIngredientResponse = createDeferred<unknown>();
+    const newProductResponse = createDeferred<unknown>();
+    let blankIngredientRequestCount = 0;
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL) => {
+        const url = requestUrl(input);
+
+        if (url === "/api/v1/pantry") {
+          return jsonResponse({ items: [], product_items: [] });
+        }
+
+        if (url.startsWith("/api/v1/ingredients")) {
+          const query = new URL(url, "http://homecook.test").searchParams.get("q");
+          if (query === "이전") {
+            return oldIngredientResponse.promise;
+          }
+          if (query === "최신") {
+            return newIngredientResponse.promise;
+          }
+
+          blankIngredientRequestCount += 1;
+          return blankIngredientRequestCount === 1
+            ? jsonResponse({
+                items: [
+                  {
+                    id: "ingredient-green-onion",
+                    standard_name: "대파",
+                    category: "채소",
+                  },
+                ],
+              })
+            : categoryIngredientResponse.promise;
+        }
+
+        if (url.startsWith("/api/v1/food-products")) {
+          const query = new URL(url, "http://homecook.test").searchParams.get("q");
+          if (query === "이전") {
+            return oldProductResponse.promise;
+          }
+          if (query === "최신") {
+            return newProductResponse.promise;
+          }
+        }
+
+        throw new Error(`unexpected request: ${url}`);
+      }),
+    );
+
+    render(<PantryScreen initialAuthenticated />);
+
+    await screen.findByText("아직 등록한 재료가 없어요");
+    await userEvent.setup().click(
+      screen.getAllByRole("button", { name: "재료 추가하기" })[0]!,
+    );
+
+    const dialog = await screen.findByRole("dialog", { name: "재료 추가" });
+    const searchbox = within(dialog).getByRole("textbox", {
+      name: "재료명 검색",
+    });
+
+    fireEvent.change(searchbox, { target: { value: "이전" } });
+    await waitFor(() => {
+      expect(
+        vi.mocked(fetch).mock.calls.some(([input]) =>
+          requestUrl(input).includes("q=%EC%9D%B4%EC%A0%84"),
+        ),
+      ).toBe(true);
+    });
+
+    fireEvent.change(searchbox, { target: { value: "" } });
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "채소/버섯" }),
+    );
+    await waitFor(() => {
+      expect(blankIngredientRequestCount).toBe(2);
+    });
+
+    fireEvent.change(searchbox, { target: { value: "최신" } });
+    await waitFor(() => {
+      expect(
+        vi.mocked(fetch).mock.calls.some(([input]) =>
+          requestUrl(input).includes("q=%EC%B5%9C%EC%8B%A0"),
+        ),
+      ).toBe(true);
+    });
+
+    await act(async () => {
+      newIngredientResponse.resolve(
+        await jsonResponse({ items: [] }),
+      );
+      newProductResponse.resolve(
+        await jsonResponse({
+          items: [NEW_SEARCH_PRODUCT],
+          next_cursor: null,
+          has_next: false,
+        }),
+      );
+    });
+
+    const newestOption = await within(dialog).findByRole("checkbox", {
+      name: `${NEW_SEARCH_PRODUCT.name} · ${NEW_SEARCH_PRODUCT.brand} · 영양 버전 ${NEW_SEARCH_PRODUCT.nutrition_version_id}`,
+    });
+    expect((newestOption as HTMLButtonElement).disabled).toBe(false);
+
+    await act(async () => {
+      oldIngredientResponse.resolve(await jsonResponse({ items: [] }));
+      oldProductResponse.resolve(
+        await jsonResponse({
+          items: [OLD_SEARCH_PRODUCT],
+          next_cursor: null,
+          has_next: false,
+        }),
+      );
+      categoryIngredientResponse.resolve(
+        await jsonResponse({
+          items: [
+            {
+              id: "ingredient-green-onion",
+              standard_name: "대파",
+              category: "채소",
+            },
+          ],
+        }),
+      );
+    });
+
+    expect(
+      within(dialog).getByRole("checkbox", {
+        name: `${NEW_SEARCH_PRODUCT.name} · ${NEW_SEARCH_PRODUCT.brand} · 영양 버전 ${NEW_SEARCH_PRODUCT.nutrition_version_id}`,
+      }),
+    ).toBeTruthy();
+    expect(
+      within(dialog).queryByRole("checkbox", {
+        name: `${OLD_SEARCH_PRODUCT.name} · ${OLD_SEARCH_PRODUCT.brand} · 영양 버전 ${OLD_SEARCH_PRODUCT.nutrition_version_id}`,
+      }),
+    ).toBeNull();
+  });
+
+  it("ignores late ingredient and product completion after the add sheet closes", async () => {
+    authOverride = true;
+    const lateIngredientResponse = createDeferred<unknown>();
+    const lateProductResponse = createDeferred<unknown>();
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+    let blankIngredientRequestCount = 0;
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL) => {
+        const url = requestUrl(input);
+
+        if (url === "/api/v1/pantry") {
+          return jsonResponse({ items: [], product_items: [] });
+        }
+
+        if (url === "/api/v1/ingredients") {
+          blankIngredientRequestCount += 1;
+          return jsonResponse({
+            items:
+              blankIngredientRequestCount === 1
+                ? []
+                : [
+                    {
+                      id: "ingredient-reopened",
+                      standard_name: "다시 연 재료",
+                      category: "기타",
+                    },
+                  ],
+          });
+        }
+
+        if (url.includes("/api/v1/ingredients?q=")) {
+          return lateIngredientResponse.promise;
+        }
+
+        if (url.startsWith("/api/v1/food-products")) {
+          return lateProductResponse.promise;
+        }
+
+        throw new Error(`unexpected request: ${url}`);
+      }),
+    );
+
+    render(<PantryScreen initialAuthenticated />);
+
+    await screen.findByText("아직 등록한 재료가 없어요");
+    await userEvent.setup().click(
+      screen.getAllByRole("button", { name: "재료 추가하기" })[0]!,
+    );
+
+    const dialog = await screen.findByRole("dialog", { name: "재료 추가" });
+    fireEvent.change(
+      within(dialog).getByRole("textbox", { name: "재료명 검색" }),
+      { target: { value: "느린" } },
+    );
+    await waitFor(() => {
+      expect(
+        vi.mocked(fetch).mock.calls.some(([input]) =>
+          requestUrl(input).includes("q=%EB%8A%90%EB%A6%B0"),
+        ),
+      ).toBe(true);
+    });
+
+    fireEvent.click(within(dialog).getByRole("button", { name: "닫기" }));
+    expect(screen.queryByRole("dialog", { name: "재료 추가" })).toBeNull();
+
+    await userEvent.setup().click(
+      screen.getAllByRole("button", { name: "재료 추가하기" })[0]!,
+    );
+    const reopenedDialog = await screen.findByRole("dialog", {
+      name: "재료 추가",
+    });
+    expect(
+      await within(reopenedDialog).findByRole("checkbox", {
+        name: "다시 연 재료",
+      }),
+    ).toBeTruthy();
+    const errorCountBeforeLateCompletion = consoleError.mock.calls.length;
+
+    await act(async () => {
+      lateIngredientResponse.resolve(await jsonResponse({ items: [] }));
+      lateProductResponse.resolve(
+        await jsonResponse({
+          items: [OLD_SEARCH_PRODUCT],
+          next_cursor: null,
+          has_next: false,
+        }),
+      );
+    });
+
+    expect(
+      within(reopenedDialog).getByRole("checkbox", { name: "다시 연 재료" }),
+    ).toBeTruthy();
+    expect(
+      within(reopenedDialog).queryByRole("checkbox", {
+        name: `${OLD_SEARCH_PRODUCT.name} · ${OLD_SEARCH_PRODUCT.brand} · 영양 버전 ${OLD_SEARCH_PRODUCT.nutrition_version_id}`,
+      }),
+    ).toBeNull();
+    expect(consoleError.mock.calls).toHaveLength(
+      errorCountBeforeLateCompletion,
+    );
+    consoleError.mockRestore();
   });
 
   it("preserves unauthorized and error recovery surfaces for the existing PANTRY consumer", async () => {

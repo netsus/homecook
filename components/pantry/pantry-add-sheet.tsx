@@ -67,6 +67,8 @@ export function PantryAddSheet({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const requestSequenceRef = useRef(0);
+  const isMountedRef = useRef(true);
   const existingSet = useRef(new Set(existingIngredientIds));
   const existingProductSet = useRef(
     new Set(existingProductItems.map(productIdentityKey)),
@@ -125,6 +127,12 @@ export function PantryAddSheet({
   );
 
   const loadIngredients = useCallback(async (query?: string) => {
+    const requestSequence = requestSequenceRef.current + 1;
+    requestSequenceRef.current = requestSequence;
+    if (!isMountedRef.current) {
+      return;
+    }
+
     setSheetState("loading");
     try {
       const normalizedQuery = query?.trim() ?? "";
@@ -138,6 +146,12 @@ export function PantryAddSheet({
             }))
           : Promise.resolve({ items: [] as FoodProductData[] }),
       ]);
+      if (
+        !isMountedRef.current ||
+        requestSequence !== requestSequenceRef.current
+      ) {
+        return;
+      }
       setIngredients(ingredientResult.items);
       setProducts(productResult.items);
       setSheetState(
@@ -146,6 +160,12 @@ export function PantryAddSheet({
           : "ready",
       );
     } catch {
+      if (
+        !isMountedRef.current ||
+        requestSequence !== requestSequenceRef.current
+      ) {
+        return;
+      }
       setIngredients([]);
       setProducts([]);
       setSheetState("error");
@@ -154,6 +174,7 @@ export function PantryAddSheet({
 
   const handleSearch = useCallback(
     (value: string) => {
+      requestSequenceRef.current += 1;
       setSearchQuery(value);
       if (value.trim().length > 0) {
         setActiveCategory(null);
@@ -177,6 +198,7 @@ export function PantryAddSheet({
         setProducts([]);
       }
       if (category && searchQuery.trim().length > 0) {
+        requestSequenceRef.current += 1;
         setSearchQuery("");
         setDebouncedQuery("");
         if (searchTimerRef.current) {
@@ -294,16 +316,20 @@ export function PantryAddSheet({
   }, []);
 
   useEffect(() => {
-    void loadIngredients(debouncedQuery);
-  }, [debouncedQuery, loadIngredients]);
+    isMountedRef.current = true;
 
-  useEffect(() => {
     return () => {
+      isMountedRef.current = false;
+      requestSequenceRef.current += 1;
       if (searchTimerRef.current) {
         clearTimeout(searchTimerRef.current);
       }
     };
   }, []);
+
+  useEffect(() => {
+    void loadIngredients(debouncedQuery);
+  }, [debouncedQuery, loadIngredients]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
