@@ -142,13 +142,18 @@ begin
   if cardinality(v_legacy_private_product_ids) > 0 then
     -- Exact owner fence precedes reference cleanup and aggregate deletion.
     delete from public.pantry_items
-    where food_product_id = any(v_legacy_private_product_ids);
+    where user_id = p_user_id
+      and food_product_id = any(v_legacy_private_product_ids);
 
-    delete from public.shopping_list_items
-    where food_product_id = any(v_legacy_private_product_ids);
+    delete from public.shopping_list_items as item
+    using public.shopping_lists as list
+    where list.id = item.shopping_list_id
+      and list.user_id = p_user_id
+      and item.food_product_id = any(v_legacy_private_product_ids);
 
     delete from public.product_planner_entries
-    where product_id = any(v_legacy_private_product_ids);
+    where user_id = p_user_id
+      and product_id = any(v_legacy_private_product_ids);
 
     select
       (select count(*) from public.pantry_items
@@ -156,6 +161,9 @@ begin
       +
       (select count(*) from public.shopping_list_items
        where food_product_id = any(v_legacy_private_product_ids))
+      +
+      (select count(*) from public.product_planner_entries
+       where product_id = any(v_legacy_private_product_ids))
     into v_remaining_private_reference_count;
 
     if v_remaining_private_reference_count <> 0 then

@@ -679,7 +679,8 @@ describe.runIf(enabled)(
 
       expect(psql(authenticatedSql(ownerA, `
         select count(*)::text
-        from public.select_pantry_effective_ingredients('${ownerA}');
+        from public.select_pantry_effective_ingredients('${ownerA}')
+        where ingredient_id = '${ingredientId}';
       `))).toBe("1");
       expect(psql(authenticatedSql(ownerB, `
         select count(*)::text
@@ -720,6 +721,206 @@ describe.runIf(enabled)(
       );
       expect(explain.stdout).toMatch(/pantry_items_user_product_lookup_idx/i);
       expect(explain.stdout).toMatch(/food_product_ingredient_links/i);
+    });
+
+    it("excludes hidden products and non-public owners from the effective reader", () => {
+      const ingredientId = createIngredient("reader-visibility");
+      const product = createManualProduct(ownerA, "reader-visibility");
+      const candidateId = createCandidate({
+        ingredientId,
+        productId: product.id,
+      });
+
+      psql(serviceSql(`
+        select public.promote_food_product_ingredient_link(
+          '${candidateId}',
+          null,
+          'visibility fixture'
+        );
+        insert into public.pantry_items (
+          user_id,
+          food_product_id,
+          food_product_nutrition_version_id
+        ) values (
+          '${ownerA}',
+          '${product.id}',
+          '${product.nutrition_version_id}'
+        );
+      `));
+
+      expect(psql(authenticatedSql(ownerA, `
+        select count(*)::text
+        from public.select_pantry_effective_ingredients('${ownerA}')
+        where ingredient_id = '${ingredientId}';
+      `))).toBe("1");
+
+      psql(serviceSql(`
+        update public.food_products
+        set moderation_status = 'hidden_by_operator'
+        where id = '${product.id}';
+      `));
+      expect(psql(authenticatedSql(ownerA, `
+        select count(*)::text
+        from public.select_pantry_effective_ingredients('${ownerA}')
+        where ingredient_id = '${ingredientId}';
+      `))).toBe("0");
+
+      psql(serviceSql(`
+        update public.food_products
+        set moderation_status = 'visible'
+        where id = '${product.id}';
+        insert into public.user_account_lifecycles (
+          owner_uuid,
+          account_generation,
+          status
+        ) values ('${ownerA}', 1, 'quarantined');
+      `));
+      expect(psql(authenticatedSql(ownerA, `
+        select count(*)::text
+        from public.select_pantry_effective_ingredients('${ownerA}')
+        where ingredient_id = '${ingredientId}';
+      `))).toBe("0");
+    });
+
+    it("denies auth-null and service-role direct shopping mutations", () => {
+      const createCall = `
+        select public.create_shopping_list_from_payload(
+          '${ownerA}',
+          'authorization fixture',
+          current_date,
+          current_date,
+          true,
+          '{}'::uuid[]
+        )::text;
+      `;
+      expect(JSON.parse(psql(createCall))).toMatchObject({
+        error_code: "FORBIDDEN",
+      });
+      expectSqlFailure(serviceSql(createCall), /permission denied/i);
+
+      const completeCall = `
+        select public.complete_shopping_list(
+          gen_random_uuid(),
+          '${ownerA}',
+          null
+        )::text;
+      `;
+      expect(JSON.parse(psql(completeCall))).toMatchObject({
+        error_code: "FORBIDDEN",
+      });
+      expectSqlFailure(serviceSql(completeCall), /permission denied/i);
+    });
+
+    it("preserves cross-owner product references and blocks private cleanup", () => {
+      const product = createManualProduct(ownerA, "cross-owner-cleanup");
+      const shoppingListId = randomUUID();
+      const columnId = randomUUID();
+
+      psql(serviceSql(`
+        insert into public.pantry_items (
+          user_id,
+          food_product_id,
+          food_product_nutrition_version_id
+        ) values (
+          '${ownerB}',
+          '${product.id}',
+          '${product.nutrition_version_id}'
+        );
+        insert into public.shopping_lists (
+          id,
+          user_id,
+          title,
+          date_range_start,
+          date_range_end
+        ) values (
+          '${shoppingListId}',
+          '${ownerB}',
+          'cross-owner fixture',
+          current_date,
+          current_date
+        );
+        insert into public.shopping_list_items (
+          shopping_list_id,
+          ingredient_id,
+          food_product_id,
+          food_product_nutrition_version_id,
+          display_text,
+          amounts_json
+        ) values (
+          '${shoppingListId}',
+          null,
+          '${product.id}',
+          '${product.nutrition_version_id}',
+          'cross-owner fixture',
+          '[]'::jsonb
+        );
+        insert into public.meal_plan_columns (
+          id,
+          user_id,
+          name,
+          sort_order
+        ) values (
+          '${columnId}',
+          '${ownerB}',
+          '교차 소유자',
+          99
+        );
+        insert into public.product_planner_entries (
+          user_id,
+          plan_date,
+          column_id,
+          product_id,
+          product_nutrition_version_id,
+          quantity_amount,
+          quantity_unit,
+          product_name_snapshot,
+          product_brand_snapshot
+        ) values (
+          '${ownerB}',
+          current_date,
+          '${columnId}',
+          '${product.id}',
+          '${product.nutrition_version_id}',
+          100,
+          'g',
+          (select name from public.food_products where id = '${product.id}'),
+          (select brand from public.food_products where id = '${product.id}')
+        );
+      `));
+      psql(`
+        alter table public.food_products
+          disable trigger protect_food_product_identity;
+      `);
+      psql(`
+        update public.food_products
+        set visibility = 'private'
+        where id = '${product.id}';
+      `);
+      psql(`
+        alter table public.food_products
+          enable trigger protect_food_product_identity;
+      `);
+
+      expectSqlFailure(
+        serviceSql(`select public.delete_user_private_data('${ownerA}');`),
+        /private product references remain/i,
+      );
+
+      expect(psql(serviceSql(`
+        select (
+          (select count(*) from public.pantry_items
+           where user_id = '${ownerB}' and food_product_id = '${product.id}')
+          +
+          (select count(*) from public.shopping_list_items as item
+           join public.shopping_lists as list
+             on list.id = item.shopping_list_id
+           where list.user_id = '${ownerB}'
+             and item.food_product_id = '${product.id}')
+          +
+          (select count(*) from public.product_planner_entries
+           where user_id = '${ownerB}' and product_id = '${product.id}')
+        )::text;
+      `))).toBe("3");
     });
 
     it("enforces ingredient restrict and product cleanup cascade", () => {

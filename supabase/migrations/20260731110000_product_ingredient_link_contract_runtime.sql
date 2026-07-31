@@ -49,6 +49,21 @@ alter table public.shopping_list_items
   alter column ingredient_id drop not null,
   drop constraint if exists shopping_list_items_shopping_list_id_ingredient_id_key;
 
+do $preflight$
+begin
+  if exists (
+    select 1
+    from public.shopping_list_items
+    where ingredient_id is null
+      and food_product_id is null
+      and food_product_nutrition_version_id is null
+  ) then
+    raise exception 'SHOPPING_LIST_ITEMS_ALL_NULL_PROVENANCE'
+      using errcode = '23514';
+  end if;
+end
+$preflight$;
+
 alter table public.shopping_list_items
   add constraint shopping_list_items_identity_xor_check check (
     (
@@ -61,15 +76,11 @@ alter table public.shopping_list_items
       and food_product_id is not null
       and food_product_nutrition_version_id is not null
     )
-  ) not valid,
+  ),
   add constraint shopping_list_items_product_version_fkey
     foreign key (food_product_id, food_product_nutrition_version_id)
     references public.food_product_nutrition_versions(product_id, id)
     on delete restrict;
-
-comment on constraint shopping_list_items_identity_xor_check
-  on public.shopping_list_items is
-  'Strict for new writes; NOT VALID preserves historical all-null display snapshots.';
 
 create unique index shopping_list_items_list_ingredient_unique
   on public.shopping_list_items (shopping_list_id, ingredient_id)
@@ -118,6 +129,10 @@ begin
     join public.food_products as product
       on product.id = pantry.food_product_id
      and product.deleted_at is null
+     and product.moderation_status = 'visible'
+     and recipe_visibility_guard.is_owner_publicly_visible(
+       product.owner_user_id
+     )
      and (
        product.visibility = 'public'
        or (
@@ -170,7 +185,7 @@ declare
   v_owned_meal_count integer := 0;
   v_meals_updated integer := 0;
 begin
-  if auth.uid() is not null and auth.uid() <> p_user_id then
+  if auth.uid() is null or auth.uid() <> p_user_id then
     return jsonb_build_object(
       'error_code', 'FORBIDDEN',
       'message', '내 식사만 장보기로 만들 수 있어요.'
@@ -324,6 +339,33 @@ begin
     'id', v_list_id,
     'title', p_title,
     'is_completed', false,
+    'items', coalesce((
+      select jsonb_agg(
+        jsonb_build_object(
+          'id', item.id,
+          'source_type', case
+            when item.ingredient_id is not null then 'ingredient'
+            when item.food_product_id is not null
+              and item.food_product_nutrition_version_id is not null
+              then 'food_product'
+            else null
+          end,
+          'ingredient_id', item.ingredient_id,
+          'food_product_id', item.food_product_id,
+          'food_product_nutrition_version_id',
+            item.food_product_nutrition_version_id,
+          'display_text', item.display_text,
+          'amounts_json', item.amounts_json,
+          'is_checked', item.is_checked,
+          'is_pantry_excluded', item.is_pantry_excluded,
+          'added_to_pantry', item.added_to_pantry,
+          'sort_order', item.sort_order
+        )
+        order by item.sort_order, item.id
+      )
+      from public.shopping_list_items as item
+      where item.shopping_list_id = v_list_id
+    ), '[]'::jsonb),
     'created_at', v_created_at
   );
 end;
@@ -334,7 +376,7 @@ revoke all on function public.create_shopping_list_from_payload(
 ) from public, anon, authenticated, service_role;
 grant execute on function public.create_shopping_list_from_payload(
   uuid, text, date, date, boolean, uuid[], jsonb, jsonb, jsonb, jsonb, integer
-) to authenticated, service_role;
+) to authenticated;
 
 create or replace function public.complete_shopping_list(
   p_list_id uuid,
@@ -355,7 +397,7 @@ declare
   v_meals_updated integer := 0;
   v_pantry_item_ids uuid[] := '{}'::uuid[];
 begin
-  if auth.uid() is not null and auth.uid() <> p_user_id then
+  if auth.uid() is null or auth.uid() <> p_user_id then
     return jsonb_build_object('error_code', 'FORBIDDEN', 'message', '내 장보기 리스트만 완료할 수 있어요.');
   end if;
 
@@ -481,7 +523,7 @@ $function$;
 revoke all on function public.complete_shopping_list(uuid, uuid, uuid[])
   from public, anon, authenticated, service_role;
 grant execute on function public.complete_shopping_list(uuid, uuid, uuid[])
-  to authenticated, service_role;
+  to authenticated;
 
 alter table public.food_product_nutrition_versions
   drop constraint food_product_nutrition_versions_product_id_fkey,

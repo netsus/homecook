@@ -26,8 +26,7 @@
       "effect": "mutation",
       "exposure": "authenticated-self",
       "allowed_principals": [
-        "authenticated",
-        "service_role"
+        "authenticated"
       ],
       "security_mode": "definer",
       "safe_search_path": [
@@ -43,8 +42,7 @@
       "effect": "mutation",
       "exposure": "authenticated-self",
       "allowed_principals": [
-        "authenticated",
-        "service_role"
+        "authenticated"
       ],
       "security_mode": "definer",
       "safe_search_path": [
