@@ -2290,7 +2290,7 @@
       "id": "product-ingredient-link-foundation",
       "preset": "vertical-slice-strict",
       "branch": "feature/be-product-ingredient-link-contract-runtime",
-      "pr_path": "https://github.com/netsus/homecook/pull/1254",
+      "pr_path": "https://github.com/netsus/homecook/pull/1255",
       "lifecycle": "in_progress",
       "approval_state": "not_started",
       "verification_status": "pending",
@@ -2312,7 +2312,7 @@
         "node scripts/verify-product-ingredient-link-hybrid.mjs --mode post-merge-read-only",
         "git diff --check"
       ],
-      "notes": "2026-07-31 Contract Evolution PR #1254 merged at 8b4287f83a99c0cc1f1cc4979b578dc56a2895d0. Stage 2 backend/data implementation on feature/be-product-ingredient-link-contract-runtime completed RED→GREEN, local PostgreSQL fresh/replay, focused and full tests, backend gate and validators. Lifecycle remains in_progress and approval/verification remain pending until independent Stage 3 and current-head Draft PR checks. Stage 4/5/6, remote Auth evidence and production account cleanup activation are not performed; production/staging/remote writes are zero.",
+      "notes": "2026-07-31 Contract Evolution PR #1254 merged at 8b4287f83a99c0cc1f1cc4979b578dc56a2895d0. Stage 2 backend/data implementation is published as Draft PR #1255 on feature/be-product-ingredient-link-contract-runtime after RED→GREEN, local PostgreSQL fresh/replay, focused and full tests, backend gate and validators. Lifecycle remains in_progress and approval/verification remain pending until independent Stage 3 and current-head Draft PR checks. Stage 4/5/6, remote Auth evidence and production account cleanup activation are not performed; production/staging/remote writes are zero.",
       "evaluation_status": "not_started",
       "evaluation_round": 0,
       "last_evaluator_result": null,
