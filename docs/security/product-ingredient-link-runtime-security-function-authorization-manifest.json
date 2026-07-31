@@ -65,6 +65,19 @@
         "pg_temp"
       ],
       "replaces_baseline": true
+    },
+    {
+      "signature": "public.pin_recipe_snapshot_or_authorized_shopping_clone_on_meal_insert()",
+      "control_class": "application-controlled",
+      "effect": "trigger/internal",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "security_mode": "definer",
+      "safe_search_path": [
+        "pg_catalog",
+        "public",
+        "pg_temp"
+      ]
     }
   ]
 }

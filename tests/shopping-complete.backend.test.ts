@@ -778,6 +778,122 @@ describe("12a shopping complete backend", () => {
     });
   });
 
+  it("reflects the pinned product version and excludes an all-null legacy snapshot in fallback completion", async () => {
+    const productItemId = "550e8400-e29b-41d4-a716-446655440231";
+    const allNullItemId = "550e8400-e29b-41d4-a716-446655440232";
+    const productId = "550e8400-e29b-41d4-a716-446655440331";
+    const versionId = "550e8400-e29b-41d4-a716-446655440332";
+    const listQuery = createMaybeSingleQuery([
+      {
+        data: {
+          id: listId,
+          user_id: "user-1",
+          is_completed: false,
+          completed_at: null,
+        },
+        error: null,
+      },
+    ]);
+    const listUpdateQuery = createUpdateMaybeSingleQuery([
+      {
+        data: {
+          id: listId,
+          is_completed: true,
+          completed_at: "2026-04-27T11:20:00.000Z",
+        },
+        error: null,
+      },
+    ]);
+    const mealsUpdateQuery = createArrayUpdateQuery([{ data: [], error: null }]);
+    const itemsQuery = createArraySelectQuery([
+      {
+        data: [
+          {
+            id: productItemId,
+            ingredient_id: null,
+            food_product_id: productId,
+            food_product_nutrition_version_id: versionId,
+            is_checked: true,
+            is_pantry_excluded: false,
+            added_to_pantry: false,
+          },
+          {
+            id: allNullItemId,
+            ingredient_id: null,
+            food_product_id: null,
+            food_product_nutrition_version_id: null,
+            is_checked: true,
+            is_pantry_excluded: false,
+            added_to_pantry: false,
+          },
+        ],
+        error: null,
+      },
+    ]);
+    const pantryQuery = createArraySelectQuery([{ data: [], error: null }]);
+    const pantryInsertQuery = createInsertQuery([{ data: null, error: null }]);
+    const itemReflectQuery = createArrayUpdateQuery([
+      { data: [{ id: productItemId }], error: null },
+    ]);
+    const insertPantryItems = vi.fn(() => pantryInsertQuery);
+    const updateItems = vi.fn(() => itemReflectQuery);
+
+    createRouteHandlerClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })),
+      },
+      from: vi.fn((table: string) => {
+        if (table === "shopping_lists") {
+          return {
+            select: vi.fn(() => listQuery),
+            update: vi.fn(() => listUpdateQuery),
+          };
+        }
+        if (table === "meals") {
+          return { update: vi.fn(() => mealsUpdateQuery) };
+        }
+        if (table === "shopping_list_items") {
+          return {
+            select: vi.fn(() => itemsQuery),
+            update: updateItems,
+          };
+        }
+        if (table === "pantry_items") {
+          return {
+            select: vi.fn(() => pantryQuery),
+            insert: insertPantryItems,
+          };
+        }
+
+        throw new Error(`unexpected table: ${table}`);
+      }),
+    });
+
+    const { POST } = await importCompleteRoute();
+    const response = await POST(
+      createCompleteRequest(listId, {
+        add_to_pantry_item_ids: [productItemId, allNullItemId],
+      }),
+      createContext(),
+    );
+    const body = await response.json();
+
+    expect(insertPantryItems).toHaveBeenCalledWith([
+      {
+        user_id: "user-1",
+        food_product_id: productId,
+        food_product_nutrition_version_id: versionId,
+      },
+    ]);
+    expect(itemReflectQuery.in).toHaveBeenCalledWith("id", [productItemId]);
+    expect(body.data).toEqual({
+      completed: true,
+      meals_updated: 0,
+      pantry_added: 1,
+      pantry_added_item_ids: [productItemId],
+    });
+  });
+
   it("defaults to reflecting all checked purchase candidates when add_to_pantry_item_ids is omitted", async () => {
     const firstItemId = "550e8400-e29b-41d4-a716-446655440211";
     const secondItemId = "550e8400-e29b-41d4-a716-446655440212";

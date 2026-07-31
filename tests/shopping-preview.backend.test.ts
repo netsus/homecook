@@ -1337,6 +1337,136 @@ describe("shopping stage2 backend", () => {
     });
   });
 
+  it("returns pinned product provenance from the product-only fallback create path", async () => {
+    const mealId = "550e8400-e29b-41d4-a716-446655440211";
+    const productId = "550e8400-e29b-41d4-a716-446655440311";
+    const versionId = "550e8400-e29b-41d4-a716-446655440312";
+    const mealsQuery = createArraySelectQuery([
+      {
+        data: [
+          {
+            id: mealId,
+            user_id: "user-1",
+            recipe_id: "recipe-product-fallback",
+            recipe_content_snapshot_id: "snapshot-product-fallback",
+            recipe_content_snapshots: {
+              base_servings: 2,
+              ingredients_json: [
+                {
+                  ingredient_id: null,
+                  food_product_id: productId,
+                  food_product_nutrition_version_id: versionId,
+                  amount: 1,
+                  unit: "개",
+                  ingredient_type: "QUANT",
+                  display_text: "고정 두부 1개",
+                  scalable: true,
+                  sort_order: 0,
+                },
+              ],
+            },
+            plan_date: "2026-04-25",
+            column_id: "column-dinner",
+            planned_servings: 2,
+            status: "registered",
+            is_leftover: false,
+            leftover_dish_id: null,
+            shopping_list_id: null,
+          },
+        ],
+        error: null,
+      },
+    ]);
+    const pantryQuery = createArraySelectQuery([{ data: [], error: null }]);
+    const shoppingListInsertQuery = createInsertMaybeSingleQuery([
+      {
+        data: {
+          id: "shopping-list-product-fallback",
+          title: "4/25 장보기",
+          is_completed: false,
+          created_at: "2026-04-25T09:00:00.000Z",
+        },
+        error: null,
+      },
+    ]);
+    const shoppingListRecipesInsert = vi.fn(() =>
+      createAwaitInsertQuery([{ data: [], error: null }]),
+    );
+    const shoppingListItemsInsert = vi.fn((values: Array<Record<string, unknown>>) =>
+      createAwaitInsertQuery([
+        {
+          data: values.map((value) => ({
+            id: "shopping-item-product-fallback",
+            ...value,
+          })),
+          error: null,
+        },
+      ]),
+    );
+    const mealsUpdateQuery = createMealsUpdateQuery([{ data: [], error: null }]);
+
+    createRouteHandlerClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })),
+      },
+    });
+    createServiceRoleClient.mockReturnValue({
+      from: vi.fn((table: string) => {
+        if (table === "meals") {
+          return {
+            select: vi.fn(() => mealsQuery),
+            update: vi.fn(() => mealsUpdateQuery),
+          };
+        }
+        if (table === "pantry_items") {
+          return { select: vi.fn(() => pantryQuery) };
+        }
+        if (table === "shopping_lists") {
+          return { insert: vi.fn(() => shoppingListInsertQuery) };
+        }
+        if (table === "shopping_list_recipes") {
+          return { insert: shoppingListRecipesInsert };
+        }
+        if (table === "shopping_list_items") {
+          return { insert: shoppingListItemsInsert };
+        }
+
+        throw new Error(`unexpected table: ${table}`);
+      }),
+    });
+
+    const { POST } = await importListsRoute();
+    const response = await POST(
+      new Request("http://localhost:3000/api/v1/shopping/lists", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          meal_configs: [{ meal_id: mealId, shopping_servings: 2 }],
+        }),
+      }),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(201);
+    expect(shoppingListItemsInsert).toHaveBeenCalledWith([
+      expect.objectContaining({
+        ingredient_id: null,
+        food_product_id: productId,
+        food_product_nutrition_version_id: versionId,
+        is_pantry_excluded: false,
+      }),
+    ]);
+    expect(body.data.items).toEqual([
+      expect.objectContaining({
+        id: "shopping-item-product-fallback",
+        source_type: "food_product",
+        ingredient_id: null,
+        food_product_id: productId,
+        food_product_nutrition_version_id: versionId,
+      }),
+    ]);
+  });
+
   it("requires both generic and exact product pantry identities for mixed completion", async () => {
     const mealId = "550e8400-e29b-41d4-a716-446655440211";
     const ingredientId = "550e8400-e29b-41d4-a716-446655440212";

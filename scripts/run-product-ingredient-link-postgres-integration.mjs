@@ -12,6 +12,8 @@ const TARGET_MIGRATIONS = [
   "supabase/migrations/20260731110000_product_ingredient_link_contract_runtime.sql",
   "supabase/migrations/20260731111000_product_ingredient_link_account_cleanup.sql",
 ];
+const SNAPSHOT_AUTHORITY_MIGRATION =
+  "supabase/migrations/20260729170500_recipe_snapshot_authority_foundation.sql";
 const PRE_TARGET_MIGRATIONS = [
   "supabase/migrations/20260301000000_core_schema_bootstrap.sql",
   "supabase/migrations/20260425000000_08b_add_pantry_items_table.sql",
@@ -173,11 +175,45 @@ create table if not exists public.operational_events (
 
 const ACCOUNT_CLEANUP_COMPAT_SQL = `
 alter table public.recipes
-  add column if not exists visibility text not null default 'public';
+  add column if not exists visibility text not null default 'public',
+  add column if not exists deleted_at timestamptz;
+alter table public.cooking_methods
+  add column if not exists category_code text;
+create table if not exists public.recipe_step_cooking_methods (
+  id uuid primary key default gen_random_uuid(),
+  step_id uuid not null references public.recipe_steps(id) on delete cascade,
+  method_id uuid not null references public.cooking_methods(id) on delete restrict,
+  position integer not null check (position > 0),
+  created_at timestamptz not null default now(),
+  unique (step_id, method_id),
+  unique (step_id, position)
+);
 create table if not exists public.recipe_content_snapshots (
   id uuid primary key default gen_random_uuid(),
-  owner_user_id uuid
+  owner_user_id uuid,
+  recipe_id uuid not null references public.recipes(id) on delete restrict,
+  recipe_nutrition_snapshot_id uuid
+    references public.recipe_nutrition_snapshots(id) on delete restrict,
+  title varchar(200) not null,
+  base_servings numeric(8,2) not null check (base_servings > 0),
+  ingredients_json jsonb not null default '[]'::jsonb
+    check (jsonb_typeof(ingredients_json) = 'array'),
+  steps_json jsonb not null default '[]'::jsonb
+    check (jsonb_typeof(steps_json) = 'array'),
+  content_hash text not null,
+  schema_version integer not null default 1 check (schema_version > 0),
+  created_at timestamptz not null default now(),
+  unique nulls not distinct (
+    recipe_id,
+    content_hash,
+    recipe_nutrition_snapshot_id,
+    schema_version
+  )
 );
+alter table public.meals
+  add column if not exists recipe_content_snapshot_id uuid
+    references public.recipe_content_snapshots(id) on delete restrict,
+  add column if not exists recipe_content_snapshot_origin varchar(20);
 alter table public.recipe_nutrition_snapshots
   add column if not exists owner_user_id uuid;
 create table if not exists public.cooking_sessions (
@@ -197,7 +233,7 @@ create table if not exists public.leftover_dishes (
   recipe_id uuid
 );
 create or replace function public.recipe_snapshot_account_cleanup_guard(
-  p_user_id uuid
+  p_owner_user_id uuid
 )
 returns void
 language plpgsql
@@ -205,7 +241,7 @@ security definer
 set search_path = pg_catalog, public, pg_temp
 as $$
 begin
-  perform p_user_id;
+  perform p_owner_user_id;
 end
 $$;
 create or replace function public.delete_user_private_data(p_user_id uuid)
@@ -374,6 +410,14 @@ async function runMode(postgresBin, mode) {
     required(
       path.join(postgresBin, "psql"),
       [...args, "-c", ACCOUNT_CLEANUP_COMPAT_SQL],
+    );
+    required(path.join(postgresBin, "psql"), [
+      ...args,
+      "-f",
+      SNAPSHOT_AUTHORITY_MIGRATION,
+    ]);
+    process.stdout.write(
+      `[product-link-pg] applied ${SNAPSHOT_AUTHORITY_MIGRATION} mode=${mode}\n`,
     );
 
     if (mode === "fresh") {
