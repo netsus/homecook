@@ -2289,8 +2289,8 @@
     {
       "id": "product-ingredient-link-foundation",
       "preset": "vertical-slice-strict",
-      "branch": "feature/be-product-ingredient-link-contract-runtime",
-      "pr_path": "https://github.com/netsus/homecook/pull/1255",
+      "branch": "feature/fe-product-ingredient-link-foundation",
+      "pr_path": "https://github.com/netsus/homecook/pull/1256",
       "lifecycle": "in_progress",
       "approval_state": "not_started",
       "verification_status": "pending",
