@@ -1344,6 +1344,40 @@ describe.runIf(enabled)(
       `))).toBe("registered|true");
     });
 
+    it("rejects omitted locked-meal item identities without writing a list or claim", () => {
+      const ingredientId = createIngredient("create-omitted-item");
+      const fixture = createShoppingMealFixture(
+        ownerA,
+        `omitted-item-${randomUUID()}`,
+        ingredientId,
+      );
+      const title = `omitted-item:${randomUUID()}`;
+
+      const result = JSON.parse(psql(authenticatedSql(ownerA, shoppingCreateCall({
+        userId: ownerA,
+        title,
+        mealIds: [fixture.mealId],
+        recipeRows: [{
+          recipe_id: fixture.recipeId,
+          shopping_servings: 2,
+          planned_servings_total: 2,
+        }],
+        itemRows: [],
+      }))));
+
+      expect(result).toMatchObject({ error_code: expect.any(String) });
+      expect(psql(serviceSql(`
+        select count(*)::text
+        from public.shopping_lists
+        where title = '${title}';
+      `))).toBe("0");
+      expect(psql(serviceSql(`
+        select (shopping_list_id is null)::text
+        from public.meals
+        where id = '${fixture.mealId}';
+      `))).toBe("true");
+    });
+
     it("creates a valid split from the locked meal while preserving the selected serving total", () => {
       const ingredientId = createIngredient("create-split-success");
       const fixture = createShoppingMealFixture(

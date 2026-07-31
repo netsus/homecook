@@ -675,6 +675,81 @@ begin
     );
   end if;
 
+  with expected_identity as (
+    select
+      recipe_ingredient.ingredient_id,
+      null::uuid as food_product_id,
+      null::uuid as food_product_nutrition_version_id
+    from public.meals as meal
+    join public.recipe_ingredients as recipe_ingredient
+      on recipe_ingredient.recipe_id = meal.recipe_id
+    where meal.id = any(p_shopping_meal_ids)
+      and meal.user_id = p_user_id
+      and meal.recipe_content_snapshot_id is null
+      and recipe_ingredient.ingredient_id is not null
+
+    union
+
+    select
+      nullif(snapshot_item ->> 'ingredient_id', '')::uuid,
+      nullif(snapshot_item ->> 'food_product_id', '')::uuid,
+      nullif(
+        snapshot_item ->> 'food_product_nutrition_version_id',
+        ''
+      )::uuid
+    from public.meals as meal
+    join public.recipe_content_snapshots as snapshot
+      on snapshot.id = meal.recipe_content_snapshot_id
+    cross join jsonb_array_elements(
+      snapshot.ingredients_json
+    ) as snapshot_item
+    where meal.id = any(p_shopping_meal_ids)
+      and meal.user_id = p_user_id
+      and (
+        (
+          nullif(snapshot_item ->> 'ingredient_id', '') is not null
+          and nullif(snapshot_item ->> 'food_product_id', '') is null
+          and nullif(
+            snapshot_item ->> 'food_product_nutrition_version_id',
+            ''
+          ) is null
+        )
+        or (
+          nullif(snapshot_item ->> 'ingredient_id', '') is null
+          and nullif(snapshot_item ->> 'food_product_id', '') is not null
+          and nullif(
+            snapshot_item ->> 'food_product_nutrition_version_id',
+            ''
+          ) is not null
+        )
+      )
+  )
+  select count(*)
+  into v_invalid_count
+  from expected_identity as expected
+  where not exists (
+    select 1
+    from jsonb_array_elements(
+      coalesce(p_item_rows, '[]'::jsonb)
+    ) as row
+    where nullif(row ->> 'ingredient_id', '')::uuid
+        is not distinct from expected.ingredient_id
+      and nullif(row ->> 'food_product_id', '')::uuid
+        is not distinct from expected.food_product_id
+      and nullif(
+        row ->> 'food_product_nutrition_version_id',
+        ''
+      )::uuid is not distinct from
+        expected.food_product_nutrition_version_id
+  );
+
+  if v_invalid_count > 0 then
+    return jsonb_build_object(
+      'error_code', 'FORBIDDEN',
+      'message', '선택한 식사에서 확인된 항목만 장보기에 포함할 수 있어요.'
+    );
+  end if;
+
   select count(*) - count(
     distinct case
       when nullif(row ->> 'ingredient_id', '') is not null
