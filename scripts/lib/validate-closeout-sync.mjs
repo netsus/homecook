@@ -3,7 +3,10 @@ import { resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 
 import { resolveSliceBookkeepingPaths } from "./bookkeeping-authority.mjs";
-import { resolveBaseRef } from "./check-workpack-docs.mjs";
+import {
+  resolveBaseRef,
+  resolveWorkpackSlice,
+} from "./check-workpack-docs.mjs";
 import { projectCanonicalCloseoutToDocSurfaceSyncContract } from "./omo-closeout-state.mjs";
 import {
   readSliceRoadmapStatus,
@@ -18,22 +21,11 @@ import {
   resolveOwnedChecklistItems,
   resolveUncheckedChecklistItems,
 } from "./omo-checklist-contract.mjs";
-
-const CLOSEOUT_SLICE_BRANCH_PATTERN = /^docs\/omo-closeout-([0-9]{2}[-a-z0-9]+)$/;
-
-function resolveBranchName(rootDir, env) {
-  const branchName = env.BRANCH_NAME ?? env.GITHUB_HEAD_REF;
-  if (typeof branchName === "string" && branchName.trim().length > 0) {
-    return branchName.trim();
-  }
-
-  const result = spawnSync("git", ["branch", "--show-current"], {
-    cwd: rootDir,
-    encoding: "utf8",
-  });
-
-  return result.status === 0 ? (result.stdout ?? "").trim() : "";
-}
+import {
+  parseDraftState,
+  resolveBranchName,
+  resolveSliceBranchContext,
+} from "./validator-shared.mjs";
 
 function readJson(filePath) {
   return JSON.parse(readFileSync(filePath, "utf8"));
@@ -114,29 +106,6 @@ function readBaseChecklistContractFromGit({
     readmeContents,
     acceptanceContents,
   });
-}
-
-function resolveBranchContext(branchName) {
-  const featureMatch = /^feature\/(be|fe)-(.+)$/.exec(branchName);
-  if (featureMatch) {
-    return {
-      kind: `feature-${featureMatch[1]}`,
-      slice: featureMatch[2],
-    };
-  }
-
-  const closeoutMatch = CLOSEOUT_SLICE_BRANCH_PATTERN.exec(branchName);
-  if (closeoutMatch) {
-    return {
-      kind: "omo-closeout",
-      slice: closeoutMatch[1],
-    };
-  }
-
-  return {
-    kind: null,
-    slice: null,
-  };
 }
 
 function extractSliceFromWorkpackDocPath(filePath) {
@@ -241,18 +210,6 @@ function resolveChangedSlices({
   }
 
   return Array.from(slices);
-}
-
-function parseDraftState(value) {
-  if (value === true || value === "true") {
-    return true;
-  }
-
-  if (value === false || value === "false") {
-    return false;
-  }
-
-  return null;
 }
 
 function readLines(filePath) {
@@ -1015,9 +972,22 @@ export function validateCloseoutSync({
   changedFiles = null,
   readBaseChecklistContract = readBaseChecklistContractFromGit,
 } = {}) {
-  const branchName = resolveBranchName(rootDir, env);
-  const branchContext = resolveBranchContext(branchName);
+  const branchName = resolveBranchName({ rootDir, env });
   const baseRef = resolveBaseRef(env, spawnSync) ?? "master";
+  const branchContext = resolveSliceBranchContext(branchName, {
+    includeBackend: true,
+  });
+  if (branchContext.kind === "feature-be" || branchContext.kind === "feature-fe") {
+    branchContext.slice = resolveWorkpackSlice({
+      slice: branchContext.slice,
+      baseRef,
+      spawnSyncFn: (command, args, options) =>
+        spawnSync(command, args, {
+          ...options,
+          cwd: rootDir,
+        }),
+    });
+  }
   const resolvedChangedFiles =
     Array.isArray(changedFiles) && changedFiles.length >= 0
       ? changedFiles

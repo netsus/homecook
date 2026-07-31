@@ -18,6 +18,24 @@ function writeFixtureFile(rootDir: string, relativePath: string, contents: strin
   writeFileSync(filePath, contents);
 }
 
+function commitFixture(rootDir: string) {
+  execFileSync("git", ["init"], { cwd: rootDir });
+  execFileSync("git", ["add", "."], { cwd: rootDir });
+  execFileSync(
+    "git",
+    [
+      "-c",
+      "user.name=Closeout Sync Test",
+      "-c",
+      "user.email=closeout-sync@example.com",
+      "commit",
+      "-m",
+      "test fixture",
+    ],
+    { cwd: rootDir },
+  );
+}
+
 function buildReadme({
   designStatus = "temporary",
   authorityStatus = "not-required",
@@ -253,6 +271,56 @@ function validateIncrementalBackendFixture(rootDir: string, baseRootDir: string)
 }
 
 describe("closeout sync validator", () => {
+  it("uses the tracked workflow branch mapping for a non-draft backend PR", () => {
+    const checklistMeta = metadata("mapped-stage2-item", 2, "backend", "3,6");
+    const { baseRootDir, rootDir } = createIncrementalBackendFixture({
+      baseDeliveryItems: [
+        {
+          checked: false,
+          text: "mapped Stage 2 behavior",
+          meta: checklistMeta,
+        },
+      ],
+      currentDeliveryItems: [
+        {
+          checked: true,
+          text: "mapped Stage 2 behavior",
+          meta: checklistMeta,
+        },
+      ],
+    });
+    writeFixtureFile(
+      rootDir,
+      ".workflow-v2/status.json",
+      JSON.stringify({
+        items: [
+          {
+            id: "05-planner-week-core",
+            branch: "feature/be-product-ingredient-link-contract-runtime",
+          },
+        ],
+      }),
+    );
+    commitFixture(rootDir);
+
+    const results = validateCloseoutSync({
+      rootDir,
+      env: {
+        ...process.env,
+        BRANCH_NAME: "feature/be-product-ingredient-link-contract-runtime",
+        PR_IS_DRAFT: "false",
+      },
+      changedFiles: [],
+      readBaseChecklistContract: () =>
+        readWorkpackChecklistContract({
+          rootDir: baseRootDir,
+          slice: "05-planner-week-core",
+        }),
+    });
+
+    expect(results).toEqual([]);
+  });
+
   it("does not enforce strict closeout on draft frontend PRs", () => {
     const rootDir = createFixture({
       roadmapStatus: "in-progress",

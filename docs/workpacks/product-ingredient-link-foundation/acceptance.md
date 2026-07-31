@@ -53,7 +53,7 @@
 - [x] link fixture includes active-approved-primary represents plus inactive, pending, rejected, revoked, superseded, secondary, contains and substitute rows <!-- omo:id=accept-link-fixture-states;stage=2;scope=backend;review=3,6 -->
 - [x] concurrency fixture attempts two simultaneous primary promotions for one product <!-- omo:id=accept-link-fixture-concurrency;stage=2;scope=backend;review=3,6 -->
 - [x] delete fixture covers private cascade, owner-null preservation and ingredient restrict <!-- omo:id=accept-link-fixture-delete;stage=2;scope=backend;review=3,6 -->
-- [ ] existing-schema comparison plus schema/function/grant/data digest equivalence remains unverified; isolated fresh/replay and dirty-row preflight are covered <!-- omo:id=accept-link-db-replay;stage=2;scope=backend;review=3,6 -->
+- [ ] existing, fresh and replay databases produce identical schema signatures, grants and stable data digests <!-- omo:id=accept-link-db-replay;stage=2;scope=backend;review=3,6 -->
 - [x] implementation does not activate account-generation cleanup until F0 and #3 joint account-delete gate is satisfied <!-- omo:id=accept-link-joint-gate;stage=2;scope=shared;review=3,6 -->
 - [ ] local application DB has `local auth.users=0`, and the session-authority gateway proves the active exact epoch plus live HMAC binding before account cleanup <!-- omo:id=accept-link-hybrid-session-gate;stage=2;scope=shared;review=3,6 -->
 
@@ -87,8 +87,8 @@
 - [x] Stage 2 adds focused tests first and records the expected RED before migration/production reader code <!-- omo:id=accept-link-tdd-red;stage=2;scope=backend;review=3,6 -->
 - [ ] Stage 4 adds behavior-only HOME/PANTRY consumer unit and focused Playwright regressions with no visual hierarchy change <!-- omo:id=accept-link-stage4-consumer-tests;stage=4;scope=frontend;review=5,6 -->
 - [x] focused Vitest covers link predicate, route/helper readers, ACL/PII and account-delete behavior <!-- omo:id=accept-link-vitest-targets;stage=2;scope=backend;review=3,6 -->
-- [x] PostgreSQL integration covers isolated fresh/replay with the official snapshot-authority migration, dirty-row preflight, FK/check/partial unique, RLS/grants, complete locked-meal item identity validation, concurrent promotion, two-session shopping create conflict and immutable snapshot-preserving split clone authority <!-- omo:id=accept-link-postgres-targets;stage=2;scope=backend;review=3,6 -->
-- [ ] production-equivalent query-plan evidence for the actual effective-reader body, including product visibility joins, remains Manual Only <!-- omo:id=accept-link-query-plan;stage=2;scope=backend;review=3,6 -->
+- [ ] PostgreSQL integration covers existing/fresh/replay, FK/check/partial unique, RLS/grants and concurrent promotion <!-- omo:id=accept-link-postgres-targets;stage=2;scope=backend;review=3,6 -->
+- [ ] query plans prove one bounded set-based projection without per-row N+1 or unbounded product scan <!-- omo:id=accept-link-query-plan;stage=2;scope=backend;review=3,6 -->
 - [ ] current safe subset and later approved full shape each use a merged-exact-SHA hybrid verifier that reads local application DB/Storage plus minimal remote Auth exact-epoch evidence with `local auth.users=0` and all application/production/staging writes zero <!-- omo:id=accept-link-remote-read-only;stage=2;scope=shared;review=3,6 -->
 - [ ] independent internal 1.5, security/DB and five-axis reviewers finish with unresolved required findings zero <!-- omo:id=accept-link-independent-reviews;stage=2;scope=shared;review=3,6 -->
 - [ ] Draft→Ready and current exact head started checks all finish success or documented normal skip before squash merge <!-- omo:id=accept-link-current-head-ci;stage=2;scope=shared;review=3,6 -->

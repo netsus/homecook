@@ -237,6 +237,6 @@ Schema Change:
 - [x] brand-product synonym prohibition, ambiguity fail-closed and broad-anchor preservation are tested <!-- omo:id=delivery-no-guess-policy;stage=2;scope=backend;review=3,6 -->
 - [x] private cascade/public-shared preservation and ingredient restrict are proven <!-- omo:id=delivery-delete-integrity;stage=2;scope=backend;review=3,6 -->
 - [x] RLS/grants/admin promotion and A/B owner isolation are proven <!-- omo:id=delivery-link-security;stage=2;scope=backend;review=3,6 -->
-- [ ] current safe subset records isolated fresh/replay/dirty and merged-exact-SHA hybrid read-only evidence; existing-schema digest equivalence and the actual projection query plan remain Manual Only <!-- omo:id=delivery-link-verification;stage=2;scope=shared;review=3,6 -->
+- [ ] current safe subset records local real DB/replay and merged-exact-SHA hybrid read-only evidence; projection query-plan evidence remains deferred until Contract Evolution <!-- omo:id=delivery-link-verification;stage=2;scope=shared;review=3,6 -->
 - [ ] existing HOME cleanout and PANTRY display/add consumers use the projection contract without raw ingredient-only fallback <!-- omo:id=delivery-link-existing-consumers;stage=4;scope=frontend;review=5,6 -->
 - [ ] existing loading/empty/error/read-only/unauthorized and exact product/version presentation remain unchanged <!-- omo:id=delivery-link-ui-regression;stage=4;scope=frontend;review=5,6 -->
