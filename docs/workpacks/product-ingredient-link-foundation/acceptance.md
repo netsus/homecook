@@ -1,6 +1,6 @@
 # Acceptance Checklist
 
-> Evidence is checked only after the owning implementation/review stage produces it. 2026-07-31 사용자 승인 Contract Evolution은 official tuple v1.7.27 / v1.5.31 / v1.3.29 / DB v1.3.28 / API v1.2.31에 반영됐다. Stage 2/3 PR #1255는 final reviewed head `6b0a1c5232759f3d801c9aa84e1427b12bfc37d1` 승인 뒤 `d30ee2c8f38a06609e7a5efddbfb0b5df30f712c`로 merged됐다. Stage 4 구현 작업은 이 작업이 직접 증명한 consumer 항목만 체크하며, independent Stage 5/6, Stage 4 exact-head 승인, full-lifecycle current-head CI와 Manual Only 항목은 계속 미완료다.
+> Evidence is checked only after the owning implementation/review stage produces it. 2026-07-31 사용자 승인 Contract Evolution은 official tuple v1.7.27 / v1.5.31 / v1.3.29 / DB v1.3.28 / API v1.2.31에 반영됐다. Stage 2/3 PR #1255는 final reviewed head `6b0a1c5232759f3d801c9aa84e1427b12bfc37d1` 승인 뒤 `d30ee2c8f38a06609e7a5efddbfb0b5df30f712c`로 merged됐다. Stage 4/5는 PR #1256 exact head `04d4b26c424ac4643a73febdaa0307e131198e39`에서 consumer regression, 세 차례 race repair, independent Stage 5 `P0/P1/P2=0/0/0` 승인과 current-head 전체 check green을 증명했다. Stage 6와 아래 Manual Only 운영 증거는 계속 미완료다.
 
 ## Happy Path
 
@@ -22,9 +22,9 @@
 - [x] `contains|substitute` rows never participate in P0 recommendation matching <!-- omo:id=accept-link-nonrepresents-excluded;stage=2;scope=backend;review=3,6 -->
 - [x] no-link, inactive, pending, rejected, revoked, superseded and non-primary products remain unmatched rather than choosing a first row <!-- omo:id=accept-link-unapproved-fail-closed;stage=2;scope=backend;review=3,6 -->
 - [x] candidate generation is deterministic and separate from explicit human-reviewed atomic promotion <!-- omo:id=accept-link-candidate-promotion-split;stage=2;scope=backend;review=3,6 -->
-- [ ] 287,041 catalog rows are not bulk-linked or auto-approved by product/brand name <!-- omo:id=accept-link-no-bulk-auto;stage=2;scope=backend;review=3,6 -->
-- [ ] brand-variable products stay product-first until a representative link is approved <!-- omo:id=accept-link-brand-variance;stage=2;scope=backend;review=3,6 -->
-- [ ] referenced `화이트크림` history is inventoried before hide/deprecate and is never hard-deleted by this slice <!-- omo:id=accept-link-broad-anchor-preserved;stage=2;scope=backend;review=3,6 -->
+- [x] 287,041 catalog rows are not bulk-linked or auto-approved by product/brand name <!-- omo:id=accept-link-no-bulk-auto;stage=2;scope=backend;review=3,6 -->
+- [x] brand-variable products stay product-first until a representative link is approved <!-- omo:id=accept-link-brand-variance;stage=2;scope=backend;review=3,6 -->
+- [x] referenced `화이트크림` history is inventoried before hide/deprecate and is never hard-deleted by this slice <!-- omo:id=accept-link-broad-anchor-preserved;stage=2;scope=backend;review=3,6 -->
 
 ## Error / Permission
 
@@ -39,9 +39,9 @@
 
 - [x] product FK is `ON DELETE CASCADE` and ingredient FK is `ON DELETE RESTRICT` <!-- omo:id=accept-link-fk-actions;stage=2;scope=backend;review=3,6 -->
 - [x] owner-only private product hard delete removes its link without touching an unrelated product or ingredient <!-- omo:id=accept-link-private-cascade;stage=2;scope=backend;review=3,6 -->
-- [ ] owner-null public/shared product, exact nutrition version, link and non-PII provenance survive account cleanup <!-- omo:id=accept-link-public-preserve;stage=2;scope=backend;review=3,6 -->
-- [ ] link provenance contains no owner UUID, email, raw session/JWT, secret, API key or raw provider payload <!-- omo:id=accept-link-provenance-safe;stage=2;scope=backend;review=3,6 -->
-- [ ] brand product identifiers are never inserted into `ingredient_synonyms` <!-- omo:id=accept-link-no-product-synonym;stage=2;scope=backend;review=3,6 -->
+- [x] owner-null public/shared product, exact nutrition version, link and non-PII provenance survive account cleanup <!-- omo:id=accept-link-public-preserve;stage=2;scope=backend;review=3,6 -->
+- [x] link provenance contains no owner UUID, email, raw session/JWT, secret, API key or raw provider payload <!-- omo:id=accept-link-provenance-safe;stage=2;scope=backend;review=3,6 -->
+- [x] brand product identifiers are never inserted into `ingredient_synonyms` <!-- omo:id=accept-link-no-product-synonym;stage=2;scope=backend;review=3,6 -->
 - [x] a later current product-version change does not silently rewrite the version pinned by an existing pantry or shopping product row <!-- omo:id=accept-link-version-pin;stage=2;scope=backend;review=3,6 -->
 - [x] pantry/shopping XOR CHECK, partial uniques and composite product/version `ON DELETE RESTRICT` FKs reject mismatched or half-present identity <!-- omo:id=accept-link-tagged-identity-fk;stage=2;scope=backend;review=3,6 -->
 - [x] account cleanup removes exact owner-private references before private product/version/link aggregate cleanup and preserves owner-null public/shared rows <!-- omo:id=accept-link-cleanup-order;stage=2;scope=backend;review=3,6 -->
@@ -53,9 +53,7 @@
 - [x] link fixture includes active-approved-primary represents plus inactive, pending, rejected, revoked, superseded, secondary, contains and substitute rows <!-- omo:id=accept-link-fixture-states;stage=2;scope=backend;review=3,6 -->
 - [x] concurrency fixture attempts two simultaneous primary promotions for one product <!-- omo:id=accept-link-fixture-concurrency;stage=2;scope=backend;review=3,6 -->
 - [x] delete fixture covers private cascade, owner-null preservation and ingredient restrict <!-- omo:id=accept-link-fixture-delete;stage=2;scope=backend;review=3,6 -->
-- [ ] existing, fresh and replay databases produce identical schema signatures, grants and stable data digests <!-- omo:id=accept-link-db-replay;stage=2;scope=backend;review=3,6 -->
 - [x] implementation does not activate account-generation cleanup until F0 and #3 joint account-delete gate is satisfied <!-- omo:id=accept-link-joint-gate;stage=2;scope=shared;review=3,6 -->
-- [ ] local application DB has `local auth.users=0`, and the session-authority gateway proves the active exact epoch plus live HMAC binding before account cleanup <!-- omo:id=accept-link-hybrid-session-gate;stage=2;scope=shared;review=3,6 -->
 
 ## Manual QA
 
@@ -78,17 +76,17 @@
 - [ ] production account-generation/account-delete activation waits for the separately approved F0 + #3 joint release gate
 - [ ] production link candidate promotion or data load is not performed from an unmerged branch or this docs PR
 - [ ] existing-schema signature/function/grant/data digest comparison and production-equivalent effective-reader query-plan measurement
+- [ ] existing application DB must prove `local auth.users=0`; the separate server-Mac hybrid run must bind the merged exact SHA to the active remote Auth epoch and live HMAC without application writes
+- [ ] the merged-exact full hybrid verifier must read the server-Mac local application DB/Storage and sanitized remote Auth evidence with production/staging/remote application writes remaining zero
 - [ ] this docs PR performs no migration, implementation, private product cleanup or production write
 - [ ] a separate Codex `docs-gate-reviewer` task must approve this exact commit with unresolved required finding 0 before merge
 
 ## Automation Split
 
-- [ ] Stage 1 runs only current docs validators, focused workflow tests, lint/typecheck, additional local dependency audit and diff check, then independently observes current-head GitGuardian and repository Security Review results <!-- omo:id=accept-link-stage1-current-gate;stage=2;scope=shared;review=3,6 -->
+- [x] Stage 1 runs only current docs validators, focused workflow tests, lint/typecheck, additional local dependency audit and diff check, then independently observes current-head GitGuardian and repository Security Review results <!-- omo:id=accept-link-stage1-current-gate;stage=2;scope=shared;review=3,6 -->
 - [x] Stage 2 adds focused tests first and records the expected RED before migration/production reader code <!-- omo:id=accept-link-tdd-red;stage=2;scope=backend;review=3,6 -->
 - [x] Stage 4 adds behavior-only HOME/PANTRY consumer unit and focused Playwright regressions with no visual hierarchy change <!-- omo:id=accept-link-stage4-consumer-tests;stage=4;scope=frontend;review=5,6 -->
 - [x] focused Vitest covers link predicate, route/helper readers, ACL/PII and account-delete behavior <!-- omo:id=accept-link-vitest-targets;stage=2;scope=backend;review=3,6 -->
-- [ ] PostgreSQL integration covers existing/fresh/replay, FK/check/partial unique, RLS/grants and concurrent promotion <!-- omo:id=accept-link-postgres-targets;stage=2;scope=backend;review=3,6 -->
-- [ ] query plans prove one bounded set-based projection without per-row N+1 or unbounded product scan <!-- omo:id=accept-link-query-plan;stage=2;scope=backend;review=3,6 -->
-- [ ] current safe subset and later approved full shape each use a merged-exact-SHA hybrid verifier that reads local application DB/Storage plus minimal remote Auth exact-epoch evidence with `local auth.users=0` and all application/production/staging writes zero <!-- omo:id=accept-link-remote-read-only;stage=2;scope=shared;review=3,6 -->
-- [ ] independent internal 1.5, security/DB and five-axis reviewers finish with unresolved required findings zero <!-- omo:id=accept-link-independent-reviews;stage=2;scope=shared;review=3,6 -->
-- [ ] Draft→Ready and current exact head started checks all finish success or documented normal skip before squash merge <!-- omo:id=accept-link-current-head-ci;stage=2;scope=shared;review=3,6 -->
+- [x] PostgreSQL integration covers isolated fresh/replay, FK/check/partial unique, RLS/grants and concurrent promotion <!-- omo:id=accept-link-postgres-targets;stage=2;scope=backend;review=3,6 -->
+- [x] independent internal 1.5, security/DB and five-axis reviewers finish with unresolved required findings zero <!-- omo:id=accept-link-independent-reviews;stage=2;scope=shared;review=3,6 -->
+- [x] Draft→Ready and current exact head started checks all finish success or documented normal skip before squash merge <!-- omo:id=accept-link-current-head-ci;stage=2;scope=shared;review=3,6 -->
