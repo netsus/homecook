@@ -72,12 +72,18 @@ const ADDITIVE_SOURCES = [
         REPO_ROOT,
         "docs/security/recipe-snapshot-authority-security-function-authorization-manifest.json",
       ),
-    migrationPath:
-      process.env.SECURITY_FUNCTION_RECIPE_SNAPSHOT_AUTHORITY_MIGRATION_PATH
-      ?? path.join(
-        REPO_ROOT,
-        "supabase/migrations/20260729170500_recipe_snapshot_authority_foundation.sql",
-      ),
+    migrationPaths: process.env.SECURITY_FUNCTION_RECIPE_SNAPSHOT_AUTHORITY_MIGRATION_PATH
+      ? [process.env.SECURITY_FUNCTION_RECIPE_SNAPSHOT_AUTHORITY_MIGRATION_PATH]
+      : [
+          path.join(
+            REPO_ROOT,
+            "supabase/migrations/20260729170500_recipe_snapshot_authority_foundation.sql",
+          ),
+          path.join(
+            REPO_ROOT,
+            "supabase/migrations/20260731111000_product_ingredient_link_account_cleanup.sql",
+          ),
+        ],
   },
   {
     manifestPath:
@@ -91,6 +97,20 @@ const ADDITIVE_SOURCES = [
       ?? path.join(
         REPO_ROOT,
         "supabase/migrations/20260730210000_product_ingredient_link_foundation.sql",
+      ),
+  },
+  {
+    manifestPath:
+      process.env.SECURITY_FUNCTION_PRODUCT_INGREDIENT_LINK_RUNTIME_MANIFEST_PATH
+      ?? path.join(
+        REPO_ROOT,
+        "docs/security/product-ingredient-link-runtime-security-function-authorization-manifest.json",
+      ),
+    migrationPath:
+      process.env.SECURITY_FUNCTION_PRODUCT_INGREDIENT_LINK_RUNTIME_MIGRATION_PATH
+      ?? path.join(
+        REPO_ROOT,
+        "supabase/migrations/20260731110000_product_ingredient_link_contract_runtime.sql",
       ),
   },
   {

@@ -1,0 +1,83 @@
+{
+  "schema_version": 1,
+  "slice": "product-ingredient-link-contract-runtime",
+  "migration": "supabase/migrations/20260731110000_product_ingredient_link_contract_runtime.sql",
+  "deployment_state": "pre-deployment",
+  "baseline_application_contract_count": 74,
+  "functions": [
+    {
+      "signature": "public.select_pantry_effective_ingredients(uuid)",
+      "control_class": "application-controlled",
+      "effect": "read-only",
+      "exposure": "authenticated-self",
+      "allowed_principals": [
+        "authenticated"
+      ],
+      "security_mode": "definer",
+      "safe_search_path": [
+        "pg_catalog",
+        "public",
+        "pg_temp"
+      ]
+    },
+    {
+      "signature": "public.create_shopping_list_from_payload(uuid, text, date, date, boolean, uuid[], jsonb, jsonb, jsonb, jsonb, integer)",
+      "control_class": "application-controlled",
+      "effect": "mutation",
+      "exposure": "authenticated-self",
+      "allowed_principals": [
+        "authenticated"
+      ],
+      "security_mode": "definer",
+      "safe_search_path": [
+        "pg_catalog",
+        "public",
+        "pg_temp"
+      ],
+      "replaces_baseline": true
+    },
+    {
+      "signature": "public.complete_shopping_list(uuid, uuid, uuid[])",
+      "control_class": "application-controlled",
+      "effect": "mutation",
+      "exposure": "authenticated-self",
+      "allowed_principals": [
+        "authenticated"
+      ],
+      "security_mode": "definer",
+      "safe_search_path": [
+        "pg_catalog",
+        "public",
+        "pg_temp"
+      ],
+      "replaces_baseline": true
+    },
+    {
+      "signature": "public.protect_food_product_nutrition_version()",
+      "control_class": "application-controlled",
+      "effect": "trigger/internal",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "security_mode": "invoker",
+      "safe_search_path": [
+        "pg_catalog",
+        "public",
+        "pg_temp"
+      ],
+      "replaces_baseline": true
+    },
+    {
+      "signature": "public.pin_recipe_snapshot_or_authorized_shopping_clone_on_meal_insert()",
+      "control_class": "application-controlled",
+      "effect": "trigger/internal",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "security_mode": "definer",
+      "safe_search_path": [
+        "pg_catalog",
+        "public",
+        "pg_temp"
+      ]
+    }
+  ]
+}

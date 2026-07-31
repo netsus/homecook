@@ -8,15 +8,23 @@ import path from "node:path";
 
 const TOOLS = ["initdb", "pg_ctl", "createdb", "psql"];
 const TEST_FILE = "tests/product-ingredient-link-postgres.integration.test.ts";
-const TARGET_MIGRATION =
-  "supabase/migrations/20260730210000_product_ingredient_link_foundation.sql";
+const TARGET_MIGRATIONS = [
+  "supabase/migrations/20260731110000_product_ingredient_link_contract_runtime.sql",
+  "supabase/migrations/20260731111000_product_ingredient_link_account_cleanup.sql",
+];
+const SNAPSHOT_AUTHORITY_MIGRATION =
+  "supabase/migrations/20260729170500_recipe_snapshot_authority_foundation.sql";
 const PRE_TARGET_MIGRATIONS = [
   "supabase/migrations/20260301000000_core_schema_bootstrap.sql",
+  "supabase/migrations/20260425000000_08b_add_pantry_items_table.sql",
+  "supabase/migrations/20260426090000_09_shopping_tables.sql",
   "supabase/migrations/20260610170000_recipe_book_cover_metadata.sql",
   "supabase/migrations/20260714143000_ingredient_nutrition_conversion_model.sql",
   "supabase/migrations/20260716090000_add_recipe_nutrition_snapshots.sql",
   "supabase/migrations/20260716120000_prepared_food_catalog.sql",
+  "supabase/migrations/20260716150000_prepared_food_planner_entries.sql",
   "supabase/migrations/20260718090000_community_prepared_food_catalog.sql",
+  "supabase/migrations/20260730210000_product_ingredient_link_foundation.sql",
 ];
 const REPLAY_SEED_NAME = "product-link:replay-seed";
 const VITEST_BIN = path.join(process.cwd(), "node_modules/.bin/vitest");
@@ -118,6 +126,39 @@ $$;
 grant usage on schema auth to anon, authenticated, service_role;
 grant execute on function auth.uid() to anon, authenticated, service_role;
 grant usage on schema public to anon, authenticated, service_role, public_probe;
+create table if not exists public.user_account_lifecycles (
+  owner_uuid uuid not null,
+  account_generation bigint not null,
+  status text not null,
+  primary key (owner_uuid, account_generation)
+);
+create schema if not exists recipe_visibility_guard;
+create or replace function recipe_visibility_guard.is_owner_publicly_visible(
+  p_owner_uuid uuid
+)
+returns boolean
+language plpgsql
+stable
+security definer
+set search_path = pg_catalog, public, pg_temp
+as $function$
+declare
+  v_latest_status text;
+begin
+  if p_owner_uuid is null then
+    return true;
+  end if;
+
+  select lifecycle.status
+    into v_latest_status
+  from public.user_account_lifecycles as lifecycle
+  where lifecycle.owner_uuid = p_owner_uuid
+  order by lifecycle.account_generation desc
+  limit 1;
+
+  return v_latest_status is null or v_latest_status = 'active';
+end
+$function$;
 create table if not exists public.operational_events (
   id uuid primary key default gen_random_uuid(),
   event_type text not null,
@@ -130,6 +171,91 @@ create table if not exists public.operational_events (
   created_at timestamptz not null default now(),
   check (severity in ('info', 'warn', 'error', 'critical'))
 );
+`;
+
+const ACCOUNT_CLEANUP_COMPAT_SQL = `
+alter table public.recipes
+  add column if not exists visibility text not null default 'public',
+  add column if not exists deleted_at timestamptz;
+alter table public.cooking_methods
+  add column if not exists category_code text;
+create table if not exists public.recipe_step_cooking_methods (
+  id uuid primary key default gen_random_uuid(),
+  step_id uuid not null references public.recipe_steps(id) on delete cascade,
+  method_id uuid not null references public.cooking_methods(id) on delete restrict,
+  position integer not null check (position > 0),
+  created_at timestamptz not null default now(),
+  unique (step_id, method_id),
+  unique (step_id, position)
+);
+create table if not exists public.recipe_content_snapshots (
+  id uuid primary key default gen_random_uuid(),
+  owner_user_id uuid,
+  recipe_id uuid not null references public.recipes(id) on delete restrict,
+  recipe_nutrition_snapshot_id uuid
+    references public.recipe_nutrition_snapshots(id) on delete restrict,
+  title varchar(200) not null,
+  base_servings numeric(8,2) not null check (base_servings > 0),
+  ingredients_json jsonb not null default '[]'::jsonb
+    check (jsonb_typeof(ingredients_json) = 'array'),
+  steps_json jsonb not null default '[]'::jsonb
+    check (jsonb_typeof(steps_json) = 'array'),
+  content_hash text not null,
+  schema_version integer not null default 1 check (schema_version > 0),
+  created_at timestamptz not null default now(),
+  unique nulls not distinct (
+    recipe_id,
+    content_hash,
+    recipe_nutrition_snapshot_id,
+    schema_version
+  )
+);
+alter table public.meals
+  add column if not exists recipe_content_snapshot_id uuid
+    references public.recipe_content_snapshots(id) on delete restrict,
+  add column if not exists recipe_content_snapshot_origin varchar(20);
+alter table public.recipe_nutrition_snapshots
+  add column if not exists owner_user_id uuid;
+create table if not exists public.cooking_sessions (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid
+);
+create table if not exists public.cooking_session_meals (
+  session_id uuid,
+  meal_id uuid,
+  recipe_id uuid
+);
+create table if not exists public.cooking_session_meal_claims (
+  meal_id uuid
+);
+create table if not exists public.leftover_dishes (
+  user_id uuid,
+  recipe_id uuid
+);
+create or replace function public.recipe_snapshot_account_cleanup_guard(
+  p_owner_user_id uuid
+)
+returns void
+language plpgsql
+security definer
+set search_path = pg_catalog, public, pg_temp
+as $$
+begin
+  perform p_owner_user_id;
+end
+$$;
+create or replace function public.delete_user_private_data(p_user_id uuid)
+returns jsonb
+language sql
+security definer
+set search_path = pg_catalog, public, pg_temp
+as $$
+  select jsonb_build_object('deleted', true, 'user_id', p_user_id)
+$$;
+revoke all on function public.delete_user_private_data(uuid)
+  from public, anon, authenticated, service_role;
+grant execute on function public.delete_user_private_data(uuid)
+  to service_role;
 `;
 
 function replaySeedSql() {
@@ -153,6 +279,77 @@ function replaySeedSql() {
        )`,
   ].join("; ")};
   `;
+}
+
+function verifyDirtyShoppingPreflight(postgresBin, args) {
+  const psql = path.join(postgresBin, "psql");
+  const dirtyOwnerId = "16000000-0000-4000-8000-000000000001";
+  const dirtyListId = "16000000-0000-4000-8000-000000000002";
+  const dirtyItemId = "16000000-0000-4000-8000-000000000003";
+
+  required(psql, [
+    ...args,
+    "-c",
+    `
+      insert into public.users (id, nickname, social_provider, social_id)
+      values ('${dirtyOwnerId}', 'dirty-migration-owner', 'google', 'dirty-migration-owner');
+      insert into public.shopping_lists (
+        id,
+        user_id,
+        title,
+        date_range_start,
+        date_range_end
+      ) values (
+        '${dirtyListId}',
+        '${dirtyOwnerId}',
+        'dirty migration fixture',
+        current_date,
+        current_date
+      );
+      alter table public.shopping_list_items alter column ingredient_id drop not null;
+      insert into public.shopping_list_items (
+        id,
+        shopping_list_id,
+        ingredient_id,
+        display_text,
+        amounts_json
+      ) values (
+        '${dirtyItemId}',
+        '${dirtyListId}',
+        null,
+        'dirty migration fixture',
+        '[]'::jsonb
+      );
+    `,
+  ]);
+
+  const migration = command(psql, [
+    ...args,
+    "-f",
+    TARGET_MIGRATIONS[0],
+  ]);
+  if (
+    migration.status === 0
+    || !/SHOPPING_LIST_ITEMS_ALL_NULL_PROVENANCE/.test(migration.stderr ?? "")
+  ) {
+    process.stderr.write(migration.stdout ?? "");
+    process.stderr.write(migration.stderr ?? "");
+    throw new Error(
+      "Dirty shopping provenance preflight did not fail with the locked marker.",
+    );
+  }
+
+  required(psql, [
+    ...args,
+    "-c",
+    `
+      delete from public.shopping_list_items where id = '${dirtyItemId}';
+      delete from public.shopping_lists where id = '${dirtyListId}';
+      delete from public.users where id = '${dirtyOwnerId}';
+      alter table public.shopping_list_items alter column ingredient_id set not null;
+    `,
+  ]);
+  process.stdout.write("[product-link-pg] dirty shopping preflight rejected\n");
 }
 
 async function runMode(postgresBin, mode) {
@@ -210,15 +407,34 @@ async function runMode(postgresBin, mode) {
       process.stdout.write(`[product-link-pg] applied ${migration} mode=${mode}\n`);
     }
 
+    required(
+      path.join(postgresBin, "psql"),
+      [...args, "-c", ACCOUNT_CLEANUP_COMPAT_SQL],
+    );
+    required(path.join(postgresBin, "psql"), [
+      ...args,
+      "-f",
+      SNAPSHOT_AUTHORITY_MIGRATION,
+    ]);
+    process.stdout.write(
+      `[product-link-pg] applied ${SNAPSHOT_AUTHORITY_MIGRATION} mode=${mode}\n`,
+    );
+
+    if (mode === "fresh") {
+      verifyDirtyShoppingPreflight(postgresBin, args);
+    }
+
     if (mode === "replay") {
       required(path.join(postgresBin, "psql"), [...args, "-c", replaySeedSql()]);
       process.stdout.write(`[product-link-pg] replay seed inserted mode=${mode}\n`);
     }
 
-    required(path.join(postgresBin, "psql"), [...args, "-f", TARGET_MIGRATION]);
-    process.stdout.write(
-      `[product-link-pg] applied ${TARGET_MIGRATION} mode=${mode}\n`,
-    );
+    for (const migration of TARGET_MIGRATIONS) {
+      required(path.join(postgresBin, "psql"), [...args, "-f", migration]);
+      process.stdout.write(
+        `[product-link-pg] applied ${migration} mode=${mode}\n`,
+      );
+    }
 
     const test = command(
       VITEST_BIN,

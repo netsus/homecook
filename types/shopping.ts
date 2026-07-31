@@ -52,6 +52,7 @@ export interface ShoppingListSummary {
   is_completed: boolean;
   completed_at?: string | null;
   item_count?: number;
+  items?: ShoppingListItemSummary[];
   created_at: string;
 }
 
@@ -105,7 +106,10 @@ export interface ShoppingListRecipeSummary {
 
 export interface ShoppingListItemSummary {
   id: string;
-  ingredient_id: string;
+  ingredient_id: string | null;
+  source_type?: "ingredient" | "food_product" | null;
+  food_product_id?: string | null;
+  food_product_nutrition_version_id?: string | null;
   category?: string | null;
   display_text: string;
   amounts_json: Array<{ amount: number; unit: string }>;

@@ -2289,8 +2289,8 @@
     {
       "id": "product-ingredient-link-foundation",
       "preset": "vertical-slice-strict",
-      "branch": "docs/product-ingredient-link-contract-evolution",
-      "pr_path": "https://github.com/netsus/homecook/pull/1254",
+      "branch": "feature/be-product-ingredient-link-contract-runtime",
+      "pr_path": "https://github.com/netsus/homecook/pull/1255",
       "lifecycle": "in_progress",
       "approval_state": "not_started",
       "verification_status": "pending",
@@ -2312,7 +2312,7 @@
         "node scripts/verify-product-ingredient-link-hybrid.mjs --mode post-merge-read-only",
         "git diff --check"
       ],
-      "notes": "2026-07-31 사용자 승인 Contract Evolution Stage 1 docs authoring is active. Internal 1.5 task 019fb5c6-d036-7a50-a1de-d093159a7f0b requested changes at PR #1254 head 97d93f983ab8dd9c22ff8943eb8f3bc58e6caf17. Author repair narrows the shared reader to authenticated-self with auth.uid()=p_user_id and no user-path service-token fallback, adds shopping create/detail provenance automation, and returns custom-recipe/meal-log runtime ownership to successors. This author task does not self-approve; lifecycle/verification/evaluation remain in_progress/pending/not_started until fresh internal 1.5 re-review and new-head checks. PR #1236 link-only authority and PR #1248 hybrid verifier remain historical merged evidence. New implementation, full local/remote evidence and production activation remain pending/Manual Only with zero production/staging/remote application writes.",
+      "notes": "Contract Evolution PR #1254 merged at base 8b4287f83a99c0cc1f1cc4979b578dc56a2895d0. PR #1255 head 3e47eb67e9634603b11a86ce1a7a190591ce5360 received Stage 3 019fb631-8a42-7512-881d-8644562cb73a P0/P1/P2=0/5/2 request_changes and /root/stage2_security_db_review Critical/High=0/2 request_changes; the first repair was later approved by that security/DB reviewer at head 66c27efac705939d9ae620affdf8aae92378c086 with Critical/High/Medium/Low=0/0/0/0. Fresh Stage 3 task 019fb668-233f-7ec1-a6a4-f507a74fe223 returned P0/P1/P2=0/2/2 request_changes at 66c27efa. Second TDD RED reproduced cross-owner SECURITY DEFINER writes, a two-session lists=2/attached=1/orphan=1 race, caller-omitted locked-meal item identities, and valid split failure against the restored immutable snapshot trigger. GREEN adds deterministic meal locking, locked owner/column/recipe/item/product and complete source identity validation, server-derived split/pantry/complete values, rollback on update-count conflict, and one-time server-only snapshot clone authority with forged/direct access denial. Focused route 57/57, focused Stage 2 selection 97 passed/20 skipped, isolated PostgreSQL fresh/replay 20/20 each plus dirty preflight, full Vitest 4,765 passed/240 skipped, backend product 2,428 passed/128 skipped, build, security Playwright 12/12 and validators pass. Existing-schema digest equivalence and actual-reader production query-plan evidence are explicitly Manual Only. The unrelated local partially deployed hybrid additive contract blocks only repository-wide local security-function preflight; isolated target auth tests pass. Replacement exact head, current-head checks and independent re-review are pending; lifecycle stays in_progress and self-approval is forbidden. Stage 4/5/6, remote Auth and production cleanup activation remain unperformed; production/staging/remote writes are zero.",
       "evaluation_status": "not_started",
       "evaluation_round": 0,
       "last_evaluator_result": null,

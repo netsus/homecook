@@ -4,6 +4,33 @@ export function resolveSliceFromBranch(branchName) {
 }
 
 export function resolveWorkpackSlice({ slice, baseRef, spawnSyncFn }) {
+  const statusResult = spawnSyncFn(
+    "git",
+    ["show", "HEAD:.workflow-v2/status.json"],
+    { encoding: "utf8" },
+  );
+  if (statusResult.status === 0) {
+    try {
+      const status = JSON.parse(statusResult.stdout);
+      const expectedBranches = new Set([
+        `feature/be-${slice}`,
+        `feature/fe-${slice}`,
+      ]);
+      const mappedItems = Array.isArray(status.items)
+        ? status.items.filter(
+            (item) =>
+              typeof item?.id === "string"
+              && expectedBranches.has(item.branch),
+          )
+        : [];
+      if (mappedItems.length === 1) {
+        return mappedItems[0].id;
+      }
+    } catch {
+      // Fall through to the established direct/retrofit resolution.
+    }
+  }
+
   if (!/^\d{2}-retrofit$/.test(slice)) {
     return slice;
   }

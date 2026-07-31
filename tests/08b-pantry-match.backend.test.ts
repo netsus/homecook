@@ -109,6 +109,7 @@ describe("08b pantry match backend", () => {
       auth: {
         getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })),
       },
+      rpc: vi.fn(() => pantryItemsTable.select()),
       from: vi.fn((table: string) => {
         if (table === "pantry_items") return pantryItemsTable;
         throw new Error(`unexpected table: ${table}`);
@@ -182,6 +183,7 @@ describe("08b pantry match backend", () => {
       auth: {
         getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })),
       },
+      rpc: vi.fn(() => pantryItemsTable.select()),
       from: vi.fn((table: string) => {
         if (table === "pantry_items") return pantryItemsTable;
         if (table === "recipe_ingredients") return recipeIngredientsTable;
@@ -289,6 +291,7 @@ describe("08b pantry match backend", () => {
       auth: {
         getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })),
       },
+      rpc: vi.fn(() => pantryItemsTable.select()),
       from: vi.fn((table: string) => {
         if (table === "pantry_items") return pantryItemsTable;
         if (table === "recipe_ingredients") return recipeIngredientsTable;

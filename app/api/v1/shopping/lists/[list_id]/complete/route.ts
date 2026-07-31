@@ -55,14 +55,18 @@ interface MealUpdateRow {
 
 interface ShoppingListItemRow {
   id: string;
-  ingredient_id: string;
+  ingredient_id: string | null;
+  food_product_id: string | null;
+  food_product_nutrition_version_id: string | null;
   is_checked: boolean;
   is_pantry_excluded: boolean;
   added_to_pantry: boolean;
 }
 
 interface PantryItemRow {
-  ingredient_id: string;
+  ingredient_id: string | null;
+  food_product_id: string | null;
+  food_product_nutrition_version_id: string | null;
 }
 
 type MaybeSingleResult<T> = PromiseLike<{
@@ -129,7 +133,16 @@ interface ShoppingListItemsTable {
 
 interface PantryItemsTable {
   select(columns: string): PantryItemsSelectQuery;
-  insert(values: Array<{ user_id: string; ingredient_id: string }>): PantryItemsInsertQuery;
+  insert(
+    values: Array<
+      | { user_id: string; ingredient_id: string }
+      | {
+          user_id: string;
+          food_product_id: string;
+          food_product_nutrition_version_id: string;
+        }
+    >,
+  ): PantryItemsInsertQuery;
 }
 
 interface ShoppingCompleteDbClient {
@@ -202,7 +215,13 @@ function statusFromRpcErrorCode(code: string | undefined) {
 }
 
 function isPantryReflectionCandidate(item: ShoppingListItemRow) {
-  return (item.is_checked && !item.is_pantry_excluded) || item.is_pantry_excluded;
+  const hasPinnedIdentity =
+    item.ingredient_id !== null ||
+    (item.food_product_id !== null &&
+      item.food_product_nutrition_version_id !== null);
+
+  return hasPinnedIdentity &&
+    ((item.is_checked && !item.is_pantry_excluded) || item.is_pantry_excluded);
 }
 
 async function recordShoppingCompletionRewards(
@@ -386,7 +405,7 @@ export async function POST(request: Request, context: RouteContext) {
   if (listResult.data.is_completed) {
     const reflectedItemsResult = await dbClient
       .from("shopping_list_items")
-      .select("id, ingredient_id, is_checked, is_pantry_excluded, added_to_pantry")
+      .select("id, ingredient_id, food_product_id, food_product_nutrition_version_id, is_checked, is_pantry_excluded, added_to_pantry")
       .eq("shopping_list_id", listId);
 
     if (reflectedItemsResult.error || !reflectedItemsResult.data) {
@@ -408,7 +427,7 @@ export async function POST(request: Request, context: RouteContext) {
   if (requestedPantryItemIds === undefined || requestedPantryItemIds.length > 0) {
     const itemsResult = await dbClient
       .from("shopping_list_items")
-      .select("id, ingredient_id, is_checked, is_pantry_excluded, added_to_pantry")
+      .select("id, ingredient_id, food_product_id, food_product_nutrition_version_id, is_checked, is_pantry_excluded, added_to_pantry")
       .eq("shopping_list_id", listId);
 
     if (itemsResult.error || !itemsResult.data) {
@@ -427,7 +446,13 @@ export async function POST(request: Request, context: RouteContext) {
 
     pantryAddedItemIds = validItems.map((item) => item.id);
 
-    const ingredientIds = [...new Set(validItems.map((item) => item.ingredient_id))];
+    const ingredientIds = [
+      ...new Set(
+        validItems
+          .map((item) => item.ingredient_id)
+          .filter((ingredientId): ingredientId is string => ingredientId !== null),
+      ),
+    ];
 
     if (ingredientIds.length > 0) {
       const existingPantryResult = await dbClient
@@ -455,6 +480,63 @@ export async function POST(request: Request, context: RouteContext) {
 
         if (pantryInsertResult.error) {
           return fail("INTERNAL_ERROR", "팬트리에 재료를 추가하지 못했어요.", 500);
+        }
+      }
+    }
+
+    const productItems = validItems.filter(
+      (
+        item,
+      ): item is ShoppingListItemRow & {
+        food_product_id: string;
+        food_product_nutrition_version_id: string;
+      } =>
+        item.ingredient_id === null &&
+        item.food_product_id !== null &&
+        item.food_product_nutrition_version_id !== null,
+    );
+
+    if (productItems.length > 0) {
+      const productIds = [...new Set(productItems.map((item) => item.food_product_id))];
+      const existingProductsResult = await dbClient
+        .from("pantry_items")
+        .select(
+          "ingredient_id, food_product_id, food_product_nutrition_version_id",
+        )
+        .eq("user_id", user.id)
+        .in("food_product_id", productIds);
+
+      if (existingProductsResult.error || !existingProductsResult.data) {
+        return fail("INTERNAL_ERROR", "팬트리 보유 상품을 확인하지 못했어요.", 500);
+      }
+
+      const existingProductPairs = new Set(
+        existingProductsResult.data.map(
+          (item) =>
+            `${item.food_product_id}:${item.food_product_nutrition_version_id}`,
+        ),
+      );
+      const productRowsToInsert = productItems
+        .filter(
+          (item) =>
+            !existingProductPairs.has(
+              `${item.food_product_id}:${item.food_product_nutrition_version_id}`,
+            ),
+        )
+        .map((item) => ({
+          user_id: user.id,
+          food_product_id: item.food_product_id,
+          food_product_nutrition_version_id:
+            item.food_product_nutrition_version_id,
+        }));
+
+      if (productRowsToInsert.length > 0) {
+        const productInsertResult = await dbClient
+          .from("pantry_items")
+          .insert(productRowsToInsert);
+
+        if (productInsertResult.error) {
+          return fail("INTERNAL_ERROR", "팬트리에 상품을 추가하지 못했어요.", 500);
         }
       }
     }

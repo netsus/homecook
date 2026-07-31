@@ -68,7 +68,9 @@ interface IngredientRow {
 
 interface ShoppingListItemRow {
   id: string;
-  ingredient_id: string;
+  ingredient_id: string | null;
+  food_product_id: string | null;
+  food_product_nutrition_version_id: string | null;
   display_text: string;
   amounts_json: unknown;
   is_checked: boolean;
@@ -199,7 +201,20 @@ function buildItem(
   return {
     id: item.id,
     ingredient_id: item.ingredient_id,
-    category: categoryByIngredientId.get(item.ingredient_id) ?? null,
+    source_type:
+      item.ingredient_id !== null
+        ? "ingredient"
+        : item.food_product_id !== null &&
+            item.food_product_nutrition_version_id !== null
+          ? "food_product"
+          : null,
+    food_product_id: item.food_product_id ?? null,
+    food_product_nutrition_version_id:
+      item.food_product_nutrition_version_id ?? null,
+    category:
+      item.ingredient_id === null
+        ? null
+        : categoryByIngredientId.get(item.ingredient_id) ?? null,
     display_text: item.display_text,
     amounts_json: normalizeAmountsJson(item.amounts_json),
     is_checked: item.is_checked,
@@ -311,7 +326,7 @@ export async function GET(_request: Request, context: RouteContext) {
 
   const itemsResult = await dbClient
     .from("shopping_list_items")
-    .select("id, ingredient_id, display_text, amounts_json, is_checked, is_pantry_excluded, added_to_pantry, sort_order")
+    .select("id, ingredient_id, food_product_id, food_product_nutrition_version_id, display_text, amounts_json, is_checked, is_pantry_excluded, added_to_pantry, sort_order")
     .eq("shopping_list_id", listId)
     .order("sort_order", { ascending: true })
     .order("id", { ascending: true });
@@ -321,7 +336,11 @@ export async function GET(_request: Request, context: RouteContext) {
   }
 
   const ingredientIds = [
-    ...new Set(itemsResult.data.map((item) => item.ingredient_id)),
+    ...new Set(
+      itemsResult.data
+        .map((item) => item.ingredient_id)
+        .filter((ingredientId): ingredientId is string => ingredientId !== null),
+    ),
   ];
   const categoryByIngredientId = new Map<string, string | null>();
 

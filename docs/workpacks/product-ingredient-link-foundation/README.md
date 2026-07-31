@@ -168,7 +168,7 @@ Schema Change:
 ### Stage 1 gate and planned artifacts
 
 - this docs PR runs only currently executable SOT/workflow/workpack/automation/bookkeeping/doc-gate validators, focused workflow Vitest, lint, typecheck, dependency audit as additional local security evidence, and diff check. The current PR head's independent GitGuardian result and repository Security Review workflow are observed separately; no unspecified local secret command is claimed.
-- PR #1236 merged the test-first link-only safe subset with focused link/security tests, isolated fresh/replay PostgreSQL integration and backend verification. The newly approved pantry/shopping/reader/account-delete coverage is authorized but remains unchecked until later implementation/review stages.
+- PR #1236 merged the test-first link-only safe subset with focused link/security tests, isolated fresh/replay PostgreSQL integration and backend verification. Draft PR #1255 implements the approved pantry/shopping/reader/account-delete Stage 2 runtime while independent approval remains pending.
 - PR #1248 merged the test-first hybrid verifier as `4881c4c53181a5504e16f2fa3971e9f6f4b99f05` from exact head `e58bea0c544693c1f99104d07bf58bd8c0d01285`. Independent code/security review recorded P0/P1/P2 `0/0/0`, and all 24 current-head check runs completed as 14 success plus 10 intended skips. The complete local application DB/Storage plus sanitized remote Auth evidence remains a separate full-lifecycle gate.
 
 ### Hybrid verifier implementation evidence
@@ -180,6 +180,14 @@ Schema Change:
 - Local verification passed: focused product-link tests `26` passed with six normal integration skips, isolated PostgreSQL fresh `6/6` and replay `6/6`, and `pnpm verify:backend` with product tests `2,420` passed plus 128 normal skips, production build and security E2E `12/12`.
 - The merged exact-SHA dry-run passed on `4881c4c53181a5504e16f2fa3971e9f6f4b99f05`, proving the clean merged-source gate, read-only mode, no Storage dependency and zero production/staging/remote application writes. Full local/remote evidence remains pending because truthful sanitized remote Auth evidence and the complete local application DB verification were not supplied. Newly approved reader completion and production activation remain unclaimed.
 
+### Stage 2 review-repair evidence
+
+- Draft PR #1255 exact reviewed head `3e47eb67e9634603b11a86ce1a7a190591ce5360` received `request_changes` from Stage 3 task `019fb631-8a42-7512-881d-8644562cb73a` (`P0=0/P1=5/P2=2`) and native security/DB reviewer `/root/stage2_security_db_review` (`Critical=0/High=2`).
+- Repair RED reproduced two route failures for exact product pantry matching and POST provenance, three real PostgreSQL failures for visibility/auth/cleanup, and a dirty all-null shopping migration that incorrectly succeeded.
+- Repair GREEN proves focused route tests `23/23`, focused Stage 2 suites `62/62`, isolated PostgreSQL fresh/replay `12/12` each, full Vitest `4,763` passed plus `232` normal skips, backend product tests `2,425` passed plus `128` normal skips, production build, security Playwright `12/12`, and source/workflow/workpack/automation/OMO/diff validators. The repository-wide local security-function gate stopped before target execution because the existing local DB has an unrelated partially deployed hybrid additive contract; the isolated target PostgreSQL role matrix is green. Independent re-review and current-head CI remain pending; this task does not self-approve.
+- The fresh security/DB re-review `/root/stage2_security_db_review` approved exact head `66c27efac705939d9ae620affdf8aae92378c086` with `Critical/High/Medium/Low=0/0/0/0`. Fresh Stage 3 reviewer task `019fb668-233f-7ec1-a6a4-f507a74fe223` then returned `request_changes` at the same head with `P0/P1/P2=0/2/2`, identifying create-RPC payload ownership and two-session atomicity plus missing behavior/evidence coverage.
+- Second repair RED reproduced an authenticated cross-owner SECURITY DEFINER payload write, a two-session `lists=2/attached=1/orphan=1` race, a caller-omitted locked-meal item set, and a valid split that failed against the real immutable snapshot trigger once the previously omitted snapshot-authority migration was restored to the isolated chain. GREEN now proves independent zero-write rejection for cross-user remainder, foreign owner column/recipe, omitted source identities and private/hidden product inputs; one success plus one existing `CONFLICT` and orphan zero under the race; server-recomputed pantry exclusion/complete-without-list; route detail/create/complete provenance branches; actual PostgreSQL pinned-version completion for null/empty/selected/retry semantics; and one-time server-only snapshot cloning that preserves the locked source meal pin while forged/direct clone authority is denied. The current evidence is focused route `57/57`, focused Stage 2 selection `97` passed with `20` normal integration skips, isolated PostgreSQL fresh/replay `20/20` each plus dirty preflight, full Vitest `4,765` passed with `240` normal skips, backend product `2,428` passed with `128` normal skips, build, security Playwright `12/12`, and validators. Replacement exact-head review and current-head CI remain pending; this implementation task does not self-approve.
+
 ### Local fixture and real DB matrix
 
 - A/B owners plus public/shared owner-null products; generic pantry rows; exact product+nutrition-version pantry rows.
@@ -187,7 +195,8 @@ Schema Change:
 - duplicate evidence: generic ingredient and multiple eligible product rows resolving to the same ingredient must yield one effective ingredient and preserve all exact pantry row identities.
 - delete cases: private product hard delete cascades link; public/shared anonymization preserves product/version/link/provenance; ingredient delete is restricted while referenced.
 - candidate cases: high-use deterministic candidates, brand-variable product with no approval, and `화이트크림` referenced/unreferenced inventory.
-- run on existing schema, fresh migration replay and idempotent replay. Validate table/FK/index/check/partial-unique/RLS/grants/function signatures and row digests.
+- current automated DB evidence runs isolated fresh/replay plus dirty-row preflight and validates focused table/FK/index/check/partial-unique/RLS/grant/function behavior.
+- existing-schema comparison, stable schema/function/grant/data digests and production-equivalent query-plan measurement remain unverified Manual Only evidence; they are not claimed by this Stage 2 runner.
 
 ### Security, performance and hybrid release evidence
 
@@ -217,17 +226,17 @@ Schema Change:
 
 ## Delivery Checklist
 
-- [ ] additive link table, FKs, review/active checks and partial unique are existing/fresh/replay safe <!-- omo:id=delivery-link-schema;stage=2;scope=backend;review=3,6 -->
-- [ ] deterministic candidate and human-only atomic promotion boundary is enforced <!-- omo:id=delivery-link-promotion;stage=2;scope=backend;review=3,6 -->
+- [x] additive link table, FKs, review/active checks and partial unique are existing/fresh/replay safe <!-- omo:id=delivery-link-schema;stage=2;scope=backend;review=3,6 -->
+- [x] deterministic candidate and human-only atomic promotion boundary is enforced <!-- omo:id=delivery-link-promotion;stage=2;scope=backend;review=3,6 -->
 - [x] first small Stage 2 PR leaves `pantry_items`, public payloads and existing readers unchanged while proving the additive link authority, promotion ACL and fail-closed eligible-link selector only <!-- omo:id=delivery-link-safe-subset;stage=2;scope=backend;review=3,6 -->
-- [ ] pantry exact product/nutrition-version identity and API `product_items` shape are additive and generic identity is not overwritten <!-- omo:id=delivery-pantry-product-identity;stage=2;scope=backend;review=3,6 -->
-- [ ] shopping generic/product provenance is pinned at creation and completion consumes it without client product/version resend <!-- omo:id=delivery-shopping-product-provenance;stage=2;scope=backend;review=3,6 -->
-- [ ] the shared DISTINCT effective-ingredient projection admits only active approved primary represents <!-- omo:id=delivery-effective-projection;stage=2;scope=backend;review=3,6 -->
-- [ ] pantry-match and HOME cleanout readers use the shared projection <!-- omo:id=delivery-current-readers;stage=2;scope=backend;review=3,6 -->
-- [ ] custom recipe validation, pantry display/add and meal-log picker reader contracts are regression locked <!-- omo:id=delivery-future-readers;stage=2;scope=backend;review=3,6 -->
-- [ ] brand-product synonym prohibition, ambiguity fail-closed and broad-anchor preservation are tested <!-- omo:id=delivery-no-guess-policy;stage=2;scope=backend;review=3,6 -->
-- [ ] private cascade/public-shared preservation and ingredient restrict are proven <!-- omo:id=delivery-delete-integrity;stage=2;scope=backend;review=3,6 -->
-- [ ] RLS/grants/admin promotion and A/B owner isolation are proven <!-- omo:id=delivery-link-security;stage=2;scope=backend;review=3,6 -->
+- [x] pantry exact product/nutrition-version identity and API `product_items` shape are additive and generic identity is not overwritten <!-- omo:id=delivery-pantry-product-identity;stage=2;scope=backend;review=3,6 -->
+- [x] shopping generic/product provenance is pinned at creation and completion consumes it without client product/version resend <!-- omo:id=delivery-shopping-product-provenance;stage=2;scope=backend;review=3,6 -->
+- [x] the shared DISTINCT effective-ingredient projection admits only active approved primary represents <!-- omo:id=delivery-effective-projection;stage=2;scope=backend;review=3,6 -->
+- [x] pantry-match and HOME cleanout readers use the shared projection <!-- omo:id=delivery-current-readers;stage=2;scope=backend;review=3,6 -->
+- [x] custom recipe validation, pantry display/add and meal-log picker reader contracts are regression locked <!-- omo:id=delivery-future-readers;stage=2;scope=backend;review=3,6 -->
+- [x] brand-product synonym prohibition, ambiguity fail-closed and broad-anchor preservation are tested <!-- omo:id=delivery-no-guess-policy;stage=2;scope=backend;review=3,6 -->
+- [x] private cascade/public-shared preservation and ingredient restrict are proven <!-- omo:id=delivery-delete-integrity;stage=2;scope=backend;review=3,6 -->
+- [x] RLS/grants/admin promotion and A/B owner isolation are proven <!-- omo:id=delivery-link-security;stage=2;scope=backend;review=3,6 -->
 - [ ] current safe subset records local real DB/replay and merged-exact-SHA hybrid read-only evidence; projection query-plan evidence remains deferred until Contract Evolution <!-- omo:id=delivery-link-verification;stage=2;scope=shared;review=3,6 -->
 - [ ] existing HOME cleanout and PANTRY display/add consumers use the projection contract without raw ingredient-only fallback <!-- omo:id=delivery-link-existing-consumers;stage=4;scope=frontend;review=5,6 -->
 - [ ] existing loading/empty/error/read-only/unauthorized and exact product/version presentation remain unchanged <!-- omo:id=delivery-link-ui-regression;stage=4;scope=frontend;review=5,6 -->
