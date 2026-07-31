@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-07-30T22:18:40.000Z",
+  "updated_at": "2026-07-31T01:42:32.000Z",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -2289,15 +2289,15 @@
     {
       "id": "product-ingredient-link-foundation",
       "preset": "vertical-slice-strict",
-      "branch": "feature/be-product-ingredient-link-foundation",
-      "pr_path": "https://github.com/netsus/homecook/pull/1236",
+      "branch": "docs/product-ingredient-link-contract-evolution",
+      "pr_path": "https://github.com/netsus/homecook/pull/1254",
       "lifecycle": "in_progress",
       "approval_state": "not_started",
       "verification_status": "pending",
       "required_checks": [
         "pnpm validate:source-of-truth-sync",
         "pnpm validate:workflow-v2",
-        "BRANCH_NAME=docs/product-ingredient-link-stage2-relock pnpm validate:workpack -- --slice product-ingredient-link-foundation",
+        "BRANCH_NAME=docs/product-ingredient-link-contract-evolution pnpm validate:workpack -- --slice product-ingredient-link-foundation",
         "node scripts/validate-automation-spec.mjs --slice product-ingredient-link-foundation",
         "pnpm validate:omo-bookkeeping",
         "pnpm exec vitest run tests/product-ingredient-link-hybrid-contract-sync.test.ts",
@@ -2312,7 +2312,7 @@
         "node scripts/verify-product-ingredient-link-hybrid.mjs --mode post-merge-read-only",
         "git diff --check"
       ],
-      "notes": "PR #1076 records the Stage 1 contract and independent internal 1.5/security-DB/five-axis approvals at exact head f3d9be4e37bf791c430635036aa14bf355a7b85b. PR #1235 relocked the current official tuple and hybrid boundary, and PR #1236 merged the first Stage 2 safe subset: additive link authority, service-role promotion ACL and fail-closed eligible-link selector with isolated fresh/replay PostgreSQL evidence. PR #1248 merged the test-first hybrid verifier as 4881c4c53181a5504e16f2fa3971e9f6f4b99f05 from exact head e58bea0c544693c1f99104d07bf58bd8c0d01285 after independent code/security P0/P1/P2 0/0/0 and 24 current-head checks with 14 success and 10 intended skips; its merged exact-SHA dry-run passed. Full local/remote evidence remains pending because truthful sanitized remote Auth evidence and the complete local application DB verification were not supplied, so lifecycle/verification/evaluation stay in_progress/pending/not_started. The current public pantry contract accepts ingredient_ids only, shopping rows lack product/version provenance, and pantry product/version FK delete behavior is not locked; pantry identity/projection, public payloads and related readers remain unchecked pending approved Contract Evolution. Production activation remains Manual Only, and production/staging/remote application writes remain zero.",
+      "notes": "2026-07-31 사용자 승인 Contract Evolution Stage 1 docs authoring is active. Internal 1.5 task 019fb5c6-d036-7a50-a1de-d093159a7f0b requested changes at PR #1254 head 97d93f983ab8dd9c22ff8943eb8f3bc58e6caf17. Author repair narrows the shared reader to authenticated-self with auth.uid()=p_user_id and no user-path service-token fallback, adds shopping create/detail provenance automation, and returns custom-recipe/meal-log runtime ownership to successors. This author task does not self-approve; lifecycle/verification/evaluation remain in_progress/pending/not_started until fresh internal 1.5 re-review and new-head checks. PR #1236 link-only authority and PR #1248 hybrid verifier remain historical merged evidence. New implementation, full local/remote evidence and production activation remain pending/Manual Only with zero production/staging/remote application writes.",
       "evaluation_status": "not_started",
       "evaluation_round": 0,
       "last_evaluator_result": null,

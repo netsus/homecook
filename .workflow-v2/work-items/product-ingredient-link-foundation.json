@@ -1,7 +1,7 @@
 {
   "id": "product-ingredient-link-foundation",
   "title": "Product ingredient link foundation",
-  "summary": "제품과 canonical ingredient의 사람 승인 대표 관계를 additive하게 잠그고, exact product/version identity를 보존한 DISTINCT effective-ingredient projection을 모든 required reader와 account-delete 경계에 적용한다.",
+  "summary": "제품과 canonical ingredient의 사람 승인 대표 관계를 additive하게 잠그고, exact product/version identity를 보존한 authenticated-self DISTINCT effective-ingredient projection을 #2 소유 pantry-match/HOME consumer와 account-delete 경계에 적용하며 successor에는 signature/semantics regression contract만 제공한다.",
   "project_profile": "homecook",
   "change_type": "product",
   "surface": "fullstack",
@@ -23,11 +23,11 @@
   "docs_refs": {
     "source_of_truth": [
       "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
-      "docs/요구사항기준선-v1.7.26.md",
-      "docs/화면정의서-v1.5.30.md",
-      "docs/유저flow맵-v1.3.28.md",
-      "docs/db설계-v1.3.27.md",
-      "docs/api문서-v1.2.30.md"
+      "docs/요구사항기준선-v1.7.27.md",
+      "docs/화면정의서-v1.5.31.md",
+      "docs/유저flow맵-v1.3.29.md",
+      "docs/db설계-v1.3.28.md",
+      "docs/api문서-v1.2.31.md"
     ],
     "governing_docs": [
       "AGENTS.md",
@@ -67,7 +67,7 @@
     "required_checks": [
       "pnpm validate:source-of-truth-sync",
       "pnpm validate:workflow-v2",
-      "BRANCH_NAME=docs/product-ingredient-link-stage2-relock pnpm validate:workpack -- --slice product-ingredient-link-foundation",
+      "BRANCH_NAME=docs/product-ingredient-link-contract-evolution pnpm validate:workpack -- --slice product-ingredient-link-foundation",
       "node scripts/validate-automation-spec.mjs --slice product-ingredient-link-foundation",
       "pnpm validate:omo-bookkeeping",
       "pnpm exec vitest run tests/product-ingredient-link-hybrid-contract-sync.test.ts",
@@ -85,7 +85,7 @@
     "verify_commands": [
       "pnpm validate:source-of-truth-sync",
       "pnpm validate:workflow-v2",
-      "BRANCH_NAME=docs/product-ingredient-link-stage2-relock pnpm validate:workpack -- --slice product-ingredient-link-foundation",
+      "BRANCH_NAME=docs/product-ingredient-link-contract-evolution pnpm validate:workpack -- --slice product-ingredient-link-foundation",
       "node scripts/validate-automation-spec.mjs --slice product-ingredient-link-foundation",
       "pnpm validate:omo-bookkeeping",
       "pnpm exec vitest run tests/product-ingredient-link-hybrid-contract-sync.test.ts tests/workflow-v2-docs.test.ts tests/omo-automation-spec.test.ts tests/omo-bookkeeping.test.ts tests/omo-doc-gate.test.ts tests/source-of-truth-sync.test.ts",
@@ -111,15 +111,22 @@
       "deterministic-candidate-human-promotion-separation",
       "no-bulk-name-link-and-no-product-identifier-synonym",
       "pantry-exact-product-and-nutrition-version-preservation",
+      "pantry-existing-ingredient-ids-and-generic-items-semantics-preserved",
+      "pantry-additive-product-items-product-added-shape",
+      "pantry-and-shopping-xor-composite-restrict-fk-and-partial-unique",
+      "shopping-version-pinned-at-creation-and-completion-client-resend-forbidden",
+      "shopping-create-detail-source-type-nullable-provenance-and-three-branch-contract",
+      "legacy-shopping-generic-preserved-and-all-null-never-guessed",
       "generic-plus-approved-product-distinct-effective-projection",
-      "five-required-reader-raw-ingredient-only-regressions",
+      "authenticated-self-reader-auth-uid-parameter-match-without-service-token-fallback",
+      "two-owned-reader-raw-ingredient-only-regressions",
+      "successor-reader-signature-semantics-contract-without-runtime-ownership",
       "existing-home-and-pantry-behavior-only-consumer-regression",
-      "private-cascade-public-shared-preservation",
+      "owner-private-reference-first-cleanup-and-public-shared-preservation",
       "f0-plus-slice3-joint-account-delete-activation-gate",
       "local-existing-fresh-replay-and-role-matrix-evidence",
       "merged-exact-sha-hybrid-local-data-remote-auth-evidence",
-      "public-pantry-product-version-writes-remain-unchecked-until-contract-evolution",
-      "shopping-reflection-remains-unchecked-until-official-product-version-provenance",
+      "approved-additive-fields-limited-to-pantry-and-shopping-contract",
       "independent-codex-required-findings-zero",
       "current-head-all-started-checks-terminal-green-or-intended-skip"
     ]
@@ -143,12 +150,11 @@
     "Personal recipe writes cooked-batch completion meal-log core or meal-log UI owned by later successors",
     "Production account-generation or account-delete activation before F0 plus slice #3 joint gate",
     "Migration or data promotion outside hybrid local application Data authority",
-    "Public pantry product/version fields, direct writes, shopping reflection, or pantry FK delete semantics before approved Contract Evolution"
+    "DELETE /pantry product-row contract, public product-link/admin endpoint, new public status/error code, or successor-owned UI/runtime"
   ],
   "open_questions": [
-    "Contract Evolution required: official POST/GET pantry product/version request-response shape",
-    "Contract Evolution required: shopping item product/version provenance for shopping reflection",
-    "Contract Evolution required: pantry product/version FK delete actions compatible with account cleanup ordering"
+    "Out-of-scope candidate: product pantry row deletion needs a separately approved DELETE /pantry additive contract before implementation",
+    "Manual release decision: account-generation cleanup activation remains gated by F0 plus slice #3 joint production evidence"
   ],
-  "notes": "PR #1076 records the Stage 1 contract and independent internal 1.5/security-DB/five-axis approvals at exact head f3d9be4e37bf791c430635036aa14bf355a7b85b. PR #1235 relocked the current official tuple and hybrid boundary, and PR #1236 merged the first Stage 2 safe subset: additive link authority, service-role promotion ACL and fail-closed eligible-link selector with isolated fresh/replay PostgreSQL evidence. PR #1248 merged the test-first hybrid verifier as 4881c4c53181a5504e16f2fa3971e9f6f4b99f05 from exact head e58bea0c544693c1f99104d07bf58bd8c0d01285 after independent code/security P0/P1/P2 0/0/0 and 24 current-head checks with 14 success and 10 intended skips; its merged exact-SHA dry-run passed. Full local/remote evidence remains pending because truthful sanitized remote Auth evidence and the complete local application DB verification were not supplied, so lifecycle/verification/evaluation stay in_progress/pending/not_started. The current public pantry contract accepts ingredient_ids only, shopping rows lack product/version provenance, and pantry product/version FK delete behavior is not locked; pantry identity/projection, public payloads and related readers remain unchecked pending approved Contract Evolution. Production activation remains Manual Only, and production/staging/remote application writes remain zero."
+  "notes": "2026-07-31 사용자 승인 Contract Evolution authoring is active on docs/product-ingredient-link-contract-evolution. Internal 1.5 task 019fb5c6-d036-7a50-a1de-d093159a7f0b requested changes at PR #1254 head 97d93f983ab8dd9c22ff8943eb8f3bc58e6caf17; author repair narrows reader authority to authenticated-self with auth.uid()=p_user_id and no user-path service-token fallback, adds shopping create/detail provenance automation, and returns custom-recipe/meal-log runtime ownership to successors. Official tuple v1.7.27/v1.5.31/v1.3.29/DB v1.3.28/API v1.2.31 remains unchanged. This author task does not self-approve; lifecycle/verification/evaluation remain in_progress/pending/not_started until fresh internal 1.5 re-review. PR #1236 link-only authority and PR #1248 hybrid verifier remain historical merged evidence. New implementation, full local/remote evidence and production activation remain pending/Manual Only with zero production/staging/remote application writes."
 }

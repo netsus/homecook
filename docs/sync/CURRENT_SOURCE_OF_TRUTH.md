@@ -1,17 +1,37 @@
 # Current Source of Truth
 
 ## Official Files
-- `docs/요구사항기준선-v1.7.26.md`
-- `docs/화면정의서-v1.5.30.md`
-- `docs/유저flow맵-v1.3.28.md`
-- `docs/db설계-v1.3.27.md`
-- `docs/api문서-v1.2.30.md`
+- `docs/요구사항기준선-v1.7.27.md`
+- `docs/화면정의서-v1.5.31.md`
+- `docs/유저flow맵-v1.3.29.md`
+- `docs/db설계-v1.3.28.md`
+- `docs/api문서-v1.2.31.md`
 
 ## Notes
 - 위 5개 파일이 현재 공식 기준 문서다.
 - `docs/reference/wireframes/`는 보조 참고 자료다.
 - 구현 중 문서 충돌이 보이면 먼저 충돌 항목을 정리하고 작업 범위를 다시 확정한다.
 - 사용자 승인으로 공식 계약을 바꾸는 경우에도 구현보다 문서가 먼저다. 관련 공식 문서와 이 파일의 버전/경로를 같은 `contract-evolution` PR에서 먼저 갱신한다.
+
+## Product Ingredient Link Foundation Contract-Evolution `2026-07-31`
+
+| 문서 | 변경 내용 |
+|------|----------|
+| 요구사항 기준선 v1.7.27 | generic/product pantry tagged identity, immutable version pin, shared effective-ingredient reader, shopping provenance, fail-closed 추천/권한/cleanup 경계를 잠근다 |
+| 화면정의서 v1.5.31 | 신규 화면/layout 없이 PANTRY product 표시/add와 SHOPPING_DETAIL pinned provenance 소비를 기존 상태 UI에 additive하게 연결한다 |
+| 유저플로우 v1.3.29 | direct add → exact pair 검증 → pantry display/effective reader, shopping 생성 시 pin → completion 반영, private account cleanup 순서를 정의한다 |
+| DB v1.3.28 | pantry/shopping XOR CHECK, partial unique/index, composite product/version `ON DELETE RESTRICT`, owner RLS/guard, shared reader와 private aggregate cleanup 예외를 고정한다 |
+| API v1.2.31 | 기존 `ingredient_ids`/generic `items`를 유지하고 `product_items`, shopping item provenance를 additive 제공하며 complete request/response와 public error/status를 유지한다 |
+
+> 사용자는 2026-07-31에 `#2 product-ingredient-link-foundation` Contract Evolution을 명시 승인했다. 승인 범위는 pantry exact product ID와 선택 당시 immutable nutrition version, 공용 effective-ingredient reader, shopping product/version provenance, pantry product/version FK 삭제 규칙이다.
+>
+> `POST /pantry`의 기존 `ingredient_ids`, `GET /pantry.items`, JSON wrapper와 기존 public error code를 유지한다. exact product direct add/조회는 additive `product_items`를 사용하며 product/version mismatch는 기존 `422 VALIDATION_ERROR`로 fail closed한다. product current version 변경은 기존 pantry/shopping row를 자동 repin하지 않는다.
+>
+> shared reader는 generic ingredient와 active + approved + primary + `relation='represents'` product link ingredient의 `DISTINCT` union이다. `contains|substitute`, inactive, pending, rejected, revoked, superseded, non-primary, ambiguous/no-link는 recommendation에서 제외되고 pantry row identity는 보존된다.
+>
+> shopping completion client는 product/version을 재전송하지 않고 existing `add_to_pantry_item_ids`의 null/[]/선택값만 사용한다. server는 item 생성 시 pin된 provenance로 pantry를 반영한다. legacy non-null ingredient item은 generic으로 보존하고 all-null provenance는 이름/brand/display text로 추측하지 않는다.
+>
+> 일반 pantry/shopping product/version FK는 `ON DELETE RESTRICT`다. account cleanup 전용 authority가 exact owner-private references를 먼저 제거한 뒤에만 private product/version/link aggregate를 정리한다. owner-null public/shared product, immutable version, link/provenance는 보존하며 account-generation activation은 별도 F0 + #3 joint gate 전까지 열지 않는다.
 
 ## Workflow Actor Governance Note `2026-07-30`
 

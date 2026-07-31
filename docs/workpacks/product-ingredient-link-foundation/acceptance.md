@@ -1,18 +1,19 @@
 # Acceptance Checklist
 
-> Evidence is checked only after the owning implementation/review stage produces it. This hybrid relock fixes the current official tuple and safe implementation split. The link-only subset is merged, and PR #1248 merged the test-first hybrid verifier as `4881c4c53181a5504e16f2fa3971e9f6f4b99f05`; its merged exact-SHA dry-run passed. Full local/remote evidence remains pending, so verifier implementation and dry-run alone do not satisfy the unchecked local Data/Storage plus sanitized remote Auth evidence gate. Every item prefixed `after approved Contract Evolution` remains deferred and unchecked.
+> Evidence is checked only after the owning implementation/review stage produces it. 2026-07-31 사용자 승인 Contract Evolution이 official tuple v1.7.27 / v1.5.31 / v1.3.29 / DB v1.3.28 / API v1.2.31에 반영됐지만, 이 Stage 1 작성 작업은 구현 evidence나 독립 internal 1.5 승인을 주장하지 않는다. The link-only subset and hybrid verifier remain historical merged evidence; all newly authorized pantry/shopping/reader/cleanup items stay unchecked until their owning stages close them.
 
 ## Happy Path
 
 - [x] the first small Stage 2 PR proves only the additive link authority, promotion ACL and fail-closed eligible-link selector, while leaving `pantry_items`, public payloads and existing readers unchanged <!-- omo:id=accept-link-safe-subset;stage=2;scope=backend;review=3,6 -->
-- [ ] after approved Contract Evolution, a generic pantry row contributes its canonical ingredient without any product link <!-- omo:id=accept-link-generic-pantry;stage=2;scope=backend;review=3,6 -->
-- [ ] after approved Contract Evolution, a product pantry row retains exact product and nutrition-version identity while an active approved primary `represents` link contributes its effective ingredient <!-- omo:id=accept-link-product-pantry;stage=2;scope=backend;review=3,6 -->
-- [ ] after approved Contract Evolution, generic and multiple product rows resolving to the same ingredient produce one DISTINCT effective ingredient without collapsing exact pantry row IDs <!-- omo:id=accept-link-distinct-union;stage=2;scope=backend;review=3,6 -->
-- [ ] after approved Contract Evolution, official `GET /recipes/pantry-match` (implemented at `/api/v1/recipes/pantry-match`) recognizes an eligible product row as the linked canonical ingredient <!-- omo:id=accept-link-pantry-match;stage=2;scope=backend;review=3,6 -->
-- [ ] after approved Contract Evolution, HOME pantry-cleanout recommendation uses the same projection and returns the same eligibility decision <!-- omo:id=accept-link-home-cleanout;stage=2;scope=backend;review=3,6 -->
-- [ ] after approved Contract Evolution, custom recipe product validation preserves product/version provenance and checks the approved representative link <!-- omo:id=accept-link-custom-recipe;stage=2;scope=backend;review=3,6 -->
-- [ ] after approved Contract Evolution, pantry display/direct add/shopping reflection preserve generic versus exact product identity <!-- omo:id=accept-link-pantry-display-add;stage=2;scope=backend;review=3,6 -->
-- [ ] after approved Contract Evolution, meal-log product/ingredient picker reads the shared effective projection without converting a product into a generic stored row <!-- omo:id=accept-link-meal-log-picker;stage=2;scope=backend;review=3,6 -->
+- [ ] a generic pantry row contributes its canonical ingredient without any product link <!-- omo:id=accept-link-generic-pantry;stage=2;scope=backend;review=3,6 -->
+- [ ] a product pantry row retains exact product and nutrition-version identity while an active approved primary `represents` link contributes its effective ingredient <!-- omo:id=accept-link-product-pantry;stage=2;scope=backend;review=3,6 -->
+- [ ] generic and multiple product rows resolving to the same ingredient produce one DISTINCT effective ingredient without collapsing exact pantry row IDs <!-- omo:id=accept-link-distinct-union;stage=2;scope=backend;review=3,6 -->
+- [ ] official `GET /recipes/pantry-match` (implemented at `/api/v1/recipes/pantry-match`) recognizes an eligible product row as the linked canonical ingredient <!-- omo:id=accept-link-pantry-match;stage=2;scope=backend;review=3,6 -->
+- [ ] HOME pantry-cleanout recommendation uses the same projection and returns the same eligibility decision <!-- omo:id=accept-link-home-cleanout;stage=2;scope=backend;review=3,6 -->
+- [ ] shared reader signature/semantics regression contract only is published for custom-recipe and meal-log owning successors; their runtime endpoints/UI are not #2 acceptance targets <!-- omo:id=accept-link-successor-reader-contract;stage=2;scope=backend;review=3,6 -->
+- [ ] pantry display/direct add preserves existing generic `items`/`ingredient_ids` and additive exact `product_items` <!-- omo:id=accept-link-pantry-display-add;stage=2;scope=backend;review=3,6 -->
+- [ ] shopping creation pins generic/product provenance and completion uses it without client product/version resend <!-- omo:id=accept-link-shopping-provenance;stage=2;scope=backend;review=3,6 -->
+- [ ] shopping create/detail response exposes source_type and nullable exact product/version provenance for generic, product and all-null legacy fail-closed branches <!-- omo:id=accept-link-shopping-response-provenance;stage=2;scope=backend;review=3,6 -->
 
 ## State / Policy
 
@@ -31,6 +32,7 @@
 - [ ] PUBLIC/anon/ordinary authenticated execution is denied and only the exact intended internal/admin principal can promote <!-- omo:id=accept-link-exact-principal;stage=2;scope=backend;review=3,6 -->
 - [ ] another owner's private product/link is absent from rows, counts, effective sets and error details <!-- omo:id=accept-link-owner-isolation;stage=2;scope=backend;review=3,6 -->
 - [ ] missing or ambiguous link data returns valid fail-closed absence without a new public error code or guessed ingredient <!-- omo:id=accept-link-no-public-error-drift;stage=2;scope=backend;review=3,6 -->
+- [ ] shared reader execution is authenticated-self, verifies `auth.uid() = p_user_id`, and rejects missing auth, other-owner, stale generation/session and user-path service-token fallback <!-- omo:id=accept-link-reader-auth-self;stage=2;scope=backend;review=3,6 -->
 - [ ] existing JSON endpoints retain `{ success, data, error }` and `{ code, message, fields[] }` <!-- omo:id=accept-link-envelope;stage=2;scope=backend;review=3,6 -->
 
 ## Data Integrity
@@ -40,12 +42,14 @@
 - [ ] owner-null public/shared product, exact nutrition version, link and non-PII provenance survive account cleanup <!-- omo:id=accept-link-public-preserve;stage=2;scope=backend;review=3,6 -->
 - [ ] link provenance contains no owner UUID, email, raw session/JWT, secret, API key or raw provider payload <!-- omo:id=accept-link-provenance-safe;stage=2;scope=backend;review=3,6 -->
 - [ ] brand product identifiers are never inserted into `ingredient_synonyms` <!-- omo:id=accept-link-no-product-synonym;stage=2;scope=backend;review=3,6 -->
-- [ ] after approved Contract Evolution, a later current product-version change does not silently rewrite the version pinned by an existing pantry product row <!-- omo:id=accept-link-version-pin;stage=2;scope=backend;review=3,6 -->
-- [ ] after approved Contract Evolution, each required reader has a regression that fails when reduced to raw `pantry_items.ingredient_id` only <!-- omo:id=accept-link-raw-reader-regressions;stage=2;scope=backend;review=3,6 -->
+- [ ] a later current product-version change does not silently rewrite the version pinned by an existing pantry or shopping product row <!-- omo:id=accept-link-version-pin;stage=2;scope=backend;review=3,6 -->
+- [ ] pantry/shopping XOR CHECK, partial uniques and composite product/version `ON DELETE RESTRICT` FKs reject mismatched or half-present identity <!-- omo:id=accept-link-tagged-identity-fk;stage=2;scope=backend;review=3,6 -->
+- [ ] account cleanup removes exact owner-private references before private product/version/link aggregate cleanup and preserves owner-null public/shared rows <!-- omo:id=accept-link-cleanup-order;stage=2;scope=backend;review=3,6 -->
+- [ ] #2-owned pantry-match and HOME readers have regressions that fail when reduced to raw `pantry_items.ingredient_id` only; successor regression checks stop at shared signature/semantics <!-- omo:id=accept-link-raw-reader-regressions;stage=2;scope=backend;review=3,6 -->
 
 ## Data Setup / Preconditions
 
-- [ ] after approved Contract Evolution, fixture includes A/B owners, owner-null shared product, generic/product pantry rows and exact nutrition versions <!-- omo:id=accept-link-fixture-owners;stage=2;scope=shared;review=3,6 -->
+- [ ] fixture includes A/B owners, owner-null shared product, generic/product pantry and shopping rows, exact nutrition versions and product/version mismatch <!-- omo:id=accept-link-fixture-owners;stage=2;scope=shared;review=3,6 -->
 - [ ] link fixture includes active-approved-primary represents plus inactive, pending, rejected, revoked, superseded, secondary, contains and substitute rows <!-- omo:id=accept-link-fixture-states;stage=2;scope=backend;review=3,6 -->
 - [ ] concurrency fixture attempts two simultaneous primary promotions for one product <!-- omo:id=accept-link-fixture-concurrency;stage=2;scope=backend;review=3,6 -->
 - [ ] delete fixture covers private cascade, owner-null preservation and ingredient restrict <!-- omo:id=accept-link-fixture-delete;stage=2;scope=backend;review=3,6 -->
@@ -63,7 +67,7 @@
   3. revoke or demote the representative link and confirm all effective readers stop matching it
   4. delete a private product and anonymize a shared product, then compare link/version retention
 
-## Post-Contract-Evolution Existing Consumer Regression
+## Existing Consumer Regression
 
 - [ ] HOME cleanout and PANTRY display/add consume the effective-ingredient result without a raw `pantry_items.ingredient_id`-only fallback <!-- omo:id=accept-link-existing-consumers;stage=4;scope=frontend;review=5,6 -->
 - [ ] loading/empty/error/read-only/unauthorized states and exact product/version presentation remain unchanged at desktop, 390px and 320px <!-- omo:id=accept-link-existing-ui-states;stage=4;scope=frontend;review=5,6 -->
@@ -73,8 +77,8 @@
 
 - [ ] production account-generation/account-delete activation waits for the separately approved F0 + #3 joint release gate
 - [ ] production link candidate promotion or data load is not performed from an unmerged branch or this docs PR
-- [ ] current official `POST /pantry` accepts only `ingredient_ids`; product/version direct add or response fields require an explicitly approved Contract Evolution and remain unchecked
-- [ ] shopping reflection remains unchecked until the official shopping item contract supplies product/version provenance and the DB contract fixes pantry product/version FK delete behavior
+- [ ] this docs PR performs no migration, implementation, private product cleanup or production write
+- [ ] a separate Codex `docs-gate-reviewer` task must approve this exact commit with unresolved required finding 0 before merge
 
 ## Automation Split
 
@@ -83,7 +87,7 @@
 - [ ] Stage 4 adds behavior-only HOME/PANTRY consumer unit and focused Playwright regressions with no visual hierarchy change <!-- omo:id=accept-link-stage4-consumer-tests;stage=4;scope=frontend;review=5,6 -->
 - [ ] focused Vitest covers link predicate, route/helper readers, ACL/PII and account-delete behavior <!-- omo:id=accept-link-vitest-targets;stage=2;scope=backend;review=3,6 -->
 - [ ] PostgreSQL integration covers existing/fresh/replay, FK/check/partial unique, RLS/grants and concurrent promotion <!-- omo:id=accept-link-postgres-targets;stage=2;scope=backend;review=3,6 -->
-- [ ] after approved Contract Evolution, query plans prove one bounded set-based projection without per-row N+1 or unbounded product scan <!-- omo:id=accept-link-query-plan;stage=2;scope=backend;review=3,6 -->
+- [ ] query plans prove one bounded set-based projection without per-row N+1 or unbounded product scan <!-- omo:id=accept-link-query-plan;stage=2;scope=backend;review=3,6 -->
 - [ ] current safe subset and later approved full shape each use a merged-exact-SHA hybrid verifier that reads local application DB/Storage plus minimal remote Auth exact-epoch evidence with `local auth.users=0` and all application/production/staging writes zero <!-- omo:id=accept-link-remote-read-only;stage=2;scope=shared;review=3,6 -->
 - [ ] independent internal 1.5, security/DB and five-axis reviewers finish with unresolved required findings zero <!-- omo:id=accept-link-independent-reviews;stage=2;scope=shared;review=3,6 -->
 - [ ] Draft→Ready and current exact head started checks all finish success or documented normal skip before squash merge <!-- omo:id=accept-link-current-head-ci;stage=2;scope=shared;review=3,6 -->
