@@ -707,7 +707,7 @@
       "kind": "direct_dml",
       "operation": "delete",
       "target": "pantry_items",
-      "line": 657,
+      "line": 658,
       "source_file": "app/api/v1/pantry/route.ts",
       "route": "/api/v1/pantry",
       "owner_scope": "authenticated-user",
@@ -721,7 +721,7 @@
       "kind": "direct_dml",
       "operation": "insert",
       "target": "pantry_items",
-      "line": 513,
+      "line": 596,
       "source_file": "app/api/v1/pantry/route.ts",
       "route": "/api/v1/pantry",
       "owner_scope": "authenticated-user",
@@ -735,7 +735,7 @@
       "kind": "direct_dml",
       "operation": "insert",
       "target": "pantry_items",
-      "line": 609,
+      "line": 610,
       "source_file": "app/api/v1/pantry/route.ts",
       "route": "/api/v1/pantry",
       "owner_scope": "authenticated-user",
@@ -2000,6 +2000,6 @@
       "on_delete": "cascade"
     }
   ],
-  "generated_at": "2026-07-31T02:45:14.808Z",
-  "checksum": "b39b36c1a80aecba9ac501bc3aa742a872a522833c69f29be2875cb8be275f22"
+  "generated_at": "2026-07-31T03:14:03.439Z",
+  "checksum": "c9009450e24fef78ace192c3517bd1010f093f063d7e5c4263dcd9d60c630736"
 }
