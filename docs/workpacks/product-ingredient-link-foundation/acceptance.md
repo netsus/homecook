@@ -1,6 +1,6 @@
 # Acceptance Checklist
 
-> Evidence is checked only after the owning implementation/review stage produces it. 2026-07-31 사용자 승인 Contract Evolution은 official tuple v1.7.27 / v1.5.31 / v1.3.29 / DB v1.3.28 / API v1.2.31에 반영됐다. Draft PR #1255의 Stage 2 구현·테스트로 확인된 항목만 체크하며, independent Stage 3/security-DB re-review, Stage 4/5/6, current-head CI와 Manual Only 항목은 계속 미완료다.
+> Evidence is checked only after the owning implementation/review stage produces it. 2026-07-31 사용자 승인 Contract Evolution은 official tuple v1.7.27 / v1.5.31 / v1.3.29 / DB v1.3.28 / API v1.2.31에 반영됐다. Stage 2/3 PR #1255는 final reviewed head `6b0a1c5232759f3d801c9aa84e1427b12bfc37d1` 승인 뒤 `d30ee2c8f38a06609e7a5efddbfb0b5df30f712c`로 merged됐다. Stage 4 구현 작업은 이 작업이 직접 증명한 consumer 항목만 체크하며, independent Stage 5/6, Stage 4 exact-head 승인, full-lifecycle current-head CI와 Manual Only 항목은 계속 미완료다.
 
 ## Happy Path
 
@@ -69,9 +69,9 @@
 
 ## Existing Consumer Regression
 
-- [ ] HOME cleanout and PANTRY display/add consume the effective-ingredient result without a raw `pantry_items.ingredient_id`-only fallback <!-- omo:id=accept-link-existing-consumers;stage=4;scope=frontend;review=5,6 -->
-- [ ] loading/empty/error/read-only/unauthorized states and exact product/version presentation remain unchanged at desktop, 390px and 320px <!-- omo:id=accept-link-existing-ui-states;stage=4;scope=frontend;review=5,6 -->
-- [ ] custom-recipe and meal-log UI work remains with its owning successor and no provisional control or layout is added here <!-- omo:id=accept-link-successor-ui-boundary;stage=4;scope=frontend;review=5,6 -->
+- [x] HOME cleanout and PANTRY display/add consume the effective-ingredient result without a raw `pantry_items.ingredient_id`-only fallback <!-- omo:id=accept-link-existing-consumers;stage=4;scope=frontend;review=5,6 -->
+- [x] loading/empty/error/read-only/unauthorized states and exact product/version presentation remain unchanged at desktop, 390px and 320px <!-- omo:id=accept-link-existing-ui-states;stage=4;scope=frontend;review=5,6 -->
+- [x] custom-recipe and meal-log UI work remains with its owning successor and no provisional control or layout is added here <!-- omo:id=accept-link-successor-ui-boundary;stage=4;scope=frontend;review=5,6 -->
 
 ### Manual Only
 
@@ -85,7 +85,7 @@
 
 - [ ] Stage 1 runs only current docs validators, focused workflow tests, lint/typecheck, additional local dependency audit and diff check, then independently observes current-head GitGuardian and repository Security Review results <!-- omo:id=accept-link-stage1-current-gate;stage=2;scope=shared;review=3,6 -->
 - [x] Stage 2 adds focused tests first and records the expected RED before migration/production reader code <!-- omo:id=accept-link-tdd-red;stage=2;scope=backend;review=3,6 -->
-- [ ] Stage 4 adds behavior-only HOME/PANTRY consumer unit and focused Playwright regressions with no visual hierarchy change <!-- omo:id=accept-link-stage4-consumer-tests;stage=4;scope=frontend;review=5,6 -->
+- [x] Stage 4 adds behavior-only HOME/PANTRY consumer unit and focused Playwright regressions with no visual hierarchy change <!-- omo:id=accept-link-stage4-consumer-tests;stage=4;scope=frontend;review=5,6 -->
 - [x] focused Vitest covers link predicate, route/helper readers, ACL/PII and account-delete behavior <!-- omo:id=accept-link-vitest-targets;stage=2;scope=backend;review=3,6 -->
 - [ ] PostgreSQL integration covers existing/fresh/replay, FK/check/partial unique, RLS/grants and concurrent promotion <!-- omo:id=accept-link-postgres-targets;stage=2;scope=backend;review=3,6 -->
 - [ ] query plans prove one bounded set-based projection without per-row N+1 or unbounded product scan <!-- omo:id=accept-link-query-plan;stage=2;scope=backend;review=3,6 -->

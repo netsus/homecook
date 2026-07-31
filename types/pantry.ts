@@ -20,6 +20,26 @@ export interface PantryProductItem {
   created_at: string;
 }
 
+export interface PantryProductInput {
+  food_product_id: string;
+  food_product_nutrition_version_id: string;
+}
+
+export interface PantryDisplayItem {
+  category: string;
+  category_group_code?: string | null;
+  category_code?: string | null;
+  category_label?: string | null;
+  created_at: string;
+  detail_text: string | null;
+  food_product_id: string | null;
+  food_product_nutrition_version_id: string | null;
+  id: string;
+  ingredient_id: string | null;
+  item_type: "ingredient" | "food_product";
+  standard_name: string;
+}
+
 export interface PantryListData {
   items: PantryItem[];
   product_items: PantryProductItem[];

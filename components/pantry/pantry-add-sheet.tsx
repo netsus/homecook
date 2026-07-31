@@ -20,12 +20,15 @@ import {
   WebDialogTitle,
   WebModal,
 } from "@/components/web";
+import { fetchFoodProducts } from "@/lib/api/food-product";
 import { addPantryItems, fetchIngredients } from "@/lib/api/pantry";
 import {
   getIngredientGroupDisplayLabel,
   INGREDIENT_CATEGORY_GROUP_OPTIONS,
   ingredientMatchesCategoryGroup,
 } from "@/lib/ingredient-categories";
+import type { FoodProductData } from "@/types/food-product";
+import type { PantryProductInput } from "@/types/pantry";
 import type { IngredientItem } from "@/types/recipe";
 
 const SEARCH_DEBOUNCE_MS = 300;
@@ -33,16 +36,19 @@ type SheetState = "loading" | "error" | "empty" | "ready";
 
 interface PantryAddSheetProps {
   existingIngredientIds: string[];
+  existingProductIds: string[];
   onAdd: (addedCount: number) => void;
   onClose: () => void;
 }
 
 export function PantryAddSheet({
   existingIngredientIds,
+  existingProductIds,
   onAdd,
   onClose,
 }: PantryAddSheetProps) {
   const [ingredients, setIngredients] = useState<IngredientItem[]>([]);
+  const [products, setProducts] = useState<FoodProductData[]>([]);
   const [sheetState, setSheetState] = useState<SheetState>("loading");
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
@@ -51,11 +57,18 @@ export function PantryAddSheet({
   const [selectedIngredientById, setSelectedIngredientById] = useState<
     Map<string, IngredientItem>
   >(new Map());
+  const [selectedProductIds, setSelectedProductIds] = useState<Set<string>>(
+    new Set(),
+  );
+  const [selectedProductById, setSelectedProductById] = useState<
+    Map<string, FoodProductData>
+  >(new Map());
   const [isAdding, setIsAdding] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const existingSet = useRef(new Set(existingIngredientIds));
+  const existingProductSet = useRef(new Set(existingProductIds));
   const closeButtonRef = useRef<HTMLButtonElement | null>(null);
   const isMobileViewport = useIsMobileViewport();
 
@@ -83,7 +96,9 @@ export function PantryAddSheet({
   }, [activeCategory, hasSearchQuery, ingredients]);
 
   const visibleSheetState =
-    sheetState === "ready" && visibleIngredients.length === 0
+    sheetState === "ready" &&
+    visibleIngredients.length === 0 &&
+    products.length === 0
       ? "empty"
       : sheetState;
 
@@ -94,6 +109,14 @@ export function PantryAddSheet({
         .filter((ingredient): ingredient is IngredientItem => Boolean(ingredient)),
     [selectedIds, selectedIngredientById],
   );
+  const selectedProducts = useMemo(
+    () =>
+      Array.from(selectedProductIds)
+        .map((productId) => selectedProductById.get(productId))
+        .filter((product): product is FoodProductData => Boolean(product)),
+    [selectedProductById, selectedProductIds],
+  );
+  const selectedCount = selectedIngredients.length + selectedProducts.length;
   const visibleIngredientGroups = useMemo(
     () => groupIngredientsByCategory(visibleIngredients),
     [visibleIngredients],
@@ -102,13 +125,27 @@ export function PantryAddSheet({
   const loadIngredients = useCallback(async (query?: string) => {
     setSheetState("loading");
     try {
-      const result = await fetchIngredients({
-        q: query?.trim() || undefined,
-      });
-      setIngredients(result.items);
-      setSheetState(result.items.length === 0 ? "empty" : "ready");
+      const normalizedQuery = query?.trim() ?? "";
+      const [ingredientResult, productResult] = await Promise.all([
+        fetchIngredients({
+          q: normalizedQuery || undefined,
+        }),
+        normalizedQuery
+          ? fetchFoodProducts({ q: normalizedQuery, limit: 20 }).catch(() => ({
+              items: [] as FoodProductData[],
+            }))
+          : Promise.resolve({ items: [] as FoodProductData[] }),
+      ]);
+      setIngredients(ingredientResult.items);
+      setProducts(productResult.items);
+      setSheetState(
+        ingredientResult.items.length === 0 && productResult.items.length === 0
+          ? "empty"
+          : "ready",
+      );
     } catch {
       setIngredients([]);
+      setProducts([]);
       setSheetState("error");
     }
   }, []);
@@ -184,20 +221,68 @@ export function PantryAddSheet({
     });
   }, []);
 
+  const handleProductToggle = useCallback(
+    (product: FoodProductData) => {
+      const shouldRemove = selectedProductIds.has(product.id);
+      setErrorMessage(null);
+      setSelectedProductIds((prev) => {
+        const next = new Set(prev);
+        if (shouldRemove) {
+          next.delete(product.id);
+        } else {
+          next.add(product.id);
+        }
+        return next;
+      });
+      setSelectedProductById((prev) => {
+        const next = new Map(prev);
+        if (shouldRemove) {
+          next.delete(product.id);
+        } else {
+          next.set(product.id, product);
+        }
+        return next;
+      });
+    },
+    [selectedProductIds],
+  );
+
+  const removeSelectedProduct = useCallback((productId: string) => {
+    setSelectedProductIds((prev) => {
+      const next = new Set(prev);
+      next.delete(productId);
+      return next;
+    });
+    setSelectedProductById((prev) => {
+      const next = new Map(prev);
+      next.delete(productId);
+      return next;
+    });
+  }, []);
+
   const handleAdd = useCallback(async () => {
-    if (selectedIds.size === 0) return;
+    if (selectedCount === 0) return;
 
     setIsAdding(true);
     setErrorMessage(null);
     try {
-      const result = await addPantryItems(Array.from(selectedIds));
-      onAdd(result.added);
+      const productItems: PantryProductInput[] = selectedProducts.map(
+        (product) => ({
+          food_product_id: product.id,
+          food_product_nutrition_version_id: product.nutrition_version_id,
+        }),
+      );
+      const result =
+        productItems.length > 0
+          ? await addPantryItems(Array.from(selectedIds), productItems)
+          : await addPantryItems(Array.from(selectedIds));
+      onAdd(result.added + (result.product_added ?? 0));
       onClose();
     } catch {
       setErrorMessage("추가에 실패했어요. 다시 시도해 주세요.");
       setIsAdding(false);
     }
-  }, [selectedIds, onAdd, onClose]);
+  }, [onAdd, onClose, selectedCount, selectedIds, selectedProducts]);
 
   useEffect(() => {
     closeButtonRef.current?.focus();
@@ -244,12 +329,12 @@ export function PantryAddSheet({
               </p>
             ) : null}
             <AppModalFooterActions
-              confirmDisabled={selectedIds.size === 0 || isAdding}
+              confirmDisabled={selectedCount === 0 || isAdding}
               confirmLabel={
                 isAdding
                   ? "추가 중..."
-                  : selectedIds.size > 0
-                    ? `팬트리에 추가 (${selectedIds.size})`
+                  : selectedCount > 0
+                    ? `팬트리에 추가 (${selectedCount})`
                     : "재료 선택"
               }
               onCancel={onClose}
@@ -292,7 +377,7 @@ export function PantryAddSheet({
                 />
               ))}
             </div>
-            {selectedIngredients.length > 0 ? (
+            {selectedCount > 0 ? (
               <div
                 className="scrollbar-hide mt-3 flex gap-1.5 overflow-x-auto"
                 data-testid="pantry-add-selected-ingredients"
@@ -306,6 +391,17 @@ export function PantryAddSheet({
                     type="button"
                   >
                     {ingredient.standard_name} ×
+                  </button>
+                ))}
+                {selectedProducts.map((product) => (
+                  <button
+                    aria-label={`${product.name} 선택 해제`}
+                    className="shrink-0 rounded-full bg-[var(--brand-soft)] px-2.5 py-1 text-[12px] font-extrabold text-[var(--brand)]"
+                    key={product.id}
+                    onClick={() => removeSelectedProduct(product.id)}
+                    type="button"
+                  >
+                    {product.name} ×
                   </button>
                 ))}
               </div>
@@ -401,6 +497,60 @@ export function PantryAddSheet({
                 </div>
               </section>
             ))}
+            {products.length > 0 ? (
+              <section>
+                <h3 className="mb-2 px-0.5 text-[13px] font-extrabold text-[var(--text-2)]">
+                  제품
+                </h3>
+                <div className="grid grid-cols-2 gap-2">
+                  {products.map((product) => {
+                    const isExisting = existingProductSet.current.has(product.id);
+                    const isChecked = selectedProductIds.has(product.id);
+
+                    return (
+                      <button
+                        aria-checked={isChecked}
+                        aria-label={productAccessibleLabel(product)}
+                        className={[
+                          "flex min-h-[54px] items-center gap-2 rounded-[var(--radius-card)] border px-3 text-left disabled:opacity-60",
+                          isExisting
+                            ? "border-[var(--line-strong)] bg-[var(--surface-fill)] opacity-60 grayscale"
+                            : isChecked
+                              ? "border-[var(--brand)] bg-[var(--brand-soft)]"
+                              : "border-[var(--line-strong)] bg-[var(--surface)]",
+                        ].join(" ")}
+                        data-owned={isExisting ? "true" : undefined}
+                        disabled={isExisting}
+                        key={product.id}
+                        onClick={() => handleProductToggle(product)}
+                        role="checkbox"
+                        type="button"
+                      >
+                        <span
+                          aria-hidden="true"
+                          className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-[var(--surface-fill)] text-[18px]"
+                        >
+                          📦
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <strong className="block truncate text-[13px]">
+                            {product.name}
+                          </strong>
+                          <small className="block truncate text-[10px] text-[var(--text-3)]">
+                            {productDetailText(product)}
+                          </small>
+                        </span>
+                        {isChecked ? (
+                          <span className="shrink-0 text-[15px] font-extrabold text-[var(--brand)]">
+                            ✓
+                          </span>
+                        ) : null}
+                      </button>
+                    );
+                  })}
+                </div>
+              </section>
+            ) : null}
           </div>
         )}
       </AppBottomSheet>
@@ -467,21 +617,37 @@ export function PantryAddSheet({
 
           <div className="web-ingredient-editor" data-testid="pantry-add-selected-ingredients">
             <div className="web-ingredient-added" aria-live="polite">
-              {selectedIngredients.length > 0 ? (
-                selectedIngredients.map((ingredient) => (
-                  <button
-                    aria-label={`${ingredient.standard_name} 선택 해제`}
-                    className="web-ingredient-pill"
-                    key={ingredient.id}
-                    onClick={() => removeSelectedIngredient(ingredient.id)}
-                    type="button"
-                  >
-                    <span>{ingredient.standard_name}</span>
-                    <span aria-hidden="true" className="web-ingredient-pill-remove">
-                      ×
-                    </span>
-                  </button>
-                ))
+              {selectedCount > 0 ? (
+                <>
+                  {selectedIngredients.map((ingredient) => (
+                    <button
+                      aria-label={`${ingredient.standard_name} 선택 해제`}
+                      className="web-ingredient-pill"
+                      key={ingredient.id}
+                      onClick={() => removeSelectedIngredient(ingredient.id)}
+                      type="button"
+                    >
+                      <span>{ingredient.standard_name}</span>
+                      <span aria-hidden="true" className="web-ingredient-pill-remove">
+                        ×
+                      </span>
+                    </button>
+                  ))}
+                  {selectedProducts.map((product) => (
+                    <button
+                      aria-label={`${product.name} 선택 해제`}
+                      className="web-ingredient-pill"
+                      key={product.id}
+                      onClick={() => removeSelectedProduct(product.id)}
+                      type="button"
+                    >
+                      <span>{product.name}</span>
+                      <span aria-hidden="true" className="web-ingredient-pill-remove">
+                        ×
+                      </span>
+                    </button>
+                  ))}
+                </>
               ) : (
                 <span className="web-ingredient-empty">선택한 재료가 없어요</span>
               )}
@@ -547,6 +713,37 @@ export function PantryAddSheet({
                     </button>
                   );
                 })}
+                {products.map((product) => {
+                  const isExisting = existingProductSet.current.has(product.id);
+                  const isChecked = selectedProductIds.has(product.id);
+
+                  return (
+                    <button
+                      aria-checked={isChecked}
+                      aria-label={productAccessibleLabel(product)}
+                      className={[
+                        "web-ingredient-cell",
+                        isChecked ? "web-ingredient-cell-selected" : "",
+                        isExisting
+                          ? "web-pantry-ingredient-existing opacity-60 grayscale"
+                          : "",
+                      ].join(" ")}
+                      data-owned={isExisting ? "true" : undefined}
+                      disabled={isExisting}
+                      key={product.id}
+                      onClick={() => handleProductToggle(product)}
+                      role="checkbox"
+                      title={productAccessibleLabel(product)}
+                      type="button"
+                    >
+                      <span aria-hidden="true" className="web-ingredient-cell-visual">
+                        📦
+                      </span>
+                      <strong>{product.name}</strong>
+                      <small>{productDetailText(product)}</small>
+                    </button>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -563,17 +760,17 @@ export function PantryAddSheet({
           </WebButton>
           <WebButton
             aria-label={
-              selectedIds.size > 0
-                ? `팬트리에 추가 (${selectedIds.size})`
+              selectedCount > 0
+                ? `팬트리에 추가 (${selectedCount})`
                 : undefined
             }
-            disabled={selectedIds.size === 0 || isAdding}
+            disabled={selectedCount === 0 || isAdding}
             onClick={() => void handleAdd()}
           >
             {isAdding
               ? "추가 중..."
-              : selectedIds.size > 0
-                ? `팬트리에 추가 (${selectedIds.size})`
+              : selectedCount > 0
+                ? `팬트리에 추가 (${selectedCount})`
                 : "재료 선택"}
           </WebButton>
         </WebDialogFooter>
@@ -650,4 +847,12 @@ function SearchGlyph({ className }: { className?: string }) {
       <path d="m16.5 16.5 4 4" />
     </svg>
   );
+}
+
+function productDetailText(product: FoodProductData) {
+  return `${product.brand ?? "브랜드 없음"} · 영양 버전 ${product.nutrition_version_id}`;
+}
+
+function productAccessibleLabel(product: FoodProductData) {
+  return `${product.name} · ${productDetailText(product)}`;
 }

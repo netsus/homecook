@@ -556,6 +556,8 @@ export function HomeScreen() {
     () => (effectiveTagKey ? recipes?.items ?? [] : selectedTheme?.recipes ?? recipes?.items ?? []),
     [effectiveTagKey, recipes?.items, selectedTheme?.recipes],
   );
+  const consumerScreenState: ScreenState =
+    selectedTheme && displayedRecipes.length > 0 ? "ready" : screenState;
   const usesPaginatedRecipeList = !selectedTheme || Boolean(effectiveTagKey);
   const hasMoreDisplayedRecipes =
     usesPaginatedRecipeList && Boolean(recipes?.has_next && recipes.next_cursor);
@@ -569,16 +571,16 @@ export function HomeScreen() {
   const showDiscoveryRailSkeleton =
     !hasResultPriorityContext && themeState === "loading";
   const showInitialRecipeSkeleton =
-    !hasResultPriorityContext && screenState === "loading";
+    !hasResultPriorityContext && consumerScreenState === "loading";
   const showEmptyState =
-    (screenState === "ready" || screenState === "empty") &&
+    (consumerScreenState === "ready" || consumerScreenState === "empty") &&
     displayedRecipes.length === 0;
   const emptyStateActionLabel = "초기화";
   const [mealGreeting, setMealGreeting] = useState(HOME_MEAL_GREETING_FALLBACK);
   const resultStatusText = buildResultStatusText({
     count: displayedRecipes.length,
     listTitle,
-    screenState,
+    screenState: consumerScreenState,
   });
 
   useEffect(() => {
@@ -824,7 +826,7 @@ export function HomeScreen() {
           query={query}
           resultStatusText={resultStatusText}
           savedRecipeIds={homeSaveFlow.savedRecipeIds}
-          screenState={screenState}
+          screenState={consumerScreenState}
           selectedTheme={selectedTheme}
           showClearAllFilters={showClearAllFilters}
           showDiscoveryShortcuts={!hasResultPriorityContext}
@@ -952,7 +954,7 @@ export function HomeScreen() {
               </section>
             ) : null}
 
-            {screenState === "error" ? (
+            {consumerScreenState === "error" ? (
               <div className="px-4 pb-4">
                 <ContentState
                   actionLabel="다시 시도"
@@ -965,7 +967,7 @@ export function HomeScreen() {
               </div>
             ) : null}
 
-            {screenState !== "error" && !showInitialRecipeSkeleton ? (
+            {consumerScreenState !== "error" && !showInitialRecipeSkeleton ? (
               <section aria-label={listTitle}>
                 <p
                   aria-live="polite"
@@ -1006,13 +1008,13 @@ export function HomeScreen() {
                     </div>
                   </div>
 
-                {screenState === "loading" ? (
+                {consumerScreenState === "loading" ? (
                   <div className="px-4">
                     <RecipeListSkeleton includeHeader={false} />
                   </div>
                 ) : null}
 
-                {screenState === "ready" && displayedRecipes.length ? (
+                {consumerScreenState === "ready" && displayedRecipes.length ? (
                   <div className="grid grid-cols-1 gap-4 px-4">
                     {displayedRecipes.map((recipe) => (
                       <RecipeCard
@@ -1026,7 +1028,7 @@ export function HomeScreen() {
                   </div>
                 ) : null}
 
-                {screenState === "ready" && hasMoreDisplayedRecipes ? (
+                {consumerScreenState === "ready" && hasMoreDisplayedRecipes ? (
                   <div className="home-mobile-load-more">
                     {loadMoreRecipeError ? (
                       <p className="home-mobile-load-more-error">
