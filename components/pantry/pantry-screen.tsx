@@ -652,7 +652,11 @@ export function PantryScreen({
       {showAddSheet && (
         <PantryAddSheet
           existingIngredientIds={items.map((item) => item.ingredient_id)}
-          existingProductIds={productItems.map((item) => item.food_product_id)}
+          existingProductItems={productItems.map((item) => ({
+            food_product_id: item.food_product_id,
+            food_product_nutrition_version_id:
+              item.food_product_nutrition_version_id,
+          }))}
           onAdd={handleAddComplete}
           onClose={() => setShowAddSheet(false)}
         />

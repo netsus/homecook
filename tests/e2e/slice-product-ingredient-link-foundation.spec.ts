@@ -5,7 +5,7 @@ import { setE2EAuthOverride } from "./helpers/mock-routes";
 const OWNED_PRODUCT_LABEL =
   "현미 즉석밥 · 집밥식품 · 영양 버전 nutrition-version-owned";
 const NEW_PRODUCT_LABEL =
-  "무가당 두유 · 콩마을 · 영양 버전 nutrition-version-new";
+  "현미 즉석밥 · 집밥식품 · 영양 버전 nutrition-version-new";
 
 const OWNED_PRODUCT = {
   id: "product-owned",
@@ -17,9 +17,9 @@ const OWNED_PRODUCT = {
 };
 
 const SEARCH_PRODUCT = {
-  id: "food-product-new",
-  name: "무가당 두유",
-  brand: "콩마을",
+  id: OWNED_PRODUCT.food_product_id,
+  name: OWNED_PRODUCT.name,
+  brand: OWNED_PRODUCT.brand,
   visibility: "public",
   source_type: "public_dataset",
   editable: false,
@@ -154,14 +154,24 @@ async function verifyExactProductConsumer(
     .first()
     .click();
   const dialog = page.getByRole("dialog", { name: "재료 추가" });
-  await dialog.getByRole("textbox", { name: "재료명 검색" }).fill("두유");
+  const searchbox = dialog.getByRole("textbox", { name: "재료명 검색" });
+  await searchbox.fill("현미");
+  await expect(
+    dialog.getByRole("checkbox", { name: NEW_PRODUCT_LABEL }),
+  ).toBeEnabled();
+  await searchbox.fill("");
+  await dialog.getByText("채소/버섯", { exact: true }).click();
+  await expect(
+    dialog.getByRole("checkbox", { name: NEW_PRODUCT_LABEL }),
+  ).toHaveCount(0);
+  await searchbox.fill("즉석밥");
   await dialog.getByRole("checkbox", { name: NEW_PRODUCT_LABEL }).click();
   await dialog.getByRole("button", { name: "팬트리에 추가 (1)" }).click();
 
   await expect.poll(routes.submittedBody).toEqual({
     product_items: [
       {
-        food_product_id: "food-product-new",
+        food_product_id: "food-product-owned",
         food_product_nutrition_version_id: "nutrition-version-new",
       },
     ],

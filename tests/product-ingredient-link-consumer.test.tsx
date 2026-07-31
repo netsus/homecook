@@ -1,7 +1,14 @@
 // @vitest-environment jsdom
 
 import React from "react";
-import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -66,6 +73,12 @@ const FOOD_PRODUCT = {
     warnings: [],
     sources: [],
   },
+};
+
+const PREVIOUS_VERSION_PRODUCT_ITEM = {
+  ...PRODUCT_ITEM,
+  id: "pantry-product-previous-version",
+  food_product_nutrition_version_id: "nutrition-version-pinned-6",
 };
 
 const PRODUCT_RECIPE = {
@@ -334,6 +347,211 @@ describe("product ingredient link existing consumers", () => {
         },
       ]);
     });
+  });
+
+  it("disables an add option only when its exact product and nutrition version pair already exists", async () => {
+    authOverride = true;
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL) => {
+        const url = requestUrl(input);
+
+        if (url === "/api/v1/pantry") {
+          return jsonResponse({
+            items: [],
+            product_items: [PRODUCT_ITEM],
+          });
+        }
+
+        if (url.startsWith("/api/v1/ingredients")) {
+          return jsonResponse({ items: [] });
+        }
+
+        if (url.startsWith("/api/v1/food-products")) {
+          return jsonResponse({
+            items: [FOOD_PRODUCT],
+            next_cursor: null,
+            has_next: false,
+          });
+        }
+
+        throw new Error(`unexpected request: ${url}`);
+      }),
+    );
+
+    render(<PantryScreen initialAuthenticated />);
+
+    await screen.findByLabelText(
+      `${PRODUCT_ITEM.name} · ${PRODUCT_ITEM.brand} · 영양 버전 ${PRODUCT_ITEM.food_product_nutrition_version_id}`,
+    );
+    await userEvent.setup().click(
+      screen.getByRole("button", { name: /재료 추가/ }),
+    );
+
+    const dialog = await screen.findByRole("dialog", { name: "재료 추가" });
+    await userEvent.setup().type(
+      within(dialog).getByRole("textbox", { name: "재료명 검색" }),
+      "생크림빵",
+    );
+
+    const exactPairOption = await within(dialog).findByRole("checkbox", {
+      name: `${FOOD_PRODUCT.name} · ${FOOD_PRODUCT.brand} · 영양 버전 ${FOOD_PRODUCT.nutrition_version_id}`,
+    });
+    expect((exactPairOption as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it("allows the same product at a different nutrition version and submits that exact pair", async () => {
+    authOverride = true;
+    const pantryPostBodies: unknown[] = [];
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+        const url = requestUrl(input);
+
+        if (url === "/api/v1/pantry" && init?.method === "POST") {
+          pantryPostBodies.push(JSON.parse(String(init.body)));
+          return jsonResponse(
+            {
+              added: 0,
+              items: [],
+              product_added: 1,
+              product_items: [PRODUCT_ITEM],
+            },
+            201,
+          );
+        }
+
+        if (url === "/api/v1/pantry") {
+          return jsonResponse({
+            items: [],
+            product_items: [PREVIOUS_VERSION_PRODUCT_ITEM],
+          });
+        }
+
+        if (url.startsWith("/api/v1/ingredients")) {
+          return jsonResponse({ items: [] });
+        }
+
+        if (url.startsWith("/api/v1/food-products")) {
+          return jsonResponse({
+            items: [FOOD_PRODUCT],
+            next_cursor: null,
+            has_next: false,
+          });
+        }
+
+        throw new Error(`unexpected request: ${url}`);
+      }),
+    );
+
+    render(<PantryScreen initialAuthenticated />);
+
+    await screen.findByLabelText(
+      `${PREVIOUS_VERSION_PRODUCT_ITEM.name} · ${PREVIOUS_VERSION_PRODUCT_ITEM.brand} · 영양 버전 ${PREVIOUS_VERSION_PRODUCT_ITEM.food_product_nutrition_version_id}`,
+    );
+    await userEvent.setup().click(
+      screen.getByRole("button", { name: /재료 추가/ }),
+    );
+
+    const dialog = await screen.findByRole("dialog", { name: "재료 추가" });
+    await userEvent.setup().type(
+      within(dialog).getByRole("textbox", { name: "재료명 검색" }),
+      "생크림빵",
+    );
+
+    const differentVersionOption = await within(dialog).findByRole("checkbox", {
+      name: `${FOOD_PRODUCT.name} · ${FOOD_PRODUCT.brand} · 영양 버전 ${FOOD_PRODUCT.nutrition_version_id}`,
+    });
+    expect((differentVersionOption as HTMLButtonElement).disabled).toBe(false);
+    await userEvent.setup().click(differentVersionOption);
+    await userEvent.setup().click(
+      within(dialog).getByRole("button", { name: "팬트리에 추가 (1)" }),
+    );
+
+    await waitFor(() => {
+      expect(pantryPostBodies).toEqual([
+        {
+          product_items: [
+            {
+              food_product_id: FOOD_PRODUCT.id,
+              food_product_nutrition_version_id:
+                FOOD_PRODUCT.nutrition_version_id,
+            },
+          ],
+        },
+      ]);
+    });
+  });
+
+  it("removes stale product search results immediately when switching to an ingredient category", async () => {
+    authOverride = true;
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL) => {
+        const url = requestUrl(input);
+
+        if (url === "/api/v1/pantry") {
+          return jsonResponse({ items: [], product_items: [] });
+        }
+
+        if (url.startsWith("/api/v1/ingredients")) {
+          return jsonResponse({
+            items: [
+              {
+                id: "ingredient-green-onion",
+                standard_name: "대파",
+                category: "채소",
+              },
+            ],
+          });
+        }
+
+        if (url.startsWith("/api/v1/food-products")) {
+          return jsonResponse({
+            items: [FOOD_PRODUCT],
+            next_cursor: null,
+            has_next: false,
+          });
+        }
+
+        throw new Error(`unexpected request: ${url}`);
+      }),
+    );
+
+    render(<PantryScreen initialAuthenticated />);
+
+    await screen.findByText("아직 등록한 재료가 없어요");
+    await userEvent.setup().click(
+      screen.getAllByRole("button", { name: "재료 추가하기" })[0]!,
+    );
+
+    const dialog = await screen.findByRole("dialog", { name: "재료 추가" });
+    const searchbox = within(dialog).getByRole("textbox", {
+      name: "재료명 검색",
+    });
+    await userEvent.setup().type(searchbox, "생크림빵");
+    expect(
+      await within(dialog).findByRole("checkbox", {
+        name: `${FOOD_PRODUCT.name} · ${FOOD_PRODUCT.brand} · 영양 버전 ${FOOD_PRODUCT.nutrition_version_id}`,
+      }),
+    ).toBeTruthy();
+
+    fireEvent.change(searchbox, { target: { value: "" } });
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "채소/버섯" }),
+    );
+
+    expect(
+      within(dialog).queryByRole("checkbox", {
+        name: `${FOOD_PRODUCT.name} · ${FOOD_PRODUCT.brand} · 영양 버전 ${FOOD_PRODUCT.nutrition_version_id}`,
+      }),
+    ).toBeNull();
+    expect(
+      within(dialog).getByRole("checkbox", { name: "대파" }),
+    ).toBeTruthy();
   });
 
   it("preserves unauthorized and error recovery surfaces for the existing PANTRY consumer", async () => {

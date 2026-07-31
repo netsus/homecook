@@ -36,14 +36,14 @@ type SheetState = "loading" | "error" | "empty" | "ready";
 
 interface PantryAddSheetProps {
   existingIngredientIds: string[];
-  existingProductIds: string[];
+  existingProductItems: PantryProductInput[];
   onAdd: (addedCount: number) => void;
   onClose: () => void;
 }
 
 export function PantryAddSheet({
   existingIngredientIds,
-  existingProductIds,
+  existingProductItems,
   onAdd,
   onClose,
 }: PantryAddSheetProps) {
@@ -68,7 +68,9 @@ export function PantryAddSheet({
 
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const existingSet = useRef(new Set(existingIngredientIds));
-  const existingProductSet = useRef(new Set(existingProductIds));
+  const existingProductSet = useRef(
+    new Set(existingProductItems.map(productIdentityKey)),
+  );
   const closeButtonRef = useRef<HTMLButtonElement | null>(null);
   const isMobileViewport = useIsMobileViewport();
 
@@ -171,6 +173,9 @@ export function PantryAddSheet({
   const handleCategoryChange = useCallback(
     (category: string | null) => {
       setActiveCategory(category);
+      if (category) {
+        setProducts([]);
+      }
       if (category && searchQuery.trim().length > 0) {
         setSearchQuery("");
         setDebouncedQuery("");
@@ -504,7 +509,13 @@ export function PantryAddSheet({
                 </h3>
                 <div className="grid grid-cols-2 gap-2">
                   {products.map((product) => {
-                    const isExisting = existingProductSet.current.has(product.id);
+                    const isExisting = existingProductSet.current.has(
+                      productIdentityKey({
+                        food_product_id: product.id,
+                        food_product_nutrition_version_id:
+                          product.nutrition_version_id,
+                      }),
+                    );
                     const isChecked = selectedProductIds.has(product.id);
 
                     return (
@@ -714,7 +725,13 @@ export function PantryAddSheet({
                   );
                 })}
                 {products.map((product) => {
-                  const isExisting = existingProductSet.current.has(product.id);
+                  const isExisting = existingProductSet.current.has(
+                    productIdentityKey({
+                      food_product_id: product.id,
+                      food_product_nutrition_version_id:
+                        product.nutrition_version_id,
+                    }),
+                  );
                   const isChecked = selectedProductIds.has(product.id);
 
                   return (
@@ -804,6 +821,10 @@ function MobileCategoryChip({
       {label}
     </button>
   );
+}
+
+function productIdentityKey(product: PantryProductInput) {
+  return `${product.food_product_id}\u0000${product.food_product_nutrition_version_id}`;
 }
 
 function groupIngredientsByCategory(items: IngredientItem[]) {
