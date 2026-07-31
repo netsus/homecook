@@ -2291,7 +2291,7 @@
       "preset": "vertical-slice-strict",
       "branch": "feature/fe-product-ingredient-link-foundation",
       "pr_path": "https://github.com/netsus/homecook/pull/1256",
-      "lifecycle": "ready_for_review",
+      "lifecycle": "in_progress",
       "approval_state": "codex_approved",
       "verification_status": "pending",
       "required_checks": [
