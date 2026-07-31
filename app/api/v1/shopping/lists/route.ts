@@ -24,6 +24,7 @@ import type {
   ShoppingListAllPantrySummary,
   ShoppingListCreateBody,
   ShoppingListHistoryData,
+  ShoppingListItemSummary,
   ShoppingListSummary,
 } from "@/types/shopping";
 
@@ -42,8 +43,22 @@ interface ShoppingCreateRpcData {
   meals_updated?: number;
   pantry_item_count?: number;
   created_at?: string;
+  items?: ShoppingCreateItemRow[];
   error_code?: string;
   message?: string;
+}
+
+interface ShoppingCreateItemRow {
+  id: string;
+  ingredient_id: string | null;
+  food_product_id: string | null;
+  food_product_nutrition_version_id: string | null;
+  display_text: string;
+  amounts_json: Array<{ amount: number; unit: string }>;
+  is_checked: boolean;
+  is_pantry_excluded: boolean;
+  added_to_pantry: boolean;
+  sort_order: number;
 }
 
 interface PinnedIngredientSnapshot {
@@ -102,7 +117,9 @@ interface IngredientRow {
 }
 
 interface PantryRow {
-  ingredient_id: string;
+  ingredient_id: string | null;
+  food_product_id: string | null;
+  food_product_nutrition_version_id: string | null;
 }
 
 interface ShoppingListInsertRow {
@@ -187,7 +204,7 @@ interface IngredientsSelectQuery {
 
 interface PantrySelectQuery {
   eq(column: string, value: string): PantrySelectQuery;
-  in(column: string, values: string[]): PantrySelectQuery;
+  or(filters: string): PantrySelectQuery;
   then: ArrayQueryResult<PantryRow>["then"];
 }
 
@@ -196,7 +213,8 @@ interface ShoppingListRecipesInsertQuery {
 }
 
 interface ShoppingListItemsInsertQuery {
-  then: ArrayQueryResult<unknown>["then"];
+  select(columns: string): ShoppingListItemsInsertQuery;
+  then: ArrayQueryResult<ShoppingCreateItemRow>["then"];
 }
 
 interface MealsTable {
@@ -327,6 +345,31 @@ function getMealContentSnapshot(meal: MealsRow) {
 
 function hasContentPin(meal: MealsRow) {
   return typeof meal.recipe_content_snapshot_id === "string" && meal.recipe_content_snapshot_id.length > 0;
+}
+
+function toShoppingCreateItem(row: ShoppingCreateItemRow): ShoppingListItemSummary {
+  const sourceType =
+    row.ingredient_id !== null
+      ? "ingredient"
+      : row.food_product_id !== null
+          && row.food_product_nutrition_version_id !== null
+        ? "food_product"
+        : null;
+
+  return {
+    id: row.id,
+    source_type: sourceType,
+    ingredient_id: row.ingredient_id,
+    food_product_id: row.food_product_id,
+    food_product_nutrition_version_id:
+      row.food_product_nutrition_version_id,
+    display_text: row.display_text,
+    amounts_json: row.amounts_json,
+    is_checked: row.is_checked,
+    is_pantry_excluded: row.is_pantry_excluded,
+    added_to_pantry: row.added_to_pantry,
+    sort_order: row.sort_order,
+  };
 }
 
 function buildShoppingMealSelection({
@@ -744,6 +787,13 @@ export async function POST(request: Request) {
   });
 
   const ingredientIds = [...new Set(ingredientAggregationRows.map((row) => row.ingredient_id))];
+  const neededIngredientIds = new Set(ingredientIds);
+  const neededProductVersionPairs = new Set(
+    productAggregationRows.map(
+      (row) =>
+        `${row.food_product_id}:${row.food_product_nutrition_version_id}`,
+    ),
+  );
   const ingredientNameMap = new Map<string, string>();
 
   if (ingredientIds.length > 0) {
@@ -762,19 +812,46 @@ export async function POST(request: Request) {
   }
 
   const pantryIngredientIds = new Set<string>();
-  if (ingredientIds.length > 0) {
+  const pantryProductVersionPairs = new Set<string>();
+  if (ingredientIds.length > 0 || neededProductVersionPairs.size > 0) {
+    const pantryIdentityFilters = [
+      ...(ingredientIds.length > 0
+        ? [`ingredient_id.in.(${ingredientIds.join(",")})`]
+        : []),
+      ...[...neededProductVersionPairs].map((pair) => {
+        const [productId, versionId] = pair.split(":");
+        return `and(food_product_id.eq.${productId},food_product_nutrition_version_id.eq.${versionId})`;
+      }),
+    ];
     const pantryRowsResult = await dbClient
       .from("pantry_items")
-      .select("ingredient_id")
+      .select(
+        "ingredient_id, food_product_id, food_product_nutrition_version_id",
+      )
       .eq("user_id", user.id)
-      .in("ingredient_id", ingredientIds);
+      .or(pantryIdentityFilters.join(","));
 
     if (pantryRowsResult.error || !pantryRowsResult.data) {
       return fail("INTERNAL_ERROR", "장보기 목록을 만들지 못했어요.", 500);
     }
 
     pantryRowsResult.data.forEach((row) => {
-      pantryIngredientIds.add(row.ingredient_id);
+      if (
+        row.ingredient_id !== null
+        && neededIngredientIds.has(row.ingredient_id)
+      ) {
+        pantryIngredientIds.add(row.ingredient_id);
+      }
+      if (
+        row.food_product_id !== null
+        && row.food_product_nutrition_version_id !== null
+      ) {
+        const pair =
+          `${row.food_product_id}:${row.food_product_nutrition_version_id}`;
+        if (neededProductVersionPairs.has(pair)) {
+          pantryProductVersionPairs.add(pair);
+        }
+      }
     });
   }
 
@@ -791,13 +868,6 @@ export async function POST(request: Request) {
     })),
   );
 
-  const allNeededIngredientsAreInPantry =
-    aggregatedIngredients.length > 0 &&
-    aggregatedIngredients.every((ingredient) =>
-      pantryIngredientIds.has(ingredient.ingredient_id),
-    );
-  const shouldCompleteWithoutList =
-    body.complete_without_list !== false && allNeededIngredientsAreInPantry;
   const title = buildShoppingListTitle(dateRangeStart);
   const shoppingMealIds = shoppingMeals.map((meal) => meal.id).sort();
   const shoppingRecipePayloadRows = [...recipeAggregation.entries()].map(([recipeId, totals]) => ({
@@ -822,7 +892,7 @@ export async function POST(request: Request) {
       food_product_nutrition_version_id: string;
       display_text: string;
       amounts_json: Array<{ amount: number; unit: string }>;
-      is_pantry_excluded: false;
+      is_pantry_excluded: boolean;
       sort_order: number;
     }
   >();
@@ -851,7 +921,7 @@ export async function POST(request: Request) {
         product.food_product_nutrition_version_id,
       display_text: product.display_text,
       amounts_json: nextAmount,
-      is_pantry_excluded: false,
+      is_pantry_excluded: pantryProductVersionPairs.has(pair),
       sort_order: shoppingItemPayloadRows.length + productPayloadByPair.size,
     });
   });
@@ -860,6 +930,18 @@ export async function POST(request: Request) {
     ...shoppingItemPayloadRows,
     ...productPayloadByPair.values(),
   ];
+  const allNeededIngredientsAreInPantry =
+    allShoppingItemPayloadRows.length > 0
+    && aggregatedIngredients.every((ingredient) =>
+      pantryIngredientIds.has(ingredient.ingredient_id),
+    )
+    && [...productPayloadByPair.keys()].every((pair) =>
+      pantryProductVersionPairs.has(pair),
+    );
+  const shouldCompleteWithoutList =
+    body.complete_without_list !== false && allNeededIngredientsAreInPantry;
+  const matchedPantryItemCount =
+    pantryIngredientIds.size + pantryProductVersionPairs.size;
 
   if (typeof dbClient.rpc === "function") {
     const createResult = await dbClient.rpc("create_shopping_list_from_payload", {
@@ -887,7 +969,7 @@ export async function POST(request: Request) {
       })),
       p_recipe_rows: shoppingRecipePayloadRows,
       p_item_rows: allShoppingItemPayloadRows,
-      p_pantry_item_count: aggregatedIngredients.length,
+      p_pantry_item_count: allShoppingItemPayloadRows.length,
     });
 
     if (createResult.error || !createResult.data) {
@@ -921,7 +1003,7 @@ export async function POST(request: Request) {
             sourceMeta: {
               action_kind: "completed_without_list",
               meal_ids: shoppingMealIds,
-              pantry_item_count: aggregatedIngredients.length,
+              pantry_item_count: allShoppingItemPayloadRows.length,
             },
             occurredAt: completedAt,
           });
@@ -939,7 +1021,8 @@ export async function POST(request: Request) {
         completed_at: completedAt,
         completed_without_list: true,
         meals_updated: createResult.data.meals_updated ?? shoppingMealIds.length,
-        pantry_item_count: createResult.data.pantry_item_count ?? aggregatedIngredients.length,
+        pantry_item_count:
+          createResult.data.pantry_item_count ?? allShoppingItemPayloadRows.length,
         created_at: createResult.data.created_at ?? completedAt,
       } satisfies ShoppingListAllPantryCompletionSummary, { status: 200 });
     }
@@ -962,7 +1045,7 @@ export async function POST(request: Request) {
         sourceMeta: {
           action_kind: "shopping_list",
           meal_ids: shoppingMealIds,
-          pantry_item_count: pantryIngredientIds.size,
+          pantry_item_count: matchedPantryItemCount,
         },
         occurredAt: createResult.data.created_at,
       });
@@ -974,10 +1057,11 @@ export async function POST(request: Request) {
       id: createResult.data.id,
       title: createResult.data.title ?? title,
       is_completed: createResult.data.is_completed ?? false,
+      items: (createResult.data.items ?? []).map(toShoppingCreateItem),
       ...(allNeededIngredientsAreInPantry
         ? {
             all_items_in_pantry: true as const,
-            pantry_item_count: aggregatedIngredients.length,
+            pantry_item_count: allShoppingItemPayloadRows.length,
           }
         : {}),
       created_at: createResult.data.created_at,
@@ -1049,7 +1133,7 @@ export async function POST(request: Request) {
           sourceMeta: {
             action_kind: "completed_without_list",
             meal_ids: mealIds,
-            pantry_item_count: aggregatedIngredients.length,
+            pantry_item_count: allShoppingItemPayloadRows.length,
           },
           occurredAt: completedAt,
         });
@@ -1067,7 +1151,7 @@ export async function POST(request: Request) {
       completed_at: completedAt,
       completed_without_list: true,
       meals_updated: shoppingMeals.length,
-      pantry_item_count: aggregatedIngredients.length,
+      pantry_item_count: allShoppingItemPayloadRows.length,
       created_at: completedAt,
     } satisfies ShoppingListAllPantryCompletionSummary, { status: 200 });
   }
@@ -1106,6 +1190,7 @@ export async function POST(request: Request) {
     }
   }
 
+  let createdItems: ShoppingListItemSummary[] = [];
   if (allShoppingItemPayloadRows.length > 0) {
     const itemsInsertResult = await dbClient
       .from("shopping_list_items")
@@ -1123,11 +1208,15 @@ export async function POST(request: Request) {
           added_to_pantry: false,
           sort_order: item.sort_order,
         })),
+      )
+      .select(
+        "id, ingredient_id, food_product_id, food_product_nutrition_version_id, display_text, amounts_json, is_checked, is_pantry_excluded, added_to_pantry, sort_order",
       );
 
-    if (itemsInsertResult.error) {
+    if (itemsInsertResult.error || !itemsInsertResult.data) {
       return fail("INTERNAL_ERROR", "장보기 목록을 만들지 못했어요.", 500);
     }
+    createdItems = itemsInsertResult.data.map(toShoppingCreateItem);
   }
 
   const mealUpdateResult = await dbClient
@@ -1154,7 +1243,7 @@ export async function POST(request: Request) {
       sourceMeta: {
         action_kind: "shopping_list",
         meal_ids: shoppingMealIds,
-        pantry_item_count: pantryIngredientIds.size,
+        pantry_item_count: matchedPantryItemCount,
       },
       occurredAt: shoppingList.created_at,
     });
@@ -1166,10 +1255,11 @@ export async function POST(request: Request) {
     id: shoppingList.id,
     title: shoppingList.title,
     is_completed: shoppingList.is_completed,
+    items: createdItems,
     ...(allNeededIngredientsAreInPantry
       ? {
           all_items_in_pantry: true as const,
-          pantry_item_count: aggregatedIngredients.length,
+          pantry_item_count: allShoppingItemPayloadRows.length,
         }
       : {}),
     created_at: shoppingList.created_at,

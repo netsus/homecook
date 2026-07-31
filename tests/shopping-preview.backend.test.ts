@@ -63,6 +63,7 @@ function createArraySelectQuery<T>(results: Array<QueryResult<T[]>>) {
     eq: vi.fn(() => query),
     in: vi.fn(() => query),
     is: vi.fn(() => query),
+    or: vi.fn(() => query),
     order: vi.fn(() => query),
     then(
       onFulfilled?: (value: QueryResult<T[]>) => unknown,
@@ -94,7 +95,8 @@ function createInsertMaybeSingleQuery<T>(results: Array<QueryResult<T | null>>) 
 }
 
 function createAwaitInsertQuery(results: Array<QueryResult<unknown[] | null>>) {
-  return {
+  const query = {
+    select: vi.fn(() => query),
     then(
       onFulfilled?: (value: QueryResult<unknown[] | null>) => unknown,
       onRejected?: (reason: unknown) => unknown,
@@ -107,6 +109,7 @@ function createAwaitInsertQuery(results: Array<QueryResult<unknown[] | null>>) {
       ).then(onFulfilled, onRejected);
     },
   };
+  return query;
 }
 
 function createMealsUpdateQuery(results: Array<QueryResult<unknown[] | null>>) {
@@ -822,10 +825,12 @@ describe("shopping stage2 backend", () => {
       },
     ]);
     const shoppingListItemsInsert = vi.fn((values: Array<Record<string, unknown>>) => {
-      void values;
       return createAwaitInsertQuery([
         {
-          data: [],
+          data: values.map((value, index) => ({
+            id: `shopping-item-${index + 1}`,
+            ...value,
+          })),
           error: null,
         },
       ]);
@@ -898,13 +903,21 @@ describe("shopping stage2 backend", () => {
     const body = await response.json();
 
     expect(response.status).toBe(201);
-    expect(body).toEqual({
+    expect(body).toMatchObject({
       success: true,
       data: {
         id: "shopping-list-1",
         title: "4/25 장보기",
         is_completed: false,
         created_at: "2026-04-25T09:00:00.000Z",
+        items: expect.arrayContaining([
+          expect.objectContaining({
+            source_type: "ingredient",
+            ingredient_id: "ing-onion",
+            food_product_id: null,
+            food_product_nutrition_version_id: null,
+          }),
+        ]),
       },
       error: null,
     });
@@ -989,6 +1002,44 @@ describe("shopping stage2 backend", () => {
         title: "4/25 장보기",
         is_completed: false,
         created_at: "2026-04-25T09:00:00.000Z",
+        items: [
+          {
+            id: "item-generic",
+            ingredient_id: "ing-onion",
+            food_product_id: null,
+            food_product_nutrition_version_id: null,
+            display_text: "양파 1개",
+            amounts_json: [{ amount: 1, unit: "개" }],
+            is_checked: false,
+            is_pantry_excluded: false,
+            added_to_pantry: false,
+            sort_order: 0,
+          },
+          {
+            id: "item-product",
+            ingredient_id: null,
+            food_product_id: "product-1",
+            food_product_nutrition_version_id: "version-1",
+            display_text: "두부 1개",
+            amounts_json: [{ amount: 1, unit: "개" }],
+            is_checked: false,
+            is_pantry_excluded: false,
+            added_to_pantry: false,
+            sort_order: 1,
+          },
+          {
+            id: "item-legacy-snapshot",
+            ingredient_id: null,
+            food_product_id: null,
+            food_product_nutrition_version_id: null,
+            display_text: "과거 표시 스냅샷",
+            amounts_json: [],
+            is_checked: false,
+            is_pantry_excluded: false,
+            added_to_pantry: false,
+            sort_order: 2,
+          },
+        ],
       },
       error: null,
     }));
@@ -1134,7 +1185,299 @@ describe("shopping stage2 backend", () => {
       title: "4/25 장보기",
       is_completed: false,
       created_at: "2026-04-25T09:00:00.000Z",
+      items: [
+        expect.objectContaining({
+          id: "item-generic",
+          source_type: "ingredient",
+          ingredient_id: "ing-onion",
+          food_product_id: null,
+          food_product_nutrition_version_id: null,
+        }),
+        expect.objectContaining({
+          id: "item-product",
+          source_type: "food_product",
+          ingredient_id: null,
+          food_product_id: "product-1",
+          food_product_nutrition_version_id: "version-1",
+        }),
+        expect.objectContaining({
+          id: "item-legacy-snapshot",
+          source_type: null,
+          ingredient_id: null,
+          food_product_id: null,
+          food_product_nutrition_version_id: null,
+        }),
+      ],
     });
+  });
+
+  it("uses an exact pantry product/version pair for product-only completion", async () => {
+    const mealId = "550e8400-e29b-41d4-a716-446655440201";
+    const productId = "550e8400-e29b-41d4-a716-446655440301";
+    const versionId = "550e8400-e29b-41d4-a716-446655440302";
+    const pantryQuery = createArraySelectQuery([
+      {
+        data: [
+          {
+            ingredient_id: null,
+            food_product_id: productId,
+            food_product_nutrition_version_id: versionId,
+          },
+        ],
+        error: null,
+      },
+    ]);
+    const rpc = vi.fn(async () => ({
+      data: {
+        id: null,
+        title: "4/25 장보기",
+        date_range_start: "2026-04-25",
+        date_range_end: "2026-04-25",
+        is_completed: true,
+        completed_at: "2026-04-25T09:00:00.000Z",
+        completed_without_list: true,
+        meals_updated: 1,
+        pantry_item_count: 1,
+        created_at: "2026-04-25T09:00:00.000Z",
+      },
+      error: null,
+    }));
+    const mealsQuery = createArraySelectQuery([
+      {
+        data: [
+          {
+            id: mealId,
+            user_id: "user-1",
+            recipe_id: "recipe-product",
+            recipe_content_snapshot_id: "snapshot-product",
+            recipe_content_snapshots: {
+              base_servings: 2,
+              ingredients_json: [
+                {
+                  ingredient_id: null,
+                  food_product_id: productId,
+                  food_product_nutrition_version_id: versionId,
+                  amount: 1,
+                  unit: "개",
+                  ingredient_type: "QUANT",
+                  display_text: "두부 1개",
+                  scalable: true,
+                  sort_order: 0,
+                },
+              ],
+            },
+            plan_date: "2026-04-25",
+            column_id: "column-dinner",
+            planned_servings: 2,
+            status: "registered",
+            is_leftover: false,
+            leftover_dish_id: null,
+            shopping_list_id: null,
+          },
+        ],
+        error: null,
+      },
+    ]);
+
+    createRouteHandlerClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })),
+      },
+    });
+    createServiceRoleClient.mockReturnValue({
+      rpc,
+      from: vi.fn((table: string) => {
+        if (table === "meals") {
+          return { select: vi.fn(() => mealsQuery) };
+        }
+        if (table === "pantry_items") {
+          return { select: vi.fn(() => pantryQuery) };
+        }
+
+        throw new Error(`unexpected table: ${table}`);
+      }),
+    });
+
+    const { POST } = await importListsRoute();
+    const response = await POST(
+      new Request("http://localhost:3000/api/v1/shopping/lists", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          meal_configs: [{ meal_id: mealId, shopping_servings: 2 }],
+        }),
+      }),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(pantryQuery.eq).toHaveBeenCalledWith("user_id", "user-1");
+    expect(pantryQuery.or).toHaveBeenCalledWith(
+      `and(food_product_id.eq.${productId},food_product_nutrition_version_id.eq.${versionId})`,
+    );
+    expect(rpc).toHaveBeenCalledWith(
+      "create_shopping_list_from_payload",
+      expect.objectContaining({
+        p_complete_without_list: true,
+        p_pantry_item_count: 1,
+        p_item_rows: [
+          expect.objectContaining({
+            ingredient_id: null,
+            food_product_id: productId,
+            food_product_nutrition_version_id: versionId,
+            is_pantry_excluded: true,
+          }),
+        ],
+      }),
+    );
+    expect(body.data).toMatchObject({
+      id: null,
+      completed_without_list: true,
+      pantry_item_count: 1,
+    });
+  });
+
+  it("requires both generic and exact product pantry identities for mixed completion", async () => {
+    const mealId = "550e8400-e29b-41d4-a716-446655440211";
+    const ingredientId = "550e8400-e29b-41d4-a716-446655440212";
+    const productId = "550e8400-e29b-41d4-a716-446655440311";
+    const versionId = "550e8400-e29b-41d4-a716-446655440312";
+    const mealsQuery = createArraySelectQuery([
+      {
+        data: [
+          {
+            id: mealId,
+            user_id: "user-1",
+            recipe_id: "recipe-mixed",
+            recipe_content_snapshot_id: "snapshot-mixed",
+            recipe_content_snapshots: {
+              base_servings: 2,
+              ingredients_json: [
+                {
+                  ingredient_id: ingredientId,
+                  amount: 1,
+                  unit: "개",
+                  ingredient_type: "QUANT",
+                  display_text: "양파 1개",
+                },
+                {
+                  ingredient_id: null,
+                  food_product_id: productId,
+                  food_product_nutrition_version_id: versionId,
+                  amount: 1,
+                  unit: "개",
+                  ingredient_type: "QUANT",
+                  display_text: "두부 1개",
+                },
+              ],
+            },
+            plan_date: "2026-04-25",
+            column_id: "column-dinner",
+            planned_servings: 2,
+            status: "registered",
+            is_leftover: false,
+            leftover_dish_id: null,
+            shopping_list_id: null,
+          },
+        ],
+        error: null,
+      },
+    ]);
+    const ingredientsQuery = createArraySelectQuery([
+      {
+        data: [{ id: ingredientId, standard_name: "양파" }],
+        error: null,
+      },
+    ]);
+    const pantryQuery = createArraySelectQuery([
+      {
+        data: [
+          {
+            ingredient_id: ingredientId,
+            food_product_id: null,
+            food_product_nutrition_version_id: null,
+          },
+          {
+            ingredient_id: null,
+            food_product_id: productId,
+            food_product_nutrition_version_id: versionId,
+          },
+        ],
+        error: null,
+      },
+    ]);
+    const rpc = vi.fn(async () => ({
+      data: {
+        id: null,
+        title: "4/25 장보기",
+        date_range_start: "2026-04-25",
+        date_range_end: "2026-04-25",
+        is_completed: true,
+        completed_at: "2026-04-25T09:00:00.000Z",
+        completed_without_list: true,
+        meals_updated: 1,
+        pantry_item_count: 2,
+        created_at: "2026-04-25T09:00:00.000Z",
+      },
+      error: null,
+    }));
+
+    createRouteHandlerClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })),
+      },
+    });
+    createServiceRoleClient.mockReturnValue({
+      rpc,
+      from: vi.fn((table: string) => {
+        if (table === "meals") {
+          return { select: vi.fn(() => mealsQuery) };
+        }
+        if (table === "ingredients") {
+          return { select: vi.fn(() => ingredientsQuery) };
+        }
+        if (table === "pantry_items") {
+          return { select: vi.fn(() => pantryQuery) };
+        }
+
+        throw new Error(`unexpected table: ${table}`);
+      }),
+    });
+
+    const { POST } = await importListsRoute();
+    const response = await POST(
+      new Request("http://localhost:3000/api/v1/shopping/lists", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          meal_configs: [{ meal_id: mealId, shopping_servings: 2 }],
+        }),
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(pantryQuery.or).toHaveBeenCalledWith(
+      `ingredient_id.in.(${ingredientId}),and(food_product_id.eq.${productId},food_product_nutrition_version_id.eq.${versionId})`,
+    );
+    expect(rpc).toHaveBeenCalledWith(
+      "create_shopping_list_from_payload",
+      expect.objectContaining({
+        p_complete_without_list: true,
+        p_pantry_item_count: 2,
+        p_item_rows: expect.arrayContaining([
+          expect.objectContaining({
+            ingredient_id: ingredientId,
+            is_pantry_excluded: true,
+          }),
+          expect.objectContaining({
+            ingredient_id: null,
+            food_product_id: productId,
+            food_product_nutrition_version_id: versionId,
+            is_pantry_excluded: true,
+          }),
+        ]),
+      }),
+    );
   });
 
   it("uses pinned content once per Meal without duplicating a recipe-level serving total", async () => {

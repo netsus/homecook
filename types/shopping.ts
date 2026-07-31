@@ -52,6 +52,7 @@ export interface ShoppingListSummary {
   is_completed: boolean;
   completed_at?: string | null;
   item_count?: number;
+  items?: ShoppingListItemSummary[];
   created_at: string;
 }
 
