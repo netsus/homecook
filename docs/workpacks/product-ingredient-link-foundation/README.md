@@ -151,7 +151,12 @@ Schema Change:
 
 ## Design Status
 
-`N/A`. No new screen or visual-system change. Existing HOME/PANTRY consumer behavior is regression-tested at Stage 4/5.
+- [ ] 임시 UI (temporary)
+- [ ] 리뷰 대기 (pending-review)
+- [ ] 확정 (confirmed)
+- [x] N/A — 새 screen/route/layout/navigation/component hierarchy/visual hierarchy 변경 없음
+
+기존 HOME/PANTRY consumer behavior만 Stage 4에서 회귀 검증하며 독립 Stage 5/6는 계속 미완료다.
 
 ## Source Links
 
