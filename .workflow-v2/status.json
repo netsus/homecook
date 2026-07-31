@@ -2289,7 +2289,7 @@
     {
       "id": "product-ingredient-link-foundation",
       "preset": "vertical-slice-strict",
-      "branch": "docs/product-ingredient-link-contract-evolution",
+      "branch": "feature/be-product-ingredient-link-contract-runtime",
       "pr_path": "https://github.com/netsus/homecook/pull/1254",
       "lifecycle": "in_progress",
       "approval_state": "not_started",
@@ -2312,7 +2312,7 @@
         "node scripts/verify-product-ingredient-link-hybrid.mjs --mode post-merge-read-only",
         "git diff --check"
       ],
-      "notes": "2026-07-31 사용자 승인 Contract Evolution Stage 1 docs authoring is active. Internal 1.5 task 019fb5c6-d036-7a50-a1de-d093159a7f0b requested changes at PR #1254 head 97d93f983ab8dd9c22ff8943eb8f3bc58e6caf17. Author repair narrows the shared reader to authenticated-self with auth.uid()=p_user_id and no user-path service-token fallback, adds shopping create/detail provenance automation, and returns custom-recipe/meal-log runtime ownership to successors. This author task does not self-approve; lifecycle/verification/evaluation remain in_progress/pending/not_started until fresh internal 1.5 re-review and new-head checks. PR #1236 link-only authority and PR #1248 hybrid verifier remain historical merged evidence. New implementation, full local/remote evidence and production activation remain pending/Manual Only with zero production/staging/remote application writes.",
+      "notes": "2026-07-31 Contract Evolution PR #1254 merged at 8b4287f83a99c0cc1f1cc4979b578dc56a2895d0. Stage 2 backend/data implementation on feature/be-product-ingredient-link-contract-runtime completed RED→GREEN, local PostgreSQL fresh/replay, focused and full tests, backend gate and validators. Lifecycle remains in_progress and approval/verification remain pending until independent Stage 3 and current-head Draft PR checks. Stage 4/5/6, remote Auth evidence and production account cleanup activation are not performed; production/staging/remote writes are zero.",
       "evaluation_status": "not_started",
       "evaluation_round": 0,
       "last_evaluator_result": null,
