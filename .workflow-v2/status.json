@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-07-31T00:58:38.000Z",
+  "updated_at": "2026-07-31T01:07:04.000Z",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -2290,6 +2290,7 @@
       "id": "product-ingredient-link-foundation",
       "preset": "vertical-slice-strict",
       "branch": "docs/product-ingredient-link-contract-evolution",
+      "pr_path": "https://github.com/netsus/homecook/pull/1254",
       "lifecycle": "in_progress",
       "approval_state": "not_started",
       "verification_status": "pending",
