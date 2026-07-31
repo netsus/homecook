@@ -68,6 +68,7 @@ export function PantryAddSheet({
 
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const requestSequenceRef = useRef(0);
+  const mutationSequenceRef = useRef(0);
   const isMountedRef = useRef(true);
   const existingSet = useRef(new Set(existingIngredientIds));
   const existingProductSet = useRef(
@@ -288,7 +289,13 @@ export function PantryAddSheet({
   }, []);
 
   const handleAdd = useCallback(async () => {
-    if (selectedCount === 0) return;
+    if (selectedCount === 0 || isAdding) return;
+
+    const mutationSequence = mutationSequenceRef.current + 1;
+    mutationSequenceRef.current = mutationSequence;
+    if (!isMountedRef.current) {
+      return;
+    }
 
     setIsAdding(true);
     setErrorMessage(null);
@@ -303,13 +310,38 @@ export function PantryAddSheet({
         productItems.length > 0
           ? await addPantryItems(Array.from(selectedIds), productItems)
           : await addPantryItems(Array.from(selectedIds));
+      if (
+        !isMountedRef.current ||
+        mutationSequence !== mutationSequenceRef.current
+      ) {
+        return;
+      }
       onAdd(result.added + (result.product_added ?? 0));
       onClose();
     } catch {
+      if (
+        !isMountedRef.current ||
+        mutationSequence !== mutationSequenceRef.current
+      ) {
+        return;
+      }
       setErrorMessage("추가에 실패했어요. 다시 시도해 주세요.");
-      setIsAdding(false);
+    } finally {
+      if (
+        isMountedRef.current &&
+        mutationSequence === mutationSequenceRef.current
+      ) {
+        setIsAdding(false);
+      }
     }
-  }, [onAdd, onClose, selectedCount, selectedIds, selectedProducts]);
+  }, [
+    isAdding,
+    onAdd,
+    onClose,
+    selectedCount,
+    selectedIds,
+    selectedProducts,
+  ]);
 
   useEffect(() => {
     closeButtonRef.current?.focus();
@@ -321,6 +353,7 @@ export function PantryAddSheet({
     return () => {
       isMountedRef.current = false;
       requestSequenceRef.current += 1;
+      mutationSequenceRef.current += 1;
       if (searchTimerRef.current) {
         clearTimeout(searchTimerRef.current);
       }

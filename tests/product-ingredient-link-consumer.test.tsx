@@ -147,6 +147,26 @@ function requestUrl(input: RequestInfo | URL) {
   return typeof input === "string" ? input : input.toString();
 }
 
+async function openAndSelectExactProduct() {
+  const user = userEvent.setup();
+  await user.click(
+    screen.getAllByRole("button", { name: "재료 추가하기" })[0]!,
+  );
+
+  const dialog = await screen.findByRole("dialog", { name: "재료 추가" });
+  await user.type(
+    within(dialog).getByRole("textbox", { name: "재료명 검색" }),
+    "생크림빵",
+  );
+  await user.click(
+    await within(dialog).findByRole("checkbox", {
+      name: `${FOOD_PRODUCT.name} · ${FOOD_PRODUCT.brand} · 영양 버전 ${FOOD_PRODUCT.nutrition_version_id}`,
+    }),
+  );
+
+  return { dialog, user };
+}
+
 describe("product ingredient link existing consumers", () => {
   beforeEach(() => {
     authOverride = null;
@@ -372,6 +392,237 @@ describe("product ingredient link existing consumers", () => {
         },
       ]);
     });
+  });
+
+  it("ignores a late add success from a closed sheet instead of closing or refreshing the reopened cycle", async () => {
+    authOverride = true;
+    const staleAddResponse = createDeferred<unknown>();
+    let pantryReadCount = 0;
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+        const url = requestUrl(input);
+
+        if (url === "/api/v1/pantry" && init?.method === "POST") {
+          return staleAddResponse.promise;
+        }
+
+        if (url === "/api/v1/pantry") {
+          pantryReadCount += 1;
+          return jsonResponse({ items: [], product_items: [] });
+        }
+
+        if (url.startsWith("/api/v1/ingredients")) {
+          return jsonResponse({ items: [] });
+        }
+
+        if (url.startsWith("/api/v1/food-products")) {
+          return jsonResponse({
+            items: [FOOD_PRODUCT],
+            next_cursor: null,
+            has_next: false,
+          });
+        }
+
+        throw new Error(`unexpected request: ${url}`);
+      }),
+    );
+
+    render(<PantryScreen initialAuthenticated />);
+
+    await screen.findByText("아직 등록한 재료가 없어요");
+    const firstCycle = await openAndSelectExactProduct();
+    await firstCycle.user.click(
+      within(firstCycle.dialog).getByRole("button", {
+        name: "팬트리에 추가 (1)",
+      }),
+    );
+    const pendingAddButton = within(firstCycle.dialog).getByRole("button", {
+      name: "팬트리에 추가 (1)",
+    });
+    expect(pendingAddButton.textContent).toBe("추가 중...");
+    expect((pendingAddButton as HTMLButtonElement).disabled).toBe(true);
+
+    fireEvent.click(
+      within(firstCycle.dialog).getByRole("button", { name: "닫기" }),
+    );
+    const reopenedDialog = (await openAndSelectExactProduct()).dialog;
+    expect(pantryReadCount).toBe(1);
+
+    await act(async () => {
+      staleAddResponse.resolve(
+        await jsonResponse(
+          {
+            added: 0,
+            items: [],
+            product_added: 1,
+            product_items: [PRODUCT_ITEM],
+          },
+          201,
+        ),
+      );
+    });
+
+    expect(screen.getByRole("dialog", { name: "재료 추가" })).toBe(
+      reopenedDialog,
+    );
+    expect(
+      within(reopenedDialog).getByRole("button", {
+        name: "팬트리에 추가 (1)",
+      }),
+    ).toBeTruthy();
+    expect(
+      screen.queryByText("1개 재료가 팬트리에 추가됐어요"),
+    ).toBeNull();
+    expect(pantryReadCount).toBe(1);
+  });
+
+  it("ignores a late add failure from a closed sheet while the reopened cycle can add once normally", async () => {
+    authOverride = true;
+    const staleAddResponse = createDeferred<unknown>();
+    const pantryPostBodies: unknown[] = [];
+    let pantryPostCount = 0;
+    let pantryReadCount = 0;
+    let productWasAdded = false;
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+        const url = requestUrl(input);
+
+        if (url === "/api/v1/pantry" && init?.method === "POST") {
+          pantryPostCount += 1;
+          pantryPostBodies.push(JSON.parse(String(init.body)));
+          if (pantryPostCount === 1) {
+            return staleAddResponse.promise;
+          }
+          if (pantryPostCount === 2) {
+            return Promise.reject(new Error("active add failed"));
+          }
+
+          productWasAdded = true;
+          return jsonResponse(
+            {
+              added: 0,
+              items: [],
+              product_added: 1,
+              product_items: [PRODUCT_ITEM],
+            },
+            201,
+          );
+        }
+
+        if (url === "/api/v1/pantry") {
+          pantryReadCount += 1;
+          return jsonResponse({
+            items: [],
+            product_items: productWasAdded ? [PRODUCT_ITEM] : [],
+          });
+        }
+
+        if (url.startsWith("/api/v1/ingredients")) {
+          return jsonResponse({ items: [] });
+        }
+
+        if (url.startsWith("/api/v1/food-products")) {
+          return jsonResponse({
+            items: [FOOD_PRODUCT],
+            next_cursor: null,
+            has_next: false,
+          });
+        }
+
+        throw new Error(`unexpected request: ${url}`);
+      }),
+    );
+
+    render(<PantryScreen initialAuthenticated />);
+
+    await screen.findByText("아직 등록한 재료가 없어요");
+    const firstCycle = await openAndSelectExactProduct();
+    await firstCycle.user.click(
+      within(firstCycle.dialog).getByRole("button", {
+        name: "팬트리에 추가 (1)",
+      }),
+    );
+    fireEvent.click(
+      within(firstCycle.dialog).getByRole("button", { name: "닫기" }),
+    );
+
+    const reopenedCycle = await openAndSelectExactProduct();
+    await act(async () => {
+      staleAddResponse.reject(new Error("stale add failed"));
+    });
+
+    expect(
+      screen.getByRole("dialog", { name: "재료 추가" }),
+    ).toBe(reopenedCycle.dialog);
+    expect(
+      within(reopenedCycle.dialog).queryByRole("alert"),
+    ).toBeNull();
+    expect(
+      within(reopenedCycle.dialog).getByRole("button", {
+        name: "팬트리에 추가 (1)",
+      }),
+    ).toBeTruthy();
+    expect(pantryReadCount).toBe(1);
+
+    await reopenedCycle.user.click(
+      within(reopenedCycle.dialog).getByRole("button", {
+        name: "팬트리에 추가 (1)",
+      }),
+    );
+    expect(
+      (await within(reopenedCycle.dialog).findByRole("alert")).textContent,
+    ).toBe("추가에 실패했어요. 다시 시도해 주세요.");
+    const retryButton = within(reopenedCycle.dialog).getByRole("button", {
+      name: "팬트리에 추가 (1)",
+    });
+    expect(retryButton.textContent).toBe("팬트리에 추가 (1)");
+    expect((retryButton as HTMLButtonElement).disabled).toBe(false);
+
+    await reopenedCycle.user.click(retryButton);
+
+    expect(
+      await screen.findByText("1개 재료가 팬트리에 추가됐어요"),
+    ).toBeTruthy();
+    expect(screen.queryByRole("dialog", { name: "재료 추가" })).toBeNull();
+    expect(
+      await screen.findByLabelText(
+        `${PRODUCT_ITEM.name} · ${PRODUCT_ITEM.brand} · 영양 버전 ${PRODUCT_ITEM.food_product_nutrition_version_id}`,
+      ),
+    ).toBeTruthy();
+    expect(pantryReadCount).toBe(2);
+    expect(pantryPostBodies).toEqual([
+      {
+        product_items: [
+          {
+            food_product_id: FOOD_PRODUCT.id,
+            food_product_nutrition_version_id:
+              FOOD_PRODUCT.nutrition_version_id,
+          },
+        ],
+      },
+      {
+        product_items: [
+          {
+            food_product_id: FOOD_PRODUCT.id,
+            food_product_nutrition_version_id:
+              FOOD_PRODUCT.nutrition_version_id,
+          },
+        ],
+      },
+      {
+        product_items: [
+          {
+            food_product_id: FOOD_PRODUCT.id,
+            food_product_nutrition_version_id:
+              FOOD_PRODUCT.nutrition_version_id,
+          },
+        ],
+      },
+    ]);
   });
 
   it("disables an add option only when its exact product and nutrition version pair already exists", async () => {
