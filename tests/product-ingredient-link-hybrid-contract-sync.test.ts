@@ -124,6 +124,8 @@ describe("product ingredient link hybrid contract lock", () => {
 
   it("locks the exact additive pantry request and response shape", () => {
     const api = read(apiPath);
+    const pantryReadSection =
+      api.match(/## 0-PIL-B\.[\s\S]*?(?=\n## 0-PIL-C\.)/)?.[0] ?? "";
 
     expect(api).toContain('"ingredient_ids": ["uuid"]');
     expect(api).toContain('"product_items": [');
@@ -144,8 +146,13 @@ describe("product ingredient link hybrid contract lock", () => {
     expect(api).toContain("reason은 `product_version_mismatch`");
     expect(api).toContain("기존 `404 RESOURCE_NOT_FOUND`");
     expect(api).toContain("존재 여부를 노출하지 않도록");
-    expect(api).toContain("`q`는 `name`/`brand`에 적용");
-    expect(api).toContain("`product_items=[]`");
+    expect(pantryReadSection).toContain("`q`는 `name`/`brand`에 적용");
+    expect(pantryReadSection).toContain(
+      "`category`가 지정되면 product는 category authority가 없으므로 `product_items=[]`",
+    );
+    expect(pantryReadSection).toContain(
+      "approved representative link를 display category/filter 추측에 사용하지 않는다.",
+    );
     expect(api).toContain("신규 endpoint");
     expect(api).toContain("신규 public status");
     expect(api).toContain("신규 public error code");
