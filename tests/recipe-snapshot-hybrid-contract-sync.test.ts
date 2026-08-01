@@ -26,6 +26,10 @@ type ActiveProjection = {
 type NamedTextProjection = {
   name: string;
   value: string;
+  requiredTokens: Array<{
+    name: string;
+    pattern: RegExp;
+  }>;
 };
 
 const retiredActiveGatePatterns = [
@@ -114,17 +118,6 @@ describe("recipe snapshot full-local contract lock", () => {
     }
   }
 
-  function markdownSection(markdown: string, heading: string) {
-    const start = markdown.indexOf(heading);
-    expect(start).toBeGreaterThanOrEqual(0);
-    const afterHeading = markdown.slice(start + heading.length);
-    const nextHeading = afterHeading.search(/\n## /);
-    return markdown.slice(
-      start,
-      nextHeading === -1 ? markdown.length : start + heading.length + nextHeading,
-    );
-  }
-
   function lineContaining(text: string, marker: string) {
     const line = text.split("\n").find((candidate) => candidate.includes(marker));
     expect(line).toBeDefined();
@@ -140,62 +133,216 @@ describe("recipe snapshot full-local contract lock", () => {
 
     return [
       {
-        name: "README dependency",
-        value: [
-          markdownSection(read(readmePath), "## Dependencies"),
-          lineContaining(read(readmePath), "first local mutation/cutover"),
-        ].join("\n"),
+        name: "README full-local dependency row",
+        value: lineContaining(
+          read(readmePath),
+          "`full-local-supabase-production` PR #1263",
+        ),
+        requiredTokens: [
+          { name: "PR #1263", pattern: /PR #1263/ },
+          {
+            name: "Stage 3 deployable app/runtime authority",
+            pattern: /Stage 3 deployable app\/runtime authority/,
+          },
+          {
+            name: "explicit env+DB activation",
+            pattern: /activation은 explicit env\+DB control/,
+          },
+          { name: "Manual Only", pattern: /Manual Only/ },
+        ],
       },
       {
-        name: "acceptance pending evidence",
-        value: [
-          lineContaining(read(acceptancePath), "accept-snapshot-remote"),
-          lineContaining(
-            read(acceptancePath),
-            "accept-snapshot-full-local-manual",
-          ),
-        ].join("\n"),
+        name: "README Manual Only boundary line",
+        value: lineContaining(read(readmePath), "first local mutation/cutover"),
+        requiredTokens: [
+          { name: "PR #1263", pattern: /PR #1263/ },
+          {
+            name: "first local mutation/cutover",
+            pattern: /first local mutation\/cutover/,
+          },
+          { name: "Manual Only/pending", pattern: /Manual Only\/pending/ },
+        ],
       },
       {
-        name: "automation external smoke and notes",
-        value: [
-          ...strings(automation.external_smokes),
-          String(automation.notes),
-        ].join("\n"),
+        name: "acceptance accept-snapshot-remote line",
+        value: lineContaining(read(acceptancePath), "accept-snapshot-remote"),
+        requiredTokens: [
+          { name: "PR #1263", pattern: /PR #1263/ },
+          {
+            name: "Stage 3 deployable app/runtime authority",
+            pattern: /Stage 3 deployable app\/runtime authority/,
+          },
+          { name: "pending snapshot gate", pattern: /pending snapshot gate/ },
+        ],
       },
       {
-        name: "work-item dependency workflow and notes",
-        value: [
-          ...strings(workItem.dependencies),
-          ...strings(workflow.external_smokes),
-          String(workItem.notes),
-        ].join("\n"),
+        name: "acceptance accept-snapshot-full-local-manual line",
+        value: lineContaining(
+          read(acceptancePath),
+          "accept-snapshot-full-local-manual",
+        ),
+        requiredTokens: [
+          { name: "PR #1263", pattern: /PR #1263/ },
+          {
+            name: "explicit env+DB control",
+            pattern: /explicit env\+DB control/,
+          },
+          { name: "Manual Only/pending", pattern: /Manual Only\/pending/ },
+        ],
       },
       {
-        name: "status notes",
+        name: "automation external_smokes array",
+        value: strings(automation.external_smokes).join("\n"),
+        requiredTokens: [
+          { name: "PR #1263", pattern: /PR #1263/ },
+          {
+            name: "Stage 3 deployable app/runtime authority",
+            pattern: /Stage 3 deployable app\/runtime authority/,
+          },
+          {
+            name: "explicit env+DB activation",
+            pattern: /local authority activation requires explicit env\+DB control/i,
+          },
+          { name: "Manual Only/pending", pattern: /Manual Only\/pending/ },
+        ],
+      },
+      {
+        name: "automation notes scalar",
+        value: String(automation.notes),
+        requiredTokens: [
+          { name: "PR #1263", pattern: /PR #1263 merged the/ },
+          {
+            name: "Stage 3 deployable app/runtime authority",
+            pattern: /Stage 3 deployable app\/runtime authority/,
+          },
+          {
+            name: "explicit env+DB activation",
+            pattern: /local authority activation requires explicit env\+DB control/i,
+          },
+          { name: "Manual Only/pending", pattern: /Manual Only\/pending/ },
+        ],
+      },
+      {
+        name: "workItem dependencies array",
+        value: strings(workItem.dependencies).join("\n"),
+        requiredTokens: [
+          { name: "PR #1263", pattern: /PR #1263/ },
+          {
+            name: "Stage 3 deployable app/runtime authority",
+            pattern: /Stage 3 deployable app\/runtime authority/,
+          },
+          {
+            name: "explicit env+DB activation",
+            pattern: /activation requires explicit env\+DB control/,
+          },
+          { name: "Manual Only/pending", pattern: /Manual Only\/pending/ },
+        ],
+      },
+      {
+        name: "workItem workflow.external_smokes array",
+        value: strings(workflow.external_smokes).join("\n"),
+        requiredTokens: [
+          {
+            name: "PR #1263 deployable authority slug",
+            pattern: /full-local-stage3-deployable-app-runtime-authority-pr1263-merged/,
+          },
+          {
+            name: "activation slug",
+            pattern: /local-authority-activation-requires-explicit-env-and-db-control/,
+          },
+          { name: "Manual Only/pending", pattern: /Manual Only\/pending/ },
+        ],
+      },
+      {
+        name: "workItem notes scalar",
+        value: String(workItem.notes),
+        requiredTokens: [
+          { name: "PR #1263", pattern: /PR #1263 merged the/ },
+          {
+            name: "Stage 3 deployable app/runtime authority",
+            pattern: /Stage 3 deployable app\/runtime authority/,
+          },
+          {
+            name: "explicit env+DB activation",
+            pattern: /local authority activation requires explicit env\+DB control/i,
+          },
+          { name: "Manual Only/pending", pattern: /Manual Only\/pending/ },
+        ],
+      },
+      {
+        name: "status notes scalar",
         value: String(statusItem.notes),
+        requiredTokens: [
+          { name: "PR #1263", pattern: /PR #1263/ },
+          {
+            name: "Stage 3 deployable app/runtime authority",
+            pattern: /Stage 3 deployable app\/runtime authority/,
+          },
+          {
+            name: "explicit env+DB activation",
+            pattern: /local authority activation requires explicit env\+DB control/i,
+          },
+          { name: "Manual Only/pending", pattern: /Manual Only\/pending/ },
+        ],
       },
       {
-        name: "roadmap full-local projection",
+        name: "roadmap full-local-supabase-production row",
         value: lineContaining(roadmap, "`full-local-supabase-production` | docs"),
+        requiredTokens: [
+          { name: "PR #1263", pattern: /PR #1263/ },
+          {
+            name: "Stage 3 deployable app/runtime authority",
+            pattern: /Stage 3 deployable app\/runtime authority/,
+          },
+          {
+            name: "explicit env+DB activation",
+            pattern: /activation은 explicit env\+DB control/,
+          },
+          { name: "Manual Only/pending", pattern: /Manual Only\/pending/ },
+        ],
+      },
+      {
+        name: "roadmap recipe-snapshot index row",
+        value: lineContaining(
+          roadmap,
+          "`recipe-snapshot-authority-foundation` | in-progress",
+        ),
+        requiredTokens: [
+          { name: "PR #1263", pattern: /PR #1263/ },
+          {
+            name: "Stage 3 deployable app/runtime authority",
+            pattern: /Stage 3 deployable app\/runtime authority/i,
+          },
+          { name: "activation/Manual Only", pattern: /activation\/Manual Only/ },
+          { name: "pending/not implemented", pattern: /pending\/not implemented/ },
+        ],
+      },
+      {
+        name: "roadmap Train B dependency row",
+        value: lineContaining(
+          roadmap,
+          "| 4 | B | `recipe-snapshot-authority-foundation`",
+        ),
+        requiredTokens: [
+          { name: "PR #1263", pattern: /PR #1263/ },
+          {
+            name: "deployable app/runtime authority",
+            pattern: /deployable app\/runtime authority/,
+          },
+          { name: "activation", pattern: /activation/ },
+          { name: "Manual Only", pattern: /Manual Only/ },
+          { name: "미완료", pattern: /미완료/ },
+        ],
       },
     ];
   }
 
   function assertPr1263Projections(projections: NamedTextProjection[]) {
-    const requiredPatterns = [
-      /PR #1263/,
-      /Stage 3 deployable app\/runtime authority/i,
-      /explicit env\+DB control/i,
-      /Manual Only/i,
-      /pending/i,
-    ];
-
     for (const projection of projections) {
-      for (const pattern of requiredPatterns) {
-        if (!pattern.test(projection.value)) {
+      for (const requiredToken of projection.requiredTokens) {
+        if (!requiredToken.pattern.test(projection.value)) {
           throw new Error(
-            `${projection.name}: missing PR #1263 authority boundary ${pattern.source}`,
+            `${projection.name}: missing ${requiredToken.name} (${requiredToken.pattern.source})`,
           );
         }
       }
@@ -271,21 +418,38 @@ describe("recipe snapshot full-local contract lock", () => {
     ).toContain(path);
   });
 
-  it.each(pr1263NamedProjections().map((projection) => [projection.name]))(
-    "rejects PR #1263 removal from copied named projection %s",
-    (name) => {
-      const original = pr1263NamedProjections().find(
-        (projection) => projection.name === name,
+  it.each(
+    pr1263NamedProjections().flatMap((projection) =>
+      projection.requiredTokens.map((requiredToken) => [
+        `${projection.name} :: ${requiredToken.name}`,
+        projection,
+        requiredToken,
+      ] as const),
+    ),
+  )(
+    "rejects required token mutation %s",
+    (_caseName, projection, requiredToken) => {
+      const mutatedValue = projection.value.replace(
+        requiredToken.pattern,
+        "required-token-removed",
       );
-      expect(original).toBeDefined();
-      const mutated = {
-        name,
-        value: (original?.value ?? "").replaceAll("PR #1263", "PR #removed"),
-      };
+      expect(mutatedValue).not.toBe(projection.value);
+      const mutated = { ...projection, value: mutatedValue };
 
-      expect(() => assertPr1263Projections([mutated])).toThrow(name);
+      expect(() => assertPr1263Projections([mutated])).toThrow(
+        `${projection.name}: missing ${requiredToken.name}`,
+      );
     },
   );
+
+  it.each([
+    "roadmap recipe-snapshot index row",
+    "roadmap Train B dependency row",
+  ])("collects named projection %s", (name) => {
+    expect(
+      pr1263NamedProjections().map((projection) => projection.name),
+    ).toContain(name);
+  });
 
   it("keeps hybrid verifier evidence as history without making it an active release gate", () => {
     const evidenceBundle = [
