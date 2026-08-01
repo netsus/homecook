@@ -102,6 +102,7 @@ describe("login screen", () => {
     ["account_conflict", "현재 계정으로 로그인할 수 없어요"],
     ["provider_resolution_failed", "로그인 정보를 안전하게 확인하지 못했어요"],
     ["ACCOUNT_SESSION_STALE", "세션을 다시 확인해 주세요"],
+    ["ACCOUNT_LIFECYCLE_MAINTENANCE", "로그인 시스템을 안전하게 전환하고 있어요"],
   ])("shows a PII-safe recovery for %s", (code, copy) => {
     render(<LoginScreen authError={code} />);
     expect(screen.getByRole("alert").textContent).toContain(copy);
