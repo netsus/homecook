@@ -98,10 +98,10 @@ describe("recipe snapshot mutation security", () => {
       "protect_recipe_nutrition_snapshot",
     );
 
-    expect(
-      /before insert or update/i.test(migrationSql) && ownership.length > 0,
-      "nutrition snapshots need a server-derived owner/recipe validation trigger",
-    ).toBe(true);
+    expect(ownership.length).toBeGreaterThan(0);
+    expect(migrationSql).toMatch(
+      /create trigger recipe_nutrition_snapshot_validate_ownership\s+before insert or update on public\.recipe_nutrition_snapshots\s+for each row\s+execute function public\.validate_recipe_nutrition_snapshot_ownership\(\);/i,
+    );
     expect(
       /deleted_at[\s\S]*(raise exception|23514)/i.test(ownership),
       "soft-deleted recipes can still create or switch nutrition snapshots",

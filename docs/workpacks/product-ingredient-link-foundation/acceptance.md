@@ -2,7 +2,7 @@
 
 > **Full-local relock 2026-08-01:** pantry/shopping product authority와 owner cleanup 의미는 유지하되 local Auth UUID/session binding이 active principal이다. remote exact-epoch와 `local auth.users=0` 검증은 역사적 hybrid evidence이며 full-local RLS/cross-owner/delete-recreate smoke로 재잠근다.
 
-> Evidence is checked only after the owning implementation/review stage produces it. 2026-07-31 사용자 승인 Contract Evolution은 current official tuple v1.7.28 / v1.5.32 / v1.3.30 / DB v1.3.29 / API v1.2.32에 반영됐다. Stage 2/3 PR #1255는 final reviewed head `6b0a1c5232759f3d801c9aa84e1427b12bfc37d1` 승인 뒤 `d30ee2c8f38a06609e7a5efddbfb0b5df30f712c`로 merged됐다. Stage 4/5는 PR #1256 reviewed head `04d4b26c424ac4643a73febdaa0307e131198e39`에서 consumer regression, 세 차례 race repair와 independent Stage 5 `P0/P1/P2=0/0/0`을 증명했다. Full-local base merge 뒤 current-head checks, fresh independent review, Stage 6와 아래 Manual Only 운영 증거는 계속 미완료다.
+> Evidence is checked only after the owning implementation/review stage produces it. 2026-07-31 사용자 승인 Contract Evolution은 current official tuple v1.7.28 / v1.5.32 / v1.3.30 / DB v1.3.30 / API v1.2.33에 반영됐다. Stage 2/3 PR #1255는 final reviewed head `6b0a1c5232759f3d801c9aa84e1427b12bfc37d1` 승인 뒤 `d30ee2c8f38a06609e7a5efddbfb0b5df30f712c`로 merged됐다. Stage 4/5는 PR #1256 reviewed head `04d4b26c424ac4643a73febdaa0307e131198e39`에서 consumer regression, 세 차례 race repair와 independent Stage 5 `P0/P1/P2=0/0/0`을 증명했다. Full-local base merge 뒤 current-head checks, fresh independent review, Stage 6와 아래 Manual Only 운영 증거는 계속 미완료다.
 
 ## Happy Path
 
