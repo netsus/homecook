@@ -1,0 +1,287 @@
+name: homecook-full-local-isolated
+
+# Compose mounts every declared secret read-only under /run/secrets.
+
+services:
+  postgres:
+    image: public.ecr.aws/supabase/postgres@sha256:a9946f08d31e8eb1149229c94e5c26603a9233116807cbbd93d75179cbac516a
+    platform: ${FULL_LOCAL_DOCKER_PLATFORM:?FULL_LOCAL_DOCKER_PLATFORM is required}
+    entrypoint: ["/homecook/secret-entrypoint.sh"]
+    command: ["docker-entrypoint.sh", "postgres", "-D", "/etc/postgresql"]
+    environment:
+      HOMECOOK_SECRET_EXPORTS: HOMECOOK_POSTGRES_ROLE_PASSWORD=postgres_password
+      POSTGRES_DB: postgres
+      POSTGRES_PASSWORD: homecook-expired-bootstrap-password
+      POSTGRES_USER: supabase_admin
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -h 127.0.0.1 -U supabase_admin -d postgres >/dev/null
+      interval: 5s
+      timeout: 5s
+      retries: 60
+      start_period: 20s
+    networks:
+      - data-internal
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    secrets:
+      - postgres_password
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./secret-entrypoint.sh:/homecook/secret-entrypoint.sh:ro
+      - ./full-local-role-passwords.sh:/docker-entrypoint-initdb.d/zz-homecook-role-passwords.sh:ro
+
+  auth:
+    image: supabase/gotrue@sha256:385184459f57569c54c25209f51f3b2be99ddd7c4ce9e3555b5d3eea8447b7cf
+    platform: ${FULL_LOCAL_DOCKER_PLATFORM:?FULL_LOCAL_DOCKER_PLATFORM is required}
+    entrypoint: ["/homecook/secret-entrypoint.sh"]
+    command: ["/homecook/start-auth.sh"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      API_EXTERNAL_URL: ${FULL_LOCAL_API_EXTERNAL_URL:?FULL_LOCAL_API_EXTERNAL_URL is required}
+      GOTRUE_API_HOST: 0.0.0.0
+      GOTRUE_API_PORT: "9999"
+      GOTRUE_DB_DRIVER: postgres
+      GOTRUE_DISABLE_SIGNUP: "false"
+      GOTRUE_EXTERNAL_ANONYMOUS_USERS_ENABLED: ${FULL_LOCAL_ENABLE_ANONYMOUS_USERS:?FULL_LOCAL_ENABLE_ANONYMOUS_USERS is required}
+      GOTRUE_EXTERNAL_EMAIL_ENABLED: ${FULL_LOCAL_ENABLE_EMAIL_SIGNUP:?FULL_LOCAL_ENABLE_EMAIL_SIGNUP is required}
+      GOTRUE_EXTERNAL_PHONE_ENABLED: ${FULL_LOCAL_ENABLE_PHONE_SIGNUP:?FULL_LOCAL_ENABLE_PHONE_SIGNUP is required}
+      GOTRUE_JWT_ADMIN_ROLES: service_role
+      GOTRUE_JWT_AUD: authenticated
+      GOTRUE_JWT_DEFAULT_GROUP_NAME: authenticated
+      GOTRUE_JWT_EXP: "3600"
+      GOTRUE_JWT_ISSUER: ${FULL_LOCAL_API_EXTERNAL_URL:?FULL_LOCAL_API_EXTERNAL_URL is required}
+      GOTRUE_MAILER_AUTOCONFIRM: ${FULL_LOCAL_ENABLE_EMAIL_AUTOCONFIRM:?FULL_LOCAL_ENABLE_EMAIL_AUTOCONFIRM is required}
+      GOTRUE_SITE_URL: ${FULL_LOCAL_SITE_URL:?FULL_LOCAL_SITE_URL is required}
+      GOTRUE_URI_ALLOW_LIST: ${FULL_LOCAL_ADDITIONAL_REDIRECT_URLS:?FULL_LOCAL_ADDITIONAL_REDIRECT_URLS is required}
+      HOMECOOK_SECRET_EXPORTS: POSTGRES_PASSWORD=postgres_password;GOTRUE_JWT_SECRET=jwt_secret;GOTRUE_JWT_KEYS=jwt_keys
+      # Audited production invariants:
+      # GOTRUE_EXTERNAL_EMAIL_ENABLED=false
+      # GOTRUE_EXTERNAL_PHONE_ENABLED=false
+      # GOTRUE_EXTERNAL_ANONYMOUS_USERS_ENABLED=false
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:9999/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 60
+      start_period: 10s
+    networks:
+      - data-internal
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    secrets:
+      - postgres_password
+      - jwt_secret
+      - jwt_keys
+    volumes:
+      - ./secret-entrypoint.sh:/homecook/secret-entrypoint.sh:ro
+      - ./start-auth.sh:/homecook/start-auth.sh:ro
+
+  postgrest:
+    image: postgrest/postgrest@sha256:844785450d6b046ee97f1c67ea37e3ff6b4ed7ee3570b1b91c03f66f032c4805
+    platform: ${FULL_LOCAL_DOCKER_PLATFORM:?FULL_LOCAL_DOCKER_PLATFORM is required}
+    entrypoint: ["/homecook/secret-entrypoint.sh"]
+    command: ["/homecook/start-postgrest.sh"]
+    depends_on:
+      auth:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    environment:
+      HOMECOOK_SECRET_EXPORTS: POSTGRES_PASSWORD=postgres_password;PGRST_JWT_SECRET=jwt_jwks
+      PGRST_ADMIN_SERVER_PORT: "3001"
+      PGRST_DB_ANON_ROLE: anon
+      PGRST_DB_SCHEMAS: public,storage
+      PGRST_JWT_AUD: authenticated
+    networks:
+      - data-internal
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    secrets:
+      - postgres_password
+      - jwt_jwks
+    volumes:
+      - ./secret-entrypoint.sh:/homecook/secret-entrypoint.sh:ro
+      - ./start-postgrest.sh:/homecook/start-postgrest.sh:ro
+
+  postgrest-probe:
+    image: docker.io/library/node@sha256:74e144386aaec923ce092c3371b351d96c4f977a4ac3f58431fa9164b9399534
+    platform: ${FULL_LOCAL_DOCKER_PLATFORM:?FULL_LOCAL_DOCKER_PLATFORM is required}
+    command: ["node", "-e", "setInterval(() => {}, 2147483647)"]
+    depends_on:
+      postgrest:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://postgrest:3001/ready').then((r)=>process.exit(r.status===200?0:1)).catch(()=>process.exit(1))"]
+      interval: 5s
+      timeout: 4s
+      retries: 60
+    networks:
+      - data-internal
+    read_only: true
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+
+  storage:
+    image: supabase/storage-api@sha256:9326eb9c6b74c0a5ba393ab46a08a51d16bc5ea5f2978fc5b0f17fc67c64a4de
+    platform: ${FULL_LOCAL_DOCKER_PLATFORM:?FULL_LOCAL_DOCKER_PLATFORM is required}
+    entrypoint: ["/homecook/secret-entrypoint.sh"]
+    command: ["/homecook/start-storage.sh"]
+    depends_on:
+      auth:
+        condition: service_healthy
+      postgrest-probe:
+        condition: service_healthy
+    environment:
+      FILE_SIZE_LIMIT: ${FULL_LOCAL_STORAGE_FILE_SIZE_LIMIT:?FULL_LOCAL_STORAGE_FILE_SIZE_LIMIT is required}
+      FILE_STORAGE_BACKEND_PATH: /var/lib/storage
+      GLOBAL_S3_BUCKET: ${FULL_LOCAL_STORAGE_GLOBAL_BUCKET:?FULL_LOCAL_STORAGE_GLOBAL_BUCKET is required}
+      HOMECOOK_SECRET_EXPORTS: POSTGRES_PASSWORD=postgres_password;ANON_KEY=anon_key;SERVICE_KEY=service_role_key;JWT_JWKS=jwt_jwks;PGRST_JWT_SECRET=jwt_secret;S3_PROTOCOL_ACCESS_KEY_ID=storage_s3_access_key_id;S3_PROTOCOL_ACCESS_KEY_SECRET=storage_s3_access_key_secret
+      POSTGREST_URL: http://postgrest:3000
+      REGION: ${FULL_LOCAL_STORAGE_REGION:?FULL_LOCAL_STORAGE_REGION is required}
+      STORAGE_BACKEND: file
+      TENANT_ID: ${FULL_LOCAL_STORAGE_TENANT_ID:?FULL_LOCAL_STORAGE_TENANT_ID is required}
+      # Audited runtime mappings:
+      # REGION=FULL_LOCAL_STORAGE_REGION
+      # S3_PROTOCOL_ACCESS_KEY_ID=storage_s3_access_key_id
+      # S3_PROTOCOL_ACCESS_KEY_SECRET=storage_s3_access_key_secret
+    healthcheck:
+      test: ["CMD-SHELL", "wget --quiet --tries=1 --timeout=3 --output-document=/dev/null http://127.0.0.1:5000/status"]
+      interval: 5s
+      timeout: 4s
+      retries: 60
+      start_period: 10s
+    networks:
+      - data-internal
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    secrets:
+      - postgres_password
+      - anon_key
+      - service_role_key
+      - jwt_jwks
+      - jwt_secret
+      - storage_s3_access_key_id
+      - storage_s3_access_key_secret
+    volumes:
+      - storage-data:/var/lib/storage
+      - ./secret-entrypoint.sh:/homecook/secret-entrypoint.sh:ro
+      - ./start-storage.sh:/homecook/start-storage.sh:ro
+
+  api-gateway:
+    image: kong/kong@sha256:6addf50e6bd8d578314cb9ce4f2d2d1e3781d2edecef59f707e00c6e05d384f5
+    platform: ${FULL_LOCAL_DOCKER_PLATFORM:?FULL_LOCAL_DOCKER_PLATFORM is required}
+    entrypoint: ["/homecook/secret-entrypoint.sh"]
+    command: ["/bin/sh", "/homecook/kong-entrypoint.sh"]
+    depends_on:
+      storage:
+        condition: service_healthy
+    environment:
+      HOMECOOK_SECRET_EXPORTS: SUPABASE_ANON_KEY=anon_key;SUPABASE_SERVICE_KEY=service_role_key;SUPABASE_PUBLISHABLE_KEY=publishable_key;SUPABASE_SECRET_KEY=secret_key;ANON_KEY_ASYMMETRIC=anon_key_asymmetric;SERVICE_ROLE_KEY_ASYMMETRIC=service_role_key_asymmetric
+      KONG_DATABASE: "off"
+      KONG_DECLARATIVE_CONFIG: /tmp/homecook-kong.yml
+      KONG_DNS_NOT_FOUND_TTL: "1"
+      KONG_DNS_ORDER: LAST,A,CNAME
+      KONG_DNS_VALID_TTL: "5"
+      KONG_NGINX_PROXY_PROXY_BUFFER_SIZE: 160k
+      KONG_NGINX_PROXY_PROXY_BUFFERS: 64 160k
+      KONG_PLUGINS: request-transformer,cors,key-auth,acl,post-function
+      KONG_PROXY_ACCESS_LOG: "off"
+      KONG_ROUTER_FLAVOR: expressions
+    healthcheck:
+      test: ["CMD", "kong", "health"]
+      interval: 5s
+      timeout: 5s
+      retries: 60
+      start_period: 10s
+    networks:
+      - auth-edge
+      - data-internal
+    ports:
+      - 127.0.0.1:${FULL_LOCAL_INTERNAL_GATEWAY_PORT:?FULL_LOCAL_INTERNAL_GATEWAY_PORT is required}:8000
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    secrets:
+      - anon_key
+      - service_role_key
+      - publishable_key
+      - secret_key
+      - anon_key_asymmetric
+      - service_role_key_asymmetric
+    tmpfs:
+      - /tmp:mode=1777
+    volumes:
+      - ./secret-entrypoint.sh:/homecook/secret-entrypoint.sh:ro
+      - ./kong-entrypoint.sh:/homecook/kong-entrypoint.sh:ro
+      - ./kong.yml:/homecook/kong.yml:ro
+
+  auth-proxy:
+    image: docker.io/library/node@sha256:74e144386aaec923ce092c3371b351d96c4f977a4ac3f58431fa9164b9399534
+    platform: ${FULL_LOCAL_DOCKER_PLATFORM:?FULL_LOCAL_DOCKER_PLATFORM is required}
+    command: ["node", "/homecook/auth-only-proxy.mjs"]
+    depends_on:
+      api-gateway:
+        condition: service_healthy
+    environment:
+      FULL_LOCAL_PUBLIC_AUTH_URL: ${FULL_LOCAL_PUBLIC_AUTH_URL:?FULL_LOCAL_PUBLIC_AUTH_URL is required}
+    healthcheck:
+      test: ["CMD", "node", "-e", "const s=require('node:net').connect(8080,'127.0.0.1',()=>{s.end();process.exit(0)});s.on('error',()=>process.exit(1))"]
+      interval: 5s
+      timeout: 4s
+      retries: 60
+    networks:
+      - auth-edge
+    ports:
+      - 127.0.0.1:${FULL_LOCAL_AUTH_PROXY_PORT:?FULL_LOCAL_AUTH_PROXY_PORT is required}:8080
+    read_only: true
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    volumes:
+      - ./auth-only-proxy.mjs:/homecook/auth-only-proxy.mjs:ro
+
+networks:
+  auth-edge: {}
+  data-internal:
+    internal: true
+
+secrets:
+  postgres_password:
+    file: ${FULL_LOCAL_SECRET_DIR:?FULL_LOCAL_SECRET_DIR is required}/postgres_password
+  jwt_secret:
+    file: ${FULL_LOCAL_SECRET_DIR:?FULL_LOCAL_SECRET_DIR is required}/jwt_secret
+  jwt_keys:
+    file: ${FULL_LOCAL_SECRET_DIR:?FULL_LOCAL_SECRET_DIR is required}/jwt_keys
+  jwt_jwks:
+    file: ${FULL_LOCAL_SECRET_DIR:?FULL_LOCAL_SECRET_DIR is required}/jwt_jwks
+  anon_key:
+    file: ${FULL_LOCAL_SECRET_DIR:?FULL_LOCAL_SECRET_DIR is required}/anon_key
+  service_role_key:
+    file: ${FULL_LOCAL_SECRET_DIR:?FULL_LOCAL_SECRET_DIR is required}/service_role_key
+  publishable_key:
+    file: ${FULL_LOCAL_SECRET_DIR:?FULL_LOCAL_SECRET_DIR is required}/publishable_key
+  secret_key:
+    file: ${FULL_LOCAL_SECRET_DIR:?FULL_LOCAL_SECRET_DIR is required}/secret_key
+  anon_key_asymmetric:
+    file: ${FULL_LOCAL_SECRET_DIR:?FULL_LOCAL_SECRET_DIR is required}/anon_key_asymmetric
+  service_role_key_asymmetric:
+    file: ${FULL_LOCAL_SECRET_DIR:?FULL_LOCAL_SECRET_DIR is required}/service_role_key_asymmetric
+  storage_s3_access_key_id:
+    file: ${FULL_LOCAL_SECRET_DIR:?FULL_LOCAL_SECRET_DIR is required}/storage_s3_access_key_id
+  storage_s3_access_key_secret:
+    file: ${FULL_LOCAL_SECRET_DIR:?FULL_LOCAL_SECRET_DIR is required}/storage_s3_access_key_secret
+
+volumes:
+  postgres-data:
+    name: ${FULL_LOCAL_POSTGRES_VOLUME_NAME:?FULL_LOCAL_POSTGRES_VOLUME_NAME is required}
+  storage-data:
+    name: ${FULL_LOCAL_STORAGE_VOLUME_NAME:?FULL_LOCAL_STORAGE_VOLUME_NAME is required}
