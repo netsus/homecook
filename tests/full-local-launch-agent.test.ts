@@ -162,6 +162,7 @@ describe("full-local launch agent install and uninstall", () => {
       getuid: () => 501,
       homeDir,
       nodeBin: "/opt/homebrew/bin/node",
+      platform: "darwin",
       rootDir,
       spawn: (command, args) => {
         launchctlCalls.push(`${command} ${args.join(" ")}`);
@@ -197,6 +198,7 @@ describe("full-local launch agent install and uninstall", () => {
     const result = uninstallFullLocalLaunchAgent({
       getuid: () => 501,
       homeDir,
+      platform: "darwin",
       spawn: (command, args) => {
         calls.push(`${command} ${args.join(" ")}`);
         return { status: 0, stdout: "", stderr: "" };
