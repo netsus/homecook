@@ -64,19 +64,19 @@
 ### Surface / Scope Boundary
 
 - [x] MYPAGE and RECIPEBOOK_DETAIL add no edit UI and existing item navigation still lands on RECIPE_DETAIL <!-- omo:id=accept-editor-recipebook-boundary;stage=4;scope=frontend;review=5,6 -->
-- [x] no history/timeline/trash/restore/public-publish UI or unofficial endpoint/field/status/error is introduced <!-- omo:id=accept-editor-no-extra-contract;stage=4;scope=frontend;review=5,6 -->
-- [x] #5 does not implement or claim #6 write/RLS/RPC, #7 impact propagation or #8 snapshot-v2 activation <!-- omo:id=accept-editor-successor-boundary;stage=4;scope=frontend;review=5,6 -->
-- [x] editor CTA and external personal writes remain dark until approved capability and snapshot-v2 activation gates <!-- omo:id=accept-editor-dark-ship;stage=4;scope=frontend;review=5,6 -->
+- [x] no history/timeline/trash/restore/public-publish UI or unofficial endpoint/field/status/error is introduced <!-- omo:id=accept-editor-no-extra-contract;stage=4;scope=shared;review=6 -->
+- [x] #5 does not implement or claim #6 write/RLS/RPC, #7 impact propagation or #8 snapshot-v2 activation <!-- omo:id=accept-editor-successor-boundary;stage=4;scope=shared;review=6 -->
+- [x] editor CTA and external personal writes remain dark until approved capability and snapshot-v2 activation gates <!-- omo:id=accept-editor-dark-ship;stage=4;scope=shared;review=6 -->
 - **Successor gate (#6/#8):** user-scoped preload and future mutation use the restored stable local Auth UUID, active local session binding, account generation and existing `auth.uid()` RLS; all remote sessions/refresh/flow-state are excluded and users re-login <!-- omo:id=accept-editor-full-local-session-boundary -->
-- [x] browser direct Data/Storage and service-role user fallback remain zero; existing generation-aware server image Routes with `image_object_id`, private Storage, short signed read and owner cancel are the only managed-image mutation path <!-- omo:id=accept-editor-hybrid-client-boundary;stage=4;scope=frontend;review=5,6 -->
+- [x] browser direct Data/Storage and service-role user fallback remain zero; existing generation-aware server image Routes with `image_object_id`, private Storage, short signed read and owner cancel are the only managed-image mutation path <!-- omo:id=accept-editor-hybrid-client-boundary;stage=4;scope=shared;review=6 -->
 - **Post-merge gate:** the Stage 2 merged-exact-SHA full-local verifier proves single local Auth/DB/Storage authority, stable UUID, local session/RLS owner boundary, app plus the current official `/auth/v1/*` contract as the only public surfaces, and capability-off external personal write dark; historical `verify-personal-recipe-editor-hybrid.mjs` evidence cannot satisfy it. A narrower method/path allowlist requires a future user-approved contract-evolution and is not promised here <!-- omo:id=accept-editor-full-local-verifier -->
 
 ## Data Setup / Preconditions
 
 ### Design / Accessibility
 
-- [x] Stage 1 state matrix and markdown wireframe cover public/auth, anon, owner, other-owner/deleted/quarantined and four editor contexts <!-- omo:id=accept-editor-stage1-wireframe;stage=4;scope=frontend;review=5,6 -->
-- [x] independent design critic approves hierarchy, planner/standalone separation, dirty guard and permission states before implementation <!-- omo:id=accept-editor-design-critic;stage=4;scope=frontend;review=5,6 -->
+- Historical Stage 1 lifecycle note: the state matrix and markdown wireframe cover public/auth, anon, owner, other-owner/deleted/quarantined and four editor contexts. <!-- omo:id=accept-editor-stage1-wireframe -->
+- Historical Stage 1 lifecycle note: an independent design critic approved hierarchy, planner/standalone separation, dirty guard and permission states before the capability-off implementation. <!-- omo:id=accept-editor-design-critic -->
 - **Successor gate (#8):** before/after RECIPE_DETAIL and editor evidence exists at 390px and 320px for capability-on login-return and edit/delete states <!-- omo:id=accept-editor-visual-evidence -->
 - [x] no horizontal overflow, clipped sticky CTA, keyboard occlusion or ingredient/step action collision occurs at 320px <!-- omo:id=accept-editor-mobile-fit;stage=4;scope=frontend;review=5,6 -->
 - **Successor gate (#8):** 320px visual and tab wrap order preserves primary `플래너에 추가 → 요리하기`, then secondary fork/edit, then destructive delete <!-- omo:id=accept-editor-cta-hierarchy -->
@@ -95,10 +95,10 @@ Existing confirmed Stage 4 visual/a11y artifacts and the authority report are re
 
 ### Verification / Delivery
 
-- [x] Stage 1 claims only the RED→GREEN contract-sync test, current docs validators, focused workflow tests, lint/typecheck, audit and diff check <!-- omo:id=accept-editor-stage1-honesty;stage=4;scope=frontend;review=5,6 -->
+- Stage 1 verification note: this relock claims only its RED→GREEN contract-sync test, current docs validators, focused workflow tests, lint/typecheck, audit and diff check. <!-- omo:id=accept-editor-stage1-honesty -->
 - [x] Stage 4 records failing component/navigation tests before production shell/CTA/dirty-guard edits <!-- omo:id=accept-editor-tdd-red;stage=4;scope=frontend;review=5,6 -->
 - [x] component, E2E, visual, a11y and capability-off regressions pass at the Stage 4 implementation head <!-- omo:id=accept-editor-future-tests;stage=4;scope=frontend;review=5,6 -->
-- [x] independent internal 1.5, security/ownership and five-axis reviews finish with no unresolved merge-blocking finding <!-- omo:id=accept-editor-independent-reviews;stage=4;scope=frontend;review=5,6 -->
+- Lifecycle review note: historical capability-off reviews remain evidence, while each repaired exact head still requires fresh independent internal 1.5 and security/ownership re-review before approval. <!-- omo:id=accept-editor-independent-reviews -->
 - **Merge gate:** Draft→Ready and every started current-head check finishes success or documented normal skip before squash merge <!-- omo:id=accept-editor-current-head -->
 
 ### Active Full-Local Relock Gates

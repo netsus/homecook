@@ -287,15 +287,50 @@ describe("personal recipe editor full-local contract lock", () => {
     const acceptanceItems = contract.acceptanceItems.filter(
       (item) => !item.manualOnly && item.metadata,
     );
+    const acceptanceItemsById = new Map<
+      string,
+      (typeof acceptanceItems)[number]
+    >();
+    for (const item of acceptanceItems) {
+      if (item.metadata?.id) acceptanceItemsById.set(item.metadata.id, item);
+    }
     expect(acceptanceItems.length).toBeGreaterThan(0);
     for (const item of acceptanceItems) {
       const metadata = item.metadata;
       expect(metadata).not.toBeNull();
       if (!metadata) throw new Error(`missing metadata for ${item.text}`);
       expect([2, 4]).toContain(metadata.stage);
-      expect(metadata.review).toEqual(
-        metadata.stage === 2 ? [3, 6] : [5, 6],
-      );
+      if (metadata.stage === 2) {
+        expect(metadata.review).toEqual([3, 6]);
+      } else if (metadata.scope === "frontend") {
+        expect(metadata.review).toEqual([5, 6]);
+      } else {
+        expect(metadata.scope).toBe("shared");
+        expect(metadata.review).toEqual([6]);
+      }
+    }
+
+    for (const id of [
+      "accept-editor-no-extra-contract",
+      "accept-editor-successor-boundary",
+      "accept-editor-dark-ship",
+      "accept-editor-hybrid-client-boundary",
+    ]) {
+      expect(acceptanceItemsById.get(id)?.metadata).toMatchObject({
+        stage: 4,
+        scope: "shared",
+        review: [6],
+      });
+    }
+
+    for (const id of [
+      "accept-editor-stage1-wireframe",
+      "accept-editor-design-critic",
+      "accept-editor-stage1-honesty",
+      "accept-editor-independent-reviews",
+    ]) {
+      expect(acceptanceItemsById.has(id)).toBe(false);
+      expect(read(acceptancePath)).toContain(`<!-- omo:id=${id} -->`);
     }
 
     const manualOnlyItems = contract.acceptanceItems.filter(
