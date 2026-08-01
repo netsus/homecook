@@ -557,7 +557,9 @@ export function HomeScreen() {
     [effectiveTagKey, recipes?.items, selectedTheme?.recipes],
   );
   const consumerScreenState: ScreenState =
-    selectedTheme && displayedRecipes.length > 0 ? "ready" : screenState;
+    selectedTheme && displayedRecipes.length > 0 && screenState !== "error"
+      ? "ready"
+      : screenState;
   const usesPaginatedRecipeList = !selectedTheme || Boolean(effectiveTagKey);
   const hasMoreDisplayedRecipes =
     usesPaginatedRecipeList && Boolean(recipes?.has_next && recipes.next_cursor);

@@ -238,6 +238,56 @@ describe("product ingredient link existing consumers", () => {
     ).toBe(false);
   });
 
+  it("keeps the HOME retry error visible when a selected cached theme request fails", async () => {
+    authOverride = false;
+    const recipeResponse =
+      createDeferred<Awaited<ReturnType<typeof jsonResponse>>>();
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL) => {
+        const url = requestUrl(input);
+
+        if (url.startsWith("/api/v1/recipes/themes")) {
+          return jsonResponse({
+            themes: [
+              {
+                id: "pantry-cleanout",
+                title: "냉장고 비우는 한 끼",
+                description: "팬트리 매칭",
+                recipes: [PRODUCT_RECIPE],
+              },
+            ],
+          });
+        }
+
+        if (url.startsWith("/api/v1/tags")) {
+          return jsonResponse({ items: [] });
+        }
+
+        if (url.startsWith("/api/v1/recipes")) {
+          return recipeResponse.promise;
+        }
+
+        throw new Error(`unexpected request: ${url}`);
+      }),
+    );
+
+    render(<HomeScreen />);
+
+    await userEvent.setup().click(
+      await screen.findByRole("button", { name: /냉장고 비우는 한 끼/ }),
+    );
+    await act(async () => {
+      recipeResponse.resolve(await jsonResponse(null, 500));
+    });
+
+    expect(
+      await screen.findByRole("heading", { name: "레시피를 불러오지 못했어요" }),
+    ).toBeTruthy();
+    expect(screen.getByRole("button", { name: "다시 시도" })).toBeTruthy();
+  });
+
   it("keeps an unlinked product fail-closed instead of guessing a HOME theme from its name", async () => {
     authOverride = false;
 

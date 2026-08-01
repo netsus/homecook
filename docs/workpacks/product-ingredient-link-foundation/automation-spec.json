@@ -65,13 +65,14 @@
       "common-success-data-error-envelope-preserved",
       "no-new-public-endpoint-status-or-error-code",
       "approved-additive-public-fields-limited-to-pantry-product-items-product-added-and-shopping-provenance",
-      "hybrid-session-authority-active-exact-epoch-and-live-hmac-binding",
-      "local-application-db-requires-local-auth-users-zero",
+      "full-local-auth-uuid-session-binding-and-auth-uid-rls-active",
+      "historical-hybrid-verifier-not-an-active-release-gate",
+      "pre-floor-remote-source-authority-and-production-mutation-zero",
       "no-unmerged-server-production-migration-or-production-rehearsal-write"
     ],
     "verify_commands": [
       "pnpm exec vitest run tests/product-ingredient-link-hybrid-contract-sync.test.ts",
-      "pnpm exec vitest run tests/product-ingredient-link-hybrid-verifier.test.ts",
+      "pnpm exec vitest run tests/full-local-production-runtime.test.ts",
       "pnpm exec vitest run tests/product-ingredient-link-foundation.test.ts tests/product-ingredient-link-routes.test.ts tests/product-ingredient-link-security.test.ts tests/product-ingredient-link-readers.test.ts tests/product-ingredient-link-account-delete.test.ts",
       "pnpm test:product-ingredient-link-foundation:postgres",
       "pnpm verify:backend",
@@ -100,7 +101,7 @@
       "shopping create/detail generic product and all-null legacy response branch evidence",
       "shopping completion pinned provenance and legacy fail-closed evidence",
       "owner-private reference-first cleanup and public/shared preservation evidence",
-      "merged-exact-SHA local application DB/Storage plus remote Auth exact-epoch read-only compatibility evidence"
+      "isolated full-local Auth UUID/session-binding RLS cross-owner delete/recreate and stale-session evidence"
     ]
   },
   "frontend": {
@@ -148,10 +149,10 @@
     }
   },
   "external_smokes": [
-    "server MacBook local application DB/Storage and isolated local rehearsal exact-SHA smoke for GET /recipes/pantry-match, covering unauthorized and authenticated generic/product/mixed pantry reads",
-    "local application DB/rehearsal link-table FK partial-unique RLS grant and exact-principal inventory",
-    "local application DB/rehearsal private-product cascade policy and owner-null public/shared preservation evidence",
-    "minimal remote Auth control-plane exact-epoch/session-binding read-only evidence with local auth.users=0 and remote application writes zero"
+    "isolated full-local rehearsal exact-SHA smoke for GET /recipes/pantry-match, covering unauthorized and local authenticated generic/product/mixed pantry reads",
+    "full-local Auth auth.uid() RLS A/B cross-owner isolation plus link-table FK partial-unique grant and exact-principal inventory",
+    "full-local private-product cascade, owner-null public/shared preservation, delete/recreate and stale-session evidence",
+    "pre-floor remote Supabase remains the read-only migration source; production/staging mutation stays zero until cutover"
   ],
   "blocked_conditions": [
     "stage1-artifacts-not-approved-by-separate-codex-internal-1.5-reviewer",
@@ -187,10 +188,10 @@
     "public-additive-field-outside-approved-pantry-shopping-contract",
     "pantry-or-shopping-product-version-fk-is-not-on-delete-restrict",
     "private-product-cleanup-runs-before-owner-private-references-are-zero",
-    "migration-applied-outside-hybrid-local-data-authority",
-    "hybrid-verifier-sha-does-not-match-merged-source",
-    "local-auth-users-is-not-zero",
-    "remote-auth-exact-epoch-or-live-hmac-binding-evidence-missing",
+    "migration-applied-outside-approved-full-local-pre-floor-or-cutover-authority",
+    "full-local-product-link-rehearsal-verifier-not-yet-implemented",
+    "full-local-auth-uuid-session-binding-or-auth-uid-rls-evidence-missing",
+    "full-local-cross-owner-delete-recreate-or-stale-session-evidence-missing",
     "production-staging-write-or-data-promotion-before-approved-release-gate",
     "current-head-check-pending-absent-stale-failed-or-cancelled"
   ],
@@ -198,5 +199,5 @@
     "backend": 4,
     "frontend": 4
   },
-  "notes": "2026-07-31 승인 Contract Evolution official tuple과 merged Stage 2/3 PR #1255를 기준으로 Stage 4 existing-consumer 자동화를 실행한다. Final Stage 3 task 019fb6e6-4ca6-7320-ab08-dc86b7414a0b는 reviewed head 6b0a1c5232759f3d801c9aa84e1427b12bfc37d1을 P0/P1/P2=0/0/0 approve했고 PR #1255는 d30ee2c8f38a06609e7a5efddbfb0b5df30f712c로 merged됐다. Initial Stage 4 locked consumer RED 3/5 후 GREEN 5/5, existing HOME/PANTRY 94/94를 확보했다. Independent Stage 5 reviewer /root/stage5_product_link_design_review는 exact head 9d974d5db977f6d7d8df47d484fb3956504f8505에서 P0/P1/P2=0/1/1 request_changes를 반환했다. First repair RED locked 2/8 후 GREEN locked 8/8, existing HOME/PANTRY 97/97을 확보했다. Fresh Stage 5 reviewer /root/stage5_product_link_design_rereview는 P1 exact pair를 closed로 확인했지만 exact head c0a5c45dc206dfa5c24c12dfe39822a99b0c2e3d에서 P0/P1/P2=0/0/1 request_changes를 반환했다. Second repair RED locked 1/10은 old-search와 blank/category late completion이 최신 product authority를 덮는 경쟁을 재현했고, GREEN은 latest-mounted request guard로 locked 10/10, existing HOME/PANTRY 99/99을 통과했다. Final fresh Stage 5 reviewer /root/stage5_product_link_final_review는 search guard를 closed로 확인했지만 exact head 395c649f35bf88c2b13e72b600ccb0934313af45에서 add mutation close/reopen race를 P0/P1/P2=0/0/1 request_changes로 반환했다. Third repair RED locked 1/12은 old add success가 reopened sheet를 닫고 false toast/refetch를 발생시키는 문제를 재현했다. GREEN은 latest-mounted mutation guard로 locked 12/12, existing HOME/PANTRY 101/101, focused Playwright desktop/390/320 3 passed/3 intentional project skips, verify:frontend:pr 및 CI=1 verify:frontend full regression 924 passed/144 skipped, accessibility 18 passed/15 skipped, visual 23 passed/22 skipped, security 12/12를 통과했다. Production/staging/remote writes는 0이며 full local/remote hybrid evidence, Manual Only, fresh independent Stage 5 review, Stage 6, Stage 4 exact-head approval과 merge는 pending이다."
+  "notes": "2026-07-31 승인 Contract Evolution과 merged Stage 2/3를 기준으로 Stage 4 existing-consumer 자동화를 실행했고 exact product/version, fail-closed, stale search/mutation repairs와 frontend gates를 통과했다. 2026-08-01 full-local relock 뒤 historical hybrid verifier는 active release gate가 아니다. 현재 executable subset은 contract sync와 full-local runtime static test이며 product-link 전용 full-local Auth/RLS/cross-owner/delete-recreate/stale-session rehearsal verifier는 아직 구현되지 않아 명시적 blocked condition과 Manual Only로 남는다. Production/staging writes는 zero이며 fresh exact-head review, current-head CI, Stage 6와 merge는 pending이다."
 }

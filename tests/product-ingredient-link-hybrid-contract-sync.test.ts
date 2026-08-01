@@ -16,6 +16,7 @@ describe("product ingredient link contract lock", () => {
   const acceptancePath = `docs/workpacks/${sliceId}/acceptance.md`;
   const automationPath = `docs/workpacks/${sliceId}/automation-spec.json`;
   const workItemPath = `.workflow-v2/work-items/${sliceId}.json`;
+  const statusPath = ".workflow-v2/status.json";
   const requirementsPath = "docs/요구사항기준선-v1.7.28.md";
   const screensPath = "docs/화면정의서-v1.5.32.md";
   const flowPath = "docs/유저flow맵-v1.3.30.md";
@@ -85,6 +86,66 @@ describe("product ingredient link contract lock", () => {
     expect(bundle).not.toContain("BRANCH_NAME=docs/product-ingredient-link-stage2-relock");
     expect(bundle).toContain(
       "BRANCH_NAME=docs/product-ingredient-link-contract-evolution",
+    );
+  });
+
+  it("routes active workflow gates through full-local authority and keeps status in sync", () => {
+    const workItem = JSON.parse(read(workItemPath)) as {
+      dependencies: string[];
+      workflow: { external_smokes: string[] };
+      verification: {
+        required_checks: string[];
+        artifact_assertions: string[];
+      };
+      status: { approval_state: string };
+    };
+    const automation = JSON.parse(read(automationPath)) as {
+      backend: { invariants: string[]; required_test_targets: string[] };
+      external_smokes: string[];
+      blocked_conditions: string[];
+    };
+    const status = JSON.parse(read(statusPath)) as {
+      items: Array<{
+        id: string;
+        approval_state: string;
+        required_checks: string[];
+      }>;
+    };
+    const aggregate = status.items.find((item) => item.id === sliceId);
+
+    expect(workItem.dependencies.join("\n")).toContain(
+      "full-local UUID/session-binding/RLS",
+    );
+    expect(workItem.workflow.external_smokes.join("\n")).toContain(
+      "full-local Auth auth.uid() RLS",
+    );
+    expect(workItem.verification.required_checks).toContain(
+      "pnpm exec vitest run tests/full-local-production-runtime.test.ts",
+    );
+    expect(workItem.verification.required_checks).not.toContain(
+      "pnpm exec vitest run tests/product-ingredient-link-hybrid-verifier.test.ts",
+    );
+    expect(workItem.verification.required_checks).not.toContain(
+      "node scripts/verify-product-ingredient-link-hybrid.mjs --mode post-merge-read-only",
+    );
+    expect(workItem.verification.artifact_assertions).toContain(
+      "full-local-auth-uuid-session-binding-rls-cross-owner-delete-recreate-evidence",
+    );
+    expect(automation.backend.invariants).toContain(
+      "historical-hybrid-verifier-not-an-active-release-gate",
+    );
+    expect(automation.backend.required_test_targets.join("\n")).toContain(
+      "full-local Auth UUID/session-binding",
+    );
+    expect(automation.external_smokes.join("\n")).toContain(
+      "full-local Auth auth.uid() RLS",
+    );
+    expect(automation.blocked_conditions).toContain(
+      "full-local-product-link-rehearsal-verifier-not-yet-implemented",
+    );
+    expect(aggregate?.approval_state).toBe(workItem.status.approval_state);
+    expect(aggregate?.required_checks).toEqual(
+      workItem.verification.required_checks,
     );
   });
 
