@@ -76,3 +76,37 @@
 - independent Stage 3 code/security/DB review.
 
 The implementation keeps all acceptance and lifecycle completion items unchecked until those exact evidence gates are satisfied.
+
+## Stage 3 REQUEST_CHANGES repair — 2026-08-02
+
+- Review input: PR #1265 head `4bf8e8781f76b1306382ed0715ead585890cd93c`, verdict `REQUEST_CHANGES`, findings `P0/P1/P2 = 0/3/0`.
+- Role boundary: the same Stage 2 implementer repaired the three findings. This evidence is not a Stage 3 approval, Ready decision, merge decision or lifecycle completion.
+
+### Mutation RED and focused GREEN
+
+1. Explicit application authority environment:
+   - RED: `tests/recipe-snapshot-authority-full-local-verifier.test.ts` reported `1 failed / 8 passed`; the verifier exported no fail-closed environment assertion.
+   - GREEN: `HOMECOOK_AUTH_AUTHORITY=local` and `HOMECOOK_DATA_AUTHORITY=local` are both required before dry-run or execution. Missing, remote, local-shadow, typo and mixed values are rejected without echoing the supplied value.
+2. Exact target-DB security inventory:
+   - RED: `pnpm test:full-local-auth-db-foundation:postgres` reported `6 failed / 6 passed`; the exact inventory builder/assertion did not exist.
+   - GREEN: `12 passed`, including actual transactional mutations for allow-all function body, `anon` EXECUTE, SECURITY/search_path drift, required owner RLS removal plus dummy `auth.uid()` policy and an unexpected overload. Every mutation is rolled back inside its isolated PostgreSQL fixture.
+3. Auth-only public exposure and Compose publication:
+   - RED: `tests/full-local-production-runtime.test.ts` failed before collection because the proxy could not be imported as a pure request boundary (`Invalid URL`).
+   - Additional RED during security diff review: `2 failed / 38 passed`; literal dot segments could be normalized from an Auth-prefixed path into REST or Storage.
+   - GREEN: `40 passed`; the production handler now uses the tested pure request decision, rejects encoded/duplicate/dot-segment/direct-origin/private service paths across method/query/trailing-slash variants, and startup rejects equality/regex/Set/encoded-storage matcher mutations. Parsed Compose model mutations reject short-form published ports on PostgreSQL, PostgREST, Storage and Studio and require both gateway publications to bind loopback.
+
+### Repair verification recorded before push
+
+- Combined focused verifier/public-boundary suite: 2 files, 49 tests passed.
+- Snapshot/full-local/Train B required set: 16 files, 110 tests passed.
+- Snapshot isolated PostgreSQL existing/fresh/replay: first mode 14 passed with 1 intended skip; second mode 15 passed.
+- Full-local isolated PostgreSQL: 12 tests passed.
+- PR #1263 full-local runtime/app regression set: 10 files passed, 1 Docker smoke file skipped by its explicit opt-in gate; 133 tests passed, 1 skipped.
+- Replace-ref/graft and read-only SQL regression: 10 tests passed.
+- `pnpm lint` and `pnpm typecheck`: passed after the repair.
+- `pnpm verify:backend`: product Vitest 202 files passed and 9 skipped, 2,544 tests passed and 128 skipped; Next.js production build passed; Playwright security smoke 12 passed.
+- source-of-truth, workpack, automation-spec, workflow-v2, OMO bookkeeping, closeout sync and branch validators plus `git diff --check`: passed.
+- `pnpm audit --audit-level high`: high-or-higher findings 0; the existing low-severity advisory remains 1.
+- Production, staging and remote application writes remain `0 / 0 / 0`. No activation, cutover, provider callback, Cloudflare, backup, restore or actual production cleanup operation was run.
+
+All Manual Only items above remain pending. The repaired current head still requires a fresh independent Stage 3 code/security/DB re-review and all current-head PR checks; this Stage 2 task does not approve or merge it.
