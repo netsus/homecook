@@ -17,6 +17,8 @@ describe("product ingredient link contract lock", () => {
   const automationPath = `docs/workpacks/${sliceId}/automation-spec.json`;
   const workItemPath = `.workflow-v2/work-items/${sliceId}.json`;
   const statusPath = ".workflow-v2/status.json";
+  const closeoutEvidencePath =
+    `docs/workpacks/${sliceId}/evidence/2026-08-01-stage4-6-closeout.md`;
   const requirementsPath = "docs/요구사항기준선-v1.7.28.md";
   const screensPath = "docs/화면정의서-v1.5.32.md";
   const flowPath = "docs/유저flow맵-v1.3.30.md";
@@ -147,6 +149,72 @@ describe("product ingredient link contract lock", () => {
     expect(aggregate?.required_checks).toEqual(
       workItem.verification.required_checks,
     );
+  });
+
+  it("records the merged Stage 6 closeout without closing Manual Only gates", () => {
+    const workItem = JSON.parse(read(workItemPath)) as {
+      status: {
+        lifecycle: string;
+        verification_status: string;
+        evaluation_status: string;
+      };
+      closeout?: {
+        phase: string;
+        verification_projection: { external_smokes: string };
+        merge_gate_projection: {
+          current_head_sha: string;
+          all_checks_green: boolean;
+        };
+      };
+    };
+    const status = JSON.parse(read(statusPath)) as {
+      items: Array<{
+        id: string;
+        lifecycle: string;
+        verification_status: string;
+        evaluation_status: string;
+      }>;
+    };
+    const aggregate = status.items.find((item) => item.id === sliceId);
+    const acceptance = read(acceptancePath);
+    const readme = read(readmePath);
+    const roadmap = read("docs/workpacks/README.md");
+    const evidence = read(closeoutEvidencePath);
+
+    expect(workItem.status).toMatchObject({
+      lifecycle: "merged",
+      verification_status: "passed",
+      evaluation_status: "passed",
+    });
+    expect(workItem.closeout).toMatchObject({
+      phase: "completed",
+      verification_projection: { external_smokes: "pending" },
+      merge_gate_projection: {
+        current_head_sha: "27fc07c48e61f9f8c252949e598ef5c67fc00068",
+        all_checks_green: true,
+      },
+    });
+    expect(aggregate).toMatchObject({
+      lifecycle: "merged",
+      verification_status: "passed",
+      evaluation_status: "passed",
+    });
+    expect(acceptance).toContain(
+      "[x] independent internal 1.5, security/DB and five-axis reviewers",
+    );
+    expect(acceptance).toContain(
+      "[x] Draft→Ready and current exact head started checks",
+    );
+    expect(readme).toContain("PR #1256");
+    expect(readme).toContain("5e9773f5e715e7d63132d7f6b8fadcaafd4b76a0");
+    expect(roadmap).not.toMatch(
+      /\| `product-ingredient-link-foundation` \| in-progress \|/,
+    );
+    expect(
+      roadmap.match(/\| `product-ingredient-link-foundation` \| merged \|/g),
+    ).toHaveLength(2);
+    expect(evidence).toContain("P0/P1/P2=0/0/0");
+    expect(evidence).toContain("Manual Only");
   });
 
   it("records the approved product pantry and shopping contract evolution", () => {
@@ -392,7 +460,7 @@ describe("product ingredient link contract lock", () => {
     expect(bundle).toContain(target);
   });
 
-  it("projects the merged verifier evidence without closing the full lifecycle", () => {
+  it("preserves the historical verifier evidence without closing Manual Only gates", () => {
     const target = "tests/product-ingredient-link-hybrid-verifier.test.ts";
     const workItem = JSON.parse(read(workItemPath)) as Record<string, unknown>;
     const workItemStatus = workItem.status as Record<string, unknown>;
@@ -428,14 +496,14 @@ describe("product ingredient link contract lock", () => {
     );
     expect(read(readmePath)).not.toContain("No merged exact-SHA result");
     expect(workItemStatus).toMatchObject({
-      lifecycle: "in_progress",
-      verification_status: "pending",
-      evaluation_status: "not_started",
+      lifecycle: "merged",
+      verification_status: "passed",
+      evaluation_status: "passed",
     });
     expect(statusItem).toMatchObject({
-      lifecycle: "in_progress",
-      verification_status: "pending",
-      evaluation_status: "not_started",
+      lifecycle: "merged",
+      verification_status: "passed",
+      evaluation_status: "passed",
     });
   });
 });

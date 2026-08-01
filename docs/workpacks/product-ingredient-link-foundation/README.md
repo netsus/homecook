@@ -156,7 +156,7 @@ Schema Change:
 - [ ] 확정 (confirmed)
 - [x] N/A — 새 screen/route/layout/navigation/component hierarchy/visual hierarchy 변경 없음
 
-기존 HOME/PANTRY consumer behavior는 Stage 4에서 회귀 검증했고, exact head `04d4b26c424ac4643a73febdaa0307e131198e39`의 독립 Stage 5 리뷰도 `P0/P1/P2=0/0/0`으로 승인됐다. Full-local rebased current-head review/checks와 Stage 6 closeout은 아직 남았다.
+기존 HOME/PANTRY consumer behavior는 Stage 4에서 회귀 검증했고, exact head `27fc07c48e61f9f8c252949e598ef5c67fc00068`의 독립 code/security/Stage 6 검토도 `P0/P1/P2=0/0/0`으로 승인됐다. PR #1256은 current-head 전체 checks green 뒤 merge SHA `5e9773f5e715e7d63132d7f6b8fadcaafd4b76a0`로 병합됐으며, 서버 MacBook 운영 증거는 아래 Manual Only 경계에 남아 있다.
 
 ## Source Links
 
@@ -206,6 +206,14 @@ Schema Change:
 - Fresh independent Stage 5 approval reviewer `/root/stage5_product_link_approval_review` approved exact head `04d4b26c424ac4643a73febdaa0307e131198e39` with blocker/major/minor and `P0/P1/P2` both `0/0/0`. It confirmed `accept-link-existing-consumers`, `accept-link-existing-ui-states` and `accept-link-successor-ui-boundary`, kept Design `N/A/not-required`, and observed `20` success plus one intentional `full-regression` skip with failed/pending `0`. Stage 6 closeout remains pending.
 - After the full-local base merge, independent code review of `2528eede51579d489e13a6468dc3b144f3ad425a` returned `P0/P1/P2=0/1/1`: active workflow gates still pointed at the historical hybrid verifier and aggregate/per-item approval state differed. The independent verifier also found `P0/P1/P2=0/1/1`: a selected cached theme could mask an initial HOME recipe error, and the Stage 6 wording was ahead of the pending status. Repair RED failed the new workflow lock `1/13` and the selected-theme HOME regression; GREEN passes the workflow lock, focused HOME/PANTRY consumer set `115/115`, full-local runtime static tests `22/22`, lint/typecheck and all source/workflow/workpack/automation/bookkeeping validators. Historical hybrid evidence remains documented but is no longer an active release gate; fresh repaired-head review and current-head CI are pending.
 - Fresh review of repaired exact head `2907feb31336aee246a850fd84aba997710bb8a8` closed the prior findings: independent code review returned `P0/P1/P2=0/0/0`. A separate security review found `P0/P1/P2=0/1/0` because a previous authenticated user's slow pantry-list response could overwrite the next user's screen after an Auth session change. RED reproduced the cross-session stale response; GREEN invalidates pending list reads on every Auth transition and passes the focused HOME/PANTRY/product consumer set `103/103`. The independent verifier also exposed a date-dependent PostgreSQL fixture that became invalid after `2026-07-31`; its locked plan date now passes isolated fresh/replay PostgreSQL `20/20` each. The migration security scan retains all five assertions while replacing repository-wide greedy scans with latest-function-bounded scans, reducing the isolated suite from multi-second execution to `15ms`. Fresh final-head reviews and current-head CI remain pending; no completion is claimed here.
+
+### Stage 6 final closeout evidence
+
+- PR #1256 final exact head `27fc07c48e61f9f8c252949e598ef5c67fc00068` is a tree-identical evidence commit over reviewed implementation head `fd82fd200d7a5da17032388be8ebdd0b9f2f93a8`. Fresh independent code and security reviews both returned `P0/P1/P2=0/0/0`, and the independent verifier returned `MERGE-READY YES` for that exact remote head.
+- Every check started for the exact final head finished success or documented intended skip. The sole skip was the normal `full-regression` skip; pending, failed, cancelled and rerun-in-progress counts were all zero.
+- Local final evidence includes focused HOME/PANTRY consumer regressions, full-local runtime locks, isolated PostgreSQL fresh/replay `20/20` each, source/workflow/workpack/automation/OMO validators, lint, typecheck, `git diff --check`, `pnpm verify:frontend:pr`, and `CI=1 pnpm verify:frontend`. The frontend PR gate passed 2,429 product tests with 128 normal skips; the full gate passed regression 924/144 skip, accessibility 18/15 skip, visual 23/22 skip and security 12/12.
+- PR #1256 squash-merged as protected-base SHA `5e9773f5e715e7d63132d7f6b8fadcaafd4b76a0`. The detailed reviewer and command record is preserved in `docs/workpacks/product-ingredient-link-foundation/evidence/2026-08-01-stage4-6-closeout.md`.
+- Existing-schema digest, production-equivalent query plan, server-Mac full-local Auth/RLS/delete-recreate rehearsal and production activation remain Manual Only. This closeout performed zero production/staging writes and does not authorize activation.
 
 ### Local fixture and real DB matrix
 

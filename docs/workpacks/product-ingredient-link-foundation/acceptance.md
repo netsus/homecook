@@ -2,7 +2,7 @@
 
 > **Full-local relock 2026-08-01:** pantry/shopping product authority와 owner cleanup 의미는 유지하되 local Auth UUID/session binding이 active principal이다. remote exact-epoch와 `local auth.users=0` 검증은 역사적 hybrid evidence이며 full-local RLS/cross-owner/delete-recreate smoke로 재잠근다.
 
-> Evidence is checked only after the owning implementation/review stage produces it. 2026-07-31 사용자 승인 Contract Evolution은 current official tuple v1.7.28 / v1.5.32 / v1.3.30 / DB v1.3.30 / API v1.2.33에 반영됐다. Stage 2/3 PR #1255는 final reviewed head `6b0a1c5232759f3d801c9aa84e1427b12bfc37d1` 승인 뒤 `d30ee2c8f38a06609e7a5efddbfb0b5df30f712c`로 merged됐다. Stage 4/5는 PR #1256 reviewed head `04d4b26c424ac4643a73febdaa0307e131198e39`에서 consumer regression, 세 차례 race repair와 independent Stage 5 `P0/P1/P2=0/0/0`을 증명했다. Full-local base merge 뒤 current-head checks, fresh independent review, Stage 6와 아래 Manual Only 운영 증거는 계속 미완료다.
+> Evidence is checked only after the owning implementation/review stage produces it. 2026-07-31 사용자 승인 Contract Evolution은 current official tuple v1.7.28 / v1.5.32 / v1.3.30 / DB v1.3.30 / API v1.2.33에 반영됐다. Stage 2/3 PR #1255는 final reviewed head `6b0a1c5232759f3d801c9aa84e1427b12bfc37d1` 승인 뒤 `d30ee2c8f38a06609e7a5efddbfb0b5df30f712c`로 merged됐다. Stage 4/5/6 PR #1256은 consumer regression과 race repair를 잠그고, exact head `27fc07c48e61f9f8c252949e598ef5c67fc00068`의 독립 code/security/final verification `P0/P1/P2=0/0/0`, current-head 전체 checks green을 확인한 뒤 `5e9773f5e715e7d63132d7f6b8fadcaafd4b76a0`로 merged됐다. 아래 Manual Only 운영 증거는 계속 미완료다.
 
 ## Happy Path
 
@@ -90,5 +90,5 @@
 - [x] Stage 4 adds behavior-only HOME/PANTRY consumer unit and focused Playwright regressions with no visual hierarchy change <!-- omo:id=accept-link-stage4-consumer-tests;stage=4;scope=frontend;review=5,6 -->
 - [x] focused Vitest covers link predicate, route/helper readers, ACL/PII and account-delete behavior <!-- omo:id=accept-link-vitest-targets;stage=2;scope=backend;review=3,6 -->
 - [x] PostgreSQL integration covers isolated fresh/replay, FK/check/partial unique, RLS/grants and concurrent promotion <!-- omo:id=accept-link-postgres-targets;stage=2;scope=backend;review=3,6 -->
-- [ ] independent internal 1.5, security/DB and five-axis reviewers finish with unresolved required findings zero on the full-local rebased current head <!-- omo:id=accept-link-independent-reviews;stage=2;scope=shared;review=3,6 -->
-- [ ] Draft→Ready and current exact head started checks all finish success or documented normal skip before squash merge <!-- omo:id=accept-link-current-head-ci;stage=2;scope=shared;review=3,6 -->
+- [x] independent internal 1.5, security/DB and five-axis reviewers finish with unresolved required findings zero on the full-local rebased current head <!-- omo:id=accept-link-independent-reviews;stage=2;scope=shared;review=3,6 -->
+- [x] Draft→Ready and current exact head started checks all finish success or documented normal skip before squash merge <!-- omo:id=accept-link-current-head-ci;stage=2;scope=shared;review=3,6 -->
