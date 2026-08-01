@@ -72,6 +72,7 @@ export function PantryScreen({
   const [authState, setAuthState] = useState<AuthState>(
     initialAuthenticated ? "authenticated" : "checking",
   );
+  const [authGeneration, setAuthGeneration] = useState(0);
   const [viewState, setViewState] = useState<ViewState>("loading");
   const [items, setItems] = useState<PantryItem[]>([]);
   const [productItems, setProductItems] = useState<PantryProductItem[]>([]);
@@ -95,6 +96,7 @@ export function PantryScreen({
   const [isDeleting, setIsDeleting] = useState(false);
   const [toast, setToast] = useState<{ message: string; tone: "success" | "error" } | null>(null);
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pantryRequestSequenceRef = useRef(0);
   const isMobileViewport = useIsMobileViewport();
 
   const allDisplayItems = useMemo(
@@ -237,14 +239,43 @@ export function PantryScreen({
     };
   }, []);
 
+  const applyAuthSession = useCallback((session: Session | null) => {
+    pantryRequestSequenceRef.current += 1;
+    setItems([]);
+    setProductItems([]);
+    setViewState("loading");
+    setIsSelectMode(false);
+    setSelectedIds(new Set());
+    setShowDeleteConfirm(false);
+    setShowAddSheet(false);
+    setShowBundlePicker(false);
+    setShowPantryRecommendations(false);
+    setPlannerAddTarget(null);
+    setIsPlannerAddSheetOpen(false);
+    setAuthGeneration((current) => current + 1);
+    setAuthState(session ? "authenticated" : "unauthorized");
+  }, []);
+
   const loadItems = useCallback(
     async () => {
+      const requestSequence = pantryRequestSequenceRef.current + 1;
+      pantryRequestSequenceRef.current = requestSequence;
+
       try {
         const result = await fetchPantryList();
+
+        if (requestSequence !== pantryRequestSequenceRef.current) {
+          return;
+        }
+
         setItems(result.items);
         setProductItems(result.product_items ?? []);
         setViewState("ready");
       } catch (error) {
+        if (requestSequence !== pantryRequestSequenceRef.current) {
+          return;
+        }
+
         if (isPantryApiError(error) && error.status === 401) {
           setAuthState("unauthorized");
           return;
@@ -466,11 +497,12 @@ export function PantryScreen({
         data: { subscription },
       } = supabase.auth.onAuthStateChange(
         (_event: AuthChangeEvent, session: Session | null) => {
-          setAuthState(session ? "authenticated" : "unauthorized");
+          applyAuthSession(session);
         },
       );
 
       return () => {
+        pantryRequestSequenceRef.current += 1;
         subscription.unsubscribe();
       };
     }
@@ -485,21 +517,22 @@ export function PantryScreen({
     void supabase.auth
       .getSession()
       .then((result: { data: { session: Session | null } }) => {
-        setAuthState(result.data.session ? "authenticated" : "unauthorized");
+        applyAuthSession(result.data.session);
       });
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(
       (_event: AuthChangeEvent, session: Session | null) => {
-        setAuthState(session ? "authenticated" : "unauthorized");
+        applyAuthSession(session);
       },
     );
 
     return () => {
+      pantryRequestSequenceRef.current += 1;
       subscription.unsubscribe();
     };
-  }, [initialAuthenticated]);
+  }, [applyAuthSession, initialAuthenticated]);
 
   // Load items on auth
   useEffect(() => {
@@ -508,7 +541,7 @@ export function PantryScreen({
     }
 
     void loadItems();
-  }, [authState, loadItems]);
+  }, [authGeneration, authState, loadItems]);
 
   // --- Render states ---
 
