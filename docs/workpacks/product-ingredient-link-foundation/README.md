@@ -1,6 +1,6 @@
 # product-ingredient-link-foundation
 
-> 2026-07-31 사용자 승인 Contract Evolution relock. The historical master plan SHA-256 `45f02013fbc1c3af1936d596605230d0cbac7839a783224aa9535844e4bda7dc` (1,056 lines) remains product-link design history, while its local-only Auth/deployment assumptions are superseded by `docs/sync/CURRENT_SOURCE_OF_TRUTH.md`. Official baseline: requirements v1.7.27, screens v1.5.31, flow v1.3.29, DB v1.3.28, API v1.2.31.
+> 2026-07-31 사용자 승인 Contract Evolution relock. The historical master plan SHA-256 `45f02013fbc1c3af1936d596605230d0cbac7839a783224aa9535844e4bda7dc` (1,056 lines) remains product-link design history, while its local-only Auth/deployment assumptions are superseded by `docs/sync/CURRENT_SOURCE_OF_TRUTH.md`. Official baseline: requirements v1.7.28, screens v1.5.32, flow v1.3.30, DB v1.3.30, API v1.2.33.
 
 ## Goal
 
@@ -11,8 +11,8 @@
 - Stage 1 Contract Evolution docs: `docs/product-ingredient-link-contract-evolution`
 - Stage 2 backend/data: `feature/be-product-ingredient-link-foundation`
 - Stage 4 existing-consumer regression: `feature/fe-product-ingredient-link-foundation`
-- Release train: B. `account-session-generation-foundation`과 `recipe-visibility-read-hardening`은 모두 병합됐다. Stage 2는 hybrid exact-epoch/session-authority 경계 안에서만 구현하며 production activation은 별도 Manual Only gate로 남긴다.
-- 초기 배포 gate: application Data/Storage authority는 server MacBook local Next.js + local Supabase, Auth control-plane은 remote Auth다. verifier는 둘을 분리해 읽기 전용으로 확인하고 production/staging/remote application write는 0이어야 한다.
+- Release train: B. `account-session-generation-foundation`과 `recipe-visibility-read-hardening`은 모두 병합됐다. Product-link behavior는 full-local UUID/session-binding/RLS 계약을 소비하며 production activation은 별도 Manual Only gate로 남긴다.
+- 배포 gate: cutover floor 전에는 remote Supabase Auth/DB/Storage가 migration source-of-record이고, 최종 authority는 server MacBook의 same-host Next.js + self-hosted Supabase Auth/DB/Storage다. verifier는 pre-floor/cutover/post-floor를 분리하고 승인 전 production mutation은 0이어야 한다.
 - Stage 1 author, internal 1.5 reviewer/repair-final owner, implementation owner, security/DB reviewer와 five-axis reviewer는 사용자 승인대로 서로 다른 Codex 세션을 사용하며 Claude는 사용하지 않는다.
 
 ## In Scope
@@ -73,7 +73,7 @@ Schema Change:
 | historical cooking/meal-log contract base PR #1072 | merged | superseded baseline; active authority is the current tuple in `docs/sync/CURRENT_SOURCE_OF_TRUTH.md` |
 | `account-session-generation-foundation` | merged | F0 backend/frontend foundation and independent closeout are available; production generation activation remains Manual Only |
 | `prepared-food-search-relevance` | merged | successor #1 implementation and closeout predecessor complete |
-| `recipe-visibility-read-hardening` (#3) | merged | hybrid session/image/account-delete runtime and existing MANUAL_RECIPE_CREATE integration complete |
+| `recipe-visibility-read-hardening` (#3) | merged | session/image/account-delete runtime and existing MANUAL_RECIPE_CREATE integration complete; production activation remains behind the full-local cutover gate |
 
 > PR #1076의 historical Stage 1 approval은 이전 tuple에 대한 기록이다. 2026-07-31 사용자 승인 Contract Evolution은 이 작업의 새 internal 1.5 docs gate를 통과하기 전까지 최종 승인되지 않으며, 이 작성 작업은 자기 변경을 승인하지 않는다. 기존 link-only subset/verifier의 merged evidence는 유지하되 새 pantry/shopping contract의 Stage 2/4 evidence를 주장하지 않는다.
 
@@ -151,7 +151,12 @@ Schema Change:
 
 ## Design Status
 
-`N/A`. No new screen or visual-system change. Existing HOME/PANTRY consumer behavior is regression-tested at Stage 4/5.
+- [ ] 임시 UI (temporary)
+- [ ] 리뷰 대기 (pending-review)
+- [ ] 확정 (confirmed)
+- [x] N/A — 새 screen/route/layout/navigation/component hierarchy/visual hierarchy 변경 없음
+
+기존 HOME/PANTRY consumer behavior는 Stage 4에서 회귀 검증했고, exact head `04d4b26c424ac4643a73febdaa0307e131198e39`의 독립 Stage 5 리뷰도 `P0/P1/P2=0/0/0`으로 승인됐다. Full-local rebased current-head review/checks와 Stage 6 closeout은 아직 남았다.
 
 ## Source Links
 
@@ -171,7 +176,7 @@ Schema Change:
 - PR #1236 merged the test-first link-only safe subset with focused link/security tests, isolated fresh/replay PostgreSQL integration and backend verification. Draft PR #1255 implements the approved pantry/shopping/reader/account-delete Stage 2 runtime while independent approval remains pending.
 - PR #1248 merged the test-first hybrid verifier as `4881c4c53181a5504e16f2fa3971e9f6f4b99f05` from exact head `e58bea0c544693c1f99104d07bf58bd8c0d01285`. Independent code/security review recorded P0/P1/P2 `0/0/0`, and all 24 current-head check runs completed as 14 success plus 10 intended skips. The complete local application DB/Storage plus sanitized remote Auth evidence remains a separate full-lifecycle gate.
 
-### Hybrid verifier implementation evidence
+### Historical hybrid verifier implementation evidence
 
 - RED: `pnpm exec vitest run tests/product-ingredient-link-hybrid-verifier.test.ts` failed `2/7` because the draft required `HEAD == origin/master` and the CLI did not prove that an exact historical HEAD remained merged after `origin/master` advanced.
 - GREEN: the same focused verifier suite passed `7/7` after the source gate changed to `git merge-base --is-ancestor HEAD origin/master` plus a clean tracked-tree check.
@@ -187,6 +192,20 @@ Schema Change:
 - Repair GREEN proves focused route tests `23/23`, focused Stage 2 suites `62/62`, isolated PostgreSQL fresh/replay `12/12` each, full Vitest `4,763` passed plus `232` normal skips, backend product tests `2,425` passed plus `128` normal skips, production build, security Playwright `12/12`, and source/workflow/workpack/automation/OMO/diff validators. The repository-wide local security-function gate stopped before target execution because the existing local DB has an unrelated partially deployed hybrid additive contract; the isolated target PostgreSQL role matrix is green. Independent re-review and current-head CI remain pending; this task does not self-approve.
 - The fresh security/DB re-review `/root/stage2_security_db_review` approved exact head `66c27efac705939d9ae620affdf8aae92378c086` with `Critical/High/Medium/Low=0/0/0/0`. Fresh Stage 3 reviewer task `019fb668-233f-7ec1-a6a4-f507a74fe223` then returned `request_changes` at the same head with `P0/P1/P2=0/2/2`, identifying create-RPC payload ownership and two-session atomicity plus missing behavior/evidence coverage.
 - Second repair RED reproduced an authenticated cross-owner SECURITY DEFINER payload write, a two-session `lists=2/attached=1/orphan=1` race, a caller-omitted locked-meal item set, and a valid split that failed against the real immutable snapshot trigger once the previously omitted snapshot-authority migration was restored to the isolated chain. GREEN now proves independent zero-write rejection for cross-user remainder, foreign owner column/recipe, omitted source identities and private/hidden product inputs; one success plus one existing `CONFLICT` and orphan zero under the race; server-recomputed pantry exclusion/complete-without-list; route detail/create/complete provenance branches; actual PostgreSQL pinned-version completion for null/empty/selected/retry semantics; and one-time server-only snapshot cloning that preserves the locked source meal pin while forged/direct clone authority is denied. The current evidence is focused route `57/57`, focused Stage 2 selection `97` passed with `20` normal integration skips, isolated PostgreSQL fresh/replay `20/20` each plus dirty preflight, full Vitest `4,765` passed with `240` normal skips, backend product `2,428` passed with `128` normal skips, build, security Playwright `12/12`, and validators. Replacement exact-head review and current-head CI remain pending; this implementation task does not self-approve.
+- Final Stage 3 reviewer task `019fb6e6-4ca6-7320-ab08-dc86b7414a0b` approved exact head `6b0a1c5232759f3d801c9aa84e1427b12bfc37d1` with `P0/P1/P2=0/0/0`; the security/DB product-head review remained `Critical/High/Medium/Low=0/0/0/0`. PR #1255 then squash-merged as protected-base SHA `d30ee2c8f38a06609e7a5efddbfb0b5df30f712c`.
+
+### Stage 4 existing-consumer evidence
+
+- RED: locked `tests/product-ingredient-link-consumer.test.tsx` failed `3/5` before implementation: product-only HOME cleanout did not render when the generic recipe list was empty, additive PANTRY product rows were discarded, and the existing add sheet could not submit exact product/version identity.
+- GREEN: the locked suite passes `5/5` and behaviorally proves product-only plus generic/product-distinct consumption, no-link name-guess fail-closed behavior, no raw PANTRY fallback from HOME, exact product/version display and POST payload, product-row read-only behavior, and existing unauthorized/error recovery.
+- Existing HOME/PANTRY regression passed `94/94`. Focused Playwright passed desktop `1280px`, mobile `390px`, and mobile `320px` as `3` passed plus `3` project-mismatch intentional skips; attached screenshots confirm the existing shell/layout while exact product/version text remains present. No new route, navigation, public interaction, component hierarchy, custom-recipe/meal-log control, or production/staging/remote write was added. Design remains `N/A/not-required`; this was the initial Stage 4 evidence before the review-repair rounds below.
+- Independent Stage 5 reviewer `/root/stage5_product_link_design_review` returned `request_changes` at exact head `9d974d5db977f6d7d8df47d484fb3956504f8505` with `P0/P1/P2=0/1/1`: existing-product identity compared only `food_product_id`, and category selection could retain stale product-search results.
+- Repair RED failed `2/8` locked consumer cases while the other `6/8` remained green: the same product with a different nutrition version was incorrectly disabled, and a category transition retained the prior product result. Repair GREEN passes the locked suite `8/8`, existing HOME/PANTRY `97/97`, focused desktop/390/320 Playwright `3` passed plus `3` intentional project skips, `verify:frontend:pr`, and `CI=1 verify:frontend` including full regression `924` passed/`144` skipped, accessibility `18` passed/`15` skipped, visual `23` passed/`22` skipped, and security `12/12`. Exact same product/version pairs are disabled, different versions remain selectable with their exact payload, and category transitions clear product results immediately.
+- Fresh Stage 5 reviewer `/root/stage5_product_link_design_rereview` confirmed the P1 exact-pair repair closed but returned `request_changes` at exact head `c0a5c45dc206dfa5c24c12dfe39822a99b0c2e3d` with `P0/P1/P2=0/0/1`: late ingredient/product responses were not guarded across query/category changes and sheet lifecycle. Second repair RED failed `1/10` locked cases while `9/10` remained green by completing new, old-search, and blank/category responses out of order. GREEN passes locked `10/10`, existing HOME/PANTRY `99/99`, focused desktop/390/320 Playwright `3` passed plus `3` intentional skips, `verify:frontend:pr`, and `CI=1 verify:frontend`. A monotonic request sequence now permits state writes only for the latest mounted request and invalidates pending work on query/category change, close, unmount, and reopen.
+- Final fresh Stage 5 reviewer `/root/stage5_product_link_final_review` confirmed the search latest-request guard closed but returned `request_changes` at exact head `395c649f35bf88c2b13e72b600ccb0934313af45` with `P0/P1/P2=0/0/1`: an in-flight add mutation could complete after close/reopen and call the prior cycle's parent callbacks or write stale failure/loading state. Third repair RED failed `1/12` locked cases while `11/12` remained green because a late success closed the reopened sheet, showed a false success toast, and refreshed the parent. GREEN passes locked `12/12`, existing HOME/PANTRY `101/101`, focused desktop/390/320 Playwright `3` passed plus `3` intentional skips, `verify:frontend:pr`, and `CI=1 verify:frontend`. A separate monotonic mutation sequence now guards success callbacks, error state, and loading cleanup; close/unmount invalidates the old mutation while the reopened cycle can recover from an active failure and complete one exact-product add normally.
+- Fresh independent Stage 5 approval reviewer `/root/stage5_product_link_approval_review` approved exact head `04d4b26c424ac4643a73febdaa0307e131198e39` with blocker/major/minor and `P0/P1/P2` both `0/0/0`. It confirmed `accept-link-existing-consumers`, `accept-link-existing-ui-states` and `accept-link-successor-ui-boundary`, kept Design `N/A/not-required`, and observed `20` success plus one intentional `full-regression` skip with failed/pending `0`. Stage 6 closeout remains pending.
+- After the full-local base merge, independent code review of `2528eede51579d489e13a6468dc3b144f3ad425a` returned `P0/P1/P2=0/1/1`: active workflow gates still pointed at the historical hybrid verifier and aggregate/per-item approval state differed. The independent verifier also found `P0/P1/P2=0/1/1`: a selected cached theme could mask an initial HOME recipe error, and the Stage 6 wording was ahead of the pending status. Repair RED failed the new workflow lock `1/13` and the selected-theme HOME regression; GREEN passes the workflow lock, focused HOME/PANTRY consumer set `115/115`, full-local runtime static tests `22/22`, lint/typecheck and all source/workflow/workpack/automation/bookkeeping validators. Historical hybrid evidence remains documented but is no longer an active release gate; fresh repaired-head review and current-head CI are pending.
+- Fresh review of repaired exact head `2907feb31336aee246a850fd84aba997710bb8a8` closed the prior findings: independent code review returned `P0/P1/P2=0/0/0`. A separate security review found `P0/P1/P2=0/1/0` because a previous authenticated user's slow pantry-list response could overwrite the next user's screen after an Auth session change. RED reproduced the cross-session stale response; GREEN invalidates pending list reads on every Auth transition and passes the focused HOME/PANTRY/product consumer set `103/103`. The independent verifier also exposed a date-dependent PostgreSQL fixture that became invalid after `2026-07-31`; its locked plan date now passes isolated fresh/replay PostgreSQL `20/20` each. The migration security scan retains all five assertions while replacing repository-wide greedy scans with latest-function-bounded scans, reducing the isolated suite from multi-second execution to `15ms`. Fresh final-head reviews and current-head CI remain pending; no completion is claimed here.
 
 ### Local fixture and real DB matrix
 
@@ -198,13 +217,13 @@ Schema Change:
 - current automated DB evidence runs isolated fresh/replay plus dirty-row preflight and validates focused table/FK/index/check/partial-unique/RLS/grant/function behavior.
 - existing-schema comparison, stable schema/function/grant/data digests and production-equivalent query-plan measurement remain unverified Manual Only evidence; they are not claimed by this Stage 2 runner.
 
-### Security, performance and hybrid release evidence
+### Security, performance and release evidence
 
 - PUBLIC/anon/authenticated/admin/service-principal matrix proves normal users cannot mutate/promote or infer another owner's private product/link.
 - each effective reader uses a bounded indexed set operation without per-row product-link N+1 or unbounded catalog scan.
 - evidence contains no secret, raw provider payload, private product owner identity or user PII.
-- merged-exact-SHA `verify-product-ingredient-link-hybrid.mjs`는 local application DB/Storage schema·reader·role을 읽기 전용으로 확인하고 remote Auth의 exact epoch/session binding evidence만 최소 조회한다.
-- local application DB에는 `local auth.users=0`을 요구한다. remote application DB/Storage, production, staging에는 write하지 않는다.
+- merged-exact-SHA `verify-product-ingredient-link-hybrid.mjs`의 과거 결과는 local application DB/Storage schema·reader·role에 대한 historical read-only evidence로만 보존한다. full-local 최종 gate는 local Auth UUID/session binding과 `auth.uid()` RLS를 별도로 검증한다.
+- cutover floor 전에는 remote Supabase가 source-of-record이며 isolated full-local rehearsal과 production/staging application write 0을 유지한다.
 - migration apply, link promotion, account-generation activation은 이 docs relock이나 unmerged branch에서 실행하지 않는다.
 
 ## Key Rules
@@ -237,6 +256,13 @@ Schema Change:
 - [x] brand-product synonym prohibition, ambiguity fail-closed and broad-anchor preservation are tested <!-- omo:id=delivery-no-guess-policy;stage=2;scope=backend;review=3,6 -->
 - [x] private cascade/public-shared preservation and ingredient restrict are proven <!-- omo:id=delivery-delete-integrity;stage=2;scope=backend;review=3,6 -->
 - [x] RLS/grants/admin promotion and A/B owner isolation are proven <!-- omo:id=delivery-link-security;stage=2;scope=backend;review=3,6 -->
-- [ ] current safe subset records local real DB/replay and merged-exact-SHA hybrid read-only evidence; projection query-plan evidence remains deferred until Contract Evolution <!-- omo:id=delivery-link-verification;stage=2;scope=shared;review=3,6 -->
-- [ ] existing HOME cleanout and PANTRY display/add consumers use the projection contract without raw ingredient-only fallback <!-- omo:id=delivery-link-existing-consumers;stage=4;scope=frontend;review=5,6 -->
-- [ ] existing loading/empty/error/read-only/unauthorized and exact product/version presentation remain unchanged <!-- omo:id=delivery-link-ui-regression;stage=4;scope=frontend;review=5,6 -->
+- [x] current safe subset records isolated local fresh/replay DB evidence and the merged-exact-SHA hybrid verifier's read-only dry-run gate <!-- omo:id=delivery-link-verification;stage=2;scope=shared;review=3,6 -->
+- [x] existing HOME cleanout and PANTRY display/add consumers use the projection contract without raw ingredient-only fallback <!-- omo:id=delivery-link-existing-consumers;stage=4;scope=frontend;review=5,6 -->
+- [x] existing loading/empty/error/read-only/unauthorized and exact product/version presentation remain unchanged <!-- omo:id=delivery-link-ui-regression;stage=4;scope=frontend;review=5,6 -->
+
+## Manual Only
+
+- [ ] existing application DB schema/function/grant/data digest comparison
+- [ ] production-equivalent effective-reader query-plan measurement
+- [ ] server-Mac full-local rehearsal with merged-exact source, preserved UUID/product provenance, local Auth RLS/cross-owner/delete-recreate evidence and pre-floor production mutation zero
+- [ ] production account-generation/account-delete activation and candidate promotion remain behind their separately approved release gates

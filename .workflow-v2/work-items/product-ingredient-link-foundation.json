@@ -18,7 +18,7 @@
     "cooking-meal-log contract-evolution merged as PR #1072",
     "account-session-generation-foundation merged with production activation still Manual Only",
     "prepared-food-search-relevance implementation and closeout merged",
-    "recipe-visibility-read-hardening Stage 2 through Stage 6 merged; product-link work must consume the hybrid exact-epoch/session-authority boundary"
+    "recipe-visibility-read-hardening Stage 2 through Stage 6 merged; product-link work must consume the full-local UUID/session-binding/RLS boundary"
   ],
   "docs_refs": {
     "source_of_truth": [
@@ -50,10 +50,10 @@
     "plan_loop": "required",
     "review_loop": "required",
     "external_smokes": [
-      "server MacBook local application DB/Storage and isolated local rehearsal exact-SHA smoke for GET /recipes/pantry-match, covering unauthorized and authenticated generic/product/mixed pantry reads",
-      "local application DB/rehearsal link-table FK partial-unique RLS grant and exact-principal inventory",
-      "local application DB/rehearsal private-product cascade policy and owner-null public/shared preservation evidence",
-      "minimal remote Auth exact-epoch/session-binding evidence is read-only; local application DB/Storage remains the Data authority and all remote application writes stay zero"
+      "isolated full-local rehearsal exact-SHA smoke for GET /recipes/pantry-match, covering unauthorized and local authenticated generic/product/mixed pantry reads",
+      "full-local Auth auth.uid() RLS A/B cross-owner isolation plus link-table FK partial-unique grant and exact-principal inventory",
+      "full-local private-product cascade, owner-null public/shared preservation, delete/recreate and stale-session evidence",
+      "pre-floor remote Supabase remains the read-only migration source; production/staging mutation stays zero until the full-local cutover gate"
     ],
     "execution_mode": "manual",
     "evaluator_profile": "vertical-slice-strict",
@@ -71,7 +71,7 @@
       "node scripts/validate-automation-spec.mjs --slice product-ingredient-link-foundation",
       "pnpm validate:omo-bookkeeping",
       "pnpm exec vitest run tests/product-ingredient-link-hybrid-contract-sync.test.ts",
-      "pnpm exec vitest run tests/product-ingredient-link-hybrid-verifier.test.ts",
+      "pnpm exec vitest run tests/full-local-production-runtime.test.ts",
       "pnpm exec vitest run tests/product-ingredient-link-foundation.test.ts tests/product-ingredient-link-routes.test.ts tests/product-ingredient-link-security.test.ts tests/product-ingredient-link-readers.test.ts tests/product-ingredient-link-account-delete.test.ts",
       "pnpm test:product-ingredient-link-foundation:postgres",
       "pnpm verify:backend",
@@ -79,7 +79,6 @@
       "pnpm verify:frontend:pr",
       "pnpm test:e2e:regression:ci --grep product-ingredient-link-foundation",
       "pnpm verify:frontend",
-      "node scripts/verify-product-ingredient-link-hybrid.mjs --mode post-merge-read-only",
       "git diff --check"
     ],
     "verify_commands": [
@@ -89,7 +88,7 @@
       "node scripts/validate-automation-spec.mjs --slice product-ingredient-link-foundation",
       "pnpm validate:omo-bookkeeping",
       "pnpm exec vitest run tests/product-ingredient-link-hybrid-contract-sync.test.ts tests/workflow-v2-docs.test.ts tests/omo-automation-spec.test.ts tests/omo-bookkeeping.test.ts tests/omo-doc-gate.test.ts tests/source-of-truth-sync.test.ts",
-      "pnpm exec vitest run tests/product-ingredient-link-hybrid-verifier.test.ts",
+      "pnpm exec vitest run tests/full-local-production-runtime.test.ts",
       "pnpm lint",
       "pnpm typecheck",
       "pnpm audit --audit-level high",
@@ -125,7 +124,7 @@
       "owner-private-reference-first-cleanup-and-public-shared-preservation",
       "f0-plus-slice3-joint-account-delete-activation-gate",
       "local-existing-fresh-replay-and-role-matrix-evidence",
-      "merged-exact-sha-hybrid-local-data-remote-auth-evidence",
+      "full-local-auth-uuid-session-binding-rls-cross-owner-delete-recreate-evidence",
       "approved-additive-fields-limited-to-pantry-and-shopping-contract",
       "independent-codex-required-findings-zero",
       "current-head-all-started-checks-terminal-green-or-intended-skip"
@@ -133,7 +132,7 @@
   },
   "status": {
     "lifecycle": "in_progress",
-    "approval_state": "not_started",
+    "approval_state": "codex_approved",
     "verification_status": "pending",
     "evaluation_status": "not_started",
     "evaluation_round": 0,
@@ -149,12 +148,12 @@
     "Prepared-food search relevance owned by successor #1",
     "Personal recipe writes cooked-batch completion meal-log core or meal-log UI owned by later successors",
     "Production account-generation or account-delete activation before F0 plus slice #3 joint gate",
-    "Migration or data promotion outside hybrid local application Data authority",
+    "Migration or data promotion outside the approved full-local pre-floor/cutover authority",
     "DELETE /pantry product-row contract, public product-link/admin endpoint, new public status/error code, or successor-owned UI/runtime"
   ],
   "open_questions": [
     "Out-of-scope candidate: product pantry row deletion needs a separately approved DELETE /pantry additive contract before implementation",
     "Manual release decision: account-generation cleanup activation remains gated by F0 plus slice #3 joint production evidence"
   ],
-  "notes": "2026-07-31 승인 Contract Evolution PR #1254는 exact base 8b4287f83a99c0cc1f1cc4979b578dc56a2895d0로 merged. Draft PR #1255 reviewed head 3e47eb67e9634603b11a86ce1a7a190591ce5360은 Stage 3 task 019fb631-8a42-7512-881d-8644562cb73a에서 P0/P1/P2=0/5/2 request_changes, native security/DB reviewer /root/stage2_security_db_review에서 Critical/High=0/2 request_changes를 받았고 첫 repair로 수리했다. Security/DB reviewer는 head 66c27efac705939d9ae620affdf8aae92378c086을 Critical/High/Medium/Low=0/0/0/0 approve했지만 fresh Stage 3 task 019fb668-233f-7ec1-a6a4-f507a74fe223는 같은 head에서 P0/P1/P2=0/2/2 request_changes를 반환했다. 두 번째 TDD RED는 authenticated cross-owner create payload가 victim meal/list를 쓰고 두 세션이 lists=2/attached=1/orphan=1을 만들며, caller가 locked-meal item identity를 누락해도 list가 생성되고, 누락된 snapshot-authority migration을 실제 격리 체인에 복구했을 때 valid split이 immutable pin trigger에서 실패하는 것을 PostgreSQL에서 재현했다. GREEN은 deterministic meal FOR UPDATE, locked meal/column/recipe/item/product visibility와 complete source identity set validation, server-derived split/pantry/complete semantics, row-count rollback과 one-time server-only snapshot clone authority를 적용해 independent cross-user/column/recipe/omitted-item/private-hidden product zero-write, race 1 success+1 CONFLICT/orphan 0, pinned completion null/[]/selected/retry, source snapshot 보존과 forged/direct clone 거부를 증명한다. Focused route 57/57, Stage 2 focused selection 97 passed/20 skipped, isolated PostgreSQL fresh/replay 20/20 each plus dirty preflight, full Vitest 4,765 passed/240 skipped, backend product 2,428 passed/128 skipped, build, security Playwright 12/12와 validators는 green이다. Existing-schema digest equivalence와 actual reader production query plan은 검증되지 않아 Manual Only로 되돌렸다. 기존 로컬 DB의 unrelated partially deployed hybrid additive contract 때문에 repository-wide local security-function gate만 target 실행 전 차단됐고 isolated target auth matrix는 green이다. Replacement exact head/current-head CI/independent re-review는 pending이다. Stage 4/5/6 및 production activation/remote Auth evidence는 미수행이며 production/staging/remote application writes는 0이다."
+  "notes": "2026-07-31 승인 Contract Evolution PR #1254와 Stage 2/3 PR #1255가 merged됐다. Stage 2는 cross-owner write, concurrent create orphan, incomplete source identity, pinned completion과 immutable snapshot clone authority를 TDD로 닫았고 final Stage 3 및 security/DB review는 findings zero였다. Stage 4는 HOME/PANTRY exact product/version consumer, no raw fallback, three race repairs와 focused/full frontend gates를 증명했고 independent Stage 5 approval을 받았다. 2026-08-01 full-local relock 뒤 historical hybrid verifier는 active release gate에서 제외됐다. 현재 active Manual Only gate는 isolated full-local Auth UUID/session binding, auth.uid() RLS A/B cross-owner, delete/recreate, stale-session, existing-schema/query-plan과 pre-floor production mutation zero다. Fresh full-local-rebased exact-head review, current-head CI, Stage 6와 merge는 pending이며 production/staging writes는 zero다."
 }

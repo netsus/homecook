@@ -65,13 +65,14 @@
       "common-success-data-error-envelope-preserved",
       "no-new-public-endpoint-status-or-error-code",
       "approved-additive-public-fields-limited-to-pantry-product-items-product-added-and-shopping-provenance",
-      "hybrid-session-authority-active-exact-epoch-and-live-hmac-binding",
-      "local-application-db-requires-local-auth-users-zero",
+      "full-local-auth-uuid-session-binding-and-auth-uid-rls-active",
+      "historical-hybrid-verifier-not-an-active-release-gate",
+      "pre-floor-remote-source-authority-and-production-mutation-zero",
       "no-unmerged-server-production-migration-or-production-rehearsal-write"
     ],
     "verify_commands": [
       "pnpm exec vitest run tests/product-ingredient-link-hybrid-contract-sync.test.ts",
-      "pnpm exec vitest run tests/product-ingredient-link-hybrid-verifier.test.ts",
+      "pnpm exec vitest run tests/full-local-production-runtime.test.ts",
       "pnpm exec vitest run tests/product-ingredient-link-foundation.test.ts tests/product-ingredient-link-routes.test.ts tests/product-ingredient-link-security.test.ts tests/product-ingredient-link-readers.test.ts tests/product-ingredient-link-account-delete.test.ts",
       "pnpm test:product-ingredient-link-foundation:postgres",
       "pnpm verify:backend",
@@ -100,7 +101,7 @@
       "shopping create/detail generic product and all-null legacy response branch evidence",
       "shopping completion pinned provenance and legacy fail-closed evidence",
       "owner-private reference-first cleanup and public/shared preservation evidence",
-      "merged-exact-SHA local application DB/Storage plus remote Auth exact-epoch read-only compatibility evidence"
+      "isolated full-local Auth UUID/session-binding RLS cross-owner delete/recreate and stale-session evidence"
     ]
   },
   "frontend": {
@@ -148,10 +149,10 @@
     }
   },
   "external_smokes": [
-    "server MacBook local application DB/Storage and isolated local rehearsal exact-SHA smoke for GET /recipes/pantry-match, covering unauthorized and authenticated generic/product/mixed pantry reads",
-    "local application DB/rehearsal link-table FK partial-unique RLS grant and exact-principal inventory",
-    "local application DB/rehearsal private-product cascade policy and owner-null public/shared preservation evidence",
-    "minimal remote Auth control-plane exact-epoch/session-binding read-only evidence with local auth.users=0 and remote application writes zero"
+    "isolated full-local rehearsal exact-SHA smoke for GET /recipes/pantry-match, covering unauthorized and local authenticated generic/product/mixed pantry reads",
+    "full-local Auth auth.uid() RLS A/B cross-owner isolation plus link-table FK partial-unique grant and exact-principal inventory",
+    "full-local private-product cascade, owner-null public/shared preservation, delete/recreate and stale-session evidence",
+    "pre-floor remote Supabase remains the read-only migration source; production/staging mutation stays zero until cutover"
   ],
   "blocked_conditions": [
     "stage1-artifacts-not-approved-by-separate-codex-internal-1.5-reviewer",
@@ -187,10 +188,10 @@
     "public-additive-field-outside-approved-pantry-shopping-contract",
     "pantry-or-shopping-product-version-fk-is-not-on-delete-restrict",
     "private-product-cleanup-runs-before-owner-private-references-are-zero",
-    "migration-applied-outside-hybrid-local-data-authority",
-    "hybrid-verifier-sha-does-not-match-merged-source",
-    "local-auth-users-is-not-zero",
-    "remote-auth-exact-epoch-or-live-hmac-binding-evidence-missing",
+    "migration-applied-outside-approved-full-local-pre-floor-or-cutover-authority",
+    "full-local-product-link-rehearsal-verifier-not-yet-implemented",
+    "full-local-auth-uuid-session-binding-or-auth-uid-rls-evidence-missing",
+    "full-local-cross-owner-delete-recreate-or-stale-session-evidence-missing",
     "production-staging-write-or-data-promotion-before-approved-release-gate",
     "current-head-check-pending-absent-stale-failed-or-cancelled"
   ],
@@ -198,5 +199,5 @@
     "backend": 4,
     "frontend": 4
   },
-  "notes": "2026-07-31 사용자 승인 Contract Evolution은 official tuple v1.7.27/v1.5.31/v1.3.29/DB v1.3.28/API v1.2.31에서 기존 ingredient_ids와 generic items를 유지하고 additive product_items/product_added, shopping pinned provenance, composite RESTRICT FK, shared reader와 owner-private reference-first cleanup을 잠근다. 이 Stage 1 docs PR은 implementation/migration/production write를 하지 않고 independent internal 1.5 review 전 self-approval을 금지한다. PR #1236의 link-only authority와 PR #1248의 hybrid verifier merged evidence는 유지되지만 새 pantry/shopping/reader/account-delete/consumer implementation evidence는 unchecked다. Full local/remote evidence, frontend verification and focused Playwright remain pending. F0 and recipe-visibility-read-hardening are merged predecessors; production activation remains Manual Only."
+  "notes": "2026-07-31 승인 Contract Evolution과 merged Stage 2/3를 기준으로 Stage 4 existing-consumer 자동화를 실행했고 exact product/version, fail-closed, stale search/mutation repairs와 frontend gates를 통과했다. 2026-08-01 full-local relock 뒤 historical hybrid verifier는 active release gate가 아니다. 현재 executable subset은 contract sync와 full-local runtime static test이며 product-link 전용 full-local Auth/RLS/cross-owner/delete-recreate/stale-session rehearsal verifier는 아직 구현되지 않아 명시적 blocked condition과 Manual Only로 남는다. Production/staging writes는 zero이며 fresh exact-head review, current-head CI, Stage 6와 merge는 pending이다."
 }

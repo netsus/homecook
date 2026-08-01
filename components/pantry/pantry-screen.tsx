@@ -50,24 +50,16 @@ import {
 import { resolveRecipeImage } from "@/lib/recipe-image";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { hasSupabasePublicEnv } from "@/lib/supabase/env";
-import type { PantryItem } from "@/types/pantry";
+import type {
+  PantryDisplayItem,
+  PantryItem,
+  PantryProductItem,
+} from "@/types/pantry";
 import type { PlannerColumnData } from "@/types/planner";
 import type { PantryMatchRecipeItem } from "@/types/recipe";
 
 type AuthState = "checking" | "authenticated" | "unauthorized";
 type ViewState = "loading" | "error" | "ready";
-type PantryDisplayItem = {
-  category: string;
-  category_group_code?: string | null;
-  category_code?: string | null;
-  category_label?: string | null;
-  created_at: string | null;
-  id: string;
-  ingredient_id: string;
-  isOwned: boolean;
-  standard_name: string;
-};
-
 const TOAST_DURATION_MS = 3000;
 
 export interface PantryScreenProps {
@@ -80,8 +72,10 @@ export function PantryScreen({
   const [authState, setAuthState] = useState<AuthState>(
     initialAuthenticated ? "authenticated" : "checking",
   );
+  const [authGeneration, setAuthGeneration] = useState(0);
   const [viewState, setViewState] = useState<ViewState>("loading");
   const [items, setItems] = useState<PantryItem[]>([]);
+  const [productItems, setProductItems] = useState<PantryProductItem[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [isSelectMode, setIsSelectMode] = useState(false);
@@ -102,11 +96,16 @@ export function PantryScreen({
   const [isDeleting, setIsDeleting] = useState(false);
   const [toast, setToast] = useState<{ message: string; tone: "success" | "error" } | null>(null);
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pantryRequestSequenceRef = useRef(0);
   const isMobileViewport = useIsMobileViewport();
 
   const allDisplayItems = useMemo(
-    () => items.map(toOwnedDisplayItem).sort(comparePantryDisplayItems),
-    [items],
+    () =>
+      [
+        ...items.map(toIngredientDisplayItem),
+        ...productItems.map(toProductDisplayItem),
+      ].sort(comparePantryDisplayItems),
+    [items, productItems],
   );
 
   const searchedItems = useMemo(() => {
@@ -116,8 +115,10 @@ export function PantryScreen({
       return allDisplayItems;
     }
 
-    return allDisplayItems.filter((item) =>
-      item.standard_name.includes(normalizedQuery),
+    return allDisplayItems.filter(
+      (item) =>
+        item.standard_name.includes(normalizedQuery) ||
+        item.detail_text?.includes(normalizedQuery),
     );
   }, [allDisplayItems, searchQuery]);
 
@@ -152,10 +153,12 @@ export function PantryScreen({
       ? categories.filter((category) => category.value === activeCategory)
       : categories;
 
-    return groupOptions
+    const ingredientGroups = groupOptions
       .map((category) => {
-        const groupItems = displayItems.filter((item) =>
-          ingredientMatchesCategoryGroup(item, category.value),
+        const groupItems = displayItems.filter(
+          (item) =>
+            item.item_type === "ingredient" &&
+            ingredientMatchesCategoryGroup(item, category.value),
         );
 
         return {
@@ -165,10 +168,28 @@ export function PantryScreen({
         };
       })
       .filter((group) => group.items.length > 0);
+
+    const productGroup =
+      activeCategory === null
+        ? [
+            {
+              key: "food_product",
+              label: "제품",
+              items: displayItems.filter(
+                (item) => item.item_type === "food_product",
+              ),
+            },
+          ].filter((group) => group.items.length > 0)
+        : [];
+
+    return [...ingredientGroups, ...productGroup];
   }, [activeCategory, categories, displayItems]);
 
   const selectableIngredientIds = useMemo(
-    () => displayItems.map((item) => item.ingredient_id),
+    () =>
+      displayItems.flatMap((item) =>
+        item.ingredient_id ? [item.ingredient_id] : [],
+      ),
     [displayItems],
   );
   const isAllVisibleSelected =
@@ -194,19 +215,7 @@ export function PantryScreen({
   const selectableDates = useMemo(() => buildSelectableDates(), [buildSelectableDates]);
 
   const mobileDisplayItems = useMemo(
-    () =>
-      displayItems
-        .filter((item) => item.isOwned)
-        .map((item) => ({
-          category: item.category,
-          category_group_code: item.category_group_code,
-          category_code: item.category_code,
-          category_label: item.category_label,
-          created_at: item.created_at ?? "",
-          id: item.id,
-          ingredient_id: item.ingredient_id,
-          standard_name: item.standard_name,
-        })),
+    () => displayItems,
     [displayItems],
   );
 
@@ -230,13 +239,43 @@ export function PantryScreen({
     };
   }, []);
 
+  const applyAuthSession = useCallback((session: Session | null) => {
+    pantryRequestSequenceRef.current += 1;
+    setItems([]);
+    setProductItems([]);
+    setViewState("loading");
+    setIsSelectMode(false);
+    setSelectedIds(new Set());
+    setShowDeleteConfirm(false);
+    setShowAddSheet(false);
+    setShowBundlePicker(false);
+    setShowPantryRecommendations(false);
+    setPlannerAddTarget(null);
+    setIsPlannerAddSheetOpen(false);
+    setAuthGeneration((current) => current + 1);
+    setAuthState(session ? "authenticated" : "unauthorized");
+  }, []);
+
   const loadItems = useCallback(
     async () => {
+      const requestSequence = pantryRequestSequenceRef.current + 1;
+      pantryRequestSequenceRef.current = requestSequence;
+
       try {
         const result = await fetchPantryList();
+
+        if (requestSequence !== pantryRequestSequenceRef.current) {
+          return;
+        }
+
         setItems(result.items);
+        setProductItems(result.product_items ?? []);
         setViewState("ready");
       } catch (error) {
+        if (requestSequence !== pantryRequestSequenceRef.current) {
+          return;
+        }
+
         if (isPantryApiError(error) && error.status === 401) {
           setAuthState("unauthorized");
           return;
@@ -458,11 +497,12 @@ export function PantryScreen({
         data: { subscription },
       } = supabase.auth.onAuthStateChange(
         (_event: AuthChangeEvent, session: Session | null) => {
-          setAuthState(session ? "authenticated" : "unauthorized");
+          applyAuthSession(session);
         },
       );
 
       return () => {
+        pantryRequestSequenceRef.current += 1;
         subscription.unsubscribe();
       };
     }
@@ -477,21 +517,22 @@ export function PantryScreen({
     void supabase.auth
       .getSession()
       .then((result: { data: { session: Session | null } }) => {
-        setAuthState(result.data.session ? "authenticated" : "unauthorized");
+        applyAuthSession(result.data.session);
       });
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(
       (_event: AuthChangeEvent, session: Session | null) => {
-        setAuthState(session ? "authenticated" : "unauthorized");
+        applyAuthSession(session);
       },
     );
 
     return () => {
+      pantryRequestSequenceRef.current += 1;
       subscription.unsubscribe();
     };
-  }, [initialAuthenticated]);
+  }, [applyAuthSession, initialAuthenticated]);
 
   // Load items on auth
   useEffect(() => {
@@ -500,7 +541,7 @@ export function PantryScreen({
     }
 
     void loadItems();
-  }, [authState, loadItems]);
+  }, [authGeneration, authState, loadItems]);
 
   // --- Render states ---
 
@@ -644,6 +685,11 @@ export function PantryScreen({
       {showAddSheet && (
         <PantryAddSheet
           existingIngredientIds={items.map((item) => item.ingredient_id)}
+          existingProductItems={productItems.map((item) => ({
+            food_product_id: item.food_product_id,
+            food_product_nutrition_version_id:
+              item.food_product_nutrition_version_id,
+          }))}
           onAdd={handleAddComplete}
           onClose={() => setShowAddSheet(false)}
         />
@@ -753,7 +799,7 @@ export function PantryScreen({
           displayItems={mobileDisplayItems}
           isLoading={isPantryLoading}
           isSelectMode={isSelectMode}
-          items={items}
+          items={allDisplayItems}
           onCategoryChange={handleCategoryChange}
           onClearSearch={handleClearSearch}
           onExitSelectMode={handleExitSelectMode}
@@ -786,7 +832,7 @@ export function PantryScreen({
           <header className="web-pantry-head">
             <div>
               <p className="web-menu-add-eyebrow">팬트리</p>
-              <h1>{isPantryLoading ? "나의 팬트리" : `나의 팬트리 ${items.length}개`}</h1>
+              <h1>{isPantryLoading ? "나의 팬트리" : `나의 팬트리 ${allDisplayItems.length}개`}</h1>
               <p>
                 팬트리에 있는 재료는 장보기에서 자동 제외돼요.
               </p>
@@ -901,7 +947,9 @@ export function PantryScreen({
                 ) : (
                   <WebButton
                     className="web-pantry-edit-button"
-                    disabled={isPantryLoading || displayItems.length === 0}
+                    disabled={
+                      isPantryLoading || selectableIngredientIds.length === 0
+                    }
                     onClick={() => setIsSelectMode(true)}
                     variant="tertiary"
                   >
@@ -953,10 +1001,14 @@ export function PantryScreen({
                     </div>
                     <div className="web-pantry-grid">
                       {group.items.map((item) => {
-                        const isSelected = selectedIds.has(item.ingredient_id);
+                        const ingredientId = item.ingredient_id;
+                        const isSelectable = ingredientId !== null;
+                        const isSelected =
+                          ingredientId !== null && selectedIds.has(ingredientId);
+                        const testId = ingredientId ?? item.id;
                         const cardContent = (
                           <>
-                            {isSelectMode ? (
+                            {isSelectMode && isSelectable ? (
                               <span className="web-pantry-check" aria-hidden="true">
                                 {isSelected ? "✓" : ""}
                               </span>
@@ -968,14 +1020,17 @@ export function PantryScreen({
                             />
                             <span
                               className="web-pantry-card-copy"
-                              data-testid={`web-pantry-card-copy-${item.ingredient_id}`}
+                              data-testid={`web-pantry-card-copy-${testId}`}
                             >
                               <strong>{item.standard_name}</strong>
+                              {item.detail_text ? (
+                                <small>{item.detail_text}</small>
+                              ) : null}
                             </span>
                           </>
                         );
 
-                        return isSelectMode ? (
+                        return isSelectMode && isSelectable ? (
                           <button
                             aria-checked={isSelected}
                             aria-label={`${item.standard_name} 선택`}
@@ -984,9 +1039,9 @@ export function PantryScreen({
                               "web-pantry-card-selectable",
                               isSelected ? "web-pantry-card-selected" : "",
                             ].join(" ")}
-                            data-testid={`web-pantry-card-${item.ingredient_id}`}
-                            key={item.ingredient_id}
-                            onClick={() => handleSelectToggle(item.ingredient_id)}
+                            data-testid={`web-pantry-card-${testId}`}
+                            key={item.id}
+                            onClick={() => handleSelectToggle(ingredientId)}
                             role="checkbox"
                             type="button"
                           >
@@ -994,10 +1049,10 @@ export function PantryScreen({
                           </button>
                         ) : (
                           <article
-                            aria-label={`${item.standard_name} 재료`}
+                            aria-label={displayItemAccessibleLabel(item)}
                             className="web-pantry-card"
-                            data-testid={`web-pantry-card-${item.ingredient_id}`}
-                            key={item.ingredient_id}
+                            data-testid={`web-pantry-card-${testId}`}
+                            key={item.id}
                           >
                             {cardContent}
                           </article>
@@ -1016,7 +1071,7 @@ export function PantryScreen({
   );
 }
 
-function toOwnedDisplayItem(item: PantryItem): PantryDisplayItem {
+function toIngredientDisplayItem(item: PantryItem): PantryDisplayItem {
   return {
     category: item.category,
     category_group_code:
@@ -1028,11 +1083,40 @@ function toOwnedDisplayItem(item: PantryItem): PantryDisplayItem {
     category_code: item.category_code,
     category_label: item.category_label,
     created_at: item.created_at,
+    detail_text: null,
+    food_product_id: null,
+    food_product_nutrition_version_id: null,
     id: item.id,
     ingredient_id: item.ingredient_id,
-    isOwned: true,
+    item_type: "ingredient",
     standard_name: item.standard_name,
   };
+}
+
+function toProductDisplayItem(item: PantryProductItem): PantryDisplayItem {
+  return {
+    category: "제품",
+    category_group_code: null,
+    category_code: null,
+    category_label: "제품",
+    created_at: item.created_at,
+    detail_text: `${item.brand ?? "브랜드 없음"} · 영양 버전 ${item.food_product_nutrition_version_id}`,
+    food_product_id: item.food_product_id,
+    food_product_nutrition_version_id:
+      item.food_product_nutrition_version_id,
+    id: item.id,
+    ingredient_id: null,
+    item_type: "food_product",
+    standard_name: item.name,
+  };
+}
+
+function displayItemAccessibleLabel(item: PantryDisplayItem) {
+  if (item.detail_text) {
+    return `${item.standard_name} · ${item.detail_text}`;
+  }
+
+  return `${item.standard_name} 재료`;
 }
 
 function comparePantryDisplayItems(

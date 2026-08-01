@@ -13,37 +13,37 @@ function readMigrationSource() {
     .join("\n");
 }
 
-function latestFunction(sql: string, functionName: string) {
-  const marker = `create or replace function public.${functionName}()`;
-  const start = sql.toLowerCase().lastIndexOf(marker);
+const migrationSql = readMigrationSource();
+
+function readLatestFunctionSource(functionName: string) {
+  const marker = `create or replace function public.${functionName}(`;
+  const start = migrationSql.toLowerCase().lastIndexOf(marker);
   expect(start, `${functionName} function is missing`).toBeGreaterThanOrEqual(0);
-  const bodyStart = sql.indexOf("as $$", start);
-  const end = sql.indexOf("\n$$;", bodyStart);
+  const bodyStart = migrationSql.indexOf("as $$", start);
+  const end = migrationSql.indexOf("\n$$;", bodyStart);
   expect(bodyStart, `${functionName} body is missing`).toBeGreaterThan(start);
   expect(end, `${functionName} terminator is missing`).toBeGreaterThan(bodyStart);
-  return sql.slice(start, end + 4);
+  return migrationSql.slice(start, end + 4);
 }
 
 describe("recipe snapshot mutation security", () => {
   it("keeps snapshot mutation server-owned and validates private/public ownership pairs", () => {
-    const sql = readMigrationSource();
-    const ownership = latestFunction(
-      sql,
+    const ownership = readLatestFunctionSource(
       "validate_recipe_content_snapshot_ownership",
     );
 
     expect(
       /revoke all on table public\.recipe_content_snapshots from public,\s*anon,\s*authenticated,\s*service_role/i
-        .test(sql),
+        .test(migrationSql),
       "content snapshot table mutation must be revoked from ordinary principals",
     ).toBe(true);
     expect(
-      /before update or delete on public\.recipe_content_snapshots/i.test(sql),
+      /before update or delete on public\.recipe_content_snapshots/i.test(migrationSql),
       "content snapshot immutable trigger is missing",
     ).toBe(true);
     expect(
-      /alter table public\.recipe_nutrition_snapshots[\s\S]*add column(?: if not exists)? owner_user_id uuid/i
-        .test(sql),
+      /alter table public\.recipe_nutrition_snapshots[^;]*add column(?: if not exists)? owner_user_id uuid/i
+        .test(migrationSql),
       "nutrition snapshots need additive nullable ownership",
     ).toBe(true);
     expect(ownership).toContain(
@@ -55,12 +55,12 @@ describe("recipe snapshot mutation security", () => {
   });
 
   it("allows hard delete only for the transaction-local exact owner cleanup guard", () => {
-    const sql = readMigrationSource();
-    const contentGuard = latestFunction(
-      sql,
+    const contentGuard = readLatestFunctionSource(
       "prevent_recipe_content_snapshot_mutation",
     );
-    const nutritionGuard = latestFunction(sql, "protect_recipe_nutrition_snapshot");
+    const nutritionGuard = readLatestFunctionSource(
+      "protect_recipe_nutrition_snapshot",
+    );
 
     for (const guard of [contentGuard, nutritionGuard]) {
       expect(guard).toContain("if tg_op = 'DELETE' then");
@@ -72,55 +72,53 @@ describe("recipe snapshot mutation security", () => {
   });
 
   it("rejects owner-neutral private rows, owned public rows, and soft-deleted recipe snapshots", () => {
-    const sql = readMigrationSource();
+    const ownership = readLatestFunctionSource(
+      "validate_recipe_content_snapshot_ownership",
+    );
 
     expect(
-      /validate_recipe_content_snapshot_ownership[\s\S]*visibility[\s\S]*private[\s\S]*owner_user_id/i
-        .test(sql),
+      /visibility[\s\S]*private[\s\S]*owner_user_id/i.test(ownership),
       "private recipe snapshots do not require the recipe owner",
     ).toBe(true);
     expect(
-      /validate_recipe_content_snapshot_ownership[\s\S]*visibility[\s\S]*public[\s\S]*owner_user_id/i
-        .test(sql),
+      /visibility[\s\S]*public[\s\S]*owner_user_id/i.test(ownership),
       "public/shared snapshots are not constrained to owner-null",
     ).toBe(true);
     expect(
-      /validate_recipe_content_snapshot_ownership[\s\S]*deleted_at[\s\S]*(raise exception|23514)/i
-        .test(sql),
+      /deleted_at[\s\S]*(raise exception|23514)/i.test(ownership),
       "soft-deleted recipes can still create snapshots",
     ).toBe(true);
   });
 
   it("derives nutrition ownership and blocks soft-deleted current transitions", () => {
-    const sql = readMigrationSource();
+    const ownership = readLatestFunctionSource(
+      "validate_recipe_nutrition_snapshot_ownership",
+    );
+    const mutationGuard = readLatestFunctionSource(
+      "protect_recipe_nutrition_snapshot",
+    );
 
+    expect(ownership.length).toBeGreaterThan(0);
+    expect(migrationSql).toMatch(
+      /create trigger recipe_nutrition_snapshot_validate_ownership\s+before insert or update on public\.recipe_nutrition_snapshots\s+for each row\s+execute function public\.validate_recipe_nutrition_snapshot_ownership\(\);/i,
+    );
     expect(
-      /validate_recipe_nutrition_snapshot_ownership[\s\S]*before insert or update/i
-        .test(sql),
-      "nutrition snapshots need a server-derived owner/recipe validation trigger",
-    ).toBe(true);
-    expect(
-      /validate_recipe_nutrition_snapshot_ownership[\s\S]*deleted_at[\s\S]*(raise exception|23514)/i
-        .test(sql),
+      /deleted_at[\s\S]*(raise exception|23514)/i.test(ownership),
       "soft-deleted recipes can still create or switch nutrition snapshots",
     ).toBe(true);
     expect(
-      /protect_recipe_nutrition_snapshot[\s\S]*homecook\.recipe_nutrition_writer[\s\S]*is_current/i
-        .test(sql),
+      /homecook\.recipe_nutrition_writer[\s\S]*is_current/i.test(mutationGuard),
       "the existing allowlisted current-switch writer contract was not preserved",
     ).toBe(true);
   });
 
   it("preserves hardened SECURITY DEFINER search paths and service-only cleanup ACL", () => {
-    const sql = readMigrationSource();
-    const cleanup = sql.match(
-      /create or replace function public\.delete_user_private_data\(p_user_id uuid\)([\s\S]*?)\n\$\$;/gi,
-    )?.at(-1) ?? "";
+    const cleanup = readLatestFunctionSource("delete_user_private_data");
 
     expect(cleanup).toMatch(
       /security definer[\s\S]*set search_path\s*=\s*pg_catalog,\s*public,\s*pg_temp/i,
     );
-    expect(sql).toMatch(
+    expect(migrationSql).toMatch(
       /revoke all on function public\.delete_user_private_data\(uuid\)[\s\S]*from public,\s*anon,\s*authenticated[\s\S]*grant execute on function public\.delete_user_private_data\(uuid\)[\s\S]*to service_role/i,
     );
   });

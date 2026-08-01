@@ -280,6 +280,7 @@ function createShoppingMealFixture(
   label: string,
   ingredientId?: string,
 ) {
+  const planDate = "2026-07-31";
   const recipeId = randomUUID();
   const columnId = randomUUID();
   const mealId = randomUUID();
@@ -353,13 +354,13 @@ function createShoppingMealFixture(
       '${mealId}',
       '${userId}',
       '${recipeId}',
-      current_date,
+      '${planDate}',
       '${columnId}',
       2
     );
   `));
 
-  return { recipeId, columnId, mealId };
+  return { recipeId, columnId, mealId, planDate };
 }
 
 function shoppingCreateCall(options: {
@@ -1394,7 +1395,7 @@ describe.runIf(enabled)(
         splitRemainders: [{
           user_id: ownerA,
           recipe_id: fixture.recipeId,
-          plan_date: "2026-07-31",
+          plan_date: fixture.planDate,
           column_id: fixture.columnId,
           planned_servings: 1,
           is_leftover: false,

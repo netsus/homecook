@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import React from "react";
-import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -20,6 +20,10 @@ const mockFetchIngredients = vi.fn();
 const mockFetchPantryMatchRecipes = vi.fn();
 const mockFetchPlannerColumns = vi.fn();
 const mockCreateMealSafe = vi.fn();
+let mockSupabaseEnvAvailable = false;
+let mockAuthStateChangeCallback:
+  | ((event: string, session: unknown) => void)
+  | null = null;
 const VEGETABLE_CATEGORY = INGREDIENT_CATEGORIES.find(({ code }) => code === "vegetable")!.label;
 const MEAT_CATEGORY = INGREDIENT_CATEGORIES.find(({ code }) => code === "meat")!.label;
 const SEASONING_CATEGORY = INGREDIENT_CATEGORIES.find(({ code }) => code === "seasoning")!.label;
@@ -43,15 +47,18 @@ vi.mock("@/lib/supabase/browser", () => ({
   getSupabaseBrowserClient: () => ({
     auth: {
       getSession: vi.fn(async () => ({ data: { session: null } })),
-      onAuthStateChange: vi.fn(() => ({
-        data: { subscription: { unsubscribe: vi.fn() } },
-      })),
+      onAuthStateChange: vi.fn(
+        (callback: (event: string, session: unknown) => void) => {
+          mockAuthStateChangeCallback = callback;
+          return { data: { subscription: { unsubscribe: vi.fn() } } };
+        },
+      ),
     },
   }),
 }));
 
 vi.mock("@/lib/supabase/env", () => ({
-  hasSupabasePublicEnv: () => false,
+  hasSupabasePublicEnv: () => mockSupabaseEnvAvailable,
 }));
 
 vi.mock("@/lib/auth/e2e-auth-override", () => ({
@@ -104,6 +111,14 @@ function installMatchMedia(matchesAppView: boolean) {
   });
 }
 
+function createDeferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((nextResolve) => {
+    resolve = nextResolve;
+  });
+  return { promise, resolve };
+}
+
 const MOCK_ITEMS = [
   {
     id: "p1",
@@ -136,6 +151,8 @@ describe("PantryScreen", () => {
 
   beforeEach(() => {
     installMatchMedia(false);
+    mockSupabaseEnvAvailable = false;
+    mockAuthStateChangeCallback = null;
     mockFetchPantryList.mockReset();
     mockDeletePantryItems.mockReset();
     mockAddPantryItems.mockReset();
@@ -214,6 +231,50 @@ describe("PantryScreen", () => {
     expect(screen.getByTestId("web-profile-summary-button")).toBeTruthy();
     expect(screen.queryByText("3개 재료 보유 중")).toBeNull();
     expect(screen.queryByText("3개 표시")).toBeNull();
+  });
+
+  it("ignores a previous user's late pantry response after the auth session changes", async () => {
+    mockSupabaseEnvAvailable = true;
+    const previousUserResponse = createDeferred<{ items: typeof MOCK_ITEMS }>();
+    const nextUserResponse = createDeferred<{ items: typeof MOCK_ITEMS }>();
+    const previousUserItems = [
+      { ...MOCK_ITEMS[0]!, id: "previous-user-item", standard_name: "이전 사용자 양파" },
+    ];
+    const nextUserItems = [
+      { ...MOCK_ITEMS[1]!, id: "next-user-item", standard_name: "새 사용자 마늘" },
+    ];
+    mockFetchPantryList
+      .mockImplementationOnce(() => previousUserResponse.promise)
+      .mockImplementationOnce(() => nextUserResponse.promise);
+
+    render(<PantryScreen initialAuthenticated />);
+
+    await waitFor(() => expect(mockFetchPantryList).toHaveBeenCalledTimes(1));
+    expect(mockAuthStateChangeCallback).not.toBeNull();
+
+    act(() => {
+      mockAuthStateChangeCallback?.("SIGNED_OUT", null);
+    });
+    act(() => {
+      mockAuthStateChangeCallback?.("SIGNED_IN", {
+        access_token: "next-user-session",
+        user: { id: "next-user" },
+      });
+    });
+    await waitFor(() => expect(mockFetchPantryList).toHaveBeenCalledTimes(2));
+
+    await act(async () => {
+      nextUserResponse.resolve({ items: nextUserItems });
+    });
+    expect(await screen.findByText("새 사용자 마늘", { exact: false })).toBeTruthy();
+
+    await act(async () => {
+      previousUserResponse.resolve({ items: previousUserItems });
+    });
+    await waitFor(() => {
+      expect(screen.queryByText("이전 사용자 양파", { exact: false })).toBeNull();
+      expect(screen.getByText("새 사용자 마늘", { exact: false })).toBeTruthy();
+    });
   });
 
   it("groups the desktop all pantry tab by category and omits duplicate status text inside ingredient cards", async () => {

@@ -9,6 +9,7 @@ import type {
   PantryBundleListData,
   PantryDeleteData,
   PantryListData,
+  PantryProductInput,
 } from "@/types/pantry";
 import type { IngredientListData } from "@/types/recipe";
 
@@ -90,13 +91,28 @@ export async function fetchPantryList(params?: { q?: string; category?: string }
   return requestPantry<PantryListData>(url);
 }
 
-export async function addPantryItems(ingredientIds: string[]) {
+export async function addPantryItems(
+  ingredientIds: string[],
+  productItems: PantryProductInput[] = [],
+) {
+  const body: {
+    ingredient_ids?: string[];
+    product_items?: PantryProductInput[];
+  } = {};
+
+  if (ingredientIds.length > 0) {
+    body.ingredient_ids = ingredientIds;
+  }
+  if (productItems.length > 0) {
+    body.product_items = productItems;
+  }
+
   const data = await requestPantry<PantryAddData>("/api/v1/pantry", {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ ingredient_ids: ingredientIds }),
+    body: JSON.stringify(body),
   });
-  if (data.added > 0) {
+  if (data.added + (data.product_added ?? 0) > 0) {
     notifyGamificationSourceAction();
     notifyGamificationSourceActionAfter(1_500);
     notifyGamificationSourceActionAfter(5_000);
