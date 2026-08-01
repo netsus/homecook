@@ -10,7 +10,7 @@
   "goal": "public 원본 불변과 owner-private 권한을 유지하면서 planner-add, standalone create/edit, public fork가 하나의 form primitive를 안전하게 재사용하고 각 context의 identity·navigation·side effect를 섞지 않게 한다.",
   "owners": {
     "claude": "forbidden by explicit user instruction; do not invoke Claude for authoring, repair, implementation, review, security, design, authority, operations, or closeout",
-    "codex": "separate sessions for Stage 1 author, internal 1.5 reviewer/repair-final, frontend implementation, security/ownership review, five-axis review, design critic, product-design-authority, Stage 6 re-review and closeout; no session approves its own work",
+    "codex": "Stage 1 author repairs findings; a fresh independent internal 1.5 reviewer re-reviews the repaired exact head; separate sessions own frontend implementation, security/ownership review, five-axis review, design critic, product-design-authority, Stage 6 re-review and closeout; no session approves its own work",
     "workers": []
   },
   "dependencies": [
@@ -67,7 +67,7 @@
       "stable-remote-user-uuid-restored-to-local-gotrue",
       "remote-session-refresh-flow-state-excluded-relogin-all-users",
       "local-session-binding-and-auth-uid-rls-owner-boundary",
-      "app-and-narrow-auth-v1-allowlist-only-public-data-storage-studio-postgres-internal",
+      "app-and-official-auth-v1-wildcard-only-public-data-storage-studio-postgres-internal",
       "browser-direct-data-storage-and-service-role-user-fallback-zero",
       "production/staging/remote application write 0 and external personal write remains dark",
       "activated provider callback/link Cloudflare final backup off-Mac restore first local mutation/cutover and post-floor recovery remain Manual Only/pending",
@@ -135,7 +135,7 @@
       "stable-remote-user-uuid-restored-to-local-gotrue",
       "remote-session-refresh-flow-state-excluded-relogin-all-users",
       "local-session-binding-and-auth-uid-rls-owner-boundary",
-      "app-and-narrow-auth-v1-allowlist-only-public-data-storage-studio-postgres-internal",
+      "app-and-official-auth-v1-wildcard-only-public-data-storage-studio-postgres-internal",
       "browser-direct-data-storage-and-service-role-user-fallback-zero",
       "stage2-full-local-personal-editor-verifier-implementation-tdd-red-green",
       "stage3-independent-code-security-review-pending",

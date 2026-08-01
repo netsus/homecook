@@ -3,6 +3,12 @@ import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+import {
+  readWorkpackChecklistContract,
+  validateChecklistContract,
+} from "../scripts/lib/omo-checklist-contract.mjs";
+import { evaluateDocGate } from "../scripts/lib/omo-doc-gate.mjs";
+
 const repoRoot = process.cwd();
 const sliceId = "personal-recipe-editor-decoupling";
 const docsBranch = "docs/personal-recipe-editor-stage1-full-local-relock";
@@ -161,13 +167,16 @@ describe("personal recipe editor full-local contract lock", () => {
     expect(active).toContain("remote-session-refresh-flow-state-excluded-relogin-all-users");
     expect(active).toContain("local-session-binding-and-auth-uid-rls-owner-boundary");
     expect(active).toContain(
-      "app-and-narrow-auth-v1-allowlist-only-public-data-storage-studio-postgres-internal",
+      "app-and-official-auth-v1-wildcard-only-public-data-storage-studio-postgres-internal",
     );
     expect(active).toContain("browser-direct-data-storage-and-service-role-user-fallback-zero");
+    expect(read(readmePath)).toContain("official `/auth/v1/*`");
     expect(read(readmePath)).toContain(
+      "future user-approved contract-evolution",
+    );
+    expect(read(readmePath)).not.toContain(
       "narrow allowlisted subset under `/auth/v1`",
     );
-    expect(read(readmePath)).not.toContain("allowlisted `/auth/v1/*`");
     expect(strings(automation.external_smokes)).toEqual(
       strings(workflow.external_smokes),
     );
@@ -256,9 +265,50 @@ describe("personal recipe editor full-local contract lock", () => {
     expect(bundle).toContain("no visual/product change");
   });
 
+  it("passes the Stage 1 document, checklist, and design authority gates", () => {
+    const result = evaluateDocGate({ rootDir: repoRoot, slice: sliceId });
+    const contract = readWorkpackChecklistContract({
+      rootDir: repoRoot,
+      slice: sliceId,
+    });
+    const automation = readJson(automationPath);
+    const frontend = automation.frontend as Record<string, unknown>;
+    const designAuthority = frontend.design_authority as Record<string, unknown>;
+
+    expect(result.outcome, JSON.stringify(result.findings, null, 2)).toBe(
+      "pass",
+    );
+    expect(validateChecklistContract(contract)).toEqual([]);
+    expect(strings(designAuthority.required_screens)).toEqual([
+      "RECIPE_DETAIL",
+      "MANUAL_RECIPE_CREATE",
+    ]);
+
+    const acceptanceItems = contract.acceptanceItems.filter(
+      (item) => !item.manualOnly && item.metadata,
+    );
+    expect(acceptanceItems.length).toBeGreaterThan(0);
+    for (const item of acceptanceItems) {
+      const metadata = item.metadata;
+      expect(metadata).not.toBeNull();
+      if (!metadata) throw new Error(`missing metadata for ${item.text}`);
+      expect([2, 4]).toContain(metadata.stage);
+      expect(metadata.review).toEqual(
+        metadata.stage === 2 ? [3, 6] : [5, 6],
+      );
+    }
+
+    const manualOnlyItems = contract.acceptanceItems.filter(
+      (item) => item.manualOnly,
+    );
+    expect(manualOnlyItems.length).toBeGreaterThan(0);
+    expect(manualOnlyItems.every((item) => item.metadata === null)).toBe(true);
+  });
+
   it("keeps lifecycle pending and projects the fresh docs branch", () => {
     const workItem = readJson(workItemPath);
     const item = statusItem();
+    const readme = read(readmePath);
     const verification = workItem.verification as Record<string, unknown>;
     const requiredChecks = strings(verification.required_checks);
     const statusChecks = strings(item.required_checks);
@@ -279,5 +329,14 @@ describe("personal recipe editor full-local contract lock", () => {
       `BRANCH_NAME=${docsBranch} pnpm validate:workpack -- --slice ${sliceId}`,
     );
     expect(statusChecks).toEqual(requiredChecks);
+    expect(readme).toContain(
+      "Stage 1 author가 review finding을 repair하고, fresh independent internal 1.5 reviewer가 repaired exact head를 다시 검토한다",
+    );
+    expect(String((workItem.owners as Record<string, unknown>).codex)).toContain(
+      "Stage 1 author repairs findings; a fresh independent internal 1.5 reviewer re-reviews the repaired exact head",
+    );
+    expect([readme, read(workItemPath)].join("\n")).not.toContain(
+      "internal 1.5 reviewer/repair-final",
+    );
   });
 });

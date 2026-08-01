@@ -12,7 +12,7 @@ planner에 결합된 `MANUAL_RECIPE_CREATE`를 재사용 가능한 editor shell�
 - Stage 2 backend evidence lock: `feature/be-personal-recipe-editor-decoupling`
 - Stage 4 frontend shell: `feature/fe-personal-recipe-editor-decoupling`
 - Release train: C. successor dependency는 merged #3뿐이며, 재사용 대상인 `31-recipe-media-tags`와 `36e-recipe-tags-frontend`도 이미 merged다. #4 완료는 #5 구현 선행조건이 아니다.
-- Stage 1 author, internal 1.5 reviewer/repair-final owner, frontend implementation owner, security/ownership reviewer, five-axis reviewer, design critic와 product-design-authority reviewer는 서로 다른 Codex 세션을 사용한다. Claude는 사용하지 않는다.
+- Stage 1 author가 review finding을 repair하고, fresh independent internal 1.5 reviewer가 repaired exact head를 다시 검토한다. Frontend implementation owner, security/ownership reviewer, five-axis reviewer, design critic와 product-design-authority reviewer도 서로 다른 Codex 세션을 사용한다. Claude는 사용하지 않는다.
 
 ## In Scope
 
@@ -71,16 +71,20 @@ Schema Change:
 
 > Roadmap and workflow lifecycle remain `in-progress` after the historical Stage 2/3 boundary lock and Stage 4/5 capability-off implementation merge. The active full-local Stage 2 verifier implementation and merged-exact-SHA execution are pending. No editor CTA, personal write or new runtime endpoint is activated.
 
-## Full-Local Auth / Data / Storage Boundary
+## Backend First Contract
+
+### Full-Local Auth / Data / Storage Boundary
 
 - Before the first successful local production Auth state mutation, `LIVE_REMOTE` Supabase Auth/application DB/Storage remains the only source-of-record and migration/recovery source. Existing local data is rehearsal output and cannot outrank the remote dump.
 - The target is one self-hosted local Supabase Auth (GoTrue), PostgreSQL/PostgREST and Storage authority on the server Mac. Stable remote user UUID/identity is classified and restored into local GoTrue; remote sessions, refresh tokens and flow-state rows are excluded so every user logs in again.
 - `local auth.users=0` is historical hybrid evidence, not an active invariant. Future user-scoped editor preload and mutation use local Auth JWT, the app-owned local session binding, account generation and existing `auth.uid()` RLS/owner boundary.
-- The browser uses the Homecook app API plus only the narrow allowlisted subset under `/auth/v1` required for Auth flows. No other Auth route is publicly reachable. Public `/rest/v1`, `/storage/v1`, Studio, PostgreSQL and Docker socket exposure is zero. Browser direct Data/Storage mutation and service-role user fallback remain zero.
+- The browser uses the Homecook app API plus the current official `/auth/v1/*` contract, and only those app/Auth surfaces are public. Public `/rest/v1`, `/storage/v1`, Studio, PostgreSQL and Docker socket exposure is zero. Browser direct Data/Storage mutation and service-role user fallback remain zero. Any narrower method/path allowlist is a future user-approved contract-evolution; #5 neither implements nor promises it.
 - Editor/user image paths keep the existing generation-aware server Route, `image_object_id`, private Storage, short signed reads and owner cancel. Browser direct Storage mutation/remove and a service-role user fallback are forbidden.
 - Production/staging/remote application write 0 remains mandatory. This relock does not perform the first local production session, provider link, user-scoped local DB/Storage write or cutover.
 
-## Context Contract
+## Frontend Delivery Mode
+
+### Context Contract
 
 | Context | Entry | Initial data | Primary success | Cancel/back |
 | --- | --- | --- | --- | --- |
@@ -114,7 +118,9 @@ Schema Change:
 - unauthenticated protected entry는 login gate/`401` 의미로 같은 public recipe와 draft action을 보존한다. authenticated other-owner private, deleted 또는 quarantined content는 login prompt가 아니라 `404` non-disclosure를 렌더링해 존재를 추론할 수 없게 한다.
 - detail/editor load error는 기존 안전한 content/draft를 숨기지 않고 retry를 제공한다. access 판정 실패를 public 또는 owner state로 fallback하지 않는다.
 
-## Editor / Navigation Contract
+## Primary User Path
+
+### Editor / Navigation Contract
 
 - form primitives contain no router, planner, auth, persistence or destination decisions. They emit normalized draft changes and validation state only.
 - shell owns submit adapter, busy/error state, dirty detection, destination and managed upload cancellation. A context adapter cannot silently call another context's save path.
@@ -175,6 +181,7 @@ dirty close/back → [계속 편집] [변경사항 버리기]
 - UI risk: `high-risk` anchor-screen CTA and multi-context editor navigation
 - Anchor screen: `RECIPE_DETAIL`; high-risk affected/required editor surface: `MANUAL_RECIPE_CREATE`
 - Stage 1 artifact: this README's state matrix and markdown wireframe
+- Visual artifact: `ui/designs/evidence/personal-recipe-editor-decoupling/RECIPE_DETAIL-mobile-default.png` (existing confirmed Stage 4 evidence; no new capture is claimed by this no-visual-drift relock)
 - Design critic: required before Stage 4 implementation begins; public/owner/anon/deleted matrix, action hierarchy, dirty-discard and planner/standalone separation
 - Stage 4 evidence: before/after `RECIPE_DETAIL` and editor at 390px/320px; public/auth, anon login-return, owner edit/delete, dirty dialog, validation/error/upload states, keyboard/focus, no horizontal overflow
 - Product-design-authority: required from screenshots or Figma frames before Design Status can become `confirmed`

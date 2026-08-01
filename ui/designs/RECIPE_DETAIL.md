@@ -81,6 +81,7 @@
 - **utility metrics row**: `플래너 등록수 / 공유 / 좋아요 / 저장`을 full-width 4등분 박스가 아니라 compact wrap row로 배치
 - **tone 분리**: 좋아요 활성 상태는 `요리하기` CTA와 같은 brand tone을 피하고 별도 signal tone으로 구분
 - **primary CTA row**: `[플래너에 추가]`, `[요리하기]` 두 개를 균형 있는 2열 row로 분리
+- **scroll containment**: 상세 본문은 단일 세로 스크롤 안에 유지하고 CTA/재료/조리 단계가 별도 가로 스크롤이나 중첩 스크롤을 만들지 않는다.
 - **Loading**: 제목 스켈레톤 2줄, 태그 칩 스켈레톤 3개, utility row 스켈레톤, CTA row 스켈레톤
 - **태그 없음**: 태그 행 비노출 (여백 유지 없이 제거)
 - **지표**: compact row 기준 `플래너등록수 / 공유 / 좋아요수 / 저장수`

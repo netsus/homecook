@@ -31,7 +31,7 @@
       "stable-remote-user-uuid-restored-to-local-gotrue",
       "remote-session-refresh-flow-state-excluded-relogin-all-users",
       "local-session-binding-and-auth-uid-rls-owner-boundary",
-      "app-and-narrow-auth-v1-allowlist-only-public-data-storage-studio-postgres-internal",
+      "app-and-official-auth-v1-wildcard-only-public-data-storage-studio-postgres-internal",
       "browser-direct-data-storage-and-service-role-user-fallback-zero",
       "generation-aware-server-image-route-object-id-private-storage-signed-read-owner-cancel",
       "production-staging-remote-application-write-zero",
@@ -144,13 +144,8 @@
         "RECIPE_DETAIL"
       ],
       "required_screens": [
-        "RECIPE_DETAIL public authenticated fork CTA",
-        "RECIPE_DETAIL public anonymous login return",
-        "RECIPE_DETAIL owner private edit delete CTA",
-        "shared editor four contexts",
-        "dirty discard confirmation",
-        "upload validation and error states",
-        "MYPAGE and RECIPEBOOK_DETAIL unchanged-navigation evidence"
+        "RECIPE_DETAIL",
+        "MANUAL_RECIPE_CREATE"
       ],
       "generator_required": true,
       "generator_artifact": "docs/workpacks/personal-recipe-editor-decoupling/README.md#stage-1-wireframe",
@@ -183,7 +178,7 @@
     "stable-remote-user-uuid-restored-to-local-gotrue",
     "remote-session-refresh-flow-state-excluded-relogin-all-users",
     "local-session-binding-and-auth-uid-rls-owner-boundary",
-    "app-and-narrow-auth-v1-allowlist-only-public-data-storage-studio-postgres-internal",
+    "app-and-official-auth-v1-wildcard-only-public-data-storage-studio-postgres-internal",
     "browser-direct-data-storage-and-service-role-user-fallback-zero",
     "production/staging/remote application write 0 and external personal write remains dark",
     "activated provider callback/link Cloudflare final backup off-Mac restore first local mutation/cutover and post-floor recovery remain Manual Only/pending",
