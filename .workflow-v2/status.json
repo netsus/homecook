@@ -2401,6 +2401,7 @@
         "node scripts/validate-automation-spec.mjs --slice recipe-snapshot-authority-foundation",
         "pnpm validate:omo-bookkeeping",
         "pnpm exec vitest run tests/full-local-auth-db-foundation.test.ts",
+        "pnpm exec vitest run tests/auth-callback-flow-authority.test.ts tests/full-local-session-authority.test.ts tests/full-local-production-runtime.test.ts tests/full-local-request-authority-migration.test.ts",
         "pnpm exec vitest run tests/recipe-snapshot-authority.test.ts tests/recipe-snapshot-readers.test.ts tests/recipe-snapshot-security.test.ts tests/recipe-snapshot-account-delete.test.ts",
         "pnpm test:recipe-snapshot-authority:postgres",
         "pnpm verify:backend",
@@ -2411,7 +2412,7 @@
         "pnpm validate:closeout-sync -- --slice recipe-snapshot-authority-foundation",
         "git diff --check"
       ],
-      "notes": "Full-local Stage 1 contract sync is open. Active authority is self-hosted local Supabase Auth/DB/Storage; the snapshot-specific verifier remains planned for Stage 2 and is not yet implemented. PR #1218/#1219/#1231/#1232/#1233/#1251 and the hybrid verifier remain historical evidence only. PR #1256 implementation and PR #1262 closeout are merged; #3 Storage/outbox runtime is merged. Snapshot-specific Train B, compatibility, cleanup rehearsal, S3/rclone restore, provider cutover, and current-head release evidence remain pending Manual Only where applicable. Lifecycle/verification/evaluation remain in_progress/pending/not_started.",
+      "notes": "Full-local Stage 1 contract sync is open. PR #1263 merged the Stage 3 deployable app/runtime authority for OAuth flow ledger, callback/refresh/guarded Data/Storage/logout, loopback admin, request attestation, and the secret boundary; local authority activation requires explicit env+DB control. Provider live callback/link, Cloudflare, remote final backup, off-Mac restore 2회, and first local mutation/cutover remain Manual Only/pending. The snapshot-specific verifier remains planned for Stage 2 and is not yet implemented. PR #1218/#1219/#1231/#1232/#1233/#1251 and the hybrid verifier remain historical evidence only. PR #1256 and PR #1262 are merged; #3 Storage/outbox runtime is merged. Snapshot-specific Train B, compatibility, and cleanup rehearsal remain pending. Lifecycle/verification/evaluation remain in_progress/pending/not_started.",
       "evaluation_status": "not_started",
       "evaluation_round": 0,
       "last_evaluator_result": null,

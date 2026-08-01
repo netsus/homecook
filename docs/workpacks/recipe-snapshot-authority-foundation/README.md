@@ -14,7 +14,7 @@ mutable recipe current가 바뀌어도 기존 Meal·요리 세션·batch·식사
 - Stage 2 hybrid regression evidence: `fix/recipe-snapshot-stage2-regression-evidence` (PR #1233 merged)
 - Stage 2 verifier reproducibility hardening: `fix/recipe-snapshot-verifier-historical-sha` (PR #1251 merged)
 - Stage 4 existing-consumer compatibility: `feature/fe-recipe-snapshot-authority-foundation`
-- Release train: B. #2 implementation PR #1256과 Stage 6 closeout PR #1262, #3 runtime, 기존 recipe nutrition snapshot release가 병합됐다. 이 relock은 이미 병합된 #4 Stage 2/4 구현을 full-local authority 기준으로 재검증하기 위한 Stage 1 문서 선행 작업이다. recipe snapshot Stage 2/검증은 아직 완료되지 않았다.
+- Release train: B. #2 implementation PR #1256과 Stage 6 closeout PR #1262, #3 runtime, full-local Stage 3 deployable app/runtime authority PR #1263, 기존 recipe nutrition snapshot release가 병합됐다. 이 relock은 이미 병합된 #4 Stage 2/4 구현을 full-local authority 기준으로 재검증하기 위한 Stage 1 문서 선행 작업이다. recipe snapshot Stage 2/검증은 아직 완료되지 않았다.
 - Stage 1 author, internal 1.5 reviewer/repair-final owner, implementation owner, security/DB reviewer와 five-axis reviewer는 서로 다른 Codex 세션을 사용하며 Claude는 사용하지 않는다.
 
 ## In Scope
@@ -77,7 +77,7 @@ Schema Change:
 | existing recipe nutrition snapshot release | merged | immutable nutrition authority, writer conflict and Meal direct pin baseline available |
 | `recipe-visibility-read-hardening` PR #1228 | merged | #3 Stage 2~6 runtime, client, independent reviews and current-head gates complete |
 | `product-ingredient-link-foundation` PR #1256 + closeout PR #1262 | merged | HOME/PANTRY consumer 구현과 Stage 6 closeout은 병합됨. 기존-schema/full-local/query-plan/production cleanup 증거는 Manual Only |
-| `full-local-supabase-production` | docs/foundation merged | local Auth+DB+Storage authority 문서와 fail-closed Auth/DB foundation은 병합됐으나 provider live, final cutover, off-Mac restore는 Manual Only |
+| `full-local-supabase-production` PR #1263 | Stage 3 deployable app/runtime authority merged | OAuth flow ledger, callback/refresh/guarded Data/Storage/logout, loopback admin, request attestation과 secret boundary가 병합됨. activation은 explicit env+DB control이며 live/cutover/restore는 Manual Only |
 
 > Historical implementation exists: PR #1218 merged the Stage 2 snapshot authority foundation and PR #1219 merged Stage 4 existing-consumer regression. PR #1220 intentionally reopened the lifecycle because required deployment verification did not exist. PR #1231/#1232/#1233/#1251 then supplied hybrid-era contract and verifier evidence. Those artifacts remain historical evidence and are not deleted. The next implementation is a full-local verification delta, not a fresh Stage 2 or duplicate migration. This Stage 1 relock does not activate schema migration, contract/null cutover, or production writes.
 
@@ -128,6 +128,8 @@ Schema Change:
 - only app HTTPS and Auth `/auth/v1/*` are public. Data/PostgREST, Storage, Studio, and PostgreSQL remain internal; browser-direct Data/Storage and service-role user fallback are zero.
 - remote Supabase is source-of-record, migration source, and recovery floor only before local-state activation. Production mutation against remote Supabase is forbidden.
 - rollback is pre-floor until the first successful local production session, provider identity link, or user-scoped local DB or Storage write. Once any one succeeds, env-only rollback is forbidden; Auth/application/Storage deltas must be recovered together.
+- PR #1263 merged the Stage 3 deployable app/runtime authority: OAuth flow ledger, callback/refresh/guarded Data/Storage/logout, loopback admin, request attestation, and the repo-external secret boundary. Local authority activation still requires matching explicit env+DB control.
+- provider live callback/link, Cloudflare, remote final backup, off-Mac restore 2회, and first local mutation/cutover remain Manual Only/pending. PR #1263 does not complete those gates or the recipe snapshot verifier.
 - the snapshot-specific full-local merged-SHA verifier is a planned Stage 2 gate and is not implemented by this Stage 1. Existing `tests/full-local-auth-db-foundation.test.ts` and `tests/full-local-auth-db-foundation-postgres.integration.test.ts` are foundation evidence, not a substitute for the pending snapshot verifier.
 - the verifier may re-check a clean historical merged SHA after `origin/master` advances only when `git --no-replace-objects merge-base --is-ancestor` proves that exact HEAD is an `origin/master` ancestor. Local replace refs and legacy grafts cannot supply ancestry evidence; a dirty tree, unmerged branch or unrelated commit still fails closed.
 
@@ -232,7 +234,7 @@ Schema Change:
 - local Auth/DB/Storage existing/fresh/idempotent replay, schema/constraint/trigger/grant inventory, stable UUID/RLS/session-binding/cross-owner/delete-recreate evidence, and a planned merged-exact-SHA full-local snapshot verifier are required.
 - official S3/rclone off-Mac restore must prove semantic recovery; direct live volume/file copying is not accepted as restore evidence.
 - Train B integration confirms #3 Storage cleanup/outbox runtime remains terminal-safe and #2 PR #1256 implementation plus PR #1262 Stage 6 closeout remain green without adding either contract to #4 schema. Their existing-schema/full-local/query-plan/production cleanup evidence remains Manual Only.
-- provider live login/link, final public cutover, production-scale compatibility-release observation, full actual-DB cleanup rehearsal, S3/rclone restore, and current-head release evidence are Manual Only and still pending.
+- provider live callback/link, Cloudflare, remote final backup, off-Mac restore 2회, first local mutation/cutover, production-scale compatibility-release observation, and full actual-DB cleanup rehearsal are Manual Only/pending.
 
 ## Key Rules
 

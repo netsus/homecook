@@ -18,13 +18,35 @@ function strings(value: unknown) {
   return Array.isArray(value) ? value.map(String) : [];
 }
 
+type ActiveProjection = {
+  name: string;
+  values: string[];
+};
+
+const retiredActiveGatePatterns = [
+  /pnpm test:recipe-snapshot-authority:hybrid-cleanup-postgres/i,
+  /tests\/recipe-snapshot-hybrid-account-cleanup-postgres\.integration\.test\.ts/i,
+  /session[- ]liveness HMAC binding/i,
+  /mirror[- ]terminal/i,
+  /remote[- ]exact[- ]epoch/i,
+  /hybrid[- ]exact[- ]epoch/i,
+  /remote Auth control[- ]plane/i,
+  /local auth\.users\s*=\s*0/i,
+  /local-auth-users-(?:remains-)?zero/i,
+  /verify-recipe-snapshot-authority-hybrid\.mjs/i,
+  /tests\/recipe-snapshot-authority-hybrid-verifier\.test\.ts/i,
+  /tests\/recipe-snapshot-authority-remote-verifier\.test\.ts/i,
+  /hybrid-account-cleanup-only/i,
+  /hybrid-delete-order/i,
+];
+
 describe("recipe snapshot full-local contract lock", () => {
   const readmePath = `docs/workpacks/${sliceId}/README.md`;
   const acceptancePath = `docs/workpacks/${sliceId}/acceptance.md`;
   const automationPath = `docs/workpacks/${sliceId}/automation-spec.json`;
   const workItemPath = `.workflow-v2/work-items/${sliceId}.json`;
 
-  function activeGateBundle() {
+  function activeMachineReadableProjections(): ActiveProjection[] {
     const automation = readJson(automationPath);
     const automationBackend = automation.backend as Record<string, unknown>;
     const workItem = readJson(workItemPath);
@@ -34,18 +56,66 @@ describe("recipe snapshot full-local contract lock", () => {
     const statusItems = statusFile.items as Array<Record<string, unknown>>;
     const statusItem = statusItems.find((item) => item.id === sliceId);
 
+    const arrayProjections = (
+      prefix: string,
+      record: Record<string, unknown>,
+    ): ActiveProjection[] =>
+      Object.entries(record)
+        .filter(([, value]) => Array.isArray(value))
+        .map(([name, value]) => ({
+          name: `${prefix}.${name}`,
+          values: strings(value),
+        }));
+
     return [
-      ...strings(automationBackend.invariants),
-      ...strings(automationBackend.verify_commands),
-      ...strings(automationBackend.required_test_targets),
-      ...strings(automation.external_smokes),
-      ...strings(automation.blocked_conditions),
-      ...strings(workflow.external_smokes),
-      ...strings(verification.required_checks),
-      ...strings(verification.verify_commands),
-      ...strings(verification.artifact_assertions),
-      ...strings(statusItem?.required_checks),
-    ].join("\n");
+      {
+        name: "automation.backend.invariants",
+        values: strings(automationBackend.invariants),
+      },
+      {
+        name: "automation.backend.verify_commands",
+        values: strings(automationBackend.verify_commands),
+      },
+      {
+        name: "automation.backend.required_test_targets",
+        values: strings(automationBackend.required_test_targets),
+      },
+      {
+        name: "automation.external_smokes",
+        values: strings(automation.external_smokes),
+      },
+      {
+        name: "automation.blocked_conditions",
+        values: strings(automation.blocked_conditions),
+      },
+      ...arrayProjections("workItem.workflow", workflow),
+      ...arrayProjections("workItem.verification", verification),
+      {
+        name: "status.required_checks",
+        values: strings(statusItem?.required_checks),
+      },
+    ];
+  }
+
+  function activeGateBundle() {
+    return activeMachineReadableProjections()
+      .flatMap((projection) => projection.values)
+      .join("\n");
+  }
+
+  function assertNoRetiredActiveGates(projections: ActiveProjection[]) {
+    for (const projection of projections) {
+      for (const value of projection.values) {
+        const retiredPattern = retiredActiveGatePatterns.find((pattern) =>
+          pattern.test(value),
+        );
+        if (retiredPattern) {
+          throw new Error(
+            `${projection.name}: retired active gate ${retiredPattern.source}: ${value}`,
+          );
+        }
+      }
+    }
   }
 
   it("uses only the current official document tuple", () => {
@@ -79,10 +149,31 @@ describe("recipe snapshot full-local contract lock", () => {
     expect(active).toContain("official-s3-rclone-restore-evidence");
     expect(active).toContain("app-and-auth-only-public-data-storage-studio-postgres-internal");
 
-    expect(active).not.toContain("verify-recipe-snapshot-authority-hybrid.mjs");
-    expect(active).not.toContain("local auth.users=0");
-    expect(active).not.toContain("remote Auth control-plane");
-    expect(active).not.toContain("remote exact-epoch");
+  });
+
+  it("excludes every retired hybrid gate from each active projection", () => {
+    for (const projection of activeMachineReadableProjections()) {
+      expect(() => assertNoRetiredActiveGates([projection])).not.toThrow();
+    }
+  });
+
+  it("rejects a retired hybrid gate injected into a copied active projection", () => {
+    const mutated = activeMachineReadableProjections().map((projection) => ({
+      name: projection.name,
+      values: [...projection.values],
+    }));
+    const verifyCommands = mutated.find(
+      (projection) => projection.name === "automation.backend.verify_commands",
+    );
+
+    expect(verifyCommands).toBeDefined();
+    verifyCommands?.values.push(
+      "pnpm test:recipe-snapshot-authority:hybrid-cleanup-postgres",
+    );
+
+    expect(() => assertNoRetiredActiveGates(mutated)).toThrow(
+      /automation\.backend\.verify_commands/,
+    );
   });
 
   it("keeps hybrid verifier evidence as history without making it an active release gate", () => {
@@ -135,6 +226,36 @@ describe("recipe snapshot full-local contract lock", () => {
     });
     expect(roadmap).toMatch(
       /\|\s*4\s*\|\s*B\s*\|\s*`recipe-snapshot-authority-foundation`\s*\|\s*in-progress\s*\|/,
+    );
+  });
+
+  it("records PR #1263 as deployable full-local authority without claiming activation", () => {
+    const bundle = [
+      read(readmePath),
+      read(acceptancePath),
+      read(automationPath),
+      read(workItemPath),
+      read(".workflow-v2/status.json"),
+      read("docs/workpacks/README.md"),
+    ].join("\n");
+
+    expect(bundle).toContain("PR #1263");
+    expect(bundle).toContain("Stage 3 deployable app/runtime authority");
+    expect(bundle).toContain("OAuth flow ledger");
+    expect(bundle).toContain("callback/refresh/guarded Data/Storage/logout");
+    expect(bundle).toContain("loopback admin");
+    expect(bundle).toContain("request attestation");
+    expect(bundle).toContain("secret boundary");
+    expect(bundle).toContain("explicit env+DB control");
+    expect(bundle).toContain("provider live callback/link");
+    expect(bundle).toContain("Cloudflare");
+    expect(bundle).toContain("remote final backup");
+    expect(bundle).toContain("off-Mac restore 2회");
+    expect(bundle).toContain("first local mutation/cutover");
+    expect(bundle).toContain("Manual Only");
+    expect(bundle).toContain("pending");
+    expect(activeGateBundle()).toContain(
+      "planned-stage2-full-local-snapshot-verifier-not-yet-implemented",
     );
   });
 
