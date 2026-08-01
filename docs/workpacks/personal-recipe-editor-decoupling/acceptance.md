@@ -1,12 +1,12 @@
 # Acceptance Checklist
 
-> **Full-local relock 2026-08-01:** browser direct Data/Storage와 user-path service-role fallback 0은 그대로 유지한다. local Auth JWT/active binding으로 owner 경계를 다시 증명하며 과거 remote Auth/local `auth.users=0` evidence는 full-local provider/cutover 증거로 간주하지 않는다.
+> **Fresh full-local relock 2026-08-02:** browser direct Data/Storage와 user-path service-role fallback 0은 그대로 유지한다. local Auth JWT/active binding으로 owner 경계를 다시 증명하며 과거 remote Auth/local `auth.users=0` evidence는 historical evidence일 뿐 full-local provider/cutover 증거로 간주하지 않는다.
 
-> This hybrid Stage 1 relock uses the current official tuple (`요구사항기준선-v1.7.26.md`, `화면정의서-v1.5.30.md`, `유저flow맵-v1.3.28.md`, `db설계-v1.3.27.md`, `api문서-v1.2.30.md`). The approved master plan remains design history, but its local-only Auth/deployment assumptions are superseded. Stage 2 backend is test-only: it locks the existing detail-read and manual-create contract boundaries without adding runtime endpoints.
+> This full-local Stage 1 relock uses the current official tuple (`요구사항기준선-v1.7.28.md`, `화면정의서-v1.5.32.md`, `유저flow맵-v1.3.30.md`, `db설계-v1.3.30.md`, `api문서-v1.2.33.md`). The approved master plan remains design history. The current pre-floor source-of-record is `LIVE_REMOTE`; the target authority is one self-hosted local Supabase Auth/DB/Storage. This docs PR adds no product runtime, migration, schema or public contract.
 >
 > Stage 4 evidence is local-fixture only: the shared shell/primitives, capability-off CTA composition, browser dirty guard, managed-image cleanup, 390px/320px Playwright and 20 PNG authority set are implemented on `feature/fe-personal-recipe-editor-decoupling`. Plain successor/merge-gate bullets are intentionally outside the machine Stage 4 checklist; they remain owned by #6, #8 or post-merge verification and are not claimed here.
 >
-> Stage 4/5 implementation and its merge gate closed through PR #1243: exact implementation head `e177a882e0fbc35847895a7a0f1dd775ff4425d1` completed 20 checks successfully with one documented normal skip, then squash-merged as `6565c2a84f3b7eba9f0579db7b91fed12fc08f23`. PR #1246 merged the test-first Stage 6 hybrid verifier as `354c569c8e40889bcfa7d9832cb9cec93f53db46`, and its merged exact-SHA dry-run passed. Full lifecycle verification remains pending until the complete local Data/Storage plus sanitized remote Auth evidence path passes; future gates below remain explicitly unclaimed.
+> Stage 4/5 implementation and its merge gate closed through PR #1243: exact implementation head `e177a882e0fbc35847895a7a0f1dd775ff4425d1` completed 20 checks successfully with one documented normal skip, then squash-merged as `6565c2a84f3b7eba9f0579db7b91fed12fc08f23`. PR #1246 merged the test-first historical hybrid verifier as `354c569c8e40889bcfa7d9832cb9cec93f53db46`, and its merged exact-SHA dry-run passed. These checked items and PR evidence remain history; they are not retoggled or treated as the active full-local completion gate.
 
 ## Existing Backend Boundary Lock
 
@@ -59,9 +59,9 @@
 - [x] no history/timeline/trash/restore/public-publish UI or unofficial endpoint/field/status/error is introduced <!-- omo:id=accept-editor-no-extra-contract;stage=4;scope=shared;review=6 -->
 - [x] #5 does not implement or claim #6 write/RLS/RPC, #7 impact propagation or #8 snapshot-v2 activation <!-- omo:id=accept-editor-successor-boundary;stage=4;scope=shared;review=6 -->
 - [x] editor CTA and external personal writes remain dark until approved capability and snapshot-v2 activation gates <!-- omo:id=accept-editor-dark-ship;stage=4;scope=shared;review=6 -->
-- **Successor gate (#6/#8):** user-scoped preload and future mutation pass the remote Auth control-plane, current local identity epoch and session-liveness HMAC binding while `local auth.users=0` stays invariant <!-- omo:id=accept-editor-hybrid-session-boundary -->
-- [x] browser direct local Data/Storage and service-role user fallback remain zero; existing server image APIs are the only managed-image mutation path <!-- omo:id=accept-editor-hybrid-client-boundary;stage=4;scope=shared;review=6 -->
-- **Post-merge gate:** merged-exact-SHA `verify-personal-recipe-editor-hybrid.mjs` reads local application Data/Storage plus minimal remote Auth control-plane evidence, keeps remote application DB/Storage writes at zero and proves external personal write remains dark <!-- omo:id=accept-editor-hybrid-verifier -->
+- **Successor gate (#6/#8):** user-scoped preload and future mutation use the restored stable local Auth UUID, active local session binding, account generation and existing `auth.uid()` RLS; all remote sessions/refresh/flow-state are excluded and users re-login <!-- omo:id=accept-editor-full-local-session-boundary -->
+- [x] browser direct Data/Storage and service-role user fallback remain zero; existing generation-aware server image Routes with `image_object_id`, private Storage, short signed read and owner cancel are the only managed-image mutation path <!-- omo:id=accept-editor-hybrid-client-boundary;stage=4;scope=shared;review=6 -->
+- **Post-merge gate:** the Stage 2 merged-exact-SHA full-local verifier proves single local Auth/DB/Storage authority, stable UUID, local session/RLS owner boundary, app plus the narrow allowlisted Auth-flow subset under `/auth/v1` as the only public surfaces, and capability-off external personal write dark; historical `verify-personal-recipe-editor-hybrid.mjs` evidence cannot satisfy it <!-- omo:id=accept-editor-full-local-verifier -->
 
 ## Design / Accessibility
 
@@ -80,3 +80,13 @@
 - [x] component, E2E, visual, a11y and capability-off regressions pass at the Stage 4 implementation head <!-- omo:id=accept-editor-future-tests;stage=4;scope=frontend;review=5,6 -->
 - [x] independent internal 1.5, security/ownership and five-axis reviews finish with no unresolved merge-blocking finding <!-- omo:id=accept-editor-independent-reviews;stage=4;scope=shared;review=6 -->
 - **Merge gate:** Draft→Ready and every started current-head check finishes success or documented normal skip before squash merge <!-- omo:id=accept-editor-current-head -->
+
+## Active Full-Local Relock Gates
+
+- [ ] Stage 2 implements the read-only full-local verifier with TDD RED→GREEN and keeps the active target at a clean merged exact SHA <!-- omo:id=accept-editor-full-local-stage2;stage=2;scope=shared;review=3,6 -->
+- [ ] a separate Codex task completes Stage 3 exact-head code/security review with unresolved required findings zero <!-- omo:id=accept-editor-full-local-stage3;stage=3;scope=shared;review=3,6 -->
+- [ ] Stage 4 revalidates the existing capability-off shell/consumer without activating #6/#7/#8 or adding product/UI changes <!-- omo:id=accept-editor-full-local-stage4;stage=4;scope=frontend;review=5,6 -->
+- [ ] Stage 5 performs a lightweight no-visual-drift review; Design Status remains confirmed and no new screenshot/Figma/authority evidence is fabricated <!-- omo:id=accept-editor-full-local-stage5;stage=5;scope=frontend;review=5,6 -->
+- [ ] Stage 6 closes only from the exact merged head after all active checks and independent review evidence are current <!-- omo:id=accept-editor-full-local-stage6;stage=6;scope=shared;review=6 -->
+- [ ] self-owned isolated local Auth/DB/Storage rehearsal and the merged-exact verifier pass without any production/staging/remote application write <!-- omo:id=accept-editor-full-local-isolated;stage=2;scope=shared;review=3,6 -->
+- [ ] activated provider callback/link, Cloudflare, final backup, off-Mac restore, first local mutation/cutover and post-floor recovery remain Manual Only/pending and unclaimed <!-- omo:id=accept-editor-full-local-manual;stage=6;scope=shared;review=6 -->

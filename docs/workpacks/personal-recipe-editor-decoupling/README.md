@@ -1,6 +1,6 @@
 # personal-recipe-editor-decoupling
 
-> Hybrid Stage 1 relock. The approved 2026-07-29 master plan SHA-256 `45f02013fbc1c3af1936d596605230d0cbac7839a783224aa9535844e4bda7dc` (1,056 lines) remains editor/product design history, while its local-only Auth/deployment assumptions are superseded by `docs/sync/CURRENT_SOURCE_OF_TRUTH.md`. Official baseline: `docs/요구사항기준선-v1.7.26.md`, `docs/화면정의서-v1.5.30.md`, `docs/유저flow맵-v1.3.28.md`, `docs/db설계-v1.3.27.md`, `docs/api문서-v1.2.30.md`.
+> Full-local Stage 1 relock. The approved 2026-07-29 master plan SHA-256 `45f02013fbc1c3af1936d596605230d0cbac7839a783224aa9535844e4bda7dc` (1,056 lines) remains editor/product design history. The active authority contract is the current full-local tuple in `docs/sync/CURRENT_SOURCE_OF_TRUTH.md`: `docs/요구사항기준선-v1.7.28.md`, `docs/화면정의서-v1.5.32.md`, `docs/유저flow맵-v1.3.30.md`, `docs/db설계-v1.3.30.md`, `docs/api문서-v1.2.33.md`. Earlier local-only and hybrid Auth assumptions are historical evidence, not active release gates.
 
 ## Goal
 
@@ -8,7 +8,7 @@ planner에 결합된 `MANUAL_RECIPE_CREATE`를 재사용 가능한 editor shell�
 
 ## Branches
 
-- Stage 1 hybrid relock: `docs/personal-recipe-editor-stage1-relock`
+- Fresh Stage 1 full-local relock: `docs/personal-recipe-editor-stage1-full-local-relock`
 - Stage 2 backend evidence lock: `feature/be-personal-recipe-editor-decoupling`
 - Stage 4 frontend shell: `feature/fe-personal-recipe-editor-decoupling`
 - Release train: C. successor dependency는 merged #3뿐이며, 재사용 대상인 `31-recipe-media-tags`와 `36e-recipe-tags-frontend`도 이미 merged다. #4 완료는 #5 구현 선행조건이 아니다.
@@ -51,7 +51,7 @@ Schema Change:
 
 - `POST /recipes` public fork persistence, `PATCH /recipes/{id}`, `DELETE /recipes/{id}`, future-plan impact token, optimistic concurrency, RLS/DB RPC (#6/#7)
 - `personal_recipe_v2` capability activation 또는 public-fork/personal-edit external write activation; #8 snapshot-v2 cook complete gate 전에는 dark-ship
-- hybrid Auth gateway, identity epoch mirror, session-liveness binding, local Data/Storage infrastructure 또는 verifier 구현
+- full-local Auth/DB/Storage runtime, migration, schema, cutover 또는 verifier 구현. 이 문서는 Stage 2 verifier 계약만 잠근다.
 - official contract에 없는 editor endpoint, route, field, status, error code, history/timeline, trash/restore 또는 public publish UI
 - `MYPAGE`나 `RECIPEBOOK_DETAIL`의 새 edit CTA/layout. 기존 item→`RECIPE_DETAIL` navigation만 유지
 - recipebook cover picker/reference upgrade, YT import redesign, PLANNER_WEEK shell, COOK_MODE 또는 MEAL_LOG UI
@@ -66,18 +66,19 @@ Schema Change:
 | `recipe-visibility-read-hardening` PR #1228 | merged | #3 Stage 2~6 runtime/client/review/current-head closeout is the only successor predecessor for #5 |
 | `31-recipe-media-tags` | merged | existing image upload/object-ID/cancel surface must be reused |
 | `36e-recipe-tags-frontend` | merged | existing tag form/primitives must be reused |
-| `recipe-snapshot-authority-foundation` | in-progress, not a predecessor | PR #1218 historical Stage 2 and PR #1219 historical Stage 4 are preserved; the hybrid delta/reverification remains in progress. #4 is not a #5 implementation predecessor |
+| `recipe-snapshot-authority-foundation` | in-progress, not a predecessor | PR #1218/#1219와 후속 hybrid/full-local evidence는 역사로 보존한다. #4 is not a #5 implementation predecessor |
 | `recipebook-diary-port` | not a predecessor | MYPAGE/RECIPEBOOK_DETAIL remain untouched |
 
-> Roadmap and workflow lifecycle remain `in-progress` after the Stage 2/3 boundary lock and Stage 4/5 capability-off implementation merge. The required merged-SHA hybrid verifier is still pending, and no editor CTA, personal write or new runtime endpoint is activated.
+> Roadmap and workflow lifecycle remain `in-progress` after the historical Stage 2/3 boundary lock and Stage 4/5 capability-off implementation merge. The active full-local Stage 2 verifier implementation and merged-exact-SHA execution are pending. No editor CTA, personal write or new runtime endpoint is activated.
 
-## Hybrid Auth / Local Data Boundary
+## Full-Local Auth / Data / Storage Boundary
 
-- Google/Naver/Kakao session identity and the minimal Hook/lifecycle fence remain in the remote Auth control-plane. Application DB and Storage authority are local application Data/Storage on the server Mac.
-- `local auth.users=0` is intentional. User-scoped editor preload and future mutation paths must pass the server session-authority gateway, exact remote JWT claim checks, current private identity epoch and active session-liveness HMAC binding.
-- The browser must not call local PostgREST/Storage directly. The user path has service-role user path 0; managed image operations continue through the existing server image APIs.
-- The post-merge release verifier is `node scripts/verify-personal-recipe-editor-hybrid.mjs --mode post-merge-read-only`. It reads local application Data/Storage plus minimal sanitized remote Auth control-plane evidence, keeps remote application DB/Storage writes at zero, and proves the capability-off external personal write is dark at the observation point.
-- The verifier is developed test-first in `tests/personal-recipe-editor-hybrid-verifier.test.ts`. A successful release result is claimed only when the command runs from a clean merged exact SHA with truthful local and Manual Only evidence. This verifier makes no product API, DB, route, field, status or error change.
+- Before the first successful local production Auth state mutation, `LIVE_REMOTE` Supabase Auth/application DB/Storage remains the only source-of-record and migration/recovery source. Existing local data is rehearsal output and cannot outrank the remote dump.
+- The target is one self-hosted local Supabase Auth (GoTrue), PostgreSQL/PostgREST and Storage authority on the server Mac. Stable remote user UUID/identity is classified and restored into local GoTrue; remote sessions, refresh tokens and flow-state rows are excluded so every user logs in again.
+- `local auth.users=0` is historical hybrid evidence, not an active invariant. Future user-scoped editor preload and mutation use local Auth JWT, the app-owned local session binding, account generation and existing `auth.uid()` RLS/owner boundary.
+- The browser uses the Homecook app API plus only the narrow allowlisted subset under `/auth/v1` required for Auth flows. No other Auth route is publicly reachable. Public `/rest/v1`, `/storage/v1`, Studio, PostgreSQL and Docker socket exposure is zero. Browser direct Data/Storage mutation and service-role user fallback remain zero.
+- Editor/user image paths keep the existing generation-aware server Route, `image_object_id`, private Storage, short signed reads and owner cancel. Browser direct Storage mutation/remove and a service-role user fallback are forbidden.
+- Production/staging/remote application write 0 remains mandatory. This relock does not perform the first local production session, provider link, user-scoped local DB/Storage write or cutover.
 
 ## Context Contract
 
@@ -203,10 +204,10 @@ The independent product-design-authority recheck records `pass`, blocker/major/m
 - The implementation head `e177a882e0fbc35847895a7a0f1dd775ff4425d1` completed 20 GitHub checks successfully with one documented normal `full-regression` skip and no pending, failed, cancelled or Vercel check.
 - Independent code, security and exact-head verification finished with P0/P1/P2 `0/0/0`; the independent design authority finished with blocker/major/minor `0/0/0`.
 - Retained Codex native review paths: `/root/stage4_final4_code_review`, `/root/stage4_final4_security_review`, `/root/stage4_post_vercel_fresh_review`, `/root/stage4_exact_head_final_verifier`; reviewed input SHA `e177a882e0fbc35847895a7a0f1dd775ff4425d1`, result artifact is this closeout evidence plus PR #1243 Actual Verification.
-- The post-merge hybrid verifier implementation is separate from the Stage 4 evidence. PR #1246 merged it as `354c569c8e40889bcfa7d9832cb9cec93f53db46`; its merged exact-SHA dry-run passed. Capability-on fork/edit/delete/login-return smokes remain future or Manual Only and do not authorize remote application DB/Storage writes.
-- Full Stage 6 lifecycle closeout remains pending until the verifier passes its complete local Data/Storage plus sanitized remote Auth evidence path.
+- The historical hybrid verifier implementation is separate from the Stage 4 evidence. PR #1246 merged it as `354c569c8e40889bcfa7d9832cb9cec93f53db46`; its merged exact-SHA dry-run passed. It remains historical evidence and is not the active completion gate. Capability-on fork/edit/delete/login-return smokes remain future or Manual Only and do not authorize application writes.
+- Full Stage 6 lifecycle closeout remains pending until the new full-local verifier passes from a clean merged exact SHA and the required independent reviews are complete.
 
-### Stage 6 verifier implementation evidence
+### Historical hybrid verifier evidence
 
 - RED: `pnpm exec vitest run tests/personal-recipe-editor-hybrid-verifier.test.ts` failed because the verifier module did not exist.
 - GREEN: the focused verifier, contract-sync, snapshot-hybrid, recipe-visibility local and hybrid static-gate set passed `33/33`.
@@ -215,6 +216,16 @@ The independent product-design-authority recheck records `pass`, blocker/major/m
 - The exact source inventory proves user service-role fallback/direct paths `0`, browser direct Storage paths `0`, inactive personal-create entry, app/MYPAGE/RECIPEBOOK personal-entry markers `0`, shipping capability-on markers `0`, and no recipe `PATCH`/`DELETE` handler. It preserves the one legacy manual-create `POST /recipes` handler while requiring personal editor markers and `origin_recipe_id` inputs on that handler to remain `0`. The stale generated browser Storage inventory was refreshed to the current empty set.
 - The merged exact-SHA dry-run passed on `354c569c8e40889bcfa7d9832cb9cec93f53db46`, proving the clean merged source and static dark-ship boundary. The complete verifier still fails closed because the current local instance lacks `private.remote_auth_identity_epochs` and no truthful sanitized remote Auth evidence is available. No full release result, other-Mac deployment evidence, production/staging write or remote application DB/Storage mutation is claimed here.
 
+### Active full-local delta and stage order
+
+1. Stage 2 read-only verifier: TDD RED→GREEN으로 `tests/personal-recipe-editor-full-local-verifier.test.ts`와 full-local verifier를 구현한다. Active target은 clean merged exact SHA이며 historical hybrid verifier를 completion gate로 재사용하지 않는다.
+2. Stage 3: Stage 2 작성 작업과 다른 Codex task가 exact-head code/security review를 수행한다.
+3. Stage 4: 이미 merge된 capability-off shell/consumer를 current full-local session/image boundary에서 재검증한다. 새 UI나 activation을 구현하지 않는다.
+4. Stage 5: no visual/product change 근거로 lightweight no-visual-drift review를 수행한다. `Design Status: confirmed`를 유지하고 새 screenshot/Figma/authority evidence를 fabricated하지 않는다.
+5. Stage 6: clean merged exact head에서 verifier와 lifecycle projection을 닫는다. activated live path와 아래 Manual Only 증거가 없으면 verification은 `pending`을 유지한다.
+
+자동화 가능한 증거는 self-owned isolated local Auth/DB/Storage rehearsal, 정적 public exposure inventory, capability-off source inventory와 merged-exact verifier다. Activated provider callback/link, Cloudflare, final backup/restore, off-Mac restore, first local mutation/cutover와 post-floor recovery는 Manual Only/pending이다.
+
 ## QA / Test Data Plan
 
 ### Stage 1 gate
@@ -222,7 +233,7 @@ The independent product-design-authority recheck records `pass`, blocker/major/m
 - this docs PR first records RED and then GREEN in `tests/personal-recipe-editor-hybrid-contract-sync.test.ts`, and runs the current executable subset only: SOT/workflow/workpack/automation/bookkeeping validators, focused workflow Vitest, lint, typecheck, dependency audit and diff check.
 - `required_checks` remains the full-lifecycle closeout gate; `verify_commands` is the current Stage 1 executable subset.
 - Stage 4 first writes component/navigation regression tests and records RED before shell extraction, CTA or dirty guard production code.
-- capability-on component/Playwright/visual/authority smokes below remain future or Manual Only. The hybrid verifier unit/static checks are executable now, while its release command remains a merged-exact-SHA gate.
+- capability-on component/Playwright/visual/authority smokes remain future or Manual Only. The new full-local verifier is a Stage 2 TDD artifact; it does not exist or pass merely because the historical hybrid verifier exists.
 
 ### Future fixtures
 
@@ -232,16 +243,16 @@ The independent product-design-authority recheck records `pass`, blocker/major/m
 - clean cancel, dirty browser back/in-app close, stay/discard, cancel API failure, duplicate submit, server validation, unauthorized/stale access and retry.
 - public fork source unchanged and new private ID; personal edit same ID; secondary save new ID; planner-add alone creates Meal.
 - current and immediate-previous dark-ship compatibility with CTA/write flag off and no mutable-history regression.
-- hybrid session fixtures cover remote Auth control-plane liveness, local identity epoch/binding checks, `local auth.users=0`, service-role user path 0 and remote application DB/Storage write 0 without logging raw identity/session material.
+- full-local session fixtures cover restored stable UUID, local session binding, `auth.uid()` RLS, cross-owner denial, re-login after transient session exclusion, service-role fallback 0 and production/staging/remote application write 0 without logging raw identity/session material.
 
 ## Source Links
 
 - `docs/sync/CURRENT_SOURCE_OF_TRUTH.md`
-- `docs/요구사항기준선-v1.7.26.md` 0-HYBRID, B
-- `docs/화면정의서-v1.5.30.md` 0-HYBRID, 0-D
-- `docs/유저flow맵-v1.3.28.md` remote Auth→local Data/Storage, ⓮
-- `docs/db설계-v1.3.27.md` 0-HYBRID, recipe/image authority
-- `docs/api문서-v1.2.30.md` hybrid internal boundary, personal recipe/image contracts
+- `docs/요구사항기준선-v1.7.28.md` full-local authority, B
+- `docs/화면정의서-v1.5.32.md` full-local Auth and existing editor screens
+- `docs/유저flow맵-v1.3.30.md` local Auth/session/owner flow, ⓮
+- `docs/db설계-v1.3.30.md` local Auth restore, session binding, recipe/image authority
+- `docs/api문서-v1.2.33.md` Auth-only public boundary and existing personal recipe/image contracts
 - historical master plan design sections for successor #5; its local-only Auth/deployment assumptions are superseded by the current official tuple
 
 ## Key Rules
@@ -254,7 +265,7 @@ The independent product-design-authority recheck records `pass`, blocker/major/m
 - managed image object ID and existing tag rules are reused; no browser Storage mutation or client visibility authority.
 - MYPAGE/RECIPEBOOK_DETAIL stay out of scope.
 - CTA and external personal write remains dark until the approved capability/snapshot-v2 activation gate.
-- remote application DB/Storage writes remain zero; the hybrid control-plane boundary never authorizes #5 product writes.
+- production/staging/remote application write 0 remains locked; the full-local target never authorizes #5 product writes or claims #6/#7/#8 activation.
 
 ## Delivery Checklist
 
