@@ -6,7 +6,7 @@
 - Role: Stage 2 `backend-implementer`; no independent Stage 3 approval was performed.
 - Base: `b46ec9571538fefce48d13f57c9765daba1e2b06`
 - Branch: `fix/recipe-snapshot-stage2-full-local-verifier`
-- Draft PR: [#1265](https://github.com/netsus/homecook/pull/1265); current-head CI is tracked separately and does not constitute Stage 3 approval.
+- Draft PR: [#1265](https://github.com/netsus/homecook/pull/1265); exact current-head CI is recorded in the PR Merge Gate and does not constitute Stage 3 approval.
 - Production/staging/remote application writes: `0 / 0 / 0`
 - Schema migration, activation, cutover and restore: not performed.
 
@@ -73,6 +73,6 @@
 - first local mutation/cutover;
 - one full compatibility-release observation;
 - full actual-DB cleanup rehearsal including exact local Auth identity delete, terminal readback and delete/recreate isolation;
-- independent Stage 3 code/security/DB review and current-head CI.
+- independent Stage 3 code/security/DB review.
 
 The implementation keeps all acceptance and lifecycle completion items unchecked until those exact evidence gates are satisfied.
