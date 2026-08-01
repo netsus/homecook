@@ -4,6 +4,13 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const migrationsDirectory = join(process.cwd(), "supabase", "migrations");
+const consumerReadAuthoritySql = readFileSync(
+  join(
+    migrationsDirectory,
+    "20260802120000_recipe_snapshot_consumer_read_authority.sql",
+  ),
+  "utf8",
+);
 
 function readMigrationSource() {
   return readdirSync(migrationsDirectory)
@@ -27,6 +34,39 @@ function readLatestFunctionSource(functionName: string) {
 }
 
 describe("recipe snapshot mutation security", () => {
+  it("grants authenticated read-only access through exact owner-or-shared policies", () => {
+    for (const table of [
+      "recipe_content_snapshots",
+      "recipe_nutrition_snapshots",
+    ]) {
+      expect(consumerReadAuthoritySql).toMatch(
+        new RegExp(
+          `revoke all on table public\\.${table}\\s+from public, anon, authenticated`,
+          "iu",
+        ),
+      );
+      expect(consumerReadAuthoritySql).toMatch(
+        new RegExp(
+          `grant select on table public\\.${table}\\s+to authenticated, service_role`,
+          "iu",
+        ),
+      );
+      expect(consumerReadAuthoritySql).toMatch(
+        new RegExp(
+          `create policy ${table}_authenticated_read[\\s\\S]*for select[\\s\\S]*to authenticated[\\s\\S]*owner_user_id is null[\\s\\S]*auth\\.uid\\(\\) = owner_user_id`,
+          "iu",
+        ),
+      );
+    }
+
+    expect(consumerReadAuthoritySql).not.toMatch(
+      /grant\s+(?:insert|update|delete|truncate|all)\b/iu,
+    );
+    expect(consumerReadAuthoritySql).not.toMatch(
+      /create\s+function|security\s+definer/iu,
+    );
+  });
+
   it("keeps snapshot mutation server-owned and validates private/public ownership pairs", () => {
     const ownership = readLatestFunctionSource(
       "validate_recipe_content_snapshot_ownership",
