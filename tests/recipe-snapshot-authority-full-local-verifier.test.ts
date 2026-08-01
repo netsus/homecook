@@ -56,6 +56,14 @@ const fullLocalPolicyExpressionInventory = [
     schema: "public", table: "leftover_dishes", name: "leftover_dishes_update_own",
     using: "auth.uid() = user_id", check: "auth.uid() = user_id",
   },
+  {
+    schema: "public", table: "recipe_content_snapshots", name: "recipe_content_snapshots_authenticated_read",
+    using: "owner_user_id is null or auth.uid() = owner_user_id", check: "",
+  },
+  {
+    schema: "public", table: "recipe_nutrition_snapshots", name: "recipe_nutrition_snapshots_authenticated_read",
+    using: "owner_user_id is null or auth.uid() = owner_user_id", check: "",
+  },
 ];
 
 const snapshotResult = {
@@ -132,7 +140,22 @@ const localResult = {
     rls_disabled_count: 0,
     rls_owner_drift_count: 0,
     rls_force_drift_count: 0,
-    required_policy_count: 10,
+    required_snapshot_table_acl_count: 2,
+    snapshot_table_acl_missing_count: 0,
+    snapshot_table_acl_drift_count: 0,
+    _snapshot_table_acl_inventory: [
+      {
+        schema: "public",
+        table: "recipe_content_snapshots",
+        acl: "authenticated:SELECT:false,service_role:SELECT:false",
+      },
+      {
+        schema: "public",
+        table: "recipe_nutrition_snapshots",
+        acl: "authenticated:SELECT:false,service_role:SELECT:false",
+      },
+    ],
+    required_policy_count: 12,
     policy_missing_count: 0,
     policy_drift_count: 0,
     unexpected_policy_count: 0,

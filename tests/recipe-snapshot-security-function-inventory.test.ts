@@ -16,6 +16,27 @@ describe("recipe snapshot security function inventory", () => {
     const manifest = JSON.parse(readFileSync(manifestPath, "utf8")) as {
       slice?: string;
       migration?: string;
+      table_read_authority_migration?: string;
+      tables?: Array<{
+        schema?: string;
+        name?: string;
+        owner?: string;
+        rls_enabled?: boolean;
+        force_rls?: boolean;
+        allowed_acl?: Array<{
+          principal?: string;
+          privilege?: string;
+          grantable?: boolean;
+        }>;
+        policies?: Array<{
+          name?: string;
+          command?: string;
+          roles?: string[];
+          permissive?: string;
+          using?: string;
+          check?: string;
+        }>;
+      }>;
       functions?: Array<{
         signature?: string;
         control_class?: string;
@@ -36,6 +57,45 @@ describe("recipe snapshot security function inventory", () => {
     expect(manifest.migration).toBe(
       "supabase/migrations/20260729170500_recipe_snapshot_authority_foundation.sql",
     );
+    expect(manifest.table_read_authority_migration).toBe(
+      "supabase/migrations/20260802120000_recipe_snapshot_consumer_read_authority.sql",
+    );
+    expect(manifest.tables).toEqual([
+      expect.objectContaining({
+        schema: "public",
+        name: "recipe_content_snapshots",
+        owner: "postgres",
+        rls_enabled: true,
+        force_rls: false,
+        allowed_acl: [
+          {
+            principal: "authenticated",
+            privilege: "SELECT",
+            grantable: false,
+          },
+          {
+            principal: "service_role",
+            privilege: "SELECT",
+            grantable: false,
+          },
+        ],
+        policies: [expect.objectContaining({
+          name: "recipe_content_snapshots_authenticated_read",
+          command: "SELECT",
+          roles: ["authenticated"],
+          permissive: "PERMISSIVE",
+          using: "owner_user_id is null or auth.uid() = owner_user_id",
+          check: "",
+        })],
+      }),
+      expect.objectContaining({
+        schema: "public",
+        name: "recipe_nutrition_snapshots",
+        owner: "postgres",
+        rls_enabled: true,
+        force_rls: false,
+      }),
+    ]);
     expect(manifest.functions?.length ?? 0).toBeGreaterThan(0);
     expect(
       manifest.functions?.find(

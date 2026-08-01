@@ -817,8 +817,20 @@ activeInventoryRun("active full-local snapshot security inventory", () => {
     expect(database).toMatch(/^homecook_[a-z0-9_]+$/u);
   });
 
-  it("accepts the active 12-table and 10-policy inventory", () => {
+  it("accepts the active 12-table, 2 snapshot ACL, and 12-policy inventory", () => {
     const { api, result } = securityInventoryAfter("", options);
+    expect(result._snapshot_table_acl_inventory).toEqual([
+      {
+        schema: "public",
+        table: "recipe_content_snapshots",
+        acl: "authenticated:SELECT:false,service_role:SELECT:false",
+      },
+      {
+        schema: "public",
+        table: "recipe_nutrition_snapshots",
+        acl: "authenticated:SELECT:false,service_role:SELECT:false",
+      },
+    ]);
     expect(result).toMatchObject({
       required_function_count: 29,
       required_role_count: 4,
@@ -827,13 +839,43 @@ activeInventoryRun("active full-local snapshot security inventory", () => {
       role_membership_drift_count: 0,
       unexpected_role_membership_count: 0,
       required_rls_table_count: 12,
-      required_policy_count: 10,
+      required_snapshot_table_acl_count: 2,
+      snapshot_table_acl_missing_count: 0,
+      snapshot_table_acl_drift_count: 0,
+      required_policy_count: 12,
       function_acl_drift_count: 0,
       rls_owner_drift_count: 0,
       rls_force_drift_count: 0,
       policy_drift_count: 0,
     });
-    expect(result._policy_expression_inventory).toHaveLength(10);
+    expect(result._policy_expression_inventory).toHaveLength(12);
+    const policyInventory = result._policy_expression_inventory as Array<{
+      name: string;
+      schema: string;
+      table: string;
+      using: string;
+      check: string;
+    }>;
+    expect(
+      policyInventory.filter((policy) =>
+        policy.name.includes("snapshots_authenticated_read"),
+      ),
+    ).toEqual([
+      {
+        schema: "public",
+        table: "recipe_content_snapshots",
+        name: "recipe_content_snapshots_authenticated_read",
+        using: "((owner_user_id IS NULL) OR (auth.uid() = owner_user_id))",
+        check: "",
+      },
+      {
+        schema: "public",
+        table: "recipe_nutrition_snapshots",
+        name: "recipe_nutrition_snapshots_authenticated_read",
+        using: "((owner_user_id IS NULL) OR (auth.uid() = owner_user_id))",
+        check: "",
+      },
+    ]);
     expect(() => api.assertResult(result, options)).not.toThrow();
   });
 
@@ -852,6 +894,18 @@ activeInventoryRun("active full-local snapshot security inventory", () => {
       "snapshot function unexpected principal",
       `grant execute on function public.backfill_meal_recipe_content_snapshots()
          to authenticator;`,
+    ],
+    [
+      "authenticated content snapshot write",
+      "grant insert on table public.recipe_content_snapshots to authenticated;",
+    ],
+    [
+      "anonymous content snapshot read",
+      "grant select on table public.recipe_content_snapshots to anon;",
+    ],
+    [
+      "missing authenticated nutrition snapshot read",
+      "revoke select on table public.recipe_nutrition_snapshots from authenticated;",
     ],
     [
       "authenticated BYPASSRLS",
@@ -888,8 +942,26 @@ activeInventoryRun("active full-local snapshot security inventory", () => {
     ],
     ["FORCE RLS", "alter table public.recipes force row level security;"],
     [
+      "snapshot FORCE RLS",
+      "alter table public.recipe_content_snapshots force row level security;",
+    ],
+    [
       "protected table owner",
       "alter table public.recipes owner to authenticated;",
+    ],
+    [
+      "snapshot table owner",
+      "alter table public.recipe_nutrition_snapshots owner to authenticated;",
+    ],
+    [
+      "broad snapshot read policy",
+      `drop policy recipe_content_snapshots_authenticated_read
+         on public.recipe_content_snapshots;
+       create policy recipe_content_snapshots_authenticated_read
+         on public.recipe_content_snapshots
+         for select
+         to authenticated
+         using (true);`,
     ],
     [
       "restrictive policy",

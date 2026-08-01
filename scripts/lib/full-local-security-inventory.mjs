@@ -21,6 +21,10 @@ const SNAPSHOT_MIGRATION_PATH = join(
   REPOSITORY_ROOT,
   "supabase/migrations/20260729170500_recipe_snapshot_authority_foundation.sql",
 );
+const SNAPSHOT_CONSUMER_READ_MIGRATION_PATH = join(
+  REPOSITORY_ROOT,
+  "supabase/migrations/20260802120000_recipe_snapshot_consumer_read_authority.sql",
+);
 const CURRENT_ACCOUNT_CLEANUP_MIGRATION_PATH = join(
   REPOSITORY_ROOT,
   "supabase/migrations/20260731111000_product_ingredient_link_account_cleanup.sql",
@@ -40,6 +44,10 @@ const snapshotManifest = JSON.parse(
 );
 const fullLocalMigration = readFileSync(FULL_LOCAL_MIGRATION_PATH, "utf8");
 const snapshotMigration = readFileSync(SNAPSHOT_MIGRATION_PATH, "utf8");
+const snapshotConsumerReadMigration = readFileSync(
+  SNAPSHOT_CONSUMER_READ_MIGRATION_PATH,
+  "utf8",
+);
 const currentAccountCleanupMigration = readFileSync(
   CURRENT_ACCOUNT_CLEANUP_MIGRATION_PATH,
   "utf8",
@@ -54,21 +62,27 @@ const leftoverMigration = readFileSync(LEFTOVER_MIGRATION_PATH, "utf8");
 // protected relations are repo-migration objects; Storage service-owned
 // relations are intentionally outside this locked 12-table inventory.
 const CORE_RLS_TABLES = [
-  ["private", "full_local_auth_control", "postgres"],
-  ["private", "auth_flow_attempts", "postgres"],
-  ["public", "recipes", "postgres"],
-  ["public", "recipe_sources", "postgres"],
-  ["public", "recipe_ingredients", "postgres"],
-  ["public", "recipe_steps", "postgres"],
-  ["public", "recipe_step_cooking_methods", "postgres"],
-  ["public", "recipe_tags", "postgres"],
-  ["public", "tags", "postgres"],
+  ["private", "full_local_auth_control", "postgres", "false"],
+  ["private", "auth_flow_attempts", "postgres", "false"],
+  ["public", "recipes", "postgres", "false"],
+  ["public", "recipe_sources", "postgres", "false"],
+  ["public", "recipe_ingredients", "postgres", "false"],
+  ["public", "recipe_steps", "postgres", "false"],
+  ["public", "recipe_step_cooking_methods", "postgres", "false"],
+  ["public", "recipe_tags", "postgres", "false"],
+  ["public", "tags", "postgres", "false"],
 ];
 
+const SNAPSHOT_READ_TABLES = snapshotManifest.tables ?? [];
+
 const SNAPSHOT_RLS_TABLES = [
-  ["public", "recipe_nutrition_snapshots", "postgres"],
-  ["public", "recipe_content_snapshots", "postgres"],
-  ["public", "leftover_dishes", "postgres"],
+  ...SNAPSHOT_READ_TABLES.map((table) => [
+    table.schema,
+    table.name,
+    table.owner,
+    String(table.force_rls),
+  ]),
+  ["public", "leftover_dishes", "postgres", "false"],
 ];
 
 const CORE_POLICY_SOURCES = [
@@ -85,7 +99,25 @@ const SNAPSHOT_POLICY_SOURCES = [
   [leftoverMigration, "leftover_dishes_select_own"],
   [leftoverMigration, "leftover_dishes_insert_own"],
   [leftoverMigration, "leftover_dishes_update_own"],
+  ...SNAPSHOT_READ_TABLES.flatMap((table) =>
+    table.policies.map((policy) => [snapshotConsumerReadMigration, policy.name])
+  ),
 ];
+
+const SNAPSHOT_TABLE_ACL_CONTRACT = SNAPSHOT_READ_TABLES.map((table) => [
+  table.schema,
+  table.name,
+  [...table.allowed_acl]
+    .sort((left, right) =>
+      `${left.principal}:${left.privilege}:${left.grantable}`.localeCompare(
+        `${right.principal}:${right.privilege}:${right.grantable}`,
+      )
+    )
+    .map((entry) =>
+      `${entry.principal}:${entry.privilege}:${entry.grantable}`
+    )
+    .join(","),
+]);
 
 const ROLE_ATTRIBUTE_CONTRACT = [
   ["anon", "false", "false"],
@@ -443,6 +475,29 @@ const SNAPSHOT_POLICY_CONTRACT = SNAPSHOT_POLICY_SOURCES.map(
   ([migration, name]) => parsePolicy(migration, name),
 );
 
+for (const table of SNAPSHOT_READ_TABLES) {
+  if (table.rls_enabled !== true) {
+    throw new Error(`snapshot read table must keep RLS enabled: ${table.name}`);
+  }
+  for (const policy of table.policies) {
+    const parsed = SNAPSHOT_POLICY_CONTRACT.find((entry) =>
+      entry.schema === table.schema
+      && entry.table === table.name
+      && entry.name === policy.name
+    );
+    if (
+      !parsed
+      || parsed.command !== policy.command
+      || parsed.roles !== [...policy.roles].sort().join(",")
+      || parsed.permissive !== policy.permissive
+      || parsed.using !== canonicalizePredicate(policy.using)
+      || parsed.check !== canonicalizePredicate(policy.check)
+    ) {
+      throw new Error(`snapshot read policy manifest drift: ${policy.name}`);
+    }
+  }
+}
+
 function valuesSql(rows) {
   return rows.map((row) => `(${row.map(sqlLiteral).join(", ")})`).join(",\n      ");
 }
@@ -468,12 +523,7 @@ function buildSecurityInventoryExpression({ includeSnapshotTables }) {
     entry.searchPath,
     entry.allowedAcl,
   ]));
-  const tableValues = valuesSql(rlsTables.map(([schema, table, owner]) => [
-    schema,
-    table,
-    owner,
-    "false",
-  ]));
+  const tableValues = valuesSql(rlsTables);
   const policyValues = valuesSql(policies.map((policy) => [
     policy.schema,
     policy.table,
@@ -486,6 +536,9 @@ function buildSecurityInventoryExpression({ includeSnapshotTables }) {
   ]));
   const roleValues = valuesSql(ROLE_ATTRIBUTE_CONTRACT);
   const membershipValues = valuesSql(ROLE_MEMBERSHIP_CONTRACT);
+  const snapshotTableAclSource = includeSnapshotTables
+    ? `values\n      ${valuesSql(SNAPSHOT_TABLE_ACL_CONTRACT)}`
+    : `select null::text, null::text, null::text where false`;
 
   return `
     with expected_functions(
@@ -579,6 +632,35 @@ function buildSecurityInventoryExpression({ includeSnapshotTables }) {
        and relation.relname = expected.table_name
        and relation.relkind in ('r', 'p')
       left join pg_catalog.pg_roles as owner on owner.oid = relation.relowner
+    ), expected_snapshot_table_acls(schema_name, table_name, allowed_acl) as (
+      ${snapshotTableAclSource}
+    ), snapshot_table_acl_inventory as (
+      select
+        expected.*,
+        relation.oid,
+        coalesce((
+          select pg_catalog.string_agg(
+            (case when acl.grantee = 0 then 'public' else role.rolname end)
+              || ':' || acl.privilege_type || ':' || acl.is_grantable::text,
+            ',' order by
+              case when acl.grantee = 0 then 'public' else role.rolname end,
+              acl.privilege_type,
+              acl.is_grantable
+          )
+          from pg_catalog.aclexplode(coalesce(
+            relation.relacl,
+            pg_catalog.acldefault('r', relation.relowner)
+          )) as acl
+          left join pg_catalog.pg_roles as role on role.oid = acl.grantee
+          where acl.grantee is distinct from relation.relowner
+        ), '') as actual_acl
+      from expected_snapshot_table_acls as expected
+      left join pg_catalog.pg_namespace as namespace
+        on namespace.nspname = expected.schema_name
+      left join pg_catalog.pg_class as relation
+        on relation.relnamespace = namespace.oid
+       and relation.relname = expected.table_name
+       and relation.relkind in ('r', 'p')
     ), expected_policies(
       schema_name, table_name, policy_name, command_name, role_names,
       permissive_mode, using_predicate, check_predicate
@@ -669,6 +751,21 @@ function buildSecurityInventoryExpression({ includeSnapshotTables }) {
       'rls_disabled_count', (select count(*) from rls_inventory where oid is not null and not relrowsecurity),
       'rls_owner_drift_count', (select count(*) from rls_inventory where oid is not null and actual_owner is distinct from owner_name),
       'rls_force_drift_count', (select count(*) from rls_inventory where oid is not null and relforcerowsecurity is distinct from force_rls::boolean),
+      'required_snapshot_table_acl_count', (select count(*) from expected_snapshot_table_acls),
+      'snapshot_table_acl_missing_count', (select count(*) from snapshot_table_acl_inventory where oid is null),
+      'snapshot_table_acl_drift_count', (
+        select count(*)
+        from snapshot_table_acl_inventory
+        where oid is not null and actual_acl is distinct from allowed_acl
+      ),
+      '_snapshot_table_acl_inventory', (
+        select coalesce(pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object(
+          'schema', actual.schema_name,
+          'table', actual.table_name,
+          'acl', actual.actual_acl
+        ) order by actual.schema_name, actual.table_name), '[]'::jsonb)
+        from snapshot_table_acl_inventory as actual
+      ),
       'required_policy_count', (select count(*) from expected_policies),
       'policy_missing_count', (
         select count(*) from expected_policies as expected
@@ -731,6 +828,10 @@ const SECURITY_RESULT_KEYS = [
   "rls_disabled_count",
   "rls_owner_drift_count",
   "rls_force_drift_count",
+  "required_snapshot_table_acl_count",
+  "snapshot_table_acl_missing_count",
+  "snapshot_table_acl_drift_count",
+  "_snapshot_table_acl_inventory",
   "required_policy_count",
   "policy_missing_count",
   "policy_drift_count",
@@ -767,10 +868,22 @@ export function assertRecipeSnapshotAuthorityFullLocalSecurityInventoryResult(
   const expectedPolicyCount = includeSnapshotTables
     ? CORE_POLICY_CONTRACT.length + SNAPSHOT_POLICY_CONTRACT.length
     : CORE_POLICY_CONTRACT.length;
+  const expectedSnapshotTableAclCount = includeSnapshotTables
+    ? SNAPSHOT_TABLE_ACL_CONTRACT.length
+    : 0;
   const expectedPolicies = includeSnapshotTables
     ? [...CORE_POLICY_CONTRACT, ...SNAPSHOT_POLICY_CONTRACT]
     : CORE_POLICY_CONTRACT;
   const policyInventory = result?._policy_expression_inventory;
+  const snapshotTableAclInventory = result?._snapshot_table_acl_inventory;
+  const exactSnapshotTableAcls = Array.isArray(snapshotTableAclInventory)
+    && snapshotTableAclInventory.length === expectedSnapshotTableAclCount
+    && SNAPSHOT_TABLE_ACL_CONTRACT.slice(0, expectedSnapshotTableAclCount)
+      .every(([schema, table, acl]) => snapshotTableAclInventory.some((entry) =>
+        entry?.schema === schema
+        && entry?.table === table
+        && entry?.acl === acl
+      ));
   const exactPolicyExpressions = Array.isArray(policyInventory)
     && policyInventory.length === expectedPolicies.length
     && expectedPolicies.every((expected) => {
@@ -792,7 +905,9 @@ export function assertRecipeSnapshotAuthorityFullLocalSecurityInventoryResult(
     && result.required_role_count === ROLE_ATTRIBUTE_CONTRACT.length
     && result.required_role_membership_count === ROLE_MEMBERSHIP_CONTRACT.length
     && result.required_rls_table_count === expectedTableCount
+    && result.required_snapshot_table_acl_count === expectedSnapshotTableAclCount
     && result.required_policy_count === expectedPolicyCount
+    && exactSnapshotTableAcls
     && exactPolicyExpressions
     && SECURITY_ZERO_KEYS.every((key) => result[key] === 0);
   if (!valid) {

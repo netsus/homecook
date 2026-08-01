@@ -9,6 +9,8 @@ import path from "node:path";
 const POSTGRES_TOOLS = ["initdb", "pg_ctl", "createdb", "psql"];
 const TARGET_MIGRATION =
   "supabase/migrations/20260729170500_recipe_snapshot_authority_foundation.sql";
+const CONSUMER_READ_AUTHORITY_MIGRATION =
+  "supabase/migrations/20260802120000_recipe_snapshot_consumer_read_authority.sql";
 const ACTIVE_SECURITY_MIGRATIONS = [
   "supabase/migrations/20260429080000_15a_cook_planner_complete.sql",
   "supabase/migrations/20260723140000_account_session_generation_foundation.sql",
@@ -727,8 +729,18 @@ async function runMode(postgresBin, mode) {
       runRequired(path.join(postgresBin, "psql"), [...connectionArgs, "-c", REPLAY_FIXTURE_SQL]);
     }
     runRequired(path.join(postgresBin, "psql"), [...connectionArgs, "-f", TARGET_MIGRATION]);
+    runRequired(path.join(postgresBin, "psql"), [
+      ...connectionArgs,
+      "-f",
+      CONSUMER_READ_AUTHORITY_MIGRATION,
+    ]);
     if (mode === "replay") {
       runRequired(path.join(postgresBin, "psql"), [...connectionArgs, "-f", TARGET_MIGRATION]);
+      runRequired(path.join(postgresBin, "psql"), [
+        ...connectionArgs,
+        "-f",
+        CONSUMER_READ_AUTHORITY_MIGRATION,
+      ]);
     }
 
     const wrapperPath = path.join(wrapperDirectory, "psql");

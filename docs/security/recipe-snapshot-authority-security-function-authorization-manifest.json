@@ -4,6 +4,67 @@
   "migration": "supabase/migrations/20260729170500_recipe_snapshot_authority_foundation.sql",
   "deployment_state": "pre-deployment",
   "baseline_application_contract_count": 74,
+  "table_read_authority_migration": "supabase/migrations/20260802120000_recipe_snapshot_consumer_read_authority.sql",
+  "tables": [
+    {
+      "schema": "public",
+      "name": "recipe_content_snapshots",
+      "owner": "postgres",
+      "rls_enabled": true,
+      "force_rls": false,
+      "allowed_acl": [
+        {
+          "principal": "authenticated",
+          "privilege": "SELECT",
+          "grantable": false
+        },
+        {
+          "principal": "service_role",
+          "privilege": "SELECT",
+          "grantable": false
+        }
+      ],
+      "policies": [
+        {
+          "name": "recipe_content_snapshots_authenticated_read",
+          "command": "SELECT",
+          "roles": ["authenticated"],
+          "permissive": "PERMISSIVE",
+          "using": "owner_user_id is null or auth.uid() = owner_user_id",
+          "check": ""
+        }
+      ]
+    },
+    {
+      "schema": "public",
+      "name": "recipe_nutrition_snapshots",
+      "owner": "postgres",
+      "rls_enabled": true,
+      "force_rls": false,
+      "allowed_acl": [
+        {
+          "principal": "authenticated",
+          "privilege": "SELECT",
+          "grantable": false
+        },
+        {
+          "principal": "service_role",
+          "privilege": "SELECT",
+          "grantable": false
+        }
+      ],
+      "policies": [
+        {
+          "name": "recipe_nutrition_snapshots_authenticated_read",
+          "command": "SELECT",
+          "roles": ["authenticated"],
+          "permissive": "PERMISSIVE",
+          "using": "owner_user_id is null or auth.uid() = owner_user_id",
+          "check": ""
+        }
+      ]
+    }
+  ],
   "functions": [
     {
       "signature": "public.validate_recipe_nutrition_snapshot_ownership()",
