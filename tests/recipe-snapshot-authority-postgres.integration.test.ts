@@ -14,11 +14,14 @@ const ownerB = "10000000-0000-4000-8000-000000000002";
 const privateRecipe = "20000000-0000-4000-8000-000000000001";
 const publicRecipe = "20000000-0000-4000-8000-000000000002";
 const deletedRecipe = "20000000-0000-4000-8000-000000000003";
+const privateRecipeB = "20000000-0000-4000-8000-000000000004";
 const privateNutrition = "30000000-0000-4000-8000-000000000001";
 const alternateNutrition = "30000000-0000-4000-8000-000000000002";
 const publicNutrition = "30000000-0000-4000-8000-000000000003";
+const privateNutritionB = "30000000-0000-4000-8000-000000000006";
 const privateContent = "40000000-0000-4000-8000-000000000001";
 const publicContent = "40000000-0000-4000-8000-000000000002";
+const privateContentB = "40000000-0000-4000-8000-000000000003";
 const legacyMeal = "50000000-0000-4000-8000-000000000001";
 const newMeal = "50000000-0000-4000-8000-000000000002";
 const plannerMeal = "50000000-0000-4000-8000-000000000003";
@@ -179,7 +182,8 @@ describe.skipIf(!enabled)("recipe snapshot authority PostgreSQL", () => {
       ) values
         ('${privateRecipe}', '개인 레시피', 2, '${ownerA}', 'private', null),
         ('${publicRecipe}', '공용 레시피', 2, null, 'public', null),
-        ('${deletedRecipe}', '삭제 레시피', 2, '${ownerA}', 'private', now());
+        ('${deletedRecipe}', '삭제 레시피', 2, '${ownerA}', 'private', now()),
+        ('${privateRecipeB}', '다른 사용자 레시피', 2, '${ownerB}', 'private', null);
 
       insert into public.recipe_ingredients (
         recipe_id, ingredient_id, amount, unit, ingredient_type,
@@ -265,6 +269,13 @@ describe.skipIf(!enabled)("recipe snapshot authority PostgreSQL", () => {
         id: publicNutrition,
         recipeId: publicRecipe,
         inputHash: "c".repeat(64),
+      }),
+    );
+    psql(
+      nutritionInsertSql({
+        id: privateNutritionB,
+        recipeId: privateRecipeB,
+        inputHash: "f".repeat(64),
       }),
     );
   });
@@ -623,6 +634,143 @@ describe.skipIf(!enabled)("recipe snapshot authority PostgreSQL", () => {
         }),
       ),
     ).not.toBe(privateContent);
+    expect(
+      psql(
+        contentInsertSql({
+          id: privateContentB,
+          ownerUserId: ownerB,
+          recipeId: privateRecipeB,
+          nutritionId: privateNutritionB,
+          contentHash: "private-content-owner-b",
+        }),
+      ),
+    ).toBe(privateContentB);
+  });
+
+  it("lets an authenticated consumer read shared and own exact snapshot pairs without cross-owner access", () => {
+    expect(
+      JSON.parse(psql(`
+        set role authenticated;
+        set request.jwt.claim.sub = '${ownerA}';
+        select jsonb_build_object(
+          'content_ids', (
+            select jsonb_agg(id order by id)
+            from public.recipe_content_snapshots
+            where id in ('${privateContent}', '${publicContent}', '${privateContentB}')
+          ),
+          'nutrition_ids', (
+            select jsonb_agg(id order by id)
+            from public.recipe_nutrition_snapshots
+            where id in ('${privateNutrition}', '${publicNutrition}', '${privateNutritionB}')
+          ),
+          'exact_pair_count', (
+            select count(*)
+            from public.recipe_content_snapshots as content
+            join public.recipe_nutrition_snapshots as nutrition
+              on nutrition.id = content.recipe_nutrition_snapshot_id
+            where content.id in ('${privateContent}', '${publicContent}', '${privateContentB}')
+          ),
+          'cross_owner_content_count', (
+            select count(*)
+            from public.recipe_content_snapshots
+            where id = '${privateContentB}'
+          ),
+          'cross_owner_nutrition_count', (
+            select count(*)
+            from public.recipe_nutrition_snapshots
+            where id = '${privateNutritionB}'
+          )
+        )::text;
+      `)),
+    ).toEqual({
+      content_ids: [privateContent, publicContent],
+      nutrition_ids: [privateNutrition, publicNutrition],
+      exact_pair_count: 2,
+      cross_owner_content_count: 0,
+      cross_owner_nutrition_count: 0,
+    });
+
+    expect(
+      JSON.parse(psql(`
+        select jsonb_build_object(
+          'content_select', has_table_privilege(
+            'authenticated', 'public.recipe_content_snapshots', 'SELECT'
+          ),
+          'content_insert', has_table_privilege(
+            'authenticated', 'public.recipe_content_snapshots', 'INSERT'
+          ),
+          'content_update', has_table_privilege(
+            'authenticated', 'public.recipe_content_snapshots', 'UPDATE'
+          ),
+          'content_delete', has_table_privilege(
+            'authenticated', 'public.recipe_content_snapshots', 'DELETE'
+          ),
+          'nutrition_select', has_table_privilege(
+            'authenticated', 'public.recipe_nutrition_snapshots', 'SELECT'
+          ),
+          'nutrition_insert', has_table_privilege(
+            'authenticated', 'public.recipe_nutrition_snapshots', 'INSERT'
+          ),
+          'nutrition_update', has_table_privilege(
+            'authenticated', 'public.recipe_nutrition_snapshots', 'UPDATE'
+          ),
+          'nutrition_delete', has_table_privilege(
+            'authenticated', 'public.recipe_nutrition_snapshots', 'DELETE'
+          )
+        )::text;
+      `)),
+    ).toEqual({
+      content_select: true,
+      content_insert: false,
+      content_update: false,
+      content_delete: false,
+      nutrition_select: true,
+      nutrition_insert: false,
+      nutrition_update: false,
+      nutrition_delete: false,
+    });
+
+    expectSqlFailure(
+      "set role anon; select * from public.recipe_content_snapshots;",
+      /permission denied|42501/i,
+    );
+    expectSqlFailure(
+      "set role anon; select * from public.recipe_nutrition_snapshots;",
+      /permission denied|42501/i,
+    );
+    expectSqlFailure(
+      `
+        set role authenticated;
+        set request.jwt.claim.sub = '${ownerA}';
+        update public.recipe_content_snapshots
+        set title = 'cross-owner mutation'
+        where id = '${privateContentB}';
+      `,
+      /permission denied|42501/i,
+    );
+    expectSqlFailure(
+      `
+        set role authenticated;
+        set request.jwt.claim.sub = '${ownerA}';
+        delete from public.recipe_nutrition_snapshots
+        where id = '${privateNutritionB}';
+      `,
+      /permission denied|42501/i,
+    );
+    expect(
+      psql(`
+        select count(*)
+        from public.recipe_content_snapshots
+        where id = '${privateContentB}';
+      `),
+    ).toBe("1");
+    expect(
+      psql(`
+        select count(*)
+        from public.recipe_nutrition_snapshots
+        where id = '${privateNutritionB}';
+      `),
+    ).toBe("1");
   });
 
   it("denies ordinary snapshot mutation and permits only exact-owner cleanup delete", () => {
