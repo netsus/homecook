@@ -6,6 +6,7 @@
 - Role: Stage 2 `backend-implementer`; no independent Stage 3 approval was performed.
 - Base: `b46ec9571538fefce48d13f57c9765daba1e2b06`
 - Branch: `fix/recipe-snapshot-stage2-full-local-verifier`
+- Draft PR: [#1265](https://github.com/netsus/homecook/pull/1265); current-head CI is tracked separately and does not constitute Stage 3 approval.
 - Production/staging/remote application writes: `0 / 0 / 0`
 - Schema migration, activation, cutover and restore: not performed.
 

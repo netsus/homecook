@@ -2390,7 +2390,7 @@
       "id": "recipe-snapshot-authority-foundation",
       "preset": "vertical-slice-strict",
       "branch": "fix/recipe-snapshot-stage2-full-local-verifier",
-      "pr_path": null,
+      "pr_path": "https://github.com/netsus/homecook/pull/1265",
       "lifecycle": "in_progress",
       "approval_state": "not_started",
       "verification_status": "pending",
