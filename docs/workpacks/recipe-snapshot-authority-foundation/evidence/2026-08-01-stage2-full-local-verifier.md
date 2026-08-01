@@ -202,3 +202,41 @@ Merged-exact execution, provider callback/link, Cloudflare, remote final backup,
 - No public API, field, status, error, migration or dependency was added. Production, staging and remote application writes remain `0 / 0 / 0`.
 
 Merged-exact execution, provider callback/link, Cloudflare, remote final backup, off-Mac restore twice, first local mutation/cutover, compatibility-release observation and full actual-DB cleanup rehearsal remain Manual Only/pending. The repaired exact head still requires all current-head checks and fresh independent code/security/DB reviews.
+
+## Final-candidate exact ACL and role repair — 2026-08-02
+
+- Review input: PR #1265 exact head `670e8a2b3562c01cbeb517135e16cca20b20a56d`.
+- Code review task `019fbe59-fc4a-7ee3-b1c6-32bec1a8252a`: `P0/P1/P2 = 0/1/0`, verdict `REQUEST_CHANGES`.
+- Security review task `019fbe59-fc4a-7ee3-b1c6-32d0cc1a966c`: `P0/P1/P2 = 0/1/0`, verdict `REQUEST_CHANGES`.
+- Role boundary: the same Stage 2 implementer performed this repair. It is not an approval, merge decision, Stage 3 completion or Stage 6 completion.
+
+### Actual PostgreSQL mutation RED and GREEN
+
+1. Fresh and replay RED:
+   - snapshot schema suites remained green (`14 passed / 1 intended skip`, then `15/15`);
+   - each active production assertion reported `5 failed / 8 passed` because it accepted snapshot `service_role EXECUTE WITH GRANT OPTION`, unexpected `authenticator EXECUTE`, `authenticated BYPASSRLS`, `anon SUPERUSER`, and `authenticated` membership in privileged `service_role`.
+2. Exact function inventory GREEN:
+   - the existing full-local manifest 13 functions and snapshot manifest 16 functions are one active exact inventory;
+   - signature/overload, migration-derived source hash, SECURITY mode, owner, safe search_path, principal, privilege type and `is_grantable` are compared for all 29 functions;
+   - the current product-ingredient account-cleanup migration remains the source authority for the replaced `delete_user_private_data(uuid)` body.
+3. Exact role and membership GREEN:
+   - `anon` and `authenticated` require SUPERUSER/BYPASSRLS false; `service_role` requires SUPERUSER false and the intentional BYPASSRLS true; `authenticator` requires both false;
+   - only the PostgreSQL 17/Supabase `authenticator -> anon/authenticated` edges are allowed in the client-role membership boundary, with `admin=false`, `inherit=false`, `set=true` exactly;
+   - reverse/extra membership, missing SET ROLE, client-role privilege escalation and loss of the intentional service-role BYPASSRLS all fail closed.
+4. Fresh and replay GREEN:
+   - fresh snapshot `14 passed / 1 intended skip`, active security inventory `15/15`;
+   - replay snapshot `15/15`, active security inventory `15/15`;
+   - full-local isolated PostgreSQL baseline `16 passed / 13 active-path tests intentionally skipped`.
+
+### Current repair verification before push
+
+- Focused production assertion: `19/19`.
+- Snapshot/full-local/Train B focused set: 16 files, `220/220`.
+- PR #1266 restore/cutover/runtime focused set: 7 files, `108/108`.
+- Remote verifier replace-ref/ancestry/read-only regression: `10/10`.
+- Security-function manifest validator `--contract-only`: passed and classified both the 13-function full-local and 16-function snapshot manifests.
+- Full `pnpm verify:security-functions` could not connect to the preserved local target at `127.0.0.1:54322`; no Docker container or another worktree fixture was started, stopped or modified. Its target-DB coverage is supplied here by the repository-owned isolated fresh/replay and full-local PostgreSQL runners above.
+- `pnpm verify:backend`: product Vitest 202 files passed and 9 skipped, `2,554 passed / 128 skipped`; production build passed; Playwright security smoke `12/12`.
+- No public API, field, status, error, migration or dependency was added. Production, staging and remote application writes remain `0 / 0 / 0`.
+
+Merged-exact execution, provider callback/link, Cloudflare, remote final backup, off-Mac restore twice, first local mutation/cutover, compatibility-release observation and full actual-DB cleanup rehearsal remain Manual Only/pending. The repaired exact head still requires all current-head checks and fresh independent code/security/DB reviews.
