@@ -39,7 +39,7 @@
 
 ## Independent Review / Merge Gate
 
-- [x] 별도 Codex internal 1.5 reviewer가 Stage 1 artifact를 승인하고 unresolved finding이 0이다 <!-- omo:id=accept-full-local-doc-review;stage=1;scope=shared;review=1,6 -->
+- [x] 별도 Codex internal 1.5 reviewer가 Stage 1 contract artifact를 승인하고 unresolved contract finding이 0이다 <!-- omo:id=accept-full-local-doc-review;stage=1;scope=shared;review=1,6 -->
 - [ ] 구현과 분리된 security/DB와 five-axis reviewer finding이 0이다 <!-- omo:id=accept-full-local-independent-review;stage=3;scope=shared;review=3,6 -->
 - [ ] 현재 PR head의 모든 check가 success 또는 정책상 정상 skip이며 pending/missing/stale/fail이 0이다 <!-- omo:id=accept-full-local-current-head-green;stage=6;scope=shared;review=6 -->
 
@@ -55,5 +55,5 @@
 ## Stage 1 Review Evidence
 
 - 2026-08-01 독립 Codex `code-reviewer` 1차: source-of-record, OAuth 시작 순서, logout revoke 계약 3건 `REQUEST CHANGES`.
-- 같은 working tree에서 세 항목 수정 후 exact diff 재검토: **PASS**, unresolved/blocking finding 0.
+- 같은 working tree에서 세 계약 항목 수정 후 contract diff 재검토: **PASS**, 해당 계약 finding의 unresolved/blocking 0. 이 기록은 provenance·secret 비노출 검토와 구분한다.
 - 실행 검증: source-of-truth/workflow-v2/workpack/automation/bookkeeping validation, lint, typecheck, harness 594 tests, HTML 320/390/1280 Playwright overflow·console·request failure 0.

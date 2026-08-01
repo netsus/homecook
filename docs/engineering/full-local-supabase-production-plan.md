@@ -1,6 +1,6 @@
 # 전체 로컬 Supabase Auth + DB + Storage production 전환 계획
 
-상태: **Stage -1 계약 산출물 작성 및 독립 검토 PASS / docs PR 병합 대기 / 구현하지 않음**
+상태: **Stage -1 계약 산출물 작성 및 독립 검토 PASS / docs PR 병합 완료 / 구현하지 않음**
 작성일: **2026-07-31 KST**
 최종 갱신: **2026-08-01 KST**
 대상 서비스: `homecook`
@@ -56,7 +56,7 @@ Google·네이버·카카오 자체 로그인 화면을 새로 만들지 않고,
 | --- | --- | --- |
 | production 앱 | launchd `com.homecook.production`, `0.0.0.0:3100` | 앱 프로세스는 계속 재사용한다. |
 | 현재 Data authority | `HOMECOOK_DATA_AUTHORITY=remote` | 아직 local write가 없어 아키텍처 변경 시점이 안전하다. |
-| 현재 Auth | `https://vfubnhtawezmheylfhsv.supabase.co` | migration source와 rollback source로 유지한다. |
+| 현재 Auth | 원격 hosted Supabase project(식별자는 repo 밖 운영 evidence에만 보관) | migration source와 rollback source로 유지한다. |
 | local runtime | PostgreSQL/PostgREST/Storage 실행, gateway `BLOCKED/DEGRADED` | 운영 연결 전 검증 기반으로 재사용할 수 있다. |
 | local 검증 DB | 약 19 MB, `public.users=5`, `recipes=44`, `storage.objects=1`, `auth.users=0` | 완전한 운영 원본이 아니므로 fresh restore 대상이다. |
 | browser Auth | Auth-only facade | 직접 DB/Storage 브라우저 접근을 계속 차단할 수 있다. |
@@ -329,7 +329,7 @@ Docker Compose의 `environment`나 `.env`에 secret 값을 직접 넣지 않는�
 
 ### Stage -1. 공식 계약 변경
 
-현재 상태: **산출물 작성 완료, 독립 Codex contract review PASS, docs PR 병합 대기**
+현재 상태: **산출물 작성 완료, 독립 Codex contract review PASS, docs PR 병합 완료**
 
 새 공식 문서 묶음:
 
@@ -872,10 +872,10 @@ rollback floor는 **첫 successful local production Auth state mutation**이다.
 
 - 방향 결정: **완료**
 - 계획 문서: **완료**
-- 공식 contract-evolution 산출물: **작성 완료, 독립 검토 PASS, docs PR 병합 대기**
+- 공식 contract-evolution 산출물: **작성 완료, 독립 검토 PASS, docs PR 병합 완료**
 - self-hosted Auth runtime: **미착수**
 - Google/Naver/Kakao local Auth 실검증: **미착수**
 - Auth/DB/Storage final migration: **미착수**
 - first local production Auth state mutation: **금지 상태**
 
-이 계획의 다음 단계는 **Stage -1 산출물의 독립 검토와 docs PR 병합**이다. 구현은 해당 PR이 `master`에 병합된 뒤 별도 work branch에서 시작한다.
+이 계획의 다음 단계는 **Stage 0 현재 authority와 migration inventory 고정**이다. 구현은 별도 work branch에서 시작하고 첫 local production Auth mutation 전 Manual Only gate를 모두 유지한다.
