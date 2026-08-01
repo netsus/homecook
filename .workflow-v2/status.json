@@ -2413,12 +2413,12 @@
         "pnpm validate:closeout-sync -- --slice recipe-snapshot-authority-foundation",
         "git diff --check"
       ],
-      "notes": "Full-local Stage 1 contract sync is merged. PR #1263 merged the Stage 3 deployable app/runtime authority for OAuth flow ledger, callback/refresh/guarded Data/Storage/logout, loopback admin, request attestation, and the secret boundary; local authority activation requires explicit env+DB control. Provider live callback/link, Cloudflare, remote final backup, off-Mac restore 2회, and first local mutation/cutover remain Manual Only/pending. PR #1265 Stage 2/3 verifier is merged. Historical PR #1219 remains the original Stage 4 consumer evidence. Fresh Stage 4 revalidation Draft PR #1267 fixes the actual planner mutable-title fallback under a content pin and keeps focused Meal/planner/shopping/cooking/history/leftover plus Train B tests green. Full-local recipe_content_snapshots SELECT remains service-role-only while consumer Routes use authenticated createRouteHandlerClient and local compatibility service-role fallback is forbidden, so an independent backend read-authority repair is required before Ready, Stage 5/6 or merged-exact consumer smoke. Lifecycle/verification/evaluation remain in_progress/pending/not_started.",
+      "notes": "Full-local Stage 1 contract sync is merged. PR #1263 merged the Stage 3 deployable app/runtime authority for OAuth flow ledger, callback/refresh/guarded Data/Storage/logout, loopback admin, request attestation, and the secret boundary; local authority activation requires explicit env+DB control. Provider live callback/link, Cloudflare, remote final backup, off-Mac restore 2회, and first local mutation/cutover remain Manual Only/pending. PR #1265 Stage 2/3 verifier is merged. Historical PR #1219 remains the original Stage 4 consumer evidence. Fresh Stage 4 revalidation Draft PR #1267 fixes the actual planner mutable-title fallback under a content pin and keeps focused Meal/planner/shopping/cooking/history/leftover plus Train B tests green. Merged PR #1268 restores owner-aware authenticated SELECT for content and nutrition snapshots without a service-role fallback; isolated fresh/replay and security inventory regressions are green. Activated live Route smoke, merged-exact-SHA, Manual Only evidence, and independent Stage 5/6 remain pending. Lifecycle/verification/evaluation remain in_progress/pending/not_started.",
       "evaluation_status": "not_started",
       "evaluation_round": 0,
       "last_evaluator_result": null,
       "auto_merge_eligible": false,
-      "blocked_reason_code": "stage4-full-local-snapshot-read-authority-missing"
+      "blocked_reason_code": null
     },
     {
       "id": "personal-recipe-editor-decoupling",
