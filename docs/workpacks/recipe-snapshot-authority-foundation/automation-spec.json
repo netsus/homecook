@@ -43,7 +43,7 @@
       "app-and-auth-only-public-data-storage-studio-postgres-internal",
       "full-local-stage3-deployable-app-runtime-authority-pr1263-merged",
       "local-authority-activation-requires-explicit-env-and-db-control",
-      "planned-stage2-full-local-snapshot-verifier-not-yet-implemented",
+      "stage2-full-local-snapshot-verifier-implemented-merged-exact-execution-pending",
       "local-account-cleanup-only-private-hard-delete-active-session-binding-and-exact-owner-guard",
       "account-cleanup-order-event-pointer-event-meal-log-nonimage-idempotency-claim-sessionmeal-session-meal-batch-content-nutrition-recipe-private-product-chain",
       "local-delete-order-owner-fence-cleanup-before-exact-local-auth-identity-delete-and-terminal-readback",
@@ -94,6 +94,7 @@
       "pnpm exec vitest run tests/full-local-auth-db-foundation.test.ts",
       "pnpm exec vitest run tests/auth-callback-flow-authority.test.ts tests/full-local-session-authority.test.ts tests/full-local-production-runtime.test.ts tests/full-local-request-authority-migration.test.ts",
       "pnpm exec vitest run tests/recipe-snapshot-authority.test.ts tests/recipe-snapshot-readers.test.ts tests/recipe-snapshot-security.test.ts tests/recipe-snapshot-account-delete.test.ts",
+      "pnpm exec vitest run tests/recipe-snapshot-authority-full-local-verifier.test.ts",
       "pnpm test:recipe-snapshot-authority:postgres",
       "pnpm verify:backend",
       "pnpm validate:source-of-truth-sync",
@@ -109,6 +110,7 @@
       "tests/recipe-snapshot-readers.test.ts",
       "tests/recipe-snapshot-security.test.ts",
       "tests/recipe-snapshot-account-delete.test.ts",
+      "tests/recipe-snapshot-authority-full-local-verifier.test.ts",
       "tests/recipe-snapshot-authority-postgres.integration.test.ts",
       "tests/recipe-snapshot-hybrid-contract-sync.test.ts",
       "tests/full-local-auth-db-foundation.test.ts",
@@ -130,7 +132,7 @@
       "leftover content-only no-direct-nutrition-FK evidence",
       "10-servings scalable ratio plus fixed once and missing-not-zero evidence",
       "Train B Storage outbox and pantry effective-ingredient integration evidence",
-      "planned merged-exact-SHA full-local Auth DB Storage snapshot compatibility evidence"
+      "implemented merged-exact-SHA full-local Auth DB Storage snapshot verifier with exact execution pending"
     ]
   },
   "frontend": {
@@ -184,7 +186,7 @@
     }
   },
   "external_smokes": [
-    "planned Stage 2 full-local snapshot verifier from merged exact SHA; not implemented by Stage 1",
+    "Stage 2 full-local snapshot verifier implementation; merged exact execution remains pending",
     "local Supabase Auth DB Storage table column FK unique check trigger grant function and stable UUID inventory",
     "local session binding pre-expiry revoke auth.uid RLS and private cross-owner read write delete zero",
     "local account delete owner fence cleanup exact Auth identity delete terminal readback and delete-recreate isolation",
@@ -241,5 +243,5 @@
     "backend": 6,
     "frontend": 3
   },
-  "notes": "Active target: self-hosted local Supabase Auth, PostgreSQL/PostgREST, and Storage are one authority on the current Mac. PR #1263 merged the Stage 3 deployable app/runtime authority for OAuth flow ledger, callback/refresh/guarded Data/Storage/logout, loopback admin, request attestation, and the secret boundary. Local authority activation requires explicit env+DB control. Provider live callback/link, Cloudflare, remote final backup, off-Mac restore 2회, and first local mutation/cutover remain Manual Only/pending. Stable UUID, session revoke, auth.uid() RLS, cross-owner denial, delete/recreate cleanup, official S3/rclone restore, and app+Auth-only public exposure remain required. Remote Supabase is source-of-record, migration source, and recovery floor only before the first local production session, provider identity link, or user-scoped local DB or Storage write; production mutation is forbidden, and after that floor env-only rollback is forbidden. PR #1218/#1219/#1231/#1232/#1233/#1251 and the hybrid verifier remain historical evidence, not active release gates. Existing full-local foundation and PR #1263 tests do not complete the planned Stage 2 snapshot verifier. PR #1256 and PR #1262 are merged; #3 Storage/outbox runtime is merged, while snapshot-specific Train B verification remains pending. Lifecycle/verification/evaluation stay in_progress/pending/not_started."
+  "notes": "Active target: self-hosted local Supabase Auth, PostgreSQL/PostgREST, and Storage are one authority on the current Mac. PR #1263 merged the Stage 3 deployable app/runtime authority for OAuth flow ledger, callback/refresh/guarded Data/Storage/logout, loopback admin, request attestation, and the secret boundary. Local authority activation requires explicit env+DB control. Provider live callback/link, Cloudflare, remote final backup, off-Mac restore 2회, and first local mutation/cutover remain Manual Only/pending. Stable UUID, session revoke, auth.uid() RLS, cross-owner denial, delete/recreate cleanup, official S3/rclone restore, and app+Auth-only public exposure remain required. Remote Supabase is source-of-record, migration source, and recovery floor only before the first local production session, provider identity link, or user-scoped local DB or Storage write; production mutation is forbidden, and after that floor env-only rollback is forbidden. PR #1218/#1219/#1231/#1232/#1233/#1251 and the hybrid verifier remain historical evidence, not active release gates. Stage 2 now implements the fail-closed full-local verifier, but merged-exact-SHA execution and Manual Only evidence remain pending. PR #1256 and PR #1262 are merged; #3 Storage/outbox runtime is merged, while snapshot-specific Train B merged-head verification remains pending. Lifecycle/verification/evaluation stay in_progress/pending/not_started."
 }

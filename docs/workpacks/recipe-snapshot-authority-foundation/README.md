@@ -130,7 +130,7 @@ Schema Change:
 - rollback is pre-floor until the first successful local production session, provider identity link, or user-scoped local DB or Storage write. Once any one succeeds, env-only rollback is forbidden; Auth/application/Storage deltas must be recovered together.
 - PR #1263 merged the Stage 3 deployable app/runtime authority: OAuth flow ledger, callback/refresh/guarded Data/Storage/logout, loopback admin, request attestation, and the repo-external secret boundary. Local authority activation still requires matching explicit env+DB control.
 - provider live callback/link, Cloudflare, remote final backup, off-Mac restore 2회, and first local mutation/cutover remain Manual Only/pending. PR #1263 does not complete those gates or the recipe snapshot verifier.
-- the snapshot-specific full-local merged-SHA verifier is a planned Stage 2 gate and is not implemented by this Stage 1. Existing `tests/full-local-auth-db-foundation.test.ts` and `tests/full-local-auth-db-foundation-postgres.integration.test.ts` are foundation evidence, not a substitute for the pending snapshot verifier.
+- Stage 2 implements the snapshot-specific full-local merged-SHA verifier in `scripts/verify-recipe-snapshot-authority-full-local.mjs`. It reuses the historical snapshot inventory, adds one local Auth/DB authority query and runs the locked snapshot/full-local/Train B gates. A clean merged exact SHA and matching local fixture are still required before it can pass; existing foundation tests alone are not a substitute.
 - the verifier may re-check a clean historical merged SHA after `origin/master` advances only when `git --no-replace-objects merge-base --is-ancestor` proves that exact HEAD is an `origin/master` ancestor. Local replace refs and legacy grafts cannot supply ancestry evidence; a dirty tree, unmerged branch or unrelated commit still fails closed.
 
 ## Frontend Delivery Mode
@@ -208,6 +208,8 @@ Schema Change:
   and does not satisfy or block the current full-local gate by itself.
 - Detailed evidence:
   `evidence/2026-07-30-stage2-hybrid-regression.md`.
+- Stage 2 full-local verifier implementation evidence:
+  `evidence/2026-08-01-stage2-full-local-verifier.md`. This pre-merge evidence records RED/GREEN and isolated local regression only; merged-exact execution and Manual Only gates remain pending.
 
 ### Fixture and matrix
 
@@ -231,7 +233,7 @@ Schema Change:
 
 - old-shape/direct-only write telemetry is zero for one full compatibility release and backfill/pair mismatch is zero before contract/null.
 - current and immediate-previous releases read content-aware rows and direct-only legacy fallback; rollback smoke before null and rollback-floor rejection after null are both recorded.
-- local Auth/DB/Storage existing/fresh/idempotent replay, schema/constraint/trigger/grant inventory, stable UUID/RLS/session-binding/cross-owner/delete-recreate evidence, and a planned merged-exact-SHA full-local snapshot verifier are required.
+- local Auth/DB/Storage existing/fresh/idempotent replay, schema/constraint/trigger/grant inventory, stable UUID/RLS/session-binding/cross-owner/delete-recreate evidence, and the implemented merged-exact-SHA full-local snapshot verifier are required. Pre-merge unit/integration GREEN does not claim the merged-exact gate complete.
 - official S3/rclone off-Mac restore must prove semantic recovery; direct live volume/file copying is not accepted as restore evidence.
 - Train B integration confirms #3 Storage cleanup/outbox runtime remains terminal-safe and #2 PR #1256 implementation plus PR #1262 Stage 6 closeout remain green without adding either contract to #4 schema. Their existing-schema/full-local/query-plan/production cleanup evidence remains Manual Only.
 - provider live callback/link, Cloudflare, remote final backup, off-Mac restore 2회, first local mutation/cutover, production-scale compatibility-release observation, and full actual-DB cleanup rehearsal are Manual Only/pending.
