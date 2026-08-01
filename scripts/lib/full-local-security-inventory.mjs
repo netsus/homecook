@@ -72,13 +72,125 @@ function normalizeSignature(value) {
   return value.replaceAll(/\s+/gu, "");
 }
 
-function normalizePredicate(value) {
-  return value
-    .toLowerCase()
+function isWrappedExpression(value) {
+  if (!value.startsWith("(") || !value.endsWith(")")) return false;
+  let depth = 0;
+  let quoted = false;
+  for (let index = 0; index < value.length; index += 1) {
+    const character = value[index];
+    if (character === "'" && value[index - 1] !== "\\") quoted = !quoted;
+    if (quoted) continue;
+    if (character === "(") depth += 1;
+    if (character === ")") depth -= 1;
+    if (depth === 0 && index < value.length - 1) return false;
+  }
+  return depth === 0;
+}
+
+function splitTopLevelBoolean(value, operator) {
+  const parts = [];
+  let depth = 0;
+  let quoted = false;
+  let start = 0;
+  const expression = value.toLowerCase();
+  for (let index = 0; index < expression.length; index += 1) {
+    const character = expression[index];
+    if (character === "'" && expression[index - 1] !== "\\") quoted = !quoted;
+    if (quoted) continue;
+    if (character === "(") depth += 1;
+    if (character === ")") depth -= 1;
+    if (
+      depth === 0
+      && expression.startsWith(operator, index)
+      && !/[a-z0-9_]/u.test(expression[index - 1] ?? "")
+      && !/[a-z0-9_]/u.test(expression[index + operator.length] ?? "")
+    ) {
+      parts.push(value.slice(start, index));
+      start = index + operator.length;
+      index += operator.length - 1;
+    }
+  }
+  if (parts.length === 0) return [value];
+  parts.push(value.slice(start));
+  return parts;
+}
+
+function findTopLevelKeyword(value, keyword) {
+  let depth = 0;
+  let quoted = false;
+  const expression = value.toLowerCase();
+  for (let index = 0; index < expression.length; index += 1) {
+    const character = expression[index];
+    if (character === "'" && expression[index - 1] !== "\\") quoted = !quoted;
+    if (quoted) continue;
+    if (character === "(") depth += 1;
+    if (character === ")") depth -= 1;
+    if (
+      depth === 0
+      && expression.startsWith(keyword, index)
+      && !/[a-z0-9_]/u.test(expression[index - 1] ?? "")
+      && !/[a-z0-9_]/u.test(expression[index + keyword.length] ?? "")
+    ) return index;
+  }
+  return -1;
+}
+
+function canonicalizePredicateAtom(value) {
+  let result = "";
+  for (let index = 0; index < value.length; index += 1) {
+    if (value[index] !== "(") {
+      result += value[index];
+      continue;
+    }
+    let depth = 1;
+    let quoted = false;
+    let end = index + 1;
+    for (; end < value.length && depth > 0; end += 1) {
+      const character = value[end];
+      if (character === "'" && value[end - 1] !== "\\") quoted = !quoted;
+      if (quoted) continue;
+      if (character === "(") depth += 1;
+      if (character === ")") depth -= 1;
+    }
+    if (depth !== 0) throw new Error("policy expression is unbalanced");
+    const prefix = result.match(/([a-z_][a-z0-9_.]*)\s*$/iu)?.[1] ?? "";
+    const inner = canonicalizePredicate(value.slice(index + 1, end - 1));
+    const structural = (
+      prefix !== ""
+      && !["from", "join", "on", "select", "where"].includes(prefix.toLowerCase())
+    ) || /\b(not|in)\s*$/iu.test(result);
+    result += structural ? `(${inner})` : inner;
+    index = end - 1;
+  }
+  return result
     .replaceAll("::text", "")
     .replaceAll(/\bpublic\./gu, "")
     .replaceAll(/\bas\b/gu, "")
-    .replaceAll(/[\s()]/gu, "");
+    .replaceAll(/\s+/gu, "");
+}
+
+function canonicalizePredicate(value) {
+  let expression = value.trim().toLowerCase();
+  while (isWrappedExpression(expression)) {
+    expression = expression.slice(1, -1).trim();
+  }
+  if (expression.startsWith("select ")) {
+    const whereIndex = findTopLevelKeyword(expression, "where");
+    if (whereIndex >= 0) {
+      return canonicalizePredicateAtom(expression.slice(0, whereIndex + 5))
+        + canonicalizePredicate(expression.slice(whereIndex + 5));
+    }
+    return canonicalizePredicateAtom(expression);
+  }
+  const orParts = splitTopLevelBoolean(expression, "or");
+  if (orParts.length > 1) {
+    return `or(${orParts.map(canonicalizePredicate).join(",")})`;
+  }
+  const andParts = splitTopLevelBoolean(expression, "and");
+  if (andParts.length > 1) {
+    return `and(${andParts.map(canonicalizePredicate).join(",")})`;
+  }
+  return canonicalizePredicateAtom(expression);
 }
 
 function readBalancedExpression(statement, marker) {
@@ -126,8 +238,9 @@ function parsePolicy(migration, policyName) {
       .map((role) => role.trim().toLowerCase())
       .sort()
       .join(","),
-    using: normalizePredicate(readBalancedExpression(statement, "using")),
-    check: normalizePredicate(
+    permissive: "PERMISSIVE",
+    using: canonicalizePredicate(readBalancedExpression(statement, "using")),
+    check: canonicalizePredicate(
       readBalancedExpression(statement, "with check"),
     ),
   };
@@ -177,7 +290,10 @@ function parseFunction(entry) {
     securityDefiner: entry.security_mode === "definer",
     owner: entry.owner ?? "postgres",
     searchPath: entry.safe_search_path.join(","),
-    allowedPrincipals: [...entry.allowed_principals].sort().join(","),
+    allowedAcl: [...entry.allowed_principals]
+      .sort()
+      .map((principal) => `${principal}:EXECUTE:false`)
+      .join(","),
   };
 }
 
@@ -209,15 +325,20 @@ function buildSecurityInventoryExpression({ includeSnapshotTables }) {
     String(entry.securityDefiner),
     entry.owner,
     entry.searchPath,
-    entry.allowedPrincipals,
+    entry.allowedAcl,
   ]));
-  const tableValues = valuesSql(rlsTables);
+  const tableValues = valuesSql(rlsTables.map(([schema, table]) => [
+    schema,
+    table,
+    "false",
+  ]));
   const policyValues = valuesSql(policies.map((policy) => [
     policy.schema,
     policy.table,
     policy.name,
     policy.command,
     policy.roles,
+    policy.permissive,
     policy.using,
     policy.check,
   ]));
@@ -225,7 +346,7 @@ function buildSecurityInventoryExpression({ includeSnapshotTables }) {
   return `
     with expected_functions(
       lookup_signature, signature, schema_name, function_name, source_hash, security_definer,
-      owner_name, search_path, allowed_principals
+      owner_name, search_path, allowed_acl
     ) as (
       values
       ${functionValues}
@@ -244,26 +365,29 @@ function buildSecurityInventoryExpression({ includeSnapshotTables }) {
         ), ''), ' ', '') as actual_search_path,
         coalesce((
           select pg_catalog.string_agg(
-            case when acl.grantee = 0 then 'public' else role.rolname end,
-            ',' order by case when acl.grantee = 0 then 'public' else role.rolname end
+            (case when acl.grantee = 0 then 'public' else role.rolname end)
+              || ':' || acl.privilege_type || ':' || acl.is_grantable::text,
+            ',' order by
+              case when acl.grantee = 0 then 'public' else role.rolname end,
+              acl.privilege_type,
+              acl.is_grantable
           )
           from pg_catalog.aclexplode(coalesce(
             procedure.proacl,
             pg_catalog.acldefault('f', procedure.proowner)
           )) as acl
           left join pg_catalog.pg_roles as role on role.oid = acl.grantee
-          where acl.privilege_type = 'EXECUTE'
-            and acl.grantee is distinct from procedure.proowner
-        ), '') as actual_principals
+          where acl.grantee is distinct from procedure.proowner
+        ), '') as actual_acl
       from expected_functions as expected
       left join pg_catalog.pg_proc as procedure
         on procedure.oid = pg_catalog.to_regprocedure(expected.lookup_signature)
       left join pg_catalog.pg_roles as owner on owner.oid = procedure.proowner
-    ), expected_rls_tables(schema_name, table_name) as (
+    ), expected_rls_tables(schema_name, table_name, force_rls) as (
       values
       ${tableValues}
     ), rls_inventory as (
-      select expected.*, relation.oid, relation.relrowsecurity
+      select expected.*, relation.oid, relation.relrowsecurity, relation.relforcerowsecurity
       from expected_rls_tables as expected
       left join pg_catalog.pg_namespace as namespace
         on namespace.nspname = expected.schema_name
@@ -273,7 +397,7 @@ function buildSecurityInventoryExpression({ includeSnapshotTables }) {
        and relation.relkind in ('r', 'p')
     ), expected_policies(
       schema_name, table_name, policy_name, command_name, role_names,
-      using_predicate, check_predicate
+      permissive_mode, using_predicate, check_predicate
     ) as (
       values
       ${policyValues}
@@ -283,24 +407,13 @@ function buildSecurityInventoryExpression({ includeSnapshotTables }) {
         policy.tablename as table_name,
         policy.policyname as policy_name,
         policy.cmd as command_name,
+        policy.permissive as permissive_mode,
         coalesce((
           select pg_catalog.string_agg(role_name::text, ',' order by role_name::text)
           from pg_catalog.unnest(policy.roles) as role_name
         ), '') as role_names,
-        pg_catalog.regexp_replace(
-          pg_catalog.replace(pg_catalog.replace(
-            pg_catalog.replace(pg_catalog.lower(coalesce(policy.qual, '')), '::text', ''),
-            'public.', ''
-          ), ' as ', ' '),
-          '[[:space:]()]', '', 'g'
-        ) as using_predicate,
-        pg_catalog.regexp_replace(
-          pg_catalog.replace(pg_catalog.replace(
-            pg_catalog.replace(pg_catalog.lower(coalesce(policy.with_check, '')), '::text', ''),
-            'public.', ''
-          ), ' as ', ' '),
-          '[[:space:]()]', '', 'g'
-        ) as check_predicate
+        coalesce(policy.qual, '') as using_predicate,
+        coalesce(policy.with_check, '') as check_predicate
       from pg_catalog.pg_policies as policy
       join expected_rls_tables as expected
         on expected.schema_name = policy.schemaname
@@ -313,7 +426,7 @@ function buildSecurityInventoryExpression({ includeSnapshotTables }) {
       'function_security_drift_count', (select count(*) from function_inventory where oid is not null and prosecdef is distinct from security_definer::boolean),
       'function_owner_drift_count', (select count(*) from function_inventory where oid is not null and actual_owner is distinct from owner_name),
       'function_search_path_drift_count', (select count(*) from function_inventory where oid is not null and actual_search_path is distinct from 'search_path=' || search_path),
-      'function_acl_drift_count', (select count(*) from function_inventory where oid is not null and actual_principals is distinct from allowed_principals),
+      'function_acl_drift_count', (select count(*) from function_inventory where oid is not null and actual_acl is distinct from allowed_acl),
       'unexpected_function_overload_count', (
         select count(*)
         from pg_catalog.pg_proc as procedure
@@ -334,6 +447,7 @@ function buildSecurityInventoryExpression({ includeSnapshotTables }) {
       'required_rls_table_count', (select count(*) from expected_rls_tables),
       'rls_table_missing_count', (select count(*) from rls_inventory where oid is null),
       'rls_disabled_count', (select count(*) from rls_inventory where oid is not null and not relrowsecurity),
+      'rls_force_drift_count', (select count(*) from rls_inventory where oid is not null and relforcerowsecurity is distinct from force_rls::boolean),
       'required_policy_count', (select count(*) from expected_policies),
       'policy_missing_count', (
         select count(*) from expected_policies as expected
@@ -351,8 +465,7 @@ function buildSecurityInventoryExpression({ includeSnapshotTables }) {
          and actual.policy_name = expected.policy_name
         where actual.command_name is distinct from expected.command_name
            or actual.role_names is distinct from expected.role_names
-           or actual.using_predicate is distinct from expected.using_predicate
-           or actual.check_predicate is distinct from expected.check_predicate
+           or actual.permissive_mode is distinct from expected.permissive_mode
       ),
       'unexpected_policy_count', (
         select count(*) from policy_inventory as actual
@@ -362,6 +475,16 @@ function buildSecurityInventoryExpression({ includeSnapshotTables }) {
             and expected.table_name = actual.table_name
             and expected.policy_name = actual.policy_name
         )
+      ),
+      '_policy_expression_inventory', (
+        select coalesce(pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object(
+          'schema', actual.schema_name,
+          'table', actual.table_name,
+          'name', actual.policy_name,
+          'using', actual.using_predicate,
+          'check', actual.check_predicate
+        ) order by actual.schema_name, actual.table_name, actual.policy_name), '[]'::jsonb)
+        from policy_inventory as actual
       )
     )`;
 }
@@ -378,14 +501,16 @@ const SECURITY_RESULT_KEYS = [
   "required_rls_table_count",
   "rls_table_missing_count",
   "rls_disabled_count",
+  "rls_force_drift_count",
   "required_policy_count",
   "policy_missing_count",
   "policy_drift_count",
   "unexpected_policy_count",
+  "_policy_expression_inventory",
 ];
 
 const SECURITY_ZERO_KEYS = SECURITY_RESULT_KEYS.filter((key) =>
-  !key.startsWith("required_")
+  !key.startsWith("required_") && !key.startsWith("_")
 );
 
 export function buildFullLocalSecurityInventoryExpression({
@@ -411,6 +536,22 @@ export function assertRecipeSnapshotAuthorityFullLocalSecurityInventoryResult(
   const expectedPolicyCount = includeSnapshotTables
     ? CORE_POLICY_CONTRACT.length + SNAPSHOT_POLICY_CONTRACT.length
     : CORE_POLICY_CONTRACT.length;
+  const expectedPolicies = includeSnapshotTables
+    ? [...CORE_POLICY_CONTRACT, ...SNAPSHOT_POLICY_CONTRACT]
+    : CORE_POLICY_CONTRACT;
+  const policyInventory = result?._policy_expression_inventory;
+  const exactPolicyExpressions = Array.isArray(policyInventory)
+    && policyInventory.length === expectedPolicies.length
+    && expectedPolicies.every((expected) => {
+      const actual = policyInventory.find((entry) =>
+        entry?.schema === expected.schema
+        && entry?.table === expected.table
+        && entry?.name === expected.name
+      );
+      return actual
+        && canonicalizePredicate(actual.using) === expected.using
+        && canonicalizePredicate(actual.check) === expected.check;
+    });
   const valid = result
     && typeof result === "object"
     && !Array.isArray(result)
@@ -419,6 +560,7 @@ export function assertRecipeSnapshotAuthorityFullLocalSecurityInventoryResult(
     && result.required_function_count === expectedFunctionCount
     && result.required_rls_table_count === expectedTableCount
     && result.required_policy_count === expectedPolicyCount
+    && exactPolicyExpressions
     && SECURITY_ZERO_KEYS.every((key) => result[key] === 0);
   if (!valid) {
     throw new Error("full-local security inventory failed closed");

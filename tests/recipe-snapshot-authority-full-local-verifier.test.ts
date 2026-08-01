@@ -15,6 +15,49 @@ import * as fullLocalVerifier from
 
 const sourceMergeSha = "a".repeat(40);
 
+const fullLocalPolicyExpressionInventory = [
+  {
+    schema: "public", table: "recipes", name: "recipes_public_and_owner_read",
+    using: "deleted_at is null and recipe_visibility_guard.is_owner_publicly_visible(created_by) and (visibility = 'public' or auth.uid() = created_by)", check: "",
+  },
+  {
+    schema: "public", table: "recipe_sources", name: "recipe_sources_parent_read",
+    using: "exists (select 1 from public.recipes as recipe where recipe.id = recipe_sources.recipe_id)", check: "",
+  },
+  {
+    schema: "public", table: "recipe_ingredients", name: "recipe_ingredients_parent_read",
+    using: "exists (select 1 from public.recipes as recipe where recipe.id = recipe_ingredients.recipe_id)", check: "",
+  },
+  {
+    schema: "public", table: "recipe_steps", name: "recipe_steps_parent_read",
+    using: "exists (select 1 from public.recipes as recipe where recipe.id = recipe_steps.recipe_id)", check: "",
+  },
+  {
+    schema: "public", table: "recipe_step_cooking_methods", name: "recipe_step_cooking_methods_parent_read",
+    using: "exists (select 1 from public.recipe_steps as step join public.recipes as recipe on recipe.id = step.recipe_id where step.id = recipe_step_cooking_methods.step_id)", check: "",
+  },
+  {
+    schema: "public", table: "recipe_tags", name: "recipe_tags_parent_read",
+    using: "visibility = 'public' and review_status = 'approved' and exists (select 1 from public.recipes as recipe where recipe.id = recipe_tags.recipe_id)", check: "",
+  },
+  {
+    schema: "public", table: "tags", name: "tags_public_read",
+    using: "is_system = true or exists (select 1 from public.recipe_tags as recipe_tag join public.recipes as recipe on recipe.id = recipe_tag.recipe_id where recipe_tag.tag_id = tags.id and recipe_tag.visibility = 'public' and recipe_tag.review_status = 'approved')", check: "",
+  },
+  {
+    schema: "public", table: "leftover_dishes", name: "leftover_dishes_select_own",
+    using: "auth.uid() = user_id", check: "",
+  },
+  {
+    schema: "public", table: "leftover_dishes", name: "leftover_dishes_insert_own",
+    using: "", check: "auth.uid() = user_id",
+  },
+  {
+    schema: "public", table: "leftover_dishes", name: "leftover_dishes_update_own",
+    using: "auth.uid() = user_id", check: "auth.uid() = user_id",
+  },
+];
+
 const snapshotResult = {
   verification_scope_status: "post-merge-read-only",
   schema_inventory_status: "ready",
@@ -80,10 +123,12 @@ const localResult = {
     required_rls_table_count: 12,
     rls_table_missing_count: 0,
     rls_disabled_count: 0,
+    rls_force_drift_count: 0,
     required_policy_count: 10,
     policy_missing_count: 0,
     policy_drift_count: 0,
     unexpected_policy_count: 0,
+    _policy_expression_inventory: fullLocalPolicyExpressionInventory,
   },
   account_cleanup_function_missing_count: 0,
   owner_null_shared_snapshot_count: 2,
@@ -318,6 +363,26 @@ describe("recipe snapshot authority full-local verifier", () => {
       ["full_local_security_inventory", {
         ...localResult.full_local_security_inventory,
         function_source_drift_count: 1,
+      }],
+      ["full_local_security_inventory", {
+        ...localResult.full_local_security_inventory,
+        function_acl_drift_count: 1,
+      }],
+      ["full_local_security_inventory", {
+        ...localResult.full_local_security_inventory,
+        rls_force_drift_count: 1,
+      }],
+      ["full_local_security_inventory", {
+        ...localResult.full_local_security_inventory,
+        _policy_expression_inventory:
+          fullLocalPolicyExpressionInventory.map((policy) =>
+            policy.name === "recipes_public_and_owner_read"
+              ? {
+                  ...policy,
+                  using: "(deleted_at is null and recipe_visibility_guard.is_owner_publicly_visible(created_by) and visibility = 'public') or auth.uid() = created_by",
+                }
+              : policy
+          ),
       }],
       ["account_cleanup_function_missing_count", 1],
       ["remote_application_writes", 1],

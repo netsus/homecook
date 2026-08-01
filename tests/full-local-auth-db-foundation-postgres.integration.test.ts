@@ -6,10 +6,15 @@ import * as fullLocalVerifier from
   "../scripts/lib/recipe-snapshot-authority-full-local-verifier.mjs";
 
 const enabled = process.env.HOMECOOK_FULL_LOCAL_AUTH_DB_PG_INTEGRATION === "1";
+const inventoryOnly =
+  process.env.HOMECOOK_FULL_LOCAL_SECURITY_INVENTORY_ONLY === "1";
 const host = process.env.HOMECOOK_ACCOUNT_GENERATION_PGHOST ?? "";
 const port = process.env.HOMECOOK_ACCOUNT_GENERATION_PGPORT ?? "";
 const database = process.env.HOMECOOK_ACCOUNT_GENERATION_PGDATABASE ?? "";
-const run = enabled ? describe.sequential : describe.skip;
+const run = enabled && !inventoryOnly ? describe.sequential : describe.skip;
+const activeInventoryRun = enabled && inventoryOnly
+  ? describe.sequential
+  : describe.skip;
 
 function psqlResult(sql: string) {
   return spawnSync("psql", [
@@ -44,17 +49,23 @@ function securityInventoryApi() {
   expect(buildSql).toBeTypeOf("function");
   expect(assertResult).toBeTypeOf("function");
   return {
-    buildSql: buildSql as () => string,
-    assertResult: assertResult as (result: Record<string, unknown>) => void,
+    buildSql: buildSql as (options?: { includeSnapshotTables?: boolean }) => string,
+    assertResult: assertResult as (
+      result: Record<string, unknown>,
+      options?: { includeSnapshotTables?: boolean },
+    ) => void,
   };
 }
 
-function securityInventoryAfter(mutation = "") {
+function securityInventoryAfter(
+  mutation = "",
+  options: { includeSnapshotTables?: boolean } = {},
+) {
   const api = securityInventoryApi();
   const result = psqlResult(`
     begin;
     ${mutation}
-    ${api.buildSql()}
+    ${api.buildSql(options)}
     rollback;
   `);
   expect(result.status, result.stderr).toBe(0);
@@ -637,7 +648,7 @@ run("full-local Auth isolated PostgreSQL foundation", () => {
 
   it("accepts the exact manifest function and protected-table RLS inventory", () => {
     const { api, result } = securityInventoryAfter();
-    expect(result).toEqual({
+    expect(result).toMatchObject({
       required_function_count: 13,
       function_missing_count: 0,
       function_source_drift_count: 0,
@@ -649,11 +660,13 @@ run("full-local Auth isolated PostgreSQL foundation", () => {
       required_rls_table_count: 9,
       rls_table_missing_count: 0,
       rls_disabled_count: 0,
+      rls_force_drift_count: 0,
       required_policy_count: 7,
       policy_missing_count: 0,
       policy_drift_count: 0,
       unexpected_policy_count: 0,
     });
+    expect(result._policy_expression_inventory).toHaveLength(7);
     expect(() => api.assertResult(result)).not.toThrow();
   });
 
@@ -679,6 +692,16 @@ run("full-local Auth isolated PostgreSQL foundation", () => {
   it("rejects an unexpected anon EXECUTE grant", () => {
     const { api, result } = securityInventoryAfter(`
       grant execute on function public.read_full_local_auth_control() to anon;
+    `);
+    expect(() => api.assertResult(result)).toThrow(
+      /security inventory failed closed/i,
+    );
+  });
+
+  it("rejects EXECUTE WITH GRANT OPTION delegation drift", () => {
+    const { api, result } = securityInventoryAfter(`
+      grant execute on function public.read_full_local_auth_control()
+        to service_role with grant option;
     `);
     expect(() => api.assertResult(result)).toThrow(
       /security inventory failed closed/i,
@@ -711,6 +734,55 @@ run("full-local Auth isolated PostgreSQL foundation", () => {
     );
   });
 
+  it("rejects FORCE RLS drift on a protected table", () => {
+    const { api, result } = securityInventoryAfter(`
+      alter table public.recipes force row level security;
+    `);
+    expect(() => api.assertResult(result)).toThrow(
+      /security inventory failed closed/i,
+    );
+  });
+
+  it("rejects a restrictive replacement of an otherwise exact policy", () => {
+    const { api, result } = securityInventoryAfter(`
+      drop policy recipes_public_and_owner_read on public.recipes;
+      create policy recipes_public_and_owner_read
+        on public.recipes
+        as restrictive
+        for select
+        to anon, authenticated
+        using (
+          deleted_at is null
+          and recipe_visibility_guard.is_owner_publicly_visible(created_by)
+          and (visibility = 'public' or auth.uid() = created_by)
+        );
+    `);
+    expect(() => api.assertResult(result)).toThrow(
+      /security inventory failed closed/i,
+    );
+  });
+
+  it("rejects a policy whose parentheses change the boolean tree", () => {
+    const { api, result } = securityInventoryAfter(`
+      drop policy recipes_public_and_owner_read on public.recipes;
+      create policy recipes_public_and_owner_read
+        on public.recipes
+        for select
+        to anon, authenticated
+        using (
+          (
+            deleted_at is null
+            and recipe_visibility_guard.is_owner_publicly_visible(created_by)
+            and visibility = 'public'
+          )
+          or auth.uid() = created_by
+        );
+    `);
+    expect(() => api.assertResult(result)).toThrow(
+      /security inventory failed closed/i,
+    );
+  });
+
   it("rejects an unexpected overload of a manifest function", () => {
     const { api, result } = securityInventoryAfter(`
       create function public.read_full_local_auth_control(p_dummy integer)
@@ -723,6 +795,67 @@ run("full-local Auth isolated PostgreSQL foundation", () => {
       $mutation$;
     `);
     expect(() => api.assertResult(result)).toThrow(
+      /security inventory failed closed/i,
+    );
+  });
+});
+
+activeInventoryRun("active full-local snapshot security inventory", () => {
+  const options = { includeSnapshotTables: true };
+
+  beforeAll(() => {
+    expect(host).not.toBe("");
+    expect(port).not.toBe("");
+    expect(database).toMatch(/^homecook_[a-z0-9_]+$/u);
+  });
+
+  it("accepts the active 12-table and 10-policy inventory", () => {
+    const { api, result } = securityInventoryAfter("", options);
+    expect(result).toMatchObject({
+      required_function_count: 13,
+      required_rls_table_count: 12,
+      required_policy_count: 10,
+      function_acl_drift_count: 0,
+      rls_force_drift_count: 0,
+      policy_drift_count: 0,
+    });
+    expect(result._policy_expression_inventory).toHaveLength(10);
+    expect(() => api.assertResult(result, options)).not.toThrow();
+  });
+
+  it.each([
+    [
+      "grant option",
+      `grant execute on function public.read_full_local_auth_control()
+         to service_role with grant option;`,
+    ],
+    ["FORCE RLS", "alter table public.recipes force row level security;"],
+    [
+      "restrictive policy",
+      `drop policy recipes_public_and_owner_read on public.recipes;
+       create policy recipes_public_and_owner_read
+         on public.recipes as restrictive for select to anon, authenticated
+         using (
+           deleted_at is null
+           and recipe_visibility_guard.is_owner_publicly_visible(created_by)
+           and (visibility = 'public' or auth.uid() = created_by)
+         );`,
+    ],
+    [
+      "changed boolean tree",
+      `drop policy recipes_public_and_owner_read on public.recipes;
+       create policy recipes_public_and_owner_read
+         on public.recipes for select to anon, authenticated
+         using (
+           (deleted_at is null
+             and recipe_visibility_guard.is_owner_publicly_visible(created_by)
+             and visibility = 'public')
+           or auth.uid() = created_by
+         );`,
+    ],
+  ])("rejects %s drift through the active verifier path", (_name, mutation) => {
+    const { api, result } = securityInventoryAfter(mutation, options);
+    expect(() => api.assertResult(result, options)).toThrow(
       /security inventory failed closed/i,
     );
   });
