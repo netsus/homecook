@@ -43,7 +43,7 @@ Google·네이버·카카오 자체 로그인 화면을 새로 만들지 않고,
 - 원격 `/auth/v1/user` liveness, HMAC attestation, identity epoch 검증: `lib/server/hybrid-auth/gateway.ts:129-227`
 - callback 뒤 local mirror/session authority 기록: `app/auth/callback/route.ts:231-262`
 - 원격 identity mirror: `supabase/migrations/20260730090000_hybrid_auth_remote_identity_epoch_mirror.sql:10-96`
-- 과거 hybrid 계약의 local `auth.users=0` invariant: `docs/db설계-v1.3.29.md`
+- 과거 hybrid 계약의 local `auth.users=0` invariant: `docs/db설계-v1.3.30.md`
 - Docker gateway가 remote Auth와 local PostgREST/Storage를 연결: `infra/hybrid-supabase/docker-compose.production.yml:136-180`
 
 이 장치들은 원격 Auth와 로컬 DB가 서로 다른 시스템이기 때문에 필요하다. Auth까지 같은 local Supabase로 이동하면 remote JWKS sync, remote identity mirror, two-system barrier, remote liveness outage 경계를 제거할 수 있다. 다만 Supabase sign-out 뒤 access token은 `exp`까지 서명상 유효할 수 있으므로, callback/refresh 때 결합하고 logout/delete/quarantine/identity replacement 때 즉시 revoke하는 **app-owned local session authority binding**은 최소 14일 안정화까지 유지한다.
@@ -336,8 +336,8 @@ Docker Compose의 `environment`나 `.env`에 secret 값을 직접 넣지 않는�
 - `docs/요구사항기준선-v1.7.28.md`
 - `docs/화면정의서-v1.5.32.md`
 - `docs/유저flow맵-v1.3.30.md`
-- `docs/db설계-v1.3.29.md`
-- `docs/api문서-v1.2.32.md`
+- `docs/db설계-v1.3.30.md`
+- `docs/api문서-v1.2.33.md`
 - `docs/workpacks/full-local-supabase-production/`
 
 작업:
@@ -440,7 +440,7 @@ Docker Compose의 `environment`나 `.env`에 secret 값을 직접 넣지 않는�
 
 auth-flow ledger 내부 계약:
 
-- table: `private.auth_flow_attempts`; browser와 public API에서 직접 접근할 수 없고 server-only RPC만 write한다.
+- table: `private.auth_flow_attempts`; browser와 public API에서 직접 접근할 수 없고 server-only RPC로만 insert/read/terminal/outstanding 작업을 수행한다.
 - primary key: `(attempt_hash, flow_kind)`. `attempt_hash`는 cookie nonce의 HMAC-SHA256이며 raw nonce는 DB에 저장하지 않는다.
 - columns: `flow_kind(login|link)`, `provider`, `authority(remote|local)`, `cutover_epoch`, `issued_at`, `expires_at`, `terminal_at`, `terminal_reason(success|error|cancelled|expired|cutover_rejected)`.
 - cookie: random nonce, flow kind, authority, cutover epoch, expiry만 서명해 `HttpOnly; Secure; SameSite=Lax`로 저장한다. OAuth code, token, email, UUID는 cookie/ledger에 넣지 않는다.
@@ -449,7 +449,7 @@ auth-flow ledger 내부 계약:
 - cutover barrier: 신규 flow 생성 차단 → 최대 `960초`(TTL 900초 + clock skew 60초) drain → expired terminal 처리 → outstanding `0` 확인 → cutover epoch/HMAC cookie version 회전 순서다.
 - local callback은 `authority=local`이고 현재 `cutover_epoch`인 cookie만 받는다. 이전 epoch/remote cookie는 `cutover_rejected`로 닫고, old remote code는 local issuer·PKCE verifier와 교환하지 않는다.
 - cookie 이름은 production에서 `__Host-homecook-auth-flow`로 고정하며 `Path=/`, host-only(no `Domain`), `HttpOnly`, `Secure`, `SameSite=Lax`, `Max-Age=900`을 사용한다.
-- ledger insert/terminal RPC만 별도 `AuthFlowLedgerStore`가 server-only internal credential로 호출한다. 이 credential은 사용자 데이터 query fallback에 사용할 수 없고 table/RPC는 `anon`, `authenticated`에게 revoke한다.
+- ledger insert/read/terminal/outstanding RPC만 별도 `AuthFlowLedgerStore`가 server-only internal credential로 호출한다. read는 signed cookie nonce HMAC의 exact `(attempt_hash, flow_kind)` 한 행에서 provider·authority·cutover epoch·expiry·terminal 상태만 반환한다. 이 credential은 사용자 데이터 query fallback에 사용할 수 없고 table/RPC는 `anon`, `authenticated`에게 revoke한다.
 
 ### Stage 4. Auth/DB/Storage restore rehearsal
 

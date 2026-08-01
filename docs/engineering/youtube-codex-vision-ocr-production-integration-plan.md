@@ -40,8 +40,8 @@
 - `docs/요구사항기준선-v1.7.28.md`
 - `docs/화면정의서-v1.5.32.md`
 - `docs/유저flow맵-v1.3.30.md`
-- `docs/db설계-v1.3.29.md`
-- `docs/api문서-v1.2.32.md`
+- `docs/db설계-v1.3.30.md`
+- `docs/api문서-v1.2.33.md`
 - YouTube 관련 workpack `20`, `29`, `32`
 
 실험 저장소:

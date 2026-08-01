@@ -4,14 +4,23 @@
 - `docs/요구사항기준선-v1.7.28.md`
 - `docs/화면정의서-v1.5.32.md`
 - `docs/유저flow맵-v1.3.30.md`
-- `docs/db설계-v1.3.29.md`
-- `docs/api문서-v1.2.32.md`
+- `docs/db설계-v1.3.30.md`
+- `docs/api문서-v1.2.33.md`
 
 ## Notes
 - 위 5개 파일이 현재 공식 기준 문서다.
 - `docs/reference/wireframes/`는 보조 참고 자료다.
 - 구현 중 문서 충돌이 보이면 먼저 충돌 항목을 정리하고 작업 범위를 다시 확정한다.
 - 사용자 승인으로 공식 계약을 바꾸는 경우에도 구현보다 문서가 먼저다. 관련 공식 문서와 이 파일의 버전/경로를 같은 `contract-evolution` PR에서 먼저 갱신한다.
+
+## Full-Local Auth Flow Ledger Read Contract Clarification `2026-08-01`
+
+| 문서 | 변경 내용 |
+|------|----------|
+| DB v1.3.30 | signed cookie에 provider를 넣지 않는 기존 계약을 유지하면서 exact `(attempt_hash, flow_kind)` server-only read RPC와 최소 safe metadata 반환을 명시한다 |
+| API v1.2.33 | callback의 provider/authority는 query가 아니라 private ledger exact read 결과만 사용하고 public API shape는 바뀌지 않음을 명시한다 |
+
+> 이 수정은 구현 중 발견한 내부 모순을 닫는다. 기존 계약은 cookie와 query provider를 authority로 금지하면서 insert/terminal/outstanding RPC만 허용해 callback이 ledger provider를 읽을 수 없었다. 새 read RPC는 raw nonce·OAuth code/token·email·UUID를 받거나 반환하지 않고 browser/`anon`/`authenticated`에 닫혀 있으므로 trust boundary를 넓히지 않는다.
 
 ## Full-Local Supabase Auth / DB / Storage Production Contract-Evolution `2026-08-01`
 
@@ -20,8 +29,8 @@
 | 요구사항 기준선 v1.7.28 | Google/Naver/Kakao를 self-hosted Supabase Auth로 옮기고 local Auth/DB/Storage 단일 authority, UUID/RLS 보존, 재로그인, secret/S3/cutover/rollback gate를 잠근다 |
 | 화면정의서 v1.5.32 | 신규 화면 없이 server-issued OAuth flow, remote session 재로그인, maintenance와 browser Auth-only/Data·Storage server-only 경계를 정의한다 |
 | 유저플로우 v1.3.30 | local flow ledger → provider callback → local Auth → session binding → RLS 및 960초 drain/floor 전후 rollback 흐름을 고정한다 |
-| DB v1.3.29 | local `auth.users` authority, stable UUID restore, transient session 제외, private flow ledger, local session binding, S3 semantic restore를 정의한다 |
-| API v1.2.32 | `/api/v1` shape를 유지하고 `/auth/flow/start|cancel`, exact Auth URL/callback, Auth-only public proxy와 loopback S3 경계를 추가한다 |
+| DB v1.3.30 | local `auth.users` authority, stable UUID restore, transient session 제외, private flow ledger, local session binding, S3 semantic restore와 exact server-only ledger read를 정의한다 |
+| API v1.2.33 | `/api/v1` shape를 유지하고 `/auth/flow/start|cancel`, exact Auth URL/callback, Auth-only public proxy, loopback S3와 callback ledger read 경계를 추가한다 |
 
 > 사용자는 2026-08-01에 2026-07-30 `원격 Auth + 로컬 DB/Storage` 계약을 대체하고, 현재 Mac의 self-hosted Supabase Auth·PostgreSQL·PostgREST·Storage를 production authority로 통합하도록 승인했다. 과거 hybrid 문서·migration은 역사와 recovery artifact로 보존하며 14일 안정화와 dependency 0 전에는 삭제하지 않는다.
 >

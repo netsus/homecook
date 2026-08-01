@@ -164,8 +164,8 @@ Schema Change:
 - `docs/요구사항기준선-v1.7.28.md` 0-PIL / 0-PIL-SHOPPING / 0-PIL-DELETE
 - `docs/화면정의서-v1.5.32.md` 0-PIL
 - `docs/유저flow맵-v1.3.30.md` 0-PIL / 0-PIL-SHOPPING / 0-PIL-DELETE
-- `docs/db설계-v1.3.29.md` 0-PIL-A~D
-- `docs/api문서-v1.2.32.md` 0-PIL-A~D and existing pantry/shopping/pantry-match sections
+- `docs/db설계-v1.3.30.md` 0-PIL-A~D
+- `docs/api문서-v1.2.33.md` 0-PIL-A~D and existing pantry/shopping/pantry-match sections
 - historical master plan sections 6-2 and successor #2, with local-only Auth/deployment assumptions superseded by the current official tuple
 
 ## QA / Test Data Plan
