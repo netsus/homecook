@@ -7,6 +7,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 
 const POSTGRES_TOOLS = ["initdb", "pg_ctl", "createdb", "psql"];
+const fullLocalMode = process.argv.includes("--full-local");
 
 function commandResult(command, args, options = {}) {
   return spawnSync(command, args, {
@@ -134,6 +135,7 @@ if (!postgresBin) {
         create role authenticated nologin;
         create role service_role nologin bypassrls;
         create role supabase_auth_admin nologin;
+        create role authenticator nologin;
         create schema auth;
         create schema extensions;
         create extension pgcrypto with schema extensions;
@@ -150,6 +152,16 @@ if (!postgresBin) {
         stable
         as $function$
           select null::uuid
+        $function$;
+        create or replace function auth.role()
+        returns text
+        language sql
+        stable
+        as $function$
+          select coalesce(
+            nullif(current_setting('request.jwt.claim.role', true), ''),
+            nullif(current_setting('request.jwt.claims', true), '')::jsonb ->> 'role'
+          )
         $function$;
         create schema storage;
         create table storage.objects (
@@ -180,6 +192,14 @@ if (!postgresBin) {
           created_at timestamptz not null default now(),
           updated_at timestamptz not null default now(),
           deleted_at timestamptz
+        );
+        create table public.admin_members (
+          user_id uuid primary key,
+          granted_by uuid
+        );
+        create table public.admin_audit_logs (
+          id uuid primary key default gen_random_uuid(),
+          actor_admin_user_id uuid
         );
         grant select, insert, update, delete on public.users to service_role;
         create table public.recipes (
@@ -373,10 +393,24 @@ if (!postgresBin) {
       "-f",
       "supabase/migrations/20260723170000_recipe_visibility_read_hardening.sql",
     ]);
+    if (fullLocalMode) {
+      runRequired(path.join(postgresBin, "psql"), [
+        ...connectionArgs,
+        "-f",
+        "supabase/migrations/20260730090000_hybrid_auth_remote_identity_epoch_mirror.sql",
+      ]);
+      runRequired(path.join(postgresBin, "psql"), [
+        ...connectionArgs,
+        "-f",
+        "supabase/migrations/20260801120000_full_local_auth_db_foundation.sql",
+      ]);
+    }
 
     const test = commandResult("pnpm", [
       "exec", "vitest", "run",
-      "tests/account-session-generation-postgres.integration.test.ts",
+      fullLocalMode
+        ? "tests/full-local-auth-db-foundation-postgres.integration.test.ts"
+        : "tests/account-session-generation-postgres.integration.test.ts",
       "--pool=forks",
       "--maxWorkers=1",
       "--testTimeout=30000",
@@ -389,6 +423,7 @@ if (!postgresBin) {
         HOMECOOK_ACCOUNT_GENERATION_PGHOST: "127.0.0.1",
         HOMECOOK_ACCOUNT_GENERATION_PGPORT: String(port),
         HOMECOOK_ACCOUNT_GENERATION_PGDATABASE: database,
+        HOMECOOK_FULL_LOCAL_AUTH_DB_PG_INTEGRATION: fullLocalMode ? "1" : "0",
       },
     });
     process.exitCode = test.status ?? 1;
