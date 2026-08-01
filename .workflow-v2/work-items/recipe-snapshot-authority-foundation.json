@@ -17,20 +17,21 @@
     "security-definer-mutation-authorization-hotfix merged and deployed",
     "cooking-meal-log contract-evolution merged as PR #1072",
     "existing recipe nutrition snapshot release merged",
-    "recipe-visibility-read-hardening Stage 2 through Stage 6 merged through PR #1228",
-    "product-ingredient-link-foundation Stage 1 docs merged as PR #1076 for Train B integrated QA",
+    "recipe-visibility-read-hardening Stage 2 through Stage 6 merged through PR #1228 including Storage/outbox runtime",
+    "product-ingredient-link-foundation implementation PR #1256 and Stage 6 closeout PR #1262 merged; existing-schema full-local query-plan and production cleanup evidence remains Manual Only",
+    "full-local-supabase-production docs and fail-closed Auth DB foundation merged; provider live final cutover and S3/rclone restore remain Manual Only",
     "recipe snapshot Stage 2 implementation merged as PR #1218 and Stage 4 consumer regression merged as PR #1219",
     "PR #1220 intentionally reopened roadmap docs and lifecycle planned because deployment verification remained missing",
-    "this hybrid contract relock does not activate schema migration Meal contract cutover or production writes"
+    "this full-local Stage 1 contract relock does not implement a verifier activate schema migration Meal contract cutover or authorize production writes"
   ],
   "docs_refs": {
     "source_of_truth": [
       "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
-      "docs/요구사항기준선-v1.7.26.md",
-      "docs/화면정의서-v1.5.30.md",
-      "docs/유저flow맵-v1.3.28.md",
-      "docs/db설계-v1.3.27.md",
-      "docs/api문서-v1.2.30.md"
+      "docs/요구사항기준선-v1.7.28.md",
+      "docs/화면정의서-v1.5.32.md",
+      "docs/유저flow맵-v1.3.30.md",
+      "docs/db설계-v1.3.30.md",
+      "docs/api문서-v1.2.33.md"
     ],
     "governing_docs": [
       "AGENTS.md",
@@ -55,13 +56,18 @@
     "plan_loop": "required",
     "review_loop": "required",
     "external_smokes": [
-      "node scripts/verify-recipe-snapshot-authority-hybrid.mjs --mode post-merge-read-only from merged exact SHA only",
-      "local application DB table column FK unique check trigger grant function inventory and local auth.users=0",
-      "remote Auth control-plane active exact epoch session binding terminal state read-only evidence with remote application writes zero",
+      "self-hosted-local-auth-db-storage-single-authority",
+      "stable-auth-user-uuid-and-auth-uid-rls-preserved",
+      "local-session-binding-pre-expiry-revoke",
+      "private-cross-owner-read-write-delete-zero",
+      "account-delete-recreate-local-lifecycle-cleanup",
+      "official-s3-rclone-restore-evidence",
+      "app-and-auth-only-public-data-storage-studio-postgres-internal",
+      "planned-stage2-full-local-snapshot-verifier-not-yet-implemented",
       "current and immediate-previous content-aware reader compatibility smoke",
       "one-full-release old-shape direct-only write zero and pair mismatch zero evidence",
       "pre-contract rollback and post-contract content-aware rollback-floor rejection",
-      "hybrid exact-epoch account cleanup runs local owner fence and FK order before remote delete terminal readback and mirror terminal while preserving owner-null public shared snapshots",
+      "local account cleanup runs owner fence and FK order before exact local Auth identity delete and terminal readback while preserving owner-null public shared snapshots",
       "Train B Storage outbox and pantry effective-ingredient integration smoke",
       "production contract-null writes remain zero until approved compatibility gate"
     ],
@@ -80,8 +86,7 @@
       "pnpm validate:workpack -- --slice recipe-snapshot-authority-foundation",
       "node scripts/validate-automation-spec.mjs --slice recipe-snapshot-authority-foundation",
       "pnpm validate:omo-bookkeeping",
-      "pnpm exec vitest run tests/recipe-snapshot-authority-hybrid-verifier.test.ts tests/recipe-snapshot-authority-remote-verifier.test.ts",
-      "pnpm test:recipe-snapshot-authority:hybrid-cleanup-postgres",
+      "pnpm exec vitest run tests/full-local-auth-db-foundation.test.ts",
       "pnpm exec vitest run tests/recipe-snapshot-authority.test.ts tests/recipe-snapshot-readers.test.ts tests/recipe-snapshot-security.test.ts tests/recipe-snapshot-account-delete.test.ts",
       "pnpm test:recipe-snapshot-authority:postgres",
       "pnpm verify:backend",
@@ -90,7 +95,6 @@
       "pnpm test:e2e:regression:ci --grep recipe-snapshot-authority-foundation",
       "pnpm verify:frontend",
       "pnpm validate:closeout-sync -- --slice recipe-snapshot-authority-foundation",
-      "node scripts/verify-recipe-snapshot-authority-hybrid.mjs --mode post-merge-read-only",
       "git diff --check"
     ],
     "verify_commands": [
@@ -99,8 +103,7 @@
       "pnpm validate:workpack -- --slice recipe-snapshot-authority-foundation",
       "node scripts/validate-automation-spec.mjs --slice recipe-snapshot-authority-foundation",
       "pnpm validate:omo-bookkeeping",
-      "pnpm exec vitest run tests/recipe-snapshot-authority-hybrid-verifier.test.ts tests/recipe-snapshot-authority-remote-verifier.test.ts",
-      "pnpm test:recipe-snapshot-authority:hybrid-cleanup-postgres",
+      "pnpm exec vitest run tests/full-local-auth-db-foundation.test.ts",
       "pnpm exec vitest run tests/recipe-snapshot-hybrid-contract-sync.test.ts tests/workflow-v2-docs.test.ts tests/omo-automation-spec.test.ts tests/omo-bookkeeping.test.ts tests/omo-doc-gate.test.ts tests/source-of-truth-sync.test.ts",
       "pnpm lint",
       "pnpm typecheck",
@@ -114,15 +117,15 @@
       "separate Codex Stage 3 implementation review and final closeout review"
     ],
     "artifact_assertions": [
-      "historical-plan-snapshot-product-design-plus-current-hybrid-source-of-truth-lock",
-      "hybrid-relock-core-artifacts-plus-roadmap-and-status-projections",
+      "historical-plan-and-hybrid-evidence-plus-current-full-local-source-of-truth-lock",
+      "full-local-relock-core-artifacts-plus-roadmap-and-status-projections",
       "content-exact-nutrition-id-only-single-authority",
       "nutrition-not-null-restrict-ordinary-unique-current-index-and-writer-conflict-preserved",
       "private-owner-recipe-pair-and-owner-null-public-shared-shape",
-      "ordinary-direct-mutation-denied-and-hybrid-exact-epoch-account-cleanup-only-private-delete",
+      "ordinary-direct-mutation-denied-and-local-session-bound-account-cleanup-only-private-delete",
       "exact-account-cleanup-event-idempotency-claim-session-meal-batch-snapshot-product-order",
-      "active-epoch-session-liveness-hmac-binding-local-cleanup-before-remote-delete-terminal-readback-and-mirror-terminal",
-      "local-auth-users-zero-and-remote-application-writes-zero",
+      "stable-local-auth-uuid-session-binding-auth-uid-rls-cross-owner-denial-delete-recreate-cleanup",
+      "official-s3-rclone-restore-and-app-auth-only-public-boundary",
       "soft-delete-history-preservation-and-new-snapshot-denial",
       "reader-first-n-preserving-idempotent-expand-backfill",
       "db-derived-null-or-equal-compatibility-mirror-and-content-null-legacy-fallback",
@@ -133,7 +136,8 @@
       "scalable-cooking-over-base-plus-fixed-once-and-missing-not-zero",
       "existing-consumer-behavior-only-no-new-visual-scope",
       "train-b-storage-outbox-and-pantry-effective-ingredient-integration",
-      "merged-exact-sha-local-application-db-and-remote-auth-control-plane-read-only-hybrid-evidence",
+      "planned-stage2-full-local-snapshot-verifier-not-yet-implemented",
+      "existing-full-local-auth-db-foundation-tests-are-evidence-not-snapshot-closeout",
       "independent-codex-required-findings-zero",
       "current-head-all-started-checks-terminal-green-or-intended-skip"
     ]
@@ -161,5 +165,5 @@
     "Unapproved production or staging migration database Storage or remote application write"
   ],
   "open_questions": [],
-  "notes": "PR #1231 merged the hybrid remote Auth/local Data relock after PR #1218 Stage 2 and PR #1219 Stage 4. PR #1232 merged the TDD hybrid verifier as 6c9d2c32969d715de95813e93c61f005075c89a0; its exact-master dry-run passed and a separate read-only local query proved auth.users=0. PR #1233 merged the Stage 2 regression delta as 4a7718ee6bac66fb39b5163742783ac2092e5b5c from exact head d9468881b7ae77f5b9b333e6f2a82452eb9dd60e after independent code/security P0/P1/P2 0/0/0 and 16 current-head checks with 15 success and one intended skip. PR #1251 then hardened historical merged-SHA verification at exact head 75d09a37f6341772c77e27a12a59730b7ef7914e after independent code/security/verifier P0/P1/P2 0/0/0 and 24 current-head checks with 14 success and 10 intended skips, and squash-merged as 94ae1a2077d63974c73a506add7b6647bf69d6d0. The clean master remote and hybrid dry-runs passed at exact SHA 94ae1a2077d63974c73a506add7b6647bf69d6d0 in read-only mode with production/staging/remote application writes 0. After PR #1252 advanced origin/master to 29115dee2830f657a594ab68a8a6a3efe107dec9, both remote and hybrid historical dry-run passed from clean detached ancestor 94ae1a2077d63974c73a506add7b6647bf69d6d0 in read-only mode with production/staging/remote application writes 0. Full local/remote evidence remains pending: real sanitized remote Auth evidence, local Storage evidence, compatibility-release observation, full actual public.users inbound-FK cleanup rehearsal, Train B #2 integration and successor event/meal-log/non-image-idempotency cleanup links are still required. Lifecycle/verification/evaluation therefore remain in_progress/pending/not_started; contract/null still waits for current+previous content-aware, one-release old-shape zero and pair-mismatch zero evidence."
+  "notes": "Active target is one self-hosted local Supabase Auth/DB/Storage authority with stable UUID, local session binding, auth.uid() RLS, cross-owner denial, local delete/recreate cleanup, S3/rclone restore, and app+Auth-only public exposure. Remote Supabase is pre-floor source-of-record, migration source, and recovery source only; production mutation is forbidden. The floor is the first successful local production session, provider identity link, or user-scoped local DB or Storage write, after which env-only rollback is forbidden. PR #1218/#1219/#1231/#1232/#1233/#1251, scripts/verify-recipe-snapshot-authority-hybrid.mjs, local auth.users=0, and remote exact-epoch dry-runs remain historical evidence. Existing full-local foundation tests are evidence, while the snapshot-specific full-local verifier is planned for Stage 2 and not yet implemented. PR #1256 and PR #1262 are merged and #3 Storage/outbox runtime exists; snapshot Train B and Manual Only verification remain pending. Lifecycle/verification/evaluation therefore stay in_progress/pending/not_started."
 }

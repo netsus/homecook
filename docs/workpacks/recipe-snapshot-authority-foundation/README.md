@@ -1,6 +1,6 @@
 # recipe-snapshot-authority-foundation
 
-> Hybrid contract relock. The historical 2026-07-29 master plan SHA-256 `45f02013fbc1c3af1936d596605230d0cbac7839a783224aa9535844e4bda7dc` (1,056 lines) remains snapshot-product design history, while its local-only Auth/deployment assumptions are superseded by `docs/sync/CURRENT_SOURCE_OF_TRUTH.md`. Official baseline: requirements v1.7.26, screens v1.5.30, flow v1.3.28, DB v1.3.27, API v1.2.30.
+> Full-local contract relock. The active target is one self-hosted local Supabase Auth/PostgreSQL/PostgREST/Storage authority on the current Mac. Official baseline: requirements v1.7.28, screens v1.5.32, flow v1.3.30, DB v1.3.30, API v1.2.33. The historical 2026-07-29 master plan SHA-256 `45f02013fbc1c3af1936d596605230d0cbac7839a783224aa9535844e4bda7dc` (1,056 lines) and later hybrid evidence remain preserved history, not an active release gate.
 
 ## Goal
 
@@ -8,12 +8,13 @@ mutable recipe current가 바뀌어도 기존 Meal·요리 세션·batch·식사
 
 ## Branches
 
-- Stage 1 docs: `docs/recipe-snapshot-authority-foundation`
+- Stage 1 full-local contract sync: `docs/recipe-snapshot-full-local-contract-sync-stage1`
+- Historical Stage 1 docs: `docs/recipe-snapshot-authority-foundation`
 - Stage 2 hybrid verifier delta: `fix/recipe-snapshot-hybrid-verifier` (PR #1232 merged)
 - Stage 2 hybrid regression evidence: `fix/recipe-snapshot-stage2-regression-evidence` (PR #1233 merged)
 - Stage 2 verifier reproducibility hardening: `fix/recipe-snapshot-verifier-historical-sha` (PR #1251 merged)
 - Stage 4 existing-consumer compatibility: `feature/fe-recipe-snapshot-authority-foundation`
-- Release train: B. #3 runtime과 기존 recipe nutrition snapshot release는 모두 병합됐다. 이 relock은 이미 병합된 #4 Stage 2/4 구현을 hybrid delta/reverification 기준으로 다시 검증하기 위한 문서 선행 작업이다.
+- Release train: B. #2 implementation PR #1256과 Stage 6 closeout PR #1262, #3 runtime, 기존 recipe nutrition snapshot release가 병합됐다. 이 relock은 이미 병합된 #4 Stage 2/4 구현을 full-local authority 기준으로 재검증하기 위한 Stage 1 문서 선행 작업이다. recipe snapshot Stage 2/검증은 아직 완료되지 않았다.
 - Stage 1 author, internal 1.5 reviewer/repair-final owner, implementation owner, security/DB reviewer와 five-axis reviewer는 서로 다른 Codex 세션을 사용하며 Claude는 사용하지 않는다.
 
 ## In Scope
@@ -75,9 +76,10 @@ Schema Change:
 | historical contract base PR #1072 | merged | superseded baseline; active authority is the current tuple in `docs/sync/CURRENT_SOURCE_OF_TRUTH.md` |
 | existing recipe nutrition snapshot release | merged | immutable nutrition authority, writer conflict and Meal direct pin baseline available |
 | `recipe-visibility-read-hardening` PR #1228 | merged | #3 Stage 2~6 runtime, client, independent reviews and current-head gates complete |
-| `product-ingredient-link-foundation` Stage 1 docs PR #1076 | merged | Train B product relation docs available for integrated QA |
+| `product-ingredient-link-foundation` PR #1256 + closeout PR #1262 | merged | HOME/PANTRY consumer 구현과 Stage 6 closeout은 병합됨. 기존-schema/full-local/query-plan/production cleanup 증거는 Manual Only |
+| `full-local-supabase-production` | docs/foundation merged | local Auth+DB+Storage authority 문서와 fail-closed Auth/DB foundation은 병합됐으나 provider live, final cutover, off-Mac restore는 Manual Only |
 
-> Historical implementation exists: PR #1218 merged the Stage 2 snapshot authority foundation and PR #1219 merged Stage 4 existing-consumer regression. PR #1220 intentionally reopened the lifecycle to roadmap `docs` / workflow `planned` because the required deployment verifier did not exist. The next implementation is therefore a hybrid delta/reverification, not a fresh Stage 2 or a duplicate migration. This relock does not activate contract/null cutover or production writes.
+> Historical implementation exists: PR #1218 merged the Stage 2 snapshot authority foundation and PR #1219 merged Stage 4 existing-consumer regression. PR #1220 intentionally reopened the lifecycle because required deployment verification did not exist. PR #1231/#1232/#1233/#1251 then supplied hybrid-era contract and verifier evidence. Those artifacts remain historical evidence and are not deleted. The next implementation is a full-local verification delta, not a fresh Stage 2 or duplicate migration. This Stage 1 relock does not activate schema migration, contract/null cutover, or production writes.
 
 ## Backend First Contract
 
@@ -95,7 +97,7 @@ Schema Change:
 - public/shared content and nutrition use owner-null shared rows. Account cleanup cannot re-own, duplicate per user or delete those rows.
 - normal application, authenticated, service-role direct DML and generic cleanup cannot update/delete snapshots. Existing nutrition current switch remains confined to the allowlisted calculation writer.
 - personal recipe soft delete only sets `recipes.deleted_at`; it preserves recipe/content/nutrition/history FKs and blocks new snapshot creation or current transition. An internal restore reuses the same immutable identity instead of editing payload.
-- account cleanup alone may hard-delete private snapshots inside the hybrid exact-epoch deletion saga. The session-authority gateway must first validate the active identity epoch and session-liveness HMAC binding; then the local owner fence/cleanup runs in the exact chain `Meal active event pointer → quantity/lifecycle event → meal-log entry + ordinary non-image idempotency key → cooking_session_meal_claim → cooking_session_meal → cooking_session → Meal → leftover_dishes batch → private content snapshot → private nutrition snapshot → private recipe → pantry/product-planner private-product references → private product link/version/profile/product`. Only after local dependency zero may the remote exact-epoch Auth delete, terminal readback and mirror-terminal transition complete. It never changes `meals.leftover_dish_id` to `SET NULL` as a shortcut.
+- account cleanup alone may hard-delete private snapshots for the stable local Auth UUID. The gateway first requires an active local session binding and applies `auth.uid()` RLS plus the local owner fence/cleanup in the exact chain `Meal active event pointer → quantity/lifecycle event → meal-log entry + ordinary non-image idempotency key → cooking_session_meal_claim → cooking_session_meal → cooking_session → Meal → leftover_dishes batch → private content snapshot → private nutrition snapshot → private recipe → pantry/product-planner private-product references → private product link/version/profile/product`. After local dependency zero, it deletes the exact local Auth identity and requires terminal readback before completion. A delete/recreate flow must not regain the deleted owner's rows, cross-owner read/write/delete stays zero, and owner-null public/shared rows survive. It never changes `meals.leftover_dish_id` to `SET NULL` as a shortcut.
 
 ### Meal expand, compatibility and contract
 
@@ -122,7 +124,11 @@ Schema Change:
 - shopping preview/detail, existing cooking/history and later batch/meal-log readers must consume the same Meal/content authority. A regression test fails if any content-pinned row reads raw Meal direct N or mutable current recipe data.
 - `GET /planner/nutrition` remains for one compatibility release even though the new planner UI will stop calling it; removal requires a separate tombstone contract.
 - Train B closeout jointly rechecks #3 Storage cleanup/outbox and #2 pantry effective-ingredient projection, but #4 does not reimplement or weaken either contract.
-- hybrid verification is read-only: it inspects the local application DB/Storage authority and only the minimal remote Auth control-plane identity-epoch evidence. It requires `local auth.users=0`, active epoch/session binding consistency and no remote application DB/Storage write. Contract/null cutover and production writes run only from a merged exact SHA after the compatibility evidence gate.
+- the active release target is `self-hosted-local-auth-db-storage-single-authority`: stable Auth UUID, local session binding with pre-expiry revoke, `auth.uid()` RLS, private cross-owner denial, local account delete/recreate cleanup, and official S3/rclone restore evidence must agree at one merged exact SHA.
+- only app HTTPS and Auth `/auth/v1/*` are public. Data/PostgREST, Storage, Studio, and PostgreSQL remain internal; browser-direct Data/Storage and service-role user fallback are zero.
+- remote Supabase is source-of-record, migration source, and recovery floor only before local-state activation. Production mutation against remote Supabase is forbidden.
+- rollback is pre-floor until the first successful local production session, provider identity link, or user-scoped local DB or Storage write. Once any one succeeds, env-only rollback is forbidden; Auth/application/Storage deltas must be recovered together.
+- the snapshot-specific full-local merged-SHA verifier is a planned Stage 2 gate and is not implemented by this Stage 1. Existing `tests/full-local-auth-db-foundation.test.ts` and `tests/full-local-auth-db-foundation-postgres.integration.test.ts` are foundation evidence, not a substitute for the pending snapshot verifier.
 - the verifier may re-check a clean historical merged SHA after `origin/master` advances only when `git --no-replace-objects merge-base --is-ancestor` proves that exact HEAD is an `origin/master` ancestor. Local replace refs and legacy grafts cannot supply ancestry evidence; a dirty tree, unmerged branch or unrelated commit still fails closed.
 
 ## Frontend Delivery Mode
@@ -149,16 +155,23 @@ Schema Change:
 ## Source Links
 
 - `docs/sync/CURRENT_SOURCE_OF_TRUTH.md`
-- `docs/요구사항기준선-v1.7.26.md` B/D/J and hybrid Auth/local Data addendum
-- `docs/화면정의서-v1.5.30.md` 0-B, browser Auth/Data boundary and nutrition formula compatibility notes
-- `docs/유저flow맵-v1.3.28.md` snapshot/Meal migration, hybrid session-authority and deletion saga
-- `docs/db설계-v1.3.27.md` B/C/D, identity epoch mirror and snapshot/cooking/batch/account-cleanup sections
-- `docs/api문서-v1.2.30.md` hybrid gateway boundary and existing Meal/planner nutrition contracts
+- `docs/요구사항기준선-v1.7.28.md` B/D/J and full-local Supabase production boundary
+- `docs/화면정의서-v1.5.32.md` 0-B, local Auth/session and browser public/internal boundary
+- `docs/유저flow맵-v1.3.30.md` snapshot/Meal migration, local session authority and account lifecycle
+- `docs/db설계-v1.3.30.md` B/C/D, stable Auth UUID, RLS, snapshot/cooking/batch/account-cleanup sections
+- `docs/api문서-v1.2.33.md` full-local gateway boundary and existing Meal/planner nutrition contracts
 - historical master plan sections 6-1, dependency matrix #4, successor #4, migration plan 9 and test strategy 10, with local-only Auth/deployment assumptions superseded by the current official tuple
 
 ## QA / Test Data Plan
 
 ### Relock gate and remaining artifacts
+
+- This Stage 1 records a focused RED/GREEN in the compatibility-named `tests/recipe-snapshot-hybrid-contract-sync.test.ts`, then re-locks documents and machine-readable gates only. Stage 1 does not implement a new full-local verifier.
+- The planned active gate is `planned-stage2-full-local-snapshot-verifier-not-yet-implemented`. It must later consume a merged exact SHA and the local Auth/DB/Storage authority without inventing a new public API, field, status, or error.
+- Existing full-local foundation evidence is limited to `tests/full-local-auth-db-foundation.test.ts` and `tests/full-local-auth-db-foundation-postgres.integration.test.ts`; snapshot Stage 2 and its verification remain pending.
+- PR #1218/#1219/#1231/#1232/#1233/#1251 and `scripts/verify-recipe-snapshot-authority-hybrid.mjs` are retained as historical evidence. In that historical context, `local auth.users=0`, remote exact-epoch checks, and read-only hybrid dry-runs were valid; none is an active full-local release gate.
+
+#### Historical hybrid evidence — not an active release gate
 
 - PR #1231 recorded RED in `tests/recipe-snapshot-hybrid-contract-sync.test.ts`, then passed the current SOT/workflow/workpack/automation/bookkeeping validators, focused workflow Vitest, lint, typecheck, dependency audit, diff check and current-head repository workflows.
 - PR #1218 already supplied the original Stage 2 RED/GREEN implementation and PR #1219 supplied the Stage 4 consumer regression. Their evidence remains historical and must not be represented as new work.
@@ -172,11 +185,10 @@ Schema Change:
   completed with 15 success and one intended skip after independent
   code/security P0/P1/P2 `0/0/0`. The clean master dry-run passed at exact SHA
   `da054a96afb7c6108a7007bfafbf3d328ef47656` in read-only mode with
-  production/staging/remote application writes 0. Full local/remote evidence
-  remains pending: actual remote Auth evidence, local Storage evidence, the
-  compatibility-release observation window, a full actual-DB inbound-FK
-  cleanup rehearsal, and successor/Train B dependencies remain required and
-  are not claimed complete.
+  production/staging/remote application writes 0. The then-planned hybrid
+  remote Auth/local Storage evidence, compatibility-release observation,
+  full actual-DB inbound-FK cleanup rehearsal, and successor/Train B proof
+  remained incomplete. Those gaps are history, not current full-local gates.
 - PR #1251 hardened clean historical merged-SHA verification against replace
   refs, legacy grafts, malformed SHAs and repository/history redirect
   environment variables. Exact head
@@ -190,8 +202,8 @@ Schema Change:
   `29115dee2830f657a594ab68a8a6a3efe107dec9`, both remote and hybrid
   historical dry-run passed from clean detached ancestor
   `94ae1a2077d63974c73a506add7b6647bf69d6d0` in read-only mode with
-  production/staging/remote application writes 0. Full local/remote evidence
-  remains pending.
+  production/staging/remote application writes 0. This is retained history
+  and does not satisfy or block the current full-local gate by itself.
 - Detailed evidence:
   `evidence/2026-07-30-stage2-hybrid-regression.md`.
 
@@ -204,20 +216,23 @@ Schema Change:
 - 10 cooking/base servings fixture proves scalable ratio plus fixed once; partial/unavailable and missing-not-zero remain intact.
 - snapshot-v2 conditional session fields, planner session-meal match/revision, active claim PK, generation-scoped idempotency, legacy orphan/mixed preflight report-only, immutable pin and leftover content-only/no-direct-N schema fixtures.
 - concurrent planner attempts claim one Meal once; same key replay returns one durable result, different payload/cross-generation replay fails, and no duplicate downstream side effect is possible before #7 activation.
-- hybrid cleanup fixture proves active epoch + live HMAC binding, same-intent replay,
-  operational identifier scrub, and local owner fence/cleanup for the currently
-  implemented snapshot/product FK subset. It then locally simulates fake-provider
-  outbox finalize and terminal mirror updates while public/shared rows survive.
-  Event, meal-log, ordinary non-image idempotency, successor-owned links, the full
-  actual `public.users` inbound-FK inventory, remote exact-epoch delete, and terminal
-  readback evidence remain pending.
+- active full-local fixture must prove stable local Auth UUID, active local session binding,
+  `auth.uid()` RLS, private cross-owner read/write/delete zero, local owner fence/cleanup,
+  exact local Auth identity delete, terminal readback, and delete/recreate isolation while
+  owner-null public/shared rows survive.
+- the historical hybrid cleanup fixture remains evidence for active epoch + live HMAC
+  binding, same-intent replay, operational identifier scrub, outbox finalize, and terminal
+  mirror behavior only. Full actual `public.users` inbound-FK and successor-owned cleanup
+  rehearsal remain pending.
 
 ### Release evidence
 
 - old-shape/direct-only write telemetry is zero for one full compatibility release and backfill/pair mismatch is zero before contract/null.
 - current and immediate-previous releases read content-aware rows and direct-only legacy fallback; rollback smoke before null and rollback-floor rejection after null are both recorded.
-- local application DB existing/fresh/idempotent replay, schema/constraint/trigger/grant inventory, `local auth.users=0`, remote Auth control-plane read-only exact-epoch evidence and merged-exact-SHA hybrid verifier evidence are required.
-- Train B integration confirms #3 Storage cleanup outbox remains terminal-safe and #2 pantry effective ingredient readers remain green without adding them to #4 schema.
+- local Auth/DB/Storage existing/fresh/idempotent replay, schema/constraint/trigger/grant inventory, stable UUID/RLS/session-binding/cross-owner/delete-recreate evidence, and a planned merged-exact-SHA full-local snapshot verifier are required.
+- official S3/rclone off-Mac restore must prove semantic recovery; direct live volume/file copying is not accepted as restore evidence.
+- Train B integration confirms #3 Storage cleanup/outbox runtime remains terminal-safe and #2 PR #1256 implementation plus PR #1262 Stage 6 closeout remain green without adding either contract to #4 schema. Their existing-schema/full-local/query-plan/production cleanup evidence remains Manual Only.
+- provider live login/link, final public cutover, production-scale compatibility-release observation, full actual-DB cleanup rehearsal, S3/rclone restore, and current-head release evidence are Manual Only and still pending.
 
 ## Key Rules
 
@@ -235,7 +250,7 @@ Schema Change:
 2. The content snapshot holds title, ingredients/product provenance and steps plus the exact nutrition snapshot ID, not a copied nutrition vector.
 3. Existing Meal/planner/shopping/history readers resolve content when present; only content-null legacy rows use the direct nutrition fallback.
 4. A later recipe edit or nutrition current switch does not rewrite the pin, while personal soft delete still leaves anchored history readable.
-5. The hybrid deletion saga validates the active epoch/session binding, removes local private dependents and snapshot pairs in FK order, then completes remote exact-epoch deletion and mirror terminal state while preserving owner-null public/shared snapshots.
+5. The local deletion saga validates the active local session binding, applies `auth.uid()` and the local owner fence/cleanup, removes private dependents and snapshot pairs in FK order, deletes the exact local Auth identity, requires terminal readback, and proves delete/recreate cannot recover prior private rows while preserving owner-null public/shared snapshots.
 
 ## Delivery Checklist
 
@@ -252,4 +267,4 @@ Schema Change:
 - [ ] leftover/batch uses immutable content-only nutrition authority with no direct nutrition FK <!-- omo:id=delivery-snapshot-batch-authority;stage=2;scope=backend;review=3,6 -->
 - [ ] scalable cooking/base plus fixed-once, partial/unavailable and missing-not-zero fixtures pass <!-- omo:id=delivery-snapshot-nutrition-formula;stage=2;scope=backend;review=3,6 -->
 - [x] existing consumers preserve pinned history and legacy fallback without new visual scope <!-- omo:id=delivery-snapshot-consumer-regression;stage=4;scope=frontend;review=5,6 -->
-- [ ] local application DB existing/fresh/replay and merged-exact-SHA hybrid read-only verifier evidence are green; remote access is limited to Auth control-plane exact-epoch evidence and `local auth.users=0` remains true <!-- omo:id=delivery-snapshot-verification;stage=2;scope=shared;review=3,6 -->
+- [ ] merged-exact-SHA full-local snapshot verification is implemented in Stage 2 and proves local Supabase Auth/DB/Storage single authority, stable UUID, local session revoke, `auth.uid()` RLS, cross-owner denial, delete/recreate cleanup, S3/rclone restore, and app+Auth-only public exposure <!-- omo:id=delivery-snapshot-verification;stage=2;scope=shared;review=3,6 -->
