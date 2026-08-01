@@ -32,6 +32,11 @@ interface PlannerColumnRow {
 interface PlannerMealRow {
   id: string;
   recipe_id: string;
+  recipe_content_snapshot_id: string | null;
+  recipe_content_snapshots:
+    | { title: string | null }
+    | Array<{ title: string | null }>
+    | null;
   plan_date: string;
   column_id: string;
   planned_servings: number;
@@ -132,18 +137,27 @@ function normalizeMealStatus(status: string): MealStatus {
   return "registered";
 }
 
+function getPlannerMealContentSnapshot(meal: PlannerMealRow) {
+  return Array.isArray(meal.recipe_content_snapshots)
+    ? meal.recipe_content_snapshots[0] ?? null
+    : meal.recipe_content_snapshots;
+}
+
 function toPlannerMeal(
   meal: PlannerMealRow,
   recipeMap: Map<string, RecipeRow>,
   shoppingListMap: Map<string, ShoppingListRow>,
 ): PlannerMealData {
   const recipe = recipeMap.get(meal.recipe_id);
+  const contentSnapshot = getPlannerMealContentSnapshot(meal);
   const shoppingList = meal.shopping_list_id ? shoppingListMap.get(meal.shopping_list_id) : null;
 
   return {
     id: meal.id,
     recipe_id: meal.recipe_id,
-    recipe_title: recipe?.title ?? "",
+    recipe_title: meal.recipe_content_snapshot_id
+      ? contentSnapshot?.title?.trim() ?? ""
+      : recipe?.title ?? "",
     recipe_thumbnail_url: normalizeFoodSafetyImageUrl(recipe?.thumbnail_url),
     plan_date: meal.plan_date,
     column_id: meal.column_id,
@@ -239,7 +253,7 @@ export async function GET(request: NextRequest) {
 
   const mealsResult = await dbClient
     .from("meals")
-    .select("id, recipe_id, plan_date, column_id, planned_servings, status, is_leftover, shopping_list_id, created_at")
+    .select("id, recipe_id, recipe_content_snapshot_id, recipe_content_snapshots(title), plan_date, column_id, planned_servings, status, is_leftover, shopping_list_id, created_at")
     .eq("user_id", user.id)
     .gte("plan_date", dateRange.startDate)
     .lte("plan_date", dateRange.endDate)
@@ -248,6 +262,20 @@ export async function GET(request: NextRequest) {
     .order("created_at", { ascending: true });
 
   if (mealsResult.error || !mealsResult.data) {
+    return fail("INTERNAL_ERROR", "플래너를 불러오지 못했어요.", 500);
+  }
+
+  const hasBrokenContentPinnedMeal = mealsResult.data.some((meal) => {
+    if (!meal.recipe_content_snapshot_id) {
+      return false;
+    }
+
+    const contentSnapshot = getPlannerMealContentSnapshot(meal);
+
+    return contentSnapshot === null || !contentSnapshot.title?.trim();
+  });
+
+  if (hasBrokenContentPinnedMeal) {
     return fail("INTERNAL_ERROR", "플래너를 불러오지 못했어요.", 500);
   }
 

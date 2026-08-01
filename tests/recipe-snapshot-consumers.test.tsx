@@ -9,6 +9,7 @@ function readRepositoryFile(path: string) {
 
 const consumerSources = {
   meals: readRepositoryFile("app/api/v1/meals/route.ts"),
+  planner: readRepositoryFile("app/api/v1/planner/route.ts"),
   plannerNutrition: readRepositoryFile("lib/server/planner-nutrition-summary.ts"),
   shoppingPreview: readRepositoryFile("app/api/v1/shopping/preview/route.ts"),
   shoppingCreate: readRepositoryFile("app/api/v1/shopping/lists/route.ts"),
@@ -40,6 +41,13 @@ describe("recipe snapshot consumer regression", () => {
     );
     expect(consumerSources.meals).toMatch(
       /recipe_title:\s*contentSnapshot\?\.title\?\.trim\(\)\s*\|\|\s*recipe\?\.title/u,
+    );
+
+    expect(consumerSources.planner).toContain(
+      "recipe_content_snapshot_id, recipe_content_snapshots(title)",
+    );
+    expect(consumerSources.planner).toMatch(
+      /recipe_title:\s*meal\.recipe_content_snapshot_id\s*\?\s*contentSnapshot\?\.title\?\.trim\(\)\s*\?\?\s*""\s*:\s*recipe\?\.title/u,
     );
 
     expect(consumerSources.plannerNutrition).toContain(
@@ -102,6 +110,7 @@ describe("recipe snapshot consumer regression", () => {
     );
 
     expect(consumerSources.meals).toContain("hasBrokenContentPinnedMeal");
+    expect(consumerSources.planner).toContain("hasBrokenContentPinnedMeal");
     expect(consumerSources.shoppingPreview).toContain(
       "hasContentPin(meal) && getPinnedMealTitle(meal) === null",
     );
@@ -131,6 +140,10 @@ describe("recipe snapshot consumer regression", () => {
       "uses an immutable content title instead of the mutable current recipe title",
       "fails closed when a content-pinned Meal cannot load its immutable content row",
       "keeps deleted recipe metadata behind an owned Meal anchor",
+    ]);
+    expectScenarioNames("tests/planner-route.test.ts", [
+      "uses an immutable content title instead of the mutable current recipe title",
+      "fails closed when a content-pinned planner Meal cannot load its immutable content row",
     ]);
     expectScenarioNames("tests/shopping-preview.backend.test.ts", [
       "uses a content-pinned Meal title instead of the mutable current recipe title",
