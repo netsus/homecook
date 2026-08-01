@@ -1,8 +1,8 @@
 # 전체 로컬 Supabase Auth + DB + Storage production 전환 계획
 
-상태: **Stage -1 계약 산출물 작성 및 독립 검토 PASS / docs PR 병합 완료 / 구현하지 않음**
+상태: **Stage -1~3 코드·복원 rehearsal 완료 / 실제 도메인·Cloudflare·provider callback·live OAuth·최종 cutover 대기**
 작성일: **2026-07-31 KST**
-최종 갱신: **2026-08-01 KST**
+최종 갱신: **2026-08-01 23:21 KST**
 대상 서비스: `homecook`
 목표 구조: **현재 Mac의 self-hosted Supabase Auth + DB + Storage + 기존 RLS**
 현재 운영 구조: **원격 Supabase Auth + 원격 DB/Storage, Mac Next.js `0.0.0.0:3100`**
@@ -772,21 +772,21 @@ rollback floor는 **첫 successful local production Auth state mutation**이다.
 
 - [ ] 실제 소유 도메인과 `app`/`auth` hostname 확정
 - [ ] Cloudflare named tunnel과 HTTPS 준비
-- [ ] Auth image exact digest와 Apple Silicon 호환 확인
+- [x] Auth image exact digest와 Apple Silicon 호환 확인
 - [ ] Keychain secret inventory와 off-Mac encrypted key backup 준비
-- [ ] repo 밖 secret directory/file mode `0700`/`0600`, read-only mount, runtime entrypoint와 Docker `Config.Env` scanner 통과
-- [ ] email/password, OTP, anonymous login production 비활성화
-- [ ] Google built-in provider 설정
-- [ ] Kakao built-in provider 설정
+- [x] repo 밖 secret directory/file mode `0700`/`0600`, read-only mount, runtime entrypoint와 Docker `Config.Env` scanner 통과
+- [x] email/password, OTP, anonymous login production 비활성화
+- [x] Google built-in provider 설정
+- [x] Kakao built-in provider 설정
 - [ ] Naver `custom:naver` self-hosted 실검증
-- [ ] server-issued auth-flow cookie와 start/cancel/callback/expiry terminal test 통과
-- [ ] local bucket precreate + official S3/rclone copy를 포함한 Auth/Data/Storage fresh restore rehearsal 2회
-- [ ] temporary hosted S3 credential revoke와 command/log/manifest 잔존 0 확인
-- [ ] owner UUID semantic mismatch 0
+- [x] server-issued auth-flow cookie와 start/cancel/callback/expiry terminal test 통과
+- [x] local bucket precreate + official S3/rclone copy를 포함한 Auth/Data/Storage fresh restore rehearsal 2회
+- [x] temporary hosted S3 credential revoke와 command/log/manifest 잔존 0 확인
+- [x] owner UUID semantic mismatch 0
 - [ ] User A/B RLS negative test 통과
 - [ ] logout/revoke pre-expiry negative test 통과
 - [ ] account delete/recreate test 통과
-- [ ] public Auth path allowlist와 rate limit 통과
+- [x] public Auth path allowlist와 spoofed forwarded header 정규화 통과; public Cloudflare rate limit은 도메인 연결 뒤 확인
 - [ ] off-Mac complete restore 통과
 - [ ] Mac reboot/ordered recovery 통과
 - [ ] 세 provider production E2E 통과
@@ -873,9 +873,12 @@ rollback floor는 **첫 successful local production Auth state mutation**이다.
 - 방향 결정: **완료**
 - 계획 문서: **완료**
 - 공식 contract-evolution 산출물: **작성 완료, 독립 검토 PASS, docs PR 병합 완료**
-- self-hosted Auth runtime: **미착수**
-- Google/Naver/Kakao local Auth 실검증: **미착수**
-- Auth/DB/Storage final migration: **미착수**
+- self-hosted Auth runtime: **7개 컨테이너 ordered health와 disposable Docker 통합 검증 완료**
+- encrypted backup과 Auth/DB/Storage fresh restore: **서로 다른 volume에서 2회 digest 일치 완료**
+- Google/Kakao local Auth 설정: **완료**
+- Naver `custom:naver` 등록과 세 provider 실제 login/link: **도메인 소유 및 운영자 승인 대기**
+- Mac login-time LaunchAgent 자동 시작: **코드·테스트 완료, 최종 전환 전이라 설치하지 않음**
+- Cloudflare public HTTPS와 Auth/DB/Storage final authority 전환: **미착수**
 - first local production Auth state mutation: **금지 상태**
 
-이 계획의 다음 단계는 **Stage 0 현재 authority와 migration inventory 고정**이다. 구현은 별도 work branch에서 시작하고 첫 local production Auth mutation 전 Manual Only gate를 모두 유지한다.
+다음 단계는 실제 도메인을 소유한 뒤 **Cloudflare public HTTPS → provider callback → Naver 등록 → 세 provider login/link → RLS/session negative test → 재부팅 복구 → 운영자 승인형 cutover** 순서로 진행한다. 그 전까지 원격 Supabase가 운영 권위이며 Manual Only gate를 모두 유지한다.

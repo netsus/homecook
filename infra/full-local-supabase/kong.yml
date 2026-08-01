@@ -105,13 +105,28 @@ services:
             - admin
             - anon
 
+  - name: storage-v1-s3
+    url: http://storage:5000/
+    routes:
+      - name: storage-v1-s3
+        headers:
+          authorization:
+            - "~^AWS4-HMAC-SHA256 "
+        preserve_host: true
+        strip_path: true
+        paths:
+          - /storage/v1
+    plugins:
+      - name: cors
+
   - name: storage-v1
     url: http://storage:5000/
     routes:
       - name: storage-v1-all
+        preserve_host: true
         strip_path: true
         paths:
-          - /storage/v1/
+          - /storage/v1
     plugins:
       - name: cors
       - name: request-transformer

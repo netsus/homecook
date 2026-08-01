@@ -503,7 +503,11 @@ export function validateFullLocalProductionConfig({
   });
 }
 
-export function materializeFullLocalSecrets({ readSecret, targetDirectory }) {
+export function materializeFullLocalSecrets({
+  additionalExpectedNames = [],
+  readSecret,
+  targetDirectory,
+}) {
   if (typeof readSecret !== "function") {
     throw new Error("A Keychain secret reader is required.");
   }
@@ -520,7 +524,7 @@ export function materializeFullLocalSecrets({ readSecret, targetDirectory }) {
   }
   validateFullLocalSecretFiles({
     directory: targetDirectory,
-    expectedNames: FULL_LOCAL_SECRET_NAMES,
+    expectedNames: [...FULL_LOCAL_SECRET_NAMES, ...additionalExpectedNames],
   });
   return Object.freeze({ secretCount: FULL_LOCAL_SECRET_NAMES.length });
 }

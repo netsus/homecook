@@ -1,9 +1,24 @@
 import { createServer } from "node:http";
+import { isIP } from "node:net";
 
 const host = "0.0.0.0";
 const port = 8080;
-const upstream = new URL("http://api-gateway:8000");
+const upstream = new URL(process.env.FULL_LOCAL_INTERNAL_GATEWAY_ORIGIN ?? "");
 const publicAuth = new URL(process.env.FULL_LOCAL_PUBLIC_AUTH_URL ?? "");
+if (
+  upstream.protocol !== "http:"
+  || upstream.hostname !== "api-gateway"
+  || !upstream.port
+  || upstream.pathname !== "/"
+  || upstream.search
+  || upstream.hash
+  || upstream.username
+  || upstream.password
+) {
+  throw new Error(
+    "FULL_LOCAL_INTERNAL_GATEWAY_ORIGIN must be an exact api-gateway HTTP origin.",
+  );
+}
 if (
   publicAuth.protocol !== "https:"
   || publicAuth.pathname !== "/"
@@ -25,7 +40,13 @@ function responseHeaders(source) {
   headers.delete("trailer");
   headers.delete("transfer-encoding");
   headers.delete("upgrade");
+  headers.set("cache-control", "no-store, max-age=0");
+  headers.set("pragma", "no-cache");
   return Object.fromEntries(headers.entries());
+}
+
+function isLoopbackAddress(address) {
+  return address === "127.0.0.1" || address === "::1" || address === "::ffff:127.0.0.1";
 }
 
 createServer(async (request, response) => {
@@ -38,6 +59,11 @@ createServer(async (request, response) => {
 
   const target = new URL(`${url.pathname}${url.search}`, upstream);
   const headers = new Headers(request.headers);
+  const peerAddress = request.socket.remoteAddress ?? "127.0.0.1";
+  const cloudflareClientIp = headers.get("cf-connecting-ip")?.trim() ?? "";
+  const verifiedClientIp = isLoopbackAddress(peerAddress) && isIP(cloudflareClientIp)
+    ? cloudflareClientIp
+    : peerAddress;
   const connectionHeaders = (headers.get("connection") ?? "")
     .split(",")
     .map((value) => value.trim().toLowerCase())
@@ -64,7 +90,7 @@ createServer(async (request, response) => {
   ]) {
     headers.delete(name);
   }
-  headers.set("x-forwarded-for", request.socket.remoteAddress ?? "127.0.0.1");
+  headers.set("x-forwarded-for", verifiedClientIp);
   headers.set("x-forwarded-host", publicAuth.host);
   headers.set("x-forwarded-port", publicAuth.port || "443");
   headers.set("x-forwarded-proto", publicAuth.protocol.slice(0, -1));
