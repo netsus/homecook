@@ -846,10 +846,10 @@ if (!postgresBin) {
 }
 
 await runMode(postgresBin, "fresh");
-if (process.exitCode && process.exitCode !== 0) {
-  process.exit(process.exitCode);
-}
+const freshFailed = Boolean(process.exitCode && process.exitCode !== 0);
+process.exitCode = 0;
 await runMode(postgresBin, "replay");
-if (process.exitCode && process.exitCode !== 0) {
-  process.exit(process.exitCode);
+const replayFailed = Boolean(process.exitCode && process.exitCode !== 0);
+if (freshFailed || replayFailed) {
+  process.exit(1);
 }

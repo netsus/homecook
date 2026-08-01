@@ -72,14 +72,99 @@ function normalizeSignature(value) {
   return value.replaceAll(/\s+/gu, "");
 }
 
+function isIdentifierCharacter(value) {
+  return /[a-z0-9_$]/iu.test(value ?? "");
+}
+
+function escapedByBackslash(value, index) {
+  let backslashCount = 0;
+  for (let cursor = index - 1; cursor >= 0 && value[cursor] === "\\"; cursor -= 1) {
+    backslashCount += 1;
+  }
+  return backslashCount % 2 === 1;
+}
+
+function quotedTokenAt(value, index) {
+  const quote = value[index];
+  if (quote === "'") {
+    const escapeString = /[eE]/u.test(value[index - 1] ?? "")
+      && !isIdentifierCharacter(value[index - 2]);
+    for (let cursor = index + 1; cursor < value.length; cursor += 1) {
+      if (value[cursor] !== "'") continue;
+      if (value[cursor + 1] === "'") {
+        cursor += 1;
+        continue;
+      }
+      if (escapeString && escapedByBackslash(value, cursor)) continue;
+      return { end: cursor + 1, kind: "string" };
+    }
+    throw new Error("policy string literal is unterminated");
+  }
+  if (quote === '"') {
+    for (let cursor = index + 1; cursor < value.length; cursor += 1) {
+      if (value[cursor] !== '"') continue;
+      if (value[cursor + 1] === '"') {
+        cursor += 1;
+        continue;
+      }
+      return { end: cursor + 1, kind: "identifier" };
+    }
+    throw new Error("policy quoted identifier is unterminated");
+  }
+  if (quote !== "$") return null;
+  if (isIdentifierCharacter(value[index - 1])) return null;
+  const delimiter = /^\$(?:[a-z_][a-z0-9_]*)?\$/iu.exec(
+    value.slice(index),
+  )?.[0];
+  if (!delimiter) return null;
+  const closingIndex = value.indexOf(delimiter, index + delimiter.length);
+  if (closingIndex < 0) throw new Error("policy dollar literal is unterminated");
+  return {
+    end: closingIndex + delimiter.length,
+    kind: "dollar",
+  };
+}
+
+function encodedQuotedToken(kind, token) {
+  return `\uE000${kind}:${Buffer.from(token, "utf8").toString("hex")}\uE001`;
+}
+
+function normalizeUnquotedSql(value) {
+  return value
+    .toLowerCase()
+    .replaceAll("::text", "")
+    .replaceAll(/(?<![a-z0-9_$])public\./gu, "")
+    .replaceAll(/(?<![a-z0-9_$])as(?![a-z0-9_$])/gu, "")
+    .replaceAll(/\s+/gu, "");
+}
+
+function normalizeSqlSegments(value) {
+  let result = "";
+  let unquotedStart = 0;
+  for (let index = 0; index < value.length; index += 1) {
+    const quoted = quotedTokenAt(value, index);
+    if (!quoted) continue;
+    result += normalizeUnquotedSql(value.slice(unquotedStart, index));
+    result += encodedQuotedToken(
+      quoted.kind,
+      value.slice(index, quoted.end),
+    );
+    index = quoted.end - 1;
+    unquotedStart = quoted.end;
+  }
+  return result + normalizeUnquotedSql(value.slice(unquotedStart));
+}
+
 function isWrappedExpression(value) {
   if (!value.startsWith("(") || !value.endsWith(")")) return false;
   let depth = 0;
-  let quoted = false;
   for (let index = 0; index < value.length; index += 1) {
+    const quoted = quotedTokenAt(value, index);
+    if (quoted) {
+      index = quoted.end - 1;
+      continue;
+    }
     const character = value[index];
-    if (character === "'" && value[index - 1] !== "\\") quoted = !quoted;
-    if (quoted) continue;
     if (character === "(") depth += 1;
     if (character === ")") depth -= 1;
     if (depth === 0 && index < value.length - 1) return false;
@@ -90,20 +175,21 @@ function isWrappedExpression(value) {
 function splitTopLevelBoolean(value, operator) {
   const parts = [];
   let depth = 0;
-  let quoted = false;
   let start = 0;
-  const expression = value.toLowerCase();
-  for (let index = 0; index < expression.length; index += 1) {
-    const character = expression[index];
-    if (character === "'" && expression[index - 1] !== "\\") quoted = !quoted;
-    if (quoted) continue;
+  for (let index = 0; index < value.length; index += 1) {
+    const quoted = quotedTokenAt(value, index);
+    if (quoted) {
+      index = quoted.end - 1;
+      continue;
+    }
+    const character = value[index];
     if (character === "(") depth += 1;
     if (character === ")") depth -= 1;
     if (
       depth === 0
-      && expression.startsWith(operator, index)
-      && !/[a-z0-9_]/u.test(expression[index - 1] ?? "")
-      && !/[a-z0-9_]/u.test(expression[index + operator.length] ?? "")
+      && value.slice(index, index + operator.length).toLowerCase() === operator
+      && !isIdentifierCharacter(value[index - 1])
+      && !isIdentifierCharacter(value[index + operator.length])
     ) {
       parts.push(value.slice(start, index));
       start = index + operator.length;
@@ -117,19 +203,20 @@ function splitTopLevelBoolean(value, operator) {
 
 function findTopLevelKeyword(value, keyword) {
   let depth = 0;
-  let quoted = false;
-  const expression = value.toLowerCase();
-  for (let index = 0; index < expression.length; index += 1) {
-    const character = expression[index];
-    if (character === "'" && expression[index - 1] !== "\\") quoted = !quoted;
-    if (quoted) continue;
+  for (let index = 0; index < value.length; index += 1) {
+    const quoted = quotedTokenAt(value, index);
+    if (quoted) {
+      index = quoted.end - 1;
+      continue;
+    }
+    const character = value[index];
     if (character === "(") depth += 1;
     if (character === ")") depth -= 1;
     if (
       depth === 0
-      && expression.startsWith(keyword, index)
-      && !/[a-z0-9_]/u.test(expression[index - 1] ?? "")
-      && !/[a-z0-9_]/u.test(expression[index + keyword.length] ?? "")
+      && value.slice(index, index + keyword.length).toLowerCase() === keyword
+      && !isIdentifierCharacter(value[index - 1])
+      && !isIdentifierCharacter(value[index + keyword.length])
     ) return index;
   }
   return -1;
@@ -138,22 +225,30 @@ function findTopLevelKeyword(value, keyword) {
 function canonicalizePredicateAtom(value) {
   let result = "";
   for (let index = 0; index < value.length; index += 1) {
+    const quoted = quotedTokenAt(value, index);
+    if (quoted) {
+      result += value.slice(index, quoted.end);
+      index = quoted.end - 1;
+      continue;
+    }
     if (value[index] !== "(") {
       result += value[index];
       continue;
     }
     let depth = 1;
-    let quoted = false;
     let end = index + 1;
     for (; end < value.length && depth > 0; end += 1) {
+      const quoted = quotedTokenAt(value, end);
+      if (quoted) {
+        end = quoted.end - 1;
+        continue;
+      }
       const character = value[end];
-      if (character === "'" && value[end - 1] !== "\\") quoted = !quoted;
-      if (quoted) continue;
       if (character === "(") depth += 1;
       if (character === ")") depth -= 1;
     }
     if (depth !== 0) throw new Error("policy expression is unbalanced");
-    const prefix = result.match(/([a-z_][a-z0-9_.]*)\s*$/iu)?.[1] ?? "";
+    const prefix = result.match(/([a-z_][a-z0-9_.$]*)\s*$/iu)?.[1] ?? "";
     const inner = canonicalizePredicate(value.slice(index + 1, end - 1));
     const structural = (
       prefix !== ""
@@ -162,19 +257,15 @@ function canonicalizePredicateAtom(value) {
     result += structural ? `(${inner})` : inner;
     index = end - 1;
   }
-  return result
-    .replaceAll("::text", "")
-    .replaceAll(/\bpublic\./gu, "")
-    .replaceAll(/\bas\b/gu, "")
-    .replaceAll(/\s+/gu, "");
+  return normalizeSqlSegments(result);
 }
 
 function canonicalizePredicate(value) {
-  let expression = value.trim().toLowerCase();
+  let expression = value.trim();
   while (isWrappedExpression(expression)) {
     expression = expression.slice(1, -1).trim();
   }
-  if (expression.startsWith("select ")) {
+  if (/^select\b/iu.test(expression)) {
     const whereIndex = findTopLevelKeyword(expression, "where");
     if (whereIndex >= 0) {
       return canonicalizePredicateAtom(expression.slice(0, whereIndex + 5))
@@ -199,11 +290,13 @@ function readBalancedExpression(statement, marker) {
   const start = statement.indexOf("(", markerIndex + marker.length);
   if (start < 0) throw new Error(`policy ${marker.trim()} expression is missing`);
   let depth = 0;
-  let quoted = false;
   for (let index = start; index < statement.length; index += 1) {
+    const quoted = quotedTokenAt(statement, index);
+    if (quoted) {
+      index = quoted.end - 1;
+      continue;
+    }
     const character = statement[index];
-    if (character === "'" && statement[index - 1] !== "\\") quoted = !quoted;
-    if (quoted) continue;
     if (character === "(") depth += 1;
     if (character === ")") {
       depth -= 1;

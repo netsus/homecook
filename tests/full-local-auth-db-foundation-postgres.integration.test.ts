@@ -853,6 +853,42 @@ activeInventoryRun("active full-local snapshot security inventory", () => {
            or auth.uid() = created_by
          );`,
     ],
+    [
+      "uppercase policy literal",
+      `drop policy recipes_public_and_owner_read on public.recipes;
+       create policy recipes_public_and_owner_read
+         on public.recipes for select to anon, authenticated
+         using (
+           deleted_at is null
+           and recipe_visibility_guard.is_owner_publicly_visible(created_by)
+           and (visibility = 'PUBLIC' or auth.uid() = created_by)
+         );`,
+    ],
+    [
+      "spaced policy literal",
+      `drop policy recipes_public_and_owner_read on public.recipes;
+       create policy recipes_public_and_owner_read
+         on public.recipes for select to anon, authenticated
+         using (
+           deleted_at is null
+           and recipe_visibility_guard.is_owner_publicly_visible(created_by)
+           and (visibility = 'p u b l i c' or auth.uid() = created_by)
+         );`,
+    ],
+    [
+      "uppercase review-status literal",
+      `drop policy recipe_tags_parent_read on public.recipe_tags;
+       create policy recipe_tags_parent_read
+         on public.recipe_tags for select to anon, authenticated
+         using (
+           visibility = 'public'
+           and review_status = 'APPROVED'
+           and exists (
+             select 1 from public.recipes as recipe
+             where recipe.id = recipe_tags.recipe_id
+           )
+         );`,
+    ],
   ])("rejects %s drift through the active verifier path", (_name, mutation) => {
     const { api, result } = securityInventoryAfter(mutation, options);
     expect(() => api.assertResult(result, options)).toThrow(

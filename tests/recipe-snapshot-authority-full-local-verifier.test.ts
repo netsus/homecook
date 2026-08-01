@@ -396,6 +396,79 @@ describe("recipe snapshot authority full-local verifier", () => {
     }
   });
 
+  it.each([
+    ["uppercase visibility", "visibility = 'PUBLIC'"],
+    ["spaced visibility", "visibility = 'p u b l i c'"],
+    ["uppercase review status", "review_status = 'APPROVED'"],
+    ["doubled-quote literal", "visibility = 'pub''lic'"],
+    ["escape-string literal", String.raw`visibility = E'pub\'lic'`],
+    [
+      "dollar-quoted literal",
+      "visibility = $$public. ::text (AND OR) as  $$",
+    ],
+    [
+      "literal containing normalizer tokens",
+      "visibility = 'public. ::text (AND OR) as  '",
+    ],
+    ["quoted identifier", `"visibility" = 'public'`],
+    ["dollar-bearing identifier", "visibility$or = 'public'"],
+  ])("rejects %s lexical drift in the production assertion", (_name, literal) => {
+    const mutatedInventory = fullLocalPolicyExpressionInventory.map((policy) => {
+      if (literal.startsWith("review_status")) {
+        return policy.name === "recipe_tags_parent_read"
+          ? {
+              ...policy,
+              using: policy.using.replace(
+                "review_status = 'approved'",
+                literal,
+              ),
+            }
+          : policy;
+      }
+      return policy.name === "recipes_public_and_owner_read"
+        ? {
+            ...policy,
+            using: policy.using.replace("visibility = 'public'", literal),
+          }
+        : policy;
+    });
+
+    expect(() =>
+      assertRecipeSnapshotAuthorityFullLocalResult({
+        ...localResult,
+        full_local_security_inventory: {
+          ...localResult.full_local_security_inventory,
+          _policy_expression_inventory: mutatedInventory,
+        },
+      })
+    ).toThrow(/full-local verification failed closed/i);
+  });
+
+  it("accepts only unquoted case, whitespace and PostgreSQL text-cast noise", () => {
+    const deparsedInventory = fullLocalPolicyExpressionInventory.map((policy) =>
+      policy.name === "recipes_public_and_owner_read"
+        ? {
+            ...policy,
+            using: `
+              (DELETED_AT IS NULL)
+              AND recipe_visibility_guard.is_owner_publicly_visible(created_by)
+              AND ((visibility = 'public'::text) OR (auth.uid() = created_by))
+            `,
+          }
+        : policy
+    );
+
+    expect(() =>
+      assertRecipeSnapshotAuthorityFullLocalResult({
+        ...localResult,
+        full_local_security_inventory: {
+          ...localResult.full_local_security_inventory,
+          _policy_expression_inventory: deparsedInventory,
+        },
+      })
+    ).not.toThrow();
+  });
+
   it("requires every automated check passed and every live operation pending", () => {
     expect(() =>
       assertRecipeSnapshotAuthorityFullLocalExecutionEvidence(executionEvidence),
