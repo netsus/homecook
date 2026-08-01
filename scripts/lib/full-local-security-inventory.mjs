@@ -551,8 +551,12 @@ function buildSecurityInventoryExpression({ includeSnapshotTables }) {
         on granted_role.oid = membership.roleid
       join pg_catalog.pg_roles as member_role
         on member_role.oid = membership.member
-      where granted_role.rolname in ('anon', 'authenticated')
-         or member_role.rolname in ('anon', 'authenticated')
+      where exists (
+        select 1
+        from expected_roles as protected_role
+        where protected_role.role_name = granted_role.rolname
+           or protected_role.role_name = member_role.rolname
+      )
     ), expected_rls_tables(schema_name, table_name, force_rls) as (
       values
       ${tableValues}

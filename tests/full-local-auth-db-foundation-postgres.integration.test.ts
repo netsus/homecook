@@ -864,6 +864,19 @@ activeInventoryRun("active full-local snapshot security inventory", () => {
       "grant service_role to authenticated;",
     ],
     [
+      "authenticator service-role membership",
+      "grant service_role to authenticator;",
+    ],
+    [
+      "service-role reverse membership",
+      `revoke service_role from authenticator;
+       grant authenticator to service_role;`,
+    ],
+    [
+      "authenticator predefined privileged membership",
+      "grant pg_read_all_data to authenticator;",
+    ],
+    [
       "service role BYPASSRLS contract",
       "alter role service_role nobypassrls;",
     ],

@@ -137,7 +137,7 @@ create role authenticated nologin;
 create role service_role nologin bypassrls;
 create role supabase_auth_admin nologin;
 create role authenticator noinherit login;
-grant anon, authenticated, service_role to authenticator;
+grant anon, authenticated to authenticator;
 
 create schema if not exists auth;
 create table auth.users (
