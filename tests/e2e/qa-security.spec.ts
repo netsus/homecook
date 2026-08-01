@@ -63,7 +63,7 @@ test.describe("QA auth and session security smoke", () => {
     expect(redirectLocation).toBeTruthy();
     expect(new URL(redirectLocation ?? response.url()).pathname).toBe("/login");
     expect(new URL(redirectLocation ?? response.url()).searchParams.get("authError")).toBe(
-      "oauth_failed",
+      "provider_resolution_failed",
     );
   });
 
