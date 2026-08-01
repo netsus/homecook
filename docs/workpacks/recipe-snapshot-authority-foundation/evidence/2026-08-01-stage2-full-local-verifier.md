@@ -226,7 +226,7 @@ Merged-exact execution, provider callback/link, Cloudflare, remote final backup,
 4. Fresh and replay GREEN:
    - fresh snapshot `14 passed / 1 intended skip`, active security inventory `15/15`;
    - replay snapshot `15/15`, active security inventory `15/15`;
-   - full-local isolated PostgreSQL baseline `16 passed / 13 active-path tests intentionally skipped`.
+   - corrected exact-head full-local isolated PostgreSQL baseline: `16 passed / 15 active-path tests intentionally skipped`; the earlier `13 skipped` count omitted two already-added active-path cases from the final rerun record.
 
 ### Current repair verification before push
 
@@ -237,6 +237,40 @@ Merged-exact execution, provider callback/link, Cloudflare, remote final backup,
 - Security-function manifest validator `--contract-only`: passed and classified both the 13-function full-local and 16-function snapshot manifests.
 - Full `pnpm verify:security-functions` could not connect to the preserved local target at `127.0.0.1:54322`; no Docker container or another worktree fixture was started, stopped or modified. Its target-DB coverage is supplied here by the repository-owned isolated fresh/replay and full-local PostgreSQL runners above.
 - `pnpm verify:backend`: product Vitest 202 files passed and 9 skipped, `2,554 passed / 128 skipped`; production build passed; Playwright security smoke `12/12`.
+- No public API, field, status, error, migration or dependency was added. Production, staging and remote application writes remain `0 / 0 / 0`.
+
+Merged-exact execution, provider callback/link, Cloudflare, remote final backup, off-Mac restore twice, first local mutation/cutover, compatibility-release observation and full actual-DB cleanup rehearsal remain Manual Only/pending. The repaired exact head still requires all current-head checks and fresh independent code/security/DB reviews.
+
+## Final membership-graph repair — 2026-08-02
+
+- Review input: PR #1265 exact head `7ba0a242918a0b62f1b4974406f4b4b40fc3ccb7`.
+- Fresh code review: `APPROVE`, `P0/P1/P2 = 0/0/0`.
+- Security review task `019fbe77-b29c-73d2-afe5-7d7813bd07b1`: `REQUEST_CHANGES`, `P0/P1/P2 = 0/1/1`.
+- Role boundary: the same Stage 2 implementer performed this repair. It is not an approval, merge decision, Stage 3 completion or Stage 6 completion.
+
+### Actual PostgreSQL membership RED and GREEN
+
+1. Fresh and replay RED:
+   - snapshot suites remained green (`14 passed / 1 intended skip`, then `15/15`);
+   - each active production assertion reported `3 failed / 15 passed` because it accepted `service_role -> authenticator`, the reverse `authenticator -> service_role`, and predefined privileged `pg_read_all_data -> authenticator` edges.
+2. Minimal GREEN:
+   - both isolated bootstrap fixtures removed the unsafe `service_role TO authenticator` grant and retain only `anon, authenticated TO authenticator`;
+   - the target inventory now collects every membership edge whose granted role or member is any one of `anon`, `authenticated`, `service_role`, or `authenticator`;
+   - the exact expected set remains only the two normal Authenticator SET ROLE edges, including their `admin=false`, `inherit=false`, `set=true` options;
+   - extra protected-to-protected, protected-to-predefined, reverse and option-drift edges all fail closed.
+3. Fresh and replay GREEN:
+   - fresh snapshot `14 passed / 1 intended skip`, active security inventory `18/18`;
+   - replay snapshot `15/15`, active security inventory `18/18`;
+   - final full-local isolated PostgreSQL result `16 passed / 18 active-path tests intentionally skipped`. The full-local runner owns the 16 core Auth/session cases; all 18 skipped cases are the snapshot-owned active security matrix executed and passed in both fresh and replay runs above.
+
+### Current repair verification before push
+
+- Snapshot/full-local/Train B focused set: 16 files, `220/220`.
+- PR #1266 restore/cutover/runtime focused set: 7 files, `108/108`.
+- Remote verifier replace-ref/ancestry/read-only regression: `10/10`.
+- `pnpm verify:backend`: product Vitest 202 files passed and 9 skipped, `2,554 passed / 128 skipped`; production build passed; Playwright security smoke `12/12`.
+- A bounded read-only auxiliary security review found `Critical/High/Medium/Low = 0/0/0/0`. This is implementation assistance, not the required fresh independent Stage 3 review.
+- The preserved `127.0.0.1:54322` target remains unavailable; no Docker container or another worktree fixture was started, stopped or modified.
 - No public API, field, status, error, migration or dependency was added. Production, staging and remote application writes remain `0 / 0 / 0`.
 
 Merged-exact execution, provider callback/link, Cloudflare, remote final backup, off-Mac restore twice, first local mutation/cutover, compatibility-release observation and full actual-DB cleanup rehearsal remain Manual Only/pending. The repaired exact head still requires all current-head checks and fresh independent code/security/DB reviews.
