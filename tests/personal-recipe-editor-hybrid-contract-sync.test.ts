@@ -350,16 +350,41 @@ describe("personal recipe editor full-local contract lock", () => {
 
     expect(workItem.status).toMatchObject({
       lifecycle: "in_progress",
+      approval_state: "not_started",
       verification_status: "pending",
       evaluation_status: "not_started",
+      last_evaluator_result: null,
     });
     expect(item).toMatchObject({
       branch: docsBranch,
       pr_path: "https://github.com/netsus/homecook/pull/1270",
       lifecycle: "in_progress",
+      approval_state: "not_started",
       verification_status: "pending",
       evaluation_status: "not_started",
+      last_evaluator_result: null,
     });
+
+    for (const projection of [String(workItem.notes), String(item.notes)]) {
+      expect(projection).toContain("Stage 1 docs gate pass");
+      expect(projection).toContain(
+        "8dbf99f6cf78fdcd66d2a5de1c07e2d37d55f047",
+      );
+      expect(projection).toContain(
+        "019fbf9e-055d-7e81-89c9-83bfe845b1c6",
+      );
+      expect(projection).toContain(
+        "019fbf9e-055d-7e81-89c9-83dae1459246",
+      );
+      expect(projection).toContain("P0/P1/P2=0/0/0");
+      expect(projection).toContain("findings=0");
+      expect(projection).toContain(
+        "raw checks 17 = 12 success + 5 intended skip",
+      );
+      expect(projection).toContain("pending/fail/cancel/rerun=0");
+      expect(projection).toContain("full tests 5,040 pass/283 skip");
+      expect(projection).toContain("final exact-head verifier pending");
+    }
     expect(requiredChecks).toContain(
       `BRANCH_NAME=${docsBranch} pnpm validate:workpack -- --slice ${sliceId}`,
     );
