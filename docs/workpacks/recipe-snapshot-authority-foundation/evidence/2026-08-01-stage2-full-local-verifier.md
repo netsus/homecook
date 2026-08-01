@@ -164,3 +164,41 @@ The integration does not change the independent fresh Stage 3 code/security/DB r
 - No public API, field, status, error, migration or dependency was added. Production, staging and remote application writes remain `0 / 0 / 0`.
 
 Merged-exact execution, provider callback/link, Cloudflare, remote final backup, off-Mac restore twice, first local mutation/cutover, compatibility-release observation and full actual-DB cleanup rehearsal remain Manual Only/pending. A new exact head still requires all current-head checks and fresh independent code/security/DB reviews.
+
+## Fresh Stage 3 quoted-literal repair — 2026-08-02
+
+- Review input: PR #1265 exact head `3a6bda4b7de8734f0a6db049b7e658c44e4d327d`.
+- Code review task `019fbe34-5204-7f11-9d91-9a41083c5878`: `P0/P1/P2 = 0/0/1`, verdict `REQUEST_CHANGES`.
+- Security/DB review task `019fbe34-5204-7f11-9d91-9a6e14531b2c`: `P0/P1/P2 = 0/0/1`, verdict `REQUEST_CHANGES`.
+- Role boundary: the same Stage 2 implementer performed this repair. It is not an approval, merge decision, Stage 3 completion or Stage 6 completion.
+
+### Literal mutation RED and GREEN
+
+1. Production assertion RED:
+   - focused verifier result before implementation: `3 failed / 9 passed`;
+   - the active assertion falsely accepted `visibility='PUBLIC'`, `visibility='p u b l i c'` and `review_status='APPROVED'`.
+2. Actual isolated PostgreSQL RED:
+   - the snapshot runner was changed to execute both modes before returning a fail-closed aggregate exit code;
+   - fresh active inventory: `3 failed / 5 passed`; replay active inventory: `3 failed / 5 passed`;
+   - the snapshot migration suites themselves remained green in both modes.
+3. Exact lexical GREEN:
+   - unquoted SQL keywords, identifiers, whitespace, `public.` qualification and deparser `::text` noise are normalized;
+   - standard and `E'...'` strings, doubled quotes, dollar-quoted literals and quoted identifiers are preserved as exact lexical tokens;
+   - boolean precedence/tree, subquery, function-call and keyword boundaries remain structural, including PostgreSQL identifiers containing `$`;
+   - focused verifier result after implementation: `19/19`.
+4. Active PostgreSQL GREEN:
+   - fresh snapshot `14 passed / 1 intended skip`, active `12 tables / 10 policies` inventory `8/8`;
+   - replay snapshot `15/15`, active inventory `8/8`;
+   - the active mutations include uppercase/spaced visibility and uppercase review-status literals, plus the prior grant-option, FORCE RLS, restrictive-policy and boolean-tree mutations.
+
+### Current repair verification before push
+
+- Snapshot/full-local/Train B focused set: 16 files, `220/220`.
+- PR #1266 restore/cutover/runtime focused set: 7 files, `108/108`.
+- Remote verifier replace-ref/ancestry/read-only regression: `10/10`.
+- Full-local isolated PostgreSQL baseline: `16 passed / 8 active-snapshot tests intentionally skipped` because the snapshot runner owns that path.
+- `pnpm verify:backend`: product Vitest 202 files passed and 9 skipped, `2,554 passed / 128 skipped`; production build passed; Playwright security smoke `12/12`.
+- A bounded auxiliary security review found one medium `$`-identifier lexer boundary issue; the repair was extended with PostgreSQL identifier-aware boundaries and its follow-up returned `Critical/High/Medium = 0/0/0`. This is implementation assistance, not independent Stage 3 approval.
+- No public API, field, status, error, migration or dependency was added. Production, staging and remote application writes remain `0 / 0 / 0`.
+
+Merged-exact execution, provider callback/link, Cloudflare, remote final backup, off-Mac restore twice, first local mutation/cutover, compatibility-release observation and full actual-DB cleanup rehearsal remain Manual Only/pending. The repaired exact head still requires all current-head checks and fresh independent code/security/DB reviews.
