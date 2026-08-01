@@ -1,5 +1,7 @@
 # Slice: hybrid-auth-local-data-production
 
+> **Superseded 2026-08-01:** `full-local-supabase-production` contract가 active production authority를 대체한다. 이 workpack의 remote Auth/local Data 설계와 체크는 역사·recovery evidence이며 새 구현 완료로 승격하지 않는다. migration/code 삭제는 full-local cutover 14일 안정화, dependency 0과 별도 cleanup 승인 뒤에만 가능하다.
+
 ## Goal
 
 원격 Supabase는 Google/Naver/Kakao Auth만 계속 담당하고, Homecook application DB와 Storage는 현재 Mac의 self-hosted Supabase로 이전한다. remote Auth가 발급한 ES256 JWT를 local PostgREST/Storage가 JWKS로 검증해 기존 `auth.uid()` RLS와 owner boundary를 유지한다. 이 workpack은 public API shape를 바꾸지 않고, `auth.users` 직접 의존을 private remote identity mirror로 대체하며, account-generation safeguard를 약화하지 않는 production cutover 기반을 잠근다.

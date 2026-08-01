@@ -1,17 +1,39 @@
 # Current Source of Truth
 
 ## Official Files
-- `docs/요구사항기준선-v1.7.27.md`
-- `docs/화면정의서-v1.5.31.md`
-- `docs/유저flow맵-v1.3.29.md`
-- `docs/db설계-v1.3.28.md`
-- `docs/api문서-v1.2.31.md`
+- `docs/요구사항기준선-v1.7.28.md`
+- `docs/화면정의서-v1.5.32.md`
+- `docs/유저flow맵-v1.3.30.md`
+- `docs/db설계-v1.3.29.md`
+- `docs/api문서-v1.2.32.md`
 
 ## Notes
 - 위 5개 파일이 현재 공식 기준 문서다.
 - `docs/reference/wireframes/`는 보조 참고 자료다.
 - 구현 중 문서 충돌이 보이면 먼저 충돌 항목을 정리하고 작업 범위를 다시 확정한다.
 - 사용자 승인으로 공식 계약을 바꾸는 경우에도 구현보다 문서가 먼저다. 관련 공식 문서와 이 파일의 버전/경로를 같은 `contract-evolution` PR에서 먼저 갱신한다.
+
+## Full-Local Supabase Auth / DB / Storage Production Contract-Evolution `2026-08-01`
+
+| 문서 | 변경 내용 |
+|------|----------|
+| 요구사항 기준선 v1.7.28 | Google/Naver/Kakao를 self-hosted Supabase Auth로 옮기고 local Auth/DB/Storage 단일 authority, UUID/RLS 보존, 재로그인, secret/S3/cutover/rollback gate를 잠근다 |
+| 화면정의서 v1.5.32 | 신규 화면 없이 server-issued OAuth flow, remote session 재로그인, maintenance와 browser Auth-only/Data·Storage server-only 경계를 정의한다 |
+| 유저플로우 v1.3.30 | local flow ledger → provider callback → local Auth → session binding → RLS 및 960초 drain/floor 전후 rollback 흐름을 고정한다 |
+| DB v1.3.29 | local `auth.users` authority, stable UUID restore, transient session 제외, private flow ledger, local session binding, S3 semantic restore를 정의한다 |
+| API v1.2.32 | `/api/v1` shape를 유지하고 `/auth/flow/start|cancel`, exact Auth URL/callback, Auth-only public proxy와 loopback S3 경계를 추가한다 |
+
+> 사용자는 2026-08-01에 2026-07-30 `원격 Auth + 로컬 DB/Storage` 계약을 대체하고, 현재 Mac의 self-hosted Supabase Auth·PostgreSQL·PostgREST·Storage를 production authority로 통합하도록 승인했다. 과거 hybrid 문서·migration은 역사와 recovery artifact로 보존하며 14일 안정화와 dependency 0 전에는 삭제하지 않는다.
+>
+> 이 승인 시점에는 hybrid final cutover와 첫 local application write가 실행되지 않았다. 따라서 현재 유일한 migration source-of-record는 원격 Supabase의 Auth·application DB·Storage이고, Mac의 기존 local DB/Storage는 rehearsal 결과일 뿐 승격하거나 remote dump보다 우선하지 않는다. `hybrid-auth-local-data-production`의 `superseded` 표시는 목표 계약의 대체를 뜻하며 local Data cutover 완료를 뜻하지 않는다.
+>
+> Homecook이 OAuth/session 서버를 직접 구현하지 않는다. Google/Kakao 지원 provider와 Naver `custom:naver`를 isolated HTTPS 환경에서 검증하고, 새 local ES256 key를 사용하므로 모든 기존 사용자는 cutover 뒤 한 번 재로그인한다. stable user UUID와 기존 `auth.uid()` RLS, account-generation, owner/read-only/delete/recreate 보호는 유지한다.
+>
+> public internet에는 app HTTPS와 allowlisted Auth `/auth/v1/*`만 노출한다. Data/Storage/Studio/PostgreSQL은 직접 공개하지 않으며 browser user path의 service-role fallback과 direct Data/Storage mutation은 0이다. secret은 Keychain과 read-only file mount로 전달하고 Docker `Config.Env`, Git, bundle, log 노출 0을 요구한다.
+>
+> Storage는 official S3 protocol/rclone로 hosted `/storage/v1/s3`에서 loopback local `/storage/v1/s3`로 옮기며 direct file copy를 금지한다. final cutover 전에 fresh restore 2회, off-Mac restore, provider login/link, RLS·stale token, flow drain, public path, dependency audit와 reboot recovery가 모두 통과해야 한다.
+>
+> rollback floor는 첫 local production session 발급, provider identity link, user-scoped DB/Storage write 중 최초 성공한 local Auth state mutation이다. floor 뒤에는 env-only rollback을 금지하고 Auth/session/identity/application/Storage delta를 함께 복구하거나 forward-fix한다.
 
 ## Product Ingredient Link Foundation Contract-Evolution `2026-07-31`
 
