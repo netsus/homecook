@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import {
   chmodSync,
   existsSync,
@@ -11,8 +12,10 @@ import {
   writeFileSync,
 } from "node:fs";
 import { homedir, tmpdir } from "node:os";
-import { dirname, join, resolve } from "node:path";
+import { dirname, isAbsolute, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+
+import { createClient } from "@supabase/supabase-js";
 
 import {
   FULL_LOCAL_SECRET_NAMES,
@@ -25,10 +28,30 @@ import {
   validateExternalSecretDirectory,
   validateFullLocalProductionConfig,
 } from "./lib/full-local-production-runtime.mjs";
+import {
+  PLATFORM_BACKUP_KEYCHAIN_ACCOUNT,
+  PLATFORM_BACKUP_KEYCHAIN_SERVICE,
+  withVerifiedPlatformBackup,
+} from "./lib/full-local-platform-backup.mjs";
+import {
+  assertFreshRestoreExecutionApproved,
+  assertFreshRestoreAllowed,
+  buildCutoverPreflight,
+  buildPlatformRestoreSql,
+  compareRestoreReplayManifests,
+} from "./lib/full-local-restore-cutover.mjs";
+import {
+  FULL_LOCAL_OAUTH_KEYCHAIN_ACCOUNTS,
+  assertLocalOAuthProvisionApproved,
+  materializeFullLocalOAuthSecrets,
+  upsertNaverCustomProvider,
+  validateFullLocalOAuthConfig,
+} from "./lib/full-local-oauth-providers.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const INFRA = join(ROOT, "infra/full-local-supabase");
 const COMPOSE_FILE = join(INFRA, "docker-compose.production.yml");
+const OAUTH_COMPOSE_FILE = join(INFRA, "docker-compose.oauth.production.yml");
 const CONFIG_EXAMPLE = join(INFRA, ".env.production.example");
 const DEFAULT_CONFIG = join(INFRA, ".env.production.local");
 const KEYCHAIN_WRITER = join(INFRA, "keychain-store.exp");
@@ -214,6 +237,7 @@ function composeArgs(runtime, ...args) {
     runtime.config.FULL_LOCAL_COMPOSE_PROJECT_NAME,
     "-f",
     COMPOSE_FILE,
+    ...(runtime.oauth?.enabled ? ["-f", OAUTH_COMPOSE_FILE] : []),
     ...args,
   ];
 }
@@ -222,6 +246,14 @@ function compose(runtime, args) {
   return run("docker", composeArgs(runtime, ...args), {
     env: runtime.env,
     failure: "Full-local Docker Compose operation failed.",
+  });
+}
+
+function composeWithInput(runtime, args, input) {
+  return run("docker", composeArgs(runtime, ...args), {
+    env: runtime.env,
+    failure: "Full-local Docker Compose database operation failed.",
+    input,
   });
 }
 
@@ -254,7 +286,26 @@ function baseRuntime(args, { requireSecrets = true } = {}) {
         keychainSecret(service, name),
       ]))
     : {};
-  return { config, configPath: path, secrets, service };
+  const oauthEnabled = config.FULL_LOCAL_ENABLE_SOCIAL_PROVIDERS === "true";
+  const oauthService = config.FULL_LOCAL_OAUTH_KEYCHAIN_SERVICE;
+  if (oauthEnabled && !oauthService) {
+    fail("FULL_LOCAL_OAUTH_KEYCHAIN_SERVICE is required when social providers are enabled.");
+  }
+  const oauthSecrets = requireSecrets && oauthEnabled
+    ? Object.fromEntries(Object.entries(FULL_LOCAL_OAUTH_KEYCHAIN_ACCOUNTS).map(([
+        name,
+        account,
+      ]) => [name, keychainValue(oauthService, account)]))
+    : {};
+  return {
+    config,
+    configPath: path,
+    oauthEnabled,
+    oauthSecrets,
+    oauthService,
+    secrets,
+    service,
+  };
 }
 
 function validateAndMaterialize(args) {
@@ -263,7 +314,18 @@ function validateAndMaterialize(args) {
     repositoryRoot: ROOT,
     secretDirectory: runtime.config.FULL_LOCAL_SECRET_DIR,
   });
+  const oauth = validateFullLocalOAuthConfig({
+    config: runtime.config,
+    secrets: runtime.oauthSecrets,
+  });
+  if (oauth.enabled) {
+    materializeFullLocalOAuthSecrets({
+      secrets: runtime.oauthSecrets,
+      targetDirectory: secretDirectory,
+    });
+  }
   materializeFullLocalSecrets({
+    additionalExpectedNames: oauth.enabled ? Object.keys(runtime.oauthSecrets) : [],
     readSecret: (name) => runtime.secrets[name],
     targetDirectory: secretDirectory,
   });
@@ -277,24 +339,15 @@ function validateAndMaterialize(args) {
   delete env.DOCKER_DEFAULT_PLATFORM;
   const composed = run(
     "docker",
-    [
-      "compose",
-      "--project-name",
-      runtime.config.FULL_LOCAL_COMPOSE_PROJECT_NAME,
-      "-f",
-      COMPOSE_FILE,
-      "config",
-      "--format",
-      "json",
-    ],
+    composeArgs({ ...runtime, oauth }, "config", "--format", "json"),
     { env, failure: "Full-local Compose configuration is invalid." },
   );
   assertFullLocalComposeModel(JSON.parse(composed));
   assertNoSecretLeakage({
     artifacts: [composed, readFileSync(runtime.configPath, "utf8")],
-    secrets: Object.values(runtime.secrets),
+    secrets: [...Object.values(runtime.secrets), ...Object.values(runtime.oauthSecrets)],
   });
-  return Object.freeze({ ...runtime, env, validation });
+  return Object.freeze({ ...runtime, env, oauth, validation });
 }
 
 function bootstrapSecrets(args) {
@@ -394,6 +447,493 @@ async function waitForRuntimeHealthy(runtime, timeoutMs = 180_000) {
   fail("Full-local runtime did not become healthy within 180 seconds.");
 }
 
+async function waitForServiceHealthy(runtime, service, timeoutMs = 180_000) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const container = compose(runtime, ["ps", "--quiet", service]).trim();
+    if (container) {
+      const state = JSON.parse(run(
+        "docker",
+        ["inspect", "--format", "{{json .State}}", container],
+        { env: runtime.env },
+      ));
+      if (state.Status === "exited") {
+        fail(`Full-local ${service} exited before becoming healthy.`);
+      }
+      if (state.Status === "running" && state.Health?.Status === "healthy") {
+        return true;
+      }
+    }
+    await new Promise((resolveDelay) => setTimeout(resolveDelay, 1_000));
+  }
+  fail(`Full-local ${service} did not become healthy within 180 seconds.`);
+}
+
+function sha256Text(value) {
+  return createHash("sha256").update(value).digest("hex");
+}
+
+function restoredSemanticManifest(runtime) {
+  const sql = String.raw`
+    create temporary table homecook_restore_manifest (
+      relation text primary key,
+      row_count bigint not null,
+      row_digest text not null
+    );
+    do $homecook$
+    declare item record;
+    begin
+      for item in
+        select schemaname, tablename
+        from pg_catalog.pg_tables
+        where schemaname = 'public'
+        order by tablename
+      loop
+        execute format(
+          'insert into homecook_restore_manifest(relation, row_count, row_digest) '
+          || 'select %L, count(*), md5(coalesce(string_agg(row_text, E''\\n'' order by row_text), '''')) '
+          || 'from (select to_jsonb(source_row)::text as row_text from %I.%I source_row) rows',
+          item.schemaname || '.' || item.tablename,
+          item.schemaname,
+          item.tablename
+        );
+      end loop;
+    end
+    $homecook$;
+    create temporary table homecook_storage_url_references as
+    select
+      recipe.created_by as owner_uuid,
+      regexp_replace(
+        split_part(split_part(recipe.thumbnail_url, '?', 1), '#', 1),
+        '^https?://[^/]+/storage/v1/object/(public|sign)/',
+        ''
+      ) as object_key
+    from public.recipes recipe
+    where recipe.thumbnail_url ~ '^https?://[^/]+/storage/v1/object/(public|sign)/'
+    union all
+    select
+      app_user.id as owner_uuid,
+      regexp_replace(
+        split_part(split_part(app_user.profile_image_url, '?', 1), '#', 1),
+        '^https?://[^/]+/storage/v1/object/(public|sign)/',
+        ''
+      ) as object_key
+    from public.users app_user
+    where app_user.profile_image_url ~ '^https?://[^/]+/storage/v1/object/(public|sign)/'
+    union all
+    select
+      recipe_book.user_id as owner_uuid,
+      regexp_replace(
+        split_part(split_part(recipe_book.cover_image_url, '?', 1), '#', 1),
+        '^https?://[^/]+/storage/v1/object/(public|sign)/',
+        ''
+      ) as object_key
+    from public.recipe_books recipe_book
+    where recipe_book.cover_image_url ~ '^https?://[^/]+/storage/v1/object/(public|sign)/'
+    union all
+    select
+      null::uuid as owner_uuid,
+      regexp_replace(
+        split_part(split_part(food_product.image_url, '?', 1), '#', 1),
+        '^https?://[^/]+/storage/v1/object/(public|sign)/',
+        ''
+      ) as object_key
+    from public.food_products food_product
+    where food_product.image_url ~ '^https?://[^/]+/storage/v1/object/(public|sign)/';
+    create temporary table homecook_storage_references as
+    select
+      storage_object.bucket_id,
+      storage_object.name,
+      exists (
+        select 1 from homecook_storage_url_references url_reference
+        where url_reference.object_key = storage_object.bucket_id || '/' || storage_object.name
+      )
+      or exists (
+        select 1 from public.recipe_image_objects managed_object
+        where managed_object.bucket_id = storage_object.bucket_id
+          and managed_object.object_path = storage_object.name
+      ) as referenced,
+      case
+        when split_part(storage_object.name, '/', 1)
+          !~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+          then false
+        else
+          not exists (
+            select 1 from auth.users auth_user
+            where auth_user.id::text = split_part(storage_object.name, '/', 1)
+          )
+          or exists (
+            select 1 from homecook_storage_url_references url_reference
+            where url_reference.object_key = storage_object.bucket_id || '/' || storage_object.name
+              and url_reference.owner_uuid is not null
+              and url_reference.owner_uuid::text <> split_part(storage_object.name, '/', 1)
+          )
+          or exists (
+            select 1 from public.recipe_image_objects managed_object
+            where managed_object.bucket_id = storage_object.bucket_id
+              and managed_object.object_path = storage_object.name
+              and managed_object.owner_uuid::text <> split_part(storage_object.name, '/', 1)
+          )
+      end as owner_prefix_mismatch
+    from storage.objects storage_object;
+    select jsonb_build_object(
+      'auth_identity_digest', (
+        select md5(coalesce(string_agg(value, E'\\n' order by value), ''))
+        from (
+          select concat_ws('|', id::text, created_at::text, coalesce(email, '')) as value
+          from auth.users
+          union all
+          select concat_ws('|', id::text, user_id::text, provider, provider_id) as value
+          from auth.identities
+        ) auth_rows
+      ),
+      'auth_users', (select count(*) from auth.users),
+      'auth_identities', (select count(*) from auth.identities),
+      'auth_sessions', (select count(*) from auth.sessions),
+      'auth_refresh_tokens', (select count(*) from auth.refresh_tokens),
+      'auth_flow_state', (select count(*) from auth.flow_state),
+      'public_relations', (
+        select coalesce(jsonb_agg(to_jsonb(manifest_row) order by relation), '[]'::jsonb)
+        from homecook_restore_manifest manifest_row
+      ),
+      'storage_bucket_digest', (
+        select md5(coalesce(string_agg(to_jsonb(bucket_row)::text, E'\\n' order by id), ''))
+        from storage.buckets bucket_row
+      ),
+      'storage_buckets', (select count(*) from storage.buckets),
+      'storage_objects', (select count(*) from storage.objects),
+      'storage_object_digest', (
+        select md5(coalesce(string_agg(
+          concat_ws(
+            '|',
+            bucket_id,
+            name,
+            coalesce(owner_id::text, ''),
+            coalesce((metadata - 'lastModified')::text, ''),
+            coalesce(user_metadata::text, '')
+          ),
+          E'\\n' order by bucket_id, name
+        ), ''))
+        from storage.objects
+      ),
+      'storage_referenced_objects', (
+        select count(*) from homecook_storage_references where referenced
+      ),
+      'storage_unreferenced_objects', (
+        select count(*) from homecook_storage_references where not referenced
+      ),
+      'storage_owner_prefix_mismatches', (
+        select count(*) from homecook_storage_references where owner_prefix_mismatch
+      ),
+      'public_users_without_auth', (
+        select count(*)
+        from public.users app_user
+        left join auth.users auth_user on auth_user.id = app_user.id
+        where auth_user.id is null
+      )
+    )::text;
+  `;
+  const output = composeWithInput(runtime, [
+    "exec",
+    "-T",
+    "postgres",
+    "psql",
+    "--tuples-only",
+    "--no-align",
+    "--variable",
+    "ON_ERROR_STOP=1",
+    "--username",
+    "supabase_admin",
+    "--dbname",
+    "postgres",
+  ], sql).trim();
+  const parsed = JSON.parse(output.split("\n").at(-1));
+  if (
+    parsed.auth_sessions !== 0
+    || parsed.auth_refresh_tokens !== 0
+    || parsed.auth_flow_state !== 0
+    || parsed.public_users_without_auth !== 0
+    || parsed.storage_unreferenced_objects !== 0
+    || parsed.storage_owner_prefix_mismatches !== 0
+  ) {
+    fail("Restored semantic manifest contains transient Auth rows, missing Storage references, or owner mismatches.");
+  }
+  return {
+    auth_identity_digest: sha256Text(parsed.auth_identity_digest),
+    auth_identities: parsed.auth_identities,
+    auth_users: parsed.auth_users,
+    database_digest: sha256Text(JSON.stringify(parsed.public_relations)),
+    public_relation_count: parsed.public_relations.length,
+    public_users_without_auth: parsed.public_users_without_auth,
+    storage_bucket_count: parsed.storage_buckets,
+    storage_digest: sha256Text(
+      `${parsed.storage_bucket_digest}\n${parsed.storage_object_digest}`,
+    ),
+    storage_object_count: parsed.storage_objects,
+    storage_owner_prefix_mismatch_count: parsed.storage_owner_prefix_mismatches,
+    storage_referenced_object_count: parsed.storage_referenced_objects,
+    storage_unreferenced_object_count: parsed.storage_unreferenced_objects,
+    transient_promote_count: 0,
+  };
+}
+
+function writeRestoreManifest({ manifestPath, metadata, runtime, semantic }) {
+  const restoreManifest = {
+    ...semantic,
+    compose_project: runtime.config.FULL_LOCAL_COMPOSE_PROJECT_NAME,
+    created_at: new Date().toISOString(),
+    format: "homecook-full-local-restore-v1",
+    postgres_volume: runtime.config.FULL_LOCAL_POSTGRES_VOLUME_NAME,
+    relation_classification_digest: metadata.manifest.relation_classification_digest,
+    source_backup_created_at: metadata.created_at,
+    source_data_sha256: metadata.components.data_sha256,
+    source_roles_sha256: metadata.components.roles_sha256,
+    source_schema_sha256: metadata.components.schema_sha256,
+    storage_volume: runtime.config.FULL_LOCAL_STORAGE_VOLUME_NAME,
+    unclassified_count: metadata.manifest.unclassified.length,
+  };
+  writeFileSync(manifestPath, `${JSON.stringify(restoreManifest, null, 2)}\n`, {
+    encoding: "utf8",
+    mode: 0o600,
+  });
+  chmodSync(manifestPath, 0o600);
+  return restoreManifest;
+}
+
+function restoreEvidenceOptions(args, command) {
+  const archiveOption = optionValue(args, "--archive");
+  const manifestOption = optionValue(args, "--manifest");
+  if (!archiveOption || !isAbsolute(archiveOption) || !existsSync(archiveOption)) {
+    fail(`${command} requires --archive <absolute existing path>.`);
+  }
+  if (!manifestOption || !isAbsolute(manifestOption) || !manifestOption.endsWith(".json")) {
+    fail(`${command} requires --manifest <absolute external .json path>.`);
+  }
+  const manifestPath = resolve(manifestOption);
+  validateExternalSecretDirectory({
+    repositoryRoot: ROOT,
+    secretDirectory: dirname(manifestPath),
+  });
+  if (existsSync(manifestPath)) {
+    fail("Restore manifest output already exists.");
+  }
+  return { archive: resolve(archiveOption), manifestPath };
+}
+
+function runCutoverPreflight(args) {
+  const evidenceOption = optionValue(args, "--evidence");
+  if (!evidenceOption || !isAbsolute(evidenceOption) || !existsSync(evidenceOption)) {
+    fail("cutover-preflight requires --evidence <absolute existing mode 0600 JSON path>.");
+  }
+  const evidencePath = resolve(evidenceOption);
+  const evidenceStat = statSync(evidencePath);
+  if (!evidenceStat.isFile() || (evidenceStat.mode & 0o777) !== 0o600) {
+    fail("cutover-preflight evidence must be a regular mode 0600 file.");
+  }
+  const evidence = JSON.parse(readFileSync(evidencePath, "utf8"));
+  const preflight = buildCutoverPreflight({
+    completeStorageBackupVerified: evidence.complete_storage_backup_verified,
+    firstLocalMutationApproved:
+      optionValue(args, "--confirm-first-local-auth-mutation")
+        === "APPROVE_FIRST_LOCAL_PRODUCTION_AUTH_MUTATION",
+    offMacRestoreCount: evidence.off_mac_restore_count,
+    providerCallbackVerified: evidence.provider_callback_verified,
+    remoteOutstandingFlows: evidence.remote_outstanding_flows,
+    restoreReplayVerified: evidence.restore_replay_verified,
+    storageVerified: evidence.storage_verified,
+    temporaryHostedS3CredentialRevoked:
+      evidence.temporary_hosted_s3_credential_revoked,
+  });
+  if (!preflight.ready) {
+    fail(`Cutover preflight blocked: ${preflight.blockers.join(", ")}`);
+  }
+  return {
+    ...preflight,
+    evidence_path: evidencePath,
+    status: "PASS",
+  };
+}
+
+async function restorePlatformBackup(args) {
+  const { archive, manifestPath } = restoreEvidenceOptions(args, "restore-platform");
+  assertFreshRestoreExecutionApproved({
+    confirmation: optionValue(args, "--confirm-fresh-restore"),
+  });
+
+  const runtime = validateAndMaterialize(args);
+  assertFreshRestoreAllowed({
+    postgresVolumeExists: dockerVolumeExists(runtime.config.FULL_LOCAL_POSTGRES_VOLUME_NAME),
+    storageVolumeExists: dockerVolumeExists(runtime.config.FULL_LOCAL_STORAGE_VOLUME_NAME),
+  });
+  const backupKey = keychainValue(
+    PLATFORM_BACKUP_KEYCHAIN_SERVICE,
+    PLATFORM_BACKUP_KEYCHAIN_ACCOUNT,
+  );
+
+  return withVerifiedPlatformBackup({
+    archive,
+    backupKey,
+    consume: async ({ dataPath, metadata, rolesPath, schemaPath }) => {
+      // GoTrue and Storage own their internal schemas. Bootstrap the exact
+      // pinned service versions before applying the platform dump.
+      compose(runtime, ["up", "-d"]);
+      await waitForRuntimeHealthy(runtime);
+      compose(runtime, [
+        "stop",
+        "auth-proxy",
+        "api-gateway",
+        "storage",
+        "postgrest-probe",
+        "postgrest",
+        "auth",
+      ]);
+      await waitForServiceHealthy(runtime, "postgres");
+      const restoreSql = buildPlatformRestoreSql({
+        dataSql: readFileSync(dataPath, "utf8"),
+        rolesSql: readFileSync(rolesPath, "utf8"),
+        schemaSql: readFileSync(schemaPath, "utf8"),
+      });
+      composeWithInput(runtime, [
+        "exec",
+        "-T",
+        "postgres",
+        "psql",
+        "--single-transaction",
+        "--variable",
+        "ON_ERROR_STOP=1",
+        "--username",
+        "supabase_admin",
+        "--dbname",
+        "postgres",
+      ], restoreSql);
+      compose(runtime, ["up", "-d"]);
+      await waitForRuntimeHealthy(runtime);
+      const semantic = restoredSemanticManifest(runtime);
+      return writeRestoreManifest({ manifestPath, metadata, runtime, semantic });
+    },
+  });
+}
+
+function compareRestoreManifests(args) {
+  const firstPath = optionValue(args, "--first");
+  const secondPath = optionValue(args, "--second");
+  const outputPath = optionValue(args, "--manifest");
+  for (const [label, path] of Object.entries({ firstPath, secondPath })) {
+    if (!path || !isAbsolute(path) || !existsSync(path)) {
+      fail(`compare-restore-manifests requires --${label === "firstPath" ? "first" : "second"} <absolute existing .json path>.`);
+    }
+  }
+  if (!outputPath || !isAbsolute(outputPath) || !outputPath.endsWith(".json")) {
+    fail("compare-restore-manifests requires --manifest <absolute external .json path>.");
+  }
+  validateExternalSecretDirectory({
+    repositoryRoot: ROOT,
+    secretDirectory: dirname(resolve(outputPath)),
+  });
+  if (existsSync(outputPath)) fail("Restore replay comparison output already exists.");
+  const first = JSON.parse(readFileSync(firstPath, "utf8"));
+  const second = JSON.parse(readFileSync(secondPath, "utf8"));
+  const comparison = compareRestoreReplayManifests(first, second);
+  const result = {
+    ...comparison,
+    created_at: new Date().toISOString(),
+    format: "homecook-full-local-restore-replay-v1",
+    storage_object_count: first.storage_object_count,
+  };
+  writeFileSync(outputPath, `${JSON.stringify(result, null, 2)}\n`, {
+    encoding: "utf8",
+    mode: 0o600,
+  });
+  chmodSync(outputPath, 0o600);
+  return result;
+}
+
+async function verifyRestoredPlatform(args) {
+  const { archive, manifestPath } = restoreEvidenceOptions(args, "verify-restored-platform");
+  const runtime = validateAndMaterialize(args);
+  const status = runtimeStatus(runtime);
+  if (!status.healthy) fail("Full-local runtime must be healthy before restore verification.");
+  const backupKey = keychainValue(
+    PLATFORM_BACKUP_KEYCHAIN_SERVICE,
+    PLATFORM_BACKUP_KEYCHAIN_ACCOUNT,
+  );
+  return withVerifiedPlatformBackup({
+    archive,
+    backupKey,
+    consume: ({ metadata }) => writeRestoreManifest({
+      manifestPath,
+      metadata,
+      runtime,
+      semantic: restoredSemanticManifest(runtime),
+    }),
+  });
+}
+
+function createLocalSupabaseAdmin(runtime) {
+  return createClient(
+    runtime.config.FULL_LOCAL_INTERNAL_GATEWAY_URL,
+    runtime.secrets.service_role_key,
+    {
+      auth: {
+        autoRefreshToken: false,
+        detectSessionInUrl: false,
+        persistSession: false,
+      },
+    },
+  ).auth.admin.customProviders;
+}
+
+async function provisionOAuthProviders(args) {
+  assertLocalOAuthProvisionApproved({
+    confirmation: optionValue(args, "--confirm-local-auth-mutation"),
+  });
+  const runtime = validateAndMaterialize(args);
+  if (!runtime.oauth.enabled) {
+    fail("Social providers must be enabled before OAuth provisioning.");
+  }
+  if (!runtimeStatus(runtime).healthy) {
+    fail("Full-local runtime must be healthy before OAuth provisioning.");
+  }
+  const naver = await upsertNaverCustomProvider({
+    admin: createLocalSupabaseAdmin(runtime),
+    clientId: runtime.oauthSecrets.naver_client_id,
+    clientSecret: runtime.oauthSecrets.naver_client_secret,
+    siteUrl: runtime.config.FULL_LOCAL_SITE_URL,
+  });
+  return {
+    built_in_providers: ["google", "kakao"],
+    custom_provider: naver,
+    provider_count: 3,
+  };
+}
+
+async function verifyOAuthProviders(args) {
+  const runtime = validateAndMaterialize(args);
+  if (!runtime.oauth.enabled) {
+    fail("Social providers must be enabled before OAuth verification.");
+  }
+  if (!runtimeStatus(runtime).healthy) {
+    fail("Full-local runtime must be healthy before OAuth verification.");
+  }
+  const settingsResponse = await fetch(
+    `${runtime.config.FULL_LOCAL_INTERNAL_GATEWAY_URL}/auth/v1/settings`,
+    { headers: { apikey: runtime.secrets.anon_key } },
+  );
+  if (!settingsResponse.ok) fail("Local Auth settings request failed.");
+  const settings = await settingsResponse.json();
+  if (settings?.external?.google !== true || settings?.external?.kakao !== true) {
+    fail("Google and Kakao are not both enabled in local Auth settings.");
+  }
+  const naver = await createLocalSupabaseAdmin(runtime).getProvider("custom:naver");
+  if (naver.error || naver.data?.enabled !== true) {
+    fail("custom:naver is missing or disabled in local Auth.");
+  }
+  return {
+    enabled_providers: ["google", "kakao", "custom:naver"],
+    provider_count: 3,
+  };
+}
+
 function print(value) {
   process.stdout.write(`${JSON.stringify(value, null, 2)}\n`);
 }
@@ -409,7 +949,12 @@ async function main() {
       break;
     case "validate": {
       const runtime = validateAndMaterialize(args);
-      print({ ...runtime.validation, status: "PASS" });
+      print({
+        ...runtime.validation,
+        oauth_provider_count: runtime.oauth.provider_count,
+        social_providers_enabled: runtime.oauth.enabled,
+        status: "PASS",
+      });
       break;
     }
     case "start": {
@@ -432,6 +977,32 @@ async function main() {
       const runtime = validateAndMaterialize(args);
       compose(runtime, ["stop"]);
       print({ preserved_named_volumes: true, status: "PASS" });
+      break;
+    }
+    case "restore-platform": {
+      const result = await restorePlatformBackup(args);
+      print({ ...result, status: "PASS" });
+      break;
+    }
+    case "verify-restored-platform": {
+      const result = await verifyRestoredPlatform(args);
+      print({ ...result, status: "PASS" });
+      break;
+    }
+    case "compare-restore-manifests": {
+      print({ ...compareRestoreManifests(args), status: "PASS" });
+      break;
+    }
+    case "provision-oauth": {
+      print({ ...await provisionOAuthProviders(args), status: "PASS" });
+      break;
+    }
+    case "verify-oauth": {
+      print({ ...await verifyOAuthProviders(args), status: "PASS" });
+      break;
+    }
+    case "cutover-preflight": {
+      print(runCutoverPreflight(args));
       break;
     }
     default:
