@@ -131,14 +131,85 @@
     ]
   },
   "status": {
-    "lifecycle": "in_progress",
-    "approval_state": "codex_approved",
-    "verification_status": "pending",
-    "evaluation_status": "not_started",
-    "evaluation_round": 0,
+    "lifecycle": "merged",
+    "approval_state": "dual_approved",
+    "verification_status": "passed",
+    "evaluation_status": "passed",
+    "evaluation_round": 1,
     "last_evaluator_result": null,
     "auto_merge_eligible": false,
     "blocked_reason_code": null
+  },
+  "closeout": {
+    "phase": "completed",
+    "docs_projection": {
+      "roadmap_lifecycle": "merged",
+      "design_status": "N/A",
+      "delivery_checklist": "complete",
+      "design_authority": "not_required",
+      "acceptance": "complete",
+      "automation_spec_metadata": "synced"
+    },
+    "verification_projection": {
+      "required_checks": "passed",
+      "external_smokes": "pending",
+      "authority_reports": [],
+      "actual_verification_refs": [
+        "GitHub PR #1254 merged the user-approved Contract Evolution boundary",
+        "GitHub PR #1255 Stage 2/3 reviews approved with findings zero and merged as d30ee2c8f38a06609e7a5efddbfb0b5df30f712c",
+        "Stage 4 TDD locked HOME/PANTRY product identity and asynchronous response ownership regressions",
+        "Focused final HOME/PANTRY/product consumer set passed 103/103",
+        "Isolated PostgreSQL fresh and replay suites passed 20/20 each",
+        "pnpm verify:frontend:pr passed 2429 product tests with 128 normal skips plus build, smoke, accessibility and visual gates",
+        "CI=1 pnpm verify:frontend passed Lighthouse, regression 924/144 skip, accessibility 18/15 skip, visual 23/22 skip and security 12/12",
+        "Independent exact-head code and security reviews approved with P0/P1/P2 0/0/0",
+        "Independent final verifier returned MERGE-READY YES for exact remote head 27fc07c48e61f9f8c252949e598ef5c67fc00068",
+        "GitHub PR #1256 exact head completed all latest contexts successfully with one intended full-regression skip and pending/fail/cancel/rerun-in-progress 0",
+        "GitHub PR #1256 squash-merged as 5e9773f5e715e7d63132d7f6b8fadcaafd4b76a0",
+        "docs/workpacks/product-ingredient-link-foundation/evidence/2026-08-01-stage4-6-closeout.md records the review, test and merge evidence",
+        "Existing-schema/query-plan and server-Mac full-local rehearsal remain Manual Only; production/staging writes remain zero"
+      ]
+    },
+    "merge_gate_projection": {
+      "current_head_sha": "27fc07c48e61f9f8c252949e598ef5c67fc00068",
+      "approval_state": "dual_approved",
+      "all_checks_green": true
+    },
+    "recovery_summary": {
+      "manual_patch_count": 6,
+      "manual_handoff": false,
+      "stale_lock_count": 0,
+      "ci_resync_count": 3,
+      "artifact_missing": false,
+      "last_recovery_at": "2026-08-01T12:10:39Z"
+    },
+    "repair_summary": {
+      "codex_repairable_count": 6,
+      "claude_repairable_count": 0,
+      "manual_decision_required_count": 0,
+      "human_escalation_count": 0,
+      "post_merge_stale_count": 1,
+      "latest_reason_code": "post-merge-stage6-closeout-sync",
+      "evidence_sources": [
+        "GitHub PR #1254 Contract Evolution",
+        "GitHub PR #1255 Stage 2/3 backend/data",
+        "GitHub PR #1256 Stage 4-6 existing consumers",
+        "tests/product-ingredient-link-consumer.test.tsx",
+        "tests/pantry-screen.test.tsx",
+        "tests/product-ingredient-link-postgres.integration.test.ts",
+        "tests/recipe-snapshot-security.test.ts",
+        "tests/product-ingredient-link-hybrid-contract-sync.test.ts",
+        "docs/workpacks/product-ingredient-link-foundation/evidence/2026-08-01-stage4-6-closeout.md",
+        "independent Codex exact-head code review",
+        "independent Codex exact-head security review",
+        "independent Codex exact-head verifier"
+      ]
+    },
+    "projection_state": {
+      "docs_synced_at": "2026-08-01T12:15:02Z",
+      "status_synced_at": "2026-08-01T12:15:02Z",
+      "pr_body_synced_at": "2026-08-01T12:10:39Z"
+    }
   },
   "out_of_scope": [
     "Public product-link CRUD or admin HTTP endpoints",
@@ -155,5 +226,5 @@
     "Out-of-scope candidate: product pantry row deletion needs a separately approved DELETE /pantry additive contract before implementation",
     "Manual release decision: account-generation cleanup activation remains gated by F0 plus slice #3 joint production evidence"
   ],
-  "notes": "2026-07-31 승인 Contract Evolution PR #1254와 Stage 2/3 PR #1255가 merged됐다. Stage 2는 cross-owner write, concurrent create orphan, incomplete source identity, pinned completion과 immutable snapshot clone authority를 TDD로 닫았고 final Stage 3 및 security/DB review는 findings zero였다. Stage 4는 HOME/PANTRY exact product/version consumer, no raw fallback, three race repairs와 focused/full frontend gates를 증명했고 independent Stage 5 approval을 받았다. 2026-08-01 full-local relock 뒤 historical hybrid verifier는 active release gate에서 제외됐다. 현재 active Manual Only gate는 isolated full-local Auth UUID/session binding, auth.uid() RLS A/B cross-owner, delete/recreate, stale-session, existing-schema/query-plan과 pre-floor production mutation zero다. Fresh full-local-rebased exact-head review, current-head CI, Stage 6와 merge는 pending이며 production/staging writes는 zero다."
+  "notes": "Canonical closeout: .workflow-v2/work-items/product-ingredient-link-foundation.json#closeout. Contract Evolution PR #1254와 Stage 2/3 PR #1255가 merged됐다. Stage 4는 HOME/PANTRY exact product/version consumer와 response ownership races를 TDD로 닫았다. PR #1256 exact head 27fc07c48e61f9f8c252949e598ef5c67fc00068의 독립 code/security review는 P0/P1/P2=0/0/0, final verifier는 MERGE-READY YES였고 current-head checks는 one intended full-regression skip 외 전부 success, pending/fail/cancel/rerun-in-progress 0이었다. PR #1256은 5e9773f5e715e7d63132d7f6b8fadcaafd4b76a0로 merged됐다. Existing-schema/query-plan, server-Mac full-local Auth/RLS/delete-recreate/stale-session과 activation은 Manual Only이며 production/staging writes는 zero다. closeout_phase=completed closeout_recovery=manual_patch:6|ci_resync:3 closeout_repair=codex:6|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:1|sources:GitHub PR #1254 Contract Evolution,GitHub PR #1255 Stage 2/3 backend/data,GitHub PR #1256 Stage 4-6 existing consumers,tests/product-ingredient-link-consumer.test.tsx,tests/pantry-screen.test.tsx,tests/product-ingredient-link-postgres.integration.test.ts,tests/recipe-snapshot-security.test.ts,tests/product-ingredient-link-hybrid-contract-sync.test.ts,docs/workpacks/product-ingredient-link-foundation/evidence/2026-08-01-stage4-6-closeout.md,independent Codex exact-head code review,independent Codex exact-head security review,independent Codex exact-head verifier | latest_reason_code=post-merge-stage6-closeout-sync | last_recovery_at=2026-08-01T12:10:39Z"
 }

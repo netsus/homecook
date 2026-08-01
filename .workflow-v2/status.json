@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-07-31T01:42:32.000Z",
+  "updated_at": "2026-08-01T12:15:02Z",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -2291,9 +2291,9 @@
       "preset": "vertical-slice-strict",
       "branch": "feature/fe-product-ingredient-link-foundation",
       "pr_path": "https://github.com/netsus/homecook/pull/1256",
-      "lifecycle": "in_progress",
-      "approval_state": "codex_approved",
-      "verification_status": "pending",
+      "lifecycle": "merged",
+      "approval_state": "dual_approved",
+      "verification_status": "passed",
       "required_checks": [
         "pnpm validate:source-of-truth-sync",
         "pnpm validate:workflow-v2",
@@ -2311,9 +2311,9 @@
         "pnpm verify:frontend",
         "git diff --check"
       ],
-      "notes": "Contract Evolution PR #1254와 Stage 2/3 PR #1255는 merged됐고 backend Stage 3/security review는 findings zero였다. Stage 4 frontend는 exact product/version, no raw fallback, stale search/mutation race repairs와 focused/full frontend gates를 통과했으며 independent Stage 5 approval을 받았다. 2026-08-01 full-local relock 뒤 historical hybrid verifier는 active release gate에서 제외됐다. Product-link 전용 full-local Auth UUID/session binding, auth.uid() RLS A/B cross-owner, delete/recreate, stale-session, existing-schema/query-plan evidence는 아직 Manual Only/pending이다. Fresh full-local-rebased exact-head review와 current-head CI, Stage 6, merge는 pending이며 production/staging writes는 zero다.",
-      "evaluation_status": "not_started",
-      "evaluation_round": 0,
+      "notes": "Canonical closeout: .workflow-v2/work-items/product-ingredient-link-foundation.json#closeout. Contract Evolution PR #1254와 Stage 2/3 PR #1255가 merged됐다. Stage 4는 HOME/PANTRY exact product/version consumer와 response ownership races를 TDD로 닫았다. PR #1256 exact head 27fc07c48e61f9f8c252949e598ef5c67fc00068의 독립 code/security review는 P0/P1/P2=0/0/0, final verifier는 MERGE-READY YES였고 current-head checks는 one intended full-regression skip 외 전부 success, pending/fail/cancel/rerun-in-progress 0이었다. PR #1256은 5e9773f5e715e7d63132d7f6b8fadcaafd4b76a0로 merged됐다. Existing-schema/query-plan, server-Mac full-local Auth/RLS/delete-recreate/stale-session과 activation은 Manual Only이며 production/staging writes는 zero다. closeout_phase=completed closeout_recovery=manual_patch:6|ci_resync:3 closeout_repair=codex:6|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:1|sources:GitHub PR #1254 Contract Evolution,GitHub PR #1255 Stage 2/3 backend/data,GitHub PR #1256 Stage 4-6 existing consumers,tests/product-ingredient-link-consumer.test.tsx,tests/pantry-screen.test.tsx,tests/product-ingredient-link-postgres.integration.test.ts,tests/recipe-snapshot-security.test.ts,tests/product-ingredient-link-hybrid-contract-sync.test.ts,docs/workpacks/product-ingredient-link-foundation/evidence/2026-08-01-stage4-6-closeout.md,independent Codex exact-head code review,independent Codex exact-head security review,independent Codex exact-head verifier | latest_reason_code=post-merge-stage6-closeout-sync | last_recovery_at=2026-08-01T12:10:39Z",
+      "evaluation_status": "passed",
+      "evaluation_round": 1,
       "last_evaluator_result": null,
       "auto_merge_eligible": false,
       "blocked_reason_code": null
