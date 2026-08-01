@@ -65,6 +65,7 @@ The active mutation matrix rejects authenticated snapshot write grants, anon sna
 
 ## Remaining gates
 
+- PR head `a90323a54452bfbc1c14d48b7aef45c175e567bd`는 초기 PR 본문의 workflow-v2 work item `N/A` 형식 오류로 `template-check`가 한 번 실패했고, 본문 correction 후 동일 head 재실행은 통과했다. 엄격한 current-head 규칙상 이 old head는 superseded이며 최종 merge evidence로 사용하지 않는다.
 - Fresh independent backend/code/security/DB review of this exact PR head.
 - Draft PR current-head checks; Ready and merge remain coordinator/reviewer-owned.
 - Stage 4 PR #1267 must integrate the merged backend repair and rerun a real activated full-local Route smoke for Meal/planner/shopping/cooking/leftover consumers.
