@@ -1,0 +1,128 @@
+{
+  "schema_version": 1,
+  "slice": "full-local-supabase-production",
+  "migrations": [
+    "supabase/migrations/20260801120000_full_local_auth_db_foundation.sql"
+  ],
+  "deployment_state": "pre-deployment",
+  "baseline_application_contract_count": 74,
+  "functions": [
+    {
+      "signature": "public.read_full_local_auth_control()",
+      "control_class": "application-controlled",
+      "effect": "read-only",
+      "exposure": "service-internal",
+      "allowed_principals": ["service_role"],
+      "security_mode": "definer",
+      "safe_search_path": ["pg_catalog", "public", "private", "auth", "pg_temp"]
+    },
+    {
+      "signature": "public.start_full_local_auth_cutover(bigint, text, timestamp with time zone)",
+      "control_class": "application-controlled",
+      "effect": "mutation",
+      "exposure": "service-internal",
+      "allowed_principals": ["service_role"],
+      "security_mode": "definer",
+      "safe_search_path": ["pg_catalog", "public", "private", "auth", "pg_temp"]
+    },
+    {
+      "signature": "public.activate_full_local_auth_authority(bigint, integer, text, timestamp with time zone)",
+      "control_class": "application-controlled",
+      "effect": "mutation",
+      "exposure": "service-internal",
+      "allowed_principals": ["service_role"],
+      "security_mode": "definer",
+      "safe_search_path": ["pg_catalog", "public", "private", "auth", "pg_temp"]
+    },
+    {
+      "signature": "public.insert_auth_flow_attempt(text, text, text, text, bigint, timestamp with time zone, timestamp with time zone)",
+      "control_class": "application-controlled",
+      "effect": "mutation",
+      "exposure": "service-internal",
+      "allowed_principals": ["service_role"],
+      "security_mode": "definer",
+      "safe_search_path": ["pg_catalog", "public", "private", "auth", "pg_temp"]
+    },
+    {
+      "signature": "public.read_auth_flow_attempt(text, text)",
+      "control_class": "application-controlled",
+      "effect": "read-only",
+      "exposure": "service-internal",
+      "allowed_principals": ["service_role"],
+      "security_mode": "definer",
+      "safe_search_path": ["pg_catalog", "public", "private", "auth", "pg_temp"]
+    },
+    {
+      "signature": "public.terminal_auth_flow_attempt(text, text, text, timestamp with time zone)",
+      "control_class": "application-controlled",
+      "effect": "mutation",
+      "exposure": "service-internal",
+      "allowed_principals": ["service_role"],
+      "security_mode": "definer",
+      "safe_search_path": ["pg_catalog", "public", "private", "auth", "pg_temp"]
+    },
+    {
+      "signature": "public.expire_and_count_remote_auth_flows(timestamp with time zone, timestamp with time zone)",
+      "control_class": "application-controlled",
+      "effect": "mutation",
+      "exposure": "service-internal",
+      "allowed_principals": ["service_role"],
+      "security_mode": "definer",
+      "safe_search_path": ["pg_catalog", "public", "private", "auth", "pg_temp"]
+    },
+    {
+      "signature": "private.protect_full_local_session_binding_identity()",
+      "control_class": "application-controlled",
+      "effect": "trigger/internal",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "security_mode": "invoker",
+      "safe_search_path": ["pg_catalog", "public", "private", "pg_temp"]
+    },
+    {
+      "signature": "private.revoke_full_local_bindings_on_lifecycle_exit()",
+      "control_class": "application-controlled",
+      "effect": "trigger/internal",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "security_mode": "definer",
+      "safe_search_path": ["pg_catalog", "public", "private", "pg_temp"]
+    },
+    {
+      "signature": "private.revoke_full_local_bindings_on_auth_identity_change()",
+      "control_class": "application-controlled",
+      "effect": "trigger/internal",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "security_mode": "definer",
+      "safe_search_path": ["pg_catalog", "public", "private", "auth", "pg_temp"]
+    },
+    {
+      "signature": "public.record_full_local_session_authority(text, uuid, timestamp with time zone, text, integer, bigint, timestamp with time zone, timestamp with time zone, timestamp with time zone, timestamp with time zone)",
+      "control_class": "application-controlled",
+      "effect": "mutation",
+      "exposure": "service-internal",
+      "allowed_principals": ["service_role"],
+      "security_mode": "definer",
+      "safe_search_path": ["pg_catalog", "public", "private", "auth", "pg_temp"]
+    },
+    {
+      "signature": "public.assert_full_local_session_authority(text, uuid, timestamp with time zone, text, integer, bigint, timestamp with time zone)",
+      "control_class": "application-controlled",
+      "effect": "read-only",
+      "exposure": "service-internal",
+      "allowed_principals": ["service_role"],
+      "security_mode": "definer",
+      "safe_search_path": ["pg_catalog", "public", "private", "auth", "pg_temp"]
+    },
+    {
+      "signature": "public.revoke_full_local_session_authority(text, uuid, text, integer)",
+      "control_class": "application-controlled",
+      "effect": "mutation",
+      "exposure": "service-internal",
+      "allowed_principals": ["service_role"],
+      "security_mode": "definer",
+      "safe_search_path": ["pg_catalog", "public", "auth", "pg_temp"]
+    }
+  ]
+}

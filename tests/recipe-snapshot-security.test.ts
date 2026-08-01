@@ -13,9 +13,24 @@ function readMigrationSource() {
     .join("\n");
 }
 
+function latestFunction(sql: string, functionName: string) {
+  const marker = `create or replace function public.${functionName}()`;
+  const start = sql.toLowerCase().lastIndexOf(marker);
+  expect(start, `${functionName} function is missing`).toBeGreaterThanOrEqual(0);
+  const bodyStart = sql.indexOf("as $$", start);
+  const end = sql.indexOf("\n$$;", bodyStart);
+  expect(bodyStart, `${functionName} body is missing`).toBeGreaterThan(start);
+  expect(end, `${functionName} terminator is missing`).toBeGreaterThan(bodyStart);
+  return sql.slice(start, end + 4);
+}
+
 describe("recipe snapshot mutation security", () => {
   it("keeps snapshot mutation server-owned and validates private/public ownership pairs", () => {
     const sql = readMigrationSource();
+    const ownership = latestFunction(
+      sql,
+      "validate_recipe_content_snapshot_ownership",
+    );
 
     expect(
       /revoke all on table public\.recipe_content_snapshots from public,\s*anon,\s*authenticated,\s*service_role/i
@@ -31,31 +46,29 @@ describe("recipe snapshot mutation security", () => {
         .test(sql),
       "nutrition snapshots need additive nullable ownership",
     ).toBe(true);
-    expect(
-      /recipe_content_snapshot[\s\S]*(owner|ownership)[\s\S]*(recipe|nutrition)[\s\S]*(mismatch|match)/i
-        .test(sql),
-      "private/public content-nutrition ownership validation is missing",
-    ).toBe(true);
+    expect(ownership).toContain(
+      "recipe_content_snapshot recipe nutrition mismatch",
+    );
+    expect(ownership).toContain("v_nutrition_recipe_id is distinct from new.recipe_id");
+    expect(ownership).toContain("recipe_content_snapshot ownership mismatch");
+    expect(ownership).toContain("v_nutrition_owner is distinct from new.owner_user_id");
   });
 
   it("allows hard delete only for the transaction-local exact owner cleanup guard", () => {
     const sql = readMigrationSource();
+    const contentGuard = latestFunction(
+      sql,
+      "prevent_recipe_content_snapshot_mutation",
+    );
+    const nutritionGuard = latestFunction(sql, "protect_recipe_nutrition_snapshot");
 
-    expect(
-      /prevent_recipe_content_snapshot_mutation[\s\S]*tg_op\s*=\s*'DELETE'[\s\S]*current_setting\s*\(\s*'homecook\.recipe_snapshot_account_cleanup_owner'/i
-        .test(sql),
-      "content immutable guard does not consume the exact-owner cleanup setting",
-    ).toBe(true);
-    expect(
-      /protect_recipe_nutrition_snapshot[\s\S]*tg_op\s*=\s*'DELETE'[\s\S]*current_setting\s*\(\s*'homecook\.recipe_snapshot_account_cleanup_owner'/i
-        .test(sql),
-      "nutrition immutable guard does not consume the exact-owner cleanup setting",
-    ).toBe(true);
-    expect(
-      /prevent_recipe_(?:content|nutrition)_snapshot_mutation[\s\S]*old\.owner_user_id/i
-        .test(sql),
-      "cleanup exception is not tied to the deleted row owner",
-    ).toBe(true);
+    for (const guard of [contentGuard, nutritionGuard]) {
+      expect(guard).toContain("if tg_op = 'DELETE' then");
+      expect(guard).toContain(
+        "'homecook.recipe_snapshot_account_cleanup_owner'",
+      );
+      expect(guard).toContain("v_cleanup_owner = old.owner_user_id::text");
+    }
   });
 
   it("rejects owner-neutral private rows, owned public rows, and soft-deleted recipe snapshots", () => {

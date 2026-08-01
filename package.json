@@ -48,6 +48,7 @@
     "account-maintenance:local-scheduler:uninstall": "node scripts/account-maintenance-local-scheduler-uninstall.mjs",
     "account-maintenance:local-scheduler:verify": "node scripts/account-maintenance-local-scheduler-verify.mjs",
     "test:account-session-generation:postgres": "node scripts/run-account-session-generation-postgres-integration.mjs",
+    "test:full-local-auth-db-foundation:postgres": "node scripts/run-account-session-generation-postgres-integration.mjs --full-local",
     "test:hybrid-supabase:postgres": "vitest run tests/hybrid-supabase-postgres.integration.test.ts",
     "test:hybrid-supabase:storage": "vitest run tests/hybrid-supabase-storage.integration.test.ts tests/hybrid-session-authority-gateway.test.ts",
     "test:hybrid-supabase:runtime": "HYBRID_RUNTIME_COMPOSE=1 vitest run tests/hybrid-isolated-runtime.test.ts",

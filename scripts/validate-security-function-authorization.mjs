@@ -23,6 +23,16 @@ const INVENTORY_PATH = process.env.SECURITY_FUNCTION_INVENTORY_PATH
   );
 const ADDITIVE_SOURCES = [
   {
+    manifestPath: path.join(
+      REPO_ROOT,
+      "docs/security/full-local-auth-db-security-function-authorization-manifest.json",
+    ),
+    migrationPath: path.join(
+      REPO_ROOT,
+      "supabase/migrations/20260801120000_full_local_auth_db_foundation.sql",
+    ),
+  },
+  {
     manifestPath: process.env.SECURITY_FUNCTION_ADDITIVE_MANIFEST_PATH
       ?? path.join(
         REPO_ROOT,
