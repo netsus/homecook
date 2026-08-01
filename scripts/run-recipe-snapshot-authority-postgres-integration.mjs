@@ -9,6 +9,14 @@ import path from "node:path";
 const POSTGRES_TOOLS = ["initdb", "pg_ctl", "createdb", "psql"];
 const TARGET_MIGRATION =
   "supabase/migrations/20260729170500_recipe_snapshot_authority_foundation.sql";
+const ACTIVE_SECURITY_MIGRATIONS = [
+  "supabase/migrations/20260429080000_15a_cook_planner_complete.sql",
+  "supabase/migrations/20260723140000_account_session_generation_foundation.sql",
+  "supabase/migrations/20260723170000_recipe_visibility_read_hardening.sql",
+  "supabase/migrations/20260730090000_hybrid_auth_remote_identity_epoch_mirror.sql",
+  "supabase/migrations/20260731111000_product_ingredient_link_account_cleanup.sql",
+  "supabase/migrations/20260801120000_full_local_auth_db_foundation.sql",
+];
 const INTEGRATION_TEST =
   "tests/recipe-snapshot-authority-postgres.integration.test.ts";
 const TEST_TIMEOUT_MS = 30_000;
@@ -127,8 +135,18 @@ $function$;
 create role anon nologin;
 create role authenticated nologin;
 create role service_role nologin bypassrls;
+create role supabase_auth_admin nologin;
+create role authenticator noinherit login;
+grant anon, authenticated to authenticator;
 
 create schema if not exists auth;
+create table auth.users (
+  id uuid primary key,
+  created_at timestamptz not null,
+  email text,
+  raw_app_meta_data jsonb not null default '{}'::jsonb,
+  raw_user_meta_data jsonb not null default '{}'::jsonb
+);
 create or replace function auth.uid()
 returns uuid
 language sql
@@ -137,10 +155,38 @@ set search_path = pg_catalog
 as $function$
   select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid
 $function$;
+create or replace function auth.role()
+returns text
+language sql
+stable
+set search_path = pg_catalog
+as $function$
+  select coalesce(
+    nullif(current_setting('request.jwt.claim.role', true), ''),
+    nullif(current_setting('request.jwt.claims', true), '')::jsonb ->> 'role'
+  )
+$function$;
 grant usage on schema auth to anon, authenticated;
 grant execute on function auth.uid() to anon, authenticated;
 
+create schema storage;
+create table storage.objects (
+  id uuid primary key default gen_random_uuid(),
+  bucket_id text not null,
+  name text not null
+);
+alter table storage.objects enable row level security;
+create or replace function storage.foldername(p_name text)
+returns text[]
+language sql
+immutable
+set search_path = pg_catalog
+as $function$
+  select pg_catalog.string_to_array(p_name, '/')
+$function$;
+
 create type public.recipe_ingredient_type as enum ('QUANT', 'TO_TASTE');
+create type public.recipe_source_type as enum ('system', 'youtube', 'manual');
 create type public.cooking_session_status_type as enum ('in_progress', 'completed', 'cancelled');
 create type public.leftover_dish_status_type as enum ('leftover', 'eaten');
 
@@ -151,15 +197,29 @@ create table public.users (
   social_id text not null
 );
 
+create table public.admin_members (
+  user_id uuid primary key,
+  granted_by uuid
+);
+
+create table public.admin_audit_logs (
+  id uuid primary key default gen_random_uuid(),
+  actor_admin_user_id uuid
+);
+
 create table public.recipes (
   id uuid primary key,
   title varchar(200) not null,
+  thumbnail_url text,
+  source_type public.recipe_source_type not null default 'manual',
   base_servings integer not null default 2 check (base_servings > 0),
   created_by uuid references public.users(id) on delete set null,
   visibility text not null default 'public',
   deleted_at timestamptz,
   revision bigint not null default 1 check (revision > 0),
   updated_at timestamptz not null default now(),
+  tags text[] not null default '{}'::text[],
+  view_count integer not null default 0,
   like_count integer not null default 0,
   save_count integer not null default 0
 );
@@ -212,6 +272,35 @@ create table public.recipe_sources (
   id uuid primary key default gen_random_uuid(),
   recipe_id uuid not null references public.recipes(id) on delete cascade
 );
+
+create table public.tags (
+  id uuid primary key default gen_random_uuid(),
+  normalized_key text not null unique,
+  label text not null,
+  slug text,
+  kind text not null,
+  is_system boolean not null default false,
+  theme_eligible boolean not null default false,
+  usage_count integer not null default 0,
+  created_by uuid,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table public.recipe_tags (
+  recipe_id uuid not null references public.recipes(id) on delete cascade,
+  tag_id uuid not null references public.tags(id) on delete cascade,
+  source text not null default 'system_suggested',
+  confidence numeric(4, 3) not null default 1,
+  visibility text not null default 'public',
+  review_status text not null default 'approved',
+  sort_order integer not null default 0,
+  created_by uuid,
+  created_at timestamptz not null default now(),
+  primary key (recipe_id, tag_id)
+);
+alter table public.tags enable row level security;
+alter table public.recipe_tags enable row level security;
 
 create table public.recipe_likes (
   user_id uuid not null references public.users(id) on delete cascade,
@@ -354,6 +443,7 @@ create table public.recipe_nutrition_snapshots (
   created_at timestamptz not null default now(),
   unique (recipe_id, input_hash, calculation_version)
 );
+alter table public.recipe_nutrition_snapshots enable row level security;
 
 create unique index recipe_nutrition_snapshots_current_idx
   on public.recipe_nutrition_snapshots (recipe_id) where is_current;
@@ -517,6 +607,22 @@ $function$;
 create trigger protect_meal_recipe_nutrition_pin
 before update of recipe_id, recipe_nutrition_snapshot_id, nutrition_snapshot_origin on public.meals
 for each row execute function public.protect_meal_recipe_nutrition_pin();
+
+create or replace function public.delete_user_private_data(p_user_id uuid)
+returns jsonb
+language plpgsql
+security definer
+set search_path = pg_catalog, public, pg_temp
+as $function$
+begin
+  delete from public.users where id = p_user_id;
+  return jsonb_build_object(
+    'deleted', true,
+    'user_deleted', found,
+    'preserved_recipe_count', 0
+  );
+end;
+$function$;
 `;
 
 function commandResult(command, args, options = {}) {
@@ -684,6 +790,41 @@ esac
 
     if (result.status !== 0) {
       process.exitCode = result.status ?? 1;
+    } else {
+      for (const migration of ACTIVE_SECURITY_MIGRATIONS) {
+        runRequired(path.join(postgresBin, "psql"), [
+          ...connectionArgs,
+          "-f",
+          migration,
+        ]);
+      }
+      const activeSecurityResult = commandResult(
+        "pnpm",
+        [
+          "exec",
+          "vitest",
+          "run",
+          "tests/full-local-auth-db-foundation-postgres.integration.test.ts",
+          "--pool=forks",
+          "--maxWorkers=1",
+          `--testTimeout=${TEST_TIMEOUT_MS}`,
+        ],
+        {
+          stdio: "inherit",
+          env: {
+            ...process.env,
+            PATH: `${postgresBin}${path.delimiter}${process.env.PATH ?? ""}`,
+            HOMECOOK_FULL_LOCAL_AUTH_DB_PG_INTEGRATION: "1",
+            HOMECOOK_FULL_LOCAL_SECURITY_INVENTORY_ONLY: "1",
+            HOMECOOK_ACCOUNT_GENERATION_PGHOST: "127.0.0.1",
+            HOMECOOK_ACCOUNT_GENERATION_PGPORT: String(port),
+            HOMECOOK_ACCOUNT_GENERATION_PGDATABASE: database,
+          },
+        },
+      );
+      if (activeSecurityResult.status !== 0) {
+        process.exitCode = activeSecurityResult.status ?? 1;
+      }
     }
   } finally {
     if (started) {
@@ -707,10 +848,10 @@ if (!postgresBin) {
 }
 
 await runMode(postgresBin, "fresh");
-if (process.exitCode && process.exitCode !== 0) {
-  process.exit(process.exitCode);
-}
+const freshFailed = Boolean(process.exitCode && process.exitCode !== 0);
+process.exitCode = 0;
 await runMode(postgresBin, "replay");
-if (process.exitCode && process.exitCode !== 0) {
-  process.exit(process.exitCode);
+const replayFailed = Boolean(process.exitCode && process.exitCode !== 0);
+if (freshFailed || replayFailed) {
+  process.exit(1);
 }

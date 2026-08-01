@@ -135,7 +135,8 @@ if (!postgresBin) {
         create role authenticated nologin;
         create role service_role nologin bypassrls;
         create role supabase_auth_admin nologin;
-        create role authenticator nologin;
+        create role authenticator noinherit login;
+        grant anon, authenticated to authenticator;
         create schema auth;
         create schema extensions;
         create extension pgcrypto with schema extensions;

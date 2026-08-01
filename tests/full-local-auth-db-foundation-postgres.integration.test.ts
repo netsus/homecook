@@ -2,11 +2,19 @@ import { spawnSync } from "node:child_process";
 
 import { beforeAll, describe, expect, it } from "vitest";
 
+import * as fullLocalVerifier from
+  "../scripts/lib/recipe-snapshot-authority-full-local-verifier.mjs";
+
 const enabled = process.env.HOMECOOK_FULL_LOCAL_AUTH_DB_PG_INTEGRATION === "1";
+const inventoryOnly =
+  process.env.HOMECOOK_FULL_LOCAL_SECURITY_INVENTORY_ONLY === "1";
 const host = process.env.HOMECOOK_ACCOUNT_GENERATION_PGHOST ?? "";
 const port = process.env.HOMECOOK_ACCOUNT_GENERATION_PGPORT ?? "";
 const database = process.env.HOMECOOK_ACCOUNT_GENERATION_PGDATABASE ?? "";
-const run = enabled ? describe.sequential : describe.skip;
+const run = enabled && !inventoryOnly ? describe.sequential : describe.skip;
+const activeInventoryRun = enabled && inventoryOnly
+  ? describe.sequential
+  : describe.skip;
 
 function psqlResult(sql: string) {
   return spawnSync("psql", [
@@ -30,6 +38,46 @@ function psql(sql: string) {
   const result = psqlResult(sql);
   expect(result.status, result.stderr).toBe(0);
   return result.stdout.trim().split("\n").filter(Boolean).at(-1) ?? "";
+}
+
+function securityInventoryApi() {
+  const verifierApi = fullLocalVerifier as Record<string, unknown>;
+  const buildSql = verifierApi
+    .buildRecipeSnapshotAuthorityFullLocalSecurityInventorySql;
+  const assertResult = verifierApi
+    .assertRecipeSnapshotAuthorityFullLocalSecurityInventoryResult;
+  expect(buildSql).toBeTypeOf("function");
+  expect(assertResult).toBeTypeOf("function");
+  return {
+    buildSql: buildSql as (options?: { includeSnapshotTables?: boolean }) => string,
+    assertResult: assertResult as (
+      result: Record<string, unknown>,
+      options?: { includeSnapshotTables?: boolean },
+    ) => void,
+  };
+}
+
+function securityInventoryAfter(
+  mutation = "",
+  options: { includeSnapshotTables?: boolean } = {},
+) {
+  const api = securityInventoryApi();
+  const result = psqlResult(`
+    begin;
+    ${mutation}
+    ${api.buildSql(options)}
+    rollback;
+  `);
+  expect(result.status, result.stderr).toBe(0);
+  const json = result.stdout
+    .trim()
+    .split("\n")
+    .find((line) => line.trim().startsWith("{"));
+  expect(json).toBeDefined();
+  return {
+    api,
+    result: JSON.parse(json ?? "{}") as Record<string, unknown>,
+  };
 }
 
 const serviceClaims = `set request.jwt.claims = '{"role":"service_role"}';`;
@@ -596,5 +644,316 @@ run("full-local Auth isolated PostgreSQL foundation", () => {
       where conrelid = 'public.user_session_generation_bindings'::regclass
         and conname = 'user_session_generation_bindings_epoch_fkey';
     `)).toBe("t:t:1");
+  });
+
+  it("accepts the exact manifest function and protected-table RLS inventory", () => {
+    const { api, result } = securityInventoryAfter();
+    expect(result).toMatchObject({
+      required_function_count: 13,
+      function_missing_count: 0,
+      function_source_drift_count: 0,
+      function_security_drift_count: 0,
+      function_owner_drift_count: 0,
+      function_search_path_drift_count: 0,
+      function_acl_drift_count: 0,
+      unexpected_function_overload_count: 0,
+      required_role_count: 4,
+      role_missing_count: 0,
+      role_attribute_drift_count: 0,
+      required_role_membership_count: 2,
+      role_membership_missing_count: 0,
+      role_membership_drift_count: 0,
+      unexpected_role_membership_count: 0,
+      required_rls_table_count: 9,
+      rls_table_missing_count: 0,
+      rls_disabled_count: 0,
+      rls_owner_drift_count: 0,
+      rls_force_drift_count: 0,
+      required_policy_count: 7,
+      policy_missing_count: 0,
+      policy_drift_count: 0,
+      unexpected_policy_count: 0,
+    });
+    expect(result._policy_expression_inventory).toHaveLength(7);
+    expect(() => api.assertResult(result)).not.toThrow();
+  });
+
+  it("rejects an allow-all replacement body", () => {
+    const { api, result } = securityInventoryAfter(`
+      create or replace function public.read_full_local_auth_control()
+      returns jsonb
+      language plpgsql
+      stable
+      security definer
+      set search_path = pg_catalog, public, private, auth, pg_temp
+      as $mutation$
+      begin
+        return '{}'::jsonb;
+      end;
+      $mutation$;
+    `);
+    expect(() => api.assertResult(result)).toThrow(
+      /security inventory failed closed/i,
+    );
+  });
+
+  it("rejects an unexpected anon EXECUTE grant", () => {
+    const { api, result } = securityInventoryAfter(`
+      grant execute on function public.read_full_local_auth_control() to anon;
+    `);
+    expect(() => api.assertResult(result)).toThrow(
+      /security inventory failed closed/i,
+    );
+  });
+
+  it("rejects EXECUTE WITH GRANT OPTION delegation drift", () => {
+    const { api, result } = securityInventoryAfter(`
+      grant execute on function public.read_full_local_auth_control()
+        to service_role with grant option;
+    `);
+    expect(() => api.assertResult(result)).toThrow(
+      /security inventory failed closed/i,
+    );
+  });
+
+  it("rejects SECURITY INVOKER and unsafe search_path drift", () => {
+    const { api, result } = securityInventoryAfter(`
+      alter function public.read_full_local_auth_control() security invoker;
+      alter function public.read_full_local_auth_control()
+        set search_path = public, pg_temp;
+    `);
+    expect(() => api.assertResult(result)).toThrow(
+      /security inventory failed closed/i,
+    );
+  });
+
+  it("rejects removed owner RLS even when a dummy auth.uid policy exists", () => {
+    const { api, result } = securityInventoryAfter(`
+      alter table public.recipes disable row level security;
+      drop policy recipes_public_and_owner_read on public.recipes;
+      create policy dummy_auth_uid_policy
+        on public.users
+        for select
+        to authenticated
+        using (auth.uid() = id);
+    `);
+    expect(() => api.assertResult(result)).toThrow(
+      /security inventory failed closed/i,
+    );
+  });
+
+  it("rejects FORCE RLS drift on a protected table", () => {
+    const { api, result } = securityInventoryAfter(`
+      alter table public.recipes force row level security;
+    `);
+    expect(() => api.assertResult(result)).toThrow(
+      /security inventory failed closed/i,
+    );
+  });
+
+  it("rejects a restrictive replacement of an otherwise exact policy", () => {
+    const { api, result } = securityInventoryAfter(`
+      drop policy recipes_public_and_owner_read on public.recipes;
+      create policy recipes_public_and_owner_read
+        on public.recipes
+        as restrictive
+        for select
+        to anon, authenticated
+        using (
+          deleted_at is null
+          and recipe_visibility_guard.is_owner_publicly_visible(created_by)
+          and (visibility = 'public' or auth.uid() = created_by)
+        );
+    `);
+    expect(() => api.assertResult(result)).toThrow(
+      /security inventory failed closed/i,
+    );
+  });
+
+  it("rejects a policy whose parentheses change the boolean tree", () => {
+    const { api, result } = securityInventoryAfter(`
+      drop policy recipes_public_and_owner_read on public.recipes;
+      create policy recipes_public_and_owner_read
+        on public.recipes
+        for select
+        to anon, authenticated
+        using (
+          (
+            deleted_at is null
+            and recipe_visibility_guard.is_owner_publicly_visible(created_by)
+            and visibility = 'public'
+          )
+          or auth.uid() = created_by
+        );
+    `);
+    expect(() => api.assertResult(result)).toThrow(
+      /security inventory failed closed/i,
+    );
+  });
+
+  it("rejects an unexpected overload of a manifest function", () => {
+    const { api, result } = securityInventoryAfter(`
+      create function public.read_full_local_auth_control(p_dummy integer)
+      returns jsonb
+      language sql
+      stable
+      set search_path = pg_catalog, public, private, auth, pg_temp
+      as $mutation$
+        select '{}'::jsonb
+      $mutation$;
+    `);
+    expect(() => api.assertResult(result)).toThrow(
+      /security inventory failed closed/i,
+    );
+  });
+});
+
+activeInventoryRun("active full-local snapshot security inventory", () => {
+  const options = { includeSnapshotTables: true };
+
+  beforeAll(() => {
+    expect(host).not.toBe("");
+    expect(port).not.toBe("");
+    expect(database).toMatch(/^homecook_[a-z0-9_]+$/u);
+  });
+
+  it("accepts the active 12-table and 10-policy inventory", () => {
+    const { api, result } = securityInventoryAfter("", options);
+    expect(result).toMatchObject({
+      required_function_count: 29,
+      required_role_count: 4,
+      required_role_membership_count: 2,
+      role_attribute_drift_count: 0,
+      role_membership_drift_count: 0,
+      unexpected_role_membership_count: 0,
+      required_rls_table_count: 12,
+      required_policy_count: 10,
+      function_acl_drift_count: 0,
+      rls_owner_drift_count: 0,
+      rls_force_drift_count: 0,
+      policy_drift_count: 0,
+    });
+    expect(result._policy_expression_inventory).toHaveLength(10);
+    expect(() => api.assertResult(result, options)).not.toThrow();
+  });
+
+  it.each([
+    [
+      "grant option",
+      `grant execute on function public.read_full_local_auth_control()
+         to service_role with grant option;`,
+    ],
+    [
+      "snapshot function grant option",
+      `grant execute on function public.backfill_meal_recipe_content_snapshots()
+         to service_role with grant option;`,
+    ],
+    [
+      "snapshot function unexpected principal",
+      `grant execute on function public.backfill_meal_recipe_content_snapshots()
+         to authenticator;`,
+    ],
+    [
+      "authenticated BYPASSRLS",
+      "alter role authenticated bypassrls;",
+    ],
+    [
+      "anon SUPERUSER",
+      "alter role anon superuser;",
+    ],
+    [
+      "authenticated privileged membership",
+      "grant service_role to authenticated;",
+    ],
+    [
+      "authenticator service-role membership",
+      "grant service_role to authenticator;",
+    ],
+    [
+      "service-role reverse membership",
+      `revoke service_role from authenticator;
+       grant authenticator to service_role;`,
+    ],
+    [
+      "authenticator predefined privileged membership",
+      "grant pg_read_all_data to authenticator;",
+    ],
+    [
+      "service role BYPASSRLS contract",
+      "alter role service_role nobypassrls;",
+    ],
+    [
+      "authenticator SET ROLE contract",
+      "revoke set option for authenticated from authenticator;",
+    ],
+    ["FORCE RLS", "alter table public.recipes force row level security;"],
+    [
+      "protected table owner",
+      "alter table public.recipes owner to authenticated;",
+    ],
+    [
+      "restrictive policy",
+      `drop policy recipes_public_and_owner_read on public.recipes;
+       create policy recipes_public_and_owner_read
+         on public.recipes as restrictive for select to anon, authenticated
+         using (
+           deleted_at is null
+           and recipe_visibility_guard.is_owner_publicly_visible(created_by)
+           and (visibility = 'public' or auth.uid() = created_by)
+         );`,
+    ],
+    [
+      "changed boolean tree",
+      `drop policy recipes_public_and_owner_read on public.recipes;
+       create policy recipes_public_and_owner_read
+         on public.recipes for select to anon, authenticated
+         using (
+           (deleted_at is null
+             and recipe_visibility_guard.is_owner_publicly_visible(created_by)
+             and visibility = 'public')
+           or auth.uid() = created_by
+         );`,
+    ],
+    [
+      "uppercase policy literal",
+      `drop policy recipes_public_and_owner_read on public.recipes;
+       create policy recipes_public_and_owner_read
+         on public.recipes for select to anon, authenticated
+         using (
+           deleted_at is null
+           and recipe_visibility_guard.is_owner_publicly_visible(created_by)
+           and (visibility = 'PUBLIC' or auth.uid() = created_by)
+         );`,
+    ],
+    [
+      "spaced policy literal",
+      `drop policy recipes_public_and_owner_read on public.recipes;
+       create policy recipes_public_and_owner_read
+         on public.recipes for select to anon, authenticated
+         using (
+           deleted_at is null
+           and recipe_visibility_guard.is_owner_publicly_visible(created_by)
+           and (visibility = 'p u b l i c' or auth.uid() = created_by)
+         );`,
+    ],
+    [
+      "uppercase review-status literal",
+      `drop policy recipe_tags_parent_read on public.recipe_tags;
+       create policy recipe_tags_parent_read
+         on public.recipe_tags for select to anon, authenticated
+         using (
+           visibility = 'public'
+           and review_status = 'APPROVED'
+           and exists (
+             select 1 from public.recipes as recipe
+             where recipe.id = recipe_tags.recipe_id
+           )
+         );`,
+    ],
+  ])("rejects %s drift through the active verifier path", (_name, mutation) => {
+    const { api, result } = securityInventoryAfter(mutation, options);
+    expect(() => api.assertResult(result, options)).toThrow(
+      /security inventory failed closed/i,
+    );
   });
 });

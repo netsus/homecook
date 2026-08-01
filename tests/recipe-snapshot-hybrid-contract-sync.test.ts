@@ -313,8 +313,8 @@ describe("recipe snapshot full-local contract lock", () => {
             name: "Stage 3 deployable app/runtime authority",
             pattern: /Stage 3 deployable app\/runtime authority/i,
           },
-          { name: "activation/Manual Only", pattern: /activation\/Manual Only/ },
-          { name: "pending/not implemented", pattern: /pending\/not implemented/ },
+          { name: "Stage 2 verifier", pattern: /Stage 2 fail-closed verifier/ },
+          { name: "Manual Only pending", pattern: /Manual Only.*pending/ },
         ],
       },
       {
@@ -509,7 +509,7 @@ describe("recipe snapshot full-local contract lock", () => {
       expect(() => assertPr1263Projections([projection])).not.toThrow();
     }
     expect(activeGateBundle()).toContain(
-      "planned-stage2-full-local-snapshot-verifier-not-yet-implemented",
+      "stage2-full-local-snapshot-verifier-implemented-merged-exact-execution-pending",
     );
   });
 
@@ -530,17 +530,20 @@ describe("recipe snapshot full-local contract lock", () => {
     expect(acceptance).not.toContain("mirror terminal");
   });
 
-  it("separates the planned full-local gate from already implemented evidence", () => {
+  it("routes the active full-local gate through the Stage 2 verifier", () => {
     const active = activeGateBundle();
     const readme = read(readmePath);
 
-    expect(active).toContain("planned-stage2-full-local-snapshot-verifier-not-yet-implemented");
+    expect(active).toContain(
+      "stage2-full-local-snapshot-verifier-implemented-merged-exact-execution-pending",
+    );
     expect(active).toContain("tests/full-local-auth-db-foundation.test.ts");
     expect(active).toContain(
       "tests/full-local-auth-db-foundation-postgres.integration.test.ts",
     );
-    expect(active).not.toContain("verify-recipe-snapshot-authority-full-local.mjs");
-    expect(readme).toContain("Stage 1 does not implement a new full-local verifier");
+    expect(active).toContain("tests/recipe-snapshot-authority-full-local-verifier.test.ts");
+    expect(readme).toContain("verify-recipe-snapshot-authority-full-local.mjs");
+    expect(readme).toContain("merged exact SHA");
   });
 
   it("locks the first-local-state rollback floor", () => {

@@ -24,6 +24,9 @@ describe("recipe snapshot authority remote verifier", () => {
     const hybridCli = resolve(
       "scripts/verify-recipe-snapshot-authority-hybrid.mjs",
     );
+    const fullLocalCli = resolve(
+      "scripts/verify-recipe-snapshot-authority-full-local.mjs",
+    );
     const git = (args: string[]) => {
       const result = spawnSync("git", args, {
         cwd: repositoryRoot,
@@ -32,13 +35,23 @@ describe("recipe snapshot authority remote verifier", () => {
       expect(result.status, result.stderr).toBe(0);
       return result.stdout.trim();
     };
-    const verifyRejected = (cli: string) => {
+    const verifyRejected = (
+      cli: string,
+      mode = "post-merge-read-only",
+    ) => {
       const result = spawnSync(
         process.execPath,
-        [cli, "--mode", "post-merge-read-only", "--dry-run"],
+        [cli, "--mode", mode, "--dry-run"],
         {
           cwd: repositoryRoot,
           encoding: "utf8",
+          env: mode === "post-merge-full-local-read-only"
+            ? {
+                ...process.env,
+                HOMECOOK_AUTH_AUTHORITY: "local",
+                HOMECOOK_DATA_AUTHORITY: "local",
+              }
+            : process.env,
         },
       );
       expect(result.status, result.stdout).toBe(1);
@@ -102,6 +115,18 @@ describe("recipe snapshot authority remote verifier", () => {
           "utf8",
         ),
       );
+      writeFileSync(
+        join(
+          migrationDirectory,
+          "20260731111000_product_ingredient_link_account_cleanup.sql",
+        ),
+        readFileSync(
+          resolve(
+            "supabase/migrations/20260731111000_product_ingredient_link_account_cleanup.sql",
+          ),
+          "utf8",
+        ),
+      );
 
       git(["replace", "--graft", masterSha, featureSha]);
       expect(
@@ -113,6 +138,7 @@ describe("recipe snapshot authority remote verifier", () => {
       ).toBe(0);
       verifyRejected(remoteCli);
       verifyRejected(hybridCli);
+      verifyRejected(fullLocalCli, "post-merge-full-local-read-only");
 
       git(["replace", "-d", masterSha]);
       const gitDirectory = git(["rev-parse", "--git-dir"]);
@@ -127,6 +153,7 @@ describe("recipe snapshot authority remote verifier", () => {
       ).toBe(0);
       verifyRejected(remoteCli);
       verifyRejected(hybridCli);
+      verifyRejected(fullLocalCli, "post-merge-full-local-read-only");
     } finally {
       rmSync(fixtureRoot, { recursive: true, force: true });
     }
@@ -330,6 +357,12 @@ describe("recipe snapshot authority remote verifier", () => {
         fieldName: "test SQL",
       }),
     ).toThrow("test SQL must not contain mutating SQL keywords");
+    expect(() =>
+      verifier.assertRecipeSnapshotAuthorityReadOnlyVerificationSql({
+        sql: "select jsonb_build_object('command', 'UPDATE', 'privilege', 'EXECUTE')",
+        fieldName: "test SQL",
+      }),
+    ).not.toThrow();
 
     for (const sql of [
       "with safe as (select 1 as id) select id from safe;\n\\gexec",
@@ -532,6 +565,10 @@ describe("recipe snapshot authority remote verifier", () => {
       "scripts/verify-recipe-snapshot-authority-hybrid.mjs",
       "utf8",
     );
+    const fullLocalCli = readFileSync(
+      "scripts/verify-recipe-snapshot-authority-full-local.mjs",
+      "utf8",
+    );
 
     expect(cli).toContain("buildRecipeSnapshotAuthorityRemotePsqlRequest");
     expect(cli).toContain(
@@ -544,6 +581,8 @@ describe("recipe snapshot authority remote verifier", () => {
     expect(cli).toContain('"merge-base"');
     expect(hybridCli).toContain('"--no-replace-objects"');
     expect(hybridCli).toContain('"merge-base"');
+    expect(fullLocalCli).toContain('"--no-replace-objects"');
+    expect(fullLocalCli).toContain('"merge-base"');
     expect(cli).not.toContain("PGOPTIONS");
     expect(cli).not.toMatch(/process\.stdout\.write\([^\n]*PGPASSWORD/u);
   });
