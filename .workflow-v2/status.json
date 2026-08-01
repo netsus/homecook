@@ -2389,8 +2389,8 @@
     {
       "id": "recipe-snapshot-authority-foundation",
       "preset": "vertical-slice-strict",
-      "branch": "fix/recipe-snapshot-stage2-full-local-verifier",
-      "pr_path": "https://github.com/netsus/homecook/pull/1265",
+      "branch": "fix/recipe-snapshot-stage4-consumer-revalidation",
+      "pr_path": "https://github.com/netsus/homecook/pull/1267",
       "lifecycle": "in_progress",
       "approval_state": "not_started",
       "verification_status": "pending",
@@ -2413,7 +2413,7 @@
         "pnpm validate:closeout-sync -- --slice recipe-snapshot-authority-foundation",
         "git diff --check"
       ],
-      "notes": "Full-local Stage 1 contract sync is merged. PR #1263 merged the Stage 3 deployable app/runtime authority for OAuth flow ledger, callback/refresh/guarded Data/Storage/logout, loopback admin, request attestation, and the secret boundary; local authority activation requires explicit env+DB control. Provider live callback/link, Cloudflare, remote final backup, off-Mac restore 2회, and first local mutation/cutover remain Manual Only/pending. Stage 2 now implements the fail-closed snapshot-specific verifier. The latest Stage 3 REQUEST_CHANGES repair exact-compares ACL grant option across all 29 full-local and snapshot functions, protected role SUPERUSER/BYPASSRLS attributes and every membership edge incident to the four protected roles, exact owner plus ENABLE/FORCE RLS state for all 12 protected tables, policy permissiveness, boolean-tree structure and quoted policy literals. The actual snapshot/current-cleanup migration active path covers 12 tables and 10 policies in isolated fresh/replay PostgreSQL. This is implementation evidence only; fresh independent reviews, current-head checks and merged-exact-SHA execution remain pending. PR #1218/#1219/#1231/#1232/#1233/#1251 and the hybrid verifier remain historical evidence only. PR #1256 and PR #1262 are merged; #3 Storage/outbox runtime is merged. Snapshot-specific merged-head Train B, compatibility, and cleanup rehearsal remain pending. Lifecycle/verification/evaluation remain in_progress/pending/not_started.",
+      "notes": "Full-local Stage 1 contract sync is merged. PR #1263 merged the Stage 3 deployable app/runtime authority for OAuth flow ledger, callback/refresh/guarded Data/Storage/logout, loopback admin, request attestation, and the secret boundary; local authority activation requires explicit env+DB control. Provider live callback/link, Cloudflare, remote final backup, off-Mac restore 2회, and first local mutation/cutover remain Manual Only/pending. PR #1265 Stage 2/3 verifier is merged. Historical PR #1219 remains the original Stage 4 consumer evidence. Fresh Stage 4 revalidation Draft PR #1267 fixes the actual planner mutable-title fallback under a content pin and keeps focused Meal/planner/shopping/cooking/history/leftover plus Train B tests green. Merged PR #1268 restores owner-aware authenticated SELECT for content and nutrition snapshots without a service-role fallback; isolated fresh/replay and security inventory regressions are green. Activated live Route smoke, merged-exact-SHA, Manual Only evidence, and independent Stage 5/6 remain pending. Lifecycle/verification/evaluation remain in_progress/pending/not_started.",
       "evaluation_status": "not_started",
       "evaluation_round": 0,
       "last_evaluator_result": null,
