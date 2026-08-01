@@ -270,7 +270,7 @@ describe("personal recipe editor full-local contract lock", () => {
     });
     expect(item).toMatchObject({
       branch: docsBranch,
-      pr_path: "pending",
+      pr_path: "https://github.com/netsus/homecook/pull/1270",
       lifecycle: "in_progress",
       verification_status: "pending",
       evaluation_status: "not_started",
