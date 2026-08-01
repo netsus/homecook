@@ -50,22 +50,25 @@ const recipeVisibilityMigration = readFileSync(
 );
 const leftoverMigration = readFileSync(LEFTOVER_MIGRATION_PATH, "utf8");
 
+// Platform schema restore preserves the canonical migration owner. These
+// protected relations are repo-migration objects; Storage service-owned
+// relations are intentionally outside this locked 12-table inventory.
 const CORE_RLS_TABLES = [
-  ["private", "full_local_auth_control"],
-  ["private", "auth_flow_attempts"],
-  ["public", "recipes"],
-  ["public", "recipe_sources"],
-  ["public", "recipe_ingredients"],
-  ["public", "recipe_steps"],
-  ["public", "recipe_step_cooking_methods"],
-  ["public", "recipe_tags"],
-  ["public", "tags"],
+  ["private", "full_local_auth_control", "postgres"],
+  ["private", "auth_flow_attempts", "postgres"],
+  ["public", "recipes", "postgres"],
+  ["public", "recipe_sources", "postgres"],
+  ["public", "recipe_ingredients", "postgres"],
+  ["public", "recipe_steps", "postgres"],
+  ["public", "recipe_step_cooking_methods", "postgres"],
+  ["public", "recipe_tags", "postgres"],
+  ["public", "tags", "postgres"],
 ];
 
 const SNAPSHOT_RLS_TABLES = [
-  ["public", "recipe_nutrition_snapshots"],
-  ["public", "recipe_content_snapshots"],
-  ["public", "leftover_dishes"],
+  ["public", "recipe_nutrition_snapshots", "postgres"],
+  ["public", "recipe_content_snapshots", "postgres"],
+  ["public", "leftover_dishes", "postgres"],
 ];
 
 const CORE_POLICY_SOURCES = [
@@ -465,9 +468,10 @@ function buildSecurityInventoryExpression({ includeSnapshotTables }) {
     entry.searchPath,
     entry.allowedAcl,
   ]));
-  const tableValues = valuesSql(rlsTables.map(([schema, table]) => [
+  const tableValues = valuesSql(rlsTables.map(([schema, table, owner]) => [
     schema,
     table,
+    owner,
     "false",
   ]));
   const policyValues = valuesSql(policies.map((policy) => [
@@ -557,11 +561,16 @@ function buildSecurityInventoryExpression({ includeSnapshotTables }) {
         where protected_role.role_name = granted_role.rolname
            or protected_role.role_name = member_role.rolname
       )
-    ), expected_rls_tables(schema_name, table_name, force_rls) as (
+    ), expected_rls_tables(schema_name, table_name, owner_name, force_rls) as (
       values
       ${tableValues}
     ), rls_inventory as (
-      select expected.*, relation.oid, relation.relrowsecurity, relation.relforcerowsecurity
+      select
+        expected.*,
+        relation.oid,
+        owner.rolname as actual_owner,
+        relation.relrowsecurity,
+        relation.relforcerowsecurity
       from expected_rls_tables as expected
       left join pg_catalog.pg_namespace as namespace
         on namespace.nspname = expected.schema_name
@@ -569,6 +578,7 @@ function buildSecurityInventoryExpression({ includeSnapshotTables }) {
         on relation.relnamespace = namespace.oid
        and relation.relname = expected.table_name
        and relation.relkind in ('r', 'p')
+      left join pg_catalog.pg_roles as owner on owner.oid = relation.relowner
     ), expected_policies(
       schema_name, table_name, policy_name, command_name, role_names,
       permissive_mode, using_predicate, check_predicate
@@ -657,6 +667,7 @@ function buildSecurityInventoryExpression({ includeSnapshotTables }) {
       'required_rls_table_count', (select count(*) from expected_rls_tables),
       'rls_table_missing_count', (select count(*) from rls_inventory where oid is null),
       'rls_disabled_count', (select count(*) from rls_inventory where oid is not null and not relrowsecurity),
+      'rls_owner_drift_count', (select count(*) from rls_inventory where oid is not null and actual_owner is distinct from owner_name),
       'rls_force_drift_count', (select count(*) from rls_inventory where oid is not null and relforcerowsecurity is distinct from force_rls::boolean),
       'required_policy_count', (select count(*) from expected_policies),
       'policy_missing_count', (
@@ -718,6 +729,7 @@ const SECURITY_RESULT_KEYS = [
   "required_rls_table_count",
   "rls_table_missing_count",
   "rls_disabled_count",
+  "rls_owner_drift_count",
   "rls_force_drift_count",
   "required_policy_count",
   "policy_missing_count",

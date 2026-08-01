@@ -130,6 +130,7 @@ const localResult = {
     required_rls_table_count: 12,
     rls_table_missing_count: 0,
     rls_disabled_count: 0,
+    rls_owner_drift_count: 0,
     rls_force_drift_count: 0,
     required_policy_count: 10,
     policy_missing_count: 0,
@@ -388,6 +389,10 @@ describe("recipe snapshot authority full-local verifier", () => {
       ["full_local_security_inventory", {
         ...localResult.full_local_security_inventory,
         unexpected_role_membership_count: 1,
+      }],
+      ["full_local_security_inventory", {
+        ...localResult.full_local_security_inventory,
+        rls_owner_drift_count: 1,
       }],
       ["full_local_security_inventory", {
         ...localResult.full_local_security_inventory,

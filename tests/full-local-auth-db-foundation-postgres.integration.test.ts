@@ -667,6 +667,7 @@ run("full-local Auth isolated PostgreSQL foundation", () => {
       required_rls_table_count: 9,
       rls_table_missing_count: 0,
       rls_disabled_count: 0,
+      rls_owner_drift_count: 0,
       rls_force_drift_count: 0,
       required_policy_count: 7,
       policy_missing_count: 0,
@@ -828,6 +829,7 @@ activeInventoryRun("active full-local snapshot security inventory", () => {
       required_rls_table_count: 12,
       required_policy_count: 10,
       function_acl_drift_count: 0,
+      rls_owner_drift_count: 0,
       rls_force_drift_count: 0,
       policy_drift_count: 0,
     });
@@ -885,6 +887,10 @@ activeInventoryRun("active full-local snapshot security inventory", () => {
       "revoke set option for authenticated from authenticator;",
     ],
     ["FORCE RLS", "alter table public.recipes force row level security;"],
+    [
+      "protected table owner",
+      "alter table public.recipes owner to authenticated;",
+    ],
     [
       "restrictive policy",
       `drop policy recipes_public_and_owner_read on public.recipes;
