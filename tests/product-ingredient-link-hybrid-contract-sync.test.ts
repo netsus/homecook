@@ -474,24 +474,27 @@ describe("product ingredient link contract lock", () => {
       read(workItemPath),
       read(".workflow-v2/status.json"),
     ].join("\n");
-    const evidenceBundle = [
+    const historicalEvidenceBundle = [
       read(readmePath),
       read(acceptancePath),
       read(automationPath),
       read(workItemPath),
-      read(".workflow-v2/status.json"),
-    ].join("\n");
+    ]
+      .join("\n")
+      .toLowerCase();
 
     expect(bundle).toContain(target);
     expect(read(readmePath)).toContain(
       "Historical hybrid verifier implementation evidence",
     );
-    expect(evidenceBundle).toContain("PR #1248");
-    expect(evidenceBundle).toContain(
+    expect(historicalEvidenceBundle).toContain("pr #1248");
+    expect(historicalEvidenceBundle).toContain(
       "4881c4c53181a5504e16f2fa3971e9f6f4b99f05",
     );
-    expect(evidenceBundle).toContain("merged exact-SHA dry-run passed");
-    expect(evidenceBundle).toContain(
+    expect(historicalEvidenceBundle).toContain(
+      "merged exact-sha dry-run passed",
+    );
+    expect(historicalEvidenceBundle).toContain(
       "full local/remote evidence remains pending",
     );
     expect(read(readmePath)).not.toContain("No merged exact-SHA result");

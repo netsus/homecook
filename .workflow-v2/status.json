@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-08-01T12:15:02Z",
+  "updated_at": "2026-08-02T00:00:00Z",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -2423,15 +2423,15 @@
     {
       "id": "personal-recipe-editor-decoupling",
       "preset": "vertical-slice-strict",
-      "branch": "feature/fe-personal-recipe-editor-decoupling",
-      "pr_path": "https://github.com/netsus/homecook/pull/1243",
+      "branch": "docs/personal-recipe-editor-stage1-full-local-relock",
+      "pr_path": "https://github.com/netsus/homecook/pull/1270",
       "lifecycle": "in_progress",
-      "approval_state": "codex_approved",
+      "approval_state": "not_started",
       "verification_status": "pending",
       "required_checks": [
         "pnpm validate:source-of-truth-sync",
         "pnpm validate:workflow-v2",
-        "BRANCH_NAME=docs/personal-recipe-editor-stage1-relock pnpm validate:workpack -- --slice personal-recipe-editor-decoupling",
+        "BRANCH_NAME=docs/personal-recipe-editor-stage1-full-local-relock pnpm validate:workpack -- --slice personal-recipe-editor-decoupling",
         "node scripts/validate-automation-spec.mjs --slice personal-recipe-editor-decoupling",
         "pnpm validate:omo-bookkeeping",
         "pnpm exec vitest run tests/personal-recipe-editor-hybrid-contract-sync.test.ts",
@@ -2445,10 +2445,10 @@
         "pnpm verify:frontend",
         "pnpm validate:exploratory-qa-evidence -- --slice personal-recipe-editor-decoupling",
         "pnpm validate:closeout-sync -- --slice personal-recipe-editor-decoupling",
-        "node scripts/verify-personal-recipe-editor-hybrid.mjs --mode post-merge-read-only",
+        "pnpm exec vitest run tests/personal-recipe-editor-full-local-verifier.test.ts",
         "git diff --check"
       ],
-      "notes": "Stage 2/3 evidence merged through PR #1238. PR #1243 merged the capability-off Stage 4/5 implementation as 6565c2a84f3b7eba9f0579db7b91fed12fc08f23 from exact head e177a882e0fbc35847895a7a0f1dd775ff4425d1 after independent code/security/authority review and 20 success and one normal full-regression skip. PR #1246 merged the test-first hybrid verifier as 354c569c8e40889bcfa7d9832cb9cec93f53db46 after exact-head code/security P0/P1/P2 0/0/0 and 21 green or intended-skip checks; its merged exact-SHA dry-run passed. required_checks remains the full-lifecycle gate because full local/remote evidence remains pending: the current local instance lacks private.remote_auth_identity_epochs and no truthful sanitized remote Auth evidence exists, so lifecycle/verification/evaluation stay in_progress/pending/not_started. #6 writes and #8 activation remain future work or Manual Only. No production/staging or remote application DB/Storage write was performed; external personal write dark remains enforced.",
+      "notes": "Stage 1 docs gate pass evidence: reviewed content head 8dbf99f6cf78fdcd66d2a5de1c07e2d37d55f047; code/docs/workflow task 019fbf9e-055d-7e81-89c9-83bfe845b1c6 APPROVE and security/authority task 019fbf9e-055d-7e81-89c9-83dae1459246 APPROVE; both P0/P1/P2=0/0/0 and findings=0; raw checks 17 = 12 success + 5 intended skip with pending/fail/cancel/rerun=0; full tests 5,040 pass/283 skip; exact head/base/clean confirmed. This is a Stage 1 docs gate pass only; full lifecycle remains in_progress with approval_state=not_started, verification=pending and evaluation=not_started, and Stage 2 through Stage 6, Manual Only operations and the final exact-head verifier pending. Before the first local production Auth state mutation, LIVE_REMOTE Auth/application DB/Storage remains the source-of-record; the target is one self-hosted local Supabase Auth/PostgreSQL/PostgREST/Storage authority with stable UUID restore, transient session/refresh/flow-state exclusion and full re-login. PR #1238, capability-off PR #1243 merge 6565c2a84f3b7eba9f0579db7b91fed12fc08f23 and hybrid verifier PR #1246 merge 354c569c8e40889bcfa7d9832cb9cec93f53db46 remain historical evidence. Active order is Stage 2 read-only verifier TDD, independent Stage 3 code/security review, Stage 4 existing shell revalidation, lightweight Stage 5 no-visual-drift review and Stage 6 merged-exact closeout. #4 is not a predecessor and #6/#7/#8 activation is not claimed. Activated provider callback/link, Cloudflare, backup/restore, first local mutation/cutover and post-floor recovery remain Manual Only/pending. Production/staging/remote application write 0 and external personal write dark remain enforced.",
       "evaluation_status": "not_started",
       "evaluation_round": 0,
       "last_evaluator_result": null,
