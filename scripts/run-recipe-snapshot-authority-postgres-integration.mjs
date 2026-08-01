@@ -14,6 +14,7 @@ const ACTIVE_SECURITY_MIGRATIONS = [
   "supabase/migrations/20260723140000_account_session_generation_foundation.sql",
   "supabase/migrations/20260723170000_recipe_visibility_read_hardening.sql",
   "supabase/migrations/20260730090000_hybrid_auth_remote_identity_epoch_mirror.sql",
+  "supabase/migrations/20260731111000_product_ingredient_link_account_cleanup.sql",
   "supabase/migrations/20260801120000_full_local_auth_db_foundation.sql",
 ];
 const INTEGRATION_TEST =
@@ -135,7 +136,8 @@ create role anon nologin;
 create role authenticated nologin;
 create role service_role nologin bypassrls;
 create role supabase_auth_admin nologin;
-create role authenticator nologin;
+create role authenticator noinherit login;
+grant anon, authenticated, service_role to authenticator;
 
 create schema if not exists auth;
 create table auth.users (

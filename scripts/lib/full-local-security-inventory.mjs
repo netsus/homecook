@@ -9,9 +9,21 @@ const FULL_LOCAL_MANIFEST_PATH = join(
   REPOSITORY_ROOT,
   "docs/security/full-local-auth-db-security-function-authorization-manifest.json",
 );
+const SNAPSHOT_MANIFEST_PATH = join(
+  REPOSITORY_ROOT,
+  "docs/security/recipe-snapshot-authority-security-function-authorization-manifest.json",
+);
 const FULL_LOCAL_MIGRATION_PATH = join(
   REPOSITORY_ROOT,
   "supabase/migrations/20260801120000_full_local_auth_db_foundation.sql",
+);
+const SNAPSHOT_MIGRATION_PATH = join(
+  REPOSITORY_ROOT,
+  "supabase/migrations/20260729170500_recipe_snapshot_authority_foundation.sql",
+);
+const CURRENT_ACCOUNT_CLEANUP_MIGRATION_PATH = join(
+  REPOSITORY_ROOT,
+  "supabase/migrations/20260731111000_product_ingredient_link_account_cleanup.sql",
 );
 const RECIPE_VISIBILITY_MIGRATION_PATH = join(
   REPOSITORY_ROOT,
@@ -23,7 +35,15 @@ const LEFTOVER_MIGRATION_PATH = join(
 );
 
 const manifest = JSON.parse(readFileSync(FULL_LOCAL_MANIFEST_PATH, "utf8"));
+const snapshotManifest = JSON.parse(
+  readFileSync(SNAPSHOT_MANIFEST_PATH, "utf8"),
+);
 const fullLocalMigration = readFileSync(FULL_LOCAL_MIGRATION_PATH, "utf8");
+const snapshotMigration = readFileSync(SNAPSHOT_MIGRATION_PATH, "utf8");
+const currentAccountCleanupMigration = readFileSync(
+  CURRENT_ACCOUNT_CLEANUP_MIGRATION_PATH,
+  "utf8",
+);
 const recipeVisibilityMigration = readFileSync(
   RECIPE_VISIBILITY_MIGRATION_PATH,
   "utf8",
@@ -62,6 +82,18 @@ const SNAPSHOT_POLICY_SOURCES = [
   [leftoverMigration, "leftover_dishes_select_own"],
   [leftoverMigration, "leftover_dishes_insert_own"],
   [leftoverMigration, "leftover_dishes_update_own"],
+];
+
+const ROLE_ATTRIBUTE_CONTRACT = [
+  ["anon", "false", "false"],
+  ["authenticated", "false", "false"],
+  ["service_role", "false", "true"],
+  ["authenticator", "false", "false"],
+];
+
+const ROLE_MEMBERSHIP_CONTRACT = [
+  ["anon", "authenticator", "false", "false", "true"],
+  ["authenticated", "authenticator", "false", "false", "true"],
 ];
 
 function sqlLiteral(value) {
@@ -339,15 +371,15 @@ function parsePolicy(migration, policyName) {
   };
 }
 
-function parseFunction(entry) {
+function parseFunction(entry, migration) {
   const identity = entry.signature.slice(0, entry.signature.indexOf("("));
   const escapedIdentity = identity.replaceAll(".", "\\.");
   const startMatch = new RegExp(
     `create\\s+or\\s+replace\\s+function\\s+${escapedIdentity}\\s*\\(`,
     "iu",
-  ).exec(fullLocalMigration);
+  ).exec(migration);
   if (!startMatch) throw new Error(`function source is missing: ${entry.signature}`);
-  const definition = fullLocalMigration.slice(startMatch.index);
+  const definition = migration.slice(startMatch.index);
   const bodyMarker = definition.match(/\bas\s+(\$[a-z0-9_]*\$)/iu);
   if (!bodyMarker || bodyMarker.index === undefined) {
     throw new Error(`function body marker is missing: ${entry.signature}`);
@@ -390,7 +422,17 @@ function parseFunction(entry) {
   };
 }
 
-const FUNCTION_CONTRACT = manifest.functions.map(parseFunction);
+const FUNCTION_CONTRACT = manifest.functions.map((entry) =>
+  parseFunction(entry, fullLocalMigration)
+);
+const SNAPSHOT_FUNCTION_CONTRACT = snapshotManifest.functions.map((entry) =>
+  parseFunction(
+    entry,
+    entry.signature === "public.delete_user_private_data(uuid)"
+      ? currentAccountCleanupMigration
+      : snapshotMigration,
+  )
+);
 const CORE_POLICY_CONTRACT = CORE_POLICY_SOURCES.map(([migration, name]) =>
   parsePolicy(migration, name)
 );
@@ -403,13 +445,16 @@ function valuesSql(rows) {
 }
 
 function buildSecurityInventoryExpression({ includeSnapshotTables }) {
+  const functions = includeSnapshotTables
+    ? [...FUNCTION_CONTRACT, ...SNAPSHOT_FUNCTION_CONTRACT]
+    : FUNCTION_CONTRACT;
   const rlsTables = includeSnapshotTables
     ? [...CORE_RLS_TABLES, ...SNAPSHOT_RLS_TABLES]
     : CORE_RLS_TABLES;
   const policies = includeSnapshotTables
     ? [...CORE_POLICY_CONTRACT, ...SNAPSHOT_POLICY_CONTRACT]
     : CORE_POLICY_CONTRACT;
-  const functionValues = valuesSql(FUNCTION_CONTRACT.map((entry) => [
+  const functionValues = valuesSql(functions.map((entry) => [
     entry.lookupSignature,
     entry.signature,
     entry.schema,
@@ -435,6 +480,8 @@ function buildSecurityInventoryExpression({ includeSnapshotTables }) {
     policy.using,
     policy.check,
   ]));
+  const roleValues = valuesSql(ROLE_ATTRIBUTE_CONTRACT);
+  const membershipValues = valuesSql(ROLE_MEMBERSHIP_CONTRACT);
 
   return `
     with expected_functions(
@@ -476,6 +523,36 @@ function buildSecurityInventoryExpression({ includeSnapshotTables }) {
       left join pg_catalog.pg_proc as procedure
         on procedure.oid = pg_catalog.to_regprocedure(expected.lookup_signature)
       left join pg_catalog.pg_roles as owner on owner.oid = procedure.proowner
+    ), expected_roles(role_name, superuser, bypass_rls) as (
+      values
+      ${roleValues}
+    ), role_inventory as (
+      select
+        expected.*,
+        role.oid,
+        role.rolsuper,
+        role.rolbypassrls
+      from expected_roles as expected
+      left join pg_catalog.pg_roles as role on role.rolname = expected.role_name
+    ), expected_role_memberships(
+      granted_role_name, member_name, admin_option, inherit_option, set_option
+    ) as (
+      values
+      ${membershipValues}
+    ), role_membership_inventory as (
+      select
+        granted_role.rolname as granted_role_name,
+        member_role.rolname as member_name,
+        membership.admin_option,
+        membership.inherit_option,
+        membership.set_option
+      from pg_catalog.pg_auth_members as membership
+      join pg_catalog.pg_roles as granted_role
+        on granted_role.oid = membership.roleid
+      join pg_catalog.pg_roles as member_role
+        on member_role.oid = membership.member
+      where granted_role.rolname in ('anon', 'authenticated')
+         or member_role.rolname in ('anon', 'authenticated')
     ), expected_rls_tables(schema_name, table_name, force_rls) as (
       values
       ${tableValues}
@@ -537,6 +614,42 @@ function buildSecurityInventoryExpression({ includeSnapshotTables }) {
             ), ' ', '')
           )
       ),
+      'required_role_count', (select count(*) from expected_roles),
+      'role_missing_count', (select count(*) from role_inventory where oid is null),
+      'role_attribute_drift_count', (
+        select count(*) from role_inventory
+        where oid is not null
+          and (rolsuper is distinct from superuser::boolean
+            or rolbypassrls is distinct from bypass_rls::boolean)
+      ),
+      'required_role_membership_count', (select count(*) from expected_role_memberships),
+      'role_membership_missing_count', (
+        select count(*)
+        from expected_role_memberships as expected
+        left join role_membership_inventory as actual
+          on actual.granted_role_name = expected.granted_role_name
+         and actual.member_name = expected.member_name
+        where actual.granted_role_name is null
+      ),
+      'role_membership_drift_count', (
+        select count(*)
+        from expected_role_memberships as expected
+        join role_membership_inventory as actual
+          on actual.granted_role_name = expected.granted_role_name
+         and actual.member_name = expected.member_name
+        where actual.admin_option is distinct from expected.admin_option::boolean
+           or actual.inherit_option is distinct from expected.inherit_option::boolean
+           or actual.set_option is distinct from expected.set_option::boolean
+      ),
+      'unexpected_role_membership_count', (
+        select count(*)
+        from role_membership_inventory as actual
+        where not exists (
+          select 1 from expected_role_memberships as expected
+          where expected.granted_role_name = actual.granted_role_name
+            and expected.member_name = actual.member_name
+        )
+      ),
       'required_rls_table_count', (select count(*) from expected_rls_tables),
       'rls_table_missing_count', (select count(*) from rls_inventory where oid is null),
       'rls_disabled_count', (select count(*) from rls_inventory where oid is not null and not relrowsecurity),
@@ -591,6 +704,13 @@ const SECURITY_RESULT_KEYS = [
   "function_search_path_drift_count",
   "function_acl_drift_count",
   "unexpected_function_overload_count",
+  "required_role_count",
+  "role_missing_count",
+  "role_attribute_drift_count",
+  "required_role_membership_count",
+  "role_membership_missing_count",
+  "role_membership_drift_count",
+  "unexpected_role_membership_count",
   "required_rls_table_count",
   "rls_table_missing_count",
   "rls_disabled_count",
@@ -622,7 +742,9 @@ export function assertRecipeSnapshotAuthorityFullLocalSecurityInventoryResult(
   result,
   { includeSnapshotTables = false } = {},
 ) {
-  const expectedFunctionCount = FUNCTION_CONTRACT.length;
+  const expectedFunctionCount = includeSnapshotTables
+    ? FUNCTION_CONTRACT.length + SNAPSHOT_FUNCTION_CONTRACT.length
+    : FUNCTION_CONTRACT.length;
   const expectedTableCount = includeSnapshotTables
     ? CORE_RLS_TABLES.length + SNAPSHOT_RLS_TABLES.length
     : CORE_RLS_TABLES.length;
@@ -651,6 +773,8 @@ export function assertRecipeSnapshotAuthorityFullLocalSecurityInventoryResult(
     && Object.keys(result).length === SECURITY_RESULT_KEYS.length
     && SECURITY_RESULT_KEYS.every((key) => Object.hasOwn(result, key))
     && result.required_function_count === expectedFunctionCount
+    && result.required_role_count === ROLE_ATTRIBUTE_CONTRACT.length
+    && result.required_role_membership_count === ROLE_MEMBERSHIP_CONTRACT.length
     && result.required_rls_table_count === expectedTableCount
     && result.required_policy_count === expectedPolicyCount
     && exactPolicyExpressions

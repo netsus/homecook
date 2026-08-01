@@ -112,7 +112,7 @@ const localResult = {
   stable_auth_uuid_drift_count: 0,
   local_session_binding_shape_drift_count: 0,
   full_local_security_inventory: {
-    required_function_count: 13,
+    required_function_count: 29,
     function_missing_count: 0,
     function_source_drift_count: 0,
     function_security_drift_count: 0,
@@ -120,6 +120,13 @@ const localResult = {
     function_search_path_drift_count: 0,
     function_acl_drift_count: 0,
     unexpected_function_overload_count: 0,
+    required_role_count: 4,
+    role_missing_count: 0,
+    role_attribute_drift_count: 0,
+    required_role_membership_count: 2,
+    role_membership_missing_count: 0,
+    role_membership_drift_count: 0,
+    unexpected_role_membership_count: 0,
     required_rls_table_count: 12,
     rls_table_missing_count: 0,
     rls_disabled_count: 0,
@@ -257,11 +264,17 @@ describe("recipe snapshot authority full-local verifier", () => {
     expect(plan.sql).toContain("auth.users");
     expect(plan.sql).toContain("pg_policies");
     expect(plan.sql).toContain("pg_catalog.aclexplode");
+    expect(plan.sql).toContain("pg_catalog.pg_auth_members");
+    expect(plan.sql).toContain("membership.set_option");
+    expect(plan.sql).toContain("role.rolbypassrls");
     expect(plan.sql).toContain("relation.relrowsecurity");
     expect(plan.sql).toContain("unexpected_function_overload_count");
     expect(plan.sql).toContain("function_source_drift_count");
     expect(plan.sql).toContain(
       "public.revoke_full_local_session_authority(text,uuid,text,integer)",
+    );
+    expect(plan.sql).toContain(
+      "public.backfill_meal_recipe_content_snapshots()",
     );
     const cleanupHash = createHash("md5")
       .update(currentAccountCleanupSource())
@@ -367,6 +380,14 @@ describe("recipe snapshot authority full-local verifier", () => {
       ["full_local_security_inventory", {
         ...localResult.full_local_security_inventory,
         function_acl_drift_count: 1,
+      }],
+      ["full_local_security_inventory", {
+        ...localResult.full_local_security_inventory,
+        role_attribute_drift_count: 1,
+      }],
+      ["full_local_security_inventory", {
+        ...localResult.full_local_security_inventory,
+        unexpected_role_membership_count: 1,
       }],
       ["full_local_security_inventory", {
         ...localResult.full_local_security_inventory,

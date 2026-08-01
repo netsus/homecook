@@ -657,6 +657,13 @@ run("full-local Auth isolated PostgreSQL foundation", () => {
       function_search_path_drift_count: 0,
       function_acl_drift_count: 0,
       unexpected_function_overload_count: 0,
+      required_role_count: 4,
+      role_missing_count: 0,
+      role_attribute_drift_count: 0,
+      required_role_membership_count: 2,
+      role_membership_missing_count: 0,
+      role_membership_drift_count: 0,
+      unexpected_role_membership_count: 0,
       required_rls_table_count: 9,
       rls_table_missing_count: 0,
       rls_disabled_count: 0,
@@ -812,7 +819,12 @@ activeInventoryRun("active full-local snapshot security inventory", () => {
   it("accepts the active 12-table and 10-policy inventory", () => {
     const { api, result } = securityInventoryAfter("", options);
     expect(result).toMatchObject({
-      required_function_count: 13,
+      required_function_count: 29,
+      required_role_count: 4,
+      required_role_membership_count: 2,
+      role_attribute_drift_count: 0,
+      role_membership_drift_count: 0,
+      unexpected_role_membership_count: 0,
       required_rls_table_count: 12,
       required_policy_count: 10,
       function_acl_drift_count: 0,
@@ -828,6 +840,36 @@ activeInventoryRun("active full-local snapshot security inventory", () => {
       "grant option",
       `grant execute on function public.read_full_local_auth_control()
          to service_role with grant option;`,
+    ],
+    [
+      "snapshot function grant option",
+      `grant execute on function public.backfill_meal_recipe_content_snapshots()
+         to service_role with grant option;`,
+    ],
+    [
+      "snapshot function unexpected principal",
+      `grant execute on function public.backfill_meal_recipe_content_snapshots()
+         to authenticator;`,
+    ],
+    [
+      "authenticated BYPASSRLS",
+      "alter role authenticated bypassrls;",
+    ],
+    [
+      "anon SUPERUSER",
+      "alter role anon superuser;",
+    ],
+    [
+      "authenticated privileged membership",
+      "grant service_role to authenticated;",
+    ],
+    [
+      "service role BYPASSRLS contract",
+      "alter role service_role nobypassrls;",
+    ],
+    [
+      "authenticator SET ROLE contract",
+      "revoke set option for authenticated from authenticator;",
     ],
     ["FORCE RLS", "alter table public.recipes force row level security;"],
     [
