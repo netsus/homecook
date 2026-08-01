@@ -111,6 +111,10 @@ const MUTATING_SQL_KEYWORD_PATTERN =
   /\b(?:insert|update|delete|truncate|alter|create|drop|grant|revoke|call|do|merge|copy|vacuum|reindex|refresh|execute|perform)\b/iu;
 const PSQL_META_COMMAND_PATTERN = /(^|[\r\n])\s*\\[^\s]/u;
 
+function withoutSqlStringLiterals(sql) {
+  return sql.replace(/'(?:''|[^'])*'/gu, "''");
+}
+
 function hasOnlyAllowedKeys(result) {
   const actualKeys = Object.keys(result).sort();
   const expectedKeys = [...ALLOWED_RESULT_KEYS].sort();
@@ -144,7 +148,9 @@ export function assertRecipeSnapshotAuthorityReadOnlyVerificationSql({
     throw new Error(`${normalizedFieldName} must be a single SELECT/CTE statement`);
   }
 
-  if (MUTATING_SQL_KEYWORD_PATTERN.test(withoutTrailingSemicolon)) {
+  if (MUTATING_SQL_KEYWORD_PATTERN.test(
+    withoutSqlStringLiterals(withoutTrailingSemicolon),
+  )) {
     throw new Error(`${normalizedFieldName} must not contain mutating SQL keywords`);
   }
 }

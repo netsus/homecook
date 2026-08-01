@@ -10,6 +10,8 @@ import {
   buildRecipeSnapshotAuthorityFullLocalSummary,
   buildRecipeSnapshotAuthorityFullLocalVerificationPlan,
 } from "../scripts/lib/recipe-snapshot-authority-full-local-verifier.mjs";
+import * as fullLocalVerifier from
+  "../scripts/lib/recipe-snapshot-authority-full-local-verifier.mjs";
 
 const sourceMergeSha = "a".repeat(40);
 
@@ -66,9 +68,23 @@ const localResult = {
   local_control_shape_drift_count: 0,
   stable_auth_uuid_drift_count: 0,
   local_session_binding_shape_drift_count: 0,
-  local_session_revocation_function_missing_count: 0,
-  auth_uid_rls_policy_missing_count: 0,
-  request_authority_function_missing_count: 0,
+  full_local_security_inventory: {
+    required_function_count: 13,
+    function_missing_count: 0,
+    function_source_drift_count: 0,
+    function_security_drift_count: 0,
+    function_owner_drift_count: 0,
+    function_search_path_drift_count: 0,
+    function_acl_drift_count: 0,
+    unexpected_function_overload_count: 0,
+    required_rls_table_count: 12,
+    rls_table_missing_count: 0,
+    rls_disabled_count: 0,
+    required_policy_count: 10,
+    policy_missing_count: 0,
+    policy_drift_count: 0,
+    unexpected_policy_count: 0,
+  },
   account_cleanup_function_missing_count: 0,
   owner_null_shared_snapshot_count: 2,
   remote_application_writes: 0,
@@ -121,6 +137,53 @@ function currentAccountCleanupSource() {
 }
 
 describe("recipe snapshot authority full-local verifier", () => {
+  it("requires both application authority environment controls to be exactly local", () => {
+    const assertEnvironment = (
+      fullLocalVerifier as Record<string, unknown>
+    ).assertRecipeSnapshotAuthorityFullLocalEnvironment as
+      | ((environment: Record<string, string | undefined>) => void)
+      | undefined;
+
+    expect(assertEnvironment).toBeTypeOf("function");
+    expect(() => assertEnvironment?.({
+      HOMECOOK_AUTH_AUTHORITY: "local",
+      HOMECOOK_DATA_AUTHORITY: "local",
+    })).not.toThrow();
+
+    for (const environment of [
+      { HOMECOOK_AUTH_AUTHORITY: "remote", HOMECOOK_DATA_AUTHORITY: "local" },
+      { HOMECOOK_AUTH_AUTHORITY: "local", HOMECOOK_DATA_AUTHORITY: "remote" },
+      { HOMECOOK_DATA_AUTHORITY: "local" },
+      { HOMECOOK_AUTH_AUTHORITY: "local" },
+      {},
+      { HOMECOOK_AUTH_AUTHORITY: "local-shadow", HOMECOOK_DATA_AUTHORITY: "local" },
+      { HOMECOOK_AUTH_AUTHORITY: "local", HOMECOOK_DATA_AUTHORITY: "local-shadow" },
+      { HOMECOOK_AUTH_AUTHORITY: "locla", HOMECOOK_DATA_AUTHORITY: "local" },
+    ]) {
+      expect(() => assertEnvironment?.(environment)).toThrow(
+        /full-local application authority environment is not active/i,
+      );
+    }
+
+    try {
+      assertEnvironment?.({
+        HOMECOOK_AUTH_AUTHORITY: "sensitive-authority-value",
+        HOMECOOK_DATA_AUTHORITY: "local",
+      });
+    } catch (error) {
+      expect(String(error)).not.toContain("sensitive-authority-value");
+    }
+
+    const cli = readFileSync(
+      "scripts/verify-recipe-snapshot-authority-full-local.mjs",
+      "utf8",
+    );
+    expect(cli.indexOf("assertRecipeSnapshotAuthorityFullLocalEnvironment"))
+      .toBeGreaterThanOrEqual(0);
+    expect(cli.indexOf("assertRecipeSnapshotAuthorityFullLocalEnvironment"))
+      .toBeLessThan(cli.indexOf("if (dryRun)"));
+  });
+
   it("builds one fail-closed full-local read-only plan", () => {
     const plan = buildRecipeSnapshotAuthorityFullLocalVerificationPlan({
       mode: "post-merge-full-local-read-only",
@@ -148,6 +211,10 @@ describe("recipe snapshot authority full-local verifier", () => {
     expect(plan.sql).toContain("user_session_generation_bindings");
     expect(plan.sql).toContain("auth.users");
     expect(plan.sql).toContain("pg_policies");
+    expect(plan.sql).toContain("pg_catalog.aclexplode");
+    expect(plan.sql).toContain("relation.relrowsecurity");
+    expect(plan.sql).toContain("unexpected_function_overload_count");
+    expect(plan.sql).toContain("function_source_drift_count");
     expect(plan.sql).toContain(
       "public.revoke_full_local_session_authority(text,uuid,text,integer)",
     );
@@ -157,7 +224,7 @@ describe("recipe snapshot authority full-local verifier", () => {
     expect(plan.sql).toContain(cleanupHash);
     expect(plan.sql).not.toContain("fd9116a5fd1c58066d73b01e30220850");
     expect(plan.sql).toContain("authority_target_status");
-    expect(plan.sql).not.toMatch(
+    expect(plan.sql.replace(/'(?:''|[^'])*'/gu, "''")).not.toMatch(
       /\b(?:insert|update|delete|truncate|alter|create|drop|grant|revoke|call|do|merge|copy|vacuum|reindex|refresh|execute|perform)\b/iu,
     );
     expect(() =>
@@ -248,9 +315,10 @@ describe("recipe snapshot authority full-local verifier", () => {
       ["local_control_shape_drift_count", 1],
       ["stable_auth_uuid_drift_count", 1],
       ["local_session_binding_shape_drift_count", 1],
-      ["local_session_revocation_function_missing_count", 1],
-      ["auth_uid_rls_policy_missing_count", 1],
-      ["request_authority_function_missing_count", 1],
+      ["full_local_security_inventory", {
+        ...localResult.full_local_security_inventory,
+        function_source_drift_count: 1,
+      }],
       ["account_cleanup_function_missing_count", 1],
       ["remote_application_writes", 1],
     ] as const) {

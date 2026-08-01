@@ -45,6 +45,13 @@ describe("recipe snapshot authority remote verifier", () => {
         {
           cwd: repositoryRoot,
           encoding: "utf8",
+          env: mode === "post-merge-full-local-read-only"
+            ? {
+                ...process.env,
+                HOMECOOK_AUTH_AUTHORITY: "local",
+                HOMECOOK_DATA_AUTHORITY: "local",
+              }
+            : process.env,
         },
       );
       expect(result.status, result.stdout).toBe(1);
@@ -350,6 +357,12 @@ describe("recipe snapshot authority remote verifier", () => {
         fieldName: "test SQL",
       }),
     ).toThrow("test SQL must not contain mutating SQL keywords");
+    expect(() =>
+      verifier.assertRecipeSnapshotAuthorityReadOnlyVerificationSql({
+        sql: "select jsonb_build_object('command', 'UPDATE', 'privilege', 'EXECUTE')",
+        fieldName: "test SQL",
+      }),
+    ).not.toThrow();
 
     for (const sql of [
       "with safe as (select 1 as id) select id from safe;\n\\gexec",

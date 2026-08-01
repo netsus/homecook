@@ -5,6 +5,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { isAbsolute, resolve } from "node:path";
 
 import {
+  assertRecipeSnapshotAuthorityFullLocalEnvironment,
   assertRecipeSnapshotAuthorityFullLocalResult,
   buildRecipeSnapshotAuthorityFullLocalPsqlRequest,
   buildRecipeSnapshotAuthorityFullLocalSummary,
@@ -117,6 +118,7 @@ const pretty = process.argv.includes("--json");
 const repositoryRoot = process.cwd();
 
 try {
+  assertRecipeSnapshotAuthorityFullLocalEnvironment(process.env);
   const plan = buildRecipeSnapshotAuthorityFullLocalVerificationPlan({ mode });
   const mergeSha = assertMergedExactSource(repositoryRoot);
 

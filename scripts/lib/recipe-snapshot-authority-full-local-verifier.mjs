@@ -7,6 +7,16 @@ import {
   assertRecipeSnapshotAuthorityRemoteVerificationResult,
   buildRecipeSnapshotAuthorityRemoteVerificationPlan,
 } from "./recipe-snapshot-authority-remote-verifier.mjs";
+import {
+  assertRecipeSnapshotAuthorityFullLocalSecurityInventoryResult,
+  buildFullLocalSecurityInventoryExpression,
+  buildRecipeSnapshotAuthorityFullLocalSecurityInventorySql,
+} from "./full-local-security-inventory.mjs";
+
+export {
+  assertRecipeSnapshotAuthorityFullLocalSecurityInventoryResult,
+  buildRecipeSnapshotAuthorityFullLocalSecurityInventorySql,
+};
 
 const MODE = "post-merge-full-local-read-only";
 const TARGET = "self-hosted-local-auth-db-storage-single-authority";
@@ -102,9 +112,7 @@ const FULL_LOCAL_RESULT_FIELDS = [
   "local_control_shape_drift_count",
   "stable_auth_uuid_drift_count",
   "local_session_binding_shape_drift_count",
-  "local_session_revocation_function_missing_count",
-  "auth_uid_rls_policy_missing_count",
-  "request_authority_function_missing_count",
+  "full_local_security_inventory",
   "account_cleanup_function_missing_count",
   "owner_null_shared_snapshot_count",
   "remote_application_writes",
@@ -114,9 +122,6 @@ const ZERO_RESULT_FIELDS = [
   "local_control_shape_drift_count",
   "stable_auth_uuid_drift_count",
   "local_session_binding_shape_drift_count",
-  "local_session_revocation_function_missing_count",
-  "auth_uid_rls_policy_missing_count",
-  "request_authority_function_missing_count",
   "account_cleanup_function_missing_count",
   "remote_application_writes",
 ];
@@ -189,6 +194,19 @@ function hasExactKeys(value, expectedKeys) {
     && actualKeys.every((key, index) => key === sortedExpectedKeys[index]);
 }
 
+export function assertRecipeSnapshotAuthorityFullLocalEnvironment(
+  environment = {},
+) {
+  if (
+    environment.HOMECOOK_AUTH_AUTHORITY !== "local"
+    || environment.HOMECOOK_DATA_AUTHORITY !== "local"
+  ) {
+    throw new Error(
+      "full-local application authority environment is not active",
+    );
+  }
+}
+
 function buildFullLocalSql(snapshotSql) {
   const replacement = [
     "'remote_writes', 0,",
@@ -226,27 +244,9 @@ function buildFullLocalSql(snapshotSql) {
     "        or binding.auth_identity_created_at_snapshot is distinct from auth_user.created_at",
     "        or (binding.binding_state = 'active' and (binding.revoked_at is not null or binding.binding_expires_at <= binding.local_verified_at)))",
     "  ),",
-    "  'local_session_revocation_function_missing_count', (",
-    "    select count(*)::integer",
-    "    from (values",
-    "      ('public.revoke_full_local_session_authority(text,uuid,text,integer)'),",
-    "      ('private.revoke_full_local_bindings_on_lifecycle_exit()'),",
-    "      ('private.revoke_full_local_bindings_on_auth_identity_change()')",
-    "    ) as required(signature)",
-    "    where pg_catalog.to_regprocedure(required.signature) is null",
-    "  ),",
-    "  'auth_uid_rls_policy_missing_count', (",
-    "    select case when exists (",
-    "      select 1",
-    "      from pg_catalog.pg_policies as policy",
-    "      where policy.schemaname = 'public'",
-    "        and (coalesce(policy.qual, '') ilike '%auth.uid()%'",
-    "          or coalesce(policy.with_check, '') ilike '%auth.uid()%')",
-    "    ) then 0 else 1 end",
-    "  ),",
-    "  'request_authority_function_missing_count', (",
-    "    select case when pg_catalog.to_regprocedure('private.verify_hybrid_request_authority()') is null then 1 else 0 end",
-    "  ),",
+    "  'full_local_security_inventory', (" +
+      buildFullLocalSecurityInventoryExpression({ includeSnapshotTables: true }) +
+      "\n  ),",
     "  'account_cleanup_function_missing_count', (",
     "    select count(*)::integer",
     "    from (values",
@@ -383,6 +383,17 @@ export function assertRecipeSnapshotAuthorityFullLocalResult(result) {
     && FULL_LOCAL_RESULT_FIELDS.every((field) => Object.hasOwn(result, field))
     && result.authority_target_status === TARGET
     && result.local_control_row_count === 1
+    && (() => {
+      try {
+        assertRecipeSnapshotAuthorityFullLocalSecurityInventoryResult(
+          result.full_local_security_inventory,
+          { includeSnapshotTables: true },
+        );
+        return true;
+      } catch {
+        return false;
+      }
+    })()
     && ZERO_RESULT_FIELDS.every((field) => result[field] === 0)
     && Number.isInteger(result.owner_null_shared_snapshot_count)
     && result.owner_null_shared_snapshot_count >= 0;

@@ -2,6 +2,9 @@ import { spawnSync } from "node:child_process";
 
 import { beforeAll, describe, expect, it } from "vitest";
 
+import * as fullLocalVerifier from
+  "../scripts/lib/recipe-snapshot-authority-full-local-verifier.mjs";
+
 const enabled = process.env.HOMECOOK_FULL_LOCAL_AUTH_DB_PG_INTEGRATION === "1";
 const host = process.env.HOMECOOK_ACCOUNT_GENERATION_PGHOST ?? "";
 const port = process.env.HOMECOOK_ACCOUNT_GENERATION_PGPORT ?? "";
@@ -30,6 +33,40 @@ function psql(sql: string) {
   const result = psqlResult(sql);
   expect(result.status, result.stderr).toBe(0);
   return result.stdout.trim().split("\n").filter(Boolean).at(-1) ?? "";
+}
+
+function securityInventoryApi() {
+  const verifierApi = fullLocalVerifier as Record<string, unknown>;
+  const buildSql = verifierApi
+    .buildRecipeSnapshotAuthorityFullLocalSecurityInventorySql;
+  const assertResult = verifierApi
+    .assertRecipeSnapshotAuthorityFullLocalSecurityInventoryResult;
+  expect(buildSql).toBeTypeOf("function");
+  expect(assertResult).toBeTypeOf("function");
+  return {
+    buildSql: buildSql as () => string,
+    assertResult: assertResult as (result: Record<string, unknown>) => void,
+  };
+}
+
+function securityInventoryAfter(mutation = "") {
+  const api = securityInventoryApi();
+  const result = psqlResult(`
+    begin;
+    ${mutation}
+    ${api.buildSql()}
+    rollback;
+  `);
+  expect(result.status, result.stderr).toBe(0);
+  const json = result.stdout
+    .trim()
+    .split("\n")
+    .find((line) => line.trim().startsWith("{"));
+  expect(json).toBeDefined();
+  return {
+    api,
+    result: JSON.parse(json ?? "{}") as Record<string, unknown>,
+  };
 }
 
 const serviceClaims = `set request.jwt.claims = '{"role":"service_role"}';`;
@@ -596,5 +633,97 @@ run("full-local Auth isolated PostgreSQL foundation", () => {
       where conrelid = 'public.user_session_generation_bindings'::regclass
         and conname = 'user_session_generation_bindings_epoch_fkey';
     `)).toBe("t:t:1");
+  });
+
+  it("accepts the exact manifest function and protected-table RLS inventory", () => {
+    const { api, result } = securityInventoryAfter();
+    expect(result).toEqual({
+      required_function_count: 13,
+      function_missing_count: 0,
+      function_source_drift_count: 0,
+      function_security_drift_count: 0,
+      function_owner_drift_count: 0,
+      function_search_path_drift_count: 0,
+      function_acl_drift_count: 0,
+      unexpected_function_overload_count: 0,
+      required_rls_table_count: 9,
+      rls_table_missing_count: 0,
+      rls_disabled_count: 0,
+      required_policy_count: 7,
+      policy_missing_count: 0,
+      policy_drift_count: 0,
+      unexpected_policy_count: 0,
+    });
+    expect(() => api.assertResult(result)).not.toThrow();
+  });
+
+  it("rejects an allow-all replacement body", () => {
+    const { api, result } = securityInventoryAfter(`
+      create or replace function public.read_full_local_auth_control()
+      returns jsonb
+      language plpgsql
+      stable
+      security definer
+      set search_path = pg_catalog, public, private, auth, pg_temp
+      as $mutation$
+      begin
+        return '{}'::jsonb;
+      end;
+      $mutation$;
+    `);
+    expect(() => api.assertResult(result)).toThrow(
+      /security inventory failed closed/i,
+    );
+  });
+
+  it("rejects an unexpected anon EXECUTE grant", () => {
+    const { api, result } = securityInventoryAfter(`
+      grant execute on function public.read_full_local_auth_control() to anon;
+    `);
+    expect(() => api.assertResult(result)).toThrow(
+      /security inventory failed closed/i,
+    );
+  });
+
+  it("rejects SECURITY INVOKER and unsafe search_path drift", () => {
+    const { api, result } = securityInventoryAfter(`
+      alter function public.read_full_local_auth_control() security invoker;
+      alter function public.read_full_local_auth_control()
+        set search_path = public, pg_temp;
+    `);
+    expect(() => api.assertResult(result)).toThrow(
+      /security inventory failed closed/i,
+    );
+  });
+
+  it("rejects removed owner RLS even when a dummy auth.uid policy exists", () => {
+    const { api, result } = securityInventoryAfter(`
+      alter table public.recipes disable row level security;
+      drop policy recipes_public_and_owner_read on public.recipes;
+      create policy dummy_auth_uid_policy
+        on public.users
+        for select
+        to authenticated
+        using (auth.uid() = id);
+    `);
+    expect(() => api.assertResult(result)).toThrow(
+      /security inventory failed closed/i,
+    );
+  });
+
+  it("rejects an unexpected overload of a manifest function", () => {
+    const { api, result } = securityInventoryAfter(`
+      create function public.read_full_local_auth_control(p_dummy integer)
+      returns jsonb
+      language sql
+      stable
+      set search_path = pg_catalog, public, private, auth, pg_temp
+      as $mutation$
+        select '{}'::jsonb
+      $mutation$;
+    `);
+    expect(() => api.assertResult(result)).toThrow(
+      /security inventory failed closed/i,
+    );
   });
 });
