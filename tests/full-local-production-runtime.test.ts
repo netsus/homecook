@@ -1,10 +1,13 @@
+import { spawnSync } from "node:child_process";
 import {
+  chmodSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
   rmSync,
   statSync,
   symlinkSync,
+  writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -148,7 +151,7 @@ describe("full-local production runtime static contract", () => {
             ports: [{ host_ip: "127.0.0.1", published: "54482", target: 8080 }],
           },
           "api-gateway": {
-            ports: [{ host_ip: "127.0.0.1", published: "54481", target: 8000 }],
+            ports: [{ host_ip: "127.0.0.1", published: "54481", target: 54481 }],
           },
           postgres: {},
           postgrest: {},
@@ -165,7 +168,7 @@ describe("full-local production runtime static contract", () => {
             ports: [{ host_ip: "0.0.0.0", published: "54482", target: 8080 }],
           },
           "api-gateway": {
-            ports: [{ host_ip: "127.0.0.1", published: "54481", target: 8000 }],
+            ports: [{ host_ip: "127.0.0.1", published: "54481", target: 54481 }],
           },
           postgres: {},
           postgrest: {},
@@ -199,8 +202,16 @@ describe("full-local production runtime static contract", () => {
       "infra/full-local-supabase/docker-compose.production.yml",
       "utf8",
     );
+    const oauthCompose = readFileSync(
+      "infra/full-local-supabase/docker-compose.oauth.production.yml",
+      "utf8",
+    );
     const proxy = readFileSync(
       "infra/full-local-supabase/auth-only-proxy.mjs",
+      "utf8",
+    );
+    const runtimeCli = readFileSync(
+      "scripts/full-local-production-runtime.mjs",
       "utf8",
     );
     const kong = readFileSync(
@@ -235,10 +246,23 @@ describe("full-local production runtime static contract", () => {
     expect(compose).toContain("GOTRUE_EXTERNAL_PHONE_ENABLED=false");
     expect(compose).toContain("GOTRUE_EXTERNAL_ANONYMOUS_USERS_ENABLED=false");
     expect(compose).toContain("REGION=FULL_LOCAL_STORAGE_REGION");
+    expect(compose).toContain(
+      "STORAGE_PUBLIC_URL: ${FULL_LOCAL_INTERNAL_GATEWAY_URL:?FULL_LOCAL_INTERNAL_GATEWAY_URL is required}/storage/v1",
+    );
+    expect(compose).toContain('REQUEST_ALLOW_X_FORWARDED_PATH: "true"');
     expect(compose).toContain("S3_PROTOCOL_ACCESS_KEY_ID=storage_s3_access_key_id");
     expect(compose).toContain(
       "S3_PROTOCOL_ACCESS_KEY_SECRET=storage_s3_access_key_secret",
     );
+    expect(kong).toMatch(
+      /name:\s*storage-v1-all[\s\S]*?preserve_host:\s*true[\s\S]*?strip_path:\s*true/u,
+    );
+    expect(kong).toMatch(
+      /name:\s*storage-v1-s3[\s\S]*?url:\s*http:\/\/storage:5000\/[\s\S]*?headers:[\s\S]*?authorization:[\s\S]*?AWS4-HMAC-SHA256[\s\S]*?paths:[\s\S]*?- \/storage\/v1[\s\S]*?plugins:[\s\S]*?- name: cors/u,
+    );
+    expect(kong).not.toContain('"X-Forwarded-Port: $FULL_LOCAL_INTERNAL_GATEWAY_PORT"');
+    expect(kong).toContain("- /storage/v1");
+    expect(kong).not.toMatch(/^\s*- \/storage\/v1\/$/mu);
     expect(compose).toContain("/run/secrets");
     expect(compose).not.toContain("/var/run/docker.sock");
     expect(compose).toContain('KONG_PROXY_ACCESS_LOG: "off"');
@@ -258,16 +282,60 @@ describe("full-local production runtime static contract", () => {
       "app.settings.homecook_session_attestation_hmac_key",
     );
     expect(compose).not.toContain("KONG_PROXY_ACCESS_LOG: /dev/stdout combined");
-    expect(proxy).toContain("authOnlyUpstreamTarget(request)");
+    expect(proxy).toContain("authOnlyUpstreamTarget(request, upstream)");
+    expect(proxy).toContain("FULL_LOCAL_INTERNAL_GATEWAY_ORIGIN");
     expect(proxy).toContain('"forwarded"');
     expect(proxy).toContain('"x-forwarded-for"');
+    expect(proxy).toContain("isIP(cloudflareClientIp)");
+    expect(proxy).toContain("isLoopbackAddress(peerAddress)");
+    expect(proxy).toContain('headers.set("x-forwarded-for", verifiedClientIp)');
+    expect(proxy).toContain('headers.set("cache-control", "no-store, max-age=0")');
+    expect(runtimeCli).toContain("homecook_storage_url_references");
+    expect(runtimeCli).not.toContain("like ('%' || storage_object.name)");
     expect(proxy).toContain("headers.delete(name)");
     expect(proxy).toContain("FULL_LOCAL_PUBLIC_AUTH_URL");
     expect(proxy).not.toContain('headers.set("x-forwarded-host", "auth.mumeok.com")');
+    expect(oauthCompose).toContain('GOTRUE_EXTERNAL_GOOGLE_ENABLED: "true"');
+    expect(oauthCompose).toContain('GOTRUE_EXTERNAL_KAKAO_ENABLED: "true"');
+    expect(oauthCompose).toContain("GOTRUE_EXTERNAL_GOOGLE_CLIENT_ID=google_client_id");
+    expect(oauthCompose).toContain("GOTRUE_EXTERNAL_KAKAO_SECRET=kakao_client_secret");
+    expect(oauthCompose).not.toContain("/run/secrets");
+    expect(oauthCompose).not.toContain("homecook-full-local-oauth-providers-v1");
   });
 });
 
 describe("full-local production configuration", () => {
+  it("exposes a cutover CLI that fails closed without complete Storage backup evidence", () => {
+    const root = mkdtempSync(join(tmpdir(), "full-local-cutover-preflight-"));
+    const evidencePath = join(root, "evidence.json");
+    writeFileSync(evidencePath, JSON.stringify({
+      complete_storage_backup_verified: false,
+      off_mac_restore_count: 2,
+      provider_callback_verified: true,
+      remote_outstanding_flows: 0,
+      restore_replay_verified: true,
+      storage_verified: true,
+      temporary_hosted_s3_credential_revoked: true,
+    }), { encoding: "utf8", mode: 0o600 });
+    chmodSync(evidencePath, 0o600);
+
+    try {
+      const result = spawnSync(process.execPath, [
+        "scripts/full-local-production-runtime.mjs",
+        "cutover-preflight",
+        "--evidence",
+        evidencePath,
+        "--confirm-first-local-auth-mutation",
+        "APPROVE_FIRST_LOCAL_PRODUCTION_AUTH_MUTATION",
+      ], { cwd: process.cwd(), encoding: "utf8" });
+
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain("complete-storage-backup-verification-missing");
+    } finally {
+      rmSync(root, { force: true, recursive: true });
+    }
+  });
+
   it("accepts exact HTTPS public URLs and loopback-only internal URLs", () => {
     expect(
       validateFullLocalProductionConfig({

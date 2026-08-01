@@ -146,8 +146,10 @@ services:
       GLOBAL_S3_BUCKET: ${FULL_LOCAL_STORAGE_GLOBAL_BUCKET:?FULL_LOCAL_STORAGE_GLOBAL_BUCKET is required}
       HOMECOOK_SECRET_EXPORTS: POSTGRES_PASSWORD=postgres_password;ANON_KEY=anon_key;SERVICE_KEY=service_role_key;JWT_JWKS=jwt_jwks;PGRST_JWT_SECRET=jwt_secret;S3_PROTOCOL_ACCESS_KEY_ID=storage_s3_access_key_id;S3_PROTOCOL_ACCESS_KEY_SECRET=storage_s3_access_key_secret
       POSTGREST_URL: http://postgrest:3000
+      REQUEST_ALLOW_X_FORWARDED_PATH: "true"
       REGION: ${FULL_LOCAL_STORAGE_REGION:?FULL_LOCAL_STORAGE_REGION is required}
       STORAGE_BACKEND: file
+      STORAGE_PUBLIC_URL: ${FULL_LOCAL_INTERNAL_GATEWAY_URL:?FULL_LOCAL_INTERNAL_GATEWAY_URL is required}/storage/v1
       TENANT_ID: ${FULL_LOCAL_STORAGE_TENANT_ID:?FULL_LOCAL_STORAGE_TENANT_ID is required}
       # Audited runtime mappings:
       # REGION=FULL_LOCAL_STORAGE_REGION
@@ -196,6 +198,7 @@ services:
       KONG_NGINX_PROXY_PROXY_BUFFERS: 64 160k
       KONG_NGINX_MAIN_ENV: HOMECOOK_SESSION_ATTESTATION_HMAC_KEY_V1
       KONG_PLUGINS: request-transformer,cors,key-auth,acl,post-function,homecook-attestation
+      KONG_PROXY_LISTEN: 0.0.0.0:${FULL_LOCAL_INTERNAL_GATEWAY_PORT:?FULL_LOCAL_INTERNAL_GATEWAY_PORT is required}
       KONG_PROXY_ACCESS_LOG: "off"
       KONG_ROUTER_FLAVOR: expressions
     healthcheck:
@@ -208,7 +211,7 @@ services:
       - auth-edge
       - data-internal
     ports:
-      - 127.0.0.1:${FULL_LOCAL_INTERNAL_GATEWAY_PORT:?FULL_LOCAL_INTERNAL_GATEWAY_PORT is required}:8000
+      - 127.0.0.1:${FULL_LOCAL_INTERNAL_GATEWAY_PORT:?FULL_LOCAL_INTERNAL_GATEWAY_PORT is required}:${FULL_LOCAL_INTERNAL_GATEWAY_PORT:?FULL_LOCAL_INTERNAL_GATEWAY_PORT is required}
     restart: unless-stopped
     security_opt:
       - no-new-privileges:true
@@ -236,6 +239,7 @@ services:
       api-gateway:
         condition: service_healthy
     environment:
+      FULL_LOCAL_INTERNAL_GATEWAY_ORIGIN: http://api-gateway:${FULL_LOCAL_INTERNAL_GATEWAY_PORT:?FULL_LOCAL_INTERNAL_GATEWAY_PORT is required}
       FULL_LOCAL_PUBLIC_AUTH_URL: ${FULL_LOCAL_PUBLIC_AUTH_URL:?FULL_LOCAL_PUBLIC_AUTH_URL is required}
     healthcheck:
       test: ["CMD", "node", "-e", "const s=require('node:net').connect(8080,'127.0.0.1',()=>{s.end();process.exit(0)});s.on('error',()=>process.exit(1))"]

@@ -1,0 +1,23 @@
+services:
+  auth:
+    environment:
+      GOTRUE_EXTERNAL_GOOGLE_ENABLED: "true"
+      GOTRUE_EXTERNAL_GOOGLE_REDIRECT_URI: ${FULL_LOCAL_API_EXTERNAL_URL:?FULL_LOCAL_API_EXTERNAL_URL is required}/callback
+      GOTRUE_EXTERNAL_KAKAO_ENABLED: "true"
+      GOTRUE_EXTERNAL_KAKAO_REDIRECT_URI: ${FULL_LOCAL_API_EXTERNAL_URL:?FULL_LOCAL_API_EXTERNAL_URL is required}/callback
+      HOMECOOK_SECRET_EXPORTS: POSTGRES_PASSWORD=postgres_password;GOTRUE_JWT_SECRET=jwt_secret;GOTRUE_JWT_KEYS=jwt_keys;GOTRUE_EXTERNAL_GOOGLE_CLIENT_ID=google_client_id;GOTRUE_EXTERNAL_GOOGLE_SECRET=google_client_secret;GOTRUE_EXTERNAL_KAKAO_CLIENT_ID=kakao_client_id;GOTRUE_EXTERNAL_KAKAO_SECRET=kakao_client_secret
+    secrets:
+      - google_client_id
+      - google_client_secret
+      - kakao_client_id
+      - kakao_client_secret
+
+secrets:
+  google_client_id:
+    file: ${FULL_LOCAL_SECRET_DIR:?FULL_LOCAL_SECRET_DIR is required}/google_client_id
+  google_client_secret:
+    file: ${FULL_LOCAL_SECRET_DIR:?FULL_LOCAL_SECRET_DIR is required}/google_client_secret
+  kakao_client_id:
+    file: ${FULL_LOCAL_SECRET_DIR:?FULL_LOCAL_SECRET_DIR is required}/kakao_client_id
+  kakao_client_secret:
+    file: ${FULL_LOCAL_SECRET_DIR:?FULL_LOCAL_SECRET_DIR is required}/kakao_client_secret

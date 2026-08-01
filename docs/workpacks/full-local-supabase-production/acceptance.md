@@ -23,10 +23,10 @@
 
 ## Migration / Storage / Rollback
 
-- [ ] stable Auth UUID와 owner semantic mismatch가 0이고 transient remote session/refresh/flow promote row가 0이다 <!-- omo:id=accept-full-local-auth-restore;stage=2;scope=backend;review=3,6 -->
-- [ ] Auth relation/column manifest 미분류 항목이 0이고 fresh restore 2회가 같은 digest를 만든다 <!-- omo:id=accept-full-local-restore-replay;stage=2;scope=backend;review=3,6 -->
-- [ ] S3/rclone copy 뒤 path/count/bytes/MIME/SHA-256/DB reference/owner prefix mismatch가 0이다 <!-- omo:id=accept-full-local-storage-copy;stage=2;scope=backend;review=3,6 -->
-- [ ] direct file copy, public/direct-container S3 path와 temporary credential 잔존이 0이다 <!-- omo:id=accept-full-local-storage-boundary;stage=2;scope=backend;review=3,6 -->
+- [x] stable Auth UUID와 owner semantic mismatch가 0이고 transient remote session/refresh/flow promote row가 0이다 <!-- omo:id=accept-full-local-auth-restore;stage=2;scope=backend;review=3,6 -->
+- [x] Auth relation/column manifest 미분류 항목이 0이고 fresh restore 2회가 같은 digest를 만든다 <!-- omo:id=accept-full-local-restore-replay;stage=2;scope=backend;review=3,6 -->
+- [x] S3/rclone copy 뒤 path/count/bytes/MIME/SHA-256/DB reference/owner prefix mismatch가 0이다 <!-- omo:id=accept-full-local-storage-copy;stage=2;scope=backend;review=3,6 -->
+- [x] direct file copy, public/direct-container S3 path와 temporary credential 잔존이 0이다 <!-- omo:id=accept-full-local-storage-boundary;stage=2;scope=backend;review=3,6 -->
 - [ ] off-Mac encrypted restore와 Mac reboot/ordered recovery가 통과한다 <!-- omo:id=accept-full-local-disaster-recovery;stage=2;scope=shared;review=3,6 -->
 - [ ] pre-floor와 post-floor rollback rehearsal이 모두 통과하고 floor 뒤 env-only rollback이 차단된다 <!-- omo:id=accept-full-local-rollback-floor;stage=2;scope=shared;review=3,6 -->
 - [ ] dependency/image audit의 release blocker가 0이다 <!-- omo:id=accept-full-local-dependency-gate;stage=2;scope=backend;review=3,6 -->
@@ -75,3 +75,12 @@
 - 요청 attestation HMAC은 Kong custom plugin이 process-only secret으로 검증하고 입력 서명 헤더를 제거한다. PostgreSQL catalog·backup에는 attestation secret을 저장하지 않는다.
 - 실행 증거: lint, typecheck, production build, product 2,449 tests, focused 72 tests, PostgreSQL integration 6 tests, disposable 7-container Docker smoke와 invalid HMAC `401`/valid HMAC pass, inventory validators 통과.
 - 독립 `code-reviewer` 4건과 `security-reviewer` 4건을 수정 후 보안 재검토 **PASS**. 추가 발견된 local V1 premature key requirement도 제거하고 dynamic V2/epoch 회귀 테스트를 통과했다. five-axis 전체 리뷰는 final cutover PR 전까지 미완료로 유지한다.
+
+## Stage 4 Restore / Provider Configuration Evidence
+
+- 2026-08-01 원격 project의 Auth/application DB와 Storage metadata를 암호화해 Dropbox off-Mac 경로에 저장하고 archive SHA-256, HMAC-SHA256 변조 인증과 relation classification digest를 검증했다. 실제 Storage payload는 이 archive에 포함되지 않으므로 complete disaster-recovery backup 항목은 미완료로 유지한다. remote transient Auth/session/flow promote count와 unclassified count는 모두 0이다.
+- 서로 다른 PostgreSQL/Storage named volume과 loopback gateway를 쓰는 fresh restore 2회를 실행했다. 두 결과는 Auth users `7`, identities `8`, public relations `82`, Storage buckets `2`, objects `1`이며 Auth/DB/Storage semantic digest가 exact 일치했다. `lastModified`와 Storage internal version처럼 S3 replay마다 달라지는 값은 semantic digest에서 제외하고 path/owner/size/MIME/eTag/user metadata를 비교한다.
+- pinned rclone과 hosted S3 → loopback local S3 경로로 객체를 복사했다. source/default/replay-2의 bytes, MIME, MD5, SHA-256이 일치했고 DB reference `1`, unreferenced `0`, owner prefix mismatch `0`이다. 임시 hosted S3 key 2개는 dashboard에서 revoke하고 관련 Keychain item 잔존 0을 확인했다.
+- Google/Kakao/Naver Client ID/Secret은 별도 macOS Keychain service에 저장했다. Supabase dashboard가 Naver secret 대신 반환한 `placeholder`는 runtime 검증이 차단했고 즉시 삭제한 뒤 Naver Developers의 실제 secret으로 교체했다. OAuth-enabled Compose validation과 7-container ordered health가 PASS이며 local Auth settings에서 Google/Kakao `true`, email/phone/anonymous `false`를 확인했다.
+- `custom:naver` provision은 exact `--confirm-local-auth-mutation PROVISION_LOCAL_OAUTH_PROVIDERS` gate 뒤 create/update하는 명령으로 구현했지만 실행하지 않았다. `mumeok.com`이 미등록 상태라 Cloudflare named tunnel, public HTTPS callback과 실제 provider login/link는 아직 차단 상태다.
+- macOS 로그인 시 full-local runtime을 올리는 LaunchAgent install/status/uninstall 명령을 구현하고 plist·설정 파일 mode `0600`, secret 비포함, ordered runtime entrypoint, Docker/volume 비삭제를 단위 테스트로 고정했다. 최종 전환 전이므로 실제 LaunchAgent는 설치하지 않았고 현재 status는 `unloaded`다.

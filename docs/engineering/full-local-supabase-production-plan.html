@@ -465,6 +465,21 @@
         border-radius: 2px;
       }
 
+      .checklist li.done {
+        background: var(--green-soft);
+        border-color: #a7d4bb;
+      }
+
+      .checklist li.done::before {
+        content: "✓";
+        display: grid;
+        place-items: center;
+        color: #fff;
+        background: var(--forest);
+        font-size: 0.72rem;
+        font-weight: 900;
+      }
+
       details {
         margin-top: 12px;
         background: #fff;
@@ -599,7 +614,7 @@
         </p>
         <div class="hero-meta">
           <span>작성일 2026-07-31 KST</span>
-          <span>상태 Stage -1 작성·독립 검토 PASS, 병합 대기</span>
+          <span>상태 로컬 복원 rehearsal 완료, 외부 공개 대기</span>
           <span>대상 homecook production</span>
         </div>
       </div>
@@ -607,8 +622,10 @@
 
     <div class="notice" role="status">
       <div class="wrap">
-        <strong>현재 상태:</strong> 공식 계약과 workpack은 독립 검토를 통과했지만 아직 병합 전입니다.
-        지금 production은 원격 Supabase Auth, DB, Storage를 사용합니다.
+        <strong>현재 상태:</strong> 원격 Auth·DB의 암호화+HMAC 백업과 두 번의 독립 로컬 복원, 별도 Storage 복사,
+        Google·Kakao 로컬 Auth 설정까지 통과했습니다. 다만 <code>mumeok.com</code>이 아직 등록되지 않아
+        Mac 자동 시작 명령까지 준비했습니다. Cloudflare HTTPS, callback 변경, 실제 소셜 로그인과
+        최종 전환은 시작하지 않았습니다.
       </div>
     </div>
 
@@ -1002,15 +1019,15 @@ provider callback=${API_EXTERNAL_URL}/callback</code></pre>
           <h2>아래 항목이 모두 통과해야 production을 엽니다</h2>
           <ul class="checklist">
             <li>세 provider의 실제 local OAuth login 성공</li>
-            <li>기존 사용자 UUID와 소유 데이터 mismatch 0</li>
+            <li class="done">기존 사용자 UUID와 소유 데이터 mismatch 0</li>
             <li>User A가 User B의 row/object에 접근한 건수 0</li>
             <li>로그아웃 뒤 만료 전 token mutation 0</li>
             <li>server-issued flow cookie 전 OAuth SDK 호출 0</li>
             <li>old remote cookie/code의 local 수락 0</li>
-            <li>공개 Auth allowlist 외 Supabase endpoint 노출 0</li>
-            <li>S3/rclone 복사 후 Storage mismatch 0</li>
-            <li>Git·bundle·log·Docker 설정의 secret 노출 0</li>
-            <li>Mac 밖 암호화 백업의 실제 restore 성공</li>
+            <li class="done">공개 Auth allowlist 외 Supabase endpoint 노출 0</li>
+            <li class="done">S3/rclone 복사 후 Storage mismatch 0</li>
+            <li class="done">Git·bundle·log·Docker 설정의 secret 노출 0</li>
+            <li>Storage payload까지 포함한 Mac 밖 complete backup의 실제 restore 2회 성공</li>
             <li>Mac 재부팅 뒤 ordered recovery 성공</li>
             <li>경계 전·후 rollback 예행연습 성공</li>
             <li>첫 local Auth 변화에 운영자 별도 승인</li>
@@ -1094,19 +1111,27 @@ provider callback=${API_EXTERNAL_URL}/callback</code></pre>
       <section class="section">
         <div class="wrap">
           <p class="section-label">다음 행동</p>
-          <h2>바로 서버를 바꾸지 않습니다</h2>
+          <h2>도메인을 소유한 뒤 외부 공개를 이어갑니다</h2>
           <div class="summary-box">
             <p>
-              다음 단계는 독립 검토를 통과한 Stage -1 공식 요구사항·화면·유저 Flow·DB·API 문서와
-              workpack의 docs PR 병합입니다. 구현은 병합 뒤에만 시작합니다.
+              다음 단계는 <code>mumeok.com</code> 또는 실제 사용할 도메인을 구입·소유한 뒤 Cloudflare
+              named tunnel에 <code>app</code>과 <code>auth</code> hostname을 연결하고, 세 개발자 센터의
+              callback을 바꿔 실제 로그인·계정 연결을 검증하는 것입니다.
             </p>
           </div>
           <div class="callout warning">
-            <strong>현재 금지 상태</strong>
+            <strong>아직 실행하지 않은 고위험 단계</strong>
             <p>
-              contract-evolution 산출물은 아직 병합되지 않았고 self-hosted Auth runtime, 세 provider
-              실검증, 최종 데이터 이전도 시작하지 않았습니다. 첫 local production Auth state
-              mutation도 열지 않습니다.
+              소유하지 않은 도메인으로 callback을 바꾸지 않습니다. <code>custom:naver</code> 등록,
+              첫 local production session·identity·user write, 원격 프로젝트 삭제와 최종 authority 전환은
+              별도 운영자 승인 전까지 계속 차단합니다.
+            </p>
+          </div>
+          <div class="callout">
+            <strong>Mac 자동 시작은 준비만 완료</strong>
+            <p>
+              로그인할 때 Docker runtime을 시작하는 LaunchAgent 설치·상태·삭제 명령은 만들고 테스트했습니다.
+              아직 최종 전환 전이라 이 Mac에는 설치하지 않았으며, 설치 전 상태는 <code>unloaded</code>입니다.
             </p>
           </div>
         </div>

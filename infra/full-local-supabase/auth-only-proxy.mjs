@@ -1,9 +1,10 @@
 import { createServer } from "node:http";
+import { isIP } from "node:net";
 import { pathToFileURL } from "node:url";
 
 const host = "0.0.0.0";
 const port = 8080;
-const upstream = new URL("http://api-gateway:8000");
+const defaultUpstream = new URL("http://api-gateway:8000");
 
 const BLOCKED_PUBLIC_REQUESTS = Object.freeze([
   { method: "GET", url: "/rest/v1/" },
@@ -28,7 +29,41 @@ const REQUIRED_PUBLIC_REQUESTS = Object.freeze([
   { method: "OPTIONS", url: "/auth/v1/callback/" },
 ]);
 
-export function authOnlyUpstreamTarget(request, upstreamBase = upstream) {
+function exactInternalGatewayOrigin(value) {
+  const upstream = new URL(value ?? "");
+  if (
+    upstream.protocol !== "http:"
+    || upstream.hostname !== "api-gateway"
+    || !upstream.port
+    || upstream.pathname !== "/"
+    || upstream.search
+    || upstream.hash
+    || upstream.username
+    || upstream.password
+  ) {
+    throw new Error(
+      "FULL_LOCAL_INTERNAL_GATEWAY_ORIGIN must be an exact api-gateway HTTP origin.",
+    );
+  }
+  return upstream;
+}
+
+function exactPublicAuthOrigin(value) {
+  const publicAuth = new URL(value ?? "");
+  if (
+    publicAuth.protocol !== "https:"
+    || publicAuth.pathname !== "/"
+    || publicAuth.search
+    || publicAuth.hash
+    || publicAuth.username
+    || publicAuth.password
+  ) {
+    throw new Error("FULL_LOCAL_PUBLIC_AUTH_URL must be an exact HTTPS origin.");
+  }
+  return publicAuth;
+}
+
+export function authOnlyUpstreamTarget(request, upstreamBase = defaultUpstream) {
   const rawTarget = request?.url;
   if (typeof rawTarget !== "string" || !rawTarget.startsWith("/")) {
     return null;
@@ -79,27 +114,30 @@ function responseHeaders(source) {
   headers.delete("trailer");
   headers.delete("transfer-encoding");
   headers.delete("upgrade");
+  headers.set("cache-control", "no-store, max-age=0");
+  headers.set("pragma", "no-cache");
   return Object.fromEntries(headers.entries());
 }
 
+function isLoopbackAddress(address) {
+  return address === "127.0.0.1"
+    || address === "::1"
+    || address === "::ffff:127.0.0.1";
+}
+
 export function startAuthOnlyProxy(environment = process.env) {
-  const publicAuth = new URL(environment.FULL_LOCAL_PUBLIC_AUTH_URL ?? "");
-  if (
-    publicAuth.protocol !== "https:"
-    || publicAuth.pathname !== "/"
-    || publicAuth.search
-    || publicAuth.hash
-    || publicAuth.username
-    || publicAuth.password
-  ) {
-    throw new Error("FULL_LOCAL_PUBLIC_AUTH_URL must be an exact HTTPS origin.");
-  }
+  const upstream = exactInternalGatewayOrigin(
+    environment.FULL_LOCAL_INTERNAL_GATEWAY_ORIGIN,
+  );
+  const publicAuth = exactPublicAuthOrigin(
+    environment.FULL_LOCAL_PUBLIC_AUTH_URL,
+  );
   assertAuthOnlyPublicRouteContract((request) =>
-    authOnlyUpstreamTarget(request) !== null,
+    authOnlyUpstreamTarget(request, upstream) !== null,
   );
 
   return createServer(async (request, response) => {
-    const target = authOnlyUpstreamTarget(request);
+    const target = authOnlyUpstreamTarget(request, upstream);
     if (!target) {
       response.writeHead(404, { "content-type": "application/json" });
       response.end(JSON.stringify({ error: "not_found" }));
@@ -107,6 +145,12 @@ export function startAuthOnlyProxy(environment = process.env) {
     }
 
     const headers = new Headers(request.headers);
+    const peerAddress = request.socket.remoteAddress ?? "127.0.0.1";
+    const cloudflareClientIp = headers.get("cf-connecting-ip")?.trim() ?? "";
+    const verifiedClientIp = isLoopbackAddress(peerAddress)
+      && isIP(cloudflareClientIp)
+      ? cloudflareClientIp
+      : peerAddress;
     const connectionHeaders = (headers.get("connection") ?? "")
       .split(",")
       .map((value) => value.trim().toLowerCase())
@@ -133,7 +177,7 @@ export function startAuthOnlyProxy(environment = process.env) {
     ]) {
       headers.delete(name);
     }
-    headers.set("x-forwarded-for", request.socket.remoteAddress ?? "127.0.0.1");
+    headers.set("x-forwarded-for", verifiedClientIp);
     headers.set("x-forwarded-host", publicAuth.host);
     headers.set("x-forwarded-port", publicAuth.port || "443");
     headers.set("x-forwarded-proto", publicAuth.protocol.slice(0, -1));
