@@ -124,3 +124,43 @@ All Manual Only items above remain pending. The repaired current head still requ
 - Worktree was clean and `origin/master` was an ancestor of the integrated branch. Production/staging/remote application writes remained `0 / 0 / 0`.
 
 The integration does not change the independent fresh Stage 3 code/security/DB re-review requirement or any remaining Manual Only gate.
+
+## Fresh Stage 3 exact-inventory repair — 2026-08-02
+
+- Review input: PR #1265 exact head `8d0ef9682ab2ee53f32c8af52f7208a741409b87`.
+- Code review task `019fbe0d-ba7b-70d3-9c5f-80e026f65222`: `P0/P1/P2 = 0/2/1`, verdict `REQUEST_CHANGES`.
+- Security/DB review task `019fbe0d-ba7b-70d3-9c5f-80c1f5369613`: `P0/P1/P2 = 0/1/0`, verdict `REQUEST_CHANGES`.
+- Role boundary: the same Stage 2 implementer performed this repair. It is not an approval, merge decision, Stage 3 completion or Stage 6 completion.
+
+### Mutation RED and GREEN
+
+1. Actual isolated PostgreSQL RED:
+   - `pnpm test:full-local-auth-db-foundation:postgres`
+   - Result before implementation: `4 failed / 12 passed` across 16 tests.
+   - The verifier incorrectly accepted `service_role EXECUTE WITH GRANT OPTION`, `FORCE ROW LEVEL SECURITY`, an exact-expression policy recreated `AS RESTRICTIVE`, and the meaning-changing `(deleted AND guard AND public) OR owner` boolean tree.
+2. Exact inventory GREEN:
+   - function ACL comparison now includes principal, privilege type and `is_grantable` exactly;
+   - protected tables compare both `relrowsecurity` and migration-derived `relforcerowsecurity=false`;
+   - policies compare exact `permissive`, command and roles, while their `qual` and `with_check` are canonicalized without erasing boolean-tree parentheses;
+   - the baseline full-local PostgreSQL fixture passed `16/16`, including the four transactional mutation regressions.
+3. Active snapshot path integration:
+   - the snapshot existing/fresh/replay runner now applies the actual snapshot authority migration plus the existing leftover, account-session, visibility, hybrid and full-local migrations to its isolated database;
+   - `tests/full-local-auth-db-foundation-postgres.integration.test.ts` invokes the production inventory builder and assertion with `includeSnapshotTables:true`;
+   - fresh and replay each passed the active `12 tables / 10 policies` baseline plus grant-option, FORCE RLS, restrictive-policy and changed-boolean-tree mutations: `5/5` in each mode.
+
+### Current repair verification before push
+
+- Focused full-local verifier unit suite: `9/9`.
+- Snapshot/full-local/Train B focused set: 16 files, `210/210`.
+- PR #1266 restore/cutover/runtime focused set: 7 files, `108/108`.
+- Remote verifier replace-ref/ancestry/read-only regression: `10/10`.
+- Snapshot isolated PostgreSQL:
+  - fresh snapshot suite `14 passed / 1 intended skip`, active inventory `5/5`;
+  - replay snapshot suite `15/15`, active inventory `5/5`.
+- Full-local isolated PostgreSQL baseline: `16/16`.
+- `pnpm verify:backend`: product Vitest 202 files passed and 9 skipped, `2,544 passed / 128 skipped`; production build passed; Playwright security smoke `12/12`.
+- source-of-truth, workpack, automation-spec, workflow-v2, OMO bookkeeping, closeout sync and branch validators passed; lint, typecheck and `git diff --check` passed.
+- `pnpm audit --audit-level high`: high-or-higher findings `0`; the existing low-severity advisory remains `1`.
+- No public API, field, status, error, migration or dependency was added. Production, staging and remote application writes remain `0 / 0 / 0`.
+
+Merged-exact execution, provider callback/link, Cloudflare, remote final backup, off-Mac restore twice, first local mutation/cutover, compatibility-release observation and full actual-DB cleanup rehearsal remain Manual Only/pending. A new exact head still requires all current-head checks and fresh independent code/security/DB reviews.
