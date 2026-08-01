@@ -1,5 +1,7 @@
 # Acceptance Checklist
 
+> **Full-local relock 2026-08-01:** pantry/shopping product authority와 owner cleanup 의미는 유지하되 local Auth UUID/session binding이 active principal이다. remote exact-epoch와 `local auth.users=0` 검증은 역사적 hybrid evidence이며 full-local RLS/cross-owner/delete-recreate smoke로 재잠근다.
+
 > Evidence is checked only after the owning implementation/review stage produces it. 2026-07-31 사용자 승인 Contract Evolution은 official tuple v1.7.27 / v1.5.31 / v1.3.29 / DB v1.3.28 / API v1.2.31에 반영됐다. Draft PR #1255의 Stage 2 구현·테스트로 확인된 항목만 체크하며, independent Stage 3/security-DB re-review, Stage 4/5/6, current-head CI와 Manual Only 항목은 계속 미완료다.
 
 ## Happy Path

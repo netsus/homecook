@@ -1,5 +1,7 @@
 # Acceptance Checklist
 
+> **Full-local relock 2026-08-01:** browser direct Data/Storage와 user-path service-role fallback 0은 그대로 유지한다. local Auth JWT/active binding으로 owner 경계를 다시 증명하며 과거 remote Auth/local `auth.users=0` evidence는 full-local provider/cutover 증거로 간주하지 않는다.
+
 > This hybrid Stage 1 relock uses the current official tuple (`요구사항기준선-v1.7.26.md`, `화면정의서-v1.5.30.md`, `유저flow맵-v1.3.28.md`, `db설계-v1.3.27.md`, `api문서-v1.2.30.md`). The approved master plan remains design history, but its local-only Auth/deployment assumptions are superseded. Stage 2 backend is test-only: it locks the existing detail-read and manual-create contract boundaries without adding runtime endpoints.
 >
 > Stage 4 evidence is local-fixture only: the shared shell/primitives, capability-off CTA composition, browser dirty guard, managed-image cleanup, 390px/320px Playwright and 20 PNG authority set are implemented on `feature/fe-personal-recipe-editor-decoupling`. Plain successor/merge-gate bullets are intentionally outside the machine Stage 4 checklist; they remain owned by #6, #8 or post-merge verification and are not claimed here.
