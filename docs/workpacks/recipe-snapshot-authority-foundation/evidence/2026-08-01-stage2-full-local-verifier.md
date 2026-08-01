@@ -110,3 +110,17 @@ The implementation keeps all acceptance and lifecycle completion items unchecked
 - Production, staging and remote application writes remain `0 / 0 / 0`. No activation, cutover, provider callback, Cloudflare, backup, restore or actual production cleanup operation was run.
 
 All Manual Only items above remain pending. The repaired current head still requires a fresh independent Stage 3 code/security/DB re-review and all current-head PR checks; this Stage 2 task does not approve or merge it.
+
+## PR #1266 master integration — 2026-08-02
+
+- Integrated `origin/master` exact SHA `af0b65ce33b8cc413f66cd30f2bfdcd98b6acdfb` with merge commit `cf1fe574` after PR #1266 advanced the restore/cutover runtime.
+- Conflict resolution preserved both boundaries in `auth-only-proxy.mjs`: the repaired pure Auth-only request matcher plus PR #1266 dynamic internal gateway origin, trusted loopback Cloudflare client IP and no-store response headers.
+- PR #1266 full-local production plan/acceptance, OAuth Compose, platform backup, restore/cutover, LaunchAgent and Storage-copy code/evidence were retained without reverting or marking additional Manual Only work complete.
+- Post-integration focused restore/proxy/runtime suite: 7 files, 105 tests passed.
+- Post-integration Stage 2 snapshot/full-local/Train B set: 16 files, 111 tests passed; remote verifier ancestry/read-only SQL 10 tests passed.
+- Snapshot PostgreSQL existing/fresh/replay remained 14 passed with 1 intended skip, then 15 passed. Full-local PostgreSQL remained 12 passed.
+- Post-integration `pnpm verify:backend`: product Vitest 202 files passed and 9 skipped, 2,544 tests passed and 128 skipped; build and 12 security E2E tests passed.
+- Source/workpack/automation/workflow/OMO/closeout/branch validators, lint, typecheck, audit and diff check passed. `validate:commits` still reports the already-merged non-Conventional PR #1261 subject from base history; none of this repair's four Conventional+Lore commits is the reported violation.
+- Worktree was clean and `origin/master` was an ancestor of the integrated branch. Production/staging/remote application writes remained `0 / 0 / 0`.
+
+The integration does not change the independent fresh Stage 3 code/security/DB re-review requirement or any remaining Manual Only gate.
