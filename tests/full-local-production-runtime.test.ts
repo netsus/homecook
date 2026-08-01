@@ -12,6 +12,11 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import {
+  assertAuthOnlyPublicRouteContract,
+  authOnlyUpstreamTarget,
+} from "../infra/full-local-supabase/auth-only-proxy.mjs";
+
+import {
   FULL_LOCAL_SECRET_NAMES,
   assertFullLocalComposeModel,
   assertNoSecretLeakage,
@@ -72,6 +77,49 @@ function validSecrets() {
 }
 
 describe("full-local production runtime static contract", () => {
+  it.each([
+    ["GET", "/auth/v1/health", true],
+    ["POST", "/auth/v1/token?grant_type=refresh_token", true],
+    ["OPTIONS", "/auth/v1/callback/", true],
+    ["HEAD", "/rest/v1/", false],
+    ["POST", "/rest/v1/rpc/private_operation?probe=1", false],
+    ["DELETE", "/storage/v1/object/private/a", false],
+    ["GET", "/studio/", false],
+    ["GET", "/health", false],
+    ["GET", "/auth//v1/health", false],
+    ["GET", "/auth/v1//health", false],
+    ["GET", "/auth/v1/../../rest/v1/", false],
+    ["GET", "/auth/v1/../storage/v1/", false],
+    ["GET", "/auth%2fv1/health", false],
+    ["GET", "/%73torage/v1/object/a", false],
+    ["GET", "//postgrest:3000/rest/v1/", false],
+    ["GET", "/rest/v1/?next=/auth/v1/health", false],
+    ["GET", "/auth/v1", false],
+  ])("applies the Auth-only public route to %s %s", (method, url, allowed) => {
+    expect(authOnlyUpstreamTarget({ method, url }) !== null).toBe(allowed);
+  });
+
+  it("rejects equality, regex, Set, and encoded-storage route mutations", () => {
+    const canonical = ({ url }: { url?: string }) =>
+      typeof url === "string" && url.startsWith("/auth/v1/");
+    const equalityMutation = ({ url }: { url?: string }) =>
+      canonical({ url }) || url === "/rest/v1/";
+    const regexMutation = ({ url }: { url?: string }) =>
+      canonical({ url }) || /^\/rest\/v1\//u.test(url ?? "");
+    const exposed = new Set(["/rest/v1/", "/storage/v1/"]);
+    const setMutation = ({ url }: { url?: string }) =>
+      canonical({ url }) || exposed.has(url ?? "");
+    const encodedStorageMutation = ({ url }: { url?: string }) =>
+      canonical({ url }) || url === "/%73torage/v1/object/a";
+
+    expect(() => assertAuthOnlyPublicRouteContract(equalityMutation)).toThrow();
+    expect(() => assertAuthOnlyPublicRouteContract(regexMutation)).toThrow();
+    expect(() => assertAuthOnlyPublicRouteContract(setMutation)).toThrow();
+    expect(() =>
+      assertAuthOnlyPublicRouteContract(encodedStorageMutation),
+    ).toThrow();
+  });
+
   it("pins the reviewed arm64 runtime images by RepoDigest", () => {
     const images = fullLocalImageRefsForPlatform("linux/arm64");
 
@@ -127,6 +175,23 @@ describe("full-local production runtime static contract", () => {
         },
       }),
     ).toThrow(/loopback|raw service|storage/iu);
+
+    for (const rawService of ["postgres", "postgrest", "storage", "studio"]) {
+      expect(() =>
+        assertFullLocalComposeModel({
+          services: {
+            auth: {},
+            "auth-proxy": { ports: ["127.0.0.1:54482:8080"] },
+            "api-gateway": { ports: ["127.0.0.1:54481:8000"] },
+            postgres: {},
+            postgrest: {},
+            storage: {},
+            studio: {},
+            [rawService]: { ports: ["127.0.0.1:59999:59999"] },
+          },
+        }),
+      ).toThrow(/raw service/iu);
+    }
   });
 
   it("defines ordered health, read-only secrets, social-only auth, and S3 isolation", () => {
@@ -193,14 +258,12 @@ describe("full-local production runtime static contract", () => {
       "app.settings.homecook_session_attestation_hmac_key",
     );
     expect(compose).not.toContain("KONG_PROXY_ACCESS_LOG: /dev/stdout combined");
-    expect(proxy).toContain('pathname.startsWith("/auth/v1/")');
+    expect(proxy).toContain("authOnlyUpstreamTarget(request)");
     expect(proxy).toContain('"forwarded"');
     expect(proxy).toContain('"x-forwarded-for"');
     expect(proxy).toContain("headers.delete(name)");
     expect(proxy).toContain("FULL_LOCAL_PUBLIC_AUTH_URL");
     expect(proxy).not.toContain('headers.set("x-forwarded-host", "auth.mumeok.com")');
-    expect(proxy).not.toContain('pathname.startsWith("/rest/v1/")');
-    expect(proxy).not.toContain('pathname.startsWith("/storage/v1/")');
   });
 });
 
