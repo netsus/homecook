@@ -5,10 +5,10 @@
 ## Contract / Runtime
 
 - [x] 공식 5종과 CURRENT_SOURCE_OF_TRUTH가 full-local authority를 active 계약으로 고정한다 <!-- omo:id=accept-full-local-official-contract;stage=1;scope=shared;review=1,6 -->
-- [ ] Auth/API gateway/PostgREST/Storage image digest와 ordered health가 고정된다 <!-- omo:id=accept-full-local-runtime-health;stage=2;scope=backend;review=3,6 -->
-- [ ] production email/password/OTP/SMS/anonymous signup과 Studio/public DB/Storage port가 fail closed된다 <!-- omo:id=accept-full-local-production-auth-surface;stage=2;scope=backend;review=3,6 -->
-- [ ] public Auth proxy는 `/auth/v1/*`만 허용하고 `/rest/v1`, `/storage/v1`, Studio/Postgres/direct origin을 차단한다 <!-- omo:id=accept-full-local-public-allowlist;stage=2;scope=backend;review=3,6 -->
-- [ ] Keychain→`0700`/`0600` file→read-only mount→entrypoint 주입과 secret scan이 통과한다 <!-- omo:id=accept-full-local-secret-mount;stage=2;scope=backend;review=3,6 -->
+- [x] Auth/API gateway/PostgREST/Storage image digest와 ordered health가 고정된다 <!-- omo:id=accept-full-local-runtime-health;stage=2;scope=backend;review=3,6 -->
+- [x] production email/password/OTP/SMS/anonymous signup과 Studio/public DB/Storage port가 fail closed된다 <!-- omo:id=accept-full-local-production-auth-surface;stage=2;scope=backend;review=3,6 -->
+- [x] public Auth proxy는 `/auth/v1/*`만 허용하고 `/rest/v1`, `/storage/v1`, Studio/Postgres/direct origin을 차단한다 <!-- omo:id=accept-full-local-public-allowlist;stage=2;scope=backend;review=3,6 -->
+- [x] Keychain→`0700`/`0600` file→read-only mount→entrypoint 주입과 secret scan이 통과한다 <!-- omo:id=accept-full-local-secret-mount;stage=2;scope=backend;review=3,6 -->
 
 ## OAuth / Session / RLS
 
@@ -57,3 +57,12 @@
 - 2026-08-01 독립 Codex `code-reviewer` 1차: source-of-record, OAuth 시작 순서, logout revoke 계약 3건 `REQUEST CHANGES`.
 - 같은 working tree에서 세 항목 수정 후 exact diff 재검토: **PASS**, unresolved/blocking finding 0.
 - 실행 검증: source-of-truth/workflow-v2/workpack/automation/bookkeeping validation, lint, typecheck, harness 594 tests, HTML 320/390/1280 Playwright overflow·console·request failure 0.
+
+## Stage 2 Runtime Evidence
+
+- 2026-08-01 exact digest 7-container Docker smoke: ordered health 통과, raw Postgres/Auth/PostgREST/Storage host port 0, loopback gateway 2개만 노출.
+- Auth-only proxy: `/auth/v1/health` 200, `/rest/v1`, `/storage/v1`, `/healthz` 404. OAuth callback `code` marker의 전체 container log match 0.
+- secret 전달: 12개 논리 secret Keychain chunk 저장·왕복, repo 밖 `0700` directory/`0600` file, read-only `/run/secrets`, Compose·`Config.Env`·log raw/base64/URL-encoded match 0.
+- 회귀 보호: repo 내부 경로와 내부를 가리키는 symlink 거부, 기존 PostgreSQL named volume이 있으면 `bootstrap-secrets --replace` 거부, `start` 180초 health poll.
+- 실행 검증: focused 22 tests, disposable Docker integration 1 test, lint, typecheck, 전체 499 files(`474 passed`, `25 skipped`)와 5,028 tests(`4,787 passed`, `241 skipped`) 통과.
+- 분리된 `code-reviewer`와 `security-reviewer` 재검토: 모두 **PASS**, critical/high/medium unresolved finding 0. dependency audit 잔여는 devDependency 경로 low 1건.
