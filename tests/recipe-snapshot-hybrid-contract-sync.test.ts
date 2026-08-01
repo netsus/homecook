@@ -23,6 +23,11 @@ type ActiveProjection = {
   values: string[];
 };
 
+type NamedTextProjection = {
+  name: string;
+  value: string;
+};
+
 const retiredActiveGatePatterns = [
   /pnpm test:recipe-snapshot-authority:hybrid-cleanup-postgres/i,
   /tests\/recipe-snapshot-hybrid-account-cleanup-postgres\.integration\.test\.ts/i,
@@ -46,54 +51,45 @@ describe("recipe snapshot full-local contract lock", () => {
   const automationPath = `docs/workpacks/${sliceId}/automation-spec.json`;
   const workItemPath = `.workflow-v2/work-items/${sliceId}.json`;
 
-  function activeMachineReadableProjections(): ActiveProjection[] {
-    const automation = readJson(automationPath);
-    const automationBackend = automation.backend as Record<string, unknown>;
-    const workItem = readJson(workItemPath);
-    const workflow = workItem.workflow as Record<string, unknown>;
-    const verification = workItem.verification as Record<string, unknown>;
+  function collectStringArrayProjections(
+    name: string,
+    value: unknown,
+  ): ActiveProjection[] {
+    if (Array.isArray(value)) {
+      if (value.every((item) => typeof item === "string")) {
+        return [{ name, values: value.map(String) }];
+      }
+      return value.flatMap((item, index) =>
+        collectStringArrayProjections(`${name}[${index}]`, item),
+      );
+    }
+
+    if (value && typeof value === "object") {
+      return Object.entries(value as Record<string, unknown>).flatMap(
+        ([key, nestedValue]) =>
+          collectStringArrayProjections(`${name}.${key}`, nestedValue),
+      );
+    }
+
+    return [];
+  }
+
+  function targetStatusItem() {
     const statusFile = readJson(".workflow-v2/status.json");
     const statusItems = statusFile.items as Array<Record<string, unknown>>;
     const statusItem = statusItems.find((item) => item.id === sliceId);
+    expect(statusItem).toBeDefined();
+    return statusItem ?? {};
+  }
 
-    const arrayProjections = (
-      prefix: string,
-      record: Record<string, unknown>,
-    ): ActiveProjection[] =>
-      Object.entries(record)
-        .filter(([, value]) => Array.isArray(value))
-        .map(([name, value]) => ({
-          name: `${prefix}.${name}`,
-          values: strings(value),
-        }));
+  function activeMachineReadableProjections(): ActiveProjection[] {
+    const automation = readJson(automationPath);
+    const workItem = readJson(workItemPath);
 
     return [
-      {
-        name: "automation.backend.invariants",
-        values: strings(automationBackend.invariants),
-      },
-      {
-        name: "automation.backend.verify_commands",
-        values: strings(automationBackend.verify_commands),
-      },
-      {
-        name: "automation.backend.required_test_targets",
-        values: strings(automationBackend.required_test_targets),
-      },
-      {
-        name: "automation.external_smokes",
-        values: strings(automation.external_smokes),
-      },
-      {
-        name: "automation.blocked_conditions",
-        values: strings(automation.blocked_conditions),
-      },
-      ...arrayProjections("workItem.workflow", workflow),
-      ...arrayProjections("workItem.verification", verification),
-      {
-        name: "status.required_checks",
-        values: strings(statusItem?.required_checks),
-      },
+      ...collectStringArrayProjections("automation", automation),
+      ...collectStringArrayProjections("workItem", workItem),
+      ...collectStringArrayProjections("status", targetStatusItem()),
     ];
   }
 
@@ -112,6 +108,94 @@ describe("recipe snapshot full-local contract lock", () => {
         if (retiredPattern) {
           throw new Error(
             `${projection.name}: retired active gate ${retiredPattern.source}: ${value}`,
+          );
+        }
+      }
+    }
+  }
+
+  function markdownSection(markdown: string, heading: string) {
+    const start = markdown.indexOf(heading);
+    expect(start).toBeGreaterThanOrEqual(0);
+    const afterHeading = markdown.slice(start + heading.length);
+    const nextHeading = afterHeading.search(/\n## /);
+    return markdown.slice(
+      start,
+      nextHeading === -1 ? markdown.length : start + heading.length + nextHeading,
+    );
+  }
+
+  function lineContaining(text: string, marker: string) {
+    const line = text.split("\n").find((candidate) => candidate.includes(marker));
+    expect(line).toBeDefined();
+    return line ?? "";
+  }
+
+  function pr1263NamedProjections(): NamedTextProjection[] {
+    const automation = readJson(automationPath);
+    const workItem = readJson(workItemPath);
+    const workflow = workItem.workflow as Record<string, unknown>;
+    const statusItem = targetStatusItem();
+    const roadmap = read("docs/workpacks/README.md");
+
+    return [
+      {
+        name: "README dependency",
+        value: [
+          markdownSection(read(readmePath), "## Dependencies"),
+          lineContaining(read(readmePath), "first local mutation/cutover"),
+        ].join("\n"),
+      },
+      {
+        name: "acceptance pending evidence",
+        value: [
+          lineContaining(read(acceptancePath), "accept-snapshot-remote"),
+          lineContaining(
+            read(acceptancePath),
+            "accept-snapshot-full-local-manual",
+          ),
+        ].join("\n"),
+      },
+      {
+        name: "automation external smoke and notes",
+        value: [
+          ...strings(automation.external_smokes),
+          String(automation.notes),
+        ].join("\n"),
+      },
+      {
+        name: "work-item dependency workflow and notes",
+        value: [
+          ...strings(workItem.dependencies),
+          ...strings(workflow.external_smokes),
+          String(workItem.notes),
+        ].join("\n"),
+      },
+      {
+        name: "status notes",
+        value: String(statusItem.notes),
+      },
+      {
+        name: "roadmap full-local projection",
+        value: lineContaining(roadmap, "`full-local-supabase-production` | docs"),
+      },
+    ];
+  }
+
+  function assertPr1263Projections(projections: NamedTextProjection[]) {
+    const requiredPatterns = [
+      /PR #1263/,
+      /Stage 3 deployable app\/runtime authority/i,
+      /explicit env\+DB control/i,
+      /Manual Only/i,
+      /pending/i,
+    ];
+
+    for (const projection of projections) {
+      for (const pattern of requiredPatterns) {
+        if (!pattern.test(projection.value)) {
+          throw new Error(
+            `${projection.name}: missing PR #1263 authority boundary ${pattern.source}`,
           );
         }
       }
@@ -157,24 +241,51 @@ describe("recipe snapshot full-local contract lock", () => {
     }
   });
 
-  it("rejects a retired hybrid gate injected into a copied active projection", () => {
-    const mutated = activeMachineReadableProjections().map((projection) => ({
-      name: projection.name,
-      values: [...projection.values],
-    }));
-    const verifyCommands = mutated.find(
-      (projection) => projection.name === "automation.backend.verify_commands",
+  it.each(
+    activeMachineReadableProjections().map((projection) => [projection.name]),
+  )("rejects a retired gate injected into copied projection %s", (path) => {
+    const original = activeMachineReadableProjections().find(
+      (projection) => projection.name === path,
     );
+    expect(original).toBeDefined();
+    const retiredGate =
+      path === "automation.backend.required_endpoints"
+        ? "remote exact-epoch hybrid verifier gate"
+        : path === "automation.frontend.verify_commands"
+          ? "pnpm test:recipe-snapshot-authority:hybrid-cleanup-postgres"
+          : "session-liveness HMAC binding";
+    const mutated = {
+      name: path,
+      values: [...(original?.values ?? []), retiredGate],
+    };
 
-    expect(verifyCommands).toBeDefined();
-    verifyCommands?.values.push(
-      "pnpm test:recipe-snapshot-authority:hybrid-cleanup-postgres",
-    );
-
-    expect(() => assertNoRetiredActiveGates(mutated)).toThrow(
-      /automation\.backend\.verify_commands/,
-    );
+    expect(() => assertNoRetiredActiveGates([mutated])).toThrow(path);
   });
+
+  it.each([
+    "automation.backend.required_endpoints",
+    "automation.frontend.verify_commands",
+  ])("collects active projection %s", (path) => {
+    expect(
+      activeMachineReadableProjections().map((projection) => projection.name),
+    ).toContain(path);
+  });
+
+  it.each(pr1263NamedProjections().map((projection) => [projection.name]))(
+    "rejects PR #1263 removal from copied named projection %s",
+    (name) => {
+      const original = pr1263NamedProjections().find(
+        (projection) => projection.name === name,
+      );
+      expect(original).toBeDefined();
+      const mutated = {
+        name,
+        value: (original?.value ?? "").replaceAll("PR #1263", "PR #removed"),
+      };
+
+      expect(() => assertPr1263Projections([mutated])).toThrow(name);
+    },
+  );
 
   it("keeps hybrid verifier evidence as history without making it an active release gate", () => {
     const evidenceBundle = [
@@ -229,31 +340,10 @@ describe("recipe snapshot full-local contract lock", () => {
     );
   });
 
-  it("records PR #1263 as deployable full-local authority without claiming activation", () => {
-    const bundle = [
-      read(readmePath),
-      read(acceptancePath),
-      read(automationPath),
-      read(workItemPath),
-      read(".workflow-v2/status.json"),
-      read("docs/workpacks/README.md"),
-    ].join("\n");
-
-    expect(bundle).toContain("PR #1263");
-    expect(bundle).toContain("Stage 3 deployable app/runtime authority");
-    expect(bundle).toContain("OAuth flow ledger");
-    expect(bundle).toContain("callback/refresh/guarded Data/Storage/logout");
-    expect(bundle).toContain("loopback admin");
-    expect(bundle).toContain("request attestation");
-    expect(bundle).toContain("secret boundary");
-    expect(bundle).toContain("explicit env+DB control");
-    expect(bundle).toContain("provider live callback/link");
-    expect(bundle).toContain("Cloudflare");
-    expect(bundle).toContain("remote final backup");
-    expect(bundle).toContain("off-Mac restore 2회");
-    expect(bundle).toContain("first local mutation/cutover");
-    expect(bundle).toContain("Manual Only");
-    expect(bundle).toContain("pending");
+  it("records PR #1263 authority independently in every named projection", () => {
+    for (const projection of pr1263NamedProjections()) {
+      expect(() => assertPr1263Projections([projection])).not.toThrow();
+    }
     expect(activeGateBundle()).toContain(
       "planned-stage2-full-local-snapshot-verifier-not-yet-implemented",
     );
