@@ -274,3 +274,37 @@ Merged-exact execution, provider callback/link, Cloudflare, remote final backup,
 - No public API, field, status, error, migration or dependency was added. Production, staging and remote application writes remain `0 / 0 / 0`.
 
 Merged-exact execution, provider callback/link, Cloudflare, remote final backup, off-Mac restore twice, first local mutation/cutover, compatibility-release observation and full actual-DB cleanup rehearsal remain Manual Only/pending. The repaired exact head still requires all current-head checks and fresh independent code/security/DB reviews.
+
+## Protected-table owner repair — 2026-08-02
+
+- Review input: PR #1265 exact head `24250a8bb0649c14810c0e63fdaf4e47ea4b56c5`.
+- Fresh code review: `APPROVE`, `P0/P1/P2 = 0/0/0`.
+- Security review task `019fbe8b-fe74-7a93-887e-3ec2a95e534b`: `REQUEST_CHANGES`, `P0/P1/P2 = 0/1/0`.
+- Role boundary: the same Stage 2 implementer performed this repair. It is not an approval, merge decision, Stage 3 completion or Stage 6 completion.
+
+### Actual PostgreSQL owner RED and GREEN
+
+1. Fresh and replay RED:
+   - snapshot suites remained green (`14 passed / 1 intended skip`, then `15/15`);
+   - each active production assertion reported `1 failed / 18 passed / 16 skipped` because `ALTER TABLE public.recipes OWNER TO authenticated` was accepted.
+2. Minimal GREEN:
+   - the existing 12-table migration-derived inventory now carries an exact owner for every `private` and `public` protected table;
+   - `pg_class.relowner` resolves through `pg_roles.rolname`, and `rls_owner_drift_count` must remain zero alongside ENABLE/FORCE RLS state;
+   - the expected `postgres` owner matches the canonical migration/schema restore ownership already required by the 29-function owner inventory. `storage.objects` is not silently added to the locked 12-table set.
+3. Fresh and replay GREEN:
+   - fresh snapshot `14 passed / 1 intended skip`, active security inventory `19/19`;
+   - replay snapshot `15/15`, active security inventory `19/19`;
+   - final full-local isolated PostgreSQL result `16 passed / 19 active-path tests intentionally skipped`. The 19 skipped cases are snapshot-owned active inventory cases executed and passed in both fresh and replay runs above.
+4. Pure assertion-shape regression:
+   - RED: focused bundle `3 failed / 213 passed` because the exact fixtures did not yet include `rls_owner_drift_count`;
+   - GREEN: 16 files, `216/216`, including a direct nonzero owner-drift assertion and the existing Storage/outbox plus effective-ingredient regressions.
+
+### Current repair verification before push
+
+- `pnpm verify:backend`: product Vitest 202 files passed and 9 skipped, `2,554 passed / 128 skipped`; production build passed; Playwright security smoke `12/12`.
+- Security-function manifest validator `--contract-only`: passed and retained the 13-function full-local plus 16-function snapshot classifications.
+- Two bounded auxiliary read-only owner-drift reviews were requested under the implementation task but did not return a result within the execution window and were interrupted. They are not counted as review evidence; fresh independent exact-head Stage 3 code/security/DB reviews remain required.
+- The preserved `127.0.0.1:54322` target remains unavailable; no Docker container or another worktree fixture was started, stopped or modified.
+- No public API, field, status, error, migration or dependency was added. Production, staging and remote application writes remain `0 / 0 / 0`.
+
+Merged-exact execution, provider callback/link, Cloudflare, remote final backup, off-Mac restore twice, first local mutation/cutover, compatibility-release observation and full actual-DB cleanup rehearsal remain Manual Only/pending. The repaired exact head still requires all current-head checks and fresh independent code/security/DB reviews.
