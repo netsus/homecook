@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { createAuthProviderAttemptCookie } from "@/lib/auth/provider-cookies";
+import { cancelServerAuthFlow, startServerAuthFlow } from "@/lib/auth/flow-client";
 import { AUTH_PROVIDER_META, getEnabledAuthProviders, getSupabaseAuthProvider, normalizeAuthProviderId, type AuthProviderId } from "@/lib/auth/providers";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { hasSupabasePublicEnv } from "@/lib/supabase/env";
@@ -51,15 +51,37 @@ export function LinkedAuthProviders() {
   async function link(provider: AuthProviderId) {
     if (pending) return;
     setPending(provider);
-    document.cookie = createAuthProviderAttemptCookie(provider);
-    const callback = new URL("/auth/link/callback", window.location.origin);
-    callback.searchParams.set("attemptedProvider", provider);
-    const { error: linkError } = await getSupabaseBrowserClient().auth.linkIdentity({
-      provider: getSupabaseAuthProvider(provider),
-      options: { redirectTo: callback.toString() },
-    });
-    if (linkError) setState("error");
-    setPending(null);
+    let flowStarted = false;
+    try {
+      const started = await startServerAuthFlow({
+        flowKind: "link",
+        provider: provider === "naver" ? "custom:naver" : provider,
+      });
+      if (!started.ok) {
+        setState("error");
+        return;
+      }
+      flowStarted = true;
+      const callback = new URL("/auth/link/callback", window.location.origin);
+      const { error: linkError } = await getSupabaseBrowserClient().auth.linkIdentity({
+        provider: getSupabaseAuthProvider(provider),
+        options: { redirectTo: callback.toString() },
+      });
+      if (linkError) {
+        throw linkError;
+      }
+    } catch {
+      if (flowStarted) {
+        try {
+          await cancelServerAuthFlow();
+        } catch {
+          // The 900-second ledger expiry remains the fail-closed fallback.
+        }
+      }
+      setState("error");
+    } finally {
+      setPending(null);
+    }
   }
 
   return (

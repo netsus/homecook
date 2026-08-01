@@ -9,6 +9,7 @@ services:
     entrypoint: ["/homecook/secret-entrypoint.sh"]
     command: ["docker-entrypoint.sh", "postgres", "-D", "/etc/postgresql"]
     environment:
+      FULL_LOCAL_AUTH_EXPECTED_ISSUER: ${FULL_LOCAL_API_EXTERNAL_URL:?FULL_LOCAL_API_EXTERNAL_URL is required}
       HOMECOOK_SECRET_EXPORTS: HOMECOOK_POSTGRES_ROLE_PASSWORD=postgres_password
       POSTGRES_DB: postgres
       POSTGRES_PASSWORD: homecook-expired-bootstrap-password
@@ -185,7 +186,7 @@ services:
       storage:
         condition: service_healthy
     environment:
-      HOMECOOK_SECRET_EXPORTS: SUPABASE_ANON_KEY=anon_key;SUPABASE_SERVICE_KEY=service_role_key;SUPABASE_PUBLISHABLE_KEY=publishable_key;SUPABASE_SECRET_KEY=secret_key;ANON_KEY_ASYMMETRIC=anon_key_asymmetric;SERVICE_ROLE_KEY_ASYMMETRIC=service_role_key_asymmetric
+      HOMECOOK_SECRET_EXPORTS: SUPABASE_ANON_KEY=anon_key;SUPABASE_SERVICE_KEY=service_role_key;SUPABASE_PUBLISHABLE_KEY=publishable_key;SUPABASE_SECRET_KEY=secret_key;ANON_KEY_ASYMMETRIC=anon_key_asymmetric;SERVICE_ROLE_KEY_ASYMMETRIC=service_role_key_asymmetric;HOMECOOK_SESSION_ATTESTATION_HMAC_KEY_V1=session_attestation_hmac_key_v1
       KONG_DATABASE: "off"
       KONG_DECLARATIVE_CONFIG: /tmp/homecook-kong.yml
       KONG_DNS_NOT_FOUND_TTL: "1"
@@ -193,7 +194,8 @@ services:
       KONG_DNS_VALID_TTL: "5"
       KONG_NGINX_PROXY_PROXY_BUFFER_SIZE: 160k
       KONG_NGINX_PROXY_PROXY_BUFFERS: 64 160k
-      KONG_PLUGINS: request-transformer,cors,key-auth,acl,post-function
+      KONG_NGINX_MAIN_ENV: HOMECOOK_SESSION_ATTESTATION_HMAC_KEY_V1
+      KONG_PLUGINS: request-transformer,cors,key-auth,acl,post-function,homecook-attestation
       KONG_PROXY_ACCESS_LOG: "off"
       KONG_ROUTER_FLAVOR: expressions
     healthcheck:
@@ -217,12 +219,14 @@ services:
       - secret_key
       - anon_key_asymmetric
       - service_role_key_asymmetric
+      - session_attestation_hmac_key_v1
     tmpfs:
       - /tmp:mode=1777
     volumes:
       - ./secret-entrypoint.sh:/homecook/secret-entrypoint.sh:ro
       - ./kong-entrypoint.sh:/homecook/kong-entrypoint.sh:ro
       - ./kong.yml:/homecook/kong.yml:ro
+      - ./kong/plugins/homecook-attestation:/usr/local/share/lua/5.1/kong/plugins/homecook-attestation:ro
 
   auth-proxy:
     image: docker.io/library/node@sha256:74e144386aaec923ce092c3371b351d96c4f977a4ac3f58431fa9164b9399534
@@ -279,6 +283,12 @@ secrets:
     file: ${FULL_LOCAL_SECRET_DIR:?FULL_LOCAL_SECRET_DIR is required}/storage_s3_access_key_id
   storage_s3_access_key_secret:
     file: ${FULL_LOCAL_SECRET_DIR:?FULL_LOCAL_SECRET_DIR is required}/storage_s3_access_key_secret
+  auth_flow_hmac_key:
+    file: ${FULL_LOCAL_SECRET_DIR:?FULL_LOCAL_SECRET_DIR is required}/auth_flow_hmac_key
+  session_attestation_hmac_key_v1:
+    file: ${FULL_LOCAL_SECRET_DIR:?FULL_LOCAL_SECRET_DIR is required}/session_attestation_hmac_key_v1
+  session_generation_hmac_key_v2:
+    file: ${FULL_LOCAL_SECRET_DIR:?FULL_LOCAL_SECRET_DIR is required}/session_generation_hmac_key_v2
 
 volumes:
   postgres-data:

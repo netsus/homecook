@@ -3,7 +3,10 @@ import {
   validateRemoteJwtClaims,
 } from "@/lib/server/hybrid-auth/jwt-guard";
 import { createSessionLivenessBinding } from "@/lib/server/hybrid-auth/session-authority";
-import { getAuthSupabaseEnv } from "@/lib/supabase/auth-env";
+import {
+  getAuthAuthority,
+  getAuthSupabaseEnv,
+} from "@/lib/supabase/auth-env";
 import { getDataAuthority } from "@/lib/supabase/data-env";
 import { createSessionLogoutInternalDataClient } from "@/lib/supabase/server";
 
@@ -71,10 +74,35 @@ export async function revokeCurrentHybridSessionAuthority(
       return { ok: false as const };
     }
 
+    const authorityClient = createSessionLogoutInternalDataClient();
+    if (!authorityClient) {
+      return { ok: false as const };
+    }
+    let keyVersion = 1;
+    if (getAuthAuthority() === "local") {
+      const controlResult = await authorityClient.rpc(
+        "read_full_local_auth_control",
+        {},
+      );
+      const control = controlResult.data && typeof controlResult.data === "object"
+        ? controlResult.data as Record<string, unknown>
+        : null;
+      if (
+        controlResult.error
+        || control?.authority !== "local"
+        || control.local_issuer !== claims.claims.issuer
+        || !Number.isSafeInteger(control.hmac_key_version)
+        || Number(control.hmac_key_version) <= 0
+      ) {
+        return { ok: false as const };
+      }
+      keyVersion = Number(control.hmac_key_version);
+    }
     const binding = createSessionLivenessBinding({
-      secret:
-        process.env.HOMECOOK_SESSION_GENERATION_HMAC_KEY_V1?.trim() ?? "",
-      keyVersion: 1,
+      secret: process.env[
+        `HOMECOOK_SESSION_GENERATION_HMAC_KEY_V${keyVersion}`
+      ]?.trim() ?? "",
+      keyVersion,
       issuer: claims.claims.issuer,
       ownerUuid: claims.claims.ownerUuid,
       sessionId: claims.claims.sessionId,
@@ -82,16 +110,22 @@ export async function revokeCurrentHybridSessionAuthority(
       remoteVerifiedAt: new Date().toISOString(),
       ttlSeconds: 1,
     });
-    const authorityClient = createSessionLogoutInternalDataClient();
-    if (!authorityClient) {
-      return { ok: false as const };
-    }
+    const localAuthority = getAuthAuthority() === "local";
     const { data, error } = await authorityClient.rpc(
-      "revoke_hybrid_remote_session_authority",
-      {
-        p_session_key_hash: binding.session_key_hash,
-        p_hmac_key_version: binding.hmac_key_version,
-      },
+      localAuthority
+        ? "revoke_full_local_session_authority"
+        : "revoke_hybrid_remote_session_authority",
+      localAuthority
+        ? {
+            p_issuer: binding.issuer,
+            p_owner_uuid: binding.owner_uuid,
+            p_session_key_hash: binding.session_key_hash,
+            p_hmac_key_version: binding.hmac_key_version,
+          }
+        : {
+            p_session_key_hash: binding.session_key_hash,
+            p_hmac_key_version: binding.hmac_key_version,
+          },
     );
     return error
       || typeof data !== "object"

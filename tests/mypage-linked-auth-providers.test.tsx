@@ -9,6 +9,10 @@ import { LinkedAuthProviders } from "@/components/auth/linked-auth-providers";
 
 const getUserIdentities = vi.fn();
 const linkIdentity = vi.fn();
+const { startServerAuthFlow, cancelServerAuthFlow } = vi.hoisted(() => ({
+  startServerAuthFlow: vi.fn(),
+  cancelServerAuthFlow: vi.fn(),
+}));
 let publicEnvAvailable = true;
 let searchParams = new URLSearchParams();
 
@@ -21,11 +25,19 @@ vi.mock("@/lib/supabase/env", () => ({ hasSupabasePublicEnv: () => publicEnvAvai
 vi.mock("@/lib/supabase/browser", () => ({
   getSupabaseBrowserClient: () => ({ auth: { getUserIdentities, linkIdentity } }),
 }));
+vi.mock("@/lib/auth/flow-client", () => ({
+  startServerAuthFlow,
+  cancelServerAuthFlow,
+}));
 
 describe("LinkedAuthProviders", () => {
   beforeEach(() => {
     getUserIdentities.mockReset();
     linkIdentity.mockReset();
+    startServerAuthFlow.mockReset();
+    cancelServerAuthFlow.mockReset();
+    startServerAuthFlow.mockResolvedValue({ ok: true });
+    cancelServerAuthFlow.mockResolvedValue(undefined);
     publicEnvAvailable = true;
     searchParams = new URLSearchParams();
   });
@@ -44,12 +56,49 @@ describe("LinkedAuthProviders", () => {
     linkIdentity.mockReturnValue(new Promise(() => {}));
     render(<LinkedAuthProviders />);
     await userEvent.click(await screen.findByRole("button", { name: "네이버 연결" }));
+    expect(startServerAuthFlow).toHaveBeenCalledWith({
+      flowKind: "link",
+      provider: "custom:naver",
+    });
+    expect(startServerAuthFlow.mock.invocationCallOrder[0])
+      .toBeLessThan(linkIdentity.mock.invocationCallOrder[0]);
     expect(linkIdentity).toHaveBeenCalledWith(expect.objectContaining({
       provider: "custom:naver",
       options: expect.objectContaining({ redirectTo: expect.stringContaining("/auth/link/callback") }),
     }));
     await waitFor(() => expect(screen.getByRole("button", { name: "네이버 연결 중" }).hasAttribute("disabled")).toBe(true));
     expect(screen.getByRole("button", { name: "카카오 연결" }).hasAttribute("disabled")).toBe(false);
+  });
+
+  it("does not call the provider SDK when the server link flow is unavailable", async () => {
+    getUserIdentities.mockResolvedValue({ data: { identities: [{ provider: "google" }] }, error: null });
+    startServerAuthFlow.mockResolvedValue({ ok: false });
+    render(<LinkedAuthProviders />);
+
+    await userEvent.click(await screen.findByRole("button", { name: "네이버 연결" }));
+
+    expect(linkIdentity).not.toHaveBeenCalled();
+    expect(await screen.findByText("연결 상태를 불러오지 못했어요.")).toBeTruthy();
+  });
+
+  it("cancels the server flow when linkIdentity fails before redirect", async () => {
+    getUserIdentities.mockResolvedValue({ data: { identities: [{ provider: "google" }] }, error: null });
+    linkIdentity.mockResolvedValue({ error: new Error("sdk failed") });
+    render(<LinkedAuthProviders />);
+
+    await userEvent.click(await screen.findByRole("button", { name: "네이버 연결" }));
+
+    await waitFor(() => expect(cancelServerAuthFlow).toHaveBeenCalledTimes(1));
+  });
+
+  it("cancels the server flow when linkIdentity throws before redirect", async () => {
+    getUserIdentities.mockResolvedValue({ data: { identities: [{ provider: "google" }] }, error: null });
+    linkIdentity.mockRejectedValue(new Error("sdk crashed"));
+    render(<LinkedAuthProviders />);
+
+    await userEvent.click(await screen.findByRole("button", { name: "네이버 연결" }));
+
+    await waitFor(() => expect(cancelServerAuthFlow).toHaveBeenCalledTimes(1));
   });
 
   it("shows the backend linked result as a successful connection", async () => {

@@ -18,6 +18,11 @@ import {
   beginHybridAuthorityResponseBoundary,
 } from "@/lib/server/hybrid-auth/route-error-context";
 import {
+  prepareFullLocalSessionAuthority,
+  readFullLocalSessionControl,
+  recordFullLocalSessionAuthority,
+} from "@/lib/server/full-local-auth/session-authority";
+import {
   buildLegacyAuthCallbackProfile,
   ensurePublicUserRow,
   ensureUserBootstrapState,
@@ -26,8 +31,10 @@ import {
 import type { HybridPublicReadScope } from
   "@/lib/server/hybrid-auth/public-read-policy";
 import {
+  getAuthAuthority,
   getAuthServiceRoleKey,
   getAuthSupabaseEnv,
+  getAuthSupabaseServerEnv,
   getDataServiceRoleKey,
   getDataSupabaseEnv,
   getLocalDataServiceRoleKey,
@@ -66,7 +73,7 @@ async function createAuthServerClient({
             return { ok: false as const, reason: "maintenance" as const };
           }
 
-          return bootstrapAuthCallbackSessionAuthority({
+          return bootstrapAuthRefreshSessionAuthority({
             accessToken,
             client,
             user,
@@ -108,6 +115,8 @@ function createAssertSessionAuthority(
 ) {
   return async ({
     binding,
+    authCutoverEpoch,
+    sessionIssuedAt,
   }: Parameters<
     NonNullable<
       Parameters<typeof createHybridAuthorityFetch>[0]["assertSessionAuthority"]
@@ -117,16 +126,39 @@ function createAssertSessionAuthority(
       functionName: string,
       args: Record<string, unknown>,
     ) => PromiseLike<{ error: unknown }>;
+    const localAuthority = getAuthAuthority() === "local";
+    if (
+      localAuthority
+      && (
+        !Number.isSafeInteger(authCutoverEpoch)
+        || Number(authCutoverEpoch) <= 0
+        || typeof sessionIssuedAt !== "string"
+      )
+    ) {
+      throw new HybridSessionAuthorityError();
+    }
     const { error } = await rpc.call(
       authorityClient,
-      "assert_hybrid_remote_session_authority",
-      {
-        p_issuer: binding.issuer,
-        p_owner_uuid: binding.owner_uuid,
-        p_identity_created_at: binding.identity_created_at,
-        p_session_key_hash: binding.session_key_hash,
-        p_hmac_key_version: binding.hmac_key_version,
-      },
+      localAuthority
+        ? "assert_full_local_session_authority"
+        : "assert_hybrid_remote_session_authority",
+      localAuthority
+        ? {
+            p_issuer: binding.issuer,
+            p_owner_uuid: binding.owner_uuid,
+            p_identity_created_at: binding.identity_created_at,
+            p_session_key_hash: binding.session_key_hash,
+            p_hmac_key_version: binding.hmac_key_version,
+            p_auth_cutover_epoch: authCutoverEpoch,
+            p_session_issued_at: sessionIssuedAt,
+          }
+        : {
+            p_issuer: binding.issuer,
+            p_owner_uuid: binding.owner_uuid,
+            p_identity_created_at: binding.identity_created_at,
+            p_session_key_hash: binding.session_key_hash,
+            p_hmac_key_version: binding.hmac_key_version,
+          },
     );
     if (error) {
       const message = String(
@@ -159,6 +191,7 @@ function createGuardedLocalFetch({
   anonymousPublicReadScope?: HybridPublicReadScope;
 }) {
   const authEnv = getAuthSupabaseEnv();
+  const localAuthority = getAuthAuthority() === "local";
   return createHybridAuthorityFetch({
     getAccessToken,
     auth: {
@@ -169,9 +202,31 @@ function createGuardedLocalFetch({
     attestationSecret: requireHmacSecret(
       "HOMECOOK_SESSION_ATTESTATION_HMAC_KEY_V1",
     ),
-    sessionBindingSecret: requireHmacSecret(
-      "HOMECOOK_SESSION_GENERATION_HMAC_KEY_V1",
-    ),
+    ...(localAuthority ? {
+      resolveSessionBindingKey: async () => {
+        const result = await readFullLocalSessionControl(authorityClient as {
+          rpc: (functionName: string, args?: Record<string, unknown>) => PromiseLike<{
+            data?: unknown;
+            error?: unknown;
+          }>;
+        });
+        if (!result.ok) {
+          throw new HybridSessionAuthorityError();
+        }
+        const keyVersion = result.control.hmac_key_version;
+        return {
+          authCutoverEpoch: result.control.cutover_epoch,
+          keyVersion,
+          secret: requireHmacSecret(
+            `HOMECOOK_SESSION_GENERATION_HMAC_KEY_V${keyVersion}`,
+          ),
+        };
+      },
+    } : {
+      sessionBindingSecret: requireHmacSecret(
+        "HOMECOOK_SESSION_GENERATION_HMAC_KEY_V1",
+      ),
+    }),
     assertSessionAuthority: createAssertSessionAuthority(authorityClient),
     anonymousPublicReadScope,
   });
@@ -286,9 +341,9 @@ export async function createAuthServerComponentClient() {
 }
 
 /**
- * Compatibility facade: Auth always stays remote. In `local` mode Data/RPC/
- * Storage members are delegated to a request-scoped local client whose fetch
- * is guarded by remote `/auth/v1/user` liveness and HMAC attestation.
+ * Compatibility facade: browser and SSR Auth stay on the selected public HTTPS
+ * origin. In `local` Data mode, Data/RPC/Storage members are delegated to a
+ * request-scoped local client guarded by session liveness and HMAC attestation.
  */
 export async function createRouteHandlerClient(options?: {
   anonymousPublicReadScope?: HybridPublicReadScope;
@@ -333,6 +388,7 @@ type LocalInternalScope =
   | "account-lifecycle"
   | "admin-data"
   | "auth-callback"
+  | "auth-flow"
   | "auth-refresh"
   | "not-found-feedback"
   | "operational-event"
@@ -401,6 +457,11 @@ export function createAuthCallbackInternalDataClient() {
   return {
     rpc: client.rpc.bind(client),
   };
+}
+
+export function createAuthFlowInternalDataClient() {
+  const client = createScopedDataServiceRoleClient("auth-flow");
+  return client ? { rpc: client.rpc.bind(client) } : null;
 }
 
 export const createAuthCallbackOperationsClient =
@@ -632,6 +693,9 @@ export async function bootstrapAuthCallbackSessionAuthority({
     created_at?: string;
   };
 }) {
+  if (getAuthAuthority() === "local") {
+    return { ok: true as const };
+  }
   if (getDataSupabaseEnv().authority !== "local") {
     return { ok: true as const };
   }
@@ -654,6 +718,32 @@ export async function bootstrapAuthCallbackSessionAuthority({
   });
 }
 
+async function bootstrapAuthRefreshSessionAuthority({
+  accessToken,
+  client,
+  user,
+}: {
+  accessToken: string;
+  client: NonNullable<ReturnType<typeof createAuthRefreshInternalDataClient>>;
+  user: { id: string; created_at: string };
+}) {
+  if (getAuthAuthority() !== "local") {
+    return bootstrapAuthCallbackSessionAuthority({ accessToken, client, user });
+  }
+  const prepared = await prepareFullLocalSessionAuthority({
+    accessToken,
+    client,
+    user,
+  });
+  if (!prepared.ok) {
+    return prepared;
+  }
+  return recordFullLocalSessionAuthority({
+    client,
+    record: prepared.record,
+  });
+}
+
 /**
  * Keeps legacy service-key behavior only while the authoritative Data plane
  * is remote. At local cutover this returns null instead of bypassing local RLS.
@@ -665,7 +755,7 @@ export function createRemoteCompatibilityServiceRoleClient() {
 }
 
 export function createAuthServiceRoleClient() {
-  const { url } = getAuthSupabaseEnv();
+  const { url } = getAuthSupabaseServerEnv();
   const serviceRoleKey = getAuthServiceRoleKey();
   if (!serviceRoleKey) {
     return null;

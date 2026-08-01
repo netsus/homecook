@@ -1,4 +1,5 @@
 import { execFileSync, spawnSync } from "node:child_process";
+import { createHmac } from "node:crypto";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -171,6 +172,33 @@ run("full-local production Docker runtime", () => {
       const blockedHealth = await fetch(
         `http://127.0.0.1:${authPort}/healthz`,
       );
+      const attestationPayload = Buffer.from(JSON.stringify({
+        method: "GET",
+        path: "/",
+      })).toString("base64url");
+      const invalidAttestation = await fetch(
+        `http://127.0.0.1:${internalPort}/rest/v1/`,
+        {
+          headers: {
+            ...headers,
+            "x-homecook-session-attestation": attestationPayload,
+            "x-homecook-session-attestation-signature": "0".repeat(64),
+          },
+        },
+      );
+      const validAttestation = await fetch(
+        `http://127.0.0.1:${internalPort}/rest/v1/`,
+        {
+          headers: {
+            ...headers,
+            "x-homecook-session-attestation": attestationPayload,
+            "x-homecook-session-attestation-signature": createHmac(
+              "sha256",
+              secrets.session_attestation_hmac_key_v1,
+            ).update(attestationPayload).digest("hex"),
+          },
+        },
+      );
       const oauthLogMarker = "oauth-code-must-not-reach-logs-0001";
       await fetch(
         `http://127.0.0.1:${authPort}/auth/v1/callback?code=${oauthLogMarker}&state=fixture`,
@@ -182,6 +210,8 @@ run("full-local production Docker runtime", () => {
       expect(blockedRest.status).toBe(404);
       expect(blockedStorage.status).toBe(404);
       expect(blockedHealth.status).toBe(404);
+      expect(invalidAttestation.status).toBe(401);
+      expect(validAttestation.status).not.toBe(401);
 
       const artifacts = containers.flatMap((container) => [
         {

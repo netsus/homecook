@@ -10,6 +10,8 @@ describe("hybrid Supabase environment boundary", () => {
     delete process.env.NEXT_PUBLIC_AUTH_SUPABASE_PUBLISHABLE_KEY;
     delete process.env.AUTH_SUPABASE_EXPECTED_ISSUER;
     delete process.env.AUTH_SUPABASE_JWKS_URL;
+    delete process.env.HOMECOOK_AUTH_AUTHORITY;
+    delete process.env.LOCAL_SUPABASE_INTERNAL_URL;
     delete process.env.DATA_SUPABASE_URL;
     delete process.env.DATA_SUPABASE_PUBLISHABLE_KEY;
     delete process.env.DATA_SUPABASE_SECRET_KEY;
@@ -118,5 +120,49 @@ describe("hybrid Supabase environment boundary", () => {
     const { getAuthSupabaseEnv } = await import("@/lib/supabase/auth-env");
 
     expect(() => getAuthSupabaseEnv()).toThrow(/issuer/i);
+  });
+
+  it("separates the public HTTPS Auth origin from the local server loopback origin", async () => {
+    process.env.HOMECOOK_AUTH_AUTHORITY = "local";
+    process.env.NEXT_PUBLIC_AUTH_SUPABASE_URL = "https://auth.mumeok.com";
+    process.env.NEXT_PUBLIC_AUTH_SUPABASE_PUBLISHABLE_KEY = "local-publishable";
+    process.env.LOCAL_SUPABASE_INTERNAL_URL = "http://127.0.0.1:54321";
+
+    const {
+      getAuthAuthority,
+      getAuthSupabaseEnv,
+      getAuthSupabaseServerEnv,
+    } = await import("@/lib/supabase/auth-env");
+
+    expect(getAuthAuthority()).toBe("local");
+    expect(getAuthSupabaseEnv()).toMatchObject({
+      url: "https://auth.mumeok.com",
+      issuer: "https://auth.mumeok.com/auth/v1",
+    });
+    expect(getAuthSupabaseServerEnv()).toMatchObject({
+      url: "http://127.0.0.1:54321",
+      issuer: "https://auth.mumeok.com/auth/v1",
+    });
+  });
+
+  it("fails closed when local Auth uses a non-loopback internal origin", async () => {
+    process.env.HOMECOOK_AUTH_AUTHORITY = "local";
+    process.env.NEXT_PUBLIC_AUTH_SUPABASE_URL = "https://auth.mumeok.com";
+    process.env.NEXT_PUBLIC_AUTH_SUPABASE_PUBLISHABLE_KEY = "local-publishable";
+    process.env.LOCAL_SUPABASE_INTERNAL_URL = "http://192.168.0.36:54321";
+
+    const { getAuthSupabaseServerEnv } = await import(
+      "@/lib/supabase/auth-env"
+    );
+
+    expect(() => getAuthSupabaseServerEnv()).toThrow(/loopback/i);
+  });
+
+  it("rejects an unknown Auth authority instead of silently falling back", async () => {
+    process.env.HOMECOOK_AUTH_AUTHORITY = "typo";
+
+    const { getAuthAuthority } = await import("@/lib/supabase/auth-env");
+
+    expect(() => getAuthAuthority()).toThrow(/remote.*local/i);
   });
 });

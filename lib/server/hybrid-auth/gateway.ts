@@ -235,6 +235,7 @@ export function createHybridAuthorityFetch({
   auth,
   attestationSecret,
   sessionBindingSecret,
+  resolveSessionBindingKey,
   nowSeconds = () => Math.floor(Date.now() / 1_000),
   anonymousPublicReadScope,
   timeoutMs = 3_000,
@@ -245,10 +246,17 @@ export function createHybridAuthorityFetch({
   loadRemoteJwks?: () => Promise<unknown>;
   assertSessionAuthority: (input: {
     binding: ReturnType<typeof createSessionLivenessBinding>;
+    authCutoverEpoch?: number;
+    sessionIssuedAt: string;
   }) => Promise<void>;
   auth: RemoteAuthGatewayEnv;
   attestationSecret: string;
-  sessionBindingSecret: string;
+  sessionBindingSecret?: string;
+  resolveSessionBindingKey?: () => Promise<{
+    authCutoverEpoch: number;
+    keyVersion: number;
+    secret: string;
+  }>;
   nowSeconds?: () => number;
   anonymousPublicReadScope?: HybridPublicReadScope;
   timeoutMs?: number;
@@ -337,9 +345,18 @@ export function createHybridAuthorityFetch({
         failClosed();
       }
 
+      const bindingKey = resolveSessionBindingKey
+        ? await resolveSessionBindingKey()
+        : sessionBindingSecret
+          ? {
+            authCutoverEpoch: undefined,
+            keyVersion: 1,
+            secret: sessionBindingSecret,
+          }
+          : failClosed();
       const binding = createSessionLivenessBinding({
-        secret: sessionBindingSecret,
-        keyVersion: 1,
+        secret: bindingKey.secret,
+        keyVersion: bindingKey.keyVersion,
         issuer: validated.claims.issuer,
         ownerUuid: validated.claims.ownerUuid,
         sessionId: validated.claims.sessionId,
@@ -350,11 +367,15 @@ export function createHybridAuthorityFetch({
 
       await assertSessionAuthority({
         binding,
+        authCutoverEpoch: bindingKey.authCutoverEpoch,
+        sessionIssuedAt: new Date(
+          validated.claims.issuedAt * 1_000,
+        ).toISOString(),
       });
 
       const attestation = createHybridRequestAttestation({
         secret: attestationSecret,
-        keyVersion: 1,
+        keyVersion: bindingKey.keyVersion,
         method: request.method,
         path: authorityPath,
         issuer: validated.claims.issuer,

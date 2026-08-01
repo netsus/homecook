@@ -13,6 +13,10 @@ const hasSupabasePublicEnv = vi.fn();
 const isLocalDevAuthEnabled = vi.fn();
 const isLocalGoogleOAuthEnabled = vi.fn();
 const isQaFixtureClientModeEnabled = vi.fn();
+const { startServerAuthFlow, cancelServerAuthFlow } = vi.hoisted(() => ({
+  startServerAuthFlow: vi.fn(),
+  cancelServerAuthFlow: vi.fn(),
+}));
 
 vi.mock("@/components/auth/local-dev-login-panel", () => ({
   LocalDevLoginPanel: () => <div>local-dev-panel</div>,
@@ -39,6 +43,11 @@ vi.mock("@/lib/supabase/browser", () => ({
   }),
 }));
 
+vi.mock("@/lib/auth/flow-client", () => ({
+  startServerAuthFlow,
+  cancelServerAuthFlow,
+}));
+
 describe("social login buttons", () => {
   afterEach(() => {
     cleanup();
@@ -50,12 +59,16 @@ describe("social login buttons", () => {
     isLocalDevAuthEnabled.mockReset();
     isLocalGoogleOAuthEnabled.mockReset();
     isQaFixtureClientModeEnabled.mockReset();
+    startServerAuthFlow.mockReset();
+    cancelServerAuthFlow.mockReset();
     window.localStorage.clear();
     document.cookie = "homecook-post-auth-next=; Path=/; Max-Age=0";
     document.cookie = "homecook-auth-provider-attempt=; Path=/; Max-Age=0";
     isLocalDevAuthEnabled.mockReturnValue(false);
     isLocalGoogleOAuthEnabled.mockReturnValue(false);
     isQaFixtureClientModeEnabled.mockReturnValue(false);
+    startServerAuthFlow.mockResolvedValue({ ok: true });
+    cancelServerAuthFlow.mockResolvedValue(undefined);
   });
 
   it("shows a safe consistent message when public env is missing", async () => {
@@ -109,7 +122,7 @@ describe("social login buttons", () => {
     );
   });
 
-  it("passes the attempted provider to the OAuth callback and stores the sanitized return path in a cookie", async () => {
+  it("starts the server flow before OAuth and stores only the sanitized return path in a client cookie", async () => {
     hasSupabasePublicEnv.mockReturnValue(true);
     signInWithOAuth.mockResolvedValue({ error: null });
 
@@ -121,15 +134,55 @@ describe("social login buttons", () => {
       expect(signInWithOAuth).toHaveBeenCalledTimes(1);
     });
 
+    expect(startServerAuthFlow).toHaveBeenCalledWith({
+      flowKind: "login",
+      provider: "google",
+    });
+    expect(startServerAuthFlow.mock.invocationCallOrder[0])
+      .toBeLessThan(signInWithOAuth.mock.invocationCallOrder[0]);
+
     const redirectTo = signInWithOAuth.mock.calls[0][0].options.redirectTo;
     const callbackUrl = new URL(redirectTo);
     expect(callbackUrl.pathname).toBe("/auth/callback");
-    expect(callbackUrl.searchParams.get("attemptedProvider")).toBe("google");
+    expect(callbackUrl.searchParams.get("attemptedProvider")).toBeNull();
     expect(callbackUrl.searchParams.get("next")).toBeNull();
     expect(document.cookie).toContain(
       "homecook-post-auth-next=%2Fplanner%3Fdate%3D2026-06-17",
     );
-    expect(document.cookie).toContain("homecook-auth-provider-attempt=google");
+    expect(document.cookie).not.toContain("homecook-auth-provider-attempt=");
+  });
+
+  it("does not call OAuth when the server flow cannot start", async () => {
+    hasSupabasePublicEnv.mockReturnValue(true);
+    startServerAuthFlow.mockResolvedValue({ ok: false });
+
+    render(<SocialLoginButtons nextPath="/" />);
+    await userEvent.click(screen.getByRole("button", { name: "Google로 시작하기" }));
+
+    expect(await screen.findByText(
+      "로그인을 시작하지 못했어요. 잠시 후 다시 시도해 주세요.",
+    )).toBeTruthy();
+    expect(signInWithOAuth).not.toHaveBeenCalled();
+  });
+
+  it("cancels the server flow when the OAuth SDK fails before redirect", async () => {
+    hasSupabasePublicEnv.mockReturnValue(true);
+    signInWithOAuth.mockResolvedValue({ error: new Error("sdk failed") });
+
+    render(<SocialLoginButtons nextPath="/" />);
+    await userEvent.click(screen.getByRole("button", { name: "Google로 시작하기" }));
+
+    await waitFor(() => expect(cancelServerAuthFlow).toHaveBeenCalledTimes(1));
+  });
+
+  it("cancels the server flow when the OAuth SDK throws before redirect", async () => {
+    hasSupabasePublicEnv.mockReturnValue(true);
+    signInWithOAuth.mockRejectedValue(new Error("sdk crashed"));
+
+    render(<SocialLoginButtons nextPath="/" />);
+    await userEvent.click(screen.getByRole("button", { name: "Google로 시작하기" }));
+
+    await waitFor(() => expect(cancelServerAuthFlow).toHaveBeenCalledTimes(1));
   });
 
   it("labels the recent provider without relying on a colored outline", () => {
@@ -177,7 +230,7 @@ describe("social login buttons", () => {
       expect(signInWithOAuth.mock.calls[0][0]).toMatchObject({
         provider: "kakao",
         options: {
-          redirectTo: "http://localhost:3000/auth/callback?attemptedProvider=kakao",
+          redirectTo: "http://localhost:3000/auth/callback",
         },
       });
     } finally {
@@ -215,7 +268,7 @@ describe("social login buttons", () => {
       expect(signInWithOAuth.mock.calls[0][0]).toMatchObject({
         provider: "custom:naver",
         options: {
-          redirectTo: "http://localhost:3000/auth/callback?attemptedProvider=naver",
+          redirectTo: "http://localhost:3000/auth/callback",
         },
       });
     } finally {

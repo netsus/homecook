@@ -138,6 +138,18 @@ describe("full-local production runtime static contract", () => {
       "infra/full-local-supabase/auth-only-proxy.mjs",
       "utf8",
     );
+    const kong = readFileSync(
+      "infra/full-local-supabase/kong.yml",
+      "utf8",
+    );
+    const attestationPlugin = readFileSync(
+      "infra/full-local-supabase/kong/plugins/homecook-attestation/handler.lua",
+      "utf8",
+    );
+    const roleBootstrap = readFileSync(
+      "infra/full-local-supabase/full-local-role-passwords.sh",
+      "utf8",
+    );
 
     for (const image of Object.values(fullLocalImageRefsForPlatform("linux/arm64"))) {
       expect(compose).toContain(image);
@@ -165,6 +177,21 @@ describe("full-local production runtime static contract", () => {
     expect(compose).toContain("/run/secrets");
     expect(compose).not.toContain("/var/run/docker.sock");
     expect(compose).toContain('KONG_PROXY_ACCESS_LOG: "off"');
+    expect(compose).toContain(
+      "KONG_NGINX_MAIN_ENV: HOMECOOK_SESSION_ATTESTATION_HMAC_KEY_V1",
+    );
+    expect(compose).toMatch(
+      /api-gateway:[\s\S]*session_attestation_hmac_key_v1/u,
+    );
+    expect(kong).toContain("homecook-attestation");
+    expect(attestationPlugin).toContain("x-homecook-attestation-verified");
+    expect(attestationPlugin).toContain("x-homecook-session-attestation-signature");
+    expect(attestationPlugin).toContain('require "resty.hmac"');
+    expect(attestationPlugin).toContain("secure_equal");
+    expect(attestationPlugin).toContain("kong.service.request.clear_header");
+    expect(roleBootstrap).not.toContain(
+      "app.settings.homecook_session_attestation_hmac_key",
+    );
     expect(compose).not.toContain("KONG_PROXY_ACCESS_LOG: /dev/stdout combined");
     expect(proxy).toContain('pathname.startsWith("/auth/v1/")');
     expect(proxy).toContain('"forwarded"');

@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const createSessionLogoutInternalDataClient = vi.fn();
 const getAuthSupabaseEnv = vi.fn();
+const getAuthAuthority = vi.fn();
 const getDataAuthority = vi.fn();
 
 vi.mock("@/lib/supabase/server", () => ({
@@ -9,6 +10,7 @@ vi.mock("@/lib/supabase/server", () => ({
 }));
 
 vi.mock("@/lib/supabase/auth-env", () => ({
+  getAuthAuthority,
   getAuthSupabaseEnv,
 }));
 
@@ -67,9 +69,11 @@ describe("hybrid logout authority", () => {
   beforeEach(() => {
     createSessionLogoutInternalDataClient.mockReset();
     getAuthSupabaseEnv.mockReset();
+    getAuthAuthority.mockReset();
     getDataAuthority.mockReset();
     getDataAuthority.mockReturnValue("local");
     getAuthSupabaseEnv.mockReturnValue({ issuer: ISSUER });
+    getAuthAuthority.mockReturnValue("remote");
     process.env.HOMECOOK_SESSION_GENERATION_HMAC_KEY_V1 =
       "0123456789abcdef0123456789abcdef";
   });
@@ -131,5 +135,38 @@ describe("hybrid logout authority", () => {
 
     expect(result).toEqual({ ok: true });
     expect(client.auth.signOut).toHaveBeenCalledWith({ scope: "local" });
+  });
+
+  it("uses the current local key version and revokes the exact local issuer binding first", async () => {
+    getAuthAuthority.mockReturnValue("local");
+    process.env.HOMECOOK_SESSION_GENERATION_HMAC_KEY_V2 =
+      "fedcba9876543210fedcba9876543210";
+    const rpc = vi.fn()
+      .mockResolvedValueOnce({
+        data: {
+          authority: "local",
+          cutover_epoch: 7,
+          flows_open: true,
+          hmac_key_version: 2,
+          local_issuer: ISSUER,
+        },
+        error: null,
+      })
+      .mockResolvedValueOnce({ data: { revoked: true }, error: null });
+    createSessionLogoutInternalDataClient.mockReturnValue({ rpc });
+    const client = authClient();
+    const { executeHybridLogout } = await import("@/lib/server/hybrid-auth/logout");
+
+    const result = await executeHybridLogout(client);
+
+    expect(result).toEqual({ ok: true });
+    expect(rpc).toHaveBeenNthCalledWith(2, "revoke_full_local_session_authority", expect.objectContaining({
+      p_hmac_key_version: 2,
+      p_issuer: ISSUER,
+      p_owner_uuid: OWNER_UUID,
+      p_session_key_hash: expect.stringMatching(/^[a-f0-9]{64}$/),
+    }));
+    expect(rpc.mock.invocationCallOrder[1])
+      .toBeLessThan(client.auth.signOut.mock.invocationCallOrder[0]);
   });
 });

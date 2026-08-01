@@ -49,6 +49,10 @@ const ADDITIVE_SOURCES = [
             REPO_ROOT,
             "supabase/migrations/20260730090000_hybrid_auth_remote_identity_epoch_mirror.sql",
           ),
+          path.join(
+            REPO_ROOT,
+            "supabase/migrations/20260801151000_full_local_request_authority.sql",
+          ),
         ],
   },
   {
@@ -650,6 +654,7 @@ function parseCreatedFunctionDefinitions(migration) {
 
     definitions.push({
       signature: `${match[1].toLowerCase()}(${argumentTypes.join(", ")})`,
+      source_index: match.index,
       security_mode: /\bsecurity\s+definer\b/iu.test(definitionSql)
         ? "definer"
         : "invoker",
@@ -660,6 +665,31 @@ function parseCreatedFunctionDefinitions(migration) {
         latestRoleTransition?.[1].toLowerCase() === "reset role"
           ? null
           : latestRoleTransition?.[2]?.toLowerCase() ?? null,
+    });
+  }
+
+  const renamePattern =
+    /alter\s+function\s+([a-z_][a-z0-9_]*\.[a-z_][a-z0-9_]*)\s*\(([^)]*)\)\s+rename\s+to\s+([a-z_][a-z0-9_]*)\s*;/giu;
+  for (const match of migration.matchAll(renamePattern)) {
+    const argumentTypes = match[2].trim()
+      ? match[2].split(",").map(normalizeFunctionArgument)
+      : [];
+    const sourceSignature = `${match[1].toLowerCase()}(${argumentTypes.join(", ")})`;
+    const sourceDefinition = definitions
+      .filter(
+        (definition) =>
+          definition.signature === sourceSignature
+          && definition.source_index < match.index,
+      )
+      .at(-1);
+    if (!sourceDefinition) {
+      throw new Error(`renamed function source is missing for ${sourceSignature}`);
+    }
+    const schema = match[1].slice(0, match[1].indexOf(".")).toLowerCase();
+    definitions.push({
+      ...sourceDefinition,
+      signature: `${schema}.${match[3].toLowerCase()}(${argumentTypes.join(", ")})`,
+      source_index: match.index,
     });
   }
 

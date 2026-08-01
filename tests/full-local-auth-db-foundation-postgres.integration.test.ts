@@ -293,6 +293,13 @@ run("full-local Auth isolated PostgreSQL foundation", () => {
         ) as result
       ) as activated;
     `)).toBe("local:2:2:true");
+    expect(psql(`
+      update private.full_local_auth_control
+      set cutover_started_at = clock_timestamp() - interval '20 seconds',
+          local_activated_at = clock_timestamp() - interval '10 seconds'
+      where singleton;
+      select authority from private.full_local_auth_control;
+    `)).toBe("local");
   });
 
   it("binds only post-activation local sessions to the exact auth user", () => {
@@ -308,8 +315,8 @@ run("full-local Auth isolated PostgreSQL foundation", () => {
         repeat('d', 64),
         2,
         2,
-        control.local_activated_at + interval '1 second',
-        control.local_activated_at + interval '2 seconds',
+        to_timestamp(ceil(extract(epoch from control.local_activated_at)) + 1),
+        to_timestamp(ceil(extract(epoch from control.local_activated_at)) + 2),
         control.local_activated_at + interval '1 hour',
         control.local_activated_at + interval '30 minutes'
       )
@@ -352,8 +359,8 @@ run("full-local Auth isolated PostgreSQL foundation", () => {
         repeat('d', 64),
         2,
         2,
-        control.local_activated_at + interval '1 second',
-        control.local_activated_at + interval '2 seconds',
+        to_timestamp(ceil(extract(epoch from control.local_activated_at)) + 1),
+        to_timestamp(ceil(extract(epoch from control.local_activated_at)) + 2),
         control.local_activated_at + interval '1 hour',
         control.local_activated_at + interval '30 minutes'
       ) ->> 'binding_state'
@@ -372,7 +379,7 @@ run("full-local Auth isolated PostgreSQL foundation", () => {
         repeat('d', 64),
         2,
         2,
-        control.local_activated_at + interval '1 second'
+        to_timestamp(ceil(extract(epoch from control.local_activated_at)) + 1)
       ) ->> 'binding_state'
       from control;
     `)).toBe("active");
@@ -382,6 +389,93 @@ run("full-local Auth isolated PostgreSQL foundation", () => {
       from public.user_session_generation_bindings
       where session_key_hash = repeat('d', 64);
     `)).toBe("t:https://auth.mumeok.com/auth/v1:2");
+  });
+
+  it("allows only scoped internal RPCs and verifies the active local binding", () => {
+    expect(psql(`
+      set request.jwt.claims = '{"role":"service_role"}';
+      set request.method = 'POST';
+      set request.path = '/rpc/read_full_local_auth_control';
+      set request.headers = '{"x-homecook-internal-scope":"auth-flow"}';
+      select private.verify_hybrid_request_authority();
+      select 'ok';
+    `)).toBe("ok");
+
+    const broadInternalRequest = psqlResult(`
+      set request.jwt.claims = '{"role":"service_role"}';
+      set request.method = 'GET';
+      set request.path = '/users';
+      set request.headers = '{"x-homecook-internal-scope":"auth-flow"}';
+      select private.verify_hybrid_request_authority();
+    `);
+    expect(broadInternalRequest.status).not.toBe(0);
+    expect(broadInternalRequest.stderr).toContain("ACCOUNT_SESSION_STALE");
+
+    expect(psql(`
+      set request.method = 'GET';
+      set request.path = '/users';
+      with authority as (
+        select
+          extract(epoch from binding.session_issued_at)::bigint as session_iat,
+          extract(epoch from clock_timestamp())::bigint as now_epoch
+        from public.user_session_generation_bindings as binding
+        where binding.session_key_hash = repeat('d', 64)
+      ), claims as (
+        select set_config(
+          'request.jwt.claims',
+          jsonb_build_object(
+            'iss', 'https://auth.mumeok.com/auth/v1',
+            'aud', 'authenticated',
+            'role', 'authenticated',
+            'sub', '${owner}',
+            'session_id', '22222222-2222-4222-8222-222222222222',
+            'iat', authority.session_iat,
+            'nbf', authority.session_iat,
+            'exp', authority.now_epoch + 1800
+          )::text,
+          false
+        )
+        from authority
+      ), payload as (
+        select rtrim(translate(replace(encode(convert_to(
+          jsonb_build_object(
+            'version', 2,
+            'method', 'GET',
+            'path', '/users',
+            'issuer', 'https://auth.mumeok.com/auth/v1',
+            'owner_uuid', '${owner}',
+            'identity_created_at', '2026-08-01T00:00:00.000Z',
+            'session_key_hash', repeat('d', 64),
+            'issued_at', authority.now_epoch,
+            'expires_at', authority.now_epoch + 30
+          )::text,
+          'UTF8'
+        ), 'base64'), E'\\n', ''), '+/', '-_'), '=') as value
+        from authority, claims
+      ), headers as (
+        select set_config(
+          'request.headers',
+          jsonb_build_object(
+            'x-homecook-attestation-verified', payload.value
+          )::text,
+          false
+        )
+        from payload
+      )
+      select private.verify_hybrid_request_authority()
+      from headers;
+      select 'ok';
+    `)).toBe("ok");
+
+    const unverifiedPayload = psqlResult(`
+      set request.jwt.claims = '{"role":"authenticated"}';
+      set request.method = 'GET';
+      set request.path = '/users';
+      set request.headers = '{"x-homecook-session-attestation":"forged"}';
+      select private.verify_hybrid_request_authority();
+    `);
+    expect(unverifiedPayload.status).not.toBe(0);
+    expect(unverifiedPayload.stderr).toContain("ACCOUNT_SESSION_STALE");
   });
 
   it("preserves hybrid recovery and revokes local sessions idempotently", () => {
