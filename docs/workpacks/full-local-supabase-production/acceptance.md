@@ -13,13 +13,13 @@
 ## OAuth / Session / RLS
 
 - [ ] Google/Kakao/Naver login과 link가 local Auth에서 실제 통과한다 <!-- omo:id=accept-full-local-provider-live;stage=4;scope=shared;review=6 -->
-- [ ] `/auth/flow/start` 성공 전 OAuth SDK 호출과 client-side authority cookie write가 0이다 <!-- omo:id=accept-full-local-flow-start-before-sdk;stage=4;scope=frontend;review=5,6 -->
-- [ ] flow ledger는 HMAC attempt만 저장하고 TTL 900초, terminal, outstanding, 960초 drain과 epoch rejection을 지킨다 <!-- omo:id=accept-full-local-flow-ledger;stage=2;scope=backend;review=3,6 -->
-- [ ] callback/link callback은 ledger provider/flow를 sole authority로 사용하고 replay/wrong/expired/old remote flow를 거부한다 <!-- omo:id=accept-full-local-callback-authority;stage=2;scope=backend;review=3,6 -->
+- [x] `/auth/flow/start` 성공 전 OAuth SDK 호출과 client-side authority cookie write가 0이다 <!-- omo:id=accept-full-local-flow-start-before-sdk;stage=4;scope=frontend;review=5,6 -->
+- [x] flow ledger는 HMAC attempt만 저장하고 TTL 900초, terminal, outstanding, 960초 drain과 epoch rejection을 지킨다 <!-- omo:id=accept-full-local-flow-ledger;stage=2;scope=backend;review=3,6 -->
+- [x] callback/link callback은 ledger provider/flow를 sole authority로 사용하고 replay/wrong/expired/old remote flow를 거부한다 <!-- omo:id=accept-full-local-callback-authority;stage=2;scope=backend;review=3,6 -->
 - [ ] local JWT `sub`와 `auth.uid()` mismatch가 0이고 User A로 User B row/object read/write/delete가 0이다 <!-- omo:id=accept-full-local-rls-owner;stage=2;scope=backend;review=3,6 -->
 - [ ] callback/refresh가 local session binding을 갱신하고 logout/delete/quarantine/recreate 뒤 pre-expiry stale token mutation이 0이다 <!-- omo:id=accept-full-local-session-revoke;stage=2;scope=backend;review=3,6 -->
-- [ ] logout은 binding revoke → local Auth sign-out → cookie 만료 순서를 지키고 partial failure/retry에도 stale JWT mutation과 cross-session revoke가 0이다 <!-- omo:id=accept-full-local-logout-order;stage=2;scope=backend;review=3,6 -->
-- [ ] user path service-role priority/fallback과 browser direct Data/Storage mutation이 0이다 <!-- omo:id=accept-full-local-no-service-fallback;stage=2;scope=backend;review=3,6 -->
+- [x] logout은 binding revoke → local Auth sign-out → cookie 만료 순서를 지키고 partial failure/retry에도 stale JWT mutation과 cross-session revoke가 0이다 <!-- omo:id=accept-full-local-logout-order;stage=2;scope=backend;review=3,6 -->
+- [x] user path service-role priority/fallback과 browser direct Data/Storage mutation이 0이다 <!-- omo:id=accept-full-local-no-service-fallback;stage=2;scope=backend;review=3,6 -->
 
 ## Migration / Storage / Rollback
 
@@ -63,7 +63,15 @@
 
 - 2026-08-01 exact digest 7-container Docker smoke: ordered health 통과, raw Postgres/Auth/PostgREST/Storage host port 0, loopback gateway 2개만 노출.
 - Auth-only proxy: `/auth/v1/health` 200, `/rest/v1`, `/storage/v1`, `/healthz` 404. OAuth callback `code` marker의 전체 container log match 0.
-- secret 전달: 12개 논리 secret Keychain chunk 저장·왕복, repo 밖 `0700` directory/`0600` file, read-only `/run/secrets`, Compose·`Config.Env`·log raw/base64/URL-encoded match 0.
+- secret 전달: 15개 논리 secret Keychain chunk 저장·왕복, repo 밖 `0700` directory/`0600` file, read-only `/run/secrets`, Compose·`Config.Env`·log raw/base64/URL-encoded match 0.
 - 회귀 보호: repo 내부 경로와 내부를 가리키는 symlink 거부, 기존 PostgreSQL named volume이 있으면 `bootstrap-secrets --replace` 거부, `start` 180초 health poll.
 - 실행 검증: focused 22 tests, disposable Docker integration 1 test, lint, typecheck, 전체 499 files(`474 passed`, `25 skipped`)와 5,028 tests(`4,787 passed`, `241 skipped`) 통과.
 - 분리된 `code-reviewer`와 `security-reviewer` 재검토: 모두 **PASS**, critical/high/medium unresolved finding 0. dependency audit 잔여는 devDependency 경로 low 1건.
+
+## Stage 3 App Adapter Evidence
+
+- 2026-08-01 browser OAuth는 server ledger start 성공 뒤에만 실행되고, 반환 오류와 throw 모두 cancel을 시도한다. callback/link는 query·client cookie 대신 ledger provider/flow만 인증 authority로 사용한다.
+- local callback/refresh/logout은 DB control의 active cutover epoch와 HMAC key version을 읽어 binding을 bootstrap/assert/revoke하며, SSR Auth는 public HTTPS origin, server-only admin client만 loopback을 사용한다.
+- 요청 attestation HMAC은 Kong custom plugin이 process-only secret으로 검증하고 입력 서명 헤더를 제거한다. PostgreSQL catalog·backup에는 attestation secret을 저장하지 않는다.
+- 실행 증거: lint, typecheck, production build, product 2,449 tests, focused 72 tests, PostgreSQL integration 6 tests, disposable 7-container Docker smoke와 invalid HMAC `401`/valid HMAC pass, inventory validators 통과.
+- 독립 `code-reviewer` 4건과 `security-reviewer` 4건을 수정 후 보안 재검토 **PASS**. 추가 발견된 local V1 premature key requirement도 제거하고 dynamic V2/epoch 회귀 테스트를 통과했다. five-axis 전체 리뷰는 final cutover PR 전까지 미완료로 유지한다.

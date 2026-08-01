@@ -121,13 +121,13 @@ describe("loopback session-authority gateway", () => {
       }),
     );
     expect(localUpstreamFetch).toHaveBeenCalledTimes(1);
-    expect(assertSessionAuthority).toHaveBeenCalledWith({
+    expect(assertSessionAuthority).toHaveBeenCalledWith(expect.objectContaining({
       binding: expect.objectContaining({
         owner_uuid: OWNER_UUID,
         binding_state: "active",
         binding_expires_at: new Date(1_800_000_600 * 1_000).toISOString(),
       }),
-    });
+    }));
     const [, localInit] = localUpstreamFetch.mock.calls[0];
     const localHeaders = new Headers(localInit.headers);
     expect(localHeaders.get("authorization")).toBe(
@@ -147,6 +147,62 @@ describe("loopback session-authority gateway", () => {
       path: "/meals",
       nowSeconds: 1_800_000_100,
     })).toMatchObject({ ok: true });
+  });
+
+  it("uses the active control-plane key version and cutover epoch for binding and attestation", async () => {
+    const rotatedSecret = "abcdef0123456789abcdef0123456789";
+    const assertSessionAuthority = vi.fn().mockResolvedValue(undefined);
+    const localUpstreamFetch = vi.fn().mockResolvedValue(
+      new Response("{}", { status: 200 }),
+    );
+    const authorityFetch = createHybridAuthorityFetch({
+      getAccessToken: async () => accessToken(),
+      remoteLivenessFetch: vi.fn().mockResolvedValue(new Response(
+        JSON.stringify({
+          id: OWNER_UUID,
+          created_at: "2026-07-28T00:00:00.000Z",
+        }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      )),
+      localUpstreamFetch,
+      loadRemoteJwks: async () => ({ keys: [REMOTE_JWK] }),
+      assertSessionAuthority,
+      auth: {
+        issuer: ISSUER,
+        url: "https://remote.example.supabase.co",
+        publishableKey: "remote-publishable",
+      },
+      attestationSecret: rotatedSecret,
+      resolveSessionBindingKey: async () => ({
+        authCutoverEpoch: 7,
+        keyVersion: 2,
+        secret: rotatedSecret,
+      }),
+      nowSeconds: () => 1_800_000_100,
+    });
+
+    const response = await authorityFetch(
+      "http://127.0.0.1:8000/rest/v1/meals",
+      { method: "GET" },
+    );
+
+    expect(response.status).toBe(200);
+    expect(assertSessionAuthority).toHaveBeenCalledWith({
+      authCutoverEpoch: 7,
+      binding: expect.objectContaining({ hmac_key_version: 2 }),
+      sessionIssuedAt: new Date(1_800_000_000 * 1_000).toISOString(),
+    });
+    const localHeaders = new Headers(localUpstreamFetch.mock.calls[0][1].headers);
+    expect(verifyHybridRequestAttestation({
+      payload: localHeaders.get("x-homecook-session-attestation")!,
+      signature: localHeaders.get(
+        "x-homecook-session-attestation-signature",
+      )!,
+      secret: rotatedSecret,
+      method: "GET",
+      path: "/meals",
+      nowSeconds: 1_800_000_100,
+    })).toMatchObject({ ok: true, claims: { version: 2 } });
   });
 
   it("allows only a scoped exact anonymous public read without remote liveness", async () => {

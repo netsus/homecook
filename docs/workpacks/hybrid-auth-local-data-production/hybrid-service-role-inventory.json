@@ -104,7 +104,7 @@
       "classification": "internal",
       "file": "app/auth/callback/route.ts",
       "column": 31,
-      "line": 230,
+      "line": 263,
       "allowed": true,
       "factory": "createAuthCallbackOperationsClient",
       "kind": "internal-operation-call"
@@ -140,7 +140,7 @@
       "classification": "user",
       "file": "lib/server/hybrid-auth/logout.ts",
       "column": 29,
-      "line": 85,
+      "line": 77,
       "allowed": true,
       "factory": "createSessionLogoutInternalDataClient",
       "kind": "internal-operation-call"
@@ -158,7 +158,7 @@
       "classification": "internal",
       "file": "lib/supabase/server.ts",
       "column": 26,
-      "line": 64,
+      "line": 71,
       "allowed": true,
       "factory": "createAuthRefreshInternalDataClient",
       "kind": "internal-operation-call"

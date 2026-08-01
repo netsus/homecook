@@ -3,13 +3,16 @@ import { NextResponse } from "next/server";
 
 import { resolveNextPath } from "@/lib/auth/callback";
 import {
-  AUTH_PROVIDER_ATTEMPT_COOKIE,
   clearAuthProviderAttemptCookie,
 } from "@/lib/auth/provider-cookies";
 import { hasProviderIdentity } from "@/lib/auth/provider-resolution";
-import { normalizeAuthProviderId } from "@/lib/auth/providers";
 import { expireSupabaseAuthCookies } from "@/lib/auth/session-cookies";
 import { recordOperationalEventFromServiceRole } from "@/lib/server/admin-events";
+import {
+  readCallbackAuthFlow,
+  terminalCallbackAuthFlow,
+} from "@/lib/server/full-local-auth/callback-flow";
+import { AUTH_FLOW_COOKIE_NAME } from "@/lib/server/full-local-auth/flow-ledger";
 import { createAuthRouteHandlerClient } from "@/lib/supabase/server";
 
 type LinkErrorCode = "link_cancelled" | "link_failed" | "link_conflict";
@@ -31,6 +34,13 @@ function buildLinkRedirect(
 
 function clearLinkAttemptCookie(response: NextResponse) {
   clearAuthProviderAttemptCookie(response);
+  response.cookies.set(AUTH_FLOW_COOKIE_NAME, "", {
+    httpOnly: true,
+    maxAge: 0,
+    path: "/",
+    sameSite: "lax",
+    secure: true,
+  });
   return response;
 }
 
@@ -90,7 +100,21 @@ async function restoreOrTerminateSession({
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
   const nextPath = resolveNextPath(requestUrl.searchParams.get("next") ?? "/mypage");
+  const cookieStore = await cookies();
+  const flowCookie = cookieStore.get(AUTH_FLOW_COOKIE_NAME)?.value;
+  const flow = await readCallbackAuthFlow({
+    cookieValue: flowCookie,
+    expectedFlowKind: "link",
+    providerHint: requestUrl.searchParams.get("attemptedProvider"),
+  });
+  if (!flow.ok || !flowCookie) {
+    await recordLinkFailure(request, "link_failed");
+    return clearLinkAttemptCookie(NextResponse.redirect(
+      buildLinkRedirect(requestUrl, nextPath, { error: "link_failed" }),
+    ));
+  }
 
+  let flowTerminalized = false;
   try {
     const supabase = await createAuthRouteHandlerClient();
     const beforeResult = await supabase.auth.getUser();
@@ -102,21 +126,15 @@ export async function GET(request: Request) {
       ));
     }
 
-    const cookieStore = await cookies();
-    const queryProvider = normalizeAuthProviderId(
-      requestUrl.searchParams.get("attemptedProvider"),
-    );
-    const cookieProvider = normalizeAuthProviderId(
-      cookieStore.get(AUTH_PROVIDER_ATTEMPT_COOKIE)?.value,
-    );
-    if (!queryProvider || (cookieProvider && cookieProvider !== queryProvider)) {
-      await recordLinkFailure(request, "link_failed");
-      return clearLinkAttemptCookie(NextResponse.redirect(
-        buildLinkRedirect(requestUrl, nextPath, { error: "link_failed" }),
-      ));
-    }
-
-    if (hasProviderIdentity(beforeUser.identities, queryProvider)) {
+    if (hasProviderIdentity(beforeUser.identities, flow.provider)) {
+      const terminal = await terminalCallbackAuthFlow(flowCookie, "success");
+      if (!terminal.ok) {
+        await recordLinkFailure(request, "link_failed");
+        return clearLinkAttemptCookie(NextResponse.redirect(
+          buildLinkRedirect(requestUrl, nextPath, { error: "link_failed" }),
+        ));
+      }
+      flowTerminalized = true;
       return clearLinkAttemptCookie(NextResponse.redirect(
         buildLinkRedirect(requestUrl, nextPath, { success: "already_linked" }),
       ));
@@ -196,7 +214,21 @@ export async function GET(request: Request) {
         });
       }
 
-      if (hasProviderIdentity(afterUser.identities, queryProvider)) {
+      if (hasProviderIdentity(afterUser.identities, flow.provider)) {
+        const terminal = await terminalCallbackAuthFlow(flowCookie, "success");
+        if (!terminal.ok) {
+          await recordLinkFailure(request, "link_failed");
+          return restoreOrTerminateSession({
+            cookieStore,
+            request,
+            response: clearLinkAttemptCookie(NextResponse.redirect(
+              buildLinkRedirect(requestUrl, nextPath, { error: "link_failed" }),
+            )),
+            session: originalSession,
+            supabase,
+          });
+        }
+        flowTerminalized = true;
         return clearLinkAttemptCookie(NextResponse.redirect(
           buildLinkRedirect(requestUrl, nextPath, { success: "linked" }),
         ));
@@ -221,5 +253,9 @@ export async function GET(request: Request) {
     return clearLinkAttemptCookie(NextResponse.redirect(
       buildLinkRedirect(requestUrl, nextPath, { error: "link_failed" }),
     ));
+  } finally {
+    if (!flowTerminalized) {
+      await terminalCallbackAuthFlow(flowCookie, "error");
+    }
   }
 }

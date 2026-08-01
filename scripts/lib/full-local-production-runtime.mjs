@@ -68,6 +68,9 @@ export const FULL_LOCAL_SECRET_NAMES = Object.freeze([
   "service_role_key_asymmetric",
   "storage_s3_access_key_id",
   "storage_s3_access_key_secret",
+  "auth_flow_hmac_key",
+  "session_attestation_hmac_key_v1",
+  "session_generation_hmac_key_v2",
 ]);
 
 function canonicalPath(path) {
@@ -304,6 +307,9 @@ export function generateFullLocalSecretBundle() {
     }),
     storage_s3_access_key_id: randomBytes(16).toString("hex"),
     storage_s3_access_key_secret: randomBytes(32).toString("hex"),
+    auth_flow_hmac_key: randomBytes(32).toString("hex"),
+    session_attestation_hmac_key_v1: randomBytes(32).toString("hex"),
+    session_generation_hmac_key_v2: randomBytes(32).toString("hex"),
   });
 }
 

@@ -1,8 +1,12 @@
 import {
+  getAuthAuthority,
   getAuthSupabaseEnv as readAuthSupabaseEnv,
+  getAuthSupabaseServerEnv as readAuthSupabaseServerEnv,
   getAuthSupabaseSecretKey,
   hasAuthSupabasePublicEnv,
 } from "./auth-env";
+
+export { getAuthAuthority };
 import {
   getDataSupabaseEnv as readDataSupabaseEnv,
   getDataSupabaseSecretKey,
@@ -12,6 +16,16 @@ import {
 
 export function getAuthSupabaseEnv() {
   const env = readAuthSupabaseEnv();
+  return {
+    url: env.url,
+    anonKey: env.publishableKey,
+    issuer: env.issuer,
+    jwksUrl: env.jwksUrl,
+  };
+}
+
+export function getAuthSupabaseServerEnv() {
+  const env = readAuthSupabaseServerEnv();
   return {
     url: env.url,
     anonKey: env.publishableKey,

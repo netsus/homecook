@@ -17,6 +17,9 @@ acls:
   - consumer: service_role
     group: admin
 
+plugins:
+  - name: homecook-attestation
+
 services:
   - name: auth-v1-open-callback
     url: http://auth:9999/callback

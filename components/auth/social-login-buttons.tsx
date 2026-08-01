@@ -4,7 +4,10 @@ import React from "react";
 import { useEffect, useRef, useState, useTransition } from "react";
 
 import { LocalDevLoginPanel } from "@/components/auth/local-dev-login-panel";
-import { createAuthProviderAttemptCookie } from "@/lib/auth/provider-cookies";
+import {
+  cancelServerAuthFlow,
+  startServerAuthFlow,
+} from "@/lib/auth/flow-client";
 import {
   AUTH_PROVIDER_META,
   getAuthProviderDisplayName,
@@ -93,6 +96,7 @@ export function SocialLoginButtons({
 
   const handleSignIn = (provider: AuthProviderId) => {
     startTransition(async () => {
+      let flowStarted = false;
       try {
         setErrorMessage(null);
         setPendingProvider(provider);
@@ -108,14 +112,21 @@ export function SocialLoginButtons({
         }
 
         document.cookie = createPostAuthNextCookie(nextPath);
-        document.cookie = createAuthProviderAttemptCookie(provider);
+
+        const authProvider = getSupabaseAuthProvider(provider);
+        const started = await startServerAuthFlow({
+          flowKind: "login",
+          provider: provider === "naver" ? "custom:naver" : provider,
+        });
+        if (!started.ok) {
+          throw new Error("Auth flow start failed");
+        }
+        flowStarted = true;
 
         onStarted?.();
 
         const supabase = getSupabaseBrowserClient();
         const callback = new URL("/auth/callback", window.location.origin);
-        callback.searchParams.set("attemptedProvider", provider);
-        const authProvider = getSupabaseAuthProvider(provider);
 
         const { error } = await supabase.auth.signInWithOAuth({
           provider: authProvider,
@@ -128,6 +139,13 @@ export function SocialLoginButtons({
           throw error;
         }
       } catch {
+        if (flowStarted) {
+          try {
+            await cancelServerAuthFlow();
+          } catch {
+            // The 900-second ledger expiry remains the fail-closed fallback.
+          }
+        }
         setErrorMessage("로그인을 시작하지 못했어요. 잠시 후 다시 시도해 주세요.");
       } finally {
         setPendingProvider(null);

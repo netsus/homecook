@@ -564,6 +564,28 @@
       "activation_phase": "f0-expand-legacy-guard"
     },
     {
+      "key": "POST /auth/flow/cancel",
+      "route": "/auth/flow/cancel",
+      "source_file": "app/auth/flow/cancel/route.ts",
+      "method": "POST",
+      "owner_scope": "auth-session",
+      "persists_personal_state": false,
+      "guard_mode": "not_applicable",
+      "expected_generation": "not_applicable",
+      "activation_phase": "always"
+    },
+    {
+      "key": "POST /auth/flow/start",
+      "route": "/auth/flow/start",
+      "source_file": "app/auth/flow/start/route.ts",
+      "method": "POST",
+      "owner_scope": "auth-session",
+      "persists_personal_state": false,
+      "guard_mode": "not_applicable",
+      "expected_generation": "not_applicable",
+      "activation_phase": "always"
+    },
+    {
       "key": "POST /internal/account-maintenance/tick",
       "route": "/internal/account-maintenance/tick",
       "source_file": "app/internal/account-maintenance/tick/route.ts",
@@ -1795,20 +1817,6 @@
       "activation_phase": "f0-expand-legacy-guard"
     },
     {
-      "key": "rpc|lib/server/hybrid-auth/logout.ts|revoke_hybrid_remote_session_authority|1",
-      "kind": "rpc",
-      "operation": "call",
-      "target": "revoke_hybrid_remote_session_authority",
-      "line": 89,
-      "source_file": "lib/server/hybrid-auth/logout.ts",
-      "route": null,
-      "owner_scope": "auth-session",
-      "persists_personal_state": false,
-      "guard_mode": "not_applicable",
-      "expected_generation": "not_applicable",
-      "activation_phase": "always"
-    },
-    {
       "key": "rpc|lib/server/recipe-image-auth-deletion-finalize.ts|finalize_recipe_image_auth_deletion_claim|1",
       "kind": "rpc",
       "operation": "call",
@@ -2000,6 +2008,6 @@
       "on_delete": "cascade"
     }
   ],
-  "generated_at": "2026-07-31T04:08:49.476Z",
-  "checksum": "7c84e5b407018007fcd08f7bbab0d56f57b0e834079eeb766ccfdb4ec87bece7"
+  "generated_at": "2026-08-01T12:06:37.763Z",
+  "checksum": "12fb7f000bc43f8b0edbc10dd65be88ca445cda5154b2b2ed3760c6fc8058785"
 }

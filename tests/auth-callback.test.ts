@@ -14,6 +14,10 @@ const ensureUserBootstrapState = vi.fn();
 const cookies = vi.fn();
 const cookieGet = vi.fn();
 const cookieGetAll = vi.fn();
+const readCallbackAuthFlow = vi.fn();
+const terminalCallbackAuthFlow = vi.fn();
+const prepareFullLocalSessionAuthority = vi.fn();
+const recordFullLocalSessionAuthority = vi.fn();
 
 function createServiceRoleUserLookup(
   existingUser: { id: string; social_provider: string } | null = null,
@@ -60,6 +64,16 @@ vi.mock("next/headers", () => ({
   cookies,
 }));
 
+vi.mock("@/lib/server/full-local-auth/callback-flow", () => ({
+  readCallbackAuthFlow,
+  terminalCallbackAuthFlow,
+}));
+
+vi.mock("@/lib/server/full-local-auth/session-authority", () => ({
+  prepareFullLocalSessionAuthority,
+  recordFullLocalSessionAuthority,
+}));
+
 vi.mock("@/lib/server/user-bootstrap", () => ({
   ensurePublicUserRow,
   ensureUserBootstrapState,
@@ -93,6 +107,10 @@ describe("auth callback", () => {
     cookies.mockReset();
     cookieGet.mockReset();
     cookieGetAll.mockReset();
+    readCallbackAuthFlow.mockReset();
+    terminalCallbackAuthFlow.mockReset();
+    prepareFullLocalSessionAuthority.mockReset();
+    recordFullLocalSessionAuthority.mockReset();
 
     const routeClient = {
       auth: {
@@ -115,8 +133,17 @@ describe("auth callback", () => {
       get: cookieGet,
       getAll: cookieGetAll,
     });
-    cookieGet.mockReturnValue(undefined);
+    cookieGet.mockImplementation((name: string) => name === "__Host-homecook-auth-flow"
+      ? { value: "signed-flow-cookie" }
+      : undefined);
     cookieGetAll.mockReturnValue([]);
+    readCallbackAuthFlow.mockImplementation(({ providerHint }) => ({
+      ok: true,
+      provider: providerHint ?? "google",
+    }));
+    terminalCallbackAuthFlow.mockResolvedValue({ ok: true });
+    prepareFullLocalSessionAuthority.mockResolvedValue({ ok: false, reason: "stale" });
+    recordFullLocalSessionAuthority.mockResolvedValue({ ok: true });
     getSession.mockResolvedValue({
       data: { session: null },
       error: null,
@@ -972,11 +999,13 @@ describe("auth callback", () => {
     expect(signOut).not.toHaveBeenCalled();
   });
 
-  it("fails provider resolution when query and cookie attempts conflict", async () => {
+  it("ignores a conflicting legacy client cookie and uses ledger authority", async () => {
     exchangeCodeForSession.mockResolvedValue({ error: null });
     cookieGet.mockImplementation((name: string) => name === "homecook-auth-provider-attempt"
       ? { value: "naver" }
-      : undefined);
+      : name === "__Host-homecook-auth-flow"
+        ? { value: "signed-flow-cookie" }
+        : undefined);
 
     const { GET } = await import("@/app/auth/callback/route");
     const response = await GET(new Request(
@@ -984,9 +1013,75 @@ describe("auth callback", () => {
     ));
 
     const redirectUrl = new URL(response.headers.get("location") ?? "");
-    expect(redirectUrl.searchParams.get("authError")).toBe("provider_resolution_failed");
-    expect(response.headers.get("set-cookie")).not.toContain("homecook-last-auth-provider=google");
+    expect(redirectUrl.searchParams.get("authError")).toBeNull();
+    expect(response.headers.get("set-cookie")).toContain("homecook-last-auth-provider=google");
     expect(ensurePublicUserRow).not.toHaveBeenCalled();
+  });
+
+  it("rejects a missing or replayed ledger flow before exchanging the code", async () => {
+    readCallbackAuthFlow.mockResolvedValue({ ok: false, reason: "invalid" });
+
+    const { GET } = await import("@/app/auth/callback/route");
+    const response = await GET(new Request(
+      "http://localhost:3000/auth/callback?code=abc&attemptedProvider=google",
+    ));
+
+    expect(new URL(response.headers.get("location") ?? "").searchParams.get("authError"))
+      .toBe("provider_resolution_failed");
+    expect(exchangeCodeForSession).not.toHaveBeenCalled();
+  });
+
+  it("bootstraps the account before recording the local session binding", async () => {
+    vi.stubEnv("HOMECOOK_AUTH_AUTHORITY", "local");
+    const identityCreatedAt = "2026-08-01T00:00:00.000Z";
+    exchangeCodeForSession.mockResolvedValue({
+      data: { session: { access_token: "local-access-token" } },
+      error: null,
+    });
+    getUser.mockResolvedValue({
+      data: { user: {
+        id: "11111111-1111-4111-8111-111111111111",
+        created_at: identityCreatedAt,
+        email: "cook@example.com",
+        email_confirmed_at: identityCreatedAt,
+        identities: [{
+          provider: "google",
+          identity_data: { email_verified: true },
+        }],
+        user_metadata: {},
+      } },
+      error: null,
+    });
+    const lookup = createServiceRoleUserLookup(null, {
+      data: { state: "generation_active", revision: 2 },
+      error: null,
+    });
+    createServiceRoleClient.mockReturnValue(lookup.client);
+    const prepared = {
+      accountBootstrap: {
+        ownerUuid: "11111111-1111-4111-8111-111111111111",
+        authIdentityCreatedAt: identityCreatedAt,
+        sessionIssuedAt: "2026-08-01T00:10:00.000Z",
+        sessionKeyHash: "a".repeat(64),
+        hmacKeyVersion: 2,
+      },
+      record: { p_session_key_hash: "a".repeat(64) },
+    };
+    prepareFullLocalSessionAuthority.mockResolvedValue({ ok: true, ...prepared });
+    lookup.rpc.mockImplementation(async (name: string) => name === "get_account_generation_capability"
+      ? { data: { state: "generation_active", revision: 2 }, error: null }
+      : { data: { account_generation: 1, nickname: "집밥러" }, error: null });
+
+    const { GET } = await import("@/app/auth/callback/route");
+    const response = await GET(new Request(
+      "http://localhost:3000/auth/callback?code=abc&attemptedProvider=google",
+    ));
+
+    expect(response.headers.get("location")).toBe("http://localhost:3000/");
+    expect(prepareFullLocalSessionAuthority).toHaveBeenCalledTimes(1);
+    expect(recordFullLocalSessionAuthority).toHaveBeenCalledTimes(1);
+    expect(lookup.rpc.mock.invocationCallOrder.at(-1))
+      .toBeLessThan(recordFullLocalSessionAuthority.mock.invocationCallOrder[0]);
   });
 
   it("expires Supabase auth cookies even when signOut throws", async () => {
@@ -1113,6 +1208,10 @@ describe("auth callback", () => {
 
       if (name === "homecook-auth-provider-attempt") {
         return { value: "google" };
+      }
+
+      if (name === "__Host-homecook-auth-flow") {
+        return { value: "signed-flow-cookie" };
       }
 
       return undefined;

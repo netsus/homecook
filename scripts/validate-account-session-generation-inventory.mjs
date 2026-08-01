@@ -20,6 +20,8 @@ const mode = args.has("--write") ? "write" : "check";
 const ROUTE_METADATA_BY_KEY = {
   "POST /internal/account-maintenance/tick": { owner_scope: "system", persists_personal_state: false },
   "POST /api/v1/auth/logout": { owner_scope: "auth-session", persists_personal_state: false },
+  "POST /auth/flow/cancel": { owner_scope: "auth-session", persists_personal_state: false },
+  "POST /auth/flow/start": { owner_scope: "auth-session", persists_personal_state: false },
   "POST /api/v1/admin/page-view": { owner_scope: "admin", persists_personal_state: false },
   "POST /api/v1/cooking/sessions": { owner_scope: "authenticated-user", persists_personal_state: true },
   "POST /api/v1/cooking/sessions/[session_id]/cancel": { owner_scope: "authenticated-user", persists_personal_state: true },

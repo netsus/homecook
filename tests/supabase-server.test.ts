@@ -7,6 +7,8 @@ const cookies = vi.fn();
 const createServerClient = vi.fn();
 const createClient = vi.fn();
 const getSupabaseEnv = vi.fn();
+const getAuthAuthority = vi.fn();
+const getAuthSupabaseServerEnv = vi.fn();
 const getServiceRoleKey = vi.fn();
 const getLocalShadowDataEnv = vi.fn();
 const getLocalDataServiceRoleKey = vi.fn();
@@ -41,7 +43,9 @@ vi.mock("@/lib/server/hybrid-auth/shadow-read", () => ({
 }));
 
 vi.mock("@/lib/supabase/env", () => ({
+  getAuthAuthority,
   getAuthSupabaseEnv: getSupabaseEnv,
+  getAuthSupabaseServerEnv,
   getDataSupabaseEnv: getSupabaseEnv,
   getAuthServiceRoleKey: getServiceRoleKey,
   getDataServiceRoleKey: getServiceRoleKey,
@@ -56,6 +60,8 @@ describe("supabase server helpers", () => {
     createServerClient.mockReset();
     createClient.mockReset();
     getSupabaseEnv.mockReset();
+    getAuthAuthority.mockReset();
+    getAuthSupabaseServerEnv.mockReset();
     getServiceRoleKey.mockReset();
     getLocalDataServiceRoleKey.mockReset();
     getLocalShadowDataEnv.mockReset();
@@ -72,6 +78,13 @@ describe("supabase server helpers", () => {
       url: "http://127.0.0.1:54321",
       anonKey: "anon-key",
       authority: "remote",
+      issuer: "http://127.0.0.1:54321/auth/v1",
+      jwksUrl: "http://127.0.0.1:54321/auth/v1/.well-known/jwks.json",
+    });
+    getAuthAuthority.mockReturnValue("remote");
+    getAuthSupabaseServerEnv.mockReturnValue({
+      url: "http://127.0.0.1:54321",
+      anonKey: "anon-key",
       issuer: "http://127.0.0.1:54321/auth/v1",
       jwksUrl: "http://127.0.0.1:54321/auth/v1/.well-known/jwks.json",
     });
@@ -114,6 +127,40 @@ describe("supabase server helpers", () => {
     await expect(getServerAuthUser()).resolves.toEqual({
       id: "user-1",
     });
+  });
+
+  it("keeps SSR Auth on the public origin and uses loopback only for the local admin client", async () => {
+    getAuthAuthority.mockReturnValue("local");
+    getSupabaseEnv.mockReturnValue({
+      url: "https://auth.mumeok.com",
+      anonKey: "local-publishable",
+      issuer: "https://auth.mumeok.com/auth/v1",
+      jwksUrl: "https://auth.mumeok.com/auth/v1/.well-known/jwks.json",
+    });
+    getAuthSupabaseServerEnv.mockReturnValue({
+      url: "http://127.0.0.1:54481",
+      anonKey: "local-publishable",
+      issuer: "https://auth.mumeok.com/auth/v1",
+      jwksUrl: "https://auth.mumeok.com/auth/v1/.well-known/jwks.json",
+    });
+    getServiceRoleKey.mockReturnValue("local-secret-key");
+    createServerClient.mockReturnValue({ auth: {} });
+    createClient.mockReturnValue({ auth: { admin: {} } });
+
+    const server = await import("@/lib/supabase/server");
+    await server.createAuthRouteHandlerClient();
+    server.createAuthServiceRoleClient();
+
+    expect(createServerClient).toHaveBeenCalledWith(
+      "https://auth.mumeok.com",
+      "local-publishable",
+      expect.any(Object),
+    );
+    expect(createClient).toHaveBeenCalledWith(
+      "http://127.0.0.1:54481",
+      "local-secret-key",
+      expect.any(Object),
+    );
   });
 
   it("wires safe semantic comparison into the real server fetch path in local-shadow", async () => {

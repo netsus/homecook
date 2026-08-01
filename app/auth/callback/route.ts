@@ -3,7 +3,6 @@ import { NextResponse } from "next/server";
 
 import { resolveNextPath } from "@/lib/auth/callback";
 import {
-  AUTH_PROVIDER_ATTEMPT_COOKIE,
   clearAuthProviderAttemptCookie,
   setLastAuthProviderCookie,
 } from "@/lib/auth/provider-cookies";
@@ -26,6 +25,15 @@ import {
 } from "@/lib/server/account-generation/session-authority";
 import { recordOperationalEventFromServiceRole } from "@/lib/server/admin-events";
 import {
+  readCallbackAuthFlow,
+  terminalCallbackAuthFlow,
+} from "@/lib/server/full-local-auth/callback-flow";
+import { AUTH_FLOW_COOKIE_NAME } from "@/lib/server/full-local-auth/flow-ledger";
+import {
+  prepareFullLocalSessionAuthority,
+  recordFullLocalSessionAuthority,
+} from "@/lib/server/full-local-auth/session-authority";
+import {
   normalizeUserEmail,
 } from "@/lib/server/user-bootstrap";
 import {
@@ -34,6 +42,7 @@ import {
   createAuthCallbackOperationsClient,
   createAuthRouteHandlerClient,
 } from "@/lib/supabase/server";
+import { getAuthAuthority } from "@/lib/supabase/auth-env";
 
 type AuthFailureCode =
   | "email_required"
@@ -100,6 +109,13 @@ function shouldCollectNickname(userRow: { nickname?: unknown }) {
 
 function clearAuthFlowCookies(response: NextResponse) {
   response.cookies.set(POST_AUTH_NEXT_COOKIE, "", { maxAge: 0, path: "/" });
+  response.cookies.set(AUTH_FLOW_COOKIE_NAME, "", {
+    httpOnly: true,
+    maxAge: 0,
+    path: "/",
+    sameSite: "lax",
+    secure: true,
+  });
   clearAuthProviderAttemptCookie(response);
   return response;
 }
@@ -139,10 +155,26 @@ export async function GET(request: Request) {
       ?? parsePostAuthNextCookie(cookieStore.get(POST_AUTH_NEXT_COOKIE)?.value),
   );
   const code = requestUrl.searchParams.get("code");
+  const authFlowCookie = cookieStore.get(AUTH_FLOW_COOKIE_NAME)?.value;
+  const authFlow = await readCallbackAuthFlow({
+    cookieValue: authFlowCookie,
+    expectedFlowKind: "login",
+    providerHint: requestUrl.searchParams.get("attemptedProvider"),
+  });
   let supabase: Awaited<ReturnType<typeof createAuthRouteHandlerClient>> | null =
     null;
 
+  if (!authFlow.ok) {
+    await recordAuthFailure(request, "AUTH_FLOW_INVALID");
+    return clearAuthFlowCookies(NextResponse.redirect(
+      buildFailureRedirectUrl(requestUrl, nextPath, "provider_resolution_failed"),
+    ));
+  }
+
   if (!code) {
+    if (authFlowCookie) {
+      await terminalCallbackAuthFlow(authFlowCookie, "error");
+    }
     if (requestUrl.searchParams.get("error")) {
       await recordAuthFailure(request, "OAUTH_PROVIDER_ERROR");
       return clearAuthFlowCookies(NextResponse.redirect(
@@ -155,6 +187,7 @@ export async function GET(request: Request) {
     );
   }
 
+  let flowSucceeded = false;
   try {
     supabase = await createAuthRouteHandlerClient();
     const exchangeResult = await supabase.auth.exchangeCodeForSession(code);
@@ -188,12 +221,12 @@ export async function GET(request: Request) {
     }
 
     const actualProvider = resolveActualAuthProvider({
-      queryAttempt: requestUrl.searchParams.get("attemptedProvider"),
-      cookieAttempt: cookieStore.get(AUTH_PROVIDER_ATTEMPT_COOKIE)?.value,
+      queryAttempt: authFlow.provider,
+      cookieAttempt: null,
       identities: user.identities,
       userMetadata: user.user_metadata,
     });
-    if (!actualProvider) {
+    if (!actualProvider || actualProvider !== authFlow.provider) {
       await recordAuthFailure(request, "PROVIDER_RESOLUTION_FAILED");
       return clearPartialSession(
         supabase,
@@ -292,12 +325,23 @@ export async function GET(request: Request) {
     }
 
     if (capability.state === "generation_active") {
-      const sessionAuthority = exchangedAccessToken
-        ? deriveVerifiedAccountGenerationSessionAuthority({
+      const localPrepared = getAuthAuthority() === "local" && exchangedAccessToken
+        ? await prepareFullLocalSessionAuthority({
             accessToken: exchangedAccessToken,
+            client: serviceRoleClient,
             user,
           })
         : null;
+      const sessionAuthority = getAuthAuthority() === "local"
+        ? localPrepared?.ok
+          ? localPrepared.accountBootstrap
+          : null
+        : exchangedAccessToken
+          ? deriveVerifiedAccountGenerationSessionAuthority({
+              accessToken: exchangedAccessToken,
+              user,
+            })
+          : null;
       if (!sessionAuthority) {
         await recordAuthFailure(request, "ACCOUNT_SESSION_STALE");
         return clearPartialSession(
@@ -335,6 +379,40 @@ export async function GET(request: Request) {
           cookieStore,
         );
       }
+
+      if (localPrepared?.ok) {
+        const localBinding = await recordFullLocalSessionAuthority({
+          client: serviceRoleClient,
+          record: localPrepared.record,
+        });
+        if (!localBinding.ok) {
+          await recordAuthFailure(request, "ACCOUNT_SESSION_STALE");
+          return clearPartialSession(
+            supabase,
+            clearAuthFlowCookies(NextResponse.redirect(
+              buildFailureRedirectUrl(requestUrl, nextPath, "ACCOUNT_SESSION_STALE"),
+            )),
+            request,
+            cookieStore,
+          );
+        }
+      }
+
+      const terminal = authFlowCookie
+        ? await terminalCallbackAuthFlow(authFlowCookie, "success")
+        : { ok: false as const };
+      if (!terminal.ok) {
+        await recordAuthFailure(request, "AUTH_FLOW_TERMINAL_FAILED");
+        return clearPartialSession(
+          supabase,
+          clearAuthFlowCookies(NextResponse.redirect(
+            buildFailureRedirectUrl(requestUrl, nextPath, "oauth_failed"),
+          )),
+          request,
+          cookieStore,
+        );
+      }
+      flowSucceeded = true;
 
       const redirectUrl = shouldCollectNickname(bootstrapResult)
         ? buildNicknameOnboardingRedirectUrl(requestUrl, nextPath)
@@ -384,6 +462,21 @@ export async function GET(request: Request) {
     const redirectUrl = shouldCollectNickname(legacyBootstrap)
       ? buildNicknameOnboardingRedirectUrl(requestUrl, nextPath)
       : new URL(nextPath, requestUrl.origin);
+    const terminal = authFlowCookie
+      ? await terminalCallbackAuthFlow(authFlowCookie, "success")
+      : { ok: false as const };
+    if (!terminal.ok) {
+      await recordAuthFailure(request, "AUTH_FLOW_TERMINAL_FAILED");
+      return clearPartialSession(
+        supabase,
+        clearAuthFlowCookies(NextResponse.redirect(
+          buildFailureRedirectUrl(requestUrl, nextPath, "oauth_failed"),
+        )),
+        request,
+        cookieStore,
+      );
+    }
+    flowSucceeded = true;
     const response = clearAuthFlowCookies(NextResponse.redirect(redirectUrl));
     setLastAuthProviderCookie(response, actualProvider);
     return response;
@@ -396,5 +489,9 @@ export async function GET(request: Request) {
     return supabase
       ? clearPartialSession(supabase, response, request, cookieStore)
       : expireSupabaseAuthCookies(response, request, cookieStore);
+  } finally {
+    if (!flowSucceeded && authFlowCookie) {
+      await terminalCallbackAuthFlow(authFlowCookie, "error");
+    }
   }
 }

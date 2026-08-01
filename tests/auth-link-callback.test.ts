@@ -11,12 +11,19 @@ const ensureUserBootstrapState = vi.fn();
 const cookies = vi.fn();
 const cookieGet = vi.fn();
 const cookieGetAll = vi.fn();
+const readCallbackAuthFlow = vi.fn();
+const terminalCallbackAuthFlow = vi.fn();
 
 vi.mock("@/lib/supabase/server", () => ({
   createAuthRouteHandlerClient: createRouteHandlerClient,
 }));
 
 vi.mock("next/headers", () => ({ cookies }));
+
+vi.mock("@/lib/server/full-local-auth/callback-flow", () => ({
+  readCallbackAuthFlow,
+  terminalCallbackAuthFlow,
+}));
 
 vi.mock("@/lib/server/user-bootstrap", () => ({
   ensurePublicUserRow,
@@ -49,13 +56,22 @@ describe("auth link callback", () => {
     cookies.mockReset();
     cookieGet.mockReset();
     cookieGetAll.mockReset();
+    readCallbackAuthFlow.mockReset();
+    terminalCallbackAuthFlow.mockReset();
 
     createRouteHandlerClient.mockResolvedValue({
       auth: { exchangeCodeForSession, getUser, getSession, setSession, signOut },
     });
     cookies.mockResolvedValue({ get: cookieGet, getAll: cookieGetAll });
-    cookieGet.mockReturnValue(undefined);
+    cookieGet.mockImplementation((name: string) => name === "__Host-homecook-auth-flow"
+      ? { value: "signed-flow-cookie" }
+      : undefined);
     cookieGetAll.mockReturnValue([]);
+    readCallbackAuthFlow.mockImplementation(({ providerHint }) => ({
+      ok: true,
+      provider: providerHint ?? "naver",
+    }));
+    terminalCallbackAuthFlow.mockResolvedValue({ ok: true });
     getSession.mockResolvedValue({
       data: {
         session: {
@@ -79,6 +95,20 @@ describe("auth link callback", () => {
 
     expect(new URL(response.headers.get("location") ?? "").searchParams.get("linkError"))
       .toBe("link_failed");
+    expect(exchangeCodeForSession).not.toHaveBeenCalled();
+  });
+
+  it("rejects an invalid ledger flow before reading or exchanging the session", async () => {
+    readCallbackAuthFlow.mockResolvedValue({ ok: false, reason: "invalid" });
+
+    const { GET } = await import("@/app/auth/link/callback/route");
+    const response = await GET(new Request(
+      "http://localhost:3000/auth/link/callback?code=secret&attemptedProvider=naver&next=/mypage",
+    ));
+
+    expect(new URL(response.headers.get("location") ?? "").searchParams.get("linkError"))
+      .toBe("link_failed");
+    expect(getUser).not.toHaveBeenCalled();
     expect(exchangeCodeForSession).not.toHaveBeenCalled();
   });
 
