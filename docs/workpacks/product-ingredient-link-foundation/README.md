@@ -1,6 +1,6 @@
 # product-ingredient-link-foundation
 
-> 2026-07-31 사용자 승인 Contract Evolution relock. The historical master plan SHA-256 `45f02013fbc1c3af1936d596605230d0cbac7839a783224aa9535844e4bda7dc` (1,056 lines) remains product-link design history, while its local-only Auth/deployment assumptions are superseded by `docs/sync/CURRENT_SOURCE_OF_TRUTH.md`. Official baseline: requirements v1.7.27, screens v1.5.31, flow v1.3.29, DB v1.3.28, API v1.2.31.
+> 2026-07-31 사용자 승인 Contract Evolution relock. The historical master plan SHA-256 `45f02013fbc1c3af1936d596605230d0cbac7839a783224aa9535844e4bda7dc` (1,056 lines) remains product-link design history, while its local-only Auth/deployment assumptions are superseded by `docs/sync/CURRENT_SOURCE_OF_TRUTH.md`. Official baseline: requirements v1.7.28, screens v1.5.32, flow v1.3.30, DB v1.3.29, API v1.2.32.
 
 ## Goal
 
@@ -11,8 +11,8 @@
 - Stage 1 Contract Evolution docs: `docs/product-ingredient-link-contract-evolution`
 - Stage 2 backend/data: `feature/be-product-ingredient-link-foundation`
 - Stage 4 existing-consumer regression: `feature/fe-product-ingredient-link-foundation`
-- Release train: B. `account-session-generation-foundation`과 `recipe-visibility-read-hardening`은 모두 병합됐다. Stage 2는 hybrid exact-epoch/session-authority 경계 안에서만 구현하며 production activation은 별도 Manual Only gate로 남긴다.
-- 초기 배포 gate: application Data/Storage authority는 server MacBook local Next.js + local Supabase, Auth control-plane은 remote Auth다. verifier는 둘을 분리해 읽기 전용으로 확인하고 production/staging/remote application write는 0이어야 한다.
+- Release train: B. `account-session-generation-foundation`과 `recipe-visibility-read-hardening`은 모두 병합됐다. Product-link behavior는 full-local UUID/session-binding/RLS 계약을 소비하며 production activation은 별도 Manual Only gate로 남긴다.
+- 배포 gate: cutover floor 전에는 remote Supabase Auth/DB/Storage가 migration source-of-record이고, 최종 authority는 server MacBook의 same-host Next.js + self-hosted Supabase Auth/DB/Storage다. verifier는 pre-floor/cutover/post-floor를 분리하고 승인 전 production mutation은 0이어야 한다.
 - Stage 1 author, internal 1.5 reviewer/repair-final owner, implementation owner, security/DB reviewer와 five-axis reviewer는 사용자 승인대로 서로 다른 Codex 세션을 사용하며 Claude는 사용하지 않는다.
 
 ## In Scope
@@ -73,7 +73,7 @@ Schema Change:
 | historical cooking/meal-log contract base PR #1072 | merged | superseded baseline; active authority is the current tuple in `docs/sync/CURRENT_SOURCE_OF_TRUTH.md` |
 | `account-session-generation-foundation` | merged | F0 backend/frontend foundation and independent closeout are available; production generation activation remains Manual Only |
 | `prepared-food-search-relevance` | merged | successor #1 implementation and closeout predecessor complete |
-| `recipe-visibility-read-hardening` (#3) | merged | hybrid session/image/account-delete runtime and existing MANUAL_RECIPE_CREATE integration complete |
+| `recipe-visibility-read-hardening` (#3) | merged | session/image/account-delete runtime and existing MANUAL_RECIPE_CREATE integration complete; production activation remains behind the full-local cutover gate |
 
 > PR #1076의 historical Stage 1 approval은 이전 tuple에 대한 기록이다. 2026-07-31 사용자 승인 Contract Evolution은 이 작업의 새 internal 1.5 docs gate를 통과하기 전까지 최종 승인되지 않으며, 이 작성 작업은 자기 변경을 승인하지 않는다. 기존 link-only subset/verifier의 merged evidence는 유지하되 새 pantry/shopping contract의 Stage 2/4 evidence를 주장하지 않는다.
 
@@ -161,11 +161,11 @@ Schema Change:
 ## Source Links
 
 - `docs/sync/CURRENT_SOURCE_OF_TRUTH.md`
-- `docs/요구사항기준선-v1.7.27.md` 0-PIL / 0-PIL-SHOPPING / 0-PIL-DELETE
-- `docs/화면정의서-v1.5.31.md` 0-PIL
-- `docs/유저flow맵-v1.3.29.md` 0-PIL / 0-PIL-SHOPPING / 0-PIL-DELETE
-- `docs/db설계-v1.3.28.md` 0-PIL-A~D
-- `docs/api문서-v1.2.31.md` 0-PIL-A~D and existing pantry/shopping/pantry-match sections
+- `docs/요구사항기준선-v1.7.28.md` 0-PIL / 0-PIL-SHOPPING / 0-PIL-DELETE
+- `docs/화면정의서-v1.5.32.md` 0-PIL
+- `docs/유저flow맵-v1.3.30.md` 0-PIL / 0-PIL-SHOPPING / 0-PIL-DELETE
+- `docs/db설계-v1.3.29.md` 0-PIL-A~D
+- `docs/api문서-v1.2.32.md` 0-PIL-A~D and existing pantry/shopping/pantry-match sections
 - historical master plan sections 6-2 and successor #2, with local-only Auth/deployment assumptions superseded by the current official tuple
 
 ## QA / Test Data Plan
@@ -176,7 +176,7 @@ Schema Change:
 - PR #1236 merged the test-first link-only safe subset with focused link/security tests, isolated fresh/replay PostgreSQL integration and backend verification. Draft PR #1255 implements the approved pantry/shopping/reader/account-delete Stage 2 runtime while independent approval remains pending.
 - PR #1248 merged the test-first hybrid verifier as `4881c4c53181a5504e16f2fa3971e9f6f4b99f05` from exact head `e58bea0c544693c1f99104d07bf58bd8c0d01285`. Independent code/security review recorded P0/P1/P2 `0/0/0`, and all 24 current-head check runs completed as 14 success plus 10 intended skips. The complete local application DB/Storage plus sanitized remote Auth evidence remains a separate full-lifecycle gate.
 
-### Hybrid verifier implementation evidence
+### Historical hybrid verifier implementation evidence
 
 - RED: `pnpm exec vitest run tests/product-ingredient-link-hybrid-verifier.test.ts` failed `2/7` because the draft required `HEAD == origin/master` and the CLI did not prove that an exact historical HEAD remained merged after `origin/master` advanced.
 - GREEN: the same focused verifier suite passed `7/7` after the source gate changed to `git merge-base --is-ancestor HEAD origin/master` plus a clean tracked-tree check.
@@ -215,13 +215,13 @@ Schema Change:
 - current automated DB evidence runs isolated fresh/replay plus dirty-row preflight and validates focused table/FK/index/check/partial-unique/RLS/grant/function behavior.
 - existing-schema comparison, stable schema/function/grant/data digests and production-equivalent query-plan measurement remain unverified Manual Only evidence; they are not claimed by this Stage 2 runner.
 
-### Security, performance and hybrid release evidence
+### Security, performance and release evidence
 
 - PUBLIC/anon/authenticated/admin/service-principal matrix proves normal users cannot mutate/promote or infer another owner's private product/link.
 - each effective reader uses a bounded indexed set operation without per-row product-link N+1 or unbounded catalog scan.
 - evidence contains no secret, raw provider payload, private product owner identity or user PII.
-- merged-exact-SHA `verify-product-ingredient-link-hybrid.mjs`는 local application DB/Storage schema·reader·role을 읽기 전용으로 확인하고 remote Auth의 exact epoch/session binding evidence만 최소 조회한다.
-- local application DB에는 `local auth.users=0`을 요구한다. remote application DB/Storage, production, staging에는 write하지 않는다.
+- merged-exact-SHA `verify-product-ingredient-link-hybrid.mjs`의 과거 결과는 local application DB/Storage schema·reader·role에 대한 historical read-only evidence로만 보존한다. full-local 최종 gate는 local Auth UUID/session binding과 `auth.uid()` RLS를 별도로 검증한다.
+- cutover floor 전에는 remote Supabase가 source-of-record이며 isolated full-local rehearsal과 production/staging application write 0을 유지한다.
 - migration apply, link promotion, account-generation activation은 이 docs relock이나 unmerged branch에서 실행하지 않는다.
 
 ## Key Rules
@@ -262,5 +262,5 @@ Schema Change:
 
 - [ ] existing application DB schema/function/grant/data digest comparison
 - [ ] production-equivalent effective-reader query-plan measurement
-- [ ] server-Mac full hybrid run with `local auth.users=0`, merged-exact source, live remote Auth epoch/HMAC binding and production/staging/remote application writes zero
+- [ ] server-Mac full-local rehearsal with merged-exact source, preserved UUID/product provenance, local Auth RLS/cross-owner/delete-recreate evidence and pre-floor production mutation zero
 - [ ] production account-generation/account-delete activation and candidate promotion remain behind their separately approved release gates

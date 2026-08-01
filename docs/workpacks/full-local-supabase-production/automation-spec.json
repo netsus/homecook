@@ -1,0 +1,122 @@
+{
+  "slice_id": "full-local-supabase-production",
+  "execution_mode": "manual",
+  "risk_class": "critical",
+  "merge_policy": "manual",
+  "backend": {
+    "required_endpoints": [
+      "POST /auth/flow/start",
+      "POST /auth/flow/cancel",
+      "GET /auth/callback",
+      "GET /auth/link/callback",
+      "POST /api/v1/auth/logout"
+    ],
+    "invariants": [
+      "self-hosted-local-auth-db-storage-single-authority",
+      "stable-auth-user-uuid-and-auth-uid-rls-preserved",
+      "server-issued-http-only-flow-cookie-before-oauth-sdk",
+      "flow-ledger-hmac-only-900-second-ttl-960-second-drain",
+      "local-session-binding-pre-expiry-revoke",
+      "logout-revoke-before-local-signout-before-cookie-expiry",
+      "user-path-service-role-fallback-zero",
+      "browser-direct-data-storage-zero",
+      "public-auth-v1-allowlist-only",
+      "secret-keychain-read-only-mount-no-config-env-leak",
+      "official-s3-rclone-copy-no-direct-file-copy",
+      "single-remote-cutline-source-no-local-rehearsal-merge",
+      "pre-and-post-floor-rollback-rehearsed",
+      "no-production-mutation-before-manual-gate"
+    ],
+    "verify_commands": [
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "BRANCH_NAME=docs/full-local-supabase-contract pnpm validate:workpack -- --slice full-local-supabase-production",
+      "node scripts/validate-automation-spec.mjs --slice full-local-supabase-production",
+      "pnpm lint",
+      "pnpm typecheck",
+      "git diff --check"
+    ],
+    "required_test_targets": [
+      "auth-flow-ledger unit and PostgreSQL security tests",
+      "local Auth runtime and exact URL contract integration tests",
+      "session revoke and cross-owner RLS Storage tests",
+      "S3 copy semantic manifest and credential cleanup tests",
+      "backup restore reboot and rollback rehearsal evidence"
+    ]
+  },
+  "frontend": {
+    "required_routes": [
+      "LOGIN",
+      "/auth/callback",
+      "/auth/link/callback",
+      "SETTINGS/MYPAGE"
+    ],
+    "required_states": [
+      "loading",
+      "maintenance-restricted",
+      "error-retry",
+      "cancelled",
+      "provider-conflict",
+      "remote-session-relogin",
+      "return-to-action"
+    ],
+    "verify_commands": [
+      "pnpm test:e2e:oauth",
+      "pnpm test:e2e:security",
+      "pnpm test:e2e:a11y:core",
+      "git diff --check"
+    ],
+    "playwright_projects": [
+      "desktop-chrome",
+      "mobile-chrome",
+      "mobile-ios-small"
+    ],
+    "artifact_assertions": [
+      "no-new-product-screen-navigation-or-layout",
+      "oauth-sdk-never-runs-before-server-flow-start",
+      "browser-bundle-has-no-data-storage-or-secret-surface",
+      "320-390-desktop-no-overflow-focus-or-cta-blocker"
+    ],
+    "design_authority": {
+      "ui_risk": "low-risk",
+      "anchor_screens": [],
+      "required_screens": [],
+      "generator_required": false,
+      "generator_artifact": null,
+      "critic_required": false,
+      "critic_artifact": null,
+      "authority_required": false,
+      "stage4_evidence_requirements": [
+        "320 390 desktop login maintenance relogin screenshots"
+      ],
+      "authority_report_paths": []
+    }
+  },
+  "external_smokes": [
+    "Google Kakao Naver local Auth login and linking over owned HTTPS domain",
+    "LTE 5G app and public Auth path allowlist smoke",
+    "off-Mac encrypted full restore twice",
+    "Mac reboot Docker restart Cloudflare reconnect ordered recovery",
+    "pre-floor and post-floor rollback rehearsal"
+  ],
+  "blocked_conditions": [
+    "stage1-contract-not-merged",
+    "separate-codex-review-not-approved",
+    "oauth-or-session-hand-rolled-in-homecook",
+    "provider-domain-or-secret-evidence-missing",
+    "auth-user-uuid-or-owner-semantic-mismatch",
+    "transient-remote-session-promoted",
+    "user-path-service-role-or-browser-direct-storage-detected",
+    "public-rest-storage-studio-postgres-or-direct-origin-exposed",
+    "secret-found-in-config-env-git-bundle-build-or-log",
+    "storage-copy-bypasses-s3-protocol-or-semantic-mismatch",
+    "off-mac-restore-or-rollback-rehearsal-missing",
+    "dependency-or-image-release-blocker-present",
+    "production-auth-state-mutation-before-operator-approval",
+    "current-head-check-pending-absent-stale-failed-or-cancelled"
+  ],
+  "max_fix_rounds": {
+    "backend": 5,
+    "frontend": 4
+  }
+}

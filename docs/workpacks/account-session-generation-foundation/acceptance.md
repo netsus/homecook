@@ -1,5 +1,7 @@
 # Acceptance Checklist: account-session-generation-foundation
 
+> **Full-local relock 2026-08-01:** local `auth.users`와 local issuer/session이 active identity authority가 된다. 기존 generation/owner fence와 delete/recreate 보호는 유지하며, callback/refresh local session binding과 pre-expiry revoke를 `full-local-supabase-production` acceptance로 추가 검증한다. 과거 hybrid exact-epoch evidence는 새 provider/cutover 증거로 자동 승격하지 않는다.
+
 > 이 문서는 F0 additive dark-ship의 living closeout이다. 체크는 실패 테스트의 RED, 구현, server-production/local-rehearsal evidence, 독립 Codex review가 생긴 뒤에만 한다. Stage 1 author는 자기 문서를 승인하지 않으며 별도 Codex internal 1.5 reviewer가 5개 core artifact(README/acceptance/automation/work-item/status)와 2개 design gate artifact(wireframe/critique) 전체를 먼저 승인해야 한다.
 >
 > `Manual Only`를 제외한 모든 체크박스는 `omo` metadata를 유지한다. F0 완료는 production `generation_active` 전환이 아니라 `legacy` 안전 배포다. #3 joint activation 항목은 local deterministic harness로 검증하되 실제 production transition은 이 slice의 완료 신호로 요구하지 않는다.

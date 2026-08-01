@@ -11,16 +11,16 @@ function read(relativePath: string) {
   return existsSync(absolutePath) ? readFileSync(absolutePath, "utf8") : "";
 }
 
-describe("product ingredient link hybrid contract lock", () => {
+describe("product ingredient link contract lock", () => {
   const readmePath = `docs/workpacks/${sliceId}/README.md`;
   const acceptancePath = `docs/workpacks/${sliceId}/acceptance.md`;
   const automationPath = `docs/workpacks/${sliceId}/automation-spec.json`;
   const workItemPath = `.workflow-v2/work-items/${sliceId}.json`;
-  const requirementsPath = "docs/요구사항기준선-v1.7.27.md";
-  const screensPath = "docs/화면정의서-v1.5.31.md";
-  const flowPath = "docs/유저flow맵-v1.3.29.md";
-  const dbPath = "docs/db설계-v1.3.28.md";
-  const apiPath = "docs/api문서-v1.2.31.md";
+  const requirementsPath = "docs/요구사항기준선-v1.7.28.md";
+  const screensPath = "docs/화면정의서-v1.5.32.md";
+  const flowPath = "docs/유저flow맵-v1.3.30.md";
+  const dbPath = "docs/db설계-v1.3.29.md";
+  const apiPath = "docs/api문서-v1.2.32.md";
 
   it("uses only the current official document tuple", () => {
     const bundle = [
@@ -57,7 +57,7 @@ describe("product ingredient link hybrid contract lock", () => {
     expect(readme).not.toContain("Stage 1 docs pending");
   });
 
-  it("uses hybrid Auth and local Data verification instead of the retired verifier", () => {
+  it("keeps historical hybrid evidence while using the full-local production gate", () => {
     const bundle = [
       read(readmePath),
       read(acceptancePath),
@@ -68,10 +68,19 @@ describe("product ingredient link hybrid contract lock", () => {
 
     expect(bundle).not.toContain("verify-product-ingredient-link-local-first.mjs");
     expect(bundle).toContain("verify-product-ingredient-link-hybrid.mjs");
-    expect(bundle).toContain("remote Auth");
-    expect(bundle).toContain("local application DB");
-    expect(bundle).toContain("local auth.users=0");
-    expect(bundle).toContain("exact epoch");
+    expect(read(readmePath)).toContain(
+      "Historical hybrid verifier implementation evidence",
+    );
+    expect(read(readmePath)).toContain("full-local UUID/session-binding/RLS");
+    expect(read(readmePath)).toContain("remote Supabase Auth/DB/Storage");
+    expect(read(acceptancePath)).toContain("Full-local relock 2026-08-01");
+    expect(read(acceptancePath)).toContain("full-local RLS/cross-owner/delete-recreate");
+    expect(read(acceptancePath)).not.toContain(
+      "existing application DB must prove `local auth.users=0`",
+    );
+    expect(read(acceptancePath)).not.toContain(
+      "the merged-exact full hybrid verifier must read",
+    );
     expect(bundle).not.toContain("BRANCH_NAME=docs/product-ingredient-link-foundation");
     expect(bundle).not.toContain("BRANCH_NAME=docs/product-ingredient-link-stage2-relock");
     expect(bundle).toContain(
@@ -345,7 +354,9 @@ describe("product ingredient link hybrid contract lock", () => {
     ].join("\n");
 
     expect(bundle).toContain(target);
-    expect(read(readmePath)).toContain("Hybrid verifier implementation evidence");
+    expect(read(readmePath)).toContain(
+      "Historical hybrid verifier implementation evidence",
+    );
     expect(evidenceBundle).toContain("PR #1248");
     expect(evidenceBundle).toContain(
       "4881c4c53181a5504e16f2fa3971e9f6f4b99f05",

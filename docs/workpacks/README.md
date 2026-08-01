@@ -10,6 +10,12 @@
 
 ## Revision Notes
 
+- `v2` full-local Supabase Auth / DB / Storage production contract (2026-08-01 KST, UTC+09:00)
+  - 2026-07-30 `remote Auth + local DB/Storage` active 계약을 대체하고, 현재 Mac의 self-hosted Supabase Auth·PostgreSQL·PostgREST·Storage를 단일 authority로 통합한다.
+  - stable Auth UUID와 `auth.uid()` RLS, account generation과 owner/read-only/delete/recreate 보호를 유지하며 모든 사용자는 새 local ES256 session으로 한 번 재로그인한다.
+  - server-issued OAuth flow ledger, local session binding, Keychain/read-only secret mount, Auth-only public proxy, official S3/rclone restore와 floor 전후 rollback을 implementation/cutover gate로 둔다.
+  - hybrid workpack과 migration은 역사/recovery artifact로 유지하며 14일 안정화와 dependency 0 전에는 삭제하지 않는다.
+
 - `v2` hybrid remote Auth / local Data production contract (2026-07-30 KST, UTC+09:00)
   - 2026-07-29 local-first 초기 배포의 `원격 프로젝트 삭제`, `실제 사용자 없음`, `local auth.users 단일 barrier` 전제를 대체한다.
   - Google/Naver/Kakao와 session identity는 remote Supabase Auth에 남기고 application DB/Storage는 서버 Mac의 local Supabase로 이전한다.
@@ -229,7 +235,8 @@ Slice Order 표의 Status 값은 위 이벤트가 발생한 PR 또는 closeout b
 | `36d-recipe-tags-rules-backfill` | merged | P0 의미 태그 rule fixture와 기존 레시피 backfill dry-run/report, usage count reconcile, P1 후보 승인 정책 구현 |
 | `36e-recipe-tags-frontend` | ready-for-review | MANUAL_RECIPE_CREATE/YT_IMPORT 태그 추천·검수 UI와 HOME 태그 검색/filter/theme chip UX 구현 |
 | `launch-readiness-blockers` | docs | 광고/배포 차단 release-hotfix 예외: legal/trust/SEO 404와 fake contact, HOME hydration/guest console noise, security headers, FoodSafety mixed-content, PostCSS audit blocker를 Codex-only 세션 분리로 닫음 |
-| `hybrid-auth-local-data-production` | in-progress | Google/Naver/Kakao Auth는 remote Supabase에 유지하고 application DB/Storage는 서버 Mac local Supabase로 이전하며 기존 RLS, identity epoch, semantic restore, backup/rollback gate를 보존 |
+| `hybrid-auth-local-data-production` | superseded | 2026-08-01 full-local 계약이 active authority를 대체했다. 기존 구현/migration은 14일 recovery·dependency inventory용 역사 artifact로 보존 |
+| `full-local-supabase-production` | docs | 현재 Mac의 self-hosted Supabase Auth+DB+Storage 단일 authority, provider login/link, UUID/RLS, flow ledger/session revoke, secret/S3/restore/rollback/manual cutover gate |
 | `auth-provider-memory-linking` | merged | 세 provider 이메일 필수, built-in Kakao/Naver 표준 claim gate, 최근 provider 기억/전환 확인, same-user identity linking과 different-user conflict 보호, 수동 provider 연결. PR #967 merge |
 | `service-about-guide` | merged | 공개 `/about` 서비스 가이드, `PRIMARY_WEB_NAV_ITEMS` 웹 공통 5메뉴, HOME `집밥 둘러보기` guide+theme rail, MYPAGE 임시 도움말 제거. docs PR #978 + FE PR #979 merge. 커뮤니티/제안 게시판은 후속 슬라이스 |
 | `service-brand-rebrand` | merged | 정식명 `무엇을 먹든`, 짧은명 `무먹`, 신규·빈 nickname `무먹러`, system notification read-time copy 호환을 API/DB shape와 기술 식별자 변화 없이 잠금 |
