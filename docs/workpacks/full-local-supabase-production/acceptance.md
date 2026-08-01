@@ -57,6 +57,7 @@
 - 2026-08-01 독립 Codex `code-reviewer` 1차: source-of-record, OAuth 시작 순서, logout revoke 계약 3건 `REQUEST CHANGES`.
 - 같은 working tree에서 세 계약 항목 수정 후 contract diff 재검토: **PASS**, 해당 계약 finding의 unresolved/blocking 0. 이 기록은 provenance·secret 비노출 검토와 구분한다.
 - 실행 검증: source-of-truth/workflow-v2/workpack/automation/bookkeeping validation, lint, typecheck, harness 594 tests, HTML 320/390/1280 Playwright overflow·console·request failure 0.
+- 구현 중 발견한 callback ledger read 모순을 DB v1.3.30/API v1.2.33으로 교정하고 독립 `architect` 재검토 **PASS**, unresolved finding 0. public API shape와 browser 권한은 바뀌지 않는다.
 
 ## Stage 2 Runtime Evidence
 
