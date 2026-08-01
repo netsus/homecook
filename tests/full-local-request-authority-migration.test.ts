@@ -6,6 +6,13 @@ const migration = readFileSync(
   new URL("../supabase/migrations/20260801151000_full_local_request_authority.sql", import.meta.url),
   "utf8",
 );
+const authorizationManifest = readFileSync(
+  new URL(
+    "../docs/security/account-session-generation-security-function-authorization-manifest.json",
+    import.meta.url,
+  ),
+  "utf8",
+);
 
 describe("full-local request authority migration", () => {
   it("keeps the remote verifier dormant and branches authenticated requests to local authority", () => {
@@ -39,5 +46,13 @@ describe("full-local request authority migration", () => {
     ]) {
       expect(migration).toContain(fragment);
     }
+  });
+
+  it("classifies every full-local pre-request helper as internal-only", () => {
+    expect(authorizationManifest).toContain("20260801151000_full_local_request_authority.sql");
+    expect(authorizationManifest).toContain("private.verify_hybrid_request_authority_remote_legacy()");
+    expect(authorizationManifest).toContain("private.verify_full_local_internal_scope()");
+    expect(authorizationManifest).toContain("private.verify_full_local_anonymous_authority()");
+    expect(authorizationManifest).toContain("private.verify_full_local_authenticated_authority()");
   });
 });

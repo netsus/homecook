@@ -13,7 +13,7 @@ returns jsonb
 language plpgsql
 volatile
 security definer
-set search_path = pg_catalog, public, private, auth, pg_temp
+set search_path = pg_catalog, public, auth, pg_temp
 as $function$
 declare
   v_control private.full_local_auth_control%rowtype;

@@ -3,7 +3,8 @@
   "slice": "account-session-generation-foundation",
   "migrations": [
     "supabase/migrations/20260723140000_account_session_generation_foundation.sql",
-    "supabase/migrations/20260730090000_hybrid_auth_remote_identity_epoch_mirror.sql"
+    "supabase/migrations/20260730090000_hybrid_auth_remote_identity_epoch_mirror.sql",
+    "supabase/migrations/20260801151000_full_local_request_authority.sql"
   ],
   "deployment_state": "post-migration",
   "baseline_application_contract_count": 74,
@@ -349,6 +350,42 @@
       "allowed_principals": ["anon", "authenticated", "service_role"],
       "security_mode": "definer",
       "safe_search_path": ["pg_catalog", "public", "private", "pg_temp"]
+    },
+    {
+      "signature": "private.verify_hybrid_request_authority_remote_legacy()",
+      "control_class": "application-controlled",
+      "effect": "read-only",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "security_mode": "definer",
+      "safe_search_path": ["pg_catalog", "public", "private", "pg_temp"]
+    },
+    {
+      "signature": "private.verify_full_local_internal_scope()",
+      "control_class": "application-controlled",
+      "effect": "read-only",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "security_mode": "definer",
+      "safe_search_path": ["pg_catalog", "public", "private", "pg_temp"]
+    },
+    {
+      "signature": "private.verify_full_local_anonymous_authority()",
+      "control_class": "application-controlled",
+      "effect": "read-only",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "security_mode": "definer",
+      "safe_search_path": ["pg_catalog", "public", "private", "pg_temp"]
+    },
+    {
+      "signature": "private.verify_full_local_authenticated_authority()",
+      "control_class": "application-controlled",
+      "effect": "read-only",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "security_mode": "definer",
+      "safe_search_path": ["pg_catalog", "public", "private", "auth", "extensions", "pg_temp"]
     }
   ]
 }

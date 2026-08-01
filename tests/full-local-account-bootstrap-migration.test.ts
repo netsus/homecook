@@ -16,6 +16,8 @@ describe("full-local account bootstrap migration", () => {
   });
 
   it("keeps the bootstrap RPC internal", () => {
+    expect(migration).toContain("set search_path = pg_catalog, public, auth, pg_temp");
+    expect(migration).not.toContain("set search_path = pg_catalog, public, private");
     expect(migration).toContain("revoke all on function public.bootstrap_account_generation_identity");
     expect(migration).toContain("grant execute on function public.bootstrap_account_generation_identity");
     expect(migration).toContain("to service_role");
