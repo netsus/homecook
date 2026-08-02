@@ -24,6 +24,8 @@ The initial pre-RED attempt that could not find `vitest` because this fresh work
 
 The implementer quality review then found that the first GREEN version bypassed #4's nutrition snapshot writer. A regression assertion produced `1 failed / 3 passed / 8 skipped`; the repair now calls `write_recipe_nutrition_snapshot` with the transaction's exact input guard and returned deterministic snapshot ID. The same focused command returned to `15 passed / 8 intended integration skips` before disposable PostgreSQL execution.
 
+The first Draft PR head exposed one additional CI RED: the three new `SECURITY DEFINER` functions were absent from the central authorization manifest. A locked security test reproduced this as `1 failed / 4 passed`; the slice manifest and validator source registration repaired it to `5/5`, and `validate-security-function-authorization.mjs --contract-only` classified all three functions. The final locked static suite is `16 passed / 9 intended integration skips`.
+
 ## Implemented dormant authority
 
 - One service-role-only `write_personal_recipe_core` RPC owns capability, account generation, exact session binding, common lock order, resource validation, idempotency and all content effects in one transaction.
@@ -51,6 +53,7 @@ Command: `pnpm test:personal-recipe-customization-write-core:postgres`
 - `pnpm verify:backend`: lint, typecheck, product `2,557 pass / 129 skip`, production build, security Playwright `12/12` passed.
 - `pnpm audit --audit-level high`: high/critical `0`; one pre-existing low-severity advisory reported.
 - source/workpack/automation/workflow-v2/OMO/closeout/branch validators and `git diff --check` passed. Validator-focused Vitest returned `5 files / 48 tests` passed.
+- security function authorization contract classification passed for the new three-function manifest. The local full role-matrix command could not bind `127.0.0.1:54322` because Docker Desktop was not running; the Draft PR current-head CI supplies the fresh Supabase role-matrix result.
 
 ## Explicit pending gates
 

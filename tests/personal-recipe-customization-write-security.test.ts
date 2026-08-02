@@ -67,4 +67,38 @@ describe("personal recipe write security", () => {
     expect(sql).not.toMatch(/thumbnail_url\s*=\s*p_/i);
     expect(sql).toMatch(/exception[\s\S]*rollback|all effects roll back/i);
   });
+
+  it("registers every new security-definer function in the authorization inventory", () => {
+    const manifestPath = join(
+      process.cwd(),
+      "docs/security/personal-recipe-customization-write-core-security-function-authorization-manifest.json",
+    );
+    expect(existsSync(manifestPath), "security function manifest is missing").toBe(true);
+
+    const manifest = JSON.parse(readFileSync(manifestPath, "utf8")) as {
+      functions: Array<{ signature: string; allowed_principals: string[] }>;
+    };
+    expect(manifest.functions).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        signature: "public.lock_personal_recipe_ids(uuid[])",
+        allowed_principals: [],
+      }),
+      expect.objectContaining({
+        signature: expect.stringMatching(/^public\.write_personal_recipe_core\(/),
+        allowed_principals: ["service_role"],
+      }),
+      expect.objectContaining({
+        signature: "public.cleanup_personal_recipe_write_receipts()",
+        allowed_principals: [],
+      }),
+    ]));
+
+    const validator = readFileSync(
+      join(process.cwd(), "scripts/validate-security-function-authorization.mjs"),
+      "utf8",
+    );
+    expect(validator).toContain(
+      "personal-recipe-customization-write-core-security-function-authorization-manifest.json",
+    );
+  });
 });

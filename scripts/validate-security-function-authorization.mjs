@@ -100,6 +100,16 @@ const ADDITIVE_SOURCES = [
         ],
   },
   {
+    manifestPath: path.join(
+      REPO_ROOT,
+      "docs/security/personal-recipe-customization-write-core-security-function-authorization-manifest.json",
+    ),
+    migrationPath: path.join(
+      REPO_ROOT,
+      "supabase/migrations/20260802130000_personal_recipe_customization_write_core.sql",
+    ),
+  },
+  {
     manifestPath:
       process.env.SECURITY_FUNCTION_PRODUCT_INGREDIENT_LINK_MANIFEST_PATH
       ?? path.join(

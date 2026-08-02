@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "slice": "personal-recipe-customization-write-core",
+  "migration": "supabase/migrations/20260802130000_personal_recipe_customization_write_core.sql",
+  "deployment_state": "pre-deployment",
+  "baseline_application_contract_count": 74,
+  "functions": [
+    {
+      "signature": "public.lock_personal_recipe_ids(uuid[])",
+      "control_class": "application-controlled",
+      "effect": "read-only",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "security_mode": "definer",
+      "safe_search_path": [
+        "pg_catalog",
+        "public",
+        "pg_temp"
+      ]
+    },
+    {
+      "signature": "public.write_personal_recipe_core(uuid, timestamp with time zone, text, integer, text, uuid, uuid, bigint, jsonb, jsonb, jsonb, uuid, bigint, uuid, timestamp with time zone)",
+      "control_class": "application-controlled",
+      "effect": "mutation",
+      "exposure": "service-internal",
+      "allowed_principals": [
+        "service_role"
+      ],
+      "security_mode": "definer",
+      "safe_search_path": [
+        "pg_catalog",
+        "public",
+        "extensions",
+        "pg_temp"
+      ]
+    },
+    {
+      "signature": "public.cleanup_personal_recipe_write_receipts()",
+      "control_class": "application-controlled",
+      "effect": "trigger/internal",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "security_mode": "definer",
+      "safe_search_path": [
+        "pg_catalog",
+        "public",
+        "pg_temp"
+      ]
+    }
+  ]
+}
