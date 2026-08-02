@@ -72,6 +72,12 @@ Command: `pnpm test:recipe-content-snapshot-future-propagation:postgres`
 - Security reviewer `/root/slice7_stage2_security_review` approved exact code head `2378ec6b869fe2e4408345c720374cf899e7ad29` with P0/P1/P2 `0/0/0` after authentication-first repairs. The later `b4af7c35` commit changes tests only.
 - These role-separated reviews are implementation feedback, not the separate-task formal Stage 3 approval required by `AGENTS.md` and the slice workflow.
 
+## Full-local composite verifier repair
+
+- Actual RED: with the #7 target migration selected, `HOMECOOK_RECIPE_SNAPSHOT_FOLLOWUP_TARGET_MIGRATION=supabase/migrations/20260802210000_recipe_content_snapshot_future_propagation.sql pnpm test:recipe-content-snapshot-future-propagation:postgres` failed the active full-local Auth/DB foundation subtest because the snapshot verifier did not include the personal recipe function contract in both its generated inventory and its result assertion.
+- GREEN: the verifier now applies `HOMECOOK_PERSONAL_RECIPE_SECURITY_FUNCTIONS=1` symmetrically to inventory build and assertion. Focused verifier tests passed `2 files / 35 tests`; the composite PostgreSQL fresh/replay runner passed #7 `10/10` and active full-local inventory `30 pass / 16 intended skip` in each cycle.
+- Independent code and security reviews of this two-file runtime/test repair approved with P0/P1/P2 `0/0/0`. The change widens only the read-only fail-closed inventory under an existing explicit opt-in; loopback, credential filtering and production/staging/remote write boundaries are unchanged.
+
 ## Explicit pending gates
 
 - Draft PR #1278 current-head GitHub checks are pending.

@@ -1,5 +1,7 @@
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
@@ -318,6 +320,52 @@ describe("recipe snapshot authority full-local verifier", () => {
         mode: "post-merge-read-only",
       }),
     ).toThrow(/unsupported recipe snapshot authority full-local verification mode/i);
+  });
+
+  it("propagates personal and future inventory opts into the full-local plan when the env requests them", async () => {
+    const previousTargetMigration =
+      process.env.HOMECOOK_RECIPE_SNAPSHOT_FOLLOWUP_TARGET_MIGRATION;
+    const previousPersonalFlag =
+      process.env.HOMECOOK_PERSONAL_RECIPE_SECURITY_FUNCTIONS;
+    process.env.HOMECOOK_RECIPE_SNAPSHOT_FOLLOWUP_TARGET_MIGRATION =
+      "supabase/migrations/20260802210000_recipe_content_snapshot_future_propagation.sql";
+    process.env.HOMECOOK_PERSONAL_RECIPE_SECURITY_FUNCTIONS = "1";
+
+    try {
+      const moduleUrl =
+        `${pathToFileURL(resolve(
+          "scripts/lib/recipe-snapshot-authority-full-local-verifier.mjs",
+        )).href}?opts=${Date.now()}`;
+      const verifier = await import(
+        /* @vite-ignore */ moduleUrl
+      );
+      const plan = verifier.buildRecipeSnapshotAuthorityFullLocalVerificationPlan({
+        mode: "post-merge-full-local-read-only",
+      });
+
+      expect(plan.sql).toContain(
+        "public.write_personal_recipe_core(uuid, timestamp with time zone, text, integer, timestamp with time zone, text, uuid, uuid, bigint, jsonb, jsonb, jsonb, uuid, bigint, uuid, timestamp with time zone)",
+      );
+      expect(plan.sql).toContain(
+        "public.protect_meal_recipe_content_pin_with_future_propagation()",
+      );
+      expect(plan.sql).toContain(
+        "cooking_sessions_contract_namespace_check",
+      );
+    } finally {
+      if (previousTargetMigration === undefined) {
+        delete process.env.HOMECOOK_RECIPE_SNAPSHOT_FOLLOWUP_TARGET_MIGRATION;
+      } else {
+        process.env.HOMECOOK_RECIPE_SNAPSHOT_FOLLOWUP_TARGET_MIGRATION =
+          previousTargetMigration;
+      }
+      if (previousPersonalFlag === undefined) {
+        delete process.env.HOMECOOK_PERSONAL_RECIPE_SECURITY_FUNCTIONS;
+      } else {
+        process.env.HOMECOOK_PERSONAL_RECIPE_SECURITY_FUNCTIONS =
+          previousPersonalFlag;
+      }
+    }
   });
 
   it("pins the current local cleanup function and its exact private dependency order", () => {

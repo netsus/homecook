@@ -20,6 +20,8 @@ export {
 
 const MODE = "post-merge-full-local-read-only";
 const TARGET = "self-hosted-local-auth-db-storage-single-authority";
+const INCLUDE_PERSONAL_RECIPE_FUNCTIONS =
+  process.env.HOMECOOK_PERSONAL_RECIPE_SECURITY_FUNCTIONS === "1";
 const INCLUDE_RECIPE_FUTURE_PROPAGATION_FUNCTIONS =
   process.env.HOMECOOK_RECIPE_SNAPSHOT_FOLLOWUP_TARGET_MIGRATION?.endsWith(
     "_recipe_content_snapshot_future_propagation.sql",
@@ -252,6 +254,7 @@ function buildFullLocalSql(snapshotSql) {
     "  'full_local_security_inventory', (" +
       buildFullLocalSecurityInventoryExpression({
         includeSnapshotTables: true,
+        includePersonalRecipeFunctions: INCLUDE_PERSONAL_RECIPE_FUNCTIONS,
         includeRecipeFuturePropagationFunctions:
           INCLUDE_RECIPE_FUTURE_PROPAGATION_FUNCTIONS,
       }) +
@@ -400,6 +403,7 @@ export function assertRecipeSnapshotAuthorityFullLocalResult(result) {
           result.full_local_security_inventory,
           {
             includeSnapshotTables: true,
+            includePersonalRecipeFunctions: INCLUDE_PERSONAL_RECIPE_FUNCTIONS,
             includeRecipeFuturePropagationFunctions:
               INCLUDE_RECIPE_FUTURE_PROPAGATION_FUNCTIONS,
           },
