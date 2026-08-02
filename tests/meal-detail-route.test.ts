@@ -11,6 +11,7 @@ const formatBootstrapErrorMessage = vi.fn((error: unknown, fallbackMessage: stri
 
   return fallbackMessage;
 });
+const readVerifiedAccountGenerationSession = vi.fn();
 
 vi.mock("@/lib/supabase/server", () => ({
   createRouteHandlerClient,
@@ -21,6 +22,10 @@ vi.mock("@/lib/server/user-bootstrap", () => ({
   ensurePublicUserRow,
   ensureUserBootstrapState,
   formatBootstrapErrorMessage,
+}));
+
+vi.mock("@/lib/server/account-generation/session-authority", () => ({
+  readVerifiedAccountGenerationSession,
 }));
 
 interface QueryError {
@@ -89,12 +94,34 @@ describe("/api/v1/meals/[meal_id]", () => {
     vi.resetModules();
     createRouteHandlerClient.mockReset();
     createServiceRoleClient.mockReset();
+    readVerifiedAccountGenerationSession.mockReset();
     ensurePublicUserRow.mockReset();
     ensureUserBootstrapState.mockReset();
     formatBootstrapErrorMessage.mockClear();
-    createServiceRoleClient.mockReturnValue(null);
+    createServiceRoleClient.mockReturnValue({
+      rpc: vi.fn(async (_name: string, args: Record<string, unknown>) => ({
+        data: args.p_action === "delete"
+          ? { id: args.p_meal_id }
+          : {
+              id: args.p_meal_id,
+              planned_servings: args.p_planned_servings ?? 2,
+              status: "registered",
+            },
+        error: null,
+      })),
+    });
     ensurePublicUserRow.mockResolvedValue({});
     ensureUserBootstrapState.mockResolvedValue(undefined);
+    readVerifiedAccountGenerationSession.mockResolvedValue({
+      ok: true,
+      sessionAuthority: {
+        ownerUuid: "user-1",
+        authIdentityCreatedAt: "2026-08-01T00:00:00.000Z",
+        sessionIssuedAt: "2026-08-02T00:00:00.000Z",
+        sessionKeyHash: "a".repeat(64),
+        hmacKeyVersion: 1,
+      },
+    });
     delete process.env.HOMECOOK_ENABLE_QA_FIXTURES;
   });
 
@@ -162,6 +189,19 @@ describe("/api/v1/meals/[meal_id]", () => {
         throw new Error(`unexpected table: ${table}`);
       }),
     });
+    createServiceRoleClient.mockReturnValue({
+      rpc: vi.fn(async () => ({
+        data: {
+          success: false,
+          data: null,
+          error: {
+            code: "RECIPE_IMPACT_STALE",
+            message: "status conflict",
+          },
+        },
+        error: null,
+      })),
+    });
 
     const { PATCH } = await importRoute();
     const response = await PATCH(
@@ -204,6 +244,16 @@ describe("/api/v1/meals/[meal_id]", () => {
         if (table === "meals") return mealsTable;
         throw new Error(`unexpected table: ${table}`);
       }),
+    });
+    createServiceRoleClient.mockReturnValue({
+      rpc: vi.fn(async () => ({
+        data: {
+          id: "meal-1",
+          planned_servings: 3,
+          status: "cook_done",
+        },
+        error: null,
+      })),
     });
 
     const { PATCH } = await importRoute();
@@ -253,6 +303,19 @@ describe("/api/v1/meals/[meal_id]", () => {
         if (table === "meals") return mealsTable;
         throw new Error(`unexpected table: ${table}`);
       }),
+    });
+    createServiceRoleClient.mockReturnValue({
+      rpc: vi.fn(async () => ({
+        data: {
+          success: false,
+          data: null,
+          error: {
+            code: "RECIPE_IMPACT_STALE",
+            message: "status conflict",
+          },
+        },
+        error: null,
+      })),
     });
 
     const { PATCH } = await importRoute();
@@ -308,6 +371,16 @@ describe("/api/v1/meals/[meal_id]", () => {
         throw new Error(`unexpected table: ${table}`);
       }),
     });
+    createServiceRoleClient.mockReturnValue({
+      rpc: vi.fn(async () => ({
+        data: {
+          id: "meal-1",
+          planned_servings: 3,
+          status: "cook_done",
+        },
+        error: null,
+      })),
+    });
 
     const { PATCH } = await importRoute();
     const response = await PATCH(
@@ -345,6 +418,19 @@ describe("/api/v1/meals/[meal_id]", () => {
         if (table === "meals") return mealsTable;
         throw new Error(`unexpected table: ${table}`);
       }),
+    });
+    createServiceRoleClient.mockReturnValue({
+      rpc: vi.fn(async () => ({
+        data: {
+          success: false,
+          data: null,
+          error: {
+            code: "RECIPE_IMPACT_STALE",
+            message: "downstream conflict",
+          },
+        },
+        error: null,
+      })),
     });
 
     const { DELETE } = await importRoute();
@@ -392,6 +478,19 @@ describe("/api/v1/meals/[meal_id]", () => {
         if (table === "meals") return mealsTable;
         throw new Error(`unexpected table: ${table}`);
       }),
+    });
+    createServiceRoleClient.mockReturnValue({
+      rpc: vi.fn(async () => ({
+        data: {
+          success: false,
+          data: null,
+          error: {
+            code: "RECIPE_IMPACT_STALE",
+            message: "downstream conflict",
+          },
+        },
+        error: null,
+      })),
     });
 
     const { DELETE } = await importRoute();

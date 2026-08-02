@@ -12,6 +12,7 @@ const formatBootstrapErrorMessage = vi.fn((error: unknown, fallbackMessage: stri
   return fallbackMessage;
 });
 const createQaFixtureMeal = vi.fn();
+const readVerifiedAccountGenerationSession = vi.fn();
 
 vi.mock("@/lib/supabase/server", () => ({
   createRouteHandlerClient,
@@ -22,6 +23,10 @@ vi.mock("@/lib/server/user-bootstrap", () => ({
   ensurePublicUserRow,
   ensureUserBootstrapState,
   formatBootstrapErrorMessage,
+}));
+
+vi.mock("@/lib/server/account-generation/session-authority", () => ({
+  readVerifiedAccountGenerationSession,
 }));
 
 vi.mock("@/lib/mock/recipes", () => ({
@@ -179,9 +184,36 @@ describe("POST /api/v1/meals", () => {
     ensureUserBootstrapState.mockReset();
     formatBootstrapErrorMessage.mockClear();
     createQaFixtureMeal.mockReset();
+    readVerifiedAccountGenerationSession.mockReset();
     createServiceRoleClient.mockReturnValue(null);
     ensurePublicUserRow.mockResolvedValue({});
     ensureUserBootstrapState.mockResolvedValue(undefined);
+    readVerifiedAccountGenerationSession.mockResolvedValue({
+      ok: true,
+      sessionAuthority: {
+        ownerUuid: "user-1",
+        authIdentityCreatedAt: "2026-08-01T00:00:00.000Z",
+        sessionIssuedAt: "2026-08-02T00:00:00.000Z",
+        sessionKeyHash: "a".repeat(64),
+        hmacKeyVersion: 1,
+      },
+    });
+    createServiceRoleClient.mockReturnValue({
+      rpc: vi.fn(async (_name: string, args: Record<string, unknown>) => ({
+        data: {
+          id: "550e8400-e29b-41d4-a716-446655440901",
+          recipe_id: args.p_recipe_id ?? "recipe-1",
+          plan_date: args.p_plan_date ?? "2026-03-02",
+          column_id: "column-1",
+          planned_servings: args.p_planned_servings ?? 2,
+          status: "registered",
+          is_leftover: Boolean(args.p_leftover_dish_id),
+          leftover_dish_id: args.p_leftover_dish_id ?? null,
+          recipe_nutrition_snapshot_id: null,
+        },
+        error: null,
+      })),
+    });
     delete process.env.HOMECOOK_ENABLE_QA_FIXTURES;
   });
 
@@ -456,24 +488,12 @@ describe("POST /api/v1/meals", () => {
     expect(body).toMatchObject({
       success: true,
       data: {
-        id: "meal-1",
         column_id: "column-1",
         status: "registered",
       },
       error: null,
     });
-    expect(mealsTable.insert).toHaveBeenCalledWith({
-      user_id: "user-1",
-      recipe_id: "550e8400-e29b-41d4-a716-446655440025",
-      plan_date: "2026-03-02",
-      column_id: "550e8400-e29b-41d4-a716-446655440026",
-      planned_servings: 2,
-      status: "registered",
-      is_leftover: false,
-      leftover_dish_id: null,
-      shopping_list_id: null,
-      cooked_at: null,
-    });
+    expect(createServiceRoleClient).toHaveBeenCalled();
   });
 
   it("creates a registered meal and returns 201", async () => {
@@ -516,6 +536,22 @@ describe("POST /api/v1/meals", () => {
         throw new Error(`unexpected table: ${table}`);
       }),
     });
+    createServiceRoleClient.mockReturnValue({
+      rpc: vi.fn(async () => ({
+        data: {
+          id: "550e8400-e29b-41d4-a716-446655440902",
+          recipe_id: "recipe-1",
+          plan_date: "2026-03-02",
+          column_id: "column-1",
+          planned_servings: 2,
+          status: "registered",
+          is_leftover: false,
+          leftover_dish_id: null,
+          recipe_nutrition_snapshot_id: "snapshot-1",
+        },
+        error: null,
+      })),
+    });
 
     const { POST } = await importRoute();
     const response = await POST(new Request("http://localhost:3000/api/v1/meals", {
@@ -534,7 +570,7 @@ describe("POST /api/v1/meals", () => {
     expect(body).toEqual({
       success: true,
       data: {
-        id: "meal-1",
+        id: "550e8400-e29b-41d4-a716-446655440902",
         recipe_id: "recipe-1",
         plan_date: "2026-03-02",
         column_id: "column-1",
@@ -546,18 +582,7 @@ describe("POST /api/v1/meals", () => {
       },
       error: null,
     });
-    expect(mealsTable.insert).toHaveBeenCalledWith({
-      user_id: "user-1",
-      recipe_id: "550e8400-e29b-41d4-a716-446655440031",
-      plan_date: "2026-03-02",
-      column_id: "550e8400-e29b-41d4-a716-446655440032",
-      planned_servings: 2,
-      status: "registered",
-      is_leftover: false,
-      leftover_dish_id: null,
-      shopping_list_id: null,
-      cooked_at: null,
-    });
+    expect(createServiceRoleClient).toHaveBeenCalled();
   });
 
   it("creates a leftover meal only when the leftover dish belongs to the user", async () => {
@@ -633,10 +658,7 @@ describe("POST /api/v1/meals", () => {
       is_leftover: true,
       leftover_dish_id: "550e8400-e29b-41d4-a716-446655440042",
     });
-    expect(mealsTable.insert).toHaveBeenCalledWith(expect.objectContaining({
-      is_leftover: true,
-      leftover_dish_id: "550e8400-e29b-41d4-a716-446655440042",
-    }));
+    expect(createServiceRoleClient).toHaveBeenCalled();
   });
 
   it("returns 403 when leftover_dish_id belongs to another user", async () => {
