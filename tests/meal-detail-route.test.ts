@@ -125,7 +125,7 @@ describe("/api/v1/meals/[meal_id]", () => {
     delete process.env.HOMECOOK_ENABLE_QA_FIXTURES;
   });
 
-  it("returns 401 when the user is not authenticated for PATCH", async () => {
+  it("returns 401 before path or body validation when PATCH is unauthenticated", async () => {
     createRouteHandlerClient.mockResolvedValue({
       auth: {
         getUser: vi.fn(async () => ({ data: { user: null } })),
@@ -135,13 +135,13 @@ describe("/api/v1/meals/[meal_id]", () => {
 
     const { PATCH } = await importRoute();
     const response = await PATCH(
-      new Request("http://localhost:3000/api/v1/meals/550e8400-e29b-41d4-a716-446655440001", {
+      new Request("http://localhost:3000/api/v1/meals/not-a-uuid", {
         method: "PATCH",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ planned_servings: 2 }),
+        body: "{",
       }),
       {
-        params: Promise.resolve({ meal_id: "550e8400-e29b-41d4-a716-446655440001" }),
+        params: Promise.resolve({ meal_id: "not-a-uuid" }),
       },
     );
     const body = await response.json();
@@ -153,7 +153,37 @@ describe("/api/v1/meals/[meal_id]", () => {
     });
   });
 
+  it("returns 401 before path validation when DELETE is unauthenticated", async () => {
+    createRouteHandlerClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn(async () => ({ data: { user: null } })),
+      },
+      from: vi.fn(),
+    });
+
+    const { DELETE } = await importRoute();
+    const response = await DELETE(
+      new Request("http://localhost:3000/api/v1/meals/not-a-uuid", {
+        method: "DELETE",
+      }),
+      { params: Promise.resolve({ meal_id: "not-a-uuid" }) },
+    );
+
+    expect(response.status).toBe(401);
+    await expect(response.json()).resolves.toMatchObject({
+      success: false,
+      error: { code: "UNAUTHORIZED" },
+    });
+  });
+
   it("returns 422 when planned_servings is invalid for PATCH", async () => {
+    createRouteHandlerClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })),
+      },
+      from: vi.fn(),
+    });
+
     const { PATCH } = await importRoute();
     const response = await PATCH(
       new Request("http://localhost:3000/api/v1/meals/550e8400-e29b-41d4-a716-446655440002", {

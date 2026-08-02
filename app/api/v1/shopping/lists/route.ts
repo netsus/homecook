@@ -511,6 +511,13 @@ function statusFromShoppingCreateRpcError(code: string | undefined) {
 }
 
 export async function POST(request: Request) {
+  const routeClient = await createRouteHandlerClient();
+  const user = await requireUser(routeClient);
+
+  if (!user) {
+    return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
+  }
+
   let body: ShoppingListCreateBody;
 
   try {
@@ -526,13 +533,6 @@ export async function POST(request: Request) {
 
   if (parseFields.length > 0) {
     return fail("VALIDATION_ERROR", "요청 값을 확인해 주세요.", 422, parseFields);
-  }
-
-  const routeClient = await createRouteHandlerClient();
-  const user = await requireUser(routeClient);
-
-  if (!user) {
-    return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
   }
 
   const dbClient = routeClient as unknown as

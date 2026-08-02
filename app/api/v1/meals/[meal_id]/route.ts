@@ -150,6 +150,35 @@ async function requireAuthenticatedUser(routeClient: Awaited<ReturnType<typeof c
   return authResult.data.user;
 }
 
+async function authenticateMealMutation(request: Request) {
+  if (isQaFixtureModeEnabled()) {
+    if (readE2EAuthOverrideHeader(request.headers) !== "authenticated") {
+      return {
+        ok: false as const,
+        response: fail("UNAUTHORIZED", "로그인이 필요해요.", 401),
+      };
+    }
+
+    return { ok: true as const, fixture: true as const };
+  }
+
+  const routeClient = await createRouteHandlerClient();
+  const user = await requireAuthenticatedUser(routeClient);
+  if (!user) {
+    return {
+      ok: false as const,
+      response: fail("UNAUTHORIZED", "로그인이 필요해요.", 401),
+    };
+  }
+
+  return {
+    ok: true as const,
+    fixture: false as const,
+    routeClient,
+    user,
+  };
+}
+
 async function readOwnedMeal(dbClient: MealsDbClient, mealId: string) {
   return dbClient
     .from("meals")
@@ -159,6 +188,11 @@ async function readOwnedMeal(dbClient: MealsDbClient, mealId: string) {
 }
 
 export async function PATCH(request: Request, context: RouteContext) {
+  const authentication = await authenticateMealMutation(request);
+  if (!authentication.ok) {
+    return authentication.response;
+  }
+
   const { meal_id: mealId } = await context.params;
 
   if (!isUuid(mealId)) {
@@ -180,13 +214,7 @@ export async function PATCH(request: Request, context: RouteContext) {
     return fail("VALIDATION_ERROR", "요청 값을 확인해 주세요.", 422, parsed.fields);
   }
 
-  if (isQaFixtureModeEnabled()) {
-    const authOverride = readE2EAuthOverrideHeader(request.headers);
-
-    if (authOverride !== "authenticated") {
-      return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
-    }
-
+  if (authentication.fixture) {
     const fixtureResult = updateQaFixtureMealServings({
       mealId,
       plannedServings: parsed.plannedServings,
@@ -199,12 +227,7 @@ export async function PATCH(request: Request, context: RouteContext) {
     return ok(fixtureResult.data);
   }
 
-  const routeClient = await createRouteHandlerClient();
-  const user = await requireAuthenticatedUser(routeClient);
-
-  if (!user) {
-    return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
-  }
+  const { routeClient, user } = authentication;
 
   const dbClient = routeClient as unknown as MealsDbClient & UserBootstrapDbClient;
 
@@ -265,19 +288,18 @@ export async function PATCH(request: Request, context: RouteContext) {
 }
 
 export async function DELETE(request: Request, context: RouteContext) {
+  const authentication = await authenticateMealMutation(request);
+  if (!authentication.ok) {
+    return authentication.response;
+  }
+
   const { meal_id: mealId } = await context.params;
 
   if (!isUuid(mealId)) {
     return fail("RESOURCE_NOT_FOUND", "식사를 찾을 수 없어요.", 404);
   }
 
-  if (isQaFixtureModeEnabled()) {
-    const authOverride = readE2EAuthOverrideHeader(request.headers);
-
-    if (authOverride !== "authenticated") {
-      return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
-    }
-
+  if (authentication.fixture) {
     const fixtureResult = deleteQaFixtureMeal(mealId);
 
     if (!fixtureResult.ok) {
@@ -287,12 +309,7 @@ export async function DELETE(request: Request, context: RouteContext) {
     return new Response(null, { status: 204 });
   }
 
-  const routeClient = await createRouteHandlerClient();
-  const user = await requireAuthenticatedUser(routeClient);
-
-  if (!user) {
-    return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
-  }
+  const { routeClient, user } = authentication;
 
   const dbClient = routeClient as unknown as MealsDbClient & UserBootstrapDbClient;
 

@@ -343,6 +343,30 @@ describe("shopping stage2 backend", () => {
     });
   });
 
+  it("returns 401 before body validation when shopping creation is unauthenticated", async () => {
+    createRouteHandlerClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn(async () => ({ data: { user: null } })),
+      },
+      from: vi.fn(),
+    });
+
+    const { POST } = await importListsRoute();
+    const response = await POST(
+      new Request("http://localhost:3000/api/v1/shopping/lists", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: "{",
+      }),
+    );
+
+    expect(response.status).toBe(401);
+    await expect(response.json()).resolves.toMatchObject({
+      success: false,
+      error: { code: "UNAUTHORIZED" },
+    });
+  });
+
   it("returns eligible shopping preview meals in envelope", async () => {
     const mealsQuery = createArraySelectQuery([
       {
