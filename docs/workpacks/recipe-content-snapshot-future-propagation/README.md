@@ -65,12 +65,19 @@ Schema Change:
 | Gate | Current state | Meaning |
 | --- | --- | --- |
 | historical contract base PR #1072 | merged | superseded baseline; active authority is the current tuple in `docs/sync/CURRENT_SOURCE_OF_TRUTH.md` |
-| `recipe-snapshot-authority-foundation` Stage 1 PR #1078 | merged docs | #4 runtime must provide content authority, v2 dark session/claim/idempotency schema and rollback-safe Meal transition before #7 implementation |
-| `personal-recipe-customization-write-core` Stage 1 PR #1080 | merged docs | #6 runtime must provide the recipe-local owner/session-generation-bound write core before #7 integrates final PATCH |
-| `cook-mode-whole-board` | currently `implementation` | must merge with required checks green before #7 implementation; Stage 1 docs may merge now |
+| `recipe-snapshot-authority-foundation` | runtime merged | PR #1218 supplies content authority, v2 dark session/claim/idempotency schema and rollback-safe Meal transition; activation and Manual Only evidence remain separate release gates |
+| `personal-recipe-customization-write-core` | Stage 3 runtime merged | PR #1274 merge `05683e4d` supplies the recipe-local owner/session-generation-bound write core; terminal #6 closeout and activation remain pending |
+| `cook-mode-whole-board` | merged | PR #711 merge `2f8569cb` satisfies the runtime predecessor for #7 implementation |
 | `cooked-batch-weight-ledger` #8 | successor | owns exact-pantry complete and R/R+1 compatibility gate before R+2 joint activation |
 
-> Roadmap status is `docs` while workflow lifecycle remains `planned`. This Stage 1 docs merge neither satisfies runtime predecessors nor activates personal writes or v2 session creation.
+> Stage 1 PR #1081 is merged and its independent internal 1.5, security/DB, five-axis and design reviews approved with no required findings. Runtime predecessors are now merged, so Stage 2 may start in dormant mode. Personal writes and v2 session creation remain off.
+
+## Stage 2 Contract Boundary
+
+- The active official tuple is requirements `v1.7.28`, screens `v1.5.32`, flow `v1.3.30`, DB `v1.3.30`, API `v1.2.33`.
+- The official API already locks impact request/response fields, PATCH request fields, session-attempt request variants and error codes.
+- Exact success `data` field names are still not locked for snapshot-v2 start, cook-mode read, cancel, recipe PATCH and recipe DELETE. Stage 2 must not invent names such as `pinned_content` or `content_snapshot_id`.
+- DB/security/concurrency tests and private SQL helpers that do not depend on those public names may proceed TDD-first. Public route/type implementation depending on those names is blocked until an approved contract-evolution PR locks them.
 
 ## Authority and Transaction Contract
 
