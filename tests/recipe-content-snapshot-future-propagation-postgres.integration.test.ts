@@ -530,9 +530,9 @@ describeIf("recipe content snapshot future propagation PostgreSQL", () => {
       "read_snapshot_v2_cook_mode(uuid,timestamp with time zone,text,integer,timestamp with time zone,uuid,timestamp with time zone)",
       "cancel_snapshot_v2_cooking_session(uuid,timestamp with time zone,text,integer,timestamp with time zone,uuid,uuid,timestamp with time zone)",
     ]) {
-      expect(psql(`select to_regprocedure('public.${signature}') is not null;`)).toBe(
-        "true",
-      );
+      expect(
+        psql(`select (to_regprocedure('public.${signature}') is not null)::text;`),
+      ).toBe("true");
     }
   });
 
@@ -813,6 +813,11 @@ describeIf("recipe content snapshot future propagation PostgreSQL", () => {
       select recipe_content_snapshot_id::text from public.meals where id = '${pastMeal}';
     `);
     psql(`
+      begin;
+      select public.set_account_generation_internal_writer_marker(
+        '${cutoverAttempt}',
+        true
+      );
       insert into public.cooking_sessions (
         id, user_id, contract_version, session_kind, recipe_id,
         recipe_content_snapshot_id, cooking_servings, base_recipe_revision
@@ -820,7 +825,19 @@ describeIf("recipe content snapshot future propagation PostgreSQL", () => {
         '${seededSession}', '${owner}', 'snapshot_v2', 'standalone', '${recipeId}',
         '${pinnedContent}', 2, 1
       );
+      select public.set_account_generation_internal_writer_marker(
+        '${cutoverAttempt}',
+        false
+      );
+      commit;
     `);
+    expect(
+      psql(`
+        select (result_json ? '_internal_generation_writer_txid')::text
+        from public.account_generation_cutover_attempts
+        where id = '${cutoverAttempt}';
+      `),
+    ).toBe("false");
     expect(
       psql(`select title from public.recipes where id = '${recipeId}';`),
     ).not.toBe("고정 원본");

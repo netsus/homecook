@@ -60,7 +60,7 @@ function expectSnapshotGroupedRecipePayload(
   ];
   const declarationStart = declarationPatterns
     .map((pattern) => routeSource.search(pattern))
-    .find((index) => index >= 0);
+    .find((index) => index >= 0) ?? -1;
   expect(
     declarationStart,
     `cannot trace shopping RPC payload ${payloadReference}`,
