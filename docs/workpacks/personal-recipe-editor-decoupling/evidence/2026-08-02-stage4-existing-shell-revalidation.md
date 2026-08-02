@@ -64,7 +64,7 @@ This proves only the static current and immediate-previous capability-off surfac
 
 - Stage 4 existing capability-off shell/consumer revalidation: **complete**.
 - Governance projection compatibility: the first focused governance run returned `2 failed / 57 passed` because the regression contract retains the historical Stage 4 `pending` substring and Stage 2 branch/PR projection. After preserving those, the second run returned `1 failed / 58 passed` for the older `final exact-head verifier pending` phrase. No test or product code was changed. The repair keeps both pending strings only as explicit `superseded-not-active` breadcrumbs and preserves the Stage 2 status branch/PR fields while the new evidence, acceptance and notes carry the active Stage 4 result. The final governance bundle passed `7 files / 59 tests`.
-- Stage 5 lightweight no-visual-drift review: **pending in a separate fresh task**.
+- Stage 5 lightweight no-visual-drift review: **complete** in independent task `019fc0ac-3d83-7452-b942-b6409b9f7b6b`; retained evidence: `2026-08-02-stage5-no-visual-drift-review.md`.
 - Stage 6 lifecycle closeout: **pending**. Successful merged-exact verifier evidence does not replace the fresh Stage 5/6 actor separation or Manual Only evidence.
 - Activated provider callback/link, Cloudflare, final backup/restore, off-Mac restore, first local mutation/cutover and post-floor recovery: **Manual Only / pending**.
 - Overall workflow remains `in_progress / not_started / pending / not_started`.

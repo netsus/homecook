@@ -69,7 +69,7 @@ Schema Change:
 | `recipe-snapshot-authority-foundation` | in-progress, not a predecessor | PR #1218/#1219와 후속 hybrid/full-local evidence는 역사로 보존한다. #4 is not a #5 implementation predecessor |
 | `recipebook-diary-port` | not a predecessor | MYPAGE/RECIPEBOOK_DETAIL remain untouched |
 
-> Roadmap and workflow lifecycle remain `in-progress` after the historical Stage 2/3 boundary lock and Stage 4/5 capability-off implementation merge. PR #1271 merged the active full-local Stage 2 verifier as `27572ac95cdf261fe5a7d598c9c12e71634158d5`; its fresh final verifier and post-merge exact local fixture verifier both returned P0/P1/P2=`0/0/0`. Stage 4 existing shell/consumer revalidation is complete, while the separate lightweight Stage 5 review, Stage 6 lifecycle closeout and Manual Only evidence remain pending. No editor CTA, personal write or new runtime endpoint is activated.
+> Roadmap and workflow lifecycle remain `in-progress` after the historical Stage 2/3 boundary lock and Stage 4/5 capability-off implementation merge. PR #1271 merged the active full-local Stage 2 verifier as `27572ac95cdf261fe5a7d598c9c12e71634158d5`; its fresh final verifier and post-merge exact local fixture verifier both returned P0/P1/P2=`0/0/0`. Stage 4 existing shell/consumer revalidation and the independent Stage 5 lightweight no-visual-drift review are complete, while Stage 6 lifecycle closeout and Manual Only evidence remain pending. No editor CTA, personal write or new runtime endpoint is activated.
 
 ## Backend First Contract
 
@@ -203,6 +203,7 @@ The independent product-design-authority recheck records `pass`, blocker/major/m
 - Focused Vitest covers the shared shell, context policy, browser dirty guard, managed owner cancel, tag/media reuse and capability-off action matrix.
 - `tests/e2e/slice-personal-recipe-editor-decoupling.spec.ts` covers 12 local-fixture cases across 390px and 320px, including browser back, validation, upload error, cleanup retry, interaction geometry, focus/scroll and MYPAGE/RECIPEBOOK no-edit regression.
 - Fresh existing-shell revalidation evidence is retained at [`evidence/2026-08-02-stage4-existing-shell-revalidation.md`](./evidence/2026-08-02-stage4-existing-shell-revalidation.md): locked focused Vitest `35/35`, permission/contract/full-local source regression `36/36`, exact 390px/320px fixture E2E `12/12`, locked CI projection `6 pass / 6 intended skip`, `pnpm verify:frontend:pr`, current/previous source inventory and security manifests all passed.
+- Fresh independent Stage 5 evidence is retained at [`evidence/2026-08-02-stage5-no-visual-drift-review.md`](./evidence/2026-08-02-stage5-no-visual-drift-review.md): task `019fc0ac-3d83-7452-b942-b6409b9f7b6b` returned `APPROVE_NO_VISUAL_DRIFT`, blocker/major/minor and P0/P1/P2 all `0/0/0`, with the visual tree `127` blobs and `22` authority PNG checksums identical to base.
 - `ui/designs/authority/personal-recipe-editor-decoupling-authority.md` is the canonical authority report. Physical-device virtual keyboard/IME and post-activation personal writes remain Manual Only/future evidence.
 - No production/staging write or remote application DB/Storage mutation was performed.
 
@@ -213,7 +214,7 @@ The independent product-design-authority recheck records `pass`, blocker/major/m
 - Independent code, security and exact-head verification finished with P0/P1/P2 `0/0/0`; the independent design authority finished with blocker/major/minor `0/0/0`.
 - Retained Codex native review paths: `/root/stage4_final4_code_review`, `/root/stage4_final4_security_review`, `/root/stage4_post_vercel_fresh_review`, `/root/stage4_exact_head_final_verifier`; reviewed input SHA `e177a882e0fbc35847895a7a0f1dd775ff4425d1`, result artifact is this closeout evidence plus PR #1243 Actual Verification.
 - The historical hybrid verifier implementation is separate from the Stage 4 evidence. PR #1246 merged it as `354c569c8e40889bcfa7d9832cb9cec93f53db46`; its merged exact-SHA dry-run passed. It remains historical evidence and is not the active completion gate. Capability-on fork/edit/delete/login-return smokes remain future or Manual Only and do not authorize application writes.
-- Full Stage 6 lifecycle closeout remains pending until the new full-local verifier passes from a clean merged exact SHA and the remaining Stage 4/5/6 reviews are complete. Active full-local Stage 3 content review is complete as recorded below.
+- Full Stage 6 lifecycle closeout remains pending in a separate fresh task. The clean merged-exact verifier, Stage 4 revalidation and independent Stage 5 no-visual-drift review are complete; Manual Only evidence and #6/#8 capability-on activation remain pending and unclaimed.
 
 ### Historical hybrid verifier evidence
 
@@ -231,7 +232,7 @@ Stage 2 implementation evidence is retained at [`evidence/2026-08-02-stage2-full
 1. Stage 2 read-only verifier: TDD RED→GREEN으로 `tests/personal-recipe-editor-full-local-verifier.test.ts`와 full-local verifier를 구현했다. Historical hybrid verifier를 completion gate로 재사용하지 않았고, clean merged exact SHA 실행은 task `019fc08f-e766-7771-b67e-dd5bcac29dc7`에서 통과했다. Stage 6 lifecycle closeout은 별도 pending이다.
 2. Stage 3 complete: separate security/authority and code/quality Codex tasks approved exact content head `bb2bc367` with P0/P1/P2=`0/0/0`; this bookkeeping update does not self-approve or advance Ready.
 3. Stage 4 complete: 이미 merge된 capability-off shell/consumer를 current full-local session/image boundary에서 재검증했다. 새 UI나 activation은 구현하지 않았다.
-4. Stage 5: no visual/product change 근거로 lightweight no-visual-drift review를 수행한다. `Design Status: confirmed`를 유지하고 새 screenshot/Figma/authority evidence를 fabricated하지 않는다.
+4. Stage 5 complete: task `019fc0ac-3d83-7452-b942-b6409b9f7b6b`가 no visual/product change를 독립 검토해 `APPROVE_NO_VISUAL_DRIFT`, blocker/major/minor=`0/0/0`을 반환했다. `Design Status: confirmed`를 유지하고 새 screenshot/Figma/authority evidence는 만들지 않았다.
 5. Stage 6: clean merged exact head에서 verifier와 lifecycle projection을 닫는다. activated live path와 아래 Manual Only 증거가 없으면 verification은 `pending`을 유지한다.
 
 자동화 가능한 증거는 self-owned isolated local Auth/DB/Storage rehearsal, 정적 public exposure inventory, capability-off source inventory와 merged-exact verifier다. Activated provider callback/link, Cloudflare, final backup/restore, off-Mac restore, first local mutation/cutover와 post-floor recovery는 Manual Only/pending이다.
