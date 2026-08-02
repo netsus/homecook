@@ -168,10 +168,14 @@ import * as serverClients from "@/lib/supabase/server";
 
 const client = getSupabaseBrowserClient();
 client.from("recipes").update({ title: "blocked" });
+const recipeQuery = client.from("recipes");
+recipeQuery.upsert({ title: "also blocked" });
 client.storage.from("recipe-images-private").remove(["blocked.jpg"]);
-fetch("https://data.example.test/rest/v1/recipes", { method: "PATCH" });
+const restBase = "https://data.example.test";
+fetch(restBase + "/rest/v1/recipes", { method: "PATCH" });
+const factory = elevated;
 const fallback = Math.random() > 0.5
-  ? elevated()
+  ? factory()
   : serverClients.createServiceRoleClient();
 void fallback;
 `,
@@ -183,6 +187,11 @@ void fallback;
       expect.objectContaining({
         file: "app/client-boundary.tsx",
         method: "update",
+        table: "recipes",
+      }),
+      expect.objectContaining({
+        file: "app/client-boundary.tsx",
+        method: "upsert",
         table: "recipes",
       }),
     ]);
@@ -208,6 +217,11 @@ const localCollection = {
   },
 };
 localCollection.from().insert();
+const localQuery = localCollection.from();
+localQuery.update?.({});
+const localFactory = () => null;
+const localFactoryAlias = localFactory;
+localFactoryAlias();
 fetch("https://data.example.test/rest/v1/recipes");
 `,
     });

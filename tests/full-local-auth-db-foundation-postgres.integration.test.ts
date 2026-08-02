@@ -910,6 +910,12 @@ activeInventoryRun("active full-local snapshot security inventory", () => {
       left join auth.identities as identity on identity.user_id = app_user.id
       where identity.user_id is null;
 
+      drop policy if exists recipe_images_public_read on storage.objects;
+      create policy recipe_images_public_read
+        on storage.objects
+        for select
+        using (bucket_id = 'recipe-images');
+
       update private.full_local_auth_control
       set authority = 'local',
           local_issuer = 'https://auth.mumeok.com/auth/v1',
@@ -991,6 +997,57 @@ activeInventoryRun("active full-local snapshot security inventory", () => {
         process.cwd(),
       ),
     })).not.toThrow();
+  });
+
+  it("rejects a broad Storage policy without a private bucket literal", () => {
+    const plan = buildPersonalRecipeEditorFullLocalVerificationPlan({
+      mode: "post-merge-full-local-read-only",
+    });
+    const verification = psqlResult(`
+      begin;
+      create policy personal_editor_broad_storage_read
+        on storage.objects
+        for select
+        using (true);
+      ${plan.sql}
+      rollback;
+    `);
+    expect(verification.status, verification.stderr).toBe(0);
+    const json = verification.stdout
+      .trim()
+      .split("\n")
+      .find((line) => line.trim().startsWith("{"));
+    expect(json).toBeDefined();
+    expect(() => assertPersonalRecipeEditorFullLocalResult({
+      full_local_authority: JSON.parse(json ?? "{}") as Record<string, unknown>,
+      personal_editor_source: collectPersonalRecipeEditorSourceEvidence(
+        process.cwd(),
+      ),
+    })).toThrow(/failed closed/i);
+  });
+
+  it("rejects PUBLIC mutation grants on Storage objects", () => {
+    const plan = buildPersonalRecipeEditorFullLocalVerificationPlan({
+      mode: "post-merge-full-local-read-only",
+    });
+    const verification = psqlResult(`
+      begin;
+      grant insert, update, delete on storage.objects to public;
+      ${plan.sql}
+      rollback;
+    `);
+    expect(verification.status, verification.stderr).toBe(0);
+    const json = verification.stdout
+      .trim()
+      .split("\n")
+      .find((line) => line.trim().startsWith("{"));
+    expect(json).toBeDefined();
+    expect(() => assertPersonalRecipeEditorFullLocalResult({
+      full_local_authority: JSON.parse(json ?? "{}") as Record<string, unknown>,
+      personal_editor_source: collectPersonalRecipeEditorSourceEvidence(
+        process.cwd(),
+      ),
+    })).toThrow(/failed closed/i);
   });
 
   it.each([

@@ -162,6 +162,7 @@ const fullLocalResult = {
   account_cleanup_function_missing_count: 0,
   owner_null_shared_snapshot_count: 2,
   remote_application_writes: 0,
+  public_user_count: 3,
   auth_user_count: 3,
   auth_identity_count: 3,
   auth_identity_mapping_mismatch_count: 0,
@@ -173,8 +174,10 @@ const fullLocalResult = {
   private_storage_bucket_count: 1,
   private_storage_bucket_drift_count: 0,
   storage_objects_rls_disabled_count: 0,
-  private_storage_policy_count: 0,
-  storage_object_mutation_grant_count: 6,
+  storage_policy_count: 4,
+  storage_policy_drift_count: 0,
+  unexpected_storage_policy_count: 0,
+  unexpected_storage_mutation_grant_count: 0,
   image_registry_acl_drift_count: 0,
   private_storage_object_count: 1,
   private_storage_object_registry_mismatch_count: 0,
@@ -234,6 +237,14 @@ const boundaryChecks = {
   remote_application_writes: "zero",
 };
 
+const executionObservation = {
+  git_fetch_transport: "https-read-only",
+  database_target: "loopback",
+  database_transaction: "read-only",
+  required_checks_target: "local-sanitized",
+  remote_application_write_target: "absent",
+};
+
 const executionEvidence = {
   source_merge_sha: sourceMergeSha,
   checks: Object.fromEntries(requiredCheckIds.map((id) => [id, "passed"])),
@@ -241,9 +252,9 @@ const executionEvidence = {
     manualOnlyPending.map((id) => [id, "pending"]),
   ),
   boundary_checks: boundaryChecks,
+  execution_observation: executionObservation,
   production_writes: 0,
   staging_writes: 0,
-  remote_application_writes: 0,
 };
 
 const validLocalResult = {
@@ -454,6 +465,15 @@ describe("personal recipe editor full-local verifier", () => {
         ...validResult,
         full_local_authority: {
           ...fullLocalResult,
+          public_user_count: 0,
+          auth_user_count: 0,
+          auth_identity_count: 0,
+        },
+      },
+      {
+        ...validResult,
+        full_local_authority: {
+          ...fullLocalResult,
           auth_identity_mapping_mismatch_count: 1,
         },
       },
@@ -475,7 +495,21 @@ describe("personal recipe editor full-local verifier", () => {
         ...validResult,
         full_local_authority: {
           ...fullLocalResult,
-          private_storage_policy_count: 1,
+          storage_policy_drift_count: 1,
+        },
+      },
+      {
+        ...validResult,
+        full_local_authority: {
+          ...fullLocalResult,
+          unexpected_storage_policy_count: 1,
+        },
+      },
+      {
+        ...validResult,
+        full_local_authority: {
+          ...fullLocalResult,
+          unexpected_storage_mutation_grant_count: 1,
         },
       },
       {
@@ -556,7 +590,18 @@ describe("personal recipe editor full-local verifier", () => {
           service_role_user_fallback: "one",
         },
       },
-      { ...executionEvidence, remote_application_writes: 1 },
+      {
+        ...executionEvidence,
+        execution_observation: {
+          ...executionObservation,
+          remote_application_write_target: "present",
+        },
+      },
+      (() => {
+        const { execution_observation: _omitted, ...legacyEvidence } =
+          executionEvidence;
+        return { ...legacyEvidence, remote_application_writes: 0 };
+      })(),
       { ...executionEvidence, extra: true },
     ]) {
       expect(() =>
@@ -572,6 +617,7 @@ describe("personal recipe editor full-local verifier", () => {
     expect(buildPersonalRecipeEditorBoundaryChecks({
       checks: executionEvidence.checks,
       localResult: validLocalResult,
+      executionObservation,
     })).toEqual(boundaryChecks);
 
     expect(buildPersonalRecipeEditorBoundaryChecks({
@@ -583,6 +629,7 @@ describe("personal recipe editor full-local verifier", () => {
           browser_direct_data_mutation_count: 1,
         },
       },
+      executionObservation,
     }).browser_direct_data_storage_mutation).toBe("detected");
     expect(buildPersonalRecipeEditorBoundaryChecks({
       checks: executionEvidence.checks,
@@ -593,15 +640,18 @@ describe("personal recipe editor full-local verifier", () => {
           user_direct_service_role_count: 1,
         },
       },
+      executionObservation,
     }).service_role_user_fallback).toBe("detected");
     expect(buildPersonalRecipeEditorBoundaryChecks({
       checks: executionEvidence.checks,
-      localResult: {
-        ...validLocalResult,
-        full_local_authority: {
-          ...fullLocalResult,
-          remote_application_writes: 1,
-        },
+      localResult: validLocalResult,
+    }).remote_application_writes).toBe("not-observed");
+    expect(buildPersonalRecipeEditorBoundaryChecks({
+      checks: executionEvidence.checks,
+      localResult: validLocalResult,
+      executionObservation: {
+        ...executionObservation,
+        remote_application_write_target: "present",
       },
     }).remote_application_writes).toBe("detected");
   });

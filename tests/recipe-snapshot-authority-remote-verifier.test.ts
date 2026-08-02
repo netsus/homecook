@@ -472,6 +472,9 @@ describe("recipe snapshot authority remote verifier", () => {
       LANG: "ko_KR.UTF-8",
       LC_ALL: "C.UTF-8",
       TMPDIR: "/tmp/homecook-git",
+      GIT_CONFIG_GLOBAL: "/dev/null",
+      GIT_CONFIG_NOSYSTEM: "1",
+      GIT_SSH_COMMAND: "ssh -F /dev/null",
     });
   });
 
