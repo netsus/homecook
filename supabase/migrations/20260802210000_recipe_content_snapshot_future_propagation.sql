@@ -404,15 +404,55 @@ create or replace function public.build_recipe_draft_nutrition_predecessor_guard
   p_draft jsonb
 )
 returns jsonb
-language sql
+language plpgsql
 stable
 security definer
 set search_path = pg_catalog, public, pg_temp
 as $function$
+declare
+  v_result jsonb;
+begin
+  if to_regclass('public.ingredient_nutrition_profiles') is null
+    or to_regclass('public.ingredient_conversion_assignments') is null
+    or to_regprocedure('public.normalize_recipe_nutrition_unit(text)') is null then
+    return jsonb_build_object(
+      'recipe_ingredients', coalesce((
+        select jsonb_agg(jsonb_build_object(
+          'ingredient_id', ingredient -> 'ingredient_id',
+          'amount', ingredient -> 'amount',
+          'unit', ingredient -> 'unit',
+          'ingredient_type', ingredient -> 'ingredient_type',
+          'scalable', ingredient -> 'scalable',
+          'sort_order', ingredient -> 'sort_order',
+          'food_product_id', case when product_link.id is null then null
+            else ingredient -> 'food_product_id' end,
+          'food_product_nutrition_version_id',
+            case when product_link.id is null then null
+              else ingredient -> 'food_product_nutrition_version_id' end,
+          'nutrition_candidates', '[]'::jsonb,
+          'conversion_candidates', '[]'::jsonb,
+          'selected_nutrition_link_id', null,
+          'selected_conversion_assignment_id', null
+        ) order by ordinality)
+        from jsonb_array_elements(
+          public.canonicalize_recipe_future_draft(p_draft) -> 'ingredients'
+        ) with ordinality as rows(ingredient, ordinality)
+        left join public.food_product_ingredient_links as product_link
+          on product_link.product_id =
+            nullif(ingredient ->> 'food_product_id', '')::uuid
+         and product_link.ingredient_id = (ingredient ->> 'ingredient_id')::uuid
+         and product_link.relation = 'represents'
+         and product_link.review_status = 'approved'
+         and product_link.is_primary and product_link.is_active
+      ), '[]'::jsonb)
+    );
+  end if;
+
+  execute $guard$
   with draft_ingredient as (
     select ingredient, ordinality
     from jsonb_array_elements(
-      public.canonicalize_recipe_future_draft(p_draft) -> 'ingredients'
+      public.canonicalize_recipe_future_draft($1) -> 'ingredients'
     ) with ordinality as rows(ingredient, ordinality)
   )
   select jsonb_build_object(
@@ -585,7 +625,10 @@ as $function$
       public.normalize_recipe_nutrition_unit(ingredient.ingredient ->> 'unit')
         in ('g', 'kg') as is_mass_input
     ) as unit_flags
-  ) as selected;
+  ) as selected
+  $guard$ into v_result using p_draft;
+  return v_result;
+end;
 $function$;
 
 create or replace function public.build_recipe_future_target_state(
