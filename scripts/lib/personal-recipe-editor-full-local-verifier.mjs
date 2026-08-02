@@ -43,6 +43,24 @@ const STORAGE_POLICY_CONTRACT = [
     "recipe_images_delete_own",
   ].map((name) => parsePolicy(CURRENT_RECIPE_IMAGE_POLICY_MIGRATION, name)),
 ];
+const APPROVED_VERIFIED_SESSION_SERVICE_ROLE_ROUTE_COUNTS = new Map([
+  ["app/api/v1/cooking/session-attempts/[id]/cancel/route.ts", 1],
+  ["app/api/v1/cooking/session-attempts/[id]/cook-mode/route.ts", 1],
+  ["app/api/v1/cooking/session-attempts/route.ts", 1],
+  ["app/api/v1/meals/[meal_id]/route.ts", 2],
+  ["app/api/v1/meals/route.ts", 1],
+  ["app/api/v1/recipes/[id]/future-plan-impact/route.ts", 1],
+  ["app/api/v1/shopping/lists/route.ts", 1],
+]);
+const APPROVED_PUBLIC_SERVICE_ROLE_ROUTE_COUNTS = new Map([
+  ["app/api/v1/recipes/[id]/route.ts", 1],
+]);
+const APPROVED_VERIFIED_SESSION_SERVICE_ROLE_ENTRY_COUNT =
+  [...APPROVED_VERIFIED_SESSION_SERVICE_ROLE_ROUTE_COUNTS.values()]
+    .reduce((sum, count) => sum + count, 0);
+const APPROVED_PUBLIC_SERVICE_ROLE_ENTRY_COUNT =
+  [...APPROVED_PUBLIC_SERVICE_ROLE_ROUTE_COUNTS.values()]
+    .reduce((sum, count) => sum + count, 0);
 const SAFE_CHECK_ENVIRONMENT_KEYS = [
   "PATH",
   "LANG",
@@ -104,6 +122,7 @@ const SOURCE_EVIDENCE_KEYS = [
   "recipe_delete_handler_count",
   "recipe_patch_handler_count",
   "recipebook_surface_personal_editor_marker_count",
+  "public_service_role_entry_count",
   "user_direct_service_role_count",
   "user_service_role_violation_count",
 ].sort();
@@ -182,6 +201,28 @@ function hasExactKeys(value, expectedKeys) {
   const sortedExpectedKeys = [...expectedKeys].sort();
   return actualKeys.length === sortedExpectedKeys.length
     && actualKeys.every((key, index) => key === sortedExpectedKeys[index]);
+}
+
+function countAllowlistedServiceRoleEntries(entries, expectedByFile) {
+  const remainingByFile = new Map(expectedByFile);
+  let approvedCount = 0;
+  let violationCount = 0;
+
+  for (const entry of entries) {
+    const remaining = remainingByFile.get(entry.file) ?? 0;
+    if (remaining > 0 && entry.kind === "service-role-call") {
+      approvedCount += 1;
+      remainingByFile.set(entry.file, remaining - 1);
+      continue;
+    }
+    violationCount += 1;
+  }
+
+  for (const remaining of remainingByFile.values()) {
+    violationCount += remaining;
+  }
+
+  return { approvedCount, violationCount };
 }
 
 function hasExactExecutionObservation(
@@ -551,6 +592,16 @@ export function collectPersonalRecipeEditorSourceEvidence(repositoryRoot) {
     detailSource.match(/\bcapabilityEnabled\b/gu)?.length ?? 0;
   const capabilityOffOccurrenceCount =
     detailSource.match(/capabilityEnabled=\{false\}/gu)?.length ?? 0;
+  const verifiedSessionServiceRoleEntries =
+    countAllowlistedServiceRoleEntries(
+      inventory.userDirectServiceRoleEntries,
+      APPROVED_VERIFIED_SESSION_SERVICE_ROLE_ROUTE_COUNTS,
+    );
+  const approvedPublicServiceRoleEntries =
+    countAllowlistedServiceRoleEntries(
+      inventory.publicServiceRoleEntries,
+      APPROVED_PUBLIC_SERVICE_ROLE_ROUTE_COUNTS,
+    );
   const personalCreateCase =
     policySource.match(
       /case\s+"personal-create"(?<body>[\s\S]*?)(?=\n\s*case\s+|\n\s*\}\n)/u,
@@ -601,10 +652,14 @@ export function collectPersonalRecipeEditorSourceEvidence(repositoryRoot) {
         recipebookSourceFiles,
         /\b(?:personal-create|personal-edit|public-fork|personal_recipe_v2)\b|내 레시피로 수정/gu,
       ),
+    public_service_role_entry_count:
+      approvedPublicServiceRoleEntries.approvedCount,
     user_direct_service_role_count:
-      inventory.userDirectServiceRoleEntries.length,
+      verifiedSessionServiceRoleEntries.approvedCount,
     user_service_role_violation_count:
-      inventory.userServiceRoleViolations.length,
+      inventory.userServiceRoleViolations.length
+      + verifiedSessionServiceRoleEntries.violationCount
+      + approvedPublicServiceRoleEntries.violationCount,
   };
 }
 
@@ -629,10 +684,13 @@ export function assertPersonalRecipeEditorSourceEvidence(evidence) {
     && evidence.personal_create_active_entry === false
     && evidence.recipe_collection_personal_editor_marker_count === 0
     && evidence.recipe_collection_personal_origin_field_count === 0
-    && evidence.recipe_delete_handler_count === 0
-    && evidence.recipe_patch_handler_count === 0
+    && evidence.recipe_delete_handler_count === 1
+    && evidence.recipe_patch_handler_count === 1
     && evidence.recipebook_surface_personal_editor_marker_count === 0
-    && evidence.user_direct_service_role_count === 0
+    && evidence.public_service_role_entry_count
+      === APPROVED_PUBLIC_SERVICE_ROLE_ENTRY_COUNT
+    && evidence.user_direct_service_role_count
+      === APPROVED_VERIFIED_SESSION_SERVICE_ROLE_ENTRY_COUNT
     && evidence.user_service_role_violation_count === 0;
   if (!valid) {
     throw new Error("personal recipe editor source evidence failed closed");
@@ -874,8 +932,7 @@ export function buildPersonalRecipeEditorBoundaryChecks({
     + (source.browser_direct_storage_path_count ?? 0)
     + (source.browser_raw_rest_mutation_count ?? 0);
   const serviceRoleViolationCount =
-    (source.user_direct_service_role_count ?? 0)
-    + (source.user_service_role_violation_count ?? 0);
+    source.user_service_role_violation_count ?? 0;
 
   return {
     owner_access: permissionsPassed && policyBoundaryPassed ? "passed" : "failed",

@@ -1,5 +1,14 @@
 import { execFileSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import {
+  copyFileSync,
+  mkdtempSync,
+  mkdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
+import { dirname, join } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
@@ -223,10 +232,11 @@ const sourceEvidence = {
   personal_create_active_entry: false,
   recipe_collection_personal_editor_marker_count: 0,
   recipe_collection_personal_origin_field_count: 0,
-  recipe_delete_handler_count: 0,
-  recipe_patch_handler_count: 0,
+  recipe_delete_handler_count: 1,
+  recipe_patch_handler_count: 1,
   recipebook_surface_personal_editor_marker_count: 0,
-  user_direct_service_role_count: 0,
+  public_service_role_entry_count: 1,
+  user_direct_service_role_count: 8,
   user_service_role_violation_count: 0,
 };
 
@@ -303,6 +313,43 @@ const validLocalResult = {
   full_local_authority: fullLocalResult,
   personal_editor_source: sourceEvidence,
 };
+
+function createSourceEvidenceFixtureRepository(extraFiles: Record<string, string>) {
+  const root = mkdtempSync(join(tmpdir(), "personal-editor-full-local-"));
+  for (const relativeDir of [
+    "components/mypage",
+    "components/recipebook",
+  ]) {
+    mkdirSync(join(root, relativeDir), { recursive: true });
+  }
+  const requiredFiles = [
+    "app/api/v1/cooking/session-attempts/[id]/cancel/route.ts",
+    "app/api/v1/cooking/session-attempts/[id]/cook-mode/route.ts",
+    "app/api/v1/cooking/session-attempts/route.ts",
+    "app/api/v1/meals/[meal_id]/route.ts",
+    "app/api/v1/meals/route.ts",
+    "app/api/v1/recipes/[id]/future-plan-impact/route.ts",
+    "app/api/v1/recipes/[id]/route.ts",
+    "app/api/v1/recipes/route.ts",
+    "app/api/v1/shopping/lists/route.ts",
+    "components/recipe/recipe-detail-screen.tsx",
+    "lib/personal-recipe-editor.ts",
+  ];
+
+  for (const relativePath of requiredFiles) {
+    const destination = join(root, relativePath);
+    mkdirSync(dirname(destination), { recursive: true });
+    copyFileSync(relativePath, destination);
+  }
+
+  for (const [relativePath, source] of Object.entries(extraFiles)) {
+    const destination = join(root, relativePath);
+    mkdirSync(dirname(destination), { recursive: true });
+    writeFileSync(destination, source);
+  }
+
+  return root;
+}
 
 describe("personal recipe editor full-local verifier", () => {
   it("rejects remote authority and any unmerged, dirty or grafted source", () => {
@@ -576,18 +623,81 @@ describe("personal recipe editor full-local verifier", () => {
       { ...sourceEvidence, browser_direct_storage_path_count: 1 },
       { ...sourceEvidence, browser_direct_data_mutation_count: 1 },
       { ...sourceEvidence, browser_raw_rest_mutation_count: 1 },
-      { ...sourceEvidence, user_direct_service_role_count: 1 },
+      { ...sourceEvidence, user_direct_service_role_count: 7 },
+      { ...sourceEvidence, user_direct_service_role_count: 9 },
       { ...sourceEvidence, user_service_role_violation_count: 1 },
       { ...sourceEvidence, capability_on_occurrence_count: 1 },
       { ...sourceEvidence, capability_off_occurrence_count: 0 },
       { ...sourceEvidence, personal_create_active_entry: true },
-      { ...sourceEvidence, recipe_patch_handler_count: 1 },
-      { ...sourceEvidence, recipe_delete_handler_count: 1 },
+      { ...sourceEvidence, recipe_patch_handler_count: 0 },
+      { ...sourceEvidence, recipe_patch_handler_count: 2 },
+      { ...sourceEvidence, recipe_delete_handler_count: 0 },
+      { ...sourceEvidence, recipe_delete_handler_count: 2 },
+      { ...sourceEvidence, public_service_role_entry_count: 0 },
+      { ...sourceEvidence, public_service_role_entry_count: 2 },
       { ...sourceEvidence, extra: 0 },
     ]) {
       expect(() => assertPersonalRecipeEditorSourceEvidence(evidence)).toThrow(
         /personal recipe editor source evidence failed closed/i,
       );
+    }
+  });
+
+  it("treats extra user service-role routes outside the exact official allowlist as violations", () => {
+    const root = createSourceEvidenceFixtureRepository({
+      "app/api/v1/unapproved/route.ts": `import { createServiceRoleClient } from "@/lib/supabase/server";
+
+export async function POST() {
+  const client = createServiceRoleClient();
+  void client;
+  return Response.json({ success: true });
+}
+`,
+    });
+
+    try {
+      const evidence = collectPersonalRecipeEditorSourceEvidence(root);
+
+      expect(evidence.user_direct_service_role_count).toBe(
+        sourceEvidence.user_direct_service_role_count,
+      );
+      expect(evidence.user_service_role_violation_count).toBe(1);
+      expect(() => assertPersonalRecipeEditorSourceEvidence(evidence)).toThrow(
+        /personal recipe editor source evidence failed closed/i,
+      );
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("treats extra public service-role calls inside the official recipe route as violations", () => {
+    const routeSource = readFileSync(
+      "app/api/v1/recipes/[id]/route.ts",
+      "utf8",
+    );
+    const root = createSourceEvidenceFixtureRepository({
+      "app/api/v1/recipes/[id]/route.ts": `${routeSource}
+
+export async function __testExtraPublicServiceRoleCall() {
+  const client = createServiceRoleClient();
+  void client;
+  return null;
+}
+`,
+    });
+
+    try {
+      const evidence = collectPersonalRecipeEditorSourceEvidence(root);
+
+      expect(evidence.public_service_role_entry_count).toBe(
+        sourceEvidence.public_service_role_entry_count,
+      );
+      expect(evidence.user_service_role_violation_count).toBe(1);
+      expect(() => assertPersonalRecipeEditorSourceEvidence(evidence)).toThrow(
+        /personal recipe editor source evidence failed closed/i,
+      );
+    } finally {
+      rmSync(root, { recursive: true, force: true });
     }
   });
 
@@ -753,7 +863,7 @@ describe("personal recipe editor full-local verifier", () => {
         ...validLocalResult,
         personal_editor_source: {
           ...sourceEvidence,
-          user_direct_service_role_count: 1,
+          user_service_role_violation_count: 1,
         },
       },
       executionObservation,
