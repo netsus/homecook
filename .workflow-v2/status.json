@@ -2424,7 +2424,7 @@
       "id": "personal-recipe-editor-decoupling",
       "preset": "vertical-slice-strict",
       "branch": "fix/personal-recipe-editor-stage2-full-local-verifier",
-      "pr_path": "pending",
+      "pr_path": "https://github.com/netsus/homecook/pull/1271",
       "lifecycle": "in_progress",
       "approval_state": "not_started",
       "verification_status": "pending",

@@ -6,6 +6,7 @@
 - Role: fresh Stage 2 implementer. This task does not perform or claim Stage 3 code/security approval, Ready transition, merge, Stage Discord notification or Stage 6 closeout.
 - Exact base: `b33a7df67ed6484c9183834f15a511dffe9d70cb`
 - Branch: `fix/personal-recipe-editor-stage2-full-local-verifier`
+- Draft PR: [#1271](https://github.com/netsus/homecook/pull/1271). It remains Draft; Stage 3 approval, Ready and merge are not claimed.
 - Production/staging/remote application writes: `0 / 0 / 0`
 - Product API, field, status, error, migration, schema, UI and dependency changes: none.
 
