@@ -132,7 +132,7 @@
     ]
   },
   "status": {
-    "lifecycle": "planned",
+    "lifecycle": "in_progress",
     "approval_state": "not_started",
     "verification_status": "pending",
     "evaluation_status": "not_started",
@@ -153,5 +153,5 @@
     "Unapproved server-production migration or database write or capability activation"
   ],
   "open_questions": [],
-  "notes": "Roadmap moves to docs while workflow lifecycle remains planned and approval not_started until separate Codex internal1.5, security/DB and five-axis reviews approve with zero required findings. Stage 1 verify_commands are current docs validators, focused workflow tests, lint, typecheck, audit and diff only. Backend migration/RPC/RLS/PostgreSQL/real DB/E2E/server-production/local-rehearsal and release evidence are future artifacts. Design is N/A because #5 owns all UI. #6 may dark-ship recipe-local write core but must not expose an alternate PATCH; #7 integrates future impact and #8 gates R+2 activation."
+  "notes": "Stage 1 contract lock remains approved. Stage 2 backend implementer task 019fc113-7b96-7620-ada5-a0bb66cfae7e recorded RED 15 failed/2 skipped before GREEN 15/15, then disposable PostgreSQL fresh and replay each passed #6 9/9 plus the active #4/full-local security regressions. #2/#3/#4/#5 focused regressions and verify:backend are green; production/staging/remote writes remain 0/0/0. Implementation commit 22e673ca4a09649ee9187b336b35f5a97a80ce86 is in Draft PR #1274. Evidence: docs/workpacks/personal-recipe-customization-write-core/evidence/2026-08-02-stage2-backend-implementation.md. Lifecycle is in_progress while approval not_started, verification pending and evaluation not_started; this implementation task does not self-approve Stage 3. The named slice E2E, merged-exact read-only verifier, Manual Only evidence, #7 integration and #8 R/R+1→R+2 activation remain pending."
 }

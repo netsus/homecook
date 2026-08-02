@@ -586,7 +586,7 @@
       "id": "baemin-prototype-planner-week-parity",
       "preset": "vertical-slice-strict",
       "branch": "feature/fe-baemin-prototype-planner-week-parity",
-      "pr_path": "pending",
+      "pr_path": "https://github.com/netsus/homecook/pull/1274",
       "lifecycle": "merged",
       "approval_state": "dual_approved",
       "verification_status": "passed",
@@ -2462,9 +2462,9 @@
     {
       "id": "personal-recipe-customization-write-core",
       "preset": "vertical-slice-strict",
-      "branch": "docs/personal-recipe-customization-write-core",
+      "branch": "feature/be-personal-recipe-customization-write-core",
       "pr_path": "pending",
-      "lifecycle": "planned",
+      "lifecycle": "in_progress",
       "approval_state": "not_started",
       "verification_status": "pending",
       "required_checks": [
@@ -2481,7 +2481,7 @@
         "node scripts/verify-personal-recipe-customization-write-core-local-first.mjs --mode post-merge-read-only",
         "git diff --check"
       ],
-      "notes": "Roadmap moves to docs while workflow lifecycle remains planned and approval not_started until separate Codex internal1.5, security/DB and five-axis reviews approve with zero required findings. Stage 1 verify_commands are current docs validators, focused workflow tests, lint, typecheck, audit and diff only. Backend migration/RPC/RLS/PostgreSQL/real DB/E2E/server-production/local-rehearsal and release evidence are future artifacts. Design is N/A because #5 owns all UI. #6 may dark-ship recipe-local write core but must not expose an alternate PATCH; #7 integrates future impact and #8 gates R+2 activation.",
+      "notes": "Stage 2 backend implementer task 019fc113-7b96-7620-ada5-a0bb66cfae7e recorded RED 15 failed/2 skipped before GREEN 15/15. Disposable PostgreSQL fresh/replay each passed #6 9/9 with #4/full-local security regressions; #2/#3/#4/#5 focused regressions and verify:backend are green; writes 0/0/0. Implementation commit 22e673ca4a09649ee9187b336b35f5a97a80ce86 is in Draft PR #1274. Evidence: docs/workpacks/personal-recipe-customization-write-core/evidence/2026-08-02-stage2-backend-implementation.md. This task does not self-approve Stage 3. Approval/evaluation, named slice E2E, merged-exact read-only verifier, Manual Only evidence and #7/#8 activation remain pending.",
       "evaluation_status": "not_started",
       "evaluation_round": 0,
       "last_evaluator_result": null,

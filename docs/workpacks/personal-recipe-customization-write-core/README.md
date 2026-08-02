@@ -185,6 +185,8 @@ No stable capability-off public error code is invented. Before approved activati
 
 ## Delivery Checklist
 
+Stage 2 implementation evidence is retained at [`evidence/2026-08-02-stage2-backend-implementation.md`](./evidence/2026-08-02-stage2-backend-implementation.md). It records the implementer task's actual RED→GREEN, disposable PostgreSQL fresh/replay and predecessor regression results without claiming Stage 3 approval, Manual Only evidence or capability activation.
+
 - [ ] dormant create/fork/save-as-new core preserves source identity and legacy manual behavior <!-- omo:id=delivery-personal-write-create;stage=2;scope=backend;review=3,6 -->
 - [ ] owner-private same-ID revision update stores canonical ingredient/product/version/step provenance <!-- omo:id=delivery-personal-write-update;stage=2;scope=backend;review=3,6 -->
 - [ ] soft DELETE is owner-only, idempotent and preserves every history FK/snapshot <!-- omo:id=delivery-personal-write-delete;stage=2;scope=backend;review=3,6 -->
