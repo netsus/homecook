@@ -11,7 +11,6 @@ import { evaluateDocGate } from "../scripts/lib/omo-doc-gate.mjs";
 
 const repoRoot = process.cwd();
 const sliceId = "personal-recipe-editor-decoupling";
-const docsBranch = "docs/personal-recipe-editor-stage1-full-local-relock";
 const stage2Branch = "fix/personal-recipe-editor-stage2-full-local-verifier";
 
 function read(relativePath: string) {

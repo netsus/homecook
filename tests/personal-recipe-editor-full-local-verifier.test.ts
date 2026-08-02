@@ -9,6 +9,7 @@ import {
   assertPersonalRecipeEditorFullLocalResult,
   assertPersonalRecipeEditorMergedExactSource,
   assertPersonalRecipeEditorSourceEvidence,
+  buildPersonalRecipeEditorCheckEnvironment,
   buildPersonalRecipeEditorFullLocalPsqlRequest,
   buildPersonalRecipeEditorFullLocalSummary,
   buildPersonalRecipeEditorFullLocalVerificationPlan,
@@ -353,6 +354,24 @@ describe("personal recipe editor full-local verifier", () => {
     ).toThrow(/mutating SQL|read-only/i);
   });
 
+  it("runs required checks with a sanitized non-authority environment", () => {
+    expect(buildPersonalRecipeEditorCheckEnvironment({
+      PATH: "/usr/bin:/bin",
+      HOME: "/tmp/home",
+      TMPDIR: "/tmp",
+      CI: "true",
+      PERSONAL_RECIPE_EDITOR_FULL_LOCAL_DATABASE_URL: "secret-url",
+      SUPABASE_SERVICE_ROLE_KEY: "secret-role",
+      GIT_CONFIG_GLOBAL: "/tmp/poison",
+      PGHOST: "remote.example.com",
+    })).toEqual({
+      PATH: "/usr/bin:/bin",
+      HOME: "/tmp/home",
+      TMPDIR: "/tmp",
+      CI: "true",
+    });
+  });
+
   it("accepts an exact valid self-owned isolated full-local result", () => {
     expect(() =>
       assertPersonalRecipeEditorFullLocalResult({
@@ -370,7 +389,9 @@ describe("personal recipe editor full-local verifier", () => {
       full_local_authority: fullLocalResult,
       personal_editor_source: sourceEvidence,
     };
-    const { remote_writes: _removed, ...missingFullLocalField } = fullLocalResult;
+    const missingFullLocalField = Object.fromEntries(
+      Object.entries(fullLocalResult).filter(([key]) => key !== "remote_writes"),
+    );
 
     for (const result of [
       null,

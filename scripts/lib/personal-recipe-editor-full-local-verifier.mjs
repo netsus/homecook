@@ -15,6 +15,17 @@ import {
 const MODE = "post-merge-full-local-read-only";
 const TARGET = "self-hosted-local-auth-db-storage-single-authority";
 const SOURCE_OF_RECORD = "live-remote-read-only-pre-floor";
+const SAFE_CHECK_ENVIRONMENT_KEYS = [
+  "PATH",
+  "LANG",
+  "LC_ALL",
+  "HOME",
+  "TMPDIR",
+  "CI",
+  "NO_COLOR",
+  "FORCE_COLOR",
+  "TZ",
+];
 
 const PERSONAL_EDITOR_CHECKS = [
   {
@@ -128,6 +139,16 @@ export function assertPersonalRecipeEditorMergedExactSource(source) {
       "personal recipe editor verifier requires a clean merged exact origin/master source",
     );
   }
+}
+
+export function buildPersonalRecipeEditorCheckEnvironment(
+  baseEnvironment = {},
+) {
+  return Object.fromEntries(
+    SAFE_CHECK_ENVIRONMENT_KEYS
+      .filter((key) => baseEnvironment[key] !== undefined)
+      .map((key) => [key, baseEnvironment[key]]),
+  );
 }
 
 export function buildPersonalRecipeEditorFullLocalVerificationPlan({ mode }) {

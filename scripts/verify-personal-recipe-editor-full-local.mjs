@@ -9,6 +9,7 @@ import {
   assertPersonalRecipeEditorFullLocalResult,
   assertPersonalRecipeEditorMergedExactSource,
   assertPersonalRecipeEditorSourceEvidence,
+  buildPersonalRecipeEditorCheckEnvironment,
   buildPersonalRecipeEditorBoundaryChecks,
   buildPersonalRecipeEditorFullLocalPsqlRequest,
   buildPersonalRecipeEditorFullLocalSummary,
@@ -95,11 +96,12 @@ function assertMergedExactSource(repositoryRoot) {
 
 function runRequiredChecks(plan, repositoryRoot) {
   const checks = {};
+  const environment = buildPersonalRecipeEditorCheckEnvironment(process.env);
   for (const check of plan.requiredChecks) {
     const result = spawnSync(check.command, check.args, {
       cwd: repositoryRoot,
       encoding: "utf8",
-      env: process.env,
+      env: environment,
     });
     if (result.status !== 0) {
       throw new Error(

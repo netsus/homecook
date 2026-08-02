@@ -45,6 +45,22 @@
 - Security-function manifest classification: `node scripts/validate-security-function-authorization.mjs --contract-only` passed, including the full-local 13-function and snapshot 16-function manifests.
 - Pre-merge CLI dry-run was executed with local authority controls and a sentinel loopback credential. It failed before DB access because the feature head is not merged into `origin/master`, printed no credential or raw payload, and returned only the clean merged-exact requirement. This is expected pre-merge fail-closed evidence, not a successful release result.
 
+## Final local validation before Draft PR
+
+- Five-axis implementer self-check found one important hardening gap: fixed required-check child processes inherited the full shell environment. The repair now forwards only `PATH`, locale, home/temp, CI/color and timezone keys; DB URLs, Supabase service keys, Git routing and PostgreSQL routing variables are excluded. This self-check is not Stage 3 approval.
+- Final focused verifier/contract bundle after the environment repair: `5 files / 43 tests passed`.
+- `pnpm verify:backend` passed:
+  - product Vitest: `202 files passed / 9 skipped`, `2,557 tests passed / 129 skipped`;
+  - Next.js production build passed;
+  - auth/session security Playwright: `12/12 passed`.
+- Full `pnpm test`: `490 files passed / 26 skipped`, `5,049 tests passed / 283 skipped`.
+- `pnpm lint` and `pnpm typecheck`: passed with zero warning/error output after removing two test-only unused bindings.
+- source-of-truth, workflow-v2, workpack, automation-spec, OMO bookkeeping and closeout-sync validators: passed.
+- branch validator: passed for `fix/personal-recipe-editor-stage2-full-local-verifier`.
+- default 20-commit validator reported two already-merged base-history subjects. Re-running with `BASE_REF=b33a7df67ed6484c9183834f15a511dffe9d70cb` passed all Stage 2 branch commits present at that point.
+- `pnpm audit --audit-level high`: high-or-higher findings `0`; one existing low-severity advisory remains.
+- `git diff --check`: passed before each commit boundary.
+
 ## Pending
 
 - fresh independent Stage 3 exact-head code/security review;
