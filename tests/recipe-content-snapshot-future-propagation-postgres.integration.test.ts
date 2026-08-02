@@ -42,6 +42,7 @@ const pastMeal = "93000000-0000-4000-8000-000000000003";
 const cookedMeal = "93000000-0000-4000-8000-000000000004";
 const cancelMeal = "93000000-0000-4000-8000-000000000005";
 const concurrentMeal = "93000000-0000-4000-8000-000000000006";
+const replayMeal = "93000000-0000-4000-8000-000000000007";
 const incompleteShopping = "94000000-0000-4000-8000-000000000001";
 const completedShopping = "94000000-0000-4000-8000-000000000002";
 const genericPantry = "95000000-0000-4000-8000-000000000001";
@@ -498,7 +499,8 @@ describeIf("recipe content snapshot future propagation PostgreSQL", () => {
         ('${pastMeal}', '${owner}', '${recipeId}', current_date - 5, 2, 'registered', '${completedShopping}'),
         ('${cookedMeal}', '${owner}', '${recipeId}', current_date + 7, 2, 'registered', '${completedShopping}'),
         ('${cancelMeal}', '${owner}', '${recipeId}', current_date + 8, 2, 'registered', null),
-        ('${concurrentMeal}', '${owner}', '${recipeId}', current_date + 9, 2, 'registered', null);
+        ('${concurrentMeal}', '${owner}', '${recipeId}', current_date + 9, 2, 'registered', null),
+        ('${replayMeal}', '${owner}', '${recipeId}', current_date + 10, 2, 'registered', null);
       update public.meals set status = 'shopping_done' where id = '${cookedMeal}';
       update public.meals set status = 'cook_done', cooked_at = now()
       where id = '${cookedMeal}';
@@ -820,6 +822,29 @@ describeIf("recipe content snapshot future propagation PostgreSQL", () => {
           (select count(*) from public.mutation_idempotency_keys));
       `),
     ).toBe(before);
+  });
+
+  it("replays the first snapshot-v2 start after its claim exists and creation turns off", () => {
+    const key = "96000000-0000-4000-8000-000000000041";
+    const revision = Number(
+      psql(`select revision::text from public.meals where id = '${replayMeal}';`),
+    );
+    const first = JSON.parse(
+      psql(startSql({ mealId: replayMeal, mealRevision: revision, key })),
+    );
+    const replay = JSON.parse(
+      psql(startSql({
+        mealId: replayMeal,
+        mealRevision: revision,
+        key,
+        creation: "off",
+      })),
+    );
+
+    expect(replay).toEqual(first);
+    expect(
+      psql(`select count(*)::text from public.cooking_session_meal_claims where meal_id = '${replayMeal}';`),
+    ).toBe("1");
   });
 
   it("reads seeded v2 content immutably with exact generic/product pantry provenance", () => {

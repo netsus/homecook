@@ -1335,9 +1335,6 @@ begin
     p_owner_uuid, p_auth_identity_created_at_snapshot, p_session_key_hash,
     p_hmac_key_version, p_session_issued_at
   );
-  if current_setting('homecook.snapshot_v2_creation', true) is distinct from 'on' then
-    raise exception 'SNAPSHOT_V2_CREATION_DISABLED' using errcode = '55000';
-  end if;
 
   if p_mode = 'planner' then
     if cardinality(coalesce(p_meal_ids, '{}'::uuid[])) = 0
@@ -1372,6 +1369,51 @@ begin
     end if;
     v_recipe_id := p_recipe_id;
     v_cooking_servings := p_cooking_servings::integer;
+  end if;
+
+  v_key_hash := encode(extensions.digest(
+    convert_to(p_idempotency_key::text, 'UTF8'), 'sha256'
+  ), 'hex');
+  v_payload_hash := encode(extensions.digest(convert_to(jsonb_build_object(
+    'mode', p_mode,
+    'meal_ids', case when p_mode = 'planner' then to_jsonb(p_meal_ids) else null end,
+    'expected_meal_revisions', case when p_mode = 'planner'
+      then p_expected_meal_revisions else null end,
+    'recipe_id', case when p_mode = 'standalone' then p_recipe_id else null end,
+    'expected_recipe_revision', case when p_mode = 'standalone'
+      then p_expected_recipe_revision else null end,
+    'cooking_servings', case when p_mode = 'standalone'
+      then p_cooking_servings else null end
+  )::text, 'UTF8'), 'sha256'), 'hex');
+
+  insert into public.mutation_idempotency_keys (
+    owner_uuid, account_generation, operation_scope, key_hash, payload_hash,
+    state, attempt_token, lease_expires_at, created_at, updated_at
+  ) values (
+    p_owner_uuid, (v_authority ->> 'account_generation')::bigint,
+    'snapshot_v2_start', v_key_hash, v_payload_hash, 'in_progress',
+    extensions.gen_random_uuid(), p_now + interval '5 minutes', p_now, p_now
+  ) on conflict (owner_uuid, account_generation, operation_scope, key_hash)
+  do nothing returning * into v_idempotency;
+  if v_idempotency.id is null then
+    select receipt.* into v_idempotency
+    from public.mutation_idempotency_keys as receipt
+    where receipt.owner_uuid = p_owner_uuid
+      and receipt.account_generation = (v_authority ->> 'account_generation')::bigint
+      and receipt.operation_scope = 'snapshot_v2_start'
+      and receipt.key_hash = v_key_hash
+    for update;
+    if v_idempotency.payload_hash is distinct from v_payload_hash then
+      raise exception 'IDEMPOTENCY_KEY_REUSED' using errcode = '23505';
+    end if;
+    if v_idempotency.state = 'succeeded' then
+      return v_idempotency.durable_result;
+    end if;
+    raise exception 'IDEMPOTENCY_KEY_REUSED' using errcode = '23505';
+  end if;
+
+  if current_setting('homecook.snapshot_v2_creation', true) is distinct from 'on' then
+    raise exception 'SNAPSHOT_V2_CREATION_DISABLED' using errcode = '55000';
   end if;
 
   perform public.lock_personal_recipe_ids(array[v_recipe_id]);
@@ -1433,47 +1475,6 @@ begin
     if v_content_snapshot_id is null then
       raise exception 'RESOURCE_NOT_FOUND' using errcode = 'P0002';
     end if;
-  end if;
-
-  v_key_hash := encode(extensions.digest(
-    convert_to(p_idempotency_key::text, 'UTF8'), 'sha256'
-  ), 'hex');
-  v_payload_hash := encode(extensions.digest(convert_to(jsonb_build_object(
-    'mode', p_mode,
-    'meal_ids', case when p_mode = 'planner' then to_jsonb(p_meal_ids) else null end,
-    'expected_meal_revisions', case when p_mode = 'planner'
-      then p_expected_meal_revisions else null end,
-    'recipe_id', case when p_mode = 'standalone' then p_recipe_id else null end,
-    'expected_recipe_revision', case when p_mode = 'standalone'
-      then p_expected_recipe_revision else null end,
-    'cooking_servings', case when p_mode = 'standalone'
-      then p_cooking_servings else null end
-  )::text, 'UTF8'), 'sha256'), 'hex');
-
-  insert into public.mutation_idempotency_keys (
-    owner_uuid, account_generation, operation_scope, key_hash, payload_hash,
-    state, attempt_token, lease_expires_at, created_at, updated_at
-  ) values (
-    p_owner_uuid, (v_authority ->> 'account_generation')::bigint,
-    'snapshot_v2_start', v_key_hash, v_payload_hash, 'in_progress',
-    extensions.gen_random_uuid(), p_now + interval '5 minutes', p_now, p_now
-  ) on conflict (owner_uuid, account_generation, operation_scope, key_hash)
-  do nothing returning * into v_idempotency;
-  if v_idempotency.id is null then
-    select receipt.* into v_idempotency
-    from public.mutation_idempotency_keys as receipt
-    where receipt.owner_uuid = p_owner_uuid
-      and receipt.account_generation = (v_authority ->> 'account_generation')::bigint
-      and receipt.operation_scope = 'snapshot_v2_start'
-      and receipt.key_hash = v_key_hash
-    for update;
-    if v_idempotency.payload_hash is distinct from v_payload_hash then
-      raise exception 'IDEMPOTENCY_KEY_REUSED' using errcode = '23505';
-    end if;
-    if v_idempotency.state = 'succeeded' then
-      return v_idempotency.durable_result;
-    end if;
-    raise exception 'IDEMPOTENCY_KEY_REUSED' using errcode = '23505';
   end if;
 
   select snapshot.* into v_snapshot

@@ -42,6 +42,7 @@ const ownerId = "550e8400-e29b-41d4-a716-446655440201";
 const sessionId = "550e8400-e29b-41d4-a716-446655440202";
 const recipeId = "550e8400-e29b-41d4-a716-446655440203";
 const mealId = "550e8400-e29b-41d4-a716-446655440204";
+const secondMealId = "550e8400-e29b-41d4-a716-446655440214";
 const idempotencyKey = "550e8400-e29b-41d4-a716-446655440205";
 const pantryItemId = "550e8400-e29b-41d4-a716-446655440206";
 const ingredientId = "550e8400-e29b-41d4-a716-446655440207";
@@ -212,6 +213,39 @@ describe("snapshot-v2 session attempts public contract", () => {
     expect(from).not.toHaveBeenCalled();
   });
 
+  it("canonicalizes planner Meal order before the idempotent start RPC", async () => {
+    const { rpc } = setupAuthorizedRpc({
+      data: {
+        session_id: sessionId,
+        contract_version: "snapshot_v2",
+        mode: "planner",
+        status: "in_progress",
+        content_summary: {
+          recipe_id: recipeId,
+          title: "김치찌개",
+          cooking_servings: 4,
+        },
+      },
+      error: null,
+    });
+
+    const { POST } = await importStartRoute();
+    const response = await POST(startRequest({
+      mode: "planner",
+      meal_ids: [secondMealId, mealId],
+      expected_meal_revisions: { [secondMealId]: 4, [mealId]: 3 },
+    }));
+
+    expect(response.status).toBe(200);
+    expect(rpc).toHaveBeenCalledWith(
+      "start_snapshot_v2_cooking_session",
+      expect.objectContaining({
+        p_meal_ids: [mealId, secondMealId],
+        p_expected_meal_revisions: { [mealId]: 3, [secondMealId]: 4 },
+      }),
+    );
+  });
+
   it("returns cook-mode from immutable session content with exact eight-field product provenance", async () => {
     const recipe = {
       id: recipeId,
@@ -308,6 +342,27 @@ describe("snapshot-v2 session attempts public contract", () => {
     await expect(first.json()).resolves.toEqual(expected);
     await expect(replay.json()).resolves.toEqual(expected);
     expect(rpc).toHaveBeenCalledTimes(2);
+  });
+
+  it("maps completed-session cancel conflict to the official 409 envelope", async () => {
+    setupAuthorizedRpc({
+      data: null,
+      error: { code: "55000", message: "CONFLICT" },
+    });
+
+    const { POST } = await importCancelRoute();
+    const response = await POST(cancelRequest(), context());
+
+    expect(response.status).toBe(409);
+    await expect(response.json()).resolves.toEqual({
+      success: false,
+      data: null,
+      error: {
+        code: "CONFLICT",
+        message: expect.any(String),
+        fields: [],
+      },
+    });
   });
 
   it.each(["start", "read", "cancel"] as const)(

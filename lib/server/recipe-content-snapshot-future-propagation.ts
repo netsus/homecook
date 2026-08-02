@@ -36,6 +36,10 @@ const PUBLIC_RPC_ERRORS = {
     message: "세션을 다시 확인해 주세요.",
     status: 409,
   },
+  CONFLICT: {
+    message: "현재 상태에서는 요청을 처리할 수 없어요.",
+    status: 409,
+  },
   FORBIDDEN: {
     message: "이 작업을 수행할 권한이 없어요.",
     status: 403,
@@ -316,12 +320,18 @@ export function parseSnapshotV2StartRequest(
       return { ok: false, fields };
     }
 
+    const canonicalMealIds = [...mealIds].sort((left, right) =>
+      String(left).localeCompare(String(right)),
+    ) as string[];
+
     return {
       ok: true,
       value: {
         mode: "planner",
-        mealIds: mealIds as string[],
-        expectedMealRevisions: revisions as Record<string, number>,
+        mealIds: canonicalMealIds,
+        expectedMealRevisions: Object.fromEntries(
+          canonicalMealIds.map((mealId) => [mealId, revisions[mealId]]),
+        ) as Record<string, number>,
       },
     };
   }

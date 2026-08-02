@@ -495,6 +495,54 @@ function buildShoppingHistoryTitle(row: ShoppingListHistoryRow) {
   return `${startMonth}/${startDay}~${endMonth}/${endDay}`;
 }
 
+function shoppingContentGroupKey(meal: MealsRow) {
+  return `${meal.recipe_id}:${meal.recipe_content_snapshot_id ?? "legacy"}`;
+}
+
+function allocateRecipeShoppingServings(
+  meals: MealsRow[],
+  requestedServings: number,
+) {
+  const plannedByGroup = new Map<string, number>();
+  for (const meal of meals) {
+    const key = shoppingContentGroupKey(meal);
+    plannedByGroup.set(key, (plannedByGroup.get(key) ?? 0) + meal.planned_servings);
+  }
+
+  const plannedTotal = [...plannedByGroup.values()].reduce(
+    (total, servings) => total + servings,
+    0,
+  );
+  if (plannedTotal <= 0) {
+    return new Map<string, number>();
+  }
+
+  const allocations = [...plannedByGroup.entries()].map(([key, servings]) => {
+    const exact = (requestedServings * servings) / plannedTotal;
+    const allocated = Math.floor(exact);
+    return { key, allocated, remainder: exact - allocated };
+  });
+  let unallocated = requestedServings - allocations.reduce(
+    (total, allocation) => total + allocation.allocated,
+    0,
+  );
+  allocations.sort((left, right) =>
+    right.remainder - left.remainder || left.key.localeCompare(right.key),
+  );
+  for (const allocation of allocations) {
+    if (unallocated <= 0) {
+      break;
+    }
+    allocation.allocated += 1;
+    unallocated -= 1;
+  }
+
+  return new Map(allocations.map((allocation) => [
+    allocation.key,
+    allocation.allocated,
+  ]));
+}
+
 function statusFromShoppingCreateRpcError(code: string | undefined) {
   switch (code) {
     case "VALIDATION_ERROR":
@@ -637,10 +685,15 @@ export async function POST(request: Request) {
   const dateRangeStart = dates[0] ?? shoppingMeals[0]!.plan_date;
   const dateRangeEnd = dates.at(-1) ?? shoppingMeals[0]!.plan_date;
 
-  const recipeRequestedTotals = new Map<
-    string,
-    { planned_servings_total: number; shopping_servings: number }
-  >();
+  const recipeGroupShoppingServings = new Map<string, number>();
+  const recipeGroupPlannedServings = new Map<string, number>();
+  for (const meal of shoppingMeals) {
+    const key = shoppingContentGroupKey(meal);
+    recipeGroupPlannedServings.set(
+      key,
+      (recipeGroupPlannedServings.get(key) ?? 0) + meal.planned_servings,
+    );
+  }
 
   if (usesRecipeConfigs) {
     (parsedRecipeConfigs?.valid_configs ?? []).forEach((recipeConfig) => {
@@ -654,13 +707,13 @@ export async function POST(request: Request) {
         return;
       }
 
-      recipeRequestedTotals.set(recipeConfig.recipe_id, {
-        planned_servings_total: mealsForRecipe.reduce(
-          (total, meal) => total + meal.planned_servings,
-          0,
-        ),
-        shopping_servings: recipeConfig.shopping_servings,
-      });
+      const groupAllocations = allocateRecipeShoppingServings(
+        mealsForRecipe,
+        recipeConfig.shopping_servings,
+      );
+      for (const [key, servings] of groupAllocations) {
+        recipeGroupShoppingServings.set(key, servings);
+      }
     });
   }
 
@@ -674,10 +727,12 @@ export async function POST(request: Request) {
       return;
     }
 
-    const recipeTotals = recipeRequestedTotals.get(meal.recipe_id);
-    const shoppingServings = recipeTotals && recipeTotals.planned_servings_total > 0
-      ? (recipeTotals.shopping_servings * meal.planned_servings)
-        / recipeTotals.planned_servings_total
+    const key = shoppingContentGroupKey(meal);
+    const groupPlannedServings = recipeGroupPlannedServings.get(key) ?? 0;
+    const groupShoppingServings = recipeGroupShoppingServings.get(key);
+    const shoppingServings = groupShoppingServings !== undefined
+      && groupPlannedServings > 0
+      ? (groupShoppingServings * meal.planned_servings) / groupPlannedServings
       : meal.planned_servings;
     shoppingServingsByMealId.set(meal.id, shoppingServings);
   });
@@ -693,7 +748,7 @@ export async function POST(request: Request) {
   >();
 
   shoppingMeals.forEach((meal) => {
-    const key = `${meal.recipe_id}:${meal.recipe_content_snapshot_id ?? "legacy"}`;
+    const key = shoppingContentGroupKey(meal);
     const existing = recipeAggregation.get(key) ?? {
       recipe_id: meal.recipe_id,
       recipe_content_snapshot_id: meal.recipe_content_snapshot_id,
@@ -702,8 +757,10 @@ export async function POST(request: Request) {
     };
 
     existing.planned_servings_total += meal.planned_servings;
-    existing.shopping_servings +=
-      shoppingServingsByMealId.get(meal.id) ?? meal.planned_servings;
+    existing.shopping_servings = usesRecipeConfigs
+      ? recipeGroupShoppingServings.get(key) ?? meal.planned_servings
+      : existing.shopping_servings
+        + (shoppingServingsByMealId.get(meal.id) ?? meal.planned_servings);
     recipeAggregation.set(key, existing);
   });
 
@@ -901,12 +958,18 @@ export async function POST(request: Request) {
 
   const title = buildShoppingListTitle(dateRangeStart);
   const shoppingMealIds = shoppingMeals.map((meal) => meal.id).sort();
-  const shoppingRecipePayloadRows = [...recipeAggregation.values()].map((totals) => ({
-    recipe_id: totals.recipe_id,
-    recipe_content_snapshot_id: totals.recipe_content_snapshot_id,
-    shopping_servings: totals.shopping_servings,
-    planned_servings_total: totals.planned_servings_total,
-  }));
+  const shoppingRecipePayloadRows = [...recipeAggregation.values()]
+    .sort((left, right) =>
+      left.recipe_id.localeCompare(right.recipe_id)
+      || (left.recipe_content_snapshot_id ?? "")
+        .localeCompare(right.recipe_content_snapshot_id ?? ""),
+    )
+    .map((totals) => ({
+      recipe_id: totals.recipe_id,
+      recipe_content_snapshot_id: totals.recipe_content_snapshot_id,
+      shopping_servings: totals.shopping_servings,
+      planned_servings_total: totals.planned_servings_total,
+    }));
   const shoppingItemPayloadRows = aggregatedIngredients.map((ingredient, index) => ({
     ingredient_id: ingredient.ingredient_id,
     food_product_id: null,

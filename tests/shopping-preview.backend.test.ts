@@ -1776,7 +1776,7 @@ describe("shopping stage2 backend", () => {
     );
   });
 
-  it("uses pinned content once per Meal without duplicating a recipe-level serving total", async () => {
+  it("splits one recipe across content snapshots with deterministic integer servings", async () => {
     const firstMealId = "550e8400-e29b-41d4-a716-446655440001";
     const secondMealId = "550e8400-e29b-41d4-a716-446655440002";
     const recipeId = "550e8400-e29b-41d4-a716-446655440101";
@@ -1796,7 +1796,7 @@ describe("shopping stage2 backend", () => {
             id: firstMealId,
             user_id: "user-1",
             recipe_id: recipeId,
-            recipe_content_snapshot_id: "snapshot-1",
+            recipe_content_snapshot_id: "snapshot-2",
             recipe_content_snapshots: {
               base_servings: 2,
               ingredients_json: [
@@ -1917,7 +1917,7 @@ describe("shopping stage2 backend", () => {
             {
               recipe_id: recipeId,
               meal_ids: [firstMealId, secondMealId],
-              shopping_servings: 6,
+              shopping_servings: 7,
             },
           ],
         }),
@@ -1933,8 +1933,8 @@ describe("shopping stage2 backend", () => {
             ingredient_id: "ing-onion",
             food_product_id: null,
             food_product_nutrition_version_id: null,
-            display_text: "양파 600g",
-            amounts_json: [{ amount: 600, unit: "g" }],
+            display_text: "양파 700g",
+            amounts_json: [{ amount: 700, unit: "g" }],
             is_pantry_excluded: false,
             sort_order: 0,
           },
@@ -1943,8 +1943,14 @@ describe("shopping stage2 backend", () => {
           {
             recipe_id: recipeId,
             recipe_content_snapshot_id: "snapshot-1",
-            shopping_servings: 6,
-            planned_servings_total: 6,
+            shopping_servings: 5,
+            planned_servings_total: 4,
+          },
+          {
+            recipe_id: recipeId,
+            recipe_content_snapshot_id: "snapshot-2",
+            shopping_servings: 2,
+            planned_servings_total: 2,
           },
         ],
       }),
