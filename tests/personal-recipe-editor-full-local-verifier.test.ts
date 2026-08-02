@@ -70,6 +70,30 @@ const policyExpressionInventory = [
   },
 ];
 
+const storageOwnerPredicate = "bucket_id = 'recipe-images' and (storage.foldername(name))[1] = auth.uid()::text and account_generation_storage_guard.allows_legacy_recipe_image_write()";
+const storagePolicyExpressionInventory = [
+  {
+    schema: "storage", table: "objects", name: "recipe_images_public_read",
+    command: "SELECT", roles: "public", permissive: "PERMISSIVE",
+    using: "bucket_id = 'recipe-images'", check: "",
+  },
+  {
+    schema: "storage", table: "objects", name: "recipe_images_insert_own",
+    command: "INSERT", roles: "authenticated", permissive: "PERMISSIVE",
+    using: "", check: storageOwnerPredicate,
+  },
+  {
+    schema: "storage", table: "objects", name: "recipe_images_update_own",
+    command: "UPDATE", roles: "authenticated", permissive: "PERMISSIVE",
+    using: storageOwnerPredicate, check: storageOwnerPredicate,
+  },
+  {
+    schema: "storage", table: "objects", name: "recipe_images_delete_own",
+    command: "DELETE", roles: "authenticated", permissive: "PERMISSIVE",
+    using: storageOwnerPredicate, check: "",
+  },
+];
+
 const fullLocalResult = {
   verification_scope_status: "post-merge-read-only",
   schema_inventory_status: "ready",
@@ -178,6 +202,7 @@ const fullLocalResult = {
   storage_policy_drift_count: 0,
   unexpected_storage_policy_count: 0,
   unexpected_storage_mutation_grant_count: 0,
+  _storage_policy_expression_inventory: storagePolicyExpressionInventory,
   image_registry_acl_drift_count: 0,
   private_storage_object_count: 1,
   private_storage_object_registry_mismatch_count: 0,
@@ -246,7 +271,7 @@ const requiredCheckCommandLedger =
     args,
   }));
 
-const executionObservation = {
+const legacyExecutionObservation = {
   git_fetch_transport: "https-read-only",
   database_target: "loopback",
   database_transaction: "read-only",
@@ -254,8 +279,8 @@ const executionObservation = {
   remote_application_write_target: "absent",
 };
 
-const lockedExecutionObservation = {
-  ...executionObservation,
+const executionObservation = {
+  ...legacyExecutionObservation,
   required_check_command_ledger: requiredCheckCommandLedger,
   required_check_environment_keys: ["HOME", "LANG", "PATH"],
   remote_application_target_environment_keys: [],
@@ -633,11 +658,11 @@ describe("personal recipe editor full-local verifier", () => {
   it("requires an exact required-check command ledger and explicit remote environment absence", () => {
     const lockedEvidence = {
       ...executionEvidence,
-      execution_observation: lockedExecutionObservation,
+      execution_observation: executionObservation,
       boundary_checks: buildPersonalRecipeEditorBoundaryChecks({
         checks: executionEvidence.checks,
         localResult: validLocalResult,
-        executionObservation: lockedExecutionObservation,
+        executionObservation,
       }),
     };
 
@@ -649,7 +674,10 @@ describe("personal recipe editor full-local verifier", () => {
     ).not.toThrow();
     expect(() =>
       assertPersonalRecipeEditorFullLocalExecutionEvidence(
-        executionEvidence,
+        {
+          ...executionEvidence,
+          execution_observation: legacyExecutionObservation,
+        },
         { localResult: validLocalResult },
       ),
     ).toThrow(/execution evidence failed closed/i);
@@ -658,24 +686,24 @@ describe("personal recipe editor full-local verifier", () => {
   it("rejects unknown required-check commands and remote target or credential environment keys", () => {
     for (const executionObservationDrift of [
       {
-        ...lockedExecutionObservation,
+        ...executionObservation,
         required_check_command_ledger: [
           ...requiredCheckCommandLedger,
           { id: "unknown", command: "node", args: ["unknown.mjs"] },
         ],
       },
       {
-        ...lockedExecutionObservation,
+        ...executionObservation,
         required_check_environment_keys: [
-          ...lockedExecutionObservation.required_check_environment_keys,
+          ...executionObservation.required_check_environment_keys,
           "SUPABASE_URL",
         ],
         remote_application_target_environment_keys: ["SUPABASE_URL"],
       },
       {
-        ...lockedExecutionObservation,
+        ...executionObservation,
         required_check_environment_keys: [
-          ...lockedExecutionObservation.required_check_environment_keys,
+          ...executionObservation.required_check_environment_keys,
           "SUPABASE_SERVICE_ROLE_KEY",
         ],
         remote_application_credential_environment_keys: [

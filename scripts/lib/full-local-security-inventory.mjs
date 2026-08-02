@@ -327,7 +327,7 @@ function canonicalizePredicateAtom(value) {
   return normalizeSqlSegments(result);
 }
 
-function canonicalizePredicate(value) {
+export function canonicalizePredicate(value) {
   let expression = value.trim();
   while (isWrappedExpression(expression)) {
     expression = expression.slice(1, -1).trim();
@@ -373,7 +373,7 @@ function readBalancedExpression(statement, marker) {
   throw new Error(`policy ${marker.trim()} expression is unterminated`);
 }
 
-function parsePolicy(migration, policyName) {
+export function parsePolicy(migration, policyName) {
   const startMatch = new RegExp(
     `create\\s+policy\\s+${policyName}\\b`,
     "iu",
@@ -385,7 +385,7 @@ function parsePolicy(migration, policyName) {
   const table = statement.match(/\bon\s+([a-z_][a-z0-9_]*)\.([a-z_][a-z0-9_]*)/iu);
   const command = statement.match(/\bfor\s+(select|insert|update|delete|all)\b/iu);
   const roles = statement.match(/\bto\s+([\s\S]+?)(?=\busing\b|\bwith\s+check\b|;)/iu);
-  if (!table || !command || !roles) {
+  if (!table || !command) {
     throw new Error(`policy contract is incomplete: ${policyName}`);
   }
   return {
@@ -393,7 +393,7 @@ function parsePolicy(migration, policyName) {
     table: table[2].toLowerCase(),
     name: policyName,
     command: command[1].toUpperCase(),
-    roles: roles[1]
+    roles: (roles?.[1] ?? "public")
       .split(",")
       .map((role) => role.trim().toLowerCase())
       .sort()

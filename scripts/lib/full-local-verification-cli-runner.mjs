@@ -119,6 +119,7 @@ function runRequiredChecks({
   repositoryRoot,
 }) {
   const checks = {};
+  const commandLedger = [];
   const checkEnvironment = buildCheckEnvironment
     ? buildCheckEnvironment(environment)
     : environment;
@@ -135,18 +136,38 @@ function runRequiredChecks({
       );
     }
     checks[check.id] = "passed";
+    commandLedger.push({
+      id: check.id,
+      command: check.command,
+      args: [...check.args],
+    });
   }
   return {
     checks,
+    commandLedger,
+    requiredCheckEnvironmentKeys: Object.keys(checkEnvironment).sort(),
     requiredChecksTarget: buildCheckEnvironment
       ? "local-sanitized"
       : "local-inherited",
   };
 }
 
+function remoteApplicationEnvironmentKeys(environmentKeys) {
+  const remoteTargetPattern = /(?:^|_)(?:DATABASE|DB|POSTGRES|POSTGREST|REST|STORAGE|SUPABASE)(?:_|$)|(?:^|_)URL$/iu;
+  const remoteCredentialPattern = /(?:^|_)(?:ANON|API|CREDENTIAL|JWT|KEY|PASSWORD|SECRET|SERVICE_ROLE|TOKEN)(?:_|$)/iu;
+  return {
+    credentials: environmentKeys.filter((key) =>
+      remoteCredentialPattern.test(key)
+    ),
+    targets: environmentKeys.filter((key) => remoteTargetPattern.test(key)),
+  };
+}
+
 function buildExecutionObservation({
+  commandLedger,
   gitFetchTransport,
   request,
+  requiredCheckEnvironmentKeys,
   requiredChecksTarget,
 }) {
   const loopbackHosts = new Set(["127.0.0.1", "localhost", "::1", "[::1]"]);
@@ -158,11 +179,16 @@ function buildExecutionObservation({
   )
     ? "read-only"
     : "write-capable";
+  const remoteEnvironment = remoteApplicationEnvironmentKeys(
+    requiredCheckEnvironmentKeys,
+  );
   const remoteApplicationWriteTarget =
     gitFetchTransport === "https-read-only"
       && databaseTarget === "loopback"
       && databaseTransaction === "read-only"
       && requiredChecksTarget === "local-sanitized"
+      && remoteEnvironment.targets.length === 0
+      && remoteEnvironment.credentials.length === 0
       ? "absent"
       : "not-proven-absent";
 
@@ -172,6 +198,11 @@ function buildExecutionObservation({
     database_transaction: databaseTransaction,
     required_checks_target: requiredChecksTarget,
     remote_application_write_target: remoteApplicationWriteTarget,
+    required_check_command_ledger: commandLedger,
+    required_check_environment_keys: requiredCheckEnvironmentKeys,
+    remote_application_target_environment_keys: remoteEnvironment.targets,
+    remote_application_credential_environment_keys:
+      remoteEnvironment.credentials,
   };
 }
 
@@ -238,15 +269,22 @@ export function runFullLocalVerificationCli({
     }
     const localResult = buildLocalResult({ databaseResult, sourceEvidence });
     assertLocalResult(localResult);
-    const { checks, requiredChecksTarget } = runRequiredChecks({
+    const {
+      checks,
+      commandLedger,
+      requiredCheckEnvironmentKeys,
+      requiredChecksTarget,
+    } = runRequiredChecks({
       buildCheckEnvironment,
       environment,
       plan,
       repositoryRoot,
     });
     const executionObservation = buildExecutionObservation({
+      commandLedger,
       gitFetchTransport,
       request,
+      requiredCheckEnvironmentKeys,
       requiredChecksTarget,
     });
     const executionEvidence = buildExecutionEvidence({

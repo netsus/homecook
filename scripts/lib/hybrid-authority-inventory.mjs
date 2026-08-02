@@ -297,6 +297,19 @@ function isFactoryCall(node, identifiers, namespaces, memberNames) {
 function isFactoryReference(node, identifiers, namespaces, memberNames) {
   const expression = unwrapExpression(node);
   if (ts.isIdentifier(expression)) return identifiers.has(expression.text);
+  if (ts.isConditionalExpression(expression)) {
+    return isFactoryReference(
+      expression.whenTrue,
+      identifiers,
+      namespaces,
+      memberNames,
+    ) || isFactoryReference(
+      expression.whenFalse,
+      identifiers,
+      namespaces,
+      memberNames,
+    );
+  }
   return ts.isPropertyAccessExpression(expression)
     && ts.isIdentifier(expression.expression)
     && namespaces.has(expression.expression.text)
@@ -318,8 +331,13 @@ function staticString(expression, constants) {
     return left === null || right === null ? null : left + right;
   }
   if (ts.isTemplateExpression(value)) {
-    return value.head.text
-      + value.templateSpans.map((span) => `\${dynamic}${span.literal.text}`).join("");
+    let result = value.head.text;
+    for (const span of value.templateSpans) {
+      const expressionValue = staticString(span.expression, constants);
+      if (expressionValue === null) return null;
+      result += expressionValue + span.literal.text;
+    }
+    return result;
   }
   return null;
 }

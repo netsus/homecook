@@ -1,6 +1,11 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 
+import {
+  canonicalizePredicate,
+  parsePolicy,
+} from "./full-local-security-inventory.mjs";
 import { inventoryHybridAuthorityPaths } from "./hybrid-authority-inventory.mjs";
 import {
   assertRecipeSnapshotAuthorityFullLocalEnvironment,
@@ -18,6 +23,26 @@ const SOURCE_OF_RECORD = "live-remote-read-only-pre-floor";
 const RESTORE_MANIFEST_STATUS = "pending-manual-evidence";
 const STABLE_UUID_RESTORE_STATUS = "pending-manual-restore-manifest";
 const TRANSIENT_AUTH_STATE_STATUS = "local-zero-manifest-pending";
+const REPOSITORY_ROOT = fileURLToPath(new URL("../../", import.meta.url));
+const LEGACY_RECIPE_IMAGE_POLICY_MIGRATION = readFileSync(join(
+  REPOSITORY_ROOT,
+  "supabase/migrations/20260530103000_31_recipe_media_tags.sql",
+), "utf8");
+const CURRENT_RECIPE_IMAGE_POLICY_MIGRATION = readFileSync(join(
+  REPOSITORY_ROOT,
+  "supabase/migrations/20260723140000_account_session_generation_foundation.sql",
+), "utf8");
+const STORAGE_POLICY_CONTRACT = [
+  parsePolicy(
+    LEGACY_RECIPE_IMAGE_POLICY_MIGRATION,
+    "recipe_images_public_read",
+  ),
+  ...[
+    "recipe_images_insert_own",
+    "recipe_images_update_own",
+    "recipe_images_delete_own",
+  ].map((name) => parsePolicy(CURRENT_RECIPE_IMAGE_POLICY_MIGRATION, name)),
+];
 const SAFE_CHECK_ENVIRONMENT_KEYS = [
   "PATH",
   "LANG",
@@ -94,13 +119,21 @@ const BOUNDARY_CHECK_KEYS = [
   "remote_application_writes",
 ];
 
-const EXECUTION_OBSERVATION = {
+const EXECUTION_OBSERVATION_SCALARS = {
   git_fetch_transport: "https-read-only",
   database_target: "loopback",
   database_transaction: "read-only",
   required_checks_target: "local-sanitized",
   remote_application_write_target: "absent",
 };
+
+const EXECUTION_OBSERVATION_KEYS = [
+  ...Object.keys(EXECUTION_OBSERVATION_SCALARS),
+  "required_check_command_ledger",
+  "required_check_environment_keys",
+  "remote_application_target_environment_keys",
+  "remote_application_credential_environment_keys",
+];
 
 const LOCAL_AUTHORITY_OBSERVATION_FIELDS = [
   "public_user_count",
@@ -119,6 +152,7 @@ const LOCAL_AUTHORITY_OBSERVATION_FIELDS = [
   "storage_policy_drift_count",
   "unexpected_storage_policy_count",
   "unexpected_storage_mutation_grant_count",
+  "_storage_policy_expression_inventory",
   "image_registry_acl_drift_count",
   "private_storage_object_count",
   "private_storage_object_registry_mismatch_count",
@@ -150,11 +184,45 @@ function hasExactKeys(value, expectedKeys) {
     && actualKeys.every((key, index) => key === sortedExpectedKeys[index]);
 }
 
-function hasExactExecutionObservation(observation) {
-  return hasExactKeys(observation, Object.keys(EXECUTION_OBSERVATION))
-    && Object.entries(EXECUTION_OBSERVATION).every(
-      ([key, value]) => observation[key] === value,
-    );
+function hasExactExecutionObservation(
+  observation,
+  { requireAbsentRemoteTarget = true } = {},
+) {
+  const plan = buildPersonalRecipeEditorFullLocalVerificationPlan({
+    mode: MODE,
+  });
+  const expectedLedger = plan.requiredChecks.map(({ id, command, args }) => ({
+    id,
+    command,
+    args,
+  }));
+  const environmentKeys = observation?.required_check_environment_keys;
+  const commandLedger = observation?.required_check_command_ledger;
+  return hasExactKeys(observation, EXECUTION_OBSERVATION_KEYS)
+    && Object.entries(EXECUTION_OBSERVATION_SCALARS).every(
+      ([key, value]) => key === "remote_application_write_target"
+        ? !requireAbsentRemoteTarget || observation[key] === value
+        : observation[key] === value,
+    )
+    && Array.isArray(commandLedger)
+    && JSON.stringify(commandLedger) === JSON.stringify(expectedLedger)
+    && Array.isArray(environmentKeys)
+    && environmentKeys.length > 0
+    && environmentKeys.every((key) =>
+      typeof key === "string" && SAFE_CHECK_ENVIRONMENT_KEYS.includes(key)
+    )
+    && new Set(environmentKeys).size === environmentKeys.length
+    && environmentKeys.every(
+      (key, index) => index === 0 || environmentKeys[index - 1] < key,
+    )
+    && Array.isArray(
+      observation.remote_application_target_environment_keys,
+    )
+    && observation.remote_application_target_environment_keys.length === 0
+    && Array.isArray(
+      observation.remote_application_credential_environment_keys,
+    )
+    && observation.remote_application_credential_environment_keys.length === 0;
 }
 
 function listSourceFiles(directory) {
@@ -259,11 +327,33 @@ function buildPersonalEditorAuthoritySql(fullLocalSql) {
     "       or (coalesce(pg_catalog.pg_get_expr(policy.polqual, policy.polrelid), '')",
     "         || ' ' || coalesce(pg_catalog.pg_get_expr(policy.polwithcheck, policy.polrelid), ''))",
     "         not like '%bucket_id%recipe-images%'",
+    "       or (coalesce(pg_catalog.pg_get_expr(policy.polqual, policy.polrelid), '')",
+    "         || ' ' || coalesce(pg_catalog.pg_get_expr(policy.polwithcheck, policy.polrelid), '')) ~* '\\mor\\M'",
     "       or (expected.role_name = 'authenticated' and (",
     "         (coalesce(pg_catalog.pg_get_expr(policy.polqual, policy.polrelid), '')",
     "           || ' ' || coalesce(pg_catalog.pg_get_expr(policy.polwithcheck, policy.polrelid), '')) not like '%storage.foldername(name)%'",
     "         or (coalesce(pg_catalog.pg_get_expr(policy.polqual, policy.polrelid), '')",
     "           || ' ' || coalesce(pg_catalog.pg_get_expr(policy.polwithcheck, policy.polrelid), '')) not like '%account_generation_storage_guard.allows_legacy_recipe_image_write()%'))",
+    "  ),",
+    "  '_storage_policy_expression_inventory', (",
+    "    select coalesce(jsonb_agg(jsonb_build_object(",
+    "      'schema', namespace.nspname,",
+    "      'table', relation.relname,",
+    "      'name', policy.polname,",
+    "      'command', case policy.polcmd",
+    "        when 'r' then 'SELECT' when 'a' then 'INSERT'",
+    "        when 'w' then 'UPDATE' when 'd' then 'DELETE' else 'ALL' end,",
+    "      'roles', (select string_agg(case when role_oid = 0 then 'public' else role.rolname end, ',' order by case when role_oid = 0 then 'public' else role.rolname end)",
+    "        from unnest(policy.polroles) as role_oid",
+    "        left join pg_catalog.pg_roles as role on role.oid = role_oid),",
+    "      'permissive', case when policy.polpermissive then 'PERMISSIVE' else 'RESTRICTIVE' end,",
+    "      'using', coalesce(pg_catalog.pg_get_expr(policy.polqual, policy.polrelid), ''),",
+    "      'check', coalesce(pg_catalog.pg_get_expr(policy.polwithcheck, policy.polrelid), '')",
+    "    ) order by policy.polname), '[]'::jsonb)",
+    "    from pg_catalog.pg_policy as policy",
+    "    join pg_catalog.pg_class as relation on relation.oid = policy.polrelid",
+    "    join pg_catalog.pg_namespace as namespace on namespace.oid = relation.relnamespace",
+    "    where policy.polrelid = 'storage.objects'::pg_catalog.regclass",
     "  ),",
     "  'unexpected_storage_policy_count', (",
     "    select count(*)::integer from pg_catalog.pg_policy as policy",
@@ -275,12 +365,39 @@ function buildPersonalEditorAuthoritySql(fullLocalSql) {
     "  ),",
     "  'unexpected_storage_mutation_grant_count', (",
     "    select count(*)::integer",
-    "    from (values ('public'), ('anon'), ('authenticated')) as role(grantee)",
-    "    cross join (values ('INSERT'), ('UPDATE'), ('DELETE')) as privilege(name)",
-    "    where pg_catalog.has_table_privilege(role.grantee, 'storage.objects', privilege.name)",
-    "       or case when privilege.name = 'DELETE' then false",
-    "         else pg_catalog.has_any_column_privilege(role.grantee, 'storage.objects', privilege.name)",
-    "       end",
+    "    from (",
+    "      with relation as (",
+    "        select object.oid, object.relowner, object.relacl",
+    "        from pg_catalog.pg_class as object",
+    "        where object.oid = 'storage.objects'::pg_catalog.regclass",
+    "      ), actual as (",
+    "        select case when acl.grantee = 0 then 'PUBLIC' else role.rolname end as principal,",
+    "          'table'::text as scope, upper(acl.privilege_type) as privilege, acl.is_grantable as grantable",
+    "        from relation",
+    "        cross join lateral pg_catalog.aclexplode(coalesce(relation.relacl, pg_catalog.acldefault('r', relation.relowner))) as acl",
+    "        left join pg_catalog.pg_roles as role on role.oid = acl.grantee",
+    "        where acl.grantee <> relation.relowner",
+    "          and upper(acl.privilege_type) in ('INSERT', 'UPDATE', 'DELETE')",
+    "        union all",
+    "        select case when acl.grantee = 0 then 'PUBLIC' else role.rolname end,",
+    "          'column:' || attribute.attname, upper(acl.privilege_type), acl.is_grantable",
+    "        from relation",
+    "        join pg_catalog.pg_attribute as attribute on attribute.attrelid = relation.oid",
+    "        cross join lateral pg_catalog.aclexplode(attribute.attacl) as acl",
+    "        left join pg_catalog.pg_roles as role on role.oid = acl.grantee",
+    "        where attribute.attnum > 0 and not attribute.attisdropped",
+    "          and attribute.attacl is not null",
+    "          and acl.grantee <> relation.relowner",
+    "          and upper(acl.privilege_type) in ('INSERT', 'UPDATE')",
+    "      ), expected(principal, scope, privilege, grantable) as (",
+    "        values ('authenticated', 'table', 'INSERT', false),",
+    "          ('authenticated', 'table', 'UPDATE', false),",
+    "          ('authenticated', 'table', 'DELETE', false)",
+    "      )",
+    "      (select * from actual except select * from expected)",
+    "      union all",
+    "      (select * from expected except select * from actual)",
+    "    ) as acl_drift",
     "  ),",
     "  'image_registry_acl_drift_count', (",
     "    select count(*)::integer",
@@ -523,6 +640,34 @@ export function assertPersonalRecipeEditorSourceEvidence(evidence) {
   return evidence;
 }
 
+function hasExactStoragePolicyInventory(inventory) {
+  return Array.isArray(inventory)
+    && inventory.length === STORAGE_POLICY_CONTRACT.length
+    && STORAGE_POLICY_CONTRACT.every((expected) => {
+      const actual = inventory.find((entry) =>
+        entry?.schema === expected.schema
+        && entry?.table === expected.table
+        && entry?.name === expected.name
+      );
+      return actual
+        && hasExactKeys(actual, [
+          "schema",
+          "table",
+          "name",
+          "command",
+          "roles",
+          "permissive",
+          "using",
+          "check",
+        ])
+        && actual.command === expected.command
+        && actual.roles === expected.roles
+        && actual.permissive === expected.permissive
+        && canonicalizePredicate(actual.using) === expected.using
+        && canonicalizePredicate(actual.check) === expected.check;
+    });
+}
+
 export function assertPersonalRecipeEditorFullLocalResult(result) {
   if (!hasExactKeys(result, [
     "full_local_authority",
@@ -553,6 +698,9 @@ export function assertPersonalRecipeEditorFullLocalResult(result) {
       || authority.auth_identity_count <= 0
       || authority.private_storage_bucket_count !== 1
       || authority.storage_policy_count !== 4
+      || !hasExactStoragePolicyInventory(
+        authority._storage_policy_expression_inventory,
+      )
       || !["public_user_count", "auth_user_count", "auth_identity_count", "storage_bucket_count", "storage_object_count", "private_storage_object_count"]
         .every((field) => Number.isInteger(authority[field]) && authority[field] >= 0)
     ) {
@@ -747,10 +895,9 @@ export function buildPersonalRecipeEditorBoundaryChecks({
     service_role_user_fallback:
       serviceRoleViolationCount === 0 ? "zero" : "detected",
     remote_application_writes:
-      !hasExactKeys(
-        executionObservation,
-        Object.keys(EXECUTION_OBSERVATION),
-      )
+      !hasExactExecutionObservation(executionObservation, {
+        requireAbsentRemoteTarget: false,
+      })
         ? "not-observed"
         : executionObservation.remote_application_write_target === "absent"
           ? "zero"
