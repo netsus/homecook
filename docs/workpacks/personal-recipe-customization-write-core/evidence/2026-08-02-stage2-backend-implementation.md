@@ -157,7 +157,7 @@ The same Stage 2 author repaired, but did not approve, two fresh independent rev
   - It independently reproduced the same lifecycle→recipe versus recipe→lifecycle cycle and tied it to the official `global → all affected owners → recipe → resource` order.
   - It also identified `.workflow-v2/status.json` line 589, where the unrelated merged `baemin-prototype-planner-week-parity` item had changed from the exact-base `pr_path: pending` to PR #1274.
 
-The review prompt's implementation SHA `cfc2dfab0127842217ab165d68a3f49a10850e6c` was not a Git object. The actual prior repair commit is `cfc2dfab46ce192a3c9160920d4a2a6db4ddb5f0`, as already recorded in this evidence and the PR body. The third implementation repair commit is `080193e73346eff91c1266045e7dfa6da43d26a6`.
+The actual prior repair commit is `cfc2dfab46ce192a3c9160920d4a2a6db4ddb5f0`, as already recorded in this evidence and the PR body. The third implementation repair commit is `080193e73346eff91c1266045e7dfa6da43d26a6`.
 
 Neither reviewer result is marked complete. Fresh independent Stage 3 code/quality and security/DB re-review of the new current head remains pending.
 
