@@ -1,4 +1,6 @@
 import { spawnSync } from "node:child_process";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 
 import { beforeAll, describe, expect, it } from "vitest";
 
@@ -15,6 +17,16 @@ const inventoryOnly =
   process.env.HOMECOOK_FULL_LOCAL_SECURITY_INVENTORY_ONLY === "1";
 const includePersonalRecipeFunctions =
   process.env.HOMECOOK_PERSONAL_RECIPE_SECURITY_FUNCTIONS === "1";
+const includeRecipeFuturePropagationFunctions =
+  process.env.HOMECOOK_RECIPE_SNAPSHOT_FOLLOWUP_TARGET_MIGRATION?.endsWith(
+    "_recipe_content_snapshot_future_propagation.sql",
+  ) ?? false;
+const recipeFuturePropagationFunctionCount = includeRecipeFuturePropagationFunctions
+  ? (JSON.parse(readFileSync(join(
+      process.cwd(),
+      "docs/security/recipe-content-snapshot-future-propagation-security-function-authorization-manifest.json",
+    ), "utf8")) as { functions: unknown[] }).functions.length
+  : 0;
 const host = process.env.HOMECOOK_ACCOUNT_GENERATION_PGHOST ?? "";
 const port = process.env.HOMECOOK_ACCOUNT_GENERATION_PGPORT ?? "";
 const database = process.env.HOMECOOK_ACCOUNT_GENERATION_PGDATABASE ?? "";
@@ -59,12 +71,14 @@ function securityInventoryApi() {
     buildSql: buildSql as (options?: {
       includeSnapshotTables?: boolean;
       includePersonalRecipeFunctions?: boolean;
+      includeRecipeFuturePropagationFunctions?: boolean;
     }) => string,
     assertResult: assertResult as (
       result: Record<string, unknown>,
       options?: {
         includeSnapshotTables?: boolean;
         includePersonalRecipeFunctions?: boolean;
+        includeRecipeFuturePropagationFunctions?: boolean;
       },
     ) => void,
   };
@@ -75,6 +89,7 @@ function securityInventoryAfter(
   options: {
     includeSnapshotTables?: boolean;
     includePersonalRecipeFunctions?: boolean;
+    includeRecipeFuturePropagationFunctions?: boolean;
   } = {},
 ) {
   const api = securityInventoryApi();
@@ -828,6 +843,7 @@ activeInventoryRun("active full-local snapshot security inventory", () => {
   const options = {
     includeSnapshotTables: true,
     includePersonalRecipeFunctions,
+    includeRecipeFuturePropagationFunctions,
   };
 
   beforeAll(() => {
@@ -851,7 +867,9 @@ activeInventoryRun("active full-local snapshot security inventory", () => {
       },
     ]);
     expect(result).toMatchObject({
-      required_function_count: includePersonalRecipeFunctions ? 33 : 29,
+      required_function_count:
+        (includePersonalRecipeFunctions ? 33 : 29)
+        + recipeFuturePropagationFunctionCount,
       required_role_count: 4,
       required_role_membership_count: 2,
       role_attribute_drift_count: 0,

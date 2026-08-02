@@ -17,6 +17,10 @@ const PERSONAL_RECIPE_MANIFEST_PATH = join(
   REPOSITORY_ROOT,
   "docs/security/personal-recipe-customization-write-core-security-function-authorization-manifest.json",
 );
+const RECIPE_FUTURE_PROPAGATION_MANIFEST_PATH = join(
+  REPOSITORY_ROOT,
+  "docs/security/recipe-content-snapshot-future-propagation-security-function-authorization-manifest.json",
+);
 const FULL_LOCAL_MIGRATION_PATH = join(
   REPOSITORY_ROOT,
   "supabase/migrations/20260801120000_full_local_auth_db_foundation.sql",
@@ -28,6 +32,10 @@ const SNAPSHOT_MIGRATION_PATH = join(
 const PERSONAL_RECIPE_MIGRATION_PATH = join(
   REPOSITORY_ROOT,
   "supabase/migrations/20260802130000_personal_recipe_customization_write_core.sql",
+);
+const RECIPE_FUTURE_PROPAGATION_MIGRATION_PATH = join(
+  REPOSITORY_ROOT,
+  "supabase/migrations/20260802210000_recipe_content_snapshot_future_propagation.sql",
 );
 const SNAPSHOT_CONSUMER_READ_MIGRATION_PATH = join(
   REPOSITORY_ROOT,
@@ -53,10 +61,17 @@ const snapshotManifest = JSON.parse(
 const personalRecipeManifest = JSON.parse(
   readFileSync(PERSONAL_RECIPE_MANIFEST_PATH, "utf8"),
 );
+const recipeFuturePropagationManifest = JSON.parse(
+  readFileSync(RECIPE_FUTURE_PROPAGATION_MANIFEST_PATH, "utf8"),
+);
 const fullLocalMigration = readFileSync(FULL_LOCAL_MIGRATION_PATH, "utf8");
 const snapshotMigration = readFileSync(SNAPSHOT_MIGRATION_PATH, "utf8");
 const personalRecipeMigration = readFileSync(
   PERSONAL_RECIPE_MIGRATION_PATH,
+  "utf8",
+);
+const recipeFuturePropagationMigration = readFileSync(
+  RECIPE_FUTURE_PROPAGATION_MIGRATION_PATH,
   "utf8",
 );
 const snapshotConsumerReadMigration = readFileSync(
@@ -486,6 +501,10 @@ const SNAPSHOT_FUNCTION_CONTRACT = snapshotManifest.functions.map((entry) =>
 const PERSONAL_RECIPE_FUNCTION_CONTRACT = personalRecipeManifest.functions.map(
   (entry) => parseFunction(entry, personalRecipeMigration),
 );
+const RECIPE_FUTURE_PROPAGATION_FUNCTION_CONTRACT =
+  recipeFuturePropagationManifest.functions.map(
+    (entry) => parseFunction(entry, recipeFuturePropagationMigration),
+  );
 const CORE_POLICY_CONTRACT = CORE_POLICY_SOURCES.map(([migration, name]) =>
   parsePolicy(migration, name)
 );
@@ -523,13 +542,20 @@ function valuesSql(rows) {
 function buildSecurityInventoryExpression({
   includeSnapshotTables,
   includePersonalRecipeFunctions,
+  includeRecipeFuturePropagationFunctions,
 }) {
   const baseFunctions = includeSnapshotTables
     ? [...FUNCTION_CONTRACT, ...SNAPSHOT_FUNCTION_CONTRACT]
     : FUNCTION_CONTRACT;
-  const functions = includePersonalRecipeFunctions
+  const functionsWithPersonalRecipe = includePersonalRecipeFunctions
     ? [...baseFunctions, ...PERSONAL_RECIPE_FUNCTION_CONTRACT]
     : baseFunctions;
+  const functions = includeRecipeFuturePropagationFunctions
+    ? [
+        ...functionsWithPersonalRecipe,
+        ...RECIPE_FUTURE_PROPAGATION_FUNCTION_CONTRACT,
+      ]
+    : functionsWithPersonalRecipe;
   const rlsTables = includeSnapshotTables
     ? [...CORE_RLS_TABLES, ...SNAPSHOT_RLS_TABLES]
     : CORE_RLS_TABLES;
@@ -870,10 +896,12 @@ const SECURITY_ZERO_KEYS = SECURITY_RESULT_KEYS.filter((key) =>
 export function buildFullLocalSecurityInventoryExpression({
   includeSnapshotTables = false,
   includePersonalRecipeFunctions = false,
+  includeRecipeFuturePropagationFunctions = false,
 } = {}) {
   return buildSecurityInventoryExpression({
     includeSnapshotTables,
     includePersonalRecipeFunctions,
+    includeRecipeFuturePropagationFunctions,
   });
 }
 
@@ -888,13 +916,17 @@ export function assertRecipeSnapshotAuthorityFullLocalSecurityInventoryResult(
   {
     includeSnapshotTables = false,
     includePersonalRecipeFunctions = false,
+    includeRecipeFuturePropagationFunctions = false,
   } = {},
 ) {
   const baseFunctionCount = includeSnapshotTables
     ? FUNCTION_CONTRACT.length + SNAPSHOT_FUNCTION_CONTRACT.length
     : FUNCTION_CONTRACT.length;
   const expectedFunctionCount = baseFunctionCount
-    + (includePersonalRecipeFunctions ? PERSONAL_RECIPE_FUNCTION_CONTRACT.length : 0);
+    + (includePersonalRecipeFunctions ? PERSONAL_RECIPE_FUNCTION_CONTRACT.length : 0)
+    + (includeRecipeFuturePropagationFunctions
+      ? RECIPE_FUTURE_PROPAGATION_FUNCTION_CONTRACT.length
+      : 0);
   const expectedTableCount = includeSnapshotTables
     ? CORE_RLS_TABLES.length + SNAPSHOT_RLS_TABLES.length
     : CORE_RLS_TABLES.length;

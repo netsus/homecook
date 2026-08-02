@@ -20,6 +20,10 @@ export {
 
 const MODE = "post-merge-full-local-read-only";
 const TARGET = "self-hosted-local-auth-db-storage-single-authority";
+const INCLUDE_RECIPE_FUTURE_PROPAGATION_FUNCTIONS =
+  process.env.HOMECOOK_RECIPE_SNAPSHOT_FOLLOWUP_TARGET_MIGRATION?.endsWith(
+    "_recipe_content_snapshot_future_propagation.sql",
+  ) ?? false;
 const SAFE_ENVIRONMENT_KEYS = ["PATH", "LANG", "LC_ALL", "HOME"];
 
 const REQUIRED_CHECKS = [
@@ -246,7 +250,11 @@ function buildFullLocalSql(snapshotSql) {
     "        or (binding.binding_state = 'active' and (binding.revoked_at is not null or binding.binding_expires_at <= binding.local_verified_at)))",
     "  ),",
     "  'full_local_security_inventory', (" +
-      buildFullLocalSecurityInventoryExpression({ includeSnapshotTables: true }) +
+      buildFullLocalSecurityInventoryExpression({
+        includeSnapshotTables: true,
+        includeRecipeFuturePropagationFunctions:
+          INCLUDE_RECIPE_FUTURE_PROPAGATION_FUNCTIONS,
+      }) +
       "\n  ),",
     "  'account_cleanup_function_missing_count', (",
     "    select count(*)::integer",
@@ -388,7 +396,11 @@ export function assertRecipeSnapshotAuthorityFullLocalResult(result) {
       try {
         assertRecipeSnapshotAuthorityFullLocalSecurityInventoryResult(
           result.full_local_security_inventory,
-          { includeSnapshotTables: true },
+          {
+            includeSnapshotTables: true,
+            includeRecipeFuturePropagationFunctions:
+              INCLUDE_RECIPE_FUTURE_PROPAGATION_FUNCTIONS,
+          },
         );
         return true;
       } catch {
