@@ -7,6 +7,8 @@
 > Stage 4 evidence is local-fixture only: the shared shell/primitives, capability-off CTA composition, browser dirty guard, managed-image cleanup, 390px/320px Playwright and 20 PNG authority set are implemented on `feature/fe-personal-recipe-editor-decoupling`. Plain successor/merge-gate bullets are intentionally outside the machine Stage 4 checklist; they remain owned by #6, #8 or post-merge verification and are not claimed here.
 >
 > Stage 4/5 implementation and its merge gate closed through PR #1243: exact implementation head `e177a882e0fbc35847895a7a0f1dd775ff4425d1` completed 20 checks successfully with one documented normal skip, then squash-merged as `6565c2a84f3b7eba9f0579db7b91fed12fc08f23`. PR #1246 merged the test-first historical hybrid verifier as `354c569c8e40889bcfa7d9832cb9cec93f53db46`, and its merged exact-SHA dry-run passed. These checked items and PR evidence remain history; they are not retoggled or treated as the active full-local completion gate.
+>
+> Fresh Stage 4 revalidation is retained at `evidence/2026-08-02-stage4-existing-shell-revalidation.md`. PR #1271 merged as `27572ac95cdf261fe5a7d598c9c12e71634158d5`; fresh final and post-merge exact verifiers returned P0/P1/P2=`0/0/0`, and the current capability-off shell/source/E2E/frontend gates passed without a product or visual change. Independent Stage 5 task `019fc0ac-3d83-7452-b942-b6409b9f7b6b` returned `APPROVE_NO_VISUAL_DRIFT` with blocker/major/minor and P0/P1/P2 all `0/0/0`; Stage 6 lifecycle and Manual Only evidence remain pending.
 
 ## Happy Path
 
@@ -103,9 +105,9 @@ Existing confirmed Stage 4 visual/a11y artifacts and the authority report are re
 
 ### Active Full-Local Relock Gates
 
-- [x] Stage 2 implements the read-only full-local verifier with TDD RED→GREEN and keeps the active target at a clean merged exact SHA; implementation evidence is `evidence/2026-08-02-stage2-full-local-verifier.md`, while merged-exact execution remains unchecked below <!-- omo:id=accept-editor-full-local-stage2;stage=2;scope=shared;review=3,6 -->
+- [x] Stage 2 implements the read-only full-local verifier with TDD RED→GREEN and keeps the active target at a clean merged exact SHA; implementation and merged-exact evidence are retained in `evidence/2026-08-02-stage2-full-local-verifier.md` and the checked isolated gate below <!-- omo:id=accept-editor-full-local-stage2;stage=2;scope=shared;review=3,6 -->
 - Stage 3 lifecycle evidence: security/authority task `019fc05d-ba33-7840-a984-57fb1489ae81` and code/quality task `019fc05d-ba33-7840-a984-57d4a3bf79e1` both approved exact content head `bb2bc367` with P0/P1/P2=`0/0/0`; no checkbox or later-stage completion is inferred.
-- [ ] Stage 4 revalidates the existing capability-off shell/consumer without activating #6/#7/#8 or adding product/UI changes <!-- omo:id=accept-editor-full-local-stage4;stage=4;scope=frontend;review=5,6 -->
-- Stage 5 lifecycle gate: perform a lightweight no-visual-drift review; Design Status remains confirmed and no new screenshot/Figma/authority evidence is fabricated.
+- [x] Stage 4 revalidates the existing capability-off shell/consumer without activating #6/#7/#8 or adding product/UI changes; evidence: `evidence/2026-08-02-stage4-existing-shell-revalidation.md` <!-- omo:id=accept-editor-full-local-stage4;stage=4;scope=frontend;review=5,6 -->
+- [x] Stage 5 lightweight no-visual-drift review passed at exact head `2680e7aa78b64c1a5c717120bb9b0a1a0827f7e7`; Design Status remains confirmed and no new screenshot/Figma/authority evidence was created. Evidence: `evidence/2026-08-02-stage5-no-visual-drift-review.md` <!-- omo:id=accept-editor-full-local-stage5;stage=4;scope=frontend;review=5,6 -->
 - Stage 6 lifecycle gate: close only from the exact merged head after all active checks and independent review evidence are current.
-- [ ] self-owned isolated local Auth/DB/Storage rehearsal and the merged-exact verifier pass without any production/staging/remote application write <!-- omo:id=accept-editor-full-local-isolated;stage=2;scope=shared;review=3,6 -->
+- [x] self-owned isolated local Auth/DB/Storage rehearsal and the merged-exact verifier passed in task `019fc08f-e766-7771-b67e-dd5bcac29dc7` without any production/staging/remote application write; this does not complete Stage 6 or Manual Only evidence <!-- omo:id=accept-editor-full-local-isolated;stage=2;scope=shared;review=3,6 -->
