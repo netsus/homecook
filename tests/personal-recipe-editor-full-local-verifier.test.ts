@@ -598,8 +598,8 @@ describe("personal recipe editor full-local verifier", () => {
         },
       },
       (() => {
-        const { execution_observation: _omitted, ...legacyEvidence } =
-          executionEvidence;
+        const legacyEvidence: Record<string, unknown> = { ...executionEvidence };
+        delete legacyEvidence.execution_observation;
         return { ...legacyEvidence, remote_application_writes: 0 };
       })(),
       { ...executionEvidence, extra: true },

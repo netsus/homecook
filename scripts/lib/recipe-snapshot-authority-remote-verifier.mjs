@@ -1005,11 +1005,16 @@ const RECIPE_SNAPSHOT_AUTHORITY_SAFE_GIT_ENVIRONMENT_KEYS = [
 export function buildRecipeSnapshotAuthorityGitEnvironment({
   baseEnvironment = {},
 }) {
-  return Object.fromEntries(
+  return {
+    ...Object.fromEntries(
     RECIPE_SNAPSHOT_AUTHORITY_SAFE_GIT_ENVIRONMENT_KEYS
       .filter((key) => baseEnvironment[key] !== undefined)
       .map((key) => [key, baseEnvironment[key]]),
-  );
+    ),
+    GIT_CONFIG_GLOBAL: "/dev/null",
+    GIT_CONFIG_NOSYSTEM: "1",
+    GIT_SSH_COMMAND: "ssh -F /dev/null",
+  };
 }
 
 export function parseRecipeSnapshotAuthorityLinkedDatabaseEnvironment({

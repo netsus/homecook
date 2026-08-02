@@ -29,6 +29,7 @@ if [ "$1" = "--no-replace-objects" ] && [ "$2" = "merge-base" ]; then
 fi
 case "$1" in
   fetch) exit 0 ;;
+  config) printf '%s\n' 'https://github.com/netsus/homecook.git' ;;
   remote) printf '%s\n' 'https://github.com/netsus/homecook.git' ;;
   rev-parse)
     case "$2" in

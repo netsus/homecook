@@ -286,12 +286,21 @@ function collectImportBindings(sourceFile) {
 function isFactoryCall(node, identifiers, namespaces, memberNames) {
   const expression = unwrapExpression(node);
   if (!ts.isCallExpression(expression)) return false;
-  const callee = unwrapExpression(expression.expression);
-  if (ts.isIdentifier(callee)) return identifiers.has(callee.text);
-  return ts.isPropertyAccessExpression(callee)
-    && ts.isIdentifier(callee.expression)
-    && namespaces.has(callee.expression.text)
-    && memberNames.has(callee.name.text);
+  return isFactoryReference(
+    expression.expression,
+    identifiers,
+    namespaces,
+    memberNames,
+  );
+}
+
+function isFactoryReference(node, identifiers, namespaces, memberNames) {
+  const expression = unwrapExpression(node);
+  if (ts.isIdentifier(expression)) return identifiers.has(expression.text);
+  return ts.isPropertyAccessExpression(expression)
+    && ts.isIdentifier(expression.expression)
+    && namespaces.has(expression.expression.text)
+    && memberNames.has(expression.name.text);
 }
 
 function staticString(expression, constants) {
@@ -300,6 +309,14 @@ function staticString(expression, constants) {
     return value.text;
   }
   if (ts.isIdentifier(value)) return constants.get(value.text) ?? null;
+  if (
+    ts.isBinaryExpression(value)
+    && value.operatorToken.kind === ts.SyntaxKind.PlusToken
+  ) {
+    const left = staticString(value.left, constants);
+    const right = staticString(value.right, constants);
+    return left === null || right === null ? null : left + right;
+  }
   if (ts.isTemplateExpression(value)) {
     return value.head.text
       + value.templateSpans.map((span) => `\${dynamic}${span.literal.text}`).join("");
@@ -375,6 +392,7 @@ function inventoryHybridAuthorityPaths(repoRoot = process.cwd()) {
     const clientModule = isClientModule(sourceFile);
     const importBindings = collectImportBindings(sourceFile);
     const browserClientVariables = new Set();
+    const browserQueryBuilderVariables = new Map();
     const stringConstants = new Map();
     const serviceRoleVariables = new Set();
     let usesDataRouteClient = false;
@@ -389,6 +407,16 @@ function inventoryHybridAuthorityPaths(repoRoot = process.cwd()) {
         if (literal !== null) stringConstants.set(node.name.text, literal);
         const initializer = unwrapExpression(node.initializer);
         if (
+          isFactoryReference(
+            initializer,
+            importBindings.serviceRoleFactories,
+            importBindings.serviceRoleNamespaces,
+            SERVICE_ROLE_FACTORY_NAMES,
+          )
+        ) {
+          importBindings.serviceRoleFactories.add(node.name.text);
+        }
+        if (
           isFactoryCall(
             initializer,
             importBindings.browserClientFactories,
@@ -398,6 +426,37 @@ function inventoryHybridAuthorityPaths(repoRoot = process.cwd()) {
           || (ts.isIdentifier(initializer) && browserClientVariables.has(initializer.text))
         ) {
           browserClientVariables.add(node.name.text);
+        }
+        if (
+          ts.isCallExpression(initializer)
+          && ts.isPropertyAccessExpression(initializer.expression)
+          && initializer.expression.name.text === "from"
+        ) {
+          const client = unwrapExpression(initializer.expression.expression);
+          const knownClient =
+            (ts.isIdentifier(client) && browserClientVariables.has(client.text))
+            || isFactoryCall(
+              client,
+              importBindings.browserClientFactories,
+              importBindings.browserClientNamespaces,
+              BROWSER_CLIENT_FACTORY_NAMES,
+            );
+          if (knownClient) {
+            browserQueryBuilderVariables.set(
+              node.name.text,
+              initializer.arguments[0]
+                ? staticString(initializer.arguments[0], stringConstants)
+                : null,
+            );
+          }
+        } else if (
+          ts.isIdentifier(initializer)
+          && browserQueryBuilderVariables.has(initializer.text)
+        ) {
+          browserQueryBuilderVariables.set(
+            node.name.text,
+            browserQueryBuilderVariables.get(initializer.text),
+          );
         }
       }
 
@@ -554,14 +613,24 @@ function inventoryHybridAuthorityPaths(repoRoot = process.cwd()) {
         && BROWSER_DATA_MUTATION_METHODS.has(node.expression.name.text)
       ) {
         const fromCall = unwrapExpression(node.expression.expression);
+        const queryBuilder = ts.isIdentifier(fromCall)
+          && browserQueryBuilderVariables.has(fromCall.text)
+          ? fromCall
+          : null;
         if (
-          ts.isCallExpression(fromCall)
-          && ts.isPropertyAccessExpression(fromCall.expression)
-          && fromCall.expression.name.text === "from"
+          queryBuilder
+          || (
+            ts.isCallExpression(fromCall)
+            && ts.isPropertyAccessExpression(fromCall.expression)
+            && fromCall.expression.name.text === "from"
+          )
         ) {
-          const client = unwrapExpression(fromCall.expression.expression);
+          const client = queryBuilder
+            ? null
+            : unwrapExpression(fromCall.expression.expression);
           const knownClient =
-            (ts.isIdentifier(client) && browserClientVariables.has(client.text))
+            queryBuilder !== null
+            || (ts.isIdentifier(client) && browserClientVariables.has(client.text))
             || isFactoryCall(
               client,
               importBindings.browserClientFactories,
@@ -572,9 +641,11 @@ function inventoryHybridAuthorityPaths(repoRoot = process.cwd()) {
             const entry = {
               ...createBaseEntry(relativeFile, sourceFile, node, classification),
               method: node.expression.name.text,
-              table: fromCall.arguments[0]
-                ? staticString(fromCall.arguments[0], stringConstants)
-                : null,
+              table: queryBuilder
+                ? browserQueryBuilderVariables.get(queryBuilder.text)
+                : fromCall.arguments[0]
+                  ? staticString(fromCall.arguments[0], stringConstants)
+                  : null,
             };
             const key = `${entry.file}:${entry.line}:${entry.column}:${entry.method}`;
             if (!dataMutationEntryKeys.has(key)) {

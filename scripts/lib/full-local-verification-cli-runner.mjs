@@ -29,6 +29,24 @@ function runStatus(command, args, options = {}) {
   return result.status;
 }
 
+function assertHttpsGitRemote(remoteUrl) {
+  let parsed;
+  try {
+    parsed = new URL(remoteUrl);
+  } catch {
+    throw new Error("full-local verifier requires a credential-free HTTPS origin");
+  }
+  if (
+    parsed.protocol !== "https:"
+    || parsed.username
+    || parsed.password
+    || parsed.search
+    || parsed.hash
+  ) {
+    throw new Error("full-local verifier requires a credential-free HTTPS origin");
+  }
+}
+
 function assertMergedExactSource({
   assertSource,
   buildGitEnvironment,
@@ -38,6 +56,11 @@ function assertMergedExactSource({
   const gitEnvironment = buildGitEnvironment({
     baseEnvironment: environment,
   });
+  const originUrl = run("git", ["config", "--get", "remote.origin.url"], {
+    cwd: repositoryRoot,
+    env: gitEnvironment,
+  });
+  assertHttpsGitRemote(originUrl);
   run("git", ["fetch", "--quiet", "origin", "master"], {
     cwd: repositoryRoot,
     env: gitEnvironment,
@@ -61,7 +84,7 @@ function assertMergedExactSource({
     ? readFileSync(resolvedGraftsPath, "utf8").trim()
     : "";
 
-  return assertSource({
+  const mergeSha = assertSource({
     head,
     originMaster,
     isAncestorOfOriginMaster:
@@ -83,6 +106,10 @@ function assertMergedExactSource({
       { cwd: repositoryRoot, env: gitEnvironment },
     ),
   });
+  return {
+    gitFetchTransport: "https-read-only",
+    mergeSha,
+  };
 }
 
 function runRequiredChecks({
@@ -109,7 +136,43 @@ function runRequiredChecks({
     }
     checks[check.id] = "passed";
   }
-  return checks;
+  return {
+    checks,
+    requiredChecksTarget: buildCheckEnvironment
+      ? "local-sanitized"
+      : "local-inherited",
+  };
+}
+
+function buildExecutionObservation({
+  gitFetchTransport,
+  request,
+  requiredChecksTarget,
+}) {
+  const loopbackHosts = new Set(["127.0.0.1", "localhost", "::1", "[::1]"]);
+  const databaseTarget = loopbackHosts.has(request.environment.PGHOST)
+    ? "loopback"
+    : "non-loopback";
+  const databaseTransaction = /\bbegin\b[^;]*\bread\s+only\b/iu.test(
+    request.input,
+  )
+    ? "read-only"
+    : "write-capable";
+  const remoteApplicationWriteTarget =
+    gitFetchTransport === "https-read-only"
+      && databaseTarget === "loopback"
+      && databaseTransaction === "read-only"
+      && requiredChecksTarget === "local-sanitized"
+      ? "absent"
+      : "not-proven-absent";
+
+  return {
+    git_fetch_transport: gitFetchTransport,
+    database_target: databaseTarget,
+    database_transaction: databaseTransaction,
+    required_checks_target: requiredChecksTarget,
+    remote_application_write_target: remoteApplicationWriteTarget,
+  };
 }
 
 function emitJson(value, pretty) {
@@ -143,7 +206,7 @@ export function runFullLocalVerificationCli({
   try {
     assertEnvironment(environment);
     const plan = buildPlan({ mode });
-    const mergeSha = assertMergedExactSource({
+    const { gitFetchTransport, mergeSha } = assertMergedExactSource({
       assertSource: assertMergedSource,
       buildGitEnvironment,
       environment,
@@ -162,21 +225,33 @@ export function runFullLocalVerificationCli({
       databaseUrl: environment[databaseUrlEnvironmentKey] ?? "",
       planSql: plan.sql,
     });
-    const databaseResult = JSON.parse(run("psql", request.args, {
+    const databaseOutput = run("psql", request.args, {
       cwd: repositoryRoot,
       env: request.environment,
       input: request.input,
-    }));
+    });
+    let databaseResult;
+    try {
+      databaseResult = JSON.parse(databaseOutput);
+    } catch {
+      throw new Error("database verifier returned invalid JSON");
+    }
     const localResult = buildLocalResult({ databaseResult, sourceEvidence });
     assertLocalResult(localResult);
-    const checks = runRequiredChecks({
+    const { checks, requiredChecksTarget } = runRequiredChecks({
       buildCheckEnvironment,
       environment,
       plan,
       repositoryRoot,
     });
+    const executionObservation = buildExecutionObservation({
+      gitFetchTransport,
+      request,
+      requiredChecksTarget,
+    });
     const executionEvidence = buildExecutionEvidence({
       checks,
+      executionObservation,
       localResult,
       mergeSha,
       plan,

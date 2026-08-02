@@ -40,9 +40,15 @@ process.exitCode = runFullLocalVerificationCli({
     external_personal_write_status: plan.externalPersonalWrite,
     production_writes: 0,
     staging_writes: 0,
-    remote_application_writes: 0,
+    remote_application_write_status: "not-observed-dry-run",
   }),
-  buildExecutionEvidence: ({ checks, localResult, mergeSha, plan }) => ({
+  buildExecutionEvidence: ({
+    checks,
+    executionObservation,
+    localResult,
+    mergeSha,
+    plan,
+  }) => ({
     source_merge_sha: mergeSha,
     checks,
     manual_only: Object.fromEntries(
@@ -51,10 +57,11 @@ process.exitCode = runFullLocalVerificationCli({
     boundary_checks: buildPersonalRecipeEditorBoundaryChecks({
       checks,
       localResult,
+      executionObservation,
     }),
+    execution_observation: executionObservation,
     production_writes: 0,
     staging_writes: 0,
-    remote_application_writes: 0,
   }),
   buildGitEnvironment: buildRecipeSnapshotAuthorityGitEnvironment,
   buildLocalResult: ({ databaseResult, sourceEvidence }) => ({

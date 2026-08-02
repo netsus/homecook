@@ -75,6 +75,17 @@ describe("recipe snapshot authority remote verifier", () => {
       git(["commit", "-m", "base"]);
       git(["remote", "add", "origin", originRoot]);
       git(["push", "-u", "origin", "master"]);
+      git([
+        "config",
+        `url.${originRoot}.insteadOf`,
+        "https://github.com/netsus/homecook.git",
+      ]);
+      git([
+        "remote",
+        "set-url",
+        "origin",
+        "https://github.com/netsus/homecook.git",
+      ]);
       git(["switch", "-c", "feature"]);
       writeFileSync(join(repositoryRoot, "feature.txt"), "feature\n");
       git(["add", "feature.txt"]);
