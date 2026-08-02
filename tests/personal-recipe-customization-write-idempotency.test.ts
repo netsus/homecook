@@ -21,7 +21,14 @@ describe("personal recipe write idempotency", () => {
 
     expect(sql).toMatch(/p_idempotency_key uuid/i);
     expect(sql).toMatch(/extensions\.digest[\s\S]*p_idempotency_key::text/i);
-    expect(sql).toMatch(/jsonb_build_object[\s\S]*p_operation[\s\S]*p_draft/i);
+    expect(sql).toMatch(/v_canonical_draft jsonb/i);
+    expect(sql).toMatch(/v_canonical_nutrition_snapshot jsonb/i);
+    expect(sql).toMatch(/v_canonical_tags jsonb/i);
+    expect(sql).toMatch(
+      /jsonb_build_object[\s\S]*'draft',\s*v_canonical_draft[\s\S]*'nutrition_snapshot',\s*v_canonical_nutrition_snapshot[\s\S]*'tags',\s*v_canonical_tags/i,
+    );
+    expect(sql).not.toMatch(/'draft',\s*coalesce\(p_draft/i);
+    expect(sql).toMatch(/jsonb_object_keys\(p_draft\)[\s\S]*VALIDATION_ERROR/i);
     expect(sql).toMatch(/operation_scope[\s\S]*personal_recipe_/i);
   });
 

@@ -1,4 +1,4 @@
-import { spawnSync } from "node:child_process";
+import { spawn, spawnSync, type ChildProcessWithoutNullStreams } from "node:child_process";
 
 import { beforeAll, describe, expect, it } from "vitest";
 
@@ -40,30 +40,165 @@ function expectSqlFailure(sql: string, pattern: RegExp) {
   expect(result.stderr).toMatch(pattern);
 }
 
+function spawnPsql(sql?: string) {
+  const args = [
+    "-h", host, "-p", port, "-U", "postgres", "-d", database,
+    "-At", "-v", "ON_ERROR_STOP=1",
+  ];
+  if (sql !== undefined) args.push("-c", sql);
+  return spawn("psql", args, {
+    env: { PATH: process.env.PATH ?? "", NODE_ENV: "test" },
+  });
+}
+
+function waitForToken(child: ChildProcessWithoutNullStreams, token: string) {
+  return new Promise<void>((resolve, reject) => {
+    let output = "";
+    const onData = (chunk: Buffer) => {
+      output += chunk.toString();
+      if (output.includes(token)) {
+        child.stdout.off("data", onData);
+        resolve();
+      }
+    };
+    child.stdout.on("data", onData);
+    child.once("error", reject);
+    child.once("exit", (code) => {
+      if (!output.includes(token)) reject(new Error(`psql exited ${code} before ${token}`));
+    });
+  });
+}
+
+function waitForExit(child: ChildProcessWithoutNullStreams) {
+  return new Promise<{ status: number | null; stdout: string; stderr: string }>((resolve) => {
+    let stdout = "";
+    let stderr = "";
+    child.stdout.on("data", (chunk: Buffer) => { stdout += chunk.toString(); });
+    child.stderr.on("data", (chunk: Buffer) => { stderr += chunk.toString(); });
+    child.once("exit", (status) => resolve({ status, stdout, stderr }));
+  });
+}
+
+async function waitForBarrierWaiters(expected: number) {
+  const deadline = Date.now() + 5_000;
+  while (Date.now() < deadline) {
+    const waiting = Number(psql(
+      "select count(*)::text from pg_locks where locktype = 'advisory' and not granted;",
+    ));
+    if (waiting >= expected) return;
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
+  throw new Error(`explicit PostgreSQL barrier did not collect ${expected} waiters`);
+}
+
+async function runAtBarrier(participants: Array<string | { preBarrier: string; statement: string }>) {
+  const barrierKey = "homecook-personal-recipe-test-barrier";
+  const control = spawnPsql();
+  const ready = waitForToken(control, "BARRIER_READY");
+  control.stdin.write(
+    `select pg_advisory_lock(hashtextextended('${barrierKey}', 0)); select 'BARRIER_READY';\n`,
+  );
+  await ready;
+
+  const children = participants.map((participant) => {
+    const { preBarrier, statement } = typeof participant === "string"
+      ? { preBarrier: "", statement: participant }
+      : participant;
+    return spawnPsql(`
+    begin;
+    ${preBarrier}
+    select pg_advisory_xact_lock_shared(hashtextextended('${barrierKey}', 0));
+    ${statement}
+    commit;
+  `);
+  });
+  const outcomes = children.map(waitForExit);
+  await waitForBarrierWaiters(children.length);
+  const controlExit = waitForExit(control);
+  control.stdin.write(
+    `select pg_advisory_unlock(hashtextextended('${barrierKey}', 0));\n\\q\n`,
+  );
+  const results = await Promise.all(outcomes);
+  await controlExit;
+  return results;
+}
+
+function ownerLockSql(owner: string) {
+  return `select pg_advisory_xact_lock(hashtextextended('homecook-account-owner:${owner}', 0));`;
+}
+
+function cleanupCallSql(owner: string) {
+  return `
+    ${ownerLockSql(owner)}
+    select public.set_account_generation_internal_writer_marker('${cutoverAttempt}', true);
+    update public.user_account_lifecycles
+    set status = 'deleting', revision = revision + 1, updated_at = now()
+    where owner_uuid = '${owner}' and account_generation = 1;
+    select public.delete_user_private_data('${owner}');
+    update public.user_account_lifecycles
+    set status = 'cleanup_pending', revision = revision + 1, updated_at = now()
+    where owner_uuid = '${owner}' and account_generation = 1;
+    select public.set_account_generation_internal_writer_marker('${cutoverAttempt}', false);
+  `;
+}
+
 const ownerA = "81000000-0000-4000-8000-000000000001";
 const ownerB = "81000000-0000-4000-8000-000000000002";
+const ownerC = "81000000-0000-4000-8000-000000000003";
+const ownerD = "81000000-0000-4000-8000-000000000004";
+const ownerE = "81000000-0000-4000-8000-000000000005";
+const ownerF = "81000000-0000-4000-8000-000000000006";
+const ownerG = "81000000-0000-4000-8000-000000000007";
+const ownerH = "81000000-0000-4000-8000-000000000008";
+const ownerI = "81000000-0000-4000-8000-000000000009";
+const ownerJ = "81000000-0000-4000-8000-000000000010";
 const publicRecipe = "82000000-0000-4000-8000-000000000001";
 const privateRecipeB = "82000000-0000-4000-8000-000000000002";
+const ownerPublicRecipe = "82000000-0000-4000-8000-000000000003";
+const deletingPublicRecipe = "82000000-0000-4000-8000-000000000004";
+const cleanupPendingPublicRecipe = "82000000-0000-4000-8000-000000000005";
 const ingredient = "83000000-0000-4000-8000-000000000001";
+const productIngredient = "83000000-0000-4000-8000-000000000002";
 const cookingMethod = "84000000-0000-4000-8000-000000000001";
+const foodProduct = "86000000-0000-4000-8000-000000000001";
+const foodProductVersion = "86000000-0000-4000-8000-000000000002";
+const unlinkedFoodProduct = "86000000-0000-4000-8000-000000000003";
+const unlinkedFoodProductVersion = "86000000-0000-4000-8000-000000000004";
+const nutritionProfile = "86000000-0000-4000-8000-000000000005";
 const identityEpoch = "2026-08-02T00:00:00Z";
+const identityEpochG2 = "2026-08-02T02:00:00Z";
 const cutoverAttempt = "80000000-0000-4000-8000-000000000001";
 const sessionA = "a".repeat(64);
 const sessionB = "b".repeat(64);
+const sessionC = "c".repeat(64);
+const sessionD = "d".repeat(64);
+const sessionE = "e".repeat(64);
+const sessionF = "f".repeat(64);
+const sessionG = "g".repeat(64);
+const sessionH = "h".repeat(64);
+const sessionH2 = "i".repeat(64);
 
-function draft(title: string) {
+function draft(title: string, options: {
+  foodProductId?: string;
+  foodProductVersionId?: string;
+  ignoredAuthority?: boolean;
+} = {}) {
   return JSON.stringify({
     title,
     description: "개인 레시피 fixture",
     base_servings: 2,
     ingredients: [
       {
-        ingredient_id: ingredient,
+        ingredient_id: options.foodProductId ? productIngredient : ingredient,
         amount: 100,
         unit: "g",
         ingredient_type: "QUANT",
         display_text: "재료 100g",
         scalable: true,
+        ...(options.foodProductId ? { food_product_id: options.foodProductId } : {}),
+        ...(options.foodProductVersionId
+          ? { food_product_nutrition_version_id: options.foodProductVersionId }
+          : {}),
       },
     ],
     steps: [
@@ -74,6 +209,7 @@ function draft(title: string) {
         ingredients_used: [],
       },
     ],
+    ...(options.ignoredAuthority ? { visibility: "public", created_by: ownerB } : {}),
   }).replaceAll("'", "''");
 }
 
@@ -116,6 +252,10 @@ function writerSql(options: {
   draftTitle?: string;
   tags?: Array<{ normalized_key: string; label: string }>;
   imageObjectId?: string;
+  foodProductId?: string;
+  foodProductVersionId?: string;
+  ignoredAuthority?: boolean;
+  expectedCleanupGeneration?: number;
 }) {
   const owner = options.owner ?? ownerA;
   const session = options.session ?? sessionA;
@@ -126,7 +266,11 @@ function writerSql(options: {
   const revision = options.revision ?? "null";
   const payload = options.operation === "delete"
     ? "'{}'::jsonb"
-    : `'${draft(options.draftTitle ?? "개인 레시피")}'::jsonb`;
+    : `'${draft(options.draftTitle ?? "개인 레시피", {
+      foodProductId: options.foodProductId,
+      foodProductVersionId: options.foodProductVersionId,
+      ignoredAuthority: options.ignoredAuthority,
+    })}'::jsonb`;
   const tags = JSON.stringify(options.tags ?? []).replaceAll("'", "''");
   const imageObjectId = options.imageObjectId
     ? `'${options.imageObjectId}'::uuid`
@@ -147,7 +291,7 @@ function writerSql(options: {
       '${nutritionSnapshot()}'::jsonb,
       '${tags}'::jsonb,
       ${imageObjectId},
-      0,
+      ${options.expectedCleanupGeneration ?? 0},
       '${options.key}'::uuid,
       '2026-08-02T01:00:00Z'::timestamptz
     );
@@ -155,33 +299,68 @@ function writerSql(options: {
   `;
 }
 
+function writerCallSql(options: Parameters<typeof writerSql>[0]) {
+  return writerSql(options)
+    .replace(/^\s*begin;\s*/i, "")
+    .replace(/\s*commit;\s*$/i, "");
+}
+
 describe.skipIf(!enabled)("personal recipe write PostgreSQL", () => {
   beforeAll(() => {
     psql(`
+      create role personal_recipe_public_probe nologin;
+
       insert into public.users (id, nickname, social_provider, social_id)
       values
         ('${ownerA}', 'personal-owner-a', 'test', 'personal-owner-a'),
-        ('${ownerB}', 'personal-owner-b', 'test', 'personal-owner-b');
+        ('${ownerB}', 'personal-owner-b', 'test', 'personal-owner-b'),
+        ('${ownerC}', 'personal-owner-c', 'test', 'personal-owner-c'),
+        ('${ownerD}', 'personal-owner-d', 'test', 'personal-owner-d'),
+        ('${ownerE}', 'personal-owner-e', 'test', 'personal-owner-e'),
+        ('${ownerF}', 'personal-owner-f', 'test', 'personal-owner-f'),
+        ('${ownerG}', 'personal-owner-g', 'test', 'personal-owner-g'),
+        ('${ownerH}', 'personal-owner-h', 'test', 'personal-owner-h'),
+        ('${ownerI}', 'personal-owner-i', 'test', 'personal-owner-i'),
+        ('${ownerJ}', 'personal-owner-j', 'test', 'personal-owner-j');
 
       insert into public.user_account_generation_watermarks (owner_uuid, last_account_generation)
-      values ('${ownerA}', 1), ('${ownerB}', 1);
+      values
+        ('${ownerA}', 1), ('${ownerB}', 1), ('${ownerC}', 1),
+        ('${ownerD}', 1), ('${ownerE}', 1), ('${ownerF}', 1), ('${ownerG}', 1),
+        ('${ownerH}', 1), ('${ownerI}', 1), ('${ownerJ}', 1);
 
       insert into public.user_account_lifecycles (
         owner_uuid, account_generation, auth_identity_created_at_snapshot,
         origin, status, activated_at
       ) values
         ('${ownerA}', 1, '${identityEpoch}', 'runtime', 'active', now()),
-        ('${ownerB}', 1, '${identityEpoch}', 'runtime', 'active', now());
+        ('${ownerB}', 1, '${identityEpoch}', 'runtime', 'active', now()),
+        ('${ownerC}', 1, '${identityEpoch}', 'runtime', 'active', now()),
+        ('${ownerD}', 1, '${identityEpoch}', 'runtime', 'active', now()),
+        ('${ownerE}', 1, '${identityEpoch}', 'runtime', 'active', now()),
+        ('${ownerF}', 1, '${identityEpoch}', 'runtime', 'active', now()),
+        ('${ownerG}', 1, '${identityEpoch}', 'runtime', 'active', now()),
+        ('${ownerH}', 1, '${identityEpoch}', 'runtime', 'active', now()),
+        ('${ownerI}', 1, '${identityEpoch}', 'runtime', 'active', now()),
+        ('${ownerJ}', 1, '${identityEpoch}', 'runtime', 'active', now());
 
       insert into public.user_session_generation_bindings (
         session_key_hash, hmac_key_version, owner_uuid,
         expected_account_generation, auth_identity_created_at_snapshot
       ) values
         ('${sessionA}', 1, '${ownerA}', 1, '${identityEpoch}'),
-        ('${sessionB}', 1, '${ownerB}', 1, '${identityEpoch}');
+        ('${sessionB}', 1, '${ownerB}', 1, '${identityEpoch}'),
+        ('${sessionC}', 1, '${ownerC}', 1, '${identityEpoch}'),
+        ('${sessionD}', 1, '${ownerD}', 1, '${identityEpoch}'),
+        ('${sessionE}', 1, '${ownerE}', 1, '${identityEpoch}'),
+        ('${sessionF}', 1, '${ownerF}', 1, '${identityEpoch}'),
+        ('${sessionG}', 1, '${ownerG}', 1, '${identityEpoch}'),
+        ('${sessionH}', 1, '${ownerH}', 1, '${identityEpoch}');
 
       insert into public.ingredients (id, name)
-      values ('${ingredient}', '개인 레시피 재료');
+      values
+        ('${ingredient}', '개인 레시피 재료'),
+        ('${productIngredient}', '제품 provenance 재료');
 
       insert into public.cooking_methods (id, code, label, color_key, category_code)
       values ('${cookingMethod}', 'personal-fixture', '조리', 'red', 'wet_heat');
@@ -191,7 +370,33 @@ describe.skipIf(!enabled)("personal recipe write PostgreSQL", () => {
         revision, updated_at
       ) values
         ('${publicRecipe}', '공개 원본', 2, 'manual', null, 'public', 7, now()),
-        ('${privateRecipeB}', '다른 소유자 개인식', 2, 'manual', '${ownerB}', 'private', 1, now());
+        ('${privateRecipeB}', '다른 소유자 개인식', 2, 'manual', '${ownerB}', 'private', 1, now()),
+        ('${ownerPublicRecipe}', '격리 공개 원본', 2, 'manual', '${ownerC}', 'public', 1, now()),
+        ('${deletingPublicRecipe}', '삭제 중 공개 원본', 2, 'manual', '${ownerI}', 'public', 1, now()),
+        ('${cleanupPendingPublicRecipe}', '정리 대기 공개 원본', 2, 'manual', '${ownerJ}', 'public', 1, now());
+
+      insert into public.nutrition_profiles (id, created_by)
+      values ('${nutritionProfile}', '${ownerA}');
+
+      insert into public.food_products (
+        id, owner_user_id, visibility, source_type, moderation_status, name
+      ) values
+        ('${foodProduct}', null, 'public', 'manual', 'visible', '연결 제품'),
+        ('${unlinkedFoodProduct}', null, 'public', 'manual', 'visible', '미연결 제품');
+
+      insert into public.food_product_nutrition_versions (
+        id, product_id, nutrition_profile_id, created_by
+      ) values
+        ('${foodProductVersion}', '${foodProduct}', '${nutritionProfile}', '${ownerA}'),
+        ('${unlinkedFoodProductVersion}', '${unlinkedFoodProduct}', '${nutritionProfile}', '${ownerA}');
+
+      insert into public.food_product_ingredient_links (
+        product_id, ingredient_id, relation, review_status, is_primary,
+        is_active, source, decision_reason, reviewed_at
+      ) values (
+        '${foodProduct}', '${productIngredient}', 'represents', 'approved',
+        true, true, 'fixture', 'fixture approval', now()
+      );
 
       insert into public.account_generation_cutover_attempts (
         id, state, capability_revision, result_json
@@ -209,6 +414,85 @@ describe.skipIf(!enabled)("personal recipe write PostgreSQL", () => {
   it("installs a dark service-only writer and leaves the capability off", () => {
     expect(psql(`select has_function_privilege('authenticated', 'public.write_personal_recipe_core(uuid,timestamptz,text,integer,text,uuid,uuid,bigint,jsonb,jsonb,jsonb,uuid,bigint,uuid,timestamptz)', 'execute')::text;`)).toBe("false");
     expect(psql("select coalesce(current_setting('homecook.personal_recipe_v2', true), 'off');")).toBe("off");
+  });
+
+  it("locks exact owner, overload, ACL, grant option, and actual role call matrices", () => {
+    const digestBefore = psql(`
+      select md5(concat_ws('|',
+        (select count(*) from public.recipes),
+        (select count(*) from public.mutation_idempotency_keys),
+        (select coalesce(string_agg(concat_ws(':', id, revision, visibility), ',' order by id), '') from public.recipes)
+      ));
+    `);
+    expect(psql(`
+      with expected(signature) as (values
+        ('public.lock_personal_recipe_ids(uuid[])'),
+        ('public.write_personal_recipe_core(uuid,timestamp with time zone,text,integer,text,uuid,uuid,bigint,jsonb,jsonb,jsonb,uuid,bigint,uuid,timestamp with time zone)'),
+        ('public.cleanup_personal_recipe_write_receipts()')
+      )
+      select string_agg(concat_ws(':', expected.signature, role.rolname, procedure.prosecdef), ',' order by expected.signature)
+      from expected
+      join pg_proc procedure on procedure.oid = to_regprocedure(expected.signature)
+      join pg_roles role on role.oid = procedure.proowner;
+    `)).toBe([
+      "public.cleanup_personal_recipe_write_receipts():postgres:t",
+      "public.lock_personal_recipe_ids(uuid[]):postgres:t",
+      "public.write_personal_recipe_core(uuid,timestamp with time zone,text,integer,text,uuid,uuid,bigint,jsonb,jsonb,jsonb,uuid,bigint,uuid,timestamp with time zone):postgres:t",
+    ].join(","));
+    expect(psql(`
+      select concat_ws(':',
+        count(*) filter (where proname = 'lock_personal_recipe_ids'),
+        count(*) filter (where proname = 'write_personal_recipe_core'),
+        count(*) filter (where proname = 'cleanup_personal_recipe_write_receipts')
+      )
+      from pg_proc where pronamespace = 'public'::regnamespace
+        and proname in ('lock_personal_recipe_ids', 'write_personal_recipe_core', 'cleanup_personal_recipe_write_receipts');
+    `)).toBe("1:1:1");
+    expect(psql(`
+      with target as (
+        select procedure.oid, procedure.proowner, procedure.proacl
+        from pg_proc procedure
+        where procedure.oid = 'public.write_personal_recipe_core(uuid,timestamptz,text,integer,text,uuid,uuid,bigint,jsonb,jsonb,jsonb,uuid,bigint,uuid,timestamptz)'::regprocedure
+      )
+      select concat_ws(':',
+        has_function_privilege('anon', target.oid, 'execute'),
+        has_function_privilege('authenticated', target.oid, 'execute'),
+        has_function_privilege('service_role', target.oid, 'execute'),
+        coalesce(bool_or(acl.grantee = 'service_role'::regrole and acl.is_grantable), false),
+        coalesce(bool_or(acl.grantee = 0), false)
+      )
+      from target
+      left join lateral aclexplode(coalesce(target.proacl, acldefault('f', target.proowner))) acl on true
+      group by target.oid;
+    `)).toBe("f:f:t:f:f");
+
+    const roleCall = writerCallSql({
+      operation: "create", key: "85000000-0000-4000-8000-000000000031",
+    }).replace("set local homecook.personal_recipe_v2 = 'on';", "");
+    const deniedInternalCalls = [
+      "select public.lock_personal_recipe_ids('{}'::uuid[]);",
+      "select public.cleanup_personal_recipe_write_receipts();",
+    ];
+    for (const role of ["personal_recipe_public_probe", "anon", "authenticated"]) {
+      expectSqlFailure(`begin; set local role ${role}; ${roleCall} rollback;`, /permission denied/i);
+      for (const call of deniedInternalCalls) {
+        expectSqlFailure(`begin; set local role ${role}; ${call} rollback;`, /permission denied/i);
+      }
+    }
+    for (const call of deniedInternalCalls) {
+      expectSqlFailure(`begin; set local role service_role; ${call} rollback;`, /permission denied/i);
+    }
+    expectSqlFailure(
+      `begin; set local role service_role; ${roleCall} rollback;`,
+      /personal recipe capability is disabled/i,
+    );
+    expect(psql(`
+      select md5(concat_ws('|',
+        (select count(*) from public.recipes),
+        (select count(*) from public.mutation_idempotency_keys),
+        (select coalesce(string_agg(concat_ws(':', id, revision, visibility), ',' order by id), '') from public.recipes)
+      ));
+    `)).toBe(digestBefore);
   });
 
   it("proves fresh and replay migration modes through the repository-owned runner", () => {
@@ -243,6 +527,180 @@ describe.skipIf(!enabled)("personal recipe write PostgreSQL", () => {
       /IDEMPOTENCY_KEY_REUSED/,
     );
     expect(psql(`select count(*)::text from public.recipes where id = '${first.data.id}';`)).toBe("1");
+  });
+
+  it("hashes only canonical server-consumed input and rejects ignored authority", () => {
+    const key = "85000000-0000-4000-8000-000000000020";
+    const first = JSON.parse(psql(writerSql({
+      operation: "create",
+      key,
+      draftTitle: "  canonical retry  ",
+    })));
+    const replay = JSON.parse(psql(writerSql({
+      operation: "create",
+      key,
+      draftTitle: "canonical retry",
+      expectedCleanupGeneration: 99,
+    })));
+
+    expect(replay).toEqual(first);
+    const mutationCountBefore = psql("select count(*)::text from public.recipes;");
+    expectSqlFailure(
+      writerSql({
+        operation: "create",
+        key: "85000000-0000-4000-8000-000000000021",
+        ignoredAuthority: true,
+      }),
+      /VALIDATION_ERROR/,
+    );
+    expect(psql("select count(*)::text from public.recipes;")).toBe(mutationCountBefore);
+  });
+
+  it("stores exact product provenance and rejects invalid pairs or links without writes", () => {
+    const created = JSON.parse(psql(writerSql({
+      operation: "create",
+      key: "85000000-0000-4000-8000-000000000022",
+      draftTitle: "제품 provenance",
+      foodProductId: foodProduct,
+      foodProductVersionId: foodProductVersion,
+    })));
+    expect(psql(`
+      select concat_ws(':', ingredient_id, food_product_id, food_product_nutrition_version_id)
+      from public.recipe_ingredients where recipe_id = '${created.data.id}';
+    `)).toBe(`${productIngredient}:${foodProduct}:${foodProductVersion}`);
+
+    const before = psql("select count(*)::text from public.recipe_ingredients;");
+    expectSqlFailure(`
+      begin;
+      select public.set_account_generation_internal_writer_marker('${cutoverAttempt}', true);
+      insert into public.recipe_ingredients (
+        recipe_id, ingredient_id, ingredient_type, food_product_id
+      ) values ('${publicRecipe}', '${productIngredient}', 'QUANT', '${foodProduct}');
+      commit;
+    `, /recipe_ingredient_product_provenance_pair/i);
+    expectSqlFailure(`
+      begin;
+      select public.set_account_generation_internal_writer_marker('${cutoverAttempt}', true);
+      insert into public.recipe_ingredients (
+        recipe_id, ingredient_id, ingredient_type,
+        food_product_id, food_product_nutrition_version_id
+      ) values (
+        '${publicRecipe}', '${productIngredient}', 'QUANT',
+        '${unlinkedFoodProduct}', '${unlinkedFoodProductVersion}'
+      );
+      commit;
+    `, /recipe_ingredient_product_link_guard|VALIDATION_ERROR/i);
+    expectSqlFailure(writerSql({
+      operation: "create",
+      key: "85000000-0000-4000-8000-000000000023",
+      draftTitle: "invalid product link",
+      foodProductId: unlinkedFoodProduct,
+      foodProductVersionId: unlinkedFoodProductVersion,
+    }), /VALIDATION_ERROR/);
+    expect(psql("select count(*)::text from public.recipe_ingredients;")).toBe(before);
+    expect(psql("select count(*)::text from public.recipes where title = 'invalid product link';")).toBe("0");
+  });
+
+  it("makes one of two real same-revision writers win at an explicit barrier", async () => {
+    const created = JSON.parse(psql(writerSql({
+      operation: "create",
+      key: "85000000-0000-4000-8000-000000000024",
+      draftTitle: "revision race",
+    })));
+    const results = await runAtBarrier([
+      writerCallSql({
+        operation: "update", recipeId: created.data.id, revision: 1,
+        key: "85000000-0000-4000-8000-000000000025", draftTitle: "race winner A",
+      }),
+      writerCallSql({
+        operation: "update", recipeId: created.data.id, revision: 1,
+        key: "85000000-0000-4000-8000-000000000026", draftTitle: "race winner B",
+      }),
+    ]);
+
+    expect(results.filter((result) => result.status === 0)).toHaveLength(1);
+    expect(results.filter((result) => /RECIPE_REVISION_CONFLICT/.test(result.stderr))).toHaveLength(1);
+    expect(psql(`select revision::text from public.recipes where id = '${created.data.id}';`)).toBe("2");
+    expect(psql(`select count(*)::text from public.recipe_content_snapshots where recipe_id = '${created.data.id}';`)).toBe("2");
+  });
+
+  it("hides a public source across a real lifecycle transition race", async () => {
+    const digestBefore = psql(`
+      select md5(string_agg(
+        concat_ws('|', id, title, revision, visibility, coalesce(deleted_at::text, '')),
+        ',' order by id
+      )) from public.recipes
+      where id in ('${ownerPublicRecipe}', '${deletingPublicRecipe}', '${cleanupPendingPublicRecipe}');
+    `);
+    const results = await runAtBarrier([
+      {
+        preBarrier: `
+          ${ownerLockSql(ownerC)}
+          select 1 from public.user_account_lifecycles
+          where owner_uuid = '${ownerC}' and account_generation = 1 for update;
+        `,
+        statement: `
+          select public.set_account_generation_internal_writer_marker('${cutoverAttempt}', true);
+          update public.user_account_lifecycles
+          set status = 'quarantined', revision = revision + 1, updated_at = now()
+          where owner_uuid = '${ownerC}' and account_generation = 1;
+          select public.set_account_generation_internal_writer_marker('${cutoverAttempt}', false);
+        `,
+      },
+      writerCallSql({
+        operation: "fork", sourceRecipeId: ownerPublicRecipe,
+        key: "85000000-0000-4000-8000-000000000027", draftTitle: "hidden race fork",
+      }),
+    ]);
+    expect(results[0]?.status).toBe(0);
+    expect(results[1]?.stderr).toMatch(/RESOURCE_NOT_FOUND/);
+
+    psql(`
+      begin;
+      select public.set_account_generation_internal_writer_marker('${cutoverAttempt}', true);
+      update public.user_account_lifecycles
+      set status = 'deleting', revision = revision + 1, updated_at = now()
+      where owner_uuid in ('${ownerI}', '${ownerJ}') and account_generation = 1;
+      update public.user_account_lifecycles
+      set status = 'cleanup_pending', revision = revision + 1, updated_at = now()
+      where owner_uuid = '${ownerJ}' and account_generation = 1;
+      select public.set_account_generation_internal_writer_marker('${cutoverAttempt}', false);
+      commit;
+    `);
+
+    const hiddenRecipes = [
+      ownerPublicRecipe,
+      deletingPublicRecipe,
+      cleanupPendingPublicRecipe,
+    ];
+    let keySuffix = 28;
+    for (const hiddenRecipe of hiddenRecipes) {
+      for (const request of [
+        writerSql({
+          operation: "fork", sourceRecipeId: hiddenRecipe,
+          key: `85000000-0000-4000-8000-${String(keySuffix++).padStart(12, "0")}`,
+          draftTitle: "hidden fork",
+        }),
+        writerSql({
+          operation: "update", recipeId: hiddenRecipe, revision: 1,
+          key: `85000000-0000-4000-8000-${String(keySuffix++).padStart(12, "0")}`,
+          draftTitle: "hidden update",
+        }),
+        writerSql({
+          operation: "delete", recipeId: hiddenRecipe,
+          key: `85000000-0000-4000-8000-${String(keySuffix++).padStart(12, "0")}`,
+        }),
+      ]) expectSqlFailure(request, /RESOURCE_NOT_FOUND/);
+    }
+
+    expect(psql(`
+      select md5(string_agg(
+        concat_ws('|', id, title, revision, visibility, coalesce(deleted_at::text, '')),
+        ',' order by id
+      )) from public.recipes
+      where id in ('${ownerPublicRecipe}', '${deletingPublicRecipe}', '${cleanupPendingPublicRecipe}');
+    `)).toBe(digestBefore);
+    expect(psql("select count(*)::text from public.recipes where title like 'hidden %';")).toBe("0");
   });
 
   it("forks without changing the public source and saves updates on the same ID", () => {
@@ -312,6 +770,144 @@ describe.skipIf(!enabled)("personal recipe write PostgreSQL", () => {
     expect(psql(`select count(*)::text from public.recipe_content_snapshots where recipe_id = '${copy.data.id}';`)).toBe("1");
   });
 
+  it("serializes writer and soft delete in both directions on two connections", async () => {
+    const updateFirst = JSON.parse(psql(writerSql({
+      operation: "create", owner: ownerD, session: sessionD,
+      key: "85000000-0000-4000-8000-000000000032", draftTitle: "update first",
+    })));
+    const firstResults = await runAtBarrier([
+      {
+        preBarrier: ownerLockSql(ownerD),
+        statement: writerCallSql({
+          operation: "update", owner: ownerD, session: sessionD,
+          recipeId: updateFirst.data.id, revision: 1,
+          key: "85000000-0000-4000-8000-000000000033", draftTitle: "updated before delete",
+        }),
+      },
+      writerCallSql({
+        operation: "delete", owner: ownerD, session: sessionD,
+        recipeId: updateFirst.data.id,
+        key: "85000000-0000-4000-8000-000000000034",
+      }),
+    ]);
+    expect(firstResults.every((result) => result.status === 0)).toBe(true);
+    expect(psql(`select concat((deleted_at is not null)::text, ':', revision) from public.recipes where id = '${updateFirst.data.id}';`)).toBe("true:3");
+
+    const deleteFirst = JSON.parse(psql(writerSql({
+      operation: "create", owner: ownerE, session: sessionE,
+      key: "85000000-0000-4000-8000-000000000035", draftTitle: "delete first",
+    })));
+    const secondResults = await runAtBarrier([
+      {
+        preBarrier: ownerLockSql(ownerE),
+        statement: writerCallSql({
+          operation: "delete", owner: ownerE, session: sessionE,
+          recipeId: deleteFirst.data.id,
+          key: "85000000-0000-4000-8000-000000000036",
+        }),
+      },
+      writerCallSql({
+        operation: "update", owner: ownerE, session: sessionE,
+        recipeId: deleteFirst.data.id, revision: 1,
+        key: "85000000-0000-4000-8000-000000000037", draftTitle: "must not revive",
+      }),
+    ]);
+    expect(secondResults[0]?.status).toBe(0);
+    expect(secondResults[1]?.stderr).toMatch(/RESOURCE_NOT_FOUND/);
+    expect(psql(`select concat((deleted_at is not null)::text, ':', revision) from public.recipes where id = '${deleteFirst.data.id}';`)).toBe("true:2");
+  });
+
+  it("serializes writer and account cleanup in both directions without preserving private rows", async () => {
+    const sharedBefore = psql(`select md5(concat_ws('|', title, revision, visibility)) from public.recipes where id = '${publicRecipe}';`);
+    const writerFirst = JSON.parse(psql(writerSql({
+      operation: "create", owner: ownerF, session: sessionF,
+      key: "85000000-0000-4000-8000-000000000038", draftTitle: "writer before cleanup",
+    })));
+    const firstResults = await runAtBarrier([
+      {
+        preBarrier: ownerLockSql(ownerF),
+        statement: writerCallSql({
+          operation: "update", owner: ownerF, session: sessionF,
+          recipeId: writerFirst.data.id, revision: 1,
+          key: "85000000-0000-4000-8000-000000000039", draftTitle: "updated then cleaned",
+        }),
+      },
+      cleanupCallSql(ownerF),
+    ]);
+    expect(firstResults.every((result) => result.status === 0)).toBe(true);
+    expect(psql(`select count(*)::text from public.recipes where id = '${writerFirst.data.id}';`)).toBe("0");
+
+    const cleanupFirst = JSON.parse(psql(writerSql({
+      operation: "create", owner: ownerG, session: sessionG,
+      key: "85000000-0000-4000-8000-000000000040", draftTitle: "cleanup before writer",
+    })));
+    const secondResults = await runAtBarrier([
+      {
+        preBarrier: ownerLockSql(ownerG),
+        statement: cleanupCallSql(ownerG),
+      },
+      writerCallSql({
+        operation: "update", owner: ownerG, session: sessionG,
+        recipeId: cleanupFirst.data.id, revision: 1,
+        key: "85000000-0000-4000-8000-000000000041", draftTitle: "stale writer",
+      }),
+    ]);
+    expect(secondResults[0]?.status).toBe(0);
+    expect(secondResults[1]?.stderr).toMatch(/ACCOUNT_DELETING|ACCOUNT_SESSION_STALE/);
+    expect(psql(`select count(*)::text from public.recipes where id = '${cleanupFirst.data.id}';`)).toBe("0");
+    expect(psql(`select md5(concat_ws('|', title, revision, visibility)) from public.recipes where id = '${publicRecipe}';`)).toBe(sharedBefore);
+  });
+
+  it("rejects a G1 writer after an in-flight G2 transition and clears the F0 marker", async () => {
+    const created = JSON.parse(psql(writerSql({
+      operation: "create", owner: ownerH, session: sessionH,
+      key: "85000000-0000-4000-8000-000000000042", draftTitle: "G1 stale target",
+    })));
+    const digestBefore = psql(`select md5(concat_ws('|', title, revision, visibility)) from public.recipes where id = '${created.data.id}';`);
+    const results = await runAtBarrier([
+      {
+        preBarrier: `
+          ${ownerLockSql(ownerH)}
+          select 1 from public.user_account_lifecycles
+          where owner_uuid = '${ownerH}' and account_generation = 1 for update;
+        `,
+        statement: `
+          select public.set_account_generation_internal_writer_marker('${cutoverAttempt}', true);
+          update public.user_account_lifecycles
+          set status = 'deleting', revision = revision + 1, updated_at = now()
+          where owner_uuid = '${ownerH}' and account_generation = 1;
+          update public.user_session_generation_bindings
+          set revoked_at = now()
+          where owner_uuid = '${ownerH}' and expected_account_generation = 1;
+          update public.user_account_lifecycles
+          set status = 'cleanup_pending', revision = revision + 1, updated_at = now()
+          where owner_uuid = '${ownerH}' and account_generation = 1;
+          update public.user_account_generation_watermarks
+          set last_account_generation = 2
+          where owner_uuid = '${ownerH}';
+          insert into public.user_account_lifecycles (
+            owner_uuid, account_generation, auth_identity_created_at_snapshot,
+            origin, status, activated_at
+          ) values ('${ownerH}', 2, '${identityEpochG2}', 'runtime', 'active', now());
+          insert into public.user_session_generation_bindings (
+            session_key_hash, hmac_key_version, owner_uuid,
+            expected_account_generation, auth_identity_created_at_snapshot
+          ) values ('${sessionH2}', 1, '${ownerH}', 2, '${identityEpochG2}');
+          select public.set_account_generation_internal_writer_marker('${cutoverAttempt}', false);
+        `,
+      },
+      writerCallSql({
+        operation: "update", owner: ownerH, session: sessionH,
+        recipeId: created.data.id, revision: 1,
+        key: "85000000-0000-4000-8000-000000000043", draftTitle: "must stay G1",
+      }),
+    ]);
+    expect(results[0]?.status).toBe(0);
+    expect(results[1]?.stderr).toMatch(/ACCOUNT_SESSION_STALE|ACCOUNT_GENERATION_STALE/);
+    expect(psql(`select md5(concat_ws('|', title, revision, visibility)) from public.recipes where id = '${created.data.id}';`)).toBe(digestBefore);
+    expect(psql(`select coalesce(result_json ->> '_internal_generation_writer_txid', '') from public.account_generation_cutover_attempts where id = '${cutoverAttempt}';`)).toBe("");
+  });
+
   it("commits private user tags and rolls back every effect when image attach fails", () => {
     const tagged = JSON.parse(psql(writerSql({
       operation: "create",
@@ -321,6 +917,8 @@ describe.skipIf(!enabled)("personal recipe write PostgreSQL", () => {
     })));
     expect(psql(`select concat(recipe_tag.visibility, ':', tag.kind, ':', recipe_tag.source) from public.recipe_tags recipe_tag join public.tags tag on tag.id = recipe_tag.tag_id where recipe_tag.recipe_id = '${tagged.data.id}';`)).toBe("private:user:user_selected");
 
+    const markerBefore = psql(`select coalesce(result_json ->> '_internal_generation_writer_txid', '') from public.account_generation_cutover_attempts where id = '${cutoverAttempt}';`);
+    const sharedBefore = psql(`select md5(concat_ws('|', title, revision, visibility)) from public.recipes where id = '${publicRecipe}';`);
     const failedKey = "90000000-0000-4000-8000-000000000011";
     expectSqlFailure(writerSql({
       operation: "create",
@@ -332,6 +930,9 @@ describe.skipIf(!enabled)("personal recipe write PostgreSQL", () => {
     expect(psql("select count(*)::text from public.recipes where title = '이미지 실패 롤백';")).toBe("0");
     expect(psql("select count(*)::text from public.recipe_content_snapshots snapshot join public.recipes recipe on recipe.id = snapshot.recipe_id where recipe.title = '이미지 실패 롤백';")).toBe("0");
     expect(psql(`select count(*)::text from public.mutation_idempotency_keys where key_hash = encode(extensions.digest(convert_to('${failedKey}', 'UTF8'), 'sha256'), 'hex');`)).toBe("0");
+    expect(psql("select count(*)::text from public.tags where normalized_key = 'rollback-tag';")).toBe("0");
+    expect(psql(`select coalesce(result_json ->> '_internal_generation_writer_txid', '') from public.account_generation_cutover_attempts where id = '${cutoverAttempt}';`)).toBe(markerBefore);
+    expect(psql(`select md5(concat_ws('|', title, revision, visibility)) from public.recipes where id = '${publicRecipe}';`)).toBe(sharedBefore);
   });
 
   it("denies public, other-owner, and authenticated direct mutation", () => {

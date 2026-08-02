@@ -6,11 +6,26 @@
   "baseline_application_contract_count": 74,
   "functions": [
     {
+      "signature": "public.enforce_recipe_ingredient_product_link()",
+      "control_class": "application-controlled",
+      "effect": "trigger/internal",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "owner": "postgres",
+      "security_mode": "invoker",
+      "safe_search_path": [
+        "pg_catalog",
+        "public",
+        "pg_temp"
+      ]
+    },
+    {
       "signature": "public.lock_personal_recipe_ids(uuid[])",
       "control_class": "application-controlled",
       "effect": "read-only",
       "exposure": "service-internal",
       "allowed_principals": [],
+      "owner": "postgres",
       "security_mode": "definer",
       "safe_search_path": [
         "pg_catalog",
@@ -26,6 +41,7 @@
       "allowed_principals": [
         "service_role"
       ],
+      "owner": "postgres",
       "security_mode": "definer",
       "safe_search_path": [
         "pg_catalog",
@@ -40,6 +56,7 @@
       "effect": "trigger/internal",
       "exposure": "service-internal",
       "allowed_principals": [],
+      "owner": "postgres",
       "security_mode": "definer",
       "safe_search_path": [
         "pg_catalog",

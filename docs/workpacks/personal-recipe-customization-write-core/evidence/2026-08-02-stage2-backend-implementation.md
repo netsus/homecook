@@ -31,7 +31,7 @@ The first Draft PR head exposed one additional CI RED: the three new `SECURITY D
 - One service-role-only `write_personal_recipe_core` RPC owns capability, account generation, exact session binding, common lock order, resource validation, idempotency and all content effects in one transaction.
 - `homecook.personal_recipe_v2` remains unset/off by default, no application caller sets it, and no PATCH/DELETE route was added.
 - Create, immutable public fork, same-ID revision update, explicit save-as-new and owner-only idempotent soft delete are implemented without changing the legacy `POST /recipes` route.
-- Server canonicalization strips client authority fields, resolves exact product/version provenance through one approved primary `represents` link, and stores immutable content with the exact ID returned by #4's validated nutrition snapshot writer. The #6 migration does not insert nutrition snapshot rows directly.
+- Server canonicalization rejects unsupported client authority/server-owned fields with the existing `VALIDATION_ERROR`, hashes only normalized server-consumed fields, resolves exact product/version provenance through one approved primary `represents` link, and stores immutable content with the exact ID returned by #4's validated nutrition snapshot writer. The #6 migration does not insert nutrition snapshot rows directly.
 - Tag input is narrowed to private user-selected authority. Managed image attach/replacement/removal remains in the same transaction and uses the existing generation-aware object/reference/outbox functions.
 - The F0 internal generation-writer marker is opened and cleared inside the RPC transaction. Account lifecycle transition to exact-generation `deleting` removes only that generation's non-image personal write receipts before existing hard-delete cleanup.
 
@@ -62,3 +62,46 @@ Command: `pnpm test:personal-recipe-customization-write-core:postgres`
 - Workpack E2E named `personal-recipe-customization-write-core` does not currently exist; no empty grep is claimed as green.
 - Local full Supabase/browser, merged-exact server-production/local-rehearsal read-only verifier, Manual Only evidence, #7 integration and #8 R/R+1→R+2 activation remain pending.
 - Contract Evolution Candidate: none.
+
+## Stage 3 findings repair — current Draft PR
+
+This Stage 2 author repaired, but did not approve, two independent Stage 3 `REQUEST_CHANGES` results against exact head `1a5a6d47dd5f91329ec6279a33374991a8e35428`:
+
+- code/quality task `019fc157-2042-7c90-a3ba-8af10f6ce86b`: `0/3/1`.
+  - The reviewer identified the missing official ingredient provenance at the writer INSERT near the reviewed migration line 489 and the common runner's `recipe_ingredients` bootstrap near line 281, which had pre-created both columns and concealed migration ownership.
+  - It identified the public-fork visibility check near the reviewed migration line 314 as weaker than the central `recipe_visibility_guard.is_owner_publicly_visible` contract defined near `20260723170000_recipe_visibility_read_hardening.sql:148`.
+  - It identified the PostgreSQL test near reviewed line 248 as sequential revision coverage and the account cleanup test near reviewed line 363 as receipt-trigger-only coverage, not real two-connection races.
+  - It identified the raw idempotency hash near reviewed migration line 243 as occurring before server-consumed canonicalization.
+- security/DB task `019fc157-226b-7a20-af4a-ef8ba99640c5`: `0/2/1`.
+  - The reviewer additionally identified hidden public update/delete as an existence leak because the public `FORBIDDEN` branch ran before the central lifecycle visibility upper bound.
+  - It identified that the active full-local `30 pass / 16 skip` run did not yet add the new functions to its expected exact inventory, and that the slice manifest omitted explicit owners while the validator checked owner only when the manifest declared one.
+
+No reviewer result is marked complete here. Fresh independent Stage 3 code/quality and security/DB re-review of the repaired exact head remains pending.
+
+### Repair RED → GREEN
+
+- Locked static RED before migration repair: `4 failed files`, `5 failed / 11 passed` across the four non-PostgreSQL locked files.
+- Disposable PostgreSQL RED in both fresh and replay: #6 `4 failed / 13 passed`; the actual defect signals were canonical retry conflict, missing stored provenance, and a hidden-source lifecycle race that allowed a fork. The fourth failure was a test-only PostgreSQL boolean rendering expectation (`true` versus `t`) and was corrected before implementation claims.
+- Locked static GREEN: `4 files / 16 tests passed`.
+- Disposable PostgreSQL GREEN in both fresh and replay: predecessor snapshot authority fresh `15 pass / 1 intended skip`, replay `16/16`; #6 `17/17` per mode; active full-local security inventory `30 pass / 16 inactive skip` per mode with `required_function_count=33` (the prior 29 plus all three #6 `SECURITY DEFINER` functions and the provenance invoker trigger).
+- Commands:
+  - `pnpm exec vitest run tests/personal-recipe-customization-write-core.test.ts tests/personal-recipe-customization-write-security.test.ts tests/personal-recipe-customization-write-idempotency.test.ts tests/personal-recipe-customization-write-account-delete.test.ts tests/personal-recipe-customization-write-core-postgres.integration.test.ts`
+  - `pnpm test:personal-recipe-customization-write-core:postgres`
+
+### Findings closure evidence
+
+- The #6 migration now owns additive product/version columns, pair and composite-version FK constraints, an exact approved-primary `represents` link trigger, and exact INSERT persistence. The predecessor runner creates compatibility columns only for its own older snapshot test, drops them before follow-up migrations, and therefore cannot conceal a missing #6 DDL on either fresh or replay.
+- Public fork/update/delete locks the current source-owner lifecycle row and applies `recipe_visibility_guard.is_owner_publicly_visible` in the same transaction. Hidden owners converge to `RESOURCE_NOT_FOUND`; before/after recipe and mutation digests remain unchanged.
+- Real spawned `psql` connections wait behind an explicit advisory barrier for same-revision one-winner, writer↔soft-delete and writer↔account-cleanup both orderings, G1→G2 stale writer, and lifecycle transition visibility. Failed mixed tag/image work proves recipe/snapshot/tag/idempotency mutation zero, shared-public preservation, and F0 marker rollback/clear.
+- Fresh/replay inspect exact owner, security mode, overload count, ACL, grantability, PUBLIC-only probe/`anon`/`authenticated`/`service_role` actual calls, and the central exact inventory. The three `SECURITY DEFINER` signatures explicitly declare `owner: postgres` in the manifest and exact `ALTER FUNCTION ... OWNER TO postgres` statements in the migration.
+- Idempotency hashes normalized server-consumed draft/nutrition/tag fields. Whitespace-equivalent input durably replays, unsupported client authority is rejected with the existing `VALIDATION_ERROR`, and only a different canonical payload produces `IDEMPOTENCY_KEY_REUSED`.
+
+### Repair verification status
+
+- `pnpm verify:backend`: product `2,557 pass / 129 intended skip`, production build, and security Playwright `12/12` passed.
+- Current-diff predecessor regression: #2 unit `55 pass / 20 integration skip` and disposable PostgreSQL fresh/replay `20/20` each; #3 official focused visibility/image suite `59 files / 618 tests`; #4 snapshot authority fresh `15 pass / 1 intended skip` and replay `16/16` inside the #6 runner; #5 editor `9 files / 61 tests`.
+- An additional non-required standalone #3 PostgreSQL diagnostic returned `74/75`: its unchanged pre-existing remote-verifier fixture reports `guard_unsafe_membership_count=1` while the test's simulated clean result overrides lifecycle, role and direct-mutation fields but not that field. The runner, test and verifier are byte-unchanged from reviewed head `1a5a6d47...`; the required #3 focused regression is green and this repair does not alter or claim that unrelated predecessor diagnostic.
+- `pnpm audit --audit-level high`: high/critical `0`; one pre-existing low advisory remains.
+- source/workpack/automation/workflow-v2/OMO/closeout/branch validators and `git diff --check` passed. Commit and PR-body validators are rerun after the repair commits/body update.
+- No matching slice-specific local-fixture E2E exists before #7/#8 activation; no empty grep is claimed green.
+- Production/staging/remote application writes remain `0/0/0`. Contract Evolution Candidate remains `none`.

@@ -47,6 +47,12 @@ describe("personal recipe write security", () => {
     expect(sql).toMatch(/created_by is distinct from p_owner_uuid/i);
     expect(sql).toMatch(/visibility is distinct from 'private'/i);
     expect(sql).toMatch(/deleted_at is not null/i);
+    expect(sql).toMatch(
+      /recipe_visibility_guard\.is_owner_publicly_visible\(v_source\.created_by\)/i,
+    );
+    expect(sql).toMatch(
+      /recipe_visibility_guard\.is_owner_publicly_visible\(v_recipe\.created_by\)/i,
+    );
   });
 
   it("denies authenticated direct DML and never accepts client owner or visibility authority", () => {
@@ -76,20 +82,32 @@ describe("personal recipe write security", () => {
     expect(existsSync(manifestPath), "security function manifest is missing").toBe(true);
 
     const manifest = JSON.parse(readFileSync(manifestPath, "utf8")) as {
-      functions: Array<{ signature: string; allowed_principals: string[] }>;
+      functions: Array<{
+        signature: string;
+        allowed_principals: string[];
+        owner?: string;
+      }>;
     };
     expect(manifest.functions).toEqual(expect.arrayContaining([
       expect.objectContaining({
+        signature: "public.enforce_recipe_ingredient_product_link()",
+        allowed_principals: [],
+        owner: "postgres",
+      }),
+      expect.objectContaining({
         signature: "public.lock_personal_recipe_ids(uuid[])",
         allowed_principals: [],
+        owner: "postgres",
       }),
       expect.objectContaining({
         signature: expect.stringMatching(/^public\.write_personal_recipe_core\(/),
         allowed_principals: ["service_role"],
+        owner: "postgres",
       }),
       expect.objectContaining({
         signature: "public.cleanup_personal_recipe_write_receipts()",
         allowed_principals: [],
+        owner: "postgres",
       }),
     ]));
 
@@ -100,5 +118,22 @@ describe("personal recipe write security", () => {
     expect(validator).toContain(
       "personal-recipe-customization-write-core-security-function-authorization-manifest.json",
     );
+
+    const centralInventory = readFileSync(
+      join(process.cwd(), "scripts/lib/full-local-security-inventory.mjs"),
+      "utf8",
+    );
+    expect(centralInventory).toContain(
+      "personal-recipe-customization-write-core-security-function-authorization-manifest.json",
+    );
+
+    const sql = migration();
+    for (const signature of [
+      "public.lock_personal_recipe_ids(uuid[])",
+      "public.write_personal_recipe_core(uuid, timestamp with time zone, text, integer, text, uuid, uuid, bigint, jsonb, jsonb, jsonb, uuid, bigint, uuid, timestamp with time zone)",
+      "public.cleanup_personal_recipe_write_receipts()",
+    ]) {
+      expect(sql).toContain(`alter function ${signature} owner to postgres`);
+    }
   });
 });

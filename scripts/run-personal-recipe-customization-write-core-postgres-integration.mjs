@@ -13,5 +13,6 @@ process.env.HOMECOOK_RECIPE_SNAPSHOT_FOLLOWUP_TARGET_MIGRATION =
   "supabase/migrations/20260802130000_personal_recipe_customization_write_core.sql";
 process.env.HOMECOOK_RECIPE_SNAPSHOT_FOLLOWUP_INTEGRATION_TEST =
   "tests/personal-recipe-customization-write-core-postgres.integration.test.ts";
+process.env.HOMECOOK_PERSONAL_RECIPE_SECURITY_FUNCTIONS = "1";
 
 await import("./run-recipe-snapshot-authority-postgres-integration.mjs");

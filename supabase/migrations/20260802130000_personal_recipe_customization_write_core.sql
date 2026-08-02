@@ -5,6 +5,68 @@
 
 begin;
 
+-- The official ingredient contract keeps the canonical ingredient while
+-- pinning the exact approved product/version provenance when one was used.
+-- These columns belong to this migration; disposable runners must not seed
+-- them ahead of the target migration.
+alter table public.recipe_ingredients
+  add column if not exists food_product_id uuid,
+  add column if not exists food_product_nutrition_version_id uuid;
+
+alter table public.recipe_ingredients
+  drop constraint if exists recipe_ingredient_product_provenance_pair,
+  drop constraint if exists recipe_ingredient_product_version_fkey;
+
+alter table public.recipe_ingredients
+  add constraint recipe_ingredient_product_provenance_pair check (
+    (food_product_id is null and food_product_nutrition_version_id is null)
+    or
+    (food_product_id is not null and food_product_nutrition_version_id is not null)
+  ),
+  add constraint recipe_ingredient_product_version_fkey
+    foreign key (food_product_id, food_product_nutrition_version_id)
+    references public.food_product_nutrition_versions (product_id, id)
+    on delete restrict;
+
+create or replace function public.enforce_recipe_ingredient_product_link()
+returns trigger
+language plpgsql
+set search_path = pg_catalog, public, pg_temp
+as $function$
+begin
+  if new.food_product_id is null then
+    return new;
+  end if;
+
+  if not exists (
+    select 1
+    from public.food_product_ingredient_links as link
+    where link.product_id = new.food_product_id
+      and link.ingredient_id = new.ingredient_id
+      and link.relation = 'represents'
+      and link.review_status = 'approved'
+      and link.is_primary
+      and link.is_active
+  ) then
+    raise exception 'recipe_ingredient_product_link_guard'
+      using errcode = '23514';
+  end if;
+
+  return new;
+end;
+$function$;
+
+drop trigger if exists recipe_ingredient_product_link_guard
+  on public.recipe_ingredients;
+create trigger recipe_ingredient_product_link_guard
+before insert or update of ingredient_id, food_product_id,
+  food_product_nutrition_version_id
+on public.recipe_ingredients
+for each row execute function public.enforce_recipe_ingredient_product_link();
+
+revoke all on function public.enforce_recipe_ingredient_product_link()
+  from public, anon, authenticated, service_role;
+
 create or replace function public.lock_personal_recipe_ids(
   p_recipe_ids uuid[]
 )
@@ -62,6 +124,8 @@ declare
   v_capability_state text;
   v_cutover_attempt_id uuid;
   v_lifecycle public.user_account_lifecycles%rowtype;
+  v_source_owner_lifecycle public.user_account_lifecycles%rowtype;
+  v_recipe_owner_lifecycle public.user_account_lifecycles%rowtype;
   v_binding public.user_session_generation_bindings%rowtype;
   v_recipe public.recipes%rowtype;
   v_source public.recipes%rowtype;
@@ -87,6 +151,8 @@ declare
   v_product_brand text;
   v_step_id uuid;
   v_target_ingredient_count integer := 0;
+  v_canonical_draft jsonb;
+  v_canonical_nutrition_snapshot jsonb;
   v_canonical_ingredients jsonb := '[]'::jsonb;
   v_canonical_steps jsonb := '[]'::jsonb;
   v_canonical_tags jsonb := '[]'::jsonb;
@@ -119,6 +185,111 @@ begin
     )
   then
     raise exception 'VALIDATION_ERROR' using errcode = '22023';
+  end if;
+
+  if p_operation <> 'delete' then
+    if exists (
+      select 1 from jsonb_object_keys(p_draft) as key
+      where key not in ('title', 'description', 'base_servings', 'ingredients', 'steps')
+    ) or exists (
+      select 1 from jsonb_array_elements(p_draft -> 'ingredients') as item
+      where jsonb_typeof(item) <> 'object'
+    ) or exists (
+      select 1 from jsonb_array_elements(p_draft -> 'steps') as item
+      where jsonb_typeof(item) <> 'object'
+    ) or exists (
+      select 1 from jsonb_array_elements(coalesce(p_tags, '[]'::jsonb)) as item
+      where jsonb_typeof(item) <> 'object'
+    ) then
+      raise exception 'VALIDATION_ERROR' using errcode = '22023';
+    end if;
+
+    if exists (
+      select 1
+      from jsonb_array_elements(p_draft -> 'ingredients') as item,
+        lateral jsonb_object_keys(item) as key
+      where key not in (
+        'ingredient_id', 'amount', 'unit', 'ingredient_type', 'display_text',
+        'component_label', 'scalable', 'food_product_id',
+        'food_product_nutrition_version_id'
+      )
+    ) or exists (
+      select 1
+      from jsonb_array_elements(p_draft -> 'steps') as item,
+        lateral jsonb_object_keys(item) as key
+      where key not in (
+        'step_number', 'instruction', 'cooking_method_id',
+        'cooking_method_ids', 'ingredients_used', 'component_label',
+        'heat_level', 'duration_seconds', 'duration_text'
+      )
+    ) or exists (
+      select 1
+      from jsonb_array_elements(coalesce(p_tags, '[]'::jsonb)) as item,
+        lateral jsonb_object_keys(item) as key
+      where key not in ('normalized_key', 'label')
+    ) or exists (
+      select 1 from jsonb_object_keys(p_nutrition_snapshot) as key
+      where key not in (
+        'calculation_version', 'scalable_values', 'fixed_values',
+        'nutrient_status', 'calculation_status', 'calculation_quality',
+        'reflected_ingredient_count', 'target_ingredient_count',
+        'missing_reasons', 'warnings', 'sources'
+      )
+    ) then
+      -- Reject client authority/server-owned fields with the existing official
+      -- validation failure instead of silently hashing values the server ignores.
+      raise exception 'VALIDATION_ERROR' using errcode = '22023';
+    end if;
+
+    select jsonb_build_object(
+      'title', btrim(p_draft ->> 'title'),
+      'description', nullif(p_draft ->> 'description', ''),
+      'base_servings', (p_draft ->> 'base_servings')::integer,
+      'ingredients', coalesce((
+        select jsonb_agg(jsonb_strip_nulls(jsonb_build_object(
+          'ingredient_id', nullif(item ->> 'ingredient_id', '')::uuid,
+          'amount', nullif(item ->> 'amount', '')::numeric,
+          'unit', nullif(item ->> 'unit', ''),
+          'ingredient_type', coalesce(nullif(item ->> 'ingredient_type', ''), 'QUANT'),
+          'display_text', nullif(item ->> 'display_text', ''),
+          'component_label', nullif(item ->> 'component_label', ''),
+          'scalable', coalesce((item ->> 'scalable')::boolean, true),
+          'food_product_id', nullif(item ->> 'food_product_id', '')::uuid,
+          'food_product_nutrition_version_id',
+            nullif(item ->> 'food_product_nutrition_version_id', '')::uuid
+        )) order by ordinality)
+        from jsonb_array_elements(p_draft -> 'ingredients')
+          with ordinality as ingredient_rows(item, ordinality)
+      ), '[]'::jsonb),
+      'steps', coalesce((
+        select jsonb_agg(jsonb_strip_nulls(jsonb_build_object(
+          'step_number', (item ->> 'step_number')::integer,
+          'instruction', item ->> 'instruction',
+          'cooking_method_id', nullif(item ->> 'cooking_method_id', '')::uuid,
+          'cooking_method_ids', case
+            when jsonb_typeof(item -> 'cooking_method_ids') = 'array'
+              then item -> 'cooking_method_ids'
+            else null
+          end,
+          'ingredients_used', coalesce(item -> 'ingredients_used', '[]'::jsonb),
+          'component_label', nullif(item ->> 'component_label', ''),
+          'heat_level', nullif(item ->> 'heat_level', ''),
+          'duration_seconds', nullif(item ->> 'duration_seconds', '')::integer,
+          'duration_text', nullif(item ->> 'duration_text', '')
+        )) order by ordinality)
+        from jsonb_array_elements(p_draft -> 'steps')
+          with ordinality as step_rows(item, ordinality)
+      ), '[]'::jsonb)
+    ) into v_canonical_draft;
+
+    v_canonical_nutrition_snapshot := p_nutrition_snapshot;
+    select coalesce(jsonb_agg(jsonb_strip_nulls(jsonb_build_object(
+      'normalized_key', item ->> 'normalized_key',
+      'label', item ->> 'label'
+    )) order by ordinality), '[]'::jsonb)
+      into v_canonical_tags
+    from jsonb_array_elements(coalesce(p_tags, '[]'::jsonb))
+      with ordinality as tag_rows(item, ordinality);
   end if;
 
   if current_setting('homecook.personal_recipe_v2', true) is distinct from 'on' then
@@ -235,6 +406,29 @@ begin
     for update;
   end if;
 
+  -- Pin the latest lifecycle row before applying the central #3 visibility
+  -- upper bound. Account transitions update the old generation before making a
+  -- successor current, so this row lock closes the visibility-check race in the
+  -- same transaction without exposing lifecycle state to the caller.
+  if v_source.visibility = 'public' and v_source.created_by is not null then
+    select lifecycle.*
+      into v_source_owner_lifecycle
+    from public.user_account_lifecycles as lifecycle
+    where lifecycle.owner_uuid = v_source.created_by
+    order by lifecycle.account_generation desc
+    limit 1
+    for key share;
+  end if;
+  if v_recipe.visibility = 'public' and v_recipe.created_by is not null then
+    select lifecycle.*
+      into v_recipe_owner_lifecycle
+    from public.user_account_lifecycles as lifecycle
+    where lifecycle.owner_uuid = v_recipe.created_by
+    order by lifecycle.account_generation desc
+    limit 1
+    for key share;
+  end if;
+
   v_operation_scope := 'personal_recipe_' || p_operation;
   v_key_hash := encode(
     extensions.digest(convert_to(p_idempotency_key::text, 'UTF8'), 'sha256'),
@@ -243,16 +437,40 @@ begin
   v_payload_hash := encode(
     extensions.digest(
       convert_to(
-        jsonb_build_object(
-          'operation', p_operation,
-          'recipe_id', p_recipe_id,
-          'source_recipe_id', p_source_recipe_id,
-          'base_recipe_revision', p_base_recipe_revision,
-          'draft', p_draft,
-          'nutrition_snapshot', p_nutrition_snapshot,
-          'tags', coalesce(p_tags, '[]'::jsonb),
-          'image_object_id', p_image_object_id,
-          'expected_cleanup_generation', p_expected_cleanup_generation
+        (
+          case p_operation
+            when 'delete' then jsonb_build_object(
+              'operation', p_operation,
+              'recipe_id', p_recipe_id
+            )
+            when 'update' then jsonb_build_object(
+              'operation', p_operation,
+              'recipe_id', p_recipe_id,
+              'base_recipe_revision', p_base_recipe_revision
+            )
+            when 'fork' then jsonb_build_object(
+              'operation', p_operation,
+              'source_recipe_id', p_source_recipe_id
+            )
+            when 'save_as_new' then jsonb_build_object(
+              'operation', p_operation,
+              'source_recipe_id', p_source_recipe_id
+            )
+            else jsonb_build_object('operation', p_operation)
+          end
+          || case when p_operation = 'delete' then '{}'::jsonb else
+            jsonb_build_object(
+              'draft', v_canonical_draft,
+              'nutrition_snapshot', v_canonical_nutrition_snapshot,
+              'tags', v_canonical_tags,
+              'image', case when p_image_object_id is null then null else
+                jsonb_build_object(
+                  'object_id', p_image_object_id,
+                  'expected_cleanup_generation', p_expected_cleanup_generation
+                )
+              end
+            )
+          end
         )::text,
         'UTF8'
       ),
@@ -314,7 +532,10 @@ begin
   if p_operation = 'fork' then
     if v_source.id is null
       or v_source.visibility is distinct from 'public'
-      or v_source.deleted_at is not null then
+      or v_source.deleted_at is not null
+      or recipe_visibility_guard.is_owner_publicly_visible(v_source.created_by)
+        is not true
+    then
       raise exception 'RESOURCE_NOT_FOUND' using errcode = 'P0002';
     end if;
   elsif p_operation = 'save_as_new' then
@@ -326,6 +547,12 @@ begin
     end if;
   elsif p_operation in ('update', 'delete') then
     if v_recipe.id is not null and v_recipe.visibility = 'public' then
+      if v_recipe.deleted_at is not null
+        or recipe_visibility_guard.is_owner_publicly_visible(v_recipe.created_by)
+          is not true
+      then
+        raise exception 'RESOURCE_NOT_FOUND' using errcode = 'P0002';
+      end if;
       raise exception 'FORBIDDEN' using errcode = '42501';
     end if;
     if v_recipe.id is null
@@ -495,7 +722,9 @@ begin
         display_text,
         component_label,
         sort_order,
-        scalable
+        scalable,
+        food_product_id,
+        food_product_nutrition_version_id
       ) values (
         v_result_recipe_id,
         v_ingredient_id,
@@ -505,7 +734,9 @@ begin
         nullif(v_ingredient ->> 'display_text', ''),
         nullif(v_ingredient ->> 'component_label', ''),
         v_target_ingredient_count,
-        coalesce((v_ingredient ->> 'scalable')::boolean, true)
+        coalesce((v_ingredient ->> 'scalable')::boolean, true),
+        v_product_id,
+        v_product_version_id
       );
       v_canonical_ingredients := v_canonical_ingredients || jsonb_build_array(
         jsonb_strip_nulls(jsonb_build_object(
@@ -811,6 +1042,11 @@ for each row execute function public.cleanup_personal_recipe_write_receipts();
 
 revoke all on function public.cleanup_personal_recipe_write_receipts()
   from public, anon, authenticated, service_role;
+
+alter function public.lock_personal_recipe_ids(uuid[]) owner to postgres;
+alter function public.write_personal_recipe_core(uuid, timestamp with time zone, text, integer, text, uuid, uuid, bigint, jsonb, jsonb, jsonb, uuid, bigint, uuid, timestamp with time zone) owner to postgres;
+alter function public.cleanup_personal_recipe_write_receipts() owner to postgres;
+alter function public.enforce_recipe_ingredient_product_link() owner to postgres;
 
 revoke insert, update, delete on table
   public.recipes,

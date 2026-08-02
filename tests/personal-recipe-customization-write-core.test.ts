@@ -48,10 +48,36 @@ describe("personal recipe customization write core", () => {
 
   it("replaces canonical ingredients and steps and pins immutable content plus nutrition", () => {
     const sql = migration();
+    const runner = readFileSync(
+      join(
+        process.cwd(),
+        "scripts/run-recipe-snapshot-authority-postgres-integration.mjs",
+      ),
+      "utf8",
+    );
 
     expect(sql).toMatch(/delete from public\.recipe_ingredients/i);
     expect(sql).toMatch(/insert into public\.recipe_ingredients/i);
-    expect(sql).toMatch(/food_product_nutrition_version_id/i);
+    expect(sql).toMatch(
+      /alter table public\.recipe_ingredients[\s\S]*add column if not exists food_product_id uuid/i,
+    );
+    expect(sql).toMatch(
+      /alter table public\.recipe_ingredients[\s\S]*add column if not exists food_product_nutrition_version_id uuid/i,
+    );
+    expect(sql).toMatch(
+      /foreign key \(food_product_id, food_product_nutrition_version_id\)[\s\S]*food_product_nutrition_versions \(product_id, id\)/i,
+    );
+    expect(sql).toMatch(/recipe_ingredient_product_provenance_pair/i);
+    expect(sql).toMatch(/recipe_ingredient_product_link_guard/i);
+    expect(sql).toMatch(
+      /insert into public\.recipe_ingredients\s*\([\s\S]*food_product_id[\s\S]*food_product_nutrition_version_id/i,
+    );
+    expect(runner).not.toMatch(
+      /create table public\.recipe_ingredients \([^;]*food_product_id uuid/i,
+    );
+    expect(runner).toMatch(
+      /drop column food_product_id,[\s\S]*drop column food_product_nutrition_version_id[\s\S]*FOLLOWUP_MIGRATIONS/i,
+    );
     expect(sql).toMatch(/delete from public\.recipe_steps/i);
     expect(sql).toMatch(/insert into public\.recipe_steps/i);
     expect(sql).toMatch(/public\.write_recipe_nutrition_snapshot/i);

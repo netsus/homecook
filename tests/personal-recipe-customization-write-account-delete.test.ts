@@ -23,6 +23,9 @@ describe("personal recipe deletion and account cleanup", () => {
     expect(sql).toMatch(/set deleted_at\s*=\s*coalesce\(recipe\.deleted_at,\s*p_now\)/i);
     expect(sql).not.toMatch(/delete from public\.recipes[\s\S]*p_recipe_id/i);
     expect(sql).not.toMatch(/delete from public\.recipe_content_snapshots[\s\S]*p_recipe_id/i);
+    expect(sql).toMatch(
+      /v_recipe\.visibility = 'public'[\s\S]*recipe_visibility_guard\.is_owner_publicly_visible\(v_recipe\.created_by\)[\s\S]*RESOURCE_NOT_FOUND/i,
+    );
   });
 
   it("removes personal idempotency tombstones only inside exact account cleanup before private recipes", () => {

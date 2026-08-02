@@ -288,9 +288,7 @@ create table public.recipe_ingredients (
   display_text varchar(200),
   component_label text,
   sort_order integer not null default 0,
-  scalable boolean not null default true,
-  food_product_id uuid,
-  food_product_nutrition_version_id uuid
+  scalable boolean not null default true
 );
 
 create table public.recipe_steps (
@@ -480,7 +478,8 @@ create table public.food_product_nutrition_versions (
   id uuid primary key default gen_random_uuid(),
   product_id uuid not null references public.food_products(id) on delete cascade,
   nutrition_profile_id uuid not null references public.nutrition_profiles(id) on delete restrict,
-  created_by uuid
+  created_by uuid,
+  unique (product_id, id)
 );
 
 alter table public.food_products
@@ -851,6 +850,18 @@ async function runMode(postgresBin, mode) {
       ]);
     }
 
+    // The predecessor snapshot suite models the already-official schema while
+    // its migration predates these two columns. Keep that fixture compatibility
+    // outside BOOTSTRAP_SQL, then remove it before any follow-up target so the
+    // personal-write migration must install its own columns and constraints.
+    runRequired(path.join(postgresBin, "psql"), [
+      ...connectionArgs,
+      "-c",
+      `alter table public.recipe_ingredients
+         add column food_product_id uuid,
+         add column food_product_nutrition_version_id uuid;`,
+    ]);
+
     const wrapperPath = path.join(wrapperDirectory, "psql");
     writeFileSync(
       wrapperPath,
@@ -911,6 +922,15 @@ esac
     if (result.status !== 0) {
       process.exitCode = result.status ?? 1;
     } else {
+      if (FOLLOWUP_TARGET_MIGRATION) {
+        runRequired(path.join(postgresBin, "psql"), [
+          ...connectionArgs,
+          "-c",
+          `alter table public.recipe_ingredients
+             drop column food_product_id,
+             drop column food_product_nutrition_version_id;`,
+        ]);
+      }
       for (const migration of ACTIVE_SECURITY_MIGRATIONS) {
         runRequired(path.join(postgresBin, "psql"), [
           ...connectionArgs,
