@@ -5,6 +5,7 @@
 - Role: Stage 2 backend implementer/orchestrator. This task does not self-approve formal Stage 3.
 - Base: `origin/master` exact `487847419319c61cf2f53f025741a5782357ef86`.
 - Branch: `feature/be-recipe-content-snapshot-future-propagation`.
+- Draft PR: `#1278`.
 - Current implementation/test head before this evidence projection: `b4af7c35860551056a4e41b9764e5f04e04bd6cb`.
 - Production/staging/remote application writes: `0/0/0`.
 - Claude, capability activation, provider mutation and server-production migration were not used.
@@ -57,7 +58,7 @@ Command: `pnpm test:recipe-content-snapshot-future-propagation:postgres`
 
 ## Explicit pending gates
 
-- Draft PR creation and current-head GitHub checks are pending.
+- Draft PR #1278 current-head GitHub checks are pending.
 - Formal Stage 3 must run in a different Codex task ID; this Stage 2 task cannot self-approve or merge.
 - A slice-named browser E2E spec does not yet exist; the grep returns “No tests found” and is not claimed green. Stage 4 owns component/E2E/design evidence.
 - Real local Supabase two-owner evidence, merged-exact-SHA server-production/local-rehearsal read-only inventory, Manual Only evidence and #8 R/R+1 compatibility/activation remain pending.
