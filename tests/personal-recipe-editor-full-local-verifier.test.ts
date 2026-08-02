@@ -10,6 +10,7 @@ import {
   assertPersonalRecipeEditorMergedExactSource,
   assertPersonalRecipeEditorSourceEvidence,
   buildPersonalRecipeEditorCheckEnvironment,
+  buildPersonalRecipeEditorBoundaryChecks,
   buildPersonalRecipeEditorFullLocalPsqlRequest,
   buildPersonalRecipeEditorFullLocalSummary,
   buildPersonalRecipeEditorFullLocalVerificationPlan,
@@ -161,11 +162,31 @@ const fullLocalResult = {
   account_cleanup_function_missing_count: 0,
   owner_null_shared_snapshot_count: 2,
   remote_application_writes: 0,
+  auth_user_count: 3,
+  auth_identity_count: 3,
+  auth_identity_mapping_mismatch_count: 0,
+  auth_session_row_count: 0,
+  auth_refresh_token_row_count: 0,
+  auth_flow_state_row_count: 0,
+  storage_bucket_count: 2,
+  storage_object_count: 1,
+  private_storage_bucket_count: 1,
+  private_storage_bucket_drift_count: 0,
+  storage_objects_rls_disabled_count: 0,
+  private_storage_policy_count: 0,
+  storage_object_mutation_grant_count: 6,
+  image_registry_acl_drift_count: 0,
+  private_storage_object_count: 1,
+  private_storage_object_registry_mismatch_count: 0,
+  private_image_registry_shape_drift_count: 0,
+  private_image_registry_active_object_mismatch_count: 0,
 };
 
 const sourceEvidence = {
   app_surface_personal_editor_marker_count: 0,
+  browser_direct_data_mutation_count: 0,
   browser_direct_storage_path_count: 0,
+  browser_raw_rest_mutation_count: 0,
   capability_on_occurrence_count: 0,
   capability_off_occurrence_count: 3,
   internal_operation_violation_count: 0,
@@ -225,6 +246,11 @@ const executionEvidence = {
   remote_application_writes: 0,
 };
 
+const validLocalResult = {
+  full_local_authority: fullLocalResult,
+  personal_editor_source: sourceEvidence,
+};
+
 describe("personal recipe editor full-local verifier", () => {
   it("rejects remote authority and any unmerged, dirty or grafted source", () => {
     expect(() => assertPersonalRecipeEditorFullLocalEnvironment({
@@ -277,8 +303,9 @@ describe("personal recipe editor full-local verifier", () => {
       requiresMergedOriginMaster: true,
       requiresCleanTrackedTree: true,
       sourceOfRecord: "live-remote-read-only-pre-floor",
-      stableRemoteUuidRestore: true,
-      remoteTransientAuthState: "excluded-relogin-required",
+      stableRemoteUuidRestore: "pending-manual-restore-manifest",
+      remoteTransientAuthState: "local-zero-manifest-pending",
+      restoreManifest: "pending-manual-evidence",
       externalPersonalWrite: "dark",
       productionWrites: 0,
       stagingWrites: 0,
@@ -290,6 +317,13 @@ describe("personal recipe editor full-local verifier", () => {
     expect(plan.manualOnlyPending).toEqual(manualOnlyPending);
     expect(plan.sql).toContain("full_local_security_inventory");
     expect(plan.sql).toContain("auth.uid()");
+    expect(plan.sql).toContain("auth.identities");
+    expect(plan.sql).toContain("auth.sessions");
+    expect(plan.sql).toContain("auth.refresh_tokens");
+    expect(plan.sql).toContain("auth.flow_state");
+    expect(plan.sql).toContain("storage.buckets");
+    expect(plan.sql).toContain("storage.objects");
+    expect(plan.sql).toContain("public.recipe_image_objects");
     expect(plan.sql).not.toContain("remote_auth_identity_epochs");
     expect(() =>
       buildPersonalRecipeEditorFullLocalVerificationPlan({
@@ -375,8 +409,7 @@ describe("personal recipe editor full-local verifier", () => {
   it("accepts an exact valid self-owned isolated full-local result", () => {
     expect(() =>
       assertPersonalRecipeEditorFullLocalResult({
-        full_local_authority: fullLocalResult,
-        personal_editor_source: sourceEvidence,
+        ...validLocalResult,
       }),
     ).not.toThrow();
     expect(collectPersonalRecipeEditorSourceEvidence(process.cwd())).toEqual(
@@ -385,10 +418,7 @@ describe("personal recipe editor full-local verifier", () => {
   });
 
   it("fails closed on missing, extra, drift, count and remote-write result changes", () => {
-    const validResult = {
-      full_local_authority: fullLocalResult,
-      personal_editor_source: sourceEvidence,
-    };
+    const validResult = validLocalResult;
     const missingFullLocalField = Object.fromEntries(
       Object.entries(fullLocalResult).filter(([key]) => key !== "remote_writes"),
     );
@@ -420,6 +450,41 @@ describe("personal recipe editor full-local verifier", () => {
           remote_application_writes: 1,
         },
       },
+      {
+        ...validResult,
+        full_local_authority: {
+          ...fullLocalResult,
+          auth_identity_mapping_mismatch_count: 1,
+        },
+      },
+      {
+        ...validResult,
+        full_local_authority: {
+          ...fullLocalResult,
+          auth_session_row_count: 1,
+        },
+      },
+      {
+        ...validResult,
+        full_local_authority: {
+          ...fullLocalResult,
+          private_storage_bucket_drift_count: 1,
+        },
+      },
+      {
+        ...validResult,
+        full_local_authority: {
+          ...fullLocalResult,
+          private_storage_policy_count: 1,
+        },
+      },
+      {
+        ...validResult,
+        full_local_authority: {
+          ...fullLocalResult,
+          private_storage_object_registry_mismatch_count: 1,
+        },
+      },
     ]) {
       expect(() =>
         assertPersonalRecipeEditorFullLocalResult(result),
@@ -433,6 +498,8 @@ describe("personal recipe editor full-local verifier", () => {
 
     for (const evidence of [
       { ...sourceEvidence, browser_direct_storage_path_count: 1 },
+      { ...sourceEvidence, browser_direct_data_mutation_count: 1 },
+      { ...sourceEvidence, browser_raw_rest_mutation_count: 1 },
       { ...sourceEvidence, user_direct_service_role_count: 1 },
       { ...sourceEvidence, user_service_role_violation_count: 1 },
       { ...sourceEvidence, capability_on_occurrence_count: 1 },
@@ -450,7 +517,10 @@ describe("personal recipe editor full-local verifier", () => {
 
   it("requires exact checks and fails closed on permission/public/write boundary drift", () => {
     expect(() =>
-      assertPersonalRecipeEditorFullLocalExecutionEvidence(executionEvidence),
+      assertPersonalRecipeEditorFullLocalExecutionEvidence(
+        executionEvidence,
+        { localResult: validLocalResult },
+      ),
     ).not.toThrow();
 
     for (const evidence of [
@@ -490,18 +560,56 @@ describe("personal recipe editor full-local verifier", () => {
       { ...executionEvidence, extra: true },
     ]) {
       expect(() =>
-        assertPersonalRecipeEditorFullLocalExecutionEvidence(evidence),
+        assertPersonalRecipeEditorFullLocalExecutionEvidence(
+          evidence,
+          { localResult: validLocalResult },
+        ),
       ).toThrow(/execution evidence failed closed/i);
     }
+  });
+
+  it("derives boundary statuses from validated SQL and AST observations", () => {
+    expect(buildPersonalRecipeEditorBoundaryChecks({
+      checks: executionEvidence.checks,
+      localResult: validLocalResult,
+    })).toEqual(boundaryChecks);
+
+    expect(buildPersonalRecipeEditorBoundaryChecks({
+      checks: executionEvidence.checks,
+      localResult: {
+        ...validLocalResult,
+        personal_editor_source: {
+          ...sourceEvidence,
+          browser_direct_data_mutation_count: 1,
+        },
+      },
+    }).browser_direct_data_storage_mutation).toBe("detected");
+    expect(buildPersonalRecipeEditorBoundaryChecks({
+      checks: executionEvidence.checks,
+      localResult: {
+        ...validLocalResult,
+        personal_editor_source: {
+          ...sourceEvidence,
+          user_direct_service_role_count: 1,
+        },
+      },
+    }).service_role_user_fallback).toBe("detected");
+    expect(buildPersonalRecipeEditorBoundaryChecks({
+      checks: executionEvidence.checks,
+      localResult: {
+        ...validLocalResult,
+        full_local_authority: {
+          ...fullLocalResult,
+          remote_application_writes: 1,
+        },
+      },
+    }).remote_application_writes).toBe("detected");
   });
 
   it("builds an exact secret-safe summary without hybrid authority evidence", () => {
     const summary = buildPersonalRecipeEditorFullLocalSummary({
       mergeSha: sourceMergeSha,
-      localResult: {
-        full_local_authority: fullLocalResult,
-        personal_editor_source: sourceEvidence,
-      },
+      localResult: validLocalResult,
       executionEvidence,
     });
 
@@ -512,12 +620,13 @@ describe("personal recipe editor full-local verifier", () => {
       merge_sha: sourceMergeSha,
       source_of_record_status: "live-remote-read-only-pre-floor",
       full_local_auth_db_storage_status: "ready",
-      stable_remote_uuid_restore_status: "ready",
-      remote_transient_auth_state_status: "excluded-relogin-required",
+      stable_remote_uuid_restore_status: "pending-manual-restore-manifest",
+      remote_transient_auth_state_status: "local-zero-manifest-pending",
       local_session_rls_owner_boundary_status: "ready",
       personal_editor_permission_boundary_status: "ready",
       public_surface_status: "app-and-official-auth-v1-only",
       private_storage_image_authority_status: "ready",
+      restore_manifest_status: "pending-manual-evidence",
       external_personal_write_status: "dark",
       automated_check_count: requiredCheckIds.length,
       manual_only_status: "pending",

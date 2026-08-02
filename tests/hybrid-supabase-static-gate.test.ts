@@ -1,8 +1,35 @@
-import { readFileSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 
 import { inventoryHybridAuthorityPaths } from "../scripts/lib/hybrid-authority-inventory.mjs";
+
+const temporaryRepositories: string[] = [];
+
+function fixtureRepository(files: Record<string, string>) {
+  const root = mkdtempSync(join(tmpdir(), "homecook-authority-inventory-"));
+  temporaryRepositories.push(root);
+  for (const [relativePath, source] of Object.entries(files)) {
+    const absolutePath = join(root, relativePath);
+    mkdirSync(join(absolutePath, ".."), { recursive: true });
+    writeFileSync(absolutePath, source, "utf8");
+  }
+  return root;
+}
+
+afterEach(() => {
+  while (temporaryRepositories.length > 0) {
+    rmSync(temporaryRepositories.pop()!, { force: true, recursive: true });
+  }
+});
 
 describe("hybrid authority AST/static gate", () => {
   it("has zero user-route service-role fallback or direct bypass", () => {
@@ -130,6 +157,66 @@ describe("hybrid authority AST/static gate", () => {
     const inventory = inventoryHybridAuthorityPaths();
 
     expect(inventory.browserDirectStoragePaths).toEqual([]);
+  });
+
+  it("detects browser Data/REST mutation and aliased conditional service-role calls", () => {
+    const root = fixtureRepository({
+      "app/client-boundary.tsx": `"use client";
+import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { createServiceRoleClient as elevated } from "@/lib/supabase/server";
+import * as serverClients from "@/lib/supabase/server";
+
+const client = getSupabaseBrowserClient();
+client.from("recipes").update({ title: "blocked" });
+client.storage.from("recipe-images-private").remove(["blocked.jpg"]);
+fetch("https://data.example.test/rest/v1/recipes", { method: "PATCH" });
+const fallback = Math.random() > 0.5
+  ? elevated()
+  : serverClients.createServiceRoleClient();
+void fallback;
+`,
+    });
+
+    const inventory = inventoryHybridAuthorityPaths(root);
+
+    expect(inventory.browserDirectDataMutationPaths).toEqual([
+      expect.objectContaining({
+        file: "app/client-boundary.tsx",
+        method: "update",
+        table: "recipes",
+      }),
+    ]);
+    expect(inventory.browserRawRestMutationPaths).toEqual([
+      expect.objectContaining({
+        file: "app/client-boundary.tsx",
+        method: "PATCH",
+      }),
+    ]);
+    expect(inventory.browserDirectStoragePaths).toHaveLength(1);
+    expect(inventory.userDirectServiceRoleEntries).toEqual([
+      expect.objectContaining({ file: "app/client-boundary.tsx" }),
+      expect.objectContaining({ file: "app/client-boundary.tsx" }),
+    ]);
+  });
+
+  it("does not mistake unrelated from/insert chains or REST reads for browser mutation", () => {
+    const root = fixtureRepository({
+      "components/safe-client.tsx": `"use client";
+const localCollection = {
+  from() {
+    return { insert() { return "local-only"; } };
+  },
+};
+localCollection.from().insert();
+fetch("https://data.example.test/rest/v1/recipes");
+`,
+    });
+
+    const inventory = inventoryHybridAuthorityPaths(root);
+
+    expect(inventory.browserDirectDataMutationPaths).toEqual([]);
+    expect(inventory.browserRawRestMutationPaths).toEqual([]);
+    expect(inventory.userDirectServiceRoleEntries).toEqual([]);
   });
 
   it("keeps every remaining service-role call inside an exact allowlist", () => {

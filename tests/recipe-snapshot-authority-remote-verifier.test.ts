@@ -435,7 +435,7 @@ describe("recipe snapshot authority remote verifier", () => {
     );
   });
 
-  it("removes Git environment overrides that can redirect ancestry evidence", async () => {
+  it("uses a strict Git environment allowlist for ancestry evidence", async () => {
     const verifier = await import(
       "../scripts/lib/recipe-snapshot-authority-remote-verifier.mjs"
     );
@@ -445,6 +445,9 @@ describe("recipe snapshot authority remote verifier", () => {
         baseEnvironment: {
           PATH: "/usr/bin:/bin",
           HOME: "/tmp/homecook",
+          LANG: "ko_KR.UTF-8",
+          LC_ALL: "C.UTF-8",
+          TMPDIR: "/tmp/homecook-git",
           GIT_DIR: "/tmp/forged.git",
           GIT_WORK_TREE: "/tmp/forged-worktree",
           GIT_OBJECT_DIRECTORY: "/tmp/forged-objects",
@@ -457,12 +460,18 @@ describe("recipe snapshot authority remote verifier", () => {
           GIT_CONFIG_SYSTEM: "/tmp/forged-system-config",
           GIT_CONFIG_VALUE_0: "0",
           GIT_ASKPASS: "/usr/bin/ssh-askpass",
+          GIT_SSH_COMMAND: "ssh -o ProxyCommand=poison",
+          NODE_OPTIONS: "--require=/tmp/poison.cjs",
+          HTTPS_PROXY: "http://proxy.example.test",
+          SUPABASE_SERVICE_ROLE_KEY: "must-not-reach-git",
         },
       }),
     ).toEqual({
       PATH: "/usr/bin:/bin",
       HOME: "/tmp/homecook",
-      GIT_ASKPASS: "/usr/bin/ssh-askpass",
+      LANG: "ko_KR.UTF-8",
+      LC_ALL: "C.UTF-8",
+      TMPDIR: "/tmp/homecook-git",
     });
   });
 
