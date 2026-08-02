@@ -49,7 +49,8 @@
 - [ ] planner start creates session, session-meal rows and one active claim per Meal atomically <!-- omo:id=accept-future-planner-claim;stage=2;scope=backend;review=3,6 -->
 - [ ] concurrent attempts for the same Meal produce one winner and no duplicate claim/session/downstream effect <!-- omo:id=accept-future-concurrent-start;stage=2;scope=backend;review=3,6 -->
 - [ ] standalone start alone pins current content after access, deleted-state and expected recipe revision validation under recipe lock <!-- omo:id=accept-future-standalone-pin;stage=2;scope=backend;review=3,6 -->
-- [ ] start success `data` is exactly `{session_id,contract_version:"snapshot_v2",mode,status:"in_progress",content_summary:{recipe_id,title,cooking_servings}}` before any COOK_MODE navigation <!-- omo:id=accept-future-start-response;stage=4;scope=shared;review=3,5,6 -->
+- [ ] start success `data` is exactly `{session_id,contract_version:"snapshot_v2",mode,status:"in_progress",content_summary:{recipe_id,title,cooking_servings}}` <!-- omo:id=accept-future-start-response;stage=2;scope=backend;review=3,6 -->
+- [ ] UI waits for the exact start success response before any COOK_MODE navigation <!-- omo:id=accept-future-start-navigation;stage=4;scope=frontend;review=5,6 -->
 - [ ] creation flag off returns exact `409 SNAPSHOT_V2_CREATION_DISABLED` with session/claim mutation zero outside the official internal/test allowlist <!-- omo:id=accept-future-creation-disabled;stage=2;scope=backend;review=3,6 -->
 
 ## Read / Cancel / Dispatch
@@ -94,12 +95,14 @@
 ## Verification / Evidence
 
 - [ ] Stage 1 claims only docs validators, focused workflow tests, lint/typecheck, audit and diff check <!-- omo:id=accept-future-stage1-honesty;stage=2;scope=shared;review=3,6 -->
-- [ ] Stage 2/4 first records failing route/DB/component tests before production changes <!-- omo:id=accept-future-tdd-red;stage=2;scope=shared;review=3,5,6 -->
+- [ ] Stage 2 first records failing route/DB tests before backend production changes <!-- omo:id=accept-future-tdd-red;stage=2;scope=backend;review=3,6 -->
+- [ ] Stage 4 first records failing component tests before frontend production changes <!-- omo:id=accept-future-component-tdd-red;stage=4;scope=frontend;review=5,6 -->
 - [ ] fresh/replay PostgreSQL tests cover preview RLS/ACL, locks, idempotency, claim concurrency and full rollback <!-- omo:id=accept-future-postgres;stage=2;scope=backend;review=3,6 -->
 - [ ] real local Supabase two-owner matrix and before/after digests prove denied/stale/claim paths are unchanged <!-- omo:id=accept-future-real-db;stage=2;scope=backend;review=3,6 -->
-- [ ] E2E covers keep/replace-all, shopping read-only, stale preview, same-Meal concurrent start, cancel/restart and historical snapshot invariance <!-- omo:id=accept-future-e2e;stage=4;scope=shared;review=5,6 -->
+- [ ] E2E covers keep/replace-all, shopping read-only, stale preview, same-Meal concurrent start, cancel/restart and historical snapshot invariance <!-- omo:id=accept-future-e2e;stage=4;scope=frontend;review=5,6 -->
 - [ ] merged-exact-SHA server-production/local-rehearsal verifier is read-only and production flags remain off until approved release gate <!-- omo:id=accept-future-remote;stage=2;scope=shared;review=3,6 -->
-- [ ] independent internal1.5, security/DB, five-axis, design, Stage 3/5/6 and closeout reviews have zero unresolved required findings <!-- omo:id=accept-future-independent-review;stage=2;scope=shared;review=3,5,6 -->
+- [ ] independent internal1.5, security/DB, five-axis, Stage 3/6 and closeout reviews have zero unresolved backend findings <!-- omo:id=accept-future-independent-review;stage=2;scope=shared;review=3,6 -->
+- [ ] independent design, Stage 5/6 and closeout reviews have zero unresolved frontend findings <!-- omo:id=accept-future-independent-frontend-review;stage=4;scope=frontend;review=5,6 -->
 - [ ] current-head PR checks and post-merge QA/Policy/Security/Vercel are terminal green or intended skip <!-- omo:id=accept-future-ci;stage=2;scope=shared;review=3,6 -->
 
 ## Manual QA
