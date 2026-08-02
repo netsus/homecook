@@ -16,7 +16,7 @@ function migration() {
 }
 
 describe("personal recipe customization write core", () => {
-  it("dark-ships one server-only generation-bound RPC without a new public route", () => {
+  it("keeps the generation-bound core behind the exact Stage 2 successor route", () => {
     const sql = migration();
 
     expect(sql).toMatch(/create or replace function public\.write_personal_recipe_core/i);
@@ -30,7 +30,11 @@ describe("personal recipe customization write core", () => {
       join(process.cwd(), "app/api/v1/recipes/[id]/route.ts"),
       "utf8",
     );
-    expect(recipeDetailRoute).not.toMatch(/export async function (?:PATCH|DELETE)/);
+    expect(recipeDetailRoute).toContain("export async function PATCH");
+    expect(recipeDetailRoute).toContain("export async function DELETE");
+    expect(recipeDetailRoute).toContain("readVerifiedAccountGenerationSession");
+    expect(recipeDetailRoute).toContain('"write_recipe_future_plan_change"');
+    expect(recipeDetailRoute).toContain('"write_personal_recipe_core"');
   });
 
   it("supports create, immutable public fork, same-ID update, and explicit save-as-new", () => {

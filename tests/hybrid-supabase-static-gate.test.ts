@@ -14,6 +14,22 @@ import { inventoryHybridAuthorityPaths } from "../scripts/lib/hybrid-authority-i
 
 const temporaryRepositories: string[] = [];
 
+const APPROVED_USER_SERVICE_ROLE_FILES = [
+  "app/api/v1/cooking/session-attempts/[id]/cancel/route.ts",
+  "app/api/v1/cooking/session-attempts/[id]/cook-mode/route.ts",
+  "app/api/v1/cooking/session-attempts/route.ts",
+  "app/api/v1/meals/[meal_id]/route.ts",
+  "app/api/v1/meals/[meal_id]/route.ts",
+  "app/api/v1/meals/route.ts",
+  "app/api/v1/recipes/[id]/future-plan-impact/route.ts",
+  "app/api/v1/shopping/lists/route.ts",
+];
+const APPROVED_SERVICE_ROLE_FILES = [
+  ...APPROVED_USER_SERVICE_ROLE_FILES.slice(0, -1),
+  "app/api/v1/recipes/[id]/route.ts",
+  APPROVED_USER_SERVICE_ROLE_FILES.at(-1)!,
+];
+
 function fixtureRepository(files: Record<string, string>) {
   const root = mkdtempSync(join(tmpdir(), "homecook-authority-inventory-"));
   temporaryRepositories.push(root);
@@ -32,11 +48,15 @@ afterEach(() => {
 });
 
 describe("hybrid authority AST/static gate", () => {
-  it("has zero user-route service-role fallback or direct bypass", () => {
+  it("has only the exact verified-session service-role routes and no direct bypass", () => {
     const inventory = inventoryHybridAuthorityPaths();
 
     expect(inventory.userServiceRoleViolations).toEqual([]);
-    expect(inventory.userDirectServiceRoleEntries).toEqual([]);
+    expect(inventory.userDirectServiceRoleEntries.map((entry) => entry.file))
+      .toEqual(APPROVED_USER_SERVICE_ROLE_FILES);
+    expect(inventory.userDirectServiceRoleEntries.every((entry) =>
+      entry.classification === "user" && entry.kind === "service-role-call"
+    )).toBe(true);
     expect(inventory.internalOperationViolations).toEqual([]);
     expect(inventory.remoteCompatibilityEntries.map((entry) => entry.file))
       .toEqual([
@@ -113,7 +133,7 @@ describe("hybrid authority AST/static gate", () => {
   it("routes every local Data handler through the common API response boundary", () => {
     const inventory = inventoryHybridAuthorityPaths();
 
-    expect(inventory.dataRouteResponseBoundaries).toHaveLength(52);
+    expect(inventory.dataRouteResponseBoundaries).toHaveLength(56);
     expect(inventory.dataRouteResponseBoundaryViolations).toEqual([]);
   });
 
@@ -284,8 +304,10 @@ fetch("https://data.example.test/rest/v1/recipes");
   it("keeps every remaining service-role call inside an exact allowlist", () => {
     const inventory = inventoryHybridAuthorityPaths();
 
-    expect(inventory.serviceRoleEntries).toEqual([]);
-    expect(inventory.genericLocalServiceRoleViolations).toEqual([]);
+    expect(inventory.serviceRoleEntries.map((entry) => entry.file))
+      .toEqual(APPROVED_SERVICE_ROLE_FILES);
+    expect(inventory.genericLocalServiceRoleViolations)
+      .toEqual(inventory.serviceRoleEntries);
     expect(inventory.remoteCompatibilityEntries.map((entry) => entry.file))
       .toEqual(["app/api/v1/recipes/[id]/route.ts"]);
   });

@@ -1,7 +1,7 @@
 {
   "generated_from": "scripts/lib/hybrid-authority-inventory.mjs",
   "user_service_role_violation_count": 0,
-  "user_direct_service_role_count": 0,
+  "user_direct_service_role_count": 8,
   "internal_operation_violation_count": 0,
   "internal_operation_allowlist": {
     "createAuthCallbackOperationsClient": [
@@ -169,7 +169,7 @@
       "classification": "public",
       "file": "app/api/v1/recipes/[id]/route.ts",
       "column": 27,
-      "line": 284,
+      "line": 300,
       "kind": "remote-only-compatibility-call"
     }
   ],
@@ -195,6 +195,70 @@
     "lib/server/admin-events.ts",
     "lib/supabase/server.ts"
   ],
-  "service_role_entries": [],
+  "service_role_entries": [
+    {
+      "classification": "user",
+      "file": "app/api/v1/cooking/session-attempts/[id]/cancel/route.ts",
+      "column": 25,
+      "line": 47,
+      "kind": "service-role-call"
+    },
+    {
+      "classification": "user",
+      "file": "app/api/v1/cooking/session-attempts/[id]/cook-mode/route.ts",
+      "column": 25,
+      "line": 41,
+      "kind": "service-role-call"
+    },
+    {
+      "classification": "user",
+      "file": "app/api/v1/cooking/session-attempts/route.ts",
+      "column": 25,
+      "line": 56,
+      "kind": "service-role-call"
+    },
+    {
+      "classification": "user",
+      "file": "app/api/v1/meals/[meal_id]/route.ts",
+      "column": 25,
+      "line": 260,
+      "kind": "service-role-call"
+    },
+    {
+      "classification": "user",
+      "file": "app/api/v1/meals/[meal_id]/route.ts",
+      "column": 25,
+      "line": 342,
+      "kind": "service-role-call"
+    },
+    {
+      "classification": "user",
+      "file": "app/api/v1/meals/route.ts",
+      "column": 25,
+      "line": 688,
+      "kind": "service-role-call"
+    },
+    {
+      "classification": "user",
+      "file": "app/api/v1/recipes/[id]/future-plan-impact/route.ts",
+      "column": 25,
+      "line": 60,
+      "kind": "service-role-call"
+    },
+    {
+      "classification": "public",
+      "file": "app/api/v1/recipes/[id]/route.ts",
+      "column": 25,
+      "line": 498,
+      "kind": "service-role-call"
+    },
+    {
+      "classification": "user",
+      "file": "app/api/v1/shopping/lists/route.ts",
+      "column": 25,
+      "line": 1045,
+      "kind": "service-role-call"
+    }
+  ],
   "service_role_fallback_entries": []
 }

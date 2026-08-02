@@ -50,6 +50,14 @@ Command: `pnpm test:recipe-content-snapshot-future-propagation:postgres`
 - `pnpm audit --audit-level high`: high/critical `0`; one pre-existing low advisory.
 - Frozen-lockfile install, source/workflow/workpack/automation/bookkeeping validators, security-function contract classification and `git diff --check` passed before the evidence projection; they are rerun on its final head.
 
+## Draft PR quality-gate repair
+
+- Draft PR #1278 exact head `c8057fc878f4a8ad7d34072aa1c617eef455a4c0` initially had `12` successful checks, `2` intended skips and one failed `CI / quality` check. The failure was confined to predecessor static/inventory locks that still required zero PATCH/DELETE and zero service-role entries.
+- Local RED reproduced `7` failures across the hybrid, predecessor and permission suites. A following full `pnpm test` exposed the same missing account-session route classifications.
+- The repair reuses the full-local verifier's exact allowlist: eight verified-session user routes and one public compatibility route are allowed by exact file/count, with unapproved or missing entries remaining fail-closed. The account-session inventory now classifies the five Stage 2 mutation/preview routes explicitly.
+- Focused repair verification passed `6 files / 39 tests`; generated hybrid and account-session inventories validate cleanly.
+- A full-suite rerun exposed one existing HOME loading race under parallel load; the assertion now waits for its asynchronous theme heading. Final local `pnpm test`: `499 files passed / 28 intended skip`, `5,125 tests passed / 318 intended skip`.
+
 ## Independent auxiliary reviews
 
 - Code/quality reviewer `/root/slice7_stage2_code_review` approved the implementation plus the one-serving snapshot-group regression with P0/P1/P2 `0/0/0`.

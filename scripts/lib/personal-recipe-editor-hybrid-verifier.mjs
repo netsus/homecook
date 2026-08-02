@@ -1,7 +1,6 @@
-import { readdirSync, readFileSync } from "node:fs";
-import { join } from "node:path";
-
-import { inventoryHybridAuthorityPaths } from "./hybrid-authority-inventory.mjs";
+import {
+  collectPersonalRecipeEditorSourceEvidence,
+} from "./personal-recipe-editor-full-local-verifier.mjs";
 import {
   assertRecipeSnapshotAuthorityReadOnlyVerificationSql,
 } from "./recipe-snapshot-authority-remote-verifier.mjs";
@@ -41,33 +40,6 @@ function hasExactKeys(value, expectedKeys) {
 
 function stripSqlStringLiterals(value) {
   return value.replace(/'(?:''|[^'])*'/gu, "''");
-}
-
-function listSourceFiles(directory) {
-  const entries = readdirSync(directory, {
-    encoding: "utf8",
-    withFileTypes: true,
-  });
-  const files = [];
-  for (const entry of entries) {
-    if (entry.name.startsWith(".")) continue;
-    const path = join(directory, entry.name);
-    if (entry.isDirectory()) {
-      files.push(...listSourceFiles(path));
-      continue;
-    }
-    if (entry.isFile() && /\.(?:ts|tsx)$/u.test(entry.name)) {
-      files.push(path);
-    }
-  }
-  return files.sort();
-}
-
-function countPatternMatchesInFiles(files, pattern) {
-  return files.reduce((total, file) => {
-    const source = readFileSync(file, "utf8");
-    return total + (source.match(pattern)?.length ?? 0);
-  }, 0);
 }
 
 export function assertPersonalRecipeEditorMergedSource({
@@ -289,89 +261,11 @@ export function buildPersonalRecipeEditorHybridLocalPsqlRequest(options) {
 export function collectPersonalRecipeEditorHybridSourceEvidence(
   repositoryRoot,
 ) {
-  const inventory = inventoryHybridAuthorityPaths(repositoryRoot);
-  const appSourceFiles = listSourceFiles(join(repositoryRoot, "app"));
-  const mypageSourceFiles = listSourceFiles(
-    join(repositoryRoot, "components/mypage"),
+  const successorEvidence =
+    collectPersonalRecipeEditorSourceEvidence(repositoryRoot);
+  return Object.fromEntries(
+    SOURCE_EVIDENCE_KEYS.map((key) => [key, successorEvidence[key]]),
   );
-  const recipebookSourceFiles = listSourceFiles(
-    join(repositoryRoot, "components/recipebook"),
-  );
-  const detailSource = readFileSync(
-    join(
-      repositoryRoot,
-      "components/recipe/recipe-detail-screen.tsx",
-    ),
-    "utf8",
-  );
-  const policySource = readFileSync(
-    join(repositoryRoot, "lib/personal-recipe-editor.ts"),
-    "utf8",
-  );
-  const recipeRouteSource = readFileSync(
-    join(repositoryRoot, "app/api/v1/recipes/[id]/route.ts"),
-    "utf8",
-  );
-  const recipeCollectionRouteSource = readFileSync(
-    join(repositoryRoot, "app/api/v1/recipes/route.ts"),
-    "utf8",
-  );
-  const capabilityOccurrenceCount =
-    detailSource.match(/\bcapabilityEnabled\b/gu)?.length ?? 0;
-  const capabilityOffOccurrenceCount =
-    detailSource.match(/capabilityEnabled=\{false\}/gu)?.length ?? 0;
-
-  const personalCreateCase =
-    policySource.match(
-      /case\s+"personal-create"(?<body>[\s\S]*?)(?=\n\s*case\s+|\n\s*\}\n)/u,
-    )?.groups?.body ?? "";
-
-  return {
-    app_surface_personal_editor_marker_count:
-      countPatternMatchesInFiles(
-        appSourceFiles,
-        /\b(?:personal-create|personal-edit|public-fork|personal_recipe_v2)\b|내 레시피로 수정/gu,
-      ),
-    browser_direct_storage_path_count:
-      inventory.browserDirectStoragePaths.length,
-    capability_on_occurrence_count:
-      capabilityOccurrenceCount - capabilityOffOccurrenceCount,
-    capability_off_occurrence_count: capabilityOffOccurrenceCount,
-    internal_operation_violation_count:
-      inventory.internalOperationViolations.length,
-    legacy_recipe_post_handler_count:
-      recipeCollectionRouteSource.match(
-        /export\s+async\s+function\s+POST\b/gu,
-      )?.length ?? 0,
-    mypage_surface_personal_editor_marker_count:
-      countPatternMatchesInFiles(
-        mypageSourceFiles,
-        /\b(?:personal-create|personal-edit|public-fork|personal_recipe_v2)\b|내 레시피로 수정/gu,
-      ),
-    personal_create_active_entry:
-      !/activeEntry:\s*false/u.test(personalCreateCase),
-    recipe_collection_personal_editor_marker_count:
-      recipeCollectionRouteSource.match(
-        /\b(?:personal-create|personal-edit|public-fork|personal_recipe_v2)\b/gu,
-      )?.length ?? 0,
-    recipe_collection_personal_origin_field_count:
-      recipeCollectionRouteSource.match(/\borigin_recipe_id\b/gu)?.length ?? 0,
-    recipe_delete_handler_count:
-      recipeRouteSource.match(/export\s+async\s+function\s+DELETE\b/gu)
-        ?.length ?? 0,
-    recipe_patch_handler_count:
-      recipeRouteSource.match(/export\s+async\s+function\s+PATCH\b/gu)
-        ?.length ?? 0,
-    recipebook_surface_personal_editor_marker_count:
-      countPatternMatchesInFiles(
-        recipebookSourceFiles,
-        /\b(?:personal-create|personal-edit|public-fork|personal_recipe_v2)\b|내 레시피로 수정/gu,
-      ),
-    user_direct_service_role_count:
-      inventory.userDirectServiceRoleEntries.length,
-    user_service_role_violation_count:
-      inventory.userServiceRoleViolations.length,
-  };
 }
 
 export function assertPersonalRecipeEditorHybridSourceEvidence(evidence) {
@@ -393,10 +287,10 @@ export function assertPersonalRecipeEditorHybridSourceEvidence(evidence) {
     && evidence.personal_create_active_entry === false
     && evidence.recipe_collection_personal_editor_marker_count === 0
     && evidence.recipe_collection_personal_origin_field_count === 0
-    && evidence.recipe_delete_handler_count === 0
-    && evidence.recipe_patch_handler_count === 0
+    && evidence.recipe_delete_handler_count === 1
+    && evidence.recipe_patch_handler_count === 1
     && evidence.recipebook_surface_personal_editor_marker_count === 0
-    && evidence.user_direct_service_role_count === 0
+    && evidence.user_direct_service_role_count === 8
     && evidence.user_service_role_violation_count === 0;
 
   if (!valid) {
@@ -434,7 +328,8 @@ export function buildPersonalRecipeEditorHybridSummary({
     local_auth_user_count: 0,
     local_active_epoch_count: localResult.local_active_epoch_count,
     local_active_binding_count: localResult.local_active_binding_count,
-    service_role_user_path_count: 0,
+    service_role_user_path_count:
+      sourceEvidence.user_direct_service_role_count,
     browser_direct_storage_path_count: 0,
     remote_auth_control_plane_status: "ready",
     active_epoch_count: remoteAuthEvidence.active_epoch_count,

@@ -108,7 +108,7 @@ describe("personal recipe editor permission boundaries", () => {
     expect(recipesQuery.eq).toHaveBeenCalledWith("id", "550e8400-e29b-41d4-a716-446655440001");
   });
 
-  it("keeps the parent recipe read ahead of child reads and exposes no PATCH or DELETE handler in the detail route", async () => {
+  it("keeps the parent read ahead of child reads and exposes only the Stage 2 mutation boundary", async () => {
     const source = await import("node:fs/promises").then(({ readFile }) =>
       readFile("app/api/v1/recipes/[id]/route.ts", "utf8"),
     );
@@ -119,8 +119,11 @@ describe("personal recipe editor permission boundaries", () => {
 
     expect(parentReadIndex).toBeGreaterThan(-1);
     expect(childReadIndex).toBeGreaterThan(parentReadIndex);
-    expect(source).not.toContain("export async function PATCH");
-    expect(source).not.toContain("export async function DELETE");
+    expect(source).toContain("export async function PATCH");
+    expect(source).toContain("export async function DELETE");
+    expect(source).toContain("readVerifiedAccountGenerationSession");
+    expect(source).toContain('"write_recipe_future_plan_change"');
+    expect(source).toContain('"write_personal_recipe_core"');
     expect(source).toContain('return fail("RESOURCE_NOT_FOUND", "레시피를 찾을 수 없어요.", 404);');
   });
 });
