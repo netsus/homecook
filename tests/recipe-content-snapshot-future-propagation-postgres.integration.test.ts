@@ -720,6 +720,10 @@ describeIf("recipe content snapshot future propagation PostgreSQL", () => {
     const claimSession = "97000000-0000-4000-8000-000000000001";
     psql(`
       begin;
+      select public.set_account_generation_internal_writer_marker(
+        '${cutoverAttempt}',
+        true
+      );
       set constraints all deferred;
       insert into public.cooking_sessions (
         id, user_id, contract_version, session_kind, recipe_id,
@@ -733,8 +737,19 @@ describeIf("recipe content snapshot future propagation PostgreSQL", () => {
         from public.meals where id = '${secondEligibleMeal}';
       insert into public.cooking_session_meal_claims (meal_id, session_id, owner_user_id)
       values ('${secondEligibleMeal}', '${claimSession}', '${owner}');
+      select public.set_account_generation_internal_writer_marker(
+        '${cutoverAttempt}',
+        false
+      );
       commit;
     `);
+    expect(
+      psql(`
+        select (result_json ? '_internal_generation_writer_txid')::text
+        from public.account_generation_cutover_attempts
+        where id = '${cutoverAttempt}';
+      `),
+    ).toBe("false");
     const claimed = preview("claimed-replace", 4);
     const claimDigest = wholeRequestDigest();
     expectSqlFailure(
@@ -927,6 +942,7 @@ describeIf("recipe content snapshot future propagation PostgreSQL", () => {
     const control = spawnPsql(
       `select pg_advisory_lock(hashtextextended('${barrier}', 0)); select pg_sleep(1); select pg_advisory_unlock(hashtextextended('${barrier}', 0));`,
     );
+    const controlExit = waitForExit(control);
     await new Promise((resolve) => setTimeout(resolve, 100));
     const contenders = [
       "96000000-0000-4000-8000-000000000060",
@@ -940,7 +956,7 @@ describeIf("recipe content snapshot future propagation PostgreSQL", () => {
       ),
     );
     const outcomes = await Promise.all(contenders.map(waitForExit));
-    await waitForExit(control);
+    await controlExit;
     expect(outcomes.filter((outcome) => outcome.status === 0)).toHaveLength(1);
     expect(outcomes.filter((outcome) => outcome.status !== 0)).toHaveLength(1);
     expect(outcomes.map((outcome) => outcome.stderr).join("\n")).toMatch(
