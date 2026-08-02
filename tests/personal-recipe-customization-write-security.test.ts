@@ -20,12 +20,18 @@ describe("personal recipe write security", () => {
     const sql = migration();
     const writer = sql.indexOf("create or replace function public.write_personal_recipe_core");
     const fence = sql.indexOf("homecook-account-generation-cutover", writer);
+    const authorityControl = sql.indexOf("private.full_local_auth_control", fence);
     const owner = sql.indexOf("homecook-account-owner:");
+    const sessionAuthority = sql.indexOf("public.assert_full_local_session_authority", owner);
     const recipe = sql.indexOf("perform public.lock_personal_recipe_ids", owner);
     const resource = sql.indexOf("for update", recipe);
 
     expect(fence).toBeGreaterThan(-1);
+    expect(authorityControl).toBeGreaterThan(fence);
+    expect(owner).toBeGreaterThan(authorityControl);
     expect(owner).toBeGreaterThan(fence);
+    expect(sessionAuthority).toBeGreaterThan(owner);
+    expect(recipe).toBeGreaterThan(sessionAuthority);
     expect(recipe).toBeGreaterThan(owner);
     expect(resource).toBeGreaterThan(recipe);
     expect(sql.slice(0, writer)).toMatch(/order by recipe_id::text collate "C"/i);
@@ -52,6 +58,18 @@ describe("personal recipe write security", () => {
     );
     expect(sql).toMatch(
       /recipe_visibility_guard\.is_owner_publicly_visible\(v_recipe\.created_by\)/i,
+    );
+    expect(sql).toMatch(/p_session_issued_at timestamp with time zone/i);
+    expect(sql).toMatch(/public\.read_full_local_auth_control\(\)/i);
+    expect(sql).toMatch(/public\.assert_full_local_session_authority\(/i);
+    expect(sql).toMatch(
+      /expected_account_generation[\s\S]*v_lifecycle\.account_generation/i,
+    );
+    expect(sql).toMatch(
+      /v_source\.visibility = 'public'[\s\S]*for share;/i,
+    );
+    expect(sql).toMatch(
+      /v_recipe\.visibility = 'public'[\s\S]*for share;/i,
     );
   });
 
@@ -100,7 +118,7 @@ describe("personal recipe write security", () => {
         owner: "postgres",
       }),
       expect.objectContaining({
-        signature: expect.stringMatching(/^public\.write_personal_recipe_core\(/),
+        signature: "public.write_personal_recipe_core(uuid, timestamp with time zone, text, integer, timestamp with time zone, text, uuid, uuid, bigint, jsonb, jsonb, jsonb, uuid, bigint, uuid, timestamp with time zone)",
         allowed_principals: ["service_role"],
         owner: "postgres",
       }),
@@ -130,7 +148,7 @@ describe("personal recipe write security", () => {
     const sql = migration();
     for (const signature of [
       "public.lock_personal_recipe_ids(uuid[])",
-      "public.write_personal_recipe_core(uuid, timestamp with time zone, text, integer, text, uuid, uuid, bigint, jsonb, jsonb, jsonb, uuid, bigint, uuid, timestamp with time zone)",
+      "public.write_personal_recipe_core(uuid, timestamp with time zone, text, integer, timestamp with time zone, text, uuid, uuid, bigint, jsonb, jsonb, jsonb, uuid, bigint, uuid, timestamp with time zone)",
       "public.cleanup_personal_recipe_write_receipts()",
     ]) {
       expect(sql).toContain(`alter function ${signature} owner to postgres`);

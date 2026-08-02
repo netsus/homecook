@@ -102,6 +102,7 @@ create or replace function public.write_personal_recipe_core(
   p_auth_identity_created_at_snapshot timestamp with time zone,
   p_session_key_hash text,
   p_hmac_key_version integer,
+  p_session_issued_at timestamp with time zone,
   p_operation text,
   p_recipe_id uuid,
   p_source_recipe_id uuid,
@@ -126,7 +127,8 @@ declare
   v_lifecycle public.user_account_lifecycles%rowtype;
   v_source_owner_lifecycle public.user_account_lifecycles%rowtype;
   v_recipe_owner_lifecycle public.user_account_lifecycles%rowtype;
-  v_binding public.user_session_generation_bindings%rowtype;
+  v_auth_control jsonb;
+  v_session_authority jsonb;
   v_recipe public.recipes%rowtype;
   v_source public.recipes%rowtype;
   v_idempotency public.mutation_idempotency_keys%rowtype;
@@ -302,6 +304,15 @@ begin
     pg_catalog.hashtextextended('homecook-account-generation-cutover', 0)
   );
 
+  -- Read and pin the global full-local control before the owner lock. The
+  -- canonical assertion is called after owner lifecycle acquisition so its
+  -- binding row lock remains in the official global -> owner -> resource order.
+  v_auth_control := public.read_full_local_auth_control();
+  perform 1
+  from private.full_local_auth_control as control
+  where control.singleton
+  for share;
+
   select capability.state, capability.current_cutover_attempt_id
     into v_capability_state, v_cutover_attempt_id
   from public.account_generation_capability_state as capability
@@ -345,20 +356,19 @@ begin
     raise exception 'ACCOUNT_SESSION_STALE' using errcode = '55000';
   end if;
 
-  select binding.*
-    into v_binding
-  from public.user_session_generation_bindings as binding
-  where binding.session_key_hash = p_session_key_hash
-    and binding.hmac_key_version = p_hmac_key_version
-    and binding.owner_uuid = p_owner_uuid
-    and binding.expected_account_generation = v_lifecycle.account_generation
-    and binding.auth_identity_created_at_snapshot
-      = p_auth_identity_created_at_snapshot
-    and binding.revoked_at is null
-  for key share;
+  v_session_authority := public.assert_full_local_session_authority(
+    v_auth_control ->> 'local_issuer',
+    p_owner_uuid,
+    p_auth_identity_created_at_snapshot,
+    p_session_key_hash,
+    p_hmac_key_version,
+    (v_auth_control ->> 'cutover_epoch')::bigint,
+    p_session_issued_at
+  );
 
-  if v_binding.owner_uuid is null then
-    raise exception 'ACCOUNT_SESSION_STALE' using errcode = '55000';
+  if (v_session_authority ->> 'expected_account_generation')::bigint
+    is distinct from v_lifecycle.account_generation then
+    raise exception 'ACCOUNT_GENERATION_STALE' using errcode = '55000';
   end if;
 
   if v_cutover_attempt_id is null then
@@ -417,7 +427,7 @@ begin
     where lifecycle.owner_uuid = v_source.created_by
     order by lifecycle.account_generation desc
     limit 1
-    for key share;
+    for share;
   end if;
   if v_recipe.visibility = 'public' and v_recipe.created_by is not null then
     select lifecycle.*
@@ -426,7 +436,7 @@ begin
     where lifecycle.owner_uuid = v_recipe.created_by
     order by lifecycle.account_generation desc
     limit 1
-    for key share;
+    for share;
   end if;
 
   v_operation_scope := 'personal_recipe_' || p_operation;
@@ -1044,7 +1054,7 @@ revoke all on function public.cleanup_personal_recipe_write_receipts()
   from public, anon, authenticated, service_role;
 
 alter function public.lock_personal_recipe_ids(uuid[]) owner to postgres;
-alter function public.write_personal_recipe_core(uuid, timestamp with time zone, text, integer, text, uuid, uuid, bigint, jsonb, jsonb, jsonb, uuid, bigint, uuid, timestamp with time zone) owner to postgres;
+alter function public.write_personal_recipe_core(uuid, timestamp with time zone, text, integer, timestamp with time zone, text, uuid, uuid, bigint, jsonb, jsonb, jsonb, uuid, bigint, uuid, timestamp with time zone) owner to postgres;
 alter function public.cleanup_personal_recipe_write_receipts() owner to postgres;
 alter function public.enforce_recipe_ingredient_product_link() owner to postgres;
 
@@ -1064,6 +1074,7 @@ revoke all on function public.write_personal_recipe_core(
   timestamp with time zone,
   text,
   integer,
+  timestamp with time zone,
   text,
   uuid,
   uuid,
@@ -1081,6 +1092,7 @@ grant execute on function public.write_personal_recipe_core(
   timestamp with time zone,
   text,
   integer,
+  timestamp with time zone,
   text,
   uuid,
   uuid,

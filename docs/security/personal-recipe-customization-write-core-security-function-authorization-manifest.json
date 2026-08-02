@@ -34,7 +34,7 @@
       ]
     },
     {
-      "signature": "public.write_personal_recipe_core(uuid, timestamp with time zone, text, integer, text, uuid, uuid, bigint, jsonb, jsonb, jsonb, uuid, bigint, uuid, timestamp with time zone)",
+      "signature": "public.write_personal_recipe_core(uuid, timestamp with time zone, text, integer, timestamp with time zone, text, uuid, uuid, bigint, jsonb, jsonb, jsonb, uuid, bigint, uuid, timestamp with time zone)",
       "control_class": "application-controlled",
       "effect": "mutation",
       "exposure": "service-internal",

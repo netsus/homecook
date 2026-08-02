@@ -22,7 +22,7 @@ describe("personal recipe customization write core", () => {
     expect(sql).toMatch(/create or replace function public\.write_personal_recipe_core/i);
     expect(sql).toMatch(/current_setting\('homecook\.personal_recipe_v2',\s*true\)/i);
     expect(sql).toMatch(/account_generation_capability_state[\s\S]*generation_active/i);
-    expect(sql).toMatch(/user_session_generation_bindings/i);
+    expect(sql).toMatch(/assert_full_local_session_authority/i);
     expect(sql).toMatch(/revoke all on function public\.write_personal_recipe_core/i);
     expect(sql).toMatch(/grant execute on function public\.write_personal_recipe_core[\s\S]*service_role/i);
 
