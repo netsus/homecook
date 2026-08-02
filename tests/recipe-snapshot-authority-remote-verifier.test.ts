@@ -578,6 +578,10 @@ describe("recipe snapshot authority remote verifier", () => {
       "scripts/verify-recipe-snapshot-authority-full-local.mjs",
       "utf8",
     );
+    const fullLocalRunner = readFileSync(
+      "scripts/lib/full-local-verification-cli-runner.mjs",
+      "utf8",
+    );
 
     expect(cli).toContain("buildRecipeSnapshotAuthorityRemotePsqlRequest");
     expect(cli).toContain(
@@ -590,8 +594,8 @@ describe("recipe snapshot authority remote verifier", () => {
     expect(cli).toContain('"merge-base"');
     expect(hybridCli).toContain('"--no-replace-objects"');
     expect(hybridCli).toContain('"merge-base"');
-    expect(fullLocalCli).toContain('"--no-replace-objects"');
-    expect(fullLocalCli).toContain('"merge-base"');
+    expect(fullLocalCli + fullLocalRunner).toContain('"--no-replace-objects"');
+    expect(fullLocalCli + fullLocalRunner).toContain('"merge-base"');
     expect(cli).not.toContain("PGOPTIONS");
     expect(cli).not.toMatch(/process\.stdout\.write\([^\n]*PGPASSWORD/u);
   });

@@ -19,6 +19,9 @@ function fakeGitDirectory() {
   temporaryDirectories.push(directory);
   const git = join(directory, "git");
   writeFileSync(git, `#!/bin/sh
+if [ "$1" = "--no-replace-objects" ] && [ "$2" = "merge-base" ]; then
+  exit 0
+fi
 case "$1" in
   fetch) exit 0 ;;
   rev-parse)
@@ -50,6 +53,7 @@ function runDryRun(script: string) {
         HOMECOOK_AUTH_AUTHORITY: "local",
         HOMECOOK_DATA_AUTHORITY: "local",
         LANG: "C.UTF-8",
+        NODE_ENV: "test",
         PATH: `${gitDirectory}${delimiter}${process.env.PATH ?? ""}`,
       },
     },
