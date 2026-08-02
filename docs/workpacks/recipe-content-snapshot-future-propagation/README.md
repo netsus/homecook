@@ -253,6 +253,8 @@ snapshot_v2 read:
 - 390px/320px component/visual/a11y evidence plus design critic and product-design-authority report.
 - merged-exact-SHA server-production/local-rehearsal read-only function/ACL/RLS/policy/constraint/capability inventory; no unapproved server-production migration.
 
+The Stage 2 `automation-spec.json` external smoke gate contains only exact current-head backend/local-rehearsal evidence. The workflow-v2 work item retains the full-lifecycle list: Stage 4 relocks the mobile visual/a11y/design smoke, and Stage 6 owns merged-exact-SHA server-production/local-rehearsal evidence.
+
 ## Key Rules
 
 - preview token binds owner, generation, exact session, recipe, base revision, canonical draft hash, target Meal revisions and active claim/session tuple.

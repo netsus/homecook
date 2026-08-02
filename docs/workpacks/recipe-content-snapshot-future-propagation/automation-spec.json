@@ -167,7 +167,7 @@
     }
   },
   "external_smokes": [
-    "merged-exact-SHA server-production/local-rehearsal verifier is read-only and reports preview/session functions ACL RLS policies constraints and capability state",
+    "exact current-head local-rehearsal verifier is read-only and reports preview/session functions ACL RLS policies constraints and capability state",
     "two-owner preview and patch denial matrix leaves exact before-after recipe Meal shopping claim digests unchanged",
     "G1 delayed preview-or-patch and G2 recreation never commits an old-generation target",
     "keep preserves all pins while replace-all changes only eligible unclaimed future pins",
@@ -175,8 +175,7 @@
     "incomplete shopping reconcile is deterministic and completed shopping is bit-for-bit unchanged",
     "same-Meal concurrent planner start creates one session claim and cancel restart is idempotent",
     "v1-v2 explicit dispatch and creation-off seeded-v2 read-cancel drain remain green",
-    "current and immediate-previous flag-off deployment creates zero new personal-v2 mutations",
-    "390px and 320px impact start and dispatch visual-a11y-design evidence"
+    "current and immediate-previous flag-off local-rehearsal creates zero new personal-v2 mutations"
   ],
   "blocked_conditions": [
     "stage1-artifacts-not-approved-by-separate-codex-internal-1.5-reviewer",
@@ -215,5 +214,5 @@
     "backend": 6,
     "frontend": 4
   },
-  "notes": "This is a DB/security/concurrency and high-risk UI integration contract lock. Stage 1 PR #1081 and runtime predecessors #1218/#1274/#711 are merged. Stage 2 RED commit 608c826c records focused and PostgreSQL failures before production implementation. User-approved API v1.2.34 locks recipe PATCH/DELETE and snapshot-v2 start/read/cancel exact success data, including immutable cook-mode content and exact pantry row/product-version candidates. #7 dark-ships impact integration plus v2 start/cancel/read and explicit dispatch; #8 owns exact-pantry completion and the R/R+1 gate before R+2 joint activation."
+  "notes": "This is the Stage 2 backend DB/security/concurrency automation lock. The workflow-v2 work item preserves the full-lifecycle merged-exact-SHA and Stage 4 visual/a11y/design smoke list for later relock and closeout. Stage 1 PR #1081 and runtime predecessors #1218/#1274/#711 are merged. Stage 2 RED commit 608c826c records focused and PostgreSQL failures before production implementation. User-approved API v1.2.34 locks recipe PATCH/DELETE and snapshot-v2 start/read/cancel exact success data, including immutable cook-mode content and exact pantry row/product-version candidates. #7 dark-ships impact integration plus v2 start/cancel/read and explicit dispatch; #8 owns exact-pantry completion and the R/R+1 gate before R+2 joint activation."
 }
