@@ -3,10 +3,10 @@
 ## Scope
 
 - Task ID: `019fbfc4-e794-77e0-88b7-d76a74e438f3`
-- Role: fresh Stage 2 implementer. This task did not self-approve its implementation; this later bookkeeping-only update records the separate Stage 3 code/security approvals and still does not perform Ready transition, merge, Stage Discord notification or Stage 6 closeout.
+- Role: fresh Stage 2 implementer. This task did not self-approve its implementation; the later bookkeeping updates record separate Stage 3 code/security approvals and the independently supplied merge/post-merge facts below. This evidence update does not perform Stage Discord notification or Stage 6 closeout.
 - Exact base: `b33a7df67ed6484c9183834f15a511dffe9d70cb`
 - Branch: `fix/personal-recipe-editor-stage2-full-local-verifier`
-- Draft PR: [#1271](https://github.com/netsus/homecook/pull/1271). It remains Draft; independent Stage 3 approval is retained below, while Ready and merge are not claimed.
+- PR: [#1271](https://github.com/netsus/homecook/pull/1271), merged as exact SHA `27572ac95cdf261fe5a7d598c9c12e71634158d5`.
 - Production/staging/remote application writes: `0 / 0 / 0`
 - Product API, field, status, error, migration, schema, UI and dependency changes: none.
 - Stage 3 reviewed implementation head: `b96d83e55c276e7125e28b09b4999bccfbfb1a7a`.
@@ -87,7 +87,7 @@
   - replay active full-local inventory: `25 passed / 16 snapshot-owned skips`.
 - Static browser/service-role authority inventory: `node scripts/generate-hybrid-authority-inventories.mjs --check` passed.
 - Security-function manifest classification: `node scripts/validate-security-function-authorization.mjs --contract-only` passed, including the full-local 13-function and snapshot 16-function manifests.
-- Pre-merge CLI dry-run was executed with local authority controls and a sentinel loopback credential. It failed before DB access because the feature head is not merged into `origin/master`, printed no credential or raw payload, and returned only the clean merged-exact requirement. This is expected pre-merge fail-closed evidence, not a successful release result.
+- Historical pre-merge CLI dry-run was executed with local authority controls and a sentinel loopback credential. It failed before DB access because the feature head was not yet merged into `origin/master`, printed no credential or raw payload, and returned only the clean merged-exact requirement. That expected fail-closed evidence is superseded for merge state by PR #1271 and the separate post-merge exact result below.
 
 ### Stage 3 repair isolated PostgreSQL evidence
 
@@ -134,13 +134,20 @@
 - Security/authority task `019fc05d-ba33-7840-a984-57fb1489ae81`: `APPROVE`, P0/P1/P2=`0/0/0`.
 - Code/quality task `019fc05d-ba33-7840-a984-57d4a3bf79e1`: `APPROVE`, P0/P1/P2=`0/0/0`.
 - Both reviewers independently confirmed the exact head/base and raw current-head snapshot `18 = 16 success + 2 intended skip`, with pending/failed/cancelled `0/0/0`.
-- Stage 3 is complete for the reviewed implementation content. This bookkeeping-only projection update introduces no product code, test or contract change and does not imply Ready, merge, Stage 5/6 approval or merged-exact success.
+- Stage 3 is complete for the reviewed implementation content. At that review point, the bookkeeping-only projection introduced no product code, test or contract change and did not imply Ready, merge, Stage 5/6 approval or merged-exact success; later independent merge and merged-exact facts are recorded separately below.
+
+## Merge and post-merge exact result
+
+- PR #1271 merged to `master` as `27572ac95cdf261fe5a7d598c9c12e71634158d5`.
+- Fresh final verifier task `019fc087-22d2-7303-b071-08b53160988f`: `MERGE_READY`, P0/P1/P2=`0/0/0`, raw checks `28 = 26 success + 2 intended skip`.
+- Post-merge exact local fixture verifier task `019fc08f-e766-7771-b67e-dd5bcac29dc7`: `MERGED_EXACT_VERIFIED`, P0/P1/P2=`0/0/0`; fresh `15/1 + 30/16 + 9/9`, replay `16/0 + 30/16 + 9/9`, production/staging/remote application writes `0/0/0`.
+- Manual Only remains pending. This exact result does not self-complete Stage 5 or Stage 6 lifecycle review.
 
 ## Pending
 
-- Stage 4 existing capability-off shell/consumer revalidation;
+- Stage 4 existing capability-off shell/consumer revalidation is complete at `evidence/2026-08-02-stage4-existing-shell-revalidation.md`;
 - Stage 5 lightweight no-visual-drift review;
-- clean merged-exact Stage 6 verifier execution;
+- Stage 6 lifecycle closeout, despite the successful retained merged-exact verifier execution;
 - activated provider callback/link, Cloudflare, final backup/restore, off-Mac restore, first local mutation/cutover and post-floor recovery (`Manual Only`);
 - Vercel and another-Mac deployment/manual evidence are not used and remain pending.
 
