@@ -646,12 +646,18 @@ describe("personal recipe editor full-local verifier", () => {
       "scripts/verify-personal-recipe-editor-full-local.mjs",
       "utf8",
     );
+    const runner = readFileSync(
+      "scripts/lib/full-local-verification-cli-runner.mjs",
+      "utf8",
+    );
+    const executionSource = cli + runner;
 
     expect(cli).toContain("PERSONAL_RECIPE_EDITOR_FULL_LOCAL_DATABASE_URL");
-    expect(cli).toContain("--dry-run");
-    expect(cli).toContain('"merge-base", "--is-ancestor"');
-    expect(cli).toContain("--no-replace-objects");
-    expect(cli).toContain("--untracked-files=all");
+    expect(executionSource).toContain("--dry-run");
+    expect(executionSource).toContain('"merge-base",');
+    expect(executionSource).toContain('"--is-ancestor"');
+    expect(executionSource).toContain("--no-replace-objects");
+    expect(executionSource).toContain("--untracked-files=all");
     expect(cli).toContain("collectPersonalRecipeEditorSourceEvidence");
     expect(cli).not.toContain("verify-personal-recipe-editor-hybrid");
     expect(cli).not.toContain("remote_auth_identity_epochs");

@@ -91,6 +91,20 @@ const BROWSER_DIRECT_STORAGE_ALLOWLIST = new Map([
   ],
 ]);
 
+const BROWSER_DATA_MUTATION_METHODS = new Set([
+  "delete",
+  "insert",
+  "update",
+  "upsert",
+]);
+const BROWSER_CLIENT_FACTORY_NAMES = new Set([
+  "createBrowserClient",
+  "createClient",
+  "getSupabaseBrowserClient",
+]);
+const SERVICE_ROLE_FACTORY_NAMES = new Set(["createServiceRoleClient"]);
+const REST_MUTATION_METHODS = new Set(["DELETE", "PATCH", "POST", "PUT"]);
+
 function normalizePath(filePath) {
   return filePath.split(path.sep).join("/");
 }
@@ -217,6 +231,104 @@ function isStorageFromCall(node) {
   return fromAccess.expression.name.text === "storage";
 }
 
+function importModuleName(node) {
+  return ts.isStringLiteral(node.moduleSpecifier)
+    ? node.moduleSpecifier.text
+    : "";
+}
+
+function importedBindingName(specifier) {
+  return specifier.propertyName?.text ?? specifier.name.text;
+}
+
+function collectImportBindings(sourceFile) {
+  const browserClientFactories = new Set(["getSupabaseBrowserClient"]);
+  const browserClientNamespaces = new Set();
+  const serviceRoleFactories = new Set(["createServiceRoleClient"]);
+  const serviceRoleNamespaces = new Set();
+
+  for (const statement of sourceFile.statements) {
+    if (!ts.isImportDeclaration(statement) || !statement.importClause) continue;
+    const moduleName = importModuleName(statement);
+    const namedBindings = statement.importClause.namedBindings;
+    const isBrowserModule =
+      moduleName === "@/lib/supabase/browser"
+      || moduleName === "@supabase/ssr"
+      || moduleName === "@supabase/supabase-js";
+    const isServerModule = moduleName === "@/lib/supabase/server";
+    if (namedBindings && ts.isNamespaceImport(namedBindings)) {
+      if (isBrowserModule) browserClientNamespaces.add(namedBindings.name.text);
+      if (isServerModule) serviceRoleNamespaces.add(namedBindings.name.text);
+      continue;
+    }
+    if (!namedBindings || !ts.isNamedImports(namedBindings)) continue;
+    for (const specifier of namedBindings.elements) {
+      const importedName = importedBindingName(specifier);
+      if (
+        isBrowserModule
+        && BROWSER_CLIENT_FACTORY_NAMES.has(importedName)
+      ) {
+        browserClientFactories.add(specifier.name.text);
+      }
+      if (isServerModule && importedName === "createServiceRoleClient") {
+        serviceRoleFactories.add(specifier.name.text);
+      }
+    }
+  }
+  return {
+    browserClientFactories,
+    browserClientNamespaces,
+    serviceRoleFactories,
+    serviceRoleNamespaces,
+  };
+}
+
+function isFactoryCall(node, identifiers, namespaces, memberNames) {
+  const expression = unwrapExpression(node);
+  if (!ts.isCallExpression(expression)) return false;
+  const callee = unwrapExpression(expression.expression);
+  if (ts.isIdentifier(callee)) return identifiers.has(callee.text);
+  return ts.isPropertyAccessExpression(callee)
+    && ts.isIdentifier(callee.expression)
+    && namespaces.has(callee.expression.text)
+    && memberNames.has(callee.name.text);
+}
+
+function staticString(expression, constants) {
+  const value = unwrapExpression(expression);
+  if (ts.isStringLiteral(value) || ts.isNoSubstitutionTemplateLiteral(value)) {
+    return value.text;
+  }
+  if (ts.isIdentifier(value)) return constants.get(value.text) ?? null;
+  if (ts.isTemplateExpression(value)) {
+    return value.head.text
+      + value.templateSpans.map((span) => `\${dynamic}${span.literal.text}`).join("");
+  }
+  return null;
+}
+
+function objectStringProperty(object, name, constants) {
+  const value = unwrapExpression(object);
+  if (!ts.isObjectLiteralExpression(value)) return null;
+  for (const property of value.properties) {
+    if (!ts.isPropertyAssignment(property)) continue;
+    const propertyName = ts.isIdentifier(property.name) || ts.isStringLiteral(property.name)
+      ? property.name.text
+      : "";
+    if (propertyName === name) return staticString(property.initializer, constants);
+  }
+  return null;
+}
+
+function isFetchCall(node) {
+  const expression = unwrapExpression(node.expression);
+  if (ts.isIdentifier(expression)) return expression.text === "fetch";
+  return ts.isPropertyAccessExpression(expression)
+    && expression.name.text === "fetch"
+    && ts.isIdentifier(expression.expression)
+    && ["globalThis", "window"].includes(expression.expression.text);
+}
+
 function isClientModule(sourceFile) {
   for (const statement of sourceFile.statements) {
     if (!ts.isExpressionStatement(statement) || !ts.isStringLiteral(statement.expression)) {
@@ -236,10 +348,14 @@ function inventoryHybridAuthorityPaths(repoRoot = process.cwd()) {
   const remoteCompatibilityEntries = [];
   const fallbackEntries = [];
   const browserDirectStoragePaths = [];
+  const browserDirectDataMutationPaths = [];
+  const browserRawRestMutationPaths = [];
   const internalOperationEntries = [];
   const serviceRoleEntryKeys = new Set();
   const fallbackEntryKeys = new Set();
   const storageEntryKeys = new Set();
+  const dataMutationEntryKeys = new Set();
+  const rawRestMutationEntryKeys = new Set();
   const remoteCompatibilityEntryKeys = new Set();
   const internalOperationEntryKeys = new Set();
   const declaredPublicRouteScopes = new Map();
@@ -257,10 +373,34 @@ function inventoryHybridAuthorityPaths(repoRoot = process.cwd()) {
     );
     const classification = classifyFile(relativeFile);
     const clientModule = isClientModule(sourceFile);
+    const importBindings = collectImportBindings(sourceFile);
+    const browserClientVariables = new Set();
+    const stringConstants = new Map();
     const serviceRoleVariables = new Set();
     let usesDataRouteClient = false;
 
     const visit = (node) => {
+      if (
+        ts.isVariableDeclaration(node)
+        && ts.isIdentifier(node.name)
+        && node.initializer
+      ) {
+        const literal = staticString(node.initializer, stringConstants);
+        if (literal !== null) stringConstants.set(node.name.text, literal);
+        const initializer = unwrapExpression(node.initializer);
+        if (
+          isFactoryCall(
+            initializer,
+            importBindings.browserClientFactories,
+            importBindings.browserClientNamespaces,
+            BROWSER_CLIENT_FACTORY_NAMES,
+          )
+          || (ts.isIdentifier(initializer) && browserClientVariables.has(initializer.text))
+        ) {
+          browserClientVariables.add(node.name.text);
+        }
+      }
+
       if (
         ts.isCallExpression(node)
         && (
@@ -300,12 +440,25 @@ function inventoryHybridAuthorityPaths(repoRoot = process.cwd()) {
         ts.isVariableDeclaration(node)
         && ts.isIdentifier(node.name)
         && node.initializer
-        && isNamedCall(node.initializer, "createServiceRoleClient")
+        && isFactoryCall(
+          node.initializer,
+          importBindings.serviceRoleFactories,
+          importBindings.serviceRoleNamespaces,
+          SERVICE_ROLE_FACTORY_NAMES,
+        )
       ) {
         serviceRoleVariables.add(node.name.text);
       }
 
-      if (ts.isCallExpression(node) && isNamedCall(node, "createServiceRoleClient")) {
+      if (
+        ts.isCallExpression(node)
+        && isFactoryCall(
+          node,
+          importBindings.serviceRoleFactories,
+          importBindings.serviceRoleNamespaces,
+          SERVICE_ROLE_FACTORY_NAMES,
+        )
+      ) {
         const entry = {
           ...createBaseEntry(relativeFile, sourceFile, node, classification),
           kind: "service-role-call",
@@ -394,6 +547,69 @@ function inventoryHybridAuthorityPaths(repoRoot = process.cwd()) {
         }
       }
 
+      if (
+        clientModule
+        && ts.isCallExpression(node)
+        && ts.isPropertyAccessExpression(node.expression)
+        && BROWSER_DATA_MUTATION_METHODS.has(node.expression.name.text)
+      ) {
+        const fromCall = unwrapExpression(node.expression.expression);
+        if (
+          ts.isCallExpression(fromCall)
+          && ts.isPropertyAccessExpression(fromCall.expression)
+          && fromCall.expression.name.text === "from"
+        ) {
+          const client = unwrapExpression(fromCall.expression.expression);
+          const knownClient =
+            (ts.isIdentifier(client) && browserClientVariables.has(client.text))
+            || isFactoryCall(
+              client,
+              importBindings.browserClientFactories,
+              importBindings.browserClientNamespaces,
+              BROWSER_CLIENT_FACTORY_NAMES,
+            );
+          if (knownClient) {
+            const entry = {
+              ...createBaseEntry(relativeFile, sourceFile, node, classification),
+              method: node.expression.name.text,
+              table: fromCall.arguments[0]
+                ? staticString(fromCall.arguments[0], stringConstants)
+                : null,
+            };
+            const key = `${entry.file}:${entry.line}:${entry.column}:${entry.method}`;
+            if (!dataMutationEntryKeys.has(key)) {
+              dataMutationEntryKeys.add(key);
+              browserDirectDataMutationPaths.push(entry);
+            }
+          }
+        }
+      }
+
+      if (clientModule && ts.isCallExpression(node) && isFetchCall(node)) {
+        const url = node.arguments[0]
+          ? staticString(node.arguments[0], stringConstants)
+          : null;
+        if (url?.includes("/rest/v1/")) {
+          const configuredMethod = node.arguments[1]
+            ? objectStringProperty(node.arguments[1], "method", stringConstants)
+            : null;
+          const method = configuredMethod?.toUpperCase() ?? "GET";
+          const hasDynamicOptions =
+            configuredMethod === null && node.arguments.length > 1;
+          if (REST_MUTATION_METHODS.has(method) || hasDynamicOptions) {
+            const entry = {
+              ...createBaseEntry(relativeFile, sourceFile, node, classification),
+              method: REST_MUTATION_METHODS.has(method) ? method : "DYNAMIC",
+            };
+            const key = `${entry.file}:${entry.line}:${entry.column}:${entry.method}`;
+            if (!rawRestMutationEntryKeys.has(key)) {
+              rawRestMutationEntryKeys.add(key);
+              browserRawRestMutationPaths.push(entry);
+            }
+          }
+        }
+      }
+
       ts.forEachChild(node, visit);
     };
 
@@ -414,6 +630,10 @@ function inventoryHybridAuthorityPaths(repoRoot = process.cwd()) {
   const sortedRemoteCompatibilityEntries =
     remoteCompatibilityEntries.sort(compareEntries);
   const sortedBrowserDirectStoragePaths = browserDirectStoragePaths.sort(compareEntries);
+  const sortedBrowserDirectDataMutationPaths =
+    browserDirectDataMutationPaths.sort(compareEntries);
+  const sortedBrowserRawRestMutationPaths =
+    browserRawRestMutationPaths.sort(compareEntries);
   const sortedInternalOperationEntries = internalOperationEntries.sort(compareEntries);
   const publicRouteContracts = HYBRID_PUBLIC_ROUTE_CONTRACTS
     .map((contract) => ({ ...contract }))
@@ -432,7 +652,9 @@ function inventoryHybridAuthorityPaths(repoRoot = process.cwd()) {
   return {
     adminAllowlistFiles: [...ADMIN_ALLOWLIST_FILES].sort(),
     adminServiceRoleEntries: sortedServiceRoleEntries.filter((entry) => entry.classification === "admin"),
+    browserDirectDataMutationPaths: sortedBrowserDirectDataMutationPaths,
     browserDirectStoragePaths: sortedBrowserDirectStoragePaths,
+    browserRawRestMutationPaths: sortedBrowserRawRestMutationPaths,
     dataRouteResponseBoundaries:
       dataRouteResponseBoundaries.sort((left, right) =>
         left.file.localeCompare(right.file)),

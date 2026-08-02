@@ -15,6 +15,8 @@ const ACTIVE_SECURITY_MIGRATIONS = [
   "supabase/migrations/20260429080000_15a_cook_planner_complete.sql",
   "supabase/migrations/20260723140000_account_session_generation_foundation.sql",
   "supabase/migrations/20260723170000_recipe_visibility_read_hardening.sql",
+  "supabase/migrations/20260724110000_recipe_managed_image_registry_foundation.sql",
+  "supabase/migrations/20260724140000_recipe_image_private_storage_boundary.sql",
   "supabase/migrations/20260730090000_hybrid_auth_remote_identity_epoch_mirror.sql",
   "supabase/migrations/20260731111000_product_ingredient_link_account_cleanup.sql",
   "supabase/migrations/20260801120000_full_local_auth_db_foundation.sql",
@@ -23,6 +25,19 @@ const INTEGRATION_TEST =
   "tests/recipe-snapshot-authority-postgres.integration.test.ts";
 const TEST_TIMEOUT_MS = 30_000;
 const REPLAY_FIXTURE_SQL = String.raw`
+insert into auth.users (id, created_at, email)
+values (
+  '11000000-0000-4000-8000-000000000001',
+  now(),
+  'replay-owner@example.invalid'
+);
+
+insert into auth.identities (id, user_id)
+values (
+  'replay-owner',
+  '11000000-0000-4000-8000-000000000001'
+);
+
 insert into public.users (id, nickname, social_provider, social_id)
 values (
   '11000000-0000-4000-8000-000000000001',
@@ -149,6 +164,22 @@ create table auth.users (
   raw_app_meta_data jsonb not null default '{}'::jsonb,
   raw_user_meta_data jsonb not null default '{}'::jsonb
 );
+create table auth.identities (
+  id text primary key,
+  user_id uuid not null references auth.users(id) on delete cascade
+);
+create table auth.sessions (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade
+);
+create table auth.refresh_tokens (
+  id bigint generated always as identity primary key,
+  user_id uuid references auth.users(id) on delete cascade
+);
+create table auth.flow_state (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users(id) on delete cascade
+);
 create or replace function auth.uid()
 returns uuid
 language sql
@@ -172,6 +203,13 @@ grant usage on schema auth to anon, authenticated;
 grant execute on function auth.uid() to anon, authenticated;
 
 create schema storage;
+create table storage.buckets (
+  id text primary key,
+  name text not null,
+  public boolean not null default false,
+  file_size_limit bigint,
+  allowed_mime_types text[]
+);
 create table storage.objects (
   id uuid primary key default gen_random_uuid(),
   bucket_id text not null,

@@ -15,6 +15,9 @@ import {
 const MODE = "post-merge-full-local-read-only";
 const TARGET = "self-hosted-local-auth-db-storage-single-authority";
 const SOURCE_OF_RECORD = "live-remote-read-only-pre-floor";
+const RESTORE_MANIFEST_STATUS = "pending-manual-evidence";
+const STABLE_UUID_RESTORE_STATUS = "pending-manual-restore-manifest";
+const TRANSIENT_AUTH_STATE_STATUS = "local-zero-manifest-pending";
 const SAFE_CHECK_ENVIRONMENT_KEYS = [
   "PATH",
   "LANG",
@@ -62,7 +65,9 @@ const MANUAL_ONLY_PENDING = [
 
 const SOURCE_EVIDENCE_KEYS = [
   "app_surface_personal_editor_marker_count",
+  "browser_direct_data_mutation_count",
   "browser_direct_storage_path_count",
+  "browser_raw_rest_mutation_count",
   "capability_on_occurrence_count",
   "capability_off_occurrence_count",
   "internal_operation_violation_count",
@@ -78,16 +83,51 @@ const SOURCE_EVIDENCE_KEYS = [
   "user_service_role_violation_count",
 ].sort();
 
-const BOUNDARY_CHECKS = {
-  owner_access: "passed",
-  other_owner_nondisclosure: "passed",
-  deleted_nondisclosure: "passed",
-  quarantined_nondisclosure: "passed",
-  public_surface_boundary: "passed",
-  browser_direct_data_storage_mutation: "zero",
-  service_role_user_fallback: "zero",
-  remote_application_writes: "zero",
-};
+const BOUNDARY_CHECK_KEYS = [
+  "owner_access",
+  "other_owner_nondisclosure",
+  "deleted_nondisclosure",
+  "quarantined_nondisclosure",
+  "public_surface_boundary",
+  "browser_direct_data_storage_mutation",
+  "service_role_user_fallback",
+  "remote_application_writes",
+];
+
+const LOCAL_AUTHORITY_OBSERVATION_FIELDS = [
+  "auth_user_count",
+  "auth_identity_count",
+  "auth_identity_mapping_mismatch_count",
+  "auth_session_row_count",
+  "auth_refresh_token_row_count",
+  "auth_flow_state_row_count",
+  "storage_bucket_count",
+  "storage_object_count",
+  "private_storage_bucket_count",
+  "private_storage_bucket_drift_count",
+  "storage_objects_rls_disabled_count",
+  "private_storage_policy_count",
+  "storage_object_mutation_grant_count",
+  "image_registry_acl_drift_count",
+  "private_storage_object_count",
+  "private_storage_object_registry_mismatch_count",
+  "private_image_registry_shape_drift_count",
+  "private_image_registry_active_object_mismatch_count",
+];
+
+const ZERO_LOCAL_AUTHORITY_OBSERVATION_FIELDS = [
+  "auth_identity_mapping_mismatch_count",
+  "auth_session_row_count",
+  "auth_refresh_token_row_count",
+  "auth_flow_state_row_count",
+  "private_storage_bucket_drift_count",
+  "storage_objects_rls_disabled_count",
+  "private_storage_policy_count",
+  "image_registry_acl_drift_count",
+  "private_storage_object_registry_mismatch_count",
+  "private_image_registry_shape_drift_count",
+  "private_image_registry_active_object_mismatch_count",
+];
 
 function hasExactKeys(value, expectedKeys) {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
@@ -119,6 +159,126 @@ function countPatternMatchesInFiles(files, pattern) {
     const source = readFileSync(file, "utf8");
     return total + (source.match(pattern)?.length ?? 0);
   }, 0);
+}
+
+function buildPersonalEditorAuthoritySql(fullLocalSql) {
+  const replacement = [
+    "'remote_application_writes', 0",
+    ") || jsonb_build_object(",
+    "  'auth_user_count', (select count(*)::integer from auth.users),",
+    "  'auth_identity_count', (select count(*)::integer from auth.identities),",
+    "  'auth_identity_mapping_mismatch_count', (",
+    "    select count(*)::integer",
+    "    from (",
+    "      select app_user.id::text as identity_key",
+    "      from public.users as app_user",
+    "      left join auth.users as auth_user on auth_user.id = app_user.id",
+    "      where auth_user.id is null",
+    "      union all",
+    "      select auth_user.id::text",
+    "      from auth.users as auth_user",
+    "      left join public.users as app_user on app_user.id = auth_user.id",
+    "      where app_user.id is null",
+    "      union all",
+    "      select identity.user_id::text",
+    "      from auth.identities as identity",
+    "      left join auth.users as auth_user on auth_user.id = identity.user_id",
+    "      where auth_user.id is null",
+    "      union all",
+    "      select auth_user.id::text",
+    "      from auth.users as auth_user",
+    "      left join auth.identities as identity on identity.user_id = auth_user.id",
+    "      where identity.user_id is null",
+    "    ) as mismatch",
+    "  ),",
+    "  'auth_session_row_count', (select count(*)::integer from auth.sessions),",
+    "  'auth_refresh_token_row_count', (select count(*)::integer from auth.refresh_tokens),",
+    "  'auth_flow_state_row_count', (select count(*)::integer from auth.flow_state),",
+    "  'storage_bucket_count', (select count(*)::integer from storage.buckets),",
+    "  'storage_object_count', (select count(*)::integer from storage.objects),",
+    "  'private_storage_bucket_count', (",
+    "    select count(*)::integer from storage.buckets",
+    "    where id = 'recipe-images-private' and name = 'recipe-images-private'",
+    "  ),",
+    "  'private_storage_bucket_drift_count', (",
+    "    select count(*)::integer from storage.buckets",
+    "    where id = 'recipe-images-private'",
+    "      and (public",
+    "        or file_size_limit is distinct from 5242880",
+    "        or allowed_mime_types is distinct from array['image/jpeg','image/png','image/webp']::text[])",
+    "  ),",
+    "  'storage_objects_rls_disabled_count', (",
+    "    select count(*)::integer",
+    "    from pg_catalog.pg_class as relation",
+    "    join pg_catalog.pg_namespace as namespace on namespace.oid = relation.relnamespace",
+    "    where namespace.nspname = 'storage' and relation.relname = 'objects'",
+    "      and not relation.relrowsecurity",
+    "  ),",
+    "  'private_storage_policy_count', (",
+    "    select count(*)::integer from pg_catalog.pg_policy as policy",
+    "    where policy.polrelid = 'storage.objects'::pg_catalog.regclass",
+    "      and (coalesce(pg_catalog.pg_get_expr(policy.polqual, policy.polrelid), '') ilike '%recipe-images-private%'",
+    "        or coalesce(pg_catalog.pg_get_expr(policy.polwithcheck, policy.polrelid), '') ilike '%recipe-images-private%')",
+    "  ),",
+    "  'storage_object_mutation_grant_count', (",
+    "    select count(*)::integer",
+    "    from (values ('anon'), ('authenticated')) as role(grantee)",
+    "    cross join (values ('INSERT'), ('UPDATE'), ('DELETE')) as privilege(name)",
+    "    where pg_catalog.has_table_privilege(role.grantee, 'storage.objects', privilege.name)",
+    "       or case when privilege.name = 'DELETE' then false",
+    "         else pg_catalog.has_any_column_privilege(role.grantee, 'storage.objects', privilege.name)",
+    "       end",
+    "  ),",
+    "  'image_registry_acl_drift_count', (",
+    "    select count(*)::integer",
+    "    from (values ('public'), ('anon'), ('authenticated'), ('service_role')) as role(grantee)",
+    "    cross join (values ('SELECT'), ('INSERT'), ('UPDATE'), ('DELETE')) as privilege(name)",
+    "    where pg_catalog.has_table_privilege(role.grantee, 'public.recipe_image_objects', privilege.name)",
+    "       or case when privilege.name = 'DELETE' then false",
+    "         else pg_catalog.has_any_column_privilege(role.grantee, 'public.recipe_image_objects', privilege.name)",
+    "       end",
+    "  ),",
+    "  'private_storage_object_count', (",
+    "    select count(*)::integer from storage.objects",
+    "    where bucket_id = 'recipe-images-private'",
+    "  ),",
+    "  'private_storage_object_registry_mismatch_count', (",
+    "    select count(*)::integer",
+    "    from storage.objects as object",
+    "    left join public.recipe_image_objects as registry",
+    "      on registry.bucket_id = object.bucket_id and registry.object_path = object.name",
+    "    where object.bucket_id = 'recipe-images-private'",
+    "      and (registry.id is null or registry.visibility is distinct from 'private')",
+    "  ),",
+    "  'private_image_registry_shape_drift_count', (",
+    "    select count(*)::integer",
+    "    from public.recipe_image_objects as registry",
+    "    where registry.bucket_id = 'recipe-images-private'",
+    "      and (registry.visibility is distinct from 'private'",
+    "        or registry.owner_uuid is null",
+    "        or registry.account_generation is null",
+    "        or registry.account_generation <= 0",
+    "        or registry.object_path not like (registry.owner_uuid::text || '/' || registry.account_generation::text || '/' || registry.id::text || '.%'))",
+    "  ),",
+    "  'private_image_registry_active_object_mismatch_count', (",
+    "    select count(*)::integer",
+    "    from public.recipe_image_objects as registry",
+    "    left join storage.objects as object",
+    "      on object.bucket_id = registry.bucket_id and object.name = registry.object_path",
+    "    where registry.bucket_id = 'recipe-images-private'",
+    "      and registry.state in ('uploaded_unlinked', 'attached_private')",
+    "      and object.id is null",
+    "  )",
+    ")",
+  ].join("\n");
+  const sql = fullLocalSql.replace(
+    /'remote_application_writes', 0\s*\)\s*$/u,
+    replacement,
+  );
+  if (sql === fullLocalSql) {
+    throw new Error("personal editor authority SQL could not be extended safely");
+  }
+  return sql;
 }
 
 export function assertPersonalRecipeEditorFullLocalEnvironment(environment) {
@@ -166,8 +326,9 @@ export function buildPersonalRecipeEditorFullLocalVerificationPlan({ mode }) {
     mode,
     target: TARGET,
     sourceOfRecord: SOURCE_OF_RECORD,
-    stableRemoteUuidRestore: true,
-    remoteTransientAuthState: "excluded-relogin-required",
+    stableRemoteUuidRestore: STABLE_UUID_RESTORE_STATUS,
+    remoteTransientAuthState: TRANSIENT_AUTH_STATE_STATUS,
+    restoreManifest: RESTORE_MANIFEST_STATUS,
     externalPersonalWrite: "dark",
     requiredChecks: [
       ...PERSONAL_EDITOR_CHECKS.map((check) => ({
@@ -177,6 +338,7 @@ export function buildPersonalRecipeEditorFullLocalVerificationPlan({ mode }) {
       ...fullLocalPlan.requiredChecks,
     ],
     manualOnlyPending: [...MANUAL_ONLY_PENDING],
+    sql: buildPersonalEditorAuthoritySql(fullLocalPlan.sql),
   };
 }
 
@@ -230,8 +392,12 @@ export function collectPersonalRecipeEditorSourceEvidence(repositoryRoot) {
         appSourceFiles,
         /\b(?:personal-create|personal-edit|public-fork|personal_recipe_v2)\b|내 레시피로 수정/gu,
       ),
+    browser_direct_data_mutation_count:
+      inventory.browserDirectDataMutationPaths.length,
     browser_direct_storage_path_count:
       inventory.browserDirectStoragePaths.length,
+    browser_raw_rest_mutation_count:
+      inventory.browserRawRestMutationPaths.length,
     capability_on_occurrence_count:
       capabilityOccurrenceCount - capabilityOffOccurrenceCount,
     capability_off_occurrence_count: capabilityOffOccurrenceCount,
@@ -282,7 +448,9 @@ export function assertPersonalRecipeEditorSourceEvidence(evidence) {
       (key) => Number.isInteger(evidence[key]) && evidence[key] >= 0,
     )
     && evidence.app_surface_personal_editor_marker_count === 0
+    && evidence.browser_direct_data_mutation_count === 0
     && evidence.browser_direct_storage_path_count === 0
+    && evidence.browser_raw_rest_mutation_count === 0
     && evidence.capability_on_occurrence_count === 0
     && evidence.capability_off_occurrence_count > 0
     && evidence.internal_operation_violation_count === 0
@@ -310,15 +478,39 @@ export function assertPersonalRecipeEditorFullLocalResult(result) {
     throw new Error("personal recipe editor full-local result failed closed");
   }
   try {
-    assertRecipeSnapshotAuthorityFullLocalResult(result.full_local_authority);
+    const snapshotAuthority = { ...result.full_local_authority };
+    for (const field of LOCAL_AUTHORITY_OBSERVATION_FIELDS) {
+      delete snapshotAuthority[field];
+    }
+    assertRecipeSnapshotAuthorityFullLocalResult(snapshotAuthority);
     assertPersonalRecipeEditorSourceEvidence(result.personal_editor_source);
+    const authority = result.full_local_authority;
+    if (
+      Object.keys(authority).length
+        !== Object.keys(snapshotAuthority).length
+          + LOCAL_AUTHORITY_OBSERVATION_FIELDS.length
+      || LOCAL_AUTHORITY_OBSERVATION_FIELDS.some(
+        (field) => !Object.hasOwn(authority, field),
+      )
+      || ZERO_LOCAL_AUTHORITY_OBSERVATION_FIELDS.some(
+        (field) => authority[field] !== 0,
+      )
+      || authority.private_storage_bucket_count !== 1
+      || !["auth_user_count", "auth_identity_count", "storage_bucket_count", "storage_object_count", "storage_object_mutation_grant_count", "private_storage_object_count"]
+        .every((field) => Number.isInteger(authority[field]) && authority[field] >= 0)
+    ) {
+      throw new Error("local authority observation drifted");
+    }
   } catch {
     throw new Error("personal recipe editor full-local result failed closed");
   }
   return result;
 }
 
-export function assertPersonalRecipeEditorFullLocalExecutionEvidence(evidence) {
+export function assertPersonalRecipeEditorFullLocalExecutionEvidence(
+  evidence,
+  { localResult } = {},
+) {
   const plan = buildPersonalRecipeEditorFullLocalVerificationPlan({
     mode: MODE,
   });
@@ -342,10 +534,19 @@ export function assertPersonalRecipeEditorFullLocalExecutionEvidence(evidence) {
     && Object.values(evidence.manual_only).every(
       (status) => status === "pending",
     )
-    && hasExactKeys(evidence.boundary_checks, Object.keys(BOUNDARY_CHECKS))
-    && Object.entries(BOUNDARY_CHECKS).every(
-      ([key, value]) => evidence.boundary_checks[key] === value,
-    )
+    && hasExactKeys(evidence.boundary_checks, BOUNDARY_CHECK_KEYS)
+    && (() => {
+      const expected = buildPersonalRecipeEditorBoundaryChecks({
+        checks: evidence.checks,
+        localResult,
+      });
+      return BOUNDARY_CHECK_KEYS.every(
+        (key) => evidence.boundary_checks[key] === expected[key],
+      )
+        && Object.values(expected).every(
+          (status) => status === "passed" || status === "zero",
+        );
+    })()
     && evidence.production_writes === 0
     && evidence.staging_writes === 0
     && evidence.remote_application_writes === 0;
@@ -368,12 +569,44 @@ export function buildPersonalRecipeEditorFullLocalSummary({
     );
   }
   assertPersonalRecipeEditorFullLocalResult(localResult);
-  assertPersonalRecipeEditorFullLocalExecutionEvidence(executionEvidence);
+  assertPersonalRecipeEditorFullLocalExecutionEvidence(
+    executionEvidence,
+    { localResult },
+  );
   if (executionEvidence.source_merge_sha !== mergeSha) {
     throw new Error(
       "personal recipe editor full-local execution evidence must match the exact merge SHA",
     );
   }
+
+  const boundary = buildPersonalRecipeEditorBoundaryChecks({
+    checks: executionEvidence.checks,
+    localResult,
+  });
+  const authority = localResult.full_local_authority;
+  const source = localResult.personal_editor_source;
+  const localAuthStorageReady =
+    authority.auth_identity_mapping_mismatch_count === 0
+    && authority.auth_session_row_count === 0
+    && authority.auth_refresh_token_row_count === 0
+    && authority.auth_flow_state_row_count === 0
+    && authority.private_storage_bucket_count === 1
+    && authority.private_storage_bucket_drift_count === 0
+    && authority.storage_objects_rls_disabled_count === 0
+    && authority.private_storage_policy_count === 0
+    && authority.image_registry_acl_drift_count === 0
+    && authority.private_storage_object_registry_mismatch_count === 0
+    && authority.private_image_registry_shape_drift_count === 0
+    && authority.private_image_registry_active_object_mismatch_count === 0;
+  const permissionReady = [
+    boundary.owner_access,
+    boundary.other_owner_nondisclosure,
+    boundary.deleted_nondisclosure,
+    boundary.quarantined_nondisclosure,
+  ].every((status) => status === "passed");
+  const privateStorageReady =
+    localAuthStorageReady
+    && boundary.browser_direct_data_storage_mutation === "zero";
 
   return {
     ok: true,
@@ -381,14 +614,21 @@ export function buildPersonalRecipeEditorFullLocalSummary({
     target: TARGET,
     merge_sha: mergeSha,
     source_of_record_status: SOURCE_OF_RECORD,
-    full_local_auth_db_storage_status: "ready",
-    stable_remote_uuid_restore_status: "ready",
-    remote_transient_auth_state_status: "excluded-relogin-required",
-    local_session_rls_owner_boundary_status: "ready",
-    personal_editor_permission_boundary_status: "ready",
-    public_surface_status: "app-and-official-auth-v1-only",
-    private_storage_image_authority_status: "ready",
-    external_personal_write_status: "dark",
+    full_local_auth_db_storage_status: localAuthStorageReady ? "ready" : "drifted",
+    stable_remote_uuid_restore_status: STABLE_UUID_RESTORE_STATUS,
+    remote_transient_auth_state_status: TRANSIENT_AUTH_STATE_STATUS,
+    local_session_rls_owner_boundary_status: permissionReady ? "ready" : "drifted",
+    personal_editor_permission_boundary_status: permissionReady ? "ready" : "drifted",
+    public_surface_status: boundary.public_surface_boundary === "passed"
+      ? "app-and-official-auth-v1-only"
+      : "drifted",
+    private_storage_image_authority_status: privateStorageReady ? "ready" : "drifted",
+    restore_manifest_status: RESTORE_MANIFEST_STATUS,
+    external_personal_write_status:
+      source.personal_create_active_entry === false
+        && source.capability_on_occurrence_count === 0
+        ? "dark"
+        : "active",
     automated_check_count:
       Object.keys(executionEvidence.checks).length,
     manual_only_status: "pending",
@@ -399,6 +639,47 @@ export function buildPersonalRecipeEditorFullLocalSummary({
   };
 }
 
-export function buildPersonalRecipeEditorBoundaryChecks() {
-  return { ...BOUNDARY_CHECKS };
+export function buildPersonalRecipeEditorBoundaryChecks({
+  checks = {},
+  localResult = {},
+} = {}) {
+  const authority = localResult.full_local_authority ?? {};
+  const source = localResult.personal_editor_source ?? {};
+  const permissionsPassed =
+    checks["personal-editor-permissions-contract"] === "passed";
+  const fullLocalSourcePassed =
+    checks["personal-editor-full-local-source-boundary"] === "passed";
+  const securityInventory = authority.full_local_security_inventory ?? {};
+  const policyBoundaryPassed =
+    securityInventory.policy_missing_count === 0
+    && securityInventory.policy_drift_count === 0
+    && securityInventory.unexpected_policy_count === 0;
+  const browserMutationCount =
+    (source.browser_direct_data_mutation_count ?? 0)
+    + (source.browser_direct_storage_path_count ?? 0)
+    + (source.browser_raw_rest_mutation_count ?? 0);
+  const serviceRoleViolationCount =
+    (source.user_direct_service_role_count ?? 0)
+    + (source.user_service_role_violation_count ?? 0);
+
+  return {
+    owner_access: permissionsPassed && policyBoundaryPassed ? "passed" : "failed",
+    other_owner_nondisclosure:
+      permissionsPassed && policyBoundaryPassed ? "passed" : "failed",
+    deleted_nondisclosure:
+      permissionsPassed && fullLocalSourcePassed ? "passed" : "failed",
+    quarantined_nondisclosure:
+      permissionsPassed && fullLocalSourcePassed ? "passed" : "failed",
+    public_surface_boundary:
+      fullLocalSourcePassed
+        && (source.internal_operation_violation_count ?? 1) === 0
+        ? "passed"
+        : "failed",
+    browser_direct_data_storage_mutation:
+      browserMutationCount === 0 ? "zero" : "detected",
+    service_role_user_fallback:
+      serviceRoleViolationCount === 0 ? "zero" : "detected",
+    remote_application_writes:
+      authority.remote_application_writes === 0 ? "zero" : "detected",
+  };
 }
