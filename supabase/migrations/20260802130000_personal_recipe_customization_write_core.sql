@@ -125,8 +125,15 @@ declare
   v_capability_state text;
   v_cutover_attempt_id uuid;
   v_lifecycle public.user_account_lifecycles%rowtype;
-  v_source_owner_lifecycle public.user_account_lifecycles%rowtype;
-  v_recipe_owner_lifecycle public.user_account_lifecycles%rowtype;
+  v_affected_owner_lifecycle public.user_account_lifecycles%rowtype;
+  v_affected_owner uuid;
+  v_affected_owner_candidates uuid[] := '{}'::uuid[];
+  v_pre_recipe_created_by uuid;
+  v_pre_recipe_visibility text;
+  v_pre_recipe_deleted_at timestamp with time zone;
+  v_pre_source_created_by uuid;
+  v_pre_source_visibility text;
+  v_pre_source_deleted_at timestamp with time zone;
   v_auth_control jsonb;
   v_session_authority jsonb;
   v_recipe public.recipes%rowtype;
@@ -326,20 +333,82 @@ begin
     raise exception 'ACCOUNT_GENERATION_STALE' using errcode = '55000';
   end if;
 
-  perform pg_catalog.pg_advisory_xact_lock(
-    pg_catalog.hashtextextended(
-      'homecook-account-owner:' || p_owner_uuid::text,
-      0
-    )
-  );
+  v_result_recipe_id := case
+    when p_operation in ('create', 'fork', 'save_as_new')
+      then extensions.gen_random_uuid()
+    else p_recipe_id
+  end;
 
-  select lifecycle.*
-    into v_lifecycle
-  from public.user_account_lifecycles as lifecycle
-  where lifecycle.owner_uuid = p_owner_uuid
-  order by lifecycle.account_generation desc
-  limit 1
-  for update;
+  if (p_operation in ('update', 'delete') and p_recipe_id is null)
+    or (p_operation = 'fork' and p_source_recipe_id is null)
+    or (p_operation = 'save_as_new' and p_source_recipe_id is null)
+  then
+    raise exception 'VALIDATION_ERROR' using errcode = '22023';
+  end if;
+
+  -- Mutation-free authority discovery must happen before any owner or recipe
+  -- lock. Rows are re-read under recipe locks below, so this pre-read grants no
+  -- authority and any owner/visibility/deletion drift fails closed.
+  if p_recipe_id is not null then
+    select recipe.created_by, recipe.visibility, recipe.deleted_at
+      into v_pre_recipe_created_by, v_pre_recipe_visibility,
+        v_pre_recipe_deleted_at
+    from public.recipes as recipe
+    where recipe.id = p_recipe_id;
+  end if;
+  if p_source_recipe_id is not null then
+    select source.created_by, source.visibility, source.deleted_at
+      into v_pre_source_created_by, v_pre_source_visibility,
+        v_pre_source_deleted_at
+    from public.recipes as source
+    where source.id = p_source_recipe_id;
+  end if;
+
+  select coalesce(
+    array_agg(owner_uuid order by owner_uuid::text collate "C"),
+    '{}'::uuid[]
+  )
+    into v_affected_owner_candidates
+  from (
+    select distinct owner_uuid
+    from unnest(array[
+      p_owner_uuid,
+      v_pre_recipe_created_by,
+      v_pre_source_created_by
+    ]) as affected(owner_uuid)
+    where owner_uuid is not null
+  ) as candidates;
+
+  -- Every requester/source/target owner is acquired in one deterministic UUID
+  -- order before any recipe advisory or row lock. The canonical session
+  -- assertion runs only after this loop and therefore cannot reintroduce a
+  -- requester-first inversion.
+  foreach v_affected_owner in array v_affected_owner_candidates loop
+    perform pg_catalog.pg_advisory_xact_lock(
+      pg_catalog.hashtextextended(
+        'homecook-account-owner:' || v_affected_owner::text,
+        0
+      )
+    );
+
+    if v_affected_owner = p_owner_uuid then
+      select lifecycle.*
+        into v_lifecycle
+      from public.user_account_lifecycles as lifecycle
+      where lifecycle.owner_uuid = v_affected_owner
+      order by lifecycle.account_generation desc
+      limit 1
+      for update;
+    else
+      select lifecycle.*
+        into v_affected_owner_lifecycle
+      from public.user_account_lifecycles as lifecycle
+      where lifecycle.owner_uuid = v_affected_owner
+      order by lifecycle.account_generation desc
+      limit 1
+      for share;
+    end if;
+  end loop;
 
   if v_lifecycle.owner_uuid is null then
     raise exception 'ACCOUNT_CUTOVER_UNCLASSIFIED' using errcode = '55000';
@@ -375,19 +444,6 @@ begin
     raise exception 'ACCOUNT_GENERATION_STALE' using errcode = '55000';
   end if;
 
-  v_result_recipe_id := case
-    when p_operation in ('create', 'fork', 'save_as_new')
-      then extensions.gen_random_uuid()
-    else p_recipe_id
-  end;
-
-  if (p_operation in ('update', 'delete') and p_recipe_id is null)
-    or (p_operation = 'fork' and p_source_recipe_id is null)
-    or (p_operation = 'save_as_new' and p_source_recipe_id is null)
-  then
-    raise exception 'VALIDATION_ERROR' using errcode = '22023';
-  end if;
-
   perform public.lock_personal_recipe_ids(array[
     p_recipe_id,
     p_source_recipe_id,
@@ -416,27 +472,23 @@ begin
     for update;
   end if;
 
-  -- Pin the latest lifecycle row before applying the central #3 visibility
-  -- upper bound. Account transitions update the old generation before making a
-  -- successor current, so this row lock closes the visibility-check race in the
-  -- same transaction without exposing lifecycle state to the caller.
-  if v_source.visibility = 'public' and v_source.created_by is not null then
-    select lifecycle.*
-      into v_source_owner_lifecycle
-    from public.user_account_lifecycles as lifecycle
-    where lifecycle.owner_uuid = v_source.created_by
-    order by lifecycle.account_generation desc
-    limit 1
-    for share;
+  if p_source_recipe_id is not null
+    and (
+      v_source.created_by is distinct from v_pre_source_created_by
+      or v_source.visibility is distinct from v_pre_source_visibility
+      or v_source.deleted_at is distinct from v_pre_source_deleted_at
+    )
+  then
+    raise exception 'RESOURCE_NOT_FOUND' using errcode = 'P0002';
   end if;
-  if v_recipe.visibility = 'public' and v_recipe.created_by is not null then
-    select lifecycle.*
-      into v_recipe_owner_lifecycle
-    from public.user_account_lifecycles as lifecycle
-    where lifecycle.owner_uuid = v_recipe.created_by
-    order by lifecycle.account_generation desc
-    limit 1
-    for share;
+  if p_recipe_id is not null
+    and (
+      v_recipe.created_by is distinct from v_pre_recipe_created_by
+      or v_recipe.visibility is distinct from v_pre_recipe_visibility
+      or v_recipe.deleted_at is distinct from v_pre_recipe_deleted_at
+    )
+  then
+    raise exception 'RESOURCE_NOT_FOUND' using errcode = 'P0002';
   end if;
 
   v_operation_scope := 'personal_recipe_' || p_operation;

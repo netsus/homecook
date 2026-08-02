@@ -156,6 +156,32 @@ function cleanupCallSql(owner: string) {
   `;
 }
 
+function concurrentLockGraph(writerApplication: string, cleanupApplication: string) {
+  return JSON.parse(psql(`
+    with writer as (
+      select pid, wait_event_type, wait_event
+      from pg_stat_activity
+      where application_name = '${writerApplication}'
+    ), cleanup as (
+      select pid, wait_event_type, wait_event
+      from pg_stat_activity
+      where application_name = '${cleanupApplication}'
+    )
+    select jsonb_build_object(
+      'writer_wait', concat_ws(':', writer.wait_event_type, writer.wait_event),
+      'cleanup_wait', concat_ws(':', cleanup.wait_event_type, cleanup.wait_event),
+      'writer_blocked_by_cleanup', cleanup.pid = any(pg_blocking_pids(writer.pid)),
+      'cleanup_blocker_count', cardinality(pg_blocking_pids(cleanup.pid))
+    )::text
+    from writer cross join cleanup;
+  `)) as {
+    writer_wait: string;
+    cleanup_wait: string;
+    writer_blocked_by_cleanup: boolean;
+    cleanup_blocker_count: number;
+  };
+}
+
 const ownerA = "81000000-0000-4000-8000-000000000001";
 const ownerB = "81000000-0000-4000-8000-000000000002";
 const ownerC = "81000000-0000-4000-8000-000000000003";
@@ -166,11 +192,15 @@ const ownerG = "81000000-0000-4000-8000-000000000007";
 const ownerH = "81000000-0000-4000-8000-000000000008";
 const ownerI = "81000000-0000-4000-8000-000000000009";
 const ownerJ = "81000000-0000-4000-8000-000000000010";
+const ownerK = "81000000-0000-4000-8000-000000000011";
+const ownerL = "81000000-0000-4000-8000-000000000012";
 const publicRecipe = "82000000-0000-4000-8000-000000000001";
 const privateRecipeB = "82000000-0000-4000-8000-000000000002";
 const ownerPublicRecipe = "82000000-0000-4000-8000-000000000003";
 const deletingPublicRecipe = "82000000-0000-4000-8000-000000000004";
 const cleanupPendingPublicRecipe = "82000000-0000-4000-8000-000000000005";
+const cleanupFirstPublicRecipe = "82000000-0000-4000-8000-000000000006";
+const writerFirstPublicRecipe = "82000000-0000-4000-8000-000000000007";
 const ingredient = "83000000-0000-4000-8000-000000000001";
 const productIngredient = "83000000-0000-4000-8000-000000000002";
 const cookingMethod = "84000000-0000-4000-8000-000000000001";
@@ -352,7 +382,9 @@ describe.skipIf(!enabled)("personal recipe write PostgreSQL", () => {
         ('${ownerG}', '${identityEpoch}', 'owner-g@example.invalid'),
         ('${ownerH}', '${identityEpoch}', 'owner-h@example.invalid'),
         ('${ownerI}', '${identityEpoch}', 'owner-i@example.invalid'),
-        ('${ownerJ}', '${identityEpoch}', 'owner-j@example.invalid');
+        ('${ownerJ}', '${identityEpoch}', 'owner-j@example.invalid'),
+        ('${ownerK}', '${identityEpoch}', 'owner-k@example.invalid'),
+        ('${ownerL}', '${identityEpoch}', 'owner-l@example.invalid');
 
       update private.full_local_auth_control
       set authority = 'local',
@@ -375,13 +407,16 @@ describe.skipIf(!enabled)("personal recipe write PostgreSQL", () => {
         ('${ownerG}', 'personal-owner-g', 'test', 'personal-owner-g'),
         ('${ownerH}', 'personal-owner-h', 'test', 'personal-owner-h'),
         ('${ownerI}', 'personal-owner-i', 'test', 'personal-owner-i'),
-        ('${ownerJ}', 'personal-owner-j', 'test', 'personal-owner-j');
+        ('${ownerJ}', 'personal-owner-j', 'test', 'personal-owner-j'),
+        ('${ownerK}', 'personal-owner-k', 'test', 'personal-owner-k'),
+        ('${ownerL}', 'personal-owner-l', 'test', 'personal-owner-l');
 
       insert into public.user_account_generation_watermarks (owner_uuid, last_account_generation)
       values
         ('${ownerA}', 1), ('${ownerB}', 1), ('${ownerC}', 1),
         ('${ownerD}', 1), ('${ownerE}', 1), ('${ownerF}', 1), ('${ownerG}', 1),
-        ('${ownerH}', 1), ('${ownerI}', 1), ('${ownerJ}', 1);
+        ('${ownerH}', 1), ('${ownerI}', 1), ('${ownerJ}', 1),
+        ('${ownerK}', 1), ('${ownerL}', 1);
 
       insert into public.user_account_lifecycles (
         owner_uuid, account_generation, auth_identity_created_at_snapshot,
@@ -396,7 +431,9 @@ describe.skipIf(!enabled)("personal recipe write PostgreSQL", () => {
         ('${ownerG}', 1, '${identityEpoch}', 'runtime', 'active', now()),
         ('${ownerH}', 1, '${identityEpoch}', 'runtime', 'active', now()),
         ('${ownerI}', 1, '${identityEpoch}', 'runtime', 'active', now()),
-        ('${ownerJ}', 1, '${identityEpoch}', 'runtime', 'active', now());
+        ('${ownerJ}', 1, '${identityEpoch}', 'runtime', 'active', now()),
+        ('${ownerK}', 1, '${identityEpoch}', 'runtime', 'active', now()),
+        ('${ownerL}', 1, '${identityEpoch}', 'runtime', 'active', now());
 
       insert into public.user_session_generation_bindings (
         session_key_hash, hmac_key_version, owner_uuid,
@@ -439,7 +476,9 @@ describe.skipIf(!enabled)("personal recipe write PostgreSQL", () => {
         ('${privateRecipeB}', '다른 소유자 개인식', 2, 'manual', '${ownerB}', 'private', 1, now()),
         ('${ownerPublicRecipe}', '격리 공개 원본', 2, 'manual', '${ownerC}', 'public', 1, now()),
         ('${deletingPublicRecipe}', '삭제 중 공개 원본', 2, 'manual', '${ownerI}', 'public', 1, now()),
-        ('${cleanupPendingPublicRecipe}', '정리 대기 공개 원본', 2, 'manual', '${ownerJ}', 'public', 1, now());
+        ('${cleanupPendingPublicRecipe}', '정리 대기 공개 원본', 2, 'manual', '${ownerJ}', 'public', 1, now()),
+        ('${cleanupFirstPublicRecipe}', 'cleanup-first 공개 원본', 2, 'manual', '${ownerK}', 'public', 1, now()),
+        ('${writerFirstPublicRecipe}', 'writer-first 공개 원본', 2, 'manual', '${ownerL}', 'public', 1, now());
 
       insert into public.nutrition_profiles (id, created_by)
       values ('${nutritionProfile}', '${ownerA}');
@@ -482,7 +521,8 @@ describe.skipIf(!enabled)("personal recipe write PostgreSQL", () => {
       delete from public.user_session_generation_bindings
       where owner_uuid in (
         '${ownerA}', '${ownerB}', '${ownerC}', '${ownerD}', '${ownerE}',
-        '${ownerF}', '${ownerG}', '${ownerH}', '${ownerI}', '${ownerJ}'
+        '${ownerF}', '${ownerG}', '${ownerH}', '${ownerI}', '${ownerJ}',
+        '${ownerK}', '${ownerL}'
       );
     `);
   });
@@ -1113,6 +1153,176 @@ describe.skipIf(!enabled)("personal recipe write PostgreSQL", () => {
     expect(secondResults[1]?.stderr).toMatch(/ACCOUNT_DELETING|ACCOUNT_SESSION_STALE/);
     expect(psql(`select count(*)::text from public.recipes where id = '${cleanupFirst.data.id}';`)).toBe("0");
     expect(psql(`select md5(concat_ws('|', title, revision, visibility)) from public.recipes where id = '${publicRecipe}';`)).toBe(sharedBefore);
+  });
+
+  it("serializes cross-owner public forks with full account cleanup in both directions", async () => {
+    const cleanupFirstBarrier = "homecook-personal-cleanup-first";
+    const cleanupFirstWriterApp = "personal-cleanup-first-writer";
+    const cleanupFirstDeleteApp = "personal-cleanup-first-delete";
+    const cleanupFirstKey = "85000000-0000-4000-8000-000000000120";
+    const control = spawnPsql();
+    const controlReady = waitForToken(control, "CLEANUP_FIRST_BARRIER_READY");
+    const controlExit = waitForExit(control);
+    control.stdin.write(`
+      select pg_advisory_lock(hashtextextended('${cleanupFirstBarrier}', 0));
+      select 'CLEANUP_FIRST_BARRIER_READY';
+    `);
+    await controlReady;
+
+    const cleanupFirstDelete = spawnPsql(`
+      begin;
+      set local application_name = '${cleanupFirstDeleteApp}';
+      ${ownerLockSql(ownerK)}
+      select public.set_account_generation_internal_writer_marker('${cutoverAttempt}', true);
+      update public.user_account_lifecycles
+      set status = 'deleting', revision = revision + 1, updated_at = now()
+      where owner_uuid = '${ownerK}' and account_generation = 1;
+      select pg_advisory_xact_lock_shared(hashtextextended('${cleanupFirstBarrier}', 0));
+      select public.delete_user_private_data('${ownerK}');
+      update public.user_account_lifecycles
+      set status = 'cleanup_pending', revision = revision + 1, updated_at = now()
+      where owner_uuid = '${ownerK}' and account_generation = 1;
+      select public.set_account_generation_internal_writer_marker('${cutoverAttempt}', false);
+      commit;
+    `);
+    const cleanupFirstDeleteOutcome = waitForExit(cleanupFirstDelete);
+    expect(await waitForApplicationLock(cleanupFirstDeleteApp)).toBe(true);
+
+    const cleanupFirstWriter = spawnPsql(`
+      begin;
+      set local application_name = '${cleanupFirstWriterApp}';
+      ${writerCallSql({
+        operation: "fork",
+        sourceRecipeId: cleanupFirstPublicRecipe,
+        key: cleanupFirstKey,
+        draftTitle: "must not survive cleanup-first",
+      })}
+      commit;
+    `);
+    const cleanupFirstWriterOutcome = waitForExit(cleanupFirstWriter);
+    expect(await waitForApplicationLock(cleanupFirstWriterApp)).toBe(true);
+    const cleanupFirstGraph = concurrentLockGraph(
+      cleanupFirstWriterApp,
+      cleanupFirstDeleteApp,
+    );
+    const recipeProbe = psqlResult(`
+      begin;
+      select id from public.recipes
+      where id = '${cleanupFirstPublicRecipe}'
+      for update nowait;
+      rollback;
+    `);
+
+    control.stdin.write(`
+      select pg_advisory_unlock(hashtextextended('${cleanupFirstBarrier}', 0));
+      \\q
+    `);
+    const [cleanupFirstWriterResult, cleanupFirstDeleteResult] = await Promise.all([
+      cleanupFirstWriterOutcome,
+      cleanupFirstDeleteOutcome,
+    ]);
+    await controlExit;
+
+    const cleanupFirstErrors = `${cleanupFirstWriterResult.stderr}\n${cleanupFirstDeleteResult.stderr}`;
+    const cleanupFirstSourceState = psql(`
+      select concat_ws(':', visibility, (created_by is null)::text, title, revision)
+      from public.recipes where id = '${cleanupFirstPublicRecipe}';
+    `);
+    const cleanupFirstForkCount = psql(
+      "select count(*)::text from public.recipes where title = 'must not survive cleanup-first';",
+    );
+    const cleanupFirstReceiptCount = psql(`
+      select count(*)::text
+      from public.mutation_idempotency_keys
+      where key_hash = encode(
+        extensions.digest(convert_to('${cleanupFirstKey}', 'UTF8'), 'sha256'),
+        'hex'
+      );
+    `);
+    const cleanupFirstEvidence = {
+      graph: cleanupFirstGraph,
+      recipe_locked_before_all_owners: recipeProbe.status !== 0,
+      writer_status: cleanupFirstWriterResult.status,
+      cleanup_status: cleanupFirstDeleteResult.status,
+      writer_error: cleanupFirstWriterResult.stderr.trim(),
+      cleanup_error: cleanupFirstDeleteResult.stderr.trim(),
+      source_state: cleanupFirstSourceState,
+      fork_count: cleanupFirstForkCount,
+      receipt_count: cleanupFirstReceiptCount,
+    };
+    expect(cleanupFirstGraph.writer_blocked_by_cleanup).toBe(true);
+    expect(cleanupFirstGraph.writer_wait).toMatch(/^Lock:/);
+    expect(cleanupFirstGraph.cleanup_wait).toMatch(/^Lock:/);
+    expect(cleanupFirstGraph.cleanup_blocker_count).toBeGreaterThan(0);
+    expect(
+      /40P01|deadlock detected/i.test(cleanupFirstErrors),
+      JSON.stringify(cleanupFirstEvidence),
+    ).toBe(false);
+    expect(recipeProbe.status, recipeProbe.stderr).toBe(0);
+    expect(cleanupFirstDeleteResult.status, cleanupFirstDeleteResult.stderr).toBe(0);
+    expect(cleanupFirstWriterResult.status).not.toBe(0);
+    expect(cleanupFirstWriterResult.stderr).toMatch(/RESOURCE_NOT_FOUND/);
+    expect(cleanupFirstSourceState).toBe("public:true:cleanup-first 공개 원본:1");
+    expect(cleanupFirstForkCount).toBe("0");
+    expect(cleanupFirstReceiptCount).toBe("0");
+
+    const writerFirstApplication = "personal-full-cleanup-writer-first";
+    const writerFirstDeleteApplication = "personal-full-cleanup-delete-second";
+    const markerControl = spawnPsql();
+    const markerReady = waitForToken(markerControl, "FULL_CLEANUP_MARKER_LOCKED");
+    const markerControlExit = waitForExit(markerControl);
+    markerControl.stdin.write(`
+      begin;
+      select 1 from public.account_generation_cutover_attempts
+      where id = '${cutoverAttempt}' for update;
+      select 'FULL_CLEANUP_MARKER_LOCKED';
+    `);
+    await markerReady;
+
+    const writerFirst = spawnPsql(`
+      begin;
+      set local application_name = '${writerFirstApplication}';
+      ${writerCallSql({
+        operation: "fork",
+        sourceRecipeId: writerFirstPublicRecipe,
+        key: "85000000-0000-4000-8000-000000000121",
+        draftTitle: "writer survives before full cleanup",
+      })}
+      commit;
+    `);
+    const writerFirstOutcome = waitForExit(writerFirst);
+    expect(await waitForApplicationLock(writerFirstApplication)).toBe(true);
+
+    const writerFirstDelete = spawnPsql(`
+      begin;
+      set local application_name = '${writerFirstDeleteApplication}';
+      ${cleanupCallSql(ownerL)}
+      commit;
+    `);
+    const writerFirstDeleteOutcome = waitForExit(writerFirstDelete);
+    expect(await waitForApplicationLock(writerFirstDeleteApplication)).toBe(true);
+    const writerFirstGraph = concurrentLockGraph(
+      writerFirstApplication,
+      writerFirstDeleteApplication,
+    );
+
+    markerControl.stdin.write("commit;\n\\q\n");
+    const [writerFirstResult, writerFirstDeleteResult] = await Promise.all([
+      writerFirstOutcome,
+      writerFirstDeleteOutcome,
+    ]);
+    await markerControlExit;
+
+    const writerFirstErrors = `${writerFirstResult.stderr}\n${writerFirstDeleteResult.stderr}`;
+    expect(writerFirstGraph.cleanup_blocker_count).toBeGreaterThan(0);
+    expect(writerFirstErrors).not.toMatch(/40P01|deadlock detected/i);
+    expect(writerFirstResult.status, writerFirstResult.stderr).toBe(0);
+    expect(writerFirstDeleteResult.status, writerFirstDeleteResult.stderr).toBe(0);
+    expect(psql("select count(*)::text from public.recipes where title = 'writer survives before full cleanup';")).toBe("1");
+    expect(psql(`
+      select concat_ws(':', visibility, (created_by is null)::text, title, revision)
+      from public.recipes where id = '${writerFirstPublicRecipe}';
+    `)).toBe("public:true:writer-first 공개 원본:1");
   });
 
   it("rejects a G1 writer after an in-flight G2 transition and clears the F0 marker", async () => {

@@ -21,13 +21,15 @@ describe("personal recipe write security", () => {
     const writer = sql.indexOf("create or replace function public.write_personal_recipe_core");
     const fence = sql.indexOf("homecook-account-generation-cutover", writer);
     const authorityControl = sql.indexOf("private.full_local_auth_control", fence);
-    const owner = sql.indexOf("homecook-account-owner:");
+    const ownerPreRead = sql.indexOf("v_affected_owner_candidates", authorityControl);
+    const owner = sql.indexOf("homecook-account-owner:", ownerPreRead);
     const sessionAuthority = sql.indexOf("public.assert_full_local_session_authority", owner);
     const recipe = sql.indexOf("perform public.lock_personal_recipe_ids", owner);
     const resource = sql.indexOf("for update", recipe);
 
     expect(fence).toBeGreaterThan(-1);
     expect(authorityControl).toBeGreaterThan(fence);
+    expect(ownerPreRead).toBeGreaterThan(authorityControl);
     expect(owner).toBeGreaterThan(authorityControl);
     expect(owner).toBeGreaterThan(fence);
     expect(sessionAuthority).toBeGreaterThan(owner);
@@ -66,10 +68,13 @@ describe("personal recipe write security", () => {
       /expected_account_generation[\s\S]*v_lifecycle\.account_generation/i,
     );
     expect(sql).toMatch(
-      /v_source\.visibility = 'public'[\s\S]*for share;/i,
+      /v_pre_source_created_by[\s\S]*v_affected_owner_candidates[\s\S]*for share;/i,
     );
     expect(sql).toMatch(
-      /v_recipe\.visibility = 'public'[\s\S]*for share;/i,
+      /v_source\.created_by is distinct from v_pre_source_created_by[\s\S]*RESOURCE_NOT_FOUND/i,
+    );
+    expect(sql).toMatch(
+      /v_recipe\.created_by is distinct from v_pre_recipe_created_by[\s\S]*RESOURCE_NOT_FOUND/i,
     );
   });
 

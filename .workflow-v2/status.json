@@ -586,7 +586,7 @@
       "id": "baemin-prototype-planner-week-parity",
       "preset": "vertical-slice-strict",
       "branch": "feature/fe-baemin-prototype-planner-week-parity",
-      "pr_path": "https://github.com/netsus/homecook/pull/1274",
+      "pr_path": "pending",
       "lifecycle": "merged",
       "approval_state": "dual_approved",
       "verification_status": "passed",
