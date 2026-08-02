@@ -1776,7 +1776,29 @@ describe("shopping stage2 backend", () => {
     );
   });
 
-  it("splits one recipe across content snapshots with deterministic integer servings", async () => {
+  it.each([
+    {
+      requestedServings: 7,
+      expectedAmount: 700,
+      expectedAllocations: [
+        { snapshotId: "snapshot-1", shoppingServings: 5, plannedServingsTotal: 4 },
+        { snapshotId: "snapshot-2", shoppingServings: 2, plannedServingsTotal: 2 },
+      ],
+    },
+    {
+      requestedServings: 1,
+      expectedAmount: 100,
+      expectedAllocations: [
+        { snapshotId: "snapshot-2", shoppingServings: 1, plannedServingsTotal: 1 },
+      ],
+    },
+  ])(
+    "uses pinned content once per Meal without duplicating a recipe-level serving total",
+    async ({
+      requestedServings,
+      expectedAmount,
+      expectedAllocations,
+    }) => {
     const firstMealId = "550e8400-e29b-41d4-a716-446655440001";
     const secondMealId = "550e8400-e29b-41d4-a716-446655440002";
     const recipeId = "550e8400-e29b-41d4-a716-446655440101";
@@ -1917,7 +1939,7 @@ describe("shopping stage2 backend", () => {
             {
               recipe_id: recipeId,
               meal_ids: [firstMealId, secondMealId],
-              shopping_servings: 7,
+              shopping_servings: requestedServings,
             },
           ],
         }),
@@ -1933,29 +1955,22 @@ describe("shopping stage2 backend", () => {
             ingredient_id: "ing-onion",
             food_product_id: null,
             food_product_nutrition_version_id: null,
-            display_text: "양파 700g",
-            amounts_json: [{ amount: 700, unit: "g" }],
+            display_text: `양파 ${expectedAmount}g`,
+            amounts_json: [{ amount: expectedAmount, unit: "g" }],
             is_pantry_excluded: false,
             sort_order: 0,
           },
         ],
-        p_recipe_rows: [
-          {
-            recipe_id: recipeId,
-            recipe_content_snapshot_id: "snapshot-1",
-            shopping_servings: 5,
-            planned_servings_total: 4,
-          },
-          {
-            recipe_id: recipeId,
-            recipe_content_snapshot_id: "snapshot-2",
-            shopping_servings: 2,
-            planned_servings_total: 2,
-          },
-        ],
+        p_recipe_rows: expectedAllocations.map((allocation) => ({
+          recipe_id: recipeId,
+          recipe_content_snapshot_id: allocation.snapshotId,
+          shopping_servings: allocation.shoppingServings,
+          planned_servings_total: allocation.plannedServingsTotal,
+        })),
       }),
     );
-  });
+    },
+  );
 
   it("marks selected meals shopping_done without creating a list when every needed ingredient is already in pantry", async () => {
     const mealId = "550e8400-e29b-41d4-a716-446655440111";
