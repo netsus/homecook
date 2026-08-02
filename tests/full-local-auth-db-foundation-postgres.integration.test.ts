@@ -13,6 +13,8 @@ import {
 const enabled = process.env.HOMECOOK_FULL_LOCAL_AUTH_DB_PG_INTEGRATION === "1";
 const inventoryOnly =
   process.env.HOMECOOK_FULL_LOCAL_SECURITY_INVENTORY_ONLY === "1";
+const includePersonalRecipeFunctions =
+  process.env.HOMECOOK_PERSONAL_RECIPE_SECURITY_FUNCTIONS === "1";
 const host = process.env.HOMECOOK_ACCOUNT_GENERATION_PGHOST ?? "";
 const port = process.env.HOMECOOK_ACCOUNT_GENERATION_PGPORT ?? "";
 const database = process.env.HOMECOOK_ACCOUNT_GENERATION_PGDATABASE ?? "";
@@ -54,17 +56,26 @@ function securityInventoryApi() {
   expect(buildSql).toBeTypeOf("function");
   expect(assertResult).toBeTypeOf("function");
   return {
-    buildSql: buildSql as (options?: { includeSnapshotTables?: boolean }) => string,
+    buildSql: buildSql as (options?: {
+      includeSnapshotTables?: boolean;
+      includePersonalRecipeFunctions?: boolean;
+    }) => string,
     assertResult: assertResult as (
       result: Record<string, unknown>,
-      options?: { includeSnapshotTables?: boolean },
+      options?: {
+        includeSnapshotTables?: boolean;
+        includePersonalRecipeFunctions?: boolean;
+      },
     ) => void,
   };
 }
 
 function securityInventoryAfter(
   mutation = "",
-  options: { includeSnapshotTables?: boolean } = {},
+  options: {
+    includeSnapshotTables?: boolean;
+    includePersonalRecipeFunctions?: boolean;
+  } = {},
 ) {
   const api = securityInventoryApi();
   const result = psqlResult(`
@@ -814,7 +825,10 @@ run("full-local Auth isolated PostgreSQL foundation", () => {
 });
 
 activeInventoryRun("active full-local snapshot security inventory", () => {
-  const options = { includeSnapshotTables: true };
+  const options = {
+    includeSnapshotTables: true,
+    includePersonalRecipeFunctions,
+  };
 
   beforeAll(() => {
     expect(host).not.toBe("");
@@ -837,7 +851,7 @@ activeInventoryRun("active full-local snapshot security inventory", () => {
       },
     ]);
     expect(result).toMatchObject({
-      required_function_count: 29,
+      required_function_count: includePersonalRecipeFunctions ? 33 : 29,
       required_role_count: 4,
       required_role_membership_count: 2,
       role_attribute_drift_count: 0,

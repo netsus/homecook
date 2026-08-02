@@ -2462,11 +2462,11 @@
     {
       "id": "personal-recipe-customization-write-core",
       "preset": "vertical-slice-strict",
-      "branch": "docs/personal-recipe-customization-write-core",
-      "pr_path": "pending",
-      "lifecycle": "planned",
-      "approval_state": "not_started",
-      "verification_status": "pending",
+      "branch": "feature/be-personal-recipe-customization-write-core",
+      "pr_path": "https://github.com/netsus/homecook/pull/1274",
+      "lifecycle": "in_progress",
+      "approval_state": "dual_approved",
+      "verification_status": "passed",
       "required_checks": [
         "pnpm validate:source-of-truth-sync",
         "pnpm validate:workflow-v2",
@@ -2481,7 +2481,7 @@
         "node scripts/verify-personal-recipe-customization-write-core-local-first.mjs --mode post-merge-read-only",
         "git diff --check"
       ],
-      "notes": "Roadmap moves to docs while workflow lifecycle remains planned and approval not_started until separate Codex internal1.5, security/DB and five-axis reviews approve with zero required findings. Stage 1 verify_commands are current docs validators, focused workflow tests, lint, typecheck, audit and diff only. Backend migration/RPC/RLS/PostgreSQL/real DB/E2E/server-production/local-rehearsal and release evidence are future artifacts. Design is N/A because #5 owns all UI. #6 may dark-ship recipe-local write core but must not expose an alternate PATCH; #7 integrates future impact and #8 gates R+2 activation.",
+      "notes": "Draft PR #1274 exact implementation/evidence head 5b96e9be94f36822944deb194581517731c3a4ab received two external independent approvals: code/quality task 019fc23c-6129-7de3-a075-89828d6f35bf and security/DB task 019fc23c-6129-7de3-a075-8961262f7bb3 each APPROVE P0/P1/P2 0/0/0. Reviewed-head evidence is locked 16/16, #6 fresh/replay 20/20, #4 fresh 15 plus 1 intended skip and replay 16/16, inventory 30 plus 16 intended skip, raw checks 21 = 19 success plus 2 intended skip with pending/fail/cancel 0. Standalone #3 remains the disclosed pre-existing 74/75 diagnostic. The Stage 2 author only projects these external results and does not self-approve. Pre-merge lifecycle remains in_progress; approval_state=dual_approved, verification_status=passed, evaluation not_started and auto-merge false. Draft/merge/post-merge, Manual Only, #7/#8 and R+2 activation remain pending. Writes 0/0/0; Contract Evolution none.",
       "evaluation_status": "not_started",
       "evaluation_round": 0,
       "last_evaluator_result": null,

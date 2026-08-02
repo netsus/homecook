@@ -132,9 +132,9 @@
     ]
   },
   "status": {
-    "lifecycle": "planned",
-    "approval_state": "not_started",
-    "verification_status": "pending",
+    "lifecycle": "in_progress",
+    "approval_state": "dual_approved",
+    "verification_status": "passed",
     "evaluation_status": "not_started",
     "evaluation_round": 0,
     "last_evaluator_result": null,
@@ -153,5 +153,5 @@
     "Unapproved server-production migration or database write or capability activation"
   ],
   "open_questions": [],
-  "notes": "Roadmap moves to docs while workflow lifecycle remains planned and approval not_started until separate Codex internal1.5, security/DB and five-axis reviews approve with zero required findings. Stage 1 verify_commands are current docs validators, focused workflow tests, lint, typecheck, audit and diff only. Backend migration/RPC/RLS/PostgreSQL/real DB/E2E/server-production/local-rehearsal and release evidence are future artifacts. Design is N/A because #5 owns all UI. #6 may dark-ship recipe-local write core but must not expose an alternate PATCH; #7 integrates future impact and #8 gates R+2 activation."
+  "notes": "Stage 1 contract lock remains approved. Stage 2 backend implementer task 019fc113-7b96-7620-ada5-a0bb66cfae7e retains all original and repair evidence in Draft PR #1274. Fresh independent code/quality task 019fc23c-6129-7de3-a075-89828d6f35bf and security/DB task 019fc23c-6129-7de3-a075-8961262f7bb3 each returned APPROVE with P0/P1/P2 0/0/0 against exact implementation/evidence head 5b96e9be94f36822944deb194581517731c3a4ab. The reviewers independently confirmed locked 16/16, #6 fresh/replay 20/20, #4 fresh 15 plus 1 intended skip and replay 16/16, central inventory 30 pass plus 16 intended skip, and exact-head checks raw 21 = 19 success plus 2 intended skip with pending/fail/cancel 0. Standalone #3 remains the separately disclosed pre-existing 74/75 diagnostic and is not claimed green. This Stage 2 author only projects the external approvals and does not self-approve. Pre-merge lifecycle stays in_progress, approval is dual_approved for two distinct Codex task IDs, verification is passed for the reviewed exact head, evaluation remains not_started, and auto-merge remains false. PR #1274 stays Draft; merge/post-merge verification, named E2E when applicable, merged-exact read-only verifier, Manual Only evidence, #7 integration and #8 R/R+1→R+2 activation remain pending. Production/staging/remote writes remain 0/0/0 and Contract Evolution is none. Evidence: docs/workpacks/personal-recipe-customization-write-core/evidence/2026-08-02-stage2-backend-implementation.md."
 }

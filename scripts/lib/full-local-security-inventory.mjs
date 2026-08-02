@@ -13,6 +13,10 @@ const SNAPSHOT_MANIFEST_PATH = join(
   REPOSITORY_ROOT,
   "docs/security/recipe-snapshot-authority-security-function-authorization-manifest.json",
 );
+const PERSONAL_RECIPE_MANIFEST_PATH = join(
+  REPOSITORY_ROOT,
+  "docs/security/personal-recipe-customization-write-core-security-function-authorization-manifest.json",
+);
 const FULL_LOCAL_MIGRATION_PATH = join(
   REPOSITORY_ROOT,
   "supabase/migrations/20260801120000_full_local_auth_db_foundation.sql",
@@ -20,6 +24,10 @@ const FULL_LOCAL_MIGRATION_PATH = join(
 const SNAPSHOT_MIGRATION_PATH = join(
   REPOSITORY_ROOT,
   "supabase/migrations/20260729170500_recipe_snapshot_authority_foundation.sql",
+);
+const PERSONAL_RECIPE_MIGRATION_PATH = join(
+  REPOSITORY_ROOT,
+  "supabase/migrations/20260802130000_personal_recipe_customization_write_core.sql",
 );
 const SNAPSHOT_CONSUMER_READ_MIGRATION_PATH = join(
   REPOSITORY_ROOT,
@@ -42,8 +50,15 @@ const manifest = JSON.parse(readFileSync(FULL_LOCAL_MANIFEST_PATH, "utf8"));
 const snapshotManifest = JSON.parse(
   readFileSync(SNAPSHOT_MANIFEST_PATH, "utf8"),
 );
+const personalRecipeManifest = JSON.parse(
+  readFileSync(PERSONAL_RECIPE_MANIFEST_PATH, "utf8"),
+);
 const fullLocalMigration = readFileSync(FULL_LOCAL_MIGRATION_PATH, "utf8");
 const snapshotMigration = readFileSync(SNAPSHOT_MIGRATION_PATH, "utf8");
+const personalRecipeMigration = readFileSync(
+  PERSONAL_RECIPE_MIGRATION_PATH,
+  "utf8",
+);
 const snapshotConsumerReadMigration = readFileSync(
   SNAPSHOT_CONSUMER_READ_MIGRATION_PATH,
   "utf8",
@@ -468,6 +483,9 @@ const SNAPSHOT_FUNCTION_CONTRACT = snapshotManifest.functions.map((entry) =>
       : snapshotMigration,
   )
 );
+const PERSONAL_RECIPE_FUNCTION_CONTRACT = personalRecipeManifest.functions.map(
+  (entry) => parseFunction(entry, personalRecipeMigration),
+);
 const CORE_POLICY_CONTRACT = CORE_POLICY_SOURCES.map(([migration, name]) =>
   parsePolicy(migration, name)
 );
@@ -502,10 +520,16 @@ function valuesSql(rows) {
   return rows.map((row) => `(${row.map(sqlLiteral).join(", ")})`).join(",\n      ");
 }
 
-function buildSecurityInventoryExpression({ includeSnapshotTables }) {
-  const functions = includeSnapshotTables
+function buildSecurityInventoryExpression({
+  includeSnapshotTables,
+  includePersonalRecipeFunctions,
+}) {
+  const baseFunctions = includeSnapshotTables
     ? [...FUNCTION_CONTRACT, ...SNAPSHOT_FUNCTION_CONTRACT]
     : FUNCTION_CONTRACT;
+  const functions = includePersonalRecipeFunctions
+    ? [...baseFunctions, ...PERSONAL_RECIPE_FUNCTION_CONTRACT]
+    : baseFunctions;
   const rlsTables = includeSnapshotTables
     ? [...CORE_RLS_TABLES, ...SNAPSHOT_RLS_TABLES]
     : CORE_RLS_TABLES;
@@ -845,8 +869,12 @@ const SECURITY_ZERO_KEYS = SECURITY_RESULT_KEYS.filter((key) =>
 
 export function buildFullLocalSecurityInventoryExpression({
   includeSnapshotTables = false,
+  includePersonalRecipeFunctions = false,
 } = {}) {
-  return buildSecurityInventoryExpression({ includeSnapshotTables });
+  return buildSecurityInventoryExpression({
+    includeSnapshotTables,
+    includePersonalRecipeFunctions,
+  });
 }
 
 export function buildRecipeSnapshotAuthorityFullLocalSecurityInventorySql(
@@ -857,11 +885,16 @@ export function buildRecipeSnapshotAuthorityFullLocalSecurityInventorySql(
 
 export function assertRecipeSnapshotAuthorityFullLocalSecurityInventoryResult(
   result,
-  { includeSnapshotTables = false } = {},
+  {
+    includeSnapshotTables = false,
+    includePersonalRecipeFunctions = false,
+  } = {},
 ) {
-  const expectedFunctionCount = includeSnapshotTables
+  const baseFunctionCount = includeSnapshotTables
     ? FUNCTION_CONTRACT.length + SNAPSHOT_FUNCTION_CONTRACT.length
     : FUNCTION_CONTRACT.length;
+  const expectedFunctionCount = baseFunctionCount
+    + (includePersonalRecipeFunctions ? PERSONAL_RECIPE_FUNCTION_CONTRACT.length : 0);
   const expectedTableCount = includeSnapshotTables
     ? CORE_RLS_TABLES.length + SNAPSHOT_RLS_TABLES.length
     : CORE_RLS_TABLES.length;

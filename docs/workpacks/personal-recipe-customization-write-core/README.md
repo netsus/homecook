@@ -185,14 +185,22 @@ No stable capability-off public error code is invented. Before approved activati
 
 ## Delivery Checklist
 
-- [ ] dormant create/fork/save-as-new core preserves source identity and legacy manual behavior <!-- omo:id=delivery-personal-write-create;stage=2;scope=backend;review=3,6 -->
-- [ ] owner-private same-ID revision update stores canonical ingredient/product/version/step provenance <!-- omo:id=delivery-personal-write-update;stage=2;scope=backend;review=3,6 -->
-- [ ] soft DELETE is owner-only, idempotent and preserves every history FK/snapshot <!-- omo:id=delivery-personal-write-delete;stage=2;scope=backend;review=3,6 -->
-- [ ] public/other-owner/direct-DML/client-authority mutation paths are denied without disclosure <!-- omo:id=delivery-personal-write-permissions;stage=2;scope=backend;review=3,6 -->
-- [ ] F0 session generation, lifecycle and shared capability fence are revalidated inside each write transaction <!-- omo:id=delivery-personal-write-generation;stage=2;scope=backend;review=3,6 -->
-- [ ] common lock order and one-RPC atomicity survive write/delete/account-cleanup races <!-- omo:id=delivery-personal-write-locks;stage=2;scope=backend;review=3,6 -->
-- [ ] idempotency replay/conflict is generation-scoped and effect-exactly-once <!-- omo:id=delivery-personal-write-idempotency;stage=2;scope=backend;review=3,6 -->
-- [ ] image object attach, tag upper bound and immutable content/nutrition snapshot authorities are preserved <!-- omo:id=delivery-personal-write-integrations;stage=2;scope=shared;review=3,6 -->
+Stage 2 implementation evidence is retained at [`evidence/2026-08-02-stage2-backend-implementation.md`](./evidence/2026-08-02-stage2-backend-implementation.md). It records the implementer task's actual RED→GREEN, disposable PostgreSQL fresh/replay and predecessor regression results without claiming Stage 3 approval, Manual Only evidence or capability activation.
+
+The same evidence also records the Stage 2 author's repairs for fresh Stage 3 `REQUEST_CHANGES` at reviewed head `bcc4aa4efad7419837e3a35ae7b5c6ab5661ef31`. Those historical repair rounds remain preserved and are superseded for current-head review status by the approvals below.
+
+The evidence further records the third Stage 3 repair for exact head `d197086c9ff0a140878104716dfb73dff0f2ad27`: independent code/quality task `019fc1cf-9b72-7080-bddd-24e166fe86e1` and security/DB task `019fc1cf-9b73-71e1-b2d2-c8009811ee79` both reproduced the cross-owner public-fork/full-cleanup lock inversion. Implementation commit `080193e73346eff91c1266045e7dfa6da43d26a6` restores the canonical all-affected-owner-before-recipe order and the unrelated workflow projection contamination.
+
+Fresh independent re-review of exact implementation/evidence head `5b96e9be94f36822944deb194581517731c3a4ab` is approved: code/quality task `019fc23c-6129-7de3-a075-89828d6f35bf` and security/DB task `019fc23c-6129-7de3-a075-8961262f7bb3` each returned `APPROVE`, P0/P1/P2 `0/0/0`. This Stage 2 author only projects those external results and does not self-approve. The PR remains Draft and pre-merge; Stage 4~6 are backend-only N/A/skipped only after the Stage 3 merge gate, while Manual Only, #7/#8 and R+2 activation remain pending.
+
+- [x] dormant create/fork/save-as-new core preserves source identity and legacy manual behavior <!-- omo:id=delivery-personal-write-create;stage=2;scope=backend;review=3,6 -->
+- [x] owner-private same-ID revision update stores canonical ingredient/product/version/step provenance <!-- omo:id=delivery-personal-write-update;stage=2;scope=backend;review=3,6 -->
+- [x] soft DELETE is owner-only, idempotent and preserves every history FK/snapshot <!-- omo:id=delivery-personal-write-delete;stage=2;scope=backend;review=3,6 -->
+- [x] public/other-owner/direct-DML/client-authority mutation paths are denied without disclosure <!-- omo:id=delivery-personal-write-permissions;stage=2;scope=backend;review=3,6 -->
+- [x] F0 session generation, lifecycle and shared capability fence are revalidated inside each write transaction <!-- omo:id=delivery-personal-write-generation;stage=2;scope=backend;review=3,6 -->
+- [x] common lock order and one-RPC atomicity survive write/delete/account-cleanup races <!-- omo:id=delivery-personal-write-locks;stage=2;scope=backend;review=3,6 -->
+- [x] idempotency replay/conflict is generation-scoped and effect-exactly-once <!-- omo:id=delivery-personal-write-idempotency;stage=2;scope=backend;review=3,6 -->
+- [x] image object attach, tag upper bound and immutable content/nutrition snapshot authorities are preserved <!-- omo:id=delivery-personal-write-integrations;stage=2;scope=shared;review=3,6 -->
 - [ ] #7 final PATCH/propagation and #8 activation boundaries are not preclaimed <!-- omo:id=delivery-personal-write-successor-boundary;stage=2;scope=shared;review=3,6 -->
 - [ ] capability-off current/previous releases create zero new personal mutations and legacy manual flow remains green <!-- omo:id=delivery-personal-write-dark-ship;stage=2;scope=shared;review=3,6 -->
 - [ ] local, PostgreSQL, real DB, E2E, security and current-head checks produce the planned evidence <!-- omo:id=delivery-personal-write-verification;stage=2;scope=shared;review=3,6 -->

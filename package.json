@@ -98,6 +98,7 @@
     "test:recipe-visibility-read-hardening:focused": "vitest run tests/recipe-visibility-*.test.ts tests/recipe-image-*.test.ts --exclude '**/*.integration.test.ts' --exclude '**/*.live.test.ts'",
     "test:recipe-visibility-read-hardening:postgres": "node scripts/run-recipe-visibility-read-hardening-postgres-integration.mjs",
     "test:recipe-snapshot-authority:postgres": "node scripts/run-recipe-snapshot-authority-postgres-integration.mjs",
+    "test:personal-recipe-customization-write-core:postgres": "node scripts/run-personal-recipe-customization-write-core-postgres-integration.mjs",
     "verify:recipe-snapshot-authority:full-local": "node scripts/verify-recipe-snapshot-authority-full-local.mjs --mode post-merge-full-local-read-only",
     "verify:personal-recipe-editor:full-local": "node scripts/verify-personal-recipe-editor-full-local.mjs --mode post-merge-full-local-read-only",
     "test:recipe-snapshot-authority:hybrid-cleanup-postgres": "node scripts/run-recipe-snapshot-hybrid-account-cleanup-postgres-integration.mjs",

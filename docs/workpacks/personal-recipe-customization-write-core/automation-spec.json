@@ -107,6 +107,7 @@
     }
   },
   "external_smokes": [
+    "fresh-independent-stage3-code-quality-and-security-db-review-approved-exact-head-5b96e9be-with-p0-p1-p2-zero",
     "merged-exact-SHA server-production/local-rehearsal verifier is read-only and reports function signatures ACL RLS policy guards and capability state",
     "two-owner role matrix denies public source mutation other-owner private write and direct DML without row-count or digest change",
     "delayed G1 write delete and G2 recreation never records G1 content in G2",
@@ -153,5 +154,5 @@
     "backend": 6,
     "frontend": 1
   },
-  "notes": "This is a DB/security high-risk backend-only Stage 1 lock. Stage 1 runs only current docs validators, focused workflow tests, lint, typecheck, audit and diff. Route/RPC, PostgreSQL, real DB, E2E, server-production/local-rehearsal and compatibility evidence are future Stage 2/integration/closeout artifacts. #6 dark-ships recipe-local write core but cannot expose an alternate PATCH contract; #7 owns impact integration and #8 owns the R/R+1 gate before R+2 joint activation. Design is N/A because #5 exclusively owns RECIPE_DETAIL/editor UI and authority evidence."
+  "notes": "Stage 2 dormant backend evidence is independently approved at exact head 5b96e9be94f36822944deb194581517731c3a4ab by code/quality task 019fc23c-6129-7de3-a075-89828d6f35bf and security/DB task 019fc23c-6129-7de3-a075-8961262f7bb3, each APPROVE with P0/P1/P2 0/0/0. This Stage 2 author records those external results and does not self-approve. Pre-merge lifecycle remains in_progress; the PR stays Draft. Design is N/A and Stage 4~6 are backend-only skip semantics after merge. Named E2E, merged-exact read-only verification, Manual Only, #7/#8 and R+2 activation remain pending."
 }
