@@ -105,3 +105,43 @@ No reviewer result is marked complete here. Fresh independent Stage 3 code/quali
 - source/workpack/automation/workflow-v2/OMO/closeout/branch validators and `git diff --check` passed. Commit and PR-body validators are rerun after the repair commits/body update.
 - No matching slice-specific local-fixture E2E exists before #7/#8 activation; no empty grep is claimed green.
 - Production/staging/remote application writes remain `0/0/0`. Contract Evolution Candidate remains `none`.
+
+## Fresh Stage 3 re-review repair — writer-first lifecycle and full session authority
+
+The same Stage 2 author repaired, but did not approve, the fresh independent reviews of exact head `bcc4aa4efad7419837e3a35ae7b5c6ab5661ef31`. The implementation repair commit is `cfc2dfab46ce192a3c9160920d4a2a6db4ddb5f0`.
+
+- code/quality task `019fc194-0255-7df1-abc2-0c01b08ef001`: `REQUEST_CHANGES`, P0/P1/P2 `0/1/0`.
+  - The reviewer tied the official same-transaction `session_id + iat + identity epoch + generation` requirement to workpack README line 28, API v1.2.33 line 211 and automation-spec line 32.
+  - At reviewed migration lines 100-115 the RPC signature had no JWT `iat`; the binding lookup near reviewed lines 348-358 could not compare `session_issued_at`. The reviewer also cited the existing binding column near full-local foundation line 698, authenticated pre-request/service-role boundary near request-authority line 348, and the iat-less PostgreSQL caller near reviewed test line 281.
+- security/DB task `019fc193-e6e0-7571-a486-5d3d6efa2a40`: `REQUEST_CHANGES`, P0/P1/P2 `0/2/0`.
+  - The public-source lifecycle row was locked with `FOR KEY SHARE` near reviewed migration lines 409-430. The reviewer reproduced a writer-first interleaving where a non-key `status='quarantined'` update committed before the already-guarded writer, while the existing regression near reviewed test lines 627-656 covered transition-first only.
+  - The same reviewed binding lookup omitted `binding_state`, expiry, local authority/issuer, auth cutover epoch and current control authority. The reviewer cited the canonical full-local predicate near foundation lines 1157-1177 as the reusable upper bound.
+
+Neither review task is marked complete. Both findings require a new independent Stage 3 re-review of the repaired current head.
+
+### Fresh repair RED → GREEN
+
+- Locked static RED before implementation edits: `4 files`, `14 passed / 2 failed`. Failures were the missing JWT `iat`/canonical authority call/strong lifecycle lock and the stale exact function signature.
+- Disposable PostgreSQL RED in both fresh and replay: #6 `17 passed / 2 failed` out of 19. An expired binding completed successfully instead of raising `ACCOUNT_SESSION_STALE`, and all three writer-first transitions returned `[false,false,false]`, proving `quarantined`, `deleting` and `cleanup_pending` could commit before the writer transaction.
+- The first RED fixture also left local-authority rows visible to the following central inventory suite, producing an additional fixture-isolation failure. This was not counted as a product finding; `afterAll` now removes only the disposable #6 session bindings before central inventory verification.
+- Locked static GREEN/refactor: `4 files / 16 tests passed` and `git diff --check` passed.
+- Disposable PostgreSQL GREEN in both fresh and replay: predecessor snapshot authority fresh `15 pass / 1 intended skip`, replay `16/16`; #6 `19/19` per mode; active central inventory `30 pass / 16 inactive skip` per mode with exact personal function inventory `33`.
+
+### Fresh findings closure evidence
+
+- `write_personal_recipe_core` now accepts exact JWT `session_issued_at`, pins the full-local control row after the common shared fence, acquires the owner lifecycle lock, then reuses `assert_full_local_session_authority`. The canonical predicate verifies service-role context, current local authority/issuer/cutover/HMAC control, auth identity epoch, active/non-revoked/non-expired binding, exact JWT iat and active expected generation in the same transaction. The returned generation must equal the latest locked owner lifecycle generation.
+- Public source/recipe owner lifecycle rows now use `FOR SHARE`, which conflicts with non-key status UPDATE. The writer-first test holds the F0 marker row only as an explicit post-guard barrier, observes the writer's real PostgreSQL lock wait, starts an independent lifecycle transition connection, proves that transition also waits, then releases the barrier. Writer commit precedes transition commit; every post-transition fork is `RESOURCE_NOT_FOUND` with identical recipe/idempotency/snapshot digest.
+- The transition-first race remains covered. The new writer-first matrix covers `quarantined`, `deleting` and `cleanup_pending`; nullable/non-public visibility continues to fail closed through `IS DISTINCT FROM` and `IS NOT TRUE` predicates.
+- Binding negatives cover expired, revoked, non-active, wrong issuer, stale cutover epoch, mismatched JWT iat, stale identity epoch, remote current authority, changed current issuer, changed current cutover epoch and changed current HMAC control. Their before/after mutation digest is identical; one exact valid binding succeeds.
+- The changed exact RPC signature is locked in migration owner/REVOKE/GRANT statements, the slice security manifest, fresh/replay owner/security-mode/overload/grantability queries and PUBLIC/anon/authenticated/service_role actual-call matrix. Central inventory remains exact with no unexpected overload.
+
+### Fresh repair verification
+
+- Locked focused static: `16/16`.
+- #6 PostgreSQL fresh/replay: #6 `19/19` each; predecessor #4 `15 pass / 1 intended skip` fresh and `16/16` replay; central inventory `30 pass / 16 intended skip` each.
+- Predecessors: #2 focused `83/83` and PostgreSQL fresh/replay `20/20` each; #3 official focused `618/618`; #4 focused `35/35`; #5 focused `62/62`.
+- The separate non-required #3 PostgreSQL diagnostic remains honestly `74/75`, failing only the unchanged remote-verifier simulated-clean assertion. It is not replaced by or claimed green through `618/618`.
+- `pnpm verify:backend`: lint, typecheck, product `2,557 pass / 129 intended skip`, production build and security Playwright `12/12` passed.
+- Source/workpack/automation/workflow-v2/OMO/closeout/branch validators passed; validator-focused Vitest returned `8 files / 98 tests passed`.
+- `pnpm audit --audit-level high`: high/critical `0`; one pre-existing low advisory remains. No slice-specific browser E2E exists before #7/#8 activation, so no empty grep is claimed green.
+- Production/staging/remote application writes: `0/0/0`. Capability activation, public route activation, Ready, merge, Discord and Claude use: none. Contract Evolution Candidate: none.
