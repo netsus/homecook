@@ -89,7 +89,7 @@ function commonWriterRpcWindows(source: string, resource: "meal" | "shopping") {
     ? "write_future_meal_with_snapshot_authority"
     : "create_shopping_list_with_snapshot_authority";
   const pattern = new RegExp(
-    `\\.rpc\\(\\s*["']${rpcName}["']`,
+    `(?:\\.rpc\\(\\s*["']${rpcName}["']|\\bcallFuturePropagationRpc\\([\\s\\S]{0,160}?["']${rpcName}["'])`,
     "gi",
   );
   const matches = [...source.matchAll(pattern)];
