@@ -97,13 +97,14 @@
   - auth/session security Playwright: `12/12 passed`.
 - The retained `5,049` full-test claim was stale. The independently reviewed `b96d83e5` head and GitHub quality evidence were `5,050 passed / 283 skipped`.
 - Fresh re-review repair full `pnpm test`: `491 files passed / 26 skipped`, `5,057 tests passed / 286 skipped`.
+- The first pushed documentation head exposed one workflow projection regression in GitHub `quality`: `1 failed / 5,056 passed / 286 skipped`. Local focused reproduction was `1 failed / 9 passed`; commit `0c05655b` restored the immutable Stage 1 raw-check/full-test/final-verifier sentinels. The focused contract then passed `10/10`, and full `pnpm test` returned to `5,057 passed / 286 skipped`.
 - `pnpm lint` and `pnpm typecheck`: passed with zero warning/error output after removing two test-only unused bindings.
 - source-of-truth, workflow-v2, workpack, automation-spec, OMO bookkeeping and closeout-sync validators: passed.
 - branch validator: passed for `fix/personal-recipe-editor-stage2-full-local-verifier`.
 - default 20-commit validator reported two already-merged base-history subjects. Re-running with `BASE_REF=b33a7df67ed6484c9183834f15a511dffe9d70cb` passed all Stage 2 branch commits present at that point.
 - `pnpm audit --audit-level high`: high-or-higher findings `0`; one existing low-severity advisory remains.
 - `git diff --check`: passed before each commit boundary.
-- Fresh repair validation passed `pnpm verify:backend` (`2,557 product tests`, production build, security E2E `12/12`), focused `32/32` and regression `55/55`, both isolated PostgreSQL runners, static hybrid/security authority gates, lint and typecheck. Source-of-truth, workflow-v2, workpack, automation, OMO bookkeeping, closeout-sync and branch validators passed; exact-base commit validation passed `12` branch commits. `pnpm audit --audit-level high` found no high-or-higher finding and retained one pre-existing low advisory. No Stage 3 approval is inferred from implementer validation.
+- Fresh repair validation passed `pnpm verify:backend` (`2,557 product tests`, production build, security E2E `12/12`), focused `32/32` and regression `55/55`, both isolated PostgreSQL runners, static hybrid/security authority gates, lint and typecheck. Source-of-truth, workflow-v2, workpack, automation, OMO bookkeeping, closeout-sync, branch and exact-base commit validators passed. `pnpm audit --audit-level high` found no high-or-higher finding and retained one pre-existing low advisory. No Stage 3 approval is inferred from implementer validation.
 
 ## Pending
 
