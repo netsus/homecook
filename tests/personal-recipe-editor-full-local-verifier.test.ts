@@ -4,8 +4,10 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 import {
+  assertPersonalRecipeEditorFullLocalEnvironment,
   assertPersonalRecipeEditorFullLocalExecutionEvidence,
   assertPersonalRecipeEditorFullLocalResult,
+  assertPersonalRecipeEditorMergedExactSource,
   assertPersonalRecipeEditorSourceEvidence,
   buildPersonalRecipeEditorFullLocalPsqlRequest,
   buildPersonalRecipeEditorFullLocalSummary,
@@ -223,6 +225,45 @@ const executionEvidence = {
 };
 
 describe("personal recipe editor full-local verifier", () => {
+  it("rejects remote authority and any unmerged, dirty or grafted source", () => {
+    expect(() => assertPersonalRecipeEditorFullLocalEnvironment({
+      HOMECOOK_AUTH_AUTHORITY: "local",
+      HOMECOOK_DATA_AUTHORITY: "local",
+    })).not.toThrow();
+    for (const environment of [
+      { HOMECOOK_AUTH_AUTHORITY: "remote", HOMECOOK_DATA_AUTHORITY: "local" },
+      { HOMECOOK_AUTH_AUTHORITY: "local", HOMECOOK_DATA_AUTHORITY: "remote" },
+      { HOMECOOK_AUTH_AUTHORITY: "hybrid", HOMECOOK_DATA_AUTHORITY: "local" },
+      {},
+    ]) {
+      expect(() =>
+        assertPersonalRecipeEditorFullLocalEnvironment(environment),
+      ).toThrow(/requires local Auth and Data authority/i);
+    }
+
+    const validSource = {
+      head: sourceMergeSha,
+      originMaster: "b".repeat(40),
+      isAncestorOfOriginMaster: true,
+      legacyGrafts: "",
+      trackedStatus: "",
+    };
+    expect(assertPersonalRecipeEditorMergedExactSource(validSource)).toBe(
+      sourceMergeSha,
+    );
+    for (const source of [
+      { ...validSource, isAncestorOfOriginMaster: false },
+      { ...validSource, trackedStatus: " M tracked.ts" },
+      { ...validSource, trackedStatus: "?? untracked.ts" },
+      { ...validSource, legacyGrafts: `${sourceMergeSha} ${"c".repeat(40)}` },
+      { ...validSource, head: "short" },
+    ]) {
+      expect(() => assertPersonalRecipeEditorMergedExactSource(source)).toThrow(
+        /clean merged exact origin\/master source/i,
+      );
+    }
+  });
+
   it("locks the active full-local plan, required checks and Manual Only list exactly", () => {
     const plan = buildPersonalRecipeEditorFullLocalVerificationPlan({
       mode: "post-merge-full-local-read-only",
@@ -335,6 +376,7 @@ describe("personal recipe editor full-local verifier", () => {
       null,
       { full_local_authority: fullLocalResult },
       { ...validResult, extra: true },
+      { ...validResult, remote_auth_evidence: { status: "historical" } },
       { ...validResult, full_local_authority: missingFullLocalField },
       {
         ...validResult,
