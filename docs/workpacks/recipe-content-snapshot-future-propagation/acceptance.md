@@ -21,6 +21,8 @@
 - [ ] any target active claim/session returns exact `409 MEAL_COOKING_ALREADY_STARTED`; no target is silently excluded and no write commits <!-- omo:id=accept-future-active-claim;stage=2;scope=backend;review=3,6 -->
 - [ ] past, cook-done, completed/cancelled session and past meal-log history are never repinned <!-- omo:id=accept-future-history-immutable;stage=2;scope=shared;review=3,6 -->
 - [ ] same key+payload returns the first durable wrapper/status; different payload returns `409 IDEMPOTENCY_KEY_REUSED` with mutation zero <!-- omo:id=accept-future-patch-idempotency;stage=2;scope=backend;review=3,6 -->
+- [ ] PATCH success `data` is exactly `{id,revision}`; server-only snapshot, generation, target and reconcile evidence is not exposed <!-- omo:id=accept-future-patch-success-data;stage=2;scope=backend;review=3,6 -->
+- [ ] DELETE success `data` is exactly `{id,revision,deleted_at}` and replay returns the first durable revision/timestamp <!-- omo:id=accept-future-delete-success-data;stage=2;scope=backend;review=3,6 -->
 
 ## Common Lock / Writer Inventory
 
@@ -47,13 +49,16 @@
 - [ ] planner start creates session, session-meal rows and one active claim per Meal atomically <!-- omo:id=accept-future-planner-claim;stage=2;scope=backend;review=3,6 -->
 - [ ] concurrent attempts for the same Meal produce one winner and no duplicate claim/session/downstream effect <!-- omo:id=accept-future-concurrent-start;stage=2;scope=backend;review=3,6 -->
 - [ ] standalone start alone pins current content after access, deleted-state and expected recipe revision validation under recipe lock <!-- omo:id=accept-future-standalone-pin;stage=2;scope=backend;review=3,6 -->
-- [ ] start success returns session ID, `snapshot_v2`, mode and pinned content summary before any COOK_MODE navigation <!-- omo:id=accept-future-start-response;stage=4;scope=shared;review=3,5,6 -->
+- [ ] start success `data` is exactly `{session_id,contract_version:"snapshot_v2",mode,status:"in_progress",content_summary:{recipe_id,title,cooking_servings}}` before any COOK_MODE navigation <!-- omo:id=accept-future-start-response;stage=4;scope=shared;review=3,5,6 -->
 - [ ] creation flag off returns exact `409 SNAPSHOT_V2_CREATION_DISABLED` with session/claim mutation zero outside the official internal/test allowlist <!-- omo:id=accept-future-creation-disabled;stage=2;scope=backend;review=3,6 -->
 
 ## Read / Cancel / Dispatch
 
 - [ ] v2 cook-mode GET reads immutable session content/servings/steps/pantry candidates and never mutable current recipe <!-- omo:id=accept-future-v2-read;stage=2;scope=backend;review=3,6 -->
+- [ ] v2 cook-mode success `data` is exactly `{session_id,contract_version,mode,status,recipe,pantry_candidates}` and recipe reuses the existing `CookingModeRecipe` ingredient/step field shapes <!-- omo:id=accept-future-read-success-data;stage=2;scope=backend;review=3,6 -->
+- [ ] each pantry candidate is exactly `{pantry_item_id,ingredient_id,item_type,standard_name,food_product_id,food_product_nutrition_version_id,name,brand}` with generic null product/version and selected-product exact version provenance <!-- omo:id=accept-future-pantry-candidate-data;stage=2;scope=backend;review=3,6 -->
 - [ ] owner in-progress v2 cancel is idempotent and releases planner claims in the same transaction <!-- omo:id=accept-future-v2-cancel;stage=2;scope=backend;review=3,6 -->
+- [ ] cancel success `data` is exactly `{session_id,contract_version:"snapshot_v2",mode,status:"cancelled"}` and replay returns the same durable shape <!-- omo:id=accept-future-cancel-success-data;stage=2;scope=backend;review=3,6 -->
 - [ ] completed/cancelled cancel replay returns stored result without reopening state or releasing another claim <!-- omo:id=accept-future-cancel-replay;stage=2;scope=backend;review=3,6 -->
 - [ ] v1 endpoint/parser/reader accepts only `legacy_v1` and v2 namespace accepts only `snapshot_v2`; cross-version IDs use official 404/409 <!-- omo:id=accept-future-version-isolation;stage=2;scope=shared;review=3,6 -->
 - [ ] UI dispatches from explicit `contract_version`, never body-shape inference, and preserves existing v1 body/response/consumed-ingredient semantics <!-- omo:id=accept-future-ui-dispatch;stage=4;scope=frontend;review=5,6 -->

@@ -74,10 +74,11 @@ Schema Change:
 
 ## Stage 2 Contract Boundary
 
-- The active official tuple is requirements `v1.7.28`, screens `v1.5.32`, flow `v1.3.30`, DB `v1.3.30`, API `v1.2.33`.
+- The active official tuple is requirements `v1.7.28`, screens `v1.5.32`, flow `v1.3.30`, DB `v1.3.30`, API `v1.2.34`.
 - The official API already locks impact request/response fields, PATCH request fields, session-attempt request variants and error codes.
-- Exact success `data` field names are still not locked for snapshot-v2 start, cook-mode read, cancel, recipe PATCH and recipe DELETE. Stage 2 must not invent names such as `pinned_content` or `content_snapshot_id`.
-- DB/security/concurrency tests and private SQL helpers that do not depend on those public names may proceed TDD-first. Public route/type implementation depending on those names is blocked until an approved contract-evolution PR locks them.
+- User-approved API v1.2.34 locks recipe PATCH `{id,revision}`, recipe DELETE `{id,revision,deleted_at}`, snapshot-v2 start `{session_id,contract_version,mode,status,content_summary}`, cook-mode `{session_id,contract_version,mode,status,recipe,pantry_candidates}` and cancel `{session_id,contract_version,mode,status}`.
+- `pantry_candidates[]` uses exact `pantry_item_id`, pinned recipe `ingredient_id`, `item_type`, `standard_name`, nullable exact product/version identity and actual `name/brand`. It does not preclaim #8 completion effects.
+- Stage 2 may now implement the locked public route/type surface. Any additional success field remains contract-evolution blocked.
 
 ## Authority and Transaction Contract
 

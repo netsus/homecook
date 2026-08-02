@@ -5,13 +5,21 @@
 - `docs/화면정의서-v1.5.32.md`
 - `docs/유저flow맵-v1.3.30.md`
 - `docs/db설계-v1.3.30.md`
-- `docs/api문서-v1.2.33.md`
+- `docs/api문서-v1.2.34.md`
 
 ## Notes
 - 위 5개 파일이 현재 공식 기준 문서다.
 - `docs/reference/wireframes/`는 보조 참고 자료다.
 - 구현 중 문서 충돌이 보이면 먼저 충돌 항목을 정리하고 작업 범위를 다시 확정한다.
 - 사용자 승인으로 공식 계약을 바꾸는 경우에도 구현보다 문서가 먼저다. 관련 공식 문서와 이 파일의 버전/경로를 같은 `contract-evolution` PR에서 먼저 갱신한다.
+
+## Recipe Future Propagation Success Data Contract-Evolution `2026-08-02`
+
+| 문서 | 변경 내용 |
+|------|----------|
+| API v1.2.34 | recipe PATCH/DELETE와 snapshot-v2 start/read/cancel의 exact success `data` field를 잠그고, immutable content 및 exact pantry row/version projection과 replay shape를 명시한다 |
+
+> 사용자는 2026-08-02에 #7 Stage 2 RED 뒤 발견된 success response 공백을 최소 additive shape로 닫도록 승인했다. 신규 endpoint/status/error code는 없고, server-only generation/token/target/claim authority는 public response에 노출하지 않는다.
 
 ## Full-Local Auth Flow Ledger Read Contract Clarification `2026-08-01`
 

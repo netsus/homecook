@@ -46,7 +46,7 @@ Schema Change:
 
 | Gate | 상태 | 의미 |
 | --- | --- | --- |
-| official tuple v1.7.28/v1.5.32/v1.3.30/DB v1.3.30/API v1.2.33 | Stage -1 | 본 workpack 구현 전 merge 필수 |
+| official tuple v1.7.28/v1.5.32/v1.3.30/DB v1.3.30/API v1.2.34 | Stage -1 | 본 workpack 구현 전 merge 필수 |
 | `account-session-generation-foundation` | merged, relock required | local issuer/session binding으로 의미 재검증 |
 | `recipe-visibility-read-hardening` | merged, relock required | owner/private Storage와 delete/recreate 보호 유지 |
 | hybrid runtime/data migration | historical implementation | reusable infra는 선별 재사용하고 remote-only authority는 dormant 처리 |
@@ -106,7 +106,7 @@ Schema Change:
 - `docs/화면정의서-v1.5.32.md`
 - `docs/유저flow맵-v1.3.30.md`
 - `docs/db설계-v1.3.30.md`
-- `docs/api문서-v1.2.33.md`
+- `docs/api문서-v1.2.34.md`
 
 ## Manual Only
 

@@ -28,7 +28,7 @@
       "docs/화면정의서-v1.5.32.md",
       "docs/유저flow맵-v1.3.30.md",
       "docs/db설계-v1.3.30.md",
-      "docs/api문서-v1.2.33.md"
+      "docs/api문서-v1.2.34.md"
     ],
     "governing_docs": [
       "AGENTS.md",
@@ -162,8 +162,6 @@
     "New public endpoint request response field status error code screen or client authority",
     "Unapproved server-production migration or database write or capability activation"
   ],
-  "open_questions": [
-    "Contract evolution must lock exact success data field names for snapshot-v2 start, cook-mode read, cancel, recipe PATCH and recipe DELETE before their public route and type implementation."
-  ],
-  "notes": "Stage 1 PR #1081 merged after separate Codex internal1.5, security/DB, five-axis and design reviews approved with zero required findings. Runtime predecessors are satisfied by #4 PR #1218, #6 PR #1274 merge 05683e4d and cook-mode-whole-board PR #711 merge 2f8569cb. Stage 2 starts with contract-locked DB/security/concurrency TDD RED while public response field names remain contract-evolution blocked. Personal writes and v2 creation stay dark; #8 owns exact-pantry completion and the R/R+1 gate before R+2 joint activation. Design Status remains temporary pending implementation evidence and authority approval."
+  "open_questions": [],
+  "notes": "Stage 1 PR #1081 merged after separate Codex internal1.5, security/DB, five-axis and design reviews approved with zero required findings. Runtime predecessors are satisfied by #4 PR #1218, #6 PR #1274 merge 05683e4d and cook-mode-whole-board PR #711 merge 2f8569cb. Stage 2 RED commit 608c826c records focused 4-file/13-test and PostgreSQL missing-migration failures. User-approved API v1.2.34 now locks the five exact success data shapes, including immutable cook-mode content and exact pantry row/product-version candidates. Personal writes and v2 creation stay dark; #8 owns exact-pantry completion and the R/R+1 gate before R+2 joint activation. Design Status remains temporary pending implementation evidence and authority approval."
 }

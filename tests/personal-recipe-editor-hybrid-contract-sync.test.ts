@@ -125,13 +125,13 @@ describe("personal recipe editor full-local contract lock", () => {
       "docs/화면정의서-v1.5.32.md",
       "docs/유저flow맵-v1.3.30.md",
       "docs/db설계-v1.3.30.md",
-      "docs/api문서-v1.2.33.md",
+      "docs/api문서-v1.2.34.md",
     ]);
     expect(bundle).toContain("요구사항기준선-v1.7.28.md");
     expect(bundle).toContain("화면정의서-v1.5.32.md");
     expect(bundle).toContain("유저flow맵-v1.3.30.md");
     expect(bundle).toContain("db설계-v1.3.30.md");
-    expect(bundle).toContain("api문서-v1.2.33.md");
+    expect(bundle).toContain("api문서-v1.2.34.md");
   });
 
   it("keeps slice 3 and media/tag foundations as the only implementation predecessors", () => {

@@ -1,6 +1,6 @@
 # recipe-snapshot-authority-foundation
 
-> Full-local contract relock. The active target is one self-hosted local Supabase Auth/PostgreSQL/PostgREST/Storage authority on the current Mac. Official baseline: requirements v1.7.28, screens v1.5.32, flow v1.3.30, DB v1.3.30, API v1.2.33. The historical 2026-07-29 master plan SHA-256 `45f02013fbc1c3af1936d596605230d0cbac7839a783224aa9535844e4bda7dc` (1,056 lines) and later hybrid evidence remain preserved history, not an active release gate.
+> Full-local contract relock. The active target is one self-hosted local Supabase Auth/PostgreSQL/PostgREST/Storage authority on the current Mac. Official baseline: requirements v1.7.28, screens v1.5.32, flow v1.3.30, DB v1.3.30, API v1.2.34. The historical 2026-07-29 master plan SHA-256 `45f02013fbc1c3af1936d596605230d0cbac7839a783224aa9535844e4bda7dc` (1,056 lines) and later hybrid evidence remain preserved history, not an active release gate.
 
 ## Goal
 
@@ -162,7 +162,7 @@ Schema Change:
 - `docs/화면정의서-v1.5.32.md` 0-B, local Auth/session and browser public/internal boundary
 - `docs/유저flow맵-v1.3.30.md` snapshot/Meal migration, local session authority and account lifecycle
 - `docs/db설계-v1.3.30.md` B/C/D, stable Auth UUID, RLS, snapshot/cooking/batch/account-cleanup sections
-- `docs/api문서-v1.2.33.md` full-local gateway boundary and existing Meal/planner nutrition contracts
+- `docs/api문서-v1.2.34.md` full-local gateway boundary and existing Meal/planner nutrition contracts
 - historical master plan sections 6-1, dependency matrix #4, successor #4, migration plan 9 and test strategy 10, with local-only Auth/deployment assumptions superseded by the current official tuple
 
 ## QA / Test Data Plan
