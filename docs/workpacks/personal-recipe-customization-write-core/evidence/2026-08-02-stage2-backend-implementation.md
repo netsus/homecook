@@ -193,3 +193,25 @@ Production/staging/remote application writes remain `0/0/0`. Capability activati
 - Source/workpack/automation/workflow-v2/OMO/closeout/branch validators and `git diff --check` passed. Validator-focused Vitest returned `8 files / 84 tests passed`.
 - `pnpm audit --audit-level high`: high/critical `0`; one pre-existing low advisory remains.
 - No slice-specific browser E2E exists before #7/#8 activation, so no empty grep is claimed green.
+
+## Fresh independent Stage 3 approval projection
+
+Exact implementation/evidence head `5b96e9be94f36822944deb194581517731c3a4ab` received two independent read-only approvals:
+
+- code/quality task `019fc23c-6129-7de3-a075-89828d6f35bf`: `APPROVE`, P0/P1/P2 `0/0/0`.
+- security/DB task `019fc23c-6129-7de3-a075-8961262f7bb3`: `APPROVE`, P0/P1/P2 `0/0/0`.
+
+Both reviewer finals were read directly. They independently confirmed the mutation-free affected-owner pre-read, UUID `COLLATE "C"` all-owner lock order before recipe/resource locks, post-lock drift fail-closed behavior, canonical full-local session/JWT `iat` authority, and the real `delete_user_private_data() → public.users DELETE → recipes.created_by ON DELETE SET NULL` two-connection race in both directions. No provenance, idempotency, ACL/owner/grantability/overload, nullable visibility or exact function-33 inventory regression was found. The unrelated `baemin-prototype-planner-week-parity.pr_path` remained at exact-base `pending`, and the actual prior repair SHA remained correctly recorded as `cfc2dfab46ce192a3c9160920d4a2a6db4ddb5f0`.
+
+Reviewer-confirmed exact-head evidence:
+
+- locked static `16/16`;
+- #6 PostgreSQL fresh/replay `20/20` each;
+- #4 fresh `15 pass / 1 intended skip`, replay `16/16`;
+- central inventory fresh/replay `30 pass / 16 inactive skip` each;
+- full GitHub unit/integration `5,077 pass / 308 skip`, additional PostgreSQL `14/14`, build/lint/typecheck/security authorization green, security Playwright `12/12`;
+- raw checks `21 = 19 success + 2 intended skip`, unique contexts `15 = 13 success + 2 intended skip`, pending/failure/cancelled `0`, exact-head Actions runs `9/9` success;
+- standalone #3 PostgreSQL remains the separately disclosed pre-existing `74/75` simulated-clean diagnostic and is not replaced by focused `618/618` or claimed green;
+- high/critical audit findings `0`, with one pre-existing low advisory.
+
+This section is a projection of two external reviewer decisions, not self-approval by the Stage 2 author. Canonical pre-merge state is `lifecycle=in_progress`, `approval_state=dual_approved`, `verification_status=passed`, `evaluation_status=not_started`, `auto_merge_eligible=false`. PR #1274 remains Draft. Stage 4~6 are backend-only N/A/skip semantics after merge, not completed stages here. Named E2E, merged-exact read-only verification, Manual Only, #7/#8 and R+2 activation remain pending. Production/staging/remote application writes remain `0/0/0`; Contract Evolution Candidate is `none`.
