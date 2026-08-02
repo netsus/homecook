@@ -994,33 +994,27 @@ export function assertRecipeSnapshotAuthorityMergedExactSource({
   return head;
 }
 
-const RECIPE_SNAPSHOT_AUTHORITY_UNSAFE_GIT_ENVIRONMENT_KEYS = new Set([
-  "GIT_ALTERNATE_OBJECT_DIRECTORIES",
-  "GIT_CEILING_DIRECTORIES",
-  "GIT_COMMON_DIR",
-  "GIT_CONFIG_COUNT",
-  "GIT_CONFIG_GLOBAL",
-  "GIT_CONFIG_PARAMETERS",
-  "GIT_CONFIG_SYSTEM",
-  "GIT_DIR",
-  "GIT_EXEC_PATH",
-  "GIT_INDEX_FILE",
-  "GIT_NAMESPACE",
-  "GIT_OBJECT_DIRECTORY",
-  "GIT_REPLACE_REF_BASE",
-  "GIT_SHALLOW_FILE",
-  "GIT_WORK_TREE",
-]);
+const RECIPE_SNAPSHOT_AUTHORITY_SAFE_GIT_ENVIRONMENT_KEYS = [
+  "PATH",
+  "HOME",
+  "LANG",
+  "LC_ALL",
+  "TMPDIR",
+];
 
 export function buildRecipeSnapshotAuthorityGitEnvironment({
-  baseEnvironment,
+  baseEnvironment = {},
 }) {
-  return Object.fromEntries(
-    Object.entries(baseEnvironment).filter(([key]) =>
-      !RECIPE_SNAPSHOT_AUTHORITY_UNSAFE_GIT_ENVIRONMENT_KEYS.has(key)
-      && !/^GIT_CONFIG_(?:KEY|VALUE)_\d+$/u.test(key)
+  return {
+    ...Object.fromEntries(
+    RECIPE_SNAPSHOT_AUTHORITY_SAFE_GIT_ENVIRONMENT_KEYS
+      .filter((key) => baseEnvironment[key] !== undefined)
+      .map((key) => [key, baseEnvironment[key]]),
     ),
-  );
+    GIT_CONFIG_GLOBAL: "/dev/null",
+    GIT_CONFIG_NOSYSTEM: "1",
+    GIT_SSH_COMMAND: "ssh -F /dev/null",
+  };
 }
 
 export function parseRecipeSnapshotAuthorityLinkedDatabaseEnvironment({

@@ -172,6 +172,16 @@ function contentInsertSql(options: {
 describe.skipIf(!enabled)("recipe snapshot authority PostgreSQL", () => {
   beforeAll(() => {
     psql(`
+      insert into auth.users (id, created_at, email)
+      values
+        ('${ownerA}', now(), 'owner-a@example.invalid'),
+        ('${ownerB}', now(), 'owner-b@example.invalid');
+
+      insert into auth.identities (id, user_id)
+      values
+        ('owner-a', '${ownerA}'),
+        ('owner-b', '${ownerB}');
+
       insert into public.users (id, nickname, social_provider, social_id)
       values
         ('${ownerA}', 'owner-a', 'test', 'owner-a'),

@@ -103,8 +103,8 @@ Existing confirmed Stage 4 visual/a11y artifacts and the authority report are re
 
 ### Active Full-Local Relock Gates
 
-- [ ] Stage 2 implements the read-only full-local verifier with TDD RED→GREEN and keeps the active target at a clean merged exact SHA <!-- omo:id=accept-editor-full-local-stage2;stage=2;scope=shared;review=3,6 -->
-- Stage 3 lifecycle gate: a separate Codex task completes exact-head code/security review with unresolved required findings zero.
+- [x] Stage 2 implements the read-only full-local verifier with TDD RED→GREEN and keeps the active target at a clean merged exact SHA; implementation evidence is `evidence/2026-08-02-stage2-full-local-verifier.md`, while merged-exact execution remains unchecked below <!-- omo:id=accept-editor-full-local-stage2;stage=2;scope=shared;review=3,6 -->
+- Stage 3 lifecycle evidence: security/authority task `019fc05d-ba33-7840-a984-57fb1489ae81` and code/quality task `019fc05d-ba33-7840-a984-57d4a3bf79e1` both approved exact content head `bb2bc367` with P0/P1/P2=`0/0/0`; no checkbox or later-stage completion is inferred.
 - [ ] Stage 4 revalidates the existing capability-off shell/consumer without activating #6/#7/#8 or adding product/UI changes <!-- omo:id=accept-editor-full-local-stage4;stage=4;scope=frontend;review=5,6 -->
 - Stage 5 lifecycle gate: perform a lightweight no-visual-drift review; Design Status remains confirmed and no new screenshot/Figma/authority evidence is fabricated.
 - Stage 6 lifecycle gate: close only from the exact merged head after all active checks and independent review evidence are current.

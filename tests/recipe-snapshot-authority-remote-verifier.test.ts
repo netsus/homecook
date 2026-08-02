@@ -75,6 +75,17 @@ describe("recipe snapshot authority remote verifier", () => {
       git(["commit", "-m", "base"]);
       git(["remote", "add", "origin", originRoot]);
       git(["push", "-u", "origin", "master"]);
+      git([
+        "config",
+        `url.${originRoot}.insteadOf`,
+        "https://github.com/netsus/homecook.git",
+      ]);
+      git([
+        "remote",
+        "set-url",
+        "origin",
+        "https://github.com/netsus/homecook.git",
+      ]);
       git(["switch", "-c", "feature"]);
       writeFileSync(join(repositoryRoot, "feature.txt"), "feature\n");
       git(["add", "feature.txt"]);
@@ -435,7 +446,7 @@ describe("recipe snapshot authority remote verifier", () => {
     );
   });
 
-  it("removes Git environment overrides that can redirect ancestry evidence", async () => {
+  it("uses a strict Git environment allowlist for ancestry evidence", async () => {
     const verifier = await import(
       "../scripts/lib/recipe-snapshot-authority-remote-verifier.mjs"
     );
@@ -445,6 +456,9 @@ describe("recipe snapshot authority remote verifier", () => {
         baseEnvironment: {
           PATH: "/usr/bin:/bin",
           HOME: "/tmp/homecook",
+          LANG: "ko_KR.UTF-8",
+          LC_ALL: "C.UTF-8",
+          TMPDIR: "/tmp/homecook-git",
           GIT_DIR: "/tmp/forged.git",
           GIT_WORK_TREE: "/tmp/forged-worktree",
           GIT_OBJECT_DIRECTORY: "/tmp/forged-objects",
@@ -457,12 +471,21 @@ describe("recipe snapshot authority remote verifier", () => {
           GIT_CONFIG_SYSTEM: "/tmp/forged-system-config",
           GIT_CONFIG_VALUE_0: "0",
           GIT_ASKPASS: "/usr/bin/ssh-askpass",
+          GIT_SSH_COMMAND: "ssh -o ProxyCommand=poison",
+          NODE_OPTIONS: "--require=/tmp/poison.cjs",
+          HTTPS_PROXY: "http://proxy.example.test",
+          SUPABASE_SERVICE_ROLE_KEY: "must-not-reach-git",
         },
       }),
     ).toEqual({
       PATH: "/usr/bin:/bin",
       HOME: "/tmp/homecook",
-      GIT_ASKPASS: "/usr/bin/ssh-askpass",
+      LANG: "ko_KR.UTF-8",
+      LC_ALL: "C.UTF-8",
+      TMPDIR: "/tmp/homecook-git",
+      GIT_CONFIG_GLOBAL: "/dev/null",
+      GIT_CONFIG_NOSYSTEM: "1",
+      GIT_SSH_COMMAND: "ssh -F /dev/null",
     });
   });
 
@@ -569,6 +592,10 @@ describe("recipe snapshot authority remote verifier", () => {
       "scripts/verify-recipe-snapshot-authority-full-local.mjs",
       "utf8",
     );
+    const fullLocalRunner = readFileSync(
+      "scripts/lib/full-local-verification-cli-runner.mjs",
+      "utf8",
+    );
 
     expect(cli).toContain("buildRecipeSnapshotAuthorityRemotePsqlRequest");
     expect(cli).toContain(
@@ -581,8 +608,8 @@ describe("recipe snapshot authority remote verifier", () => {
     expect(cli).toContain('"merge-base"');
     expect(hybridCli).toContain('"--no-replace-objects"');
     expect(hybridCli).toContain('"merge-base"');
-    expect(fullLocalCli).toContain('"--no-replace-objects"');
-    expect(fullLocalCli).toContain('"merge-base"');
+    expect(fullLocalCli + fullLocalRunner).toContain('"--no-replace-objects"');
+    expect(fullLocalCli + fullLocalRunner).toContain('"merge-base"');
     expect(cli).not.toContain("PGOPTIONS");
     expect(cli).not.toMatch(/process\.stdout\.write\([^\n]*PGPASSWORD/u);
   });

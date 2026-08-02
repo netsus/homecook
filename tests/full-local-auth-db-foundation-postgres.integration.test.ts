@@ -4,6 +4,11 @@ import { beforeAll, describe, expect, it } from "vitest";
 
 import * as fullLocalVerifier from
   "../scripts/lib/recipe-snapshot-authority-full-local-verifier.mjs";
+import {
+  assertPersonalRecipeEditorFullLocalResult,
+  buildPersonalRecipeEditorFullLocalVerificationPlan,
+  collectPersonalRecipeEditorSourceEvidence,
+} from "../scripts/lib/personal-recipe-editor-full-local-verifier.mjs";
 
 const enabled = process.env.HOMECOOK_FULL_LOCAL_AUTH_DB_PG_INTEGRATION === "1";
 const inventoryOnly =
@@ -877,6 +882,241 @@ activeInventoryRun("active full-local snapshot security inventory", () => {
       },
     ]);
     expect(() => api.assertResult(result, options)).not.toThrow();
+  });
+
+  it("observes local Auth and private Storage authority in a read-only verifier transaction", () => {
+    const ownerUuid = "10000000-0000-4000-8000-000000000002";
+    const imageObjectId = "71000000-0000-4000-8000-000000000001";
+    const objectPath = `${ownerUuid}/1/${imageObjectId}.webp`;
+    const setup = psqlResult(`
+      delete from auth.identities as identity
+      where not exists (
+        select 1 from public.users as app_user
+        where app_user.id = identity.user_id
+      );
+      delete from auth.users as auth_user
+      where not exists (
+        select 1 from public.users as app_user
+        where app_user.id = auth_user.id
+      );
+      insert into auth.users (id, created_at, email)
+      select app_user.id, now(), app_user.id::text || '@example.invalid'
+      from public.users as app_user
+      left join auth.users as auth_user on auth_user.id = app_user.id
+      where auth_user.id is null;
+      insert into auth.identities (id, user_id)
+      select app_user.id::text, app_user.id
+      from public.users as app_user
+      left join auth.identities as identity on identity.user_id = app_user.id
+      where identity.user_id is null;
+
+      drop policy if exists recipe_images_public_read on storage.objects;
+      create policy recipe_images_public_read
+        on storage.objects
+        for select
+        using (bucket_id = 'recipe-images');
+
+      grant insert, update, delete on storage.objects to authenticated;
+
+      update private.full_local_auth_control
+      set authority = 'local',
+          local_issuer = 'https://auth.mumeok.com/auth/v1',
+          cutover_epoch = 2,
+          hmac_key_version = 2,
+          local_activated_at = clock_timestamp(),
+          updated_at = clock_timestamp();
+
+      insert into public.recipe_image_objects (
+        id,
+        owner_uuid,
+        account_generation,
+        bucket_id,
+        object_path,
+        raw_sha256,
+        byte_size,
+        actual_mime_type,
+        visibility,
+        state
+      ) values (
+        '${imageObjectId}',
+        '${ownerUuid}',
+        1,
+        'recipe-images-private',
+        '${objectPath}',
+        repeat('a', 64),
+        128,
+        'image/webp',
+        'private',
+        'attached_private'
+      );
+
+      insert into storage.objects (bucket_id, name)
+      values ('recipe-images-private', '${objectPath}');
+    `);
+    expect(setup.status, setup.stderr).toBe(0);
+
+    const plan = buildPersonalRecipeEditorFullLocalVerificationPlan({
+      mode: "post-merge-full-local-read-only",
+    });
+    const verification = psqlResult(`
+      begin transaction isolation level read committed read only;
+      ${plan.sql}
+      commit;
+    `);
+    expect(verification.status, verification.stderr).toBe(0);
+    const json = verification.stdout
+      .trim()
+      .split("\n")
+      .find((line) => line.trim().startsWith("{"));
+    expect(json).toBeDefined();
+    const authority = JSON.parse(json ?? "{}") as Record<string, unknown>;
+    const identityMapping = JSON.parse(psql(`
+      select jsonb_build_object(
+        'app_users', (select jsonb_agg(id order by id) from public.users),
+        'auth_users', (select jsonb_agg(id order by id) from auth.users),
+        'identity_users', (select jsonb_agg(user_id order by user_id) from auth.identities)
+      );
+    `)) as Record<string, unknown>;
+    expect(identityMapping.auth_users).toEqual(identityMapping.app_users);
+    expect(identityMapping.identity_users).toEqual(identityMapping.auth_users);
+    expect(authority).toMatchObject({
+      auth_identity_mapping_mismatch_count: 0,
+      auth_session_row_count: 0,
+      auth_refresh_token_row_count: 0,
+      auth_flow_state_row_count: 0,
+      private_storage_bucket_count: 1,
+      private_storage_bucket_drift_count: 0,
+      storage_policy_drift_count: 0,
+      unexpected_storage_policy_count: 0,
+      unexpected_storage_mutation_grant_count: 0,
+      private_storage_object_count: 1,
+      private_storage_object_registry_mismatch_count: 0,
+      private_image_registry_shape_drift_count: 0,
+      private_image_registry_active_object_mismatch_count: 0,
+    });
+    expect(authority.auth_user_count).toBeGreaterThan(0);
+    expect(authority.auth_identity_count).toBe(authority.auth_user_count);
+    expect(() => assertPersonalRecipeEditorFullLocalResult({
+      full_local_authority: authority,
+      personal_editor_source: collectPersonalRecipeEditorSourceEvidence(
+        process.cwd(),
+      ),
+    })).not.toThrow();
+  });
+
+  it("rejects a broad Storage policy without a private bucket literal", () => {
+    const plan = buildPersonalRecipeEditorFullLocalVerificationPlan({
+      mode: "post-merge-full-local-read-only",
+    });
+    const verification = psqlResult(`
+      begin;
+      create policy personal_editor_broad_storage_read
+        on storage.objects
+        for select
+        using (true);
+      ${plan.sql}
+      rollback;
+    `);
+    expect(verification.status, verification.stderr).toBe(0);
+    const json = verification.stdout
+      .trim()
+      .split("\n")
+      .find((line) => line.trim().startsWith("{"));
+    expect(json).toBeDefined();
+    expect(() => assertPersonalRecipeEditorFullLocalResult({
+      full_local_authority: JSON.parse(json ?? "{}") as Record<string, unknown>,
+      personal_editor_source: collectPersonalRecipeEditorSourceEvidence(
+        process.cwd(),
+      ),
+    })).toThrow(/failed closed/i);
+  });
+
+  it("rejects an allowed Storage policy broadened with OR true", () => {
+    const plan = buildPersonalRecipeEditorFullLocalVerificationPlan({
+      mode: "post-merge-full-local-read-only",
+    });
+    const verification = psqlResult(`
+      begin;
+      drop policy recipe_images_insert_own on storage.objects;
+      create policy recipe_images_insert_own
+        on storage.objects
+        for insert
+        to authenticated
+        with check (
+          (
+            bucket_id = 'recipe-images'
+            and (storage.foldername(name))[1] = auth.uid()::text
+            and account_generation_storage_guard.allows_legacy_recipe_image_write()
+          )
+          or true
+        );
+      ${plan.sql}
+      rollback;
+    `);
+    expect(verification.status, verification.stderr).toBe(0);
+    const json = verification.stdout
+      .trim()
+      .split("\n")
+      .find((line) => line.trim().startsWith("{"));
+    expect(json).toBeDefined();
+    const authority = JSON.parse(json ?? "{}") as Record<string, unknown>;
+    expect(authority.storage_policy_drift_count).toBeGreaterThan(0);
+    expect(() => assertPersonalRecipeEditorFullLocalResult({
+      full_local_authority: authority,
+      personal_editor_source: collectPersonalRecipeEditorSourceEvidence(
+        process.cwd(),
+      ),
+    })).toThrow(/failed closed/i);
+  });
+
+  it("rejects a mutation grant to a non-owner role outside the exact ACL", () => {
+    const plan = buildPersonalRecipeEditorFullLocalVerificationPlan({
+      mode: "post-merge-full-local-read-only",
+    });
+    const verification = psqlResult(`
+      begin;
+      grant insert on storage.objects to service_role;
+      ${plan.sql}
+      rollback;
+    `);
+    expect(verification.status, verification.stderr).toBe(0);
+    const json = verification.stdout
+      .trim()
+      .split("\n")
+      .find((line) => line.trim().startsWith("{"));
+    expect(json).toBeDefined();
+    const authority = JSON.parse(json ?? "{}") as Record<string, unknown>;
+    expect(authority.unexpected_storage_mutation_grant_count).toBe(1);
+    expect(() => assertPersonalRecipeEditorFullLocalResult({
+      full_local_authority: authority,
+      personal_editor_source: collectPersonalRecipeEditorSourceEvidence(
+        process.cwd(),
+      ),
+    })).toThrow(/failed closed/i);
+  });
+
+  it("rejects PUBLIC mutation grants on Storage objects", () => {
+    const plan = buildPersonalRecipeEditorFullLocalVerificationPlan({
+      mode: "post-merge-full-local-read-only",
+    });
+    const verification = psqlResult(`
+      begin;
+      grant insert, update, delete on storage.objects to public;
+      ${plan.sql}
+      rollback;
+    `);
+    expect(verification.status, verification.stderr).toBe(0);
+    const json = verification.stdout
+      .trim()
+      .split("\n")
+      .find((line) => line.trim().startsWith("{"));
+    expect(json).toBeDefined();
+    expect(() => assertPersonalRecipeEditorFullLocalResult({
+      full_local_authority: JSON.parse(json ?? "{}") as Record<string, unknown>,
+      personal_editor_source: collectPersonalRecipeEditorSourceEvidence(
+        process.cwd(),
+      ),
+    })).toThrow(/failed closed/i);
   });
 
   it.each([

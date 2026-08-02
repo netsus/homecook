@@ -209,7 +209,8 @@ export function assertRecipeSnapshotAuthorityFullLocalEnvironment(
 
 function buildFullLocalSql(snapshotSql) {
   const replacement = [
-    "'remote_writes', 0,",
+    "'remote_writes', 0",
+    ") || jsonb_build_object(",
     "  'authority_target_status', '" + TARGET + "',",
     "  'local_control_row_count', (",
     "    select count(*)::integer from private.full_local_auth_control",

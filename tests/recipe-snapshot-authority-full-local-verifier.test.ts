@@ -254,10 +254,14 @@ describe("recipe snapshot authority full-local verifier", () => {
       "scripts/verify-recipe-snapshot-authority-full-local.mjs",
       "utf8",
     );
+    const runner = readFileSync(
+      "scripts/lib/full-local-verification-cli-runner.mjs",
+      "utf8",
+    );
     expect(cli.indexOf("assertRecipeSnapshotAuthorityFullLocalEnvironment"))
       .toBeGreaterThanOrEqual(0);
-    expect(cli.indexOf("assertRecipeSnapshotAuthorityFullLocalEnvironment"))
-      .toBeLessThan(cli.indexOf("if (dryRun)"));
+    expect(runner.indexOf("assertEnvironment(environment)"))
+      .toBeLessThan(runner.indexOf("if (dryRun)"));
   });
 
   it("builds one fail-closed full-local read-only plan", () => {
@@ -581,12 +585,16 @@ describe("recipe snapshot authority full-local verifier", () => {
       "scripts/verify-recipe-snapshot-authority-full-local.mjs",
       "utf8",
     );
+    const runner = readFileSync(
+      "scripts/lib/full-local-verification-cli-runner.mjs",
+      "utf8",
+    );
     const packageJson = JSON.parse(readFileSync("package.json", "utf8"));
 
-    expect(cli).toContain("--no-replace-objects");
-    expect(cli).toContain("merge-base");
-    expect(cli).toContain("--is-ancestor");
-    expect(cli).toContain("--untracked-files=all");
+    expect(runner).toContain("--no-replace-objects");
+    expect(runner).toContain("merge-base");
+    expect(runner).toContain("--is-ancestor");
+    expect(runner).toContain("--untracked-files=all");
     expect(cli).toContain("RECIPE_SNAPSHOT_AUTHORITY_FULL_LOCAL_DATABASE_URL");
     expect(cli).not.toContain("RECIPE_SNAPSHOT_AUTHORITY_REMOTE_DATABASE_URL");
     expect(packageJson.scripts["verify:recipe-snapshot-authority:full-local"]).toBe(
