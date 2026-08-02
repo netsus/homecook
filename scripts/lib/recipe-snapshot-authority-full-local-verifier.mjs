@@ -304,6 +304,8 @@ export function buildRecipeSnapshotAuthorityFullLocalVerificationPlan({ mode }) 
   }
   const snapshotPlan = buildRecipeSnapshotAuthorityRemoteVerificationPlan({
     mode: "post-merge-read-only",
+    includeRecipeFuturePropagation:
+      INCLUDE_RECIPE_FUTURE_PROPAGATION_FUNCTIONS,
   });
   return {
     mode,

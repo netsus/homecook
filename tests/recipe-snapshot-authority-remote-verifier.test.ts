@@ -250,6 +250,45 @@ describe("recipe snapshot authority remote verifier", () => {
     );
   });
 
+  it("selects the future-propagation inventory only when the caller opts in", async () => {
+    const verifier = await import(
+      "../scripts/lib/recipe-snapshot-authority-remote-verifier.mjs"
+    );
+
+    const baselinePlan =
+      verifier.buildRecipeSnapshotAuthorityRemoteVerificationPlan({
+        mode: "post-merge-read-only",
+      });
+    const futurePropagationPlan =
+      verifier.buildRecipeSnapshotAuthorityRemoteVerificationPlan({
+        mode: "post-merge-read-only",
+        includeRecipeFuturePropagation: true,
+      });
+
+    expect(baselinePlan.sql).toContain(
+      "cooking_sessions_snapshot_v2_shape_check",
+    );
+    expect(baselinePlan.sql).toContain(
+      "public.protect_meal_recipe_content_pin()",
+    );
+    expect(baselinePlan.sql).not.toContain(
+      "cooking_sessions_contract_namespace_check",
+    );
+    expect(baselinePlan.sql).not.toContain(
+      "public.protect_meal_recipe_content_pin_with_future_propagation()",
+    );
+
+    expect(futurePropagationPlan.sql).toContain(
+      "cooking_sessions_contract_namespace_check",
+    );
+    expect(futurePropagationPlan.sql).toContain(
+      "public.protect_meal_recipe_content_pin_with_future_propagation()",
+    );
+    expect(futurePropagationPlan.sql).not.toContain(
+      "cooking_sessions_snapshot_v2_shape_check",
+    );
+  });
+
   it("detects unexpected owned inventory instead of checking only missing rows", async () => {
     const verifier = await import(
       "../scripts/lib/recipe-snapshot-authority-remote-verifier.mjs"
