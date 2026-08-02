@@ -23,6 +23,13 @@ const ACTIVE_SECURITY_MIGRATIONS = [
 ];
 const INTEGRATION_TEST =
   "tests/recipe-snapshot-authority-postgres.integration.test.ts";
+const FOLLOWUP_MIGRATIONS = (process.env.HOMECOOK_RECIPE_SNAPSHOT_FOLLOWUP_MIGRATIONS ?? "")
+  .split(path.delimiter)
+  .filter(Boolean);
+const FOLLOWUP_TARGET_MIGRATION =
+  process.env.HOMECOOK_RECIPE_SNAPSHOT_FOLLOWUP_TARGET_MIGRATION ?? "";
+const FOLLOWUP_INTEGRATION_TEST =
+  process.env.HOMECOOK_RECIPE_SNAPSHOT_FOLLOWUP_INTEGRATION_TEST ?? "";
 const TEST_TIMEOUT_MS = 30_000;
 const REPLAY_FIXTURE_SQL = String.raw`
 insert into auth.users (id, created_at, email)
@@ -247,9 +254,15 @@ create table public.admin_audit_logs (
   actor_admin_user_id uuid
 );
 
+create table public.ingredients (
+  id uuid primary key default gen_random_uuid(),
+  name text not null default ''
+);
+
 create table public.recipes (
   id uuid primary key,
   title varchar(200) not null,
+  description text,
   thumbnail_url text,
   source_type public.recipe_source_type not null default 'manual',
   base_servings integer not null default 2 check (base_servings > 0),
@@ -257,6 +270,7 @@ create table public.recipes (
   visibility text not null default 'public',
   deleted_at timestamptz,
   revision bigint not null default 1 check (revision > 0),
+  created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   tags text[] not null default '{}'::text[],
   view_count integer not null default 0,
@@ -401,7 +415,25 @@ create table public.cooking_session_meals (
 );
 
 create table public.mutation_idempotency_keys (
-  id uuid primary key default gen_random_uuid()
+  id uuid primary key default gen_random_uuid(),
+  owner_uuid uuid not null,
+  account_generation bigint not null check (account_generation > 0),
+  operation_scope text not null,
+  key_hash text not null,
+  payload_hash text not null,
+  state text not null,
+  terminal_result text,
+  durable_result jsonb,
+  result_reference uuid,
+  attempt_token uuid,
+  attempts integer not null default 1,
+  lease_expires_at timestamptz,
+  reserved_byte_size bigint,
+  quota_reserved_at timestamptz,
+  quota_released_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (owner_uuid, account_generation, operation_scope, key_hash)
 );
 
 create table public.leftover_dishes (
@@ -512,6 +544,44 @@ $function$;
 create trigger protect_recipe_nutrition_snapshot
 before update or delete on public.recipe_nutrition_snapshots
 for each row execute function public.protect_recipe_nutrition_snapshot();
+
+create or replace function public.lock_recipe_nutrition_recipe_ids(
+  p_recipe_ids uuid[]
+)
+returns void
+language plpgsql
+security definer
+set search_path = pg_catalog, public
+as $function$
+declare
+  v_recipe_id uuid;
+begin
+  for v_recipe_id in
+    select recipe_id
+    from (
+      select distinct recipe_id
+      from unnest(coalesce(p_recipe_ids, '{}'::uuid[])) recipe_ids(recipe_id)
+      where recipe_id is not null
+    ) distinct_recipe_ids
+    order by recipe_id::text collate "C"
+  loop
+    perform pg_catalog.pg_advisory_xact_lock(
+      pg_catalog.hashtextextended('recipe-nutrition-recipe:' || v_recipe_id::text, 0)
+    );
+  end loop;
+end;
+$function$;
+
+create or replace function public.build_recipe_nutrition_input_guard(
+  p_recipe_id uuid
+)
+returns jsonb
+language sql
+stable
+set search_path = pg_catalog, public
+as $function$
+  select jsonb_build_object('recipe_id', p_recipe_id);
+$function$;
 
 create or replace function public.write_recipe_nutrition_snapshot(
   p_recipe_id uuid,
@@ -847,6 +917,56 @@ esac
           "-f",
           migration,
         ]);
+      }
+      for (const migration of FOLLOWUP_MIGRATIONS) {
+        runRequired(path.join(postgresBin, "psql"), [
+          ...connectionArgs,
+          "-f",
+          migration,
+        ]);
+      }
+      if (FOLLOWUP_TARGET_MIGRATION) {
+        runRequired(path.join(postgresBin, "psql"), [
+          ...connectionArgs,
+          "-f",
+          FOLLOWUP_TARGET_MIGRATION,
+        ]);
+        if (mode === "replay") {
+          runRequired(path.join(postgresBin, "psql"), [
+            ...connectionArgs,
+            "-f",
+            FOLLOWUP_TARGET_MIGRATION,
+          ]);
+        }
+      }
+      if (FOLLOWUP_INTEGRATION_TEST) {
+        const followupResult = commandResult(
+          "pnpm",
+          [
+            "exec",
+            "vitest",
+            "run",
+            FOLLOWUP_INTEGRATION_TEST,
+            "--pool=forks",
+            "--maxWorkers=1",
+            `--testTimeout=${TEST_TIMEOUT_MS}`,
+          ],
+          {
+            stdio: "inherit",
+            env: {
+              ...process.env,
+              PATH: `${postgresBin}${path.delimiter}${process.env.PATH ?? ""}`,
+              HOMECOOK_PERSONAL_RECIPE_WRITE_PG_INTEGRATION: "1",
+              HOMECOOK_PERSONAL_RECIPE_WRITE_PGHOST: "127.0.0.1",
+              HOMECOOK_PERSONAL_RECIPE_WRITE_PGPORT: String(port),
+              HOMECOOK_PERSONAL_RECIPE_WRITE_PGDATABASE: database,
+              HOMECOOK_PERSONAL_RECIPE_WRITE_PGMODE: mode,
+            },
+          },
+        );
+        if (followupResult.status !== 0) {
+          process.exitCode = followupResult.status ?? 1;
+        }
       }
       const activeSecurityResult = commandResult(
         "pnpm",
