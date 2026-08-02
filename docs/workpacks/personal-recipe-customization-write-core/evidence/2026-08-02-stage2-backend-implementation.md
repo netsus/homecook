@@ -145,3 +145,51 @@ Neither review task is marked complete. Both findings require a new independent 
 - Source/workpack/automation/workflow-v2/OMO/closeout/branch validators passed; validator-focused Vitest returned `8 files / 98 tests passed`.
 - `pnpm audit --audit-level high`: high/critical `0`; one pre-existing low advisory remains. No slice-specific browser E2E exists before #7/#8 activation, so no empty grep is claimed green.
 - Production/staging/remote application writes: `0/0/0`. Capability activation, public route activation, Ready, merge, Discord and Claude use: none. Contract Evolution Candidate: none.
+
+## Third Stage 3 repair — cross-owner full-cleanup lock order
+
+The same Stage 2 author repaired, but did not approve, two fresh independent reviews of exact head `d197086c9ff0a140878104716dfb73dff0f2ad27`:
+
+- code/quality task `019fc1cf-9b72-7080-bddd-24e166fe86e1`: `REQUEST_CHANGES`, P0/P1/P2 `0/1/0`.
+  - The reviewer identified recipe advisory/row acquisition near reviewed migration lines 391/404 before the source-owner lifecycle `FOR SHARE` near line 423.
+  - Its actual two-connection reproduction held the source-owner lifecycle first, let the writer hold the public source recipe row, then ran full account cleanup. `public.users DELETE` reached the `recipes.created_by ON DELETE SET NULL` path and PostgreSQL returned `deadlock detected` instead of an official application error.
+- security/DB task `019fc1cf-9b73-71e1-b2d2-c8009811ee79`: `REQUEST_CHANGES`, P0/P1/P2 `0/1/1`.
+  - It independently reproduced the same lifecycle→recipe versus recipe→lifecycle cycle and tied it to the official `global → all affected owners → recipe → resource` order.
+  - It also identified `.workflow-v2/status.json` line 589, where the unrelated merged `baemin-prototype-planner-week-parity` item had changed from the exact-base `pr_path: pending` to PR #1274.
+
+The review prompt's implementation SHA `cfc2dfab0127842217ab165d68a3f49a10850e6c` was not a Git object. The actual prior repair commit is `cfc2dfab46ce192a3c9160920d4a2a6db4ddb5f0`, as already recorded in this evidence and the PR body. The third implementation repair commit is `080193e73346eff91c1266045e7dfa6da43d26a6`.
+
+Neither reviewer result is marked complete. Fresh independent Stage 3 code/quality and security/DB re-review of the new current head remains pending.
+
+### Third repair RED → GREEN
+
+- Locked static RED before implementation: `1 failed / 4 passed`; the migration had no mutation-free affected-owner pre-read before the owner/recipe order.
+- Disposable PostgreSQL RED in both fresh and replay: #6 `19 passed / 1 failed` out of 20.
+  - Observed lock graph: writer `Lock:transactionid`, cleanup `Lock:advisory`, writer blocked by cleanup, cleanup blocked by the explicit barrier.
+  - The recipe `FOR UPDATE NOWAIT` probe failed before every affected owner was acquired.
+  - After barrier release the writer exited `1` with actual PostgreSQL `deadlock detected`; cleanup exited `0`.
+  - Contracted cleanup still preserved the public source as `visibility=public`, `created_by=NULL`, revision `1`; the failed writer left fork/idempotency receipt counts `0/0`.
+- Locked static GREEN/refactor: the full locked suite returned `4 files / 16 passed` plus the PostgreSQL file's intended local skip.
+- Disposable PostgreSQL GREEN in both fresh and replay: predecessor #4 fresh `15 pass / 1 intended skip`, replay `16/16`; #6 `20/20` per mode; central inventory `30 pass / 16 intended skip` per mode.
+
+### Third findings closure
+
+- The RPC performs a mutation-free pre-read of request/source/target recipe authority candidates after the global shared fence and capability/control pins.
+- Requester and discovered source/target owners are deduplicated and UUID-sorted with `COLLATE "C"`; each owner advisory and latest lifecycle row is locked before any recipe advisory or row lock.
+- The canonical `assert_full_local_session_authority` call remains after the complete owner loop and before recipe locks, so requester session authority does not reintroduce requester-first multi-owner ordering. JWT `iat`, binding state/expiry, authority/issuer/cutover/HMAC, identity epoch and generation checks remain unchanged.
+- Recipe/source rows are re-read under `FOR UPDATE`. Owner, visibility or deletion drift converges to the existing `RESOURCE_NOT_FOUND` without adding a field, status, error or endpoint.
+- The real full-cleanup test covers both directions. Cleanup-first completes account cleanup/anonymization before the writer fails non-disclosing with mutation zero and no deadlock; writer-first commits the fork before full cleanup completes. Public source preservation and contracted anonymization are asserted in both cases.
+- The unrelated `baemin-prototype-planner-week-parity.pr_path` is restored to exact-base `pending`; PR #1274 is projected only on the `personal-recipe-customization-write-core` item.
+
+Production/staging/remote application writes remain `0/0/0`. Capability activation, Ready, merge, Discord and Claude use remain none. Contract Evolution Candidate remains none.
+
+### Third repair verification
+
+- Locked focused command: `4 files / 16 passed`; the PostgreSQL file was intentionally skipped outside its disposable runner.
+- #6 disposable PostgreSQL fresh/replay: #6 `20/20` each; predecessor #4 fresh `15 pass / 1 intended skip`, replay `16/16`; central inventory `30 pass / 16 intended skip` each.
+- Predecessors: #2 focused `9 files / 55 tests` plus PostgreSQL fresh/replay `20/20` each; #3 official focused `59 files / 618 tests`; #4 focused `4 files / 45 tests`; #5 focused `9 files / 61 tests`.
+- The separate non-required #3 PostgreSQL diagnostic was not substituted with the focused suite. Its existing `74/75` simulated-clean assertion diagnosis remains separately disclosed.
+- `pnpm verify:backend`: lint, typecheck, product `202 files passed / 9 skipped` and `2,557 tests passed / 129 intended skip`, production build and security Playwright `12/12` passed.
+- Source/workpack/automation/workflow-v2/OMO/closeout/branch validators and `git diff --check` passed. Validator-focused Vitest returned `8 files / 84 tests passed`.
+- `pnpm audit --audit-level high`: high/critical `0`; one pre-existing low advisory remains.
+- No slice-specific browser E2E exists before #7/#8 activation, so no empty grep is claimed green.

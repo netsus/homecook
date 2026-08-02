@@ -2463,7 +2463,7 @@
       "id": "personal-recipe-customization-write-core",
       "preset": "vertical-slice-strict",
       "branch": "feature/be-personal-recipe-customization-write-core",
-      "pr_path": "pending",
+      "pr_path": "https://github.com/netsus/homecook/pull/1274",
       "lifecycle": "in_progress",
       "approval_state": "not_started",
       "verification_status": "pending",
@@ -2481,7 +2481,7 @@
         "node scripts/verify-personal-recipe-customization-write-core-local-first.mjs --mode post-merge-read-only",
         "git diff --check"
       ],
-      "notes": "Stage 2 backend implementer task 019fc113-7b96-7620-ada5-a0bb66cfae7e recorded RED 15 failed/2 skipped before GREEN 15/15. Disposable PostgreSQL fresh/replay each passed #6 9/9 with #4/full-local security regressions; #2/#3/#4/#5 focused regressions and verify:backend are green; writes 0/0/0. Implementation commit 22e673ca4a09649ee9187b336b35f5a97a80ce86 is in Draft PR #1274. Evidence: docs/workpacks/personal-recipe-customization-write-core/evidence/2026-08-02-stage2-backend-implementation.md. This task does not self-approve Stage 3. Approval/evaluation, named slice E2E, merged-exact read-only verifier, Manual Only evidence and #7/#8 activation remain pending.",
+      "notes": "Stage 2 backend implementer task 019fc113-7b96-7620-ada5-a0bb66cfae7e retains original and Stage 3 repair evidence in Draft PR #1274. Third fresh reviewers 019fc1cf-9b72-7080-bddd-24e166fe86e1 and 019fc1cf-9b73-71e1-b2d2-c8009811ee79 returned REQUEST_CHANGES 0/1/0 and 0/1/1 against d197086c9ff0a140878104716dfb73dff0f2ad27. Commit 080193e73346eff91c1266045e7dfa6da43d26a6 repairs cross-owner public-fork/full-cleanup ordering through mutation-free affected-owner discovery, UUID-sorted all-owner locks and post-lock drift revalidation. RED static 1/4 and fresh/replay #6 19/1 reproduced PostgreSQL deadlock; GREEN static 16/16 and fresh/replay #6 20/20 plus inventory 30/16. The unrelated baemin planner pr_path was restored to exact-base pending. Writes remain 0/0/0; Contract Evolution none. Evidence: docs/workpacks/personal-recipe-customization-write-core/evidence/2026-08-02-stage2-backend-implementation.md. This task does not self-approve Stage 3; fresh independent re-review, Manual Only evidence and #7/#8 activation remain pending.",
       "evaluation_status": "not_started",
       "evaluation_round": 0,
       "last_evaluator_result": null,

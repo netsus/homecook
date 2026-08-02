@@ -189,6 +189,8 @@ Stage 2 implementation evidence is retained at [`evidence/2026-08-02-stage2-back
 
 The same evidence also records the Stage 2 author's repairs for fresh Stage 3 `REQUEST_CHANGES` at reviewed head `bcc4aa4efad7419837e3a35ae7b5c6ab5661ef31`. Those repairs do not mark either reviewer task or Stage 3 complete; independent fresh re-review remains pending.
 
+The evidence further records the third Stage 3 repair for exact head `d197086c9ff0a140878104716dfb73dff0f2ad27`: independent code/quality task `019fc1cf-9b72-7080-bddd-24e166fe86e1` and security/DB task `019fc1cf-9b73-71e1-b2d2-c8009811ee79` both reproduced the cross-owner public-fork/full-cleanup lock inversion. Implementation commit `080193e73346eff91c1266045e7dfa6da43d26a6` restores the canonical all-affected-owner-before-recipe order and the unrelated workflow projection contamination. This author repair is not Stage 3 approval; fresh independent re-review remains pending.
+
 - [ ] dormant create/fork/save-as-new core preserves source identity and legacy manual behavior <!-- omo:id=delivery-personal-write-create;stage=2;scope=backend;review=3,6 -->
 - [ ] owner-private same-ID revision update stores canonical ingredient/product/version/step provenance <!-- omo:id=delivery-personal-write-update;stage=2;scope=backend;review=3,6 -->
 - [ ] soft DELETE is owner-only, idempotent and preserves every history FK/snapshot <!-- omo:id=delivery-personal-write-delete;stage=2;scope=backend;review=3,6 -->
