@@ -207,7 +207,7 @@ snapshot_v2 read:
 - creation flag off: existing session read/cancel drain remains available
 ```
 
-## Design / Accessibility Authority
+## Design Authority
 
 - UI risk: high-risk `RECIPE_DETAIL` anchor extension plus `PLANNER_WEEK` start transition and `COOK_MODE` contract dispatch.
 - Anchor screens: `RECIPE_DETAIL`, `PLANNER_WEEK`. High-risk required non-anchor surface: `COOK_MODE`.
