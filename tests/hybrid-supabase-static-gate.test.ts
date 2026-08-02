@@ -208,6 +208,49 @@ void fallback;
     ]);
   });
 
+  it("detects a raw REST mutation when the path is interpolated from an identifier", () => {
+    const root = fixtureRepository({
+      "app/interpolated-rest-client.tsx": `"use client";
+const restBase = "https://data.example.test";
+const recipeMutationPath = "/rest/v1/recipes";
+fetch(\`\${restBase}\${recipeMutationPath}\`, { method: "PATCH" });
+`,
+    });
+
+    const inventory = inventoryHybridAuthorityPaths(root);
+
+    expect(inventory.browserRawRestMutationPaths).toEqual([
+      expect.objectContaining({
+        file: "app/interpolated-rest-client.tsx",
+        method: "PATCH",
+      }),
+    ]);
+  });
+
+  it("detects a conditionally selected and re-aliased service-role factory", () => {
+    const root = fixtureRepository({
+      "app/conditional-service-role-client.tsx": `"use client";
+import { createServiceRoleClient as elevated } from "@/lib/supabase/server";
+import * as serverClients from "@/lib/supabase/server";
+
+const selectedFactory = Math.random() > 0.5
+  ? elevated
+  : serverClients.createServiceRoleClient;
+const reAliasedFactory = selectedFactory;
+const client = reAliasedFactory();
+void client;
+`,
+    });
+
+    const inventory = inventoryHybridAuthorityPaths(root);
+
+    expect(inventory.userDirectServiceRoleEntries).toEqual([
+      expect.objectContaining({
+        file: "app/conditional-service-role-client.tsx",
+      }),
+    ]);
+  });
+
   it("does not mistake unrelated from/insert chains or REST reads for browser mutation", () => {
     const root = fixtureRepository({
       "components/safe-client.tsx": `"use client";
@@ -222,6 +265,11 @@ localQuery.update?.({});
 const localFactory = () => null;
 const localFactoryAlias = localFactory;
 localFactoryAlias();
+const selectedLocalFactory = Math.random() > 0.5
+  ? localFactory
+  : () => null;
+const reAliasedLocalFactory = selectedLocalFactory;
+reAliasedLocalFactory();
 fetch("https://data.example.test/rest/v1/recipes");
 `,
     });

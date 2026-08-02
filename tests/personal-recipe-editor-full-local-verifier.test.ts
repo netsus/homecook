@@ -237,12 +237,29 @@ const boundaryChecks = {
   remote_application_writes: "zero",
 };
 
+const requiredCheckCommandLedger =
+  buildPersonalRecipeEditorFullLocalVerificationPlan({
+    mode: "post-merge-full-local-read-only",
+  }).requiredChecks.map(({ id, command, args }) => ({
+    id,
+    command,
+    args,
+  }));
+
 const executionObservation = {
   git_fetch_transport: "https-read-only",
   database_target: "loopback",
   database_transaction: "read-only",
   required_checks_target: "local-sanitized",
   remote_application_write_target: "absent",
+};
+
+const lockedExecutionObservation = {
+  ...executionObservation,
+  required_check_command_ledger: requiredCheckCommandLedger,
+  required_check_environment_keys: ["HOME", "LANG", "PATH"],
+  remote_application_target_environment_keys: [],
+  remote_application_credential_environment_keys: [],
 };
 
 const executionEvidence = {
@@ -607,6 +624,77 @@ describe("personal recipe editor full-local verifier", () => {
       expect(() =>
         assertPersonalRecipeEditorFullLocalExecutionEvidence(
           evidence,
+          { localResult: validLocalResult },
+        ),
+      ).toThrow(/execution evidence failed closed/i);
+    }
+  });
+
+  it("requires an exact required-check command ledger and explicit remote environment absence", () => {
+    const lockedEvidence = {
+      ...executionEvidence,
+      execution_observation: lockedExecutionObservation,
+      boundary_checks: buildPersonalRecipeEditorBoundaryChecks({
+        checks: executionEvidence.checks,
+        localResult: validLocalResult,
+        executionObservation: lockedExecutionObservation,
+      }),
+    };
+
+    expect(() =>
+      assertPersonalRecipeEditorFullLocalExecutionEvidence(
+        lockedEvidence,
+        { localResult: validLocalResult },
+      ),
+    ).not.toThrow();
+    expect(() =>
+      assertPersonalRecipeEditorFullLocalExecutionEvidence(
+        executionEvidence,
+        { localResult: validLocalResult },
+      ),
+    ).toThrow(/execution evidence failed closed/i);
+  });
+
+  it("rejects unknown required-check commands and remote target or credential environment keys", () => {
+    for (const executionObservationDrift of [
+      {
+        ...lockedExecutionObservation,
+        required_check_command_ledger: [
+          ...requiredCheckCommandLedger,
+          { id: "unknown", command: "node", args: ["unknown.mjs"] },
+        ],
+      },
+      {
+        ...lockedExecutionObservation,
+        required_check_environment_keys: [
+          ...lockedExecutionObservation.required_check_environment_keys,
+          "SUPABASE_URL",
+        ],
+        remote_application_target_environment_keys: ["SUPABASE_URL"],
+      },
+      {
+        ...lockedExecutionObservation,
+        required_check_environment_keys: [
+          ...lockedExecutionObservation.required_check_environment_keys,
+          "SUPABASE_SERVICE_ROLE_KEY",
+        ],
+        remote_application_credential_environment_keys: [
+          "SUPABASE_SERVICE_ROLE_KEY",
+        ],
+      },
+    ]) {
+      const driftedEvidence = {
+        ...executionEvidence,
+        execution_observation: executionObservationDrift,
+        boundary_checks: buildPersonalRecipeEditorBoundaryChecks({
+          checks: executionEvidence.checks,
+          localResult: validLocalResult,
+          executionObservation: executionObservationDrift,
+        }),
+      };
+      expect(() =>
+        assertPersonalRecipeEditorFullLocalExecutionEvidence(
+          driftedEvidence,
           { localResult: validLocalResult },
         ),
       ).toThrow(/execution evidence failed closed/i);
