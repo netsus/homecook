@@ -16,19 +16,19 @@
   "dependencies": [
     "security-definer-mutation-authorization hotfix merged and deployed",
     "cooking-meal-log contract-evolution merged as PR #1072",
-    "recipe-snapshot-authority-foundation Stage 1 docs merged as PR #1078; runtime remains an implementation predecessor",
-    "personal-recipe-customization-write-core Stage 1 docs merged as PR #1080; runtime remains an implementation predecessor",
-    "cook-mode-whole-board is currently implementation and must merge before #7 implementation",
+    "recipe-snapshot-authority-foundation runtime merged via PR #1218; activation and Manual Only evidence remain release gates",
+    "personal-recipe-customization-write-core Stage 3 runtime merged via PR #1274 as 05683e4d; terminal closeout and activation remain pending",
+    "cook-mode-whole-board runtime merged via PR #711 as 2f8569cb",
     "cooked-batch-weight-ledger #8 owns exact-pantry completion and the R/R+1 compatibility gate before R+2 activation"
   ],
   "docs_refs": {
     "source_of_truth": [
       "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
-      "docs/요구사항기준선-v1.7.25.md",
-      "docs/화면정의서-v1.5.29.md",
-      "docs/유저flow맵-v1.3.27.md",
-      "docs/db설계-v1.3.26.md",
-      "docs/api문서-v1.2.29.md"
+      "docs/요구사항기준선-v1.7.28.md",
+      "docs/화면정의서-v1.5.32.md",
+      "docs/유저flow맵-v1.3.30.md",
+      "docs/db설계-v1.3.30.md",
+      "docs/api문서-v1.2.33.md"
     ],
     "governing_docs": [
       "AGENTS.md",
@@ -142,8 +142,8 @@
     ]
   },
   "status": {
-    "lifecycle": "planned",
-    "approval_state": "not_started",
+    "lifecycle": "in_progress",
+    "approval_state": "dual_approved",
     "verification_status": "pending",
     "evaluation_status": "not_started",
     "evaluation_round": 0,
@@ -162,6 +162,8 @@
     "New public endpoint request response field status error code screen or client authority",
     "Unapproved server-production migration or database write or capability activation"
   ],
-  "open_questions": [],
-  "notes": "Roadmap moves to docs while workflow lifecycle remains planned and approval not_started until separate Codex internal1.5, security/DB, five-axis and design reviews approve with zero required findings. Stage 1 verify_commands are current docs validators, focused workflow tests, lint, typecheck, audit and diff only. Runtime implementation waits for #4/#6 and cook-mode-whole-board. #7 owns dormant preview/PATCH propagation plus v2 start/cancel/read and explicit dispatch; #8 owns exact-pantry completion and the R/R+1 gate before R+2 joint activation. Design Status is temporary pending implementation evidence and authority approval."
+  "open_questions": [
+    "Contract evolution must lock exact success data field names for snapshot-v2 start, cook-mode read, cancel, recipe PATCH and recipe DELETE before their public route and type implementation."
+  ],
+  "notes": "Stage 1 PR #1081 merged after separate Codex internal1.5, security/DB, five-axis and design reviews approved with zero required findings. Runtime predecessors are satisfied by #4 PR #1218, #6 PR #1274 merge 05683e4d and cook-mode-whole-board PR #711 merge 2f8569cb. Stage 2 starts with contract-locked DB/security/concurrency TDD RED while public response field names remain contract-evolution blocked. Personal writes and v2 creation stay dark; #8 owns exact-pantry completion and the R/R+1 gate before R+2 joint activation. Design Status remains temporary pending implementation evidence and authority approval."
 }

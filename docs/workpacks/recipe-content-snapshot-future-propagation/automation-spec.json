@@ -183,6 +183,7 @@
     "official-doc-or-approved-plan-conflict",
     "plan-sha-or-line-count-drift",
     "runtime-predecessor-4-6-or-cook-mode-whole-board-not-merged-green-before-implementation",
+    "exact-public-success-data-field-names-not-contract-evolved-before-dependent-route-or-type-implementation",
     "preview-and-patch-canonicalizers-diverge",
     "token-client-readable-forgeable-or-not-bound-to-owner-generation-session-target-claims",
     "preview-performs-domain-write-or-direct-client-preview-mutation-allowed",
@@ -213,5 +214,5 @@
     "backend": 6,
     "frontend": 4
   },
-  "notes": "This is a DB/security/concurrency and high-risk UI integration Stage 1 lock. Stage 1 runs only current docs validators, focused workflow tests, lint, typecheck, audit and diff. Backend migrations/RPCs, PostgreSQL, real DB, components, E2E, visual/a11y, server-production/local-rehearsal and release evidence are future artifacts. Implementation is blocked until #4/#6 runtime and cook-mode-whole-board merge. #7 dark-ships impact integration plus v2 start/cancel/read and explicit dispatch; #8 owns exact-pantry completion and the R/R+1 gate before R+2 joint activation."
+  "notes": "This is a DB/security/concurrency and high-risk UI integration contract lock. Stage 1 PR #1081 and runtime predecessors #1218/#1274/#711 are merged. Stage 2 begins TDD-first for contract-locked DB/security/concurrency behavior, but public route/type work for snapshot-v2 start/read/cancel and recipe PATCH/DELETE success data is blocked until contract evolution locks exact field names. #7 dark-ships impact integration plus v2 start/cancel/read and explicit dispatch; #8 owns exact-pantry completion and the R/R+1 gate before R+2 joint activation."
 }

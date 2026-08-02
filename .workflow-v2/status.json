@@ -2493,8 +2493,8 @@
       "preset": "vertical-slice-strict",
       "branch": "docs/recipe-content-snapshot-future-propagation",
       "pr_path": "pending",
-      "lifecycle": "planned",
-      "approval_state": "not_started",
+      "lifecycle": "in_progress",
+      "approval_state": "dual_approved",
       "verification_status": "pending",
       "required_checks": [
         "pnpm validate:source-of-truth-sync",
@@ -2518,7 +2518,7 @@
         "node scripts/verify-recipe-content-snapshot-future-propagation-local-first.mjs --mode post-merge-read-only",
         "git diff --check"
       ],
-      "notes": "Roadmap moves to docs while workflow lifecycle remains planned and approval not_started until separate Codex internal1.5, security/DB, five-axis and design reviews approve with zero required findings. Stage 1 verify_commands are current docs validators, focused workflow tests, lint, typecheck, audit and diff only. Runtime implementation waits for #4/#6 and cook-mode-whole-board. #7 owns dormant preview/PATCH propagation plus v2 start/cancel/read and explicit dispatch; #8 owns exact-pantry completion and the R/R+1 gate before R+2 joint activation. Design Status is temporary pending implementation evidence and authority approval.",
+      "notes": "Stage 1 PR #1081 merged after separate Codex internal1.5, security/DB, five-axis and design reviews approved with zero required findings. Runtime predecessors are satisfied by #4 PR #1218, #6 PR #1274 merge 05683e4d and cook-mode-whole-board PR #711 merge 2f8569cb. Stage 2 begins with contract-locked DB/security/concurrency TDD RED. Exact public success data field names for snapshot-v2 start/read/cancel and recipe PATCH/DELETE remain contract-evolution blocked. Personal writes and v2 creation stay dark; #8 owns exact-pantry completion and R/R+1 before R+2 activation. Design Status remains temporary.",
       "evaluation_status": "not_started",
       "evaluation_round": 0,
       "last_evaluator_result": null,
