@@ -126,6 +126,20 @@ function setupAuthorizedRpc(result: {
   return { from, rpc };
 }
 
+function setupUnauthenticated() {
+  const rpc = vi.fn(async () => ({ data: null, error: null }));
+  const from = vi.fn(() => {
+    throw new Error("unauthenticated snapshot-v2 requests must not read privileged tables");
+  });
+  createRouteHandlerClient.mockResolvedValue({
+    auth: { getUser: vi.fn(async () => ({ data: { user: null } })) },
+    from,
+    rpc,
+  });
+  createServiceRoleClient.mockReturnValue({ from, rpc });
+  return { from, rpc };
+}
+
 async function importStartRoute() {
   requireRoute(startRoutePath, "snapshot-v2 start route is missing");
   return import("@/app/api/v1/cooking/session-attempts/route");
@@ -295,6 +309,55 @@ describe("snapshot-v2 session attempts public contract", () => {
     await expect(replay.json()).resolves.toEqual(expected);
     expect(rpc).toHaveBeenCalledTimes(2);
   });
+
+  it.each(["start", "read", "cancel"] as const)(
+    "rejects unauthenticated snapshot-v2 %s before malformed key/body/id handling or privileged reads",
+    async (operation) => {
+      const { from, rpc } = setupUnauthenticated();
+      createServiceRoleClient.mockClear();
+      let response: Response;
+
+      if (operation === "start") {
+        const { POST } = await importStartRoute();
+        response = await POST(new Request(
+          "http://localhost:3000/api/v1/cooking/session-attempts",
+          { method: "POST", body: "{" },
+        ));
+      } else if (operation === "read") {
+        const { GET } = await importCookModeRoute();
+        response = await GET(
+          new Request(
+            "http://localhost:3000/api/v1/cooking/session-attempts/not-a-uuid/cook-mode",
+          ),
+          context("not-a-uuid"),
+        );
+      } else {
+        const { POST } = await importCancelRoute();
+        response = await POST(
+          new Request(
+            "http://localhost:3000/api/v1/cooking/session-attempts/not-a-uuid/cancel",
+            { method: "POST" },
+          ),
+          context("not-a-uuid"),
+        );
+      }
+
+      expect(response.status).toBe(401);
+      expect(await response.json()).toEqual({
+        success: false,
+        data: null,
+        error: {
+          code: "UNAUTHORIZED",
+          message: expect.any(String),
+          fields: [],
+        },
+      });
+      expect(createServiceRoleClient).not.toHaveBeenCalled();
+      expect(readVerifiedAccountGenerationSession).not.toHaveBeenCalled();
+      expect(from).not.toHaveBeenCalled();
+      expect(rpc).not.toHaveBeenCalled();
+    },
+  );
 
   it.each([
     [null, 428, "IDEMPOTENCY_KEY_REQUIRED"],

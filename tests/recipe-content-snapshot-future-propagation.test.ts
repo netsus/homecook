@@ -271,6 +271,54 @@ describe("recipe content snapshot future propagation public contract", () => {
     expect(rpc).toHaveBeenCalledTimes(2);
   });
 
+  it("pins the requested exact product/version pair in the nutrition predecessor guard", async () => {
+    const ingredientId = "550e8400-e29b-41d4-a716-446655440106";
+    const productId = "550e8400-e29b-41d4-a716-446655440107";
+    const selectedVersionId = "550e8400-e29b-41d4-a716-446655440108";
+    const query = {
+      select: vi.fn(() => query),
+      in: vi.fn(() => query),
+      eq: vi.fn(() => query),
+      order: vi.fn(() => query),
+      range: vi.fn(async () => ({ data: [], error: null })),
+    };
+    const client = { from: vi.fn(() => query) };
+    const { calculateRecipeDraftNutrition } = await import(
+      "@/lib/server/recipe-content-snapshot-future-propagation"
+    );
+
+    const result = await calculateRecipeDraftNutrition(client, {
+      recipeId,
+      baseRecipeRevision: 12,
+      draft: {
+        title: "선택 버전 고정",
+        base_servings: 2,
+        ingredients: [{
+          ingredient_id: ingredientId,
+          amount: 100,
+          unit: "g",
+          ingredient_type: "QUANT",
+          scalable: true,
+          food_product_id: productId,
+          food_product_nutrition_version_id: selectedVersionId,
+        }],
+        steps: [],
+      },
+    });
+
+    expect(result.predecessorGuard.recipe_ingredients).toEqual([
+      expect.objectContaining({
+        ingredient_id: ingredientId,
+        food_product_id: productId,
+        food_product_nutrition_version_id: selectedVersionId,
+      }),
+    ]);
+    expect(result.predecessorGuard.recipe_ingredients[0]).not.toMatchObject({
+      food_product_id: null,
+      food_product_nutrition_version_id: null,
+    });
+  });
+
   it("keeps preview and PATCH on one shared canonicalizer and one-RPC final authority", () => {
     const sql = readFuturePropagationMigration();
     const canonicalizerCalls = sql.match(/canonicaliz[a-z_]*recipe[a-z_]*draft/gi) ?? [];

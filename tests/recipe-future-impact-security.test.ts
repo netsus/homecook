@@ -68,9 +68,11 @@ function previewRequest() {
 function patchRequest({
   idempotencyKey = key,
   strategy = "replace_all",
+  body = {},
 }: {
   idempotencyKey?: string | null;
   strategy?: string;
+  body?: Record<string, unknown>;
 } = {}) {
   const headers = new Headers({ "content-type": "application/json" });
   if (idempotencyKey !== null) headers.set("Idempotency-Key", idempotencyKey);
@@ -82,6 +84,7 @@ function patchRequest({
       draft,
       future_plan_strategy: strategy,
       impact_token: "opaque-token",
+      ...body,
     }),
   });
 }
@@ -150,16 +153,84 @@ describe("recipe future impact security", () => {
     readVerifiedAccountGenerationSession.mockReset();
   });
 
-  it("rejects unauthenticated preview before privileged RPC creation or draft disclosure", async () => {
-    setupUser({ data: null, error: null }, null);
+  it("rejects unauthenticated preview before malformed body parsing or privileged reads", async () => {
+    const { from, rpc } = setupUser({ data: null, error: null }, null);
     createServiceRoleClient.mockClear();
 
     const { POST } = await importPreviewRoute();
-    const response = await POST(previewRequest(), context());
+    const response = await POST(new Request(
+      `http://localhost:3000/api/v1/recipes/${recipeId}/future-plan-impact`,
+      { method: "POST", body: "{" },
+    ), context());
 
     expect(response.status).toBe(401);
     expectPublicError(await response.json(), "UNAUTHORIZED");
     expect(createServiceRoleClient).not.toHaveBeenCalled();
+    expect(readVerifiedAccountGenerationSession).not.toHaveBeenCalled();
+    expect(from).not.toHaveBeenCalled();
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it.each(["PATCH", "DELETE"] as const)(
+    "rejects unauthenticated %s before malformed key/body validation and all privileged reads",
+    async (method) => {
+      const { from, rpc } = setupUser({ data: null, error: null }, null);
+      createServiceRoleClient.mockClear();
+      const request = new Request(
+        `http://localhost:3000/api/v1/recipes/${recipeId}`,
+        method === "PATCH"
+          ? {
+              method,
+              headers: { "content-type": "application/json" },
+              body: "{",
+            }
+          : { method },
+      );
+
+      const route = await importRecipeRoute();
+      const response = method === "PATCH"
+        ? await route.PATCH(request, context())
+        : await route.DELETE(request, context());
+
+      expect(response.status).toBe(401);
+      expectPublicError(await response.json(), "UNAUTHORIZED");
+      expect(createServiceRoleClient).not.toHaveBeenCalled();
+      expect(readVerifiedAccountGenerationSession).not.toHaveBeenCalled();
+      expect(from).not.toHaveBeenCalled();
+      expect(rpc).not.toHaveBeenCalled();
+    },
+  );
+
+  it("fails trusted nutrition predecessor read errors closed as server errors, not draft 422", async () => {
+    const { from, rpc } = setupUser({
+      data: { id: recipeId, revision: 13 },
+      error: null,
+    });
+    const ingredientId = "550e8400-e29b-41d4-a716-446655440304";
+
+    const { PATCH } = await importRecipeRoute();
+    const failed = await PATCH(patchRequest({
+      body: {
+        draft: {
+          title: "영양 predecessor 조회 실패",
+          base_servings: 2,
+          ingredients: [{
+            ingredient_id: ingredientId,
+            amount: 100,
+            unit: "g",
+            ingredient_type: "QUANT",
+            scalable: true,
+          }],
+          steps: [],
+        },
+      },
+    }), context());
+
+    expect(failed.status).toBe(500);
+    expectPublicError(await failed.json(), "INTERNAL_ERROR");
+    expect(readVerifiedAccountGenerationSession).toHaveBeenCalledTimes(1);
+    expect(from).toHaveBeenCalledTimes(1);
+    expect(rpc).not.toHaveBeenCalled();
   });
 
   it("maps missing and other-owner preview results to the same non-disclosing 404 wrapper", async () => {
