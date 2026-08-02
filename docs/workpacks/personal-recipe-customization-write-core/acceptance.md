@@ -1,6 +1,6 @@
 # Acceptance Checklist
 
-> This Stage 1 document locks future backend and release evidence. Unchecked items are not claims that migrations, routes, RLS/RPC, server-production/local-rehearsal DB state, #7 propagation or `personal_recipe_v2` activation already exist.
+> PR #1274 merged the Stage 3 backend runtime checkpoint, but overall acceptance remains in progress. Unchecked items are not claims that the integrated pinned-reader path, route/service tests, server-production/local-rehearsal DB state, #7/#8 integrated E2E, terminal workpack closeout review or `personal_recipe_v2` R+2 activation already exist.
 
 ## Create / Fork / Identity
 
@@ -45,10 +45,10 @@
 
 ## Successor / Activation Boundary
 
-- [ ] #6 exposes no alternate partial PATCH body and leaves impact preview/token/replace_all|keep/Meal-shopping propagation to #7 <!-- omo:id=accept-personal-patch-boundary;stage=2;scope=shared;review=3,6 -->
-- [ ] #6 owns no session-attempt start/cancel/complete, exact pantry completion or cooked-batch behavior <!-- omo:id=accept-personal-cooking-boundary;stage=2;scope=shared;review=3,6 -->
-- [ ] current and immediate-previous release with capability off emits zero new personal mutations and preserves legacy flows <!-- omo:id=accept-personal-capability-off;stage=2;scope=shared;review=3,6 -->
-- [ ] external personal writes stay disabled until #7 integration plus #8 R/R+1 evidence and R+2 joint activation <!-- omo:id=accept-personal-r2-activation;stage=2;scope=shared;review=3,6 -->
+- [x] #6 exposes no alternate partial PATCH body and leaves impact preview/token/replace_all|keep/Meal-shopping propagation to #7 <!-- omo:id=accept-personal-patch-boundary;stage=2;scope=shared;review=3,6 -->
+- [x] #6 owns no session-attempt start/cancel/complete, exact pantry completion or cooked-batch behavior <!-- omo:id=accept-personal-cooking-boundary;stage=2;scope=shared;review=3,6 -->
+- [x] current and immediate-previous release with capability off emits zero new personal mutations and preserves legacy flows <!-- omo:id=accept-personal-capability-off;stage=2;scope=shared;review=3,6 -->
+- [x] external personal writes stay disabled until #7 integration plus #8 R/R+1 evidence and R+2 joint activation <!-- omo:id=accept-personal-r2-activation;stage=2;scope=shared;review=3,6 -->
 - [x] Design Status remains N/A because #5 exclusively owns RECIPE_DETAIL/editor UI and authority evidence <!-- omo:id=accept-personal-design-na;stage=2;scope=shared;review=3,6 -->
 
 ## Error / Wrapper
@@ -81,7 +81,7 @@
 ### E2E / Release
 
 - [ ] after #5/#7/#8 integration, E2E proves public fork/new ID, same-ID edit, explicit new ID, delete/history and rollback behavior <!-- omo:id=accept-personal-e2e;stage=2;scope=shared;review=3,6 -->
-- [ ] current-head PR checks and post-merge QA/Policy/Security/Vercel are terminal green or intended skip <!-- omo:id=accept-personal-ci;stage=2;scope=shared;review=3,6 -->
+- [x] current-head PR checks and post-merge QA/Policy/Security/Vercel are terminal green or intended skip <!-- omo:id=accept-personal-ci;stage=2;scope=shared;review=3,6 -->
 
 ### Manual Only
 

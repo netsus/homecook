@@ -2481,10 +2481,10 @@
         "node scripts/verify-personal-recipe-customization-write-core-local-first.mjs --mode post-merge-read-only",
         "git diff --check"
       ],
-      "notes": "Draft PR #1274 exact implementation/evidence head 5b96e9be94f36822944deb194581517731c3a4ab received two external independent approvals: code/quality task 019fc23c-6129-7de3-a075-89828d6f35bf and security/DB task 019fc23c-6129-7de3-a075-8961262f7bb3 each APPROVE P0/P1/P2 0/0/0. Reviewed-head evidence is locked 16/16, #6 fresh/replay 20/20, #4 fresh 15 plus 1 intended skip and replay 16/16, inventory 30 plus 16 intended skip, raw checks 21 = 19 success plus 2 intended skip with pending/fail/cancel 0. Standalone #3 remains the disclosed pre-existing 74/75 diagnostic. The Stage 2 author only projects these external results and does not self-approve. Pre-merge lifecycle remains in_progress; approval_state=dual_approved, verification_status=passed, evaluation not_started and auto-merge false. Draft/merge/post-merge, Manual Only, #7/#8 and R+2 activation remain pending. Writes 0/0/0; Contract Evolution none.",
-      "evaluation_status": "not_started",
-      "evaluation_round": 0,
-      "last_evaluator_result": null,
+      "notes": "Stage 3 backend runtime merge checkpoint, not terminal workpack closeout. PR #1274 final head a27be0c7e9a72dfd25d6c7a31cb0b9ae401ead9e merged as 05683e4d1cf95c4cc3b9a41eb3fa7857b58a3d2d at 2026-08-02T12:22:37Z after independent code/quality task 019fc23c-6129-7de3-a075-89828d6f35bf and security/DB task 019fc23c-6129-7de3-a075-8961262f7bb3 each approved reviewed head 5b96e9be94f36822944deb194581517731c3a4ab with P0/P1/P2 0/0/0. Latest unique Ready contexts were 15/15 success with pending/fail/cancel/rerun 0; the historical first Ready policy failure was a PR-body structured environment/scope omission repaired without a head change, and later policy runs passed. Exact-merge post-merge verification returned POSTMERGE_VERIFIED YES and P0/P1/P2 0/0/0: PostgreSQL aggregate fresh 65 pass/17 intended skip and replay 66/16, including #6 20/20 each, #4 fresh 15+1/replay 16, inventory 30+16, plus static 4 files/16 tests and governance validators. Production/staging/remote writes were 0/0/0 and capability remains off. Overall lifecycle remains in_progress because server MacBook/local rehearsal, route/service and named integrated E2E, the terminal workpack closeout review, #7/#8 and R+2 activation remain pending. BE-only Design Status is N/A.",
+      "evaluation_status": "passed",
+      "evaluation_round": 1,
+      "last_evaluator_result": "POSTMERGE_VERIFIED YES on merge 05683e4d1cf95c4cc3b9a41eb3fa7857b58a3d2d; P0/P1/P2 0/0/0",
       "auto_merge_eligible": false,
       "blocked_reason_code": null
     },

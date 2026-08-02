@@ -21,8 +21,8 @@
     "recipe-visibility-read-hardening Stage 1 docs merged as PR #1077; runtime remains an implementation predecessor",
     "recipe-snapshot-authority-foundation Stage 1 docs merged as PR #1078; runtime remains an implementation predecessor",
     "personal-recipe-editor-decoupling Stage 1 docs merged as PR #1079; #5 owns UI composition",
-    "31-recipe-media-tags is currently in-progress and must be merged before implementation",
-    "36e-recipe-tags-frontend is currently ready-for-review and must be merged before implementation",
+    "31-recipe-media-tags merged before #6 implementation; existing image object/cancel authority is reused",
+    "36e-recipe-tags-frontend merged before #6 implementation; existing tag primitives are reused",
     "recipe-content-snapshot-future-propagation #7 owns final PATCH impact integration",
     "cooked-batch-weight-ledger #8 compatibility gate precedes R+2 activation"
   ],
@@ -135,9 +135,9 @@
     "lifecycle": "in_progress",
     "approval_state": "dual_approved",
     "verification_status": "passed",
-    "evaluation_status": "not_started",
-    "evaluation_round": 0,
-    "last_evaluator_result": null,
+    "evaluation_status": "passed",
+    "evaluation_round": 1,
+    "last_evaluator_result": "POSTMERGE_VERIFIED YES on merge 05683e4d1cf95c4cc3b9a41eb3fa7857b58a3d2d; P0/P1/P2 0/0/0",
     "auto_merge_eligible": false,
     "blocked_reason_code": null
   },
@@ -153,5 +153,5 @@
     "Unapproved server-production migration or database write or capability activation"
   ],
   "open_questions": [],
-  "notes": "Stage 1 contract lock remains approved. Stage 2 backend implementer task 019fc113-7b96-7620-ada5-a0bb66cfae7e retains all original and repair evidence in Draft PR #1274. Fresh independent code/quality task 019fc23c-6129-7de3-a075-89828d6f35bf and security/DB task 019fc23c-6129-7de3-a075-8961262f7bb3 each returned APPROVE with P0/P1/P2 0/0/0 against exact implementation/evidence head 5b96e9be94f36822944deb194581517731c3a4ab. The reviewers independently confirmed locked 16/16, #6 fresh/replay 20/20, #4 fresh 15 plus 1 intended skip and replay 16/16, central inventory 30 pass plus 16 intended skip, and exact-head checks raw 21 = 19 success plus 2 intended skip with pending/fail/cancel 0. Standalone #3 remains the separately disclosed pre-existing 74/75 diagnostic and is not claimed green. This Stage 2 author only projects the external approvals and does not self-approve. Pre-merge lifecycle stays in_progress, approval is dual_approved for two distinct Codex task IDs, verification is passed for the reviewed exact head, evaluation remains not_started, and auto-merge remains false. PR #1274 stays Draft; merge/post-merge verification, named E2E when applicable, merged-exact read-only verifier, Manual Only evidence, #7 integration and #8 R/R+1→R+2 activation remain pending. Production/staging/remote writes remain 0/0/0 and Contract Evolution is none. Evidence: docs/workpacks/personal-recipe-customization-write-core/evidence/2026-08-02-stage2-backend-implementation.md."
+  "notes": "Stage 3 backend runtime merge checkpoint, not terminal workpack closeout. Stage 1 contract lock and Stage 2 evidence remain retained. Backend implementer task 019fc113-7b96-7620-ada5-a0bb66cfae7e did not self-approve. Independent code/quality task 019fc23c-6129-7de3-a075-89828d6f35bf and security/DB task 019fc23c-6129-7de3-a075-8961262f7bb3 each approved exact reviewed implementation/evidence head 5b96e9be94f36822944deb194581517731c3a4ab with P0/P1/P2 0/0/0. PR #1274 final head a27be0c7e9a72dfd25d6c7a31cb0b9ae401ead9e had latest unique Ready contexts 15/15 success and merged as 05683e4d1cf95c4cc3b9a41eb3fa7857b58a3d2d at 2026-08-02T12:22:37Z. The first historical Ready policy failure was a structured PR-body environment/scope omission; it was repaired without a head change and subsequent policy runs passed. Independent exact-merge post-merge verification returned POSTMERGE_VERIFIED YES with P0/P1/P2 0/0/0, PostgreSQL aggregate fresh 65 pass/17 intended skip and replay 66/16, #6 20/20 each, #4 fresh 15+1/replay 16, inventory 30+16, static 4 files/16 tests, governance validators pass and master/origin clean. Production/staging/remote writes remain 0/0/0 and capability remains off. Overall lifecycle remains in_progress; approval is dual_approved, verification passed, evaluation passed round 1 and auto-merge false for the backend checkpoint. Server MacBook/local rehearsal, route/service and named integrated E2E, terminal workpack closeout review, #7/#8 and R+2 activation remain pending. Evidence: docs/workpacks/personal-recipe-customization-write-core/evidence/2026-08-02-stage2-backend-implementation.md and docs/workpacks/personal-recipe-customization-write-core/evidence/2026-08-02-stage3-backend-merge.md."
 }

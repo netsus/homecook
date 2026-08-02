@@ -1,6 +1,6 @@
 # personal-recipe-customization-write-core
 
-> Stage 1 contract lock. Approved master plan SHA-256 `45f02013fbc1c3af1936d596605230d0cbac7839a783224aa9535844e4bda7dc` (1,056 lines). Official baseline: requirements v1.7.25, screens v1.5.29, flow v1.3.27, DB v1.3.26, API v1.2.29.
+> Stage 3 backend runtime merge checkpoint; overall workpack remains in progress. Approved master plan SHA-256 `45f02013fbc1c3af1936d596605230d0cbac7839a783224aa9535844e4bda7dc` (1,056 lines). The Stage 1 historical baseline remains requirements v1.7.25, screens v1.5.29, flow v1.3.27, DB v1.3.26, API v1.2.29; active authority is the current tuple in `docs/sync/CURRENT_SOURCE_OF_TRUTH.md`.
 
 ## Goal
 
@@ -62,11 +62,11 @@ Schema Change:
 | #3 `recipe-visibility-read-hardening` | Stage 1 docs merged | private visibility/RLS/image registry/tag upper-bound runtime이 predecessor |
 | #4 `recipe-snapshot-authority-foundation` | Stage 1 docs merged | immutable content/nutrition snapshot runtime이 predecessor |
 | #5 `personal-recipe-editor-decoupling` | Stage 1 docs merged as PR #1079 | UI composition contract locked; runtime UI remains separately gated |
-| `31-recipe-media-tags` | in-progress | must be merged before implementation; existing image object/cancel surface is reused |
-| `36e-recipe-tags-frontend` | ready-for-review | must be merged before implementation; existing tag primitives are reused |
+| `31-recipe-media-tags` | merged before #6 implementation | existing image object/cancel surface is reused |
+| `36e-recipe-tags-frontend` | merged before #6 implementation | existing tag primitives are reused |
 | #7 and #8 | successors | future impact integration and joint snapshot-v2 activation remain blocked |
 
-> Roadmap status is `docs` while workflow lifecycle remains `planned`. Stage 1 ordering does not mean the #2~#5 runtime predecessors exist, and this docs merge activates no schema, route or personal mutation.
+> PR #1274 merged the #6 backend runtime checkpoint, but roadmap/workflow lifecycle remains `in-progress`. The checkpoint does not activate `personal_recipe_v2`: route/service and integrated E2E, #7/#8 integration, server MacBook/local rehearsal, terminal workpack closeout review and R+2 service-owner approval remain pending.
 
 ## Backend First Contract
 
@@ -134,6 +134,13 @@ No stable capability-off public error code is invented. Before approved activati
 - only R+2 may jointly activate new snapshot-v2 creation and personal mutation. Rollback blocks new personal mutations and v2 starts but never disables existing v2 read/cancel/complete drain.
 - Stage 1, Stage 2 merge, or a green isolated route test is not activation evidence.
 
+## Design Status
+
+- [ ] (temporary)
+- [ ] (pending-review)
+- [ ] (confirmed)
+- [x] N/A
+
 ## Frontend Delivery Mode / Design Authority
 
 - Frontend delivery: N/A. This workpack changes backend write/RLS/RPC behavior only and adds no screen, layout, CTA, navigation or interaction model.
@@ -150,10 +157,10 @@ No stable capability-off public error code is invented. Before approved activati
 
 ## QA / Test Data Plan
 
-### Stage 1 gate
+### Stage 3 backend merge checkpoint
 
-- this docs PR runs SOT/workflow/workpack/automation/bookkeeping validators, focused workflow-doc Vitest, lint, typecheck, dependency audit and diff check.
-- PostgreSQL migrations, route/RPC tests, real DB, browser/E2E, local-first production/rehearsal verification and activation evidence below are future Stage 2/integration/closeout artifacts and are not claimed executable now.
+- PR #1274 merged dormant #6 backend code after independent Stage 3 approval and current-head Ready checks. Exact retained results are recorded in the Stage 2 and Stage 3 closeout evidence files below.
+- Disposable PostgreSQL and repository/static validation are complete for #6. Route/service and browser/integrated E2E, server MacBook/local rehearsal, terminal workpack closeout review, #7/#8 integration and activation remain pending and are not claimed here.
 
 ### Future fixtures
 
@@ -191,7 +198,9 @@ The same evidence also records the Stage 2 author's repairs for fresh Stage 3 `R
 
 The evidence further records the third Stage 3 repair for exact head `d197086c9ff0a140878104716dfb73dff0f2ad27`: independent code/quality task `019fc1cf-9b72-7080-bddd-24e166fe86e1` and security/DB task `019fc1cf-9b73-71e1-b2d2-c8009811ee79` both reproduced the cross-owner public-fork/full-cleanup lock inversion. Implementation commit `080193e73346eff91c1266045e7dfa6da43d26a6` restores the canonical all-affected-owner-before-recipe order and the unrelated workflow projection contamination.
 
-Fresh independent re-review of exact implementation/evidence head `5b96e9be94f36822944deb194581517731c3a4ab` is approved: code/quality task `019fc23c-6129-7de3-a075-89828d6f35bf` and security/DB task `019fc23c-6129-7de3-a075-8961262f7bb3` each returned `APPROVE`, P0/P1/P2 `0/0/0`. This Stage 2 author only projects those external results and does not self-approve. The PR remains Draft and pre-merge; Stage 4~6 are backend-only N/A/skipped only after the Stage 3 merge gate, while Manual Only, #7/#8 and R+2 activation remain pending.
+Fresh independent re-review of exact implementation/evidence head `5b96e9be94f36822944deb194581517731c3a4ab` is approved: code/quality task `019fc23c-6129-7de3-a075-89828d6f35bf` and security/DB task `019fc23c-6129-7de3-a075-8961262f7bb3` each returned `APPROVE`, P0/P1/P2 `0/0/0`. PR #1274 reached final head `a27be0c7e9a72dfd25d6c7a31cb0b9ae401ead9e`, latest unique Ready contexts `15/15 success`, and squash merge `05683e4d1cf95c4cc3b9a41eb3fa7857b58a3d2d` at `2026-08-02T12:22:37Z`. The first historical Ready policy run failed only because the PR body omitted structured environment/scope metadata; the body was repaired without a head change and later policy runs passed. Exact-merge post-merge verification returned `POSTMERGE_VERIFIED YES`, P0/P1/P2 `0/0/0`. Full evidence is retained at [`evidence/2026-08-02-stage3-backend-merge.md`](./evidence/2026-08-02-stage3-backend-merge.md).
+
+This is a backend runtime merge checkpoint, not terminal workpack closeout. The remaining aggregate verification, integrated readers/E2E, server MacBook/local rehearsal and terminal workpack closeout review stay unchecked. Design Status is N/A because this checkpoint adds no frontend surface.
 
 - [x] dormant create/fork/save-as-new core preserves source identity and legacy manual behavior <!-- omo:id=delivery-personal-write-create;stage=2;scope=backend;review=3,6 -->
 - [x] owner-private same-ID revision update stores canonical ingredient/product/version/step provenance <!-- omo:id=delivery-personal-write-update;stage=2;scope=backend;review=3,6 -->
@@ -201,6 +210,6 @@ Fresh independent re-review of exact implementation/evidence head `5b96e9be94f36
 - [x] common lock order and one-RPC atomicity survive write/delete/account-cleanup races <!-- omo:id=delivery-personal-write-locks;stage=2;scope=backend;review=3,6 -->
 - [x] idempotency replay/conflict is generation-scoped and effect-exactly-once <!-- omo:id=delivery-personal-write-idempotency;stage=2;scope=backend;review=3,6 -->
 - [x] image object attach, tag upper bound and immutable content/nutrition snapshot authorities are preserved <!-- omo:id=delivery-personal-write-integrations;stage=2;scope=shared;review=3,6 -->
-- [ ] #7 final PATCH/propagation and #8 activation boundaries are not preclaimed <!-- omo:id=delivery-personal-write-successor-boundary;stage=2;scope=shared;review=3,6 -->
-- [ ] capability-off current/previous releases create zero new personal mutations and legacy manual flow remains green <!-- omo:id=delivery-personal-write-dark-ship;stage=2;scope=shared;review=3,6 -->
+- [x] #7 final PATCH/propagation and #8 activation boundaries are not preclaimed <!-- omo:id=delivery-personal-write-successor-boundary;stage=2;scope=shared;review=3,6 -->
+- [x] capability-off current/previous releases create zero new personal mutations and legacy manual flow remains green <!-- omo:id=delivery-personal-write-dark-ship;stage=2;scope=shared;review=3,6 -->
 - [ ] local, PostgreSQL, real DB, E2E, security and current-head checks produce the planned evidence <!-- omo:id=delivery-personal-write-verification;stage=2;scope=shared;review=3,6 -->
