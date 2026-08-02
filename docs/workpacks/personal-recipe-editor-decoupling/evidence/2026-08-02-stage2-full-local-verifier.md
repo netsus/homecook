@@ -12,6 +12,7 @@
 - Stage 3 reviewed implementation head: `b96d83e55c276e7125e28b09b4999bccfbfb1a7a`.
 - First Stage 3 repair implementation commits: `1d94a0c5` (RED), `2e852e70` (shared runner/Git env), `af7d709b` (observed authority/AST/PG).
 - Fresh re-review input head `f8b0199fe40ce72370d743f61881c4d606a285ad` received new required findings. The second repair commits are `59ee0d66` (RED) and `42be7a34` (opaque output, fixed Git config, AST dataflow, non-empty Auth, exact Storage and observed execution boundary). Fresh independent re-review of the final pushed PR head remains pending.
+- Later reviewed head `c9dbbc6f2c70c92b004ab45bd03d80377d82201b` still allowed an official Storage predicate to be broadened with `OR true`, enumerated only three named principals for mutation grants, missed identifier-interpolated REST paths and conditionally selected/re-aliased service-role factories, and retained only a label for sanitized required-check execution. The strict RED commit is `d8504be6`; the implementation content commit is `03b9a8dd`. Fresh independent exact-head re-review remains pending and no Stage 3 approval is claimed.
 
 ## TDD evidence
 
@@ -54,6 +55,17 @@
 - Storage readiness now compares the existing four official `storage.objects` policy names/commands/roles and owner/generation guard expressions exactly, rejects unexpected/broad policies and rejects PUBLIC/anon/authenticated mutation grants. It observes the existing private bucket, RLS, image registry and generation-aware object state without adding a schema or migration.
 - Remote application write status is no longer accepted from a SQL/result constant. The shared runner derives exact execution observation from a credential-free HTTPS Git read, loopback PostgreSQL target, `READ ONLY` transaction, sanitized local required checks and absence of any remote application-write target. Dry-run reports `not-observed-dry-run` and cannot claim numeric zero.
 
+### Latest exact-boundary repair — RED → GREEN
+
+- Actual locked AST RED at `d8504be6`: `pnpm exec vitest run tests/hybrid-supabase-static-gate.test.ts` returned `2 failed / 7 passed`. The misses were an identifier-composed REST mutation path and a conditional-expression-selected, re-aliased service-role factory. The existing unrelated local factory and REST GET controls stayed clean.
+- Actual locked PostgreSQL RED in both fresh and replay cycles: snapshot authority stayed `15 passed / 1 skip` fresh and `16 passed / 0 skip` replay, while active inventory returned `3 failed / 27 passed / 16 skipped`. The failures proved that `OR true` left policy drift at zero and that the partial ACL check counted expected authenticated grants while missing an unexpected internal-role grant.
+- Actual execution-observation RED: `pnpm exec vitest run tests/personal-recipe-editor-full-local-verifier.test.ts` returned `1 failed / 12 passed` because the new exact command-ledger evidence was rejected by the old label-only contract.
+- GREEN at `03b9a8dd`: the #4/#5 runner, snapshot, personal and AST focused set returned `4 files / 45 tests passed`; the final permission/contract composition returned `6 files / 49 tests passed`.
+- The Storage policy check now reuses `full-local-security-inventory.mjs` canonical predicate parsing against the existing official policy migrations. Names, commands, roles, permissiveness, `USING` and `WITH CHECK` expressions must all match; retaining required substrings while appending `OR true` fails closed.
+- Storage mutation ACL success is the exact symmetric difference between the existing official `authenticated` table-level `INSERT`, `UPDATE` and `DELETE` grants and every actual explicit non-owner table/column grant. Relation-owner/internal owner rights are preserved, while PUBLIC, anon, service-role or any other non-owner role, column grant or grant option is unexpected.
+- Static AST evaluation now resolves identifiers inside static templates/concatenations and propagates possible service-role factory references through conditional selection and subsequent aliases. Unresolved dynamic strings remain unknown rather than guessed, and the false-positive controls remain clean.
+- The runner records every successfully executed required check as exact `{id, command, args}` ledger entries plus the actual sorted child-environment key list. The personal verifier accepts that list only as a subset of its fixed safe allowlist and requires explicit empty remote-target and remote-credential key observations. Together with credential-free HTTPS Git read, loopback DB target and `READ ONLY` SQL, this is the locked portable evidence that the executed command plan has no remote application-write target; missing, extra or unknown observation stays `not-observed` and cannot become numeric zero. No cross-platform packet monitor or new product contract was invented.
+
 ## Reused authority and fail-closed boundary
 
 - `scripts/lib/recipe-snapshot-authority-full-local-verifier.mjs` remains the SQL, loopback request, stable UUID, local session binding, `auth.uid()` RLS and exact result authority.
@@ -87,6 +99,13 @@
 - Fixture setup aligns non-empty self-owned `public.users`/`auth.users`/`auth.identities` and inserts one generation-aware private image object. The verifier itself then runs in a separate `READ ONLY` transaction and observes identity mapping mismatch `0`, transient Auth rows `0`, one exact private bucket, Storage RLS enabled, exact existing Storage policies, unexpected broad policies/grants `0`, registry ACL drift `0`, and object/registry/path mismatches `0`.
 - PostgreSQL itself exposed three additional fail-closed REDs before GREEN: the inherited JSON result exceeded one `jsonb_build_object` argument ceiling, column-level `DELETE` privilege is invalid, and a snapshot deletion left an Auth/application UUID mismatch. The repair splits JSONB objects, checks `DELETE` only at table scope, and explicitly realigns only the disposable fixture before the read-only verification.
 
+### Latest repair isolated PostgreSQL evidence
+
+- Fresh cycle: snapshot authority `15 passed / 1 intended skip`; active full-local Auth/Storage inventory `30 passed / 16 snapshot-owned skips`.
+- Replay cycle: snapshot authority `16 passed / 0 skipped`; active inventory `30 passed / 16 snapshot-owned skips`.
+- Standalone `pnpm test:full-local-auth-db-foundation:postgres`: `16 passed / 30 skipped`.
+- All mutations were limited to each runner's disposable synthetic fixture setup. The verifier query itself remained one loopback `READ ONLY` transaction; no production/staging/remote application write occurred.
+
 ## Final local validation before Draft PR
 
 - Five-axis implementer self-check found one important hardening gap: fixed required-check child processes inherited the full shell environment. The repair now forwards only `PATH`, locale, home/temp, CI/color and timezone keys; DB URLs, Supabase service keys, Git routing and PostgreSQL routing variables are excluded. This self-check is not Stage 3 approval.
@@ -105,6 +124,9 @@
 - `pnpm audit --audit-level high`: high-or-higher findings `0`; one existing low-severity advisory remains.
 - `git diff --check`: passed before each commit boundary.
 - Fresh repair validation passed `pnpm verify:backend` (`2,557 product tests`, production build, security E2E `12/12`), focused `32/32` and regression `55/55`, both isolated PostgreSQL runners, static hybrid/security authority gates, lint and typecheck. Source-of-truth, workflow-v2, workpack, automation, OMO bookkeeping, closeout-sync, branch and exact-base commit validators passed. `pnpm audit --audit-level high` found no high-or-higher finding and retained one pre-existing low advisory. No Stage 3 approval is inferred from implementer validation.
+- Latest repair full `pnpm test`: `491 files passed / 26 skipped`, `5,061 tests passed / 288 skipped`.
+- Latest `pnpm verify:backend`: lint/typecheck passed; product Vitest `202 files passed / 9 skipped`, `2,557 passed / 129 skipped`; production build passed; security E2E `12/12` passed.
+- Latest static authority inventory, security manifest, focused `49/49`, governance `58/58`, source-of-truth, workflow-v2, workpack, automation-spec, OMO bookkeeping and closeout-sync gates passed. Audit, branch/exact-base commit validation and final diff checks are recorded after the evidence commit below; these implementer checks do not constitute Stage 3 approval.
 
 ## Pending
 
