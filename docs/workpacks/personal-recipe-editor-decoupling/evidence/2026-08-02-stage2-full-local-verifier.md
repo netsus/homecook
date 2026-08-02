@@ -146,7 +146,7 @@
 ## Pending
 
 - Stage 4 existing capability-off shell/consumer revalidation is complete at `evidence/2026-08-02-stage4-existing-shell-revalidation.md`;
-- Stage 5 lightweight no-visual-drift review;
+- Stage 5 lightweight no-visual-drift review is complete: exact head `2680e7aa78b64c1a5c717120bb9b0a1a0827f7e7` received `APPROVE_NO_VISUAL_DRIFT` with blocker/major/minor and P0/P1/P2 all `0/0/0` from independent task `019fc0ac-3d83-7452-b942-b6409b9f7b6b`; retained evidence: `evidence/2026-08-02-stage5-no-visual-drift-review.md`;
 - Stage 6 lifecycle closeout, despite the successful retained merged-exact verifier execution;
 - activated provider callback/link, Cloudflare, final backup/restore, off-Mac restore, first local mutation/cutover and post-floor recovery (`Manual Only`);
 - Vercel and another-Mac deployment/manual evidence are not used and remain pending.
