@@ -57,13 +57,13 @@ Command: `pnpm test:recipe-content-snapshot-future-propagation:postgres`
 - Local RED reproduced `7` failures across the hybrid, predecessor and permission suites. A following full `pnpm test` exposed the same missing account-session route classifications.
 - The repair reuses the full-local verifier's exact allowlist: eight verified-session user routes and one public compatibility route are allowed by exact file/count, with unapproved or missing entries remaining fail-closed. The account-session inventory now classifies the five Stage 2 mutation/preview routes explicitly.
 - Focused repair verification passed `6 files / 73 tests`; generated hybrid and account-session inventories validate cleanly.
-- A full-suite rerun exposed one existing HOME loading race under parallel load; the assertion now waits for its asynchronous theme heading. Final local `pnpm test`: `499 files passed / 28 intended skip`, `5,125 tests passed / 318 intended skip`.
+- A full-suite rerun exposed one existing HOME loading race under parallel load; the assertion now waits for its asynchronous theme heading. After the verifier regression was added, final local `pnpm test`: `499 files passed / 28 intended skip`, `5,126 tests passed / 318 intended skip`.
 
 ## Base-governance repair integration
 
 - Ready validation exposed an invalid Stage 2/4 shared-review checklist shape already present on the base branch. Separate docs PR `#1279` split backend and frontend obligations without changing the public product contract and merged as `c4f969fb20b91348b5a94b19e52f277e453475ed`.
 - Merge commit `9160152129d9676dedba2804a00bdc6e8d1dcbd0` preserves only evidenced Stage 2 backend completion and leaves the new Stage 4 component, navigation, E2E and frontend-review items unchecked.
-- Post-integration verification: checklist contract `96` valid items; focused CI-repair suite `6 files / 73 tests`; full Vitest `499 files passed / 28 intended skip`, `5,125 tests passed / 318 intended skip`; `pnpm verify:backend` product tests `205 files`, `2,589 pass / 139 intended skip`, production build and security Playwright `12/12`; source/workflow/workpack/bookkeeping/closeout validators and `git diff --check` passed.
+- Post-integration verification: checklist contract `96` valid items; focused CI-repair suite `6 files / 73 tests`; final full Vitest `499 files passed / 28 intended skip`, `5,126 tests passed / 318 intended skip`; `pnpm verify:backend` product tests `205 files`, `2,589 pass / 139 intended skip`, production build and security Playwright `12/12`; source/workflow/workpack/bookkeeping/closeout validators and `git diff --check` passed.
 - A second Ready attempt exposed full-lifecycle Stage 4 visual and Stage 6 merged-exact smoke requirements in the Stage 2 automation gate. Docs PR `#1280` retained exact current-head backend/local-rehearsal evidence for Stage 2 while preserving the later evidence in the workflow-v2 work item; it merged as `53ebcc325665da1d7f0c2c304d4b3e73c0d7612c` after exact-head checks and independent P0/P1/P2 `0/0/0` reviews.
 
 ## Independent auxiliary reviews
@@ -80,7 +80,7 @@ Command: `pnpm test:recipe-content-snapshot-future-propagation:postgres`
 
 ## Explicit pending gates
 
-- Draft PR #1278 current-head GitHub checks are pending.
+- Draft PR #1278 exact implementation head `4eec972ee3e18e3040fbf4c70d056b0fdd86d6fe` had all started GitHub checks terminal green or intended skip before this evidence-only correction.
 - Formal Stage 3 must run in a different Codex task ID; this Stage 2 task cannot self-approve or merge.
 - A slice-named browser E2E spec does not yet exist; the grep returns “No tests found” and is not claimed green. Stage 4 owns component/E2E/design evidence.
 - Real local Supabase two-owner evidence, merged-exact-SHA server-production/local-rehearsal read-only inventory, Manual Only evidence and #8 R/R+1 compatibility/activation remain pending.
