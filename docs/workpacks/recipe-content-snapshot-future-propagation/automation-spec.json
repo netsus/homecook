@@ -50,6 +50,8 @@
       "v2-reader-immutable-session-content-only-no-mutable-current-recipe-fallback",
       "v2-cancel-owner-in-progress-only-and-claim-release-same-transaction",
       "cancel-replay-stored-result-no-session-reopen-or-cross-claim-release",
+      "approved-api-v1.2.34-five-success-data-shapes",
+      "cook-mode-exact-pantry-row-product-version-candidate-shape",
       "legacy-v1-and-snapshot-v2-explicit-version-predicates-namespaces-parsers-and-readers",
       "cross-version-id-official-404-or-409-no-shape-inference",
       "creation-rollback-blocks-new-start-but-existing-v2-read-cancel-and-later-complete-drain",
@@ -183,7 +185,6 @@
     "official-doc-or-approved-plan-conflict",
     "plan-sha-or-line-count-drift",
     "runtime-predecessor-4-6-or-cook-mode-whole-board-not-merged-green-before-implementation",
-    "exact-public-success-data-field-names-not-contract-evolved-before-dependent-route-or-type-implementation",
     "preview-and-patch-canonicalizers-diverge",
     "token-client-readable-forgeable-or-not-bound-to-owner-generation-session-target-claims",
     "preview-performs-domain-write-or-direct-client-preview-mutation-allowed",
@@ -214,5 +215,5 @@
     "backend": 6,
     "frontend": 4
   },
-  "notes": "This is a DB/security/concurrency and high-risk UI integration contract lock. Stage 1 PR #1081 and runtime predecessors #1218/#1274/#711 are merged. Stage 2 begins TDD-first for contract-locked DB/security/concurrency behavior, but public route/type work for snapshot-v2 start/read/cancel and recipe PATCH/DELETE success data is blocked until contract evolution locks exact field names. #7 dark-ships impact integration plus v2 start/cancel/read and explicit dispatch; #8 owns exact-pantry completion and the R/R+1 gate before R+2 joint activation."
+  "notes": "This is a DB/security/concurrency and high-risk UI integration contract lock. Stage 1 PR #1081 and runtime predecessors #1218/#1274/#711 are merged. Stage 2 RED commit 608c826c records focused and PostgreSQL failures before production implementation. User-approved API v1.2.34 locks recipe PATCH/DELETE and snapshot-v2 start/read/cancel exact success data, including immutable cook-mode content and exact pantry row/product-version candidates. #7 dark-ships impact integration plus v2 start/cancel/read and explicit dispatch; #8 owns exact-pantry completion and the R/R+1 gate before R+2 joint activation."
 }

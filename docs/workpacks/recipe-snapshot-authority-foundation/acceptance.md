@@ -1,6 +1,6 @@
 # Acceptance Checklist
 
-> **Full-local relock 2026-08-01:** official tuple은 requirements v1.7.28, screens v1.5.32, flow v1.3.30, DB v1.3.30, API v1.2.33이다. Active authority는 current Mac의 local Supabase Auth/PostgreSQL/PostgREST/Storage 하나이며, `local auth.users=0`과 remote exact-epoch verifier는 historical evidence일 뿐 active gate가 아니다.
+> **Full-local relock 2026-08-01:** official tuple은 requirements v1.7.28, screens v1.5.32, flow v1.3.30, DB v1.3.30, API v1.2.34이다. Active authority는 current Mac의 local Supabase Auth/PostgreSQL/PostgREST/Storage 하나이며, `local auth.users=0`과 remote exact-epoch verifier는 historical evidence일 뿐 active gate가 아니다.
 
 > PR #1218 Stage 2 and PR #1219 Stage 4 are historical implementation evidence. PR #1220 reopened the lifecycle because deployment verification was missing. PR #1232 merged the hybrid verifier, PR #1233 merged the Stage 2 regression delta as `4a7718ee6bac66fb39b5163742783ac2092e5b5c`, and PR #1251 merged historical merged-SHA verifier hardening as `94ae1a2077d63974c73a506add7b6647bf69d6d0` from exact head `75d09a37f6341772c77e27a12a59730b7ef7914e`. Historical dry-runs were read-only with production/staging/remote application writes 0. Their then-planned remote Auth/local Storage evidence gaps are preserved history, not active release gates; current unchecked gates are the full-local items below.
 

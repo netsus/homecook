@@ -1,6 +1,6 @@
 # product-ingredient-link-foundation
 
-> 2026-07-31 사용자 승인 Contract Evolution relock. The historical master plan SHA-256 `45f02013fbc1c3af1936d596605230d0cbac7839a783224aa9535844e4bda7dc` (1,056 lines) remains product-link design history, while its local-only Auth/deployment assumptions are superseded by `docs/sync/CURRENT_SOURCE_OF_TRUTH.md`. Official baseline: requirements v1.7.28, screens v1.5.32, flow v1.3.30, DB v1.3.30, API v1.2.33.
+> 2026-07-31 사용자 승인 Contract Evolution relock. The historical master plan SHA-256 `45f02013fbc1c3af1936d596605230d0cbac7839a783224aa9535844e4bda7dc` (1,056 lines) remains product-link design history, while its local-only Auth/deployment assumptions are superseded by `docs/sync/CURRENT_SOURCE_OF_TRUTH.md`. Official baseline: requirements v1.7.28, screens v1.5.32, flow v1.3.30, DB v1.3.30, API v1.2.34.
 
 ## Goal
 
@@ -165,7 +165,7 @@ Schema Change:
 - `docs/화면정의서-v1.5.32.md` 0-PIL
 - `docs/유저flow맵-v1.3.30.md` 0-PIL / 0-PIL-SHOPPING / 0-PIL-DELETE
 - `docs/db설계-v1.3.30.md` 0-PIL-A~D
-- `docs/api문서-v1.2.33.md` 0-PIL-A~D and existing pantry/shopping/pantry-match sections
+- `docs/api문서-v1.2.34.md` 0-PIL-A~D and existing pantry/shopping/pantry-match sections
 - historical master plan sections 6-2 and successor #2, with local-only Auth/deployment assumptions superseded by the current official tuple
 
 ## QA / Test Data Plan

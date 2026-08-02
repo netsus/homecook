@@ -23,7 +23,7 @@ describe("product ingredient link contract lock", () => {
   const screensPath = "docs/화면정의서-v1.5.32.md";
   const flowPath = "docs/유저flow맵-v1.3.30.md";
   const dbPath = "docs/db설계-v1.3.30.md";
-  const apiPath = "docs/api문서-v1.2.33.md";
+  const apiPath = "docs/api문서-v1.2.34.md";
 
   it("uses only the current official document tuple", () => {
     const bundle = [

@@ -363,7 +363,7 @@ describe("recipe snapshot full-local contract lock", () => {
     expect(bundle).toContain("화면정의서-v1.5.32.md");
     expect(bundle).toContain("유저flow맵-v1.3.30.md");
     expect(bundle).toContain("db설계-v1.3.30.md");
-    expect(bundle).toContain("api문서-v1.2.33.md");
+    expect(bundle).toContain("api문서-v1.2.34.md");
     expect(strings(docsRefs.source_of_truth).join("\n")).not.toMatch(
       /v1\.7\.26|v1\.5\.30|v1\.3\.28|v1\.3\.27|v1\.2\.30/,
     );

@@ -1,6 +1,6 @@
 # personal-recipe-editor-decoupling
 
-> Full-local Stage 1 relock. The approved 2026-07-29 master plan SHA-256 `45f02013fbc1c3af1936d596605230d0cbac7839a783224aa9535844e4bda7dc` (1,056 lines) remains editor/product design history. The active authority contract is the current full-local tuple in `docs/sync/CURRENT_SOURCE_OF_TRUTH.md`: `docs/요구사항기준선-v1.7.28.md`, `docs/화면정의서-v1.5.32.md`, `docs/유저flow맵-v1.3.30.md`, `docs/db설계-v1.3.30.md`, `docs/api문서-v1.2.33.md`. Earlier local-only and hybrid Auth assumptions are historical evidence, not active release gates.
+> Full-local Stage 1 relock. The approved 2026-07-29 master plan SHA-256 `45f02013fbc1c3af1936d596605230d0cbac7839a783224aa9535844e4bda7dc` (1,056 lines) remains editor/product design history. The active authority contract is the current full-local tuple in `docs/sync/CURRENT_SOURCE_OF_TRUTH.md`: `docs/요구사항기준선-v1.7.28.md`, `docs/화면정의서-v1.5.32.md`, `docs/유저flow맵-v1.3.30.md`, `docs/db설계-v1.3.30.md`, `docs/api문서-v1.2.34.md`. Earlier local-only and hybrid Auth assumptions are historical evidence, not active release gates.
 
 ## Goal
 
@@ -263,7 +263,7 @@ Stage 2 implementation evidence is retained at [`evidence/2026-08-02-stage2-full
 - `docs/화면정의서-v1.5.32.md` full-local Auth and existing editor screens
 - `docs/유저flow맵-v1.3.30.md` local Auth/session/owner flow, ⓮
 - `docs/db설계-v1.3.30.md` local Auth restore, session binding, recipe/image authority
-- `docs/api문서-v1.2.33.md` Auth-only public boundary and existing personal recipe/image contracts
+- `docs/api문서-v1.2.34.md` Auth-only public boundary and existing personal recipe/image contracts
 - historical master plan design sections for successor #5; its local-only Auth/deployment assumptions are superseded by the current official tuple
 
 ## Key Rules

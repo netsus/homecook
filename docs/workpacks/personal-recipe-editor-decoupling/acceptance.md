@@ -2,7 +2,7 @@
 
 > **Fresh full-local relock 2026-08-02:** browser direct Data/Storage와 user-path service-role fallback 0은 그대로 유지한다. local Auth JWT/active binding으로 owner 경계를 다시 증명하며 과거 remote Auth/local `auth.users=0` evidence는 historical evidence일 뿐 full-local provider/cutover 증거로 간주하지 않는다.
 
-> This full-local Stage 1 relock uses the current official tuple (`요구사항기준선-v1.7.28.md`, `화면정의서-v1.5.32.md`, `유저flow맵-v1.3.30.md`, `db설계-v1.3.30.md`, `api문서-v1.2.33.md`). The approved master plan remains design history. The current pre-floor source-of-record is `LIVE_REMOTE`; the target authority is one self-hosted local Supabase Auth/DB/Storage. This docs PR adds no product runtime, migration, schema or public contract.
+> This full-local Stage 1 relock uses the current official tuple (`요구사항기준선-v1.7.28.md`, `화면정의서-v1.5.32.md`, `유저flow맵-v1.3.30.md`, `db설계-v1.3.30.md`, `api문서-v1.2.34.md`). The approved master plan remains design history. The current pre-floor source-of-record is `LIVE_REMOTE`; the target authority is one self-hosted local Supabase Auth/DB/Storage. This docs PR adds no product runtime, migration, schema or public contract.
 >
 > Stage 4 evidence is local-fixture only: the shared shell/primitives, capability-off CTA composition, browser dirty guard, managed-image cleanup, 390px/320px Playwright and 20 PNG authority set are implemented on `feature/fe-personal-recipe-editor-decoupling`. Plain successor/merge-gate bullets are intentionally outside the machine Stage 4 checklist; they remain owned by #6, #8 or post-merge verification and are not claimed here.
 >
