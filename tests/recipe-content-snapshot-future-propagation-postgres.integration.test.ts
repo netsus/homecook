@@ -451,6 +451,11 @@ describeIf("recipe content snapshot future propagation PostgreSQL", () => {
     `);
 
     psql(`
+      begin;
+      select public.set_account_generation_internal_writer_marker(
+        '${cutoverAttempt}',
+        true
+      );
       insert into public.shopping_lists (
         id, user_id, title, date_range_start, date_range_end,
         is_completed, completed_at
@@ -497,7 +502,19 @@ describeIf("recipe content snapshot future propagation PostgreSQL", () => {
       update public.meals set status = 'shopping_done' where id = '${cookedMeal}';
       update public.meals set status = 'cook_done', cooked_at = now()
       where id = '${cookedMeal}';
+      select public.set_account_generation_internal_writer_marker(
+        '${cutoverAttempt}',
+        false
+      );
+      commit;
     `);
+    expect(
+      psql(`
+        select (result_json ? '_internal_generation_writer_txid')::text
+        from public.account_generation_cutover_attempts
+        where id = '${cutoverAttempt}';
+      `),
+    ).toBe("false");
   });
 
   it("applies the dedicated migration in both fresh and replay modes with exact RPC signatures", () => {
