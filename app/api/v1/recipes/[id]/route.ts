@@ -30,10 +30,26 @@ import {
   RECIPE_STEP_SELECT_LEGACY,
   RECIPE_STEP_SELECT_WITH_METHODS,
 } from "@/lib/server/recipe-step-method-select";
+import { readVerifiedAccountGenerationSession } from
+  "@/lib/server/account-generation/session-authority";
+import {
+  buildSessionAuthorityRpcArgs,
+  calculateRecipeDraftNutrition,
+  callFuturePropagationRpc,
+  isUuid,
+  parseRecipeFuturePatchRequest,
+  projectRecipeDeleteData,
+  projectRecipePatchData,
+  readRequiredIdempotencyKey,
+  RecipeDraftNutritionValidationError,
+  type FuturePropagationRpcClient,
+  type RecipeDraftNutritionClient,
+} from "@/lib/server/recipe-content-snapshot-future-propagation";
 import { formatBootstrapErrorMessage } from "@/lib/server/user-bootstrap";
 import {
   createRemoteCompatibilityServiceRoleClient,
   createRouteHandlerClient,
+  createServiceRoleClient,
 } from "@/lib/supabase/server";
 import type { RecipeDetail, RecipePhoto, RecipePhotoRole, RecipeUserStatus } from "@/types/recipe";
 
@@ -462,4 +478,170 @@ export async function GET(request: Request, context: RouteContext) {
       500,
     );
   }
+}
+
+async function readRecipeMutationAuthority(
+  routeClient: Awaited<ReturnType<typeof createRouteHandlerClient>>,
+  userId: string,
+) {
+  const verifiedSession = await readVerifiedAccountGenerationSession(routeClient);
+  if (
+    !verifiedSession.ok
+    || verifiedSession.sessionAuthority.ownerUuid !== userId
+  ) {
+    return {
+      ok: false as const,
+      response: fail("ACCOUNT_SESSION_STALE", "세션을 다시 확인해 주세요.", 409),
+    };
+  }
+
+  const serviceClient = createServiceRoleClient();
+  if (!serviceClient) {
+    return {
+      ok: false as const,
+      response: fail("INTERNAL_ERROR", "레시피를 변경하지 못했어요.", 500),
+    };
+  }
+
+  return {
+    ok: true as const,
+    serviceClient: serviceClient as unknown as FuturePropagationRpcClient,
+    sessionAuthority: verifiedSession.sessionAuthority,
+  };
+}
+
+export async function PATCH(request: Request, context: RouteContext) {
+  const routeClient = await createRouteHandlerClient();
+  const authResult = await routeClient.auth.getUser();
+  const user = authResult.data.user;
+  if (!user) {
+    return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
+  }
+
+  const idempotency = readRequiredIdempotencyKey(request, "Idempotency-Key");
+  if (!idempotency.ok) {
+    return idempotency.response;
+  }
+
+  const { id: recipeId } = await context.params;
+  if (!isUuid(recipeId)) {
+    return fail("RESOURCE_NOT_FOUND", "레시피를 찾을 수 없어요.", 404);
+  }
+
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return fail("VALIDATION_ERROR", "요청 본문을 확인해 주세요.", 422, [
+      { field: "body", reason: "invalid_json" },
+    ]);
+  }
+  const parsed = parseRecipeFuturePatchRequest(body);
+  if (!parsed.ok) {
+    return fail(
+      "VALIDATION_ERROR",
+      "요청 값을 확인해 주세요.",
+      422,
+      parsed.fields,
+    );
+  }
+
+  const authority = await readRecipeMutationAuthority(routeClient, user.id);
+  if (!authority.ok) {
+    return authority.response;
+  }
+
+  let nutrition;
+  try {
+    nutrition = await calculateRecipeDraftNutrition(
+      authority.serviceClient as unknown as RecipeDraftNutritionClient,
+      {
+        recipeId,
+        baseRecipeRevision: parsed.value.baseRecipeRevision,
+        draft: parsed.value.draft,
+      },
+    );
+  } catch (error) {
+    if (error instanceof RecipeDraftNutritionValidationError) {
+      return fail("VALIDATION_ERROR", "레시피 영양 입력을 확인해 주세요.", 422, [
+        { field: "draft.ingredients", reason: "invalid_nutrition_input" },
+      ]);
+    }
+    return fail("INTERNAL_ERROR", "레시피 영양 정보를 확인하지 못했어요.", 500);
+  }
+
+  const result = await callFuturePropagationRpc(
+    authority.serviceClient,
+    "write_recipe_future_plan_change",
+    {
+      ...buildSessionAuthorityRpcArgs(authority.sessionAuthority),
+      p_recipe_id: recipeId,
+      p_base_recipe_revision: parsed.value.baseRecipeRevision,
+      p_draft: parsed.value.draft,
+      p_nutrition_snapshot: nutrition.nutritionSnapshot,
+      p_nutrition_predecessor_guard: nutrition.predecessorGuard,
+      p_future_plan_strategy: parsed.value.futurePlanStrategy,
+      p_impact_token: parsed.value.impactToken,
+      p_image_object_id: parsed.value.imageObjectId,
+      p_idempotency_key: idempotency.key,
+    },
+  );
+  if (!result.ok) {
+    return result.response;
+  }
+
+  const data = projectRecipePatchData(result.data);
+  return data
+    ? ok(data)
+    : fail("INTERNAL_ERROR", "레시피를 변경하지 못했어요.", 500);
+}
+
+export async function DELETE(request: Request, context: RouteContext) {
+  const routeClient = await createRouteHandlerClient();
+  const authResult = await routeClient.auth.getUser();
+  const user = authResult.data.user;
+  if (!user) {
+    return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
+  }
+
+  const idempotency = readRequiredIdempotencyKey(request, "Idempotency-Key");
+  if (!idempotency.ok) {
+    return idempotency.response;
+  }
+
+  const { id: recipeId } = await context.params;
+  if (!isUuid(recipeId)) {
+    return fail("RESOURCE_NOT_FOUND", "레시피를 찾을 수 없어요.", 404);
+  }
+
+  const authority = await readRecipeMutationAuthority(routeClient, user.id);
+  if (!authority.ok) {
+    return authority.response;
+  }
+
+  const result = await callFuturePropagationRpc(
+    authority.serviceClient,
+    "write_personal_recipe_core",
+    {
+      ...buildSessionAuthorityRpcArgs(authority.sessionAuthority),
+      p_operation: "delete",
+      p_recipe_id: recipeId,
+      p_source_recipe_id: null,
+      p_base_recipe_revision: null,
+      p_draft: null,
+      p_nutrition_snapshot: null,
+      p_tags: null,
+      p_image_object_id: null,
+      p_expected_cleanup_generation: null,
+      p_idempotency_key: idempotency.key,
+    },
+  );
+  if (!result.ok) {
+    return result.response;
+  }
+
+  const data = projectRecipeDeleteData(result.data);
+  return data
+    ? ok(data)
+    : fail("INTERNAL_ERROR", "레시피를 삭제하지 못했어요.", 500);
 }
