@@ -4,10 +4,10 @@
 
 - Role: Stage 2 backend implementer/orchestrator. This task does not self-approve formal Stage 3.
 - Original base: `origin/master` exact `487847419319c61cf2f53f025741a5782357ef86`.
-- Integrated base-governance repair: PR `#1279`, merge commit `c4f969fb20b91348b5a94b19e52f277e453475ed`.
+- Integrated base-governance repairs: PR `#1279`, merge commit `c4f969fb20b91348b5a94b19e52f277e453475ed`; PR `#1280`, merge commit `53ebcc325665da1d7f0c2c304d4b3e73c0d7612c`.
 - Branch: `feature/be-recipe-content-snapshot-future-propagation`.
 - Draft PR: `#1278`.
-- Current implementation/test head before this final evidence projection: `9160152129d9676dedba2804a00bdc6e8d1dcbd0`.
+- Current implementation/test head before this final evidence projection: `ea7766fbff2fb9ae894b636336fa6eb4e2537d64`.
 - Production/staging/remote application writes: `0/0/0`.
 - Claude, capability activation, provider mutation and server-production migration were not used.
 
@@ -64,6 +64,7 @@ Command: `pnpm test:recipe-content-snapshot-future-propagation:postgres`
 - Ready validation exposed an invalid Stage 2/4 shared-review checklist shape already present on the base branch. Separate docs PR `#1279` split backend and frontend obligations without changing the public product contract and merged as `c4f969fb20b91348b5a94b19e52f277e453475ed`.
 - Merge commit `9160152129d9676dedba2804a00bdc6e8d1dcbd0` preserves only evidenced Stage 2 backend completion and leaves the new Stage 4 component, navigation, E2E and frontend-review items unchecked.
 - Post-integration verification: checklist contract `96` valid items; focused CI-repair suite `6 files / 73 tests`; full Vitest `499 files passed / 28 intended skip`, `5,125 tests passed / 318 intended skip`; `pnpm verify:backend` product tests `205 files`, `2,589 pass / 139 intended skip`, production build and security Playwright `12/12`; source/workflow/workpack/bookkeeping/closeout validators and `git diff --check` passed.
+- A second Ready attempt exposed full-lifecycle Stage 4 visual and Stage 6 merged-exact smoke requirements in the Stage 2 automation gate. Docs PR `#1280` retained exact current-head backend/local-rehearsal evidence for Stage 2 while preserving the later evidence in the workflow-v2 work item; it merged as `53ebcc325665da1d7f0c2c304d4b3e73c0d7612c` after exact-head checks and independent P0/P1/P2 `0/0/0` reviews.
 
 ## Independent auxiliary reviews
 
