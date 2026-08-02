@@ -267,21 +267,23 @@ snapshot_v2 read:
 
 ## Delivery Checklist
 
-- [ ] preview uses the PATCH canonicalizer and stores an owner/generation/session-bound opaque token hash <!-- omo:id=delivery-future-preview;stage=2;scope=backend;review=3,6 -->
-- [ ] target-set hash includes exact Meal revisions and active claim/session tuples <!-- omo:id=delivery-future-target-hash;stage=2;scope=backend;review=3,6 -->
-- [ ] final PATCH revalidates preview under one common-lock RPC and stale input changes nothing <!-- omo:id=delivery-future-patch-atomic;stage=2;scope=backend;review=3,6 -->
-- [ ] keep preserves every Meal pin and replace-all repins only eligible unclaimed future Meals <!-- omo:id=delivery-future-strategies;stage=2;scope=backend;review=3,6 -->
-- [ ] claimed replace-all returns exact 409 without silently excluding a target <!-- omo:id=delivery-future-claim-block;stage=2;scope=backend;review=3,6 -->
-- [ ] recipe/Meal/shopping/start writers use one-RPC common lock order with multi-recipe UUID sorting <!-- omo:id=delivery-future-writer-locks;stage=2;scope=backend;review=3,6 -->
-- [ ] incomplete shopping reconcile preserves states and completed shopping stays read-only <!-- omo:id=delivery-future-shopping;stage=2;scope=backend;review=3,6 -->
-- [ ] grouping separates the same recipe ID by content snapshot ID <!-- omo:id=delivery-future-grouping;stage=2;scope=shared;review=3,6 -->
-- [ ] planner start copies Meal pin/servings and creates one active claim per Meal exactly once <!-- omo:id=delivery-future-planner-start;stage=2;scope=backend;review=3,6 -->
-- [ ] standalone start pins current content under recipe revision lock <!-- omo:id=delivery-future-standalone-start;stage=2;scope=backend;review=3,6 -->
-- [ ] v2 read/cancel use immutable content, release claims and replay without cross-version fallback <!-- omo:id=delivery-future-v2-drain;stage=2;scope=backend;review=3,6 -->
+Stage 2 implementer evidence is retained at [`evidence/2026-08-03-stage2-backend-implementation.md`](./evidence/2026-08-03-stage2-backend-implementation.md). It records actual RED→GREEN, disposable PostgreSQL fresh/replay, repository verification and role-separated auxiliary reviews without claiming formal Stage 3, current-head CI, Manual Only evidence or capability activation.
+
+- [x] preview uses the PATCH canonicalizer and stores an owner/generation/session-bound opaque token hash <!-- omo:id=delivery-future-preview;stage=2;scope=backend;review=3,6 -->
+- [x] target-set hash includes exact Meal revisions and active claim/session tuples <!-- omo:id=delivery-future-target-hash;stage=2;scope=backend;review=3,6 -->
+- [x] final PATCH revalidates preview under one common-lock RPC and stale input changes nothing <!-- omo:id=delivery-future-patch-atomic;stage=2;scope=backend;review=3,6 -->
+- [x] keep preserves every Meal pin and replace-all repins only eligible unclaimed future Meals <!-- omo:id=delivery-future-strategies;stage=2;scope=backend;review=3,6 -->
+- [x] claimed replace-all returns exact 409 without silently excluding a target <!-- omo:id=delivery-future-claim-block;stage=2;scope=backend;review=3,6 -->
+- [x] recipe/Meal/shopping/start writers use one-RPC common lock order with multi-recipe UUID sorting <!-- omo:id=delivery-future-writer-locks;stage=2;scope=backend;review=3,6 -->
+- [x] incomplete shopping reconcile preserves states and completed shopping stays read-only <!-- omo:id=delivery-future-shopping;stage=2;scope=backend;review=3,6 -->
+- [x] grouping separates the same recipe ID by content snapshot ID <!-- omo:id=delivery-future-grouping;stage=2;scope=shared;review=3,6 -->
+- [x] planner start copies Meal pin/servings and creates one active claim per Meal exactly once <!-- omo:id=delivery-future-planner-start;stage=2;scope=backend;review=3,6 -->
+- [x] standalone start pins current content under recipe revision lock <!-- omo:id=delivery-future-standalone-start;stage=2;scope=backend;review=3,6 -->
+- [x] v2 read/cancel use immutable content, release claims and replay without cross-version fallback <!-- omo:id=delivery-future-v2-drain;stage=2;scope=backend;review=3,6 -->
 - [ ] UI waits for session ID/version and dispatches v1/v2 without parser or body-shape inference <!-- omo:id=delivery-future-dispatch;stage=4;scope=frontend;review=5,6 -->
 - [ ] impact dialog loading/empty/claim/stale states and two-choice hierarchy are accessible <!-- omo:id=delivery-future-impact-ui;stage=4;scope=frontend;review=5,6 -->
 - [ ] 390px/320px visual/a11y and independent design critic/authority reviews pass <!-- omo:id=delivery-future-design-authority;stage=4;scope=frontend;review=5,6 -->
-- [ ] past/cook-done/completed shopping/session/log history remains snapshot-stable <!-- omo:id=delivery-future-history;stage=2;scope=shared;review=3,6 -->
-- [ ] v2 creation/personal writes stay dark and existing seeded v2 drain survives rollback <!-- omo:id=delivery-future-dark-release;stage=2;scope=shared;review=3,6 -->
-- [ ] exact-pantry complete and activation remain #8 boundaries <!-- omo:id=delivery-future-successor-boundary;stage=2;scope=shared;review=3,6 -->
+- [x] past/cook-done/completed shopping/session/log history remains snapshot-stable <!-- omo:id=delivery-future-history;stage=2;scope=shared;review=3,6 -->
+- [x] v2 creation/personal writes stay dark and existing seeded v2 drain survives rollback <!-- omo:id=delivery-future-dark-release;stage=2;scope=shared;review=3,6 -->
+- [x] exact-pantry complete and activation remain #8 boundaries <!-- omo:id=delivery-future-successor-boundary;stage=2;scope=shared;review=3,6 -->
 - [ ] local, PostgreSQL, E2E, real DB, server-production/local-rehearsal, security and current-head evidence are green <!-- omo:id=delivery-future-verification;stage=2;scope=shared;review=3,6 -->

@@ -2491,7 +2491,7 @@
     {
       "id": "recipe-content-snapshot-future-propagation",
       "preset": "vertical-slice-strict",
-      "branch": "docs/recipe-content-snapshot-future-propagation",
+      "branch": "feature/be-recipe-content-snapshot-future-propagation",
       "pr_path": "pending",
       "lifecycle": "in_progress",
       "approval_state": "dual_approved",
@@ -2518,7 +2518,7 @@
         "node scripts/verify-recipe-content-snapshot-future-propagation-local-first.mjs --mode post-merge-read-only",
         "git diff --check"
       ],
-      "notes": "Stage 1 PR #1081 merged after separate Codex internal1.5, security/DB, five-axis and design reviews approved with zero required findings. Runtime predecessors are satisfied by #4 PR #1218, #6 PR #1274 merge 05683e4d and cook-mode-whole-board PR #711 merge 2f8569cb. Stage 2 RED commit 608c826c records focused 4-file/13-test and PostgreSQL missing-migration failures. User-approved API v1.2.34 locks the exact recipe PATCH/DELETE and snapshot-v2 start/read/cancel success data shapes. Personal writes and v2 creation stay dark; #8 owns exact-pantry completion and R/R+1 before R+2 activation. Design Status remains temporary.",
+      "notes": "Stage 1 PR #1081 merged after separate Codex internal1.5, security/DB, five-axis and design reviews approved with zero required findings. Runtime predecessors are satisfied by #4 PR #1218, #6 PR #1274 merge 05683e4d and cook-mode-whole-board PR #711 merge 2f8569cb. Rewritten conventional RED commit 0e5f89aa records focused 4-file/13-test and PostgreSQL missing-migration failures. Stage 2 local GREEN is retained in docs/workpacks/recipe-content-snapshot-future-propagation/evidence/2026-08-03-stage2-backend-implementation.md: locked 40/40, PostgreSQL fresh/replay #7 10/10 each with predecessor/inventory green, verify:backend product 2589 pass plus security Playwright 12/12, and auxiliary code/security reviews P0/P1/P2 0/0/0. Draft PR/current-head CI and separate-task formal Stage 3 remain pending, so lifecycle/verification stay in_progress/pending. Personal writes and v2 creation stay dark; #8 owns exact-pantry completion and R/R+1 before R+2 activation. Design Status remains temporary.",
       "evaluation_status": "not_started",
       "evaluation_round": 0,
       "last_evaluator_result": null,
