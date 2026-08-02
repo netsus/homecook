@@ -57,7 +57,7 @@
     "plan_loop": "required",
     "review_loop": "required",
     "external_smokes": [
-      "stage2-full-local-personal-editor-verifier-implementation-tdd-red-green",
+      "stage2-full-local-personal-editor-verifier-implemented-tdd-red-green",
       "stage3-independent-code-security-review-pending",
       "stage4-existing-shell-consumer-revalidation-pending",
       "stage5-lightweight-no-visual-drift-review-pending",
@@ -90,7 +90,7 @@
     "required_checks": [
       "pnpm validate:source-of-truth-sync",
       "pnpm validate:workflow-v2",
-      "BRANCH_NAME=docs/personal-recipe-editor-stage1-full-local-relock pnpm validate:workpack -- --slice personal-recipe-editor-decoupling",
+      "BRANCH_NAME=fix/personal-recipe-editor-stage2-full-local-verifier pnpm validate:workpack -- --slice personal-recipe-editor-decoupling",
       "node scripts/validate-automation-spec.mjs --slice personal-recipe-editor-decoupling",
       "pnpm validate:omo-bookkeeping",
       "pnpm exec vitest run tests/personal-recipe-editor-hybrid-contract-sync.test.ts",
@@ -105,15 +105,22 @@
       "pnpm validate:exploratory-qa-evidence -- --slice personal-recipe-editor-decoupling",
       "pnpm validate:closeout-sync -- --slice personal-recipe-editor-decoupling",
       "pnpm exec vitest run tests/personal-recipe-editor-full-local-verifier.test.ts",
+      "pnpm exec vitest run tests/personal-recipe-editor-permissions.test.ts tests/personal-recipe-editor-contract.test.ts",
+      "pnpm test:full-local-auth-db-foundation:postgres",
+      "pnpm test:recipe-snapshot-authority:postgres",
+      "HOMECOOK_AUTH_AUTHORITY=local HOMECOOK_DATA_AUTHORITY=local pnpm verify:personal-recipe-editor:full-local -- --dry-run",
       "git diff --check"
     ],
     "verify_commands": [
       "pnpm validate:source-of-truth-sync",
       "pnpm validate:workflow-v2",
-      "BRANCH_NAME=docs/personal-recipe-editor-stage1-full-local-relock pnpm validate:workpack -- --slice personal-recipe-editor-decoupling",
+      "BRANCH_NAME=fix/personal-recipe-editor-stage2-full-local-verifier pnpm validate:workpack -- --slice personal-recipe-editor-decoupling",
       "node scripts/validate-automation-spec.mjs --slice personal-recipe-editor-decoupling",
       "pnpm validate:omo-bookkeeping",
       "pnpm exec vitest run tests/personal-recipe-editor-hybrid-contract-sync.test.ts",
+      "pnpm exec vitest run tests/personal-recipe-editor-full-local-verifier.test.ts tests/personal-recipe-editor-permissions.test.ts tests/personal-recipe-editor-contract.test.ts",
+      "pnpm test:full-local-auth-db-foundation:postgres",
+      "pnpm test:recipe-snapshot-authority:postgres",
       "pnpm exec vitest run tests/workflow-v2-docs.test.ts tests/omo-automation-spec.test.ts tests/omo-bookkeeping.test.ts tests/omo-doc-gate.test.ts tests/source-of-truth-sync.test.ts",
       "pnpm lint",
       "pnpm typecheck",
@@ -137,7 +144,7 @@
       "local-session-binding-and-auth-uid-rls-owner-boundary",
       "app-and-official-auth-v1-wildcard-only-public-data-storage-studio-postgres-internal",
       "browser-direct-data-storage-and-service-role-user-fallback-zero",
-      "stage2-full-local-personal-editor-verifier-implementation-tdd-red-green",
+      "stage2-full-local-personal-editor-verifier-implemented-tdd-red-green",
       "stage3-independent-code-security-review-pending",
       "stage4-existing-shell-consumer-revalidation-pending",
       "stage5-lightweight-no-visual-drift-review-pending",
@@ -186,5 +193,5 @@
     "Activated provider callback/link Cloudflare backup restore first mutation cutover or post-floor recovery"
   ],
   "open_questions": [],
-  "notes": "Active target is one self-hosted local Supabase Auth/PostgreSQL/PostgREST/Storage authority. Before the first local production Auth state mutation, LIVE_REMOTE Auth/application DB/Storage remains the only source-of-record. Stable remote UUID/identity is restored to local GoTrue while sessions, refresh tokens and flow-state are excluded so all users re-login. Stage 2/3 PR #1238, capability-off Stage 4/5 PR #1243 merge 6565c2a84f3b7eba9f0579db7b91fed12fc08f23 and hybrid verifier PR #1246 merge 354c569c8e40889bcfa7d9832cb9cec93f53db46 remain historical evidence. The active order is Stage 2 read-only verifier TDD, independent Stage 3 code/security review, Stage 4 existing shell revalidation, lightweight Stage 5 no-visual-drift review and Stage 6 merged-exact closeout. Historical checked items are not retoggled or treated as new implementation. #4 is not a predecessor; #6/#7/#8 activation remains future. Activated provider callback/link, Cloudflare, backup/restore, first local mutation/cutover and post-floor recovery remain Manual Only/pending. Production/staging/remote application write 0 and external personal write dark remain enforced. Stage 1 docs gate pass evidence: reviewed content head 8dbf99f6cf78fdcd66d2a5de1c07e2d37d55f047; code/docs/workflow task 019fbf9e-055d-7e81-89c9-83bfe845b1c6 APPROVE and security/authority task 019fbf9e-055d-7e81-89c9-83dae1459246 APPROVE; both P0/P1/P2=0/0/0 and findings=0; raw checks 17 = 12 success + 5 intended skip with pending/fail/cancel/rerun=0; full tests 5,040 pass/283 skip; exact head/base/clean confirmed. Full lifecycle remains in_progress with approval_state=not_started, verification=pending and evaluation=not_started; Stage 2 through Stage 6, Manual Only operations and the final exact-head verifier pending."
+  "notes": "Stage 1 docs gate pass evidence remains: reviewed content head 8dbf99f6cf78fdcd66d2a5de1c07e2d37d55f047; code/docs/workflow task 019fbf9e-055d-7e81-89c9-83bfe845b1c6 APPROVE and security/authority task 019fbf9e-055d-7e81-89c9-83dae1459246 APPROVE; both P0/P1/P2=0/0/0 and findings=0; raw checks 17 = 12 success + 5 intended skip with pending/fail/cancel/rerun=0; full tests 5,040 pass/283 skip. Fresh Stage 2 task 019fbfc4-e794-77e0-88b7-d76a74e438f3 implemented the full-local read-only verifier with actual missing-module RED then focused GREEN; retained evidence is docs/workpacks/personal-recipe-editor-decoupling/evidence/2026-08-02-stage2-full-local-verifier.md. Active target remains one self-hosted local Supabase Auth/PostgreSQL/PostgREST/Storage authority, while pre-floor LIVE_REMOTE remains source-of-record. Historical PR #1238/#1243/#1246 evidence cannot satisfy the active gate. Independent Stage 3, Stage 4 existing shell revalidation, Stage 5 lightweight no-visual-drift review and final exact-head verifier pending in Stage 6. #4 is not a predecessor; #6/#7/#8, provider callback/link, Cloudflare, final backup/restore, off-Mac restore, first mutation/cutover and post-floor recovery remain pending. Overall lifecycle remains in_progress with approval_state=not_started, verification=pending and evaluation=not_started; production/staging/remote application writes remain zero and external personal write remains dark."
 }

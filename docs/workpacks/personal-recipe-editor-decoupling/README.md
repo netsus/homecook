@@ -225,7 +225,9 @@ The independent product-design-authority recheck records `pass`, blocker/major/m
 
 ### Active full-local delta and stage order
 
-1. Stage 2 read-only verifier: TDD RED→GREEN으로 `tests/personal-recipe-editor-full-local-verifier.test.ts`와 full-local verifier를 구현한다. Active target은 clean merged exact SHA이며 historical hybrid verifier를 completion gate로 재사용하지 않는다.
+Stage 2 implementation evidence is retained at [`evidence/2026-08-02-stage2-full-local-verifier.md`](./evidence/2026-08-02-stage2-full-local-verifier.md). The locked test first failed as `1 failed suite / 0 tests` because the implementation module did not exist, then passed `8/8` after the minimum #4-composed verifier and CLI were added. The current focused permission/contract/full-local bundle passes `32/32`; isolated full-local PostgreSQL passes `16` core cases and the snapshot existing/fresh/replay path passes in both modes. This is implementation evidence only: the feature head is not merged, Stage 3 is pending and no merged-exact success is claimed.
+
+1. Stage 2 read-only verifier: TDD RED→GREEN으로 `tests/personal-recipe-editor-full-local-verifier.test.ts`와 full-local verifier를 구현했다. Active target은 clean merged exact SHA이며 historical hybrid verifier를 completion gate로 재사용하지 않는다. Merged-exact 실행은 Stage 6까지 pending이다.
 2. Stage 3: Stage 2 작성 작업과 다른 Codex task가 exact-head code/security review를 수행한다.
 3. Stage 4: 이미 merge된 capability-off shell/consumer를 current full-local session/image boundary에서 재검증한다. 새 UI나 activation을 구현하지 않는다.
 4. Stage 5: no visual/product change 근거로 lightweight no-visual-drift review를 수행한다. `Design Status: confirmed`를 유지하고 새 screenshot/Figma/authority evidence를 fabricated하지 않는다.

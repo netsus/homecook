@@ -12,6 +12,7 @@ import { evaluateDocGate } from "../scripts/lib/omo-doc-gate.mjs";
 const repoRoot = process.cwd();
 const sliceId = "personal-recipe-editor-decoupling";
 const docsBranch = "docs/personal-recipe-editor-stage1-full-local-relock";
+const stage2Branch = "fix/personal-recipe-editor-stage2-full-local-verifier";
 
 function read(relativePath: string) {
   return readFileSync(join(repoRoot, relativePath), "utf8");
@@ -211,7 +212,7 @@ describe("personal recipe editor full-local contract lock", () => {
     const acceptance = read(acceptancePath);
 
     expect(active).toContain(
-      "stage2-full-local-personal-editor-verifier-implementation-tdd-red-green",
+      "stage2-full-local-personal-editor-verifier-implemented-tdd-red-green",
     );
     expect(active).toContain("stage3-independent-code-security-review-pending");
     expect(active).toContain("stage4-existing-shell-consumer-revalidation-pending");
@@ -340,7 +341,7 @@ describe("personal recipe editor full-local contract lock", () => {
     expect(manualOnlyItems.every((item) => item.metadata === null)).toBe(true);
   });
 
-  it("keeps lifecycle pending and projects the fresh docs branch", () => {
+  it("keeps lifecycle pending and projects the fresh Stage 2 branch", () => {
     const workItem = readJson(workItemPath);
     const item = statusItem();
     const readme = read(readmePath);
@@ -356,8 +357,8 @@ describe("personal recipe editor full-local contract lock", () => {
       last_evaluator_result: null,
     });
     expect(item).toMatchObject({
-      branch: docsBranch,
-      pr_path: "https://github.com/netsus/homecook/pull/1270",
+      branch: stage2Branch,
+      pr_path: "pending",
       lifecycle: "in_progress",
       approval_state: "not_started",
       verification_status: "pending",
@@ -384,9 +385,12 @@ describe("personal recipe editor full-local contract lock", () => {
       expect(projection).toContain("pending/fail/cancel/rerun=0");
       expect(projection).toContain("full tests 5,040 pass/283 skip");
       expect(projection).toContain("final exact-head verifier pending");
+      expect(projection).toContain(
+        "019fbfc4-e794-77e0-88b7-d76a74e438f3",
+      );
     }
     expect(requiredChecks).toContain(
-      `BRANCH_NAME=${docsBranch} pnpm validate:workpack -- --slice ${sliceId}`,
+      `BRANCH_NAME=${stage2Branch} pnpm validate:workpack -- --slice ${sliceId}`,
     );
     expect(statusChecks).toEqual(requiredChecks);
     expect(readme).toContain(
