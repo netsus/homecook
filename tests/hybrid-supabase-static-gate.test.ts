@@ -173,6 +173,16 @@ describe("hybrid authority AST/static gate", () => {
         functionName: "revokeCurrentHybridSessionAuthority",
       },
       {
+        factory: "createRecipeFuturePropagationInternalClient",
+        file: "lib/server/recipe-snapshot-entrypoint.ts",
+        functionName: "readRecipeSnapshotUiMode",
+      },
+      {
+        factory: "createRecipeFuturePropagationInternalClient",
+        file: "lib/server/recipe-snapshot-entrypoint.ts",
+        functionName: "readRecipeSnapshotEntrypointContext",
+      },
+      {
         factory: "createYoutubeIngredientRegistrationInternalRpcClient",
         file: "lib/server/youtube-import.ts",
         functionName: "handleYoutubeIngredientRegistration",
@@ -188,6 +198,10 @@ describe("hybrid authority AST/static gate", () => {
       createRecipeFuturePropagationInternalClient: {
         "app/api/v1/recipes/[id]/future-plan-impact/route.ts": ["POST"],
         "app/api/v1/recipes/[id]/route.ts": ["DELETE", "PATCH"],
+        "lib/server/recipe-snapshot-entrypoint.ts": [
+          "readRecipeSnapshotEntrypointContext",
+          "readRecipeSnapshotUiMode",
+        ],
       },
     });
 

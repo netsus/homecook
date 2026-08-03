@@ -980,7 +980,7 @@
       "kind": "direct_dml",
       "operation": "update",
       "target": "recipes",
-      "line": 228,
+      "line": 230,
       "source_file": "app/api/v1/recipes/[id]/route.ts",
       "route": "/api/v1/recipes/[id]",
       "owner_scope": "public",
@@ -1596,7 +1596,7 @@
       "kind": "rpc",
       "operation": "call",
       "target": "increment_recipe_view_count",
-      "line": 420,
+      "line": 473,
       "source_file": "app/api/v1/recipes/[id]/route.ts",
       "route": "/api/v1/recipes/[id]",
       "owner_scope": "public",
@@ -1909,6 +1909,6 @@
       "on_delete": "cascade"
     }
   ],
-  "generated_at": "2026-08-02T16:47:18.416Z",
-  "checksum": "47ae81cc058dd704d15c8b4f590272b8daa3ecb31c2fb4639e798af729c92754"
+  "generated_at": "2026-08-03T21:00:52.448Z",
+  "checksum": "03142ce940d91865107f220cabc2e39f4192b3825239c5bbeba8ae72ba408f16"
 }
