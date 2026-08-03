@@ -138,3 +138,10 @@
 - A fresh independent authority precheck must review the pushed current head. Broader real Auth/Data, Manual Only and merged-exact server-Mac evidence remain pending.
 - Personal recipe v2 writes and new snapshot-v2 creation were not activated. Existing seeded v2 read/cancel drain remains available, while #8 R/R+1 evidence and R+2 joint approval remain the activation gate.
 - No production/staging write, remote Supabase write, migration apply, Vercel deploy, server-Mac mutation, dependency change or Discord notification occurred.
+
+### Current-head security inventory repair
+
+- GitHub fresh-Supabase `security-function-authorization` exposed one real RED at head `a3940ef4`: both new service-only functions were absent from the central additive authorization inventory, so CI rejected them as unclassified.
+- Focused inventory RED: 1/1 failed with the missing function classification. GREEN commit `29173d68` classifies the exact signatures, explicit postgres owner, safe search paths and service-role-only ACLs in both the central and full-local inventories.
+- GREEN evidence: inventory/projection 15/15; authorization `--contract-only` validator classified all 18 #7 functions; disposable PostgreSQL fresh/replay again passed #7 20/20 and full-local security 31 pass + 17 intended skip in each run.
+- This repair changes no public endpoint, browser capability value or activation state.

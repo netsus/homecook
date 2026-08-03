@@ -228,7 +228,7 @@ snapshot_v2 read:
 
 ## Design Status
 
-`pending-review` and still temporary. Draft PR #1281 includes the approved entrypoint repair through code head `ba509392`: the real recipe/planner pages now consume the server-only joint capability projection, owner edit context and Meal revision while the off/error path remains legacy fail-closed. A fresh independent authority precheck is still required. No product-design-authority report exists; Stage 5, final authority and Stage 6 remain pending, so Design Status is not `confirmed`.
+`pending-review` and still temporary. Draft PR #1281 includes the approved entrypoint repair and fresh security-inventory closure through code head `29173d68`: the real recipe/planner pages now consume the server-only joint capability projection, owner edit context and Meal revision while the off/error path remains legacy fail-closed. A fresh independent authority precheck is still required. No product-design-authority report exists; Stage 5, final authority and Stage 6 remain pending, so Design Status is not `confirmed`.
 
 ## Primary User Path
 
@@ -278,7 +278,7 @@ The Stage 2 `automation-spec.json` external smoke gate contains only exact curre
 
 ## Delivery Checklist
 
-Stage 2 implementer evidence is retained at [`evidence/2026-08-03-stage2-backend-implementation.md`](./evidence/2026-08-03-stage2-backend-implementation.md), and Stage 2/3 PR #1278 is merged as `ef5903b131a2eb9e505b2121b4e390970c565b95`. Draft Stage 4 PR #1281 contains the approved entrypoint read/projection implementation through code head `ba509392` plus exact mobile evidence. It remains `pending-review` until a fresh independent authority precheck and later Stage 5/final authority/Stage 6 reviews. This implementation does not claim Manual/server-Mac evidence or activation.
+Stage 2 implementer evidence is retained at [`evidence/2026-08-03-stage2-backend-implementation.md`](./evidence/2026-08-03-stage2-backend-implementation.md), and Stage 2/3 PR #1278 is merged as `ef5903b131a2eb9e505b2121b4e390970c565b95`. Draft Stage 4 PR #1281 contains the approved entrypoint read/projection implementation and service-only function inventory closure through code head `29173d68` plus exact mobile evidence. It remains `pending-review` until a fresh independent authority precheck and later Stage 5/final authority/Stage 6 reviews. This implementation does not claim Manual/server-Mac evidence or activation.
 
 - [x] preview uses the PATCH canonicalizer and stores an owner/generation/session-bound opaque token hash <!-- omo:id=delivery-future-preview;stage=2;scope=backend;review=3,6 -->
 - [x] target-set hash includes exact Meal revisions and active claim/session tuples <!-- omo:id=delivery-future-target-hash;stage=2;scope=backend;review=3,6 -->
