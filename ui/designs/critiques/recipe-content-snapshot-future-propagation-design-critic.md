@@ -129,3 +129,13 @@ BLOCKER 0인 이유는 현재 공식 문서와 workpack이 구현 결정을 내�
 - [ ] 구현 head와 비공식 설계 문서/evidence가 같은 화면 상태를 설명할 것
 
 다시 말해, **Stage 4 구현 착수는 가능하지만 이 critique만으로 독립 Stage 승인 또는 `Design Status: confirmed` 처리는 금지한다.**
+
+## Stage 4 implementation follow-up — actual owner edit repair
+
+> 이 절은 구현자가 원래 critique의 요구사항과 새 증거를 연결하는 기록이다. 독립 authority 승인이나 `confirmed` 판정이 아니다.
+
+- `RECIPE_DETAIL`의 편집 액션은 이제 서버가 내려준 exact owner-private `snapshot_v2 + edit_context`에서만 보인다. 비로그인, legacy, non-owner, 404/non-disclosure 경계에는 편집 UI가 없다.
+- 기존 `PersonalRecipeEditorShell`을 실제 상세 화면에서 사용하고, 사용자가 제목/설명/인분/재료/단계를 변경한 뒤에만 `변경사항 저장`이 활성화된다.
+- 전체 official draft와 revision/managed-image authority를 유지하며, preview 시점에 고정한 같은 draft만 PATCH에 전달한다. 날짜 선택이나 새 shopping/old-recipe action은 추가하지 않았다.
+- 새 390×844/320×568 증거는 `편집 진입 → 실제 제목 수정 → impact dialog` 순서로 생성되었다. E2E가 initial editor focus, dialog Tab loop, Escape opener restore, stale recheck focus, 44px action, 16px radius와 horizontal overflow 0을 함께 고정한다.
+- 구현 증거상 이 critique의 Stage 4 non-blocker는 닫혔지만, fresh independent authority_precheck, Stage 5, final product-design-authority와 Stage 6은 계속 별도 작업이다.

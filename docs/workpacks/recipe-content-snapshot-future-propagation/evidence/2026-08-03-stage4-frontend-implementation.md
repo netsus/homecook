@@ -153,3 +153,32 @@
 - GREEN evidence: focused inventory tests 19/19; account-session inventory 59 routes, 88 write surfaces and 3 inbound `auth.users` foreign keys; hybrid generator check; full `pnpm test` exit 0; `git diff --check` pass.
 - The first evidence projection head `d6244b55` then exposed one remaining self-lock literal in CI: 1 failed, 5,203 passed and 330 intended skipped. Updating both exact code-head expectations produced focused 27/27 and aggregate 513 files passed + 28 skipped, 5,204 tests passed + 330 skipped.
 - Independent authority precheck, Stage 5/final authority/Stage 6, Manual/server-Mac evidence and activation remain pending.
+
+## AUTH-B01 actual owner-edit repair — 2026-08-04
+
+- Fresh authority precheck task `019fc981-6834-7fd3-be43-f161d81c02b6` reviewed PR #1281 head `166be95c9bd976fd41c720dfc7d520f595771e35` and returned `NEEDS_REPAIR` with blocker/major/minor `1/0/0` because the impact flow received the unchanged GET draft without an actual detail-screen editor.
+- RED commit `037549179adf368621192214310f07a7c8df956b` changed the component contract first. Its focused run failed `1` test with `58` filtered because no accessible `편집` button existed.
+- GREEN commit `7ca6a5dd5a9747a75c5b38c0e48fc1900f346f79` connects the exact owner-private `snapshot_v2 + edit_context` boundary to the existing personal editor shell. The editor initializes the complete official draft, retains untouched nested `ingredients_used` data, preserves `base_recipe_revision` and `image_object_id`, and freezes one edited draft for both impact preview and PATCH.
+- Unauthenticated, legacy and non-owner responses expose no edit action or editor. Existing loading/error, active-claim, stale recheck focus, dialog trap/restore and read-only boundaries remain unchanged.
+
+### Repair verification
+
+- Focused component/API/security/entrypoint set: `14 files / 134 tests` passed. The direct UI integration set passed `77/77`; the wider related set passed `93/93`.
+- `pnpm verify:frontend:pr`: product `2,652 passed + 150 intended skip`; 77-route build; smoke `59 passed + 10 intended skip`; core a11y `8 passed + 1 intended skip`; core visual `12/12`.
+- `pnpm verify:frontend`: Lighthouse passed; aggregate browser regression `931 passed + 158 intended skip`; a11y `18 passed + 15 intended skip`; visual `23 passed + 22 intended skip`; security `12/12`. No aggregate failure or isolated-rerun substitution occurred.
+- Slice E2E: `7 passed + 7` non-target-project intended skips. The flow now enters owner edit, changes the title, verifies enabled save, opens impact preview, keeps exactly two choices, checks keyboard wrapping/opener restore and retains stale recheck focus.
+- Exploratory QA: `95/100`, threshold `85`; evidence validator passed. One evidence-generation `jq` command initially exited `5` due to local variable scoping, was corrected without product changes, and the complete eval then passed.
+
+### Refreshed visual evidence
+
+- `ui/designs/evidence/recipe-content-snapshot-future-propagation/RECIPE_DETAIL-impact-mobile-default.png`: actual owner edit → title change → impact dialog, viewport-only `390×844`.
+- `ui/designs/evidence/recipe-content-snapshot-future-propagation/RECIPE_DETAIL-impact-mobile-narrow.png`: the same actual flow, viewport-only `320×568`.
+- The other four required workpack PNGs and auxiliary COOK_MODE evidence were regression-checked. Aggregate tests regenerated unrelated evidence as a side effect; every unrelated tracked file was restored and generated untracked files were removed before the #7 captures were recreated.
+- Both refreshed images were visually inspected. The dialog keeps its visible/accessibly named title, 16px shell/cards, 44px actions, scroll-contained narrow body, reachable footer, two-choice hierarchy and zero horizontal overflow.
+
+### Honest handoff boundary
+
+- AUTH-B01 is closed by implementation evidence but remains pending a fresh independent authority precheck. This task does not create or approve an authority report.
+- Design Status remains `pending-review`/temporary. PR #1281 stays Draft; Stage 5, final authority, Stage 6, broader real Auth/Data, Manual Only and merged-exact server-Mac evidence remain pending.
+- Personal-v2 writes and snapshot-v2 creation were not activated. Existing seeded v2 read/cancel drain remains, while #8 R/R+1 evidence and R+2 joint approval remain the activation gate.
+- No production/staging/remote application write, remote Supabase write, migration apply, dependency change, Vercel deployment, server-Mac mutation or Discord notification occurred.
