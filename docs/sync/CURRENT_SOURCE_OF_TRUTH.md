@@ -27,7 +27,7 @@
 >
 > R/R+1에는 creation off·new personal/v2 mutation 0을 유지하고 seeded/existing v2 read/cancel drain을 보존한다. #8의 R/R+1 증거와 R+2 공동 승인 전에 activation하지 않는다. #8 pantry/weight/batch/XP, F0/account quarantine, production·staging·remote application write, migration apply, Vercel/server-Mac mutation은 이 승인 범위가 아니다.
 >
-> 이 PR은 사용자가 명시한 독립성 경계에 따라 공식 5종과 `CURRENT_SOURCE_OF_TRUTH`만 갱신한다. workpack README/acceptance/automation/work item/status 재잠금은 이 PR merge 뒤 다른 fresh Stage 1 docs author가 수행한다.
+> 이 PR의 제품 계약 authority 변경은 공식 5종과 `CURRENT_SOURCE_OF_TRUTH`에만 한정하고, validator 정합성을 위해 11개 governance pointer에서는 공식 버전 경로만 기계 동기화하며, workpack README/acceptance/automation/work item/status 재잠금은 이 PR merge 뒤 별도 fresh Stage 1 PR이 수행한다.
 >
 > 그 별도 Stage 1 재잠금 전까지 기존 workpack/automation/work item과 contract-sync regression이 의도적으로 보존하는 compatibility tuple은 `docs/요구사항기준선-v1.7.28.md`, `docs/화면정의서-v1.5.32.md`, `docs/유저flow맵-v1.3.30.md`, `docs/db설계-v1.3.30.md`, `docs/api문서-v1.2.34.md`다. 이 경로들은 전환 대기 상태를 검증하는 historical input이며 현재 공식 authority는 위 `Official Files`의 새 tuple뿐이다.
 
