@@ -235,8 +235,8 @@ const sourceEvidence = {
   recipe_delete_handler_count: 1,
   recipe_patch_handler_count: 1,
   recipebook_surface_personal_editor_marker_count: 0,
-  public_service_role_entry_count: 1,
-  user_direct_service_role_count: 8,
+  public_service_role_entry_count: 0,
+  user_direct_service_role_count: 7,
   user_service_role_violation_count: 0,
 };
 
@@ -623,8 +623,8 @@ describe("personal recipe editor full-local verifier", () => {
       { ...sourceEvidence, browser_direct_storage_path_count: 1 },
       { ...sourceEvidence, browser_direct_data_mutation_count: 1 },
       { ...sourceEvidence, browser_raw_rest_mutation_count: 1 },
-      { ...sourceEvidence, user_direct_service_role_count: 7 },
-      { ...sourceEvidence, user_direct_service_role_count: 9 },
+      { ...sourceEvidence, user_direct_service_role_count: 6 },
+      { ...sourceEvidence, user_direct_service_role_count: 8 },
       { ...sourceEvidence, user_service_role_violation_count: 1 },
       { ...sourceEvidence, capability_on_occurrence_count: 1 },
       { ...sourceEvidence, capability_off_occurrence_count: 0 },
@@ -633,7 +633,7 @@ describe("personal recipe editor full-local verifier", () => {
       { ...sourceEvidence, recipe_patch_handler_count: 2 },
       { ...sourceEvidence, recipe_delete_handler_count: 0 },
       { ...sourceEvidence, recipe_delete_handler_count: 2 },
-      { ...sourceEvidence, public_service_role_entry_count: 0 },
+      { ...sourceEvidence, public_service_role_entry_count: 1 },
       { ...sourceEvidence, public_service_role_entry_count: 2 },
       { ...sourceEvidence, extra: 0 },
     ]) {
