@@ -168,6 +168,8 @@
 - `pnpm verify:frontend`: Lighthouse passed; aggregate browser regression `931 passed + 158 intended skip`; a11y `18 passed + 15 intended skip`; visual `23 passed + 22 intended skip`; security `12/12`. No aggregate failure or isolated-rerun substitution occurred.
 - Slice E2E: `7 passed + 7` non-target-project intended skips. The flow now enters owner edit, changes the title, verifies enabled save, opens impact preview, keeps exactly two choices, checks keyboard wrapping/opener restore and retains stale recheck focus.
 - Exploratory QA: `95/100`, threshold `85`; evidence validator passed. One evidence-generation `jq` command initially exited `5` due to local variable scoping, was corrected without product changes, and the complete eval then passed.
+- The first pushed owner-edit evidence head `ab523fcb` exposed a CI-only static inventory RED: `quality` reported `3` failed files and `5` failed tests because the verifier treated the server-projected, owner-only `canEditPersonalRecipe` prop as literal client capability activation. The exact local reproduction failed `5/27`; the product component/API/E2E paths remained green.
+- The verifier now counts that prop as fail-closed only when both exact server-projected guards remain present (`snapshot_v2 + edit_context`, then authenticated owner gating). The focused inventory set passes `27/27`, the related owner-edit/inventory set passes `106/106`, and the same aggregate `pnpm test` path passes `513` files + `28` intended skips with `5,207` tests + `330` intended skips. No capability value is exposed or activated by this classification repair.
 
 ### Refreshed visual evidence
 
