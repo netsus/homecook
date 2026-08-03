@@ -653,6 +653,9 @@ function sourceOwnerTransitionSql(options: {
     ${options.barrierDelaySeconds
       ? `select pg_sleep(${options.barrierDelaySeconds});`
       : ""}
+    select pg_advisory_xact_lock(
+      hashtextextended('homecook-account-owner:' || '${options.ownerUuid}', 0)
+    );
     select public.set_account_generation_internal_writer_marker(
       '${cutoverAttempt}',
       true

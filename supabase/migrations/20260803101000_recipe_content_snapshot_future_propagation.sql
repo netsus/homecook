@@ -457,6 +457,8 @@ declare
   v_authority jsonb;
   v_idempotency public.mutation_idempotency_keys%rowtype;
   v_recipe public.recipes%rowtype;
+  v_source_recipe public.recipes%rowtype;
+  v_source_lifecycle public.user_account_lifecycles%rowtype;
   v_snapshot public.recipe_content_snapshots%rowtype;
   v_session_id uuid := extensions.gen_random_uuid();
   v_recipe_id uuid;
@@ -466,6 +468,7 @@ declare
   v_payload_hash text;
   v_result jsonb;
   v_meal record;
+  v_owner_uuid uuid;
 begin
   if p_idempotency_key is null
     or p_mode not in ('planner', 'standalone')
@@ -511,6 +514,9 @@ begin
     end if;
     v_recipe_id := p_recipe_id;
     v_cooking_servings := p_cooking_servings::integer;
+    select recipe.* into v_source_recipe
+    from public.recipes as recipe
+    where recipe.id = v_recipe_id;
   end if;
 
   v_key_hash := encode(extensions.digest(
@@ -558,6 +564,27 @@ begin
     raise exception 'SNAPSHOT_V2_CREATION_DISABLED' using errcode = '55000';
   end if;
 
+  if p_mode = 'standalone'
+    and v_source_recipe.visibility = 'public'
+    and v_source_recipe.created_by is distinct from p_owner_uuid then
+    for v_owner_uuid in
+      select ordered.owner_uuid
+      from (
+        select distinct owner_uuid
+        from unnest(array[p_owner_uuid, v_source_recipe.created_by]) as owner_uuid
+        where owner_uuid is not null
+      ) as ordered
+      order by ordered.owner_uuid::text collate "C"
+    loop
+      perform pg_catalog.pg_advisory_xact_lock(
+        pg_catalog.hashtextextended(
+          'homecook-account-owner:' || v_owner_uuid::text,
+          0
+        )
+      );
+    end loop;
+  end if;
+
   perform public.lock_personal_recipe_ids(array[v_recipe_id]);
   select recipe.* into v_recipe
   from public.recipes as recipe
@@ -574,6 +601,20 @@ begin
     )
   ) then
     raise exception 'RESOURCE_NOT_FOUND' using errcode = 'P0002';
+  end if;
+  if p_mode = 'standalone'
+    and v_recipe.visibility = 'public'
+    and v_recipe.created_by is distinct from p_owner_uuid then
+    select lifecycle.* into v_source_lifecycle
+    from public.user_account_lifecycles as lifecycle
+    where lifecycle.owner_uuid = v_recipe.created_by
+    order by lifecycle.account_generation desc
+    limit 1
+    for update;
+    if v_source_lifecycle.owner_uuid is not null
+      and v_source_lifecycle.status is distinct from 'active' then
+      raise exception 'RESOURCE_NOT_FOUND' using errcode = 'P0002';
+    end if;
   end if;
 
   if p_mode = 'planner' then
@@ -704,6 +745,8 @@ as $function$
 declare
   v_session public.cooking_sessions%rowtype;
   v_snapshot public.recipe_content_snapshots%rowtype;
+  v_recipe_row public.recipes%rowtype;
+  v_source_lifecycle_status text;
   v_recipe jsonb;
   v_candidates jsonb;
 begin
@@ -724,6 +767,25 @@ begin
   where snapshot.id = v_session.recipe_content_snapshot_id;
   if v_snapshot.id is null then
     raise exception 'RESOURCE_NOT_FOUND' using errcode = 'P0002';
+  end if;
+  select recipe.* into v_recipe_row
+  from public.recipes as recipe
+  where recipe.id = v_session.recipe_id;
+  if v_recipe_row.id is null
+    or v_recipe_row.deleted_at is not null then
+    raise exception 'RESOURCE_NOT_FOUND' using errcode = 'P0002';
+  end if;
+  if v_recipe_row.visibility = 'public'
+    and v_recipe_row.created_by is distinct from p_owner_uuid then
+    select lifecycle.status into v_source_lifecycle_status
+    from public.user_account_lifecycles as lifecycle
+    where lifecycle.owner_uuid = v_recipe_row.created_by
+    order by lifecycle.account_generation desc
+    limit 1;
+    if v_source_lifecycle_status is not null
+      and v_source_lifecycle_status is distinct from 'active' then
+      raise exception 'RESOURCE_NOT_FOUND' using errcode = 'P0002';
+    end if;
   end if;
 
   v_recipe := jsonb_build_object(
