@@ -1,7 +1,7 @@
 {
   "generated_from": "scripts/lib/hybrid-authority-inventory.mjs",
   "user_service_role_violation_count": 0,
-  "user_direct_service_role_count": 8,
+  "user_direct_service_role_count": 7,
   "internal_operation_violation_count": 0,
   "internal_operation_allowlist": {
     "createAuthCallbackOperationsClient": [
@@ -236,20 +236,6 @@
       "file": "app/api/v1/meals/route.ts",
       "column": 25,
       "line": 688,
-      "kind": "service-role-call"
-    },
-    {
-      "classification": "user",
-      "file": "app/api/v1/recipes/[id]/future-plan-impact/route.ts",
-      "column": 25,
-      "line": 60,
-      "kind": "service-role-call"
-    },
-    {
-      "classification": "public",
-      "file": "app/api/v1/recipes/[id]/route.ts",
-      "column": 25,
-      "line": 498,
       "kind": "service-role-call"
     },
     {

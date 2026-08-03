@@ -172,7 +172,7 @@ const sourceEvidence = {
   recipe_delete_handler_count: 1,
   recipe_patch_handler_count: 1,
   recipebook_surface_personal_editor_marker_count: 0,
-  user_direct_service_role_count: 8,
+  user_direct_service_role_count: 7,
   user_service_role_violation_count: 0,
 };
 
@@ -293,8 +293,8 @@ describe("personal recipe editor hybrid verifier", () => {
 
     for (const evidence of [
       { ...sourceEvidence, user_service_role_violation_count: 1 },
-      { ...sourceEvidence, user_direct_service_role_count: 7 },
-      { ...sourceEvidence, user_direct_service_role_count: 9 },
+      { ...sourceEvidence, user_direct_service_role_count: 6 },
+      { ...sourceEvidence, user_direct_service_role_count: 8 },
       { ...sourceEvidence, internal_operation_violation_count: 1 },
       { ...sourceEvidence, app_surface_personal_editor_marker_count: 1 },
       { ...sourceEvidence, browser_direct_storage_path_count: 1 },
@@ -382,7 +382,7 @@ describe("personal recipe editor hybrid verifier", () => {
       local_auth_user_count: 0,
       local_active_epoch_count: 0,
       local_active_binding_count: 0,
-      service_role_user_path_count: 8,
+      service_role_user_path_count: 7,
       browser_direct_storage_path_count: 0,
       remote_auth_control_plane_status: "ready",
       active_epoch_count: 2,

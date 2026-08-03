@@ -290,7 +290,7 @@ export function assertPersonalRecipeEditorHybridSourceEvidence(evidence) {
     && evidence.recipe_delete_handler_count === 1
     && evidence.recipe_patch_handler_count === 1
     && evidence.recipebook_surface_personal_editor_marker_count === 0
-    && evidence.user_direct_service_role_count === 8
+    && evidence.user_direct_service_role_count === 7
     && evidence.user_service_role_violation_count === 0;
 
   if (!valid) {

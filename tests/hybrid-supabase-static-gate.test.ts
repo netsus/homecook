@@ -21,14 +21,9 @@ const APPROVED_USER_SERVICE_ROLE_FILES = [
   "app/api/v1/meals/[meal_id]/route.ts",
   "app/api/v1/meals/[meal_id]/route.ts",
   "app/api/v1/meals/route.ts",
-  "app/api/v1/recipes/[id]/future-plan-impact/route.ts",
   "app/api/v1/shopping/lists/route.ts",
 ];
-const APPROVED_SERVICE_ROLE_FILES = [
-  ...APPROVED_USER_SERVICE_ROLE_FILES.slice(0, -1),
-  "app/api/v1/recipes/[id]/route.ts",
-  APPROVED_USER_SERVICE_ROLE_FILES.at(-1)!,
-];
+const APPROVED_SERVICE_ROLE_FILES = [...APPROVED_USER_SERVICE_ROLE_FILES];
 
 function fixtureRepository(files: Record<string, string>) {
   const root = mkdtempSync(join(tmpdir(), "homecook-authority-inventory-"));
