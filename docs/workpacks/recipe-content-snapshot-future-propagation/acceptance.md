@@ -75,7 +75,7 @@
 - [x] planner/standalone start pending disables duplicate action and retains the current screen until session ID/version succeeds <!-- omo:id=accept-future-start-pending-ui;stage=4;scope=frontend;review=5,6 -->
 - [x] v2 read error never falls back to mutable recipe or cross-version parser; terminal session is read-only <!-- omo:id=accept-future-cookmode-fail-closed;stage=4;scope=frontend;review=5,6 -->
 - [x] RECIPE_DETAIL and PLANNER_WEEK anchor plus COOK_MODE high-risk wireframes receive independent design critique before implementation <!-- omo:id=accept-future-design-critic;stage=4;scope=frontend;review=5,6 -->
-- [ ] 390px/320px screenshots or Figma frames prove dialog/start/dispatch/loading/error/read-only states without overflow or keyboard/focus defects <!-- omo:id=accept-future-visual-evidence;stage=4;scope=frontend;review=5,6 -->
+- [x] 390px/320px screenshots or Figma frames prove dialog/start/dispatch/loading/error/read-only states without overflow or keyboard/focus defects <!-- omo:id=accept-future-visual-evidence;stage=4;scope=frontend;review=5,6 -->
 - [ ] product-design-authority report has blocker/major findings zero before Design Status becomes confirmed <!-- omo:id=accept-future-design-authority;stage=4;scope=frontend;review=5,6 -->
 
 ## Successor / Release Boundary

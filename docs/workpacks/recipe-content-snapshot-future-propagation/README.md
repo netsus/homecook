@@ -219,7 +219,7 @@ snapshot_v2 read:
 
 ## Design Status
 
-`pending-review`. Stage 4 implementation screenshots and the independent design critique are present. Separate authority precheck/final product-design-authority approval is still pending, so `confirmed` is forbidden.
+`pending-review`. Stage 4 implementation screenshots and the independent design critique are present. The first authority precheck requested changes at head `57ddc8ce`; the Stage 4 implementer repaired those findings test-first, but a fresh authority precheck and final product-design-authority approval are still pending, so `confirmed` is forbidden.
 
 ## Primary User Path
 
