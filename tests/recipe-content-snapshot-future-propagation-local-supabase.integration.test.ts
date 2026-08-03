@@ -17,6 +17,7 @@ type AdapterModule = {
     plan: Record<string, unknown>;
     reportPath: string;
   }): {
+    collectRelease(input: Record<string, unknown>): Promise<Record<string, unknown>>;
     collectTwoOwner(input: Record<string, unknown>): Promise<Record<string, unknown>>;
     cleanup(input: Record<string, unknown>): Promise<void>;
     prepare(input: Record<string, unknown>): Promise<Record<string, unknown>>;
@@ -98,6 +99,40 @@ run("recipe content snapshot future propagation isolated full-local adapter", ()
         external_writes: 0,
         issuer: plan.loopback.issuer,
         migrations_applied: true,
+      });
+      await expect(adapter.collectRelease({
+        plan,
+        releaseSha: plan.immediate_previous_sha,
+        releaseSlot: "immediate_previous",
+        runtime,
+      })).resolves.toMatchObject({
+        release_sha: plan.immediate_previous_sha,
+        personal_recipe_v2_enabled: false,
+        snapshot_v2_creation_enabled: false,
+        personal_entry_count: 0,
+        personal_caller_count: 0,
+        recipe_change_previews_delta: 0,
+        session_delta: 0,
+        claim_delta: 0,
+        personal_v2_idempotency_delta: 0,
+        legacy_v1_shape_preserved: true,
+      });
+      await expect(adapter.collectRelease({
+        plan,
+        releaseSha: plan.current_head_sha,
+        releaseSlot: "current",
+        runtime,
+      })).resolves.toMatchObject({
+        release_sha: plan.current_head_sha,
+        personal_recipe_v2_enabled: false,
+        snapshot_v2_creation_enabled: false,
+        personal_entry_count: 0,
+        personal_caller_count: 0,
+        recipe_change_previews_delta: 0,
+        session_delta: 0,
+        claim_delta: 0,
+        personal_v2_idempotency_delta: 0,
+        legacy_v1_shape_preserved: true,
       });
       await expect(adapter.collectTwoOwner({
         plan,

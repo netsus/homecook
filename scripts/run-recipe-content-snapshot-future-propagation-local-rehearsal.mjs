@@ -11,6 +11,12 @@ import {
   buildLocalRehearsalResourcePlan,
   buildSanitizedRunnerSummary,
 } from "./lib/recipe-content-snapshot-future-propagation-local-runner.mjs";
+import {
+  runRecipeContentSnapshotFuturePropagationLocalCollector,
+} from "./lib/recipe-content-snapshot-future-propagation-local-collector.mjs";
+import {
+  createRecipeContentSnapshotFuturePropagationFullLocalAdapter,
+} from "./lib/recipe-content-snapshot-future-propagation-full-local-adapter.mjs";
 
 function readOption(argv, name) {
   const index = argv.indexOf(name);
@@ -70,11 +76,19 @@ try {
   });
 
   if (execute) {
-    throw new Error(
-      "live collector is not implemented; refusing to fabricate a local rehearsal PASS",
+    const adapter =
+      createRecipeContentSnapshotFuturePropagationFullLocalAdapter({ plan });
+    await runRecipeContentSnapshotFuturePropagationLocalCollector({
+      adapter,
+      plan,
+      reportPath: input.report_path,
+    });
+    process.stdout.write(
+      `${JSON.stringify(buildSanitizedRunnerSummary(plan, "complete"))}\n`,
     );
+  } else {
+    process.stdout.write(`${JSON.stringify(buildSanitizedRunnerSummary(plan))}\n`);
   }
-  process.stdout.write(`${JSON.stringify(buildSanitizedRunnerSummary(plan))}\n`);
 } catch (error) {
   const message = error instanceof Error
     ? error.message

@@ -430,6 +430,11 @@ if (!postgresBin) {
         "-f",
         "supabase/migrations/20260803092000_recipe_future_internal_scope.sql",
       ]);
+      runRequired(path.join(postgresBin, "psql"), [
+        ...connectionArgs,
+        "-f",
+        "supabase/migrations/20260803093000_full_local_read_only_request_authority.sql",
+      ]);
     }
 
     const test = commandResult("pnpm", [

@@ -208,7 +208,7 @@ export function buildSanitizedRunnerSummary(plan, status = "planned") {
 
 export function buildLocalRehearsalCollectorContract() {
   return {
-    collector_status: "not-implemented",
+    collector_status: "implemented",
     authenticated_callers: ["owner_a", "owner_b"],
     route_requests: [
       { method: "POST", path: "/api/v1/recipes/:id/future-plan-impact" },

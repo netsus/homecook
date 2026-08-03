@@ -135,12 +135,12 @@ describe("recipe content snapshot future propagation local rehearsal runner cont
     );
   });
 
-  it("locks the future live collector contract while execute mode remains fail closed", async () => {
+  it("locks the implemented live collector contract", async () => {
     const helper = await loadHelper();
     const contract = helper.buildLocalRehearsalCollectorContract();
 
     expect(contract).toMatchObject({
-      collector_status: "not-implemented",
+      collector_status: "implemented",
       authenticated_callers: ["owner_a", "owner_b"],
       expected_denial: { status: 404, error_code: "RESOURCE_NOT_FOUND" },
       digest_invariance: ["recipe", "content", "meal", "shopping", "claim", "session"],

@@ -1,5 +1,11 @@
 import { execFileSync, spawn } from "node:child_process";
-import { createHmac, randomBytes, randomUUID } from "node:crypto";
+import {
+  createHmac,
+  createPrivateKey,
+  randomBytes,
+  randomUUID,
+  sign as signPayload,
+} from "node:crypto";
 import {
   chmodSync,
   existsSync,
@@ -443,6 +449,52 @@ function sessionBindingHash(runtime, caller) {
   ].join("\n"), "utf8").digest("hex");
 }
 
+function addReleaseCompatibleNotBeforeClaim(runtime, caller) {
+  if (Number.isSafeInteger(caller.claims.nbf)) return;
+  const [encodedHeader] = caller.session.access_token.split(".");
+  if (!encodedHeader) {
+    throw new Error("isolated Auth token header is missing");
+  }
+  const header = JSON.parse(
+    Buffer.from(encodedHeader, "base64url").toString("utf8"),
+  );
+  const privateKey = JSON.parse(runtime.secrets.jwt_keys).find((key) =>
+    key?.kty === "EC" && typeof key?.d === "string" && key.kid === header.kid
+  );
+  if (!privateKey || header.alg !== "ES256") {
+    throw new Error("isolated Auth signing key did not match the session token");
+  }
+  const claims = { ...caller.claims, nbf: caller.claims.iat };
+  const signingInput = [
+    Buffer.from(JSON.stringify(header), "utf8").toString("base64url"),
+    Buffer.from(JSON.stringify(claims), "utf8").toString("base64url"),
+  ].join(".");
+  const signature = signPayload("SHA256", Buffer.from(signingInput), {
+    dsaEncoding: "ieee-p1363",
+    key: createPrivateKey({ format: "jwk", key: privateKey }),
+  }).toString("base64url");
+  caller.claims = claims;
+  caller.session.access_token = `${signingInput}.${signature}`;
+}
+
+function alignFixtureAuthEpochsToReleasePrecision(runtime, callers) {
+  const ownerIds = callers
+    .map((caller) => `${sqlLiteral(caller.user.id)}::uuid`)
+    .join(", ");
+  postgres(runtime, `
+    update auth.users
+    set created_at = date_trunc('milliseconds', created_at),
+        updated_at = greatest(
+          date_trunc('milliseconds', created_at),
+          date_trunc('milliseconds', updated_at)
+        )
+    where id in (${ownerIds});
+  `);
+  for (const caller of callers) {
+    caller.user.created_at = new Date(caller.user.created_at).toISOString();
+  }
+}
+
 function seedTwoOwnerAuthority(runtime, ownerA, ownerB) {
   const fixture = {
     cutoverAttemptId: randomUUID(),
@@ -495,7 +547,8 @@ function seedTwoOwnerAuthority(runtime, ownerA, ownerB) {
     insert into public.users (
       id, nickname, email, social_provider, social_id, settings_json
     )
-    select owner_uuid, nickname, email, provider, social_id, '{}'::jsonb
+    select owner_uuid, nickname, email, provider, social_id,
+        '{"user_bootstrap_version":3}'::jsonb
     from fixture_callers;
     insert into public.user_account_generation_watermarks (
       owner_uuid, last_account_generation
@@ -565,12 +618,6 @@ function seedTwoOwnerAuthority(runtime, ownerA, ownerB) {
       ${sqlLiteral(fixture.methodId)}::uuid,
       jsonb_build_array(${sqlLiteral(fixture.ingredientId)})
     );
-    update public.account_generation_capability_state
-    set state = 'generation_active',
-        revision = revision + 1,
-        current_cutover_attempt_id = ${sqlLiteral(fixture.cutoverAttemptId)}::uuid,
-        activated_at = ${sqlLiteral(activatedAt)}::timestamptz
-    where singleton;
     update private.full_local_auth_control
     set authority = 'local',
         local_issuer = ${sqlLiteral(runtime.plan.loopback.issuer)},
@@ -583,6 +630,118 @@ function seedTwoOwnerAuthority(runtime, ownerA, ownerB) {
     commit;
   `);
   return fixture;
+}
+
+async function ensureTwoOwnerFixture(runtime) {
+  if (runtime.twoOwnerFixture) return runtime.twoOwnerFixture;
+  const ownerA = await createLocalAuthCaller(runtime, "owner-a");
+  const ownerB = await createLocalAuthCaller(runtime, "owner-b");
+  addReleaseCompatibleNotBeforeClaim(runtime, ownerA);
+  addReleaseCompatibleNotBeforeClaim(runtime, ownerB);
+  alignFixtureAuthEpochsToReleasePrecision(runtime, [ownerA, ownerB]);
+  const fixture = seedTwoOwnerAuthority(runtime, ownerA, ownerB);
+  runtime.twoOwnerFixture = { fixture, ownerA, ownerB };
+  return runtime.twoOwnerFixture;
+}
+
+function activateTwoOwnerFixture(runtime, twoOwnerFixture) {
+  if (runtime.twoOwnerFixtureActivated) return;
+  const { fixture, ownerA, ownerB } = twoOwnerFixture;
+  const activatedAt = new Date(
+    Math.min(ownerA.claims.iat, ownerB.claims.iat) * 1_000 - 1_000,
+  ).toISOString();
+  postgres(runtime, `
+    update public.account_generation_capability_state
+    set state = 'generation_active',
+        revision = revision + 1,
+        current_cutover_attempt_id = ${sqlLiteral(fixture.cutoverAttemptId)}::uuid,
+        activated_at = ${sqlLiteral(activatedAt)}::timestamptz
+    where singleton;
+  `);
+  assertSeededCallerAuthority(runtime, ownerA);
+  assertSeededCallerAuthority(runtime, ownerB);
+  runtime.twoOwnerFixtureActivated = true;
+}
+
+function readFlagOffMutationState(runtime) {
+  const row = postgres(runtime, `
+    select concat_ws('|',
+      case when current_setting('homecook.personal_recipe_v2', true) = 'on'
+        then '1' else '0' end,
+      case when current_setting('homecook.snapshot_v2_creation', true) = 'on'
+        then '1' else '0' end,
+      (select count(*) from public.mutation_idempotency_keys
+        where operation_scope like 'personal_recipe_%'),
+      (select count(distinct owner_uuid) from public.mutation_idempotency_keys
+        where operation_scope like 'personal_recipe_%'),
+      (select count(*) from public.recipe_change_previews),
+      (select count(*) from public.cooking_sessions
+        where contract_version = 'snapshot_v2'),
+      (select count(*) from public.cooking_session_meal_claims),
+      (select count(*) from public.mutation_idempotency_keys
+        where operation_scope like 'personal_recipe_%')
+    );
+  `, { output: true }).trim();
+  const values = row.split('|').map((value) => Number(value));
+  if (values.length !== 8 || values.some((value) => !Number.isSafeInteger(value))) {
+    throw new Error("isolated release mutation inventory was invalid");
+  }
+  return {
+    personalRecipeV2Enabled: values[0] === 1,
+    snapshotV2CreationEnabled: values[1] === 1,
+    personalEntryCount: values[2],
+    personalCallerCount: values[3],
+    previewCount: values[4],
+    snapshotV2SessionCount: values[5],
+    claimCount: values[6],
+    personalIdempotencyCount: values[7],
+  };
+}
+
+async function readLegacyV1Shape(runtime) {
+  const response = await fetch(
+    `${runtime.plan.loopback.app_url}/api/v1/cooking/sessions`,
+    {
+      body: JSON.stringify({
+        cooking_servings: 0,
+        meal_ids: [],
+        recipe_id: "invalid-recipe-id",
+      }),
+      headers: {
+        "content-type": "application/json",
+      },
+      method: "POST",
+      signal: AbortSignal.timeout(30_000),
+    },
+  );
+  let payload;
+  try {
+    payload = await response.json();
+  } catch {
+    throw new Error("isolated legacy-v1 response was not JSON");
+  }
+  const expectedFields = [
+    { field: "recipe_id", reason: "invalid_uuid" },
+    { field: "meal_ids", reason: "required_non_empty" },
+    { field: "cooking_servings", reason: "min_value" },
+  ];
+  if (
+    response.status !== 422
+    || payload?.success !== false
+    || payload?.data !== null
+    || payload?.error?.code !== "VALIDATION_ERROR"
+    || typeof payload?.error?.message !== "string"
+    || JSON.stringify(payload?.error?.fields) !== JSON.stringify(expectedFields)
+    || Object.keys(payload).sort().join(',') !== 'data,error,success'
+  ) {
+    const safeCode = typeof payload?.error?.code === "string"
+      ? payload.error.code.slice(0, 80)
+      : "missing";
+    throw new Error(
+      `isolated legacy-v1 response shape drifted ${response.status}/${safeCode}`,
+    );
+  }
+  return true;
 }
 
 function assertSeededCallerAuthority(runtime, caller) {
@@ -1026,11 +1185,8 @@ export function createRecipeContentSnapshotFuturePropagationFullLocalAdapter({
       if (releaseSha !== plan.current_head_sha) {
         throw new Error("two-owner rehearsal requires the exact current head");
       }
-      const ownerA = await createLocalAuthCaller(runtime, "owner-a");
-      const ownerB = await createLocalAuthCaller(runtime, "owner-b");
-      const fixture = seedTwoOwnerAuthority(runtime, ownerA, ownerB);
-      assertSeededCallerAuthority(runtime, ownerA);
-      assertSeededCallerAuthority(runtime, ownerB);
+      const { fixture, ownerA, ownerB } = await ensureTwoOwnerFixture(runtime);
+      activateTwoOwnerFixture(runtime, { fixture, ownerA, ownerB });
       await assertPreviewDataApi(runtime, ownerA, fixture);
       const application = await startReleaseApplication(
         runtime,
@@ -1103,6 +1259,54 @@ export function createRecipeContentSnapshotFuturePropagationFullLocalAdapter({
       } finally {
         await stopApplication(application);
       }
+    },
+
+    async collectRelease({ releaseSha, releaseSlot }) {
+      if (
+        ![plan.current_head_sha, plan.immediate_previous_sha].includes(releaseSha)
+        || !["current", "immediate_previous"].includes(releaseSlot)
+      ) {
+        throw new Error("release rehearsal requires an exact locked release slot");
+      }
+      const before = readFlagOffMutationState(runtime);
+      const application = await startReleaseApplication(
+        runtime,
+        releaseSha,
+        `release-${releaseSlot}`,
+      );
+      let legacyV1ShapePreserved;
+      try {
+        legacyV1ShapePreserved = await readLegacyV1Shape(runtime);
+      } finally {
+        await stopApplication(application);
+      }
+      const after = readFlagOffMutationState(runtime);
+      return {
+        release_sha: releaseSha,
+        personal_recipe_v2_enabled: after.personalRecipeV2Enabled,
+        snapshot_v2_creation_enabled: after.snapshotV2CreationEnabled,
+        personal_entry_count: after.personalEntryCount,
+        personal_caller_count: after.personalCallerCount,
+        recipe_change_previews_delta: after.previewCount - before.previewCount,
+        session_delta:
+          after.snapshotV2SessionCount - before.snapshotV2SessionCount,
+        claim_delta: after.claimCount - before.claimCount,
+        personal_v2_idempotency_delta:
+          after.personalIdempotencyCount - before.personalIdempotencyCount,
+        legacy_v1_shape_preserved: legacyV1ShapePreserved,
+      };
+    },
+
+    async writeReport({ report, reportPath }) {
+      if (typeof reportPath !== "string" || !reportPath.startsWith("/")) {
+        throw new Error("isolated collector report path must be absolute");
+      }
+      writeFileSync(reportPath, `${JSON.stringify(report, null, 2)}\n`, {
+        encoding: "utf8",
+        flag: "wx",
+        mode: 0o600,
+      });
+      chmodSync(reportPath, 0o600);
     },
 
     async cleanup({ runtime: preparedRuntime } = {}) {
