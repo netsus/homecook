@@ -91,7 +91,7 @@ test.describe("recipe-content-snapshot-future-propagation", () => {
       },
     }));
     await page.goto(`${RECIPE_PATH}?qaFutureImpact=1`);
-    const backgroundSave = await openImpactFromEditedOwnerRecipe(page, "세션 만료 전 김치찌개");
+    await openImpactFromEditedOwnerRecipe(page, "세션 만료 전 김치찌개");
 
     const loginGate = page.getByRole("dialog", { name: "로그인이 필요한 작업이에요" });
     await expect(loginGate).toBeVisible();
@@ -101,6 +101,7 @@ test.describe("recipe-content-snapshot-future-propagation", () => {
 
     await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => resolve())));
     await expect(loginGate.locator(":focus")).toHaveCount(1);
+    const backgroundSave = page.locator("button").filter({ hasText: /^변경사항 저장$/ });
     await expect(backgroundSave).not.toBeFocused();
     const close = loginGate.getByRole("button", { name: "닫기" });
     const login = loginGate.getByRole("button", { name: "로그인" });
