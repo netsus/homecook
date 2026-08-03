@@ -1189,6 +1189,7 @@ export function MealScreen({
   const restoredProductContextRef = useRef(false);
   const pendingProductEditIdsRef = useRef<Set<string>>(new Set());
   const pendingProductDeleteIdsRef = useRef<Set<string>>(new Set());
+  const pendingCookingMealIdsRef = useRef<Set<string>>(new Set());
   const productEditInputRef = useRef<HTMLInputElement>(null);
   const [mealAddSheetOpen, setMealAddSheetOpen] = useState(false);
   const [mealAddPickerMode, setMealAddPickerMode] =
@@ -1437,10 +1438,14 @@ export function MealScreen({
   }
 
   async function startMealCooking(meal: MealListItemData) {
-    if (meal.status !== "shopping_done") {
+    if (
+      meal.status !== "shopping_done"
+      || pendingCookingMealIdsRef.current.has(meal.id)
+    ) {
       return;
     }
 
+    pendingCookingMealIdsRef.current.add(meal.id);
     addPending(meal.id);
     clearConflictError(meal.id);
 
@@ -1468,6 +1473,7 @@ export function MealScreen({
           : "요리 세션을 만들지 못했어요. 다시 시도해 주세요.",
       );
     } finally {
+      pendingCookingMealIdsRef.current.delete(meal.id);
       removePending(meal.id);
     }
   }
