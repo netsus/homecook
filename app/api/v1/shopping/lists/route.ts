@@ -25,7 +25,10 @@ import {
   callFuturePropagationRpc,
   type FuturePropagationRpcClient,
 } from "@/lib/server/recipe-content-snapshot-future-propagation";
-import { createRouteHandlerClient, createServiceRoleClient } from "@/lib/supabase/server";
+import {
+  createRouteHandlerClient,
+  createShoppingCreateInternalClient,
+} from "@/lib/supabase/server";
 import type {
   ShoppingListAllPantryCompletionSummary,
   ShoppingListAllPantrySummary,
@@ -1042,7 +1045,7 @@ export async function POST(request: Request) {
     return fail("ACCOUNT_SESSION_STALE", "세션을 다시 확인해 주세요.", 409);
   }
 
-  const serviceClient = createServiceRoleClient();
+  const serviceClient = createShoppingCreateInternalClient();
   if (!serviceClient) {
     return fail("INTERNAL_ERROR", "장보기 목록을 만들지 못했어요.", 500);
   }

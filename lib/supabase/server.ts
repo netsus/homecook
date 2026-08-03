@@ -390,12 +390,15 @@ type LocalInternalScope =
   | "auth-callback"
   | "auth-flow"
   | "auth-refresh"
+  | "future-meal-write"
   | "not-found-feedback"
   | "operational-event"
   | "recipe-future-propagation"
   | "recipe-image"
   | "request-authority"
   | "session-logout"
+  | "shopping-create"
+  | "snapshot-v2-session"
   | "youtube-ingredient-registration";
 
 function createScopedDataServiceRoleClient(
@@ -463,6 +466,23 @@ export function createRecipeFuturePropagationInternalClient() {
     from: exactInternalFrom(client, RECIPE_FUTURE_PROPAGATION_READ_TABLES),
     rpc: client.rpc.bind(client),
   };
+}
+
+function createScopedInternalRpcClient(scope: LocalInternalScope) {
+  const client = createScopedDataServiceRoleClient(scope);
+  return client ? { rpc: client.rpc.bind(client) } : null;
+}
+
+export function createSnapshotV2SessionInternalClient() {
+  return createScopedInternalRpcClient("snapshot-v2-session");
+}
+
+export function createFutureMealWriteInternalClient() {
+  return createScopedInternalRpcClient("future-meal-write");
+}
+
+export function createShoppingCreateInternalClient() {
+  return createScopedInternalRpcClient("shopping-create");
 }
 
 export function createAuthCallbackInternalDataClient() {

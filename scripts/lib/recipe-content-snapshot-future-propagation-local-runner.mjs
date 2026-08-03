@@ -213,6 +213,13 @@ export function buildLocalRehearsalCollectorContract() {
     route_requests: [
       { method: "POST", path: "/api/v1/recipes/:id/future-plan-impact" },
       { method: "PATCH", path: "/api/v1/recipes/:id" },
+      { method: "POST", path: "/api/v1/cooking/session-attempts" },
+      { method: "POST", path: "/api/v1/meals" },
+      { method: "PATCH", path: "/api/v1/meals/:meal_id" },
+      { method: "DELETE", path: "/api/v1/meals/:meal_id" },
+      { method: "POST", path: "/api/v1/shopping/lists" },
+      { method: "GET", path: "/api/v1/cooking/session-attempts/:id/cook-mode" },
+      { method: "POST", path: "/api/v1/cooking/session-attempts/:id/cancel" },
     ],
     expected_denial: { status: 404, error_code: "RESOURCE_NOT_FOUND" },
     digest_invariance: [

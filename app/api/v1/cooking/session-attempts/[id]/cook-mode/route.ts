@@ -9,8 +9,8 @@ import {
   type FuturePropagationRpcClient,
 } from "@/lib/server/recipe-content-snapshot-future-propagation";
 import {
+  createSnapshotV2SessionInternalClient,
   createRouteHandlerClient,
-  createServiceRoleClient,
 } from "@/lib/supabase/server";
 
 interface RouteContext {
@@ -38,7 +38,7 @@ export async function GET(_request: Request, context: RouteContext) {
     return fail("ACCOUNT_SESSION_STALE", "세션을 다시 확인해 주세요.", 409);
   }
 
-  const serviceClient = createServiceRoleClient();
+  const serviceClient = createSnapshotV2SessionInternalClient();
   if (!serviceClient) {
     return fail("INTERNAL_ERROR", "요리모드 데이터를 불러오지 못했어요.", 500);
   }

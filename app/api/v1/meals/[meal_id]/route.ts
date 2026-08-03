@@ -18,7 +18,10 @@ import {
   callFuturePropagationRpc,
   type FuturePropagationRpcClient,
 } from "@/lib/server/recipe-content-snapshot-future-propagation";
-import { createRouteHandlerClient, createServiceRoleClient } from "@/lib/supabase/server";
+import {
+  createFutureMealWriteInternalClient,
+  createRouteHandlerClient,
+} from "@/lib/supabase/server";
 import type { MealMutationData, MealUpdateBody } from "@/types/meal";
 import type { MealStatus } from "@/types/planner";
 
@@ -257,7 +260,7 @@ export async function PATCH(request: Request, context: RouteContext) {
     return fail("FORBIDDEN", "내 식사만 수정할 수 있어요.", 403);
   }
 
-  const serviceClient = createServiceRoleClient();
+  const serviceClient = createFutureMealWriteInternalClient();
   if (!serviceClient) {
     return fail("INTERNAL_ERROR", "식사를 수정하지 못했어요.", 500);
   }
@@ -339,7 +342,7 @@ export async function DELETE(request: Request, context: RouteContext) {
     return fail("FORBIDDEN", "내 식사만 삭제할 수 있어요.", 403);
   }
 
-  const serviceClient = createServiceRoleClient();
+  const serviceClient = createFutureMealWriteInternalClient();
   if (!serviceClient) {
     return fail("INTERNAL_ERROR", "식사를 삭제하지 못했어요.", 500);
   }

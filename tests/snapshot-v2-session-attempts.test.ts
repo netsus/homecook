@@ -252,12 +252,57 @@ describe("snapshot-v2 session attempts public contract", () => {
   });
 
   it("returns cook-mode from immutable session content with exact eight-field product provenance", async () => {
+    const internalRecipe = {
+      id: recipeId,
+      title: "세션에 고정된 제목",
+      base_servings: 4,
+      cooking_servings: 4,
+      ingredients: [{
+        ingredient_id: ingredientId,
+        standard_name: "두부",
+        amount: 100,
+        unit: "g",
+        display_text: "두부 100g",
+        component_label: null,
+        ingredient_type: "QUANT",
+        scalable: true,
+      }],
+      steps: [{
+        step_number: 1,
+        instruction: "끓인다",
+        component_label: null,
+        cooking_methods: [{ code: "boil", label: "끓이기", color_key: "boil" }],
+        ingredients_used: [],
+        heat_level: null,
+        duration_seconds: null,
+        duration_text: null,
+      }],
+    };
     const recipe = {
       id: recipeId,
       title: "세션에 고정된 제목",
       cooking_servings: 4,
-      ingredients: [{ ingredient_id: ingredientId, standard_name: "두부" }],
-      steps: [{ step_number: 1, instruction: "끓인다" }],
+      ingredients: [{
+        ingredient_id: ingredientId,
+        standard_name: "두부",
+        amount: 100,
+        unit: "g",
+        display_text: "두부 100g",
+        component_label: null,
+        ingredient_type: "QUANT",
+        scalable: true,
+      }],
+      steps: [{
+        step_number: 1,
+        instruction: "끓인다",
+        component_label: null,
+        cooking_method: { code: "boil", label: "끓이기", color_key: "boil" },
+        cooking_methods: [{ code: "boil", label: "끓이기", color_key: "boil" }],
+        ingredients_used: [],
+        heat_level: null,
+        duration_seconds: null,
+        duration_text: null,
+      }],
     };
     const pantryCandidate = {
       pantry_item_id: pantryItemId,
@@ -275,7 +320,7 @@ describe("snapshot-v2 session attempts public contract", () => {
         contract_version: "snapshot_v2",
         mode: "planner",
         status: "in_progress",
-        recipe,
+        recipe: internalRecipe,
         pantry_candidates: [
           {
             ...pantryCandidate,

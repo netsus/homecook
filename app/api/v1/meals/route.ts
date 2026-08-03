@@ -39,7 +39,10 @@ import {
   type FuturePropagationRpcClient,
 } from "@/lib/server/recipe-content-snapshot-future-propagation";
 import { awardUserProgressEvent, type UserProgressDbClient } from "@/lib/server/user-progress";
-import { createRouteHandlerClient, createServiceRoleClient } from "@/lib/supabase/server";
+import {
+  createFutureMealWriteInternalClient,
+  createRouteHandlerClient,
+} from "@/lib/supabase/server";
 import type { MealCreateBody, MealCreateData, MealListData, MealListItemData } from "@/types/meal";
 import type { MealStatus } from "@/types/planner";
 import type { ProductPlannerEntryData } from "@/types/product-planner-entry";
@@ -685,7 +688,7 @@ async function postMeals(request: Request) {
     }
   }
 
-  const serviceClient = createServiceRoleClient();
+  const serviceClient = createFutureMealWriteInternalClient();
   if (!serviceClient) {
     return fail("INTERNAL_ERROR", "식사를 추가하지 못했어요.", 500);
   }

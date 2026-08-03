@@ -56,6 +56,25 @@ const INTERNAL_OPERATION_ALLOWLIST = new Map([
     ]),
   ],
   [
+    "createSnapshotV2SessionInternalClient",
+    new Set([
+      "app/api/v1/cooking/session-attempts/route.ts",
+      "app/api/v1/cooking/session-attempts/[id]/cook-mode/route.ts",
+      "app/api/v1/cooking/session-attempts/[id]/cancel/route.ts",
+    ]),
+  ],
+  [
+    "createFutureMealWriteInternalClient",
+    new Set([
+      "app/api/v1/meals/route.ts",
+      "app/api/v1/meals/[meal_id]/route.ts",
+    ]),
+  ],
+  [
+    "createShoppingCreateInternalClient",
+    new Set(["app/api/v1/shopping/lists/route.ts"]),
+  ],
+  [
     "createOperationalEventInternalClient",
     new Set(["lib/server/admin-events.ts"]),
   ],
@@ -99,6 +118,45 @@ const INTERNAL_OPERATION_FUNCTION_ALLOWLIST = new Map([
       [
         "app/api/v1/recipes/[id]/route.ts",
         new Set(["DELETE", "PATCH"]),
+      ],
+    ]),
+  ],
+  [
+    "createSnapshotV2SessionInternalClient",
+    new Map([
+      [
+        "app/api/v1/cooking/session-attempts/route.ts",
+        new Set(["POST"]),
+      ],
+      [
+        "app/api/v1/cooking/session-attempts/[id]/cook-mode/route.ts",
+        new Set(["GET"]),
+      ],
+      [
+        "app/api/v1/cooking/session-attempts/[id]/cancel/route.ts",
+        new Set(["POST"]),
+      ],
+    ]),
+  ],
+  [
+    "createFutureMealWriteInternalClient",
+    new Map([
+      [
+        "app/api/v1/meals/route.ts",
+        new Set(["POST"]),
+      ],
+      [
+        "app/api/v1/meals/[meal_id]/route.ts",
+        new Set(["DELETE", "PATCH"]),
+      ],
+    ]),
+  ],
+  [
+    "createShoppingCreateInternalClient",
+    new Map([
+      [
+        "app/api/v1/shopping/lists/route.ts",
+        new Set(["POST"]),
       ],
     ]),
   ],

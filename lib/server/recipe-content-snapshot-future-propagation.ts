@@ -1,4 +1,10 @@
 import { fail } from "@/lib/api/response";
+import {
+  toCookingModeIngredient,
+  toCookingModeStep,
+  type CookingIngredientRow,
+  type CookingStepRow,
+} from "@/lib/server/cooking";
 import { calculateRecipeNutrition } from
   "@/lib/nutrition/recipe-nutrition-calculator";
 
@@ -707,6 +713,89 @@ function hasSnapshotV2Identity(value: Record<string, unknown>) {
     && (value.mode === "planner" || value.mode === "standalone");
 }
 
+function projectSnapshotV2CookModeIngredients(
+  value: unknown,
+  baseServings: number,
+  cookingServings: number,
+) {
+  if (!Array.isArray(value)) {
+    return null;
+  }
+  const rows: CookingIngredientRow[] = [];
+  for (const item of value) {
+    if (
+      !isRecord(item)
+      || !isUuid(item.ingredient_id)
+      || typeof item.standard_name !== "string"
+      || (item.amount !== null && typeof item.amount !== "number")
+      || (item.unit !== null && typeof item.unit !== "string")
+      || (item.display_text !== null && typeof item.display_text !== "string")
+      || (
+        item.component_label !== undefined
+        && item.component_label !== null
+        && typeof item.component_label !== "string"
+      )
+      || (item.ingredient_type !== "QUANT" && item.ingredient_type !== "TO_TASTE")
+      || typeof item.scalable !== "boolean"
+    ) {
+      return null;
+    }
+    rows.push({
+      ingredient_id: item.ingredient_id,
+      amount: item.amount ?? null,
+      unit: item.unit ?? null,
+      display_text: item.display_text ?? null,
+      component_label: item.component_label ?? null,
+      ingredient_type: item.ingredient_type,
+      scalable: item.scalable,
+      ingredients: { standard_name: item.standard_name },
+    });
+  }
+
+  return rows.map((row) =>
+    toCookingModeIngredient({
+      row,
+      baseServings,
+      cookingServings,
+    })
+  );
+}
+
+function projectSnapshotV2CookModeSteps(value: unknown) {
+  if (!Array.isArray(value)) {
+    return null;
+  }
+  const rows: CookingStepRow[] = [];
+  for (const item of value) {
+    if (
+      !isRecord(item)
+      || !isPositiveInteger(item.step_number)
+      || typeof item.instruction !== "string"
+    ) {
+      return null;
+    }
+    rows.push({
+      step_number: item.step_number,
+      instruction: item.instruction,
+      component_label:
+        typeof item.component_label === "string" ? item.component_label : null,
+      ingredients_used: Array.isArray(item.ingredients_used)
+        ? item.ingredients_used
+        : [],
+      heat_level: typeof item.heat_level === "string" ? item.heat_level : null,
+      duration_seconds:
+        typeof item.duration_seconds === "number" ? item.duration_seconds : null,
+      duration_text:
+        typeof item.duration_text === "string" ? item.duration_text : null,
+      cooking_methods: Array.isArray(item.cooking_methods)
+        ? item.cooking_methods
+        : null,
+    });
+  }
+
+  return rows.map((row) => toCookingModeStep(row));
+}
+
 export function projectSnapshotV2StartData(value: unknown) {
   if (
     !isRecord(value)
@@ -740,11 +829,20 @@ export function projectSnapshotV2CookModeData(value: unknown) {
     || !isRecord(value.recipe)
     || !isUuid(value.recipe.id)
     || typeof value.recipe.title !== "string"
+    || !isPositiveInteger(value.recipe.base_servings)
     || !isPositiveInteger(value.recipe.cooking_servings)
-    || !Array.isArray(value.recipe.ingredients)
-    || !Array.isArray(value.recipe.steps)
     || !Array.isArray(value.pantry_candidates)
   ) {
+    return null;
+  }
+
+  const ingredients = projectSnapshotV2CookModeIngredients(
+    value.recipe.ingredients,
+    value.recipe.base_servings,
+    value.recipe.cooking_servings,
+  );
+  const steps = projectSnapshotV2CookModeSteps(value.recipe.steps);
+  if (!ingredients || !steps) {
     return null;
   }
 
@@ -790,8 +888,8 @@ export function projectSnapshotV2CookModeData(value: unknown) {
       id: value.recipe.id,
       title: value.recipe.title,
       cooking_servings: value.recipe.cooking_servings,
-      ingredients: value.recipe.ingredients,
-      steps: value.recipe.steps,
+      ingredients,
+      steps,
     },
     pantry_candidates: pantryCandidates,
   };
