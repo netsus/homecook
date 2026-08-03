@@ -28,6 +28,8 @@ const serviceContent = `${JSON.stringify({
   internal_operation_violation_count:
     inventory.internalOperationViolations.length,
   internal_operation_allowlist: inventory.internalOperationAllowlist,
+  internal_operation_function_allowlist:
+    inventory.internalOperationFunctionAllowlist,
   internal_operation_entries: inventory.internalOperationEntries,
   remote_compatibility_entries: inventory.remoteCompatibilityEntries,
   public_allowlist_files: inventory.publicAllowlistFiles,

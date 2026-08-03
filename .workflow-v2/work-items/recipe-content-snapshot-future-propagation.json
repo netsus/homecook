@@ -94,7 +94,7 @@
       "pnpm verify:frontend",
       "pnpm validate:exploratory-qa-evidence -- --slice recipe-content-snapshot-future-propagation",
       "pnpm validate:closeout-sync -- --slice recipe-content-snapshot-future-propagation",
-      "node scripts/verify-recipe-content-snapshot-future-propagation-local-first.mjs --mode post-merge-read-only",
+      "node scripts/verify-recipe-content-snapshot-future-propagation-local-rehearsal.mjs",
       "git diff --check"
     ],
     "verify_commands": [

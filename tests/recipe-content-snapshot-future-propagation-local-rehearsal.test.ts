@@ -37,6 +37,33 @@ async function loadRequiredVerifier(): Promise<LocalRehearsalVerifierModule> {
 }
 
 describe("recipe content snapshot future propagation local rehearsal verifier contract", () => {
+  it("keeps workflow commands and PR bookkeeping on the exact slice", () => {
+    const workItem = JSON.parse(readFileSync(
+      ".workflow-v2/work-items/recipe-content-snapshot-future-propagation.json",
+      "utf8",
+    ));
+    const status = JSON.parse(readFileSync(".workflow-v2/status.json", "utf8"));
+    const statusItem = status.items.find((item: { id: string }) =>
+      item.id === "recipe-content-snapshot-future-propagation"
+    );
+    const unrelatedItem = status.items.find((item: { id: string }) =>
+      item.id === "baemin-prototype-planner-week-parity"
+    );
+    const requiredChecks = [
+      ...workItem.verification.required_checks,
+      ...statusItem.required_checks,
+    ].join("\n");
+
+    expect(requiredChecks).toContain(
+      "scripts/verify-recipe-content-snapshot-future-propagation-local-rehearsal.mjs",
+    );
+    expect(requiredChecks).not.toContain(
+      "scripts/verify-recipe-content-snapshot-future-propagation-local-first.mjs",
+    );
+    expect(statusItem.pr_path).toBe("https://github.com/netsus/homecook/pull/1278");
+    expect(unrelatedItem.pr_path).toBe("pending");
+  });
+
   it("defines a pre-merge exact-current-head CLI contract instead of the historical post-merge full-local lane", () => {
     const cli = readRequiredCli();
 

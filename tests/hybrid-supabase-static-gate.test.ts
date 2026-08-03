@@ -60,72 +60,101 @@ describe("hybrid authority AST/static gate", () => {
     expect(inventory.internalOperationEntries.map((entry) => ({
       factory: entry.factory,
       file: entry.file,
+      functionName: entry.functionName,
     }))).toEqual([
       {
         factory: "createAdminDataInternalClient",
         file: "app/admin/layout.tsx",
+        functionName: "enforceAdminRouteAccess",
       },
       {
         factory: "createNotFoundFeedbackInternalClient",
         file: "app/api/v1/feedback/404/route.ts",
+        functionName: "POST",
       },
       {
         factory: "createRecipeFuturePropagationInternalClient",
         file: "app/api/v1/recipes/[id]/future-plan-impact/route.ts",
+        functionName: "POST",
       },
       {
         factory: "createRecipeFuturePropagationInternalClient",
         file: "app/api/v1/recipes/[id]/route.ts",
+        functionName: "PATCH",
+      },
+      {
+        factory: "createRecipeFuturePropagationInternalClient",
+        file: "app/api/v1/recipes/[id]/route.ts",
+        functionName: "DELETE",
       },
       {
         factory: "createRecipeImageInternalClient",
         file: "app/api/v1/recipes/images/[image_object_id]/cancel/route.ts",
+        functionName: "POST",
       },
       {
         factory: "createRecipeImageInternalClient",
         file: "app/api/v1/recipes/images/route.ts",
+        functionName: "POST",
       },
       {
         factory: "createAccountLifecycleInternalRpcClient",
         file: "app/api/v1/users/me/cutover-quarantine-resolution/route.ts",
+        functionName: "POST",
       },
       {
         factory: "createAccountLifecycleInternalRpcClient",
         file: "app/api/v1/users/me/route.ts",
+        functionName: "DELETE",
       },
       {
         factory: "createAccountLifecycleInternalRpcClient",
         file: "app/api/v1/users/me/route.ts",
+        functionName: "DELETE",
       },
       {
         factory: "createAuthCallbackOperationsClient",
         file: "app/auth/callback/route.ts",
+        functionName: "GET",
       },
       {
         factory: "createAccountLifecycleInternalRpcClient",
         file: "lib/server/account-generation/quarantine-gate.ts",
+        functionName: "readAccountQuarantineGate",
       },
       {
         factory: "createAdminDataInternalClient",
         file: "lib/server/admin-auth.ts",
+        functionName: "requireAdminUser",
       },
       {
         factory: "createOperationalEventInternalClient",
         file: "lib/server/admin-events.ts",
+        functionName: "recordOperationalEventFromServiceRole",
       },
       {
         factory: "createSessionLogoutInternalDataClient",
         file: "lib/server/hybrid-auth/logout.ts",
+        functionName: "revokeCurrentHybridSessionAuthority",
       },
       {
         factory: "createYoutubeIngredientRegistrationInternalRpcClient",
         file: "lib/server/youtube-import.ts",
+        functionName: "handleYoutubeIngredientRegistration",
       },
       {
         factory: "createAuthRefreshInternalDataClient",
         file: "lib/supabase/server.ts",
+        functionName: "createAuthServerClient",
       },
     ]);
+
+    expect(inventory.internalOperationFunctionAllowlist).toMatchObject({
+      createRecipeFuturePropagationInternalClient: {
+        "app/api/v1/recipes/[id]/future-plan-impact/route.ts": ["POST"],
+        "app/api/v1/recipes/[id]/route.ts": ["DELETE", "PATCH"],
+      },
+    });
 
     const serverFactory = readFileSync("lib/supabase/server.ts", "utf8");
     expect(serverFactory).toMatch(
@@ -138,6 +167,25 @@ describe("hybrid authority AST/static gate", () => {
 
     expect(inventory.dataRouteResponseBoundaries).toHaveLength(56);
     expect(inventory.dataRouteResponseBoundaryViolations).toEqual([]);
+  });
+
+  it("rejects a scoped future-propagation client call from the public GET handler", () => {
+    const root = fixtureRepository({
+      "app/api/v1/recipes/[id]/route.ts": `export async function GET() {
+  return createRecipeFuturePropagationInternalClient();
+}
+`,
+    });
+
+    const inventory = inventoryHybridAuthorityPaths(root);
+
+    expect(inventory.internalOperationViolations).toEqual([
+      expect.objectContaining({
+        factory: "createRecipeFuturePropagationInternalClient",
+        file: "app/api/v1/recipes/[id]/route.ts",
+        functionName: "GET",
+      }),
+    ]);
   });
 
   it("links every official anonymous API route to an exact public-read scope", () => {

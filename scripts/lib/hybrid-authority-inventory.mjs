@@ -88,6 +88,22 @@ const INTERNAL_OPERATION_ALLOWLIST = new Map([
   ],
 ]);
 
+const INTERNAL_OPERATION_FUNCTION_ALLOWLIST = new Map([
+  [
+    "createRecipeFuturePropagationInternalClient",
+    new Map([
+      [
+        "app/api/v1/recipes/[id]/future-plan-impact/route.ts",
+        new Set(["POST"]),
+      ],
+      [
+        "app/api/v1/recipes/[id]/route.ts",
+        new Set(["DELETE", "PATCH"]),
+      ],
+    ]),
+  ],
+]);
+
 const BROWSER_DIRECT_STORAGE_ALLOWLIST = new Map([
   [
     "components/recipe/manual-recipe-create-screen.tsx",
@@ -222,6 +238,27 @@ function createBaseEntry(relativeFile, sourceFile, node, classification) {
     file: relativeFile,
     ...getLineColumn(sourceFile, node),
   };
+}
+
+function getEnclosingFunctionName(node) {
+  let current = node.parent;
+  while (current) {
+    if (ts.isFunctionDeclaration(current) && current.name) {
+      return current.name.text;
+    }
+    if (
+      (ts.isArrowFunction(current) || ts.isFunctionExpression(current))
+      && ts.isVariableDeclaration(current.parent)
+      && ts.isIdentifier(current.parent.name)
+    ) {
+      return current.parent.name.text;
+    }
+    if (ts.isMethodDeclaration(current) && current.name) {
+      return current.name.getText();
+    }
+    current = current.parent;
+  }
+  return null;
 }
 
 function isStorageFromCall(node) {
@@ -574,10 +611,18 @@ function inventoryHybridAuthorityPaths(repoRoot = process.cwd()) {
           if (!isNamedCall(node, factory)) {
             continue;
           }
+          const functionName = getEnclosingFunctionName(node);
+          const allowedFunctionsByFile =
+            INTERNAL_OPERATION_FUNCTION_ALLOWLIST.get(factory);
+          const allowedFunctions = allowedFunctionsByFile?.get(relativeFile);
           const entry = {
             ...createBaseEntry(relativeFile, sourceFile, node, classification),
-            allowed: allowedFiles.has(relativeFile),
+            allowed:
+              allowedFiles.has(relativeFile)
+              && (!allowedFunctionsByFile
+                || (functionName !== null && allowedFunctions?.has(functionName) === true)),
             factory,
+            functionName,
             kind: "internal-operation-call",
           };
           const key = `${entry.file}:${entry.line}:${entry.column}:${entry.factory}`;
@@ -764,6 +809,14 @@ function inventoryHybridAuthorityPaths(repoRoot = process.cwd()) {
       [...INTERNAL_OPERATION_ALLOWLIST].map(([factory, files]) => [
         factory,
         [...files].sort(),
+      ]),
+    ),
+    internalOperationFunctionAllowlist: Object.fromEntries(
+      [...INTERNAL_OPERATION_FUNCTION_ALLOWLIST].map(([factory, files]) => [
+        factory,
+        Object.fromEntries(
+          [...files].map(([file, functions]) => [file, [...functions].sort()]),
+        ),
       ]),
     ),
     internalOperationEntries: sortedInternalOperationEntries,

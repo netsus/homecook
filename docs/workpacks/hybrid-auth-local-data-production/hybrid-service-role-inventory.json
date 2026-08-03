@@ -40,6 +40,17 @@
       "lib/server/youtube-import.ts"
     ]
   },
+  "internal_operation_function_allowlist": {
+    "createRecipeFuturePropagationInternalClient": {
+      "app/api/v1/recipes/[id]/future-plan-impact/route.ts": [
+        "POST"
+      ],
+      "app/api/v1/recipes/[id]/route.ts": [
+        "DELETE",
+        "PATCH"
+      ]
+    }
+  },
   "internal_operation_entries": [
     {
       "classification": "admin",
@@ -48,6 +59,7 @@
       "line": 44,
       "allowed": true,
       "factory": "createAdminDataInternalClient",
+      "functionName": "enforceAdminRouteAccess",
       "kind": "internal-operation-call"
     },
     {
@@ -57,6 +69,7 @@
       "line": 106,
       "allowed": true,
       "factory": "createNotFoundFeedbackInternalClient",
+      "functionName": "POST",
       "kind": "internal-operation-call"
     },
     {
@@ -66,15 +79,27 @@
       "line": 63,
       "allowed": true,
       "factory": "createRecipeFuturePropagationInternalClient",
+      "functionName": "POST",
       "kind": "internal-operation-call"
     },
     {
       "classification": "public",
       "file": "app/api/v1/recipes/[id]/route.ts",
       "column": 25,
-      "line": 501,
+      "line": 547,
       "allowed": true,
       "factory": "createRecipeFuturePropagationInternalClient",
+      "functionName": "PATCH",
+      "kind": "internal-operation-call"
+    },
+    {
+      "classification": "public",
+      "file": "app/api/v1/recipes/[id]/route.ts",
+      "column": 25,
+      "line": 619,
+      "allowed": true,
+      "factory": "createRecipeFuturePropagationInternalClient",
+      "functionName": "DELETE",
       "kind": "internal-operation-call"
     },
     {
@@ -84,6 +109,7 @@
       "line": 42,
       "allowed": true,
       "factory": "createRecipeImageInternalClient",
+      "functionName": "POST",
       "kind": "internal-operation-call"
     },
     {
@@ -93,6 +119,7 @@
       "line": 192,
       "allowed": true,
       "factory": "createRecipeImageInternalClient",
+      "functionName": "POST",
       "kind": "internal-operation-call"
     },
     {
@@ -102,6 +129,7 @@
       "line": 36,
       "allowed": true,
       "factory": "createAccountLifecycleInternalRpcClient",
+      "functionName": "POST",
       "kind": "internal-operation-call"
     },
     {
@@ -111,6 +139,7 @@
       "line": 292,
       "allowed": true,
       "factory": "createAccountLifecycleInternalRpcClient",
+      "functionName": "DELETE",
       "kind": "internal-operation-call"
     },
     {
@@ -120,6 +149,7 @@
       "line": 321,
       "allowed": true,
       "factory": "createAccountLifecycleInternalRpcClient",
+      "functionName": "DELETE",
       "kind": "internal-operation-call"
     },
     {
@@ -129,6 +159,7 @@
       "line": 263,
       "allowed": true,
       "factory": "createAuthCallbackOperationsClient",
+      "functionName": "GET",
       "kind": "internal-operation-call"
     },
     {
@@ -138,6 +169,7 @@
       "line": 72,
       "allowed": true,
       "factory": "createAccountLifecycleInternalRpcClient",
+      "functionName": "readAccountQuarantineGate",
       "kind": "internal-operation-call"
     },
     {
@@ -147,6 +179,7 @@
       "line": 68,
       "allowed": true,
       "factory": "createAdminDataInternalClient",
+      "functionName": "requireAdminUser",
       "kind": "internal-operation-call"
     },
     {
@@ -156,6 +189,7 @@
       "line": 111,
       "allowed": true,
       "factory": "createOperationalEventInternalClient",
+      "functionName": "recordOperationalEventFromServiceRole",
       "kind": "internal-operation-call"
     },
     {
@@ -165,6 +199,7 @@
       "line": 77,
       "allowed": true,
       "factory": "createSessionLogoutInternalDataClient",
+      "functionName": "revokeCurrentHybridSessionAuthority",
       "kind": "internal-operation-call"
     },
     {
@@ -174,6 +209,7 @@
       "line": 10691,
       "allowed": true,
       "factory": "createYoutubeIngredientRegistrationInternalRpcClient",
+      "functionName": "handleYoutubeIngredientRegistration",
       "kind": "internal-operation-call"
     },
     {
@@ -183,6 +219,7 @@
       "line": 71,
       "allowed": true,
       "factory": "createAuthRefreshInternalDataClient",
+      "functionName": "createAuthServerClient",
       "kind": "internal-operation-call"
     }
   ],

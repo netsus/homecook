@@ -498,17 +498,8 @@ async function readRecipeMutationAuthority(
     };
   }
 
-  const serviceClient = createRecipeFuturePropagationInternalClient();
-  if (!serviceClient) {
-    return {
-      ok: false as const,
-      response: fail("INTERNAL_ERROR", "레시피를 변경하지 못했어요.", 500),
-    };
-  }
-
   return {
     ok: true as const,
-    serviceClient: serviceClient as unknown as FuturePropagationRpcClient,
     sessionAuthority: verifiedSession.sessionAuthority,
   };
 }
@@ -553,11 +544,15 @@ export async function PATCH(request: Request, context: RouteContext) {
   if (!authority.ok) {
     return authority.response;
   }
+  const serviceClient = createRecipeFuturePropagationInternalClient();
+  if (!serviceClient) {
+    return fail("INTERNAL_ERROR", "레시피를 변경하지 못했어요.", 500);
+  }
 
   let nutrition;
   try {
     nutrition = await calculateRecipeDraftNutrition(
-      authority.serviceClient as unknown as RecipeDraftNutritionClient,
+      serviceClient as unknown as RecipeDraftNutritionClient,
       {
         recipeId,
         baseRecipeRevision: parsed.value.baseRecipeRevision,
@@ -574,7 +569,7 @@ export async function PATCH(request: Request, context: RouteContext) {
   }
 
   const result = await callFuturePropagationRpc(
-    authority.serviceClient,
+    serviceClient as unknown as FuturePropagationRpcClient,
     "write_recipe_future_plan_change",
     {
       ...buildSessionAuthorityRpcArgs(authority.sessionAuthority),
@@ -621,9 +616,13 @@ export async function DELETE(request: Request, context: RouteContext) {
   if (!authority.ok) {
     return authority.response;
   }
+  const serviceClient = createRecipeFuturePropagationInternalClient();
+  if (!serviceClient) {
+    return fail("INTERNAL_ERROR", "레시피를 삭제하지 못했어요.", 500);
+  }
 
   const result = await callFuturePropagationRpc(
-    authority.serviceClient,
+    serviceClient as unknown as FuturePropagationRpcClient,
     "write_personal_recipe_core",
     {
       ...buildSessionAuthorityRpcArgs(authority.sessionAuthority),
