@@ -7,7 +7,7 @@
 - Integrated base-governance repairs: PR `#1279`, merge commit `c4f969fb20b91348b5a94b19e52f277e453475ed`; PR `#1280`, merge commit `53ebcc325665da1d7f0c2c304d4b3e73c0d7612c`.
 - Branch: `feature/be-recipe-content-snapshot-future-propagation`.
 - Draft PR: `#1278`.
-- Current code/test evidence head before this evidence projection: `21b9c9e74f8f3a6e133837e7e57d49c8377fa76d`.
+- Current code/test evidence head before this evidence projection: `1a1d38b9a9675ba66e68ea713c24e37df0683150`.
 - Production/staging/remote application writes: `0/0/0`.
 - Claude, capability activation, provider mutation and server-production migration were not used.
 
@@ -98,21 +98,22 @@ Command: `pnpm test:recipe-content-snapshot-future-propagation:postgres`
 
 - The other-Mac rerun at exact head `8c9be695e03044c1cd7634383759413d5e1dc94b` passed the composite PostgreSQL prerequisite and every PostgreSQL behavioral row, but correctly left two gates blocked because the repository had no official real-Auth two-owner fixture and no executable current/immediate-previous release fixture.
 - The repository now owns an opt-in local collector, full-local adapter and verifier. It allocates loopback-only ports, boots disposable PostgreSQL/Auth/Data plus current and immediate-previous app checkouts, writes a mode `0600` sanitized report, and cleans the isolated resources in `finally`. It refuses execution without explicit full SHAs, opt-in and exact current checkout identity.
-- Exact current-head execution passed at `21b9c9e74f8f3a6e133837e7e57d49c8377fa76d` against immediate previous `53ebcc325665da1d7f0c2c304d4b3e73c0d7612c`. The collector report was `2060` bytes with mode `0600`; its compose project had no surviving container after completion.
+- Exact current-head execution passed at `1a1d38b9a9675ba66e68ea713c24e37df0683150` against immediate previous `53ebcc325665da1d7f0c2c304d4b3e73c0d7612c`. The collector report was `2060` bytes with mode `0600`; its compose project had no surviving container after completion.
 - Real local Auth calls used two distinct owners. Missing-recipe and other-owner preview/PATCH each returned the same `404 RESOURCE_NOT_FOUND`; recipe, content, Meal, shopping, session and claim digests were unchanged (`6/6`).
-- Both current and immediate-previous release apps preserved the locked legacy-v1 validation wrapper while personal-recipe-v2 and snapshot-v2 creation flags remained off. Preview, session, claim and personal-v2 idempotency deltas were all `0` for both releases. Production, staging and remote application writes were `0`.
+- Both current and immediate-previous release apps preserved the locked legacy-v1 validation wrapper while personal-recipe-v2 and snapshot-v2 creation flags remained off. Private manual personal-recipe rows, distinct personal-recipe owners, preview/session/claim deltas and personal-v2 idempotency deltas were independently `0` for both releases. Production, staging and remote application writes were `0`.
 - The current local integration test passed `1/1`; the exact-head command-line collector and independent report verifier also passed. This closes the missing two-owner non-disclosure and current/immediate-previous compatibility fixture gaps without claiming server-production evidence or capability activation.
 
 ## Exact privileged-client inventory alignment
 
-- Future propagation preview/PATCH now use the dedicated `createRecipeFuturePropagationInternalClient`; they no longer appear in the generic service-role inventory. The exact generic verified-session count is therefore `7`, the public generic count is `0`, and violations remain `0`.
+- Future propagation preview/PATCH now use the dedicated `createRecipeFuturePropagationInternalClient`; they no longer appear in the generic service-role inventory. The exact generic verified-session count is therefore `7` and the public generic count is `0`. A separate fail-closed internal-operation inventory counts the dedicated factory at exactly the preview and recipe routes; generic and scoped-internal violations both remain `0`.
 - RED was observed in the full suite where the old `8`-entry hybrid expectation and route mock remained locked. The verifier, generated inventory and tests were updated together; focused authority/security tests passed `31/31`.
+- Fresh independent code review then found that the scoped client was not yet represented in the separate exact internal-operation inventory and that `personal_entry_count` duplicated the idempotency query instead of measuring domain rows. Two focused RED failures were recorded. The internal allowlist/generated artifact now counts both scoped route calls, and the release collector reads private manual recipe rows/distinct owners independently from the one personal idempotency query. Focused tests passed `46/46`; the real isolated local integration passed `1/1` in `103.55s`; the final exact-head collector/verifier passed again.
 - Fresh `pnpm verify:backend` passed lint, typecheck, product tests `209 files / 2,604 pass / 140 intended skip`, production build and security Playwright `12/12`. Fresh full Vitest passed `504 files / 5,151 tests` with `28 files / 320 tests` intentionally skipped.
 - The composite PostgreSQL fresh/replay runner passed predecessor `15 pass / 1 intended skip` then `16/16`, #7 `10/10` twice, and active full-local inventory `31 pass / 17 intended skip` twice on the active ordered migration chain.
 
 ## Explicit pending gates
 
-- Draft PR #1278 has not yet run GitHub checks for code evidence head `21b9c9e74f8f3a6e133837e7e57d49c8377fa76d`; prior-head CI is not reused as current-head evidence.
+- Draft PR #1278 has not yet run GitHub checks for code evidence head `1a1d38b9a9675ba66e68ea713c24e37df0683150`; prior-head CI is not reused as current-head evidence. A prior policy failure was commit-title format only; all affected subjects now use Conventional Commits while preserving their Lore bodies and TDD order.
 - Formal Stage 3 must run in a different Codex task ID; this Stage 2 task cannot self-approve or merge.
 - A slice-named browser E2E spec does not yet exist; the grep returns “No tests found” and is not claimed green. Stage 4 owns component/E2E/design evidence.
 - The real local two-owner fixture proves the denied non-disclosure paths. The broader acceptance row that also requires real-local stale and active-claim paths remains unchecked because those behaviors are currently proven in disposable PostgreSQL rather than through real local Auth/Data calls.
