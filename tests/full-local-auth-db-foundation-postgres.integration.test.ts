@@ -147,6 +147,29 @@ function authSnapshot() {
   return { count, digest };
 }
 
+function buildAuthenticatorSetRoleContractDriftSql() {
+  return `do $membership_drift$
+    begin
+      if current_setting('server_version_num')::integer >= 160000 then
+        execute 'revoke set option for authenticated from authenticator';
+      else
+        execute 'alter role authenticator inherit';
+      end if;
+    end
+    $membership_drift$;`;
+}
+
+describe("full-local PG catalog compatibility helpers", () => {
+  it("builds an authenticator membership drift SQL that works on both PG15 and PG16+", () => {
+    const sql = buildAuthenticatorSetRoleContractDriftSql();
+    expect(sql).toMatch(/server_version_num/i);
+    expect(sql).toMatch(/alter role authenticator inherit/i);
+    expect(sql).toContain(
+      "revoke set option for authenticated from authenticator",
+    );
+  });
+});
+
 run("full-local Auth isolated PostgreSQL foundation", () => {
   beforeAll(() => {
     expect(host).not.toBe("");
@@ -1210,7 +1233,7 @@ activeInventoryRun("active full-local snapshot security inventory", () => {
     ],
     [
       "authenticator SET ROLE contract",
-      "revoke set option for authenticated from authenticator;",
+      buildAuthenticatorSetRoleContractDriftSql(),
     ],
     ["FORCE RLS", "alter table public.recipes force row level security;"],
     [

@@ -7,7 +7,7 @@
 - Integrated base-governance repairs: PR `#1279`, merge commit `c4f969fb20b91348b5a94b19e52f277e453475ed`; PR `#1280`, merge commit `53ebcc325665da1d7f0c2c304d4b3e73c0d7612c`.
 - Branch: `feature/be-recipe-content-snapshot-future-propagation`.
 - Draft PR: `#1278`.
-- Current implementation/test head before this final evidence projection: `ea7766fbff2fb9ae894b636336fa6eb4e2537d64`.
+- Current implementation/test head before the final PostgreSQL 15 mutation repair: `dbd4656652432fc9e0ce6da0c09749adafa7dc65`.
 - Production/staging/remote application writes: `0/0/0`.
 - Claude, capability activation, provider mutation and server-production migration were not used.
 
@@ -86,9 +86,17 @@ Command: `pnpm test:recipe-content-snapshot-future-propagation:postgres`
 - The generated full-local inventory SQL executed successfully against the disposable PostgreSQL 15 fixture. Focused verifier tests passed `21/21`; the composite fresh/replay runner again passed predecessor `15 pass / 1 intended skip` then `16/16`, #7 `10/10` twice, and full-local inventory `30 pass / 16 intended skip` twice.
 - Fresh `pnpm verify:backend` passed lint, typecheck, product tests `205 files / 2,591 pass / 139 intended skip`, production build and security Playwright `12/12`; full Vitest passed `499 files / 5,127 tests` with `28 files / 318 tests` intentionally skipped. Source/workflow/workpack/automation/bookkeeping/closeout/branch validators, audit (high/critical `0`, one pre-existing low) and `git diff --check` also passed. The failed other-Mac behavioral matrix is not retroactively claimed green and must rerun on the repaired exact head.
 
+## PostgreSQL 15 membership-drift mutation repair
+
+- The other-Mac rerun at exact head `dbd4656652432fc9e0ce6da0c09749adafa7dc65` proved that the catalog compatibility repair worked, but the active negative test still injected membership drift with PostgreSQL 16+ syntax: `revoke set option for authenticated from authenticator`. PostgreSQL `15.15` therefore stopped the full-local verifier at `29 pass / 1 fail / 16 intended skip` before the behavioral matrix. Production/staging/remote application writes remained `0/0/0`.
+- The mutation helper is now version-gated. PostgreSQL 16+ continues to revoke the per-membership `SET` option; PostgreSQL 15 changes `authenticator` from `NOINHERIT` to `INHERIT`, which violates the same expected `inherit=false` membership contract. The negative security assertion remains active on both versions and is not skipped or weakened.
+- A disposable PostgreSQL `15.18` fixture proved that the fallback changes `authenticator.rolinherit` to `true`. The focused helper test passed `1/1`; the composite fresh/replay runner passed predecessor `15 pass / 1 intended skip` then `16/16`, #7 `10/10` twice, and full-local inventory `31 pass / 16 intended skip` twice.
+- Fresh `pnpm verify:backend` passed lint, typecheck, product tests `205 files / 2,591 pass / 139 intended skip`, production build and security Playwright `12/12`. Full Vitest passed `500 files / 5,128 tests` with `27 files / 318 tests` intentionally skipped.
+- The other-Mac behavioral matrix remains pending and must rerun on the new exact head produced by this repair. No blocked item from the earlier result is claimed green by local inference.
+
 ## Explicit pending gates
 
-- Draft PR #1278 exact implementation head `4eec972ee3e18e3040fbf4c70d056b0fdd86d6fe` had all started GitHub checks terminal green or intended skip before this evidence-only correction.
+- Draft PR #1278 exact head `dbd4656652432fc9e0ce6da0c09749adafa7dc65` had all started GitHub checks terminal green or intended skip before the PostgreSQL 15 membership-drift mutation repair.
 - Formal Stage 3 must run in a different Codex task ID; this Stage 2 task cannot self-approve or merge.
 - A slice-named browser E2E spec does not yet exist; the grep returns “No tests found” and is not claimed green. Stage 4 owns component/E2E/design evidence.
 - Real local Supabase two-owner evidence, merged-exact-SHA server-production/local-rehearsal read-only inventory, Manual Only evidence and #8 R/R+1 compatibility/activation remain pending.
