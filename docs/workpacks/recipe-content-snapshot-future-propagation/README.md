@@ -219,7 +219,7 @@ snapshot_v2 read:
 
 ## Design Status
 
-`pending-review`. Stage 4 implementation screenshots and the independent design critique are present. The first authority precheck requested changes at head `57ddc8ce`; the Stage 4 implementer repaired those findings test-first, but a fresh authority precheck and final product-design-authority approval are still pending, so `confirmed` is forbidden.
+`pending-review`. Stage 4 implementation screenshots and the independent design critique are present. The second authority precheck requested changes at head `3786aa0e`. The implementer closed the response-correlation and visual-evidence findings test-first, but repository inspection found no approved page-readable capability source or owner editor draft/revision projection that the two real page entrypoints can consume. Supplying either would add a new client authority outside the official contract, so `AP-B01` is recorded as a Contract Evolution Candidate instead of inventing a flag. Fresh authority review, Stage 5 and final product-design-authority approval remain pending, so `confirmed` is forbidden.
 
 ## Primary User Path
 

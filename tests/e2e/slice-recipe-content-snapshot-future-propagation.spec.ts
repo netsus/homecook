@@ -4,6 +4,13 @@ import { expect, test, type Page } from "@playwright/test";
 import { installCookingVisualRoutes, installMealDetailRoutes, installRecipeDetailRoutes, MEAL_VISUAL_PATH, RECIPE_PATH, setE2EAuthOverride } from "./helpers/mock-routes";
 
 const evidence = resolve("ui/designs/evidence/recipe-content-snapshot-future-propagation");
+const immutableSnapshotRecipe = {
+  id: "recipe-qa",
+  title: "고정된 김치찌개",
+  cooking_servings: 2,
+  ingredients: [{ ingredient_id: "ingredient-kimchi", standard_name: "김치", amount: 200, unit: "g", display_text: "김치 200g", ingredient_type: "QUANT", scalable: true }],
+  steps: [{ step_number: 1, instruction: "김치를 냄비에 넣고 10분간 끓여요.", cooking_method: { code: "BOIL", label: "끓이기", color_key: "orange" }, ingredients_used: [], heat_level: "medium", duration_seconds: 600, duration_text: "10분" }],
+};
 async function capture(page: Page, width: 390 | 320, name: string) {
   await page.setViewportSize({ width, height: width === 390 ? 844 : 568 });
   const path = resolve(evidence, name);
@@ -74,10 +81,14 @@ test.describe("recipe-content-snapshot-future-propagation", () => {
     await expect(cook).toBeVisible();
     await cook.click();
     await expect(cook).toBeDisabled();
+    await expect(page.getByText("요리 세션 생성 중…")).toBeVisible();
     await expect(page).toHaveURL(new RegExp("/planner/"));
     await capture(page, 390, "PLANNER_WEEK-start-mobile-default.png");
     release();
     await expect(page).toHaveURL(/\/cooking\/sessions\/cook-session-visual\/cook-mode/);
+    await expect(page.getByTestId("cook-mode-whole-board")).toBeVisible();
+    await expect(page.getByTestId("snapshot-v2-cook-mode")).toHaveCount(0);
+    await capture(page, 390, "COOK_MODE-dispatch-legacy-success-mobile-default.png");
   });
 
   test("keeps the narrow planner CTA reachable and shows start errors in place", async ({ page }) => {
@@ -94,12 +105,23 @@ test.describe("recipe-content-snapshot-future-propagation", () => {
   });
 
   test("reads snapshot_v2 through its isolated route", async ({ page }) => {
-    await page.route("**/api/v1/cooking/session-attempts/*/cook-mode", async (route) => route.fulfill({ json: { success: true, data: { session_id: "snapshot-qa", contract_version: "snapshot_v2", mode: "planner", status: "completed", recipe: { id: "recipe-qa", title: "고정된 김치찌개", cooking_servings: 2, ingredients: [], steps: [] }, pantry_candidates: [] }, error: null } }));
+    await page.route("**/api/v1/cooking/session-attempts/*/cook-mode", async (route) => route.fulfill({ json: { success: true, data: { session_id: "snapshot-qa", contract_version: "snapshot_v2", mode: "planner", status: "completed", recipe: immutableSnapshotRecipe, pantry_candidates: [] }, error: null } }));
     await page.goto("/cooking/session-attempts/snapshot-qa/cook-mode");
     await expect(page.getByText("완료된 요리 기록이에요")).toBeVisible();
+    await expect(page.getByTestId("cook-mode-ingredient-ingredient-kimchi").getByText("김치", { exact: true })).toBeVisible();
+    await expect(page.getByText("김치를 냄비에 넣고 10분간 끓여요.")).toBeVisible();
     await expect(page.getByRole("button", { name: "요리 완료" })).toHaveCount(0);
     await capture(page, 390, "COOK_MODE-dispatch-mobile-default.png");
     await capture(page, 320, "COOK_MODE-dispatch-mobile-narrow.png");
+  });
+
+  test("distinguishes a successful snapshot-v2 dispatch from legacy cook mode", async ({ page }) => {
+    await page.route("**/api/v1/cooking/session-attempts/*/cook-mode", async (route) => route.fulfill({ json: { success: true, data: { session_id: "snapshot-active", contract_version: "snapshot_v2", mode: "standalone", status: "in_progress", recipe: immutableSnapshotRecipe, pantry_candidates: [] }, error: null } }));
+    await page.goto("/cooking/session-attempts/snapshot-active/cook-mode");
+    await expect(page.getByTestId("snapshot-v2-cook-mode")).toBeVisible();
+    await expect(page.getByText("2인분 · 고정된 레시피")).toBeVisible();
+    await expect(page.getByRole("button", { name: "취소" })).toBeVisible();
+    await capture(page, 390, "COOK_MODE-dispatch-snapshot-success-mobile-default.png");
   });
 
   test("fails closed for snapshot-v2 loading and read errors while creation remains off", async ({ page }) => {
@@ -111,6 +133,7 @@ test.describe("recipe-content-snapshot-future-propagation", () => {
     });
     await page.goto("/cooking/session-attempts/snapshot-qa/cook-mode");
     await expect(page.getByRole("status")).toContainText("고정된 레시피를 불러오고 있어요");
+    await expect(page.getByTestId("snapshot-v2-cook-mode-loading").locator(".cook-whole-board-mobile")).toBeVisible();
     await capture(page, 390, "COOK_MODE-dispatch-loading-mobile-default.png");
     release();
     await expect(page.locator("main[role='alert']")).toContainText("요리 기록을 불러오지 못했어요");

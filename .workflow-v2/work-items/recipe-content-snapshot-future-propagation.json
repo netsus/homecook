@@ -143,7 +143,7 @@
   },
   "status": {
     "lifecycle": "in_progress",
-    "approval_state": "dual_approved",
+    "approval_state": "needs_revision",
     "verification_status": "pending",
     "evaluation_status": "not_started",
     "evaluation_round": 0,
@@ -163,5 +163,5 @@
     "Unapproved server-production migration or database write or capability activation"
   ],
   "open_questions": [],
-  "notes": "Stage 1 PR #1081 and Stage 2/3 backend runtime are merged; retained backend evidence remains authoritative for those stages. Stage 4 Draft PR #1281 first reached head 57ddc8ce with local/CI checks green, then independent authority-precheck task 019fc82b-e1e9-7010-80c7-a3845ab2f42a returned REQUEST_CHANGES. The same frontend implementer repaired AP-B01/AP-M01/AP-M02/AP-M03/AP-M04/AP-m01 test-first in RED fc905983 and GREEN bcb559c5: real dormant recipe preview/PATCH and planner/standalone v2 start consumers, cancel key reuse, exact start success validation, visible dialog title, exact viewport evidence and current Stage 4 bookkeeping. Fresh authority precheck, Stage 5/final authority, Stage 6, real-local stale/active-claim paths, merged-exact server-production evidence and Manual Only remain pending. Lifecycle and verification therefore stay in_progress/pending, Design Status stays pending-review, personal writes/v2 creation stay dark, and #8 retains exact-pantry completion plus the R/R+1 gate before R+2 activation."
+  "notes": "Stage 1 PR #1081 and Stage 2/3 backend runtime are merged and remain authoritative for those stages. Stage 4 Draft PR #1281 second authority-precheck task 019fc850-46de-7a42-bbf6-c58c3dccd57a reviewed head 3786aa0e and returned REQUEST_CHANGES. The frontend implementer closed response-correlation, pending/loading/terminal evidence and duplicate-CTA findings test-first in RED ce4b12eb and GREEN b0f67e7f, with snapshot contrast RED/GREEN 7bd5a3f4/2d030379. AP-B01 remains a Contract Evolution Candidate: neither real page entrypoint has an approved page-readable projection of the DB-local snapshot creation capability or an official owner editor draft/base-revision context, and inventing either is forbidden. Approval therefore stays needs_revision, lifecycle/verification stay in_progress/pending, and Design Status stays pending-review. Fresh authority review, Stage 5/final authority, Stage 6, real-local stale/active-claim paths, merged-exact server-Mac evidence and Manual Only remain pending. Personal writes/v2 creation stay dark; #8 retains exact-pantry completion and R/R+1 before R+2 activation."
 }

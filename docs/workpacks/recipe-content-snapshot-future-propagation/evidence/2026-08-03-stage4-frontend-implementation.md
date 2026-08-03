@@ -68,3 +68,39 @@
 - Exploratory QA: score `95`, coverage-sensitive threshold `85`, evidence validation passed. The blocked share is the explicitly pending authority, real-data, server-Mac and Manual Only boundary.
 - `validate:source-of-truth-sync`, `validate:workflow-v2`, `validate:workpack`, `validate-automation-spec`, `validate:omo-bookkeeping` and `git diff --check`: passed.
 - No capability flag, migration, remote application, production/staging data or deployment was changed.
+
+## Second authority precheck repair — 2026-08-04
+
+- Review task: `019fc850-46de-7a42-bbf6-c58c3dccd57a`
+- Reviewed head: `3786aa0e2720c4d8ec00acf57309213385a1796d`
+- Verdict: `REQUEST_CHANGES` (`AP-B01` blocker, `AP-M02`/`AP-M03` major, `AP-m01` minor; prior `AP-M01` and `AP-M04` remain closed)
+- Repair RED: `ce4b12eb` — five expected failures exposed response/request mismatch acceptance, missing pending copy, non-whole-board snapshot loading and duplicate standalone CTA behavior while 111 existing assertions passed.
+- Repair GREEN: `b0f67e7f` — focused 4 files / 116 tests and related 9 files / 145 tests passed; start validation now correlates mode, recipe and servings to the request, planner exposes pending feedback, and standalone v2 replaces the existing CTA in place.
+- Visual RED/GREEN: `7bd5a3f4` / `2d030379` — the immutable snapshot reader was missing the shared whole-board surface; the focused test failed 1/3 before the repair and passed 3/3 after it.
+
+### Finding disposition
+
+- `AP-B01` — **Contract Evolution Candidate / BLOCKED**: `app/recipe/[id]/page.tsx` and `app/planner/[date]/[columnId]/page.tsx` have no approved server/config projection for the DB-local `homecook.snapshot_v2_creation` capability and no official owner editor draft/base-revision context. The repository's only creation switch is read inside the protected DB function. The component integration now replaces the legacy CTA in place when an approved context is supplied, so duplicate CTA count is zero, but connecting the real page entrypoints would require a new client-readable authority or editor contract. No flag, API, field or QA query parameter was invented.
+- `AP-M02` — closed locally: snapshot-v2 start success is rejected with existing `INVALID_RESPONSE` unless response mode equals request mode; standalone response recipe ID and servings must also equal the request. Component tests keep the current screen and navigation count zero on mismatch.
+- `AP-M03` — closed locally: planner pending has visible `요리 세션 생성 중…` feedback; loading preserves whole-board geometry; terminal and in-progress fixtures retain one realistic ingredient and step; legacy and snapshot success have distinct DOM assertions and auxiliary captures. Required images remain exact viewport-only `390×844` / `320×568` captures.
+- `AP-m01` — synchronized to frontend Draft PR `#1281`, Design Status `pending-review` and the repaired Stage 4 state. Manual Only, server-Mac evidence, Stage 5, final authority, Stage 6 and activation remain pending.
+
+### Second repair visual evidence
+
+- Required: `RECIPE_DETAIL-impact-mobile-default.png`, `RECIPE_DETAIL-impact-mobile-narrow.png`, `PLANNER_WEEK-start-mobile-default.png`, `PLANNER_WEEK-start-mobile-narrow.png`, `COOK_MODE-dispatch-mobile-default.png`, `COOK_MODE-dispatch-mobile-narrow.png`.
+- Auxiliary: `COOK_MODE-dispatch-loading-mobile-default.png`, `COOK_MODE-dispatch-error-mobile-narrow.png`, `COOK_MODE-dispatch-legacy-success-mobile-default.png`, `COOK_MODE-dispatch-snapshot-success-mobile-default.png`.
+- Slice Playwright: `7 passed / 7 intended non-target-project skips`; captures use `fullPage: false` and preserve 390px/320px overflow, focus and first-viewport action contracts.
+
+### Second repair verification
+
+- `pnpm verify:frontend:pr`: passed; product Vitest `213 files passed / 11 skipped`, `2620 passed / 148 skipped`; production build passed; smoke `59 passed / 10 intended skips`; core a11y `8 passed / 1 intended skip`; core visual `12 passed`.
+- Full Playwright: a11y `18 passed / 15 intended skips`; visual `23 passed / 22 intended skips`; security `12 passed`.
+- Exploratory QA: score `95`, threshold `85`; exploratory evidence validation passed with authority, real-data, server-Mac and Manual Only cases explicitly blocked.
+- Source-of-truth, workflow-v2, workpack, automation-spec, OMO bookkeeping and closeout-sync validators passed; `git diff --check` passed.
+- Full visual tests regenerated unrelated slice evidence as a side effect; those unrelated files were restored exactly, leaving only this workpack's captures changed.
+
+### Remaining boundary
+
+- Repair verdict is `BLOCKED` only on the missing approved entrypoint capability/editor projection. The independent authority reviewer must decide whether to open contract evolution; this implementation task cannot authorize it.
+- Existing seeded snapshot-v2 read/cancel drain remains available with creation off. No capability was activated.
+- Broader real Auth/Data stale/active-claim evidence, merged-exact server-Mac read-only evidence, Manual Only, #8 exact-pantry completion and R/R+1 before R+2 activation remain pending.
