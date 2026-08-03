@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const createRouteHandlerClient = vi.fn();
 const createServiceRoleClient = vi.fn();
+const createFutureMealWriteInternalClient = vi.fn();
 const ensurePublicUserRow = vi.fn();
 const ensureUserBootstrapState = vi.fn();
 const formatBootstrapErrorMessage = vi.fn((error: unknown, fallbackMessage: string) => {
@@ -18,6 +19,7 @@ const readVerifiedAccountGenerationSession = vi.fn();
 vi.mock("@/lib/supabase/server", () => ({
   createRouteHandlerClient,
   createServiceRoleClient,
+  createFutureMealWriteInternalClient,
 }));
 
 vi.mock("@/lib/server/user-bootstrap", () => ({
@@ -119,6 +121,10 @@ describe("08a meal add search backend target", () => {
     vi.resetModules();
     createRouteHandlerClient.mockReset();
     createServiceRoleClient.mockReset();
+    createFutureMealWriteInternalClient.mockReset();
+    createFutureMealWriteInternalClient.mockImplementation(
+      () => createServiceRoleClient(),
+    );
     ensurePublicUserRow.mockReset();
     ensureUserBootstrapState.mockReset();
     formatBootstrapErrorMessage.mockClear();
@@ -250,7 +256,8 @@ describe("08a meal add search backend target", () => {
         throw new Error(`unexpected table: ${table}`);
       }),
     });
-    createServiceRoleClient.mockReturnValue({ rpc });
+    const client = { rpc };
+    createServiceRoleClient.mockReturnValue(client);
 
     const { POST } = await import("@/app/api/v1/meals/route");
     const response = await POST(

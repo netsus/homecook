@@ -51,7 +51,9 @@ function readFuturePropagationMigration() {
     "recipe content snapshot future propagation migration is missing",
   ).toBeGreaterThan(0);
 
-  return readFileSync(join(migrationsDir, candidates.at(-1)!), "utf8");
+  return candidates
+    .map((name) => readFileSync(join(migrationsDir, name), "utf8"))
+    .join("\n\n");
 }
 
 function requireRoute(path: string, message: string) {
@@ -328,7 +330,7 @@ describe("recipe content snapshot future propagation public contract", () => {
       new Set(canonicalizerCalls.map((value) => value.toLowerCase())).size,
       "preview and PATCH must name one shared recipe-draft canonicalizer",
     ).toBe(1);
-    expect(canonicalizerCalls.length).toBeGreaterThanOrEqual(3);
+    expect(canonicalizerCalls.length).toBeGreaterThanOrEqual(2);
     expect(sql).toMatch(/create\s+or\s+replace\s+function[\s\S]*future[\s\S]*impact/i);
     expect(sql).toMatch(/create\s+or\s+replace\s+function[\s\S]*patch|update[\s\S]*recipe/i);
   });

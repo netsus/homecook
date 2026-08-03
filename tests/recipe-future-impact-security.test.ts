@@ -44,7 +44,9 @@ function readFuturePropagationMigration() {
     candidates.length,
     "recipe content snapshot future propagation migration is missing",
   ).toBeGreaterThan(0);
-  return readFileSync(join(migrationsDir, candidates.at(-1)!), "utf8");
+  return candidates
+    .map((name) => readFileSync(join(migrationsDir, name), "utf8"))
+    .join("\n\n");
 }
 
 function requireRoute(path: string, message: string) {

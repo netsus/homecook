@@ -12,6 +12,7 @@ import { createShoppingList, fetchShoppingPreview, isShoppingApiError } from "@/
 const recordUserGrowthActivityEvent = vi.hoisted(() => vi.fn());
 const createRouteHandlerClient = vi.fn();
 const createServiceRoleClient = vi.fn();
+const createShoppingCreateInternalClient = vi.fn();
 const ensurePublicUserRow = vi.fn();
 const ensureUserBootstrapState = vi.fn();
 const formatBootstrapErrorMessage = vi.fn((error: unknown, fallbackMessage: string) => {
@@ -26,13 +27,16 @@ const readVerifiedAccountGenerationSession = vi.hoisted(() => vi.fn());
 vi.mock("@/lib/supabase/server", () => ({
   createRouteHandlerClient: async (...args: unknown[]) => {
     const routeClient = await createRouteHandlerClient(...args);
-    const createDataClient = createServiceRoleClient.getMockImplementation();
+    const createDataClient =
+      createShoppingCreateInternalClient.getMockImplementation()
+      ?? createServiceRoleClient.getMockImplementation();
     const dataClient = createDataClient?.();
     return dataClient
       ? { ...routeClient, ...dataClient, auth: routeClient.auth }
       : routeClient;
   },
   createServiceRoleClient,
+  createShoppingCreateInternalClient,
 }));
 
 vi.mock("@/lib/server/user-bootstrap", () => ({
@@ -150,11 +154,12 @@ describe("shopping stage2 backend", () => {
     vi.resetModules();
     createRouteHandlerClient.mockReset();
     createServiceRoleClient.mockReset();
+    createShoppingCreateInternalClient.mockReset();
     readVerifiedAccountGenerationSession.mockReset();
     ensurePublicUserRow.mockReset();
     ensureUserBootstrapState.mockReset();
     formatBootstrapErrorMessage.mockClear();
-    createServiceRoleClient.mockReturnValue({
+    const defaultClient = {
       rpc: vi.fn(async (_name: string, args: Record<string, unknown>) => ({
         data: args.p_complete_without_list
           ? {
@@ -187,7 +192,11 @@ describe("shopping stage2 backend", () => {
             },
         error: null,
       })),
-    });
+    };
+    createServiceRoleClient.mockReturnValue(defaultClient);
+    createShoppingCreateInternalClient.mockImplementation(
+      () => createServiceRoleClient(),
+    );
     ensurePublicUserRow.mockResolvedValue({});
     ensureUserBootstrapState.mockResolvedValue(undefined);
     readVerifiedAccountGenerationSession.mockResolvedValue({

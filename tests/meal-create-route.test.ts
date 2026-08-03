@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const createRouteHandlerClient = vi.fn();
 const createServiceRoleClient = vi.fn();
+const createFutureMealWriteInternalClient = vi.fn();
 const ensurePublicUserRow = vi.fn();
 const ensureUserBootstrapState = vi.fn();
 const formatBootstrapErrorMessage = vi.fn((error: unknown, fallbackMessage: string) => {
@@ -17,6 +18,7 @@ const readVerifiedAccountGenerationSession = vi.fn();
 vi.mock("@/lib/supabase/server", () => ({
   createRouteHandlerClient,
   createServiceRoleClient,
+  createFutureMealWriteInternalClient,
 }));
 
 vi.mock("@/lib/server/user-bootstrap", () => ({
@@ -180,12 +182,16 @@ describe("POST /api/v1/meals", () => {
     vi.resetModules();
     createRouteHandlerClient.mockReset();
     createServiceRoleClient.mockReset();
+    createFutureMealWriteInternalClient.mockReset();
     ensurePublicUserRow.mockReset();
     ensureUserBootstrapState.mockReset();
     formatBootstrapErrorMessage.mockClear();
     createQaFixtureMeal.mockReset();
     readVerifiedAccountGenerationSession.mockReset();
     createServiceRoleClient.mockReturnValue(null);
+    createFutureMealWriteInternalClient.mockImplementation(
+      () => createServiceRoleClient(),
+    );
     ensurePublicUserRow.mockResolvedValue({});
     ensureUserBootstrapState.mockResolvedValue(undefined);
     readVerifiedAccountGenerationSession.mockResolvedValue({
@@ -198,7 +204,7 @@ describe("POST /api/v1/meals", () => {
         hmacKeyVersion: 1,
       },
     });
-    createServiceRoleClient.mockReturnValue({
+    const defaultClient = {
       rpc: vi.fn(async (_name: string, args: Record<string, unknown>) => ({
         data: {
           id: "550e8400-e29b-41d4-a716-446655440901",
@@ -213,7 +219,8 @@ describe("POST /api/v1/meals", () => {
         },
         error: null,
       })),
-    });
+    };
+    createServiceRoleClient.mockReturnValue(defaultClient);
     delete process.env.HOMECOOK_ENABLE_QA_FIXTURES;
   });
 
@@ -352,14 +359,15 @@ describe("POST /api/v1/meals", () => {
         throw new Error(`unexpected route table: ${table}`);
       }),
     });
-    createServiceRoleClient.mockReturnValue({
+    const serviceClient = {
       from: vi.fn((table: string) => {
         if (table === "recipes") return serviceRecipesTable;
         if (table === "meal_plan_columns") return mealPlanColumnsTable;
         if (table === "meals") return mealsTable;
         throw new Error(`unexpected service table: ${table}`);
       }),
-    });
+    };
+    createServiceRoleClient.mockReturnValue(serviceClient);
 
     const { POST } = await importRoute();
     const response = await POST(new Request("http://localhost:3000/api/v1/meals", {
@@ -536,7 +544,7 @@ describe("POST /api/v1/meals", () => {
         throw new Error(`unexpected table: ${table}`);
       }),
     });
-    createServiceRoleClient.mockReturnValue({
+    const finalClient = {
       rpc: vi.fn(async () => ({
         data: {
           id: "550e8400-e29b-41d4-a716-446655440902",
@@ -551,7 +559,8 @@ describe("POST /api/v1/meals", () => {
         },
         error: null,
       })),
-    });
+    };
+    createServiceRoleClient.mockReturnValue(finalClient);
 
     const { POST } = await importRoute();
     const response = await POST(new Request("http://localhost:3000/api/v1/meals", {

@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const createRouteHandlerClient = vi.fn();
 const createServiceRoleClient = vi.fn();
+const createFutureMealWriteInternalClient = vi.fn();
 const ensurePublicUserRow = vi.fn();
 const ensureUserBootstrapState = vi.fn();
 const awardUserProgressEvent = vi.fn();
@@ -11,6 +12,7 @@ const readVerifiedAccountGenerationSession = vi.fn();
 vi.mock("@/lib/supabase/server", () => ({
   createRouteHandlerClient,
   createServiceRoleClient,
+  createFutureMealWriteInternalClient,
 }));
 
 vi.mock("@/lib/server/user-bootstrap", () => ({
@@ -83,6 +85,10 @@ describe("planner registered progress source", () => {
     vi.resetModules();
     createRouteHandlerClient.mockReset();
     createServiceRoleClient.mockReset();
+    createFutureMealWriteInternalClient.mockReset();
+    createFutureMealWriteInternalClient.mockImplementation(
+      () => createServiceRoleClient(),
+    );
     ensurePublicUserRow.mockReset().mockResolvedValue({});
     ensureUserBootstrapState.mockReset().mockResolvedValue(undefined);
     awardUserProgressEvent.mockReset().mockResolvedValue({ awarded: true, error: null });

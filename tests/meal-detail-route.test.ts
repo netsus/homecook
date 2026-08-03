@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const createRouteHandlerClient = vi.fn();
 const createServiceRoleClient = vi.fn();
+const createFutureMealWriteInternalClient = vi.fn();
 const ensurePublicUserRow = vi.fn();
 const ensureUserBootstrapState = vi.fn();
 const formatBootstrapErrorMessage = vi.fn((error: unknown, fallbackMessage: string) => {
@@ -16,6 +17,7 @@ const readVerifiedAccountGenerationSession = vi.fn();
 vi.mock("@/lib/supabase/server", () => ({
   createRouteHandlerClient,
   createServiceRoleClient,
+  createFutureMealWriteInternalClient,
 }));
 
 vi.mock("@/lib/server/user-bootstrap", () => ({
@@ -94,6 +96,7 @@ describe("/api/v1/meals/[meal_id]", () => {
     vi.resetModules();
     createRouteHandlerClient.mockReset();
     createServiceRoleClient.mockReset();
+    createFutureMealWriteInternalClient.mockReset();
     readVerifiedAccountGenerationSession.mockReset();
     ensurePublicUserRow.mockReset();
     ensureUserBootstrapState.mockReset();
@@ -110,6 +113,9 @@ describe("/api/v1/meals/[meal_id]", () => {
         error: null,
       })),
     });
+    createFutureMealWriteInternalClient.mockImplementation(
+      () => createServiceRoleClient(),
+    );
     ensurePublicUserRow.mockResolvedValue({});
     ensureUserBootstrapState.mockResolvedValue(undefined);
     readVerifiedAccountGenerationSession.mockResolvedValue({

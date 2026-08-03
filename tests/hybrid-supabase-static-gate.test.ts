@@ -68,9 +68,39 @@ describe("hybrid authority AST/static gate", () => {
         functionName: "enforceAdminRouteAccess",
       },
       {
+        factory: "createSnapshotV2SessionInternalClient",
+        file: "app/api/v1/cooking/session-attempts/[id]/cancel/route.ts",
+        functionName: "POST",
+      },
+      {
+        factory: "createSnapshotV2SessionInternalClient",
+        file: "app/api/v1/cooking/session-attempts/[id]/cook-mode/route.ts",
+        functionName: "GET",
+      },
+      {
+        factory: "createSnapshotV2SessionInternalClient",
+        file: "app/api/v1/cooking/session-attempts/route.ts",
+        functionName: "POST",
+      },
+      {
         factory: "createNotFoundFeedbackInternalClient",
         file: "app/api/v1/feedback/404/route.ts",
         functionName: "POST",
+      },
+      {
+        factory: "createFutureMealWriteInternalClient",
+        file: "app/api/v1/meals/[meal_id]/route.ts",
+        functionName: "PATCH",
+      },
+      {
+        factory: "createFutureMealWriteInternalClient",
+        file: "app/api/v1/meals/[meal_id]/route.ts",
+        functionName: "DELETE",
+      },
+      {
+        factory: "createFutureMealWriteInternalClient",
+        file: "app/api/v1/meals/route.ts",
+        functionName: "postMeals",
       },
       {
         factory: "createRecipeFuturePropagationInternalClient",
@@ -95,6 +125,11 @@ describe("hybrid authority AST/static gate", () => {
       {
         factory: "createRecipeImageInternalClient",
         file: "app/api/v1/recipes/images/route.ts",
+        functionName: "POST",
+      },
+      {
+        factory: "createShoppingCreateInternalClient",
+        file: "app/api/v1/shopping/lists/route.ts",
         functionName: "POST",
       },
       {

@@ -18,6 +18,18 @@
       "app/api/v1/recipes/[id]/future-plan-impact/route.ts",
       "app/api/v1/recipes/[id]/route.ts"
     ],
+    "createSnapshotV2SessionInternalClient": [
+      "app/api/v1/cooking/session-attempts/[id]/cancel/route.ts",
+      "app/api/v1/cooking/session-attempts/[id]/cook-mode/route.ts",
+      "app/api/v1/cooking/session-attempts/route.ts"
+    ],
+    "createFutureMealWriteInternalClient": [
+      "app/api/v1/meals/[meal_id]/route.ts",
+      "app/api/v1/meals/route.ts"
+    ],
+    "createShoppingCreateInternalClient": [
+      "app/api/v1/shopping/lists/route.ts"
+    ],
     "createOperationalEventInternalClient": [
       "lib/server/admin-events.ts"
     ],
@@ -49,6 +61,31 @@
         "DELETE",
         "PATCH"
       ]
+    },
+    "createSnapshotV2SessionInternalClient": {
+      "app/api/v1/cooking/session-attempts/route.ts": [
+        "POST"
+      ],
+      "app/api/v1/cooking/session-attempts/[id]/cook-mode/route.ts": [
+        "GET"
+      ],
+      "app/api/v1/cooking/session-attempts/[id]/cancel/route.ts": [
+        "POST"
+      ]
+    },
+    "createFutureMealWriteInternalClient": {
+      "app/api/v1/meals/route.ts": [
+        "postMeals"
+      ],
+      "app/api/v1/meals/[meal_id]/route.ts": [
+        "DELETE",
+        "PATCH"
+      ]
+    },
+    "createShoppingCreateInternalClient": {
+      "app/api/v1/shopping/lists/route.ts": [
+        "POST"
+      ]
     }
   },
   "internal_operation_entries": [
@@ -63,6 +100,36 @@
       "kind": "internal-operation-call"
     },
     {
+      "classification": "user",
+      "file": "app/api/v1/cooking/session-attempts/[id]/cancel/route.ts",
+      "column": 25,
+      "line": 47,
+      "allowed": true,
+      "factory": "createSnapshotV2SessionInternalClient",
+      "functionName": "POST",
+      "kind": "internal-operation-call"
+    },
+    {
+      "classification": "user",
+      "file": "app/api/v1/cooking/session-attempts/[id]/cook-mode/route.ts",
+      "column": 25,
+      "line": 41,
+      "allowed": true,
+      "factory": "createSnapshotV2SessionInternalClient",
+      "functionName": "GET",
+      "kind": "internal-operation-call"
+    },
+    {
+      "classification": "user",
+      "file": "app/api/v1/cooking/session-attempts/route.ts",
+      "column": 25,
+      "line": 56,
+      "allowed": true,
+      "factory": "createSnapshotV2SessionInternalClient",
+      "functionName": "POST",
+      "kind": "internal-operation-call"
+    },
+    {
       "classification": "public",
       "file": "app/api/v1/feedback/404/route.ts",
       "column": 29,
@@ -70,6 +137,36 @@
       "allowed": true,
       "factory": "createNotFoundFeedbackInternalClient",
       "functionName": "POST",
+      "kind": "internal-operation-call"
+    },
+    {
+      "classification": "user",
+      "file": "app/api/v1/meals/[meal_id]/route.ts",
+      "column": 25,
+      "line": 263,
+      "allowed": true,
+      "factory": "createFutureMealWriteInternalClient",
+      "functionName": "PATCH",
+      "kind": "internal-operation-call"
+    },
+    {
+      "classification": "user",
+      "file": "app/api/v1/meals/[meal_id]/route.ts",
+      "column": 25,
+      "line": 345,
+      "allowed": true,
+      "factory": "createFutureMealWriteInternalClient",
+      "functionName": "DELETE",
+      "kind": "internal-operation-call"
+    },
+    {
+      "classification": "user",
+      "file": "app/api/v1/meals/route.ts",
+      "column": 25,
+      "line": 691,
+      "allowed": true,
+      "factory": "createFutureMealWriteInternalClient",
+      "functionName": "postMeals",
       "kind": "internal-operation-call"
     },
     {
@@ -119,6 +216,16 @@
       "line": 192,
       "allowed": true,
       "factory": "createRecipeImageInternalClient",
+      "functionName": "POST",
+      "kind": "internal-operation-call"
+    },
+    {
+      "classification": "user",
+      "file": "app/api/v1/shopping/lists/route.ts",
+      "column": 25,
+      "line": 1048,
+      "allowed": true,
+      "factory": "createShoppingCreateInternalClient",
       "functionName": "POST",
       "kind": "internal-operation-call"
     },
@@ -280,28 +387,28 @@
       "classification": "user",
       "file": "app/api/v1/meals/[meal_id]/route.ts",
       "column": 25,
-      "line": 260,
+      "line": 263,
       "kind": "service-role-call"
     },
     {
       "classification": "user",
       "file": "app/api/v1/meals/[meal_id]/route.ts",
       "column": 25,
-      "line": 342,
+      "line": 345,
       "kind": "service-role-call"
     },
     {
       "classification": "user",
       "file": "app/api/v1/meals/route.ts",
       "column": 25,
-      "line": 688,
+      "line": 691,
       "kind": "service-role-call"
     },
     {
       "classification": "user",
       "file": "app/api/v1/shopping/lists/route.ts",
       "column": 25,
-      "line": 1045,
+      "line": 1048,
       "kind": "service-role-call"
     }
   ],
