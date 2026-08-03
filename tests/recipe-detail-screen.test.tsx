@@ -29,6 +29,7 @@ const fetchUserProgress = vi.fn();
 const fetchUserGamification = vi.fn();
 const mockRouterPush = vi.fn();
 const mockRouterReplace = vi.fn();
+const createSnapshotV2CookingSession = vi.fn();
 const globalsCss = readFileSync(join(process.cwd(), "app/globals.css"), "utf8");
 const navigationMocks = vi.hoisted(() => ({
   searchParams: vi.fn(() => new URLSearchParams()),
@@ -58,6 +59,10 @@ vi.mock("@/lib/api/planner", () => ({
 vi.mock("@/lib/api/meal", () => ({
   createMeal: (...args: unknown[]) => createMeal(...args),
   isMealApiError: () => false,
+}));
+
+vi.mock("@/lib/api/cooking", () => ({
+  createSnapshotV2CookingSession: (...args: unknown[]) => createSnapshotV2CookingSession(...args),
 }));
 
 vi.mock("@/lib/api/mypage", () => ({
@@ -243,6 +248,7 @@ describe("recipe detail screen", () => {
     fetchUserGamification.mockReset();
     mockRouterPush.mockReset();
     mockRouterReplace.mockReset();
+    createSnapshotV2CookingSession.mockReset();
     navigationMocks.searchParams.mockReset();
     navigationMocks.searchParams.mockReturnValue(new URLSearchParams());
     useAuthGateStore.setState({ isOpen: false, action: null });
@@ -331,6 +337,28 @@ describe("recipe detail screen", () => {
       `/api/v1/recipes/${MOCK_RECIPE_DETAIL.id}`,
     );
   }, 10_000);
+
+  it("replaces the existing standalone CTA in place while snapshot start is pending", async () => {
+    const pending = createDeferred<{
+      session_id: string;
+      contract_version: "snapshot_v2";
+      mode: "standalone";
+      status: "in_progress";
+      content_summary: { recipe_id: string; title: string; cooking_servings: number };
+    }>();
+    createSnapshotV2CookingSession.mockReturnValue(pending.promise);
+
+    render(<RecipeDetailScreen
+      recipeId={MOCK_RECIPE_DETAIL.id}
+      snapshotV2StartContext={{ expectedRecipeRevision: 12 }}
+    />);
+
+    const cookButtons = await screen.findAllByRole("button", { name: "요리하기" });
+    expect(cookButtons).toHaveLength(1);
+    await userEvent.click(cookButtons[0]!);
+    expect(screen.getByRole("button", { name: "요리 세션 생성 중…" })).toBeDisabled();
+    expect(mockRouterPush).not.toHaveBeenCalled();
+  });
 
   it("keeps the selected servings after a nutrition-only retry succeeds", async () => {
     const completeDetail = buildRecipeDetail({ nutrition: buildCompleteNutrition() });

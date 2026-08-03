@@ -41,4 +41,35 @@ describe("snapshot v2 cooking API", () => {
       await expect(createSnapshotV2CookingSession({ mode: "standalone", recipe_id: RECIPE_UUID, expected_recipe_revision: 12, cooking_servings: 2 }, UUID)).rejects.toMatchObject({ code: "INVALID_RESPONSE" });
     }
   });
+
+  it("rejects snapshot start responses that do not match standalone request semantics", async () => {
+    const body = { mode: "standalone" as const, recipe_id: RECIPE_UUID, expected_recipe_revision: 12, cooking_servings: 2 };
+    const valid = { session_id: UUID, contract_version: "snapshot_v2", mode: "standalone", status: "in_progress", content_summary: { recipe_id: RECIPE_UUID, title: "김치찌개", cooking_servings: 2 } };
+    const fetchMock = vi.spyOn(globalThis, "fetch");
+
+    for (const mismatched of [
+      { ...valid, mode: "planner" },
+      { ...valid, content_summary: { ...valid.content_summary, recipe_id: UUID } },
+      { ...valid, content_summary: { ...valid.content_summary, cooking_servings: 3 } },
+    ]) {
+      fetchMock.mockImplementationOnce(() => response(mismatched));
+      await expect(createSnapshotV2CookingSession(body, UUID)).rejects.toMatchObject({ code: "INVALID_RESPONSE" });
+    }
+  });
+
+  it("rejects a planner start response with a different mode", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(() => response({
+      session_id: UUID,
+      contract_version: "snapshot_v2",
+      mode: "standalone",
+      status: "in_progress",
+      content_summary: { recipe_id: RECIPE_UUID, title: "김치찌개", cooking_servings: 2 },
+    }));
+
+    await expect(createSnapshotV2CookingSession({
+      mode: "planner",
+      meal_ids: [UUID],
+      expected_meal_revisions: { [UUID]: 3 },
+    }, UUID)).rejects.toMatchObject({ code: "INVALID_RESPONSE" });
+  });
 });
