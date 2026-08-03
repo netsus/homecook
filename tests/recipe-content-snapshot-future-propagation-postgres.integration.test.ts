@@ -691,6 +691,11 @@ describeIf("recipe content snapshot future propagation PostgreSQL", () => {
     );
     hiddenPublicRecipeId = hiddenCreated.data.id as string;
     psql(`
+      begin;
+      select public.set_account_generation_internal_writer_marker(
+        '${cutoverAttempt}',
+        true
+      );
       update public.recipes
       set visibility = 'public'
       where id = '${hiddenPublicRecipeId}';
@@ -708,6 +713,11 @@ describeIf("recipe content snapshot future propagation PostgreSQL", () => {
       update public.user_account_generation_watermarks
       set last_account_generation = 2
       where owner_uuid = '${hiddenOwner}';
+      select public.set_account_generation_internal_writer_marker(
+        '${cutoverAttempt}',
+        false
+      );
+      commit;
     `);
 
     psql(`

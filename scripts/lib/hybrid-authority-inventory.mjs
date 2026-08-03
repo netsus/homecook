@@ -143,7 +143,7 @@ const INTERNAL_OPERATION_FUNCTION_ALLOWLIST = new Map([
     new Map([
       [
         "app/api/v1/meals/route.ts",
-        new Set(["POST"]),
+        new Set(["postMeals"]),
       ],
       [
         "app/api/v1/meals/[meal_id]/route.ts",
@@ -183,7 +183,12 @@ const BROWSER_CLIENT_FACTORY_NAMES = new Set([
   "createClient",
   "getSupabaseBrowserClient",
 ]);
-const SERVICE_ROLE_FACTORY_NAMES = new Set(["createServiceRoleClient"]);
+const SERVICE_ROLE_FACTORY_NAMES = new Set([
+  "createServiceRoleClient",
+  "createFutureMealWriteInternalClient",
+  "createShoppingCreateInternalClient",
+  "createSnapshotV2SessionInternalClient",
+]);
 const REST_MUTATION_METHODS = new Set(["DELETE", "PATCH", "POST", "PUT"]);
 
 function normalizePath(filePath) {
@@ -346,7 +351,7 @@ function importedBindingName(specifier) {
 function collectImportBindings(sourceFile) {
   const browserClientFactories = new Set(["getSupabaseBrowserClient"]);
   const browserClientNamespaces = new Set();
-  const serviceRoleFactories = new Set(["createServiceRoleClient"]);
+  const serviceRoleFactories = new Set(SERVICE_ROLE_FACTORY_NAMES);
   const serviceRoleNamespaces = new Set();
 
   for (const statement of sourceFile.statements) {
@@ -372,7 +377,7 @@ function collectImportBindings(sourceFile) {
       ) {
         browserClientFactories.add(specifier.name.text);
       }
-      if (isServerModule && importedName === "createServiceRoleClient") {
+      if (isServerModule && SERVICE_ROLE_FACTORY_NAMES.has(importedName)) {
         serviceRoleFactories.add(specifier.name.text);
       }
     }
