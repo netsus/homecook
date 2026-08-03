@@ -70,6 +70,14 @@ describe("hybrid authority AST/static gate", () => {
         file: "app/api/v1/feedback/404/route.ts",
       },
       {
+        factory: "createRecipeFuturePropagationInternalClient",
+        file: "app/api/v1/recipes/[id]/future-plan-impact/route.ts",
+      },
+      {
+        factory: "createRecipeFuturePropagationInternalClient",
+        file: "app/api/v1/recipes/[id]/route.ts",
+      },
+      {
         factory: "createRecipeImageInternalClient",
         file: "app/api/v1/recipes/images/[image_object_id]/cancel/route.ts",
       },

@@ -1,4 +1,4 @@
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
@@ -81,6 +81,26 @@ const validReleaseMatrix = {
 };
 
 describe("recipe content snapshot future propagation release fixture contract", () => {
+  it("counts personal recipe domain rows independently from idempotency receipts", () => {
+    const adapterSource = readFileSync(
+      "scripts/lib/recipe-content-snapshot-future-propagation-full-local-adapter.mjs",
+      "utf8",
+    );
+    const start = adapterSource.indexOf("function readFlagOffMutationState");
+    const end = adapterSource.indexOf("async function readLegacyV1Shape", start);
+    const inventorySource = adapterSource.slice(start, end);
+
+    expect(inventorySource).toMatch(
+      /count\(\*\) from public\.recipes as recipe[\s\S]+recipe\.visibility = 'private'/u,
+    );
+    expect(inventorySource).toMatch(
+      /count\(distinct recipe\.created_by\) from public\.recipes as recipe/u,
+    );
+    expect(
+      inventorySource.match(/operation_scope like 'personal_recipe_%'/gu),
+    ).toHaveLength(1);
+  });
+
   it("validates the exact two-owner denial matrix and unchanged digest result shape", async () => {
     const verifier = await loadRequiredVerifier();
 

@@ -14,6 +14,10 @@
     "createNotFoundFeedbackInternalClient": [
       "app/api/v1/feedback/404/route.ts"
     ],
+    "createRecipeFuturePropagationInternalClient": [
+      "app/api/v1/recipes/[id]/future-plan-impact/route.ts",
+      "app/api/v1/recipes/[id]/route.ts"
+    ],
     "createOperationalEventInternalClient": [
       "lib/server/admin-events.ts"
     ],
@@ -53,6 +57,24 @@
       "line": 106,
       "allowed": true,
       "factory": "createNotFoundFeedbackInternalClient",
+      "kind": "internal-operation-call"
+    },
+    {
+      "classification": "user",
+      "file": "app/api/v1/recipes/[id]/future-plan-impact/route.ts",
+      "column": 25,
+      "line": 63,
+      "allowed": true,
+      "factory": "createRecipeFuturePropagationInternalClient",
+      "kind": "internal-operation-call"
+    },
+    {
+      "classification": "public",
+      "file": "app/api/v1/recipes/[id]/route.ts",
+      "column": 25,
+      "line": 501,
+      "allowed": true,
+      "factory": "createRecipeFuturePropagationInternalClient",
       "kind": "internal-operation-call"
     },
     {

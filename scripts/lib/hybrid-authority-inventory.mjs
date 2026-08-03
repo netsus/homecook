@@ -49,6 +49,13 @@ const INTERNAL_OPERATION_ALLOWLIST = new Map([
     new Set(["app/api/v1/feedback/404/route.ts"]),
   ],
   [
+    "createRecipeFuturePropagationInternalClient",
+    new Set([
+      "app/api/v1/recipes/[id]/future-plan-impact/route.ts",
+      "app/api/v1/recipes/[id]/route.ts",
+    ]),
+  ],
+  [
     "createOperationalEventInternalClient",
     new Set(["lib/server/admin-events.ts"]),
   ],

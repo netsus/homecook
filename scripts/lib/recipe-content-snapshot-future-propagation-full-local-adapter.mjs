@@ -670,10 +670,14 @@ function readFlagOffMutationState(runtime) {
         then '1' else '0' end,
       case when current_setting('homecook.snapshot_v2_creation', true) = 'on'
         then '1' else '0' end,
-      (select count(*) from public.mutation_idempotency_keys
-        where operation_scope like 'personal_recipe_%'),
-      (select count(distinct owner_uuid) from public.mutation_idempotency_keys
-        where operation_scope like 'personal_recipe_%'),
+      (select count(*) from public.recipes as recipe
+        where recipe.created_by is not null
+          and recipe.source_type = 'manual'
+          and recipe.visibility = 'private'),
+      (select count(distinct recipe.created_by) from public.recipes as recipe
+        where recipe.created_by is not null
+          and recipe.source_type = 'manual'
+          and recipe.visibility = 'private'),
       (select count(*) from public.recipe_change_previews),
       (select count(*) from public.cooking_sessions
         where contract_version = 'snapshot_v2'),
