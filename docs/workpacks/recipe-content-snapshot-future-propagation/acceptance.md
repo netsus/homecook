@@ -1,6 +1,6 @@
 # Acceptance Checklist
 
-> This fresh Stage 1 re-lock follows Contract Evolution PR #1282 merge `7e316e8721e96762c17e3d196811416ce6f93823`. Unchecked items do not claim that Draft Stage 4 PR #1281 has completed the new entrypoint repair, or that Stage 5, authority, Stage 6, server-Mac/Manual evidence or R+2 activation exists.
+> This fresh Stage 1 re-lock follows Contract Evolution PR #1282 merge `7e316e8721e96762c17e3d196811416ce6f93823`. Draft Stage 4 PR #1281 implements the approved entrypoint repair through code head `ba509392`, but unchecked items do not claim independent re-review, Stage 5, authority, Stage 6, server-Mac/Manual evidence or R+2 activation.
 
 ## Entrypoint Read / Capability Projection
 
@@ -107,7 +107,7 @@
 - [x] Stage 1 claims only docs validators, focused workflow tests, lint/typecheck, audit and diff check <!-- omo:id=accept-future-stage1-honesty;stage=2;scope=shared;review=3,6 -->
 - [x] Stage 2 first records failing route/DB tests before backend production changes <!-- omo:id=accept-future-tdd-red;stage=2;scope=backend;review=3,6 -->
 - [x] Stage 2/3 PR #1278 reviewed exact head `9eb1ebd8ea5a12294a76d7f2799693f03654b0a4` with required findings `0/0/0` and merged as `ef5903b131a2eb9e505b2121b4e390970c565b95` <!-- omo:id=accept-future-stage3-merged;stage=2;scope=backend;review=3,6 -->
-- [ ] Stage 4 first records failing component tests before frontend production changes <!-- omo:id=accept-future-component-tdd-red;stage=4;scope=frontend;review=5,6 -->
+- [x] Stage 4 first records failing component tests before frontend production changes <!-- omo:id=accept-future-component-tdd-red;stage=4;scope=frontend;review=5,6 -->
 - [x] fresh/replay PostgreSQL tests cover preview RLS/ACL, locks, idempotency, claim concurrency and full rollback <!-- omo:id=accept-future-postgres;stage=2;scope=backend;review=3,6 -->
 - [ ] real local Supabase two-owner matrix and before/after digests prove denied/stale/claim paths are unchanged <!-- omo:id=accept-future-real-db;stage=2;scope=backend;review=3,6 -->
 - [ ] E2E covers keep/replace-all, shopping read-only, stale preview, same-Meal concurrent start, cancel/restart and historical snapshot invariance <!-- omo:id=accept-future-e2e;stage=4;scope=frontend;review=5,6 -->
@@ -115,7 +115,7 @@
 - [ ] independent internal1.5, security/DB, five-axis, Stage 3/6 and closeout reviews have zero unresolved backend findings <!-- omo:id=accept-future-independent-review;stage=2;scope=shared;review=3,6 -->
 - [ ] independent design, Stage 5/6 and closeout reviews have zero unresolved frontend findings <!-- omo:id=accept-future-independent-frontend-review;stage=4;scope=frontend;review=5,6 -->
 - [ ] current-head PR checks and post-merge QA/Policy/Security/Vercel are terminal green or intended skip <!-- omo:id=accept-future-ci;stage=2;scope=shared;review=3,6 -->
-- [ ] Draft Stage 4 PR #1281 exact head `6cfcb30787c8cdebeacf9e1651bfdadfe5d8a866` is repaired for the new entrypoint contract and independently re-reviewed; current evidence alone does not complete Stage 4 <!-- omo:id=accept-future-stage4-entrypoint-repair;stage=4;scope=shared;review=5,6 -->
+- [ ] Draft Stage 4 PR #1281 implements the approved entrypoint contract through code head `ba509392` and awaits fresh independent re-review; implementation evidence alone does not complete Stage 4 <!-- omo:id=accept-future-stage4-entrypoint-repair;stage=4;scope=shared;review=5,6 -->
 - [ ] Design Status remains pending-review/temporary until an authority report exists; Stage 5, final authority, Stage 6, Manual/server-Mac and activation remain pending <!-- omo:id=accept-future-honest-stage-state;stage=4;scope=shared;review=5,6 -->
 
 ## Manual QA
