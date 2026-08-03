@@ -28,7 +28,7 @@
 
 - [x] every personal writer verifies exact JWT session binding, identity epoch, current active generation and capability inside its final transaction <!-- omo:id=accept-future-session-generation;stage=2;scope=backend;review=3,6 -->
 - [x] global shared fence→owner lifecycle→recipe UUID→Meal UUID→resource order is common to recipe, Meal, shopping and session-attempt writers <!-- omo:id=accept-future-lock-order;stage=2;scope=backend;review=3,6 -->
-- [ ] multi-recipe shopping acquires recipe locks in UUID order and concurrent tests show no deadlock or stale post-preview Meal insertion <!-- omo:id=accept-future-multi-recipe-locks;stage=2;scope=backend;review=3,6 -->
+- [x] multi-recipe shopping acquires recipe locks in UUID order and concurrent tests show no deadlock or stale post-preview Meal insertion <!-- omo:id=accept-future-multi-recipe-locks;stage=2;scope=backend;review=3,6 -->
 - [x] recipe PATCH/soft DELETE/future restore and future Meal create/update/delete are single-RPC final writes <!-- omo:id=accept-future-writer-rpcs;stage=2;scope=backend;review=3,6 -->
 - [x] no route calls a lock-only RPC and then performs REST INSERT/UPDATE/DELETE <!-- omo:id=accept-future-no-split-write;stage=2;scope=backend;review=3,6 -->
 - [x] direct table privileges/guards are tightened only after the complete writer inventory is converted and regression-green <!-- omo:id=accept-future-writer-cutover;stage=2;scope=backend;review=3,6 -->
