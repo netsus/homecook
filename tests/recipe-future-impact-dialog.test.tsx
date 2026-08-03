@@ -32,8 +32,8 @@ describe("recipe future impact dialog", () => {
     expect(screen.getByText(/미완료 장보기 2개/)).toBeTruthy();
     expect(screen.getByText(/완료한 장보기 기록은 바뀌지 않아요/)).toBeTruthy();
     expect(screen.getAllByRole("radio")).toHaveLength(2);
-    expect(screen.getByRole("radio", { name: /전체 반영/ })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "저장" })).toBeDisabled();
+    expect((screen.getByRole("radio", { name: /전체 반영/ }) as HTMLInputElement).disabled).toBe(true);
+    expect((screen.getByRole("button", { name: "저장" }) as HTMLButtonElement).disabled).toBe(true);
 
     await user.click(screen.getByRole("radio", { name: /기존 계획 유지/ }));
     await user.click(screen.getByRole("button", { name: "저장" }));
@@ -42,11 +42,11 @@ describe("recipe future impact dialog", () => {
 
   it("fails closed while loading and keeps stale errors open with recheck focus", () => {
     const { rerender } = render(<RecipeFutureImpactDialog impact={null} loading onClose={vi.fn()} onRecheck={vi.fn()} onSave={vi.fn()} />);
-    expect(screen.getByRole("dialog")).toHaveAttribute("aria-busy", "true");
-    expect(screen.getByRole("button", { name: "저장" })).toBeDisabled();
+    expect(screen.getByRole("dialog").getAttribute("aria-busy")).toBe("true");
+    expect((screen.getByRole("button", { name: "저장" }) as HTMLButtonElement).disabled).toBe(true);
 
     rerender(<RecipeFutureImpactDialog errorCode="RECIPE_IMPACT_STALE" impact={impact} onClose={vi.fn()} onRecheck={vi.fn()} onSave={vi.fn()} />);
     expect(screen.getByRole("dialog")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "최신 영향 다시 확인" })).toHaveFocus();
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "최신 영향 다시 확인" }));
   });
 });

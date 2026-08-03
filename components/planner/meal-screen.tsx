@@ -39,6 +39,7 @@ import {
   WebTopNav,
 } from "@/components/web";
 import { createCookingSession, isCookingApiError } from "@/lib/api/cooking";
+import { getCookingSessionCookModeHref } from "@/lib/cooking/session-version-dispatch";
 import {
   deleteMeal,
   fetchMeals,
@@ -491,7 +492,7 @@ function MealCard({
             {canStartCook ? (
               <button
                 aria-label={`${meal.recipe_title} 요리하기`}
-                className="min-h-[38px] rounded-[var(--radius-control)] border border-[var(--brand)] bg-[var(--brand)] text-[14px] font-bold text-[var(--text-inverse)]"
+                className="min-h-11 rounded-[var(--radius-control)] border border-[var(--brand)] bg-[var(--brand)] text-[14px] font-bold text-[var(--text-inverse)]"
                 disabled={isPending}
                 onClick={onStartCook}
                 type="button"
@@ -1450,7 +1451,7 @@ export function MealScreen({
         cooking_servings: meal.planned_servings,
       });
       router.push(
-        buildReturnHref(`/cooking/sessions/${session.session_id}/cook-mode`, {
+        buildReturnHref(getCookingSessionCookModeHref({ session_id: session.session_id, contract_version: "legacy_v1" }), {
           returnTo: buildNextPath(planDate, columnId, slotName),
         }),
       );

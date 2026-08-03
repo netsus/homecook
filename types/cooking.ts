@@ -99,6 +99,30 @@ export interface CookingStandaloneCookModeData {
   recipe: CookingModeRecipe;
 }
 
+export interface SnapshotV2StartData {
+  session_id: string;
+  contract_version: "snapshot_v2";
+  mode: "planner" | "standalone";
+  status: "in_progress";
+  content_summary: { recipe_id: string; title: string; cooking_servings: number };
+}
+
+export interface SnapshotV2CookModeData {
+  session_id: string;
+  contract_version: "snapshot_v2";
+  mode: "planner" | "standalone";
+  status: CookingSessionStatus;
+  recipe: CookingModeRecipe;
+  pantry_candidates: Array<{ pantry_item_id: string; ingredient_id: string; item_type: "ingredient" | "food_product"; standard_name: string; food_product_id: string | null; food_product_nutrition_version_id: string | null; name: string; brand: string | null }>;
+}
+
+export interface SnapshotV2CancelData {
+  session_id: string;
+  contract_version: "snapshot_v2";
+  mode: "planner" | "standalone";
+  status: "cancelled";
+}
+
 export type CookingSessionCreateResponse = ApiResponse<CookingSessionCreateData>;
 export type CookingSessionCancelResponse = ApiResponse<CookingSessionCancelData>;
 export type CookingSessionCompleteResponse = ApiResponse<CookingSessionCompleteData>;

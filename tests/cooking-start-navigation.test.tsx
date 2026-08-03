@@ -18,7 +18,7 @@ describe("cooking start navigation", () => {
     render(<CookingStartAction label="김치찌개 요리하기" navigate={navigate} start={start} />);
 
     await user.click(screen.getByRole("button", { name: "김치찌개 요리하기" }));
-    expect(screen.getByRole("button", { name: "김치찌개 요리하기" })).toBeDisabled();
+    expect((screen.getByRole("button", { name: "김치찌개 요리하기" }) as HTMLButtonElement).disabled).toBe(true);
     expect(screen.getByText("세션 생성 중…")).toBeTruthy();
     expect(navigate).not.toHaveBeenCalled();
     await user.click(screen.getByRole("button", { name: "김치찌개 요리하기" }));
@@ -35,7 +35,7 @@ describe("cooking start navigation", () => {
     const start = vi.fn().mockRejectedValue(new Error("시작하지 못했어요"));
     render(<CookingStartAction label="요리하기" navigate={navigate} start={start} />);
     await user.click(screen.getByRole("button", { name: "요리하기" }));
-    expect(await screen.findByRole("alert")).toHaveTextContent("시작하지 못했어요");
+    expect((await screen.findByRole("alert")).textContent).toContain("시작하지 못했어요");
     expect(screen.getByRole("button", { name: "다시 시도" })).toBeTruthy();
     expect(navigate).not.toHaveBeenCalled();
   });

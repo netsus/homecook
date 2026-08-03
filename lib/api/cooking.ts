@@ -7,12 +7,33 @@ import type {
   CookingSessionCreateData,
   CookingStandaloneCompleteData,
   CookingStandaloneCookModeData,
+  SnapshotV2CancelData,
+  SnapshotV2CookModeData,
+  SnapshotV2StartData,
 } from "@/types/cooking";
 
 export interface CookingApiError extends Error {
   status: number;
   code: string;
   fields: ApiError["fields"];
+}
+
+export async function createSnapshotV2CookingSession(body: { mode: "planner"; meal_ids: string[]; expected_meal_revisions: Record<string, number> } | { mode: "standalone"; recipe_id: string; expected_recipe_revision: number; cooking_servings: number }, idempotencyKey = crypto.randomUUID()): Promise<SnapshotV2StartData> {
+  const data = await requestCooking<SnapshotV2StartData>("/api/v1/cooking/session-attempts", { method: "POST", headers: { "content-type": "application/json", "Idempotency-Key": idempotencyKey }, body: JSON.stringify(body) });
+  if (data.contract_version !== "snapshot_v2" || data.status !== "in_progress") throw createCookingApiError({ status: 502, code: "INVALID_RESPONSE", fields: [], message: "요리 세션 버전을 확인하지 못했어요." });
+  return data;
+}
+
+export async function fetchSnapshotV2CookMode(sessionId: string): Promise<SnapshotV2CookModeData> {
+  const data = await requestCooking<SnapshotV2CookModeData>(`/api/v1/cooking/session-attempts/${sessionId}/cook-mode`);
+  if (data.contract_version !== "snapshot_v2") throw createCookingApiError({ status: 502, code: "INVALID_RESPONSE", fields: [], message: "요리 세션 버전을 확인하지 못했어요." });
+  return data;
+}
+
+export async function cancelSnapshotV2CookingSession(sessionId: string): Promise<SnapshotV2CancelData> {
+  const data = await requestCooking<SnapshotV2CancelData>(`/api/v1/cooking/session-attempts/${sessionId}/cancel`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({}) });
+  if (data.contract_version !== "snapshot_v2" || data.status !== "cancelled") throw createCookingApiError({ status: 502, code: "INVALID_RESPONSE", fields: [], message: "요리 세션 버전을 확인하지 못했어요." });
+  return data;
 }
 
 function createCookingApiError({
