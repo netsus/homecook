@@ -378,7 +378,7 @@ describe("recipe detail screen", () => {
     });
   });
 
-  it("connects the fetched owner edit context to the real impact preview flow", async () => {
+  it("sends the owner-edited full draft unchanged from impact preview to PATCH", async () => {
     const draft: RecipeEditDraft = {
       title: "내 김치찌개",
       description: null,
@@ -416,7 +416,7 @@ describe("recipe detail screen", () => {
       edit_context: {
         base_recipe_revision: 12,
         draft,
-        image_object_id: null,
+        image_object_id: "550e8400-e29b-41d4-a716-446655440099",
       },
     }));
     fetchRecipeFutureImpact.mockResolvedValue({
@@ -430,22 +430,52 @@ describe("recipe detail screen", () => {
       active_cooking_claim_count: 0,
       replace_all_allowed: true,
     });
+    patchRecipeWithFutureStrategy.mockResolvedValue({
+      id: MOCK_RECIPE_DETAIL.id,
+      revision: 13,
+    });
 
     render(<RecipeDetailScreen
       initialAuthenticated
       recipeId={MOCK_RECIPE_DETAIL.id}
       recipeSnapshotUiMode="snapshot_v2"
     />);
-    await userEvent.click(await screen.findByRole("button", { name: "변경사항 저장" }));
+    await userEvent.click(await screen.findByRole("button", { name: "편집" }));
+    const title = screen.getByRole("textbox", { name: "레시피 제목" });
+    await userEvent.clear(title);
+    await userEvent.type(title, "내 매콤 김치찌개");
+    await userEvent.click(screen.getByRole("button", { name: "변경사항 저장" }));
+
+    const editedDraft = {
+      ...draft,
+      title: "내 매콤 김치찌개",
+    };
 
     await waitFor(() => {
       expect(fetchRecipeFutureImpact).toHaveBeenCalledWith(
         MOCK_RECIPE_DETAIL.id,
         12,
-        draft,
+        editedDraft,
       );
     });
     expect(screen.getByRole("dialog", { name: "미래 계획 반영 확인" })).toBeTruthy();
+    await userEvent.click(screen.getByRole("radio", { name: /기존 계획 유지/ }));
+    await userEvent.click(screen.getByRole("button", { name: "저장" }));
+
+    expect(patchRecipeWithFutureStrategy).toHaveBeenCalledWith(
+      MOCK_RECIPE_DETAIL.id,
+      {
+        baseRecipeRevision: 12,
+        draft: editedDraft,
+        futurePlanStrategy: "keep",
+        impactToken: "impact-token",
+        imageObjectId: "550e8400-e29b-41d4-a716-446655440099",
+      },
+      expect.any(String),
+    );
+    const previewDraft = fetchRecipeFutureImpact.mock.calls[0]?.[2];
+    const patchDraft = patchRecipeWithFutureStrategy.mock.calls[0]?.[1]?.draft;
+    expect(JSON.stringify(patchDraft)).toBe(JSON.stringify(previewDraft));
   });
 
   it("keeps the selected servings after a nutrition-only retry succeeds", async () => {
