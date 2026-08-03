@@ -479,6 +479,71 @@ describe("recipe detail screen", () => {
     expect(JSON.stringify(patchDraft)).toBe(JSON.stringify(previewDraft));
   });
 
+  it("restores the owner draft and resumes its original impact preview after login", async () => {
+    const serverDraft: RecipeEditDraft = {
+      title: "내 김치찌개",
+      description: null,
+      base_servings: 2,
+      ingredients: [],
+      steps: [],
+    };
+    const resumedDraft: RecipeEditDraft = {
+      ...serverDraft,
+      title: "세션 만료 전 매콤 김치찌개",
+      description: "로그인 뒤에도 남아야 해요.",
+    };
+    fetchJson.mockResolvedValue(buildRecipeDetail({
+      revision: 12,
+      edit_context: {
+        base_recipe_revision: 12,
+        draft: serverDraft,
+        image_object_id: "550e8400-e29b-41d4-a716-446655440099",
+      },
+    }));
+    fetchRecipeFutureImpact.mockResolvedValue({
+      impact_token: "impact-token",
+      expires_at: "2026-08-04T10:00:00.000Z",
+      proposed_content_hash: "a".repeat(64),
+      future_meal_count: 0,
+      date_range: { from: null, to: null },
+      incomplete_shopping_list_count: 0,
+      completed_shopping_list_count: 0,
+      active_cooking_claim_count: 0,
+      replace_all_allowed: true,
+    });
+    window.localStorage.setItem(PENDING_ACTION_KEY, JSON.stringify({
+      type: "recipe-edit-save",
+      recipeId: MOCK_RECIPE_DETAIL.id,
+      redirectTo: `/recipe/${MOCK_RECIPE_DETAIL.id}`,
+      createdAt: Date.now(),
+      editContext: {
+        base_recipe_revision: 12,
+        draft: resumedDraft,
+        image_object_id: "550e8400-e29b-41d4-a716-446655440099",
+      },
+    }));
+
+    render(
+      <RecipeDetailScreen
+        initialAuthenticated
+        recipeId={MOCK_RECIPE_DETAIL.id}
+        recipeSnapshotUiMode="snapshot_v2"
+      />,
+    );
+
+    const title = await screen.findByRole("textbox", { name: "레시피 제목" });
+    expect((title as HTMLInputElement).value).toBe(resumedDraft.title);
+    await waitFor(() => {
+      expect(fetchRecipeFutureImpact).toHaveBeenCalledWith(
+        MOCK_RECIPE_DETAIL.id,
+        12,
+        resumedDraft,
+      );
+    });
+    expect(screen.getByRole("dialog", { name: "미래 계획 반영 확인" })).toBeTruthy();
+    expect(window.localStorage.getItem(PENDING_ACTION_KEY)).toBeNull();
+  });
+
   it.each([
     {
       label: "unauthenticated owner response",
