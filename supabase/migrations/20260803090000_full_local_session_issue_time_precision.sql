@@ -377,4 +377,3 @@ grant execute on function public.assert_full_local_session_authority(
 ) to service_role;
 
 commit;
-

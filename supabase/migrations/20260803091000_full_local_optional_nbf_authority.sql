@@ -154,4 +154,3 @@ revoke all on function private.verify_full_local_authenticated_authority()
   from public, anon, authenticated, service_role;
 
 commit;
-

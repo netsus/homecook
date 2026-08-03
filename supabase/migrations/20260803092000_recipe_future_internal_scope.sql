@@ -154,4 +154,3 @@ revoke all on function private.verify_full_local_internal_scope()
   from public, anon, authenticated, service_role;
 
 commit;
-
