@@ -37,10 +37,11 @@ const PERSONAL_RECIPE_MIGRATION_PATH = join(
   REPOSITORY_ROOT,
   "supabase/migrations/20260802130000_personal_recipe_customization_write_core.sql",
 );
-const RECIPE_FUTURE_PROPAGATION_MIGRATION_PATH = join(
+const RECIPE_FUTURE_PROPAGATION_BASE_MIGRATION_PATH = join(
   REPOSITORY_ROOT,
   "supabase/migrations/20260802210000_recipe_content_snapshot_future_propagation.sql",
 );
+let RECIPE_FUTURE_PROPAGATION_MIGRATION_PATH;
 const SNAPSHOT_CONSUMER_READ_MIGRATION_PATH = join(
   REPOSITORY_ROOT,
   "supabase/migrations/20260802120000_recipe_snapshot_consumer_read_authority.sql",
@@ -68,6 +69,10 @@ const personalRecipeManifest = JSON.parse(
 const recipeFuturePropagationManifest = JSON.parse(
   readFileSync(RECIPE_FUTURE_PROPAGATION_MANIFEST_PATH, "utf8"),
 );
+RECIPE_FUTURE_PROPAGATION_MIGRATION_PATH = join(
+  REPOSITORY_ROOT,
+  recipeFuturePropagationManifest.migration,
+);
 const fullLocalMigration = readFileSync(FULL_LOCAL_MIGRATION_PATH, "utf8");
 const fullLocalSessionIssueTimePrecisionMigration = readFileSync(
   FULL_LOCAL_SESSION_ISSUE_TIME_PRECISION_MIGRATION_PATH,
@@ -78,10 +83,13 @@ const personalRecipeMigration = readFileSync(
   PERSONAL_RECIPE_MIGRATION_PATH,
   "utf8",
 );
-const recipeFuturePropagationMigration = readFileSync(
-  RECIPE_FUTURE_PROPAGATION_MIGRATION_PATH,
-  "utf8",
-);
+const recipeFuturePropagationMigration = [
+  readFileSync(RECIPE_FUTURE_PROPAGATION_BASE_MIGRATION_PATH, "utf8"),
+  RECIPE_FUTURE_PROPAGATION_MIGRATION_PATH
+  === RECIPE_FUTURE_PROPAGATION_BASE_MIGRATION_PATH
+    ? null
+    : readFileSync(RECIPE_FUTURE_PROPAGATION_MIGRATION_PATH, "utf8"),
+].filter(Boolean).join("\n\n");
 const snapshotConsumerReadMigration = readFileSync(
   SNAPSHOT_CONSUMER_READ_MIGRATION_PATH,
   "utf8",
@@ -447,10 +455,11 @@ export function parsePolicy(migration, policyName) {
 function parseFunction(entry, migration) {
   const identity = entry.signature.slice(0, entry.signature.indexOf("("));
   const escapedIdentity = identity.replaceAll(".", "\\.");
-  const startMatch = new RegExp(
+  const startMatches = [...migration.matchAll(new RegExp(
     `create\\s+or\\s+replace\\s+function\\s+${escapedIdentity}\\s*\\(`,
-    "iu",
-  ).exec(migration);
+    "giu",
+  ))];
+  const startMatch = startMatches.at(-1);
   if (!startMatch) throw new Error(`function source is missing: ${entry.signature}`);
   const definition = migration.slice(startMatch.index);
   const bodyMarker = definition.match(/\bas\s+(\$[a-z0-9_]*\$)/iu);

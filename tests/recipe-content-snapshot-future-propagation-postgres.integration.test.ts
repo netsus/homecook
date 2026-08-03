@@ -3,6 +3,7 @@ import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 
 import { beforeAll, describe, expect, it } from "vitest";
+import { aggregateShoppingIngredients } from "@/lib/server/shopping";
 
 const enabled =
   process.env.HOMECOOK_RECIPE_CONTENT_SNAPSHOT_FUTURE_PROPAGATION_PG_INTEGRATION ===
@@ -134,6 +135,147 @@ function extractPsqlJson(stdout: string) {
       )
       .at(-1) ?? "null",
   );
+}
+
+function jsonSql(value: unknown) {
+  return `'${JSON.stringify(value).replaceAll("'", "''")}'::jsonb`;
+}
+
+function shoppingConcurrencyPayload(mealIds: string[]) {
+  const meals = JSON.parse(psql(`
+    select jsonb_agg(jsonb_build_object(
+      'meal_id', meal.id,
+      'recipe_id', meal.recipe_id,
+      'recipe_content_snapshot_id', meal.recipe_content_snapshot_id,
+      'planned_servings', meal.planned_servings,
+      'base_servings', snapshot.base_servings,
+      'ingredients_json', snapshot.ingredients_json
+    ) order by meal.id::text collate "C")::text
+    from public.meals as meal
+    join public.recipe_content_snapshots as snapshot
+      on snapshot.id = meal.recipe_content_snapshot_id
+    where meal.id = any(array[${mealIds.map((mealId) => `'${mealId}'::uuid`).join(",")}]);
+  `));
+  const ingredientNames = JSON.parse(psql(`
+    with ingredient_ids as (
+      select distinct nullif(item ->> 'ingredient_id', '')::uuid as ingredient_id
+      from public.meals as meal
+      join public.recipe_content_snapshots as snapshot
+        on snapshot.id = meal.recipe_content_snapshot_id
+      cross join jsonb_array_elements(snapshot.ingredients_json) as item
+      where meal.id = any(array[${mealIds.map((mealId) => `'${mealId}'::uuid`).join(",")}])
+        and nullif(item ->> 'ingredient_id', '') is not null
+    )
+    select jsonb_object_agg(ingredient.id::text, ingredient.name)::text
+    from public.ingredients as ingredient
+    join ingredient_ids on ingredient_ids.ingredient_id = ingredient.id;
+  `) || "{}");
+
+  const recipeRowsMap = new Map<string, {
+    recipe_id: string;
+    recipe_content_snapshot_id: string | null;
+    shopping_servings: number;
+    planned_servings_total: number;
+  }>();
+  const genericInputs: Array<{
+    ingredient_id: string;
+    standard_name: string;
+    ingredient_type: "QUANT" | "TO_TASTE";
+    amount: number | null;
+    unit: string | null;
+    display_text: string | null;
+    planned_servings: number;
+    shopping_servings: number;
+  }> = [];
+  const productPayloadByPair = new Map<string, {
+    ingredient_id: null;
+    food_product_id: string;
+    food_product_nutrition_version_id: string;
+    display_text: string;
+    amounts_json: Array<{ amount: number; unit: string }>;
+    is_pantry_excluded: boolean;
+    sort_order: number;
+  }>();
+
+  for (const meal of meals as Array<Record<string, any>>) {
+    const key = `${meal.recipe_id}:${meal.recipe_content_snapshot_id ?? ""}`;
+    const existing = recipeRowsMap.get(key) ?? {
+      recipe_id: meal.recipe_id,
+      recipe_content_snapshot_id: meal.recipe_content_snapshot_id ?? null,
+      shopping_servings: 0,
+      planned_servings_total: 0,
+    };
+    existing.shopping_servings += meal.planned_servings;
+    existing.planned_servings_total += meal.planned_servings;
+    recipeRowsMap.set(key, existing);
+
+    for (const ingredient of meal.ingredients_json as Array<Record<string, any>>) {
+      if (
+        ingredient.food_product_id
+        && ingredient.food_product_nutrition_version_id
+      ) {
+        const pair = `${ingredient.food_product_id}:${ingredient.food_product_nutrition_version_id}`;
+        const existingProduct = productPayloadByPair.get(pair) ?? {
+          ingredient_id: null,
+          food_product_id: ingredient.food_product_id,
+          food_product_nutrition_version_id: ingredient.food_product_nutrition_version_id,
+          display_text: ingredient.display_text?.trim() || "상품",
+          amounts_json: [],
+          is_pantry_excluded: false,
+          sort_order: 0,
+        };
+        if (
+          typeof ingredient.amount === "number"
+          && ingredient.unit
+          && meal.base_servings > 0
+        ) {
+          existingProduct.amounts_json.push({
+            amount: (ingredient.amount * meal.planned_servings) / meal.base_servings,
+            unit: ingredient.unit,
+          });
+        }
+        productPayloadByPair.set(pair, existingProduct);
+        continue;
+      }
+      if (!ingredient.ingredient_id) {
+        continue;
+      }
+      genericInputs.push({
+        ingredient_id: ingredient.ingredient_id,
+        standard_name: ingredientNames[ingredient.ingredient_id] ?? "",
+        ingredient_type: ingredient.ingredient_type,
+        amount: ingredient.amount,
+        unit: ingredient.unit,
+        display_text: ingredient.display_text,
+        planned_servings: meal.base_servings,
+        shopping_servings: meal.planned_servings,
+      });
+    }
+  }
+
+  const genericRows = aggregateShoppingIngredients(genericInputs).map((row, index) => ({
+    ingredient_id: row.ingredient_id,
+    food_product_id: null,
+    food_product_nutrition_version_id: null,
+    display_text: row.display_text,
+    amounts_json: row.amounts_json,
+    is_pantry_excluded: false,
+    sort_order: index,
+  }));
+  const productRows = [...productPayloadByPair.values()].map((row, index) => ({
+    ...row,
+    sort_order: genericRows.length + index,
+  }));
+
+  return {
+    recipeRows: [...recipeRowsMap.values()].sort((left, right) =>
+      left.recipe_id.localeCompare(right.recipe_id)
+      || (left.recipe_content_snapshot_id ?? "").localeCompare(
+        right.recipe_content_snapshot_id ?? "",
+      )
+    ),
+    itemRows: [...genericRows, ...productRows],
+  };
 }
 
 function expectSqlFailure(sql: string, pattern: RegExp) {
@@ -377,6 +519,8 @@ function standaloneStartSql(options: {
 function shoppingCreateSql(options: {
   mealIds: string[];
   title: string;
+  recipeRows: unknown[];
+  itemRows: unknown[];
 }) {
   const mealArray = options.mealIds.map((mealId) => `'${mealId}'::uuid`).join(",");
   return `
@@ -392,81 +536,8 @@ function shoppingCreateSql(options: {
       array[${mealArray}],
       '[]'::jsonb,
       '[]'::jsonb,
-      (
-        with requested_meals as (
-          select meal.recipe_id, meal.recipe_content_snapshot_id, meal.planned_servings
-          from public.meals as meal
-          where meal.id = any(array[${mealArray}])
-        )
-        select coalesce(jsonb_agg(jsonb_build_object(
-          'recipe_id', grouped.recipe_id,
-          'recipe_content_snapshot_id', grouped.recipe_content_snapshot_id,
-          'shopping_servings', grouped.planned_servings_total,
-          'planned_servings_total', grouped.planned_servings_total
-        ) order by grouped.recipe_id::text collate "C", grouped.recipe_content_snapshot_id::text collate "C"), '[]'::jsonb)
-        from (
-          select recipe_id, recipe_content_snapshot_id, sum(planned_servings)::integer as planned_servings_total
-          from requested_meals
-          group by recipe_id, recipe_content_snapshot_id
-        ) as grouped
-      ),
-      (
-        with requested_meals as (
-          select
-            meal.id,
-            meal.planned_servings,
-            snapshot.base_servings,
-            snapshot.ingredients_json
-          from public.meals as meal
-          join public.recipe_content_snapshots as snapshot
-            on snapshot.id = meal.recipe_content_snapshot_id
-          where meal.id = any(array[${mealArray}])
-        ), ingredient_rows as (
-          select
-            (ingredient ->> 'ingredient_id')::uuid as ingredient_id,
-            nullif(ingredient ->> 'food_product_id', '')::uuid as food_product_id,
-            nullif(
-              ingredient ->> 'food_product_nutrition_version_id',
-              ''
-            )::uuid as food_product_nutrition_version_id,
-            coalesce(
-              nullif(ingredient ->> 'display_text', ''),
-              case
-                when nullif(ingredient ->> 'food_product_id', '') is null
-                  then '재료'
-                else '상품'
-              end
-            ) as display_text,
-            jsonb_build_array(jsonb_build_object(
-              'amount',
-              round(
-                coalesce((ingredient ->> 'amount')::numeric, 0)
-                * requested_meals.planned_servings
-                / nullif(requested_meals.base_servings, 0),
-                2
-              ),
-              'unit',
-              ingredient ->> 'unit'
-            )) as amounts_json,
-            row_number() over (
-              order by
-                coalesce((ingredient ->> 'ingredient_id')::uuid::text, ''),
-                coalesce(nullif(ingredient ->> 'food_product_id', '')::uuid::text, '')
-            ) - 1 as sort_order
-          from requested_meals,
-               jsonb_array_elements(requested_meals.ingredients_json) as ingredient
-        )
-        select coalesce(jsonb_agg(jsonb_build_object(
-          'ingredient_id', ingredient_id,
-          'food_product_id', food_product_id,
-          'food_product_nutrition_version_id', food_product_nutrition_version_id,
-          'display_text', display_text,
-          'amounts_json', amounts_json,
-          'is_pantry_excluded', false,
-          'sort_order', sort_order
-        ) order by sort_order), '[]'::jsonb)
-        from ingredient_rows
-      ),
+      ${jsonSql(options.recipeRows)},
+      ${jsonSql(options.itemRows)},
       0
     );
     commit;
@@ -1459,6 +1530,14 @@ describeIf("recipe content snapshot future propagation PostgreSQL", () => {
   });
 
   it("lets opposite-order multi-recipe shopping writers finish without deadlock and land in a deterministic terminal state", async () => {
+    const leftPayloadInput = shoppingConcurrencyPayload([
+      multiRecipeMealC,
+      multiRecipeMealA,
+    ]);
+    const rightPayloadInput = shoppingConcurrencyPayload([
+      multiRecipeMealB,
+      multiRecipeMealD,
+    ]);
     const control = spawnPsql(
       "select pg_advisory_lock(hashtextextended('homecook-multi-recipe-shopping-barrier', 0)); select pg_sleep(1); select pg_advisory_unlock(hashtextextended('homecook-multi-recipe-shopping-barrier', 0));",
     );
@@ -1469,6 +1548,8 @@ describeIf("recipe content snapshot future propagation PostgreSQL", () => {
       shoppingCreateSql({
         mealIds: [multiRecipeMealC, multiRecipeMealA],
         title: "멀티 레시피 A",
+        recipeRows: leftPayloadInput.recipeRows,
+        itemRows: leftPayloadInput.itemRows,
       }).replace(
         "select public.create_shopping_list_with_snapshot_authority(",
         "select pg_advisory_xact_lock_shared(hashtextextended('homecook-multi-recipe-shopping-barrier', 0));\nselect public.create_shopping_list_with_snapshot_authority(",
@@ -1478,6 +1559,8 @@ describeIf("recipe content snapshot future propagation PostgreSQL", () => {
       shoppingCreateSql({
         mealIds: [multiRecipeMealB, multiRecipeMealD],
         title: "멀티 레시피 B",
+        recipeRows: rightPayloadInput.recipeRows,
+        itemRows: rightPayloadInput.itemRows,
       }).replace(
         "select public.create_shopping_list_with_snapshot_authority(",
         "select pg_advisory_xact_lock_shared(hashtextextended('homecook-multi-recipe-shopping-barrier', 0));\nselect public.create_shopping_list_with_snapshot_authority(",
@@ -1495,7 +1578,7 @@ describeIf("recipe content snapshot future propagation PostgreSQL", () => {
 
     expect(leftResult.status, leftResult.stderr).toBe(0);
     expect(rightResult.status, rightResult.stderr).toBe(0);
-    expect(leftPayload?.error_code ?? null).toBe(null);
-    expect(rightPayload?.error_code ?? null).toBe(null);
+    expect(leftPayload?.error_code ?? null, JSON.stringify(leftPayload)).toBe(null);
+    expect(rightPayload?.error_code ?? null, JSON.stringify(rightPayload)).toBe(null);
   });
 });
