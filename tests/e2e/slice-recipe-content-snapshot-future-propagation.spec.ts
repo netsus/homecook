@@ -79,6 +79,30 @@ test.describe("recipe-content-snapshot-future-propagation", () => {
     await expect(page).toHaveURL(new RegExp(`${RECIPE_PATH.replaceAll("/", "\\/")}\\?qaFutureImpact=1$`));
   });
 
+  test("routes an expired impact preview to login while keeping the edited draft", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await installRecipeDetailRoutes(page);
+    await page.route("**/api/v1/recipes/*/future-plan-impact", async (route) => route.fulfill({
+      status: 401,
+      json: {
+        success: false,
+        data: null,
+        error: { code: "UNAUTHORIZED", message: "로그인이 필요해요.", fields: [] },
+      },
+    }));
+    await page.goto(`${RECIPE_PATH}?qaFutureImpact=1`);
+    await openImpactFromEditedOwnerRecipe(page, "세션 만료 전 김치찌개");
+
+    const loginGate = page.getByRole("dialog", { name: "로그인이 필요한 작업이에요" });
+    await expect(loginGate).toBeVisible();
+    await expect(loginGate).toContainText("다시 로그인하면 수정한 내용으로 저장을 계속할 수 있어요.");
+    await expect(page.getByRole("dialog", { name: "미래 계획 반영 확인" })).toHaveCount(0);
+    await expect(page).toHaveURL(new RegExp(`${RECIPE_PATH.replaceAll("/", "\\/")}\\?qaFutureImpact=1$`));
+
+    await loginGate.getByRole("button", { name: "취소" }).click();
+    await expect(page.getByRole("textbox", { name: "레시피 제목" })).toHaveValue("세션 만료 전 김치찌개");
+  });
+
   test("captures planner pending before navigation without a shell redesign", async ({ page }) => {
     await installMealDetailRoutes(page);
     await installCookingVisualRoutes(page);

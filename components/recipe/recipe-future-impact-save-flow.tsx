@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 
 import { RecipeFutureImpactDialog, type RecipeFutureImpact } from "@/components/recipe/recipe-future-impact-dialog";
 import {
@@ -8,6 +8,7 @@ import {
   patchRecipeWithFutureStrategy,
   type RecipeFutureDraft,
 } from "@/lib/api/recipe-future-impact";
+import type { RecipeEditContext } from "@/types/recipe";
 
 interface RecipeFutureImpactSaveFlowProps {
   actionDisabled?: boolean;
@@ -16,7 +17,9 @@ interface RecipeFutureImpactSaveFlowProps {
   enabled: boolean;
   imageObjectId: string | null;
   onSaved: (result: { id: string; revision: number }) => void;
+  onUnauthorized?: (editContext: RecipeEditContext) => void;
   recipeId: string;
+  resumePreview?: boolean;
 }
 
 function readErrorCode(error: unknown) {
@@ -32,7 +35,9 @@ export function RecipeFutureImpactSaveFlow({
   enabled,
   imageObjectId,
   onSaved,
+  onUnauthorized,
   recipeId,
+  resumePreview = false,
 }: RecipeFutureImpactSaveFlowProps) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -41,10 +46,9 @@ export function RecipeFutureImpactSaveFlow({
   const [errorCode, setErrorCode] = useState<string | null>(null);
   const patchKeyRef = useRef<string | null>(null);
   const previewDraftRef = useRef<RecipeFutureDraft | null>(null);
+  const resumeAttemptedRef = useRef(false);
 
-  if (!enabled) return null;
-
-  async function preview() {
+  const preview = useCallback(async () => {
     if (actionDisabled) return;
     const previewDraft = JSON.parse(JSON.stringify(draft)) as RecipeFutureDraft;
     setOpen(true);
@@ -56,11 +60,28 @@ export function RecipeFutureImpactSaveFlow({
     try {
       setImpact(await fetchRecipeFutureImpact(recipeId, baseRecipeRevision, previewDraft));
     } catch (error) {
-      setErrorCode(readErrorCode(error));
+      const code = readErrorCode(error);
+      setErrorCode(code);
+      if (code === "UNAUTHORIZED" && onUnauthorized) {
+        setOpen(false);
+        onUnauthorized({
+          base_recipe_revision: baseRecipeRevision,
+          draft: previewDraft,
+          image_object_id: imageObjectId,
+        });
+      }
     } finally {
       setLoading(false);
     }
-  }
+  }, [actionDisabled, baseRecipeRevision, draft, imageObjectId, onUnauthorized, recipeId]);
+
+  useEffect(() => {
+    if (!resumePreview || resumeAttemptedRef.current || actionDisabled || !enabled) return;
+    resumeAttemptedRef.current = true;
+    void preview();
+  }, [actionDisabled, enabled, preview, resumePreview]);
+
+  if (!enabled) return null;
 
   async function save(strategy: "keep" | "replace_all") {
     const previewDraft = previewDraftRef.current;
@@ -80,7 +101,16 @@ export function RecipeFutureImpactSaveFlow({
       setOpen(false);
       onSaved(result);
     } catch (error) {
-      setErrorCode(readErrorCode(error));
+      const code = readErrorCode(error);
+      setErrorCode(code);
+      if (code === "UNAUTHORIZED" && onUnauthorized) {
+        setOpen(false);
+        onUnauthorized({
+          base_recipe_revision: baseRecipeRevision,
+          draft: previewDraft,
+          image_object_id: imageObjectId,
+        });
+      }
     } finally {
       setSubmitting(false);
     }
@@ -88,6 +118,14 @@ export function RecipeFutureImpactSaveFlow({
 
   return <>
     <button className="min-h-11 rounded-[var(--radius-control)] border border-[var(--brand)] px-4 font-bold text-[var(--brand)] disabled:cursor-not-allowed disabled:opacity-50" disabled={actionDisabled} onClick={() => void preview()} type="button">변경사항 저장</button>
-    {open ? <RecipeFutureImpactDialog errorCode={errorCode} impact={impact} loading={loading} onClose={() => { if (!submitting) setOpen(false); }} onRecheck={() => void preview()} onSave={(strategy) => void save(strategy)} submitting={submitting} /> : null}
+    {open ? <RecipeFutureImpactDialog errorCode={errorCode} impact={impact} loading={loading} onClose={() => { if (!submitting) setOpen(false); }} onLogin={() => {
+      const previewDraft = previewDraftRef.current;
+      if (!previewDraft) return;
+      onUnauthorized?.({
+        base_recipe_revision: baseRecipeRevision,
+        draft: previewDraft,
+        image_object_id: imageObjectId,
+      });
+    }} onRecheck={() => void preview()} onSave={(strategy) => void save(strategy)} submitting={submitting} /> : null}
   </>;
 }

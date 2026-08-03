@@ -544,6 +544,59 @@ describe("recipe detail screen", () => {
     expect(window.localStorage.getItem(PENDING_ACTION_KEY)).toBeNull();
   });
 
+  it("opens the existing login gate with the edited draft when impact preview returns 401", async () => {
+    const serverDraft: RecipeEditDraft = {
+      title: "내 김치찌개",
+      description: null,
+      base_servings: 2,
+      ingredients: [],
+      steps: [],
+    };
+    fetchJson.mockResolvedValue(buildRecipeDetail({
+      revision: 12,
+      edit_context: {
+        base_recipe_revision: 12,
+        draft: serverDraft,
+        image_object_id: null,
+      },
+    }));
+    fetchRecipeFutureImpact.mockRejectedValue(Object.assign(
+      new Error("로그인이 필요해요."),
+      { code: "UNAUTHORIZED", status: 401 },
+    ));
+
+    render(
+      <RecipeDetailScreen
+        initialAuthenticated
+        recipeId={MOCK_RECIPE_DETAIL.id}
+        recipeSnapshotUiMode="snapshot_v2"
+      />,
+    );
+    await userEvent.click(await screen.findByRole("button", { name: "편집" }));
+    const title = screen.getByRole("textbox", { name: "레시피 제목" });
+    await userEvent.clear(title);
+    await userEvent.type(title, "세션 만료 전 김치찌개");
+    await userEvent.click(screen.getByRole("button", { name: "변경사항 저장" }));
+
+    expect(await screen.findByRole("dialog", { name: "로그인이 필요한 작업이에요" })).toBeTruthy();
+    expect(screen.getByText(/다시 로그인하면 수정한 내용으로 저장을 계속할 수 있어요/)).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "다시 확인" })).toBeNull();
+    expect(useAuthGateStore.getState().action).toEqual({
+      type: "recipe-edit-save",
+      recipeId: MOCK_RECIPE_DETAIL.id,
+      redirectTo: `/recipe/${MOCK_RECIPE_DETAIL.id}`,
+      createdAt: expect.any(Number),
+      editContext: {
+        base_recipe_revision: 12,
+        draft: {
+          ...serverDraft,
+          title: "세션 만료 전 김치찌개",
+        },
+        image_object_id: null,
+      },
+    });
+  });
+
   it.each([
     {
       label: "unauthenticated owner response",

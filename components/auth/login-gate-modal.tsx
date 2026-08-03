@@ -32,6 +32,10 @@ export function LoginGateModal() {
       return "";
     }
 
+    if (action.type === "recipe-edit-save") {
+      return "다시 로그인하면 수정한 내용으로 저장을 계속할 수 있어요.";
+    }
+
     return "로그인하면 원래 하려던 작업으로 자동 이동해요.";
   }, [action]);
 

@@ -11,12 +11,14 @@ import {
 import { RecipeFutureImpactSaveFlow } from "@/components/recipe/recipe-future-impact-save-flow";
 import { createRecipeEditorImageDraft, type RecipeEditorDraft } from "@/lib/personal-recipe-editor";
 import type { RecipeEditContext, RecipeEditDraft } from "@/types/recipe";
+import { useAuthGateStore } from "@/stores/ui-store";
 
 interface RecipeDetailPersonalEditorProps {
   editContext: RecipeEditContext;
   onClose: () => void;
   onSaved: () => void;
   recipeId: string;
+  resumeContext?: RecipeEditContext | null;
 }
 
 function cloneDraft(draft: RecipeEditDraft): RecipeEditDraft {
@@ -79,12 +81,17 @@ export function RecipeDetailPersonalEditor({
   onClose,
   onSaved,
   recipeId,
+  resumeContext = null,
 }: RecipeDetailPersonalEditorProps) {
   const initialDraft = useMemo(
     () => cloneDraft(editContext.draft),
     [editContext],
   );
-  const [draft, setDraft] = useState(() => cloneDraft(editContext.draft));
+  const [draft, setDraft] = useState(() => cloneDraft(
+    resumeContext?.draft ?? editContext.draft,
+  ));
+  const openAuthGate = useAuthGateStore((state) => state.open);
+  const saveContext = resumeContext ?? editContext;
   const initialShellDraft = useMemo(
     () => toEditorShellDraft(initialDraft, editContext.image_object_id),
     [editContext.image_object_id, initialDraft],
@@ -242,15 +249,21 @@ export function RecipeDetailPersonalEditor({
 
             <RecipeFutureImpactSaveFlow
               actionDisabled={!hasChanges || draft.title.trim() === ""}
-              baseRecipeRevision={editContext.base_recipe_revision}
+              baseRecipeRevision={saveContext.base_recipe_revision}
               draft={draft}
               enabled
-              imageObjectId={editContext.image_object_id}
+              imageObjectId={saveContext.image_object_id}
               onSaved={() => {
                 onClose();
                 onSaved();
               }}
+              onUnauthorized={(pendingEditContext) => openAuthGate({
+                editContext: pendingEditContext,
+                recipeId,
+                type: "recipe-edit-save",
+              })}
               recipeId={recipeId}
+              resumePreview={Boolean(resumeContext)}
             />
           </div>
         </PersonalRecipeEditorShell>

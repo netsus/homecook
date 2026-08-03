@@ -68,6 +68,7 @@ import { useAuthGateStore } from "@/stores/ui-store";
 import type {
   RecipeBookSummary,
   RecipeDetail,
+  RecipeEditContext,
   RecipeIngredient,
   RecipeLikeData,
   RecipeSnapshotUiMode,
@@ -198,6 +199,7 @@ export function RecipeDetailScreen({
   const [plannerServings, setPlannerServings] = useState(1);
   const [snapshotStartState, setSnapshotStartState] = useState<"idle" | "pending">("idle");
   const [isPersonalEditorOpen, setIsPersonalEditorOpen] = useState(false);
+  const [personalEditResumeContext, setPersonalEditResumeContext] = useState<RecipeEditContext | null>(null);
   const router = useRouter();
   const openAuthGate = useAuthGateStore((state) => state.open);
   const isDesktopViewport = useDesktopViewport();
@@ -895,6 +897,14 @@ export function RecipeDetailScreen({
 
     clearPendingAction();
 
+    if (pendingAction.type === "recipe-edit-save") {
+      if (recipeSnapshotUiMode === "snapshot_v2" && recipe.edit_context) {
+        setPersonalEditResumeContext(pendingAction.editContext);
+        setIsPersonalEditorOpen(true);
+      }
+      return;
+    }
+
     if (pendingAction.type === "like") {
       void handleLikeToggle({ source: "return-to-action" });
       return;
@@ -917,7 +927,7 @@ export function RecipeDetailScreen({
       void openPlannerAddSheet({ source: "return-to-action" });
       return;
     }
-  }, [handleLikeToggle, isAuthenticated, openPlannerAddSheet, openSaveModal, recipe, recipeId]);
+  }, [handleLikeToggle, isAuthenticated, openPlannerAddSheet, openSaveModal, recipe, recipeId, recipeSnapshotUiMode]);
 
   const handleShare = async () => {
     if (!recipe) {
@@ -1119,7 +1129,10 @@ export function RecipeDetailScreen({
             selectedServings={selectedServings}
             isNutritionRefreshing={nutritionRequestState === "loading"}
             canEditPersonalRecipe={canEditPersonalRecipe}
-            onEditPersonalRecipe={() => setIsPersonalEditorOpen(true)}
+            onEditPersonalRecipe={() => {
+              setPersonalEditResumeContext(null);
+              setIsPersonalEditorOpen(true);
+            }}
           />
         </div>
       ) : null}
@@ -1842,7 +1855,10 @@ export function RecipeDetailScreen({
           capabilityEnabled={canEditPersonalRecipe}
           isAuthenticated={isAuthenticated}
           onDelete={() => undefined}
-          onEdit={() => setIsPersonalEditorOpen(true)}
+          onEdit={() => {
+            setPersonalEditResumeContext(null);
+            setIsPersonalEditorOpen(true);
+          }}
           onFork={() => undefined}
         />
       </div>
@@ -1927,9 +1943,16 @@ export function RecipeDetailScreen({
             draft: activePersonalEditContext.draft,
             image_object_id: activePersonalEditContext.imageObjectId,
           }}
-          onClose={() => setIsPersonalEditorOpen(false)}
-          onSaved={() => void loadRecipe()}
+          onClose={() => {
+            setIsPersonalEditorOpen(false);
+            setPersonalEditResumeContext(null);
+          }}
+          onSaved={() => {
+            setPersonalEditResumeContext(null);
+            void loadRecipe();
+          }}
           recipeId={recipeId}
+          resumeContext={personalEditResumeContext}
         />
       ) : null}
     </>

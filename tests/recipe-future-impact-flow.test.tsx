@@ -98,9 +98,8 @@ describe("recipe future impact save flow", () => {
     );
     await user.click(screen.getByRole("button", { name: "변경사항 저장" }));
 
-    expect((await screen.findByRole("alert")).textContent).toContain(
-      "다시 로그인하면 수정한 내용으로 저장을 계속할 수 있어요",
-    );
+    await waitFor(() => expect(onUnauthorized).toHaveBeenCalledTimes(1));
+    expect(screen.queryByRole("dialog", { name: "미래 계획 반영 확인" })).toBeNull();
     expect(screen.queryByRole("button", { name: "다시 확인" })).toBeNull();
     expect(onUnauthorized).toHaveBeenCalledWith({
       base_recipe_revision: 12,

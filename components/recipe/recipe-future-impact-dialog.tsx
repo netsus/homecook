@@ -22,29 +22,37 @@ function dateLabel(value: string | null) {
   return new Intl.DateTimeFormat("ko-KR", { year: "numeric", month: "numeric", day: "numeric", timeZone: "Asia/Seoul" }).format(new Date(`${value}T12:00:00+09:00`));
 }
 
-export function RecipeFutureImpactDialog({ errorCode, impact, loading = false, onClose, onRecheck, onSave, submitting = false }: {
+export function RecipeFutureImpactDialog({ errorCode, impact, loading = false, onClose, onLogin, onRecheck, onSave, submitting = false }: {
   errorCode?: string | null;
   impact: RecipeFutureImpact | null;
   loading?: boolean;
   submitting?: boolean;
   onClose: () => void;
+  onLogin?: () => void;
   onRecheck: () => void;
   onSave: (strategy: Strategy) => void;
 }) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const recheckRef = useRef<HTMLButtonElement>(null);
+  const loginRef = useRef<HTMLButtonElement>(null);
   const [strategy, setStrategy] = useState<Strategy | null>(null);
-  const needsRecheck = Boolean(errorCode);
-  useDialogBoundary({ dialogRef, initialFocusRef: needsRecheck ? recheckRef : undefined, onClose, closeOnEscape: !submitting });
-  useEffect(() => { if (needsRecheck) { setStrategy(null); requestAnimationFrame(() => recheckRef.current?.focus()); } }, [needsRecheck, errorCode]);
+  const unauthorized = errorCode === "UNAUTHORIZED";
+  const needsRecheck = Boolean(errorCode) && !unauthorized;
+  useDialogBoundary({ dialogRef, initialFocusRef: unauthorized ? loginRef : needsRecheck ? recheckRef : undefined, onClose, closeOnEscape: !submitting });
+  useEffect(() => {
+    if (!errorCode) return;
+    setStrategy(null);
+    requestAnimationFrame(() => (unauthorized ? loginRef : recheckRef).current?.focus());
+  }, [errorCode, unauthorized]);
 
   return <div className="fixed inset-0 z-50 flex items-end justify-center bg-[var(--overlay-40)] p-4 sm:items-center" role="presentation">
     <div aria-busy={loading || submitting} aria-describedby="future-impact-copy" aria-labelledby="future-impact-title" className="flex max-h-[calc(100dvh-32px)] w-full max-w-[390px] flex-col overflow-hidden rounded-[16px] bg-[var(--surface)] shadow-xl" ref={dialogRef} role="dialog" tabIndex={-1}>
       <div className="shrink-0 border-b border-[var(--line)] p-4"><h2 className="text-lg font-extrabold" id="future-impact-title">미래 계획 반영 확인</h2></div>
       <div className="min-h-0 overflow-y-auto p-4" id="future-impact-copy">
         {loading ? <p role="status">영향을 확인하고 있어요.</p> : null}
+        {unauthorized ? <div role="alert"><p>로그인이 만료됐어요. 다시 로그인하면 수정한 내용으로 저장을 계속할 수 있어요.</p><button className="mt-3 min-h-11 rounded-[var(--radius-control)] border px-4 font-bold" onClick={onLogin} ref={loginRef} type="button">로그인하고 저장 계속하기</button></div> : null}
         {needsRecheck ? <div role="alert"><p>영향을 확인하지 못했어요. 최신 내용으로 다시 확인해 주세요.</p><button className="mt-3 min-h-11 rounded-[var(--radius-control)] border px-4 font-bold" onClick={onRecheck} ref={recheckRef} type="button">{errorCode === "RECIPE_IMPACT_STALE" || errorCode === "MEAL_COOKING_ALREADY_STARTED" ? "최신 영향 다시 확인" : "다시 확인"}</button></div> : null}
-        {!loading && !needsRecheck && impact ? <>
+        {!loading && !errorCode && impact ? <>
           <section className="rounded-[16px] bg-[var(--surface-fill)] p-4" aria-label="영향 요약">
             <p className="font-bold">미래 계획 {impact.future_meal_count}개</p>
             <p>{dateLabel(impact.date_range.from)} ~ {dateLabel(impact.date_range.to)}</p>
@@ -58,7 +66,7 @@ export function RecipeFutureImpactDialog({ errorCode, impact, loading = false, o
           <p className="mt-4 text-sm">완료한 장보기 기록은 바뀌지 않아요. 요리는 각 계획에 고정된 레시피 내용으로 진행돼요.</p>
         </> : null}
       </div>
-      <footer className="grid shrink-0 grid-cols-2 gap-2 border-t border-[var(--line)] p-4"><button className="min-h-11 rounded-[var(--radius-control)] border" disabled={submitting} onClick={onClose} type="button">취소</button><button className="min-h-11 rounded-[var(--radius-control)] bg-[var(--brand)] font-bold text-[var(--text-inverse)] disabled:opacity-50" disabled={!impact || loading || needsRecheck || submitting || !strategy} onClick={() => strategy && onSave(strategy)} type="button">{submitting ? "저장 중…" : "저장"}</button></footer>
+      <footer className="grid shrink-0 grid-cols-2 gap-2 border-t border-[var(--line)] p-4"><button className="min-h-11 rounded-[var(--radius-control)] border" disabled={submitting} onClick={onClose} type="button">취소</button><button className="min-h-11 rounded-[var(--radius-control)] bg-[var(--brand)] font-bold text-[var(--text-inverse)] disabled:opacity-50" disabled={!impact || loading || Boolean(errorCode) || submitting || !strategy} onClick={() => strategy && onSave(strategy)} type="button">{submitting ? "저장 중…" : "저장"}</button></footer>
     </div>
   </div>;
 }

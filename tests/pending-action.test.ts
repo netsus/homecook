@@ -111,4 +111,28 @@ describe("pending action", () => {
 
     expect(readPendingAction()).toEqual(action);
   });
+
+  it("rejects a malformed owner edit return context", () => {
+    window.localStorage.setItem(PENDING_ACTION_KEY, JSON.stringify({
+      type: "recipe-edit-save",
+      recipeId: "recipe-1",
+      redirectTo: "/recipe/recipe-1",
+      createdAt: 123,
+      editContext: {
+        base_recipe_revision: 12,
+        draft: {
+          title: "고친 레시피",
+          description: null,
+          base_servings: 2,
+          ingredients: [],
+          steps: [],
+          guessed_field: true,
+        },
+        image_object_id: null,
+      },
+    }));
+
+    expect(readPendingAction()).toBeNull();
+    expect(window.localStorage.getItem(PENDING_ACTION_KEY)).toBeNull();
+  });
 });
