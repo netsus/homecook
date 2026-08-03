@@ -37,11 +37,11 @@
 - `docs/engineering/slice-workflow.md`
 - `docs/engineering/git-workflow.md`
 - `docs/engineering/qa-system.md`
-- `docs/요구사항기준선-v1.7.28.md`
-- `docs/화면정의서-v1.5.32.md`
-- `docs/유저flow맵-v1.3.30.md`
-- `docs/db설계-v1.3.30.md`
-- `docs/api문서-v1.2.34.md`
+- `docs/요구사항기준선-v1.7.29.md`
+- `docs/화면정의서-v1.5.33.md`
+- `docs/유저flow맵-v1.3.31.md`
+- `docs/db설계-v1.3.31.md`
+- `docs/api문서-v1.2.35.md`
 - YouTube 관련 workpack `20`, `29`, `32`
 
 실험 저장소:
