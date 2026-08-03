@@ -482,12 +482,15 @@ export async function GET(request: Request, context: RouteContext) {
 
 async function readRecipeMutationAuthority(
   routeClient: Awaited<ReturnType<typeof createRouteHandlerClient>>,
-  userId: string,
+  user: { created_at: string; id: string },
 ) {
-  const verifiedSession = await readVerifiedAccountGenerationSession(routeClient);
+  const verifiedSession = await readVerifiedAccountGenerationSession(
+    routeClient,
+    user,
+  );
   if (
     !verifiedSession.ok
-    || verifiedSession.sessionAuthority.ownerUuid !== userId
+    || verifiedSession.sessionAuthority.ownerUuid !== user.id
   ) {
     return {
       ok: false as const,
@@ -546,7 +549,7 @@ export async function PATCH(request: Request, context: RouteContext) {
     );
   }
 
-  const authority = await readRecipeMutationAuthority(routeClient, user.id);
+  const authority = await readRecipeMutationAuthority(routeClient, user);
   if (!authority.ok) {
     return authority.response;
   }
@@ -614,7 +617,7 @@ export async function DELETE(request: Request, context: RouteContext) {
     return fail("RESOURCE_NOT_FOUND", "레시피를 찾을 수 없어요.", 404);
   }
 
-  const authority = await readRecipeMutationAuthority(routeClient, user.id);
+  const authority = await readRecipeMutationAuthority(routeClient, user);
   if (!authority.ok) {
     return authority.response;
   }

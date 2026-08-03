@@ -49,7 +49,10 @@ export async function POST(request: Request, context: RouteContext) {
     );
   }
 
-  const verifiedSession = await readVerifiedAccountGenerationSession(routeClient);
+  const verifiedSession = await readVerifiedAccountGenerationSession(
+    routeClient,
+    user,
+  );
   if (
     !verifiedSession.ok
     || verifiedSession.sessionAuthority.ownerUuid !== user.id

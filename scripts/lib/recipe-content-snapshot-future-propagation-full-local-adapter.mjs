@@ -574,6 +574,55 @@ function seedTwoOwnerAuthority(runtime, ownerA, ownerB) {
   return fixture;
 }
 
+function assertSeededCallerAuthority(runtime, caller) {
+  const requestEpoch = Math.floor(Date.now() / 1_000);
+  const identityCreatedAt = caller.user.created_at;
+  const sessionIssuedAt = new Date(caller.claims.iat * 1_000).toISOString();
+  const claims = {
+    aud: "authenticated",
+    exp: caller.claims.exp,
+    iat: caller.claims.iat,
+    iss: caller.claims.iss,
+    role: "authenticated",
+    session_id: caller.claims.session_id,
+    sub: caller.claims.sub,
+  };
+  const attestation = Buffer.from(JSON.stringify({
+    version: 1,
+    method: "GET",
+    path: "/recipes",
+    issuer: runtime.plan.loopback.issuer,
+    owner_uuid: caller.user.id,
+    identity_created_at: identityCreatedAt,
+    session_key_hash: sessionBindingHash(runtime, caller),
+    issued_at: requestEpoch,
+    expires_at: requestEpoch + 30,
+  }), "utf8").toString("base64url");
+  const result = postgres(runtime, `
+    set request.jwt.claims = '{"role":"service_role"}';
+    select public.assert_full_local_session_authority(
+      ${sqlLiteral(runtime.plan.loopback.issuer)},
+      ${sqlLiteral(caller.user.id)}::uuid,
+      ${sqlLiteral(identityCreatedAt)}::timestamptz,
+      ${sqlLiteral(sessionBindingHash(runtime, caller))},
+      1,
+      2,
+      ${sqlLiteral(sessionIssuedAt)}::timestamptz
+    ) ->> 'binding_state';
+    set request.jwt.claims = ${sqlLiteral(JSON.stringify(claims))};
+    set request.method = 'GET';
+    set request.path = '/recipes';
+    set request.headers = ${sqlLiteral(JSON.stringify({
+      "x-homecook-attestation-verified": attestation,
+    }))};
+    select private.verify_hybrid_request_authority();
+    select 'active';
+  `, { output: true });
+  if (!result.trim().endsWith("active")) {
+    throw new Error("isolated seeded session authority preflight failed");
+  }
+}
+
 function createReleaseWorktree(runtime, releaseSha, slot) {
   if (!EXACT_SHA.test(releaseSha ?? "")) {
     throw new Error("isolated application release requires an exact SHA");
@@ -930,6 +979,8 @@ export function createRecipeContentSnapshotFuturePropagationFullLocalAdapter({
       const ownerA = await createLocalAuthCaller(runtime, "owner-a");
       const ownerB = await createLocalAuthCaller(runtime, "owner-b");
       const fixture = seedTwoOwnerAuthority(runtime, ownerA, ownerB);
+      assertSeededCallerAuthority(runtime, ownerA);
+      assertSeededCallerAuthority(runtime, ownerB);
       const application = await startReleaseApplication(
         runtime,
         releaseSha,

@@ -198,6 +198,7 @@ export function deriveVerifiedAccountGenerationSessionAuthority(input: {
 
 export async function readVerifiedAccountGenerationSession(
   routeClient: AccountGenerationRouteAuthClient,
+  liveVerifiedUser?: VerifiedAuthUser,
 ): Promise<
   | {
       ok: true;
@@ -214,10 +215,13 @@ export async function readVerifiedAccountGenerationSession(
       return { ok: false };
     }
 
-    const userResult = await routeClient.auth.getUser(accessToken);
-    const user = userResult.data.user;
-    if (userResult.error || !user) {
-      return { ok: false };
+    let user = liveVerifiedUser;
+    if (!user) {
+      const userResult = await routeClient.auth.getUser(accessToken);
+      user = userResult.data.user ?? undefined;
+      if (userResult.error || !user) {
+        return { ok: false };
+      }
     }
 
     const sessionAuthority = deriveVerifiedAccountGenerationSessionAuthority({
