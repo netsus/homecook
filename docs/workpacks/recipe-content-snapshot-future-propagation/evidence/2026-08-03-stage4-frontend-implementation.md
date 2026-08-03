@@ -143,5 +143,5 @@
 
 - GitHub fresh-Supabase `security-function-authorization` exposed one real RED at head `a3940ef4`: both new service-only functions were absent from the central additive authorization inventory, so CI rejected them as unclassified.
 - Focused inventory RED: 1/1 failed with the missing function classification. GREEN commit `29173d68` classifies the exact signatures, explicit postgres owner, safe search paths and service-role-only ACLs in both the central and full-local inventories.
-- GREEN evidence: inventory/projection 15/15; authorization `--contract-only` validator classified all 18 #7 functions; disposable PostgreSQL fresh/replay again passed #7 20/20 and full-local security 31 pass + 17 intended skip in each run.
+- GREEN evidence: inventory/projection 15/15; authorization `--contract-only` validator classified all 18 #7 functions; disposable PostgreSQL fresh/replay again passed #7 20/20 and full-local security 31 pass + 17 intended skip in each run; current-head `pnpm verify:backend` passed 217 product files with 2,649 tests + 150 intended skips, 77-route build and security E2E 12/12.
 - This repair changes no public endpoint, browser capability value or activation state.
