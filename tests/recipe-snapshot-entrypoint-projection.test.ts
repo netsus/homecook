@@ -88,6 +88,17 @@ describe("recipe snapshot server-only entrypoint projection", () => {
     await expect(readRecipeSnapshotUiMode()).resolves.toBe("legacy_v1");
   });
 
+  it("returns legacy_v1 when server-only client creation throws", async () => {
+    createRecipeFuturePropagationInternalClient.mockImplementation(() => {
+      throw new Error("server environment unavailable");
+    });
+    const { readRecipeSnapshotUiMode } = await import(
+      "@/lib/server/recipe-snapshot-entrypoint"
+    );
+
+    await expect(readRecipeSnapshotUiMode()).resolves.toBe("legacy_v1");
+  });
+
   it("accepts only the exact positive-revision owner edit projection", async () => {
     const rpc = vi.fn(async () => ({ data: ownerProjection(), error: null }));
     createRecipeFuturePropagationInternalClient.mockReturnValue({ rpc });

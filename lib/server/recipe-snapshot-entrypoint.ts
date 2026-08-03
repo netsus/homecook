@@ -159,12 +159,14 @@ function parseEntrypointContext(value: unknown): RecipeSnapshotEntrypointContext
 }
 
 export async function readRecipeSnapshotUiMode(
-  client: RpcClient | null = createRecipeFuturePropagationInternalClient(),
+  client?: RpcClient | null,
 ): Promise<RecipeSnapshotUiMode> {
-  if (!client) return "legacy_v1";
-
   try {
-    const result = await client.rpc("read_recipe_snapshot_ui_mode");
+    const resolvedClient = client === undefined
+      ? createRecipeFuturePropagationInternalClient()
+      : client;
+    if (!resolvedClient) return "legacy_v1";
+    const result = await resolvedClient.rpc("read_recipe_snapshot_ui_mode");
     return !result.error && result.data === "snapshot_v2"
       ? "snapshot_v2"
       : "legacy_v1";
@@ -176,20 +178,31 @@ export async function readRecipeSnapshotUiMode(
 export async function readRecipeSnapshotEntrypointContext({
   recipeId,
   sessionAuthority,
-  client = createRecipeFuturePropagationInternalClient(),
+  client,
 }: {
   recipeId: string;
   sessionAuthority: AccountGenerationBootstrapSessionAuthority;
   client?: RpcClient | null;
 }): Promise<RecipeSnapshotEntrypointContext> {
-  if (!client) {
+  let resolvedClient: RpcClient | null;
+  try {
+    resolvedClient = client === undefined
+      ? createRecipeFuturePropagationInternalClient()
+      : client;
+  } catch {
+    throw new Error("recipe snapshot entrypoint context is unavailable");
+  }
+  if (!resolvedClient) {
     throw new Error("recipe snapshot entrypoint context is unavailable");
   }
 
-  const result = await client.rpc("read_recipe_snapshot_entrypoint_context", {
-    ...buildSessionAuthorityRpcArgs(sessionAuthority),
-    p_recipe_id: recipeId,
-  });
+  const result = await resolvedClient.rpc(
+    "read_recipe_snapshot_entrypoint_context",
+    {
+      ...buildSessionAuthorityRpcArgs(sessionAuthority),
+      p_recipe_id: recipeId,
+    },
+  );
   if (result.error) {
     throw new Error("recipe snapshot entrypoint context is unavailable");
   }

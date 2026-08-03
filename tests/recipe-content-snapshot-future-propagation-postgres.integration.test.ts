@@ -1115,6 +1115,72 @@ describeIf("recipe content snapshot future propagation PostgreSQL", () => {
     }
   });
 
+  it("derives only the joint server UI mode and keeps public execution closed", () => {
+    expect(psql(`
+      begin;
+      set local homecook.personal_recipe_v2 = 'on';
+      set local homecook.snapshot_v2_creation = 'on';
+      select public.read_recipe_snapshot_ui_mode();
+      commit;
+    `)).toBe("snapshot_v2");
+    expect(psql(`
+      begin;
+      set local homecook.personal_recipe_v2 = 'on';
+      reset homecook.snapshot_v2_creation;
+      select public.read_recipe_snapshot_ui_mode();
+      commit;
+    `)).toBe("legacy_v1");
+    expect(psql(`
+      select concat_ws(':',
+        has_function_privilege('anon', 'public.read_recipe_snapshot_ui_mode()', 'execute'),
+        has_function_privilege('authenticated', 'public.read_recipe_snapshot_ui_mode()', 'execute'),
+        has_function_privilege('service_role', 'public.read_recipe_snapshot_ui_mode()', 'execute')
+      );
+    `)).toBe("f:f:t");
+  });
+
+  it("reads one exact owner editor snapshot and rejects a different owner", () => {
+    const context = JSON.parse(psql(`
+      begin;
+      set local request.jwt.claim.role = 'service_role';
+      select public.read_recipe_snapshot_entrypoint_context(
+        ${authArgs()}, '${recipeId}'::uuid
+      );
+      commit;
+    `));
+
+    expect(context.revision).toBeGreaterThan(0);
+    expect(context.edit_context.base_recipe_revision).toBe(context.revision);
+    expect(Object.keys(context.edit_context).sort()).toEqual([
+      "base_recipe_revision",
+      "draft",
+      "image_object_id",
+    ]);
+    expect(Object.keys(context.edit_context.draft).sort()).toEqual([
+      "base_servings",
+      "description",
+      "ingredients",
+      "steps",
+      "title",
+    ]);
+    expect(context.edit_context.image_object_id).toBeNull();
+    expect(context.edit_context.draft.ingredients).toHaveLength(2);
+    expect(context.edit_context.draft.steps[0].ingredients_used[0]).toHaveProperty(
+      "cut_size",
+    );
+
+    const nonOwnerResult = psqlResult(`
+      begin;
+      set local request.jwt.claim.role = 'service_role';
+      select public.read_recipe_snapshot_entrypoint_context(
+        ${authArgs()}, '${hiddenPublicRecipeId}'::uuid
+      );
+      commit;
+    `);
+    expect(nonOwnerResult.status).not.toBe(0);
+    expect(nonOwnerResult.stderr).toContain("RESOURCE_NOT_FOUND");
+  });
+
   it("denies authenticated preview DML and preview mutates no domain row", () => {
     expect(psql(`
       select relrowsecurity::text from pg_class
