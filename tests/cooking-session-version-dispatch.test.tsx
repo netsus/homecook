@@ -19,6 +19,7 @@ describe("cooking session version dispatch", () => {
 
   it("renders terminal snapshot sessions read-only without legacy fallback actions", () => {
     render(<SnapshotV2CookModeView data={{ session_id: "s", contract_version: "snapshot_v2", mode: "planner", status: "completed", recipe: { id: "r", title: "고정된 김치찌개", cooking_servings: 2, ingredients: [{ ingredient_id: "ingredient-1", standard_name: "김치", amount: 200, unit: "g", display_text: "김치 200g", ingredient_type: "QUANT", scalable: true }], steps: [{ step_number: 1, instruction: "김치를 냄비에 넣고 끓여요.", cooking_method: { code: "BOIL", label: "끓이기", color_key: "orange" }, ingredients_used: [], heat_level: "medium", duration_seconds: 600, duration_text: "10분" }] }, pantry_candidates: [] }} onCancel={() => undefined} />);
+    expect(screen.getByTestId("snapshot-v2-cook-mode").classList.contains("cook-mobile-whole-screen")).toBe(true);
     expect(screen.getByText("고정된 김치찌개")).toBeTruthy();
     expect(screen.getByText("김치")).toBeTruthy();
     expect(screen.getByText("김치를 냄비에 넣고 끓여요.")).toBeTruthy();
