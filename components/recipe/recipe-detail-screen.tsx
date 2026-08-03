@@ -11,7 +11,8 @@ import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-ta
 import { PlannerAddSheet } from "@/components/recipe/planner-add-sheet";
 import type { PlannerAddSheetState } from "@/components/recipe/planner-add-sheet";
 import { RecipeDetailPersonalActions } from "@/components/recipe/recipe-detail-personal-actions";
-import { RecipeFutureImpactDialog } from "@/components/recipe/recipe-future-impact-dialog";
+import { RecipeFutureImpactSaveFlow } from "@/components/recipe/recipe-future-impact-save-flow";
+import { CookingStartAction } from "@/components/cooking/cooking-start-action";
 import { RecipeNutritionCard } from "@/components/recipe/recipe-nutrition-card";
 import { SaveModal } from "@/components/recipe/save-modal";
 import { ContentState } from "@/components/shared/content-state";
@@ -40,6 +41,8 @@ import {
   saveRecipeToBooks,
 } from "@/lib/api/recipe-save";
 import { createMeal, isMealApiError } from "@/lib/api/meal";
+import { createSnapshotV2CookingSession } from "@/lib/api/cooking";
+import type { RecipeFutureDraft } from "@/lib/api/recipe-future-impact";
 import { notifyGamificationSourceAction } from "@/lib/gamification-events";
 import { getCookingMethodColor, getCookingMethodTint } from "@/lib/cooking-method-colors";
 import { getCookingMethodAssistiveLabel } from "@/lib/cooking-method-taxonomy";
@@ -150,6 +153,12 @@ interface RecipeDetailScreenProps {
   recipeId: string;
   authError?: string | null;
   initialAuthenticated?: boolean;
+  personalEditContext?: {
+    baseRecipeRevision: number;
+    draft: RecipeFutureDraft;
+    imageObjectId: string | null;
+  };
+  snapshotV2StartContext?: { expectedRecipeRevision: number };
 }
 
 
@@ -157,6 +166,8 @@ export function RecipeDetailScreen({
   recipeId,
   authError,
   initialAuthenticated = false,
+  personalEditContext,
+  snapshotV2StartContext,
 }: RecipeDetailScreenProps) {
   const [detailState, setDetailState] = useState<DetailState>("loading");
   const [detailErrorKind, setDetailErrorKind] = useState<DetailErrorKind>(null);
@@ -1010,6 +1021,17 @@ export function RecipeDetailScreen({
   const shouldRenderWebView = isDesktopViewport;
   const shouldRenderAppView = !isDesktopViewport;
   const shouldRenderLegacyWebView = false;
+  const activePersonalEditContext = personalEditContext ?? (showQaFutureImpact ? {
+    baseRecipeRevision: 12,
+    draft: {
+      title: recipe.title,
+      description: recipe.description,
+      base_servings: recipe.base_servings,
+      ingredients: recipe.ingredients,
+      steps: recipe.steps,
+    },
+    imageObjectId: null,
+  } : undefined);
 
   return (
     <>
@@ -1835,23 +1857,26 @@ export function RecipeDetailScreen({
       />
       {feedback ? <FeedbackToast message={feedback.message} tone={feedback.tone} /> : null}
       <LoginGateModal />
-      {showQaFutureImpact ? (
-        <RecipeFutureImpactDialog
-          impact={{
-            impact_token: "qa-impact-token",
-            expires_at: "2026-08-03T12:00:00.000Z",
-            proposed_content_hash: "a".repeat(64),
-            future_meal_count: 3,
-            date_range: { from: "2026-08-04", to: "2026-08-10" },
-            incomplete_shopping_list_count: 2,
-            completed_shopping_list_count: 1,
-            active_cooking_claim_count: 1,
-            replace_all_allowed: false,
-          }}
-          onClose={() => setShowQaFutureImpact(false)}
-          onRecheck={() => undefined}
-          onSave={() => undefined}
-        />
+      {activePersonalEditContext ? (
+        <div className="fixed inset-x-4 bottom-[calc(190px+env(safe-area-inset-bottom))] z-30 lg:static lg:mt-4">
+          <RecipeFutureImpactSaveFlow
+            baseRecipeRevision={activePersonalEditContext.baseRecipeRevision}
+            draft={activePersonalEditContext.draft}
+            enabled
+            imageObjectId={activePersonalEditContext.imageObjectId}
+            onSaved={() => void loadRecipe()}
+            recipeId={recipeId}
+          />
+        </div>
+      ) : null}
+      {snapshotV2StartContext ? (
+        <div className="fixed inset-x-4 bottom-[calc(246px+env(safe-area-inset-bottom))] z-30 lg:static lg:mt-4">
+          <CookingStartAction
+            label={`${recipe.title} 요리하기`}
+            navigate={(href) => router.push(buildReturnHref(href, { returnSurface: "recipe.detail", returnTo: recipeDetailReturnHref }))}
+            start={() => createSnapshotV2CookingSession({ mode: "standalone", recipe_id: recipeId, expected_recipe_revision: snapshotV2StartContext.expectedRecipeRevision, cooking_servings: selectedServings })}
+          />
+        </div>
       ) : null}
     </>
   );

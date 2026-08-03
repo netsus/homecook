@@ -64,7 +64,7 @@ describe("recipe future impact save flow", () => {
 
     render(<RecipeFutureImpactSaveFlow baseRecipeRevision={12} draft={draft} enabled imageObjectId={null} onSaved={vi.fn()} recipeId="recipe-id" />);
     await user.click(screen.getByRole("button", { name: "변경사항 저장" }));
-    expect(await screen.findByRole("alert")).toHaveTextContent("최신 내용으로 다시 확인");
+    expect((await screen.findByRole("alert")).textContent).toContain("최신 내용으로 다시 확인");
     expect(patchRecipeWithFutureStrategy).not.toHaveBeenCalled();
 
     await user.click(screen.getByRole("button", { name: "다시 확인" }));
@@ -73,7 +73,7 @@ describe("recipe future impact save flow", () => {
 
     const recheck = await screen.findByRole("button", { name: "최신 영향 다시 확인" });
     await waitFor(() => expect(document.activeElement).toBe(recheck));
-    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(screen.getByRole("dialog")).toBeTruthy();
   });
 
   it("stays completely dark when the capability boundary is off", () => {

@@ -40,7 +40,7 @@ export function RecipeFutureImpactDialog({ errorCode, impact, loading = false, o
 
   return <div className="fixed inset-0 z-50 flex items-end justify-center bg-[var(--overlay-40)] p-4 sm:items-center" role="presentation">
     <div aria-busy={loading || submitting} aria-describedby="future-impact-copy" aria-labelledby="future-impact-title" className="flex max-h-[calc(100dvh-32px)] w-full max-w-[390px] flex-col overflow-hidden rounded-[16px] bg-[var(--surface)] shadow-xl" ref={dialogRef} role="dialog" tabIndex={-1}>
-      <header className="shrink-0 border-b border-[var(--line)] p-4"><h2 className="text-lg font-extrabold" id="future-impact-title">미래 계획 반영 확인</h2></header>
+      <div className="shrink-0 border-b border-[var(--line)] p-4"><h2 className="text-lg font-extrabold" id="future-impact-title">미래 계획 반영 확인</h2></div>
       <div className="min-h-0 overflow-y-auto p-4" id="future-impact-copy">
         {loading ? <p role="status">영향을 확인하고 있어요.</p> : null}
         {needsRecheck ? <div role="alert"><p>영향을 확인하지 못했어요. 최신 내용으로 다시 확인해 주세요.</p><button className="mt-3 min-h-11 rounded-[var(--radius-control)] border px-4 font-bold" onClick={onRecheck} ref={recheckRef} type="button">{errorCode === "RECIPE_IMPACT_STALE" || errorCode === "MEAL_COOKING_ALREADY_STARTED" ? "최신 영향 다시 확인" : "다시 확인"}</button></div> : null}

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { SnapshotV2CookModeView } from "@/components/cooking/snapshot-v2-cook-mode-view";
 import { cancelSnapshotV2CookingSession, fetchSnapshotV2CookMode, isCookingApiError } from "@/lib/api/cooking";
 import type { SnapshotV2CookModeData } from "@/types/cooking";
@@ -9,6 +9,7 @@ export function SnapshotV2CookModeScreen({ initialAuthenticated, sessionId }: { 
   const [data, setData] = useState<SnapshotV2CookModeData | null>(null);
   const [state, setState] = useState<"loading" | "ready" | "error" | "unauthorized">(initialAuthenticated ? "loading" : "unauthorized");
   const [cancelling, setCancelling] = useState(false);
+  const cancelKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!initialAuthenticated) return;
@@ -24,6 +25,8 @@ export function SnapshotV2CookModeScreen({ initialAuthenticated, sessionId }: { 
   return <SnapshotV2CookModeView cancelling={cancelling} data={data} onCancel={() => {
     if (cancelling || data.status !== "in_progress") return;
     setCancelling(true);
-    void cancelSnapshotV2CookingSession(sessionId).then(() => setData({ ...data, status: "cancelled" })).catch(() => setState("error")).finally(() => setCancelling(false));
+    const idempotencyKey = cancelKeyRef.current ?? crypto.randomUUID();
+    cancelKeyRef.current = idempotencyKey;
+    void cancelSnapshotV2CookingSession(sessionId, idempotencyKey).then(() => { cancelKeyRef.current = null; setData({ ...data, status: "cancelled" }); }).catch(() => setState("error")).finally(() => setCancelling(false));
   }} />;
 }

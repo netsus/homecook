@@ -38,7 +38,7 @@ import {
   WebSkeleton,
   WebTopNav,
 } from "@/components/web";
-import { createCookingSession, isCookingApiError } from "@/lib/api/cooking";
+import { createCookingSession, createSnapshotV2CookingSession, isCookingApiError } from "@/lib/api/cooking";
 import { getCookingSessionCookModeHref } from "@/lib/cooking/session-version-dispatch";
 import {
   deleteMeal,
@@ -93,6 +93,7 @@ export interface MealScreenProps {
   columnId: string;
   slotName: string;
   initialAuthenticated: boolean;
+  snapshotV2StartContext?: { expectedMealRevisions: Record<string, number> };
 }
 
 // Status data preserved for logic; visual badges removed per Wave1 port.
@@ -1160,6 +1161,7 @@ export function MealScreen({
   columnId,
   slotName,
   initialAuthenticated,
+  snapshotV2StartContext,
 }: MealScreenProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -1450,13 +1452,21 @@ export function MealScreen({
     clearConflictError(meal.id);
 
     try {
-      const session = await createCookingSession({
-        recipe_id: meal.recipe_id,
-        meal_ids: [meal.id],
-        cooking_servings: meal.planned_servings,
-      });
+      const session = snapshotV2StartContext
+        ? await createSnapshotV2CookingSession({
+            mode: "planner",
+            meal_ids: [meal.id],
+            expected_meal_revisions: {
+              [meal.id]: snapshotV2StartContext.expectedMealRevisions[meal.id],
+            },
+          })
+        : await createCookingSession({
+            recipe_id: meal.recipe_id,
+            meal_ids: [meal.id],
+            cooking_servings: meal.planned_servings,
+          });
       router.push(
-        buildReturnHref(getCookingSessionCookModeHref({ session_id: session.session_id, contract_version: "legacy_v1" }), {
+        buildReturnHref(getCookingSessionCookModeHref({ session_id: session.session_id, contract_version: snapshotV2StartContext ? "snapshot_v2" : "legacy_v1" }), {
           returnTo: buildNextPath(planDate, columnId, slotName),
         }),
       );
