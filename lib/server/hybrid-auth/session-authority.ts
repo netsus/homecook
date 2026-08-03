@@ -262,6 +262,7 @@ export function createHybridRequestAttestation({
   ) {
     throw new Error("attestation TTL은 1~60초여야 해요.");
   }
+  requireIsoTimestamp(identityCreatedAt, "identityCreatedAt");
 
   const payload: HybridAttestationPayload = {
     version: keyVersion,
@@ -269,10 +270,7 @@ export function createHybridRequestAttestation({
     path,
     issuer,
     owner_uuid: ownerUuid,
-    identity_created_at: requireIsoTimestamp(
-      identityCreatedAt,
-      "identityCreatedAt",
-    ),
+    identity_created_at: identityCreatedAt,
     session_key_hash: sessionKeyHash,
     issued_at: issuedAtSeconds,
     expires_at: issuedAtSeconds + ttlSeconds,
@@ -319,6 +317,7 @@ export function verifyHybridRequestAttestation({
       || claims.expires_at - claims.issued_at <= 0
       || claims.expires_at - claims.issued_at > 60
       || !UUID_PATTERN.test(claims.owner_uuid)
+      || !Number.isFinite(Date.parse(claims.identity_created_at))
       || !SHA256_PATTERN.test(claims.session_key_hash)
     ) {
       return { ok: false };

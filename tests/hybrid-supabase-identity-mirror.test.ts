@@ -120,4 +120,31 @@ describe("hybrid identity epoch and session-liveness authority", () => {
       nowSeconds: 1_800_000_031,
     })).toMatchObject({ ok: false });
   });
+
+  it("keeps the exact identity epoch inside the signed request attestation", () => {
+    const exactIdentityEpoch = "2026-07-30T00:00:00.123456Z";
+    const attestation = createHybridRequestAttestation({
+      secret: SECRET,
+      keyVersion: 1,
+      method: "POST",
+      path: "/rest/v1/meals",
+      issuer: ISSUER,
+      ownerUuid: OWNER_UUID,
+      identityCreatedAt: exactIdentityEpoch,
+      sessionKeyHash: "b".repeat(64),
+      issuedAtSeconds: 1_800_000_000,
+      ttlSeconds: 30,
+    });
+
+    expect(verifyHybridRequestAttestation({
+      ...attestation,
+      secret: SECRET,
+      method: "POST",
+      path: "/rest/v1/meals",
+      nowSeconds: 1_800_000_010,
+    })).toMatchObject({
+      ok: true,
+      claims: { identity_created_at: exactIdentityEpoch },
+    });
+  });
 });
