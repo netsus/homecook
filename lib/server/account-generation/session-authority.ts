@@ -1,6 +1,8 @@
 import { createHmac } from "node:crypto";
 
 import { getRemoteAuthIssuer } from "@/lib/supabase/auth-env";
+import { createSessionKeyHash } from
+  "@/lib/server/hybrid-auth/session-authority";
 
 import { verifyAccountDeleteReplayJwt } from "./jwt-replay";
 
@@ -179,9 +181,14 @@ export function deriveVerifiedAccountGenerationSessionAuthority(input: {
     ownerUuid: input.user.id,
     authIdentityCreatedAt: input.user.created_at,
     sessionIssuedAt: new Date(Number(issuedAt) * 1_000).toISOString(),
-    sessionKeyHash: createHmac("sha256", secret)
-      .update(sessionId as string, "utf8")
-      .digest("hex"),
+    sessionKeyHash: createSessionKeyHash({
+      secret,
+      keyVersion: 1,
+      issuer: String(claims?.iss),
+      ownerUuid: input.user.id,
+      sessionId: sessionId as string,
+      identityCreatedAt: input.user.created_at,
+    }),
     hmacKeyVersion: 1,
   };
 }

@@ -33,6 +33,39 @@ function signPayload(payload: string, secret: string) {
   return createHmac("sha256", secret).update(payload, "utf8").digest("hex");
 }
 
+export function createSessionKeyHash({
+  secret,
+  keyVersion,
+  issuer,
+  ownerUuid,
+  sessionId,
+  identityCreatedAt,
+}: {
+  secret: string;
+  keyVersion: number;
+  issuer: string;
+  ownerUuid: string;
+  sessionId: string;
+  identityCreatedAt: string;
+}) {
+  requireSecret(secret);
+  requireUuid(ownerUuid, "ownerUuid");
+  requireUuid(sessionId, "sessionId");
+  if (!Number.isSafeInteger(keyVersion) || keyVersion <= 0) {
+    throw new Error("keyVersion은 양의 정수여야 해요.");
+  }
+  return signPayload(
+    [
+      `v${keyVersion}`,
+      issuer,
+      ownerUuid,
+      requireIsoTimestamp(identityCreatedAt, "identityCreatedAt"),
+      sessionId,
+    ].join("\n"),
+    secret,
+  );
+}
+
 export function createRemoteIdentityDigest({
   issuer,
   ownerUuid,
@@ -153,16 +186,14 @@ export function createSessionLivenessBinding({
   const expiresAt = new Date(
     Date.parse(normalizedVerifiedAt) + ttlSeconds * 1_000,
   ).toISOString();
-  const sessionKeyHash = signPayload(
-    [
-      `v${keyVersion}`,
-      issuer,
-      ownerUuid,
-      normalizedIdentityCreatedAt,
-      sessionId,
-    ].join("\n"),
+  const sessionKeyHash = createSessionKeyHash({
     secret,
-  );
+    keyVersion,
+    issuer,
+    ownerUuid,
+    sessionId,
+    identityCreatedAt: normalizedIdentityCreatedAt,
+  });
 
   return {
     session_key_hash: sessionKeyHash,
