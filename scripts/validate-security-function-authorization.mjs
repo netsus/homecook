@@ -132,10 +132,16 @@ const ADDITIVE_SOURCES = [
       REPO_ROOT,
       "docs/security/recipe-content-snapshot-future-propagation-security-function-authorization-manifest.json",
     ),
-    migrationPath: path.join(
-      REPO_ROOT,
-      "supabase/migrations/20260802210000_recipe_content_snapshot_future_propagation.sql",
-    ),
+    migrationPaths: [
+      path.join(
+        REPO_ROOT,
+        "supabase/migrations/20260802210000_recipe_content_snapshot_future_propagation.sql",
+      ),
+      path.join(
+        REPO_ROOT,
+        "supabase/migrations/20260804100000_recipe_snapshot_entrypoint_projection.sql",
+      ),
+    ],
   },
   {
     manifestPath:

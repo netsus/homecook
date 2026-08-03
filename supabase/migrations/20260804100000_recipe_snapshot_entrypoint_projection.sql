@@ -122,16 +122,22 @@ begin
 end;
 $function$;
 
+alter function public.read_recipe_snapshot_ui_mode()
+  owner to postgres;
+alter function public.read_recipe_snapshot_entrypoint_context(
+  uuid, timestamp with time zone, text, integer, timestamp with time zone, uuid
+) owner to postgres;
+
 revoke all on function public.read_recipe_snapshot_ui_mode()
   from public, anon, authenticated, service_role;
 grant execute on function public.read_recipe_snapshot_ui_mode()
   to service_role;
 
 revoke all on function public.read_recipe_snapshot_entrypoint_context(
-  uuid, timestamptz, text, integer, timestamptz, uuid
+  uuid, timestamp with time zone, text, integer, timestamp with time zone, uuid
 ) from public, anon, authenticated, service_role;
 grant execute on function public.read_recipe_snapshot_entrypoint_context(
-  uuid, timestamptz, text, integer, timestamptz, uuid
+  uuid, timestamp with time zone, text, integer, timestamp with time zone, uuid
 ) to service_role;
 
 commit;
