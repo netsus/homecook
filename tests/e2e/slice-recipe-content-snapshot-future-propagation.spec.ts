@@ -91,13 +91,24 @@ test.describe("recipe-content-snapshot-future-propagation", () => {
       },
     }));
     await page.goto(`${RECIPE_PATH}?qaFutureImpact=1`);
-    await openImpactFromEditedOwnerRecipe(page, "세션 만료 전 김치찌개");
+    const backgroundSave = await openImpactFromEditedOwnerRecipe(page, "세션 만료 전 김치찌개");
 
     const loginGate = page.getByRole("dialog", { name: "로그인이 필요한 작업이에요" });
     await expect(loginGate).toBeVisible();
     await expect(loginGate).toContainText("다시 로그인하면 수정한 내용으로 저장을 계속할 수 있어요.");
     await expect(page.getByRole("dialog", { name: "미래 계획 반영 확인" })).toHaveCount(0);
     await expect(page).toHaveURL(new RegExp(`${RECIPE_PATH.replaceAll("/", "\\/")}\\?qaFutureImpact=1$`));
+
+    await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => resolve())));
+    await expect(loginGate.locator(":focus")).toHaveCount(1);
+    await expect(backgroundSave).not.toBeFocused();
+    const close = loginGate.getByRole("button", { name: "닫기" });
+    const login = loginGate.getByRole("button", { name: "로그인" });
+    await login.focus();
+    await page.keyboard.press("Tab");
+    await expect(close).toBeFocused();
+    await page.keyboard.press("Shift+Tab");
+    await expect(login).toBeFocused();
 
     await loginGate.getByRole("button", { name: "취소" }).click();
     await expect(page.getByRole("textbox", { name: "레시피 제목" })).toHaveValue("세션 만료 전 김치찌개");

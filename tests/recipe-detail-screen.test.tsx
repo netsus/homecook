@@ -576,11 +576,25 @@ describe("recipe detail screen", () => {
     const title = screen.getByRole("textbox", { name: "레시피 제목" });
     await userEvent.clear(title);
     await userEvent.type(title, "세션 만료 전 김치찌개");
-    await userEvent.click(screen.getByRole("button", { name: "변경사항 저장" }));
+    const saveButton = screen.getByRole("button", { name: "변경사항 저장" });
+    await userEvent.click(saveButton);
 
-    expect(await screen.findByRole("dialog", { name: "로그인이 필요한 작업이에요" })).toBeTruthy();
+    const loginGate = await screen.findByRole("dialog", { name: "로그인이 필요한 작업이에요" });
     expect(screen.getByText(/다시 로그인하면 수정한 내용으로 저장을 계속할 수 있어요/)).toBeTruthy();
     expect(screen.queryByRole("button", { name: "다시 확인" })).toBeNull();
+    await act(async () => {
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    });
+    expect(loginGate.contains(document.activeElement)).toBe(true);
+    expect(document.activeElement).not.toBe(saveButton);
+
+    const login = within(loginGate).getByRole("button", { name: "로그인" });
+    const close = within(loginGate).getByRole("button", { name: "닫기" });
+    login.focus();
+    await userEvent.tab();
+    expect(document.activeElement).toBe(close);
+    await userEvent.tab({ shift: true });
+    expect(document.activeElement).toBe(login);
     expect(useAuthGateStore.getState().action).toEqual({
       type: "recipe-edit-save",
       recipeId: MOCK_RECIPE_DETAIL.id,
