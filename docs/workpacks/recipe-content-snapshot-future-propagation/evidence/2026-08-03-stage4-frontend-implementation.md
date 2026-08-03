@@ -2,6 +2,7 @@
 
 - Role: independent Stage 4 `frontend-implementer`
 - Branch: `feature/fe-recipe-content-snapshot-future-propagation`
+- Draft PR: `#1281`
 - Base: `ef5903b131a2eb9e505b2121b4e390970c565b95`
 - RED commit: `e7f1ae72d0d8bdc620c690cfd7be89628cc6f4f2`
 - GREEN commit: `226dcc85d25b9cbc2a439af2b3b495456d2948d9`
