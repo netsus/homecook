@@ -19,16 +19,17 @@
     "recipe-snapshot-authority-foundation runtime merged via PR #1218; activation and Manual Only evidence remain release gates",
     "personal-recipe-customization-write-core Stage 3 runtime merged via PR #1274 as 05683e4d; terminal closeout and activation remain pending",
     "cook-mode-whole-board runtime merged via PR #711 as 2f8569cb",
+    "recipe snapshot entrypoint Contract Evolution PR #1282 reviewed head 4341732d282f9acebf8d3e6a6550b67128e8f2b0 and merged as 7e316e8721e96762c17e3d196811416ce6f93823",
     "cooked-batch-weight-ledger #8 owns exact-pantry completion and the R/R+1 compatibility gate before R+2 activation"
   ],
   "docs_refs": {
     "source_of_truth": [
       "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
-      "docs/요구사항기준선-v1.7.28.md",
-      "docs/화면정의서-v1.5.32.md",
-      "docs/유저flow맵-v1.3.30.md",
-      "docs/db설계-v1.3.30.md",
-      "docs/api문서-v1.2.34.md"
+      "docs/요구사항기준선-v1.7.29.md",
+      "docs/화면정의서-v1.5.33.md",
+      "docs/유저flow맵-v1.3.31.md",
+      "docs/db설계-v1.3.31.md",
+      "docs/api문서-v1.2.35.md"
     ],
     "governing_docs": [
       "AGENTS.md",
@@ -78,9 +79,10 @@
     "required_checks": [
       "pnpm validate:source-of-truth-sync",
       "pnpm validate:workflow-v2",
-      "BRANCH_NAME=docs/recipe-content-snapshot-future-propagation pnpm validate:workpack -- --slice recipe-content-snapshot-future-propagation",
+      "BRANCH_NAME=docs/recipe-content-snapshot-entrypoint-relock pnpm validate:workpack -- --slice recipe-content-snapshot-future-propagation",
       "node scripts/validate-automation-spec.mjs --slice recipe-content-snapshot-future-propagation",
       "pnpm validate:omo-bookkeeping",
+      "pnpm exec vitest run tests/recipe-content-snapshot-entrypoint-contract-sync.test.ts tests/recipe-content-snapshot-future-propagation-local-rehearsal.test.ts",
       "pnpm exec vitest run tests/recipe-content-snapshot-future-propagation.test.ts tests/recipe-future-impact-security.test.ts tests/snapshot-v2-session-attempts.test.ts tests/recipe-shopping-reconciliation.test.ts",
       "pnpm test:recipe-content-snapshot-future-propagation:postgres",
       "pnpm exec vitest run tests/recipe-future-impact-dialog.test.tsx tests/cooking-session-version-dispatch.test.tsx tests/cooking-start-navigation.test.tsx",
@@ -100,9 +102,10 @@
     "verify_commands": [
       "pnpm validate:source-of-truth-sync",
       "pnpm validate:workflow-v2",
-      "BRANCH_NAME=docs/recipe-content-snapshot-future-propagation pnpm validate:workpack -- --slice recipe-content-snapshot-future-propagation",
+      "BRANCH_NAME=docs/recipe-content-snapshot-entrypoint-relock pnpm validate:workpack -- --slice recipe-content-snapshot-future-propagation",
       "node scripts/validate-automation-spec.mjs --slice recipe-content-snapshot-future-propagation",
       "pnpm validate:omo-bookkeeping",
+      "pnpm exec vitest run tests/recipe-content-snapshot-entrypoint-contract-sync.test.ts tests/recipe-content-snapshot-future-propagation-local-rehearsal.test.ts",
       "pnpm exec vitest run tests/workflow-v2-docs.test.ts tests/omo-automation-spec.test.ts tests/omo-bookkeeping.test.ts tests/omo-doc-gate.test.ts tests/source-of-truth-sync.test.ts",
       "pnpm lint",
       "pnpm typecheck",
@@ -137,6 +140,16 @@
       "independent-design-critic-and-product-design-authority-required",
       "merged-exact-sha-server-production-local-rehearsal-read-only-evidence",
       "stage1-current-vs-future-command-honesty",
+      "all-200-recipe-detail-responses-include-positive-revision",
+      "edit-context-base-recipe-revision-equals-same-response-data-revision",
+      "recipe-revision-and-edit-context-one-detail-read-snapshot-no-cross-query-composition",
+      "owner-private-current-only-edit-context-full-draft-null-array-omit",
+      "edit-context-full-draft-exact-nested-ingredients-used-cut-size-null-array-omit",
+      "image-object-id-verified-managed-identity-or-null-never-url-derived",
+      "meal-items-revision-recipe-meal-only-product-entries-unchanged",
+      "server-only-joint-capability-projection-legacy-fail-closed-raw-exposure-zero",
+      "r-r1-creation-off-seeded-read-cancel-drain-no-r2-preactivation",
+      "endpoint-request-wrapper-status-public-error-contract-unchanged",
       "independent-codex-required-findings-zero",
       "current-head-all-started-checks-terminal-green-or-intended-skip"
     ]
@@ -163,5 +176,5 @@
     "Unapproved server-production migration or database write or capability activation"
   ],
   "open_questions": [],
-  "notes": "Stage 1 PR #1081 and Stage 2/3 backend runtime are merged and remain authoritative for those stages. Stage 4 Draft PR #1281 second authority-precheck task 019fc850-46de-7a42-bbf6-c58c3dccd57a reviewed head 3786aa0e and returned REQUEST_CHANGES. The frontend implementer closed response-correlation, pending/loading/terminal evidence and duplicate-CTA findings test-first in RED ce4b12eb and GREEN b0f67e7f, with snapshot contrast RED/GREEN 7bd5a3f4/2d030379. AP-B01 remains a Contract Evolution Candidate: neither real page entrypoint has an approved page-readable projection of the DB-local snapshot creation capability or an official owner editor draft/base-revision context, and inventing either is forbidden. Approval therefore stays needs_revision, lifecycle/verification stay in_progress/pending, and Design Status stays pending-review. Fresh authority review, Stage 5/final authority, Stage 6, real-local stale/active-claim paths, merged-exact server-Mac evidence and Manual Only remain pending. Personal writes/v2 creation stay dark; #8 retains exact-pantry completion and R/R+1 before R+2 activation."
+  "notes": "Stage 1 PR #1081 and runtime predecessors #1218/#1274/#711 are merged. Stage 2/3 PR #1278 was independently reviewed at exact head 9eb1ebd8ea5a12294a76d7f2799693f03654b0a4 with required findings 0/0/0 and merged as ef5903b131a2eb9e505b2121b4e390970c565b95; backend evidence remains in docs/workpacks/recipe-content-snapshot-future-propagation/evidence/2026-08-03-stage2-backend-implementation.md. Contract Evolution PR #1282 reviewed head 4341732d282f9acebf8d3e6a6550b67128e8f2b0 with blocker/major/minor 0/0/0 and merged as 7e316e8721e96762c17e3d196811416ce6f93823, establishing requirements v1.7.29, screens v1.5.33, flow v1.3.31, DB v1.3.31 and API v1.2.35. Draft Stage 4 PR #1281 exact head 6cfcb30787c8cdebeacf9e1651bfdadfe5d8a866 contains implementation evidence but stage4-draft-entrypoint-repair-required. design-status-pending-review-temporary-no-authority-report; stage5-authority-stage6-pending; manual-server-mac-activation-pending. Lifecycle/verification stay in_progress/pending and approval is needs_revision. Personal writes and v2 creation remain dark; seeded/existing v2 read/cancel drains, and #8 R/R+1 evidence plus R+2 joint approval remains the activation gate."
 }

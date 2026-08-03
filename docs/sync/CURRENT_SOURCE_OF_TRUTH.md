@@ -1,17 +1,35 @@
 # Current Source of Truth
 
 ## Official Files
-- `docs/요구사항기준선-v1.7.28.md`
-- `docs/화면정의서-v1.5.32.md`
-- `docs/유저flow맵-v1.3.30.md`
-- `docs/db설계-v1.3.30.md`
-- `docs/api문서-v1.2.34.md`
+- `docs/요구사항기준선-v1.7.29.md`
+- `docs/화면정의서-v1.5.33.md`
+- `docs/유저flow맵-v1.3.31.md`
+- `docs/db설계-v1.3.31.md`
+- `docs/api문서-v1.2.35.md`
 
 ## Notes
 - 위 5개 파일이 현재 공식 기준 문서다.
 - `docs/reference/wireframes/`는 보조 참고 자료다.
 - 구현 중 문서 충돌이 보이면 먼저 충돌 항목을 정리하고 작업 범위를 다시 확정한다.
 - 사용자 승인으로 공식 계약을 바꾸는 경우에도 구현보다 문서가 먼저다. 관련 공식 문서와 이 파일의 버전/경로를 같은 `contract-evolution` PR에서 먼저 갱신한다.
+
+## Recipe Snapshot Entrypoint Context Contract-Evolution `2026-08-04`
+
+| 문서 | 변경 내용 |
+|------|----------|
+| 요구사항 기준선 v1.7.29 | 기존 endpoint/status/error를 유지하고 recipe revision·owner-only editor context·Meal revision·server-only 공동 capability projection·activation boundary를 잠근다 |
+| 화면정의서 v1.5.33 | `RECIPE_DETAIL`/`MEAL_SCREEN`의 단일 CTA, owner edit preview/PATCH, planner/standalone start, loading/error/unauthorized/read-only/stale-focus 연결을 기존 화면에 additive로 정의한다 |
+| 유저flow맵 v1.3.31 | page server projection → owner edit → preview/PATCH, Meal/recipe revision → snapshot-v2 start, creation-off seeded drain flow를 고정한다 |
+| DB v1.3.31 | 기존 recipe/Meal revision, canonical full-draft child rows, managed image reference로 owner read context를 만들고 두 capability의 atomic server-only `legacy_v1|snapshot_v2` projection을 정의한다 |
+| API v1.2.35 | `GET /recipes/{id}`에 additive `revision`/owner-only `edit_context`, `GET /meals.items[]`에 additive `revision`을 exact field/null/omit semantics로 정의한다 |
+
+> 사용자는 `recipe-content-snapshot-future-propagation`의 실제 `RECIPE_DETAIL`/`MEAL_SCREEN` 연결을 위해 이 최소 Contract Evolution을 명시적으로 승인했다. 새 endpoint·query parameter·env·public capability field·HTTP status·public error code는 없고 wrapper는 유지한다. raw `personal_recipe_v2`/`snapshot_v2_creation`은 server-only이며 둘 모두 active일 때만 page loader가 `snapshot_v2` creation consumer를 선택한다. DB write/start RPC의 capability·권한·revision 검증이 최종 authority다.
+>
+> R/R+1에는 creation off·new personal/v2 mutation 0을 유지하고 seeded/existing v2 read/cancel drain을 보존한다. #8의 R/R+1 증거와 R+2 공동 승인 전에 activation하지 않는다. #8 pantry/weight/batch/XP, F0/account quarantine, production·staging·remote application write, migration apply, Vercel/server-Mac mutation은 이 승인 범위가 아니다.
+>
+> 이 PR의 제품 계약 authority 변경은 공식 5종과 `CURRENT_SOURCE_OF_TRUTH`에만 한정하고, validator 정합성을 위해 11개 governance pointer에서는 공식 버전 경로만 기계 동기화하며, workpack README/acceptance/automation/work item/status 재잠금은 이 PR merge 뒤 별도 fresh Stage 1 PR이 수행한다.
+>
+> 그 별도 Stage 1 재잠금 전까지 기존 workpack/automation/work item과 contract-sync regression이 의도적으로 보존하는 compatibility tuple은 `docs/요구사항기준선-v1.7.28.md`, `docs/화면정의서-v1.5.32.md`, `docs/유저flow맵-v1.3.30.md`, `docs/db설계-v1.3.30.md`, `docs/api문서-v1.2.34.md`다. 이 경로들은 전환 대기 상태를 검증하는 historical input이며 현재 공식 authority는 위 `Official Files`의 새 tuple뿐이다.
 
 ## Recipe Future Propagation Success Data Contract-Evolution `2026-08-02`
 
