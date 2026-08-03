@@ -113,6 +113,12 @@ Command: `pnpm test:recipe-content-snapshot-future-propagation:postgres`
 - The isolated current/immediate-previous collector reran on exact repair commit `f38ed9cda1766ae3360c5be859b549bdeb551b91` against `53ebcc325665da1d7f0c2c304d4b3e73c0d7612c`. The report verifier again proved two-owner non-disclosure, six unchanged digest scopes, zero external writes and preserved legacy-v1 shape; the mode-`0600` report was `2060` bytes and the compose project had no surviving container.
 - The composite PostgreSQL fresh/replay runner passed predecessor `15 pass / 1 intended skip` then `16/16`, #7 `10/10` twice, and active full-local inventory `31 pass / 17 intended skip` twice on the active ordered migration chain.
 
+## Ready policy evidence repair
+
+- Exact docs head `943077d1a96b59423dea1efac563c1e5731464df` was marked Ready after independent code and security reviews both reported branch-scoped P0/P1/P2 `0/0/0`; the independent verifier marked the review repairs verified while retaining the overall Stage as partial.
+- The first Ready policy event rejected the PR body because `## Actual Verification` lacked the required structured `scope` and `result` labels. The body now records those labels plus pass/pending status for all nine declared `external_smokes`; the same validator passed locally with the live PR body.
+- Ready-only QA then passed accessibility, visual, Lighthouse, smoke and full Playwright regression; full regression completed in `14m32s`. Re-running the failed policy run still consumed its immutable original event payload, so a new evidence-only head is required to obtain an unambiguous current-head check set with no historical failure.
+
 ## Explicit pending gates
 
 - Draft PR #1278 must rerun every GitHub check after the final review-repair evidence commit is pushed; prior-head CI is not reused as current-head evidence. A prior policy failure was commit-title format only; all affected subjects now use Conventional Commits while preserving their Lore bodies and TDD order.
