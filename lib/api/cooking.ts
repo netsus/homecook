@@ -20,7 +20,7 @@ export interface CookingApiError extends Error {
 
 export async function createSnapshotV2CookingSession(body: { mode: "planner"; meal_ids: string[]; expected_meal_revisions: Record<string, number> } | { mode: "standalone"; recipe_id: string; expected_recipe_revision: number; cooking_servings: number }, idempotencyKey = crypto.randomUUID()): Promise<SnapshotV2StartData> {
   const data = await requestCooking<SnapshotV2StartData>("/api/v1/cooking/session-attempts", { method: "POST", headers: { "content-type": "application/json", "Idempotency-Key": idempotencyKey }, body: JSON.stringify(body) });
-  if (!isExactSnapshotV2StartData(data)) throw createCookingApiError({ status: 502, code: "INVALID_RESPONSE", fields: [], message: "요리 세션 응답을 확인하지 못했어요." });
+  if (!isExactSnapshotV2StartData(data, body)) throw createCookingApiError({ status: 502, code: "INVALID_RESPONSE", fields: [], message: "요리 세션 응답을 확인하지 못했어요." });
   return data;
 }
 
@@ -47,11 +47,14 @@ function hasExactKeys(value: Record<string, unknown>, keys: string[]) {
   return actual.length === keys.length && actual.every((key, index) => key === [...keys].sort()[index]);
 }
 
-function isExactSnapshotV2StartData(value: unknown): value is SnapshotV2StartData {
+function isExactSnapshotV2StartData(
+  value: unknown,
+  request: { mode: "planner"; meal_ids: string[]; expected_meal_revisions: Record<string, number> } | { mode: "standalone"; recipe_id: string; expected_recipe_revision: number; cooking_servings: number },
+): value is SnapshotV2StartData {
   if (!isRecord(value) || !hasExactKeys(value, ["session_id", "contract_version", "mode", "status", "content_summary"])) return false;
-  if (typeof value.session_id !== "string" || !UUID_PATTERN.test(value.session_id) || value.contract_version !== "snapshot_v2" || (value.mode !== "planner" && value.mode !== "standalone") || value.status !== "in_progress") return false;
+  if (typeof value.session_id !== "string" || !UUID_PATTERN.test(value.session_id) || value.contract_version !== "snapshot_v2" || value.mode !== request.mode || value.status !== "in_progress") return false;
   const summary = value.content_summary;
-  return isRecord(summary)
+  const exactSummary = isRecord(summary)
     && hasExactKeys(summary, ["recipe_id", "title", "cooking_servings"])
     && typeof summary.recipe_id === "string"
     && UUID_PATTERN.test(summary.recipe_id)
@@ -59,6 +62,10 @@ function isExactSnapshotV2StartData(value: unknown): value is SnapshotV2StartDat
     && summary.title.trim().length > 0
     && Number.isInteger(summary.cooking_servings)
     && Number(summary.cooking_servings) > 0;
+  if (!exactSummary) return false;
+  return request.mode === "planner"
+    || (summary.recipe_id === request.recipe_id
+      && summary.cooking_servings === request.cooking_servings);
 }
 
 function createCookingApiError({

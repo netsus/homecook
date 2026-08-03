@@ -356,7 +356,7 @@ describe("recipe detail screen", () => {
     const cookButtons = await screen.findAllByRole("button", { name: "요리하기" });
     expect(cookButtons).toHaveLength(1);
     await userEvent.click(cookButtons[0]!);
-    expect(screen.getByRole("button", { name: "요리 세션 생성 중…" })).toBeDisabled();
+    expect((screen.getByRole("button", { name: "요리 세션 생성 중…" }) as HTMLButtonElement).disabled).toBe(true);
     expect(mockRouterPush).not.toHaveBeenCalled();
   });
 

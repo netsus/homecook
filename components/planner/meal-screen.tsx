@@ -851,6 +851,7 @@ function MealWebView({
   screenState,
   slotName,
   totalServings,
+  hasCookingStartPending,
 }: {
   addMealHref: string;
   authState: AuthState;
@@ -876,6 +877,7 @@ function MealWebView({
   screenState: ScreenState;
   slotName: string;
   totalServings: number;
+  hasCookingStartPending: boolean;
 }) {
   const isLoading = authState === "checking" || screenState === "loading";
   const breadcrumbCurrent = slotName
@@ -915,6 +917,10 @@ function MealWebView({
         </div>
 
         {nutritionSummary}
+
+        {hasCookingStartPending ? (
+          <p aria-live="polite" className="web-meal-conflict">요리 세션 생성 중…</p>
+        ) : null}
 
         {isLoading ? (
           <MealWebLoadingSkeleton planDate={planDate} slotName={slotName} />
@@ -1900,6 +1906,7 @@ export function MealScreen({
             screenState={screenState}
             slotName={slotName}
             totalServings={totalServings}
+            hasCookingStartPending={pendingCookingMealIdsRef.current.size > 0}
           />
         </div>
       ) : null}
@@ -1922,6 +1929,12 @@ export function MealScreen({
           >
             <div className="space-y-3 p-4">
               {nutritionSummary}
+
+              {pendingCookingMealIdsRef.current.size > 0 ? (
+                <p aria-live="polite" className="rounded-[var(--radius-control)] bg-[var(--surface)] px-4 py-3 text-sm font-bold text-[var(--brand)]">
+                  요리 세션 생성 중…
+                </p>
+              ) : null}
 
               {/* Loading skeletons */}
               {isLoading ? <LoadingSkeleton /> : null}

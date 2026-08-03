@@ -12,7 +12,6 @@ import { PlannerAddSheet } from "@/components/recipe/planner-add-sheet";
 import type { PlannerAddSheetState } from "@/components/recipe/planner-add-sheet";
 import { RecipeDetailPersonalActions } from "@/components/recipe/recipe-detail-personal-actions";
 import { RecipeFutureImpactSaveFlow } from "@/components/recipe/recipe-future-impact-save-flow";
-import { CookingStartAction } from "@/components/cooking/cooking-start-action";
 import { RecipeNutritionCard } from "@/components/recipe/recipe-nutrition-card";
 import { SaveModal } from "@/components/recipe/save-modal";
 import { ContentState } from "@/components/shared/content-state";
@@ -42,6 +41,7 @@ import {
 } from "@/lib/api/recipe-save";
 import { createMeal, isMealApiError } from "@/lib/api/meal";
 import { createSnapshotV2CookingSession } from "@/lib/api/cooking";
+import { getCookingSessionCookModeHref } from "@/lib/cooking/session-version-dispatch";
 import type { RecipeFutureDraft } from "@/lib/api/recipe-future-impact";
 import { notifyGamificationSourceAction } from "@/lib/gamification-events";
 import { getCookingMethodColor, getCookingMethodTint } from "@/lib/cooking-method-colors";
@@ -202,6 +202,7 @@ export function RecipeDetailScreen({
   const [selectedPlanDate, setSelectedPlanDate] = useState("");
   const [selectedPlanColumnId, setSelectedPlanColumnId] = useState("");
   const [plannerServings, setPlannerServings] = useState(1);
+  const [snapshotStartState, setSnapshotStartState] = useState<"idle" | "pending">("idle");
   const router = useRouter();
   const openAuthGate = useAuthGateStore((state) => state.open);
   const isDesktopViewport = useDesktopViewport();
@@ -211,6 +212,7 @@ export function RecipeDetailScreen({
   );
   const nutritionRequestSequenceRef = React.useRef(0);
   const currentRecipeIdRef = React.useRef(recipeId);
+  const snapshotStartLatchRef = React.useRef(false);
   currentRecipeIdRef.current = recipeId;
 
   useEffect(() => {
@@ -1018,6 +1020,32 @@ export function RecipeDetailScreen({
       returnTo: recipeDetailReturnHref,
     },
   );
+  const cookActionLabel = snapshotStartState === "pending" ? "요리 세션 생성 중…" : "요리하기";
+  async function handleCook() {
+    if (!snapshotV2StartContext) {
+      router.push(cookModeHref);
+      return;
+    }
+    if (snapshotStartLatchRef.current) return;
+    snapshotStartLatchRef.current = true;
+    setSnapshotStartState("pending");
+    try {
+      const session = await createSnapshotV2CookingSession({
+        mode: "standalone",
+        recipe_id: recipeId,
+        expected_recipe_revision: snapshotV2StartContext.expectedRecipeRevision,
+        cooking_servings: selectedServings,
+      });
+      router.push(buildReturnHref(getCookingSessionCookModeHref(session), {
+        returnSurface: "recipe.detail",
+        returnTo: recipeDetailReturnHref,
+      }));
+    } catch {
+      snapshotStartLatchRef.current = false;
+      setSnapshotStartState("idle");
+      setFeedback({ message: "요리 세션을 만들지 못했어요. 다시 시도해 주세요.", tone: "error" });
+    }
+  }
   const shouldRenderWebView = isDesktopViewport;
   const shouldRenderAppView = !isDesktopViewport;
   const shouldRenderLegacyWebView = false;
@@ -1042,9 +1070,9 @@ export function RecipeDetailScreen({
             isAuthenticated={isAuthenticated}
             isLikePending={likeRequestState === "pending"}
             likeCountLabel={desktopLikeCountLabel}
-            onCook={() =>
-              router.push(cookModeHref)
-            }
+            onCook={() => void handleCook()}
+            cookActionLabel={cookActionLabel}
+            isCookPending={snapshotStartState === "pending"}
             onOpenLightbox={(index) => {
               setLightboxIndex(index);
               setIsLightboxOpen(true);
@@ -1749,8 +1777,9 @@ export function RecipeDetailScreen({
             tone="olive"
           />
           <ActionButton
-            label="요리하기"
-            onClick={() => router.push(cookModeHref)}
+            disabled={snapshotStartState === "pending"}
+            label={cookActionLabel}
+            onClick={() => void handleCook()}
             tone="brand"
           />
         </div>
@@ -1767,11 +1796,13 @@ export function RecipeDetailScreen({
             플래너에 추가
           </button>
           <button
+            aria-label={cookActionLabel}
             className="min-h-[var(--control-height-md)] flex-1 rounded-[var(--radius-card)] border border-[var(--brand)] bg-transparent px-3 text-[15px] font-bold text-[var(--brand)]"
-            onClick={() => router.push(cookModeHref)}
+            disabled={snapshotStartState === "pending"}
+            onClick={() => void handleCook()}
             type="button"
           >
-            요리하기
+            {cookActionLabel}
           </button>
         </div>
         <RecipeDetailPersonalActions
@@ -1869,24 +1900,17 @@ export function RecipeDetailScreen({
           />
         </div>
       ) : null}
-      {snapshotV2StartContext ? (
-        <div className="fixed inset-x-4 bottom-[calc(246px+env(safe-area-inset-bottom))] z-30 lg:static lg:mt-4">
-          <CookingStartAction
-            label={`${recipe.title} 요리하기`}
-            navigate={(href) => router.push(buildReturnHref(href, { returnSurface: "recipe.detail", returnTo: recipeDetailReturnHref }))}
-            start={() => createSnapshotV2CookingSession({ mode: "standalone", recipe_id: recipeId, expected_recipe_revision: snapshotV2StartContext.expectedRecipeRevision, cooking_servings: selectedServings })}
-          />
-        </div>
-      ) : null}
     </>
   );
 }
 
 function RecipeDetailWebView({
+  cookActionLabel,
   cookCountLabel,
   isAuthenticated,
   isLikePending,
   isNutritionRefreshing,
+  isCookPending,
   likeCountLabel,
   onCook,
   onOpenLightbox,
@@ -1901,10 +1925,12 @@ function RecipeDetailWebView({
   scaledIngredients,
   selectedServings,
 }: {
+  cookActionLabel: string;
   cookCountLabel: string;
   isAuthenticated: boolean;
   isLikePending: boolean;
   isNutritionRefreshing: boolean;
+  isCookPending: boolean;
   likeCountLabel: string;
   onCook: () => void;
   onOpenLightbox: (index: number) => void;
@@ -2200,9 +2226,9 @@ function RecipeDetailWebView({
                     <CalendarIcon />
                     플래너에 추가
                   </WebButton>
-                  <WebButton fullWidth onClick={onCook} variant="secondary">
+                  <WebButton disabled={isCookPending} fullWidth onClick={onCook} variant="secondary">
                     <CookIcon />
-                    요리하기
+                    {cookActionLabel}
                   </WebButton>
                   <RecipeDetailPersonalActions
                     accessState="unknown"
@@ -2227,7 +2253,7 @@ function RecipeDetailWebView({
         <WebButton onClick={() => onProtectedAction("planner")}>
           플래너에 추가
         </WebButton>
-        <WebButton onClick={onCook} variant="secondary">요리하기</WebButton>
+        <WebButton disabled={isCookPending} onClick={onCook} variant="secondary">{cookActionLabel}</WebButton>
         <RecipeDetailPersonalActions
           accessState="unknown"
           capabilityEnabled={false}
