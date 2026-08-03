@@ -26,6 +26,15 @@ function readRoute(path: string) {
   return readFileSync(path, "utf8");
 }
 
+function expectScopedInternalClient(
+  source: string,
+  clientName: string,
+  genericMessage: string,
+) {
+  expect(source).toContain(clientName);
+  expect(source).not.toContain(genericMessage);
+}
+
 function expectAuth5RpcArgs(source: string) {
   if (/\.\.\.buildSessionAuthorityRpcArgs\s*\(/.test(source)) {
     return;
@@ -145,6 +154,11 @@ describe("Stage 2 common writer route inventory", () => {
 
     const writerRpcWindows = commonWriterRpcWindows(postSource, "meal");
     writerRpcWindows.forEach(expectAuth5RpcArgs);
+    expectScopedInternalClient(
+      postSource,
+      "createFutureMealWriteInternalClient",
+      "createServiceRoleClient",
+    );
     expectNoDirectTableMutation(postSource, "meals", "insert");
     expect(postSource).toContain("MealCreateBody");
     expect(postSource).toContain("MealCreateData");
@@ -156,6 +170,11 @@ describe("Stage 2 common writer route inventory", () => {
 
     const writerRpcWindows = commonWriterRpcWindows(source, "meal");
     writerRpcWindows.forEach(expectAuth5RpcArgs);
+    expectScopedInternalClient(
+      source,
+      "createFutureMealWriteInternalClient",
+      "createServiceRoleClient",
+    );
     expectNoDirectTableMutation(source, "meals", "update");
     expectNoDirectTableMutation(source, "meals", "delete");
     expect(source).toContain("MealUpdateBody");
@@ -171,6 +190,11 @@ describe("Stage 2 common writer route inventory", () => {
 
     const writerRpcWindows = commonWriterRpcWindows(postSource, "shopping");
     writerRpcWindows.forEach(expectAuth5RpcArgs);
+    expectScopedInternalClient(
+      postSource,
+      "createShoppingCreateInternalClient",
+      "createServiceRoleClient",
+    );
     for (const [table, operations] of [
       ["shopping_lists", ["insert"]],
       ["shopping_list_recipes", ["insert"]],

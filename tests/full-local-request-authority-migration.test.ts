@@ -20,6 +20,13 @@ const recipeFutureInternalScopeMigration = readFileSync(
   ),
   "utf8",
 );
+const recipeFutureScopedRpcMigration = readFileSync(
+  new URL(
+    "../supabase/migrations/20260803100000_recipe_future_scoped_internal_rpc_clients.sql",
+    import.meta.url,
+  ),
+  "utf8",
+);
 const readOnlyRequestAuthorityMigration = readFileSync(
   new URL(
     "../supabase/migrations/20260803093000_full_local_read_only_request_authority.sql",
@@ -104,11 +111,38 @@ describe("full-local request authority migration", () => {
     }
   });
 
+  it("allowlists snapshot-v2, future-meal, and shopping RPCs under exact route scopes", () => {
+    for (const [scope, paths] of [
+      [
+        "snapshot-v2-session",
+        [
+          "/rpc/start_snapshot_v2_cooking_session",
+          "/rpc/read_snapshot_v2_cook_mode",
+          "/rpc/cancel_snapshot_v2_cooking_session",
+        ],
+      ],
+      [
+        "future-meal-write",
+        ["/rpc/write_future_meal_with_snapshot_authority"],
+      ],
+      [
+        "shopping-create",
+        ["/rpc/create_shopping_list_with_snapshot_authority"],
+      ],
+    ] as const) {
+      expect(recipeFutureScopedRpcMigration).toContain(`v_scope = '${scope}'`);
+      for (const path of paths) {
+        expect(recipeFutureScopedRpcMigration).toContain(path);
+      }
+    }
+  });
+
   it("classifies every full-local pre-request helper as internal-only", () => {
     expect(authorizationManifest).toContain("20260801151000_full_local_request_authority.sql");
     expect(authorizationManifest).toContain("20260803091000_full_local_optional_nbf_authority.sql");
     expect(authorizationManifest).toContain("20260803092000_recipe_future_internal_scope.sql");
     expect(authorizationManifest).toContain("20260803093000_full_local_read_only_request_authority.sql");
+    expect(authorizationManifest).toContain("20260803100000_recipe_future_scoped_internal_rpc_clients.sql");
     expect(authorizationManifest).toContain("private.verify_hybrid_request_authority_remote_legacy()");
     expect(authorizationManifest).toContain("private.verify_full_local_internal_scope()");
     expect(authorizationManifest).toContain("private.verify_full_local_anonymous_authority()");

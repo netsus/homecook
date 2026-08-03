@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const createRouteHandlerClient = vi.fn();
 const createServiceRoleClient = vi.fn();
+const createSnapshotV2SessionInternalClient = vi.fn();
 const readAccountGenerationCapability = vi.fn();
 const readVerifiedAccountGenerationSession = vi.fn();
 
@@ -13,6 +14,7 @@ vi.mock("@/lib/supabase/server", () => ({
   createRemoteCompatibilityServiceRoleClient: createServiceRoleClient,
   createRouteHandlerClient,
   createServiceRoleClient,
+  createSnapshotV2SessionInternalClient,
 }));
 
 vi.mock("@/app/api/v1/users/me/_account-generation", () => ({
@@ -109,6 +111,7 @@ function setupAuthorizedRpc(result: {
   };
   createRouteHandlerClient.mockResolvedValue(routeClient);
   createServiceRoleClient.mockReturnValue({ from, rpc });
+  createSnapshotV2SessionInternalClient.mockReturnValue({ from, rpc });
   readAccountGenerationCapability.mockResolvedValue({
     ok: true,
     revision: 4,
@@ -138,6 +141,7 @@ function setupUnauthenticated() {
     rpc,
   });
   createServiceRoleClient.mockReturnValue({ from, rpc });
+  createSnapshotV2SessionInternalClient.mockReturnValue({ from, rpc });
   return { from, rpc };
 }
 
@@ -162,6 +166,7 @@ describe("snapshot-v2 session attempts public contract", () => {
     vi.unstubAllEnvs();
     createRouteHandlerClient.mockReset();
     createServiceRoleClient.mockReset();
+    createSnapshotV2SessionInternalClient.mockReset();
     readAccountGenerationCapability.mockReset();
     readVerifiedAccountGenerationSession.mockReset();
   });
@@ -307,6 +312,126 @@ describe("snapshot-v2 session attempts public contract", () => {
     });
     expect(rpc).toHaveBeenCalledTimes(1);
     expect(from).not.toHaveBeenCalled();
+  });
+
+  it("reuses the legacy CookingModeRecipe projection, scales 2 servings to 4, and strips internal snapshot food fields", async () => {
+    const { rpc } = setupAuthorizedRpc({
+      data: {
+        session_id: sessionId,
+        contract_version: "snapshot_v2",
+        mode: "standalone",
+        status: "in_progress",
+        recipe: {
+          id: recipeId,
+          title: "세션 스냅샷 찌개",
+          base_servings: 2,
+          cooking_servings: 4,
+          ingredients: [
+            {
+              ingredient_id: ingredientId,
+              standard_name: "두부",
+              amount: 100,
+              unit: "g",
+              display_text: "[메인] 두부 100g",
+              component_label: "메인",
+              ingredient_type: "QUANT",
+              scalable: true,
+              food_product_id: productId,
+              food_product_nutrition_version_id: productVersionId,
+              food_product_name: "내부 상품명",
+              food_product_brand: "내부 브랜드",
+            },
+          ],
+          steps: [
+            {
+              step_number: 1,
+              instruction: "[메인] 두부를 끓인다",
+              component_label: "메인",
+              cooking_methods: [
+                {
+                  code: "boil",
+                  label: "끓이기",
+                  color_key: "boil",
+                },
+              ],
+              ingredients_used: [ingredientId],
+              heat_level: null,
+              duration_seconds: 60,
+              duration_text: null,
+            },
+          ],
+          mutable_recipe_revision: 999,
+        },
+        pantry_candidates: [],
+      },
+      error: null,
+    });
+
+    const { GET } = await importCookModeRoute();
+    const response = await GET(
+      new Request(
+        `http://localhost:3000/api/v1/cooking/session-attempts/${sessionId}/cook-mode`,
+      ),
+      context(),
+    );
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({
+      success: true,
+      data: {
+        session_id: sessionId,
+        contract_version: "snapshot_v2",
+        mode: "standalone",
+        status: "in_progress",
+        recipe: {
+          id: recipeId,
+          title: "세션 스냅샷 찌개",
+          cooking_servings: 4,
+          ingredients: [
+            {
+              ingredient_id: ingredientId,
+              standard_name: "두부",
+              amount: 200,
+              unit: "g",
+              display_text: "두부 200g",
+              component_label: "메인",
+              ingredient_type: "QUANT",
+              scalable: true,
+            },
+          ],
+          steps: [
+            {
+              step_number: 1,
+              instruction: "두부를 끓인다",
+              component_label: "메인",
+              cooking_method: {
+                code: "boil",
+                label: "끓이기",
+                color_key: "boil",
+                category_code: undefined,
+                category_label: undefined,
+              },
+              cooking_methods: [
+                {
+                  code: "boil",
+                  label: "끓이기",
+                  color_key: "boil",
+                  category_code: undefined,
+                  category_label: undefined,
+                },
+              ],
+              ingredients_used: [ingredientId],
+              heat_level: null,
+              duration_seconds: 60,
+              duration_text: null,
+            },
+          ],
+        },
+        pantry_candidates: [],
+      },
+      error: null,
+    });
+    expect(rpc).toHaveBeenCalledTimes(1);
   });
 
   it("returns cancel and replay as the exact stored four-field data without reopening terminal state", async () => {
@@ -470,6 +595,43 @@ describe("snapshot-v2 session attempts public contract", () => {
     });
     expect(rpc).toHaveBeenCalledTimes(1);
     expect(from).not.toHaveBeenCalled();
+  });
+
+  it("uses the exact snapshot-v2 scoped internal client for start/read/cancel instead of the generic service-role client", async () => {
+    setupAuthorizedRpc({
+      data: {
+        session_id: sessionId,
+        contract_version: "snapshot_v2",
+        mode: "planner",
+        status: "in_progress",
+        content_summary: {
+          recipe_id: recipeId,
+          title: "김치찌개",
+          cooking_servings: 4,
+        },
+      },
+      error: null,
+    });
+
+    const startRoute = await importStartRoute();
+    const cookModeRoute = await importCookModeRoute();
+    const cancelRoute = await importCancelRoute();
+
+    await startRoute.POST(startRequest({
+      mode: "planner",
+      meal_ids: [mealId],
+      expected_meal_revisions: { [mealId]: 3 },
+    }));
+    await cookModeRoute.GET(
+      new Request(
+        `http://localhost:3000/api/v1/cooking/session-attempts/${sessionId}/cook-mode`,
+      ),
+      context(),
+    );
+    await cancelRoute.POST(cancelRequest(), context());
+
+    expect(createSnapshotV2SessionInternalClient).toHaveBeenCalledTimes(3);
+    expect(createServiceRoleClient).not.toHaveBeenCalled();
   });
 
   it.each([
