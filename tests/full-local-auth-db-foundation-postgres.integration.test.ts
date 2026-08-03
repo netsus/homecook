@@ -604,7 +604,6 @@ run("full-local Auth isolated PostgreSQL foundation", () => {
             'sub', '${owner}',
             'session_id', '22222222-2222-4222-8222-222222222222',
             'iat', authority.session_iat,
-            'nbf', authority.session_iat,
             'exp', authority.now_epoch + 1800
           )::text,
           false

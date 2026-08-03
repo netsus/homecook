@@ -6,6 +6,13 @@ const migration = readFileSync(
   new URL("../supabase/migrations/20260801151000_full_local_request_authority.sql", import.meta.url),
   "utf8",
 );
+const optionalNbfMigration = readFileSync(
+  new URL(
+    "../supabase/migrations/20260803091000_full_local_optional_nbf_authority.sql",
+    import.meta.url,
+  ),
+  "utf8",
+);
 const authorizationManifest = readFileSync(
   new URL(
     "../docs/security/account-session-generation-security-function-authorization-manifest.json",
@@ -33,6 +40,14 @@ describe("full-local request authority migration", () => {
     expect(migration).not.toContain("extensions.hmac");
   });
 
+  it("uses iat when GoTrue omits the standards-optional nbf claim", () => {
+    expect(optionalNbfMigration).toContain(
+      "v_request_nbf := coalesce(\n    v_claims ->> 'nbf',\n    v_claims ->> 'iat'",
+    );
+    expect(optionalNbfMigration).toContain("v_claims ->> 'iat' is null");
+    expect(optionalNbfMigration).not.toContain("v_claims ->> 'nbf' is null");
+  });
+
   it("allowlists each new internal RPC under an exact server scope", () => {
     for (const fragment of [
       "v_scope = 'auth-flow'",
@@ -50,6 +65,7 @@ describe("full-local request authority migration", () => {
 
   it("classifies every full-local pre-request helper as internal-only", () => {
     expect(authorizationManifest).toContain("20260801151000_full_local_request_authority.sql");
+    expect(authorizationManifest).toContain("20260803091000_full_local_optional_nbf_authority.sql");
     expect(authorizationManifest).toContain("private.verify_hybrid_request_authority_remote_legacy()");
     expect(authorizationManifest).toContain("private.verify_full_local_internal_scope()");
     expect(authorizationManifest).toContain("private.verify_full_local_anonymous_authority()");
