@@ -5001,7 +5001,7 @@ POST /api/v1/admin/page-view
 
 ---
 
-## 엔드포인트 전체 목록 (102개) `v1.2.34`
+## 엔드포인트 전체 목록 (102개) `v1.2.35`
 
 | #        | Method     | Path                                   | 화면                     | 인증   | v1.2 변경                        |
 | -------- | ---------- | -------------------------------------- | ------------------------ | ------ | -------------------------------- |
@@ -5108,6 +5108,8 @@ POST /api/v1/admin/page-view
 | 16-19    | DELETE     | /meal-log/entries/{id}                 | MEAL_LOG                 | 🔒     | v1.2.27 soft delete+reversal     |
 | 16-20    | GET        | /food-catalog/search                   | MEAL_LOG / recipe editor | 🔒     | v1.2.27 typed union search       |
 
+> **v1.2.35 총계**: 102개 (recipe detail/Meal read field와 server-only UI consumer projection만 additive하게 잠그며 신규 endpoint/status/error code는 없다. active 101개 + 삭제된 `2-4` tombstone 1개. internal maintenance endpoint와 DB internal RPC는 제외)
+>
 > **v1.2.34 총계**: 102개 (#7 기존 5개 endpoint의 exact success `data`만 잠그며 신규 endpoint/status/error code는 없다. active 101개 + 삭제된 `2-4` tombstone 1개. internal maintenance endpoint와 DB internal RPC는 제외)
 >
 > **v1.2.33 총계**: 102개 (full-local web-auth orchestration은 `/api/v1` 제품 API count 밖이며, pantry/shopping additive field와 기존 public endpoint count는 유지한다. active 101개 + 삭제된 `2-4` tombstone 1개. internal maintenance endpoint와 DB internal RPC는 제외)
