@@ -124,6 +124,7 @@ function buildMeal(overrides: Partial<{
   planned_servings: number;
   status: "registered" | "shopping_done" | "cook_done";
   is_leftover: boolean;
+  revision: number;
 }> = {}) {
   return {
     id: "meal-1",
@@ -133,6 +134,7 @@ function buildMeal(overrides: Partial<{
     planned_servings: 2,
     status: "registered" as const,
     is_leftover: false,
+    revision: 3,
     ...overrides,
   };
 }
@@ -561,12 +563,17 @@ describe("MealScreen", () => {
 
     render(<MealScreen
       {...DEFAULT_PROPS}
-      snapshotV2StartContext={{ expectedMealRevisions: { "meal-1": 3 } }}
+      recipeSnapshotUiMode="snapshot_v2"
     />);
 
     await userEvent.click(await screen.findByRole("button", { name: "김치찌개 요리하기" }));
 
     expect(await screen.findByText("요리 세션 생성 중…")).toBeTruthy();
+    expect(createSnapshotV2CookingSession).toHaveBeenCalledWith({
+      mode: "planner",
+      meal_ids: ["meal-1"],
+      expected_meal_revisions: { "meal-1": 3 },
+    });
     expect(mockRouterPush).not.toHaveBeenCalled();
     pending.resolve({
       session_id: "550e8400-e29b-41d4-a716-446655440000",

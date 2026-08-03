@@ -321,6 +321,7 @@ describe("GET /api/v1/meals", () => {
             status: "registered",
             is_leftover: false,
             created_at: "2026-03-01T08:00:00Z",
+            revision: 3,
           },
           {
             id: "meal-2",
@@ -329,6 +330,7 @@ describe("GET /api/v1/meals", () => {
             status: "shopping_done",
             is_leftover: true,
             created_at: "2026-03-01T09:00:00Z",
+            revision: 4,
           },
         ],
         error: null,
@@ -377,6 +379,7 @@ describe("GET /api/v1/meals", () => {
             planned_servings: 2,
             status: "registered",
             is_leftover: false,
+            revision: 3,
           },
           {
             id: "meal-2",
@@ -386,12 +389,70 @@ describe("GET /api/v1/meals", () => {
             planned_servings: 1,
             status: "shopping_done",
             is_leftover: true,
+            revision: 4,
           },
         ],
       },
     });
     expect(mealsQuery.order).toHaveBeenNthCalledWith(1, "created_at", { ascending: true });
     expect(mealsQuery.order).toHaveBeenNthCalledWith(2, "id", { ascending: true });
+  });
+
+  it("adds positive revision only to Recipe Meal items and leaves product entries unchanged", async () => {
+    const columnQuery = createMaybeSingleQuery([{
+      data: { id: "column-1", user_id: "user-1", name: "점심" },
+      error: null,
+    }]);
+    const mealsQuery = createThenableQuery([{
+      data: [{
+        id: "meal-1",
+        recipe_id: "recipe-1",
+        planned_servings: 2,
+        status: "shopping_done",
+        is_leftover: false,
+        created_at: "2026-03-01T08:00:00Z",
+        revision: 7,
+      }],
+      error: null,
+    }]);
+    const recipesQuery = createThenableQuery([{
+      data: [{ id: "recipe-1", title: "김치찌개", thumbnail_url: null }],
+      error: null,
+    }]);
+    const productEntry = {
+      id: "product-entry-1",
+      entry_type: "product",
+      product_id: "product-1",
+      product_name: "우유",
+      brand: null,
+      amount: 1,
+      unit: "개",
+      plan_date: "2026-03-01",
+      column_id: "column-1",
+      legacy_read_only: true,
+    };
+    const rpc = vi.fn(async () => ({ data: [productEntry], error: null }));
+    createRouteHandlerClient.mockResolvedValue({
+      auth: { getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })) },
+      rpc,
+      from: vi.fn((table: string) => {
+        if (table === "meal_plan_columns") return { select: vi.fn(() => columnQuery) };
+        if (table === "meals") return { select: vi.fn(() => mealsQuery) };
+        if (table === "recipes") return { select: vi.fn(() => recipesQuery) };
+        throw new Error(`unexpected table: ${table}`);
+      }),
+    });
+
+    const { GET } = await importRoute();
+    const response = await GET(new NextRequest(
+      "http://localhost:3000/api/v1/meals?plan_date=2026-03-01&column_id=550e8400-e29b-41d4-a716-446655440013",
+    ));
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.data.items[0].revision).toBe(7);
+    expect(body.data.product_entries[0]).not.toHaveProperty("revision");
+    expect(mealsQuery.eq).toHaveBeenCalledWith("user_id", "user-1");
   });
 
   it("uses an immutable content title instead of the mutable current recipe title", async () => {

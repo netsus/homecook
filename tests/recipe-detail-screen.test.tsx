@@ -30,6 +30,8 @@ const fetchUserGamification = vi.fn();
 const mockRouterPush = vi.fn();
 const mockRouterReplace = vi.fn();
 const createSnapshotV2CookingSession = vi.fn();
+const fetchRecipeFutureImpact = vi.fn();
+const patchRecipeWithFutureStrategy = vi.fn();
 const globalsCss = readFileSync(join(process.cwd(), "app/globals.css"), "utf8");
 const navigationMocks = vi.hoisted(() => ({
   searchParams: vi.fn(() => new URLSearchParams()),
@@ -63,6 +65,11 @@ vi.mock("@/lib/api/meal", () => ({
 
 vi.mock("@/lib/api/cooking", () => ({
   createSnapshotV2CookingSession: (...args: unknown[]) => createSnapshotV2CookingSession(...args),
+}));
+
+vi.mock("@/lib/api/recipe-future-impact", () => ({
+  fetchRecipeFutureImpact: (...args: unknown[]) => fetchRecipeFutureImpact(...args),
+  patchRecipeWithFutureStrategy: (...args: unknown[]) => patchRecipeWithFutureStrategy(...args),
 }));
 
 vi.mock("@/lib/api/mypage", () => ({
@@ -104,6 +111,7 @@ vi.mock("@/components/auth/social-login-buttons-deferred", () => ({
 function buildRecipeDetail(overrides?: Partial<RecipeDetail>): RecipeDetail {
   return {
     ...MOCK_RECIPE_DETAIL,
+    revision: 12,
     user_status: {
       is_liked: false,
       is_saved: false,
@@ -249,6 +257,8 @@ describe("recipe detail screen", () => {
     mockRouterPush.mockReset();
     mockRouterReplace.mockReset();
     createSnapshotV2CookingSession.mockReset();
+    fetchRecipeFutureImpact.mockReset();
+    patchRecipeWithFutureStrategy.mockReset();
     navigationMocks.searchParams.mockReset();
     navigationMocks.searchParams.mockReturnValue(new URLSearchParams());
     useAuthGateStore.setState({ isOpen: false, action: null });
@@ -348,9 +358,10 @@ describe("recipe detail screen", () => {
     }>();
     createSnapshotV2CookingSession.mockReturnValue(pending.promise);
 
+    fetchJson.mockResolvedValue(buildRecipeDetail({ revision: 12 }));
     render(<RecipeDetailScreen
       recipeId={MOCK_RECIPE_DETAIL.id}
-      snapshotV2StartContext={{ expectedRecipeRevision: 12 }}
+      recipeSnapshotUiMode="snapshot_v2"
     />);
 
     const cookButtons = await screen.findAllByRole("button", { name: "요리하기" });
@@ -358,6 +369,82 @@ describe("recipe detail screen", () => {
     await userEvent.click(cookButtons[0]!);
     expect((screen.getByRole("button", { name: "요리 세션 생성 중…" }) as HTMLButtonElement).disabled).toBe(true);
     expect(mockRouterPush).not.toHaveBeenCalled();
+    expect(createSnapshotV2CookingSession).toHaveBeenCalledWith({
+      mode: "standalone",
+      recipe_id: MOCK_RECIPE_DETAIL.id,
+      expected_recipe_revision: 12,
+      cooking_servings: MOCK_RECIPE_DETAIL.base_servings,
+    });
+  });
+
+  it("connects the fetched owner edit context to the real impact preview flow", async () => {
+    const draft = {
+      title: "내 김치찌개",
+      description: null,
+      base_servings: 2,
+      ingredients: [{
+        ingredient_id: "550e8400-e29b-41d4-a716-446655440010",
+        amount: 1,
+        unit: null,
+        ingredient_type: "QUANT",
+        display_text: null,
+        component_label: null,
+        scalable: true,
+        food_product_id: null,
+        food_product_nutrition_version_id: null,
+      }],
+      steps: [{
+        step_number: 1,
+        instruction: "끓여요.",
+        cooking_method_id: "550e8400-e29b-41d4-a716-446655440020",
+        cooking_method_ids: ["550e8400-e29b-41d4-a716-446655440020"],
+        ingredients_used: [{
+          ingredient_id: "550e8400-e29b-41d4-a716-446655440010",
+          amount: null,
+          unit: null,
+          cut_size: null,
+        }],
+        component_label: null,
+        heat_level: null,
+        duration_seconds: null,
+        duration_text: null,
+      }],
+    };
+    fetchJson.mockResolvedValue(buildRecipeDetail({
+      revision: 12,
+      edit_context: {
+        base_recipe_revision: 12,
+        draft,
+        image_object_id: null,
+      },
+    }));
+    fetchRecipeFutureImpact.mockResolvedValue({
+      impact_token: "impact-token",
+      expires_at: "2026-08-04T10:00:00.000Z",
+      proposed_content_hash: "a".repeat(64),
+      future_meal_count: 0,
+      date_range: { from: null, to: null },
+      incomplete_shopping_list_count: 0,
+      completed_shopping_list_count: 0,
+      active_cooking_claim_count: 0,
+      replace_all_allowed: true,
+    });
+
+    render(<RecipeDetailScreen
+      initialAuthenticated
+      recipeId={MOCK_RECIPE_DETAIL.id}
+      recipeSnapshotUiMode="snapshot_v2"
+    />);
+    await userEvent.click(await screen.findByRole("button", { name: "변경사항 저장" }));
+
+    await waitFor(() => {
+      expect(fetchRecipeFutureImpact).toHaveBeenCalledWith(
+        MOCK_RECIPE_DETAIL.id,
+        12,
+        draft,
+      );
+    });
+    expect(screen.getByRole("dialog", { name: "미래 계획 반영 확인" })).toBeTruthy();
   });
 
   it("keeps the selected servings after a nutrition-only retry succeeds", async () => {

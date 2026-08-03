@@ -47,7 +47,9 @@ describe("cooking start navigation", () => {
     const plannerSource = readFileSync(join(process.cwd(), "components/planner/meal-screen.tsx"), "utf8");
     expect(recipeSource).toContain("createSnapshotV2CookingSession");
     expect(plannerSource).toContain("createSnapshotV2CookingSession");
-    expect(recipeSource).toContain("snapshotV2StartContext");
-    expect(plannerSource).toContain("snapshotV2StartContext");
+    expect(recipeSource).toContain("recipeSnapshotUiMode");
+    expect(recipeSource).toContain("recipe.revision");
+    expect(plannerSource).toContain("recipeSnapshotUiMode");
+    expect(plannerSource).toContain("meal.revision");
   });
 });
