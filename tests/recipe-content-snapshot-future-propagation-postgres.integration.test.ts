@@ -1880,11 +1880,21 @@ describeIf("recipe content snapshot future propagation PostgreSQL", () => {
 
     const leftPayload = extractPsqlJson(leftResult.stdout);
     const rightPayload = extractPsqlJson(rightResult.stdout);
+    const leftListId = typeof leftPayload?.id === "string" ? leftPayload.id : null;
+    const rightListId = typeof rightPayload?.id === "string" ? rightPayload.id : null;
+    const secondContentSnapshotId = psql(`
+      select id::text
+      from public.recipe_content_snapshots
+      where recipe_id = '${secondRecipeId}'
+      order by created_at, id
+      limit 1;
+    `);
 
     expect(leftResult.status, leftResult.stderr).toBe(0);
     expect(rightResult.status, rightResult.stderr).toBe(0);
     expect(leftPayload?.error_code ?? null, JSON.stringify(leftPayload)).toBe(null);
     expect(rightPayload?.error_code ?? null, JSON.stringify(rightPayload)).toBe(null);
+    expect(leftListId).not.toBe(rightListId);
     expect(
       psql(`
         select count(*)::text
@@ -1900,6 +1910,32 @@ describeIf("recipe content snapshot future propagation PostgreSQL", () => {
           and shopping_list_id is not null;
       `),
     ).toBe("4");
+    const expectedMealProjection = [
+      { meal_id: multiRecipeMealA, shopping_list_id: leftListId },
+      { meal_id: multiRecipeMealC, shopping_list_id: leftListId },
+      { meal_id: multiRecipeMealB, shopping_list_id: rightListId },
+      { meal_id: multiRecipeMealD, shopping_list_id: rightListId },
+    ].sort((left, right) =>
+      left.shopping_list_id!.localeCompare(right.shopping_list_id!)
+      || left.meal_id.localeCompare(right.meal_id)
+    );
+    expect(
+      JSON.parse(
+        psql(`
+          select coalesce(jsonb_agg(jsonb_build_object(
+            'meal_id', meal.id,
+            'shopping_list_id', meal.shopping_list_id
+          ) order by meal.shopping_list_id::text collate "C", meal.id::text collate "C"), '[]'::jsonb)::text
+          from public.meals as meal
+          where meal.id in (
+            '${multiRecipeMealA}',
+            '${multiRecipeMealB}',
+            '${multiRecipeMealC}',
+            '${multiRecipeMealD}'
+          );
+        `),
+      ),
+    ).toEqual(expectedMealProjection);
     expect(
       psql(`
         select count(*)::text
@@ -1908,6 +1944,72 @@ describeIf("recipe content snapshot future propagation PostgreSQL", () => {
         where list.title in ('멀티 레시피 A', '멀티 레시피 B');
       `),
     ).toBe("4");
+    const mealProjection = JSON.parse(
+      psql(`
+        select coalesce(jsonb_agg(jsonb_build_object(
+          'meal_id', meal.id,
+          'shopping_list_id', meal.shopping_list_id,
+          'recipe_id', meal.recipe_id,
+          'recipe_content_snapshot_id', meal.recipe_content_snapshot_id,
+          'planned_servings', meal.planned_servings
+        ) order by meal.shopping_list_id::text collate "C", meal.id::text collate "C"), '[]'::jsonb)::text
+        from public.meals as meal
+        where meal.id in (
+          '${multiRecipeMealA}',
+          '${multiRecipeMealB}',
+          '${multiRecipeMealC}',
+          '${multiRecipeMealD}'
+        );
+      `),
+    ) as Array<{
+      meal_id: string;
+      shopping_list_id: string;
+      recipe_id: string;
+      recipe_content_snapshot_id: string;
+      planned_servings: number;
+    }>;
+    const expectedRecipeRows = [...mealProjection
+      .reduce((map, meal) => {
+        const key = `${meal.shopping_list_id}:${meal.recipe_id}:${meal.recipe_content_snapshot_id}`;
+        const existing = map.get(key) ?? {
+          shopping_list_id: meal.shopping_list_id,
+          recipe_id: meal.recipe_id,
+          recipe_content_snapshot_id: meal.recipe_content_snapshot_id,
+          shopping_servings: 0,
+          planned_servings_total: 0,
+        };
+        existing.shopping_servings += meal.planned_servings;
+        existing.planned_servings_total += meal.planned_servings;
+        map.set(key, existing);
+        return map;
+      }, new Map<string, {
+        shopping_list_id: string;
+        recipe_id: string;
+        recipe_content_snapshot_id: string;
+        shopping_servings: number;
+        planned_servings_total: number;
+      }>())
+      .values()]
+      .sort((left, right) =>
+        left.shopping_list_id.localeCompare(right.shopping_list_id)
+        || left.recipe_id.localeCompare(right.recipe_id)
+        || left.recipe_content_snapshot_id.localeCompare(right.recipe_content_snapshot_id)
+      );
+    expect(
+      JSON.parse(
+        psql(`
+          select coalesce(jsonb_agg(jsonb_build_object(
+            'shopping_list_id', row.shopping_list_id,
+            'recipe_id', row.recipe_id,
+            'recipe_content_snapshot_id', row.recipe_content_snapshot_id,
+            'shopping_servings', row.shopping_servings,
+            'planned_servings_total', row.planned_servings_total
+          ) order by row.shopping_list_id::text collate "C", row.recipe_id::text collate "C", row.recipe_content_snapshot_id::text collate "C"), '[]'::jsonb)::text
+          from public.shopping_list_recipes as row
+          where row.shopping_list_id in ('${leftListId}', '${rightListId}');
+        `),
+      ),
+    ).toEqual(expectedRecipeRows);
     expect(
       psql(`
         select count(*)::text
@@ -1916,6 +2018,24 @@ describeIf("recipe content snapshot future propagation PostgreSQL", () => {
           and not exists (
             select 1 from public.meals as meal where meal.shopping_list_id = list.id
           );
+      `),
+    ).toBe("0");
+    expect(
+      psql(`
+        select count(*)::text
+        from public.shopping_list_recipes as row
+        where row.shopping_list_id = '${leftListId}'
+          and row.recipe_id = '${secondRecipeId}'
+          and row.recipe_content_snapshot_id = '${initialContentId}';
+      `),
+    ).toBe("0");
+    expect(
+      psql(`
+        select count(*)::text
+        from public.shopping_list_recipes as row
+        where row.shopping_list_id = '${rightListId}'
+          and row.recipe_id = '${recipeId}'
+          and row.recipe_content_snapshot_id = '${secondContentSnapshotId}';
       `),
     ).toBe("0");
     expect(
