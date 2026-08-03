@@ -235,7 +235,7 @@ describe("recipe snapshot entrypoint Stage 1 contract lock", () => {
     ]) {
       expect(notes).toContain("9eb1ebd8ea5a12294a76d7f2799693f03654b0a4");
       expect(notes).toContain("ef5903b131a2eb9e505b2121b4e390970c565b95");
-      expect(notes).toContain("29173d68d2f582460d9aa1b78e0e3ea3fbfda1cc");
+      expect(notes).toContain("ca0b05558efd65042e868cc9e1e5813e4ee9184e");
       expect(notes).toContain(
         "stage4-draft-entrypoint-repair-implemented-awaiting-independent-review",
       );
@@ -247,7 +247,7 @@ describe("recipe snapshot entrypoint Stage 1 contract lock", () => {
     }
     expect(readme).toContain("No product-design-authority report exists");
     expect(roadmap).toMatch(
-      /recipe-content-snapshot-future-propagation[\s\S]*Draft Stage 4 PR #1281[\s\S]*29173d68/,
+      /recipe-content-snapshot-future-propagation[\s\S]*Draft Stage 4 PR #1281[\s\S]*ca0b0555/,
     );
   });
 });

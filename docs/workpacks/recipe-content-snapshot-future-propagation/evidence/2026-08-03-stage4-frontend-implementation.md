@@ -151,4 +151,5 @@
 - GitHub `quality` exposed a second real RED at head `b7094db7`: the server-only entrypoint was approved by the runtime inventory, but three generated/static projections still described the pre-entrypoint source tree. The aggregate result was 3 failed, 5,201 passed and 330 intended skipped tests.
 - GREEN commit `ca0b0555` adds only the two exact approved internal reads to the hybrid static expectation and regenerates the hybrid/account-session artifacts. It adds no operation, endpoint, capability source or browser authority.
 - GREEN evidence: focused inventory tests 19/19; account-session inventory 59 routes, 88 write surfaces and 3 inbound `auth.users` foreign keys; hybrid generator check; full `pnpm test` exit 0; `git diff --check` pass.
+- The first evidence projection head `d6244b55` then exposed one remaining self-lock literal in CI: 1 failed, 5,203 passed and 330 intended skipped. Updating both exact code-head expectations produced focused 27/27 and aggregate 513 files passed + 28 skipped, 5,204 tests passed + 330 skipped.
 - Independent authority precheck, Stage 5/final authority/Stage 6, Manual/server-Mac evidence and activation remain pending.
