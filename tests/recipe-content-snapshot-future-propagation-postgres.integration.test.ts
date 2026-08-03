@@ -62,7 +62,6 @@ const productPantry = "95000000-0000-4000-8000-000000000002";
 let recipeId = "";
 let initialContentId = "";
 let secondRecipeId = "";
-let secondContentId = "";
 let hiddenPublicRecipeId = "";
 
 function migrationPath() {
@@ -197,7 +196,7 @@ function shoppingConcurrencyPayload(mealIds: string[]) {
     sort_order: number;
   }>();
 
-  for (const meal of meals as Array<Record<string, any>>) {
+  for (const meal of meals as Array<Record<string, unknown>>) {
     const key = `${meal.recipe_id}:${meal.recipe_content_snapshot_id ?? ""}`;
     const existing = recipeRowsMap.get(key) ?? {
       recipe_id: meal.recipe_id,
@@ -209,7 +208,10 @@ function shoppingConcurrencyPayload(mealIds: string[]) {
     existing.planned_servings_total += meal.planned_servings;
     recipeRowsMap.set(key, existing);
 
-    for (const ingredient of meal.ingredients_json as Array<Record<string, any>>) {
+    const ingredientsJson = Array.isArray(meal.ingredients_json)
+      ? meal.ingredients_json as Array<Record<string, unknown>>
+      : [];
+    for (const ingredient of ingredientsJson) {
       if (
         ingredient.food_product_id
         && ingredient.food_product_nutrition_version_id
@@ -428,15 +430,6 @@ function authArgs() {
     '${sessionKeyHash}'::text,
     1,
     '${sessionIssuedAt}'::timestamptz`;
-}
-
-function hiddenAuthArgs() {
-  return `
-    '${hiddenOwner}'::uuid,
-    '${hiddenIdentityEpoch}'::timestamptz,
-    '${hiddenSessionKeyHash}'::text,
-    1,
-    '${hiddenSessionIssuedAt}'::timestamptz`;
 }
 
 function previewSql(
@@ -764,7 +757,7 @@ describeIf("recipe content snapshot future propagation PostgreSQL", () => {
       `),
     );
     secondRecipeId = secondCreated.data.id as string;
-    secondContentId = psql(`
+    psql(`
       select id::text from public.recipe_content_snapshots
       where recipe_id = '${secondRecipeId}' order by created_at, id limit 1;
     `);
