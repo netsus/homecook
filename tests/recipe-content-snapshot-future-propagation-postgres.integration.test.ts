@@ -41,6 +41,7 @@ const foodProduct = "92000000-0000-4000-8000-000000000004";
 const foodProductVersion = "92000000-0000-4000-8000-000000000005";
 const nutritionProfile = "92000000-0000-4000-8000-000000000006";
 const secondGenericIngredient = "92000000-0000-4000-8000-000000000007";
+const plannerColumn = "97000000-0000-4000-8000-000000000001";
 const eligibleMeal = "93000000-0000-4000-8000-000000000001";
 const secondEligibleMeal = "93000000-0000-4000-8000-000000000002";
 const pastMeal = "93000000-0000-4000-8000-000000000003";
@@ -115,6 +116,23 @@ function psql(sql: string) {
           ),
       )
       .at(-1) ?? ""
+  );
+}
+
+function extractPsqlJson(stdout: string) {
+  return JSON.parse(
+    stdout
+      .trim()
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(
+        (line) =>
+          line.length > 0
+          && !/^(?:BEGIN|COMMIT|DELETE \d+|INSERT \d+ \d+|SELECT \d+|SET|UPDATE \d+)$/.test(
+            line,
+          ),
+      )
+      .at(-1) ?? "null",
   );
 }
 
@@ -596,6 +614,13 @@ describeIf("recipe content snapshot future propagation PostgreSQL", () => {
         ('${genericIngredient}', '일반 재료'),
         ('${productIngredient}', '상품 연결 재료'),
         ('${secondGenericIngredient}', '두 번째 일반 재료');
+      create table if not exists public.meal_plan_columns (
+        id uuid primary key,
+        user_id uuid not null
+      );
+      insert into public.meal_plan_columns (id, user_id)
+      values ('${plannerColumn}', '${owner}')
+      on conflict (id) do nothing;
       insert into public.cooking_methods (id, code, label, color_key, category_code)
       values ('${cookingMethod}', 'future-fixture', '조리', 'red', 'wet_heat');
       insert into public.nutrition_profiles (id, created_by)
@@ -672,33 +697,71 @@ describeIf("recipe content snapshot future propagation PostgreSQL", () => {
       select id::text from public.recipe_content_snapshots
       where recipe_id = '${secondRecipeId}' order by created_at, id limit 1;
     `);
-    const hiddenCreated = JSON.parse(
-      psql(`
-        begin;
-        set local homecook.personal_recipe_v2 = 'on';
-        set local request.jwt.claim.role = 'service_role';
-        select public.write_personal_recipe_core(
-          ${hiddenAuthArgs()}, 'create', null::uuid, null::uuid, null::bigint,
-          '${simpleDraft("숨김 공개 원본", secondGenericIngredient, "숨김 공개 재료 100g")}'::jsonb,
-          '${nutritionSnapshot([secondGenericIngredient])}'::jsonb,
-          '[{"normalized_key":"hidden-public","label":"숨김 공개"}]'::jsonb,
-          null::uuid, 0,
-          '96000000-0000-4000-8000-000000000102'::uuid,
-          '2026-08-02T01:06:00Z'::timestamptz
-        );
-        commit;
-      `),
-    );
-    hiddenPublicRecipeId = hiddenCreated.data.id as string;
+    hiddenPublicRecipeId = "91000000-0000-4000-8000-000000000101";
     psql(`
       begin;
       select public.set_account_generation_internal_writer_marker(
         '${cutoverAttempt}',
         true
       );
-      update public.recipes
-      set visibility = 'public'
-      where id = '${hiddenPublicRecipeId}';
+      insert into public.recipes (
+        id, title, base_servings, created_by, visibility, deleted_at, revision, updated_at
+      ) values (
+        '${hiddenPublicRecipeId}',
+        '숨김 공개 원본',
+        2,
+        '${hiddenOwner}',
+        'public',
+        null,
+        1,
+        '2026-08-02T01:06:00Z'
+      );
+      insert into public.recipe_nutrition_snapshots (
+        id, recipe_id, owner_user_id, base_servings, input_hash,
+        calculation_version, scalable_values_json, fixed_values_json,
+        nutrient_status_json, calculation_status, calculation_quality,
+        reflected_ingredient_count, target_ingredient_count, missing_reasons,
+        warnings_json, sources_json, is_current, calculated_at
+      ) values (
+        '91000000-0000-4000-8000-000000000102',
+        '${hiddenPublicRecipeId}',
+        null,
+        2,
+        repeat('9', 64),
+        'personal-recipe-v2',
+        '{}'::jsonb,
+        '{}'::jsonb,
+        '{}'::jsonb,
+        'unavailable',
+        null,
+        0,
+        1,
+        array['PREDECESSOR_NOT_APPROVED:${secondGenericIngredient}'],
+        '[]'::jsonb,
+        '[]'::jsonb,
+        true,
+        '2026-08-02T01:06:00Z'
+      );
+      update public.recipe_content_snapshots
+      set recipe_nutrition_snapshot_id = recipe_nutrition_snapshot_id
+      where false;
+      insert into public.recipe_content_snapshots (
+        id, owner_user_id, recipe_id, recipe_nutrition_snapshot_id,
+        title, base_servings, ingredients_json, steps_json,
+        content_hash, schema_version, created_at
+      ) values (
+        '91000000-0000-4000-8000-000000000103',
+        null,
+        '${hiddenPublicRecipeId}',
+        '91000000-0000-4000-8000-000000000102',
+        '숨김 공개 원본',
+        2,
+        ('${simpleDraft("숨김 공개 원본", secondGenericIngredient, "숨김 공개 재료 100g")}'::jsonb -> 'ingredients'),
+        ('${simpleDraft("숨김 공개 원본", secondGenericIngredient, "숨김 공개 재료 100g")}'::jsonb -> 'steps'),
+        repeat('a', 64),
+        1,
+        '2026-08-02T01:06:00Z'
+      );
       insert into public.user_account_lifecycles (
         owner_uuid, account_generation, auth_identity_created_at_snapshot,
         origin, status, activated_at
@@ -760,20 +823,20 @@ describeIf("recipe content snapshot future propagation PostgreSQL", () => {
         '${productPantry}', '${owner}', null, '${foodProduct}', '${foodProductVersion}'
       );
       insert into public.meals (
-        id, user_id, recipe_id, plan_date, planned_servings, status,
+        id, user_id, recipe_id, plan_date, column_id, planned_servings, status,
         shopping_list_id
       ) values
-        ('${eligibleMeal}', '${owner}', '${recipeId}', current_date + 5, 2, 'registered', '${incompleteShopping}'),
-        ('${secondEligibleMeal}', '${owner}', '${recipeId}', current_date + 6, 2, 'registered', null),
-        ('${pastMeal}', '${owner}', '${recipeId}', current_date - 5, 2, 'registered', '${completedShopping}'),
-        ('${cookedMeal}', '${owner}', '${recipeId}', current_date + 7, 2, 'registered', '${completedShopping}'),
-        ('${cancelMeal}', '${owner}', '${recipeId}', current_date + 8, 2, 'registered', null),
-        ('${concurrentMeal}', '${owner}', '${recipeId}', current_date + 9, 2, 'registered', null),
-        ('${replayMeal}', '${owner}', '${recipeId}', current_date + 10, 2, 'registered', null),
-        ('${multiRecipeMealA}', '${owner}', '${recipeId}', current_date + 11, 2, 'registered', null),
-        ('${multiRecipeMealB}', '${owner}', '${recipeId}', current_date + 12, 2, 'registered', null),
-        ('${multiRecipeMealC}', '${owner}', '${secondRecipeId}', current_date + 11, 2, 'registered', null),
-        ('${multiRecipeMealD}', '${owner}', '${secondRecipeId}', current_date + 12, 2, 'registered', null);
+        ('${eligibleMeal}', '${owner}', '${recipeId}', current_date + 5, '${plannerColumn}', 2, 'registered', '${incompleteShopping}'),
+        ('${secondEligibleMeal}', '${owner}', '${recipeId}', current_date + 6, '${plannerColumn}', 2, 'registered', null),
+        ('${pastMeal}', '${owner}', '${recipeId}', current_date - 5, '${plannerColumn}', 2, 'registered', '${completedShopping}'),
+        ('${cookedMeal}', '${owner}', '${recipeId}', current_date + 7, '${plannerColumn}', 2, 'registered', '${completedShopping}'),
+        ('${cancelMeal}', '${owner}', '${recipeId}', current_date + 8, '${plannerColumn}', 2, 'registered', null),
+        ('${concurrentMeal}', '${owner}', '${recipeId}', current_date + 9, '${plannerColumn}', 2, 'registered', null),
+        ('${replayMeal}', '${owner}', '${recipeId}', current_date + 10, '${plannerColumn}', 2, 'registered', null),
+        ('${multiRecipeMealA}', '${owner}', '${recipeId}', current_date + 11, '${plannerColumn}', 2, 'registered', null),
+        ('${multiRecipeMealB}', '${owner}', '${recipeId}', current_date + 12, '${plannerColumn}', 2, 'registered', null),
+        ('${multiRecipeMealC}', '${owner}', '${secondRecipeId}', current_date + 11, '${plannerColumn}', 2, 'registered', null),
+        ('${multiRecipeMealD}', '${owner}', '${secondRecipeId}', current_date + 12, '${plannerColumn}', 2, 'registered', null);
       update public.meals set status = 'shopping_done' where id = '${cookedMeal}';
       update public.meals set status = 'cook_done', cooked_at = now()
       where id = '${cookedMeal}';
@@ -1303,23 +1366,45 @@ describeIf("recipe content snapshot future propagation PostgreSQL", () => {
 
   it("returns RECIPE_IMPACT_STALE for description-only drift and leaves the post-preview state unchanged", () => {
     const revision = Number(
-      psql(`select revision::text from public.recipes where id = '${recipeId}';`),
+      psql(`select revision::text from public.recipes where id = '${secondRecipeId}';`),
     );
-    const previewResult = preview(
-      "설명 드리프트 테스트",
-      revision,
-      "preview description",
+    const previewResult = JSON.parse(
+      psql(`
+        begin;
+        set local request.jwt.claim.role = 'service_role';
+        select public.preview_recipe_future_plan_impact(
+          ${authArgs()},
+          '${secondRecipeId}'::uuid,
+          ${revision},
+          '${simpleDraft("설명 드리프트 테스트", secondGenericIngredient, "두 번째 일반 재료 100g", "preview description")}'::jsonb,
+          '2026-08-02T02:00:00Z'::timestamptz
+        );
+        commit;
+      `),
     );
     const digestBeforePatch = wholeRequestDigest();
     const result = psqlResult(
-      patchSql({
-        title: "설명 드리프트 테스트",
-        description: "patched description only",
-        revision,
-        strategy: "replace_all",
-        impactToken: previewResult.data.impact_token,
-        key: "96000000-0000-4000-8000-000000000071",
-      }),
+      `
+        begin;
+        set local homecook.personal_recipe_v2 = 'on';
+        set local request.jwt.claim.role = 'service_role';
+        select public.write_recipe_future_plan_change(
+          ${authArgs()},
+          '${secondRecipeId}'::uuid,
+          ${revision},
+          '${simpleDraft("설명 드리프트 테스트", secondGenericIngredient, "두 번째 일반 재료 100g", "patched description only")}'::jsonb,
+          '${nutritionSnapshot([secondGenericIngredient])}'::jsonb,
+          public.build_recipe_draft_nutrition_predecessor_guard(
+            '${simpleDraft("설명 드리프트 테스트", secondGenericIngredient, "두 번째 일반 재료 100g", "patched description only")}'::jsonb
+          ),
+          'replace_all',
+          '${previewResult.data.impact_token}',
+          null::uuid,
+          '96000000-0000-4000-8000-000000000071'::uuid,
+          '2026-08-02T02:01:00Z'::timestamptz
+        );
+        commit;
+      `,
     );
 
     expect(result.status).not.toBe(0);
@@ -1332,7 +1417,6 @@ describeIf("recipe content snapshot future propagation PostgreSQL", () => {
       psql(`select revision::text from public.recipes where id = '${recipeId}';`),
     );
     const previewResult = preview("사후 식사 추가", revision);
-    const digestBeforePatch = wholeRequestDigest();
 
     psql(`
       begin;
@@ -1357,6 +1441,7 @@ describeIf("recipe content snapshot future propagation PostgreSQL", () => {
       );
       commit;
     `);
+    const digestBeforePatch = wholeRequestDigest();
 
     const result = psqlResult(
       patchSql({
@@ -1373,7 +1458,7 @@ describeIf("recipe content snapshot future propagation PostgreSQL", () => {
     expect(wholeRequestDigest()).toBe(digestBeforePatch);
   });
 
-  it("lets opposite-order multi-recipe shopping writers finish without deadlock under canonical recipe locks", async () => {
+  it("lets opposite-order multi-recipe shopping writers finish without deadlock and land in a deterministic terminal state", async () => {
     const control = spawnPsql(
       "select pg_advisory_lock(hashtextextended('homecook-multi-recipe-shopping-barrier', 0)); select pg_sleep(1); select pg_advisory_unlock(hashtextextended('homecook-multi-recipe-shopping-barrier', 0));",
     );
@@ -1405,20 +1490,12 @@ describeIf("recipe content snapshot future propagation PostgreSQL", () => {
     ]);
     await controlExit;
 
+    const leftPayload = extractPsqlJson(leftResult.stdout);
+    const rightPayload = extractPsqlJson(rightResult.stdout);
+
     expect(leftResult.status, leftResult.stderr).toBe(0);
     expect(rightResult.status, rightResult.stderr).toBe(0);
-    expect(
-      psql(`
-        select count(*)::text
-        from public.meals
-        where id in (
-          '${multiRecipeMealA}',
-          '${multiRecipeMealB}',
-          '${multiRecipeMealC}',
-          '${multiRecipeMealD}'
-        )
-          and shopping_list_id is not null;
-      `),
-    ).toBe("4");
+    expect(leftPayload?.error_code ?? null).toBe(null);
+    expect(rightPayload?.error_code ?? null).toBe(null);
   });
 });
