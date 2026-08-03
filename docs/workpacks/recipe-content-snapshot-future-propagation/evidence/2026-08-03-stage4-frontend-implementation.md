@@ -145,3 +145,10 @@
 - Focused inventory RED: 1/1 failed with the missing function classification. GREEN commit `29173d68` classifies the exact signatures, explicit postgres owner, safe search paths and service-role-only ACLs in both the central and full-local inventories.
 - GREEN evidence: inventory/projection 15/15; authorization `--contract-only` validator classified all 18 #7 functions; disposable PostgreSQL fresh/replay again passed #7 20/20 and full-local security 31 pass + 17 intended skip in each run; current-head `pnpm verify:backend` passed 217 product files with 2,649 tests + 150 intended skips, 77-route build and security E2E 12/12.
 - This repair changes no public endpoint, browser capability value or activation state.
+
+### Current-head quality inventory repair
+
+- GitHub `quality` exposed a second real RED at head `b7094db7`: the server-only entrypoint was approved by the runtime inventory, but three generated/static projections still described the pre-entrypoint source tree. The aggregate result was 3 failed, 5,201 passed and 330 intended skipped tests.
+- GREEN commit `ca0b0555` adds only the two exact approved internal reads to the hybrid static expectation and regenerates the hybrid/account-session artifacts. It adds no operation, endpoint, capability source or browser authority.
+- GREEN evidence: focused inventory tests 19/19; account-session inventory 59 routes, 88 write surfaces and 3 inbound `auth.users` foreign keys; hybrid generator check; full `pnpm test` exit 0; `git diff --check` pass.
+- Independent authority precheck, Stage 5/final authority/Stage 6, Manual/server-Mac evidence and activation remain pending.
