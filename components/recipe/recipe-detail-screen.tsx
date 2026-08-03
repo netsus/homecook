@@ -11,6 +11,7 @@ import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-ta
 import { PlannerAddSheet } from "@/components/recipe/planner-add-sheet";
 import type { PlannerAddSheetState } from "@/components/recipe/planner-add-sheet";
 import { RecipeDetailPersonalActions } from "@/components/recipe/recipe-detail-personal-actions";
+import { RecipeFutureImpactDialog } from "@/components/recipe/recipe-future-impact-dialog";
 import { RecipeNutritionCard } from "@/components/recipe/recipe-nutrition-card";
 import { SaveModal } from "@/components/recipe/save-modal";
 import { ContentState } from "@/components/shared/content-state";
@@ -60,6 +61,7 @@ import {
 import { buildReturnHref } from "@/lib/navigation/return-context";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { hasSupabasePublicEnv } from "@/lib/supabase/env";
+import { isQaFixtureClientModeEnabled } from "@/lib/mock/qa-fixture-client";
 import { useAuthGateStore } from "@/stores/ui-store";
 import type {
   RecipeBookSummary,
@@ -184,6 +186,7 @@ export function RecipeDetailScreen({
   const [plannerColumns, setPlannerColumns] = useState<PlannerColumnData[]>([]);
   const [plannerAddError, setPlannerAddError] = useState<string | null>(null);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
+  const [showQaFutureImpact, setShowQaFutureImpact] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const [selectedPlanDate, setSelectedPlanDate] = useState("");
   const [selectedPlanColumnId, setSelectedPlanColumnId] = useState("");
@@ -198,6 +201,13 @@ export function RecipeDetailScreen({
   const nutritionRequestSequenceRef = React.useRef(0);
   const currentRecipeIdRef = React.useRef(recipeId);
   currentRecipeIdRef.current = recipeId;
+
+  useEffect(() => {
+    setShowQaFutureImpact(
+      isQaFixtureClientModeEnabled()
+        && new URLSearchParams(window.location.search).get("qaFutureImpact") === "1",
+    );
+  }, []);
 
   const loadRecipe = useCallback(async () => {
     const requestedRecipeId = recipeId;
@@ -1825,6 +1835,24 @@ export function RecipeDetailScreen({
       />
       {feedback ? <FeedbackToast message={feedback.message} tone={feedback.tone} /> : null}
       <LoginGateModal />
+      {showQaFutureImpact ? (
+        <RecipeFutureImpactDialog
+          impact={{
+            impact_token: "qa-impact-token",
+            expires_at: "2026-08-03T12:00:00.000Z",
+            proposed_content_hash: "a".repeat(64),
+            future_meal_count: 3,
+            date_range: { from: "2026-08-04", to: "2026-08-10" },
+            incomplete_shopping_list_count: 2,
+            completed_shopping_list_count: 1,
+            active_cooking_claim_count: 1,
+            replace_all_allowed: false,
+          }}
+          onClose={() => setShowQaFutureImpact(false)}
+          onRecheck={() => undefined}
+          onSave={() => undefined}
+        />
+      ) : null}
     </>
   );
 }

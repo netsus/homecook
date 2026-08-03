@@ -219,7 +219,7 @@ snapshot_v2 read:
 
 ## Design Status
 
-`temporary`. Stage 1 locks official states and evidence requirements only. Implementation screenshots/Figma, independent design critique and product-design-authority approval are pending.
+`pending-review`. Stage 4 implementation screenshots and the independent design critique are present. Separate authority precheck/final product-design-authority approval is still pending, so `confirmed` is forbidden.
 
 ## Primary User Path
 
@@ -282,8 +282,8 @@ Stage 2 implementer evidence is retained at [`evidence/2026-08-03-stage2-backend
 - [x] planner start copies Meal pin/servings and creates one active claim per Meal exactly once <!-- omo:id=delivery-future-planner-start;stage=2;scope=backend;review=3,6 -->
 - [x] standalone start pins current content under recipe revision lock <!-- omo:id=delivery-future-standalone-start;stage=2;scope=backend;review=3,6 -->
 - [x] v2 read/cancel use immutable content, release claims and replay without cross-version fallback <!-- omo:id=delivery-future-v2-drain;stage=2;scope=backend;review=3,6 -->
-- [ ] UI waits for session ID/version and dispatches v1/v2 without parser or body-shape inference <!-- omo:id=delivery-future-dispatch;stage=4;scope=frontend;review=5,6 -->
-- [ ] impact dialog loading/empty/claim/stale states and two-choice hierarchy are accessible <!-- omo:id=delivery-future-impact-ui;stage=4;scope=frontend;review=5,6 -->
+- [x] UI waits for session ID/version and dispatches v1/v2 without parser or body-shape inference <!-- omo:id=delivery-future-dispatch;stage=4;scope=frontend;review=5,6 -->
+- [x] impact dialog loading/empty/claim/stale states and two-choice hierarchy are accessible <!-- omo:id=delivery-future-impact-ui;stage=4;scope=frontend;review=5,6 -->
 - [ ] 390px/320px visual/a11y and independent design critic/authority reviews pass <!-- omo:id=delivery-future-design-authority;stage=4;scope=frontend;review=5,6 -->
 - [x] past/cook-done/completed shopping/session/log history remains snapshot-stable <!-- omo:id=delivery-future-history;stage=2;scope=shared;review=3,6 -->
 - [x] v2 creation/personal writes stay dark and existing seeded v2 drain survives rollback <!-- omo:id=delivery-future-dark-release;stage=2;scope=shared;review=3,6 -->
