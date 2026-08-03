@@ -444,7 +444,7 @@ function seedTwoOwnerAuthority(runtime, ownerA, ownerB) {
     Math.min(ownerA.claims.iat, ownerB.claims.iat) * 1_000 - 1_000,
   ).toISOString();
   const callerValues = [ownerA, ownerB].map((caller, index) => {
-    const identityCreatedAt = new Date(caller.user.created_at).toISOString();
+    const identityCreatedAt = caller.user.created_at;
     const issuedAt = new Date(caller.claims.iat * 1_000).toISOString();
     const expiresAt = new Date(caller.claims.exp * 1_000).toISOString();
     return `(
