@@ -59,6 +59,25 @@ const completedShopping = "94000000-0000-4000-8000-000000000002";
 const genericPantry = "95000000-0000-4000-8000-000000000001";
 const productPantry = "95000000-0000-4000-8000-000000000002";
 
+interface ShoppingConcurrencyIngredientRow {
+  ingredient_id: string | null;
+  food_product_id: string | null;
+  food_product_nutrition_version_id: string | null;
+  ingredient_type: "QUANT" | "TO_TASTE";
+  amount: number | null;
+  unit: string | null;
+  display_text: string | null;
+}
+
+interface ShoppingConcurrencyMealRow {
+  meal_id: string;
+  recipe_id: string;
+  recipe_content_snapshot_id: string | null;
+  planned_servings: number;
+  base_servings: number;
+  ingredients_json: ShoppingConcurrencyIngredientRow[];
+}
+
 let recipeId = "";
 let initialContentId = "";
 let secondRecipeId = "";
@@ -154,7 +173,7 @@ function shoppingConcurrencyPayload(mealIds: string[]) {
     join public.recipe_content_snapshots as snapshot
       on snapshot.id = meal.recipe_content_snapshot_id
     where meal.id = any(array[${mealIds.map((mealId) => `'${mealId}'::uuid`).join(",")}]);
-  `));
+  `)) as ShoppingConcurrencyMealRow[];
   const ingredientNames = JSON.parse(psql(`
     with ingredient_ids as (
       select distinct nullif(item ->> 'ingredient_id', '')::uuid as ingredient_id
@@ -168,7 +187,7 @@ function shoppingConcurrencyPayload(mealIds: string[]) {
     select jsonb_object_agg(ingredient.id::text, ingredient.name)::text
     from public.ingredients as ingredient
     join ingredient_ids on ingredient_ids.ingredient_id = ingredient.id;
-  `) || "{}");
+  `) || "{}") as Record<string, string>;
 
   const recipeRowsMap = new Map<string, {
     recipe_id: string;
@@ -196,7 +215,7 @@ function shoppingConcurrencyPayload(mealIds: string[]) {
     sort_order: number;
   }>();
 
-  for (const meal of meals as Array<Record<string, unknown>>) {
+  for (const meal of meals) {
     const key = `${meal.recipe_id}:${meal.recipe_content_snapshot_id ?? ""}`;
     const existing = recipeRowsMap.get(key) ?? {
       recipe_id: meal.recipe_id,
@@ -208,10 +227,7 @@ function shoppingConcurrencyPayload(mealIds: string[]) {
     existing.planned_servings_total += meal.planned_servings;
     recipeRowsMap.set(key, existing);
 
-    const ingredientsJson = Array.isArray(meal.ingredients_json)
-      ? meal.ingredients_json as Array<Record<string, unknown>>
-      : [];
-    for (const ingredient of ingredientsJson) {
+    for (const ingredient of meal.ingredients_json) {
       if (
         ingredient.food_product_id
         && ingredient.food_product_nutrition_version_id
