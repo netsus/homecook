@@ -14,6 +14,7 @@ import { useAuthGateStore } from "@/stores/ui-store";
 import type {
   RecipeBookListData,
   RecipeDetail,
+  RecipeEditDraft,
   RecipeLikeData,
   RecipeSaveData,
 } from "@/types/recipe";
@@ -378,7 +379,7 @@ describe("recipe detail screen", () => {
   });
 
   it("connects the fetched owner edit context to the real impact preview flow", async () => {
-    const draft = {
+    const draft: RecipeEditDraft = {
       title: "내 김치찌개",
       description: null,
       base_servings: 2,

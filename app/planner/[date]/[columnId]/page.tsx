@@ -5,6 +5,8 @@ import { AppShell } from "@/components/layout/app-shell";
 import { MealScreen } from "@/components/planner/meal-screen";
 import { resolveNextPath } from "@/lib/auth/callback";
 import { readE2EAuthOverrideCookie } from "@/lib/auth/e2e-auth-override";
+import { readRecipeSnapshotUiMode } from
+  "@/lib/server/recipe-snapshot-entrypoint";
 import { hasSupabasePublicEnv } from "@/lib/supabase/env";
 import { getServerAuthUser } from "@/lib/supabase/server";
 
@@ -49,6 +51,7 @@ export default async function MealScreenPage({
       : authOverride === "guest"
         ? false
         : Boolean(user);
+  const recipeSnapshotUiMode = await readRecipeSnapshotUiMode();
 
   if (
     authOverride === "guest"
@@ -78,6 +81,7 @@ export default async function MealScreenPage({
         columnId={columnId}
         initialAuthenticated={initialAuthenticated}
         planDate={date}
+        recipeSnapshotUiMode={recipeSnapshotUiMode}
         slotName={slot ?? ""}
       />
     </AppShell>

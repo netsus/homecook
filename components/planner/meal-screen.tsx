@@ -69,6 +69,7 @@ import {
   saveProductPlannerReturnContext,
 } from "@/lib/planner/product-planner-return-context";
 import type { MealListItemData } from "@/types/meal";
+import type { RecipeSnapshotUiMode } from "@/types/recipe";
 import type {
   MealProductPlannerEntryData,
   ProductPlannerEntryQuantity,
@@ -93,7 +94,7 @@ export interface MealScreenProps {
   columnId: string;
   slotName: string;
   initialAuthenticated: boolean;
-  snapshotV2StartContext?: { expectedMealRevisions: Record<string, number> };
+  recipeSnapshotUiMode?: RecipeSnapshotUiMode;
 }
 
 // Status data preserved for logic; visual badges removed per Wave1 port.
@@ -1167,7 +1168,7 @@ export function MealScreen({
   columnId,
   slotName,
   initialAuthenticated,
-  snapshotV2StartContext,
+  recipeSnapshotUiMode = "legacy_v1",
 }: MealScreenProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -1458,12 +1459,12 @@ export function MealScreen({
     clearConflictError(meal.id);
 
     try {
-      const session = snapshotV2StartContext
+      const session = recipeSnapshotUiMode === "snapshot_v2"
         ? await createSnapshotV2CookingSession({
             mode: "planner",
             meal_ids: [meal.id],
             expected_meal_revisions: {
-              [meal.id]: snapshotV2StartContext.expectedMealRevisions[meal.id],
+              [meal.id]: meal.revision,
             },
           })
         : await createCookingSession({
@@ -1472,7 +1473,7 @@ export function MealScreen({
             cooking_servings: meal.planned_servings,
           });
       router.push(
-        buildReturnHref(getCookingSessionCookModeHref({ session_id: session.session_id, contract_version: snapshotV2StartContext ? "snapshot_v2" : "legacy_v1" }), {
+        buildReturnHref(getCookingSessionCookModeHref({ session_id: session.session_id, contract_version: recipeSnapshotUiMode }), {
           returnTo: buildNextPath(planDate, columnId, slotName),
         }),
       );

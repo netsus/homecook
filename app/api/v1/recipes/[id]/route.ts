@@ -45,6 +45,8 @@ import {
   type FuturePropagationRpcClient,
   type RecipeDraftNutritionClient,
 } from "@/lib/server/recipe-content-snapshot-future-propagation";
+import { readRecipeSnapshotEntrypointContext } from
+  "@/lib/server/recipe-snapshot-entrypoint";
 import { formatBootstrapErrorMessage } from "@/lib/server/user-bootstrap";
 import {
   createRecipeFuturePropagationInternalClient,
@@ -272,10 +274,12 @@ export async function GET(request: Request, context: RouteContext) {
       authOverride === "authenticated"
         ? {
             ...getQaFixtureRecipeDetail(),
+            revision: 1,
             nutrition: buildUnavailableRecipeNutrition(),
           }
         : {
             ...MOCK_RECIPE_DETAIL,
+            revision: 1,
             nutrition: buildUnavailableRecipeNutrition(),
           },
     );
@@ -288,12 +292,17 @@ export async function GET(request: Request, context: RouteContext) {
     const recipeResult = await routeClient
       .from("recipes")
       .select(
-        "id, title, description, thumbnail_url, base_servings, tags, source_type, created_by, view_count, like_count, save_count, plan_count, cook_count",
+        "id, title, description, thumbnail_url, base_servings, tags, source_type, created_by, visibility, deleted_at, revision, view_count, like_count, save_count, plan_count, cook_count",
       )
       .eq("id", id)
       .maybeSingle();
 
-    if (recipeResult.error || !recipeResult.data) {
+    if (
+      recipeResult.error
+      || !recipeResult.data
+      || (recipeResult.data.deleted_at !== null
+        && recipeResult.data.deleted_at !== undefined)
+    ) {
       return fail("RESOURCE_NOT_FOUND", "레시피를 찾을 수 없어요.", 404);
     }
 
@@ -370,6 +379,50 @@ export async function GET(request: Request, context: RouteContext) {
     }
 
     const user = authResult.data.user;
+    if (
+      recipeResult.data.visibility === "private"
+      && recipeResult.data.created_by !== user?.id
+    ) {
+      return fail("RESOURCE_NOT_FOUND", "레시피를 찾을 수 없어요.", 404);
+    }
+    let entrypointContext: Awaited<ReturnType<
+      typeof readRecipeSnapshotEntrypointContext
+    >> | null = null;
+    const isOwnerPrivate = Boolean(
+      user
+      && recipeResult.data.created_by === user.id
+      && recipeResult.data.visibility === "private"
+      && recipeResult.data.deleted_at === null,
+    );
+    if (isOwnerPrivate && user) {
+      const verifiedSession = await readVerifiedAccountGenerationSession(
+        routeClient,
+        user,
+      );
+      if (
+        !verifiedSession.ok
+        || verifiedSession.sessionAuthority.ownerUuid !== user.id
+      ) {
+        return fail("ACCOUNT_SESSION_STALE", "세션을 다시 확인해 주세요.", 409);
+      }
+      try {
+        entrypointContext = await readRecipeSnapshotEntrypointContext({
+          recipeId: id,
+          sessionAuthority: verifiedSession.sessionAuthority,
+        });
+      } catch {
+        return fail(
+          "INTERNAL_ERROR",
+          "레시피 편집 정보를 불러오지 못했어요.",
+          500,
+        );
+      }
+    }
+
+    const revision = entrypointContext?.revision ?? recipeResult.data.revision;
+    if (!Number.isSafeInteger(revision) || Number(revision) <= 0) {
+      return fail("INTERNAL_ERROR", "레시피 상세를 불러오지 못했어요.", 500);
+    }
     let userStatus: RecipeUserStatus | null = null;
 
     if (user) {
@@ -468,6 +521,10 @@ export async function GET(request: Request, context: RouteContext) {
           ? projectRecipeNutritionSnapshot(nutritionSnapshotResult.data)
           : buildUnavailableRecipeNutrition(),
       user_status: userStatus,
+      revision: Number(revision),
+      ...(entrypointContext
+        ? { edit_context: entrypointContext.edit_context }
+        : {}),
     };
 
     return ok(detail);

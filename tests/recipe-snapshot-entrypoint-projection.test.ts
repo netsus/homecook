@@ -132,6 +132,27 @@ describe("recipe snapshot server-only entrypoint projection", () => {
         },
       },
     },
+    {
+      ...ownerProjection(),
+      edit_context: {
+        ...ownerProjection().edit_context,
+        image_object_id: "https://cdn.example.invalid/not-an-object-id",
+      },
+    },
+    {
+      ...ownerProjection(),
+      edit_context: {
+        ...ownerProjection().edit_context,
+        draft: {
+          ...ownerProjection().edit_context.draft,
+          ingredients: [{
+            ...ownerProjection().edit_context.draft.ingredients[0],
+            food_product_id: "550e8400-e29b-41d4-a716-446655440040",
+            food_product_nutrition_version_id: null,
+          }],
+        },
+      },
+    },
   ])("rejects malformed or cross-revision owner context", async (data) => {
     createRecipeFuturePropagationInternalClient.mockReturnValue({
       rpc: vi.fn(async () => ({ data, error: null })),
@@ -163,6 +184,8 @@ describe("recipe snapshot server-only entrypoint projection", () => {
     expect(sql).toMatch(/revoke all on function public\.read_recipe_snapshot_ui_mode\(\)[\s\S]*from public, anon, authenticated, service_role/i);
     expect(sql).toMatch(/grant execute on function public\.read_recipe_snapshot_ui_mode\(\)[\s\S]*to service_role/i);
     expect(sql).toContain("'cut_size', ingredient_used -> 'cut_size'");
+    expect(sql).toMatch(/image_object\.owner_uuid = recipe\.created_by[\s\S]*image_object\.account_generation[\s\S]*v_session_authority[\s\S]*image_object\.visibility = 'private'[\s\S]*image_object\.state = 'attached_private'/i);
+    expect(sql).toMatch(/recipe\.created_by = p_owner_uuid[\s\S]*recipe\.visibility = 'private'[\s\S]*recipe\.deleted_at is null/i);
     expect(sql).not.toMatch(/thumbnail_url[\s\S]*image_object_id/i);
   });
 });

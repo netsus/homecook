@@ -2,6 +2,8 @@ import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+(globalThis as typeof globalThis & { React: typeof React }).React = React;
+
 const readRecipeSnapshotUiMode = vi.fn();
 const getServerAuthUser = vi.fn();
 const cookies = vi.fn();

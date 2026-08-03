@@ -1,6 +1,7 @@
 import { withE2EAuthOverrideHeaders } from "@/lib/auth/e2e-auth-override";
 import type { RecipeFutureImpact } from "@/components/recipe/recipe-future-impact-dialog";
 import type { ApiResponse } from "@/types/api";
+import type { RecipeEditDraft } from "@/types/recipe";
 
 export interface RecipeFutureImpactApiError extends Error { status: number; code: string }
 async function request<T>(url: string, init: RequestInit): Promise<T> {
@@ -13,7 +14,7 @@ async function request<T>(url: string, init: RequestInit): Promise<T> {
   return payload.data;
 }
 
-export type RecipeFutureDraft = { title: string; description?: string | null; base_servings: number; ingredients: unknown[]; steps: unknown[] };
+export type RecipeFutureDraft = RecipeEditDraft;
 export function fetchRecipeFutureImpact(recipeId: string, baseRecipeRevision: number, draft: RecipeFutureDraft) {
   return request<RecipeFutureImpact>(`/api/v1/recipes/${recipeId}/future-plan-impact`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ base_recipe_revision: baseRecipeRevision, draft }) });
 }

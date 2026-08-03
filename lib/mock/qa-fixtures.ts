@@ -357,6 +357,7 @@ function buildRecipeDetailFromState(state: QaFixtureState): RecipeDetail {
     save_count: state.saveCount,
     plan_count: fixtureData.fixture.recipe.planCount,
     cook_count: fixtureData.fixture.recipe.cookCount,
+    revision: 1,
     ingredients: fixtureData.recipe.ingredients.map((ingredient) => ({
       id: ingredient.id,
       ingredient_id: ingredient.ingredientId,
@@ -727,6 +728,7 @@ export function getQaFixturePlannerData(startDate: string, endDate: string) {
         planned_servings: meal.planned_servings,
         status: meal.status,
         is_leftover: meal.is_leftover,
+        revision: 1,
       })),
       ...createdMeals.map((meal) => ({
         ...meal,
@@ -1102,6 +1104,7 @@ export function getQaFixtureMealsBySlot(planDate: string, columnId: string) {
         planned_servings: meal.planned_servings,
         status: meal.status,
         is_leftover: meal.is_leftover,
+        revision: 1,
       })),
     product_entries: plannerData.product_entries
       .filter((entry) => entry.plan_date === planDate && entry.column_id === columnId)

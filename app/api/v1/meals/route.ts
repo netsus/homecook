@@ -82,6 +82,7 @@ interface MealListRow {
   is_leftover: boolean;
   created_at: string;
   recipe_content_snapshot_id: string | null;
+  revision: number;
   recipe_content_snapshots:
     | {
       title: string | null;
@@ -380,6 +381,7 @@ function toMealListItem(row: MealListRow, recipeMap: Map<string, RecipeSummaryRo
     planned_servings: row.planned_servings,
     status: normalizeMealStatus(row.status),
     is_leftover: row.is_leftover,
+    revision: row.revision,
   };
 }
 
@@ -446,7 +448,7 @@ async function getMeals(request: NextRequest) {
   const mealsResult = await dbClient
     .from("meals")
     .select(
-      "id, recipe_id, planned_servings, status, is_leftover, created_at, recipe_content_snapshot_id, recipe_content_snapshots(title)",
+      "id, recipe_id, planned_servings, status, is_leftover, created_at, revision, recipe_content_snapshot_id, recipe_content_snapshots(title)",
     )
     .eq("user_id", user.id)
     .eq("plan_date", parsed.planDate)
@@ -459,6 +461,12 @@ async function getMeals(request: NextRequest) {
     if (authorityError) {
       return authorityError;
     }
+    return fail("INTERNAL_ERROR", "식사 목록을 불러오지 못했어요.", 500);
+  }
+
+  if (mealsResult.data.some(
+    (meal) => !Number.isSafeInteger(meal.revision) || meal.revision <= 0,
+  )) {
     return fail("INTERNAL_ERROR", "식사 목록을 불러오지 못했어요.", 500);
   }
 

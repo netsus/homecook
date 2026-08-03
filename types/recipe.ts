@@ -144,6 +144,51 @@ export interface RecipeStep {
   duration_text: string | null;
 }
 
+export interface RecipeEditIngredientDraft {
+  ingredient_id: string;
+  amount: number | null;
+  unit: string | null;
+  ingredient_type: "QUANT" | "TO_TASTE";
+  display_text: string | null;
+  component_label: string | null;
+  scalable: boolean;
+  food_product_id: string | null;
+  food_product_nutrition_version_id: string | null;
+}
+
+export interface RecipeEditStepDraft {
+  step_number: number;
+  instruction: string;
+  cooking_method_id: string;
+  cooking_method_ids: string[];
+  ingredients_used: Array<{
+    ingredient_id: string;
+    amount: number | null;
+    unit: string | null;
+    cut_size: string | null;
+  }>;
+  component_label: string | null;
+  heat_level: string | null;
+  duration_seconds: number | null;
+  duration_text: string | null;
+}
+
+export interface RecipeEditDraft {
+  title: string;
+  description: string | null;
+  base_servings: number;
+  ingredients: RecipeEditIngredientDraft[];
+  steps: RecipeEditStepDraft[];
+}
+
+export interface RecipeEditContext {
+  base_recipe_revision: number;
+  draft: RecipeEditDraft;
+  image_object_id: string | null;
+}
+
+export type RecipeSnapshotUiMode = "legacy_v1" | "snapshot_v2";
+
 export type RecipePhotoRole = "primary" | "alternate" | "step" | "unknown";
 
 export interface RecipePhoto {
@@ -629,4 +674,6 @@ export interface RecipeDetail {
   steps: RecipeStep[];
   nutrition: RecipeNutrition;
   user_status: RecipeUserStatus | null;
+  revision: number;
+  edit_context?: RecipeEditContext;
 }

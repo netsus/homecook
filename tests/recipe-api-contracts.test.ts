@@ -1740,6 +1740,7 @@ describe("recipe API contracts", () => {
         base_servings: 2,
         tags: ["한식"],
         source_type: "system",
+        revision: 1,
         view_count: 10,
         like_count: 0,
         save_count: 0,
@@ -1820,6 +1821,8 @@ describe("recipe API contracts", () => {
     expect(recipeReadQuery.maybeSingle.mock.invocationCallOrder[0])
       .toBeLessThan(readRecipeImageProjection.mock.invocationCallOrder[0]);
     expect(body.data.thumbnail_url).toBe(managedReadUrl);
+    expect(body.data).not.toHaveProperty("edit_context");
+    expect(readRecipeSnapshotEntrypointContext).not.toHaveBeenCalled();
     expect(routeFrom).not.toHaveBeenCalledWith("meals");
   });
 
@@ -1833,6 +1836,7 @@ describe("recipe API contracts", () => {
         base_servings: 2,
         tags: ["한식"],
         source_type: "system",
+        revision: 1,
         view_count: 10,
         like_count: 0,
         save_count: 0,
@@ -1933,6 +1937,7 @@ describe("recipe API contracts", () => {
         base_servings: 1,
         tags: ["한식"],
         source_type: "system",
+        revision: 1,
         view_count: 10,
         like_count: 0,
         save_count: 0,
@@ -2045,6 +2050,7 @@ describe("recipe API contracts", () => {
         base_servings: 2,
         tags: ["한식"],
         source_type: "system",
+        revision: 1,
         view_count: 10,
         like_count: 0,
         save_count: 0,
@@ -2134,6 +2140,7 @@ describe("recipe API contracts", () => {
         base_servings: 2,
         tags: ["한식"],
         source_type: "system",
+        revision: 1,
         view_count: 10,
         like_count: 0,
         save_count: 0,

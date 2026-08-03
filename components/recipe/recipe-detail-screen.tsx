@@ -42,7 +42,6 @@ import {
 import { createMeal, isMealApiError } from "@/lib/api/meal";
 import { createSnapshotV2CookingSession } from "@/lib/api/cooking";
 import { getCookingSessionCookModeHref } from "@/lib/cooking/session-version-dispatch";
-import type { RecipeFutureDraft } from "@/lib/api/recipe-future-impact";
 import { notifyGamificationSourceAction } from "@/lib/gamification-events";
 import { getCookingMethodColor, getCookingMethodTint } from "@/lib/cooking-method-colors";
 import { getCookingMethodAssistiveLabel } from "@/lib/cooking-method-taxonomy";
@@ -71,6 +70,7 @@ import type {
   RecipeDetail,
   RecipeIngredient,
   RecipeLikeData,
+  RecipeSnapshotUiMode,
   RecipeUserStatus,
 } from "@/types/recipe";
 import type { PlannerColumnData } from "@/types/planner";
@@ -153,12 +153,7 @@ interface RecipeDetailScreenProps {
   recipeId: string;
   authError?: string | null;
   initialAuthenticated?: boolean;
-  personalEditContext?: {
-    baseRecipeRevision: number;
-    draft: RecipeFutureDraft;
-    imageObjectId: string | null;
-  };
-  snapshotV2StartContext?: { expectedRecipeRevision: number };
+  recipeSnapshotUiMode?: RecipeSnapshotUiMode;
 }
 
 
@@ -166,8 +161,7 @@ export function RecipeDetailScreen({
   recipeId,
   authError,
   initialAuthenticated = false,
-  personalEditContext,
-  snapshotV2StartContext,
+  recipeSnapshotUiMode = "legacy_v1",
 }: RecipeDetailScreenProps) {
   const [detailState, setDetailState] = useState<DetailState>("loading");
   const [detailErrorKind, setDetailErrorKind] = useState<DetailErrorKind>(null);
@@ -1022,7 +1016,8 @@ export function RecipeDetailScreen({
   );
   const cookActionLabel = snapshotStartState === "pending" ? "요리 세션 생성 중…" : "요리하기";
   async function handleCook() {
-    if (!snapshotV2StartContext) {
+    if (!recipe) return;
+    if (recipeSnapshotUiMode !== "snapshot_v2") {
       router.push(cookModeHref);
       return;
     }
@@ -1033,7 +1028,7 @@ export function RecipeDetailScreen({
       const session = await createSnapshotV2CookingSession({
         mode: "standalone",
         recipe_id: recipeId,
-        expected_recipe_revision: snapshotV2StartContext.expectedRecipeRevision,
+        expected_recipe_revision: recipe.revision,
         cooking_servings: selectedServings,
       });
       router.push(buildReturnHref(getCookingSessionCookModeHref(session), {
@@ -1049,17 +1044,50 @@ export function RecipeDetailScreen({
   const shouldRenderWebView = isDesktopViewport;
   const shouldRenderAppView = !isDesktopViewport;
   const shouldRenderLegacyWebView = false;
-  const activePersonalEditContext = personalEditContext ?? (showQaFutureImpact ? {
+  const activePersonalEditContext = recipeSnapshotUiMode === "snapshot_v2"
+    && recipe.edit_context
+    ? {
+        baseRecipeRevision: recipe.edit_context.base_recipe_revision,
+        draft: recipe.edit_context.draft,
+        imageObjectId: recipe.edit_context.image_object_id,
+      }
+    : showQaFutureImpact ? {
     baseRecipeRevision: 12,
     draft: {
       title: recipe.title,
       description: recipe.description,
       base_servings: recipe.base_servings,
-      ingredients: recipe.ingredients,
-      steps: recipe.steps,
+      ingredients: recipe.ingredients.map((ingredient) => ({
+        ingredient_id: ingredient.ingredient_id,
+        amount: ingredient.amount,
+        unit: ingredient.unit,
+        ingredient_type: ingredient.ingredient_type,
+        display_text: ingredient.display_text,
+        component_label: ingredient.component_label ?? null,
+        scalable: ingredient.scalable,
+        food_product_id: null,
+        food_product_nutrition_version_id: null,
+      })),
+      steps: recipe.steps.map((step) => ({
+        step_number: step.step_number,
+        instruction: step.instruction,
+        cooking_method_id: step.cooking_method?.id ?? "00000000-0000-4000-8000-000000000000",
+        cooking_method_ids: step.cooking_methods?.map((method) => method.id)
+          ?? (step.cooking_method ? [step.cooking_method.id] : []),
+        ingredients_used: step.ingredients_used.map((ingredient) => ({
+          ingredient_id: ingredient.ingredient_id,
+          amount: ingredient.amount,
+          unit: ingredient.unit,
+          cut_size: ingredient.cut_size ?? null,
+        })),
+        component_label: step.component_label ?? null,
+        heat_level: step.heat_level,
+        duration_seconds: step.duration_seconds,
+        duration_text: step.duration_text,
+      })),
     },
     imageObjectId: null,
-  } : undefined);
+      } : undefined;
 
   return (
     <>
