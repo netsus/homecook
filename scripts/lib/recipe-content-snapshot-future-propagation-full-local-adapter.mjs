@@ -232,19 +232,19 @@ function applyRepositoryMigrations(runtime) {
   if (migrations.length === 0) {
     throw new Error("isolated full-local migration inventory is empty");
   }
-  const migrationSql = migrations.map((migration) => [
+  const migrationSql = `${migrations.map((migration) => [
     `\\echo applying ${migration}`,
     "begin;",
     readFileSync(join(migrationDirectory, migration), "utf8"),
     "commit;",
-  ].join("\n")).join("\n");
+  ].join("\n")).join("\n")}\nnotify pgrst, 'reload schema';\n`;
   try {
     execFileSync("docker", [
       "exec",
       "--interactive",
       runtime.postgresContainer,
       "psql",
-      "--username", "supabase_admin",
+      "--username", "postgres",
       "--dbname", "postgres",
       "--set", "ON_ERROR_STOP=1",
     ], {
@@ -276,7 +276,7 @@ function postgres(runtime, sql, { output = false } = {}) {
       "--interactive",
       runtime.postgresContainer,
       "psql",
-      "--username", "supabase_admin",
+      "--username", "postgres",
       "--dbname", "postgres",
       "--set", "ON_ERROR_STOP=1",
       ...(output ? ["--tuples-only", "--no-align"] : []),
@@ -631,6 +631,45 @@ function assertSeededCallerAuthority(runtime, caller) {
   `, { output: true });
   if (!result.trim().endsWith("active")) {
     throw new Error("isolated seeded session authority preflight failed");
+  }
+}
+
+async function assertPreviewDataApi(runtime, caller, fixture) {
+  const response = await fetch(
+    `${runtime.plan.loopback.gateway_url}/rest/v1/rpc/preview_recipe_future_plan_impact`,
+    {
+      body: JSON.stringify({
+        p_owner_uuid: caller.user.id,
+        p_auth_identity_created_at_snapshot: caller.user.created_at,
+        p_session_key_hash: sessionBindingHash(runtime, caller),
+        p_hmac_key_version: 1,
+        p_session_issued_at:
+          new Date(caller.claims.iat * 1_000).toISOString(),
+        p_recipe_id: fixture.missingRecipeId,
+        p_base_recipe_revision: 1,
+        p_draft: futureDraft(fixture),
+      }),
+      headers: {
+        apikey: runtime.secrets.secret_key,
+        authorization: `Bearer ${runtime.secrets.secret_key}`,
+        "content-type": "application/json",
+        "x-homecook-internal-scope": "recipe-future-propagation",
+      },
+      method: "POST",
+      signal: AbortSignal.timeout(10_000),
+    },
+  );
+  const payload = await response.json();
+  const safeDetail = [payload?.code, payload?.message, payload?.details]
+    .filter((value) => typeof value === "string")
+    .join(" ");
+  if (!safeDetail.includes("RESOURCE_NOT_FOUND")) {
+    const safeCode = typeof payload?.code === "string"
+      ? payload.code.slice(0, 80)
+      : "missing";
+    throw new Error(
+      `isolated future preview Data API preflight returned ${response.status}/${safeCode}`,
+    );
   }
 }
 
@@ -992,6 +1031,7 @@ export function createRecipeContentSnapshotFuturePropagationFullLocalAdapter({
       const fixture = seedTwoOwnerAuthority(runtime, ownerA, ownerB);
       assertSeededCallerAuthority(runtime, ownerA);
       assertSeededCallerAuthority(runtime, ownerB);
+      await assertPreviewDataApi(runtime, ownerA, fixture);
       const application = await startReleaseApplication(
         runtime,
         releaseSha,
