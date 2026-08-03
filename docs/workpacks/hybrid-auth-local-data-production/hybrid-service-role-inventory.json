@@ -1,7 +1,7 @@
 {
   "generated_from": "scripts/lib/hybrid-authority-inventory.mjs",
   "user_service_role_violation_count": 0,
-  "user_direct_service_role_count": 0,
+  "user_direct_service_role_count": 7,
   "internal_operation_violation_count": 0,
   "internal_operation_allowlist": {
     "createAuthCallbackOperationsClient": [
@@ -13,6 +13,22 @@
     ],
     "createNotFoundFeedbackInternalClient": [
       "app/api/v1/feedback/404/route.ts"
+    ],
+    "createRecipeFuturePropagationInternalClient": [
+      "app/api/v1/recipes/[id]/future-plan-impact/route.ts",
+      "app/api/v1/recipes/[id]/route.ts"
+    ],
+    "createSnapshotV2SessionInternalClient": [
+      "app/api/v1/cooking/session-attempts/[id]/cancel/route.ts",
+      "app/api/v1/cooking/session-attempts/[id]/cook-mode/route.ts",
+      "app/api/v1/cooking/session-attempts/route.ts"
+    ],
+    "createFutureMealWriteInternalClient": [
+      "app/api/v1/meals/[meal_id]/route.ts",
+      "app/api/v1/meals/route.ts"
+    ],
+    "createShoppingCreateInternalClient": [
+      "app/api/v1/shopping/lists/route.ts"
     ],
     "createOperationalEventInternalClient": [
       "lib/server/admin-events.ts"
@@ -36,6 +52,42 @@
       "lib/server/youtube-import.ts"
     ]
   },
+  "internal_operation_function_allowlist": {
+    "createRecipeFuturePropagationInternalClient": {
+      "app/api/v1/recipes/[id]/future-plan-impact/route.ts": [
+        "POST"
+      ],
+      "app/api/v1/recipes/[id]/route.ts": [
+        "DELETE",
+        "PATCH"
+      ]
+    },
+    "createSnapshotV2SessionInternalClient": {
+      "app/api/v1/cooking/session-attempts/route.ts": [
+        "POST"
+      ],
+      "app/api/v1/cooking/session-attempts/[id]/cook-mode/route.ts": [
+        "GET"
+      ],
+      "app/api/v1/cooking/session-attempts/[id]/cancel/route.ts": [
+        "POST"
+      ]
+    },
+    "createFutureMealWriteInternalClient": {
+      "app/api/v1/meals/route.ts": [
+        "postMeals"
+      ],
+      "app/api/v1/meals/[meal_id]/route.ts": [
+        "DELETE",
+        "PATCH"
+      ]
+    },
+    "createShoppingCreateInternalClient": {
+      "app/api/v1/shopping/lists/route.ts": [
+        "POST"
+      ]
+    }
+  },
   "internal_operation_entries": [
     {
       "classification": "admin",
@@ -44,6 +96,37 @@
       "line": 44,
       "allowed": true,
       "factory": "createAdminDataInternalClient",
+      "functionName": "enforceAdminRouteAccess",
+      "kind": "internal-operation-call"
+    },
+    {
+      "classification": "user",
+      "file": "app/api/v1/cooking/session-attempts/[id]/cancel/route.ts",
+      "column": 25,
+      "line": 47,
+      "allowed": true,
+      "factory": "createSnapshotV2SessionInternalClient",
+      "functionName": "POST",
+      "kind": "internal-operation-call"
+    },
+    {
+      "classification": "user",
+      "file": "app/api/v1/cooking/session-attempts/[id]/cook-mode/route.ts",
+      "column": 25,
+      "line": 41,
+      "allowed": true,
+      "factory": "createSnapshotV2SessionInternalClient",
+      "functionName": "GET",
+      "kind": "internal-operation-call"
+    },
+    {
+      "classification": "user",
+      "file": "app/api/v1/cooking/session-attempts/route.ts",
+      "column": 25,
+      "line": 56,
+      "allowed": true,
+      "factory": "createSnapshotV2SessionInternalClient",
+      "functionName": "POST",
       "kind": "internal-operation-call"
     },
     {
@@ -53,6 +136,67 @@
       "line": 106,
       "allowed": true,
       "factory": "createNotFoundFeedbackInternalClient",
+      "functionName": "POST",
+      "kind": "internal-operation-call"
+    },
+    {
+      "classification": "user",
+      "file": "app/api/v1/meals/[meal_id]/route.ts",
+      "column": 25,
+      "line": 263,
+      "allowed": true,
+      "factory": "createFutureMealWriteInternalClient",
+      "functionName": "PATCH",
+      "kind": "internal-operation-call"
+    },
+    {
+      "classification": "user",
+      "file": "app/api/v1/meals/[meal_id]/route.ts",
+      "column": 25,
+      "line": 345,
+      "allowed": true,
+      "factory": "createFutureMealWriteInternalClient",
+      "functionName": "DELETE",
+      "kind": "internal-operation-call"
+    },
+    {
+      "classification": "user",
+      "file": "app/api/v1/meals/route.ts",
+      "column": 25,
+      "line": 691,
+      "allowed": true,
+      "factory": "createFutureMealWriteInternalClient",
+      "functionName": "postMeals",
+      "kind": "internal-operation-call"
+    },
+    {
+      "classification": "user",
+      "file": "app/api/v1/recipes/[id]/future-plan-impact/route.ts",
+      "column": 25,
+      "line": 63,
+      "allowed": true,
+      "factory": "createRecipeFuturePropagationInternalClient",
+      "functionName": "POST",
+      "kind": "internal-operation-call"
+    },
+    {
+      "classification": "public",
+      "file": "app/api/v1/recipes/[id]/route.ts",
+      "column": 25,
+      "line": 547,
+      "allowed": true,
+      "factory": "createRecipeFuturePropagationInternalClient",
+      "functionName": "PATCH",
+      "kind": "internal-operation-call"
+    },
+    {
+      "classification": "public",
+      "file": "app/api/v1/recipes/[id]/route.ts",
+      "column": 25,
+      "line": 619,
+      "allowed": true,
+      "factory": "createRecipeFuturePropagationInternalClient",
+      "functionName": "DELETE",
       "kind": "internal-operation-call"
     },
     {
@@ -62,6 +206,7 @@
       "line": 42,
       "allowed": true,
       "factory": "createRecipeImageInternalClient",
+      "functionName": "POST",
       "kind": "internal-operation-call"
     },
     {
@@ -71,6 +216,17 @@
       "line": 192,
       "allowed": true,
       "factory": "createRecipeImageInternalClient",
+      "functionName": "POST",
+      "kind": "internal-operation-call"
+    },
+    {
+      "classification": "user",
+      "file": "app/api/v1/shopping/lists/route.ts",
+      "column": 25,
+      "line": 1048,
+      "allowed": true,
+      "factory": "createShoppingCreateInternalClient",
+      "functionName": "POST",
       "kind": "internal-operation-call"
     },
     {
@@ -80,6 +236,7 @@
       "line": 36,
       "allowed": true,
       "factory": "createAccountLifecycleInternalRpcClient",
+      "functionName": "POST",
       "kind": "internal-operation-call"
     },
     {
@@ -89,6 +246,7 @@
       "line": 292,
       "allowed": true,
       "factory": "createAccountLifecycleInternalRpcClient",
+      "functionName": "DELETE",
       "kind": "internal-operation-call"
     },
     {
@@ -98,6 +256,7 @@
       "line": 321,
       "allowed": true,
       "factory": "createAccountLifecycleInternalRpcClient",
+      "functionName": "DELETE",
       "kind": "internal-operation-call"
     },
     {
@@ -107,6 +266,7 @@
       "line": 263,
       "allowed": true,
       "factory": "createAuthCallbackOperationsClient",
+      "functionName": "GET",
       "kind": "internal-operation-call"
     },
     {
@@ -116,6 +276,7 @@
       "line": 72,
       "allowed": true,
       "factory": "createAccountLifecycleInternalRpcClient",
+      "functionName": "readAccountQuarantineGate",
       "kind": "internal-operation-call"
     },
     {
@@ -125,6 +286,7 @@
       "line": 68,
       "allowed": true,
       "factory": "createAdminDataInternalClient",
+      "functionName": "requireAdminUser",
       "kind": "internal-operation-call"
     },
     {
@@ -134,6 +296,7 @@
       "line": 111,
       "allowed": true,
       "factory": "createOperationalEventInternalClient",
+      "functionName": "recordOperationalEventFromServiceRole",
       "kind": "internal-operation-call"
     },
     {
@@ -143,6 +306,7 @@
       "line": 77,
       "allowed": true,
       "factory": "createSessionLogoutInternalDataClient",
+      "functionName": "revokeCurrentHybridSessionAuthority",
       "kind": "internal-operation-call"
     },
     {
@@ -152,6 +316,7 @@
       "line": 10691,
       "allowed": true,
       "factory": "createYoutubeIngredientRegistrationInternalRpcClient",
+      "functionName": "handleYoutubeIngredientRegistration",
       "kind": "internal-operation-call"
     },
     {
@@ -161,6 +326,7 @@
       "line": 71,
       "allowed": true,
       "factory": "createAuthRefreshInternalDataClient",
+      "functionName": "createAuthServerClient",
       "kind": "internal-operation-call"
     }
   ],
@@ -169,7 +335,7 @@
       "classification": "public",
       "file": "app/api/v1/recipes/[id]/route.ts",
       "column": 27,
-      "line": 284,
+      "line": 300,
       "kind": "remote-only-compatibility-call"
     }
   ],
@@ -195,6 +361,56 @@
     "lib/server/admin-events.ts",
     "lib/supabase/server.ts"
   ],
-  "service_role_entries": [],
+  "service_role_entries": [
+    {
+      "classification": "user",
+      "file": "app/api/v1/cooking/session-attempts/[id]/cancel/route.ts",
+      "column": 25,
+      "line": 47,
+      "kind": "service-role-call"
+    },
+    {
+      "classification": "user",
+      "file": "app/api/v1/cooking/session-attempts/[id]/cook-mode/route.ts",
+      "column": 25,
+      "line": 41,
+      "kind": "service-role-call"
+    },
+    {
+      "classification": "user",
+      "file": "app/api/v1/cooking/session-attempts/route.ts",
+      "column": 25,
+      "line": 56,
+      "kind": "service-role-call"
+    },
+    {
+      "classification": "user",
+      "file": "app/api/v1/meals/[meal_id]/route.ts",
+      "column": 25,
+      "line": 263,
+      "kind": "service-role-call"
+    },
+    {
+      "classification": "user",
+      "file": "app/api/v1/meals/[meal_id]/route.ts",
+      "column": 25,
+      "line": 345,
+      "kind": "service-role-call"
+    },
+    {
+      "classification": "user",
+      "file": "app/api/v1/meals/route.ts",
+      "column": 25,
+      "line": 691,
+      "kind": "service-role-call"
+    },
+    {
+      "classification": "user",
+      "file": "app/api/v1/shopping/lists/route.ts",
+      "column": 25,
+      "line": 1048,
+      "kind": "service-role-call"
+    }
+  ],
   "service_role_fallback_entries": []
 }

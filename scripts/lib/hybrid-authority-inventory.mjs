@@ -49,6 +49,32 @@ const INTERNAL_OPERATION_ALLOWLIST = new Map([
     new Set(["app/api/v1/feedback/404/route.ts"]),
   ],
   [
+    "createRecipeFuturePropagationInternalClient",
+    new Set([
+      "app/api/v1/recipes/[id]/future-plan-impact/route.ts",
+      "app/api/v1/recipes/[id]/route.ts",
+    ]),
+  ],
+  [
+    "createSnapshotV2SessionInternalClient",
+    new Set([
+      "app/api/v1/cooking/session-attempts/route.ts",
+      "app/api/v1/cooking/session-attempts/[id]/cook-mode/route.ts",
+      "app/api/v1/cooking/session-attempts/[id]/cancel/route.ts",
+    ]),
+  ],
+  [
+    "createFutureMealWriteInternalClient",
+    new Set([
+      "app/api/v1/meals/route.ts",
+      "app/api/v1/meals/[meal_id]/route.ts",
+    ]),
+  ],
+  [
+    "createShoppingCreateInternalClient",
+    new Set(["app/api/v1/shopping/lists/route.ts"]),
+  ],
+  [
     "createOperationalEventInternalClient",
     new Set(["lib/server/admin-events.ts"]),
   ],
@@ -81,6 +107,61 @@ const INTERNAL_OPERATION_ALLOWLIST = new Map([
   ],
 ]);
 
+const INTERNAL_OPERATION_FUNCTION_ALLOWLIST = new Map([
+  [
+    "createRecipeFuturePropagationInternalClient",
+    new Map([
+      [
+        "app/api/v1/recipes/[id]/future-plan-impact/route.ts",
+        new Set(["POST"]),
+      ],
+      [
+        "app/api/v1/recipes/[id]/route.ts",
+        new Set(["DELETE", "PATCH"]),
+      ],
+    ]),
+  ],
+  [
+    "createSnapshotV2SessionInternalClient",
+    new Map([
+      [
+        "app/api/v1/cooking/session-attempts/route.ts",
+        new Set(["POST"]),
+      ],
+      [
+        "app/api/v1/cooking/session-attempts/[id]/cook-mode/route.ts",
+        new Set(["GET"]),
+      ],
+      [
+        "app/api/v1/cooking/session-attempts/[id]/cancel/route.ts",
+        new Set(["POST"]),
+      ],
+    ]),
+  ],
+  [
+    "createFutureMealWriteInternalClient",
+    new Map([
+      [
+        "app/api/v1/meals/route.ts",
+        new Set(["postMeals"]),
+      ],
+      [
+        "app/api/v1/meals/[meal_id]/route.ts",
+        new Set(["DELETE", "PATCH"]),
+      ],
+    ]),
+  ],
+  [
+    "createShoppingCreateInternalClient",
+    new Map([
+      [
+        "app/api/v1/shopping/lists/route.ts",
+        new Set(["POST"]),
+      ],
+    ]),
+  ],
+]);
+
 const BROWSER_DIRECT_STORAGE_ALLOWLIST = new Map([
   [
     "components/recipe/manual-recipe-create-screen.tsx",
@@ -102,7 +183,12 @@ const BROWSER_CLIENT_FACTORY_NAMES = new Set([
   "createClient",
   "getSupabaseBrowserClient",
 ]);
-const SERVICE_ROLE_FACTORY_NAMES = new Set(["createServiceRoleClient"]);
+const SERVICE_ROLE_FACTORY_NAMES = new Set([
+  "createServiceRoleClient",
+  "createFutureMealWriteInternalClient",
+  "createShoppingCreateInternalClient",
+  "createSnapshotV2SessionInternalClient",
+]);
 const REST_MUTATION_METHODS = new Set(["DELETE", "PATCH", "POST", "PUT"]);
 
 function normalizePath(filePath) {
@@ -217,6 +303,27 @@ function createBaseEntry(relativeFile, sourceFile, node, classification) {
   };
 }
 
+function getEnclosingFunctionName(node) {
+  let current = node.parent;
+  while (current) {
+    if (ts.isFunctionDeclaration(current) && current.name) {
+      return current.name.text;
+    }
+    if (
+      (ts.isArrowFunction(current) || ts.isFunctionExpression(current))
+      && ts.isVariableDeclaration(current.parent)
+      && ts.isIdentifier(current.parent.name)
+    ) {
+      return current.parent.name.text;
+    }
+    if (ts.isMethodDeclaration(current) && current.name) {
+      return current.name.getText();
+    }
+    current = current.parent;
+  }
+  return null;
+}
+
 function isStorageFromCall(node) {
   const expression = unwrapExpression(node);
   if (!ts.isCallExpression(expression) || !ts.isPropertyAccessExpression(expression.expression)) {
@@ -244,7 +351,7 @@ function importedBindingName(specifier) {
 function collectImportBindings(sourceFile) {
   const browserClientFactories = new Set(["getSupabaseBrowserClient"]);
   const browserClientNamespaces = new Set();
-  const serviceRoleFactories = new Set(["createServiceRoleClient"]);
+  const serviceRoleFactories = new Set(SERVICE_ROLE_FACTORY_NAMES);
   const serviceRoleNamespaces = new Set();
 
   for (const statement of sourceFile.statements) {
@@ -270,7 +377,7 @@ function collectImportBindings(sourceFile) {
       ) {
         browserClientFactories.add(specifier.name.text);
       }
-      if (isServerModule && importedName === "createServiceRoleClient") {
+      if (isServerModule && SERVICE_ROLE_FACTORY_NAMES.has(importedName)) {
         serviceRoleFactories.add(specifier.name.text);
       }
     }
@@ -567,10 +674,18 @@ function inventoryHybridAuthorityPaths(repoRoot = process.cwd()) {
           if (!isNamedCall(node, factory)) {
             continue;
           }
+          const functionName = getEnclosingFunctionName(node);
+          const allowedFunctionsByFile =
+            INTERNAL_OPERATION_FUNCTION_ALLOWLIST.get(factory);
+          const allowedFunctions = allowedFunctionsByFile?.get(relativeFile);
           const entry = {
             ...createBaseEntry(relativeFile, sourceFile, node, classification),
-            allowed: allowedFiles.has(relativeFile),
+            allowed:
+              allowedFiles.has(relativeFile)
+              && (!allowedFunctionsByFile
+                || (functionName !== null && allowedFunctions?.has(functionName) === true)),
             factory,
+            functionName,
             kind: "internal-operation-call",
           };
           const key = `${entry.file}:${entry.line}:${entry.column}:${entry.factory}`;
@@ -757,6 +872,14 @@ function inventoryHybridAuthorityPaths(repoRoot = process.cwd()) {
       [...INTERNAL_OPERATION_ALLOWLIST].map(([factory, files]) => [
         factory,
         [...files].sort(),
+      ]),
+    ),
+    internalOperationFunctionAllowlist: Object.fromEntries(
+      [...INTERNAL_OPERATION_FUNCTION_ALLOWLIST].map(([factory, files]) => [
+        factory,
+        Object.fromEntries(
+          [...files].map(([file, functions]) => [file, [...functions].sort()]),
+        ),
       ]),
     ),
     internalOperationEntries: sortedInternalOperationEntries,

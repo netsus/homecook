@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const createRouteHandlerClient = vi.fn();
 const createServiceRoleClient = vi.fn();
+const createFutureMealWriteInternalClient = vi.fn();
 const ensurePublicUserRow = vi.fn();
 const ensureUserBootstrapState = vi.fn();
 const formatBootstrapErrorMessage = vi.fn((error: unknown, fallbackMessage: string) => {
@@ -13,16 +14,22 @@ const formatBootstrapErrorMessage = vi.fn((error: unknown, fallbackMessage: stri
   return fallbackMessage;
 });
 const createQaFixtureMeal = vi.fn();
+const readVerifiedAccountGenerationSession = vi.fn();
 
 vi.mock("@/lib/supabase/server", () => ({
   createRouteHandlerClient,
   createServiceRoleClient,
+  createFutureMealWriteInternalClient,
 }));
 
 vi.mock("@/lib/server/user-bootstrap", () => ({
   ensurePublicUserRow,
   ensureUserBootstrapState,
   formatBootstrapErrorMessage,
+}));
+
+vi.mock("@/lib/server/account-generation/session-authority", () => ({
+  readVerifiedAccountGenerationSession,
 }));
 
 vi.mock("@/lib/mock/recipes", async () => {
@@ -109,46 +116,29 @@ function createMealPlanColumnsTable({
   };
 }
 
-function createMealsTable({
-  insertResults,
-}: {
-  insertResults: Array<QueryResult<{
-    id: string;
-    recipe_id: string;
-    plan_date: string;
-    column_id: string;
-    planned_servings: number;
-    status: "registered";
-    is_leftover: boolean;
-    leftover_dish_id: string | null;
-  } | null>>;
-}) {
-  const insertQuery = {
-    select: vi.fn(() => insertQuery),
-    maybeSingle: vi.fn(() =>
-      createAwaitableQuery(
-        insertResults.shift() ?? {
-          data: null,
-          error: { message: "missing meals insert result" },
-        },
-      ),
-    ),
-  };
-
-  return {
-    insert: vi.fn(() => insertQuery),
-  };
-}
-
 describe("08a meal add search backend target", () => {
   beforeEach(() => {
     vi.resetModules();
     createRouteHandlerClient.mockReset();
     createServiceRoleClient.mockReset();
+    createFutureMealWriteInternalClient.mockReset();
+    createFutureMealWriteInternalClient.mockImplementation(
+      () => createServiceRoleClient(),
+    );
     ensurePublicUserRow.mockReset();
     ensureUserBootstrapState.mockReset();
     formatBootstrapErrorMessage.mockClear();
     createQaFixtureMeal.mockReset();
+    readVerifiedAccountGenerationSession.mockReset().mockResolvedValue({
+      ok: true,
+      sessionAuthority: {
+        ownerUuid: "user-1",
+        authIdentityCreatedAt: "2026-08-01T00:00:00.000Z",
+        sessionIssuedAt: "2026-08-02T00:00:00.000Z",
+        sessionKeyHash: "a".repeat(64),
+        hmacKeyVersion: 1,
+      },
+    });
     createServiceRoleClient.mockReturnValue(null);
     ensurePublicUserRow.mockResolvedValue({});
     ensureUserBootstrapState.mockResolvedValue(undefined);
@@ -243,33 +233,31 @@ describe("08a meal add search backend target", () => {
     const mealPlanColumnsTable = createMealPlanColumnsTable({
       selectResults: [{ data: { id: "column-1", user_id: "user-1", name: "점심" }, error: null }],
     });
-    const mealsTable = createMealsTable({
-      insertResults: [
-        {
-          data: {
-            id: "meal-1",
-            recipe_id: "recipe-1",
-            plan_date: "2026-03-02",
-            column_id: "column-1",
-            planned_servings: 2,
-            status: "registered",
-            is_leftover: false,
-            leftover_dish_id: null,
-          },
-          error: null,
-        },
-      ],
-    });
+    const rpc = vi.fn(async (_name: string, args: Record<string, unknown>) => ({
+      data: {
+        id: "550e8400-e29b-41d4-a716-446655440901",
+        recipe_id: args.p_recipe_id,
+        plan_date: args.p_plan_date,
+        column_id: args.p_column_id,
+        planned_servings: args.p_planned_servings,
+        status: "registered",
+        is_leftover: false,
+        leftover_dish_id: null,
+        recipe_nutrition_snapshot_id: null,
+      },
+      error: null,
+    }));
 
     createRouteHandlerClient.mockResolvedValue({
       auth: { getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })) },
       from: vi.fn((table: string) => {
         if (table === "recipes") return recipesTable;
         if (table === "meal_plan_columns") return mealPlanColumnsTable;
-        if (table === "meals") return mealsTable;
         throw new Error(`unexpected table: ${table}`);
       }),
     });
+    const client = { rpc };
+    createServiceRoleClient.mockReturnValue(client);
 
     const { POST } = await import("@/app/api/v1/meals/route");
     const response = await POST(
@@ -290,30 +278,28 @@ describe("08a meal add search backend target", () => {
     expect(body).toEqual({
       success: true,
       data: {
-        id: "meal-1",
-        recipe_id: "recipe-1",
+        id: "550e8400-e29b-41d4-a716-446655440901",
+        recipe_id: "550e8400-e29b-41d4-a716-446655440051",
         plan_date: "2026-03-02",
-        column_id: "column-1",
+        column_id: "550e8400-e29b-41d4-a716-446655440052",
         planned_servings: 2,
         status: "registered",
         is_leftover: false,
         leftover_dish_id: null,
+        recipe_nutrition_snapshot_id: null,
       },
       error: null,
     });
     expect(ensurePublicUserRow).toHaveBeenCalledWith(expect.anything(), { id: "user-1" });
     expect(ensureUserBootstrapState).toHaveBeenCalledWith(expect.anything(), "user-1");
-    expect(mealsTable.insert).toHaveBeenCalledWith({
-      user_id: "user-1",
-      recipe_id: "550e8400-e29b-41d4-a716-446655440051",
-      plan_date: "2026-03-02",
-      column_id: "550e8400-e29b-41d4-a716-446655440052",
-      planned_servings: 2,
-      status: "registered",
-      is_leftover: false,
-      leftover_dish_id: null,
-      shopping_list_id: null,
-      cooked_at: null,
-    });
+    expect(rpc).toHaveBeenCalledWith(
+      "write_future_meal_with_snapshot_authority",
+      expect.objectContaining({
+        p_action: "create",
+        p_owner_uuid: "user-1",
+        p_recipe_id: "550e8400-e29b-41d4-a716-446655440051",
+        p_column_id: "550e8400-e29b-41d4-a716-446655440052",
+      }),
+    );
   });
 });

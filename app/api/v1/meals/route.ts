@@ -31,8 +31,18 @@ import {
   type MealAddPath,
   type UserGrowthActivityDbClient,
 } from "@/lib/server/user-growth-activity";
+import { readVerifiedAccountGenerationSession } from
+  "@/lib/server/account-generation/session-authority";
+import {
+  buildSessionAuthorityRpcArgs,
+  callFuturePropagationRpc,
+  type FuturePropagationRpcClient,
+} from "@/lib/server/recipe-content-snapshot-future-propagation";
 import { awardUserProgressEvent, type UserProgressDbClient } from "@/lib/server/user-progress";
-import { createRouteHandlerClient } from "@/lib/supabase/server";
+import {
+  createFutureMealWriteInternalClient,
+  createRouteHandlerClient,
+} from "@/lib/supabase/server";
 import type { MealCreateBody, MealCreateData, MealListData, MealListItemData } from "@/types/meal";
 import type { MealStatus } from "@/types/planner";
 import type { ProductPlannerEntryData } from "@/types/product-planner-entry";
@@ -322,17 +332,37 @@ function buildCreateValidationFields(body: MealCreateBody) {
   };
 }
 
-function toMealCreateData(row: MealInsertRow): MealCreateData {
+function projectMealCreateData(value: unknown): MealCreateData | null {
+  if (!isRecord(value) || typeof value.id !== "string" || !isUuid(value.id)) {
+    return null;
+  }
+
+  if (
+    typeof value.recipe_id !== "string"
+    || typeof value.plan_date !== "string"
+    || typeof value.column_id !== "string"
+    || typeof value.planned_servings !== "number"
+    || typeof value.status !== "string"
+    || typeof value.is_leftover !== "boolean"
+  ) {
+    return null;
+  }
+
   return {
-    id: row.id,
-    recipe_id: row.recipe_id,
-    plan_date: row.plan_date,
-    column_id: row.column_id,
-    planned_servings: row.planned_servings,
-    status: normalizeMealStatus(row.status),
-    is_leftover: row.is_leftover,
-    leftover_dish_id: row.leftover_dish_id,
-    recipe_nutrition_snapshot_id: row.recipe_nutrition_snapshot_id,
+    id: value.id,
+    recipe_id: value.recipe_id,
+    plan_date: value.plan_date,
+    column_id: value.column_id,
+    planned_servings: value.planned_servings,
+    status: normalizeMealStatus(value.status),
+    is_leftover: value.is_leftover,
+    leftover_dish_id: typeof value.leftover_dish_id === "string"
+      ? value.leftover_dish_id
+      : null,
+    recipe_nutrition_snapshot_id:
+      typeof value.recipe_nutrition_snapshot_id === "string"
+        ? value.recipe_nutrition_snapshot_id
+        : null,
   };
 }
 
@@ -595,6 +625,11 @@ async function postMeals(request: Request) {
     );
   }
 
+  const verifiedSession = await readVerifiedAccountGenerationSession(routeClient);
+  if (!verifiedSession.ok || verifiedSession.sessionAuthority.ownerUuid !== user.id) {
+    return fail("ACCOUNT_SESSION_STALE", "세션을 다시 확인해 주세요.", 409);
+  }
+
   const recipeResult = await (routeClient as unknown as MealsDbClient)
     .from("recipes")
     .select("id")
@@ -653,28 +688,31 @@ async function postMeals(request: Request) {
     }
   }
 
-  const insertResult = await dbClient
-    .from("meals")
-    .insert({
-      user_id: user.id,
-      recipe_id: parsed.recipeId,
-      plan_date: parsed.planDate,
-      column_id: parsed.columnId,
-      planned_servings: parsed.plannedServings,
-      status: "registered",
-      is_leftover: parsed.leftoverDishId !== null,
-      leftover_dish_id: parsed.leftoverDishId,
-      shopping_list_id: null,
-      cooked_at: null,
-    })
-    .select("id, recipe_id, plan_date, column_id, planned_servings, status, is_leftover, leftover_dish_id, recipe_nutrition_snapshot_id")
-    .maybeSingle();
+  const serviceClient = createFutureMealWriteInternalClient();
+  if (!serviceClient) {
+    return fail("INTERNAL_ERROR", "식사를 추가하지 못했어요.", 500);
+  }
 
-  if (insertResult.error || !insertResult.data) {
-    const authorityError = createHybridAuthorityRouteError(insertResult.error);
-    if (authorityError) {
-      return authorityError;
-    }
+  const createResult = await callFuturePropagationRpc(
+    serviceClient as unknown as FuturePropagationRpcClient,
+    "write_future_meal_with_snapshot_authority",
+    {
+      ...buildSessionAuthorityRpcArgs(verifiedSession.sessionAuthority),
+      p_action: "create",
+      p_meal_id: null,
+      p_recipe_id: parsed.recipeId,
+      p_plan_date: parsed.planDate,
+      p_column_id: parsed.columnId,
+      p_planned_servings: parsed.plannedServings,
+      p_leftover_dish_id: parsed.leftoverDishId,
+    },
+  );
+  if (!createResult.ok) {
+    return createResult.response;
+  }
+
+  const createdMeal = projectMealCreateData(createResult.data);
+  if (!createdMeal) {
     return fail("INTERNAL_ERROR", "식사를 추가하지 못했어요.", 500);
   }
 
@@ -685,7 +723,7 @@ async function postMeals(request: Request) {
       userId: user.id,
       eventType: "planner_registered",
       sourceTable: "meals",
-      sourceId: insertResult.data.id,
+      sourceId: createdMeal.id,
       occurredAt,
     });
   } catch {
@@ -701,7 +739,7 @@ async function postMeals(request: Request) {
         category: "planner",
         sourceKey: buildMealAddPathSourceKey(user.id, sourcePath),
         sourceTable: "meals",
-        sourceId: insertResult.data.id,
+        sourceId: createdMeal.id,
         sourceMeta: { source_path: sourcePath },
         occurredAt,
       });
@@ -710,7 +748,7 @@ async function postMeals(request: Request) {
     }
   }
 
-  return ok(toMealCreateData(insertResult.data), { status: 201 });
+  return ok(createdMeal, { status: 201 });
 }
 
 const guardedPostMeals = withHybridAuthorityRouteError(

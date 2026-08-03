@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const createRouteHandlerClient = vi.fn();
 const createServiceRoleClient = vi.fn();
+const createFutureMealWriteInternalClient = vi.fn();
 const ensurePublicUserRow = vi.fn();
 const ensureUserBootstrapState = vi.fn();
 const formatBootstrapErrorMessage = vi.fn((error: unknown, fallbackMessage: string) => {
@@ -11,16 +12,22 @@ const formatBootstrapErrorMessage = vi.fn((error: unknown, fallbackMessage: stri
 
   return fallbackMessage;
 });
+const readVerifiedAccountGenerationSession = vi.fn();
 
 vi.mock("@/lib/supabase/server", () => ({
   createRouteHandlerClient,
   createServiceRoleClient,
+  createFutureMealWriteInternalClient,
 }));
 
 vi.mock("@/lib/server/user-bootstrap", () => ({
   ensurePublicUserRow,
   ensureUserBootstrapState,
   formatBootstrapErrorMessage,
+}));
+
+vi.mock("@/lib/server/account-generation/session-authority", () => ({
+  readVerifiedAccountGenerationSession,
 }));
 
 interface QueryError {
@@ -89,16 +96,42 @@ describe("/api/v1/meals/[meal_id]", () => {
     vi.resetModules();
     createRouteHandlerClient.mockReset();
     createServiceRoleClient.mockReset();
+    createFutureMealWriteInternalClient.mockReset();
+    readVerifiedAccountGenerationSession.mockReset();
     ensurePublicUserRow.mockReset();
     ensureUserBootstrapState.mockReset();
     formatBootstrapErrorMessage.mockClear();
-    createServiceRoleClient.mockReturnValue(null);
+    createServiceRoleClient.mockReturnValue({
+      rpc: vi.fn(async (_name: string, args: Record<string, unknown>) => ({
+        data: args.p_action === "delete"
+          ? { id: args.p_meal_id }
+          : {
+              id: args.p_meal_id,
+              planned_servings: args.p_planned_servings ?? 2,
+              status: "registered",
+            },
+        error: null,
+      })),
+    });
+    createFutureMealWriteInternalClient.mockImplementation(
+      () => createServiceRoleClient(),
+    );
     ensurePublicUserRow.mockResolvedValue({});
     ensureUserBootstrapState.mockResolvedValue(undefined);
+    readVerifiedAccountGenerationSession.mockResolvedValue({
+      ok: true,
+      sessionAuthority: {
+        ownerUuid: "user-1",
+        authIdentityCreatedAt: "2026-08-01T00:00:00.000Z",
+        sessionIssuedAt: "2026-08-02T00:00:00.000Z",
+        sessionKeyHash: "a".repeat(64),
+        hmacKeyVersion: 1,
+      },
+    });
     delete process.env.HOMECOOK_ENABLE_QA_FIXTURES;
   });
 
-  it("returns 401 when the user is not authenticated for PATCH", async () => {
+  it("returns 401 before path or body validation when PATCH is unauthenticated", async () => {
     createRouteHandlerClient.mockResolvedValue({
       auth: {
         getUser: vi.fn(async () => ({ data: { user: null } })),
@@ -108,13 +141,13 @@ describe("/api/v1/meals/[meal_id]", () => {
 
     const { PATCH } = await importRoute();
     const response = await PATCH(
-      new Request("http://localhost:3000/api/v1/meals/550e8400-e29b-41d4-a716-446655440001", {
+      new Request("http://localhost:3000/api/v1/meals/not-a-uuid", {
         method: "PATCH",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ planned_servings: 2 }),
+        body: "{",
       }),
       {
-        params: Promise.resolve({ meal_id: "550e8400-e29b-41d4-a716-446655440001" }),
+        params: Promise.resolve({ meal_id: "not-a-uuid" }),
       },
     );
     const body = await response.json();
@@ -126,7 +159,37 @@ describe("/api/v1/meals/[meal_id]", () => {
     });
   });
 
+  it("returns 401 before path validation when DELETE is unauthenticated", async () => {
+    createRouteHandlerClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn(async () => ({ data: { user: null } })),
+      },
+      from: vi.fn(),
+    });
+
+    const { DELETE } = await importRoute();
+    const response = await DELETE(
+      new Request("http://localhost:3000/api/v1/meals/not-a-uuid", {
+        method: "DELETE",
+      }),
+      { params: Promise.resolve({ meal_id: "not-a-uuid" }) },
+    );
+
+    expect(response.status).toBe(401);
+    await expect(response.json()).resolves.toMatchObject({
+      success: false,
+      error: { code: "UNAUTHORIZED" },
+    });
+  });
+
   it("returns 422 when planned_servings is invalid for PATCH", async () => {
+    createRouteHandlerClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })),
+      },
+      from: vi.fn(),
+    });
+
     const { PATCH } = await importRoute();
     const response = await PATCH(
       new Request("http://localhost:3000/api/v1/meals/550e8400-e29b-41d4-a716-446655440002", {
@@ -161,6 +224,19 @@ describe("/api/v1/meals/[meal_id]", () => {
         if (table === "meals") return mealsTable;
         throw new Error(`unexpected table: ${table}`);
       }),
+    });
+    createServiceRoleClient.mockReturnValue({
+      rpc: vi.fn(async () => ({
+        data: {
+          success: false,
+          data: null,
+          error: {
+            code: "RECIPE_IMPACT_STALE",
+            message: "status conflict",
+          },
+        },
+        error: null,
+      })),
     });
 
     const { PATCH } = await importRoute();
@@ -204,6 +280,16 @@ describe("/api/v1/meals/[meal_id]", () => {
         if (table === "meals") return mealsTable;
         throw new Error(`unexpected table: ${table}`);
       }),
+    });
+    createServiceRoleClient.mockReturnValue({
+      rpc: vi.fn(async () => ({
+        data: {
+          id: "meal-1",
+          planned_servings: 3,
+          status: "cook_done",
+        },
+        error: null,
+      })),
     });
 
     const { PATCH } = await importRoute();
@@ -253,6 +339,19 @@ describe("/api/v1/meals/[meal_id]", () => {
         if (table === "meals") return mealsTable;
         throw new Error(`unexpected table: ${table}`);
       }),
+    });
+    createServiceRoleClient.mockReturnValue({
+      rpc: vi.fn(async () => ({
+        data: {
+          success: false,
+          data: null,
+          error: {
+            code: "RECIPE_IMPACT_STALE",
+            message: "status conflict",
+          },
+        },
+        error: null,
+      })),
     });
 
     const { PATCH } = await importRoute();
@@ -308,6 +407,16 @@ describe("/api/v1/meals/[meal_id]", () => {
         throw new Error(`unexpected table: ${table}`);
       }),
     });
+    createServiceRoleClient.mockReturnValue({
+      rpc: vi.fn(async () => ({
+        data: {
+          id: "meal-1",
+          planned_servings: 3,
+          status: "cook_done",
+        },
+        error: null,
+      })),
+    });
 
     const { PATCH } = await importRoute();
     const response = await PATCH(
@@ -345,6 +454,19 @@ describe("/api/v1/meals/[meal_id]", () => {
         if (table === "meals") return mealsTable;
         throw new Error(`unexpected table: ${table}`);
       }),
+    });
+    createServiceRoleClient.mockReturnValue({
+      rpc: vi.fn(async () => ({
+        data: {
+          success: false,
+          data: null,
+          error: {
+            code: "RECIPE_IMPACT_STALE",
+            message: "downstream conflict",
+          },
+        },
+        error: null,
+      })),
     });
 
     const { DELETE } = await importRoute();
@@ -392,6 +514,19 @@ describe("/api/v1/meals/[meal_id]", () => {
         if (table === "meals") return mealsTable;
         throw new Error(`unexpected table: ${table}`);
       }),
+    });
+    createServiceRoleClient.mockReturnValue({
+      rpc: vi.fn(async () => ({
+        data: {
+          success: false,
+          data: null,
+          error: {
+            code: "RECIPE_IMPACT_STALE",
+            message: "downstream conflict",
+          },
+        },
+        error: null,
+      })),
     });
 
     const { DELETE } = await importRoute();

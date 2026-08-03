@@ -323,9 +323,11 @@ describe("home screen", () => {
     expect(screen.queryByRole("button", { name: "전체" })).toBeNull();
     expect(screen.queryByRole("button", { name: "국물요리" })).toBeNull();
     expect(screen.queryByRole("button", { name: "양파" })).toBeNull();
-    expect(
-      screen.getByRole("heading", { level: 2, name: "무먹 둘러보기" }).className,
-    ).toContain("home-mobile-theme-title");
+    const themeHeading = await screen.findByRole("heading", {
+      level: 2,
+      name: "무먹 둘러보기",
+    });
+    expect(themeHeading.className).toContain("home-mobile-theme-title");
     expect(ruleBody(".home-mobile-theme-title")).toContain("color: var(--foreground);");
     expect(screen.queryByRole("link", { name: /이번 주 식단 플래너/ })).toBeNull();
     expect(screen.getByRole("link", { name: /식단 짜기/ }).getAttribute("href")).toBe("/planner");
@@ -345,7 +347,6 @@ describe("home screen", () => {
       screen.getByRole("heading", { level: 2, name: "모든 레시피" }).className,
     ).toContain("text-[var(--foreground)]");
     const quickLinks = screen.getByRole("navigation", { name: "홈 빠른 이동" });
-    const themeHeading = screen.getByRole("heading", { level: 2, name: "무먹 둘러보기" });
     const recipeHeading = screen.getByRole("heading", { level: 2, name: "모든 레시피" });
 
     expect(

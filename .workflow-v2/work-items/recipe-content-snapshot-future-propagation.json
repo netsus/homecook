@@ -94,7 +94,7 @@
       "pnpm verify:frontend",
       "pnpm validate:exploratory-qa-evidence -- --slice recipe-content-snapshot-future-propagation",
       "pnpm validate:closeout-sync -- --slice recipe-content-snapshot-future-propagation",
-      "node scripts/verify-recipe-content-snapshot-future-propagation-local-first.mjs --mode post-merge-read-only",
+      "node scripts/verify-recipe-content-snapshot-future-propagation-local-rehearsal.mjs",
       "git diff --check"
     ],
     "verify_commands": [
@@ -163,5 +163,5 @@
     "Unapproved server-production migration or database write or capability activation"
   ],
   "open_questions": [],
-  "notes": "Stage 1 PR #1081 merged after separate Codex internal1.5, security/DB, five-axis and design reviews approved with zero required findings. Runtime predecessors are satisfied by #4 PR #1218, #6 PR #1274 merge 05683e4d and cook-mode-whole-board PR #711 merge 2f8569cb. Stage 2 RED commit 608c826c records focused 4-file/13-test and PostgreSQL missing-migration failures. User-approved API v1.2.34 now locks the five exact success data shapes, including immutable cook-mode content and exact pantry row/product-version candidates. Personal writes and v2 creation stay dark; #8 owns exact-pantry completion and the R/R+1 gate before R+2 joint activation. Design Status remains temporary pending implementation evidence and authority approval."
+  "notes": "Stage 1 PR #1081 merged after separate Codex internal1.5, security/DB, five-axis and design reviews approved with zero required findings. Runtime predecessors are satisfied by #4 PR #1218, #6 PR #1274 merge 05683e4d and cook-mode-whole-board PR #711 merge 2f8569cb. Rewritten conventional RED commit 0e5f89aa records focused 4-file/13-test and PostgreSQL missing-migration failures. Stage 2 local GREEN is retained in docs/workpacks/recipe-content-snapshot-future-propagation/evidence/2026-08-03-stage2-backend-implementation.md: locked 40/40, PostgreSQL fresh/replay #7 10/10 each with predecessor/inventory green, verify:backend product 2606 pass plus security Playwright 12/12 and full Vitest 5154 pass. The official isolated current/immediate-previous collector proves real-Auth two-owner 404 non-disclosure, six unchanged digest scopes, legacy-v1 shape preservation, independently zero private-manual recipe rows/owners and zero preview/session/claim/personal-v2 idempotency deltas with external writes zero. Independent full-diff review findings were repaired test-first: scoped-client inventory is now exact to preview POST and recipe PATCH/DELETE, the verifier path names the existing local-rehearsal CLI, and PR #1278 bookkeeping belongs to this slice. Fresh final code/security/verifier review remains pending. Real-local stale/active-claim paths, merged-exact server-production evidence, Draft PR #1278 current-head CI and separate-task formal Stage 3 remain pending, so lifecycle/verification stay in_progress/pending. Personal writes and v2 creation stay dark; #8 owns exact-pantry completion and the R/R+1 gate before R+2 joint activation. Design Status remains temporary pending Stage 4 evidence and authority approval."
 }

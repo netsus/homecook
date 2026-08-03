@@ -220,6 +220,12 @@ describe("supabase server helpers", () => {
     server.createAuthRefreshInternalDataClient();
     server.createSessionLogoutInternalDataClient();
     const imageClient = server.createRecipeImageInternalClient();
+    const recipeFutureClient =
+      server.createRecipeFuturePropagationInternalClient();
+    const snapshotV2SessionClient =
+      server.createSnapshotV2SessionInternalClient();
+    const futureMealClient = server.createFutureMealWriteInternalClient();
+    const shoppingCreateClient = server.createShoppingCreateInternalClient();
     const lifecycleClient = server.createAccountLifecycleInternalRpcClient();
     server.createYoutubeIngredientRegistrationInternalRpcClient();
     const adminClient = server.createAdminDataInternalClient();
@@ -232,6 +238,10 @@ describe("supabase server helpers", () => {
       "auth-refresh",
       "session-logout",
       "recipe-image",
+      "recipe-future-propagation",
+      "snapshot-v2-session",
+      "future-meal-write",
+      "shopping-create",
       "account-lifecycle",
       "youtube-ingredient-registration",
       "admin-data",
@@ -241,6 +251,14 @@ describe("supabase server helpers", () => {
     expect(() => imageClient?.from("users")).toThrow(
       "Internal Data scope denied table: users",
     );
+    expect(() => recipeFutureClient?.from("recipes")).toThrow(
+      "Internal Data scope denied table: recipes",
+    );
+    expect(() => recipeFutureClient?.from("ingredient_nutrition_profiles"))
+      .not.toThrow();
+    expect(snapshotV2SessionClient).toEqual({ rpc: expect.any(Function) });
+    expect(futureMealClient).toEqual({ rpc: expect.any(Function) });
+    expect(shoppingCreateClient).toEqual({ rpc: expect.any(Function) });
     expect(() => lifecycleClient?.from("recipes")).toThrow(
       "Internal Data scope denied table: recipes",
     );

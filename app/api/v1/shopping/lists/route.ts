@@ -18,7 +18,17 @@ import {
   recordUserGrowthActivityEvent,
   type UserGrowthActivityDbClient,
 } from "@/lib/server/user-growth-activity";
-import { createRouteHandlerClient } from "@/lib/supabase/server";
+import { readVerifiedAccountGenerationSession } from
+  "@/lib/server/account-generation/session-authority";
+import {
+  buildSessionAuthorityRpcArgs,
+  callFuturePropagationRpc,
+  type FuturePropagationRpcClient,
+} from "@/lib/server/recipe-content-snapshot-future-propagation";
+import {
+  createRouteHandlerClient,
+  createShoppingCreateInternalClient,
+} from "@/lib/supabase/server";
 import type {
   ShoppingListAllPantryCompletionSummary,
   ShoppingListAllPantrySummary,
@@ -488,6 +498,54 @@ function buildShoppingHistoryTitle(row: ShoppingListHistoryRow) {
   return `${startMonth}/${startDay}~${endMonth}/${endDay}`;
 }
 
+function shoppingContentGroupKey(meal: MealsRow) {
+  return `${meal.recipe_id}:${meal.recipe_content_snapshot_id ?? "legacy"}`;
+}
+
+function allocateRecipeShoppingServings(
+  meals: MealsRow[],
+  requestedServings: number,
+) {
+  const plannedByGroup = new Map<string, number>();
+  for (const meal of meals) {
+    const key = shoppingContentGroupKey(meal);
+    plannedByGroup.set(key, (plannedByGroup.get(key) ?? 0) + meal.planned_servings);
+  }
+
+  const plannedTotal = [...plannedByGroup.values()].reduce(
+    (total, servings) => total + servings,
+    0,
+  );
+  if (plannedTotal <= 0) {
+    return new Map<string, number>();
+  }
+
+  const allocations = [...plannedByGroup.entries()].map(([key, servings]) => {
+    const exact = (requestedServings * servings) / plannedTotal;
+    const allocated = Math.floor(exact);
+    return { key, allocated, remainder: exact - allocated };
+  });
+  let unallocated = requestedServings - allocations.reduce(
+    (total, allocation) => total + allocation.allocated,
+    0,
+  );
+  allocations.sort((left, right) =>
+    right.remainder - left.remainder || left.key.localeCompare(right.key),
+  );
+  for (const allocation of allocations) {
+    if (unallocated <= 0) {
+      break;
+    }
+    allocation.allocated += 1;
+    unallocated -= 1;
+  }
+
+  return new Map(allocations.map((allocation) => [
+    allocation.key,
+    allocation.allocated,
+  ]));
+}
+
 function statusFromShoppingCreateRpcError(code: string | undefined) {
   switch (code) {
     case "VALIDATION_ERROR":
@@ -504,6 +562,13 @@ function statusFromShoppingCreateRpcError(code: string | undefined) {
 }
 
 export async function POST(request: Request) {
+  const routeClient = await createRouteHandlerClient();
+  const user = await requireUser(routeClient);
+
+  if (!user) {
+    return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
+  }
+
   let body: ShoppingListCreateBody;
 
   try {
@@ -519,13 +584,6 @@ export async function POST(request: Request) {
 
   if (parseFields.length > 0) {
     return fail("VALIDATION_ERROR", "요청 값을 확인해 주세요.", 422, parseFields);
-  }
-
-  const routeClient = await createRouteHandlerClient();
-  const user = await requireUser(routeClient);
-
-  if (!user) {
-    return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
   }
 
   const dbClient = routeClient as unknown as
@@ -630,10 +688,15 @@ export async function POST(request: Request) {
   const dateRangeStart = dates[0] ?? shoppingMeals[0]!.plan_date;
   const dateRangeEnd = dates.at(-1) ?? shoppingMeals[0]!.plan_date;
 
-  const recipeAggregation = new Map<
-    string,
-    { planned_servings_total: number; shopping_servings: number }
-  >();
+  const recipeGroupShoppingServings = new Map<string, number>();
+  const recipeGroupPlannedServings = new Map<string, number>();
+  for (const meal of shoppingMeals) {
+    const key = shoppingContentGroupKey(meal);
+    recipeGroupPlannedServings.set(
+      key,
+      (recipeGroupPlannedServings.get(key) ?? 0) + meal.planned_servings,
+    );
+  }
 
   if (usesRecipeConfigs) {
     (parsedRecipeConfigs?.valid_configs ?? []).forEach((recipeConfig) => {
@@ -647,33 +710,62 @@ export async function POST(request: Request) {
         return;
       }
 
-      recipeAggregation.set(recipeConfig.recipe_id, {
-        planned_servings_total: mealsForRecipe.reduce(
-          (total, meal) => total + meal.planned_servings,
-          0,
-        ),
-        shopping_servings: recipeConfig.shopping_servings,
-      });
-    });
-  } else {
-    shoppingMeals.forEach((meal) => {
-      const mealConfig = mealConfigMap.get(meal.id);
-
-      if (!mealConfig) {
-        return;
+      const groupAllocations = allocateRecipeShoppingServings(
+        mealsForRecipe,
+        recipeConfig.shopping_servings,
+      );
+      for (const [key, servings] of groupAllocations) {
+        recipeGroupShoppingServings.set(key, servings);
       }
-
-      const existing = recipeAggregation.get(meal.recipe_id) ?? {
-        planned_servings_total: 0,
-        shopping_servings: 0,
-      };
-
-      recipeAggregation.set(meal.recipe_id, {
-        planned_servings_total: existing.planned_servings_total + meal.planned_servings,
-        shopping_servings: existing.shopping_servings + mealConfig.shopping_servings,
-      });
     });
   }
+
+  const shoppingServingsByMealId = new Map<string, number>();
+  shoppingMeals.forEach((meal) => {
+    if (!usesRecipeConfigs) {
+      shoppingServingsByMealId.set(
+        meal.id,
+        mealConfigMap.get(meal.id)?.shopping_servings ?? meal.planned_servings,
+      );
+      return;
+    }
+
+    const key = shoppingContentGroupKey(meal);
+    const groupPlannedServings = recipeGroupPlannedServings.get(key) ?? 0;
+    const groupShoppingServings = recipeGroupShoppingServings.get(key);
+    const shoppingServings = groupShoppingServings !== undefined
+      && groupPlannedServings > 0
+      ? (groupShoppingServings * meal.planned_servings) / groupPlannedServings
+      : meal.planned_servings;
+    shoppingServingsByMealId.set(meal.id, shoppingServings);
+  });
+
+  const recipeAggregation = new Map<
+    string,
+    {
+      recipe_id: string;
+      recipe_content_snapshot_id: string | null;
+      planned_servings_total: number;
+      shopping_servings: number;
+    }
+  >();
+
+  shoppingMeals.forEach((meal) => {
+    const key = shoppingContentGroupKey(meal);
+    const existing = recipeAggregation.get(key) ?? {
+      recipe_id: meal.recipe_id,
+      recipe_content_snapshot_id: meal.recipe_content_snapshot_id,
+      planned_servings_total: 0,
+      shopping_servings: 0,
+    };
+
+    existing.planned_servings_total += meal.planned_servings;
+    existing.shopping_servings = usesRecipeConfigs
+      ? recipeGroupShoppingServings.get(key) ?? meal.planned_servings
+      : existing.shopping_servings
+        + (shoppingServingsByMealId.get(meal.id) ?? meal.planned_servings);
+    recipeAggregation.set(key, existing);
+  });
 
   const legacyMeals = shoppingMeals.filter((meal) => !hasContentPin(meal));
   const contentPinnedMeals = shoppingMeals.filter((meal) => hasContentPin(meal));
@@ -720,17 +812,22 @@ export async function POST(request: Request) {
     }
 
     recipeIngredientRowsResult.data.forEach((row) => {
-      const recipeTotals = recipeAggregation.get(row.recipe_id);
-      const plannedServings = recipeBaseServingsMap.get(row.recipe_id);
-      if (!recipeTotals || !plannedServings) {
-        return;
-      }
-      ingredientAggregationRows.push({
-        ...row,
-        shopping_key: row.recipe_id,
-        shopping_servings: recipeTotals.shopping_servings,
-        planned_servings: plannedServings,
-      });
+      legacyMeals
+        .filter((meal) => meal.recipe_id === row.recipe_id)
+        .forEach((meal) => {
+          const plannedServings = recipeBaseServingsMap.get(row.recipe_id);
+          if (!plannedServings) {
+            return;
+          }
+
+          ingredientAggregationRows.push({
+            ...row,
+            shopping_key: `${meal.recipe_id}:${meal.recipe_content_snapshot_id ?? "legacy"}`,
+            shopping_servings:
+              shoppingServingsByMealId.get(meal.id) ?? meal.planned_servings,
+            planned_servings: plannedServings,
+          });
+        });
     });
   }
 
@@ -740,15 +837,8 @@ export async function POST(request: Request) {
       return;
     }
 
-    const recipeTotals = recipeAggregation.get(meal.recipe_id);
-    const shoppingServings = usesRecipeConfigs
-      ? recipeTotals && recipeTotals.planned_servings_total > 0
-        ? (
-            recipeTotals.shopping_servings
-            * meal.planned_servings
-          ) / recipeTotals.planned_servings_total
-        : meal.planned_servings
-      : mealConfigMap.get(meal.id)?.shopping_servings ?? meal.planned_servings;
+    const shoppingServings =
+      shoppingServingsByMealId.get(meal.id) ?? meal.planned_servings;
 
     for (const ingredient of contentSnapshot.ingredients_json ?? []) {
       if (
@@ -779,7 +869,8 @@ export async function POST(request: Request) {
         unit: ingredient.unit,
         ingredient_type: ingredient.ingredient_type,
         display_text: ingredient.display_text,
-        shopping_key: meal.id,
+        shopping_key:
+          `${meal.recipe_id}:${meal.recipe_content_snapshot_id ?? "legacy"}`,
         shopping_servings: shoppingServings,
         planned_servings: contentSnapshot.base_servings,
       });
@@ -870,11 +961,18 @@ export async function POST(request: Request) {
 
   const title = buildShoppingListTitle(dateRangeStart);
   const shoppingMealIds = shoppingMeals.map((meal) => meal.id).sort();
-  const shoppingRecipePayloadRows = [...recipeAggregation.entries()].map(([recipeId, totals]) => ({
-    recipe_id: recipeId,
-    shopping_servings: totals.shopping_servings,
-    planned_servings_total: totals.planned_servings_total,
-  }));
+  const shoppingRecipePayloadRows = [...recipeAggregation.values()]
+    .sort((left, right) =>
+      left.recipe_id.localeCompare(right.recipe_id)
+      || (left.recipe_content_snapshot_id ?? "")
+        .localeCompare(right.recipe_content_snapshot_id ?? ""),
+    )
+    .map((totals) => ({
+      recipe_id: totals.recipe_id,
+      recipe_content_snapshot_id: totals.recipe_content_snapshot_id,
+      shopping_servings: totals.shopping_servings,
+      planned_servings_total: totals.planned_servings_total,
+    }));
   const shoppingItemPayloadRows = aggregatedIngredients.map((ingredient, index) => ({
     ingredient_id: ingredient.ingredient_id,
     food_product_id: null,
@@ -942,9 +1040,21 @@ export async function POST(request: Request) {
     body.complete_without_list !== false && allNeededIngredientsAreInPantry;
   const matchedPantryItemCount =
     pantryIngredientIds.size + pantryProductVersionPairs.size;
+  const verifiedSession = await readVerifiedAccountGenerationSession(routeClient);
+  if (!verifiedSession.ok || verifiedSession.sessionAuthority.ownerUuid !== user.id) {
+    return fail("ACCOUNT_SESSION_STALE", "세션을 다시 확인해 주세요.", 409);
+  }
 
-  if (typeof dbClient.rpc === "function") {
-    const createResult = await dbClient.rpc("create_shopping_list_from_payload", {
+  const serviceClient = createShoppingCreateInternalClient();
+  if (!serviceClient) {
+    return fail("INTERNAL_ERROR", "장보기 목록을 만들지 못했어요.", 500);
+  }
+
+  const createResult = await callFuturePropagationRpc(
+    serviceClient as unknown as FuturePropagationRpcClient,
+    "create_shopping_list_with_snapshot_authority",
+    {
+      ...buildSessionAuthorityRpcArgs(verifiedSession.sessionAuthority),
       p_user_id: user.id,
       p_title: title,
       p_date_range_start: dateRangeStart,
@@ -954,6 +1064,7 @@ export async function POST(request: Request) {
       p_split_remainders: splitMeals.map(({ meal, remainingServings }) => ({
         user_id: meal.user_id,
         recipe_id: meal.recipe_id,
+        recipe_content_snapshot_id: meal.recipe_content_snapshot_id,
         plan_date: meal.plan_date,
         column_id: meal.column_id,
         planned_servings: remainingServings,
@@ -970,153 +1081,28 @@ export async function POST(request: Request) {
       p_recipe_rows: shoppingRecipePayloadRows,
       p_item_rows: allShoppingItemPayloadRows,
       p_pantry_item_count: allShoppingItemPayloadRows.length,
-    });
-
-    if (createResult.error || !createResult.data) {
-      return fail("INTERNAL_ERROR", "장보기 목록을 만들지 못했어요.", 500);
-    }
-
-    if (createResult.data.error_code) {
-      return fail(
-        createResult.data.error_code,
-        createResult.data.message ?? "장보기 목록을 만들지 못했어요.",
-        statusFromShoppingCreateRpcError(createResult.data.error_code),
-      );
-    }
-
-    if (createResult.data.completed_without_list) {
-      const completedAt = createResult.data.completed_at ?? new Date().toISOString();
-      const representativeMealId = shoppingMealIds[0];
-
-      if (representativeMealId) {
-        try {
-          await recordUserGrowthActivityEvent(dbClient, {
-            userId: user.id,
-            activityType: "shopping_bundle_prepared",
-            category: "shopping",
-            sourceKey: buildShoppingBundlePreparedSourceKey({
-              actionKind: "completed_without_list",
-              mealIds: shoppingMealIds,
-            }),
-            sourceTable: "meals",
-            sourceId: representativeMealId,
-            sourceMeta: {
-              action_kind: "completed_without_list",
-              meal_ids: shoppingMealIds,
-              pantry_item_count: allShoppingItemPayloadRows.length,
-            },
-            occurredAt: completedAt,
-          });
-        } catch {
-          // Activity history is secondary; pantry-only shopping completion remains authoritative.
-        }
-      }
-
-      return ok({
-        id: null,
-        title,
-        date_range_start: dateRangeStart,
-        date_range_end: dateRangeEnd,
-        is_completed: true,
-        completed_at: completedAt,
-        completed_without_list: true,
-        meals_updated: createResult.data.meals_updated ?? shoppingMealIds.length,
-        pantry_item_count:
-          createResult.data.pantry_item_count ?? allShoppingItemPayloadRows.length,
-        created_at: createResult.data.created_at ?? completedAt,
-      } satisfies ShoppingListAllPantryCompletionSummary, { status: 200 });
-    }
-
-    if (!createResult.data.id || !createResult.data.created_at) {
-      return fail("INTERNAL_ERROR", "장보기 목록을 만들지 못했어요.", 500);
-    }
-
-    try {
-      await recordUserGrowthActivityEvent(dbClient, {
-        userId: user.id,
-        activityType: "shopping_bundle_prepared",
-        category: "shopping",
-        sourceKey: buildShoppingBundlePreparedSourceKey({
-          actionKind: "shopping_list",
-          mealIds: shoppingMealIds,
-        }),
-        sourceTable: "shopping_lists",
-        sourceId: createResult.data.id,
-        sourceMeta: {
-          action_kind: "shopping_list",
-          meal_ids: shoppingMealIds,
-          pantry_item_count: matchedPantryItemCount,
-        },
-        occurredAt: createResult.data.created_at,
-      });
-    } catch {
-      // Activity history is secondary; shopping list creation remains authoritative.
-    }
-
-    return ok({
-      id: createResult.data.id,
-      title: createResult.data.title ?? title,
-      is_completed: createResult.data.is_completed ?? false,
-      items: (createResult.data.items ?? []).map(toShoppingCreateItem),
-      ...(allNeededIngredientsAreInPantry
-        ? {
-            all_items_in_pantry: true as const,
-            pantry_item_count: allShoppingItemPayloadRows.length,
-          }
-        : {}),
-      created_at: createResult.data.created_at,
-    } satisfies ShoppingListSummary | ShoppingListAllPantrySummary, { status: 201 });
+    },
+  );
+  if (!createResult.ok) {
+    return createResult.response;
   }
 
-  if (splitMeals.length > 0) {
-    const splitRemainderInsertResult = await dbClient
-      .from("meals")
-      .insert(
-        splitMeals.map(({ meal, remainingServings }) => ({
-          user_id: meal.user_id,
-          recipe_id: meal.recipe_id,
-          plan_date: meal.plan_date,
-          column_id: meal.column_id,
-          planned_servings: remainingServings,
-          status: "registered",
-          is_leftover: meal.is_leftover,
-          leftover_dish_id: meal.leftover_dish_id,
-          shopping_list_id: null,
-          cooked_at: null,
-        })),
-      );
-
-    if (splitRemainderInsertResult.error) {
-      return fail("INTERNAL_ERROR", "장보기 목록을 만들지 못했어요.", 500);
-    }
-
-    for (const splitMeal of splitMeals) {
-      const splitOriginalUpdateResult = await dbClient
-        .from("meals")
-        .update({ planned_servings: splitMeal.shoppingServings })
-        .eq("id", splitMeal.meal.id)
-        .eq("user_id", user.id);
-
-      if (splitOriginalUpdateResult.error) {
-        return fail("INTERNAL_ERROR", "장보기 목록을 만들지 못했어요.", 500);
-      }
-    }
+  const rpcData = createResult.data as ShoppingCreateRpcData | null;
+  if (!rpcData) {
+    return fail("INTERNAL_ERROR", "장보기 목록을 만들지 못했어요.", 500);
   }
 
-  if (shouldCompleteWithoutList) {
-    const mealDoneUpdateResult = await dbClient
-      .from("meals")
-      .update({ status: "shopping_done" })
-      .in("id", shoppingMeals.map((meal) => meal.id))
-      .eq("user_id", user.id);
+  if (rpcData.error_code) {
+    return fail(
+      rpcData.error_code,
+      rpcData.message ?? "장보기 목록을 만들지 못했어요.",
+      statusFromShoppingCreateRpcError(rpcData.error_code),
+    );
+  }
 
-    if (mealDoneUpdateResult.error) {
-      return fail("INTERNAL_ERROR", "장보기 완료 상태로 바꾸지 못했어요.", 500);
-    }
-
-    const completedAt = new Date().toISOString();
-    const mealIds = shoppingMeals.map((meal) => meal.id).sort();
-    const representativeMealId = mealIds[0];
+  if (rpcData.completed_without_list) {
+    const completedAt = rpcData.completed_at ?? new Date().toISOString();
+    const representativeMealId = shoppingMealIds[0];
 
     if (representativeMealId) {
       try {
@@ -1126,13 +1112,13 @@ export async function POST(request: Request) {
           category: "shopping",
           sourceKey: buildShoppingBundlePreparedSourceKey({
             actionKind: "completed_without_list",
-            mealIds,
+            mealIds: shoppingMealIds,
           }),
           sourceTable: "meals",
           sourceId: representativeMealId,
           sourceMeta: {
             action_kind: "completed_without_list",
-            meal_ids: mealIds,
+            meal_ids: shoppingMealIds,
             pantry_item_count: allShoppingItemPayloadRows.length,
           },
           occurredAt: completedAt,
@@ -1150,82 +1136,14 @@ export async function POST(request: Request) {
       is_completed: true,
       completed_at: completedAt,
       completed_without_list: true,
-      meals_updated: shoppingMeals.length,
-      pantry_item_count: allShoppingItemPayloadRows.length,
-      created_at: completedAt,
+      meals_updated: rpcData.meals_updated ?? shoppingMealIds.length,
+      pantry_item_count:
+        rpcData.pantry_item_count ?? allShoppingItemPayloadRows.length,
+      created_at: rpcData.created_at ?? completedAt,
     } satisfies ShoppingListAllPantryCompletionSummary, { status: 200 });
   }
 
-  const shoppingListInsertResult = await dbClient
-    .from("shopping_lists")
-    .insert({
-      user_id: user.id,
-      title,
-      date_range_start: dateRangeStart,
-      date_range_end: dateRangeEnd,
-      is_completed: false,
-    })
-    .select("id, title, is_completed, created_at")
-    .maybeSingle();
-
-  if (shoppingListInsertResult.error || !shoppingListInsertResult.data) {
-    return fail("INTERNAL_ERROR", "장보기 목록을 만들지 못했어요.", 500);
-  }
-
-  const shoppingList = shoppingListInsertResult.data;
-  const shoppingRecipeRows = shoppingRecipePayloadRows.map((recipeRow) => ({
-    shopping_list_id: shoppingList.id,
-    recipe_id: recipeRow.recipe_id,
-    shopping_servings: recipeRow.shopping_servings,
-    planned_servings_total: recipeRow.planned_servings_total,
-  }));
-
-  if (shoppingRecipeRows.length > 0) {
-    const shoppingListRecipesResult = await dbClient
-      .from("shopping_list_recipes")
-      .insert(shoppingRecipeRows);
-
-    if (shoppingListRecipesResult.error) {
-      return fail("INTERNAL_ERROR", "장보기 목록을 만들지 못했어요.", 500);
-    }
-  }
-
-  let createdItems: ShoppingListItemSummary[] = [];
-  if (allShoppingItemPayloadRows.length > 0) {
-    const itemsInsertResult = await dbClient
-      .from("shopping_list_items")
-      .insert(
-        allShoppingItemPayloadRows.map((item) => ({
-          shopping_list_id: shoppingList.id,
-          ingredient_id: item.ingredient_id,
-          food_product_id: item.food_product_id,
-          food_product_nutrition_version_id:
-            item.food_product_nutrition_version_id,
-          display_text: item.display_text,
-          amounts_json: item.amounts_json,
-          is_pantry_excluded: item.is_pantry_excluded,
-          is_checked: false,
-          added_to_pantry: false,
-          sort_order: item.sort_order,
-        })),
-      )
-      .select(
-        "id, ingredient_id, food_product_id, food_product_nutrition_version_id, display_text, amounts_json, is_checked, is_pantry_excluded, added_to_pantry, sort_order",
-      );
-
-    if (itemsInsertResult.error || !itemsInsertResult.data) {
-      return fail("INTERNAL_ERROR", "장보기 목록을 만들지 못했어요.", 500);
-    }
-    createdItems = itemsInsertResult.data.map(toShoppingCreateItem);
-  }
-
-  const mealUpdateResult = await dbClient
-    .from("meals")
-    .update({ shopping_list_id: shoppingList.id })
-    .in("id", shoppingMeals.map((meal) => meal.id))
-    .eq("user_id", user.id);
-
-  if (mealUpdateResult.error) {
+  if (!rpcData.id || !rpcData.created_at) {
     return fail("INTERNAL_ERROR", "장보기 목록을 만들지 못했어요.", 500);
   }
 
@@ -1239,30 +1157,30 @@ export async function POST(request: Request) {
         mealIds: shoppingMealIds,
       }),
       sourceTable: "shopping_lists",
-      sourceId: shoppingList.id,
+      sourceId: rpcData.id,
       sourceMeta: {
         action_kind: "shopping_list",
         meal_ids: shoppingMealIds,
         pantry_item_count: matchedPantryItemCount,
       },
-      occurredAt: shoppingList.created_at,
+      occurredAt: rpcData.created_at,
     });
   } catch {
     // Activity history is secondary; shopping list creation remains authoritative.
   }
 
   return ok({
-    id: shoppingList.id,
-    title: shoppingList.title,
-    is_completed: shoppingList.is_completed,
-    items: createdItems,
+    id: rpcData.id,
+    title: rpcData.title ?? title,
+    is_completed: rpcData.is_completed ?? false,
+    items: (rpcData.items ?? []).map(toShoppingCreateItem),
     ...(allNeededIngredientsAreInPantry
       ? {
           all_items_in_pantry: true as const,
-          pantry_item_count: allShoppingItemPayloadRows.length,
+          pantry_item_count: matchedPantryItemCount,
         }
       : {}),
-    created_at: shoppingList.created_at,
+    created_at: rpcData.created_at,
   } satisfies ShoppingListSummary | ShoppingListAllPantrySummary, { status: 201 });
 }
 

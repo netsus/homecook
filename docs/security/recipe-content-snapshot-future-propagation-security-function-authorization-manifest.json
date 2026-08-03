@@ -1,0 +1,169 @@
+{
+  "schema_version": 1,
+  "slice": "recipe-content-snapshot-future-propagation",
+  "migration": "supabase/migrations/20260803101000_recipe_content_snapshot_future_propagation.sql",
+  "deployment_state": "pre-deployment",
+  "baseline_application_contract_count": 74,
+  "functions": [
+    {
+      "signature": "public.pin_recipe_snapshot_for_future_meal_insert()",
+      "control_class": "application-controlled",
+      "effect": "trigger/internal",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "owner": "postgres",
+      "security_mode": "definer",
+      "safe_search_path": ["pg_catalog", "public", "pg_temp"]
+    },
+    {
+      "signature": "public.assert_recipe_future_session_authority(uuid, timestamp with time zone, text, integer, timestamp with time zone)",
+      "control_class": "application-controlled",
+      "effect": "read-only",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "owner": "postgres",
+      "security_mode": "definer",
+      "safe_search_path": ["pg_catalog", "public", "private", "pg_temp"]
+    },
+    {
+      "signature": "public.canonicalize_recipe_future_draft(jsonb)",
+      "control_class": "application-controlled",
+      "effect": "read-only",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "owner": "postgres",
+      "security_mode": "definer",
+      "safe_search_path": ["pg_catalog", "public", "pg_temp"]
+    },
+    {
+      "signature": "public.build_recipe_draft_nutrition_predecessor_guard(jsonb)",
+      "control_class": "application-controlled",
+      "effect": "read-only",
+      "exposure": "service-internal",
+      "allowed_principals": ["service_role"],
+      "owner": "postgres",
+      "security_mode": "definer",
+      "safe_search_path": ["pg_catalog", "public", "pg_temp"]
+    },
+    {
+      "signature": "public.build_recipe_future_target_state(uuid, uuid, date)",
+      "control_class": "application-controlled",
+      "effect": "read-only",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "owner": "postgres",
+      "security_mode": "definer",
+      "safe_search_path": ["pg_catalog", "public", "pg_temp"]
+    },
+    {
+      "signature": "public.preview_recipe_future_plan_impact(uuid, timestamp with time zone, text, integer, timestamp with time zone, uuid, bigint, jsonb, timestamp with time zone)",
+      "control_class": "application-controlled",
+      "effect": "mutation",
+      "exposure": "service-internal",
+      "allowed_principals": ["service_role"],
+      "owner": "postgres",
+      "security_mode": "definer",
+      "safe_search_path": ["pg_catalog", "public", "extensions", "pg_temp"]
+    },
+    {
+      "signature": "public.reconcile_incomplete_recipe_shopping_lists(uuid, uuid)",
+      "control_class": "application-controlled",
+      "effect": "mutation",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "owner": "postgres",
+      "security_mode": "definer",
+      "safe_search_path": ["pg_catalog", "public", "pg_temp"]
+    },
+    {
+      "signature": "public.protect_meal_recipe_content_pin_with_future_propagation()",
+      "control_class": "application-controlled",
+      "effect": "trigger/internal",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "owner": "postgres",
+      "security_mode": "invoker",
+      "safe_search_path": ["pg_catalog", "public", "pg_temp"]
+    },
+    {
+      "signature": "public.protect_meal_recipe_nutrition_pin_with_future_propagation()",
+      "control_class": "application-controlled",
+      "effect": "trigger/internal",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "owner": "postgres",
+      "security_mode": "invoker",
+      "safe_search_path": ["pg_catalog", "public", "pg_temp"]
+    },
+    {
+      "signature": "public.write_recipe_future_plan_change(uuid, timestamp with time zone, text, integer, timestamp with time zone, uuid, bigint, jsonb, jsonb, jsonb, text, text, uuid, uuid, timestamp with time zone)",
+      "control_class": "application-controlled",
+      "effect": "mutation",
+      "exposure": "service-internal",
+      "allowed_principals": ["service_role"],
+      "owner": "postgres",
+      "security_mode": "definer",
+      "safe_search_path": ["pg_catalog", "public", "extensions", "pg_temp"]
+    },
+    {
+      "signature": "public.start_snapshot_v2_cooking_session(uuid, timestamp with time zone, text, integer, timestamp with time zone, uuid, text, uuid[], jsonb, uuid, bigint, numeric, timestamp with time zone)",
+      "control_class": "application-controlled",
+      "effect": "mutation",
+      "exposure": "service-internal",
+      "allowed_principals": ["service_role"],
+      "owner": "postgres",
+      "security_mode": "definer",
+      "safe_search_path": ["pg_catalog", "public", "extensions", "pg_temp"]
+    },
+    {
+      "signature": "public.read_snapshot_v2_cook_mode(uuid, timestamp with time zone, text, integer, timestamp with time zone, uuid, timestamp with time zone)",
+      "control_class": "application-controlled",
+      "effect": "read-only",
+      "exposure": "service-internal",
+      "allowed_principals": ["service_role"],
+      "owner": "postgres",
+      "security_mode": "definer",
+      "safe_search_path": ["pg_catalog", "public", "pg_temp"]
+    },
+    {
+      "signature": "public.cancel_snapshot_v2_cooking_session(uuid, timestamp with time zone, text, integer, timestamp with time zone, uuid, uuid, timestamp with time zone)",
+      "control_class": "application-controlled",
+      "effect": "mutation",
+      "exposure": "service-internal",
+      "allowed_principals": ["service_role"],
+      "owner": "postgres",
+      "security_mode": "definer",
+      "safe_search_path": ["pg_catalog", "public", "extensions", "pg_temp"]
+    },
+    {
+      "signature": "public.write_future_meal_with_snapshot_authority(uuid, timestamp with time zone, text, integer, timestamp with time zone, text, uuid, uuid, date, uuid, integer, uuid, timestamp with time zone)",
+      "control_class": "application-controlled",
+      "effect": "mutation",
+      "exposure": "service-internal",
+      "allowed_principals": ["service_role"],
+      "owner": "postgres",
+      "security_mode": "definer",
+      "safe_search_path": ["pg_catalog", "public", "recipe_visibility_guard", "pg_temp"]
+    },
+    {
+      "signature": "public.create_shopping_list_with_snapshot_authority(uuid, timestamp with time zone, text, integer, timestamp with time zone, uuid, text, date, date, boolean, uuid[], jsonb, jsonb, jsonb, jsonb, integer)",
+      "control_class": "application-controlled",
+      "effect": "mutation",
+      "exposure": "service-internal",
+      "allowed_principals": ["service_role"],
+      "owner": "postgres",
+      "security_mode": "definer",
+      "safe_search_path": ["pg_catalog", "public", "pg_temp"]
+    },
+    {
+      "signature": "public.cleanup_expired_recipe_change_previews(timestamp with time zone)",
+      "control_class": "application-controlled",
+      "effect": "mutation",
+      "exposure": "service-internal",
+      "allowed_principals": ["service_role"],
+      "owner": "postgres",
+      "security_mode": "definer",
+      "safe_search_path": ["pg_catalog", "public", "pg_temp"]
+    }
+  ]
+}

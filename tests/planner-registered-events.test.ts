@@ -2,14 +2,17 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const createRouteHandlerClient = vi.fn();
 const createServiceRoleClient = vi.fn();
+const createFutureMealWriteInternalClient = vi.fn();
 const ensurePublicUserRow = vi.fn();
 const ensureUserBootstrapState = vi.fn();
 const awardUserProgressEvent = vi.fn();
 const recordUserGrowthActivityEvent = vi.fn();
+const readVerifiedAccountGenerationSession = vi.fn();
 
 vi.mock("@/lib/supabase/server", () => ({
   createRouteHandlerClient,
   createServiceRoleClient,
+  createFutureMealWriteInternalClient,
 }));
 
 vi.mock("@/lib/server/user-bootstrap", () => ({
@@ -26,6 +29,10 @@ vi.mock("@/lib/server/user-growth-activity", () => ({
   buildMealAddPathSourceKey: (userId: string, path: string) => `meal_add_path:${userId}:${path}`,
   MEAL_ADD_PATHS: new Set(["search", "recipebook", "pantry", "leftover", "youtube", "manual"]),
   recordUserGrowthActivityEvent,
+}));
+
+vi.mock("@/lib/server/account-generation/session-authority", () => ({
+  readVerifiedAccountGenerationSession,
 }));
 
 vi.mock("@/lib/mock/recipes", () => ({
@@ -56,15 +63,46 @@ async function importRoute() {
   return import("@/app/api/v1/meals/route");
 }
 
+function createMealWriteRpc(id: string) {
+  return vi.fn(async (_name: string, args: Record<string, unknown>) => ({
+    data: {
+      id,
+      recipe_id: args.p_recipe_id,
+      plan_date: args.p_plan_date,
+      column_id: args.p_column_id,
+      planned_servings: args.p_planned_servings,
+      status: "registered",
+      is_leftover: Boolean(args.p_leftover_dish_id),
+      leftover_dish_id: args.p_leftover_dish_id ?? null,
+      recipe_nutrition_snapshot_id: null,
+    },
+    error: null,
+  }));
+}
+
 describe("planner registered progress source", () => {
   beforeEach(() => {
     vi.resetModules();
     createRouteHandlerClient.mockReset();
     createServiceRoleClient.mockReset();
+    createFutureMealWriteInternalClient.mockReset();
+    createFutureMealWriteInternalClient.mockImplementation(
+      () => createServiceRoleClient(),
+    );
     ensurePublicUserRow.mockReset().mockResolvedValue({});
     ensureUserBootstrapState.mockReset().mockResolvedValue(undefined);
     awardUserProgressEvent.mockReset().mockResolvedValue({ awarded: true, error: null });
     recordUserGrowthActivityEvent.mockReset().mockResolvedValue({ recorded: true, duplicate: false, error: null });
+    readVerifiedAccountGenerationSession.mockReset().mockResolvedValue({
+      ok: true,
+      sessionAuthority: {
+        ownerUuid: "user-1",
+        authIdentityCreatedAt: "2026-08-01T00:00:00.000Z",
+        sessionIssuedAt: "2026-08-02T00:00:00.000Z",
+        sessionKeyHash: "a".repeat(64),
+        hmacKeyVersion: 1,
+      },
+    });
   });
 
   it("awards planner_registered XP after a meal insert succeeds", async () => {
@@ -77,32 +115,12 @@ describe("planner registered progress source", () => {
         }),
       ),
     };
-    const mealsTable = {
-      insert: vi.fn(() => ({
-        select: vi.fn(() => ({
-          maybeSingle: vi.fn(() =>
-            createAwaitableQuery({
-              data: {
-                id: "550e8400-e29b-41d4-a716-446655440901",
-                recipe_id: "550e8400-e29b-41d4-a716-446655440031",
-                plan_date: "2026-06-10",
-                column_id: "550e8400-e29b-41d4-a716-446655440032",
-                planned_servings: 2,
-                status: "registered",
-                is_leftover: false,
-                leftover_dish_id: null,
-              },
-              error: null,
-            }),
-          ),
-        })),
-      })),
-    };
+    const rpc = createMealWriteRpc("550e8400-e29b-41d4-a716-446655440901");
     const dbClient = {
+      rpc,
       from: vi.fn((table: string) => {
         if (table === "recipes") return recipesTable;
         if (table === "meal_plan_columns") return columnsTable;
-        if (table === "meals") return mealsTable;
         throw new Error(`unexpected table: ${table}`);
       }),
     };
@@ -147,32 +165,12 @@ describe("planner registered progress source", () => {
         }),
       ),
     };
-    const mealsTable = {
-      insert: vi.fn(() => ({
-        select: vi.fn(() => ({
-          maybeSingle: vi.fn(() =>
-            createAwaitableQuery({
-              data: {
-                id: "550e8400-e29b-41d4-a716-446655440902",
-                recipe_id: "550e8400-e29b-41d4-a716-446655440031",
-                plan_date: "2026-06-10",
-                column_id: "550e8400-e29b-41d4-a716-446655440032",
-                planned_servings: 2,
-                status: "registered",
-                is_leftover: false,
-                leftover_dish_id: null,
-              },
-              error: null,
-            }),
-          ),
-        })),
-      })),
-    };
+    const rpc = createMealWriteRpc("550e8400-e29b-41d4-a716-446655440902");
     const dbClient = {
+      rpc,
       from: vi.fn((table: string) => {
         if (table === "recipes") return recipesTable;
         if (table === "meal_plan_columns") return columnsTable;
-        if (table === "meals") return mealsTable;
         throw new Error(`unexpected table: ${table}`);
       }),
     };
@@ -223,32 +221,12 @@ describe("planner registered progress source", () => {
         }),
       ),
     };
-    const mealsTable = {
-      insert: vi.fn(() => ({
-        select: vi.fn(() => ({
-          maybeSingle: vi.fn(() =>
-            createAwaitableQuery({
-              data: {
-                id: "550e8400-e29b-41d4-a716-446655440903",
-                recipe_id: "550e8400-e29b-41d4-a716-446655440031",
-                plan_date: "2026-06-10",
-                column_id: "550e8400-e29b-41d4-a716-446655440032",
-                planned_servings: 2,
-                status: "registered",
-                is_leftover: false,
-                leftover_dish_id: null,
-              },
-              error: null,
-            }),
-          ),
-        })),
-      })),
-    };
+    const rpc = createMealWriteRpc("550e8400-e29b-41d4-a716-446655440903");
     const dbClient = {
+      rpc,
       from: vi.fn((table: string) => {
         if (table === "recipes") return recipesTable;
         if (table === "meal_plan_columns") return columnsTable;
-        if (table === "meals") return mealsTable;
         throw new Error(`unexpected table: ${table}`);
       }),
     };

@@ -56,6 +56,36 @@ describe("account session generation inventory", () => {
         owner_scope: "authenticated-user",
         persists_personal_state: true,
       }),
+      expect.objectContaining({
+        route: "/api/v1/cooking/session-attempts",
+        method: "POST",
+        owner_scope: "authenticated-user",
+        persists_personal_state: true,
+      }),
+      expect.objectContaining({
+        route: "/api/v1/cooking/session-attempts/[id]/cancel",
+        method: "POST",
+        owner_scope: "authenticated-user",
+        persists_personal_state: true,
+      }),
+      expect.objectContaining({
+        route: "/api/v1/recipes/[id]",
+        method: "PATCH",
+        owner_scope: "authenticated-user",
+        persists_personal_state: true,
+      }),
+      expect.objectContaining({
+        route: "/api/v1/recipes/[id]",
+        method: "DELETE",
+        owner_scope: "authenticated-user",
+        persists_personal_state: true,
+      }),
+      expect.objectContaining({
+        route: "/api/v1/recipes/[id]/future-plan-impact",
+        method: "POST",
+        owner_scope: "authenticated-user",
+        persists_personal_state: false,
+      }),
     ]));
     expect(inventory.write_inventory).toEqual(expect.arrayContaining([
       expect.objectContaining({

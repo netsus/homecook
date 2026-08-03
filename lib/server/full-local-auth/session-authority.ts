@@ -109,7 +109,10 @@ export async function prepareFullLocalSessionAuthority({
     const secret = process.env[
       `HOMECOOK_SESSION_GENERATION_HMAC_KEY_V${keyVersion}`
     ]?.trim() ?? "";
-    const identityCreatedAt = new Date(user.created_at).toISOString();
+    // Keep the database identity epoch exact. Date#toISOString truncates
+    // PostgreSQL/GoTrue microseconds and would turn a live identity into a
+    // different epoch. Hash helpers canonicalize the instant independently.
+    const identityCreatedAt = user.created_at;
     const verifiedAt = new Date(now * 1_000).toISOString();
     const binding = createSessionLivenessBinding({
       secret,

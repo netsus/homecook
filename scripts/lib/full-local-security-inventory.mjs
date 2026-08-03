@@ -17,9 +17,17 @@ const PERSONAL_RECIPE_MANIFEST_PATH = join(
   REPOSITORY_ROOT,
   "docs/security/personal-recipe-customization-write-core-security-function-authorization-manifest.json",
 );
+const RECIPE_FUTURE_PROPAGATION_MANIFEST_PATH = join(
+  REPOSITORY_ROOT,
+  "docs/security/recipe-content-snapshot-future-propagation-security-function-authorization-manifest.json",
+);
 const FULL_LOCAL_MIGRATION_PATH = join(
   REPOSITORY_ROOT,
   "supabase/migrations/20260801120000_full_local_auth_db_foundation.sql",
+);
+const FULL_LOCAL_SESSION_ISSUE_TIME_PRECISION_MIGRATION_PATH = join(
+  REPOSITORY_ROOT,
+  "supabase/migrations/20260803090000_full_local_session_issue_time_precision.sql",
 );
 const SNAPSHOT_MIGRATION_PATH = join(
   REPOSITORY_ROOT,
@@ -29,6 +37,11 @@ const PERSONAL_RECIPE_MIGRATION_PATH = join(
   REPOSITORY_ROOT,
   "supabase/migrations/20260802130000_personal_recipe_customization_write_core.sql",
 );
+const RECIPE_FUTURE_PROPAGATION_BASE_MIGRATION_PATH = join(
+  REPOSITORY_ROOT,
+  "supabase/migrations/20260802210000_recipe_content_snapshot_future_propagation.sql",
+);
+let RECIPE_FUTURE_PROPAGATION_MIGRATION_PATH;
 const SNAPSHOT_CONSUMER_READ_MIGRATION_PATH = join(
   REPOSITORY_ROOT,
   "supabase/migrations/20260802120000_recipe_snapshot_consumer_read_authority.sql",
@@ -53,12 +66,30 @@ const snapshotManifest = JSON.parse(
 const personalRecipeManifest = JSON.parse(
   readFileSync(PERSONAL_RECIPE_MANIFEST_PATH, "utf8"),
 );
+const recipeFuturePropagationManifest = JSON.parse(
+  readFileSync(RECIPE_FUTURE_PROPAGATION_MANIFEST_PATH, "utf8"),
+);
+RECIPE_FUTURE_PROPAGATION_MIGRATION_PATH = join(
+  REPOSITORY_ROOT,
+  recipeFuturePropagationManifest.migration,
+);
 const fullLocalMigration = readFileSync(FULL_LOCAL_MIGRATION_PATH, "utf8");
+const fullLocalSessionIssueTimePrecisionMigration = readFileSync(
+  FULL_LOCAL_SESSION_ISSUE_TIME_PRECISION_MIGRATION_PATH,
+  "utf8",
+);
 const snapshotMigration = readFileSync(SNAPSHOT_MIGRATION_PATH, "utf8");
 const personalRecipeMigration = readFileSync(
   PERSONAL_RECIPE_MIGRATION_PATH,
   "utf8",
 );
+const recipeFuturePropagationMigration = [
+  readFileSync(RECIPE_FUTURE_PROPAGATION_BASE_MIGRATION_PATH, "utf8"),
+  RECIPE_FUTURE_PROPAGATION_MIGRATION_PATH
+  === RECIPE_FUTURE_PROPAGATION_BASE_MIGRATION_PATH
+    ? null
+    : readFileSync(RECIPE_FUTURE_PROPAGATION_MIGRATION_PATH, "utf8"),
+].filter(Boolean).join("\n\n");
 const snapshotConsumerReadMigration = readFileSync(
   SNAPSHOT_CONSUMER_READ_MIGRATION_PATH,
   "utf8",
@@ -424,10 +455,11 @@ export function parsePolicy(migration, policyName) {
 function parseFunction(entry, migration) {
   const identity = entry.signature.slice(0, entry.signature.indexOf("("));
   const escapedIdentity = identity.replaceAll(".", "\\.");
-  const startMatch = new RegExp(
+  const startMatches = [...migration.matchAll(new RegExp(
     `create\\s+or\\s+replace\\s+function\\s+${escapedIdentity}\\s*\\(`,
-    "iu",
-  ).exec(migration);
+    "giu",
+  ))];
+  const startMatch = startMatches.at(-1);
   if (!startMatch) throw new Error(`function source is missing: ${entry.signature}`);
   const definition = migration.slice(startMatch.index);
   const bodyMarker = definition.match(/\bas\s+(\$[a-z0-9_]*\$)/iu);
@@ -472,9 +504,16 @@ function parseFunction(entry, migration) {
   };
 }
 
-const FUNCTION_CONTRACT = manifest.functions.map((entry) =>
-  parseFunction(entry, fullLocalMigration)
-);
+const FULL_LOCAL_SESSION_PRECISION_FUNCTIONS = new Set([
+  "public.record_full_local_session_authority(text, uuid, timestamp with time zone, text, integer, bigint, timestamp with time zone, timestamp with time zone, timestamp with time zone, timestamp with time zone)",
+  "public.assert_full_local_session_authority(text, uuid, timestamp with time zone, text, integer, bigint, timestamp with time zone)",
+]);
+const FUNCTION_CONTRACT = manifest.functions.map((entry) => parseFunction(
+  entry,
+  FULL_LOCAL_SESSION_PRECISION_FUNCTIONS.has(entry.signature)
+    ? fullLocalSessionIssueTimePrecisionMigration
+    : fullLocalMigration,
+));
 const SNAPSHOT_FUNCTION_CONTRACT = snapshotManifest.functions.map((entry) =>
   parseFunction(
     entry,
@@ -486,6 +525,10 @@ const SNAPSHOT_FUNCTION_CONTRACT = snapshotManifest.functions.map((entry) =>
 const PERSONAL_RECIPE_FUNCTION_CONTRACT = personalRecipeManifest.functions.map(
   (entry) => parseFunction(entry, personalRecipeMigration),
 );
+const RECIPE_FUTURE_PROPAGATION_FUNCTION_CONTRACT =
+  recipeFuturePropagationManifest.functions.map(
+    (entry) => parseFunction(entry, recipeFuturePropagationMigration),
+  );
 const CORE_POLICY_CONTRACT = CORE_POLICY_SOURCES.map(([migration, name]) =>
   parsePolicy(migration, name)
 );
@@ -523,13 +566,20 @@ function valuesSql(rows) {
 function buildSecurityInventoryExpression({
   includeSnapshotTables,
   includePersonalRecipeFunctions,
+  includeRecipeFuturePropagationFunctions,
 }) {
   const baseFunctions = includeSnapshotTables
     ? [...FUNCTION_CONTRACT, ...SNAPSHOT_FUNCTION_CONTRACT]
     : FUNCTION_CONTRACT;
-  const functions = includePersonalRecipeFunctions
+  const functionsWithPersonalRecipe = includePersonalRecipeFunctions
     ? [...baseFunctions, ...PERSONAL_RECIPE_FUNCTION_CONTRACT]
     : baseFunctions;
+  const functions = includeRecipeFuturePropagationFunctions
+    ? [
+        ...functionsWithPersonalRecipe,
+        ...RECIPE_FUTURE_PROPAGATION_FUNCTION_CONTRACT,
+      ]
+    : functionsWithPersonalRecipe;
   const rlsTables = includeSnapshotTables
     ? [...CORE_RLS_TABLES, ...SNAPSHOT_RLS_TABLES]
     : CORE_RLS_TABLES;
@@ -620,14 +670,42 @@ function buildSecurityInventoryExpression({
     ) as (
       values
       ${membershipValues}
+    ), membership_catalog_support as (
+      select
+        exists (
+          select 1
+          from pg_catalog.pg_attribute
+          where attrelid = 'pg_catalog.pg_auth_members'::regclass
+            and attname = 'inherit_option'
+            and not attisdropped
+        ) as has_inherit_option,
+        exists (
+          select 1
+          from pg_catalog.pg_attribute
+          where attrelid = 'pg_catalog.pg_auth_members'::regclass
+            and attname = 'set_option'
+            and not attisdropped
+        ) as has_set_option
     ), role_membership_inventory as (
       select
         granted_role.rolname as granted_role_name,
         member_role.rolname as member_name,
         membership.admin_option,
-        membership.inherit_option,
-        membership.set_option
+        -- PostgreSQL 15 stores inheritance on the member role and always
+        -- permits SET ROLE for memberships. PostgreSQL 16+ stores both as
+        -- per-membership options in pg_auth_members.
+        case
+          when membership_catalog_support.has_inherit_option
+            then (pg_catalog.to_jsonb(membership) ->> 'inherit_option')::boolean
+          else member_role.rolinherit
+        end as inherit_option,
+        case
+          when membership_catalog_support.has_set_option
+            then (pg_catalog.to_jsonb(membership) ->> 'set_option')::boolean
+          else true
+        end as set_option
       from pg_catalog.pg_auth_members as membership
+      cross join membership_catalog_support
       join pg_catalog.pg_roles as granted_role
         on granted_role.oid = membership.roleid
       join pg_catalog.pg_roles as member_role
@@ -870,10 +948,12 @@ const SECURITY_ZERO_KEYS = SECURITY_RESULT_KEYS.filter((key) =>
 export function buildFullLocalSecurityInventoryExpression({
   includeSnapshotTables = false,
   includePersonalRecipeFunctions = false,
+  includeRecipeFuturePropagationFunctions = false,
 } = {}) {
   return buildSecurityInventoryExpression({
     includeSnapshotTables,
     includePersonalRecipeFunctions,
+    includeRecipeFuturePropagationFunctions,
   });
 }
 
@@ -888,13 +968,17 @@ export function assertRecipeSnapshotAuthorityFullLocalSecurityInventoryResult(
   {
     includeSnapshotTables = false,
     includePersonalRecipeFunctions = false,
+    includeRecipeFuturePropagationFunctions = false,
   } = {},
 ) {
   const baseFunctionCount = includeSnapshotTables
     ? FUNCTION_CONTRACT.length + SNAPSHOT_FUNCTION_CONTRACT.length
     : FUNCTION_CONTRACT.length;
   const expectedFunctionCount = baseFunctionCount
-    + (includePersonalRecipeFunctions ? PERSONAL_RECIPE_FUNCTION_CONTRACT.length : 0);
+    + (includePersonalRecipeFunctions ? PERSONAL_RECIPE_FUNCTION_CONTRACT.length : 0)
+    + (includeRecipeFuturePropagationFunctions
+      ? RECIPE_FUTURE_PROPAGATION_FUNCTION_CONTRACT.length
+      : 0);
   const expectedTableCount = includeSnapshotTables
     ? CORE_RLS_TABLES.length + SNAPSHOT_RLS_TABLES.length
     : CORE_RLS_TABLES.length;

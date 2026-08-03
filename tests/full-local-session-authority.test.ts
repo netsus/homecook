@@ -6,6 +6,9 @@ import {
   prepareFullLocalSessionAuthority,
   recordFullLocalSessionAuthority,
 } from "@/lib/server/full-local-auth/session-authority";
+import {
+  readVerifiedAccountGenerationSession,
+} from "@/lib/server/account-generation/session-authority";
 
 const OWNER_UUID = "11111111-1111-4111-8111-111111111111";
 const SESSION_UUID = "22222222-2222-4222-8222-222222222222";
@@ -19,7 +22,12 @@ function jwt(claims: Record<string, unknown>) {
 
 describe("full-local session authority", () => {
   afterEach(() => {
+    delete process.env.AUTH_SUPABASE_EXPECTED_ISSUER;
+    delete process.env.HOMECOOK_AUTH_AUTHORITY;
+    delete process.env.HOMECOOK_SESSION_GENERATION_HMAC_KEY_V1;
     delete process.env.HOMECOOK_SESSION_GENERATION_HMAC_KEY_V2;
+    delete process.env.NEXT_PUBLIC_AUTH_SUPABASE_PUBLISHABLE_KEY;
+    delete process.env.NEXT_PUBLIC_AUTH_SUPABASE_URL;
   });
 
   it("uses the current DB key version and public issuer when deriving a binding", async () => {
@@ -63,6 +71,95 @@ describe("full-local session authority", () => {
     expect(prepared.record.p_session_key_hash).toBe(createHmac("sha256", SECRET_V2)
       .update(["v2", ISSUER, OWNER_UUID, "2026-08-01T00:00:00.000Z", SESSION_UUID].join("\n"))
       .digest("hex"));
+  });
+
+  it("preserves the exact Auth identity epoch while hashing its canonical instant", async () => {
+    process.env.HOMECOOK_SESSION_GENERATION_HMAC_KEY_V2 = SECRET_V2;
+    const now = 1_785_580_000;
+    const exactIdentityEpoch = "2026-08-01T00:00:00.123456Z";
+    const client = {
+      rpc: vi.fn().mockResolvedValue({
+        data: {
+          authority: "local",
+          cutover_epoch: 7,
+          flows_open: true,
+          hmac_key_version: 2,
+          local_issuer: ISSUER,
+        },
+        error: null,
+      }),
+    };
+
+    const prepared = await prepareFullLocalSessionAuthority({
+      accessToken: jwt({
+        aud: "authenticated",
+        exp: now + 3_600,
+        iat: now - 10,
+        iss: ISSUER,
+        role: "authenticated",
+        session_id: SESSION_UUID,
+        sub: OWNER_UUID,
+      }),
+      client,
+      nowSeconds: () => now,
+      user: { id: OWNER_UUID, created_at: exactIdentityEpoch },
+    });
+
+    expect(prepared.ok).toBe(true);
+    if (!prepared.ok) return;
+    expect(prepared.accountBootstrap.authIdentityCreatedAt)
+      .toBe(exactIdentityEpoch);
+    expect(prepared.record.p_identity_created_at).toBe(exactIdentityEpoch);
+    expect(prepared.record.p_session_key_hash).toBe(createHmac("sha256", SECRET_V2)
+      .update(["v2", ISSUER, OWNER_UUID, "2026-08-01T00:00:00.123Z", SESSION_UUID].join("\n"))
+      .digest("hex"));
+  });
+
+  it("reuses an already live-verified Auth user without a second network lookup", async () => {
+    const now = Math.floor(Date.now() / 1_000);
+    process.env.AUTH_SUPABASE_EXPECTED_ISSUER = ISSUER;
+    process.env.HOMECOOK_AUTH_AUTHORITY = "local";
+    process.env.HOMECOOK_SESSION_GENERATION_HMAC_KEY_V1 = SECRET_V2;
+    process.env.NEXT_PUBLIC_AUTH_SUPABASE_PUBLISHABLE_KEY = "local-publishable";
+    process.env.NEXT_PUBLIC_AUTH_SUPABASE_URL = "https://auth.mumeok.com";
+    const getUser = vi.fn().mockRejectedValue(new Error("duplicate lookup"));
+    const routeClient = {
+      auth: {
+        getSession: vi.fn().mockResolvedValue({
+          data: {
+            session: {
+              access_token: jwt({
+                aud: "authenticated",
+                exp: now + 3_600,
+                iat: now,
+                iss: ISSUER,
+                role: "authenticated",
+                session_id: SESSION_UUID,
+                sub: OWNER_UUID,
+              }),
+            },
+          },
+          error: null,
+        }),
+        getUser,
+      },
+    };
+    const verifiedUser = {
+      id: OWNER_UUID,
+      created_at: "2026-08-01T00:00:00.123456Z",
+    };
+
+    await expect(readVerifiedAccountGenerationSession(
+      routeClient,
+      verifiedUser,
+    )).resolves.toMatchObject({
+      ok: true,
+      sessionAuthority: {
+        ownerUuid: OWNER_UUID,
+        authIdentityCreatedAt: verifiedUser.created_at,
+      },
+    });
+    expect(getUser).not.toHaveBeenCalled();
   });
 
   it("fails closed when DB authority is not local", async () => {

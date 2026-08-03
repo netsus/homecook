@@ -17,6 +17,7 @@ const recordOperationalEvent = vi.fn(async () => true);
 
 vi.mock("@/lib/supabase/server", () => ({
   createAccountLifecycleInternalRpcClient: createServiceRoleClient,
+  createRecipeFuturePropagationInternalClient: createServiceRoleClient,
   createRemoteCompatibilityServiceRoleClient: createServiceRoleClient,
   createRouteHandlerClient,
   createServiceRoleClient,
@@ -703,7 +704,13 @@ describe("account session generation F0 routes", () => {
           "sha256",
           "test-only-session-generation-secret-at-least-32-bytes",
         )
-          .update(sessionId, "utf8")
+          .update([
+            "v1",
+            "https://project.supabase.co/auth/v1",
+            user.id,
+            user.created_at,
+            sessionId,
+          ].join("\n"), "utf8")
           .digest("hex"),
         hmacKeyVersion: 1,
       },

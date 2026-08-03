@@ -1,6 +1,8 @@
 import { createHmac } from "node:crypto";
 
 import { getRemoteAuthIssuer } from "@/lib/supabase/auth-env";
+import { createSessionKeyHash } from
+  "@/lib/server/hybrid-auth/session-authority";
 
 import { verifyAccountDeleteReplayJwt } from "./jwt-replay";
 
@@ -12,7 +14,7 @@ const UUID_PATTERN
   = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 type AllowlistedJwtAlg = (typeof ALLOWLISTED_SESSION_JWT_ALGS)[number];
 
-const NUMBER_KEYS = ["iat", "nbf", "exp"] as const;
+const NUMBER_KEYS = ["iat", "exp"] as const;
 
 interface JwtClaims {
   iss?: unknown;
@@ -125,6 +127,7 @@ export function hasRemoteAuthSessionClaimMatch(
   const header = decodeJwtHeader(accessToken);
   const headerAlg = header?.alg;
   const sessionId = claimsRecord?.session_id;
+  const notBefore = claimsRecord?.nbf ?? claimsRecord?.iat;
   const nowSeconds = Math.floor(Date.now() / 1_000);
   if (
     !Number.isInteger(nowSeconds)
@@ -142,11 +145,13 @@ export function hasRemoteAuthSessionClaimMatch(
     || !NUMBER_KEYS.every(
       (key) => Number.isSafeInteger(claimsRecord?.[key] as number | undefined),
     )
+    || !Number.isSafeInteger(notBefore as number | undefined)
     || Number(claimsRecord.iat) <= 0
-    || Number(claimsRecord.nbf) - 30 > nowSeconds
+    || Number(notBefore) - 30 > nowSeconds
     || Number(claimsRecord.exp) <= nowSeconds
     || Number(claimsRecord.iat) > nowSeconds + 60
     || Number(claimsRecord.iat) >= Number(claimsRecord.exp)
+    || Number(notBefore) >= Number(claimsRecord.exp)
   ) {
     return false;
   }
@@ -179,15 +184,21 @@ export function deriveVerifiedAccountGenerationSessionAuthority(input: {
     ownerUuid: input.user.id,
     authIdentityCreatedAt: input.user.created_at,
     sessionIssuedAt: new Date(Number(issuedAt) * 1_000).toISOString(),
-    sessionKeyHash: createHmac("sha256", secret)
-      .update(sessionId as string, "utf8")
-      .digest("hex"),
+    sessionKeyHash: createSessionKeyHash({
+      secret,
+      keyVersion: 1,
+      issuer: String(claims?.iss),
+      ownerUuid: input.user.id,
+      sessionId: sessionId as string,
+      identityCreatedAt: input.user.created_at,
+    }),
     hmacKeyVersion: 1,
   };
 }
 
 export async function readVerifiedAccountGenerationSession(
   routeClient: AccountGenerationRouteAuthClient,
+  liveVerifiedUser?: VerifiedAuthUser,
 ): Promise<
   | {
       ok: true;
@@ -204,10 +215,13 @@ export async function readVerifiedAccountGenerationSession(
       return { ok: false };
     }
 
-    const userResult = await routeClient.auth.getUser(accessToken);
-    const user = userResult.data.user;
-    if (userResult.error || !user) {
-      return { ok: false };
+    let user = liveVerifiedUser;
+    if (!user) {
+      const userResult = await routeClient.auth.getUser(accessToken);
+      user = userResult.data.user ?? undefined;
+      if (userResult.error || !user) {
+        return { ok: false };
+      }
     }
 
     const sessionAuthority = deriveVerifiedAccountGenerationSessionAuthority({

@@ -12,6 +12,7 @@ import { createShoppingList, fetchShoppingPreview, isShoppingApiError } from "@/
 const recordUserGrowthActivityEvent = vi.hoisted(() => vi.fn());
 const createRouteHandlerClient = vi.fn();
 const createServiceRoleClient = vi.fn();
+const createShoppingCreateInternalClient = vi.fn();
 const ensurePublicUserRow = vi.fn();
 const ensureUserBootstrapState = vi.fn();
 const formatBootstrapErrorMessage = vi.fn((error: unknown, fallbackMessage: string) => {
@@ -21,23 +22,31 @@ const formatBootstrapErrorMessage = vi.fn((error: unknown, fallbackMessage: stri
 
   return fallbackMessage;
 });
+const readVerifiedAccountGenerationSession = vi.hoisted(() => vi.fn());
 
 vi.mock("@/lib/supabase/server", () => ({
   createRouteHandlerClient: async (...args: unknown[]) => {
     const routeClient = await createRouteHandlerClient(...args);
-    const createDataClient = createServiceRoleClient.getMockImplementation();
+    const createDataClient =
+      createShoppingCreateInternalClient.getMockImplementation()
+      ?? createServiceRoleClient.getMockImplementation();
     const dataClient = createDataClient?.();
     return dataClient
       ? { ...routeClient, ...dataClient, auth: routeClient.auth }
       : routeClient;
   },
   createServiceRoleClient,
+  createShoppingCreateInternalClient,
 }));
 
 vi.mock("@/lib/server/user-bootstrap", () => ({
   ensurePublicUserRow,
   ensureUserBootstrapState,
   formatBootstrapErrorMessage,
+}));
+
+vi.mock("@/lib/server/account-generation/session-authority", () => ({
+  readVerifiedAccountGenerationSession,
 }));
 
 vi.mock("@/lib/server/user-growth-activity", async (importOriginal) => {
@@ -145,12 +154,61 @@ describe("shopping stage2 backend", () => {
     vi.resetModules();
     createRouteHandlerClient.mockReset();
     createServiceRoleClient.mockReset();
+    createShoppingCreateInternalClient.mockReset();
+    readVerifiedAccountGenerationSession.mockReset();
     ensurePublicUserRow.mockReset();
     ensureUserBootstrapState.mockReset();
     formatBootstrapErrorMessage.mockClear();
-    createServiceRoleClient.mockReturnValue(null);
+    const defaultClient = {
+      rpc: vi.fn(async (_name: string, args: Record<string, unknown>) => ({
+        data: args.p_complete_without_list
+          ? {
+              id: null,
+              title: args.p_title,
+              date_range_start: args.p_date_range_start,
+              date_range_end: args.p_date_range_end,
+              is_completed: true,
+              completed_without_list: true,
+              completed_at: "2026-04-25T09:00:00.000Z",
+              meals_updated: Array.isArray(args.p_shopping_meal_ids)
+                ? args.p_shopping_meal_ids.length
+                : 0,
+              pantry_item_count: args.p_pantry_item_count ?? 0,
+              created_at: "2026-04-25T09:00:00.000Z",
+            }
+          : {
+              id: "shopping-list-default",
+              title: args.p_title,
+              is_completed: false,
+              created_at: "2026-04-25T09:00:00.000Z",
+              items: Array.isArray(args.p_item_rows)
+                ? args.p_item_rows.map((item, index) => ({
+                    id: `shopping-item-${index + 1}`,
+                    ...item,
+                    is_checked: false,
+                    added_to_pantry: false,
+                  }))
+                : [],
+            },
+        error: null,
+      })),
+    };
+    createServiceRoleClient.mockReturnValue(defaultClient);
+    createShoppingCreateInternalClient.mockImplementation(
+      () => createServiceRoleClient(),
+    );
     ensurePublicUserRow.mockResolvedValue({});
     ensureUserBootstrapState.mockResolvedValue(undefined);
+    readVerifiedAccountGenerationSession.mockResolvedValue({
+      ok: true,
+      sessionAuthority: {
+        ownerUuid: "user-1",
+        authIdentityCreatedAt: "2026-08-01T00:00:00.000Z",
+        sessionIssuedAt: "2026-08-02T00:00:00.000Z",
+        sessionKeyHash: "a".repeat(64),
+        hmacKeyVersion: 1,
+      },
+    });
     recordUserGrowthActivityEvent.mockReset();
     recordUserGrowthActivityEvent.mockResolvedValue({ recorded: true, duplicate: false, error: null });
   });
@@ -290,6 +348,30 @@ describe("shopping stage2 backend", () => {
     expect(body).toMatchObject({
       success: false,
       data: null,
+      error: { code: "UNAUTHORIZED" },
+    });
+  });
+
+  it("returns 401 before body validation when shopping creation is unauthenticated", async () => {
+    createRouteHandlerClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn(async () => ({ data: { user: null } })),
+      },
+      from: vi.fn(),
+    });
+
+    const { POST } = await importListsRoute();
+    const response = await POST(
+      new Request("http://localhost:3000/api/v1/shopping/lists", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: "{",
+      }),
+    );
+
+    expect(response.status).toBe(401);
+    await expect(response.json()).resolves.toMatchObject({
+      success: false,
       error: { code: "UNAUTHORIZED" },
     });
   });
@@ -841,6 +923,53 @@ describe("shopping stage2 backend", () => {
         error: null,
       },
     ]);
+    const rpc = vi.fn(async () => ({
+      data: {
+        id: "shopping-list-1",
+        title: "4/25 장보기",
+        is_completed: false,
+        created_at: "2026-04-25T09:00:00.000Z",
+        items: [
+          {
+            id: "shopping-item-1",
+            ingredient_id: "ing-to-taste",
+            food_product_id: null,
+            food_product_nutrition_version_id: null,
+            display_text: "고추 약간",
+            amounts_json: [],
+            is_checked: false,
+            is_pantry_excluded: false,
+            added_to_pantry: false,
+            sort_order: 0,
+          },
+          {
+            id: "shopping-item-2",
+            ingredient_id: "ing-salt",
+            food_product_id: null,
+            food_product_nutrition_version_id: null,
+            display_text: "소금 1개",
+            amounts_json: [{ amount: 1, unit: "개" }],
+            is_checked: false,
+            is_pantry_excluded: false,
+            added_to_pantry: false,
+            sort_order: 1,
+          },
+          {
+            id: "shopping-item-3",
+            ingredient_id: "ing-onion",
+            food_product_id: null,
+            food_product_nutrition_version_id: null,
+            display_text: "양파 2200g",
+            amounts_json: [{ amount: 2200, unit: "g" }],
+            is_checked: false,
+            is_pantry_excluded: true,
+            added_to_pantry: false,
+            sort_order: 2,
+          },
+        ],
+      },
+      error: null,
+    }));
 
     const shoppingListItemsTable = {
       insert: shoppingListItemsInsert,
@@ -884,6 +1013,7 @@ describe("shopping stage2 backend", () => {
         throw new Error(`unexpected table: ${table}`);
       }),
     });
+    createServiceRoleClient.mockReturnValue({ rpc });
 
     const { POST } = await importListsRoute();
     const response = await POST(
@@ -922,53 +1052,50 @@ describe("shopping stage2 backend", () => {
       error: null,
     });
 
-    expect(shoppingListRecipesInsert).toHaveBeenCalledWith([
-      {
-        shopping_list_id: "shopping-list-1",
-        recipe_id: "recipe-1",
-        shopping_servings: 4,
-        planned_servings_total: 2,
-      },
-      {
-        shopping_list_id: "shopping-list-1",
-        recipe_id: "recipe-2",
-        shopping_servings: 2,
-        planned_servings_total: 2,
-      },
-    ]);
-
-    expect(shoppingListItemsInsert).toHaveBeenCalledTimes(1);
-    const shoppingListItemsPayload = shoppingListItemsInsert.mock.calls[0]?.[0] ?? [];
-    expect(shoppingListItemsPayload).toHaveLength(3);
-    expect(shoppingListItemsPayload).toEqual(expect.arrayContaining([
+    expect(rpc).toHaveBeenCalledWith(
+      "create_shopping_list_with_snapshot_authority",
       expect.objectContaining({
-        ingredient_id: "ing-to-taste",
-        is_pantry_excluded: false,
-        display_text: "고추 약간",
-        sort_order: 0,
+        p_user_id: "user-1",
+        p_shopping_meal_ids: [
+          "550e8400-e29b-41d4-a716-446655440001",
+          "550e8400-e29b-41d4-a716-446655440002",
+        ],
+        p_recipe_rows: [
+          {
+            recipe_id: "recipe-1",
+            recipe_content_snapshot_id: undefined,
+            shopping_servings: 4,
+            planned_servings_total: 2,
+          },
+          {
+            recipe_id: "recipe-2",
+            recipe_content_snapshot_id: undefined,
+            shopping_servings: 2,
+            planned_servings_total: 2,
+          },
+        ],
+        p_item_rows: [
+          expect.objectContaining({
+            ingredient_id: "ing-to-taste",
+            is_pantry_excluded: false,
+            display_text: "고추 약간",
+            sort_order: 0,
+          }),
+          expect.objectContaining({
+            ingredient_id: "ing-salt",
+            is_pantry_excluded: false,
+            display_text: "소금 1개",
+            sort_order: 1,
+          }),
+          expect.objectContaining({
+            ingredient_id: "ing-onion",
+            is_pantry_excluded: true,
+            display_text: "양파 2200g",
+            sort_order: 2,
+          }),
+        ],
       }),
-      expect.objectContaining({
-        ingredient_id: "ing-onion",
-        is_pantry_excluded: true,
-        display_text: "양파 2200g",
-        sort_order: 2,
-      }),
-      expect.objectContaining({
-        ingredient_id: "ing-salt",
-        is_pantry_excluded: false,
-        display_text: "소금 1개",
-        sort_order: 1,
-      }),
-    ]));
-
-    expect(mealsTable.update).toHaveBeenCalledWith({
-      shopping_list_id: "shopping-list-1",
-    });
-    expect(mealsUpdateQuery.in).toHaveBeenCalledWith("id", [
-      "550e8400-e29b-41d4-a716-446655440001",
-      "550e8400-e29b-41d4-a716-446655440002",
-    ]);
-    expect(mealsUpdateQuery.eq).toHaveBeenCalledWith("user_id", "user-1");
+    );
     expect(recordUserGrowthActivityEvent).toHaveBeenCalledWith(expect.anything(), {
       userId: "user-1",
       activityType: "shopping_bundle_prepared",
@@ -1147,7 +1274,7 @@ describe("shopping stage2 backend", () => {
     );
     const body = await response.json();
 
-    expect(rpc).toHaveBeenCalledWith("create_shopping_list_from_payload", expect.objectContaining({
+    expect(rpc).toHaveBeenCalledWith("create_shopping_list_with_snapshot_authority", expect.objectContaining({
       p_user_id: "user-1",
       p_title: "4/25 장보기",
       p_date_range_start: "2026-04-25",
@@ -1159,6 +1286,7 @@ describe("shopping stage2 backend", () => {
       p_recipe_rows: [
         {
           recipe_id: "recipe-1",
+          recipe_content_snapshot_id: undefined,
           shopping_servings: 2,
           planned_servings_total: 2,
         },
@@ -1316,10 +1444,16 @@ describe("shopping stage2 backend", () => {
       `and(food_product_id.eq.${productId},food_product_nutrition_version_id.eq.${versionId})`,
     );
     expect(rpc).toHaveBeenCalledWith(
-      "create_shopping_list_from_payload",
+      "create_shopping_list_with_snapshot_authority",
       expect.objectContaining({
         p_complete_without_list: true,
         p_pantry_item_count: 1,
+        p_recipe_rows: [
+          expect.objectContaining({
+            recipe_id: "recipe-product",
+            recipe_content_snapshot_id: "snapshot-product",
+          }),
+        ],
         p_item_rows: [
           expect.objectContaining({
             ingredient_id: null,
@@ -1404,6 +1538,29 @@ describe("shopping stage2 backend", () => {
       ]),
     );
     const mealsUpdateQuery = createMealsUpdateQuery([{ data: [], error: null }]);
+    const rpc = vi.fn(async () => ({
+      data: {
+        id: "shopping-list-product-fallback",
+        title: "4/25 장보기",
+        is_completed: false,
+        created_at: "2026-04-25T09:00:00.000Z",
+        items: [
+          {
+            id: "shopping-item-product-fallback",
+            ingredient_id: null,
+            food_product_id: productId,
+            food_product_nutrition_version_id: versionId,
+            display_text: "고정 두부 1개",
+            amounts_json: [{ amount: 1, unit: "개" }],
+            is_checked: false,
+            is_pantry_excluded: false,
+            added_to_pantry: false,
+            sort_order: 0,
+          },
+        ],
+      },
+      error: null,
+    }));
 
     createRouteHandlerClient.mockResolvedValue({
       auth: {
@@ -1411,6 +1568,7 @@ describe("shopping stage2 backend", () => {
       },
     });
     createServiceRoleClient.mockReturnValue({
+      rpc,
       from: vi.fn((table: string) => {
         if (table === "meals") {
           return {
@@ -1448,14 +1606,25 @@ describe("shopping stage2 backend", () => {
     const body = await response.json();
 
     expect(response.status).toBe(201);
-    expect(shoppingListItemsInsert).toHaveBeenCalledWith([
+    expect(rpc).toHaveBeenCalledWith(
+      "create_shopping_list_with_snapshot_authority",
       expect.objectContaining({
-        ingredient_id: null,
-        food_product_id: productId,
-        food_product_nutrition_version_id: versionId,
-        is_pantry_excluded: false,
+        p_recipe_rows: [
+          expect.objectContaining({
+            recipe_id: "recipe-product-fallback",
+            recipe_content_snapshot_id: "snapshot-product-fallback",
+          }),
+        ],
+        p_item_rows: [
+          expect.objectContaining({
+            ingredient_id: null,
+            food_product_id: productId,
+            food_product_nutrition_version_id: versionId,
+            is_pantry_excluded: false,
+          }),
+        ],
       }),
-    ]);
+    );
     expect(body.data.items).toEqual([
       expect.objectContaining({
         id: "shopping-item-product-fallback",
@@ -1590,10 +1759,16 @@ describe("shopping stage2 backend", () => {
       `ingredient_id.in.(${ingredientId}),and(food_product_id.eq.${productId},food_product_nutrition_version_id.eq.${versionId})`,
     );
     expect(rpc).toHaveBeenCalledWith(
-      "create_shopping_list_from_payload",
+      "create_shopping_list_with_snapshot_authority",
       expect.objectContaining({
         p_complete_without_list: true,
         p_pantry_item_count: 2,
+        p_recipe_rows: [
+          expect.objectContaining({
+            recipe_id: "recipe-mixed",
+            recipe_content_snapshot_id: "snapshot-mixed",
+          }),
+        ],
         p_item_rows: expect.arrayContaining([
           expect.objectContaining({
             ingredient_id: ingredientId,
@@ -1610,7 +1785,29 @@ describe("shopping stage2 backend", () => {
     );
   });
 
-  it("uses pinned content once per Meal without duplicating a recipe-level serving total", async () => {
+  it.each([
+    {
+      requestedServings: 7,
+      expectedAmount: 700,
+      expectedAllocations: [
+        { snapshotId: "snapshot-1", shoppingServings: 5, plannedServingsTotal: 4 },
+        { snapshotId: "snapshot-2", shoppingServings: 2, plannedServingsTotal: 2 },
+      ],
+    },
+    {
+      requestedServings: 1,
+      expectedAmount: 100,
+      expectedAllocations: [
+        { snapshotId: "snapshot-2", shoppingServings: 1, plannedServingsTotal: 1 },
+      ],
+    },
+  ])(
+    "uses pinned content once per Meal without duplicating a recipe-level serving total",
+    async ({
+      requestedServings,
+      expectedAmount,
+      expectedAllocations,
+    }) => {
     const firstMealId = "550e8400-e29b-41d4-a716-446655440001";
     const secondMealId = "550e8400-e29b-41d4-a716-446655440002";
     const recipeId = "550e8400-e29b-41d4-a716-446655440101";
@@ -1630,7 +1827,7 @@ describe("shopping stage2 backend", () => {
             id: firstMealId,
             user_id: "user-1",
             recipe_id: recipeId,
-            recipe_content_snapshot_id: "snapshot-1",
+            recipe_content_snapshot_id: "snapshot-2",
             recipe_content_snapshots: {
               base_servings: 2,
               ingredients_json: [
@@ -1751,7 +1948,7 @@ describe("shopping stage2 backend", () => {
             {
               recipe_id: recipeId,
               meal_ids: [firstMealId, secondMealId],
-              shopping_servings: 6,
+              shopping_servings: requestedServings,
             },
           ],
         }),
@@ -1760,29 +1957,29 @@ describe("shopping stage2 backend", () => {
 
     expect(response.status).toBe(201);
     expect(rpc).toHaveBeenCalledWith(
-      "create_shopping_list_from_payload",
+      "create_shopping_list_with_snapshot_authority",
       expect.objectContaining({
         p_item_rows: [
           {
             ingredient_id: "ing-onion",
             food_product_id: null,
             food_product_nutrition_version_id: null,
-            display_text: "양파 600g",
-            amounts_json: [{ amount: 600, unit: "g" }],
+            display_text: `양파 ${expectedAmount}g`,
+            amounts_json: [{ amount: expectedAmount, unit: "g" }],
             is_pantry_excluded: false,
             sort_order: 0,
           },
         ],
-        p_recipe_rows: [
-          {
-            recipe_id: recipeId,
-            shopping_servings: 6,
-            planned_servings_total: 6,
-          },
-        ],
+        p_recipe_rows: expectedAllocations.map((allocation) => ({
+          recipe_id: recipeId,
+          recipe_content_snapshot_id: allocation.snapshotId,
+          shopping_servings: allocation.shoppingServings,
+          planned_servings_total: allocation.plannedServingsTotal,
+        })),
       }),
     );
-  });
+    },
+  );
 
   it("marks selected meals shopping_done without creating a list when every needed ingredient is already in pantry", async () => {
     const mealId = "550e8400-e29b-41d4-a716-446655440111";
@@ -1935,9 +2132,7 @@ describe("shopping stage2 backend", () => {
     expect(shoppingListsInsert).not.toHaveBeenCalled();
     expect(shoppingListRecipesInsert).not.toHaveBeenCalled();
     expect(shoppingListItemsInsert).not.toHaveBeenCalled();
-    expect(mealsUpdate).toHaveBeenCalledWith({ status: "shopping_done" });
-    expect(mealsDoneUpdateQuery.in).toHaveBeenCalledWith("id", [mealId]);
-    expect(mealsDoneUpdateQuery.eq).toHaveBeenCalledWith("user_id", "user-1");
+    expect(createServiceRoleClient).toHaveBeenCalled();
     expect(activityInsert).not.toHaveBeenCalled();
     expect(recordUserGrowthActivityEvent).toHaveBeenCalledWith(expect.anything(), {
       userId: "user-1",
@@ -2080,7 +2275,7 @@ describe("shopping stage2 backend", () => {
     );
     const body = await response.json();
 
-    expect(rpc).toHaveBeenCalledWith("create_shopping_list_from_payload", expect.objectContaining({
+    expect(rpc).toHaveBeenCalledWith("create_shopping_list_with_snapshot_authority", expect.objectContaining({
       p_complete_without_list: false,
       p_item_rows: [
         {
@@ -2092,6 +2287,12 @@ describe("shopping stage2 backend", () => {
           is_pantry_excluded: true,
           sort_order: 0,
         },
+      ],
+      p_recipe_rows: [
+        expect.objectContaining({
+          recipe_id: recipeId,
+          recipe_content_snapshot_id: undefined,
+        }),
       ],
     }));
     expect(updateMeals).not.toHaveBeenCalled();
@@ -2200,6 +2401,16 @@ describe("shopping stage2 backend", () => {
         error: null,
       },
     ]);
+    const rpc = vi.fn(async () => ({
+      data: {
+        id: "shopping-list-1",
+        title: "4/28 장보기",
+        is_completed: false,
+        created_at: "2026-04-28T09:00:00.000Z",
+        items: [],
+      },
+      error: null,
+    }));
 
     createRouteHandlerClient.mockResolvedValue({
       auth: {
@@ -2237,6 +2448,7 @@ describe("shopping stage2 backend", () => {
         throw new Error(`unexpected table: ${table}`);
       }),
     });
+    createServiceRoleClient.mockReturnValue({ rpc });
 
     const { POST } = await importListsRoute();
     const response = await POST(
@@ -2256,22 +2468,27 @@ describe("shopping stage2 backend", () => {
     );
 
     expect(response.status).toBe(201);
-    expect(shoppingListRecipesInsert).toHaveBeenCalledWith([
-      {
-        shopping_list_id: "shopping-list-1",
-        recipe_id: recipeId,
-        shopping_servings: 6,
-        planned_servings_total: 6,
-      },
-    ]);
-    expect(shoppingListItemsInsert).toHaveBeenCalledWith([
+    expect(rpc).toHaveBeenCalledWith(
+      "create_shopping_list_with_snapshot_authority",
       expect.objectContaining({
-        ingredient_id: "ing-kimchi",
-        display_text: "김치 900g",
-        amounts_json: [{ amount: 900, unit: "g" }],
+        p_shopping_meal_ids: [firstMealId, secondMealId],
+        p_recipe_rows: [
+          {
+            recipe_id: recipeId,
+            recipe_content_snapshot_id: undefined,
+            shopping_servings: 6,
+            planned_servings_total: 6,
+          },
+        ],
+        p_item_rows: [
+          expect.objectContaining({
+            ingredient_id: "ing-kimchi",
+            display_text: "김치 900g",
+            amounts_json: [{ amount: 900, unit: "g" }],
+          }),
+        ],
       }),
-    ]);
-    expect(mealsUpdateQuery.in).toHaveBeenCalledWith("id", [firstMealId, secondMealId]);
+    );
   });
 
   it("splits one oversized registered meal so only requested servings are attached to the shopping list", async () => {
@@ -2381,6 +2598,16 @@ describe("shopping stage2 backend", () => {
     const mealsUpdate = vi.fn()
       .mockReturnValueOnce(splitUpdateQuery)
       .mockReturnValueOnce(listLinkUpdateQuery);
+    const rpc = vi.fn(async () => ({
+      data: {
+        id: "shopping-list-1",
+        title: "4/30 장보기",
+        is_completed: false,
+        created_at: "2026-04-30T09:00:00.000Z",
+        items: [],
+      },
+      error: null,
+    }));
 
     createRouteHandlerClient.mockResolvedValue({
       auth: {
@@ -2419,6 +2646,7 @@ describe("shopping stage2 backend", () => {
         throw new Error(`unexpected table: ${table}`);
       }),
     });
+    createServiceRoleClient.mockReturnValue({ rpc });
 
     const { POST } = await importListsRoute();
     const response = await POST(
@@ -2438,33 +2666,35 @@ describe("shopping stage2 backend", () => {
     );
 
     expect(response.status).toBe(201);
-    expect(mealsInsert).toHaveBeenCalledWith([
+    expect(rpc).toHaveBeenCalledWith(
+      "create_shopping_list_with_snapshot_authority",
       expect.objectContaining({
-        user_id: "user-1",
-        recipe_id: recipeId,
-        plan_date: "2026-04-30",
-        column_id: columnId,
-        planned_servings: 8,
-        status: "registered",
-        is_leftover: false,
-        leftover_dish_id: null,
-        shopping_list_id: null,
-        cooked_at: null,
+        p_split_remainders: [
+          expect.objectContaining({
+            user_id: "user-1",
+            recipe_id: recipeId,
+            recipe_content_snapshot_id: undefined,
+            plan_date: "2026-04-30",
+            column_id: columnId,
+            planned_servings: 8,
+          }),
+        ],
+        p_split_originals: [
+          {
+            meal_id: mealId,
+            planned_servings: 5,
+          },
+        ],
+        p_recipe_rows: [
+          {
+            recipe_id: recipeId,
+            recipe_content_snapshot_id: undefined,
+            shopping_servings: 5,
+            planned_servings_total: 5,
+          },
+        ],
       }),
-    ]);
-    expect(mealsUpdate).toHaveBeenNthCalledWith(1, { planned_servings: 5 });
-    expect(splitUpdateQuery.eq).toHaveBeenCalledWith("id", mealId);
-    expect(splitUpdateQuery.eq).toHaveBeenCalledWith("user_id", "user-1");
-    expect(mealsUpdate).toHaveBeenNthCalledWith(2, { shopping_list_id: "shopping-list-1" });
-    expect(listLinkUpdateQuery.in).toHaveBeenCalledWith("id", [mealId]);
-    expect(shoppingListRecipesInsert).toHaveBeenCalledWith([
-      {
-        shopping_list_id: "shopping-list-1",
-        recipe_id: recipeId,
-        shopping_servings: 5,
-        planned_servings_total: 5,
-      },
-    ]);
+    );
   });
 
   it("fetchShoppingPreview helper returns data when envelope is valid", async () => {

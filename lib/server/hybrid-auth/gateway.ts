@@ -178,7 +178,7 @@ async function readRemoteLiveUser({
 
   return {
     id: user.id,
-    createdAt: new Date(user.created_at).toISOString(),
+    createdAt: user.created_at,
   };
 }
 

@@ -263,6 +263,18 @@ const EXPECTED_FK_ROWS = [
   ["public.cooking_session_meal_claims", "cooking_session_meal_claims_owner_user_id_fkey", "owner_user_id", "public.users", "c"],
 ];
 
+const BASELINE_COOKING_SESSION_SHAPE_CHECK_ROW = [
+  "public.cooking_sessions",
+  "cooking_sessions_snapshot_v2_shape_check",
+  "session_kind|recipe_id|recipe_content_snapshot_id|cooking_servings|base_recipe_revision|planner|standalone",
+];
+
+const FUTURE_PROPAGATION_COOKING_SESSION_SHAPE_CHECK_ROW = [
+  "public.cooking_sessions",
+  "cooking_sessions_contract_namespace_check",
+  "contract_version|legacy_v1|snapshot_v2|session_kind|recipe_id|recipe_content_snapshot_id|cooking_servings|base_recipe_revision|planner|standalone",
+];
+
 const EXPECTED_CHECK_ROWS = [
   ["public.recipe_content_snapshots", "recipe_content_snapshots_base_servings_check", "base_servings|> 0"],
   ["public.recipe_content_snapshots", "recipe_content_snapshots_ingredients_json_check", "jsonb_typeof(ingredients_json)|array"],
@@ -270,7 +282,23 @@ const EXPECTED_CHECK_ROWS = [
   ["public.recipe_content_snapshots", "recipe_content_snapshots_schema_version_check", "schema_version|> 0"],
   ["public.meals", "meals_recipe_content_snapshot_origin_check", "recipe_content_snapshot_id|recipe_content_snapshot_origin|created|legacy_backfill"],
   ["public.cooking_sessions", "cooking_sessions_contract_version_check", "contract_version|legacy_v1|snapshot_v2"],
-  ["public.cooking_sessions", "cooking_sessions_snapshot_v2_shape_check", "session_kind|recipe_id|recipe_content_snapshot_id|cooking_servings|base_recipe_revision|planner|standalone"],
+  BASELINE_COOKING_SESSION_SHAPE_CHECK_ROW,
+];
+
+const BASELINE_MEAL_CONTENT_PIN_TRIGGER_ROW = [
+  "public.meals",
+  "protect_meal_recipe_content_pin",
+  "public.protect_meal_recipe_content_pin()",
+  "false",
+  "false",
+];
+
+const FUTURE_PROPAGATION_MEAL_CONTENT_PIN_TRIGGER_ROW = [
+  "public.meals",
+  "protect_meal_recipe_content_pin",
+  "public.protect_meal_recipe_content_pin_with_future_propagation()",
+  "false",
+  "false",
 ];
 
 const EXPECTED_TRIGGER_ROWS = [
@@ -279,7 +307,7 @@ const EXPECTED_TRIGGER_ROWS = [
   ["public.recipe_content_snapshots", "recipe_content_snapshot_immutable_guard", "public.prevent_recipe_content_snapshot_mutation()", "false", "false"],
   ["public.meals", "meals_revision_server_guard", "public.bump_meal_revision()", "false", "false"],
   ["public.meals", "recipe_content_snapshot_mirror", "public.recipe_content_snapshot_mirror()", "false", "false"],
-  ["public.meals", "protect_meal_recipe_content_pin", "public.protect_meal_recipe_content_pin()", "false", "false"],
+  BASELINE_MEAL_CONTENT_PIN_TRIGGER_ROW,
   ["public.cooking_sessions", "cooking_session_snapshot_v2_immutable_mutation_guard", "public.protect_cooking_session_snapshot_v2_mutation()", "false", "false"],
   ["public.cooking_sessions", "validate_cooking_session_snapshot_v2_on_session", "public.validate_cooking_session_snapshot_v2_association()", "true", "true"],
   ["public.cooking_session_meals", "validate_cooking_session_snapshot_v2_on_session_meal", "public.validate_cooking_session_snapshot_v2_association()", "true", "true"],
@@ -943,7 +971,43 @@ assertRecipeSnapshotAuthorityReadOnlyVerificationSql({
   fieldName: "recipe snapshot authority remote verification SQL",
 });
 
-export function buildRecipeSnapshotAuthorityRemoteVerificationPlan({ mode }) {
+function replaceExpectedInventoryRow({ sql, baselineRow, replacementRow }) {
+  const nextSql = sql.replace(
+    renderSqlRows([baselineRow]),
+    renderSqlRows([replacementRow]),
+  );
+  if (nextSql === sql) {
+    throw new Error("recipe snapshot authority expected inventory could not be extended safely");
+  }
+  return nextSql;
+}
+
+function buildPostMergeReadOnlySql({ includeRecipeFuturePropagation }) {
+  if (!includeRecipeFuturePropagation) {
+    return POST_MERGE_READ_ONLY_SQL;
+  }
+
+  const checkSql = replaceExpectedInventoryRow({
+    sql: POST_MERGE_READ_ONLY_SQL,
+    baselineRow: BASELINE_COOKING_SESSION_SHAPE_CHECK_ROW,
+    replacementRow: FUTURE_PROPAGATION_COOKING_SESSION_SHAPE_CHECK_ROW,
+  });
+  const sql = replaceExpectedInventoryRow({
+    sql: checkSql,
+    baselineRow: BASELINE_MEAL_CONTENT_PIN_TRIGGER_ROW,
+    replacementRow: FUTURE_PROPAGATION_MEAL_CONTENT_PIN_TRIGGER_ROW,
+  });
+  assertRecipeSnapshotAuthorityReadOnlyVerificationSql({
+    sql,
+    fieldName: "recipe snapshot authority future propagation verification SQL",
+  });
+  return sql;
+}
+
+export function buildRecipeSnapshotAuthorityRemoteVerificationPlan({
+  mode,
+  includeRecipeFuturePropagation = false,
+}) {
   if (mode !== "post-merge-read-only") {
     throw new Error(
       `unsupported recipe snapshot authority remote verification mode: ${mode ?? "missing"}`,
@@ -955,7 +1019,7 @@ export function buildRecipeSnapshotAuthorityRemoteVerificationPlan({ mode }) {
     readOnly: true,
     requiresMergedOriginMaster: true,
     requiresCleanTrackedTree: true,
-    sql: POST_MERGE_READ_ONLY_SQL,
+    sql: buildPostMergeReadOnlySql({ includeRecipeFuturePropagation }),
   };
 }
 

@@ -27,10 +27,16 @@ const ADDITIVE_SOURCES = [
       REPO_ROOT,
       "docs/security/full-local-auth-db-security-function-authorization-manifest.json",
     ),
-    migrationPath: path.join(
-      REPO_ROOT,
-      "supabase/migrations/20260801120000_full_local_auth_db_foundation.sql",
-    ),
+    migrationPaths: [
+      path.join(
+        REPO_ROOT,
+        "supabase/migrations/20260801120000_full_local_auth_db_foundation.sql",
+      ),
+      path.join(
+        REPO_ROOT,
+        "supabase/migrations/20260803090000_full_local_session_issue_time_precision.sql",
+      ),
+    ],
   },
   {
     manifestPath: process.env.SECURITY_FUNCTION_ADDITIVE_MANIFEST_PATH
@@ -52,6 +58,18 @@ const ADDITIVE_SOURCES = [
           path.join(
             REPO_ROOT,
             "supabase/migrations/20260801151000_full_local_request_authority.sql",
+          ),
+          path.join(
+            REPO_ROOT,
+            "supabase/migrations/20260803091000_full_local_optional_nbf_authority.sql",
+          ),
+          path.join(
+            REPO_ROOT,
+            "supabase/migrations/20260803092000_recipe_future_internal_scope.sql",
+          ),
+          path.join(
+            REPO_ROOT,
+            "supabase/migrations/20260803093000_full_local_read_only_request_authority.sql",
           ),
         ],
   },
@@ -107,6 +125,16 @@ const ADDITIVE_SOURCES = [
     migrationPath: path.join(
       REPO_ROOT,
       "supabase/migrations/20260802130000_personal_recipe_customization_write_core.sql",
+    ),
+  },
+  {
+    manifestPath: path.join(
+      REPO_ROOT,
+      "docs/security/recipe-content-snapshot-future-propagation-security-function-authorization-manifest.json",
+    ),
+    migrationPath: path.join(
+      REPO_ROOT,
+      "supabase/migrations/20260802210000_recipe_content_snapshot_future_propagation.sql",
     ),
   },
   {

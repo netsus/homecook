@@ -1,4 +1,6 @@
 import { spawnSync } from "node:child_process";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 
 import { beforeAll, describe, expect, it } from "vitest";
 
@@ -15,6 +17,16 @@ const inventoryOnly =
   process.env.HOMECOOK_FULL_LOCAL_SECURITY_INVENTORY_ONLY === "1";
 const includePersonalRecipeFunctions =
   process.env.HOMECOOK_PERSONAL_RECIPE_SECURITY_FUNCTIONS === "1";
+const includeRecipeFuturePropagationFunctions =
+  process.env.HOMECOOK_RECIPE_SNAPSHOT_FOLLOWUP_TARGET_MIGRATION?.endsWith(
+    "_recipe_content_snapshot_future_propagation.sql",
+  ) ?? false;
+const recipeFuturePropagationFunctionCount = includeRecipeFuturePropagationFunctions
+  ? (JSON.parse(readFileSync(join(
+      process.cwd(),
+      "docs/security/recipe-content-snapshot-future-propagation-security-function-authorization-manifest.json",
+    ), "utf8")) as { functions: unknown[] }).functions.length
+  : 0;
 const host = process.env.HOMECOOK_ACCOUNT_GENERATION_PGHOST ?? "";
 const port = process.env.HOMECOOK_ACCOUNT_GENERATION_PGPORT ?? "";
 const database = process.env.HOMECOOK_ACCOUNT_GENERATION_PGDATABASE ?? "";
@@ -59,12 +71,14 @@ function securityInventoryApi() {
     buildSql: buildSql as (options?: {
       includeSnapshotTables?: boolean;
       includePersonalRecipeFunctions?: boolean;
+      includeRecipeFuturePropagationFunctions?: boolean;
     }) => string,
     assertResult: assertResult as (
       result: Record<string, unknown>,
       options?: {
         includeSnapshotTables?: boolean;
         includePersonalRecipeFunctions?: boolean;
+        includeRecipeFuturePropagationFunctions?: boolean;
       },
     ) => void,
   };
@@ -75,6 +89,7 @@ function securityInventoryAfter(
   options: {
     includeSnapshotTables?: boolean;
     includePersonalRecipeFunctions?: boolean;
+    includeRecipeFuturePropagationFunctions?: boolean;
   } = {},
 ) {
   const api = securityInventoryApi();
@@ -131,6 +146,29 @@ function authSnapshot() {
   expect(digest).toMatch(/^[0-9a-f]{64}$/u);
   return { count, digest };
 }
+
+function buildAuthenticatorSetRoleContractDriftSql() {
+  return `do $membership_drift$
+    begin
+      if current_setting('server_version_num')::integer >= 160000 then
+        execute 'revoke set option for authenticated from authenticator';
+      else
+        execute 'alter role authenticator inherit';
+      end if;
+    end
+    $membership_drift$;`;
+}
+
+describe("full-local PG catalog compatibility helpers", () => {
+  it("builds an authenticator membership drift SQL that works on both PG15 and PG16+", () => {
+    const sql = buildAuthenticatorSetRoleContractDriftSql();
+    expect(sql).toMatch(/server_version_num/i);
+    expect(sql).toMatch(/alter role authenticator inherit/i);
+    expect(sql).toContain(
+      "revoke set option for authenticated from authenticator",
+    );
+  });
+});
 
 run("full-local Auth isolated PostgreSQL foundation", () => {
   beforeAll(() => {
@@ -455,12 +493,93 @@ run("full-local Auth isolated PostgreSQL foundation", () => {
     `)).toBe("t:https://auth.mumeok.com/auth/v1:2");
   });
 
+  it("accepts only the JWT issuance second containing the exact Auth identity epoch", () => {
+    const fractionalOwner = "00000000-0000-4000-8000-000000000003";
+    expect(psql(`
+      with identity_epoch as (
+        select date_trunc('second', local_activated_at)
+          + interval '11.750 seconds' as created_at
+        from private.full_local_auth_control
+      ), inserted_auth as (
+        insert into auth.users (id, created_at)
+        select '${fractionalOwner}', created_at from identity_epoch
+        returning created_at
+      )
+      insert into public.user_account_lifecycles (
+        owner_uuid,
+        account_generation,
+        auth_identity_created_at_snapshot,
+        origin,
+        status,
+        activated_at
+      )
+      select '${fractionalOwner}', 1, created_at, 'runtime', 'active', created_at
+      from inserted_auth;
+      select count(*) from auth.users where id = '${fractionalOwner}';
+    `)).toBe("1");
+
+    expect(psql(`
+      ${serviceClaims}
+      with identity_epoch as (
+        select created_at
+        from auth.users
+        where id = '${fractionalOwner}'
+      )
+      select public.record_full_local_session_authority(
+        'https://auth.mumeok.com/auth/v1',
+        '${fractionalOwner}',
+        identity_epoch.created_at,
+        repeat('7', 64),
+        2,
+        2,
+        date_trunc('second', identity_epoch.created_at),
+        date_trunc('second', identity_epoch.created_at) + interval '1 second',
+        identity_epoch.created_at + interval '1 hour',
+        identity_epoch.created_at + interval '30 minutes'
+      ) ->> 'binding_state'
+      from identity_epoch;
+    `)).toBe("active");
+
+    const previousSecond = psqlResult(`
+      ${serviceClaims}
+      with identity_epoch as (
+        select created_at
+        from auth.users
+        where id = '${fractionalOwner}'
+      )
+      select public.record_full_local_session_authority(
+        'https://auth.mumeok.com/auth/v1',
+        '${fractionalOwner}',
+        identity_epoch.created_at,
+        repeat('8', 64),
+        2,
+        2,
+        date_trunc('second', identity_epoch.created_at) - interval '1 second',
+        identity_epoch.created_at + interval '1 second',
+        identity_epoch.created_at + interval '1 hour',
+        identity_epoch.created_at + interval '30 minutes'
+      )
+      from identity_epoch;
+    `);
+    expect(previousSecond.status).not.toBe(0);
+    expect(previousSecond.stderr).toContain("ACCOUNT_SESSION_STALE");
+  });
+
   it("allows only scoped internal RPCs and verifies the active local binding", () => {
     expect(psql(`
       set request.jwt.claims = '{"role":"service_role"}';
       set request.method = 'POST';
       set request.path = '/rpc/read_full_local_auth_control';
       set request.headers = '{"x-homecook-internal-scope":"auth-flow"}';
+      select private.verify_hybrid_request_authority();
+      select 'ok';
+    `)).toBe("ok");
+
+    expect(psql(`
+      set request.jwt.claims = '{"role":"service_role"}';
+      set request.method = 'POST';
+      set request.path = '/rpc/preview_recipe_future_plan_impact';
+      set request.headers = '{"x-homecook-internal-scope":"recipe-future-propagation"}';
       select private.verify_hybrid_request_authority();
       select 'ok';
     `)).toBe("ok");
@@ -494,7 +613,6 @@ run("full-local Auth isolated PostgreSQL foundation", () => {
             'sub', '${owner}',
             'session_id', '22222222-2222-4222-8222-222222222222',
             'iat', authority.session_iat,
-            'nbf', authority.session_iat,
             'exp', authority.now_epoch + 1800
           )::text,
           false
@@ -828,6 +946,7 @@ activeInventoryRun("active full-local snapshot security inventory", () => {
   const options = {
     includeSnapshotTables: true,
     includePersonalRecipeFunctions,
+    includeRecipeFuturePropagationFunctions,
   };
 
   beforeAll(() => {
@@ -851,7 +970,9 @@ activeInventoryRun("active full-local snapshot security inventory", () => {
       },
     ]);
     expect(result).toMatchObject({
-      required_function_count: includePersonalRecipeFunctions ? 33 : 29,
+      required_function_count:
+        (includePersonalRecipeFunctions ? 33 : 29)
+        + recipeFuturePropagationFunctionCount,
       required_role_count: 4,
       required_role_membership_count: 2,
       role_attribute_drift_count: 0,
@@ -1192,7 +1313,7 @@ activeInventoryRun("active full-local snapshot security inventory", () => {
     ],
     [
       "authenticator SET ROLE contract",
-      "revoke set option for authenticated from authenticator;",
+      buildAuthenticatorSetRoleContractDriftSql(),
     ],
     ["FORCE RLS", "alter table public.recipes force row level security;"],
     [

@@ -415,6 +415,26 @@ if (!postgresBin) {
         "-f",
         "supabase/migrations/20260801151000_full_local_request_authority.sql",
       ]);
+      runRequired(path.join(postgresBin, "psql"), [
+        ...connectionArgs,
+        "-f",
+        "supabase/migrations/20260803090000_full_local_session_issue_time_precision.sql",
+      ]);
+      runRequired(path.join(postgresBin, "psql"), [
+        ...connectionArgs,
+        "-f",
+        "supabase/migrations/20260803091000_full_local_optional_nbf_authority.sql",
+      ]);
+      runRequired(path.join(postgresBin, "psql"), [
+        ...connectionArgs,
+        "-f",
+        "supabase/migrations/20260803092000_recipe_future_internal_scope.sql",
+      ]);
+      runRequired(path.join(postgresBin, "psql"), [
+        ...connectionArgs,
+        "-f",
+        "supabase/migrations/20260803093000_full_local_read_only_request_authority.sql",
+      ]);
     }
 
     const test = commandResult("pnpm", [

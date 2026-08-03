@@ -83,6 +83,42 @@ describe("hybrid callback/refresh authority bootstrap", () => {
     );
   });
 
+  it("does not truncate the remote Auth identity epoch before the DB mirror", async () => {
+    const rpc = vi.fn().mockResolvedValue({
+      data: { binding_state: "active" },
+      error: null,
+    });
+    const exactIdentityEpoch = "2026-07-28T00:00:00.123456Z";
+
+    await recordHybridSessionAuthorityBootstrap({
+      accessToken: accessToken(),
+      dbClient: { rpc },
+      expectedIssuer: ISSUER,
+      nowSeconds: () => 1_800_000_100,
+      sessionBindingSecret: SECRET,
+      user: {
+        id: OWNER_UUID,
+        created_at: exactIdentityEpoch,
+      },
+    });
+
+    expect(rpc).toHaveBeenCalledWith(
+      "record_hybrid_remote_session_authority",
+      expect.objectContaining({
+        p_identity_created_at: exactIdentityEpoch,
+        p_session_key_hash: createHmac("sha256", SECRET)
+          .update([
+            "v1",
+            ISSUER,
+            OWNER_UUID,
+            "2026-07-28T00:00:00.123Z",
+            SESSION_UUID,
+          ].join("\n"))
+          .digest("hex"),
+      }),
+    );
+  });
+
   it("keeps a valid token bound after 120 seconds but never beyond JWT exp", async () => {
     const rpc = vi.fn().mockResolvedValue({
       data: { binding_state: "active" },

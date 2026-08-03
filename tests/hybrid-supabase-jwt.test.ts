@@ -73,6 +73,32 @@ describe("remote Auth exact JWT guard", () => {
     });
   });
 
+  it("treats the standards-optional nbf claim as iat when GoTrue omits it", () => {
+    expect(validateRemoteJwtClaims({
+      claims: {
+        iss: ISSUER,
+        aud: "authenticated",
+        role: "authenticated",
+        sub: OWNER_UUID,
+        session_id: SESSION_UUID,
+        iat: 1_800_000_000,
+        exp: 1_800_000_600,
+      },
+      expectedIssuer: ISSUER,
+      nowSeconds: 1_800_000_100,
+    })).toEqual({
+      ok: true,
+      claims: {
+        issuer: ISSUER,
+        ownerUuid: OWNER_UUID,
+        sessionId: SESSION_UUID,
+        issuedAt: 1_800_000_000,
+        notBefore: 1_800_000_000,
+        expiresAt: 1_800_000_600,
+      },
+    });
+  });
+
   it.each([
     ["issuer", { iss: "https://wrong.example/auth/v1" }],
     ["audience", { aud: ["authenticated"] }],

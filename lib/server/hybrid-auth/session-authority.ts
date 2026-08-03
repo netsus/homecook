@@ -33,6 +33,39 @@ function signPayload(payload: string, secret: string) {
   return createHmac("sha256", secret).update(payload, "utf8").digest("hex");
 }
 
+export function createSessionKeyHash({
+  secret,
+  keyVersion,
+  issuer,
+  ownerUuid,
+  sessionId,
+  identityCreatedAt,
+}: {
+  secret: string;
+  keyVersion: number;
+  issuer: string;
+  ownerUuid: string;
+  sessionId: string;
+  identityCreatedAt: string;
+}) {
+  requireSecret(secret);
+  requireUuid(ownerUuid, "ownerUuid");
+  requireUuid(sessionId, "sessionId");
+  if (!Number.isSafeInteger(keyVersion) || keyVersion <= 0) {
+    throw new Error("keyVersion은 양의 정수여야 해요.");
+  }
+  return signPayload(
+    [
+      `v${keyVersion}`,
+      issuer,
+      ownerUuid,
+      requireIsoTimestamp(identityCreatedAt, "identityCreatedAt"),
+      sessionId,
+    ].join("\n"),
+    secret,
+  );
+}
+
 export function createRemoteIdentityDigest({
   issuer,
   ownerUuid,
@@ -153,23 +186,24 @@ export function createSessionLivenessBinding({
   const expiresAt = new Date(
     Date.parse(normalizedVerifiedAt) + ttlSeconds * 1_000,
   ).toISOString();
-  const sessionKeyHash = signPayload(
-    [
-      `v${keyVersion}`,
-      issuer,
-      ownerUuid,
-      normalizedIdentityCreatedAt,
-      sessionId,
-    ].join("\n"),
+  const sessionKeyHash = createSessionKeyHash({
     secret,
-  );
+    keyVersion,
+    issuer,
+    ownerUuid,
+    sessionId,
+    identityCreatedAt: normalizedIdentityCreatedAt,
+  });
 
   return {
     session_key_hash: sessionKeyHash,
     hmac_key_version: keyVersion,
     issuer,
     owner_uuid: ownerUuid,
-    identity_created_at: normalizedIdentityCreatedAt,
+    // Keep the exact provider/DB epoch. JavaScript Date canonicalization loses
+    // PostgreSQL microseconds, while the HMAC above intentionally canonicalizes
+    // the same instant for stable cross-runtime hashing.
+    identity_created_at: identityCreatedAt,
     remote_verified_at: normalizedVerifiedAt,
     binding_expires_at: expiresAt,
     binding_state: "active" as const,
@@ -228,6 +262,7 @@ export function createHybridRequestAttestation({
   ) {
     throw new Error("attestation TTL은 1~60초여야 해요.");
   }
+  requireIsoTimestamp(identityCreatedAt, "identityCreatedAt");
 
   const payload: HybridAttestationPayload = {
     version: keyVersion,
@@ -235,10 +270,7 @@ export function createHybridRequestAttestation({
     path,
     issuer,
     owner_uuid: ownerUuid,
-    identity_created_at: requireIsoTimestamp(
-      identityCreatedAt,
-      "identityCreatedAt",
-    ),
+    identity_created_at: identityCreatedAt,
     session_key_hash: sessionKeyHash,
     issued_at: issuedAtSeconds,
     expires_at: issuedAtSeconds + ttlSeconds,
@@ -285,6 +317,7 @@ export function verifyHybridRequestAttestation({
       || claims.expires_at - claims.issued_at <= 0
       || claims.expires_at - claims.issued_at > 60
       || !UUID_PATTERN.test(claims.owner_uuid)
+      || !Number.isFinite(Date.parse(claims.identity_created_at))
       || !SHA256_PATTERN.test(claims.session_key_hash)
     ) {
       return { ok: false };

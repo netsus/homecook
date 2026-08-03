@@ -11,7 +11,17 @@ import {
   formatBootstrapErrorMessage,
   type UserBootstrapDbClient,
 } from "@/lib/server/user-bootstrap";
-import { createRouteHandlerClient } from "@/lib/supabase/server";
+import { readVerifiedAccountGenerationSession } from
+  "@/lib/server/account-generation/session-authority";
+import {
+  buildSessionAuthorityRpcArgs,
+  callFuturePropagationRpc,
+  type FuturePropagationRpcClient,
+} from "@/lib/server/recipe-content-snapshot-future-propagation";
+import {
+  createFutureMealWriteInternalClient,
+  createRouteHandlerClient,
+} from "@/lib/supabase/server";
 import type { MealMutationData, MealUpdateBody } from "@/types/meal";
 import type { MealStatus } from "@/types/planner";
 
@@ -83,14 +93,6 @@ function normalizeMealStatus(status: string): MealStatus {
   return "registered";
 }
 
-function isConflictError(error: QueryError | null) {
-  if (!error) {
-    return false;
-  }
-
-  return error.code === "409" || /conflict/i.test(error.message);
-}
-
 function buildMealMutationData(row: {
   id: string;
   planned_servings: number;
@@ -101,6 +103,28 @@ function buildMealMutationData(row: {
     planned_servings: row.planned_servings,
     status: normalizeMealStatus(row.status),
   } satisfies MealMutationData;
+}
+
+function projectMealMutationData(value: unknown) {
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+
+  const record = value as Record<string, unknown>;
+
+  if (
+    typeof record.id !== "string"
+    || typeof record.planned_servings !== "number"
+    || typeof record.status !== "string"
+  ) {
+    return null;
+  }
+
+  return buildMealMutationData({
+    id: record.id,
+    planned_servings: record.planned_servings,
+    status: record.status,
+  });
 }
 
 function parsePlannedServings(body: MealUpdateBody) {
@@ -129,6 +153,35 @@ async function requireAuthenticatedUser(routeClient: Awaited<ReturnType<typeof c
   return authResult.data.user;
 }
 
+async function authenticateMealMutation(request: Request) {
+  if (isQaFixtureModeEnabled()) {
+    if (readE2EAuthOverrideHeader(request.headers) !== "authenticated") {
+      return {
+        ok: false as const,
+        response: fail("UNAUTHORIZED", "로그인이 필요해요.", 401),
+      };
+    }
+
+    return { ok: true as const, fixture: true as const };
+  }
+
+  const routeClient = await createRouteHandlerClient();
+  const user = await requireAuthenticatedUser(routeClient);
+  if (!user) {
+    return {
+      ok: false as const,
+      response: fail("UNAUTHORIZED", "로그인이 필요해요.", 401),
+    };
+  }
+
+  return {
+    ok: true as const,
+    fixture: false as const,
+    routeClient,
+    user,
+  };
+}
+
 async function readOwnedMeal(dbClient: MealsDbClient, mealId: string) {
   return dbClient
     .from("meals")
@@ -138,6 +191,11 @@ async function readOwnedMeal(dbClient: MealsDbClient, mealId: string) {
 }
 
 export async function PATCH(request: Request, context: RouteContext) {
+  const authentication = await authenticateMealMutation(request);
+  if (!authentication.ok) {
+    return authentication.response;
+  }
+
   const { meal_id: mealId } = await context.params;
 
   if (!isUuid(mealId)) {
@@ -159,13 +217,7 @@ export async function PATCH(request: Request, context: RouteContext) {
     return fail("VALIDATION_ERROR", "요청 값을 확인해 주세요.", 422, parsed.fields);
   }
 
-  if (isQaFixtureModeEnabled()) {
-    const authOverride = readE2EAuthOverrideHeader(request.headers);
-
-    if (authOverride !== "authenticated") {
-      return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
-    }
-
+  if (authentication.fixture) {
     const fixtureResult = updateQaFixtureMealServings({
       mealId,
       plannedServings: parsed.plannedServings,
@@ -178,12 +230,7 @@ export async function PATCH(request: Request, context: RouteContext) {
     return ok(fixtureResult.data);
   }
 
-  const routeClient = await createRouteHandlerClient();
-  const user = await requireAuthenticatedUser(routeClient);
-
-  if (!user) {
-    return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
-  }
+  const { routeClient, user } = authentication;
 
   const dbClient = routeClient as unknown as MealsDbClient & UserBootstrapDbClient;
 
@@ -198,6 +245,11 @@ export async function PATCH(request: Request, context: RouteContext) {
     );
   }
 
+  const verifiedSession = await readVerifiedAccountGenerationSession(routeClient);
+  if (!verifiedSession.ok || verifiedSession.sessionAuthority.ownerUuid !== user.id) {
+    return fail("ACCOUNT_SESSION_STALE", "세션을 다시 확인해 주세요.", 409);
+  }
+
   const mealResult = await readOwnedMeal(dbClient, mealId);
 
   if (mealResult.error || !mealResult.data) {
@@ -208,41 +260,49 @@ export async function PATCH(request: Request, context: RouteContext) {
     return fail("FORBIDDEN", "내 식사만 수정할 수 있어요.", 403);
   }
 
-  const updateResult = await dbClient
-    .from("meals")
-    .update({
-      planned_servings: parsed.plannedServings,
-    })
-    .eq("id", mealId)
-    .eq("user_id", user.id)
-    .select("id, user_id, planned_servings, status")
-    .maybeSingle();
-
-  if (isConflictError(updateResult.error)) {
-    return fail("CONFLICT", "현재 상태에서는 인분을 변경할 수 없어요.", 409);
-  }
-
-  if (updateResult.error || !updateResult.data) {
+  const serviceClient = createFutureMealWriteInternalClient();
+  if (!serviceClient) {
     return fail("INTERNAL_ERROR", "식사를 수정하지 못했어요.", 500);
   }
 
-  return ok(buildMealMutationData(updateResult.data));
+  const updateResult = await callFuturePropagationRpc(
+    serviceClient as unknown as FuturePropagationRpcClient,
+    "write_future_meal_with_snapshot_authority",
+    {
+      ...buildSessionAuthorityRpcArgs(verifiedSession.sessionAuthority),
+      p_action: "update",
+      p_meal_id: mealId,
+      p_planned_servings: parsed.plannedServings,
+    },
+  );
+  if (!updateResult.ok) {
+    if (updateResult.response.status === 409) {
+      return fail("CONFLICT", "현재 상태에서는 인분을 변경할 수 없어요.", 409);
+    }
+    return updateResult.response;
+  }
+
+  const updatedMeal = projectMealMutationData(updateResult.data);
+  if (!updatedMeal) {
+    return fail("INTERNAL_ERROR", "식사를 수정하지 못했어요.", 500);
+  }
+
+  return ok(updatedMeal);
 }
 
 export async function DELETE(request: Request, context: RouteContext) {
+  const authentication = await authenticateMealMutation(request);
+  if (!authentication.ok) {
+    return authentication.response;
+  }
+
   const { meal_id: mealId } = await context.params;
 
   if (!isUuid(mealId)) {
     return fail("RESOURCE_NOT_FOUND", "식사를 찾을 수 없어요.", 404);
   }
 
-  if (isQaFixtureModeEnabled()) {
-    const authOverride = readE2EAuthOverrideHeader(request.headers);
-
-    if (authOverride !== "authenticated") {
-      return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
-    }
-
+  if (authentication.fixture) {
     const fixtureResult = deleteQaFixtureMeal(mealId);
 
     if (!fixtureResult.ok) {
@@ -252,12 +312,7 @@ export async function DELETE(request: Request, context: RouteContext) {
     return new Response(null, { status: 204 });
   }
 
-  const routeClient = await createRouteHandlerClient();
-  const user = await requireAuthenticatedUser(routeClient);
-
-  if (!user) {
-    return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
-  }
+  const { routeClient, user } = authentication;
 
   const dbClient = routeClient as unknown as MealsDbClient & UserBootstrapDbClient;
 
@@ -272,6 +327,11 @@ export async function DELETE(request: Request, context: RouteContext) {
     );
   }
 
+  const verifiedSession = await readVerifiedAccountGenerationSession(routeClient);
+  if (!verifiedSession.ok || verifiedSession.sessionAuthority.ownerUuid !== user.id) {
+    return fail("ACCOUNT_SESSION_STALE", "세션을 다시 확인해 주세요.", 409);
+  }
+
   const mealResult = await readOwnedMeal(dbClient, mealId);
 
   if (mealResult.error || !mealResult.data) {
@@ -282,20 +342,25 @@ export async function DELETE(request: Request, context: RouteContext) {
     return fail("FORBIDDEN", "내 식사만 삭제할 수 있어요.", 403);
   }
 
-  const deleteResult = await dbClient
-    .from("meals")
-    .delete()
-    .eq("id", mealId)
-    .eq("user_id", user.id)
-    .select("id")
-    .maybeSingle();
-
-  if (isConflictError(deleteResult.error)) {
-    return fail("CONFLICT", "현재 상태에서는 식사를 삭제할 수 없어요.", 409);
+  const serviceClient = createFutureMealWriteInternalClient();
+  if (!serviceClient) {
+    return fail("INTERNAL_ERROR", "식사를 삭제하지 못했어요.", 500);
   }
 
-  if (deleteResult.error || !deleteResult.data) {
-    return fail("INTERNAL_ERROR", "식사를 삭제하지 못했어요.", 500);
+  const deleteResult = await callFuturePropagationRpc(
+    serviceClient as unknown as FuturePropagationRpcClient,
+    "write_future_meal_with_snapshot_authority",
+    {
+      ...buildSessionAuthorityRpcArgs(verifiedSession.sessionAuthority),
+      p_action: "delete",
+      p_meal_id: mealId,
+    },
+  );
+  if (!deleteResult.ok) {
+    if (deleteResult.response.status === 409) {
+      return fail("CONFLICT", "현재 상태에서는 식사를 삭제할 수 없어요.", 409);
+    }
+    return deleteResult.response;
   }
 
   return new Response(null, { status: 204 });

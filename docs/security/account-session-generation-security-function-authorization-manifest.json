@@ -4,7 +4,11 @@
   "migrations": [
     "supabase/migrations/20260723140000_account_session_generation_foundation.sql",
     "supabase/migrations/20260730090000_hybrid_auth_remote_identity_epoch_mirror.sql",
-    "supabase/migrations/20260801151000_full_local_request_authority.sql"
+    "supabase/migrations/20260801151000_full_local_request_authority.sql",
+    "supabase/migrations/20260803091000_full_local_optional_nbf_authority.sql",
+    "supabase/migrations/20260803092000_recipe_future_internal_scope.sql",
+    "supabase/migrations/20260803093000_full_local_read_only_request_authority.sql",
+    "supabase/migrations/20260803100000_recipe_future_scoped_internal_rpc_clients.sql"
   ],
   "deployment_state": "post-migration",
   "baseline_application_contract_count": 74,

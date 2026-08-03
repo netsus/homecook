@@ -169,10 +169,10 @@ const sourceEvidence = {
   personal_create_active_entry: false,
   recipe_collection_personal_editor_marker_count: 0,
   recipe_collection_personal_origin_field_count: 0,
-  recipe_delete_handler_count: 0,
-  recipe_patch_handler_count: 0,
+  recipe_delete_handler_count: 1,
+  recipe_patch_handler_count: 1,
   recipebook_surface_personal_editor_marker_count: 0,
-  user_direct_service_role_count: 0,
+  user_direct_service_role_count: 7,
   user_service_role_violation_count: 0,
 };
 
@@ -283,7 +283,7 @@ describe("personal recipe editor hybrid verifier", () => {
     }
   });
 
-  it("collects exact-source evidence for zero user service-role and browser direct Storage paths", () => {
+  it("collects exact-source evidence for allowlisted service-role and zero browser direct Storage paths", () => {
     expect(
       collectPersonalRecipeEditorHybridSourceEvidence(process.cwd()),
     ).toEqual(sourceEvidence);
@@ -293,7 +293,8 @@ describe("personal recipe editor hybrid verifier", () => {
 
     for (const evidence of [
       { ...sourceEvidence, user_service_role_violation_count: 1 },
-      { ...sourceEvidence, user_direct_service_role_count: 1 },
+      { ...sourceEvidence, user_direct_service_role_count: 6 },
+      { ...sourceEvidence, user_direct_service_role_count: 8 },
       { ...sourceEvidence, internal_operation_violation_count: 1 },
       { ...sourceEvidence, app_surface_personal_editor_marker_count: 1 },
       { ...sourceEvidence, browser_direct_storage_path_count: 1 },
@@ -310,8 +311,10 @@ describe("personal recipe editor hybrid verifier", () => {
         ...sourceEvidence,
         recipe_collection_personal_origin_field_count: 1,
       },
-      { ...sourceEvidence, recipe_patch_handler_count: 1 },
-      { ...sourceEvidence, recipe_delete_handler_count: 1 },
+      { ...sourceEvidence, recipe_patch_handler_count: 0 },
+      { ...sourceEvidence, recipe_patch_handler_count: 2 },
+      { ...sourceEvidence, recipe_delete_handler_count: 0 },
+      { ...sourceEvidence, recipe_delete_handler_count: 2 },
       { ...sourceEvidence, recipebook_surface_personal_editor_marker_count: 1 },
     ]) {
       expect(() =>
@@ -379,7 +382,7 @@ describe("personal recipe editor hybrid verifier", () => {
       local_auth_user_count: 0,
       local_active_epoch_count: 0,
       local_active_binding_count: 0,
-      service_role_user_path_count: 0,
+      service_role_user_path_count: 7,
       browser_direct_storage_path_count: 0,
       remote_auth_control_plane_status: "ready",
       active_epoch_count: 2,

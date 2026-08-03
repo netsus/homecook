@@ -14,6 +14,17 @@ import { inventoryHybridAuthorityPaths } from "../scripts/lib/hybrid-authority-i
 
 const temporaryRepositories: string[] = [];
 
+const APPROVED_USER_SERVICE_ROLE_FILES = [
+  "app/api/v1/cooking/session-attempts/[id]/cancel/route.ts",
+  "app/api/v1/cooking/session-attempts/[id]/cook-mode/route.ts",
+  "app/api/v1/cooking/session-attempts/route.ts",
+  "app/api/v1/meals/[meal_id]/route.ts",
+  "app/api/v1/meals/[meal_id]/route.ts",
+  "app/api/v1/meals/route.ts",
+  "app/api/v1/shopping/lists/route.ts",
+];
+const APPROVED_SERVICE_ROLE_FILES = [...APPROVED_USER_SERVICE_ROLE_FILES];
+
 function fixtureRepository(files: Record<string, string>) {
   const root = mkdtempSync(join(tmpdir(), "homecook-authority-inventory-"));
   temporaryRepositories.push(root);
@@ -32,11 +43,15 @@ afterEach(() => {
 });
 
 describe("hybrid authority AST/static gate", () => {
-  it("has zero user-route service-role fallback or direct bypass", () => {
+  it("has only the exact verified-session service-role routes and no direct bypass", () => {
     const inventory = inventoryHybridAuthorityPaths();
 
     expect(inventory.userServiceRoleViolations).toEqual([]);
-    expect(inventory.userDirectServiceRoleEntries).toEqual([]);
+    expect(inventory.userDirectServiceRoleEntries.map((entry) => entry.file))
+      .toEqual(APPROVED_USER_SERVICE_ROLE_FILES);
+    expect(inventory.userDirectServiceRoleEntries.every((entry) =>
+      entry.classification === "user" && entry.kind === "service-role-call"
+    )).toBe(true);
     expect(inventory.internalOperationViolations).toEqual([]);
     expect(inventory.remoteCompatibilityEntries.map((entry) => entry.file))
       .toEqual([
@@ -45,64 +60,136 @@ describe("hybrid authority AST/static gate", () => {
     expect(inventory.internalOperationEntries.map((entry) => ({
       factory: entry.factory,
       file: entry.file,
+      functionName: entry.functionName,
     }))).toEqual([
       {
         factory: "createAdminDataInternalClient",
         file: "app/admin/layout.tsx",
+        functionName: "enforceAdminRouteAccess",
+      },
+      {
+        factory: "createSnapshotV2SessionInternalClient",
+        file: "app/api/v1/cooking/session-attempts/[id]/cancel/route.ts",
+        functionName: "POST",
+      },
+      {
+        factory: "createSnapshotV2SessionInternalClient",
+        file: "app/api/v1/cooking/session-attempts/[id]/cook-mode/route.ts",
+        functionName: "GET",
+      },
+      {
+        factory: "createSnapshotV2SessionInternalClient",
+        file: "app/api/v1/cooking/session-attempts/route.ts",
+        functionName: "POST",
       },
       {
         factory: "createNotFoundFeedbackInternalClient",
         file: "app/api/v1/feedback/404/route.ts",
+        functionName: "POST",
+      },
+      {
+        factory: "createFutureMealWriteInternalClient",
+        file: "app/api/v1/meals/[meal_id]/route.ts",
+        functionName: "PATCH",
+      },
+      {
+        factory: "createFutureMealWriteInternalClient",
+        file: "app/api/v1/meals/[meal_id]/route.ts",
+        functionName: "DELETE",
+      },
+      {
+        factory: "createFutureMealWriteInternalClient",
+        file: "app/api/v1/meals/route.ts",
+        functionName: "postMeals",
+      },
+      {
+        factory: "createRecipeFuturePropagationInternalClient",
+        file: "app/api/v1/recipes/[id]/future-plan-impact/route.ts",
+        functionName: "POST",
+      },
+      {
+        factory: "createRecipeFuturePropagationInternalClient",
+        file: "app/api/v1/recipes/[id]/route.ts",
+        functionName: "PATCH",
+      },
+      {
+        factory: "createRecipeFuturePropagationInternalClient",
+        file: "app/api/v1/recipes/[id]/route.ts",
+        functionName: "DELETE",
       },
       {
         factory: "createRecipeImageInternalClient",
         file: "app/api/v1/recipes/images/[image_object_id]/cancel/route.ts",
+        functionName: "POST",
       },
       {
         factory: "createRecipeImageInternalClient",
         file: "app/api/v1/recipes/images/route.ts",
+        functionName: "POST",
+      },
+      {
+        factory: "createShoppingCreateInternalClient",
+        file: "app/api/v1/shopping/lists/route.ts",
+        functionName: "POST",
       },
       {
         factory: "createAccountLifecycleInternalRpcClient",
         file: "app/api/v1/users/me/cutover-quarantine-resolution/route.ts",
+        functionName: "POST",
       },
       {
         factory: "createAccountLifecycleInternalRpcClient",
         file: "app/api/v1/users/me/route.ts",
+        functionName: "DELETE",
       },
       {
         factory: "createAccountLifecycleInternalRpcClient",
         file: "app/api/v1/users/me/route.ts",
+        functionName: "DELETE",
       },
       {
         factory: "createAuthCallbackOperationsClient",
         file: "app/auth/callback/route.ts",
+        functionName: "GET",
       },
       {
         factory: "createAccountLifecycleInternalRpcClient",
         file: "lib/server/account-generation/quarantine-gate.ts",
+        functionName: "readAccountQuarantineGate",
       },
       {
         factory: "createAdminDataInternalClient",
         file: "lib/server/admin-auth.ts",
+        functionName: "requireAdminUser",
       },
       {
         factory: "createOperationalEventInternalClient",
         file: "lib/server/admin-events.ts",
+        functionName: "recordOperationalEventFromServiceRole",
       },
       {
         factory: "createSessionLogoutInternalDataClient",
         file: "lib/server/hybrid-auth/logout.ts",
+        functionName: "revokeCurrentHybridSessionAuthority",
       },
       {
         factory: "createYoutubeIngredientRegistrationInternalRpcClient",
         file: "lib/server/youtube-import.ts",
+        functionName: "handleYoutubeIngredientRegistration",
       },
       {
         factory: "createAuthRefreshInternalDataClient",
         file: "lib/supabase/server.ts",
+        functionName: "createAuthServerClient",
       },
     ]);
+
+    expect(inventory.internalOperationFunctionAllowlist).toMatchObject({
+      createRecipeFuturePropagationInternalClient: {
+        "app/api/v1/recipes/[id]/future-plan-impact/route.ts": ["POST"],
+        "app/api/v1/recipes/[id]/route.ts": ["DELETE", "PATCH"],
+      },
+    });
 
     const serverFactory = readFileSync("lib/supabase/server.ts", "utf8");
     expect(serverFactory).toMatch(
@@ -113,8 +200,27 @@ describe("hybrid authority AST/static gate", () => {
   it("routes every local Data handler through the common API response boundary", () => {
     const inventory = inventoryHybridAuthorityPaths();
 
-    expect(inventory.dataRouteResponseBoundaries).toHaveLength(52);
+    expect(inventory.dataRouteResponseBoundaries).toHaveLength(56);
     expect(inventory.dataRouteResponseBoundaryViolations).toEqual([]);
+  });
+
+  it("rejects a scoped future-propagation client call from the public GET handler", () => {
+    const root = fixtureRepository({
+      "app/api/v1/recipes/[id]/route.ts": `export async function GET() {
+  return createRecipeFuturePropagationInternalClient();
+}
+`,
+    });
+
+    const inventory = inventoryHybridAuthorityPaths(root);
+
+    expect(inventory.internalOperationViolations).toEqual([
+      expect.objectContaining({
+        factory: "createRecipeFuturePropagationInternalClient",
+        file: "app/api/v1/recipes/[id]/route.ts",
+        functionName: "GET",
+      }),
+    ]);
   });
 
   it("links every official anonymous API route to an exact public-read scope", () => {
@@ -284,8 +390,10 @@ fetch("https://data.example.test/rest/v1/recipes");
   it("keeps every remaining service-role call inside an exact allowlist", () => {
     const inventory = inventoryHybridAuthorityPaths();
 
-    expect(inventory.serviceRoleEntries).toEqual([]);
-    expect(inventory.genericLocalServiceRoleViolations).toEqual([]);
+    expect(inventory.serviceRoleEntries.map((entry) => entry.file))
+      .toEqual(APPROVED_SERVICE_ROLE_FILES);
+    expect(inventory.genericLocalServiceRoleViolations)
+      .toEqual(inventory.serviceRoleEntries);
     expect(inventory.remoteCompatibilityEntries.map((entry) => entry.file))
       .toEqual(["app/api/v1/recipes/[id]/route.ts"]);
   });

@@ -221,7 +221,7 @@ export async function recordHybridSessionAuthorityBootstrap({
     return { ok: false, reason: "stale" };
   }
 
-  const identityCreatedAt = new Date(user.created_at).toISOString();
+  const identityCreatedAt = user.created_at;
   const verifiedAt = new Date(now * 1_000).toISOString();
   const binding = createSessionLivenessBinding({
     secret: sessionBindingSecret,
