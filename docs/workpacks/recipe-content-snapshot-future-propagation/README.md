@@ -6,7 +6,8 @@
 
 ## Branches
 
-- Stage 1 docs: `docs/recipe-content-snapshot-future-propagation`
+- Original Stage 1 docs: `docs/recipe-content-snapshot-future-propagation`
+- Current entrypoint re-lock: `docs/recipe-content-snapshot-entrypoint-relock`
 - Stage 2 backend/DB: `feature/be-recipe-content-snapshot-future-propagation`
 - Stage 4 frontend integration: `feature/fe-recipe-content-snapshot-future-propagation`
 - Release train: C. 구현 선행조건은 #4와 #6 runtime, merged `cook-mode-whole-board`다.
@@ -70,15 +71,23 @@ Schema Change:
 | `cook-mode-whole-board` | merged | PR #711 merge `2f8569cb` satisfies the runtime predecessor for #7 implementation |
 | `cooked-batch-weight-ledger` #8 | successor | owns exact-pantry complete and R/R+1 compatibility gate before R+2 joint activation |
 
-> Stage 1 PR #1081 is merged and its independent internal 1.5, security/DB, five-axis and design reviews approved with no required findings. Runtime predecessors are now merged, so Stage 2 may start in dormant mode. Personal writes and v2 session creation remain off.
+> Stage 1 PR #1081 is merged and its independent internal 1.5, security/DB, five-axis and design reviews approved with no required findings. Stage 2/3 PR #1278 reviewed exact head `9eb1ebd8ea5a12294a76d7f2799693f03654b0a4` with required findings `0/0/0` and merged as `ef5903b131a2eb9e505b2121b4e390970c565b95`. Personal writes and v2 session creation remain off.
 
-## Stage 2 Contract Boundary
+## Active Official Contract Boundary
 
-- The active official tuple is requirements `v1.7.28`, screens `v1.5.32`, flow `v1.3.30`, DB `v1.3.30`, API `v1.2.34`.
+- The active official tuple is requirements `v1.7.29`, screens `v1.5.33`, flow `v1.3.31`, DB `v1.3.31`, API `v1.2.35`.
 - The official API already locks impact request/response fields, PATCH request fields, session-attempt request variants and error codes.
-- User-approved API v1.2.34 locks recipe PATCH `{id,revision}`, recipe DELETE `{id,revision,deleted_at}`, snapshot-v2 start `{session_id,contract_version,mode,status,content_summary}`, cook-mode `{session_id,contract_version,mode,status,recipe,pantry_candidates}` and cancel `{session_id,contract_version,mode,status}`.
+- API v1.2.35 preserves the approved recipe PATCH `{id,revision}`, recipe DELETE `{id,revision,deleted_at}`, snapshot-v2 start `{session_id,contract_version,mode,status,content_summary}`, cook-mode `{session_id,contract_version,mode,status,recipe,pantry_candidates}` and cancel `{session_id,contract_version,mode,status}` success shapes.
 - `pantry_candidates[]` uses exact `pantry_item_id`, pinned recipe `ingredient_id`, `item_type`, `standard_name`, nullable exact product/version identity and actual `name/brand`. It does not preclaim #8 completion effects.
-- Stage 2 may now implement the locked public route/type surface. Any additional success field remains contract-evolution blocked.
+- Contract Evolution PR #1282 reviewed exact contract head `4341732d282f9acebf8d3e6a6550b67128e8f2b0` with blocker/major/minor `0/0/0` and merged as `7e316e8721e96762c17e3d196811416ce6f93823`. It authorizes only the additive entrypoint read/projection contract below; any other success field, endpoint, status, error, action or screen remains contract-evolution blocked.
+
+### Entrypoint read and projection contract
+
+- Every successful `GET /recipes/{id}` detail includes positive `revision`. In the same successful owner response, `edit_context.base_recipe_revision === GET /recipes/{id}.data.revision`; both values come from one detail read snapshot, and separate query results are never combined. Exact authenticated current owner of a private, not-deleted recipe additionally receives owner-only `edit_context={base_recipe_revision,draft,image_object_id}`; unauthenticated, public and non-owner responses omit the whole field rather than returning `null` or `{}`. Other-owner private, deleted and quarantined recipes keep the existing 404 non-disclosure boundary.
+- `edit_context.draft` has exact top-level keys `{title,description,base_servings,ingredients,steps}`. Each ingredient is exactly `{ingredient_id,amount,unit,ingredient_type,display_text,component_label,scalable,food_product_id,food_product_nutrition_version_id}` in `sort_order ASC, id ASC`; each step is exactly `{step_number,instruction,cooking_method_id,cooking_method_ids,ingredients_used,component_label,heat_level,duration_seconds,duration_text}` in `step_number ASC, id ASC`, and each `ingredients_used[]` item is exactly `{ingredient_id,amount,unit,cut_size}`. Nullable scalars, including `description`, nullable ingredient/step scalars and `image_object_id`, are explicit `null`; `ingredients`, `steps`, `cooking_method_ids` and `ingredients_used` are always arrays in authoritative order. `image_object_id` is a verified managed object identity or explicit `null`; presentation fields, generated child IDs and URL-derived image identity are excluded, and no URL is promoted to managed identity.
+- `GET /meals.data.items[].revision` is a positive integer for Recipe Meal items in the existing owner/date/column scope only. `product_entries[]` remains unchanged. Client revisions are stale-detection hints; the start RPC remains final authority.
+- One server-only loader reads `personal_recipe_v2` and `snapshot_v2_creation` together. Only both exact-active selects `snapshot_v2`; off, missing, unknown or read error selects `legacy_v1` fail-closed. The raw capability name/value/revision has zero exposure through public JSON, browser props, HTML, query parameters, env mirrors, caches or telemetry.
+- Existing endpoints, request fields, wrappers, HTTP statuses and public errors remain unchanged. R/R+1 page entrypoints stay `legacy_v1` with new personal/v2 creation zero; direct seeded/existing v2 read/cancel drain remains available. Activation is forbidden before #8 R/R+1 evidence and R+2 joint approval.
 
 ## Authority and Transaction Contract
 
@@ -219,7 +228,7 @@ snapshot_v2 read:
 
 ## Design Status
 
-`temporary`. Stage 1 locks official states and evidence requirements only. Implementation screenshots/Figma, independent design critique and product-design-authority approval are pending.
+`pending-review` and still temporary. Draft PR #1281 exact head `6cfcb30787c8cdebeacf9e1651bfdadfe5d8a866` contains Stage 4 implementation/screenshots and critique evidence, but it still requires the newly approved entrypoint contract repair. No product-design-authority report exists; Stage 5, final authority and Stage 6 remain pending, so Design Status is not `confirmed`.
 
 ## Primary User Path
 
@@ -232,7 +241,7 @@ snapshot_v2 read:
 
 ### Stage 1 gate
 
-- this docs PR runs current SOT/workflow/workpack/automation/bookkeeping validators, focused workflow-doc Vitest, lint, typecheck, dependency audit and diff check only.
+- this docs re-lock PR runs current SOT/workflow/workpack/automation/bookkeeping validators, the #7 entrypoint contract-sync regression, focused workflow-doc Vitest, lint, typecheck, dependency audit and diff check only.
 - PostgreSQL, Route/RPC, component, E2E, visual/a11y, real DB, server-production/local-rehearsal inventory, seeded-drain and activation commands below are future implementation/integration artifacts and are not claimed executable now.
 
 ### Future fixtures
@@ -269,7 +278,7 @@ The Stage 2 `automation-spec.json` external smoke gate contains only exact curre
 
 ## Delivery Checklist
 
-Stage 2 implementer evidence is retained at [`evidence/2026-08-03-stage2-backend-implementation.md`](./evidence/2026-08-03-stage2-backend-implementation.md). It records actual RED→GREEN, disposable PostgreSQL fresh/replay, repository verification and role-separated auxiliary reviews without claiming formal Stage 3, current-head CI, Manual Only evidence or capability activation.
+Stage 2 implementer evidence is retained at [`evidence/2026-08-03-stage2-backend-implementation.md`](./evidence/2026-08-03-stage2-backend-implementation.md), and Stage 2/3 PR #1278 is merged as `ef5903b131a2eb9e505b2121b4e390970c565b95`. Draft Stage 4 PR #1281 exact head `6cfcb30787c8cdebeacf9e1651bfdadfe5d8a866` has implementation evidence but remains incomplete until the approved entrypoint read/projection contract is repaired and independently reviewed. This re-lock does not claim Stage 4 completion, Stage 5, authority, Stage 6, Manual/server-Mac evidence or activation.
 
 - [x] preview uses the PATCH canonicalizer and stores an owner/generation/session-bound opaque token hash <!-- omo:id=delivery-future-preview;stage=2;scope=backend;review=3,6 -->
 - [x] target-set hash includes exact Meal revisions and active claim/session tuples <!-- omo:id=delivery-future-target-hash;stage=2;scope=backend;review=3,6 -->

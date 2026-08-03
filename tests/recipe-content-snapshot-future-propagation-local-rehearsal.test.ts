@@ -60,7 +60,7 @@ describe("recipe content snapshot future propagation local rehearsal verifier co
     expect(requiredChecks).not.toContain(
       "scripts/verify-recipe-content-snapshot-future-propagation-local-first.mjs",
     );
-    expect(statusItem.pr_path).toBe("https://github.com/netsus/homecook/pull/1278");
+    expect(statusItem.pr_path).toBe("https://github.com/netsus/homecook/pull/1281");
     expect(unrelatedItem.pr_path).toBe("pending");
   });
 

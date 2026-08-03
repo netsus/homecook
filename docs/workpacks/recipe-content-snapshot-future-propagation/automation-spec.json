@@ -5,6 +5,8 @@
   "merge_policy": "manual",
   "backend": {
     "required_endpoints": [
+      "GET /recipes/{id} additive revision and exact owner-only edit_context read contract",
+      "GET /meals additive Recipe Meal items revision with product_entries unchanged",
       "POST /recipes/{id}/future-plan-impact official owner-scoped no-mutation preview",
       "PATCH /recipes/{id} official full-draft impact-token replace_all-or-keep transaction",
       "DELETE /recipes/{id} existing owner-private soft-delete moved through common recipe-lock RPC",
@@ -15,6 +17,27 @@
       "existing future Meal and shopping writers converted to single-RPC common lock authority"
     ],
     "invariants": [
+      "all-200-recipe-detail-responses-include-positive-revision",
+      "owner-private-current-only-edit-context-base-recipe-revision-draft-image-object-id",
+      "edit-context-base-recipe-revision-equals-same-response-data-revision",
+      "recipe-revision-and-edit-context-read-from-one-detail-snapshot-never-combined-across-queries",
+      "unauthorized-public-non-owner-edit-context-field-omitted-not-null-or-empty",
+      "edit-context-draft-exact-title-description-base-servings-ingredients-steps",
+      "ingredient-draft-exact-ingredient-id-amount-unit-ingredient-type-display-text-component-label-scalable-food-product-id-food-product-nutrition-version-id",
+      "step-draft-exact-step-number-instruction-cooking-method-id-cooking-method-ids-ingredients-used-component-label-heat-level-duration-seconds-duration-text",
+      "ingredients-used-item-exact-ingredient-id-amount-unit-cut-size",
+      "nullable-scalars-explicit-null-and-list-fields-always-arrays",
+      "edit-context-arrays-authoritative-order-cooking-method-ids-and-ingredients-used-included",
+      "managed-image-object-id-or-null-never-derived-from-url",
+      "image-object-id-verified-managed-object-identity-or-null-never-url-derived",
+      "meal-items-revision-recipe-meal-only-product-entries-unchanged",
+      "server-only-joint-personal-recipe-v2-and-snapshot-v2-creation-projection",
+      "both-capabilities-exact-active-select-snapshot-v2-otherwise-legacy-v1-fail-closed",
+      "raw-capability-public-json-browser-prop-html-query-env-cache-telemetry-exposure-zero",
+      "existing-endpoints-request-wrapper-status-and-public-error-contract-unchanged",
+      "r-r1-entrypoint-creation-off-legacy-v1-new-personal-v2-write-zero",
+      "seeded-existing-v2-read-cancel-drain-remains-available",
+      "no-activation-before-slice8-r-r1-evidence-and-r2-joint-approval",
       "preview-and-patch-use-the-same-canonical-draft-normalizer",
       "preview-token-opaque-random-and-server-hash-only",
       "preview-bound-to-owner-generation-exact-session-recipe-base-revision-content-hash-target-revisions-claims-sessions-expiry",
@@ -50,7 +73,7 @@
       "v2-reader-immutable-session-content-only-no-mutable-current-recipe-fallback",
       "v2-cancel-owner-in-progress-only-and-claim-release-same-transaction",
       "cancel-replay-stored-result-no-session-reopen-or-cross-claim-release",
-      "approved-api-v1.2.34-five-success-data-shapes",
+      "approved-api-v1.2.35-additive-read-and-preserved-five-success-data-shapes",
       "cook-mode-exact-pantry-row-product-version-candidate-shape",
       "legacy-v1-and-snapshot-v2-explicit-version-predicates-namespaces-parsers-and-readers",
       "cross-version-id-official-404-or-409-no-shape-inference",
@@ -63,18 +86,21 @@
       "no-unmerged-server-production-migration-production-write-or-capability-change"
     ],
     "verify_commands": [
+      "pnpm exec vitest run tests/recipe-content-snapshot-entrypoint-contract-sync.test.ts tests/recipe-content-snapshot-future-propagation-local-rehearsal.test.ts",
       "pnpm exec vitest run tests/recipe-content-snapshot-future-propagation.test.ts tests/recipe-future-impact-security.test.ts tests/snapshot-v2-session-attempts.test.ts tests/recipe-shopping-reconciliation.test.ts",
       "pnpm test:recipe-content-snapshot-future-propagation:postgres",
       "pnpm verify:backend",
       "pnpm test:e2e:regression:ci --grep recipe-content-snapshot-future-propagation",
       "pnpm validate:source-of-truth-sync",
       "pnpm validate:workflow-v2",
-      "BRANCH_NAME=docs/recipe-content-snapshot-future-propagation pnpm validate:workpack -- --slice recipe-content-snapshot-future-propagation",
+      "BRANCH_NAME=docs/recipe-content-snapshot-entrypoint-relock pnpm validate:workpack -- --slice recipe-content-snapshot-future-propagation",
       "node scripts/validate-automation-spec.mjs --slice recipe-content-snapshot-future-propagation",
       "pnpm validate:omo-bookkeeping",
       "git diff --check"
     ],
     "required_test_targets": [
+      "tests/recipe-content-snapshot-entrypoint-contract-sync.test.ts",
+      "tests/recipe-content-snapshot-future-propagation-local-rehearsal.test.ts",
       "tests/recipe-content-snapshot-future-propagation.test.ts",
       "tests/recipe-future-impact-security.test.ts",
       "tests/snapshot-v2-session-attempts.test.ts",
@@ -99,6 +125,9 @@
       "COOK_MODE legacy_v1 and snapshot_v2 explicit contract dispatch"
     ],
     "required_states": [
+      "owner-private-edit-context-full-draft-present",
+      "public-non-owner-edit-context-omitted",
+      "joint-capability-server-projection-legacy-fail-closed",
       "impact-preview-loading-actions-disabled",
       "impact-preview-empty-zero-count",
       "impact-preview-summary-incomplete-completed-shopping-and-active-claim",
@@ -128,6 +157,8 @@
       "mobile-narrow"
     ],
     "artifact_assertions": [
+      "recipe-detail-revision-owner-only-edit-context-null-array-omit-contract",
+      "recipe-meal-only-revision-and-server-only-joint-capability-projection",
       "official-impact-summary-and-two-strategy-only",
       "loading-empty-error-read-only-and-unauthorized-fail-closed",
       "active-claim-disabled-reason-and-latest-preview-recheck-focus",
@@ -183,6 +214,15 @@
     "claude-invoked-for-any-stage",
     "official-doc-or-approved-plan-conflict",
     "plan-sha-or-line-count-drift",
+    "recipe-detail-revision-or-owner-edit-context-entrypoint-missing",
+    "recipe-detail-revision-and-edit-context-combined-from-different-read-snapshots",
+    "edit-context-null-array-omit-or-exact-draft-shape-violated",
+    "ingredients-used-item-missing-cut-size-or-containing-unofficial-key",
+    "image-object-id-inferred-from-thumbnail-signed-external-or-legacy-url",
+    "meal-revision-added-to-product-entry-or-omitted-from-recipe-meal",
+    "joint-capability-projection-not-server-only-or-not-fail-closed",
+    "raw-capability-exposed-to-public-browser-html-query-env-cache-or-telemetry",
+    "r-r1-creation-enabled-or-activation-before-slice8-evidence-and-r2-approval",
     "runtime-predecessor-4-6-or-cook-mode-whole-board-not-merged-green-before-implementation",
     "preview-and-patch-canonicalizers-diverge",
     "token-client-readable-forgeable-or-not-bound-to-owner-generation-session-target-claims",
@@ -214,5 +254,5 @@
     "backend": 6,
     "frontend": 4
   },
-  "notes": "This is the Stage 2 backend DB/security/concurrency automation lock. The workflow-v2 work item preserves the full-lifecycle merged-exact-SHA and Stage 4 visual/a11y/design smoke list for later relock and closeout. Stage 1 PR #1081 and runtime predecessors #1218/#1274/#711 are merged. Stage 2 RED commit 608c826c records focused and PostgreSQL failures before production implementation. User-approved API v1.2.34 locks recipe PATCH/DELETE and snapshot-v2 start/read/cancel exact success data, including immutable cook-mode content and exact pantry row/product-version candidates. #7 dark-ships impact integration plus v2 start/cancel/read and explicit dispatch; #8 owns exact-pantry completion and the R/R+1 gate before R+2 joint activation."
+  "notes": "Fresh Stage 1 re-lock after Contract Evolution PR #1282 reviewed contract head 4341732d282f9acebf8d3e6a6550b67128e8f2b0 and merge 7e316e8721e96762c17e3d196811416ce6f93823. The active tuple is requirements v1.7.29, screens v1.5.33, flow v1.3.31, DB v1.3.31, API v1.2.35. Stage 2/3 PR #1278 reviewed exact head 9eb1ebd8ea5a12294a76d7f2799693f03654b0a4 and merged as ef5903b131a2eb9e505b2121b4e390970c565b95. Draft Stage 4 PR #1281 head 6cfcb30787c8cdebeacf9e1651bfdadfe5d8a866 has implementation evidence but stage4-draft-entrypoint-repair-required. design-status-pending-review-temporary-no-authority-report; stage5-authority-stage6-pending; manual-server-mac-activation-pending. #7 dark-ships impact integration plus v2 start/cancel/read and explicit dispatch; #8 owns exact-pantry completion and the R/R+1 gate before R+2 joint activation."
 }

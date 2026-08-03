@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-08-02T00:00:00Z",
+  "updated_at": "2026-08-03T18:12:39Z",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -2491,17 +2491,18 @@
     {
       "id": "recipe-content-snapshot-future-propagation",
       "preset": "vertical-slice-strict",
-      "branch": "feature/be-recipe-content-snapshot-future-propagation",
-      "pr_path": "https://github.com/netsus/homecook/pull/1278",
+      "branch": "feature/fe-recipe-content-snapshot-future-propagation",
+      "pr_path": "https://github.com/netsus/homecook/pull/1281",
       "lifecycle": "in_progress",
-      "approval_state": "dual_approved",
+      "approval_state": "needs_revision",
       "verification_status": "pending",
       "required_checks": [
         "pnpm validate:source-of-truth-sync",
         "pnpm validate:workflow-v2",
-        "BRANCH_NAME=docs/recipe-content-snapshot-future-propagation pnpm validate:workpack -- --slice recipe-content-snapshot-future-propagation",
+        "BRANCH_NAME=docs/recipe-content-snapshot-entrypoint-relock pnpm validate:workpack -- --slice recipe-content-snapshot-future-propagation",
         "node scripts/validate-automation-spec.mjs --slice recipe-content-snapshot-future-propagation",
         "pnpm validate:omo-bookkeeping",
+        "pnpm exec vitest run tests/recipe-content-snapshot-entrypoint-contract-sync.test.ts tests/recipe-content-snapshot-future-propagation-local-rehearsal.test.ts",
         "pnpm exec vitest run tests/recipe-content-snapshot-future-propagation.test.ts tests/recipe-future-impact-security.test.ts tests/snapshot-v2-session-attempts.test.ts tests/recipe-shopping-reconciliation.test.ts",
         "pnpm test:recipe-content-snapshot-future-propagation:postgres",
         "pnpm exec vitest run tests/recipe-future-impact-dialog.test.tsx tests/cooking-session-version-dispatch.test.tsx tests/cooking-start-navigation.test.tsx",
@@ -2518,7 +2519,7 @@
         "node scripts/verify-recipe-content-snapshot-future-propagation-local-rehearsal.mjs",
         "git diff --check"
       ],
-      "notes": "Stage 1 PR #1081 merged after separate Codex internal1.5, security/DB, five-axis and design reviews approved with zero required findings. Runtime predecessors are satisfied by #4 PR #1218, #6 PR #1274 merge 05683e4d and cook-mode-whole-board PR #711 merge 2f8569cb. Rewritten conventional RED commit 0e5f89aa records focused 4-file/13-test and PostgreSQL missing-migration failures. Stage 2 local GREEN is retained in docs/workpacks/recipe-content-snapshot-future-propagation/evidence/2026-08-03-stage2-backend-implementation.md: locked 40/40, PostgreSQL fresh/replay #7 10/10 each with predecessor/inventory green, verify:backend product 2606 pass plus security Playwright 12/12 and full Vitest 5154 pass. Full-diff review repairs lock the scoped future client to preview POST and recipe PATCH/DELETE, point verification at the existing local-rehearsal CLI, and attach PR #1278 only to this slice. Fresh final code/security/verifier review, current-head CI and separate-task formal Stage 3 remain pending, so lifecycle/verification stay in_progress/pending. Personal writes and v2 creation stay dark; #8 owns exact-pantry completion and R/R+1 before R+2 activation. Design Status remains temporary.",
+      "notes": "Stage 1 PR #1081 and runtime predecessors #1218/#1274/#711 are merged. Stage 2/3 PR #1278 was independently reviewed at exact head 9eb1ebd8ea5a12294a76d7f2799693f03654b0a4 with required findings 0/0/0 and merged as ef5903b131a2eb9e505b2121b4e390970c565b95. Contract Evolution PR #1282 reviewed head 4341732d282f9acebf8d3e6a6550b67128e8f2b0 with blocker/major/minor 0/0/0 and merged as 7e316e8721e96762c17e3d196811416ce6f93823, establishing requirements v1.7.29, screens v1.5.33, flow v1.3.31, DB v1.3.31 and API v1.2.35. Draft Stage 4 PR #1281 exact head 6cfcb30787c8cdebeacf9e1651bfdadfe5d8a866 contains implementation evidence but stage4-draft-entrypoint-repair-required. design-status-pending-review-temporary-no-authority-report; stage5-authority-stage6-pending; manual-server-mac-activation-pending. Lifecycle/verification remain in_progress/pending with needs_revision. Personal writes and v2 creation remain dark; seeded/existing v2 read/cancel drains, and #8 R/R+1 evidence plus R+2 joint approval remains the activation gate.",
       "evaluation_status": "not_started",
       "evaluation_round": 0,
       "last_evaluator_result": null,
