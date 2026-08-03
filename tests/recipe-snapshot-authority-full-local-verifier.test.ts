@@ -295,7 +295,7 @@ describe("recipe snapshot authority full-local verifier", () => {
     expect(plan.sql).toContain("pg_policies");
     expect(plan.sql).toContain("pg_catalog.aclexplode");
     expect(plan.sql).toContain("pg_catalog.pg_auth_members");
-    expect(plan.sql).toContain("membership.set_option");
+    expect(plan.sql).toContain("membership_catalog_support.has_set_option");
     expect(plan.sql).toContain("role.rolbypassrls");
     expect(plan.sql).toContain("relation.relrowsecurity");
     expect(plan.sql).toContain("unexpected_function_overload_count");
@@ -320,6 +320,24 @@ describe("recipe snapshot authority full-local verifier", () => {
         mode: "post-merge-read-only",
       }),
     ).toThrow(/unsupported recipe snapshot authority full-local verification mode/i);
+  });
+
+  it("keeps the full-local membership inventory compatible with PG15 catalogs", () => {
+    const plan = buildRecipeSnapshotAuthorityFullLocalVerificationPlan({
+      mode: "post-merge-full-local-read-only",
+    });
+
+    expect(plan.sql).toContain("'pg_catalog.pg_auth_members'::regclass");
+    expect(plan.sql).toContain("attname = 'inherit_option'");
+    expect(plan.sql).toContain("attname = 'set_option'");
+    expect(plan.sql).toContain("membership_catalog_support.has_inherit_option");
+    expect(plan.sql).toContain("membership_catalog_support.has_set_option");
+    expect(plan.sql).toContain("pg_catalog.to_jsonb(membership) ->> 'inherit_option'");
+    expect(plan.sql).toContain("pg_catalog.to_jsonb(membership) ->> 'set_option'");
+    expect(plan.sql).toContain("member_role.rolinherit");
+    expect(plan.sql).toContain("else true");
+    expect(plan.sql).not.toContain("membership.inherit_option");
+    expect(plan.sql).not.toContain("membership.set_option");
   });
 
   it("propagates personal and future inventory opts into the full-local plan when the env requests them", async () => {

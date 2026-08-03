@@ -78,6 +78,14 @@ Command: `pnpm test:recipe-content-snapshot-future-propagation:postgres`
 - GREEN: the verifier now applies `HOMECOOK_PERSONAL_RECIPE_SECURITY_FUNCTIONS=1` symmetrically to inventory build and assertion. Focused verifier tests passed `2 files / 35 tests`; the composite PostgreSQL fresh/replay runner passed #7 `10/10` and active full-local inventory `30 pass / 16 intended skip` in each cycle.
 - Independent code and security reviews of this two-file runtime/test repair approved with P0/P1/P2 `0/0/0`. The change widens only the read-only fail-closed inventory under an existing explicit opt-in; loopback, credential filtering and production/staging/remote write boundaries are unchanged.
 
+## PostgreSQL 15 catalog compatibility repair
+
+- Other-Mac isolated local smoke at exact head `ace8d98674265190ebc0f026223f2c3b555e1a5b` stopped before the behavioral matrix because the central full-local inventory directly referenced PostgreSQL 16+ `pg_auth_members.inherit_option` and `set_option`; production/staging/remote application writes remained `0/0/0`.
+- Local PostgreSQL `15.18` reproduced the RED exactly: both catalog columns were absent and the direct select failed with `column membership.inherit_option does not exist`.
+- The inventory now detects the catalog shape without directly referencing absent columns. PostgreSQL 16+ reads the per-membership options through `to_jsonb`; PostgreSQL 15 maps its equivalent semantics to the member role's `rolinherit` value and membership `SET ROLE=true`. The expected `admin=false, inherit=false, set=true` contract remains unchanged.
+- The generated full-local inventory SQL executed successfully against the disposable PostgreSQL 15 fixture. Focused verifier tests passed `21/21`; the composite fresh/replay runner again passed predecessor `15 pass / 1 intended skip` then `16/16`, #7 `10/10` twice, and full-local inventory `30 pass / 16 intended skip` twice.
+- Fresh `pnpm verify:backend` passed lint, typecheck, product tests `205 files / 2,591 pass / 139 intended skip`, production build and security Playwright `12/12`; full Vitest passed `499 files / 5,127 tests` with `28 files / 318 tests` intentionally skipped. Source/workflow/workpack/automation/bookkeeping/closeout/branch validators, audit (high/critical `0`, one pre-existing low) and `git diff --check` also passed. The failed other-Mac behavioral matrix is not retroactively claimed green and must rerun on the repaired exact head.
+
 ## Explicit pending gates
 
 - Draft PR #1278 exact implementation head `4eec972ee3e18e3040fbf4c70d056b0fdd86d6fe` had all started GitHub checks terminal green or intended skip before this evidence-only correction.

@@ -646,14 +646,42 @@ function buildSecurityInventoryExpression({
     ) as (
       values
       ${membershipValues}
+    ), membership_catalog_support as (
+      select
+        exists (
+          select 1
+          from pg_catalog.pg_attribute
+          where attrelid = 'pg_catalog.pg_auth_members'::regclass
+            and attname = 'inherit_option'
+            and not attisdropped
+        ) as has_inherit_option,
+        exists (
+          select 1
+          from pg_catalog.pg_attribute
+          where attrelid = 'pg_catalog.pg_auth_members'::regclass
+            and attname = 'set_option'
+            and not attisdropped
+        ) as has_set_option
     ), role_membership_inventory as (
       select
         granted_role.rolname as granted_role_name,
         member_role.rolname as member_name,
         membership.admin_option,
-        membership.inherit_option,
-        membership.set_option
+        -- PostgreSQL 15 stores inheritance on the member role and always
+        -- permits SET ROLE for memberships. PostgreSQL 16+ stores both as
+        -- per-membership options in pg_auth_members.
+        case
+          when membership_catalog_support.has_inherit_option
+            then (pg_catalog.to_jsonb(membership) ->> 'inherit_option')::boolean
+          else member_role.rolinherit
+        end as inherit_option,
+        case
+          when membership_catalog_support.has_set_option
+            then (pg_catalog.to_jsonb(membership) ->> 'set_option')::boolean
+          else true
+        end as set_option
       from pg_catalog.pg_auth_members as membership
+      cross join membership_catalog_support
       join pg_catalog.pg_roles as granted_role
         on granted_role.oid = membership.roleid
       join pg_catalog.pg_roles as member_role
