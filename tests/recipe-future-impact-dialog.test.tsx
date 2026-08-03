@@ -3,6 +3,8 @@
 import React from "react";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { RecipeFutureImpactDialog } from "@/components/recipe/recipe-future-impact-dialog";
@@ -48,5 +50,12 @@ describe("recipe future impact dialog", () => {
     rerender(<RecipeFutureImpactDialog errorCode="RECIPE_IMPACT_STALE" impact={impact} onClose={vi.fn()} onRecheck={vi.fn()} onSave={vi.fn()} />);
     expect(screen.getByRole("dialog")).toBeTruthy();
     expect(document.activeElement).toBe(screen.getByRole("button", { name: "최신 영향 다시 확인" }));
+  });
+
+  it("keeps the visible dialog title outside the shell-only header suppression selector", () => {
+    render(<RecipeFutureImpactDialog impact={impact} onClose={vi.fn()} onRecheck={vi.fn()} onSave={vi.fn()} />);
+    expect(screen.getByRole("heading", { name: "미래 계획 반영 확인" })).toBeTruthy();
+    const source = readFileSync(join(process.cwd(), "components/recipe/recipe-future-impact-dialog.tsx"), "utf8");
+    expect(source).not.toContain("<header");
   });
 });

@@ -1,6 +1,8 @@
 // @vitest-environment jsdom
 
 import React from "react";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -38,5 +40,14 @@ describe("cooking start navigation", () => {
     expect((await screen.findByRole("alert")).textContent).toContain("시작하지 못했어요");
     expect(screen.getByRole("button", { name: "다시 시도" })).toBeTruthy();
     expect(navigate).not.toHaveBeenCalled();
+  });
+
+  it("keeps real recipe and planner start consumers behind the dormant snapshot boundary", () => {
+    const recipeSource = readFileSync(join(process.cwd(), "components/recipe/recipe-detail-screen.tsx"), "utf8");
+    const plannerSource = readFileSync(join(process.cwd(), "components/planner/meal-screen.tsx"), "utf8");
+    expect(recipeSource).toContain("createSnapshotV2CookingSession");
+    expect(plannerSource).toContain("createSnapshotV2CookingSession");
+    expect(recipeSource).toContain("snapshotV2StartContext");
+    expect(plannerSource).toContain("snapshotV2StartContext");
   });
 });

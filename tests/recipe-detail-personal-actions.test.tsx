@@ -109,5 +109,7 @@ describe("recipe detail personal actions", () => {
     expect(source).toContain("<RecipeDetailPersonalActions");
     expect(source).toContain("capabilityEnabled={false}");
     expect(source).toContain('accessState="unknown"');
+    expect(source).toContain("<RecipeFutureImpactSaveFlow");
+    expect(source).toContain("createSnapshotV2CookingSession");
   });
 });
