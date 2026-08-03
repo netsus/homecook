@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { spawn, spawnSync, type ChildProcessWithoutNullStreams } from "node:child_process";
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
@@ -33,6 +34,7 @@ const hiddenOwner = "91000000-0000-4000-8000-000000000003";
 const hiddenIdentityEpoch = "2026-08-02T00:05:00Z";
 const hiddenSessionKeyHash = "8b".repeat(32);
 const hiddenSessionIssuedAt = "2026-08-02T00:35:00Z";
+const racePublicIdentityEpoch = "2026-08-02T00:06:00Z";
 const localIssuer = "https://auth.homecook.test/auth/v1";
 const cutoverAttempt = "91000000-0000-4000-8000-000000000002";
 const genericIngredient = "92000000-0000-4000-8000-000000000001";
@@ -296,6 +298,108 @@ function shoppingConcurrencyPayload(mealIds: string[]) {
   };
 }
 
+function createPublicStandaloneRaceFixture(label: string) {
+  const sourceOwner = randomUUID();
+  const recipeIdForRace = randomUUID();
+  const nutritionSnapshotId = randomUUID();
+  const contentSnapshotId = randomUUID();
+  const contentJson = simpleDraft(
+    `경쟁 공개 원본 ${label}`,
+    secondGenericIngredient,
+    `경쟁 공개 재료 ${label} 100g`,
+  );
+
+  psql(`
+    begin;
+    select public.set_account_generation_internal_writer_marker(
+      '${cutoverAttempt}',
+      true
+    );
+    insert into auth.users (id, created_at, email)
+    values ('${sourceOwner}', '${racePublicIdentityEpoch}', '${sourceOwner}@example.invalid');
+    insert into public.users (id, nickname, social_provider, social_id)
+    values ('${sourceOwner}', 'race-public-${label}', 'test', 'race-public-${label}');
+    insert into public.user_account_generation_watermarks (owner_uuid, last_account_generation)
+    values ('${sourceOwner}', 1);
+    insert into public.user_account_lifecycles (
+      owner_uuid, account_generation, auth_identity_created_at_snapshot,
+      origin, status, activated_at
+    ) values (
+      '${sourceOwner}',
+      1,
+      '${racePublicIdentityEpoch}',
+      'runtime',
+      'active',
+      now()
+    );
+    insert into public.recipes (
+      id, title, base_servings, created_by, visibility, deleted_at, revision, updated_at
+    ) values (
+      '${recipeIdForRace}',
+      '경쟁 공개 원본 ${label}',
+      2,
+      '${sourceOwner}',
+      'public',
+      null,
+      1,
+      '2026-08-02T01:07:00Z'
+    );
+    insert into public.recipe_nutrition_snapshots (
+      id, recipe_id, owner_user_id, base_servings, input_hash,
+      calculation_version, scalable_values_json, fixed_values_json,
+      nutrient_status_json, calculation_status, calculation_quality,
+      reflected_ingredient_count, target_ingredient_count, missing_reasons,
+      warnings_json, sources_json, is_current, calculated_at
+    ) values (
+      '${nutritionSnapshotId}',
+      '${recipeIdForRace}',
+      null,
+      2,
+      repeat('b', 64),
+      'personal-recipe-v2',
+      '{}'::jsonb,
+      '{}'::jsonb,
+      '{}'::jsonb,
+      'unavailable',
+      null,
+      0,
+      1,
+      array['PREDECESSOR_NOT_APPROVED:${secondGenericIngredient}'],
+      '[]'::jsonb,
+      '[]'::jsonb,
+      true,
+      '2026-08-02T01:07:00Z'
+    );
+    insert into public.recipe_content_snapshots (
+      id, owner_user_id, recipe_id, recipe_nutrition_snapshot_id,
+      title, base_servings, ingredients_json, steps_json,
+      content_hash, schema_version, created_at
+    ) values (
+      '${contentSnapshotId}',
+      null,
+      '${recipeIdForRace}',
+      '${nutritionSnapshotId}',
+      '경쟁 공개 원본 ${label}',
+      2,
+      ('${contentJson}'::jsonb -> 'ingredients'),
+      ('${contentJson}'::jsonb -> 'steps'),
+      repeat('c', 64),
+      1,
+      '2026-08-02T01:07:00Z'
+    );
+    select public.set_account_generation_internal_writer_marker(
+      '${cutoverAttempt}',
+      false
+    );
+    commit;
+  `);
+
+  return {
+    recipeId: recipeIdForRace,
+    sourceOwner,
+  };
+}
+
 function expectSqlFailure(sql: string, pattern: RegExp) {
   const result = psqlResult(sql);
   expect(result.status).not.toBe(0);
@@ -505,11 +609,21 @@ function standaloneStartSql(options: {
   recipeRevision: number;
   key: string;
   cookingServings: number;
+  barrier?: string;
+  barrierDelaySeconds?: number;
 }) {
+  const barrierSql = options.barrier
+    ? `select pg_advisory_xact_lock_shared(hashtextextended('${options.barrier}', 0));\n${
+      options.barrierDelaySeconds
+        ? `select pg_sleep(${options.barrierDelaySeconds});\n`
+        : ""
+    }`
+    : "";
   return `
     begin;
     set local request.jwt.claim.role = 'service_role';
     set local homecook.snapshot_v2_creation = 'on';
+    ${barrierSql}
     select public.start_snapshot_v2_cooking_session(
       ${authArgs()},
       '${options.key}'::uuid,
@@ -520,6 +634,50 @@ function standaloneStartSql(options: {
       ${options.recipeRevision},
       ${options.cookingServings}::numeric,
       '2026-08-02T02:10:00Z'::timestamptz
+    );
+    commit;
+  `;
+}
+
+function sourceOwnerTransitionSql(options: {
+  ownerUuid: string;
+  identityEpoch: string;
+  barrier: string;
+  barrierDelaySeconds?: number;
+  status: "deleting" | "quarantined";
+}) {
+  return `
+    begin;
+    set local request.jwt.claim.role = 'service_role';
+    select pg_advisory_xact_lock_shared(hashtextextended('${options.barrier}', 0));
+    ${options.barrierDelaySeconds
+      ? `select pg_sleep(${options.barrierDelaySeconds});`
+      : ""}
+    select public.set_account_generation_internal_writer_marker(
+      '${cutoverAttempt}',
+      true
+    );
+    insert into public.user_account_lifecycles (
+      owner_uuid,
+      account_generation,
+      auth_identity_created_at_snapshot,
+      origin,
+      status,
+      activated_at
+    ) values (
+      '${options.ownerUuid}',
+      2,
+      '${options.identityEpoch}',
+      'runtime',
+      '${options.status}',
+      now()
+    );
+    update public.user_account_generation_watermarks
+    set last_account_generation = 2
+    where owner_uuid = '${options.ownerUuid}';
+    select public.set_account_generation_internal_writer_marker(
+      '${cutoverAttempt}',
+      false
     );
     commit;
   `;
@@ -1444,6 +1602,141 @@ describeIf("recipe content snapshot future propagation PostgreSQL", () => {
     );
   });
 
+  it.each(["deleting", "quarantined"] as const)(
+    "serializes transition-first standalone public start against source-owner %s transition",
+    async (nextStatus) => {
+      const fixture = createPublicStandaloneRaceFixture(`transition-first-${nextStatus}`);
+      const recipeRevision = Number(
+        psql(`select revision::text from public.recipes where id = '${fixture.recipeId}';`),
+      );
+      const barrier = `homecook-public-standalone-transition-first-${nextStatus}`;
+      const key = `96000000-0000-4000-8000-00000000008${nextStatus === "deleting" ? "0" : "1"}`;
+      const keyHash = psql(`
+        select encode(extensions.digest(convert_to('${key}', 'UTF8'), 'sha256'), 'hex');
+      `);
+      const control = spawnPsql(
+        `select pg_advisory_lock(hashtextextended('${barrier}', 0)); select pg_sleep(1); select pg_advisory_unlock(hashtextextended('${barrier}', 0));`,
+      );
+      const controlExit = waitForExit(control);
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      const start = spawnPsql(
+        standaloneStartSql({
+          recipeId: fixture.recipeId,
+          recipeRevision,
+          key,
+          cookingServings: 2,
+          barrier,
+          barrierDelaySeconds: 0.2,
+        }),
+      );
+      const transition = spawnPsql(
+        sourceOwnerTransitionSql({
+          ownerUuid: fixture.sourceOwner,
+          identityEpoch: racePublicIdentityEpoch,
+          barrier,
+          status: nextStatus,
+        }),
+      );
+
+      const [startResult, transitionResult] = await Promise.all([
+        waitForExit(start),
+        waitForExit(transition),
+      ]);
+      await controlExit;
+
+      expect(transitionResult.status, transitionResult.stderr).toBe(0);
+      expect(startResult.status).not.toBe(0);
+      expect(startResult.stderr).toContain("RESOURCE_NOT_FOUND");
+      expect(
+        psql(`select count(*)::text from public.cooking_sessions where recipe_id = '${fixture.recipeId}' and contract_version = 'snapshot_v2';`),
+      ).toBe("0");
+      expect(
+        psql(`
+          select count(*)::text
+          from public.cooking_session_meal_claims as claim
+          join public.cooking_sessions as session on session.id = claim.session_id
+          where session.recipe_id = '${fixture.recipeId}';
+        `),
+      ).toBe("0");
+      expect(
+        psql(`
+          select count(*)::text
+          from public.mutation_idempotency_keys
+          where operation_scope = 'snapshot_v2_start'
+            and key_hash = '${keyHash}';
+        `),
+      ).toBe("0");
+    },
+  );
+
+  it.each(["deleting", "quarantined"] as const)(
+    "fails closed on durable read when source-owner %s transition races after standalone public start",
+    async (nextStatus) => {
+      const fixture = createPublicStandaloneRaceFixture(`start-first-${nextStatus}`);
+      const recipeRevision = Number(
+        psql(`select revision::text from public.recipes where id = '${fixture.recipeId}';`),
+      );
+      const barrier = `homecook-public-standalone-start-first-${nextStatus}`;
+      const key = `96000000-0000-4000-8000-00000000009${nextStatus === "deleting" ? "0" : "1"}`;
+      const control = spawnPsql(
+        `select pg_advisory_lock(hashtextextended('${barrier}', 0)); select pg_sleep(1); select pg_advisory_unlock(hashtextextended('${barrier}', 0));`,
+      );
+      const controlExit = waitForExit(control);
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      const start = spawnPsql(
+        standaloneStartSql({
+          recipeId: fixture.recipeId,
+          recipeRevision,
+          key,
+          cookingServings: 2,
+          barrier,
+        }),
+      );
+      const transition = spawnPsql(
+        sourceOwnerTransitionSql({
+          ownerUuid: fixture.sourceOwner,
+          identityEpoch: racePublicIdentityEpoch,
+          barrier,
+          barrierDelaySeconds: 0.2,
+          status: nextStatus,
+        }),
+      );
+
+      const [startResult, transitionResult] = await Promise.all([
+        waitForExit(start),
+        waitForExit(transition),
+      ]);
+      await controlExit;
+
+      expect(transitionResult.status, transitionResult.stderr).toBe(0);
+      if (startResult.status === 0) {
+        const startPayload = extractPsqlJson(startResult.stdout) as {
+          data?: { session_id?: string };
+        };
+        const sessionId = startPayload.data?.session_id;
+        expect(typeof sessionId).toBe("string");
+        const readResult = psqlResult(readSql(sessionId!));
+        expect(readResult.status).not.toBe(0);
+        expect(readResult.stderr).toContain("RESOURCE_NOT_FOUND");
+      } else {
+        expect(startResult.stderr).toContain("RESOURCE_NOT_FOUND");
+        expect(
+          psql(`select count(*)::text from public.cooking_sessions where recipe_id = '${fixture.recipeId}' and contract_version = 'snapshot_v2';`),
+        ).toBe("0");
+      }
+      expect(
+        psql(`
+          select count(*)::text
+          from public.cooking_session_meal_claims as claim
+          join public.cooking_sessions as session on session.id = claim.session_id
+          where session.recipe_id = '${fixture.recipeId}';
+        `),
+      ).toBe("0");
+    },
+  );
+
   it("returns RECIPE_IMPACT_STALE for description-only drift and leaves the post-preview state unchanged", () => {
     const revision = Number(
       psql(`select revision::text from public.recipes where id = '${secondRecipeId}';`),
@@ -1589,5 +1882,54 @@ describeIf("recipe content snapshot future propagation PostgreSQL", () => {
     expect(rightResult.status, rightResult.stderr).toBe(0);
     expect(leftPayload?.error_code ?? null, JSON.stringify(leftPayload)).toBe(null);
     expect(rightPayload?.error_code ?? null, JSON.stringify(rightPayload)).toBe(null);
+    expect(
+      psql(`
+        select count(*)::text
+        from public.shopping_lists
+        where title in ('멀티 레시피 A', '멀티 레시피 B');
+      `),
+    ).toBe("2");
+    expect(
+      psql(`
+        select count(*)::text
+        from public.meals
+        where id in ('${multiRecipeMealA}','${multiRecipeMealB}','${multiRecipeMealC}','${multiRecipeMealD}')
+          and shopping_list_id is not null;
+      `),
+    ).toBe("4");
+    expect(
+      psql(`
+        select count(*)::text
+        from public.shopping_list_recipes as row
+        join public.shopping_lists as list on list.id = row.shopping_list_id
+        where list.title in ('멀티 레시피 A', '멀티 레시피 B');
+      `),
+    ).toBe("4");
+    expect(
+      psql(`
+        select count(*)::text
+        from public.shopping_lists as list
+        where list.title in ('멀티 레시피 A', '멀티 레시피 B')
+          and not exists (
+            select 1 from public.meals as meal where meal.shopping_list_id = list.id
+          );
+      `),
+    ).toBe("0");
+    expect(
+      psql(`
+        with duplicated as (
+          select
+            item.shopping_list_id,
+            coalesce(item.ingredient_id::text, 'product:' || item.food_product_id::text || ':' || item.food_product_nutrition_version_id::text) as identity_key,
+            count(*)::integer as duplicate_count
+          from public.shopping_list_items as item
+          join public.shopping_lists as list on list.id = item.shopping_list_id
+          where list.title in ('멀티 레시피 A', '멀티 레시피 B')
+          group by item.shopping_list_id, identity_key
+          having count(*) > 1
+        )
+        select count(*)::text from duplicated;
+      `),
+    ).toBe("0");
   });
 });
