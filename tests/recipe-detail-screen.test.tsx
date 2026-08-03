@@ -442,6 +442,7 @@ describe("recipe detail screen", () => {
     />);
     await userEvent.click(await screen.findByRole("button", { name: "편집" }));
     const title = screen.getByRole("textbox", { name: "레시피 제목" });
+    await waitFor(() => expect(document.activeElement).toBe(title));
     await userEvent.clear(title);
     await userEvent.type(title, "내 매콤 김치찌개");
     await userEvent.click(screen.getByRole("button", { name: "변경사항 저장" }));
@@ -476,6 +477,58 @@ describe("recipe detail screen", () => {
     const previewDraft = fetchRecipeFutureImpact.mock.calls[0]?.[2];
     const patchDraft = patchRecipeWithFutureStrategy.mock.calls[0]?.[1]?.draft;
     expect(JSON.stringify(patchDraft)).toBe(JSON.stringify(previewDraft));
+  });
+
+  it.each([
+    {
+      label: "unauthenticated owner response",
+      initialAuthenticated: false,
+      recipeSnapshotUiMode: "snapshot_v2" as const,
+      includeEditContext: true,
+    },
+    {
+      label: "legacy projection",
+      initialAuthenticated: true,
+      recipeSnapshotUiMode: "legacy_v1" as const,
+      includeEditContext: true,
+    },
+    {
+      label: "non-owner snapshot response",
+      initialAuthenticated: true,
+      recipeSnapshotUiMode: "snapshot_v2" as const,
+      includeEditContext: false,
+    },
+  ])("does not expose the personal editor for $label", async ({
+    includeEditContext,
+    initialAuthenticated,
+    recipeSnapshotUiMode,
+  }) => {
+    const ownerEditContext = {
+      base_recipe_revision: 12,
+      draft: {
+        title: "내 김치찌개",
+        description: null,
+        base_servings: 2,
+        ingredients: [],
+        steps: [],
+      },
+      image_object_id: null,
+    } satisfies NonNullable<RecipeDetail["edit_context"]>;
+    fetchJson.mockResolvedValue(buildRecipeDetail({
+      edit_context: includeEditContext ? ownerEditContext : undefined,
+    }));
+
+    render(
+      <RecipeDetailScreen
+        initialAuthenticated={initialAuthenticated}
+        recipeId={MOCK_RECIPE_DETAIL.id}
+        recipeSnapshotUiMode={recipeSnapshotUiMode}
+      />,
+    );
+
+    await screen.findByRole("heading", { level: 1, name: MOCK_RECIPE_DETAIL.title });
+    expect(screen.queryByRole("button", { name: "편집" })).toBeNull();
+    expect(screen.queryByTestId("recipe-detail-personal-editor")).toBeNull();
   });
 
   it("keeps the selected servings after a nutrition-only retry succeeds", async () => {

@@ -20,6 +20,17 @@ async function capture(page: Page, width: 390 | 320, name: string) {
   expect(overflow).toBe(false);
 }
 
+async function openImpactFromEditedOwnerRecipe(page: Page, title: string) {
+  await page.getByRole("button", { name: "편집" }).click();
+  const titleInput = page.getByRole("textbox", { name: "레시피 제목" });
+  await expect(titleInput).toBeFocused();
+  await titleInput.fill(title);
+  const save = page.getByRole("button", { name: "변경사항 저장" });
+  await expect(save).toBeEnabled();
+  await save.click();
+  return save;
+}
+
 test.describe("recipe-content-snapshot-future-propagation", () => {
   test.beforeEach(async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== "desktop-chrome", "This spec sets the exact 390px/320px evidence viewports itself.");
@@ -27,11 +38,11 @@ test.describe("recipe-content-snapshot-future-propagation", () => {
   });
 
   test("captures impact dialog at 390px and 320px", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
     await installRecipeDetailRoutes(page);
     await page.route("**/api/v1/recipes/*/future-plan-impact", async (route) => route.fulfill({ json: { success: true, data: { impact_token: "qa-impact-token", expires_at: "2026-08-04T01:00:00.000Z", proposed_content_hash: "a".repeat(64), future_meal_count: 3, date_range: { from: "2026-08-04", to: "2026-08-10" }, incomplete_shopping_list_count: 2, completed_shopping_list_count: 1, active_cooking_claim_count: 1, replace_all_allowed: false }, error: null } }));
     await page.goto(`${RECIPE_PATH}?qaFutureImpact=1`);
-    const opener = page.getByRole("button", { name: "변경사항 저장" });
-    await opener.click();
+    const opener = await openImpactFromEditedOwnerRecipe(page, "내 매콤 김치찌개");
     await expect(page.getByRole("dialog", { name: "미래 계획 반영 확인" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "미래 계획 반영 확인" })).toBeVisible();
     await capture(page, 390, "RECIPE_DETAIL-impact-mobile-default.png");
@@ -52,6 +63,7 @@ test.describe("recipe-content-snapshot-future-propagation", () => {
   });
 
   test("keeps stale saves open and moves focus to the exact recheck action", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
     await installRecipeDetailRoutes(page);
     await page.route("**/api/v1/recipes/*/future-plan-impact", async (route) => route.fulfill({ json: { success: true, data: { impact_token: "qa-impact-token", expires_at: "2026-08-04T01:00:00.000Z", proposed_content_hash: "a".repeat(64), future_meal_count: 1, date_range: { from: "2026-08-04", to: "2026-08-04" }, incomplete_shopping_list_count: 1, completed_shopping_list_count: 1, active_cooking_claim_count: 0, replace_all_allowed: true }, error: null } }));
     await page.route("**/api/v1/recipes/*", async (route) => {
@@ -59,7 +71,7 @@ test.describe("recipe-content-snapshot-future-propagation", () => {
       await route.fulfill({ status: 409, json: { success: false, data: null, error: { code: "RECIPE_IMPACT_STALE", message: "최신 영향을 확인해 주세요.", fields: [] } } });
     });
     await page.goto(`${RECIPE_PATH}?qaFutureImpact=1`);
-    await page.getByRole("button", { name: "변경사항 저장" }).click();
+    await openImpactFromEditedOwnerRecipe(page, "내 매콤 김치찌개");
     await page.getByRole("radio", { name: /기존 계획 유지/ }).click();
     await page.getByRole("button", { name: "저장" }).click();
     const recheck = page.getByRole("button", { name: "최신 영향 다시 확인" });
