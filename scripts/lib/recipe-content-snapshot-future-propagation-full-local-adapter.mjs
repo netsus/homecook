@@ -400,9 +400,17 @@ async function createLocalAuthCaller(runtime, label) {
       method: "POST",
     },
   );
+  const liveUser = await httpsJsonRequest(runtime, "/auth/v1/user", {
+    headers: {
+      apikey: runtime.secrets.publishable_key,
+      authorization: `Bearer ${session.access_token}`,
+    },
+  });
   if (
     !UUID.test(user?.id ?? "")
     || typeof user?.created_at !== "string"
+    || liveUser?.id !== user.id
+    || typeof liveUser?.created_at !== "string"
     || typeof session?.access_token !== "string"
     || typeof session?.refresh_token !== "string"
   ) {
@@ -411,6 +419,9 @@ async function createLocalAuthCaller(runtime, label) {
   const claims = parseJwtClaims(session.access_token);
   if (claims.sub !== user.id || claims.iss !== runtime.plan.loopback.issuer) {
     throw new Error("isolated Auth caller issuer/owner binding is invalid");
+  }
+  if (liveUser.created_at !== user.created_at) {
+    throw new Error("isolated Auth identity epoch serialization is inconsistent");
   }
   return { claims, session, user };
 }

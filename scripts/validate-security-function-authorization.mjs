@@ -63,6 +63,10 @@ const ADDITIVE_SOURCES = [
             REPO_ROOT,
             "supabase/migrations/20260803091000_full_local_optional_nbf_authority.sql",
           ),
+          path.join(
+            REPO_ROOT,
+            "supabase/migrations/20260803092000_recipe_future_internal_scope.sql",
+          ),
         ],
   },
   {

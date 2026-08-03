@@ -23,6 +23,7 @@ const formatBootstrapErrorMessage = vi.fn((error: unknown, fallbackMessage: stri
 });
 
 vi.mock("@/lib/supabase/server", () => ({
+  createRecipeFuturePropagationInternalClient: createServiceRoleClient,
   createRemoteCompatibilityServiceRoleClient: createServiceRoleClient,
   createRouteHandlerClient: async (...args: unknown[]) => {
     const routeClient = await createRouteHandlerClient(...args);

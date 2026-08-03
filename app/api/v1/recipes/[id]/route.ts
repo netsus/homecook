@@ -47,9 +47,9 @@ import {
 } from "@/lib/server/recipe-content-snapshot-future-propagation";
 import { formatBootstrapErrorMessage } from "@/lib/server/user-bootstrap";
 import {
+  createRecipeFuturePropagationInternalClient,
   createRemoteCompatibilityServiceRoleClient,
   createRouteHandlerClient,
-  createServiceRoleClient,
 } from "@/lib/supabase/server";
 import type { RecipeDetail, RecipePhoto, RecipePhotoRole, RecipeUserStatus } from "@/types/recipe";
 
@@ -498,7 +498,7 @@ async function readRecipeMutationAuthority(
     };
   }
 
-  const serviceClient = createServiceRoleClient();
+  const serviceClient = createRecipeFuturePropagationInternalClient();
   if (!serviceClient) {
     return {
       ok: false as const,

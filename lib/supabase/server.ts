@@ -392,6 +392,7 @@ type LocalInternalScope =
   | "auth-refresh"
   | "not-found-feedback"
   | "operational-event"
+  | "recipe-future-propagation"
   | "recipe-image"
   | "request-authority"
   | "session-logout"
@@ -444,6 +445,24 @@ function createRequestAuthorityInternalClient(
  */
 export function createServiceRoleClient() {
   return createDataServiceRoleClient();
+}
+
+const RECIPE_FUTURE_PROPAGATION_READ_TABLES = new Set([
+  "ingredient_conversion_assignments",
+  "ingredient_nutrition_profiles",
+]);
+
+export function createRecipeFuturePropagationInternalClient() {
+  const client = createScopedDataServiceRoleClient(
+    "recipe-future-propagation",
+  );
+  if (!client) {
+    return null;
+  }
+  return {
+    from: exactInternalFrom(client, RECIPE_FUTURE_PROPAGATION_READ_TABLES),
+    rpc: client.rpc.bind(client),
+  };
 }
 
 export function createAuthCallbackInternalDataClient() {

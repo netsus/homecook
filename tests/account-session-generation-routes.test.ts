@@ -17,6 +17,7 @@ const recordOperationalEvent = vi.fn(async () => true);
 
 vi.mock("@/lib/supabase/server", () => ({
   createAccountLifecycleInternalRpcClient: createServiceRoleClient,
+  createRecipeFuturePropagationInternalClient: createServiceRoleClient,
   createRemoteCompatibilityServiceRoleClient: createServiceRoleClient,
   createRouteHandlerClient,
   createServiceRoleClient,

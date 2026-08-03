@@ -575,6 +575,15 @@ run("full-local Auth isolated PostgreSQL foundation", () => {
       select 'ok';
     `)).toBe("ok");
 
+    expect(psql(`
+      set request.jwt.claims = '{"role":"service_role"}';
+      set request.method = 'POST';
+      set request.path = '/rpc/preview_recipe_future_plan_impact';
+      set request.headers = '{"x-homecook-internal-scope":"recipe-future-propagation"}';
+      select private.verify_hybrid_request_authority();
+      select 'ok';
+    `)).toBe("ok");
+
     const broadInternalRequest = psqlResult(`
       set request.jwt.claims = '{"role":"service_role"}';
       set request.method = 'GET';

@@ -13,6 +13,13 @@ const optionalNbfMigration = readFileSync(
   ),
   "utf8",
 );
+const recipeFutureInternalScopeMigration = readFileSync(
+  new URL(
+    "../supabase/migrations/20260803092000_recipe_future_internal_scope.sql",
+    import.meta.url,
+  ),
+  "utf8",
+);
 const authorizationManifest = readFileSync(
   new URL(
     "../docs/security/account-session-generation-security-function-authorization-manifest.json",
@@ -63,9 +70,25 @@ describe("full-local request authority migration", () => {
     }
   });
 
+  it("allowlists only the recipe future RPCs and nutrition predecessor reads", () => {
+    expect(recipeFutureInternalScopeMigration).toContain(
+      "v_scope = 'recipe-future-propagation'",
+    );
+    for (const path of [
+      "/rpc/preview_recipe_future_plan_impact",
+      "/rpc/write_recipe_future_plan_change",
+      "/rpc/write_personal_recipe_core",
+      "/ingredient_nutrition_profiles",
+      "/ingredient_conversion_assignments",
+    ]) {
+      expect(recipeFutureInternalScopeMigration).toContain(path);
+    }
+  });
+
   it("classifies every full-local pre-request helper as internal-only", () => {
     expect(authorizationManifest).toContain("20260801151000_full_local_request_authority.sql");
     expect(authorizationManifest).toContain("20260803091000_full_local_optional_nbf_authority.sql");
+    expect(authorizationManifest).toContain("20260803092000_recipe_future_internal_scope.sql");
     expect(authorizationManifest).toContain("private.verify_hybrid_request_authority_remote_legacy()");
     expect(authorizationManifest).toContain("private.verify_full_local_internal_scope()");
     expect(authorizationManifest).toContain("private.verify_full_local_anonymous_authority()");

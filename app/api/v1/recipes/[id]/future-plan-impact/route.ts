@@ -10,8 +10,8 @@ import {
   type FuturePropagationRpcClient,
 } from "@/lib/server/recipe-content-snapshot-future-propagation";
 import {
+  createRecipeFuturePropagationInternalClient,
   createRouteHandlerClient,
-  createServiceRoleClient,
 } from "@/lib/supabase/server";
 
 interface RouteContext {
@@ -60,7 +60,7 @@ export async function POST(request: Request, context: RouteContext) {
     return fail("ACCOUNT_SESSION_STALE", "세션을 다시 확인해 주세요.", 409);
   }
 
-  const serviceClient = createServiceRoleClient();
+  const serviceClient = createRecipeFuturePropagationInternalClient();
   if (!serviceClient) {
     return fail("INTERNAL_ERROR", "레시피 변경 영향을 확인하지 못했어요.", 500);
   }

@@ -10,6 +10,7 @@ const readVerifiedAccountGenerationSession = vi.fn();
 
 vi.mock("@/lib/supabase/server", () => ({
   createAccountLifecycleInternalRpcClient: createServiceRoleClient,
+  createRecipeFuturePropagationInternalClient: createServiceRoleClient,
   createRemoteCompatibilityServiceRoleClient: createServiceRoleClient,
   createRouteHandlerClient,
   createServiceRoleClient,
