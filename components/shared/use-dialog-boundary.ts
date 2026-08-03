@@ -56,6 +56,11 @@ export function useDialogBoundary({
 
     const initialTarget = initialFocusRef?.current ?? focusableElements(dialog)[0] ?? dialog;
     initialTarget.focus();
+    const focusGuardFrame = requestAnimationFrame(() => {
+      if (!dialog.isConnected || dialog.contains(document.activeElement)) return;
+      const target = initialFocusRef?.current ?? focusableElements(dialog)[0] ?? dialog;
+      target.focus();
+    });
     document.body.style.overflow = "hidden";
 
     let branch: HTMLElement = dialog;
@@ -103,17 +108,10 @@ export function useDialogBoundary({
       }
     };
 
-    const handleFocusIn = (event: FocusEvent) => {
-      if (event.target instanceof Node && dialog.contains(event.target)) return;
-      const target = initialFocusRef?.current ?? focusableElements(dialog)[0] ?? dialog;
-      if (document.activeElement !== target) target.focus();
-    };
-
     document.addEventListener("keydown", handleKeyDown, true);
-    document.addEventListener("focusin", handleFocusIn, true);
     return () => {
+      cancelAnimationFrame(focusGuardFrame);
       document.removeEventListener("keydown", handleKeyDown, true);
-      document.removeEventListener("focusin", handleFocusIn, true);
       document.body.style.overflow = previousOverflow;
       for (const { element, inert, ariaHidden } of isolated.reverse()) {
         element.inert = inert;
