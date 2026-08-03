@@ -200,7 +200,10 @@ export function createSessionLivenessBinding({
     hmac_key_version: keyVersion,
     issuer,
     owner_uuid: ownerUuid,
-    identity_created_at: normalizedIdentityCreatedAt,
+    // Keep the exact provider/DB epoch. JavaScript Date canonicalization loses
+    // PostgreSQL microseconds, while the HMAC above intentionally canonicalizes
+    // the same instant for stable cross-runtime hashing.
+    identity_created_at: identityCreatedAt,
     remote_verified_at: normalizedVerifiedAt,
     binding_expires_at: expiresAt,
     binding_state: "active" as const,

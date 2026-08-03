@@ -1,3 +1,5 @@
+import { createHmac } from "node:crypto";
+
 import { describe, expect, it } from "vitest";
 
 import {
@@ -55,6 +57,31 @@ describe("hybrid identity epoch and session-liveness authority", () => {
     expect(binding.session_key_hash).toMatch(/^[a-f0-9]{64}$/);
     expect(JSON.stringify(binding)).not.toContain(SESSION_UUID);
     expect(binding.binding_expires_at).toBe("2026-07-30T00:03:00.000Z");
+  });
+
+  it("preserves the exact identity epoch while hashing its canonical instant", () => {
+    const exactIdentityEpoch = "2026-07-30T00:00:00.123456Z";
+    const binding = createSessionLivenessBinding({
+      secret: SECRET,
+      keyVersion: 1,
+      issuer: ISSUER,
+      ownerUuid: OWNER_UUID,
+      sessionId: SESSION_UUID,
+      identityCreatedAt: exactIdentityEpoch,
+      remoteVerifiedAt: "2026-07-30T00:01:00.000Z",
+      ttlSeconds: 120,
+    });
+
+    expect(binding.identity_created_at).toBe(exactIdentityEpoch);
+    expect(binding.session_key_hash).toBe(createHmac("sha256", SECRET)
+      .update([
+        "v1",
+        ISSUER,
+        OWNER_UUID,
+        "2026-07-30T00:00:00.123Z",
+        SESSION_UUID,
+      ].join("\n"))
+      .digest("hex"));
   });
 
   it("binds the attestation to method, path, owner, epoch and a short TTL", () => {
