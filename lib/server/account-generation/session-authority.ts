@@ -14,7 +14,7 @@ const UUID_PATTERN
   = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 type AllowlistedJwtAlg = (typeof ALLOWLISTED_SESSION_JWT_ALGS)[number];
 
-const NUMBER_KEYS = ["iat", "nbf", "exp"] as const;
+const NUMBER_KEYS = ["iat", "exp"] as const;
 
 interface JwtClaims {
   iss?: unknown;
@@ -127,6 +127,7 @@ export function hasRemoteAuthSessionClaimMatch(
   const header = decodeJwtHeader(accessToken);
   const headerAlg = header?.alg;
   const sessionId = claimsRecord?.session_id;
+  const notBefore = claimsRecord?.nbf ?? claimsRecord?.iat;
   const nowSeconds = Math.floor(Date.now() / 1_000);
   if (
     !Number.isInteger(nowSeconds)
@@ -144,11 +145,13 @@ export function hasRemoteAuthSessionClaimMatch(
     || !NUMBER_KEYS.every(
       (key) => Number.isSafeInteger(claimsRecord?.[key] as number | undefined),
     )
+    || !Number.isSafeInteger(notBefore as number | undefined)
     || Number(claimsRecord.iat) <= 0
-    || Number(claimsRecord.nbf) - 30 > nowSeconds
+    || Number(notBefore) - 30 > nowSeconds
     || Number(claimsRecord.exp) <= nowSeconds
     || Number(claimsRecord.iat) > nowSeconds + 60
     || Number(claimsRecord.iat) >= Number(claimsRecord.exp)
+    || Number(notBefore) >= Number(claimsRecord.exp)
   ) {
     return false;
   }

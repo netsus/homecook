@@ -36,6 +36,7 @@ export function validateRemoteJwtClaims({
   | { ok: true; claims: ValidatedRemoteJwtClaims }
   | { ok: false; reason: string } {
   const sessionId = claims.session_id;
+  const notBefore = claims.nbf === undefined ? claims.iat : claims.nbf;
   if (claims.iss !== expectedIssuer) {
     return { ok: false, reason: "issuer" };
   }
@@ -58,8 +59,8 @@ export function validateRemoteJwtClaims({
     return { ok: false, reason: "issued_at" };
   }
   if (
-    !isSafePositiveInteger(claims.nbf)
-    || claims.nbf > nowSeconds + clockSkewSeconds
+    !isSafePositiveInteger(notBefore)
+    || notBefore > nowSeconds + clockSkewSeconds
   ) {
     return { ok: false, reason: "not_before" };
   }
@@ -67,7 +68,7 @@ export function validateRemoteJwtClaims({
     !isSafePositiveInteger(claims.exp)
     || claims.exp <= nowSeconds
     || claims.iat >= claims.exp
-    || claims.nbf >= claims.exp
+    || notBefore >= claims.exp
   ) {
     return { ok: false, reason: "expiry" };
   }
@@ -79,7 +80,7 @@ export function validateRemoteJwtClaims({
       ownerUuid: claims.sub,
       sessionId,
       issuedAt: claims.iat,
-      notBefore: claims.nbf,
+      notBefore,
       expiresAt: claims.exp,
     },
   };
