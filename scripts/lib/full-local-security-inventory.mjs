@@ -25,6 +25,10 @@ const FULL_LOCAL_MIGRATION_PATH = join(
   REPOSITORY_ROOT,
   "supabase/migrations/20260801120000_full_local_auth_db_foundation.sql",
 );
+const FULL_LOCAL_SESSION_ISSUE_TIME_PRECISION_MIGRATION_PATH = join(
+  REPOSITORY_ROOT,
+  "supabase/migrations/20260803090000_full_local_session_issue_time_precision.sql",
+);
 const SNAPSHOT_MIGRATION_PATH = join(
   REPOSITORY_ROOT,
   "supabase/migrations/20260729170500_recipe_snapshot_authority_foundation.sql",
@@ -65,6 +69,10 @@ const recipeFuturePropagationManifest = JSON.parse(
   readFileSync(RECIPE_FUTURE_PROPAGATION_MANIFEST_PATH, "utf8"),
 );
 const fullLocalMigration = readFileSync(FULL_LOCAL_MIGRATION_PATH, "utf8");
+const fullLocalSessionIssueTimePrecisionMigration = readFileSync(
+  FULL_LOCAL_SESSION_ISSUE_TIME_PRECISION_MIGRATION_PATH,
+  "utf8",
+);
 const snapshotMigration = readFileSync(SNAPSHOT_MIGRATION_PATH, "utf8");
 const personalRecipeMigration = readFileSync(
   PERSONAL_RECIPE_MIGRATION_PATH,
@@ -487,9 +495,16 @@ function parseFunction(entry, migration) {
   };
 }
 
-const FUNCTION_CONTRACT = manifest.functions.map((entry) =>
-  parseFunction(entry, fullLocalMigration)
-);
+const FULL_LOCAL_SESSION_PRECISION_FUNCTIONS = new Set([
+  "public.record_full_local_session_authority(text, uuid, timestamp with time zone, text, integer, bigint, timestamp with time zone, timestamp with time zone, timestamp with time zone, timestamp with time zone)",
+  "public.assert_full_local_session_authority(text, uuid, timestamp with time zone, text, integer, bigint, timestamp with time zone)",
+]);
+const FUNCTION_CONTRACT = manifest.functions.map((entry) => parseFunction(
+  entry,
+  FULL_LOCAL_SESSION_PRECISION_FUNCTIONS.has(entry.signature)
+    ? fullLocalSessionIssueTimePrecisionMigration
+    : fullLocalMigration,
+));
 const SNAPSHOT_FUNCTION_CONTRACT = snapshotManifest.functions.map((entry) =>
   parseFunction(
     entry,

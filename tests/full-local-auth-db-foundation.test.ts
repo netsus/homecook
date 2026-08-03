@@ -10,6 +10,8 @@ import {
 
 const MIGRATION_PATH =
   "supabase/migrations/20260801120000_full_local_auth_db_foundation.sql";
+const SESSION_ISSUE_TIME_PRECISION_MIGRATION_PATH =
+  "supabase/migrations/20260803090000_full_local_session_issue_time_precision.sql";
 const SECURITY_MANIFEST_PATH =
   "docs/security/full-local-auth-db-security-function-authorization-manifest.json";
 const SECRET = "0123456789abcdef0123456789abcdef";
@@ -356,6 +358,26 @@ describe("full-local Auth DB migration contract", () => {
     expect(migration).toContain("create trigger protect_full_local_session_binding_identity");
     expect(migration).toContain("create trigger revoke_full_local_bindings_on_lifecycle_exit");
     expect(migration).toContain("create trigger revoke_full_local_bindings_on_auth_identity_change");
+  });
+
+  it("accepts only the exact JWT second that contains the Auth identity epoch", async () => {
+    const migration = (await readFile(
+      SESSION_ISSUE_TIME_PRECISION_MIGRATION_PATH,
+      "utf8",
+    )).toLowerCase();
+
+    expect(migration.match(
+      /p_session_issued_at < date_trunc\('second', p_identity_created_at\)/gu,
+    )).toHaveLength(2);
+    expect(migration).not.toMatch(
+      /p_session_issued_at < p_identity_created_at(?:\s|then)/u,
+    );
+    expect(migration).toContain(
+      "v_auth_created_at is distinct from p_identity_created_at",
+    );
+    expect(migration).toContain(
+      "v_binding.session_issued_at is distinct from p_session_issued_at",
+    );
   });
 
   it("exposes service-only local bind, assert, and idempotent revoke RPCs", async () => {

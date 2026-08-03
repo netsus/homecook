@@ -27,10 +27,16 @@ const ADDITIVE_SOURCES = [
       REPO_ROOT,
       "docs/security/full-local-auth-db-security-function-authorization-manifest.json",
     ),
-    migrationPath: path.join(
-      REPO_ROOT,
-      "supabase/migrations/20260801120000_full_local_auth_db_foundation.sql",
-    ),
+    migrationPaths: [
+      path.join(
+        REPO_ROOT,
+        "supabase/migrations/20260801120000_full_local_auth_db_foundation.sql",
+      ),
+      path.join(
+        REPO_ROOT,
+        "supabase/migrations/20260803090000_full_local_session_issue_time_precision.sql",
+      ),
+    ],
   },
   {
     manifestPath: process.env.SECURITY_FUNCTION_ADDITIVE_MANIFEST_PATH

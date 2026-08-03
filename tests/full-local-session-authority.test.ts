@@ -65,6 +65,48 @@ describe("full-local session authority", () => {
       .digest("hex"));
   });
 
+  it("preserves the exact Auth identity epoch while hashing its canonical instant", async () => {
+    process.env.HOMECOOK_SESSION_GENERATION_HMAC_KEY_V2 = SECRET_V2;
+    const now = 1_785_580_000;
+    const exactIdentityEpoch = "2026-08-01T00:00:00.123456Z";
+    const client = {
+      rpc: vi.fn().mockResolvedValue({
+        data: {
+          authority: "local",
+          cutover_epoch: 7,
+          flows_open: true,
+          hmac_key_version: 2,
+          local_issuer: ISSUER,
+        },
+        error: null,
+      }),
+    };
+
+    const prepared = await prepareFullLocalSessionAuthority({
+      accessToken: jwt({
+        aud: "authenticated",
+        exp: now + 3_600,
+        iat: now - 10,
+        iss: ISSUER,
+        role: "authenticated",
+        session_id: SESSION_UUID,
+        sub: OWNER_UUID,
+      }),
+      client,
+      nowSeconds: () => now,
+      user: { id: OWNER_UUID, created_at: exactIdentityEpoch },
+    });
+
+    expect(prepared.ok).toBe(true);
+    if (!prepared.ok) return;
+    expect(prepared.accountBootstrap.authIdentityCreatedAt)
+      .toBe(exactIdentityEpoch);
+    expect(prepared.record.p_identity_created_at).toBe(exactIdentityEpoch);
+    expect(prepared.record.p_session_key_hash).toBe(createHmac("sha256", SECRET_V2)
+      .update(["v2", ISSUER, OWNER_UUID, "2026-08-01T00:00:00.123Z", SESSION_UUID].join("\n"))
+      .digest("hex"));
+  });
+
   it("fails closed when DB authority is not local", async () => {
     const client = {
       rpc: vi.fn().mockResolvedValue({

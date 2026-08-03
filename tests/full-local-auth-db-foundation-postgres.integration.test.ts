@@ -493,6 +493,78 @@ run("full-local Auth isolated PostgreSQL foundation", () => {
     `)).toBe("t:https://auth.mumeok.com/auth/v1:2");
   });
 
+  it("accepts only the JWT issuance second containing the exact Auth identity epoch", () => {
+    const fractionalOwner = "00000000-0000-4000-8000-000000000003";
+    expect(psql(`
+      with identity_epoch as (
+        select date_trunc('second', local_activated_at)
+          + interval '11.750 seconds' as created_at
+        from private.full_local_auth_control
+      ), inserted_auth as (
+        insert into auth.users (id, created_at)
+        select '${fractionalOwner}', created_at from identity_epoch
+        returning created_at
+      )
+      insert into public.user_account_lifecycles (
+        owner_uuid,
+        account_generation,
+        auth_identity_created_at_snapshot,
+        origin,
+        status,
+        activated_at
+      )
+      select '${fractionalOwner}', 1, created_at, 'runtime', 'active', created_at
+      from inserted_auth;
+      select count(*) from auth.users where id = '${fractionalOwner}';
+    `)).toBe("1");
+
+    expect(psql(`
+      ${serviceClaims}
+      with identity_epoch as (
+        select created_at
+        from auth.users
+        where id = '${fractionalOwner}'
+      )
+      select public.record_full_local_session_authority(
+        'https://auth.mumeok.com/auth/v1',
+        '${fractionalOwner}',
+        identity_epoch.created_at,
+        repeat('7', 64),
+        2,
+        2,
+        date_trunc('second', identity_epoch.created_at),
+        date_trunc('second', identity_epoch.created_at) + interval '1 second',
+        identity_epoch.created_at + interval '1 hour',
+        identity_epoch.created_at + interval '30 minutes'
+      ) ->> 'binding_state'
+      from identity_epoch;
+    `)).toBe("active");
+
+    const previousSecond = psqlResult(`
+      ${serviceClaims}
+      with identity_epoch as (
+        select created_at
+        from auth.users
+        where id = '${fractionalOwner}'
+      )
+      select public.record_full_local_session_authority(
+        'https://auth.mumeok.com/auth/v1',
+        '${fractionalOwner}',
+        identity_epoch.created_at,
+        repeat('8', 64),
+        2,
+        2,
+        date_trunc('second', identity_epoch.created_at) - interval '1 second',
+        identity_epoch.created_at + interval '1 second',
+        identity_epoch.created_at + interval '1 hour',
+        identity_epoch.created_at + interval '30 minutes'
+      )
+      from identity_epoch;
+    `);
+    expect(previousSecond.status).not.toBe(0);
+    expect(previousSecond.stderr).toContain("ACCOUNT_SESSION_STALE");
+  });
+
   it("allows only scoped internal RPCs and verifies the active local binding", () => {
     expect(psql(`
       set request.jwt.claims = '{"role":"service_role"}';
