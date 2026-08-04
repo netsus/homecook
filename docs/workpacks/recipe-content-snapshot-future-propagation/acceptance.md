@@ -1,6 +1,6 @@
 # Acceptance Checklist
 
-> This fresh Stage 1 re-lock follows Contract Evolution PR #1282 merge `7e316e8721e96762c17e3d196811416ce6f93823`. Draft Stage 4 PR #1281 implements the approved entrypoint, actual owner-edit and AUTH-M01/M02 repairs through code commit `8856184a`, but unchecked items do not claim fresh final authority, Stage 6, server-Mac/Manual evidence or R+2 activation.
+> This fresh Stage 1 re-lock follows Contract Evolution PR #1282 merge `7e316e8721e96762c17e3d196811416ce6f93823`. Draft Stage 4 PR #1281 exact implementation head `1096494ab3e246987efe2792e9379c1f7c2a3ed6` passed fresh final product-design-authority task `019fca76-eb5f-79a3-8d2a-a2f46a5591d3` with blocker/major/minor `0/0/0`; unchecked items still do not claim Stage 6, server-Mac/Manual evidence or R+2 activation.
 
 ## Entrypoint Read / Capability Projection
 
@@ -86,7 +86,7 @@
 - [x] v2 read error never falls back to mutable recipe or cross-version parser; terminal session is read-only <!-- omo:id=accept-future-cookmode-fail-closed;stage=4;scope=frontend;review=5,6 -->
 - [x] RECIPE_DETAIL and PLANNER_WEEK anchor plus COOK_MODE high-risk wireframes receive independent design critique before implementation <!-- omo:id=accept-future-design-critic;stage=4;scope=frontend;review=5,6 -->
 - [x] 390px/320px screenshots or Figma frames prove dialog/start/dispatch/loading/error/read-only states without overflow or keyboard/focus defects <!-- omo:id=accept-future-visual-evidence;stage=4;scope=frontend;review=5,6 -->
-- [ ] product-design-authority report has blocker/major findings zero before Design Status becomes confirmed <!-- omo:id=accept-future-design-authority;stage=4;scope=frontend;review=5,6 -->
+- [x] product-design-authority report has blocker/major findings zero before Design Status becomes confirmed <!-- omo:id=accept-future-design-authority;stage=4;scope=frontend;review=5,6 -->
 
 ## Successor / Release Boundary
 
@@ -115,8 +115,8 @@
 - [ ] independent internal1.5, security/DB, five-axis, Stage 3/6 and closeout reviews have zero unresolved backend findings <!-- omo:id=accept-future-independent-review;stage=2;scope=shared;review=3,6 -->
 - [ ] independent design, Stage 5/6 and closeout reviews have zero unresolved frontend findings <!-- omo:id=accept-future-independent-frontend-review;stage=4;scope=frontend;review=5,6 -->
 - [ ] current-head PR checks and post-merge QA/Policy/Security/Vercel are terminal green or intended skip <!-- omo:id=accept-future-ci;stage=2;scope=shared;review=3,6 -->
-- [ ] Draft Stage 4 PR #1281 implements the approved entrypoint, actual owner-edit and AUTH-M01/M02 repairs through code commit `8856184a` and awaits a new independent final authority review; implementation evidence alone does not complete the remaining review stages <!-- omo:id=accept-future-stage4-entrypoint-repair;stage=4;scope=shared;review=5,6 -->
-- [ ] Design Status remains pending-review/temporary until an authority report exists; Stage 5, final authority, Stage 6, Manual/server-Mac and activation remain pending <!-- omo:id=accept-future-honest-stage-state;stage=4;scope=shared;review=5,6 -->
+- [x] Draft Stage 4 PR #1281 exact implementation head `1096494ab3e246987efe2792e9379c1f7c2a3ed6` includes the approved entrypoint, actual owner-edit, AUTH-M01/M02 repairs and AUTH-M03 explicit modal semantics; fresh final authority approved `0/0/0` without completing Stage 6 <!-- omo:id=accept-future-stage4-entrypoint-repair;stage=4;scope=shared;review=5,6 -->
+- [x] Design Status is confirmed by `ui/designs/authority/recipe-content-snapshot-future-propagation-authority.md`; Stage 6, Manual/server-Mac/OAuth and activation remain pending <!-- omo:id=accept-future-honest-stage-state;stage=4;scope=shared;review=5,6 -->
 
 ## Manual QA
 
