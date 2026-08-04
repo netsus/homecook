@@ -277,6 +277,8 @@ creation flag rollback:
 
 ## Delivery Checklist
 
+Successor Stage 1 relock evidence is retained at [`evidence/2026-08-04-stage1-relock.md`](./evidence/2026-08-04-stage1-relock.md). It records the exact author task and precheck lineage, the old-head `3 blocker / 2 major` stop reason, the preserved #7 runtime-versus-lifecycle boundary, the pending dependency audit repair PR `#1284`, and the fact that fresh critic, 390px/320px product-design-authority, internal 1.5 and Stage 2 remain separate future gates.
+
 - [ ] v2 complete validates exact owner pantry rows against pinned product/effective ingredient authority <!-- omo:id=delivery-batch-complete-pantry;stage=2;scope=backend;review=3,6 -->
 - [ ] complete atomically applies pantry batch ledger session claim Meal cook-count and XP once <!-- omo:id=delivery-batch-complete-atomic;stage=2;scope=backend;review=3,6 -->
 - [ ] known/missing completion and delayed original finished weight obey official bounds <!-- omo:id=delivery-batch-weight;stage=2;scope=backend;review=3,6 -->
