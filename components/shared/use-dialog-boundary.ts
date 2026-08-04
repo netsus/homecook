@@ -56,6 +56,11 @@ export function useDialogBoundary({
 
     const initialTarget = initialFocusRef?.current ?? focusableElements(dialog)[0] ?? dialog;
     initialTarget.focus();
+    const focusGuardFrame = requestAnimationFrame(() => {
+      if (!dialog.isConnected || dialog.contains(document.activeElement)) return;
+      const target = initialFocusRef?.current ?? focusableElements(dialog)[0] ?? dialog;
+      target.focus();
+    });
     document.body.style.overflow = "hidden";
 
     let branch: HTMLElement = dialog;
@@ -105,6 +110,7 @@ export function useDialogBoundary({
 
     document.addEventListener("keydown", handleKeyDown, true);
     return () => {
+      cancelAnimationFrame(focusGuardFrame);
       document.removeEventListener("keydown", handleKeyDown, true);
       document.body.style.overflow = previousOverflow;
       for (const { element, inert, ariaHidden } of isolated.reverse()) {

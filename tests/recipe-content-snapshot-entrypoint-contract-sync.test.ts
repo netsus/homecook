@@ -23,6 +23,7 @@ describe("recipe snapshot entrypoint Stage 1 contract lock", () => {
   const acceptancePath = `docs/workpacks/${sliceId}/acceptance.md`;
   const automationPath = `docs/workpacks/${sliceId}/automation-spec.json`;
   const workItemPath = `.workflow-v2/work-items/${sliceId}.json`;
+  const authorityPath = `ui/designs/authority/${sliceId}-authority.md`;
 
   function statusItem() {
     const status = readJson(".workflow-v2/status.json");
@@ -210,6 +211,7 @@ describe("recipe snapshot entrypoint Stage 1 contract lock", () => {
   it("projects the honest current Stage state without claiming closeout", () => {
     const readme = read(readmePath);
     const roadmap = read("docs/workpacks/README.md");
+    const authority = read(authorityPath);
     const automation = automationContract();
     const workItemContractProjection = workItemContract();
     const workItemStatus = workItemContractProjection.workItem
@@ -235,17 +237,22 @@ describe("recipe snapshot entrypoint Stage 1 contract lock", () => {
     ]) {
       expect(notes).toContain("9eb1ebd8ea5a12294a76d7f2799693f03654b0a4");
       expect(notes).toContain("ef5903b131a2eb9e505b2121b4e390970c565b95");
-      expect(notes).toContain("6cfcb30787c8cdebeacf9e1651bfdadfe5d8a866");
-      expect(notes).toContain("stage4-draft-entrypoint-repair-required");
+      expect(notes).toContain("1096494ab3e246987efe2792e9379c1f7c2a3ed6");
+      expect(notes).toContain("019fca76-eb5f-79a3-8d2a-a2f46a5591d3");
       expect(notes).toContain(
-        "design-status-pending-review-temporary-no-authority-report",
+        "design-status-confirmed-final-authority-0-0-0",
       );
-      expect(notes).toContain("stage5-authority-stage6-pending");
+      expect(notes).toContain("stage6-pending");
       expect(notes).toContain("manual-server-mac-activation-pending");
     }
-    expect(readme).toContain("No product-design-authority report exists");
+    expect(readme).toContain("`confirmed`");
+    expect(readme).toContain(authorityPath);
+    expect(authority).toContain("verdict: `FINAL_AUTHORITY_APPROVED`");
+    expect(authority).toContain("blocker_count: `0`");
+    expect(authority).toContain("major_count: `0`");
+    expect(authority).toContain("Stage 6: `pending`");
     expect(roadmap).toMatch(
-      /recipe-content-snapshot-future-propagation[\s\S]*Draft Stage 4 PR #1281[\s\S]*entrypoint repair/,
+      /recipe-content-snapshot-future-propagation[\s\S]*Draft Stage 4 PR #1281[\s\S]*1096494a[\s\S]*Design Status[\s\S]*confirmed/,
     );
   });
 });

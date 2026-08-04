@@ -157,6 +157,7 @@ describe("prepared food planner presentation", () => {
           planned_servings: 2,
           status: "registered",
           is_leftover: false,
+          revision: 1,
         },
       ],
       [{ ...createEntry(), id: "same-id" }, { ...createEntry(), id: "same-id" }],

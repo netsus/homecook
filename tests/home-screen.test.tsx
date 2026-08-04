@@ -22,6 +22,7 @@ import { PENDING_ACTION_KEY } from "@/lib/auth/pending-action";
 import { E2E_AUTH_OVERRIDE_KEY } from "@/lib/auth/e2e-auth-override";
 import { formatCount } from "@/lib/recipe";
 import { useDiscoveryFilterStore } from "@/stores/discovery-filter-store";
+import { useAuthGateStore } from "@/stores/ui-store";
 import type { RecipeCardItem, RecipeThemesData } from "@/types/recipe";
 
 const fetchJson = vi.fn();
@@ -256,6 +257,7 @@ function ruleBody(selector: string) {
 describe("home screen", () => {
   beforeEach(() => {
     useDiscoveryFilterStore.setState({ appliedIngredientIds: [] });
+    useAuthGateStore.setState({ action: null, isOpen: false });
     fetchJson.mockReset();
     fetchJson.mockImplementation((input: string) => {
       if (input.startsWith("/api/v1/ingredients")) {
@@ -295,6 +297,7 @@ describe("home screen", () => {
     vi.unstubAllGlobals();
     vi.useRealTimers();
     useDiscoveryFilterStore.setState({ appliedIngredientIds: [] });
+    useAuthGateStore.setState({ action: null, isOpen: false });
     window.localStorage.removeItem(E2E_AUTH_OVERRIDE_KEY);
     window.history.replaceState({}, "", "/");
   });

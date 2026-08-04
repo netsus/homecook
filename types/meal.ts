@@ -10,6 +10,7 @@ export interface MealListItemData {
   planned_servings: number;
   status: MealStatus;
   is_leftover: boolean;
+  revision: number;
 }
 
 export interface MealListData {

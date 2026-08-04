@@ -164,6 +164,26 @@
       "owner": "postgres",
       "security_mode": "definer",
       "safe_search_path": ["pg_catalog", "public", "pg_temp"]
+    },
+    {
+      "signature": "public.read_recipe_snapshot_ui_mode()",
+      "control_class": "application-controlled",
+      "effect": "read-only",
+      "exposure": "service-internal",
+      "allowed_principals": ["service_role"],
+      "owner": "postgres",
+      "security_mode": "definer",
+      "safe_search_path": ["pg_catalog", "public", "pg_temp"]
+    },
+    {
+      "signature": "public.read_recipe_snapshot_entrypoint_context(uuid, timestamp with time zone, text, integer, timestamp with time zone, uuid)",
+      "control_class": "application-controlled",
+      "effect": "read-only",
+      "exposure": "service-internal",
+      "allowed_principals": ["service_role"],
+      "owner": "postgres",
+      "security_mode": "definer",
+      "safe_search_path": ["pg_catalog", "public", "private", "pg_temp"]
     }
   ]
 }

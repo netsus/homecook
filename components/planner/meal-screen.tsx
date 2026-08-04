@@ -38,7 +38,8 @@ import {
   WebSkeleton,
   WebTopNav,
 } from "@/components/web";
-import { createCookingSession, isCookingApiError } from "@/lib/api/cooking";
+import { createCookingSession, createSnapshotV2CookingSession, isCookingApiError } from "@/lib/api/cooking";
+import { getCookingSessionCookModeHref } from "@/lib/cooking/session-version-dispatch";
 import {
   deleteMeal,
   fetchMeals,
@@ -68,6 +69,7 @@ import {
   saveProductPlannerReturnContext,
 } from "@/lib/planner/product-planner-return-context";
 import type { MealListItemData } from "@/types/meal";
+import type { RecipeSnapshotUiMode } from "@/types/recipe";
 import type {
   MealProductPlannerEntryData,
   ProductPlannerEntryQuantity,
@@ -92,6 +94,7 @@ export interface MealScreenProps {
   columnId: string;
   slotName: string;
   initialAuthenticated: boolean;
+  recipeSnapshotUiMode?: RecipeSnapshotUiMode;
 }
 
 // Status data preserved for logic; visual badges removed per Wave1 port.
@@ -491,7 +494,7 @@ function MealCard({
             {canStartCook ? (
               <button
                 aria-label={`${meal.recipe_title} 요리하기`}
-                className="min-h-[38px] rounded-[var(--radius-control)] border border-[var(--brand)] bg-[var(--brand)] text-[14px] font-bold text-[var(--text-inverse)]"
+                className="min-h-11 rounded-[var(--radius-control)] border border-[var(--brand)] bg-[var(--brand)] text-[14px] font-bold text-[var(--text-inverse)]"
                 disabled={isPending}
                 onClick={onStartCook}
                 type="button"
@@ -849,6 +852,7 @@ function MealWebView({
   screenState,
   slotName,
   totalServings,
+  hasCookingStartPending,
 }: {
   addMealHref: string;
   authState: AuthState;
@@ -874,6 +878,7 @@ function MealWebView({
   screenState: ScreenState;
   slotName: string;
   totalServings: number;
+  hasCookingStartPending: boolean;
 }) {
   const isLoading = authState === "checking" || screenState === "loading";
   const breadcrumbCurrent = slotName
@@ -913,6 +918,10 @@ function MealWebView({
         </div>
 
         {nutritionSummary}
+
+        {hasCookingStartPending ? (
+          <p aria-live="polite" className="web-meal-conflict">요리 세션 생성 중…</p>
+        ) : null}
 
         {isLoading ? (
           <MealWebLoadingSkeleton planDate={planDate} slotName={slotName} />
@@ -1159,6 +1168,7 @@ export function MealScreen({
   columnId,
   slotName,
   initialAuthenticated,
+  recipeSnapshotUiMode = "legacy_v1",
 }: MealScreenProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -1188,6 +1198,7 @@ export function MealScreen({
   const restoredProductContextRef = useRef(false);
   const pendingProductEditIdsRef = useRef<Set<string>>(new Set());
   const pendingProductDeleteIdsRef = useRef<Set<string>>(new Set());
+  const pendingCookingMealIdsRef = useRef<Set<string>>(new Set());
   const productEditInputRef = useRef<HTMLInputElement>(null);
   const [mealAddSheetOpen, setMealAddSheetOpen] = useState(false);
   const [mealAddPickerMode, setMealAddPickerMode] =
@@ -1436,21 +1447,33 @@ export function MealScreen({
   }
 
   async function startMealCooking(meal: MealListItemData) {
-    if (meal.status !== "shopping_done") {
+    if (
+      meal.status !== "shopping_done"
+      || pendingCookingMealIdsRef.current.has(meal.id)
+    ) {
       return;
     }
 
+    pendingCookingMealIdsRef.current.add(meal.id);
     addPending(meal.id);
     clearConflictError(meal.id);
 
     try {
-      const session = await createCookingSession({
-        recipe_id: meal.recipe_id,
-        meal_ids: [meal.id],
-        cooking_servings: meal.planned_servings,
-      });
+      const session = recipeSnapshotUiMode === "snapshot_v2"
+        ? await createSnapshotV2CookingSession({
+            mode: "planner",
+            meal_ids: [meal.id],
+            expected_meal_revisions: {
+              [meal.id]: meal.revision,
+            },
+          })
+        : await createCookingSession({
+            recipe_id: meal.recipe_id,
+            meal_ids: [meal.id],
+            cooking_servings: meal.planned_servings,
+          });
       router.push(
-        buildReturnHref(`/cooking/sessions/${session.session_id}/cook-mode`, {
+        buildReturnHref(getCookingSessionCookModeHref({ session_id: session.session_id, contract_version: recipeSnapshotUiMode }), {
           returnTo: buildNextPath(planDate, columnId, slotName),
         }),
       );
@@ -1467,6 +1490,7 @@ export function MealScreen({
           : "요리 세션을 만들지 못했어요. 다시 시도해 주세요.",
       );
     } finally {
+      pendingCookingMealIdsRef.current.delete(meal.id);
       removePending(meal.id);
     }
   }
@@ -1883,6 +1907,7 @@ export function MealScreen({
             screenState={screenState}
             slotName={slotName}
             totalServings={totalServings}
+            hasCookingStartPending={pendingCookingMealIdsRef.current.size > 0}
           />
         </div>
       ) : null}
@@ -1905,6 +1930,12 @@ export function MealScreen({
           >
             <div className="space-y-3 p-4">
               {nutritionSummary}
+
+              {pendingCookingMealIdsRef.current.size > 0 ? (
+                <p aria-live="polite" className="rounded-[var(--radius-control)] bg-[var(--surface)] px-4 py-3 text-sm font-bold text-[var(--brand)]">
+                  요리 세션 생성 중…
+                </p>
+              ) : null}
 
               {/* Loading skeletons */}
               {isLoading ? <LoadingSkeleton /> : null}

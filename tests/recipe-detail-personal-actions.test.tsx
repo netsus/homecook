@@ -100,14 +100,17 @@ describe("recipe detail personal actions", () => {
     expect(screen.queryByRole("button")).toBeNull();
   });
 
-  it("wires the action component into RECIPE_DETAIL with the shipping capability off", () => {
+  it("gates the actual owner editor on the server-projected edit context", () => {
     const source = readFileSync(
       join(process.cwd(), "components/recipe/recipe-detail-screen.tsx"),
       "utf8",
     );
 
     expect(source).toContain("<RecipeDetailPersonalActions");
-    expect(source).toContain("capabilityEnabled={false}");
-    expect(source).toContain('accessState="unknown"');
+    expect(source).toContain("capabilityEnabled={canEditPersonalRecipe}");
+    expect(source).toContain('accessState={canEditPersonalRecipe ? "owner-private" : "unknown"}');
+    expect(source).toContain("<RecipeDetailPersonalEditor");
+    expect(source).toContain("isPersonalEditorOpen && canEditPersonalRecipe && activePersonalEditContext");
+    expect(source).toContain("createSnapshotV2CookingSession");
   });
 });

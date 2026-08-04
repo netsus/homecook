@@ -228,7 +228,12 @@ snapshot_v2 read:
 
 ## Design Status
 
-`pending-review` and still temporary. Draft PR #1281 exact head `6cfcb30787c8cdebeacf9e1651bfdadfe5d8a866` contains Stage 4 implementation/screenshots and critique evidence, but it still requires the newly approved entrypoint contract repair. No product-design-authority report exists; Stage 5, final authority and Stage 6 remain pending, so Design Status is not `confirmed`.
+- [ ] 임시 UI (temporary)
+- [ ] 리뷰 대기 (pending-review)
+- [x] 확정 (confirmed)
+- [ ] N/A — BE-only slice
+
+`confirmed`. Fresh independent final product-design-authority task `019fca76-eb5f-79a3-8d2a-a2f46a5591d3` reviewed exact head `1096494ab3e246987efe2792e9379c1f7c2a3ed6` and approved with blocker/major/minor `0/0/0`. The earlier AUTH-M01/M02 repairs remain closed, and AUTH-M03 is closed by the impact dialog's explicit `role="dialog"` plus `aria-modal="true"` semantics and locked component/E2E assertions. Canonical report: `ui/designs/authority/recipe-content-snapshot-future-propagation-authority.md`. Fresh Stage 6 task `019fca98-d8a1-7613-a34f-39cc836de385` approved pre-merge closeout with P0/P1/P2 and blocker/major/minor `0/0/0`; merge, Manual/server-Mac/OAuth evidence and #8/R+2 activation remain pending.
 
 ## Primary User Path
 
@@ -278,7 +283,7 @@ The Stage 2 `automation-spec.json` external smoke gate contains only exact curre
 
 ## Delivery Checklist
 
-Stage 2 implementer evidence is retained at [`evidence/2026-08-03-stage2-backend-implementation.md`](./evidence/2026-08-03-stage2-backend-implementation.md), and Stage 2/3 PR #1278 is merged as `ef5903b131a2eb9e505b2121b4e390970c565b95`. Draft Stage 4 PR #1281 exact head `6cfcb30787c8cdebeacf9e1651bfdadfe5d8a866` has implementation evidence but remains incomplete until the approved entrypoint read/projection contract is repaired and independently reviewed. This re-lock does not claim Stage 4 completion, Stage 5, authority, Stage 6, Manual/server-Mac evidence or activation.
+Stage 2 implementer evidence is retained at [`evidence/2026-08-03-stage2-backend-implementation.md`](./evidence/2026-08-03-stage2-backend-implementation.md), and Stage 2/3 PR #1278 is merged as `ef5903b131a2eb9e505b2121b4e390970c565b95`. Draft Stage 4 PR #1281 exact implementation head `1096494ab3e246987efe2792e9379c1f7c2a3ed6` contains the approved entrypoint/read projection, actual owner editor, AUTH-M01/M02 repairs and AUTH-M03 explicit modal semantics plus refreshed exact mobile evidence. Fresh final authority task `019fca76-eb5f-79a3-8d2a-a2f46a5591d3` approved `0/0/0`, and fresh Stage 6 task `019fca98-d8a1-7613-a34f-39cc836de385` approved pre-merge closeout `0/0/0`; evidence is retained at [`evidence/2026-08-04-stage6-frontend-closeout-review.md`](./evidence/2026-08-04-stage6-frontend-closeout-review.md). Merge, Manual/server-Mac/OAuth evidence and activation remain pending.
 
 - [x] preview uses the PATCH canonicalizer and stores an owner/generation/session-bound opaque token hash <!-- omo:id=delivery-future-preview;stage=2;scope=backend;review=3,6 -->
 - [x] target-set hash includes exact Meal revisions and active claim/session tuples <!-- omo:id=delivery-future-target-hash;stage=2;scope=backend;review=3,6 -->
@@ -291,9 +296,9 @@ Stage 2 implementer evidence is retained at [`evidence/2026-08-03-stage2-backend
 - [x] planner start copies Meal pin/servings and creates one active claim per Meal exactly once <!-- omo:id=delivery-future-planner-start;stage=2;scope=backend;review=3,6 -->
 - [x] standalone start pins current content under recipe revision lock <!-- omo:id=delivery-future-standalone-start;stage=2;scope=backend;review=3,6 -->
 - [x] v2 read/cancel use immutable content, release claims and replay without cross-version fallback <!-- omo:id=delivery-future-v2-drain;stage=2;scope=backend;review=3,6 -->
-- [ ] UI waits for session ID/version and dispatches v1/v2 without parser or body-shape inference <!-- omo:id=delivery-future-dispatch;stage=4;scope=frontend;review=5,6 -->
-- [ ] impact dialog loading/empty/claim/stale states and two-choice hierarchy are accessible <!-- omo:id=delivery-future-impact-ui;stage=4;scope=frontend;review=5,6 -->
-- [ ] 390px/320px visual/a11y and independent design critic/authority reviews pass <!-- omo:id=delivery-future-design-authority;stage=4;scope=frontend;review=5,6 -->
+- [x] UI waits for session ID/version and dispatches v1/v2 without parser or body-shape inference <!-- omo:id=delivery-future-dispatch;stage=4;scope=frontend;review=5,6 -->
+- [x] impact dialog loading/empty/claim/stale states and two-choice hierarchy are accessible <!-- omo:id=delivery-future-impact-ui;stage=4;scope=frontend;review=5,6 -->
+- [x] 390px/320px visual/a11y and independent design critic/authority reviews pass <!-- omo:id=delivery-future-design-authority;stage=4;scope=frontend;review=5,6 -->
 - [x] past/cook-done/completed shopping/session/log history remains snapshot-stable <!-- omo:id=delivery-future-history;stage=2;scope=shared;review=3,6 -->
 - [x] v2 creation/personal writes stay dark and existing seeded v2 drain survives rollback <!-- omo:id=delivery-future-dark-release;stage=2;scope=shared;review=3,6 -->
 - [x] exact-pantry complete and activation remain #8 boundaries <!-- omo:id=delivery-future-successor-boundary;stage=2;scope=shared;review=3,6 -->

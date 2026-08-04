@@ -11,6 +11,7 @@ import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-ta
 import { PlannerAddSheet } from "@/components/recipe/planner-add-sheet";
 import type { PlannerAddSheetState } from "@/components/recipe/planner-add-sheet";
 import { RecipeDetailPersonalActions } from "@/components/recipe/recipe-detail-personal-actions";
+import { RecipeDetailPersonalEditor } from "@/components/recipe/recipe-detail-personal-editor";
 import { RecipeNutritionCard } from "@/components/recipe/recipe-nutrition-card";
 import { SaveModal } from "@/components/recipe/save-modal";
 import { ContentState } from "@/components/shared/content-state";
@@ -39,6 +40,8 @@ import {
   saveRecipeToBooks,
 } from "@/lib/api/recipe-save";
 import { createMeal, isMealApiError } from "@/lib/api/meal";
+import { createSnapshotV2CookingSession } from "@/lib/api/cooking";
+import { getCookingSessionCookModeHref } from "@/lib/cooking/session-version-dispatch";
 import { notifyGamificationSourceAction } from "@/lib/gamification-events";
 import { getCookingMethodColor, getCookingMethodTint } from "@/lib/cooking-method-colors";
 import { getCookingMethodAssistiveLabel } from "@/lib/cooking-method-taxonomy";
@@ -60,12 +63,15 @@ import {
 import { buildReturnHref } from "@/lib/navigation/return-context";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { hasSupabasePublicEnv } from "@/lib/supabase/env";
+import { isQaFixtureClientModeEnabled } from "@/lib/mock/qa-fixture-client";
 import { useAuthGateStore } from "@/stores/ui-store";
 import type {
   RecipeBookSummary,
   RecipeDetail,
+  RecipeEditContext,
   RecipeIngredient,
   RecipeLikeData,
+  RecipeSnapshotUiMode,
   RecipeUserStatus,
 } from "@/types/recipe";
 import type { PlannerColumnData } from "@/types/planner";
@@ -148,6 +154,7 @@ interface RecipeDetailScreenProps {
   recipeId: string;
   authError?: string | null;
   initialAuthenticated?: boolean;
+  recipeSnapshotUiMode?: RecipeSnapshotUiMode;
 }
 
 
@@ -155,6 +162,7 @@ export function RecipeDetailScreen({
   recipeId,
   authError,
   initialAuthenticated = false,
+  recipeSnapshotUiMode = "legacy_v1",
 }: RecipeDetailScreenProps) {
   const [detailState, setDetailState] = useState<DetailState>("loading");
   const [detailErrorKind, setDetailErrorKind] = useState<DetailErrorKind>(null);
@@ -184,10 +192,14 @@ export function RecipeDetailScreen({
   const [plannerColumns, setPlannerColumns] = useState<PlannerColumnData[]>([]);
   const [plannerAddError, setPlannerAddError] = useState<string | null>(null);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
+  const [showQaFutureImpact, setShowQaFutureImpact] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const [selectedPlanDate, setSelectedPlanDate] = useState("");
   const [selectedPlanColumnId, setSelectedPlanColumnId] = useState("");
   const [plannerServings, setPlannerServings] = useState(1);
+  const [snapshotStartState, setSnapshotStartState] = useState<"idle" | "pending">("idle");
+  const [isPersonalEditorOpen, setIsPersonalEditorOpen] = useState(false);
+  const [personalEditResumeContext, setPersonalEditResumeContext] = useState<RecipeEditContext | null>(null);
   const router = useRouter();
   const openAuthGate = useAuthGateStore((state) => state.open);
   const isDesktopViewport = useDesktopViewport();
@@ -197,7 +209,16 @@ export function RecipeDetailScreen({
   );
   const nutritionRequestSequenceRef = React.useRef(0);
   const currentRecipeIdRef = React.useRef(recipeId);
+  const snapshotStartLatchRef = React.useRef(false);
+  const personalEditorOpenerRef = React.useRef<HTMLElement | null>(null);
   currentRecipeIdRef.current = recipeId;
+
+  useEffect(() => {
+    setShowQaFutureImpact(
+      isQaFixtureClientModeEnabled()
+        && new URLSearchParams(window.location.search).get("qaFutureImpact") === "1",
+    );
+  }, []);
 
   const loadRecipe = useCallback(async () => {
     const requestedRecipeId = recipeId;
@@ -864,6 +885,14 @@ export function RecipeDetailScreen({
     void openPlannerAddSheet({ source: "manual" });
   };
 
+  const openPersonalEditor = useCallback(() => {
+    personalEditorOpenerRef.current = document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : null;
+    setPersonalEditResumeContext(null);
+    setIsPersonalEditorOpen(true);
+  }, []);
+
   useEffect(() => {
     if (!isAuthenticated) {
       return;
@@ -876,6 +905,15 @@ export function RecipeDetailScreen({
     }
 
     clearPendingAction();
+
+    if (pendingAction.type === "recipe-edit-save") {
+      if (recipeSnapshotUiMode === "snapshot_v2" && recipe.edit_context) {
+        personalEditorOpenerRef.current = null;
+        setPersonalEditResumeContext(pendingAction.editContext);
+        setIsPersonalEditorOpen(true);
+      }
+      return;
+    }
 
     if (pendingAction.type === "like") {
       void handleLikeToggle({ source: "return-to-action" });
@@ -899,7 +937,7 @@ export function RecipeDetailScreen({
       void openPlannerAddSheet({ source: "return-to-action" });
       return;
     }
-  }, [handleLikeToggle, isAuthenticated, openPlannerAddSheet, openSaveModal, recipe, recipeId]);
+  }, [handleLikeToggle, isAuthenticated, openPlannerAddSheet, openSaveModal, recipe, recipeId, recipeSnapshotUiMode]);
 
   const handleShare = async () => {
     if (!recipe) {
@@ -997,9 +1035,81 @@ export function RecipeDetailScreen({
       returnTo: recipeDetailReturnHref,
     },
   );
+  const cookActionLabel = snapshotStartState === "pending" ? "요리 세션 생성 중…" : "요리하기";
+  async function handleCook() {
+    if (!recipe) return;
+    if (recipeSnapshotUiMode !== "snapshot_v2") {
+      router.push(cookModeHref);
+      return;
+    }
+    if (snapshotStartLatchRef.current) return;
+    snapshotStartLatchRef.current = true;
+    setSnapshotStartState("pending");
+    try {
+      const session = await createSnapshotV2CookingSession({
+        mode: "standalone",
+        recipe_id: recipeId,
+        expected_recipe_revision: recipe.revision,
+        cooking_servings: selectedServings,
+      });
+      router.push(buildReturnHref(getCookingSessionCookModeHref(session), {
+        returnSurface: "recipe.detail",
+        returnTo: recipeDetailReturnHref,
+      }));
+    } catch {
+      snapshotStartLatchRef.current = false;
+      setSnapshotStartState("idle");
+      setFeedback({ message: "요리 세션을 만들지 못했어요. 다시 시도해 주세요.", tone: "error" });
+    }
+  }
   const shouldRenderWebView = isDesktopViewport;
   const shouldRenderAppView = !isDesktopViewport;
   const shouldRenderLegacyWebView = false;
+  const activePersonalEditContext = recipeSnapshotUiMode === "snapshot_v2"
+    && recipe.edit_context
+    ? {
+        baseRecipeRevision: recipe.edit_context.base_recipe_revision,
+        draft: recipe.edit_context.draft,
+        imageObjectId: recipe.edit_context.image_object_id,
+      }
+    : showQaFutureImpact ? {
+    baseRecipeRevision: 12,
+    draft: {
+      title: recipe.title,
+      description: recipe.description,
+      base_servings: recipe.base_servings,
+      ingredients: recipe.ingredients.map((ingredient) => ({
+        ingredient_id: ingredient.ingredient_id,
+        amount: ingredient.amount,
+        unit: ingredient.unit,
+        ingredient_type: ingredient.ingredient_type,
+        display_text: ingredient.display_text,
+        component_label: ingredient.component_label ?? null,
+        scalable: ingredient.scalable,
+        food_product_id: null,
+        food_product_nutrition_version_id: null,
+      })),
+      steps: recipe.steps.map((step) => ({
+        step_number: step.step_number,
+        instruction: step.instruction,
+        cooking_method_id: step.cooking_method?.id ?? "00000000-0000-4000-8000-000000000000",
+        cooking_method_ids: step.cooking_methods?.map((method) => method.id)
+          ?? (step.cooking_method ? [step.cooking_method.id] : []),
+        ingredients_used: step.ingredients_used.map((ingredient) => ({
+          ingredient_id: ingredient.ingredient_id,
+          amount: ingredient.amount,
+          unit: ingredient.unit,
+          cut_size: ingredient.cut_size ?? null,
+        })),
+        component_label: step.component_label ?? null,
+        heat_level: step.heat_level,
+        duration_seconds: step.duration_seconds,
+        duration_text: step.duration_text,
+      })),
+    },
+    imageObjectId: null,
+      } : undefined;
+  const canEditPersonalRecipe = isAuthenticated && Boolean(activePersonalEditContext);
 
   return (
     <>
@@ -1010,9 +1120,9 @@ export function RecipeDetailScreen({
             isAuthenticated={isAuthenticated}
             isLikePending={likeRequestState === "pending"}
             likeCountLabel={desktopLikeCountLabel}
-            onCook={() =>
-              router.push(cookModeHref)
-            }
+            onCook={() => void handleCook()}
+            cookActionLabel={cookActionLabel}
+            isCookPending={snapshotStartState === "pending"}
             onOpenLightbox={(index) => {
               setLightboxIndex(index);
               setIsLightboxOpen(true);
@@ -1028,6 +1138,8 @@ export function RecipeDetailScreen({
             scaledIngredients={scaledIngredients}
             selectedServings={selectedServings}
             isNutritionRefreshing={nutritionRequestState === "loading"}
+            canEditPersonalRecipe={canEditPersonalRecipe}
+            onEditPersonalRecipe={openPersonalEditor}
           />
         </div>
       ) : null}
@@ -1717,8 +1829,9 @@ export function RecipeDetailScreen({
             tone="olive"
           />
           <ActionButton
-            label="요리하기"
-            onClick={() => router.push(cookModeHref)}
+            disabled={snapshotStartState === "pending"}
+            label={cookActionLabel}
+            onClick={() => void handleCook()}
             tone="brand"
           />
         </div>
@@ -1735,19 +1848,21 @@ export function RecipeDetailScreen({
             플래너에 추가
           </button>
           <button
+            aria-label={cookActionLabel}
             className="min-h-[var(--control-height-md)] flex-1 rounded-[var(--radius-card)] border border-[var(--brand)] bg-transparent px-3 text-[15px] font-bold text-[var(--brand)]"
-            onClick={() => router.push(cookModeHref)}
+            disabled={snapshotStartState === "pending"}
+            onClick={() => void handleCook()}
             type="button"
           >
-            요리하기
+            {cookActionLabel}
           </button>
         </div>
         <RecipeDetailPersonalActions
-          accessState="unknown"
-          capabilityEnabled={false}
+          accessState={canEditPersonalRecipe ? "owner-private" : "unknown"}
+          capabilityEnabled={canEditPersonalRecipe}
           isAuthenticated={isAuthenticated}
           onDelete={() => undefined}
-          onEdit={() => undefined}
+          onEdit={openPersonalEditor}
           onFork={() => undefined}
         />
       </div>
@@ -1825,17 +1940,41 @@ export function RecipeDetailScreen({
       />
       {feedback ? <FeedbackToast message={feedback.message} tone={feedback.tone} /> : null}
       <LoginGateModal />
+      {isPersonalEditorOpen && canEditPersonalRecipe && activePersonalEditContext ? (
+        <RecipeDetailPersonalEditor
+          editContext={{
+            base_recipe_revision: activePersonalEditContext.baseRecipeRevision,
+            draft: activePersonalEditContext.draft,
+            image_object_id: activePersonalEditContext.imageObjectId,
+          }}
+          onClose={() => {
+            setIsPersonalEditorOpen(false);
+            setPersonalEditResumeContext(null);
+          }}
+          onSaved={() => {
+            setPersonalEditResumeContext(null);
+            void loadRecipe();
+          }}
+          recipeId={recipeId}
+          returnFocusRef={personalEditorOpenerRef}
+          resumeContext={personalEditResumeContext}
+        />
+      ) : null}
     </>
   );
 }
 
 function RecipeDetailWebView({
+  canEditPersonalRecipe,
+  cookActionLabel,
   cookCountLabel,
   isAuthenticated,
   isLikePending,
   isNutritionRefreshing,
+  isCookPending,
   likeCountLabel,
   onCook,
+  onEditPersonalRecipe,
   onOpenLightbox,
   onProtectedAction,
   onRetryNutrition,
@@ -1848,12 +1987,16 @@ function RecipeDetailWebView({
   scaledIngredients,
   selectedServings,
 }: {
+  canEditPersonalRecipe: boolean;
+  cookActionLabel: string;
   cookCountLabel: string;
   isAuthenticated: boolean;
   isLikePending: boolean;
   isNutritionRefreshing: boolean;
+  isCookPending: boolean;
   likeCountLabel: string;
   onCook: () => void;
+  onEditPersonalRecipe: () => void;
   onOpenLightbox: (index: number) => void;
   onProtectedAction: (type: "like" | "save" | "planner") => void;
   onRetryNutrition: () => void;
@@ -2147,16 +2290,16 @@ function RecipeDetailWebView({
                     <CalendarIcon />
                     플래너에 추가
                   </WebButton>
-                  <WebButton fullWidth onClick={onCook} variant="secondary">
+                  <WebButton disabled={isCookPending} fullWidth onClick={onCook} variant="secondary">
                     <CookIcon />
-                    요리하기
+                    {cookActionLabel}
                   </WebButton>
                   <RecipeDetailPersonalActions
-                    accessState="unknown"
-                    capabilityEnabled={false}
+                    accessState={canEditPersonalRecipe ? "owner-private" : "unknown"}
+                    capabilityEnabled={canEditPersonalRecipe}
                     isAuthenticated={isAuthenticated}
                     onDelete={() => undefined}
-                    onEdit={() => undefined}
+                    onEdit={onEditPersonalRecipe}
                     onFork={() => undefined}
                   />
                 </div>
@@ -2174,13 +2317,13 @@ function RecipeDetailWebView({
         <WebButton onClick={() => onProtectedAction("planner")}>
           플래너에 추가
         </WebButton>
-        <WebButton onClick={onCook} variant="secondary">요리하기</WebButton>
+        <WebButton disabled={isCookPending} onClick={onCook} variant="secondary">{cookActionLabel}</WebButton>
         <RecipeDetailPersonalActions
-          accessState="unknown"
-          capabilityEnabled={false}
+          accessState={canEditPersonalRecipe ? "owner-private" : "unknown"}
+          capabilityEnabled={canEditPersonalRecipe}
           isAuthenticated={isAuthenticated}
           onDelete={() => undefined}
-          onEdit={() => undefined}
+          onEdit={onEditPersonalRecipe}
           onFork={() => undefined}
         />
       </WebCTA>

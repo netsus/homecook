@@ -150,6 +150,7 @@ describe("recipe nutrition API boundaries", () => {
       base_servings: 2,
       tags: [],
       source_type: "system",
+      revision: 1,
       view_count: 1,
       like_count: 0,
       save_count: 0,

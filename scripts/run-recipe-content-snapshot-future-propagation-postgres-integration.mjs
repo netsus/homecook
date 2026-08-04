@@ -6,6 +6,8 @@ import { readdirSync } from "node:fs";
 const migrationDirectory = path.join(process.cwd(), "supabase/migrations");
 const BASE_FUTURE_PROPAGATION_MIGRATION =
   "supabase/migrations/20260802210000_recipe_content_snapshot_future_propagation.sql";
+const ENTRYPOINT_PROJECTION_MIGRATION =
+  "supabase/migrations/20260804100000_recipe_snapshot_entrypoint_projection.sql";
 const targetMigrationName = readdirSync(migrationDirectory)
   .filter((name) => name.endsWith("_recipe_content_snapshot_future_propagation.sql"))
   .sort()
@@ -17,7 +19,7 @@ if (!targetMigrationName) {
   );
 }
 
-const targetMigration = path.join("supabase/migrations", targetMigrationName);
+const contentPropagationMigration = path.join("supabase/migrations", targetMigrationName);
 
 process.env.HOMECOOK_RECIPE_SNAPSHOT_FOLLOWUP_MIGRATIONS = [
   "supabase/migrations/20260425000000_08b_add_pantry_items_table.sql",
@@ -30,11 +32,13 @@ process.env.HOMECOOK_RECIPE_SNAPSHOT_FOLLOWUP_MIGRATIONS = [
   "supabase/migrations/20260730210000_product_ingredient_link_foundation.sql",
   "supabase/migrations/20260731110000_product_ingredient_link_contract_runtime.sql",
   "supabase/migrations/20260802130000_personal_recipe_customization_write_core.sql",
-  ...(targetMigration !== BASE_FUTURE_PROPAGATION_MIGRATION
+  ...(contentPropagationMigration !== BASE_FUTURE_PROPAGATION_MIGRATION
     ? [BASE_FUTURE_PROPAGATION_MIGRATION]
     : []),
+  ENTRYPOINT_PROJECTION_MIGRATION,
 ].join(path.delimiter);
-process.env.HOMECOOK_RECIPE_SNAPSHOT_FOLLOWUP_TARGET_MIGRATION = targetMigration;
+process.env.HOMECOOK_RECIPE_SNAPSHOT_FOLLOWUP_TARGET_MIGRATION =
+  contentPropagationMigration;
 process.env.HOMECOOK_RECIPE_SNAPSHOT_FOLLOWUP_INTEGRATION_TEST =
   "tests/recipe-content-snapshot-future-propagation-postgres.integration.test.ts";
 process.env.HOMECOOK_PERSONAL_RECIPE_SECURITY_FUNCTIONS = "1";

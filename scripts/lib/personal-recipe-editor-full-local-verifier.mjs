@@ -587,8 +587,24 @@ export function collectPersonalRecipeEditorSourceEvidence(repositoryRoot) {
   );
   const capabilityOccurrenceCount =
     detailSource.match(/\bcapabilityEnabled\b/gu)?.length ?? 0;
-  const capabilityOffOccurrenceCount =
+  const literalCapabilityOffOccurrenceCount =
     detailSource.match(/capabilityEnabled=\{false\}/gu)?.length ?? 0;
+  const hasServerProjectedOwnerEditBoundary =
+    /const\s+activePersonalEditContext\s*=\s*recipeSnapshotUiMode\s*===\s*"snapshot_v2"\s*&&\s*recipe\.edit_context/gu.test(
+      detailSource,
+    )
+    && /const\s+canEditPersonalRecipe\s*=\s*isAuthenticated\s*&&\s*Boolean\(activePersonalEditContext\);/gu.test(
+      detailSource,
+    );
+  const projectedCapabilityOffOccurrenceCount =
+    hasServerProjectedOwnerEditBoundary
+      ? detailSource.match(
+        /capabilityEnabled=\{canEditPersonalRecipe\}/gu,
+      )?.length ?? 0
+      : 0;
+  const capabilityOffOccurrenceCount =
+    literalCapabilityOffOccurrenceCount
+    + projectedCapabilityOffOccurrenceCount;
   const verifiedSessionServiceRoleEntries =
     countAllowlistedServiceRoleEntries(
       inventory.userDirectServiceRoleEntries,

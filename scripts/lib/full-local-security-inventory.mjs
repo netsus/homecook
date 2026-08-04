@@ -41,6 +41,10 @@ const RECIPE_FUTURE_PROPAGATION_BASE_MIGRATION_PATH = join(
   REPOSITORY_ROOT,
   "supabase/migrations/20260802210000_recipe_content_snapshot_future_propagation.sql",
 );
+const RECIPE_SNAPSHOT_ENTRYPOINT_MIGRATION_PATH = join(
+  REPOSITORY_ROOT,
+  "supabase/migrations/20260804100000_recipe_snapshot_entrypoint_projection.sql",
+);
 let RECIPE_FUTURE_PROPAGATION_MIGRATION_PATH;
 const SNAPSHOT_CONSUMER_READ_MIGRATION_PATH = join(
   REPOSITORY_ROOT,
@@ -89,6 +93,7 @@ const recipeFuturePropagationMigration = [
   === RECIPE_FUTURE_PROPAGATION_BASE_MIGRATION_PATH
     ? null
     : readFileSync(RECIPE_FUTURE_PROPAGATION_MIGRATION_PATH, "utf8"),
+  readFileSync(RECIPE_SNAPSHOT_ENTRYPOINT_MIGRATION_PATH, "utf8"),
 ].filter(Boolean).join("\n\n");
 const snapshotConsumerReadMigration = readFileSync(
   SNAPSHOT_CONSUMER_READ_MIGRATION_PATH,

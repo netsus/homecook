@@ -29,6 +29,7 @@ const INTERNAL_ALLOWLIST_FILES = new Set([
   "lib/server/account-generation/quarantine-gate.ts",
   "lib/server/admin-auth.ts",
   "lib/server/admin-events.ts",
+  "lib/server/recipe-snapshot-entrypoint.ts",
   "lib/supabase/server.ts",
 ]);
 
@@ -53,6 +54,7 @@ const INTERNAL_OPERATION_ALLOWLIST = new Map([
     new Set([
       "app/api/v1/recipes/[id]/future-plan-impact/route.ts",
       "app/api/v1/recipes/[id]/route.ts",
+      "lib/server/recipe-snapshot-entrypoint.ts",
     ]),
   ],
   [
@@ -118,6 +120,13 @@ const INTERNAL_OPERATION_FUNCTION_ALLOWLIST = new Map([
       [
         "app/api/v1/recipes/[id]/route.ts",
         new Set(["DELETE", "PATCH"]),
+      ],
+      [
+        "lib/server/recipe-snapshot-entrypoint.ts",
+        new Set([
+          "readRecipeSnapshotEntrypointContext",
+          "readRecipeSnapshotUiMode",
+        ]),
       ],
     ]),
   ],

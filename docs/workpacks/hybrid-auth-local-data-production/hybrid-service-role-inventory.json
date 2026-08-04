@@ -16,7 +16,8 @@
     ],
     "createRecipeFuturePropagationInternalClient": [
       "app/api/v1/recipes/[id]/future-plan-impact/route.ts",
-      "app/api/v1/recipes/[id]/route.ts"
+      "app/api/v1/recipes/[id]/route.ts",
+      "lib/server/recipe-snapshot-entrypoint.ts"
     ],
     "createSnapshotV2SessionInternalClient": [
       "app/api/v1/cooking/session-attempts/[id]/cancel/route.ts",
@@ -60,6 +61,10 @@
       "app/api/v1/recipes/[id]/route.ts": [
         "DELETE",
         "PATCH"
+      ],
+      "lib/server/recipe-snapshot-entrypoint.ts": [
+        "readRecipeSnapshotEntrypointContext",
+        "readRecipeSnapshotUiMode"
       ]
     },
     "createSnapshotV2SessionInternalClient": {
@@ -163,7 +168,7 @@
       "classification": "user",
       "file": "app/api/v1/meals/route.ts",
       "column": 25,
-      "line": 691,
+      "line": 699,
       "allowed": true,
       "factory": "createFutureMealWriteInternalClient",
       "functionName": "postMeals",
@@ -183,7 +188,7 @@
       "classification": "public",
       "file": "app/api/v1/recipes/[id]/route.ts",
       "column": 25,
-      "line": 547,
+      "line": 604,
       "allowed": true,
       "factory": "createRecipeFuturePropagationInternalClient",
       "functionName": "PATCH",
@@ -193,7 +198,7 @@
       "classification": "public",
       "file": "app/api/v1/recipes/[id]/route.ts",
       "column": 25,
-      "line": 619,
+      "line": 676,
       "allowed": true,
       "factory": "createRecipeFuturePropagationInternalClient",
       "functionName": "DELETE",
@@ -310,6 +315,26 @@
       "kind": "internal-operation-call"
     },
     {
+      "classification": "internal",
+      "file": "lib/server/recipe-snapshot-entrypoint.ts",
+      "column": 9,
+      "line": 166,
+      "allowed": true,
+      "factory": "createRecipeFuturePropagationInternalClient",
+      "functionName": "readRecipeSnapshotUiMode",
+      "kind": "internal-operation-call"
+    },
+    {
+      "classification": "internal",
+      "file": "lib/server/recipe-snapshot-entrypoint.ts",
+      "column": 9,
+      "line": 190,
+      "allowed": true,
+      "factory": "createRecipeFuturePropagationInternalClient",
+      "functionName": "readRecipeSnapshotEntrypointContext",
+      "kind": "internal-operation-call"
+    },
+    {
       "classification": "user",
       "file": "lib/server/youtube-import.ts",
       "column": 5,
@@ -335,7 +360,7 @@
       "classification": "public",
       "file": "app/api/v1/recipes/[id]/route.ts",
       "column": 27,
-      "line": 300,
+      "line": 309,
       "kind": "remote-only-compatibility-call"
     }
   ],
@@ -359,6 +384,7 @@
     "lib/server/account-generation/quarantine-gate.ts",
     "lib/server/admin-auth.ts",
     "lib/server/admin-events.ts",
+    "lib/server/recipe-snapshot-entrypoint.ts",
     "lib/supabase/server.ts"
   ],
   "service_role_entries": [
@@ -401,7 +427,7 @@
       "classification": "user",
       "file": "app/api/v1/meals/route.ts",
       "column": 25,
-      "line": 691,
+      "line": 699,
       "kind": "service-role-call"
     },
     {

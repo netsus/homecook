@@ -17,6 +17,7 @@ const updateMealServings = vi.fn();
 const deleteMeal = vi.fn();
 const createMealSafe = vi.fn();
 const createCookingSession = vi.fn();
+const createSnapshotV2CookingSession = vi.fn();
 const fetchRecipes = vi.fn();
 const fetchLeftovers = vi.fn();
 const updateProductPlannerEntryQuantity = vi.fn();
@@ -72,6 +73,7 @@ vi.mock("@/lib/api/recipe", () => ({
 
 vi.mock("@/lib/api/cooking", () => ({
   createCookingSession: (...args: unknown[]) => createCookingSession(...args),
+  createSnapshotV2CookingSession: (...args: unknown[]) => createSnapshotV2CookingSession(...args),
   isCookingApiError: (error: unknown) => isCookingApiError(error),
 }));
 
@@ -122,6 +124,7 @@ function buildMeal(overrides: Partial<{
   planned_servings: number;
   status: "registered" | "shopping_done" | "cook_done";
   is_leftover: boolean;
+  revision: number;
 }> = {}) {
   return {
     id: "meal-1",
@@ -131,6 +134,7 @@ function buildMeal(overrides: Partial<{
     planned_servings: 2,
     status: "registered" as const,
     is_leftover: false,
+    revision: 3,
     ...overrides,
   };
 }
@@ -276,6 +280,7 @@ describe("MealScreen", () => {
     deleteMeal.mockReset();
     createMealSafe.mockReset();
     createCookingSession.mockReset();
+    createSnapshotV2CookingSession.mockReset();
     fetchRecipes.mockReset();
     fetchLeftovers.mockReset();
     updateProductPlannerEntryQuantity.mockReset();
@@ -540,6 +545,44 @@ describe("MealScreen", () => {
     expect(pushedUrl.searchParams.get("returnTo")).toBe(
       `/planner/${DEFAULT_PROPS.planDate}/${DEFAULT_PROPS.columnId}?slot=${encodeURIComponent(DEFAULT_PROPS.slotName)}`,
     );
+  });
+
+  it("announces snapshot session creation while keeping the planner screen in place", async () => {
+    readE2EAuthOverride.mockReturnValue(true);
+    fetchMeals.mockResolvedValue({
+      items: [buildMeal({ id: "meal-1", planned_servings: 2, status: "shopping_done" })],
+    });
+    const pending = createDeferred<{
+      session_id: string;
+      contract_version: "snapshot_v2";
+      mode: "planner";
+      status: "in_progress";
+      content_summary: { recipe_id: string; title: string; cooking_servings: number };
+    }>();
+    createSnapshotV2CookingSession.mockReturnValue(pending.promise);
+
+    render(<MealScreen
+      {...DEFAULT_PROPS}
+      recipeSnapshotUiMode="snapshot_v2"
+    />);
+
+    await userEvent.click(await screen.findByRole("button", { name: "김치찌개 요리하기" }));
+
+    expect(await screen.findByText("요리 세션 생성 중…")).toBeTruthy();
+    expect(createSnapshotV2CookingSession).toHaveBeenCalledWith({
+      mode: "planner",
+      meal_ids: ["meal-1"],
+      expected_meal_revisions: { "meal-1": 3 },
+    });
+    expect(mockRouterPush).not.toHaveBeenCalled();
+    pending.resolve({
+      session_id: "550e8400-e29b-41d4-a716-446655440000",
+      contract_version: "snapshot_v2",
+      mode: "planner",
+      status: "in_progress",
+      content_summary: { recipe_id: "550e8400-e29b-41d4-a716-446655440001", title: "김치찌개", cooking_servings: 2 },
+    });
+    await waitFor(() => expect(mockRouterPush).toHaveBeenCalledTimes(1));
   });
 
   it("uses only the selected shopping_done meal servings when the same recipe appears more than once", async () => {

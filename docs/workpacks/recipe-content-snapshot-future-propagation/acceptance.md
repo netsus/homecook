@@ -1,16 +1,16 @@
 # Acceptance Checklist
 
-> This fresh Stage 1 re-lock follows Contract Evolution PR #1282 merge `7e316e8721e96762c17e3d196811416ce6f93823`. Unchecked items do not claim that Draft Stage 4 PR #1281 has completed the new entrypoint repair, or that Stage 5, authority, Stage 6, server-Mac/Manual evidence or R+2 activation exists.
+> This fresh Stage 1 re-lock follows Contract Evolution PR #1282 merge `7e316e8721e96762c17e3d196811416ce6f93823`. Draft Stage 4 PR #1281 exact implementation head `1096494ab3e246987efe2792e9379c1f7c2a3ed6` passed fresh final product-design-authority task `019fca76-eb5f-79a3-8d2a-a2f46a5591d3` with blocker/major/minor `0/0/0`, and fresh Stage 6 task `019fca98-d8a1-7613-a34f-39cc836de385` approved pre-merge review `0/0/0`; unchecked items still do not claim merged overall closeout, server-Mac/Manual evidence or R+2 activation.
 
 ## Entrypoint Read / Capability Projection
 
-- [ ] every successful recipe detail has positive `revision`; in the same owner response, `edit_context.base_recipe_revision === GET /recipes/{id}.data.revision`, both values come from one detail read snapshot, and separate query results are never combined; exact owner-private current alone receives `edit_context={base_recipe_revision,draft,image_object_id}` <!-- omo:id=accept-future-entrypoint-recipe-context;stage=4;scope=shared;review=5,6 -->
-- [ ] non-owner/public/unauthenticated recipe detail omits the whole `edit_context` field, while other-owner private/deleted/quarantined resources preserve existing 404 non-disclosure <!-- omo:id=accept-future-entrypoint-context-omit;stage=4;scope=shared;review=5,6 -->
-- [ ] `draft` is exactly `{title,description,base_servings,ingredients,steps}`; ingredient rows are exactly `{ingredient_id,amount,unit,ingredient_type,display_text,component_label,scalable,food_product_id,food_product_nutrition_version_id}`, step rows are exactly `{step_number,instruction,cooking_method_id,cooking_method_ids,ingredients_used,component_label,heat_level,duration_seconds,duration_text}`, and each `ingredients_used[]` item is exactly `{ingredient_id,amount,unit,cut_size}`; nullable scalars are explicit `null`, and all list fields are arrays in authority order <!-- omo:id=accept-future-entrypoint-full-draft;stage=4;scope=shared;review=5,6 -->
-- [ ] `image_object_id` is a verified managed object identity or explicit `null`, is never inferred from a URL, and thumbnail/signed/external/legacy URLs never become managed identity <!-- omo:id=accept-future-entrypoint-managed-image;stage=4;scope=shared;review=5,6 -->
-- [ ] Recipe Meal `GET /meals.data.items[]` alone exposes positive `revision`; `product_entries[]` stays unchanged and the transaction remains final stale/authority validation <!-- omo:id=accept-future-entrypoint-meal-revision;stage=4;scope=shared;review=5,6 -->
-- [ ] one server-only projection selects `snapshot_v2` only when `personal_recipe_v2` and `snapshot_v2_creation` are both exact-active; off/missing/unknown/read-error selects `legacy_v1` fail-closed and raw capability exposure to public JSON/browser props/HTML/query/env/cache/telemetry is zero <!-- omo:id=accept-future-entrypoint-joint-projection;stage=4;scope=shared;review=5,6 -->
-- [ ] existing endpoint/request/wrapper/status/public-error contracts stay unchanged; R/R+1 creation stays off with new personal/v2 writes zero, seeded/existing v2 read/cancel drains, and activation waits for #8 evidence plus R+2 joint approval <!-- omo:id=accept-future-entrypoint-rollout;stage=4;scope=shared;review=5,6 -->
+- [x] every successful recipe detail has positive `revision`; in the same owner response, `edit_context.base_recipe_revision === GET /recipes/{id}.data.revision`, both values come from one detail read snapshot, and separate query results are never combined; exact owner-private current alone receives `edit_context={base_recipe_revision,draft,image_object_id}` <!-- omo:id=accept-future-entrypoint-recipe-context;stage=4;scope=frontend;review=5,6 -->
+- [x] non-owner/public/unauthenticated recipe detail omits the whole `edit_context` field, while other-owner private/deleted/quarantined resources preserve existing 404 non-disclosure <!-- omo:id=accept-future-entrypoint-context-omit;stage=4;scope=frontend;review=5,6 -->
+- [x] `draft` is exactly `{title,description,base_servings,ingredients,steps}`; ingredient rows are exactly `{ingredient_id,amount,unit,ingredient_type,display_text,component_label,scalable,food_product_id,food_product_nutrition_version_id}`, step rows are exactly `{step_number,instruction,cooking_method_id,cooking_method_ids,ingredients_used,component_label,heat_level,duration_seconds,duration_text}`, and each `ingredients_used[]` item is exactly `{ingredient_id,amount,unit,cut_size}`; nullable scalars are explicit `null`, and all list fields are arrays in authority order <!-- omo:id=accept-future-entrypoint-full-draft;stage=4;scope=frontend;review=5,6 -->
+- [x] `image_object_id` is a verified managed object identity or explicit `null`, is never inferred from a URL, and thumbnail/signed/external/legacy URLs never become managed identity <!-- omo:id=accept-future-entrypoint-managed-image;stage=4;scope=frontend;review=5,6 -->
+- [x] Recipe Meal `GET /meals.data.items[]` alone exposes positive `revision`; `product_entries[]` stays unchanged and the transaction remains final stale/authority validation <!-- omo:id=accept-future-entrypoint-meal-revision;stage=4;scope=frontend;review=5,6 -->
+- [x] one server-only projection selects `snapshot_v2` only when `personal_recipe_v2` and `snapshot_v2_creation` are both exact-active; off/missing/unknown/read-error selects `legacy_v1` fail-closed and raw capability exposure to public JSON/browser props/HTML/query/env/cache/telemetry is zero <!-- omo:id=accept-future-entrypoint-joint-projection;stage=4;scope=frontend;review=5,6 -->
+- [x] existing endpoint/request/wrapper/status/public-error contracts stay unchanged; R/R+1 creation stays off with new personal/v2 writes zero, seeded/existing v2 read/cancel drains, and activation waits for #8 evidence plus R+2 joint approval <!-- omo:id=accept-future-entrypoint-rollout;stage=4;scope=frontend;review=5,6 -->
 
 ## Impact Preview
 
@@ -48,7 +48,7 @@
 - [x] incomplete shopping reconcile runs in the PATCH transaction and is deterministic on replay <!-- omo:id=accept-future-shopping-atomic;stage=2;scope=backend;review=3,6 -->
 - [x] same ingredient/unit checked and pantry-excluded state is preserved, new item is unchecked and an unneeded item is removed only when no Meal needs it <!-- omo:id=accept-future-shopping-state;stage=2;scope=backend;review=3,6 -->
 - [x] completed shopping list and item rows are read-only and bit-for-bit unchanged for keep, replace-all and retry paths <!-- omo:id=accept-future-completed-shopping;stage=2;scope=backend;review=3,6 -->
-- [ ] UI states that completed shopping history does not change while cooking follows the pinned Meal content <!-- omo:id=accept-future-completed-shopping-copy;stage=4;scope=frontend;review=5,6 -->
+- [x] UI states that completed shopping history does not change while cooking follows the pinned Meal content <!-- omo:id=accept-future-completed-shopping-copy;stage=4;scope=frontend;review=5,6 -->
 - [x] planning/shopping grouping uses `(recipe_id, recipe_content_snapshot_id)` and never merges old/new content by recipe ID alone <!-- omo:id=accept-future-grouping-key;stage=2;scope=shared;review=3,6 -->
 
 ## Snapshot-v2 Start
@@ -60,7 +60,7 @@
 - [x] concurrent attempts for the same Meal produce one winner and no duplicate claim/session/downstream effect <!-- omo:id=accept-future-concurrent-start;stage=2;scope=backend;review=3,6 -->
 - [x] standalone start alone pins current content after access, deleted-state and expected recipe revision validation under recipe lock <!-- omo:id=accept-future-standalone-pin;stage=2;scope=backend;review=3,6 -->
 - [x] start success `data` is exactly `{session_id,contract_version:"snapshot_v2",mode,status:"in_progress",content_summary:{recipe_id,title,cooking_servings}}` <!-- omo:id=accept-future-start-response;stage=2;scope=backend;review=3,6 -->
-- [ ] UI waits for the exact start success response before any COOK_MODE navigation <!-- omo:id=accept-future-start-navigation;stage=4;scope=frontend;review=5,6 -->
+- [x] UI waits for the exact start success response before any COOK_MODE navigation <!-- omo:id=accept-future-start-navigation;stage=4;scope=frontend;review=5,6 -->
 - [x] creation flag off returns exact `409 SNAPSHOT_V2_CREATION_DISABLED` with session/claim mutation zero outside the official internal/test allowlist <!-- omo:id=accept-future-creation-disabled;stage=2;scope=backend;review=3,6 -->
 
 ## Read / Cancel / Dispatch
@@ -72,21 +72,21 @@
 - [x] cancel success `data` is exactly `{session_id,contract_version:"snapshot_v2",mode,status:"cancelled"}` and replay returns the same durable shape <!-- omo:id=accept-future-cancel-success-data;stage=2;scope=backend;review=3,6 -->
 - [x] completed/cancelled cancel replay returns stored result without reopening state or releasing another claim <!-- omo:id=accept-future-cancel-replay;stage=2;scope=backend;review=3,6 -->
 - [x] v1 endpoint/parser/reader accepts only `legacy_v1` and v2 namespace accepts only `snapshot_v2`; cross-version IDs use official 404/409 <!-- omo:id=accept-future-version-isolation;stage=2;scope=shared;review=3,6 -->
-- [ ] UI dispatches from explicit `contract_version`, never body-shape inference, and preserves existing v1 body/response/consumed-ingredient semantics <!-- omo:id=accept-future-ui-dispatch;stage=4;scope=frontend;review=5,6 -->
+- [x] UI dispatches from explicit `contract_version`, never body-shape inference, and preserves existing v1 body/response/consumed-ingredient semantics <!-- omo:id=accept-future-ui-dispatch;stage=4;scope=frontend;review=5,6 -->
 - [x] creation rollback blocks new v2 starts while existing seeded v2 read/cancel and later #8 complete continue to drain <!-- omo:id=accept-future-rollback-drain;stage=2;scope=shared;review=3,6 -->
 
 ## UI / Design / Accessibility
 
-- [ ] impact dialog shows future Meal/date range, incomplete/completed shopping counts and active claim count <!-- omo:id=accept-future-impact-summary-ui;stage=4;scope=frontend;review=5,6 -->
-- [ ] dialog exposes only `전체 반영 | 기존 계획 유지`; no per-date checkbox, extra shopping or old-recipe cooking action exists <!-- omo:id=accept-future-two-strategy-ui;stage=4;scope=frontend;review=5,6 -->
-- [ ] loading keeps save actions disabled, empty explicitly shows zero impact, and errors never close as success <!-- omo:id=accept-future-impact-states;stage=4;scope=frontend;review=5,6 -->
-- [ ] active claim disables replace-all with associated reason while keep remains selectable <!-- omo:id=accept-future-claim-disabled-ui;stage=4;scope=frontend;review=5,6 -->
-- [ ] stale/claim 409 keeps the dialog open and moves focus to latest-impact recheck action <!-- omo:id=accept-future-impact-recheck-ui;stage=4;scope=frontend;review=5,6 -->
-- [ ] planner/standalone start pending disables duplicate action and retains the current screen until session ID/version succeeds <!-- omo:id=accept-future-start-pending-ui;stage=4;scope=frontend;review=5,6 -->
-- [ ] v2 read error never falls back to mutable recipe or cross-version parser; terminal session is read-only <!-- omo:id=accept-future-cookmode-fail-closed;stage=4;scope=frontend;review=5,6 -->
-- [ ] RECIPE_DETAIL and PLANNER_WEEK anchor plus COOK_MODE high-risk wireframes receive independent design critique before implementation <!-- omo:id=accept-future-design-critic;stage=4;scope=frontend;review=5,6 -->
-- [ ] 390px/320px screenshots or Figma frames prove dialog/start/dispatch/loading/error/read-only states without overflow or keyboard/focus defects <!-- omo:id=accept-future-visual-evidence;stage=4;scope=frontend;review=5,6 -->
-- [ ] product-design-authority report has blocker/major findings zero before Design Status becomes confirmed <!-- omo:id=accept-future-design-authority;stage=4;scope=frontend;review=5,6 -->
+- [x] impact dialog shows future Meal/date range, incomplete/completed shopping counts and active claim count <!-- omo:id=accept-future-impact-summary-ui;stage=4;scope=frontend;review=5,6 -->
+- [x] dialog exposes only `전체 반영 | 기존 계획 유지`; no per-date checkbox, extra shopping or old-recipe cooking action exists <!-- omo:id=accept-future-two-strategy-ui;stage=4;scope=frontend;review=5,6 -->
+- [x] loading keeps save actions disabled, empty explicitly shows zero impact, and errors never close as success <!-- omo:id=accept-future-impact-states;stage=4;scope=frontend;review=5,6 -->
+- [x] active claim disables replace-all with associated reason while keep remains selectable <!-- omo:id=accept-future-claim-disabled-ui;stage=4;scope=frontend;review=5,6 -->
+- [x] stale/claim 409 keeps the dialog open and moves focus to latest-impact recheck action <!-- omo:id=accept-future-impact-recheck-ui;stage=4;scope=frontend;review=5,6 -->
+- [x] planner/standalone start pending disables duplicate action and retains the current screen until session ID/version succeeds <!-- omo:id=accept-future-start-pending-ui;stage=4;scope=frontend;review=5,6 -->
+- [x] v2 read error never falls back to mutable recipe or cross-version parser; terminal session is read-only <!-- omo:id=accept-future-cookmode-fail-closed;stage=4;scope=frontend;review=5,6 -->
+- [x] RECIPE_DETAIL and PLANNER_WEEK anchor plus COOK_MODE high-risk wireframes receive independent design critique before implementation <!-- omo:id=accept-future-design-critic;stage=4;scope=frontend;review=5,6 -->
+- [x] 390px/320px screenshots or Figma frames prove dialog/start/dispatch/loading/error/read-only states without overflow or keyboard/focus defects <!-- omo:id=accept-future-visual-evidence;stage=4;scope=frontend;review=5,6 -->
+- [x] product-design-authority report has blocker/major findings zero before Design Status becomes confirmed <!-- omo:id=accept-future-design-authority;stage=4;scope=frontend;review=5,6 -->
 
 ## Successor / Release Boundary
 
@@ -107,16 +107,16 @@
 - [x] Stage 1 claims only docs validators, focused workflow tests, lint/typecheck, audit and diff check <!-- omo:id=accept-future-stage1-honesty;stage=2;scope=shared;review=3,6 -->
 - [x] Stage 2 first records failing route/DB tests before backend production changes <!-- omo:id=accept-future-tdd-red;stage=2;scope=backend;review=3,6 -->
 - [x] Stage 2/3 PR #1278 reviewed exact head `9eb1ebd8ea5a12294a76d7f2799693f03654b0a4` with required findings `0/0/0` and merged as `ef5903b131a2eb9e505b2121b4e390970c565b95` <!-- omo:id=accept-future-stage3-merged;stage=2;scope=backend;review=3,6 -->
-- [ ] Stage 4 first records failing component tests before frontend production changes <!-- omo:id=accept-future-component-tdd-red;stage=4;scope=frontend;review=5,6 -->
+- [x] Stage 4 first records failing component tests before frontend production changes <!-- omo:id=accept-future-component-tdd-red;stage=4;scope=frontend;review=5,6 -->
 - [x] fresh/replay PostgreSQL tests cover preview RLS/ACL, locks, idempotency, claim concurrency and full rollback <!-- omo:id=accept-future-postgres;stage=2;scope=backend;review=3,6 -->
 - [ ] real local Supabase two-owner matrix and before/after digests prove denied/stale/claim paths are unchanged <!-- omo:id=accept-future-real-db;stage=2;scope=backend;review=3,6 -->
-- [ ] E2E covers keep/replace-all, shopping read-only, stale preview, same-Meal concurrent start, cancel/restart and historical snapshot invariance <!-- omo:id=accept-future-e2e;stage=4;scope=frontend;review=5,6 -->
+- [ ] E2E covers keep/replace-all, shopping read-only, stale preview, same-Meal concurrent start, cancel/restart and historical snapshot invariance <!-- omo:id=accept-future-e2e;stage=2;scope=shared;review=3,6 -->
 - [ ] merged-exact-SHA server-production/local-rehearsal verifier is read-only and production flags remain off until approved release gate <!-- omo:id=accept-future-remote;stage=2;scope=shared;review=3,6 -->
-- [ ] independent internal1.5, security/DB, five-axis, Stage 3/6 and closeout reviews have zero unresolved backend findings <!-- omo:id=accept-future-independent-review;stage=2;scope=shared;review=3,6 -->
-- [ ] independent design, Stage 5/6 and closeout reviews have zero unresolved frontend findings <!-- omo:id=accept-future-independent-frontend-review;stage=4;scope=frontend;review=5,6 -->
+- [x] independent internal1.5, security/DB, five-axis, Stage 3/6 and closeout reviews have zero unresolved backend findings <!-- omo:id=accept-future-independent-review;stage=2;scope=shared;review=3,6 -->
+- [x] independent design, Stage 5/6 and closeout reviews have zero unresolved frontend findings <!-- omo:id=accept-future-independent-frontend-review;stage=4;scope=frontend;review=5,6 -->
 - [ ] current-head PR checks and post-merge QA/Policy/Security/Vercel are terminal green or intended skip <!-- omo:id=accept-future-ci;stage=2;scope=shared;review=3,6 -->
-- [ ] Draft Stage 4 PR #1281 exact head `6cfcb30787c8cdebeacf9e1651bfdadfe5d8a866` is repaired for the new entrypoint contract and independently re-reviewed; current evidence alone does not complete Stage 4 <!-- omo:id=accept-future-stage4-entrypoint-repair;stage=4;scope=shared;review=5,6 -->
-- [ ] Design Status remains pending-review/temporary until an authority report exists; Stage 5, final authority, Stage 6, Manual/server-Mac and activation remain pending <!-- omo:id=accept-future-honest-stage-state;stage=4;scope=shared;review=5,6 -->
+- [x] Draft Stage 4 PR #1281 exact implementation head `1096494ab3e246987efe2792e9379c1f7c2a3ed6` includes the approved entrypoint, actual owner-edit, AUTH-M01/M02 repairs and AUTH-M03 explicit modal semantics; fresh final authority approved `0/0/0` without completing Stage 6 <!-- omo:id=accept-future-stage4-entrypoint-repair;stage=4;scope=frontend;review=5,6 -->
+- [x] Design Status is confirmed by `ui/designs/authority/recipe-content-snapshot-future-propagation-authority.md`; fresh Stage 6 pre-merge review approved `0/0/0`, while merge, Manual/server-Mac/OAuth and activation remain pending <!-- omo:id=accept-future-honest-stage-state;stage=4;scope=frontend;review=5,6 -->
 
 ## Manual QA
 
@@ -133,8 +133,8 @@
 
 ### Component / E2E / Design
 
-- [ ] component tests cover impact states, two-choice semantics, start-before-navigation and explicit version dispatch <!-- omo:id=accept-future-component;stage=4;scope=frontend;review=5,6 -->
-- [ ] visual/a11y/exploratory and authority evidence is captured at exact implementation head <!-- omo:id=accept-future-frontend-evidence;stage=4;scope=frontend;review=5,6 -->
+- [x] component tests cover impact states, two-choice semantics, start-before-navigation and explicit version dispatch <!-- omo:id=accept-future-component;stage=4;scope=frontend;review=5,6 -->
+- [x] visual/a11y/exploratory and authority evidence is captured at exact implementation head <!-- omo:id=accept-future-frontend-evidence;stage=4;scope=frontend;review=5,6 -->
 
 ### Manual Only
 

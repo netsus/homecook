@@ -3,6 +3,8 @@ import type { Metadata } from "next";
 import { AppShell } from "@/components/layout/app-shell";
 import { RecipeDetailScreen } from "@/components/recipe/recipe-detail-screen";
 import { normalizeFoodSafetyImageUrl } from "@/lib/recipe-image";
+import { readRecipeSnapshotUiMode } from
+  "@/lib/server/recipe-snapshot-entrypoint";
 import { defaultOpenGraphImagePath } from "@/lib/seo/default-social-image";
 import { hasSupabasePublicEnv } from "@/lib/supabase/env";
 import {
@@ -106,6 +108,7 @@ export default async function RecipePage({
   const { id } = await params;
   const resolvedSearchParams = await searchParams;
   const user = hasSupabasePublicEnv() ? await getServerAuthUser() : null;
+  const recipeSnapshotUiMode = await readRecipeSnapshotUiMode();
 
   return (
     <AppShell
@@ -118,6 +121,7 @@ export default async function RecipePage({
         authError={resolvedSearchParams.authError ?? null}
         initialAuthenticated={Boolean(user)}
         recipeId={id}
+        recipeSnapshotUiMode={recipeSnapshotUiMode}
       />
     </AppShell>
   );

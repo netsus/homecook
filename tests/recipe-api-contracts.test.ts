@@ -11,6 +11,7 @@ const readAccountGenerationCapability = vi.fn();
 const readVerifiedAccountGenerationSession = vi.fn();
 const readRecipeImageProjection = vi.fn();
 const resolveRecipeImageReadUrl = vi.fn();
+const readRecipeSnapshotEntrypointContext = vi.fn();
 const normalizeExpectedRecipeImageStorageOrigin = vi.fn(
   (value: string) => new URL(value).origin,
 );
@@ -53,6 +54,10 @@ vi.mock("@/lib/server/recipe-image-read", () => ({
   normalizeExpectedRecipeImageStorageOrigin,
   readRecipeImageProjection,
   resolveRecipeImageReadUrl,
+}));
+
+vi.mock("@/lib/server/recipe-snapshot-entrypoint", () => ({
+  readRecipeSnapshotEntrypointContext,
 }));
 
 vi.mock("@/app/api/v1/users/me/_account-generation", () => ({
@@ -218,6 +223,7 @@ describe("recipe API contracts", () => {
     readVerifiedAccountGenerationSession.mockReset();
     readRecipeImageProjection.mockReset();
     resolveRecipeImageReadUrl.mockReset();
+    readRecipeSnapshotEntrypointContext.mockReset();
     formatBootstrapErrorMessage.mockClear();
     createServiceRoleClient.mockReturnValue(null);
     hasSupabasePublicEnv.mockReturnValue(true);
@@ -1609,6 +1615,121 @@ describe("recipe API contracts", () => {
     expect(readRecipeImageProjection).not.toHaveBeenCalled();
   });
 
+  it("returns the exact same-snapshot revision and owner-only full edit context", async () => {
+    const recipeId = "550e8400-e29b-41d4-a716-446655440002";
+    const ownerId = "550e8400-e29b-41d4-a716-446655440001";
+    const sessionAuthority = {
+      authIdentityCreatedAt: "2026-08-01T00:00:00.000Z",
+      hmacKeyVersion: 1,
+      ownerUuid: ownerId,
+      sessionIssuedAt: "2026-08-03T00:00:00.000Z",
+      sessionKeyHash: "a".repeat(64),
+    };
+    const editContext = {
+      base_recipe_revision: 12,
+      draft: {
+        title: "내 김치찌개",
+        description: null,
+        base_servings: 2,
+        ingredients: [{
+          ingredient_id: "550e8400-e29b-41d4-a716-446655440010",
+          amount: 1,
+          unit: null,
+          ingredient_type: "QUANT",
+          display_text: null,
+          component_label: null,
+          scalable: true,
+          food_product_id: null,
+          food_product_nutrition_version_id: null,
+        }],
+        steps: [{
+          step_number: 1,
+          instruction: "끓여요.",
+          cooking_method_id: "550e8400-e29b-41d4-a716-446655440020",
+          cooking_method_ids: ["550e8400-e29b-41d4-a716-446655440020"],
+          ingredients_used: [{
+            ingredient_id: "550e8400-e29b-41d4-a716-446655440010",
+            amount: null,
+            unit: null,
+            cut_size: null,
+          }],
+          component_label: null,
+          heat_level: null,
+          duration_seconds: null,
+          duration_text: null,
+        }],
+      },
+      image_object_id: "550e8400-e29b-41d4-a716-446655440030",
+    };
+    const recipeQuery = createQuery({
+      data: {
+        id: recipeId,
+        title: "내 김치찌개",
+        description: null,
+        thumbnail_url: null,
+        base_servings: 2,
+        tags: [],
+        source_type: "manual",
+        created_by: ownerId,
+        visibility: "private",
+        deleted_at: null,
+        revision: 12,
+        view_count: 0,
+        like_count: 0,
+        save_count: 0,
+        plan_count: 0,
+        cook_count: 0,
+      },
+      error: null,
+    });
+    const emptyQuery = createQuery({ data: [], error: null });
+    const sourceQuery = createQuery({ data: null, error: null });
+    const rpc = vi.fn(() => createQuery({
+      data: { id: recipeId, view_count: 1 },
+      error: null,
+    }));
+    const from = vi.fn((table: string) => {
+      if (table === "recipes") return recipeQuery;
+      if (table === "recipe_sources") return sourceQuery;
+      if (table === "recipe_ingredients" || table === "recipe_steps") return emptyQuery;
+      if (table === "recipe_likes" || table === "recipe_book_items") return emptyQuery;
+      if (table === "meals") return createQuery({ data: null, error: null, count: 0 });
+      throw new Error(`unexpected table: ${table}`);
+    });
+    createRouteHandlerClient.mockResolvedValue({
+      auth: { getUser: vi.fn(async () => ({ data: { user: { id: ownerId } } })) },
+      from,
+    });
+    createServiceRoleClient.mockReturnValue({ from, rpc });
+    readVerifiedAccountGenerationSession.mockResolvedValue({
+      ok: true,
+      sessionAuthority,
+    });
+    readRecipeSnapshotEntrypointContext.mockResolvedValue({
+      revision: 12,
+      edit_context: editContext,
+    });
+
+    const { GET } = await import("@/app/api/v1/recipes/[id]/route");
+    const response = await GET(new Request(`http://localhost:3000/api/v1/recipes/${recipeId}`), {
+      params: Promise.resolve({ id: recipeId }),
+    });
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.data.revision).toBe(12);
+    expect(body.data.edit_context).toEqual(editContext);
+    expect(Object.keys(body.data.edit_context)).toEqual([
+      "base_recipe_revision",
+      "draft",
+      "image_object_id",
+    ]);
+    expect(readRecipeSnapshotEntrypointContext).toHaveBeenCalledWith({
+      recipeId,
+      sessionAuthority,
+    });
+  });
+
   it("awaits the recipe detail view-count persistence when service role is available", async () => {
     const recipeReadQuery = createQuery({
       data: {
@@ -1619,6 +1740,7 @@ describe("recipe API contracts", () => {
         base_servings: 2,
         tags: ["한식"],
         source_type: "system",
+        revision: 1,
         view_count: 10,
         like_count: 0,
         save_count: 0,
@@ -1699,6 +1821,8 @@ describe("recipe API contracts", () => {
     expect(recipeReadQuery.maybeSingle.mock.invocationCallOrder[0])
       .toBeLessThan(readRecipeImageProjection.mock.invocationCallOrder[0]);
     expect(body.data.thumbnail_url).toBe(managedReadUrl);
+    expect(body.data).not.toHaveProperty("edit_context");
+    expect(readRecipeSnapshotEntrypointContext).not.toHaveBeenCalled();
     expect(routeFrom).not.toHaveBeenCalledWith("meals");
   });
 
@@ -1712,6 +1836,7 @@ describe("recipe API contracts", () => {
         base_servings: 2,
         tags: ["한식"],
         source_type: "system",
+        revision: 1,
         view_count: 10,
         like_count: 0,
         save_count: 0,
@@ -1812,6 +1937,7 @@ describe("recipe API contracts", () => {
         base_servings: 1,
         tags: ["한식"],
         source_type: "system",
+        revision: 1,
         view_count: 10,
         like_count: 0,
         save_count: 0,
@@ -1924,6 +2050,7 @@ describe("recipe API contracts", () => {
         base_servings: 2,
         tags: ["한식"],
         source_type: "system",
+        revision: 1,
         view_count: 10,
         like_count: 0,
         save_count: 0,
@@ -2013,6 +2140,7 @@ describe("recipe API contracts", () => {
         base_servings: 2,
         tags: ["한식"],
         source_type: "system",
+        revision: 1,
         view_count: 10,
         like_count: 0,
         save_count: 0,
