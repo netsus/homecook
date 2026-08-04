@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import {
   PersonalRecipeEditorShell,
@@ -9,6 +9,7 @@ import {
   usePersonalRecipeEditorShell,
 } from "@/components/recipe/personal-recipe-editor-shell";
 import { RecipeFutureImpactSaveFlow } from "@/components/recipe/recipe-future-impact-save-flow";
+import { useDialogBoundary } from "@/components/shared/use-dialog-boundary";
 import { createRecipeEditorImageDraft, type RecipeEditorDraft } from "@/lib/personal-recipe-editor";
 import type { RecipeEditContext, RecipeEditDraft } from "@/types/recipe";
 import { useAuthGateStore } from "@/stores/ui-store";
@@ -18,6 +19,7 @@ interface RecipeDetailPersonalEditorProps {
   onClose: () => void;
   onSaved: () => void;
   recipeId: string;
+  returnFocusRef?: React.RefObject<HTMLElement | null>;
   resumeContext?: RecipeEditContext | null;
 }
 
@@ -81,6 +83,7 @@ export function RecipeDetailPersonalEditor({
   onClose,
   onSaved,
   recipeId,
+  returnFocusRef,
   resumeContext = null,
 }: RecipeDetailPersonalEditorProps) {
   const initialDraft = useMemo(
@@ -90,7 +93,9 @@ export function RecipeDetailPersonalEditor({
   const [draft, setDraft] = useState(() => cloneDraft(
     resumeContext?.draft ?? editContext.draft,
   ));
+  const [impactDialogOpen, setImpactDialogOpen] = useState(false);
   const openAuthGate = useAuthGateStore((state) => state.open);
+  const authGateOpen = useAuthGateStore((state) => state.isOpen);
   const saveContext = resumeContext ?? editContext;
   const initialShellDraft = useMemo(
     () => toEditorShellDraft(initialDraft, editContext.image_object_id),
@@ -101,6 +106,8 @@ export function RecipeDetailPersonalEditor({
     [draft, editContext.image_object_id],
   );
   const titleRef = useRef<HTMLInputElement | null>(null);
+  const dialogRef = useRef<HTMLDivElement | null>(null);
+  const fallbackOpenerRef = useRef<HTMLElement | null>(null);
   const hasChanges = JSON.stringify(draft) !== JSON.stringify(initialDraft);
   const controller = usePersonalRecipeEditorShell({
     accessState: "ready",
@@ -117,22 +124,38 @@ export function RecipeDetailPersonalEditor({
     onSubmit: async () => undefined,
   });
 
-  useEffect(() => {
-    const opener = document.activeElement instanceof HTMLElement
-      ? document.activeElement
-      : null;
-    titleRef.current?.focus();
-
+  useLayoutEffect(() => {
+    const explicitReturnTarget = returnFocusRef?.current ?? null;
+    if (!returnFocusRef) {
+      fallbackOpenerRef.current = document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
+    }
     return () => {
-      opener?.focus();
+      requestAnimationFrame(() => {
+        const opener = explicitReturnTarget ?? fallbackOpenerRef.current;
+        if (opener?.isConnected) opener.focus();
+        fallbackOpenerRef.current = null;
+      });
     };
-  }, []);
+  }, [returnFocusRef]);
+
+  useDialogBoundary({
+    active: !authGateOpen && !controller.isDiscardDialogOpen && !impactDialogOpen,
+    dialogRef,
+    initialFocusRef: titleRef,
+    onClose: controller.requestCancel,
+  });
 
   return (
     <div
-      aria-label="내 레시피 편집"
+      aria-labelledby="recipe-detail-personal-editor-title"
+      aria-modal="true"
       className="fixed inset-0 z-40 overflow-y-auto bg-[var(--surface-fill)] px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-[calc(1rem+env(safe-area-inset-top))]"
       data-testid="recipe-detail-personal-editor"
+      ref={dialogRef}
+      role="dialog"
+      tabIndex={-1}
     >
       <div className="mx-auto max-w-2xl rounded-[var(--radius-lg)] bg-[var(--surface)] p-4 shadow-[var(--shadow-2)]">
         <PersonalRecipeEditorShell
@@ -143,7 +166,7 @@ export function RecipeDetailPersonalEditor({
           <header className="flex items-center justify-between gap-3">
             <div>
               <p className="text-sm font-semibold text-[var(--brand)]">내 레시피</p>
-              <h2 className="text-xl font-bold text-[var(--foreground)]">레시피 편집</h2>
+              <h2 className="text-xl font-bold text-[var(--foreground)]" id="recipe-detail-personal-editor-title">레시피 편집</h2>
             </div>
             <button
               aria-label="편집 닫기"
@@ -253,6 +276,7 @@ export function RecipeDetailPersonalEditor({
               draft={draft}
               enabled
               imageObjectId={saveContext.image_object_id}
+              onDialogOpenChange={setImpactDialogOpen}
               onSaved={() => {
                 onClose();
                 onSaved();

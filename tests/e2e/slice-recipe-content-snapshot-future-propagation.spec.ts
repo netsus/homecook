@@ -56,10 +56,48 @@ test.describe("recipe-content-snapshot-future-propagation", () => {
     await expect(keep).toBeFocused();
     await page.keyboard.press("Tab");
     await expect(cancel).toBeFocused();
-    const dialogBottom = await page.getByRole("dialog").evaluate((element) => element.getBoundingClientRect().bottom);
+    const dialogBottom = await page.getByRole("dialog", { name: "미래 계획 반영 확인" }).evaluate((element) => element.getBoundingClientRect().bottom);
     expect(dialogBottom).toBeLessThanOrEqual(568);
     await page.keyboard.press("Escape");
     await expect(opener).toBeFocused();
+  });
+
+  test("isolates the owner editor focus and background at 390px and 320px", async ({ page }) => {
+    for (const width of [390, 320] as const) {
+      await page.setViewportSize({ width, height: width === 390 ? 844 : 568 });
+      await installRecipeDetailRoutes(page);
+      await page.goto(`${RECIPE_PATH}?qaFutureImpact=1&editorWidth=${width}`);
+      const backgroundCook = page.getByRole("button", { name: "요리하기" });
+      const backgroundCookHandle = await backgroundCook.elementHandle();
+      const opener = page.getByRole("button", { name: "편집" });
+      await opener.click();
+
+      const editor = page.getByRole("dialog", { name: "레시피 편집" });
+      await expect(editor).toBeVisible();
+      await expect(editor).toHaveAttribute("aria-modal", "true");
+      expect(await page.evaluate(() => document.body.style.overflow)).toBe("hidden");
+      expect(backgroundCookHandle).not.toBeNull();
+      await backgroundCookHandle!.evaluate((element) => element.focus());
+      expect(await backgroundCookHandle!.evaluate((element) => document.activeElement === element)).toBe(false);
+      await expect(editor.locator(":focus")).toHaveCount(1);
+
+      const title = editor.getByRole("textbox", { name: "레시피 제목" });
+      await title.fill(`초점 격리 김치찌개 ${width}`);
+      const save = editor.getByRole("button", { name: "변경사항 저장" });
+      const close = editor.getByRole("button", { name: "편집 닫기" });
+      await save.focus();
+      await page.keyboard.press("Tab");
+      await expect(close).toBeFocused();
+      await page.keyboard.press("Shift+Tab");
+      await expect(save).toBeFocused();
+
+      await page.keyboard.press("Escape");
+      const discard = page.getByRole("dialog", { name: "변경사항을 버릴까요?" });
+      await expect(discard.getByRole("button", { name: "계속 편집" })).toBeFocused();
+      await discard.getByRole("button", { name: "변경사항 버리기" }).click();
+      await expect(opener).toBeFocused();
+      expect(await page.evaluate(() => document.body.style.overflow)).toBe("");
+    }
   });
 
   test("keeps stale saves open and moves focus to the exact recheck action", async ({ page }) => {
@@ -172,12 +210,18 @@ test.describe("recipe-content-snapshot-future-propagation", () => {
     await capture(page, 390, "COOK_MODE-dispatch-snapshot-success-mobile-default.png");
   });
 
-  test("fails closed for snapshot-v2 loading and read errors while creation remains off", async ({ page }) => {
+  test("retries snapshot-v2 read errors without leaving the immutable reader", async ({ page }) => {
     let release!: () => void;
     const gate = new Promise<void>((resolveGate) => { release = resolveGate; });
+    let requests = 0;
     await page.route("**/api/v1/cooking/session-attempts/*/cook-mode", async (route) => {
-      await gate;
-      await route.fulfill({ status: 500, json: { success: false, data: null, error: { code: "INTERNAL_ERROR", message: "read failed", fields: [] } } });
+      requests += 1;
+      if (requests === 1) {
+        await gate;
+        await route.fulfill({ status: 500, json: { success: false, data: null, error: { code: "INTERNAL_ERROR", message: "read failed", fields: [] } } });
+        return;
+      }
+      await route.fulfill({ json: { success: true, data: { session_id: "snapshot-qa", contract_version: "snapshot_v2", mode: "planner", status: "completed", recipe: immutableSnapshotRecipe, pantry_candidates: [] }, error: null } });
     });
     await page.goto("/cooking/session-attempts/snapshot-qa/cook-mode");
     await expect(page.getByRole("status")).toContainText("고정된 레시피를 불러오고 있어요");
@@ -185,6 +229,44 @@ test.describe("recipe-content-snapshot-future-propagation", () => {
     await capture(page, 390, "COOK_MODE-dispatch-loading-mobile-default.png");
     release();
     await expect(page.locator("main[role='alert']")).toContainText("요리 기록을 불러오지 못했어요");
+    const retry = page.getByRole("button", { name: "다시 시도" });
+    const previous = page.getByRole("button", { name: "이전 화면" });
+    await expect(retry).toBeFocused();
+    expect((await retry.boundingBox())?.height).toBeGreaterThanOrEqual(44);
+    expect((await previous.boundingBox())?.height).toBeGreaterThanOrEqual(44);
+    await capture(page, 390, "COOK_MODE-dispatch-error-mobile-default.png");
     await capture(page, 320, "COOK_MODE-dispatch-error-mobile-narrow.png");
+    await retry.click();
+    await expect(page.getByTestId("snapshot-v2-cook-mode")).toBeVisible();
+    expect(requests).toBe(2);
+  });
+
+  test("offers safe previous and login return actions for unauthorized snapshot reads", async ({ page }) => {
+    await page.route("**/api/v1/cooking/session-attempts/*/cook-mode", async (route) => route.fulfill({
+      status: 401,
+      json: { success: false, data: null, error: { code: "UNAUTHORIZED", message: "login required", fields: [] } },
+    }));
+    const snapshotPath = "/cooking/session-attempts/snapshot-private/cook-mode";
+    const loginHref = "/login?next=%2Fcooking%2Fsession-attempts%2Fsnapshot-private%2Fcook-mode";
+
+    await page.goto("/");
+    await page.goto(snapshotPath);
+    const recovery = page.getByTestId("snapshot-v2-cook-mode-recovery");
+    const login = page.getByRole("link", { name: "로그인" });
+    const previous = page.getByRole("button", { name: "이전 화면" });
+    await expect(recovery).toContainText("로그인이 필요해요");
+    await expect(login).toHaveAttribute("href", loginHref);
+    await expect(login).toBeFocused();
+    expect((await login.boundingBox())?.height).toBeGreaterThanOrEqual(44);
+    expect((await previous.boundingBox())?.height).toBeGreaterThanOrEqual(44);
+    await capture(page, 390, "COOK_MODE-dispatch-unauthorized-mobile-default.png");
+    await capture(page, 320, "COOK_MODE-dispatch-unauthorized-mobile-narrow.png");
+
+    await previous.click();
+    await expect(page).toHaveURL(/\/$/);
+    await page.goto(snapshotPath);
+    await page.route("**/login?next=**", async (route) => route.fulfill({ contentType: "text/html", body: "<main>login boundary</main>" }));
+    await page.getByRole("link", { name: "로그인" }).click();
+    await expect(page).toHaveURL(new RegExp(`/login\\?next=${encodeURIComponent(snapshotPath)}`));
   });
 });

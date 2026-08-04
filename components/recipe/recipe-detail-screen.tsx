@@ -210,6 +210,7 @@ export function RecipeDetailScreen({
   const nutritionRequestSequenceRef = React.useRef(0);
   const currentRecipeIdRef = React.useRef(recipeId);
   const snapshotStartLatchRef = React.useRef(false);
+  const personalEditorOpenerRef = React.useRef<HTMLElement | null>(null);
   currentRecipeIdRef.current = recipeId;
 
   useEffect(() => {
@@ -884,6 +885,14 @@ export function RecipeDetailScreen({
     void openPlannerAddSheet({ source: "manual" });
   };
 
+  const openPersonalEditor = useCallback(() => {
+    personalEditorOpenerRef.current = document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : null;
+    setPersonalEditResumeContext(null);
+    setIsPersonalEditorOpen(true);
+  }, []);
+
   useEffect(() => {
     if (!isAuthenticated) {
       return;
@@ -899,6 +908,7 @@ export function RecipeDetailScreen({
 
     if (pendingAction.type === "recipe-edit-save") {
       if (recipeSnapshotUiMode === "snapshot_v2" && recipe.edit_context) {
+        personalEditorOpenerRef.current = null;
         setPersonalEditResumeContext(pendingAction.editContext);
         setIsPersonalEditorOpen(true);
       }
@@ -1129,10 +1139,7 @@ export function RecipeDetailScreen({
             selectedServings={selectedServings}
             isNutritionRefreshing={nutritionRequestState === "loading"}
             canEditPersonalRecipe={canEditPersonalRecipe}
-            onEditPersonalRecipe={() => {
-              setPersonalEditResumeContext(null);
-              setIsPersonalEditorOpen(true);
-            }}
+            onEditPersonalRecipe={openPersonalEditor}
           />
         </div>
       ) : null}
@@ -1855,10 +1862,7 @@ export function RecipeDetailScreen({
           capabilityEnabled={canEditPersonalRecipe}
           isAuthenticated={isAuthenticated}
           onDelete={() => undefined}
-          onEdit={() => {
-            setPersonalEditResumeContext(null);
-            setIsPersonalEditorOpen(true);
-          }}
+          onEdit={openPersonalEditor}
           onFork={() => undefined}
         />
       </div>
@@ -1952,6 +1956,7 @@ export function RecipeDetailScreen({
             void loadRecipe();
           }}
           recipeId={recipeId}
+          returnFocusRef={personalEditorOpenerRef}
           resumeContext={personalEditResumeContext}
         />
       ) : null}

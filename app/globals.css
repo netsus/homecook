@@ -13140,7 +13140,7 @@ button {
   .app-shell.wave1-planner-shell header,
   .app-shell.wave1-pantry-shell header,
   .app-shell.wave1-mypage-shell header,
-  .app-shell.wave1-recipe-shell header {
+  .app-shell.wave1-recipe-shell > div > header {
     display: none;
   }
 

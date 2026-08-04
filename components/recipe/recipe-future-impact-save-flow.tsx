@@ -17,6 +17,7 @@ interface RecipeFutureImpactSaveFlowProps {
   enabled: boolean;
   imageObjectId: string | null;
   onSaved: (result: { id: string; revision: number }) => void;
+  onDialogOpenChange?: (open: boolean) => void;
   onUnauthorized?: (editContext: RecipeEditContext) => void;
   recipeId: string;
   resumePreview?: boolean;
@@ -35,6 +36,7 @@ export function RecipeFutureImpactSaveFlow({
   enabled,
   imageObjectId,
   onSaved,
+  onDialogOpenChange,
   onUnauthorized,
   recipeId,
   resumePreview = false,
@@ -48,10 +50,15 @@ export function RecipeFutureImpactSaveFlow({
   const previewDraftRef = useRef<RecipeFutureDraft | null>(null);
   const resumeAttemptedRef = useRef(false);
 
+  const updateOpen = useCallback((nextOpen: boolean) => {
+    setOpen(nextOpen);
+    onDialogOpenChange?.(nextOpen);
+  }, [onDialogOpenChange]);
+
   const preview = useCallback(async () => {
     if (actionDisabled) return;
     const previewDraft = JSON.parse(JSON.stringify(draft)) as RecipeFutureDraft;
-    setOpen(true);
+    updateOpen(true);
     setLoading(true);
     setImpact(null);
     setErrorCode(null);
@@ -63,7 +70,7 @@ export function RecipeFutureImpactSaveFlow({
       const code = readErrorCode(error);
       setErrorCode(code);
       if (code === "UNAUTHORIZED" && onUnauthorized) {
-        setOpen(false);
+        updateOpen(false);
         onUnauthorized({
           base_recipe_revision: baseRecipeRevision,
           draft: previewDraft,
@@ -73,7 +80,7 @@ export function RecipeFutureImpactSaveFlow({
     } finally {
       setLoading(false);
     }
-  }, [actionDisabled, baseRecipeRevision, draft, imageObjectId, onUnauthorized, recipeId]);
+  }, [actionDisabled, baseRecipeRevision, draft, imageObjectId, onUnauthorized, recipeId, updateOpen]);
 
   useEffect(() => {
     if (!resumePreview || resumeAttemptedRef.current || actionDisabled || !enabled) return;
@@ -98,13 +105,13 @@ export function RecipeFutureImpactSaveFlow({
         impactToken: impact.impact_token,
         imageObjectId,
       }, idempotencyKey);
-      setOpen(false);
+      updateOpen(false);
       onSaved(result);
     } catch (error) {
       const code = readErrorCode(error);
       setErrorCode(code);
       if (code === "UNAUTHORIZED" && onUnauthorized) {
-        setOpen(false);
+        updateOpen(false);
         onUnauthorized({
           base_recipe_revision: baseRecipeRevision,
           draft: previewDraft,
@@ -118,7 +125,7 @@ export function RecipeFutureImpactSaveFlow({
 
   return <>
     <button className="min-h-11 rounded-[var(--radius-control)] border border-[var(--brand)] px-4 font-bold text-[var(--brand)] disabled:cursor-not-allowed disabled:opacity-50" disabled={actionDisabled} onClick={() => void preview()} type="button">변경사항 저장</button>
-    {open ? <RecipeFutureImpactDialog errorCode={errorCode} impact={impact} loading={loading} onClose={() => { if (!submitting) setOpen(false); }} onLogin={() => {
+    {open ? <RecipeFutureImpactDialog errorCode={errorCode} impact={impact} loading={loading} onClose={() => { if (!submitting) updateOpen(false); }} onLogin={() => {
       const previewDraft = previewDraftRef.current;
       if (!previewDraft) return;
       onUnauthorized?.({

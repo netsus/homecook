@@ -509,9 +509,10 @@ describe("recipe detail screen", () => {
     const editor = screen.getByRole("dialog", { name: "레시피 편집" });
     expect(editor.getAttribute("aria-modal")).toBe("true");
     expect(document.body.style.overflow).toBe("hidden");
-    const isolatedBackground = Array.from(document.body.children).find(
-      (element) => element instanceof HTMLElement && element.getAttribute("aria-hidden") === "true",
-    ) as HTMLElement | undefined;
+    let isolatedBackground = backgroundCook.parentElement;
+    while (isolatedBackground && isolatedBackground.getAttribute("aria-hidden") !== "true") {
+      isolatedBackground = isolatedBackground.parentElement;
+    }
     expect(isolatedBackground).toBeTruthy();
     expect(isolatedBackground?.inert).toBe(true);
     expect(isolatedBackground?.contains(backgroundCook)).toBe(true);
@@ -519,9 +520,7 @@ describe("recipe detail screen", () => {
     const title = screen.getByRole("textbox", { name: "레시피 제목" });
     await waitFor(() => expect(document.activeElement).toBe(title));
     backgroundCook.focus();
-    await act(async () => {
-      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-    });
+    await userEvent.tab();
     expect(editor.contains(document.activeElement)).toBe(true);
 
     await userEvent.clear(title);
@@ -536,8 +535,12 @@ describe("recipe detail screen", () => {
 
     await userEvent.keyboard("{Escape}");
     const discard = screen.getByRole("dialog", { name: "변경사항을 버릴까요?" });
-    expect(within(discard).getByRole("button", { name: "계속 편집" })).toHaveFocus();
-    expect(screen.getAllByRole("dialog")).toHaveLength(1);
+    expect(document.activeElement).toBe(within(discard).getByRole("button", { name: "계속 편집" }));
+    let inactiveEditorContent = save.parentElement;
+    while (inactiveEditorContent && inactiveEditorContent.getAttribute("aria-hidden") !== "true") {
+      inactiveEditorContent = inactiveEditorContent.parentElement;
+    }
+    expect(inactiveEditorContent?.inert).toBe(true);
     await userEvent.click(within(discard).getByRole("button", { name: "변경사항 버리기" }));
     await waitFor(() => expect(document.activeElement).toBe(opener));
     expect(document.body.style.overflow).toBe("");

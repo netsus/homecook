@@ -11,6 +11,7 @@ import React, {
 
 import { Button } from "@/components/ui/button";
 import { RecipeTagEditor } from "@/components/recipe/recipe-tag-editor";
+import { useDialogBoundary } from "@/components/shared/use-dialog-boundary";
 import { getCookingMethodColor } from "@/lib/cooking-method-colors";
 import { groupCookingMethodsByCategory } from "@/lib/cooking-method-taxonomy";
 import { COOKING_UNIT_OPTIONS } from "@/lib/recipe-units";
@@ -710,63 +711,13 @@ export function RecipeEditorDiscardDialog({
 }: RecipeEditorDiscardDialogProps) {
   const dialogRef = useRef<HTMLDivElement | null>(null);
   const stayEditingButtonRef = useRef<HTMLButtonElement | null>(null);
-  const returnFocusRef = useRef<HTMLElement | null>(null);
 
-  useEffect(() => {
-    if (!open) {
-      return;
-    }
-
-    returnFocusRef.current =
-      document.activeElement instanceof HTMLElement
-        ? document.activeElement
-        : null;
-    stayEditingButtonRef.current?.focus();
-
-    const dialog = dialogRef.current;
-    if (!dialog) {
-      return;
-    }
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        event.preventDefault();
-        onStay();
-        return;
-      }
-
-      if (event.key !== "Tab") {
-        return;
-      }
-
-      const focusable = dialog.querySelectorAll<HTMLElement>(
-        'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
-      );
-      if (focusable.length === 0) {
-        return;
-      }
-
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-      const activeElement = document.activeElement;
-
-      if (event.shiftKey && activeElement === first) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && activeElement === last) {
-        event.preventDefault();
-        first.focus();
-      }
-    };
-
-    dialog.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      dialog.removeEventListener("keydown", handleKeyDown);
-      returnFocusRef.current?.focus();
-      returnFocusRef.current = null;
-    };
-  }, [onStay, open]);
+  useDialogBoundary({
+    active: open,
+    dialogRef,
+    initialFocusRef: stayEditingButtonRef,
+    onClose: onStay,
+  });
 
   if (!open) {
     return null;
