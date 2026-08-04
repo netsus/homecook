@@ -216,7 +216,7 @@ Slice Order 표의 Status 값은 위 이벤트가 발생한 PR 또는 closeout b
 | `mvp2-polish-planner-meal-add-modal` | merged | PLANNER_WEEK/MEAL_SCREEN 식사추가 follow-up: 검색/레시피북/팬트리/유튜브 modal entry, picker 뒤로가기 버튼 공용화, 남은요리 뒤로가기, 유튜브/직접등록 option typography 정리. API/DB 변경 없음 |
 | `mvp2-polish-manual-recipe-form` | merged | MANUAL_RECIPE_CREATE follow-up: 기준인분 stepper, 조리방법 선택 필수화, 저장 클릭 후 필드별 validation, 재료 선택 모달 선택 요약/취소/active 버튼 정리. API/DB 변경 없음 |
 | `ux-latency-resolution` | merged | 주요 화면 진입·모달/시트 열기의 >0.2s 체감 대기 개선. FE-only, targeted warm-up/cache reuse/prefetch. API/DB/auth 변경 없음 |
-| `cook-mode-whole-board` | merged | PR #711 exact head `55b93ad7`가 merge `2f8569cb`로 병합되어 COOK_MODE 전체 재료 + 전체 조리순서 whole-board runtime이 존재한다. API/DB 변경 없음 |
+| `cook-mode-whole-board` | implementation | PR #711 exact head `55b93ad7`가 merge `2f8569cb`로 병합되어 whole-board runtime predecessor는 존재하지만, roadmap closeout status는 broader lifecycle 증거와 분리해 계속 `implementation`으로 유지한다. API/DB 변경 없음 |
 | `recipebook-diary-port` | implementation | 레시피북을 작은 책/다이어리처럼 느끼게 하는 FE-only 포팅. `MYPAGE` 책장형 목록과 `RECIPEBOOK_DETAIL` desktop 목차 rail + recipe area split, mobile 목차형 상세를 적용하며, full page-turn reader는 read-only preview 계약이 승인될 때까지 scope 밖 |
 | `33a-user-progress-foundation` | merged | 전용 progress ledger/read model과 `GET /users/me/progress` contract를 backend-first로 구현. 4개 canonical event writer/backfill/reconcile. `GET /users/me`는 profile-only 유지 |
 | `33b-mypage-progress-ui` | merged | MYPAGE 하드코딩 레벨 subtitle을 실제 `GET /users/me/progress` 기반 compact progress UI로 교체. progress soft-fail. 390px/320px evidence 확보 |
