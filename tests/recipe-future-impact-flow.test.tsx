@@ -42,6 +42,7 @@ describe("recipe future impact save flow", () => {
     await user.click(screen.getByRole("button", { name: "변경사항 저장" }));
 
     expect(fetchRecipeFutureImpact).toHaveBeenCalledWith("recipe-id", 12, draft);
+    expect((await screen.findByRole("dialog", { name: "미래 계획 반영 확인" })).getAttribute("aria-modal")).toBe("true");
     expect((await screen.findByRole("button", { name: "저장" }) as HTMLButtonElement).disabled).toBe(true);
     await user.click(screen.getByRole("radio", { name: /기존 계획 유지/ }));
     await user.click(screen.getByRole("button", { name: "저장" }));

@@ -43,7 +43,9 @@ test.describe("recipe-content-snapshot-future-propagation", () => {
     await page.route("**/api/v1/recipes/*/future-plan-impact", async (route) => route.fulfill({ json: { success: true, data: { impact_token: "qa-impact-token", expires_at: "2026-08-04T01:00:00.000Z", proposed_content_hash: "a".repeat(64), future_meal_count: 3, date_range: { from: "2026-08-04", to: "2026-08-10" }, incomplete_shopping_list_count: 2, completed_shopping_list_count: 1, active_cooking_claim_count: 1, replace_all_allowed: false }, error: null } }));
     await page.goto(`${RECIPE_PATH}?qaFutureImpact=1`);
     const opener = await openImpactFromEditedOwnerRecipe(page, "내 매콤 김치찌개");
-    await expect(page.getByRole("dialog", { name: "미래 계획 반영 확인" })).toBeVisible();
+    const impactDialog = page.getByRole("dialog", { name: "미래 계획 반영 확인" });
+    await expect(impactDialog).toBeVisible();
+    await expect(impactDialog).toHaveAttribute("aria-modal", "true");
     await expect(page.getByRole("heading", { name: "미래 계획 반영 확인" })).toBeVisible();
     await capture(page, 390, "RECIPE_DETAIL-impact-mobile-default.png");
     await capture(page, 320, "RECIPE_DETAIL-impact-mobile-narrow.png");
