@@ -9,6 +9,15 @@ function read(path: string) {
   return readFileSync(join(root, path), "utf8");
 }
 
+function readPngWidth(path: string) {
+  const png = readFileSync(join(root, path));
+  expect(png.subarray(0, 8)).toEqual(
+    Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
+  );
+  expect(png.subarray(12, 16).toString("ascii")).toBe("IHDR");
+  return png.readUInt32BE(16);
+}
+
 describe("cooked-batch-weight-ledger fresh Stage 1 re-lock", () => {
   const readme = read("docs/workpacks/cooked-batch-weight-ledger/README.md");
   const acceptance = read("docs/workpacks/cooked-batch-weight-ledger/acceptance.md");
@@ -83,6 +92,19 @@ describe("cooked-batch-weight-ledger fresh Stage 1 re-lock", () => {
     );
     expect(readme).toContain("Stage 2 진입 전");
     expect(acceptance).toContain("Stage 2 진입 전");
+  });
+
+  it("provides fresh #8 design evidence at the locked mobile widths", () => {
+    expect(
+      readPngWidth(
+        "ui/designs/evidence/cooked-batch-weight-ledger/COOK_MODE-design-mobile-default-390.png",
+      ),
+    ).toBe(390);
+    expect(
+      readPngWidth(
+        "ui/designs/evidence/cooked-batch-weight-ledger/COOK_MODE-design-mobile-narrow-320.png",
+      ),
+    ).toBe(320);
   });
 
   it("locks exact pantry rows, weight choices, recovery states and dark creation drain", () => {
