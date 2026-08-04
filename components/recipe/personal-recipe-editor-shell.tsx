@@ -711,6 +711,20 @@ export function RecipeEditorDiscardDialog({
 }: RecipeEditorDiscardDialogProps) {
   const dialogRef = useRef<HTMLDivElement | null>(null);
   const stayEditingButtonRef = useRef<HTMLButtonElement | null>(null);
+  const immediateReturnFocusRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    immediateReturnFocusRef.current = document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : null;
+    return () => {
+      if (immediateReturnFocusRef.current?.isConnected) {
+        immediateReturnFocusRef.current.focus();
+      }
+      immediateReturnFocusRef.current = null;
+    };
+  }, [open]);
 
   useDialogBoundary({
     active: open,

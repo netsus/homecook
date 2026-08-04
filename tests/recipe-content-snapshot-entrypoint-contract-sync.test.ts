@@ -235,19 +235,20 @@ describe("recipe snapshot entrypoint Stage 1 contract lock", () => {
     ]) {
       expect(notes).toContain("9eb1ebd8ea5a12294a76d7f2799693f03654b0a4");
       expect(notes).toContain("ef5903b131a2eb9e505b2121b4e390970c565b95");
-      expect(notes).toContain("7ca6a5dd5a9747a75c5b38c0e48fc1900f346f79");
+      expect(notes).toContain("8856184ae1f493ee6a117ff4fa21513cc98049f6");
       expect(notes).toContain(
-        "stage4-draft-owner-edit-repair-implemented-awaiting-independent-review",
+        "stage4-auth-m01-m02-repaired-awaiting-fresh-final-authority",
       );
+      expect(notes).toContain("final-authority-hold-0-2-0");
       expect(notes).toContain(
         "design-status-pending-review-temporary-no-authority-report",
       );
-      expect(notes).toContain("stage5-authority-stage6-pending");
+      expect(notes).toContain("stage6-pending");
       expect(notes).toContain("manual-server-mac-activation-pending");
     }
-    expect(readme).toContain("No product-design-authority report exists");
+    expect(readme).toContain("No authority report exists");
     expect(roadmap).toMatch(
-      /recipe-content-snapshot-future-propagation[\s\S]*Draft Stage 4 PR #1281[\s\S]*7ca6a5dd/,
+      /recipe-content-snapshot-future-propagation[\s\S]*Draft Stage 4 PR #1281[\s\S]*8856184a/,
     );
   });
 });

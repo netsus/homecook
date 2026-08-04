@@ -231,3 +231,11 @@
 - AUTH-M01 and AUTH-M02 are closed by implementation evidence only. A new fresh independent final authority task must review the pushed exact head; this implementer does not approve authority, Stage 5 or Stage 6 and does not create the authority report.
 - Design Status remains `pending-review`/temporary. Broader real Auth/Data, Manual Only, merged-exact server-Mac evidence, #8 scope and R/R+1 before R+2 activation remain pending.
 - Capability activation, production/staging/remote writes, migrations, Vercel deployment, server-Mac mutation and Discord notification remained zero.
+
+### First current-head quality failure and direct repair
+
+- The first pushed evidence head `30a05a1cd0414c764c22466aaa9f81f1d75b22ae` completed `14/15` checks as success or intended skip, but `quality` failed and is not completion evidence. Its aggregate result was `2 failed / 5,213 passed / 330 skipped`.
+- One failure was directly related to AUTH-M01: the shared discard boundary restored focus one animation frame later, while the existing personal-editor contract requires the original cancel control immediately after Escape. The other was bookkeeping consistency: the contract-sync test still locked the superseded `7ca6a5dd` projection after automation notes moved to code commit `8856184a`.
+- The exact local focused reproduction failed the same `2/13`. The repair preserves shared inert/scroll/Tab isolation while restoring the discard opener immediately, and synchronizes automation/work-item/status/roadmap assertions to the honest HOLD state. No unrelated product or test file is changed.
+- GREEN verification passed the repair/related set `83/83`; the CI-equivalent local aggregate passed `513` files + `28` skipped with `5,215` tests passed + `330` skipped.
+- Because the first-run quality failure is real, it is not rerun as completion evidence. This follow-up commit creates a new exact head that must receive a fully clean first-run check set before handoff.
