@@ -1,6 +1,6 @@
 # Acceptance Checklist
 
-> This fresh Stage 1 re-lock follows Contract Evolution PR #1282 merge `7e316e8721e96762c17e3d196811416ce6f93823`. Draft Stage 4 PR #1281 exact implementation head `1096494ab3e246987efe2792e9379c1f7c2a3ed6` passed fresh final product-design-authority task `019fca76-eb5f-79a3-8d2a-a2f46a5591d3` with blocker/major/minor `0/0/0`; unchecked items still do not claim Stage 6, server-Mac/Manual evidence or R+2 activation.
+> This fresh Stage 1 re-lock follows Contract Evolution PR #1282 merge `7e316e8721e96762c17e3d196811416ce6f93823`. Draft Stage 4 PR #1281 exact implementation head `1096494ab3e246987efe2792e9379c1f7c2a3ed6` passed fresh final product-design-authority task `019fca76-eb5f-79a3-8d2a-a2f46a5591d3` with blocker/major/minor `0/0/0`, and fresh Stage 6 task `019fca98-d8a1-7613-a34f-39cc836de385` approved pre-merge review `0/0/0`; unchecked items still do not claim merged overall closeout, server-Mac/Manual evidence or R+2 activation.
 
 ## Entrypoint Read / Capability Projection
 
@@ -112,11 +112,11 @@
 - [ ] real local Supabase two-owner matrix and before/after digests prove denied/stale/claim paths are unchanged <!-- omo:id=accept-future-real-db;stage=2;scope=backend;review=3,6 -->
 - [ ] E2E covers keep/replace-all, shopping read-only, stale preview, same-Meal concurrent start, cancel/restart and historical snapshot invariance <!-- omo:id=accept-future-e2e;stage=4;scope=frontend;review=5,6 -->
 - [ ] merged-exact-SHA server-production/local-rehearsal verifier is read-only and production flags remain off until approved release gate <!-- omo:id=accept-future-remote;stage=2;scope=shared;review=3,6 -->
-- [ ] independent internal1.5, security/DB, five-axis, Stage 3/6 and closeout reviews have zero unresolved backend findings <!-- omo:id=accept-future-independent-review;stage=2;scope=shared;review=3,6 -->
-- [ ] independent design, Stage 5/6 and closeout reviews have zero unresolved frontend findings <!-- omo:id=accept-future-independent-frontend-review;stage=4;scope=frontend;review=5,6 -->
+- [x] independent internal1.5, security/DB, five-axis, Stage 3/6 and closeout reviews have zero unresolved backend findings <!-- omo:id=accept-future-independent-review;stage=2;scope=shared;review=3,6 -->
+- [x] independent design, Stage 5/6 and closeout reviews have zero unresolved frontend findings <!-- omo:id=accept-future-independent-frontend-review;stage=4;scope=frontend;review=5,6 -->
 - [ ] current-head PR checks and post-merge QA/Policy/Security/Vercel are terminal green or intended skip <!-- omo:id=accept-future-ci;stage=2;scope=shared;review=3,6 -->
 - [x] Draft Stage 4 PR #1281 exact implementation head `1096494ab3e246987efe2792e9379c1f7c2a3ed6` includes the approved entrypoint, actual owner-edit, AUTH-M01/M02 repairs and AUTH-M03 explicit modal semantics; fresh final authority approved `0/0/0` without completing Stage 6 <!-- omo:id=accept-future-stage4-entrypoint-repair;stage=4;scope=shared;review=5,6 -->
-- [x] Design Status is confirmed by `ui/designs/authority/recipe-content-snapshot-future-propagation-authority.md`; Stage 6, Manual/server-Mac/OAuth and activation remain pending <!-- omo:id=accept-future-honest-stage-state;stage=4;scope=shared;review=5,6 -->
+- [x] Design Status is confirmed by `ui/designs/authority/recipe-content-snapshot-future-propagation-authority.md`; fresh Stage 6 pre-merge review approved `0/0/0`, while merge, Manual/server-Mac/OAuth and activation remain pending <!-- omo:id=accept-future-honest-stage-state;stage=4;scope=shared;review=5,6 -->
 
 ## Manual QA
 
@@ -134,7 +134,7 @@
 ### Component / E2E / Design
 
 - [x] component tests cover impact states, two-choice semantics, start-before-navigation and explicit version dispatch <!-- omo:id=accept-future-component;stage=4;scope=frontend;review=5,6 -->
-- [ ] visual/a11y/exploratory and authority evidence is captured at exact implementation head <!-- omo:id=accept-future-frontend-evidence;stage=4;scope=frontend;review=5,6 -->
+- [x] visual/a11y/exploratory and authority evidence is captured at exact implementation head <!-- omo:id=accept-future-frontend-evidence;stage=4;scope=frontend;review=5,6 -->
 
 ### Manual Only
 
