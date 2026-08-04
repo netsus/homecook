@@ -21,6 +21,9 @@ describe("cooked-batch-weight-ledger fresh Stage 1 re-lock", () => {
   const workflowStatus = JSON.parse(read(".workflow-v2/status.json"));
   const roadmap = read("docs/workpacks/README.md");
   const cookModeDesign = read("ui/designs/COOK_MODE.md");
+  const evidence = read(
+    "docs/workpacks/cooked-batch-weight-ledger/evidence/2026-08-04-stage1-relock.md",
+  );
 
   it("locks every #8 source reference to the current official tuple", () => {
     expect(workItem.docs_refs.source_of_truth).toEqual([
@@ -116,5 +119,19 @@ describe("cooked-batch-weight-ledger fresh Stage 1 re-lock", () => {
       approval_state: "not_started",
       verification_status: "pending",
     });
+  });
+
+  it("records the merged #1284 baseline repair and the current audit floor truthfully", () => {
+    const mergedSha = "c982d97085ebcbe50da8a1b3c3de68bcd9f638a3";
+
+    expect(evidence).toContain(`#1284`);
+    expect(evidence).toContain(mergedSha);
+    expect(evidence).toContain("high/critical `0`");
+    expect(evidence).not.toContain("Dependency audit repair PR `#1284` is still pending");
+    expect(evidence).not.toContain("pre-existing high advisories `3`");
+
+    expect(readme).toContain(`#1284`);
+    expect(readme).toContain(mergedSha);
+    expect(readme).not.toContain("pending dependency audit repair PR `#1284`");
   });
 });

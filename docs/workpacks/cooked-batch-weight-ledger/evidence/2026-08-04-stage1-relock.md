@@ -30,7 +30,7 @@ The relock remains docs-only. No product runtime, API, DB, migration, dependency
 
 - `recipe-content-snapshot-future-propagation` (#7) runtime predecessor is merged and available through PR `#1281` exact head `aab9a65e6123e3134478842971765ad3aa737d6a`, merged as `2173737e8ea2eec2297e1cc0227ce4f2c27c50b9`.
 - That merge does **not** close the broader #7 lifecycle. Manual/server-Mac/OAuth evidence, #8 R/R+1 drain, and R+2 activation remain open and are intentionally preserved as pending here.
-- Dependency audit repair PR `#1284` is still pending and is not claimed resolved by this Stage 1 relock successor.
+- Dependency advisory baseline repair PR `#1284` was independently approved and squash-merged as `c982d97085ebcbe50da8a1b3c3de68bcd9f638a3`. This Stage 1 relock does not claim ownership of that merge; it only consumes the repaired base truthfully.
 
 ## Pending independent gates
 
@@ -46,7 +46,7 @@ No gate above is self-approved or projected complete by this author task.
 
 ## Local successor edits
 
-- Added this successor evidence file so the interrupted Stage 1 lineage, blocked precheck context, pending dependency repair, and future independent gates are retained in-repo.
+- Added this successor evidence file so the interrupted Stage 1 lineage, blocked precheck context, merged dependency-baseline context, and future independent gates are retained in-repo.
 - Added one minimal README link to the evidence file so future reviewers and validators can find the successor context without reopening scope.
 
 ## Validation
@@ -77,7 +77,7 @@ Fresh successor-head validation was rerun after the evidence/bookkeeping update:
 - `pnpm exec vitest run tests/cooked-batch-weight-ledger-stage1-relock.test.ts tests/check-workpack-docs.test.ts tests/source-of-truth-sync.test.ts tests/workflow-v2-docs.test.ts tests/omo-automation-spec.test.ts tests/omo-bookkeeping.test.ts` → `6 files / 67 tests` pass
 - `pnpm lint` → pass
 - `pnpm typecheck` → pass
-- `pnpm audit --audit-level high` → fail, pre-existing high advisories `3` (`undici` via `jsdom`, `ip-address` via `@lhci/cli`, `brace-expansion` via `@eslint/eslintrc`)
+- `pnpm audit --audit-level high` → high/critical `0`; residual advisories `1 low | 1 moderate`
 - `git diff --check` → pass
 
 ## PR and merge posture
