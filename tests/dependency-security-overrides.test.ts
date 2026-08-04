@@ -61,9 +61,11 @@ describe("dependency security overrides", () => {
       ?? readPnpmConfig("onlyBuiltDependencies");
 
     expect(overrides).toMatchObject({
-      "minimatch@3.1.5>brace-expansion": "5.0.8",
-      "minimatch@10.2.5>brace-expansion": "5.0.8",
+      "minimatch@3.1.5>brace-expansion": "5.0.9",
+      "minimatch@10.2.5>brace-expansion": "5.0.9",
       postcss: "8.5.18",
+      "socks>ip-address": "10.3.1",
+      undici: "7.29.0",
     });
     expect(patchedDependencies).toEqual({
       "minimatch@3.1.5": join(rootDir, "patches/minimatch@3.1.5.patch"),
