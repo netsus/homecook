@@ -228,6 +228,11 @@ snapshot_v2 read:
 
 ## Design Status
 
+- [ ] 임시 UI (temporary)
+- [ ] 리뷰 대기 (pending-review)
+- [x] 확정 (confirmed)
+- [ ] N/A — BE-only slice
+
 `confirmed`. Fresh independent final product-design-authority task `019fca76-eb5f-79a3-8d2a-a2f46a5591d3` reviewed exact head `1096494ab3e246987efe2792e9379c1f7c2a3ed6` and approved with blocker/major/minor `0/0/0`. The earlier AUTH-M01/M02 repairs remain closed, and AUTH-M03 is closed by the impact dialog's explicit `role="dialog"` plus `aria-modal="true"` semantics and locked component/E2E assertions. Canonical report: `ui/designs/authority/recipe-content-snapshot-future-propagation-authority.md`. Fresh Stage 6 task `019fca98-d8a1-7613-a34f-39cc836de385` approved pre-merge closeout with P0/P1/P2 and blocker/major/minor `0/0/0`; merge, Manual/server-Mac/OAuth evidence and #8/R+2 activation remain pending.
 
 ## Primary User Path

@@ -48,5 +48,6 @@ The review covered the complete PR diff, five UI states, explicit legacy-v1/snap
 - The roadmap remains `in-progress` after this implementation PR because the canonical closeout validator treats the separately pending real local Supabase, merged-exact server rehearsal, #8 compatibility and activation gates as part of the overall slice lifecycle; they are not falsely projected as complete here.
 - The closeout-only successor head must complete a new first-run Draft check set before Ready.
 - Ready-triggered checks, including `full-regression` and `lighthouse`, must all become terminal success or contractually intended skip on that same current head before merge.
+- The first Ready event on closeout head `1a91b41156ccb5b364526cabffe1998a33665882` exposed a truthful policy RED: Stage 4-owned checklist routing metadata used `scope=shared`, the confirmed Design Status lacked the parser's checkbox form, and the broad future integration E2E item was incorrectly owned by Stage 4. The failed head is diagnostic only; these governing metadata defects require a new successor first-run and no rerun is used as completion evidence.
 - Manual/local-rehearsal/server-Mac/OAuth, production/staging/remote writes, Vercel deployment, migrations, capability activation, #8 and R/R+1→R+2 remain pending or forbidden for this task.
 - Discord notifications sent by this task: `0`.
