@@ -1,311 +1,224 @@
-# COOK_MODE — 요리모드 (전체화면 몰입형)
+# COOK_MODE — whole-board + cooked batch completion
 
-> 기준 문서: 화면정의서 v1.5.1 §14 / 요구사항 v1.6.4 §1-3, §2-8
-> 생성일: 2026-04-29
-> 슬라이스: 15a-cook-planner-complete
-> Wave1 mobile 100% parity note: this surface needs explicit fixed reference confirmation. Once exact-reference-ready, `ui/designs/WAVE1_MOBILE_APP_BASELINE.md` supersedes older MVP/C2 visual target notes.
+> 기준: 요구사항 `v1.7.29`, 화면정의서 `v1.5.33`, 유저 flow `v1.3.31`, DB `v1.3.31`, API `v1.2.35`
+> 대상: `cooked-batch-weight-ledger` #8 fresh Stage 1 design source
+> 분류: `prototype-derived design`, high-risk UI change, authority required
+> 상태: `temporary` — fresh independent critic/authority/internal1.5 pending
 
-## 화면 목적
+## 목적과 계약 경계
 
-플래너 경유 요리 세션의 몰입형 요리모드. 전체화면에서 좌우 스와이프로 재료/과정을 확인하며 요리 후 완료 처리.
+사용자는 요리 중 전체 재료와 전체 조리순서를 한 화면의 whole-board로 읽고, 완료할 때 실제 사용한 pantry row와 음식만의 완성 중량을 명시적으로 결정한다.
 
-## 진입 경로
+- 기존 whole-board interaction model을 유지한다. 재료/과정을 좌우 swipe나 단계 이동 화면으로 되돌리지 않는다.
+- COOK_MODE 안에 인분 stepper나 인분 변경 action을 두지 않는다.
+- snapshot-v2 완료 body는 기존 `consumed_pantry_item_ids`, `weight_action`, `finished_weight_g`만 사용한다.
+- 새 endpoint, field, status, public error, action, screen을 만들지 않는다.
+- #7의 recipe/Meal `revision`, owner-only `edit_context`, server-only joint capability projection은 entrypoint 경계다. #8 completion body를 확장하지 않는다.
+- creation-off에서는 새 personal edit와 새 snapshot-v2 start를 막되 seeded/existing v2 read/cancel/complete drain은 유지한다.
 
-- COOK_READY_LIST에서 레시피 [요리하기] 클릭 → 세션 생성 → COOK_MODE 진입
-- 독립 요리(RECIPE_DETAIL 직행)는 15b에서 별도 처리
+## 화면 구조
 
-## 화면 구성 원칙
-
-- **전체화면 몰입형**: 일반 AppBar 없음, 최소 UI
-- **좌우 스와이프 전환**: 재료 화면(좌) ↔ 과정 화면(우)
-- **하단 고정 CTA**: [요리 완료] + [취소] 버튼만 노출
-- **인분 조절 불가**: 진입 전 설정된 인분으로 고정 (읽기 전용 표시)
-
-## 레이아웃 와이어프레임
-
-```
-┌─────────────────────────┐  ← 375px (모바일 기준)
-│                         │
-│    ← 스와이프 영역 →     │  ← 전체화면 (상단 여백 최소)
-│                         │
-│    [재료] / [과정]       │  ← 좌우 스와이프로 전환
-│                         │
-│                         │
-│                         │
-│                         │
-│                         │
-│                         │
-│                         │
-│                         │
-│                         │
-├─────────────────────────┤
-│ [요리 완료]    [취소]    │  ← 하단 고정 CTA
-└─────────────────────────┘
-     ← safe-area 대응
+```text
+┌────────────────────────────────────┐
+│ 김치찌개                    4인분   │  읽기 전용
+│ 오늘 저녁 · 요리 중                │
+├────────────────────────────────────┤
+│ 재료                               │
+│ 돼지고기 300g · 김치 400g · …      │
+│                                    │
+│ 조리순서                           │  whole-board 내부 세로 스크롤
+│ 1  볶기  돼지고기와 김치를 볶아요  │
+│ 2  끓이기  물을 넣고 끓여요        │
+│ 3  마무리  간을 맞춰요              │
+├────────────────────────────────────┤
+│ [취소]                 [요리 완료] │  safe-area 고정, 44px+
+└────────────────────────────────────┘
 ```
 
-## 컴포넌트 상세
+- 일반 AppBar와 하단 탭은 숨긴다.
+- 제목, 읽기 전용 인분, 전체 재료, 전체 조리순서를 한 scroll context에서 보여준다.
+- 하단 action bar만 고정하며 본문 마지막을 가리지 않는다.
+- 긴 레시피는 whole-board 내부만 세로 스크롤한다. page-level horizontal scroll은 금지한다.
+- 실제 wake lock이 활성화된 경우에만 `화면 안 꺼짐` 상태를 표시한다.
 
-### 1. 재료 화면 (좌측)
+## 요리 완료 sheet
 
-```
-┌─────────────────────────┐
-│                         │
-│   조리 인분: 2인분 ←     │  ← --muted 텍스트, 읽기 전용
-│   (읽기 전용)           │
-│                         │
-│   재료 목록:            │  ← --foreground
-│                         │
-│   ┌─────────────────┐   │
-│   │ 양파 200g       │   │  ← --surface 카드
-│   │ (표준명)        │   │  ← ingredient_id 기반
-│   └─────────────────┘   │
-│   ┌─────────────────┐   │
-│   │ 간장 2큰술      │   │
-│   │ (scalable)      │   │
-│   └─────────────────┘   │
-│   ┌─────────────────┐   │
-│   │ 소금 약간       │   │
-│   │ (TO_TASTE)      │   │
-│   └─────────────────┘   │
-│                         │
-│   (세로 스크롤)         │
-│                         │
-└─────────────────────────┘
-```
+초기값은 pantry row 선택 0개, weight action 미선택이다. 어느 항목도 자동 선택하지 않는다.
 
-#### 재료 카드 정보
-- ingredient_id, standard_name, amount, unit, display_text
-- ingredient_type: `QUANT` (수량 표시) / `TO_TASTE` ("약간" 등 텍스트)
-- scalable: true/false (인분 배율 적용 여부)
-- 재료는 세로 리스트로 나열, 카드 radius `--radius-md` (12px)
-- 카드 배경 `--surface`, 그림자 `--shadow-1`
-
-### 2. 과정 화면 (우측)
-
-```
-┌─────────────────────────┐
-│                         │
-│   스텝 카드 리스트      │  ← 세로 스크롤
-│                         │
-│   ┌─────────────────┐   │
-│   │ 1. 볶기 ←       │   │  ← cooking_method + 색상 테두리
-│   │                 │   │  ← #FF8C42 (볶기)
-│   │ 양파 200g 투입  │   │  ← step_ingredients
-│   │ 중불 🔥         │   │  ← heat_level
-│   │ 3분             │   │  ← cook_time_minutes
-│   └─────────────────┘   │
-│   ┌─────────────────┐   │
-│   │ 2. 끓이기 ←     │   │
-│   │                 │   │  ← #E8453C (끓이기)
-│   │ 물 500ml 추가   │   │
-│   │ 강불 🔥🔥       │   │
-│   │ 10분            │   │
-│   └─────────────────┘   │
-│   ┌─────────────────┐   │
-│   │ 3. 섞기 ←       │   │
-│   │                 │   │  ← #AAAAAA (기타)
-│   │ 간장 2큰술      │   │
-│   │ 골고루 섞기     │   │
-│   │                 │   │
-│   └─────────────────┘   │
-│                         │
-└─────────────────────────┘
+```text
+┌────────────────────────────────────┐
+│ 요리 완료                          │
+│ 실제 사용한 팬트리 항목과          │
+│ 완성된 음식 전체 무게를 확인해요   │
+├────────────────────────────────────┤
+│ 사용한 팬트리 항목                 │
+│                                    │
+│ 닭가슴살                           │  pinned ingredient group
+│ ☐ 닭가슴살 오리지널                │  제품명
+│   하림 · 냉장고                     │  브랜드 · row context
+│   pantry_item_id: row-a             │  구현 식별자, 사용자에게 raw UUID 비노출
+│ ☐ 담백 닭가슴살                    │  equivalent row
+│   무브랜드 · 냉동실                 │
+│   pantry_item_id: row-b             │
+│                                    │
+│ 양파                               │
+│ ☐ 양파                             │  generic row
+│   일반 재료 · 팬트리                │
+│   pantry_item_id: row-c             │
+├────────────────────────────────────┤
+│ 완성 직후 음식 전체 중량           │
+│ ○ 음식만 무게(g)   [            ]  │
+│ ○ 나중에 입력                      │
+│ 용기·그릇 무게는 제외해 주세요     │
+├────────────────────────────────────┤
+│ [돌아가기]          [완료 저장]     │
+└────────────────────────────────────┘
 ```
 
-#### 스텝 카드 정보
-- 스텝 번호 (step_order)
-- **조리방법 + 색상 시각 구분**: 카드 좌측 테두리 또는 배경 accent
-  - 볶기: `#FF8C42`
-  - 끓이기: `#E8453C`
-  - 굽기: `#8B5E3C`
-  - 찌기: `#4A90D9`
-  - 튀기기: `#F5C518`
-  - 데치기: `#7BC67E`
-  - 무치기/버무리기: `#2ea67a`
-  - 섞기/준비/기타: `#AAAAAA`
-- 투입 재료/양 (step_ingredients: ingredient_name + amount + unit)
-- 썰기 크기 (cut_size)
-- 불세기 (heat_level): 약불/중불/강불 → 🔥 아이콘 개수
-- 조리시간 (cook_time_minutes): "N분" 표시
-- 카드 radius `--radius-md` (12px), 그림자 `--shadow-2`
-- 카드 간격 `--space-4` (16px)
+### Exact pantry row 규칙
 
-### 3. 하단 고정 CTA
+- 각 선택 항목의 authority는 `pantry_item_id`다. client가 ingredient 이름이나 브랜드로 row를 다시 찾지 않는다.
+- product row는 실제 제품명과 브랜드를 주 정보로, generic row는 표준 재료명을 주 정보로 보여준다.
+- 같은 effective ingredient에 여러 row가 있어도 모두 별도 선택 항목이다.
+- 초기 선택은 항상 0개이며 동등 row, 첫 row, 최근 row를 자동 선택하지 않는다.
+- 선택하지 않은 row는 삭제하지 않는다.
+- eligible row가 없으면 `사용할 팬트리 항목이 없어요` Empty를 보여주고 `consumed_pantry_item_ids=[]`로 둔다. 사용자는 weight action을 명시적으로 고른 뒤 완료할 수 있다.
 
-```
-┌─────────────────────────┐
-│ [요리 완료]    [취소]    │  ← safe-area-inset-bottom 대응
-└─────────────────────────┘
-```
+### Weight 규칙
 
-- **[요리 완료]** (primary): `--brand` (#ED7470), radius `--radius-sm` (8px), 터치 타겟 44px 이상
-- **[취소]** (secondary): `--muted` 테두리, 배경 투명, `--foreground` 텍스트
-- 버튼 간격 `--space-4` (16px)
-- 하단 safe-area 여백 포함
+- `음식만 무게(g)`와 `나중에 입력`은 exact-one radio다. 초기에는 둘 다 미선택이다.
+- `음식만 무게(g)`를 고르면 positive `finished_weight_g`가 필요하다.
+- 입력값은 완성 직후 음식 전체 중량이며 현재 남은 양이나 용기 포함 중량이 아니다.
+- `나중에 입력`은 `weight_action=weigh_later`, `finished_weight_g=null`이다.
+- servings→grams 추정, 이전 값 추측, 선택 자동 전환을 하지 않는다.
+- pantry 선택 0개는 허용하지만 weight action 미선택/invalid g에서는 완료 CTA를 disabled로 둔다.
 
-## 인터랙션 노트
-
-| 액션 | 트리거 | 결과 | 로그인 필요 |
-|------|--------|------|------------|
-| 좌우 스와이프 | 화면 중앙 스와이프 | 재료 화면 ↔ 과정 화면 전환 | N |
-| [취소] 클릭 | 하단 [취소] 버튼 | 안내 모달 → `POST /cooking/sessions/{session_id}/cancel` → COOK_READY_LIST 복귀 | Y |
-| [요리 완료] 클릭 | 하단 [요리 완료] 버튼 | 비로그인 시 로그인 게이트 → 로그인 시 소진 재료 체크리스트 팝업 | Y |
-| 소진 재료 체크 | 팝업 재료 체크박스 | 체크한 재료 = pantry_items DELETE 대상 | Y |
-| 팝업 [확인] | 소진 재료 팝업 확인 | `POST /cooking/sessions/{session_id}/complete` → meals.status=cook_done → COOK_READY_LIST 복귀 | Y |
-
-## 소진 재료 체크리스트 팝업
-
-```
-┌─────────────────────────┐
-│ 소진한 재료 선택        │  ← 팝업 제목
-├─────────────────────────┤
-│ 사용한 재료를 선택하면  │  ← helper copy
-│ 팬트리에서 제거돼요     │
-├─────────────────────────┤
-│ [ ] 양파               │  ← 기본 체크 해제
-│ [ ] 간장               │
-│ [ ] 소금               │
-│ [ ] 마늘               │
-├─────────────────────────┤
-│    [확인]      [건너뛰기] │  ← 확인 = primary, 건너뛰기 = secondary
-└─────────────────────────┘
-```
-
-- **기본 체크 해제**: 사용자가 직접 체크해야 pantry에서 제거
-- **재료 목록**: GET /cooking/sessions/{session_id}/cook-mode의 ingredients 중 user pantry에 있는 재료만 노출
-- **[확인]** 클릭 → `consumed_ingredient_ids` 배열로 전달
-- **[건너뛰기]** 클릭 → `consumed_ingredient_ids = []` (팬트리 소진 없음)
-
-## 상태별 UI
+## 상태 설계
 
 ### Loading
-- COOK_MODE 데이터 로딩 중: 중앙 스피너 또는 skeleton (재료/스텝 카드 윤곽)
-- 로딩 중에는 스와이프 비활성
+
+- session/pinned content/pantry candidates 중 하나라도 unresolved면 whole-board 또는 sheet skeleton을 표시한다.
+- sheet Loading에서는 checkbox와 완료 CTA를 disabled로 두고 row나 weight action을 추측하지 않는다.
+- 재시도 중 기존 사용자의 명시 선택이 있다면 유지하되 server 응답으로 사라진 row는 선택에서 제거하고 Error로 알린다.
 
 ### Empty
-- 해당 없음 (세션 기반 진입이므로 데이터가 항상 존재, 세션 없으면 404)
+
+- pantry candidate `[]`는 오류가 아니다.
+- `사용할 팬트리 항목이 없어요. 음식 무게만 선택해 완료할 수 있어요.`를 표시한다.
+- `consumed_pantry_item_ids=[]`를 유지하고 weight action이 valid하면 완료를 허용한다.
+- session/content가 없거나 접근 불가한 경우는 Empty로 숨기지 않고 기존 404/unauthorized 경계를 사용한다.
 
 ### Error
-- API 오류 시 중앙 메시지 + [다시 시도] / [이전 화면] 버튼
-- "요리 정보를 불러오지 못했어요"
-- [다시 시도] → GET /cooking/sessions/{session_id}/cook-mode 재호출
-- [이전 화면] → COOK_READY_LIST 복귀
 
-### Read-only
-- **조리 인분**: 숫자 + "인분" 표시만, 스테퍼 없음 (읽기 전용)
-- 재료/스텝 모두 읽기 전용 (편집 불가)
+- whole-board read 실패: `요리 정보를 불러오지 못했어요` + `[다시 시도]` + `[이전 화면]`.
+- complete의 기존 409/422: sheet를 닫지 않고 선택한 exact row IDs와 weight action/input을 보존한다.
+- 오류 요약에 focus를 옮기고 fields가 가리키는 control과 연결한다.
+- other-owner/private resource는 상세를 노출하지 않고 기존 404 non-disclosure를 유지한다.
+- 새 public error copy/code를 발명하지 않으며 server wrapper의 기존 code/message/fields를 소비한다.
+
+### Pending / duplicate submit
+
+- 첫 submit 직후 모든 sheet action을 잠그고 단일 progress label을 보여준다.
+- 추가 tap, Enter, touch submit을 차단한다.
+- 네트워크 재시도는 같은 UUID Idempotency-Key와 같은 canonical payload를 사용한다.
+
+### stored replay
+
+- same key+same payload는 server의 최초 stored replay result를 그대로 소비한다.
+- sheet는 한 번만 닫고 pantry/batch/cook count/XP 성공 animation이나 toast를 반복하지 않는다.
+- same key+different payload는 기존 409를 표시하고 아무 effect도 완료로 투영하지 않는다.
+
+### Read-only / terminal
+
+- completed/cancelled v2 session을 재열면 pinned content를 read-only로 보여주고 새 completion control을 만들지 않는다.
+- creation-off에서도 existing in-progress v2 session의 read/cancel/complete control은 유지한다.
+- v1 session은 기존 `legacy_v1` parser/body/UI를 사용하며 v2 sheet를 섞지 않는다.
 
 ### Unauthorized
-- [요리 완료] 클릭 시 비로그인이면 로그인 게이트 모달
-- 로그인 후 return-to-action: 동일 세션 COOK_MODE 복귀 → 소진 재료 팝업 자동 노출
 
-## 화면 정의서 매핑
+- owner session completion은 로그인/owner authority가 필요하다.
+- auth가 없으면 기존 로그인 안내와 return-to-action으로 동일 session COOK_MODE에 복귀한다.
+- return 뒤 최신 session/pantry state를 다시 읽으며 과거 client selection을 authority로 강제하지 않는다.
 
-| 정의서 항목 (§14) | 구현 여부 | 비고 |
-|------------|----------|------|
-| 전체화면 몰입형 | ✅ | 일반 AppBar 없음, 최소 UI |
-| 좌우 스와이프 | ✅ | 재료(좌) ↔ 과정(우) |
-| 재료 화면: 조리 인분(읽기 전용) | ✅ | 스테퍼 없음, 숫자만 표시 |
-| 재료 화면: 재료 전체 목록 | ✅ | ingredient_id, standard_name, amount, unit, display_text, ingredient_type, scalable |
-| 과정 화면: 스텝 카드 리스트 | ✅ | 세로 스크롤 |
-| 스텝 카드: 조리방법 + 색상 시각 구분 | ✅ | 테두리 또는 배경 accent (design-tokens.md 기준) |
-| 스텝 카드: 투입 재료/양, 썰기 크기 | ✅ | step_ingredients, cut_size |
-| 스텝 카드: 불세기 | ✅ | heat_level → 🔥 아이콘 |
-| 스텝 카드: 조리시간 | ✅ | cook_time_minutes |
-| 하단 고정 CTA: [요리 완료] [취소] | ✅ | safe-area 대응 |
-| 소진 재료 체크리스트 팝업 | ✅ | 기본 체크 해제 |
-| 화면 꺼짐 방지 | ⚠️ | 17c(SETTINGS)에서 닫음 |
+## 390px evidence frame 계획
 
-## 디자인 결정 사항
+```text
+width 390
+┌──────────────────────────────────┐
+│ title · servings                 │
+│ ingredients summary             │
+│ steps list                       │
+│                                  │
+├──────────────────────────────────┤
+│ cancel             complete      │
+└──────────────────────────────────┘
 
-1. **좌우 스와이프 구현**:
-   - React/Vue 환경에서는 touch event 또는 swipe library 사용
-   - 현재 화면 표시 hint: 하단 dot indicator 또는 "재료 / 과정" 텍스트 toggle
+completion sheet cases in one evidence set:
+default no-selection / multiple product rows / Empty [] /
+known g / weigh-later / Loading / 409·422 / Pending / stored replay /
+creation-off existing-v2 drain
+```
 
-2. **조리방법 색상 표현**:
-   - 스텝 카드 좌측 4px 세로 테두리로 표현 (모바일 친화적)
-   - 또는 카드 상단 1줄 배경 tint (design-critic 검토 시 결정)
+- planned artifact: `ui/designs/evidence/cooked-batch-weight-ledger/COOK_MODE-design-mobile-default-390.png`
+- verify whole-board hierarchy, sheet max height/internal scroll, visible primary CTA and product/brand hierarchy.
 
-3. **스와이프 affordance**:
-   - 초기 진입 시 작은 좌우 화살표 또는 "좌우로 넘겨보세요" 안내 (첫 사용자 대상)
-   - 또는 재료/과정 화면 가장자리에 반투명 화살표 힌트
+## 320px evidence frame 계획
 
-4. **safe-area 대응**:
-   - 하단 CTA는 `padding-bottom: calc(16px + env(safe-area-inset-bottom))`
-   - iOS notch/home indicator 고려
+```text
+width 320
+┌────────────────────────────┐
+│ title wraps at most 2 lines│
+│ ingredient / steps board   │
+├────────────────────────────┤
+│ cancel        complete     │
+└────────────────────────────┘
 
-5. **불세기 표현**:
-   - 약불: 🔥
-   - 중불: 🔥🔥
-   - 강불: 🔥🔥🔥
-   - 또는 텍스트 + 아이콘 조합 ("중불 🔥🔥")
+sheet row:
+☐ product name
+  brand · storage context
+weight radio + input stay readable without horizontal overflow
+```
 
-6. **전체화면 진입/탈출**:
-   - 진입 시 일반 navigation header 숨김
-   - [취소] / 요리 완료 후 COOK_READY_LIST 복귀 시 일반 화면으로 복귀
+- planned artifact: `ui/designs/evidence/cooked-batch-weight-ledger/COOK_MODE-design-mobile-narrow-320.png`
+- no page-level overflow, CTA clipping, fixed-bar overlap or touch target below 44px.
+- product name may wrap; brand/context remains subordinate and must not collapse into raw identifiers.
 
-7. **스크롤 containment**:
-   - 재료 화면: 재료 리스트만 세로 스크롤
-   - 과정 화면: 스텝 카드 리스트만 세로 스크롤
-   - 좌우 스와이프는 전체 화면 wrapper에서 처리
+## Interaction and accessibility
 
-8. **작은 모바일 대응 (320px)**:
-   - 재료/스텝 카드 패딩 축소 (`--space-3` → `--space-2`)
-   - 폰트 크기 유지 (가독성 우선)
-   - CTA 버튼 세로 배치 검토 (공간 부족 시)
+| Action | Result |
+| --- | --- |
+| `[요리 완료]` | owner v2 session이면 completion sheet open; legacy v1이면 기존 UI |
+| pantry checkbox | exact `pantry_item_id` membership toggle only |
+| weight radio | exact-one action selection; known 선택 시 g input enabled |
+| `[완료 저장]` | valid weight action일 때 existing complete request submit |
+| 409/422 retry | selections/input/focus context retained |
+| `[취소]` | existing cancel contract; return context preserved |
 
-## design-critic 검토 필요 항목
+- sheet open 시 title로 focus, focus trap, background inert, Escape/돌아가기 시 opener focus restore.
+- checkbox, radio, input, CTA는 label/programmatic name을 갖고 최소 44×44px target을 유지한다.
+- color alone으로 선택/error/pending을 표현하지 않는다.
+- screen reader는 제품명 → 브랜드/context → 선택 상태 순서로 읽는다. raw UUID는 읽지 않는다.
+- bottom safe-area를 포함하고 virtual keyboard가 g input/error/CTA를 가리지 않게 한다.
 
-- [ ] 조리방법 색상 표현 방식 (좌측 세로 테두리 vs 상단 배경 tint)
-- [ ] 스와이프 affordance 디자인 (화살표 힌트 vs dot indicator vs 텍스트 toggle)
-- [ ] 재료/스텝 카드 간격과 여백 (세로 스크롤 편의성)
-- [ ] 불세기 아이콘 표현 (🔥 개수 vs 텍스트 + 아이콘)
-- [ ] 소진 재료 팝업 높이와 스크롤 (재료가 많을 경우)
-- [ ] 하단 CTA 버튼 배치 (가로 나란히 vs 세로 2줄, 좁은 폭 대응)
-- [ ] 전체화면 진입 시 상단 여백 처리 (status bar 영역)
-- [ ] 320px 좁은 폭에서 레이아웃 붕괴 여부
+## Design token boundary
 
-## 토큰 힌트
+- app surface는 current app token layer의 `--brand-primary`, `--surface`, `--surface-fill`, `--text-2/3`, `--border`, `--radius-card`, `--radius-sheet`, `--control-height-md/lg`를 사용한다.
+- whole-board의 기존 dark treatment와 cooking method accent는 현재 구현/공식 whole-board 계약을 유지한다.
+- 직접 hex 추가나 legacy coral `--brand` 복귀로 #11의 final polish를 선점하지 않는다.
+- `COOK_MODE`는 h8 matrix상 `prototype-derived design`이며 parity로 자동 승격하지 않는다.
 
-- `--background`: #fff9f2 — 전체 배경
-- `--foreground`: #1a1a2e — 기본 텍스트
-- `--brand`: #ED7470 — [요리 완료] CTA
-- `--brand-deep`: #C84C48 — [요리 완료] hover
-- `--surface`: #ffffff — 재료/스텝 카드 배경
-- `--muted`: #5f6470 — 보조 텍스트, [취소] 버튼
-- `--shadow-1`: 0 1px 3px rgba(0,0,0,0.04) — 재료 카드
-- `--shadow-2`: 0 2px 8px rgba(0,0,0,0.08) — 스텝 카드
-- `--radius-sm`: 8px — CTA 버튼
-- `--radius-md`: 12px — 재료/스텝 카드
-- `--space-4`: 16px — 카드 패딩, 버튼 간격
-- `--space-8`: 32px — 하단 CTA 영역 상단 여백
+## Fresh independent review gates
 
-## 조리방법 색상 토큰 (design-tokens.md 기준)
+- critic path: `ui/designs/critiques/COOK_MODE-cooked-batch-weight-ledger-critique.md`
+- authority path: `ui/designs/authority/COOK_MODE-cooked-batch-weight-ledger-authority.md`
+- 기존 `ui/designs/critiques/COOK_MODE-critique.md`, `ui/designs/authority/COOK_MODE-authority.md`, 15a v1.5.1 screenshots은 역사 artifact이며 #8 evidence로 재사용하지 않는다.
+- Stage 2 진입 전 fresh independent critic과 390/320 screenshot/Figma product-design-authority가 이 exact design head를 검토해 blocker/major 0을 남겨야 한다.
+- 이 Stage 1 author는 critic/authority/internal1.5를 작성하거나 승인하지 않는다.
+- Stage 4 implementation은 별도 390/320 evidence와 Stage 5/final authority를 다시 거친다.
 
-| 조리방법 | 색상 | 용도 |
-|---------|------|------|
-| 볶기/볶아주기 | `#FF8C42` | 스텝 카드 좌측 테두리 또는 배경 tint |
-| 끓이기/국물 | `#E8453C` | 스텝 카드 좌측 테두리 또는 배경 tint |
-| 굽기/오븐/구이 | `#8B5E3C` | 스텝 카드 좌측 테두리 또는 배경 tint |
-| 찌기/스팀 | `#4A90D9` | 스텝 카드 좌측 테두리 또는 배경 tint |
-| 튀기기 | `#F5C518` | 스텝 카드 좌측 테두리 또는 배경 tint |
-| 데치기 | `#7BC67E` | 스텝 카드 좌측 테두리 또는 배경 tint |
-| 무치기/버무리기 | `#2ea67a` | 스텝 카드 좌측 테두리 또는 배경 tint |
-| 섞기/준비/기타 | `#AAAAAA` | 스텝 카드 좌측 테두리 또는 배경 tint |
+## Successor boundary
 
-## 모바일 UX 리스크 체크
-
-- [x] whole-page horizontal scroll 없음 (좌우 스와이프는 localized, 화면 전환 용도)
-- [x] scroll containment 명시 (재료 리스트/스텝 리스트만 세로 스크롤)
-- [x] primary CTA 첫 화면 노출 (하단 고정 [요리 완료])
-- [x] 터치 타겟 최소 44px (CTA 버튼)
-- [x] 작은 모바일 sentinel 대응 (320px에서 패딩 축소, CTA 세로 배치 검토)
-- [x] 의도된 interaction model 보존 (전체화면 스와이프는 요리모드 고유 패턴)
-- [x] 정보 단위 묶기 (재료는 한 화면, 스텝은 한 화면)
-
-## h8 분류
-
-- **prototype-derived design** — Baemin vocabulary/material 사용, 시각적 parity 목표 아님
-- planner path이므로 visual parity 자동 승격 없음
-- authority review는 `required` (new-screen)
+- #8: exact pantry completion, finished-weight/weigh-later functional UI, batch/ledger/XP, R/R+1 gate.
+- #9: meal-log linked consumed event/pointer and arbitrary-order entry reversal.
+- #11: LEFTOVERS 및 COOK_MODE final visual polish, delayed-weight/unrecoverable/discard/adjust presentation, container helper와 full accessibility completion.
+- R+2 production capability activation: Manual Only; #8 R/R+1 evidence와 service-owner 공동 승인 전 금지.
