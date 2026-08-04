@@ -184,3 +184,17 @@
 - Design Status remains `pending-review`/temporary. PR #1281 stays Draft; Stage 5, final authority, Stage 6, broader real Auth/Data, Manual Only and merged-exact server-Mac evidence remain pending.
 - Personal-v2 writes and snapshot-v2 creation were not activated. Existing seeded v2 read/cancel drain remains, while #8 R/R+1 evidence and R+2 joint approval remain the activation gate.
 - No production/staging/remote application write, remote Supabase write, migration apply, dependency change, Vercel deployment, server-Mac mutation or Discord notification occurred.
+
+## S5-M01 unauthorized focus-isolation repair — 2026-08-04
+
+- Fresh Stage 5 re-review task `019fc9f0-25df-7080-a25e-20b9f9a2fc08` reviewed head `409b9e563a6c14e6f8d846e5b08d16f2eb3f57a4` and kept only the focus-isolation boundary open: the retired impact dialog could restore focus behind the replacement login gate on its delayed cleanup frame.
+- RED commit `b750cb9105b4d941626caede807ffa8af116a60b` proves the escape after one animation frame and locks forward/reverse Tab wrapping in component and slice E2E coverage.
+- GREEN commit `0ba05d584d302b81f39363906b9bb23f3ed26532` connects `LoginGateModal` to the existing shared dialog boundary. Test-isolation commit `e21dd3cf3aaccb823a811bf38589a1ffb2b5f1f0` resets the global auth-gate store in HOME tests, and static fix `421ddcea6056f38a6e9745c6c752a0f8616d3454` bounds replacement-modal focus recovery to one animation frame so multiple mounted dialog hooks cannot recursively exchange focus.
+- Exact implementation-head verification passed: focused dialog/401 coverage `90/90`; slice E2E `8 passed + 8` non-target-project skips; `verify:frontend:pr` product `2,657 passed + 150 intended skip`, smoke `59 passed + 10 intended skip`, core a11y `8 passed + 1 intended skip`, core visual `12/12`; full a11y `18 passed + 15 intended skip`; security `12/12`; full Vitest `513` files passed + `28` skipped, `5,212` tests passed + `330` skipped.
+
+### Exact-head CI diagnostic boundary
+
+- The first `421ddcea6056f38a6e9745c6c752a0f8616d3454` CI aggregate completed with one unrelated existing async-focus assertion failure in `tests/prepared-food-planner-entry-ui.test.tsx`: `1 failed / 5,211 passed / 330 skipped`. The failure observed the search input before the expected amount-input focus; no #7 product assertion failed.
+- The exact failing prepared-food assertion then passed `10/10` isolated local runs, while the unchanged local full aggregate passed `5,212/5,212`. A single diagnostic-only rerun passed `513` files + `28` skipped, `5,212` tests + `330` skipped, plus the ingredient-nutrition PostgreSQL integration `14/14`.
+- The prepared-food product code and test were not changed. The diagnostic rerun is not used as final completion evidence; this evidence-only commit creates a new head whose newly started checks must all finish success or intended skip without rerun.
+- The login transition still preserves one visible dialog, the edited draft, base revision and managed image identity, and retains post-auth resume. Stage 5 re-review, final authority, Stage 6, Manual/server-Mac evidence and capability activation remain pending; this implementer does not approve them.
