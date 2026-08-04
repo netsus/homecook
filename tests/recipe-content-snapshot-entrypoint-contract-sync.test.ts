@@ -252,7 +252,7 @@ describe("recipe snapshot entrypoint Stage 1 contract lock", () => {
     expect(authority).toContain("major_count: `0`");
     expect(authority).toContain("Stage 6: `pending`");
     expect(roadmap).toMatch(
-      /recipe-content-snapshot-future-propagation[\s\S]*Draft Stage 4 PR #1281[\s\S]*1096494a[\s\S]*Design Status[\s\S]*confirmed/,
+      /recipe-content-snapshot-future-propagation[\s\S]*PR #1281 exact head `aab9a65e` merge `2173737e`[\s\S]*Design Status는 confirmed/,
     );
   });
 });
