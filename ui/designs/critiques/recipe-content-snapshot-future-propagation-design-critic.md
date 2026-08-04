@@ -139,3 +139,12 @@ BLOCKER 0인 이유는 현재 공식 문서와 workpack이 구현 결정을 내�
 - 전체 official draft와 revision/managed-image authority를 유지하며, preview 시점에 고정한 같은 draft만 PATCH에 전달한다. 날짜 선택이나 새 shopping/old-recipe action은 추가하지 않았다.
 - 새 390×844/320×568 증거는 `편집 진입 → 실제 제목 수정 → impact dialog` 순서로 생성되었다. E2E가 initial editor focus, dialog Tab loop, Escape opener restore, stale recheck focus, 44px action, 16px radius와 horizontal overflow 0을 함께 고정한다.
 - 구현 증거상 이 critique의 Stage 4 non-blocker는 닫혔지만, fresh independent authority_precheck, Stage 5, final product-design-authority와 Stage 6은 계속 별도 작업이다.
+
+## Final authority HOLD implementation follow-up — AUTH-M01 / AUTH-M02
+
+> 이 절은 final authority task `019fca28-f9c7-7110-884c-63052b90e6d8`의 HOLD 두 항목을 구현 증거와 연결할 뿐이다. 독립 authority 승인이나 `confirmed` 판정이 아니다.
+
+- AUTH-M01: owner editor는 shared dialog boundary를 사용하고, 배경 inert/aria-hidden, body scroll lock, Tab/Shift+Tab 순환, dirty-discard 격리와 exact opener 복원을 제공한다. Impact/login/discard가 열리면 parent boundary가 비활성화되어 active focus scope가 경쟁하지 않는다.
+- AUTH-M02: snapshot-v2 오류/401은 dark whole-board recovery shell을 유지한다. 오류는 44px+ `다시 시도 | 이전 화면`, 401은 existing login-next primitive와 `이전 화면`을 제공하며 retry는 같은 immutable reader만 다시 호출한다.
+- 보조 증거는 `COOK_MODE-dispatch-error-mobile-{default,narrow}.png`와 `COOK_MODE-dispatch-unauthorized-mobile-{default,narrow}.png`다. 각각 `390×844`/`320×568`, `fullPage:false`이고 직접 시각 검사와 E2E overflow/focus 검증을 마쳤다.
+- 구현 code commit은 `8856184a`이며 Design Status는 계속 `pending-review`다. 새 fresh final authority가 pushed exact head를 다시 검토해야 한다.

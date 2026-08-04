@@ -1,6 +1,6 @@
 # Acceptance Checklist
 
-> This fresh Stage 1 re-lock follows Contract Evolution PR #1282 merge `7e316e8721e96762c17e3d196811416ce6f93823`. Draft Stage 4 PR #1281 implements the approved entrypoint repair, service-only function/security/hybrid inventory closure and actual owner-edit flow through code head `7ca6a5dd`, but unchecked items do not claim independent re-review, Stage 5, authority, Stage 6, server-Mac/Manual evidence or R+2 activation.
+> This fresh Stage 1 re-lock follows Contract Evolution PR #1282 merge `7e316e8721e96762c17e3d196811416ce6f93823`. Draft Stage 4 PR #1281 implements the approved entrypoint, actual owner-edit and AUTH-M01/M02 repairs through code commit `8856184a`, but unchecked items do not claim fresh final authority, Stage 6, server-Mac/Manual evidence or R+2 activation.
 
 ## Entrypoint Read / Capability Projection
 
@@ -115,7 +115,7 @@
 - [ ] independent internal1.5, security/DB, five-axis, Stage 3/6 and closeout reviews have zero unresolved backend findings <!-- omo:id=accept-future-independent-review;stage=2;scope=shared;review=3,6 -->
 - [ ] independent design, Stage 5/6 and closeout reviews have zero unresolved frontend findings <!-- omo:id=accept-future-independent-frontend-review;stage=4;scope=frontend;review=5,6 -->
 - [ ] current-head PR checks and post-merge QA/Policy/Security/Vercel are terminal green or intended skip <!-- omo:id=accept-future-ci;stage=2;scope=shared;review=3,6 -->
-- [ ] Draft Stage 4 PR #1281 implements the approved entrypoint and actual owner-edit contract through code head `7ca6a5dd` and awaits fresh independent re-review; implementation evidence alone does not complete Stage 4 <!-- omo:id=accept-future-stage4-entrypoint-repair;stage=4;scope=shared;review=5,6 -->
+- [ ] Draft Stage 4 PR #1281 implements the approved entrypoint, actual owner-edit and AUTH-M01/M02 repairs through code commit `8856184a` and awaits a new independent final authority review; implementation evidence alone does not complete the remaining review stages <!-- omo:id=accept-future-stage4-entrypoint-repair;stage=4;scope=shared;review=5,6 -->
 - [ ] Design Status remains pending-review/temporary until an authority report exists; Stage 5, final authority, Stage 6, Manual/server-Mac and activation remain pending <!-- omo:id=accept-future-honest-stage-state;stage=4;scope=shared;review=5,6 -->
 
 ## Manual QA
