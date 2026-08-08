@@ -486,6 +486,11 @@ export function createSnapshotV2SessionInternalClient() {
   return createScopedInternalRpcClient("snapshot-v2-session");
 }
 
+// Cooked-batch RPCs share the already isolated snapshot-v2 session scope.
+// Keep this as an alias so the scope factory remains single-source.
+export const createCookedBatchInternalClient =
+  createSnapshotV2SessionInternalClient;
+
 export function createFutureMealWriteInternalClient() {
   return createScopedInternalRpcClient("future-meal-write");
 }
