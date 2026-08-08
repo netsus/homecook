@@ -56,7 +56,7 @@ describe("full-local launch agent helpers", () => {
   it("requires an absolute mode 0600 config file path", () => {
     const rootDir = createTempDirectory("full-local-launch-agent-config-");
     const configPath = join(rootDir, ".env.production.local");
-    writeFileSync(configPath, "FULL_LOCAL_SITE_URL=https://app.mumeok.com\n", {
+    writeFileSync(configPath, "FULL_LOCAL_SITE_URL=https://app.mumeok.kr\n", {
       encoding: "utf8",
       mode: 0o600,
     });
@@ -101,7 +101,7 @@ describe("full-local launch agent helpers", () => {
     expect(plist).toContain(`<string>${rootDir}</string>`);
     expect(plist).toContain("/Users/tester/Library/Logs/Homecook/full-local-production.out.log");
     expect(plist).toContain("/Users/tester/Library/Logs/Homecook/full-local-production.err.log");
-    expect(plist).not.toContain("FULL_LOCAL_SITE_URL=https://app.mumeok.com");
+    expect(plist).not.toContain("FULL_LOCAL_SITE_URL=https://app.mumeok.kr");
     expect(plist).not.toContain("<key>EnvironmentVariables</key>");
   });
 
@@ -150,7 +150,7 @@ describe("full-local launch agent install and uninstall", () => {
     mkdirSync(join(rootDir, "infra/full-local-supabase"), { recursive: true });
     mkdirSync(join(rootDir, "scripts"), { recursive: true });
     writeFileSync(join(rootDir, "scripts/full-local-production-runtime.mjs"), "", "utf8");
-    writeFileSync(configPath, "FULL_LOCAL_SITE_URL=https://app.mumeok.com\n", {
+    writeFileSync(configPath, "FULL_LOCAL_SITE_URL=https://app.mumeok.kr\n", {
       encoding: "utf8",
       mode: 0o600,
     });

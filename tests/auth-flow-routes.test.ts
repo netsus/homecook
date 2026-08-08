@@ -43,7 +43,7 @@ describe("auth flow routes", () => {
 
   it("rejects a cross-site start before touching the ledger", async () => {
     const { POST } = await import("@/app/auth/flow/start/route");
-    const response = await POST(new Request("https://app.mumeok.com/auth/flow/start", {
+    const response = await POST(new Request("https://app.mumeok.kr/auth/flow/start", {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -58,11 +58,11 @@ describe("auth flow routes", () => {
 
   it("issues a secure host-only HttpOnly cookie after a valid login ledger insert", async () => {
     const { POST } = await import("@/app/auth/flow/start/route");
-    const response = await POST(new Request("https://app.mumeok.com/auth/flow/start", {
+    const response = await POST(new Request("https://app.mumeok.kr/auth/flow/start", {
       method: "POST",
       headers: {
         "content-type": "application/json",
-        origin: "https://app.mumeok.com",
+        origin: "https://app.mumeok.kr",
       },
       body: JSON.stringify({ flow_kind: "login", provider: "custom:naver" }),
     }));
@@ -80,11 +80,11 @@ describe("auth flow routes", () => {
   it("requires an authenticated user before starting a link flow", async () => {
     getUser.mockResolvedValue({ data: { user: null }, error: null });
     const { POST } = await import("@/app/auth/flow/start/route");
-    const response = await POST(new Request("https://app.mumeok.com/auth/flow/start", {
+    const response = await POST(new Request("https://app.mumeok.kr/auth/flow/start", {
       method: "POST",
       headers: {
         "content-type": "application/json",
-        origin: "https://app.mumeok.com",
+        origin: "https://app.mumeok.kr",
       },
       body: JSON.stringify({ flow_kind: "link", provider: "kakao" }),
     }));
@@ -96,9 +96,9 @@ describe("auth flow routes", () => {
   it("terminalizes the current flow and expires its cookie on cancel", async () => {
     cookieGet.mockReturnValue({ value: "signed-flow-cookie" });
     const { POST } = await import("@/app/auth/flow/cancel/route");
-    const response = await POST(new Request("https://app.mumeok.com/auth/flow/cancel", {
+    const response = await POST(new Request("https://app.mumeok.kr/auth/flow/cancel", {
       method: "POST",
-      headers: { origin: "https://app.mumeok.com" },
+      headers: { origin: "https://app.mumeok.kr" },
     }));
 
     expect(response.status).toBe(200);

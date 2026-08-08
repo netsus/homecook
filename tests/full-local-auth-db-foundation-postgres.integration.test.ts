@@ -353,7 +353,7 @@ run("full-local Auth isolated PostgreSQL foundation", () => {
     const changedIdentitySet = psqlResult(`
       ${serviceClaims}
       select public.activate_full_local_auth_authority(
-        1, 2, 'https://auth.mumeok.com/auth/v1', clock_timestamp()
+        1, 2, 'https://auth.mumeok.kr/auth/v1', clock_timestamp()
       );
     `);
     expect(changedIdentitySet.status).not.toBe(0);
@@ -368,7 +368,7 @@ run("full-local Auth isolated PostgreSQL foundation", () => {
     const prematureActivation = psqlResult(`
       ${serviceClaims}
       select public.activate_full_local_auth_authority(
-        1, 2, 'https://auth.mumeok.com/auth/v1', clock_timestamp()
+        1, 2, 'https://auth.mumeok.kr/auth/v1', clock_timestamp()
       );
     `);
     expect(prematureActivation.status).not.toBe(0);
@@ -391,7 +391,7 @@ run("full-local Auth isolated PostgreSQL foundation", () => {
       )
       from (
         select public.activate_full_local_auth_authority(
-          1, 2, 'https://auth.mumeok.com/auth/v1', clock_timestamp()
+          1, 2, 'https://auth.mumeok.kr/auth/v1', clock_timestamp()
         ) as result
       ) as activated;
     `)).toBe("local:2:2:true");
@@ -411,7 +411,7 @@ run("full-local Auth isolated PostgreSQL foundation", () => {
         select local_activated_at from private.full_local_auth_control
       )
       select public.record_full_local_session_authority(
-        'https://auth.mumeok.com/auth/v1',
+        'https://auth.mumeok.kr/auth/v1',
         '${owner}',
         '2026-08-01T00:00:01Z',
         repeat('d', 64),
@@ -433,7 +433,7 @@ run("full-local Auth isolated PostgreSQL foundation", () => {
         select local_activated_at from private.full_local_auth_control
       )
       select public.record_full_local_session_authority(
-        'https://auth.mumeok.com/auth/v1',
+        'https://auth.mumeok.kr/auth/v1',
         '${owner}',
         '2026-08-01T00:00:00Z',
         repeat('d', 64),
@@ -455,7 +455,7 @@ run("full-local Auth isolated PostgreSQL foundation", () => {
         select local_activated_at from private.full_local_auth_control
       )
       select public.record_full_local_session_authority(
-        'https://auth.mumeok.com/auth/v1',
+        'https://auth.mumeok.kr/auth/v1',
         '${owner}',
         '2026-08-01T00:00:00Z',
         repeat('d', 64),
@@ -475,7 +475,7 @@ run("full-local Auth isolated PostgreSQL foundation", () => {
         select local_activated_at from private.full_local_auth_control
       )
       select public.assert_full_local_session_authority(
-        'https://auth.mumeok.com/auth/v1',
+        'https://auth.mumeok.kr/auth/v1',
         '${owner}',
         '2026-08-01T00:00:00Z',
         repeat('d', 64),
@@ -490,7 +490,7 @@ run("full-local Auth isolated PostgreSQL foundation", () => {
       select concat_ws(':', issuer is null, local_issuer, auth_cutover_epoch)
       from public.user_session_generation_bindings
       where session_key_hash = repeat('d', 64);
-    `)).toBe("t:https://auth.mumeok.com/auth/v1:2");
+    `)).toBe("t:https://auth.mumeok.kr/auth/v1:2");
   });
 
   it("accepts only the JWT issuance second containing the exact Auth identity epoch", () => {
@@ -526,7 +526,7 @@ run("full-local Auth isolated PostgreSQL foundation", () => {
         where id = '${fractionalOwner}'
       )
       select public.record_full_local_session_authority(
-        'https://auth.mumeok.com/auth/v1',
+        'https://auth.mumeok.kr/auth/v1',
         '${fractionalOwner}',
         identity_epoch.created_at,
         repeat('7', 64),
@@ -548,7 +548,7 @@ run("full-local Auth isolated PostgreSQL foundation", () => {
         where id = '${fractionalOwner}'
       )
       select public.record_full_local_session_authority(
-        'https://auth.mumeok.com/auth/v1',
+        'https://auth.mumeok.kr/auth/v1',
         '${fractionalOwner}',
         identity_epoch.created_at,
         repeat('8', 64),
@@ -607,7 +607,7 @@ run("full-local Auth isolated PostgreSQL foundation", () => {
         select set_config(
           'request.jwt.claims',
           jsonb_build_object(
-            'iss', 'https://auth.mumeok.com/auth/v1',
+            'iss', 'https://auth.mumeok.kr/auth/v1',
             'aud', 'authenticated',
             'role', 'authenticated',
             'sub', '${owner}',
@@ -624,7 +624,7 @@ run("full-local Auth isolated PostgreSQL foundation", () => {
             'version', 2,
             'method', 'GET',
             'path', '/users',
-            'issuer', 'https://auth.mumeok.com/auth/v1',
+            'issuer', 'https://auth.mumeok.kr/auth/v1',
             'owner_uuid', '${owner}',
             'identity_created_at', '2026-08-01T00:00:00.000Z',
             'session_key_hash', repeat('d', 64),
@@ -671,10 +671,10 @@ run("full-local Auth isolated PostgreSQL foundation", () => {
       from (
         select
           public.revoke_full_local_session_authority(
-            'https://auth.mumeok.com/auth/v1', '${owner}', repeat('d', 64), 2
+            'https://auth.mumeok.kr/auth/v1', '${owner}', repeat('d', 64), 2
           ) as first_result,
           public.revoke_full_local_session_authority(
-            'https://auth.mumeok.com/auth/v1', '${owner}', repeat('d', 64), 2
+            'https://auth.mumeok.kr/auth/v1', '${owner}', repeat('d', 64), 2
           ) as second_result
       ) as revoked;
     `)).toBe("false:true");
@@ -685,7 +685,7 @@ run("full-local Auth isolated PostgreSQL foundation", () => {
         select local_activated_at from private.full_local_auth_control
       )
       select public.assert_full_local_session_authority(
-        'https://auth.mumeok.com/auth/v1', '${owner}',
+        'https://auth.mumeok.kr/auth/v1', '${owner}',
         '2026-08-01T00:00:00Z', repeat('d', 64), 2, 2,
         control.local_activated_at + interval '1 second'
       )
@@ -700,7 +700,7 @@ run("full-local Auth isolated PostgreSQL foundation", () => {
         select local_activated_at from private.full_local_auth_control
       )
       select public.record_full_local_session_authority(
-        'https://auth.mumeok.com/auth/v1',
+        'https://auth.mumeok.kr/auth/v1',
         '${owner}',
         '2026-08-01T00:00:00Z',
         repeat('e', 64),
@@ -744,7 +744,7 @@ run("full-local Auth isolated PostgreSQL foundation", () => {
         select local_activated_at from private.full_local_auth_control
       )
       select public.record_full_local_session_authority(
-        'https://auth.mumeok.com/auth/v1',
+        'https://auth.mumeok.kr/auth/v1',
         '${secondOwner}',
         '2026-08-01T00:00:00Z',
         repeat('f', 64),
@@ -1055,7 +1055,7 @@ activeInventoryRun("active full-local snapshot security inventory", () => {
 
       update private.full_local_auth_control
       set authority = 'local',
-          local_issuer = 'https://auth.mumeok.com/auth/v1',
+          local_issuer = 'https://auth.mumeok.kr/auth/v1',
           cutover_epoch = 2,
           hmac_key_version = 2,
           local_activated_at = clock_timestamp(),

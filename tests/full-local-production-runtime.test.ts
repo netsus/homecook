@@ -38,8 +38,8 @@ function validConfig(overrides: Record<string, string> = {}) {
   const images = fullLocalImageRefsForPlatform("linux/arm64");
   return {
     FULL_LOCAL_ADDITIONAL_REDIRECT_URLS:
-      "https://app.mumeok.com/auth/callback,https://app.mumeok.com/auth/link/callback",
-    FULL_LOCAL_API_EXTERNAL_URL: "https://auth.mumeok.com/auth/v1",
+      "https://app.mumeok.kr/auth/callback,https://app.mumeok.kr/auth/link/callback",
+    FULL_LOCAL_API_EXTERNAL_URL: "https://auth.mumeok.kr/auth/v1",
     FULL_LOCAL_AUTH_IMAGE: images.auth,
     FULL_LOCAL_AUTH_PROXY_PORT: "54482",
     FULL_LOCAL_COMPOSE_PROJECT_NAME: "homecook-full-local-isolated",
@@ -57,8 +57,8 @@ function validConfig(overrides: Record<string, string> = {}) {
     FULL_LOCAL_POSTGRES_IMAGE: images.postgres,
     FULL_LOCAL_POSTGRES_VOLUME_NAME: "homecook-full-local-test-postgres",
     FULL_LOCAL_POSTGREST_IMAGE: images.postgrest,
-    FULL_LOCAL_PUBLIC_AUTH_URL: "https://auth.mumeok.com",
-    FULL_LOCAL_SITE_URL: "https://app.mumeok.com",
+    FULL_LOCAL_PUBLIC_AUTH_URL: "https://auth.mumeok.kr",
+    FULL_LOCAL_SITE_URL: "https://app.mumeok.kr",
     FULL_LOCAL_STORAGE_IMAGE: images.storage,
     FULL_LOCAL_STORAGE_VOLUME_NAME: "homecook-full-local-test-storage",
     FULL_LOCAL_STORAGE_REGION: "homecook-local-1",
@@ -294,7 +294,7 @@ describe("full-local production runtime static contract", () => {
     expect(runtimeCli).not.toContain("like ('%' || storage_object.name)");
     expect(proxy).toContain("headers.delete(name)");
     expect(proxy).toContain("FULL_LOCAL_PUBLIC_AUTH_URL");
-    expect(proxy).not.toContain('headers.set("x-forwarded-host", "auth.mumeok.com")');
+    expect(proxy).not.toContain('headers.set("x-forwarded-host", "auth.mumeok.kr")');
     expect(oauthCompose).toContain('GOTRUE_EXTERNAL_GOOGLE_ENABLED: "true"');
     expect(oauthCompose).toContain('GOTRUE_EXTERNAL_KAKAO_ENABLED: "true"');
     expect(oauthCompose).toContain("GOTRUE_EXTERNAL_GOOGLE_CLIENT_ID=google_client_id");
@@ -348,14 +348,14 @@ describe("full-local production configuration", () => {
       authProxyPort: 54482,
       dockerPlatform: "linux/arm64",
       internalGatewayPort: 54481,
-      publicAuthOrigin: "https://auth.mumeok.com",
+      publicAuthOrigin: "https://auth.mumeok.kr",
       secretCount: FULL_LOCAL_SECRET_NAMES.length,
     });
   });
 
   it.each([
-    ["FULL_LOCAL_PUBLIC_AUTH_URL", "http://auth.mumeok.com"],
-    ["FULL_LOCAL_API_EXTERNAL_URL", "https://auth.mumeok.com/not-auth"],
+    ["FULL_LOCAL_PUBLIC_AUTH_URL", "http://auth.mumeok.kr"],
+    ["FULL_LOCAL_API_EXTERNAL_URL", "https://auth.mumeok.kr/not-auth"],
     ["FULL_LOCAL_INTERNAL_GATEWAY_URL", "http://192.168.0.36:54481"],
     ["FULL_LOCAL_INTERNAL_S3_URL", "http://storage:5000/storage/v1/s3"],
   ])("rejects unsafe URL config %s", (name, value) => {
@@ -408,7 +408,7 @@ describe("full-local production configuration", () => {
     ).toBe("http://127.0.0.1:54481/storage/v1/s3");
     expect(() =>
       validateLoopbackS3Endpoint(
-        "https://auth.mumeok.com/storage/v1/s3",
+        "https://auth.mumeok.kr/storage/v1/s3",
         54481,
       ),
     ).toThrow(/loopback/iu);

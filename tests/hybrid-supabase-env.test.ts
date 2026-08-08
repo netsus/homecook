@@ -124,7 +124,7 @@ describe("hybrid Supabase environment boundary", () => {
 
   it("separates the public HTTPS Auth origin from the local server loopback origin", async () => {
     process.env.HOMECOOK_AUTH_AUTHORITY = "local";
-    process.env.NEXT_PUBLIC_AUTH_SUPABASE_URL = "https://auth.mumeok.com";
+    process.env.NEXT_PUBLIC_AUTH_SUPABASE_URL = "https://auth.mumeok.kr";
     process.env.NEXT_PUBLIC_AUTH_SUPABASE_PUBLISHABLE_KEY = "local-publishable";
     process.env.LOCAL_SUPABASE_INTERNAL_URL = "http://127.0.0.1:54321";
 
@@ -136,18 +136,18 @@ describe("hybrid Supabase environment boundary", () => {
 
     expect(getAuthAuthority()).toBe("local");
     expect(getAuthSupabaseEnv()).toMatchObject({
-      url: "https://auth.mumeok.com",
-      issuer: "https://auth.mumeok.com/auth/v1",
+      url: "https://auth.mumeok.kr",
+      issuer: "https://auth.mumeok.kr/auth/v1",
     });
     expect(getAuthSupabaseServerEnv()).toMatchObject({
       url: "http://127.0.0.1:54321",
-      issuer: "https://auth.mumeok.com/auth/v1",
+      issuer: "https://auth.mumeok.kr/auth/v1",
     });
   });
 
   it("fails closed when local Auth uses a non-loopback internal origin", async () => {
     process.env.HOMECOOK_AUTH_AUTHORITY = "local";
-    process.env.NEXT_PUBLIC_AUTH_SUPABASE_URL = "https://auth.mumeok.com";
+    process.env.NEXT_PUBLIC_AUTH_SUPABASE_URL = "https://auth.mumeok.kr";
     process.env.NEXT_PUBLIC_AUTH_SUPABASE_PUBLISHABLE_KEY = "local-publishable";
     process.env.LOCAL_SUPABASE_INTERNAL_URL = "http://192.168.0.36:54321";
 

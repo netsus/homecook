@@ -132,16 +132,16 @@ describe("supabase server helpers", () => {
   it("keeps SSR Auth on the public origin and uses loopback only for the local admin client", async () => {
     getAuthAuthority.mockReturnValue("local");
     getSupabaseEnv.mockReturnValue({
-      url: "https://auth.mumeok.com",
+      url: "https://auth.mumeok.kr",
       anonKey: "local-publishable",
-      issuer: "https://auth.mumeok.com/auth/v1",
-      jwksUrl: "https://auth.mumeok.com/auth/v1/.well-known/jwks.json",
+      issuer: "https://auth.mumeok.kr/auth/v1",
+      jwksUrl: "https://auth.mumeok.kr/auth/v1/.well-known/jwks.json",
     });
     getAuthSupabaseServerEnv.mockReturnValue({
       url: "http://127.0.0.1:54481",
       anonKey: "local-publishable",
-      issuer: "https://auth.mumeok.com/auth/v1",
-      jwksUrl: "https://auth.mumeok.com/auth/v1/.well-known/jwks.json",
+      issuer: "https://auth.mumeok.kr/auth/v1",
+      jwksUrl: "https://auth.mumeok.kr/auth/v1/.well-known/jwks.json",
     });
     getServiceRoleKey.mockReturnValue("local-secret-key");
     createServerClient.mockReturnValue({ auth: {} });
@@ -152,7 +152,7 @@ describe("supabase server helpers", () => {
     server.createAuthServiceRoleClient();
 
     expect(createServerClient).toHaveBeenCalledWith(
-      "https://auth.mumeok.com",
+      "https://auth.mumeok.kr",
       "local-publishable",
       expect.any(Object),
     );
