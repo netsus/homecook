@@ -71,6 +71,9 @@ create index if not exists cooked_batch_quantity_events_batch_order_idx
 create index if not exists cooked_batches_owner_loggable_idx
   on public.leftover_dishes (user_id, cooked_at desc, id desc)
   where weight_status = 'known' and batch_status = 'available' and remaining_weight_g > 0;
+create index if not exists cooked_batches_owner_leftovers_compat_idx
+  on public.leftover_dishes (user_id, batch_status, depleted_reason, cooked_at desc, id desc)
+  where recipe_content_snapshot_id is not null;
 
 alter table public.cooked_batch_quantity_events enable row level security;
 drop policy if exists cooked_batch_quantity_events_select_own on public.cooked_batch_quantity_events;
@@ -82,6 +85,13 @@ revoke update on public.leftover_dishes from authenticated, service_role;
 revoke delete on public.leftover_dishes from authenticated, service_role;
 revoke update (status, eaten_at, auto_hide_at, stale_reviewed_at)
   on public.leftover_dishes from authenticated;
+revoke select on public.leftover_dishes from authenticated;
+grant select (
+  id, user_id, recipe_id, status, cooked_at, cooking_servings, eaten_at,
+  auto_hide_at, created_at, stale_reviewed_at, recipe_content_snapshot_id,
+  finished_weight_g, remaining_weight_g, weight_status, batch_status,
+  depleted_reason, revision
+) on public.leftover_dishes to authenticated;
 
 create or replace function private.guard_cooked_batch_legacy_projection_update()
 returns trigger
@@ -331,6 +341,201 @@ begin
 end;
 $function$;
 
+create or replace function private.assert_cooked_batch_cached_projection(
+  p_batch_id uuid,
+  p_owner_uuid uuid
+) returns void
+language plpgsql volatile security definer
+set search_path = pg_catalog, public, private, pg_temp
+as $function$
+declare
+  v_batch public.leftover_dishes%rowtype;
+  v_remaining numeric;
+  v_marked boolean;
+  v_close_reason text;
+  v_consumed boolean;
+  v_discarded boolean;
+  v_checksum text;
+  v_event_count bigint;
+  v_set_weight_count bigint;
+  v_expected_revision bigint;
+  v_expected_weight_status text;
+  v_expected_batch_status text;
+  v_expected_depleted_reason text;
+  v_expected_status public.leftover_dish_status_type;
+begin
+  select batch.* into v_batch
+  from public.leftover_dishes as batch
+  where batch.id = p_batch_id and batch.user_id = p_owner_uuid
+  for update;
+  if v_batch.id is null then
+    raise exception 'RESOURCE_NOT_FOUND' using errcode = 'P0002';
+  end if;
+
+  with active as (
+    select event.*
+    from public.cooked_batch_quantity_events as event
+    where event.cooked_batch_id = p_batch_id
+      and event.event_type <> 'reversal'
+      and not exists (
+        select 1 from public.cooked_batch_quantity_events as reversal
+        where reversal.reverses_event_id = event.id
+      )
+  )
+  select
+    case when v_batch.finished_weight_g is null then null
+      else v_batch.finished_weight_g + coalesce(sum(delta_g)
+        filter (where event_type in ('consumed','discarded','adjustment')), 0) end,
+    coalesce(bool_or(event_type = 'marked_unrecoverable'), false),
+    (array_agg(reason order by created_at desc, id desc)
+      filter (where event_type = 'closed_unweighed'))[1],
+    coalesce(bool_or(event_type = 'consumed'), false),
+    coalesce(bool_or(event_type = 'discarded'), false),
+    encode(extensions.digest(convert_to(coalesce(string_agg(
+      id::text || ':' || event_type || ':' || coalesce(delta_g::text, '') || ':' ||
+        coalesce(reason, '') || ':' || coalesce(reverses_event_id::text, ''),
+      '|' order by created_at, id), ''), 'UTF8'), 'sha256'), 'hex')
+  into v_remaining, v_marked, v_close_reason, v_consumed, v_discarded, v_checksum
+  from active;
+
+  select count(*) into v_event_count
+  from public.cooked_batch_quantity_events
+  where cooked_batch_id = p_batch_id;
+  select count(*) into v_set_weight_count
+  from public.mutation_idempotency_keys as receipt
+  where receipt.owner_uuid = p_owner_uuid
+    and receipt.operation_scope = 'cooked_batch_set_finished_weight'
+    and receipt.state = 'succeeded'
+    and receipt.result_reference = p_batch_id;
+
+  v_expected_revision := 1 + v_event_count + v_set_weight_count;
+  v_expected_weight_status := case
+    when v_marked then 'unrecoverable'
+    when v_batch.finished_weight_g is null then 'missing'
+    else 'known'
+  end;
+  v_expected_batch_status := case
+    when v_close_reason is not null or v_remaining = 0 then 'depleted'
+    else 'available'
+  end;
+  v_expected_depleted_reason := case
+    when v_close_reason is not null then v_close_reason || '_unweighed'
+    when v_remaining = 0 and v_consumed and v_discarded then 'mixed'
+    when v_remaining = 0 and v_consumed then 'consumed'
+    when v_remaining = 0 and v_discarded then 'discarded'
+    else null
+  end;
+  v_expected_status := (case
+    when v_close_reason = 'consumed'
+      or (v_remaining = 0 and v_consumed and not v_discarded) then 'eaten'
+    else 'leftover'
+  end)::public.leftover_dish_status_type;
+
+  if v_batch.remaining_weight_g is distinct from
+      (case when v_marked or v_close_reason is not null then null else v_remaining end)
+    or v_batch.weight_status is distinct from v_expected_weight_status
+    or v_batch.batch_status is distinct from v_expected_batch_status
+    or v_batch.depleted_reason is distinct from v_expected_depleted_reason
+    or v_batch.status is distinct from v_expected_status
+    or v_batch.revision is distinct from v_expected_revision
+    or v_batch.event_checksum is distinct from v_checksum then
+    raise exception 'CONFLICT' using errcode = '55000';
+  end if;
+end;
+$function$;
+
+create or replace function private.project_cooked_batch_progress_activity(
+  p_owner_uuid uuid,
+  p_event_type text,
+  p_source_id uuid,
+  p_now timestamptz
+) returns void
+language plpgsql volatile security definer
+set search_path = pg_catalog, public, private, pg_temp
+as $function$
+declare
+  v_xp_kind text;
+  v_xp integer;
+  v_total_xp integer;
+  v_last_event_at timestamptz;
+  v_event_counts jsonb;
+  v_level integer := 1;
+begin
+  if p_owner_uuid is null or p_source_id is null or p_now is null
+    or p_event_type not in ('cooking_completed', 'leftover_eaten') then
+    raise exception 'VALIDATION_ERROR' using errcode = '22023';
+  end if;
+
+  perform pg_catalog.pg_advisory_xact_lock(
+    pg_catalog.hashtextextended('homecook-user-progress:' || p_owner_uuid::text, 0)
+  );
+  v_xp_kind := case when exists (
+    select 1 from public.user_progress_events
+    where user_id = p_owner_uuid and event_type = p_event_type
+  ) then 'repeat' else 'first' end;
+  v_xp := case p_event_type
+    when 'cooking_completed' then case v_xp_kind when 'first' then 60 else 45 end
+    else case v_xp_kind when 'first' then 15 else 8 end
+  end;
+
+  insert into public.user_progress_events(
+    user_id,event_type,source_key,source_table,source_id,xp_delta,occurred_at,
+    source_meta_json
+  ) values(
+    p_owner_uuid,p_event_type,p_event_type || ':' || p_source_id,
+    'leftover_dishes',p_source_id,v_xp,p_now,
+    jsonb_build_object('xp_kind',v_xp_kind,'level_curve_version','v2')
+  ) on conflict(user_id,event_type,source_key) do nothing;
+
+  if p_event_type = 'leftover_eaten' then
+    insert into public.user_growth_activity_events(
+      user_id,activity_type,category,source_key,source_table,source_id,
+      source_meta_json,occurred_at
+    ) values(
+      p_owner_uuid,'leftover_eaten','leftovers','leftover_eaten:' || p_source_id,
+      'leftover_dishes',p_source_id,'{}'::jsonb,p_now
+    ) on conflict(user_id,activity_type,source_key) do nothing;
+  end if;
+
+  select
+    coalesce(sum(greatest(event.xp_delta, 0)), 0)::integer,
+    max(event.occurred_at),
+    jsonb_build_object(
+      'cooking_completed', count(*) filter (where event.event_type='cooking_completed'),
+      'shopping_completed', count(*) filter (where event.event_type='shopping_completed'),
+      'recipe_saved_distinct_ever', count(distinct event.source_key)
+        filter (where event.event_type='recipe_saved'),
+      'custom_book_created', count(*) filter (where event.event_type='custom_book_created'),
+      'planner_registered_first', count(*) filter (
+        where event.event_type='planner_registered'
+          and coalesce(event.source_meta_json->>'xp_kind','first') <> 'repeat'),
+      'planner_registered_repeat', count(*) filter (
+        where event.event_type='planner_registered'
+          and event.source_meta_json->>'xp_kind' = 'repeat'),
+      'leftover_eaten', count(*) filter (where event.event_type='leftover_eaten')
+    )
+  into v_total_xp, v_last_event_at, v_event_counts
+  from public.user_progress_events as event
+  where event.user_id = p_owner_uuid;
+
+  while 40 * v_level * v_level + 60 * v_level <= v_total_xp loop
+    v_level := v_level + 1;
+  end loop;
+  insert into public.user_progress_summary(
+    user_id,total_xp,current_level,level_curve_version,event_counts,
+    last_event_at,last_updated_at
+  ) values(
+    p_owner_uuid,v_total_xp,v_level,'v2',v_event_counts,v_last_event_at,p_now
+  ) on conflict(user_id) do update set
+    total_xp=excluded.total_xp,
+    current_level=excluded.current_level,
+    level_curve_version=excluded.level_curve_version,
+    event_counts=excluded.event_counts,
+    last_event_at=excluded.last_event_at,
+    last_updated_at=excluded.last_updated_at;
+end;
+$function$;
+
 create or replace function public.list_cooked_batches(
   p_owner_uuid uuid,
   p_auth_identity_created_at_snapshot timestamptz,
@@ -370,24 +575,37 @@ end;
 $function$;
 
 create or replace function public.mutate_legacy_leftover_status(
+  p_owner_uuid uuid,
+  p_auth_identity_created_at_snapshot timestamptz,
+  p_session_key_hash text,
+  p_hmac_key_version integer,
+  p_session_issued_at timestamptz,
   p_leftover_id uuid,
   p_action text,
   p_now timestamptz default clock_timestamp()
 ) returns jsonb
 language plpgsql volatile security definer
-set search_path = pg_catalog, public, private, auth, pg_temp
+set search_path = pg_catalog, public, private, pg_temp
 as $function$
 declare
-  v_owner_uuid uuid := auth.uid();
+  v_authority jsonb;
   v_leftover public.leftover_dishes%rowtype;
-  v_capability_state text;
   v_cutover_attempt_id uuid;
   v_transitioned boolean;
 begin
-  if v_owner_uuid is null or p_leftover_id is null
-    or p_action not in ('eat', 'uneat') or p_now is null then
+  if p_owner_uuid is null or p_leftover_id is null
+    or p_action not in ('eat', 'uneat', 'keep') or p_now is null then
     raise exception 'VALIDATION_ERROR' using errcode = '22023';
   end if;
+
+  v_authority := public.assert_recipe_future_session_authority(
+    p_owner_uuid,
+    p_auth_identity_created_at_snapshot,
+    p_session_key_hash,
+    p_hmac_key_version,
+    p_session_issued_at
+  );
+  v_cutover_attempt_id := (v_authority ->> 'cutover_attempt_id')::uuid;
 
   select leftover.* into v_leftover
   from public.leftover_dishes as leftover
@@ -396,46 +614,56 @@ begin
   if v_leftover.id is null then
     return jsonb_build_object('error_code', 'RESOURCE_NOT_FOUND');
   end if;
-  if v_leftover.user_id is distinct from v_owner_uuid then
+  if v_leftover.user_id is distinct from p_owner_uuid then
     return jsonb_build_object('error_code', 'FORBIDDEN');
   end if;
-  if v_leftover.recipe_content_snapshot_id is not null then
+  if p_action in ('eat', 'uneat')
+    and v_leftover.recipe_content_snapshot_id is not null then
+    return jsonb_build_object('error_code', 'CONFLICT');
+  end if;
+  if p_action = 'keep' and v_leftover.status is distinct from 'leftover' then
     return jsonb_build_object('error_code', 'CONFLICT');
   end if;
 
   v_transitioned := (p_action = 'eat' and v_leftover.status <> 'eaten')
-    or (p_action = 'uneat' and v_leftover.status <> 'leftover');
-  if v_transitioned then
-    select capability.state, capability.current_cutover_attempt_id
-      into v_capability_state, v_cutover_attempt_id
-    from public.account_generation_capability_state as capability
-    where capability.singleton
-    for key share;
-    if v_capability_state = 'generation_active' then
-      perform public.set_account_generation_internal_writer_marker(
-        v_cutover_attempt_id,
-        true
-      );
-    end if;
+    or (p_action = 'uneat' and v_leftover.status <> 'leftover')
+    or (p_action = 'keep' and v_leftover.stale_reviewed_at is distinct from p_now);
+  if v_transitioned or p_action = 'eat' then
+    perform public.set_account_generation_internal_writer_marker(
+      v_cutover_attempt_id,
+      true
+    );
 
-    if p_action = 'eat' then
+    if v_transitioned and p_action = 'eat' then
       update public.leftover_dishes
       set status = 'eaten', eaten_at = p_now, auto_hide_at = p_now + interval '30 days'
       where id = p_leftover_id
       returning * into v_leftover;
-    else
+    elsif v_transitioned and p_action = 'uneat' then
       update public.leftover_dishes
       set status = 'leftover', eaten_at = null, auto_hide_at = null
       where id = p_leftover_id
       returning * into v_leftover;
+    elsif v_transitioned then
+      update public.leftover_dishes
+      set stale_reviewed_at = p_now
+      where id = p_leftover_id
+      returning * into v_leftover;
     end if;
 
-    if v_capability_state = 'generation_active' then
-      perform public.set_account_generation_internal_writer_marker(
-        v_cutover_attempt_id,
-        false
+    if p_action = 'eat' then
+      perform private.project_cooked_batch_progress_activity(
+        p_owner_uuid,
+        'leftover_eaten',
+        p_leftover_id,
+        p_now
       );
     end if;
+
+    perform public.set_account_generation_internal_writer_marker(
+      v_cutover_attempt_id,
+      false
+    );
   end if;
 
   return jsonb_build_object(
@@ -443,6 +671,7 @@ begin
     'status', v_leftover.status,
     'eaten_at', v_leftover.eaten_at,
     'auto_hide_at', v_leftover.auto_hide_at,
+    'stale_reviewed_at', v_leftover.stale_reviewed_at,
     'transitioned', v_transitioned
   );
 end;
@@ -604,7 +833,7 @@ declare
   v_meals integer := 0; v_expected_meals integer := 0;
   v_claims integer := 0; v_claims_deleted integer := 0;
   v_removed integer := 0; v_cook_count integer := 0;
-  v_xp integer; v_batch_id uuid := p_session_id;
+  v_batch_id uuid := p_session_id;
 begin
   if p_idempotency_key is null or p_weight_action not in ('set_finished_weight','weigh_later')
     or (p_weight_action = 'set_finished_weight' and (p_finished_weight_g is null or p_finished_weight_g <= 0))
@@ -622,7 +851,20 @@ begin
     'snapshot_v2_complete', p_idempotency_key, jsonb_build_object(
       'session_id', p_session_id, 'consumed_pantry_item_ids', to_jsonb(coalesce(p_consumed_pantry_item_ids, '{}'::uuid[])),
       'weight_action', p_weight_action, 'finished_weight_g', p_finished_weight_g), p_now);
-  if v_claim ? 'replay' then return v_claim->'replay'; end if;
+  if v_claim ? 'replay' then
+    perform public.set_account_generation_internal_writer_marker(
+      (v_authority->>'cutover_attempt_id')::uuid,
+      true
+    );
+    perform private.project_cooked_batch_progress_activity(
+      p_owner_uuid,'cooking_completed',v_batch_id,p_now
+    );
+    perform public.set_account_generation_internal_writer_marker(
+      (v_authority->>'cutover_attempt_id')::uuid,
+      false
+    );
+    return v_claim->'replay';
+  end if;
   v_receipt := (v_claim->>'receipt_id')::uuid;
   if v_session.status <> 'in_progress' then raise exception 'CONFLICT' using errcode = '55000'; end if;
 
@@ -740,10 +982,9 @@ begin
   end if;
   update public.cooking_sessions set status = 'completed', completed_at = p_now where id = p_session_id;
   update public.recipes set cook_count = coalesce(cook_count,0)+1 where id = v_session.recipe_id returning cook_count into v_cook_count;
-  select case when exists(select 1 from public.user_progress_events where user_id=p_owner_uuid and event_type='cooking_completed') then 45 else 60 end into v_xp;
-  insert into public.user_progress_events(user_id,event_type,source_key,source_table,source_id,xp_delta,occurred_at)
-  values(p_owner_uuid,'cooking_completed','cooking_completed:'||v_batch_id,'leftover_dishes',v_batch_id,v_xp,p_now)
-  on conflict(user_id,event_type,source_key) do nothing;
+  perform private.project_cooked_batch_progress_activity(
+    p_owner_uuid,'cooking_completed',v_batch_id,p_now
+  );
   perform public.set_account_generation_internal_writer_marker((v_authority->>'cutover_attempt_id')::uuid, false);
 
   v_result := jsonb_build_object('success',true,'data',jsonb_build_object(
@@ -767,34 +1008,32 @@ set search_path = pg_catalog, public, private, pg_temp
 as $function$
 declare v_authority jsonb; v_batch public.leftover_dishes%rowtype; v_claim jsonb; v_receipt uuid;
   v_event uuid := extensions.gen_random_uuid(); v_result jsonb; v_target public.cooked_batch_quantity_events%rowtype;
-  v_xp integer; v_current_checksum text;
 begin
   v_authority := public.assert_recipe_future_session_authority(p_owner_uuid,p_auth_identity_created_at_snapshot,p_session_key_hash,p_hmac_key_version,p_session_issued_at);
   select batch.* into v_batch from public.leftover_dishes as batch
   where batch.id=p_batch_id and batch.user_id=p_owner_uuid and batch.recipe_content_snapshot_id is not null for update;
   if v_batch.id is null then raise exception 'RESOURCE_NOT_FOUND' using errcode='P0002'; end if;
-  with active as (
-    select event.*
-    from public.cooked_batch_quantity_events as event
-    where event.cooked_batch_id = p_batch_id
-      and event.event_type <> 'reversal'
-      and not exists (
-        select 1 from public.cooked_batch_quantity_events as reversal
-        where reversal.reverses_event_id = event.id
-      )
-  )
-  select encode(extensions.digest(convert_to(coalesce(string_agg(
-    id::text || ':' || event_type || ':' || coalesce(delta_g::text, '') || ':' || coalesce(reason, '') || ':' || coalesce(reverses_event_id::text, ''),
-    '|' order by created_at, id), ''), 'UTF8'), 'sha256'), 'hex')
-  into v_current_checksum
-  from active;
-  if v_batch.event_checksum is distinct from v_current_checksum then
-    raise exception 'CONFLICT' using errcode='55000';
-  end if;
+  perform private.assert_cooked_batch_cached_projection(p_batch_id,p_owner_uuid);
   v_claim := private.claim_cooked_batch_operation(p_owner_uuid,(v_authority->>'account_generation')::bigint,
     'cooked_batch_'||p_action,p_idempotency_key,jsonb_build_object('batch_id',p_batch_id,'expected_revision',p_expected_revision,
     'action',p_action,'delta_g',p_delta_g,'reason',p_reason,'reverses_event_id',p_reverses_event_id),p_now);
-  if v_claim ? 'replay' then return v_claim->'replay'; end if; v_receipt := (v_claim->>'receipt_id')::uuid;
+  if v_claim ? 'replay' then
+    if p_action = 'closed_unweighed' and p_reason = 'consumed' then
+      perform public.set_account_generation_internal_writer_marker(
+        (v_authority->>'cutover_attempt_id')::uuid,
+        true
+      );
+      perform private.project_cooked_batch_progress_activity(
+        p_owner_uuid,'leftover_eaten',p_batch_id,p_now
+      );
+      perform public.set_account_generation_internal_writer_marker(
+        (v_authority->>'cutover_attempt_id')::uuid,
+        false
+      );
+    end if;
+    return v_claim->'replay';
+  end if;
+  v_receipt := (v_claim->>'receipt_id')::uuid;
   if v_batch.revision is distinct from p_expected_revision then raise exception 'CONFLICT' using errcode='40001'; end if;
   if p_action='marked_unrecoverable' then
     if v_batch.weight_status='unrecoverable' then raise exception 'WEIGHT_UNRECOVERABLE' using errcode='55000'; end if;
@@ -819,16 +1058,9 @@ begin
   values(v_event,p_owner_uuid,p_batch_id,p_action,p_delta_g,p_reason,p_reverses_event_id,p_idempotency_key,1,(v_claim->>'payload_hash'),p_now);
   perform private.replay_cooked_batch(p_batch_id,p_owner_uuid,p_now);
   if p_action = 'closed_unweighed' and p_reason = 'consumed' then
-    select case when exists(
-      select 1 from public.user_progress_events
-      where user_id = p_owner_uuid and event_type = 'leftover_eaten'
-    ) then 8 else 15 end into v_xp;
-    insert into public.user_progress_events(
-      user_id,event_type,source_key,source_table,source_id,xp_delta,occurred_at
-    ) values(
-      p_owner_uuid,'leftover_eaten','leftover_eaten:'||p_batch_id,
-      'leftover_dishes',p_batch_id,v_xp,p_now
-    ) on conflict(user_id,event_type,source_key) do nothing;
+    perform private.project_cooked_batch_progress_activity(
+      p_owner_uuid,'leftover_eaten',p_batch_id,p_now
+    );
   end if;
   v_result:=jsonb_build_object('success',true,'data',jsonb_build_object('action',case p_action when 'marked_unrecoverable' then 'mark_unrecoverable' when 'discarded' then 'discard' when 'adjustment' then 'adjust' when 'closed_unweighed' then 'close' else 'cancel_current' end,'batch',private.project_cooked_batch(p_batch_id,p_owner_uuid),'event_id',v_event),'error',null);
   perform private.finish_cooked_batch_operation(v_receipt,v_result,v_event,p_now);
@@ -854,6 +1086,7 @@ begin
   v_authority:=public.assert_recipe_future_session_authority(p_owner_uuid,p_auth_identity_created_at_snapshot,p_session_key_hash,p_hmac_key_version,p_session_issued_at);
   select batch.* into v_batch from public.leftover_dishes as batch where batch.id=p_batch_id and batch.user_id=p_owner_uuid and batch.recipe_content_snapshot_id is not null for update;
   if v_batch.id is null then raise exception 'RESOURCE_NOT_FOUND' using errcode='P0002'; end if;
+  perform private.assert_cooked_batch_cached_projection(p_batch_id,p_owner_uuid);
   v_claim:=private.claim_cooked_batch_operation(p_owner_uuid,(v_authority->>'account_generation')::bigint,'cooked_batch_set_finished_weight',p_idempotency_key,jsonb_build_object('batch_id',p_batch_id,'expected_revision',p_expected_revision,'action',p_action,'finished_weight_g',p_finished_weight_g),p_now);
   if v_claim ? 'replay' then return v_claim->'replay'; end if; v_receipt:=(v_claim->>'receipt_id')::uuid;
   if v_batch.weight_status='unrecoverable' then raise exception 'WEIGHT_UNRECOVERABLE' using errcode='55000'; end if;
@@ -1061,6 +1294,7 @@ begin
           '/rpc/read_snapshot_v2_cook_mode',
           '/rpc/cancel_snapshot_v2_cooking_session',
           '/rpc/complete_snapshot_v2_cooking_session',
+          '/rpc/mutate_legacy_leftover_status',
           '/rpc/list_cooked_batches',
           '/rpc/mutate_cooked_batch_weight',
           '/rpc/discard_cooked_batch',
@@ -1097,11 +1331,13 @@ alter function private.cleanup_cooked_batch_before_delete() owner to postgres;
 alter function private.claim_cooked_batch_operation(uuid,bigint,text,uuid,jsonb,timestamptz) owner to postgres;
 alter function private.finish_cooked_batch_operation(uuid,jsonb,uuid,timestamptz) owner to postgres;
 alter function private.replay_cooked_batch(uuid,uuid,timestamptz) owner to postgres;
+alter function private.assert_cooked_batch_cached_projection(uuid,uuid) owner to postgres;
+alter function private.project_cooked_batch_progress_activity(uuid,text,uuid,timestamptz) owner to postgres;
 alter function private.validate_meal_leftover_cooked_batch_authority() owner to postgres;
 alter function private.validate_active_cooking_session_snapshot_v2_association() owner to postgres;
 alter function private.apply_cooked_batch_event(uuid,timestamptz,text,integer,timestamptz,uuid,uuid,bigint,text,numeric,text,uuid,timestamptz) owner to postgres;
 alter function private.verify_full_local_internal_scope() owner to postgres;
-alter function public.mutate_legacy_leftover_status(uuid,text,timestamptz) owner to postgres;
+alter function public.mutate_legacy_leftover_status(uuid,timestamptz,text,integer,timestamptz,uuid,text,timestamptz) owner to postgres;
 alter function public.list_cooked_batches(uuid,timestamptz,text,integer,timestamptz,text,integer,timestamptz,uuid) owner to postgres;
 alter function public.complete_snapshot_v2_cooking_session(uuid,timestamptz,text,integer,timestamptz,uuid,uuid,uuid[],text,numeric,timestamptz) owner to postgres;
 alter function public.mutate_cooked_batch_weight(uuid,timestamptz,text,integer,timestamptz,uuid,uuid,text,numeric,bigint,timestamptz) owner to postgres;
@@ -1121,6 +1357,10 @@ revoke all on function private.finish_cooked_batch_operation(uuid,jsonb,uuid,tim
   from public, anon, authenticated, service_role;
 revoke all on function private.replay_cooked_batch(uuid,uuid,timestamptz)
   from public, anon, authenticated, service_role;
+revoke all on function private.assert_cooked_batch_cached_projection(uuid,uuid)
+  from public, anon, authenticated, service_role;
+revoke all on function private.project_cooked_batch_progress_activity(uuid,text,uuid,timestamptz)
+  from public, anon, authenticated, service_role;
 revoke all on function private.validate_meal_leftover_cooked_batch_authority()
   from public, anon, authenticated, service_role;
 revoke all on function private.validate_active_cooking_session_snapshot_v2_association()
@@ -1130,10 +1370,10 @@ revoke all on function private.apply_cooked_batch_event(uuid,timestamptz,text,in
 revoke all on function private.verify_full_local_internal_scope()
   from public, anon, authenticated, service_role;
 
-revoke all on function public.mutate_legacy_leftover_status(uuid,text,timestamptz)
+revoke all on function public.mutate_legacy_leftover_status(uuid,timestamptz,text,integer,timestamptz,uuid,text,timestamptz)
   from public, anon, authenticated, service_role;
-grant execute on function public.mutate_legacy_leftover_status(uuid,text,timestamptz)
-  to authenticated;
+grant execute on function public.mutate_legacy_leftover_status(uuid,timestamptz,text,integer,timestamptz,uuid,text,timestamptz)
+  to service_role;
 
 revoke all on function public.list_cooked_batches(uuid,timestamptz,text,integer,timestamptz,text,integer,timestamptz,uuid) from public,anon,authenticated;
 revoke all on function public.complete_snapshot_v2_cooking_session(uuid,timestamptz,text,integer,timestamptz,uuid,uuid,uuid[],text,numeric,timestamptz) from public,anon,authenticated;

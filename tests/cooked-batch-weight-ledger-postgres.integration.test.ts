@@ -17,6 +17,7 @@ const contentB = "a3000000-0000-4000-8000-000000000002";
 const batchA = "a4000000-0000-4000-8000-000000000001";
 const batchB = "a4000000-0000-4000-8000-000000000002";
 const legacyBatch = "a4000000-0000-4000-8000-000000000009";
+const legacyAtomicBatch = "a4000000-0000-4000-8000-000000000010";
 const completeSession = "a4000000-0000-4000-8000-000000000003";
 const plannerSession = "a4000000-0000-4000-8000-000000000004";
 const plannerMeal = "a4000000-0000-4000-8000-000000000005";
@@ -84,7 +85,9 @@ function ownerDigest(owner: string) {
       'claims', (select coalesce(jsonb_agg(jsonb_build_array(meal_id,session_id) order by meal_id),'[]'::jsonb) from public.cooking_session_meal_claims where owner_user_id='${owner}'),
       'meals', (select coalesce(jsonb_agg(jsonb_build_array(id,status,revision,is_leftover,leftover_dish_id) order by id),'[]'::jsonb) from public.meals where user_id='${owner}'),
       'recipes', (select coalesce(jsonb_agg(jsonb_build_array(id,cook_count) order by id),'[]'::jsonb) from public.recipes where created_by='${owner}'),
-      'progress', (select coalesce(jsonb_agg(jsonb_build_array(event_type,source_key,xp_delta) order by id),'[]'::jsonb) from public.user_progress_events where user_id='${owner}')
+      'progress', (select coalesce(jsonb_agg(jsonb_build_array(event_type,source_key,xp_delta,source_meta_json) order by id),'[]'::jsonb) from public.user_progress_events where user_id='${owner}'),
+      'progress_summary', (select coalesce(jsonb_agg(jsonb_build_array(total_xp,current_level,level_curve_version,event_counts,last_event_at) order by user_id),'[]'::jsonb) from public.user_progress_summary where user_id='${owner}'),
+      'growth_activity', (select coalesce(jsonb_agg(jsonb_build_array(activity_type,category,source_key,source_meta_json) order by id),'[]'::jsonb) from public.user_growth_activity_events where user_id='${owner}')
     )::text,'UTF8'),'sha256'),'hex');
   `).stdout.trim().split("\n").at(-1);
 }
@@ -153,7 +156,8 @@ describe.runIf(enabled)("cooked batch weight ledger PostgreSQL", () => {
       ) values
         ('${batchA}','${ownerA}','${recipeA}','${contentA}','leftover',now(),2,1000,1000,'known','available',null,1,encode(extensions.digest(convert_to('','UTF8'),'sha256'),'hex')),
         ('${batchB}','${ownerB}','${recipeB}','${contentB}','leftover',now(),2,null,null,'missing','available',null,1,encode(extensions.digest(convert_to('','UTF8'),'sha256'),'hex')),
-        ('${legacyBatch}','${ownerA}','${recipeA}',null,'leftover',now(),2,null,null,null,null,null,null,null)
+        ('${legacyBatch}','${ownerA}','${recipeA}',null,'leftover',now(),2,null,null,null,null,null,null,null),
+        ('${legacyAtomicBatch}','${ownerA}','${recipeA}',null,'leftover',now(),2,null,null,null,null,null,null,null)
       on conflict(id) do nothing;
       insert into public.pantry_items(id,user_id,ingredient_id) values
         ('${pantryA}','${ownerA}','${ingredient}'),
@@ -276,6 +280,26 @@ describe.runIf(enabled)("cooked batch weight ledger PostgreSQL", () => {
     expect(projected.stdout.trim()).toBe("");
   });
 
+  it("keeps event_checksum private while preserving safe owner columns", () => {
+    const hiddenChecksum = psql(`
+      begin;
+      set local role authenticated;
+      select set_config('request.jwt.claim.sub','${ownerA}',true);
+      select event_checksum from public.leftover_dishes where id='${batchA}';
+      rollback;
+    `, false);
+    expect(hiddenChecksum.stderr).toContain("permission denied");
+
+    const safeProjection = psql(`
+      begin;
+      set local role authenticated;
+      select set_config('request.jwt.claim.sub','${ownerA}',true);
+      select id,status,revision from public.leftover_dishes where id='${batchA}';
+      rollback;
+    `);
+    expect(safeProjection.stdout).toContain(batchA);
+  });
+
   it("rejects direct protected updates and event inserts for authenticated callers", () => {
     const update = psql(`
       begin; set local role authenticated;
@@ -314,27 +338,135 @@ describe.runIf(enabled)("cooked batch weight ledger PostgreSQL", () => {
     expect(forgedBatch.status).not.toBe(0);
   });
 
-  it("mutates legacy leftovers through the owner-locked RPC while generation is active", () => {
-    const eaten = psql(`
-      begin;
-      set local role authenticated;
-      select set_config('request.jwt.claim.sub','${ownerA}',true);
+  it("mutates legacy leftovers only through a verified current-generation session", () => {
+    const eaten = serviceRpc(`
       select public.mutate_legacy_leftover_status(
-        '${legacyBatch}','eat','2026-08-08T01:10:00Z'
+        ${authArgs(ownerA)},'${legacyBatch}','eat','2026-08-08T01:10:00Z'
       );
-      commit;
     `);
     expect(extractJson(eaten.stdout)).toMatchObject({ status: "eaten", transitioned: true });
-    const uneaten = psql(`
-      begin;
-      set local role authenticated;
-      select set_config('request.jwt.claim.sub','${ownerA}',true);
-      select public.mutate_legacy_leftover_status(
-        '${legacyBatch}','uneat','2026-08-08T01:11:00Z'
+    expect(extractJson(psql(`
+      select jsonb_build_object(
+        'progress_meta',(select source_meta_json from public.user_progress_events
+          where user_id='${ownerA}' and event_type='leftover_eaten' and source_id='${legacyBatch}'),
+        'summary',(select jsonb_build_object('total_xp',total_xp,'event_counts',event_counts,'level_curve_version',level_curve_version)
+          from public.user_progress_summary where user_id='${ownerA}'),
+        'activity',(select jsonb_build_object('category',category,'source_meta_json',source_meta_json)
+          from public.user_growth_activity_events where user_id='${ownerA}' and activity_type='leftover_eaten' and source_id='${legacyBatch}')
       );
-      commit;
+    `).stdout)).toMatchObject({
+      progress_meta: { xp_kind: "first", level_curve_version: "v2" },
+      summary: { total_xp: 15, level_curve_version: "v2", event_counts: { leftover_eaten: 1 } },
+      activity: { category: "leftovers", source_meta_json: {} },
+    });
+    const uneaten = serviceRpc(`
+      select public.mutate_legacy_leftover_status(
+        ${authArgs(ownerA)},'${legacyBatch}','uneat','2026-08-08T01:11:00Z'
+      );
     `);
     expect(extractJson(uneaten.stdout)).toMatchObject({ status: "leftover", transitioned: true });
+  });
+
+  it("rolls legacy status and canonical side effects back together", () => {
+    const before = ownerDigest(ownerA);
+    const failed = serviceRpc(`
+      create function pg_temp.reject_leftover_activity() returns trigger
+      language plpgsql as $$ begin raise exception 'forced activity failure'; end $$;
+      create trigger reject_leftover_activity before insert on public.user_growth_activity_events
+      for each row when (new.source_id='${legacyAtomicBatch}'::uuid)
+      execute function pg_temp.reject_leftover_activity();
+      select public.mutate_legacy_leftover_status(
+        ${authArgs(ownerA)},'${legacyAtomicBatch}','eat','2026-08-08T01:11:30Z'
+      );
+    `, false);
+    expect(failed.stderr).toContain("forced activity failure");
+    expect(ownerDigest(ownerA)).toBe(before);
+    expect(psql(`select status from public.leftover_dishes where id='${legacyAtomicBatch}';`).stdout.trim())
+      .toBe("leftover");
+  });
+
+  it("fails stale session and generation bindings closed with zero leftover writes", () => {
+    const before = psql(`
+      select jsonb_build_array(status,eaten_at,auto_hide_at,stale_reviewed_at)::text
+      from public.leftover_dishes where id='${legacyBatch}';
+    `).stdout.trim().split("\n").at(-1);
+
+    const staleSession = serviceRpc(`
+      update public.user_session_generation_bindings
+      set binding_state='revoked', revoked_at=clock_timestamp()
+      where session_key_hash='${sessionHashA}';
+      select public.mutate_legacy_leftover_status(
+        ${authArgs(ownerA)},'${legacyBatch}','eat','2026-08-08T01:12:00Z'
+      );
+    `, false);
+    expect(staleSession.stderr).toContain("ACCOUNT_SESSION_STALE");
+    expect(psql(`
+      select jsonb_build_array(status,eaten_at,auto_hide_at,stale_reviewed_at)::text
+      from public.leftover_dishes where id='${legacyBatch}';
+    `).stdout.trim().split("\n").at(-1)).toBe(before);
+
+    const staleGeneration = serviceRpc(`
+      update public.user_account_lifecycles
+      set status='complete', updated_at=clock_timestamp()
+      where owner_uuid='${ownerA}' and account_generation=1;
+      insert into public.user_account_lifecycles(
+        owner_uuid,account_generation,auth_identity_created_at_snapshot,origin,status,activated_at
+      ) values('${ownerA}',2,'${identityA}','runtime','active',clock_timestamp());
+      select public.mutate_legacy_leftover_status(
+        ${authArgs(ownerA)},'${legacyBatch}','eat','2026-08-08T01:13:00Z'
+      );
+    `, false);
+    expect(staleGeneration.stderr).toContain("ACCOUNT_SESSION_STALE");
+    expect(psql(`
+      select jsonb_build_array(status,eaten_at,auto_hide_at,stale_reviewed_at)::text
+      from public.leftover_dishes where id='${legacyBatch}';
+    `).stdout.trim().split("\n").at(-1)).toBe(before);
+  });
+
+  it("keeps an owned leftover by changing stale_reviewed_at only", () => {
+    const before = psql(`
+      select jsonb_build_array(status,eaten_at,auto_hide_at,recipe_content_snapshot_id)::text
+      from public.leftover_dishes where id='${legacyBatch}';
+    `).stdout.trim().split("\n").at(-1);
+    const kept = serviceRpc(`
+      select public.mutate_legacy_leftover_status(
+        ${authArgs(ownerA)},'${legacyBatch}','keep','2026-08-08T01:14:00Z'
+      );
+    `);
+    const keptData = extractJson(kept.stdout);
+    expect(keptData).toMatchObject({ status: "leftover" });
+    expect(new Date(String(keptData.stale_reviewed_at)).toISOString())
+      .toBe("2026-08-08T01:14:00.000Z");
+    expect(psql(`
+      select jsonb_build_array(status,eaten_at,auto_hide_at,recipe_content_snapshot_id)::text
+      from public.leftover_dishes where id='${legacyBatch}';
+    `).stdout.trim().split("\n").at(-1)).toBe(before);
+    expect(psql(`
+      select to_char(
+        stale_reviewed_at at time zone 'UTC',
+        'YYYY-MM-DD"T"HH24:MI:SS"Z"'
+      )
+      from public.leftover_dishes
+      where id='${legacyBatch}';
+    `).stdout).toContain("2026-08-08T01:14:00Z");
+  });
+
+  it("denies another owner's keep and keeps v2 status mutations read-only", () => {
+    const ownerBBefore = ownerDigest(ownerB);
+    const denied = serviceRpc(`
+      select public.mutate_legacy_leftover_status(
+        ${authArgs(ownerA)},'${batchB}','keep','2026-08-08T01:15:00Z'
+      );
+    `);
+    expect(extractJson(denied.stdout)).toMatchObject({ error_code: "FORBIDDEN" });
+    expect(ownerDigest(ownerB)).toBe(ownerBBefore);
+
+    const v2Status = serviceRpc(`
+      select public.mutate_legacy_leftover_status(
+        ${authArgs(ownerA)},'${batchA}','eat','2026-08-08T01:16:00Z'
+      );
+    `);
+    expect(extractJson(v2Status.stdout)).toMatchObject({ error_code: "CONFLICT" });
   });
 
   it("preserves explicit v2 state bounds and public projection keys", () => {
@@ -408,6 +540,21 @@ describe.runIf(enabled)("cooked batch weight ledger PostgreSQL", () => {
     expect(psql(`select count(*) from public.pantry_items where id='${pantryA}';`).stdout.trim()).toBe("0");
     expect(psql(`select count(*) from public.pantry_items where id='${pantryB}';`).stdout.trim()).toBe("1");
     expect(psql(`select count(*) from public.user_progress_events where user_id='${ownerA}' and event_type='cooking_completed' and source_id='${completeSession}';`).stdout.trim()).toBe("1");
+    expect(extractJson(psql(`
+      select jsonb_build_object(
+        'source_meta_json',(select source_meta_json from public.user_progress_events
+          where user_id='${ownerA}' and event_type='cooking_completed' and source_id='${completeSession}'),
+        'summary',(select jsonb_build_object('total_xp',total_xp,'event_counts',event_counts,'level_curve_version',level_curve_version)
+          from public.user_progress_summary where user_id='${ownerA}')
+      );
+    `).stdout)).toMatchObject({
+      source_meta_json: { xp_kind: "first", level_curve_version: "v2" },
+      summary: {
+        total_xp: 75,
+        level_curve_version: "v2",
+        event_counts: { cooking_completed: 1, leftover_eaten: 1 },
+      },
+    });
 
     const reused = serviceRpc(`
       select public.complete_snapshot_v2_cooking_session(
@@ -544,6 +691,29 @@ describe.runIf(enabled)("cooked batch weight ledger PostgreSQL", () => {
       from public.leftover_dishes as batch where batch.id='${batchA}';
     `).stdout.trim()).toBe("t");
 
+    const cachedBefore = ownerDigest(ownerA);
+    const cachedCorruptions = [
+      "remaining_weight_g=850",
+      "revision=99",
+      "event_checksum=repeat('f',64)",
+      "remaining_weight_g=0,status='eaten',eaten_at=clock_timestamp(),auto_hide_at=clock_timestamp(),batch_status='depleted',depleted_reason='discarded'",
+    ];
+    for (const [ordinal, corruption] of cachedCorruptions.entries()) {
+      const operationId = `a6000000-0000-4000-8000-${String(100 + ordinal).padStart(12, "0")}`;
+      const cachedMismatch = serviceRpc(`
+        select public.set_account_generation_internal_writer_marker('${cutoverAttempt}',true);
+        update public.leftover_dishes set ${corruption} where id='${batchA}';
+        select public.set_account_generation_internal_writer_marker('${cutoverAttempt}',false);
+        select public.adjust_cooked_batch(
+          ${authArgs(ownerA)},'${batchA}',
+          '${operationId}',10,'tampered cache',2,
+          '2026-08-08T02:01:30Z'
+        );
+      `, false);
+      expect(cachedMismatch.stderr, corruption).toContain("CONFLICT");
+      expect(ownerDigest(ownerA), corruption).toBe(cachedBefore);
+    }
+
     const reused = serviceRpc(`
       select public.discard_cooked_batch(
         ${authArgs(ownerA)},'${batchA}','${key}',90,'상함',1,
@@ -625,6 +795,49 @@ describe.runIf(enabled)("cooked batch weight ledger PostgreSQL", () => {
     `).stdout);
     expect(reclosed.data.batch?.status).toBe("eaten");
     expect(psql(`select count(*) from public.user_progress_events where user_id='${ownerB}' and event_type='leftover_eaten';`).stdout.trim()).toBe("1");
+    expect(extractJson(psql(`
+      select jsonb_build_object(
+        'source_meta_json',(select source_meta_json from public.user_progress_events
+          where user_id='${ownerB}' and event_type='leftover_eaten'),
+        'summary',(select jsonb_build_object('total_xp',total_xp,'event_counts',event_counts,'level_curve_version',level_curve_version)
+          from public.user_progress_summary where user_id='${ownerB}'),
+        'activity_count',(select count(*) from public.user_growth_activity_events
+          where user_id='${ownerB}' and activity_type='leftover_eaten' and source_id='${batchB}')
+      );
+    `).stdout)).toMatchObject({
+      source_meta_json: { xp_kind: "first", level_curve_version: "v2" },
+      summary: { total_xp: 15, level_curve_version: "v2", event_counts: { leftover_eaten: 1 } },
+      activity_count: 1,
+    });
+  });
+
+  it("uses the single compatibility index for a representative leftovers predicate", () => {
+    const explain = psql(`
+      begin;
+      select public.set_account_generation_internal_writer_marker('${cutoverAttempt}',true);
+      insert into public.leftover_dishes(
+        id,user_id,recipe_id,recipe_content_snapshot_id,status,cooked_at,cooking_servings,
+        finished_weight_g,remaining_weight_g,weight_status,batch_status,depleted_reason,revision,event_checksum
+      )
+      select md5('compat-'||series)::uuid,'${ownerB}','${recipeB}','${contentB}',
+        case when series % 100 = 0 then 'leftover' else 'eaten' end::public.leftover_dish_status_type,
+        clock_timestamp()-(series||' seconds')::interval,1,100,
+        case when series % 100 = 0 then 100 else 0 end,'known',
+        case when series % 100 = 0 then 'available' else 'depleted' end,
+        case when series % 100 = 0 then null else 'consumed' end,1,
+        encode(extensions.digest(convert_to('','UTF8'),'sha256'),'hex')
+      from generate_series(1,4000) as series;
+      analyze public.leftover_dishes;
+      explain (analyze, buffers, format json)
+      select id from public.leftover_dishes
+      where user_id='${ownerB}'
+        and recipe_content_snapshot_id is not null
+        and batch_status='available'
+      order by cooked_at desc,id desc limit 20;
+      rollback;
+    `).stdout;
+    expect(explain).toContain("cooked_batches_owner_leftovers_compat_idx");
+    expect(explain).toContain("Shared Hit Blocks");
   });
 
   it("rejects a depleted v2 leftover in the final meal-write wrapper with zero effect", () => {

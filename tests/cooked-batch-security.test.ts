@@ -97,18 +97,28 @@ describe("cooked batch database security contract", () => {
       /revoke select, insert, update, delete on public\.cooked_batch_quantity_events\s*from anon, authenticated, service_role/i,
     );
     expect(sql).not.toMatch(/grant select on public\.cooked_batch_quantity_events to authenticated/i);
+    expect(sql).toMatch(
+      /revoke select on public\.leftover_dishes from authenticated;[\s\S]*grant select \([\s\S]*\) on public\.leftover_dishes to authenticated/i,
+    );
+    const safeColumnGrant = sql.match(
+      /grant select \(([\s\S]*?)\) on public\.leftover_dishes to authenticated/i,
+    )?.[1] ?? "";
+    expect(safeColumnGrant).not.toContain("event_checksum");
   });
 
-  it("moves legacy eat and uneat through one owner-locked compatibility RPC", () => {
+  it("moves legacy eat, uneat, and keep through one verified owner-locked compatibility RPC", () => {
     const sql = migration();
     expect(sql).toMatch(
-      /function public\.mutate_legacy_leftover_status\([\s\S]*from public\.leftover_dishes[\s\S]*for update/i,
+      /function public\.mutate_legacy_leftover_status\(\s*p_owner_uuid uuid,\s*p_auth_identity_created_at_snapshot timestamptz,\s*p_session_key_hash text,\s*p_hmac_key_version integer,\s*p_session_issued_at timestamptz,[\s\S]*from public\.leftover_dishes[\s\S]*for update/i,
     );
     expect(sql).toMatch(
-      /set_account_generation_internal_writer_marker\([\s\S]*update public\.leftover_dishes[\s\S]*set_account_generation_internal_writer_marker\(/i,
+      /assert_recipe_future_session_authority\([\s\S]*set_account_generation_internal_writer_marker\([\s\S]*update public\.leftover_dishes[\s\S]*stale_reviewed_at[\s\S]*set_account_generation_internal_writer_marker\(/i,
+    );
+    expect(sql).toMatch(
+      /revoke all on function public\.mutate_legacy_leftover_status\([\s\S]*from public, anon, authenticated, service_role;[\s\S]*grant execute on function public\.mutate_legacy_leftover_status\([\s\S]*to service_role/i,
     );
 
-    for (const action of ["eat", "uneat"]) {
+    for (const action of ["eat", "uneat", "keep"]) {
       const route = readFileSync(
         join(
           process.cwd(),
@@ -116,8 +126,9 @@ describe("cooked batch database security contract", () => {
         ),
         "utf8",
       );
-      expect(route).toContain('rpc("mutate_legacy_leftover_status"');
+      expect(route).toContain('"mutate_legacy_leftover_status"');
       expect(route).not.toContain('.from("leftover_dishes")\n    .update(');
+      expect(route).toContain("...authorized.authorityArgs");
     }
   });
 
@@ -135,5 +146,21 @@ describe("cooked batch database security contract", () => {
     const sql = migration();
     const reasonTerms = sql.match(/coalesce\(reason, ''\)/gi) ?? [];
     expect(reasonTerms).toHaveLength(2);
+  });
+
+  it("serializes and atomically projects cooked-batch progress plus activity", () => {
+    const sql = migration();
+    expect(sql).toMatch(
+      /function private\.project_cooked_batch_progress_activity\([\s\S]*pg_advisory_xact_lock\([\s\S]*homecook-user-progress:/i,
+    );
+    expect(sql).toMatch(/project_cooked_batch_progress_activity[\s\S]*user_progress_events[\s\S]*source_meta_json/i);
+    expect(sql).toMatch(/project_cooked_batch_progress_activity[\s\S]*user_progress_summary/i);
+    expect(sql).toMatch(/project_cooked_batch_progress_activity[\s\S]*user_growth_activity_events/i);
+    const eatRoute = readFileSync(
+      join(process.cwd(), "app/api/v1/leftovers/[leftover_id]/eat/route.ts"),
+      "utf8",
+    );
+    expect(eatRoute).not.toContain("awardUserProgressEvent");
+    expect(eatRoute).not.toContain("recordUserGrowthActivityEvent");
   });
 });

@@ -14,6 +14,15 @@ const formatBootstrapErrorMessage = vi.fn((error: unknown, fallbackMessage: stri
 });
 const awardUserProgressEvent = vi.fn();
 const recordUserGrowthActivityEvent = vi.fn();
+const authorizeCookedBatchRequest = vi.fn();
+
+const authorityArgs = {
+  p_owner_uuid: "user-1",
+  p_auth_identity_created_at_snapshot: "2026-04-01T00:00:00.000Z",
+  p_session_key_hash: "a".repeat(64),
+  p_hmac_key_version: 1,
+  p_session_issued_at: "2026-04-01T00:00:00.000Z",
+};
 
 vi.mock("@/lib/supabase/server", () => ({
   createRouteHandlerClient: async (...args: unknown[]) => {
@@ -39,6 +48,10 @@ vi.mock("@/lib/server/user-progress", () => ({
 
 vi.mock("@/lib/server/user-growth-activity", () => ({
   recordUserGrowthActivityEvent,
+}));
+
+vi.mock("@/lib/server/cooked-batch-route", () => ({
+  authorizeCookedBatchRequest,
 }));
 
 interface QueryError {
@@ -236,7 +249,7 @@ function createLeftoverMutationDb({
   const update = vi.fn(() => updateQuery);
   const rpc = vi.fn(async (
     _name: string,
-    args: { p_action: "eat" | "uneat" },
+    args: { p_action: "eat" | "uneat" | "keep" },
   ) => {
     const source = selectRows[0];
     if (!source) return { data: { error_code: "RESOURCE_NOT_FOUND" }, error: null };
@@ -254,6 +267,7 @@ function createLeftoverMutationDb({
         status: result.status,
         eaten_at: result.eaten_at,
         auto_hide_at: result.auto_hide_at,
+        stale_reviewed_at: result.stale_reviewed_at,
         transitioned: source.status !== targetStatus,
       },
       error: null,
@@ -282,13 +296,32 @@ function createLeftoverMutationDb({
 }
 
 function setupAuthenticatedDb(db: unknown, userId = "user-1") {
-  createRouteHandlerClient.mockResolvedValue({
+  const routeClient = {
     auth: {
       getUser: vi.fn(async () => ({ data: { user: { id: userId } } })),
     },
     from: vi.fn(),
-  });
+  };
+  createRouteHandlerClient.mockResolvedValue(routeClient);
   createServiceRoleClient.mockReturnValue(db);
+  authorizeCookedBatchRequest.mockResolvedValue({
+    ok: true,
+    routeClient,
+    user: { id: userId },
+    client: db,
+    authorityArgs: { ...authorityArgs, p_owner_uuid: userId },
+  });
+}
+
+function setupUnauthorizedCookedBatchRequest() {
+  authorizeCookedBatchRequest.mockResolvedValue({
+    ok: false,
+    response: Response.json({
+      success: false,
+      data: null,
+      error: { code: "UNAUTHORIZED", message: "로그인이 필요해요.", fields: [] },
+    }, { status: 401 }),
+  });
 }
 
 async function importListRoute() {
@@ -669,6 +702,7 @@ describe("POST /api/v1/leftovers/{id}/keep", () => {
     createServiceRoleClient.mockReset();
     ensurePublicUserRow.mockReset();
     ensureUserBootstrapState.mockReset();
+    authorizeCookedBatchRequest.mockReset();
     formatBootstrapErrorMessage.mockClear();
     ensurePublicUserRow.mockResolvedValue({});
     ensureUserBootstrapState.mockResolvedValue(undefined);
@@ -682,6 +716,7 @@ describe("POST /api/v1/leftovers/{id}/keep", () => {
   });
 
   it("returns 401 when the user is not authenticated", async () => {
+    setupUnauthorizedCookedBatchRequest();
     createRouteHandlerClient.mockResolvedValue({
       auth: { getUser: vi.fn(async () => ({ data: { user: null } })) },
       from: vi.fn(),
@@ -699,7 +734,7 @@ describe("POST /api/v1/leftovers/{id}/keep", () => {
   });
 
   it("stores a stale review timestamp without changing leftover status", async () => {
-    const { db, update, updateQuery } = createLeftoverMutationDb({
+    const { db, rpc, update } = createLeftoverMutationDb({
       selectRows: [
         {
           id: leftoverId,
@@ -731,9 +766,13 @@ describe("POST /api/v1/leftovers/{id}/keep", () => {
     const body = await response.json();
 
     expect(response.status).toBe(200);
-    expect(update).toHaveBeenCalledWith({ stale_reviewed_at: nowIso });
-    expect(updateQuery.eq).toHaveBeenCalledWith("id", leftoverId);
-    expect(updateQuery.eq).toHaveBeenCalledWith("user_id", "user-1");
+    expect(update).not.toHaveBeenCalled();
+    expect(rpc).toHaveBeenCalledWith("mutate_legacy_leftover_status", {
+      ...authorityArgs,
+      p_action: "keep",
+      p_leftover_id: leftoverId,
+      p_now: nowIso,
+    });
     expect(body).toEqual({
       success: true,
       data: {
@@ -784,6 +823,7 @@ describe("POST /api/v1/leftovers/{id}/eat", () => {
     formatBootstrapErrorMessage.mockClear();
     awardUserProgressEvent.mockReset();
     recordUserGrowthActivityEvent.mockReset();
+    authorizeCookedBatchRequest.mockReset();
     ensurePublicUserRow.mockResolvedValue({});
     ensureUserBootstrapState.mockResolvedValue(undefined);
     awardUserProgressEvent.mockResolvedValue({
@@ -799,6 +839,7 @@ describe("POST /api/v1/leftovers/{id}/eat", () => {
   });
 
   it("returns 401 when the user is not authenticated", async () => {
+    setupUnauthorizedCookedBatchRequest();
     createRouteHandlerClient.mockResolvedValue({
       auth: { getUser: vi.fn(async () => ({ data: { user: null } })) },
       from: vi.fn(),
@@ -848,6 +889,7 @@ describe("POST /api/v1/leftovers/{id}/eat", () => {
     expect(response.status).toBe(200);
     expect(update).not.toHaveBeenCalled();
     expect(rpc).toHaveBeenCalledWith("mutate_legacy_leftover_status", {
+      ...authorityArgs,
       p_action: "eat",
       p_leftover_id: leftoverId,
       p_now: nowIso,
@@ -862,28 +904,8 @@ describe("POST /api/v1/leftovers/{id}/eat", () => {
       },
       error: null,
     });
-    expect(awardUserProgressEvent).toHaveBeenCalledWith(
-      expect.objectContaining({ from: db.from }),
-      {
-        userId: "user-1",
-        eventType: "leftover_eaten",
-        sourceTable: "leftover_dishes",
-        sourceId: leftoverId,
-        occurredAt: nowIso,
-      },
-    );
-    expect(recordUserGrowthActivityEvent).toHaveBeenCalledWith(
-      expect.objectContaining({ from: db.from }),
-      {
-        userId: "user-1",
-        activityType: "leftover_eaten",
-        category: "leftovers",
-        sourceKey: `leftover_eaten:${leftoverId}`,
-        sourceTable: "leftover_dishes",
-        sourceId: leftoverId,
-        occurredAt: nowIso,
-      },
-    );
+    expect(awardUserProgressEvent).not.toHaveBeenCalled();
+    expect(recordUserGrowthActivityEvent).not.toHaveBeenCalled();
   });
 
   it("returns the same result without updating when the dish is already eaten", async () => {
@@ -994,6 +1016,7 @@ describe("POST /api/v1/leftovers/{id}/uneat", () => {
     createServiceRoleClient.mockReset();
     ensurePublicUserRow.mockReset();
     ensureUserBootstrapState.mockReset();
+    authorizeCookedBatchRequest.mockReset();
     formatBootstrapErrorMessage.mockClear();
     ensurePublicUserRow.mockResolvedValue({});
     ensureUserBootstrapState.mockResolvedValue(undefined);
@@ -1001,6 +1024,7 @@ describe("POST /api/v1/leftovers/{id}/uneat", () => {
   });
 
   it("returns 401 when the user is not authenticated", async () => {
+    setupUnauthorizedCookedBatchRequest();
     createRouteHandlerClient.mockResolvedValue({
       auth: { getUser: vi.fn(async () => ({ data: { user: null } })) },
       from: vi.fn(),
@@ -1050,6 +1074,7 @@ describe("POST /api/v1/leftovers/{id}/uneat", () => {
     expect(response.status).toBe(200);
     expect(update).not.toHaveBeenCalled();
     expect(rpc).toHaveBeenCalledWith("mutate_legacy_leftover_status", {
+      ...authorityArgs,
       p_action: "uneat",
       p_leftover_id: leftoverId,
       p_now: expect.any(String),

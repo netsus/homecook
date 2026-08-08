@@ -38,6 +38,22 @@ describe("cooked batch mutation contract", () => {
     });
   });
 
+  it("rejects non-canonical or non-base64url cursor encodings", () => {
+    const canonical = Buffer.from(JSON.stringify({
+      v: 1,
+      a: "loggable",
+      t: "2026-08-08T10:00:00.000Z",
+      i: batch.id,
+    }), "utf8").toString("base64url");
+
+    for (const cursor of [`${canonical}!`, `${canonical}=`, ` ${canonical}`, `${canonical}\n`]) {
+      expect(parseCookedBatchListQuery(new URLSearchParams({ cursor }))).toEqual({
+        ok: false,
+        fields: [{ field: "cursor", reason: "invalid_cursor" }],
+      });
+    }
+  });
+
   it("accepts only the official weight action shapes", () => {
     expect(parseBatchWeightRequest({
       action: "set_finished_weight",

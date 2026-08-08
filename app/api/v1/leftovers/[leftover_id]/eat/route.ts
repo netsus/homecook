@@ -5,21 +5,14 @@ import {
   isUuid,
   toLeftoverMutationData,
 } from "@/lib/server/leftovers";
+import { callCookedBatchRpc } from "@/lib/server/cooked-batches";
+import { authorizeCookedBatchRequest } from "@/lib/server/cooked-batch-route";
 import {
   ensurePublicUserRow,
   ensureUserBootstrapState,
   formatBootstrapErrorMessage,
   type UserBootstrapDbClient,
 } from "@/lib/server/user-bootstrap";
-import {
-  awardUserProgressEvent,
-  type UserProgressDbClient,
-} from "@/lib/server/user-progress";
-import {
-  recordUserGrowthActivityEvent,
-  type UserGrowthActivityDbClient,
-} from "@/lib/server/user-growth-activity";
-import { createRouteHandlerClient } from "@/lib/supabase/server";
 import type { LeftoverMutationData } from "@/types/leftover";
 
 interface RouteContext {
@@ -28,30 +21,8 @@ interface RouteContext {
   }>;
 }
 
-interface QueryError {
-  code?: string;
-  message: string;
-}
-
-interface LeftoverMutationDbClient {
-  rpc(
-    name: "mutate_legacy_leftover_status",
-    args: { p_action: "eat"; p_leftover_id: string; p_now: string },
-  ): PromiseLike<{
-    data: (LeftoverMutationData & { transitioned: boolean })
-      | { error_code: "RESOURCE_NOT_FOUND" | "FORBIDDEN" | "CONFLICT" }
-      | null;
-    error: QueryError | null;
-  }>;
-}
-
 type LeftoverMutationAuthedDbClient =
-  LeftoverMutationDbClient & UserBootstrapDbClient & UserProgressDbClient & UserGrowthActivityDbClient;
-
-async function requireUser(routeClient: Awaited<ReturnType<typeof createRouteHandlerClient>>) {
-  const authResult = await routeClient.auth.getUser();
-  return authResult.data.user;
-}
+  UserBootstrapDbClient;
 
 export async function POST(request: Request, context: RouteContext) {
   const { leftover_id: leftoverId } = await context.params;
@@ -76,12 +47,9 @@ export async function POST(request: Request, context: RouteContext) {
     return ok(fixtureResult.data);
   }
 
-  const routeClient = await createRouteHandlerClient();
-  const user = await requireUser(routeClient);
-
-  if (!user) {
-    return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
-  }
+  const authorized = await authorizeCookedBatchRequest();
+  if (!authorized.ok) return authorized.response;
+  const { routeClient, user } = authorized;
 
   const dbClient = routeClient as unknown as
     LeftoverMutationAuthedDbClient;
@@ -98,49 +66,32 @@ export async function POST(request: Request, context: RouteContext) {
   }
 
   const eatenAt = new Date().toISOString();
-  const mutationResult = await dbClient.rpc("mutate_legacy_leftover_status", {
-    p_action: "eat",
-    p_leftover_id: leftoverId,
-    p_now: eatenAt,
-  });
-  if (mutationResult.error || !mutationResult.data) {
+  const mutationResult = await callCookedBatchRpc(
+    authorized.client,
+    "mutate_legacy_leftover_status",
+    {
+      ...authorized.authorityArgs,
+      p_action: "eat",
+      p_leftover_id: leftoverId,
+      p_now: eatenAt,
+    },
+  );
+  if (!mutationResult.ok) return mutationResult.response;
+  if (!mutationResult.data || typeof mutationResult.data !== "object") {
     return fail("INTERNAL_ERROR", "남은 요리를 다먹음 처리하지 못했어요.", 500);
   }
-  if ("error_code" in mutationResult.data) {
-    if (mutationResult.data.error_code === "RESOURCE_NOT_FOUND") {
+  const mutationData = mutationResult.data as
+    | (LeftoverMutationData & { transitioned: boolean })
+    | { error_code: "RESOURCE_NOT_FOUND" | "FORBIDDEN" | "CONFLICT" };
+  if ("error_code" in mutationData) {
+    if (mutationData.error_code === "RESOURCE_NOT_FOUND") {
       return fail("RESOURCE_NOT_FOUND", "남은 요리를 찾을 수 없어요.", 404);
     }
-    if (mutationResult.data.error_code === "FORBIDDEN") {
+    if (mutationData.error_code === "FORBIDDEN") {
       return fail("FORBIDDEN", "내 남은 요리만 수정할 수 있어요.", 403);
     }
     return fail("CONFLICT", "중량 기록이 있는 요리는 전용 기록 화면에서 변경해 주세요.", 409);
   }
 
-  if (mutationResult.data.transitioned) try {
-    await awardUserProgressEvent(dbClient, {
-      userId: user.id,
-      eventType: "leftover_eaten",
-      sourceTable: "leftover_dishes",
-      sourceId: leftoverId,
-      occurredAt: eatenAt,
-    });
-  } catch {
-    // XP projection is secondary; leftover mutation remains authoritative.
-  }
-
-  if (mutationResult.data.transitioned) try {
-    await recordUserGrowthActivityEvent(dbClient, {
-      userId: user.id,
-      activityType: "leftover_eaten",
-      category: "leftovers",
-      sourceKey: `leftover_eaten:${leftoverId}`,
-      sourceTable: "leftover_dishes",
-      sourceId: leftoverId,
-      occurredAt: eatenAt,
-    });
-  } catch {
-    // Activity history is secondary; leftover mutation remains authoritative.
-  }
-
-  return ok(toLeftoverMutationData(mutationResult.data));
+  return ok(toLeftoverMutationData(mutationData));
 }

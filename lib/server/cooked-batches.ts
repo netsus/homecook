@@ -284,7 +284,10 @@ export function encodeCookedBatchCursor(cursor: CookedBatchCursor) {
 
 export function decodeCookedBatchCursor(value: string, availability: "loggable" | "all"): CookedBatchCursor | null {
   try {
-    const parsed = JSON.parse(Buffer.from(value, "base64url").toString("utf8"));
+    if (!/^[A-Za-z0-9_-]+$/.test(value) || value.length % 4 === 1) return null;
+    const bytes = Buffer.from(value, "base64url");
+    if (bytes.toString("base64url") !== value) return null;
+    const parsed = JSON.parse(bytes.toString("utf8"));
     if (!isRecord(parsed) || parsed.v !== 1 || parsed.a !== availability || typeof parsed.t !== "string"
       || !Number.isFinite(Date.parse(parsed.t)) || !isUuid(parsed.i)) return null;
     return { availability, cookedAt: parsed.t, id: parsed.i };

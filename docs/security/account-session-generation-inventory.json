@@ -751,20 +751,6 @@
       "activation_phase": "f0-expand-legacy-guard"
     },
     {
-      "key": "direct_dml|app/api/v1/leftovers/[leftover_id]/keep/route.ts|leftover_dishes|update|1",
-      "kind": "direct_dml",
-      "operation": "update",
-      "target": "leftover_dishes",
-      "line": 119,
-      "source_file": "app/api/v1/leftovers/[leftover_id]/keep/route.ts",
-      "route": "/api/v1/leftovers/[leftover_id]/keep",
-      "owner_scope": "authenticated-user",
-      "persists_personal_state": true,
-      "guard_mode": "database-before-trigger",
-      "expected_generation": "joint-promote-server-verified-session-binding",
-      "activation_phase": "f0-expand-legacy-guard"
-    },
-    {
       "key": "direct_dml|app/api/v1/pantry/route.ts|pantry_items|delete|3",
       "kind": "direct_dml",
       "operation": "delete",
@@ -1936,6 +1922,6 @@
       "on_delete": "cascade"
     }
   ],
-  "generated_at": "2026-08-08T15:48:27.759Z",
-  "checksum": "826afc879e36dabf267f7b22e20ff1382e3f20c0b3c7c9164f7dd4fd971d66d9"
+  "generated_at": "2026-08-08T17:04:11.361Z",
+  "checksum": "353ba440e565d3a7be4359f1d05ab87c8a868d89285e3d2b8da1310cf14d17ab"
 }
