@@ -57,8 +57,8 @@
 - [ ] UI offers only original food-only g or weigh-later and excludes container/current remainder <!-- omo:id=accept-batch-ui-weight-action;stage=4;scope=frontend;review=5,6 -->
 - [ ] loading/empty/error fail closed, submit is deduped and 409/422 preserves selections/focus <!-- omo:id=accept-batch-ui-states;stage=4;scope=frontend;review=5,6 -->
 - [ ] stored replay result closes once without repeating effects <!-- omo:id=accept-batch-ui-replay;stage=4;scope=frontend;review=5,6 -->
-- [ ] canonical COOK_MODE #8 design and fresh independent critic pass before Stage 2 진입 전 implementation <!-- omo:id=accept-batch-ui-design-critic;stage=2;scope=frontend;review=5,6 -->
-- [ ] fresh 390px/320px screenshot/Figma product-design-authority reports blocker/major zero before Stage 2 진입 전; legacy 15a evidence is not reused <!-- omo:id=accept-batch-ui-authority;stage=2;scope=frontend;review=5,6 -->
+- [ ] canonical COOK_MODE #8 design and fresh independent critic pass before Stage 4 frontend entry <!-- omo:id=accept-batch-ui-design-critic;stage=4;scope=frontend;review=5,6 -->
+- [ ] fresh 390px/320px screenshot/Figma product-design-authority reports blocker/major zero before Stage 4 frontend entry; legacy 15a evidence is not reused <!-- omo:id=accept-batch-ui-authority;stage=4;scope=frontend;review=5,6 -->
 - [ ] #11 retains final LEFTOVERS/design/accessibility ownership without duplicate API/mutation <!-- omo:id=accept-batch-ui-successor;stage=4;scope=shared;review=5,6 -->
 
 ## Release / v1-v2 Boundary

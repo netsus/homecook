@@ -77,7 +77,7 @@ describe("cooked-batch-weight-ledger fresh Stage 1 re-lock", () => {
     expect(roadmap).toContain("merge `2173737e`");
   });
 
-  it("requires fresh #8 critic and 390/320 authority approval before Stage 2", () => {
+  it("requires fresh #8 critic and 390/320 authority approval before Stage 4", () => {
     const authority = automation.frontend.design_authority;
 
     expect(authority.generator_artifact).toBe("ui/designs/COOK_MODE.md");
@@ -94,7 +94,7 @@ describe("cooked-batch-weight-ledger fresh Stage 1 re-lock", () => {
       ]),
     );
     expect(automation.blocked_conditions).toContain(
-      "stage2-entered-before-fresh-independent-slice8-design-critic-and-390-320-product-design-authority-pass",
+      "stage4-entered-before-fresh-independent-slice8-design-critic-and-390-320-product-design-authority-pass",
     );
     expect(readme).toContain("019fe02c-1b12-7d42-bcaf-0d5a02847967");
     expect(readme).toContain("019fe041-2ff4-7f62-9786-79a46aecae0c");
@@ -133,15 +133,15 @@ describe("cooked-batch-weight-ledger fresh Stage 1 re-lock", () => {
     }
   });
 
-  it("keeps fresh Stage 1 approval pending on the new docs branch", () => {
+  it("projects active Stage 2 without promoting approval or verification", () => {
     expect(status).toMatchObject({
-      branch: "docs/cooked-batch-api-contract-v1-2-36",
-      lifecycle: "planned",
+      branch: "feature/cooked-batch-weight-ledger-stage2-current",
+      lifecycle: "in_progress",
       approval_state: "not_started",
       verification_status: "pending",
     });
     expect(workItem.status).toMatchObject({
-      lifecycle: "planned",
+      lifecycle: "in_progress",
       approval_state: "not_started",
       verification_status: "pending",
     });

@@ -99,7 +99,7 @@ Schema Change:
 | `meal-log-core` #9 | successor | owns linked consumed meal entry and arbitrary-order entry-specific reversal |
 | `cooked-batch-weight-ui` #11 | successor | owns final LEFTOVERS/weight UI design/accessibility without duplicating mutations |
 
-> Exact runtime predecessors are merged, but predecessor lifecycle and activation projections are not falsely closed. #8 remains `docs` on the roadmap and `planned / not_started / pending` in workflow state until fresh independent Stage 1 gates pass. This PR does not activate v2/personal flags.
+> Exact runtime predecessors are merged, but predecessor lifecycle and activation projections are not falsely closed. #8 Stage 1 gates are approved and the backend Stage 2 lifecycle is `in_progress`; overall approval and verification remain pending until fresh Stage 3 and current-head evidence. This PR does not activate v2/personal flags.
 
 ## #7 Entrypoint Boundary
 
@@ -228,8 +228,8 @@ creation flag rollback:
 
 - UI risk: high-risk `COOK_MODE` functional completion change. `COOK_MODE` is a required high-risk surface but is not listed as an anchor screen in `docs/design/anchor-screens.md`.
 - Stage 1 design source: `ui/designs/COOK_MODE.md` now locks the current official tuple, whole-board shell and #8 exact-row/weight sheet states. The existing `ui/designs/critiques/COOK_MODE-critique.md` and `ui/designs/authority/COOK_MODE-authority.md` are legacy 15a/v1.5.1 evidence and are not reusable.
-- Design critic gate: a fresh independent task must write `ui/designs/critiques/COOK_MODE-cooked-batch-weight-ledger-critique.md` and return pass/conditional-pass with blocker 0 before Stage 2.
-- Product-design-authority gate: before Stage 2, a different independent task must review the design at 390px and 320px using fresh screenshot/Figma evidence and write `ui/designs/authority/COOK_MODE-cooked-batch-weight-ledger-authority.md` with blocker/major 0. This author does not create or approve either report.
+- Design critic gate: a fresh independent task must write `ui/designs/critiques/COOK_MODE-cooked-batch-weight-ledger-critique.md` and return pass/conditional-pass with blocker 0 before Stage 4 frontend entry.
+- Product-design-authority gate: before Stage 4 frontend entry, a different independent task must review the design at 390px and 320px using fresh screenshot/Figma evidence and write `ui/designs/authority/COOK_MODE-cooked-batch-weight-ledger-authority.md` with blocker/major 0. This author does not create or approve either report.
 - Pre-Stage 2 design evidence plan: `ui/designs/evidence/cooked-batch-weight-ledger/COOK_MODE-design-mobile-default-390.png` and `ui/designs/evidence/cooked-batch-weight-ledger/COOK_MODE-design-mobile-narrow-320.png`, covering default, multi-row, empty, known, weigh-later, loading, 409/422, replay and creation-off drain states without reusing v1.5.1 images.
 - Stage 4 must capture a second fresh implementation evidence pair at 390px/320px for keyboard/focus, 44px targets, safe-area and no-overflow verification; the pre-Stage 2 design approval is not a substitute for implemented-screen review.
 - #11 still owns final COOK_MODE/LEFTOVERS visual polish, container calculator and full delayed-weight/unrecoverable UX; it reuses #8 mutations without expanding them.
@@ -300,7 +300,7 @@ Fresh Stage 2 backend evidence is retained at [`evidence/2026-08-09-stage2-backe
 - [x] legacy eaten projection and XP/activity apply only to consumed reasons exactly once <!-- omo:id=delivery-batch-legacy-projection;stage=2;scope=backend;review=3,6 -->
 - [x] legacy rows remain nullable and are never assigned inferred grams or fabricated content <!-- omo:id=delivery-batch-legacy-data;stage=2;scope=backend;review=3,6 -->
 - [ ] COOK_MODE exact-row/weight UI is fail-closed and waits for stored completion result <!-- omo:id=delivery-batch-complete-ui;stage=4;scope=frontend;review=5,6 -->
-- [ ] fresh independent design critic and 390px/320px screenshot/Figma product-design-authority pass before Stage 2 <!-- omo:id=delivery-batch-design-authority;stage=2;scope=frontend;review=5,6 -->
+- [ ] fresh independent design critic and 390px/320px screenshot/Figma product-design-authority pass before Stage 4 frontend entry <!-- omo:id=delivery-batch-design-authority;stage=4;scope=frontend;review=5,6 -->
 - [ ] R/R+1 seeded v2 drain and current/previous v1 compatibility pass with new-write zero <!-- omo:id=delivery-batch-drain;stage=2;scope=shared;review=3,6 -->
 - [ ] R+2 joint activation and rollback preserve existing v2 drain <!-- omo:id=delivery-batch-activation;stage=2;scope=shared;review=3,6 -->
 - [x] #9 meal-log and #11 final UI boundaries are not preclaimed <!-- omo:id=delivery-batch-successor-boundary;stage=2;scope=shared;review=3,6 -->
