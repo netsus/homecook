@@ -58,6 +58,7 @@
     "full-local-production:bootstrap-secrets": "node scripts/full-local-production-runtime.mjs bootstrap-secrets",
     "full-local-production:validate": "node scripts/full-local-production-runtime.mjs validate",
     "verify:production-domain-contract": "node scripts/validate-production-domain-contract.mjs",
+    "verify:full-local-session-refresh-lifecycle": "pnpm exec vitest run tests/full-local-session-authority.test.ts tests/full-local-auth-db-foundation.test.ts tests/full-local-request-authority-migration.test.ts tests/hybrid-session-authority-bootstrap.test.ts tests/hybrid-session-authority-gateway.test.ts && pnpm test:full-local-auth-db-foundation:postgres && pnpm test:full-local-production:runtime",
     "verify:full-local-session-lifecycle-evidence": "vitest run tests/full-local-session-lifecycle-evidence.test.ts",
     "full-local-production:start": "node scripts/full-local-production-runtime.mjs start",
     "full-local-production:status": "node scripts/full-local-production-runtime.mjs status",

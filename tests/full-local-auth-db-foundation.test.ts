@@ -1,4 +1,4 @@
-import { readFile } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 
 import { describe, expect, it, vi } from "vitest";
 
@@ -12,10 +12,25 @@ const MIGRATION_PATH =
   "supabase/migrations/20260801120000_full_local_auth_db_foundation.sql";
 const SESSION_ISSUE_TIME_PRECISION_MIGRATION_PATH =
   "supabase/migrations/20260803090000_full_local_session_issue_time_precision.sql";
+const MIGRATIONS_DIRECTORY = "supabase/migrations";
 const SECURITY_MANIFEST_PATH =
   "docs/security/full-local-auth-db-security-function-authorization-manifest.json";
 const SECRET = "0123456789abcdef0123456789abcdef";
 const NOW = new Date("2026-08-01T10:00:00.000Z");
+
+async function readRefreshAuthorityMigration() {
+  const migrationFiles = await readdir(MIGRATIONS_DIRECTORY);
+  const refreshMigrationName = migrationFiles.find((file) =>
+    file.includes("full_local_session_refresh_authority"),
+  );
+
+  return {
+    refreshMigrationName,
+    migration: refreshMigrationName
+      ? await readFile(`${MIGRATIONS_DIRECTORY}/${refreshMigrationName}`, "utf8")
+      : "",
+  };
+}
 
 function clientWithRpc(rpc = vi.fn()) {
   return { client: { rpc }, rpc };
@@ -378,6 +393,61 @@ describe("full-local Auth DB migration contract", () => {
     expect(migration).toContain(
       "v_binding.session_issued_at is distinct from p_session_issued_at",
     );
+  });
+
+  it("requires a dedicated additive v2 session refresh migration instead of mutating the old exact-iat file in place", async () => {
+    const migrationFiles = await readdir(MIGRATIONS_DIRECTORY);
+    const refreshMigrations = migrationFiles.filter((file) =>
+      file.includes("full_local_session_refresh_authority"),
+    );
+
+    expect(refreshMigrations).toHaveLength(1);
+    expect(refreshMigrations[0]).toMatch(
+      /^[0-9]{14}_full_local_session_refresh_authority\.sql$/u,
+    );
+  });
+
+  it("pins exact v2 local authority RPC signatures with named monotonic token evidence", async () => {
+    const { refreshMigrationName, migration } = await readRefreshAuthorityMigration();
+    expect(refreshMigrationName).toBeDefined();
+    const normalized = migration.toLowerCase();
+
+    expect(normalized).toContain(
+      "create or replace function public.record_full_local_session_authority_v2(",
+    );
+    expect(normalized).toContain(
+      "create or replace function public.assert_and_renew_full_local_session_authority_v2(",
+    );
+    expect(normalized).toContain("p_session_id uuid");
+    expect(normalized).toContain("p_verified_at timestamptz");
+    expect(normalized).toContain("p_last_token_issued_at timestamptz");
+    expect(normalized).toContain("p_access_token_expires_at timestamptz");
+    expect(normalized).toContain("p_binding_expires_at timestamptz");
+    for (const signature of [
+      "record_full_local_session_authority_v2",
+      "assert_and_renew_full_local_session_authority_v2",
+    ]) {
+      const parameterBlock = normalized.match(
+        new RegExp(
+          `create or replace function public\\.${signature}\\(([^)]*)\\)`,
+          "u",
+        ),
+      )?.[1] ?? "";
+      expect(parameterBlock.split(",").map((part) => part.trim()).filter(Boolean)).toHaveLength(12);
+    }
+  });
+
+  it("records refresh-safe fields for browser-first first request and late older token rejection only in the additive refresh migration", async () => {
+    const { refreshMigrationName, migration } = await readRefreshAuthorityMigration();
+    expect(refreshMigrationName).toBeDefined();
+    const normalized = migration.toLowerCase();
+
+    expect(normalized).toContain("last_token_issued_at");
+    expect(normalized).toContain("binding_expires_at");
+    expect(normalized).toContain("greatest");
+    expect(normalized).toMatch(/binding_state[\s\S]*active/iu);
+    expect(normalized).toMatch(/revoked_at[\s\S]*is null/iu);
+    expect(normalized).toContain("account_session_stale");
   });
 
   it("exposes service-only local bind, assert, and idempotent revoke RPCs", async () => {

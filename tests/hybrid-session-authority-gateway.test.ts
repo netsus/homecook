@@ -1,4 +1,5 @@
 import {
+  createHmac,
   generateKeyPairSync,
   sign,
 } from "node:crypto";
@@ -203,6 +204,64 @@ describe("loopback session-authority gateway", () => {
       path: "/meals",
       nowSeconds: 1_800_000_100,
     })).toMatchObject({ ok: true, claims: { version: 2 } });
+  });
+
+  it("keeps browser-first refresh on the same session monotonic for the first protected request", async () => {
+    const refreshedToken = accessToken({
+      iat: 1_800_001_200,
+      exp: 1_800_001_800,
+    });
+    const assertSessionAuthority = vi.fn().mockResolvedValue(undefined);
+    const localUpstreamFetch = vi.fn().mockResolvedValue(
+      new Response("{}", { status: 200 }),
+    );
+    const authorityFetch = createHybridAuthorityFetch({
+      getAccessToken: async () => refreshedToken,
+      remoteLivenessFetch: vi.fn().mockResolvedValue(new Response(
+        JSON.stringify({
+          id: OWNER_UUID,
+          created_at: "2026-07-28T00:00:00.000Z",
+        }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      )),
+      localUpstreamFetch,
+      loadRemoteJwks: async () => ({ keys: [REMOTE_JWK] }),
+      assertSessionAuthority,
+      auth: {
+        issuer: ISSUER,
+        url: "https://remote.example.supabase.co",
+        publishableKey: "remote-publishable",
+      },
+      attestationSecret: SECRET,
+      sessionBindingSecret: SECRET,
+      nowSeconds: () => 1_800_001_250,
+    });
+
+    const response = await authorityFetch("http://127.0.0.1:8000/rest/v1/meals", {
+      method: "POST",
+      body: "{}",
+    });
+
+    expect(response.status).toBe(200);
+    expect(assertSessionAuthority).toHaveBeenCalledWith(expect.objectContaining({
+      sessionId: SESSION_UUID,
+      sessionIssuedAt: new Date(1_800_001_200 * 1_000).toISOString(),
+      lastTokenIssuedAt: new Date(1_800_001_200 * 1_000).toISOString(),
+      accessTokenExpiresAt: new Date(1_800_001_800 * 1_000).toISOString(),
+      verifiedAt: new Date(1_800_001_250 * 1_000).toISOString(),
+      binding: expect.objectContaining({
+        owner_uuid: OWNER_UUID,
+        session_key_hash: createHmac("sha256", SECRET)
+          .update([
+            "v1",
+            ISSUER,
+            OWNER_UUID,
+            "2026-07-28T00:00:00.000Z",
+            SESSION_UUID,
+          ].join("\n"))
+          .digest("hex"),
+      }),
+    }));
   });
 
   it("allows only a scoped exact anonymous public read without remote liveness", async () => {

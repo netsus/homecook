@@ -1,12 +1,14 @@
 import { execFileSync, spawnSync } from "node:child_process";
 import { createHmac } from "node:crypto";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createServer as createNetServer } from "node:net";
 
 import { describe, expect, it } from "vitest";
 
+import { createHybridAuthorityFetch } from "@/lib/server/hybrid-auth/gateway";
+import { createSessionKeyHash } from "@/lib/server/hybrid-auth/session-authority";
 import {
   assertFullLocalComposeModel,
   assertNoSecretLeakage,
@@ -19,6 +21,9 @@ const run = process.env.FULL_LOCAL_PRODUCTION_DOCKER_SMOKE === "1"
   ? describe
   : describe.skip;
 const composeFile = "infra/full-local-supabase/docker-compose.production.yml";
+const packageJson = JSON.parse(
+  readFileSync(new URL("../package.json", import.meta.url), "utf8"),
+) as { scripts?: Record<string, string> };
 
 function command(executable: string, args: string[], env: NodeJS.ProcessEnv) {
   return execFileSync(executable, args, {
@@ -30,12 +35,128 @@ function command(executable: string, args: string[], env: NodeJS.ProcessEnv) {
   });
 }
 
+function commandWithInput(
+  executable: string,
+  args: string[],
+  env: NodeJS.ProcessEnv,
+  input: string,
+) {
+  return execFileSync(executable, args, {
+    cwd: process.cwd(),
+    encoding: "utf8",
+    env,
+    input,
+    maxBuffer: 32 * 1024 * 1024,
+    stdio: ["pipe", "pipe", "pipe"],
+  });
+}
+
 function compose(project: string, env: NodeJS.ProcessEnv, args: string[]) {
   return command(
     "docker",
     ["compose", "--project-name", project, "-f", composeFile, ...args],
     env,
   );
+}
+
+function composeOutput(project: string, env: NodeJS.ProcessEnv, args: string[]) {
+  return command(
+    "docker",
+    ["compose", "--project-name", project, "-f", composeFile, ...args],
+    env,
+  );
+}
+
+async function authJsonRequest({
+  authPort,
+  path,
+  method = "GET",
+  headers,
+  body,
+  bodyEncoding = "json",
+}: {
+  authPort: number;
+  path: string;
+  method?: string;
+  headers?: Record<string, string>;
+  body?: Record<string, unknown>;
+  bodyEncoding?: "json" | "form";
+}) {
+  const encodedBody = body === undefined
+    ? undefined
+    : bodyEncoding === "form"
+      ? new URLSearchParams(
+          Object.entries(body).map(([key, value]) => [key, String(value)]),
+        ).toString()
+      : JSON.stringify(body);
+  const response = await fetch(`http://127.0.0.1:${authPort}${path}`, {
+    method,
+    headers: {
+      "content-type": bodyEncoding === "form"
+        ? "application/x-www-form-urlencoded"
+        : "application/json",
+      ...(headers ?? {}),
+    },
+    body: encodedBody,
+  });
+  const text = await response.text();
+  let json: unknown = null;
+  try {
+    json = text ? JSON.parse(text) : null;
+  } catch {
+    json = text;
+  }
+  return { json, response, text };
+}
+
+function readJwtClaims(token: string) {
+  const [, payload] = token.split(".");
+  return JSON.parse(
+    Buffer.from(payload ?? "", "base64url").toString("utf8"),
+  ) as {
+    exp: number;
+    iat: number;
+    iss: string;
+    session_id: string;
+    sub: string;
+  };
+}
+
+async function readNewerRefreshedSession({
+  authPort,
+  publishableKey,
+  sessionA,
+}: {
+  authPort: number;
+  publishableKey: string;
+  sessionA: { access_token: string; refresh_token: string };
+}) {
+  const claimsA = readJwtClaims(sessionA.access_token);
+  let refreshToken = sessionA.refresh_token;
+
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const refreshGrant = await authJsonRequest({
+      authPort,
+      path: "/auth/v1/token?grant_type=refresh_token",
+      method: "POST",
+      headers: { apikey: publishableKey },
+      body: { refresh_token: refreshToken },
+    });
+    expect(refreshGrant.response.status).toBe(200);
+    const sessionB = refreshGrant.json as {
+      access_token: string;
+      refresh_token?: string;
+    };
+    const claimsB = readJwtClaims(sessionB.access_token);
+    expect(claimsB.session_id).toBe(claimsA.session_id);
+    if (claimsB.iat > claimsA.iat && claimsB.exp > claimsA.exp) {
+      return { claimsA, claimsB, sessionB };
+    }
+    refreshToken = sessionB.refresh_token ?? refreshToken;
+    await new Promise((resolve) => setTimeout(resolve, 1_100));
+  }
+
+  throw new Error("Refreshed JWT did not advance iat/exp within bounded retries.");
 }
 
 function freePort(): Promise<number> {
@@ -77,6 +198,81 @@ async function waitForHealthy(project: string, env: NodeJS.ProcessEnv) {
   }
   throw new Error("Full-local runtime did not become healthy within 180 seconds.");
 }
+
+function applyDockerMigrationChain(project: string, env: NodeJS.ProcessEnv) {
+  const required = new Set([
+    "20260301000000_core_schema_bootstrap.sql",
+    "20260425000000_08b_add_pantry_items_table.sql",
+    "20260524154000_account_delete_private_data.sql",
+    "20260527030000_admin_foundation.sql",
+    "20260723140000_account_session_generation_foundation.sql",
+    "20260730090000_hybrid_auth_remote_identity_epoch_mirror.sql",
+    "20260730140000_hybrid_internal_operations_facades.sql",
+    "20260730150000_account_delete_hybrid_session_authority.sql",
+    "20260801120000_full_local_auth_db_foundation.sql",
+    "20260801150000_full_local_account_bootstrap.sql",
+    "20260801151000_full_local_request_authority.sql",
+    "20260803090000_full_local_session_issue_time_precision.sql",
+    "20260803091000_full_local_optional_nbf_authority.sql",
+    "20260803093000_full_local_read_only_request_authority.sql",
+  ]);
+  const refreshAuthorityMigrations = readdirSync(
+    new URL("../supabase/migrations/", import.meta.url),
+  )
+    .filter((name) => /^[0-9]{14}_full_local_session_refresh_authority\.sql$/u.test(name))
+    .sort();
+  if (refreshAuthorityMigrations.length > 1) {
+    throw new Error("Docker migration chain found multiple refresh-authority migrations.");
+  }
+  const migrationDir = new URL("../supabase/migrations/", import.meta.url);
+  const migrations = readdirSync(migrationDir)
+    .filter((name) => required.has(name) || refreshAuthorityMigrations.includes(name))
+    .sort();
+  if (migrations.length !== required.size + refreshAuthorityMigrations.length) {
+    throw new Error("Docker migration chain is incomplete.");
+  }
+  const sql = `${migrations.map((name) => [
+    `\\echo applying ${name}`,
+    "begin;",
+    readFileSync(new URL(`../supabase/migrations/${name}`, import.meta.url), "utf8"),
+    "commit;",
+  ].join("\n")).join("\n")}\nnotify pgrst, 'reload schema';\n`;
+  commandWithInput(
+    "docker",
+    ["compose", "--project-name", project, "-f", composeFile, "exec", "-T", "postgres", "psql", "-U", "supabase_admin", "-d", "postgres", "-v", "ON_ERROR_STOP=1"],
+    env,
+    sql,
+  );
+}
+
+async function waitForPostgrestSchemaReload(internalPort: number, serviceRoleKey: string) {
+  for (let attempt = 0; attempt < 30; attempt += 1) {
+    const response = await fetch(
+      `http://127.0.0.1:${internalPort}/rest/v1/rpc/read_full_local_auth_control`,
+      {
+        method: "POST",
+        headers: {
+          apikey: serviceRoleKey,
+          authorization: `Bearer ${serviceRoleKey}`,
+          "content-type": "application/json",
+          "x-homecook-internal-scope": "auth-flow",
+        },
+        body: "{}",
+      },
+    );
+    if (response.ok) return;
+    await new Promise((resolve) => setTimeout(resolve, 1_000));
+  }
+  throw new Error("PostgREST schema reload did not become queryable.");
+}
+
+describe("full-local production Docker verification gate", () => {
+  it("keeps the browser-first refresh docker smoke inside the exact lifecycle bundle", () => {
+    expect(packageJson.scripts?.["verify:full-local-session-refresh-lifecycle"]).toBe(
+      "pnpm exec vitest run tests/full-local-session-authority.test.ts tests/full-local-auth-db-foundation.test.ts tests/full-local-request-authority-migration.test.ts tests/hybrid-session-authority-bootstrap.test.ts tests/hybrid-session-authority-gateway.test.ts && pnpm test:full-local-auth-db-foundation:postgres && pnpm test:full-local-production:runtime",
+    );
+  });
+});
 
 run("full-local production Docker runtime", () => {
   it("boots healthy with file-mounted secrets and an Auth-only public edge", async () => {
@@ -257,5 +453,303 @@ run("full-local production Docker runtime", () => {
       }
     }
     expect(failure).toBeUndefined();
+  }, 240_000);
+
+  it("replays browser-first refreshed JWT through public auth refresh, real authority RPC, and protected PostgREST", async () => {
+    const root = mkdtempSync(join(tmpdir(), "homecook-full-local-refresh-"));
+    const project = `homecook-full-local-refresh-${Date.now()}`;
+    const secretDirectory = join(root, "secrets");
+    const secrets = generateFullLocalSecretBundle();
+    materializeFullLocalSecrets({
+      readSecret: (name: string) => secrets[name as keyof typeof secrets],
+      targetDirectory: secretDirectory,
+    });
+    const [internalPort, authPort] = await Promise.all([freePort(), freePort()]);
+    const images = fullLocalImageRefsForPlatform("linux/arm64");
+    const env = {
+      ...process.env,
+      FULL_LOCAL_ADDITIONAL_REDIRECT_URLS:
+        "https://app.mumeok.kr/auth/callback,https://app.mumeok.kr/auth/link/callback",
+      FULL_LOCAL_API_EXTERNAL_URL: "https://auth.mumeok.kr/auth/v1",
+      FULL_LOCAL_AUTH_IMAGE: images.auth,
+      FULL_LOCAL_AUTH_PROXY_PORT: String(authPort),
+      FULL_LOCAL_COMPOSE_PROJECT_NAME: project,
+      FULL_LOCAL_DOCKER_PLATFORM: "linux/arm64",
+      FULL_LOCAL_ENABLE_ANONYMOUS_USERS: "false",
+      FULL_LOCAL_ENABLE_EMAIL_AUTOCONFIRM: "true",
+      // Fixture-only enablement for this refresh lifecycle test.
+      // Production contract is verified in the earlier smoke test where
+      // email login remains disabled; here we only need a real session +
+      // refresh token pair for an admin-created confirmed user.
+      FULL_LOCAL_ENABLE_EMAIL_SIGNUP: "true",
+      FULL_LOCAL_ENABLE_PHONE_SIGNUP: "false",
+      FULL_LOCAL_INTERNAL_GATEWAY_PORT: String(internalPort),
+      FULL_LOCAL_INTERNAL_GATEWAY_URL: `http://127.0.0.1:${internalPort}`,
+      FULL_LOCAL_INTERNAL_S3_URL:
+        `http://127.0.0.1:${internalPort}/storage/v1/s3`,
+      FULL_LOCAL_KONG_IMAGE: images.kong,
+      FULL_LOCAL_NODE_IMAGE: images.node,
+      FULL_LOCAL_POSTGRES_IMAGE: images.postgres,
+      FULL_LOCAL_POSTGRES_VOLUME_NAME: `${project}-postgres`,
+      FULL_LOCAL_POSTGREST_IMAGE: images.postgrest,
+      FULL_LOCAL_PUBLIC_AUTH_URL: "https://auth.mumeok.kr",
+      FULL_LOCAL_SECRET_DIR: secretDirectory,
+      FULL_LOCAL_SITE_URL: "https://app.mumeok.kr",
+      FULL_LOCAL_STORAGE_FILE_SIZE_LIMIT: "52428800",
+      FULL_LOCAL_STORAGE_GLOBAL_BUCKET: "homecook-test",
+      FULL_LOCAL_STORAGE_IMAGE: images.storage,
+      FULL_LOCAL_STORAGE_REGION: "homecook-local-1",
+      FULL_LOCAL_STORAGE_TENANT_ID: "homecook-test",
+      FULL_LOCAL_STORAGE_VOLUME_NAME: `${project}-storage`,
+    };
+
+    try {
+      compose(project, env, ["up", "-d"]);
+      await waitForHealthy(project, env);
+
+      const password = "HomecookTestPassword!123456789";
+      applyDockerMigrationChain(project, env);
+      await waitForPostgrestSchemaReload(internalPort, secrets.service_role_key);
+
+      const createUser = await authJsonRequest({
+        authPort,
+        path: "/auth/v1/admin/users",
+        method: "POST",
+        headers: {
+          apikey: secrets.secret_key,
+          authorization: `Bearer ${secrets.secret_key}`,
+        },
+        body: {
+          email: "docker-refresh@example.invalid",
+          email_confirm: true,
+          password,
+          user_metadata: { nickname: "docker-refresh", provider: "google" },
+        },
+      });
+      expect([200, 201]).toContain(createUser.response.status);
+      const createdUser = createUser.json as {
+        id: string;
+        created_at: string;
+        email: string;
+      };
+      composeOutput(project, env, [
+        "exec", "-T", "postgres", "psql", "-U", "supabase_admin", "-d", "postgres", "-v", "ON_ERROR_STOP=1", "-c",
+        `
+          insert into public.users (id, nickname, email, social_provider, social_id)
+          values ('${createdUser.id}', 'docker-refresh', '${createdUser.email}', 'google', '${createdUser.id}')
+          on conflict (id) do nothing;
+          insert into public.user_account_lifecycles (
+            owner_uuid,
+            account_generation,
+            auth_identity_created_at_snapshot,
+            origin,
+            status,
+            activated_at
+          ) values (
+            '${createdUser.id}',
+            1,
+            '${createdUser.created_at}',
+            'runtime',
+            'active',
+            now() - interval '10 seconds'
+          )
+          on conflict do nothing;
+          update public.account_generation_capability_state
+          set state = 'generation_active',
+              revision = revision + 1,
+              activated_at = now() - interval '10 seconds'
+          where singleton;
+          update private.full_local_auth_control
+          set authority = 'local',
+              flows_open = true,
+              cutover_epoch = 2,
+              hmac_key_version = 2,
+              local_issuer = 'https://auth.mumeok.kr/auth/v1',
+              local_activated_at = now() - interval '10 seconds',
+              updated_at = now()
+          where singleton;
+        `,
+      ]);
+      const passwordGrant = await authJsonRequest({
+        authPort,
+        path: "/auth/v1/token?grant_type=password",
+        method: "POST",
+        headers: { apikey: secrets.publishable_key },
+        body: {
+          email: createdUser.email,
+          password,
+        },
+      });
+      expect(
+        passwordGrant.response.status,
+        typeof passwordGrant.json === "string"
+          ? passwordGrant.json
+          : JSON.stringify(passwordGrant.json),
+      ).toBe(200);
+      const sessionA = passwordGrant.json as {
+        access_token: string;
+        refresh_token: string;
+      };
+      const claimsA = readJwtClaims(sessionA.access_token);
+      const sessionKeyHash = createSessionKeyHash({
+        secret: secrets.session_generation_hmac_key_v2,
+        keyVersion: 2,
+        issuer: claimsA.iss,
+        ownerUuid: createdUser.id,
+        sessionId: claimsA.session_id,
+        identityCreatedAt: createdUser.created_at,
+      });
+
+      composeOutput(project, env, [
+        "exec", "-T", "postgres", "psql", "-U", "supabase_admin", "-d", "postgres", "-v", "ON_ERROR_STOP=1", "-c",
+        `
+          select public.record_full_local_session_authority_v2(
+            p_issuer := 'https://auth.mumeok.kr/auth/v1',
+            p_owner_uuid := '${createdUser.id}'::uuid,
+            p_identity_created_at := '${createdUser.created_at}'::timestamptz,
+            p_session_id := '${claimsA.session_id}'::uuid,
+            p_session_key_hash := '${sessionKeyHash}',
+            p_hmac_key_version := 2,
+            p_auth_cutover_epoch := 2,
+            p_session_issued_at := to_timestamp(${claimsA.iat}),
+            p_last_token_issued_at := to_timestamp(${claimsA.iat}),
+            p_verified_at := to_timestamp(${claimsA.iat} + 1),
+            p_access_token_expires_at := to_timestamp(${claimsA.exp}),
+            p_binding_expires_at := to_timestamp(${claimsA.exp})
+          );
+        `,
+      ]);
+      const refresh = await readNewerRefreshedSession({
+        authPort,
+        publishableKey: secrets.publishable_key,
+        sessionA,
+      });
+      const { claimsB, sessionB } = refresh;
+      expect(claimsB.session_id).toBe(claimsA.session_id);
+      expect(claimsB.iat).toBeGreaterThan(claimsA.iat);
+      expect(claimsB.exp).toBeGreaterThan(claimsA.exp);
+
+      const authorityFetch = createHybridAuthorityFetch({
+        getAccessToken: async () => sessionB.access_token,
+        remoteLivenessFetch: globalThis.fetch,
+        localUpstreamFetch: globalThis.fetch,
+        loadRemoteJwks: async () => JSON.parse(secrets.jwt_jwks),
+        assertSessionAuthority: async (input) => {
+          const enriched = input as typeof input & {
+            accessTokenExpiresAt?: string;
+            lastTokenIssuedAt?: string;
+            sessionId?: string;
+            verifiedAt?: string;
+          };
+          const response = await fetch(
+            `http://127.0.0.1:${internalPort}/rest/v1/rpc/assert_and_renew_full_local_session_authority_v2`,
+            {
+              method: "POST",
+              headers: {
+                "content-type": "application/json",
+                apikey: secrets.service_role_key,
+                authorization: `Bearer ${secrets.service_role_key}`,
+                "x-homecook-internal-scope": "request-authority",
+              },
+              body: JSON.stringify({
+                p_issuer: input.binding.issuer,
+                p_owner_uuid: input.binding.owner_uuid,
+                p_identity_created_at: input.binding.identity_created_at,
+                p_session_id: enriched.sessionId,
+                p_session_key_hash: input.binding.session_key_hash,
+                p_hmac_key_version: input.binding.hmac_key_version,
+                p_auth_cutover_epoch: input.authCutoverEpoch ?? 2,
+                p_session_issued_at: input.sessionIssuedAt,
+                p_last_token_issued_at: enriched.lastTokenIssuedAt,
+                p_verified_at: enriched.verifiedAt,
+                p_access_token_expires_at: enriched.accessTokenExpiresAt,
+                p_binding_expires_at: enriched.accessTokenExpiresAt,
+              }),
+            },
+          );
+          if (!response.ok) {
+            throw new Error(await response.text());
+          }
+        },
+        auth: {
+          issuer: "https://auth.mumeok.kr/auth/v1",
+          url: `http://127.0.0.1:${authPort}`,
+          publishableKey: secrets.publishable_key,
+        },
+        attestationSecret: secrets.session_attestation_hmac_key_v1,
+        resolveSessionBindingKey: async () => ({
+          authCutoverEpoch: 2,
+          keyVersion: 2,
+          secret: secrets.session_generation_hmac_key_v2,
+        }),
+        nowSeconds: () => claimsB.iat + 10,
+      });
+
+      const labels = Array.from({ length: 10 }, (_, index) => `browser-first-refresh-${index + 1}`);
+      const responses = await Promise.all(labels.map((label) => authorityFetch(
+        `http://127.0.0.1:${internalPort}/rest/v1/pantry_items`,
+        {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            apikey: secrets.anon_key,
+            prefer: "return=representation",
+          },
+          body: JSON.stringify({ user_id: createdUser.id, label }),
+        },
+      )));
+
+      for (const response of responses) {
+        expect(response.status).toBe(201);
+      }
+      expect(composeOutput(project, env, [
+        "exec", "-T", "postgres", "psql", "-U", "supabase_admin", "-d", "postgres", "-At", "-v", "ON_ERROR_STOP=1", "-c",
+        `
+          select concat_ws(
+            ':',
+            count(*)::text,
+            count(distinct label)::text
+          )
+          from public.pantry_items
+          where user_id = '${createdUser.id}'::uuid
+            and label like 'browser-first-refresh-%';
+        `,
+      ]).trim()).toBe("10:10");
+      expect(composeOutput(project, env, [
+        "exec", "-T", "postgres", "psql", "-U", "supabase_admin", "-d", "postgres", "-At", "-v", "ON_ERROR_STOP=1", "-c",
+        `
+          select concat_ws(
+            ':',
+            session_issued_at = to_timestamp(${claimsA.iat}),
+            last_token_issued_at = to_timestamp(${claimsB.iat}),
+            binding_expires_at = to_timestamp(${claimsB.exp}),
+            binding_state
+          )
+          from public.user_session_generation_bindings
+          where session_key_hash = '${sessionKeyHash}';
+        `,
+      ]).trim()).toBe("true:true:true:active");
+
+      const logArtifacts = compose(project, env, ["ps", "-q"])
+        .trim().split("\n").filter(Boolean).map((container) =>
+          command("docker", ["logs", container], env),
+        );
+      expect(assertNoSecretLeakage({
+        artifacts: logArtifacts,
+        secrets: [
+          password,
+          sessionA.access_token,
+          sessionA.refresh_token,
+          sessionB.access_token,
+          createdUser.id,
+        ],
+      })).toBe(true);
+    } finally {
+      try {
+        compose(project, env, ["down", "--volumes", "--remove-orphans"]);
+      } finally {
+        rmSync(root, { force: true, recursive: true });
+      }
+    }
   }, 240_000);
 });
