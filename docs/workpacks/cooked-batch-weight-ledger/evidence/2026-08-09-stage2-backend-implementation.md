@@ -26,7 +26,9 @@ This task changes only #8 DB/backend/API, the existing leftovers compatibility r
 - Row-lock completion and mutation RPCs, append-only event/reversal ledger, cached checksum replay, UUID idempotency and owner/account-generation authority
 - Exact pantry row validation and selected-only delete, planner/standalone completion, Meal `shopping_done -> cook_done`, cook count and XP once
 - Legacy leftovers read projection before protected update cutover; v2 rows reject legacy eat/uneat while legacy rows remain compatible and nullable
-- Legacy eat/uneat now uses one owner-row-lock RPC even while account generation is active; authenticated direct v2-shaped INSERT and event-table SELECT are revoked
+- Legacy eat/uneat/keep now use one owner-row-lock RPC with exact active session-generation validation; authenticated direct v2-shaped INSERT, broad leftover UPDATE, event-table SELECT and `event_checksum` SELECT are revoked
+- Legacy eat status, canonical progress metadata/summary and growth activity are one transaction; v2 completion and consumed closure use the same owner-serialized canonical projection authority
+- Every mutation compares the full event replay with cached revision, remaining weight, status, depleted reason and checksum before writing
 - Meal creation keeps the existing `write_future_meal_with_snapshot_authority` RPC contract while a transaction-local trigger row-locks the linked leftover and rejects depleted/closed v2 batches
 - Completion locks exact owner pantry and Meal-claim rows, requires exact delete counts, and rolls the entire digest back when either selection changes
 - Account cleanup clears future #9 event links when present, then deletes events before batch hard delete
@@ -50,32 +52,34 @@ full-local/security projection regression: 4 files / 54 tests passed
 
 Old-head security/DB advisory `019fe1f5-6ac2-7150-9184-437b218122f5` returned `HOLD 0/5/3`; old-head five-axis advisory `019fe1f5-6ac2-7150-9184-438ae9727b20` returned `HOLD 0/4/2`. Successor RED tests reproduced pantry and claim TOCTOU, forged direct INSERT, generation-active legacy mutation, incomplete function inventory, v2 null nutrition status, event metadata SELECT, weak cleanup marker, reason-free checksum replay, depleted batch meal reuse, empty cursor and unbounded legacy list reads. All fourteen findings received focused GREEN coverage. These old-head advisories are lineage only, not current-head approval.
 
+Successor-head security task `019fe22e-75af-7d61-89f9-8064cd710ff9` returned `ADVISORY HOLD 0/4/1` and five-axis task `019fe22e-75ae-7e02-a131-023cc9216782` returned `ADVISORY HOLD 0/4/3` on old head `dd0825726792c9c48b09cb46396f9916e9fd580e`. New RED cases reproduced owner keep failure, revoked/stale session-generation mutation, split legacy status/XP/activity commit, incomplete v2 progress projections, exposed `event_checksum`, stale cached replay acceptance, noncanonical cursor acceptance, missing representative predicate evidence and inconsistent Stage 2 bookkeeping. The successor repair makes those boundaries fail closed and covers each with Vitest or PostgreSQL negative tests. Both advisory results and all checks on `dd082572…` are lineage only, never final proof.
+
 PostgreSQL refinement also separated fixture isolation from two earlier product defects: terminal sessions were revalidating the active Meal revision pin, and completion set `meals.leftover_dish_id` without `is_leftover`. The final migration keeps immutable start snapshots as audit data after terminal transition and leaves ordinary planner Meal leftover-origin fields unchanged.
 
 Final fresh and replay PostgreSQL evidence:
 
 ```text
 fresh predecessor: 15 passed / 1 intended skip
-fresh cooked batch: 13 passed
+fresh cooked batch: 19 passed
 fresh inherited shared security inventory: 26 passed / 22 intended skips
 replay predecessor: 16 passed
-replay cooked batch: 13 passed
+replay cooked batch: 19 passed
 replay inherited shared security inventory: 26 passed / 22 intended skips
 ```
 
-The cooked-batch scenarios cover exact 17-function owner/ACL/search-path/scope inventory, owner RLS, direct protected update/event insert/select and forged batch INSERT denial, two-owner multi-table digests, exact pantry/claim rollback, standalone and planner completion/replay, idempotency payload mismatch including reason, discard/adjust bounds, unrecoverable irreversibility, close/cancel/reclose XP once, v2 unavailable versus legacy-null nutrition status, depleted meal reuse denial and exact-owner cleanup ordering.
+The cooked-batch scenarios cover exact 19-function owner/ACL/search-path/scope inventory, owner RLS, direct protected update/event insert/select/checksum and forged batch INSERT denial, two-owner multi-table digests, exact pantry/claim rollback, stale session-generation zero-write, owner-locked keep, atomic canonical progress/activity projection, standalone and planner completion/replay, idempotency payload mismatch including reason, full cached-projection tamper denial, discard/adjust bounds, unrecoverable irreversibility, close/cancel/reclose XP once, v2 unavailable versus legacy-null nutrition status, strict canonical cursor parsing, a 4,000-row `EXPLAIN (ANALYZE, BUFFERS)` compatibility predicate, depleted meal reuse denial and exact-owner cleanup ordering.
 
 ## Verification
 
 - `pnpm install --frozen-lockfile` — pass; no dependency or lockfile change
 - final focused Vitest — `6 files / 58 tests`, official contract `4 files / 21 tests`, verifier projection `4 files / 54 tests` pass
-- full `pnpm test` — attempt 1: 9 failures; attempt 2: 1 stale Stage 1 projection failure; attempt 3 pass: `520 files passed | 29 skipped`, `5,277 tests passed | 343 skipped`
-- `pnpm test:cooked-batch-weight-ledger:postgres` — final pass: fresh predecessor `15 + 1 intended skip`, fresh/replay #8 `13/13`, replay predecessor `16/16`, inherited shared security inventory fresh/replay `26 passed / 22 intended skips`
+- full `pnpm test` — initial implementation attempt 1: 9 failures; attempt 2: 1 stale Stage 1 projection failure; attempt 3 passed. Successor attempt 1 exposed 1 wrapper-inventory omission; attempt 2 exposed 2 bookkeeping/inventory projections; successor attempt 3 passed: `520 files passed | 29 skipped`, `5,279 tests passed | 349 skipped`
+- `pnpm test:cooked-batch-weight-ledger:postgres` — final successor pass: fresh predecessor `15 + 1 intended skip`, fresh/replay #8 `19/19`, replay predecessor `16/16`, inherited shared security inventory fresh/replay `26 passed / 22 intended skips`
 - `pnpm verify:backend` — pass: lint, typecheck, `217 files passed | 11 skipped`, `2,664 tests passed | 150 skipped`, Next build, security E2E `12/12`
 - `pnpm test:security-functions:postgres` — pass: 8 anonymous mutation signatures denied with unchanged checksums
-- `node scripts/validate-security-function-authorization.mjs --contract-only` — pass; #8 manifest classifies 17 pre-deployment functions
+- `node scripts/validate-security-function-authorization.mjs --contract-only` — pass; #8 manifest classifies 19 pre-deployment functions
 - source-of-truth, workflow-v2, workpack, automation-spec and OMO bookkeeping validators — pass
-- account-session generation inventory — pass: `64 routes / 86 write surfaces / 3 auth.users inbound FKs`
+- account-session generation inventory — pass: `64 routes / 85 write surfaces / 3 auth.users inbound FKs`; the removed surface is the legacy keep direct UPDATE replaced by the owner-locked RPC
 - `pnpm audit --audit-level high` — exit 0; residual `1 low / 1 moderate`, high `0`, critical `0`
 - `git diff --check` — pass
 
@@ -90,8 +94,16 @@ The workpack-specific Stage 4 E2E grep returned `No tests found`; no pass-with-n
 - Merged-exact-SHA server-production/local-rehearsal, R/R+1 seeded drain, current/previous release evidence, R+2 service-owner activation, frontend/E2E visual work and post-merge verification remain open.
 - #9 still owns the physical meal-log linked event pointer and arbitrary-order consumed-entry reversal. #11 still owns final LEFTOVERS/weight UI.
 
+## Author five-axis check
+
+- Correctness: official wrapper/status/error shapes, legacy idempotency, full cached projection and fresh/replay state transitions match focused and PostgreSQL tests.
+- Readability/architecture: all three legacy mutations share the existing verified-session RPC adapter and one database authority; no route-side compensating XP/activity path remains.
+- Security: current-generation authority, owner row locks, exact affected-row counts, private helper ACLs and safe-column SELECT grants are fail closed.
+- Performance: pagination remains bounded and the representative 4,000-row legacy/v2 predicate uses the single partial compatibility index under `EXPLAIN (ANALYZE, BUFFERS)`.
+- Scope/dependencies: no frontend, personal-recipe product/docs, F0, new public contract or package dependency changed. This author check is not Stage 3 approval.
+
 ## Contract evolution and handoff
 
 - Contract Evolution Candidate: none. No undocumented endpoint, field, status, reason, error, action or screen was added.
-- Stage 3 must be a different fresh `backend-reviewer` task and review the Draft PR successor head, all fourteen repaired advisory findings, migration/RPC/trigger atomicity and grants, route inventory isolation, legacy leftovers compatibility, fresh/replay evidence and every checked `review=3` item. Author-side current diff review found no remaining P0/P1/P2, but it is not an independent approval.
+- Stage 3 must be a different fresh `backend-reviewer` task and review the Draft PR successor head, every repaired old-head and successor advisory finding, migration/RPC/trigger atomicity and grants, route inventory isolation, legacy leftovers compatibility, fresh/replay evidence and every checked `review=3` item. Author-side current diff review is not an independent approval.
 - This Stage 2 task does not self-approve Stage 3, mark Ready, merge or send Discord.

@@ -437,12 +437,12 @@ describe("cooked batch API v1.2.36 Contract Evolution", () => {
     );
 
     expect(workItem.status).toMatchObject({
-      lifecycle: "planned",
+      lifecycle: "in_progress",
       approval_state: "not_started",
       verification_status: "pending",
     });
     expect(status).toMatchObject({
-      lifecycle: "planned",
+      lifecycle: "in_progress",
       approval_state: "not_started",
       verification_status: "pending",
     });
@@ -450,6 +450,6 @@ describe("cooked batch API v1.2.36 Contract Evolution", () => {
     expect(currentProjection).toContain("019fe194-62d9-7ed2-9116-b820873bd48b");
     expect(currentProjection).toContain("APPROVE");
     expect(currentProjection).toContain("635763041d6420c648e2b55336e6caa9f1f9143c");
-    expect(currentProjection).toContain("Stage 3/Ready/merge remain pending");
+    expect(currentProjection).toContain("overall approval and verification remain pending");
   });
 });
