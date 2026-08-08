@@ -43,7 +43,7 @@ Google·네이버·카카오 자체 로그인 화면을 새로 만들지 않고,
 - 원격 `/auth/v1/user` liveness, HMAC attestation, identity epoch 검증: `lib/server/hybrid-auth/gateway.ts:129-227`
 - callback 뒤 local mirror/session authority 기록: `app/auth/callback/route.ts:231-262`
 - 원격 identity mirror: `supabase/migrations/20260730090000_hybrid_auth_remote_identity_epoch_mirror.sql:10-96`
-- 과거 hybrid 계약의 local `auth.users=0` invariant: `docs/db설계-v1.3.31.md`
+- 과거 hybrid 계약의 local `auth.users=0` invariant: `docs/db설계-v1.3.32.md`
 - Docker gateway가 remote Auth와 local PostgREST/Storage를 연결: `infra/hybrid-supabase/docker-compose.production.yml:136-180`
 
 이 장치들은 원격 Auth와 로컬 DB가 서로 다른 시스템이기 때문에 필요하다. Auth까지 같은 local Supabase로 이동하면 remote JWKS sync, remote identity mirror, two-system barrier, remote liveness outage 경계를 제거할 수 있다. 다만 Supabase sign-out 뒤 access token은 `exp`까지 서명상 유효할 수 있으므로, callback/refresh 때 결합하고 logout/delete/quarantine/identity replacement 때 즉시 revoke하는 **app-owned local session authority binding**은 최소 14일 안정화까지 유지한다.
@@ -333,11 +333,11 @@ Docker Compose의 `environment`나 `.env`에 secret 값을 직접 넣지 않는�
 
 새 공식 문서 묶음:
 
-- `docs/요구사항기준선-v1.7.29.md`
-- `docs/화면정의서-v1.5.33.md`
-- `docs/유저flow맵-v1.3.31.md`
-- `docs/db설계-v1.3.31.md`
-- `docs/api문서-v1.2.36.md`
+- `docs/요구사항기준선-v1.7.30.md`
+- `docs/화면정의서-v1.5.34.md`
+- `docs/유저flow맵-v1.3.32.md`
+- `docs/db설계-v1.3.32.md`
+- `docs/api문서-v1.2.37.md`
 - `docs/workpacks/full-local-supabase-production/`
 
 작업:

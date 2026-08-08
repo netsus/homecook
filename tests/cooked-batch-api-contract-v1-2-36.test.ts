@@ -86,10 +86,11 @@ const listContainerDeclarationEnd = ". `items`는";
 describe("cooked batch API v1.2.36 Contract Evolution", () => {
   const apiPath = "docs/api문서-v1.2.36.md";
 
-  it("promotes only API v1.2.36 in the official source-of-truth tuple", () => {
+  it("preserves the API v1.2.36 contract after a later official API version is promoted", () => {
     const source = read("docs/sync/CURRENT_SOURCE_OF_TRUTH.md");
 
-    expect(source).toContain("`docs/api문서-v1.2.36.md`");
+    expect(source).toContain("`docs/api문서-v1.2.37.md`");
+    expect(source).toContain("| API v1.2.36 | 공통 owner-only `CookedBatchProjection`");
     expect(source).toContain("Cooked Batch Weight Ledger Contract-Evolution `2026-08-08`");
     expect(source).toContain("요구사항 `v1.7.29` · 화면 `v1.5.33` · Flow `v1.3.31` · DB `v1.3.31`");
   });

@@ -1,17 +1,30 @@
 # Current Source of Truth
 
 ## Official Files
-- `docs/요구사항기준선-v1.7.29.md`
-- `docs/화면정의서-v1.5.33.md`
-- `docs/유저flow맵-v1.3.31.md`
-- `docs/db설계-v1.3.31.md`
-- `docs/api문서-v1.2.36.md`
+- `docs/요구사항기준선-v1.7.30.md`
+- `docs/화면정의서-v1.5.34.md`
+- `docs/유저flow맵-v1.3.32.md`
+- `docs/db설계-v1.3.32.md`
+- `docs/api문서-v1.2.37.md`
 
 ## Notes
 - 위 5개 파일이 현재 공식 기준 문서다.
 - `docs/reference/wireframes/`는 보조 참고 자료다.
 - 구현 중 문서 충돌이 보이면 먼저 충돌 항목을 정리하고 작업 범위를 다시 확정한다.
 - 사용자 승인으로 공식 계약을 바꾸는 경우에도 구현보다 문서가 먼저다. 관련 공식 문서와 이 파일의 버전/경로를 같은 `contract-evolution` PR에서 먼저 갱신한다.
+
+## Session Refresh Authority Contract-Evolution `2026-08-08 / 1A`
+
+| 문서 | 변경 내용 |
+|------|----------|
+| 요구사항 v1.7.30 | stable Auth session identity와 rotating JWT evidence 분리, 보호 기능 전반의 정상 refresh 불변식, `.kr` production origin 확정 |
+| 화면정의서 v1.5.34 | 1시간 access-token 회전과 로그인 유지 구분, 공통 재로그인/return-to-action UX |
+| 유저 Flow맵 v1.3.32 | callback·server refresh·browser-first refresh의 단일 record/assert flow |
+| DB v1.3.32 | 같은 active session의 monotonic token evidence 갱신과 stale/revoked 거부 의미 |
+| API v1.2.37 | v1.2.36 cooked-batch 계약을 보존하면서 public API 변경 없이 첫 protected request에서 session authority를 갱신하는 내부 계약 |
+
+> production 단일 origin은 `https://app.mumeok.kr`와 `https://auth.mumeok.kr`다. callback은 `/auth/callback`, `/auth/link/callback` 두 기존 경로만 사용한다.
+> 30일 inactivity, 90일 absolute timebox, 민감 작업 recent-auth 10분은 후속 1B 계약이며 이번 1A의 구현 완료 주장이 아니다.
 
 ## Cooked Batch Weight Ledger Contract-Evolution `2026-08-08`
 
