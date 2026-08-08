@@ -61,9 +61,12 @@ describe("dependency security overrides", () => {
       ?? readPnpmConfig("onlyBuiltDependencies");
 
     expect(overrides).toMatchObject({
+      "@eslint/eslintrc>js-yaml": "4.3.1",
+      "@lhci/utils>js-yaml": "3.15.1",
       "minimatch@3.1.5>brace-expansion": "5.0.9",
       "minimatch@10.2.5>brace-expansion": "5.0.9",
       postcss: "8.5.18",
+      "postcss>nanoid": "3.3.17",
       "socks>ip-address": "10.3.1",
       undici: "7.29.0",
     });
@@ -81,6 +84,33 @@ describe("dependency security overrides", () => {
         "unrs-resolver@1.11.1": true,
       });
     }
+  });
+
+  it("resolves each audited transitive line at its patched floor", () => {
+    const eslintRequire = createDependencyRequire("@eslint/eslintrc");
+    const lhciCliRequire = createRequire(
+      require.resolve("@lhci/cli/package.json"),
+    );
+    const lhciUtilsRequire = createRequire(
+      lhciCliRequire.resolve("@lhci/utils/package.json"),
+    );
+    const tailwindPostcssRequire = createDependencyRequire(
+      "@tailwindcss/postcss",
+    );
+    const postcssRequire = createRequire(
+      tailwindPostcssRequire.resolve("postcss"),
+    );
+
+    expect(
+      (eslintRequire("js-yaml/package.json") as { version: string }).version,
+    ).toBe("4.3.1");
+    expect(
+      (lhciUtilsRequire("js-yaml/package.json") as { version: string })
+        .version,
+    ).toBe("3.15.1");
+    expect(
+      (postcssRequire("nanoid/package.json") as { version: string }).version,
+    ).toBe("3.3.17");
   });
 
   it("expands braces through both installed minimatch major versions", () => {
