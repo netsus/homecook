@@ -3,11 +3,12 @@ import { NextResponse } from "next/server";
 
 import { expireSupabaseAuthCookies } from "@/lib/auth/session-cookies";
 import { resolveNextPath } from "@/lib/auth/callback";
+import { buildSameAppRedirectUrl } from "@/lib/auth/redirect-origin";
 import { executeHybridLogout } from "@/lib/server/hybrid-auth/logout";
 import { createAuthRouteHandlerClient } from "@/lib/supabase/server";
 
 function buildLogoutFailureRedirectUrl(requestUrl: URL, nextPath: string) {
-  const redirectUrl = new URL("/login", requestUrl.origin);
+  const redirectUrl = buildSameAppRedirectUrl("/login", requestUrl);
   redirectUrl.searchParams.set("authError", "ACCOUNT_SESSION_STALE");
   if (nextPath !== "/") {
     redirectUrl.searchParams.set("next", nextPath);
@@ -30,5 +31,5 @@ export async function GET(request: Request) {
     );
   }
 
-  return NextResponse.redirect(new URL(nextPath, requestUrl.origin));
+  return NextResponse.redirect(buildSameAppRedirectUrl(nextPath, requestUrl));
 }

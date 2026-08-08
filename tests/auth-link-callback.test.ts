@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const exchangeCodeForSession = vi.fn();
 const getUser = vi.fn();
@@ -43,6 +43,10 @@ function userWithProviders(id: string, providers: string[]) {
 }
 
 describe("auth link callback", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
   beforeEach(() => {
     vi.resetModules();
     exchangeCodeForSession.mockReset();
@@ -271,6 +275,25 @@ describe("auth link callback", () => {
     expect(redirectUrl.searchParams.has("userId")).toBe(false);
     expect(ensurePublicUserRow).not.toHaveBeenCalled();
     expect(ensureUserBootstrapState).not.toHaveBeenCalled();
+  });
+
+  it("uses the public app origin for same-app link redirects", async () => {
+    vi.stubEnv("NEXT_PUBLIC_APP_URL", "https://app.mumeok.kr");
+    const before = userWithProviders("user-1", ["google"]);
+    const after = userWithProviders("user-1", ["google", "custom:naver"]);
+    getUser
+      .mockResolvedValueOnce({ data: { user: before } })
+      .mockResolvedValueOnce({ data: { user: after } });
+    exchangeCodeForSession.mockResolvedValue({ error: null });
+
+    const { GET } = await import("@/app/auth/link/callback/route");
+    const response = await GET(new Request(
+      "http://localhost:3100/auth/link/callback?code=secret&attemptedProvider=naver&next=/mypage",
+    ));
+
+    expect(response.headers.get("location")).toBe(
+      "https://app.mumeok.kr/mypage?linkResult=linked",
+    );
   });
 
   it("treats an already linked provider as a safe no-op", async () => {
