@@ -98,6 +98,68 @@ describe("auth flow routes", () => {
     });
   });
 
+  it("starts a new flow when the existing auth-flow cookie is already expired", async () => {
+    cookieGet.mockReturnValue({ value: "expired-flow-cookie" });
+    cancelAuthFlowAttempt.mockResolvedValueOnce({ ok: false, reason: "expired" });
+
+    const { POST } = await import("@/app/auth/flow/start/route");
+    const response = await POST(new Request("https://app.mumeok.kr/auth/flow/start", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        origin: "https://app.mumeok.kr",
+      },
+      body: JSON.stringify({ flow_kind: "login", provider: "google" }),
+    }));
+
+    expect(response.status).toBe(200);
+    expect(cancelAuthFlowAttempt).toHaveBeenCalledWith("expired-flow-cookie");
+    expect(startAuthFlowAttempt).toHaveBeenCalledWith({
+      flowKind: "login",
+      provider: "google",
+    });
+  });
+
+  it("starts a new flow when the existing auth-flow cookie is invalid", async () => {
+    cookieGet.mockReturnValue({ value: "invalid-flow-cookie" });
+    cancelAuthFlowAttempt.mockResolvedValueOnce({ ok: false, reason: "invalid" });
+
+    const { POST } = await import("@/app/auth/flow/start/route");
+    const response = await POST(new Request("https://app.mumeok.kr/auth/flow/start", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        origin: "https://app.mumeok.kr",
+      },
+      body: JSON.stringify({ flow_kind: "login", provider: "kakao" }),
+    }));
+
+    expect(response.status).toBe(200);
+    expect(cancelAuthFlowAttempt).toHaveBeenCalledWith("invalid-flow-cookie");
+    expect(startAuthFlowAttempt).toHaveBeenCalledWith({
+      flowKind: "login",
+      provider: "kakao",
+    });
+  });
+
+  it("fails closed when the existing auth-flow cookie cannot be terminalized for availability reasons", async () => {
+    cookieGet.mockReturnValue({ value: "stuck-flow-cookie" });
+    cancelAuthFlowAttempt.mockResolvedValueOnce({ ok: false, reason: "unavailable" });
+
+    const { POST } = await import("@/app/auth/flow/start/route");
+    const response = await POST(new Request("https://app.mumeok.kr/auth/flow/start", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        origin: "https://app.mumeok.kr",
+      },
+      body: JSON.stringify({ flow_kind: "login", provider: "google" }),
+    }));
+
+    expect(response.status).toBe(503);
+    expect(startAuthFlowAttempt).not.toHaveBeenCalled();
+  });
+
   it("requires an authenticated user before starting a link flow", async () => {
     getUser.mockResolvedValue({ data: { user: null }, error: null });
     const { POST } = await import("@/app/auth/flow/start/route");

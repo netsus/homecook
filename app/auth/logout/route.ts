@@ -1,7 +1,10 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
-import { expireSupabaseAuthCookies } from "@/lib/auth/session-cookies";
+import {
+  expireAuthFlowCookie,
+  expireSupabaseAuthCookies,
+} from "@/lib/auth/session-cookies";
 import { resolveNextPath } from "@/lib/auth/callback";
 import { buildSameAppRedirectUrl } from "@/lib/auth/redirect-origin";
 import { executeHybridLogout } from "@/lib/server/hybrid-auth/logout";
@@ -24,12 +27,16 @@ export async function GET(request: Request) {
 
   const logoutResult = await executeHybridLogout(supabase);
   if (!logoutResult.ok) {
-    return expireSupabaseAuthCookies(
-      NextResponse.redirect(buildLogoutFailureRedirectUrl(requestUrl, nextPath)),
-      request,
-      cookieStore,
+    return expireAuthFlowCookie(
+      expireSupabaseAuthCookies(
+        NextResponse.redirect(buildLogoutFailureRedirectUrl(requestUrl, nextPath)),
+        request,
+        cookieStore,
+      ),
     );
   }
 
-  return NextResponse.redirect(buildSameAppRedirectUrl(nextPath, requestUrl));
+  return expireAuthFlowCookie(
+    NextResponse.redirect(buildSameAppRedirectUrl(nextPath, requestUrl)),
+  );
 }

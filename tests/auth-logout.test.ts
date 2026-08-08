@@ -5,6 +5,11 @@ const executeHybridLogout = vi.fn();
 const cookies = vi.fn();
 const cookieGetAll = vi.fn();
 
+function getSetCookieHeaders(response: Response) {
+  const headers = response.headers as Headers & { getSetCookie?: () => string[] };
+  return headers.getSetCookie?.() ?? [];
+}
+
 vi.mock("@/lib/supabase/server", () => ({
   createAuthRouteHandlerClient: createRouteHandlerClient,
   createDataServiceRoleClient: vi.fn(),
@@ -47,6 +52,11 @@ describe("auth logout route", () => {
 
     expect(executeHybridLogout).toHaveBeenCalledTimes(1);
     expect(response.headers.get("location")).toBe("http://localhost:3000/planner");
+    expect(getSetCookieHeaders(response)).toContainEqual(
+      expect.stringMatching(
+        /__Host-homecook-auth-flow=;.*Path=\/.*Max-Age=0.*Secure.*HttpOnly.*SameSite=Lax/i,
+      ),
+    );
   });
 
   it("prefers the public app origin over the proxy request origin", async () => {
@@ -84,6 +94,11 @@ describe("auth logout route", () => {
     expect(redirectUrl.searchParams.get("authError")).toBe("ACCOUNT_SESSION_STALE");
     expect(redirectUrl.searchParams.get("next")).toBe("/planner");
     expect(response.cookies.get("sb-local-auth-token")?.maxAge).toBe(0);
+    expect(getSetCookieHeaders(response)).toContainEqual(
+      expect.stringMatching(
+        /__Host-homecook-auth-flow=;.*Path=\/.*Max-Age=0.*Secure.*HttpOnly.*SameSite=Lax/i,
+      ),
+    );
   });
 
   it("fails closed to login when signOut reports an error", async () => {
@@ -110,5 +125,10 @@ describe("auth logout route", () => {
     expect(redirectUrl.searchParams.get("authError")).toBe("ACCOUNT_SESSION_STALE");
     expect(redirectUrl.searchParams.get("next")).toBe("/planner");
     expect(response.cookies.get("sb-local-auth-token")?.maxAge).toBe(0);
+    expect(getSetCookieHeaders(response)).toContainEqual(
+      expect.stringMatching(
+        /__Host-homecook-auth-flow=;.*Path=\/.*Max-Age=0.*Secure.*HttpOnly.*SameSite=Lax/i,
+      ),
+    );
   });
 });
