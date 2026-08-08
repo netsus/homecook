@@ -168,7 +168,7 @@
       "monotonic same-session JWT refresh with late-token rejection",
       "durable replay and duplicate zero-write projection",
       "shared v1/v2 owner progress serialization",
-      "20-function fail-closed #8 authorization inventory plus canonical #1292 refresh authority"
+      "21-function fail-closed #8 authorization inventory plus canonical #1292 refresh authority"
     ]
   },
   "changed_files": [
