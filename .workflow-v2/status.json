@@ -2530,7 +2530,7 @@
       "id": "cooked-batch-weight-ledger",
       "preset": "vertical-slice-strict",
       "branch": "feature/cooked-batch-weight-ledger-stage2-current",
-      "pr_path": "https://github.com/cook-function/homecook/pull/1291",
+      "pr_path": "https://github.com/netsus/homecook/pull/1291",
       "lifecycle": "in_progress",
       "approval_state": "not_started",
       "verification_status": "pending",
