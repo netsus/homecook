@@ -28,8 +28,14 @@ describe("cooked-batch-weight-ledger fresh Stage 1 re-lock", () => {
     read(".workflow-v2/work-items/cooked-batch-weight-ledger.json"),
   );
   const workflowStatus = JSON.parse(read(".workflow-v2/status.json"));
+  const status = workflowStatus.items.find(
+    (item: { id: string }) => item.id === "cooked-batch-weight-ledger",
+  );
   const roadmap = read("docs/workpacks/README.md");
   const cookModeDesign = read("ui/designs/COOK_MODE.md");
+  const critic = read(
+    "ui/designs/critiques/COOK_MODE-cooked-batch-weight-ledger-critique.md",
+  );
   const evidence = read(
     "docs/workpacks/cooked-batch-weight-ledger/evidence/2026-08-04-stage1-relock.md",
   );
@@ -126,10 +132,6 @@ describe("cooked-batch-weight-ledger fresh Stage 1 re-lock", () => {
   });
 
   it("keeps fresh Stage 1 approval pending on the new docs branch", () => {
-    const status = workflowStatus.items.find(
-      (item: { id: string }) => item.id === "cooked-batch-weight-ledger",
-    );
-
     expect(status).toMatchObject({
       branch: "docs/cooked-batch-weight-ledger-stage1-relock",
       lifecycle: "planned",
@@ -143,17 +145,42 @@ describe("cooked-batch-weight-ledger fresh Stage 1 re-lock", () => {
     });
   });
 
-  it("records the merged #1284 baseline repair and the current audit floor truthfully", () => {
-    const mergedSha = "c982d97085ebcbe50da8a1b3c3de68bcd9f638a3";
+  it("uses only the official joint R+2 capability names", () => {
+    expect(readme).toContain("`personal_recipe_v2` and `snapshot_v2_creation`");
+    expect(readme).not.toContain("cooking_session_v2");
+  });
 
-    expect(evidence).toContain(`#1284`);
-    expect(evidence).toContain(mergedSha);
+  it("keeps the preserved critic report free of trailing whitespace", () => {
+    const trailingWhitespaceLines = critic
+      .split("\n")
+      .map((line, index) => ({ line, number: index + 1 }))
+      .filter(({ line }) => /[ \t]+$/.test(line));
+
+    expect(trailingWhitespaceLines).toEqual([]);
+  });
+
+  it("records all internal 1.5 repairs while keeping fresh re-review pending", () => {
+    const dependencyRepairSha =
+      "9ff5a920f063af22cd8a8dbee33a603b27c3af57";
+    const projections = [
+      readme,
+      evidence,
+      automation.notes,
+      workItem.notes,
+      status.notes,
+    ];
+
+    for (const projection of projections) {
+      for (const finding of ["I15-B01", "I15-B02", "I15-B03"]) {
+        expect(projection).toContain(finding);
+      }
+      expect(projection).toContain("HOLD");
+      expect(projection).toContain("fresh internal 1.5 re-review pending");
+      expect(projection).toContain("#1286");
+      expect(projection).toContain(dependencyRepairSha);
+    }
     expect(evidence).toContain("high/critical `0`");
-    expect(evidence).not.toContain("Dependency audit repair PR `#1284` is still pending");
-    expect(evidence).not.toContain("pre-existing high advisories `3`");
-
-    expect(readme).toContain(`#1284`);
-    expect(readme).toContain(mergedSha);
-    expect(readme).not.toContain("pending dependency audit repair PR `#1284`");
+    expect(evidence).toContain("false pass claim");
+    expect(evidence).toContain("six Markdown hard-break trailing-space pairs");
   });
 });

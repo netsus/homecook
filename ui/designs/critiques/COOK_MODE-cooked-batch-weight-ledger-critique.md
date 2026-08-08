@@ -1,11 +1,11 @@
 # COOK_MODE cooked-batch-weight-ledger — fresh independent design critique
 
-> 검토 역할: `design-critic` 전용 독립 Codex App task  
-> task ID: `019fe02c-1b12-7d42-bcaf-0d5a02847967`  
-> 검토일: 2026-08-08  
-> reviewed input head: `f88bc1c0d4bad38e1ba35e224ee1c62741eb2b23`  
-> base master: `c982d97085ebcbe50da8a1b3c3de68bcd9f638a3`  
-> source branch / PR: `docs/cooked-batch-weight-ledger-stage1-relock` / PR #1285 (Draft)  
+> 검토 역할: `design-critic` 전용 독립 Codex App task
+> task ID: `019fe02c-1b12-7d42-bcaf-0d5a02847967`
+> 검토일: 2026-08-08
+> reviewed input head: `f88bc1c0d4bad38e1ba35e224ee1c62741eb2b23`
+> base master: `c982d97085ebcbe50da8a1b3c3de68bcd9f638a3`
+> source branch / PR: `docs/cooked-batch-weight-ledger-stage1-relock` / PR #1285 (Draft)
 > 공식 tuple: 요구사항 `v1.7.29` / 화면정의서 `v1.5.33` / 유저 Flow `v1.3.31` / DB `v1.3.31` / API `v1.2.35`
 
 ## Verdict

@@ -58,7 +58,7 @@ snapshot-v2 요리 완료를 session에 pin된 content/servings와 exact pantry 
   - duplicate submit displays the stored first result and does not repeat pantry/batch/cook-count/XP effects.
 - phased release
   - #8 merge enables flag-off dormant release R, then R+1 repeats seeded-v2 read/cancel/complete drain on current+immediate-previous UI while new personal/v2 creation remains zero.
-  - only R+2 jointly enables `cooking_session_v2` and `personal_recipe_v2`.
+  - only R+2 jointly enables `personal_recipe_v2` and `snapshot_v2_creation`.
   - rollback blocks new v2 start/personal mutation but preserves existing v2 read/cancel/complete and rows.
 
 Schema Change:
@@ -228,7 +228,7 @@ creation flag rollback:
 
 ## Design Status
 
-`temporary`. The current design source is re-locked, but fresh independent critic, 390px/320px product-design-authority and internal 1.5 are pending. Stage 2 진입 전 all three exact-head gates must pass; #11 owns later final visual/accessibility completion.
+`temporary`. Fresh independent critic task `019fe02c-1b12-7d42-bcaf-0d5a02847967` and 390px/320px product-design-authority task `019fe041-2ff4-7f62-9786-79a46aecae0c` passed with `0/0/0`. Internal 1.5 task `019fe049-dc14-77f0-ac4c-6dcb58d2b819` returned `HOLD` on old head `0eb76e8ff0450ccc4353b91f191be8a2f1e2dfb3`; `I15-B01`, `I15-B02`, and `I15-B03` are author-repaired, but fresh internal 1.5 re-review pending. Stage 2 진입 전 the re-review and Stage 1 merge must pass; #11 owns later final visual/accessibility completion.
 
 ## Primary User Path
 
@@ -277,7 +277,7 @@ creation flag rollback:
 
 ## Delivery Checklist
 
-Successor Stage 1 relock evidence is retained at [`evidence/2026-08-04-stage1-relock.md`](./evidence/2026-08-04-stage1-relock.md). It records the exact author task and precheck lineage, the old-head `3 blocker / 2 major` stop reason, the preserved #7 runtime-versus-lifecycle boundary, dependency advisory baseline PR `#1284` merged as `c982d97085ebcbe50da8a1b3c3de68bcd9f638a3`, current audit high/critical `0`, and the fact that fresh critic, 390px/320px product-design-authority, internal 1.5 and Stage 2 remain separate future gates.
+Successor Stage 1 relock evidence is retained at [`evidence/2026-08-04-stage1-relock.md`](./evidence/2026-08-04-stage1-relock.md). It preserves the author/precheck lineage and #7 runtime-versus-lifecycle boundary, records critic/authority pass `0/0/0`, the old-head internal 1.5 `HOLD` findings `I15-B01`/`I15-B02`/`I15-B03`, and dependency repair PR `#1286` merged as `9ff5a920f063af22cd8a8dbee33a603b27c3af57`. Current audit high/critical is `0`; all three findings are repaired and fresh internal 1.5 re-review pending.
 
 - [ ] v2 complete validates exact owner pantry rows against pinned product/effective ingredient authority <!-- omo:id=delivery-batch-complete-pantry;stage=2;scope=backend;review=3,6 -->
 - [ ] complete atomically applies pantry batch ledger session claim Meal cook-count and XP once <!-- omo:id=delivery-batch-complete-atomic;stage=2;scope=backend;review=3,6 -->
