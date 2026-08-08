@@ -1,7 +1,7 @@
 {
   "generated_from": "scripts/lib/hybrid-authority-inventory.mjs",
   "user_service_role_violation_count": 0,
-  "user_direct_service_role_count": 7,
+  "user_direct_service_role_count": 9,
   "internal_operation_violation_count": 0,
   "internal_operation_allowlist": {
     "createAuthCallbackOperationsClient": [
@@ -51,6 +51,9 @@
     ],
     "createYoutubeIngredientRegistrationInternalRpcClient": [
       "lib/server/youtube-import.ts"
+    ],
+    "createYoutubeExtractionInternalClient": [
+      "lib/server/youtube-import.ts"
     ]
   },
   "internal_operation_function_allowlist": {
@@ -90,6 +93,12 @@
     "createShoppingCreateInternalClient": {
       "app/api/v1/shopping/lists/route.ts": [
         "POST"
+      ]
+    },
+    "createYoutubeExtractionInternalClient": {
+      "lib/server/youtube-import.ts": [
+        "handleYoutubeCandidateDraft",
+        "handleYoutubeExtract"
       ]
     }
   },
@@ -337,8 +346,28 @@
     {
       "classification": "user",
       "file": "lib/server/youtube-import.ts",
+      "column": 35,
+      "line": 9296,
+      "allowed": true,
+      "factory": "createYoutubeExtractionInternalClient",
+      "functionName": "handleYoutubeExtract",
+      "kind": "internal-operation-call"
+    },
+    {
+      "classification": "user",
+      "file": "lib/server/youtube-import.ts",
+      "column": 35,
+      "line": 10543,
+      "allowed": true,
+      "factory": "createYoutubeExtractionInternalClient",
+      "functionName": "handleYoutubeCandidateDraft",
+      "kind": "internal-operation-call"
+    },
+    {
+      "classification": "user",
+      "file": "lib/server/youtube-import.ts",
       "column": 5,
-      "line": 10691,
+      "line": 10726,
       "allowed": true,
       "factory": "createYoutubeIngredientRegistrationInternalRpcClient",
       "functionName": "handleYoutubeIngredientRegistration",
@@ -435,6 +464,20 @@
       "file": "app/api/v1/shopping/lists/route.ts",
       "column": 25,
       "line": 1048,
+      "kind": "service-role-call"
+    },
+    {
+      "classification": "user",
+      "file": "lib/server/youtube-import.ts",
+      "column": 35,
+      "line": 9296,
+      "kind": "service-role-call"
+    },
+    {
+      "classification": "user",
+      "file": "lib/server/youtube-import.ts",
+      "column": 35,
+      "line": 10543,
       "kind": "service-role-call"
     }
   ],

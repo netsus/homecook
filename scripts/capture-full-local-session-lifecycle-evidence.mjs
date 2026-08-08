@@ -77,6 +77,7 @@ const KNOWN_MIGRATION_HEADS = new Set([
   "20260803090000_full_local_session_issue_time_precision.sql",
   "20260803093000_full_local_read_only_request_authority.sql",
   "20260809100000_full_local_session_refresh_authority.sql",
+  "20260809110000_full_local_request_transaction_and_youtube_scope.sql",
 ]);
 const SAFE_BRANCH_PATTERN = /^[A-Za-z0-9._/-]+$/u;
 const JWT_PATTERN = /\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}(?:\.[A-Za-z0-9_-]+)?\b/u;
@@ -971,6 +972,9 @@ export function buildMigrationHeadSql() {
     "set local statement_timeout = '5s';",
     "with catalog_marker as (",
     "  select case",
+    "    when to_regprocedure('private.verify_full_local_authenticated_authority()') is not null",
+    "      and position('current_setting(''transaction_read_only'') = ''on''' in pg_get_functiondef(to_regprocedure('private.verify_full_local_authenticated_authority()'))) > 0",
+    "      then '20260809110000_full_local_request_transaction_and_youtube_scope.sql'",
     "    when to_regprocedure('public.assert_and_renew_full_local_session_authority_v2(text,uuid,timestamp with time zone,uuid,text,integer,bigint,timestamp with time zone,timestamp with time zone,timestamp with time zone,timestamp with time zone,timestamp with time zone)') is not null",
     "      and position('last_token_issued_at' in pg_get_functiondef(to_regprocedure('public.assert_and_renew_full_local_session_authority_v2(text,uuid,timestamp with time zone,uuid,text,integer,bigint,timestamp with time zone,timestamp with time zone,timestamp with time zone,timestamp with time zone,timestamp with time zone)'))) > 0",
     "      then '20260809100000_full_local_session_refresh_authority.sql'",

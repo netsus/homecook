@@ -69,6 +69,7 @@ import {
 } from "@/lib/server/gemini-key-failover";
 import {
   createRouteHandlerClient,
+  createYoutubeExtractionInternalClient,
   createYoutubeIngredientRegistrationInternalRpcClient,
 } from "@/lib/supabase/server";
 import { YOUTUBE_PREVIEW_ONLY_CLASSIFICATION_REASON } from "@/lib/youtube-import-constants";
@@ -8902,10 +8903,12 @@ function selectMultiRecipeExtraction({
 }
 
 async function buildExtractedRecipeCandidate({
-  dbClient,
+  cookingDbClient,
+  ingredientDbClient,
   rawCandidate,
 }: {
-  dbClient: DbClient;
+  cookingDbClient: DbClient;
+  ingredientDbClient: DbClient;
   rawCandidate: YoutubeRawRecipeCandidate;
 }): Promise<{
   candidate: YoutubeRecipeCandidate | null;
@@ -8914,7 +8917,7 @@ async function buildExtractedRecipeCandidate({
 }> {
   const parsedIngredients = rawCandidate.draft.ingredients.map(adaptFlatDraftIngredient);
   const ingredientLookup = await findIngredientIds(
-    dbClient,
+    ingredientDbClient,
     parsedIngredients.map((ingredient) => ingredient.name),
   );
 
@@ -8922,7 +8925,10 @@ async function buildExtractedRecipeCandidate({
     return { candidate: null, newCookingMethods: [], error: ingredientLookup.error };
   }
 
-  const cookingMethodResult = await resolveCookingMethodsForSteps(dbClient, rawCandidate.draft.steps);
+  const cookingMethodResult = await resolveCookingMethodsForSteps(
+    cookingDbClient,
+    rawCandidate.draft.steps,
+  );
   if (cookingMethodResult.error || !cookingMethodResult.fallbackMethod) {
     return {
       candidate: null,
@@ -8968,17 +8974,23 @@ async function buildExtractedRecipeCandidate({
 }
 
 async function buildExtractedRecipeCandidates({
-  dbClient,
+  cookingDbClient,
+  ingredientDbClient,
   rawCandidates,
 }: {
-  dbClient: DbClient;
+  cookingDbClient: DbClient;
+  ingredientDbClient: DbClient;
   rawCandidates: YoutubeRawRecipeCandidate[];
 }) {
   const candidates: YoutubeRecipeCandidate[] = [];
   const newCookingMethods: YoutubeExtractedCookingMethod[] = [];
 
   for (const rawCandidate of rawCandidates) {
-    const result = await buildExtractedRecipeCandidate({ dbClient, rawCandidate });
+    const result = await buildExtractedRecipeCandidate({
+      cookingDbClient,
+      ingredientDbClient,
+      rawCandidate,
+    });
     if (result.error || !result.candidate) {
       return { candidates: [], newCookingMethods: [], error: result.error ?? { message: "candidate failed" } };
     }
@@ -9111,14 +9123,16 @@ async function handleYoutubeI031Extract({
   parsedUrl,
   video,
   classification,
-  dbClient,
+  internalDbClient,
+  userDbClient,
 }: {
   request: Request;
   userId: string;
   parsedUrl: ParsedYoutubeUrl;
   video: YoutubeProviderVideo;
   classification: YoutubeClassification;
-  dbClient: DbClient;
+  internalDbClient: DbClient;
+  userDbClient: DbClient;
 }) {
   let extraction: YoutubeI031ExtractionResult;
   try {
@@ -9143,14 +9157,17 @@ async function handleYoutubeI031Extract({
 
   const parsedRecipe = buildI031ParsedRecipe(extraction);
   const ingredientLookup = await findIngredientIds(
-    dbClient,
+    userDbClient,
     parsedRecipe.ingredients.map((ingredient) => ingredient.name),
   );
   if (ingredientLookup.error) {
     return fail("INTERNAL_ERROR", "재료 정보를 확인하지 못했어요.", 500);
   }
 
-  const cookingMethodResult = await resolveCookingMethodsForSteps(dbClient, parsedRecipe.steps);
+  const cookingMethodResult = await resolveCookingMethodsForSteps(
+    internalDbClient,
+    parsedRecipe.steps,
+  );
   if (cookingMethodResult.error || !cookingMethodResult.fallbackMethod) {
     return fail("INTERNAL_ERROR", "조리방법을 준비하지 못했어요.", 500);
   }
@@ -9206,7 +9223,7 @@ async function handleYoutubeI031Extract({
     identity: extraction.identity,
     ...extraction.meta,
   };
-  const sessionError = await insertExtractionSession(dbClient, {
+  const sessionError = await insertExtractionSession(internalDbClient, {
     id: extractionId,
     user_id: userId,
     youtube_url: parsedUrl.youtubeUrl,
@@ -9275,7 +9292,12 @@ export async function handleYoutubeExtract(request: Request) {
     return fail("NOT_RECIPE_VIDEO", "이 영상은 요리 레시피가 아닌 것 같아요.", 422);
   }
 
-  const dbClient = routeClient as unknown as DbClient;
+  const userDbClient = routeClient as unknown as DbClient;
+  const youtubeExtractionClient = createYoutubeExtractionInternalClient();
+  if (!youtubeExtractionClient) {
+    return fail("INTERNAL_ERROR", "유튜브 추출 저장소를 준비하지 못했어요.", 500);
+  }
+  const internalDbClient = youtubeExtractionClient as unknown as DbClient;
   let extractorMode;
   try {
     extractorMode = resolveYoutubeRecipeExtractorMode();
@@ -9297,7 +9319,8 @@ export async function handleYoutubeExtract(request: Request) {
       parsedUrl,
       video,
       classification,
-      dbClient,
+      internalDbClient,
+      userDbClient,
     });
   }
 
@@ -9308,7 +9331,7 @@ export async function handleYoutubeExtract(request: Request) {
     video,
     authorCommentFallback.recipe,
     parsedUrl,
-    dbClient,
+    internalDbClient,
     user.id,
   );
   let rawSourceText = buildRawSourceText(
@@ -9338,7 +9361,7 @@ export async function handleYoutubeExtract(request: Request) {
     video,
     parsedRecipe: transcriptFallback.recipe,
     parsedUrl,
-    dbClient,
+    dbClient: internalDbClient,
     userId: user.id,
     sourceBlocks,
     multiRecipeExtraction: usableDeterministicMultiRecipeExtraction,
@@ -9347,7 +9370,7 @@ export async function handleYoutubeExtract(request: Request) {
     video,
     parsedRecipe: llmFallback.recipe,
     parsedUrl,
-    dbClient,
+    dbClient: internalDbClient,
     userId: user.id,
     sourceBlocks,
     multiRecipeExtraction: usableDeterministicMultiRecipeExtraction ?? llmFallback.multiRecipeExtraction,
@@ -9378,7 +9401,8 @@ export async function handleYoutubeExtract(request: Request) {
       );
     }
     const candidateBuild = await buildExtractedRecipeCandidates({
-      dbClient,
+      cookingDbClient: internalDbClient,
+      ingredientDbClient: userDbClient,
       rawCandidates: multiRecipeExtraction.candidates,
     });
 
@@ -9387,7 +9411,7 @@ export async function handleYoutubeExtract(request: Request) {
     }
 
     const visualQuantityEnrichment = await resolveVisualQuantityEnrichment({
-      dbClient,
+      dbClient: internalDbClient,
       userId: user.id,
       video,
       parsedUrl,
@@ -9458,7 +9482,7 @@ export async function handleYoutubeExtract(request: Request) {
       recipe_candidates: recipeCandidates,
     };
     const expiresAt = buildSessionExpiresAt();
-    const sessionError = await insertExtractionSession(dbClient, {
+    const sessionError = await insertExtractionSession(internalDbClient, {
       id: extractionId,
       user_id: user.id,
       youtube_url: parsedUrl.youtubeUrl,
@@ -9505,7 +9529,7 @@ export async function handleYoutubeExtract(request: Request) {
     }
 
     const candidateError = await insertExtractionCandidates(
-      dbClient,
+      internalDbClient,
       buildMultiRecipeCandidateRows(extractionId, recipeCandidates),
     );
 
@@ -9517,21 +9541,24 @@ export async function handleYoutubeExtract(request: Request) {
   }
 
   const ingredientLookup = await findIngredientIds(
-    dbClient,
+    userDbClient,
     finalParsedRecipe.ingredients.map((ingredient) => ingredient.name),
   );
   if (ingredientLookup.error) {
     return fail("INTERNAL_ERROR", "재료 정보를 확인하지 못했어요.", 500);
   }
 
-  const cookingMethodResult = await resolveCookingMethodsForSteps(dbClient, finalParsedRecipe.steps);
+  const cookingMethodResult = await resolveCookingMethodsForSteps(
+    internalDbClient,
+    finalParsedRecipe.steps,
+  );
   if (cookingMethodResult.error || !cookingMethodResult.fallbackMethod) {
     return fail("INTERNAL_ERROR", "조리방법을 준비하지 못했어요.", 500);
   }
 
   const extractedIngredients = buildExtractedIngredients(ingredientLookup.matchesByName, finalParsedRecipe.ingredients);
   const visualQuantityEnrichment = await resolveVisualQuantityEnrichment({
-    dbClient,
+    dbClient: internalDbClient,
     userId: user.id,
     video,
     parsedUrl,
@@ -9634,7 +9661,7 @@ export async function handleYoutubeExtract(request: Request) {
     } : {}),
   };
 
-  const sessionError = await insertExtractionSession(dbClient, {
+  const sessionError = await insertExtractionSession(internalDbClient, {
     id: extractionId,
     user_id: user.id,
     youtube_url: parsedUrl.youtubeUrl,
@@ -10512,8 +10539,13 @@ export async function handleYoutubeCandidateDraft(request: Request) {
     return fail("VALIDATION_ERROR", "요청 값을 확인해 주세요.", 422, fields);
   }
 
-  const dbClient = routeClient as unknown as DbClient;
-  const parentResult = await findExtractionSession(dbClient, parsed.extractionId);
+  const userDbClient = routeClient as unknown as DbClient;
+  const youtubeExtractionClient = createYoutubeExtractionInternalClient();
+  if (!youtubeExtractionClient) {
+    return fail("INTERNAL_ERROR", "유튜브 추출 저장소를 준비하지 못했어요.", 500);
+  }
+  const internalDbClient = youtubeExtractionClient as unknown as DbClient;
+  const parentResult = await findExtractionSession(userDbClient, parsed.extractionId);
   if (parentResult.error) {
     return fail("INTERNAL_ERROR", "추출 세션을 확인하지 못했어요.", 500);
   }
@@ -10525,7 +10557,7 @@ export async function handleYoutubeCandidateDraft(request: Request) {
 
   const parentSession = parentResult.data as YoutubeExtractionSessionRow;
   const candidateResult = await findExtractionCandidate(
-    dbClient,
+    userDbClient,
     parsed.extractionId,
     parsed.candidateId,
   );
@@ -10543,7 +10575,10 @@ export async function handleYoutubeCandidateDraft(request: Request) {
   }
 
   if (candidateRow.status === "promoted" && candidateRow.child_extraction_session_id) {
-    const childResult = await findExtractionSession(dbClient, candidateRow.child_extraction_session_id);
+    const childResult = await findExtractionSession(
+      userDbClient,
+      candidateRow.child_extraction_session_id,
+    );
     if (childResult.error) {
       return fail("INTERNAL_ERROR", "후보 추출 세션을 확인하지 못했어요.", 500);
     }
@@ -10588,7 +10623,7 @@ export async function handleYoutubeCandidateDraft(request: Request) {
     parentSession.source_providers?.length
       ? parentSession.source_providers
       : readStringArray(parentMeta.source_providers);
-  const childSessionError = await insertExtractionSession(dbClient, {
+  const childSessionError = await insertExtractionSession(internalDbClient, {
     id: childExtractionId,
     user_id: user.id,
     youtube_url: parentSession.youtube_url,
@@ -10626,7 +10661,7 @@ export async function handleYoutubeCandidateDraft(request: Request) {
   }
 
   const candidateUpdateError = await updateExtractionCandidate(
-    dbClient,
+    internalDbClient,
     parentSession.id,
     candidate.candidate_id,
     {
@@ -10914,20 +10949,7 @@ export async function handleYoutubeRegister(request: Request) {
     });
   }
 
-  const session = sessionResult.data;
   const registeredAt = new Date().toISOString();
-  if (
-    session?.session_kind === "candidate_child" &&
-    session.parent_extraction_session_id &&
-    session.parent_candidate_id
-  ) {
-    await updateExtractionCandidate(dbClient, session.parent_extraction_session_id, session.parent_candidate_id, {
-      status: "registered",
-      recipe_id: data.recipe_id,
-      registered_at: registeredAt,
-    });
-  }
-
   try {
     await recordUserGrowthActivityEvent(dbClient, {
       userId: user.id,

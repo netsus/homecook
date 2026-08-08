@@ -53,6 +53,7 @@ const {
 vi.mock("@/lib/supabase/server", () => ({
   createRouteHandlerClient: mocks.createRouteHandlerClient,
   createServiceRoleClient: mocks.createServiceRoleClient,
+  createYoutubeExtractionInternalClient: mocks.createServiceRoleClient,
   createYoutubeIngredientRegistrationInternalRpcClient:
     mocks.createServiceRoleClient,
 }));

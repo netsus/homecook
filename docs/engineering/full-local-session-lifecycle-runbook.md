@@ -70,3 +70,11 @@ node scripts/capture-full-local-session-lifecycle-evidence.mjs milestone-a-t65 \
 ```
 
 실패 시 canary 확대를 중단하고 session hotfix 계획의 forward-fix 절차를 따른다. DB만 또는 env만 단독으로 되돌리지 않는다.
+
+## 기능 canary 실패를 세션 장애와 구분하기
+
+planner 또는 YouTube canary가 실패해도 같은 관찰 구간의 `ACCOUNT_SESSION_STALE` delta와 `staleTokenMutationCount`가 모두 `0`이면, 세션 수명주기 장애로 단정하지 않는다. 이 경우 token·cookie·사용자 식별자를 출력하지 않은 채 PostgreSQL의 오류 종류와 대상 relation만 확인해 기능별 RLS 또는 request transaction 권한을 먼저 진단한다.
+
+- 읽기 RPC가 `POST`를 사용하더라도 PostgreSQL transaction이 read-only이면 verifier는 잠금 조회(`FOR SHARE`)를 실행하면 안 된다.
+- YouTube 추출 worker는 `youtube-extraction` internal scope의 exact table/method allowlist 안에서만 cache, event, session, candidate를 기록한다.
+- migration과 앱은 함께 forward-fix하고, 적용 뒤 exact migration head·LaunchAgent implementation SHA·기능 canary·stale delta 0을 다시 확인한다.
