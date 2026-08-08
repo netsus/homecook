@@ -70,6 +70,8 @@ Final-old-head security task `019fe265-7393-76d2-809d-e0caea0ea0ab` returned `HO
 
 Final `b47c8d623c2c60e09ac4735e63466a1b97126472` advisories found no product DB/security P0/P1 defects: security task `019fe298-6c5b-7bc2-990e-5de2cc14c657` returned `HOLD 0/0/2`, and five-axis task `019fe298-6c5b-7bc2-990e-5e0b941cf514` returned `HOLD 0/1/2`. The narrow successor RED reproduced the remaining P1 automation defect as four CLI failures: the explicit cooked-batch slice returned success without a marker, unknown and missing slices returned success, and the package wrapper overwrote a branch caller. The validator now gives explicit `--slice` authority independent of checkout state, fails closed for malformed or missing workpacks, preserves branch inference when no explicit slice is supplied, and emits `Workpack docs OK` only after both governing documents exist on the base. The two P2 evidence mismatches are also corrected below. The `b47c` reviews and checks are lineage only after this repair.
 
+The first `dbf4091d…` current-head CI quality run then supplied a new environment-specific RED: GitHub's shallow pull-request checkout had no `origin/master` ref, so two real-workpack CLI cases failed, while the governing status branch incorrectly projected the local successor instead of the preserved Draft PR branch. The repair keeps status on `feature/cooked-batch-weight-ledger-stage2-current` and makes the validator shallow-fetch the exact remote base only when its ref is absent; failure to resolve that base is an error, never a silent pass. Focused GREEN is `2 files / 37 tests`, including two new base-resolution cases and all explicit-success, invalid-slice and legacy-fallback paths.
+
 PostgreSQL refinement also separated fixture isolation from two earlier product defects: terminal sessions were revalidating the active Meal revision pin, and completion set `meals.leftover_dish_id` without `is_leftover`. The final migration keeps immutable start snapshots as audit data after terminal transition and leaves ordinary planner Meal leftover-origin fields unchanged.
 
 Final fresh and replay PostgreSQL evidence:
@@ -88,9 +90,9 @@ The cooked-batch scenarios cover exact 20-function owner/ACL/search-path/scope i
 ## Verification
 
 - `pnpm install --frozen-lockfile` — pass; no dependency or lockfile change
-- final focused Vitest — successor regression `10 files / 112 tests` pass; canonical-refresh ownership test `1 file / 14 tests` pass
-- full `pnpm test` on the `eb4e878e…` successor — `522 files passed | 28 skipped`, `5,322 tests passed | 363 skipped`
-- `pnpm exec vitest run tests/check-workpack-docs.test.ts tests/cooked-batch-api-contract-v1-2-36.test.ts` — `2 files / 36 tests` pass; the validator-only file is `25/25`
+- final focused Vitest — pre-CI successor regression `10 files / 112 tests` pass; canonical-refresh ownership test `1 file / 14 tests` pass; final automation/status repair `2 files / 37 tests` pass
+- full `pnpm test` on the final `eb4e878e…` successor — `522 files passed | 28 skipped`, `5,324 tests passed | 363 skipped`
+- `pnpm exec vitest run tests/check-workpack-docs.test.ts tests/cooked-batch-weight-ledger-stage1-relock.test.ts` — final automation/status repair `2 files / 37 tests`; the validator-only file is `27/27`
 - `pnpm validate:workpack -- --slice cooked-batch-weight-ledger` — pass with visible `Workpack docs OK for slice 'cooked-batch-weight-ledger' (base: master)` marker; `missing-cooked-batch-sentinel` exits `1` with both missing governing paths; legacy `BRANCH_NAME=feature/be-cooked-batch-weight-ledger pnpm validate:workpack` inference still resolves the real workpack and passes
 - `pnpm test:cooked-batch-weight-ledger:postgres` — final successor pass: fresh predecessor `15 + 1 intended skip`, fresh/replay #8 `23/23`, replay predecessor `16/16`, inherited shared security inventory fresh/replay `26 passed / 31 intended skips`
 - `pnpm verify:backend` — pass: lint, typecheck, `217 files passed | 11 skipped`, `2,664 tests passed | 150 skipped`, Next build, security E2E `12/12`

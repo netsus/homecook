@@ -46,10 +46,10 @@
     "full_vitest_eb4e_successor": {
       "passed_files": 522,
       "skipped_files": 28,
-      "passed_tests": 5322,
+      "passed_tests": 5324,
       "skipped_tests": 363
     },
-    "focused_vitest": "10 files / 112 tests; canonical refresh ownership 1 file / 14 tests",
+    "focused_vitest": "pre-CI successor 10 files / 112 tests; canonical refresh ownership 1 file / 14 tests; final automation/status repair 2 files / 37 tests",
     "postgres_fresh_replay": "predecessor fresh 15 passed / 1 intended skip, replay 16 passed; cooked-batch fresh/replay 23/23; inherited inventory fresh/replay 26 passed / 31 intended skips",
     "canonical_refresh_regressions": "same stable session newer JWT accepted; stale/old, different-session, revoked and stale-generation attempts are zero-write",
     "progress_race": "two real connections serialize v1/v2 first awards to 60+45",
@@ -57,7 +57,7 @@
     "security_function_postgres": "8 anonymous mutation signatures denied with unchanged checksums",
     "cooked_batch_authorization_manifest_functions": 20,
     "workpack_validator_red": "4 CLI failures reproduced the explicit-slice silent no-op, unknown/missing slice success, and overwritten branch caller",
-    "workpack_validator_green": "25/25 focused tests; explicit --slice emits Workpack docs OK and fails closed for missing governing docs",
+    "workpack_validator_green": "27/27 focused tests; missing shallow base refs are fetched exactly or fail closed; explicit --slice emits Workpack docs OK and fails closed for missing governing docs; legacy branch inference remains active",
     "leftovers_partial_compatibility_indexes": 4
   },
   "next_route": "stage3_fresh_backend_review",
@@ -160,6 +160,7 @@
     "lib/supabase/server.ts",
     "package.json",
     "scripts/check-workpack-docs.mjs",
+    "scripts/lib/check-workpack-docs.mjs",
     "scripts/lib/full-local-security-inventory.mjs",
     "scripts/lib/hybrid-authority-inventory.mjs",
     "scripts/run-cooked-batch-weight-ledger-postgres-integration.mjs",

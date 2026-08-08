@@ -4,10 +4,40 @@ import { describe, expect, it } from "vitest";
 
 import {
   checkWorkpackDocs,
+  ensureRemoteBaseRef,
   resolveBaseRef,
   resolveSliceFromBranch,
   resolveWorkpackSlice,
 } from "../scripts/lib/check-workpack-docs.mjs";
+
+describe("ensureRemoteBaseRef", () => {
+  it("fetches a shallow pull-request base when checkout did not create its remote ref", () => {
+    const calls: string[][] = [];
+    const spawnSyncFn = (_cmd: string, args: string[]) => {
+      calls.push(args);
+      return args[0] === "rev-parse"
+        ? { status: 1 }
+        : { status: 0 };
+    };
+
+    expect(ensureRemoteBaseRef("master", spawnSyncFn)).toBe(true);
+    expect(calls).toEqual([
+      ["rev-parse", "--verify", "--quiet", "refs/remotes/origin/master"],
+      [
+        "fetch",
+        "--no-tags",
+        "--depth=1",
+        "origin",
+        "+refs/heads/master:refs/remotes/origin/master",
+      ],
+    ]);
+  });
+
+  it("fails closed when the pull-request base cannot be fetched", () => {
+    const spawnSyncFn = () => ({ status: 1 });
+    expect(ensureRemoteBaseRef("master", spawnSyncFn)).toBe(false);
+  });
+});
 
 describe("resolveSliceFromBranch", () => {
   it("extracts slice from feature/be- branch", () => {

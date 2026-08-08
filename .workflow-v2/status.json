@@ -2529,7 +2529,7 @@
     {
       "id": "cooked-batch-weight-ledger",
       "preset": "vertical-slice-strict",
-      "branch": "feature/cooked-batch-weight-ledger-stage2-eb4e-successor",
+      "branch": "feature/cooked-batch-weight-ledger-stage2-current",
       "pr_path": "https://github.com/netsus/homecook/pull/1291",
       "lifecycle": "in_progress",
       "approval_state": "not_started",
@@ -2537,7 +2537,7 @@
       "required_checks": [
         "pnpm validate:source-of-truth-sync",
         "pnpm validate:workflow-v2",
-        "BRANCH_NAME=feature/cooked-batch-weight-ledger-stage2-eb4e-successor pnpm validate:workpack -- --slice cooked-batch-weight-ledger",
+        "BRANCH_NAME=feature/cooked-batch-weight-ledger-stage2-current pnpm validate:workpack -- --slice cooked-batch-weight-ledger",
         "node scripts/validate-automation-spec.mjs --slice cooked-batch-weight-ledger",
         "pnpm validate:omo-bookkeeping",
         "pnpm exec vitest run tests/cooked-batch-api-contract-v1-2-36.test.ts",

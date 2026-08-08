@@ -82,7 +82,7 @@
     "required_checks": [
       "pnpm validate:source-of-truth-sync",
       "pnpm validate:workflow-v2",
-      "BRANCH_NAME=feature/cooked-batch-weight-ledger-stage2-eb4e-successor pnpm validate:workpack -- --slice cooked-batch-weight-ledger",
+      "BRANCH_NAME=feature/cooked-batch-weight-ledger-stage2-current pnpm validate:workpack -- --slice cooked-batch-weight-ledger",
       "node scripts/validate-automation-spec.mjs --slice cooked-batch-weight-ledger",
       "pnpm validate:omo-bookkeeping",
       "pnpm exec vitest run tests/cooked-batch-api-contract-v1-2-36.test.ts",
@@ -105,7 +105,7 @@
     "verify_commands": [
       "pnpm validate:source-of-truth-sync",
       "pnpm validate:workflow-v2",
-      "BRANCH_NAME=feature/cooked-batch-weight-ledger-stage2-eb4e-successor pnpm validate:workpack -- --slice cooked-batch-weight-ledger",
+      "BRANCH_NAME=feature/cooked-batch-weight-ledger-stage2-current pnpm validate:workpack -- --slice cooked-batch-weight-ledger",
       "node scripts/validate-automation-spec.mjs --slice cooked-batch-weight-ledger",
       "pnpm validate:omo-bookkeeping",
       "pnpm exec vitest run tests/workflow-v2-docs.test.ts tests/omo-automation-spec.test.ts tests/omo-bookkeeping.test.ts tests/omo-doc-gate.test.ts tests/source-of-truth-sync.test.ts",

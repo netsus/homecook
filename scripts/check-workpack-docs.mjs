@@ -4,6 +4,7 @@ import { spawnSync } from "node:child_process";
 
 import {
   checkWorkpackDocs,
+  ensureRemoteBaseRef,
   resolveBaseRef,
   resolveSliceFromBranch,
 } from "./lib/check-workpack-docs.mjs";
@@ -76,6 +77,13 @@ if (!baseRef) {
 
   // Preserve the established branch-derived local fallback; CI supplies a base.
   process.exit(0);
+}
+
+if (!ensureRemoteBaseRef(baseRef, spawnSync)) {
+  process.stderr.write(
+    `Cannot resolve origin/${baseRef}; workpack validation fails closed.\n`,
+  );
+  process.exit(1);
 }
 
 const missing = checkWorkpackDocs({ slice, baseRef, spawnSyncFn: spawnSync });
