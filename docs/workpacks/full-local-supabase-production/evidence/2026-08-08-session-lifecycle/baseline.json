@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "phase": "baseline",
+  "captured_at": "2026-08-08T13:48:09.410Z",
+  "source": {
+    "canonical_base_sha": "b73be1a1002c7901dd6844cab707675c4b3c9f4f",
+    "implementation_sha": "fbd66aa02bee9354314d9e7f4752c5e5368c81f1",
+    "live_head_sha": "af0b65ce33b8cc413f66cd30f2bfdcd98b6acdfb",
+    "live_branch": "docs/full-local-production-operator-checklist",
+    "live_dirty": true,
+    "live_dirty_diff_sha256": "sha256:9ca899e5a45e1bba3809c18d287c77aceab70654728be49ebc7bd8a119df886d"
+  },
+  "runtime": {
+    "app_origin": "https://app.mumeok.kr",
+    "auth_origin": "https://auth.mumeok.kr",
+    "full_local_status": "PASS",
+    "mac_production_status": "PASS",
+    "launch_agent_status": "BLOCKED",
+    "gotrue_image_digest": "sha256:46cc7cade1221616f0ce8d1c898e275a2b8ad849941edbe0e0f3b4857ac5e3a8",
+    "migration_head": "20260803020000_full_local_production_data_quality_scope.sql",
+    "migration_head_source": "database_catalog_marker"
+  },
+  "session_policy": {
+    "jwt_exp_seconds": 3600,
+    "inactivity_timeout": null,
+    "timebox": null,
+    "single_per_user": false,
+    "refresh_rotation_enabled": true,
+    "refresh_reuse_interval_seconds": 10
+  },
+  "incident": {
+    "binding_created_at": null,
+    "binding_expires_at": null,
+    "first_stale_at": null,
+    "affected_route_classes": [
+      "planner-read",
+      "planner-write",
+      "pantry-read",
+      "youtube-extract"
+    ]
+  },
+  "verification": {
+    "production_domain_contract_gate": "PASS",
+    "refresh_lifecycle_gate": "NOT_RUN",
+    "authority_static_contracts": "NOT_RUN",
+    "postgres_integration": "NOT_RUN",
+    "docker_refresh_smoke": "NOT_RUN",
+    "security_function_gate": "NOT_RUN",
+    "gotrue_policy_gate": "NOT_RUN",
+    "recent_auth_security_gate": "NOT_RUN",
+    "t65_canary": "NOT_RUN",
+    "canary_results": {
+      "planner_read": "NOT_RUN",
+      "planner_write": "NOT_RUN",
+      "pantry_read": "NOT_RUN",
+      "youtube_extract": "NOT_RUN"
+    },
+    "account_session_stale_count": 0,
+    "stale_token_mutation_count": 0
+  }
+}
