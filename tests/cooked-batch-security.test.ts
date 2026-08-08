@@ -163,4 +163,54 @@ describe("cooked batch database security contract", () => {
     expect(eatRoute).not.toContain("awardUserProgressEvent");
     expect(eatRoute).not.toContain("recordUserGrowthActivityEvent");
   });
+
+  it("accepts only monotonic JWT refresh evidence for a stable active binding", () => {
+    const sql = migration();
+    expect(sql).toMatch(
+      /function public\.assert_full_local_session_authority\([\s\S]*from public\.user_session_generation_bindings[\s\S]*for update/i,
+    );
+    expect(sql).toMatch(/p_session_issued_at < v_binding\.session_issued_at/i);
+    expect(sql).toMatch(
+      /update public\.user_session_generation_bindings[\s\S]*session_issued_at = p_session_issued_at[\s\S]*session_issued_at < p_session_issued_at/i,
+    );
+    const inventory = readFileSync(
+      join(process.cwd(), "scripts/lib/full-local-security-inventory.mjs"),
+      "utf8",
+    );
+    expect(inventory).toContain("COOKED_BATCH_FULL_LOCAL_REPLACEMENTS");
+    expect(inventory).toContain("_cooked_batch_weight_ledger.sql");
+  });
+
+  it("returns durable replays without invoking projection recovery writers", () => {
+    const sql = migration();
+    const replayBranches = sql.match(/if v_claim \? 'replay' then[\s\S]*?end if;/gi) ?? [];
+    expect(replayBranches.length).toBeGreaterThanOrEqual(3);
+    for (const branch of replayBranches) {
+      expect(branch).not.toContain("project_cooked_batch_progress_activity");
+    }
+    expect(sql).toMatch(/if v_transitioned and p_action = 'eat' then[\s\S]*project_cooked_batch_progress_activity/i);
+  });
+
+  it("normalizes v1 and v2 progress inserts under the same owner lock", () => {
+    const sql = migration();
+    expect(sql).toMatch(
+      /function private\.canonicalize_cooked_batch_progress_award\(\)[\s\S]*homecook-user-progress:[\s\S]*new\.xp_delta[\s\S]*new\.source_meta_json/i,
+    );
+    expect(sql).toMatch(
+      /create trigger canonicalize_cooked_batch_progress_award[\s\S]*before insert on public\.user_progress_events/i,
+    );
+    const writer = readFileSync(
+      join(process.cwd(), "lib/server/user-progress.ts"),
+      "utf8",
+    );
+    expect(writer).toContain('.select("id, xp_delta, source_meta_json")');
+    expect(writer).toContain("insertResult.data.xp_delta");
+  });
+
+  it("rejects null deltas and blank reasons at the final database authority", () => {
+    const sql = migration();
+    expect(sql).toMatch(
+      /p_action in \('discarded','adjustment'\)[\s\S]*p_delta_g is null[\s\S]*nullif\(btrim\(p_reason\),''\) is null/i,
+    );
+  });
 });
