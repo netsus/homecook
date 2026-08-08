@@ -59,10 +59,10 @@ Schema Change:
 
 ### Auth and flow authority
 
-- public URL contract는 `SUPABASE_PUBLIC_URL=https://auth.<owned-domain>`, `API_EXTERNAL_URL=https://auth.<owned-domain>/auth/v1`, callback `${API_EXTERNAL_URL}/callback`, site `https://app.<owned-domain>`이다.
+- production public URL contract는 `SUPABASE_PUBLIC_URL=https://auth.mumeok.kr`, `API_EXTERNAL_URL=https://auth.mumeok.kr/auth/v1`, callback `https://app.mumeok.kr/auth/callback`, link callback `https://app.mumeok.kr/auth/link/callback`, site `https://app.mumeok.kr`이다. `.com` origin/callback 혼용은 허용하지 않는다.
 - OAuth SDK는 `/auth/flow/start`가 ledger insert와 `__Host-homecook-auth-flow` HttpOnly cookie를 발급한 뒤에만 호출한다.
 - callback/link callback은 ledger provider/flow/authority/epoch와 local Auth identity를 exact 비교한다. query provider와 client-written cookie는 authority가 아니다.
-- local JWT `sub`는 existing `auth.uid()`와 exact 일치해야 하며 callback/refresh는 `session_id` HMAC binding을 멱등 갱신한다.
+- local JWT `sub`는 existing `auth.uid()`와 exact 일치해야 한다. callback/refresh/첫 protected request는 stable `session_id` HMAC binding과 rotating JWT `iat`/`exp` evidence를 분리해 검증하고, 같은 active session의 최신 evidence와 expiry/last-seen만 단조 갱신한다. missing/revoked binding은 자동 복구하지 않는다.
 - logout/delete/quarantine/identity replacement는 binding을 즉시 revoke하고 pre-expiry stale JWT mutation을 차단한다.
 
 ### Runtime and secret boundary
