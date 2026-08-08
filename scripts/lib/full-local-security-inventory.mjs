@@ -29,6 +29,10 @@ const FULL_LOCAL_SESSION_ISSUE_TIME_PRECISION_MIGRATION_PATH = join(
   REPOSITORY_ROOT,
   "supabase/migrations/20260803090000_full_local_session_issue_time_precision.sql",
 );
+const FULL_LOCAL_SESSION_REFRESH_AUTHORITY_MIGRATION_PATH = join(
+  REPOSITORY_ROOT,
+  "supabase/migrations/20260809100000_full_local_session_refresh_authority.sql",
+);
 const SNAPSHOT_MIGRATION_PATH = join(
   REPOSITORY_ROOT,
   "supabase/migrations/20260729170500_recipe_snapshot_authority_foundation.sql",
@@ -80,6 +84,10 @@ RECIPE_FUTURE_PROPAGATION_MIGRATION_PATH = join(
 const fullLocalMigration = readFileSync(FULL_LOCAL_MIGRATION_PATH, "utf8");
 const fullLocalSessionIssueTimePrecisionMigration = readFileSync(
   FULL_LOCAL_SESSION_ISSUE_TIME_PRECISION_MIGRATION_PATH,
+  "utf8",
+);
+const fullLocalSessionRefreshAuthorityMigration = readFileSync(
+  FULL_LOCAL_SESSION_REFRESH_AUTHORITY_MIGRATION_PATH,
   "utf8",
 );
 const snapshotMigration = readFileSync(SNAPSHOT_MIGRATION_PATH, "utf8");
@@ -511,11 +519,19 @@ function parseFunction(entry, migration) {
 
 const FULL_LOCAL_SESSION_PRECISION_FUNCTIONS = new Set([
   "public.record_full_local_session_authority(text, uuid, timestamp with time zone, text, integer, bigint, timestamp with time zone, timestamp with time zone, timestamp with time zone, timestamp with time zone)",
+]);
+const FULL_LOCAL_SESSION_REFRESH_FUNCTIONS = new Set([
+  "private.protect_full_local_session_binding_identity()",
+  "private.hydrate_full_local_session_token_evidence()",
   "public.assert_full_local_session_authority(text, uuid, timestamp with time zone, text, integer, bigint, timestamp with time zone)",
+  "public.record_full_local_session_authority_v2(text, uuid, timestamp with time zone, uuid, text, integer, bigint, timestamp with time zone, timestamp with time zone, timestamp with time zone, timestamp with time zone, timestamp with time zone)",
+  "public.assert_and_renew_full_local_session_authority_v2(text, uuid, timestamp with time zone, uuid, text, integer, bigint, timestamp with time zone, timestamp with time zone, timestamp with time zone, timestamp with time zone, timestamp with time zone)",
 ]);
 const FUNCTION_CONTRACT = manifest.functions.map((entry) => parseFunction(
   entry,
-  FULL_LOCAL_SESSION_PRECISION_FUNCTIONS.has(entry.signature)
+  FULL_LOCAL_SESSION_REFRESH_FUNCTIONS.has(entry.signature)
+    ? fullLocalSessionRefreshAuthorityMigration
+    : FULL_LOCAL_SESSION_PRECISION_FUNCTIONS.has(entry.signature)
     ? fullLocalSessionIssueTimePrecisionMigration
     : fullLocalMigration,
 ));

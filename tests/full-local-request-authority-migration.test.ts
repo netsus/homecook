@@ -106,7 +106,13 @@ describe("full-local request authority migration", () => {
       /request_iat[\s\S]*<=?[\s\S]*last_token_issued_at/iu,
     );
     expect(refreshAuthorityMigration).not.toMatch(
-      /session_issued_at[\s\S]*is distinct from[\s\S]*request_iat/iu,
+      /session_issued_at\s+is distinct from\s+to_timestamp\(v_request_iat\)/iu,
+    );
+    expect(refreshAuthorityMigration).toContain(
+      "'/rpc/record_full_local_session_authority_v2'",
+    );
+    expect(refreshAuthorityMigration).toContain(
+      "'/rpc/assert_and_renew_full_local_session_authority_v2'",
     );
   });
 

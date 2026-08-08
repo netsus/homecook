@@ -36,6 +36,10 @@ const ADDITIVE_SOURCES = [
         REPO_ROOT,
         "supabase/migrations/20260803090000_full_local_session_issue_time_precision.sql",
       ),
+      path.join(
+        REPO_ROOT,
+        "supabase/migrations/20260809100000_full_local_session_refresh_authority.sql",
+      ),
     ],
   },
   {
@@ -70,6 +74,10 @@ const ADDITIVE_SOURCES = [
           path.join(
             REPO_ROOT,
             "supabase/migrations/20260803093000_full_local_read_only_request_authority.sql",
+          ),
+          path.join(
+            REPO_ROOT,
+            "supabase/migrations/20260809100000_full_local_session_refresh_authority.sql",
           ),
         ],
   },
@@ -777,7 +785,12 @@ function parseExecuteAcl(migration, signature) {
   return { allowed: [...allowed].sort(), revoked };
 }
 
-function assertAdditiveContract(baseContract, manifest, migration) {
+function assertAdditiveContract(
+  baseContract,
+  manifest,
+  migration,
+  classifiedSignatures,
+) {
   if (manifest.schema_version !== 1
     || !new Set(["pre-deployment", "post-migration"]).has(
       manifest.deployment_state,
@@ -822,7 +835,7 @@ function assertAdditiveContract(baseContract, manifest, migration) {
   const definitions = parseCreatedFunctionDefinitions(migration);
   const definitionMap = new Map(definitions.map((entry) => [entry.signature, entry]));
   const unclassified = definitions
-    .filter((entry) => !signatures.includes(entry.signature))
+    .filter((entry) => !classifiedSignatures.has(entry.signature))
     .map((entry) => entry.signature);
   const missing = signatures.filter((signature) => !definitionMap.has(signature));
   if (unclassified.length > 0 || missing.length > 0) {
@@ -1195,6 +1208,11 @@ const additiveSources = await Promise.all(
   }),
 );
 const applicationContract = parseApplicationContract(migration);
+const classifiedAdditiveSignatures = new Set(
+  additiveSources.flatMap(({ manifest }) =>
+    (manifest.functions ?? []).map((entry) => entry.signature)
+  ),
+);
 const additiveContracts = additiveSources.map(({ manifest, migration: sourceMigration }) => ({
   slice: manifest.slice,
   expectedState: manifest.deployment_state,
@@ -1202,6 +1220,7 @@ const additiveContracts = additiveSources.map(({ manifest, migration: sourceMigr
     applicationContract,
     manifest,
     sourceMigration,
+    classifiedAdditiveSignatures,
   ),
 }));
 const additiveContract = additiveContracts.flatMap(({ functions }) => functions);

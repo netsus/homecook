@@ -255,7 +255,7 @@ describe("full-local Auth DB migration contract", () => {
       }>;
     };
 
-    expect(manifest.functions).toHaveLength(13);
+    expect(manifest.functions).toHaveLength(16);
     expect(manifest.functions.map((entry) => entry.signature)).toEqual(
       expect.arrayContaining([
         "public.read_auth_flow_attempt(text, text)",
@@ -263,8 +263,11 @@ describe("full-local Auth DB migration contract", () => {
         "public.activate_full_local_auth_authority(bigint, integer, text, timestamp with time zone)",
         "public.record_full_local_session_authority(text, uuid, timestamp with time zone, text, integer, bigint, timestamp with time zone, timestamp with time zone, timestamp with time zone, timestamp with time zone)",
         "private.protect_full_local_session_binding_identity()",
+        "private.hydrate_full_local_session_token_evidence()",
         "private.revoke_full_local_bindings_on_lifecycle_exit()",
         "private.revoke_full_local_bindings_on_auth_identity_change()",
+        "public.record_full_local_session_authority_v2(text, uuid, timestamp with time zone, uuid, text, integer, bigint, timestamp with time zone, timestamp with time zone, timestamp with time zone, timestamp with time zone, timestamp with time zone)",
+        "public.assert_and_renew_full_local_session_authority_v2(text, uuid, timestamp with time zone, uuid, text, integer, bigint, timestamp with time zone, timestamp with time zone, timestamp with time zone, timestamp with time zone, timestamp with time zone)",
       ]),
     );
     for (const entry of manifest.functions) {
@@ -448,6 +451,19 @@ describe("full-local Auth DB migration contract", () => {
     expect(normalized).toMatch(/binding_state[\s\S]*active/iu);
     expect(normalized).toMatch(/revoked_at[\s\S]*is null/iu);
     expect(normalized).toContain("account_session_stale");
+  });
+
+  it("replaces the legacy exact-signature assert wrapper with latest-token compatibility only in the additive refresh migration", async () => {
+    const { refreshMigrationName, migration } = await readRefreshAuthorityMigration();
+    expect(refreshMigrationName).toBeDefined();
+    const normalized = migration.toLowerCase();
+
+    expect(normalized).toContain(
+      "create or replace function public.assert_full_local_session_authority(",
+    );
+    expect(normalized).toContain("v_binding.last_token_issued_at is distinct from p_session_issued_at");
+    expect(normalized).toContain("p_session_issued_at < v_binding.session_issued_at");
+    expect(normalized).not.toContain("v_binding.session_issued_at is distinct from p_session_issued_at");
   });
 
   it("exposes service-only local bind, assert, and idempotent revoke RPCs", async () => {
