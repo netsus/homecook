@@ -14,6 +14,13 @@ const HISTORICAL_INVENTORY_PATH =
 describe("account session generation security function inventory", () => {
   it("records an additive F0 function authorization manifest", () => {
     expect(existsSync(ADDITIVE_MANIFEST_PATH)).toBe(true);
+    const manifest = JSON.parse(readFileSync(ADDITIVE_MANIFEST_PATH, "utf8")) as {
+      migrations: string[];
+    };
+
+    expect(manifest.migrations).toContain(
+      "supabase/migrations/20260809110000_full_local_request_transaction_and_youtube_scope.sql",
+    );
   });
 
   it("observes private invoker helpers instead of treating them as absent", () => {
@@ -24,6 +31,12 @@ describe("account session generation security function inventory", () => {
 
     expect(validator).toContain(
       "schema_name in ('public', 'account_generation_auth_hook', 'private')",
+    );
+    expect(validator).toContain(
+      "manifest.migrations?.map(",
+    );
+    expect(validator).toContain(
+      "resolveAdditiveSourcePaths(",
     );
   });
 

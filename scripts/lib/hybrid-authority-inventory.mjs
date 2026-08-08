@@ -107,6 +107,10 @@ const INTERNAL_OPERATION_ALLOWLIST = new Map([
     "createYoutubeIngredientRegistrationInternalRpcClient",
     new Set(["lib/server/youtube-import.ts"]),
   ],
+  [
+    "createYoutubeExtractionInternalClient",
+    new Set(["lib/server/youtube-import.ts"]),
+  ],
 ]);
 
 const INTERNAL_OPERATION_FUNCTION_ALLOWLIST = new Map([
@@ -169,6 +173,15 @@ const INTERNAL_OPERATION_FUNCTION_ALLOWLIST = new Map([
       ],
     ]),
   ],
+  [
+    "createYoutubeExtractionInternalClient",
+    new Map([
+      [
+        "lib/server/youtube-import.ts",
+        new Set(["handleYoutubeCandidateDraft", "handleYoutubeExtract"]),
+      ],
+    ]),
+  ],
 ]);
 
 const BROWSER_DIRECT_STORAGE_ALLOWLIST = new Map([
@@ -197,6 +210,7 @@ const SERVICE_ROLE_FACTORY_NAMES = new Set([
   "createFutureMealWriteInternalClient",
   "createShoppingCreateInternalClient",
   "createSnapshotV2SessionInternalClient",
+  "createYoutubeExtractionInternalClient",
 ]);
 const REST_MUTATION_METHODS = new Set(["DELETE", "PATCH", "POST", "PUT"]);
 

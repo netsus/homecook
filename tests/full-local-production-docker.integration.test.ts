@@ -240,6 +240,7 @@ function applyDockerMigrationChain(project: string, env: NodeJS.ProcessEnv) {
     "20260803091000_full_local_optional_nbf_authority.sql",
     "20260803092000_recipe_future_internal_scope.sql",
     "20260803093000_full_local_read_only_request_authority.sql",
+    "20260809110000_full_local_request_transaction_and_youtube_scope.sql",
     "20260803101000_recipe_content_snapshot_future_propagation.sql",
     "20260804100000_recipe_snapshot_entrypoint_projection.sql",
   ]);

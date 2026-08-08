@@ -232,7 +232,7 @@ const sourceEvidence = {
   recipe_patch_handler_count: 1,
   recipebook_surface_personal_editor_marker_count: 0,
   public_service_role_entry_count: 0,
-  user_direct_service_role_count: 7,
+  user_direct_service_role_count: 9,
   user_service_role_violation_count: 0,
 };
 
@@ -330,6 +330,7 @@ function createSourceEvidenceFixtureRepository(extraFiles: Record<string, string
     "app/api/v1/shopping/lists/route.ts",
     "components/recipe/recipe-detail-screen.tsx",
     "lib/personal-recipe-editor.ts",
+    "lib/server/youtube-import.ts",
   ];
 
   for (const relativePath of requiredFiles) {
@@ -619,8 +620,8 @@ describe("personal recipe editor full-local verifier", () => {
       { ...sourceEvidence, browser_direct_storage_path_count: 1 },
       { ...sourceEvidence, browser_direct_data_mutation_count: 1 },
       { ...sourceEvidence, browser_raw_rest_mutation_count: 1 },
-      { ...sourceEvidence, user_direct_service_role_count: 6 },
       { ...sourceEvidence, user_direct_service_role_count: 8 },
+      { ...sourceEvidence, user_direct_service_role_count: 10 },
       { ...sourceEvidence, user_service_role_violation_count: 1 },
       { ...sourceEvidence, capability_on_occurrence_count: 1 },
       { ...sourceEvidence, capability_off_occurrence_count: 0 },

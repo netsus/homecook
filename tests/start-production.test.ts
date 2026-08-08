@@ -13,6 +13,7 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { normalizeProductionStartArgs } from "../scripts/lib/start-production-args.mjs";
+import { prepareStartProductionRuntimeEnv } from "../scripts/lib/start-production-runtime.mjs";
 import {
   FULL_LOCAL_APP_SECRET_ENV,
   loadFullLocalAppSecretEnv,
@@ -80,6 +81,34 @@ describe("production start arguments", () => {
       repositoryRoot: process.cwd(),
       secretDirectory: undefined,
     })).toEqual({});
+  });
+
+  it("loads env files before resolving the full-local secret directory", () => {
+    const processEnv: Record<string, string | undefined> = {};
+    const calls: string[] = [];
+
+    const merged = prepareStartProductionRuntimeEnv({
+      repositoryRoot: "/Users/tester/homecook",
+      processEnv,
+      loadEnvFiles: ({ rootDir }) => {
+        calls.push(`env:${rootDir}`);
+        processEnv.HOMECOOK_FULL_LOCAL_SECRET_DIR = "/tmp/full-local-secrets";
+        return [];
+      },
+      loadSecretEnv: ({ secretDirectory }) => {
+        calls.push(`secret:${secretDirectory ?? "missing"}`);
+        return { AUTH_FLOW_HMAC_KEY: "loaded-secret" };
+      },
+    });
+
+    expect(calls).toEqual([
+      "env:/Users/tester/homecook",
+      "secret:/tmp/full-local-secrets",
+    ]);
+    expect(merged).toMatchObject({
+      HOMECOOK_FULL_LOCAL_SECRET_DIR: "/tmp/full-local-secrets",
+      AUTH_FLOW_HMAC_KEY: "loaded-secret",
+    });
   });
 
   it("rejects insecure permissions and symbolic-link secret files", () => {

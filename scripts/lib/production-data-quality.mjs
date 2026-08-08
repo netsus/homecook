@@ -1,6 +1,12 @@
-import { existsSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { existsSync, lstatSync, readFileSync, realpathSync } from "node:fs";
 import { isIP } from "node:net";
-import { resolve } from "node:path";
+import { isAbsolute, join, resolve } from "node:path";
+import {
+  FULL_LOCAL_SECRET_NAMES,
+  validateExternalSecretDirectory,
+  validateFullLocalProductionConfig,
+} from "./full-local-production-runtime.mjs";
 
 const PRODUCTION_ENVS = new Set(["production", "preview-production"]);
 
@@ -60,6 +66,17 @@ export const PRODUCTION_DATA_SCAN_TABLES = [
     idField: "id",
   },
 ];
+
+const LOCAL_MAC_FULL_LOCAL_CONFIG = "infra/full-local-supabase/.env.production.local";
+const LOCAL_MAC_FULL_LOCAL_CONFIG_EXAMPLE = "infra/full-local-supabase/.env.production.example";
+const LOCAL_MAC_FULL_LOCAL_PROJECT = "homecook-full-local-isolated";
+
+const LOCAL_SCAN_COLUMNS = Object.freeze(Object.fromEntries(
+  PRODUCTION_DATA_SCAN_TABLES.map((table) => [
+    table.table,
+    Object.freeze(table.columns.split(",").map((column) => column.trim())),
+  ]),
+));
 
 export function loadProductionEnvFiles({
   rootDir = process.cwd(),
@@ -272,13 +289,281 @@ export function buildDataQualityFindings(rowsByTable) {
           field: match.field,
           rule: match.rule,
           message: `${tableConfig.table}.${match.field} contains ${match.label}.`,
-          value: match.value,
         });
       }
     }
   }
 
   return findings;
+}
+
+function scanFailure() {
+  return {
+    errors: [{
+      code: "PRODUCTION_LOCAL_DB_SCAN_FAILED",
+      message: "Local Mac production data scan failed.",
+    }],
+    skipped: false,
+    skipReason: null,
+    findings: [],
+  };
+}
+
+function parseFullLocalConfig(text) {
+  const config = {};
+  for (const rawLine of String(text).split(/\r?\n/u)) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith("#")) continue;
+    const match = /^([A-Z][A-Z0-9_]*)=(.*)$/u.exec(line);
+    if (!match) throw new Error("Invalid full-local config.");
+    let value = match[2].trim();
+    if (
+      (value.startsWith('"') && value.endsWith('"'))
+      || (value.startsWith("'") && value.endsWith("'"))
+    ) {
+      value = value.slice(1, -1);
+    }
+    config[match[1]] = value;
+  }
+  return config;
+}
+
+function assertMode(stat, expected, kind) {
+  if ((stat.mode & 0o777) !== expected) {
+    throw new Error(`Invalid ${kind} mode.`);
+  }
+}
+
+function isRegularFile(stat) {
+  return typeof stat.isFile === "function"
+    ? stat.isFile()
+    : (stat.mode & 0o170000) === 0o100000;
+}
+
+function isDirectory(stat) {
+  return typeof stat.isDirectory === "function"
+    ? stat.isDirectory()
+    : (stat.mode & 0o170000) === 0o040000;
+}
+
+function isSymbolicLink(stat) {
+  return typeof stat.isSymbolicLink === "function" && stat.isSymbolicLink();
+}
+
+function assertLocalScannerPaths({
+  configPath,
+  configExamplePath,
+  repositoryRoot,
+  secretDirectory,
+  statImpl,
+  realpathImpl,
+}) {
+  if (
+    typeof secretDirectory !== "string"
+    || secretDirectory.trim().length === 0
+    || !isAbsolute(configPath)
+    || !isAbsolute(configExamplePath)
+    || !isAbsolute(secretDirectory)
+  ) {
+    throw new Error("Full-local paths must be absolute.");
+  }
+
+  const configStat = statImpl(configPath);
+  if (isSymbolicLink(configStat) || !isRegularFile(configStat)) {
+    throw new Error("Full-local config must be a regular file.");
+  }
+  assertMode(configStat, 0o600, "config");
+
+  const configExampleStat = statImpl(configExamplePath);
+  if (isSymbolicLink(configExampleStat) || !isRegularFile(configExampleStat)) {
+    throw new Error("Full-local config example must be a regular file.");
+  }
+
+  const repository = realpathImpl(repositoryRoot);
+  const requestedSecretDirectory = resolve(secretDirectory);
+  const validatedSecretDirectory = validateExternalSecretDirectory({
+    repositoryRoot: repository,
+    secretDirectory: requestedSecretDirectory,
+  });
+  if (realpathImpl(validatedSecretDirectory) !== requestedSecretDirectory) {
+    throw new Error("Full-local secret directory alias is not allowed.");
+  }
+
+  const secretDirectoryStat = statImpl(secretDirectory);
+  if (isSymbolicLink(secretDirectoryStat) || !isDirectory(secretDirectoryStat)) {
+    throw new Error("Full-local secret directory must be a real directory.");
+  }
+  assertMode(secretDirectoryStat, 0o700, "secret directory");
+}
+
+function localScanSql(limit) {
+  const queries = PRODUCTION_DATA_SCAN_TABLES.map((table) => {
+    const columns = LOCAL_SCAN_COLUMNS[table.table].map((column) => `"${column}"`).join(", ");
+    return `'${table.table}', COALESCE((SELECT json_agg(row_to_json(scanned) ORDER BY scanned."${table.idField}") FROM (SELECT ${columns} FROM public."${table.table}" ORDER BY "${table.idField}" LIMIT ${limit}) AS scanned), '[]'::json)`;
+  });
+  return [
+    "BEGIN READ ONLY;",
+    "SET LOCAL statement_timeout = '30s';",
+    `SELECT json_build_object(${queries.join(", ")})::text;`,
+    "COMMIT;",
+  ].join("\n");
+}
+
+function validateRowsByTable(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error("Invalid scan result.");
+  }
+  const expectedTables = PRODUCTION_DATA_SCAN_TABLES.map((table) => table.table).sort();
+  if (JSON.stringify(Object.keys(value).sort()) !== JSON.stringify(expectedTables)) {
+    throw new Error("Invalid scan tables.");
+  }
+  for (const table of expectedTables) {
+    if (!Array.isArray(value[table])) throw new Error("Invalid scan rows.");
+    const allowedColumns = new Set(LOCAL_SCAN_COLUMNS[table]);
+    for (const row of value[table]) {
+      if (!row || typeof row !== "object" || Array.isArray(row)) {
+        throw new Error("Invalid scan row.");
+      }
+      if (Object.keys(row).some((key) => !allowedColumns.has(key))) {
+        throw new Error("Unexpected scan column.");
+      }
+    }
+  }
+  return value;
+}
+
+/**
+ * @param {{
+ *   env?: Record<string, string | undefined>,
+ * }} [options]
+ */
+export function shouldUseLocalMacProductionDataScan({
+  env = process.env,
+} = {}) {
+  return env.HOMECOOK_AUTH_AUTHORITY === "local"
+    && env.HOMECOOK_DATA_AUTHORITY === "local";
+}
+
+/**
+ * @param {{
+ *   rootDir?: string,
+ *   env?: Record<string, string | undefined>,
+ *   limit?: number,
+ *   readFileImpl?: (path: string) => string,
+ *   statImpl?: (path: string) => {
+ *     mode: number,
+ *     isFile?: () => boolean,
+ *     isDirectory?: () => boolean,
+ *     isSymbolicLink?: () => boolean,
+ *   },
+ *   realpathImpl?: (path: string) => string,
+ *   runCommand?: (command: string, args: string[], options: Record<string, unknown>) => {
+ *     status: number | null,
+ *     stdout?: string | Buffer,
+ *     stderr?: string | Buffer,
+ *   },
+ * }} [options]
+ */
+export async function scanLocalMacProductionData({
+  rootDir = process.cwd(),
+  env = process.env,
+  limit = 500,
+  readFileImpl = (path) => readFileSync(path, "utf8"),
+  statImpl = lstatSync,
+  realpathImpl = realpathSync,
+  runCommand = (command, args, options) => spawnSync(command, args, options),
+} = {}) {
+  try {
+    if (!Number.isInteger(limit) || limit < 1 || limit > 500) {
+      throw new Error("Invalid scan limit.");
+    }
+    const repositoryRoot = realpathImpl(resolve(rootDir));
+    const configPath = resolve(repositoryRoot, LOCAL_MAC_FULL_LOCAL_CONFIG);
+    const configExamplePath = resolve(repositoryRoot, LOCAL_MAC_FULL_LOCAL_CONFIG_EXAMPLE);
+    const secretDirectory = env.HOMECOOK_FULL_LOCAL_SECRET_DIR;
+    assertLocalScannerPaths({
+      configPath,
+      configExamplePath,
+      repositoryRoot,
+      secretDirectory,
+      statImpl,
+      realpathImpl,
+    });
+    const config = parseFullLocalConfig(readFileImpl(configPath));
+    const configExample = parseFullLocalConfig(readFileImpl(configExamplePath));
+    if (configExample.FULL_LOCAL_COMPOSE_PROJECT_NAME !== LOCAL_MAC_FULL_LOCAL_PROJECT) {
+      throw new Error("Unexpected canonical compose project.");
+    }
+    if (
+      config.FULL_LOCAL_COMPOSE_PROJECT_NAME !== LOCAL_MAC_FULL_LOCAL_PROJECT
+      || config.FULL_LOCAL_SECRET_DIR !== secretDirectory
+    ) {
+      throw new Error("Full-local config identity mismatch.");
+    }
+    const secrets = Object.fromEntries(FULL_LOCAL_SECRET_NAMES.map((fileName) => {
+      const secretPath = join(secretDirectory, fileName);
+      const fileStat = statImpl(secretPath);
+      if (isSymbolicLink(fileStat) || !isRegularFile(fileStat)) {
+        throw new Error("Full-local secret must be a regular file.");
+      }
+      assertMode(fileStat, 0o600, "secret file");
+      return [fileName, readFileImpl(secretPath)];
+    }));
+    validateFullLocalProductionConfig({
+      config,
+      configFileMode: statImpl(configPath).mode,
+      secretDirectoryMode: statImpl(secretDirectory).mode,
+      secrets,
+    });
+
+    const containers = runCommand("docker", [
+      "ps",
+      "--filter", `label=com.docker.compose.project=${LOCAL_MAC_FULL_LOCAL_PROJECT}`,
+      "--filter", "label=com.docker.compose.service=postgres",
+      "--filter", "status=running",
+      "--filter", "health=healthy",
+      "--format", "{{.ID}}",
+    ], {
+      encoding: "utf8",
+      maxBuffer: 1024 * 1024,
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    const containerIds = String(containers.stdout ?? "")
+      .split(/\r?\n/u).map((value) => value.trim()).filter(Boolean);
+    if (
+      containers.status !== 0
+      || containerIds.length !== 1
+      || !/^[a-f0-9]{12,64}$/u.test(containerIds[0])
+    ) {
+      throw new Error("Full-local PostgreSQL container is not uniquely healthy.");
+    }
+
+    const query = runCommand("docker", [
+      "exec", "-i", containerIds[0],
+      "psql", "-X", "-qAt", "-U", "supabase_admin", "-d", "postgres",
+      "-v", "ON_ERROR_STOP=1",
+    ], {
+      encoding: "utf8",
+      input: localScanSql(limit),
+      maxBuffer: 16 * 1024 * 1024,
+      stdio: ["pipe", "pipe", "pipe"],
+    });
+    if (query.status !== 0) throw new Error("Full-local PostgreSQL query failed.");
+    const output = String(query.stdout ?? "")
+      .split(/\r?\n/u)
+      .map((value) => value.trim())
+      .filter(Boolean)
+      .at(-1);
+    const rowsByTable = validateRowsByTable(JSON.parse(output ?? ""));
+    return {
+      errors: [],
+      skipped: false,
+      skipReason: null,
+      findings: buildDataQualityFindings(rowsByTable),
+    };
+  } catch {
+    return scanFailure();
+  }
 }
 
 async function scanTable(supabase, tableConfig, limit) {
@@ -300,7 +585,7 @@ async function scanTable(supabase, tableConfig, limit) {
   return { errors: [], rows: Array.isArray(data) ? data : [] };
 }
 
-export async function scanProductionData({ env = process.env, limit = 500 } = {}) {
+async function scanRemoteProductionData({ env = process.env, limit = 500 } = {}) {
   const url = env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceRoleKey = env.SUPABASE_SERVICE_ROLE_KEY;
 
@@ -337,14 +622,49 @@ export async function scanProductionData({ env = process.env, limit = 500 } = {}
   };
 }
 
+/**
+ * @param {{
+ *   rootDir?: string,
+ *   env?: Record<string, string | undefined>,
+ *   limit?: number,
+ *   shouldUseLocalScanner?: (options: {
+ *     rootDir: string,
+ *     env: Record<string, string | undefined>,
+ *   }) => boolean,
+ *   localScanner?: (options: {
+ *     rootDir: string,
+ *     env: Record<string, string | undefined>,
+ *     limit: number,
+ *   }) => Promise<object>,
+ *   remoteScanner?: (options: {
+ *     env: Record<string, string | undefined>,
+ *     limit: number,
+ *   }) => Promise<object>,
+ * }} [options]
+ */
+export async function scanProductionData({
+  rootDir = process.cwd(),
+  env = process.env,
+  limit = 500,
+  shouldUseLocalScanner = shouldUseLocalMacProductionDataScan,
+  localScanner = scanLocalMacProductionData,
+  remoteScanner = scanRemoteProductionData,
+} = {}) {
+  if (shouldUseLocalScanner({ rootDir, env })) {
+    return localScanner({ rootDir, env, limit });
+  }
+  return remoteScanner({ env, limit });
+}
+
 export async function validateProductionDataQuality({
+  rootDir = process.cwd(),
   env = process.env,
   limit = 500,
   requireDb = false,
 } = {}) {
   const envResult = validateProductionEnv(env);
   const dbResult = envResult.productionLike
-    ? await scanProductionData({ env, limit })
+    ? await scanProductionData({ rootDir, env, limit })
     : {
         errors: [],
         skipped: true,

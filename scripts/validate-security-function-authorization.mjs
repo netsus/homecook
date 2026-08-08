@@ -27,20 +27,6 @@ const ADDITIVE_SOURCES = [
       REPO_ROOT,
       "docs/security/full-local-auth-db-security-function-authorization-manifest.json",
     ),
-    migrationPaths: [
-      path.join(
-        REPO_ROOT,
-        "supabase/migrations/20260801120000_full_local_auth_db_foundation.sql",
-      ),
-      path.join(
-        REPO_ROOT,
-        "supabase/migrations/20260803090000_full_local_session_issue_time_precision.sql",
-      ),
-      path.join(
-        REPO_ROOT,
-        "supabase/migrations/20260809100000_full_local_session_refresh_authority.sql",
-      ),
-    ],
   },
   {
     manifestPath: process.env.SECURITY_FUNCTION_ADDITIVE_MANIFEST_PATH
@@ -50,36 +36,7 @@ const ADDITIVE_SOURCES = [
       ),
     migrationPaths: process.env.SECURITY_FUNCTION_ADDITIVE_MIGRATION_PATH
       ? [process.env.SECURITY_FUNCTION_ADDITIVE_MIGRATION_PATH]
-      : [
-          path.join(
-            REPO_ROOT,
-            "supabase/migrations/20260723140000_account_session_generation_foundation.sql",
-          ),
-          path.join(
-            REPO_ROOT,
-            "supabase/migrations/20260730090000_hybrid_auth_remote_identity_epoch_mirror.sql",
-          ),
-          path.join(
-            REPO_ROOT,
-            "supabase/migrations/20260801151000_full_local_request_authority.sql",
-          ),
-          path.join(
-            REPO_ROOT,
-            "supabase/migrations/20260803091000_full_local_optional_nbf_authority.sql",
-          ),
-          path.join(
-            REPO_ROOT,
-            "supabase/migrations/20260803092000_recipe_future_internal_scope.sql",
-          ),
-          path.join(
-            REPO_ROOT,
-            "supabase/migrations/20260803093000_full_local_read_only_request_authority.sql",
-          ),
-          path.join(
-            REPO_ROOT,
-            "supabase/migrations/20260809100000_full_local_session_refresh_authority.sql",
-          ),
-        ],
+      : null,
   },
   {
     manifestPath: path.join(
@@ -1210,17 +1167,27 @@ function assertEnvironment(
   }
 }
 
+function resolveAdditiveSourcePaths(manifest, migrationPath, migrationPaths) {
+  const configuredPaths = migrationPaths
+    ?? (migrationPath ? [migrationPath] : manifest.migrations?.map(
+      (sourcePath) => path.join(REPO_ROOT, sourcePath),
+    ));
+  if (!configuredPaths || configuredPaths.length === 0) {
+    throw new Error(`additive security manifest has no migration source: ${manifest.slice}`);
+  }
+
+  return configuredPaths;
+}
+
 const migration = await readFile(MIGRATION_PATH, "utf8");
 const additiveSources = await Promise.all(
   ADDITIVE_SOURCES.map(async ({ manifestPath, migrationPath, migrationPaths }) => {
     const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
-    const sourcePaths = migrationPaths
-      ?? (migrationPath ? [migrationPath] : manifest.migrations?.map(
-        (sourcePath) => path.join(REPO_ROOT, sourcePath),
-      ));
-    if (!sourcePaths || sourcePaths.length === 0) {
-      throw new Error(`additive security manifest has no migration source: ${manifest.slice}`);
-    }
+    const sourcePaths = resolveAdditiveSourcePaths(
+      manifest,
+      migrationPath,
+      migrationPaths,
+    );
     return {
       manifest,
       migration: (

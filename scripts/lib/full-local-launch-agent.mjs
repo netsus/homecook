@@ -11,6 +11,7 @@ import {
 import { dirname, resolve } from "node:path";
 
 export const DEFAULT_FULL_LOCAL_LAUNCH_AGENT_LABEL = "com.homecook.full-local.production";
+const LAUNCHCTL_BIN = "/bin/launchctl";
 
 /**
  * @typedef {{
@@ -93,11 +94,25 @@ function requireExistingFile(path, label) {
   return stat;
 }
 
+function buildSanitizedLaunchAgentPath(nodeBin) {
+  const segments = [
+    dirname(requireAbsolutePath(nodeBin, "nodeBin")),
+    "/opt/homebrew/bin",
+    "/usr/local/bin",
+    "/usr/bin",
+    "/bin",
+    "/usr/sbin",
+    "/sbin",
+  ];
+
+  return [...new Set(segments)].join(":");
+}
+
 function runLaunchctl(args, spawn) {
-  const result = spawn("launchctl", args, { encoding: "utf8" });
+  const result = spawn(LAUNCHCTL_BIN, args, { encoding: "utf8" });
   if (result.status !== 0) {
     const details = `${result.stderr ?? ""}\n${result.stdout ?? ""}`.trim();
-    throw new Error(details || `launchctl ${args.join(" ")} failed.`);
+    throw new Error(details || `${LAUNCHCTL_BIN} ${args.join(" ")} failed.`);
   }
   return result;
 }
@@ -219,10 +234,12 @@ export function renderFullLocalLaunchAgentPlist({
   nodeBin = process.execPath,
   rootDir = process.cwd(),
 } = {}) {
+  const normalizedHomeDir = requireAbsolutePath(homeDir, "homeDir");
   const normalizedRootDir = requireAbsolutePath(rootDir, "rootDir");
   const normalizedNodeBin = requireAbsolutePath(nodeBin, "nodeBin");
   const normalizedConfigPath = requireAbsolutePath(configPath, "configPath");
-  const paths = getFullLocalLaunchAgentPaths(homeDir);
+  const sanitizedPath = buildSanitizedLaunchAgentPath(normalizedNodeBin);
+  const paths = getFullLocalLaunchAgentPaths(normalizedHomeDir);
 
   return `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -234,6 +251,10 @@ export function renderFullLocalLaunchAgentPlist({
   <string>${escapeXml(normalizedRootDir)}</string>
   <key>ProgramArguments</key>
   <array>
+    <string>/usr/bin/env</string>
+    <string>-i</string>
+    <string>${escapeXml(`HOME=${normalizedHomeDir}`)}</string>
+    <string>${escapeXml(`PATH=${sanitizedPath}`)}</string>
     <string>${escapeXml(normalizedNodeBin)}</string>
     <string>${escapeXml(resolve(normalizedRootDir, "scripts", "full-local-production-runtime.mjs"))}</string>
     <string>start</string>
@@ -306,7 +327,7 @@ export function readFullLocalLaunchAgentStatus({
   requireDarwin(platform);
   const uid = requireUserId(getuid);
   const serviceTarget = `gui/${uid}/${DEFAULT_FULL_LOCAL_LAUNCH_AGENT_LABEL}`;
-  const launchctlResult = spawn("launchctl", ["print", serviceTarget], {
+  const launchctlResult = spawn(LAUNCHCTL_BIN, ["print", serviceTarget], {
     encoding: "utf8",
   });
   const paths = getFullLocalLaunchAgentPaths(homeDir);
@@ -381,7 +402,7 @@ export function installFullLocalLaunchAgent({
   writeFileSync(paths.plistPath, plist, { encoding: "utf8", mode: 0o600 });
   chmodSync(paths.plistPath, 0o600);
 
-  spawn("launchctl", ["bootout", `gui/${uid}`, paths.plistPath], {
+  spawn(LAUNCHCTL_BIN, ["bootout", `gui/${uid}`, paths.plistPath], {
     encoding: "utf8",
   });
   runLaunchctl(["bootstrap", `gui/${uid}`, paths.plistPath], spawn);
@@ -417,7 +438,7 @@ export function uninstallFullLocalLaunchAgent({
   requireDarwin(platform);
   const uid = requireUserId(getuid);
   const paths = getFullLocalLaunchAgentPaths(homeDir);
-  spawn("launchctl", ["bootout", `gui/${uid}`, paths.plistPath], {
+  spawn(LAUNCHCTL_BIN, ["bootout", `gui/${uid}`, paths.plistPath], {
     encoding: "utf8",
   });
   rmSync(paths.plistPath, { force: true });

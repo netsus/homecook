@@ -18,15 +18,12 @@ import { ensureDockerRunning } from "./local-docker.mjs";
 export const LOCAL_MAC_PRODUCTION_LABEL = "com.homecook.production";
 export const DEFAULT_LOCAL_MAC_PRODUCTION_HOST = "127.0.0.1";
 export const DEFAULT_LOCAL_MAC_PRODUCTION_PORT = 3100;
-export const LOCAL_SUPABASE_CLI_PACKAGE = "supabase@2.110.0";
 
-const LOCAL_SUPABASE_ENV_KEYS = [
-  "COREPACK_HOME",
+const FULL_LOCAL_RUNTIME_ENV_KEYS = [
   "DOCKER_CONTEXT",
   "DOCKER_HOST",
   "HOME",
   "PATH",
-  "PNPM_HOME",
   "TMPDIR",
   "XDG_CONFIG_HOME",
 ];
@@ -121,11 +118,11 @@ function ensureLocalNextStartArgs(args) {
   ];
 }
 
-function createLocalSupabaseCommandEnv(env) {
+function createFullLocalRuntimeCommandEnv(env) {
   /** @type {Record<string, string | undefined>} */
   const commandEnv = {};
 
-  for (const key of LOCAL_SUPABASE_ENV_KEYS) {
+  for (const key of FULL_LOCAL_RUNTIME_ENV_KEYS) {
     if (typeof env[key] === "string" && env[key].length > 0) {
       commandEnv[key] = env[key];
     }
@@ -133,7 +130,6 @@ function createLocalSupabaseCommandEnv(env) {
 
   ensureNonEmptyString(commandEnv.HOME, "HOME");
   ensureNonEmptyString(commandEnv.PATH, "PATH");
-  commandEnv.npm_config_offline = "true";
 
   return commandEnv;
 }
@@ -341,7 +337,7 @@ function getLocalMacProductionPath(nodeBin) {
  *   ) => { status: number | null },
  * }} options
  */
-export function verifyLocalMacProductionBootCli({
+export function verifyFullLocalProductionRuntimeStatus({
   command,
   args,
   cwd,
@@ -357,7 +353,8 @@ export function verifyLocalMacProductionBootCli({
 
   if (result.status !== 0) {
     throw new Error(
-      `Unable to cache ${LOCAL_SUPABASE_CLI_PACKAGE} for offline production boot.`,
+      "Full-local production runtime health check failed; "
+      + "com.homecook.full-local.production must be healthy before starting the app.",
     );
   }
 }
@@ -399,33 +396,17 @@ export async function startLocalMacProductionRuntime({
   const normalizedRootDir = resolve(ensureNonEmptyString(rootDir, "rootDir"));
   const normalizedNodeBin = resolve(ensureNonEmptyString(nodeBin, "nodeBin"));
   const normalizedArgs = ensureLocalNextStartArgs(args);
-  const supabaseEnv = createLocalSupabaseCommandEnv(env);
+  const runtimeEnv = createFullLocalRuntimeCommandEnv(env);
 
   await ensureDocker();
 
-  const commandOptions = {
+  verifyFullLocalProductionRuntimeStatus({
+    command: normalizedNodeBin,
+    args: [resolve(normalizedRootDir, "scripts", "full-local-production-runtime.mjs"), "status"],
     cwd: normalizedRootDir,
-    env: supabaseEnv,
-    encoding: "utf8",
-    stdio: "ignore",
-  };
-  const startResult = runCommand(
-    "pnpm",
-    ["dlx", LOCAL_SUPABASE_CLI_PACKAGE, "start"],
-    commandOptions,
-  );
-  if (startResult.status !== 0) {
-    throw new Error("Local Supabase start failed.");
-  }
-
-  const statusResult = runCommand(
-    "pnpm",
-    ["dlx", LOCAL_SUPABASE_CLI_PACKAGE, "status"],
-    commandOptions,
-  );
-  if (statusResult.status !== 0) {
-    throw new Error("Local Supabase health check failed.");
-  }
+    env: runtimeEnv,
+    runCommand,
+  });
 
   return spawnProcess(
     normalizedNodeBin,
@@ -511,6 +492,8 @@ export function verifyLocalMacProductionPrerequisites({
     resolve(rootDir, ".next", "BUILD_ID"),
     resolve(rootDir, "scripts", "start-local-mac-production.mjs"),
     resolve(rootDir, "scripts", "start-production.mjs"),
+    resolve(rootDir, "scripts", "full-local-production-runtime.mjs"),
+    resolve(rootDir, "infra", "full-local-supabase", ".env.production.local"),
     resolve(nodeBin),
   ];
   const missingPaths = requiredPaths.filter((filePath) => !existsSync(filePath));
@@ -539,7 +522,7 @@ export function installLocalMacProductionLaunchAgent({
   platform = process.platform,
   getuid = process.getuid?.bind(process),
   spawn = spawnSync,
-  verifyBootCli = verifyLocalMacProductionBootCli,
+  verifyRuntimeStatus = verifyFullLocalProductionRuntimeStatus,
   verifyPrerequisites = verifyLocalMacProductionPrerequisites,
 } = {}) {
   if (platform !== "darwin") {
@@ -557,9 +540,9 @@ export function installLocalMacProductionLaunchAgent({
     rootDir: normalizedRootDir,
     nodeBin: normalizedNodeBin,
   });
-  verifyBootCli({
-    command: "pnpm",
-    args: ["dlx", LOCAL_SUPABASE_CLI_PACKAGE, "--version"],
+  verifyRuntimeStatus({
+    command: normalizedNodeBin,
+    args: [resolve(normalizedRootDir, "scripts", "full-local-production-runtime.mjs"), "status"],
     cwd: normalizedRootDir,
     env: {
       HOME: resolve(ensureNonEmptyString(homeDir, "homeDir")),
@@ -682,6 +665,7 @@ export async function activateLocalMacProduction({
 } = {}) {
   loadEnvFiles({ rootDir });
   const validation = await validateDataQuality({
+    rootDir,
     env: {
       ...process.env,
       NODE_ENV: "production",

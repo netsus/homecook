@@ -228,6 +228,7 @@ describe("supabase server helpers", () => {
     const shoppingCreateClient = server.createShoppingCreateInternalClient();
     const lifecycleClient = server.createAccountLifecycleInternalRpcClient();
     server.createYoutubeIngredientRegistrationInternalRpcClient();
+    const youtubeExtractionClient = server.createYoutubeExtractionInternalClient();
     const adminClient = server.createAdminDataInternalClient();
     const feedbackClient = server.createNotFoundFeedbackInternalClient();
     const eventClient = server.createOperationalEventInternalClient();
@@ -244,6 +245,7 @@ describe("supabase server helpers", () => {
       "shopping-create",
       "account-lifecycle",
       "youtube-ingredient-registration",
+      "youtube-extraction",
       "admin-data",
       "not-found-feedback",
       "operational-event",
@@ -262,6 +264,30 @@ describe("supabase server helpers", () => {
     expect(() => lifecycleClient?.from("recipes")).toThrow(
       "Internal Data scope denied table: recipes",
     );
+    expect(() => youtubeExtractionClient?.from("users")).toThrow(
+      "Internal Data scope denied table: users",
+    );
+    expect(() => youtubeExtractionClient?.from("youtube_extraction_sessions"))
+      .not.toThrow();
+    expect(() => youtubeExtractionClient?.from("youtube_extraction_candidates"))
+      .not.toThrow();
+    expect(() => youtubeExtractionClient?.from("youtube_transcript_cache"))
+      .not.toThrow();
+    expect(() => youtubeExtractionClient?.from("youtube_transcript_fetch_events"))
+      .not.toThrow();
+    expect(() => youtubeExtractionClient?.from("youtube_llm_extraction_cache"))
+      .not.toThrow();
+    expect(() => youtubeExtractionClient?.from("youtube_llm_extraction_events"))
+      .not.toThrow();
+    expect(() => youtubeExtractionClient?.from("youtube_visual_extraction_cache"))
+      .not.toThrow();
+    expect(() => youtubeExtractionClient?.from("youtube_visual_extraction_events"))
+      .not.toThrow();
+    expect(() => youtubeExtractionClient?.from("cooking_methods"))
+      .not.toThrow();
+    expect(youtubeExtractionClient).toEqual({
+      from: expect.any(Function),
+    });
     expect(callbackClient).not.toHaveProperty("from");
     expect(callbackClient).toEqual({ rpc: expect.any(Function) });
     expect(() => adminClient?.from("recipes")).toThrow(

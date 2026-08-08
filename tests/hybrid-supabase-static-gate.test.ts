@@ -22,6 +22,8 @@ const APPROVED_USER_SERVICE_ROLE_FILES = [
   "app/api/v1/meals/[meal_id]/route.ts",
   "app/api/v1/meals/route.ts",
   "app/api/v1/shopping/lists/route.ts",
+  "lib/server/youtube-import.ts",
+  "lib/server/youtube-import.ts",
 ];
 const APPROVED_SERVICE_ROLE_FILES = [...APPROVED_USER_SERVICE_ROLE_FILES];
 
@@ -183,6 +185,16 @@ describe("hybrid authority AST/static gate", () => {
         functionName: "readRecipeSnapshotEntrypointContext",
       },
       {
+        factory: "createYoutubeExtractionInternalClient",
+        file: "lib/server/youtube-import.ts",
+        functionName: "handleYoutubeExtract",
+      },
+      {
+        factory: "createYoutubeExtractionInternalClient",
+        file: "lib/server/youtube-import.ts",
+        functionName: "handleYoutubeCandidateDraft",
+      },
+      {
         factory: "createYoutubeIngredientRegistrationInternalRpcClient",
         file: "lib/server/youtube-import.ts",
         functionName: "handleYoutubeIngredientRegistration",
@@ -203,6 +215,17 @@ describe("hybrid authority AST/static gate", () => {
           "readRecipeSnapshotUiMode",
         ],
       },
+      createYoutubeExtractionInternalClient: {
+        "lib/server/youtube-import.ts": [
+          "handleYoutubeCandidateDraft",
+          "handleYoutubeExtract",
+        ],
+      },
+    });
+    expect(inventory.internalOperationAllowlist).toMatchObject({
+      createYoutubeExtractionInternalClient: [
+        "lib/server/youtube-import.ts",
+      ],
     });
 
     const serverFactory = readFileSync("lib/supabase/server.ts", "utf8");
@@ -233,6 +256,25 @@ describe("hybrid authority AST/static gate", () => {
         factory: "createRecipeFuturePropagationInternalClient",
         file: "app/api/v1/recipes/[id]/route.ts",
         functionName: "GET",
+      }),
+    ]);
+  });
+
+  it("rejects a youtube extraction internal client outside the exact allowlist file", () => {
+    const root = fixtureRepository({
+      "app/api/v1/recipes/youtube/extract/route.ts": `export async function POST() {
+  return createYoutubeExtractionInternalClient();
+}
+`,
+    });
+
+    const inventory = inventoryHybridAuthorityPaths(root);
+
+    expect(inventory.internalOperationViolations).toEqual([
+      expect.objectContaining({
+        factory: "createYoutubeExtractionInternalClient",
+        file: "app/api/v1/recipes/youtube/extract/route.ts",
+        functionName: "POST",
       }),
     ]);
   });

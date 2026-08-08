@@ -1,4 +1,4 @@
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import {
   mkdtempSync,
   mkdirSync,
@@ -16,7 +16,9 @@ import { describe, expect, it } from "vitest";
 import {
   ALLOWED_PHASES,
   EXPECTED_LIVE_ROOT,
+  REFRESH_LIFECYCLE_JSON_SCRIPT,
   assertEvidencePhaseReady,
+  buildMigrationHeadSql,
   buildSessionLifecycleEvidence,
   computeLiveDirtyDiffSha256,
   normalizeRuntimeStatus,
@@ -24,10 +26,12 @@ import {
   parseGoTruePolicyGateJson,
   parseMigrationHeadSqlOutput,
   parseRefreshLifecycleGateJson,
+  loadPriorT65Evidence,
   runEvidenceCommand,
   validateEvidenceOutputPath,
   validateLiveRoot,
   validateSessionLifecycleEvidence,
+  validateLaunchAgentProvenance,
   writeSessionLifecycleEvidence,
 } from "../scripts/capture-full-local-session-lifecycle-evidence.mjs";
 
@@ -64,6 +68,38 @@ function createGitFixture() {
 }
 
 describe("full-local session lifecycle evidence contract", () => {
+  it("keeps the canonical raw lifecycle gate separate from the evidence JSON wrapper", () => {
+    const packageJson = JSON.parse(readFileSync("package.json", "utf8")) as {
+      scripts: Record<string, string>;
+    };
+
+    expect(packageJson.scripts["verify:full-local-session-refresh-lifecycle"]).toBe(
+      "pnpm exec vitest run tests/full-local-session-authority.test.ts tests/full-local-auth-db-foundation.test.ts tests/full-local-request-authority-migration.test.ts tests/hybrid-session-authority-bootstrap.test.ts tests/hybrid-session-authority-gateway.test.ts && pnpm test:full-local-auth-db-foundation:postgres && pnpm test:full-local-production:runtime",
+    );
+    expect(packageJson.scripts["verify:full-local-session-refresh-lifecycle:json"]).toBe(
+      "node scripts/verify-full-local-session-production-canary.mjs --refresh-lifecycle-gate --json",
+    );
+    expect(packageJson.scripts["verify:full-local-session-refresh-lifecycle:raw"]).toBeUndefined();
+    expect(REFRESH_LIFECYCLE_JSON_SCRIPT).toBe(
+      "verify:full-local-session-refresh-lifecycle:json",
+    );
+  });
+
+  it("redacts every top-level CLI failure without echoing raw arguments", () => {
+    const result = spawnSync(process.execPath, [
+      "scripts/capture-full-local-session-lifecycle-evidence.mjs",
+      "oauth_code=must-not-escape",
+    ], {
+      cwd: process.cwd(),
+      encoding: "utf8",
+    });
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toBe("");
+    expect(result.stderr).toBe("session-lifecycle-evidence: FAIL (redacted)\n");
+    expect(result.stderr).not.toContain("must-not-escape");
+  });
+
   it("keeps the four planned phases exact", () => {
     expect(ALLOWED_PHASES).toEqual([
       "baseline",
@@ -305,6 +341,16 @@ describe("full-local session lifecycle evidence contract", () => {
         first_stale_at: "2026-08-08T10:00:00.000Z",
       },
       phase: "milestone-a-t65",
+      safety_checks: {
+        binding_expiry_monotonic: "PASS",
+        logout_new_token_read: "BLOCKED",
+        logout_new_token_write: "BLOCKED",
+        logout_old_token_read: "BLOCKED",
+        logout_old_token_write: "BLOCKED",
+        planner_write_cleanup: "PASS",
+        phase_time_boundary: "PASS",
+        stale_counts_since_deploy: "PASS",
+      },
       stale_token_mutation_count: 0,
       status: "PASS",
     }), {
@@ -317,7 +363,123 @@ describe("full-local session lifecycle evidence contract", () => {
     }));
   });
 
+  it("does not treat a later-phase canary as the prior T+65 gate", () => {
+    const implementationSha = "c".repeat(40);
+    const parsed = parseCanaryObservationJson(JSON.stringify({
+      account_session_stale_count: 0,
+      canary_results: {
+        pantry_read: "PASS",
+        planner_read: "PASS",
+        planner_write: "PASS",
+        youtube_extract: "PASS",
+      },
+      implementation_sha: implementationSha,
+      incident: {
+        binding_created_at: "2026-08-09T00:00:00.000Z",
+        binding_expires_at: "2026-08-10T02:00:00.000Z",
+        first_stale_at: null,
+      },
+      phase: "milestone-a-24h",
+      safety_checks: {
+        binding_expiry_monotonic: "PASS",
+        logout_new_token_read: "BLOCKED",
+        logout_new_token_write: "BLOCKED",
+        logout_old_token_read: "BLOCKED",
+        logout_old_token_write: "BLOCKED",
+        phase_time_boundary: "PASS",
+        planner_write_cleanup: "PASS",
+        stale_counts_since_deploy: "PASS",
+      },
+      stale_token_mutation_count: 0,
+      status: "PASS",
+    }), {
+      implementationSha,
+      phase: "milestone-a-24h",
+    });
+
+    expect(parsed.t65Canary).toBeUndefined();
+  });
+
+  it("inherits T+65 only from the exact validated prior evidence file", () => {
+    const implementationRoot = realpathSync(mkdtempSync(path.join(tmpdir(), "prior-t65-root-")));
+    const implementationSha = "c".repeat(40);
+    const outputPath = path.join(
+      implementationRoot,
+      "docs/workpacks/full-local-supabase-production/evidence/2026-08-08-session-lifecycle/milestone-a-t65.json",
+    );
+    const evidence = createEvidence({
+      implementationSha,
+      observation: {
+        accountSessionStaleCount: 0,
+        bindingCreatedAt: "2026-08-09T00:00:00.000Z",
+        bindingExpiresAt: "2026-08-09T02:00:00.000Z",
+        canaryResults: {
+          pantry_read: "PASS",
+          planner_read: "PASS",
+          planner_write: "PASS",
+          youtube_extract: "PASS",
+        },
+        firstStaleAt: null,
+        staleTokenMutationCount: 0,
+        t65Canary: "PASS",
+      },
+      phase: "milestone-a-t65",
+      verification: {
+        authority_static_contracts: "PASS",
+        docker_refresh_smoke: "PASS",
+        postgres_integration: "PASS",
+        refresh_lifecycle_gate: "PASS",
+        security_function_gate: "PASS",
+      },
+    });
+    writeSessionLifecycleEvidence({ evidence, implementationRoot, outputPath });
+
+    expect(loadPriorT65Evidence({ implementationRoot, implementationSha })).toBe("PASS");
+    expect(() => loadPriorT65Evidence({
+      implementationRoot,
+      implementationSha: "d".repeat(40),
+    })).toThrow(/prior T\+65 evidence/u);
+
+    const missingRoot = realpathSync(mkdtempSync(path.join(tmpdir(), "missing-prior-t65-")));
+    expect(() => loadPriorT65Evidence({
+      implementationRoot: missingRoot,
+      implementationSha,
+    })).toThrow(/prior T\+65 evidence/u);
+
+    const aliasParent = realpathSync(mkdtempSync(path.join(tmpdir(), "prior-t65-alias-")));
+    const aliasRoot = path.join(aliasParent, "implementation-root");
+    symlinkSync(implementationRoot, aliasRoot, "dir");
+    expect(() => loadPriorT65Evidence({
+      implementationRoot: aliasRoot,
+      implementationSha,
+    })).toThrow(/prior T\+65 evidence/u);
+
+    const symlinkFileRoot = realpathSync(mkdtempSync(path.join(tmpdir(), "prior-t65-file-link-")));
+    const symlinkOutputPath = path.join(
+      symlinkFileRoot,
+      "docs/workpacks/full-local-supabase-production/evidence/2026-08-08-session-lifecycle/milestone-a-t65.json",
+    );
+    mkdirSync(path.dirname(symlinkOutputPath), { recursive: true });
+    symlinkSync(outputPath, symlinkOutputPath);
+    expect(() => loadPriorT65Evidence({
+      implementationRoot: symlinkFileRoot,
+      implementationSha,
+    })).toThrow(/prior T\+65 evidence/u);
+  });
+
   it("accepts only one safe migration filename from the read-only SQL result", () => {
+    expect(parseMigrationHeadSqlOutput(
+      '{"migration_head":"20260809110000_full_local_request_transaction_and_youtube_scope.sql","source":"database_catalog_marker"}\n',
+    )).toEqual({
+      migrationHead: "20260809110000_full_local_request_transaction_and_youtube_scope.sql",
+      migrationHeadSource: "database_catalog_marker",
+    });
+    expect(parseMigrationHeadSqlOutput(
+      '{"migration_head":"20260809100000_full_local_session_refresh_authority.sql","source":"database_catalog_marker"}\n',
+    )).toEqual({
+      migrationHead: "20260809100000_full_local_session_refresh_authority.sql",
+      migrationHeadSource: "database_catalog_marker",
+    });
     expect(parseMigrationHeadSqlOutput(
       '{"migration_head":"20260803093000_full_local_read_only_request_authority.sql","source":"database_catalog_marker"}\n',
     )).toEqual({
@@ -330,6 +492,50 @@ describe("full-local session lifecycle evidence contract", () => {
     expect(() => parseMigrationHeadSqlOutput(
       '{"migration_head":"20260803093000_full_local_read_only_request_authority.sql","source":"checkout_guess"}\n',
     )).toThrow(/database_catalog_marker/u);
+  });
+
+  it("detects the request transaction read-only authority marker before the earlier refresh marker", () => {
+    const sql = buildMigrationHeadSql();
+    const readOnlyMarker = sql.indexOf("current_setting(''transaction_read_only'') = ''on''");
+    const refreshMarker = sql.indexOf("assert_and_renew_full_local_session_authority_v2");
+    const previousMarker = sql.indexOf("v_request_nbf := coalesce(");
+
+    expect(readOnlyMarker).toBeGreaterThanOrEqual(0);
+    expect(refreshMarker).toBeGreaterThan(readOnlyMarker);
+    expect(refreshMarker).toBeGreaterThanOrEqual(0);
+    expect(previousMarker).toBeGreaterThan(refreshMarker);
+    expect(sql).toContain("20260809110000_full_local_request_transaction_and_youtube_scope.sql");
+    expect(sql).toContain("20260809100000_full_local_session_refresh_authority.sql");
+    expect(sql).toContain("begin transaction read only;");
+    expect(sql).toContain("rollback;");
+  });
+
+  it("requires the post-deploy app LaunchAgent to target the exact implementation checkout", () => {
+    const implementationRoot = realpathSync(mkdtempSync(path.join(tmpdir(), "launch-agent-root-")));
+    const output = [
+      "state = running",
+      `working directory = ${implementationRoot}`,
+      "arguments = {",
+      "  /opt/homebrew/bin/node",
+      `  ${implementationRoot}/scripts/start-local-mac-production.mjs`,
+      "}",
+    ].join("\n");
+
+    expect(() => validateLaunchAgentProvenance({
+      implementationRoot,
+      launchctlOutput: output,
+      phase: "milestone-a-t65",
+    })).not.toThrow();
+    expect(() => validateLaunchAgentProvenance({
+      implementationRoot,
+      launchctlOutput: output.replace(implementationRoot, "/tmp/stale-checkout"),
+      phase: "milestone-a-t65",
+    })).toThrow(/implementation checkout/u);
+    expect(() => validateLaunchAgentProvenance({
+      implementationRoot,
+      launchctlOutput: "state = running\nworking directory = /tmp/dirty-live-root",
+      phase: "baseline",
+    })).not.toThrow();
   });
 
   it("keeps fixed stdin commands in Buffer mode without an invalid encoding", () => {
