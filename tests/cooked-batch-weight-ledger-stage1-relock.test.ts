@@ -96,8 +96,10 @@ describe("cooked-batch-weight-ledger fresh Stage 1 re-lock", () => {
     expect(automation.blocked_conditions).toContain(
       "stage2-entered-before-fresh-independent-slice8-design-critic-and-390-320-product-design-authority-pass",
     );
-    expect(readme).toContain("Stage 2 진입 전");
-    expect(acceptance).toContain("Stage 2 진입 전");
+    expect(readme).toContain("019fe02c-1b12-7d42-bcaf-0d5a02847967");
+    expect(readme).toContain("019fe041-2ff4-7f62-9786-79a46aecae0c");
+    expect(acceptance).toContain("- [ ] canonical COOK_MODE #8 design");
+    expect(acceptance).toContain("- [ ] fresh 390px/320px screenshot/Figma");
   });
 
   it("provides fresh #8 design evidence at the locked mobile widths", () => {
@@ -159,25 +161,29 @@ describe("cooked-batch-weight-ledger fresh Stage 1 re-lock", () => {
     expect(trailingWhitespaceLines).toEqual([]);
   });
 
-  it("records all internal 1.5 repairs while keeping fresh re-review pending", () => {
+  it("retains the old repair record and projects the final Stage 1 approvals", () => {
     const dependencyRepairSha =
       "9ff5a920f063af22cd8a8dbee33a603b27c3af57";
-    const projections = [
+    const currentProjections = [
       readme,
-      evidence,
       automation.notes,
       workItem.notes,
       status.notes,
     ];
 
-    for (const projection of projections) {
-      for (const finding of ["I15-B01", "I15-B02", "I15-B03"]) {
-        expect(projection).toContain(finding);
-      }
-      expect(projection).toContain("HOLD");
-      expect(projection).toContain("fresh internal 1.5 re-review pending");
-      expect(projection).toContain("#1286");
-      expect(projection).toContain(dependencyRepairSha);
+    for (const finding of ["I15-B01", "I15-B02", "I15-B03"]) {
+      expect(evidence).toContain(finding);
+    }
+    expect(evidence).toContain("HOLD");
+    expect(evidence).toContain("#1286");
+    expect(evidence).toContain(dependencyRepairSha);
+
+    for (const projection of currentProjections) {
+      expect(projection).toContain("019fe0c0");
+      expect(projection).toContain("019fe194-62d9-7ed2-9116-b820873bd48b");
+      expect(projection).toContain("APPROVE");
+      expect(projection).toContain("635763041d6420c648e2b55336e6caa9f1f9143c");
+      expect(projection).not.toContain("fresh internal 1.5 re-review pending");
     }
     expect(evidence).toContain("high/critical `0`");
     expect(evidence).toContain("false pass claim");

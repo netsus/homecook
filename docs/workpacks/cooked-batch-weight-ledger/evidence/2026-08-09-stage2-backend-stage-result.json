@@ -14,6 +14,8 @@
     "pnpm test:cooked-batch-weight-ledger:postgres",
     "pnpm test",
     "pnpm verify:backend",
+    "pnpm test:security-functions:postgres",
+    "node scripts/validate-security-function-authorization.mjs --contract-only",
     "pnpm validate:source-of-truth-sync",
     "pnpm validate:workflow-v2",
     "pnpm validate:workpack -- --slice cooked-batch-weight-ledger",
@@ -28,6 +30,7 @@
       "app/api/v1/cooked-batches/**",
       "app/api/v1/cooking/session-attempts/[id]/complete/route.ts",
       "app/api/v1/leftovers/**",
+      "app/api/v1/meals/route.ts",
       "lib/server/cooked-batch-route.ts",
       "lib/server/cooked-batches.ts",
       "lib/server/leftovers.ts",
@@ -36,12 +39,16 @@
       "scripts/run-cooked-batch-weight-ledger-postgres-integration.mjs",
       "scripts/run-recipe-snapshot-authority-postgres-integration.mjs",
       "scripts/validate-account-session-generation-inventory.mjs",
+      "scripts/validate-security-function-authorization.mjs",
       "docs/security/account-session-generation-inventory.json",
+      "docs/security/cooked-batch-weight-ledger-security-function-authorization-manifest.json",
       "docs/workpacks/cooked-batch-weight-ledger/**",
       "tests/*cooked-batch*",
       "tests/snapshot-v2-complete.test.ts",
       "tests/leftovers.backend.test.ts",
       "tests/account-session-generation-inventory.test.ts",
+      "tests/full-local-auth-db-foundation-postgres.integration.test.ts",
+      "tests/meal-create-route.test.ts",
       "package.json"
     ],
     "endpoints": [
@@ -54,7 +61,8 @@
     ],
     "routes": [
       "existing /api/v1/leftovers compatibility reader",
-      "existing /api/v1/leftovers/{id}/eat and uneat legacy-only writer"
+      "existing /api/v1/leftovers/{id}/eat and uneat legacy-only writer",
+      "existing POST /api/v1/meals leftover eligibility path"
     ],
     "states": [
       "known",
@@ -74,10 +82,13 @@
       "exact public success and error projections",
       "single-transaction planner and standalone completion",
       "selected-only exact pantry deletion",
+      "exact pantry and Meal-claim row locks plus affected-row counts",
       "append-only event ledger and full replay checksum",
+      "depleted v2 meal-link rejection in the final write transaction",
       "idempotent irreversible state transitions",
       "legacy nullable reader compatibility and v2 direct-write denial",
-      "account cleanup events-before-batch order"
+      "exact-owner account cleanup and events-before-batch order",
+      "17-function fail-closed authorization inventory"
     ]
   },
   "changed_files": [
@@ -90,7 +101,11 @@
     "app/api/v1/leftovers/[leftover_id]/eat/route.ts",
     "app/api/v1/leftovers/[leftover_id]/uneat/route.ts",
     "app/api/v1/leftovers/route.ts",
+    "app/api/v1/meals/route.ts",
+    ".workflow-v2/status.json",
+    ".workflow-v2/work-items/cooked-batch-weight-ledger.json",
     "docs/security/account-session-generation-inventory.json",
+    "docs/security/cooked-batch-weight-ledger-security-function-authorization-manifest.json",
     "docs/workpacks/README.md",
     "docs/workpacks/cooked-batch-weight-ledger/README.md",
     "docs/workpacks/cooked-batch-weight-ledger/acceptance.md",
@@ -104,13 +119,21 @@
     "scripts/run-cooked-batch-weight-ledger-postgres-integration.mjs",
     "scripts/run-recipe-snapshot-authority-postgres-integration.mjs",
     "scripts/validate-account-session-generation-inventory.mjs",
+    "scripts/validate-security-function-authorization.mjs",
+    "scripts/lib/full-local-security-inventory.mjs",
     "supabase/migrations/20260808143000_cooked_batch_weight_ledger.sql",
     "tests/account-session-generation-inventory.test.ts",
     "tests/cooked-batch-compatibility.test.ts",
     "tests/cooked-batch-security.test.ts",
     "tests/cooked-batch-weight-ledger-postgres.integration.test.ts",
     "tests/cooked-batch-weight-ledger.test.ts",
+    "tests/cooked-batch-api-contract-v1-2-36.test.ts",
+    "tests/cooked-batch-weight-ledger-stage1-relock.test.ts",
+    "tests/full-local-auth-db-foundation-postgres.integration.test.ts",
     "tests/leftovers.backend.test.ts",
+    "tests/meal-create-route.test.ts",
+    "tests/personal-recipe-editor-full-local-verifier.test.ts",
+    "tests/recipe-snapshot-authority-full-local-verifier.test.ts",
     "tests/snapshot-v2-complete.test.ts"
   ],
   "tests_touched": [
@@ -119,7 +142,13 @@
     "tests/cooked-batch-security.test.ts",
     "tests/cooked-batch-weight-ledger-postgres.integration.test.ts",
     "tests/cooked-batch-weight-ledger.test.ts",
+    "tests/cooked-batch-api-contract-v1-2-36.test.ts",
+    "tests/cooked-batch-weight-ledger-stage1-relock.test.ts",
+    "tests/full-local-auth-db-foundation-postgres.integration.test.ts",
     "tests/leftovers.backend.test.ts",
+    "tests/meal-create-route.test.ts",
+    "tests/personal-recipe-editor-full-local-verifier.test.ts",
+    "tests/recipe-snapshot-authority-full-local-verifier.test.ts",
     "tests/snapshot-v2-complete.test.ts"
   ],
   "artifacts_written": [

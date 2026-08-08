@@ -412,7 +412,7 @@ describe("cooked batch API v1.2.36 Contract Evolution", () => {
     expect(projectionSection).toContain("비공개");
   });
 
-  it("re-locks every #8 contract surface while keeping review and implementation pending", () => {
+  it("retains the #8 contract lock without promoting overall workflow approval", () => {
     const paths = [
       "docs/workpacks/cooked-batch-weight-ledger/README.md",
       "docs/workpacks/cooked-batch-weight-ledger/acceptance.md",
@@ -446,9 +446,10 @@ describe("cooked batch API v1.2.36 Contract Evolution", () => {
       approval_state: "not_started",
       verification_status: "pending",
     });
-    expect(`${workItem.notes}\n${status.notes}`).toMatch(
-      /fresh independent contract re-review pending/i,
-    );
-    expect(`${workItem.notes}\n${status.notes}`).toContain("Stage 2 resume pending");
+    const currentProjection = `${workItem.notes}\n${status.notes}`;
+    expect(currentProjection).toContain("019fe194-62d9-7ed2-9116-b820873bd48b");
+    expect(currentProjection).toContain("APPROVE");
+    expect(currentProjection).toContain("635763041d6420c648e2b55336e6caa9f1f9143c");
+    expect(currentProjection).toContain("Stage 3/Ready/merge remain pending");
   });
 });

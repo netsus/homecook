@@ -16,7 +16,7 @@ snapshot-v2 요리 완료를 session에 pin된 content/servings와 exact pantry 
 
 Stage 2는 current source-of-truth tuple requirements `v1.7.30`, screens `v1.5.34`, Flow `v1.3.32`, DB `v1.3.32`, API `v1.2.37`을 사용한다. API v1.2.37의 `0-CBW` compatibility block은 이 Stage 1 lock의 API v1.2.36 block과 byte-identical이므로 public endpoint/field/status/error 확장 없이 구현한다.
 
-Fresh independent contract re-review와 Stage 2 resume는 pending이다. 이 contract-docs 작성 작업은 Stage 1/internal 1.5를 self-approve하거나 Stage 2 구현을 시작하지 않는다. #7 broader lifecycle, Manual/server-Mac/OAuth, R/R+1/R+2도 기존 pending 상태를 유지한다.
+Stage 1은 original internal 1.5 task `019fe0c0…` APPROVE, current-tuple re-lock reviewer task `019fe194-62d9-7ed2-9116-b820873bd48b` APPROVE `P0/P1/P2=0/0/0`, PR #1289 merge `635763041d6420c648e2b55336e6caa9f1f9143c`, closeout task `019fe19e…`로 닫혔다. Stage 2 backend 구현은 별도 task `019fe1aa-82fd-7602-844e-e050efae93db`에서 진행하며 Stage 3/Ready/merge는 여전히 pending이다. #7 broader lifecycle, Manual/server-Mac/OAuth, R/R+1/R+2도 기존 pending 상태를 유지한다.
 
 ## Branches
 
@@ -236,7 +236,7 @@ creation flag rollback:
 
 ## Design Status
 
-`temporary`. Fresh independent critic task `019fe02c-1b12-7d42-bcaf-0d5a02847967` and 390px/320px product-design-authority task `019fe041-2ff4-7f62-9786-79a46aecae0c` passed with `0/0/0`. Internal 1.5 task `019fe049-dc14-77f0-ac4c-6dcb58d2b819` returned `HOLD` on old head `0eb76e8ff0450ccc4353b91f191be8a2f1e2dfb3`; `I15-B01`, `I15-B02`, and `I15-B03` are author-repaired, but fresh internal 1.5 re-review pending. Stage 2 진입 전 the re-review and Stage 1 merge must pass; #11 owns later final visual/accessibility completion.
+`temporary`. Fresh independent critic task `019fe02c-1b12-7d42-bcaf-0d5a02847967` and 390px/320px product-design-authority task `019fe041-2ff4-7f62-9786-79a46aecae0c` passed with `0/0/0`. The old internal 1.5 `HOLD` and repairs remain in the Stage 1 evidence; original internal 1.5 task `019fe0c0…` and current-tuple re-lock reviewer `019fe194-62d9-7ed2-9116-b820873bd48b` subsequently returned `APPROVE`, and PR #1289 merged as `635763041d6420c648e2b55336e6caa9f1f9143c`. Stage 3 and #11 later visual/accessibility completion remain pending.
 
 ## Primary User Path
 
@@ -285,7 +285,7 @@ creation flag rollback:
 
 ## Delivery Checklist
 
-Successor Stage 1 relock evidence is retained at [`evidence/2026-08-04-stage1-relock.md`](./evidence/2026-08-04-stage1-relock.md). It preserves the author/precheck lineage and #7 runtime-versus-lifecycle boundary, records critic/authority pass `0/0/0`, the old-head internal 1.5 `HOLD` findings `I15-B01`/`I15-B02`/`I15-B03`, and dependency repair PR `#1286` merged as `9ff5a920f063af22cd8a8dbee33a603b27c3af57`. Current audit high/critical is `0`; all three findings are repaired and fresh internal 1.5 re-review pending.
+Successor Stage 1 relock evidence is retained at [`evidence/2026-08-04-stage1-relock.md`](./evidence/2026-08-04-stage1-relock.md). It preserves the author/precheck lineage and #7 runtime-versus-lifecycle boundary, records critic/authority pass `0/0/0`, the old-head internal 1.5 `HOLD` findings `I15-B01`/`I15-B02`/`I15-B03`, and dependency repair PR `#1286` merged as `9ff5a920f063af22cd8a8dbee33a603b27c3af57`. Current audit high/critical is `0`; all three findings were repaired before the final independent APPROVE evidence listed above.
 
 Fresh Stage 2 backend evidence is retained at [`evidence/2026-08-09-stage2-backend-implementation.md`](./evidence/2026-08-09-stage2-backend-implementation.md). Stage 3 review, Ready, merge, server-production/local-rehearsal, capability activation and Discord remain outside this author task.
 
