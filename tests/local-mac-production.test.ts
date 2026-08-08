@@ -276,23 +276,28 @@ describe("local Mac production launch agent", () => {
 
   it("blocks activation before launchd install when the production gate fails", async () => {
     let installCalled = false;
+    let validatedRootDir = "";
 
     await expect(
       activateLocalMacProduction({
+        rootDir: "/Users/tester/homecook",
         loadEnvFiles: () => [],
-        validateDataQuality: async () => ({
-          ok: false,
-          errors: [{
-            code: "PRODUCTION_DATA_SCAN_FAILED",
-            message: "recipes.visibility is missing",
-          }],
-          warnings: [],
-          db: {
-            skipped: false,
-            skipReason: null,
-            findingCount: 0,
-          },
-        }),
+        validateDataQuality: async (options) => {
+          validatedRootDir = options?.rootDir ?? "";
+          return {
+            ok: false,
+            errors: [{
+              code: "PRODUCTION_DATA_SCAN_FAILED",
+              message: "recipes.visibility is missing",
+            }],
+            warnings: [],
+            db: {
+              skipped: false,
+              skipReason: null,
+              findingCount: 0,
+            },
+          };
+        },
         installLaunchAgent: () => {
           installCalled = true;
           throw new Error("must not install");
@@ -301,6 +306,7 @@ describe("local Mac production launch agent", () => {
     ).rejects.toThrow("PRODUCTION_DATA_SCAN_FAILED");
 
     expect(installCalled).toBe(false);
+    expect(validatedRootDir).toBe("/Users/tester/homecook");
   });
 
   it("removes a partial launchd install when HTTP readiness fails", async () => {
