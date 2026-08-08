@@ -23,9 +23,10 @@
 - screens: `docs/화면정의서-v1.5.33.md`
 - flow: `docs/유저flow맵-v1.3.31.md`
 - DB: `docs/db설계-v1.3.31.md`
-- API: `docs/api문서-v1.2.35.md`
+- API at the original 2026-08-04 evidence head: `docs/api문서-v1.2.35.md`
+- current user-approved Contract Evolution tuple: `docs/api문서-v1.2.36.md`
 
-The relock remains docs-only. No product runtime, API, DB, migration, dependency, #7 implementation, other workpack or capability-activation change is introduced here.
+The relock remains docs-only. No product runtime/API implementation, DB schema, migration, dependency, #7 implementation, other workpack or capability-activation change is introduced here.
 
 ## Dependency and predecessor boundary
 
@@ -87,8 +88,17 @@ Fresh successor-head validation was rerun after the evidence/bookkeeping update:
 - After PR `#1286` absorption and author repair, `pnpm audit --audit-level high` → high/critical `0`; residual advisories `1 low | 1 moderate`.
 - After whitespace-only critic repair, `git diff --check origin/master...HEAD` → pass.
 
+## 2026-08-08 API Contract Evolution re-lock
+
+- Fresh precheck task `019fe0d7-a6fd-7561-a68b-a59fe9c40030` returned `CONFIRMED_CE` with three high-confidence blockers: missing exact complete/mutation success data, incomplete `GET /cooked-batches`, and other-owner error conflict.
+- The user explicitly approved API `v1.2.35 → v1.2.36` while keeping requirements `v1.7.29`, screens `v1.5.33`, Flow `v1.3.31`, DB `v1.3.31`, endpoint count and DB authority unchanged.
+- API v1.2.36 now locks one owner-only `CookedBatchProjection` shared by `GET /cooked-batches`, complete and mutation success; exact complete/mutation replay data; owner-only filter/cursor/legacy null semantics; missing/other-owner `404 RESOURCE_NOT_FOUND` versus validation 422 and state/revision/bounds/later-event 409.
+- #9 meal-log and #11 final UI remain successor-owned. No product code, migration/apply, production/staging/remote DB/app/Vercel write, capability or R+2 activation is included.
+- Fresh independent contract re-review pending; Stage 2 resume pending. This author does not self-approve Stage 1/internal 1.5, mark Ready, merge, or resume implementation.
+- #7 broader lifecycle, Manual/server-Mac/OAuth evidence, #8 R/R+1 drain and R+2 activation remain pending.
+
 ## PR and merge posture
 
-- PR `#1285` remains `Draft`.
+- Historical Stage 1 PR `#1285` remains `Draft`; this Contract Evolution is delivered through a separate Draft PR and does not approve #1285.
 - This successor task may fill the PR body and supervise current-head checks, but it does not mark Ready, approve, or merge.
 - Current-head checks and fresh internal 1.5 must be evaluated on the new pushed successor SHA only; old-head green checks and the old `HOLD` are retained as history, not reused as approval proof.

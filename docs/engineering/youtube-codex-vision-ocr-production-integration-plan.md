@@ -41,7 +41,7 @@
 - `docs/화면정의서-v1.5.33.md`
 - `docs/유저flow맵-v1.3.31.md`
 - `docs/db설계-v1.3.31.md`
-- `docs/api문서-v1.2.35.md`
+- `docs/api문서-v1.2.36.md`
 - YouTube 관련 workpack `20`, `29`, `32`
 
 실험 저장소:

@@ -10,9 +10,11 @@ snapshot-v2 요리 완료를 session에 pin된 content/servings와 exact pantry 
 - screens: `docs/화면정의서-v1.5.33.md`
 - flow: `docs/유저flow맵-v1.3.31.md`
 - DB: `docs/db설계-v1.3.31.md`
-- API: `docs/api문서-v1.2.35.md`
+- API: `docs/api문서-v1.2.36.md`
 
-이 fresh Stage 1 재잠금은 위 tuple을 그대로 소비한다. 기존 endpoint, request/body, `{ success, data, error }` wrapper, HTTP status와 public error code를 늘리지 않으므로 새 Contract Evolution은 필요하지 않다. 구현 중 이 경계를 벗어나는 충돌이 발견되면 임의 확장하지 않고 `Contract Evolution Candidate`로 중단한다.
+사용자가 2026-08-08 명시 승인한 최소 Contract Evolution은 API `v1.2.36`에서 완료됐다. 이 workpack은 새 endpoint나 DB authority를 만들지 않고 공통 owner-only `CookedBatchProjection`, snapshot-v2 complete/batch mutation exact success `data`, `GET /cooked-batches` pagination·legacy null, missing/other-owner의 동일 `404 RESOURCE_NOT_FOUND`와 422/409 구분을 그대로 소비한다. 이 경계를 다시 벗어나는 충돌은 임의 확장하지 않고 새 `Contract Evolution Candidate`로 중단한다.
+
+Fresh independent contract re-review와 Stage 2 resume는 pending이다. 이 contract-docs 작성 작업은 Stage 1/internal 1.5를 self-approve하거나 Stage 2 구현을 시작하지 않는다. #7 broader lifecycle, Manual/server-Mac/OAuth, R/R+1/R+2도 기존 pending 상태를 유지한다.
 
 ## Branches
 
@@ -48,6 +50,9 @@ snapshot-v2 요리 완료를 session에 pin된 content/servings와 exact pantry 
   - close-unweighed is missing/unrecoverable+available with `consumed|discarded|mixed` reason, null delta and no meal-log/nutrition entry.
   - `cancel_current` can reverse only the current active terminal `closed_unweighed` event when no later event exists. It cannot reverse marked-unrecoverable.
 - compatibility reader and projection
+  - `GET /cooked-batches.items[]`, complete `cooked_batch`, mutation `batch`는 API v1.2.36의 exact 15-key owner-only `CookedBatchProjection` 하나를 공유한다.
+  - complete success는 exact 8-key data, batch mutation success는 exact 3-key `{ action, batch, event_id }`, list는 exact `{ items, next_cursor, has_next }`를 반환하고 same-key replay는 최초 status/data를 재생한다.
+  - list default는 `availability=loggable`, limit 20/max 50, `cooked_at DESC,id DESC` opaque cursor다. 다른 owner row는 item/cursor boundary 모두에서 제외한다.
   - existing `/leftovers` and every server reader move first to `batch_status/depleted_reason/weight_status` authority.
   - legacy `status=eaten` compatibility projection is true only for `consumed|consumed_unweighed`; discard/mixed states are never rendered as eaten.
   - consumed/consumed_unweighed first depletion sets eaten/auto-hide and grants `leftover_eaten:{batch_id}` once. Reversal clears eaten/auto-hide but neither retracts XP/activity nor enables a second award.
@@ -164,17 +169,17 @@ Schema Change:
 | Condition | Public result | Required effect |
 | --- | --- | --- |
 | missing/invalid auth | existing 401 | mutation 0 |
-| other-owner/private session, batch or pantry | official 404/non-disclosure | mutation 0; owner/state hidden |
-| missing/duplicate/mismatched pantry selection | official 409/422 | no pantry or completion effect |
+| missing/other-owner private session, batch or pantry | `404 RESOURCE_NOT_FOUND`, `fields=[]` | mutation 0; owner/state hidden |
+| duplicate pantry/body enum·format/pinned mismatch | `422 VALIDATION_ERROR` | no pantry or completion effect |
 | same key, different payload | `409 IDEMPOTENCY_KEY_REUSED` | mutation 0 |
-| stale expected batch revision | official 409 | event/projection unchanged |
+| stale revision, lifecycle/state, bounds, later-event/current-closure conflict | `409 CONFLICT` | event/projection unchanged |
 | unrecoverable weight set/restore/marker reversal | `409 WEIGHT_UNRECOVERABLE` | event/projection unchanged |
 | adjustment reaches 0, exceeds finished or reopens | `409 BATCH_ADJUSTMENT_INVALID` | event/projection unchanged |
-| invalid close/cancel target or later event exists | official 409 | event/projection unchanged |
+| invalid close/cancel target or later event exists | `409 CONFLICT` | event/projection unchanged |
 | creation flag off for new v2 | `409 SNAPSHOT_V2_CREATION_DISABLED` | no new session/completion source |
 | v1 key absent before zero-telemetry gate | existing v1 behavior | no premature 428 |
 
-All responses retain `{ success, data, error }` and `{ code, message, fields[] }`. Internal reasons cannot replace exact public error codes.
+All responses retain `{ success, data, error }` and `{ code, message, fields[] }`. Internal reasons cannot replace exact public error codes. 모든 failure는 pantry/batch/event/session/claim/Meal/cook-count/XP zero-write다.
 
 ## Stage 1 Wireframe
 

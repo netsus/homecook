@@ -1,9 +1,10 @@
 # Acceptance Checklist
 
-> Fresh Stage 1 official tuple: requirements `v1.7.29`, screens `v1.5.33`, flow `v1.3.31`, DB `v1.3.31`, API `v1.2.35`. #7 PR #1281 runtime and `cook-mode-whole-board` PR #711 are merged predecessors, but #7 overall lifecycle, Manual/server-Mac gates, #8 R/R+1 evidence and R+2 activation remain open. Unchecked items do not claim migrations, #8 RPCs, seeded drain, fresh critic/authority evidence or activation already exist.
+> Fresh Stage 1 official tuple: requirements `v1.7.29`, screens `v1.5.33`, flow `v1.3.31`, DB `v1.3.31`, API `v1.2.36`. API v1.2.36은 owner-only `CookedBatchProjection`, exact success/replay, `GET /cooked-batches` pagination·legacy null과 missing/other-owner `404 RESOURCE_NOT_FOUND`를 잠근다. Fresh independent contract re-review와 Stage 2 resume는 pending이다. #7 PR #1281 runtime과 `cook-mode-whole-board` PR #711은 merged predecessor지만 #7 broader lifecycle, Manual/server-Mac/OAuth, #8 R/R+1과 R+2 activation은 open이다. Unchecked items은 product implementation/migration/activation 완료를 주장하지 않는다.
 
 ## Snapshot-v2 Completion
 
+- [ ] success returns exact `{session_id,contract_version,mode,status,cooked_batch,meals_updated,pantry_removed,cook_count}` and replays the first status/data <!-- omo:id=accept-batch-complete-success-projection;stage=2;scope=backend;review=3,6 -->
 - [ ] complete requires owner in-progress `snapshot_v2` session and UUID Idempotency-Key <!-- omo:id=accept-batch-complete-session;stage=2;scope=backend;review=3,6 -->
 - [ ] exact-one weight action accepts positive food-only finished g or weigh-later null g <!-- omo:id=accept-batch-complete-weight;stage=2;scope=backend;review=3,6 -->
 - [ ] exact product pin consumes only the matching owner product pantry row <!-- omo:id=accept-batch-product-row;stage=2;scope=backend;review=3,6 -->
@@ -37,6 +38,8 @@
 
 ## Reader / Legacy Compatibility
 
+- [ ] `GET /cooked-batches`, complete `cooked_batch` and mutation `batch` share the exact 15-key `CookedBatchProjection` <!-- omo:id=accept-batch-public-projection;stage=2;scope=shared;review=3,6 -->
+- [ ] `GET /cooked-batches` defaults to loggable, limit 20/max 50 and owner-only cooked_at/id opaque cursor boundaries <!-- omo:id=accept-batch-list-pagination;stage=2;scope=backend;review=3,6 -->
 - [ ] every leftover reader switches to new read model before direct protected update is revoked <!-- omo:id=accept-batch-reader-first;stage=2;scope=shared;review=3,6 -->
 - [ ] existing server mutations move to row-lock RPC before grant/policy/guard cutover <!-- omo:id=accept-batch-writer-cutover;stage=2;scope=backend;review=3,6 -->
 - [ ] legacy eaten projection is limited to consumed/consumed_unweighed <!-- omo:id=accept-batch-legacy-eaten;stage=2;scope=backend;review=3,6 -->
@@ -73,7 +76,7 @@
 - [ ] #9 owns meal-log linked consumed event pointer and arbitrary-order entry reversal <!-- omo:id=accept-batch-meal-log-boundary;stage=2;scope=shared;review=3,6 -->
 - [ ] #11 owns final delayed-weight/unrecoverable/LEFTOVERS UI polish and reuses #8 mutations <!-- omo:id=accept-batch-weight-ui-boundary;stage=4;scope=shared;review=5,6 -->
 - [ ] responses keep official wrapper/error shape and exact public codes <!-- omo:id=accept-batch-wrapper;stage=2;scope=backend;review=3,6 -->
-- [ ] 401/404/409/422/503 paths preserve nondisclosure and whole-operation zero-write <!-- omo:id=accept-batch-errors;stage=2;scope=backend;review=3,6 -->
+- [ ] 401; missing/other-owner identical `404 RESOURCE_NOT_FOUND`; body/filter 422; state/revision/bounds/later-event 409 preserve nondisclosure and whole-operation zero-write <!-- omo:id=accept-batch-errors;stage=2;scope=backend;review=3,6 -->
 - [ ] no unofficial endpoint/field/status/reason/error/screen is introduced <!-- omo:id=accept-batch-no-contract-invention;stage=2;scope=shared;review=3,6 -->
 
 ## Verification / Evidence

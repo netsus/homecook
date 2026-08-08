@@ -5,13 +5,25 @@
 - `docs/화면정의서-v1.5.33.md`
 - `docs/유저flow맵-v1.3.31.md`
 - `docs/db설계-v1.3.31.md`
-- `docs/api문서-v1.2.35.md`
+- `docs/api문서-v1.2.36.md`
 
 ## Notes
 - 위 5개 파일이 현재 공식 기준 문서다.
 - `docs/reference/wireframes/`는 보조 참고 자료다.
 - 구현 중 문서 충돌이 보이면 먼저 충돌 항목을 정리하고 작업 범위를 다시 확정한다.
 - 사용자 승인으로 공식 계약을 바꾸는 경우에도 구현보다 문서가 먼저다. 관련 공식 문서와 이 파일의 버전/경로를 같은 `contract-evolution` PR에서 먼저 갱신한다.
+
+## Cooked Batch Weight Ledger Contract-Evolution `2026-08-08`
+
+| 문서 | 변경 내용 |
+|------|----------|
+| API v1.2.36 | 공통 owner-only `CookedBatchProjection`, snapshot-v2 complete와 batch mutation의 exact success `data`/replay, `GET /cooked-batches` filter·pagination·legacy null, private resource 404 nondisclosure와 validation 422/state 409 구분을 잠근다 |
+
+> 사용자는 2026-08-08 Homecook #8 `cooked-batch-weight-ledger` Stage 2 precheck의 blocker 3건을 닫기 위한 최소 API Contract Evolution을 명시적으로 승인했다. 요구사항 `v1.7.29` · 화면 `v1.5.33` · Flow `v1.3.31` · DB `v1.3.31`과 102개 endpoint 목록/DB authority는 변경하지 않는다.
+>
+> 승인 범위는 `CookedBatchProjection`의 exact field/null/omit 의미, snapshot-v2 complete와 cooked-batch mutation의 exact success `data` 및 same-key replay, owner-only `GET /cooked-batches`의 `availability=loggable|all`·limit·stable cursor, missing/other-owner session·batch·pantry의 동일 `404 RESOURCE_NOT_FOUND`, body/filter validation `422 VALIDATION_ERROR`, state/revision/bounds/later-event의 기존 exact `409` 구분이다. server-only content/account generation/hash/checksum/claim/operation metadata는 public projection에서 제외한다.
+>
+> #9 meal-log entry/event 기능, #11 최종 COOK_MODE/LEFTOVERS UI, product implementation, migration/apply, production·staging·remote DB/app/Vercel write, capability 또는 R+2 activation은 승인 밖이다. #8 fresh independent contract re-review와 Stage 2 resume는 이 docs PR merge 뒤에도 별도 gate로 pending이며 이 작성 작업은 스스로 승인하지 않는다. #7의 broader lifecycle, Manual/server-Mac/OAuth evidence, R/R+1과 R+2 gate도 계속 pending이다.
 
 ## Recipe Snapshot Entrypoint Context Contract-Evolution `2026-08-04`
 

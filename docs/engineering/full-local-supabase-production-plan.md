@@ -337,7 +337,7 @@ Docker Compose의 `environment`나 `.env`에 secret 값을 직접 넣지 않는�
 - `docs/화면정의서-v1.5.33.md`
 - `docs/유저flow맵-v1.3.31.md`
 - `docs/db설계-v1.3.31.md`
-- `docs/api문서-v1.2.35.md`
+- `docs/api문서-v1.2.36.md`
 - `docs/workpacks/full-local-supabase-production/`
 
 작업:
