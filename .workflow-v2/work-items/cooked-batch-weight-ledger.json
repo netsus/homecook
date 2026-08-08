@@ -19,6 +19,7 @@
     "recipe-snapshot-authority-foundation runtime is merged; activation and remaining Manual Only evidence stay open",
     "product-ingredient-link-foundation runtime is merged and supplies exact approved effective-ingredient authority",
     "user-approved API v1.2.36 Contract Evolution locks CookedBatchProjection, exact success replay, GET /cooked-batches owner pagination and 404 RESOURCE_NOT_FOUND versus 422/409; original internal 1.5 task 019fe0c0… and current-tuple re-lock reviewer 019fe194-62d9-7ed2-9116-b820873bd48b approved Stage 1, PR #1289 merged as 635763041d6420c648e2b55336e6caa9f1f9143c",
+    "PR #1292 merged as eb4e878eb1d5b6fe5df00b1edd3a4f42fa472142 and owns the canonical full-local session refresh authority; Stage 2 consumes that authority without duplicating its functions, tests or manifest ownership",
     "recipe-content-snapshot-future-propagation PR #1281 exact head aab9a65e6123e3134478842971765ad3aa737d6a merged as 2173737e8ea2eec2297e1cc0227ce4f2c27c50b9; runtime predecessor is satisfied but overall lifecycle remains in_progress with needs_revision/pending because Manual/server-Mac, slice8 and activation gates remain open",
     "cook-mode-whole-board PR #711 exact head 55b93ad7d29cfa8cba19e7942b18e6275fdc986a merged as 2f8569cb56a53e9508d8d9571b94b260ec0bce73",
     "fresh independent COOK_MODE slice8 design critic and 390px/320px product-design-authority must pass before Stage 4 frontend entry; internal1.5 already approved the exact Stage 1 docs lineage",
@@ -81,7 +82,7 @@
     "required_checks": [
       "pnpm validate:source-of-truth-sync",
       "pnpm validate:workflow-v2",
-      "BRANCH_NAME=feature/cooked-batch-weight-ledger-stage2-current pnpm validate:workpack -- --slice cooked-batch-weight-ledger",
+      "BRANCH_NAME=feature/cooked-batch-weight-ledger-stage2-eb4e-successor pnpm validate:workpack -- --slice cooked-batch-weight-ledger",
       "node scripts/validate-automation-spec.mjs --slice cooked-batch-weight-ledger",
       "pnpm validate:omo-bookkeeping",
       "pnpm exec vitest run tests/cooked-batch-api-contract-v1-2-36.test.ts",
@@ -104,7 +105,7 @@
     "verify_commands": [
       "pnpm validate:source-of-truth-sync",
       "pnpm validate:workflow-v2",
-      "BRANCH_NAME=feature/cooked-batch-weight-ledger-stage2-current pnpm validate:workpack -- --slice cooked-batch-weight-ledger",
+      "BRANCH_NAME=feature/cooked-batch-weight-ledger-stage2-eb4e-successor pnpm validate:workpack -- --slice cooked-batch-weight-ledger",
       "node scripts/validate-automation-spec.mjs --slice cooked-batch-weight-ledger",
       "pnpm validate:omo-bookkeeping",
       "pnpm exec vitest run tests/workflow-v2-docs.test.ts tests/omo-automation-spec.test.ts tests/omo-bookkeeping.test.ts tests/omo-doc-gate.test.ts tests/source-of-truth-sync.test.ts",
@@ -170,5 +171,5 @@
     "Unapproved server-production migration or write or capability activation"
   ],
   "open_questions": [],
-  "notes": "Stage 1 re-lock originated on requirements v1.7.29, screens v1.5.33, flow v1.3.31, DB v1.3.31 and API v1.2.36; Stage 2 consumes the current tuple requirements v1.7.30, screens v1.5.34, Flow v1.3.32, DB v1.3.32 and API v1.2.37, whose 0-CBW block is byte-identical to v1.2.36. API v1.2.36 locks one owner-only CookedBatchProjection for GET /cooked-batches and exact success data, snapshot-v2 complete/mutation replay, owner-only pagination/legacy null semantics, and missing/other-owner 404 RESOURCE_NOT_FOUND versus validation 422 and state/revision/bounds/later-event 409. Original internal 1.5 task 019fe0c0… APPROVE, current-tuple re-lock reviewer 019fe194-62d9-7ed2-9116-b820873bd48b APPROVE P0/P1/P2=0/0/0, PR #1289 merged as 635763041d6420c648e2b55336e6caa9f1f9143c, and closeout task 019fe19e… closed Stage 1. Stage 2 backend runs in independent task 019fe1aa-82fd-7602-844e-e050efae93db, so lifecycle is in_progress while overall approval and verification remain pending until fresh Stage 3 and current-head evidence. #7 PR #1281 runtime and cook-mode-whole-board PR #711 are exact merged predecessors; #7 broader lifecycle remains in_progress/needs_revision/pending because Manual/server-Mac/OAuth, #8 R/R+1 and R+2 activation gates are open. Legacy 15a evidence remains forbidden. #8 owns existing complete body exact-pantry/weight/batch/XP and R/R+1 gate, #9 meal-log links, #11 final UI, and R+2 activation remains Manual Only."
+  "notes": "Stage 1 re-lock originated on requirements v1.7.29, screens v1.5.33, flow v1.3.31, DB v1.3.31 and API v1.2.36; Stage 2 consumes the current tuple requirements v1.7.30, screens v1.5.34, Flow v1.3.32, DB v1.3.32 and API v1.2.37, whose 0-CBW block is byte-identical to v1.2.36. API v1.2.36 locks one owner-only CookedBatchProjection for GET /cooked-batches and exact success data, snapshot-v2 complete/mutation replay, owner-only pagination/legacy null semantics, and missing/other-owner 404 RESOURCE_NOT_FOUND versus validation 422 and state/revision/bounds/later-event 409. Original internal 1.5 task 019fe0c0… APPROVE, current-tuple re-lock reviewer 019fe194-62d9-7ed2-9116-b820873bd48b APPROVE P0/P1/P2=0/0/0, PR #1289 merged as 635763041d6420c648e2b55336e6caa9f1f9143c, and closeout task 019fe19e… closed Stage 1. Stage 2 implementation lineage task is 019fe1aa-82fd-7602-844e-e050efae93db; base-drift integrator task 019fe2b2-0ee4-77c3-a829-9ae04bfac07f rebases the Draft PR onto PR #1292 merge eb4e878eb1d5b6fe5df00b1edd3a4f42fa472142 and defers refresh authority to its canonical v2 migration. Lifecycle remains in_progress while overall approval and verification remain pending until fresh Stage 3 and current-head evidence. #7 PR #1281 runtime and cook-mode-whole-board PR #711 are exact merged predecessors; #7 broader lifecycle remains in_progress/needs_revision/pending because Manual/server-Mac/OAuth, #8 R/R+1 and R+2 activation gates are open. Legacy 15a evidence remains forbidden. #8 owns existing complete body exact-pantry/weight/batch/XP and R/R+1 gate, #9 meal-log links, #11 final UI, and R+2 activation remains Manual Only."
 }

@@ -16,12 +16,12 @@ snapshot-v2 요리 완료를 session에 pin된 content/servings와 exact pantry 
 
 Stage 2는 current source-of-truth tuple requirements `v1.7.30`, screens `v1.5.34`, Flow `v1.3.32`, DB `v1.3.32`, API `v1.2.37`을 사용한다. API v1.2.37의 `0-CBW` compatibility block은 이 Stage 1 lock의 API v1.2.36 block과 byte-identical이므로 public endpoint/field/status/error 확장 없이 구현한다.
 
-Stage 1은 original internal 1.5 task `019fe0c0…` APPROVE, current-tuple re-lock reviewer task `019fe194-62d9-7ed2-9116-b820873bd48b` APPROVE `P0/P1/P2=0/0/0`, PR #1289 merge `635763041d6420c648e2b55336e6caa9f1f9143c`, closeout task `019fe19e…`로 닫혔다. Stage 2 backend 구현은 별도 task `019fe1aa-82fd-7602-844e-e050efae93db`에서 진행하며 Stage 3/Ready/merge는 여전히 pending이다. #7 broader lifecycle, Manual/server-Mac/OAuth, R/R+1/R+2도 기존 pending 상태를 유지한다.
+Stage 1은 original internal 1.5 task `019fe0c0…` APPROVE, current-tuple re-lock reviewer task `019fe194-62d9-7ed2-9116-b820873bd48b` APPROVE `P0/P1/P2=0/0/0`, PR #1289 merge `635763041d6420c648e2b55336e6caa9f1f9143c`, closeout task `019fe19e…`로 닫혔다. Stage 2 backend 구현 lineage는 task `019fe1aa-82fd-7602-844e-e050efae93db`이며, base-drift 통합 task `019fe2b2-0ee4-77c3-a829-9ae04bfac07f`가 PR #1292 merge `eb4e878eb1d5b6fe5df00b1edd3a4f42fa472142`를 새 기준으로 사용한다. #1292의 canonical full-local session refresh authority가 우선하며 #8은 이를 재구현하지 않는다. 전체 lifecycle은 `in_progress`, Stage 3/Ready/merge와 approval/verification은 pending이다. #7 broader lifecycle, Manual/server-Mac/OAuth, R/R+1/R+2도 기존 pending 상태를 유지한다.
 
 ## Branches
 
 - Fresh Stage 1 re-lock docs: `docs/cooked-batch-weight-ledger-stage1-relock`
-- Stage 2 backend/DB current: `feature/cooked-batch-weight-ledger-stage2-current`
+- Stage 2 backend/DB local successor: `feature/cooked-batch-weight-ledger-stage2-eb4e-successor` (Draft PR #1291 remote branch는 `feature/cooked-batch-weight-ledger-stage2-current` 유지)
 - Preserved held lineage: `feature/be-cooked-batch-weight-ledger` exact `3c5b6760ce8c9a8b51205c755f9f92d57177ca00`; rebase/cherry-pick/force/edit 금지
 - Stage 4 functional COOK_MODE integration: `feature/fe-cooked-batch-weight-ledger`
 - Release train: D. 구현 선행조건은 #7 runtime과 merged `cook-mode-whole-board`다.

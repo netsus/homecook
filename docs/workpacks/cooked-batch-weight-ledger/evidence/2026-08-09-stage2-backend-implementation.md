@@ -3,15 +3,27 @@
 ## Scope and lineage
 
 - Workpack: `cooked-batch-weight-ledger` (#8)
-- Stage/role: Stage 2 / fresh `backend-implementer`
-- Codex task ID: `019fe1aa-82fd-7602-844e-e050efae93db`
-- Exact base: `master` / `origin/master` `635763041d6420c648e2b55336e6caa9f1f9143c`
-- Fresh branch: `feature/cooked-batch-weight-ledger-stage2-current`
+- Stage/role: Stage 2 / fresh `backend-implementer`, then fresh base-drift integrator/author
+- Implementation lineage task ID: `019fe1aa-82fd-7602-844e-e050efae93db`
+- Base-drift integrator task ID: `019fe2b2-0ee4-77c3-a829-9ae04bfac07f`
+- Original Stage 1 base: `635763041d6420c648e2b55336e6caa9f1f9143c`
+- Current exact base: `master` / `origin/master` `eb4e878eb1d5b6fe5df00b1edd3a4f42fa472142` (PR #1292)
+- Local successor branch: `feature/cooked-batch-weight-ledger-stage2-eb4e-successor`
+- Draft PR #1291 remote branch retained: `feature/cooked-batch-weight-ledger-stage2-current`
 - Preserved held branch: `feature/be-cooked-batch-weight-ledger` exact `3c5b6760ce8c9a8b51205c755f9f92d57177ca00`
 - The held branch was restored before task changes and was not rebased, edited, force-pushed or cherry-picked.
 - Current tuple: requirements `v1.7.30`, screens `v1.5.34`, Flow `v1.3.32`, DB `v1.3.32`, API `v1.2.37`; API `0-CBW` is byte-identical to v1.2.36.
 
 This task changes only #8 DB/backend/API, the existing leftovers compatibility reader/writer boundary, and the repository-wide account-session route inventory entries required by the new #8 write routes. It does not change personal recipe editor product/docs, F0, another workpack, frontend/Stage 4, #9 meal-log public ownership or #11 visual ownership.
+
+## Latest-master base-drift integration
+
+- PR #1292 makes `supabase/migrations/20260809100000_full_local_session_refresh_authority.sql` the canonical stable-session refresh authority. The #8 migration is ordered after it as `20260809110000_cooked_batch_weight_ledger.sql`.
+- The obsolete #8 copies of the refresh trigger, legacy record/assert functions, three replacement manifest entries and inventory branch were removed. #8 retains only its scope-aware `private.verify_full_local_internal_scope()` replacement and recognizes the canonical `record_full_local_session_authority_v2` / `assert_and_renew_full_local_session_authority_v2` RPC paths.
+- Integration RED first failed because the cooked-batch migration still defined `private.protect_full_local_session_binding_identity`; GREEN proves that the canonical migration alone owns monotonic token evidence and that the runner applies it before #8.
+- PostgreSQL regression covers a newer JWT for the same stable session, old/stale token, different session, revoked session and stale generation. Only the newer same-session token is accepted; every rejected case leaves the expanded owner digest unchanged.
+- `scripts/lib/full-local-security-inventory.mjs` follows #1292 canonical ownership. Shared inventory expectations were intentionally advanced from 29/33 to 32/36 functions; no #1292 security entry or user/external change was dropped.
+- Public API/status/field/error contracts are unchanged. Contract Evolution Candidate: none.
 
 ## Backend contract implemented
 
@@ -64,26 +76,26 @@ Final fresh and replay PostgreSQL evidence:
 
 ```text
 fresh predecessor: 15 passed / 1 intended skip
-fresh cooked batch: 22 passed
-fresh inherited shared security inventory: 26 passed / 22 intended skips
+fresh cooked batch: 23 passed
+fresh inherited shared security inventory: 26 passed / 31 intended skips
 replay predecessor: 16 passed
-replay cooked batch: 22 passed
-replay inherited shared security inventory: 26 passed / 22 intended skips
+replay cooked batch: 23 passed
+replay inherited shared security inventory: 26 passed / 31 intended skips
 ```
 
-The cooked-batch scenarios cover exact 23-function owner/ACL/search-path/scope inventory, owner RLS, direct protected update/event insert/select/checksum and forged batch INSERT denial, two-owner multi-table digests including progress-summary timestamps, exact pantry/claim rollback, stale session-generation zero-write, monotonic same-session JWT rotation, owner-locked keep, atomic canonical progress/activity projection, duplicate/replay zero-write, standalone and planner completion/replay, idempotency payload mismatch including reason, full cached-projection tamper denial, DB-level NULL/blank discard-adjust rejection, unrecoverable irreversibility, close/cancel/reclose XP once, a forced two-connection v1/v2 `60+45` award race, v2 unavailable versus legacy-null nutrition status, strict canonical cursor parsing, representative 4,000 v2 + 4,000 legacy row `EXPLAIN (ANALYZE, BUFFERS)` checks for both exact LEFTOVERS predicates, depleted meal reuse denial and exact-owner cleanup ordering.
+The cooked-batch scenarios cover exact 20-function owner/ACL/search-path/scope inventory plus the inherited canonical refresh authority, owner RLS, direct protected update/event insert/select/checksum and forged batch INSERT denial, two-owner multi-table digests including progress-summary timestamps, exact pantry/claim rollback, same-session newer JWT acceptance with old/stale/different/revoked/generation-mismatched zero-write, owner-locked keep, atomic canonical progress/activity projection, duplicate/replay zero-write, standalone and planner completion/replay, idempotency payload mismatch including reason, full cached-projection tamper denial, DB-level NULL/blank discard-adjust rejection, unrecoverable irreversibility, close/cancel/reclose XP once, a forced two-connection v1/v2 `60+45` award race, v2 unavailable versus legacy-null nutrition status, strict canonical cursor parsing, representative 4,000 v2 + 4,000 legacy row `EXPLAIN (ANALYZE, BUFFERS)` checks for both exact LEFTOVERS predicates, depleted meal reuse denial and exact-owner cleanup ordering.
 
 ## Verification
 
 - `pnpm install --frozen-lockfile` — pass; no dependency or lockfile change
-- final focused Vitest — successor regression `10 files / 90 tests`, official contract `4 files / 27 tests` pass
-- full `pnpm test` — initial implementation attempt 1: 9 failures; attempt 2: 1 stale Stage 1 projection failure; attempt 3 passed. Successor attempt 1 exposed 1 wrapper-inventory omission; attempt 2 exposed 2 bookkeeping/inventory projections; successor attempt 3 passed. Exact `b47c8d62` run: `520 files passed | 29 skipped`, `5,283 tests passed | 352 skipped`. Narrow validator successor: `520 files passed | 29 skipped`, `5,287 tests passed | 352 skipped`.
+- final focused Vitest — successor regression `10 files / 112 tests` pass; canonical-refresh ownership test `1 file / 14 tests` pass
+- full `pnpm test` on the `eb4e878e…` successor — `522 files passed | 28 skipped`, `5,322 tests passed | 363 skipped`
 - `pnpm exec vitest run tests/check-workpack-docs.test.ts tests/cooked-batch-api-contract-v1-2-36.test.ts` — `2 files / 36 tests` pass; the validator-only file is `25/25`
-- `pnpm validate:workpack -- --slice cooked-batch-weight-ledger` — pass with visible `Workpack docs OK for slice 'cooked-batch-weight-ledger' (base: master)` marker; `unknown-workpack` exits `1` with both missing governing paths
-- `pnpm test:cooked-batch-weight-ledger:postgres` — final successor pass: fresh predecessor `15 + 1 intended skip`, fresh/replay #8 `22/22`, replay predecessor `16/16`, inherited shared security inventory fresh/replay `26 passed / 22 intended skips`
+- `pnpm validate:workpack -- --slice cooked-batch-weight-ledger` — pass with visible `Workpack docs OK for slice 'cooked-batch-weight-ledger' (base: master)` marker; `missing-cooked-batch-sentinel` exits `1` with both missing governing paths; legacy `BRANCH_NAME=feature/be-cooked-batch-weight-ledger pnpm validate:workpack` inference still resolves the real workpack and passes
+- `pnpm test:cooked-batch-weight-ledger:postgres` — final successor pass: fresh predecessor `15 + 1 intended skip`, fresh/replay #8 `23/23`, replay predecessor `16/16`, inherited shared security inventory fresh/replay `26 passed / 31 intended skips`
 - `pnpm verify:backend` — pass: lint, typecheck, `217 files passed | 11 skipped`, `2,664 tests passed | 150 skipped`, Next build, security E2E `12/12`
 - `pnpm test:security-functions:postgres` — pass: 8 anonymous mutation signatures denied with unchanged checksums
-- `node scripts/validate-security-function-authorization.mjs --contract-only` — pass; #8 manifest classifies 23 pre-deployment functions, including three explicit full-local replacements
+- `node scripts/validate-security-function-authorization.mjs --contract-only` — pass; #8 manifest classifies 20 pre-deployment functions and delegates all full-local refresh ownership to the canonical #1292 manifest/migration
 - source-of-truth, workflow-v2, workpack, automation-spec and OMO bookkeeping validators — pass
 - account-session generation inventory — pass: `64 routes / 85 write surfaces / 3 auth.users inbound FKs`; the removed surface is the legacy keep direct UPDATE replaced by the owner-locked RPC
 - `pnpm audit --audit-level high` — exit 0; residual `1 low / 1 moderate`, high `0`, critical `0`
