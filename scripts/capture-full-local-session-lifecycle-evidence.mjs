@@ -21,6 +21,8 @@ import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 
 export const EXPECTED_LIVE_ROOT = "/Users/cwj/01_vibe_coding/homecook-full-local-restore";
+export const REFRESH_LIFECYCLE_JSON_SCRIPT =
+  "verify:full-local-session-refresh-lifecycle:json";
 export const ALLOWED_PHASES = Object.freeze([
   "baseline",
   "milestone-a-t65",
@@ -52,6 +54,16 @@ const CANARY_RESULT_KEYS = Object.freeze([
   "pantry_read",
   "youtube_extract",
 ]);
+const CANARY_SAFETY_CHECK_KEYS = Object.freeze([
+  "binding_expiry_monotonic",
+  "logout_new_token_read",
+  "logout_new_token_write",
+  "logout_old_token_read",
+  "logout_old_token_write",
+  "planner_write_cleanup",
+  "phase_time_boundary",
+  "stale_counts_since_deploy",
+]);
 const SHA_PATTERN = /^[a-f0-9]{40}$/u;
 const DIGEST_PATTERN = /^sha256:[a-f0-9]{64}$/u;
 const MIGRATION_PATTERN = /^\d{14}_[a-z0-9_]+\.sql$/u;
@@ -64,6 +76,7 @@ const KNOWN_MIGRATION_HEADS = new Set([
   "20260803020000_full_local_production_data_quality_scope.sql",
   "20260803090000_full_local_session_issue_time_precision.sql",
   "20260803093000_full_local_read_only_request_authority.sql",
+  "20260809100000_full_local_session_refresh_authority.sql",
 ]);
 const SAFE_BRANCH_PATTERN = /^[A-Za-z0-9._/-]+$/u;
 const JWT_PATTERN = /\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}(?:\.[A-Za-z0-9_-]+)?\b/u;
@@ -596,6 +609,7 @@ export function parseCanaryObservationJson(stdout, { implementationSha, phase })
     "implementation_sha",
     "incident",
     "canary_results",
+    "safety_checks",
     "account_session_stale_count",
     "stale_token_mutation_count",
   ], "production canary observation");
@@ -609,6 +623,11 @@ export function parseCanaryObservationJson(stdout, { implementationSha, phase })
     CANARY_RESULT_KEYS,
     "production canary observation results",
   );
+  assertExactResultKeys(
+    result.safety_checks,
+    CANARY_SAFETY_CHECK_KEYS,
+    "production canary observation safety checks",
+  );
   if (result.status !== "PASS") throw new Error("production canary observation status must be PASS.");
   if (result.phase !== phase) throw new Error("production canary observation phase mismatch.");
   if (result.implementation_sha !== implementationSha || !SHA_PATTERN.test(result.implementation_sha)) {
@@ -617,6 +636,21 @@ export function parseCanaryObservationJson(stdout, { implementationSha, phase })
   for (const key of CANARY_RESULT_KEYS) {
     if (result.canary_results[key] !== "PASS") {
       throw new Error(`production canary observation ${key} must be PASS.`);
+    }
+  }
+  for (const key of [
+    "binding_expiry_monotonic",
+    "planner_write_cleanup",
+    "phase_time_boundary",
+    "stale_counts_since_deploy",
+  ]) {
+    if (result.safety_checks[key] !== "PASS") {
+      throw new Error(`production canary observation ${key} must be PASS.`);
+    }
+  }
+  for (const key of CANARY_SAFETY_CHECK_KEYS.filter((key) => key.startsWith("logout_"))) {
+    if (result.safety_checks[key] !== "BLOCKED") {
+      throw new Error(`production canary observation ${key} must be BLOCKED.`);
     }
   }
   for (const [key, value] of Object.entries(result.incident)) {
@@ -636,8 +670,59 @@ export function parseCanaryObservationJson(stdout, { implementationSha, phase })
     canaryResults: result.canary_results,
     firstStaleAt: result.incident.first_stale_at,
     staleTokenMutationCount: result.stale_token_mutation_count,
-    t65Canary: "PASS",
+    ...(phase === "milestone-a-t65" ? { t65Canary: "PASS" } : {}),
   };
+}
+
+export function loadPriorT65Evidence({ implementationRoot, implementationSha }) {
+  try {
+    if (!SHA_PATTERN.test(implementationSha ?? "")) {
+      throw new Error("invalid implementation SHA");
+    }
+    const canonicalRoot = realpathSync(implementationRoot);
+    if (canonicalRoot !== implementationRoot) {
+      throw new Error("implementation root must be canonical");
+    }
+    const evidencePath = validateEvidenceOutputPath(
+      "milestone-a-t65",
+      path.join(EVIDENCE_DIRECTORY, "milestone-a-t65.json"),
+      canonicalRoot,
+    );
+    let currentPath = canonicalRoot;
+    const relativeParent = path.relative(canonicalRoot, path.dirname(evidencePath));
+    for (const segment of relativeParent.split(path.sep).filter(Boolean)) {
+      currentPath = path.join(currentPath, segment);
+      const stats = lstatSync(currentPath);
+      if (!stats.isDirectory() || stats.isSymbolicLink() || realpathSync(currentPath) !== currentPath) {
+        throw new Error("evidence parent is not trusted");
+      }
+    }
+    const stats = lstatSync(evidencePath);
+    if (!stats.isFile()
+      || stats.isSymbolicLink()
+      || (stats.mode & 0o777) !== 0o600
+      || stats.size <= 0
+      || stats.size > 256 * 1024
+      || realpathSync(evidencePath) !== evidencePath) {
+      throw new Error("evidence file is not trusted");
+    }
+    const evidence = JSON.parse(readFileSync(evidencePath, "utf8"));
+    if (validateSessionLifecycleEvidence(evidence).length > 0
+      || evidence.phase !== "milestone-a-t65"
+      || evidence.source?.implementation_sha !== implementationSha
+      || evidence.verification?.t65_canary !== "PASS") {
+      throw new Error("evidence contract mismatch");
+    }
+    assertEvidencePhaseReady(evidence);
+    for (const key of CANARY_RESULT_KEYS) {
+      if (evidence.verification.canary_results?.[key] !== "PASS") {
+        throw new Error("prior canary result is not PASS");
+      }
+    }
+    return "PASS";
+  } catch {
+    throw new Error("prior T+65 evidence is missing or invalid.");
+  }
 }
 
 function runPnpmJsonGate(implementationRoot, scriptName, parser, extraArgs = []) {
@@ -663,7 +748,7 @@ function collectVerification({ implementationRoot, implementationSha, phase }) {
   try {
     Object.assign(verification, runPnpmJsonGate(
       implementationRoot,
-      "verify:full-local-session-refresh-lifecycle",
+      REFRESH_LIFECYCLE_JSON_SCRIPT,
       parseRefreshLifecycleGateJson,
     ));
   } catch {
@@ -683,6 +768,12 @@ function collectVerification({ implementationRoot, implementationSha, phase }) {
       (stdout) => parseCanaryObservationJson(stdout, { implementationSha, phase }),
       ["--phase", phase],
     );
+    if (phase !== "milestone-a-t65") {
+      observation.t65Canary = loadPriorT65Evidence({
+        implementationRoot,
+        implementationSha,
+      });
+    }
   } catch {
     verification.t65_canary = "FAIL";
   }
@@ -811,10 +902,40 @@ function collectContainers() {
 function collectLaunchAgent(label) {
   const result = run("launchctl", ["print", `gui/${process.getuid()}/${label}`], { allowFailure: true });
   if (result.status === 0) {
-    return /\bstate\s*=\s*running\b/u.test(stdoutText(result)) ? "running" : "failed";
+    return {
+      output: stdoutText(result),
+      status: /\bstate\s*=\s*running\b/u.test(stdoutText(result)) ? "running" : "failed",
+    };
   }
   const output = `${stdoutText(result)} ${Buffer.isBuffer(result.stderr) ? result.stderr.toString("utf8") : result.stderr ?? ""}`;
-  return /could not find service|service not found/u.test(output) ? "not-found" : "failed";
+  return {
+    output: "",
+    status: /could not find service|service not found/u.test(output) ? "not-found" : "failed",
+  };
+}
+
+export function validateLaunchAgentProvenance({
+  implementationRoot,
+  launchctlOutput,
+  phase,
+}) {
+  if (phase === "baseline") return;
+  if (!ALLOWED_PHASES.includes(phase)) {
+    throw new Error("LaunchAgent provenance phase is invalid.");
+  }
+  const canonicalRoot = realpathSync(implementationRoot);
+  const lines = String(launchctlOutput ?? "").split(/\r?\n/u).map((line) => line.trim());
+  const workingDirectory = lines
+    .find((line) => line.startsWith("working directory = "))
+    ?.slice("working directory = ".length);
+  const expectedProgram = path.join(
+    canonicalRoot,
+    "scripts",
+    "start-local-mac-production.mjs",
+  );
+  if (workingDirectory !== canonicalRoot || !lines.includes(expectedProgram)) {
+    throw new Error("Production LaunchAgent must target the exact implementation checkout.");
+  }
 }
 
 export function parseMigrationHeadSqlOutput(stdout) {
@@ -844,12 +965,15 @@ export function parseMigrationHeadSqlOutput(stdout) {
   };
 }
 
-function collectMigrationHead(postgresContainerId) {
-  const sql = [
+export function buildMigrationHeadSql() {
+  return [
     "begin transaction read only;",
     "set local statement_timeout = '5s';",
     "with catalog_marker as (",
     "  select case",
+    "    when to_regprocedure('public.assert_and_renew_full_local_session_authority_v2(text,uuid,timestamp with time zone,uuid,text,integer,bigint,timestamp with time zone,timestamp with time zone,timestamp with time zone,timestamp with time zone,timestamp with time zone)') is not null",
+    "      and position('last_token_issued_at' in pg_get_functiondef(to_regprocedure('public.assert_and_renew_full_local_session_authority_v2(text,uuid,timestamp with time zone,uuid,text,integer,bigint,timestamp with time zone,timestamp with time zone,timestamp with time zone,timestamp with time zone,timestamp with time zone)'))) > 0",
+    "      then '20260809100000_full_local_session_refresh_authority.sql'",
     "    when to_regprocedure('private.verify_full_local_authenticated_authority()') is not null",
     "      and position('v_read_only_request := v_method in (''GET'', ''HEAD'')' in pg_get_functiondef(to_regprocedure('private.verify_full_local_authenticated_authority()'))) > 0",
     "      then '20260803093000_full_local_read_only_request_authority.sql'",
@@ -882,6 +1006,10 @@ function collectMigrationHead(postgresContainerId) {
     "rollback;",
     "",
   ].join("\n");
+}
+
+function collectMigrationHead(postgresContainerId) {
+  const sql = buildMigrationHeadSql();
   const result = run("docker", [
     "exec",
     "-i",
@@ -953,11 +1081,18 @@ export function captureSessionLifecycleEvidence({ implementationRoot, liveRoot, 
   const [authContainer] = authContainers;
   const [postgresContainer] = postgresContainers;
   const volumes = run("docker", ["volume", "inspect", ...REQUIRED_VOLUMES], { allowFailure: true });
+  const fullLocalLaunchAgent = collectLaunchAgent("com.homecook.full-local.production");
+  const macProductionLaunchAgent = collectLaunchAgent("com.homecook.production");
+  validateLaunchAgentProvenance({
+    implementationRoot,
+    launchctlOutput: macProductionLaunchAgent.output,
+    phase,
+  });
   const statuses = normalizeRuntimeStatus({
     containers,
     expectedVolumesPresent: volumes.status === 0,
-    fullLocalLaunchAgent: collectLaunchAgent("com.homecook.full-local.production"),
-    macProductionLaunchAgent: collectLaunchAgent("com.homecook.production"),
+    fullLocalLaunchAgent: fullLocalLaunchAgent.status,
+    macProductionLaunchAgent: macProductionLaunchAgent.status,
   });
   if (!verifyPublicOrigins()) {
     throw new Error("Public app/Auth origin verification failed.");
@@ -1017,8 +1152,8 @@ function main() {
     const implementationRoot = realpathSync(process.cwd());
     const evidence = captureSessionLifecycleEvidence({ implementationRoot, liveRoot, output, phase });
     process.stdout.write(`session-lifecycle-evidence: PASS (${evidence.phase})\n`);
-  } catch (error) {
-    process.stderr.write(`session-lifecycle-evidence: FAIL (${error instanceof Error ? error.message : String(error)})\n`);
+  } catch {
+    process.stderr.write("session-lifecycle-evidence: FAIL (redacted)\n");
     process.exitCode = 1;
   }
 }
