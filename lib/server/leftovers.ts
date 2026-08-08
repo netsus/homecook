@@ -27,6 +27,16 @@ export interface LeftoverDishRow {
   auto_hide_at: string | null;
   stale_reviewed_at: string | null;
   cooking_servings: number | null;
+  weight_status?: "known" | "missing" | "unrecoverable" | null;
+  batch_status?: "available" | "depleted" | null;
+  depleted_reason?:
+    | "consumed"
+    | "discarded"
+    | "mixed"
+    | "consumed_unweighed"
+    | "discarded_unweighed"
+    | "mixed_unweighed"
+    | null;
 }
 
 export interface LeftoverRecipeRow {
@@ -69,6 +79,23 @@ export function addDaysIso(base: Date, days: number) {
   const next = new Date(base.getTime());
   next.setUTCDate(next.getUTCDate() + days);
   return next.toISOString();
+}
+
+export function projectLeftoverCompatibilityStatus(
+  row: Pick<
+    LeftoverDishRow,
+    "recipe_content_snapshot_id" | "status" | "batch_status" | "depleted_reason"
+  >,
+): LeftoverDishStatus {
+  if (!row.recipe_content_snapshot_id || row.batch_status === null || row.batch_status === undefined) {
+    return row.status;
+  }
+
+  return row.batch_status === "depleted"
+      && (row.depleted_reason === "consumed"
+        || row.depleted_reason === "consumed_unweighed")
+    ? "eaten"
+    : "leftover";
 }
 
 export function toLeftoverMutationData(row: {

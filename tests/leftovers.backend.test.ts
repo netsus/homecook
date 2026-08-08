@@ -388,7 +388,7 @@ describe("GET /api/v1/leftovers", () => {
 
     expect(response.status).toBe(200);
     expect(leftoversQuery.eq).toHaveBeenCalledWith("user_id", "user-1");
-    expect(leftoversQuery.eq).toHaveBeenCalledWith("status", "leftover");
+    expect(leftoversQuery.eq).not.toHaveBeenCalledWith("status", "leftover");
     expect(leftoversQuery.order).toHaveBeenCalledWith("cooked_at", { ascending: false });
     expect(recipesQuery.in).toHaveBeenCalledWith("id", [recipeId, otherRecipeId]);
     expect(body).toEqual({
@@ -610,7 +610,7 @@ describe("GET /api/v1/leftovers", () => {
     );
 
     expect(response.status).toBe(200);
-    expect(leftoversQuery.eq).toHaveBeenCalledWith("status", "eaten");
+    expect(leftoversQuery.eq).not.toHaveBeenCalledWith("status", "eaten");
     expect(leftoversQuery.gt).toHaveBeenCalledWith("auto_hide_at", nowIso);
     expect(leftoversQuery.order).toHaveBeenCalledWith("eaten_at", { ascending: false });
     vi.useRealTimers();
@@ -903,6 +903,31 @@ describe("POST /api/v1/leftovers/{id}/eat", () => {
     expect(body.error.code).toBe("FORBIDDEN");
   });
 
+  it("keeps snapshot-v2 batches read-only in the legacy eat endpoint", async () => {
+    const { db, update } = createLeftoverMutationDb({
+      selectRows: [{
+        id: leftoverId,
+        user_id: "user-1",
+        recipe_id: recipeId,
+        recipe_content_snapshot_id: "550e8400-e29b-41d4-a716-446655440399",
+        status: "leftover",
+        cooked_at: "2026-04-28T10:00:00.000Z",
+        eaten_at: null,
+        auto_hide_at: null,
+      }],
+    });
+    setupAuthenticatedDb(db);
+
+    const { POST } = await importEatRoute();
+    const response = await POST(new Request("http://localhost:3000"), {
+      params: Promise.resolve({ leftover_id: leftoverId }),
+    });
+
+    expect(response.status).toBe(409);
+    expect(update).not.toHaveBeenCalled();
+    expect((await response.json()).error.code).toBe("CONFLICT");
+  });
+
   it("returns 404 when the leftover does not exist", async () => {
     const { db } = createLeftoverMutationDb({ selectRows: [null] });
     setupAuthenticatedDb(db);
@@ -1031,6 +1056,31 @@ describe("POST /api/v1/leftovers/{id}/uneat", () => {
 
     expect(response.status).toBe(404);
     expect(body.error.code).toBe("RESOURCE_NOT_FOUND");
+  });
+
+  it("keeps snapshot-v2 batches read-only in the legacy uneat endpoint", async () => {
+    const { db, update } = createLeftoverMutationDb({
+      selectRows: [{
+        id: leftoverId,
+        user_id: "user-1",
+        recipe_id: recipeId,
+        recipe_content_snapshot_id: "550e8400-e29b-41d4-a716-446655440399",
+        status: "eaten",
+        cooked_at: "2026-04-28T10:00:00.000Z",
+        eaten_at: nowIso,
+        auto_hide_at: autoHideIso,
+      }],
+    });
+    setupAuthenticatedDb(db);
+
+    const { POST } = await importUneatRoute();
+    const response = await POST(new Request("http://localhost:3000"), {
+      params: Promise.resolve({ leftover_id: leftoverId }),
+    });
+
+    expect(response.status).toBe(409);
+    expect(update).not.toHaveBeenCalled();
+    expect((await response.json()).error.code).toBe("CONFLICT");
   });
 
   it("returns the same result without updating when the dish is already leftover", async () => {
