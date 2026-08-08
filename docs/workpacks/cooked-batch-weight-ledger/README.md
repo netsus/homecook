@@ -145,6 +145,8 @@ Schema Change:
 
 - batch stores content snapshot ID and cooking servings only. The content pin resolves exact immutable `recipe_nutrition_snapshot_id`; batch does not store another nutrition FK.
 - batch total nutrient is `scalable × cooking_servings/base_servings + fixed`. Fixed is applied once, not multiplied by servings.
+- Stage 2 implements this formula in postgres-owned `private.resolve_cooked_batch_nutrition(uuid,uuid)`. It is owner-bound, has a fixed `search_path`, grants no direct application principal, and is consumed by the existing private cooked-batch projection without adding a public RPC or response field.
+- The resolver reads only `leftover_dishes.recipe_content_snapshot_id → recipe_content_snapshots.recipe_nutrition_snapshot_id`; a later mutable recipe current never repins an existing batch. Invalid pinned `base_servings` fails closed, while an officially missing nutrition pin remains `unavailable`.
 - actual consumed nutrition later is batch total × `consumed_g/finished_weight_g`.
 - missing/partial/unavailable remains explicit. A null/invalid nutrition snapshot does not trigger mutable-current recalculation or zero substitution.
 - missing/unrecoverable batch cannot produce g meal-log nutrition; unweighed closure creates no meal entry.
@@ -295,7 +297,7 @@ Fresh Stage 2 backend evidence is retained at [`evidence/2026-08-09-stage2-backe
 - [x] missing→unrecoverable is idempotent irreversible and exact-error protected <!-- omo:id=delivery-batch-unrecoverable;stage=2;scope=backend;review=3,6 -->
 - [x] append-only events, operation uniqueness, reversal and full-replay checksum are enforced <!-- omo:id=delivery-batch-ledger;stage=2;scope=backend;review=3,6 -->
 - [x] discard/adjust/close/cancel-current state matrix cannot bypass depletion authority <!-- omo:id=delivery-batch-mutations;stage=2;scope=backend;review=3,6 -->
-- [ ] content-only nutrition formula preserves partial/unavailable and fixed-once semantics <!-- omo:id=delivery-batch-nutrition;stage=2;scope=backend;review=3,6 -->
+- [x] content-only nutrition formula preserves partial/unavailable and fixed-once semantics <!-- omo:id=delivery-batch-nutrition;stage=2;scope=backend;review=3,6 -->
 - [x] new read model serves every leftover reader before protected direct updates are revoked <!-- omo:id=delivery-batch-reader-cutover;stage=2;scope=shared;review=3,6 -->
 - [x] legacy eaten projection and XP/activity apply only to consumed reasons exactly once <!-- omo:id=delivery-batch-legacy-projection;stage=2;scope=backend;review=3,6 -->
 - [x] legacy rows remain nullable and are never assigned inferred grams or fabricated content <!-- omo:id=delivery-batch-legacy-data;stage=2;scope=backend;review=3,6 -->

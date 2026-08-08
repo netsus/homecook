@@ -22,7 +22,7 @@
 - [x] v2 batch pins exact content snapshot and cooking servings without direct nutrition FK/vector duplication <!-- omo:id=accept-batch-content-only;stage=2;scope=backend;review=3,6 -->
 - [x] known/missing/unrecoverable and available/depleted/reason checks are mutually consistent <!-- omo:id=accept-batch-state-checks;stage=2;scope=backend;review=3,6 -->
 - [x] known weights obey `0<=remaining<=finished`; missing/unrecoverable weights are null <!-- omo:id=accept-batch-weight-bounds;stage=2;scope=backend;review=3,6 -->
-- [ ] batch nutrition uses scalable×servings/base+fixed once and preserves partial/unavailable <!-- omo:id=accept-batch-nutrition-formula;stage=2;scope=backend;review=3,6 -->
+- [x] batch nutrition uses scalable×servings/base+fixed once and preserves partial/unavailable <!-- omo:id=accept-batch-nutrition-formula;stage=2;scope=backend;review=3,6 -->
 - [x] mutable recipe current, servings-to-g inference and missing-to-zero fallback are forbidden <!-- omo:id=accept-batch-no-guessing;stage=2;scope=backend;review=3,6 -->
 
 ## Weight / Ledger State Machine

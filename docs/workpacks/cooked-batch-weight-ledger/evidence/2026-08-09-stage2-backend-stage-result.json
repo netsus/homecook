@@ -1,13 +1,13 @@
 {
   "result": "done",
-  "summary_markdown": "#8 cooked-batch exact pantry/weight completion을 공통 잠금 순서로 직렬화하고 공식 live gamification projection, fail-closed writer inventory와 정직하게 분리된 LEFTOVERS route/index/catalog evidence를 current official contract 안에서 local fresh/replay PostgreSQL로 검증했다.",
+  "summary_markdown": "#8 cooked-batch exact pantry/weight completion과 content-pinned batch nutrition authority를 공식 private PostgreSQL 경계에 구현하고, fixed-once/partial/unavailable/provenance와 기존 lock/gamification/inventory/LEFTOVERS 회귀를 fresh/replay로 검증했다.",
   "commit": {
     "subject": "feat(cooked-batch): make batch weight changes authoritative",
-    "body_markdown": "- snapshot-v2 completion and cooked-batch mutations use verified-session scoped RPCs\n- append-only events and replay checksum protect owner-only state transitions\n- legacy leftovers remain compatible without exposing v2 direct writes"
+    "body_markdown": "- snapshot-v2 completion and cooked-batch mutations use verified-session scoped RPCs\n- immutable content pins resolve batch nutrition through a postgres-owned private function\n- append-only events and replay checksum protect owner-only state transitions\n- legacy leftovers remain compatible without exposing v2 direct writes"
   },
   "pr": {
     "title": "feat(cooked-batch): implement weight ledger backend",
-    "body_markdown": "Draft Stage 2 backend implementation on PR #1292 merge eb4e878eb1d5b6fe5df00b1edd3a4f42fa472142. Repair commit e0884a6de5ce928f2dc087916d07f3d5858313c3 closes the lock/gamification/inventory/LIMIT findings. Performance-evidence repair 216a7429d27aa3de09b026cf4e6ef940a6c6f3c9 removes one unused internal PostgREST embed without changing the public response, parses exact route and snapshot plans separately, proves four selective index plans, and checks four exact catalog definitions separately. Stage 3, Ready, merge, remote rehearsal and activation remain pending."
+    "body_markdown": "Draft Stage 2 backend implementation on PR #1292 merge eb4e878eb1d5b6fe5df00b1edd3a4f42fa472142. Repair commit e0884a6de5ce928f2dc087916d07f3d5858313c3 closes the lock/gamification/inventory/LIMIT findings. Performance-evidence repair 216a7429d27aa3de09b026cf4e6ef940a6c6f3c9 separates route/index/catalog proof. Batch-nutrition repair 8d1145b9 implements the official content-pinned scalable×servings/base+fixed-once authority without a public contract or #9 storage expansion. Stage 3, Ready, merge, remote rehearsal and activation remain pending."
   },
   "base_drift_integration": {
     "task_id": "019fe2b2-0ee4-77c3-a829-9ae04bfac07f",
@@ -40,6 +40,19 @@
     "public_contract_expansion": false,
     "stage3_self_approval": false
   },
+  "batch_nutrition_authority_repair": {
+    "repair_entry_head": "87f068db400beba8c9df897b18875e1ad4508f50",
+    "implementation_commit": "8d1145b98422d80982674b5ac8945aa28d250a8e",
+    "latest_master_at_entry": "8e310fbfa6211c9ca8d10c716a0707c4774c4864",
+    "five_axis_task": "019fe33f-a54c-7b22-b6a2-ba72fe1145a2 HOLD 0/1/0",
+    "security_task": "019fe33f-a54c-7b22-b6a2-ba9032c9fb4b code findings 0/0/0; external merge-ref staleness only",
+    "tdd": "RED 3 missing-function failures; GREEN focused Vitest 59/59 and PostgreSQL fresh/replay cooked-batch 27/27",
+    "authority": "postgres-owned private owner-bound fixed-search_path resolver; no public/anon/authenticated/service_role EXECUTE",
+    "formula": "exact scalable * cooking_servings / base_servings + fixed once; complete/partial/unavailable and immutable provenance preserved",
+    "successor_boundary": "no #9 public API or storage invented; future #9 consumption remains private internal authority",
+    "public_contract_expansion": false,
+    "stage3_self_approval": false
+  },
   "overall_status": {
     "lifecycle": "in_progress",
     "approval_state": "not_started",
@@ -63,14 +76,14 @@
     "git diff --check"
   ],
   "verification_results": {
-    "full_vitest_eb4e_successor": {
+    "full_vitest_batch_nutrition_successor": {
       "passed_files": 522,
       "skipped_files": 28,
       "passed_tests": 5328,
-      "skipped_tests": 364
+      "skipped_tests": 367
     },
-    "focused_vitest": "review repair RED 7 failures / 41 passes; GREEN backend, gamification, security and inventory 7 files / 69 tests; final completion/security 2 files / 19 tests; remaining LEFTOVERS route RED 1 failure / 26 passes then GREEN 27/27; first full run exposed one stale structural security assertion at 1 failure / 5,327 passes, then final full 5,328 passes / 364 skips",
-    "postgres_fresh_replay": "predecessor fresh 15 passed / 1 intended skip, replay 16 passed; cooked-batch fresh/replay 24/24; inherited inventory fresh/replay 26 passed / 31 intended skips",
+    "focused_vitest": "batch-nutrition RED 3 missing-function failures; GREEN 6 files / 59 tests; prior review repair GREEN backend/gamification/security/inventory 7 files / 69 tests and LEFTOVERS 27/27; final full 5,328 passes / 367 skips",
+    "postgres_fresh_replay": "predecessor fresh 15 passed / 1 intended skip, replay 16 passed; cooked-batch fresh/replay 27/27; inherited inventory fresh/replay 26 passed / 31 intended skips",
     "complete_cancel_race": "two real connections finish without deadlock; exactly one succeeds, one returns CONFLICT, and the session/Meal/claim/batch terminal state is valid",
     "live_gamification_projection": "snapshot-v2 completion, consumed-unweighed close and legacy eat reuse canonical progress/activity IDs with the existing official notification/badge/achievement helpers",
     "account_session_generation_inventory": "64 routes, 93 write surfaces, 3 auth.users inbound fks; checksum-valid omission fixture fails closed",
@@ -78,7 +91,7 @@
     "progress_race": "two real connections serialize v1/v2 first awards to 60+45",
     "db_payload_rejection": "NULL and blank discard/adjust payloads fail at the final DB authority",
     "security_function_postgres": "8 anonymous mutation signatures denied with unchanged checksums",
-    "cooked_batch_authorization_manifest_functions": 20,
+    "cooked_batch_authorization_manifest_functions": 21,
     "workpack_validator_red": "4 CLI failures reproduced the explicit-slice silent no-op, unknown/missing slice success, and overwritten branch caller",
     "workpack_validator_green": "27/27 focused tests; missing shallow base refs are fetched exactly or fail closed; explicit --slice emits Workpack docs OK and fails closed for missing governing docs; legacy branch inference remains active",
     "leftovers_partial_compatibility_indexes": 4,
@@ -264,6 +277,14 @@
       "evidence_refs": ["tests/cooked-batch-weight-ledger-postgres.integration.test.ts"]
     },
     {
+      "id": "delivery-batch-nutrition",
+      "status": "checked",
+      "evidence_refs": [
+        "supabase/migrations/20260809110000_cooked_batch_weight_ledger.sql",
+        "tests/cooked-batch-weight-ledger-postgres.integration.test.ts"
+      ]
+    },
+    {
       "id": "delivery-batch-reader-cutover",
       "status": "checked",
       "evidence_refs": ["tests/leftovers.backend.test.ts", "tests/cooked-batch-compatibility.test.ts"]
@@ -294,6 +315,7 @@
     {"id":"accept-batch-complete-atomic","status":"checked","evidence_refs":["tests/cooked-batch-weight-ledger-postgres.integration.test.ts"]},
     {"id":"accept-batch-complete-idempotency","status":"checked","evidence_refs":["tests/cooked-batch-weight-ledger-postgres.integration.test.ts"]},
     {"id":"accept-batch-content-only","status":"checked","evidence_refs":["supabase/migrations/20260809110000_cooked_batch_weight_ledger.sql"]},
+    {"id":"accept-batch-nutrition-formula","status":"checked","evidence_refs":["supabase/migrations/20260809110000_cooked_batch_weight_ledger.sql","tests/cooked-batch-weight-ledger-postgres.integration.test.ts"]},
     {"id":"accept-batch-state-checks","status":"checked","evidence_refs":["tests/cooked-batch-weight-ledger-postgres.integration.test.ts"]},
     {"id":"accept-batch-weight-bounds","status":"checked","evidence_refs":["tests/cooked-batch-weight-ledger-postgres.integration.test.ts"]},
     {"id":"accept-batch-no-guessing","status":"checked","evidence_refs":["tests/snapshot-v2-complete.test.ts"]},

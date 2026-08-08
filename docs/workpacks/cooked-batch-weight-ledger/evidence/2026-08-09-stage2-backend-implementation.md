@@ -8,9 +8,9 @@
 - Base-drift integrator task ID: `019fe2b2-0ee4-77c3-a829-9ae04bfac07f`
 - Original Stage 1 base: `635763041d6420c648e2b55336e6caa9f1f9143c`
 - Implementation base: `eb4e878eb1d5b6fe5df00b1edd3a4f42fa472142` (PR #1292)
-- Current Draft PR base at the performance-evidence repair entry: `82e86f6ad35378f08b79f3f69def16e630024a79`
-- Latest `origin/master` observed during the repair: `b2c3baaf2d609c73fe94041abe33377fa5a5832d` (PR #1296; only `scripts/lib/local-mac-production.mjs` and `tests/local-mac-production.test.ts`, with no repair-file overlap)
-- Local performance-evidence repair branch: `fix/leftovers-performance-evidence-repair`
+- Current Draft PR head at the batch-nutrition repair entry: `87f068db400beba8c9df897b18875e1ad4508f50`
+- Latest `origin/master` observed at the batch-nutrition repair entry: `8e310fbfa6211c9ca8d10c716a0707c4774c4864`
+- Local batch-nutrition repair branch: `fix/cooked-batch-batch-nutrition-authority`
 - Draft PR #1291 remote branch retained: `feature/cooked-batch-weight-ledger-stage2-current`
 - Preserved held branch: `feature/be-cooked-batch-weight-ledger` exact `3c5b6760ce8c9a8b51205c755f9f92d57177ca00`
 - The held branch was restored before task changes and was not rebased, edited, force-pushed or cherry-picked.
@@ -92,34 +92,45 @@ Repair commit `216a7429d27aa3de09b026cf4e6ef940a6c6f3c9` keeps the public respon
 - Four separate selective representative queries prove actual `Index Scan`, `Index Only Scan` or `Bitmap Index Scan` nodes with each exact compatibility `Index Name`, relevant scan conditions, positive actual rows and at most `320` root shared blocks. These selective proofs are not described as the combined unpaginated route plan.
 - A separate `pg_catalog.pg_indexes` query compares all four full PostgreSQL-normalized `indexdef` strings exactly. Catalog existence is not treated as runtime index usage.
 
+Fresh final review task `019fe33f-a54c-7b22-b6a2-ba72fe1145a2` found the one remaining P1: Stage 2 projected a pinned nutrition status but had not implemented the official cooked-batch amount formula. Security task `019fe33f-a54c-7b22-b6a2-ba9032c9fb4b` reported code findings `0/0/0`; its only concern was external latest-master merge-ref staleness. Repair commit `8d1145b98422d80982674b5ac8945aa28d250a8e` closes the nutrition P1 without expanding the public contract:
+
+- RED first produced exactly three missing-function failures for content-pinned formula/provenance, invalid or missing `base_servings`, and ACL/owner authority.
+- `private.resolve_cooked_batch_nutrition(uuid,uuid)` is postgres-owned, owner-bound, `SECURITY DEFINER`, fixed-`search_path`, read-only and directly executable by none of `public/anon/authenticated/service_role`; the existing private projection consumes it through its owner authority.
+- Resolution follows only the batch's immutable content pin to that content snapshot's pinned nutrition snapshot. A different current/latest nutrition snapshot cannot affect the old batch.
+- Every available nutrient uses exact numeric `scalable × cooking_servings / base_servings + fixed`; fixed is applied once. Decimal results are preserved without an invented rounding layer.
+- `complete` writes the computed value to `amount`; `partial` keeps `amount=null`, writes the computed subtotal to `known_amount`, and preserves `minimum`; `unavailable` remains null and is never zero-filled. Quality, missing reasons, warnings, sources, snapshot IDs and calculation time remain the pinned immutable provenance.
+- A missing nutrition pin returns the official unavailable state. A malformed or missing pinned `base_servings` fails closed with internal `CONFLICT`; a legacy row without a content pin keeps its existing null nutrition status.
+- The authority is deterministic on replay and does not persist a duplicate nutrition FK/vector or introduce #9 meal-log storage/API. #9 may later consume this private calculation inside its own postgres-owned authority.
+
 PostgreSQL refinement also separated fixture isolation from two earlier product defects: terminal sessions were revalidating the active Meal revision pin, and completion set `meals.leftover_dish_id` without `is_leftover`. The final migration keeps immutable start snapshots as audit data after terminal transition and leaves ordinary planner Meal leftover-origin fields unchanged.
 
 Final fresh and replay PostgreSQL evidence:
 
 ```text
 fresh predecessor: 15 passed / 1 intended skip
-fresh cooked batch: 24 passed
+fresh cooked batch: 27 passed
 fresh inherited shared security inventory: 26 passed / 31 intended skips
 replay predecessor: 16 passed
-replay cooked batch: 24 passed
+replay cooked batch: 27 passed
 replay inherited shared security inventory: 26 passed / 31 intended skips
 ```
 
-The cooked-batch scenarios cover exact 20-function owner/ACL/search-path/scope inventory plus the inherited canonical refresh authority, owner RLS, direct protected update/event insert/select/checksum and forged batch INSERT denial, two-owner multi-table digests including progress-summary timestamps, exact pantry/claim rollback, same-session newer JWT acceptance with old/stale/different/revoked/generation-mismatched zero-write, owner-locked keep, atomic canonical progress/activity projection plus official live notification/badge/achievement projection, duplicate/replay canonical-ID reuse, standalone and planner completion/replay, a real complete/cancel lock race, idempotency payload mismatch including reason, full cached-projection tamper denial, DB-level NULL/blank discard-adjust rejection, unrecoverable irreversibility, close/cancel/reclose XP once, a forced two-connection v1/v2 `60+45` award race, v2 unavailable versus legacy-null nutrition status, strict canonical cursor parsing, representative 4,000 v2 + 4,000 legacy row exact unpaginated LEFTOVERS plans, a separate snapshot-title lookup, four selective actual-index-use plans and four exact catalog definitions, depleted meal reuse denial and exact-owner cleanup ordering.
+The cooked-batch scenarios cover exact 21-function owner/ACL/search-path/scope inventory plus the inherited canonical refresh authority, owner RLS, direct protected update/event insert/select/checksum and forged batch INSERT denial, two-owner multi-table digests including progress-summary timestamps, exact pantry/claim rollback, same-session newer JWT acceptance with old/stale/different/revoked/generation-mismatched zero-write, owner-locked keep, atomic canonical progress/activity projection plus official live notification/badge/achievement projection, duplicate/replay canonical-ID reuse, standalone and planner completion/replay, a real complete/cancel lock race, idempotency payload mismatch including reason, full cached-projection tamper denial, DB-level NULL/blank discard-adjust rejection, unrecoverable irreversibility, close/cancel/reclose XP once, a forced two-connection v1/v2 `60+45` award race, exact content-pinned batch nutrition with fixed-once and complete/partial/unavailable provenance, v2 unavailable versus legacy-null nutrition status, strict canonical cursor parsing, representative 4,000 v2 + 4,000 legacy row exact unpaginated LEFTOVERS plans, a separate snapshot-title lookup, four selective actual-index-use plans and four exact catalog definitions, depleted meal reuse denial and exact-owner cleanup ordering.
 
 ## Verification
 
 - `pnpm install --frozen-lockfile` — pass; no dependency or lockfile change
 - remaining LEFTOVERS performance-evidence focused TDD — route RED `1 failed / 26 passed`, GREEN `27/27`; PostgreSQL budget/catalog RED reproduced identically in fresh/replay, then final #8 fresh/replay `24/24`
-- first full Vitest after the plan rewrite — `1 failed / 5,327 passed / 364 skipped`; the only RED was the prior static security test looking for removed string assertions. The updated structural gate and final full run are `522 files passed / 28 skipped`, `5,328 tests passed / 364 skipped`
+- first full Vitest after the plan rewrite — `1 failed / 5,327 passed / 364 skipped`; the only RED was the prior static security test looking for removed string assertions. The batch-nutrition repair final full run is `522 files passed / 28 skipped`, `5,328 tests passed / 367 skipped`
 - final focused Vitest — repaired backend/gamification/security/inventory set `7 files / 69 tests` pass; final completion/security rerun `2 files / 19 tests` pass
-- full `pnpm test` on the repaired `eb4e878e…` successor — `522 files passed | 28 skipped`, `5,328 tests passed | 364 skipped`
+- full `pnpm test` after batch-nutrition repair `8d1145b9…` — `522 files passed | 28 skipped`, `5,328 tests passed | 367 skipped`
 - `pnpm exec vitest run tests/check-workpack-docs.test.ts tests/cooked-batch-weight-ledger-stage1-relock.test.ts` — final automation/status repair `2 files / 37 tests`; the validator-only file is `27/27`
 - `pnpm validate:workpack -- --slice cooked-batch-weight-ledger` — pass with visible `Workpack docs OK for slice 'cooked-batch-weight-ledger' (base: master)` marker; `missing-cooked-batch-sentinel` exits `1` with both missing governing paths; legacy `BRANCH_NAME=feature/be-cooked-batch-weight-ledger pnpm validate:workpack` inference still resolves the real workpack and passes
-- `pnpm test:cooked-batch-weight-ledger:postgres` — final successor pass: fresh predecessor `15 + 1 intended skip`, fresh/replay #8 `24/24`, replay predecessor `16/16`, inherited shared security inventory fresh/replay `26 passed / 31 intended skips`
+- batch-nutrition focused TDD — RED `3 failed` because the private resolver did not exist; GREEN focused Vitest `6 files / 59 tests`, PostgreSQL fresh/replay #8 `27/27`
+- `pnpm test:cooked-batch-weight-ledger:postgres` — final successor pass: fresh predecessor `15 + 1 intended skip`, fresh/replay #8 `27/27`, replay predecessor `16/16`, inherited shared security inventory fresh/replay `26 passed / 31 intended skips`
 - `pnpm verify:backend` — pass: lint, typecheck, `217 files passed | 11 skipped`, `2,664 tests passed | 150 skipped`, Next build, security E2E `12/12`
 - `pnpm test:security-functions:postgres` — pass: 8 anonymous mutation signatures denied with unchanged checksums
-- `node scripts/validate-security-function-authorization.mjs --contract-only` — pass; #8 manifest classifies 20 pre-deployment functions and delegates all full-local refresh ownership to the canonical #1292 manifest/migration
+- `node scripts/validate-security-function-authorization.mjs --contract-only` — pass; #8 manifest classifies 21 pre-deployment functions and delegates all full-local refresh ownership to the canonical #1292 manifest/migration
 - source-of-truth, workflow-v2, workpack, automation-spec and OMO bookkeeping validators — pass
 - account-session generation inventory — pass: `64 routes / 93 write surfaces / 3 auth.users inbound FKs`; all eight cooked-batch/legacy helper writers are explicit, and removing one from a checksum-valid alternate registry fails closed
 - `pnpm audit --audit-level high` — exit 0; residual `1 low / 1 moderate`, high `0`, critical `0`
