@@ -18,7 +18,7 @@
 - [x] callback/link callback은 ledger provider/flow를 sole authority로 사용하고 replay/wrong/expired/old remote flow를 거부한다 <!-- omo:id=accept-full-local-callback-authority;stage=2;scope=backend;review=3,6 -->
 - [ ] local JWT `sub`와 `auth.uid()` mismatch가 0이고 User A로 User B row/object read/write/delete가 0이다 <!-- omo:id=accept-full-local-rls-owner;stage=2;scope=backend;review=3,6 -->
 - [ ] callback/server refresh/browser-first refresh 뒤 첫 protected request가 같은 active `session_id` binding의 최신 JWT evidence·expiry·last-seen을 단조 갱신하고, logout/delete/quarantine/recreate 및 missing/revoked binding 뒤 stale token mutation이 0이다 <!-- omo:id=accept-full-local-session-revoke;stage=2;scope=backend;review=3,6 -->
-- [ ] production app/Auth/callback active contract가 `app.mumeok.kr`/`auth.mumeok.kr`와 기존 callback 2개로만 정렬되고 tracked runtime/example/code/test의 `.com` production origin 참조가 0이다 <!-- omo:id=accept-full-local-production-domain;stage=2;scope=backend;review=3,6 -->
+- [ ] production app/Auth/callback active contract가 `https://app.mumeok.kr`, `https://auth.mumeok.kr`, `https://app.mumeok.kr/auth/callback`, `https://app.mumeok.kr/auth/link/callback`으로만 정렬되고 tracked runtime/example/code/test의 `.com` production origin 참조가 0이다 <!-- omo:id=accept-full-local-production-domain;stage=2;scope=backend;review=3,6 -->
 - [x] logout은 binding revoke → local Auth sign-out → cookie 만료 순서를 지키고 partial failure/retry에도 stale JWT mutation과 cross-session revoke가 0이다 <!-- omo:id=accept-full-local-logout-order;stage=2;scope=backend;review=3,6 -->
 - [x] user path service-role priority/fallback과 browser direct Data/Storage mutation이 0이다 <!-- omo:id=accept-full-local-no-service-fallback;stage=2;scope=backend;review=3,6 -->
 

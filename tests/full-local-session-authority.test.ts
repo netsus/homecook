@@ -12,7 +12,7 @@ import {
 
 const OWNER_UUID = "11111111-1111-4111-8111-111111111111";
 const SESSION_UUID = "22222222-2222-4222-8222-222222222222";
-const ISSUER = "https://auth.mumeok.com/auth/v1";
+const ISSUER = "https://auth.mumeok.kr/auth/v1";
 const SECRET_V2 = "session-generation-secret-v2-at-least-32-bytes";
 
 function jwt(claims: Record<string, unknown>) {
@@ -121,7 +121,7 @@ describe("full-local session authority", () => {
     process.env.HOMECOOK_AUTH_AUTHORITY = "local";
     process.env.HOMECOOK_SESSION_GENERATION_HMAC_KEY_V1 = SECRET_V2;
     process.env.NEXT_PUBLIC_AUTH_SUPABASE_PUBLISHABLE_KEY = "local-publishable";
-    process.env.NEXT_PUBLIC_AUTH_SUPABASE_URL = "https://auth.mumeok.com";
+    process.env.NEXT_PUBLIC_AUTH_SUPABASE_URL = "https://auth.mumeok.kr";
     const getUser = vi.fn().mockRejectedValue(new Error("duplicate lookup"));
     const routeClient = {
       auth: {

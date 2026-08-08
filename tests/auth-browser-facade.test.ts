@@ -7,7 +7,7 @@ const { createBrowserClient } = vi.hoisted(() => ({
 vi.mock("@supabase/ssr", () => ({ createBrowserClient }));
 vi.mock("@/lib/supabase/auth-env", () => ({
   getAuthSupabaseEnv: () => ({
-    url: "https://auth.mumeok.com",
+    url: "https://auth.mumeok.kr",
     publishableKey: "publishable",
   }),
 }));
