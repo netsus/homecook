@@ -148,7 +148,6 @@ const CORE_POLICY_SOURCES = [
 
 const SNAPSHOT_POLICY_SOURCES = [
   [leftoverMigration, "leftover_dishes_select_own"],
-  [leftoverMigration, "leftover_dishes_insert_own"],
   [leftoverMigration, "leftover_dishes_update_own"],
   ...SNAPSHOT_READ_TABLES.flatMap((table) =>
     table.policies.map((policy) => [snapshotConsumerReadMigration, policy.name])

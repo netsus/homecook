@@ -1,4 +1,4 @@
-import { readFileSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
@@ -35,5 +35,105 @@ describe("cooked batch database security contract", () => {
     }
     expect(sql).toMatch(/security definer[\s\S]*set search_path = pg_catalog, public, private, pg_temp/i);
     expect(sql).toMatch(/select[\s\S]*from public\.leftover_dishes[\s\S]*for update/i);
+  });
+
+  it("locks every selected owner pantry row and fails closed if delete cardinality changes", () => {
+    const sql = migration();
+    expect(sql).toMatch(
+      /from \(\s*select pantry\.id\s*from public\.pantry_items as pantry[\s\S]*pantry\.user_id = p_owner_uuid[\s\S]*for update\s*\) as locked_owner_pantry/i,
+    );
+    expect(sql).toMatch(
+      /get diagnostics v_removed = row_count;[\s\S]*if v_removed <> v_requested then[\s\S]*raise exception 'CONFLICT'/i,
+    );
+  });
+
+  it("locks planner claims and requires exact owner-scoped delete cardinality", () => {
+    const sql = migration();
+    expect(sql).toMatch(
+      /from public\.cooking_session_meal_claims as claim[\s\S]*claim\.session_id = p_session_id[\s\S]*order by claim\.meal_id[\s\S]*for update[\s\S]*as locked_session_claims/i,
+    );
+    expect(sql).toMatch(/claim\.owner_user_id is distinct from p_owner_uuid/i);
+    expect(sql).toMatch(
+      /delete from public\.cooking_session_meal_claims[\s\S]*owner_user_id = p_owner_uuid;[\s\S]*get diagnostics v_claims_deleted = row_count;[\s\S]*v_claims_deleted <> v_expected_meals/i,
+    );
+  });
+
+  it("classifies every ledger function and explicitly replaces the shared scope verifier", () => {
+    const manifestPath = join(
+      process.cwd(),
+      "docs/security/cooked-batch-weight-ledger-security-function-authorization-manifest.json",
+    );
+    expect(existsSync(manifestPath), "cooked batch function manifest is missing").toBe(true);
+    if (!existsSync(manifestPath)) return;
+
+    const manifest = JSON.parse(readFileSync(manifestPath, "utf8")) as {
+      functions: Array<{ replaces_additive?: string; signature: string }>;
+    };
+    expect(
+      manifest.functions.find(
+        ({ signature }) => signature === "private.verify_full_local_internal_scope()",
+      ),
+    ).toMatchObject({
+      replaces_additive: "account-session-generation-foundation",
+    });
+
+    const validator = readFileSync(
+      join(process.cwd(), "scripts/validate-security-function-authorization.mjs"),
+      "utf8",
+    );
+    expect(validator).toContain(
+      "cooked-batch-weight-ledger-security-function-authorization-manifest.json",
+    );
+    expect(validator).toContain("replaces_additive");
+  });
+
+  it("removes direct batch insertion and event-table reads from browser roles", () => {
+    const sql = migration();
+    expect(sql).toMatch(/drop policy if exists leftover_dishes_insert_own/i);
+    expect(sql).toMatch(
+      /revoke insert on public\.leftover_dishes from anon, authenticated, service_role/i,
+    );
+    expect(sql).toMatch(
+      /revoke select, insert, update, delete on public\.cooked_batch_quantity_events\s*from anon, authenticated, service_role/i,
+    );
+    expect(sql).not.toMatch(/grant select on public\.cooked_batch_quantity_events to authenticated/i);
+  });
+
+  it("moves legacy eat and uneat through one owner-locked compatibility RPC", () => {
+    const sql = migration();
+    expect(sql).toMatch(
+      /function public\.mutate_legacy_leftover_status\([\s\S]*from public\.leftover_dishes[\s\S]*for update/i,
+    );
+    expect(sql).toMatch(
+      /set_account_generation_internal_writer_marker\([\s\S]*update public\.leftover_dishes[\s\S]*set_account_generation_internal_writer_marker\(/i,
+    );
+
+    for (const action of ["eat", "uneat"]) {
+      const route = readFileSync(
+        join(
+          process.cwd(),
+          `app/api/v1/leftovers/[leftover_id]/${action}/route.ts`,
+        ),
+        "utf8",
+      );
+      expect(route).toContain('rpc("mutate_legacy_leftover_status"');
+      expect(route).not.toContain('.from("leftover_dishes")\n    .update(');
+    }
+  });
+
+  it("keeps v2 nutrition status non-null and binds cleanup to the exact owner", () => {
+    const sql = migration();
+    expect(sql).toMatch(
+      /'nutrition_calculation_status',\s*case[\s\S]*recipe_content_snapshot_id is null then null[\s\S]*coalesce\(nutrition\.calculation_status, 'unavailable'\)/i,
+    );
+    expect(sql).toMatch(
+      /homecook\.account_delete_user_id[\s\S]*is distinct from old\.user_id/i,
+    );
+  });
+
+  it("covers event reason in both replay and cached-checksum verification", () => {
+    const sql = migration();
+    const reasonTerms = sql.match(/coalesce\(reason, ''\)/gi) ?? [];
+    expect(reasonTerms).toHaveLength(2);
   });
 });

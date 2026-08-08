@@ -25,8 +25,10 @@ process.env.HOMECOOK_RECIPE_SNAPSHOT_FOLLOWUP_TARGET_MIGRATION =
   "supabase/migrations/20260808143000_cooked_batch_weight_ledger.sql";
 process.env.HOMECOOK_RECIPE_SNAPSHOT_FOLLOWUP_INTEGRATION_TEST =
   "tests/cooked-batch-weight-ledger-postgres.integration.test.ts";
-// The inherited personal-editor inventory is an exact prior-slice catalog.
-// This follow-up runs its own ledger ACL/RLS checks without mutating that catalog.
-process.env.HOMECOOK_RECIPE_SNAPSHOT_SKIP_ACTIVE_SECURITY_INVENTORY = "1";
-
+// The inherited security inventory remains active after the #8 migration. Its
+// personal-editor Storage/runtime observations own a different workpack's full
+// schema and ACL projection and intentionally do not accept the later follow-up
+// migrations in this runner. Exact shared inventory and tamper tests still run.
+process.env.HOMECOOK_RECIPE_SNAPSHOT_ACTIVE_SECURITY_TEST_NAME_PATTERN =
+  "^(?!.*(?:Storage|local Auth and private Storage|mutation grant to a non-owner role outside the exact ACL)).*$";
 await import("./run-recipe-snapshot-authority-postgres-integration.mjs");

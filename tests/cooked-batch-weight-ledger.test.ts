@@ -5,6 +5,7 @@ import {
   parseBatchCloseRequest,
   parseBatchDiscardRequest,
   parseBatchWeightRequest,
+  parseCookedBatchListQuery,
   projectCookedBatchMutationData,
 } from "@/lib/server/cooked-batches";
 
@@ -30,6 +31,13 @@ const batch = {
 };
 
 describe("cooked batch mutation contract", () => {
+  it("rejects an explicitly present empty list cursor", () => {
+    expect(parseCookedBatchListQuery(new URLSearchParams("cursor="))).toEqual({
+      ok: false,
+      fields: [{ field: "cursor", reason: "invalid_cursor" }],
+    });
+  });
+
   it("accepts only the official weight action shapes", () => {
     expect(parseBatchWeightRequest({
       action: "set_finished_weight",

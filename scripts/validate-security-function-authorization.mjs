@@ -76,6 +76,16 @@ const ADDITIVE_SOURCES = [
   {
     manifestPath: path.join(
       REPO_ROOT,
+      "docs/security/cooked-batch-weight-ledger-security-function-authorization-manifest.json",
+    ),
+    migrationPath: path.join(
+      REPO_ROOT,
+      "supabase/migrations/20260808143000_cooked_batch_weight_ledger.sql",
+    ),
+  },
+  {
+    manifestPath: path.join(
+      REPO_ROOT,
       "docs/security/hybrid-internal-operations-security-function-authorization-manifest.json",
     ),
     migrationPath: path.join(
@@ -743,6 +753,7 @@ function parseCreatedFunctionDefinitions(migration) {
 function collapseSql(value) {
   return value
     .replace(/\s+/gu, " ")
+    .replace(/\btimestamptz\b/giu, "timestamp with time zone")
     .replace(/\(\s+/gu, "(")
     .replace(/\s+\)/gu, ")")
     .replace(/\s*,\s*/gu, ", ")
@@ -811,6 +822,21 @@ function assertAdditiveContract(baseContract, manifest, migration) {
       "additive baseline replacement contract is invalid; "
         + `unapproved=${unapprovedOverlap.join(",") || "none"}; `
         + `not-in-baseline=${invalidReplacement.join(",") || "none"}`,
+    );
+  }
+  const invalidAdditiveReplacement = functions
+    .filter(
+      (entry) =>
+        entry.replaces_additive !== undefined
+        && (typeof entry.replaces_additive !== "string"
+          || entry.replaces_additive.length === 0
+          || entry.replaces_baseline !== undefined),
+    )
+    .map((entry) => entry.signature);
+  if (invalidAdditiveReplacement.length > 0) {
+    throw new Error(
+      "additive-to-additive replacement contract is invalid; "
+        + `invalid=${invalidAdditiveReplacement.join(",")}`,
     );
   }
   if (!functions.some((entry) => entry.replaces_baseline !== true)) {
@@ -1204,11 +1230,31 @@ const additiveContracts = additiveSources.map(({ manifest, migration: sourceMigr
     sourceMigration,
   ),
 }));
-const additiveContract = additiveContracts.flatMap(({ functions }) => functions);
-const additiveSignatures = additiveContract.map((entry) => entry.signature);
-if (new Set(additiveSignatures).size !== additiveSignatures.length) {
-  throw new Error("additive security function signatures overlap across manifests");
+const additiveContractBySignature = new Map();
+for (const { slice, functions } of additiveContracts) {
+  for (const entry of functions) {
+    const previous = additiveContractBySignature.get(entry.signature);
+    if (!previous) {
+      if (entry.replaces_additive !== undefined) {
+        throw new Error(
+          `additive replacement target is missing for ${entry.signature}: `
+            + entry.replaces_additive,
+        );
+      }
+      additiveContractBySignature.set(entry.signature, { entry, slice });
+      continue;
+    }
+    if (entry.replaces_additive !== previous.slice) {
+      throw new Error(
+        `additive security function signature overlap is not approved for ${entry.signature}; `
+          + `previous=${previous.slice}; replacement=${entry.replaces_additive ?? "none"}`,
+      );
+    }
+    additiveContractBySignature.set(entry.signature, { entry, slice });
+  }
 }
+const additiveContract = [...additiveContractBySignature.values()]
+  .map(({ entry }) => entry);
 if (contractOnly) {
   if (mode !== "check" || useLinkedRemote) {
     throw new Error("--contract-only cannot be combined with write or remote modes");

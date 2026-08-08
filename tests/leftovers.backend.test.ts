@@ -112,6 +112,7 @@ function createThenableQuery<T>(results: Array<QueryResult<T>>) {
     eq: vi.fn(() => query),
     gt: vi.fn(() => query),
     in: vi.fn(() => query),
+    or: vi.fn(() => query),
     order: vi.fn(() => query),
     then(onFulfilled?: (value: QueryResult<T>) => unknown, onRejected?: (reason: unknown) => unknown) {
       const fallback: QueryResult<T> = {
@@ -233,12 +234,39 @@ function createLeftoverMutationDb({
     updateRows.map((row) => ({ data: row, error: null })),
   );
   const update = vi.fn(() => updateQuery);
+  const rpc = vi.fn(async (
+    _name: string,
+    args: { p_action: "eat" | "uneat" },
+  ) => {
+    const source = selectRows[0];
+    if (!source) return { data: { error_code: "RESOURCE_NOT_FOUND" }, error: null };
+    if (source.user_id !== "user-1") {
+      return { data: { error_code: "FORBIDDEN" }, error: null };
+    }
+    if (source.recipe_content_snapshot_id) {
+      return { data: { error_code: "CONFLICT" }, error: null };
+    }
+    const targetStatus = args.p_action === "eat" ? "eaten" : "leftover";
+    const result = updateRows[0] ?? source;
+    return {
+      data: {
+        id: result.id,
+        status: result.status,
+        eaten_at: result.eaten_at,
+        auto_hide_at: result.auto_hide_at,
+        transitioned: source.status !== targetStatus,
+      },
+      error: null,
+    };
+  });
 
   return {
     selectQuery,
     update,
     updateQuery,
+    rpc,
     db: {
+      rpc,
       from: vi.fn((table: string) => {
         if (table === "leftover_dishes") {
           return {
@@ -611,9 +639,26 @@ describe("GET /api/v1/leftovers", () => {
 
     expect(response.status).toBe(200);
     expect(leftoversQuery.eq).not.toHaveBeenCalledWith("status", "eaten");
+    expect(leftoversQuery.or).toHaveBeenCalledWith(expect.stringContaining("depleted_reason.in"));
     expect(leftoversQuery.gt).toHaveBeenCalledWith("auto_hide_at", nowIso);
     expect(leftoversQuery.order).toHaveBeenCalledWith("eaten_at", { ascending: false });
     vi.useRealTimers();
+  });
+
+  it("pushes legacy and v2 leftover compatibility filtering into the database", async () => {
+    const { db, leftoversQuery } = createLeftoverListDb({ leftovers: [], recipes: [] });
+    setupAuthenticatedDb(db);
+
+    const { GET } = await importListRoute();
+    const response = await GET(new NextRequest("http://localhost:3000/api/v1/leftovers"));
+
+    expect(response.status).toBe(200);
+    expect(leftoversQuery.or).toHaveBeenCalledWith(
+      expect.stringContaining("recipe_content_snapshot_id.is.null,status.eq.leftover"),
+    );
+    expect(leftoversQuery.or).toHaveBeenCalledWith(
+      expect.stringContaining("batch_status.eq.available"),
+    );
   });
 });
 
@@ -771,7 +816,7 @@ describe("POST /api/v1/leftovers/{id}/eat", () => {
   });
 
   it("updates a leftover dish to eaten and sets auto_hide_at 30 days later", async () => {
-    const { db, update, updateQuery } = createLeftoverMutationDb({
+    const { db, rpc, update } = createLeftoverMutationDb({
       selectRows: [
         {
           id: leftoverId,
@@ -801,13 +846,12 @@ describe("POST /api/v1/leftovers/{id}/eat", () => {
     const body = await response.json();
 
     expect(response.status).toBe(200);
-    expect(update).toHaveBeenCalledWith({
-      status: "eaten",
-      eaten_at: nowIso,
-      auto_hide_at: autoHideIso,
+    expect(update).not.toHaveBeenCalled();
+    expect(rpc).toHaveBeenCalledWith("mutate_legacy_leftover_status", {
+      p_action: "eat",
+      p_leftover_id: leftoverId,
+      p_now: nowIso,
     });
-    expect(updateQuery.eq).toHaveBeenCalledWith("id", leftoverId);
-    expect(updateQuery.eq).toHaveBeenCalledWith("user_id", "user-1");
     expect(body).toEqual({
       success: true,
       data: {
@@ -974,7 +1018,7 @@ describe("POST /api/v1/leftovers/{id}/uneat", () => {
   });
 
   it("updates an eaten dish back to leftover and clears eaten fields", async () => {
-    const { db, update } = createLeftoverMutationDb({
+    const { db, rpc, update } = createLeftoverMutationDb({
       selectRows: [
         {
           id: leftoverId,
@@ -1004,10 +1048,11 @@ describe("POST /api/v1/leftovers/{id}/uneat", () => {
     const body = await response.json();
 
     expect(response.status).toBe(200);
-    expect(update).toHaveBeenCalledWith({
-      status: "leftover",
-      eaten_at: null,
-      auto_hide_at: null,
+    expect(update).not.toHaveBeenCalled();
+    expect(rpc).toHaveBeenCalledWith("mutate_legacy_leftover_status", {
+      p_action: "uneat",
+      p_leftover_id: leftoverId,
+      p_now: expect.any(String),
     });
     expect(body.data).toEqual({
       id: leftoverId,
