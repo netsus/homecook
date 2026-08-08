@@ -10,11 +10,10 @@ import {
   activateLocalMacProduction,
   createProductionEnvContents,
   installLocalMacProductionLaunchAgent,
-  LOCAL_SUPABASE_CLI_PACKAGE,
   parseLocalMacProductionArgs,
   renderLocalMacProductionPlist,
   startLocalMacProductionRuntime,
-  verifyLocalMacProductionBootCli,
+  verifyFullLocalProductionRuntimeStatus,
   verifyLocalMacProductionPrerequisites,
   waitForLocalMacProductionReady,
 } from "../scripts/lib/local-mac-production.mjs";
@@ -134,7 +133,7 @@ describe("local Mac production environment", () => {
 });
 
 describe("local Mac production launch agent", () => {
-  it("starts Docker and local Supabase before the Next.js production process", async () => {
+  it("checks the existing full-local runtime exactly once before the Next.js production process", async () => {
     const calls: string[] = [];
     const child = { on: () => child };
     const runtimeEnv = {
@@ -159,7 +158,6 @@ describe("local Mac production launch agent", () => {
           HOME: runtimeEnv.HOME,
           PATH: runtimeEnv.PATH,
           XDG_CONFIG_HOME: runtimeEnv.XDG_CONFIG_HOME,
-          npm_config_offline: "true",
         });
         return { status: 0, stdout: "", stderr: "" };
       },
@@ -172,13 +170,16 @@ describe("local Mac production launch agent", () => {
     expect(result).toBe(child);
     expect(calls).toEqual([
       "docker-ready",
-      "/Users/tester/.nvm/corepack pnpm dlx supabase@2.110.0 start",
-      "/Users/tester/.nvm/corepack pnpm dlx supabase@2.110.0 status",
+      "/Users/tester/.nvm/node /Users/tester/homecook/scripts/full-local-production-runtime.mjs status",
       "/Users/tester/.nvm/node /Users/tester/homecook/scripts/start-production.mjs -H 127.0.0.1 -p 3100",
     ]);
+    expect(calls.join("\n")).not.toContain("supabase@2.110.0");
+    expect(calls.join("\n")).not.toContain("corepack");
+    expect(calls.join("\n")).not.toContain(" pnpm ");
+    expect(calls.join("\n")).not.toContain(" start");
   });
 
-  it("rejects a public bind address before starting Docker or Supabase", async () => {
+  it("rejects a public bind address before starting Docker or checking the runtime", async () => {
     let dockerStarted = false;
     let commandStarted = false;
     let nextStarted = false;
@@ -206,7 +207,7 @@ describe("local Mac production launch agent", () => {
     expect(nextStarted).toBe(false);
   });
 
-  it("does not start Next.js when local Supabase start fails", async () => {
+  it("does not start Next.js when the full-local runtime status fails", async () => {
     let nextStarted = false;
 
     await expect(
@@ -219,12 +220,12 @@ describe("local Mac production launch agent", () => {
           return { on: () => undefined };
         },
       }),
-    ).rejects.toThrow("Local Supabase start failed");
+    ).rejects.toThrow("Full-local production runtime health check failed");
 
     expect(nextStarted).toBe(false);
   });
 
-  it("does not start local Supabase or Next.js when Docker is unavailable", async () => {
+  it("does not check the full-local runtime or start Next.js when Docker is unavailable", async () => {
     let commandStarted = false;
     let nextStarted = false;
 
@@ -246,32 +247,6 @@ describe("local Mac production launch agent", () => {
     ).rejects.toThrow("Docker unavailable");
 
     expect(commandStarted).toBe(false);
-    expect(nextStarted).toBe(false);
-  });
-
-  it("does not start Next.js when local Supabase health check fails", async () => {
-    let commandCount = 0;
-    let nextStarted = false;
-
-    await expect(
-      startLocalMacProductionRuntime({
-        rootDir: "/Users/tester/homecook",
-        ensureDocker: async () => undefined,
-        runCommand: () => {
-          commandCount += 1;
-          return {
-            status: commandCount === 1 ? 0 : 1,
-            stdout: "",
-            stderr: "unhealthy",
-          };
-        },
-        spawnProcess: () => {
-          nextStarted = true;
-          return { on: () => undefined };
-        },
-      }),
-    ).rejects.toThrow("Local Supabase health check failed");
-
     expect(nextStarted).toBe(false);
   });
 
@@ -402,7 +377,7 @@ describe("local Mac production launch agent", () => {
     tempDirs.push(rootDir, homeDir);
 
     const spawnCalls: string[] = [];
-    const bootCliChecks: string[] = [];
+    const runtimeStatusChecks: string[] = [];
     const spawn = ((command: string, args: readonly string[]) => {
       spawnCalls.push(`${command} ${args.join(" ")}`);
       return {
@@ -421,10 +396,10 @@ describe("local Mac production launch agent", () => {
       platform: "darwin",
       getuid: () => 501,
       spawn,
-      verifyBootCli: ({ command, args, env }) => {
-        bootCliChecks.push(`${command} ${args.join(" ")}`);
-        expect(command).toBe(join(dirname(process.execPath), "corepack"));
-        expect(args).toEqual(["pnpm", "dlx", LOCAL_SUPABASE_CLI_PACKAGE, "--version"]);
+      verifyRuntimeStatus: ({ command, args, env }) => {
+        runtimeStatusChecks.push(`${command} ${args.join(" ")}`);
+        expect(command).toBe(process.execPath);
+        expect(args).toEqual([join(rootDir, "scripts/full-local-production-runtime.mjs"), "status"]);
         expect(env).toEqual({
           HOME: homeDir,
           PATH: [
@@ -443,29 +418,57 @@ describe("local Mac production launch agent", () => {
 
     expect(result.changed).toBe(true);
     expect(readFileSync(result.plistPath, "utf8")).toContain("127.0.0.1");
-    expect(bootCliChecks).toEqual([
-      `${join(dirname(process.execPath), "corepack")} pnpm dlx ${LOCAL_SUPABASE_CLI_PACKAGE} --version`,
+    expect(runtimeStatusChecks).toEqual([
+      `${process.execPath} ${join(rootDir, "scripts/full-local-production-runtime.mjs")} status`,
     ]);
+    expect(runtimeStatusChecks.join("\n")).not.toContain("supabase@2.110.0");
+    expect(runtimeStatusChecks.join("\n")).not.toContain("corepack");
+    expect(runtimeStatusChecks.join("\n")).not.toContain(" start");
     expect(spawnCalls).toContain(`launchctl bootstrap gui/501 ${result.plistPath}`);
     expect(spawnCalls).toContain("launchctl kickstart -k gui/501/com.homecook.production");
   });
 
-  it("fails installation preflight when the pinned boot CLI cannot be cached", () => {
-    expect(() => verifyLocalMacProductionBootCli({
-      command: "/Users/tester/.nvm/corepack",
-      args: ["pnpm", "dlx", LOCAL_SUPABASE_CLI_PACKAGE, "--version"],
+  it("fails installation preflight when the full-local runtime is unhealthy", () => {
+    expect(() => verifyFullLocalProductionRuntimeStatus({
+      command: "/Users/tester/.nvm/node",
+      args: ["/Users/tester/homecook/scripts/full-local-production-runtime.mjs", "status"],
       cwd: "/Users/tester/homecook",
       env: {
         HOME: "/Users/tester",
         PATH: "/usr/bin:/bin",
       },
       runCommand: () => ({ status: 1 }),
-    })).toThrow(
-      `Unable to cache ${LOCAL_SUPABASE_CLI_PACKAGE} for offline production boot`,
-    );
+    })).toThrow("Full-local production runtime health check failed");
   });
 
-  it("requires corepack next to the configured Node binary", () => {
+  it("does not mutate launchctl when the full-local runtime preflight fails", () => {
+    const spawnCalls: string[] = [];
+
+    expect(() => installLocalMacProductionLaunchAgent({
+      rootDir: "/Users/tester/homecook",
+      homeDir: "/Users/tester",
+      nodeBin: "/Users/tester/.nvm/node",
+      platform: "darwin",
+      getuid: () => 501,
+      spawn: ((command: string, args: readonly string[]) => {
+        spawnCalls.push(`${command} ${args.join(" ")}`);
+        return { status: 0, stdout: "", stderr: "" };
+      }) as typeof import("node:child_process").spawnSync,
+      verifyPrerequisites: () => undefined,
+      verifyRuntimeStatus: ({ command, args }) => {
+        expect(command).toBe("/Users/tester/.nvm/node");
+        expect(args).toEqual([
+          "/Users/tester/homecook/scripts/full-local-production-runtime.mjs",
+          "status",
+        ]);
+        throw new Error("Full-local production runtime health check failed");
+      },
+    })).toThrow("Full-local production runtime health check failed");
+
+    expect(spawnCalls).toEqual([]);
+  });
+
+  it("requires the full-local runtime script and local production config", () => {
     const rootDir = mkdtempSync(join(tmpdir(), "homecook-production-prerequisites-"));
     tempDirs.push(rootDir);
     const nodeBin = join(rootDir, "bin", "node");
@@ -480,7 +483,17 @@ describe("local Mac production launch agent", () => {
     writeFileSync(join(rootDir, "scripts", "start-production.mjs"), "");
 
     expect(() => verifyLocalMacProductionPrerequisites({ rootDir, nodeBin }))
-      .toThrow(join(dirname(nodeBin), "corepack"));
+      .toThrow(join(rootDir, "scripts/full-local-production-runtime.mjs"));
+
+    writeFileSync(join(rootDir, "scripts", "full-local-production-runtime.mjs"), "");
+
+    expect(() => verifyLocalMacProductionPrerequisites({ rootDir, nodeBin }))
+      .toThrow(join(rootDir, "infra/full-local-supabase/.env.production.local"));
+
+    mkdirSync(join(rootDir, "infra/full-local-supabase"), { recursive: true });
+    writeFileSync(join(rootDir, "infra/full-local-supabase/.env.production.local"), "");
+
+    expect(() => verifyLocalMacProductionPrerequisites({ rootDir, nodeBin })).not.toThrow();
   });
 });
 
