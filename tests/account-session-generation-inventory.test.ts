@@ -69,6 +69,36 @@ describe("account session generation inventory", () => {
         persists_personal_state: true,
       }),
       expect.objectContaining({
+        route: "/api/v1/cooking/session-attempts/[id]/complete",
+        method: "POST",
+        owner_scope: "authenticated-user",
+        persists_personal_state: true,
+      }),
+      expect.objectContaining({
+        route: "/api/v1/cooked-batches/[id]/weight",
+        method: "PATCH",
+        owner_scope: "authenticated-user",
+        persists_personal_state: true,
+      }),
+      expect.objectContaining({
+        route: "/api/v1/cooked-batches/[id]/discard",
+        method: "POST",
+        owner_scope: "authenticated-user",
+        persists_personal_state: true,
+      }),
+      expect.objectContaining({
+        route: "/api/v1/cooked-batches/[id]/adjust",
+        method: "POST",
+        owner_scope: "authenticated-user",
+        persists_personal_state: true,
+      }),
+      expect.objectContaining({
+        route: "/api/v1/cooked-batches/[id]/close-unweighed",
+        method: "POST",
+        owner_scope: "authenticated-user",
+        persists_personal_state: true,
+      }),
+      expect.objectContaining({
         route: "/api/v1/recipes/[id]",
         method: "PATCH",
         owner_scope: "authenticated-user",
