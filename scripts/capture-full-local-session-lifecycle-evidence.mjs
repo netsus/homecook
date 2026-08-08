@@ -55,6 +55,16 @@ const CANARY_RESULT_KEYS = Object.freeze([
 const SHA_PATTERN = /^[a-f0-9]{40}$/u;
 const DIGEST_PATTERN = /^sha256:[a-f0-9]{64}$/u;
 const MIGRATION_PATTERN = /^\d{14}_[a-z0-9_]+\.sql$/u;
+const KNOWN_MIGRATION_HEADS = new Set([
+  "20260801151000_full_local_request_authority.sql",
+  "20260802130000_recipe_image_public_shared_legacy_owner_compatibility.sql",
+  "20260802140000_full_local_authenticated_nbf_compatibility.sql",
+  "20260802150000_full_local_authenticated_mutation_authority.sql",
+  "20260802151000_full_local_recipe_book_projection_scope.sql",
+  "20260803020000_full_local_production_data_quality_scope.sql",
+  "20260803090000_full_local_session_issue_time_precision.sql",
+  "20260803093000_full_local_read_only_request_authority.sql",
+]);
 const SAFE_BRANCH_PATTERN = /^[A-Za-z0-9._/-]+$/u;
 const JWT_PATTERN = /\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}(?:\.[A-Za-z0-9_-]+)?\b/u;
 const EMAIL_PATTERN = /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/iu;
@@ -64,7 +74,7 @@ const SECRET_ASSIGNMENT_PATTERN = /(?:oauth[_-]?code|access[_-]?token|refresh[_-
 const EXACT_KEYS = Object.freeze({
   root: ["schema_version", "phase", "captured_at", "source", "runtime", "session_policy", "incident", "verification"],
   source: ["canonical_base_sha", "implementation_sha", "live_head_sha", "live_branch", "live_dirty", "live_dirty_diff_sha256"],
-  runtime: ["app_origin", "auth_origin", "full_local_status", "mac_production_status", "launch_agent_status", "gotrue_image_digest", "migration_head"],
+  runtime: ["app_origin", "auth_origin", "full_local_status", "mac_production_status", "launch_agent_status", "gotrue_image_digest", "migration_head", "migration_head_source"],
   session_policy: ["jwt_exp_seconds", "inactivity_timeout", "timebox", "single_per_user", "refresh_rotation_enabled", "refresh_reuse_interval_seconds"],
   incident: ["binding_created_at", "binding_expires_at", "first_stale_at", "affected_route_classes"],
   verification: ["production_domain_contract_gate", "refresh_lifecycle_gate", "authority_static_contracts", "postgres_integration", "docker_refresh_smoke", "security_function_gate", "gotrue_policy_gate", "recent_auth_security_gate", "t65_canary", "canary_results", "account_session_stale_count", "stale_token_mutation_count"],
@@ -309,6 +319,12 @@ export function validateSessionLifecycleEvidence(evidence) {
   if (!MIGRATION_PATTERN.test(evidence.runtime?.migration_head ?? "")) {
     errors.push("migration_head must be a migration filename.");
   }
+  if (!KNOWN_MIGRATION_HEADS.has(evidence.runtime?.migration_head)) {
+    errors.push("migration_head must be an approved database catalog marker.");
+  }
+  if (evidence.runtime?.migration_head_source !== "database_catalog_marker") {
+    errors.push("migration_head_source must equal database_catalog_marker.");
+  }
   if (evidence.runtime?.app_origin !== "https://app.mumeok.kr") errors.push("app_origin is invalid.");
   if (evidence.runtime?.auth_origin !== "https://auth.mumeok.kr") errors.push("auth_origin is invalid.");
 
@@ -379,6 +395,7 @@ export function buildSessionLifecycleEvidence({
   liveHeadSha,
   macProductionStatus,
   migrationHead,
+  migrationHeadSource,
   phase,
   productionDomainContractGate,
   observation = {},
@@ -405,6 +422,7 @@ export function buildSessionLifecycleEvidence({
       launch_agent_status: launchAgentStatus,
       gotrue_image_digest: gotrueImageDigest,
       migration_head: migrationHead,
+      migration_head_source: migrationHeadSource,
     },
     session_policy: {
       jwt_exp_seconds: 3600,
@@ -786,22 +804,66 @@ function collectLaunchAgent(label) {
 
 export function parseMigrationHeadSqlOutput(stdout) {
   const lines = stdout.split(/\r?\n/u).map((line) => line.trim()).filter(Boolean);
-  if (lines.length !== 1 || !MIGRATION_PATTERN.test(lines[0])) {
+  if (lines.length !== 1) {
     throw new Error("Migration query must return a single safe migration filename.");
   }
-  return lines[0];
+  let parsed;
+  try {
+    parsed = JSON.parse(lines[0]);
+  } catch {
+    throw new Error("Migration query must return a single safe migration filename.");
+  }
+  const errors = [];
+  if (!exactObjectKeys(parsed, ["migration_head", "source"], "migration query", errors)
+    || errors.length > 0
+    || !MIGRATION_PATTERN.test(parsed.migration_head ?? "")
+    || !KNOWN_MIGRATION_HEADS.has(parsed.migration_head)) {
+    throw new Error("Migration query must return a single safe migration filename.");
+  }
+  if (parsed.source !== "database_catalog_marker") {
+    throw new Error("Migration query source must equal database_catalog_marker.");
+  }
+  return {
+    migrationHead: parsed.migration_head,
+    migrationHeadSource: parsed.source,
+  };
 }
 
 function collectMigrationHead(postgresContainerId) {
   const sql = [
     "begin transaction read only;",
     "set local statement_timeout = '5s';",
-    "select name || '.sql'",
-    "from supabase_migrations.schema_migrations",
-    "where name is not null",
-    "  and name like version || '\\_%' escape '\\'",
-    "order by version desc",
-    "limit 1;",
+    "with catalog_marker as (",
+    "  select case",
+    "    when to_regprocedure('private.verify_full_local_authenticated_authority()') is not null",
+    "      and position('v_read_only_request := v_method in (''GET'', ''HEAD'')' in pg_get_functiondef(to_regprocedure('private.verify_full_local_authenticated_authority()'))) > 0",
+    "      then '20260803093000_full_local_read_only_request_authority.sql'",
+    "    when to_regprocedure('public.record_full_local_session_authority(text,uuid,timestamp with time zone,text,integer,bigint,timestamp with time zone,timestamp with time zone,timestamp with time zone,timestamp with time zone)') is not null",
+    "      and position('p_session_issued_at < date_trunc(''second'', p_identity_created_at)' in pg_get_functiondef(to_regprocedure('public.record_full_local_session_authority(text,uuid,timestamp with time zone,text,integer,bigint,timestamp with time zone,timestamp with time zone,timestamp with time zone,timestamp with time zone)'))) > 0",
+    "      then '20260803090000_full_local_session_issue_time_precision.sql'",
+    "    when to_regprocedure('private.verify_full_local_internal_scope_without_production_scan()') is not null",
+    "      then '20260803020000_full_local_production_data_quality_scope.sql'",
+    "    when to_regprocedure('private.verify_full_local_internal_scope_without_recipe_book_projection()') is not null",
+    "      then '20260802151000_full_local_recipe_book_projection_scope.sql'",
+    "    when to_regprocedure('public.enforce_legacy_personal_mutation_fence()') is not null",
+    "      then '20260802150000_full_local_authenticated_mutation_authority.sql'",
+    "    when to_regprocedure('private.verify_full_local_authenticated_authority()') is not null",
+    "      and position('v_request_nbf := coalesce(' in pg_get_functiondef(to_regprocedure('private.verify_full_local_authenticated_authority()'))) > 0",
+    "      then '20260802140000_full_local_authenticated_nbf_compatibility.sql'",
+    "    when to_regprocedure('public.prepare_recipe_image_legacy_visibility_migration(uuid,uuid,uuid,bigint,uuid[])') is not null",
+    "      and position('v_positive.expected_visibility = ''public_shared''' in pg_get_functiondef(to_regprocedure('public.prepare_recipe_image_legacy_visibility_migration(uuid,uuid,uuid,bigint,uuid[])'))) > 0",
+    "      then '20260802130000_recipe_image_public_shared_legacy_owner_compatibility.sql'",
+    "    when to_regprocedure('private.verify_hybrid_request_authority()') is not null",
+    "      then '20260801151000_full_local_request_authority.sql'",
+    "    else null",
+    "  end as migration_head",
+    ")",
+    "select json_build_object(",
+    "  'migration_head', migration_head,",
+    "  'source', 'database_catalog_marker'",
+    ")::text",
+    "from catalog_marker",
+    "where migration_head is not null;",
     "rollback;",
     "",
   ].join("\n");
@@ -901,6 +963,7 @@ export function captureSessionLifecycleEvidence({ implementationRoot, liveRoot, 
     phase,
   });
 
+  const migration = collectMigrationHead(postgresContainer.id);
   const evidence = buildSessionLifecycleEvidence({
     capturedAt: new Date().toISOString(),
     canonicalBaseSha,
@@ -913,7 +976,8 @@ export function captureSessionLifecycleEvidence({ implementationRoot, liveRoot, 
     liveDirtyDiffSha256: computeLiveDirtyDiffSha256(canonicalLiveRoot),
     liveHeadSha,
     macProductionStatus: statuses.macProductionStatus,
-    migrationHead: collectMigrationHead(postgresContainer.id),
+    migrationHead: migration.migrationHead,
+    migrationHeadSource: migration.migrationHeadSource,
     phase,
     productionDomainContractGate,
     observation,

@@ -45,6 +45,7 @@ function createEvidence(overrides: Record<string, unknown> = {}) {
     liveHeadSha: "e".repeat(40),
     macProductionStatus: "PASS",
     migrationHead: "20260803093000_full_local_read_only_request_authority.sql",
+    migrationHeadSource: "database_catalog_marker",
     phase: "baseline",
     productionDomainContractGate: "PASS",
     ...overrides,
@@ -298,11 +299,17 @@ describe("full-local session lifecycle evidence contract", () => {
 
   it("accepts only one safe migration filename from the read-only SQL result", () => {
     expect(parseMigrationHeadSqlOutput(
-      "20260803093000_full_local_read_only_request_authority.sql\n",
-    )).toBe("20260803093000_full_local_read_only_request_authority.sql");
+      '{"migration_head":"20260803093000_full_local_read_only_request_authority.sql","source":"database_catalog_marker"}\n',
+    )).toEqual({
+      migrationHead: "20260803093000_full_local_read_only_request_authority.sql",
+      migrationHeadSource: "database_catalog_marker",
+    });
     expect(() => parseMigrationHeadSqlOutput(
-      "20260803093000_full_local_read_only_request_authority.sql\nsecret=value\n",
+      '{"migration_head":"20260803093000_full_local_read_only_request_authority.sql","source":"database_catalog_marker"}\nsecret=value\n',
     )).toThrow(/single safe migration filename/u);
+    expect(() => parseMigrationHeadSqlOutput(
+      '{"migration_head":"20260803093000_full_local_read_only_request_authority.sql","source":"checkout_guess"}\n',
+    )).toThrow(/database_catalog_marker/u);
   });
 
   it("keeps fixed stdin commands in Buffer mode without an invalid encoding", () => {
