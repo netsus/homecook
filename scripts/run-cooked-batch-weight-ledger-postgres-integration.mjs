@@ -6,6 +6,8 @@ process.env.HOMECOOK_RECIPE_SNAPSHOT_FOLLOWUP_MIGRATIONS = [
   "supabase/migrations/20260425000000_08b_add_pantry_items_table.sql",
   "supabase/migrations/20260426090000_09_shopping_tables.sql",
   "supabase/migrations/20260610120000_33a_user_progress_foundation.sql",
+  "supabase/migrations/20260610183000_33c_user_gamification.sql",
+  "supabase/migrations/20260611152000_34b_growth_backend_model.sql",
   "supabase/migrations/20260615090000_35c_leftover_eaten_progress_event.sql",
   "supabase/migrations/20260620065500_shopping_already_have_pantry_reflection.sql",
   "supabase/migrations/20260620110500_leftover_stale_review_sync.sql",

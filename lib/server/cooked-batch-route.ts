@@ -25,6 +25,8 @@ export async function authorizeCookedBatchRequest() {
   }
   return {
     ok: true as const,
+    routeClient,
+    user,
     client,
     authorityArgs: buildSessionAuthorityRpcArgs(verified.sessionAuthority),
   };

@@ -66,6 +66,26 @@
       "safe_search_path": ["pg_catalog", "public", "private", "pg_temp"]
     },
     {
+      "signature": "private.assert_cooked_batch_cached_projection(uuid, uuid)",
+      "control_class": "application-controlled",
+      "effect": "read-only",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "owner": "postgres",
+      "security_mode": "definer",
+      "safe_search_path": ["pg_catalog", "public", "private", "pg_temp"]
+    },
+    {
+      "signature": "private.project_cooked_batch_progress_activity(uuid, text, uuid, timestamp with time zone)",
+      "control_class": "application-controlled",
+      "effect": "mutation",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "owner": "postgres",
+      "security_mode": "definer",
+      "safe_search_path": ["pg_catalog", "public", "private", "pg_temp"]
+    },
+    {
       "signature": "public.list_cooked_batches(uuid, timestamp with time zone, text, integer, timestamp with time zone, text, integer, timestamp with time zone, uuid)",
       "control_class": "application-controlled",
       "effect": "read-only",
@@ -76,14 +96,14 @@
       "safe_search_path": ["pg_catalog", "public", "private", "pg_temp"]
     },
     {
-      "signature": "public.mutate_legacy_leftover_status(uuid, text, timestamp with time zone)",
+      "signature": "public.mutate_legacy_leftover_status(uuid, timestamp with time zone, text, integer, timestamp with time zone, uuid, text, timestamp with time zone)",
       "control_class": "application-controlled",
       "effect": "mutation",
-      "exposure": "authenticated-self",
-      "allowed_principals": ["authenticated"],
+      "exposure": "service-internal",
+      "allowed_principals": ["service_role"],
       "owner": "postgres",
       "security_mode": "definer",
-      "safe_search_path": ["pg_catalog", "public", "private", "auth", "pg_temp"]
+      "safe_search_path": ["pg_catalog", "public", "private", "pg_temp"]
     },
     {
       "signature": "private.validate_meal_leftover_cooked_batch_authority()",
