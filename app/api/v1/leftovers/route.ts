@@ -38,6 +38,7 @@ interface QueryOrderOption {
 interface LeftoverSelectQuery {
   eq(column: string, value: string): LeftoverSelectQuery;
   gt(column: string, value: string): LeftoverSelectQuery;
+  or(filters: string): LeftoverSelectQuery;
   order(column: string, options: QueryOrderOption): LeftoverSelectQuery;
   then: ArrayQueryResult<LeftoverDishRow>["then"];
 }
@@ -147,11 +148,13 @@ export async function GET(request: NextRequest) {
 
   if (status === "eaten") {
     leftoversQuery = leftoversQuery
+      .or("and(recipe_content_snapshot_id.is.null,status.eq.eaten),and(recipe_content_snapshot_id.not.is.null,batch_status.eq.depleted,depleted_reason.in.(consumed,consumed_unweighed))")
       .gt("auto_hide_at", new Date().toISOString())
       .order("eaten_at", { ascending: false })
       .order("id", { ascending: false });
   } else {
     leftoversQuery = leftoversQuery
+      .or("and(recipe_content_snapshot_id.is.null,status.eq.leftover),and(recipe_content_snapshot_id.not.is.null,batch_status.eq.available),and(recipe_content_snapshot_id.not.is.null,batch_status.eq.depleted,depleted_reason.in.(discarded,mixed,discarded_unweighed,mixed_unweighed))")
       .order("cooked_at", { ascending: false })
       .order("id", { ascending: false });
   }

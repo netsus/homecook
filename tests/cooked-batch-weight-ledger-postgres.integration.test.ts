@@ -1,4 +1,5 @@
 import { spawnSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 
 import { beforeAll, describe, expect, it } from "vitest";
 
@@ -15,6 +16,7 @@ const contentA = "a3000000-0000-4000-8000-000000000001";
 const contentB = "a3000000-0000-4000-8000-000000000002";
 const batchA = "a4000000-0000-4000-8000-000000000001";
 const batchB = "a4000000-0000-4000-8000-000000000002";
+const legacyBatch = "a4000000-0000-4000-8000-000000000009";
 const completeSession = "a4000000-0000-4000-8000-000000000003";
 const plannerSession = "a4000000-0000-4000-8000-000000000004";
 const plannerMeal = "a4000000-0000-4000-8000-000000000005";
@@ -72,9 +74,28 @@ function psql(sql: string, expectSuccess = true) {
   return result;
 }
 
+function ownerDigest(owner: string) {
+  return psql(`
+    select encode(extensions.digest(convert_to(jsonb_build_object(
+      'pantry', (select coalesce(jsonb_agg(jsonb_build_array(id,ingredient_id,food_product_id) order by id),'[]'::jsonb) from public.pantry_items where user_id='${owner}'),
+      'batches', (select coalesce(jsonb_agg(jsonb_build_array(id,status,remaining_weight_g,weight_status,batch_status,depleted_reason,revision,event_checksum) order by id),'[]'::jsonb) from public.leftover_dishes where user_id='${owner}'),
+      'events', (select coalesce(jsonb_agg(jsonb_build_array(id,cooked_batch_id,event_type,delta_g,reason,reverses_event_id) order by id),'[]'::jsonb) from public.cooked_batch_quantity_events where owner_user_id='${owner}'),
+      'sessions', (select coalesce(jsonb_agg(jsonb_build_array(id,status,completed_at) order by id),'[]'::jsonb) from public.cooking_sessions where user_id='${owner}'),
+      'claims', (select coalesce(jsonb_agg(jsonb_build_array(meal_id,session_id) order by meal_id),'[]'::jsonb) from public.cooking_session_meal_claims where owner_user_id='${owner}'),
+      'meals', (select coalesce(jsonb_agg(jsonb_build_array(id,status,revision,is_leftover,leftover_dish_id) order by id),'[]'::jsonb) from public.meals where user_id='${owner}'),
+      'recipes', (select coalesce(jsonb_agg(jsonb_build_array(id,cook_count) order by id),'[]'::jsonb) from public.recipes where created_by='${owner}'),
+      'progress', (select coalesce(jsonb_agg(jsonb_build_array(event_type,source_key,xp_delta) order by id),'[]'::jsonb) from public.user_progress_events where user_id='${owner}')
+    )::text,'UTF8'),'sha256'),'hex');
+  `).stdout.trim().split("\n").at(-1);
+}
+
 describe.runIf(enabled)("cooked batch weight ledger PostgreSQL", () => {
   beforeAll(() => {
     psql(`
+      create table if not exists public.meal_plan_columns(
+        id uuid primary key,
+        user_id uuid not null
+      );
       insert into auth.users(id,created_at,email) values
         ('${ownerA}','${identityA}','batch-a@example.invalid'),
         ('${ownerB}','${identityB}','batch-b@example.invalid');
@@ -98,6 +119,9 @@ describe.runIf(enabled)("cooked batch weight ledger PostgreSQL", () => {
       );
       insert into public.users(id,nickname,social_provider,social_id) values
         ('${ownerA}','owner-a','test','owner-a'),('${ownerB}','owner-b','test','owner-b')
+      on conflict(id) do nothing;
+      insert into public.meal_plan_columns(id,user_id)
+      values('a4000000-0000-4000-8000-000000000099','${ownerB}')
       on conflict(id) do nothing;
       insert into public.user_account_generation_watermarks(owner_uuid,last_account_generation)
       values('${ownerA}',1),('${ownerB}',1);
@@ -128,7 +152,8 @@ describe.runIf(enabled)("cooked batch weight ledger PostgreSQL", () => {
         finished_weight_g,remaining_weight_g,weight_status,batch_status,depleted_reason,revision,event_checksum
       ) values
         ('${batchA}','${ownerA}','${recipeA}','${contentA}','leftover',now(),2,1000,1000,'known','available',null,1,encode(extensions.digest(convert_to('','UTF8'),'sha256'),'hex')),
-        ('${batchB}','${ownerB}','${recipeB}','${contentB}','leftover',now(),2,null,null,'missing','available',null,1,encode(extensions.digest(convert_to('','UTF8'),'sha256'),'hex'))
+        ('${batchB}','${ownerB}','${recipeB}','${contentB}','leftover',now(),2,null,null,'missing','available',null,1,encode(extensions.digest(convert_to('','UTF8'),'sha256'),'hex')),
+        ('${legacyBatch}','${ownerA}','${recipeA}',null,'leftover',now(),2,null,null,null,null,null,null,null)
       on conflict(id) do nothing;
       insert into public.pantry_items(id,user_id,ingredient_id) values
         ('${pantryA}','${ownerA}','${ingredient}'),
@@ -167,16 +192,84 @@ describe.runIf(enabled)("cooked batch weight ledger PostgreSQL", () => {
     `);
   });
 
-  it("keeps owner rows isolated and hides the other owner projection", () => {
+  it("matches the exact function owner, ACL, security mode and search-path manifest", () => {
+    const manifest = JSON.parse(readFileSync(
+      "docs/security/cooked-batch-weight-ledger-security-function-authorization-manifest.json",
+      "utf8",
+    )) as {
+      functions: Array<{
+        allowed_principals: string[];
+        owner: string;
+        safe_search_path: string[];
+        security_mode: "definer" | "invoker";
+        signature: string;
+      }>;
+    };
+
+    for (const entry of manifest.functions) {
+      const observation = extractJson(psql(`
+        select jsonb_build_object(
+          'owner', owner.rolname,
+          'security_definer', procedure.prosecdef,
+          'search_path', (
+            select config from unnest(procedure.proconfig) as config
+            where config like 'search_path=%'
+          ),
+          'public_execute', exists (
+            select 1 from pg_catalog.aclexplode(
+              coalesce(procedure.proacl,pg_catalog.acldefault('f',procedure.proowner))
+            ) as acl where acl.grantee=0 and acl.privilege_type='EXECUTE'
+          ),
+          'anon_execute', pg_catalog.has_function_privilege('anon',procedure.oid,'EXECUTE'),
+          'authenticated_execute', pg_catalog.has_function_privilege('authenticated',procedure.oid,'EXECUTE'),
+          'service_role_execute', pg_catalog.has_function_privilege('service_role',procedure.oid,'EXECUTE')
+        )
+        from pg_catalog.pg_proc as procedure
+        join pg_catalog.pg_roles as owner on owner.oid=procedure.proowner
+        where procedure.oid='${entry.signature}'::regprocedure;
+      `).stdout);
+      expect(observation.owner).toBe(entry.owner);
+      expect(observation.security_definer).toBe(entry.security_mode === "definer");
+      expect(observation.search_path).toBe(`search_path=${entry.safe_search_path.join(", ")}`);
+      expect(observation.public_execute).toBe(false);
+      for (const principal of ["anon", "authenticated", "service_role"]) {
+        expect(observation[`${principal}_execute`]).toBe(
+          entry.allowed_principals.includes(principal),
+        );
+      }
+    }
+  });
+
+  it("allows only the exact cooked-batch and meal-wrapper internal scope paths", () => {
+    const allowed = psql(`
+      begin;
+      select set_config('request.headers','{"x-homecook-internal-scope":"future-meal-write"}',true);
+      select set_config('request.method','POST',true);
+      select set_config('request.path','/rpc/write_future_meal_with_snapshot_authority',true);
+      select private.verify_full_local_internal_scope();
+      rollback;
+    `);
+    expect(allowed.status).toBe(0);
+    const denied = psql(`
+      begin;
+      select set_config('request.headers','{"x-homecook-internal-scope":"future-meal-write"}',true);
+      select set_config('request.method','POST',true);
+      select set_config('request.path','/rpc/unclassified_cooked_batch_write',true);
+      select private.verify_full_local_internal_scope();
+      rollback;
+    `, false);
+    expect(denied.stderr).toContain("ACCOUNT_SESSION_STALE");
+  });
+
+  it("denies direct event-table reads and hides the other owner projection", () => {
     const result = psql(`
       begin;
       set local role authenticated;
       select set_config('request.jwt.claim.sub','${ownerA}',true);
       select count(*) from public.cooked_batch_quantity_events where owner_user_id='${ownerB}';
       rollback;
-    `);
-    const lines = result.stdout.trim().split("\n").filter((line) => /^\d+$/.test(line) || line === "");
-    expect(lines).toContain("0");
+    `, false);
+    expect(result.status).not.toBe(0);
     const projected = psql(
       `select private.project_cooked_batch('${batchB}','${ownerA}');`,
     );
@@ -206,6 +299,42 @@ describe.runIf(enabled)("cooked batch weight ledger PostgreSQL", () => {
       rollback;
     `, false);
     expect(insert.status).not.toBe(0);
+    const forgedBatch = psql(`
+      begin; set local role authenticated;
+      select set_config('request.jwt.claim.sub','${ownerA}',true);
+      insert into public.leftover_dishes(
+        user_id,recipe_id,recipe_content_snapshot_id,status,cooked_at,cooking_servings,
+        finished_weight_g,remaining_weight_g,weight_status,batch_status,revision,event_checksum
+      ) values(
+        '${ownerA}','${recipeA}','${contentB}','leftover',now(),1,
+        10,10,'known','available',1,repeat('a',64)
+      );
+      rollback;
+    `, false);
+    expect(forgedBatch.status).not.toBe(0);
+  });
+
+  it("mutates legacy leftovers through the owner-locked RPC while generation is active", () => {
+    const eaten = psql(`
+      begin;
+      set local role authenticated;
+      select set_config('request.jwt.claim.sub','${ownerA}',true);
+      select public.mutate_legacy_leftover_status(
+        '${legacyBatch}','eat','2026-08-08T01:10:00Z'
+      );
+      commit;
+    `);
+    expect(extractJson(eaten.stdout)).toMatchObject({ status: "eaten", transitioned: true });
+    const uneaten = psql(`
+      begin;
+      set local role authenticated;
+      select set_config('request.jwt.claim.sub','${ownerA}',true);
+      select public.mutate_legacy_leftover_status(
+        '${legacyBatch}','uneat','2026-08-08T01:11:00Z'
+      );
+      commit;
+    `);
+    expect(extractJson(uneaten.stdout)).toMatchObject({ status: "leftover", transitioned: true });
   });
 
   it("preserves explicit v2 state bounds and public projection keys", () => {
@@ -218,10 +347,16 @@ describe.runIf(enabled)("cooked batch weight ledger PostgreSQL", () => {
     expect(Object.keys(value)).toHaveLength(15);
     expect(value.weight_status).toBe("known");
     expect(value.status).toBe("leftover");
+    expect(value.nutrition_calculation_status).toBe("unavailable");
+    const legacy = JSON.parse(psql(
+      `select private.project_cooked_batch('${legacyBatch}','${ownerA}')::text;`,
+    ).stdout.trim().split("\n").at(-1) ?? "null");
+    expect(legacy.nutrition_calculation_status).toBeNull();
   });
 
   it("completes one standalone snapshot atomically and replays its exact result", () => {
     const hiddenKey = "aa000000-0000-4000-8000-000000000001";
+    const deniedBefore = [ownerDigest(ownerA), ownerDigest(ownerB)];
     const hiddenPantry = serviceRpc(`
       select public.complete_snapshot_v2_cooking_session(
         ${authArgs(ownerA)},'${completeSession}','${hiddenKey}',
@@ -230,6 +365,7 @@ describe.runIf(enabled)("cooked batch weight ledger PostgreSQL", () => {
       );
     `, false);
     expect(hiddenPantry.stderr).toContain("RESOURCE_NOT_FOUND");
+    expect([ownerDigest(ownerA), ownerDigest(ownerB)]).toEqual(deniedBefore);
     expect(psql(`select status from public.cooking_sessions where id='${completeSession}';`).stdout.trim()).toBe("in_progress");
 
     const key = "aa000000-0000-4000-8000-000000000002";
@@ -240,6 +376,7 @@ describe.runIf(enabled)("cooked batch weight ledger PostgreSQL", () => {
         '2026-08-08T01:31:00Z'
       );
     `);
+    const replayBefore = [ownerDigest(ownerA), ownerDigest(ownerB)];
     const replay = serviceRpc(`
       select public.complete_snapshot_v2_cooking_session(
         ${authArgs(ownerA)},'${completeSession}','${key}',
@@ -247,6 +384,7 @@ describe.runIf(enabled)("cooked batch weight ledger PostgreSQL", () => {
         '2026-08-08T01:32:00Z'
       );
     `);
+    expect([ownerDigest(ownerA), ownerDigest(ownerB)]).toEqual(replayBefore);
     const data = extractJson(first.stdout).data;
     expect(extractJson(replay.stdout)).toEqual(extractJson(first.stdout));
     expect(Object.keys(data).sort()).toEqual([
@@ -279,6 +417,52 @@ describe.runIf(enabled)("cooked batch weight ledger PostgreSQL", () => {
       );
     `, false);
     expect(reused.stderr).toContain("IDEMPOTENCY_KEY_REUSED");
+  });
+
+  it("rolls planner completion back when its exact owner claim is missing or mismatched", () => {
+    psql(`
+      select public.set_account_generation_internal_writer_marker('${cutoverAttempt}',true);
+      delete from public.cooking_session_meal_claims where meal_id='${plannerMeal}';
+      select public.set_account_generation_internal_writer_marker('${cutoverAttempt}',false);
+    `);
+    const missingBefore = ownerDigest(ownerA);
+    const missing = serviceRpc(`
+      select public.complete_snapshot_v2_cooking_session(
+        ${authArgs(ownerA)},'${plannerSession}',
+        'aa000000-0000-4000-8000-000000000010',array[]::uuid[],
+        'weigh_later',null,'2026-08-08T01:35:00Z'
+      );
+    `, false);
+    expect(missing.stderr).toContain("CONFLICT");
+    expect(ownerDigest(ownerA)).toBe(missingBefore);
+
+    psql(`
+      select public.set_account_generation_internal_writer_marker('${cutoverAttempt}',true);
+      alter table public.cooking_session_meal_claims
+        disable trigger cooking_session_meal_claim_validate;
+      insert into public.cooking_session_meal_claims(meal_id,session_id,owner_user_id)
+      values('${plannerMeal}','${plannerSession}','${ownerB}');
+      alter table public.cooking_session_meal_claims
+        enable trigger cooking_session_meal_claim_validate;
+      select public.set_account_generation_internal_writer_marker('${cutoverAttempt}',false);
+    `);
+    const mismatchedBefore = [ownerDigest(ownerA), ownerDigest(ownerB)];
+    const mismatched = serviceRpc(`
+      select public.complete_snapshot_v2_cooking_session(
+        ${authArgs(ownerA)},'${plannerSession}',
+        'aa000000-0000-4000-8000-000000000011',array[]::uuid[],
+        'weigh_later',null,'2026-08-08T01:36:00Z'
+      );
+    `, false);
+    expect(mismatched.stderr).toContain("CONFLICT");
+    expect([ownerDigest(ownerA), ownerDigest(ownerB)]).toEqual(mismatchedBefore);
+
+    psql(`
+      select public.set_account_generation_internal_writer_marker('${cutoverAttempt}',true);
+      update public.cooking_session_meal_claims
+      set owner_user_id='${ownerA}' where meal_id='${plannerMeal}';
+      select public.set_account_generation_internal_writer_marker('${cutoverAttempt}',false);
+    `);
   });
 
   it("completes planner meals atomically without turning them into leftover-origin meals", () => {
@@ -347,6 +531,18 @@ describe.runIf(enabled)("cooked batch weight ledger PostgreSQL", () => {
       batch: { remaining_weight_g: 900, revision: 2, status: "leftover" },
     });
     expect(psql(`select count(*) from public.cooked_batch_quantity_events where cooked_batch_id='${batchA}';`).stdout.trim()).toBe("1");
+    expect(psql(`
+      select batch.event_checksum = encode(extensions.digest(convert_to((
+        select string_agg(
+          event.id::text || ':' || event.event_type || ':' ||
+          coalesce(event.delta_g::text,'') || ':' || coalesce(event.reason,'') || ':' ||
+          coalesce(event.reverses_event_id::text,''),
+          '|' order by event.created_at,event.id
+        ) from public.cooked_batch_quantity_events as event
+        where event.cooked_batch_id=batch.id and event.event_type<>'reversal'
+      ),'UTF8'),'sha256'),'hex')
+      from public.leftover_dishes as batch where batch.id='${batchA}';
+    `).stdout.trim()).toBe("t");
 
     const reused = serviceRpc(`
       select public.discard_cooked_batch(
@@ -431,7 +627,28 @@ describe.runIf(enabled)("cooked batch weight ledger PostgreSQL", () => {
     expect(psql(`select count(*) from public.user_progress_events where user_id='${ownerB}' and event_type='leftover_eaten';`).stdout.trim()).toBe("1");
   });
 
+  it("rejects a depleted v2 leftover in the final meal-write wrapper with zero effect", () => {
+    const before = ownerDigest(ownerB);
+    const result = serviceRpc(`
+      select public.write_future_meal_with_snapshot_authority(
+        ${authArgs(ownerB)},'create',null,'${recipeB}',current_date + 2,
+        'a4000000-0000-4000-8000-000000000099',1,'${batchB}',clock_timestamp()
+      );
+    `, false);
+    expect(result.stderr).toContain("CONFLICT");
+    expect(ownerDigest(ownerB)).toBe(before);
+  });
+
   it("cleans meal links then events before deleting an owned batch", () => {
+    const wrongOwnerMarker = psql(`
+      begin;
+      select public.set_account_generation_internal_writer_marker('${cutoverAttempt}',true);
+      select set_config('homecook.account_delete_user_id','${ownerB}',true);
+      delete from public.leftover_dishes where id='${batchA}';
+      rollback;
+    `, false);
+    expect(wrongOwnerMarker.stderr).toContain("CONFLICT");
+    expect(psql(`select count(*) from public.cooked_batch_quantity_events where cooked_batch_id='${batchA}';`).stdout.trim()).not.toBe("0");
     const deleted = serviceRpc(`
       select public.set_account_generation_internal_writer_marker(
         '${cutoverAttempt}',true

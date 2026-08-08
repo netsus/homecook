@@ -295,13 +295,14 @@ export function parseCookedBatchListQuery(params: URLSearchParams) {
   const availability = params.get("availability") ?? "loggable";
   const limitText = params.get("limit");
   const cursorText = params.get("cursor");
+  const cursorPresent = params.has("cursor");
   const fields: ValidationField[] = [];
   if (availability !== "loggable" && availability !== "all") fields.push({ field: "availability", reason: "invalid_enum" });
   const limit = limitText === null ? 20 : Number(limitText);
   if (!Number.isSafeInteger(limit) || limit < 1 || limit > 50 || (limitText !== null && !/^\d+$/.test(limitText))) fields.push({ field: "limit", reason: "invalid_integer" });
   const cursor = cursorText && (availability === "loggable" || availability === "all")
     ? decodeCookedBatchCursor(cursorText, availability) : null;
-  if (cursorText && !cursor) fields.push({ field: "cursor", reason: "invalid_cursor" });
+  if (cursorPresent && !cursor) fields.push({ field: "cursor", reason: "invalid_cursor" });
   return fields.length > 0 ? invalid(fields) : {
     ok: true as const,
     value: { availability: availability as "loggable" | "all", limit, cursor },

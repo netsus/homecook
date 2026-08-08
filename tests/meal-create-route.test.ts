@@ -101,7 +101,17 @@ function createMealPlanColumnsTable({
 function createLeftoverDishesTable({
   selectResults,
 }: {
-  selectResults: Array<QueryResult<{ id: string; user_id: string; recipe_id: string } | null>>;
+  selectResults: Array<QueryResult<{
+    id: string;
+    user_id: string;
+    recipe_id: string;
+    recipe_content_snapshot_id?: string | null;
+    status?: "leftover" | "eaten";
+    remaining_weight_g?: number | null;
+    weight_status?: "known" | "missing" | "unrecoverable" | null;
+    batch_status?: "available" | "depleted" | null;
+    depleted_reason?: string | null;
+  } | null>>;
 }) {
   const selectQuery = {
     eq: vi.fn(() => selectQuery),
@@ -613,6 +623,12 @@ describe("POST /api/v1/meals", () => {
             id: "leftover-1",
             user_id: "user-1",
             recipe_id: "550e8400-e29b-41d4-a716-446655440041",
+            recipe_content_snapshot_id: null,
+            status: "leftover",
+            remaining_weight_g: null,
+            weight_status: null,
+            batch_status: null,
+            depleted_reason: null,
           },
           error: null,
         },
@@ -668,6 +684,66 @@ describe("POST /api/v1/meals", () => {
       leftover_dish_id: "550e8400-e29b-41d4-a716-446655440042",
     });
     expect(createServiceRoleClient).toHaveBeenCalled();
+    const serviceClient = createServiceRoleClient.mock.results.at(-1)?.value;
+    expect(serviceClient.rpc).toHaveBeenCalledWith(
+      "write_future_meal_with_snapshot_authority",
+      expect.any(Object),
+    );
+  });
+
+  it("returns 409 before writing when a v2 cooked batch is depleted", async () => {
+    const recipesTable = createRecipesTable({
+      selectResults: [{ data: { id: "recipe-1" }, error: null }],
+    });
+    const mealPlanColumnsTable = createMealPlanColumnsTable({
+      selectResults: [{
+        data: { id: "column-1", user_id: "user-1", name: "저녁" },
+        error: null,
+      }],
+    });
+    const leftoverDishesTable = createLeftoverDishesTable({
+      selectResults: [{
+        data: {
+          id: "leftover-1",
+          user_id: "user-1",
+          recipe_id: "550e8400-e29b-41d4-a716-446655440041",
+          recipe_content_snapshot_id: "550e8400-e29b-41d4-a716-446655440099",
+          status: "eaten",
+          remaining_weight_g: 0,
+          weight_status: "known",
+          batch_status: "depleted",
+          depleted_reason: "consumed",
+        },
+        error: null,
+      }],
+    });
+
+    createRouteHandlerClient.mockResolvedValue({
+      auth: { getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })) },
+      from: vi.fn((table: string) => {
+        if (table === "recipes") return recipesTable;
+        if (table === "meal_plan_columns") return mealPlanColumnsTable;
+        if (table === "leftover_dishes") return leftoverDishesTable;
+        throw new Error(`unexpected table: ${table}`);
+      }),
+    });
+
+    const { POST } = await importRoute();
+    const response = await POST(new Request("http://localhost:3000/api/v1/meals", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        recipe_id: "550e8400-e29b-41d4-a716-446655440041",
+        plan_date: "2026-03-03",
+        column_id: "550e8400-e29b-41d4-a716-446655440043",
+        planned_servings: 1,
+        leftover_dish_id: "550e8400-e29b-41d4-a716-446655440042",
+      }),
+    }));
+
+    expect(response.status).toBe(409);
+    expect((await response.json()).error.code).toBe("CONFLICT");
+    expect(createFutureMealWriteInternalClient).not.toHaveBeenCalled();
   });
 
   it("returns 403 when leftover_dish_id belongs to another user", async () => {

@@ -38,6 +38,8 @@ const FOLLOWUP_INTEGRATION_TEST =
   process.env.HOMECOOK_RECIPE_SNAPSHOT_FOLLOWUP_INTEGRATION_TEST ?? "";
 const SKIP_ACTIVE_SECURITY_INVENTORY =
   process.env.HOMECOOK_RECIPE_SNAPSHOT_SKIP_ACTIVE_SECURITY_INVENTORY === "1";
+const ACTIVE_SECURITY_TEST_NAME_PATTERN =
+  process.env.HOMECOOK_RECIPE_SNAPSHOT_ACTIVE_SECURITY_TEST_NAME_PATTERN ?? "";
 const TEST_TIMEOUT_MS = 30_000;
 const REPLAY_FIXTURE_SQL = String.raw`
 insert into auth.users (id, created_at, email)
@@ -1008,6 +1010,9 @@ esac
           "--pool=forks",
           "--maxWorkers=1",
           `--testTimeout=${TEST_TIMEOUT_MS}`,
+          ...(ACTIVE_SECURITY_TEST_NAME_PATTERN
+            ? ["--testNamePattern", ACTIVE_SECURITY_TEST_NAME_PATTERN]
+            : []),
         ],
         {
           stdio: "inherit",

@@ -26,8 +26,8 @@ describe("cooked batch reader compatibility", () => {
     expect(baseRunner).toContain(
       'process.env.HOMECOOK_RECIPE_SNAPSHOT_SKIP_ACTIVE_SECURITY_INVENTORY === "1"',
     );
-    expect(ledgerRunner).toContain(
-      'HOMECOOK_RECIPE_SNAPSHOT_SKIP_ACTIVE_SECURITY_INVENTORY = "1"',
+    expect(ledgerRunner).not.toContain(
+      "HOMECOOK_RECIPE_SNAPSHOT_SKIP_ACTIVE_SECURITY_INVENTORY",
     );
   });
 

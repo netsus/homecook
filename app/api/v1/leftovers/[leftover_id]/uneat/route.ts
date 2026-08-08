@@ -4,7 +4,6 @@ import { isQaFixtureModeEnabled, uneatQaFixtureLeftover } from "@/lib/mock/recip
 import {
   isUuid,
   toLeftoverMutationData,
-  type LeftoverDishRow,
 } from "@/lib/server/leftovers";
 import {
   ensurePublicUserRow,
@@ -26,33 +25,16 @@ interface QueryError {
   message: string;
 }
 
-type MaybeSingleResult<T> = PromiseLike<{
-  data: T | null;
-  error: QueryError | null;
-}>;
-
-interface LeftoverSelectQuery {
-  eq(column: string, value: string): LeftoverSelectQuery;
-  maybeSingle(): MaybeSingleResult<LeftoverDishRow>;
-}
-
-interface LeftoverUpdateQuery {
-  eq(column: string, value: string): LeftoverUpdateQuery;
-  select(columns: string): LeftoverUpdateQuery;
-  maybeSingle(): MaybeSingleResult<LeftoverMutationData>;
-}
-
-interface LeftoverDishesTable {
-  select(columns: string): LeftoverSelectQuery;
-  update(values: {
-    status: "leftover";
-    eaten_at: null;
-    auto_hide_at: null;
-  }): LeftoverUpdateQuery;
-}
-
 interface LeftoverMutationDbClient {
-  from(table: "leftover_dishes"): LeftoverDishesTable;
+  rpc(
+    name: "mutate_legacy_leftover_status",
+    args: { p_action: "uneat"; p_leftover_id: string; p_now: string },
+  ): PromiseLike<{
+    data: (LeftoverMutationData & { transitioned: boolean })
+      | { error_code: "RESOURCE_NOT_FOUND" | "FORBIDDEN" | "CONFLICT" }
+      | null;
+    error: QueryError | null;
+  }>;
 }
 
 async function requireUser(routeClient: Awaited<ReturnType<typeof createRouteHandlerClient>>) {
@@ -104,44 +86,23 @@ export async function POST(request: Request, context: RouteContext) {
     );
   }
 
-  const leftoverResult = await dbClient
-    .from("leftover_dishes")
-    .select("id, user_id, recipe_id, recipe_content_snapshot_id, status, cooked_at, eaten_at, auto_hide_at")
-    .eq("id", leftoverId)
-    .maybeSingle();
-
-  if (leftoverResult.error || !leftoverResult.data) {
-    return fail("RESOURCE_NOT_FOUND", "남은 요리를 찾을 수 없어요.", 404);
+  const mutationResult = await dbClient.rpc("mutate_legacy_leftover_status", {
+    p_action: "uneat",
+    p_leftover_id: leftoverId,
+    p_now: new Date().toISOString(),
+  });
+  if (mutationResult.error || !mutationResult.data) {
+    return fail("INTERNAL_ERROR", "남은 요리를 덜먹음 처리하지 못했어요.", 500);
   }
-
-  if (leftoverResult.data.user_id !== user.id) {
-    return fail("FORBIDDEN", "내 남은 요리만 수정할 수 있어요.", 403);
-  }
-
-
-  if (leftoverResult.data.recipe_content_snapshot_id) {
+  if ("error_code" in mutationResult.data) {
+    if (mutationResult.data.error_code === "RESOURCE_NOT_FOUND") {
+      return fail("RESOURCE_NOT_FOUND", "남은 요리를 찾을 수 없어요.", 404);
+    }
+    if (mutationResult.data.error_code === "FORBIDDEN") {
+      return fail("FORBIDDEN", "내 남은 요리만 수정할 수 있어요.", 403);
+    }
     return fail("CONFLICT", "중량 기록이 있는 요리는 전용 기록 화면에서 변경해 주세요.", 409);
   }
 
-  if (leftoverResult.data.status === "leftover") {
-    return ok(toLeftoverMutationData(leftoverResult.data));
-  }
-
-  const updateResult = await dbClient
-    .from("leftover_dishes")
-    .update({
-      status: "leftover",
-      eaten_at: null,
-      auto_hide_at: null,
-    })
-    .eq("id", leftoverId)
-    .eq("user_id", user.id)
-    .select("id, status, eaten_at, auto_hide_at")
-    .maybeSingle();
-
-  if (updateResult.error || !updateResult.data) {
-    return fail("INTERNAL_ERROR", "남은 요리를 덜먹음 처리하지 못했어요.", 500);
-  }
-
-  return ok(toLeftoverMutationData(updateResult.data));
+  return ok(toLeftoverMutationData(mutationResult.data));
 }
