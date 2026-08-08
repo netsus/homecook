@@ -43,14 +43,14 @@ describe("cooked-batch-weight-ledger fresh Stage 1 re-lock", () => {
   it("locks every #8 source reference to the current official tuple", () => {
     expect(workItem.docs_refs.source_of_truth).toEqual([
       "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
-      "docs/요구사항기준선-v1.7.29.md",
-      "docs/화면정의서-v1.5.33.md",
-      "docs/유저flow맵-v1.3.31.md",
-      "docs/db설계-v1.3.31.md",
-      "docs/api문서-v1.2.36.md",
+      "docs/요구사항기준선-v1.7.30.md",
+      "docs/화면정의서-v1.5.34.md",
+      "docs/유저flow맵-v1.3.32.md",
+      "docs/db설계-v1.3.32.md",
+      "docs/api문서-v1.2.37.md",
     ]);
 
-    for (const version of ["v1.7.29", "v1.5.33", "v1.3.31", "v1.2.36"]) {
+    for (const version of ["v1.7.30", "v1.5.34", "v1.3.32", "v1.2.37"]) {
       expect(readme).toContain(version);
       expect(acceptance).toContain(version);
     }
