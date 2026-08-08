@@ -1372,16 +1372,15 @@ describe.runIf(enabled)("cooked batch weight ledger PostgreSQL", () => {
       expect(conditions).toContain("recipe_content_snapshot_id");
       expect(conditions).toContain("batch_status");
       expect(conditions).toContain("depleted_reason");
-      expect(nodes.flatMap((node) => node["Sort Key"] ?? []).join(" ")).toContain(orderColumn);
+      const sortKey = nodes.flatMap((node) => node["Sort Key"] ?? []).join(" ");
+      expect(sortKey).toContain(orderColumn);
+      expect(sortKey).toContain("id");
       expect(Math.max(...nodes.map((node) => node["Actual Rows"] ?? 0))).toBeLessThanOrEqual(8_100);
-      const output = (document.Plan.Output ?? []).join(" ");
-      for (const column of [
+      expect(document.Plan.Output).toEqual([
         "id", "user_id", "recipe_id", "recipe_content_snapshot_id", "status", "cooked_at",
         "eaten_at", "auto_hide_at", "stale_reviewed_at", "cooking_servings", "weight_status",
         "batch_status", "depleted_reason",
-      ]) {
-        expect(output).toContain(column);
-      }
+      ]);
     }
 
     const snapshotNodes = collectPlanNodes(snapshotLookup.Plan);

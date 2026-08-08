@@ -203,15 +203,23 @@ describe("cooked batch database security contract", () => {
       ),
       "utf8",
     );
+    const performanceTestName =
+      "separates exact limit-free LEFTOVERS route plans from selective index proofs";
     const explainBlock = testSource.slice(
-      testSource.indexOf("captures the exact limit-free LEFTOVERS route predicates"),
-      testSource.indexOf("rejects a depleted v2 leftover", testSource.indexOf("captures the exact limit-free")),
+      testSource.indexOf(performanceTestName),
+      testSource.indexOf("rejects a depleted v2 leftover", testSource.indexOf(performanceTestName)),
     );
 
     expect(explainBlock).not.toMatch(/order by cooked_at desc,id desc limit 20/i);
     expect(explainBlock).not.toMatch(/order by eaten_at desc,id desc limit 20/i);
-    expect(explainBlock).toContain("Shared Read Blocks");
-    expect(explainBlock).toContain("Actual Rows");
+    expect(explainBlock).toContain("LEFTOVERS_EXACT");
+    expect(explainBlock).toContain("SNAPSHOT_LOOKUP");
+    expect(explainBlock).toContain("expectSelectiveIndexPlan");
+    expect(explainBlock).toContain("INDEX_DEFINITIONS");
+    expect(explainBlock).toContain("rootSharedBlocks");
+    expect(testSource).toContain('node["Index Name"] === indexName');
+    expect(testSource).toContain('node["Actual Rows"]');
+    expect(testSource).toContain('node["Index Cond"]');
   });
 
   it("delegates monotonic JWT refresh to the canonical post-master authority", () => {

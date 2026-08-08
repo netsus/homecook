@@ -7,8 +7,10 @@
 - Implementation lineage task ID: `019fe1aa-82fd-7602-844e-e050efae93db`
 - Base-drift integrator task ID: `019fe2b2-0ee4-77c3-a829-9ae04bfac07f`
 - Original Stage 1 base: `635763041d6420c648e2b55336e6caa9f1f9143c`
-- Current exact base: `master` / `origin/master` `eb4e878eb1d5b6fe5df00b1edd3a4f42fa472142` (PR #1292)
-- Local successor branch: `feature/cooked-batch-weight-ledger-stage2-eb4e-successor`
+- Implementation base: `eb4e878eb1d5b6fe5df00b1edd3a4f42fa472142` (PR #1292)
+- Current Draft PR base at the performance-evidence repair entry: `82e86f6ad35378f08b79f3f69def16e630024a79`
+- Latest `origin/master` observed during the repair: `b2c3baaf2d609c73fe94041abe33377fa5a5832d` (PR #1296; only `scripts/lib/local-mac-production.mjs` and `tests/local-mac-production.test.ts`, with no repair-file overlap)
+- Local performance-evidence repair branch: `fix/leftovers-performance-evidence-repair`
 - Draft PR #1291 remote branch retained: `feature/cooked-batch-weight-ledger-stage2-current`
 - Preserved held branch: `feature/be-cooked-batch-weight-ledger` exact `3c5b6760ce8c9a8b51205c755f9f92d57177ca00`
 - The held branch was restored before task changes and was not rebased, edited, force-pushed or cherry-picked.
@@ -77,7 +79,18 @@ Fresh review of `e9b88ac12bb5cb7ccaa40cb662578c8d56d7f3d4` found four further ga
 - Snapshot-v2 completion now follows `recipe UUID -> actual Meal row UUID -> session/claim`, then revalidates Meal owner/recipe/content/status/revision under the locks. A real two-connection complete/cancel regression proves no deadlock, exactly one success and one `CONFLICT`, and one valid terminal state.
 - Transactional progress/summary/activity rows remain the canonical RPC authority. Completion, consumed-unweighed close and legacy eat now resolve the durable canonical event/activity IDs and invoke the existing official live projection helpers. Replays reuse the same IDs, so notification, badge, achievement and level-up writers retain their established idempotency keys; no RPC/HTTP field was added.
 - The account-session inventory recognizes all `callCookedBatchRpc` writers, treats only the explicit `list_cooked_batches` target as read-only, expands the mutation verbs, and supports an alternate `--inventory` registry for a real omission-fails test. The stored inventory advances from 85 to 93 write surfaces.
-- LEFTOVERS performance evidence removes both artificial limits and selects the production columns with the production predicates/order. The test records JSON `Actual Rows`, shared hit/read buffers and owner scan conditions, and separately verifies all four exact partial-index definitions. It does not claim that the unpaginated production query is a bounded page.
+- LEFTOVERS performance evidence removes both artificial limits and selects the production columns with the production predicates/order. It does not claim that the unpaginated production query is a bounded page.
+
+Fresh exact-head re-reviews then found that the remaining performance test still joined `EXPLAIN` and `pg_indexes` output before checking index-name substrings, and that the route selected an embedded `recipe_content_snapshots(...)` relation that its response projection never consumed. Security/DB task `019fe318-2f0e-7f62-98e0-f3ed205032f4` returned `HOLD 0/1/1`; five-axis task `019fe318-2f0f-7820-a6fd-cc7325bea9bb` returned `HOLD 0/0/1` on old head `5034eb802c1a409bb3f7087c6c34e85bdd70fae3`.
+
+Repair commit `216a7429d27aa3de09b026cf4e6ef940a6c6f3c9` keeps the public response unchanged while making the evidence claims separable and testable:
+
+- Route RED was `1 failed / 26 passed`: the exact `leftover_dishes` select still contained the unused embedded relation. GREEN is `27/27`; the response continues to use the existing explicit `recipe_content_snapshots(id,recipe_id,title)` lookup for the immutable title, while the unused PostgREST embed is removed.
+- PostgreSQL RED first rejected an unrealistically tight v2 eaten selective-plan budget (`262` shared blocks observed versus `256`), then exposed the exact PostgreSQL-normalized `pg_indexes.indexdef` text. The final budget is `320`, and fresh/replay #8 suites are `24/24`.
+- The two official unpaginated compatibility predicates/orders are measured as separate `FORMAT JSON` plans. Plan trees assert selected output columns, a real relation scan node (including rational `Seq Scan`), owner/predicate scan conditions, `Actual Rows` ranges, no `Limit`, at most `8,100` scanned rows and at most `2,000` root shared blocks.
+- The existing explicit snapshot-title lookup is measured separately for exact `id,recipe_id,title` output, one actual row and at most `16` shared blocks. This is the only recipe-content relationship cost claimed by this evidence after the unused embed removal.
+- Four separate selective representative queries prove actual `Index Scan`, `Index Only Scan` or `Bitmap Index Scan` nodes with each exact compatibility `Index Name`, relevant scan conditions, positive actual rows and at most `320` root shared blocks. These selective proofs are not described as the combined unpaginated route plan.
+- A separate `pg_catalog.pg_indexes` query compares all four full PostgreSQL-normalized `indexdef` strings exactly. Catalog existence is not treated as runtime index usage.
 
 PostgreSQL refinement also separated fixture isolation from two earlier product defects: terminal sessions were revalidating the active Meal revision pin, and completion set `meals.leftover_dish_id` without `is_leftover`. The final migration keeps immutable start snapshots as audit data after terminal transition and leaves ordinary planner Meal leftover-origin fields unchanged.
 
@@ -92,11 +105,13 @@ replay cooked batch: 24 passed
 replay inherited shared security inventory: 26 passed / 31 intended skips
 ```
 
-The cooked-batch scenarios cover exact 20-function owner/ACL/search-path/scope inventory plus the inherited canonical refresh authority, owner RLS, direct protected update/event insert/select/checksum and forged batch INSERT denial, two-owner multi-table digests including progress-summary timestamps, exact pantry/claim rollback, same-session newer JWT acceptance with old/stale/different/revoked/generation-mismatched zero-write, owner-locked keep, atomic canonical progress/activity projection plus official live notification/badge/achievement projection, duplicate/replay canonical-ID reuse, standalone and planner completion/replay, a real complete/cancel lock race, idempotency payload mismatch including reason, full cached-projection tamper denial, DB-level NULL/blank discard-adjust rejection, unrecoverable irreversibility, close/cancel/reclose XP once, a forced two-connection v1/v2 `60+45` award race, v2 unavailable versus legacy-null nutrition status, strict canonical cursor parsing, representative 4,000 v2 + 4,000 legacy row limit-free `EXPLAIN (ANALYZE, BUFFERS)` checks for both exact LEFTOVERS predicates, depleted meal reuse denial and exact-owner cleanup ordering.
+The cooked-batch scenarios cover exact 20-function owner/ACL/search-path/scope inventory plus the inherited canonical refresh authority, owner RLS, direct protected update/event insert/select/checksum and forged batch INSERT denial, two-owner multi-table digests including progress-summary timestamps, exact pantry/claim rollback, same-session newer JWT acceptance with old/stale/different/revoked/generation-mismatched zero-write, owner-locked keep, atomic canonical progress/activity projection plus official live notification/badge/achievement projection, duplicate/replay canonical-ID reuse, standalone and planner completion/replay, a real complete/cancel lock race, idempotency payload mismatch including reason, full cached-projection tamper denial, DB-level NULL/blank discard-adjust rejection, unrecoverable irreversibility, close/cancel/reclose XP once, a forced two-connection v1/v2 `60+45` award race, v2 unavailable versus legacy-null nutrition status, strict canonical cursor parsing, representative 4,000 v2 + 4,000 legacy row exact unpaginated LEFTOVERS plans, a separate snapshot-title lookup, four selective actual-index-use plans and four exact catalog definitions, depleted meal reuse denial and exact-owner cleanup ordering.
 
 ## Verification
 
 - `pnpm install --frozen-lockfile` — pass; no dependency or lockfile change
+- remaining LEFTOVERS performance-evidence focused TDD — route RED `1 failed / 26 passed`, GREEN `27/27`; PostgreSQL budget/catalog RED reproduced identically in fresh/replay, then final #8 fresh/replay `24/24`
+- first full Vitest after the plan rewrite — `1 failed / 5,327 passed / 364 skipped`; the only RED was the prior static security test looking for removed string assertions. The updated structural gate and final full run are `522 files passed / 28 skipped`, `5,328 tests passed / 364 skipped`
 - final focused Vitest — repaired backend/gamification/security/inventory set `7 files / 69 tests` pass; final completion/security rerun `2 files / 19 tests` pass
 - full `pnpm test` on the repaired `eb4e878e…` successor — `522 files passed | 28 skipped`, `5,328 tests passed | 364 skipped`
 - `pnpm exec vitest run tests/check-workpack-docs.test.ts tests/cooked-batch-weight-ledger-stage1-relock.test.ts` — final automation/status repair `2 files / 37 tests`; the validator-only file is `27/27`
@@ -126,7 +141,7 @@ The workpack-specific Stage 4 E2E grep returned `No tests found`; no pass-with-n
 - Correctness: official wrapper/status/error shapes, legacy idempotency, full cached projection and fresh/replay state transitions match focused and PostgreSQL tests.
 - Readability/architecture: all three legacy mutations share the existing verified-session RPC adapter and one database authority; no route-side compensating XP/activity path remains.
 - Security: current-generation authority, owner row locks, exact affected-row counts, private helper ACLs and safe-column SELECT grants are fail closed.
-- Performance: the official LEFTOVERS compatibility route is currently unpaginated. Representative 4,000-row v2 plus 4,000-row legacy fixtures exercise its exact limit-free leftover/eaten predicates and selected columns under `EXPLAIN (ANALYZE, BUFFERS)`; actual rows, shared buffers, owner scan conditions and all four purpose-specific partial-index definitions are asserted without presenting `LIMIT 20` as production evidence.
+- Performance: the official LEFTOVERS compatibility route is currently unpaginated. Representative 4,000-row v2 plus 4,000-row legacy fixtures measure the exact initial relation predicates, output columns and order without `LIMIT`; a separate plan measures the explicit snapshot-title lookup. Four selective queries separately prove the four named compatibility indexes are used, while `pg_indexes.indexdef` separately proves their exact definitions. The combined unpaginated route plan is not claimed to use all four indexes.
 - Scope/dependencies: no frontend, personal-recipe product/docs, F0, new public contract or package dependency changed. This author check is not Stage 3 approval.
 
 ## Contract evolution and handoff

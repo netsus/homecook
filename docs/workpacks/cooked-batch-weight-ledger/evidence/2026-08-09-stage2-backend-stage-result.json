@@ -1,18 +1,20 @@
 {
   "result": "done",
-  "summary_markdown": "#8 cooked-batch exact pantry/weight completion을 공통 잠금 순서로 직렬화하고 공식 live gamification projection, fail-closed writer inventory, limit-free LEFTOVERS evidence까지 current official contract 안에서 복구해 local fresh/replay PostgreSQL로 검증했다.",
+  "summary_markdown": "#8 cooked-batch exact pantry/weight completion을 공통 잠금 순서로 직렬화하고 공식 live gamification projection, fail-closed writer inventory와 정직하게 분리된 LEFTOVERS route/index/catalog evidence를 current official contract 안에서 local fresh/replay PostgreSQL로 검증했다.",
   "commit": {
     "subject": "feat(cooked-batch): make batch weight changes authoritative",
     "body_markdown": "- snapshot-v2 completion and cooked-batch mutations use verified-session scoped RPCs\n- append-only events and replay checksum protect owner-only state transitions\n- legacy leftovers remain compatible without exposing v2 direct writes"
   },
   "pr": {
     "title": "feat(cooked-batch): implement weight ledger backend",
-    "body_markdown": "Draft Stage 2 backend implementation on PR #1292 merge eb4e878eb1d5b6fe5df00b1edd3a4f42fa472142. Repair commit e0884a6de5ce928f2dc087916d07f3d5858313c3 closes the complete/cancel lock-order race, restores official live gamification projection from canonical IDs, inventories 93 write surfaces fail closed, and removes artificial LEFTOVERS limits. Stage 3, Ready, merge, remote rehearsal and activation remain pending."
+    "body_markdown": "Draft Stage 2 backend implementation on PR #1292 merge eb4e878eb1d5b6fe5df00b1edd3a4f42fa472142. Repair commit e0884a6de5ce928f2dc087916d07f3d5858313c3 closes the lock/gamification/inventory/LIMIT findings. Performance-evidence repair 216a7429d27aa3de09b026cf4e6ef940a6c6f3c9 removes one unused internal PostgREST embed without changing the public response, parses exact route and snapshot plans separately, proves four selective index plans, and checks four exact catalog definitions separately. Stage 3, Ready, merge, remote rehearsal and activation remain pending."
   },
   "base_drift_integration": {
     "task_id": "019fe2b2-0ee4-77c3-a829-9ae04bfac07f",
     "implementation_lineage_task_id": "019fe1aa-82fd-7602-844e-e050efae93db",
     "exact_base": "eb4e878eb1d5b6fe5df00b1edd3a4f42fa472142",
+    "current_pr_base_at_performance_repair_entry": "82e86f6ad35378f08b79f3f69def16e630024a79",
+    "latest_master_observed_during_performance_repair": "b2c3baaf2d609c73fe94041abe33377fa5a5832d",
     "local_successor_branch": "feature/cooked-batch-weight-ledger-stage2-eb4e-successor",
     "draft_pr": 1291,
     "remote_branch": "feature/cooked-batch-weight-ledger-stage2-current",
@@ -25,6 +27,16 @@
     "implementation_commit": "e0884a6de5ce928f2dc087916d07f3d5858313c3",
     "security_db_task": "019fe2e0-e5fc-7b32-ab30-76519d57bb08 HOLD 0/1/1",
     "five_axis_task": "019fe2e0-e60b-7221-8b9b-a720784d31c2 HOLD 0/2/0",
+    "public_contract_expansion": false,
+    "stage3_self_approval": false
+  },
+  "leftovers_performance_evidence_repair": {
+    "reviewed_head": "5034eb802c1a409bb3f7087c6c34e85bdd70fae3",
+    "implementation_commit": "216a7429d27aa3de09b026cf4e6ef940a6c6f3c9",
+    "security_db_task": "019fe318-2f0e-7f62-98e0-f3ed205032f4 HOLD 0/1/1",
+    "five_axis_task": "019fe318-2f0f-7820-a6fd-cc7325bea9bb HOLD 0/0/1",
+    "route_tdd": "RED 1 failed / 26 passed; GREEN 27/27; unused embedded snapshot relation removed while explicit snapshot lookup keeps response title unchanged",
+    "postgres_tdd": "fresh/replay RED exposed 262 shared blocks against an initial 256 selective budget and the PostgreSQL-normalized catalog definition; final fresh/replay #8 24/24",
     "public_contract_expansion": false,
     "stage3_self_approval": false
   },
@@ -57,7 +69,7 @@
       "passed_tests": 5328,
       "skipped_tests": 364
     },
-    "focused_vitest": "review repair RED 7 failures / 41 passes; GREEN backend, gamification, security and inventory 7 files / 69 tests; final completion/security 2 files / 19 tests",
+    "focused_vitest": "review repair RED 7 failures / 41 passes; GREEN backend, gamification, security and inventory 7 files / 69 tests; final completion/security 2 files / 19 tests; remaining LEFTOVERS route RED 1 failure / 26 passes then GREEN 27/27; first full run exposed one stale structural security assertion at 1 failure / 5,327 passes, then final full 5,328 passes / 364 skips",
     "postgres_fresh_replay": "predecessor fresh 15 passed / 1 intended skip, replay 16 passed; cooked-batch fresh/replay 24/24; inherited inventory fresh/replay 26 passed / 31 intended skips",
     "complete_cancel_race": "two real connections finish without deadlock; exactly one succeeds, one returns CONFLICT, and the session/Meal/claim/batch terminal state is valid",
     "live_gamification_projection": "snapshot-v2 completion, consumed-unweighed close and legacy eat reuse canonical progress/activity IDs with the existing official notification/badge/achievement helpers",
@@ -70,7 +82,10 @@
     "workpack_validator_red": "4 CLI failures reproduced the explicit-slice silent no-op, unknown/missing slice success, and overwritten branch caller",
     "workpack_validator_green": "27/27 focused tests; missing shallow base refs are fetched exactly or fail closed; explicit --slice emits Workpack docs OK and fails closed for missing governing docs; legacy branch inference remains active",
     "leftovers_partial_compatibility_indexes": 4,
-    "leftovers_explain_shape": "exact limit-free production predicates, selected columns and ordering with Actual Rows, shared hit/read buffers and owner scan condition evidence"
+    "leftovers_exact_route_plans": "separate unpaginated leftover/eaten FORMAT JSON plans assert exact selected columns, order, owner/predicate scan conditions, no Limit, 2,000-2,100 / 5,900-6,100 actual result rows, at most 8,100 scanned rows and at most 2,000 root shared blocks; rational Seq Scan remains allowed",
+    "leftovers_snapshot_lookup_plan": "the explicit id,recipe_id,title lookup that supplies response titles is separate: one actual row and at most 16 root shared blocks; the unused embedded PostgREST relation was removed",
+    "leftovers_selective_index_usage": "four separate selective representative plans each require an actual Index Scan, Index Only Scan or Bitmap Index Scan node with the exact Index Name, relevant scan conditions, positive actual rows and at most 320 root shared blocks",
+    "leftovers_index_definitions": "four full PostgreSQL-normalized pg_catalog.pg_indexes.indexdef values compared exactly and separately from runtime plan assertions"
   },
   "next_route": "stage3_fresh_backend_review",
   "claimed_scope": {
