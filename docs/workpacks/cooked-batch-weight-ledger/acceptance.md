@@ -1,6 +1,6 @@
 # Acceptance Checklist
 
-> This Stage 1 document locks future backend, functional COOK_MODE and release evidence. Unchecked items do not claim that #7 runtime, `cook-mode-whole-board`, migrations, RPCs, seeded drain, visual evidence or R+2 activation already exist.
+> Fresh Stage 1 official tuple: requirements `v1.7.29`, screens `v1.5.33`, flow `v1.3.31`, DB `v1.3.31`, API `v1.2.35`. #7 PR #1281 runtime and `cook-mode-whole-board` PR #711 are merged predecessors, but #7 overall lifecycle, Manual/server-Mac gates, #8 R/R+1 evidence and R+2 activation remain open. Unchecked items do not claim migrations, #8 RPCs, seeded drain, fresh critic/authority evidence or activation already exist.
 
 ## Snapshot-v2 Completion
 
@@ -10,6 +10,7 @@
 - [ ] generic pin accepts only generic or approved effective-ingredient product row <!-- omo:id=accept-batch-generic-row;stage=2;scope=backend;review=3,6 -->
 - [ ] duplicate/missing/other-owner/mismatched selection changes no pantry or completion state <!-- omo:id=accept-batch-pantry-denial;stage=2;scope=backend;review=3,6 -->
 - [ ] selected rows alone are deleted and equivalent unselected rows remain <!-- omo:id=accept-batch-selected-only;stage=2;scope=backend;review=3,6 -->
+- [ ] empty pantry selection remains `consumed_pantry_item_ids=[]`; no eligible row never triggers guessed or automatic selection <!-- omo:id=accept-batch-empty-selection;stage=2;scope=shared;review=3,5,6 -->
 - [ ] pantry, batch, initial ledger, session, claim, Meal, cook-count and XP commit once in one RPC <!-- omo:id=accept-batch-complete-atomic;stage=2;scope=backend;review=3,6 -->
 - [ ] same key/payload replays first result and different payload returns exact 409 with zero effect <!-- omo:id=accept-batch-complete-idempotency;stage=2;scope=backend;review=3,6 -->
 
@@ -47,15 +48,18 @@
 ## COOK_MODE Functional UI
 
 - [ ] actual pantry row product/brand identity and row selection are visible <!-- omo:id=accept-batch-ui-row-identity;stage=4;scope=frontend;review=5,6 -->
-- [ ] no exact eligible row keeps complete disabled and no equivalent row is auto-selected <!-- omo:id=accept-batch-ui-no-guess;stage=4;scope=frontend;review=5,6 -->
+- [ ] no exact eligible row renders an empty state with `[]`; completion waits for an explicit weight action and no equivalent row is auto-selected <!-- omo:id=accept-batch-ui-no-guess;stage=4;scope=frontend;review=5,6 -->
 - [ ] UI offers only original food-only g or weigh-later and excludes container/current remainder <!-- omo:id=accept-batch-ui-weight-action;stage=4;scope=frontend;review=5,6 -->
 - [ ] loading/empty/error fail closed, submit is deduped and 409/422 preserves selections/focus <!-- omo:id=accept-batch-ui-states;stage=4;scope=frontend;review=5,6 -->
 - [ ] stored replay result closes once without repeating effects <!-- omo:id=accept-batch-ui-replay;stage=4;scope=frontend;review=5,6 -->
-- [ ] canonical COOK_MODE design doc and independent critic pass before Stage 2 implementation <!-- omo:id=accept-batch-ui-design-critic;stage=2;scope=frontend;review=5,6 -->
-- [ ] 390px/320px screenshots/Figma and scoped design authority pass before R <!-- omo:id=accept-batch-ui-authority;stage=4;scope=frontend;review=5,6 -->
+- [ ] canonical COOK_MODE #8 design and fresh independent critic pass before Stage 2 진입 전 implementation <!-- omo:id=accept-batch-ui-design-critic;stage=2;scope=frontend;review=5,6 -->
+- [ ] fresh 390px/320px screenshot/Figma product-design-authority reports blocker/major zero before Stage 2 진입 전; legacy 15a evidence is not reused <!-- omo:id=accept-batch-ui-authority;stage=2;scope=frontend;review=5,6 -->
 - [ ] #11 retains final LEFTOVERS/design/accessibility ownership without duplicate API/mutation <!-- omo:id=accept-batch-ui-successor;stage=4;scope=shared;review=5,6 -->
 
 ## Release / v1-v2 Boundary
+
+- [ ] #7 additive recipe `revision`, owner-only `edit_context`, Meal `revision` and server-only joint capability projection do not add any #8 complete body field, status or public error <!-- omo:id=accept-batch-slice7-entrypoint-boundary;stage=2;scope=shared;review=3,6 -->
+- [ ] creation-off blocks new personal edit/v2 start while seeded/existing v2 read/cancel/complete drain remains available <!-- omo:id=accept-batch-creation-off-drain;stage=2;scope=shared;review=3,6 -->
 
 - [ ] R and R+1 prove current+previous seeded v2 read/cancel/complete drain with new writes zero <!-- omo:id=accept-batch-r-r1-drain;stage=2;scope=shared;review=3,6 -->
 - [ ] R+2 alone jointly enables personal recipe and v2 creation after service-owner approval <!-- omo:id=accept-batch-r2-activation;stage=2;scope=shared;review=3,6 -->

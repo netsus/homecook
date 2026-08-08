@@ -22,6 +22,7 @@
       "generic-pin-generic-or-approved-primary-represents-effective-row-only",
       "duplicate-missing-other-owner-mismatch-whole-transaction-zero-write",
       "selected-pantry-rows-only-deleted-equivalent-unselected-remain",
+      "empty-consumed-pantry-item-ids-allowed-no-equivalent-row-auto-selection",
       "pantry-batch-ledger-session-claim-meal-cook-count-xp-one-transaction-once",
       "batch-content-snapshot-and-cooking-servings-only-no-direct-nutrition-pointer",
       "known-missing-unrecoverable-and-available-depleted-reason-checks",
@@ -51,6 +52,8 @@
       "rollback-preserves-existing-v2-read-cancel-complete-and-rows",
       "v1-optional-key-one-release-zero-before-428",
       "v1-body-response-parser-and-consumed-ingredient-semantics-unchanged",
+      "slice7-additive-recipe-meal-revision-owner-edit-context-and-server-only-capability-projection-do-not-expand-slice8-complete-public-contract",
+      "creation-off-blocks-new-personal-v2-start-but-preserves-existing-v2-read-cancel-complete-drain",
       "meal-log-linked-consumed-event-owned-by-slice9",
       "final-leftovers-weight-design-owned-by-slice11",
       "no-unofficial-contract-unmerged-migration-or-production-flag-write"
@@ -62,7 +65,7 @@
       "pnpm test:e2e:regression:ci --grep cooked-batch-weight-ledger",
       "pnpm validate:source-of-truth-sync",
       "pnpm validate:workflow-v2",
-      "BRANCH_NAME=docs/cooked-batch-weight-ledger pnpm validate:workpack -- --slice cooked-batch-weight-ledger",
+      "BRANCH_NAME=docs/cooked-batch-weight-ledger-stage1-relock pnpm validate:workpack -- --slice cooked-batch-weight-ledger",
       "node scripts/validate-automation-spec.mjs --slice cooked-batch-weight-ledger",
       "pnpm validate:omo-bookkeeping",
       "git diff --check"
@@ -91,7 +94,7 @@
     "required_states": [
       "actual-pantry-row-product-brand-selection",
       "multiple-equivalent-rows-unselected-preserved",
-      "no-eligible-row-empty-complete-disabled",
+      "no-eligible-row-empty-consumed-pantry-item-ids-array-no-auto-selection",
       "food-only-finished-weight-known",
       "weigh-later-null-weight",
       "loading-and-submit-pending-fail-closed",
@@ -130,16 +133,16 @@
       "generator_required": true,
       "generator_artifact": "ui/designs/COOK_MODE.md",
       "critic_required": true,
-      "critic_artifact": "ui/designs/critiques/COOK_MODE-critique.md",
+      "critic_artifact": "ui/designs/critiques/COOK_MODE-cooked-batch-weight-ledger-critique.md",
       "authority_required": true,
       "stage4_evidence_requirements": [
-        "ui/designs/evidence/cooked-batch-weight-ledger/COOK_MODE-complete-mobile-default.png",
-        "ui/designs/evidence/cooked-batch-weight-ledger/COOK_MODE-complete-mobile-narrow.png",
-        "ui/designs/evidence/cooked-batch-weight-ledger/COOK_MODE-complete-states-mobile-default.png",
-        "ui/designs/evidence/cooked-batch-weight-ledger/COOK_MODE-complete-states-mobile-narrow.png"
+        "ui/designs/evidence/cooked-batch-weight-ledger/COOK_MODE-design-mobile-default-390.png",
+        "ui/designs/evidence/cooked-batch-weight-ledger/COOK_MODE-design-mobile-narrow-320.png",
+        "ui/designs/evidence/cooked-batch-weight-ledger/COOK_MODE-implementation-mobile-default-390.png",
+        "ui/designs/evidence/cooked-batch-weight-ledger/COOK_MODE-implementation-mobile-narrow-320.png"
       ],
       "authority_report_paths": [
-        "ui/designs/authority/COOK_MODE-authority.md"
+        "ui/designs/authority/COOK_MODE-cooked-batch-weight-ledger-authority.md"
       ]
     }
   },
@@ -176,9 +179,9 @@
     "r2-activation-before-two-release-drain-or-rollback-disables-existing-v2",
     "v1-shape-parser-semantic-change-or-premature-428-removal",
     "slice9-meal-log-or-slice11-final-ui-preclaimed",
-      "required-design-critic-authority-or-390-320-evidence-missing-before-r",
-      "legacy-cook-mode-design-critic-or-authority-artifact-reused-as-slice8-evidence",
-      "stage2-entered-before-canonical-cook-mode-slice8-design-refresh-and-independent-critic-pass",
+    "required-design-critic-authority-or-390-320-evidence-missing-before-stage2",
+    "legacy-cook-mode-design-critic-or-authority-artifact-reused-as-slice8-evidence",
+    "stage2-entered-before-fresh-independent-slice8-design-critic-and-390-320-product-design-authority-pass",
     "unofficial-contract-unmerged-migration-production-write-or-capability-change",
     "local-first-verifier-not-merged-exact-sha",
     "current-head-check-pending-absent-stale-failed-or-cancelled"
@@ -187,5 +190,5 @@
     "backend": 6,
     "frontend": 4
   },
-  "notes": "DB/security/concurrency and high-risk COOK_MODE Stage 1 lock. Stage 1 runs only current docs validators, focused tests, lint, typecheck, audit and diff. The canonical COOK_MODE design and critique paths currently contain legacy artifacts: before Stage 2, refresh the design for #8 and obtain a new independent critique; after Stage 4 captures new 390px/320px evidence, replace the legacy authority report. Runtime/PostgreSQL/real DB/component/E2E/visual/local-first production-rehearsal/drain evidence is future. Implementation waits for #7 runtime and cook-mode-whole-board. #8 owns exact-pantry complete, batch ledger, functional weight UI and R/R+1 gate; #9 owns meal-log links, #11 final weight/LEFTOVERS design, and R+2 activation remains Manual Only."
+  "notes": "Fresh Stage 1 re-lock on requirements v1.7.29, screens v1.5.33, flow v1.3.31, DB v1.3.31 and API v1.2.35. Stage 1 runs only current docs validators, focused workflow-doc tests, lint, typecheck, audit and diff. #7 PR #1281 runtime and cook-mode-whole-board PR #711 are merged predecessors, while #7 overall lifecycle, Manual/server-Mac gates, #8 R/R+1 evidence and R+2 activation remain open. Fresh critic and 390px/320px product-design-authority passed 0/0/0. Internal 1.5 task 019fe049-dc14-77f0-ac4c-6dcb58d2b819 returned HOLD on old head 0eb76e8ff0450ccc4353b91f191be8a2f1e2dfb3 with I15-B01, I15-B02 and I15-B03; all are author-repaired after dependency PR #1286 merged as 9ff5a920f063af22cd8a8dbee33a603b27c3af57, but fresh internal 1.5 re-review pending. Legacy 15a critic/authority evidence is not reusable. Runtime/PostgreSQL/real DB/component/E2E/visual/local-first production-rehearsal/drain evidence is future. #8 owns exact-pantry complete, batch ledger, functional weight UI and R/R+1 gate; #9 owns meal-log links, #11 final weight/LEFTOVERS design, and R+2 activation remains Manual Only."
 }

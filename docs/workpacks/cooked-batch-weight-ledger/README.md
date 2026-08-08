@@ -4,9 +4,19 @@
 
 snapshot-v2 요리 완료를 session에 pin된 content/servings와 exact pantry row 선택에 결합하고, cooked batch의 완성·잔량 중량과 weighted/unweighed lifecycle을 append-only event + row-lock RPC authority로 만든다. 기존 leftover reader와 v1 completion을 호환하면서 R/R+1 flag-off drain을 증명한 뒤에만 R+2에서 personal recipe와 v2 creation을 공동 활성화한다.
 
+## Official Contract Lock
+
+- requirements: `docs/요구사항기준선-v1.7.29.md`
+- screens: `docs/화면정의서-v1.5.33.md`
+- flow: `docs/유저flow맵-v1.3.31.md`
+- DB: `docs/db설계-v1.3.31.md`
+- API: `docs/api문서-v1.2.35.md`
+
+이 fresh Stage 1 재잠금은 위 tuple을 그대로 소비한다. 기존 endpoint, request/body, `{ success, data, error }` wrapper, HTTP status와 public error code를 늘리지 않으므로 새 Contract Evolution은 필요하지 않다. 구현 중 이 경계를 벗어나는 충돌이 발견되면 임의 확장하지 않고 `Contract Evolution Candidate`로 중단한다.
+
 ## Branches
 
-- Stage 1 docs: `docs/cooked-batch-weight-ledger`
+- Fresh Stage 1 re-lock docs: `docs/cooked-batch-weight-ledger-stage1-relock`
 - Stage 2 backend/DB: `feature/be-cooked-batch-weight-ledger`
 - Stage 4 functional COOK_MODE integration: `feature/fe-cooked-batch-weight-ledger`
 - Release train: D. 구현 선행조건은 #7 runtime과 merged `cook-mode-whole-board`다.
@@ -20,6 +30,7 @@ snapshot-v2 요리 완료를 session에 pin된 content/servings와 exact pantry 
   - product pin accepts only the same exact product pantry row. Generic ingredient pin accepts a generic row or product row whose active approved primary `represents` relation projects the same effective ingredient.
   - duplicate/missing/other-owner/mismatched pantry rows fail without deletion. Only selected rows are removed; equivalent unselected rows remain.
   - one transaction commits pantry deletion, immutable content-only batch, initial ledger/projection, session terminal result, claim consumption, planner Meal transition, cook count and cooking-completed XP exactly once.
+  - `consumed_pantry_item_ids` may remain `[]`; no eligible pantry candidate is a valid empty selection, never a reason to guess or auto-select an equivalent row. Completion enablement depends on an explicit valid weight action, not on selecting at least one pantry row.
 - cooked batch authority
   - v2 batch pins `recipe_content_snapshot_id` and cooking servings; no direct nutrition snapshot FK or duplicated nutrition vector/status/source is added.
   - `weight_status=known|missing|unrecoverable`, `batch_status=available|depleted`, and depleted reason distinguishes `consumed|discarded|mixed|consumed_unweighed|discarded_unweighed|mixed_unweighed`.
@@ -47,7 +58,7 @@ snapshot-v2 요리 완료를 session에 pin된 content/servings와 exact pantry 
   - duplicate submit displays the stored first result and does not repeat pantry/batch/cook-count/XP effects.
 - phased release
   - #8 merge enables flag-off dormant release R, then R+1 repeats seeded-v2 read/cancel/complete drain on current+immediate-previous UI while new personal/v2 creation remains zero.
-  - only R+2 jointly enables `cooking_session_v2` and `personal_recipe_v2`.
+  - only R+2 jointly enables `personal_recipe_v2` and `snapshot_v2_creation`.
   - rollback blocks new v2 start/personal mutation but preserves existing v2 read/cancel/complete and rows.
 
 Schema Change:
@@ -73,14 +84,21 @@ Schema Change:
 | Gate | Current state | Meaning |
 | --- | --- | --- |
 | historical contract base PR #1072 | merged | superseded baseline; active authority is the current tuple in `docs/sync/CURRENT_SOURCE_OF_TRUTH.md` |
-| `recipe-content-snapshot-future-propagation` Stage 1 PR #1081 | merged docs | #7 runtime must provide v2 start/cancel/read, immutable session pin and claim behavior before #8 implementation |
-| `recipe-snapshot-authority-foundation` Stage 1 PR #1078 | merged docs | #4 runtime must provide content-only batch/session schema authority |
-| `product-ingredient-link-foundation` Stage 1 PR #1076 | merged docs | #2 runtime approved effective-ingredient relation is required for generic pin pantry validation |
-| `cook-mode-whole-board` | currently `implementation` | must merge and be green before #8 implementation due shared COOK_MODE files; Stage 1 docs may merge now |
+| `recipe-content-snapshot-future-propagation` #7 runtime | merged predecessor | PR #1281 exact head `aab9a65e6123e3134478842971765ad3aa737d6a` merged as `2173737e8ea2eec2297e1cc0227ce4f2c27c50b9`; v2 start/cancel/read, immutable session pin, dispatch and owner entrypoint runtime are present. Its broader lifecycle deliberately remains `in_progress / needs_revision / pending`: Manual/server-Mac/OAuth evidence, #8 R/R+1 gate and R+2 activation are still open. |
+| `recipe-snapshot-authority-foundation` | runtime merged, lifecycle open | content-only batch/session authority is present; activation and remaining Manual Only evidence are not inherited as complete by #8 |
+| `product-ingredient-link-foundation` | runtime merged | approved effective-ingredient relation is available for generic pin pantry validation |
+| `cook-mode-whole-board` | merged predecessor | PR #711 exact head `55b93ad7d29cfa8cba19e7942b18e6275fdc986a` merged as `2f8569cb56a53e9508d8d9571b94b260ec0bce73`; #8 extends that actual whole-board without reopening its lifecycle |
 | `meal-log-core` #9 | successor | owns linked consumed meal entry and arbitrary-order entry-specific reversal |
 | `cooked-batch-weight-ui` #11 | successor | owns final LEFTOVERS/weight UI design/accessibility without duplicating mutations |
 
-> Roadmap status is `docs` while workflow lifecycle remains `planned`. This Stage 1 merge neither satisfies runtime predecessors nor activates v2/personal flags.
+> Exact runtime predecessors are merged, but predecessor lifecycle and activation projections are not falsely closed. #8 remains `docs` on the roadmap and `planned / not_started / pending` in workflow state until fresh independent Stage 1 gates pass. This PR does not activate v2/personal flags.
+
+## #7 Entrypoint Boundary
+
+- #7의 `GET /recipes/{id}.data.revision`, exact-owner-only `edit_context`, `GET /meals.data.items[].revision`은 recipe/Meal entrypoint의 additive read projection이다.
+- 두 server-only capability가 모두 exact-active일 때만 `snapshot_v2` creation consumer를 선택하는 공동 projection도 #7 runtime 경계이며, raw capability name/value/revision은 browser/public API에 노출하지 않는다.
+- 이 additive read 계약은 #8 complete request를 확장하지 않는다. #8은 기존 `POST /cooking/session-attempts/{id}/complete` body의 `consumed_pantry_item_ids`, `weight_action`, `finished_weight_g`만 사용하고 기존 wrapper/status/public error를 유지한다.
+- creation-off에서는 새 personal edit와 새 snapshot-v2 start가 계속 닫힌다. 다만 seeded/existing `snapshot_v2` session의 read/cancel과 #8 complete drain은 계속 허용된다.
 
 ## Completion Transaction
 
@@ -186,7 +204,7 @@ loading:
 - session/pantry candidates unresolved; complete disabled and selection not guessed
 
 empty/mismatch:
-- no eligible exact row: explain required pantry selection and keep complete disabled
+- no eligible exact row: render a calm empty state and keep `consumed_pantry_item_ids=[]`; after the user explicitly chooses a valid weight action, completion remains possible
 - another equivalent row is never auto-selected or deleted
 
 submit/error:
@@ -201,15 +219,16 @@ creation flag rollback:
 ## Design / Accessibility Authority
 
 - UI risk: high-risk `COOK_MODE` functional completion change. `COOK_MODE` is a required high-risk surface but is not listed as an anchor screen in `docs/design/anchor-screens.md`.
-- Stage 1 artifact: the exact-row and weight-action wireframe above. Before Stage 2 begins, update the existing legacy `ui/designs/COOK_MODE.md` to the #8 states, then replace `ui/designs/critiques/COOK_MODE-critique.md` with an independent critique of that updated design; the existing v1.5.1 artifacts are not #8 evidence.
-- Design critic: the refreshed critique must pass before Stage 2. It checks actual row identity, product/brand hierarchy, no auto-selection, food-only weight copy, known/later exclusivity, loading/empty/error fail-closed and duplicate-submit behavior.
-- Stage 4 evidence: 390px/320px COOK_MODE default, multi-row, no-eligible-row, known, weigh-later, pending, 409/422 and replay states; keyboard/focus, 44px targets and no overflow.
-- product-design-authority: scoped approval of #8 functional completion is required before R activation. #11 still owns final COOK_MODE/LEFTOVERS visual polish, container calculator and full delayed-weight/unrecoverable UX; it reuses the same mutations.
-- canonical authority report is `ui/designs/authority/COOK_MODE-authority.md`; the existing legacy report is not reusable and must be replaced after Stage 4 captures new #8 390px/320px evidence. PNG/Figma are report-linked evidence/runtime references.
+- Stage 1 design source: `ui/designs/COOK_MODE.md` now locks the current official tuple, whole-board shell and #8 exact-row/weight sheet states. The existing `ui/designs/critiques/COOK_MODE-critique.md` and `ui/designs/authority/COOK_MODE-authority.md` are legacy 15a/v1.5.1 evidence and are not reusable.
+- Design critic gate: a fresh independent task must write `ui/designs/critiques/COOK_MODE-cooked-batch-weight-ledger-critique.md` and return pass/conditional-pass with blocker 0 before Stage 2.
+- Product-design-authority gate: before Stage 2, a different independent task must review the design at 390px and 320px using fresh screenshot/Figma evidence and write `ui/designs/authority/COOK_MODE-cooked-batch-weight-ledger-authority.md` with blocker/major 0. This author does not create or approve either report.
+- Pre-Stage 2 design evidence plan: `ui/designs/evidence/cooked-batch-weight-ledger/COOK_MODE-design-mobile-default-390.png` and `ui/designs/evidence/cooked-batch-weight-ledger/COOK_MODE-design-mobile-narrow-320.png`, covering default, multi-row, empty, known, weigh-later, loading, 409/422, replay and creation-off drain states without reusing v1.5.1 images.
+- Stage 4 must capture a second fresh implementation evidence pair at 390px/320px for keyboard/focus, 44px targets, safe-area and no-overflow verification; the pre-Stage 2 design approval is not a substitute for implemented-screen review.
+- #11 still owns final COOK_MODE/LEFTOVERS visual polish, container calculator and full delayed-weight/unrecoverable UX; it reuses #8 mutations without expanding them.
 
 ## Design Status
 
-`temporary`. Stage 1 locks functional states only. Implementation evidence, independent design critique and scoped product-design-authority approval remain pending; #11 owns later final visual/accessibility completion.
+`temporary`. Fresh independent critic task `019fe02c-1b12-7d42-bcaf-0d5a02847967` and 390px/320px product-design-authority task `019fe041-2ff4-7f62-9786-79a46aecae0c` passed with `0/0/0`. Internal 1.5 task `019fe049-dc14-77f0-ac4c-6dcb58d2b819` returned `HOLD` on old head `0eb76e8ff0450ccc4353b91f191be8a2f1e2dfb3`; `I15-B01`, `I15-B02`, and `I15-B03` are author-repaired, but fresh internal 1.5 re-review pending. Stage 2 진입 전 the re-review and Stage 1 merge must pass; #11 owns later final visual/accessibility completion.
 
 ## Primary User Path
 
@@ -258,6 +277,8 @@ creation flag rollback:
 
 ## Delivery Checklist
 
+Successor Stage 1 relock evidence is retained at [`evidence/2026-08-04-stage1-relock.md`](./evidence/2026-08-04-stage1-relock.md). It preserves the author/precheck lineage and #7 runtime-versus-lifecycle boundary, records critic/authority pass `0/0/0`, the old-head internal 1.5 `HOLD` findings `I15-B01`/`I15-B02`/`I15-B03`, and dependency repair PR `#1286` merged as `9ff5a920f063af22cd8a8dbee33a603b27c3af57`. Current audit high/critical is `0`; all three findings are repaired and fresh internal 1.5 re-review pending.
+
 - [ ] v2 complete validates exact owner pantry rows against pinned product/effective ingredient authority <!-- omo:id=delivery-batch-complete-pantry;stage=2;scope=backend;review=3,6 -->
 - [ ] complete atomically applies pantry batch ledger session claim Meal cook-count and XP once <!-- omo:id=delivery-batch-complete-atomic;stage=2;scope=backend;review=3,6 -->
 - [ ] known/missing completion and delayed original finished weight obey official bounds <!-- omo:id=delivery-batch-weight;stage=2;scope=backend;review=3,6 -->
@@ -269,7 +290,7 @@ creation flag rollback:
 - [ ] legacy eaten projection and XP/activity apply only to consumed reasons exactly once <!-- omo:id=delivery-batch-legacy-projection;stage=2;scope=backend;review=3,6 -->
 - [ ] legacy rows remain nullable and are never assigned inferred grams or fabricated content <!-- omo:id=delivery-batch-legacy-data;stage=2;scope=backend;review=3,6 -->
 - [ ] COOK_MODE exact-row/weight UI is fail-closed and waits for stored completion result <!-- omo:id=delivery-batch-complete-ui;stage=4;scope=frontend;review=5,6 -->
-- [ ] 390px/320px visual/a11y and independent design critic/scoped authority reviews pass <!-- omo:id=delivery-batch-design-authority;stage=4;scope=frontend;review=5,6 -->
+- [ ] fresh independent design critic and 390px/320px screenshot/Figma product-design-authority pass before Stage 2 <!-- omo:id=delivery-batch-design-authority;stage=2;scope=frontend;review=5,6 -->
 - [ ] R/R+1 seeded v2 drain and current/previous v1 compatibility pass with new-write zero <!-- omo:id=delivery-batch-drain;stage=2;scope=shared;review=3,6 -->
 - [ ] R+2 joint activation and rollback preserve existing v2 drain <!-- omo:id=delivery-batch-activation;stage=2;scope=shared;review=3,6 -->
 - [ ] #9 meal-log and #11 final UI boundaries are not preclaimed <!-- omo:id=delivery-batch-successor-boundary;stage=2;scope=shared;review=3,6 -->

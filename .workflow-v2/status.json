@@ -2519,7 +2519,7 @@
         "node scripts/verify-recipe-content-snapshot-future-propagation-local-rehearsal.mjs",
         "git diff --check"
       ],
-      "notes": "Stage 2/3 PR #1278 reviewed exact head 9eb1ebd8ea5a12294a76d7f2799693f03654b0a4 and merged as ef5903b131a2eb9e505b2121b4e390970c565b95. Contract Evolution PR #1282 merged as 7e316e8721e96762c17e3d196811416ce6f93823 and Stage 1 re-lock PR #1283 merged as base 9659d4ba0cb9dccbee3bfed4833019202ff1e3f1. Draft Stage 4 PR #1281 exact implementation head 1096494ab3e246987efe2792e9379c1f7c2a3ed6 includes the approved entrypoint, actual owner-edit flow, AUTH-M01/M02 repairs and AUTH-M03 explicit modal semantics. Earlier final authority tasks 019fca28-f9c7-7110-884c-63052b90e6d8 and 019fca5b-5b23-7be2-8ec4-d106a67402bd returned historical HOLDs; fresh task 019fca76-eb5f-79a3-8d2a-a2f46a5591d3 approved blocker/major/minor 0/0/0 with canonical report ui/designs/authority/recipe-content-snapshot-future-propagation-authority.md. Focused, frontend PR, slice E2E, a11y, visual, security and exploratory QA gates are green locally. design-status-confirmed-final-authority-0-0-0; stage6-pending; manual-server-mac-activation-pending. Lifecycle/verification remain in_progress/pending with needs_revision until fresh independent Stage 6 and remaining evidence. Personal writes and new v2 creation remain dark; seeded/existing v2 read/cancel drains, and #8 R/R+1 evidence plus R+2 joint approval remains the activation gate.",
+      "notes": "Stage 2/3 PR #1278 reviewed exact head 9eb1ebd8ea5a12294a76d7f2799693f03654b0a4 and merged as ef5903b131a2eb9e505b2121b4e390970c565b95. Contract Evolution PR #1282 merged as 7e316e8721e96762c17e3d196811416ce6f93823 and Stage 1 re-lock PR #1283 merged as base 9659d4ba0cb9dccbee3bfed4833019202ff1e3f1. Draft Stage 4 PR #1281 exact implementation head 1096494ab3e246987efe2792e9379c1f7c2a3ed6 includes the approved entrypoint, actual owner-edit flow, AUTH-M01/M02 repairs and AUTH-M03 explicit modal semantics. Earlier final authority tasks 019fca28-f9c7-7110-884c-63052b90e6d8 and 019fca5b-5b23-7be2-8ec4-d106a67402bd returned historical HOLDs; fresh task 019fca76-eb5f-79a3-8d2a-a2f46a5591d3 approved blocker/major/minor 0/0/0 with canonical report ui/designs/authority/recipe-content-snapshot-future-propagation-authority.md. Focused, frontend PR, slice E2E, a11y, visual, security and exploratory QA gates are green locally. design-status-confirmed-final-authority-0-0-0. Fresh Stage 6 task 019fca98-d8a1-7613-a34f-39cc836de385 returned APPROVE with P0/P1/P2 0/0/0 and blocker/major/minor 0/0/0; evidence docs/workpacks/recipe-content-snapshot-future-propagation/evidence/2026-08-04-stage6-frontend-closeout-review.md. PR #1281 reviewed head aab9a65e6123e3134478842971765ad3aa737d6a merged as 2173737e8ea2eec2297e1cc0227ce4f2c27c50b9. Lifecycle/verification remain in_progress/pending with needs_revision because Manual/server-Mac/OAuth evidence, #8 R/R+1, and R+2 activation are still open; manual-server-mac-activation-pending. Personal writes and new v2 creation remain dark; seeded/existing v2 read/cancel drains remain available.",
       "evaluation_status": "not_started",
       "evaluation_round": 0,
       "last_evaluator_result": null,
@@ -2529,7 +2529,7 @@
     {
       "id": "cooked-batch-weight-ledger",
       "preset": "vertical-slice-strict",
-      "branch": "docs/cooked-batch-weight-ledger",
+      "branch": "docs/cooked-batch-weight-ledger-stage1-relock",
       "pr_path": "pending",
       "lifecycle": "planned",
       "approval_state": "not_started",
@@ -2537,7 +2537,7 @@
       "required_checks": [
         "pnpm validate:source-of-truth-sync",
         "pnpm validate:workflow-v2",
-        "BRANCH_NAME=docs/cooked-batch-weight-ledger pnpm validate:workpack -- --slice cooked-batch-weight-ledger",
+        "BRANCH_NAME=docs/cooked-batch-weight-ledger-stage1-relock pnpm validate:workpack -- --slice cooked-batch-weight-ledger",
         "node scripts/validate-automation-spec.mjs --slice cooked-batch-weight-ledger",
         "pnpm validate:omo-bookkeeping",
         "pnpm exec vitest run tests/cooked-batch-weight-ledger.test.ts tests/snapshot-v2-complete.test.ts tests/cooked-batch-security.test.ts tests/cooked-batch-compatibility.test.ts",
@@ -2556,7 +2556,7 @@
         "node scripts/verify-cooked-batch-weight-ledger-local-first.mjs --mode post-merge-read-only",
         "git diff --check"
       ],
-      "notes": "Roadmap moves to docs while workflow lifecycle remains planned. Approval stays not_started until separate Codex internal1.5, security/DB, five-axis and design reviews reach zero findings. Stage 1 current commands are docs validators/tests/lint/typecheck/audit/diff; implementation evidence is future. Runtime waits for #7 and cook-mode-whole-board. #8 owns complete/ledger/functional COOK_MODE/R-R1 gate, #9 meal-log links, #11 final visual completion, and R+2 activation remains Manual Only.",
+      "notes": "Fresh Stage 1 re-lock consumes requirements v1.7.29, screens v1.5.33, flow v1.3.31, DB v1.3.31 and API v1.2.35 without public contract expansion. #7 PR #1281 runtime and cook-mode-whole-board PR #711 are exact merged predecessors, while #7 overall lifecycle remains in_progress/needs_revision/pending because Manual/server-Mac, #8 and activation gates remain open. Fresh COOK_MODE critic and 390px/320px product-design-authority passed 0/0/0. Internal 1.5 task 019fe049-dc14-77f0-ac4c-6dcb58d2b819 returned HOLD on old head 0eb76e8ff0450ccc4353b91f191be8a2f1e2dfb3 with I15-B01, I15-B02 and I15-B03; all are author-repaired after dependency PR #1286 merged as 9ff5a920f063af22cd8a8dbee33a603b27c3af57, but fresh internal 1.5 re-review pending. Roadmap stays docs and workflow stays planned/not_started/pending. Current Stage 1 commands are docs validators/focused tests/lint/typecheck/audit/diff; runtime, migration, remote write and activation evidence is future or Manual Only.",
       "evaluation_status": "not_started",
       "evaluation_round": 0,
       "last_evaluator_result": null,

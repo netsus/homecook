@@ -242,7 +242,19 @@ describe("recipe snapshot entrypoint Stage 1 contract lock", () => {
       expect(notes).toContain(
         "design-status-confirmed-final-authority-0-0-0",
       );
-      expect(notes).toContain("stage6-pending");
+      expect(notes).toContain("019fca98-d8a1-7613-a34f-39cc836de385");
+      expect(notes).toContain("APPROVE");
+      expect(notes).toContain("P0/P1/P2 0/0/0");
+      expect(notes).toContain("blocker/major/minor 0/0/0");
+      expect(notes).toContain(
+        "docs/workpacks/recipe-content-snapshot-future-propagation/evidence/2026-08-04-stage6-frontend-closeout-review.md",
+      );
+      expect(notes).toContain(
+        "aab9a65e6123e3134478842971765ad3aa737d6a",
+      );
+      expect(notes).toContain(
+        "2173737e8ea2eec2297e1cc0227ce4f2c27c50b9",
+      );
       expect(notes).toContain("manual-server-mac-activation-pending");
     }
     expect(readme).toContain("`confirmed`");
@@ -252,7 +264,7 @@ describe("recipe snapshot entrypoint Stage 1 contract lock", () => {
     expect(authority).toContain("major_count: `0`");
     expect(authority).toContain("Stage 6: `pending`");
     expect(roadmap).toMatch(
-      /recipe-content-snapshot-future-propagation[\s\S]*Draft Stage 4 PR #1281[\s\S]*1096494a[\s\S]*Design Status[\s\S]*confirmed/,
+      /recipe-content-snapshot-future-propagation[\s\S]*PR #1281 exact head `aab9a65e` merge `2173737e`[\s\S]*Design Status는 confirmed/,
     );
   });
 });
