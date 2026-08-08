@@ -18,6 +18,7 @@
     "cooking-meal-log contract-evolution merged as PR #1072",
     "recipe-snapshot-authority-foundation runtime is merged; activation and remaining Manual Only evidence stay open",
     "product-ingredient-link-foundation runtime is merged and supplies exact approved effective-ingredient authority",
+    "user-approved API v1.2.36 Contract Evolution locks CookedBatchProjection, exact success replay, GET /cooked-batches owner pagination and 404 RESOURCE_NOT_FOUND versus 422/409; fresh independent contract re-review and Stage 2 resume remain pending",
     "recipe-content-snapshot-future-propagation PR #1281 exact head aab9a65e6123e3134478842971765ad3aa737d6a merged as 2173737e8ea2eec2297e1cc0227ce4f2c27c50b9; runtime predecessor is satisfied but overall lifecycle remains in_progress with needs_revision/pending because Manual/server-Mac, slice8 and activation gates remain open",
     "cook-mode-whole-board PR #711 exact head 55b93ad7d29cfa8cba19e7942b18e6275fdc986a merged as 2f8569cb56a53e9508d8d9571b94b260ec0bce73",
     "fresh independent COOK_MODE slice8 design critic and 390px/320px product-design-authority plus internal1.5 must approve this exact docs head before Stage 2",
@@ -30,7 +31,7 @@
       "docs/화면정의서-v1.5.33.md",
       "docs/유저flow맵-v1.3.31.md",
       "docs/db설계-v1.3.31.md",
-      "docs/api문서-v1.2.35.md"
+      "docs/api문서-v1.2.36.md"
     ],
     "governing_docs": [
       "AGENTS.md",
@@ -80,9 +81,10 @@
     "required_checks": [
       "pnpm validate:source-of-truth-sync",
       "pnpm validate:workflow-v2",
-      "BRANCH_NAME=docs/cooked-batch-weight-ledger-stage1-relock pnpm validate:workpack -- --slice cooked-batch-weight-ledger",
+      "BRANCH_NAME=docs/cooked-batch-api-contract-v1-2-36 pnpm validate:workpack -- --slice cooked-batch-weight-ledger",
       "node scripts/validate-automation-spec.mjs --slice cooked-batch-weight-ledger",
       "pnpm validate:omo-bookkeeping",
+      "pnpm exec vitest run tests/cooked-batch-api-contract-v1-2-36.test.ts",
       "pnpm exec vitest run tests/cooked-batch-weight-ledger.test.ts tests/snapshot-v2-complete.test.ts tests/cooked-batch-security.test.ts tests/cooked-batch-compatibility.test.ts",
       "pnpm test:cooked-batch-weight-ledger:postgres",
       "pnpm exec vitest run tests/cooked-batch-completion-sheet.test.tsx tests/cooked-batch-pantry-row-selection.test.tsx tests/cooked-batch-completion-replay.test.tsx",
@@ -102,7 +104,7 @@
     "verify_commands": [
       "pnpm validate:source-of-truth-sync",
       "pnpm validate:workflow-v2",
-      "BRANCH_NAME=docs/cooked-batch-weight-ledger-stage1-relock pnpm validate:workpack -- --slice cooked-batch-weight-ledger",
+      "BRANCH_NAME=docs/cooked-batch-api-contract-v1-2-36 pnpm validate:workpack -- --slice cooked-batch-weight-ledger",
       "node scripts/validate-automation-spec.mjs --slice cooked-batch-weight-ledger",
       "pnpm validate:omo-bookkeeping",
       "pnpm exec vitest run tests/workflow-v2-docs.test.ts tests/omo-automation-spec.test.ts tests/omo-bookkeeping.test.ts tests/omo-doc-gate.test.ts tests/source-of-truth-sync.test.ts",
@@ -123,6 +125,7 @@
       "approved-plan-sha256-and-1056-line-lock",
       "stage1-five-core-artifacts-plus-roadmap-and-status-projections",
       "roadmap-docs-workflow-lifecycle-planned-separation",
+      "api-v1.2.36-CookedBatchProjection-exact-success-pagination-404-422-409-contract",
       "snapshot-v2-exact-pantry-weight-completion-atomicity",
       "product-exact-and-generic-approved-effective-row-matching",
       "selected-only-delete-and-generation-idempotency",
@@ -167,5 +170,5 @@
     "Unapproved server-production migration or write or capability activation"
   ],
   "open_questions": [],
-  "notes": "Fresh Stage 1 re-lock consumes requirements v1.7.29, screens v1.5.33, flow v1.3.31, DB v1.3.31 and API v1.2.35 without public contract expansion. Roadmap stays docs while workflow lifecycle remains planned and approval not_started. #7 PR #1281 runtime and cook-mode-whole-board PR #711 are exact merged predecessors; #7 overall lifecycle remains in_progress/needs_revision/pending because Manual/server-Mac, #8 and activation gates are open. Stage 1 current commands are docs validators/focused tests/lint/typecheck/audit/diff; implementation evidence is future. Fresh COOK_MODE critic and 390px/320px product-design-authority passed 0/0/0. Internal 1.5 task 019fe049-dc14-77f0-ac4c-6dcb58d2b819 returned HOLD on old head 0eb76e8ff0450ccc4353b91f191be8a2f1e2dfb3 with I15-B01, I15-B02 and I15-B03; all are author-repaired after dependency PR #1286 merged as 9ff5a920f063af22cd8a8dbee33a603b27c3af57, but fresh internal 1.5 re-review pending. Legacy 15a evidence remains forbidden. #8 owns existing complete body exact-pantry/weight/batch/XP and R/R+1 gate, #9 meal-log links, #11 final UI, and R+2 activation remains Manual Only."
+  "notes": "Fresh Stage 1 re-lock consumes requirements v1.7.29, screens v1.5.33, flow v1.3.31, DB v1.3.31 and API v1.2.36. API v1.2.36 locks one owner-only CookedBatchProjection for GET /cooked-batches and exact success data, snapshot-v2 complete/mutation replay, owner-only pagination/legacy null semantics, and missing/other-owner 404 RESOURCE_NOT_FOUND versus validation 422 and state/revision/bounds/later-event 409. Fresh independent contract re-review pending; Stage 2 resume pending. Roadmap stays docs while workflow lifecycle remains planned and approval not_started. #7 PR #1281 runtime and cook-mode-whole-board PR #711 are exact merged predecessors; #7 broader lifecycle remains in_progress/needs_revision/pending because Manual/server-Mac/OAuth, #8 R/R+1 and R+2 activation gates are open. Stage 1 current commands are docs validators/focused tests/lint/typecheck/audit/diff; implementation evidence is future. Fresh COOK_MODE critic and 390px/320px product-design-authority passed 0/0/0. Internal 1.5 task 019fe049-dc14-77f0-ac4c-6dcb58d2b819 returned HOLD on old head 0eb76e8ff0450ccc4353b91f191be8a2f1e2dfb3 with I15-B01, I15-B02 and I15-B03; all are author-repaired after dependency PR #1286 merged as 9ff5a920f063af22cd8a8dbee33a603b27c3af57, but fresh internal 1.5 re-review pending. Legacy 15a evidence remains forbidden. #8 owns existing complete body exact-pantry/weight/batch/XP and R/R+1 gate, #9 meal-log links, #11 final UI, and R+2 activation remains Manual Only."
 }

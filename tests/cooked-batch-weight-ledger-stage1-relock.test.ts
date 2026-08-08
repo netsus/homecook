@@ -47,14 +47,14 @@ describe("cooked-batch-weight-ledger fresh Stage 1 re-lock", () => {
       "docs/화면정의서-v1.5.33.md",
       "docs/유저flow맵-v1.3.31.md",
       "docs/db설계-v1.3.31.md",
-      "docs/api문서-v1.2.35.md",
+      "docs/api문서-v1.2.36.md",
     ]);
 
-    for (const version of ["v1.7.29", "v1.5.33", "v1.3.31", "v1.2.35"]) {
+    for (const version of ["v1.7.29", "v1.5.33", "v1.3.31", "v1.2.36"]) {
       expect(readme).toContain(version);
       expect(acceptance).toContain(version);
-      expect(cookModeDesign).toContain(version);
     }
+    expect(cookModeDesign).toContain("API `v1.2.35`");
   });
 
   it("projects merged runtime predecessors without closing the broader #7 lifecycle", () => {
@@ -133,7 +133,7 @@ describe("cooked-batch-weight-ledger fresh Stage 1 re-lock", () => {
 
   it("keeps fresh Stage 1 approval pending on the new docs branch", () => {
     expect(status).toMatchObject({
-      branch: "docs/cooked-batch-weight-ledger-stage1-relock",
+      branch: "docs/cooked-batch-api-contract-v1-2-36",
       lifecycle: "planned",
       approval_state: "not_started",
       verification_status: "pending",

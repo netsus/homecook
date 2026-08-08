@@ -23,9 +23,10 @@
 - screens: `docs/화면정의서-v1.5.33.md`
 - flow: `docs/유저flow맵-v1.3.31.md`
 - DB: `docs/db설계-v1.3.31.md`
-- API: `docs/api문서-v1.2.35.md`
+- API at the original 2026-08-04 evidence head: `docs/api문서-v1.2.35.md`
+- current user-approved Contract Evolution tuple: `docs/api문서-v1.2.36.md`
 
-The relock remains docs-only. No product runtime, API, DB, migration, dependency, #7 implementation, other workpack or capability-activation change is introduced here.
+The relock remains docs-only. No product runtime/API implementation, DB schema, migration, dependency, #7 implementation, other workpack or capability-activation change is introduced here.
 
 ## Dependency and predecessor boundary
 
@@ -87,8 +88,33 @@ Fresh successor-head validation was rerun after the evidence/bookkeeping update:
 - After PR `#1286` absorption and author repair, `pnpm audit --audit-level high` → high/critical `0`; residual advisories `1 low | 1 moderate`.
 - After whitespace-only critic repair, `git diff --check origin/master...HEAD` → pass.
 
+## 2026-08-08 API Contract Evolution re-lock
+
+- Fresh precheck task `019fe0d7-a6fd-7561-a68b-a59fe9c40030` returned `CONFIRMED_CE` with three high-confidence blockers: missing exact complete/mutation success data, incomplete `GET /cooked-batches`, and other-owner error conflict.
+- The user explicitly approved API `v1.2.35 → v1.2.36` while keeping requirements `v1.7.29`, screens `v1.5.33`, Flow `v1.3.31`, DB `v1.3.31`, endpoint count and DB authority unchanged.
+- API v1.2.36 now locks one owner-only `CookedBatchProjection` shared by `GET /cooked-batches`, complete and mutation success; exact complete/mutation replay data; owner-only filter/cursor/legacy null semantics; missing/other-owner `404 RESOURCE_NOT_FOUND` versus validation 422 and state/revision/bounds/later-event 409.
+- #9 meal-log and #11 final UI remain successor-owned. No product code, migration/apply, production/staging/remote DB/app/Vercel write, capability or R+2 activation is included.
+- Fresh independent contract re-review pending; Stage 2 resume pending. This author does not self-approve Stage 1/internal 1.5, mark Ready, merge, or resume implementation.
+- #7 broader lifecycle, Manual/server-Mac/OAuth evidence, #8 R/R+1 drain and R+2 activation remain pending.
+
+### PR #1287 RED/GREEN count correction and reviewer repair
+
+- Original test commit `c286871f79eaec92b97fcbd64da48e1d2a0cb538` was re-executed in a detached historical worktree: `1 file / 9 tests / 8 failed / 1 passed`. The earlier PR-body claim `8 tests / 7 failures` was incorrect.
+- Reviewed old head `c189c8678878f80b31b1cdd4aa375281500e6627` was re-executed with the exact focused eight-file contract/governance suite: `8 files / 90 tests` passed. The old-head GitHub `quality` log independently ran `tests/cooked-batch-api-contract-v1-2-36.test.ts` as `9 tests`.
+- The already-pushed `c189c867` commit trailer says `89 focused tests`. It cannot be rewritten or force-pushed and was an arithmetic miscount based on the incorrect eight-test assumption, not a different passing subset. The executable historical result is `90/90`; this successor evidence and the repaired PR body supersede only that count claim.
+- Successor regression RED after strengthening whole-document consistency checks: `1 file / 9 tests / 2 expected failures / 7 passes`. The failures reproduced the inherited other-owner error conflict and permissive `availability=loggable` wording before either official-document line was repaired.
+- The repair keeps API v1.2.35 and the other four official documents byte-identical. It corrects only the two conflicting inherited v1.2.36 lines, strengthens the existing contract test, and leaves fresh independent successor-head re-review and Stage 2 resume pending.
+
+### PR #1287 second reviewer exact-key parser repair
+
+- Second fresh reviewer task `019fe114-dc48-77a1-b408-a98dd887715c` reviewed exact head `25528f81f859709845d69f965d475e9afa4e7c61` and returned `HOLD`, P0/P1/P2 `0/0/1`: projection `.slice(-15)` discarded an extra key before `id`, while list-container `.slice(0, 3)` discarded a fourth or later key.
+- Second fresh repair-author task `019fe120-b165-7ea0-a736-89da7535cacf` first injected `unexpected_before_id` and `unexpected_after_has_next` into in-memory mutated document fixtures while retaining the old assertions. The focused RED was `1 file / 11 tests / 2 failed / 9 passed`; both failures were `expected [Function] to throw an error`, proving the old assertions accepted the extra keys.
+- The minimum test-only repair isolates each declaration between explicit unique start/end markers and compares the complete ordered key array. Prefix/suffix inline-code noise remains outside the parsed range, while either injected key makes the exact-key assertion throw. No temporary key was written to an official document.
+- GREEN verification is focused `1 file / 11 tests` and the same related contract/governance suite `8 files / 90 tests`. Source-of-truth, workflow-v2, workpack, automation-spec and OMO bookkeeping validators, lint, typecheck, diff check and audit high/critical `0` also pass; residual advisories remain `1 low | 1 moderate`.
+- This second repair changes only the contract regression test and this evidence history. API v1.2.36 meaning, API v1.2.35, the other four official documents, #9/#11, product/DB/migration/dependency and activation surfaces remain unchanged. A different fresh reviewer must inspect the new exact head before any Ready, merge, Stage 1 approval or Stage 2 resume action.
+
 ## PR and merge posture
 
-- PR `#1285` remains `Draft`.
+- Historical Stage 1 PR `#1285` remains `Draft`; this Contract Evolution is delivered through a separate Draft PR and does not approve #1285.
 - This successor task may fill the PR body and supervise current-head checks, but it does not mark Ready, approve, or merge.
 - Current-head checks and fresh internal 1.5 must be evaluated on the new pushed successor SHA only; old-head green checks and the old `HOLD` are retained as history, not reused as approval proof.

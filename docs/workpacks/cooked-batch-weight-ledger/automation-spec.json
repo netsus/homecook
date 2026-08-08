@@ -15,6 +15,11 @@
       "legacy v1 completion endpoints retain body response parser and consumed ingredient semantics"
     ],
     "invariants": [
+      "api-v1.2.36-owner-only-CookedBatchProjection-shared-by-GET /cooked-batches-complete-and-mutations",
+      "snapshot-v2-complete-exact-eight-key-success-data-and-byte-equivalent-replay",
+      "batch-mutation-exact-action-batch-event-id-success-data-and-null-only-for-set-finished-weight",
+      "cooked-batch-list-loggable-default-limit-20-max-50-cooked-at-id-desc-filter-bound-opaque-cursor",
+      "missing-other-owner-session-batch-pantry-identical-404 RESOURCE_NOT_FOUND-body-filter-422-state-revision-bounds-later-event-409",
       "v2-complete-owner-in-progress-snapshot-v2-session-only",
       "complete-uuid-idempotency-key-and-canonical-payload-hash",
       "exact-one-set-finished-weight-positive-food-only-g-or-weigh-later-null",
@@ -65,9 +70,10 @@
       "pnpm test:e2e:regression:ci --grep cooked-batch-weight-ledger",
       "pnpm validate:source-of-truth-sync",
       "pnpm validate:workflow-v2",
-      "BRANCH_NAME=docs/cooked-batch-weight-ledger-stage1-relock pnpm validate:workpack -- --slice cooked-batch-weight-ledger",
+      "BRANCH_NAME=docs/cooked-batch-api-contract-v1-2-36 pnpm validate:workpack -- --slice cooked-batch-weight-ledger",
       "node scripts/validate-automation-spec.mjs --slice cooked-batch-weight-ledger",
       "pnpm validate:omo-bookkeeping",
+      "pnpm exec vitest run tests/cooked-batch-api-contract-v1-2-36.test.ts",
       "git diff --check"
     ],
     "required_test_targets": [
@@ -190,5 +196,5 @@
     "backend": 6,
     "frontend": 4
   },
-  "notes": "Fresh Stage 1 re-lock on requirements v1.7.29, screens v1.5.33, flow v1.3.31, DB v1.3.31 and API v1.2.35. Stage 1 runs only current docs validators, focused workflow-doc tests, lint, typecheck, audit and diff. #7 PR #1281 runtime and cook-mode-whole-board PR #711 are merged predecessors, while #7 overall lifecycle, Manual/server-Mac gates, #8 R/R+1 evidence and R+2 activation remain open. Fresh critic and 390px/320px product-design-authority passed 0/0/0. Internal 1.5 task 019fe049-dc14-77f0-ac4c-6dcb58d2b819 returned HOLD on old head 0eb76e8ff0450ccc4353b91f191be8a2f1e2dfb3 with I15-B01, I15-B02 and I15-B03; all are author-repaired after dependency PR #1286 merged as 9ff5a920f063af22cd8a8dbee33a603b27c3af57, but fresh internal 1.5 re-review pending. Legacy 15a critic/authority evidence is not reusable. Runtime/PostgreSQL/real DB/component/E2E/visual/local-first production-rehearsal/drain evidence is future. #8 owns exact-pantry complete, batch ledger, functional weight UI and R/R+1 gate; #9 owns meal-log links, #11 final weight/LEFTOVERS design, and R+2 activation remains Manual Only."
+  "notes": "Fresh Stage 1 re-lock now consumes requirements v1.7.29, screens v1.5.33, flow v1.3.31, DB v1.3.31 and API v1.2.36. API v1.2.36 locks one owner-only CookedBatchProjection for GET /cooked-batches and success responses, exact complete/mutation replay data, owner-only pagination/legacy nulls, and missing/other-owner 404 RESOURCE_NOT_FOUND versus validation 422 and state/revision/bounds/later-event 409. Fresh independent contract re-review pending; Stage 2 resume pending. Stage 1 runs only current docs validators, focused workflow-doc tests, lint, typecheck, audit and diff. #7 PR #1281 runtime and cook-mode-whole-board PR #711 are merged predecessors, while #7 broader lifecycle, Manual/server-Mac/OAuth, #8 R/R+1 evidence and R+2 activation remain open. Fresh critic and 390px/320px product-design-authority passed 0/0/0. Internal 1.5 task 019fe049-dc14-77f0-ac4c-6dcb58d2b819 returned HOLD on old head 0eb76e8ff0450ccc4353b91f191be8a2f1e2dfb3 with I15-B01, I15-B02 and I15-B03; all are author-repaired after dependency PR #1286 merged as 9ff5a920f063af22cd8a8dbee33a603b27c3af57, but fresh internal 1.5 re-review pending. Legacy 15a critic/authority evidence is not reusable. Runtime/PostgreSQL/real DB/component/E2E/visual/local-first production-rehearsal/drain evidence is future. #8 owns exact-pantry complete, batch ledger, functional weight UI and R/R+1 gate; #9 owns meal-log links, #11 final weight/LEFTOVERS design, and R+2 activation remains Manual Only."
 }
