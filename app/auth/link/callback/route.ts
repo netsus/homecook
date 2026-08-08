@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
 import { resolveNextPath } from "@/lib/auth/callback";
+import { buildSameAppRedirectUrl } from "@/lib/auth/redirect-origin";
 import {
   clearAuthProviderAttemptCookie,
 } from "@/lib/auth/provider-cookies";
@@ -23,7 +24,7 @@ function buildLinkRedirect(
   nextPath: string,
   result: { error: LinkErrorCode } | { success: LinkResultCode },
 ) {
-  const redirectUrl = new URL(nextPath, requestUrl.origin);
+  const redirectUrl = buildSameAppRedirectUrl(nextPath, requestUrl);
   if ("error" in result) {
     redirectUrl.searchParams.set("linkError", result.error);
   } else {

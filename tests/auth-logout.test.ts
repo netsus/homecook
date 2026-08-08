@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const createRouteHandlerClient = vi.fn();
 const executeHybridLogout = vi.fn();
@@ -20,7 +20,12 @@ vi.mock("next/headers", () => ({
 }));
 
 describe("auth logout route", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
   beforeEach(() => {
+    vi.resetModules();
     createRouteHandlerClient.mockReset();
     executeHybridLogout.mockReset();
     cookies.mockReset();
@@ -42,6 +47,17 @@ describe("auth logout route", () => {
 
     expect(executeHybridLogout).toHaveBeenCalledTimes(1);
     expect(response.headers.get("location")).toBe("http://localhost:3000/planner");
+  });
+
+  it("prefers the public app origin over the proxy request origin", async () => {
+    vi.stubEnv("NEXT_PUBLIC_APP_URL", "https://app.mumeok.kr");
+
+    const { GET } = await import("@/app/auth/logout/route");
+    const response = await GET(
+      new Request("http://localhost:3100/auth/logout?next=/planner"),
+    );
+
+    expect(response.headers.get("location")).toBe("https://app.mumeok.kr/planner");
   });
 
   it("fails closed to login when hybrid revoke rejects the session", async () => {
