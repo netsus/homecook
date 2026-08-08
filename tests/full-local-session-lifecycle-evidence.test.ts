@@ -22,6 +22,7 @@ import {
   normalizeRuntimeStatus,
   parseCanaryObservationJson,
   parseGoTruePolicyGateJson,
+  parseMigrationHeadSqlOutput,
   parseRefreshLifecycleGateJson,
   validateEvidenceOutputPath,
   validateLiveRoot,
@@ -292,6 +293,15 @@ describe("full-local session lifecycle evidence contract", () => {
       staleTokenMutationCount: 0,
       t65Canary: "PASS",
     }));
+  });
+
+  it("accepts only one safe migration filename from the read-only SQL result", () => {
+    expect(parseMigrationHeadSqlOutput(
+      "20260803093000_full_local_read_only_request_authority.sql\n",
+    )).toBe("20260803093000_full_local_read_only_request_authority.sql");
+    expect(() => parseMigrationHeadSqlOutput(
+      "20260803093000_full_local_read_only_request_authority.sql\nsecret=value\n",
+    )).toThrow(/single safe migration filename/u);
   });
 
   it.each([

@@ -76,6 +76,7 @@ function run(command, args, options = {}) {
     cwd: options.cwd,
     encoding: options.encoding ?? "buffer",
     env: options.env ?? process.env,
+    input: options.input,
     maxBuffer: 16 * 1024 * 1024,
     stdio: ["ignore", "pipe", "pipe"],
   });
@@ -751,6 +752,7 @@ function parseContainer(id) {
   const fields = stdoutText(run("docker", ["inspect", "--format", format, id])).trim().split("|");
   if (fields.length !== 4) throw new Error("Unexpected docker inspect output.");
   return {
+    id,
     running: JSON.parse(fields[0]),
     health: JSON.parse(fields[1]),
     imageDigest: JSON.parse(fields[2]),
@@ -778,18 +780,48 @@ function collectLaunchAgent(label) {
   return /could not find service|service not found/u.test(output) ? "not-found" : "failed";
 }
 
-function collectMigrationHead(liveRoot) {
-  const files = stdoutText(run("git", [
-    "-C",
-    liveRoot,
-    "ls-files",
-    "supabase/migrations/*.sql",
-  ])).split(/\r?\n/u).map((value) => path.basename(value.trim())).filter(Boolean).sort();
-  const migrationHead = files.at(-1);
-  if (!migrationHead || !MIGRATION_PATTERN.test(migrationHead)) {
-    throw new Error("Unable to determine a safe migration head.");
+export function parseMigrationHeadSqlOutput(stdout) {
+  const lines = stdout.split(/\r?\n/u).map((line) => line.trim()).filter(Boolean);
+  if (lines.length !== 1 || !MIGRATION_PATTERN.test(lines[0])) {
+    throw new Error("Migration query must return a single safe migration filename.");
   }
-  return migrationHead;
+  return lines[0];
+}
+
+function collectMigrationHead(postgresContainerId) {
+  const sql = [
+    "begin transaction read only;",
+    "set local statement_timeout = '5s';",
+    "select name || '.sql'",
+    "from supabase_migrations.schema_migrations",
+    "where name is not null",
+    "  and name like version || '\\_%' escape '\\'",
+    "order by version desc",
+    "limit 1;",
+    "rollback;",
+    "",
+  ].join("\n");
+  const result = run("docker", [
+    "exec",
+    "-i",
+    postgresContainerId,
+    "psql",
+    "-X",
+    "-qAt",
+    "-v",
+    "ON_ERROR_STOP=1",
+    "-U",
+    "supabase_admin",
+    "-d",
+    "postgres",
+  ], {
+    allowFailure: true,
+    input: sql,
+  });
+  if (result.status !== 0) {
+    throw new Error("Read-only migration head query failed.");
+  }
+  return parseMigrationHeadSqlOutput(stdoutText(result));
 }
 
 function verifyPublicOrigins() {
@@ -829,10 +861,16 @@ export function captureSessionLifecycleEvidence({ implementationRoot, liveRoot, 
   const canonicalLiveRoot = validateLiveRoot(liveRoot);
   const outputPath = validateEvidenceOutputPath(phase, output, implementationRoot);
   const containers = collectContainers();
-  const authContainer = containers.find((container) => container.service === "auth");
-  if (!authContainer || !DIGEST_PATTERN.test(authContainer.imageDigest ?? "")) {
+  const authContainers = containers.filter((container) => container.service === "auth");
+  const postgresContainers = containers.filter((container) => container.service === "postgres");
+  if (authContainers.length !== 1 || !DIGEST_PATTERN.test(authContainers[0].imageDigest ?? "")) {
     throw new Error("Auth container image digest is missing or invalid.");
   }
+  if (postgresContainers.length !== 1) {
+    throw new Error("Expected exactly one production PostgreSQL container.");
+  }
+  const [authContainer] = authContainers;
+  const [postgresContainer] = postgresContainers;
   const volumes = run("docker", ["volume", "inspect", ...REQUIRED_VOLUMES], { allowFailure: true });
   const statuses = normalizeRuntimeStatus({
     containers,
@@ -871,7 +909,7 @@ export function captureSessionLifecycleEvidence({ implementationRoot, liveRoot, 
     liveDirtyDiffSha256: computeLiveDirtyDiffSha256(canonicalLiveRoot),
     liveHeadSha,
     macProductionStatus: statuses.macProductionStatus,
-    migrationHead: collectMigrationHead(canonicalLiveRoot),
+    migrationHead: collectMigrationHead(postgresContainer.id),
     phase,
     productionDomainContractGate,
     observation,
