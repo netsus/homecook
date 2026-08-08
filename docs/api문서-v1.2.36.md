@@ -686,7 +686,7 @@ Request:
 
 - `weight_action=set_finished_weight|weigh_later`; set이면 positive finished g required, later이면 g null.
 - exact owner pantry row IDs만 허용한다. content product pin은 exact product, generic ingredient는 generic row 또는 approved effective-ingredient product row와 일치해야 한다.
-- duplicate/missing/other-owner row는 409/422. selected row만 제거한다.
+- duplicate pantry ID 또는 pinned target mismatch는 `422 VALIDATION_ERROR`; missing/other-owner private pantry row는 동일 `404 RESOURCE_NOT_FOUND` + `fields=[]`로 존재·owner·state를 숨긴다. selected row만 제거한다.
 - pantry delete, batch/content pin, initial ledger state, session complete, claim consume, Meal transition, cook count/XP를 one transaction+payload hash로 한 번만 수행한다.
 - creation flag rollback 뒤 existing v2 complete는 계속 허용한다.
 
@@ -694,7 +694,7 @@ Request:
 
 ### `GET /cooked-batches`
 
-Query: `availability=loggable|all`, cursor, limit. `loggable`은 owner+available+known weight와 remaining>0인 batch를 우선 반환한다.
+Query: `availability=loggable|all`, cursor, limit. `loggable`은 owner+available+known weight와 remaining>0인 batch만 반환하는 filter다. `all`도 owner row만 반환한다.
 
 Data는 content/name, cooked_at, cooking servings, finished/remaining g, weight/batch/depleted state, revision, nutrition availability를 포함한다. 별도 direct nutrition snapshot ID를 public authority로 노출하지 않고 content pin을 통해 투영한다.
 

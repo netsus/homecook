@@ -97,6 +97,14 @@ Fresh successor-head validation was rerun after the evidence/bookkeeping update:
 - Fresh independent contract re-review pending; Stage 2 resume pending. This author does not self-approve Stage 1/internal 1.5, mark Ready, merge, or resume implementation.
 - #7 broader lifecycle, Manual/server-Mac/OAuth evidence, #8 R/R+1 drain and R+2 activation remain pending.
 
+### PR #1287 RED/GREEN count correction and reviewer repair
+
+- Original test commit `c286871f79eaec92b97fcbd64da48e1d2a0cb538` was re-executed in a detached historical worktree: `1 file / 9 tests / 8 failed / 1 passed`. The earlier PR-body claim `8 tests / 7 failures` was incorrect.
+- Reviewed old head `c189c8678878f80b31b1cdd4aa375281500e6627` was re-executed with the exact focused eight-file contract/governance suite: `8 files / 90 tests` passed. The old-head GitHub `quality` log independently ran `tests/cooked-batch-api-contract-v1-2-36.test.ts` as `9 tests`.
+- The already-pushed `c189c867` commit trailer says `89 focused tests`. It cannot be rewritten or force-pushed and was an arithmetic miscount based on the incorrect eight-test assumption, not a different passing subset. The executable historical result is `90/90`; this successor evidence and the repaired PR body supersede only that count claim.
+- Successor regression RED after strengthening whole-document consistency checks: `1 file / 9 tests / 2 expected failures / 7 passes`. The failures reproduced the inherited other-owner error conflict and permissive `availability=loggable` wording before either official-document line was repaired.
+- The repair keeps API v1.2.35 and the other four official documents byte-identical. It corrects only the two conflicting inherited v1.2.36 lines, strengthens the existing contract test, and leaves fresh independent successor-head re-review and Stage 2 resume pending.
+
 ## PR and merge posture
 
 - Historical Stage 1 PR `#1285` remains `Draft`; this Contract Evolution is delivered through a separate Draft PR and does not approve #1285.
