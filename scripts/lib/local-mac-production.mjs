@@ -682,6 +682,7 @@ export async function activateLocalMacProduction({
 } = {}) {
   loadEnvFiles({ rootDir });
   const validation = await validateDataQuality({
+    rootDir,
     env: {
       ...process.env,
       NODE_ENV: "production",
