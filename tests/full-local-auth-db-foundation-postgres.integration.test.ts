@@ -2148,7 +2148,7 @@ activeInventoryRun("active full-local snapshot security inventory", () => {
     ]);
     expect(result).toMatchObject({
       required_function_count:
-        (includePersonalRecipeFunctions ? 33 : 29)
+        (includePersonalRecipeFunctions ? 36 : 32)
         + recipeFuturePropagationFunctionCount,
       required_role_count: 4,
       required_role_membership_count: 2,

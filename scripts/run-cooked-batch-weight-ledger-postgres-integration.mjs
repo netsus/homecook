@@ -22,9 +22,10 @@ process.env.HOMECOOK_RECIPE_SNAPSHOT_FOLLOWUP_MIGRATIONS = [
   "supabase/migrations/20260804100000_recipe_snapshot_entrypoint_projection.sql",
   "supabase/migrations/20260803101000_recipe_content_snapshot_future_propagation.sql",
   "supabase/migrations/20260803100000_recipe_future_scoped_internal_rpc_clients.sql",
+  "supabase/migrations/20260809100000_full_local_session_refresh_authority.sql",
 ].join(path.delimiter);
 process.env.HOMECOOK_RECIPE_SNAPSHOT_FOLLOWUP_TARGET_MIGRATION =
-  "supabase/migrations/20260808143000_cooked_batch_weight_ledger.sql";
+  "supabase/migrations/20260809110000_cooked_batch_weight_ledger.sql";
 process.env.HOMECOOK_RECIPE_SNAPSHOT_FOLLOWUP_INTEGRATION_TEST =
   "tests/cooked-batch-weight-ledger-postgres.integration.test.ts";
 // The inherited security inventory remains active after the #8 migration. Its

@@ -1,43 +1,10 @@
 {
   "schema_version": 1,
   "slice": "cooked-batch-weight-ledger",
-  "migration": "supabase/migrations/20260808143000_cooked_batch_weight_ledger.sql",
+  "migration": "supabase/migrations/20260809110000_cooked_batch_weight_ledger.sql",
   "deployment_state": "pre-deployment",
   "baseline_application_contract_count": 74,
   "functions": [
-    {
-      "signature": "private.protect_full_local_session_binding_identity()",
-      "control_class": "application-controlled",
-      "effect": "trigger/internal",
-      "exposure": "service-internal",
-      "allowed_principals": [],
-      "owner": "postgres",
-      "security_mode": "invoker",
-      "safe_search_path": ["pg_catalog", "public", "private", "pg_temp"],
-      "replaces_additive": "full-local-supabase-production"
-    },
-    {
-      "signature": "public.record_full_local_session_authority(text, uuid, timestamp with time zone, text, integer, bigint, timestamp with time zone, timestamp with time zone, timestamp with time zone, timestamp with time zone)",
-      "control_class": "application-controlled",
-      "effect": "mutation",
-      "exposure": "service-internal",
-      "allowed_principals": ["service_role"],
-      "owner": "postgres",
-      "security_mode": "definer",
-      "safe_search_path": ["pg_catalog", "public", "private", "auth", "pg_temp"],
-      "replaces_additive": "full-local-supabase-production"
-    },
-    {
-      "signature": "public.assert_full_local_session_authority(text, uuid, timestamp with time zone, text, integer, bigint, timestamp with time zone)",
-      "control_class": "application-controlled",
-      "effect": "mutation",
-      "exposure": "service-internal",
-      "allowed_principals": ["service_role"],
-      "owner": "postgres",
-      "security_mode": "definer",
-      "safe_search_path": ["pg_catalog", "public", "private", "auth", "pg_temp"],
-      "replaces_additive": "full-local-supabase-production"
-    },
     {
       "signature": "private.guard_cooked_batch_legacy_projection_update()",
       "control_class": "application-controlled",

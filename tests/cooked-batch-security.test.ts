@@ -164,21 +164,73 @@ describe("cooked batch database security contract", () => {
     expect(eatRoute).not.toContain("recordUserGrowthActivityEvent");
   });
 
-  it("accepts only monotonic JWT refresh evidence for a stable active binding", () => {
+  it("delegates monotonic JWT refresh to the canonical post-master authority", () => {
     const sql = migration();
-    expect(sql).toMatch(
-      /function public\.assert_full_local_session_authority\([\s\S]*from public\.user_session_generation_bindings[\s\S]*for update/i,
+    expect(sql).not.toMatch(
+      /function private\.protect_full_local_session_binding_identity\(/i,
     );
-    expect(sql).toMatch(/p_session_issued_at < v_binding\.session_issued_at/i);
-    expect(sql).toMatch(
-      /update public\.user_session_generation_bindings[\s\S]*session_issued_at = p_session_issued_at[\s\S]*session_issued_at < p_session_issued_at/i,
+    expect(sql).not.toMatch(
+      /function public\.(?:record|assert)_full_local_session_authority\(/i,
     );
+    expect(sql).toContain("/rpc/record_full_local_session_authority_v2");
+    expect(sql).toContain(
+      "/rpc/assert_and_renew_full_local_session_authority_v2",
+    );
+
+    const canonicalMigration = readFileSync(
+      join(
+        process.cwd(),
+        "supabase/migrations/20260809100000_full_local_session_refresh_authority.sql",
+      ),
+      "utf8",
+    );
+    expect(canonicalMigration).toMatch(
+      /function public\.assert_and_renew_full_local_session_authority_v2\(/i,
+    );
+    expect(canonicalMigration).toMatch(
+      /last_token_issued_at = greatest\([\s\S]*last_token_issued_at < p_last_token_issued_at/i,
+    );
+
+    const manifest = JSON.parse(readFileSync(
+      join(
+        process.cwd(),
+        "docs/security/cooked-batch-weight-ledger-security-function-authorization-manifest.json",
+      ),
+      "utf8",
+    )) as { functions: Array<{ replaces_additive?: string; signature: string }> };
+    expect(
+      manifest.functions.filter(
+        ({ replaces_additive }) =>
+          replaces_additive === "full-local-supabase-production",
+      ),
+    ).toEqual([]);
+
     const inventory = readFileSync(
       join(process.cwd(), "scripts/lib/full-local-security-inventory.mjs"),
       "utf8",
     );
-    expect(inventory).toContain("COOKED_BATCH_FULL_LOCAL_REPLACEMENTS");
-    expect(inventory).toContain("_cooked_batch_weight_ledger.sql");
+    expect(inventory).toContain(
+      "20260809100000_full_local_session_refresh_authority.sql",
+    );
+    expect(inventory).not.toContain("COOKED_BATCH_FULL_LOCAL_REPLACEMENTS");
+
+    const runner = readFileSync(
+      join(
+        process.cwd(),
+        "scripts/run-cooked-batch-weight-ledger-postgres-integration.mjs",
+      ),
+      "utf8",
+    );
+    const canonicalMigrationPosition = runner.indexOf(
+      "20260809100000_full_local_session_refresh_authority.sql",
+    );
+    const cookedBatchMigrationPosition = runner.indexOf(
+      "20260809110000_cooked_batch_weight_ledger.sql",
+    );
+    expect(canonicalMigrationPosition).toBeGreaterThanOrEqual(0);
+    expect(cookedBatchMigrationPosition).toBeGreaterThan(
+      canonicalMigrationPosition,
+    );
   });
 
   it("returns durable replays without invoking projection recovery writers", () => {

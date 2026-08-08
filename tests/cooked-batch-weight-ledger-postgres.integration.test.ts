@@ -11,9 +11,11 @@ const database = process.env.HOMECOOK_PERSONAL_RECIPE_WRITE_PGDATABASE ?? "";
 const ownerA = "a1000000-0000-4000-8000-000000000001";
 const ownerB = "a1000000-0000-4000-8000-000000000002";
 const ownerRefresh = "a1000000-0000-4000-8000-000000000003";
+const ownerGeneration = "a1000000-0000-4000-8000-000000000004";
 const recipeA = "a2000000-0000-4000-8000-000000000001";
 const recipeB = "a2000000-0000-4000-8000-000000000002";
 const recipeRefresh = "a2000000-0000-4000-8000-000000000003";
+const recipeGeneration = "a2000000-0000-4000-8000-000000000004";
 const contentA = "a3000000-0000-4000-8000-000000000001";
 const contentB = "a3000000-0000-4000-8000-000000000002";
 const batchA = "a4000000-0000-4000-8000-000000000001";
@@ -21,6 +23,7 @@ const batchB = "a4000000-0000-4000-8000-000000000002";
 const legacyBatch = "a4000000-0000-4000-8000-000000000009";
 const legacyAtomicBatch = "a4000000-0000-4000-8000-000000000010";
 const legacyRefreshBatch = "a4000000-0000-4000-8000-000000000011";
+const legacyGenerationBatch = "a4000000-0000-4000-8000-000000000012";
 const completeSession = "a4000000-0000-4000-8000-000000000003";
 const plannerSession = "a4000000-0000-4000-8000-000000000004";
 const plannerMeal = "a4000000-0000-4000-8000-000000000005";
@@ -31,16 +34,21 @@ const pantryB = "a9000000-0000-4000-8000-000000000002";
 const identityA = "2026-08-08T00:00:00.000Z";
 const identityB = "2026-08-08T00:01:00.000Z";
 const identityRefresh = "2026-08-08T00:02:00.000Z";
+const identityGeneration = "2026-08-08T00:03:00.000Z";
 const issuedA = "2026-08-08T01:00:00.000Z";
 const issuedB = "2026-08-08T01:01:00.000Z";
-const issuedRefreshT0 = "2026-08-08T01:02:00.000Z";
-const issuedRefreshT1 = "2026-08-08T01:22:00.000Z";
-const issuedRefreshT2 = "2026-08-08T01:32:00.000Z";
+const issuedGeneration = "2026-08-08T01:03:00.000Z";
 const sessionHashA = "a".repeat(64);
 const sessionHashB = "b".repeat(64);
 const sessionHashRefresh = "c".repeat(64);
+const sessionHashGeneration = "d".repeat(64);
+const sessionIdRefresh = "c1000000-0000-4000-8000-000000000001";
+const differentSessionId = "c1000000-0000-4000-8000-000000000002";
 const cutoverAttempt = "a5000000-0000-4000-8000-000000000001";
 const localIssuer = "https://auth.mumeok.kr/auth/v1";
+const refreshT0Sql = `(select session_issued_at from public.user_session_generation_bindings where session_key_hash='${sessionHashRefresh}')`;
+const refreshT1Sql = `(${refreshT0Sql} + interval '10 minutes')`;
+const refreshT2Sql = `(${refreshT0Sql} + interval '15 minutes')`;
 
 function authArgs(owner: string) {
   return owner === ownerA
@@ -113,6 +121,7 @@ function ownerDigest(owner: string) {
       'claims', (select coalesce(jsonb_agg(jsonb_build_array(meal_id,session_id) order by meal_id),'[]'::jsonb) from public.cooking_session_meal_claims where owner_user_id='${owner}'),
       'meals', (select coalesce(jsonb_agg(jsonb_build_array(id,status,revision,is_leftover,leftover_dish_id) order by id),'[]'::jsonb) from public.meals where user_id='${owner}'),
       'recipes', (select coalesce(jsonb_agg(jsonb_build_array(id,cook_count) order by id),'[]'::jsonb) from public.recipes where created_by='${owner}'),
+      'bindings', (select coalesce(jsonb_agg(jsonb_build_array(session_key_hash,expected_account_generation,binding_state,revoked_at,session_issued_at,last_token_issued_at,session_identity_hash) order by session_key_hash),'[]'::jsonb) from public.user_session_generation_bindings where owner_uuid='${owner}'),
       'progress', (select coalesce(jsonb_agg(jsonb_build_array(event_type,source_key,xp_delta,source_meta_json) order by id),'[]'::jsonb) from public.user_progress_events where user_id='${owner}'),
       'progress_summary', (select coalesce(jsonb_agg(jsonb_build_array(total_xp,current_level,level_curve_version,event_counts,last_event_at,last_updated_at) order by user_id),'[]'::jsonb) from public.user_progress_summary where user_id='${owner}'),
       'growth_activity', (select coalesce(jsonb_agg(jsonb_build_array(activity_type,category,source_key,source_meta_json) order by id),'[]'::jsonb) from public.user_growth_activity_events where user_id='${owner}')
@@ -130,7 +139,16 @@ describe.runIf(enabled)("cooked batch weight ledger PostgreSQL", () => {
       insert into auth.users(id,created_at,email) values
         ('${ownerA}','${identityA}','batch-a@example.invalid'),
         ('${ownerB}','${identityB}','batch-b@example.invalid'),
-        ('${ownerRefresh}','${identityRefresh}','batch-refresh@example.invalid');
+        ('${ownerRefresh}','${identityRefresh}','batch-refresh@example.invalid'),
+        ('${ownerGeneration}','${identityGeneration}','batch-generation@example.invalid');
+      create table if not exists auth.sessions(
+        id uuid primary key,
+        user_id uuid not null references auth.users(id) on delete cascade
+      );
+      insert into auth.sessions(id,user_id) values
+        ('${sessionIdRefresh}','${ownerRefresh}'),
+        ('${differentSessionId}','${ownerRefresh}')
+      on conflict(id) do nothing;
       update private.full_local_auth_control
       set authority='local',local_issuer='${localIssuer}',cutover_epoch=2,
           hmac_key_version=1,flows_open=true,
@@ -151,19 +169,22 @@ describe.runIf(enabled)("cooked batch weight ledger PostgreSQL", () => {
       );
       insert into public.users(id,nickname,social_provider,social_id) values
         ('${ownerA}','owner-a','test','owner-a'),('${ownerB}','owner-b','test','owner-b'),
-        ('${ownerRefresh}','owner-refresh','test','owner-refresh')
+        ('${ownerRefresh}','owner-refresh','test','owner-refresh'),
+        ('${ownerGeneration}','owner-generation','test','owner-generation')
       on conflict(id) do nothing;
       insert into public.meal_plan_columns(id,user_id)
       values('a4000000-0000-4000-8000-000000000099','${ownerB}')
       on conflict(id) do nothing;
       insert into public.user_account_generation_watermarks(owner_uuid,last_account_generation)
-      values('${ownerA}',1),('${ownerB}',1),('${ownerRefresh}',1);
+      values('${ownerA}',1),('${ownerB}',1),('${ownerRefresh}',1),('${ownerGeneration}',2);
       insert into public.user_account_lifecycles(
         owner_uuid,account_generation,auth_identity_created_at_snapshot,origin,status,activated_at
       ) values
         ('${ownerA}',1,'${identityA}','runtime','active',now()),
         ('${ownerB}',1,'${identityB}','runtime','active',now()),
-        ('${ownerRefresh}',1,'${identityRefresh}','runtime','active',now());
+        ('${ownerRefresh}',1,'${identityRefresh}','runtime','active',now()),
+        ('${ownerGeneration}',1,'${identityGeneration}','runtime','quarantined',now()),
+        ('${ownerGeneration}',2,'${identityGeneration}','runtime','active',now());
       insert into public.user_session_generation_bindings(
         session_key_hash,hmac_key_version,owner_uuid,expected_account_generation,
         auth_identity_created_at_snapshot,binding_state,auth_authority,local_issuer,
@@ -171,12 +192,14 @@ describe.runIf(enabled)("cooked batch weight ledger PostgreSQL", () => {
       ) values
         ('${sessionHashA}',1,'${ownerA}',1,'${identityA}','active','local','${localIssuer}','${issuedA}',2,'${issuedA}','2099-01-01T00:00:00Z'),
         ('${sessionHashB}',1,'${ownerB}',1,'${identityB}','active','local','${localIssuer}','${issuedB}',2,'${issuedB}','2099-01-01T00:00:00Z'),
-        ('${sessionHashRefresh}',1,'${ownerRefresh}',1,'${identityRefresh}','active','local','${localIssuer}','${issuedRefreshT0}',2,'${issuedRefreshT0}','2099-01-01T00:00:00Z');
+        ('${sessionHashRefresh}',1,'${ownerRefresh}',1,'${identityRefresh}','active','local','${localIssuer}',clock_timestamp()-interval '19 minutes',2,clock_timestamp()-interval '20 minutes',clock_timestamp()+interval '20 minutes'),
+        ('${sessionHashGeneration}',1,'${ownerGeneration}',1,'${identityGeneration}','active','local','${localIssuer}','${issuedGeneration}',2,'${issuedGeneration}','2099-01-01T00:00:00Z');
       insert into public.ingredients(id,name) values('${ingredient}','공통 재료');
       insert into public.recipes(id,title,base_servings,created_by,visibility,revision,updated_at) values
         ('${recipeA}','owner A soup',2,'${ownerA}','private',1,now()),
         ('${recipeB}','owner B soup',2,'${ownerB}','private',1,now()),
-        ('${recipeRefresh}','refresh soup',2,'${ownerRefresh}','private',1,now())
+        ('${recipeRefresh}','refresh soup',2,'${ownerRefresh}','private',1,now()),
+        ('${recipeGeneration}','generation soup',2,'${ownerGeneration}','private',1,now())
       on conflict(id) do nothing;
       insert into public.recipe_content_snapshots(id,owner_user_id,recipe_id,title,base_servings,ingredients_json,steps_json,content_hash,schema_version) values
         ('${contentA}','${ownerA}','${recipeA}','owner A soup',2,
@@ -191,7 +214,8 @@ describe.runIf(enabled)("cooked batch weight ledger PostgreSQL", () => {
         ('${batchB}','${ownerB}','${recipeB}','${contentB}','leftover',now(),2,null,null,'missing','available',null,1,encode(extensions.digest(convert_to('','UTF8'),'sha256'),'hex')),
         ('${legacyBatch}','${ownerA}','${recipeA}',null,'leftover',now(),2,null,null,null,null,null,null,null),
         ('${legacyAtomicBatch}','${ownerA}','${recipeA}',null,'leftover',now(),2,null,null,null,null,null,null,null),
-        ('${legacyRefreshBatch}','${ownerRefresh}','${recipeRefresh}',null,'leftover',now(),2,null,null,null,null,null,null,null)
+        ('${legacyRefreshBatch}','${ownerRefresh}','${recipeRefresh}',null,'leftover',now(),2,null,null,null,null,null,null,null),
+        ('${legacyGenerationBatch}','${ownerGeneration}','${recipeGeneration}',null,'leftover',now(),2,null,null,null,null,null,null,null)
       on conflict(id) do nothing;
       insert into public.pantry_items(id,user_id,ingredient_id) values
         ('${pantryA}','${ownerA}','${ingredient}'),
@@ -410,10 +434,20 @@ describe.runIf(enabled)("cooked batch weight ledger PostgreSQL", () => {
   });
 
   it("accepts a newer JWT for the same active stable session and rejects the prior token", () => {
+    const renewed = serviceRpc(`
+      select public.assert_and_renew_full_local_session_authority_v2(
+        '${localIssuer}','${ownerRefresh}','${identityRefresh}',
+        '${sessionIdRefresh}','${sessionHashRefresh}',1,2,
+        ${refreshT1Sql},${refreshT1Sql},${refreshT1Sql}+interval '1 minute',
+        ${refreshT1Sql}+interval '1 hour',${refreshT1Sql}+interval '45 minutes'
+      );
+    `);
+    expect(extractJson(renewed.stdout)).toMatchObject({ binding_state: "active" });
+
     const refreshed = serviceRpc(`
       select public.mutate_legacy_leftover_status(
         '${ownerRefresh}','${identityRefresh}','${sessionHashRefresh}',1,
-        '${issuedRefreshT1}','${legacyRefreshBatch}','keep','2026-08-08T01:23:00Z'
+        ${refreshT1Sql},'${legacyRefreshBatch}','keep','2026-08-08T01:23:00Z'
       );
     `);
     expect(extractJson(refreshed.stdout)).toMatchObject({ status: "leftover", transitioned: true });
@@ -422,39 +456,81 @@ describe.runIf(enabled)("cooked batch weight ledger PostgreSQL", () => {
     const stale = serviceRpc(`
       select public.mutate_legacy_leftover_status(
         '${ownerRefresh}','${identityRefresh}','${sessionHashRefresh}',1,
-        '${issuedRefreshT0}','${legacyRefreshBatch}','keep','2026-08-08T01:24:00Z'
+        ${refreshT0Sql},'${legacyRefreshBatch}','keep','2026-08-08T01:24:00Z'
       );
     `, false);
     expect(stale.stderr).toContain("ACCOUNT_SESSION_STALE");
     expect(ownerDigest(ownerRefresh)).toBe(afterRefresh);
   });
 
-  it("records refresh expiry evidence monotonically without reviving older JWTs", () => {
+  it("keeps old, different-session, and revoked authority zero-write", () => {
     const recorded = serviceRpc(`
-      select public.record_full_local_session_authority(
+      select public.assert_and_renew_full_local_session_authority_v2(
         '${localIssuer}','${ownerRefresh}','${identityRefresh}',
-        '${sessionHashRefresh}',1,2,'${issuedRefreshT2}',clock_timestamp(),
-        '2099-01-02T00:00:00Z','2099-01-01T00:00:00Z'
+        '${sessionIdRefresh}','${sessionHashRefresh}',1,2,
+        ${refreshT2Sql},${refreshT2Sql},${refreshT2Sql}+interval '1 minute',
+        ${refreshT2Sql}+interval '1 hour',${refreshT2Sql}+interval '50 minutes'
       );
     `);
     expect(extractJson(recorded.stdout)).toMatchObject({ binding_state: "active" });
     expect(psql(`
-      select session_issued_at='${issuedRefreshT2}'::timestamptz
-        and binding_expires_at='2099-01-01T00:00:00Z'::timestamptz
+      select session_issued_at=${refreshT0Sql}
+        and last_token_issued_at=${refreshT2Sql}
       from public.user_session_generation_bindings
       where session_key_hash='${sessionHashRefresh}';
     `).stdout.trim()).toBe("t");
 
     const before = ownerDigest(ownerRefresh);
     const older = serviceRpc(`
-      select public.record_full_local_session_authority(
+      select public.assert_and_renew_full_local_session_authority_v2(
         '${localIssuer}','${ownerRefresh}','${identityRefresh}',
-        '${sessionHashRefresh}',1,2,'${issuedRefreshT1}',clock_timestamp(),
-        '2099-01-02T00:00:00Z','2099-01-01T00:00:00Z'
+        '${sessionIdRefresh}','${sessionHashRefresh}',1,2,
+        ${refreshT1Sql},${refreshT1Sql},${refreshT1Sql}+interval '1 minute',
+        ${refreshT1Sql}+interval '1 hour',${refreshT1Sql}+interval '45 minutes'
       );
     `, false);
     expect(older.stderr).toContain("ACCOUNT_SESSION_STALE");
     expect(ownerDigest(ownerRefresh)).toBe(before);
+
+    const differentSession = serviceRpc(`
+      select public.assert_and_renew_full_local_session_authority_v2(
+        '${localIssuer}','${ownerRefresh}','${identityRefresh}',
+        '${differentSessionId}','${sessionHashRefresh}',1,2,
+        ${refreshT2Sql},${refreshT2Sql},${refreshT2Sql}+interval '1 minute',
+        ${refreshT2Sql}+interval '1 hour',${refreshT2Sql}+interval '50 minutes'
+      );
+    `, false);
+    expect(differentSession.stderr).toContain("ACCOUNT_SESSION_STALE");
+    expect(ownerDigest(ownerRefresh)).toBe(before);
+
+    psql(`
+      update public.user_session_generation_bindings
+      set binding_state='revoked', revoked_at=clock_timestamp()
+      where session_key_hash='${sessionHashRefresh}';
+    `);
+    const revokedBefore = ownerDigest(ownerRefresh);
+    const revoked = serviceRpc(`
+      select public.mutate_legacy_leftover_status(
+        '${ownerRefresh}','${identityRefresh}','${sessionHashRefresh}',1,
+        ${refreshT2Sql},'${legacyRefreshBatch}','keep','2026-08-08T01:34:00Z'
+      );
+    `, false);
+    expect(revoked.stderr).toContain("ACCOUNT_SESSION_STALE");
+    expect(ownerDigest(ownerRefresh)).toBe(revokedBefore);
+  });
+
+  it("keeps a binding from a different account generation zero-write", () => {
+    const before = ownerDigest(ownerGeneration);
+    const staleGeneration = serviceRpc(`
+      select public.mutate_legacy_leftover_status(
+        '${ownerGeneration}','${identityGeneration}','${sessionHashGeneration}',1,
+        '${issuedGeneration}','${legacyGenerationBatch}','keep','2026-08-08T01:33:00Z'
+      );
+    `, false);
+    expect(staleGeneration.stderr).toMatch(
+      /ACCOUNT_(?:GENERATION|SESSION)_STALE/,
+    );
+    expect(ownerDigest(ownerGeneration)).toBe(before);
   });
 
   it("serializes legacy and ledger first-XP awards on one owner authority", async () => {
