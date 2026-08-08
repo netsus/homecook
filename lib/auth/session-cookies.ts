@@ -1,5 +1,7 @@
 import type { NextResponse } from "next/server";
 
+import { AUTH_FLOW_COOKIE_NAME } from "@/lib/server/full-local-auth/flow-ledger";
+
 interface CookieStoreReader {
   getAll(): Array<{ name: string }>;
 }
@@ -25,6 +27,18 @@ export function expireSupabaseAuthCookies(
 
     response.cookies.set(name, "", { maxAge: 0, path: "/" });
   }
+
+  return response;
+}
+
+export function expireAuthFlowCookie(response: NextResponse) {
+  response.cookies.set(AUTH_FLOW_COOKIE_NAME, "", {
+    httpOnly: true,
+    maxAge: 0,
+    path: "/",
+    sameSite: "lax",
+    secure: true,
+  });
 
   return response;
 }
