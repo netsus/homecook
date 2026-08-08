@@ -26,6 +26,44 @@ function extractCookedBatchAddendum(api: string) {
   return api.slice(start, end);
 }
 
+function extractSection(contents: string, startMarker: string, endMarker: string) {
+  const start = contents.indexOf(startMarker);
+  const end = contents.indexOf(endMarker, start + startMarker.length);
+
+  expect(start).toBeGreaterThanOrEqual(0);
+  expect(end).toBeGreaterThan(start);
+  return contents.slice(start, end);
+}
+
+function extractFirstJsonObject(section: string) {
+  const match = section.match(/```json\n([\s\S]*?)\n```/);
+
+  expect(match).not.toBeNull();
+  return JSON.parse(match?.[1] ?? "{}");
+}
+
+function extractInlineCodeList(line: string) {
+  return [...line.matchAll(/`([^`]+)`/g)].map((match) => match[1]);
+}
+
+const projectionFields = [
+  "id",
+  "recipe_id",
+  "recipe_title",
+  "recipe_thumbnail_url",
+  "status",
+  "cooked_at",
+  "cooking_servings",
+  "finished_weight_g",
+  "remaining_weight_g",
+  "weight_status",
+  "batch_status",
+  "depleted_reason",
+  "revision",
+  "nutrition_calculation_status",
+  "current_unweighed_closure_event_id",
+];
+
 describe("cooked batch API v1.2.36 Contract Evolution", () => {
   const apiPath = "docs/api문서-v1.2.36.md";
 
@@ -71,6 +109,14 @@ describe("cooked batch API v1.2.36 Contract Evolution", () => {
     const normalized = `${current.slice(0, addendumStart)}${current.slice(addendumEnd)}`
       .replace("# API\\_설계\\_v1.2.36", "# API\\_설계\\_v1.2.35")
       .replace("날짜: 8월 8일", "날짜: 8월 4일")
+      .replace(
+        "- duplicate pantry ID 또는 pinned target mismatch는 `422 VALIDATION_ERROR`; missing/other-owner private pantry row는 동일 `404 RESOURCE_NOT_FOUND` + `fields=[]`로 존재·owner·state를 숨긴다. selected row만 제거한다.",
+        "- duplicate/missing/other-owner row는 409/422. selected row만 제거한다.",
+      )
+      .replace(
+        "Query: `availability=loggable|all`, cursor, limit. `loggable`은 owner+available+known weight와 remaining>0인 batch만 반환하는 filter다. `all`도 owner row만 반환한다.",
+        "Query: `availability=loggable|all`, cursor, limit. `loggable`은 owner+available+known weight와 remaining>0인 batch를 우선 반환한다.",
+      )
       .replace(/^> \*\*v1\.2\.36 총계\*\*:[^\n]+\n>\n/m, "");
 
     expect(normalized).toBe(previous);
@@ -78,38 +124,33 @@ describe("cooked batch API v1.2.36 Contract Evolution", () => {
 
   it("locks one exact owner-only CookedBatchProjection for reads and mutations", () => {
     const addendum = extractCookedBatchAddendum(read(apiPath));
-    const projectionFields = [
-      "id",
-      "recipe_id",
-      "recipe_title",
-      "recipe_thumbnail_url",
-      "status",
-      "cooked_at",
-      "cooking_servings",
-      "finished_weight_g",
-      "remaining_weight_g",
-      "weight_status",
-      "batch_status",
-      "depleted_reason",
-      "revision",
-      "nutrition_calculation_status",
-      "current_unweighed_closure_event_id",
-    ];
+    const projectionSection = extractSection(
+      addendum,
+      "### `CookedBatchProjection`",
+      "### snapshot-v2 complete success `data`",
+    );
+    const fieldLine = projectionSection
+      .split("\n")
+      .find((line) => line.includes("Exact field set (15 keys):"));
+    const projectionExample = extractFirstJsonObject(projectionSection);
 
-    expect(addendum).toContain(`Exact field set (${projectionFields.length} keys)`);
-    for (const field of projectionFields) {
-      expect(addendum).toContain(`\`${field}\``);
-    }
+    expect(fieldLine).toBeDefined();
+    expect(extractInlineCodeList(fieldLine ?? "").slice(-15)).toEqual(projectionFields);
+    expect(Object.keys(projectionExample)).toEqual(projectionFields);
     expect(addendum).toContain("GET item과 모든 cooked-batch mutation 성공 `data`가 그대로 공유");
-    expect(addendum).toContain("legacy row에서 증명할 수 없는 새 field는 explicit `null`");
-    expect(addendum).toContain("servings·이름·content로 g 또는 snapshot을 추론하지 않는다");
-    expect(addendum).toContain("field를 omit하지 않는다");
+    expect(projectionSection).toContain("위 15개 field는 권한을 통과한 item에서 항상 존재하며 field를 omit하지 않는다");
+    expect(projectionSection).toContain("`recipe_thumbnail_url`은 thumbnail이 없으면 `null`");
+    expect(projectionSection).toContain("active reason이 `consumed|consumed_unweighed`일 때만 `status=eaten`");
+    expect(projectionSection).toContain("`finished_weight_g`와 `remaining_weight_g`는 known이면 number이며 missing/unrecoverable이면 둘 다 `null`");
+    expect(projectionSection).toContain("`depleted_reason`은 available이면 `null`, depleted이면 `consumed|discarded|mixed|consumed_unweighed|discarded_unweighed|mixed_unweighed`");
+    expect(projectionSection).toContain("legacy row에서 증명할 수 없는 새 field는 explicit `null`");
+    expect(projectionSection).toContain("servings·이름·content로 g 또는 snapshot을 추론하지 않는다");
+    expect(projectionSection).toContain("같은 값으로 `cancel_current`가 가능한 경우에만 그 event UUID");
   });
 
   it("locks exact snapshot-v2 complete and batch mutation success data with replay", () => {
     const addendum = extractCookedBatchAddendum(read(apiPath));
-
-    for (const field of [
+    const completeFields = [
       "session_id",
       "contract_version",
       "mode",
@@ -118,44 +159,122 @@ describe("cooked batch API v1.2.36 Contract Evolution", () => {
       "meals_updated",
       "pantry_removed",
       "cook_count",
-    ]) {
-      expect(addendum).toContain(`\`${field}\``);
-    }
-    expect(addendum).toContain("`contract_version=\"snapshot_v2\"`");
-    expect(addendum).toContain("standalone은 `meals_updated=0`");
-    expect(addendum).toContain("Exact mutation success field set (3 keys): `action`, `batch`, `event_id`");
-    expect(addendum).toContain("`set_finished_weight`만 `event_id=null`");
-    expect(addendum).toContain("`mark_unrecoverable|discard|adjust|close|cancel_current`");
+    ];
+    const completeSection = extractSection(
+      addendum,
+      "### snapshot-v2 complete success `data`",
+      "### cooked-batch mutation success `data`",
+    );
+    const mutationSection = extractSection(
+      addendum,
+      "### cooked-batch mutation success `data`",
+      "### `GET /cooked-batches` owner-only list와 pagination",
+    );
+    const completeExample = extractFirstJsonObject(completeSection);
+    const mutationExample = extractFirstJsonObject(mutationSection);
+
+    expect(Object.keys(completeExample)).toEqual(completeFields);
+    expect(Object.keys(completeExample.cooked_batch)).toEqual(projectionFields);
+    expect(Object.keys(mutationExample)).toEqual(["action", "batch", "event_id"]);
+    expect(Object.keys(mutationExample.batch)).toEqual(projectionFields);
+    expect(completeSection).toContain("`contract_version=\"snapshot_v2\"`");
+    expect(completeSection).toContain("standalone은 `meals_updated=0`");
+    expect(mutationSection).toContain("Exact mutation success field set (3 keys): `action`, `batch`, `event_id`");
+    expect(mutationSection).toContain("`action=set_finished_weight|mark_unrecoverable|discard|adjust|close|cancel_current`");
+    expect(mutationSection).toContain("`set_finished_weight`만 `event_id=null`");
+    expect(mutationSection).toContain("`mark_unrecoverable|discard|adjust|close|cancel_current`은 resulting append-only event UUID");
     expect(addendum).toContain("최초 HTTP status와 canonical JSON 기준 byte-equivalent `data`");
   });
 
   it("locks owner-only cooked-batch pagination, filtering and legacy-null semantics", () => {
-    const addendum = extractCookedBatchAddendum(read(apiPath));
+    const api = read(apiPath);
+    const addendum = extractCookedBatchAddendum(api);
+    const listSection = extractSection(
+      addendum,
+      "### `GET /cooked-batches` owner-only list와 pagination",
+      "### 인증·소유권·validation·conflict와 zero-write",
+    );
+    const containerLine = listSection
+      .split("\n")
+      .find((line) => line.includes("Exact data container (3 keys):"));
+    const inheritedListSection = extractSection(
+      api,
+      "### `GET /cooked-batches`\n",
+      "### `PATCH /cooked-batches/{id}/weight`",
+    );
 
-    expect(addendum).toContain("`availability=loggable|all`; default는 `loggable`");
-    expect(addendum).toContain("owner + `weight_status=known` + `batch_status=available` + `remaining_weight_g>0`");
-    expect(addendum).toContain("default `20`, maximum `50`");
-    expect(addendum).toContain("`cooked_at DESC, id DESC`");
-    expect(addendum).toContain("cursor는 이 tuple과 exact `availability` filter에 묶인 opaque string");
-    expect(addendum).toContain("Exact data container (3 keys): `items`, `next_cursor`, `has_next`");
-    expect(addendum).toContain("다른 owner row는 item과 cursor boundary 계산 모두에서 제외");
+    expect(listSection).toContain("`availability=loggable|all`; default는 `loggable`");
+    expect(listSection).toContain("`loggable`은 owner + `weight_status=known` + `batch_status=available` + `remaining_weight_g>0`인 row만 뜻한다");
+    expect(listSection).toContain("`all`도 owner row만 반환한다");
+    expect(listSection).toContain("default `20`, maximum `50`");
+    expect(listSection).toContain("`cooked_at DESC, id DESC`");
+    expect(listSection).toContain("cursor는 이 tuple과 exact `availability` filter에 묶인 opaque string");
+    expect(containerLine).toBeDefined();
+    expect(extractInlineCodeList(containerLine ?? "").slice(0, 3)).toEqual([
+      "items",
+      "next_cursor",
+      "has_next",
+    ]);
+    expect(listSection).toContain("다른 owner row는 item과 cursor boundary 계산 모두에서 제외");
+    expect(inheritedListSection).toContain("batch만 반환하는 filter다");
+    expect(inheritedListSection).toContain("`all`도 owner row만 반환한다");
+    expect(api).not.toContain("우선 반환");
   });
 
   it("separates 404 nondisclosure, 422 validation and exact 409 conflicts with zero writes", () => {
-    const addendum = extractCookedBatchAddendum(read(apiPath));
+    const api = read(apiPath);
+    const addendum = extractCookedBatchAddendum(api);
+    const errorSection = extractSection(
+      addendum,
+      "### 인증·소유권·validation·conflict와 zero-write",
+      "- 이 addendum은 endpoint 목록이나 DB authority를 바꾸지 않는다.",
+    );
+    const errorRows = errorSection
+      .split("\n")
+      .filter((line) => line.startsWith("|") && !line.includes("---") && !line.includes("exact public result"))
+      .map((line) => line.split("|").slice(1, -1).map((cell) => cell.trim()));
 
-    expect(addendum).toContain("`401 UNAUTHORIZED`");
-    expect(addendum).toContain("동일 `404 RESOURCE_NOT_FOUND` + `fields=[]`");
-    expect(addendum).toContain("duplicate pantry ID, body enum/format 오류, pinned target mismatch");
-    expect(addendum).toContain("`422 VALIDATION_ERROR`");
-    expect(addendum).toContain("stale `expected_revision`, invalid lifecycle/state, bounds 초과, later-event/current-closure conflict");
-    expect(addendum).toContain("`409 CONFLICT`");
-    expect(addendum).toContain("`409 WEIGHT_UNRECOVERABLE`");
-    expect(addendum).toContain("`409 BATCH_ADJUSTMENT_INVALID`");
-    expect(addendum).toContain("`409 IDEMPOTENCY_KEY_REUSED`");
-    expect(addendum).toContain("`428 IDEMPOTENCY_KEY_REQUIRED`");
-    expect(addendum).toContain("`400 INVALID_IDEMPOTENCY_KEY`");
-    expect(addendum).toContain("모든 failure는 pantry/batch/event/session/claim/Meal/cook-count/XP write 0");
+    expect(errorRows).toEqual([
+      ["unauthenticated", "`401 UNAUTHORIZED`", "0"],
+      [
+        "missing 또는 other-owner private session, batch, pantry row",
+        "동일 `404 RESOURCE_NOT_FOUND` + `fields=[]`",
+        "0; 존재·owner·state 비공개",
+      ],
+      [
+        "duplicate pantry ID, body enum/format 오류, pinned target mismatch, malformed filter/cursor/limit",
+        "`422 VALIDATION_ERROR`",
+        "0",
+      ],
+      [
+        "stale `expected_revision`, invalid lifecycle/state, bounds 초과, later-event/current-closure conflict",
+        "`409 CONFLICT`",
+        "0",
+      ],
+      [
+        "unrecoverable weight/known restore/marked event reversal",
+        "`409 WEIGHT_UNRECOVERABLE`",
+        "0",
+      ],
+      [
+        "adjustment가 0 도달·finished 초과·depleted reopen 시도",
+        "`409 BATCH_ADJUSTMENT_INVALID`",
+        "0",
+      ],
+      [
+        "same key + different canonical payload",
+        "`409 IDEMPOTENCY_KEY_REUSED`",
+        "0",
+      ],
+      ["required key 누락", "`428 IDEMPOTENCY_KEY_REQUIRED`", "0"],
+      ["key가 UUID 형식 아님", "`400 INVALID_IDEMPOTENCY_KEY`", "0"],
+    ]);
+    expect(errorSection).toContain("공통 `{ code, message, fields[] }` shape");
+    expect(errorSection).toContain("private missing/other-owner 분기는 status/code/message/`fields=[]`를 구분하지 않는다");
+    expect(errorSection).toContain("모든 failure는 pantry/batch/event/session/claim/Meal/cook-count/XP write 0");
+    expect(api).toContain("duplicate pantry ID 또는 pinned target mismatch는 `422 VALIDATION_ERROR`");
+    expect(api).toContain("missing/other-owner private pantry row는 동일 `404 RESOURCE_NOT_FOUND` + `fields=[]`");
+    expect(api).not.toContain("duplicate/missing/other-owner row는 409/422");
   });
 
   it("does not expose server-only authority metadata in the new public projection", () => {
@@ -165,6 +284,25 @@ describe("cooked batch API v1.2.36 Contract Evolution", () => {
       addendum.indexOf("### snapshot-v2 complete success `data`"),
     );
 
+    const publicExamples = [
+      extractFirstJsonObject(projectionSection),
+      extractFirstJsonObject(
+        extractSection(
+          addendum,
+          "### snapshot-v2 complete success `data`",
+          "### cooked-batch mutation success `data`",
+        ),
+      ),
+      extractFirstJsonObject(
+        extractSection(
+          addendum,
+          "### cooked-batch mutation success `data`",
+          "### `GET /cooked-batches` owner-only list와 pagination",
+        ),
+      ),
+    ];
+    const serializedExamples = JSON.stringify(publicExamples);
+
     for (const forbidden of [
       "recipe_content_snapshot_id",
       "account_generation",
@@ -173,7 +311,7 @@ describe("cooked batch API v1.2.36 Contract Evolution", () => {
       "claim_id",
       "operation_id",
     ]) {
-      expect(projectionSection).not.toContain(`\"${forbidden}\"`);
+      expect(serializedExamples).not.toContain(`\"${forbidden}\"`);
     }
     expect(projectionSection).toContain("비공개");
   });
