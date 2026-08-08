@@ -74,11 +74,11 @@ const EXACT_KEYS = Object.freeze({
 function run(command, args, options = {}) {
   const result = spawnSync(command, args, {
     cwd: options.cwd,
-    encoding: options.encoding ?? "buffer",
+    encoding: options.encoding,
     env: options.env ?? process.env,
     input: options.input,
     maxBuffer: 16 * 1024 * 1024,
-    stdio: ["ignore", "pipe", "pipe"],
+    stdio: [options.input === undefined ? "ignore" : "pipe", "pipe", "pipe"],
   });
   if (result.error) {
     throw result.error;
@@ -90,6 +90,10 @@ function run(command, args, options = {}) {
     throw new Error(`${command} exited ${result.status}${stderr ? `: ${stderr}` : ""}`);
   }
   return result;
+}
+
+export function runEvidenceCommand(command, args, options = {}) {
+  return run(command, args, options);
 }
 
 function stdoutText(result) {

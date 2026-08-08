@@ -24,6 +24,7 @@ import {
   parseGoTruePolicyGateJson,
   parseMigrationHeadSqlOutput,
   parseRefreshLifecycleGateJson,
+  runEvidenceCommand,
   validateEvidenceOutputPath,
   validateLiveRoot,
   validateSessionLifecycleEvidence,
@@ -302,6 +303,17 @@ describe("full-local session lifecycle evidence contract", () => {
     expect(() => parseMigrationHeadSqlOutput(
       "20260803093000_full_local_read_only_request_authority.sql\nsecret=value\n",
     )).toThrow(/single safe migration filename/u);
+  });
+
+  it("keeps fixed stdin commands in Buffer mode without an invalid encoding", () => {
+    const result = runEvidenceCommand(
+      process.execPath,
+      ["-e", "process.stdin.pipe(process.stdout)"],
+      { input: "fixed-read-only-sql" },
+    );
+
+    expect(Buffer.isBuffer(result.stdout)).toBe(true);
+    expect(String(result.stdout)).toBe("fixed-read-only-sql");
   });
 
   it.each([
