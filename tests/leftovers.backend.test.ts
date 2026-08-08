@@ -211,8 +211,10 @@ function createLeftoverListDb({
   ]);
   const sourceMealsQuery = createThenableQuery([{ data: sourceMeals, error: null }]);
   const originMealsQuery = createThenableQuery([{ data: originMeals, error: null }]);
+  const leftoversSelect = vi.fn(() => leftoversQuery);
 
   return {
+    leftoversSelect,
     leftoversQuery,
     recipesQuery,
     contentSnapshotsQuery,
@@ -221,7 +223,7 @@ function createLeftoverListDb({
     db: {
       from: vi.fn((table: string) => {
         if (table === "leftover_dishes") {
-          return { select: vi.fn(() => leftoversQuery) };
+          return { select: leftoversSelect };
         }
 
         if (table === "recipes") {
@@ -555,7 +557,7 @@ describe("GET /api/v1/leftovers", () => {
       recipe_id: recipeId,
       title: "조리 당시 김치찌개",
     };
-    const { db } = createLeftoverListDb({
+    const { db, leftoversSelect } = createLeftoverListDb({
       leftovers: [
         {
           id: leftoverId,
@@ -588,6 +590,9 @@ describe("GET /api/v1/leftovers", () => {
 
     expect(response.status).toBe(200);
     expect(body.data.items[0].recipe_title).toBe("조리 당시 김치찌개");
+    expect(leftoversSelect).toHaveBeenCalledWith(
+      "id, user_id, recipe_id, recipe_content_snapshot_id, status, cooked_at, eaten_at, auto_hide_at, stale_reviewed_at, cooking_servings, weight_status, batch_status, depleted_reason",
+    );
   });
 
   it("fails closed when a leftover content snapshot relation is broken", async () => {

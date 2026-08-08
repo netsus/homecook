@@ -142,7 +142,7 @@ export async function GET(request: NextRequest) {
   let leftoversQuery = dbClient
     .from("leftover_dishes")
     .select(
-      "id, user_id, recipe_id, recipe_content_snapshot_id, recipe_content_snapshots(id, recipe_id, title), status, cooked_at, eaten_at, auto_hide_at, stale_reviewed_at, cooking_servings, weight_status, batch_status, depleted_reason",
+      "id, user_id, recipe_id, recipe_content_snapshot_id, status, cooked_at, eaten_at, auto_hide_at, stale_reviewed_at, cooking_servings, weight_status, batch_status, depleted_reason",
     )
     .eq("user_id", user.id);
 

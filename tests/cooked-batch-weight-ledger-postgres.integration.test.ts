@@ -111,6 +111,72 @@ function psqlAsync(sql: string) {
   });
 }
 
+interface PgPlanNode {
+  "Node Type": string;
+  "Index Name"?: string;
+  "Relation Name"?: string;
+  "Actual Rows"?: number;
+  "Shared Hit Blocks"?: number;
+  "Shared Read Blocks"?: number;
+  "Index Cond"?: string;
+  "Recheck Cond"?: string;
+  Filter?: string;
+  Output?: string[];
+  "Sort Key"?: string[];
+  Plans?: PgPlanNode[];
+}
+
+interface PgExplainDocument {
+  Plan: PgPlanNode;
+  "Execution Time": number;
+}
+
+function extractMarkedJson<T>(stdout: string, marker: string): T {
+  const lines = stdout.trim().split("\n").map((line) => line.trim());
+  const start = lines.indexOf(`__${marker}_START__`);
+  const end = lines.indexOf(`__${marker}_END__`);
+
+  expect(start, `${marker} start marker`).toBeGreaterThanOrEqual(0);
+  expect(end, `${marker} end marker`).toBeGreaterThan(start);
+
+  return JSON.parse(lines.slice(start + 1, end).join("\n")) as T;
+}
+
+function collectPlanNodes(root: PgPlanNode): PgPlanNode[] {
+  return [root, ...(root.Plans ?? []).flatMap(collectPlanNodes)];
+}
+
+function planConditions(nodes: PgPlanNode[]) {
+  return nodes.flatMap((node) => [node["Index Cond"], node["Recheck Cond"], node.Filter])
+    .filter((value): value is string => typeof value === "string")
+    .join(" ");
+}
+
+function rootSharedBlocks(document: PgExplainDocument) {
+  return (document.Plan["Shared Hit Blocks"] ?? 0)
+    + (document.Plan["Shared Read Blocks"] ?? 0);
+}
+
+function expectSelectiveIndexPlan(
+  document: PgExplainDocument,
+  indexName: string,
+  conditionFragments: string[],
+) {
+  const nodes = collectPlanNodes(document.Plan);
+  const indexNode = nodes.find((node) => node["Index Name"] === indexName);
+
+  expect(indexNode, `${indexName} plan node`).toBeDefined();
+  expect(["Index Scan", "Index Only Scan", "Bitmap Index Scan"]).toContain(
+    indexNode?.["Node Type"],
+  );
+  expect(indexNode?.["Actual Rows"] ?? 0).toBeGreaterThan(0);
+  const conditions = planConditions(nodes);
+  for (const fragment of conditionFragments) {
+    expect(conditions).toContain(fragment);
+  }
+  expect(rootSharedBlocks(document)).toBeLessThanOrEqual(320);
+}
+
 function ownerDigest(owner: string) {
   return psql(`
     select encode(extensions.digest(convert_to(jsonb_build_object(
@@ -1148,21 +1214,26 @@ describe.runIf(enabled)("cooked batch weight ledger PostgreSQL", () => {
     });
   });
 
-  it("captures the exact limit-free LEFTOVERS route predicates and compatibility indexes", () => {
-    const explain = psql(`
+  it("separates exact limit-free LEFTOVERS route plans from selective index proofs", () => {
+    const evidence = psql(`
       begin;
       select public.set_account_generation_internal_writer_marker('${cutoverAttempt}',true);
       insert into public.leftover_dishes(
         id,user_id,recipe_id,recipe_content_snapshot_id,status,cooked_at,cooking_servings,
-        finished_weight_g,remaining_weight_g,weight_status,batch_status,depleted_reason,revision,event_checksum
+        finished_weight_g,remaining_weight_g,weight_status,batch_status,depleted_reason,revision,
+        event_checksum,eaten_at,auto_hide_at
       )
       select md5('compat-'||series)::uuid,'${ownerB}','${recipeB}','${contentB}',
         case when series % 100 = 0 then 'leftover' else 'eaten' end::public.leftover_dish_status_type,
-        clock_timestamp()-(series||' seconds')::interval,1,100,
+        timestamptz '2027-01-01T00:00:00Z'-(series||' seconds')::interval,1,100,
         case when series % 100 = 0 then 100 else 0 end,'known',
         case when series % 100 = 0 then 'available' else 'depleted' end,
         case when series % 100 = 0 then null else 'consumed' end,1,
-        encode(extensions.digest(convert_to('','UTF8'),'sha256'),'hex')
+        encode(extensions.digest(convert_to('','UTF8'),'sha256'),'hex'),
+        case when series % 100 = 0 then null
+          else timestamptz '2027-01-02T00:00:00Z'-(series||' seconds')::interval end,
+        case when series % 100 = 0 then null
+          else timestamptz '2027-02-01T00:00:00Z'+((series % 30)||' days')::interval end
       from generate_series(1,4000) as series;
       insert into public.leftover_dishes(
         id,user_id,recipe_id,recipe_content_snapshot_id,status,cooked_at,cooking_servings,
@@ -1170,12 +1241,16 @@ describe.runIf(enabled)("cooked batch weight ledger PostgreSQL", () => {
       )
       select md5('legacy-compat-'||series)::uuid,'${ownerB}','${recipeB}',null,
         case when series % 2 = 0 then 'leftover' else 'eaten' end::public.leftover_dish_status_type,
-        clock_timestamp()-(series||' seconds')::interval,1,
-        case when series % 2 = 0 then null else clock_timestamp()-(series||' seconds')::interval end,
-        case when series % 2 = 0 then null else clock_timestamp()+interval '10 days' end
+        timestamptz '2027-01-01T00:00:00Z'-(series||' seconds')::interval,1,
+        case when series % 2 = 0 then null
+          else timestamptz '2027-01-02T00:00:00Z'-(series||' seconds')::interval end,
+        case when series % 2 = 0 then null
+          else timestamptz '2027-02-01T00:00:00Z'+((series % 30)||' days')::interval end
       from generate_series(1,4000) as series;
       analyze public.leftover_dishes;
-      explain (analyze, buffers, format json)
+
+      select '__LEFTOVERS_EXACT_START__';
+      explain (analyze, buffers, verbose, format json)
       select id,user_id,recipe_id,recipe_content_snapshot_id,status,cooked_at,eaten_at,
         auto_hide_at,stale_reviewed_at,cooking_servings,weight_status,batch_status,
         depleted_reason
@@ -1188,7 +1263,10 @@ describe.runIf(enabled)("cooked batch weight ledger PostgreSQL", () => {
             and depleted_reason in ('discarded','mixed','discarded_unweighed','mixed_unweighed'))
         )
       order by cooked_at desc,id desc;
-      explain (analyze, buffers, format json)
+      select '__LEFTOVERS_EXACT_END__';
+
+      select '__EATEN_EXACT_START__';
+      explain (analyze, buffers, verbose, format json)
       select id,user_id,recipe_id,recipe_content_snapshot_id,status,cooked_at,eaten_at,
         auto_hide_at,stale_reviewed_at,cooking_servings,weight_status,batch_status,
         depleted_reason
@@ -1201,25 +1279,151 @@ describe.runIf(enabled)("cooked batch weight ledger PostgreSQL", () => {
         )
         and auto_hide_at > '2026-08-08T04:00:00Z'
       order by eaten_at desc,id desc;
-      select indexname,indexdef
+      select '__EATEN_EXACT_END__';
+
+      select '__SNAPSHOT_LOOKUP_START__';
+      explain (analyze, buffers, verbose, format json)
+      select id,recipe_id,title
+      from public.recipe_content_snapshots
+      where id in ('${contentB}');
+      select '__SNAPSHOT_LOOKUP_END__';
+
+      select '__LEGACY_LEFTOVER_INDEX_START__';
+      explain (analyze, buffers, verbose, format json)
+      select id
+      from public.leftover_dishes
+      where user_id='${ownerB}'
+        and recipe_content_snapshot_id is null
+        and status='leftover'
+        and cooked_at > '2026-12-31T23:58:00Z'
+      order by cooked_at desc,id desc;
+      select '__LEGACY_LEFTOVER_INDEX_END__';
+
+      select '__V2_LEFTOVER_INDEX_START__';
+      explain (analyze, buffers, verbose, format json)
+      select id
+      from public.leftover_dishes
+      where user_id='${ownerB}'
+        and recipe_content_snapshot_id is not null
+        and batch_status='available'
+      order by cooked_at desc,id desc;
+      select '__V2_LEFTOVER_INDEX_END__';
+
+      select '__LEGACY_EATEN_INDEX_START__';
+      explain (analyze, buffers, verbose, format json)
+      select id
+      from public.leftover_dishes
+      where user_id='${ownerB}'
+        and recipe_content_snapshot_id is null
+        and status='eaten'
+        and auto_hide_at > '2027-02-28T00:00:00Z'
+      order by eaten_at desc,id desc;
+      select '__LEGACY_EATEN_INDEX_END__';
+
+      select '__V2_EATEN_INDEX_START__';
+      explain (analyze, buffers, verbose, format json)
+      select id
+      from public.leftover_dishes
+      where user_id='${ownerB}'
+        and recipe_content_snapshot_id is not null
+        and batch_status='depleted'
+        and depleted_reason in ('consumed','consumed_unweighed')
+        and auto_hide_at > '2027-02-28T00:00:00Z'
+      order by eaten_at desc,id desc;
+      select '__V2_EATEN_INDEX_END__';
+
+      select '__INDEX_DEFINITIONS_START__';
+      select jsonb_object_agg(indexname,indexdef order by indexname)
       from pg_catalog.pg_indexes
       where schemaname='public' and indexname in (
         'cooked_batches_owner_leftovers_compat_idx',
         'leftover_dishes_owner_legacy_leftover_idx',
         'leftover_dishes_owner_legacy_eaten_idx',
         'cooked_batches_owner_eaten_compat_idx'
-      )
-      order by indexname;
+      );
+      select '__INDEX_DEFINITIONS_END__';
       rollback;
     `).stdout;
-    expect(explain).toContain("cooked_batches_owner_leftovers_compat_idx");
-    expect(explain).toContain("leftover_dishes_owner_legacy_leftover_idx");
-    expect(explain).toContain("leftover_dishes_owner_legacy_eaten_idx");
-    expect(explain).toContain("cooked_batches_owner_eaten_compat_idx");
-    expect(explain).toContain("Actual Rows");
-    expect(explain).toContain("Shared Hit Blocks");
-    expect(explain).toContain("Shared Read Blocks");
-    expect(explain).toContain(ownerB);
+
+    const leftoversExact = extractMarkedJson<PgExplainDocument[]>(
+      evidence,
+      "LEFTOVERS_EXACT",
+    )[0];
+    const eatenExact = extractMarkedJson<PgExplainDocument[]>(evidence, "EATEN_EXACT")[0];
+    const snapshotLookup = extractMarkedJson<PgExplainDocument[]>(
+      evidence,
+      "SNAPSHOT_LOOKUP",
+    )[0];
+
+    for (const [document, minRows, maxRows, orderColumn] of [
+      [leftoversExact, 2_000, 2_100, "cooked_at"],
+      [eatenExact, 5_900, 6_100, "eaten_at"],
+    ] as const) {
+      const nodes = collectPlanNodes(document.Plan);
+      const scanNode = nodes.find((node) => node["Relation Name"] === "leftover_dishes");
+      const conditions = planConditions(nodes);
+      expect(document.Plan["Actual Rows"] ?? 0).toBeGreaterThanOrEqual(minRows);
+      expect(document.Plan["Actual Rows"] ?? 0).toBeLessThanOrEqual(maxRows);
+      expect(rootSharedBlocks(document)).toBeLessThanOrEqual(2_000);
+      expect(nodes.some((node) => node["Node Type"] === "Limit")).toBe(false);
+      expect(["Seq Scan", "Bitmap Heap Scan", "Index Scan", "Index Only Scan"])
+        .toContain(scanNode?.["Node Type"]);
+      expect(conditions).toContain(ownerB);
+      expect(conditions).toContain("recipe_content_snapshot_id");
+      expect(conditions).toContain("batch_status");
+      expect(conditions).toContain("depleted_reason");
+      expect(nodes.flatMap((node) => node["Sort Key"] ?? []).join(" ")).toContain(orderColumn);
+      expect(Math.max(...nodes.map((node) => node["Actual Rows"] ?? 0))).toBeLessThanOrEqual(8_100);
+      const output = (document.Plan.Output ?? []).join(" ");
+      for (const column of [
+        "id", "user_id", "recipe_id", "recipe_content_snapshot_id", "status", "cooked_at",
+        "eaten_at", "auto_hide_at", "stale_reviewed_at", "cooking_servings", "weight_status",
+        "batch_status", "depleted_reason",
+      ]) {
+        expect(output).toContain(column);
+      }
+    }
+
+    const snapshotNodes = collectPlanNodes(snapshotLookup.Plan);
+    expect(snapshotLookup.Plan["Actual Rows"]).toBe(1);
+    expect(rootSharedBlocks(snapshotLookup)).toBeLessThanOrEqual(16);
+    expect(snapshotNodes.some((node) => node["Relation Name"] === "recipe_content_snapshots"))
+      .toBe(true);
+    expect(planConditions(snapshotNodes)).toContain(contentB);
+    expect(snapshotLookup.Plan.Output).toEqual(["id", "recipe_id", "title"]);
+
+    expectSelectiveIndexPlan(
+      extractMarkedJson<PgExplainDocument[]>(evidence, "LEGACY_LEFTOVER_INDEX")[0],
+      "leftover_dishes_owner_legacy_leftover_idx",
+      ["user_id", "cooked_at"],
+    );
+    expectSelectiveIndexPlan(
+      extractMarkedJson<PgExplainDocument[]>(evidence, "V2_LEFTOVER_INDEX")[0],
+      "cooked_batches_owner_leftovers_compat_idx",
+      ["user_id", "batch_status"],
+    );
+    expectSelectiveIndexPlan(
+      extractMarkedJson<PgExplainDocument[]>(evidence, "LEGACY_EATEN_INDEX")[0],
+      "leftover_dishes_owner_legacy_eaten_idx",
+      ["user_id", "auto_hide_at"],
+    );
+    expectSelectiveIndexPlan(
+      extractMarkedJson<PgExplainDocument[]>(evidence, "V2_EATEN_INDEX")[0],
+      "cooked_batches_owner_eaten_compat_idx",
+      ["user_id", "auto_hide_at"],
+    );
+
+    expect(extractMarkedJson<Record<string, string>>(evidence, "INDEX_DEFINITIONS"))
+      .toEqual({
+        cooked_batches_owner_eaten_compat_idx:
+          "CREATE INDEX cooked_batches_owner_eaten_compat_idx ON public.leftover_dishes USING btree (user_id, auto_hide_at, eaten_at DESC, id DESC) WHERE ((recipe_content_snapshot_id IS NOT NULL) AND (batch_status = 'depleted'::text) AND (depleted_reason = ANY (ARRAY['consumed'::text, 'consumed_unweighed'::text])))",
+        cooked_batches_owner_leftovers_compat_idx:
+          "CREATE INDEX cooked_batches_owner_leftovers_compat_idx ON public.leftover_dishes USING btree (user_id, batch_status, depleted_reason, cooked_at DESC, id DESC) WHERE (recipe_content_snapshot_id IS NOT NULL)",
+        leftover_dishes_owner_legacy_eaten_idx:
+          "CREATE INDEX leftover_dishes_owner_legacy_eaten_idx ON public.leftover_dishes USING btree (user_id, auto_hide_at, eaten_at DESC, id DESC) WHERE ((recipe_content_snapshot_id IS NULL) AND (status = 'eaten'::leftover_dish_status_type))",
+        leftover_dishes_owner_legacy_leftover_idx:
+          "CREATE INDEX leftover_dishes_owner_legacy_leftover_idx ON public.leftover_dishes USING btree (user_id, cooked_at DESC, id DESC) WHERE ((recipe_content_snapshot_id IS NULL) AND (status = 'leftover'::leftover_dish_status_type))",
+      });
   });
 
   it("rejects a depleted v2 leftover in the final meal-write wrapper with zero effect", () => {
