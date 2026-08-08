@@ -114,9 +114,13 @@ function createAssertSessionAuthority(
   authorityClient: LocalAuthorityClient,
 ) {
   return async ({
+    accessTokenExpiresAt,
     binding,
     authCutoverEpoch,
+    lastTokenIssuedAt,
+    sessionId,
     sessionIssuedAt,
+    verifiedAt,
   }: Parameters<
     NonNullable<
       Parameters<typeof createHybridAuthorityFetch>[0]["assertSessionAuthority"]
@@ -140,17 +144,22 @@ function createAssertSessionAuthority(
     const { error } = await rpc.call(
       authorityClient,
       localAuthority
-        ? "assert_full_local_session_authority"
+        ? "assert_and_renew_full_local_session_authority_v2"
         : "assert_hybrid_remote_session_authority",
       localAuthority
         ? {
+            p_access_token_expires_at: accessTokenExpiresAt,
+            p_binding_expires_at: binding.binding_expires_at,
             p_issuer: binding.issuer,
             p_owner_uuid: binding.owner_uuid,
             p_identity_created_at: binding.identity_created_at,
+            p_session_id: sessionId,
             p_session_key_hash: binding.session_key_hash,
             p_hmac_key_version: binding.hmac_key_version,
             p_auth_cutover_epoch: authCutoverEpoch,
+            p_last_token_issued_at: lastTokenIssuedAt,
             p_session_issued_at: sessionIssuedAt,
+            p_verified_at: verifiedAt,
           }
         : {
             p_issuer: binding.issuer,

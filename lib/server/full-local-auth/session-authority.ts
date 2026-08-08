@@ -29,7 +29,9 @@ export interface FullLocalSessionRecord extends Record<string, unknown> {
   p_hmac_key_version: number;
   p_identity_created_at: string;
   p_issuer: string;
+  p_last_token_issued_at: string;
   p_owner_uuid: string;
+  p_session_id: string;
   p_session_issued_at: string;
   p_session_key_hash: string;
   p_verified_at: string;
@@ -127,6 +129,7 @@ export async function prepareFullLocalSessionAuthority({
     const sessionIssuedAt = new Date(
       validated.claims.issuedAt * 1_000,
     ).toISOString();
+    const lastTokenIssuedAt = sessionIssuedAt;
     const accessTokenExpiresAt = new Date(
       validated.claims.expiresAt * 1_000,
     ).toISOString();
@@ -147,7 +150,9 @@ export async function prepareFullLocalSessionAuthority({
         p_hmac_key_version: keyVersion,
         p_identity_created_at: identityCreatedAt,
         p_issuer: validated.claims.issuer,
+        p_last_token_issued_at: lastTokenIssuedAt,
         p_owner_uuid: validated.claims.ownerUuid,
+        p_session_id: validated.claims.sessionId,
         p_session_issued_at: sessionIssuedAt,
         p_session_key_hash: binding.session_key_hash,
         p_verified_at: verifiedAt,
@@ -170,7 +175,10 @@ export async function recordFullLocalSessionAuthority({
   record: FullLocalSessionRecord;
 }) {
   try {
-    const result = await client.rpc("record_full_local_session_authority", record);
+    const result = await client.rpc(
+      "record_full_local_session_authority_v2",
+      record,
+    );
     const state = result.data && typeof result.data === "object"
       ? Reflect.get(result.data, "binding_state")
       : null;

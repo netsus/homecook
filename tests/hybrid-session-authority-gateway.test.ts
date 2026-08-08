@@ -188,11 +188,11 @@ describe("loopback session-authority gateway", () => {
     );
 
     expect(response.status).toBe(200);
-    expect(assertSessionAuthority).toHaveBeenCalledWith({
+    expect(assertSessionAuthority).toHaveBeenCalledWith(expect.objectContaining({
       authCutoverEpoch: 7,
       binding: expect.objectContaining({ hmac_key_version: 2 }),
       sessionIssuedAt: new Date(1_800_000_000 * 1_000).toISOString(),
-    });
+    }));
     const localHeaders = new Headers(localUpstreamFetch.mock.calls[0][1].headers);
     expect(verifyHybridRequestAttestation({
       payload: localHeaders.get("x-homecook-session-attestation")!,

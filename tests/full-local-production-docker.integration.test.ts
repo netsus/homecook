@@ -203,18 +203,45 @@ function applyDockerMigrationChain(project: string, env: NodeJS.ProcessEnv) {
   const required = new Set([
     "20260301000000_core_schema_bootstrap.sql",
     "20260425000000_08b_add_pantry_items_table.sql",
+    "20260426090000_09_shopping_tables.sql",
+    "20260429050000_14_cook_session_tables.sql",
+    "20260429080000_15a_cook_planner_complete.sql",
+    "20260521103000_20_youtube_real_import.sql",
     "20260524154000_account_delete_private_data.sql",
     "20260527030000_admin_foundation.sql",
+    "20260617090000_36b_recipe_tags_model.sql",
+    "20260617110000_36c_recipe_tags_search_themes.sql",
+    "20260620065500_shopping_already_have_pantry_reflection.sql",
+    "20260714143000_ingredient_nutrition_conversion_model.sql",
+    "20260716090000_add_recipe_nutrition_snapshots.sql",
+    "20260716120000_prepared_food_catalog.sql",
     "20260723140000_account_session_generation_foundation.sql",
+    "20260723170000_recipe_visibility_read_hardening.sql",
+    "20260724090000_recipe_tag_parent_visibility_upper_bound.sql",
+    "20260724110000_recipe_managed_image_registry_foundation.sql",
+    "20260724120000_recipe_image_cleanup_outbox.sql",
+    "20260724130000_recipe_image_upload_reservation.sql",
+    "20260724140000_recipe_image_private_storage_boundary.sql",
+    "20260724180000_recipe_image_attach_cas.sql",
+    "20260729170500_recipe_snapshot_authority_foundation.sql",
     "20260730090000_hybrid_auth_remote_identity_epoch_mirror.sql",
     "20260730140000_hybrid_internal_operations_facades.sql",
     "20260730150000_account_delete_hybrid_session_authority.sql",
+    "20260730210000_product_ingredient_link_foundation.sql",
+    "20260731110000_product_ingredient_link_contract_runtime.sql",
+    "20260731111000_product_ingredient_link_account_cleanup.sql",
     "20260801120000_full_local_auth_db_foundation.sql",
     "20260801150000_full_local_account_bootstrap.sql",
     "20260801151000_full_local_request_authority.sql",
+    "20260802120000_recipe_snapshot_consumer_read_authority.sql",
+    "20260802130000_personal_recipe_customization_write_core.sql",
+    "20260802210000_recipe_content_snapshot_future_propagation.sql",
     "20260803090000_full_local_session_issue_time_precision.sql",
     "20260803091000_full_local_optional_nbf_authority.sql",
+    "20260803092000_recipe_future_internal_scope.sql",
     "20260803093000_full_local_read_only_request_authority.sql",
+    "20260803101000_recipe_content_snapshot_future_propagation.sql",
+    "20260804100000_recipe_snapshot_entrypoint_projection.sql",
   ]);
   const refreshAuthorityMigrations = readdirSync(
     new URL("../supabase/migrations/", import.meta.url),
@@ -231,7 +258,24 @@ function applyDockerMigrationChain(project: string, env: NodeJS.ProcessEnv) {
   if (migrations.length !== required.size + refreshAuthorityMigrations.length) {
     throw new Error("Docker migration chain is incomplete.");
   }
+  const recipeSnapshotFixtureDependency = `
+    alter table public.cooking_methods
+      add column if not exists category_code varchar(50);
+    create table if not exists public.recipe_step_cooking_methods (
+      id uuid primary key default gen_random_uuid(),
+      step_id uuid not null references public.recipe_steps(id) on delete cascade,
+      method_id uuid not null references public.cooking_methods(id) on delete restrict,
+      position integer not null,
+      created_at timestamptz not null default now(),
+      constraint recipe_step_cooking_methods_position_positive check (position > 0),
+      constraint recipe_step_cooking_methods_step_method_unique unique (step_id, method_id),
+      constraint recipe_step_cooking_methods_step_position_unique unique (step_id, position)
+    );
+  `;
   const sql = `${migrations.map((name) => [
+    name === "20260723170000_recipe_visibility_read_hardening.sql"
+      ? recipeSnapshotFixtureDependency
+      : "",
     `\\echo applying ${name}`,
     "begin;",
     readFileSync(new URL(`../supabase/migrations/${name}`, import.meta.url), "utf8"),
@@ -509,6 +553,14 @@ run("full-local production Docker runtime", () => {
 
       const password = "HomecookTestPassword!123456789";
       applyDockerMigrationChain(project, env);
+      composeOutput(project, env, [
+        "exec", "-T", "postgres", "psql", "-U", "supabase_admin", "-d", "postgres", "-v", "ON_ERROR_STOP=1", "-c",
+        `
+          grant usage on schema private, public, recipe_visibility_guard to postgres;
+          grant select, update on private.full_local_auth_control to postgres;
+          grant select, insert, update, delete on all tables in schema public to postgres;
+        `,
+      ]);
       await waitForPostgrestSchemaReload(internalPort, secrets.service_role_key);
 
       const createUser = await authJsonRequest({
@@ -554,9 +606,45 @@ run("full-local production Docker runtime", () => {
             now() - interval '10 seconds'
           )
           on conflict do nothing;
+          insert into public.account_generation_cutover_attempts (
+            id,
+            state,
+            capability_revision,
+            result_json,
+            promoted_at
+          ) values (
+            '00000000-0000-4000-8000-000000000103'::uuid,
+            'promoted',
+            2,
+            '{}'::jsonb,
+            now() - interval '10 seconds'
+          );
+          insert into public.recipes (
+            id,
+            title,
+            source_type,
+            created_by
+          ) values (
+            '00000000-0000-4000-8000-000000000101'::uuid,
+            'browser-first refresh recipe',
+            'manual',
+            '${createdUser.id}'::uuid
+          );
+          insert into public.meal_plan_columns (
+            id,
+            user_id,
+            name,
+            sort_order
+          ) values (
+            '00000000-0000-4000-8000-000000000102'::uuid,
+            '${createdUser.id}'::uuid,
+            'refresh test',
+            0
+          );
           update public.account_generation_capability_state
           set state = 'generation_active',
               revision = revision + 1,
+              current_cutover_attempt_id = '00000000-0000-4000-8000-000000000103'::uuid,
               activated_at = now() - interval '10 seconds'
           where singleton;
           update private.full_local_auth_control
@@ -603,6 +691,11 @@ run("full-local production Docker runtime", () => {
       composeOutput(project, env, [
         "exec", "-T", "postgres", "psql", "-U", "supabase_admin", "-d", "postgres", "-v", "ON_ERROR_STOP=1", "-c",
         `
+          select set_config(
+            'request.jwt.claims',
+            '{"role":"service_role"}',
+            false
+          );
           select public.record_full_local_session_authority_v2(
             p_issuer := 'https://auth.mumeok.kr/auth/v1',
             p_owner_uuid := '${createdUser.id}'::uuid,
@@ -633,7 +726,16 @@ run("full-local production Docker runtime", () => {
         getAccessToken: async () => sessionB.access_token,
         remoteLivenessFetch: globalThis.fetch,
         localUpstreamFetch: globalThis.fetch,
-        loadRemoteJwks: async () => JSON.parse(secrets.jwt_jwks),
+        loadRemoteJwks: async () => {
+          const response = await fetch(
+            `http://127.0.0.1:${authPort}/auth/v1/.well-known/jwks.json`,
+            { headers: { apikey: secrets.publishable_key } },
+          );
+          if (!response.ok) {
+            throw new Error(`GoTrue JWKS returned ${response.status}`);
+          }
+          return response.json();
+        },
         assertSessionAuthority: async (input) => {
           const enriched = input as typeof input & {
             accessTokenExpiresAt?: string;
@@ -682,39 +784,65 @@ run("full-local production Docker runtime", () => {
           keyVersion: 2,
           secret: secrets.session_generation_hmac_key_v2,
         }),
-        nowSeconds: () => claimsB.iat + 10,
+        nowSeconds: () => Math.max(
+          claimsB.iat,
+          Math.floor(Date.now() / 1_000),
+        ),
       });
 
-      const labels = Array.from({ length: 10 }, (_, index) => `browser-first-refresh-${index + 1}`);
-      const responses = await Promise.all(labels.map((label) => authorityFetch(
-        `http://127.0.0.1:${internalPort}/rest/v1/pantry_items`,
+      const protectedResponses = await Promise.all(Array.from({ length: 10 }, () =>
+        authorityFetch(
+          `http://127.0.0.1:${internalPort}/rest/v1/meal_plan_columns?id=eq.00000000-0000-4000-8000-000000000102&select=id`,
+          { headers: { apikey: secrets.anon_key } },
+        ),
+      ));
+      for (const response of protectedResponses) {
+        const responseBody = await response.clone().text();
+        expect(response.status, responseBody).toBe(200);
+      }
+
+      const mutationResponse = await fetch(
+        `http://127.0.0.1:${internalPort}/rest/v1/rpc/write_future_meal_with_snapshot_authority`,
         {
           method: "POST",
           headers: {
             "content-type": "application/json",
-            apikey: secrets.anon_key,
-            prefer: "return=representation",
+            apikey: secrets.service_role_key,
+            authorization: `Bearer ${secrets.service_role_key}`,
+            "x-homecook-internal-scope": "future-meal-write",
           },
-          body: JSON.stringify({ user_id: createdUser.id, label }),
+          body: JSON.stringify({
+            p_owner_uuid: createdUser.id,
+            p_auth_identity_created_at_snapshot: createdUser.created_at,
+            p_session_key_hash: sessionKeyHash,
+            p_hmac_key_version: 2,
+            p_session_issued_at: new Date(claimsB.iat * 1_000).toISOString(),
+            p_action: "create",
+            p_meal_id: null,
+            p_recipe_id: "00000000-0000-4000-8000-000000000101",
+            p_plan_date: "2026-08-09",
+            p_column_id: "00000000-0000-4000-8000-000000000102",
+            p_planned_servings: 2,
+            p_leftover_dish_id: null,
+            p_now: new Date(claimsB.iat * 1_000).toISOString(),
+          }),
         },
-      )));
-
-      for (const response of responses) {
-        expect(response.status).toBe(201);
-      }
+      );
+      expect(mutationResponse.status, await mutationResponse.text()).toBe(200);
       expect(composeOutput(project, env, [
         "exec", "-T", "postgres", "psql", "-U", "supabase_admin", "-d", "postgres", "-At", "-v", "ON_ERROR_STOP=1", "-c",
         `
           select concat_ws(
             ':',
             count(*)::text,
-            count(distinct label)::text
+            count(distinct id)::text
           )
-          from public.pantry_items
+          from public.meals
           where user_id = '${createdUser.id}'::uuid
-            and label like 'browser-first-refresh-%';
+            and recipe_id = '00000000-0000-4000-8000-000000000101'::uuid
+            and column_id = '00000000-0000-4000-8000-000000000102'::uuid;
         `,
-      ]).trim()).toBe("10:10");
+      ]).trim()).toBe("1:1");
       expect(composeOutput(project, env, [
         "exec", "-T", "postgres", "psql", "-U", "supabase_admin", "-d", "postgres", "-At", "-v", "ON_ERROR_STOP=1", "-c",
         `
@@ -728,7 +856,7 @@ run("full-local production Docker runtime", () => {
           from public.user_session_generation_bindings
           where session_key_hash = '${sessionKeyHash}';
         `,
-      ]).trim()).toBe("true:true:true:active");
+      ]).trim()).toBe("t:t:t:active");
 
       const logArtifacts = compose(project, env, ["ps", "-q"])
         .trim().split("\n").filter(Boolean).map((container) =>
