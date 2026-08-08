@@ -70,7 +70,7 @@
       "pnpm test:e2e:regression:ci --grep cooked-batch-weight-ledger",
       "pnpm validate:source-of-truth-sync",
       "pnpm validate:workflow-v2",
-      "BRANCH_NAME=docs/cooked-batch-api-contract-v1-2-36 pnpm validate:workpack -- --slice cooked-batch-weight-ledger",
+      "BRANCH_NAME=feature/cooked-batch-weight-ledger-stage2-current pnpm validate:workpack -- --slice cooked-batch-weight-ledger",
       "node scripts/validate-automation-spec.mjs --slice cooked-batch-weight-ledger",
       "pnpm validate:omo-bookkeeping",
       "pnpm exec vitest run tests/cooked-batch-api-contract-v1-2-36.test.ts",
@@ -185,9 +185,9 @@
     "r2-activation-before-two-release-drain-or-rollback-disables-existing-v2",
     "v1-shape-parser-semantic-change-or-premature-428-removal",
     "slice9-meal-log-or-slice11-final-ui-preclaimed",
-    "required-design-critic-authority-or-390-320-evidence-missing-before-stage2",
+    "required-design-critic-authority-or-390-320-evidence-missing-before-stage4",
     "legacy-cook-mode-design-critic-or-authority-artifact-reused-as-slice8-evidence",
-    "stage2-entered-before-fresh-independent-slice8-design-critic-and-390-320-product-design-authority-pass",
+    "stage4-entered-before-fresh-independent-slice8-design-critic-and-390-320-product-design-authority-pass",
     "unofficial-contract-unmerged-migration-production-write-or-capability-change",
     "local-first-verifier-not-merged-exact-sha",
     "current-head-check-pending-absent-stale-failed-or-cancelled"
@@ -196,5 +196,5 @@
     "backend": 6,
     "frontend": 4
   },
-  "notes": "Fresh Stage 1 re-lock now consumes requirements v1.7.29, screens v1.5.33, flow v1.3.31, DB v1.3.31 and API v1.2.36. API v1.2.36 locks one owner-only CookedBatchProjection for GET /cooked-batches and success responses, exact complete/mutation replay data, owner-only pagination/legacy nulls, and missing/other-owner 404 RESOURCE_NOT_FOUND versus validation 422 and state/revision/bounds/later-event 409. Fresh independent contract re-review pending; Stage 2 resume pending. Stage 1 runs only current docs validators, focused workflow-doc tests, lint, typecheck, audit and diff. #7 PR #1281 runtime and cook-mode-whole-board PR #711 are merged predecessors, while #7 broader lifecycle, Manual/server-Mac/OAuth, #8 R/R+1 evidence and R+2 activation remain open. Fresh critic and 390px/320px product-design-authority passed 0/0/0. Internal 1.5 task 019fe049-dc14-77f0-ac4c-6dcb58d2b819 returned HOLD on old head 0eb76e8ff0450ccc4353b91f191be8a2f1e2dfb3 with I15-B01, I15-B02 and I15-B03; all are author-repaired after dependency PR #1286 merged as 9ff5a920f063af22cd8a8dbee33a603b27c3af57, but fresh internal 1.5 re-review pending. Legacy 15a critic/authority evidence is not reusable. Runtime/PostgreSQL/real DB/component/E2E/visual/local-first production-rehearsal/drain evidence is future. #8 owns exact-pantry complete, batch ledger, functional weight UI and R/R+1 gate; #9 owns meal-log links, #11 final weight/LEFTOVERS design, and R+2 activation remains Manual Only."
+  "notes": "Fresh Stage 1 re-lock consumes requirements v1.7.29, screens v1.5.33, flow v1.3.31, DB v1.3.31 and API v1.2.36. API v1.2.36 locks one owner-only CookedBatchProjection for GET /cooked-batches and success responses, exact complete/mutation replay data, owner-only pagination/legacy nulls, and missing/other-owner 404 RESOURCE_NOT_FOUND versus validation 422 and state/revision/bounds/later-event 409. Original internal 1.5 task 019fe0c0… APPROVE, current-tuple re-lock reviewer task 019fe194-62d9-7ed2-9116-b820873bd48b APPROVE P0/P1/P2=0/0/0, PR #1289 merged as 635763041d6420c648e2b55336e6caa9f1f9143c, and closeout task 019fe19e… closed Stage 1. Stage 2 backend runs in independent task 019fe1aa-82fd-7602-844e-e050efae93db; Stage 3/Ready/merge, design checklist items, #7 broader lifecycle, Manual/server-Mac/OAuth, #8 R/R+1 evidence and R+2 activation remain open. Legacy 15a critic/authority evidence is not reusable. Merged-exact-SHA local-first production rehearsal, drain, frontend E2E and visual evidence remain future. #8 owns exact-pantry complete, batch ledger, functional weight UI and R/R+1 gate; #9 owns meal-log links, #11 final weight/LEFTOVERS design, and R+2 activation remains Manual Only."
 }

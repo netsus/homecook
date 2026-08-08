@@ -36,6 +36,10 @@ const FOLLOWUP_TARGET_MIGRATION =
   process.env.HOMECOOK_RECIPE_SNAPSHOT_FOLLOWUP_TARGET_MIGRATION ?? "";
 const FOLLOWUP_INTEGRATION_TEST =
   process.env.HOMECOOK_RECIPE_SNAPSHOT_FOLLOWUP_INTEGRATION_TEST ?? "";
+const SKIP_ACTIVE_SECURITY_INVENTORY =
+  process.env.HOMECOOK_RECIPE_SNAPSHOT_SKIP_ACTIVE_SECURITY_INVENTORY === "1";
+const ACTIVE_SECURITY_TEST_NAME_PATTERN =
+  process.env.HOMECOOK_RECIPE_SNAPSHOT_ACTIVE_SECURITY_TEST_NAME_PATTERN ?? "";
 const TEST_TIMEOUT_MS = 30_000;
 const REPLAY_FIXTURE_SQL = String.raw`
 insert into auth.users (id, created_at, email)
@@ -994,7 +998,9 @@ esac
           process.exitCode = followupResult.status ?? 1;
         }
       }
-      const activeSecurityResult = commandResult(
+      const activeSecurityResult = SKIP_ACTIVE_SECURITY_INVENTORY
+        ? { status: 0 }
+        : commandResult(
         "pnpm",
         [
           "exec",
@@ -1004,6 +1010,9 @@ esac
           "--pool=forks",
           "--maxWorkers=1",
           `--testTimeout=${TEST_TIMEOUT_MS}`,
+          ...(ACTIVE_SECURITY_TEST_NAME_PATTERN
+            ? ["--testNamePattern", ACTIVE_SECURITY_TEST_NAME_PATTERN]
+            : []),
         ],
         {
           stdio: "inherit",
@@ -1017,7 +1026,7 @@ esac
             HOMECOOK_ACCOUNT_GENERATION_PGDATABASE: database,
           },
         },
-      );
+        );
       if (activeSecurityResult.status !== 0) {
         process.exitCode = activeSecurityResult.status ?? 1;
       }

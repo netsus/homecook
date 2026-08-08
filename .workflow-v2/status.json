@@ -2529,15 +2529,15 @@
     {
       "id": "cooked-batch-weight-ledger",
       "preset": "vertical-slice-strict",
-      "branch": "docs/cooked-batch-api-contract-v1-2-36",
-      "pr_path": "pending",
-      "lifecycle": "planned",
+      "branch": "feature/cooked-batch-weight-ledger-stage2-current",
+      "pr_path": "https://github.com/netsus/homecook/pull/1291",
+      "lifecycle": "in_progress",
       "approval_state": "not_started",
       "verification_status": "pending",
       "required_checks": [
         "pnpm validate:source-of-truth-sync",
         "pnpm validate:workflow-v2",
-        "BRANCH_NAME=docs/cooked-batch-api-contract-v1-2-36 pnpm validate:workpack -- --slice cooked-batch-weight-ledger",
+        "BRANCH_NAME=feature/cooked-batch-weight-ledger-stage2-current pnpm validate:workpack -- --slice cooked-batch-weight-ledger",
         "node scripts/validate-automation-spec.mjs --slice cooked-batch-weight-ledger",
         "pnpm validate:omo-bookkeeping",
         "pnpm exec vitest run tests/cooked-batch-api-contract-v1-2-36.test.ts",
@@ -2557,7 +2557,7 @@
         "node scripts/verify-cooked-batch-weight-ledger-local-first.mjs --mode post-merge-read-only",
         "git diff --check"
       ],
-      "notes": "Fresh Stage 1 re-lock consumes requirements v1.7.29, screens v1.5.33, flow v1.3.31, DB v1.3.31 and API v1.2.36. API v1.2.36 locks one owner-only CookedBatchProjection for GET /cooked-batches and exact success data, snapshot-v2 complete/mutation replay, owner-only pagination/legacy null semantics, and missing/other-owner 404 RESOURCE_NOT_FOUND versus validation 422 and state/revision/bounds/later-event 409. Fresh independent contract re-review pending; Stage 2 resume pending. #7 PR #1281 runtime and cook-mode-whole-board PR #711 are exact merged predecessors, while #7 broader lifecycle remains in_progress/needs_revision/pending because Manual/server-Mac/OAuth, #8 R/R+1 and R+2 activation gates remain open. Fresh COOK_MODE critic and 390px/320px product-design-authority passed 0/0/0. Internal 1.5 task 019fe049-dc14-77f0-ac4c-6dcb58d2b819 returned HOLD on old head 0eb76e8ff0450ccc4353b91f191be8a2f1e2dfb3 with I15-B01, I15-B02 and I15-B03; all are author-repaired after dependency PR #1286 merged as 9ff5a920f063af22cd8a8dbee33a603b27c3af57, but fresh internal 1.5 re-review pending. Roadmap stays docs and workflow stays planned/not_started/pending. Current Stage 1 commands are docs validators/focused tests/lint/typecheck/audit/diff; runtime, migration, remote write and activation evidence is future or Manual Only.",
+      "notes": "Fresh Stage 1 re-lock consumes requirements v1.7.29, screens v1.5.33, flow v1.3.31, DB v1.3.31 and API v1.2.36. API v1.2.36 locks one owner-only CookedBatchProjection for GET /cooked-batches and exact success data, snapshot-v2 complete/mutation replay, owner-only pagination/legacy null semantics, and missing/other-owner 404 RESOURCE_NOT_FOUND versus validation 422 and state/revision/bounds/later-event 409. Original internal 1.5 task 019fe0c0… APPROVE, current-tuple re-lock reviewer 019fe194-62d9-7ed2-9116-b820873bd48b APPROVE P0/P1/P2=0/0/0, PR #1289 merged as 635763041d6420c648e2b55336e6caa9f1f9143c, and closeout task 019fe19e… closed Stage 1. Stage 2 backend runs in independent task 019fe1aa-82fd-7602-844e-e050efae93db, so lifecycle is in_progress while overall approval and verification remain pending until fresh Stage 3 and current-head evidence. #7 PR #1281 runtime and cook-mode-whole-board PR #711 are exact merged predecessors, while #7 broader lifecycle remains in_progress/needs_revision/pending because Manual/server-Mac/OAuth, #8 R/R+1 and R+2 activation gates remain open. Runtime, remote write and activation evidence remains future or Manual Only.",
       "evaluation_status": "not_started",
       "evaluation_round": 0,
       "last_evaluator_result": null,

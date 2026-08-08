@@ -412,7 +412,7 @@ describe("cooked batch API v1.2.36 Contract Evolution", () => {
     expect(projectionSection).toContain("비공개");
   });
 
-  it("re-locks every #8 contract surface while keeping review and implementation pending", () => {
+  it("retains the #8 contract lock without promoting overall workflow approval", () => {
     const paths = [
       "docs/workpacks/cooked-batch-weight-ledger/README.md",
       "docs/workpacks/cooked-batch-weight-ledger/acceptance.md",
@@ -432,23 +432,31 @@ describe("cooked batch API v1.2.36 Contract Evolution", () => {
 
     const workItem = JSON.parse(read(".workflow-v2/work-items/cooked-batch-weight-ledger.json"));
     const workflow = JSON.parse(read(".workflow-v2/status.json"));
+    const automation = JSON.parse(
+      read("docs/workpacks/cooked-batch-weight-ledger/automation-spec.json"),
+    );
     const status = workflow.items.find(
       (item: { id: string }) => item.id === "cooked-batch-weight-ledger",
     );
 
     expect(workItem.status).toMatchObject({
-      lifecycle: "planned",
+      lifecycle: "in_progress",
       approval_state: "not_started",
       verification_status: "pending",
     });
     expect(status).toMatchObject({
-      lifecycle: "planned",
+      lifecycle: "in_progress",
       approval_state: "not_started",
       verification_status: "pending",
     });
-    expect(`${workItem.notes}\n${status.notes}`).toMatch(
-      /fresh independent contract re-review pending/i,
+    const currentProjection = `${workItem.notes}\n${status.notes}`;
+    expect(currentProjection).toContain("019fe194-62d9-7ed2-9116-b820873bd48b");
+    expect(currentProjection).toContain("APPROVE");
+    expect(currentProjection).toContain("635763041d6420c648e2b55336e6caa9f1f9143c");
+    expect(currentProjection).toContain("overall approval and verification remain pending");
+    expect(automation.backend.verify_commands).toContain(
+      "BRANCH_NAME=feature/cooked-batch-weight-ledger-stage2-current pnpm validate:workpack -- --slice cooked-batch-weight-ledger",
     );
-    expect(`${workItem.notes}\n${status.notes}`).toContain("Stage 2 resume pending");
+    expect(status.pr_path).toBe("https://github.com/netsus/homecook/pull/1291");
   });
 });

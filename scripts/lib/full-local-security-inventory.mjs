@@ -29,6 +29,10 @@ const FULL_LOCAL_SESSION_ISSUE_TIME_PRECISION_MIGRATION_PATH = join(
   REPOSITORY_ROOT,
   "supabase/migrations/20260803090000_full_local_session_issue_time_precision.sql",
 );
+const COOKED_BATCH_MIGRATION_PATH = join(
+  REPOSITORY_ROOT,
+  "supabase/migrations/20260808143000_cooked_batch_weight_ledger.sql",
+);
 const SNAPSHOT_MIGRATION_PATH = join(
   REPOSITORY_ROOT,
   "supabase/migrations/20260729170500_recipe_snapshot_authority_foundation.sql",
@@ -82,6 +86,7 @@ const fullLocalSessionIssueTimePrecisionMigration = readFileSync(
   FULL_LOCAL_SESSION_ISSUE_TIME_PRECISION_MIGRATION_PATH,
   "utf8",
 );
+const cookedBatchMigration = readFileSync(COOKED_BATCH_MIGRATION_PATH, "utf8");
 const snapshotMigration = readFileSync(SNAPSHOT_MIGRATION_PATH, "utf8");
 const personalRecipeMigration = readFileSync(
   PERSONAL_RECIPE_MIGRATION_PATH,
@@ -148,7 +153,6 @@ const CORE_POLICY_SOURCES = [
 
 const SNAPSHOT_POLICY_SOURCES = [
   [leftoverMigration, "leftover_dishes_select_own"],
-  [leftoverMigration, "leftover_dishes_insert_own"],
   [leftoverMigration, "leftover_dishes_update_own"],
   ...SNAPSHOT_READ_TABLES.flatMap((table) =>
     table.policies.map((policy) => [snapshotConsumerReadMigration, policy.name])
@@ -513,11 +517,22 @@ const FULL_LOCAL_SESSION_PRECISION_FUNCTIONS = new Set([
   "public.record_full_local_session_authority(text, uuid, timestamp with time zone, text, integer, bigint, timestamp with time zone, timestamp with time zone, timestamp with time zone, timestamp with time zone)",
   "public.assert_full_local_session_authority(text, uuid, timestamp with time zone, text, integer, bigint, timestamp with time zone)",
 ]);
+const COOKED_BATCH_FULL_LOCAL_REPLACEMENTS = new Set([
+  "private.protect_full_local_session_binding_identity()",
+  ...FULL_LOCAL_SESSION_PRECISION_FUNCTIONS,
+]);
+const useCookedBatchFullLocalReplacements =
+  process.env.HOMECOOK_RECIPE_SNAPSHOT_FOLLOWUP_TARGET_MIGRATION?.endsWith(
+    "_cooked_batch_weight_ledger.sql",
+  ) ?? false;
 const FUNCTION_CONTRACT = manifest.functions.map((entry) => parseFunction(
   entry,
-  FULL_LOCAL_SESSION_PRECISION_FUNCTIONS.has(entry.signature)
-    ? fullLocalSessionIssueTimePrecisionMigration
-    : fullLocalMigration,
+  useCookedBatchFullLocalReplacements
+    && COOKED_BATCH_FULL_LOCAL_REPLACEMENTS.has(entry.signature)
+    ? cookedBatchMigration
+    : FULL_LOCAL_SESSION_PRECISION_FUNCTIONS.has(entry.signature)
+      ? fullLocalSessionIssueTimePrecisionMigration
+      : fullLocalMigration,
 ));
 const SNAPSHOT_FUNCTION_CONTRACT = snapshotManifest.functions.map((entry) =>
   parseFunction(
