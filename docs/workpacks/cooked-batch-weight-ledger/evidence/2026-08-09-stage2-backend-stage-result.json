@@ -88,7 +88,10 @@
       "idempotent irreversible state transitions",
       "legacy nullable reader compatibility and v2 direct-write denial",
       "exact-owner account cleanup and events-before-batch order",
-      "19-function fail-closed authorization inventory"
+      "monotonic same-session JWT refresh with late-token rejection",
+      "durable replay and duplicate zero-write projection",
+      "shared v1/v2 owner progress serialization",
+      "23-function fail-closed authorization inventory"
     ]
   },
   "changed_files": [
@@ -116,6 +119,7 @@
     "lib/server/cooked-batch-route.ts",
     "lib/server/cooked-batches.ts",
     "lib/server/leftovers.ts",
+    "lib/server/user-progress.ts",
     "lib/supabase/server.ts",
     "package.json",
     "scripts/lib/full-local-security-inventory.mjs",
