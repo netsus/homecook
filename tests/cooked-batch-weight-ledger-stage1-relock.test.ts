@@ -183,4 +183,16 @@ describe("cooked-batch-weight-ledger fresh Stage 1 re-lock", () => {
     expect(evidence).toContain("false pass claim");
     expect(evidence).toContain("six Markdown hard-break trailing-space pairs");
   });
+
+  it("records PR #1285 as merged without retaining a current Draft claim", () => {
+    expect(evidence).not.toMatch(
+      /(?:PR\s+)?`?#1285`?[^\n]*(?:remains|still)\s+`?Draft`?/iu,
+    );
+    expect(evidence).toContain(
+      "PR `#1285` was `Draft` at the authored/relock snapshot",
+    );
+    expect(evidence).toContain(
+      "later `MERGED` with `isDraft=false` at merge SHA `e868fe803743454a0a8e9ea59a733d0692e0658b`",
+    );
+  });
 });

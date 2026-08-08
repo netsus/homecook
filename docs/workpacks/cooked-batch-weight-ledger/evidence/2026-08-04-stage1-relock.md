@@ -115,6 +115,6 @@ Fresh successor-head validation was rerun after the evidence/bookkeeping update:
 
 ## PR and merge posture
 
-- Historical Stage 1 PR `#1285` remains `Draft`; this Contract Evolution is delivered through a separate Draft PR and does not approve #1285.
+- Historical Stage 1 PR `#1285` was `Draft` at the authored/relock snapshot, and it was later `MERGED` with `isDraft=false` at merge SHA `e868fe803743454a0a8e9ea59a733d0692e0658b`; this Contract Evolution was delivered through a separate Draft PR and did not approve #1285.
 - This successor task may fill the PR body and supervise current-head checks, but it does not mark Ready, approve, or merge.
 - Current-head checks and fresh internal 1.5 must be evaluated on the new pushed successor SHA only; old-head green checks and the old `HOLD` are retained as history, not reused as approval proof.
