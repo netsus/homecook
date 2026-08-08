@@ -93,8 +93,8 @@ run("full-local production Docker runtime", () => {
     const env = {
       ...process.env,
       FULL_LOCAL_ADDITIONAL_REDIRECT_URLS:
-        "https://app.mumeok.com/auth/callback,https://app.mumeok.com/auth/link/callback",
-      FULL_LOCAL_API_EXTERNAL_URL: "https://auth.mumeok.com/auth/v1",
+        "https://app.mumeok.kr/auth/callback,https://app.mumeok.kr/auth/link/callback",
+      FULL_LOCAL_API_EXTERNAL_URL: "https://auth.mumeok.kr/auth/v1",
       FULL_LOCAL_AUTH_IMAGE: images.auth,
       FULL_LOCAL_AUTH_PROXY_PORT: String(authPort),
       FULL_LOCAL_COMPOSE_PROJECT_NAME: project,
@@ -112,9 +112,9 @@ run("full-local production Docker runtime", () => {
       FULL_LOCAL_POSTGRES_IMAGE: images.postgres,
       FULL_LOCAL_POSTGRES_VOLUME_NAME: `${project}-postgres`,
       FULL_LOCAL_POSTGREST_IMAGE: images.postgrest,
-      FULL_LOCAL_PUBLIC_AUTH_URL: "https://auth.mumeok.com",
+      FULL_LOCAL_PUBLIC_AUTH_URL: "https://auth.mumeok.kr",
       FULL_LOCAL_SECRET_DIR: secretDirectory,
-      FULL_LOCAL_SITE_URL: "https://app.mumeok.com",
+      FULL_LOCAL_SITE_URL: "https://app.mumeok.kr",
       FULL_LOCAL_STORAGE_FILE_SIZE_LIMIT: "52428800",
       FULL_LOCAL_STORAGE_GLOBAL_BUCKET: "homecook-test",
       FULL_LOCAL_STORAGE_IMAGE: images.storage,

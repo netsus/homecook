@@ -67,14 +67,14 @@ describe("full-local Naver provider", () => {
     expect(buildNaverCustomProviderConfig({
       clientId: "naver-client-id",
       clientSecret: "naver-client-secret",
-      siteUrl: "https://app.mumeok.com",
+      siteUrl: "https://app.mumeok.kr",
     })).toMatchObject({
       authorization_url: "https://nid.naver.com/oauth2.0/authorize",
       email_optional: false,
       identifier: "custom:naver",
       provider_type: "oauth2",
       token_url: "https://nid.naver.com/oauth2.0/token",
-      userinfo_url: "https://app.mumeok.com/api/auth/oauth-userinfo/naver",
+      userinfo_url: "https://app.mumeok.kr/api/auth/oauth-userinfo/naver",
     });
   });
 
@@ -98,7 +98,7 @@ describe("full-local Naver provider", () => {
     const base = {
       clientId: "naver-client-id",
       clientSecret: "naver-client-secret",
-      siteUrl: "https://app.mumeok.com",
+      siteUrl: "https://app.mumeok.kr",
     };
     await expect(upsertNaverCustomProvider({
       ...base,

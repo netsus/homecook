@@ -57,6 +57,7 @@
     "full-local-production:init-config": "node scripts/full-local-production-runtime.mjs init-config",
     "full-local-production:bootstrap-secrets": "node scripts/full-local-production-runtime.mjs bootstrap-secrets",
     "full-local-production:validate": "node scripts/full-local-production-runtime.mjs validate",
+    "verify:production-domain-contract": "node scripts/validate-production-domain-contract.mjs",
     "full-local-production:start": "node scripts/full-local-production-runtime.mjs start",
     "full-local-production:status": "node scripts/full-local-production-runtime.mjs status",
     "full-local-production:stop": "node scripts/full-local-production-runtime.mjs stop",
