@@ -8,8 +8,56 @@ import {
   resolveSliceFromBranch,
 } from "./lib/check-workpack-docs.mjs";
 
-const branchName = process.env.BRANCH_NAME ?? "";
-const slice = resolveSliceFromBranch(branchName);
+function parseExplicitSlice(argv) {
+  let slice = null;
+
+  for (let index = 0; index < argv.length; index += 1) {
+    const arg = argv[index];
+    if (arg === "--") continue;
+
+    if (arg === "--slice") {
+      const value = argv[index + 1];
+      if (!value || value.startsWith("--")) {
+        throw new Error("--slice requires a value");
+      }
+      slice = value;
+      index += 1;
+      continue;
+    }
+
+    if (arg.startsWith("--slice=")) {
+      slice = arg.slice("--slice=".length);
+      if (!slice) throw new Error("--slice requires a value");
+      continue;
+    }
+
+    throw new Error(`Unknown argument: ${arg}`);
+  }
+
+  if (slice && !/^[a-z0-9][a-z0-9-]*$/.test(slice)) {
+    throw new Error(`Invalid --slice value: ${slice}`);
+  }
+
+  return slice;
+}
+
+let explicitSlice;
+try {
+  explicitSlice = parseExplicitSlice(process.argv.slice(2));
+} catch (error) {
+  process.stderr.write(`${error.message}\n`);
+  process.exit(1);
+}
+
+let branchName = process.env.BRANCH_NAME ?? "";
+if (!branchName) {
+  const branchResult = spawnSync("git", ["branch", "--show-current"], {
+    encoding: "utf8",
+  });
+  if (branchResult.status === 0) branchName = branchResult.stdout.trim();
+}
+
+const slice = explicitSlice ?? resolveSliceFromBranch(branchName);
 
 if (!slice) {
   // Non-feature branch — pass silently
@@ -19,7 +67,14 @@ if (!slice) {
 const baseRef = resolveBaseRef(process.env, spawnSync);
 
 if (!baseRef) {
-  // Cannot determine base branch — pass silently; CI will enforce on PR
+  if (explicitSlice) {
+    process.stderr.write(
+      `Cannot determine the base branch for explicit slice '${explicitSlice}'.\n`,
+    );
+    process.exit(1);
+  }
+
+  // Preserve the established branch-derived local fallback; CI supplies a base.
   process.exit(0);
 }
 

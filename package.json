@@ -209,7 +209,7 @@
     "validate:branch": "node scripts/check-branch-name.mjs",
     "validate:commits": "node scripts/check-commit-messages.mjs",
     "validate:pr": "node scripts/check-pr-body.mjs",
-    "validate:workpack": "BRANCH_NAME=$(git branch --show-current) node scripts/check-workpack-docs.mjs",
+    "validate:workpack": "node scripts/check-workpack-docs.mjs",
     "validate:workflow-v2": "node scripts/validate-workflow-v2.mjs",
     "validate:source-of-truth-sync": "node scripts/validate-source-of-truth-sync.mjs",
     "validate:authority-evidence-presence": "node scripts/validate-authority-evidence-presence.mjs",

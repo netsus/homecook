@@ -10,6 +10,7 @@
     "body_markdown": "Draft Stage 2 backend implementation; Stage 3, Ready, merge, remote rehearsal and activation remain pending."
   },
   "checks_run": [
+    "pnpm exec vitest run tests/check-workpack-docs.test.ts tests/cooked-batch-api-contract-v1-2-36.test.ts",
     "pnpm exec vitest run tests/cooked-batch-weight-ledger.test.ts tests/snapshot-v2-complete.test.ts tests/cooked-batch-security.test.ts tests/cooked-batch-compatibility.test.ts tests/leftovers.backend.test.ts tests/account-session-generation-inventory.test.ts",
     "pnpm test:cooked-batch-weight-ledger:postgres",
     "pnpm test",
@@ -24,6 +25,23 @@
     "pnpm audit --audit-level high",
     "git diff --check"
   ],
+  "verification_results": {
+    "full_vitest_b47c8d62": {
+      "passed_files": 520,
+      "skipped_files": 29,
+      "passed_tests": 5283,
+      "skipped_tests": 352
+    },
+    "full_vitest_validator_successor": {
+      "passed_files": 520,
+      "skipped_files": 29,
+      "passed_tests": 5287,
+      "skipped_tests": 352
+    },
+    "workpack_validator_red": "4 CLI failures reproduced the explicit-slice silent no-op, unknown/missing slice success, and overwritten branch caller",
+    "workpack_validator_green": "25/25 focused tests; explicit --slice emits Workpack docs OK and fails closed for missing governing docs",
+    "leftovers_partial_compatibility_indexes": 4
+  },
   "next_route": "stage3_fresh_backend_review",
   "claimed_scope": {
     "files": [
@@ -38,6 +56,7 @@
       "supabase/migrations/20260808143000_cooked_batch_weight_ledger.sql",
       "scripts/run-cooked-batch-weight-ledger-postgres-integration.mjs",
       "scripts/run-recipe-snapshot-authority-postgres-integration.mjs",
+      "scripts/check-workpack-docs.mjs",
       "scripts/validate-account-session-generation-inventory.mjs",
       "scripts/validate-security-function-authorization.mjs",
       "docs/security/account-session-generation-inventory.json",
@@ -122,6 +141,7 @@
     "lib/server/user-progress.ts",
     "lib/supabase/server.ts",
     "package.json",
+    "scripts/check-workpack-docs.mjs",
     "scripts/lib/full-local-security-inventory.mjs",
     "scripts/lib/hybrid-authority-inventory.mjs",
     "scripts/run-cooked-batch-weight-ledger-postgres-integration.mjs",
@@ -130,6 +150,7 @@
     "scripts/validate-security-function-authorization.mjs",
     "supabase/migrations/20260808143000_cooked_batch_weight_ledger.sql",
     "tests/account-session-generation-inventory.test.ts",
+    "tests/check-workpack-docs.test.ts",
     "tests/cooked-batch-api-contract-v1-2-36.test.ts",
     "tests/cooked-batch-compatibility.test.ts",
     "tests/cooked-batch-security.test.ts",
@@ -146,6 +167,7 @@
   ],
   "tests_touched": [
     "tests/account-session-generation-inventory.test.ts",
+    "tests/check-workpack-docs.test.ts",
     "tests/cooked-batch-compatibility.test.ts",
     "tests/cooked-batch-security.test.ts",
     "tests/cooked-batch-weight-ledger-postgres.integration.test.ts",
