@@ -58,6 +58,7 @@
     "full-local-production:bootstrap-secrets": "node scripts/full-local-production-runtime.mjs bootstrap-secrets",
     "full-local-production:validate": "node scripts/full-local-production-runtime.mjs validate",
     "verify:production-domain-contract": "node scripts/validate-production-domain-contract.mjs",
+    "verify:full-local-session-lifecycle-evidence": "vitest run tests/full-local-session-lifecycle-evidence.test.ts",
     "full-local-production:start": "node scripts/full-local-production-runtime.mjs start",
     "full-local-production:status": "node scripts/full-local-production-runtime.mjs status",
     "full-local-production:stop": "node scripts/full-local-production-runtime.mjs stop",
