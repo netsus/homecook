@@ -1,5 +1,288 @@
 begin;
 
+-- DB v1.3.32 separates the stable session hash from rotating JWT evidence.
+-- The trigger keeps every identity field immutable while allowing only the
+-- authority functions below to advance iat monotonically.
+create or replace function private.protect_full_local_session_binding_identity()
+returns trigger
+language plpgsql
+set search_path = pg_catalog, public, private, pg_temp
+as $function$
+begin
+  if old.auth_authority = 'local' and (
+    new.auth_authority is distinct from old.auth_authority
+    or new.local_issuer is distinct from old.local_issuer
+    or new.owner_uuid is distinct from old.owner_uuid
+    or new.expected_account_generation is distinct from old.expected_account_generation
+    or new.auth_identity_created_at_snapshot is distinct from old.auth_identity_created_at_snapshot
+    or new.session_key_hash is distinct from old.session_key_hash
+    or new.hmac_key_version is distinct from old.hmac_key_version
+    or new.auth_cutover_epoch is distinct from old.auth_cutover_epoch
+    or (
+      new.session_issued_at is distinct from old.session_issued_at
+      and (
+        current_setting('homecook.full_local_session_refresh_hash', true)
+          is distinct from old.session_key_hash
+        or new.session_issued_at <= old.session_issued_at
+      )
+    )
+  ) then
+    raise exception 'ACCOUNT_SESSION_STALE' using errcode = '55000';
+  end if;
+  return new;
+end;
+$function$;
+
+create or replace function public.record_full_local_session_authority(
+  p_issuer text,
+  p_owner_uuid uuid,
+  p_identity_created_at timestamptz,
+  p_session_key_hash text,
+  p_hmac_key_version integer,
+  p_auth_cutover_epoch bigint,
+  p_session_issued_at timestamptz,
+  p_verified_at timestamptz,
+  p_access_token_expires_at timestamptz,
+  p_binding_expires_at timestamptz
+) returns jsonb
+language plpgsql volatile security definer
+set search_path = pg_catalog, public, private, auth, pg_temp
+as $function$
+declare
+  v_capability_state text;
+  v_expected_generation bigint;
+  v_existing public.user_session_generation_bindings%rowtype;
+  v_binding public.user_session_generation_bindings%rowtype;
+  v_auth_created_at timestamptz;
+  v_generation_activated_at timestamptz;
+  v_control private.full_local_auth_control%rowtype;
+begin
+  if coalesce(auth.role(), coalesce(nullif(current_setting('request.jwt.claims', true), ''), '{}')::jsonb ->> 'role')
+      is distinct from 'service_role' then
+    raise exception 'ACCOUNT_LIFECYCLE_MAINTENANCE' using errcode = '42501';
+  end if;
+  if p_issuer !~ '^https://[^/?#]+/auth/v1$'
+    or p_owner_uuid is null or p_identity_created_at is null
+    or p_session_key_hash !~ '^[0-9a-f]{64}$'
+    or p_hmac_key_version is null or p_hmac_key_version <= 0
+    or p_auth_cutover_epoch is null or p_auth_cutover_epoch <= 0
+    or p_session_issued_at is null
+    or p_session_issued_at < date_trunc('second', p_identity_created_at)
+    or p_verified_at is null or p_session_issued_at > p_verified_at
+    or p_verified_at > clock_timestamp() + interval '5 seconds'
+    or p_access_token_expires_at <= p_verified_at
+    or p_binding_expires_at <= p_verified_at
+    or p_binding_expires_at > p_access_token_expires_at then
+    raise exception 'ACCOUNT_SESSION_STALE' using errcode = '22023';
+  end if;
+
+  select control.* into v_control
+  from private.full_local_auth_control as control where control.singleton for share;
+  if v_control.authority is distinct from 'local' or not v_control.flows_open
+    or v_control.local_issuer is distinct from p_issuer
+    or v_control.cutover_epoch is distinct from p_auth_cutover_epoch
+    or v_control.hmac_key_version is distinct from p_hmac_key_version
+    or v_control.local_activated_at is null
+    or p_session_issued_at < v_control.local_activated_at then
+    raise exception 'ACCOUNT_SESSION_STALE' using errcode = '55000';
+  end if;
+
+  perform pg_catalog.pg_advisory_xact_lock_shared(
+    pg_catalog.hashtextextended('homecook-account-generation-cutover', 0)
+  );
+  select capability.state, capability.activated_at
+    into v_capability_state, v_generation_activated_at
+  from public.account_generation_capability_state as capability
+  where capability.singleton for key share;
+  if v_capability_state is distinct from 'generation_active'
+    or v_generation_activated_at is null then
+    raise exception 'ACCOUNT_LIFECYCLE_MAINTENANCE' using errcode = '55000';
+  end if;
+  perform pg_catalog.pg_advisory_xact_lock(
+    pg_catalog.hashtextextended('homecook-account-owner:' || p_owner_uuid::text, 0)
+  );
+  select auth_user.created_at into v_auth_created_at
+  from auth.users as auth_user where auth_user.id = p_owner_uuid for share;
+  if v_auth_created_at is null or v_auth_created_at is distinct from p_identity_created_at then
+    raise exception 'ACCOUNT_SESSION_STALE' using errcode = '55000';
+  end if;
+  if p_session_issued_at <= v_generation_activated_at then
+    raise exception 'ACCOUNT_GENERATION_STALE' using errcode = '55000';
+  end if;
+  select lifecycle.account_generation into v_expected_generation
+  from public.user_account_lifecycles as lifecycle
+  where lifecycle.owner_uuid = p_owner_uuid
+    and lifecycle.auth_identity_created_at_snapshot = p_identity_created_at
+    and lifecycle.status = 'active' for share;
+  if v_expected_generation is null then
+    raise exception 'ACCOUNT_GENERATION_STALE' using errcode = '55000';
+  end if;
+
+  select binding.* into v_existing
+  from public.user_session_generation_bindings as binding
+  where binding.hmac_key_version = p_hmac_key_version
+    and binding.session_key_hash = p_session_key_hash for update;
+  if v_existing.session_key_hash is not null and (
+    v_existing.auth_authority is distinct from 'local'
+    or v_existing.local_issuer is distinct from p_issuer
+    or v_existing.owner_uuid is distinct from p_owner_uuid
+    or v_existing.auth_identity_created_at_snapshot is distinct from p_identity_created_at
+    or v_existing.expected_account_generation is distinct from v_expected_generation
+    or v_existing.auth_cutover_epoch is distinct from p_auth_cutover_epoch
+    or p_session_issued_at < v_existing.session_issued_at
+    or v_existing.binding_state is distinct from 'active'
+    or v_existing.revoked_at is not null
+    or v_existing.local_verified_at > p_verified_at
+  ) then
+    raise exception 'ACCOUNT_SESSION_STALE' using errcode = '55000';
+  end if;
+
+  perform set_config('homecook.full_local_session_refresh_hash', p_session_key_hash, true);
+  insert into public.user_session_generation_bindings(
+    session_key_hash,hmac_key_version,owner_uuid,expected_account_generation,
+    auth_identity_created_at_snapshot,bound_at,revoked_at,issuer,remote_verified_at,
+    binding_expires_at,binding_state,auth_authority,local_issuer,local_verified_at,
+    auth_cutover_epoch,session_issued_at
+  ) values(
+    p_session_key_hash,p_hmac_key_version,p_owner_uuid,v_expected_generation,
+    p_identity_created_at,p_verified_at,null,null,null,p_binding_expires_at,
+    'active','local',p_issuer,p_verified_at,p_auth_cutover_epoch,p_session_issued_at
+  ) on conflict(hmac_key_version,session_key_hash) do update set
+    local_verified_at = greatest(
+      public.user_session_generation_bindings.local_verified_at,
+      excluded.local_verified_at
+    ),
+    binding_expires_at = greatest(
+      public.user_session_generation_bindings.binding_expires_at,
+      excluded.binding_expires_at
+    ),
+    session_issued_at = greatest(
+      public.user_session_generation_bindings.session_issued_at,
+      excluded.session_issued_at
+    )
+  where public.user_session_generation_bindings.auth_authority = 'local'
+    and public.user_session_generation_bindings.local_issuer = excluded.local_issuer
+    and public.user_session_generation_bindings.owner_uuid = excluded.owner_uuid
+    and public.user_session_generation_bindings.auth_identity_created_at_snapshot = excluded.auth_identity_created_at_snapshot
+    and public.user_session_generation_bindings.expected_account_generation is not distinct from excluded.expected_account_generation
+    and public.user_session_generation_bindings.auth_cutover_epoch = excluded.auth_cutover_epoch
+    and public.user_session_generation_bindings.session_issued_at <= excluded.session_issued_at
+    and public.user_session_generation_bindings.binding_state = 'active'
+    and public.user_session_generation_bindings.revoked_at is null
+  returning * into v_binding;
+  perform set_config('homecook.full_local_session_refresh_hash', '', true);
+  if v_binding.session_key_hash is null then
+    raise exception 'ACCOUNT_SESSION_STALE' using errcode = '55000';
+  end if;
+  return jsonb_build_object(
+    'binding_state',v_binding.binding_state,
+    'binding_expires_at',v_binding.binding_expires_at,
+    'expected_account_generation',v_binding.expected_account_generation
+  );
+end;
+$function$;
+
+create or replace function public.assert_full_local_session_authority(
+  p_issuer text,
+  p_owner_uuid uuid,
+  p_identity_created_at timestamptz,
+  p_session_key_hash text,
+  p_hmac_key_version integer,
+  p_auth_cutover_epoch bigint,
+  p_session_issued_at timestamptz
+) returns jsonb
+language plpgsql volatile security definer
+set search_path = pg_catalog, public, private, auth, pg_temp
+as $function$
+declare
+  v_capability_state text;
+  v_auth_created_at timestamptz;
+  v_binding public.user_session_generation_bindings%rowtype;
+  v_generation_activated_at timestamptz;
+  v_control private.full_local_auth_control%rowtype;
+begin
+  if coalesce(auth.role(), coalesce(nullif(current_setting('request.jwt.claims', true), ''), '{}')::jsonb ->> 'role')
+      is distinct from 'service_role' then
+    raise exception 'ACCOUNT_LIFECYCLE_MAINTENANCE' using errcode = '42501';
+  end if;
+  if p_issuer !~ '^https://[^/?#]+/auth/v1$'
+    or p_owner_uuid is null or p_identity_created_at is null
+    or p_session_key_hash !~ '^[0-9a-f]{64}$'
+    or p_hmac_key_version is null or p_hmac_key_version <= 0
+    or p_auth_cutover_epoch is null or p_auth_cutover_epoch <= 0
+    or p_session_issued_at is null
+    or p_session_issued_at < date_trunc('second',p_identity_created_at) then
+    raise exception 'ACCOUNT_SESSION_STALE' using errcode = '22023';
+  end if;
+  select control.* into v_control
+  from private.full_local_auth_control as control where control.singleton for share;
+  if v_control.authority is distinct from 'local' or not v_control.flows_open
+    or v_control.local_issuer is distinct from p_issuer
+    or v_control.cutover_epoch is distinct from p_auth_cutover_epoch
+    or v_control.hmac_key_version is distinct from p_hmac_key_version
+    or v_control.local_activated_at is null
+    or p_session_issued_at < v_control.local_activated_at then
+    raise exception 'ACCOUNT_SESSION_STALE' using errcode = '55000';
+  end if;
+  select capability.state,capability.activated_at
+    into v_capability_state,v_generation_activated_at
+  from public.account_generation_capability_state as capability
+  where capability.singleton for share;
+  if v_capability_state is distinct from 'generation_active'
+    or v_generation_activated_at is null then
+    raise exception 'ACCOUNT_LIFECYCLE_MAINTENANCE' using errcode = '55000';
+  end if;
+  select auth_user.created_at into v_auth_created_at
+  from auth.users as auth_user where auth_user.id=p_owner_uuid for share;
+  if v_auth_created_at is null or v_auth_created_at is distinct from p_identity_created_at then
+    raise exception 'ACCOUNT_SESSION_STALE' using errcode = '55000';
+  end if;
+  select binding.* into v_binding
+  from public.user_session_generation_bindings as binding
+  where binding.hmac_key_version=p_hmac_key_version
+    and binding.session_key_hash=p_session_key_hash
+    and binding.auth_authority='local'
+    and binding.local_issuer=p_issuer
+    and binding.owner_uuid=p_owner_uuid
+    and binding.auth_identity_created_at_snapshot=p_identity_created_at
+  for update;
+  if v_binding.session_key_hash is null
+    or v_binding.binding_state is distinct from 'active'
+    or v_binding.revoked_at is not null
+    or v_binding.local_verified_at is null
+    or v_binding.binding_expires_at is null
+    or v_binding.binding_expires_at < clock_timestamp()
+    or v_binding.auth_cutover_epoch is distinct from v_control.cutover_epoch
+    or p_session_issued_at < v_binding.session_issued_at then
+    raise exception 'ACCOUNT_SESSION_STALE' using errcode = '55000';
+  end if;
+  if p_session_issued_at <= v_generation_activated_at or not exists(
+    select 1 from public.user_account_lifecycles as lifecycle
+    where lifecycle.owner_uuid=p_owner_uuid
+      and lifecycle.account_generation=v_binding.expected_account_generation
+      and lifecycle.auth_identity_created_at_snapshot=p_identity_created_at
+      and lifecycle.status='active'
+  ) then
+    raise exception 'ACCOUNT_GENERATION_STALE' using errcode = '55000';
+  end if;
+  if p_session_issued_at > v_binding.session_issued_at then
+    perform set_config('homecook.full_local_session_refresh_hash',p_session_key_hash,true);
+    update public.user_session_generation_bindings
+    set session_issued_at = p_session_issued_at,
+        local_verified_at = greatest(local_verified_at,clock_timestamp())
+    where hmac_key_version=p_hmac_key_version
+      and session_key_hash=p_session_key_hash
+      and session_issued_at < p_session_issued_at;
+    perform set_config('homecook.full_local_session_refresh_hash','',true);
+  end if;
+  return jsonb_build_object(
+    'binding_state',v_binding.binding_state,
+    'binding_expires_at',v_binding.binding_expires_at,
+    'expected_account_generation',v_binding.expected_account_generation
+  );
+end;
+$function$;
+
 alter table public.recipes
   add column if not exists cook_count integer not null default 0;
 
@@ -74,6 +357,17 @@ create index if not exists cooked_batches_owner_loggable_idx
 create index if not exists cooked_batches_owner_leftovers_compat_idx
   on public.leftover_dishes (user_id, batch_status, depleted_reason, cooked_at desc, id desc)
   where recipe_content_snapshot_id is not null;
+create index if not exists leftover_dishes_owner_legacy_leftover_idx
+  on public.leftover_dishes (user_id, cooked_at desc, id desc)
+  where recipe_content_snapshot_id is null and status = 'leftover';
+create index if not exists leftover_dishes_owner_legacy_eaten_idx
+  on public.leftover_dishes (user_id, auto_hide_at, eaten_at desc, id desc)
+  where recipe_content_snapshot_id is null and status = 'eaten';
+create index if not exists cooked_batches_owner_eaten_compat_idx
+  on public.leftover_dishes (user_id, auto_hide_at, eaten_at desc, id desc)
+  where recipe_content_snapshot_id is not null
+    and batch_status = 'depleted'
+    and depleted_reason in ('consumed','consumed_unweighed');
 
 alter table public.cooked_batch_quantity_events enable row level security;
 drop policy if exists cooked_batch_quantity_events_select_own on public.cooked_batch_quantity_events;
@@ -536,6 +830,42 @@ begin
 end;
 $function$;
 
+create or replace function private.canonicalize_cooked_batch_progress_award()
+returns trigger
+language plpgsql
+security definer
+set search_path = pg_catalog, public, private, pg_temp
+as $function$
+declare
+  v_xp_kind text;
+begin
+  if new.event_type not in ('cooking_completed','leftover_eaten')
+    or coalesce((new.source_meta_json ->> 'backfill')::boolean,false) then
+    return new;
+  end if;
+  perform pg_catalog.pg_advisory_xact_lock(
+    pg_catalog.hashtextextended('homecook-user-progress:' || new.user_id::text,0)
+  );
+  v_xp_kind := case when exists(
+    select 1 from public.user_progress_events as event
+    where event.user_id=new.user_id and event.event_type=new.event_type
+  ) then 'repeat' else 'first' end;
+  new.xp_delta := case new.event_type
+    when 'cooking_completed' then case v_xp_kind when 'first' then 60 else 45 end
+    else case v_xp_kind when 'first' then 15 else 8 end
+  end;
+  new.source_meta_json := coalesce(new.source_meta_json,'{}'::jsonb)
+    || jsonb_build_object('xp_kind',v_xp_kind,'level_curve_version','v2');
+  return new;
+end;
+$function$;
+
+drop trigger if exists canonicalize_cooked_batch_progress_award
+  on public.user_progress_events;
+create trigger canonicalize_cooked_batch_progress_award
+before insert on public.user_progress_events
+for each row execute function private.canonicalize_cooked_batch_progress_award();
+
 create or replace function public.list_cooked_batches(
   p_owner_uuid uuid,
   p_auth_identity_created_at_snapshot timestamptz,
@@ -628,7 +958,7 @@ begin
   v_transitioned := (p_action = 'eat' and v_leftover.status <> 'eaten')
     or (p_action = 'uneat' and v_leftover.status <> 'leftover')
     or (p_action = 'keep' and v_leftover.stale_reviewed_at is distinct from p_now);
-  if v_transitioned or p_action = 'eat' then
+  if v_transitioned then
     perform public.set_account_generation_internal_writer_marker(
       v_cutover_attempt_id,
       true
@@ -651,7 +981,7 @@ begin
       returning * into v_leftover;
     end if;
 
-    if p_action = 'eat' then
+    if v_transitioned and p_action = 'eat' then
       perform private.project_cooked_batch_progress_activity(
         p_owner_uuid,
         'leftover_eaten',
@@ -852,17 +1182,6 @@ begin
       'session_id', p_session_id, 'consumed_pantry_item_ids', to_jsonb(coalesce(p_consumed_pantry_item_ids, '{}'::uuid[])),
       'weight_action', p_weight_action, 'finished_weight_g', p_finished_weight_g), p_now);
   if v_claim ? 'replay' then
-    perform public.set_account_generation_internal_writer_marker(
-      (v_authority->>'cutover_attempt_id')::uuid,
-      true
-    );
-    perform private.project_cooked_batch_progress_activity(
-      p_owner_uuid,'cooking_completed',v_batch_id,p_now
-    );
-    perform public.set_account_generation_internal_writer_marker(
-      (v_authority->>'cutover_attempt_id')::uuid,
-      false
-    );
     return v_claim->'replay';
   end if;
   v_receipt := (v_claim->>'receipt_id')::uuid;
@@ -1009,6 +1328,11 @@ as $function$
 declare v_authority jsonb; v_batch public.leftover_dishes%rowtype; v_claim jsonb; v_receipt uuid;
   v_event uuid := extensions.gen_random_uuid(); v_result jsonb; v_target public.cooked_batch_quantity_events%rowtype;
 begin
+  if p_action in ('discarded','adjustment') and (
+    p_delta_g is null or nullif(btrim(p_reason),'') is null
+  ) then
+    raise exception 'VALIDATION_ERROR' using errcode='22023';
+  end if;
   v_authority := public.assert_recipe_future_session_authority(p_owner_uuid,p_auth_identity_created_at_snapshot,p_session_key_hash,p_hmac_key_version,p_session_issued_at);
   select batch.* into v_batch from public.leftover_dishes as batch
   where batch.id=p_batch_id and batch.user_id=p_owner_uuid and batch.recipe_content_snapshot_id is not null for update;
@@ -1018,19 +1342,6 @@ begin
     'cooked_batch_'||p_action,p_idempotency_key,jsonb_build_object('batch_id',p_batch_id,'expected_revision',p_expected_revision,
     'action',p_action,'delta_g',p_delta_g,'reason',p_reason,'reverses_event_id',p_reverses_event_id),p_now);
   if v_claim ? 'replay' then
-    if p_action = 'closed_unweighed' and p_reason = 'consumed' then
-      perform public.set_account_generation_internal_writer_marker(
-        (v_authority->>'cutover_attempt_id')::uuid,
-        true
-      );
-      perform private.project_cooked_batch_progress_activity(
-        p_owner_uuid,'leftover_eaten',p_batch_id,p_now
-      );
-      perform public.set_account_generation_internal_writer_marker(
-        (v_authority->>'cutover_attempt_id')::uuid,
-        false
-      );
-    end if;
     return v_claim->'replay';
   end if;
   v_receipt := (v_claim->>'receipt_id')::uuid;
@@ -1326,6 +1637,13 @@ end;
 $function$;
 
 alter function private.project_cooked_batch(uuid,uuid) owner to postgres;
+alter function private.protect_full_local_session_binding_identity() owner to postgres;
+alter function public.record_full_local_session_authority(
+  text,uuid,timestamptz,text,integer,bigint,timestamptz,timestamptz,timestamptz,timestamptz
+) owner to postgres;
+alter function public.assert_full_local_session_authority(
+  text,uuid,timestamptz,text,integer,bigint,timestamptz
+) owner to postgres;
 alter function private.guard_cooked_batch_legacy_projection_update() owner to postgres;
 alter function private.cleanup_cooked_batch_before_delete() owner to postgres;
 alter function private.claim_cooked_batch_operation(uuid,bigint,text,uuid,jsonb,timestamptz) owner to postgres;
@@ -1333,6 +1651,7 @@ alter function private.finish_cooked_batch_operation(uuid,jsonb,uuid,timestamptz
 alter function private.replay_cooked_batch(uuid,uuid,timestamptz) owner to postgres;
 alter function private.assert_cooked_batch_cached_projection(uuid,uuid) owner to postgres;
 alter function private.project_cooked_batch_progress_activity(uuid,text,uuid,timestamptz) owner to postgres;
+alter function private.canonicalize_cooked_batch_progress_award() owner to postgres;
 alter function private.validate_meal_leftover_cooked_batch_authority() owner to postgres;
 alter function private.validate_active_cooking_session_snapshot_v2_association() owner to postgres;
 alter function private.apply_cooked_batch_event(uuid,timestamptz,text,integer,timestamptz,uuid,uuid,bigint,text,numeric,text,uuid,timestamptz) owner to postgres;
@@ -1346,6 +1665,10 @@ alter function public.adjust_cooked_batch(uuid,timestamptz,text,integer,timestam
 alter function public.close_unweighed_cooked_batch(uuid,timestamptz,text,integer,timestamptz,uuid,uuid,text,text,uuid,bigint,timestamptz) owner to postgres;
 
 revoke all on function private.guard_cooked_batch_legacy_projection_update()
+  from public, anon, authenticated, service_role;
+revoke all on function private.protect_full_local_session_binding_identity()
+  from public, anon, authenticated, service_role;
+revoke all on function private.canonicalize_cooked_batch_progress_award()
   from public, anon, authenticated, service_role;
 revoke all on function private.cleanup_cooked_batch_before_delete()
   from public, anon, authenticated, service_role;
@@ -1369,6 +1692,19 @@ revoke all on function private.apply_cooked_batch_event(uuid,timestamptz,text,in
   from public, anon, authenticated, service_role;
 revoke all on function private.verify_full_local_internal_scope()
   from public, anon, authenticated, service_role;
+
+revoke all on function public.record_full_local_session_authority(
+  text,uuid,timestamptz,text,integer,bigint,timestamptz,timestamptz,timestamptz,timestamptz
+) from public, anon, authenticated;
+grant execute on function public.record_full_local_session_authority(
+  text,uuid,timestamptz,text,integer,bigint,timestamptz,timestamptz,timestamptz,timestamptz
+) to service_role;
+revoke all on function public.assert_full_local_session_authority(
+  text,uuid,timestamptz,text,integer,bigint,timestamptz
+) from public, anon, authenticated;
+grant execute on function public.assert_full_local_session_authority(
+  text,uuid,timestamptz,text,integer,bigint,timestamptz
+) to service_role;
 
 revoke all on function public.mutate_legacy_leftover_status(uuid,timestamptz,text,integer,timestamptz,uuid,text,timestamptz)
   from public, anon, authenticated, service_role;

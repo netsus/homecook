@@ -60,7 +60,11 @@ interface ProgressEventInsertQuery {
 }
 
 interface ProgressEventInsertSelectQuery {
-  maybeSingle(): MaybeSingleResult<{ id: string }>;
+  maybeSingle(): MaybeSingleResult<{
+    id: string;
+    source_meta_json?: unknown;
+    xp_delta?: number;
+  }>;
 }
 
 interface ProgressEventsSelectQuery {
@@ -394,7 +398,7 @@ export async function awardUserProgressEvent(
     const insertResult = await dbClient
       .from("user_progress_events")
       .insert(eventInsert)
-      .select("id")
+      .select("id, xp_delta, source_meta_json")
       .maybeSingle();
 
     if (isDuplicateInsert(insertResult.error)) {
@@ -432,7 +436,9 @@ export async function awardUserProgressEvent(
           userId: input.userId,
           progressEventId: insertResult.data.id,
           awardInput: input,
-          xpDelta: eventInsert.xp_delta,
+          xpDelta: Number.isFinite(insertResult.data.xp_delta)
+            ? Number(insertResult.data.xp_delta)
+            : eventInsert.xp_delta,
           previousLevel,
           progress: toUserProgressData(summaryResult.data),
         },

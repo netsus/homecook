@@ -1441,7 +1441,7 @@
       "kind": "direct_dml",
       "operation": "insert",
       "target": "user_progress_events",
-      "line": 395,
+      "line": 399,
       "source_file": "lib/server/user-progress.ts",
       "route": null,
       "owner_scope": "authenticated-user",
@@ -1455,7 +1455,7 @@
       "kind": "direct_dml",
       "operation": "upsert",
       "target": "user_progress_summary",
-      "line": 519,
+      "line": 525,
       "source_file": "lib/server/user-progress.ts",
       "route": null,
       "owner_scope": "authenticated-user",
@@ -1922,6 +1922,6 @@
       "on_delete": "cascade"
     }
   ],
-  "generated_at": "2026-08-08T17:04:11.361Z",
-  "checksum": "353ba440e565d3a7be4359f1d05ab87c8a868d89285e3d2b8da1310cf14d17ab"
+  "generated_at": "2026-08-08T17:52:14.758Z",
+  "checksum": "dc6dc4830de9d1a8ae3eda2617442ae5598c72fca149bc7f0a62893454e011d6"
 }
