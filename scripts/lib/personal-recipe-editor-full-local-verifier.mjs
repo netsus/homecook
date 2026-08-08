@@ -50,6 +50,7 @@ const APPROVED_VERIFIED_SESSION_SERVICE_ROLE_ROUTE_COUNTS = new Map([
   ["app/api/v1/meals/[meal_id]/route.ts", 2],
   ["app/api/v1/meals/route.ts", 1],
   ["app/api/v1/shopping/lists/route.ts", 1],
+  ["lib/server/youtube-import.ts", 2],
 ]);
 const APPROVED_PUBLIC_SERVICE_ROLE_ROUTE_COUNTS = new Map();
 const APPROVED_VERIFIED_SESSION_SERVICE_ROLE_ENTRY_COUNT =
