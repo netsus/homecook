@@ -106,7 +106,7 @@ export async function POST(request: Request, context: RouteContext) {
 
   const leftoverResult = await dbClient
     .from("leftover_dishes")
-    .select("id, user_id, recipe_id, status, cooked_at, eaten_at, auto_hide_at")
+    .select("id, user_id, recipe_id, recipe_content_snapshot_id, status, cooked_at, eaten_at, auto_hide_at")
     .eq("id", leftoverId)
     .maybeSingle();
 
@@ -116,6 +116,11 @@ export async function POST(request: Request, context: RouteContext) {
 
   if (leftoverResult.data.user_id !== user.id) {
     return fail("FORBIDDEN", "내 남은 요리만 수정할 수 있어요.", 403);
+  }
+
+
+  if (leftoverResult.data.recipe_content_snapshot_id) {
+    return fail("CONFLICT", "중량 기록이 있는 요리는 전용 기록 화면에서 변경해 주세요.", 409);
   }
 
   if (leftoverResult.data.status === "leftover") {
