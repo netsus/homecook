@@ -4,7 +4,7 @@
 
 snapshot-v2 요리 완료를 session에 pin된 content/servings와 exact pantry row 선택에 결합하고, cooked batch의 완성·잔량 중량과 weighted/unweighed lifecycle을 append-only event + row-lock RPC authority로 만든다. 기존 leftover reader와 v1 completion을 호환하면서 R/R+1 flag-off drain을 증명한 뒤에만 R+2에서 personal recipe와 v2 creation을 공동 활성화한다.
 
-## Official Contract Lock
+## Stage 1 Contract Lock
 
 - requirements: `docs/요구사항기준선-v1.7.29.md`
 - screens: `docs/화면정의서-v1.5.33.md`
@@ -14,12 +14,15 @@ snapshot-v2 요리 완료를 session에 pin된 content/servings와 exact pantry 
 
 사용자가 2026-08-08 명시 승인한 최소 Contract Evolution은 API `v1.2.36`에서 완료됐다. 이 workpack은 새 endpoint나 DB authority를 만들지 않고 공통 owner-only `CookedBatchProjection`, snapshot-v2 complete/batch mutation exact success `data`, `GET /cooked-batches` pagination·legacy null, missing/other-owner의 동일 `404 RESOURCE_NOT_FOUND`와 422/409 구분을 그대로 소비한다. 이 경계를 다시 벗어나는 충돌은 임의 확장하지 않고 새 `Contract Evolution Candidate`로 중단한다.
 
+Stage 2는 current source-of-truth tuple requirements `v1.7.30`, screens `v1.5.34`, Flow `v1.3.32`, DB `v1.3.32`, API `v1.2.37`을 사용한다. API v1.2.37의 `0-CBW` compatibility block은 이 Stage 1 lock의 API v1.2.36 block과 byte-identical이므로 public endpoint/field/status/error 확장 없이 구현한다.
+
 Fresh independent contract re-review와 Stage 2 resume는 pending이다. 이 contract-docs 작성 작업은 Stage 1/internal 1.5를 self-approve하거나 Stage 2 구현을 시작하지 않는다. #7 broader lifecycle, Manual/server-Mac/OAuth, R/R+1/R+2도 기존 pending 상태를 유지한다.
 
 ## Branches
 
 - Fresh Stage 1 re-lock docs: `docs/cooked-batch-weight-ledger-stage1-relock`
-- Stage 2 backend/DB: `feature/be-cooked-batch-weight-ledger`
+- Stage 2 backend/DB current: `feature/cooked-batch-weight-ledger-stage2-current`
+- Preserved held lineage: `feature/be-cooked-batch-weight-ledger` exact `3c5b6760ce8c9a8b51205c755f9f92d57177ca00`; rebase/cherry-pick/force/edit 금지
 - Stage 4 functional COOK_MODE integration: `feature/fe-cooked-batch-weight-ledger`
 - Release train: D. 구현 선행조건은 #7 runtime과 merged `cook-mode-whole-board`다.
 - Stage 1 author, internal 1.5 reviewer/repair-final owner, implementation owner, security/DB reviewer, five-axis reviewer, design critic, product-design-authority reviewer, release verifier와 closeout reviewer는 서로 다른 Codex 세션을 사용한다. Claude는 사용하지 않는다.
@@ -284,19 +287,21 @@ creation flag rollback:
 
 Successor Stage 1 relock evidence is retained at [`evidence/2026-08-04-stage1-relock.md`](./evidence/2026-08-04-stage1-relock.md). It preserves the author/precheck lineage and #7 runtime-versus-lifecycle boundary, records critic/authority pass `0/0/0`, the old-head internal 1.5 `HOLD` findings `I15-B01`/`I15-B02`/`I15-B03`, and dependency repair PR `#1286` merged as `9ff5a920f063af22cd8a8dbee33a603b27c3af57`. Current audit high/critical is `0`; all three findings are repaired and fresh internal 1.5 re-review pending.
 
-- [ ] v2 complete validates exact owner pantry rows against pinned product/effective ingredient authority <!-- omo:id=delivery-batch-complete-pantry;stage=2;scope=backend;review=3,6 -->
-- [ ] complete atomically applies pantry batch ledger session claim Meal cook-count and XP once <!-- omo:id=delivery-batch-complete-atomic;stage=2;scope=backend;review=3,6 -->
-- [ ] known/missing completion and delayed original finished weight obey official bounds <!-- omo:id=delivery-batch-weight;stage=2;scope=backend;review=3,6 -->
-- [ ] missing→unrecoverable is idempotent irreversible and exact-error protected <!-- omo:id=delivery-batch-unrecoverable;stage=2;scope=backend;review=3,6 -->
-- [ ] append-only events, operation uniqueness, reversal and full-replay checksum are enforced <!-- omo:id=delivery-batch-ledger;stage=2;scope=backend;review=3,6 -->
-- [ ] discard/adjust/close/cancel-current state matrix cannot bypass depletion authority <!-- omo:id=delivery-batch-mutations;stage=2;scope=backend;review=3,6 -->
+Fresh Stage 2 backend evidence is retained at [`evidence/2026-08-09-stage2-backend-implementation.md`](./evidence/2026-08-09-stage2-backend-implementation.md). Stage 3 review, Ready, merge, server-production/local-rehearsal, capability activation and Discord remain outside this author task.
+
+- [x] v2 complete validates exact owner pantry rows against pinned product/effective ingredient authority <!-- omo:id=delivery-batch-complete-pantry;stage=2;scope=backend;review=3,6 -->
+- [x] complete atomically applies pantry batch ledger session claim Meal cook-count and XP once <!-- omo:id=delivery-batch-complete-atomic;stage=2;scope=backend;review=3,6 -->
+- [x] known/missing completion and delayed original finished weight obey official bounds <!-- omo:id=delivery-batch-weight;stage=2;scope=backend;review=3,6 -->
+- [x] missing→unrecoverable is idempotent irreversible and exact-error protected <!-- omo:id=delivery-batch-unrecoverable;stage=2;scope=backend;review=3,6 -->
+- [x] append-only events, operation uniqueness, reversal and full-replay checksum are enforced <!-- omo:id=delivery-batch-ledger;stage=2;scope=backend;review=3,6 -->
+- [x] discard/adjust/close/cancel-current state matrix cannot bypass depletion authority <!-- omo:id=delivery-batch-mutations;stage=2;scope=backend;review=3,6 -->
 - [ ] content-only nutrition formula preserves partial/unavailable and fixed-once semantics <!-- omo:id=delivery-batch-nutrition;stage=2;scope=backend;review=3,6 -->
-- [ ] new read model serves every leftover reader before protected direct updates are revoked <!-- omo:id=delivery-batch-reader-cutover;stage=2;scope=shared;review=3,6 -->
-- [ ] legacy eaten projection and XP/activity apply only to consumed reasons exactly once <!-- omo:id=delivery-batch-legacy-projection;stage=2;scope=backend;review=3,6 -->
-- [ ] legacy rows remain nullable and are never assigned inferred grams or fabricated content <!-- omo:id=delivery-batch-legacy-data;stage=2;scope=backend;review=3,6 -->
+- [x] new read model serves every leftover reader before protected direct updates are revoked <!-- omo:id=delivery-batch-reader-cutover;stage=2;scope=shared;review=3,6 -->
+- [x] legacy eaten projection and XP/activity apply only to consumed reasons exactly once <!-- omo:id=delivery-batch-legacy-projection;stage=2;scope=backend;review=3,6 -->
+- [x] legacy rows remain nullable and are never assigned inferred grams or fabricated content <!-- omo:id=delivery-batch-legacy-data;stage=2;scope=backend;review=3,6 -->
 - [ ] COOK_MODE exact-row/weight UI is fail-closed and waits for stored completion result <!-- omo:id=delivery-batch-complete-ui;stage=4;scope=frontend;review=5,6 -->
 - [ ] fresh independent design critic and 390px/320px screenshot/Figma product-design-authority pass before Stage 2 <!-- omo:id=delivery-batch-design-authority;stage=2;scope=frontend;review=5,6 -->
 - [ ] R/R+1 seeded v2 drain and current/previous v1 compatibility pass with new-write zero <!-- omo:id=delivery-batch-drain;stage=2;scope=shared;review=3,6 -->
 - [ ] R+2 joint activation and rollback preserve existing v2 drain <!-- omo:id=delivery-batch-activation;stage=2;scope=shared;review=3,6 -->
-- [ ] #9 meal-log and #11 final UI boundaries are not preclaimed <!-- omo:id=delivery-batch-successor-boundary;stage=2;scope=shared;review=3,6 -->
+- [x] #9 meal-log and #11 final UI boundaries are not preclaimed <!-- omo:id=delivery-batch-successor-boundary;stage=2;scope=shared;review=3,6 -->
 - [ ] local PostgreSQL E2E real DB server-production/local-rehearsal security and current-head evidence are green <!-- omo:id=delivery-batch-verification;stage=2;scope=shared;review=3,6 -->
