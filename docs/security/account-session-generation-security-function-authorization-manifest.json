@@ -8,7 +8,8 @@
     "supabase/migrations/20260803091000_full_local_optional_nbf_authority.sql",
     "supabase/migrations/20260803092000_recipe_future_internal_scope.sql",
     "supabase/migrations/20260803093000_full_local_read_only_request_authority.sql",
-    "supabase/migrations/20260803100000_recipe_future_scoped_internal_rpc_clients.sql"
+    "supabase/migrations/20260803100000_recipe_future_scoped_internal_rpc_clients.sql",
+    "supabase/migrations/20260809100000_full_local_session_refresh_authority.sql"
   ],
   "deployment_state": "post-migration",
   "baseline_application_contract_count": 74,

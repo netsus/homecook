@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 
 import { describe, expect, it } from "vitest";
 
@@ -34,6 +34,15 @@ const readOnlyRequestAuthorityMigration = readFileSync(
   ),
   "utf8",
 );
+const refreshAuthorityMigrations = readdirSync(
+  new URL("../supabase/migrations/", import.meta.url),
+).filter((file) => file.includes("full_local_session_refresh_authority"));
+const refreshAuthorityMigration = refreshAuthorityMigrations[0]
+  ? readFileSync(
+      new URL(`../supabase/migrations/${refreshAuthorityMigrations[0]}`, import.meta.url),
+      "utf8",
+    )
+  : "";
 const authorizationManifest = readFileSync(
   new URL(
     "../docs/security/account-session-generation-security-function-authorization-manifest.json",
@@ -78,6 +87,50 @@ describe("full-local request authority migration", () => {
     );
     expect(readOnlyRequestAuthorityMigration).toMatch(
       /if v_read_only_request then[\s\S]*from public\.user_session_generation_bindings[\s\S]*else[\s\S]*from public\.user_session_generation_bindings[\s\S]*for key share/iu,
+    );
+  });
+
+  it("keeps the historical read-only verifier on exact session_issued_at equality until the additive refresh migration replaces it", () => {
+    expect(readOnlyRequestAuthorityMigration).toContain(
+      "v_binding.session_issued_at\n      is distinct from to_timestamp(v_request_iat)",
+    );
+    expect(readOnlyRequestAuthorityMigration).not.toContain("last_token_issued_at");
+  });
+
+  it("drops the legacy exact-iat pre-request contract in favor of monotonic last-token checks", () => {
+    expect(refreshAuthorityMigration).toContain("last_token_issued_at");
+    expect(refreshAuthorityMigration).toContain(
+      "create or replace function private.verify_full_local_authenticated_authority()",
+    );
+    expect(refreshAuthorityMigration).toMatch(
+      /request_iat[\s\S]*<=?[\s\S]*last_token_issued_at/iu,
+    );
+    expect(refreshAuthorityMigration).not.toMatch(
+      /session_issued_at\s+is distinct from\s+to_timestamp\(v_request_iat\)/iu,
+    );
+    expect(refreshAuthorityMigration).toContain(
+      "'/rpc/record_full_local_session_authority_v2'",
+    );
+    expect(refreshAuthorityMigration).toContain(
+      "'/rpc/assert_and_renew_full_local_session_authority_v2'",
+    );
+  });
+
+  it("pins the additive request-authority evolution to a dedicated refresh migration path", () => {
+    expect(refreshAuthorityMigrations).toHaveLength(1);
+    expect(refreshAuthorityMigrations[0]).toMatch(
+      /^[0-9]{14}_full_local_session_refresh_authority\.sql$/u,
+    );
+  });
+
+  it("keeps stale security mismatches on 409 while surfacing dependency outages as 503", () => {
+    expect(readOnlyRequestAuthorityMigration).toContain("ACCOUNT_SESSION_STALE");
+    expect(readOnlyRequestAuthorityMigration).toContain("ACCOUNT_LIFECYCLE_MAINTENANCE");
+    expect(readOnlyRequestAuthorityMigration).toContain(
+      "v_binding.binding_state is distinct from 'active'",
+    );
+    expect(readOnlyRequestAuthorityMigration).toContain(
+      "v_binding.revoked_at is not null",
     );
   });
 

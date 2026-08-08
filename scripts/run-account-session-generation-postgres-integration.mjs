@@ -435,6 +435,11 @@ if (!postgresBin) {
         "-f",
         "supabase/migrations/20260803093000_full_local_read_only_request_authority.sql",
       ]);
+      runRequired(path.join(postgresBin, "psql"), [
+        ...connectionArgs,
+        "-f",
+        "supabase/migrations/20260809100000_full_local_session_refresh_authority.sql",
+      ]);
     }
 
     const test = commandResult("pnpm", [

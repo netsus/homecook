@@ -246,8 +246,12 @@ export function createHybridAuthorityFetch({
   loadRemoteJwks?: () => Promise<unknown>;
   assertSessionAuthority: (input: {
     binding: ReturnType<typeof createSessionLivenessBinding>;
+    accessTokenExpiresAt: string;
     authCutoverEpoch?: number;
+    lastTokenIssuedAt: string;
+    sessionId: string;
     sessionIssuedAt: string;
+    verifiedAt: string;
   }) => Promise<void>;
   auth: RemoteAuthGatewayEnv;
   attestationSecret: string;
@@ -364,13 +368,21 @@ export function createHybridAuthorityFetch({
         remoteVerifiedAt: new Date(now * 1_000).toISOString(),
         ttlSeconds: validated.claims.expiresAt - now,
       });
+      const sessionIssuedAt = new Date(
+        validated.claims.issuedAt * 1_000,
+      ).toISOString();
+      const verifiedAt = new Date(now * 1_000).toISOString();
 
       await assertSessionAuthority({
+        accessTokenExpiresAt: new Date(
+          validated.claims.expiresAt * 1_000,
+        ).toISOString(),
         binding,
         authCutoverEpoch: bindingKey.authCutoverEpoch,
-        sessionIssuedAt: new Date(
-          validated.claims.issuedAt * 1_000,
-        ).toISOString(),
+        lastTokenIssuedAt: sessionIssuedAt,
+        sessionId: validated.claims.sessionId,
+        sessionIssuedAt,
+        verifiedAt,
       });
 
       const attestation = createHybridRequestAttestation({

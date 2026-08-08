@@ -1,4 +1,4 @@
-import { spawnSync } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -57,6 +57,188 @@ function psql(sql: string) {
   const result = psqlResult(sql);
   expect(result.status, result.stderr).toBe(0);
   return result.stdout.trim().split("\n").filter(Boolean).at(-1) ?? "";
+}
+
+function buildV2RecordCall({
+  ownerUuid,
+  identityCreatedAt,
+  sessionId,
+  sessionKeyHash,
+  hmacKeyVersion = 2,
+  authCutoverEpoch = 2,
+  sessionIssuedAtSql,
+  lastTokenIssuedAtSql,
+  verifiedAtSql,
+  accessTokenExpiresAtSql,
+  bindingExpiresAtSql,
+}: {
+  ownerUuid: string;
+  identityCreatedAt: string;
+  sessionId: string;
+  sessionKeyHash: string;
+  hmacKeyVersion?: number;
+  authCutoverEpoch?: number;
+  sessionIssuedAtSql: string;
+  lastTokenIssuedAtSql: string;
+  verifiedAtSql: string;
+  accessTokenExpiresAtSql: string;
+  bindingExpiresAtSql: string;
+}) {
+  return `public.record_full_local_session_authority_v2(
+    p_issuer := 'https://auth.mumeok.kr/auth/v1',
+    p_owner_uuid := '${ownerUuid}'::uuid,
+    p_identity_created_at := '${identityCreatedAt}'::timestamptz,
+    p_session_id := '${sessionId}'::uuid,
+    p_session_key_hash := ${sessionKeyHash},
+    p_hmac_key_version := ${hmacKeyVersion},
+    p_auth_cutover_epoch := ${authCutoverEpoch},
+    p_session_issued_at := ${sessionIssuedAtSql},
+    p_last_token_issued_at := ${lastTokenIssuedAtSql},
+    p_verified_at := ${verifiedAtSql},
+    p_access_token_expires_at := ${accessTokenExpiresAtSql},
+    p_binding_expires_at := ${bindingExpiresAtSql}
+  )`;
+}
+
+function buildV2RenewCall({
+  ownerUuid,
+  identityCreatedAt,
+  sessionId,
+  sessionKeyHash,
+  hmacKeyVersion = 2,
+  authCutoverEpoch = 2,
+  sessionIssuedAtSql,
+  lastTokenIssuedAtSql,
+  verifiedAtSql,
+  accessTokenExpiresAtSql,
+  bindingExpiresAtSql,
+}: {
+  ownerUuid: string;
+  identityCreatedAt: string;
+  sessionId: string;
+  sessionKeyHash: string;
+  hmacKeyVersion?: number;
+  authCutoverEpoch?: number;
+  sessionIssuedAtSql: string;
+  lastTokenIssuedAtSql: string;
+  verifiedAtSql: string;
+  accessTokenExpiresAtSql: string;
+  bindingExpiresAtSql: string;
+}) {
+  return `public.assert_and_renew_full_local_session_authority_v2(
+    p_issuer := 'https://auth.mumeok.kr/auth/v1',
+    p_owner_uuid := '${ownerUuid}'::uuid,
+    p_identity_created_at := '${identityCreatedAt}'::timestamptz,
+    p_session_id := '${sessionId}'::uuid,
+    p_session_key_hash := ${sessionKeyHash},
+    p_hmac_key_version := ${hmacKeyVersion},
+    p_auth_cutover_epoch := ${authCutoverEpoch},
+    p_session_issued_at := ${sessionIssuedAtSql},
+    p_last_token_issued_at := ${lastTokenIssuedAtSql},
+    p_verified_at := ${verifiedAtSql},
+    p_access_token_expires_at := ${accessTokenExpiresAtSql},
+    p_binding_expires_at := ${bindingExpiresAtSql}
+  )`;
+}
+
+function buildVerifiedAuthorityRequest({
+  method,
+  path,
+  ownerUuid,
+  identityCreatedAt,
+  sessionId,
+  sessionKeyHash,
+  issuedAtSql,
+  expiresAtSql,
+  attestationIssuedAtSql = "clock_timestamp()",
+  attestationExpiresAtSql = `${"clock_timestamp()"} + interval '30 seconds'`,
+}: {
+  method: "GET" | "POST" | "DELETE";
+  path: string;
+  ownerUuid: string;
+  identityCreatedAt: string;
+  sessionId: string;
+  sessionKeyHash: string;
+  issuedAtSql: string;
+  expiresAtSql: string;
+  attestationIssuedAtSql?: string;
+  attestationExpiresAtSql?: string;
+}) {
+  return `
+    set request.method = '${method}';
+    set request.path = '${path}';
+    with claims as (
+      select set_config(
+        'request.jwt.claims',
+        jsonb_build_object(
+          'iss', 'https://auth.mumeok.kr/auth/v1',
+          'aud', 'authenticated',
+          'role', 'authenticated',
+          'sub', '${ownerUuid}',
+          'session_id', '${sessionId}',
+          'iat', extract(epoch from (${issuedAtSql}))::bigint,
+          'exp', extract(epoch from (${expiresAtSql}))::bigint
+        )::text,
+        false
+      )
+    ), payload as (
+      select rtrim(translate(replace(encode(convert_to(
+        jsonb_build_object(
+          'version', 2,
+          'method', '${method}',
+          'path', '${path}',
+          'issuer', 'https://auth.mumeok.kr/auth/v1',
+          'owner_uuid', '${ownerUuid}',
+          'identity_created_at', '${identityCreatedAt}',
+          'session_key_hash', ${sessionKeyHash},
+          'issued_at', extract(epoch from (${attestationIssuedAtSql}))::bigint,
+          'expires_at', extract(epoch from (${attestationExpiresAtSql}))::bigint
+        )::text,
+        'UTF8'
+      ), 'base64'), E'\\n', ''), '+/', '-_'), '=') as value
+    ), headers as (
+      select set_config(
+        'request.headers',
+        jsonb_build_object(
+          'x-homecook-attestation-verified', payload.value
+        )::text,
+        false
+      )
+      from payload
+    )
+    select private.verify_hybrid_request_authority()
+    from claims, payload, headers;
+  `;
+}
+
+function psqlAsyncResult(sql: string) {
+  return new Promise<{ status: number | null; stdout: string; stderr: string }>((resolve) => {
+    const child = spawn("psql", [
+      "-h", host,
+      "-p", port,
+      "-U", "postgres",
+      "-d", database,
+      "-At",
+      "-v", "ON_ERROR_STOP=1",
+      "-c", sql,
+    ], {
+      env: {
+        PATH: process.env.PATH ?? "",
+        NODE_ENV: "test",
+      },
+    });
+    let stdout = "";
+    let stderr = "";
+    child.stdout?.on("data", (chunk: Buffer | string) => {
+      stdout += chunk.toString();
+    });
+    child.stderr?.on("data", (chunk: Buffer | string) => {
+      stderr += chunk.toString();
+    });
+    child.on("close", (status: number | null) => {
+      resolve({ status, stdout, stderr });
+    });
+  });
 }
 
 function securityInventoryApi() {
@@ -493,7 +675,7 @@ run("full-local Auth isolated PostgreSQL foundation", () => {
     `)).toBe("t:https://auth.mumeok.kr/auth/v1:2");
   });
 
-  it("accepts only the JWT issuance second containing the exact Auth identity epoch", () => {
+  it("accepts only the exact JWT issuance second containing the exact Auth identity epoch", () => {
     const fractionalOwner = "00000000-0000-4000-8000-000000000003";
     expect(psql(`
       with identity_epoch as (
@@ -563,6 +745,1001 @@ run("full-local Auth isolated PostgreSQL foundation", () => {
     `);
     expect(previousSecond.status).not.toBe(0);
     expect(previousSecond.stderr).toContain("ACCOUNT_SESSION_STALE");
+  });
+
+  it("renews same-session A/B token evidence through v2 without regressing latest expiry", async () => {
+    await new Promise((resolve) => setTimeout(resolve, 5_500));
+
+    const ownerUuid = "00000000-0000-4000-8000-000000000011";
+    const sessionId = "11111111-1111-4111-8111-111111111111";
+    const sessionKeyHash = "repeat('b', 64)";
+    expect(psql(`
+      insert into auth.users (id, created_at)
+      values ('${ownerUuid}', '2026-08-01T00:00:00Z')
+      on conflict (id) do nothing;
+      insert into public.user_account_lifecycles (
+        owner_uuid, account_generation, auth_identity_created_at_snapshot, origin, status, activated_at
+      ) values (
+        '${ownerUuid}', 1, '2026-08-01T00:00:00Z', 'runtime', 'active', clock_timestamp()
+      )
+      on conflict do nothing;
+      create table if not exists auth.sessions (
+        id uuid primary key,
+        user_id uuid not null references auth.users(id) on delete cascade
+      );
+      insert into auth.sessions (id, user_id)
+      values ('${sessionId}', '${ownerUuid}'::uuid)
+      on conflict (id) do nothing;
+      select count(*) from auth.sessions where id = '${sessionId}'::uuid;
+    `)).toBe("1");
+
+    const renewResult = psqlResult(`
+      ${serviceClaims}
+      with control as (
+        select local_activated_at
+        from private.full_local_auth_control
+      ), seed as (
+        select ${buildV2RecordCall({
+          ownerUuid,
+          identityCreatedAt: "2026-08-01T00:00:00Z",
+          sessionId,
+          sessionKeyHash,
+          sessionIssuedAtSql: "control.local_activated_at + interval '1 second'",
+          lastTokenIssuedAtSql: "control.local_activated_at + interval '1 second'",
+          verifiedAtSql: "control.local_activated_at + interval '2 seconds'",
+          accessTokenExpiresAtSql: "control.local_activated_at + interval '1 hour'",
+          bindingExpiresAtSql: "control.local_activated_at + interval '30 minutes'",
+        })} as result
+        from control
+      )
+      select ${buildV2RenewCall({
+        ownerUuid,
+        identityCreatedAt: "2026-08-01T00:00:00Z",
+        sessionId,
+        sessionKeyHash,
+        sessionIssuedAtSql: "control.local_activated_at + interval '3 seconds'",
+        lastTokenIssuedAtSql: "control.local_activated_at + interval '3 seconds'",
+        verifiedAtSql: "control.local_activated_at + interval '4 seconds'",
+        accessTokenExpiresAtSql: "control.local_activated_at + interval '59 minutes'",
+        bindingExpiresAtSql: "control.local_activated_at + interval '55 minutes'",
+      })}
+      from control, seed;
+    `);
+    expect(renewResult.status, renewResult.stderr).toBe(0);
+
+    const beforeRepeatXmin = psql(`
+      select xmin::text
+      from public.user_session_generation_bindings
+      where session_key_hash = repeat('b', 64);
+    `);
+    const repeatedToken = psqlResult(`
+      ${serviceClaims}
+      with control as (
+        select local_activated_at
+        from private.full_local_auth_control
+      )
+      select ${buildV2RenewCall({
+        ownerUuid,
+        identityCreatedAt: "2026-08-01T00:00:00Z",
+        sessionId,
+        sessionKeyHash,
+        sessionIssuedAtSql: "control.local_activated_at + interval '3 seconds'",
+        lastTokenIssuedAtSql: "control.local_activated_at + interval '3 seconds'",
+        verifiedAtSql: "control.local_activated_at + interval '4 seconds'",
+        accessTokenExpiresAtSql: "control.local_activated_at + interval '59 minutes'",
+        bindingExpiresAtSql: "control.local_activated_at + interval '55 minutes'",
+      })}
+      from control;
+    `);
+    expect(repeatedToken.status, repeatedToken.stderr).toBe(0);
+    expect(psql(`
+      select xmin::text
+      from public.user_session_generation_bindings
+      where session_key_hash = repeat('b', 64);
+    `)).toBe(beforeRepeatXmin);
+
+    const lateOlderToken = psqlResult(`
+      ${serviceClaims}
+      with control as (
+        select local_activated_at
+        from private.full_local_auth_control
+      )
+      select ${buildV2RenewCall({
+        ownerUuid,
+        identityCreatedAt: "2026-08-01T00:00:00Z",
+        sessionId,
+        sessionKeyHash,
+        sessionIssuedAtSql: "control.local_activated_at + interval '2 seconds'",
+        lastTokenIssuedAtSql: "control.local_activated_at + interval '2 seconds'",
+        verifiedAtSql: "control.local_activated_at + interval '3 seconds'",
+        accessTokenExpiresAtSql: "control.local_activated_at + interval '1 hour'",
+        bindingExpiresAtSql: "control.local_activated_at + interval '30 minutes'",
+      })}
+      from control;
+    `);
+    expect(lateOlderToken.status).not.toBe(0);
+    expect(lateOlderToken.stderr).toContain("ACCOUNT_SESSION_STALE");
+    expect(psql(`
+      with control as (
+        select local_activated_at
+        from private.full_local_auth_control
+      )
+      select concat_ws(
+        ':',
+        session_issued_at = control.local_activated_at + interval '1 second',
+        last_token_issued_at = control.local_activated_at + interval '3 seconds',
+        binding_expires_at = control.local_activated_at + interval '55 minutes',
+        session_identity_hash = encode(
+          extensions.digest(
+            convert_to('${sessionId}'::uuid::text, 'UTF8'),
+            'sha256'
+          ),
+          'hex'
+        ),
+        binding_state
+      )
+      from public.user_session_generation_bindings
+      cross join control
+      where session_key_hash = repeat('b', 64);
+    `)).toBe("t:t:t:t:active");
+  });
+
+  it("accepts only the latest rotated token through the legacy assert wrapper after v2 renew", async () => {
+    const ownerUuid = "00000000-0000-4000-8000-000000000014";
+    const sessionId = "77777777-7777-4777-8777-777777777777";
+    const sessionKeyHash = "repeat('9', 64)";
+    expect(psql(`
+      insert into auth.users (id, created_at)
+      values ('${ownerUuid}', '2026-08-01T00:00:00Z')
+      on conflict (id) do nothing;
+      insert into public.user_account_lifecycles (
+        owner_uuid, account_generation, auth_identity_created_at_snapshot, origin, status, activated_at
+      ) values (
+        '${ownerUuid}', 1, '2026-08-01T00:00:00Z', 'runtime', 'active', clock_timestamp()
+      )
+      on conflict do nothing;
+      create table if not exists auth.sessions (
+        id uuid primary key,
+        user_id uuid not null references auth.users(id) on delete cascade
+      );
+      insert into auth.sessions (id, user_id)
+      values ('${sessionId}', '${ownerUuid}'::uuid)
+      on conflict (id) do nothing;
+      select count(*) from auth.sessions where id = '${sessionId}'::uuid;
+    `)).toBe("1");
+
+    const renewed = psqlResult(`
+      ${serviceClaims}
+      with control as (
+        select local_activated_at
+        from private.full_local_auth_control
+      ), seed as (
+        select ${buildV2RecordCall({
+          ownerUuid,
+          identityCreatedAt: "2026-08-01T00:00:00Z",
+          sessionId,
+          sessionKeyHash,
+          sessionIssuedAtSql: "control.local_activated_at + interval '1 second'",
+          lastTokenIssuedAtSql: "control.local_activated_at + interval '1 second'",
+          verifiedAtSql: "control.local_activated_at + interval '2 seconds'",
+          accessTokenExpiresAtSql: "control.local_activated_at + interval '1 hour'",
+          bindingExpiresAtSql: "control.local_activated_at + interval '30 minutes'",
+        })} as result
+        from control
+      )
+      select ${buildV2RenewCall({
+        ownerUuid,
+        identityCreatedAt: "2026-08-01T00:00:00Z",
+        sessionId,
+        sessionKeyHash,
+        sessionIssuedAtSql: "control.local_activated_at + interval '3 seconds'",
+        lastTokenIssuedAtSql: "control.local_activated_at + interval '3 seconds'",
+        verifiedAtSql: "control.local_activated_at + interval '4 seconds'",
+        accessTokenExpiresAtSql: "control.local_activated_at + interval '59 minutes'",
+        bindingExpiresAtSql: "control.local_activated_at + interval '55 minutes'",
+      })}
+      from control, seed;
+    `);
+    expect(renewed.status, renewed.stderr).toBe(0);
+
+    expect(psql(`
+      ${serviceClaims}
+      with control as (
+        select local_activated_at
+        from private.full_local_auth_control
+      )
+      select public.assert_full_local_session_authority(
+        'https://auth.mumeok.kr/auth/v1',
+        '${ownerUuid}',
+        '2026-08-01T00:00:00Z',
+        repeat('9', 64),
+        2,
+        2,
+        control.local_activated_at + interval '3 seconds'
+      ) ->> 'binding_state'
+      from control;
+    `)).toBe("active");
+
+    const olderClaim = psqlResult(`
+      ${serviceClaims}
+      with control as (
+        select local_activated_at
+        from private.full_local_auth_control
+      )
+      select public.assert_full_local_session_authority(
+        'https://auth.mumeok.kr/auth/v1',
+        '${ownerUuid}',
+        '2026-08-01T00:00:00Z',
+        repeat('9', 64),
+        2,
+        2,
+        control.local_activated_at + interval '1 second'
+      )
+      from control;
+    `);
+    expect(olderClaim.status).not.toBe(0);
+    expect(olderClaim.stderr).toContain("ACCOUNT_SESSION_STALE");
+
+    const newerClaim = psqlResult(`
+      ${serviceClaims}
+      with control as (
+        select local_activated_at
+        from private.full_local_auth_control
+      )
+      select public.assert_full_local_session_authority(
+        'https://auth.mumeok.kr/auth/v1',
+        '${ownerUuid}',
+        '2026-08-01T00:00:00Z',
+        repeat('9', 64),
+        2,
+        2,
+        control.local_activated_at + interval '5 seconds'
+      )
+      from control;
+    `);
+    expect(newerClaim.status).not.toBe(0);
+    expect(newerClaim.stderr).toContain("ACCOUNT_SESSION_STALE");
+
+    expect(psql(`
+      ${serviceClaims}
+      select public.revoke_full_local_session_authority(
+        'https://auth.mumeok.kr/auth/v1',
+        '${ownerUuid}',
+        repeat('9', 64),
+        2
+      ) ->> 'revoked';
+    `)).toBe("true");
+
+    const revokedClaim = psqlResult(`
+      ${serviceClaims}
+      with control as (
+        select local_activated_at
+        from private.full_local_auth_control
+      )
+      select public.assert_full_local_session_authority(
+        'https://auth.mumeok.kr/auth/v1',
+        '${ownerUuid}',
+        '2026-08-01T00:00:00Z',
+        repeat('9', 64),
+        2,
+        2,
+        control.local_activated_at + interval '3 seconds'
+      )
+      from control;
+    `);
+    expect(revokedClaim.status).not.toBe(0);
+    expect(revokedClaim.stderr).toContain("ACCOUNT_SESSION_STALE");
+
+    expect(psql(`
+      with control as (
+        select local_activated_at
+        from private.full_local_auth_control
+      )
+      select concat_ws(
+        ':',
+        session_issued_at = control.local_activated_at + interval '1 second',
+        last_token_issued_at = control.local_activated_at + interval '3 seconds',
+        binding_expires_at = control.local_activated_at + interval '55 minutes',
+        binding_state = 'revoked'
+      )
+      from public.user_session_generation_bindings
+      cross join control
+      where session_key_hash = repeat('9', 64);
+    `)).toBe("t:t:t:t");
+  });
+
+  it("requires exact v2 refresh authority signatures before browser-first refreshed JWT writes can converge", () => {
+    expect(psql(`
+      select concat_ws(
+        ':',
+        to_regprocedure(
+          'public.record_full_local_session_authority_v2(text,uuid,timestamp with time zone,uuid,text,integer,bigint,timestamp with time zone,timestamp with time zone,timestamp with time zone,timestamp with time zone,timestamp with time zone)'
+        ) is not null,
+        to_regprocedure(
+          'public.assert_and_renew_full_local_session_authority_v2(text,uuid,timestamp with time zone,uuid,text,integer,bigint,timestamp with time zone,timestamp with time zone,timestamp with time zone,timestamp with time zone,timestamp with time zone)'
+        ) is not null
+      );
+    `)).toBe("t:t");
+  });
+
+  it("accepts a refreshed JWT in the actual pre-request verifier and keeps a late older token from regressing row state", () => {
+    expect(psql(`
+      create table if not exists auth.sessions (
+        id uuid primary key,
+        user_id uuid not null references auth.users(id) on delete cascade
+      );
+      insert into auth.sessions (id, user_id)
+      values ('22222222-2222-4222-8222-222222222222', '${owner}'::uuid)
+      on conflict (id) do nothing;
+      select count(*) from auth.sessions where id = '22222222-2222-4222-8222-222222222222'::uuid;
+    `)).toBe("1");
+    const refreshedBinding = psqlResult(`
+      ${serviceClaims}
+      with control as (
+        select local_activated_at
+        from private.full_local_auth_control
+      ), seed_a as (
+        select ${buildV2RecordCall({
+          ownerUuid: owner,
+          identityCreatedAt: "2026-08-01T00:00:00Z",
+          sessionId: "22222222-2222-4222-8222-222222222222",
+          sessionKeyHash: "repeat('6', 64)",
+          sessionIssuedAtSql: "control.local_activated_at + interval '1 second'",
+          lastTokenIssuedAtSql: "control.local_activated_at + interval '1 second'",
+          verifiedAtSql: "control.local_activated_at + interval '2 seconds'",
+          accessTokenExpiresAtSql: "control.local_activated_at + interval '1 hour'",
+          bindingExpiresAtSql: "control.local_activated_at + interval '30 minutes'",
+        })} as result
+        from control
+      ), renew_b as (
+        select ${buildV2RenewCall({
+          ownerUuid: owner,
+          identityCreatedAt: "2026-08-01T00:00:00Z",
+          sessionId: "22222222-2222-4222-8222-222222222222",
+          sessionKeyHash: "repeat('6', 64)",
+          sessionIssuedAtSql: "control.local_activated_at + interval '3 seconds'",
+          lastTokenIssuedAtSql: "control.local_activated_at + interval '3 seconds'",
+          verifiedAtSql: "control.local_activated_at + interval '4 seconds'",
+          accessTokenExpiresAtSql: "control.local_activated_at + interval '59 minutes'",
+          bindingExpiresAtSql: "control.local_activated_at + interval '55 minutes'",
+        })} as result
+        from control, seed_a
+      )
+      select result from renew_b;
+    `);
+    expect(refreshedBinding.status, refreshedBinding.stderr).toBe(0);
+
+    const refreshedPreRequest = psqlResult(`
+      set request.method = 'POST';
+      set request.path = '/pantry_items';
+      with control as (
+        select local_activated_at
+        from private.full_local_auth_control
+      ), authority as (
+        select
+          owner_uuid,
+          auth_identity_created_at_snapshot,
+          session_key_hash
+        from public.user_session_generation_bindings
+        where session_key_hash = repeat('6', 64)
+      ), claims as (
+        select set_config(
+          'request.jwt.claims',
+          jsonb_build_object(
+            'iss', 'https://auth.mumeok.kr/auth/v1',
+            'aud', 'authenticated',
+            'role', 'authenticated',
+            'sub', (select owner_uuid::text from authority),
+            'session_id', '22222222-2222-4222-8222-222222222222',
+            'iat', floor(extract(epoch from ((select local_activated_at from control) + interval '3 seconds')))::bigint,
+            'exp', floor(extract(epoch from ((select local_activated_at from control) + interval '59 minutes')))::bigint
+          )::text,
+          false
+        )
+      ), payload as (
+        select rtrim(translate(replace(encode(convert_to(
+          jsonb_build_object(
+            'version', 2,
+            'method', 'POST',
+            'path', '/pantry_items',
+            'issuer', 'https://auth.mumeok.kr/auth/v1',
+            'owner_uuid', (select owner_uuid::text from authority),
+            'identity_created_at', (select auth_identity_created_at_snapshot from authority),
+            'session_key_hash', (select session_key_hash from authority),
+            'issued_at', extract(epoch from clock_timestamp())::bigint,
+            'expires_at', extract(epoch from clock_timestamp())::bigint + 30
+          )::text,
+          'UTF8'
+        ), 'base64'), E'\\n', ''), '+/', '-_'), '=') as value
+      ), headers as (
+        select set_config(
+          'request.headers',
+          jsonb_build_object(
+            'x-homecook-attestation-verified', payload.value
+          )::text,
+          false
+        )
+        from payload
+      )
+      select private.verify_hybrid_request_authority()
+      from claims, headers;
+    `);
+    expect(refreshedPreRequest.status, refreshedPreRequest.stderr).toBe(0);
+
+    const lateOlderToken = psqlResult(`
+      ${serviceClaims}
+      with control as (
+        select local_activated_at
+        from private.full_local_auth_control
+      ), authority as (
+        select
+          auth_cutover_epoch,
+          owner_uuid,
+          auth_identity_created_at_snapshot,
+          session_key_hash,
+          hmac_key_version
+        from public.user_session_generation_bindings
+        where session_key_hash = repeat('6', 64)
+      )
+      select ${buildV2RenewCall({
+        ownerUuid: owner,
+        identityCreatedAt: "2026-08-01T00:00:00Z",
+        sessionId: "22222222-2222-4222-8222-222222222222",
+        sessionKeyHash: "authority.session_key_hash",
+        sessionIssuedAtSql: "control.local_activated_at + interval '2 seconds'",
+        lastTokenIssuedAtSql: "control.local_activated_at + interval '2 seconds'",
+        verifiedAtSql: "control.local_activated_at + interval '3 seconds'",
+        accessTokenExpiresAtSql: "control.local_activated_at + interval '1 hour'",
+        bindingExpiresAtSql: "control.local_activated_at + interval '30 minutes'",
+      })}
+      from authority, control;
+    `);
+    expect(lateOlderToken.status).not.toBe(0);
+    expect(lateOlderToken.stderr).toContain("ACCOUNT_SESSION_STALE");
+    expect(psql(`
+      with control as (
+        select local_activated_at
+        from private.full_local_auth_control
+      )
+      select concat_ws(
+        ':',
+        session_issued_at = control.local_activated_at + interval '1 second',
+        last_token_issued_at = control.local_activated_at + interval '3 seconds',
+        binding_expires_at = control.local_activated_at + interval '55 minutes',
+        binding_state
+      )
+      from public.user_session_generation_bindings
+      cross join control
+      where session_key_hash = repeat('6', 64);
+    `)).toBe("t:t:t:active");
+    expect(lateOlderToken.stderr).toContain("ACCOUNT_SESSION_STALE");
+  });
+
+  it("does not create a missing binding during protected-request renew", () => {
+    const missing = psqlResult(`
+      ${serviceClaims}
+      with control as (
+        select local_activated_at
+        from private.full_local_auth_control
+      )
+      select ${buildV2RenewCall({
+        ownerUuid: owner,
+        identityCreatedAt: "2026-08-01T00:00:00Z",
+        sessionId: "33333333-3333-4333-8333-333333333333",
+        sessionKeyHash: "repeat('1', 64)",
+        sessionIssuedAtSql: "control.local_activated_at + interval '3 seconds'",
+        lastTokenIssuedAtSql: "control.local_activated_at + interval '3 seconds'",
+        verifiedAtSql: "control.local_activated_at + interval '4 seconds'",
+        accessTokenExpiresAtSql: "control.local_activated_at + interval '59 minutes'",
+        bindingExpiresAtSql: "control.local_activated_at + interval '55 minutes'",
+      })}
+      from control;
+    `);
+    expect(missing.status).not.toBe(0);
+    expect(missing.stderr).toContain("ACCOUNT_SESSION_STALE");
+    expect(psql(`
+      select count(*) from public.user_session_generation_bindings
+      where session_key_hash = repeat('1', 64);
+    `)).toBe("0");
+  });
+
+  it("does not reactivate a revoked binding during protected-request renew", () => {
+    const revokedOwner = "00000000-0000-4000-8000-000000000012";
+    const revokedSession = "44444444-4444-4444-8444-444444444444";
+    expect(psql(`
+      insert into auth.users (id, created_at)
+      values ('${revokedOwner}', '2026-08-01T00:00:00Z')
+      on conflict (id) do nothing;
+      insert into public.user_account_lifecycles (
+        owner_uuid, account_generation, auth_identity_created_at_snapshot, origin, status, activated_at
+      ) values (
+        '${revokedOwner}', 1, '2026-08-01T00:00:00Z', 'runtime', 'active', clock_timestamp()
+      )
+      on conflict do nothing;
+      create table if not exists auth.sessions (
+        id uuid primary key,
+        user_id uuid not null references auth.users(id) on delete cascade
+      );
+      insert into auth.sessions (id, user_id)
+      values ('${revokedSession}', '${revokedOwner}'::uuid)
+      on conflict (id) do nothing;
+      select count(*) from auth.sessions where id = '${revokedSession}'::uuid;
+    `)).toBe("1");
+
+    const revokedSeed = psqlResult(`
+      ${serviceClaims}
+      with control as (
+        select local_activated_at
+        from private.full_local_auth_control
+      )
+      select ${buildV2RecordCall({
+        ownerUuid: revokedOwner,
+        identityCreatedAt: "2026-08-01T00:00:00Z",
+        sessionId: revokedSession,
+        sessionKeyHash: "repeat('c', 64)",
+        sessionIssuedAtSql: "control.local_activated_at + interval '3 seconds'",
+        lastTokenIssuedAtSql: "control.local_activated_at + interval '3 seconds'",
+        verifiedAtSql: "control.local_activated_at + interval '4 seconds'",
+        accessTokenExpiresAtSql: "control.local_activated_at + interval '1 hour'",
+        bindingExpiresAtSql: "control.local_activated_at + interval '30 minutes'",
+      })}
+      from control;
+    `);
+    expect(revokedSeed.status, revokedSeed.stderr).toBe(0);
+    expect(psql(`
+      ${serviceClaims}
+      select public.revoke_full_local_session_authority(
+        'https://auth.mumeok.kr/auth/v1', '${revokedOwner}', repeat('c', 64), 2
+      ) ->> 'revoked';
+    `)).toBe("true");
+
+    const revoked = psqlResult(`
+      ${serviceClaims}
+      with control as (
+        select local_activated_at
+        from private.full_local_auth_control
+      )
+      select ${buildV2RenewCall({
+        ownerUuid: revokedOwner,
+        identityCreatedAt: "2026-08-01T00:00:00Z",
+        sessionId: revokedSession,
+        sessionKeyHash: "repeat('c', 64)",
+        sessionIssuedAtSql: "control.local_activated_at + interval '3 seconds'",
+        lastTokenIssuedAtSql: "control.local_activated_at + interval '3 seconds'",
+        verifiedAtSql: "control.local_activated_at + interval '4 seconds'",
+        accessTokenExpiresAtSql: "control.local_activated_at + interval '59 minutes'",
+        bindingExpiresAtSql: "control.local_activated_at + interval '55 minutes'",
+      })}
+      from control;
+    `);
+    expect(revoked.status).not.toBe(0);
+    expect(revoked.stderr).toContain("ACCOUNT_SESSION_STALE");
+    expect(psql(`
+      select concat_ws(':', binding_state, revoked_at is not null)
+      from public.user_session_generation_bindings
+      where session_key_hash = repeat('c', 64);
+    `)).toBe("revoked:t");
+  });
+
+  it("rejects cross-boundary renew mismatches for owner identity generation cutover and key version", () => {
+    const mismatchOwner = "00000000-0000-4000-8000-000000000013";
+    const mismatchSession = "55555555-5555-4555-8555-555555555555";
+    expect(psql(`
+      insert into auth.users (id, created_at)
+      values ('${mismatchOwner}', '2026-08-01T00:00:00Z')
+      on conflict (id) do nothing;
+      insert into public.user_account_lifecycles (
+        owner_uuid, account_generation, auth_identity_created_at_snapshot, origin, status, activated_at
+      ) values (
+        '${mismatchOwner}', 1, '2026-08-01T00:00:00Z', 'runtime', 'active', clock_timestamp()
+      )
+      on conflict do nothing;
+      create table if not exists auth.sessions (
+        id uuid primary key,
+        user_id uuid not null references auth.users(id) on delete cascade
+      );
+      insert into auth.sessions (id, user_id)
+      values
+        ('${mismatchSession}', '${mismatchOwner}'::uuid),
+        ('66666666-6666-4666-8666-666666666666', '${mismatchOwner}'::uuid)
+      on conflict (id) do nothing;
+      select count(*) from auth.sessions where user_id = '${mismatchOwner}'::uuid;
+    `)).toBe("2");
+    const seed = psqlResult(`
+      ${serviceClaims}
+      with control as (
+        select local_activated_at from private.full_local_auth_control
+      )
+      select ${buildV2RecordCall({
+        ownerUuid: mismatchOwner,
+        identityCreatedAt: "2026-08-01T00:00:00Z",
+        sessionId: mismatchSession,
+        sessionKeyHash: "repeat('e', 64)",
+        sessionIssuedAtSql: "control.local_activated_at + interval '1 second'",
+        lastTokenIssuedAtSql: "control.local_activated_at + interval '1 second'",
+        verifiedAtSql: "control.local_activated_at + interval '2 seconds'",
+        accessTokenExpiresAtSql: "control.local_activated_at + interval '1 hour'",
+        bindingExpiresAtSql: "control.local_activated_at + interval '30 minutes'",
+      })}
+      from control;
+    `);
+    expect(seed.status, seed.stderr).toBe(0);
+
+    for (const mismatch of [
+      {
+        label: "owner",
+        call: buildV2RenewCall({
+          ownerUuid: "99999999-9999-4999-8999-999999999999",
+          identityCreatedAt: "2026-08-01T00:00:00Z",
+          sessionId: mismatchSession,
+          sessionKeyHash: "repeat('e', 64)",
+          sessionIssuedAtSql: "control.local_activated_at + interval '3 seconds'",
+          lastTokenIssuedAtSql: "control.local_activated_at + interval '3 seconds'",
+          verifiedAtSql: "control.local_activated_at + interval '4 seconds'",
+          accessTokenExpiresAtSql: "control.local_activated_at + interval '59 minutes'",
+          bindingExpiresAtSql: "control.local_activated_at + interval '55 minutes'",
+        }),
+      },
+      {
+        label: "identity",
+        call: buildV2RenewCall({
+          ownerUuid: mismatchOwner,
+          identityCreatedAt: "2026-08-01T00:00:01Z",
+          sessionId: mismatchSession,
+          sessionKeyHash: "repeat('e', 64)",
+          sessionIssuedAtSql: "control.local_activated_at + interval '3 seconds'",
+          lastTokenIssuedAtSql: "control.local_activated_at + interval '3 seconds'",
+          verifiedAtSql: "control.local_activated_at + interval '4 seconds'",
+          accessTokenExpiresAtSql: "control.local_activated_at + interval '59 minutes'",
+          bindingExpiresAtSql: "control.local_activated_at + interval '55 minutes'",
+        }),
+      },
+      {
+        label: "session",
+        call: buildV2RenewCall({
+          ownerUuid: mismatchOwner,
+          identityCreatedAt: "2026-08-01T00:00:00Z",
+          sessionId: "66666666-6666-4666-8666-666666666666",
+          sessionKeyHash: "repeat('e', 64)",
+          sessionIssuedAtSql: "control.local_activated_at + interval '3 seconds'",
+          lastTokenIssuedAtSql: "control.local_activated_at + interval '3 seconds'",
+          verifiedAtSql: "control.local_activated_at + interval '4 seconds'",
+          accessTokenExpiresAtSql: "control.local_activated_at + interval '59 minutes'",
+          bindingExpiresAtSql: "control.local_activated_at + interval '55 minutes'",
+        }),
+      },
+      {
+        label: "cutover",
+        call: buildV2RenewCall({
+          ownerUuid: mismatchOwner,
+          identityCreatedAt: "2026-08-01T00:00:00Z",
+          sessionId: mismatchSession,
+          sessionKeyHash: "repeat('e', 64)",
+          authCutoverEpoch: 99,
+          sessionIssuedAtSql: "control.local_activated_at + interval '3 seconds'",
+          lastTokenIssuedAtSql: "control.local_activated_at + interval '3 seconds'",
+          verifiedAtSql: "control.local_activated_at + interval '4 seconds'",
+          accessTokenExpiresAtSql: "control.local_activated_at + interval '59 minutes'",
+          bindingExpiresAtSql: "control.local_activated_at + interval '55 minutes'",
+        }),
+      },
+      {
+        label: "hmac",
+        call: buildV2RenewCall({
+          ownerUuid: mismatchOwner,
+          identityCreatedAt: "2026-08-01T00:00:00Z",
+          sessionId: mismatchSession,
+          sessionKeyHash: "repeat('e', 64)",
+          hmacKeyVersion: 99,
+          sessionIssuedAtSql: "control.local_activated_at + interval '3 seconds'",
+          lastTokenIssuedAtSql: "control.local_activated_at + interval '3 seconds'",
+          verifiedAtSql: "control.local_activated_at + interval '4 seconds'",
+          accessTokenExpiresAtSql: "control.local_activated_at + interval '59 minutes'",
+          bindingExpiresAtSql: "control.local_activated_at + interval '55 minutes'",
+        }),
+      },
+      {
+        label: "generation",
+        before: `
+          insert into public.user_account_lifecycles (
+            owner_uuid, account_generation, auth_identity_created_at_snapshot,
+            origin, status, activated_at
+          ) values (
+            '${mismatchOwner}', 2, '2026-08-01T00:00:00Z',
+            'runtime', 'quarantined', clock_timestamp()
+          )
+          on conflict do nothing;
+          alter table public.user_session_generation_bindings
+            disable trigger protect_full_local_session_binding_identity;
+          update public.user_session_generation_bindings
+          set expected_account_generation = 2
+          where session_key_hash = repeat('e', 64);
+          alter table public.user_session_generation_bindings
+            enable trigger protect_full_local_session_binding_identity;
+        `,
+        cleanup: `
+          alter table public.user_session_generation_bindings
+            disable trigger protect_full_local_session_binding_identity;
+          update public.user_session_generation_bindings
+          set expected_account_generation = 1
+          where session_key_hash = repeat('e', 64);
+          alter table public.user_session_generation_bindings
+            enable trigger protect_full_local_session_binding_identity;
+          delete from public.user_account_lifecycles
+          where owner_uuid = '${mismatchOwner}'::uuid
+            and account_generation = 2;
+        `,
+        call: buildV2RenewCall({
+          ownerUuid: mismatchOwner,
+          identityCreatedAt: "2026-08-01T00:00:00Z",
+          sessionId: mismatchSession,
+          sessionKeyHash: "repeat('e', 64)",
+          sessionIssuedAtSql: "control.local_activated_at + interval '3 seconds'",
+          lastTokenIssuedAtSql: "control.local_activated_at + interval '3 seconds'",
+          verifiedAtSql: "control.local_activated_at + interval '4 seconds'",
+          accessTokenExpiresAtSql: "control.local_activated_at + interval '59 minutes'",
+          bindingExpiresAtSql: "control.local_activated_at + interval '55 minutes'",
+        }),
+      },
+    ]) {
+      if (mismatch.label === "generation") {
+        expect(psql(`
+          ${mismatch.before ?? ""}
+          select concat_ws(
+            ':',
+            (select count(*) from public.user_account_lifecycles
+              where owner_uuid = '${mismatchOwner}'::uuid
+                and account_generation = 2),
+            (select count(*) from public.user_session_generation_bindings
+              where session_key_hash = repeat('e', 64)
+                and expected_account_generation = 2)
+          );
+        `)).toBe("1:1");
+      }
+
+      const result = psqlResult(`
+        ${serviceClaims}
+        with control as (
+          select local_activated_at
+          from private.full_local_auth_control
+        )
+        select ${mismatch.call}
+        from control;
+      `);
+      expect(result.status, mismatch.label).not.toBe(0);
+      expect(result.stderr, mismatch.label).toContain(
+        mismatch.label === "generation"
+          ? "ACCOUNT_GENERATION_STALE"
+          : "ACCOUNT_SESSION_STALE",
+      );
+
+      if (mismatch.label === "generation") {
+        expect(psql(`
+          ${mismatch.cleanup ?? ""}
+          select concat_ws(
+            ':',
+            (select count(*) from public.user_account_lifecycles
+              where owner_uuid = '${mismatchOwner}'::uuid
+                and account_generation = 2),
+            (select count(*) from public.user_session_generation_bindings
+              where session_key_hash = repeat('e', 64)
+                and expected_account_generation = 2)
+          );
+        `)).toBe("0:0");
+      }
+    }
+  });
+
+  it("rejects refreshed requests after auth.sessions deletion for read write and delete verbs", () => {
+    const deletionOwner = "00000000-0000-4000-8000-000000000014";
+    const oldSessionId = "77777777-7777-4777-8777-777777777777";
+    const newSessionId = "88888888-8888-4888-8888-888888888888";
+    expect(psql(`
+      insert into auth.users (id, created_at)
+      values ('${deletionOwner}', '2026-08-01T00:00:00Z')
+      on conflict (id) do nothing;
+      insert into public.user_account_lifecycles (
+        owner_uuid, account_generation, auth_identity_created_at_snapshot, origin, status, activated_at
+      ) values (
+        '${deletionOwner}', 1, '2026-08-01T00:00:00Z', 'runtime', 'active', clock_timestamp()
+      )
+      on conflict do nothing;
+      create table if not exists auth.sessions (
+        id uuid primary key,
+        user_id uuid not null references auth.users(id) on delete cascade
+      );
+      insert into auth.sessions (id, user_id)
+      values ('${oldSessionId}', '${deletionOwner}'::uuid), ('${newSessionId}', '${deletionOwner}'::uuid)
+      on conflict (id) do nothing;
+      select count(*) from auth.sessions where user_id = '${deletionOwner}'::uuid;
+    `)).toBe("2");
+    const seed = psqlResult(`
+      ${serviceClaims}
+      with control as (
+        select local_activated_at from private.full_local_auth_control
+      ), old_seed as (
+        select ${buildV2RecordCall({
+        ownerUuid: deletionOwner,
+        identityCreatedAt: "2026-08-01T00:00:00Z",
+        sessionId: oldSessionId,
+        sessionKeyHash: "repeat('f', 64)",
+        sessionIssuedAtSql: "control.local_activated_at + interval '1 second'",
+        lastTokenIssuedAtSql: "control.local_activated_at + interval '1 second'",
+        verifiedAtSql: "control.local_activated_at + interval '2 seconds'",
+        accessTokenExpiresAtSql: "control.local_activated_at + interval '1 hour'",
+        bindingExpiresAtSql: "control.local_activated_at + interval '30 minutes'",
+      })} as result
+        from control
+      )
+      select ${buildV2RecordCall({
+        ownerUuid: deletionOwner,
+        identityCreatedAt: "2026-08-01T00:00:00Z",
+        sessionId: newSessionId,
+        sessionKeyHash: "repeat('0', 64)",
+        sessionIssuedAtSql: "control.local_activated_at + interval '3 seconds'",
+        lastTokenIssuedAtSql: "control.local_activated_at + interval '3 seconds'",
+        verifiedAtSql: "control.local_activated_at + interval '4 seconds'",
+        accessTokenExpiresAtSql: "control.local_activated_at + interval '59 minutes'",
+        bindingExpiresAtSql: "control.local_activated_at + interval '55 minutes'",
+      })}
+      from control, old_seed;
+    `);
+    expect(seed.status, seed.stderr).toBe(0);
+    expect(psql(`
+      select concat_ws(
+        ':',
+        count(*) filter (where session_key_hash = repeat('f', 64)),
+        count(*) filter (where session_key_hash = repeat('0', 64))
+      )
+      from public.user_session_generation_bindings
+      where owner_uuid = '${deletionOwner}'::uuid;
+    `)).toBe("1:1");
+    expect(psql(`
+      delete from auth.sessions where user_id = '${deletionOwner}'::uuid;
+      select count(*) from auth.sessions where user_id = '${deletionOwner}'::uuid;
+    `)).toBe("0");
+    expect(psql(`
+      select coalesce(count(*), 0)
+      from public.pantry_items
+      where user_id = '${deletionOwner}'::uuid;
+    `)).toBe("0");
+    for (const [label, sessionId, method, path] of [
+      ["old-get", oldSessionId, "GET", "/users"],
+      ["old-post", oldSessionId, "POST", "/pantry_items"],
+      ["old-delete", oldSessionId, "DELETE", "/pantry_items"],
+      ["new-get", newSessionId, "GET", "/users"],
+      ["new-post", newSessionId, "POST", "/pantry_items"],
+      ["new-delete", newSessionId, "DELETE", "/pantry_items"],
+    ] as const) {
+      const sessionDeleted = psqlResult(`
+        ${buildVerifiedAuthorityRequest({
+          method,
+          path,
+          ownerUuid: deletionOwner,
+          identityCreatedAt: "2026-08-01T00:00:00Z",
+          sessionId,
+          sessionKeyHash: sessionId === oldSessionId ? "repeat('f', 64)" : "repeat('0', 64)",
+          issuedAtSql: sessionId === oldSessionId
+            ? "(select local_activated_at from private.full_local_auth_control) + interval '1 second'"
+            : "(select local_activated_at from private.full_local_auth_control) + interval '3 seconds'",
+          expiresAtSql: sessionId === oldSessionId
+            ? "(select local_activated_at from private.full_local_auth_control) + interval '1 hour'"
+            : "(select local_activated_at from private.full_local_auth_control) + interval '59 minutes'",
+          attestationIssuedAtSql: sessionId === oldSessionId
+            ? "(select local_activated_at from private.full_local_auth_control) + interval '2 seconds'"
+            : "(select local_activated_at from private.full_local_auth_control) + interval '4 seconds'",
+          attestationExpiresAtSql: sessionId === oldSessionId
+            ? "(select local_activated_at from private.full_local_auth_control) + interval '32 seconds'"
+            : "(select local_activated_at from private.full_local_auth_control) + interval '101 seconds'",
+        })}
+      `);
+      expect(sessionDeleted.status, label).not.toBe(0);
+      expect(sessionDeleted.stderr, label).toContain("ACCOUNT_SESSION_STALE");
+    }
+    expect(psql(`
+      select string_agg(
+        concat_ws(':', session_key_hash, binding_state, revoked_at is null),
+        '|'
+        order by session_key_hash
+      )
+      from public.user_session_generation_bindings
+      where session_key_hash in (repeat('0', 64), repeat('f', 64));
+    `)).toBe(
+      `${"0".repeat(64)}:active:t|${"f".repeat(64)}:active:t`,
+    );
+    expect(psql(`
+      select coalesce(count(*), 0)
+      from public.pantry_items
+      where user_id = '${deletionOwner}'::uuid;
+    `)).toBe("0");
+  });
+
+  it("converges 10 concurrent renew attempts without serialization drift and keeps the row monotonic", async () => {
+    const concurrentOwner = "00000000-0000-4000-8000-000000000010";
+    const concurrentSessionId = "99999999-9999-4999-8999-999999999999";
+    expect(psql(`
+      insert into auth.users (id, created_at)
+      values ('${concurrentOwner}', '2026-08-01T00:00:00Z')
+      on conflict (id) do nothing;
+      insert into public.user_account_lifecycles (
+        owner_uuid, account_generation, auth_identity_created_at_snapshot, origin, status, activated_at
+      ) values (
+        '${concurrentOwner}', 1, '2026-08-01T00:00:00Z', 'runtime', 'active', clock_timestamp()
+      )
+      on conflict do nothing;
+      create table if not exists auth.sessions (
+        id uuid primary key,
+        user_id uuid not null references auth.users(id) on delete cascade
+      );
+      insert into auth.sessions (id, user_id)
+      values ('${concurrentSessionId}', '${concurrentOwner}'::uuid)
+      on conflict (id) do nothing;
+      select count(*) from auth.sessions where id = '${concurrentSessionId}'::uuid;
+    `)).toBe("1");
+
+    const seed = psqlResult(`
+      ${serviceClaims}
+      with control as (
+        select local_activated_at from private.full_local_auth_control
+      )
+      select ${buildV2RecordCall({
+        ownerUuid: concurrentOwner,
+        identityCreatedAt: "2026-08-01T00:00:00Z",
+        sessionId: concurrentSessionId,
+        sessionKeyHash: "repeat('a', 64)",
+        sessionIssuedAtSql: "control.local_activated_at + interval '1 second'",
+        lastTokenIssuedAtSql: "control.local_activated_at + interval '1 second'",
+        verifiedAtSql: "control.local_activated_at + interval '2 seconds'",
+        accessTokenExpiresAtSql: "control.local_activated_at + interval '1 hour'",
+        bindingExpiresAtSql: "control.local_activated_at + interval '30 minutes'",
+      })}
+      from control;
+    `);
+    expect(seed.status, seed.stderr).toBe(0);
+
+    const sql = `
+      ${serviceClaims}
+      with control as (
+        select local_activated_at
+        from private.full_local_auth_control
+      )
+      select ${buildV2RenewCall({
+        ownerUuid: concurrentOwner,
+        identityCreatedAt: "2026-08-01T00:00:00Z",
+        sessionId: concurrentSessionId,
+        sessionKeyHash: "repeat('a', 64)",
+        sessionIssuedAtSql: "control.local_activated_at + interval '3 seconds'",
+        lastTokenIssuedAtSql: "control.local_activated_at + interval '3 seconds'",
+        verifiedAtSql: "control.local_activated_at + interval '4 seconds'",
+        accessTokenExpiresAtSql: "control.local_activated_at + interval '59 minutes'",
+        bindingExpiresAtSql: "control.local_activated_at + interval '55 minutes'",
+      })}
+      from control;
+    `;
+    const results = await Promise.all(
+      Array.from({ length: 10 }, () => psqlAsyncResult(sql)),
+    );
+
+    for (const result of results) {
+      expect(result.status, result.stderr).toBe(0);
+      expect(result.stderr).not.toMatch(/deadlock|serialization/iu);
+    }
+    expect(psql(`
+      with control as (
+        select local_activated_at
+        from private.full_local_auth_control
+      )
+      select concat_ws(
+        ':',
+        session_issued_at = control.local_activated_at + interval '1 second',
+        last_token_issued_at = control.local_activated_at + interval '3 seconds',
+        binding_expires_at = control.local_activated_at + interval '55 minutes',
+        binding_state
+      )
+      from public.user_session_generation_bindings
+      cross join control
+      where session_key_hash = repeat('a', 64);
+    `)).toBe("t:t:t:active");
   });
 
   it("allows only scoped internal RPCs and verifies the active local binding", () => {
@@ -703,7 +1880,7 @@ run("full-local Auth isolated PostgreSQL foundation", () => {
         'https://auth.mumeok.kr/auth/v1',
         '${owner}',
         '2026-08-01T00:00:00Z',
-        repeat('e', 64),
+        repeat('4', 64),
         2,
         2,
         control.local_activated_at + interval '3 seconds',
@@ -721,7 +1898,7 @@ run("full-local Auth isolated PostgreSQL foundation", () => {
       where owner_uuid = '${owner}' and account_generation = 1;
       select concat_ws(':', binding_state, revoked_at is not null)
       from public.user_session_generation_bindings
-      where session_key_hash = repeat('e', 64);
+      where session_key_hash = repeat('4', 64);
     `)).toBe("revoked:t");
 
     const secondOwner = "00000000-0000-4000-8000-000000000002";
@@ -747,7 +1924,7 @@ run("full-local Auth isolated PostgreSQL foundation", () => {
         'https://auth.mumeok.kr/auth/v1',
         '${secondOwner}',
         '2026-08-01T00:00:00Z',
-        repeat('f', 64),
+        repeat('5', 64),
         2,
         2,
         control.local_activated_at + interval '1 second',
@@ -762,7 +1939,7 @@ run("full-local Auth isolated PostgreSQL foundation", () => {
       delete from auth.users where id = '${secondOwner}';
       select concat_ws(':', binding_state, revoked_at is not null)
       from public.user_session_generation_bindings
-      where session_key_hash = repeat('f', 64);
+      where session_key_hash = repeat('5', 64);
     `)).toBe("revoked:t");
 
     expect(psql(`
@@ -783,7 +1960,7 @@ run("full-local Auth isolated PostgreSQL foundation", () => {
   it("accepts the exact manifest function and protected-table RLS inventory", () => {
     const { api, result } = securityInventoryAfter();
     expect(result).toMatchObject({
-      required_function_count: 13,
+      required_function_count: 16,
       function_missing_count: 0,
       function_source_drift_count: 0,
       function_security_drift_count: 0,

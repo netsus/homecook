@@ -115,6 +115,63 @@ describe("full-local session authority", () => {
       .digest("hex"));
   });
 
+  it("keeps the same session hash across refreshes and emits separate monotonic token evidence", async () => {
+    process.env.HOMECOOK_SESSION_GENERATION_HMAC_KEY_V2 = SECRET_V2;
+    const now = 1_785_580_000;
+    const client = {
+      rpc: vi.fn().mockResolvedValue({
+        data: {
+          authority: "local",
+          cutover_epoch: 7,
+          flows_open: true,
+          hmac_key_version: 2,
+          local_issuer: ISSUER,
+        },
+        error: null,
+      }),
+    };
+
+    const preparedA = await prepareFullLocalSessionAuthority({
+      accessToken: jwt({
+        aud: "authenticated",
+        exp: now + 3_600,
+        iat: now - 60,
+        iss: ISSUER,
+        role: "authenticated",
+        session_id: SESSION_UUID,
+        sub: OWNER_UUID,
+      }),
+      client,
+      nowSeconds: () => now,
+      user: { id: OWNER_UUID, created_at: "2026-08-01T00:00:00.000Z" },
+    });
+    const preparedB = await prepareFullLocalSessionAuthority({
+      accessToken: jwt({
+        aud: "authenticated",
+        exp: now + 7_200,
+        iat: now + 1_200,
+        iss: ISSUER,
+        role: "authenticated",
+        session_id: SESSION_UUID,
+        sub: OWNER_UUID,
+      }),
+      client,
+      nowSeconds: () => now + 1_200,
+      user: { id: OWNER_UUID, created_at: "2026-08-01T00:00:00.000Z" },
+    });
+
+    expect(preparedA.ok).toBe(true);
+    expect(preparedB.ok).toBe(true);
+    if (!preparedA.ok || !preparedB.ok) return;
+    expect(preparedA.record.p_session_key_hash).toBe(
+      preparedB.record.p_session_key_hash,
+    );
+    expect((preparedA.record as Record<string, unknown>).p_last_token_issued_at)
+      .toBe(new Date((now - 60) * 1_000).toISOString());
+    expect((preparedB.record as Record<string, unknown>).p_last_token_issued_at)
+      .toBe(new Date((now + 1_200) * 1_000).toISOString());
+  });
+
   it("reuses an already live-verified Auth user without a second network lookup", async () => {
     const now = Math.floor(Date.now() / 1_000);
     process.env.AUTH_SUPABASE_EXPECTED_ISSUER = ISSUER;
@@ -185,26 +242,39 @@ describe("full-local session authority", () => {
 
   it("records only the exact prepared local binding", async () => {
     const rpc = vi.fn().mockResolvedValue({ data: { binding_state: "active" }, error: null });
+    const record = {
+      p_access_token_expires_at: "2026-08-01T01:00:00.000Z",
+      p_auth_cutover_epoch: 7,
+      p_binding_expires_at: "2026-08-01T01:00:00.000Z",
+      p_hmac_key_version: 2,
+      p_identity_created_at: "2026-08-01T00:00:00.000Z",
+      p_issuer: ISSUER,
+      p_last_token_issued_at: "2026-08-01T00:10:00.000Z",
+      p_owner_uuid: OWNER_UUID,
+      p_session_id: SESSION_UUID,
+      p_session_issued_at: "2026-08-01T00:10:00.000Z",
+      p_session_key_hash: "a".repeat(64),
+      p_verified_at: "2026-08-01T00:10:10.000Z",
+    } as unknown as Parameters<typeof recordFullLocalSessionAuthority>[0]["record"];
     const result = await recordFullLocalSessionAuthority({
       client: { rpc },
-      record: {
-        p_access_token_expires_at: "2026-08-01T01:00:00.000Z",
-        p_auth_cutover_epoch: 7,
-        p_binding_expires_at: "2026-08-01T01:00:00.000Z",
-        p_hmac_key_version: 2,
-        p_identity_created_at: "2026-08-01T00:00:00.000Z",
-        p_issuer: ISSUER,
-        p_owner_uuid: OWNER_UUID,
-        p_session_issued_at: "2026-08-01T00:10:00.000Z",
-        p_session_key_hash: "a".repeat(64),
-        p_verified_at: "2026-08-01T00:10:10.000Z",
-      },
+      record,
     });
 
     expect(result).toEqual({ ok: true });
-    expect(rpc).toHaveBeenCalledWith("record_full_local_session_authority", expect.objectContaining({
+    expect(rpc).toHaveBeenCalledWith("record_full_local_session_authority_v2", {
+      p_access_token_expires_at: "2026-08-01T01:00:00.000Z",
+      p_auth_cutover_epoch: 7,
+      p_binding_expires_at: "2026-08-01T01:00:00.000Z",
       p_hmac_key_version: 2,
+      p_identity_created_at: "2026-08-01T00:00:00.000Z",
+      p_issuer: ISSUER,
+      p_last_token_issued_at: "2026-08-01T00:10:00.000Z",
       p_owner_uuid: OWNER_UUID,
-    }));
+      p_session_id: SESSION_UUID,
+      p_session_issued_at: "2026-08-01T00:10:00.000Z",
+      p_session_key_hash: "a".repeat(64),
+      p_verified_at: "2026-08-01T00:10:10.000Z",
+    });
   });
 });

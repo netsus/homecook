@@ -3,7 +3,8 @@
   "slice": "full-local-supabase-production",
   "migrations": [
     "supabase/migrations/20260801120000_full_local_auth_db_foundation.sql",
-    "supabase/migrations/20260803090000_full_local_session_issue_time_precision.sql"
+    "supabase/migrations/20260803090000_full_local_session_issue_time_precision.sql",
+    "supabase/migrations/20260809100000_full_local_session_refresh_authority.sql"
   ],
   "deployment_state": "pre-deployment",
   "baseline_application_contract_count": 74,
@@ -81,6 +82,15 @@
       "safe_search_path": ["pg_catalog", "public", "private", "pg_temp"]
     },
     {
+      "signature": "private.hydrate_full_local_session_token_evidence()",
+      "control_class": "application-controlled",
+      "effect": "trigger/internal",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "security_mode": "invoker",
+      "safe_search_path": ["pg_catalog", "public", "private", "pg_temp"]
+    },
+    {
       "signature": "private.revoke_full_local_bindings_on_lifecycle_exit()",
       "control_class": "application-controlled",
       "effect": "trigger/internal",
@@ -111,6 +121,24 @@
       "signature": "public.assert_full_local_session_authority(text, uuid, timestamp with time zone, text, integer, bigint, timestamp with time zone)",
       "control_class": "application-controlled",
       "effect": "read-only",
+      "exposure": "service-internal",
+      "allowed_principals": ["service_role"],
+      "security_mode": "definer",
+      "safe_search_path": ["pg_catalog", "public", "private", "auth", "pg_temp"]
+    },
+    {
+      "signature": "public.record_full_local_session_authority_v2(text, uuid, timestamp with time zone, uuid, text, integer, bigint, timestamp with time zone, timestamp with time zone, timestamp with time zone, timestamp with time zone, timestamp with time zone)",
+      "control_class": "application-controlled",
+      "effect": "mutation",
+      "exposure": "service-internal",
+      "allowed_principals": ["service_role"],
+      "security_mode": "definer",
+      "safe_search_path": ["pg_catalog", "public", "private", "auth", "pg_temp"]
+    },
+    {
+      "signature": "public.assert_and_renew_full_local_session_authority_v2(text, uuid, timestamp with time zone, uuid, text, integer, bigint, timestamp with time zone, timestamp with time zone, timestamp with time zone, timestamp with time zone, timestamp with time zone)",
+      "control_class": "application-controlled",
+      "effect": "mutation",
       "exposure": "service-internal",
       "allowed_principals": ["service_role"],
       "security_mode": "definer",
