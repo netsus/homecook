@@ -46,6 +46,20 @@ function extractInlineCodeList(line: string) {
   return [...line.matchAll(/`([^`]+)`/g)].map((match) => match[1]);
 }
 
+function extractDeclaredInlineKeys(
+  contents: string,
+  startMarker: string,
+  endMarker: string,
+) {
+  const declaration = extractSection(contents, startMarker, endMarker);
+  const start = contents.indexOf(startMarker);
+  const end = contents.indexOf(endMarker, start + startMarker.length);
+
+  expect(contents.indexOf(startMarker, start + startMarker.length)).toBe(-1);
+  expect(contents.indexOf(endMarker, end + endMarker.length)).toBe(-1);
+  return extractInlineCodeList(declaration);
+}
+
 const projectionFields = [
   "id",
   "recipe_id",
@@ -63,6 +77,11 @@ const projectionFields = [
   "nutrition_calculation_status",
   "current_unweighed_closure_event_id",
 ];
+
+const projectionDeclarationStart = "Exact field set (15 keys):";
+const projectionDeclarationEnd = ".\n\nGET item과";
+const listContainerDeclarationStart = "Exact data container (3 keys):";
+const listContainerDeclarationEnd = ". `items`는";
 
 describe("cooked batch API v1.2.36 Contract Evolution", () => {
   const apiPath = "docs/api문서-v1.2.36.md";
@@ -129,13 +148,15 @@ describe("cooked batch API v1.2.36 Contract Evolution", () => {
       "### `CookedBatchProjection`",
       "### snapshot-v2 complete success `data`",
     );
-    const fieldLine = projectionSection
-      .split("\n")
-      .find((line) => line.includes("Exact field set (15 keys):"));
     const projectionExample = extractFirstJsonObject(projectionSection);
 
-    expect(fieldLine).toBeDefined();
-    expect(extractInlineCodeList(fieldLine ?? "").slice(-15)).toEqual(projectionFields);
+    expect(
+      extractDeclaredInlineKeys(
+        projectionSection,
+        projectionDeclarationStart,
+        projectionDeclarationEnd,
+      ),
+    ).toEqual(projectionFields);
     expect(Object.keys(projectionExample)).toEqual(projectionFields);
     expect(addendum).toContain("GET item과 모든 cooked-batch mutation 성공 `data`가 그대로 공유");
     expect(projectionSection).toContain("위 15개 field는 권한을 통과한 item에서 항상 존재하며 field를 omit하지 않는다");
@@ -146,6 +167,44 @@ describe("cooked batch API v1.2.36 Contract Evolution", () => {
     expect(projectionSection).toContain("legacy row에서 증명할 수 없는 새 field는 explicit `null`");
     expect(projectionSection).toContain("servings·이름·content로 g 또는 snapshot을 추론하지 않는다");
     expect(projectionSection).toContain("같은 값으로 `cancel_current`가 가능한 경우에만 그 event UUID");
+  });
+
+  it("rejects an extra key inside the CookedBatchProjection declaration", () => {
+    const addendum = extractCookedBatchAddendum(read(apiPath));
+    const mutatedAddendum = addendum.replace(
+      "Exact field set (15 keys): `id`",
+      "Exact field set (15 keys): `unexpected_before_id`, `id`",
+    );
+    expect(mutatedAddendum).not.toBe(addendum);
+    expect(mutatedAddendum).toContain("`unexpected_before_id`");
+    const projectionSection = extractSection(
+      addendum,
+      "### `CookedBatchProjection`",
+      "### snapshot-v2 complete success `data`",
+    );
+    const mutatedProjectionSection = extractSection(
+      mutatedAddendum,
+      "### `CookedBatchProjection`",
+      "### snapshot-v2 complete success `data`",
+    );
+
+    expect(
+      extractDeclaredInlineKeys(
+        `prefix \`ignored_key\`\n${projectionSection}\nsuffix \`ignored_key\``,
+        projectionDeclarationStart,
+        projectionDeclarationEnd,
+      ),
+    ).toEqual(projectionFields);
+
+    expect(() => {
+      expect(
+        extractDeclaredInlineKeys(
+          `prefix \`ignored_key\`\n${mutatedProjectionSection}\nsuffix \`ignored_key\``,
+          projectionDeclarationStart,
+          projectionDeclarationEnd,
+        ),
+      ).toEqual(projectionFields);
+    }).toThrow();
   });
 
   it("locks exact snapshot-v2 complete and batch mutation success data with replay", () => {
@@ -194,9 +253,6 @@ describe("cooked batch API v1.2.36 Contract Evolution", () => {
       "### `GET /cooked-batches` owner-only list와 pagination",
       "### 인증·소유권·validation·conflict와 zero-write",
     );
-    const containerLine = listSection
-      .split("\n")
-      .find((line) => line.includes("Exact data container (3 keys):"));
     const inheritedListSection = extractSection(
       api,
       "### `GET /cooked-batches`\n",
@@ -209,16 +265,55 @@ describe("cooked batch API v1.2.36 Contract Evolution", () => {
     expect(listSection).toContain("default `20`, maximum `50`");
     expect(listSection).toContain("`cooked_at DESC, id DESC`");
     expect(listSection).toContain("cursor는 이 tuple과 exact `availability` filter에 묶인 opaque string");
-    expect(containerLine).toBeDefined();
-    expect(extractInlineCodeList(containerLine ?? "").slice(0, 3)).toEqual([
-      "items",
-      "next_cursor",
-      "has_next",
-    ]);
+    expect(
+      extractDeclaredInlineKeys(
+        listSection,
+        listContainerDeclarationStart,
+        listContainerDeclarationEnd,
+      ),
+    ).toEqual(["items", "next_cursor", "has_next"]);
     expect(listSection).toContain("다른 owner row는 item과 cursor boundary 계산 모두에서 제외");
     expect(inheritedListSection).toContain("batch만 반환하는 filter다");
     expect(inheritedListSection).toContain("`all`도 owner row만 반환한다");
     expect(api).not.toContain("우선 반환");
+  });
+
+  it("rejects an extra key inside the cooked-batch list container declaration", () => {
+    const addendum = extractCookedBatchAddendum(read(apiPath));
+    const mutatedAddendum = addendum.replace(
+      "`items`, `next_cursor`, `has_next`.",
+      "`items`, `next_cursor`, `has_next`, `unexpected_after_has_next`.",
+    );
+    expect(mutatedAddendum).not.toBe(addendum);
+    expect(mutatedAddendum).toContain("`unexpected_after_has_next`");
+    const listSection = extractSection(
+      addendum,
+      "### `GET /cooked-batches` owner-only list와 pagination",
+      "### 인증·소유권·validation·conflict와 zero-write",
+    );
+    const mutatedListSection = extractSection(
+      mutatedAddendum,
+      "### `GET /cooked-batches` owner-only list와 pagination",
+      "### 인증·소유권·validation·conflict와 zero-write",
+    );
+
+    expect(
+      extractDeclaredInlineKeys(
+        `prefix \`ignored_key\`\n${listSection}\nsuffix \`ignored_key\``,
+        listContainerDeclarationStart,
+        listContainerDeclarationEnd,
+      ),
+    ).toEqual(["items", "next_cursor", "has_next"]);
+
+    expect(() => {
+      expect(
+        extractDeclaredInlineKeys(
+          `prefix \`ignored_key\`\n${mutatedListSection}\nsuffix \`ignored_key\``,
+          listContainerDeclarationStart,
+          listContainerDeclarationEnd,
+        ),
+      ).toEqual(["items", "next_cursor", "has_next"]);
+    }).toThrow();
   });
 
   it("separates 404 nondisclosure, 422 validation and exact 409 conflicts with zero writes", () => {

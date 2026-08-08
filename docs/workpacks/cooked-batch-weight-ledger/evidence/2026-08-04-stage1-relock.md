@@ -105,6 +105,14 @@ Fresh successor-head validation was rerun after the evidence/bookkeeping update:
 - Successor regression RED after strengthening whole-document consistency checks: `1 file / 9 tests / 2 expected failures / 7 passes`. The failures reproduced the inherited other-owner error conflict and permissive `availability=loggable` wording before either official-document line was repaired.
 - The repair keeps API v1.2.35 and the other four official documents byte-identical. It corrects only the two conflicting inherited v1.2.36 lines, strengthens the existing contract test, and leaves fresh independent successor-head re-review and Stage 2 resume pending.
 
+### PR #1287 second reviewer exact-key parser repair
+
+- Second fresh reviewer task `019fe114-dc48-77a1-b408-a98dd887715c` reviewed exact head `25528f81f859709845d69f965d475e9afa4e7c61` and returned `HOLD`, P0/P1/P2 `0/0/1`: projection `.slice(-15)` discarded an extra key before `id`, while list-container `.slice(0, 3)` discarded a fourth or later key.
+- Second fresh repair-author task `019fe120-b165-7ea0-a736-89da7535cacf` first injected `unexpected_before_id` and `unexpected_after_has_next` into in-memory mutated document fixtures while retaining the old assertions. The focused RED was `1 file / 11 tests / 2 failed / 9 passed`; both failures were `expected [Function] to throw an error`, proving the old assertions accepted the extra keys.
+- The minimum test-only repair isolates each declaration between explicit unique start/end markers and compares the complete ordered key array. Prefix/suffix inline-code noise remains outside the parsed range, while either injected key makes the exact-key assertion throw. No temporary key was written to an official document.
+- GREEN verification is focused `1 file / 11 tests` and the same related contract/governance suite `8 files / 90 tests`. Source-of-truth, workflow-v2, workpack, automation-spec and OMO bookkeeping validators, lint, typecheck, diff check and audit high/critical `0` also pass; residual advisories remain `1 low | 1 moderate`.
+- This second repair changes only the contract regression test and this evidence history. API v1.2.36 meaning, API v1.2.35, the other four official documents, #9/#11, product/DB/migration/dependency and activation surfaces remain unchanged. A different fresh reviewer must inspect the new exact head before any Ready, merge, Stage 1 approval or Stage 2 resume action.
+
 ## PR and merge posture
 
 - Historical Stage 1 PR `#1285` remains `Draft`; this Contract Evolution is delivered through a separate Draft PR and does not approve #1285.
