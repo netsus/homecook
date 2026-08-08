@@ -21,6 +21,7 @@ import type {
 
 const createRouteHandlerClient = vi.fn();
 const createServiceRoleClient = vi.fn();
+const createYoutubeExtractionInternalClient = vi.fn();
 const createYoutubeIngredientRegistrationInternalRpcClient = vi.fn();
 const ensurePublicUserRow = vi.fn();
 const ensureUserBootstrapState = vi.fn();
@@ -35,6 +36,7 @@ const formatBootstrapErrorMessage = vi.fn((error: unknown, fallbackMessage: stri
 vi.mock("@/lib/supabase/server", () => ({
   createRouteHandlerClient,
   createServiceRoleClient,
+  createYoutubeExtractionInternalClient,
   createYoutubeIngredientRegistrationInternalRpcClient,
 }));
 
@@ -1312,11 +1314,15 @@ describe("20 youtube real import backend", () => {
     restoreYoutubeImportEnv();
     createRouteHandlerClient.mockReset();
     createServiceRoleClient.mockReset();
+    createYoutubeExtractionInternalClient.mockReset();
     createYoutubeIngredientRegistrationInternalRpcClient.mockReset();
     ensurePublicUserRow.mockReset();
     ensureUserBootstrapState.mockReset();
     formatBootstrapErrorMessage.mockClear();
     createServiceRoleClient.mockReturnValue(null);
+    createYoutubeExtractionInternalClient.mockImplementation(
+      () => createServiceRoleClient(),
+    );
     createYoutubeIngredientRegistrationInternalRpcClient.mockImplementation(
       () => createServiceRoleClient(),
     );
@@ -1850,17 +1856,23 @@ describe("20 youtube real import backend", () => {
       },
     });
     const sessionsTable = createYoutubeSessionsTable({});
-    const dbClient = {
+    const userDbClient = {
       from: vi.fn((table: string) => {
         if (table === "ingredients") return ingredientsTable;
         if (table === "ingredient_synonyms") return ingredientSynonymsTable;
+        throw new Error(`user scope denied table: ${table}`);
+      }),
+    };
+    const internalDbClient = {
+      from: vi.fn((table: string) => {
         if (table === "cooking_methods") return cookingMethodsTable;
         if (table === "youtube_extraction_sessions") return sessionsTable;
-        throw new Error(`unexpected table: ${table}`);
+        throw new Error(`internal scope denied table: ${table}`);
       }),
     };
 
-    createServiceRoleClient.mockReturnValue(dbClient);
+    createServiceRoleClient.mockReturnValue(userDbClient);
+    createYoutubeExtractionInternalClient.mockReturnValue(internalDbClient);
 
     const { POST } = await importExtractRoute();
     const response = await POST(new Request("http://localhost:3000/api/v1/recipes/youtube/extract", {
@@ -1931,6 +1943,10 @@ describe("20 youtube real import backend", () => {
       /^[0-9a-f-]{36}$/i.test(ingredient.draft_ingredient_id),
     )).toBe(true);
     expect(ingredientsTable.select).toHaveBeenCalledWith("id, standard_name");
+    expect(userDbClient.from).not.toHaveBeenCalledWith("youtube_extraction_sessions");
+    expect(userDbClient.from).not.toHaveBeenCalledWith("cooking_methods");
+    expect(internalDbClient.from).toHaveBeenCalledWith("cooking_methods");
+    expect(internalDbClient.from).toHaveBeenCalledWith("youtube_extraction_sessions");
     expect(ingredientsTable.__query.in).toHaveBeenCalledWith("standard_name", ["김치", "소금"]);
     expect(cookingMethodsTable.__selectQuery.eq).toHaveBeenCalledWith("code", "auto_salt");
     expect(cookingMethodsTable.insert).toHaveBeenCalledWith({
@@ -1959,6 +1975,28 @@ describe("20 youtube real import backend", () => {
     )).toEqual(body.data.ingredients.map((ingredient: { draft_ingredient_id: string }) =>
       ingredient.draft_ingredient_id,
     ));
+  });
+
+  it("POST /api/v1/recipes/youtube/extract fails closed before durable writes when the internal scope is unavailable", async () => {
+    mockAuth();
+    const { dbClient, sessionsTable } = createTranscriptFallbackExtractDbClient();
+    createServiceRoleClient.mockReturnValue(dbClient);
+    createYoutubeExtractionInternalClient.mockReturnValue(null);
+
+    const { POST } = await importExtractRoute();
+    const response = await POST(new Request("http://localhost:3000/api/v1/recipes/youtube/extract", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ youtube_url: recipeUrl }),
+    }));
+
+    await expect(response.json()).resolves.toMatchObject({
+      success: false,
+      data: null,
+      error: { code: "INTERNAL_ERROR", fields: [] },
+    });
+    expect(response.status).toBe(500);
+    expect(sessionsTable.insert).not.toHaveBeenCalled();
   });
 
   it("POST /api/v1/recipes/youtube/extract runs exact i031 without legacy or Gemini fallbacks", async () => {
@@ -4219,12 +4257,18 @@ describe("20 youtube real import backend", () => {
     const candidatesTable = createYoutubeExtractionCandidatesTable({
       selectResults: [{ data: buildExtractionCandidateRow(), error: null }],
     });
-    const from = vi.fn((table: string) => {
+    const userFrom = vi.fn((table: string) => {
       if (table === "youtube_extraction_sessions") return sessionsTable;
       if (table === "youtube_extraction_candidates") return candidatesTable;
-      throw new Error(`unexpected table: ${table}`);
+      throw new Error(`user scope denied table: ${table}`);
     });
-    createServiceRoleClient.mockReturnValue({ from });
+    const internalFrom = vi.fn((table: string) => {
+      if (table === "youtube_extraction_sessions") return sessionsTable;
+      if (table === "youtube_extraction_candidates") return candidatesTable;
+      throw new Error(`internal scope denied table: ${table}`);
+    });
+    createServiceRoleClient.mockReturnValue({ from: userFrom });
+    createYoutubeExtractionInternalClient.mockReturnValue({ from: internalFrom });
 
     const { POST } = await importCandidateDraftRoute();
     const response = await POST(new Request("http://localhost:3000/api/v1/recipes/youtube/candidate-drafts", {
@@ -4258,6 +4302,10 @@ describe("20 youtube real import backend", () => {
       error: null,
     });
     expect(body.data.draft.extraction_id).toEqual(expect.any(String));
+    expect(userFrom).toHaveBeenCalledWith("youtube_extraction_sessions");
+    expect(userFrom).toHaveBeenCalledWith("youtube_extraction_candidates");
+    expect(internalFrom).toHaveBeenCalledWith("youtube_extraction_sessions");
+    expect(internalFrom).toHaveBeenCalledWith("youtube_extraction_candidates");
     expect(sessionsTable.insert).toHaveBeenCalledWith(expect.objectContaining({
       id: body.data.draft.extraction_id,
       session_kind: "candidate_child",
@@ -9425,7 +9473,7 @@ describe("20 youtube real import backend", () => {
     expect(from).not.toHaveBeenCalledWith("recipe_book_items");
   });
 
-  it("POST /api/v1/recipes/youtube/register marks the parent candidate after a child draft is registered", async () => {
+  it("POST /api/v1/recipes/youtube/register delegates child candidate state to the authoritative RPC", async () => {
     mockAuth();
 
     const { candidatesTable, dbClient, rpc } = createRegisterDbClient({
@@ -9463,12 +9511,6 @@ describe("20 youtube real import backend", () => {
       error: null,
     });
     expect(rpc).toHaveBeenCalled();
-    expect(candidatesTable.update).toHaveBeenCalledWith(expect.objectContaining({
-      status: "registered",
-      recipe_id: recipeId,
-      registered_at: expect.any(String),
-    }));
-    expect(candidatesTable.__updateQuery.eq).toHaveBeenCalledWith("extraction_session_id", extractionId);
-    expect(candidatesTable.__updateQuery.eq).toHaveBeenCalledWith("candidate_id", "candidate-1");
+    expect(candidatesTable.update).not.toHaveBeenCalled();
   });
 });

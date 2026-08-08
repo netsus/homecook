@@ -43,9 +43,23 @@ const refreshAuthorityMigration = refreshAuthorityMigrations[0]
       "utf8",
     )
   : "";
+const requestTransactionAndYoutubeScopeMigration = readFileSync(
+  new URL(
+    "../supabase/migrations/20260809110000_full_local_request_transaction_and_youtube_scope.sql",
+    import.meta.url,
+  ),
+  "utf8",
+);
 const authorizationManifest = readFileSync(
   new URL(
     "../docs/security/account-session-generation-security-function-authorization-manifest.json",
+    import.meta.url,
+  ),
+  "utf8",
+);
+const fullLocalAuthorizationManifest = readFileSync(
+  new URL(
+    "../docs/security/full-local-auth-db-security-function-authorization-manifest.json",
     import.meta.url,
   ),
   "utf8",
@@ -113,6 +127,24 @@ describe("full-local request authority migration", () => {
     );
     expect(refreshAuthorityMigration).toContain(
       "'/rpc/assert_and_renew_full_local_session_authority_v2'",
+    );
+  });
+
+  it("treats transaction-level read-only writes as read-only authority checks in the additive follow-up migration", () => {
+    expect(requestTransactionAndYoutubeScopeMigration).toContain(
+      "v_read_only_request := v_method in ('GET', 'HEAD')\n    or current_setting('transaction_read_only') = 'on';",
+    );
+    expect(requestTransactionAndYoutubeScopeMigration).toContain(
+      "from auth.sessions as auth_session",
+    );
+    expect(requestTransactionAndYoutubeScopeMigration).toContain(
+      "session_identity_hash",
+    );
+    expect(requestTransactionAndYoutubeScopeMigration).toContain(
+      "last_token_issued_at",
+    );
+    expect(requestTransactionAndYoutubeScopeMigration).toContain(
+      "revoke all on function private.verify_full_local_authenticated_authority()",
     );
   });
 
@@ -190,12 +222,40 @@ describe("full-local request authority migration", () => {
     }
   });
 
+  it("allowlists the exact youtube extraction REST paths and registration rate-limit RPC", () => {
+    expect(requestTransactionAndYoutubeScopeMigration).toContain(
+      "v_scope = 'youtube-extraction'",
+    );
+    for (const path of [
+      "/youtube_extraction_sessions",
+      "/youtube_extraction_candidates",
+      "/youtube_transcript_cache",
+      "/youtube_transcript_fetch_events",
+      "/youtube_llm_extraction_cache",
+      "/youtube_llm_extraction_events",
+      "/youtube_visual_extraction_cache",
+      "/youtube_visual_extraction_events",
+      "/cooking_methods",
+      "/rpc/consume_youtube_ingredient_registration_rate_limit",
+      "/rpc/register_youtube_ingredient",
+    ]) {
+      expect(requestTransactionAndYoutubeScopeMigration).toContain(path);
+    }
+    expect(requestTransactionAndYoutubeScopeMigration).toContain("v_method = 'PATCH'");
+  });
+
   it("classifies every full-local pre-request helper as internal-only", () => {
     expect(authorizationManifest).toContain("20260801151000_full_local_request_authority.sql");
     expect(authorizationManifest).toContain("20260803091000_full_local_optional_nbf_authority.sql");
     expect(authorizationManifest).toContain("20260803092000_recipe_future_internal_scope.sql");
     expect(authorizationManifest).toContain("20260803093000_full_local_read_only_request_authority.sql");
     expect(authorizationManifest).toContain("20260803100000_recipe_future_scoped_internal_rpc_clients.sql");
+    expect(authorizationManifest).toContain(
+      "20260809110000_full_local_request_transaction_and_youtube_scope.sql",
+    );
+    expect(fullLocalAuthorizationManifest).toContain(
+      "20260809110000_full_local_request_transaction_and_youtube_scope.sql",
+    );
     expect(authorizationManifest).toContain("private.verify_hybrid_request_authority_remote_legacy()");
     expect(authorizationManifest).toContain("private.verify_full_local_internal_scope()");
     expect(authorizationManifest).toContain("private.verify_full_local_anonymous_authority()");

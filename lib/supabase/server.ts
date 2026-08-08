@@ -408,6 +408,7 @@ type LocalInternalScope =
   | "session-logout"
   | "shopping-create"
   | "snapshot-v2-session"
+  | "youtube-extraction"
   | "youtube-ingredient-registration";
 
 function createScopedDataServiceRoleClient(
@@ -687,6 +688,27 @@ export function createYoutubeIngredientRegistrationInternalRpcClient() {
   return client
     ? {
         rpc: client.rpc.bind(client),
+      }
+    : null;
+}
+
+const YOUTUBE_EXTRACTION_TABLES = new Set([
+  "youtube_extraction_sessions",
+  "youtube_extraction_candidates",
+  "youtube_transcript_cache",
+  "youtube_transcript_fetch_events",
+  "youtube_llm_extraction_cache",
+  "youtube_llm_extraction_events",
+  "youtube_visual_extraction_cache",
+  "youtube_visual_extraction_events",
+  "cooking_methods",
+]);
+
+export function createYoutubeExtractionInternalClient() {
+  const client = createScopedDataServiceRoleClient("youtube-extraction");
+  return client
+    ? {
+        from: exactInternalFrom(client, YOUTUBE_EXTRACTION_TABLES),
       }
     : null;
 }

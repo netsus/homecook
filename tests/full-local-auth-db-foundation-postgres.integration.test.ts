@@ -153,7 +153,7 @@ function buildVerifiedAuthorityRequest({
   attestationIssuedAtSql = "clock_timestamp()",
   attestationExpiresAtSql = `${"clock_timestamp()"} + interval '30 seconds'`,
 }: {
-  method: "GET" | "POST" | "DELETE";
+  method: "GET" | "HEAD" | "POST" | "PATCH" | "DELETE";
   path: string;
   ownerUuid: string;
   identityCreatedAt: string;
@@ -754,6 +754,11 @@ run("full-local Auth isolated PostgreSQL foundation", () => {
     const sessionId = "11111111-1111-4111-8111-111111111111";
     const sessionKeyHash = "repeat('b', 64)";
     expect(psql(`
+      update public.account_generation_capability_state
+      set state = 'generation_active',
+          revision = revision + 1,
+          activated_at = clock_timestamp() - interval '1 minute'
+      where singleton;
       insert into auth.users (id, created_at)
       values ('${ownerUuid}', '2026-08-01T00:00:00Z')
       on conflict (id) do nothing;
@@ -1835,6 +1840,95 @@ run("full-local Auth isolated PostgreSQL foundation", () => {
     `);
     expect(unverifiedPayload.status).not.toBe(0);
     expect(unverifiedPayload.stderr).toContain("ACCOUNT_SESSION_STALE");
+  });
+
+  it("allowlists only the exact youtube extraction REST paths and ingredient registration RPCs", () => {
+    for (const [method, path, scope] of [
+      ["POST", "/youtube_extraction_sessions", "youtube-extraction"],
+      ["PATCH", "/youtube_extraction_candidates", "youtube-extraction"],
+      ["GET", "/youtube_transcript_cache", "youtube-extraction"],
+      ["POST", "/youtube_transcript_fetch_events", "youtube-extraction"],
+      ["PATCH", "/youtube_llm_extraction_cache", "youtube-extraction"],
+      ["GET", "/youtube_llm_extraction_events", "youtube-extraction"],
+      ["PATCH", "/youtube_visual_extraction_cache", "youtube-extraction"],
+      ["POST", "/youtube_visual_extraction_events", "youtube-extraction"],
+      ["GET", "/cooking_methods", "youtube-extraction"],
+      [
+        "POST",
+        "/rpc/consume_youtube_ingredient_registration_rate_limit",
+        "youtube-ingredient-registration",
+      ],
+      ["POST", "/rpc/register_youtube_ingredient", "youtube-ingredient-registration"],
+    ] as const) {
+      expect(psql(`
+        set request.jwt.claims = '{"role":"service_role"}';
+        set request.method = '${method}';
+        set request.path = '${path}';
+        set request.headers = '{"x-homecook-internal-scope":"${scope}"}';
+        select private.verify_hybrid_request_authority();
+        select 'ok';
+      `)).toBe("ok");
+    }
+
+    const deniedYoutubeDelete = psqlResult(`
+      set request.jwt.claims = '{"role":"service_role"}';
+      set request.method = 'DELETE';
+      set request.path = '/youtube_visual_extraction_cache';
+      set request.headers = '{"x-homecook-internal-scope":"youtube-extraction"}';
+      select private.verify_hybrid_request_authority();
+    `);
+    expect(deniedYoutubeDelete.status).not.toBe(0);
+    expect(deniedYoutubeDelete.stderr).toContain("ACCOUNT_SESSION_STALE");
+  });
+
+  it("treats POST requests inside read-only transactions as read-only authority checks", () => {
+    const readOnlySessionId = "12121212-1212-4212-8212-121212121212";
+    const seed = psqlResult(`
+      create table if not exists auth.sessions (
+        id uuid primary key,
+        user_id uuid not null references auth.users(id) on delete cascade
+      );
+      insert into auth.sessions (id, user_id)
+      values ('${readOnlySessionId}'::uuid, '${owner}'::uuid)
+      on conflict (id) do nothing;
+      ${serviceClaims}
+      with control as (
+        select local_activated_at
+        from private.full_local_auth_control
+      )
+      select ${buildV2RecordCall({
+        ownerUuid: owner,
+        identityCreatedAt: "2026-08-01T00:00:00Z",
+        sessionId: readOnlySessionId,
+        sessionKeyHash: "repeat('2', 64)",
+        sessionIssuedAtSql:
+          "to_timestamp(floor(extract(epoch from control.local_activated_at)) + 1)",
+        lastTokenIssuedAtSql:
+          "to_timestamp(floor(extract(epoch from control.local_activated_at)) + 1)",
+        verifiedAtSql: "control.local_activated_at + interval '2 seconds'",
+        accessTokenExpiresAtSql: "control.local_activated_at + interval '59 minutes'",
+        bindingExpiresAtSql: "control.local_activated_at + interval '30 minutes'",
+      })}
+      from control;
+    `);
+    expect(seed.status, seed.stderr).toBe(0);
+
+    const readOnlyPostRequest = psqlResult(`
+      begin transaction isolation level read committed read only;
+      ${buildVerifiedAuthorityRequest({
+        method: "POST",
+        path: "/pantry_items",
+        ownerUuid: owner,
+        identityCreatedAt: "2026-08-01T00:00:00Z",
+        sessionId: readOnlySessionId,
+        sessionKeyHash: "repeat('2', 64)",
+        issuedAtSql:
+          "to_timestamp(floor(extract(epoch from (select local_activated_at from private.full_local_auth_control))) + 1)",
+        expiresAtSql: "(select local_activated_at + interval '59 minutes' from private.full_local_auth_control)",
+      })}
+      commit;
+    `);
+    expect(readOnlyPostRequest.status, readOnlyPostRequest.stderr).toBe(0);
   });
 
   it("preserves hybrid recovery and revokes local sessions idempotently", () => {
