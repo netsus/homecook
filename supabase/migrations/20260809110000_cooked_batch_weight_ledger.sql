@@ -466,6 +466,8 @@ as $function$
 declare
   v_xp_kind text;
   v_xp integer;
+  v_previous_total_xp integer;
+  v_previous_level integer := 1;
   v_total_xp integer;
   v_last_event_at timestamptz;
   v_event_counts jsonb;
@@ -479,6 +481,14 @@ begin
   perform pg_catalog.pg_advisory_xact_lock(
     pg_catalog.hashtextextended('homecook-user-progress:' || p_owner_uuid::text, 0)
   );
+  select coalesce(sum(greatest(event.xp_delta, 0)), 0)::integer
+  into v_previous_total_xp
+  from public.user_progress_events as event
+  where event.user_id = p_owner_uuid;
+  while 40 * v_previous_level * v_previous_level + 60 * v_previous_level
+      <= v_previous_total_xp loop
+    v_previous_level := v_previous_level + 1;
+  end loop;
   v_xp_kind := case when exists (
     select 1 from public.user_progress_events
     where user_id = p_owner_uuid and event_type = p_event_type
@@ -494,7 +504,11 @@ begin
   ) values(
     p_owner_uuid,p_event_type,p_event_type || ':' || p_source_id,
     'leftover_dishes',p_source_id,v_xp,p_now,
-    jsonb_build_object('xp_kind',v_xp_kind,'level_curve_version','v2')
+    jsonb_build_object(
+      'xp_kind',v_xp_kind,
+      'level_curve_version','v2',
+      'previous_level',v_previous_level
+    )
   ) on conflict(user_id,event_type,source_key) do nothing;
 
   if p_event_type = 'leftover_eaten' then
@@ -876,6 +890,7 @@ as $function$
 declare
   v_authority jsonb; v_session public.cooking_sessions%rowtype; v_claim jsonb;
   v_receipt uuid; v_result jsonb; v_requested integer; v_found integer; v_matching integer;
+  v_recipe_id uuid; v_meal record;
   v_meals integer := 0; v_expected_meals integer := 0;
   v_claims integer := 0; v_claims_deleted integer := 0;
   v_removed integer := 0; v_cook_count integer := 0;
@@ -889,10 +904,30 @@ begin
     raise exception 'VALIDATION_ERROR' using errcode = '22023';
   end if;
   v_authority := public.assert_recipe_future_session_authority(p_owner_uuid, p_auth_identity_created_at_snapshot, p_session_key_hash, p_hmac_key_version, p_session_issued_at);
+  select session.recipe_id into v_recipe_id
+  from public.cooking_sessions as session
+  where session.id = p_session_id
+    and session.user_id = p_owner_uuid
+    and session.contract_version = 'snapshot_v2';
+  if v_recipe_id is null then raise exception 'RESOURCE_NOT_FOUND' using errcode = 'P0002'; end if;
+  perform public.lock_personal_recipe_ids(array[v_recipe_id]);
+  for v_meal in
+    select meal.id
+    from public.cooking_session_meals as session_meal
+    join public.meals as meal on meal.id = session_meal.meal_id
+    where session_meal.session_id = p_session_id
+    order by meal.id::text collate "C"
+    for update of meal
+  loop
+    perform pg_catalog.pg_advisory_xact_lock(
+      pg_catalog.hashtextextended('homecook-meal:' || v_meal.id::text, 0)
+    );
+  end loop;
   select session.* into v_session from public.cooking_sessions as session
   where session.id = p_session_id and session.user_id = p_owner_uuid and session.contract_version = 'snapshot_v2'
   for update;
   if v_session.id is null then raise exception 'RESOURCE_NOT_FOUND' using errcode = 'P0002'; end if;
+  if v_session.recipe_id is distinct from v_recipe_id then raise exception 'CONFLICT' using errcode = '55000'; end if;
   v_claim := private.claim_cooked_batch_operation(p_owner_uuid, (v_authority->>'account_generation')::bigint,
     'snapshot_v2_complete', p_idempotency_key, jsonb_build_object(
       'session_id', p_session_id, 'consumed_pantry_item_ids', to_jsonb(coalesce(p_consumed_pantry_item_ids, '{}'::uuid[])),
@@ -922,8 +957,8 @@ begin
           meal.user_id is distinct from p_owner_uuid
           or meal.recipe_id is distinct from v_session.recipe_id
           or meal.recipe_content_snapshot_id is distinct from v_session.recipe_content_snapshot_id
-          or meal.revision is distinct from session_meal.meal_revision_snapshot
           or meal.status is distinct from 'shopping_done'
+          or meal.revision is distinct from session_meal.meal_revision_snapshot
         )
   ) then
     raise exception 'CONFLICT' using errcode = '55000';

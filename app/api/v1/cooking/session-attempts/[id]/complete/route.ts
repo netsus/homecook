@@ -3,6 +3,7 @@ import {
   callCookedBatchRpc,
   isUuid,
   parseSnapshotV2CompleteRequest,
+  projectCookedBatchGamification,
   projectSnapshotV2CompleteData,
 } from "@/lib/server/cooked-batches";
 import { authorizeCookedBatchRequest, readJson } from
@@ -32,6 +33,12 @@ export async function POST(request: Request, context: RouteContext) {
     p_finished_weight_g: parsed.value.finishedWeightG,
   });
   if (!result.ok) return result.response;
+  await projectCookedBatchGamification(
+    authorized.routeClient,
+    authorized.user.id,
+    "cooking_completed",
+    id,
+  );
   const data = projectSnapshotV2CompleteData(result.data);
   return data ? ok(data) : fail("INTERNAL_ERROR", "요리 완료 결과를 확인하지 못했어요.", 500);
 }

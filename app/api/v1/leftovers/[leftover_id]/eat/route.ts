@@ -5,7 +5,10 @@ import {
   isUuid,
   toLeftoverMutationData,
 } from "@/lib/server/leftovers";
-import { callCookedBatchRpc } from "@/lib/server/cooked-batches";
+import {
+  callCookedBatchRpc,
+  projectCookedBatchGamification,
+} from "@/lib/server/cooked-batches";
 import { authorizeCookedBatchRequest } from "@/lib/server/cooked-batch-route";
 import {
   ensurePublicUserRow,
@@ -92,6 +95,13 @@ export async function POST(request: Request, context: RouteContext) {
     }
     return fail("CONFLICT", "중량 기록이 있는 요리는 전용 기록 화면에서 변경해 주세요.", 409);
   }
+
+  await projectCookedBatchGamification(
+    routeClient,
+    user.id,
+    "leftover_eaten",
+    leftoverId,
+  );
 
   return ok(toLeftoverMutationData(mutationData));
 }

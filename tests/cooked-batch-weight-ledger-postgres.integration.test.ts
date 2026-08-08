@@ -814,6 +814,118 @@ describe.runIf(enabled)("cooked batch weight ledger PostgreSQL", () => {
     `);
   });
 
+  it("serializes two-connection complete and cancel without deadlock and leaves one valid terminal outcome", async () => {
+    const raceSession = "a4000000-0000-4000-8000-000000000030";
+    const raceMeal = "a4000000-0000-4000-8000-000000000031";
+    const completeKey = "aa000000-0000-4000-8000-000000000030";
+    const cancelKey = "aa000000-0000-4000-8000-000000000031";
+
+    psql(`
+      select public.set_account_generation_internal_writer_marker('${cutoverAttempt}',true);
+      insert into public.meals(
+        id,user_id,recipe_id,plan_date,column_id,planned_servings,status,revision
+      ) values(
+        '${raceMeal}','${ownerB}','${recipeB}',current_date + 2,'a4000000-0000-4000-8000-000000000099',2,
+        'shopping_done',1
+      );
+      insert into public.cooking_sessions(
+        id,user_id,status,contract_version,session_kind,recipe_id,
+        recipe_content_snapshot_id,cooking_servings,base_recipe_revision
+      ) select
+        '${raceSession}','${ownerB}','in_progress','snapshot_v2','planner',
+        '${recipeB}',recipe_content_snapshot_id,2,null
+      from public.meals where id='${raceMeal}';
+      insert into public.cooking_session_meals(
+        session_id,meal_id,recipe_id,cooking_servings,meal_revision_snapshot
+      ) values('${raceSession}','${raceMeal}','${recipeB}',2,1);
+      insert into public.cooking_session_meal_claims(meal_id,session_id,owner_user_id)
+      values('${raceMeal}','${raceSession}','${ownerB}');
+      select public.set_account_generation_internal_writer_marker('${cutoverAttempt}',false);
+      create or replace function private.test_pause_complete_receipt()
+      returns trigger language plpgsql set search_path=pg_catalog,public,private,pg_temp
+      as $$ begin perform pg_sleep(0.5); return new; end $$;
+      create trigger test_pause_complete_receipt
+      after insert on public.mutation_idempotency_keys
+      for each row when (new.operation_scope='snapshot_v2_complete')
+      execute function private.test_pause_complete_receipt();
+    `);
+
+    const outcomes = await Promise.allSettled([
+      psqlAsync(`
+        begin;
+        set local request.jwt.claim.role='service_role';
+        select public.complete_snapshot_v2_cooking_session(
+          ${authArgs(ownerB)},'${raceSession}','${completeKey}',array[]::uuid[],
+          'weigh_later',null,'2026-08-08T01:38:00Z'
+        );
+        commit;
+      `),
+      psqlAsync(`
+        begin;
+        set local request.jwt.claim.role='service_role';
+        select pg_sleep(0.1);
+        select public.cancel_snapshot_v2_cooking_session(
+          ${authArgs(ownerB)},'${raceSession}','${cancelKey}',
+          '2026-08-08T01:38:01Z'
+        );
+        commit;
+      `),
+    ]);
+
+    psql(`
+      drop trigger if exists test_pause_complete_receipt
+        on public.mutation_idempotency_keys;
+      drop function if exists private.test_pause_complete_receipt();
+    `);
+
+    const failures = outcomes.filter(
+      (outcome): outcome is PromiseRejectedResult => outcome.status === "rejected",
+    );
+    expect(failures.map((outcome) => String(outcome.reason))).not.toEqual(
+      expect.arrayContaining([expect.stringMatching(/deadlock detected/i)]),
+    );
+    expect(outcomes.filter((outcome) => outcome.status === "fulfilled")).toHaveLength(1);
+    expect(failures).toHaveLength(1);
+    expect(String(failures[0]?.reason)).toContain("CONFLICT");
+
+    const terminal = extractJson(psql(`
+      select jsonb_build_object(
+        'session_status',(select status from public.cooking_sessions where id='${raceSession}'),
+        'meal_status',(select status from public.meals where id='${raceMeal}'),
+        'claim_count',(select count(*) from public.cooking_session_meal_claims where session_id='${raceSession}'),
+        'batch_count',(select count(*) from public.leftover_dishes where id='${raceSession}')
+      );
+    `).stdout);
+    expect(terminal).toEqual(
+      terminal.session_status === "completed"
+        ? { session_status: "completed", meal_status: "cook_done", claim_count: 0, batch_count: 1 }
+        : { session_status: "cancelled", meal_status: "shopping_done", claim_count: 0, batch_count: 0 },
+    );
+
+    psql(`
+      select public.set_account_generation_internal_writer_marker('${cutoverAttempt}',true);
+      delete from public.user_progress_events
+      where user_id='${ownerB}' and source_id='${raceSession}';
+      delete from public.user_progress_summary as summary
+      where summary.user_id='${ownerB}' and not exists (
+        select 1 from public.user_progress_events as event
+        where event.user_id=summary.user_id
+      );
+      delete from public.leftover_dishes where id='${raceSession}';
+      delete from public.cooking_sessions where id='${raceSession}';
+      delete from public.meals where id='${raceMeal}';
+      update public.recipes set cook_count=greatest(coalesce(cook_count,0)-1,0)
+      where id='${recipeB}' and '${terminal.session_status}'='completed';
+      delete from public.mutation_idempotency_keys
+      where owner_uuid='${ownerB}' and operation_scope in ('snapshot_v2_complete','snapshot_v2_cancel')
+        and key_hash in (
+          encode(extensions.digest(convert_to('${completeKey}','UTF8'),'sha256'),'hex'),
+          encode(extensions.digest(convert_to('${cancelKey}','UTF8'),'sha256'),'hex')
+        );
+      select public.set_account_generation_internal_writer_marker('${cutoverAttempt}',false);
+    `);
+  });
+
   it("completes planner meals atomically without turning them into leftover-origin meals", () => {
     const key = "aa000000-0000-4000-8000-000000000003";
     const first = serviceRpc(`
@@ -1036,7 +1148,7 @@ describe.runIf(enabled)("cooked batch weight ledger PostgreSQL", () => {
     });
   });
 
-  it("uses bounded indexes for the exact representative LEFTOVERS route predicates", () => {
+  it("captures the exact limit-free LEFTOVERS route predicates and compatibility indexes", () => {
     const explain = psql(`
       begin;
       select public.set_account_generation_internal_writer_marker('${cutoverAttempt}',true);
@@ -1064,7 +1176,10 @@ describe.runIf(enabled)("cooked batch weight ledger PostgreSQL", () => {
       from generate_series(1,4000) as series;
       analyze public.leftover_dishes;
       explain (analyze, buffers, format json)
-      select id from public.leftover_dishes
+      select id,user_id,recipe_id,recipe_content_snapshot_id,status,cooked_at,eaten_at,
+        auto_hide_at,stale_reviewed_at,cooking_servings,weight_status,batch_status,
+        depleted_reason
+      from public.leftover_dishes
       where user_id='${ownerB}'
         and (
           (recipe_content_snapshot_id is null and status='leftover')
@@ -1072,9 +1187,12 @@ describe.runIf(enabled)("cooked batch weight ledger PostgreSQL", () => {
           or (recipe_content_snapshot_id is not null and batch_status='depleted'
             and depleted_reason in ('discarded','mixed','discarded_unweighed','mixed_unweighed'))
         )
-      order by cooked_at desc,id desc limit 20;
+      order by cooked_at desc,id desc;
       explain (analyze, buffers, format json)
-      select id from public.leftover_dishes
+      select id,user_id,recipe_id,recipe_content_snapshot_id,status,cooked_at,eaten_at,
+        auto_hide_at,stale_reviewed_at,cooking_servings,weight_status,batch_status,
+        depleted_reason
+      from public.leftover_dishes
       where user_id='${ownerB}'
         and (
           (recipe_content_snapshot_id is null and status='eaten')
@@ -1082,14 +1200,26 @@ describe.runIf(enabled)("cooked batch weight ledger PostgreSQL", () => {
             and depleted_reason in ('consumed','consumed_unweighed'))
         )
         and auto_hide_at > '2026-08-08T04:00:00Z'
-      order by eaten_at desc,id desc limit 20;
+      order by eaten_at desc,id desc;
+      select indexname,indexdef
+      from pg_catalog.pg_indexes
+      where schemaname='public' and indexname in (
+        'cooked_batches_owner_leftovers_compat_idx',
+        'leftover_dishes_owner_legacy_leftover_idx',
+        'leftover_dishes_owner_legacy_eaten_idx',
+        'cooked_batches_owner_eaten_compat_idx'
+      )
+      order by indexname;
       rollback;
     `).stdout;
     expect(explain).toContain("cooked_batches_owner_leftovers_compat_idx");
     expect(explain).toContain("leftover_dishes_owner_legacy_leftover_idx");
     expect(explain).toContain("leftover_dishes_owner_legacy_eaten_idx");
     expect(explain).toContain("cooked_batches_owner_eaten_compat_idx");
+    expect(explain).toContain("Actual Rows");
     expect(explain).toContain("Shared Hit Blocks");
+    expect(explain).toContain("Shared Read Blocks");
+    expect(explain).toContain(ownerB);
   });
 
   it("rejects a depleted v2 leftover in the final meal-write wrapper with zero effect", () => {

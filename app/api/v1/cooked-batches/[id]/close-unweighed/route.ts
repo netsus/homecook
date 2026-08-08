@@ -1,5 +1,5 @@
 import { fail, ok } from "@/lib/api/response";
-import { callCookedBatchRpc, isUuid, parseBatchCloseRequest, projectCookedBatchMutationData } from "@/lib/server/cooked-batches";
+import { callCookedBatchRpc, isUuid, parseBatchCloseRequest, projectCookedBatchGamification, projectCookedBatchMutationData } from "@/lib/server/cooked-batches";
 import { authorizeCookedBatchRequest, readJson } from "@/lib/server/cooked-batch-route";
 import { readRequiredIdempotencyKey } from "@/lib/server/recipe-content-snapshot-future-propagation";
 interface RouteContext { params: Promise<{ id: string }> }
@@ -15,6 +15,15 @@ export async function POST(request: Request, context: RouteContext) {
     p_reverses_event_id: parsed.value.reversesEventId,
     p_expected_revision: parsed.value.expectedRevision,
   });
-  if (!result.ok) return result.response; const data = projectCookedBatchMutationData(result.data);
+  if (!result.ok) return result.response;
+  if (parsed.value.action === "close" && parsed.value.closureReason === "consumed") {
+    await projectCookedBatchGamification(
+      authorized.routeClient,
+      authorized.user.id,
+      "leftover_eaten",
+      id,
+    );
+  }
+  const data = projectCookedBatchMutationData(result.data);
   return data ? ok(data) : fail("INTERNAL_ERROR", "미계량 종료 결과를 확인하지 못했어요.", 500);
 }

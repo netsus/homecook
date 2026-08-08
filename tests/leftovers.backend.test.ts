@@ -15,6 +15,8 @@ const formatBootstrapErrorMessage = vi.fn((error: unknown, fallbackMessage: stri
 const awardUserProgressEvent = vi.fn();
 const recordUserGrowthActivityEvent = vi.fn();
 const authorizeCookedBatchRequest = vi.fn();
+const projectUserGamificationAfterProgressEvent = vi.fn();
+const projectUserGamificationAfterActivityEvent = vi.fn();
 
 const authorityArgs = {
   p_owner_uuid: "user-1",
@@ -44,6 +46,16 @@ vi.mock("@/lib/server/user-bootstrap", () => ({
 
 vi.mock("@/lib/server/user-progress", () => ({
   awardUserProgressEvent,
+  calculateUserProgressLevel: (totalXp: number) => ({
+    current_level: 1,
+    total_xp: totalXp,
+    current_level_start_xp: 0,
+    next_level_start_xp: 100,
+    xp_into_current_level: totalXp,
+    xp_to_next_level: Math.max(0, 100 - totalXp),
+    progress_ratio: totalXp / 100,
+    progress_percent: totalXp,
+  }),
 }));
 
 vi.mock("@/lib/server/user-growth-activity", () => ({
@@ -52,6 +64,11 @@ vi.mock("@/lib/server/user-growth-activity", () => ({
 
 vi.mock("@/lib/server/cooked-batch-route", () => ({
   authorizeCookedBatchRequest,
+}));
+
+vi.mock("@/lib/server/user-gamification", () => ({
+  projectUserGamificationAfterProgressEvent,
+  projectUserGamificationAfterActivityEvent,
 }));
 
 interface QueryError {
@@ -113,6 +130,7 @@ interface RecipeContentSnapshotRow {
 }
 
 const leftoverId = "550e8400-e29b-41d4-a716-446655440201";
+const projectionOwnerId = "550e8400-e29b-41d4-a716-446655440101";
 const otherLeftoverId = "550e8400-e29b-41d4-a716-446655440202";
 const recipeId = "550e8400-e29b-41d4-a716-446655440301";
 const otherRecipeId = "550e8400-e29b-41d4-a716-446655440302";
@@ -231,6 +249,7 @@ function createLeftoverListDb({
 function createLeftoverMutationDb({
   selectRows,
   updateRows = [],
+  gamificationProjection = null,
 }: {
   selectRows: Array<LeftoverRow | null>;
   updateRows?: Array<
@@ -239,6 +258,7 @@ function createLeftoverMutationDb({
       })
     | null
   >;
+  gamificationProjection?: Record<string, unknown> | null;
 }) {
   const selectQuery = createMaybeSingleQuery(
     selectRows.map((row) => ({ data: row, error: null })),
@@ -249,11 +269,14 @@ function createLeftoverMutationDb({
   const update = vi.fn(() => updateQuery);
   const rpc = vi.fn(async (
     _name: string,
-    args: { p_action: "eat" | "uneat" | "keep" },
+    args: {
+      p_action: "eat" | "uneat" | "keep";
+      p_owner_uuid: string;
+    },
   ) => {
     const source = selectRows[0];
     if (!source) return { data: { error_code: "RESOURCE_NOT_FOUND" }, error: null };
-    if (source.user_id !== "user-1") {
+    if (source.user_id !== args.p_owner_uuid) {
       return { data: { error_code: "FORBIDDEN" }, error: null };
     }
     if (source.recipe_content_snapshot_id) {
@@ -289,6 +312,42 @@ function createLeftoverMutationDb({
           };
         }
 
+        if (table === "user_progress_events") {
+          return {
+            select: vi.fn(() => createMaybeSingleQuery([{ data: gamificationProjection
+              ? {
+                  id: gamificationProjection.progress_event_id,
+                  xp_delta: gamificationProjection.xp_delta,
+                  occurred_at: gamificationProjection.occurred_at,
+                  source_meta_json: { previous_level: gamificationProjection.previous_level },
+                }
+              : null, error: null }])),
+          };
+        }
+
+        if (table === "user_progress_summary") {
+          return {
+            select: vi.fn(() => createMaybeSingleQuery([{ data: gamificationProjection
+              ? {
+                  total_xp: gamificationProjection.total_xp,
+                  event_counts: gamificationProjection.event_counts,
+                  last_updated_at: gamificationProjection.last_updated_at,
+                }
+              : null, error: null }])),
+          };
+        }
+
+        if (table === "user_growth_activity_events") {
+          return {
+            select: vi.fn(() => createMaybeSingleQuery([{ data: gamificationProjection
+              ? {
+                  id: gamificationProjection.activity_event_id,
+                  occurred_at: gamificationProjection.occurred_at,
+                }
+              : null, error: null }])),
+          };
+        }
+
         throw new Error(`unexpected table: ${table}`);
       }),
     },
@@ -296,11 +355,12 @@ function createLeftoverMutationDb({
 }
 
 function setupAuthenticatedDb(db: unknown, userId = "user-1") {
+  const dataClient = db as { from?: (table: string) => unknown };
   const routeClient = {
     auth: {
       getUser: vi.fn(async () => ({ data: { user: { id: userId } } })),
     },
-    from: vi.fn(),
+    from: dataClient.from ?? vi.fn(),
   };
   createRouteHandlerClient.mockResolvedValue(routeClient);
   createServiceRoleClient.mockReturnValue(db);
@@ -703,6 +763,8 @@ describe("POST /api/v1/leftovers/{id}/keep", () => {
     ensurePublicUserRow.mockReset();
     ensureUserBootstrapState.mockReset();
     authorizeCookedBatchRequest.mockReset();
+    projectUserGamificationAfterProgressEvent.mockReset();
+    projectUserGamificationAfterActivityEvent.mockReset();
     formatBootstrapErrorMessage.mockClear();
     ensurePublicUserRow.mockResolvedValue({});
     ensureUserBootstrapState.mockResolvedValue(undefined);
@@ -833,6 +895,8 @@ describe("POST /api/v1/leftovers/{id}/eat", () => {
       summary: null,
     });
     recordUserGrowthActivityEvent.mockResolvedValue({ recorded: true, duplicate: false, error: null });
+    projectUserGamificationAfterProgressEvent.mockResolvedValue({ error: null });
+    projectUserGamificationAfterActivityEvent.mockResolvedValue({ error: null });
     createServiceRoleClient.mockReturnValue(null);
     vi.useFakeTimers();
     vi.setSystemTime(new Date(nowIso));
@@ -861,7 +925,7 @@ describe("POST /api/v1/leftovers/{id}/eat", () => {
       selectRows: [
         {
           id: leftoverId,
-          user_id: "user-1",
+          user_id: projectionOwnerId,
           recipe_id: recipeId,
           status: "leftover",
           cooked_at: "2026-04-28T10:00:00.000Z",
@@ -877,8 +941,28 @@ describe("POST /api/v1/leftovers/{id}/eat", () => {
           auto_hide_at: autoHideIso,
         },
       ],
+      gamificationProjection: {
+        progress_event_id: "550e8400-e29b-41d4-a716-446655440401",
+        event_type: "leftover_eaten",
+        source_id: leftoverId,
+        occurred_at: nowIso,
+        xp_delta: 15,
+        previous_level: 1,
+        total_xp: 15,
+        event_counts: {
+          cooking_completed: 0,
+          shopping_completed: 0,
+          recipe_saved_distinct_ever: 0,
+          custom_book_created: 0,
+          planner_registered_first: 0,
+          planner_registered_repeat: 0,
+          leftover_eaten: 1,
+        },
+        last_updated_at: nowIso,
+        activity_event_id: "550e8400-e29b-41d4-a716-446655440402",
+      },
     });
-    setupAuthenticatedDb(db);
+    setupAuthenticatedDb(db, projectionOwnerId);
 
     const { POST } = await importEatRoute();
     const response = await POST(new Request("http://localhost:3000"), {
@@ -890,6 +974,7 @@ describe("POST /api/v1/leftovers/{id}/eat", () => {
     expect(update).not.toHaveBeenCalled();
     expect(rpc).toHaveBeenCalledWith("mutate_legacy_leftover_status", {
       ...authorityArgs,
+      p_owner_uuid: projectionOwnerId,
       p_action: "eat",
       p_leftover_id: leftoverId,
       p_now: nowIso,
@@ -906,6 +991,14 @@ describe("POST /api/v1/leftovers/{id}/eat", () => {
     });
     expect(awardUserProgressEvent).not.toHaveBeenCalled();
     expect(recordUserGrowthActivityEvent).not.toHaveBeenCalled();
+    expect(projectUserGamificationAfterProgressEvent).toHaveBeenCalledTimes(1);
+    expect(projectUserGamificationAfterActivityEvent).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        userId: projectionOwnerId,
+        activityId: "550e8400-e29b-41d4-a716-446655440402",
+      }),
+    );
   });
 
   it("returns the same result without updating when the dish is already eaten", async () => {

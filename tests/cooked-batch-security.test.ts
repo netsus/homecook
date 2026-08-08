@@ -58,6 +58,24 @@ describe("cooked batch database security contract", () => {
     );
   });
 
+  it("locks recipe then actual Meal rows before the completion session and revalidates after locking", () => {
+    const sql = migration();
+    const completion = sql.slice(
+      sql.indexOf("create or replace function public.complete_snapshot_v2_cooking_session"),
+      sql.indexOf("create or replace function private.apply_cooked_batch_event"),
+    );
+    const recipeLock = completion.indexOf("lock_personal_recipe_ids");
+    const mealLock = completion.indexOf("for update of meal");
+    const sessionLock = completion.indexOf("for update", mealLock + 1);
+
+    expect(recipeLock).toBeGreaterThanOrEqual(0);
+    expect(mealLock).toBeGreaterThan(recipeLock);
+    expect(sessionLock).toBeGreaterThan(mealLock);
+    expect(completion.slice(sessionLock)).toMatch(
+      /meal\.status is distinct from 'shopping_done'[\s\S]*meal\.revision is distinct from session_meal\.meal_revision_snapshot/i,
+    );
+  });
+
   it("classifies every ledger function and explicitly replaces the shared scope verifier", () => {
     const manifestPath = join(
       process.cwd(),
@@ -162,6 +180,38 @@ describe("cooked batch database security contract", () => {
     );
     expect(eatRoute).not.toContain("awardUserProgressEvent");
     expect(eatRoute).not.toContain("recordUserGrowthActivityEvent");
+    expect(eatRoute).toContain("projectCookedBatchGamification");
+    const closeRoute = readFileSync(
+      join(process.cwd(), "app/api/v1/cooked-batches/[id]/close-unweighed/route.ts"),
+      "utf8",
+    );
+    expect(readFileSync(
+      join(process.cwd(), "app/api/v1/cooking/session-attempts/[id]/complete/route.ts"),
+      "utf8",
+    )).toContain("projectCookedBatchGamification");
+    expect(closeRoute).toMatch(
+      /action === "close" && parsed\.value\.closureReason === "consumed"[\s\S]*projectCookedBatchGamification/,
+    );
+    expect(migration()).toContain("'previous_level',v_previous_level");
+  });
+
+  it("keeps LEFTOVERS performance evidence on the production query shape without an artificial limit", () => {
+    const testSource = readFileSync(
+      join(
+        process.cwd(),
+        "tests/cooked-batch-weight-ledger-postgres.integration.test.ts",
+      ),
+      "utf8",
+    );
+    const explainBlock = testSource.slice(
+      testSource.indexOf("captures the exact limit-free LEFTOVERS route predicates"),
+      testSource.indexOf("rejects a depleted v2 leftover", testSource.indexOf("captures the exact limit-free")),
+    );
+
+    expect(explainBlock).not.toMatch(/order by cooked_at desc,id desc limit 20/i);
+    expect(explainBlock).not.toMatch(/order by eaten_at desc,id desc limit 20/i);
+    expect(explainBlock).toContain("Shared Read Blocks");
+    expect(explainBlock).toContain("Actual Rows");
   });
 
   it("delegates monotonic JWT refresh to the canonical post-master authority", () => {

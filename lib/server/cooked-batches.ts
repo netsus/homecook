@@ -1,4 +1,7 @@
 import { fail } from "@/lib/api/response";
+import { calculateUserProgressLevel } from "@/lib/server/user-progress";
+import type { UserGamificationDbClient } from "@/lib/server/user-gamification";
+import type { UserProgressData, UserProgressEventCounts } from "@/types/user-progress";
 
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -33,6 +36,17 @@ export interface CookedBatchRpcClient {
     functionName: string,
     args: Record<string, unknown>,
   ): PromiseLike<{ data: unknown; error: unknown }>;
+}
+
+interface ProjectionLookupQuery {
+  eq(column: string, value: string): ProjectionLookupQuery;
+  maybeSingle(): PromiseLike<{ data: unknown; error: unknown }>;
+}
+
+interface ProjectionLookupClient {
+  from(table: string): {
+    select(columns: string): ProjectionLookupQuery;
+  };
 }
 
 export interface CookedBatchProjection {
@@ -362,5 +376,133 @@ export async function callCookedBatchRpc(client: CookedBatchRpcClient, functionN
     return { ok: true as const, data: result.data };
   } catch {
     return { ok: false as const, response: fail("INTERNAL_ERROR", "요청을 처리하지 못했어요.", 500) };
+  }
+}
+
+function readProgressEventCounts(value: unknown): UserProgressEventCounts | null {
+  if (!isRecord(value)) return null;
+  const requiredKeys = [
+    "cooking_completed",
+    "shopping_completed",
+    "recipe_saved_distinct_ever",
+    "custom_book_created",
+    "planner_registered_first",
+    "planner_registered_repeat",
+  ] as const;
+  if (!requiredKeys.every((key) => Number.isSafeInteger(value[key]) && Number(value[key]) >= 0)) {
+    return null;
+  }
+  if (value.leftover_eaten !== undefined
+    && (!Number.isSafeInteger(value.leftover_eaten) || Number(value.leftover_eaten) < 0)) {
+    return null;
+  }
+  return {
+    cooking_completed: Number(value.cooking_completed),
+    shopping_completed: Number(value.shopping_completed),
+    recipe_saved_distinct_ever: Number(value.recipe_saved_distinct_ever),
+    custom_book_created: Number(value.custom_book_created),
+    planner_registered_first: Number(value.planner_registered_first),
+    planner_registered_repeat: Number(value.planner_registered_repeat),
+    ...(value.leftover_eaten === undefined
+      ? {}
+      : { leftover_eaten: Number(value.leftover_eaten) }),
+  };
+}
+
+/**
+ * Replays the established live gamification projection from canonical ledger rows.
+ * The projection writers are idempotent, while the RPC transaction remains the
+ * sole authority for progress and activity ledger mutations.
+ */
+export async function projectCookedBatchGamification(
+  dbClient: unknown,
+  ownerId: string,
+  eventType: "cooking_completed" | "leftover_eaten",
+  sourceId: string,
+) {
+  if (!isUuid(ownerId) || !isUuid(sourceId)) return;
+  try {
+    const lookupClient = dbClient as ProjectionLookupClient;
+    const progressEventResult = await lookupClient
+      .from("user_progress_events")
+      .select("id,xp_delta,occurred_at,source_meta_json")
+      .eq("user_id", ownerId)
+      .eq("event_type", eventType)
+      .eq("source_key", `${eventType}:${sourceId}`)
+      .maybeSingle();
+    const summaryResult = await lookupClient
+      .from("user_progress_summary")
+      .select("total_xp,event_counts,last_updated_at")
+      .eq("user_id", ownerId)
+      .maybeSingle();
+    if (progressEventResult.error || summaryResult.error
+      || !isRecord(progressEventResult.data) || !isRecord(summaryResult.data)
+      || !isUuid(progressEventResult.data.id)
+      || !isPositiveNumber(progressEventResult.data.xp_delta)
+      || typeof progressEventResult.data.occurred_at !== "string"
+      || !Number.isSafeInteger(summaryResult.data.total_xp)
+      || Number(summaryResult.data.total_xp) < 0
+      || typeof summaryResult.data.last_updated_at !== "string") {
+      return;
+    }
+    const eventCounts = readProgressEventCounts(summaryResult.data.event_counts);
+    if (!eventCounts) return;
+    const totalXp = Number(summaryResult.data.total_xp);
+    const xpDelta = Number(progressEventResult.data.xp_delta);
+    const sourceMeta = isRecord(progressEventResult.data.source_meta_json)
+      ? progressEventResult.data.source_meta_json
+      : {};
+    const storedPreviousLevel = sourceMeta.previous_level;
+    const previousLevel = isPositiveInteger(storedPreviousLevel)
+      ? Number(storedPreviousLevel)
+      : calculateUserProgressLevel(Math.max(0, totalXp - xpDelta)).current_level;
+    const progress: UserProgressData = {
+      level: calculateUserProgressLevel(totalXp),
+      event_counts: eventCounts,
+      last_updated_at: summaryResult.data.last_updated_at,
+    };
+    const gamification = await import("@/lib/server/user-gamification");
+    await gamification.projectUserGamificationAfterProgressEvent(
+      dbClient as UserGamificationDbClient,
+      {
+        userId: ownerId,
+        progressEventId: progressEventResult.data.id,
+        awardInput: {
+          userId: ownerId,
+          eventType,
+          sourceTable: "leftover_dishes",
+          sourceId,
+          occurredAt: progressEventResult.data.occurred_at,
+        },
+        xpDelta,
+        previousLevel,
+        progress,
+      },
+    );
+
+    if (eventType === "leftover_eaten") {
+      const activityResult = await lookupClient
+        .from("user_growth_activity_events")
+        .select("id,occurred_at")
+        .eq("user_id", ownerId)
+        .eq("activity_type", "leftover_eaten")
+        .eq("source_key", `leftover_eaten:${sourceId}`)
+        .maybeSingle();
+      if (!activityResult.error && isRecord(activityResult.data)
+        && isUuid(activityResult.data.id)) {
+        await gamification.projectUserGamificationAfterActivityEvent(
+          dbClient as Parameters<typeof gamification.projectUserGamificationAfterActivityEvent>[0],
+          {
+            userId: ownerId,
+            activityId: activityResult.data.id,
+            occurredAt: typeof activityResult.data.occurred_at === "string"
+              ? activityResult.data.occurred_at
+              : progressEventResult.data.occurred_at,
+          },
+        );
+      }
+    }
+  } catch {
+    // Live rewards are secondary; the transactional progress/activity ledgers stay authoritative.
   }
 }

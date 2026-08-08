@@ -1,5 +1,8 @@
-import { readFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { spawnSync } from "node:child_process";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
@@ -186,6 +189,22 @@ describe("account session generation inventory", () => {
         expected_generation: "not_applicable",
         activation_phase: "always",
       }),
+      ...[
+        ["app/api/v1/cooked-batches/[id]/weight/route.ts", "mutate_cooked_batch_weight"],
+        ["app/api/v1/cooked-batches/[id]/adjust/route.ts", "adjust_cooked_batch"],
+        ["app/api/v1/cooked-batches/[id]/close-unweighed/route.ts", "close_unweighed_cooked_batch"],
+        ["app/api/v1/cooked-batches/[id]/discard/route.ts", "discard_cooked_batch"],
+        ["app/api/v1/cooking/session-attempts/[id]/complete/route.ts", "complete_snapshot_v2_cooking_session"],
+        ["app/api/v1/leftovers/[leftover_id]/eat/route.ts", "mutate_legacy_leftover_status"],
+        ["app/api/v1/leftovers/[leftover_id]/keep/route.ts", "mutate_legacy_leftover_status"],
+        ["app/api/v1/leftovers/[leftover_id]/uneat/route.ts", "mutate_legacy_leftover_status"],
+      ].map(([source_file, target]) => expect.objectContaining({
+        kind: "rpc",
+        operation: "call",
+        source_file,
+        target,
+        persists_personal_state: true,
+      })),
     ]));
     for (const entry of [
       ...inventory.route_inventory,
@@ -214,5 +233,41 @@ describe("account session generation inventory", () => {
 
     expect(result.status, `${result.stdout}\n${result.stderr}`).toBe(0);
     expect(result.stdout).toContain("account session generation inventory is valid");
+  });
+
+  it("fails closed when a mapped private-data writer RPC is omitted from the stored registry", async () => {
+    const inventory = JSON.parse(await readFile(INVENTORY_PATH, "utf8")) as Record<string, unknown> & {
+      write_inventory: WriteInventoryEntry[];
+    };
+    const tempDirectory = await mkdtemp(join(tmpdir(), "homecook-account-inventory-"));
+    const tempInventoryPath = join(tempDirectory, "inventory.json");
+    const body = {
+      schema_version: inventory.schema_version,
+      inventory_scope: inventory.inventory_scope,
+      route_inventory: inventory.route_inventory,
+      write_inventory: inventory.write_inventory.filter(
+        (entry) => entry.target !== "complete_snapshot_v2_cooking_session",
+      ),
+      auth_users_inbound_fks: inventory.auth_users_inbound_fks,
+    };
+    const omitted = {
+      ...body,
+      generated_at: new Date().toISOString(),
+      checksum: createHash("sha256").update(JSON.stringify(body)).digest("hex"),
+    };
+
+    try {
+      await writeFile(tempInventoryPath, `${JSON.stringify(omitted, null, 2)}\n`, "utf8");
+      const result = spawnSync(
+        "node",
+        [VALIDATOR_PATH, "--inventory", tempInventoryPath],
+        { cwd: process.cwd(), encoding: "utf8" },
+      );
+
+      expect(result.status).not.toBe(0);
+      expect(result.stderr).toContain("account session generation inventory drift detected");
+    } finally {
+      await rm(tempDirectory, { force: true, recursive: true });
+    }
   });
 });

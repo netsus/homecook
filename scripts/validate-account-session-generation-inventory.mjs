@@ -3,9 +3,16 @@ import { readdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 const REPO_ROOT = process.cwd();
-const INVENTORY_PATH = path.join(
+const rawArgs = process.argv.slice(2);
+const inventoryArgIndex = rawArgs.indexOf("--inventory");
+if (inventoryArgIndex >= 0 && !rawArgs[inventoryArgIndex + 1]) {
+  throw new Error("--inventory requires a path");
+}
+const INVENTORY_PATH = path.resolve(
   REPO_ROOT,
-  "docs/security/account-session-generation-inventory.json",
+  inventoryArgIndex >= 0
+    ? rawArgs[inventoryArgIndex + 1]
+    : "docs/security/account-session-generation-inventory.json",
 );
 const ROUTE_ROOT = path.join(REPO_ROOT, "app");
 const WRITE_SCAN_ROOTS = [
@@ -14,7 +21,7 @@ const WRITE_SCAN_ROOTS = [
 ];
 const MIGRATIONS_ROOT = path.join(REPO_ROOT, "supabase/migrations");
 
-const args = new Set(process.argv.slice(2));
+const args = new Set(rawArgs);
 const mode = args.has("--write") ? "write" : "check";
 
 const ROUTE_METADATA_BY_KEY = {
@@ -115,7 +122,8 @@ const KNOWN_STORAGE_BUCKETS = {
 };
 
 const MUTATING_RPC_PATTERN =
-  /^(abort|apply|begin|bind|cancel|cleanup|complete|consume|create|delete|finalize|increment|initiate|prepare|promote|register|report|resolve|revoke|scan|set|stage|start|update|write)_/u;
+  /^(abort|adjust|apply|begin|bind|cancel|cleanup|close|complete|consume|create|delete|discard|finalize|increment|initiate|mutate|prepare|promote|register|report|resolve|revoke|scan|set|stage|start|update|write)_/u;
+const COOKED_BATCH_READ_RPC_TARGETS = new Set(["list_cooked_batches"]);
 
 function sha256(value) {
   return createHash("sha256").update(value).digest("hex");
@@ -247,13 +255,21 @@ async function collectRouteInventory() {
 
 function collectMutatingRpcEntries(source, sourceFile) {
   const entries = [];
-  const regex = /\.rpc\(\s*["'`]([^"'`]+)["'`]/gu;
-  let match;
+  const matches = [
+    ...Array.from(
+      source.matchAll(/\.rpc\(\s*["'`]([^"'`]+)["'`]/gu),
+      (match) => ({ match, helper: false }),
+    ),
+    ...Array.from(
+      source.matchAll(/callCookedBatchRpc\(\s*[^,]+,\s*["'`]([^"'`]+)["'`]/gu),
+      (match) => ({ match, helper: true }),
+    ),
+  ].sort((left, right) => (left.match.index ?? 0) - (right.match.index ?? 0));
   let ordinal = 0;
 
-  while ((match = regex.exec(source)) !== null) {
+  for (const { match, helper } of matches) {
     const target = match[1];
-    if (!MUTATING_RPC_PATTERN.test(target)) {
+    if (helper ? COOKED_BATCH_READ_RPC_TARGETS.has(target) : !MUTATING_RPC_PATTERN.test(target)) {
       continue;
     }
 
