@@ -277,7 +277,7 @@
       "classification": "internal",
       "file": "app/auth/callback/route.ts",
       "column": 31,
-      "line": 263,
+      "line": 264,
       "allowed": true,
       "factory": "createAuthCallbackOperationsClient",
       "functionName": "GET",
