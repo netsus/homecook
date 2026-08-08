@@ -368,6 +368,289 @@ describe.runIf(enabled)("cooked batch weight ledger PostgreSQL", () => {
     }
   });
 
+  it("resolves batch nutrition from the content-pinned snapshot with exact serving and fixed semantics", () => {
+    const result = psql(`
+      begin;
+      select public.set_account_generation_internal_writer_marker('${cutoverAttempt}',true);
+      insert into public.recipe_nutrition_snapshots (
+        id,owner_user_id,recipe_id,base_servings,input_hash,calculation_version,
+        scalable_values_json,fixed_values_json,nutrient_status_json,
+        calculation_status,calculation_quality,reflected_ingredient_count,
+        target_ingredient_count,missing_reasons,warnings_json,sources_json,
+        is_current,calculated_at
+      ) values
+        (
+          'a3100000-0000-4000-8000-000000000001','${ownerA}','${recipeA}',2,
+          repeat('1',64),'batch-nutrition-v1',
+          '{"energy_kcal":200,"carbohydrate_g":20,"protein_g":11,"fat_g":6,"sodium_mg":400}',
+          '{"energy_kcal":20,"carbohydrate_g":2,"protein_g":2,"fat_g":1,"sodium_mg":100}',
+          '{
+            "energy_kcal":{"amount":220,"known_amount":null,"status":"complete","display_mode":"total"},
+            "carbohydrate_g":{"amount":22,"known_amount":null,"status":"complete","display_mode":"total"},
+            "protein_g":{"amount":13,"known_amount":null,"status":"complete","display_mode":"total"},
+            "fat_g":{"amount":7,"known_amount":null,"status":"complete","display_mode":"total"},
+            "sodium_mg":{"amount":500,"known_amount":null,"status":"complete","display_mode":"total"}
+          }',
+          'complete','direct',5,5,'{}','["OLD_WARNING"]',
+          '[{"provider":"fixture","dataset":"nutrition","source_version":"old-v1","data_basis_date":null,"license":"test","source_url":"https://example.invalid/old"}]',
+          false,'2026-08-01T00:00:00Z'
+        ),
+        (
+          'a3100000-0000-4000-8000-000000000002','${ownerA}','${recipeA}',2,
+          repeat('2',64),'batch-nutrition-v1',
+          '{"energy_kcal":1000,"carbohydrate_g":100,"protein_g":100,"fat_g":100,"sodium_mg":1000}',
+          '{"energy_kcal":20,"carbohydrate_g":2,"protein_g":2,"fat_g":1,"sodium_mg":100}',
+          '{
+            "energy_kcal":{"amount":1020,"known_amount":null,"status":"complete","display_mode":"total"},
+            "carbohydrate_g":{"amount":102,"known_amount":null,"status":"complete","display_mode":"total"},
+            "protein_g":{"amount":102,"known_amount":null,"status":"complete","display_mode":"total"},
+            "fat_g":{"amount":101,"known_amount":null,"status":"complete","display_mode":"total"},
+            "sodium_mg":{"amount":1100,"known_amount":null,"status":"complete","display_mode":"total"}
+          }',
+          'complete','direct',5,5,'{}','["LATEST_WARNING"]',
+          '[{"provider":"fixture","dataset":"nutrition","source_version":"latest-v2","data_basis_date":null,"license":"test","source_url":"https://example.invalid/latest"}]',
+          true,'2026-08-02T00:00:00Z'
+        ),
+        (
+          'a3100000-0000-4000-8000-000000000003','${ownerA}','${recipeA}',2,
+          repeat('3',64),'batch-nutrition-v1',
+          '{"energy_kcal":100,"carbohydrate_g":20,"fat_g":6,"sodium_mg":400}',
+          '{"energy_kcal":10,"carbohydrate_g":2,"fat_g":1,"sodium_mg":100}',
+          '{
+            "energy_kcal":{"amount":null,"known_amount":110,"status":"partial","display_mode":"minimum"},
+            "carbohydrate_g":{"amount":22,"known_amount":null,"status":"complete","display_mode":"total"},
+            "protein_g":{"amount":null,"known_amount":null,"status":"unavailable","display_mode":null},
+            "fat_g":{"amount":null,"known_amount":7,"status":"partial","display_mode":"minimum"},
+            "sodium_mg":{"amount":500,"known_amount":null,"status":"complete","display_mode":"total"}
+          }',
+          'partial','mixed',4,5,'{"PROTEIN_MISSING"}',
+          '["UNIT_CONVERSION_MISSING"]',
+          '[{"provider":"fixture","dataset":"nutrition","source_version":"partial-v1","data_basis_date":"2026-07-01","license":"test","source_url":"https://example.invalid/partial"}]',
+          false,'2026-08-03T00:00:00Z'
+        ),
+        (
+          'a3100000-0000-4000-8000-000000000004','${ownerA}','${recipeA}',2,
+          repeat('4',64),'batch-nutrition-v1','{}','{}',
+          '{
+            "energy_kcal":{"amount":null,"known_amount":null,"status":"unavailable","display_mode":null},
+            "carbohydrate_g":{"amount":null,"known_amount":null,"status":"unavailable","display_mode":null},
+            "protein_g":{"amount":null,"known_amount":null,"status":"unavailable","display_mode":null},
+            "fat_g":{"amount":null,"known_amount":null,"status":"unavailable","display_mode":null},
+            "sodium_mg":{"amount":null,"known_amount":null,"status":"unavailable","display_mode":null}
+          }',
+          'unavailable',null,0,5,'{"ALL_INPUTS_MISSING"}',
+          '["RECIPE_NUTRITION_UNAVAILABLE"]','[]',false,'2026-08-04T00:00:00Z'
+        );
+      insert into public.recipe_content_snapshots (
+        id,owner_user_id,recipe_id,recipe_nutrition_snapshot_id,title,
+        base_servings,ingredients_json,steps_json,content_hash,schema_version
+      ) values
+        ('a3200000-0000-4000-8000-000000000001','${ownerA}','${recipeA}',
+          'a3100000-0000-4000-8000-000000000001','old pinned',2,'[]','[]',repeat('5',64),1),
+        ('a3200000-0000-4000-8000-000000000002','${ownerA}','${recipeA}',
+          'a3100000-0000-4000-8000-000000000003','partial pinned',2,'[]','[]',repeat('6',64),1),
+        ('a3200000-0000-4000-8000-000000000003','${ownerA}','${recipeA}',
+          'a3100000-0000-4000-8000-000000000004','unavailable pinned',2,'[]','[]',repeat('7',64),1),
+        ('a3200000-0000-4000-8000-000000000004','${ownerA}','${recipeA}',
+          null,'missing nutrition pin',2,'[]','[]',repeat('8',64),1);
+      insert into public.leftover_dishes (
+        id,user_id,recipe_id,recipe_content_snapshot_id,status,cooked_at,cooking_servings,
+        finished_weight_g,remaining_weight_g,weight_status,batch_status,depleted_reason,
+        revision,event_checksum
+      ) values
+        ('a4100000-0000-4000-8000-000000000001','${ownerA}','${recipeA}',
+          'a3200000-0000-4000-8000-000000000001','leftover',now(),3,1000,1000,
+          'known','available',null,1,encode(extensions.digest(convert_to('','UTF8'),'sha256'),'hex')),
+        ('a4100000-0000-4000-8000-000000000002','${ownerA}','${recipeA}',
+          'a3200000-0000-4000-8000-000000000002','leftover',now(),4,1000,1000,
+          'known','available',null,1,encode(extensions.digest(convert_to('','UTF8'),'sha256'),'hex')),
+        ('a4100000-0000-4000-8000-000000000003','${ownerA}','${recipeA}',
+          'a3200000-0000-4000-8000-000000000003','leftover',now(),2,1000,1000,
+          'known','available',null,1,encode(extensions.digest(convert_to('','UTF8'),'sha256'),'hex')),
+        ('a4100000-0000-4000-8000-000000000004','${ownerA}','${recipeA}',
+          'a3200000-0000-4000-8000-000000000004','leftover',now(),2,1000,1000,
+          'known','available',null,1,encode(extensions.digest(convert_to('','UTF8'),'sha256'),'hex'));
+      select public.set_account_generation_internal_writer_marker('${cutoverAttempt}',false);
+      select jsonb_build_object(
+        'old',private.resolve_cooked_batch_nutrition(
+          'a4100000-0000-4000-8000-000000000001','${ownerA}'
+        ),
+        'old_replay_equal',private.resolve_cooked_batch_nutrition(
+          'a4100000-0000-4000-8000-000000000001','${ownerA}'
+        ) = private.resolve_cooked_batch_nutrition(
+          'a4100000-0000-4000-8000-000000000001','${ownerA}'
+        ),
+        'partial',private.resolve_cooked_batch_nutrition(
+          'a4100000-0000-4000-8000-000000000002','${ownerA}'
+        ),
+        'unavailable',private.resolve_cooked_batch_nutrition(
+          'a4100000-0000-4000-8000-000000000003','${ownerA}'
+        ),
+        'missing',private.resolve_cooked_batch_nutrition(
+          'a4100000-0000-4000-8000-000000000004','${ownerA}'
+        ),
+        'legacy',private.resolve_cooked_batch_nutrition('${legacyBatch}','${ownerA}'),
+        'other_owner',private.resolve_cooked_batch_nutrition(
+          'a4100000-0000-4000-8000-000000000001','${ownerB}'
+        )
+      );
+      rollback;
+    `);
+    const payload = extractJson(result.stdout) as TestRpcEnvelope & {
+      legacy: unknown;
+      missing: Record<string, unknown>;
+      old: Record<string, unknown>;
+      old_replay_equal: boolean;
+      other_owner: unknown;
+      partial: Record<string, unknown>;
+      unavailable: Record<string, unknown>;
+    };
+
+    expect(payload.old_replay_equal).toBe(true);
+    expect(payload.old).toMatchObject({
+      recipe_content_snapshot_id: "a3200000-0000-4000-8000-000000000001",
+      recipe_nutrition_snapshot_id: "a3100000-0000-4000-8000-000000000001",
+      basis: { amount: 3, unit: "serving" },
+      base_servings: 2,
+      calculation_status: "complete",
+      calculation_quality: "direct",
+      warnings: ["OLD_WARNING"],
+      sources: [{ source_version: "old-v1" }],
+      values: {
+        energy_kcal: { amount: 320, known_amount: null, status: "complete", display_mode: "total" },
+        carbohydrate_g: { amount: 32, known_amount: null, status: "complete", display_mode: "total" },
+        protein_g: { amount: 18.5, known_amount: null, status: "complete", display_mode: "total" },
+        fat_g: { amount: 10, known_amount: null, status: "complete", display_mode: "total" },
+        sodium_mg: { amount: 700, known_amount: null, status: "complete", display_mode: "total" },
+      },
+    });
+    expect(payload.partial).toMatchObject({
+      calculation_status: "partial",
+      calculation_quality: "mixed",
+      missing_reasons: ["PROTEIN_MISSING"],
+      warnings: ["UNIT_CONVERSION_MISSING"],
+      sources: [{ source_version: "partial-v1", data_basis_date: "2026-07-01" }],
+      values: {
+        energy_kcal: { amount: null, known_amount: 210, status: "partial", display_mode: "minimum" },
+        carbohydrate_g: { amount: 42, known_amount: null, status: "complete", display_mode: "total" },
+        protein_g: { amount: null, known_amount: null, status: "unavailable", display_mode: null },
+        fat_g: { amount: null, known_amount: 13, status: "partial", display_mode: "minimum" },
+        sodium_mg: { amount: 900, known_amount: null, status: "complete", display_mode: "total" },
+      },
+    });
+    expect(payload.unavailable).toMatchObject({
+      calculation_status: "unavailable",
+      calculation_quality: null,
+      missing_reasons: ["ALL_INPUTS_MISSING"],
+      warnings: ["RECIPE_NUTRITION_UNAVAILABLE"],
+      sources: [],
+      values: {
+        energy_kcal: { amount: null, known_amount: null, status: "unavailable", display_mode: null },
+      },
+    });
+    expect(payload.missing).toMatchObject({
+      recipe_nutrition_snapshot_id: null,
+      base_servings: null,
+      calculation_status: "unavailable",
+      calculation_quality: null,
+      missing_reasons: [],
+      warnings: [],
+      sources: [],
+    });
+    expect(payload.legacy).toBeNull();
+    expect(payload.other_owner).toBeNull();
+  });
+
+  it("fails closed for invalid or missing pinned base servings", () => {
+    for (const [baseMutation, baseValue, suffix] of [
+      ["drop constraint recipe_nutrition_snapshots_base_servings_check", "0", "5"],
+      ["alter column base_servings drop not null", "null", "6"],
+    ] as const) {
+      const invalid = psql(`
+        begin;
+        alter table public.recipe_nutrition_snapshots ${baseMutation};
+        select public.set_account_generation_internal_writer_marker('${cutoverAttempt}',true);
+        insert into public.recipe_nutrition_snapshots (
+          id,owner_user_id,recipe_id,base_servings,input_hash,calculation_version,
+          scalable_values_json,fixed_values_json,nutrient_status_json,
+          calculation_status,calculation_quality,reflected_ingredient_count,
+          target_ingredient_count,is_current,calculated_at
+        ) values (
+          'a3100000-0000-4000-8000-00000000000${suffix}','${ownerA}','${recipeA}',
+          ${baseValue},repeat('${suffix}',64),'batch-nutrition-v1',
+          '{"energy_kcal":100}','{}',
+          '{"energy_kcal":{"amount":100,"known_amount":null,"status":"complete","display_mode":"total"},"carbohydrate_g":{"amount":100,"known_amount":null,"status":"complete","display_mode":"total"},"protein_g":{"amount":100,"known_amount":null,"status":"complete","display_mode":"total"},"fat_g":{"amount":100,"known_amount":null,"status":"complete","display_mode":"total"},"sodium_mg":{"amount":100,"known_amount":null,"status":"complete","display_mode":"total"}}',
+          'complete','direct',1,1,false,now()
+        );
+        insert into public.recipe_content_snapshots (
+          id,owner_user_id,recipe_id,recipe_nutrition_snapshot_id,title,
+          base_servings,ingredients_json,steps_json,content_hash,schema_version
+        ) values (
+          'a3200000-0000-4000-8000-00000000000${suffix}','${ownerA}','${recipeA}',
+          'a3100000-0000-4000-8000-00000000000${suffix}','invalid base',2,
+          '[]','[]',repeat('${suffix}',64),1
+        );
+        insert into public.leftover_dishes (
+          id,user_id,recipe_id,recipe_content_snapshot_id,status,cooked_at,cooking_servings,
+          finished_weight_g,remaining_weight_g,weight_status,batch_status,revision,event_checksum
+        ) values (
+          'a4100000-0000-4000-8000-00000000000${suffix}','${ownerA}','${recipeA}',
+          'a3200000-0000-4000-8000-00000000000${suffix}','leftover',now(),2,
+          100,100,'known','available',1,
+          encode(extensions.digest(convert_to('','UTF8'),'sha256'),'hex')
+        );
+        select public.set_account_generation_internal_writer_marker('${cutoverAttempt}',false);
+        select private.resolve_cooked_batch_nutrition(
+          'a4100000-0000-4000-8000-00000000000${suffix}','${ownerA}'
+        );
+        rollback;
+      `, false);
+      expect(invalid.stderr).toContain("CONFLICT");
+    }
+  });
+
+  it("keeps the batch nutrition resolver private and owner-bound", () => {
+    const observation = extractJson(psql(`
+      select jsonb_build_object(
+        'owner',owner.rolname,
+        'security_definer',procedure.prosecdef,
+        'search_path',(select config from unnest(procedure.proconfig) as config
+          where config like 'search_path=%'),
+        'public_execute',pg_catalog.has_function_privilege(
+          'public','private.resolve_cooked_batch_nutrition(uuid,uuid)','EXECUTE'
+        ),
+        'anon_execute',pg_catalog.has_function_privilege(
+          'anon','private.resolve_cooked_batch_nutrition(uuid,uuid)','EXECUTE'
+        ),
+        'authenticated_execute',pg_catalog.has_function_privilege(
+          'authenticated','private.resolve_cooked_batch_nutrition(uuid,uuid)','EXECUTE'
+        ),
+        'service_role_execute',pg_catalog.has_function_privilege(
+          'service_role','private.resolve_cooked_batch_nutrition(uuid,uuid)','EXECUTE'
+        )
+      )
+      from pg_catalog.pg_proc as procedure
+      join pg_catalog.pg_roles as owner on owner.oid=procedure.proowner
+      where procedure.oid='private.resolve_cooked_batch_nutrition(uuid,uuid)'::regprocedure;
+    `).stdout);
+    expect(observation).toEqual({
+      owner: "postgres",
+      security_definer: true,
+      search_path: "search_path=pg_catalog, public, private, pg_temp",
+      public_execute: false,
+      anon_execute: false,
+      authenticated_execute: false,
+      service_role_execute: false,
+    });
+    const denied = psql(`
+      begin;
+      set local role service_role;
+      select private.resolve_cooked_batch_nutrition('${batchA}','${ownerA}');
+      rollback;
+    `, false);
+    expect(denied.status).not.toBe(0);
+  });
+
   it("allows only the exact cooked-batch and meal-wrapper internal scope paths", () => {
     const allowed = psql(`
       begin;

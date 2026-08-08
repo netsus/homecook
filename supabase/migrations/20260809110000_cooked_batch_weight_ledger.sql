@@ -176,6 +176,253 @@ create trigger cleanup_cooked_batch_before_delete
 before delete on public.leftover_dishes
 for each row execute function private.cleanup_cooked_batch_before_delete();
 
+create or replace function private.resolve_cooked_batch_nutrition(
+  p_batch_id uuid,
+  p_owner_uuid uuid
+) returns jsonb
+language plpgsql stable security definer
+set search_path = pg_catalog, public, private, pg_temp
+as $function$
+declare
+  v_batch public.leftover_dishes%rowtype;
+  v_content public.recipe_content_snapshots%rowtype;
+  v_snapshot public.recipe_nutrition_snapshots%rowtype;
+  v_value record;
+  v_status text;
+  v_scalable numeric;
+  v_fixed numeric;
+  v_expected numeric;
+  v_batch_amount numeric;
+  v_values jsonb := '{}'::jsonb;
+  v_core_code text;
+  v_core_complete integer := 0;
+  v_any_available integer := 0;
+  v_allowed_nutrient_codes text[] := array[
+    'energy_kcal', 'carbohydrate_g', 'protein_g', 'fat_g', 'sodium_mg',
+    'sugars_g', 'saturated_fat_g', 'fiber_g'
+  ];
+  v_unavailable_values jsonb := '{
+    "energy_kcal":{"amount":null,"known_amount":null,"status":"unavailable","display_mode":null},
+    "carbohydrate_g":{"amount":null,"known_amount":null,"status":"unavailable","display_mode":null},
+    "protein_g":{"amount":null,"known_amount":null,"status":"unavailable","display_mode":null},
+    "fat_g":{"amount":null,"known_amount":null,"status":"unavailable","display_mode":null},
+    "sodium_mg":{"amount":null,"known_amount":null,"status":"unavailable","display_mode":null}
+  }'::jsonb;
+begin
+  select batch.* into v_batch
+  from public.leftover_dishes as batch
+  where batch.id = p_batch_id
+    and batch.user_id = p_owner_uuid;
+  if v_batch.id is null then
+    return null;
+  end if;
+  if v_batch.recipe_content_snapshot_id is null then
+    return null;
+  end if;
+  if v_batch.cooking_servings is null or v_batch.cooking_servings <= 0 then
+    raise exception 'CONFLICT' using errcode = '55000';
+  end if;
+
+  select content.* into v_content
+  from public.recipe_content_snapshots as content
+  where content.id = v_batch.recipe_content_snapshot_id;
+  if v_content.id is null
+    or v_content.recipe_id is distinct from v_batch.recipe_id
+    or (
+      v_content.owner_user_id is not null
+      and v_content.owner_user_id is distinct from p_owner_uuid
+    )
+  then
+    raise exception 'CONFLICT' using errcode = '55000';
+  end if;
+
+  if v_content.recipe_nutrition_snapshot_id is null then
+    return jsonb_build_object(
+      'recipe_content_snapshot_id', v_content.id,
+      'recipe_nutrition_snapshot_id', null,
+      'basis', jsonb_build_object(
+        'amount', v_batch.cooking_servings,
+        'unit', 'serving'
+      ),
+      'base_servings', null,
+      'values', v_unavailable_values,
+      'calculation_status', 'unavailable',
+      'calculation_quality', null,
+      'reflected_ingredient_count', 0,
+      'target_ingredient_count', 0,
+      'missing_reasons', '[]'::jsonb,
+      'warnings', '[]'::jsonb,
+      'sources', '[]'::jsonb,
+      'snapshot_id', null,
+      'calculated_at', null
+    );
+  end if;
+
+  select snapshot.* into v_snapshot
+  from public.recipe_nutrition_snapshots as snapshot
+  where snapshot.id = v_content.recipe_nutrition_snapshot_id;
+  if v_snapshot.id is null
+    or v_snapshot.recipe_id is distinct from v_batch.recipe_id
+    or v_snapshot.owner_user_id is distinct from v_content.owner_user_id
+    or v_snapshot.base_servings is null
+    or v_snapshot.base_servings <= 0
+    or jsonb_typeof(v_snapshot.scalable_values_json) <> 'object'
+    or jsonb_typeof(v_snapshot.fixed_values_json) <> 'object'
+    or jsonb_typeof(v_snapshot.nutrient_status_json) <> 'object'
+    or jsonb_typeof(v_snapshot.warnings_json) <> 'array'
+    or jsonb_typeof(v_snapshot.sources_json) <> 'array'
+  then
+    raise exception 'CONFLICT' using errcode = '55000';
+  end if;
+
+  foreach v_core_code in array array[
+    'energy_kcal', 'carbohydrate_g', 'protein_g', 'fat_g', 'sodium_mg'
+  ]
+  loop
+    if not (v_snapshot.nutrient_status_json ? v_core_code) then
+      raise exception 'CONFLICT' using errcode = '55000';
+    end if;
+  end loop;
+
+  for v_value in
+    select key, value
+    from jsonb_each(v_snapshot.nutrient_status_json)
+  loop
+    if v_value.key <> all(v_allowed_nutrient_codes)
+      or jsonb_typeof(v_value.value) <> 'object'
+    then
+      raise exception 'CONFLICT' using errcode = '55000';
+    end if;
+    v_status := v_value.value ->> 'status';
+    if v_status = 'complete' then
+      if jsonb_typeof(v_value.value -> 'amount') <> 'number'
+        or jsonb_typeof(v_value.value -> 'known_amount') <> 'null'
+        or v_value.value ->> 'display_mode' <> 'total'
+      then
+        raise exception 'CONFLICT' using errcode = '55000';
+      end if;
+      v_expected := (v_value.value ->> 'amount')::numeric;
+    elsif v_status = 'partial' then
+      if jsonb_typeof(v_value.value -> 'amount') <> 'null'
+        or jsonb_typeof(v_value.value -> 'known_amount') <> 'number'
+        or v_value.value ->> 'display_mode' <> 'minimum'
+      then
+        raise exception 'CONFLICT' using errcode = '55000';
+      end if;
+      v_expected := (v_value.value ->> 'known_amount')::numeric;
+    elsif v_status = 'unavailable' then
+      if jsonb_typeof(v_value.value -> 'amount') <> 'null'
+        or jsonb_typeof(v_value.value -> 'known_amount') <> 'null'
+        or jsonb_typeof(v_value.value -> 'display_mode') <> 'null'
+        or v_snapshot.scalable_values_json ? v_value.key
+        or v_snapshot.fixed_values_json ? v_value.key
+      then
+        raise exception 'CONFLICT' using errcode = '55000';
+      end if;
+      v_values := v_values || jsonb_build_object(v_value.key, jsonb_build_object(
+        'amount', null,
+        'known_amount', null,
+        'status', 'unavailable',
+        'display_mode', null
+      ));
+      continue;
+    else
+      raise exception 'CONFLICT' using errcode = '55000';
+    end if;
+
+    if jsonb_typeof(v_snapshot.scalable_values_json -> v_value.key) <> 'number'
+      or jsonb_typeof(v_snapshot.fixed_values_json -> v_value.key) <> 'number'
+    then
+      raise exception 'CONFLICT' using errcode = '55000';
+    end if;
+    v_scalable := (v_snapshot.scalable_values_json ->> v_value.key)::numeric;
+    v_fixed := (v_snapshot.fixed_values_json ->> v_value.key)::numeric;
+    if v_scalable < 0
+      or v_fixed < 0
+      or v_expected < 0
+      or abs(v_scalable + v_fixed - v_expected) > 0.000000001
+    then
+      raise exception 'CONFLICT' using errcode = '55000';
+    end if;
+
+    v_batch_amount :=
+      v_scalable * v_batch.cooking_servings / v_snapshot.base_servings
+      + v_fixed;
+    v_any_available := v_any_available + 1;
+    if v_status = 'complete' then
+      v_values := v_values || jsonb_build_object(v_value.key, jsonb_build_object(
+        'amount', v_batch_amount,
+        'known_amount', null,
+        'status', 'complete',
+        'display_mode', 'total'
+      ));
+      if v_value.key = any(array[
+        'energy_kcal', 'carbohydrate_g', 'protein_g', 'fat_g', 'sodium_mg'
+      ]) then
+        v_core_complete := v_core_complete + 1;
+      end if;
+    else
+      v_values := v_values || jsonb_build_object(v_value.key, jsonb_build_object(
+        'amount', null,
+        'known_amount', v_batch_amount,
+        'status', 'partial',
+        'display_mode', 'minimum'
+      ));
+    end if;
+  end loop;
+
+  if exists (
+    select 1
+    from jsonb_object_keys(v_snapshot.scalable_values_json) as vector_key
+    where not (v_snapshot.nutrient_status_json ? vector_key)
+  ) or exists (
+    select 1
+    from jsonb_object_keys(v_snapshot.fixed_values_json) as vector_key
+    where not (v_snapshot.nutrient_status_json ? vector_key)
+  ) or (
+    v_snapshot.calculation_status = 'complete' and v_core_complete <> 5
+  ) or (
+    v_snapshot.calculation_status = 'partial'
+    and (v_any_available = 0 or v_core_complete = 5)
+  ) or (
+    v_snapshot.calculation_status = 'unavailable' and v_any_available <> 0
+  ) or (
+    v_snapshot.calculation_status = 'unavailable'
+    and v_snapshot.calculation_quality is not null
+  ) or (
+    v_snapshot.calculation_status <> 'unavailable'
+    and v_snapshot.calculation_quality not in ('direct', 'estimated', 'mixed')
+  ) then
+    raise exception 'CONFLICT' using errcode = '55000';
+  end if;
+
+  return jsonb_build_object(
+    'recipe_content_snapshot_id', v_content.id,
+    'recipe_nutrition_snapshot_id', v_snapshot.id,
+    'basis', jsonb_build_object(
+      'amount', v_batch.cooking_servings,
+      'unit', 'serving'
+    ),
+    'base_servings', v_snapshot.base_servings,
+    'values', v_values,
+    'calculation_status', v_snapshot.calculation_status,
+    'calculation_quality', v_snapshot.calculation_quality,
+    'reflected_ingredient_count', v_snapshot.reflected_ingredient_count,
+    'target_ingredient_count', v_snapshot.target_ingredient_count,
+    'missing_reasons', to_jsonb(v_snapshot.missing_reasons),
+    'warnings', v_snapshot.warnings_json,
+    'sources', v_snapshot.sources_json,
+    'snapshot_id', v_snapshot.id,
+    'calculated_at', v_snapshot.calculated_at
+  );
+exception
+  when sqlstate '55000' then
+    raise;
+  when others then
+    raise exception 'CONFLICT' using errcode = '55000';
+end;
+$function$;
+
 create or replace function private.project_cooked_batch(
   p_batch_id uuid,
   p_owner_uuid uuid
@@ -203,7 +450,11 @@ as $function$
     'revision', batch.revision,
     'nutrition_calculation_status', case
       when batch.recipe_content_snapshot_id is null then null
-      else coalesce(nutrition.calculation_status, 'unavailable')
+      else coalesce(
+        private.resolve_cooked_batch_nutrition(batch.id, p_owner_uuid)
+          ->> 'calculation_status',
+        'unavailable'
+      )
     end,
     'current_unweighed_closure_event_id', (
       select event.id
@@ -226,8 +477,6 @@ as $function$
   join public.recipes as recipe on recipe.id = batch.recipe_id
   left join public.recipe_content_snapshots as snapshot
     on snapshot.id = batch.recipe_content_snapshot_id
-  left join public.recipe_nutrition_snapshots as nutrition
-    on nutrition.id = snapshot.recipe_nutrition_snapshot_id
   where batch.id = p_batch_id and batch.user_id = p_owner_uuid;
 $function$;
 
@@ -1389,6 +1638,7 @@ begin
 end;
 $function$;
 
+alter function private.resolve_cooked_batch_nutrition(uuid,uuid) owner to postgres;
 alter function private.project_cooked_batch(uuid,uuid) owner to postgres;
 alter function private.guard_cooked_batch_legacy_projection_update() owner to postgres;
 alter function private.cleanup_cooked_batch_before_delete() owner to postgres;
@@ -1415,6 +1665,8 @@ revoke all on function private.guard_cooked_batch_legacy_projection_update()
 revoke all on function private.canonicalize_cooked_batch_progress_award()
   from public, anon, authenticated, service_role;
 revoke all on function private.cleanup_cooked_batch_before_delete()
+  from public, anon, authenticated, service_role;
+revoke all on function private.resolve_cooked_batch_nutrition(uuid,uuid)
   from public, anon, authenticated, service_role;
 revoke all on function private.project_cooked_batch(uuid,uuid)
   from public, anon, authenticated, service_role;

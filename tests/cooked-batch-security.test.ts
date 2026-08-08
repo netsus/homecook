@@ -153,7 +153,13 @@ describe("cooked batch database security contract", () => {
   it("keeps v2 nutrition status non-null and binds cleanup to the exact owner", () => {
     const sql = migration();
     expect(sql).toMatch(
-      /'nutrition_calculation_status',\s*case[\s\S]*recipe_content_snapshot_id is null then null[\s\S]*coalesce\(nutrition\.calculation_status, 'unavailable'\)/i,
+      /'nutrition_calculation_status',\s*case[\s\S]*recipe_content_snapshot_id is null then null[\s\S]*private\.resolve_cooked_batch_nutrition\(batch\.id, p_owner_uuid\)[\s\S]*->> 'calculation_status'/i,
+    );
+    expect(sql).toMatch(
+      /function private\.resolve_cooked_batch_nutrition\([\s\S]*security definer[\s\S]*set search_path = pg_catalog, public, private, pg_temp/i,
+    );
+    expect(sql).toMatch(
+      /revoke all on function private\.resolve_cooked_batch_nutrition\(uuid,uuid\)[\s\S]*from public, anon, authenticated, service_role/i,
     );
     expect(sql).toMatch(
       /homecook\.account_delete_user_id[\s\S]*is distinct from old\.user_id/i,

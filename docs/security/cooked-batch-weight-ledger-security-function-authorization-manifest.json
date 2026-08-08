@@ -26,6 +26,16 @@
       "safe_search_path": ["pg_catalog", "public", "private", "pg_temp"]
     },
     {
+      "signature": "private.resolve_cooked_batch_nutrition(uuid, uuid)",
+      "control_class": "application-controlled",
+      "effect": "read-only",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "owner": "postgres",
+      "security_mode": "definer",
+      "safe_search_path": ["pg_catalog", "public", "private", "pg_temp"]
+    },
+    {
       "signature": "private.project_cooked_batch(uuid, uuid)",
       "control_class": "application-controlled",
       "effect": "read-only",
