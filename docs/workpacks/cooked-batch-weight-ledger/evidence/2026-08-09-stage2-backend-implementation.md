@@ -72,34 +72,41 @@ Final `b47c8d623c2c60e09ac4735e63466a1b97126472` advisories found no product DB/
 
 The first `dbf4091d…` current-head CI quality run then supplied a new environment-specific RED: GitHub's shallow pull-request checkout had no `origin/master` ref, so two real-workpack CLI cases failed, while the governing status branch incorrectly projected the local successor instead of the preserved Draft PR branch. The repair keeps status on `feature/cooked-batch-weight-ledger-stage2-current` and makes the validator shallow-fetch the exact remote base only when its ref is absent; failure to resolve that base is an error, never a silent pass. Focused GREEN is `2 files / 37 tests`, including two new base-resolution cases and all explicit-success, invalid-slice and legacy-fallback paths.
 
+Fresh review of `e9b88ac12bb5cb7ccaa40cb662578c8d56d7f3d4` found four further gaps. Security/DB task `019fe2e0-e5fc-7b32-ab30-76519d57bb08` returned `HOLD 0/1/1`; five-axis task `019fe2e0-e60b-7221-8b9b-a720784d31c2` returned `HOLD 0/2/0`. Focused RED reproduced seven failures: completion lacked the common recipe/Meal/session lock order, live gamification projection was absent, the generic RPC helper routes were missing from the write inventory and the validator could not check an alternate stored registry, and LEFTOVERS evidence still contained an artificial `LIMIT 20`. Repair commit `e0884a6de5ce928f2dc087916d07f3d5858313c3` turns that set GREEN without changing a public response shape.
+
+- Snapshot-v2 completion now follows `recipe UUID -> actual Meal row UUID -> session/claim`, then revalidates Meal owner/recipe/content/status/revision under the locks. A real two-connection complete/cancel regression proves no deadlock, exactly one success and one `CONFLICT`, and one valid terminal state.
+- Transactional progress/summary/activity rows remain the canonical RPC authority. Completion, consumed-unweighed close and legacy eat now resolve the durable canonical event/activity IDs and invoke the existing official live projection helpers. Replays reuse the same IDs, so notification, badge, achievement and level-up writers retain their established idempotency keys; no RPC/HTTP field was added.
+- The account-session inventory recognizes all `callCookedBatchRpc` writers, treats only the explicit `list_cooked_batches` target as read-only, expands the mutation verbs, and supports an alternate `--inventory` registry for a real omission-fails test. The stored inventory advances from 85 to 93 write surfaces.
+- LEFTOVERS performance evidence removes both artificial limits and selects the production columns with the production predicates/order. The test records JSON `Actual Rows`, shared hit/read buffers and owner scan conditions, and separately verifies all four exact partial-index definitions. It does not claim that the unpaginated production query is a bounded page.
+
 PostgreSQL refinement also separated fixture isolation from two earlier product defects: terminal sessions were revalidating the active Meal revision pin, and completion set `meals.leftover_dish_id` without `is_leftover`. The final migration keeps immutable start snapshots as audit data after terminal transition and leaves ordinary planner Meal leftover-origin fields unchanged.
 
 Final fresh and replay PostgreSQL evidence:
 
 ```text
 fresh predecessor: 15 passed / 1 intended skip
-fresh cooked batch: 23 passed
+fresh cooked batch: 24 passed
 fresh inherited shared security inventory: 26 passed / 31 intended skips
 replay predecessor: 16 passed
-replay cooked batch: 23 passed
+replay cooked batch: 24 passed
 replay inherited shared security inventory: 26 passed / 31 intended skips
 ```
 
-The cooked-batch scenarios cover exact 20-function owner/ACL/search-path/scope inventory plus the inherited canonical refresh authority, owner RLS, direct protected update/event insert/select/checksum and forged batch INSERT denial, two-owner multi-table digests including progress-summary timestamps, exact pantry/claim rollback, same-session newer JWT acceptance with old/stale/different/revoked/generation-mismatched zero-write, owner-locked keep, atomic canonical progress/activity projection, duplicate/replay zero-write, standalone and planner completion/replay, idempotency payload mismatch including reason, full cached-projection tamper denial, DB-level NULL/blank discard-adjust rejection, unrecoverable irreversibility, close/cancel/reclose XP once, a forced two-connection v1/v2 `60+45` award race, v2 unavailable versus legacy-null nutrition status, strict canonical cursor parsing, representative 4,000 v2 + 4,000 legacy row `EXPLAIN (ANALYZE, BUFFERS)` checks for both exact LEFTOVERS predicates, depleted meal reuse denial and exact-owner cleanup ordering.
+The cooked-batch scenarios cover exact 20-function owner/ACL/search-path/scope inventory plus the inherited canonical refresh authority, owner RLS, direct protected update/event insert/select/checksum and forged batch INSERT denial, two-owner multi-table digests including progress-summary timestamps, exact pantry/claim rollback, same-session newer JWT acceptance with old/stale/different/revoked/generation-mismatched zero-write, owner-locked keep, atomic canonical progress/activity projection plus official live notification/badge/achievement projection, duplicate/replay canonical-ID reuse, standalone and planner completion/replay, a real complete/cancel lock race, idempotency payload mismatch including reason, full cached-projection tamper denial, DB-level NULL/blank discard-adjust rejection, unrecoverable irreversibility, close/cancel/reclose XP once, a forced two-connection v1/v2 `60+45` award race, v2 unavailable versus legacy-null nutrition status, strict canonical cursor parsing, representative 4,000 v2 + 4,000 legacy row limit-free `EXPLAIN (ANALYZE, BUFFERS)` checks for both exact LEFTOVERS predicates, depleted meal reuse denial and exact-owner cleanup ordering.
 
 ## Verification
 
 - `pnpm install --frozen-lockfile` — pass; no dependency or lockfile change
-- final focused Vitest — pre-CI successor regression `10 files / 112 tests` pass; canonical-refresh ownership test `1 file / 14 tests` pass; final automation/status repair `2 files / 37 tests` pass
-- full `pnpm test` on the final `eb4e878e…` successor — `522 files passed | 28 skipped`, `5,324 tests passed | 363 skipped`
+- final focused Vitest — repaired backend/gamification/security/inventory set `7 files / 69 tests` pass; final completion/security rerun `2 files / 19 tests` pass
+- full `pnpm test` on the repaired `eb4e878e…` successor — `522 files passed | 28 skipped`, `5,328 tests passed | 364 skipped`
 - `pnpm exec vitest run tests/check-workpack-docs.test.ts tests/cooked-batch-weight-ledger-stage1-relock.test.ts` — final automation/status repair `2 files / 37 tests`; the validator-only file is `27/27`
 - `pnpm validate:workpack -- --slice cooked-batch-weight-ledger` — pass with visible `Workpack docs OK for slice 'cooked-batch-weight-ledger' (base: master)` marker; `missing-cooked-batch-sentinel` exits `1` with both missing governing paths; legacy `BRANCH_NAME=feature/be-cooked-batch-weight-ledger pnpm validate:workpack` inference still resolves the real workpack and passes
-- `pnpm test:cooked-batch-weight-ledger:postgres` — final successor pass: fresh predecessor `15 + 1 intended skip`, fresh/replay #8 `23/23`, replay predecessor `16/16`, inherited shared security inventory fresh/replay `26 passed / 31 intended skips`
+- `pnpm test:cooked-batch-weight-ledger:postgres` — final successor pass: fresh predecessor `15 + 1 intended skip`, fresh/replay #8 `24/24`, replay predecessor `16/16`, inherited shared security inventory fresh/replay `26 passed / 31 intended skips`
 - `pnpm verify:backend` — pass: lint, typecheck, `217 files passed | 11 skipped`, `2,664 tests passed | 150 skipped`, Next build, security E2E `12/12`
 - `pnpm test:security-functions:postgres` — pass: 8 anonymous mutation signatures denied with unchanged checksums
 - `node scripts/validate-security-function-authorization.mjs --contract-only` — pass; #8 manifest classifies 20 pre-deployment functions and delegates all full-local refresh ownership to the canonical #1292 manifest/migration
 - source-of-truth, workflow-v2, workpack, automation-spec and OMO bookkeeping validators — pass
-- account-session generation inventory — pass: `64 routes / 85 write surfaces / 3 auth.users inbound FKs`; the removed surface is the legacy keep direct UPDATE replaced by the owner-locked RPC
+- account-session generation inventory — pass: `64 routes / 93 write surfaces / 3 auth.users inbound FKs`; all eight cooked-batch/legacy helper writers are explicit, and removing one from a checksum-valid alternate registry fails closed
 - `pnpm audit --audit-level high` — exit 0; residual `1 low / 1 moderate`, high `0`, critical `0`
 - `git diff --check` — pass
 
@@ -110,7 +117,7 @@ The workpack-specific Stage 4 E2E grep returned `No tests found`; no pass-with-n
 - Migration was applied only to the isolated ephemeral PostgreSQL fresh/replay harness. No remote Supabase, production, staging, Vercel, server-Mac or capability activation write occurred.
 - The configured local security-function authorization validator sees a pre-existing partially deployed additive runtime and reports missing older full-local/hybrid functions including `private.verify_full_local_internal_scope`; this task did not mutate that external runtime. Repository migration fresh/replay ACL/RLS checks pass.
 - The inherited security inventory still runs exact shared function/RLS/policy and tamper cases. Personal-recipe Storage/runtime cases are intended skips in this Stage2 runner because later follow-up migrations produce that other workpack's expected schema/ACL drift; no personal recipe product, docs or generated artifact was changed.
-- Deterministic `FOR UPDATE` order, exact affected-row counts, two-owner before/after multi-table digests and a real two-connection v1/v2 progress interleaving are covered. Merged-exact-SHA local Supabase/server-production rehearsal remains manual/future evidence.
+- Deterministic `FOR UPDATE` order, exact affected-row counts, two-owner before/after multi-table digests, a real two-connection complete/cancel interleaving and a separate v1/v2 progress interleaving are covered. Merged-exact-SHA local Supabase/server-production rehearsal remains manual/future evidence.
 - Merged-exact-SHA server-production/local-rehearsal, R/R+1 seeded drain, current/previous release evidence, R+2 service-owner activation, frontend/E2E visual work and post-merge verification remain open.
 - #9 still owns the physical meal-log linked event pointer and arbitrary-order consumed-entry reversal. #11 still owns final LEFTOVERS/weight UI.
 
@@ -119,7 +126,7 @@ The workpack-specific Stage 4 E2E grep returned `No tests found`; no pass-with-n
 - Correctness: official wrapper/status/error shapes, legacy idempotency, full cached projection and fresh/replay state transitions match focused and PostgreSQL tests.
 - Readability/architecture: all three legacy mutations share the existing verified-session RPC adapter and one database authority; no route-side compensating XP/activity path remains.
 - Security: current-generation authority, owner row locks, exact affected-row counts, private helper ACLs and safe-column SELECT grants are fail closed.
-- Performance: pagination remains bounded; representative 4,000-row v2 plus 4,000-row legacy fixtures exercise the exact leftover and eaten route predicates under `EXPLAIN (ANALYZE, BUFFERS)` with four purpose-specific partial compatibility indexes and no broad table scan proof substitution.
+- Performance: the official LEFTOVERS compatibility route is currently unpaginated. Representative 4,000-row v2 plus 4,000-row legacy fixtures exercise its exact limit-free leftover/eaten predicates and selected columns under `EXPLAIN (ANALYZE, BUFFERS)`; actual rows, shared buffers, owner scan conditions and all four purpose-specific partial-index definitions are asserted without presenting `LIMIT 20` as production evidence.
 - Scope/dependencies: no frontend, personal-recipe product/docs, F0, new public contract or package dependency changed. This author check is not Stage 3 approval.
 
 ## Contract evolution and handoff

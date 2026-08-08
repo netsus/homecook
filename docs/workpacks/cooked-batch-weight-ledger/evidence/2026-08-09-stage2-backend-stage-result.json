@@ -1,13 +1,13 @@
 {
   "result": "done",
-  "summary_markdown": "#8 cooked-batch exact pantry/weight completion, owner-only batch reader and append-only row-lock ledger를 current official contract 안에서 구현하고 local fresh/replay PostgreSQL로 검증했다.",
+  "summary_markdown": "#8 cooked-batch exact pantry/weight completion을 공통 잠금 순서로 직렬화하고 공식 live gamification projection, fail-closed writer inventory, limit-free LEFTOVERS evidence까지 current official contract 안에서 복구해 local fresh/replay PostgreSQL로 검증했다.",
   "commit": {
     "subject": "feat(cooked-batch): make batch weight changes authoritative",
     "body_markdown": "- snapshot-v2 completion and cooked-batch mutations use verified-session scoped RPCs\n- append-only events and replay checksum protect owner-only state transitions\n- legacy leftovers remain compatible without exposing v2 direct writes"
   },
   "pr": {
     "title": "feat(cooked-batch): implement weight ledger backend",
-    "body_markdown": "Draft Stage 2 backend implementation rebased onto PR #1292 merge eb4e878eb1d5b6fe5df00b1edd3a4f42fa472142; canonical v2 refresh authority wins. Stage 3, Ready, merge, remote rehearsal and activation remain pending."
+    "body_markdown": "Draft Stage 2 backend implementation on PR #1292 merge eb4e878eb1d5b6fe5df00b1edd3a4f42fa472142. Repair commit e0884a6de5ce928f2dc087916d07f3d5858313c3 closes the complete/cancel lock-order race, restores official live gamification projection from canonical IDs, inventories 93 write surfaces fail closed, and removes artificial LEFTOVERS limits. Stage 3, Ready, merge, remote rehearsal and activation remain pending."
   },
   "base_drift_integration": {
     "task_id": "019fe2b2-0ee4-77c3-a829-9ae04bfac07f",
@@ -19,6 +19,14 @@
     "canonical_refresh_migration": "supabase/migrations/20260809100000_full_local_session_refresh_authority.sql",
     "cooked_batch_migration": "supabase/migrations/20260809110000_cooked_batch_weight_ledger.sql",
     "contract_evolution_candidate": null
+  },
+  "stage2_review_repair": {
+    "reviewed_head": "e9b88ac12bb5cb7ccaa40cb662578c8d56d7f3d4",
+    "implementation_commit": "e0884a6de5ce928f2dc087916d07f3d5858313c3",
+    "security_db_task": "019fe2e0-e5fc-7b32-ab30-76519d57bb08 HOLD 0/1/1",
+    "five_axis_task": "019fe2e0-e60b-7221-8b9b-a720784d31c2 HOLD 0/2/0",
+    "public_contract_expansion": false,
+    "stage3_self_approval": false
   },
   "overall_status": {
     "lifecycle": "in_progress",
@@ -46,11 +54,14 @@
     "full_vitest_eb4e_successor": {
       "passed_files": 522,
       "skipped_files": 28,
-      "passed_tests": 5324,
-      "skipped_tests": 363
+      "passed_tests": 5328,
+      "skipped_tests": 364
     },
-    "focused_vitest": "pre-CI successor 10 files / 112 tests; canonical refresh ownership 1 file / 14 tests; final automation/status repair 2 files / 37 tests",
-    "postgres_fresh_replay": "predecessor fresh 15 passed / 1 intended skip, replay 16 passed; cooked-batch fresh/replay 23/23; inherited inventory fresh/replay 26 passed / 31 intended skips",
+    "focused_vitest": "review repair RED 7 failures / 41 passes; GREEN backend, gamification, security and inventory 7 files / 69 tests; final completion/security 2 files / 19 tests",
+    "postgres_fresh_replay": "predecessor fresh 15 passed / 1 intended skip, replay 16 passed; cooked-batch fresh/replay 24/24; inherited inventory fresh/replay 26 passed / 31 intended skips",
+    "complete_cancel_race": "two real connections finish without deadlock; exactly one succeeds, one returns CONFLICT, and the session/Meal/claim/batch terminal state is valid",
+    "live_gamification_projection": "snapshot-v2 completion, consumed-unweighed close and legacy eat reuse canonical progress/activity IDs with the existing official notification/badge/achievement helpers",
+    "account_session_generation_inventory": "64 routes, 93 write surfaces, 3 auth.users inbound fks; checksum-valid omission fixture fails closed",
     "canonical_refresh_regressions": "same stable session newer JWT accepted; stale/old, different-session, revoked and stale-generation attempts are zero-write",
     "progress_race": "two real connections serialize v1/v2 first awards to 60+45",
     "db_payload_rejection": "NULL and blank discard/adjust payloads fail at the final DB authority",
@@ -58,7 +69,8 @@
     "cooked_batch_authorization_manifest_functions": 20,
     "workpack_validator_red": "4 CLI failures reproduced the explicit-slice silent no-op, unknown/missing slice success, and overwritten branch caller",
     "workpack_validator_green": "27/27 focused tests; missing shallow base refs are fetched exactly or fail closed; explicit --slice emits Workpack docs OK and fails closed for missing governing docs; legacy branch inference remains active",
-    "leftovers_partial_compatibility_indexes": 4
+    "leftovers_partial_compatibility_indexes": 4,
+    "leftovers_explain_shape": "exact limit-free production predicates, selected columns and ordering with Actual Rows, shared hit/read buffers and owner scan condition evidence"
   },
   "next_route": "stage3_fresh_backend_review",
   "claimed_scope": {
