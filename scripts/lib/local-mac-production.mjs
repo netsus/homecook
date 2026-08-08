@@ -328,6 +328,13 @@ function getLocalMacProductionPath(nodeBin) {
   ].join(":");
 }
 
+function getLocalMacProductionCorepackBin(nodeBin) {
+  return resolve(
+    dirname(resolve(ensureNonEmptyString(nodeBin, "nodeBin"))),
+    "corepack",
+  );
+}
+
 /**
  * @param {{
  *   command: string,
@@ -398,6 +405,7 @@ export async function startLocalMacProductionRuntime({
 } = {}) {
   const normalizedRootDir = resolve(ensureNonEmptyString(rootDir, "rootDir"));
   const normalizedNodeBin = resolve(ensureNonEmptyString(nodeBin, "nodeBin"));
+  const corepackBin = getLocalMacProductionCorepackBin(normalizedNodeBin);
   const normalizedArgs = ensureLocalNextStartArgs(args);
   const supabaseEnv = createLocalSupabaseCommandEnv(env);
 
@@ -410,8 +418,8 @@ export async function startLocalMacProductionRuntime({
     stdio: "ignore",
   };
   const startResult = runCommand(
-    "pnpm",
-    ["dlx", LOCAL_SUPABASE_CLI_PACKAGE, "start"],
+    corepackBin,
+    ["pnpm", "dlx", LOCAL_SUPABASE_CLI_PACKAGE, "start"],
     commandOptions,
   );
   if (startResult.status !== 0) {
@@ -419,8 +427,8 @@ export async function startLocalMacProductionRuntime({
   }
 
   const statusResult = runCommand(
-    "pnpm",
-    ["dlx", LOCAL_SUPABASE_CLI_PACKAGE, "status"],
+    corepackBin,
+    ["pnpm", "dlx", LOCAL_SUPABASE_CLI_PACKAGE, "status"],
     commandOptions,
   );
   if (statusResult.status !== 0) {
@@ -512,6 +520,7 @@ export function verifyLocalMacProductionPrerequisites({
     resolve(rootDir, "scripts", "start-local-mac-production.mjs"),
     resolve(rootDir, "scripts", "start-production.mjs"),
     resolve(nodeBin),
+    getLocalMacProductionCorepackBin(nodeBin),
   ];
   const missingPaths = requiredPaths.filter((filePath) => !existsSync(filePath));
 
@@ -553,13 +562,14 @@ export function installLocalMacProductionLaunchAgent({
 
   const normalizedRootDir = resolve(rootDir);
   const normalizedNodeBin = resolve(nodeBin);
+  const corepackBin = getLocalMacProductionCorepackBin(normalizedNodeBin);
   verifyPrerequisites({
     rootDir: normalizedRootDir,
     nodeBin: normalizedNodeBin,
   });
   verifyBootCli({
-    command: "pnpm",
-    args: ["dlx", LOCAL_SUPABASE_CLI_PACKAGE, "--version"],
+    command: corepackBin,
+    args: ["pnpm", "dlx", LOCAL_SUPABASE_CLI_PACKAGE, "--version"],
     cwd: normalizedRootDir,
     env: {
       HOME: resolve(ensureNonEmptyString(homeDir, "homeDir")),

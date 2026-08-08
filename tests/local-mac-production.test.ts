@@ -1,6 +1,6 @@
 import { spawnSync } from "node:child_process";
 import { EventEmitter } from "node:events";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 
@@ -15,6 +15,7 @@ import {
   renderLocalMacProductionPlist,
   startLocalMacProductionRuntime,
   verifyLocalMacProductionBootCli,
+  verifyLocalMacProductionPrerequisites,
   waitForLocalMacProductionReady,
 } from "../scripts/lib/local-mac-production.mjs";
 import { relayChildLifecycle } from "../scripts/lib/process-signal-relay.mjs";
@@ -171,8 +172,8 @@ describe("local Mac production launch agent", () => {
     expect(result).toBe(child);
     expect(calls).toEqual([
       "docker-ready",
-      "pnpm dlx supabase@2.110.0 start",
-      "pnpm dlx supabase@2.110.0 status",
+      "/Users/tester/.nvm/corepack pnpm dlx supabase@2.110.0 start",
+      "/Users/tester/.nvm/corepack pnpm dlx supabase@2.110.0 status",
       "/Users/tester/.nvm/node /Users/tester/homecook/scripts/start-production.mjs -H 127.0.0.1 -p 3100",
     ]);
   });
@@ -422,7 +423,8 @@ describe("local Mac production launch agent", () => {
       spawn,
       verifyBootCli: ({ command, args, env }) => {
         bootCliChecks.push(`${command} ${args.join(" ")}`);
-        expect(args).toEqual(["dlx", LOCAL_SUPABASE_CLI_PACKAGE, "--version"]);
+        expect(command).toBe(join(dirname(process.execPath), "corepack"));
+        expect(args).toEqual(["pnpm", "dlx", LOCAL_SUPABASE_CLI_PACKAGE, "--version"]);
         expect(env).toEqual({
           HOME: homeDir,
           PATH: [
@@ -442,7 +444,7 @@ describe("local Mac production launch agent", () => {
     expect(result.changed).toBe(true);
     expect(readFileSync(result.plistPath, "utf8")).toContain("127.0.0.1");
     expect(bootCliChecks).toEqual([
-      `pnpm dlx ${LOCAL_SUPABASE_CLI_PACKAGE} --version`,
+      `${join(dirname(process.execPath), "corepack")} pnpm dlx ${LOCAL_SUPABASE_CLI_PACKAGE} --version`,
     ]);
     expect(spawnCalls).toContain(`launchctl bootstrap gui/501 ${result.plistPath}`);
     expect(spawnCalls).toContain("launchctl kickstart -k gui/501/com.homecook.production");
@@ -450,8 +452,8 @@ describe("local Mac production launch agent", () => {
 
   it("fails installation preflight when the pinned boot CLI cannot be cached", () => {
     expect(() => verifyLocalMacProductionBootCli({
-      command: "pnpm",
-      args: ["dlx", LOCAL_SUPABASE_CLI_PACKAGE, "--version"],
+      command: "/Users/tester/.nvm/corepack",
+      args: ["pnpm", "dlx", LOCAL_SUPABASE_CLI_PACKAGE, "--version"],
       cwd: "/Users/tester/homecook",
       env: {
         HOME: "/Users/tester",
@@ -461,6 +463,24 @@ describe("local Mac production launch agent", () => {
     })).toThrow(
       `Unable to cache ${LOCAL_SUPABASE_CLI_PACKAGE} for offline production boot`,
     );
+  });
+
+  it("requires corepack next to the configured Node binary", () => {
+    const rootDir = mkdtempSync(join(tmpdir(), "homecook-production-prerequisites-"));
+    tempDirs.push(rootDir);
+    const nodeBin = join(rootDir, "bin", "node");
+
+    mkdirSync(dirname(nodeBin), { recursive: true });
+    writeFileSync(nodeBin, "");
+    writeFileSync(join(rootDir, ".env.production.local"), "");
+    mkdirSync(join(rootDir, ".next"), { recursive: true });
+    writeFileSync(join(rootDir, ".next", "BUILD_ID"), "build-id");
+    mkdirSync(join(rootDir, "scripts"), { recursive: true });
+    writeFileSync(join(rootDir, "scripts", "start-local-mac-production.mjs"), "");
+    writeFileSync(join(rootDir, "scripts", "start-production.mjs"), "");
+
+    expect(() => verifyLocalMacProductionPrerequisites({ rootDir, nodeBin }))
+      .toThrow(join(dirname(nodeBin), "corepack"));
   });
 });
 
