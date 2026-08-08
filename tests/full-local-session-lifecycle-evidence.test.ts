@@ -74,9 +74,29 @@ describe("full-local session lifecycle evidence contract", () => {
   });
 
   it("accepts only the exact canonical live checkout realpath", () => {
-    expect(validateLiveRoot(EXPECTED_LIVE_ROOT)).toBe(EXPECTED_LIVE_ROOT);
-    expect(() => validateLiveRoot("homecook-full-local-restore")).toThrow(/absolute/u);
-    expect(() => validateLiveRoot(path.dirname(EXPECTED_LIVE_ROOT))).toThrow(/exact live root/u);
+    const liveRoot = mkdtempSync(path.join(tmpdir(), "canonical-live-root-"));
+    const otherRoot = mkdtempSync(path.join(tmpdir(), "other-live-root-"));
+    const aliasParent = mkdtempSync(path.join(tmpdir(), "live-root-alias-"));
+    const alias = path.join(aliasParent, "live-root");
+    symlinkSync(liveRoot, alias, "dir");
+
+    expect(EXPECTED_LIVE_ROOT).toBe(
+      "/Users/cwj/01_vibe_coding/homecook-full-local-restore",
+    );
+    expect(validateLiveRoot(liveRoot, { expectedLiveRoot: liveRoot }))
+      .toBe(realpathSync(liveRoot));
+    expect(() => validateLiveRoot(
+      alias,
+      { expectedLiveRoot: liveRoot },
+    )).toThrow(/existing directory/u);
+    expect(() => validateLiveRoot(
+      "homecook-full-local-restore",
+      { expectedLiveRoot: liveRoot },
+    )).toThrow(/absolute/u);
+    expect(() => validateLiveRoot(
+      otherRoot,
+      { expectedLiveRoot: liveRoot },
+    )).toThrow(/exact live root/u);
   });
 
   it("accepts only the phase-matched evidence output path under the implementation checkout", () => {

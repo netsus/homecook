@@ -148,17 +148,32 @@ function untrackedPathsFromStatus(statusBuffer) {
     .sort(Buffer.compare);
 }
 
-export function validateLiveRoot(liveRoot) {
+export function validateLiveRoot(
+  liveRoot,
+  { expectedLiveRoot = EXPECTED_LIVE_ROOT } = {},
+) {
   if (typeof liveRoot !== "string" || !path.isAbsolute(liveRoot)) {
     throw new Error("--live-root must be an absolute path.");
+  }
+  if (
+    typeof expectedLiveRoot !== "string"
+    || !path.isAbsolute(expectedLiveRoot)
+  ) {
+    throw new Error("The expected live root must be an absolute path.");
   }
   if (!existsSync(liveRoot) || !lstatSync(liveRoot).isDirectory()) {
     throw new Error("--live-root must be an existing directory.");
   }
-  const expectedRealPath = realpathSync(EXPECTED_LIVE_ROOT);
+  if (
+    !existsSync(expectedLiveRoot)
+    || !lstatSync(expectedLiveRoot).isDirectory()
+  ) {
+    throw new Error("The expected live root must be an existing directory.");
+  }
+  const expectedRealPath = realpathSync(expectedLiveRoot);
   const actualRealPath = realpathSync(liveRoot);
   if (actualRealPath !== expectedRealPath) {
-    throw new Error(`--live-root must resolve to the exact live root: ${EXPECTED_LIVE_ROOT}`);
+    throw new Error(`--live-root must resolve to the exact live root: ${expectedLiveRoot}`);
   }
   return actualRealPath;
 }
