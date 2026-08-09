@@ -11,6 +11,7 @@ import {
 } from "@/lib/server/user-bootstrap";
 import {
   normalizeLeftoverStatus,
+  projectLeftoverCompatibilityStatus,
   toLeftoverListItem,
   type LeftoverDishRow,
   type LeftoverOriginMealRow,
@@ -37,6 +38,7 @@ interface QueryOrderOption {
 interface LeftoverSelectQuery {
   eq(column: string, value: string): LeftoverSelectQuery;
   gt(column: string, value: string): LeftoverSelectQuery;
+  or(filters: string): LeftoverSelectQuery;
   order(column: string, options: QueryOrderOption): LeftoverSelectQuery;
   then: ArrayQueryResult<LeftoverDishRow>["then"];
 }
@@ -140,18 +142,19 @@ export async function GET(request: NextRequest) {
   let leftoversQuery = dbClient
     .from("leftover_dishes")
     .select(
-      "id, user_id, recipe_id, recipe_content_snapshot_id, recipe_content_snapshots(id, recipe_id, title), status, cooked_at, eaten_at, auto_hide_at, stale_reviewed_at, cooking_servings",
+      "id, user_id, recipe_id, recipe_content_snapshot_id, status, cooked_at, eaten_at, auto_hide_at, stale_reviewed_at, cooking_servings, weight_status, batch_status, depleted_reason",
     )
-    .eq("user_id", user.id)
-    .eq("status", status);
+    .eq("user_id", user.id);
 
   if (status === "eaten") {
     leftoversQuery = leftoversQuery
+      .or("and(recipe_content_snapshot_id.is.null,status.eq.eaten),and(recipe_content_snapshot_id.not.is.null,batch_status.eq.depleted,depleted_reason.in.(consumed,consumed_unweighed))")
       .gt("auto_hide_at", new Date().toISOString())
       .order("eaten_at", { ascending: false })
       .order("id", { ascending: false });
   } else {
     leftoversQuery = leftoversQuery
+      .or("and(recipe_content_snapshot_id.is.null,status.eq.leftover),and(recipe_content_snapshot_id.not.is.null,batch_status.eq.available),and(recipe_content_snapshot_id.not.is.null,batch_status.eq.depleted,depleted_reason.in.(discarded,mixed,discarded_unweighed,mixed_unweighed))")
       .order("cooked_at", { ascending: false })
       .order("id", { ascending: false });
   }
@@ -162,13 +165,20 @@ export async function GET(request: NextRequest) {
     return fail("INTERNAL_ERROR", "남은 요리 목록을 불러오지 못했어요.", 500);
   }
 
-  const recipeIds = [...new Set(leftoversResult.data.map((item) => item.recipe_id))];
-  const leftoverIds = leftoversResult.data.map((item) => item.id);
+  const visibleLeftovers = leftoversResult.data
+    .map((row) => ({
+      ...row,
+      status: projectLeftoverCompatibilityStatus(row),
+    }))
+    .filter((row) => row.status === status);
+
+  const recipeIds = [...new Set(visibleLeftovers.map((item) => item.recipe_id))];
+  const leftoverIds = visibleLeftovers.map((item) => item.id);
   const recipeMap = new Map<string, LeftoverRecipeRow>();
   const sourceMealMap = new Map<string, LeftoverSourceMealRow>();
   const contentSnapshotIds = [
     ...new Set(
-      leftoversResult.data
+      visibleLeftovers
         .map((item) => item.recipe_content_snapshot_id)
         .filter((value): value is string => typeof value === "string" && value.length > 0),
     ),
@@ -204,7 +214,7 @@ export async function GET(request: NextRequest) {
       contentSnapshotMap.set(snapshot.id, snapshot);
     });
 
-    if (leftoversResult.data.some((item) =>
+    if (visibleLeftovers.some((item) =>
       item.recipe_content_snapshot_id !== null &&
       item.recipe_content_snapshot_id !== undefined &&
       !contentSnapshotMap.has(item.recipe_content_snapshot_id)
@@ -261,7 +271,7 @@ export async function GET(request: NextRequest) {
   }
 
   return ok({
-    items: leftoversResult.data.map((row) =>
+    items: visibleLeftovers.map((row) =>
       toLeftoverListItem(row, recipeMap, sourceMealMap, contentSnapshotMap)
     ),
   } satisfies LeftoverListData);

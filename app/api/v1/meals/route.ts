@@ -68,7 +68,7 @@ interface PlannerColumnRow {
   name: string;
 }
 
-interface LeftoverDishLookupRow {
+interface LeftoverDishLookupRow extends CookedBatchMealEligibilityRow {
   id: string;
   user_id: string;
   recipe_id: string;
@@ -673,7 +673,7 @@ async function postMeals(request: Request) {
   if (parsed.leftoverDishId) {
     const leftoverResult = await dbClient
       .from("leftover_dishes")
-      .select("id, user_id, recipe_id")
+      .select("id, user_id, recipe_id, recipe_content_snapshot_id, status, remaining_weight_g, weight_status, batch_status, depleted_reason")
       .eq("id", parsed.leftoverDishId)
       .maybeSingle();
 
@@ -684,18 +684,18 @@ async function postMeals(request: Request) {
       }
       return fail("RESOURCE_NOT_FOUND", "남은 요리를 찾을 수 없어요.", 404);
     }
-
     if (leftoverResult.data.user_id !== user.id) {
       return fail("FORBIDDEN", "내 남은 요리만 플래너에 추가할 수 있어요.", 403);
     }
-
     if (leftoverResult.data.recipe_id !== parsed.recipeId) {
       return fail("VALIDATION_ERROR", "요청 값을 확인해 주세요.", 422, [
         { field: "leftover_dish_id", reason: "recipe_mismatch" },
       ]);
     }
+    if (!isMealEligibleLeftover(leftoverResult.data)) {
+      return fail("CONFLICT", "현재 상태의 남은 요리는 플래너에 추가할 수 없어요.", 409);
+    }
   }
-
   const serviceClient = createFutureMealWriteInternalClient();
   if (!serviceClient) {
     return fail("INTERNAL_ERROR", "식사를 추가하지 못했어요.", 500);
@@ -766,4 +766,23 @@ const guardedPostMeals = withHybridAuthorityRouteError(
 
 export async function POST(request: Request) {
   return guardedPostMeals(request);
+}
+
+interface CookedBatchMealEligibilityRow {
+  recipe_content_snapshot_id: string | null;
+  status: "leftover" | "eaten";
+  remaining_weight_g: number | null;
+  weight_status: "known" | "missing" | "unrecoverable" | null;
+  batch_status: "available" | "depleted" | null;
+  depleted_reason: string | null;
+}
+
+function isMealEligibleLeftover(row: CookedBatchMealEligibilityRow) {
+  return row.recipe_content_snapshot_id === null
+    ? row.status === "leftover"
+    : row.weight_status === "known"
+      && row.batch_status === "available"
+      && typeof row.remaining_weight_g === "number"
+      && row.remaining_weight_g > 0
+      && row.depleted_reason === null;
 }

@@ -613,6 +613,7 @@ function inventoryHybridAuthorityPaths(repoRoot = process.cwd()) {
         && (
           isNamedCall(node, "createRouteHandlerClient")
           || isNamedCall(node, "createDataRouteHandlerClient")
+          || isNamedCall(node, "authorizeCookedBatchRequest")
         )
       ) {
         usesDataRouteClient = true;

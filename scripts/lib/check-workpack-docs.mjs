@@ -73,6 +73,29 @@ export function resolveBaseRef(env, spawnSyncFn) {
   return null;
 }
 
+export function ensureRemoteBaseRef(baseRef, spawnSyncFn) {
+  const remoteRef = `refs/remotes/origin/${baseRef}`;
+  const existing = spawnSyncFn(
+    "git",
+    ["rev-parse", "--verify", "--quiet", remoteRef],
+    { stdio: "ignore" },
+  );
+  if (existing.status === 0) return true;
+
+  const fetched = spawnSyncFn(
+    "git",
+    [
+      "fetch",
+      "--no-tags",
+      "--depth=1",
+      "origin",
+      `+refs/heads/${baseRef}:${remoteRef}`,
+    ],
+    { stdio: "ignore" },
+  );
+  return fetched.status === 0;
+}
+
 export function checkWorkpackDocs({ slice, baseRef, spawnSyncFn }) {
   const workpackSlice = resolveWorkpackSlice({ slice, baseRef, spawnSyncFn });
   const paths = [

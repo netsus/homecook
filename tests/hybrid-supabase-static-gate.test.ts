@@ -237,7 +237,7 @@ describe("hybrid authority AST/static gate", () => {
   it("routes every local Data handler through the common API response boundary", () => {
     const inventory = inventoryHybridAuthorityPaths();
 
-    expect(inventory.dataRouteResponseBoundaries).toHaveLength(56);
+    expect(inventory.dataRouteResponseBoundaries).toHaveLength(62);
     expect(inventory.dataRouteResponseBoundaryViolations).toEqual([]);
   });
 

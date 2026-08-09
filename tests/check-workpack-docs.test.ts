@@ -1,11 +1,43 @@
+import { spawnSync } from "node:child_process";
+
 import { describe, expect, it } from "vitest";
 
 import {
   checkWorkpackDocs,
+  ensureRemoteBaseRef,
   resolveBaseRef,
   resolveSliceFromBranch,
   resolveWorkpackSlice,
 } from "../scripts/lib/check-workpack-docs.mjs";
+
+describe("ensureRemoteBaseRef", () => {
+  it("fetches a shallow pull-request base when checkout did not create its remote ref", () => {
+    const calls: string[][] = [];
+    const spawnSyncFn = (_cmd: string, args: string[]) => {
+      calls.push(args);
+      return args[0] === "rev-parse"
+        ? { status: 1 }
+        : { status: 0 };
+    };
+
+    expect(ensureRemoteBaseRef("master", spawnSyncFn)).toBe(true);
+    expect(calls).toEqual([
+      ["rev-parse", "--verify", "--quiet", "refs/remotes/origin/master"],
+      [
+        "fetch",
+        "--no-tags",
+        "--depth=1",
+        "origin",
+        "+refs/heads/master:refs/remotes/origin/master",
+      ],
+    ]);
+  });
+
+  it("fails closed when the pull-request base cannot be fetched", () => {
+    const spawnSyncFn = () => ({ status: 1 });
+    expect(ensureRemoteBaseRef("master", spawnSyncFn)).toBe(false);
+  });
+});
 
 describe("resolveSliceFromBranch", () => {
   it("extracts slice from feature/be- branch", () => {
@@ -223,6 +255,60 @@ describe("checkWorkpackDocs", () => {
     );
     expect(calls[3]).toContain(
       "origin/master:docs/workpacks/01-discovery-detail-auth/acceptance.md",
+    );
+  });
+});
+
+describe("check-workpack-docs CLI", () => {
+  function runValidateWorkpack(args: string[], branchName = "") {
+    return spawnSync("pnpm", ["validate:workpack", "--", ...args], {
+      cwd: process.cwd(),
+      encoding: "utf8",
+      env: {
+        ...process.env,
+        BASE_REF: "master",
+        BRANCH_NAME: branchName,
+      },
+    });
+  }
+
+  it("executes explicit slice validation independently of branch state", () => {
+    const result = runValidateWorkpack([
+      "--slice",
+      "cooked-batch-weight-ledger",
+    ]);
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain(
+      "Workpack docs OK for slice 'cooked-batch-weight-ledger' (base: master)",
+    );
+  });
+
+  it("fails closed when an explicit slice has no governing workpack", () => {
+    const result = runValidateWorkpack(["--slice", "unknown-workpack"]);
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain(
+      "Workpack docs not found in origin/master for slice 'unknown-workpack'",
+    );
+  });
+
+  it("fails closed when --slice has no value", () => {
+    const result = runValidateWorkpack(["--slice"]);
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("--slice requires a value");
+  });
+
+  it("preserves branch-based validation when no explicit slice is supplied", () => {
+    const result = runValidateWorkpack(
+      [],
+      "feature/be-cooked-batch-weight-ledger",
+    );
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain(
+      "Workpack docs OK for slice 'cooked-batch-weight-ledger' (base: master)",
     );
   });
 });
