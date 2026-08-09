@@ -510,6 +510,26 @@ describe("full-local session lifecycle evidence contract", () => {
     expect(sql).toContain("rollback;");
   });
 
+  it("requires product catalog completeness before reporting a migration head", () => {
+    const sql = buildMigrationHeadSql();
+
+    expect(sql).toContain("public.recipe_content_snapshots");
+    expect(sql).toContain("public.meals.recipe_content_snapshot_id");
+    expect(sql).toContain("public.cooking_session_meal_claims");
+    expect(sql).toContain("public.food_product_ingredient_links");
+    expect(sql).toContain("public.shopping_meal_snapshot_clone_tokens");
+    expect(sql).toContain("public.recipe_change_previews");
+    expect(sql).toContain(
+      "public.read_recipe_snapshot_entrypoint_context(uuid,timestamp with time zone,text,integer,timestamp with time zone,uuid)",
+    );
+    expect(sql).toContain(
+      "public.write_personal_recipe_core(uuid,timestamp with time zone,text,integer,timestamp with time zone,text,uuid,uuid,bigint,jsonb,jsonb,jsonb,uuid,bigint,uuid,timestamp with time zone)",
+    );
+    expect(sql).toContain("public.select_pantry_effective_ingredients(uuid)");
+    expect(sql).toContain("public.list_product_planner_entries(uuid,date,date,uuid)");
+    expect(sql).toMatch(/where migration_head is not null[\s\S]*catalog/iu);
+  });
+
   it("requires the post-deploy app LaunchAgent to target the exact implementation checkout", () => {
     const implementationRoot = realpathSync(mkdtempSync(path.join(tmpdir(), "launch-agent-root-")));
     const output = [

@@ -24,9 +24,11 @@ import {
   assertFullLocalComposeModel,
   assertNoSecretLeakage,
   assertSecretRotationAllowed,
+  buildFullLocalProductCatalogSql,
   fullLocalImageRefsForPlatform,
   generateFullLocalSecretBundle,
   materializeFullLocalSecrets,
+  parseFullLocalProductCatalogSqlOutput,
   summarizeFullLocalRuntimeStates,
   validateExternalSecretDirectory,
   validateFullLocalProductionConfig,
@@ -315,6 +317,11 @@ describe("full-local production runtime static contract", () => {
     expect(oauthCompose).toContain("GOTRUE_EXTERNAL_KAKAO_SECRET=kakao_client_secret");
     expect(oauthCompose).not.toContain("/run/secrets");
     expect(oauthCompose).not.toContain("homecook-full-local-oauth-providers-v1");
+    expect(runtimeCli).toContain("collectFullLocalProductCatalog");
+    expect(runtimeCli).toContain("product_catalog_status");
+    expect(runtimeCli).toContain('case "validate"');
+    expect(runtimeCli).toContain('case "start"');
+    expect(runtimeCli).toContain('case "status"');
   });
 });
 
@@ -597,5 +604,65 @@ describe("full-local runtime readiness", () => {
         { Status: "exited" },
       ]),
     ).toEqual({ container_count: 7, exited: true, healthy: false });
+  });
+});
+
+describe("full-local product catalog gate", () => {
+  it("pins planner, snapshot, pantry, and personal-recipe product catalog objects", () => {
+    const sql = buildFullLocalProductCatalogSql();
+
+    expect(sql).toContain("begin transaction read only;");
+    expect(sql).toContain("public.recipe_content_snapshots");
+    expect(sql).toContain("public.meals.recipe_content_snapshot_id");
+    expect(sql).toContain("public.cooking_session_meal_claims");
+    expect(sql).toContain("public.food_product_ingredient_links");
+    expect(sql).toContain("public.shopping_meal_snapshot_clone_tokens");
+    expect(sql).toContain("public.recipe_change_previews");
+    expect(sql).toContain(
+      "public.read_recipe_snapshot_entrypoint_context(uuid,timestamp with time zone,text,integer,timestamp with time zone,uuid)",
+    );
+    expect(sql).toContain(
+      "public.write_personal_recipe_core(uuid,timestamp with time zone,text,integer,timestamp with time zone,text,uuid,uuid,bigint,jsonb,jsonb,jsonb,uuid,bigint,uuid,timestamp with time zone)",
+    );
+    expect(sql).toContain("public.select_pantry_effective_ingredients(uuid)");
+    expect(sql).toContain("public.list_product_planner_entries(uuid,date,date,uuid)");
+    expect(sql).toContain("rollback;");
+  });
+
+  it("parses only the exact allowlisted product catalog gate output", () => {
+    expect(
+      parseFullLocalProductCatalogSqlOutput(
+        '{"status":"PASS","missing_relations":[],"missing_columns":[],"missing_functions":[]}\n',
+      ),
+    ).toEqual({
+      missingColumns: [],
+      missingFunctions: [],
+      missingRelations: [],
+      status: "PASS",
+    });
+
+    expect(
+      parseFullLocalProductCatalogSqlOutput(
+        `{"status":"BLOCKED","missing_relations":["public.recipe_content_snapshots"],"missing_columns":["public.meals.recipe_content_snapshot_id"],"missing_functions":["public.write_personal_recipe_core(uuid,timestamp with time zone,text,integer,timestamp with time zone,text,uuid,uuid,bigint,jsonb,jsonb,jsonb,uuid,bigint,uuid,timestamp with time zone)"]}\n`,
+      ),
+    ).toEqual({
+      missingColumns: ["public.meals.recipe_content_snapshot_id"],
+      missingFunctions: [
+        "public.write_personal_recipe_core(uuid,timestamp with time zone,text,integer,timestamp with time zone,text,uuid,uuid,bigint,jsonb,jsonb,jsonb,uuid,bigint,uuid,timestamp with time zone)",
+      ],
+      missingRelations: ["public.recipe_content_snapshots"],
+      status: "BLOCKED",
+    });
+
+    expect(() =>
+      parseFullLocalProductCatalogSqlOutput(
+        '{"status":"PASS","missing_relations":[],"missing_columns":[],"missing_functions":[]}\nsecret=value\n',
+      ),
+    ).toThrow(/single safe product catalog gate result/u);
+    expect(() =>
+      parseFullLocalProductCatalogSqlOutput(
+        '{"status":"BLOCKED","missing_relations":["public.users"],"missing_columns":[],"missing_functions":[]}\n',
+      ),
+    ).toThrow(/single safe product catalog gate result/u);
   });
 });
