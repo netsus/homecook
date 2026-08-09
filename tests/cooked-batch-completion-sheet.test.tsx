@@ -75,6 +75,23 @@ describe("cooked batch completion sheet", () => {
     expect(screen.getByRole("button", { name: "완료 저장" }).hasAttribute("disabled")).toBe(false);
   });
 
+  it("scopes both completion footer CTA labels to the official text-base button typography", () => {
+    render(
+      <CookedBatchCompletionSheet
+        candidates={[candidate]}
+        onClose={() => undefined}
+        onSubmit={() => undefined}
+        serverError={null}
+        submitting={false}
+      />,
+    );
+
+    const actions = screen.getByTestId("cooked-batch-completion-actions");
+    expect(actions.className).toContain("[&_button]:text-base");
+    expect(screen.getByRole("button", { name: "돌아가기" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "완료 저장" })).toBeTruthy();
+  });
+
   it("locks every action while pending and keeps one progress label", async () => {
     render(
       <CookedBatchCompletionSheet

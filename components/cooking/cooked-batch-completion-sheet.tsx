@@ -126,7 +126,7 @@ export function CookedBatchCompletionSheet({
       descriptionClassName="mt-1 text-sm leading-5 text-[var(--wave1-text-2)]"
       footer={
         <div
-          className="[--wave1-mint-contrast:var(--brand-primary-text)] [--wave1-mint-contrast-deep:var(--foreground)]"
+          className="[--wave1-mint-contrast:var(--brand-primary-text)] [--wave1-mint-contrast-deep:var(--foreground)] [&_button]:text-base"
           data-testid="cooked-batch-completion-actions"
         >
           <AppModalFooterActions

@@ -390,6 +390,72 @@ test.describe("cooked-batch-weight-ledger", () => {
     }
   });
 
+  test("keeps both footer CTA labels at 16px without clipping at 390px and 320px", async ({ page }) => {
+    await installCookModeRoute(page);
+    await page.setViewportSize({ width: 390, height: 844 });
+    const { dialog, opener } = await openCompletion(page);
+    await expect(dialog.getByTestId("cooked-batch-completion-actions"))
+      .toHaveClass(/\[&_button\]:text-base/u);
+    await dialog.getByRole("radio", { name: "나중에 입력" }).click();
+    const actions = [
+      dialog.getByRole("button", { name: "돌아가기" }),
+      dialog.getByRole("button", { name: "완료 저장" }),
+    ];
+
+    for (const [width, height] of [[390, 844], [320, 568]] as const) {
+      await page.setViewportSize({ width, height });
+      await waitForSettledPaint(page);
+
+      for (const action of actions) {
+        const typography = await action.evaluate((button) => {
+          const style = window.getComputedStyle(button);
+          return {
+            clientWidth: button.clientWidth,
+            fontSize: style.fontSize,
+            height: button.getBoundingClientRect().height,
+            scrollWidth: button.scrollWidth,
+            whiteSpace: style.whiteSpace,
+          };
+        });
+        expect(typography.fontSize).toBe("16px");
+        expect(typography.whiteSpace).toBe("nowrap");
+        expect(typography.scrollWidth).toBeLessThanOrEqual(typography.clientWidth);
+        expect(typography.height).toBeGreaterThanOrEqual(44);
+
+        await page.mouse.move(0, 0);
+        await expectNormalTextContrast(action);
+        await action.hover();
+        await expectNormalTextContrast(action);
+        await action.evaluate((button) => {
+          button.addEventListener("click", (event) => {
+            event.preventDefault();
+            event.stopImmediatePropagation();
+          }, { once: true });
+        });
+        await page.mouse.down();
+        expect(await action.evaluate((button) => button.matches(":active"))).toBe(true);
+        await expectNormalTextContrast(action);
+        await page.mouse.up();
+      }
+
+      expect(await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth)).toBe(false);
+      const box = await dialog.boundingBox();
+      expect(box?.width).toBeLessThanOrEqual(width);
+      expect(box ? box.y + box.height : undefined).toBeLessThanOrEqual(height);
+    }
+
+    const close = dialog.getByRole("button", { name: "닫기" });
+    const confirm = dialog.getByRole("button", { name: "완료 저장" });
+    await confirm.focus();
+    await page.keyboard.press("Tab");
+    await expect(close).toBeFocused();
+    await page.keyboard.press("Shift+Tab");
+    await expect(confirm).toBeFocused();
+    await page.keyboard.press("Escape");
+    await expect(dialog).toHaveCount(0);
+    await expect(opener).toBeFocused();
+  });
+
   test("keeps a real 422 recovery state focused, linked, preserved, and above WCAG AA contrast", async ({ page }) => {
     await installCookModeRoute(page);
     await page.route("**/api/v1/cooking/session-attempts/*/complete", fulfillValidationError);
