@@ -363,11 +363,12 @@ export function parseKernProcArgs2(raw) {
   if (!Number.isInteger(argc) || argc < 1 || argc > 256) return failure();
   const executableTerminator = raw.indexOf(0, 4);
   if (executableTerminator < 5 || raw[executableTerminator + 1] !== 0) return failure();
-  const decoder = new TextDecoder("utf-8", { fatal: true });
+  const decoder = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true });
   let executablePath;
   try { executablePath = decoder.decode(raw.subarray(4, executableTerminator)); }
   catch { return failure(); }
-  if (!path.isAbsolute(executablePath) || path.normalize(executablePath) !== executablePath) return failure();
+  if (executablePath.startsWith("\uFEFF")
+    || !path.isAbsolute(executablePath) || path.normalize(executablePath) !== executablePath) return failure();
   let cursor = executableTerminator + 1;
   while (cursor < raw.length && raw[cursor] === 0) cursor += 1;
   const args = [];
@@ -375,7 +376,9 @@ export function parseKernProcArgs2(raw) {
     for (let index = 0; index < argc; index += 1) {
       const terminator = raw.indexOf(0, cursor);
       if (terminator < cursor) return failure();
-      args.push(decoder.decode(raw.subarray(cursor, terminator)));
+      const argument = decoder.decode(raw.subarray(cursor, terminator));
+      if (argument.startsWith("\uFEFF")) return failure();
+      args.push(argument);
       cursor = terminator + 1;
     }
   } catch { return failure(); }

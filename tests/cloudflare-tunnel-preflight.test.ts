@@ -141,14 +141,18 @@ function matchingQuicProbe({ verified_endpoints: endpoints }: { verified_endpoin
 
 const successfulQuicProbe = matchingQuicProbe;
 
-function kernProcArgs2Buffer(args: string[], executablePath: string | Buffer = args[0] ?? "") {
+function kernProcArgs2Buffer(args: Array<string | Buffer>, executablePath?: string | Buffer) {
   const argc = Buffer.alloc(4);
   argc.writeInt32LE(args.length, 0);
+  const rawExecutablePath = executablePath ?? args[0] ?? "";
   return Buffer.concat([
     argc,
-    Buffer.isBuffer(executablePath) ? executablePath : Buffer.from(executablePath, "utf8"),
+    Buffer.isBuffer(rawExecutablePath) ? rawExecutablePath : Buffer.from(rawExecutablePath, "utf8"),
     Buffer.from([0, 0]),
-    ...args.map((argument) => Buffer.concat([Buffer.from(argument, "utf8"), Buffer.from([0])])),
+    ...args.map((argument) => Buffer.concat([
+      Buffer.isBuffer(argument) ? argument : Buffer.from(argument, "utf8"),
+      Buffer.from([0]),
+    ])),
   ]);
 }
 
@@ -323,6 +327,34 @@ describe("pure parsing and evidence projection", () => {
       success: false,
       executable_path: null,
       arguments: [],
+    });
+  });
+
+  it.each([
+    ["executable path", ["/opt/cloudflared", "tunnel", "run"], "\uFEFF/opt/cloudflared"],
+    ["argv0", ["\uFEFF/opt/cloudflared", "tunnel", "run"], "/opt/cloudflared"],
+    ["another argv", ["/opt/cloudflared", "\uFEFFtunnel", "run"], "/opt/cloudflared"],
+  ])("rejects a UTF-8 BOM prefix in the KERN_PROCARGS2 %s", (_case, args, executablePath) => {
+    expect(parseKernProcArgs2(kernProcArgs2Buffer(args, executablePath))).toMatchObject({
+      success: false,
+      executable_path: null,
+      arguments: [],
+    });
+  });
+
+  it("rejects malformed argv UTF-8 but accepts normal non-ASCII UTF-8", () => {
+    expect(parseKernProcArgs2(kernProcArgs2Buffer([
+      "/opt/cloudflared",
+      Buffer.from([0xff]),
+    ])).success).toBe(false);
+    expect(parseKernProcArgs2(kernProcArgs2Buffer([
+      "/opt/cloudflared",
+      "터널",
+      "실행",
+    ]))).toEqual({
+      success: true,
+      executable_path: "/opt/cloudflared",
+      arguments: ["/opt/cloudflared", "터널", "실행"],
     });
   });
 
@@ -933,6 +965,32 @@ describe("read-only collection and CLI", () => {
     });
     expect(evidence.success).toBe(false);
     expect(evidence.checks.snapshot.error).toBe("SNAPSHOT_INCOMPLETE");
+  });
+
+  it.each([
+    ["executable path", (paths: Awaited<ReturnType<typeof fixturePaths>>) => ({
+      args: remoteArguments(paths), executablePath: `\uFEFF${paths.binaryPath}`,
+    })],
+    ["argv0", (paths: Awaited<ReturnType<typeof fixturePaths>>) => ({
+      args: [`\uFEFF${paths.binaryPath}`, ...remoteArguments(paths).slice(1)],
+      executablePath: paths.binaryPath,
+    })],
+    ["another argv", (paths: Awaited<ReturnType<typeof fixturePaths>>) => ({
+      args: [paths.binaryPath, "\uFEFFtunnel", ...remoteArguments(paths).slice(2)],
+      executablePath: paths.binaryPath,
+    })],
+  ])("rejects a UTF-8 BOM prefix in the runtime %s without evidence leakage", async (_case, runtime) => {
+    const paths = await fixturePaths();
+    const { runner } = happyRunner(paths);
+    const raw = runtime(paths);
+    const evidence = await collectCloudflareTunnelPreflight(validCollectorOptions(paths), {
+      ...validCollectorDependencies(paths, runner),
+      runtimeArgvReader: runtimeArgvReader(raw.args, raw.executablePath),
+    });
+    expect(evidence.success).toBe(false);
+    expect(evidence.checks.snapshot.error).toBe("SNAPSHOT_INCOMPLETE");
+    expect(JSON.stringify(evidence)).not.toContain("\uFEFF");
+    expect(JSON.stringify(evidence)).not.toContain(paths.binaryPath);
   });
 
   it("rejects a later duplicate token-file instead of accepting the first value", async () => {
