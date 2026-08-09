@@ -11,7 +11,7 @@
 - Current Draft PR head at the batch-nutrition repair entry: `87f068db400beba8c9df897b18875e1ad4508f50`
 - Latest `origin/master` observed at the batch-nutrition repair entry: `8e310fbfa6211c9ca8d10c716a0707c4774c4864`
 - Local batch-nutrition repair branch: `fix/cooked-batch-batch-nutrition-authority`
-- Draft PR #1291 remote branch retained: `feature/cooked-batch-weight-ledger-stage2-current`
+- PR #1291 remote branch retained: `feature/cooked-batch-weight-ledger-stage2-current`; the PR is now non-Draft after its independent Ready transition
 - Preserved held branch: `feature/be-cooked-batch-weight-ledger` exact `3c5b6760ce8c9a8b51205c755f9f92d57177ca00`
 - The held branch was restored before task changes and was not rebased, edited, force-pushed or cherry-picked.
 - Current tuple: requirements `v1.7.30`, screens `v1.5.34`, Flow `v1.3.32`, DB `v1.3.32`, API `v1.2.37`; API `0-CBW` is byte-identical to v1.2.36.
@@ -37,6 +37,16 @@ This task changes only #8 DB/backend/API, the existing leftovers compatibility r
 The required final re-fetch then found master had advanced again to `d9b5ff9bf6e70552641c9b02d71c8d888d340079`. That exact OAuth/auth repair lineage merged cleanly after local repair commit `cfc5515716ba3b2bf1d10fd73cd1779a6991fe81`. Official account-inventory regeneration kept `64/93/3` and checksum `eb0a8c1cd875c38ad183c5bf4f06c9b336f08e4b00d4f2d8e425c76f72b91733`; only `generated_at` advanced. Focused auth + cooked-batch Vitest passed `11 files / 159 tests`, full Vitest passed `526 files / 5,377 tests` with `28 files / 369 tests` intended skip, and `verify:backend` passed `219 product files / 2,679 tests` with `11 files / 150 tests` intended skip plus build and security E2E `12/12`.
 
 A second required final re-fetch found master had advanced once more to `2177ea439a62c3a00acba4f9e7036ed2516bb665` with the scoped logout-cookie repair from PR #1304. It merged without textual conflicts after head `3fd816c7f7d02070c5042484498191cb80d603fa`. Official regeneration again kept inventory counts `64/93/3` and checksum `eb0a8c1cd875c38ad183c5bf4f06c9b336f08e4b00d4f2d8e425c76f72b91733`; only `generated_at` advanced. Focused auth + cooked-batch Vitest passed `11 files / 131 tests`, full Vitest remained `526 files / 5,377 tests` with `28 files / 369 tests` intended skip, and `verify:backend` again passed `219 product files / 2,679 tests` with `11 files / 150 tests` intended skip plus build and security E2E `12/12`.
+
+### 2026-08-09 post-Ready integration against master `0d2d569d`
+
+- After PR #1291 became non-Draft and its Ready-triggered checks completed, `master` advanced from `2177ea439a62c3a00acba4f9e7036ed2516bb665` to `0d2d569dc83cd499f0cc2a590b215986d158c016` through the product-catalog runtime readiness repair. Exact prior PR head `71b8596ac2472dedac444f968e6bc2e8f0b9702f` and that exact master were merged without conflicts or history rewrite as `ca81aa0a7eab49c49979307aa5fafcd1590fe40a`.
+- The new read-only allowlisted catalog gate requires representative planner, immutable recipe snapshot, pantry/product-link and personal-recipe relations, columns and function signatures before full-local runtime/lifecycle evidence may report readiness. It does not change a #8 public contract, migration, RPC, grant or state transition.
+- Focused merged-tree Vitest passed `6 files / 105 tests`, including the new catalog SQL/parser/lifecycle gate and #8 completion, security, compatibility and nutrition projection suites. The existing #8 isolated PostgreSQL runner still applies the required product/schema predecessors and passed fresh/replay `27/27`; predecessor and inherited security suites also retained their exact pass/intended-skip outcomes.
+- No #8 product defect was exposed, so no contract or implementation repair was needed. The server-Mac/full-local runtime itself was not started because this author task explicitly excludes server-Mac, remote and production execution; the strengthened gate is therefore recorded as merged code/static contract evidence, not as fabricated live-smoke completion.
+- Official account inventory regeneration again produced `64 routes / 93 write surfaces / 3 auth.users inbound FKs`, checksum `eb0a8c1cd875c38ad183c5bf4f06c9b336f08e4b00d4f2d8e425c76f72b91733`; only generated metadata advanced. Migration-version uniqueness and the exact 21-function #8 authorization manifest remain green.
+- Full Vitest now passes `526 files / 5,380 tests` with `28 files / 369 tests` intended skip. `pnpm verify:backend` passes lint, typecheck, product `219 files / 2,679 tests` with `11 files / 150 tests` intended skip, production build and security E2E `12/12`.
+- PR #1291 remains OPEN and non-Draft. Independent Stage 3 is still pending; this integration author did not review, approve, merge, activate, or run R/R+1/R+2.
 
 ## Backend contract implemented
 
@@ -120,10 +130,10 @@ Final fresh and replay PostgreSQL evidence:
 ```text
 fresh predecessor: 15 passed / 1 intended skip
 fresh cooked batch: 27 passed
-fresh inherited shared security inventory: 26 passed / 31 intended skips
+fresh inherited shared security inventory: 26 passed / 33 intended skips
 replay predecessor: 16 passed
 replay cooked batch: 27 passed
-replay inherited shared security inventory: 26 passed / 31 intended skips
+replay inherited shared security inventory: 26 passed / 33 intended skips
 ```
 
 The cooked-batch scenarios cover exact 21-function owner/ACL/search-path/scope inventory plus the inherited canonical refresh authority, owner RLS, direct protected update/event insert/select/checksum and forged batch INSERT denial, two-owner multi-table digests including progress-summary timestamps, exact pantry/claim rollback, same-session newer JWT acceptance with old/stale/different/revoked/generation-mismatched zero-write, owner-locked keep, atomic canonical progress/activity projection plus official live notification/badge/achievement projection, duplicate/replay canonical-ID reuse, standalone and planner completion/replay, a real complete/cancel lock race, idempotency payload mismatch including reason, full cached-projection tamper denial, DB-level NULL/blank discard-adjust rejection, unrecoverable irreversibility, close/cancel/reclose XP once, a forced two-connection v1/v2 `60+45` award race, exact content-pinned batch nutrition with fixed-once and complete/partial/unavailable provenance, v2 unavailable versus legacy-null nutrition status, strict canonical cursor parsing, representative 4,000 v2 + 4,000 legacy row exact unpaginated LEFTOVERS plans, a separate snapshot-title lookup, four selective actual-index-use plans and four exact catalog definitions, depleted meal reuse denial and exact-owner cleanup ordering.
@@ -138,7 +148,7 @@ The cooked-batch scenarios cover exact 21-function owner/ACL/search-path/scope i
 - `pnpm exec vitest run tests/check-workpack-docs.test.ts tests/cooked-batch-weight-ledger-stage1-relock.test.ts` — final automation/status repair `2 files / 37 tests`; the validator-only file is `27/27`
 - `pnpm validate:workpack -- --slice cooked-batch-weight-ledger` — pass with visible `Workpack docs OK for slice 'cooked-batch-weight-ledger' (base: master)` marker; `missing-cooked-batch-sentinel` exits `1` with both missing governing paths; legacy `BRANCH_NAME=feature/be-cooked-batch-weight-ledger pnpm validate:workpack` inference still resolves the real workpack and passes
 - batch-nutrition focused TDD — RED `3 failed` because the private resolver did not exist; GREEN focused Vitest `6 files / 59 tests`, PostgreSQL fresh/replay #8 `27/27`
-- `pnpm test:cooked-batch-weight-ledger:postgres` — final successor pass: fresh predecessor `15 + 1 intended skip`, fresh/replay #8 `27/27`, replay predecessor `16/16`, inherited shared security inventory fresh/replay `26 passed / 31 intended skips`
+- `pnpm test:cooked-batch-weight-ledger:postgres` — current integrated pass: fresh predecessor `15 + 1 intended skip`, fresh/replay #8 `27/27`, replay predecessor `16/16`, inherited shared security inventory fresh/replay `26 passed / 33 intended skips`
 - `pnpm verify:backend` — pass: lint, typecheck, `217 files passed | 11 skipped`, `2,664 tests passed | 150 skipped`, Next build, security E2E `12/12`
 - `pnpm test:security-functions:postgres` — pass: 8 anonymous mutation signatures denied with unchanged checksums
 - `node scripts/validate-security-function-authorization.mjs --contract-only` — pass; #8 manifest classifies 21 pre-deployment functions and delegates all full-local refresh ownership to the canonical #1292 manifest/migration
@@ -150,6 +160,11 @@ The cooked-batch scenarios cover exact 21-function owner/ACL/search-path/scope i
 - first integration full Vitest — `523 files passed / 28 skipped`, `5,357 tests passed / 369 skipped`; master `508a9c26` adds `1 file / 28 pass / 2 intended skip` and the migration-version regression adds one pass
 - first integration `pnpm verify:backend` — pass: lint, typecheck, product `217 files / 2,665 tests` with `150 skipped`, Next build, security E2E `12/12`
 - integration PostgreSQL fresh/replay — predecessor `15 pass / 1 intended skip` then `16/16`; #8 `27/27` twice; inherited inventory `26 pass / 33 intended skip` twice, where the two added skips are master full-local tests outside inventory-only mode
+- post-Ready catalog-readiness focused Vitest — `6 files / 105 tests`; exact #8 migration uniqueness/account inventory rerun `2 files / 19 tests`
+- post-Ready full `pnpm test` — `526 files passed / 28 skipped`, `5,380 tests passed / 369 skipped`
+- post-Ready `pnpm verify:backend` — lint and typecheck pass; product `219 files / 2,679 tests` with `11 files / 150 tests` intended skip; Next production build and security E2E `12/12` pass
+- post-Ready PostgreSQL — predecessor fresh `15 pass / 1 intended skip`, replay `16/16`; #8 fresh/replay `27/27`; inherited inventory fresh/replay `26 pass / 33 intended skip`; security authorization denies 8 anonymous mutation signatures with unchanged checksums
+- post-Ready validators — source-of-truth, workflow-v2, explicit-slice workpack, automation-spec, OMO bookkeeping, generated account inventory `64/93/3`, migration-version uniqueness, authorization contract `21`, audit high/critical `0/0` and `git diff --check` pass
 
 The workpack-specific Stage 4 E2E grep returned `No tests found`; no pass-with-no-tests relaxation was added because frontend work is prohibited in Stage 2. Backend security E2E is covered by the successful `12/12` verification above.
 
@@ -173,5 +188,5 @@ The workpack-specific Stage 4 E2E grep returned `No tests found`; no pass-with-n
 ## Contract evolution and handoff
 
 - Contract Evolution Candidate: none. No undocumented endpoint, field, status, reason, error, action or screen was added.
-- Stage 3 must be a different fresh `backend-reviewer` task and review the Draft PR successor head, every repaired old-head and successor advisory finding, migration/RPC/trigger atomicity and grants, route inventory isolation, legacy leftovers compatibility, fresh/replay evidence and every checked `review=3` item. Author-side current diff review is not an independent approval.
-- This Stage 2 task does not self-approve Stage 3, mark Ready, merge or send Discord.
+- Stage 3 must be a different fresh `backend-reviewer` task and review the current non-Draft PR head, every repaired old-head and successor advisory finding, migration/RPC/trigger atomicity and grants, route inventory isolation, legacy leftovers compatibility, catalog-readiness interaction, fresh/replay evidence and every checked `review=3` item. Author-side integration evidence is not an independent approval.
+- This Stage 2 integration task does not self-review or self-approve Stage 3, toggle Draft state, merge, send Discord, run server-Mac/remote/production, or activate R/R+1/R+2.
