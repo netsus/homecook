@@ -82,6 +82,169 @@ function validSecrets() {
 }
 
 describe("full-local production runtime static contract", () => {
+  it("can be imported for mock-based authorization contract tests without running the CLI", () => {
+    const result = spawnSync(
+      process.execPath,
+      ["--input-type=module", "--eval", "await import('./scripts/full-local-production-runtime.mjs')"],
+      { cwd: process.cwd(), encoding: "utf8" },
+    );
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toBe("");
+    expect(result.stderr).toBe("");
+  });
+
+  it("runs the CLI main function when the runtime script is invoked through a symlink", () => {
+    const rootDir = mkdtempSync(join(tmpdir(), "full-local-runtime-symlink-"));
+    const runtimeLink = join(rootDir, "full-local-production-runtime.mjs");
+    symlinkSync(
+      join(process.cwd(), "scripts", "full-local-production-runtime.mjs"),
+      runtimeLink,
+    );
+
+    try {
+      const result = spawnSync(process.execPath, [runtimeLink], {
+        cwd: process.cwd(),
+        encoding: "utf8",
+      });
+
+      expect(result.status).toBe(1);
+      expect(result.stdout).toBe("");
+      expect(result.stderr).toContain('"error":"Unknown command: <missing>"');
+    } finally {
+      rmSync(rootDir, { force: true, recursive: true });
+    }
+  });
+
+  it("exports pure authorization contract helpers for mock-based runtime gating", async () => {
+    const runtimeCli = await import("../scripts/full-local-production-runtime.mjs");
+
+    expect(runtimeCli).toEqual(expect.objectContaining({
+      FULL_LOCAL_AUTHORIZATION_CONTRACT_REQUIREMENTS: expect.any(Array),
+      buildFullLocalAuthorizationContractCtesSql: expect.any(Function),
+      buildFullLocalAuthorizationContractSql: expect.any(Function),
+      parseFullLocalAuthorizationContractSqlOutput: expect.any(Function),
+      runtimeAuthorizationContractPayload: expect.any(Function),
+    }));
+  });
+
+  it("builds a catalog-only, read-only authorization contract query for the exact live allowlist", async () => {
+    const runtimeCli = await import("../scripts/full-local-production-runtime.mjs");
+    const sql = runtimeCli.buildFullLocalAuthorizationContractSql();
+
+    expect(runtimeCli.FULL_LOCAL_AUTHORIZATION_CONTRACT_REQUIREMENTS).toEqual([
+      "authenticated_transaction_read_only",
+      "internal_auth_callback_record_v2",
+      "internal_auth_callback_renew_v2",
+      "internal_youtube_extraction_scope",
+      "internal_youtube_extraction_post_session",
+      "internal_youtube_extraction_get_cache",
+      "internal_youtube_extraction_patch_candidate",
+    ]);
+    expect(sql).toContain("begin transaction read only;");
+    expect(sql).toContain("pg_get_functiondef");
+    expect(sql).toContain("private.verify_full_local_authenticated_authority()");
+    expect(sql).toContain("private.verify_full_local_internal_scope()");
+    expect(sql).toContain("current_setting(''transaction_read_only'') = ''on''");
+    expect(sql).toContain("v_scope in (''auth-callback'', ''auth-refresh'')");
+    expect(sql).toContain("/rpc/record_full_local_session_authority_v2");
+    expect(sql).toContain("/rpc/assert_and_renew_full_local_session_authority_v2");
+    expect(sql).toContain("v_scope = ''youtube-extraction''");
+    expect(sql).toContain("position('v_method = ''POST'''");
+    expect(sql).toContain("position('v_method = ''GET'''");
+    expect(sql).toContain("position('v_method = ''PATCH'''");
+    expect(sql).toContain("/youtube_extraction_sessions");
+    expect(sql).toContain("/youtube_transcript_cache");
+    expect(sql).toContain("/youtube_extraction_candidates");
+    expect(sql).toContain("rollback;");
+    expect(sql).not.toContain("from auth.users");
+    expect(sql).not.toContain("from public.users");
+  });
+
+  it("parses only the exact fixed authorization requirement allowlist", async () => {
+    const runtimeCli = await import("../scripts/full-local-production-runtime.mjs");
+
+    expect(runtimeCli.parseFullLocalAuthorizationContractSqlOutput(
+      '{"status":"PASS","missing_requirements":[]}\n',
+    )).toEqual({ status: "PASS", missingRequirements: [] });
+    expect(runtimeCli.parseFullLocalAuthorizationContractSqlOutput(
+      '{"status":"BLOCKED","missing_requirements":["internal_auth_callback_record_v2"]}\n',
+    )).toEqual({
+      status: "BLOCKED",
+      missingRequirements: ["internal_auth_callback_record_v2"],
+    });
+    expect(() => runtimeCli.parseFullLocalAuthorizationContractSqlOutput(
+      '{"status":"BLOCKED","missing_requirements":["raw_database_detail"]}\n',
+    )).toThrow(/single safe authorization contract result/u);
+    expect(() => runtimeCli.parseFullLocalAuthorizationContractSqlOutput(
+      '{"status":"PASS","missing_requirements":["internal_auth_callback_record_v2"]}\n',
+    )).toThrow(/single safe authorization contract result/u);
+    expect(() => runtimeCli.parseFullLocalAuthorizationContractSqlOutput(
+      '{"status":"PASS","missing_requirements":[]}\nsecret=value\n',
+    )).toThrow(/single safe authorization contract result/u);
+  });
+
+  it("blocks runtime readiness when the authorization contract is missing or unverified", async () => {
+    const runtimeCli = await import("../scripts/full-local-production-runtime.mjs");
+    const productCatalogGate = {
+      missingColumns: [],
+      missingFunctions: [],
+      missingRelations: [],
+      status: "PASS",
+    };
+
+    expect(runtimeCli.runtimeAuthorizationContractPayload({
+      authorizationContractGate: {
+        missingRequirements: [],
+        status: "PASS",
+      },
+      productCatalogGate,
+    })).toEqual(expect.objectContaining({
+      authorization_contract_missing_requirements: [],
+      authorization_contract_status: "PASS",
+      product_catalog_status: "PASS",
+      status: "PASS",
+    }));
+
+    expect(runtimeCli.runtimeAuthorizationContractPayload({
+      authorizationContractGate: {
+        missingRequirements: ["internal_auth_callback_record_v2"],
+        status: "BLOCKED",
+      },
+      productCatalogGate,
+    })).toEqual(expect.objectContaining({
+      authorization_contract_missing_requirements: ["internal_auth_callback_record_v2"],
+      authorization_contract_status: "BLOCKED",
+      product_catalog_status: "PASS",
+      status: "BLOCKED",
+    }));
+
+    expect(runtimeCli.runtimeAuthorizationContractPayload({
+      authorizationContractGate: null,
+      productCatalogGate: null,
+    })).toEqual(expect.objectContaining({
+      authorization_contract_missing_requirements:
+        runtimeCli.FULL_LOCAL_AUTHORIZATION_CONTRACT_REQUIREMENTS,
+      authorization_contract_status: "BLOCKED",
+      product_catalog_status: "NOT_RUN",
+      status: "BLOCKED",
+    }));
+  });
+
+  it("wires validate and status to the authorization contract before reporting readiness", () => {
+    const runtimeCli = readFileSync("scripts/full-local-production-runtime.mjs", "utf8");
+
+    expect(runtimeCli).toContain("function collectFullLocalAuthorizationContract");
+    expect(runtimeCli).toContain("buildFullLocalAuthorizationContractSql()");
+    expect(runtimeCli).toContain("parseFullLocalAuthorizationContractSqlOutput");
+    expect(runtimeCli).toMatch(
+      /case "validate":[\s\S]*collectFullLocalAuthorizationContract[\s\S]*authorization_contract_status[\s\S]*process\.exitCode = 2/u,
+    );
+    expect(runtimeCli).toMatch(
+      /case "status":[\s\S]*collectFullLocalAuthorizationContract[\s\S]*authorization_contract_status[\s\S]*process\.exitCode = 2/u,
+    );
+  });
+
   it.each([
     ["GET", "/auth/v1/health", true],
     ["POST", "/auth/v1/token?grant_type=refresh_token", true],
