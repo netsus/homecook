@@ -39,6 +39,11 @@ describe("cooked-batch-weight-ledger fresh Stage 1 re-lock", () => {
   const evidence = read(
     "docs/workpacks/cooked-batch-weight-ledger/evidence/2026-08-04-stage1-relock.md",
   );
+  const stageResult = JSON.parse(
+    read(
+      "docs/workpacks/cooked-batch-weight-ledger/evidence/2026-08-09-stage2-backend-stage-result.json",
+    ),
+  );
 
   it("locks every #8 source reference to the current official tuple", () => {
     expect(workItem.docs_refs.source_of_truth).toEqual([
@@ -145,6 +150,21 @@ describe("cooked-batch-weight-ledger fresh Stage 1 re-lock", () => {
       approval_state: "not_started",
       verification_status: "pending",
     });
+    expect(stageResult.verification_results.full_vitest_current_head).toEqual({
+      passed_files: 526,
+      skipped_files: 28,
+      passed_tests: 5389,
+      skipped_tests: 371,
+    });
+    expect(stageResult.verification_results.final_full_vitest).toBe(
+      "526 files passed / 28 skipped; 5,389 tests passed / 371 skipped",
+    );
+    expect(stageResult.final_catalog_startup_window_integration.full_vitest).toBe(
+      "526 files / 5,381 tests passed; 28 files / 369 tests intended skip",
+    );
+    expect(stageResult.fresh_backend_author_p2_repair.full_vitest).toBe(
+      "526 passed files / 28 skipped files; 5,381 passed tests / 370 intended skipped tests",
+    );
   });
 
   it("uses only the official joint R+2 capability names", () => {
