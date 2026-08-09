@@ -257,6 +257,41 @@ describe("hybrid callback/refresh authority bootstrap", () => {
     });
   });
 
+  it("passes the exact remote user created_at string through refresh bootstrap after validating it", async () => {
+    const bootstrap = vi.fn().mockResolvedValue({ ok: true });
+    const exactIdentityEpoch = "2026-07-28T09:00:00.123456+09:00";
+    const remoteFetch = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        access_token: accessToken(),
+      }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        id: OWNER_UUID,
+        created_at: exactIdentityEpoch,
+      }), { status: 200 }));
+    const refreshFetch = createRemoteRefreshAuthorityFetch({
+      auth: {
+        publishableKey: "remote-publishable",
+        url: "https://remote.example.supabase.co",
+      },
+      bootstrap,
+      remoteFetch,
+    });
+
+    const response = await refreshFetch(
+      "https://remote.example.supabase.co/auth/v1/token?grant_type=refresh_token",
+      { method: "POST", body: "refresh_token=opaque" },
+    );
+
+    expect(response.status).toBe(200);
+    expect(bootstrap).toHaveBeenCalledWith({
+      accessToken: accessToken(),
+      user: {
+        id: OWNER_UUID,
+        created_at: exactIdentityEpoch,
+      },
+    });
+  });
+
   it("never bootstraps ordinary auth requests or a failed refresh", async () => {
     const bootstrap = vi.fn();
     const remoteFetch = vi.fn()
