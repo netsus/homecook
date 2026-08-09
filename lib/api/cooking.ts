@@ -8,6 +8,8 @@ import type {
   CookingStandaloneCompleteData,
   CookingStandaloneCookModeData,
   SnapshotV2CancelData,
+  SnapshotV2CompleteBody,
+  SnapshotV2CompleteData,
   SnapshotV2CookModeData,
   SnapshotV2StartData,
 } from "@/types/cooking";
@@ -33,6 +35,33 @@ export async function fetchSnapshotV2CookMode(sessionId: string): Promise<Snapsh
 export async function cancelSnapshotV2CookingSession(sessionId: string, idempotencyKey: string): Promise<SnapshotV2CancelData> {
   const data = await requestCooking<SnapshotV2CancelData>(`/api/v1/cooking/session-attempts/${sessionId}/cancel`, { method: "POST", headers: { "content-type": "application/json", "Idempotency-Key": idempotencyKey }, body: JSON.stringify({}) });
   if (data.contract_version !== "snapshot_v2" || data.status !== "cancelled") throw createCookingApiError({ status: 502, code: "INVALID_RESPONSE", fields: [], message: "요리 세션 버전을 확인하지 못했어요." });
+  return data;
+}
+
+export async function completeSnapshotV2CookingSession(
+  sessionId: string,
+  body: SnapshotV2CompleteBody,
+  idempotencyKey: string,
+): Promise<SnapshotV2CompleteData> {
+  const data = await requestCooking<SnapshotV2CompleteData>(
+    `/api/v1/cooking/session-attempts/${sessionId}/complete`,
+    {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "Idempotency-Key": idempotencyKey,
+      },
+      body: JSON.stringify(body),
+    },
+  );
+  if (!isExactSnapshotV2CompleteData(data, sessionId)) {
+    throw createCookingApiError({
+      status: 502,
+      code: "INVALID_RESPONSE",
+      fields: [],
+      message: "요리 완료 결과를 확인하지 못했어요.",
+    });
+  }
   return data;
 }
 
@@ -66,6 +95,87 @@ function isExactSnapshotV2StartData(
   return request.mode === "planner"
     || (summary.recipe_id === request.recipe_id
       && summary.cooking_servings === request.cooking_servings);
+}
+
+const COOKED_BATCH_KEYS = [
+  "id",
+  "recipe_id",
+  "recipe_title",
+  "recipe_thumbnail_url",
+  "status",
+  "cooked_at",
+  "cooking_servings",
+  "finished_weight_g",
+  "remaining_weight_g",
+  "weight_status",
+  "batch_status",
+  "depleted_reason",
+  "revision",
+  "nutrition_calculation_status",
+  "current_unweighed_closure_event_id",
+];
+
+function isExactSnapshotV2CompleteData(
+  value: unknown,
+  sessionId: string,
+): value is SnapshotV2CompleteData {
+  if (!isRecord(value) || !hasExactKeys(value, [
+    "session_id",
+    "contract_version",
+    "mode",
+    "status",
+    "cooked_batch",
+    "meals_updated",
+    "pantry_removed",
+    "cook_count",
+  ])) return false;
+  if (
+    value.session_id !== sessionId
+    || value.contract_version !== "snapshot_v2"
+    || (value.mode !== "planner" && value.mode !== "standalone")
+    || value.status !== "completed"
+    || !Number.isSafeInteger(value.meals_updated)
+    || Number(value.meals_updated) < 0
+    || !Number.isSafeInteger(value.pantry_removed)
+    || Number(value.pantry_removed) < 0
+    || !Number.isSafeInteger(value.cook_count)
+    || Number(value.cook_count) < 0
+  ) return false;
+
+  const batch = value.cooked_batch;
+  if (!isRecord(batch) || !hasExactKeys(batch, COOKED_BATCH_KEYS)) return false;
+  const hasKnownWeight = batch.weight_status === "known"
+    && typeof batch.finished_weight_g === "number"
+    && Number.isFinite(batch.finished_weight_g)
+    && batch.finished_weight_g > 0
+    && typeof batch.remaining_weight_g === "number"
+    && Number.isFinite(batch.remaining_weight_g)
+    && batch.remaining_weight_g >= 0
+    && batch.remaining_weight_g <= batch.finished_weight_g;
+  const hasNoWeight = (batch.weight_status === "missing"
+      || batch.weight_status === "unrecoverable"
+      || batch.weight_status === null)
+    && batch.finished_weight_g === null
+    && batch.remaining_weight_g === null;
+  if (
+    typeof batch.id !== "string"
+    || !UUID_PATTERN.test(batch.id)
+    || typeof batch.recipe_id !== "string"
+    || !UUID_PATTERN.test(batch.recipe_id)
+    || typeof batch.recipe_title !== "string"
+    || batch.recipe_title.trim().length === 0
+    || (batch.recipe_thumbnail_url !== null && typeof batch.recipe_thumbnail_url !== "string")
+    || (batch.status !== "leftover" && batch.status !== "eaten")
+    || typeof batch.cooked_at !== "string"
+    || (batch.cooking_servings !== null && (!Number.isSafeInteger(batch.cooking_servings) || Number(batch.cooking_servings) <= 0))
+    || (!hasKnownWeight && !hasNoWeight)
+    || !["available", "depleted", null].includes(batch.batch_status as never)
+    || !["consumed", "discarded", "mixed", "consumed_unweighed", "discarded_unweighed", "mixed_unweighed", null].includes(batch.depleted_reason as never)
+    || (batch.revision !== null && (!Number.isSafeInteger(batch.revision) || Number(batch.revision) <= 0))
+    || !["complete", "partial", "unavailable", null].includes(batch.nutrition_calculation_status as never)
+    || (batch.current_unweighed_closure_event_id !== null && (typeof batch.current_unweighed_closure_event_id !== "string" || !UUID_PATTERN.test(batch.current_unweighed_closure_event_id)))
+  ) return false;
+  return true;
 }
 
 function createCookingApiError({

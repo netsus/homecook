@@ -17,12 +17,15 @@ interface AppOverlayBaseProps {
   footer?: React.ReactNode;
   headerSlot?: React.ReactNode;
   headerSlotClassName?: string;
+  horizontalPaddingClassName?: string;
   leadingAction?: React.ReactNode;
   onClose: () => void;
   panelClassName?: string;
   panelRef?: React.Ref<HTMLDivElement>;
   testId?: string;
   title: string;
+  titleRef?: React.Ref<HTMLHeadingElement>;
+  titleTabIndex?: number;
 }
 
 interface AppModalFooterActionsProps {
@@ -84,12 +87,15 @@ export function AppBottomSheet({
   footer,
   headerSlot,
   headerSlotClassName,
+  horizontalPaddingClassName = "px-5",
   leadingAction,
   onClose,
   panelClassName,
   panelRef,
   testId,
   title,
+  titleRef,
+  titleTabIndex,
 }: AppOverlayBaseProps) {
   return (
     <AppOverlayBackdrop onClose={onClose} variant="bottom">
@@ -114,7 +120,7 @@ export function AppBottomSheet({
             data-app-overlay-handle=""
           />
         </div>
-        <div className="px-5 pb-3 pt-3">
+        <div className={[horizontalPaddingClassName, "pb-3 pt-3"].join(" ")}>
           <ModalHeader
             closeDisabled={closeDisabled}
             closeButtonRef={closeButtonRef}
@@ -125,6 +131,8 @@ export function AppBottomSheet({
             onClose={onClose}
             title={title}
             titleId={ariaLabelledBy}
+            titleRef={titleRef}
+            titleTabIndex={titleTabIndex}
           />
           {headerSlot ? (
             <div className={headerSlotClassName ?? "mt-3"}>{headerSlot}</div>
@@ -132,7 +140,8 @@ export function AppBottomSheet({
         </div>
         <div
           className={[
-            "min-h-0 flex-1 overflow-y-auto px-5 pb-4",
+            "min-h-0 flex-1 overflow-y-auto pb-4",
+            horizontalPaddingClassName,
             bodyClassName,
           ]
             .filter(Boolean)
@@ -142,7 +151,10 @@ export function AppBottomSheet({
         </div>
         {footer ? (
           <div
-            className="border-t border-[var(--wave1-border)] bg-[var(--wave1-surface)] px-5 pb-[calc(12px+env(safe-area-inset-bottom))] pt-3"
+            className={[
+              "border-t border-[var(--wave1-border)] bg-[var(--wave1-surface)] pb-[calc(12px+env(safe-area-inset-bottom))] pt-3",
+              horizontalPaddingClassName,
+            ].join(" ")}
             data-app-modal-footer=""
           >
             {footer}
@@ -167,6 +179,8 @@ export function AppCenterDialog({
   panelRef,
   testId,
   title,
+  titleRef,
+  titleTabIndex,
 }: AppOverlayBaseProps) {
   return (
     <AppOverlayBackdrop onClose={onClose} variant="center">
@@ -190,6 +204,8 @@ export function AppCenterDialog({
           onClose={onClose}
           title={title}
           titleId={ariaLabelledBy}
+          titleRef={titleRef}
+          titleTabIndex={titleTabIndex}
         />
         <div className="mt-4">{children}</div>
         {footer ? (

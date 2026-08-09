@@ -1,17 +1,25 @@
 "use client";
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
+
+import { CookedBatchCompletionSheet, type CookedBatchCompletionError } from "@/components/cooking/cooked-batch-completion-sheet";
 import { MobileCookModeLoadingBoard } from "@/components/cooking/cook-mode-loading-board";
 import { SnapshotV2CookModeView } from "@/components/cooking/snapshot-v2-cook-mode-view";
-import { cancelSnapshotV2CookingSession, fetchSnapshotV2CookMode, isCookingApiError } from "@/lib/api/cooking";
+import { cancelSnapshotV2CookingSession, completeSnapshotV2CookingSession, fetchSnapshotV2CookMode, isCookingApiError } from "@/lib/api/cooking";
 import { createPostAuthNextCookie } from "@/lib/auth/post-auth-next";
-import type { SnapshotV2CookModeData } from "@/types/cooking";
+import type { SnapshotV2CompleteBody, SnapshotV2CompleteData, SnapshotV2CookModeData } from "@/types/cooking";
 
 export function SnapshotV2CookModeScreen({ initialAuthenticated, sessionId }: { initialAuthenticated: boolean; sessionId: string }) {
   const [data, setData] = useState<SnapshotV2CookModeData | null>(null);
   const [state, setState] = useState<"loading" | "ready" | "error" | "unauthorized">(initialAuthenticated ? "loading" : "unauthorized");
   const [cancelling, setCancelling] = useState(false);
+  const [completionOpen, setCompletionOpen] = useState(false);
+  const [completionSubmitting, setCompletionSubmitting] = useState(false);
+  const [completionError, setCompletionError] = useState<CookedBatchCompletionError | null>(null);
+  const [completionResult, setCompletionResult] = useState<SnapshotV2CompleteData | null>(null);
   const cancelKeyRef = useRef<string | null>(null);
+  const completeAttemptRef = useRef<{ key: string; payload: string } | null>(null);
+  const completeInFlightRef = useRef(false);
   const requestIdRef = useRef(0);
   const recoveryFocusRef = useRef<HTMLAnchorElement | HTMLButtonElement | null>(null);
 
@@ -60,13 +68,80 @@ export function SnapshotV2CookModeScreen({ initialAuthenticated, sessionId }: { 
     title="요리 기록을 불러오지 못했어요"
   />;
 
-  return <SnapshotV2CookModeView cancelling={cancelling} data={data} onCancel={() => {
+  const submitCompletion = (body: SnapshotV2CompleteBody) => {
+    if (completeInFlightRef.current || data.status !== "in_progress") return;
+    const payload = JSON.stringify(body);
+    const attempt = completeAttemptRef.current?.payload === payload
+      ? completeAttemptRef.current
+      : { key: crypto.randomUUID(), payload };
+    completeAttemptRef.current = attempt;
+    completeInFlightRef.current = true;
+    setCompletionSubmitting(true);
+    setCompletionError(null);
+    void completeSnapshotV2CookingSession(sessionId, body, attempt.key)
+      .then((result) => {
+        setCompletionResult(result);
+        setCompletionOpen(false);
+        setData((current) => current ? { ...current, status: "completed" } : current);
+      })
+      .catch((error: unknown) => {
+        if (isCookingApiError(error) && error.status === 401) {
+          setCompletionOpen(false);
+          setState("unauthorized");
+          return;
+        }
+        setCompletionError(isCookingApiError(error)
+          ? { code: error.code, fields: error.fields, message: error.message, status: error.status }
+          : { code: "UNKNOWN_ERROR", fields: [], message: "요리 완료를 저장하지 못했어요.", status: 500 });
+      })
+      .finally(() => {
+        completeInFlightRef.current = false;
+        setCompletionSubmitting(false);
+      });
+  };
+
+  const openCompletion = () => {
+    if (data.status !== "in_progress" || cancelling) return;
+    setCompletionError(null);
+    setCompletionOpen(true);
+  };
+
+  const cancelCooking = () => {
     if (cancelling || data.status !== "in_progress") return;
     setCancelling(true);
     const idempotencyKey = cancelKeyRef.current ?? crypto.randomUUID();
     cancelKeyRef.current = idempotencyKey;
-    void cancelSnapshotV2CookingSession(sessionId, idempotencyKey).then(() => { cancelKeyRef.current = null; setData({ ...data, status: "cancelled" }); }).catch(() => setState("error")).finally(() => setCancelling(false));
-  }} />;
+    void cancelSnapshotV2CookingSession(sessionId, idempotencyKey)
+      .then(() => {
+        cancelKeyRef.current = null;
+        setData((current) => current ? { ...current, status: "cancelled" } : current);
+      })
+      .catch(() => setState("error"))
+      .finally(() => setCancelling(false));
+  };
+
+  return (
+    <>
+      <SnapshotV2CookModeView
+        completionResult={completionResult}
+        cancelling={cancelling}
+        data={data}
+        onCancel={cancelCooking}
+        onComplete={openCompletion}
+      />
+      {completionOpen ? (
+        <CookedBatchCompletionSheet
+          candidates={data.pantry_candidates}
+          onClose={() => {
+            if (!completionSubmitting) setCompletionOpen(false);
+          }}
+          onSubmit={submitCompletion}
+          serverError={completionError}
+          submitting={completionSubmitting}
+        />
+      ) : null}
+    </>
+  );
 }
 
 function CookModeRecoveryShell({
