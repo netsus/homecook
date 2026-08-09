@@ -672,6 +672,28 @@ describe.runIf(enabled)("cooked batch weight ledger PostgreSQL", () => {
     expect(denied.stderr).toContain("ACCOUNT_SESSION_STALE");
   });
 
+  it("preserves callback and refresh renewal scope after the cooked-batch migration", () => {
+    for (const scope of ["auth-callback", "auth-refresh"] as const) {
+      const allowed = psql(`
+        begin;
+        select set_config(
+          'request.headers',
+          '{"x-homecook-internal-scope":"${scope}"}',
+          true
+        );
+        select set_config('request.method','POST',true);
+        select set_config(
+          'request.path',
+          '/rpc/assert_and_renew_full_local_session_authority_v2',
+          true
+        );
+        select private.verify_full_local_internal_scope();
+        rollback;
+      `, false);
+      expect(allowed.status, `${scope}: ${allowed.stderr}`).toBe(0);
+    }
+  });
+
   it("preserves the latest YouTube internal scopes after the cooked-batch migration", () => {
     for (const [method, path, scope] of [
       ["POST", "/youtube_extraction_sessions", "youtube-extraction"],

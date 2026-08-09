@@ -1502,6 +1502,7 @@ begin
           '/rpc/record_hybrid_remote_session_authority',
           '/rpc/record_full_local_session_authority',
           '/rpc/record_full_local_session_authority_v2',
+          '/rpc/assert_and_renew_full_local_session_authority_v2',
           '/rpc/get_account_generation_capability',
           '/rpc/bootstrap_account_generation_identity',
           '/rpc/bootstrap_legacy_auth_callback_identity'
