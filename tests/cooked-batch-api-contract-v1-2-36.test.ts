@@ -457,6 +457,6 @@ describe("cooked batch API v1.2.36 Contract Evolution", () => {
     expect(automation.backend.verify_commands).toContain(
       "pnpm validate:workpack -- --slice cooked-batch-weight-ledger",
     );
-    expect(status.pr_path).toBe("https://github.com/netsus/homecook/pull/1291");
+    expect(status.pr_path).toBe("https://github.com/netsus/homecook/pull/1311");
   });
 });
