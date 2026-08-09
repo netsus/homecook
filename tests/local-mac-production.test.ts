@@ -349,6 +349,25 @@ describe("local Mac production launch agent", () => {
     });
   });
 
+  it("keeps the default readiness window beyond the catalog preflight delay", async () => {
+    let attempts = 0;
+    const result = await waitForLocalMacProductionReady({
+      fetchImpl: async () => {
+        attempts += 1;
+        if (attempts <= 40) {
+          throw new Error("connection refused");
+        }
+        return new Response(null, { status: 200 });
+      },
+      waitImpl: async () => undefined,
+    });
+
+    expect(result).toEqual({
+      attempts: 41,
+      status: 200,
+    });
+  });
+
   it("renders a local-only service with absolute paths and restart protection", () => {
     const plist = renderLocalMacProductionPlist({
       rootDir: "/Users/tester/Home & Cook",

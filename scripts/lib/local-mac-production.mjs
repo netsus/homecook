@@ -609,7 +609,7 @@ export function readLocalMacProductionStatus({
 
 export async function waitForLocalMacProductionReady({
   origin = `http://${DEFAULT_LOCAL_MAC_PRODUCTION_HOST}:${DEFAULT_LOCAL_MAC_PRODUCTION_PORT}`,
-  attempts = 40,
+  attempts = 120,
   intervalMs = 250,
   fetchImpl = fetch,
   waitImpl = (milliseconds) => new Promise((resolvePromise) => {
