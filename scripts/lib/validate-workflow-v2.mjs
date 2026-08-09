@@ -316,6 +316,7 @@ export function validateWorkflowV2TrackedState({ rootDir = process.cwd() } = {})
 }
 
 export function validateWorkflowV2DocContract({ rootDir = process.cwd() } = {}) {
+  const codexTaskHandoffPath = path.join(rootDir, "docs/engineering/codex-task-handoff.md");
   const sliceWorkflowPath = path.join(rootDir, "docs/engineering/slice-workflow.md");
   const agentWorkflowOverviewPath = path.join(rootDir, "docs/engineering/agent-workflow-overview.md");
   const workflowReadmePath = path.join(rootDir, "docs/engineering/workflow-v2/README.md");
@@ -359,6 +360,7 @@ export function validateWorkflowV2DocContract({ rootDir = process.cwd() } = {}) 
     "docs/engineering/bookkeeping-authority-matrix.md",
   );
 
+  const codexTaskHandoff = readText(codexTaskHandoffPath);
   const sliceWorkflow = readText(sliceWorkflowPath);
   const agentWorkflowOverview = readText(agentWorkflowOverviewPath);
   const workflowReadme = readText(workflowReadmePath);
@@ -378,6 +380,15 @@ export function validateWorkflowV2DocContract({ rootDir = process.cwd() } = {}) 
   const canonicalCloseout = readText(canonicalCloseoutPath);
   const bookkeepingAuthorityMatrix = readText(bookkeepingAuthorityMatrixPath);
   const nextLockedScope = extractMarkdownSection(workflowReadme, "## Next Locked Scope");
+
+  const codexTaskHandoffErrors = [
+    ...containsAll(codexTaskHandoff, [
+      "Homecook의 모든 신규 작업은 Claude를 사용하지 않는다.",
+      "별도 ChatGPT/Codex 작업(새 task ID, 새 세션)",
+      "서로 다른 task ID와 서로 다른 새 세션을 사용한다.",
+      "같은 작업 안의 서브에이전트는 탐색·테스트·보조 리뷰에는 쓸 수 있지만, 독립 Stage 승인자 역할을 대신하지 않는다.",
+    ]),
+  ];
 
   const sliceWorkflowErrors = [
     ...containsAll(sliceWorkflow, [
@@ -456,6 +467,7 @@ export function validateWorkflowV2DocContract({ rootDir = process.cwd() } = {}) 
       "**Actor dispatch suspended `2026-07-30`.**",
       "신규 Stage actor 기준은 `docs/engineering/codex-task-handoff.md`의 ChatGPT/Codex 새 task 규칙이다.",
       "## Historical Purpose",
+      "`claude_repairable`: 과거 artifact 호환용 reason code. 신규 실행에서는 Claude를 호출하지 않고 역할이 분리된 ChatGPT/Codex 새 task·새 세션 repair로 route한 뒤 validator recheck",
       "아래의 Claude actor, session reuse, scheduler execute 설명은 legacy runtime vocabulary다.",
       "새 product slice는 동일 세션 resume 대신 역할이 분리된 ChatGPT/Codex 새 task와 새 세션으로 handoff한다.",
       "`pnpm omo:scheduler:install -- --work-item <id>`",
@@ -680,6 +692,10 @@ export function validateWorkflowV2DocContract({ rootDir = process.cwd() } = {}) 
   ];
 
   return [
+    {
+      name: "workflow-v2-doc-contract:codex-task-handoff",
+      errors: codexTaskHandoffErrors,
+    },
     {
       name: "workflow-v2-doc-contract:slice-workflow",
       errors: sliceWorkflowErrors,

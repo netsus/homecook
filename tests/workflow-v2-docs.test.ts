@@ -1,4 +1,5 @@
-import { existsSync, readFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
@@ -104,6 +105,31 @@ describe("workflow v2 docs", () => {
 
     expect(results.length).toBeGreaterThan(0);
     expect(results.every((result) => result.errors.length === 0)).toBe(true);
+  });
+
+  it("fails the workflow validator when the canonical GPT-only handoff contract drifts", () => {
+    const fixtureRoot = mkdtempSync(join(tmpdir(), "workflow-v2-handoff-"));
+
+    try {
+      cpSync(join(repoRoot, "docs"), join(fixtureRoot, "docs"), { recursive: true });
+      mkdirSync(join(fixtureRoot, ".opencode"), { recursive: true });
+      cpSync(join(repoRoot, ".opencode/README.md"), join(fixtureRoot, ".opencode/README.md"));
+      cpSync(join(repoRoot, "CLAUDE.md"), join(fixtureRoot, "CLAUDE.md"));
+
+      const handoffPath = join(fixtureRoot, "docs/engineering/codex-task-handoff.md");
+      const driftedHandoff = readFileSync(handoffPath, "utf8").replace(
+        "서로 다른 task ID와 서로 다른 새 세션을 사용한다.",
+        "같은 작업에서 검토할 수 있다.",
+      );
+      writeFileSync(handoffPath, driftedHandoff, "utf8");
+
+      const handoffResult = validateWorkflowV2DocContract({ rootDir: fixtureRoot })
+        .find((result) => result.name === "workflow-v2-doc-contract:codex-task-handoff");
+
+      expect(handoffResult?.errors.length).toBeGreaterThan(0);
+    } finally {
+      rmSync(fixtureRoot, { force: true, recursive: true });
+    }
   });
 
   it("keeps repo-local independent Codex agent descriptions aligned", () => {

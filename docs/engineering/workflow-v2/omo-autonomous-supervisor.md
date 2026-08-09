@@ -41,7 +41,7 @@ Codex가 orchestration owner로서 blocker를 분류하고 repair route를 정�
 기본 reason code:
 
 - `codex_repairable`: Codex bounded repair 후 validator recheck
-- `claude_repairable`: Claude-owned lane repair 후 validator recheck
+- `claude_repairable`: 과거 artifact 호환용 reason code. 신규 실행에서는 Claude를 호출하지 않고 역할이 분리된 ChatGPT/Codex 새 task·새 세션 repair로 route한 뒤 validator recheck
 - `product_defect`: 담당 product stage로 route back
 - `omo_defect`: tooling/docs-governance incident로 분리
 - `ci_wait`: scheduled resume 또는 current-head refresh
