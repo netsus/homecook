@@ -62,6 +62,7 @@
     "verify:full-local-session-refresh-lifecycle:json": "node scripts/verify-full-local-session-production-canary.mjs --refresh-lifecycle-gate --json",
     "verify:full-local-session-production-canary": "node scripts/verify-full-local-session-production-canary.mjs",
     "verify:full-local-session-lifecycle-evidence": "vitest run tests/full-local-session-lifecycle-evidence.test.ts",
+    "verify:cloudflare-tunnel-diagnostics": "vitest run tests/cloudflare-tunnel-diagnostics.test.ts",
     "full-local-production:start": "node scripts/full-local-production-runtime.mjs start",
     "full-local-production:status": "node scripts/full-local-production-runtime.mjs status",
     "full-local-production:stop": "node scripts/full-local-production-runtime.mjs stop",
