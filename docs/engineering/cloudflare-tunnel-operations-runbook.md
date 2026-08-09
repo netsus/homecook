@@ -20,11 +20,12 @@ Cloudflare dashboard/API/DNS 변경, tunnel·launchd install/reload/restart, bin
 - port: `20241`~`20245` allowlist
 - path: `/metrics`
 
-`0.0.0.0`, `[::]`, `localhost`, hostname, HTTPS, allowlist 밖 port 또는 다른 path는 모두 fail-closed한다. CLI는 argument를 받지 않으며 기본값을 바꿀 때만 아래 non-secret 환경변수를 사용한다.
+`0.0.0.0`, `[::]`, `localhost`, hostname, HTTPS, allowlist 밖 port 또는 다른 path는 모두 fail-closed한다. HTTP redirect도 따르지 않고 최종 URL이 요청한 loopback URL과 정확히 같아야 한다. metrics body는 스트리밍 중 1 MiB를 넘는 즉시 중단한다.
+
+Tunnel log는 고정 allowlist인 `/Users/cwj/.homecook/logs/cloudflare-tunnel.err.log`만 읽는다. canonical path, regular-file identity, `O_NOFOLLOW` descriptor를 검증하므로 임의 absolute path, symlink, 교체된 파일은 거부한다. CLI는 argument를 받지 않으며 metrics endpoint만 아래 non-secret 환경변수로 allowlist 안에서 선택할 수 있다.
 
 ```bash
 CLOUDFLARE_TUNNEL_METRICS_ENDPOINT=http://127.0.0.1:20241/metrics \
-CLOUDFLARE_TUNNEL_LOG_PATH=/absolute/private/cloudflared.log \
 pnpm cloudflare:tunnel-health
 ```
 
@@ -34,6 +35,8 @@ pnpm cloudflare:tunnel-health
 - warning: healthy connection `1~3` 상태가 `60초 초과`
 - warning: reconnect p95 `15초 초과`
 - diagnostic: 4개 connection simultaneous disconnect
+
+metrics는 `0~4` connection 범위, connection ID 개수 일치, healthy 상태의 location 표본을 함께 검증한다. build/version과 connection count만 남은 잘린 응답은 healthy가 아니다. reconnect와 log incident의 집계 window는 capture 시각 직전 24시간이며 그보다 오래된 event는 제외한다.
 
 ## Provider-neutral external probe contract
 
@@ -80,11 +83,15 @@ pnpm aggregate:cloudflare-external-probe < /repo-outside/private/probe-events.js
 
 - public 예정 분모: endpoint별 1,440, 전체 4,320
 - authenticated 예정 분모: 288
-- completeness: 각 audience에서 `>=99%`
+- completeness: 각 public endpoint와 authenticated endpoint에서 각각 `>=99%`
 - missing, timeout 10초를 넘긴 late, schema invalid는 모두 failure 분모에 포함
+- completeness pass와 response quality pass는 별도 필드다. 예를 들어 public endpoint의 `1/1,440` missing은 failure 수에는 남지만 endpoint completeness는 PASS다.
 - public/authenticated 분모와 gate는 독립
 - authenticated failure는 public failure를 숨기지 않음
 - public paging readiness는 authenticated success를 요구하지 않음
+- unknown/malformed event, credential 같은 추가 key, duplicate 등 rejected event가 하나라도 있으면 모든 gate는 fail-closed한다.
+
+`aggregate` CLI의 exit code는 public gate만 표현한다. `0`은 public endpoint별 completeness와 public response quality가 통과했다는 뜻이며 authenticated 결과의 성공을 뜻하지 않는다. authenticated `gate_pass`, completeness, failure는 같은 JSON의 독립 필드로 확인한다. 따라서 auth-only failure는 CLI의 public 성공을 실패로 바꾸지 않지만 숨겨지지도 않는다. rejected event는 audience와 무관하게 exit `1`이다.
 
 출력 incident timeline은 fixed status/error/colo/network-label projection만 가진다. raw status 문자열, provider error, IP, header/body, URL/path, token/cookie/JWT/email/UUID는 직렬화하지 않는다. Colo는 `ICN`, `LAX`, `OTHER`, `MISSING` 중 하나로 축약한다.
 
@@ -101,9 +108,9 @@ LAX diagnostic은 paging 조건이 아니다. 초기 threshold는 24시간 자�
 
 ## Incident timeline과 lifecycle evidence
 
-`composeIncidentTimeline()`은 local connector event와 external result event를 시간순으로 합친다. `summarizeCloudflareMonitoring()`은 그 timeline을 counts-only 요약으로 줄인다.
+`composeIncidentTimeline()`은 local connector event와 external result event를 시간순으로 합친다. 단일 public timeout과 authenticated timeout은 warning이며, 같은 public endpoint의 timeout/52x 두 번째 연속 표본에서만 critical이 된다. pantry TTFB p95와 LAX 지속 진단, local `<4 >60s`, reconnect 경보도 같은 timeline에 고정된 allowlist status로 들어간다. `summarizeCloudflareMonitoring()`은 그 timeline의 severity count에서 status를 한 번만 유도한다.
 
-기존 `capture-full-local-session-lifecycle-evidence.mjs`의 4개 phase와 schema version 1은 유지한다. `cloudflare_monitoring`은 호출자가 안전한 요약을 명시적으로 제공할 때만 생기는 optional root field다. 기존 field를 바꾸거나 legacy JSON consumer에 필수값을 추가하지 않는다.
+기존 `capture-full-local-session-lifecycle-evidence.mjs`의 4개 phase와 schema version 1은 유지한다. 실제 capture 경로는 credential/provider 설정 없이 고정 local health CLI를 read-only로 실행하고, schema-valid JSON을 받은 경우에만 redacted counts-only `cloudflare_monitoring`을 optional root field로 합성한다. critical 상태의 CLI exit `1`도 유효한 incident summary로 보존하며, JSON 수집 자체가 실패하면 field를 생략한다. 따라서 기존 field를 바꾸거나 legacy JSON consumer에 필수값을 추가하지 않는다. Validator는 incident count 합계뿐 아니라 critical/warning count와 status의 불변식도 강제한다.
 
 ## Manual Only 자산과 후속 live gate
 

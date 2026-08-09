@@ -38,7 +38,7 @@ export async function runExternalProbeCli(argv, dependencies = {}) {
     }
     const aggregate = aggregateExternalProbeWindow(JSON.parse(raw));
     stdout(`${JSON.stringify(aggregate)}\n`);
-    return aggregate.public.gate_pass && aggregate.authenticated.gate_pass ? 0 : 1;
+    return aggregate.public.gate_pass ? 0 : 1;
   } catch {
     stderr("cloudflare-external-probe: FAIL (redacted)\n");
     return 1;

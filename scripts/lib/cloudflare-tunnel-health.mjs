@@ -35,7 +35,13 @@ export function validateMetricsEndpoint(value) {
   return value;
 }
 
-function localTimeline(tunnelLog, healthyConnections, capturedAt, reconnectThresholdMs) {
+function localTimeline(
+  tunnelLog,
+  healthyConnections,
+  capturedAt,
+  reconnectThresholdMs,
+  degradedDurationMs,
+) {
   const events = [];
   if (healthyConnections === 0) {
     events.push({
@@ -45,6 +51,24 @@ function localTimeline(tunnelLog, healthyConnections, capturedAt, reconnectThres
       severity: "critical",
       status: "connector_down",
       error: "CONNECTOR_DOWN",
+      colo: "MISSING",
+      network_label: null,
+    });
+  }
+  if (
+    healthyConnections !== null
+    && healthyConnections > 0
+    && healthyConnections < 4
+    && degradedDurationMs !== null
+    && degradedDurationMs > 60_000
+  ) {
+    events.push({
+      timestamp: capturedAt,
+      source: "local_connector",
+      kind: "connector_health",
+      severity: "warning",
+      status: "connector_degraded",
+      error: "CONNECTOR_DEGRADED",
       colo: "MISSING",
       network_label: null,
     });
@@ -89,14 +113,28 @@ export function buildLocalConnectorHealth({
   }
   const metrics = parseTunnelMetrics(typeof metricsRaw === "string" ? metricsRaw : "");
   const tunnelLog = parseTunnelLog(typeof logRaw === "string" ? logRaw : "");
-  const healthyConnections = Number.isInteger(metrics.active_connections)
-    ? metrics.active_connections
-    : null;
-  const recoveredDurations = tunnelLog.outages
+  const rawConnectionCount = metrics.active_connections;
+  const connectionCountInRange = Number.isInteger(rawConnectionCount)
+    && rawConnectionCount >= 0
+    && rawConnectionCount <= 4;
+  const metricsValid = metrics.version !== null
+    && connectionCountInRange
+    && metrics.connection_ids_consistent === true
+    && (rawConnectionCount < 4 || metrics.success === true);
+  const healthyConnections = metricsValid ? rawConnectionCount : null;
+  const windowStartMs = capturedAtMs - 86_400_000;
+  const recentOutages = tunnelLog.outages.filter((outage) => {
+    const disconnectedAt = Date.parse(outage.disconnect_started_at);
+    return Number.isFinite(disconnectedAt)
+      && disconnectedAt >= windowStartMs
+      && disconnectedAt <= capturedAtMs;
+  });
+  const recentTunnelLog = { ...tunnelLog, outages: recentOutages };
+  const recoveredDurations = recentOutages
     .map((outage) => outage.recovery_ms)
     .filter((value) => value !== null);
   const reconnectMs = summarizeDurations(recoveredDurations);
-  const openOutageDurations = tunnelLog.outages
+  const openOutageDurations = recentOutages
     .filter((outage) => outage.recovered_at === null)
     .map((outage) => capturedAtMs - Date.parse(outage.disconnect_started_at))
     .filter((value) => Number.isFinite(value) && value >= 0);
@@ -119,10 +157,9 @@ export function buildLocalConnectorHealth({
   if (reconnectMs.p95 !== null && reconnectMs.p95 > 15_000) {
     warning.push("reconnect_over_15s");
   }
-  if (tunnelLog.outages.some((outage) => outage.simultaneous_full_outage)) {
+  if (recentOutages.some((outage) => outage.simultaneous_full_outage)) {
     diagnostic.push("simultaneous_disconnect");
   }
-  const metricsValid = metrics.version !== null && healthyConnections !== null;
   const connectionState = healthyConnections === null
     ? "unknown"
     : healthyConnections === 0
@@ -132,7 +169,9 @@ export function buildLocalConnectorHealth({
         : "healthy";
   const state = critical.length > 0
     ? "critical"
-    : warning.length > 0
+    : !metricsValid
+      ? "unknown"
+      : warning.length > 0
       ? "warning"
       : connectionState;
 
@@ -151,6 +190,12 @@ export function buildLocalConnectorHealth({
     degraded_duration_ms: degradedDurationMs,
     reconnect_ms: reconnectMs,
     signals: { critical, warning, diagnostic },
-    incident_events: localTimeline(tunnelLog, healthyConnections, capturedAt, 15_000),
+    incident_events: localTimeline(
+      recentTunnelLog,
+      healthyConnections,
+      capturedAt,
+      15_000,
+      degradedDurationMs,
+    ),
   };
 }

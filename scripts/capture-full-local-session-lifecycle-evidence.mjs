@@ -22,6 +22,7 @@ import { spawnSync } from "node:child_process";
 
 import { buildFullLocalProductCatalogCtesSql } from "./lib/full-local-product-catalog.mjs";
 import { buildFullLocalAuthorizationContractCtesSql } from "./full-local-production-runtime.mjs";
+import { summarizeCloudflareMonitoring } from "./lib/cloudflare-external-probe.mjs";
 
 export const EXPECTED_LIVE_ROOT = "/Users/cwj/01_vibe_coding/homecook-full-local-restore";
 export const REFRESH_LIFECYCLE_JSON_SCRIPT =
@@ -377,6 +378,21 @@ export function validateSessionLifecycleEvidence(evidence) {
         + monitoring.diagnostic_count
     ) {
       errors.push("cloudflare_monitoring.incident_count must equal severity counts.");
+    }
+    if (
+      Number.isSafeInteger(monitoring?.critical_count)
+      && Number.isSafeInteger(monitoring?.warning_count)
+    ) {
+      const expectedStatus = monitoring.critical_count > 0
+        ? "critical"
+        : monitoring.warning_count > 0
+          ? "warning"
+          : ["healthy", "unknown"].includes(monitoring.status)
+            ? monitoring.status
+            : null;
+      if (expectedStatus === null || monitoring.status !== expectedStatus) {
+        errors.push("cloudflare_monitoring.status must match severity counts.");
+      }
     }
   }
 
@@ -1124,6 +1140,32 @@ function verifyPublicOrigins() {
     && /^HTTP\/\S+ 401\b/mu.test(authHeaders);
 }
 
+export function collectCloudflareMonitoringSummary({
+  implementationRoot,
+  commandRunner = run,
+}) {
+  try {
+    const result = commandRunner(
+      process.execPath,
+      [path.join(implementationRoot, "scripts/cloudflare-tunnel-health.mjs")],
+      { cwd: implementationRoot, allowFailure: true },
+    );
+    const raw = stdoutText(result);
+    if (Buffer.byteLength(raw, "utf8") > 1_048_576) return null;
+    const localHealth = JSON.parse(raw);
+    if (
+      localHealth?.schema !== "homecook.cloudflare-tunnel-health"
+      || localHealth?.version !== 1
+      || !Array.isArray(localHealth?.incident_events)
+    ) {
+      return null;
+    }
+    return summarizeCloudflareMonitoring({ local_health: localHealth });
+  } catch {
+    return null;
+  }
+}
+
 function parseCliArgs(argv) {
   const [phase, ...rest] = argv;
   let liveRoot;
@@ -1209,6 +1251,7 @@ export function captureSessionLifecycleEvidence({ implementationRoot, liveRoot, 
     migrationHeadSource: migration.migrationHeadSource,
     phase,
     productionDomainContractGate,
+    cloudflareMonitoring: collectCloudflareMonitoringSummary({ implementationRoot }),
     observation,
     verification,
   });

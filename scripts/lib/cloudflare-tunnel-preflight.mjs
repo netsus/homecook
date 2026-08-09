@@ -225,12 +225,17 @@ export function parseTunnelMetrics(raw) {
   }
   const parsedVersion = parseVersion(version) ? version : null;
   const activeEdgeLocations = edgeLocations.size;
+  const activeConnectionIds = connectionIds.size;
+  const connectionIdsConsistent = activeConnections !== null
+    && activeConnectionIds === activeConnections;
   return {
     success: parsedVersion !== null && activeConnections !== null
-      && activeConnections >= 4 && connectionIds.size >= 4 && activeEdgeLocations >= 2,
+      && activeConnections === 4 && connectionIdsConsistent && activeEdgeLocations >= 2,
     version: parsedVersion,
     active_connections: activeConnections,
     active_edge_locations: activeEdgeLocations,
+    active_connection_ids: activeConnectionIds,
+    connection_ids_consistent: connectionIdsConsistent,
   };
 }
 

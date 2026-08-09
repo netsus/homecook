@@ -37,6 +37,8 @@ const ALLOWED_STATUSES = new Set([
   "connector_degraded",
   "simultaneous_disconnect",
   "reconnect_slow",
+  "pantry_ttfb_slow",
+  "lax_persistent",
 ]);
 const ALLOWED_ERRORS = new Set([
   "NONE",
@@ -147,13 +149,13 @@ function classifyEvent(event, probe) {
   if (observedAt === null || scheduledAt === null || observedAt < scheduledAt) {
     return { status: "invalid", error: "INVALID_EVENT" };
   }
+  if (event.outcome === "timeout") return { status: "timeout", error: "TIMEOUT" };
   if (observedAt - scheduledAt > probe.timeout_seconds * 1_000) {
     return { status: "late", error: "LATE" };
   }
   if (normalizeNetworkLabel(event.network_label) === null) {
     return { status: "invalid", error: "INVALID_EVENT" };
   }
-  if (event.outcome === "timeout") return { status: "timeout", error: "TIMEOUT" };
   if (event.outcome !== "response") return { status: "invalid", error: "INVALID_EVENT" };
   if (!Number.isInteger(event.http_status) || event.http_status < 100 || event.http_status > 599) {
     return { status: "invalid", error: "INVALID_EVENT" };
@@ -220,11 +222,11 @@ export function summarizeCloudflareMonitoring({
   const criticalCount = timeline.filter(({ severity }) => severity === "critical").length;
   const warningCount = timeline.filter(({ severity }) => severity === "warning").length;
   const diagnosticCount = timeline.filter(({ severity }) => severity === "diagnostic").length;
-  const status = criticalCount > 0 || localHealth?.state === "critical"
+  const status = criticalCount > 0
     ? "critical"
-    : warningCount > 0 || localHealth?.state === "warning"
+    : warningCount > 0
       ? "warning"
-      : localHealth?.state === "healthy"
+      : localHealth?.state === "healthy" || externalAggregate !== undefined
         ? "healthy"
         : "unknown";
   return {
@@ -258,6 +260,10 @@ function aggregateSlots(probeId, slots) {
   const invalid = count("invalid");
   const failures = slots.length - successes;
   const completeness = (slots.length - missing - late - invalid) / slots.length;
+  const responseFailures = count("timeout") + count("cloudflare_52x")
+    + count("unexpected_status") + count("invalid_wrapper");
+  const completenessPass = completeness >= EXTERNAL_PROBE_CONTRACT.completeness_threshold;
+  const responseQualityPass = responseFailures === 0;
   return {
     probe_id: probeId,
     scheduled: slots.length,
@@ -270,7 +276,9 @@ function aggregateSlots(probeId, slots) {
     unexpected_status: count("unexpected_status"),
     invalid_wrapper: count("invalid_wrapper"),
     completeness,
-    gate_pass: completeness >= EXTERNAL_PROBE_CONTRACT.completeness_threshold && failures === 0,
+    completeness_pass: completenessPass,
+    response_quality_pass: responseQualityPass,
+    gate_pass: completenessPass && responseQualityPass,
   };
 }
 
@@ -287,22 +295,23 @@ function mergeAudience(summaries) {
   return {
     ...totals,
     completeness,
-    gate_pass: completeness >= EXTERNAL_PROBE_CONTRACT.completeness_threshold
-      && totals.failures === 0,
+    endpoint_completeness_pass: summaries.every(({ completeness_pass: pass }) => pass),
+    response_quality_pass: summaries.every(({ response_quality_pass: pass }) => pass),
+    gate_pass: summaries.every(({ gate_pass: pass }) => pass),
   };
 }
 
-function hasConsecutiveTransportFailures(slots) {
-  let consecutive = 0;
-  for (const slot of slots) {
-    if (["timeout", "cloudflare_52x"].includes(slot?.status)) {
-      consecutive += 1;
-      if (consecutive >= 2) return true;
-    } else {
-      consecutive = 0;
+function criticalTransportIndexes(slots) {
+  const indexes = new Set();
+  for (let index = 1; index < slots.length; index += 1) {
+    if (
+      ["timeout", "cloudflare_52x"].includes(slots[index - 1]?.status)
+      && ["timeout", "cloudflare_52x"].includes(slots[index]?.status)
+    ) {
+      indexes.add(index);
     }
   }
-  return false;
+  return indexes;
 }
 
 function maxConsecutiveLax(slots, networkLabel) {
@@ -348,6 +357,7 @@ export function aggregateExternalProbeWindow({
     }
     const slots = slotsByProbe[event.probe_id];
     if (slots[index] !== null) {
+      rejectedEventCount += 1;
       slots[index] = {
         status: "invalid",
         error: "INVALID_EVENT",
@@ -360,6 +370,7 @@ export function aggregateExternalProbeWindow({
       continue;
     }
     const classification = classifyEvent(event, probe);
+    if (classification.status === "invalid") rejectedEventCount += 1;
     slots[index] = {
       ...classification,
       scheduled_at: event.scheduled_at,
@@ -370,13 +381,23 @@ export function aggregateExternalProbeWindow({
     };
   }
 
-  const byProbe = Object.fromEntries(Object.entries(slotsByProbe)
+  let byProbe = Object.fromEntries(Object.entries(slotsByProbe)
     .map(([probeId, slots]) => [probeId, aggregateSlots(probeId, slots)]));
-  const publicSummary = mergeAudience(PUBLIC_PROBE_IDS.map((probeId) => byProbe[probeId]));
-  const authenticatedSummary = mergeAudience([byProbe[AUTHENTICATED_PROBE_ID]]);
-  const critical = PUBLIC_PROBE_IDS.some((probeId) =>
-    hasConsecutiveTransportFailures(slotsByProbe[probeId])
-  ) ? ["public_timeout_or_52x_consecutive_2"] : [];
+  let publicSummary = mergeAudience(PUBLIC_PROBE_IDS.map((probeId) => byProbe[probeId]));
+  let authenticatedSummary = mergeAudience([byProbe[AUTHENTICATED_PROBE_ID]]);
+  if (rejectedEventCount > 0) {
+    byProbe = Object.fromEntries(Object.entries(byProbe)
+      .map(([probeId, summary]) => [probeId, { ...summary, gate_pass: false }]));
+    publicSummary = { ...publicSummary, gate_pass: false };
+    authenticatedSummary = { ...authenticatedSummary, gate_pass: false };
+  }
+  const criticalIndexesByProbe = Object.fromEntries(PUBLIC_PROBE_IDS.map((probeId) => [
+    probeId,
+    criticalTransportIndexes(slotsByProbe[probeId]),
+  ]));
+  const critical = Object.values(criticalIndexesByProbe).some((indexes) => indexes.size > 0)
+    ? ["public_timeout_or_52x_consecutive_2"]
+    : [];
   const pantryTtfb = latencySummary(slotsByProbe.public_pantry
     .filter((slot) => slot?.status === "expected")
     .map((slot) => slot.ttfb_ms));
@@ -407,13 +428,37 @@ export function aggregateExternalProbeWindow({
           ? "external_public"
           : "external_authenticated",
         kind: "probe_result",
-        severity: ["timeout", "cloudflare_52x"].includes(status) ? "critical" : "warning",
+        severity: criticalIndexesByProbe[probeId]?.has(index) ? "critical" : "warning",
         status,
         error: slot?.error ?? "MISSING_EVENT",
         colo: slot?.colo ?? "MISSING",
         network_label: slot?.network_label ?? null,
       });
     }
+  }
+  if (warning.includes("korean_pantry_ttfb_p95_over_500ms")) {
+    externalTimeline.push({
+      timestamp: windowEnd,
+      source: "external_public",
+      kind: "probe_result",
+      severity: "warning",
+      status: "pantry_ttfb_slow",
+      error: "NONE",
+      colo: "MISSING",
+      network_label: null,
+    });
+  }
+  if (diagnostic.includes("lax_consecutive_10_two_networks")) {
+    externalTimeline.push({
+      timestamp: windowEnd,
+      source: "external_public",
+      kind: "probe_result",
+      severity: "diagnostic",
+      status: "lax_persistent",
+      error: "NONE",
+      colo: "LAX",
+      network_label: null,
+    });
   }
 
   return {
@@ -424,7 +469,7 @@ export function aggregateExternalProbeWindow({
     by_probe: byProbe,
     public: publicSummary,
     authenticated: authenticatedSummary,
-    public_paging_ready: publicSummary.completeness >= EXTERNAL_PROBE_CONTRACT.completeness_threshold,
+    public_paging_ready: publicSummary.endpoint_completeness_pass && rejectedEventCount === 0,
     public_pantry_ttfb_ms: pantryTtfb,
     alerts: { critical, warning, diagnostic },
     rejected_event_count: rejectedEventCount,

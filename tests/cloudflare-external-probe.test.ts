@@ -219,6 +219,152 @@ describe("provider-neutral external probe contract", () => {
     expect(authOnlyFailure.public_paging_ready).toBe(true);
   });
 
+  it("preserves explicit timeouts past 10s while accepting a response at the inclusive boundary", () => {
+    const events = completeEvents();
+    const boundaryResponse = events.find((event) =>
+      event.probe_id === "public_pantry" && event.scheduled_at === WINDOW_START
+    )!;
+    boundaryResponse.observed_at = "2026-08-10T00:00:10.000Z";
+    for (const slot of [0, 1]) {
+      const timeout = events.find((event) =>
+        event.probe_id === "public_app_root"
+        && event.scheduled_at === eventFor("public_app_root", slot).scheduled_at
+      )!;
+      timeout.observed_at = new Date(Date.parse(timeout.scheduled_at) + 10_001).toISOString();
+      timeout.outcome = "timeout";
+      timeout.http_status = null;
+    }
+
+    const aggregate = aggregateExternalProbeWindow({
+      window_start: WINDOW_START,
+      window_end: WINDOW_END,
+      events,
+    });
+
+    expect(aggregate.by_probe.public_pantry.successes).toBe(1_440);
+    expect(aggregate.by_probe.public_app_root.timeout_or_52x).toBe(2);
+    expect(aggregate.by_probe.public_app_root.late).toBe(0);
+    expect(aggregate.alerts.critical).toContain("public_timeout_or_52x_consecutive_2");
+  });
+
+  it("separates endpoint completeness from response quality and keeps auth out of CLI success", async () => {
+    const oneMissing = completeEvents();
+    oneMissing.splice(oneMissing.findIndex((event) =>
+      event.probe_id === "public_app_root" && event.scheduled_at === WINDOW_START
+    ), 1);
+    const aggregate = aggregateExternalProbeWindow({
+      window_start: WINDOW_START,
+      window_end: WINDOW_END,
+      events: oneMissing,
+    });
+
+    expect(aggregate.by_probe.public_app_root).toEqual(expect.objectContaining({
+      failures: 1,
+      completeness_pass: true,
+      response_quality_pass: true,
+      gate_pass: true,
+    }));
+    expect(aggregate.public).toEqual(expect.objectContaining({
+      endpoint_completeness_pass: true,
+      response_quality_pass: true,
+      gate_pass: true,
+    }));
+
+    const authOnlyFailureEvents = completeEvents().map((event) =>
+      event.probe_id === "authenticated_pantry_read"
+        ? { ...event, http_status: 500, wrapper_valid: false }
+        : event
+    );
+    const stdout: string[] = [];
+    const exitCode = await runExternalProbeCli(["aggregate"], {
+      readStdin: async () => JSON.stringify({
+        window_start: WINDOW_START,
+        window_end: WINDOW_END,
+        events: authOnlyFailureEvents,
+      }),
+      stdout: (value: string) => stdout.push(value),
+      stderr: () => undefined,
+    });
+    const cliAggregate = JSON.parse(stdout.join(""));
+
+    expect(exitCode).toBe(0);
+    expect(cliAggregate.public.gate_pass).toBe(true);
+    expect(cliAggregate.authenticated.gate_pass).toBe(false);
+    expect(cliAggregate.authenticated.response_quality_pass).toBe(false);
+  });
+
+  it("fails closed when rejected or credential-bearing events are mixed into complete samples", async () => {
+    const events = completeEvents();
+    events.push({
+      ...eventFor("public_app_root", 0),
+      probe_id: "unknown",
+      credential: "must-not-escape",
+    } as unknown as ProbeEvent);
+    const credentialEvent = events.find((event) =>
+      event.probe_id === "authenticated_pantry_read" && event.scheduled_at === WINDOW_START
+    )!;
+    credentialEvent.credential = "second-secret-marker";
+    events.push(eventFor("public_pantry", 0));
+
+    const input = { window_start: WINDOW_START, window_end: WINDOW_END, events };
+    const aggregate = aggregateExternalProbeWindow(input);
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    const exitCode = await runExternalProbeCli(["aggregate"], {
+      readStdin: async () => JSON.stringify(input),
+      stdout: (value: string) => stdout.push(value),
+      stderr: (value: string) => stderr.push(value),
+    });
+    const serialized = `${JSON.stringify(aggregate)} ${stdout.join("")} ${stderr.join("")}`;
+
+    expect(aggregate.rejected_event_count).toBe(3);
+    expect(aggregate.public.gate_pass).toBe(false);
+    expect(aggregate.authenticated.gate_pass).toBe(false);
+    expect(aggregate.public_paging_ready).toBe(false);
+    expect(exitCode).toBe(1);
+    expect(serialized).not.toContain("must-not-escape");
+    expect(serialized).not.toContain("second-secret-marker");
+  });
+
+  it("keeps single public and authenticated timeouts non-critical but promotes a public pair", () => {
+    const events = completeEvents();
+    for (const [probeId, slot] of [
+      ["public_app_root", 0],
+      ["authenticated_pantry_read", 0],
+    ] as const) {
+      const event = events.find((candidate) =>
+        candidate.probe_id === probeId
+        && candidate.scheduled_at === eventFor(probeId, slot).scheduled_at
+      )!;
+      event.outcome = "timeout";
+      event.http_status = null;
+    }
+    const single = aggregateExternalProbeWindow({
+      window_start: WINDOW_START,
+      window_end: WINDOW_END,
+      events,
+    });
+    const singleSummary = summarizeCloudflareMonitoring({ external_aggregate: single });
+
+    expect(single.alerts.critical).toEqual([]);
+    expect(single.incident_timeline.filter(({ severity }) => severity === "critical")).toEqual([]);
+    expect(singleSummary.status).toBe("warning");
+
+    const secondPublic = events.find((event) =>
+      event.probe_id === "public_app_root"
+      && event.scheduled_at === eventFor("public_app_root", 1).scheduled_at
+    )!;
+    secondPublic.outcome = "timeout";
+    secondPublic.http_status = null;
+    const consecutive = aggregateExternalProbeWindow({
+      window_start: WINDOW_START,
+      window_end: WINDOW_END,
+      events,
+    });
+    expect(consecutive.incident_timeline.filter(({ severity }) => severity === "critical"))
+      .toHaveLength(1);
+  });
+
   it("warns on Korean pantry p95 over 500ms and diagnoses ten LAX samples on two network labels", () => {
     const events = completeEvents();
     let wifiSamples = 0;
@@ -245,6 +391,22 @@ describe("provider-neutral external probe contract", () => {
     expect(aggregate.public_pantry_ttfb_ms.p95).toBe(600);
     expect(aggregate.alerts.warning).toContain("korean_pantry_ttfb_p95_over_500ms");
     expect(aggregate.alerts.diagnostic).toContain("lax_consecutive_10_two_networks");
+    expect(aggregate.incident_timeline).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        severity: "warning",
+        status: "pantry_ttfb_slow",
+      }),
+      expect.objectContaining({
+        severity: "diagnostic",
+        status: "lax_persistent",
+      }),
+    ]));
+    expect(summarizeCloudflareMonitoring({ external_aggregate: aggregate }))
+      .toEqual(expect.objectContaining({
+        status: "warning",
+        warning_count: 1,
+        diagnostic_count: 1,
+      }));
   });
 
   it("composes one allowlisted incident timeline with zero raw secret, IP, headers, body, or path", () => {
@@ -344,6 +506,20 @@ describe("provider-neutral external probe contract", () => {
       diagnostic_count: 1,
     });
     expect(JSON.stringify(summary)).not.toContain("must-not-escape");
+  });
+
+  it("derives monitoring status from canonical timeline counts instead of an orphan state", () => {
+    expect(summarizeCloudflareMonitoring({
+      local_health: { state: "warning", incident_events: [] },
+    })).toEqual({
+      schema: "homecook.cloudflare-monitoring-summary",
+      version: 1,
+      status: "unknown",
+      incident_count: 0,
+      critical_count: 0,
+      warning_count: 0,
+      diagnostic_count: 0,
+    });
   });
 
   it("aggregates stdin JSON without accepting secret CLI arguments or leaking invalid input", async () => {
