@@ -28,9 +28,9 @@ The finished UI keeps initial pantry selection empty, allows explicit `[]`, expo
 
 | Evidence | Original size | SHA-256 |
 | --- | ---: | --- |
-| `ui/designs/evidence/cooked-batch-weight-ledger/COOK_MODE-implementation-desktop-1280.png` | `1280x900` | `e3e4c2b15253f4bb547ecfa4383bb3825dd374e14610654c9047cf6435c6a539` |
-| `ui/designs/evidence/cooked-batch-weight-ledger/COOK_MODE-implementation-mobile-default-390.png` | `390x844` | `3ad8e8239426d9e735219e9aa62aaa8e1425584e814beda5c9608e72b677fcb9` |
-| `ui/designs/evidence/cooked-batch-weight-ledger/COOK_MODE-implementation-mobile-narrow-320.png` | `320x568` | `c6cc60b23a9c2ebbe6553ab2ba460c4729b1b283f44fba4b426ad78666e6985b` |
+| `ui/designs/evidence/cooked-batch-weight-ledger/COOK_MODE-implementation-desktop-1280.png` | `1280x900` | `73fd2b9d36034c1cf84c32f1ea6fd1e8d1d8aeeb308a3dc5c976912385ce5b62` |
+| `ui/designs/evidence/cooked-batch-weight-ledger/COOK_MODE-implementation-mobile-default-390.png` | `390x844` | `599ad98e281fd0bab26c959f5fffffe1b1ae8b8b53bc1a3820daa12474c0f589` |
+| `ui/designs/evidence/cooked-batch-weight-ledger/COOK_MODE-implementation-mobile-narrow-320.png` | `320x568` | `500ff117971f80f217d58b8680a616c8862ab7299495bc9e7958bad2fdc97ef8` |
 
 The runtime comparison is recorded in `design-qa.md`. It is an author-only implementation QA artifact, not final product-design authority. Playwright proves 44px controls, 16px horizontal spacing, focus trap/restore, keyboard Escape behavior, narrow internal scrolling, no horizontal overflow, zero console errors, and zero serious/critical axe violations for the #8 sheet.
 
