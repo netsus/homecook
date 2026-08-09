@@ -154,10 +154,10 @@ describe("cooked-batch-weight-ledger fresh Stage 1 re-lock", () => {
       passed_files: 526,
       skipped_files: 28,
       passed_tests: 5389,
-      skipped_tests: 371,
+      skipped_tests: 372,
     });
     expect(stageResult.verification_results.final_full_vitest).toBe(
-      "526 files passed / 28 skipped; 5,389 tests passed / 371 skipped",
+      "526 files passed / 28 skipped; 5,389 tests passed / 372 skipped",
     );
     expect(stageResult.final_catalog_startup_window_integration.full_vitest).toBe(
       "526 files / 5,381 tests passed; 28 files / 369 tests intended skip",
@@ -165,6 +165,16 @@ describe("cooked-batch-weight-ledger fresh Stage 1 re-lock", () => {
     expect(stageResult.fresh_backend_author_p2_repair.full_vitest).toBe(
       "526 passed files / 28 skipped files; 5,381 passed tests / 370 intended skipped tests",
     );
+    expect(stageResult.fresh_backend_author_authorization_repair.full_vitest).toBe(
+      "526 passed files / 28 skipped files; 5,389 passed tests / 371 intended skipped tests",
+    );
+    expect(stageResult.fresh_backend_author_session_refresh_repair).toMatchObject({
+      task_id: "019fe51f-6316-7b02-816d-7187b4436a16",
+      reviewed_bad_head: "7c49518bd21e440b49785a053a9d38e047eea281",
+      implementation_commit: "30f4ca411eb3550c145e395d0ceaefdcd62e3fce",
+      full_vitest:
+        "526 passed files / 28 skipped files; 5,389 passed tests / 372 intended skipped tests",
+    });
   });
 
   it("uses only the official joint R+2 capability names", () => {

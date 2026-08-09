@@ -29,6 +29,19 @@ This task changes only #8 DB/backend/API, the existing leftovers compatibility r
 - Focused Vitest `5 files / 42 tests`, full Vitest `526 passed files / 28 skipped files`, `5,381 passed / 370 intended skipped`, account inventory `64/93/3`, authorization manifest `21`, validators, and `verify:backend` product `2,679` + build + security E2E `12/12` are green.
 - Public endpoint/status/error/field/action contracts are unchanged. Stage 3, merge, Manual/server-Mac/OAuth, R/R+1/R+2, activation and Discord remain unperformed; this author does not self-approve.
 
+## Fresh backend author session-refresh authorization repair
+
+- Task ID: `019fe51f-6316-7b02-816d-7187b4436a16`
+- Reviewed bad head: `7c49518bd21e440b49785a053a9d38e047eea281`
+- Implementation commit: `30f4ca411eb3550c145e395d0ceaefdcd62e3fce`
+- Independent security pre-gate finding: the final `20260809120000` replacement of `private.verify_full_local_internal_scope()` retained `/rpc/assert_and_renew_full_local_session_authority_v2` for `request-authority`, but dropped the canonical `20260809110000` allowance for `auth-callback|auth-refresh` + `POST`.
+- TDD RED: fresh and replay each failed only the new PostgreSQL regression (`1 failed / 29 passed`) because final applied authority returned `ACCOUNT_SESSION_STALE` for `auth-callback`; predecessor and inherited security inventory outcomes remained unchanged.
+- Minimal GREEN: add the missing renewal RPC to the existing callback/refresh POST path list. A full verifier-body diff confirms that every predecessor allowlist branch is retained; remaining body differences are equivalent method ordering and the intended #8 snapshot-v2 paths.
+- PostgreSQL GREEN: predecessor fresh `15 passed / 1 intended skip`, predecessor replay `16 passed`, #8 fresh/replay `30/30`, inherited inventory fresh/replay `26 passed / 33 intended skips`. The existing YouTube DELETE negative boundary remains denied.
+- Current focused Vitest is `8 files / 68 tests`; full-local predecessor is `29 passed / 30 intended skipped`; full Vitest is `526 passed files / 28 skipped files`, `5,389 passed / 372 intended skipped`.
+- `pnpm verify:backend` passes lint, typecheck, product `219 passed files / 11 skipped files`, `2,679 passed / 150 skipped`, production build and security E2E `12/12`. Security functions deny `8/8` anonymous mutation signatures with unchanged checksums; authorization manifest remains `21` and account inventory remains `64/93/3`.
+- This repair adds no scope, principal, public endpoint, field, status, error or grant. Stage 3, merge, Manual/server-Mac/OAuth, R/R+1/R+2, activation and Discord remain unperformed; this author does not self-approve.
+
 ## Latest-master base-drift integration
 
 - PR #1292 makes `supabase/migrations/20260809100000_full_local_session_refresh_authority.sql` the canonical stable-session refresh authority. The #8 migration is ordered after the latest-master request-transaction migration as `20260809120000_cooked_batch_weight_ledger.sql`.

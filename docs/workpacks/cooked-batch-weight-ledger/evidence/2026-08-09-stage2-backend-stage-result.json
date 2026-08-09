@@ -7,7 +7,7 @@
   },
   "pr": {
     "title": "feat(cooked-batch): implement weight ledger backend",
-    "body_markdown": "Stage 2 backend implementation is OPEN and non-Draft on PR #1291. Post-Ready integrations ca81aa0a and 5110e0ec preserve the product-catalog readiness gate and add its bounded startup window through exact master 1acf526a without history rewrite. Fresh backend author task 019fe501-0ae3-71f1-ba42-0a425e5b9315 preserves the latest master YouTube internal scopes in the final cooked-batch verifier definition. PostgreSQL #8 fresh/replay 29/29, full Vitest 5,389 pass / 371 intended skip, verify:backend product 2,679 pass plus build/security E2E 12/12, generated inventory 64/93/3 and authorization 21 are green. Stage 3, merge, server-Mac/remote rehearsal and R/R+1/R+2 activation remain pending."
+    "body_markdown": "Stage 2 backend implementation is OPEN and non-Draft on PR #1291. Post-Ready integrations ca81aa0a and 5110e0ec preserve the product-catalog readiness gate and add its bounded startup window through exact master 1acf526a without history rewrite. Fresh backend author task 019fe501-0ae3-71f1-ba42-0a425e5b9315 preserves the latest master YouTube internal scopes in the final cooked-batch verifier definition. Fresh backend author repair task 019fe51f-6316-7b02-816d-7187b4436a16 preserves the canonical auth-callback/auth-refresh POST renewal RPC in that same final verifier. PostgreSQL #8 fresh/replay 30/30, full Vitest 5,389 pass / 372 intended skip, verify:backend product 2,679 pass plus build/security E2E 12/12, generated inventory 64/93/3 and authorization 21 are green. Stage 3, merge, server-Mac/remote rehearsal and R/R+1/R+2 activation remain pending."
   },
   "base_drift_integration": {
     "task_id": "019fe2b2-0ee4-77c3-a829-9ae04bfac07f",
@@ -145,6 +145,23 @@
     "stage3_self_approval": false,
     "independent_rereview_performed": false
   },
+  "fresh_backend_author_session_refresh_repair": {
+    "task_id": "019fe51f-6316-7b02-816d-7187b4436a16",
+    "reviewed_bad_head": "7c49518bd21e440b49785a053a9d38e047eea281",
+    "implementation_commit": "30f4ca411eb3550c145e395d0ceaefdcd62e3fce",
+    "finding": "the final 20260809120000 verifier retained the renewal RPC under request-authority but omitted the canonical auth-callback and auth-refresh POST allowance from 20260809110000",
+    "tdd_red": "fresh/replay each 1 failed / 29 passed because auth-callback POST /rpc/assert_and_renew_full_local_session_authority_v2 returned ACCOUNT_SESSION_STALE from the final applied verifier",
+    "minimal_green": "add only /rpc/assert_and_renew_full_local_session_authority_v2 to the existing auth-callback/auth-refresh POST path list in 20260809120000; full verifier comparison leaves only equivalent method ordering and the intended #8 snapshot-v2 additions beyond the canonical predecessor",
+    "postgres_fresh_replay": "predecessor fresh 15 passed / 1 intended skip, replay 16 passed; cooked-batch fresh/replay 30/30; inherited inventory fresh/replay 26 passed / 33 intended skips",
+    "focused_vitest": "8 files / 68 tests",
+    "full_local_predecessor": "29 passed / 30 intended skipped",
+    "full_vitest": "526 passed files / 28 skipped files; 5,389 passed tests / 372 intended skipped tests",
+    "verify_backend": "lint and typecheck passed; product 219 passed files / 11 skipped files, 2,679 passed tests / 150 skipped tests; production build and security E2E 12/12 passed",
+    "security": "8 anonymous mutation signatures denied with unchanged checksums; authorization manifest 21; account inventory 64/93/3",
+    "public_contract_expansion": false,
+    "stage3_self_approval": false,
+    "independent_rereview_performed": false
+  },
   "overall_status": {
     "lifecycle": "in_progress",
     "approval_state": "not_started",
@@ -173,10 +190,10 @@
       "passed_files": 526,
       "skipped_files": 28,
       "passed_tests": 5389,
-      "skipped_tests": 371
+      "skipped_tests": 372
     },
-    "focused_vitest": "batch-nutrition RED 3 missing-function failures; GREEN 6 files / 59 tests; prior review repair GREEN backend/gamification/security/inventory 7 files / 69 tests and LEFTOVERS 27/27; first latest-master integration focused 11 files / 197 tests; migration-version RED 1 and GREEN 17/17; d9b5 auth/cooked-batch focused 11 files / 159 tests; 2177 logout/cooked-batch focused 11 files / 131 tests; post-Ready product-catalog/runtime plus cooked-batch 6 files / 105 tests; final startup-window/catalog/cooked-batch 7 files / 123 tests; NULL selection repair RED fresh/replay 1 failed / 27 passed and GREEN focused 5 files / 42 tests; final migration authorization RED fresh/replay 1 failed / 28 passed and GREEN 29/29; final full 5,389 passes / 371 skips",
-    "postgres_fresh_replay": "predecessor fresh 15 passed / 1 intended skip, replay 16 passed; cooked-batch fresh/replay 29/29; inherited inventory fresh/replay 26 passed / 33 intended skips after latest master added two inventory-only skipped full-local cases",
+    "focused_vitest": "batch-nutrition RED 3 missing-function failures; GREEN 6 files / 59 tests; prior review repair GREEN backend/gamification/security/inventory 7 files / 69 tests and LEFTOVERS 27/27; first latest-master integration focused 11 files / 197 tests; migration-version RED 1 and GREEN 17/17; d9b5 auth/cooked-batch focused 11 files / 159 tests; 2177 logout/cooked-batch focused 11 files / 131 tests; post-Ready product-catalog/runtime plus cooked-batch 6 files / 105 tests; final startup-window/catalog/cooked-batch 7 files / 123 tests; NULL selection repair RED fresh/replay 1 failed / 27 passed and GREEN focused 5 files / 42 tests; final migration authorization RED fresh/replay 1 failed / 28 passed and GREEN 29/29; callback/refresh renewal repair focused 8 files / 68 tests; final full 5,389 passes / 372 skips",
+    "postgres_fresh_replay": "predecessor fresh 15 passed / 1 intended skip, replay 16 passed; cooked-batch fresh/replay 30/30; inherited inventory fresh/replay 26 passed / 33 intended skips after latest master added two inventory-only skipped full-local cases",
     "complete_cancel_race": "two real connections finish without deadlock; exactly one succeeds, one returns CONFLICT, and the session/Meal/claim/batch terminal state is valid",
     "live_gamification_projection": "snapshot-v2 completion, consumed-unweighed close and legacy eat reuse canonical progress/activity IDs with the existing official notification/badge/achievement helpers",
     "account_session_generation_inventory": "64 routes, 93 write surfaces, 3 auth.users inbound fks; merged-tree checksum eb0a8c1cd875c38ad183c5bf4f06c9b336f08e4b00d4f2d8e425c76f72b91733; checksum-valid omission fixture fails closed",
@@ -186,6 +203,7 @@
     "security_function_postgres": "8 anonymous mutation signatures denied with unchanged checksums",
     "cooked_batch_authorization_manifest_functions": 21,
     "youtube_authorization_final_migration": "the final applied private.verify_full_local_internal_scope() accepts the canonical YouTube extraction POST/GET/PATCH paths and ingredient-registration rate-limit RPC while rejecting unclassified DELETE; verified on fresh and replay",
+    "session_refresh_authorization_final_migration": "the final applied private.verify_full_local_internal_scope() accepts POST /rpc/assert_and_renew_full_local_session_authority_v2 for both auth-callback and auth-refresh while retaining request-authority and every canonical predecessor branch; verified on fresh and replay",
     "workpack_validator_red": "4 CLI failures reproduced the explicit-slice silent no-op, unknown/missing slice success, and overwritten branch caller",
     "workpack_validator_green": "27/27 focused tests; missing shallow base refs are fetched exactly or fail closed; explicit --slice emits Workpack docs OK and fails closed for missing governing docs; legacy branch inference remains active",
     "leftovers_partial_compatibility_indexes": 4,
@@ -194,7 +212,7 @@
     "leftovers_selective_index_usage": "four separate selective representative plans each require an actual Index Scan, Index Only Scan or Bitmap Index Scan node with the exact Index Name, relevant scan conditions, positive actual rows and at most 320 root shared blocks",
     "leftovers_index_definitions": "four full PostgreSQL-normalized pg_catalog.pg_indexes.indexdef values compared exactly and separately from runtime plan assertions",
     "product_catalog_readiness": "new master gate is present and parser/lifecycle static contracts pass; #8 fresh/replay remains 29/29 with required predecessor schema; no server-Mac/full-local runtime was started",
-    "final_full_vitest": "526 files passed / 28 skipped; 5,389 tests passed / 371 skipped",
+    "final_full_vitest": "526 files passed / 28 skipped; 5,389 tests passed / 372 skipped",
     "final_verify_backend": "219 product files / 2,679 tests passed / 150 skipped; build and security E2E 12/12 passed"
   },
   "next_route": "stage3_fresh_backend_review",
