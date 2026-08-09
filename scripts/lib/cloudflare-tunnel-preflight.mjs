@@ -204,6 +204,31 @@ export function evaluateReleaseGate(currentVersion, metadata, platform, captured
   return { success: true, error: null };
 }
 
+function parsePrometheusLabels(raw) {
+  if (raw === undefined) return new Map();
+  if (!raw.startsWith("{") || !raw.endsWith("}")) return null;
+  let remaining = raw.slice(1, -1);
+  const labels = new Map();
+  if (remaining.trim() === "") return labels;
+  while (remaining !== "") {
+    const match = remaining.match(
+      /^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*"((?:\\["\\n]|[^"\\])*)"\s*(,?)/u,
+    );
+    if (!match || labels.has(match[1])) return null;
+    labels.set(match[1], match[2].replace(/\\(\\|"|n)/gu, (_value, escaped) =>
+      escaped === "n" ? "\n" : escaped));
+    remaining = remaining.slice(match[0].length);
+    if (match[3] === ",") {
+      if (remaining.trim() === "") return null;
+    } else if (remaining.trim() !== "") {
+      return null;
+    } else {
+      break;
+    }
+  }
+  return labels;
+}
+
 export function parseTunnelMetrics(raw) {
   const text = String(raw ?? "");
   const buildSamples = [];
@@ -216,13 +241,15 @@ export function parseTunnelMetrics(raw) {
   for (const line of text.split(/\r?\n/u)) {
     if (/^(?:cloudflared_)?build_info(?:\{|\s)/u.test(line)) {
       buildMetricLines += 1;
-      const build = line.match(/^(?:cloudflared_)?build_info\{[^}]*version="([^"]+)"[^}]*\}\s+1(?:\.0+)?$/u);
-      if (build) buildSamples.push(build[1]);
+      const build = line.match(/^(?:cloudflared_)?build_info(\{.*\})\s+1(?:\.0+)?$/u);
+      const labels = parsePrometheusLabels(build?.[1]);
+      if (labels?.has("version")) buildSamples.push(labels.get("version"));
     }
     if (/^cloudflared_tunnel_ha_connections(?:\{|\s)/u.test(line)) {
       connectionMetricLines += 1;
-      const connection = line.match(/^cloudflared_tunnel_ha_connections(?:\{[^}]*\})?\s+([0-9]+)(?:\.0+)?$/u);
-      if (connection) connectionSamples.push(connection[1]);
+      const connection = line.match(/^cloudflared_tunnel_ha_connections(\{.*\})?\s+([0-9]+)(?:\.0+)?$/u);
+      const labels = parsePrometheusLabels(connection?.[1]);
+      if (connection && labels !== null) connectionSamples.push(connection[2]);
     }
     if (!/^cloudflared_tunnel_server_locations\{/u.test(line)) continue;
     if (!/\}\s+1(?:\.0+)?$/u.test(line)) {

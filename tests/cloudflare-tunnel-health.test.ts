@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   buildLocalConnectorHealth,
+  localConnectorHealthExitCode,
   validateLocalConnectorHealth,
   validateMetricsEndpoint,
 } from "../scripts/lib/cloudflare-tunnel-health.mjs";
@@ -136,6 +137,29 @@ describe("Cloudflare local connector health", () => {
     expect(exactBoundary.degraded_duration_ms).toBe(60_000);
     expect(exactBoundary.state).toBe("degraded");
     expect(exactBoundary.signals.warning).toEqual([]);
+  });
+
+  it("treats a recovery after capture as an outage that was still open", () => {
+    const health = buildLocalConnectorHealth({
+      captured_at: "2026-08-10T00:03:00.000Z",
+      metrics_raw: metrics(3),
+      log_raw: [
+        initialConnections,
+        "2026-08-10T00:01:00.000Z ERR connection closed connIndex=3",
+        "2026-08-10T00:04:00.000Z INF Registered tunnel connection connIndex=3 location=icn01 protocol=quic",
+      ].join("\n"),
+    });
+
+    expect(health.degraded_duration_ms).toBe(120_000);
+    expect(health.state).toBe("warning");
+    expect(health.signals.warning).toContain("connector_below_4_over_60s");
+    expect(health.incident_events).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        timestamp: "2026-08-10T00:03:00.000Z",
+        severity: "warning",
+        status: "connector_degraded",
+      }),
+    ]));
   });
 
   it("fails closed for truncated, inconsistent, or out-of-range tunnel metrics", () => {
@@ -288,6 +312,78 @@ describe("Cloudflare local connector health", () => {
     }
   });
 
+  it("preserves canonical unlabeled and labeled build/HA samples", () => {
+    const cases = [
+      metrics(4),
+      metrics(4).replace(
+        "cloudflared_tunnel_ha_connections 4",
+        'cloudflared_tunnel_ha_connections{instance="local"} 4',
+      ),
+      metrics(4).replace(
+        'cloudflared_build_info{version="2026.5.2"} 1',
+        'cloudflared_build_info{goversion="go1.24.2",version="2026.5.2"} 1',
+      ),
+    ];
+
+    for (const metricsRaw of cases) {
+      expect(parseTunnelMetrics(metricsRaw)).toEqual(expect.objectContaining({
+        success: true,
+        samples_valid: true,
+      }));
+    }
+  });
+
+  it("rejects malformed labels even when each named metric appears exactly once", () => {
+    const cases = [
+      metrics(4).replace(
+        "cloudflared_tunnel_ha_connections 4",
+        "cloudflared_tunnel_ha_connections{garbage} 4",
+      ),
+      metrics(4).replace(
+        'cloudflared_build_info{version="2026.5.2"} 1',
+        'cloudflared_build_info{garbage,version="2026.5.2"} 1',
+      ),
+      metrics(4).replace(
+        'cloudflared_build_info{version="2026.5.2"} 1',
+        'cloudflared_build_info{version="2026.5.2",version="2026.5.2"} 1',
+      ),
+      metrics(4).replace(
+        "cloudflared_tunnel_ha_connections 4",
+        'cloudflared_tunnel_ha_connections{label="value" 4',
+      ),
+      metrics(4).replace(
+        "cloudflared_tunnel_ha_connections 4",
+        "cloudflared_tunnel_ha_connections{label=unquoted} 4",
+      ),
+      metrics(4).replace(
+        "cloudflared_tunnel_ha_connections 4",
+        'cloudflared_tunnel_ha_connections{label="a",label="b"} 4',
+      ),
+      metrics(4).replace(
+        'cloudflared_build_info{version="2026.5.2"} 1',
+        'cloudflared_build_info{version="2026.5.2",note="bad\\q"} 1',
+      ),
+      metrics(4).replace(
+        "cloudflared_tunnel_ha_connections 4",
+        'cloudflared_tunnel_ha_connections{label="value"} 4 1786300000',
+      ),
+    ];
+
+    for (const metricsRaw of cases) {
+      const parsed = parseTunnelMetrics(metricsRaw);
+      expect(parsed.samples_valid).toBe(false);
+      expect(parsed.success).toBe(false);
+      expect(buildLocalConnectorHealth({
+        captured_at: "2026-08-10T00:03:00.000Z",
+        metrics_raw: metricsRaw,
+        log_raw: initialConnections,
+      })).toEqual(expect.objectContaining({
+        state: "unknown",
+        connector: expect.objectContaining({ metrics_valid: false }),
+      }));
+    }
+  });
+
   it("validates the exact local health schema and state/incident invariants", () => {
     const valid = buildLocalConnectorHealth({
       captured_at: "2026-08-10T00:03:00.000Z",
@@ -304,6 +400,50 @@ describe("Cloudflare local connector health", () => {
     })).toBe(false);
     expect(validateLocalConnectorHealth({ ...valid, credential: "must-not-escape" })).toBe(false);
     expect(validateLocalConnectorHealth({ ...valid, state: "healthy" })).toBe(false);
+
+    const healthy = buildLocalConnectorHealth({
+      captured_at: "2026-08-10T00:03:00.000Z",
+      metrics_raw: metrics(4),
+      log_raw: initialConnections,
+    });
+    const impossibleSingleSample = {
+      ...healthy,
+      reconnect_ms: { count: 1, p50: 14_999, p95: 14_999, max: 16_001 },
+    };
+    expect(validateLocalConnectorHealth(impossibleSingleSample)).toBe(false);
+    expect(localConnectorHealthExitCode(impossibleSingleSample)).toBeNull();
+
+    const slowReconnect = {
+      ...healthy,
+      state: "warning",
+      reconnect_ms: { count: 1, p50: 16_001, p95: 16_001, max: 16_001 },
+      signals: { critical: [], warning: ["reconnect_over_15s"], diagnostic: [] },
+      incident_events: [{
+        timestamp: "2026-08-10T00:02:00.000Z",
+        source: "local_connector",
+        kind: "connector_health",
+        severity: "warning",
+        status: "reconnect_slow",
+        error: "RECONNECT_SLOW",
+        colo: "ICN",
+        network_label: null,
+      }],
+    };
+    expect(validateLocalConnectorHealth(slowReconnect)).toBe(true);
+    expect(validateLocalConnectorHealth({
+      ...slowReconnect,
+      incident_events: [
+        ...slowReconnect.incident_events,
+        { ...slowReconnect.incident_events[0], timestamp: "2026-08-10T00:02:30.000Z" },
+      ],
+    })).toBe(false);
+    expect(validateLocalConnectorHealth({
+      ...slowReconnect,
+      incident_events: [{
+        ...slowReconnect.incident_events[0],
+        timestamp: "2026-08-09T00:02:59.999Z",
+      }],
+    })).toBe(false);
   });
 
   it("never serializes raw metrics, logs, token, cookie, JWT, email, UUID, IP, path, header, or body", () => {

@@ -121,6 +121,8 @@ export function validateLocalConnectorHealth(value) {
   }
   if ((reconnect.count === 0 && [reconnect.p50, reconnect.p95, reconnect.max].some((item) => item !== null))
     || (reconnect.count > 0 && [reconnect.p50, reconnect.p95, reconnect.max].some((item) => item === null))
+    || (reconnect.count === 1
+      && !(reconnect.p50 === reconnect.p95 && reconnect.p95 === reconnect.max))
     || (reconnect.count > 0 && !(reconnect.p50 <= reconnect.p95 && reconnect.p95 <= reconnect.max))) {
     return false;
   }
@@ -163,10 +165,13 @@ export function validateLocalConnectorHealth(value) {
   if (value.state !== expectedState) return false;
 
   const eventSignals = new Set();
+  let slowReconnectIncidentCount = 0;
+  const capturedAtMs = Date.parse(value.captured_at);
   for (const event of value.incident_events) {
     if (!exactObjectKeys(event, INCIDENT_KEYS)
       || !utcIsoTimestamp(event.timestamp)
-      || Date.parse(event.timestamp) > Date.parse(value.captured_at)
+      || Date.parse(event.timestamp) < capturedAtMs - 86_400_000
+      || Date.parse(event.timestamp) > capturedAtMs
       || event.source !== "local_connector"
       || event.kind !== "connector_health"
       || !["ICN", "LAX", "OTHER", "MISSING"].includes(event.colo)
@@ -178,10 +183,12 @@ export function validateLocalConnectorHealth(value) {
       return false;
     }
     if (!signals[contract.signal_group].includes(contract.signal)) return false;
+    if (event.status === "reconnect_slow") slowReconnectIncidentCount += 1;
     eventSignals.add(contract.signal);
   }
-  return [...signals.critical, ...signals.warning, ...signals.diagnostic]
-    .every((signal) => eventSignals.has(signal));
+  return slowReconnectIncidentCount <= reconnect.count
+    && [...signals.critical, ...signals.warning, ...signals.diagnostic]
+      .every((signal) => eventSignals.has(signal));
 }
 
 export function localConnectorHealthExitCode(value) {
@@ -322,7 +329,8 @@ export function buildLocalConnectorHealth({
     outage.simultaneous_full_outage && timestampInWindow(outage.disconnect_completed_at)
   );
   const openOutages = tunnelLog.outages.filter((outage) => {
-    if (outage.recovered_at !== null) return false;
+    const recoveredAt = Date.parse(outage.recovered_at ?? "");
+    if (Number.isFinite(recoveredAt) && recoveredAt <= capturedAtMs) return false;
     const disconnectedAt = Date.parse(outage.disconnect_started_at);
     return Number.isFinite(disconnectedAt) && disconnectedAt <= capturedAtMs;
   });
