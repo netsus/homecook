@@ -1,7 +1,10 @@
 # COOK_MODE — #11 cooked-batch weight UI refresh
 
 > Stage: Homecook #11 `cooked-batch-weight-ui` fresh Stage 1 design-generator
-> Lineage: HOLD report `337daa808971802c79698df64c70240205addba4` → parent/current base `c16102a3072e929e45bb24a69464cd3110d03db5`
+> Reviewed design input: commit `0d64660ff8a7059754f1534cf7663573247a5263`, tree `f41f2ed854a3596dc09928063a11308f38c6552f` (the exact bytes reviewed by the two cooked-batch-weight-ui critics)
+> Internal 1.5 HOLD evidence: commit `337daa808971802c79698df64c70240205addba4`, report `docs/workpacks/cooked-batch-weight-ui/evidence/2026-08-10-stage1-internal1-5-review.md`
+> Critic HOLD evidence / repair base: commit `ec1f1d816089bdb8973972107f7f0fedd7dbe033`, tree `7d244a636527d1530217b6b99c92b7de84fb6f22`, parent `0d64660ff8a7059754f1534cf7663573247a5263`
+> Evidence role rule: both HOLD sources are repair inputs only; neither approves this design or serves as its parent/base claim
 > Current official tuple: 요구사항 `v1.7.30` / 화면정의서 `v1.5.34` / 유저 Flow `v1.3.32` / DB `v1.3.32` / API `v1.2.37`
 > Contract lineage: API `v1.2.37` preserves #8 API `v1.2.36` section `0-CBW`.
 > Classification: `prototype-derived design`, high-risk UI change, not an anchor screen
@@ -170,10 +173,14 @@ COOK_MODE whole-board
 | private 404 | nondisclosing safe error | safe back | batch/session existence and owner hidden |
 | stored replay | authoritative first success shown once | safe continuation only | sheet closes once; no duplicate toast/animation/effect |
 | completed/cancelled read-only | terminal session summary | return only | no new completion controls |
-| unknown / legacy-null projection | `이전 기록 · 중량 상태를 확인할 수 없음` | return only | do not infer missing, 0g, or depleted |
-| depleted projection | reason-specific terminal label | return only | distinct from unknown; no weight/helper/mutation controls |
 
-`unknown / legacy-null` is not `missing`: legacy null means the new state cannot be proven. `missing` is an explicit v2 weight state. A depleted projection is terminal and must never fall back to the completion form.
+### COOK_MODE N/A boundary
+
+`unknown / legacy-null` and `depleted` are **N/A — LEFTOVERS read-model only**. Active COOK_MODE reads the existing snapshot-v2 cook-mode session and submits the existing complete mutation; it does not list or refetch historical cooked batches. A fresh successful completion returns an initial `known|missing + available` `CookedBatchProjection`, while the completed/cancelled session summary is the only local terminal view.
+
+- Do not add `GET /cooked-batches`, a hidden batch refresh, a new response field, or a guessed client status to make legacy-null/depleted reachable here.
+- Do not treat a completion response with an unexpected legacy-null/depleted authority as a valid completion form state. Fail closed through the existing invalid-response/error path and leave historical rendering to LEFTOVERS.
+- Stage 4 COOK_MODE evidence excludes legacy-null and depleted cards. Those states belong to LEFTOVERS evidence only.
 
 ## 6. Interaction notes
 
@@ -214,7 +221,7 @@ COOK_MODE whole-board
 | success | exact 8-key data with `cooked_batch: CookedBatchProjection` | render response truth, never client-computed batch status |
 | errors | existing wrapper `{ success, data, error }`; `{ code, message, fields[] }` | no new public code/copy contract invented |
 
-The #8 batch mutation endpoints may be used by the LEFTOVERS surface only. COOK_MODE completion does not call `PATCH /cooked-batches/{id}/weight`, discard, adjust, close, or meal-log endpoints.
+The #8 list and batch mutation endpoints may be used by the LEFTOVERS surface only. COOK_MODE completion does not call `GET /cooked-batches`, `PATCH /cooked-batches/{id}/weight`, discard, adjust, close, or meal-log endpoints. It also does not join its returned batch to `/leftovers`.
 
 ## 8. Visual and token rules
 
@@ -235,6 +242,8 @@ The #8 batch mutation endpoints may be used by the LEFTOVERS surface only. COOK_
 ## 10. Evidence plan and limitations
 
 Stage 4 must create fresh runtime evidence under `ui/designs/evidence/cooked-batch-weight-ui/` for 390px, 320px, and desktop, covering known, weigh-later, container helper, pending, error, and replay. The manifest must record the implementation head and capture times before independent authority reports cite it.
+
+COOK_MODE evidence must not fabricate legacy-null or depleted fixtures. Those projections are exercised and evidenced only on LEFTOVERS, whose owner list contract can actually return them.
 
 Required runtime checks include:
 

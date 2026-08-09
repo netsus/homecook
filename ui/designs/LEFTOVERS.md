@@ -1,7 +1,10 @@
 # LEFTOVERS — #11 cooked-batch weight and lifecycle UI
 
 > Stage: Homecook #11 `cooked-batch-weight-ui` fresh Stage 1 design-generator
-> Lineage: HOLD report `337daa808971802c79698df64c70240205addba4` → parent/current base `c16102a3072e929e45bb24a69464cd3110d03db5`
+> Reviewed design input: commit `0d64660ff8a7059754f1534cf7663573247a5263`, tree `f41f2ed854a3596dc09928063a11308f38c6552f` (the exact bytes reviewed by the two cooked-batch-weight-ui critics)
+> Internal 1.5 HOLD evidence: commit `337daa808971802c79698df64c70240205addba4`, report `docs/workpacks/cooked-batch-weight-ui/evidence/2026-08-10-stage1-internal1-5-review.md`
+> Critic HOLD evidence / repair base: commit `ec1f1d816089bdb8973972107f7f0fedd7dbe033`, tree `7d244a636527d1530217b6b99c92b7de84fb6f22`, parent `0d64660ff8a7059754f1534cf7663573247a5263`
+> Evidence role rule: both HOLD sources are repair inputs only; neither approves this design or serves as its parent/base claim
 > Current official tuple: 요구사항 `v1.7.30` / 화면정의서 `v1.5.34` / 유저 Flow `v1.3.32` / DB `v1.3.32` / API `v1.2.37`
 > Contract lineage: API `v1.2.37` preserves #8 API `v1.2.36` section `0-CBW`.
 > Classification: `prototype-derived design`, high-risk UI change, not an anchor screen
@@ -9,10 +12,11 @@
 
 ## 1. Purpose and ownership
 
-LEFTOVERS becomes the owner-facing presentation of the existing #8 `CookedBatchProjection`. It lets a user understand known, missing, unrecoverable, legacy-unknown, available, and depleted truth without treating discard/mixed states as eaten.
+LEFTOVERS preserves the official legacy leftover-management journey and adds the owner-facing #8 cooked-batch weight/lifecycle presentation. These are two independent sections backed by two independent read models. A legacy row and a v2 batch row are never guessed to be the same record.
 
 #11 owns only the UI/client-adapter lane:
 
+- preserve the existing `/leftovers` section, `PlannerAddSheet`, planner reuse, `다먹음`, `ATE_LIST`, `덜먹음`, and stale-review/`계속 보관` behaviors without changing their contracts;
 - read the existing owner-only `GET /cooked-batches?availability=all` model;
 - display content/name, cooked time, cooking servings, finished/remaining grams, weight/batch/depleted state, revision, and nutrition availability;
 - present existing delayed weight, unrecoverable, discard, adjust, unweighed close, and exact current-closure cancel mutations;
@@ -25,13 +29,16 @@ LEFTOVERS becomes the owner-facing presentation of the existing #8 `CookedBatchP
 - new endpoint, field, status, error code, action enum, mutation, direct DML, generic reopen, or unrecoverable restore;
 - servings-to-grams estimates, zero-filled nutrition, discard XP, or automatic meal entry.
 
-### Legacy planner-add separation
+### Two-source identity and action isolation
 
-The previous LEFTOVERS design centered `다먹음` and `플래너에 추가`, including `PlannerAddSheet`, serving stepper, and `POST /meals`. That is an older planner-reuse context and is not the #11 cooked-batch weight/lifecycle surface.
+The official legacy journey is required existing behavior, not an optional compatibility surface. It remains visible in its own first section and retains its current route/action group:
 
-- This artifact removes PlannerAddSheet, planner date/meal/serving controls, optimistic `다먹음`, ATE_LIST routing, and `POST /meals` binding from the #11 design.
-- If the existing product keeps a legacy planner-reuse entry elsewhere, it must remain a visually and semantically separate existing surface. It cannot appear inside the #11 batch action group or be mistaken for a weight, discard, adjust, close, or consume action.
-- The #11 empty state has only a safe Planner return, matching the workpack. It does not use empty-state planner-add as a mutation shortcut.
+- **Legacy section source/identity:** `GET /leftovers?status=leftover`, keyed only by its returned `leftover_id` (`items[].id`). `다먹음`, `계속 보관`, and planner reuse send that exact `leftover_id`; ATE_LIST separately reads `status=eaten` and `덜먹음` sends its exact `leftover_id`.
+- **Cooked-batch section source/identity:** `GET /cooked-batches?availability=all`, keyed only by its returned `batch_id` (`items[].id`). Weight/discard/adjust/close/cancel send that exact `batch_id` and projected revision/event ID.
+- A client may namespace local DOM/state keys as `legacy:<leftover_id>` and `batch:<batch_id>` only to avoid collisions. Those prefixes are not public fields and are never persisted or sent.
+- Never join, merge, deduplicate, or cross-route the two sources by `id`, `recipe_id`, title, thumbnail, `cooked_at`, servings, array position, or any other guessed similarity. If both APIs return visually similar records, both remain in their clearly labeled sections until an approved contract supplies a stable relation.
+- Legacy cards never receive cooked-batch weight mutations. Cooked-batch cards never call legacy `eat`, `uneat`, `keep`, or planner-add actions. A v2 compatibility `status=eaten` is display compatibility only and does not authorize a legacy action.
+- Stale-review banner/card copy comes only from `/leftovers.stale_reviewed_at`; `source_meal_label` and `source_planned_servings` also remain legacy-only. They are never synthesized for a 15-field batch item.
 
 ## 2. Existing #8 reference boundary
 
@@ -48,15 +55,15 @@ Those artifacts are references only. They are not fresh #11 design, runtime, cri
 ## 3. Mobile information architecture
 
 ```text
-LEFTOVERS page
-  ├─ sticky app bar: back / 남은요리
-  ├─ optional existing stale-storage notice (separate concern)
-  ├─ vertically scrolling cooked-batch list
-  │    └─ batch card
-  │         ├─ recipe identity + cooked metadata
-  │         ├─ weight and nutrition truth
-  │         ├─ state-specific explanation
-  │         └─ #11 eligible actions only
+LEFTOVERS page — one vertical page scroll
+  ├─ sticky app bar: back / 남은요리 / 다먹은 목록
+  ├─ Section A: 남은요리 관리 (legacy `/leftovers` read model)
+  │    ├─ stale-storage banner + 계속 보관
+  │    └─ legacy card: planner-add / 다먹음 only
+  ├─ section divider + source-specific explanation
+  ├─ Section B: 중량·잔량 기록 (v2 `/cooked-batches` read model)
+  │    ├─ batch cards: weight/lifecycle truth + #11 actions only
+  │    └─ cursor control: 더 보기 / next pending / error / retry
   └─ existing bottom navigation + safe area
 
 Eligible action
@@ -67,18 +74,32 @@ Eligible action
        └─ fixed footer + safe area: cancel / confirm
 ```
 
-- The page and cards never create horizontal page scroll. The batch list owns vertical page scrolling.
-- Every mutation uses a familiar bottom sheet to preserve the list context. Destructive/irreversible actions are not inline one-tap mutations.
+- The page and cards never create horizontal page scroll. Both sections share one familiar vertical page scroll; neither creates a nested list scroll.
+- Each section owns its own loading, empty, error, ready, and action state. Failure or emptiness in one source does not erase or relabel the other section.
+- Every #11 cooked-batch mutation uses a familiar bottom sheet to preserve the list context. Destructive/irreversible batch actions are not inline one-tap mutations; existing legacy action patterns remain unchanged.
 - Sheet body scrolls internally, background is locked, and fixed footer stays above `env(safe-area-inset-bottom)`.
 - Default mobile width is 390px; 320px is the narrow sentinel. At 320px action buttons stack, labels wrap, numeric inputs remain at least 16px, and all targets stay at least 44×44px.
 
 ## 4. 390px wireframes
 
-### 4.1 List with distinct batch states
+### 4.1 Two-section list and action hierarchy
 
 ```text
 ┌──────────────────────────────────────┐ 390
-│ ‹                남은요리            │ sticky app bar
+│ ‹                남은요리   [다먹은 목록]│ sticky app bar
+├──────────────────────────────────────┤
+│ 남은요리 관리                         │ Section A · `/leftovers`
+│ 플래너에 다시 쓰거나 다 먹음 처리해요 │
+│ 오래 보관한 요리 1개                  │ legacy stale banner
+│                                      │
+│ 김치찌개                     8월 1일  │ legacy card / leftover_id
+│ 저녁 · 계획 2인분 · 요리 4인분        │ legacy-only metadata
+│ 보관한 지 30일이 지났어요             │ stale_reviewed_at=null
+│ [계속 보관]                           │ `/leftovers/{id}/keep`
+│ [플래너에 추가]             [다먹음]  │ legacy action group
+├──────────────────────────────────────┤ strong section divider
+│ 중량·잔량 기록                        │ Section B · `/cooked-batches`
+│ 요리 직후 무게와 남은 양을 관리해요   │ no legacy actions in this section
 ├──────────────────────────────────────┤
 │ 김치찌개                    남은 요리 │
 │ 8월 10일 요리 · 4인분                │
@@ -103,15 +124,18 @@ Eligible action
 ├──────────────────────────────────────┤
 │ 미역국                     이전 기록 │ legacy null / unknown
 │ 중량 상태를 확인할 수 없어요         │ no action; not “missing”
-│ [상세 확인]                          │ read-only
 ├──────────────────────────────────────┤
 │ 카레                         모두 버림│ depleted+discarded
 │ 완성 900g · 남은 양 0g               │
 │ 종료된 기록이에요                    │ read-only
+├──────────────────────────────────────┤
+│               [더 보기]              │ has_next=true, 44px+
 └──────────────────────────────────────┘
 ```
 
-`먹은 양 기록` or any consumed-amount CTA is intentionally absent. #12 may add it later only after its own merge and activation.
+The same recipe title may appear once in each section. The UI does not imply that those cards share an ID or state. Section labels and spacing are always visible before their first cards, including at 320px.
+
+`먹은 양 기록` or any consumed-amount CTA is intentionally absent from the cooked-batch section. #12 may add it later only after its own merge and activation. Legacy `다먹음` remains only in Section A and is not a gram consumption action.
 
 ### 4.2 Delayed original-weight sheet
 
@@ -194,13 +218,49 @@ discard input                         negative-adjust confirm
 
 After an exact current `closed_unweighed` projection, `current_unweighed_closure_event_id` may expose one secondary action labeled `[방금 종료 취소]`. It calls only `cancel_current` with that exact event ID. It is not called `다시 열기`, is absent after later events, and is never available for `marked_unrecoverable`.
 
+### 4.6 Cursor pagination — familiar `더 보기`
+
+```text
+last loaded batch card
+├──────────────────────────────────────┤
+│               [더 보기]              │ idle, has_next=true
+│                                      │
+│          더 불러오는 중…             │ pending; current cards stay
+│                                      │
+│ 다음 기록을 불러오지 못했어요        │ next-page error, role=alert
+│              [다시 시도]             │ same untouched opaque cursor
+│                                      │
+│ 목록 조건이 바뀌었어요               │ cursor/filter 422
+│         [처음부터 새로고침]           │ no cursor, same `availability=all`
+└──────────────────────────────────────┘
+```
+
+- First and next pages use the exact `availability=all` filter. The client does not display, parse, edit, decode, log, or transplant the opaque cursor; it only returns the unchanged `next_cursor` from the immediately preceding successful page.
+- `has_next=false` requires `next_cursor=null` and removes the control. `has_next=true` requires a non-null next cursor; an invalid container fails closed as a read error rather than guessing a cursor.
+- Append order remains the server order `cooked_at DESC, id DESC`. Within the cooked-batch section, duplicate `batch.id` cards are not appended; this is page-overlap protection only, never a cross-source join or content-based dedupe.
+- Next-page pending keeps every already rendered card, open sheet, correctable input, idempotency key, and mutation pending state intact. It disables only duplicate `더 보기` requests and never cancels or replays an action.
+- While a batch mutation is pending, pagination retry/refresh controls are disabled. An already-running next-page request may append its cards but must not close, reset, replace, or refocus the mutation sheet or its invoking card.
+- A network/server next-page error keeps loaded cards and offers `[다시 시도]` with the same untouched cursor. A filter-bound/malformed cursor `422 VALIDATION_ERROR` is not retried as valid: `[처음부터 새로고침]` requests the first `availability=all` page without a cursor and replaces the batch list only after success.
+- On append, a polite live region announces `중량·잔량 기록 N개를 더 불러왔어요`. When pagination still owns focus, focus stays on `[더 보기]` while it remains; if the final append removes the control, focus moves to the first newly appended batch-card heading (`tabindex=-1`). If a mutation sheet has since taken focus, append never steals it. Error focus moves to the next-page alert only when pagination still owns focus; retry success follows the same rule.
+
 ## 5. 320px narrow wireframes
 
-### 5.1 Known and missing cards
+### 5.1 Both sections, known/missing, and pagination
 
 ```text
 ┌──────────────────────────────┐ 320
-│ ‹          남은요리          │
+│ ‹       남은요리 [다먹은 목록]│
+├──────────────────────────────┤
+│ 남은요리 관리                │ Section A
+│ 플래너 재사용·다먹음         │
+│ 김치찌개 · 저녁 · 2인분      │ legacy card
+│ 보관한 지 30일이 지났어요    │
+│ [계속 보관]                  │
+│ [플래너에 추가]              │ 44px+, stack
+│ [다먹음]                     │
+├──────────────────────────────┤ strong section divider
+│ 중량·잔량 기록               │ Section B
+│ 음식 무게와 남은 양 관리     │
 ├──────────────────────────────┤
 │ 김치찌개            남은 요리│
 │ 8월 10일 · 4인분             │
@@ -215,6 +275,8 @@ After an exact current `closed_unweighed` projection, `current_unweighed_closure
 │ 필요해요                     │
 │ [완성 중량 입력]             │
 │ [원래 무게를 알 수 없음]     │
+├──────────────────────────────┤
+│ [더 보기]                    │ full width, 44px+
 └──────────────────────────────┘
 ```
 
@@ -239,20 +301,32 @@ After an exact current `closed_unweighed` projection, `current_unweighed_closure
 - Sheet width remains within viewport and has no page-level horizontal overflow.
 - Long Korean labels wrap. Buttons stack instead of reducing target height, font, or padding.
 - The active input, live error, and CTA remain reachable by internal scroll when the virtual keyboard is visible.
+- At 320px, the two section headings remain visible and action groups never share a row. `더 보기`, retry, and refresh controls use the same full-width 44px minimum pattern.
 
 ## 6. Display truth and state matrix
 
-### 6.1 Weight/batch truth
+### 6.1 Legacy `/leftovers` truth
+
+| Legacy source state | Required UI/action | Forbidden crossover |
+| --- | --- | --- |
+| `status=leftover`, not stale | recipe/date/latest meal/planned + cooking servings | cooked-batch revision/weight/status inference |
+| `status=leftover`, stale and unreviewed | `보관한 지 N일이 지났어요`, `계속 보관` | automatic `eaten`, batch close/discard |
+| `status=leftover` action group | `플래너에 추가`, `다먹음` | weight/discard/adjust/close/cancel mutation |
+| `status=eaten` in ATE_LIST | eaten date + `덜먹음`; 30-day auto-hide policy | cooked-batch reopen/cancel inference |
+
+Planner-add, `다먹음`, ATE_LIST, `덜먹음`, and stale review retain their existing loading/pending/error/focus behavior and current contracts. This design changes only their placement into the explicit legacy section; it does not rename their endpoint bodies or make them batch actions.
+
+### 6.2 Weight/batch truth
 
 | Projection | Required label and values | #11 actions | Forbidden |
 | --- | --- | --- | --- |
 | `known + available` | finished/remaining g; nutrition status; revision | `버림`, `양 조정` | consumed-amount CTA before #12 |
 | `missing + available` | `무게 입력 필요`; no zero/estimate | `완성 중량 입력`, `원래 무게를 알 수 없음`, `무게 없이 종료` | g meal-log, guessed grams |
 | `unrecoverable + available` | `원래 무게 확인 불가`; weight values remain null | `무게 없이 종료` | weight input, restore, marker reversal, g meal-log |
-| legacy all-null authority | `이전 기록 · 중량 상태를 확인할 수 없음` | read-only detail/safe return | treating as missing, unrecoverable, available, or depleted |
+| legacy all-null authority | `이전 기록 · 중량 상태를 확인할 수 없음` | none; card copy is locally complete | treating as missing, unrecoverable, available, or depleted; detail endpoint/action |
 | `depleted` | one exact reason label; known weights may show remaining 0g | read-only; exact current-closure cancel only when projection provides eligibility | weight/discard/adjust/close/consume controls; generic reopen |
 
-### 6.2 Depleted reason labels
+### 6.3 Depleted reason labels
 
 | `depleted_reason` | User label | Legacy eaten / XP meaning |
 | --- | --- | --- |
@@ -265,17 +339,22 @@ After an exact current `closed_unweighed` projection, `current_unweighed_closure
 
 Only the two consumed variants may look eaten. Discarded and mixed variants must not use eaten color, icon, copy, navigation, or celebration.
 
-### 6.3 Screen and request states
+### 6.4 Screen and request states
 
-| State | Visible response | Action behavior |
+| Scope/state | Visible response | Action behavior |
 | --- | --- | --- |
-| `loading` | stable card skeletons and `불러오는 중` status | no stale/guessed buttons |
-| `empty` | `저장된 요리 기록이 없어요` + explanation | safe `[플래너로 돌아가기]` only |
-| `ready` | authoritative cards in `cooked_at DESC,id DESC` order | state-eligible #11 actions only |
-| `error` read | non-private retry message | retry + safe back; no cached mutation controls |
+| page `loading` | two stable section shells; each source reports its own progress | no stale/guessed buttons |
+| legacy section `empty` | official `남은 요리가 없어요. 요리를 완료하면 여기에 저장돼요.`; ATE_LIST link remains | safe Planner return; no fabricated batch meaning |
+| batch section `empty` | `중량·잔량 기록이 없어요` | no batch action; legacy section remains usable |
+| either section read `error` | source-local non-private retry message | retry only that source; the other section remains visible |
+| legacy `ready` | `/leftovers` recent order and exact legacy metadata | planner-add/eat/keep only; ATE_LIST remains separate route |
+| batch first page `ready` | authoritative `cooked_at DESC, id DESC` cards | state-eligible #11 actions and `더 보기` only |
+| batch next pending | existing cards + `더 불러오는 중` | one page request; all card/action state preserved |
+| batch next error | loaded cards + alert + retry | same cursor retry; mutation 0 |
+| batch cursor/filter 422 | loaded cards + `목록 조건이 바뀌었어요` | first-page refresh without cursor; no cursor repair/decoding |
 | `permission` 401 | login guidance | return-to-action; private cards not rendered |
 | private 404 | same nondisclosing missing message | safe back; no owner/state clue |
-| `read-only` | legacy unknown or depleted truth | no mutation affordance except exact eligible current-closure cancel |
+| batch `read-only` | batch-model legacy unknown or depleted truth | no mutation affordance except exact eligible current-closure cancel |
 | mutation pending | values retained; progress/live status | duplicate submit, Escape, backdrop, and close locked |
 | 409 stale/state/bounds | actionable alert; refreshed card truth | input retained if still safe; require fresh deliberate retry |
 | 409 `WEIGHT_UNRECOVERABLE` | card refreshes to unrecoverable | all gram controls removed; no restore offered |
@@ -284,9 +363,20 @@ Only the two consumed variants may look eaten. Discarded and mixed variants must
 | same-key replay | stored result rendered once | one sheet close/card update; no duplicate feedback/effect |
 | same-key different payload | existing conflict alert | mutation 0; new deliberate action required |
 
+The page is fully empty only when both independent sections are empty. Even then, the existing ATE_LIST route remains reachable if its product navigation normally exposes it; the page does not infer its contents from either empty response.
+
 ## 7. Action interaction notes
 
+### Legacy action group
+
+- `플래너에 추가` opens the existing `PlannerAddSheet` with its date/meal/serving controls and existing `POST /meals` body containing the exact legacy `leftover_dish_id`. It never receives a `batch_id`.
+- `다먹음` and `계속 보관` use the exact legacy card `leftover_id`. ATE_LIST reads its own `/leftovers?status=eaten` response, and `덜먹음` uses the exact ID from that response.
+- A legacy action pending/error is confined to its legacy card/sheet. It does not disable, remove, or update a visually similar batch card. Likewise, a batch success never optimistically changes a legacy card.
+- Existing stale-review, PlannerAddSheet, `다먹음`, ATE_LIST, and `덜먹음` focus/error/return behavior stays protected by current tests. #11 adds no new legacy mutation or navigation.
+
 ### Shared bottom-sheet behavior
+
+This behavior applies to the #11 cooked-batch action sheets and to the existing PlannerAddSheet where its current contract already matches. It does not silently convert legacy `다먹음` or `계속 보관` into new sheets.
 
 1. Invoking CTA is stored for focus restoration.
 2. Sheet opens with initial focus on the title; background is inert and scroll-locked.
@@ -332,7 +422,23 @@ Only the two consumed variants may look eaten. Discarded and mixed variants must
 
 ## 9. Data and API binding
 
-### 9.1 Read model
+### 9.1 Legacy leftover-management read model
+
+`GET /leftovers?status=leftover` and the separate ATE_LIST `GET /leftovers?status=eaten`
+
+| Legacy UI | Existing field/source |
+| --- | --- |
+| card identity | `items[].id` as `leftover_id` only |
+| recipe/title/thumbnail | `recipe_id`, `recipe_title`, `recipe_thumbnail_url` |
+| time/status | `cooked_at`, `eaten_at`, `status` |
+| stale review | `stale_reviewed_at` |
+| planner context | `source_meal_label`, `source_planned_servings`, `cooking_servings` |
+| planner reuse | existing `POST /meals` with exact `leftover_dish_id` |
+| done / undo / keep | existing `/leftovers/{leftover_id}/eat|uneat|keep` |
+
+This read model is the only source for PlannerAddSheet, `다먹음`, ATE_LIST, `덜먹음`, stale banner, and `계속 보관`. None of its fields authorize a cooked-batch mutation or supply `expected_revision`.
+
+### 9.2 Cooked-batch read model
 
 `GET /cooked-batches?availability=all&limit=20[&cursor=opaque]`
 
@@ -349,6 +455,8 @@ Only the two consumed variants may look eaten. Discarded and mixed variants must
 
 All 15 fields are present for authorized items, but legacy-only fields may be explicit `null`. The UI never derives grams or state from servings, title, thumbnail, or legacy `status`.
 
+The card itself completes the read-only legacy-null presentation with `recipe_title`, optional thumbnail, `cooked_at`, optional `cooking_servings`, and the explicit unknown labels derived only from null authority fields. There is no `[상세 확인]`, detail route, detail endpoint, hidden read, or mutation for that card.
+
 Nutrition copy:
 
 - `complete` → `영양 계산 가능`
@@ -356,7 +464,14 @@ Nutrition copy:
 - `unavailable` → `영양 정보 없음`
 - legacy `null` → `영양 상태를 확인할 수 없음`
 
-### 9.2 Existing mutation bodies
+Pagination container and client rules:
+
+- Consume only exact `{ items, next_cursor, has_next }`.
+- `next_cursor` is opaque and filter-bound; the client neither interprets nor modifies it.
+- Append only within the batch section in server-provided `cooked_at DESC, id DESC` order, suppressing an overlapping duplicate `batch.id` without joining either read model.
+- Page state (`idle|pending|error`) is local UI state, not a new public status or response field.
+
+### 9.3 Existing cooked-batch mutation bodies
 
 | User action | Existing request |
 | --- | --- |
@@ -369,21 +484,26 @@ Nutrition copy:
 
 Every success uses exact 3-key `{ action, batch, event_id }`. The wrapper remains `{ success, data, error }`; error remains `{ code, message, fields[] }`. No alias field, local status, new error name, or new mutation action is added.
 
+No endpoint in this table receives a `leftover_id`. No legacy endpoint in §9.1 receives a `batch_id`, batch revision, or batch event ID.
+
 ## 10. Visual hierarchy and tokens
 
-- Use current app palette and shape tokens: `--brand-primary`, `--brand-primary-soft`, `--surface`, `--surface-fill`, `--text-2/3`, `--border`, `--danger`, `--radius-control/card/sheet`, `--control-height-md/lg`.
+- Use current app palette and shape tokens: `--brand-primary`, `--brand-primary-soft`, `--surface`, `--surface-fill`, `--text-2/3`, `--line`, `--danger`, `--danger-border`, `--radius-control/card/sheet`, `--control-height-md/lg`.
+- General card/section dividers use canonical `--line`; destructive confirmation borders use existing `--danger-border`. Do not add `--border`, a new global token, fallback hex, or ad-hoc color in this slice.
 - Known remaining grams are the strongest card datum after the recipe title. Status labels are text plus shape/icon, not color alone.
 - Unblocking `완성 중량 입력` is primary for missing state. Irreversible `원래 무게를 알 수 없음` is a separated danger secondary action.
 - `버림` is destructive secondary; `양 조정` is neutral secondary. Neither visually competes with a future #12 consumed CTA.
 - Depleted cards reduce action affordance and emphasize terminal reason. Consumed, discarded, and mixed use distinct text/icon treatment; discarded/mixed never use eaten celebration styling.
-- Existing stale-storage notice, if retained by the surrounding screen, stays visually separate from batch weight status and cannot introduce a new depleted reason.
+- The required existing stale-storage notice stays visually separate from batch weight status and cannot introduce a new depleted reason.
 
 ## 11. Accessibility contract
 
+- `남은요리 관리` and `중량·잔량 기록` are real section headings in the accessibility tree. Card accessible names include their section context so same-title records remain distinguishable without exposing IDs.
 - Card actions include recipe context: `김치찌개 버린 양 기록`, `김치찌개 남은 양 조정`, `닭볶음탕 완성 중량 입력`.
 - Numeric inputs have 16px+ text, visible unit, explicit label, `inputMode=decimal`, and field-linked errors. Reason input has a programmatic label and visible requirement.
 - Radio groups expose group labels and checked state. Irreversible confirmations are not prechecked.
 - Updated batch status is announced politely; mutation failure uses a live alert. Status meaning is not conveyed by color alone.
+- Batch-page append uses one polite announcement with the appended count. Focus behavior follows §4.6; cursor text and internal pagination state are never announced.
 - Every interactive target is 44×44px minimum. At 320px, controls stack and text reflows without horizontal scrolling or content loss.
 - Raw UUIDs, opaque cursor, revision integer, and event ID may be used internally. If revision is shown to satisfy auditability, it is labeled `기록 버전 N`, not exposed as an unlabeled developer value. Event IDs/cursors are never displayed or announced.
 
@@ -391,13 +511,17 @@ Every success uses exact 3-key `{ action, batch, event_id }`. The wrapper remain
 
 Stage 4 must create fresh implementation evidence under `ui/designs/evidence/cooked-batch-weight-ui/` for 390px, 320px, and desktop. It must cover:
 
+- both section headings in one viewport/scroll journey, with legacy and batch action groups visibly separated;
+- legacy PlannerAddSheet, `다먹음`, ATE_LIST/`덜먹음`, stale-review/`계속 보관` preservation and exact legacy-ID routing;
+- no title/date/recipe/ID join, cross-source dedupe, legacy action on a batch card, or weight action on a legacy card;
 - known available with discard/adjust and no #12 consumed CTA;
 - missing delayed-weight confirmation;
 - unrecoverable irreversible confirmation and post-409 lock;
 - unweighed close plus exact current cancel eligibility;
-- legacy unknown/null distinct from every depleted reason;
+- batch-model legacy unknown/null as a complete read-only card with no `[상세 확인]`, distinct from every depleted reason;
 - all six depleted labels and read-only affordance removal;
-- loading, empty, read error, unauthorized/private nondisclosure, pending, stale revision, 422, replay;
+- independent section loading/empty/read error plus unauthorized/private nondisclosure, mutation pending, stale revision, 422, replay;
+- `더 보기` idle/pending/error/retry/final-page and filter-bound cursor 422 refresh, stable append/dedupe, action-state preservation, focus, and announcement;
 - sheet internal scroll, fixed CTA, safe area, 44px targets, 16px numeric input, keyboard avoidance, and no overflow.
 
 `ui/designs/evidence/cooked-batch-weight-ui/manifest.json` must record implementation head SHA, capture time, viewport, state, and path. Fresh authority reports may cite only that post-implementation manifest and artifacts.
@@ -409,4 +533,4 @@ This Markdown and its ASCII wireframes do not prove runtime keyboard navigation,
 - Fresh critic path: `ui/designs/critiques/LEFTOVERS-cooked-batch-weight-ui-critique.md`
 - Future runtime authority path: `ui/designs/authority/LEFTOVERS-authority.md`
 - The design-generator author does not write either report and does not approve this design.
-- Critic must check current tuple/base, #8 contract reuse, #9/#12 exclusions, legacy planner-add separation, 390/320 hierarchy, all state and depleted distinctions, permission/replay, sheet behavior, keyboard/focus/accessibility, and the no-runtime-claim boundary.
+- Critic must check current tuple and exact evidence roles, #8 contract reuse, #9/#12 exclusions, required legacy feature preservation, two-source identity/action isolation, 390/320 two-section hierarchy, cursor pagination, all state and depleted distinctions, permission/replay, sheet behavior, keyboard/focus/accessibility, canonical tokens, and the no-runtime-claim boundary.
