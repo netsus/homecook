@@ -434,11 +434,17 @@ export function aggregatePantrySamples(samples, { app_auth_issue_id = null } = {
       latency_ms: summarizeLatencyValues(latencyValues),
     }];
   }));
+  const appAuthIssueId = byOutcome.app_auth_409.attempted > 0
+    ? validateAppAuthIssueId(app_auth_issue_id)
+    : null;
   return {
     attempted: normalizedSamples.length,
-    app_auth_issue_id: byOutcome.app_auth_409.attempted > 0
-      ? validateAppAuthIssueId(app_auth_issue_id)
-      : null,
+    app_auth_issue_id: appAuthIssueId,
+    app_auth_issue_linkage_state: byOutcome.app_auth_409.attempted === 0
+      ? "not_applicable"
+      : appAuthIssueId === null
+        ? "app_auth_issue_linkage_required"
+        : "linked",
     by_outcome: byOutcome,
     samples: normalizedSamples,
   };

@@ -1,6 +1,7 @@
 import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { EventEmitter } from "node:events";
-import { mkdtempSync, readFileSync, statSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
@@ -37,11 +38,11 @@ const JWT_MARKER = [
   "signature-part",
 ].join(".");
 
-function traceFixture(colo = "ICN") {
+function traceFixture(colo = "ICN", ip = "203.0.113.77") {
   return [
     "fl=29f608",
     "h=app.mumeok.kr",
-    "ip=203.0.113.77",
+    `ip=${ip}`,
     `colo=${colo}`,
     `token=${SECRET_MARKER}`,
   ].join("\n");
@@ -59,8 +60,12 @@ function timingFixture(status = 200, totalSeconds = 0.25) {
 }
 
 function createHealthyRunner({
+  appTraceIp = "203.0.113.77",
+  authenticatedStatus = 200,
+  baselineTraceIp = "203.0.113.77",
   capturedAt = "2026-08-09T10:00:00.000Z",
   cfRayMissing = false,
+  latestDisconnectedIndex = null as number | null,
   launchState = "running",
   logAgeMs = 1_000,
   timingMissing = false,
@@ -87,11 +92,17 @@ function createHealthyRunner({
       };
     }
     if (command === "tail") {
+      const registered = [0, 1, 2, 3].map((connectionIndex) =>
+        `${logTimestamp} INF Registered tunnel connection connIndex=${connectionIndex} location=icn01 protocol=quic`
+      );
+      if (latestDisconnectedIndex !== null) {
+        registered.push(
+          `${new Date(Date.parse(logTimestamp) + 1_000).toISOString()} ERR connection closed connIndex=${latestDisconnectedIndex}`,
+        );
+      }
       return {
         exit_code: 0,
-        stdout: [0, 1, 2, 3].map((connectionIndex) =>
-          `${logTimestamp} INF Registered tunnel connection connIndex=${connectionIndex} location=icn01 protocol=quic`
-        ).join("\n"),
+        stdout: registered.join("\n"),
         stderr: "",
         timed_out: false,
       };
@@ -106,19 +117,27 @@ function createHealthyRunner({
       })
       : timingFixture();
     if (target.includes("/cdn-cgi/trace")) {
+      const traceIp = target.startsWith("https://app.mumeok.kr")
+        ? appTraceIp
+        : baselineTraceIp;
       return {
         exit_code: 0,
-        stdout: `HTTP/2 200\r\n${cfRayHeader}\r\n${traceFixture()}\n__HC_TIMING__${timing}`,
+        stdout: `HTTP/2 200\r\n${cfRayHeader}\r\n${traceFixture("ICN", traceIp)}\n__HC_TIMING__${timing}`,
         stderr: "",
         timed_out: false,
       };
     }
-    const correlationHeader = target.endsWith("/api/v1/pantry")
+    const authenticated = target.endsWith("/api/v1/pantry");
+    const correlationHeader = authenticated
       ? `X-Correlation-Id: ${UUID_MARKER}\r\n`
       : "";
+    const status = authenticated ? authenticatedStatus : 200;
+    const body = status === 409
+      ? '{"error":{"code":"ACCOUNT_SESSION_STALE::409"}}'
+      : "{}";
     return {
       exit_code: 0,
-      stdout: `HTTP/2 200\r\n${cfRayHeader}${correlationHeader}\r\n{}\n__HC_TIMING__${timing}`,
+      stdout: `HTTP/2 ${status}\r\n${cfRayHeader}${correlationHeader}\r\n${body}\n__HC_TIMING__${timingFixture(status)}`,
       stderr: "",
       timed_out: false,
     };
@@ -567,6 +586,7 @@ describe("Cloudflare tunnel diagnostics read-only CLI", () => {
       correlation_id_hash: expect.stringMatching(/^hmac-sha256:[a-f0-9]{64}$/u),
     }));
     expect(evidence.probes.authenticated_pantry.app_auth_issue_id).toBe("APP-AUTH-42");
+    expect(evidence.probes.authenticated_pantry.app_auth_issue_linkage_state).toBe("linked");
     expect(serialized.match(new RegExp(SECRET_MARKER, "gu")) ?? []).toHaveLength(0);
     expect(serialized).not.toContain(EMAIL_MARKER);
     expect(serialized).not.toContain(UUID_MARKER);
@@ -588,7 +608,7 @@ describe("Cloudflare tunnel diagnostics read-only CLI", () => {
     expect(commandTranscript).not.toContain(SECRET_MARKER);
   });
 
-  it("fails closed unless connector, freshness, probes, timing and authenticated denominators are complete", async () => {
+  it("fails closed unless connector, probes, timing and authenticated denominators are complete", async () => {
     const capturedAt = "2026-08-09T10:00:00.000Z";
     const healthy = createHealthyRunner({ capturedAt });
     const baseOptions = {
@@ -619,13 +639,15 @@ describe("Cloudflare tunnel diagnostics read-only CLI", () => {
     })).toBe(0);
 
     const exited = createHealthyRunner({ capturedAt, launchState: "exited" });
-    const stale = createHealthyRunner({ capturedAt, logAgeMs: 10 * 60_000 });
+    const longLived = createHealthyRunner({ capturedAt, logAgeMs: 10 * 60_000 });
+    const disconnected = createHealthyRunner({ capturedAt, latestDisconnectedIndex: 2 });
     const noCfRay = createHealthyRunner({ capturedAt, cfRayMissing: true });
     const noTiming = createHealthyRunner({ capturedAt, timingMissing: true });
-    const [exitedEvidence, staleEvidence, noAuthEvidence, shortEvidence, noCfRayEvidence, noTimingEvidence] =
+    const [exitedEvidence, longLivedEvidence, disconnectedEvidence, noAuthEvidence, shortEvidence, noCfRayEvidence, noTimingEvidence] =
       await Promise.all([
         captureCloudflareTunnelDiagnostics(baseOptions, { runner: exited.runner }),
-        captureCloudflareTunnelDiagnostics(baseOptions, { runner: stale.runner }),
+        captureCloudflareTunnelDiagnostics(baseOptions, { runner: longLived.runner }),
+        captureCloudflareTunnelDiagnostics(baseOptions, { runner: disconnected.runner }),
         captureCloudflareTunnelDiagnostics({
           ...baseOptions,
           authenticated_pantry_cookie_file: null,
@@ -638,9 +660,15 @@ describe("Cloudflare tunnel diagnostics read-only CLI", () => {
         captureCloudflareTunnelDiagnostics(baseOptions, { runner: noTiming.runner }),
       ]);
 
+    expect(longLivedEvidence.success).toBe(true);
+    expect(longLivedEvidence.connector.tunnel_log.latest_connection_event_age_ms)
+      .toEqual({ "0": 600_000, "1": 600_000, "2": 600_000, "3": 600_000 });
+    expect(disconnectedEvidence.connector.tunnel_log.connection_health)
+      .toEqual(expect.objectContaining({ unhealthy_connection_indexes: [2] }));
+
     for (const evidence of [
       exitedEvidence,
-      staleEvidence,
+      disconnectedEvidence,
       noAuthEvidence,
       shortEvidence,
       noCfRayEvidence,
@@ -648,6 +676,179 @@ describe("Cloudflare tunnel diagnostics read-only CLI", () => {
     ]) {
       expect(evidence.success).toBe(false);
     }
+  });
+
+  it("requires app and baseline trace address families to match the requested family", async () => {
+    const capturedAt = "2026-08-09T10:00:00.000Z";
+    const baseOptions = {
+      authenticated_pantry_cookie_file: "/tmp/homecook-test-cookie",
+      captured_at: capturedAt,
+      network_label: "wifi-01",
+      samples: 30,
+    };
+    const ipv6WithIpv4Trace = createHealthyRunner({ capturedAt });
+    const unknownAppTrace = createHealthyRunner({ capturedAt, appTraceIp: "" });
+    const baselineMismatch = createHealthyRunner({
+      baselineTraceIp: "2001:db8::1",
+      capturedAt,
+    });
+
+    const [ipv6Mismatch, unknown, baseline] = await Promise.all([
+      captureCloudflareTunnelDiagnostics({
+        ...baseOptions,
+        address_family: "ipv6",
+      }, { runner: ipv6WithIpv4Trace.runner }),
+      captureCloudflareTunnelDiagnostics({
+        ...baseOptions,
+        address_family: "ipv4",
+      }, { runner: unknownAppTrace.runner }),
+      captureCloudflareTunnelDiagnostics({
+        ...baseOptions,
+        address_family: "ipv4",
+      }, { runner: baselineMismatch.runner }),
+    ]);
+
+    expect(ipv6Mismatch.success).toBe(false);
+    expect(ipv6Mismatch.probes.app_trace.samples[0]?.success).toBe(false);
+    expect(ipv6Mismatch.probes.app_trace.address_family.complete).toBe(false);
+    expect(ipv6Mismatch.probes.app_trace.samples[0]?.trace.address_family).toBe("ipv4");
+    expect(unknown.success).toBe(false);
+    expect(unknown.probes.app_trace.address_family.complete).toBe(false);
+    expect(unknown.probes.app_trace.samples[0]?.trace.address_family).toBe("unknown");
+    expect(baseline.success).toBe(false);
+    expect(baseline.probes.cloudflare_baseline_trace.address_family.complete).toBe(false);
+    expect(baseline.probes.cloudflare_baseline_trace.samples[0]?.trace.address_family)
+      .toBe("ipv6");
+  });
+
+  it("requires explicit issue linkage when authenticated pantry returns 409", async () => {
+    const capturedAt = "2026-08-09T10:00:00.000Z";
+    const auth409 = createHealthyRunner({ authenticatedStatus: 409, capturedAt });
+    const options = {
+      address_family: "ipv4",
+      authenticated_pantry_cookie_file: "/tmp/homecook-test-cookie",
+      captured_at: capturedAt,
+      network_label: "wifi-01",
+      samples: 30,
+    };
+    const evidence = await captureCloudflareTunnelDiagnostics(options, {
+      runner: auth409.runner,
+    });
+
+    expect(evidence.success).toBe(false);
+    expect(evidence.probes.authenticated_pantry).toEqual(expect.objectContaining({
+      app_auth_issue_id: null,
+      app_auth_issue_linkage_state: "app_auth_issue_linkage_required",
+    }));
+
+    const writes: unknown[] = [];
+    const cli409 = createHealthyRunner({ authenticatedStatus: 409, capturedAt });
+    const exitCode = await runDiagnosticsCli([
+      "--network-label", "wifi-01",
+      "--address-family", "ipv4",
+      "--samples", "30",
+      "--authenticated-pantry-cookie-file", "/tmp/homecook-test-cookie",
+      "--output", "/tmp/cloudflare-diagnostics-409.json",
+    ], {
+      now: () => new Date(capturedAt),
+      runner: cli409.runner,
+      stdout: () => {},
+      stderr: () => {},
+      writeEvidence: async (_outputPath: string, value: unknown) => writes.push(value),
+    });
+    expect(exitCode).toBe(1);
+    expect(writes).toHaveLength(1);
+    expect(writes[0]).toEqual(expect.objectContaining({ success: false }));
+  });
+
+  it("creates a new immutable app/auth linkage artifact without rewriting source evidence", async () => {
+    const root = mkdtempSync(path.join(tmpdir(), "cloudflare-linkage-"));
+    const evidencePath = path.join(root, "capture.json");
+    const outputPath = path.join(root, "linkage.json");
+    const missingIdOutput = path.join(root, "missing-id.json");
+    const missingEvidenceOutput = path.join(root, "missing-evidence.json");
+    const directoryEvidenceOutput = path.join(root, "directory-evidence.json");
+    const repoInputOutput = path.join(root, "repo-input.json");
+    const source = `${JSON.stringify({
+      schema_version: 1,
+      probes: {
+        authenticated_pantry: {
+          app_auth_issue_linkage_state: "app_auth_issue_linkage_required",
+          by_outcome: { app_auth_409: { attempted: 1 } },
+        },
+      },
+      ignored_secret: SECRET_MARKER,
+      ignored_correlation_id: UUID_MARKER,
+    })}\n`;
+    writeFileSync(evidencePath, source, { encoding: "utf8", mode: 0o600 });
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    let runnerInvoked = false;
+    const dependencies = {
+      now: () => new Date("2026-08-09T11:00:00.000Z"),
+      runner: async () => {
+        runnerInvoked = true;
+        return { exit_code: 0, stdout: "", stderr: "", timed_out: false };
+      },
+      stdout: (value: string) => stdout.push(value),
+      stderr: (value: string) => stderr.push(value),
+    };
+
+    const exitCode = await runDiagnosticsCli([
+      "link-app-auth-issue",
+      "--evidence", evidencePath,
+      "--app-auth-issue-id", "APP-AUTH-77",
+      "--output", outputPath,
+    ], dependencies);
+    expect(exitCode).toBe(0);
+    expect(runnerInvoked).toBe(false);
+    expect(readFileSync(evidencePath, "utf8")).toBe(source);
+    const linkage = JSON.parse(readFileSync(outputPath, "utf8")) as Record<string, unknown>;
+    expect(linkage).toEqual({
+      schema_version: 1,
+      artifact_type: "cloudflare_tunnel_app_auth_issue_linkage",
+      created_at: "2026-08-09T11:00:00.000Z",
+      source_evidence_sha256: `sha256:${createHash("sha256").update(source).digest("hex")}`,
+      app_auth_issue_id: "APP-AUTH-77",
+    });
+    expect(statSync(outputPath).mode & 0o777).toBe(0o600);
+    expect(await runDiagnosticsCli([
+      "link-app-auth-issue",
+      "--evidence", evidencePath,
+      "--app-auth-issue-id", "APP-AUTH-77",
+      "--output", outputPath,
+    ], dependencies)).toBe(1);
+    expect(await runDiagnosticsCli([
+      "link-app-auth-issue",
+      "--evidence", evidencePath,
+      "--output", missingIdOutput,
+    ], dependencies)).toBe(1);
+    expect(existsSync(missingIdOutput)).toBe(false);
+    expect(await runDiagnosticsCli([
+      "link-app-auth-issue",
+      "--evidence", path.join(root, "does-not-exist.json"),
+      "--app-auth-issue-id", "APP-AUTH-77",
+      "--output", missingEvidenceOutput,
+    ], dependencies)).toBe(1);
+    expect(existsSync(missingEvidenceOutput)).toBe(false);
+    expect(await runDiagnosticsCli([
+      "link-app-auth-issue",
+      "--evidence", root,
+      "--app-auth-issue-id", "APP-AUTH-77",
+      "--output", directoryEvidenceOutput,
+    ], dependencies)).toBe(1);
+    expect(existsSync(directoryEvidenceOutput)).toBe(false);
+    expect(await runDiagnosticsCli([
+      "link-app-auth-issue",
+      "--evidence", path.join(process.cwd(), "package.json"),
+      "--app-auth-issue-id", "APP-AUTH-77",
+      "--output", repoInputOutput,
+    ], dependencies)).toBe(1);
+    expect(existsSync(repoInputOutput)).toBe(false);
+    expect(readFileSync(evidencePath, "utf8")).toBe(source);
+    const allOutput = [...stdout, ...stderr, JSON.stringify(linkage)].join("\n");
+    expect(allOutput).not.toContain(SECRET_MARKER);
+    expect(allOutput).not.toContain(UUID_MARKER);
   });
 
   it("enforces exact read-only process arguments and disables hostile curl configuration", async () => {

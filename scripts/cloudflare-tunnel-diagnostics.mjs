@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 
 import { spawn } from "node:child_process";
-import { createHmac, randomBytes } from "node:crypto";
+import { createHash, createHmac, randomBytes } from "node:crypto";
 import { existsSync, realpathSync } from "node:fs";
-import { chmod, mkdir, realpath, stat, writeFile } from "node:fs/promises";
+import { chmod, mkdir, open, realpath, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -28,8 +28,8 @@ const DEFAULT_BASELINE_ORIGIN = "https://www.cloudflare.com";
 const DEFAULT_TUNNEL_LOG = "/Users/cwj/.homecook/logs/cloudflare-tunnel.err.log";
 const DEFAULT_LAUNCH_AGENT_LABEL = "com.homecook.cloudflare-tunnel";
 const REPOSITORY_ROOT = realpathSync(fileURLToPath(new URL("../", import.meta.url)));
-const LOG_FRESHNESS_MS = 5 * 60 * 1_000;
 const MINIMUM_AUTHENTICATED_SAMPLES = 30;
+const MAX_SOURCE_EVIDENCE_BYTES = 10 * 1_024 * 1_024;
 const CURL_WRITE_OUT = `${TIMING_MARKER}{\"http_code\":%{http_code},\"time_connect\":%{time_connect},\"time_starttransfer\":%{time_starttransfer},\"time_total\":%{time_total}}`;
 const ADDRESS_FAMILIES = new Set(["ipv4", "ipv6"]);
 
@@ -218,19 +218,30 @@ export function createRunScopedCorrelationHasher(key = randomBytes(32)) {
   };
 }
 
-function parseProbeResult(result, { trace = false } = {}) {
+function parseProbeResult(result, { expectedAddressFamily = null, trace = false } = {}) {
   const { response, timing: timingRaw } = splitCurlOutput(result.stdout);
   const timing = parseCurlTiming(timingRaw);
   const status = timing.http_status;
+  const parsedTrace = trace ? parseTrace(response) : null;
+  const addressFamilyMatchesRequest = trace
+    ? parsedTrace.address_family === expectedAddressFamily
+    : null;
   return {
-    success: result.exit_code === 0 && status !== null && status >= 200 && status <= 299,
+    success: result.exit_code === 0
+      && status !== null
+      && status >= 200
+      && status <= 299
+      && (!trace || addressFamilyMatchesRequest),
     timed_out: result.timed_out,
     http_status: status,
     connect_ms: timing.connect_ms,
     ttfb_ms: timing.ttfb_ms,
     total_ms: timing.total_ms,
     cf_ray: parseCfRayHeaders(response),
-    ...(trace ? { trace: parseTrace(response) } : {}),
+    ...(trace ? {
+      address_family_matches_request: addressFamilyMatchesRequest,
+      trace: parsedTrace,
+    } : {}),
   };
 }
 
@@ -259,22 +270,36 @@ function allProbeSamplesSucceeded(samples) {
   return samples.every(({ success }) => success === true);
 }
 
-function probeSampleComplete(sample, { trace = false } = {}) {
+function probeSampleComplete(sample, { addressFamily = null, trace = false } = {}) {
   return sample.success === true
     && sample.cf_ray?.present === true
     && sample.connect_ms !== null
     && sample.ttfb_ms !== null
     && sample.total_ms !== null
-    && (!trace || sample.trace?.colo_state === "value");
+    && (!trace || (
+      sample.trace?.colo_state === "value"
+      && sample.trace?.address_family === addressFamily
+    ));
 }
 
-function latestConnectionsAreFresh(tunnelLog, capturedAtMs) {
-  return [0, 1, 2, 3].every((connectionIndex) => {
+function latestConnectionEventAges(tunnelLog, capturedAtMs) {
+  return Object.fromEntries([0, 1, 2, 3].map((connectionIndex) => {
     const timestamp = tunnelLog.latest_connection_event_at?.[String(connectionIndex)];
     const timestampMs = Date.parse(timestamp ?? "");
     const ageMs = capturedAtMs - timestampMs;
-    return Number.isFinite(timestampMs) && ageMs >= 0 && ageMs <= LOG_FRESHNESS_MS;
-  });
+    return [String(connectionIndex), Number.isFinite(timestampMs) ? ageMs : null];
+  }));
+}
+
+function summarizeAddressFamilyCompleteness(samples, requestedAddressFamily) {
+  const matchingSamples = samples.filter((sample) =>
+    sample.address_family_matches_request === true
+  ).length;
+  return {
+    requested: requestedAddressFamily,
+    matching_samples: matchingSamples,
+    complete: samples.length > 0 && matchingSamples === samples.length,
+  };
 }
 
 /**
@@ -339,8 +364,14 @@ export async function captureCloudflareTunnelDiagnostics(
       })),
     ]);
     rawCollectionResults.push(appTraceResult, baselineTraceResult, publicPantryResult);
-    appTraceSamples.push(parseProbeResult(appTraceResult, { trace: true }));
-    baselineTraceSamples.push(parseProbeResult(baselineTraceResult, { trace: true }));
+    appTraceSamples.push(parseProbeResult(appTraceResult, {
+      expectedAddressFamily: addressFamily,
+      trace: true,
+    }));
+    baselineTraceSamples.push(parseProbeResult(baselineTraceResult, {
+      expectedAddressFamily: addressFamily,
+      trace: true,
+    }));
     publicPantrySamples.push(parseProbeResult(publicPantryResult));
 
     if (authenticatedPantryCookieFile) {
@@ -380,11 +411,10 @@ export async function captureCloudflareTunnelDiagnostics(
     && launchAgent.loaded
     && launchAgent.state === "running"
     && tunnelLog.connection_health.healthy_connection_count === 4;
-  const connectorFresh = latestConnectionsAreFresh(tunnelLog, capturedAtMs);
   const publicProbeCompleteness = appTraceSamples.every((sample) =>
-    probeSampleComplete(sample, { trace: true })
+    probeSampleComplete(sample, { addressFamily, trace: true })
   ) && baselineTraceSamples.every((sample) =>
-    probeSampleComplete(sample, { trace: true })
+    probeSampleComplete(sample, { addressFamily, trace: true })
   ) && publicPantrySamples.every((sample) => probeSampleComplete(sample));
   const authenticatedProbeComplete = authenticatedPantryCookieFile !== null
     && authenticatedPantrySamples.length >= MINIMUM_AUTHENTICATED_SAMPLES
@@ -399,8 +429,8 @@ export async function captureCloudflareTunnelDiagnostics(
     success: collectionCommandsSucceeded
       && publicProbesSucceeded
       && authenticatedProbeSucceeded
+      && authenticatedPantry.app_auth_issue_linkage_state !== "app_auth_issue_linkage_required"
       && connectorHealthy
-      && connectorFresh
       && publicProbeCompleteness
       && authenticatedProbeComplete,
     captured_at: capturedAt,
@@ -408,11 +438,15 @@ export async function captureCloudflareTunnelDiagnostics(
     connector: {
       cloudflared,
       launch_agent: launchAgent,
-      tunnel_log: tunnelLog,
+      tunnel_log: {
+        ...tunnelLog,
+        latest_connection_event_age_ms: latestConnectionEventAges(tunnelLog, capturedAtMs),
+      },
     },
     probes: {
       app_trace: {
         samples: appTraceSamples,
+        address_family: summarizeAddressFamilyCompleteness(appTraceSamples, addressFamily),
         summary: summarizeProbeSamples(appTraceSamples, {
           expected_count: samples,
           minimum_latency_samples: samples,
@@ -421,6 +455,10 @@ export async function captureCloudflareTunnelDiagnostics(
       },
       cloudflare_baseline_trace: {
         samples: baselineTraceSamples,
+        address_family: summarizeAddressFamilyCompleteness(
+          baselineTraceSamples,
+          addressFamily,
+        ),
         summary: summarizeProbeSamples(baselineTraceSamples, {
           expected_count: samples,
           minimum_latency_samples: samples,
@@ -507,6 +545,39 @@ function parseArgs(argv) {
   return options;
 }
 
+function parseLinkageArgs(argv) {
+  const options = {};
+  for (let index = 0; index < argv.length; index += 1) {
+    const arg = argv[index];
+    const next = argv[index + 1];
+    switch (arg) {
+      case "--evidence":
+        options.evidence_path = next;
+        index += 1;
+        break;
+      case "--app-auth-issue-id":
+        options.app_auth_issue_id = next;
+        index += 1;
+        break;
+      case "--output":
+        options.output = next;
+        index += 1;
+        break;
+      default:
+        throw new Error("Unsupported linkage argument.");
+    }
+  }
+  if (typeof options.evidence_path !== "string" || !path.isAbsolute(options.evidence_path)) {
+    throw new Error("--evidence must be an absolute path outside the repository.");
+  }
+  if (typeof options.output !== "string" || !path.isAbsolute(options.output)) {
+    throw new Error("--output must be an absolute path outside the repository.");
+  }
+  options.app_auth_issue_id = validateAppAuthIssueId(options.app_auth_issue_id);
+  assertOutputOutsideRepository(options.output);
+  return options;
+}
+
 function canonicalizeProspectivePath(targetPath) {
   let existingAncestor = path.resolve(targetPath);
   const missingSegments = [];
@@ -523,10 +594,87 @@ function canonicalizeProspectivePath(targetPath) {
 
 function assertOutputOutsideRepository(outputPath) {
   const canonicalOutput = canonicalizeProspectivePath(outputPath);
-  const relativeOutput = path.relative(REPOSITORY_ROOT, canonicalOutput);
-  if (relativeOutput === "" || (!relativeOutput.startsWith("..") && !path.isAbsolute(relativeOutput))) {
-    throw new Error("--output must be outside the repository.");
+  assertCanonicalPathOutsideRepository(canonicalOutput, "--output must be outside the repository.");
+}
+
+function assertCanonicalPathOutsideRepository(canonicalPath, message) {
+  const relativePath = path.relative(REPOSITORY_ROOT, canonicalPath);
+  if (relativePath === "" || (!relativePath.startsWith("..") && !path.isAbsolute(relativePath))) {
+    throw new Error(message);
   }
+}
+
+async function readSourceEvidence(evidencePath) {
+  const canonicalEvidencePath = await realpath(evidencePath);
+  assertCanonicalPathOutsideRepository(
+    canonicalEvidencePath,
+    "Source evidence must be outside the repository.",
+  );
+  const handle = await open(canonicalEvidencePath, "r");
+  try {
+    const sourceStats = await handle.stat();
+    if (!sourceStats.isFile()) {
+      throw new Error("Source evidence must be a regular file.");
+    }
+    if ((sourceStats.mode & 0o077) !== 0) {
+      throw new Error("Source evidence must be private.");
+    }
+    if (sourceStats.size > MAX_SOURCE_EVIDENCE_BYTES) {
+      throw new Error("Source evidence exceeds the maximum size.");
+    }
+    const source = await handle.readFile();
+    let evidence;
+    try {
+      evidence = JSON.parse(source.toString("utf8"));
+    } catch {
+      throw new Error("Source evidence must be valid JSON.");
+    }
+    if (evidence?.schema_version !== 1) {
+      throw new Error("Source evidence schema is unsupported.");
+    }
+    const authenticatedPantry = evidence?.probes?.authenticated_pantry;
+    const appAuth409Attempts = authenticatedPantry
+      ?.by_outcome?.app_auth_409?.attempted;
+    if (!Number.isInteger(appAuth409Attempts) || appAuth409Attempts < 1) {
+      throw new Error("Source evidence must contain an app_auth_409 attempt.");
+    }
+    if (authenticatedPantry.app_auth_issue_linkage_state !== "app_auth_issue_linkage_required") {
+      throw new Error("Source evidence does not require app/auth issue linkage.");
+    }
+    return { canonicalEvidencePath, source };
+  } finally {
+    await handle.close();
+  }
+}
+
+export async function createAppAuthIssueLinkageArtifact({
+  app_auth_issue_id: appAuthIssueId,
+  created_at: createdAt,
+  evidence_path: evidencePath,
+  output,
+}) {
+  const validatedIssueId = validateAppAuthIssueId(appAuthIssueId);
+  if (validatedIssueId === null) {
+    throw new Error("App/auth issue ID is required for linkage.");
+  }
+  const createdAtMs = Date.parse(createdAt);
+  if (!Number.isFinite(createdAtMs)) {
+    throw new Error("Linkage creation time must be a valid ISO timestamp.");
+  }
+  assertOutputOutsideRepository(output);
+  const { canonicalEvidencePath, source } = await readSourceEvidence(evidencePath);
+  if (canonicalizeProspectivePath(output) === canonicalEvidencePath) {
+    throw new Error("Linkage output must not replace source evidence.");
+  }
+  const artifact = {
+    schema_version: 1,
+    artifact_type: "cloudflare_tunnel_app_auth_issue_linkage",
+    created_at: new Date(createdAtMs).toISOString(),
+    source_evidence_sha256: `sha256:${createHash("sha256").update(source).digest("hex")}`,
+    app_auth_issue_id: validatedIssueId,
+  };
+  await writeEvidenceFile(output, artifact);
+  return artifact;
 }
 
 export async function writeEvidenceFile(outputPath, evidence) {
@@ -557,7 +705,32 @@ export async function writeEvidenceFile(outputPath, evidence) {
   await chmod(outputPath, 0o600);
 }
 
+async function runAppAuthIssueLinkageCli(argv, dependencies = {}) {
+  const stdout = dependencies.stdout ?? ((value) => process.stdout.write(value));
+  const stderr = dependencies.stderr ?? ((value) => process.stderr.write(value));
+  try {
+    const options = parseLinkageArgs(argv);
+    const createdAt = (dependencies.now ?? (() => new Date()))().toISOString();
+    const artifact = await createAppAuthIssueLinkageArtifact({
+      ...options,
+      created_at: createdAt,
+    });
+    stdout(`${JSON.stringify({
+      schema_version: artifact.schema_version,
+      artifact_type: artifact.artifact_type,
+      linkage_written: true,
+    })}\n`);
+    return 0;
+  } catch {
+    stderr("cloudflare-tunnel-diagnostics: FAIL (redacted)\n");
+    return 1;
+  }
+}
+
 export async function runDiagnosticsCli(argv, dependencies = {}) {
+  if (argv[0] === "link-app-auth-issue") {
+    return runAppAuthIssueLinkageCli(argv.slice(1), dependencies);
+  }
   const stdout = dependencies.stdout ?? ((value) => process.stdout.write(value));
   const stderr = dependencies.stderr ?? ((value) => process.stderr.write(value));
   const writeEvidence = dependencies.writeEvidence ?? writeEvidenceFile;
