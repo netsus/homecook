@@ -1,6 +1,6 @@
 import { EventEmitter } from "node:events";
 import { createHash } from "node:crypto";
-import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { chmod, mkdir, mkdtemp, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
@@ -28,6 +28,22 @@ const createdRoots: string[] = [];
 const SECRET_MARKER = "PHASE1_SECRET_MARKER_DO_NOT_LEAK";
 const TEST_PLATFORM = "darwin-arm64";
 type CheckResult = {
+  attempted: boolean;
+  success: boolean;
+  latency_ms: number | null;
+  error: string | null;
+};
+type VerifiedEndpoint = {
+  hostname: string;
+  family: "ipv4" | "ipv6";
+  address: string;
+};
+type QuicTarget = {
+  hostname: string;
+  address_family: "ipv4" | "ipv6";
+  address: string;
+  protocol: string;
+  port: number;
   attempted: boolean;
   success: boolean;
   latency_ms: number | null;
@@ -71,12 +87,14 @@ function completeSnapshot() {
     complete: true,
     plist: { path_hash: `sha256:${"f".repeat(64)}`, sha256: `sha256:${"c".repeat(64)}`, mode: "0600" },
     candidate_binary: {
-      path: "/opt/homebrew/bin/cloudflared", version: "2026.5.2",
-      sha256: `sha256:${"b".repeat(64)}`, mode: "0755", arguments_redacted: ["tunnel", "run"],
+      path_hash: `sha256:${"a".repeat(64)}`, version: "2026.5.2",
+      sha256: `sha256:${"b".repeat(64)}`, mode: "0755",
+      arguments_sha256: `sha256:${"d".repeat(64)}`,
     },
     running_binary: {
-      path: "/opt/homebrew/bin/cloudflared", version: "2026.5.2",
-      sha256: `sha256:${"b".repeat(64)}`, mode: "0755", arguments_redacted: ["tunnel", "run"],
+      path_hash: `sha256:${"a".repeat(64)}`, version: "2026.5.2",
+      sha256: `sha256:${"b".repeat(64)}`, mode: "0755",
+      arguments_sha256: `sha256:${"d".repeat(64)}`,
     },
     token_file_path_hash: `sha256:${"e".repeat(64)}`,
     token_file_mode: "0600",
@@ -88,16 +106,27 @@ function completeSnapshot() {
 
 const FIXTURE_BINARY_SHA256 = `sha256:${createHash("sha256")
   .update("fake-cloudflared-binary", "utf8").digest("hex")}`;
+const FIXTURE_PLIST_SHA256 = `sha256:${createHash("sha256")
+  .update("fake-plist", "utf8").digest("hex")}`;
 
-function successfulQuicProbe() {
+function matchingQuicProbe({ verified_endpoints: endpoints }: { verified_endpoints: VerifiedEndpoint[] }) {
   return {
     attempted: true, success: true, latency_ms: 1, error: null,
-    targets: [
-      { hostname: "region1.v2.argotunnel.com", address_family: "ipv4", protocol: "quic", port: 7844, attempted: true, success: true, latency_ms: 1, error: null },
-      { hostname: "region2.v2.argotunnel.com", address_family: "ipv4", protocol: "quic", port: 7844, attempted: true, success: true, latency_ms: 1, error: null },
-    ],
+    targets: endpoints.map(({ hostname, family, address }): QuicTarget => ({
+      hostname,
+      address_family: family,
+      address,
+      protocol: "quic",
+      port: 7844,
+      attempted: true,
+      success: true,
+      latency_ms: 1,
+      error: null,
+    })),
   };
 }
+
+const successfulQuicProbe = matchingQuicProbe;
 
 afterEach(async () => {
   vi.restoreAllMocks();
@@ -175,6 +204,11 @@ describe("management mode and release gate", () => {
       success: false,
       error: "UNKNOWN",
     });
+    expect(evaluateReleaseGate("2026.5.2", {
+      version: "2026.5.2",
+      verified_at: "2026-08-09T13:00:00.000Z",
+      platform: "linux-x64",
+    }, TEST_PLATFORM)).toEqual({ success: false, error: "UNKNOWN" });
     expect(evaluateReleaseGate("2026.5.2", {
       version: "2026.5.2",
       verified_at: "2026-08-07T12:59:59.000Z",
@@ -363,9 +397,12 @@ describe("pure parsing and evidence projection", () => {
 
   it("redacts sensitive shapes from binary paths and runtime arguments", () => {
     const snapshot = completeSnapshot();
-    snapshot.candidate_binary.path = "/tmp/a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11/cloudflared";
-    snapshot.running_binary.path = "/tmp/operator@example.test/cloudflared";
-    snapshot.running_binary.arguments_redacted = ["--metrics", "127.0.0.1:20241"];
+    (snapshot.candidate_binary as unknown as Record<string, unknown>).path
+      = "/tmp/a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11/cloudflared";
+    (snapshot.running_binary as unknown as Record<string, unknown>).path
+      = "/tmp/operator@example.test/cloudflared";
+    (snapshot.running_binary as unknown as Record<string, unknown>).arguments_redacted
+      = ["--metrics", "127.0.0.1:20241"];
     const evidence = buildPreflightEvidence({
       timestamp: "2026-08-09T13:00:00.000Z",
       platform: TEST_PLATFORM,
@@ -376,6 +413,51 @@ describe("pure parsing and evidence projection", () => {
       checks: successfulChecks(),
     });
     expect(JSON.stringify(evidence)).not.toMatch(/a0eebc99|operator@|127\.0\.0\.1/u);
+  });
+
+  it("serializes path hashes only and removes raw IPv4 and IPv6", () => {
+    const snapshot = completeSnapshot();
+    (snapshot.candidate_binary as unknown as Record<string, unknown>).path
+      = "/Users/operator/bin/cloudflared";
+    (snapshot.running_binary as unknown as Record<string, unknown>).path
+      = "/opt/2606:4700:a0::1/cloudflared";
+    const evidence = buildPreflightEvidence({
+      timestamp: "2026-08-09T13:00:00.000Z",
+      platform: TEST_PLATFORM,
+      management_mode: "remotely-managed",
+      management_mode_success: true,
+      snapshot,
+      token_path_mode_safe: true,
+      checks: successfulChecks(),
+    });
+    const serialized = JSON.stringify(evidence);
+    expect(serialized).not.toContain("/Users/");
+    expect(serialized).not.toContain("/opt/");
+    expect(serialized).not.toContain("2606:4700:a0::1");
+    expect(evidence.snapshot.candidate_binary).toHaveProperty("path_hash");
+    expect(evidence.snapshot.candidate_binary).not.toHaveProperty("path");
+  });
+
+  it("normalizes every free-form evidence value that could carry a path or raw IP", () => {
+    const snapshot = completeSnapshot();
+    snapshot.plist.mode = "/Users/operator/198.41.192.167";
+    snapshot.running_binary.mode = "2606:4700:a0::1";
+    snapshot.launchd_state = SECRET_MARKER;
+    snapshot.tunnel_state = "/private/config.yml";
+    snapshot.tunnel.replica_state = "operator@example.test";
+    const evidence = buildPreflightEvidence({
+      timestamp: "2026-08-09T13:00:00.000Z",
+      platform: "/Users/operator/2606:4700:a0::1",
+      management_mode: "remotely-managed",
+      management_mode_success: true,
+      snapshot,
+      token_path_mode_safe: true,
+      checks: successfulChecks(),
+    });
+    expect(JSON.stringify(evidence)).not.toMatch(
+      /\/Users\/|\/private\/|198\.41\.192\.167|2606:4700:a0::1|operator@|PHASE1_SECRET/u,
+    );
+    expect(evidence.platform).toBe("unknown");
   });
 });
 
@@ -615,7 +697,9 @@ describe("read-only collection and CLI", () => {
     });
     const evidence = await collectCloudflareTunnelPreflight({
       plist_path: paths.plistPath,
+      expected_plist_sha256: FIXTURE_PLIST_SHA256,
       expected_binary_sha256: FIXTURE_BINARY_SHA256,
+      expected_binary_version: "2026.5.2",
       output: path.join(paths.root, "evidence", "preflight.json"),
       stable_release: {
         version: "2026.5.2",
@@ -624,7 +708,13 @@ describe("read-only collection and CLI", () => {
       },
       captured_at: "2026-08-09T13:01:00.000Z",
       platform: TEST_PLATFORM,
-    }, { runner, readTextFile, quicProbe: successfulQuicProbe, trustedBinaryRoots: [paths.root] });
+    }, {
+      runner,
+      readTextFile,
+      quicProbe: successfulQuicProbe,
+      trustedBinaryRoots: [paths.root],
+      trustedPlistPaths: [paths.plistPath],
+    });
 
     expect(evidence.success).toBe(true);
     expect(evidence.management_mode).toBe("remotely-managed");
@@ -640,7 +730,9 @@ describe("read-only collection and CLI", () => {
     const { runner } = happyRunner(paths, { runtimeEvidence: false });
     const evidence = await collectCloudflareTunnelPreflight({
       plist_path: paths.plistPath,
+      expected_plist_sha256: FIXTURE_PLIST_SHA256,
       expected_binary_sha256: FIXTURE_BINARY_SHA256,
+      expected_binary_version: "2026.5.2",
       output: path.join(paths.root, "evidence", "preflight.json"),
       stable_release: {
         version: "2026.5.2",
@@ -649,7 +741,12 @@ describe("read-only collection and CLI", () => {
       },
       captured_at: "2026-08-09T13:01:00.000Z",
       platform: TEST_PLATFORM,
-    }, { runner, quicProbe: successfulQuicProbe, trustedBinaryRoots: [paths.root] });
+    }, {
+      runner,
+      quicProbe: successfulQuicProbe,
+      trustedBinaryRoots: [paths.root],
+      trustedPlistPaths: [paths.plistPath],
+    });
     expect(evidence.success).toBe(false);
     expect(evidence.checks.tunnel_connections).toMatchObject({
       attempted: false,
@@ -665,7 +762,9 @@ describe("read-only collection and CLI", () => {
     const { runner } = happyRunner(paths);
     const evidence = await collectCloudflareTunnelPreflight({
       plist_path: paths.plistPath,
+      expected_plist_sha256: FIXTURE_PLIST_SHA256,
       expected_binary_sha256: FIXTURE_BINARY_SHA256,
+      expected_binary_version: "2026.5.2",
       output: path.join(paths.root, "evidence", "preflight.json"),
       stable_release: {
         version: "2026.5.2",
@@ -674,7 +773,11 @@ describe("read-only collection and CLI", () => {
       },
       captured_at: "2026-08-09T13:01:00.000Z",
       platform: TEST_PLATFORM,
-    }, { runner, trustedBinaryRoots: [paths.root] });
+    }, {
+      runner,
+      trustedBinaryRoots: [paths.root],
+      trustedPlistPaths: [paths.plistPath],
+    });
     expect(evidence.checks.udp_7844).toMatchObject({
       attempted: false,
       success: false,
@@ -682,11 +785,151 @@ describe("read-only collection and CLI", () => {
     });
   });
 
+  it("rejects an injected QUIC PASS with an empty target set", async () => {
+    const paths = await fixturePaths();
+    const { runner } = happyRunner(paths);
+    const evidence = await collectCloudflareTunnelPreflight({
+      plist_path: paths.plistPath,
+      expected_plist_sha256: FIXTURE_PLIST_SHA256,
+      expected_binary_sha256: FIXTURE_BINARY_SHA256,
+      expected_binary_version: "2026.5.2",
+      stable_release: {
+        version: "2026.5.2",
+        verified_at: "2026-08-09T13:00:00.000Z",
+        platform: TEST_PLATFORM,
+      },
+      captured_at: "2026-08-09T13:01:00.000Z",
+      platform: TEST_PLATFORM,
+    }, {
+      runner,
+      quicProbe: () => ({ attempted: true, success: true, latency_ms: 1, error: null, targets: [] }),
+      trustedBinaryRoots: [paths.root],
+      trustedPlistPaths: [paths.plistPath],
+    });
+    expect(evidence.success).toBe(false);
+    expect(evidence.checks.udp_7844).toMatchObject({ success: false, error: "QUIC_TARGET_MISMATCH" });
+  });
+
+  it.each([
+    ["missing", (targets: QuicTarget[]) => targets.slice(1)],
+    ["duplicate", (targets: QuicTarget[]) => [targets[0], ...targets]],
+    ["address", (targets: QuicTarget[]) => [{ ...targets[0], address: "127.0.0.1" }, ...targets.slice(1)]],
+    ["family", (targets: QuicTarget[]) => [{ ...targets[0], address_family: "ipv6" as const }, ...targets.slice(1)]],
+    ["hostname", (targets: QuicTarget[]) => [{ ...targets[0], hostname: "region2.v2.argotunnel.com" }, ...targets.slice(1)]],
+    ["protocol", (targets: QuicTarget[]) => [{ ...targets[0], protocol: "udp" }, ...targets.slice(1)]],
+    ["port", (targets: QuicTarget[]) => [{ ...targets[0], port: 443 }, ...targets.slice(1)]],
+    ["latency", (targets: QuicTarget[]) => [{ ...targets[0], latency_ms: -1 }, ...targets.slice(1)]],
+  ])("rejects a tampered QUIC target set: %s", async (_case, mutate) => {
+    const paths = await fixturePaths();
+    const { runner } = happyRunner(paths);
+    const evidence = await collectCloudflareTunnelPreflight({
+      plist_path: paths.plistPath,
+      expected_plist_sha256: FIXTURE_PLIST_SHA256,
+      expected_binary_sha256: FIXTURE_BINARY_SHA256,
+      expected_binary_version: "2026.5.2",
+      stable_release: {
+        version: "2026.5.2",
+        verified_at: "2026-08-09T13:00:00.000Z",
+        platform: TEST_PLATFORM,
+      },
+      captured_at: "2026-08-09T13:01:00.000Z",
+      platform: TEST_PLATFORM,
+    }, {
+      runner,
+      quicProbe: (input: { verified_endpoints: VerifiedEndpoint[] }) => {
+        const probe = matchingQuicProbe(input);
+        return { ...probe, targets: mutate(probe.targets) };
+      },
+      trustedBinaryRoots: [paths.root],
+      trustedPlistPaths: [paths.plistPath],
+    });
+    expect(evidence.success).toBe(false);
+    expect(evidence.checks.udp_7844).toMatchObject({ success: false, error: "QUIC_TARGET_MISMATCH" });
+  });
+
+  it("rejects a malformed injected QUIC target without aborting evidence collection", async () => {
+    const paths = await fixturePaths();
+    const { runner } = happyRunner(paths);
+    const evidence = await collectCloudflareTunnelPreflight({
+      plist_path: paths.plistPath,
+      expected_plist_sha256: FIXTURE_PLIST_SHA256,
+      expected_binary_sha256: FIXTURE_BINARY_SHA256,
+      expected_binary_version: "2026.5.2",
+      stable_release: {
+        version: "2026.5.2",
+        verified_at: "2026-08-09T13:00:00.000Z",
+        platform: TEST_PLATFORM,
+      },
+      captured_at: "2026-08-09T13:01:00.000Z",
+      platform: TEST_PLATFORM,
+    }, {
+      runner,
+      quicProbe: () => ({
+        attempted: true,
+        success: true,
+        latency_ms: 1,
+        error: null,
+        targets: [null],
+      }),
+      trustedBinaryRoots: [paths.root],
+      trustedPlistPaths: [paths.plistPath],
+    });
+    expect(evidence.success).toBe(false);
+    expect(evidence.checks.udp_7844).toMatchObject({ success: false, error: "QUIC_TARGET_MISMATCH" });
+  });
+
+  it.each([
+    ["token-file separate", ["--token-file", "/private/token-A"], ["--token-file", "/private/token-B"]],
+    ["token-file equals", ["--token-file=/private/token-A"], ["--token-file=/private/token-B"]],
+    ["config separate", ["--config", "/private/config-A.yml"], ["--config", "/private/config-B.yml"]],
+    ["config equals", ["--config=/private/config-A.yml"], ["--config=/private/config-B.yml"]],
+    ["metrics separate", ["--metrics", "127.0.0.1:20241"], ["--metrics", "127.0.0.1:20242"]],
+    ["metrics equals", ["--metrics=127.0.0.1:20241"], ["--metrics=127.0.0.1:20242"]],
+  ])("rejects raw argv drift before redaction: %s", async (_case, configuredFlag, runningFlag) => {
+    const paths = await fixturePaths();
+    const base = happyRunner(paths);
+    const configuredArgs = [paths.binaryPath, "tunnel", "run", ...configuredFlag, "--metrics", "127.0.0.1:20241"];
+    const runningArgs = [paths.binaryPath, "tunnel", "run", ...runningFlag, "--metrics", "127.0.0.1:20241"];
+    const runner = vi.fn(async (invocation) => {
+      if (invocation.command === SYSTEM_TOOLS.plutil) {
+        return successResult(JSON.stringify({
+          Label: "com.homecook.cloudflare-tunnel",
+          Program: paths.binaryPath,
+          ProgramArguments: configuredArgs,
+        }));
+      }
+      if (invocation.command === SYSTEM_TOOLS.ps) return successResult(runningArgs.join(" "));
+      return base.runner(invocation);
+    });
+    const evidence = await collectCloudflareTunnelPreflight({
+      plist_path: paths.plistPath,
+      expected_plist_sha256: FIXTURE_PLIST_SHA256,
+      expected_binary_sha256: FIXTURE_BINARY_SHA256,
+      expected_binary_version: "2026.5.2",
+      stable_release: {
+        version: "2026.5.2",
+        verified_at: "2026-08-09T13:00:00.000Z",
+        platform: TEST_PLATFORM,
+      },
+      captured_at: "2026-08-09T13:01:00.000Z",
+      platform: TEST_PLATFORM,
+    }, {
+      runner,
+      quicProbe: matchingQuicProbe,
+      trustedBinaryRoots: [paths.root],
+      trustedPlistPaths: [paths.plistPath],
+    });
+    expect(evidence.success).toBe(false);
+    expect(evidence.checks.snapshot.error).toBe("SNAPSHOT_INCOMPLETE");
+  });
+
   it("does not execute a plist-selected binary without an externally verified hash", async () => {
     const paths = await fixturePaths();
     const { runner, invocations } = happyRunner(paths);
     const evidence = await collectCloudflareTunnelPreflight({
       plist_path: paths.plistPath,
+      expected_plist_sha256: FIXTURE_PLIST_SHA256,
+      expected_binary_version: "2026.5.2",
       output: path.join(paths.root, "evidence", "preflight.json"),
       stable_release: {
         version: "2026.5.2",
@@ -695,7 +938,12 @@ describe("read-only collection and CLI", () => {
       },
       captured_at: "2026-08-09T13:01:00.000Z",
       platform: TEST_PLATFORM,
-    }, { runner, quicProbe: successfulQuicProbe, trustedBinaryRoots: [paths.root] });
+    }, {
+      runner,
+      quicProbe: successfulQuicProbe,
+      trustedBinaryRoots: [paths.root],
+      trustedPlistPaths: [paths.plistPath],
+    });
     expect(evidence.success).toBe(false);
     expect(invocations.filter(({ command }) => command === paths.binaryPath)).toHaveLength(0);
   });
@@ -705,7 +953,9 @@ describe("read-only collection and CLI", () => {
     const { runner, invocations } = happyRunner(paths);
     const evidence = await collectCloudflareTunnelPreflight({
       plist_path: paths.plistPath,
+      expected_plist_sha256: FIXTURE_PLIST_SHA256,
       expected_binary_sha256: FIXTURE_BINARY_SHA256,
+      expected_binary_version: "2026.5.2",
       output: path.join(paths.root, "evidence", "preflight.json"),
       stable_release: {
         version: "2026.5.2",
@@ -714,28 +964,83 @@ describe("read-only collection and CLI", () => {
       },
       captured_at: "2026-08-09T13:01:00.000Z",
       platform: TEST_PLATFORM,
-    }, { runner, quicProbe: successfulQuicProbe });
+    }, { runner, quicProbe: successfulQuicProbe, trustedPlistPaths: [paths.plistPath] });
     expect(evidence.success).toBe(false);
     expect(invocations.filter(({ command }) => command === paths.binaryPath)).toHaveLength(0);
   });
 
-  it("fails when the verified binary inode changes while version is read", async () => {
+  it("rejects an untrusted plist path and never spawns its selected binary", async () => {
     const paths = await fixturePaths();
+    const { runner, invocations } = happyRunner(paths);
+    const evidence = await collectCloudflareTunnelPreflight({
+      plist_path: paths.plistPath,
+      expected_plist_sha256: FIXTURE_PLIST_SHA256,
+      expected_binary_sha256: FIXTURE_BINARY_SHA256,
+      expected_binary_version: "2026.5.2",
+      stable_release: {
+        version: "2026.5.2",
+        verified_at: "2026-08-09T13:00:00.000Z",
+        platform: TEST_PLATFORM,
+      },
+      captured_at: "2026-08-09T13:01:00.000Z",
+      platform: TEST_PLATFORM,
+    }, {
+      runner,
+      quicProbe: matchingQuicProbe,
+      trustedBinaryRoots: [paths.root],
+      trustedPlistPaths: [path.join(paths.root, "different.plist")],
+    });
+    expect(evidence.success).toBe(false);
+    expect(invocations.some(({ command }) => path.basename(command) === "cloudflared")).toBe(false);
+  });
+
+  it("rejects a plist hash mismatch and a writable parent directory", async () => {
+    const paths = await fixturePaths();
+    await chmod(paths.root, 0o777);
+    const { runner } = happyRunner(paths);
+    const evidence = await collectCloudflareTunnelPreflight({
+      plist_path: paths.plistPath,
+      expected_plist_sha256: `sha256:${"0".repeat(64)}`,
+      expected_binary_sha256: FIXTURE_BINARY_SHA256,
+      expected_binary_version: "2026.5.2",
+      stable_release: {
+        version: "2026.5.2",
+        verified_at: "2026-08-09T13:00:00.000Z",
+        platform: TEST_PLATFORM,
+      },
+      captured_at: "2026-08-09T13:01:00.000Z",
+      platform: TEST_PLATFORM,
+    }, {
+      runner,
+      quicProbe: matchingQuicProbe,
+      trustedBinaryRoots: [paths.root],
+      trustedPlistPaths: [paths.plistPath],
+    });
+    expect(evidence.success).toBe(false);
+    expect(evidence.checks.snapshot.error).toBe("SNAPSHOT_INCOMPLETE");
+  });
+
+  it("never executes the candidate binary during a replace-and-restore race", async () => {
+    const paths = await fixturePaths();
+    const backupPath = path.join(paths.root, "cloudflared.original");
     const base = happyRunner(paths);
-    let changed = false;
+    const invocations: Array<{ command: string; args: string[] }> = [];
     const runner = vi.fn(async (invocation) => {
-      if (!changed && path.basename(invocation.command) === "cloudflared"
-        && invocation.args[0] === "--version") {
-        changed = true;
-        await writeFile(paths.binaryPath, "changed-cloudflared-binary", { mode: 0o700 });
+      invocations.push(invocation);
+      if (path.basename(invocation.command) === "cloudflared") {
+        await rename(paths.binaryPath, backupPath);
+        await writeFile(paths.binaryPath, "malicious-binary", { mode: 0o700 });
+        await rm(paths.binaryPath);
+        await rename(backupPath, paths.binaryPath);
         return successResult("cloudflared version 2026.5.2");
       }
       return base.runner(invocation);
     });
     const evidence = await collectCloudflareTunnelPreflight({
       plist_path: paths.plistPath,
+      expected_plist_sha256: FIXTURE_PLIST_SHA256,
       expected_binary_sha256: FIXTURE_BINARY_SHA256,
-      output: path.join(paths.root, "evidence", "preflight.json"),
+      expected_binary_version: "2026.5.2",
       stable_release: {
         version: "2026.5.2",
         verified_at: "2026-08-09T13:00:00.000Z",
@@ -743,9 +1048,14 @@ describe("read-only collection and CLI", () => {
       },
       captured_at: "2026-08-09T13:01:00.000Z",
       platform: TEST_PLATFORM,
-    }, { runner, quicProbe: successfulQuicProbe, trustedBinaryRoots: [paths.root] });
-    expect(evidence.success).toBe(false);
-    expect(evidence.checks.snapshot.error).toBe("SNAPSHOT_INCOMPLETE");
+    }, {
+      runner,
+      quicProbe: matchingQuicProbe,
+      trustedBinaryRoots: [paths.root],
+      trustedPlistPaths: [paths.plistPath],
+    });
+    expect(invocations.some(({ command }) => path.basename(command) === "cloudflared")).toBe(false);
+    expect(evidence.snapshot.running_binary.version).toBe("2026.5.2");
   });
 
   it("fails token safety for non-0600 mode without reading or exposing contents", async () => {
@@ -753,7 +1063,9 @@ describe("read-only collection and CLI", () => {
     const { runner } = happyRunner(paths);
     const evidence = await collectCloudflareTunnelPreflight({
       plist_path: paths.plistPath,
+      expected_plist_sha256: FIXTURE_PLIST_SHA256,
       expected_binary_sha256: FIXTURE_BINARY_SHA256,
+      expected_binary_version: "2026.5.2",
       output: path.join(paths.root, "evidence", "preflight.json"),
       stable_release: {
         version: "2026.5.2",
@@ -762,12 +1074,17 @@ describe("read-only collection and CLI", () => {
       },
       captured_at: "2026-08-09T13:01:00.000Z",
       platform: TEST_PLATFORM,
-    }, { runner, quicProbe: successfulQuicProbe, trustedBinaryRoots: [paths.root] });
+    }, {
+      runner,
+      quicProbe: successfulQuicProbe,
+      trustedBinaryRoots: [paths.root],
+      trustedPlistPaths: [paths.plistPath],
+    });
     expect(evidence.success).toBe(false);
     expect(JSON.stringify(evidence)).not.toContain(SECRET_MARKER);
   });
 
-  it("validates local ingress only for a clearly locally-managed tunnel", async () => {
+  it("fails closed for local ingress when no immutable validator is available", async () => {
     const paths = await fixturePaths();
     const configPath = path.join(paths.root, "config.yml");
     await writeFile(configPath, [
@@ -808,7 +1125,9 @@ describe("read-only collection and CLI", () => {
     });
     const evidence = await collectCloudflareTunnelPreflight({
       plist_path: paths.plistPath,
+      expected_plist_sha256: FIXTURE_PLIST_SHA256,
       expected_binary_sha256: FIXTURE_BINARY_SHA256,
+      expected_binary_version: "2026.5.2",
       output: path.join(paths.root, "evidence", "preflight.json"),
       stable_release: {
         version: "2026.5.2",
@@ -817,14 +1136,20 @@ describe("read-only collection and CLI", () => {
       },
       captured_at: "2026-08-09T13:01:00.000Z",
       platform: TEST_PLATFORM,
-    }, { runner, quicProbe: successfulQuicProbe, trustedBinaryRoots: [paths.root] });
-    expect(evidence.success).toBe(true);
+    }, {
+      runner,
+      quicProbe: successfulQuicProbe,
+      trustedBinaryRoots: [paths.root],
+      trustedPlistPaths: [paths.plistPath],
+    });
+    expect(evidence.success).toBe(false);
     expect(evidence.management_mode).toBe("locally-managed");
-    expect(evidence.checks.config).toMatchObject({ attempted: true, success: true });
-    expect(invocations.filter(({ args }) => args.includes("validate"))).toEqual([{
-      command: evidence.snapshot.candidate_binary.path,
-      args: ["tunnel", "--config", configPath, "ingress", "validate"],
-    }]);
+    expect(evidence.checks.config).toMatchObject({
+      attempted: false,
+      success: false,
+      error: "CONFIG_VALIDATOR_UNAVAILABLE",
+    });
+    expect(invocations.filter(({ args }) => args.includes("validate"))).toHaveLength(0);
     expect(invocations.filter(({ args }) => args.join(" ").includes("tunnel diag"))).toHaveLength(0);
   });
 
@@ -854,7 +1179,9 @@ describe("read-only collection and CLI", () => {
     });
     const evidence = await collectCloudflareTunnelPreflight({
       plist_path: paths.plistPath,
+      expected_plist_sha256: FIXTURE_PLIST_SHA256,
       expected_binary_sha256: FIXTURE_BINARY_SHA256,
+      expected_binary_version: "2026.5.2",
       output: path.join(paths.root, "evidence", "preflight.json"),
       stable_release: {
         version: "2026.5.2",
@@ -869,6 +1196,7 @@ describe("read-only collection and CLI", () => {
         ? () => ({ attempted: true, success: false, latency_ms: 1, error: "CHECK_FAILED", targets: [] })
         : successfulQuicProbe,
       trustedBinaryRoots: [paths.root],
+      trustedPlistPaths: [paths.plistPath],
     });
     expect(evidence.success).toBe(false);
     expect(JSON.stringify(evidence)).not.toContain(SECRET_MARKER);
@@ -893,7 +1221,40 @@ describe("read-only collection and CLI", () => {
     expect(JSON.parse(await readFile(output, "utf8"))).toEqual(evidence);
   });
 
-  it("keeps stdout/stderr fixed and returns 0 only after successful evidence write", async () => {
+  it("keeps the default CLI fail-closed when no safe standalone QUIC probe is available", async () => {
+    const paths = await fixturePaths();
+    const { runner } = happyRunner(paths);
+    const output = path.join(paths.root, "default-quic-evidence", "preflight.json");
+    const exitCode = await runPreflightCli([
+      "--plist", paths.plistPath,
+      "--output", output,
+      "--stable-version", "2026.5.2",
+      "--stable-verified-at", "2026-08-09T13:00:00.000Z",
+      "--stable-platform", TEST_PLATFORM,
+      "--expected-plist-sha256", FIXTURE_PLIST_SHA256,
+      "--expected-binary-sha256", FIXTURE_BINARY_SHA256,
+      "--expected-binary-version", "2026.5.2",
+    ], {
+      runner,
+      now: () => new Date("2026-08-09T13:01:00.000Z"),
+      platform: TEST_PLATFORM,
+      stdout: vi.fn(),
+      stderr: vi.fn(),
+      trustedBinaryRoots: [paths.root],
+      trustedPlistPaths: [paths.plistPath],
+    });
+    const evidence = JSON.parse(await readFile(output, "utf8"));
+    expect(exitCode).toBe(1);
+    expect(evidence.success).toBe(false);
+    expect(evidence.checks.udp_7844).toMatchObject({
+      attempted: false,
+      success: false,
+      error: "QUIC_PROBE_UNAVAILABLE",
+      targets: [],
+    });
+  });
+
+  it("keeps stdout/stderr fixed and returns 0 only with a complete validated injected QUIC result", async () => {
     const paths = await fixturePaths();
     const { runner } = happyRunner(paths);
     const stdout = vi.fn();
@@ -905,7 +1266,9 @@ describe("read-only collection and CLI", () => {
       "--stable-version", "2026.5.2",
       "--stable-verified-at", "2026-08-09T13:00:00.000Z",
       "--stable-platform", TEST_PLATFORM,
+      "--expected-plist-sha256", FIXTURE_PLIST_SHA256,
       "--expected-binary-sha256", FIXTURE_BINARY_SHA256,
+      "--expected-binary-version", "2026.5.2",
     ], {
       runner,
       now: () => new Date("2026-08-09T13:01:00.000Z"),
@@ -914,6 +1277,7 @@ describe("read-only collection and CLI", () => {
       stderr,
       quicProbe: successfulQuicProbe,
       trustedBinaryRoots: [paths.root],
+      trustedPlistPaths: [paths.plistPath],
     });
     expect(exitCode).toBe(0);
     expect(stdout).toHaveBeenCalledWith(
@@ -929,7 +1293,9 @@ describe("read-only collection and CLI", () => {
       "--stable-version", "2026.5.2",
       "--stable-verified-at", "2026-08-09T13:00:00.000Z",
       "--stable-platform", TEST_PLATFORM,
+      "--expected-plist-sha256", FIXTURE_PLIST_SHA256,
       "--expected-binary-sha256", FIXTURE_BINARY_SHA256,
+      "--expected-binary-version", "2026.5.2",
     ], {
       runner,
       now: () => new Date("2026-08-09T13:01:00.000Z"),
@@ -939,6 +1305,7 @@ describe("read-only collection and CLI", () => {
       stderr,
       quicProbe: successfulQuicProbe,
       trustedBinaryRoots: [paths.root],
+      trustedPlistPaths: [paths.plistPath],
     });
     expect(failedWriteExit).toBe(1);
     expect(JSON.stringify(stderr.mock.calls)).not.toContain(SECRET_MARKER);
@@ -954,7 +1321,9 @@ describe("read-only collection and CLI", () => {
       "--stable-version", "2026.5.2",
       "--stable-verified-at", "2026-08-09T13:00:00.000Z",
       "--stable-platform", TEST_PLATFORM,
+      "--expected-plist-sha256", FIXTURE_PLIST_SHA256,
       "--expected-binary-sha256", FIXTURE_BINARY_SHA256,
+      "--expected-binary-version", "2026.5.2",
     ], { runner, stderr, stdout: vi.fn(), platform: TEST_PLATFORM });
     expect(exitCode).toBe(1);
     expect(runner).not.toHaveBeenCalled();
@@ -963,17 +1332,22 @@ describe("read-only collection and CLI", () => {
 
   it("writes a fail-closed verdict when the plist snapshot is unavailable", async () => {
     const paths = await fixturePaths();
-    const { runner } = happyRunner(paths);
+    const { runner: baseRunner } = happyRunner(paths);
+    const runner = vi.fn((candidate) => candidate.command === SYSTEM_TOOLS.plutil
+      ? failedResult()
+      : baseRunner(candidate));
     const output = path.join(paths.root, "missing-plist-evidence", "preflight.json");
     const stdout = vi.fn();
     const stderr = vi.fn();
     const exitCode = await runPreflightCli([
-      "--plist", path.join(paths.root, "missing.plist"),
+      "--plist", paths.plistPath,
       "--output", output,
       "--stable-version", "2026.5.2",
       "--stable-verified-at", "2026-08-09T13:00:00.000Z",
       "--stable-platform", TEST_PLATFORM,
+      "--expected-plist-sha256", FIXTURE_PLIST_SHA256,
       "--expected-binary-sha256", FIXTURE_BINARY_SHA256,
+      "--expected-binary-version", "2026.5.2",
     ], {
       runner,
       now: () => new Date("2026-08-09T13:01:00.000Z"),
@@ -982,6 +1356,7 @@ describe("read-only collection and CLI", () => {
       stderr,
       quicProbe: successfulQuicProbe,
       trustedBinaryRoots: [paths.root],
+      trustedPlistPaths: [paths.plistPath],
     });
     expect(exitCode).toBe(1);
     const evidence = JSON.parse(await readFile(output, "utf8"));

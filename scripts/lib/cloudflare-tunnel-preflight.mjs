@@ -4,6 +4,8 @@ import { isIP } from "node:net";
 const VERSION_COMPONENT = "(?:0|[1-9][0-9]{0,8})";
 const VERSION_PATTERN = new RegExp(`^(${VERSION_COMPONENT})\\.(${VERSION_COMPONENT})\\.(${VERSION_COMPONENT})$`, "u");
 const SHA256_PATTERN = /^sha256:[0-9a-f]{64}$/u;
+const MODE_PATTERN = /^[0-7]{4}$/u;
+const PLATFORM_PATTERN = /^(?:darwin|linux)-(?:arm64|x64)$/u;
 const CHECK_NAMES = Object.freeze([
   "snapshot", "management_mode", "token_path_mode", "config",
   "tunnel_connections", "dns", "udp_7844", "tcp_7844",
@@ -113,6 +115,10 @@ function parseVersion(value) {
   return components.every((component) => Number.isSafeInteger(component)) ? components : null;
 }
 
+export function isCanonicalCloudflaredVersion(value) {
+  return parseVersion(value) !== null;
+}
+
 function compareVersions(left, right) {
   for (let index = 0; index < left.length; index += 1) {
     if (left[index] !== right[index]) return left[index] < right[index] ? -1 : 1;
@@ -193,7 +199,11 @@ function normalizeLatency(value) {
 function normalizeTargets(targets) {
   if (!Array.isArray(targets)) return [];
   return targets.map((target) => ({
-    hostname: typeof target?.hostname === "string" ? target.hostname : "unknown",
+    hostname: [
+      ...Object.keys(CLOUDFLARE_TUNNEL_ENDPOINTS),
+      "api.cloudflare.com",
+      "loopback",
+    ].includes(target?.hostname) ? target.hostname : "unknown",
     address_family: ["ipv4", "ipv6", "n/a"].includes(target?.address_family)
       ? target.address_family : "n/a",
     protocol: ["dns", "quic", "tcp", "https", "metrics"].includes(target?.protocol)
@@ -218,30 +228,30 @@ function normalizeCheck(value = {}) {
 
 function projectBinary(value) {
   return {
-    path: typeof value?.path === "string" ? sanitizeEvidencePath(value.path) : null,
+    path_hash: SHA256_PATTERN.test(value?.path_hash ?? "") ? value.path_hash : null,
     version: parseVersion(value?.version) ? value.version : null,
     sha256: SHA256_PATTERN.test(value?.sha256 ?? "") ? value.sha256 : null,
-    mode: typeof value?.mode === "string" ? value.mode : null,
-    arguments_redacted: Array.isArray(value?.arguments_redacted)
-      ? value.arguments_redacted.map((item) => {
-        const argument = String(item);
-        return argument.startsWith("/") || containsSensitiveShape(argument)
-          ? "[redacted-value]" : argument;
-      }) : [],
+    mode: MODE_PATTERN.test(value?.mode ?? "") ? value.mode : null,
+    arguments_sha256: SHA256_PATTERN.test(value?.arguments_sha256 ?? "")
+      ? value.arguments_sha256 : null,
   };
+}
+
+function containsRawIp(value) {
+  const candidates = String(value).split(/[\s/,[\]()=]+/u).flatMap((part) => {
+    const bracketless = part.replace(/^\[|\]$/gu, "");
+    const ipv4WithPort = bracketless.match(/^((?:[0-9]{1,3}\.){3}[0-9]{1,3}):[0-9]+$/u)?.[1];
+    return ipv4WithPort ? [bracketless, ipv4WithPort] : [bracketless];
+  });
+  return candidates.some((candidate) => isIP(candidate) !== 0);
 }
 
 function containsSensitiveShape(value) {
   return /(?:token|config|secret|credential|cookie|jwt)/iu.test(value)
     || /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/iu.test(value)
     || /\b[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\b/iu.test(value)
-    || /\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}\b/u.test(value)
+    || containsRawIp(value)
     || /\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b/u.test(value);
-}
-
-function sanitizeEvidencePath(value) {
-  if (!value.startsWith("/")) return null;
-  return containsSensitiveShape(value) ? `[redacted]/${value.split("/").at(-1)}` : value;
 }
 
 function projectSnapshot(snapshot) {
@@ -250,15 +260,16 @@ function projectSnapshot(snapshot) {
       path_hash: SHA256_PATTERN.test(snapshot?.plist?.path_hash ?? "")
         ? snapshot.plist.path_hash : null,
       sha256: SHA256_PATTERN.test(snapshot?.plist?.sha256 ?? "") ? snapshot.plist.sha256 : null,
-      mode: typeof snapshot?.plist?.mode === "string" ? snapshot.plist.mode : null,
+      mode: MODE_PATTERN.test(snapshot?.plist?.mode ?? "") ? snapshot.plist.mode : null,
     },
     candidate_binary: projectBinary(snapshot?.candidate_binary),
     running_binary: projectBinary(snapshot?.running_binary),
     token_file_path_hash: SHA256_PATTERN.test(snapshot?.token_file_path_hash ?? "")
       ? snapshot.token_file_path_hash : null,
-    token_file_mode: typeof snapshot?.token_file_mode === "string" ? snapshot.token_file_mode : null,
-    launchd_state: typeof snapshot?.launchd_state === "string" ? snapshot.launchd_state : "unavailable",
-    tunnel_state: typeof snapshot?.tunnel_state === "string" ? snapshot.tunnel_state : "unavailable",
+    token_file_mode: MODE_PATTERN.test(snapshot?.token_file_mode ?? "")
+      ? snapshot.token_file_mode : null,
+    launchd_state: snapshot?.launchd_state === "running" ? "running" : "unavailable",
+    tunnel_state: snapshot?.tunnel_state === "connected" ? "connected" : "unavailable",
     tunnel: {
       required_connections: 4,
       active_connections: Number.isInteger(snapshot?.tunnel?.active_connections)
@@ -266,8 +277,7 @@ function projectSnapshot(snapshot) {
       required_edge_locations: 2,
       active_edge_locations: Number.isInteger(snapshot?.tunnel?.active_edge_locations)
         ? snapshot.tunnel.active_edge_locations : null,
-      replica_state: typeof snapshot?.tunnel?.replica_state === "string"
-        ? snapshot.tunnel.replica_state : "unavailable",
+      replica_state: snapshot?.tunnel?.replica_state === "healthy" ? "healthy" : "unavailable",
     },
     stable_metadata_sha256: SHA256_PATTERN.test(snapshot?.stable_metadata_sha256 ?? "")
       ? snapshot.stable_metadata_sha256 : null,
@@ -283,7 +293,10 @@ function snapshotComplete(snapshot, { tokenRequired }) {
     && SHA256_PATTERN.test(running?.sha256 ?? "")
     && parseVersion(candidate?.version) !== null
     && parseVersion(running?.version) !== null
-    && typeof candidate?.path === "string" && typeof running?.path === "string"
+    && SHA256_PATTERN.test(candidate?.path_hash ?? "")
+    && SHA256_PATTERN.test(running?.path_hash ?? "")
+    && SHA256_PATTERN.test(candidate?.arguments_sha256 ?? "")
+    && SHA256_PATTERN.test(running?.arguments_sha256 ?? "")
     && (!tokenRequired || (SHA256_PATTERN.test(snapshot?.token_file_path_hash ?? "")
       && snapshot?.token_file_mode === "0600"))
     && snapshot?.launchd_state === "running"
@@ -326,7 +339,7 @@ export function buildPreflightEvidence({
     schema: "homecook.cloudflare-tunnel-preflight",
     version: 1,
     timestamp: new Date(timestamp).toISOString(),
-    platform: typeof platform === "string" ? platform : "unknown",
+    platform: PLATFORM_PATTERN.test(platform ?? "") ? platform : "unknown",
     success: allChecksPass,
     management_mode: ["remotely-managed", "locally-managed"].includes(managementMode)
       ? managementMode : "unknown",
