@@ -22,8 +22,10 @@ import {
   assertFullLocalComposeModel,
   assertNoSecretLeakage,
   assertSecretRotationAllowed,
+  buildFullLocalProductCatalogSql,
   generateFullLocalSecretBundle,
   materializeFullLocalSecrets,
+  parseFullLocalProductCatalogSqlOutput,
   summarizeFullLocalRuntimeStates,
   validateExternalSecretDirectory,
   validateFullLocalProductionConfig,
@@ -257,6 +259,13 @@ function composeWithInput(runtime, args, input) {
   });
 }
 
+function composeContainerIds(runtime) {
+  return compose(runtime, ["ps", "--all", "--quiet"])
+    .trim()
+    .split("\n")
+    .filter(Boolean);
+}
+
 function initializeConfig(args) {
   const target = configPath(args);
   if (existsSync(target) && !hasFlag(args, "--replace")) {
@@ -422,14 +431,66 @@ function bootstrapSecrets(args) {
 }
 
 function runtimeStatus(runtime) {
-  const containers = compose(runtime, ["ps", "--all", "--quiet"])
-    .trim().split("\n").filter(Boolean);
+  const containers = composeContainerIds(runtime);
   const states = containers.map((container) => JSON.parse(run(
     "docker",
     ["inspect", "--format", "{{json .State}}", container],
     { env: runtime.env },
   )));
   return summarizeFullLocalRuntimeStates(states);
+}
+
+function postgresContainerId(runtime) {
+  const container = compose(runtime, ["ps", "--quiet", "postgres"]).trim();
+  return container.length > 0 ? container : null;
+}
+
+function formatProductCatalogBlockers(gate) {
+  return [
+    ...gate.missingRelations,
+    ...gate.missingColumns,
+    ...gate.missingFunctions,
+  ].join(", ");
+}
+
+function collectFullLocalProductCatalog(containerId) {
+  if (!containerId) {
+    fail("Full-local PostgreSQL runtime is unavailable.");
+  }
+  const result = spawnSync("docker", [
+    "exec",
+    "-i",
+    containerId,
+    "psql",
+    "-X",
+    "-qAt",
+    "-v",
+    "ON_ERROR_STOP=1",
+    "-U",
+    "supabase_admin",
+    "-d",
+    "postgres",
+  ], {
+    encoding: "utf8",
+    input: buildFullLocalProductCatalogSql(),
+    maxBuffer: 32 * 1024 * 1024,
+    stdio: ["pipe", "pipe", "pipe"],
+  });
+  if (result.status !== 0) {
+    fail("Full-local product catalog gate query failed.");
+  }
+  try {
+    return parseFullLocalProductCatalogSqlOutput(result.stdout ?? "");
+  } catch {
+    fail("Full-local product catalog gate returned an invalid result.");
+  }
+}
+
+function assertFullLocalProductCatalogPass(gate) {
+  if (gate.status === "PASS") {
+    return true;
+  }
+  fail(`Full-local product catalog gate blocked runtime readiness: ${formatProductCatalogBlockers(gate)}`);
 }
 
 async function waitForRuntimeHealthy(runtime, timeoutMs = 180_000) {
@@ -938,6 +999,15 @@ function print(value) {
   process.stdout.write(`${JSON.stringify(value, null, 2)}\n`);
 }
 
+function runtimeCatalogPayload(gate) {
+  return {
+    product_catalog_missing_columns: gate.missingColumns,
+    product_catalog_missing_functions: gate.missingFunctions,
+    product_catalog_missing_relations: gate.missingRelations,
+    product_catalog_status: gate.status,
+  };
+}
+
 async function main() {
   const [command, ...args] = process.argv.slice(2);
   switch (command) {
@@ -949,10 +1019,31 @@ async function main() {
       break;
     case "validate": {
       const runtime = validateAndMaterialize(args);
-      print({
+      const base = {
         ...runtime.validation,
         oauth_provider_count: runtime.oauth.provider_count,
         social_providers_enabled: runtime.oauth.enabled,
+      };
+      const containers = composeContainerIds(runtime);
+      if (containers.length === 0) {
+        print({
+          ...base,
+          product_catalog_status: "NOT_RUN",
+          runtime_present: false,
+          status: "PASS",
+        });
+        break;
+      }
+      const status = runtimeStatus(runtime);
+      if (!status.healthy) {
+        fail("Full-local runtime must be healthy before product catalog validation.");
+      }
+      const gate = collectFullLocalProductCatalog(postgresContainerId(runtime));
+      assertFullLocalProductCatalogPass(gate);
+      print({
+        ...base,
+        ...runtimeCatalogPayload(gate),
+        runtime_present: true,
         status: "PASS",
       });
       break;
@@ -961,14 +1052,26 @@ async function main() {
       const runtime = validateAndMaterialize(args);
       compose(runtime, ["up", "-d"]);
       const status = await waitForRuntimeHealthy(runtime);
-      print({ ...status, status: "PASS" });
+      const gate = collectFullLocalProductCatalog(postgresContainerId(runtime));
+      assertFullLocalProductCatalogPass(gate);
+      print({ ...status, ...runtimeCatalogPayload(gate), status: "PASS" });
       break;
     }
     case "status": {
       const runtime = validateAndMaterialize(args);
       const status = runtimeStatus(runtime);
-      print({ ...status, status: status.healthy ? "PASS" : "BLOCKED" });
       if (!status.healthy) {
+        print({ ...status, product_catalog_status: "NOT_RUN", status: "BLOCKED" });
+        process.exitCode = 2;
+        break;
+      }
+      const gate = collectFullLocalProductCatalog(postgresContainerId(runtime));
+      print({
+        ...status,
+        ...runtimeCatalogPayload(gate),
+        status: gate.status === "PASS" ? "PASS" : "BLOCKED",
+      });
+      if (gate.status !== "PASS") {
         process.exitCode = 2;
       }
       break;

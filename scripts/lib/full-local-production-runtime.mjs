@@ -18,6 +18,14 @@ import {
 } from "node:fs";
 import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
 
+export {
+  buildFullLocalProductCatalogSql,
+  FULL_LOCAL_REQUIRED_PRODUCT_COLUMNS,
+  FULL_LOCAL_REQUIRED_PRODUCT_FUNCTIONS,
+  FULL_LOCAL_REQUIRED_PRODUCT_RELATIONS,
+  parseFullLocalProductCatalogSqlOutput,
+} from "./full-local-product-catalog.mjs";
+
 const IMAGE_REFERENCES = Object.freeze({
   "linux/arm64": Object.freeze({
     auth:

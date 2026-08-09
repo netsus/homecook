@@ -20,6 +20,8 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 
+import { buildFullLocalProductCatalogCtesSql } from "./lib/full-local-product-catalog.mjs";
+
 export const EXPECTED_LIVE_ROOT = "/Users/cwj/01_vibe_coding/homecook-full-local-restore";
 export const REFRESH_LIFECYCLE_JSON_SCRIPT =
   "verify:full-local-session-refresh-lifecycle:json";
@@ -970,7 +972,16 @@ export function buildMigrationHeadSql() {
   return [
     "begin transaction read only;",
     "set local statement_timeout = '5s';",
-    "with catalog_marker as (",
+    "with",
+    buildFullLocalProductCatalogCtesSql(),
+    ", catalog_gate as (",
+    "  select",
+    "    bool_and(relation_checks.present)",
+    "      and bool_and(column_checks.present)",
+    "      and bool_and(function_checks.present) as catalog_ready",
+    "  from relation_checks, column_checks, function_checks",
+    "),",
+    "catalog_marker as (",
     "  select case",
     "    when to_regprocedure('private.verify_full_local_authenticated_authority()') is not null",
     "      and position('current_setting(''transaction_read_only'') = ''on''' in pg_get_functiondef(to_regprocedure('private.verify_full_local_authenticated_authority()'))) > 0",
@@ -1000,13 +1011,16 @@ export function buildMigrationHeadSql() {
     "      then '20260801151000_full_local_request_authority.sql'",
     "    else null",
     "  end as migration_head",
+    "  from catalog_gate",
+    "  where catalog_ready",
     ")",
     "select json_build_object(",
     "  'migration_head', migration_head,",
     "  'source', 'database_catalog_marker'",
     ")::text",
     "from catalog_marker",
-    "where migration_head is not null;",
+    "where migration_head is not null",
+    "  and exists (select 1 from catalog_gate where catalog_ready);",
     "rollback;",
     "",
   ].join("\n");
