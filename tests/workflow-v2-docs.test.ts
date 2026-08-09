@@ -1,4 +1,5 @@
-import { existsSync, readFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
@@ -106,6 +107,31 @@ describe("workflow v2 docs", () => {
     expect(results.every((result) => result.errors.length === 0)).toBe(true);
   });
 
+  it("fails the workflow validator when the canonical GPT-only handoff contract drifts", () => {
+    const fixtureRoot = mkdtempSync(join(tmpdir(), "workflow-v2-handoff-"));
+
+    try {
+      cpSync(join(repoRoot, "docs"), join(fixtureRoot, "docs"), { recursive: true });
+      mkdirSync(join(fixtureRoot, ".opencode"), { recursive: true });
+      cpSync(join(repoRoot, ".opencode/README.md"), join(fixtureRoot, ".opencode/README.md"));
+      cpSync(join(repoRoot, "CLAUDE.md"), join(fixtureRoot, "CLAUDE.md"));
+
+      const handoffPath = join(fixtureRoot, "docs/engineering/codex-task-handoff.md");
+      const driftedHandoff = readFileSync(handoffPath, "utf8").replace(
+        "서로 다른 task ID와 서로 다른 새 세션을 사용한다.",
+        "같은 작업에서 검토할 수 있다.",
+      );
+      writeFileSync(handoffPath, driftedHandoff, "utf8");
+
+      const handoffResult = validateWorkflowV2DocContract({ rootDir: fixtureRoot })
+        .find((result) => result.name === "workflow-v2-doc-contract:codex-task-handoff");
+
+      expect(handoffResult?.errors.length).toBeGreaterThan(0);
+    } finally {
+      rmSync(fixtureRoot, { force: true, recursive: true });
+    }
+  });
+
   it("keeps repo-local independent Codex agent descriptions aligned", () => {
     const opencodeConfig = readJson("opencode.json");
     const ohMyOpencodeConfig = readJson(".opencode/oh-my-opencode.json");
@@ -134,6 +160,14 @@ describe("workflow v2 docs", () => {
       "utf8",
     );
     const opencodeReadme = readFileSync(join(repoRoot, ".opencode/README.md"), "utf8");
+    const codexTaskHandoff = readFileSync(
+      join(repoRoot, "docs/engineering/codex-task-handoff.md"),
+      "utf8",
+    );
+    const sessionOrchestrator = readFileSync(
+      join(repoRoot, "docs/engineering/workflow-v2/omo-session-orchestrator.md"),
+      "utf8",
+    );
     const claudeEntry = readFileSync(join(repoRoot, "CLAUDE.md"), "utf8");
     const roadmap = readFileSync(join(repoRoot, "docs/workpacks/README.md"), "utf8");
     const template = readFileSync(join(repoRoot, "docs/workpacks/_template/README.md"), "utf8");
@@ -180,6 +214,13 @@ describe("workflow v2 docs", () => {
     expect(opencodeReadme).toContain("## Allowed OMO Commands");
     expect(opencodeReadme).toContain("## Suspended Commands");
     expect(opencodeReadme).toContain("`provider=retired`, `bin=disabled`");
+    expect(opencodeReadme).toContain("다른 task ID와 다른 새 세션을 사용한다.");
+    expect(codexTaskHandoff).toContain("별도 ChatGPT/Codex 작업(새 task ID, 새 세션)");
+    expect(codexTaskHandoff).toContain("서로 다른 task ID와 서로 다른 새 세션을 사용한다.");
+    expect(sessionOrchestrator).toContain("## Historical Session Model");
+    expect(sessionOrchestrator).toContain(
+      "현재 Homecook 운영 규칙은 `Stage 1/2/4 작성`과 `internal 1.5 / Stage 3 / Stage 5 / final authority / Stage 6 검토`를 서로 다른 ChatGPT/Codex task ID와 새 세션으로 분리한다.",
+    );
     expect(claudeEntry).toContain("# Claude 진입점 폐기 안내");
     expect(claudeEntry).toContain("Homecook은 Claude를 더 이상 사용하지 않는다.");
     expect(roadmap).toContain("| `in-progress` → `merged` | Stage 6 frontend closeout이 merge까지 반영된 시점 |");
