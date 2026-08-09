@@ -1,0 +1,91 @@
+{
+  "result": "done",
+  "stage": 4,
+  "role": "fresh-frontend-implementer",
+  "summary_markdown": "#11 COOK_MODE와 LEFTOVERS가 merged #8 cooked-batch projection을 exact UI-only consumer로 사용한다. 기존 COOK_MODE full-page contrast residual 2 nodes와 신규 #11 scoped serious/critical 0을 분리하며 Stage 5, final authority, Stage 6, Manual 및 activation은 pending이다.",
+  "source": {
+    "task_id": "019fe7b3-881f-7152-b3fc-9ca58b5dba2a",
+    "base_branch": "origin/master",
+    "base_sha": "8b1a4cce57e05d282c2a01fc54557ffc129fae1d",
+    "base_tree": "7545e8e637f8641f7ef321a70a678e0c29252867",
+    "source_pr": 1318,
+    "branch": "feature/fe-cooked-batch-weight-ui",
+    "implementation_head": "d6843baa6d27addea5d79fa991c937dfc6dbf070",
+    "implementation_tree": "0fa3545f9ec22d83dd4e969f1eef70364a2297ba",
+    "draft_pr": null,
+    "history_rewrite": false
+  },
+  "contract": {
+    "public_contract_changed": false,
+    "schema_changed": false,
+    "endpoint_added": false,
+    "status_or_error_added": false,
+    "capability_changed": false,
+    "contract_evolution_candidate": null
+  },
+  "verification": {
+    "focused_vitest": "5 files / 43 tests passed",
+    "canonical_playwright": "2 passed / 2 intended skip",
+    "focused_ledger_and_ui_playwright": "8 passed",
+    "product_vitest": "227 files / 2,698 tests passed; 11 files / 150 tests intended skip",
+    "build": "passed; 78 static pages",
+    "full_regression": "952 passed / 170 intended skip",
+    "full_accessibility": "18 passed / 15 intended skip",
+    "full_visual": "23 passed / 22 intended skip",
+    "full_security": "12 passed",
+    "lighthouse": "2 URLs x 3 runs passed",
+    "qa_eval": "93; validation errors 0; covered 52/63; blocked 11/63",
+    "audit": "high 0 / critical 0; residual low 1 / moderate 1"
+  },
+  "accessibility_scope": {
+    "existing_cook_mode_full_page_contrast_residual_nodes": 2,
+    "new_completion_action_sheets_and_leftovers_section_scoped_serious_or_critical": 0,
+    "page_wide_zero_claimed": false,
+    "physical_at": "Manual Only"
+  },
+  "screenshots": {
+    "manifest": "ui/designs/evidence/cooked-batch-weight-ui/manifest.json",
+    "captured_at": "2026-08-09T19:12:15.711Z",
+    "png_count": 15,
+    "runtime_json_count": 2,
+    "viewports": [320, 390, 1440],
+    "originals_inspected": true
+  },
+  "review": {
+    "author_quality_gate": "pass_for_draft_pr",
+    "author_critical_findings": 0,
+    "author_important_findings": 0,
+    "stage5_self_approval": false,
+    "final_authority_self_approval": false,
+    "stage6_self_approval": false
+  },
+  "shared_projection_handoff": {
+    "edited_here": false,
+    "surfaces": [
+      "docs/workpacks/README.md",
+      ".workflow-v2/status.json"
+    ],
+    "owner": "later sequential #9/shared integration lane",
+    "required_projection": "#11 pending-review with implementation target and Draft PR; do not preclaim independent gates"
+  },
+  "overall_status": {
+    "lifecycle": "planned",
+    "approval_state": "not_started",
+    "verification_status": "pending",
+    "evaluation_status": "not_started",
+    "design_status": "pending-review"
+  },
+  "pending": [
+    "current-head Draft PR checks",
+    "fresh authority precheck",
+    "independent Stage 5",
+    "final product-design authority",
+    "independent Stage 6",
+    "physical iOS Safari, virtual keyboard, screen reader and Manual QA",
+    "server-Mac, OAuth and merged-exact-SHA read-only rehearsal",
+    "R/R+1/R+2 and activation",
+    "sequential shared roadmap/status projection",
+    "Ready transition and merge",
+    "Discord notification"
+  ]
+}
