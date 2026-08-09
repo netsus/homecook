@@ -1,224 +1,255 @@
-# COOK_MODE — whole-board + cooked batch completion
+# COOK_MODE — #11 cooked-batch weight UI refresh
 
-> 기준: 요구사항 `v1.7.29`, 화면정의서 `v1.5.33`, 유저 flow `v1.3.31`, DB `v1.3.31`, API `v1.2.35`
-> 대상: `cooked-batch-weight-ledger` #8 fresh Stage 1 design source
-> 분류: `prototype-derived design`, high-risk UI change, authority required
-> 상태: `temporary` — fresh independent critic/authority/internal1.5 pending
+> Stage: Homecook #11 `cooked-batch-weight-ui` fresh Stage 1 design-generator
+> Lineage: HOLD report `337daa808971802c79698df64c70240205addba4` → parent/current base `c16102a3072e929e45bb24a69464cd3110d03db5`
+> Current official tuple: 요구사항 `v1.7.30` / 화면정의서 `v1.5.34` / 유저 Flow `v1.3.32` / DB `v1.3.32` / API `v1.2.37`
+> Contract lineage: API `v1.2.37` preserves #8 API `v1.2.36` section `0-CBW`.
+> Classification: `prototype-derived design`, high-risk UI change, not an anchor screen
+> Design status: `temporary` — fresh independent critic, runtime evidence, final authority pending
 
-## 목적과 계약 경계
+## 1. Purpose and ownership
 
-사용자는 요리 중 전체 재료와 전체 조리순서를 한 화면의 whole-board로 읽고, 완료할 때 실제 사용한 pantry row와 음식만의 완성 중량을 명시적으로 결정한다.
+The existing #8 COOK_MODE whole-board and cooked-batch completion sheet remain the interaction baseline. #11 adds only the final weight presentation and local container helper without changing the approved completion transaction.
 
-- 기존 whole-board interaction model을 유지한다. 재료/과정을 좌우 swipe나 단계 이동 화면으로 되돌리지 않는다.
-- COOK_MODE 안에 인분 stepper나 인분 변경 action을 두지 않는다.
-- snapshot-v2 완료 body는 기존 `consumed_pantry_item_ids`, `weight_action`, `finished_weight_g`만 사용한다.
-- 새 endpoint, field, status, public error, action, screen을 만들지 않는다.
-- #7의 recipe/Meal `revision`, owner-only `edit_context`, server-only joint capability projection은 entrypoint 경계다. #8 completion body를 확장하지 않는다.
-- creation-off에서는 새 personal edit와 새 snapshot-v2 start를 막되 seeded/existing v2 read/cancel/complete drain은 유지한다.
+- Keep the #8 whole-board, exact pantry-row selection, and exact-one `set_finished_weight | weigh_later` flow.
+- Explain that weight means the original food-only total immediately after cooking, not the current remainder and not food plus pot/container/plate.
+- Add a local-only helper that calculates `food + container - container tare`; only the positive result can populate `finished_weight_g`.
+- Reuse the merged #8 GET/PATCH/POST contract and existing completion mutation. Do not add an API, DB field, status, error code, mutation action, or direct DML.
+- #9 owns meal-log backend writes and links. #12 owns consumed-amount CTA and meal-log UI. Neither is rendered or implied here.
+- COOK_MODE never adds serving adjustment. The pinned cooking servings remain read-only.
 
-## 화면 구조
+### Existing #8 reference boundary
 
-```text
-┌────────────────────────────────────┐
-│ 김치찌개                    4인분   │  읽기 전용
-│ 오늘 저녁 · 요리 중                │
-├────────────────────────────────────┤
-│ 재료                               │
-│ 돼지고기 300g · 김치 400g · …      │
-│                                    │
-│ 조리순서                           │  whole-board 내부 세로 스크롤
-│ 1  볶기  돼지고기와 김치를 볶아요  │
-│ 2  끓이기  물을 넣고 끓여요        │
-│ 3  마무리  간을 맞춰요              │
-├────────────────────────────────────┤
-│ [취소]                 [요리 완료] │  safe-area 고정, 44px+
-└────────────────────────────────────┘
-```
+The merged #8 implementation and its approved authority/Stage 6 evidence are a functional and interaction reference:
 
-- 일반 AppBar와 하단 탭은 숨긴다.
-- 제목, 읽기 전용 인분, 전체 재료, 전체 조리순서를 한 scroll context에서 보여준다.
-- 하단 action bar만 고정하며 본문 마지막을 가리지 않는다.
-- 긴 레시피는 whole-board 내부만 세로 스크롤한다. page-level horizontal scroll은 금지한다.
-- 실제 wake lock이 활성화된 경우에만 `화면 안 꺼짐` 상태를 표시한다.
+- `components/cooking/cooked-batch-completion-sheet.tsx`
+- `docs/workpacks/cooked-batch-weight-ledger/evidence/2026-08-09-stage4-frontend-implementation.md`
+- `docs/workpacks/cooked-batch-weight-ledger/evidence/2026-08-09-final-product-design-authority-post-typography-rereview.md`
+- `docs/workpacks/cooked-batch-weight-ledger/evidence/2026-08-09-stage6-frontend-successor-head-rereview.md`
 
-## 요리 완료 sheet
+Those artifacts approve #8 at its exact reviewed heads. They are not fresh #11 evidence and do not approve this design.
 
-초기값은 pantry row 선택 0개, weight action 미선택이다. 어느 항목도 자동 선택하지 않는다.
+Historical #8 design-lock compatibility remains explicit: its source named API `v1.2.35` and the `Loading` / `Empty` / `Error` / `creation-off` drain states. #11 now follows current API `v1.2.37`, while preserving those behaviors, exact `pantry_item_id`, visible 제품명·브랜드 context, and the rule that the client `자동 선택하지 않는다`.
+
+## 2. Mobile information architecture
 
 ```text
-┌────────────────────────────────────┐
-│ 요리 완료                          │
-│ 실제 사용한 팬트리 항목과          │
-│ 완성된 음식 전체 무게를 확인해요   │
-├────────────────────────────────────┤
-│ 사용한 팬트리 항목                 │
-│                                    │
-│ 닭가슴살                           │  pinned ingredient group
-│ ☐ 닭가슴살 오리지널                │  제품명
-│   하림 · 냉장고                     │  브랜드 · row context
-│   pantry_item_id: row-a             │  구현 식별자, 사용자에게 raw UUID 비노출
-│ ☐ 담백 닭가슴살                    │  equivalent row
-│   무브랜드 · 냉동실                 │
-│   pantry_item_id: row-b             │
-│                                    │
-│ 양파                               │
-│ ☐ 양파                             │  generic row
-│   일반 재료 · 팬트리                │
-│   pantry_item_id: row-c             │
-├────────────────────────────────────┤
-│ 완성 직후 음식 전체 중량           │
-│ ○ 음식만 무게(g)   [            ]  │
-│ ○ 나중에 입력                      │
-│ 용기·그릇 무게는 제외해 주세요     │
-├────────────────────────────────────┤
-│ [돌아가기]          [완료 저장]     │
-└────────────────────────────────────┘
+COOK_MODE whole-board
+  ├─ pinned title + cooking servings (read-only)
+  ├─ all ingredients
+  ├─ all cooking steps
+  └─ fixed action bar: cancel / cooking complete
+        └─ familiar bottom sheet
+             ├─ title + short guidance
+             ├─ internally scrollable body
+             │    ├─ exact pantry rows
+             │    └─ food-only weight action
+             │         ├─ direct grams
+             │         ├─ local container helper
+             │         └─ weigh later
+             └─ fixed footer + safe area: back / save
 ```
 
-### Exact pantry row 규칙
+- The page must not scroll horizontally. A long recipe scrolls only in the whole-board content region.
+- Opening the sheet locks background/body scroll. The sheet body owns vertical scroll; its footer stays visible above `env(safe-area-inset-bottom)`.
+- Default mobile width is 390px; 320px is the narrow sentinel. Sheet labels stack at 320px rather than shrinking targets or input text.
+- All controls have a minimum 44×44px target. Numeric inputs use at least 16px text so mobile browsers do not zoom the page.
+- Virtual-keyboard resize must keep the active numeric input, its error, and the fixed CTA reachable through sheet-internal scrolling.
 
-- 각 선택 항목의 authority는 `pantry_item_id`다. client가 ingredient 이름이나 브랜드로 row를 다시 찾지 않는다.
-- product row는 실제 제품명과 브랜드를 주 정보로, generic row는 표준 재료명을 주 정보로 보여준다.
-- 같은 effective ingredient에 여러 row가 있어도 모두 별도 선택 항목이다.
-- 초기 선택은 항상 0개이며 동등 row, 첫 row, 최근 row를 자동 선택하지 않는다.
-- 선택하지 않은 row는 삭제하지 않는다.
-- eligible row가 없으면 `사용할 팬트리 항목이 없어요` Empty를 보여주고 `consumed_pantry_item_ids=[]`로 둔다. 사용자는 weight action을 명시적으로 고른 뒤 완료할 수 있다.
+## 3. 390px wireframes
 
-### Weight 규칙
-
-- `음식만 무게(g)`와 `나중에 입력`은 exact-one radio다. 초기에는 둘 다 미선택이다.
-- `음식만 무게(g)`를 고르면 positive `finished_weight_g`가 필요하다.
-- 입력값은 완성 직후 음식 전체 중량이며 현재 남은 양이나 용기 포함 중량이 아니다.
-- `나중에 입력`은 `weight_action=weigh_later`, `finished_weight_g=null`이다.
-- servings→grams 추정, 이전 값 추측, 선택 자동 전환을 하지 않는다.
-- pantry 선택 0개는 허용하지만 weight action 미선택/invalid g에서는 완료 CTA를 disabled로 둔다.
-
-## 상태 설계
-
-### Loading
-
-- session/pinned content/pantry candidates 중 하나라도 unresolved면 whole-board 또는 sheet skeleton을 표시한다.
-- sheet Loading에서는 checkbox와 완료 CTA를 disabled로 두고 row나 weight action을 추측하지 않는다.
-- 재시도 중 기존 사용자의 명시 선택이 있다면 유지하되 server 응답으로 사라진 row는 선택에서 제거하고 Error로 알린다.
-
-### Empty
-
-- pantry candidate `[]`는 오류가 아니다.
-- `사용할 팬트리 항목이 없어요. 음식 무게만 선택해 완료할 수 있어요.`를 표시한다.
-- `consumed_pantry_item_ids=[]`를 유지하고 weight action이 valid하면 완료를 허용한다.
-- session/content가 없거나 접근 불가한 경우는 Empty로 숨기지 않고 기존 404/unauthorized 경계를 사용한다.
-
-### Error
-
-- whole-board read 실패: `요리 정보를 불러오지 못했어요` + `[다시 시도]` + `[이전 화면]`.
-- complete의 기존 409/422: sheet를 닫지 않고 선택한 exact row IDs와 weight action/input을 보존한다.
-- 오류 요약에 focus를 옮기고 fields가 가리키는 control과 연결한다.
-- other-owner/private resource는 상세를 노출하지 않고 기존 404 non-disclosure를 유지한다.
-- 새 public error copy/code를 발명하지 않으며 server wrapper의 기존 code/message/fields를 소비한다.
-
-### Pending / duplicate submit
-
-- 첫 submit 직후 모든 sheet action을 잠그고 단일 progress label을 보여준다.
-- 추가 tap, Enter, touch submit을 차단한다.
-- 네트워크 재시도는 같은 UUID Idempotency-Key와 같은 canonical payload를 사용한다.
-
-### stored replay
-
-- same key+same payload는 server의 최초 stored replay result를 그대로 소비한다.
-- sheet는 한 번만 닫고 pantry/batch/cook count/XP 성공 animation이나 toast를 반복하지 않는다.
-- same key+different payload는 기존 409를 표시하고 아무 effect도 완료로 투영하지 않는다.
-
-### Read-only / terminal
-
-- completed/cancelled v2 session을 재열면 pinned content를 read-only로 보여주고 새 completion control을 만들지 않는다.
-- creation-off에서도 existing in-progress v2 session의 read/cancel/complete control은 유지한다.
-- v1 session은 기존 `legacy_v1` parser/body/UI를 사용하며 v2 sheet를 섞지 않는다.
-
-### Unauthorized
-
-- owner session completion은 로그인/owner authority가 필요하다.
-- auth가 없으면 기존 로그인 안내와 return-to-action으로 동일 session COOK_MODE에 복귀한다.
-- return 뒤 최신 session/pantry state를 다시 읽으며 과거 client selection을 authority로 강제하지 않는다.
-
-## 390px evidence frame 계획
+### 3.1 Whole-board and entry
 
 ```text
-width 390
-┌──────────────────────────────────┐
-│ title · servings                 │
-│ ingredients summary             │
-│ steps list                       │
-│                                  │
-├──────────────────────────────────┤
-│ cancel             complete      │
-└──────────────────────────────────┘
-
-completion sheet cases in one evidence set:
-default no-selection / multiple product rows / Empty [] /
-known g / weigh-later / Loading / 409·422 / Pending / stored replay /
-creation-off existing-v2 drain
+┌──────────────────────────────────────┐ 390
+│ 김치찌개                       4인분 │ read-only
+│ 오늘 저녁 · 요리 중                 │
+├──────────────────────────────────────┤
+│ 재료                                 │
+│ 돼지고기 300g · 김치 400g · …        │
+│                                      │
+│ 조리순서                             │ internal vertical scroll
+│ 1  볶기   돼지고기와 김치를 볶아요   │
+│ 2  끓이기 물을 넣고 끓여요           │
+│ 3  마무리 간을 맞춰요                │
+├──────────────────────────────────────┤
+│ [취소]                  [요리 완료]  │ fixed + safe area
+└──────────────────────────────────────┘
 ```
 
-- planned artifact: `ui/designs/evidence/cooked-batch-weight-ledger/COOK_MODE-design-mobile-default-390.png`
-- verify whole-board hierarchy, sheet max height/internal scroll, visible primary CTA and product/brand hierarchy.
-
-## 320px evidence frame 계획
+### 3.2 Completion sheet — ready / direct weight
 
 ```text
-width 320
-┌────────────────────────────┐
-│ title wraps at most 2 lines│
-│ ingredient / steps board   │
-├────────────────────────────┤
-│ cancel        complete     │
-└────────────────────────────┘
-
-sheet row:
-☐ product name
-  brand · storage context
-weight radio + input stay readable without horizontal overflow
+┌──────────────────────────────────────┐
+│ ───                                  │ drag handle
+│ 요리 완료                        [×] │
+│ 실제 사용한 팬트리 항목과            │
+│ 완성된 음식 전체 무게를 확인해요     │
+├──────────────────────────────────────┤ internal scroll starts
+│ 같은 원재료라도 실제 제품은 달라요   │
+│                                      │
+│ 사용한 팬트리 항목             1개   │
+│ 김치                                 │
+│ ☑ 종가집 맛김치                      │ exact pantry row
+│   대상 · 제품 팬트리 항목 1           │ raw UUID hidden
+│ ☐ 일반 김치                          │
+│   일반 재료 · 팬트리 항목 1           │
+│                                      │
+│ 완성 직후 음식 전체 중량             │
+│ ● 음식만 무게(g)          [1480]     │ 16px+ numeric
+│   [용기 무게 계산 도움]               │ local only
+│ ○ 나중에 입력                        │
+│ 용기·그릇을 뺀 음식만의 원래 무게예요│
+│ 현재 남은 양을 입력하지 마세요       │
+├──────────────────────────────────────┤
+│ [돌아가기]              [완료 저장]  │ fixed + safe area
+└──────────────────────────────────────┘
 ```
 
-- planned artifact: `ui/designs/evidence/cooked-batch-weight-ledger/COOK_MODE-design-mobile-narrow-320.png`
-- no page-level overflow, CTA clipping, fixed-bar overlap or touch target below 44px.
-- product name may wrap; brand/context remains subordinate and must not collapse into raw identifiers.
+### 3.3 Local container helper, expanded
 
-## Interaction and accessibility
+```text
+│ 용기 무게 계산 도움              [접기]│
+│ 이 계산은 이 기기 화면에서만 써요     │
+│ 음식+용기 무게(g)           [1800]    │
+│ 빈 용기 무게(g)              [ 320]    │
+│ ──────────────────────────────────── │
+│ 음식만 무게                   1480g   │ live preview
+│ [이 무게 사용]                         │
+```
 
-| Action | Result |
-| --- | --- |
-| `[요리 완료]` | owner v2 session이면 completion sheet open; legacy v1이면 기존 UI |
-| pantry checkbox | exact `pantry_item_id` membership toggle only |
-| weight radio | exact-one action selection; known 선택 시 g input enabled |
-| `[완료 저장]` | valid weight action일 때 existing complete request submit |
-| 409/422 retry | selections/input/focus context retained |
-| `[취소]` | existing cancel contract; return context preserved |
+- Helper values never leave local component state and are cleared when the sheet closes/unmounts.
+- Result is valid only when both inputs are finite and positive and `food+container > tare`; otherwise `[이 무게 사용]` is disabled and an inline, live error explains what to fix.
+- `[이 무게 사용]` selects `음식만 무게(g)` and copies only the calculated positive result into the existing `finished_weight_g` input. It does not submit.
+- Direct edits to `finished_weight_g` do not silently rewrite the two helper inputs.
 
-- sheet open 시 title로 focus, focus trap, background inert, Escape/돌아가기 시 opener focus restore.
-- checkbox, radio, input, CTA는 label/programmatic name을 갖고 최소 44×44px target을 유지한다.
-- color alone으로 선택/error/pending을 표현하지 않는다.
-- screen reader는 제품명 → 브랜드/context → 선택 상태 순서로 읽는다. raw UUID는 읽지 않는다.
-- bottom safe-area를 포함하고 virtual keyboard가 g input/error/CTA를 가리지 않게 한다.
+## 4. 320px narrow wireframes
 
-## Design token boundary
+```text
+┌──────────────────────────────┐ 320
+│ 요리 완료                [×] │
+│ 실제 사용 항목과 음식만의    │
+│ 원래 무게를 확인해요         │
+├──────────────────────────────┤ sheet body scrolls
+│ 사용한 팬트리 항목       1개 │
+│ ☑ 종가집 맛김치              │
+│   대상 · 제품 항목 1          │
+│                              │
+│ 완성 직후 음식 전체 중량     │
+│ ● 음식만 무게(g)             │ stack, do not compress
+│   [              ] g         │ 16px+, full row
+│ [용기 무게 계산 도움]         │
+│ ○ 나중에 입력                │
+│                              │
+│ expanded helper              │
+│ 음식+용기(g) [          ]    │
+│ 빈 용기(g)   [          ]    │
+│ 음식만 무게  1480g           │
+│ [이 무게 사용]               │
+├──────────────────────────────┤
+│ [완료 저장]                  │ primary first in DOM/visual order
+│ [돌아가기]                   │ stacked 48px secondary
+│ safe area                    │
+└──────────────────────────────┘
+```
 
-- app surface는 current app token layer의 `--brand-primary`, `--surface`, `--surface-fill`, `--text-2/3`, `--border`, `--radius-card`, `--radius-sheet`, `--control-height-md/lg`를 사용한다.
-- whole-board의 기존 dark treatment와 cooking method accent는 현재 구현/공식 whole-board 계약을 유지한다.
-- 직접 hex 추가나 legacy coral `--brand` 복귀로 #11의 final polish를 선점하지 않는다.
-- `COOK_MODE`는 h8 matrix상 `prototype-derived design`이며 parity로 자동 승격하지 않는다.
+- At 320px, the footer stacks with primary submit before secondary cancel/close in both DOM and visual order. A shared overlay implementation must support this scoped order without shrinking or reordering only through CSS.
+- Labels wrap; controls never shrink below 44px. There is no horizontal scroll or clipped unit suffix.
 
-## Fresh independent review gates
+## 5. State matrix
 
-- critic path: `ui/designs/critiques/COOK_MODE-cooked-batch-weight-ledger-critique.md`
-- authority path: `ui/designs/authority/COOK_MODE-cooked-batch-weight-ledger-authority.md`
-- 기존 `ui/designs/critiques/COOK_MODE-critique.md`, `ui/designs/authority/COOK_MODE-authority.md`, 15a v1.5.1 screenshots은 역사 artifact이며 #8 evidence로 재사용하지 않는다.
-- Stage 2 진입 전 fresh independent critic과 390/320 screenshot/Figma product-design-authority가 이 exact design head를 검토해 blocker/major 0을 남겨야 한다.
-- 이 Stage 1 author는 critic/authority/internal1.5를 작성하거나 승인하지 않는다.
-- Stage 4 implementation은 별도 390/320 evidence와 Stage 5/final authority를 다시 거친다.
+| State | Visible UI | Enabled actions | Fail-closed rule |
+| --- | --- | --- | --- |
+| `loading` | whole-board or sheet skeleton; `불러오는 중` status | close/back only when safe | no row, action, or grams guessed |
+| `empty` pantry candidates | `사용할 팬트리 항목이 없어요`; selection stays `[]` | weight choice; save after valid explicit choice | no equivalent/first/recent row auto-selection |
+| `ready` known | exact rows + food-only grams/container helper | save after valid explicit weight action | completion request is existing #8 body only |
+| `ready` weigh later | `나중에 입력`; grams/helper visually subordinate or collapsed | save | submits `finished_weight_g=null`; no estimate/nutrition evidence |
+| `pending` | progress status, retained values | none; Escape/close disabled | one request in flight; duplicate tap/Enter blocked |
+| `error` 409/422 | server message + linked `fields[]`; retained selection/input | correct and retry, back | sheet stays open; focus moves to actionable error |
+| `permission` 401 | login guidance without private rows | login / safe back | return-to-action reloads latest server state |
+| private 404 | nondisclosing safe error | safe back | batch/session existence and owner hidden |
+| stored replay | authoritative first success shown once | safe continuation only | sheet closes once; no duplicate toast/animation/effect |
+| completed/cancelled read-only | terminal session summary | return only | no new completion controls |
+| unknown / legacy-null projection | `이전 기록 · 중량 상태를 확인할 수 없음` | return only | do not infer missing, 0g, or depleted |
+| depleted projection | reason-specific terminal label | return only | distinct from unknown; no weight/helper/mutation controls |
 
-## Successor boundary
+`unknown / legacy-null` is not `missing`: legacy null means the new state cannot be proven. `missing` is an explicit v2 weight state. A depleted projection is terminal and must never fall back to the completion form.
 
-- #8: exact pantry completion, finished-weight/weigh-later functional UI, batch/ledger/XP, R/R+1 gate.
-- #9: meal-log linked consumed event/pointer and arbitrary-order entry reversal.
-- #11: LEFTOVERS 및 COOK_MODE final visual polish, delayed-weight/unrecoverable/discard/adjust presentation, container helper와 full accessibility completion.
-- R+2 production capability activation: Manual Only; #8 R/R+1 evidence와 service-owner 공동 승인 전 금지.
+## 6. Interaction notes
+
+### Open, close, and focus
+
+1. `[요리 완료]` stores the opener and opens the bottom sheet.
+2. Initial focus moves to the sheet title; background becomes inert and unavailable to pointer/assistive technology.
+3. Tab order follows title → pantry rows → direct-weight radio/input → helper disclosure/inputs/use → weigh-later radio → submit → cancel/close.
+4. Tab and Shift+Tab are trapped inside the sheet. Escape, `[×]`, and `[돌아가기]` close only while not pending.
+5. Closing restores focus to the original `[요리 완료]` control. A 409/422 moves focus to `role=alert`; correction then proceeds to the linked input.
+6. Pending blocks dismiss to avoid ambiguous completion. Success restores focus to the next meaningful terminal control after the sheet closes.
+
+### Selection and validation
+
+- Every pantry checkbox maps to exactly one `pantry_item_id`; raw IDs are neither visible nor announced.
+- Initial pantry selection and weight action are empty. Explicit `[]` is valid.
+- Direct weight accepts a positive finite number only. The UI must not convert servings to grams or current remainder to original total.
+- Helper calculation is a convenience preview, not server authority. The server response remains the displayed batch truth.
+- Changing the canonical payload after a failed attempt creates a new deliberate idempotency operation. Retrying the same canonical payload reuses the same UUID key.
+
+### Permission, idempotency, and replay
+
+- Unauthorized flows do not render private row data. Login returns to the same session URL, then reloads current authority.
+- Same key + same payload consumes the stored first result and closes exactly once.
+- Same key + different payload displays the existing `409 IDEMPOTENCY_KEY_REUSED`; it never projects completion.
+- A stale/revision/state conflict retains correctable local input but refreshes authoritative server state before retry.
+
+## 7. Data and API binding
+
+| UI datum/action | Existing contract binding | UI rule |
+| --- | --- | --- |
+| pinned recipe / servings / rows | existing snapshot-v2 cook-mode read | immutable/read-only; no mutable recipe reread |
+| pantry checkbox | `consumed_pantry_item_ids[]` | exact row IDs, candidate order, explicit `[]` allowed |
+| direct grams | `weight_action=set_finished_weight`, positive `finished_weight_g` | original food-only total only |
+| weigh later | `weight_action=weigh_later`, `finished_weight_g=null` | no estimate or meal evidence |
+| container inputs | local component state only | never persisted, logged, or added to request |
+| submit | existing `POST /cooking/session-attempts/{id}/complete` + UUID `Idempotency-Key` | #8 transaction/replay remains authority |
+| success | exact 8-key data with `cooked_batch: CookedBatchProjection` | render response truth, never client-computed batch status |
+| errors | existing wrapper `{ success, data, error }`; `{ code, message, fields[] }` | no new public code/copy contract invented |
+
+The #8 batch mutation endpoints may be used by the LEFTOVERS surface only. COOK_MODE completion does not call `PATCH /cooked-batches/{id}/weight`, discard, adjust, close, or meal-log endpoints.
+
+## 8. Visual and token rules
+
+- Preserve the approved dark whole-board. The white/surface bottom sheet uses current app tokens, not new hex values.
+- Use `--brand-primary`, `--brand-primary-hover`, `--brand-primary-soft`, `--surface`, `--surface-fill`, `--text-2/3`, `--radius-control/card/sheet`, and `--control-height-md/lg`.
+- Primary completion uses the strongest brand treatment. Back/cancel is neutral; error uses existing danger tokens and text/icon, never color alone.
+- The helper is a low-emphasis inset panel below direct weight, not a competing primary section.
+- Reduced-motion preference removes nonessential sheet/feedback motion without changing state timing.
+
+## 9. Accessibility contract
+
+- Exact labels: `완성 직후 음식 전체 중량`, `음식과 용기를 합친 무게`, `빈 용기 무게`, `계산한 음식만 무게 사용`, and row-specific checkbox names.
+- Weight result and helper validation use a polite live region; submit/pending status uses `role=status`; server failure uses `role=alert` and linked descriptions.
+- Selection, invalid, pending, disabled, and terminal states are expressed programmatically and in text, not only by color.
+- Screen-reader reading order is product name → brand/context → selection state. UUID, cursor, event ID, and internal operation data are not announced.
+- Target size is 44×44px minimum; numeric font is 16px minimum; text reflows at 320px without loss.
+
+## 10. Evidence plan and limitations
+
+Stage 4 must create fresh runtime evidence under `ui/designs/evidence/cooked-batch-weight-ui/` for 390px, 320px, and desktop, covering known, weigh-later, container helper, pending, error, and replay. The manifest must record the implementation head and capture times before independent authority reports cite it.
+
+Required runtime checks include:
+
+- sheet/body scroll lock, internal scroll, fixed footer and safe-area geometry;
+- 44px hit boxes, 16px numeric input, no page/sheet horizontal overflow;
+- title initial focus, Tab/Shift+Tab trap, Escape/close, pending lock, error focus, and opener restoration;
+- virtual-keyboard avoidance with the active input, error, and CTA reachable;
+- accessible names/descriptions, live status/error, reduced motion, and serious/critical automated accessibility findings zero;
+- same-payload replay single close and different-payload conflict with no duplicate effect.
+
+This Markdown and its ASCII wireframes do not prove runtime keyboard behavior, focus order/trap/restore, virtual-keyboard occlusion, computed 44px geometry, screen-reader announcements, contrast, or WCAG conformance. Static PNGs in Stage 4 will prove only visible pixels; DOM/runtime tests plus Manual physical keyboard, real device, and VoiceOver/TalkBack evidence remain separate. No runtime screenshot or final authority claim is made in Stage 1.
+
+## 11. Independent review handoff
+
+- Fresh critic path: `ui/designs/critiques/COOK_MODE-cooked-batch-weight-ui-critique.md`
+- Future runtime authority path: `ui/designs/authority/COOK_MODE-authority.md`
+- The design-generator author does not write either report and does not approve this design.
+- Critic must check #11 scope, current tuple/base, 390/320 stacking, helper locality, all states, permission/replay, keyboard/focus/accessibility, and #9/#12 exclusions.
