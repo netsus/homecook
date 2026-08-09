@@ -15,6 +15,11 @@ const formatBootstrapErrorMessage = vi.fn((error: unknown, fallbackMessage: stri
   return fallbackMessage;
 });
 
+function getSetCookieHeaders(response: Response) {
+  const headers = response.headers as Headers & { getSetCookie?: () => string[] };
+  return headers.getSetCookie?.() ?? [];
+}
+
 vi.mock("@/lib/supabase/server", () => ({
   createAccountLifecycleInternalRpcClient: createServiceRoleClient,
   createAuthRouteHandlerClient: createRouteHandlerClient,
@@ -514,6 +519,11 @@ describe("17c settings/account backend", () => {
       data: { logged_out: true },
       error: null,
     });
+    expect(getSetCookieHeaders(response)).toContainEqual(
+      expect.stringMatching(
+        /__Host-homecook-auth-flow=;.*Path=\/.*Max-Age=0.*Secure.*HttpOnly.*SameSite=Lax/i,
+      ),
+    );
   });
 
   it("POST /auth/logout fails closed before signOut when local authority revoke fails", async () => {
@@ -538,6 +548,11 @@ describe("17c settings/account backend", () => {
     });
     expect(response.status).toBe(409);
     expect(executeHybridLogout).toHaveBeenCalledWith(routeClient);
+    expect(getSetCookieHeaders(response)).toContainEqual(
+      expect.stringMatching(
+        /__Host-homecook-auth-flow=;.*Path=\/.*Max-Age=0.*Secure.*HttpOnly.*SameSite=Lax/i,
+      ),
+    );
   });
 
   it("POST /auth/logout returns an explicit internal error when signOut fails", async () => {
@@ -567,6 +582,11 @@ describe("17c settings/account backend", () => {
     });
     expect(response.status).toBe(500);
     expect(executeHybridLogout).toHaveBeenCalledWith(routeClient);
+    expect(getSetCookieHeaders(response)).toContainEqual(
+      expect.stringMatching(
+        /__Host-homecook-auth-flow=;.*Path=\/.*Max-Age=0.*Secure.*HttpOnly.*SameSite=Lax/i,
+      ),
+    );
   });
 
   it("POST /auth/logout rejects unauthenticated requests", async () => {
@@ -589,6 +609,11 @@ describe("17c settings/account backend", () => {
       data: null,
       error: { code: "UNAUTHORIZED" },
     });
+    expect(getSetCookieHeaders(response)).toContainEqual(
+      expect.stringMatching(
+        /__Host-homecook-auth-flow=;.*Path=\/.*Max-Age=0.*Secure.*HttpOnly.*SameSite=Lax/i,
+      ),
+    );
   });
 
   it("QA fixture auth lets the settings screen fetch account data without Supabase", async () => {
@@ -643,6 +668,11 @@ describe("17c settings/account backend", () => {
     expect(settingsResponse.status).toBe(200);
     expect(logoutResponse.status).toBe(200);
     expect(createRouteHandlerClient).not.toHaveBeenCalled();
+    expect(getSetCookieHeaders(logoutResponse)).toContainEqual(
+      expect.stringMatching(
+        /__Host-homecook-auth-flow=;.*Path=\/.*Max-Age=0.*Secure.*HttpOnly.*SameSite=Lax/i,
+      ),
+    );
   });
 
   it("QA fixture account endpoints still reject guest overrides", async () => {
@@ -692,5 +722,10 @@ describe("17c settings/account backend", () => {
     expect(settingsResponse.status).toBe(401);
     expect(logoutResponse.status).toBe(401);
     expect(createRouteHandlerClient).not.toHaveBeenCalled();
+    expect(getSetCookieHeaders(logoutResponse)).toContainEqual(
+      expect.stringMatching(
+        /__Host-homecook-auth-flow=;.*Path=\/.*Max-Age=0.*Secure.*HttpOnly.*SameSite=Lax/i,
+      ),
+    );
   });
 });

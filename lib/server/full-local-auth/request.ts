@@ -1,10 +1,12 @@
+import { resolveAuthRedirectOrigin } from "@/lib/auth/redirect-origin";
+
 const WINDOW_MS = 60_000;
 const MAX_STARTS_PER_WINDOW = 10;
 const startsByClient = new Map<string, { count: number; windowStartedAt: number }>();
 
 export function isSameOriginPost(request: Request) {
   const origin = request.headers.get("origin");
-  return Boolean(origin) && origin === new URL(request.url).origin;
+  return Boolean(origin) && origin === resolveAuthRedirectOrigin(new URL(request.url));
 }
 
 export function consumeAuthFlowStartLimit(request: Request, now = Date.now()) {

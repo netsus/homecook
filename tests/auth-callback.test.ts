@@ -215,6 +215,22 @@ describe("auth callback", () => {
     );
   });
 
+  it("uses the public app origin for same-app callback failure redirects", async () => {
+    vi.stubEnv("NEXT_PUBLIC_APP_URL", "https://app.mumeok.kr");
+    exchangeCodeForSession.mockResolvedValue({
+      error: new Error("oauth failed"),
+    });
+
+    const { GET } = await import("@/app/auth/callback/route");
+    const response = await GET(
+      new Request("http://localhost:3100/auth/callback?code=abc&next=/"),
+    );
+
+    expect(response.headers.get("location")).toBe(
+      "https://app.mumeok.kr/login?authError=oauth_failed",
+    );
+  });
+
   it("adds authError when the provider returns without a code", async () => {
     const { GET } = await import("@/app/auth/callback/route");
     const response = await GET(
@@ -371,6 +387,18 @@ describe("auth callback", () => {
     );
     expect(response.headers.get("set-cookie")).toContain("homecook-last-auth-provider=naver");
     expect(signOut).not.toHaveBeenCalled();
+  });
+
+  it("uses the public app origin for successful same-app callback redirects", async () => {
+    vi.stubEnv("NEXT_PUBLIC_APP_URL", "https://app.mumeok.kr");
+    exchangeCodeForSession.mockResolvedValue({ error: null });
+
+    const { GET } = await import("@/app/auth/callback/route");
+    const response = await GET(new Request(
+      "http://localhost:3100/auth/callback?code=abc&attemptedProvider=google&next=/planner",
+    ));
+
+    expect(response.headers.get("location")).toBe("https://app.mumeok.kr/planner");
   });
 
   it("rejects a missing email and never bootstraps", async () => {

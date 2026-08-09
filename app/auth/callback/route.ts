@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
 import { resolveNextPath } from "@/lib/auth/callback";
+import { buildSameAppRedirectUrl } from "@/lib/auth/redirect-origin";
 import {
   clearAuthProviderAttemptCookie,
   setLastAuthProviderCookie,
@@ -78,7 +79,7 @@ function buildFailureRedirectUrl(
     || code === "ACCOUNT_SESSION_STALE"
     ? "/login"
     : getFailurePath(nextPath);
-  const redirectUrl = new URL(pathname, requestUrl.origin);
+  const redirectUrl = buildSameAppRedirectUrl(pathname, requestUrl);
   redirectUrl.searchParams.set("authError", code);
 
   if (pathname === "/login" && nextPath !== "/") {
@@ -89,7 +90,7 @@ function buildFailureRedirectUrl(
 }
 
 function buildNicknameOnboardingRedirectUrl(requestUrl: URL, nextPath: string) {
-  const redirectUrl = new URL("/onboarding/nickname", requestUrl.origin);
+  const redirectUrl = buildSameAppRedirectUrl("/onboarding/nickname", requestUrl);
   redirectUrl.searchParams.set("next", nextPath);
   return redirectUrl;
 }
@@ -98,7 +99,7 @@ function buildAccountQuarantineRedirectUrl(
   requestUrl: URL,
   nextPath: string,
 ) {
-  const redirectUrl = new URL("/account-quarantine", requestUrl.origin);
+  const redirectUrl = buildSameAppRedirectUrl("/account-quarantine", requestUrl);
   redirectUrl.searchParams.set("next", nextPath);
   return redirectUrl;
 }
@@ -183,7 +184,7 @@ export async function GET(request: Request) {
     }
 
     return clearAuthFlowCookies(
-      NextResponse.redirect(new URL(nextPath, requestUrl.origin)),
+      NextResponse.redirect(buildSameAppRedirectUrl(nextPath, requestUrl)),
     );
   }
 
@@ -416,7 +417,7 @@ export async function GET(request: Request) {
 
       const redirectUrl = shouldCollectNickname(bootstrapResult)
         ? buildNicknameOnboardingRedirectUrl(requestUrl, nextPath)
-        : new URL(nextPath, requestUrl.origin);
+        : buildSameAppRedirectUrl(nextPath, requestUrl);
       const response = clearAuthFlowCookies(NextResponse.redirect(redirectUrl));
       setLastAuthProviderCookie(response, actualProvider);
       return response;
@@ -461,7 +462,7 @@ export async function GET(request: Request) {
 
     const redirectUrl = shouldCollectNickname(legacyBootstrap)
       ? buildNicknameOnboardingRedirectUrl(requestUrl, nextPath)
-      : new URL(nextPath, requestUrl.origin);
+      : buildSameAppRedirectUrl(nextPath, requestUrl);
     const terminal = authFlowCookie
       ? await terminalCallbackAuthFlow(authFlowCookie, "success")
       : { ok: false as const };

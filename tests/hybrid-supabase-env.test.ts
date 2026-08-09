@@ -44,6 +44,26 @@ describe("hybrid Supabase environment boundary", () => {
     });
   });
 
+  it("treats explicit public Auth env as available", async () => {
+    process.env.NEXT_PUBLIC_AUTH_SUPABASE_URL
+      = "https://remote.example.supabase.co";
+    process.env.NEXT_PUBLIC_AUTH_SUPABASE_PUBLISHABLE_KEY
+      = "remote-publishable";
+
+    const { hasAuthSupabasePublicEnv } = await import("@/lib/supabase/auth-env");
+
+    expect(hasAuthSupabasePublicEnv()).toBe(true);
+  });
+
+  it("treats legacy public Auth env as available", async () => {
+    process.env.NEXT_PUBLIC_SUPABASE_URL = "https://remote.example.supabase.co";
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "remote-publishable";
+
+    const { hasAuthSupabasePublicEnv } = await import("@/lib/supabase/auth-env");
+
+    expect(hasAuthSupabasePublicEnv()).toBe(true);
+  });
+
   it("requires explicit remote Auth and loopback local Data values in local mode", async () => {
     process.env.HOMECOOK_DATA_AUTHORITY = "local";
     process.env.NEXT_PUBLIC_AUTH_SUPABASE_URL

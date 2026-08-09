@@ -14,6 +14,7 @@ import { createAuthServerComponentClient } from "@/lib/supabase/server";
 
 const PROVIDERS = new Set(["google", "kakao", "custom:naver"]);
 const FLOW_KINDS = new Set(["login", "link"]);
+const RECOVERABLE_TERMINAL_FAILURES = new Set(["expired", "invalid"]);
 
 export async function POST(request: Request) {
   if (!isSameOriginPost(request)) {
@@ -49,7 +50,10 @@ export async function POST(request: Request) {
     const existingFlow = cookieStore.get(AUTH_FLOW_COOKIE_NAME)?.value;
     if (existingFlow) {
       const cancelled = await cancelAuthFlowAttempt(existingFlow);
-      if (!cancelled.ok) {
+      if (
+        !cancelled.ok
+        && !RECOVERABLE_TERMINAL_FAILURES.has(cancelled.reason)
+      ) {
         throw new Error("Previous Auth flow could not be terminalized");
       }
     }

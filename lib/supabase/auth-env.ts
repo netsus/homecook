@@ -64,6 +64,22 @@ function normalizeLoopbackAuthUrl(value: string) {
   return parsed.origin;
 }
 
+function readExplicitRemoteAuthUrl() {
+  return process.env.NEXT_PUBLIC_AUTH_SUPABASE_URL?.trim();
+}
+
+function readExplicitRemoteAuthKey() {
+  return process.env.NEXT_PUBLIC_AUTH_SUPABASE_PUBLISHABLE_KEY?.trim();
+}
+
+function readLegacyRemoteAuthUrl() {
+  return process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+}
+
+function readLegacyRemoteAuthKey() {
+  return process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim();
+}
+
 export interface AuthSupabaseEnv {
   url: string;
   publishableKey: string;
@@ -72,7 +88,7 @@ export interface AuthSupabaseEnv {
 }
 
 export function getRemoteAuthIssuer() {
-  const explicitUrl = process.env[REMOTE_AUTH_URL_ENV]?.trim();
+  const explicitUrl = readExplicitRemoteAuthUrl();
   const authority = getAuthAuthority();
   if (authority === "local" && !explicitUrl) {
     throw new Error(
@@ -81,7 +97,7 @@ export function getRemoteAuthIssuer() {
   }
 
   const url = normalizeRemoteAuthUrl(requireNonEmpty(
-    explicitUrl || process.env[LEGACY_URL_ENV],
+    explicitUrl || readLegacyRemoteAuthUrl(),
     explicitUrl ? REMOTE_AUTH_URL_ENV : LEGACY_URL_ENV,
   ));
   const derivedIssuer = `${url}/auth/v1`;
@@ -97,8 +113,8 @@ export function getRemoteAuthIssuer() {
 }
 
 export function getAuthSupabaseEnv(): AuthSupabaseEnv {
-  const explicitUrl = process.env[REMOTE_AUTH_URL_ENV]?.trim();
-  const explicitKey = process.env[REMOTE_AUTH_KEY_ENV]?.trim();
+  const explicitUrl = readExplicitRemoteAuthUrl();
+  const explicitKey = readExplicitRemoteAuthKey();
   const authority = getAuthAuthority();
   if (authority === "local" && (!explicitUrl || !explicitKey)) {
     throw new Error(
@@ -109,7 +125,7 @@ export function getAuthSupabaseEnv(): AuthSupabaseEnv {
   const issuer = getRemoteAuthIssuer();
   const url = issuer.slice(0, -"/auth/v1".length);
   const publishableKey = requireNonEmpty(
-    explicitKey || process.env[LEGACY_KEY_ENV],
+    explicitKey || readLegacyRemoteAuthKey(),
     explicitKey ? REMOTE_AUTH_KEY_ENV : LEGACY_KEY_ENV,
   );
   const derivedJwksUrl = `${issuer}/.well-known/jwks.json`;

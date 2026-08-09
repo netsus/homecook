@@ -64,6 +64,15 @@
     "public_contract_expansion": false,
     "stage3_self_approval": false
   },
+  "final_master_reintegration": {
+    "pre_integration_head": "cfc5515716ba3b2bf1d10fd73cd1779a6991fe81",
+    "integrated_master": "d9b5ff9bf6e70552641c9b02d71c8d888d340079",
+    "conflicts": [],
+    "account_inventory": "official regeneration kept 64 routes / 93 write surfaces / 3 auth.users inbound fks and checksum eb0a8c1cd875c38ad183c5bf4f06c9b336f08e4b00d4f2d8e425c76f72b91733",
+    "focused_auth_and_cooked_batch": "11 files / 159 tests",
+    "public_contract_expansion": false,
+    "stage3_self_approval": false
+  },
   "overall_status": {
     "lifecycle": "in_progress",
     "approval_state": "not_started",
@@ -89,12 +98,12 @@
   ],
   "verification_results": {
     "full_vitest_batch_nutrition_successor": {
-      "passed_files": 523,
+      "passed_files": 526,
       "skipped_files": 28,
-      "passed_tests": 5357,
+      "passed_tests": 5377,
       "skipped_tests": 369
     },
-    "focused_vitest": "batch-nutrition RED 3 missing-function failures; GREEN 6 files / 59 tests; prior review repair GREEN backend/gamification/security/inventory 7 files / 69 tests and LEFTOVERS 27/27; latest-master integration focused 11 files / 197 tests; migration-version RED 1 and GREEN 17/17; final full 5,357 passes / 369 skips",
+    "focused_vitest": "batch-nutrition RED 3 missing-function failures; GREEN 6 files / 59 tests; prior review repair GREEN backend/gamification/security/inventory 7 files / 69 tests and LEFTOVERS 27/27; first latest-master integration focused 11 files / 197 tests; migration-version RED 1 and GREEN 17/17; final master auth/cooked-batch focused 11 files / 159 tests; final full 5,377 passes / 369 skips",
     "postgres_fresh_replay": "predecessor fresh 15 passed / 1 intended skip, replay 16 passed; cooked-batch fresh/replay 27/27; inherited inventory fresh/replay 26 passed / 33 intended skips after latest master added two inventory-only skipped full-local cases",
     "complete_cancel_race": "two real connections finish without deadlock; exactly one succeeds, one returns CONFLICT, and the session/Meal/claim/batch terminal state is valid",
     "live_gamification_projection": "snapshot-v2 completion, consumed-unweighed close and legacy eat reuse canonical progress/activity IDs with the existing official notification/badge/achievement helpers",

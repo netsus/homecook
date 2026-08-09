@@ -72,6 +72,7 @@ services:
       start_period: 10s
     networks:
       - data-internal
+      - auth-egress
     restart: unless-stopped
     security_opt:
       - no-new-privileges:true
@@ -259,6 +260,7 @@ services:
 
 networks:
   auth-edge: {}
+  auth-egress: {}
   data-internal:
     internal: true
 

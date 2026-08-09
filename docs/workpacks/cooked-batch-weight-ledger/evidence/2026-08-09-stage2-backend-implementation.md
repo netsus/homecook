@@ -34,6 +34,8 @@ This task changes only #8 DB/backend/API, the existing leftovers compatibility r
 - Current-head CI supplied a second integration RED: master and the Draft #8 lineage both used Supabase migration version `20260809110000`. A new regression test reproduced the exact duplicate pair before the unmerged #8 migration alone moved to `20260809120000`; the already-merged master migration and both SQL bodies remain unchanged.
 - Successor security task `019fe382-c33f-7ee2-8e65-faf330b0cc32` returned APPROVE `0/0/0`. The 21-function cooked-batch manifest remains exact; this author repair is not Stage 3 approval.
 
+The required final re-fetch then found master had advanced again to `d9b5ff9bf6e70552641c9b02d71c8d888d340079`. That exact OAuth/auth repair lineage merged cleanly after local repair commit `cfc5515716ba3b2bf1d10fd73cd1779a6991fe81`. Official account-inventory regeneration kept `64/93/3` and checksum `eb0a8c1cd875c38ad183c5bf4f06c9b336f08e4b00d4f2d8e425c76f72b91733`; only `generated_at` advanced. Focused auth + cooked-batch Vitest passed `11 files / 159 tests`, full Vitest passed `526 files / 5,377 tests` with `28 files / 369 tests` intended skip, and `verify:backend` passed `219 product files / 2,679 tests` with `11 files / 150 tests` intended skip plus build and security E2E `12/12`.
+
 ## Backend contract implemented
 
 - `POST /api/v1/cooking/session-attempts/{id}/complete`
@@ -142,10 +144,10 @@ The cooked-batch scenarios cover exact 21-function owner/ACL/search-path/scope i
 - account-session generation inventory — pass: `64 routes / 93 write surfaces / 3 auth.users inbound FKs`; all eight cooked-batch/legacy helper writers are explicit, and removing one from a checksum-valid alternate registry fails closed
 - `pnpm audit --audit-level high` — exit 0; residual `1 low / 1 moderate`, high `0`, critical `0`
 - `git diff --check` — pass
-- latest-master integration focused Vitest — `11 files / 197 tests`; migration-version TDD RED identified both `20260809110000` files, GREEN `17/17`
-- latest-master full Vitest — `523 files passed / 28 skipped`, `5,357 tests passed / 369 skipped`; master adds `1 file / 28 pass / 2 intended skip` and the migration-version regression adds one pass
-- latest-master `pnpm verify:backend` — pass: lint, typecheck, product `217 files / 2,665 tests` with `150 skipped`, Next build, security E2E `12/12`
-- latest-master PostgreSQL fresh/replay — predecessor `15 pass / 1 intended skip` then `16/16`; #8 `27/27` twice; inherited inventory `26 pass / 33 intended skip` twice, where the two added skips are new master full-local tests outside inventory-only mode
+- first integration focused Vitest — `11 files / 197 tests`; migration-version TDD RED identified both `20260809110000` files, GREEN `17/17`
+- first integration full Vitest — `523 files passed / 28 skipped`, `5,357 tests passed / 369 skipped`; master `508a9c26` adds `1 file / 28 pass / 2 intended skip` and the migration-version regression adds one pass
+- first integration `pnpm verify:backend` — pass: lint, typecheck, product `217 files / 2,665 tests` with `150 skipped`, Next build, security E2E `12/12`
+- integration PostgreSQL fresh/replay — predecessor `15 pass / 1 intended skip` then `16/16`; #8 `27/27` twice; inherited inventory `26 pass / 33 intended skip` twice, where the two added skips are master full-local tests outside inventory-only mode
 
 The workpack-specific Stage 4 E2E grep returned `No tests found`; no pass-with-no-tests relaxation was added because frontend work is prohibited in Stage 2. Backend security E2E is covered by the successful `12/12` verification above.
 
