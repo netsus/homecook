@@ -20,6 +20,7 @@ vi.mock("@/lib/supabase/server", () => ({
   createRecipeFuturePropagationInternalClient: createServiceRoleClient,
   createRemoteCompatibilityServiceRoleClient: createServiceRoleClient,
   createRouteHandlerClient,
+  createSessionAuthorityInternalRpcClient: createServiceRoleClient,
   createServiceRoleClient,
 }));
 
@@ -692,7 +693,7 @@ describe("account session generation F0 routes", () => {
     const { readVerifiedAccountGenerationSession } =
       await importAccountGenerationActiveAdapter();
 
-    const result = await readVerifiedAccountGenerationSession(routeClient);
+    const result = await readVerifiedAccountGenerationSession(routeClient, user);
 
     expect(result).toEqual({
       ok: true,
@@ -715,9 +716,328 @@ describe("account session generation F0 routes", () => {
         hmacKeyVersion: 1,
       },
     });
-    expect(getUser).toHaveBeenCalledWith(accessToken);
+    expect(getUser).not.toHaveBeenCalled();
     expect(JSON.stringify(result)).not.toContain(accessToken);
     expect(JSON.stringify(result)).not.toContain(sessionId);
+  });
+
+  it("resolves the current full-local HMAC key version instead of a fixed V1 secret", async () => {
+    vi.stubEnv("HOMECOOK_AUTH_AUTHORITY", "local");
+    vi.stubEnv("HOMECOOK_DATA_AUTHORITY", "local");
+    vi.stubEnv("NEXT_PUBLIC_AUTH_SUPABASE_URL", "https://auth.mumeok.kr");
+    vi.stubEnv(
+      "NEXT_PUBLIC_AUTH_SUPABASE_PUBLISHABLE_KEY",
+      "local-auth-publishable-key",
+    );
+    vi.stubEnv("DATA_SUPABASE_URL", "http://127.0.0.1:54321");
+    vi.stubEnv(
+      "DATA_SUPABASE_PUBLISHABLE_KEY",
+      "local-data-publishable-key",
+    );
+    vi.stubEnv(
+      "DATA_SUPABASE_SECRET_KEY",
+      "local-data-secret-key-at-least-32-bytes",
+    );
+    vi.stubEnv(
+      "HOMECOOK_SESSION_GENERATION_HMAC_KEY_V2",
+      "test-only-session-generation-secret-v2-at-least-32-bytes",
+    );
+    const now = Math.floor(Date.now() / 1_000);
+    const sessionId = "550e8400-e29b-41d4-a716-446655440099";
+    const user = {
+      id: "550e8400-e29b-41d4-a716-446655440001",
+      created_at: "2026-07-23T00:00:00.123456Z",
+    };
+    const accessToken = createTestAccessToken({
+      sub: user.id,
+      session_id: sessionId,
+      iat: now - 60,
+      exp: now + 3_600,
+      iss: "https://auth.mumeok.kr/auth/v1",
+    });
+    const getUser = vi.fn(async (token?: string) => ({
+      data: { user: token === accessToken ? user : null },
+    }));
+    const controlRpc = vi.fn(async () => ({
+      data: {
+        authority: "local",
+        cutover_epoch: 2,
+        flows_open: true,
+        hmac_key_version: 2,
+        local_issuer: "https://auth.mumeok.kr/auth/v1",
+      },
+      error: null,
+    }));
+    createServiceRoleClient.mockReturnValue({ rpc: controlRpc });
+    const routeClient = {
+      auth: {
+        getSession: vi.fn(async () => ({
+          data: { session: { access_token: accessToken } },
+        })),
+        getUser,
+      },
+    };
+    const { readVerifiedAccountGenerationSession } =
+      await importAccountGenerationActiveAdapter();
+
+    const result = await readVerifiedAccountGenerationSession(routeClient, user);
+
+    expect(result).toEqual({
+      ok: true,
+      sessionAuthority: {
+        ownerUuid: user.id,
+        authIdentityCreatedAt: user.created_at,
+        sessionIssuedAt: new Date((now - 60) * 1_000).toISOString(),
+        sessionKeyHash: createHmac(
+          "sha256",
+          "test-only-session-generation-secret-v2-at-least-32-bytes",
+        )
+          .update([
+            "v2",
+            "https://auth.mumeok.kr/auth/v1",
+            user.id,
+            "2026-07-23T00:00:00.123Z",
+            sessionId,
+          ].join("\n"), "utf8")
+          .digest("hex"),
+        hmacKeyVersion: 2,
+      },
+    });
+    expect(controlRpc).toHaveBeenCalledWith("read_full_local_auth_control", {});
+    expect(getUser).not.toHaveBeenCalled();
+    expect(JSON.stringify(result)).not.toContain(accessToken);
+    expect(JSON.stringify(result)).not.toContain(sessionId);
+  });
+
+  it("replays with the current full-local HMAC key version instead of a fixed V1 secret", async () => {
+    vi.stubEnv("HOMECOOK_AUTH_AUTHORITY", "local");
+    vi.stubEnv("HOMECOOK_DATA_AUTHORITY", "local");
+    vi.stubEnv("NEXT_PUBLIC_AUTH_SUPABASE_URL", "https://auth.mumeok.kr");
+    vi.stubEnv(
+      "NEXT_PUBLIC_AUTH_SUPABASE_PUBLISHABLE_KEY",
+      "local-auth-publishable-key",
+    );
+    vi.stubEnv("DATA_SUPABASE_URL", "http://127.0.0.1:54321");
+    vi.stubEnv(
+      "DATA_SUPABASE_PUBLISHABLE_KEY",
+      "local-data-publishable-key",
+    );
+    vi.stubEnv(
+      "DATA_SUPABASE_SECRET_KEY",
+      "local-data-secret-key-at-least-32-bytes",
+    );
+    vi.stubEnv(
+      "HOMECOOK_SESSION_GENERATION_HMAC_KEY_V2",
+      "test-only-session-generation-secret-v2-at-least-32-bytes",
+    );
+    const ownerUuid = "550e8400-e29b-41d4-a716-446655440001";
+    const sessionId = "550e8400-e29b-41d4-a716-446655440099";
+    const { accessToken, jwk } = createSignedTestAccessToken({
+      aud: "authenticated",
+      exp: 4102444800,
+      iat: 1784764800,
+      iss: "https://auth.mumeok.kr/auth/v1",
+      session_id: sessionId,
+      sub: ownerUuid,
+    });
+    const fetchJwks = vi.fn(async () => {
+      return new Response(JSON.stringify({ keys: [jwk] }), {
+        headers: { "content-type": "application/json" },
+        status: 200,
+      });
+    });
+    vi.stubGlobal("fetch", fetchJwks);
+    const controlRpc = vi.fn(async () => ({
+      data: {
+        authority: "local",
+        cutover_epoch: 2,
+        flows_open: true,
+        hmac_key_version: 2,
+        local_issuer: "https://auth.mumeok.kr/auth/v1",
+      },
+      error: null,
+    }));
+    createServiceRoleClient.mockReturnValue({ rpc: controlRpc });
+    const routeClient = {
+      auth: {
+        getSession: vi.fn(async () => ({
+          data: { session: { access_token: accessToken } },
+        })),
+        getUser: vi.fn(async () => ({ data: { user: null } })),
+      },
+    };
+    const { readVerifiedAccountGenerationReplaySession } =
+      await importAccountGenerationActiveAdapter();
+
+    const result = await readVerifiedAccountGenerationReplaySession(routeClient);
+
+    expect(result).toEqual({
+      ok: true,
+      sessionAuthority: {
+        ownerUuid,
+        sessionKeyHash: createHmac(
+          "sha256",
+          "test-only-session-generation-secret-v2-at-least-32-bytes",
+        )
+          .update(sessionId, "utf8")
+          .digest("hex"),
+        hmacKeyVersion: 2,
+      },
+    });
+    expect(fetchJwks).toHaveBeenCalledWith(
+      "https://auth.mumeok.kr/auth/v1/.well-known/jwks.json",
+      expect.objectContaining({ cache: "no-store" }),
+    );
+    expect(controlRpc).toHaveBeenCalledWith("read_full_local_auth_control", {});
+    expect(JSON.stringify(result)).not.toContain(accessToken);
+    expect(JSON.stringify(result)).not.toContain(sessionId);
+  });
+
+  it("fails closed for bootstrap when local authority cannot create the internal control client", async () => {
+    vi.stubEnv("HOMECOOK_AUTH_AUTHORITY", "local");
+    vi.stubEnv("NEXT_PUBLIC_AUTH_SUPABASE_URL", "https://auth.mumeok.kr");
+    vi.stubEnv(
+      "NEXT_PUBLIC_AUTH_SUPABASE_PUBLISHABLE_KEY",
+      "local-auth-publishable-key",
+    );
+    vi.stubEnv("HOMECOOK_SESSION_GENERATION_HMAC_KEY_V1", "test-only-v1-secret-at-least-32-bytes");
+    const now = Math.floor(Date.now() / 1_000);
+    const sessionId = "550e8400-e29b-41d4-a716-446655440099";
+    const user = {
+      id: "550e8400-e29b-41d4-a716-446655440001",
+      created_at: "2026-07-23T00:00:00.123456Z",
+    };
+    const accessToken = createTestAccessToken({
+      sub: user.id,
+      session_id: sessionId,
+      iat: now - 60,
+      exp: now + 3_600,
+      iss: "https://auth.mumeok.kr/auth/v1",
+    });
+    createServiceRoleClient.mockReturnValue(null);
+    const routeClient = {
+      auth: {
+        getSession: vi.fn(async () => ({
+          data: { session: { access_token: accessToken } },
+        })),
+        getUser: vi.fn(async (token?: string) => ({
+          data: { user: token === accessToken ? user : null },
+        })),
+      },
+    };
+    const { readVerifiedAccountGenerationSession } =
+      await importAccountGenerationActiveAdapter();
+
+    await expect(readVerifiedAccountGenerationSession(routeClient)).resolves.toEqual({
+      ok: false,
+    });
+  });
+
+  it("fails closed for bootstrap when local control cannot be read even if V1 exists", async () => {
+    vi.stubEnv("HOMECOOK_AUTH_AUTHORITY", "local");
+    vi.stubEnv("NEXT_PUBLIC_AUTH_SUPABASE_URL", "https://auth.mumeok.kr");
+    vi.stubEnv(
+      "NEXT_PUBLIC_AUTH_SUPABASE_PUBLISHABLE_KEY",
+      "local-auth-publishable-key",
+    );
+    vi.stubEnv("HOMECOOK_SESSION_GENERATION_HMAC_KEY_V1", "test-only-v1-secret-at-least-32-bytes");
+    const now = Math.floor(Date.now() / 1_000);
+    const sessionId = "550e8400-e29b-41d4-a716-446655440099";
+    const user = {
+      id: "550e8400-e29b-41d4-a716-446655440001",
+      created_at: "2026-07-23T00:00:00.123456Z",
+    };
+    const accessToken = createTestAccessToken({
+      sub: user.id,
+      session_id: sessionId,
+      iat: now - 60,
+      exp: now + 3_600,
+      iss: "https://auth.mumeok.kr/auth/v1",
+    });
+    const controlRpc = vi.fn(async () => ({
+      data: null,
+      error: { message: "read failed" },
+    }));
+    createServiceRoleClient.mockReturnValue({ rpc: controlRpc });
+    const routeClient = {
+      auth: {
+        getSession: vi.fn(async () => ({
+          data: { session: { access_token: accessToken } },
+        })),
+        getUser: vi.fn(async (token?: string) => ({
+          data: { user: token === accessToken ? user : null },
+        })),
+      },
+    };
+    const { readVerifiedAccountGenerationSession } =
+      await importAccountGenerationActiveAdapter();
+
+    await expect(readVerifiedAccountGenerationSession(routeClient)).resolves.toEqual({
+      ok: false,
+    });
+    expect(controlRpc).toHaveBeenCalledWith("read_full_local_auth_control", {});
+  });
+
+  it("fails closed for replay when the current local secret is missing even if V1 exists", async () => {
+    vi.stubEnv("HOMECOOK_AUTH_AUTHORITY", "local");
+    vi.stubEnv("HOMECOOK_DATA_AUTHORITY", "local");
+    vi.stubEnv("NEXT_PUBLIC_AUTH_SUPABASE_URL", "https://auth.mumeok.kr");
+    vi.stubEnv(
+      "NEXT_PUBLIC_AUTH_SUPABASE_PUBLISHABLE_KEY",
+      "local-auth-publishable-key",
+    );
+    vi.stubEnv("DATA_SUPABASE_URL", "http://127.0.0.1:54321");
+    vi.stubEnv(
+      "DATA_SUPABASE_PUBLISHABLE_KEY",
+      "local-data-publishable-key",
+    );
+    vi.stubEnv(
+      "DATA_SUPABASE_SECRET_KEY",
+      "local-data-secret-key-at-least-32-bytes",
+    );
+    vi.stubEnv("HOMECOOK_SESSION_GENERATION_HMAC_KEY_V1", "test-only-v1-secret-at-least-32-bytes");
+    const ownerUuid = "550e8400-e29b-41d4-a716-446655440001";
+    const sessionId = "550e8400-e29b-41d4-a716-446655440099";
+    const { accessToken, jwk } = createSignedTestAccessToken({
+      aud: "authenticated",
+      exp: 4102444800,
+      iat: 1784764800,
+      iss: "https://auth.mumeok.kr/auth/v1",
+      session_id: sessionId,
+      sub: ownerUuid,
+    });
+    vi.stubGlobal("fetch", vi.fn(async () => {
+      return new Response(JSON.stringify({ keys: [jwk] }), {
+        headers: { "content-type": "application/json" },
+        status: 200,
+      });
+    }));
+    const controlRpc = vi.fn(async () => ({
+      data: {
+        authority: "local",
+        cutover_epoch: 2,
+        flows_open: true,
+        hmac_key_version: 2,
+        local_issuer: "https://auth.mumeok.kr/auth/v1",
+      },
+      error: null,
+    }));
+    createServiceRoleClient.mockReturnValue({ rpc: controlRpc });
+    const routeClient = {
+      auth: {
+        getSession: vi.fn(async () => ({
+          data: { session: { access_token: accessToken } },
+        })),
+        getUser: vi.fn(async () => ({ data: { user: null } })),
+      },
+    };
+    const { readVerifiedAccountGenerationReplaySession } =
+      await importAccountGenerationActiveAdapter();
+
+    await expect(readVerifiedAccountGenerationReplaySession(routeClient)).resolves.toEqual({
+      ok: false,
+    });
+    expect(controlRpc).toHaveBeenCalledWith("read_full_local_auth_control", {});
   });
 
   it("keeps the quarantine resolution route non-exposed while capability is legacy", async () => {

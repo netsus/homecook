@@ -1,8 +1,16 @@
 import { createHmac } from "node:crypto";
 
-import { getRemoteAuthIssuer } from "@/lib/supabase/auth-env";
+import {
+  getAuthAuthority,
+  getRemoteAuthIssuer,
+} from "@/lib/supabase/auth-env";
+import { createSessionAuthorityInternalRpcClient } from "@/lib/supabase/server";
 import { createSessionKeyHash } from
   "@/lib/server/hybrid-auth/session-authority";
+import {
+  prepareFullLocalSessionAuthority,
+  readFullLocalSessionControl,
+} from "@/lib/server/full-local-auth/session-authority";
 
 import { verifyAccountDeleteReplayJwt } from "./jwt-replay";
 
@@ -72,6 +80,42 @@ export interface AccountGenerationReplaySessionAuthority {
   ownerUuid: string;
   sessionKeyHash: string;
   hmacKeyVersion: number;
+}
+
+function readSessionGenerationHmacSecret(keyVersion: number) {
+  if (!Number.isSafeInteger(keyVersion) || keyVersion <= 0) {
+    return null;
+  }
+  const secret = process.env[
+    `HOMECOOK_SESSION_GENERATION_HMAC_KEY_V${keyVersion}`
+  ]?.trim() ?? "";
+  return Buffer.byteLength(secret, "utf8") >= 32 ? secret : null;
+}
+
+async function readCurrentFullLocalSessionContext() {
+  if (getAuthAuthority() !== "local") {
+    return { mode: "non-local" as const };
+  }
+  const client = createSessionAuthorityInternalRpcClient();
+  if (!client) {
+    return { mode: "local-failed" as const };
+  }
+  const controlResult = await readFullLocalSessionControl(client);
+  if (!controlResult.ok) {
+    return { mode: "local-failed" as const };
+  }
+  const secret = readSessionGenerationHmacSecret(
+    controlResult.control.hmac_key_version,
+  );
+  if (!secret) {
+    return { mode: "local-failed" as const };
+  }
+  return {
+    mode: "local-ok" as const,
+    client,
+    control: controlResult.control,
+    secret,
+  };
 }
 
 function decodeJwtPayload(accessToken: string) {
@@ -206,7 +250,7 @@ export async function readVerifiedAccountGenerationSession(
     }
   | {
       ok: false;
-    }
+  }
 > {
   try {
     const sessionResult = await routeClient.auth.getSession();
@@ -222,6 +266,24 @@ export async function readVerifiedAccountGenerationSession(
       if (userResult.error || !user) {
         return { ok: false };
       }
+    }
+
+    if (getAuthAuthority() === "local") {
+      const client = createSessionAuthorityInternalRpcClient();
+      if (!client) {
+        return { ok: false };
+      }
+      const prepared = await prepareFullLocalSessionAuthority({
+        accessToken,
+        client,
+        user,
+      });
+      return prepared.ok
+        ? {
+            ok: true,
+            sessionAuthority: prepared.accountBootstrap,
+          }
+        : { ok: false };
     }
 
     const sessionAuthority = deriveVerifiedAccountGenerationSessionAuthority({
@@ -247,11 +309,6 @@ export async function readVerifiedAccountGenerationReplaySession(
       ok: false;
     }
 > {
-  const secret = process.env[SESSION_HMAC_SECRET_ENV]?.trim() ?? "";
-  if (Buffer.byteLength(secret, "utf8") < 32) {
-    return { ok: false };
-  }
-
   try {
     const sessionResult = await routeClient.auth.getSession();
     const accessToken = sessionResult.data.session?.access_token;
@@ -264,6 +321,21 @@ export async function readVerifiedAccountGenerationReplaySession(
       return { ok: false };
     }
 
+    const localContext = await readCurrentFullLocalSessionContext();
+    if (localContext.mode === "local-failed") {
+      return { ok: false };
+    }
+
+    const keyVersion = localContext.mode === "local-ok"
+      ? localContext.control.hmac_key_version
+      : 1;
+    const secret = localContext.mode === "local-ok"
+      ? localContext.secret
+      : readSessionGenerationHmacSecret(1);
+    if (!secret) {
+      return { ok: false };
+    }
+
     return {
       ok: true,
       sessionAuthority: {
@@ -271,7 +343,7 @@ export async function readVerifiedAccountGenerationReplaySession(
         sessionKeyHash: createHmac("sha256", secret)
           .update(verification.claims.sessionId, "utf8")
           .digest("hex"),
-        hmacKeyVersion: 1,
+        hmacKeyVersion: keyVersion,
       },
     };
   } catch {
