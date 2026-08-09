@@ -204,33 +204,90 @@ export function evaluateReleaseGate(currentVersion, metadata, platform, captured
   return { success: true, error: null };
 }
 
-export function parseTunnelMetrics(raw) {
-  const text = String(raw ?? "");
-  const version = text.match(/^cloudflared_build_info\{[^\n}]*version="([^"]+)"[^\n}]*\}\s+1(?:\.0+)?$/mu)?.[1]
-    ?? text.match(/^build_info\{[^\n}]*version="([^"]+)"[^\n}]*\}\s+1(?:\.0+)?$/mu)?.[1]
-    ?? null;
-  const connectionValue = text.match(/^cloudflared_tunnel_ha_connections(?:\{[^\n}]*\})?\s+([0-9]+)(?:\.0+)?$/mu)?.[1];
-  const activeConnections = connectionValue && Number.isSafeInteger(Number(connectionValue))
-    ? Number(connectionValue) : null;
-  const connectionIds = new Set();
-  const edgeLocations = new Set();
-  for (const line of text.split(/\r?\n/u)) {
-    if (!/^cloudflared_tunnel_server_locations\{/u.test(line) || !/\}\s+1(?:\.0+)?$/u.test(line)) continue;
-    const connectionId = line.match(/(?:\{|,)connection_id="([^"]+)"/u)?.[1];
-    const edgeLocation = line.match(/(?:\{|,)edge_location="([^"]+)"/u)?.[1];
-    if (connectionId && edgeLocation) {
-      connectionIds.add(connectionId);
-      edgeLocations.add(edgeLocation);
+function parsePrometheusLabels(raw) {
+  if (raw === undefined) return new Map();
+  if (!raw.startsWith("{") || !raw.endsWith("}")) return null;
+  let remaining = raw.slice(1, -1);
+  const labels = new Map();
+  if (remaining.trim() === "") return labels;
+  while (remaining !== "") {
+    const match = remaining.match(
+      /^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*"((?:\\["\\n]|[^"\\])*)"\s*(,?)/u,
+    );
+    if (!match || labels.has(match[1])) return null;
+    labels.set(match[1], match[2].replace(/\\(\\|"|n)/gu, (_value, escaped) =>
+      escaped === "n" ? "\n" : escaped));
+    remaining = remaining.slice(match[0].length);
+    if (match[3] === ",") {
+      if (remaining.trim() === "") return null;
+    } else if (remaining.trim() !== "") {
+      return null;
+    } else {
+      break;
     }
   }
+  return labels;
+}
+
+export function parseTunnelMetrics(raw) {
+  const text = String(raw ?? "");
+  const buildSamples = [];
+  const connectionSamples = [];
+  let buildMetricLines = 0;
+  let connectionMetricLines = 0;
+  const connectionLocations = new Map();
+  const edgeLocations = new Set();
+  let serverSamplesValid = true;
+  for (const line of text.split(/\r?\n/u)) {
+    if (/^(?:cloudflared_)?build_info(?:\{|\s)/u.test(line)) {
+      buildMetricLines += 1;
+      const build = line.match(/^(?:cloudflared_)?build_info(\{.*\})\s+1(?:\.0+)?$/u);
+      const labels = parsePrometheusLabels(build?.[1]);
+      if (labels?.has("version")) buildSamples.push(labels.get("version"));
+    }
+    if (/^cloudflared_tunnel_ha_connections(?:\{|\s)/u.test(line)) {
+      connectionMetricLines += 1;
+      const connection = line.match(/^cloudflared_tunnel_ha_connections(\{.*\})?\s+([0-9]+)(?:\.0+)?$/u);
+      const labels = parsePrometheusLabels(connection?.[1]);
+      if (connection && labels !== null) connectionSamples.push(connection[2]);
+    }
+    if (!/^cloudflared_tunnel_server_locations(?:\{|\s)/u.test(line)) continue;
+    const server = line.match(/^cloudflared_tunnel_server_locations(\{.*\})\s+1(?:\.0+)?$/u);
+    const labels = parsePrometheusLabels(server?.[1]);
+    const connectionId = labels?.get("connection_id");
+    const edgeLocation = labels?.get("edge_location");
+    if (!server || labels === null || !connectionId || !edgeLocation
+      || connectionLocations.has(connectionId)) {
+      serverSamplesValid = false;
+      continue;
+    }
+    connectionLocations.set(connectionId, edgeLocation);
+    edgeLocations.add(edgeLocation);
+  }
+  const version = buildSamples.length === 1 ? buildSamples[0] : null;
+  const connectionValue = connectionSamples.length === 1 ? connectionSamples[0] : null;
+  const activeConnections = connectionValue && Number.isSafeInteger(Number(connectionValue))
+    ? Number(connectionValue) : null;
   const parsedVersion = parseVersion(version) ? version : null;
   const activeEdgeLocations = edgeLocations.size;
+  const activeConnectionIds = connectionLocations.size;
+  const connectionIdsConsistent = activeConnections !== null
+    && serverSamplesValid
+    && activeConnectionIds === activeConnections;
+  const samplesValid = buildMetricLines === 1
+    && buildSamples.length === 1
+    && connectionMetricLines === 1
+    && connectionSamples.length === 1
+    && serverSamplesValid;
   return {
-    success: parsedVersion !== null && activeConnections !== null
-      && activeConnections >= 4 && connectionIds.size >= 4 && activeEdgeLocations >= 2,
+    success: samplesValid && parsedVersion !== null && activeConnections !== null
+      && activeConnections === 4 && connectionIdsConsistent && activeEdgeLocations >= 2,
     version: parsedVersion,
     active_connections: activeConnections,
     active_edge_locations: activeEdgeLocations,
+    active_connection_ids: activeConnectionIds,
+    connection_ids_consistent: connectionIdsConsistent,
+    samples_valid: samplesValid,
   };
 }
 
