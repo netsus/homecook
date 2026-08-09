@@ -1,0 +1,83 @@
+{
+  "result": "done",
+  "stage": 4,
+  "role": "fresh-frontend-author",
+  "summary_markdown": "#8 COOK_MODE가 exact pantry row와 explicit weight action을 사용해 snapshot-v2 완료 계약을 fail-closed로 소비한다. Stage 5, final authority, Stage 6와 release/manual gates는 계속 pending이다.",
+  "source": {
+    "base_branch": "origin/master",
+    "base_sha": "6981a432e9d64beb06d2bb9fd2729cba4dca8bb1",
+    "source_pr": 1291,
+    "branch": "feature/cooked-batch-weight-ledger-stage4-frontend",
+    "feature_commit": "b0ae5b9ea1a7da03f1a1cd4a08db404520d2eeb9",
+    "draft_pr": 1310
+  },
+  "contract": {
+    "public_contract_changed": false,
+    "schema_changed": false,
+    "endpoint_added": false,
+    "status_or_error_added": false,
+    "capability_changed": false,
+    "contract_evolution_candidate": "pantry storage location appears in Stage 1 static examples but is absent from official pantry_candidates; no field or inferred location was added"
+  },
+  "verification": {
+    "focused_vitest": "5 files / 23 tests passed",
+    "full_vitest": "529 files / 5,402 tests passed; 28 files / 372 tests intended skip",
+    "product_vitest": "222 files / 2,685 tests passed; 11 files / 150 tests intended skip",
+    "canonical_playwright": "5 passed / 1 intended skip",
+    "full_regression": "941 passed / 166 intended skip",
+    "full_accessibility": "18 passed / 15 intended skip",
+    "full_visual": "23 passed / 22 intended skip",
+    "full_security": "12 passed",
+    "lighthouse": "2 URLs x 3 runs passed",
+    "qa_eval": "94; validation errors 0; covered 62/74; blocked 12/74",
+    "audit": "high 0 / critical 0; residual low 1 / moderate 1"
+  },
+  "screenshots": [
+    {
+      "path": "ui/designs/evidence/cooked-batch-weight-ledger/COOK_MODE-implementation-desktop-1280.png",
+      "width": 1280,
+      "height": 900,
+      "sha256": "e3e4c2b15253f4bb547ecfa4383bb3825dd374e14610654c9047cf6435c6a539"
+    },
+    {
+      "path": "ui/designs/evidence/cooked-batch-weight-ledger/COOK_MODE-implementation-mobile-default-390.png",
+      "width": 390,
+      "height": 844,
+      "sha256": "3ad8e8239426d9e735219e9aa62aaa8e1425584e814beda5c9608e72b677fcb9"
+    },
+    {
+      "path": "ui/designs/evidence/cooked-batch-weight-ledger/COOK_MODE-implementation-mobile-narrow-320.png",
+      "width": 320,
+      "height": 568,
+      "sha256": "c6cc60b23a9c2ebbe6553ab2ba460c4729b1b283f44fba4b426ad78666e6985b"
+    }
+  ],
+  "review": {
+    "author_internal_actionable_findings": {
+      "p0": 0,
+      "p1": 0,
+      "p2": 0
+    },
+    "stage5_self_approval": false,
+    "final_authority_self_approval": false,
+    "stage6_self_approval": false
+  },
+  "overall_status": {
+    "lifecycle": "in_progress",
+    "approval_state": "not_started",
+    "verification_status": "pending",
+    "evaluation_status": "not_started",
+    "design_status": "pending-review"
+  },
+  "pending": [
+    "current-head Draft PR checks",
+    "independent Stage 5",
+    "final product-design authority",
+    "independent Stage 6",
+    "physical iOS Safari and Manual QA",
+    "server-Mac and merged-exact-SHA read-only rehearsal",
+    "full v1 plus seeded R/R+1 drain E2E",
+    "R+2 service-owner activation",
+    "Ready transition and merge"
+  ]
+}

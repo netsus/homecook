@@ -82,7 +82,7 @@ describe("cooked-batch-weight-ledger fresh Stage 1 re-lock", () => {
     expect(roadmap).toContain("merge `2173737e`");
   });
 
-  it("requires fresh #8 critic and 390/320 authority approval before Stage 4", () => {
+  it("records the fresh #8 critic and 390/320 authority approval consumed by Stage 4", () => {
     const authority = automation.frontend.design_authority;
 
     expect(authority.generator_artifact).toBe("ui/designs/COOK_MODE.md");
@@ -103,8 +103,8 @@ describe("cooked-batch-weight-ledger fresh Stage 1 re-lock", () => {
     );
     expect(readme).toContain("019fe02c-1b12-7d42-bcaf-0d5a02847967");
     expect(readme).toContain("019fe041-2ff4-7f62-9786-79a46aecae0c");
-    expect(acceptance).toContain("- [ ] canonical COOK_MODE #8 design");
-    expect(acceptance).toContain("- [ ] fresh 390px/320px screenshot/Figma");
+    expect(acceptance).toContain("- [x] canonical COOK_MODE #8 design");
+    expect(acceptance).toContain("- [x] fresh 390px/320px screenshot/Figma");
   });
 
   it("provides fresh #8 design evidence at the locked mobile widths", () => {
@@ -116,6 +116,16 @@ describe("cooked-batch-weight-ledger fresh Stage 1 re-lock", () => {
     expect(
       readPngWidth(
         "ui/designs/evidence/cooked-batch-weight-ledger/COOK_MODE-design-mobile-narrow-320.png",
+      ),
+    ).toBe(320);
+    expect(
+      readPngWidth(
+        "ui/designs/evidence/cooked-batch-weight-ledger/COOK_MODE-implementation-mobile-default-390.png",
+      ),
+    ).toBe(390);
+    expect(
+      readPngWidth(
+        "ui/designs/evidence/cooked-batch-weight-ledger/COOK_MODE-implementation-mobile-narrow-320.png",
       ),
     ).toBe(320);
   });
@@ -138,9 +148,9 @@ describe("cooked-batch-weight-ledger fresh Stage 1 re-lock", () => {
     }
   });
 
-  it("projects active Stage 2 without promoting approval or verification", () => {
+  it("projects active Stage 4 without promoting approval or verification", () => {
     expect(status).toMatchObject({
-      branch: "feature/cooked-batch-weight-ledger-stage2-current",
+      branch: "feature/cooked-batch-weight-ledger-stage4-frontend",
       lifecycle: "in_progress",
       approval_state: "not_started",
       verification_status: "pending",

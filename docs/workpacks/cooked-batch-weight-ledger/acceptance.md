@@ -1,8 +1,10 @@
 # Acceptance Checklist
 
-> Fresh Stage 1 official tuple: requirements `v1.7.29`, screens `v1.5.33`, flow `v1.3.31`, DB `v1.3.31`, API `v1.2.36`. API v1.2.36은 owner-only `CookedBatchProjection`, exact success/replay, `GET /cooked-batches` pagination·legacy null과 missing/other-owner `404 RESOURCE_NOT_FOUND`를 잠근다. Original internal 1.5 task `019fe0c0…`와 current-tuple re-lock reviewer task `019fe194-62d9-7ed2-9116-b820873bd48b`는 APPROVE이고, PR #1289는 exact `635763041d6420c648e2b55336e6caa9f1f9143c`로 merge됐다. Stage 2 implementation lineage task는 `019fe1aa-82fd-7602-844e-e050efae93db`, latest-master base-drift integrator task는 `019fe2b2-0ee4-77c3-a829-9ae04bfac07f`이며 exact base는 PR #1292 merge `eb4e878eb1d5b6fe5df00b1edd3a4f42fa472142`다. 전체 lifecycle은 `in_progress`이고 Stage 3/Ready/merge와 approval/verification은 pending이다. #7 broader lifecycle, Manual/server-Mac/OAuth, #8 R/R+1과 R+2 activation은 open이다. Unchecked items은 product implementation/migration/activation 완료를 주장하지 않는다.
+> Fresh Stage 1 official tuple: requirements `v1.7.29`, screens `v1.5.33`, flow `v1.3.31`, DB `v1.3.31`, API `v1.2.36`. API v1.2.36은 owner-only `CookedBatchProjection`, exact success/replay, `GET /cooked-batches` pagination·legacy null과 missing/other-owner `404 RESOURCE_NOT_FOUND`를 잠근다. Original internal 1.5 task `019fe0c0…`와 current-tuple re-lock reviewer task `019fe194-62d9-7ed2-9116-b820873bd48b`는 APPROVE이고, PR #1289는 exact `635763041d6420c648e2b55336e6caa9f1f9143c`로 merge됐다. Stage 2 implementation lineage task는 `019fe1aa-82fd-7602-844e-e050efae93db`, latest-master base-drift integrator task는 `019fe2b2-0ee4-77c3-a829-9ae04bfac07f`이며 PR #1292 merge `eb4e878eb1d5b6fe5df00b1edd3a4f42fa472142`의 canonical authority를 소비했다. Fresh Stage 3를 거친 PR #1291은 exact `6981a432e9d64beb06d2bb9fd2729cba4dca8bb1`로 merge됐다. 전체 lifecycle은 `in_progress`이고 Stage 5/final authority/Stage 6와 approval/verification은 pending이다. #7 broader lifecycle, Manual/server-Mac/OAuth, #8 R/R+1과 R+2 activation은 open이다. Unchecked items은 product implementation/migration/activation 완료를 주장하지 않는다.
 >
-> Fresh Stage 2 implementation consumes current tuple requirements `v1.7.30`, screens `v1.5.34`, Flow `v1.3.32`, DB `v1.3.32`, API `v1.2.37`; the API `0-CBW` compatibility block remains byte-identical to v1.2.36. Checked items below are this backend implementation's local code/PostgreSQL evidence only and do not claim Stage 3, Ready, merge, remote rehearsal or activation.
+> Fresh Stage 2 implementation consumes current tuple requirements `v1.7.30`, screens `v1.5.34`, Flow `v1.3.32`, DB `v1.3.32`, API `v1.2.37`; the API `0-CBW` compatibility block remains byte-identical to v1.2.36. Checked Stage 2 items below are retained merged backend code/PostgreSQL evidence and do not claim remote rehearsal or activation.
+>
+> Fresh Stage 4 frontend starts from merged Stage 2/3 exact source `6981a432e9d64beb06d2bb9fd2729cba4dca8bb1`. Checked Stage 4 items below are local COOK_MODE code/unit/Playwright/runtime evidence only. They do not claim Stage 5, final authority, Stage 6, current-head CI completion, Ready, merge, server-Mac, R/R+1/R+2 or activation.
 
 ## Snapshot-v2 Completion
 
@@ -52,14 +54,14 @@
 
 ## COOK_MODE Functional UI
 
-- [ ] actual pantry row product/brand identity and row selection are visible <!-- omo:id=accept-batch-ui-row-identity;stage=4;scope=frontend;review=5,6 -->
-- [ ] no exact eligible row renders an empty state with `[]`; completion waits for an explicit weight action and no equivalent row is auto-selected <!-- omo:id=accept-batch-ui-no-guess;stage=4;scope=frontend;review=5,6 -->
-- [ ] UI offers only original food-only g or weigh-later and excludes container/current remainder <!-- omo:id=accept-batch-ui-weight-action;stage=4;scope=frontend;review=5,6 -->
-- [ ] loading/empty/error fail closed, submit is deduped and 409/422 preserves selections/focus <!-- omo:id=accept-batch-ui-states;stage=4;scope=frontend;review=5,6 -->
-- [ ] stored replay result closes once without repeating effects <!-- omo:id=accept-batch-ui-replay;stage=4;scope=frontend;review=5,6 -->
-- [ ] canonical COOK_MODE #8 design and fresh independent critic pass before Stage 4 frontend entry <!-- omo:id=accept-batch-ui-design-critic;stage=4;scope=frontend;review=5,6 -->
-- [ ] fresh 390px/320px screenshot/Figma product-design-authority reports blocker/major zero before Stage 4 frontend entry; legacy 15a evidence is not reused <!-- omo:id=accept-batch-ui-authority;stage=4;scope=frontend;review=5,6 -->
-- [ ] #11 retains final LEFTOVERS/design/accessibility ownership without duplicate API/mutation <!-- omo:id=accept-batch-ui-successor;stage=4;scope=shared;review=5,6 -->
+- [x] actual pantry row product/brand identity and row selection are visible <!-- omo:id=accept-batch-ui-row-identity;stage=4;scope=frontend;review=5,6 -->
+- [x] no exact eligible row renders an empty state with `[]`; completion waits for an explicit weight action and no equivalent row is auto-selected <!-- omo:id=accept-batch-ui-no-guess;stage=4;scope=frontend;review=5,6 -->
+- [x] UI offers only original food-only g or weigh-later and excludes container/current remainder <!-- omo:id=accept-batch-ui-weight-action;stage=4;scope=frontend;review=5,6 -->
+- [x] loading/empty/error fail closed, submit is deduped and 409/422 preserves selections/focus <!-- omo:id=accept-batch-ui-states;stage=4;scope=frontend;review=5,6 -->
+- [x] stored replay result closes once without repeating effects <!-- omo:id=accept-batch-ui-replay;stage=4;scope=frontend;review=5,6 -->
+- [x] canonical COOK_MODE #8 design and fresh independent critic pass before Stage 4 frontend entry <!-- omo:id=accept-batch-ui-design-critic;stage=4;scope=frontend;review=5,6 -->
+- [x] fresh 390px/320px screenshot/Figma product-design-authority reports blocker/major zero before Stage 4 frontend entry; legacy 15a evidence is not reused <!-- omo:id=accept-batch-ui-authority;stage=4;scope=frontend;review=5,6 -->
+- [x] #11 retains final LEFTOVERS/design/accessibility ownership without duplicate API/mutation <!-- omo:id=accept-batch-ui-successor;stage=4;scope=shared;review=5,6 -->
 
 ## Release / v1-v2 Boundary
 
@@ -76,7 +78,7 @@
 ## Successor / Error Boundary
 
 - [x] #9 owns meal-log linked consumed event pointer and arbitrary-order entry reversal <!-- omo:id=accept-batch-meal-log-boundary;stage=2;scope=shared;review=3,6 -->
-- [ ] #11 owns final delayed-weight/unrecoverable/LEFTOVERS UI polish and reuses #8 mutations <!-- omo:id=accept-batch-weight-ui-boundary;stage=4;scope=shared;review=5,6 -->
+- [x] #11 owns final delayed-weight/unrecoverable/LEFTOVERS UI polish and reuses #8 mutations <!-- omo:id=accept-batch-weight-ui-boundary;stage=4;scope=shared;review=5,6 -->
 - [x] responses keep official wrapper/error shape and exact public codes <!-- omo:id=accept-batch-wrapper;stage=2;scope=backend;review=3,6 -->
 - [x] 401; missing/other-owner identical `404 RESOURCE_NOT_FOUND`; body/filter 422; state/revision/bounds/later-event 409 preserve nondisclosure and whole-operation zero-write <!-- omo:id=accept-batch-errors;stage=2;scope=backend;review=3,6 -->
 - [x] no unofficial endpoint/field/status/reason/error/screen is introduced <!-- omo:id=accept-batch-no-contract-invention;stage=2;scope=shared;review=3,6 -->
