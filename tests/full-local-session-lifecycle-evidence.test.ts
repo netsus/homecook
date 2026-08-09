@@ -268,6 +268,41 @@ describe("full-local session lifecycle evidence contract", () => {
     }));
   });
 
+  it("accepts a projected Cloudflare monitoring summary as an optional root field", () => {
+    const legacyEvidence = createEvidence();
+    const monitoring = {
+      schema: "homecook.cloudflare-monitoring-summary",
+      version: 1,
+      status: "warning",
+      incident_count: 2,
+      critical_count: 0,
+      warning_count: 1,
+      diagnostic_count: 1,
+    };
+    const evidence = createEvidence({ cloudflareMonitoring: monitoring });
+
+    expect(validateSessionLifecycleEvidence(legacyEvidence)).toEqual([]);
+    expect(Object.keys(legacyEvidence)).not.toContain("cloudflare_monitoring");
+    expect(validateSessionLifecycleEvidence(evidence)).toEqual([]);
+    expect(evidence).toEqual(expect.objectContaining({
+      cloudflare_monitoring: monitoring,
+    }));
+
+    const unsafe = createEvidence({
+      cloudflareMonitoring: { ...monitoring, response_body: "must-not-be-accepted" },
+    });
+    expect(validateSessionLifecycleEvidence(unsafe)).toContain(
+      "unexpected key cloudflare_monitoring.response_body",
+    );
+
+    const inconsistent = createEvidence({
+      cloudflareMonitoring: { ...monitoring, incident_count: 3 },
+    });
+    expect(validateSessionLifecycleEvidence(inconsistent)).toContain(
+      "cloudflare_monitoring.incident_count must equal severity counts.",
+    );
+  });
+
   it("refuses milestone evidence while a required verification gate is not PASS", () => {
     const evidence = createEvidence({
       phase: "milestone-a-t65",

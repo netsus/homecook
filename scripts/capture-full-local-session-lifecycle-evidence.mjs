@@ -96,6 +96,15 @@ const EXACT_KEYS = Object.freeze({
   incident: ["binding_created_at", "binding_expires_at", "first_stale_at", "affected_route_classes"],
   verification: ["production_domain_contract_gate", "refresh_lifecycle_gate", "authority_static_contracts", "postgres_integration", "docker_refresh_smoke", "security_function_gate", "gotrue_policy_gate", "recent_auth_security_gate", "t65_canary", "canary_results", "account_session_stale_count", "stale_token_mutation_count"],
   canary_results: CANARY_RESULT_KEYS,
+  cloudflare_monitoring: [
+    "schema",
+    "version",
+    "status",
+    "incident_count",
+    "critical_count",
+    "warning_count",
+    "diagnostic_count",
+  ],
 });
 
 function run(command, args, options = {}) {
@@ -313,7 +322,13 @@ function isUtcIsoTimestamp(value) {
 
 export function validateSessionLifecycleEvidence(evidence) {
   const errors = [];
-  if (!exactObjectKeys(evidence, EXACT_KEYS.root, "evidence", errors)) {
+  const rootKeys = evidence !== null
+    && typeof evidence === "object"
+    && !Array.isArray(evidence)
+    && Object.hasOwn(evidence, "cloudflare_monitoring")
+    ? [...EXACT_KEYS.root, "cloudflare_monitoring"]
+    : EXACT_KEYS.root;
+  if (!exactObjectKeys(evidence, rootKeys, "evidence", errors)) {
     return errors;
   }
   exactObjectKeys(evidence.source, EXACT_KEYS.source, "source", errors);
@@ -327,6 +342,43 @@ export function validateSessionLifecycleEvidence(evidence) {
     "verification.canary_results",
     errors,
   );
+  if (Object.hasOwn(evidence, "cloudflare_monitoring")) {
+    exactObjectKeys(
+      evidence.cloudflare_monitoring,
+      EXACT_KEYS.cloudflare_monitoring,
+      "cloudflare_monitoring",
+      errors,
+    );
+    const monitoring = evidence.cloudflare_monitoring;
+    if (monitoring?.schema !== "homecook.cloudflare-monitoring-summary") {
+      errors.push("cloudflare_monitoring.schema is invalid.");
+    }
+    if (monitoring?.version !== 1) errors.push("cloudflare_monitoring.version must equal 1.");
+    if (!["healthy", "warning", "critical", "unknown"].includes(monitoring?.status)) {
+      errors.push("cloudflare_monitoring.status is invalid.");
+    }
+    for (const key of [
+      "incident_count",
+      "critical_count",
+      "warning_count",
+      "diagnostic_count",
+    ]) {
+      if (!Number.isSafeInteger(monitoring?.[key]) || monitoring[key] < 0) {
+        errors.push(`cloudflare_monitoring.${key} must be a non-negative integer.`);
+      }
+    }
+    if (
+      Number.isSafeInteger(monitoring?.incident_count)
+      && Number.isSafeInteger(monitoring?.critical_count)
+      && Number.isSafeInteger(monitoring?.warning_count)
+      && Number.isSafeInteger(monitoring?.diagnostic_count)
+      && monitoring.incident_count !== monitoring.critical_count
+        + monitoring.warning_count
+        + monitoring.diagnostic_count
+    ) {
+      errors.push("cloudflare_monitoring.incident_count must equal severity counts.");
+    }
+  }
 
   if (evidence.schema_version !== 1) errors.push("schema_version must equal 1.");
   if (!ALLOWED_PHASES.includes(evidence.phase)) errors.push("phase is invalid.");
@@ -430,6 +482,7 @@ export function buildSessionLifecycleEvidence({
   migrationHeadSource,
   phase,
   productionDomainContractGate,
+  cloudflareMonitoring = null,
   observation = {},
   verification = {},
 }) {
@@ -490,6 +543,9 @@ export function buildSessionLifecycleEvidence({
       stale_token_mutation_count: observation.staleTokenMutationCount ?? 0,
       ...verification,
     },
+    ...(cloudflareMonitoring === null ? {} : {
+      cloudflare_monitoring: cloudflareMonitoring,
+    }),
   };
 }
 
