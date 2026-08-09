@@ -2,11 +2,13 @@ import { readFile } from "node:fs/promises";
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+const cookies = vi.fn();
 const createRouteHandlerClient = vi.fn();
 const createServiceRoleClient = vi.fn();
 const ensurePublicUserRow = vi.fn();
 const ensureUserBootstrapState = vi.fn();
 const executeHybridLogout = vi.fn();
+const cookieGetAll = vi.fn();
 const formatBootstrapErrorMessage = vi.fn((error: unknown, fallbackMessage: string) => {
   if (error instanceof Error) {
     return `formatted: ${error.message}`;
@@ -37,6 +39,10 @@ vi.mock("@/lib/server/user-bootstrap", () => ({
 
 vi.mock("@/lib/server/hybrid-auth/logout", () => ({
   executeHybridLogout,
+}));
+
+vi.mock("next/headers", () => ({
+  cookies,
 }));
 
 interface QueryError {
@@ -124,6 +130,8 @@ async function importLogoutRoute() {
 describe("17c settings/account backend", () => {
   beforeEach(() => {
     vi.resetModules();
+    cookies.mockReset();
+    cookieGetAll.mockReset();
     createRouteHandlerClient.mockReset();
     createServiceRoleClient.mockReset();
     ensurePublicUserRow.mockReset();
@@ -136,6 +144,12 @@ describe("17c settings/account backend", () => {
     executeHybridLogout.mockResolvedValue({
       ok: true,
     });
+    cookies.mockResolvedValue({
+      getAll: cookieGetAll,
+    });
+    cookieGetAll.mockReturnValue([]);
+    vi.stubEnv("NEXT_PUBLIC_AUTH_SUPABASE_URL", "https://local.supabase.co");
+    vi.stubEnv("NEXT_PUBLIC_AUTH_SUPABASE_PUBLISHABLE_KEY", "test-publishable-key");
     delete process.env.HOMECOOK_ENABLE_QA_FIXTURES;
   });
 
@@ -504,12 +518,31 @@ describe("17c settings/account backend", () => {
 
   it("POST /auth/logout invalidates the current session and returns an API envelope", async () => {
     const routeClient = setupAuthedClient({ from: vi.fn() });
+    cookieGetAll.mockReturnValue([
+      { name: "sb-local-auth-token.2" },
+      { name: "sb-local-auth-token-code-verifier" },
+      { name: "sb-other-auth-token.7" },
+      { name: "sb-other-auth-token-code-verifier" },
+      { name: "ui_preference" },
+    ]);
 
     const { POST } = await importLogoutRoute();
     const response = await POST(
-      new Request("http://localhost:3000/api/v1/auth/logout", { method: "POST" }),
+      new Request("http://localhost:3000/api/v1/auth/logout", {
+        method: "POST",
+        headers: {
+          cookie: [
+            "sb-local-auth-token=token",
+            "sb-local-auth-token.0=chunk-0",
+            "sb-other-auth-token=other-token",
+            "sb-other-auth-token.0=other-chunk-0",
+            "feature_flag=on",
+          ].join("; "),
+        },
+      }),
     );
     const body = await response.json();
+    const setCookieHeaders = getSetCookieHeaders(response);
 
     expect(response.status).toBe(200);
     expect(executeHybridLogout).toHaveBeenCalledOnce();
@@ -519,11 +552,31 @@ describe("17c settings/account backend", () => {
       data: { logged_out: true },
       error: null,
     });
-    expect(getSetCookieHeaders(response)).toContainEqual(
+    expect(response.cookies.get("sb-local-auth-token")?.maxAge).toBe(0);
+    expect(response.cookies.get("sb-local-auth-token.0")?.maxAge).toBe(0);
+    expect(response.cookies.get("sb-local-auth-token.2")?.maxAge).toBe(0);
+    expect(response.cookies.get("sb-local-auth-token-code-verifier")?.maxAge).toBe(0);
+    expect(response.cookies.get("sb-other-auth-token")).toBeUndefined();
+    expect(response.cookies.get("sb-other-auth-token.0")).toBeUndefined();
+    expect(response.cookies.get("sb-other-auth-token.7")).toBeUndefined();
+    expect(response.cookies.get("sb-other-auth-token-code-verifier")).toBeUndefined();
+    expect(setCookieHeaders).toContainEqual(
       expect.stringMatching(
         /__Host-homecook-auth-flow=;.*Path=\/.*Max-Age=0.*Secure.*HttpOnly.*SameSite=Lax/i,
       ),
     );
+    expect(setCookieHeaders.some((header) => /^sb-other-auth-token=;/i.test(header))).toBe(false);
+    expect(setCookieHeaders.some((header) => /^sb-other-auth-token\.0=;/i.test(header))).toBe(
+      false,
+    );
+    expect(setCookieHeaders.some((header) => /^sb-other-auth-token\.7=;/i.test(header))).toBe(
+      false,
+    );
+    expect(
+      setCookieHeaders.some((header) => /^sb-other-auth-token-code-verifier=;/i.test(header)),
+    ).toBe(false);
+    expect(setCookieHeaders.some((header) => /^feature_flag=;/i.test(header))).toBe(false);
+    expect(setCookieHeaders.some((header) => /^ui_preference=;/i.test(header))).toBe(false);
   });
 
   it("POST /auth/logout fails closed before signOut when local authority revoke fails", async () => {
@@ -536,10 +589,16 @@ describe("17c settings/account backend", () => {
         status: 409,
       },
     });
+    cookieGetAll.mockReturnValue([{ name: "sb-local-auth-token.1" }]);
 
     const { POST } = await importLogoutRoute();
     const response = await POST(
-      new Request("http://localhost:3000/api/v1/auth/logout", { method: "POST" }),
+      new Request("http://localhost:3000/api/v1/auth/logout", {
+        method: "POST",
+        headers: {
+          cookie: "sb-local-auth-token=token",
+        },
+      }),
     );
 
     await expect(response.json()).resolves.toMatchObject({
@@ -548,6 +607,8 @@ describe("17c settings/account backend", () => {
     });
     expect(response.status).toBe(409);
     expect(executeHybridLogout).toHaveBeenCalledWith(routeClient);
+    expect(response.cookies.get("sb-local-auth-token")?.maxAge).toBe(0);
+    expect(response.cookies.get("sb-local-auth-token.1")?.maxAge).toBe(0);
     expect(getSetCookieHeaders(response)).toContainEqual(
       expect.stringMatching(
         /__Host-homecook-auth-flow=;.*Path=\/.*Max-Age=0.*Secure.*HttpOnly.*SameSite=Lax/i,
@@ -565,10 +626,16 @@ describe("17c settings/account backend", () => {
         status: 500,
       },
     });
+    cookieGetAll.mockReturnValue([{ name: "sb-local-auth-token.3" }]);
 
     const { POST } = await importLogoutRoute();
     const response = await POST(
-      new Request("http://localhost:3000/api/v1/auth/logout", { method: "POST" }),
+      new Request("http://localhost:3000/api/v1/auth/logout", {
+        method: "POST",
+        headers: {
+          cookie: "sb-local-auth-token=token",
+        },
+      }),
     );
 
     await expect(response.json()).resolves.toEqual({
@@ -582,6 +649,8 @@ describe("17c settings/account backend", () => {
     });
     expect(response.status).toBe(500);
     expect(executeHybridLogout).toHaveBeenCalledWith(routeClient);
+    expect(response.cookies.get("sb-local-auth-token")?.maxAge).toBe(0);
+    expect(response.cookies.get("sb-local-auth-token.3")?.maxAge).toBe(0);
     expect(getSetCookieHeaders(response)).toContainEqual(
       expect.stringMatching(
         /__Host-homecook-auth-flow=;.*Path=\/.*Max-Age=0.*Secure.*HttpOnly.*SameSite=Lax/i,
@@ -596,10 +665,16 @@ describe("17c settings/account backend", () => {
         signOut: vi.fn(),
       },
     });
+    cookieGetAll.mockReturnValue([{ name: "sb-local-auth-token.4" }]);
 
     const { POST } = await importLogoutRoute();
     const response = await POST(
-      new Request("http://localhost:3000/api/v1/auth/logout", { method: "POST" }),
+      new Request("http://localhost:3000/api/v1/auth/logout", {
+        method: "POST",
+        headers: {
+          cookie: "sb-local-auth-token=token",
+        },
+      }),
     );
     const body = await response.json();
 
@@ -609,6 +684,8 @@ describe("17c settings/account backend", () => {
       data: null,
       error: { code: "UNAUTHORIZED" },
     });
+    expect(response.cookies.get("sb-local-auth-token")?.maxAge).toBe(0);
+    expect(response.cookies.get("sb-local-auth-token.4")?.maxAge).toBe(0);
     expect(getSetCookieHeaders(response)).toContainEqual(
       expect.stringMatching(
         /__Host-homecook-auth-flow=;.*Path=\/.*Max-Age=0.*Secure.*HttpOnly.*SameSite=Lax/i,

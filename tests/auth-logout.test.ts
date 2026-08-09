@@ -42,21 +42,64 @@ describe("auth logout route", () => {
       getAll: cookieGetAll,
     });
     cookieGetAll.mockReturnValue([]);
+    vi.stubEnv("NEXT_PUBLIC_AUTH_SUPABASE_URL", "https://local.supabase.co");
+    vi.stubEnv("NEXT_PUBLIC_AUTH_SUPABASE_PUBLISHABLE_KEY", "test-publishable-key");
   });
 
   it("clears the server session and redirects to the requested local path", async () => {
+    cookieGetAll.mockReturnValue([
+      { name: "sb-local-auth-token.1" },
+      { name: "sb-local-auth-token-code-verifier" },
+      { name: "sb-other-auth-token.4" },
+      { name: "sb-other-auth-token-code-verifier" },
+      { name: "preferences" },
+    ]);
+
     const { GET } = await import("@/app/auth/logout/route");
     const response = await GET(
-      new Request("http://localhost:3000/auth/logout?next=/planner"),
+      new Request("http://localhost:3000/auth/logout?next=/planner", {
+        headers: {
+          cookie: [
+            "sb-local-auth-token=token",
+            "sb-local-auth-token.0=chunk-0",
+            "sb-other-auth-token=other-token",
+            "sb-other-auth-token.0=other-chunk-0",
+            "marketing_opt_in=yes",
+          ].join("; "),
+        },
+      }),
     );
+    const setCookieHeaders = getSetCookieHeaders(response);
 
     expect(executeHybridLogout).toHaveBeenCalledTimes(1);
     expect(response.headers.get("location")).toBe("http://localhost:3000/planner");
-    expect(getSetCookieHeaders(response)).toContainEqual(
+    expect(response.cookies.get("sb-local-auth-token")?.maxAge).toBe(0);
+    expect(response.cookies.get("sb-local-auth-token.0")?.maxAge).toBe(0);
+    expect(response.cookies.get("sb-local-auth-token.1")?.maxAge).toBe(0);
+    expect(response.cookies.get("sb-local-auth-token-code-verifier")?.maxAge).toBe(0);
+    expect(response.cookies.get("sb-other-auth-token")).toBeUndefined();
+    expect(response.cookies.get("sb-other-auth-token.0")).toBeUndefined();
+    expect(response.cookies.get("sb-other-auth-token.4")).toBeUndefined();
+    expect(response.cookies.get("sb-other-auth-token-code-verifier")).toBeUndefined();
+    expect(setCookieHeaders).toContainEqual(
       expect.stringMatching(
         /__Host-homecook-auth-flow=;.*Path=\/.*Max-Age=0.*Secure.*HttpOnly.*SameSite=Lax/i,
       ),
     );
+    expect(setCookieHeaders.some((header) => /^sb-other-auth-token=;/i.test(header))).toBe(false);
+    expect(setCookieHeaders.some((header) => /^sb-other-auth-token\.0=;/i.test(header))).toBe(
+      false,
+    );
+    expect(setCookieHeaders.some((header) => /^sb-other-auth-token\.4=;/i.test(header))).toBe(
+      false,
+    );
+    expect(
+      setCookieHeaders.some((header) => /^sb-other-auth-token-code-verifier=;/i.test(header)),
+    ).toBe(false);
+    expect(setCookieHeaders.some((header) => /^marketing_opt_in=;/i.test(header))).toBe(
+      false,
+    );
+    expect(setCookieHeaders.some((header) => /^preferences=;/i.test(header))).toBe(false);
   });
 
   it("prefers the public app origin over the proxy request origin", async () => {
