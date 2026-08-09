@@ -238,8 +238,9 @@ export function hashEvidenceValue(value) {
   return `sha256:${createHash("sha256").update(String(value), "utf8").digest("hex")}`;
 }
 
-function normalizeError(value, checkName) {
-  if (value === null || value === undefined) return null;
+function normalizeError(value, checkName, { present, success }) {
+  if (!present) return "CHECK_FAILED";
+  if (success) return value === null ? null : "CHECK_FAILED";
   return CHECK_ERROR_CODES[checkName]?.has(value) ? value : "CHECK_FAILED";
 }
 
@@ -250,7 +251,11 @@ function normalizeLatency(value) {
 function normalizeTargets(targets, checkName) {
   if (!Array.isArray(targets)) return [];
   return targets.map((target) => {
-    const error = normalizeError(target?.error, checkName);
+    const declaredSuccess = target?.success === true;
+    const error = normalizeError(target?.error, checkName, {
+      present: target !== null && typeof target === "object" && Object.hasOwn(target, "error"),
+      success: declaredSuccess,
+    });
     return {
       hostname: [
         ...Object.keys(CLOUDFLARE_TUNNEL_ENDPOINTS),
@@ -263,7 +268,7 @@ function normalizeTargets(targets, checkName) {
         ? target.protocol : "unknown",
       port: Number.isInteger(target?.port) && target.port > 0 ? target.port : null,
       attempted: target?.attempted === true,
-      success: target?.success === true && error === null,
+      success: declaredSuccess && error === null,
       latency_ms: normalizeLatency(target?.latency_ms),
       error,
     };
@@ -271,13 +276,19 @@ function normalizeTargets(targets, checkName) {
 }
 
 function normalizeCheck(value = {}, checkName) {
-  const error = normalizeError(value.error, checkName);
+  const declaredSuccess = value?.success === true;
+  const targets = normalizeTargets(value?.targets, checkName);
+  let error = normalizeError(value?.error, checkName, {
+    present: value !== null && typeof value === "object" && Object.hasOwn(value, "error"),
+    success: declaredSuccess,
+  });
+  if (declaredSuccess && targets.some((target) => !target.success)) error = "CHECK_FAILED";
   return {
     attempted: value.attempted === true,
-    success: value.success === true && error === null,
+    success: declaredSuccess && error === null,
     latency_ms: normalizeLatency(value.latency_ms),
     error,
-    targets: normalizeTargets(value.targets, checkName),
+    targets,
   };
 }
 

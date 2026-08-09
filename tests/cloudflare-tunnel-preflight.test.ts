@@ -1,6 +1,6 @@
 import { EventEmitter } from "node:events";
 import { createHash } from "node:crypto";
-import { chmod, mkdir, mkdtemp, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
+import { chmod, mkdir, mkdtemp, readFile, realpath, rename, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
@@ -63,7 +63,8 @@ type MutableQuicProbe = {
 } & Record<string, unknown>;
 
 async function privateRoot() {
-  const root = await mkdtemp(path.join(tmpdir(), "homecook-cloudflare-preflight-"));
+  const created = await mkdtemp(path.join(tmpdir(), "homecook-cloudflare-preflight-"));
+  const root = await realpath(created);
   createdRoots.push(root);
   await mkdir(root, { recursive: true, mode: 0o700 });
   return root;
@@ -140,19 +141,19 @@ function matchingQuicProbe({ verified_endpoints: endpoints }: { verified_endpoin
 
 const successfulQuicProbe = matchingQuicProbe;
 
-function kernProcArgs2Buffer(args: string[]) {
+function kernProcArgs2Buffer(args: string[], executablePath: string | Buffer = args[0] ?? "") {
   const argc = Buffer.alloc(4);
   argc.writeInt32LE(args.length, 0);
   return Buffer.concat([
     argc,
-    Buffer.from(args[0] ?? "", "utf8"),
+    Buffer.isBuffer(executablePath) ? executablePath : Buffer.from(executablePath, "utf8"),
     Buffer.from([0, 0]),
     ...args.map((argument) => Buffer.concat([Buffer.from(argument, "utf8"), Buffer.from([0])])),
   ]);
 }
 
-function runtimeArgvReader(args: string[]) {
-  return vi.fn(async () => successResult(kernProcArgs2Buffer(args)));
+function runtimeArgvReader(args: string[], executablePath?: string | Buffer) {
+  return vi.fn(async () => successResult(kernProcArgs2Buffer(args, executablePath)));
 }
 
 afterEach(async () => {
@@ -304,7 +305,25 @@ describe("pure parsing and evidence projection", () => {
       "/opt/cloudflared", "tunnel", "run", "--token-file", "/private/token with space",
       "literal-\"quote\"", "",
     ];
-    expect(parseKernProcArgs2(kernProcArgs2Buffer(args))).toEqual({ success: true, arguments: args });
+    expect(parseKernProcArgs2(kernProcArgs2Buffer(args))).toEqual({
+      success: true,
+      executable_path: args[0],
+      arguments: args,
+    });
+  });
+
+  it.each([
+    ["malformed UTF-8", Buffer.from([0xff])],
+    ["empty", ""],
+    ["nonabsolute", "cloudflared"],
+    ["noncanonical", "/opt/../opt/cloudflared"],
+  ])("rejects a %s KERN_PROCARGS2 executable path", (_case, executablePath) => {
+    const raw = kernProcArgs2Buffer(["/opt/cloudflared", "tunnel", "run"], executablePath);
+    expect(parseKernProcArgs2(raw)).toMatchObject({
+      success: false,
+      executable_path: null,
+      arguments: [],
+    });
   });
 
   it("rejects truncated, malformed, and oversized KERN_PROCARGS2 buffers", () => {
@@ -569,6 +588,62 @@ describe("pure parsing and evidence projection", () => {
     });
     const serialized = JSON.stringify(evidence);
     expect(serialized).not.toMatch(/PHASE1_SECRET|\/Users\/|operator@|2606:4700:a0::1/u);
+    expect(evidence.checks.dns).toMatchObject({ success: false, error: "CHECK_FAILED" });
+    expect(evidence.checks.dns.targets[0]).toMatchObject({ success: false, error: "CHECK_FAILED" });
+  });
+
+  it.each([
+    ["check missing error", (check: Record<string, unknown>) => { delete check.error; }],
+    ["check undefined error", (check: Record<string, unknown>) => { check.error = undefined; }],
+    ["failed check null error", (check: Record<string, unknown>) => { check.success = false; check.error = null; }],
+    ["check wrong error type", (check: Record<string, unknown>) => { check.error = 42; }],
+  ])("fails closed for %s", (_case, mutate) => {
+    const checks = successfulChecks();
+    const check = { ...checks.dns } as Record<string, unknown>;
+    mutate(check);
+    checks.dns = check as never;
+    const evidence = buildPreflightEvidence({
+      timestamp: "2026-08-09T13:00:00.000Z",
+      platform: TEST_PLATFORM,
+      management_mode: "remotely-managed",
+      management_mode_success: true,
+      snapshot: completeSnapshot(),
+      token_path_mode_safe: true,
+      checks,
+    });
+    expect(evidence.success).toBe(false);
+    expect(evidence.checks.dns).toMatchObject({ success: false, error: "CHECK_FAILED" });
+  });
+
+  it.each([
+    ["target missing error", (target: Record<string, unknown>) => { delete target.error; }],
+    ["target undefined error", (target: Record<string, unknown>) => { target.error = undefined; }],
+    ["failed target null error", (target: Record<string, unknown>) => { target.success = false; target.error = null; }],
+    ["target wrong error type", (target: Record<string, unknown>) => { target.error = 42; }],
+  ])("fails the aggregate check for %s", (_case, mutate) => {
+    const checks = successfulChecks();
+    const target: Record<string, unknown> = {
+      hostname: "region1.v2.argotunnel.com",
+      address_family: "ipv4",
+      protocol: "dns",
+      port: 53,
+      attempted: true,
+      success: true,
+      latency_ms: 1,
+      error: null,
+    };
+    mutate(target);
+    checks.dns = { ...checks.dns, targets: [target] } as never;
+    const evidence = buildPreflightEvidence({
+      timestamp: "2026-08-09T13:00:00.000Z",
+      platform: TEST_PLATFORM,
+      management_mode: "remotely-managed",
+      management_mode_success: true,
+      snapshot: completeSnapshot(),
+      token_path_mode_safe: true,
+      checks,
+    });
+    expect(evidence.success).toBe(false);
     expect(evidence.checks.dns).toMatchObject({ success: false, error: "CHECK_FAILED" });
     expect(evidence.checks.dns.targets[0]).toMatchObject({ success: false, error: "CHECK_FAILED" });
   });
@@ -840,6 +915,26 @@ describe("read-only collection and CLI", () => {
     expect(evidence.checks.snapshot.error).toBe("SNAPSHOT_INCOMPLETE");
   });
 
+  it.each([
+    ["raw executable mismatch", (paths: Awaited<ReturnType<typeof fixturePaths>>) => ({
+      args: remoteArguments(paths), executablePath: "/attacker/cloudflared",
+    })],
+    ["argv0 mismatch", (paths: Awaited<ReturnType<typeof fixturePaths>>) => ({
+      args: ["/attacker/cloudflared", ...remoteArguments(paths).slice(1)],
+      executablePath: paths.binaryPath,
+    })],
+  ])("rejects KERN_PROCARGS2 %s", async (_case, runtime) => {
+    const paths = await fixturePaths();
+    const { runner } = happyRunner(paths);
+    const raw = runtime(paths);
+    const evidence = await collectCloudflareTunnelPreflight(validCollectorOptions(paths), {
+      ...validCollectorDependencies(paths, runner),
+      runtimeArgvReader: runtimeArgvReader(raw.args, raw.executablePath),
+    });
+    expect(evidence.success).toBe(false);
+    expect(evidence.checks.snapshot.error).toBe("SNAPSHOT_INCOMPLETE");
+  });
+
   it("rejects a later duplicate token-file instead of accepting the first value", async () => {
     const paths = await fixturePaths();
     const base = happyRunner(paths);
@@ -925,6 +1020,12 @@ describe("read-only collection and CLI", () => {
     ["target undefined error", (probe: MutableQuicProbe) => { if (probe.targets[0]) probe.targets[0].error = undefined; }],
     ["aggregate wrong error type", (probe: MutableQuicProbe) => { probe.error = 42; }],
     ["target wrong error type", (probe: MutableQuicProbe) => { if (probe.targets[0]) probe.targets[0].error = 42; }],
+    ["failed aggregate null error", (probe: MutableQuicProbe) => { probe.success = false; probe.error = null; }],
+    ["failed target null error", (probe: MutableQuicProbe) => {
+      if (!probe.targets[0]) return;
+      probe.targets[0].success = false;
+      probe.targets[0].error = null;
+    }],
     ["target unknown failure code", (probe: MutableQuicProbe) => {
       if (!probe.targets[0]) return;
       probe.targets[0].success = false;
@@ -1066,6 +1167,22 @@ describe("read-only collection and CLI", () => {
     expect(evidence.checks[checkName].success).toBe(false);
   });
 
+  it("reports a closed failure when DNS exits zero without required stdout", async () => {
+    const paths = await fixturePaths();
+    const base = happyRunner(paths);
+    const runner = vi.fn(async (candidate) => candidate.command === SYSTEM_TOOLS.dig
+      ? successResult("") : base.runner(candidate));
+    const evidence = await collectCloudflareTunnelPreflight(validCollectorOptions(paths), {
+      ...validCollectorDependencies(paths, runner),
+    });
+    expect(evidence.success).toBe(false);
+    expect(evidence.checks.dns).toMatchObject({
+      attempted: true,
+      success: false,
+      error: "MALFORMED_OUTPUT",
+    });
+  });
+
   it("snapshots a remotely-managed tunnel without reading token-file contents or invoking diag", async () => {
     const paths = await fixturePaths();
     const { runner, invocations } = happyRunner(paths);
@@ -1107,6 +1224,7 @@ describe("read-only collection and CLI", () => {
       quicProbe: successfulQuicProbe,
       trustedBinaryRoots: [paths.root],
       trustedPlistPaths: [paths.plistPath],
+      watchPath: noEventWatchPath,
     });
     expect(evidence.success).toBe(false);
     expect(evidence.checks.tunnel_connections).toMatchObject({
@@ -1516,6 +1634,7 @@ describe("read-only collection and CLI", () => {
       quicProbe: successfulQuicProbe,
       trustedBinaryRoots: [paths.root],
       trustedPlistPaths: [paths.plistPath],
+      watchPath: noEventWatchPath,
     });
     expect(evidence.success).toBe(false);
     expect(evidence.management_mode).toBe("locally-managed");

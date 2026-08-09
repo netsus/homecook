@@ -355,26 +355,32 @@ function parseRunningExecutable(raw) {
   return raw.split(/\r?\n/u).find((line) => line.startsWith("n/"))?.slice(1) ?? null;
 }
 export function parseKernProcArgs2(raw) {
+  const failure = () => ({ success: false, executable_path: null, arguments: [] });
   if (!Buffer.isBuffer(raw) || raw.length < 8 || raw.length > MAX_COMMAND_OUTPUT_BYTES) {
-    return { success: false, arguments: [] };
+    return failure();
   }
   const argc = raw.readInt32LE(0);
-  if (!Number.isInteger(argc) || argc < 1 || argc > 256) return { success: false, arguments: [] };
-  let cursor = raw.indexOf(0, 4);
-  if (cursor < 5) return { success: false, arguments: [] };
-  cursor += 1;
-  while (cursor < raw.length && raw[cursor] === 0) cursor += 1;
+  if (!Number.isInteger(argc) || argc < 1 || argc > 256) return failure();
+  const executableTerminator = raw.indexOf(0, 4);
+  if (executableTerminator < 5 || raw[executableTerminator + 1] !== 0) return failure();
   const decoder = new TextDecoder("utf-8", { fatal: true });
+  let executablePath;
+  try { executablePath = decoder.decode(raw.subarray(4, executableTerminator)); }
+  catch { return failure(); }
+  if (!path.isAbsolute(executablePath) || path.normalize(executablePath) !== executablePath) return failure();
+  let cursor = executableTerminator + 1;
+  while (cursor < raw.length && raw[cursor] === 0) cursor += 1;
   const args = [];
   try {
     for (let index = 0; index < argc; index += 1) {
       const terminator = raw.indexOf(0, cursor);
-      if (terminator < cursor) return { success: false, arguments: [] };
+      if (terminator < cursor) return failure();
       args.push(decoder.decode(raw.subarray(cursor, terminator)));
       cursor = terminator + 1;
     }
-  } catch { return { success: false, arguments: [] }; }
-  return { success: args.length === argc && args[0].length > 0, arguments: args };
+  } catch { return failure(); }
+  if (args.length !== argc || args[0].length === 0) return failure();
+  return { success: true, executable_path: executablePath, arguments: args };
 }
 function parseMetricsPort(raw, requested) {
   const ports = [...String(raw ?? "").matchAll(/n127\.0\.0\.1:(2024[1-5])/gu)].map((match) => Number(match[1]));
@@ -414,7 +420,15 @@ async function collectRuntime(pid, expectedCandidate, configuredArgs, configured
   if (!parsedRuntime.success || !runtimeParsed.success) throw new Error("Runtime arguments malformed.");
   const runtimeArgumentsHash = hashArgumentVector(parsedRuntime.arguments.slice(1));
   const configuredArgumentsHash = hashArgumentVector(configuredArgs.slice(1));
+  const canonicalExecutableHash = hashEvidenceValue(canonical);
+  const runtimeExecutableHash = hashEvidenceValue(parsedRuntime.executable_path);
+  const runtimeArgv0Hash = hashEvidenceValue(parsedRuntime.arguments[0]);
   if (canonical !== expectedCandidate.path || sha256 !== expectedCandidate.sha256
+    || canonicalExecutableHash !== expectedCandidate.path_hash
+    || parsedRuntime.executable_path !== canonical
+    || parsedRuntime.arguments[0] !== canonical
+    || runtimeExecutableHash !== expectedCandidate.path_hash
+    || runtimeArgv0Hash !== expectedCandidate.path_hash
     || runtimeArgumentsHash !== configuredArgumentsHash
     || JSON.stringify(parsedRuntime.arguments) !== JSON.stringify(configuredArgs)) {
     throw new Error("Runtime identity mismatch.");
@@ -564,9 +578,13 @@ async function dnsCheck(runner, now) {
     const parsed = resultReady ? parseDnsOutput(result.stdout,
       { hostname, address_family: family }) : { success: false, addresses: [] };
     const success = resultReady && parsed.success;
+    const missingRequiredOutput = result.exit_code === 0 && result.timed_out !== true
+      && result.output_overflow !== true && result.command_missing !== true && !resultReady;
     targets.push({ hostname, address_family: family, protocol: "dns", port: 53, attempted: true,
       success, latency_ms: Math.max(0, now() - targetStarted),
-      error: success ? null : failureCode([result], { malformed: resultReady && !parsed.success }) });
+      error: success ? null : failureCode([result], {
+        malformed: missingRequiredOutput || resultReady && !parsed.success,
+      }) });
     for (const address of parsed.addresses ?? []) verified.push({ hostname, family, address });
   }
   const success = targets.every((target) => target.success);
