@@ -1481,7 +1481,7 @@ begin
   v_scope := v_headers ->> 'x-homecook-internal-scope';
 
   if not (
-    v_method in ('GET', 'POST', 'PUT', 'DELETE')
+    v_method in ('GET', 'POST', 'PUT', 'PATCH', 'DELETE')
     and (
       (
         v_scope = 'auth-flow'
@@ -1629,7 +1629,50 @@ begin
       or (
         v_scope = 'youtube-ingredient-registration'
         and v_method = 'POST'
-        and v_path = '/rpc/register_youtube_ingredient'
+        and v_path in (
+          '/rpc/consume_youtube_ingredient_registration_rate_limit',
+          '/rpc/register_youtube_ingredient'
+        )
+      )
+      or (
+        v_scope = 'youtube-extraction'
+        and (
+          (
+            v_method = 'POST'
+            and v_path in (
+              '/youtube_extraction_sessions',
+              '/youtube_extraction_candidates',
+              '/youtube_transcript_cache',
+              '/youtube_transcript_fetch_events',
+              '/youtube_llm_extraction_cache',
+              '/youtube_llm_extraction_events',
+              '/youtube_visual_extraction_cache',
+              '/youtube_visual_extraction_events',
+              '/cooking_methods'
+            )
+          )
+          or (
+            v_method = 'GET'
+            and v_path in (
+              '/youtube_transcript_cache',
+              '/youtube_transcript_fetch_events',
+              '/youtube_llm_extraction_cache',
+              '/youtube_llm_extraction_events',
+              '/youtube_visual_extraction_cache',
+              '/youtube_visual_extraction_events',
+              '/cooking_methods'
+            )
+          )
+          or (
+            v_method = 'PATCH'
+            and v_path in (
+              '/youtube_extraction_candidates',
+              '/youtube_transcript_cache',
+              '/youtube_llm_extraction_cache',
+              '/youtube_visual_extraction_cache'
+            )
+          )
+        )
       )
     )
   ) then

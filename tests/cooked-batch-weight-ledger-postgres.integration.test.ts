@@ -672,6 +672,54 @@ describe.runIf(enabled)("cooked batch weight ledger PostgreSQL", () => {
     expect(denied.stderr).toContain("ACCOUNT_SESSION_STALE");
   });
 
+  it("preserves the latest YouTube internal scopes after the cooked-batch migration", () => {
+    for (const [method, path, scope] of [
+      ["POST", "/youtube_extraction_sessions", "youtube-extraction"],
+      ["PATCH", "/youtube_extraction_candidates", "youtube-extraction"],
+      ["GET", "/youtube_transcript_cache", "youtube-extraction"],
+      ["POST", "/youtube_transcript_fetch_events", "youtube-extraction"],
+      ["PATCH", "/youtube_llm_extraction_cache", "youtube-extraction"],
+      ["GET", "/youtube_llm_extraction_events", "youtube-extraction"],
+      ["PATCH", "/youtube_visual_extraction_cache", "youtube-extraction"],
+      ["POST", "/youtube_visual_extraction_events", "youtube-extraction"],
+      ["GET", "/cooking_methods", "youtube-extraction"],
+      [
+        "POST",
+        "/rpc/consume_youtube_ingredient_registration_rate_limit",
+        "youtube-ingredient-registration",
+      ],
+      ["POST", "/rpc/register_youtube_ingredient", "youtube-ingredient-registration"],
+    ] as const) {
+      const allowed = psql(`
+        begin;
+        select set_config(
+          'request.headers',
+          '{"x-homecook-internal-scope":"${scope}"}',
+          true
+        );
+        select set_config('request.method','${method}',true);
+        select set_config('request.path','${path}',true);
+        select private.verify_full_local_internal_scope();
+        rollback;
+      `, false);
+      expect(allowed.status, `${method} ${path}: ${allowed.stderr}`).toBe(0);
+    }
+
+    const denied = psql(`
+      begin;
+      select set_config(
+        'request.headers',
+        '{"x-homecook-internal-scope":"youtube-extraction"}',
+        true
+      );
+      select set_config('request.method','DELETE',true);
+      select set_config('request.path','/youtube_visual_extraction_cache',true);
+      select private.verify_full_local_internal_scope();
+      rollback;
+    `, false);
+    expect(denied.stderr).toContain("ACCOUNT_SESSION_STALE");
+  });
+
   it("denies direct event-table reads and hides the other owner projection", () => {
     const result = psql(`
       begin;
