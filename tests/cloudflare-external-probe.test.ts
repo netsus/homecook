@@ -200,8 +200,10 @@ describe("provider-neutral external probe contract", () => {
 
     expect(aggregate.alerts.critical).toContain("public_timeout_or_52x_consecutive_2");
     expect(aggregate.public.failures).toBe(2);
+    expect(aggregate.public.response_quality_pass).toBe(false);
+    expect(aggregate.public.gate_pass).toBe(false);
     expect(aggregate.authenticated.failures).toBe(288);
-    expect(aggregate.public_paging_ready).toBe(true);
+    expect(aggregate.public_paging_ready).toBe(false);
 
     const authOnlyFailureEvents = completeEvents().map((event) =>
       event.probe_id === "authenticated_pantry_read"

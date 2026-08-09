@@ -208,14 +208,22 @@ export function parseTunnelMetrics(raw) {
   const text = String(raw ?? "");
   const buildSamples = [];
   const connectionSamples = [];
+  let buildMetricLines = 0;
+  let connectionMetricLines = 0;
   const connectionLocations = new Map();
   const edgeLocations = new Set();
   let serverSamplesValid = true;
   for (const line of text.split(/\r?\n/u)) {
-    const build = line.match(/^(?:cloudflared_)?build_info\{[^}]*version="([^"]+)"[^}]*\}\s+1(?:\.0+)?$/u);
-    if (build) buildSamples.push(build[1]);
-    const connection = line.match(/^cloudflared_tunnel_ha_connections(?:\{[^}]*\})?\s+([0-9]+)(?:\.0+)?$/u);
-    if (connection) connectionSamples.push(connection[1]);
+    if (/^(?:cloudflared_)?build_info(?:\{|\s)/u.test(line)) {
+      buildMetricLines += 1;
+      const build = line.match(/^(?:cloudflared_)?build_info\{[^}]*version="([^"]+)"[^}]*\}\s+1(?:\.0+)?$/u);
+      if (build) buildSamples.push(build[1]);
+    }
+    if (/^cloudflared_tunnel_ha_connections(?:\{|\s)/u.test(line)) {
+      connectionMetricLines += 1;
+      const connection = line.match(/^cloudflared_tunnel_ha_connections(?:\{[^}]*\})?\s+([0-9]+)(?:\.0+)?$/u);
+      if (connection) connectionSamples.push(connection[1]);
+    }
     if (!/^cloudflared_tunnel_server_locations\{/u.test(line)) continue;
     if (!/\}\s+1(?:\.0+)?$/u.test(line)) {
       serverSamplesValid = false;
@@ -240,7 +248,9 @@ export function parseTunnelMetrics(raw) {
   const connectionIdsConsistent = activeConnections !== null
     && serverSamplesValid
     && activeConnectionIds === activeConnections;
-  const samplesValid = buildSamples.length === 1
+  const samplesValid = buildMetricLines === 1
+    && buildSamples.length === 1
+    && connectionMetricLines === 1
     && connectionSamples.length === 1
     && serverSamplesValid;
   return {

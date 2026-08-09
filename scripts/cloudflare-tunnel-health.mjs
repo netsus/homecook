@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 
 import {
   buildLocalConnectorHealth,
+  localConnectorHealthExitCode,
   validateMetricsEndpoint,
 } from "./lib/cloudflare-tunnel-health.mjs";
 
@@ -107,8 +108,10 @@ export async function runHealthCli(argv, dependencies = {}) {
       metrics_raw: metricsRaw,
       log_raw: logRaw,
     });
+    const exitCode = localConnectorHealthExitCode(health);
+    if (exitCode === null) throw new Error("Invalid local health summary.");
     stdout(`${JSON.stringify(health)}\n`);
-    return ["healthy", "warning"].includes(health.state) ? 0 : 1;
+    return exitCode;
   } catch {
     stderr("cloudflare-tunnel-health: FAIL (redacted)\n");
     return 1;

@@ -23,6 +23,10 @@ import { spawnSync } from "node:child_process";
 import { buildFullLocalProductCatalogCtesSql } from "./lib/full-local-product-catalog.mjs";
 import { buildFullLocalAuthorizationContractCtesSql } from "./full-local-production-runtime.mjs";
 import { summarizeCloudflareMonitoring } from "./lib/cloudflare-external-probe.mjs";
+import {
+  localConnectorHealthExitCode,
+  validateLocalConnectorHealth,
+} from "./lib/cloudflare-tunnel-health.mjs";
 
 export const EXPECTED_LIVE_ROOT = "/Users/cwj/01_vibe_coding/homecook-full-local-restore";
 export const REFRESH_LIFECYCLE_JSON_SCRIPT =
@@ -355,7 +359,7 @@ export function validateSessionLifecycleEvidence(evidence) {
       errors.push("cloudflare_monitoring.schema is invalid.");
     }
     if (monitoring?.version !== 1) errors.push("cloudflare_monitoring.version must equal 1.");
-    if (!["healthy", "warning", "critical", "unknown"].includes(monitoring?.status)) {
+    if (!["healthy", "degraded", "warning", "critical", "unknown"].includes(monitoring?.status)) {
       errors.push("cloudflare_monitoring.status is invalid.");
     }
     for (const key of [
@@ -387,7 +391,7 @@ export function validateSessionLifecycleEvidence(evidence) {
         ? "critical"
         : monitoring.warning_count > 0
           ? "warning"
-          : ["healthy", "unknown"].includes(monitoring.status)
+          : ["healthy", "degraded", "unknown"].includes(monitoring.status)
             ? monitoring.status
             : null;
       if (expectedStatus === null || monitoring.status !== expectedStatus) {
@@ -1154,18 +1158,8 @@ export function collectCloudflareMonitoringSummary({
     const raw = stdoutText(result);
     if (Buffer.byteLength(raw, "utf8") > 1_048_576) return null;
     const localHealth = JSON.parse(raw);
-    if (
-      localHealth?.schema !== "homecook.cloudflare-tunnel-health"
-      || localHealth?.version !== 1
-      || !Array.isArray(localHealth?.incident_events)
-    ) {
-      return null;
-    }
-    const expectedExit = ["healthy", "warning"].includes(localHealth.state)
-      ? 0
-      : ["critical", "unknown"].includes(localHealth.state)
-        ? 1
-        : null;
+    if (!validateLocalConnectorHealth(localHealth)) return null;
+    const expectedExit = localConnectorHealthExitCode(localHealth);
     if (expectedExit === null || result.status !== expectedExit) return null;
     return summarizeCloudflareMonitoring({ local_health: localHealth });
   } catch {

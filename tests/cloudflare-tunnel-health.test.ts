@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   buildLocalConnectorHealth,
+  validateLocalConnectorHealth,
   validateMetricsEndpoint,
 } from "../scripts/lib/cloudflare-tunnel-health.mjs";
 import { parseTunnelMetrics } from "../scripts/lib/cloudflare-tunnel-preflight.mjs";
@@ -98,6 +99,43 @@ describe("Cloudflare local connector health", () => {
     expect(down.signals.critical).toContain("connector_down");
     expect(down.connector.connection_state).toBe("down");
     expect(down.state).toBe("critical");
+  });
+
+  it("keeps the connector grace period degraded without raising the 60s warning", async () => {
+    const log = `${initialConnections}\n2026-08-10T00:02:40.000Z ERR connection closed connIndex=3`;
+    const health = buildLocalConnectorHealth({
+      captured_at: "2026-08-10T00:03:00.000Z",
+      metrics_raw: metrics(3),
+      log_raw: log,
+    });
+    const stdout: string[] = [];
+    const exitCode = await runHealthCli([], {
+      env: {
+        CLOUDFLARE_TUNNEL_METRICS_ENDPOINT: "http://127.0.0.1:20241/metrics",
+        CLOUDFLARE_TUNNEL_LOG_PATH: "/Users/cwj/.homecook/logs/cloudflare-tunnel.err.log",
+      },
+      now: () => new Date("2026-08-10T00:03:00.000Z"),
+      readMetrics: async () => metrics(3),
+      readLog: async () => log,
+      stdout: (value: string) => stdout.push(value),
+      stderr: () => undefined,
+    });
+
+    expect(health.state).toBe("degraded");
+    expect(health.degraded_duration_ms).toBe(20_000);
+    expect(health.signals.warning).not.toContain("connector_below_4_over_60s");
+    expect(health.incident_events).toEqual([]);
+    expect(exitCode).toBe(1);
+    expect(JSON.parse(stdout.join(""))).toEqual(health);
+
+    const exactBoundary = buildLocalConnectorHealth({
+      captured_at: "2026-08-10T00:03:00.000Z",
+      metrics_raw: metrics(3),
+      log_raw: `${initialConnections}\n2026-08-10T00:02:00.000Z ERR connection closed connIndex=3`,
+    });
+    expect(exactBoundary.degraded_duration_ms).toBe(60_000);
+    expect(exactBoundary.state).toBe("degraded");
+    expect(exactBoundary.signals.warning).toEqual([]);
   });
 
   it("fails closed for truncated, inconsistent, or out-of-range tunnel metrics", () => {
@@ -225,12 +263,20 @@ describe("Cloudflare local connector health", () => {
     const cases = [
       `${metrics(4)}\ncloudflared_build_info{version="2026.5.2"} 1`,
       `${metrics(4)}\ncloudflared_tunnel_ha_connections 0`,
+      `${metrics(4)}\ncloudflared_tunnel_ha_connections 3.5`,
+      `${metrics(4)}\ncloudflared_tunnel_ha_connections not-a-number`,
+      `${metrics(4)}\ncloudflared_tunnel_ha_connections 4 1786300000`,
+      `${metrics(4)}\ncloudflared_build_info{version="2026.5.2"} 0`,
+      `${metrics(4)}\ncloudflared_build_info{version="2026.5.2"} not-a-number`,
+      `${metrics(4)}\ncloudflared_build_info{version="2026.5.2"} 1 1786300000`,
       `${metrics(4)}\ncloudflared_tunnel_server_locations{connection_id="0",edge_location="icn01"} 1`,
       `${metrics(4)}\ncloudflared_tunnel_server_locations{connection_id="0",edge_location="lax01"} 1`,
     ];
 
     for (const metricsRaw of cases) {
-      expect(parseTunnelMetrics(metricsRaw).success).toBe(false);
+      const parsed = parseTunnelMetrics(metricsRaw);
+      expect(parsed.samples_valid).toBe(false);
+      expect(parsed.success).toBe(false);
       expect(buildLocalConnectorHealth({
         captured_at: "2026-08-10T00:03:00.000Z",
         metrics_raw: metricsRaw,
@@ -240,6 +286,24 @@ describe("Cloudflare local connector health", () => {
         connector: expect.objectContaining({ metrics_valid: false }),
       }));
     }
+  });
+
+  it("validates the exact local health schema and state/incident invariants", () => {
+    const valid = buildLocalConnectorHealth({
+      captured_at: "2026-08-10T00:03:00.000Z",
+      metrics_raw: metrics(3),
+      log_raw: `${initialConnections}\n2026-08-10T00:02:40.000Z ERR connection closed connIndex=3`,
+    });
+
+    expect(validateLocalConnectorHealth(valid)).toBe(true);
+    expect(validateLocalConnectorHealth({
+      schema: valid.schema,
+      version: valid.version,
+      state: "healthy",
+      incident_events: [],
+    })).toBe(false);
+    expect(validateLocalConnectorHealth({ ...valid, credential: "must-not-escape" })).toBe(false);
+    expect(validateLocalConnectorHealth({ ...valid, state: "healthy" })).toBe(false);
   });
 
   it("never serializes raw metrics, logs, token, cookie, JWT, email, UUID, IP, path, header, or body", () => {

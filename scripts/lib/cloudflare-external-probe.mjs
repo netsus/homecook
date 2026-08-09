@@ -226,9 +226,11 @@ export function summarizeCloudflareMonitoring({
     ? "critical"
     : warningCount > 0
       ? "warning"
-      : localHealth?.state === "healthy" || externalAggregate !== undefined
-        ? "healthy"
-        : "unknown";
+      : ["healthy", "degraded"].includes(localHealth?.state)
+        ? localHealth.state
+        : externalAggregate !== undefined
+          ? "healthy"
+          : "unknown";
   return {
     schema: "homecook.cloudflare-monitoring-summary",
     version: 1,
@@ -481,7 +483,7 @@ export function aggregateExternalProbeWindow(input = {}) {
     by_probe: byProbe,
     public: publicSummary,
     authenticated: authenticatedSummary,
-    public_paging_ready: publicSummary.endpoint_completeness_pass && rejectedEventCount === 0,
+    public_paging_ready: publicSummary.gate_pass && rejectedEventCount === 0,
     public_pantry_ttfb_ms: pantryTtfb,
     alerts: { critical, warning, diagnostic },
     rejected_event_count: rejectedEventCount,

@@ -2,6 +2,192 @@ import { parseTunnelLog } from "./cloudflare-tunnel-diagnostics.mjs";
 import { parseTunnelMetrics } from "./cloudflare-tunnel-preflight.mjs";
 
 const METRICS_ENDPOINT_PATTERN = /^http:\/\/127\.0\.0\.1:(2024[1-5])\/metrics$/u;
+const LOCAL_HEALTH_KEYS = Object.freeze([
+  "schema",
+  "version",
+  "captured_at",
+  "state",
+  "connector",
+  "degraded_duration_ms",
+  "reconnect_ms",
+  "signals",
+  "incident_events",
+]);
+const CONNECTOR_KEYS = Object.freeze([
+  "healthy_connections",
+  "expected_connections",
+  "connection_state",
+  "metrics_valid",
+  "log_event_count",
+]);
+const RECONNECT_KEYS = Object.freeze(["count", "p50", "p95", "max"]);
+const SIGNAL_KEYS = Object.freeze(["critical", "warning", "diagnostic"]);
+const INCIDENT_KEYS = Object.freeze([
+  "timestamp",
+  "source",
+  "kind",
+  "severity",
+  "status",
+  "error",
+  "colo",
+  "network_label",
+]);
+const INCIDENT_CONTRACT = Object.freeze({
+  connector_down: Object.freeze({
+    severity: "critical",
+    error: "CONNECTOR_DOWN",
+    signal_group: "critical",
+    signal: "connector_down",
+  }),
+  connector_degraded: Object.freeze({
+    severity: "warning",
+    error: "CONNECTOR_DEGRADED",
+    signal_group: "warning",
+    signal: "connector_below_4_over_60s",
+  }),
+  simultaneous_disconnect: Object.freeze({
+    severity: "diagnostic",
+    error: "NONE",
+    signal_group: "diagnostic",
+    signal: "simultaneous_disconnect",
+  }),
+  reconnect_slow: Object.freeze({
+    severity: "warning",
+    error: "RECONNECT_SLOW",
+    signal_group: "warning",
+    signal: "reconnect_over_15s",
+  }),
+});
+const SIGNAL_CONTRACT = Object.freeze({
+  critical: new Set(["connector_down"]),
+  warning: new Set(["connector_below_4_over_60s", "reconnect_over_15s"]),
+  diagnostic: new Set(["simultaneous_disconnect"]),
+});
+
+function exactObjectKeys(value, keys) {
+  return value !== null
+    && typeof value === "object"
+    && !Array.isArray(value)
+    && Object.keys(value).length === keys.length
+    && keys.every((key) => Object.hasOwn(value, key));
+}
+
+function utcIsoTimestamp(value) {
+  const timestamp = Date.parse(value ?? "");
+  return Number.isFinite(timestamp) && new Date(timestamp).toISOString() === value;
+}
+
+function validOptionalDuration(value) {
+  return value === null || (Number.isFinite(value) && value >= 0);
+}
+
+function validSignalList(value, allowed) {
+  return Array.isArray(value)
+    && new Set(value).size === value.length
+    && value.every((signal) => allowed.has(signal));
+}
+
+export function validateLocalConnectorHealth(value) {
+  if (!exactObjectKeys(value, LOCAL_HEALTH_KEYS)
+    || value.schema !== "homecook.cloudflare-tunnel-health"
+    || value.version !== 1
+    || !utcIsoTimestamp(value.captured_at)
+    || !["healthy", "degraded", "warning", "critical", "unknown"].includes(value.state)
+    || !exactObjectKeys(value.connector, CONNECTOR_KEYS)
+    || !exactObjectKeys(value.reconnect_ms, RECONNECT_KEYS)
+    || !exactObjectKeys(value.signals, SIGNAL_KEYS)
+    || !Array.isArray(value.incident_events)
+    || !validOptionalDuration(value.degraded_duration_ms)) {
+    return false;
+  }
+
+  const { connector, reconnect_ms: reconnect, signals } = value;
+  if (connector.expected_connections !== 4
+    || typeof connector.metrics_valid !== "boolean"
+    || !Number.isSafeInteger(connector.log_event_count)
+    || connector.log_event_count < 0
+    || !["healthy", "degraded", "down", "unknown"].includes(connector.connection_state)
+    || !(connector.healthy_connections === null
+      || (Number.isInteger(connector.healthy_connections)
+        && connector.healthy_connections >= 0
+        && connector.healthy_connections <= 4))
+    || !Number.isSafeInteger(reconnect.count)
+    || reconnect.count < 0
+    || ![reconnect.p50, reconnect.p95, reconnect.max].every(validOptionalDuration)
+    || !validSignalList(signals.critical, SIGNAL_CONTRACT.critical)
+    || !validSignalList(signals.warning, SIGNAL_CONTRACT.warning)
+    || !validSignalList(signals.diagnostic, SIGNAL_CONTRACT.diagnostic)) {
+    return false;
+  }
+  if ((reconnect.count === 0 && [reconnect.p50, reconnect.p95, reconnect.max].some((item) => item !== null))
+    || (reconnect.count > 0 && [reconnect.p50, reconnect.p95, reconnect.max].some((item) => item === null))
+    || (reconnect.count > 0 && !(reconnect.p50 <= reconnect.p95 && reconnect.p95 <= reconnect.max))) {
+    return false;
+  }
+
+  const connectionState = connector.healthy_connections === null
+    ? "unknown"
+    : connector.healthy_connections === 0
+      ? "down"
+      : connector.healthy_connections < 4
+        ? "degraded"
+        : "healthy";
+  if (connector.connection_state !== connectionState
+    || connector.metrics_valid !== (connector.healthy_connections !== null)) {
+    return false;
+  }
+
+  const expectedSignals = {
+    critical: connector.healthy_connections === 0 ? ["connector_down"] : [],
+    warning: [
+      ...(connector.healthy_connections !== null
+        && connector.healthy_connections > 0
+        && connector.healthy_connections < 4
+        && value.degraded_duration_ms !== null
+        && value.degraded_duration_ms > 60_000
+        ? ["connector_below_4_over_60s"] : []),
+      ...(reconnect.p95 !== null && reconnect.p95 > 15_000 ? ["reconnect_over_15s"] : []),
+    ],
+  };
+  if (JSON.stringify(signals.critical) !== JSON.stringify(expectedSignals.critical)
+    || JSON.stringify(signals.warning) !== JSON.stringify(expectedSignals.warning)) {
+    return false;
+  }
+  const expectedState = signals.critical.length > 0
+    ? "critical"
+    : !connector.metrics_valid
+      ? "unknown"
+      : signals.warning.length > 0
+        ? "warning"
+        : connectionState;
+  if (value.state !== expectedState) return false;
+
+  const eventSignals = new Set();
+  for (const event of value.incident_events) {
+    if (!exactObjectKeys(event, INCIDENT_KEYS)
+      || !utcIsoTimestamp(event.timestamp)
+      || Date.parse(event.timestamp) > Date.parse(value.captured_at)
+      || event.source !== "local_connector"
+      || event.kind !== "connector_health"
+      || !["ICN", "LAX", "OTHER", "MISSING"].includes(event.colo)
+      || event.network_label !== null) {
+      return false;
+    }
+    const contract = INCIDENT_CONTRACT[event.status];
+    if (!contract || event.severity !== contract.severity || event.error !== contract.error) {
+      return false;
+    }
+    if (!signals[contract.signal_group].includes(contract.signal)) return false;
+    eventSignals.add(contract.signal);
+  }
+  return [...signals.critical, ...signals.warning, ...signals.diagnostic]
+    .every((signal) => eventSignals.has(signal));
+}
+
+export function localConnectorHealthExitCode(value) {
+  if (!validateLocalConnectorHealth(value)) return null;
+  return ["healthy", "warning"].includes(value.state) ? 0 : 1;
+}
 
 function finiteNonNegative(value) {
   return Number.isFinite(value) && value >= 0 ? value : null;
