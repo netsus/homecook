@@ -67,6 +67,14 @@ function composeOutput(project: string, env: NodeJS.ProcessEnv, args: string[]) 
   );
 }
 
+function composeServiceContainer(project: string, env: NodeJS.ProcessEnv, service: string) {
+  const container = compose(project, env, ["ps", "-q", service]).trim();
+  if (!container) {
+    throw new Error(`No full-local container found for service: ${service}`);
+  }
+  return container;
+}
+
 async function authJsonRequest({
   authPort,
   path,
@@ -397,6 +405,30 @@ run("full-local production Docker runtime", () => {
 
       compose(project, env, ["up", "-d"]);
       const containers = await waitForHealthy(project, env);
+      const authContainer = composeServiceContainer(project, env, "auth");
+      const postgresContainer = composeServiceContainer(project, env, "postgres");
+      const postgrestContainer = composeServiceContainer(project, env, "postgrest");
+      const storageContainer = composeServiceContainer(project, env, "storage");
+      const authNetworks = JSON.parse(command(
+        "docker",
+        ["inspect", "--format", "{{json .NetworkSettings.Networks}}", authContainer],
+        env,
+      )) as Record<string, unknown>;
+      const postgresNetworks = JSON.parse(command(
+        "docker",
+        ["inspect", "--format", "{{json .NetworkSettings.Networks}}", postgresContainer],
+        env,
+      )) as Record<string, unknown>;
+      const postgrestNetworks = JSON.parse(command(
+        "docker",
+        ["inspect", "--format", "{{json .NetworkSettings.Networks}}", postgrestContainer],
+        env,
+      )) as Record<string, unknown>;
+      const storageNetworks = JSON.parse(command(
+        "docker",
+        ["inspect", "--format", "{{json .NetworkSettings.Networks}}", storageContainer],
+        env,
+      )) as Record<string, unknown>;
       const headers = { apikey: secrets.publishable_key };
       const internalAuth = await fetch(
         `http://127.0.0.1:${internalPort}/auth/v1/health`,
@@ -451,6 +483,13 @@ run("full-local production Docker runtime", () => {
       expect(blockedRest.status).toBe(404);
       expect(blockedStorage.status).toBe(404);
       expect(blockedHealth.status).toBe(404);
+      expect(Object.keys(authNetworks).sort()).toEqual([
+        `${project}_auth-egress`,
+        `${project}_data-internal`,
+      ]);
+      expect(Object.keys(postgresNetworks)).toEqual([`${project}_data-internal`]);
+      expect(Object.keys(postgrestNetworks)).toEqual([`${project}_data-internal`]);
+      expect(Object.keys(storageNetworks)).toEqual([`${project}_data-internal`]);
       expect(invalidAttestation.status).toBe(401);
       expect(validAttestation.status).not.toBe(401);
 
@@ -494,7 +533,15 @@ run("full-local production Docker runtime", () => {
       try {
         compose(project, env, ["down", "--volumes", "--remove-orphans"]);
       } finally {
-        rmSync(root, { force: true, recursive: true });
+        try {
+          command(
+            "docker",
+            ["volume", "rm", "--force", env.FULL_LOCAL_POSTGRES_VOLUME_NAME],
+            env,
+          );
+        } finally {
+          rmSync(root, { force: true, recursive: true });
+        }
       }
     }
     expect(failure).toBeUndefined();
@@ -877,7 +924,15 @@ run("full-local production Docker runtime", () => {
       try {
         compose(project, env, ["down", "--volumes", "--remove-orphans"]);
       } finally {
-        rmSync(root, { force: true, recursive: true });
+        try {
+          command(
+            "docker",
+            ["volume", "rm", "--force", env.FULL_LOCAL_POSTGRES_VOLUME_NAME],
+            env,
+          );
+        } finally {
+          rmSync(root, { force: true, recursive: true });
+        }
       }
     }
   }, 240_000);
