@@ -153,12 +153,42 @@ describe("cooked-batch-weight-ledger fresh Stage 1 re-lock", () => {
     expect(stageResult.verification_results.full_vitest_current_head).toEqual({
       passed_files: 526,
       skipped_files: 28,
-      passed_tests: 5389,
+      passed_tests: 5394,
       skipped_tests: 372,
     });
     expect(stageResult.verification_results.final_full_vitest).toBe(
-      "526 files passed / 28 skipped; 5,389 tests passed / 372 skipped",
+      "526 files passed / 28 skipped; 5,394 tests passed / 372 skipped",
     );
+    expect(stageResult.fresh_latest_master_integration).toMatchObject({
+      task_id: "019fe55d-b4a7-7ec2-8fe8-2c8b21af5e43",
+      pre_integration_head: "9be49636c01657184357536c9a7c2c96bde4f0b0",
+      stale_pr_api_base: "fa81587b0f34530cbc7099d82db6f9803b9e0edb",
+      integrated_master: "29db205fecb45f163e48bd7e4683dd707cc3cc74",
+      integration_successor_head: "9b7836a352438ed8ebbdba75284087557987cf67",
+      live_merge_ref_tree_equal: true,
+      conflicts: [],
+      full_vitest:
+        "526 passed files / 28 skipped files; 5,394 passed tests / 372 intended skipped tests",
+      security_review: {
+        task_id: "019fe555-41a0-72a1-b2de-334f9e29725c",
+        verdict: "HOLD",
+        p0: 0,
+        p1: 0,
+        p2: 1,
+        stage3_approval: false,
+      },
+      five_axis_review: {
+        task_id: "019fe555-41a0-72a1-b2de-3326b98d44dd",
+        verdict: "HOLD",
+        p0: 0,
+        p1: 0,
+        p2: 2,
+        stage3_approval: false,
+      },
+      public_contract_expansion: false,
+      stage3_self_approval: false,
+      force_push_or_rebase: false,
+    });
     expect(stageResult.final_catalog_startup_window_integration.full_vitest).toBe(
       "526 files / 5,381 tests passed; 28 files / 369 tests intended skip",
     );
