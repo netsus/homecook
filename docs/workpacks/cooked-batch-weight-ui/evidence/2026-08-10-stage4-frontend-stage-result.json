@@ -7,7 +7,7 @@
     "task_id": "019fe7b3-881f-7152-b3fc-9ca58b5dba2a",
     "base_branch": "origin/master",
     "base_sha": "8b1a4cce57e05d282c2a01fc54557ffc129fae1d",
-    "base_tree": "7545e8e637f8641f7ef321a70a678e0c29252867",
+    "base_tree": "7545e8eb04142f210f9f230d1ab49c1cbde7a957",
     "source_pr": 1318,
     "branch": "feature/fe-cooked-batch-weight-ui",
     "implementation_head": "d6843baa6d27addea5d79fa991c937dfc6dbf070",

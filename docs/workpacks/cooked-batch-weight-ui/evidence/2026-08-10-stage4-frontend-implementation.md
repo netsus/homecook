@@ -5,7 +5,7 @@
 - Workpack: `cooked-batch-weight-ui` (#11)
 - Task: `019fe7b3-881f-7152-b3fc-9ca58b5dba2a`
 - Role: fresh Stage 4 frontend implementer; not Stage 5, final product-design authority, or Stage 6
-- Exact base: `origin/master` `8b1a4cce57e05d282c2a01fc54557ffc129fae1d`, tree `7545e8e637f8641f7ef321a70a678e0c29252867` (merged Stage 1 PR #1318)
+- Exact base: `origin/master` `8b1a4cce57e05d282c2a01fc54557ffc129fae1d`, tree `7545e8eb04142f210f9f230d1ab49c1cbde7a957` (merged Stage 1 PR #1318)
 - Branch: `feature/fe-cooked-batch-weight-ui`
 - Implementation evidence target: head `d6843baa6d27addea5d79fa991c937dfc6dbf070`, tree `0fa3545f9ec22d83dd4e969f1eef70364a2297ba`
 - Draft PR: [#1320](https://github.com/netsus/homecook/pull/1320), created as Draft; Ready/merge remain untouched
