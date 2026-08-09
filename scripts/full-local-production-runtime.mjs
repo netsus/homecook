@@ -7,6 +7,7 @@ import {
   existsSync,
   mkdtempSync,
   readFileSync,
+  realpathSync,
   rmSync,
   statSync,
   writeFileSync,
@@ -59,6 +60,179 @@ const DEFAULT_CONFIG = join(INFRA, ".env.production.local");
 const KEYCHAIN_WRITER = join(INFRA, "keychain-store.exp");
 const KEYCHAIN_CHUNK_SIZE = 96;
 const KEYCHAIN_MAX_CHUNKS = 128;
+
+export const FULL_LOCAL_AUTHORIZATION_CONTRACT_REQUIREMENTS = Object.freeze([
+  "authenticated_transaction_read_only",
+  "internal_auth_callback_record_v2",
+  "internal_auth_callback_renew_v2",
+  "internal_youtube_extraction_scope",
+  "internal_youtube_extraction_post_session",
+  "internal_youtube_extraction_get_cache",
+  "internal_youtube_extraction_patch_candidate",
+]);
+
+const FULL_LOCAL_AUTHORIZATION_CONTRACT_REQUIREMENT_SET = new Set(
+  FULL_LOCAL_AUTHORIZATION_CONTRACT_REQUIREMENTS,
+);
+
+export function buildFullLocalAuthorizationContractCtesSql() {
+  return [
+    "authorization_function_definitions as (",
+    "  select",
+    "    coalesce(",
+    "      pg_get_functiondef(to_regprocedure('private.verify_full_local_authenticated_authority()')),",
+    "      ''",
+    "    ) as authenticated_definition,",
+    "    coalesce(",
+    "      pg_get_functiondef(to_regprocedure('private.verify_full_local_internal_scope()')),",
+    "      ''",
+    "    ) as internal_definition",
+    "),",
+    "authorization_markers as (",
+    "  select",
+    "    position('current_setting(''transaction_read_only'') = ''on''' in authenticated_definition) as authenticated_read_only_position,",
+    "    position('v_scope in (''auth-callback'', ''auth-refresh'')' in internal_definition) as auth_callback_scope_position,",
+    "    position('v_scope = ''request-authority''' in internal_definition) as request_authority_scope_position,",
+    "    position('''/rpc/record_full_local_session_authority_v2''' in internal_definition) as record_v2_position,",
+    "    position('''/rpc/assert_and_renew_full_local_session_authority_v2''' in internal_definition) as renew_v2_position,",
+    "    position('v_scope = ''youtube-extraction''' in internal_definition) as youtube_scope_position,",
+    "    substring(",
+    "      internal_definition",
+    "      from position('v_scope = ''youtube-extraction''' in internal_definition)",
+    "    ) as youtube_definition",
+    "  from authorization_function_definitions",
+    "),",
+    "authorization_checks(requirement_order, requirement_name, present) as (",
+    "  select requirement.*",
+    "  from authorization_markers as marker",
+    "  cross join lateral (values",
+    "    (1, 'authenticated_transaction_read_only', marker.authenticated_read_only_position > 0),",
+    "    (2, 'internal_auth_callback_record_v2',",
+    "      marker.auth_callback_scope_position > 0",
+    "      and marker.record_v2_position > marker.auth_callback_scope_position",
+    "      and marker.record_v2_position < marker.request_authority_scope_position),",
+    "    (3, 'internal_auth_callback_renew_v2',",
+    "      marker.auth_callback_scope_position > 0",
+    "      and marker.renew_v2_position > marker.auth_callback_scope_position",
+    "      and marker.renew_v2_position < marker.request_authority_scope_position),",
+    "    (4, 'internal_youtube_extraction_scope', marker.youtube_scope_position > 0),",
+    "    (5, 'internal_youtube_extraction_post_session',",
+    "      position('v_method = ''POST''' in marker.youtube_definition) > 0",
+    "      and position('''/youtube_extraction_sessions''' in marker.youtube_definition)",
+    "        between position('v_method = ''POST''' in marker.youtube_definition) + 1",
+    "        and position('v_method = ''GET''' in marker.youtube_definition) - 1),",
+    "    (6, 'internal_youtube_extraction_get_cache',",
+    "      position('v_method = ''GET''' in marker.youtube_definition)",
+    "        > position('v_method = ''POST''' in marker.youtube_definition)",
+    "      and position(",
+    "        '''/youtube_transcript_cache'''",
+    "        in substring(marker.youtube_definition from position('v_method = ''GET''' in marker.youtube_definition))",
+    "      ) between 1",
+    "        and position('v_method = ''PATCH''' in marker.youtube_definition)",
+    "          - position('v_method = ''GET''' in marker.youtube_definition) - 1),",
+    "    (7, 'internal_youtube_extraction_patch_candidate',",
+    "      position('v_method = ''PATCH''' in marker.youtube_definition)",
+    "        > position('v_method = ''GET''' in marker.youtube_definition)",
+    "      and position(",
+    "        '''/youtube_extraction_candidates'''",
+    "        in substring(marker.youtube_definition from position('v_method = ''PATCH''' in marker.youtube_definition))",
+    "      ) > 0)",
+    "  ) as requirement(requirement_order, requirement_name, present)",
+    ")",
+  ].join("\n");
+}
+
+export function buildFullLocalAuthorizationContractSql() {
+  return [
+    "begin transaction read only;",
+    "set local statement_timeout = '5s';",
+    "with",
+    buildFullLocalAuthorizationContractCtesSql(),
+    "select json_build_object(",
+    "  'status', case when bool_and(present) then 'PASS' else 'BLOCKED' end,",
+    "  'missing_requirements', coalesce(",
+    "    json_agg(requirement_name order by requirement_order) filter (where not present),",
+    "    '[]'::json",
+    "  )",
+    ")::text",
+    "from authorization_checks;",
+    "rollback;",
+    "",
+  ].join("\n");
+}
+
+export function parseFullLocalAuthorizationContractSqlOutput(stdout) {
+  const lines = String(stdout)
+    .split(/\r?\n/u)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  const invalid = () => fail(
+    "Authorization contract gate must return a single safe authorization contract result.",
+  );
+  if (lines.length !== 1) {
+    return invalid();
+  }
+
+  let parsed;
+  try {
+    parsed = JSON.parse(lines[0]);
+  } catch {
+    return invalid();
+  }
+  if (
+    parsed === null
+    || typeof parsed !== "object"
+    || Array.isArray(parsed)
+    || Object.keys(parsed).sort().join("|") !== "missing_requirements|status"
+    || !Array.isArray(parsed.missing_requirements)
+    || !["PASS", "BLOCKED"].includes(parsed.status)
+  ) {
+    return invalid();
+  }
+  const missingRequirements = parsed.missing_requirements;
+  if (
+    missingRequirements.some((requirement) =>
+      typeof requirement !== "string"
+      || !FULL_LOCAL_AUTHORIZATION_CONTRACT_REQUIREMENT_SET.has(requirement))
+    || new Set(missingRequirements).size !== missingRequirements.length
+    || FULL_LOCAL_AUTHORIZATION_CONTRACT_REQUIREMENTS
+      .filter((requirement) => missingRequirements.includes(requirement))
+      .some((requirement, index) => requirement !== missingRequirements[index])
+    || parsed.status !== (missingRequirements.length === 0 ? "PASS" : "BLOCKED")
+  ) {
+    return invalid();
+  }
+  return Object.freeze({
+    missingRequirements: Object.freeze([...missingRequirements]),
+    status: parsed.status,
+  });
+}
+
+export function runtimeAuthorizationContractPayload({
+  authorizationContractGate,
+  productCatalogGate,
+}) {
+  const authorizationGate = authorizationContractGate ?? {
+    missingRequirements: FULL_LOCAL_AUTHORIZATION_CONTRACT_REQUIREMENTS,
+    status: "BLOCKED",
+  };
+  const productPayload = productCatalogGate
+    ? runtimeCatalogPayload(productCatalogGate)
+    : {
+        product_catalog_missing_columns: [],
+        product_catalog_missing_functions: [],
+        product_catalog_missing_relations: [],
+        product_catalog_status: "NOT_RUN",
+      };
+  return {
+    ...productPayload,
+    authorization_contract_missing_requirements: authorizationGate.missingRequirements,
+    authorization_contract_status: authorizationGate.status,
+    status: productCatalogGate?.status === "PASS" && authorizationGate.status === "PASS"
+      ? "PASS"
+      : "BLOCKED",
+  };
+}
 
 function fail(message) {
   throw new Error(message);
@@ -483,6 +657,39 @@ function collectFullLocalProductCatalog(containerId) {
     return parseFullLocalProductCatalogSqlOutput(result.stdout ?? "");
   } catch {
     fail("Full-local product catalog gate returned an invalid result.");
+  }
+}
+
+function collectFullLocalAuthorizationContract(containerId) {
+  if (!containerId) {
+    fail("Full-local PostgreSQL runtime is unavailable.");
+  }
+  const result = spawnSync("docker", [
+    "exec",
+    "-i",
+    containerId,
+    "psql",
+    "-X",
+    "-qAt",
+    "-v",
+    "ON_ERROR_STOP=1",
+    "-U",
+    "supabase_admin",
+    "-d",
+    "postgres",
+  ], {
+    encoding: "utf8",
+    input: buildFullLocalAuthorizationContractSql(),
+    maxBuffer: 32 * 1024 * 1024,
+    stdio: ["pipe", "pipe", "pipe"],
+  });
+  if (result.status !== 0) {
+    fail("Full-local authorization contract gate query failed.");
+  }
+  try {
+    return parseFullLocalAuthorizationContractSqlOutput(result.stdout ?? "");
+  } catch {
+    fail("Full-local authorization contract gate returned an invalid result.");
   }
 }
 
@@ -1028,24 +1235,44 @@ async function main() {
       if (containers.length === 0) {
         print({
           ...base,
-          product_catalog_status: "NOT_RUN",
+          ...runtimeAuthorizationContractPayload({
+            authorizationContractGate: null,
+            productCatalogGate: null,
+          }),
           runtime_present: false,
-          status: "PASS",
         });
+        process.exitCode = 2;
         break;
       }
       const status = runtimeStatus(runtime);
       if (!status.healthy) {
-        fail("Full-local runtime must be healthy before product catalog validation.");
+        print({
+          ...base,
+          ...runtimeAuthorizationContractPayload({
+            authorizationContractGate: null,
+            productCatalogGate: null,
+          }),
+          runtime_present: true,
+        });
+        process.exitCode = 2;
+        break;
       }
-      const gate = collectFullLocalProductCatalog(postgresContainerId(runtime));
-      assertFullLocalProductCatalogPass(gate);
+      const containerId = postgresContainerId(runtime);
+      const productCatalogGate = collectFullLocalProductCatalog(containerId);
+      const authorizationContractGate = collectFullLocalAuthorizationContract(containerId);
+      const gatePayload = runtimeAuthorizationContractPayload({
+        authorizationContractGate,
+        productCatalogGate,
+      });
       print({
         ...base,
-        ...runtimeCatalogPayload(gate),
+        ...gatePayload,
         runtime_present: true,
-        status: "PASS",
       });
+      if (gatePayload.authorization_contract_status !== "PASS"
+        || gatePayload.product_catalog_status !== "PASS") {
+        process.exitCode = 2;
+      }
       break;
     }
     case "start": {
@@ -1061,17 +1288,29 @@ async function main() {
       const runtime = validateAndMaterialize(args);
       const status = runtimeStatus(runtime);
       if (!status.healthy) {
-        print({ ...status, product_catalog_status: "NOT_RUN", status: "BLOCKED" });
+        print({
+          ...status,
+          ...runtimeAuthorizationContractPayload({
+            authorizationContractGate: null,
+            productCatalogGate: null,
+          }),
+        });
         process.exitCode = 2;
         break;
       }
-      const gate = collectFullLocalProductCatalog(postgresContainerId(runtime));
+      const containerId = postgresContainerId(runtime);
+      const productCatalogGate = collectFullLocalProductCatalog(containerId);
+      const authorizationContractGate = collectFullLocalAuthorizationContract(containerId);
+      const gatePayload = runtimeAuthorizationContractPayload({
+        authorizationContractGate,
+        productCatalogGate,
+      });
       print({
         ...status,
-        ...runtimeCatalogPayload(gate),
-        status: gate.status === "PASS" ? "PASS" : "BLOCKED",
+        ...gatePayload,
       });
-      if (gate.status !== "PASS") {
+      if (gatePayload.authorization_contract_status !== "PASS"
+        || gatePayload.product_catalog_status !== "PASS") {
         process.exitCode = 2;
       }
       break;
@@ -1113,10 +1352,24 @@ async function main() {
   }
 }
 
-main().catch((error) => {
-  process.stderr.write(`${JSON.stringify({
-    error: error instanceof Error ? error.message : "Unknown failure.",
-    status: "FAIL",
-  })}\n`);
-  process.exit(1);
-});
+function isDirectExecution() {
+  if (!process.argv[1]) {
+    return false;
+  }
+  try {
+    return realpathSync(resolve(process.argv[1]))
+      === realpathSync(fileURLToPath(import.meta.url));
+  } catch {
+    return false;
+  }
+}
+
+if (isDirectExecution()) {
+  main().catch((error) => {
+    process.stderr.write(`${JSON.stringify({
+      error: error instanceof Error ? error.message : "Unknown failure.",
+      status: "FAIL",
+    })}\n`);
+    process.exit(1);
+  });
+}

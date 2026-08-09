@@ -21,6 +21,7 @@ import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 
 import { buildFullLocalProductCatalogCtesSql } from "./lib/full-local-product-catalog.mjs";
+import { buildFullLocalAuthorizationContractCtesSql } from "./full-local-production-runtime.mjs";
 
 export const EXPECTED_LIVE_ROOT = "/Users/cwj/01_vibe_coding/homecook-full-local-restore";
 export const REFRESH_LIFECYCLE_JSON_SCRIPT =
@@ -974,6 +975,7 @@ export function buildMigrationHeadSql() {
     "set local statement_timeout = '5s';",
     "with",
     buildFullLocalProductCatalogCtesSql(),
+    `, ${buildFullLocalAuthorizationContractCtesSql()}`,
     ", catalog_gate as (",
     "  select",
     "    bool_and(relation_checks.present)",
@@ -981,10 +983,13 @@ export function buildMigrationHeadSql() {
     "      and bool_and(function_checks.present) as catalog_ready",
     "  from relation_checks, column_checks, function_checks",
     "),",
+    "authorization_gate as (",
+    "  select bool_and(present) as authorization_ready",
+    "  from authorization_checks",
+    "),",
     "catalog_marker as (",
     "  select case",
-    "    when to_regprocedure('private.verify_full_local_authenticated_authority()') is not null",
-    "      and position('current_setting(''transaction_read_only'') = ''on''' in pg_get_functiondef(to_regprocedure('private.verify_full_local_authenticated_authority()'))) > 0",
+    "    when (select authorization_ready from authorization_gate)",
     "      then '20260809110000_full_local_request_transaction_and_youtube_scope.sql'",
     "    when to_regprocedure('public.assert_and_renew_full_local_session_authority_v2(text,uuid,timestamp with time zone,uuid,text,integer,bigint,timestamp with time zone,timestamp with time zone,timestamp with time zone,timestamp with time zone,timestamp with time zone)') is not null",
     "      and position('last_token_issued_at' in pg_get_functiondef(to_regprocedure('public.assert_and_renew_full_local_session_authority_v2(text,uuid,timestamp with time zone,uuid,text,integer,bigint,timestamp with time zone,timestamp with time zone,timestamp with time zone,timestamp with time zone,timestamp with time zone)'))) > 0",
