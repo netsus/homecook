@@ -7,7 +7,7 @@
   },
   "pr": {
     "title": "feat(cooked-batch): implement weight ledger backend",
-    "body_markdown": "Stage 2 backend implementation is OPEN and non-Draft on PR #1291. Post-Ready integration ca81aa0a merges exact prior head 71b8596a with master 0d2d569d without history rewrite and carries the new read-only product-catalog readiness gate. Focused 105/105, PostgreSQL #8 fresh/replay 27/27, full Vitest 5,380 pass, verify:backend product 2,679 pass plus build/security E2E 12/12, generated inventory 64/93/3 and authorization21 are green. Stage 3, merge, server-Mac/remote rehearsal and R/R+1/R+2 activation remain pending."
+    "body_markdown": "Stage 2 backend implementation is OPEN and non-Draft on PR #1291. Post-Ready integrations ca81aa0a and 5110e0ec preserve the product-catalog readiness gate and add its bounded startup window through exact master 1acf526a without history rewrite. Focused 123/123, PostgreSQL #8 fresh/replay 27/27, full Vitest 5,381 pass, verify:backend product 2,679 pass plus build/security E2E 12/12, generated inventory 64/93/3 and authorization21 are green. Stage 3, merge, server-Mac/remote rehearsal and R/R+1/R+2 activation remain pending."
   },
   "base_drift_integration": {
     "task_id": "019fe2b2-0ee4-77c3-a829-9ae04bfac07f",
@@ -101,6 +101,22 @@
     "stage3_self_approval": false,
     "draft_state_toggled": false
   },
+  "final_catalog_startup_window_integration": {
+    "pre_integration_head": "bdf507e784f6b664fc1eb4ddd95cedea7c3bc876",
+    "integrated_master": "1acf526a670ab8c963458c2131ec32000106e80c",
+    "merge_commit": "5110e0ec7432289827ce99b31e45cea2a502a804",
+    "master_scope": "bounded local-Mac readiness window for catalog-gated startup",
+    "conflicts": [],
+    "product_defect_exposed": false,
+    "focused_local_mac_catalog_and_cooked_batch": "7 files / 123 tests",
+    "postgres_fresh_replay": "predecessor fresh 15 pass / 1 intended skip, replay 16/16; cooked-batch fresh/replay 27/27; inherited inventory fresh/replay 26 pass / 33 intended skip",
+    "full_vitest": "526 files / 5,381 tests passed; 28 files / 369 tests intended skip",
+    "verify_backend": "219 product files / 2,679 tests passed; 11 files / 150 tests intended skip; build and security E2E 12/12 passed",
+    "server_mac_executed": false,
+    "public_contract_expansion": false,
+    "stage3_self_approval": false,
+    "draft_state_toggled": false
+  },
   "overall_status": {
     "lifecycle": "in_progress",
     "approval_state": "not_started",
@@ -128,10 +144,10 @@
     "full_vitest_current_head": {
       "passed_files": 526,
       "skipped_files": 28,
-      "passed_tests": 5380,
+      "passed_tests": 5381,
       "skipped_tests": 369
     },
-    "focused_vitest": "batch-nutrition RED 3 missing-function failures; GREEN 6 files / 59 tests; prior review repair GREEN backend/gamification/security/inventory 7 files / 69 tests and LEFTOVERS 27/27; first latest-master integration focused 11 files / 197 tests; migration-version RED 1 and GREEN 17/17; d9b5 auth/cooked-batch focused 11 files / 159 tests; 2177 logout/cooked-batch focused 11 files / 131 tests; post-Ready product-catalog/runtime plus cooked-batch 6 files / 105 tests; final full 5,380 passes / 369 skips",
+    "focused_vitest": "batch-nutrition RED 3 missing-function failures; GREEN 6 files / 59 tests; prior review repair GREEN backend/gamification/security/inventory 7 files / 69 tests and LEFTOVERS 27/27; first latest-master integration focused 11 files / 197 tests; migration-version RED 1 and GREEN 17/17; d9b5 auth/cooked-batch focused 11 files / 159 tests; 2177 logout/cooked-batch focused 11 files / 131 tests; post-Ready product-catalog/runtime plus cooked-batch 6 files / 105 tests; final startup-window/catalog/cooked-batch 7 files / 123 tests; final full 5,381 passes / 369 skips",
     "postgres_fresh_replay": "predecessor fresh 15 passed / 1 intended skip, replay 16 passed; cooked-batch fresh/replay 27/27; inherited inventory fresh/replay 26 passed / 33 intended skips after latest master added two inventory-only skipped full-local cases",
     "complete_cancel_race": "two real connections finish without deadlock; exactly one succeeds, one returns CONFLICT, and the session/Meal/claim/batch terminal state is valid",
     "live_gamification_projection": "snapshot-v2 completion, consumed-unweighed close and legacy eat reuse canonical progress/activity IDs with the existing official notification/badge/achievement helpers",
@@ -149,7 +165,7 @@
     "leftovers_selective_index_usage": "four separate selective representative plans each require an actual Index Scan, Index Only Scan or Bitmap Index Scan node with the exact Index Name, relevant scan conditions, positive actual rows and at most 320 root shared blocks",
     "leftovers_index_definitions": "four full PostgreSQL-normalized pg_catalog.pg_indexes.indexdef values compared exactly and separately from runtime plan assertions",
     "product_catalog_readiness": "new master gate is present and parser/lifecycle static contracts pass; #8 fresh/replay remains 27/27 with required predecessor schema; no server-Mac/full-local runtime was started",
-    "final_full_vitest": "526 files passed / 28 skipped; 5,380 tests passed / 369 skipped",
+    "final_full_vitest": "526 files passed / 28 skipped; 5,381 tests passed / 369 skipped",
     "final_verify_backend": "219 product files / 2,679 tests passed / 150 skipped; build and security E2E 12/12 passed"
   },
   "next_route": "stage3_fresh_backend_review",

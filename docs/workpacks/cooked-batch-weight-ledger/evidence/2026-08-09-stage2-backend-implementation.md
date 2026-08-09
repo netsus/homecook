@@ -48,6 +48,13 @@ A second required final re-fetch found master had advanced once more to `2177ea4
 - Full Vitest now passes `526 files / 5,380 tests` with `28 files / 369 tests` intended skip. `pnpm verify:backend` passes lint, typecheck, product `219 files / 2,679 tests` with `11 files / 150 tests` intended skip, production build and security E2E `12/12`.
 - PR #1291 remains OPEN and non-Draft. Independent Stage 3 is still pending; this integration author did not review, approve, merge, activate, or run R/R+1/R+2.
 
+The mandatory end-of-cycle fetch then found `master` had advanced once more to `1acf526a670ab8c963458c2131ec32000106e80c`. That commit extends the bounded local-Mac readiness window so the new catalog preflight cannot make a healthy startup roll back after the former 10-second budget. Exact prior head `bdf507e784f6b664fc1eb4ddd95cedea7c3bc876` and exact master `1acf526a670ab8c963458c2131ec32000106e80c` merged without conflicts or history rewrite as `5110e0ec7432289827ce99b31e45cea2a502a804`.
+
+- Focused local-Mac/catalog/#8 Vitest passes `7 files / 123 tests`, including the delayed 41st-attempt success path while retaining a bounded 120-attempt default.
+- PostgreSQL remained unchanged but was repeated on the final merge tree: predecessor fresh `15 pass / 1 intended skip`, replay `16/16`; #8 fresh/replay `27/27`; inherited inventory fresh/replay `26 pass / 33 intended skip`.
+- Final full Vitest passes `526 files / 5,381 tests` with `28 files / 369 tests` intended skip. Final `pnpm verify:backend` again passes product `219 files / 2,679 tests` with `11 files / 150 tests` intended skip, production build and security E2E `12/12`.
+- No server-Mac process, remote runtime, production canary or activation was run. This final drift adds unit/static startup-window proof only and exposes no #8 product or contract gap.
+
 ## Backend contract implemented
 
 - `POST /api/v1/cooking/session-attempts/{id}/complete`
@@ -165,6 +172,7 @@ The cooked-batch scenarios cover exact 21-function owner/ACL/search-path/scope i
 - post-Ready `pnpm verify:backend` — lint and typecheck pass; product `219 files / 2,679 tests` with `11 files / 150 tests` intended skip; Next production build and security E2E `12/12` pass
 - post-Ready PostgreSQL — predecessor fresh `15 pass / 1 intended skip`, replay `16/16`; #8 fresh/replay `27/27`; inherited inventory fresh/replay `26 pass / 33 intended skip`; security authorization denies 8 anonymous mutation signatures with unchanged checksums
 - post-Ready validators — source-of-truth, workflow-v2, explicit-slice workpack, automation-spec, OMO bookkeeping, generated account inventory `64/93/3`, migration-version uniqueness, authorization contract `21`, audit high/critical `0/0` and `git diff --check` pass
+- final startup-window drift integration — exact master `1acf526a670ab8c963458c2131ec32000106e80c`, merge `5110e0ec7432289827ce99b31e45cea2a502a804`, focused `7 files / 123 tests`, full Vitest `5,381 pass / 369 skip`, backend product `2,679 pass / 150 skip`, build and security E2E `12/12`
 
 The workpack-specific Stage 4 E2E grep returned `No tests found`; no pass-with-no-tests relaxation was added because frontend work is prohibited in Stage 2. Backend security E2E is covered by the successful `12/12` verification above.
 
