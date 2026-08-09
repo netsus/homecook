@@ -181,6 +181,7 @@ async function stabilize(page: Page) {
   await page.addStyleTag({ content: "*,*::before,*::after{animation:none!important;transition:none!important;caret-color:transparent!important}nextjs-portal,[data-next-badge-root],[aria-label='Open Next.js Dev Tools']{display:none!important}" });
 }
 
+test.describe("cooked-batch-weight-ui", () => {
 test("captures the pre-Stage-4 COOK_MODE and LEFTOVERS state", async ({ browser }, testInfo) => {
   test.skip(testInfo.project.name !== "desktop-chrome", "한 프로젝트에서 exact viewport를 직접 설정한다.");
   await mkdir(EVIDENCE_DIR, { recursive: true });
@@ -330,6 +331,10 @@ test("captures and verifies the Stage-4 viewport, state, and accessibility matri
       await actionDialog.getByRole("checkbox").check();
       await actionDialog.getByRole("button", { name: "중량 저장" }).click();
       await expect(actionDialog.getByRole("alert")).toBeFocused();
+      runtime.scopedNewUiSeriousOrCritical += (await expectNoSeriousAxeViolations(
+        leftovers.page,
+        '[data-testid="cooked-batch-action-sheet"]',
+      )).length;
       const errorName = "LEFTOVERS-mobile-narrow-320-pending-error.png";
       await leftovers.page.screenshot({ path: resolve(EVIDENCE_DIR, errorName) });
       files.push(errorName);
@@ -402,7 +407,8 @@ test("captures and verifies the Stage-4 viewport, state, and accessibility matri
     },
     captured_at: new Date().toISOString(),
     files: files.sort(),
-    generated_by: "tests/e2e/cooked-batch-weight-ui-evidence.spec.ts",
+    generated_by: "tests/e2e/slice-cooked-batch-weight-ui-evidence.spec.ts",
     viewport_matrix: [320, 390, 1440],
   }, null, 2)}\n`);
+});
 });

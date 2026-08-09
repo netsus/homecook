@@ -113,7 +113,7 @@ export function CookedBatchActionSheet({
       closeDisabled={pending}
       description={`${batch.recipe_title} · 서버의 현재 기록을 기준으로 반영해요.`}
       footer={
-        <div className={destructive ? "[--wave1-mint-contrast:var(--danger)] [--wave1-mint-contrast-deep:var(--danger-strong)]" : "[--wave1-mint-contrast:var(--brand-primary)] [--wave1-mint-contrast-deep:var(--brand-primary-hover)]"}>
+        <div className={destructive ? "[--wave1-mint-contrast:var(--danger-strong)] [--wave1-mint-contrast-deep:var(--foreground)]" : "[--wave1-mint-contrast:var(--brand-primary-text)] [--wave1-mint-contrast-deep:var(--foreground)]"}>
           <AppModalFooterActions
             cancelDisabled={pending}
             cancelLabel="취소"
