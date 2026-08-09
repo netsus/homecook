@@ -1,9 +1,13 @@
 import { spawnSync } from "node:child_process";
+import { EventEmitter } from "node:events";
 import { mkdtempSync, readFileSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+
+import * as diagnosticsCli from "../scripts/cloudflare-tunnel-diagnostics.mjs";
+import * as diagnosticsLogic from "../scripts/lib/cloudflare-tunnel-diagnostics.mjs";
 
 import {
   aggregatePantrySamples,
@@ -52,6 +56,74 @@ function timingFixture(status = 200, totalSeconds = 0.25) {
     remote_ip: "203.0.113.77",
     secret: SECRET_MARKER,
   });
+}
+
+function createHealthyRunner({
+  capturedAt = "2026-08-09T10:00:00.000Z",
+  cfRayMissing = false,
+  launchState = "running",
+  logAgeMs = 1_000,
+  timingMissing = false,
+} = {}) {
+  const calls: Array<{ command: string; args: string[] }> = [];
+  const logTimestamp = new Date(Date.parse(capturedAt) - logAgeMs).toISOString();
+  const runner = async ({ command, args }: { command: string; args: string[] }) => {
+    calls.push({ command, args });
+    const target = args.at(-1) ?? "";
+    if (command === "cloudflared") {
+      return {
+        exit_code: 0,
+        stdout: "cloudflared version 2026.3.0",
+        stderr: "",
+        timed_out: false,
+      };
+    }
+    if (command === "launchctl") {
+      return {
+        exit_code: 0,
+        stdout: `state = ${launchState}\narguments = --protocol=quic`,
+        stderr: "",
+        timed_out: false,
+      };
+    }
+    if (command === "tail") {
+      return {
+        exit_code: 0,
+        stdout: [0, 1, 2, 3].map((connectionIndex) =>
+          `${logTimestamp} INF Registered tunnel connection connIndex=${connectionIndex} location=icn01 protocol=quic`
+        ).join("\n"),
+        stderr: "",
+        timed_out: false,
+      };
+    }
+    const cfRayHeader = cfRayMissing ? "" : "CF-RAY: safe-ray-ICN\r\n";
+    const timing = timingMissing
+      ? JSON.stringify({
+        http_code: 200,
+        time_connect: null,
+        time_starttransfer: "",
+        time_total: undefined,
+      })
+      : timingFixture();
+    if (target.includes("/cdn-cgi/trace")) {
+      return {
+        exit_code: 0,
+        stdout: `HTTP/2 200\r\n${cfRayHeader}\r\n${traceFixture()}\n__HC_TIMING__${timing}`,
+        stderr: "",
+        timed_out: false,
+      };
+    }
+    const correlationHeader = target.endsWith("/api/v1/pantry")
+      ? `X-Correlation-Id: ${UUID_MARKER}\r\n`
+      : "";
+    return {
+      exit_code: 0,
+      stdout: `HTTP/2 200\r\n${cfRayHeader}${correlationHeader}\r\n{}\n__HC_TIMING__${timing}`,
+      stderr: "",
+      timed_out: false,
+    };
+  };
+  return { calls, runner };
 }
 
 describe("Cloudflare tunnel diagnostics pure logic", () => {
@@ -129,7 +201,7 @@ describe("Cloudflare tunnel diagnostics pure logic", () => {
       `cookie=${SECRET_MARKER}; email=${EMAIL_MARKER}; id=${UUID_MARKER}`,
     ].join("\n");
 
-    const parsed = parseTunnelLog(log, { grouping_window_ms: 5_000 });
+    const parsed = parseTunnelLog(log);
 
     expect(parsed.malformed_line_count).toBe(2);
     expect(parsed.outages).toEqual([
@@ -167,7 +239,7 @@ describe("Cloudflare tunnel diagnostics pure logic", () => {
       "2026-08-09T10:01:00.000Z ERR timeout: no recent network activity connIndex=2",
     ].join("\n");
 
-    const parsed = parseTunnelLog(log, { grouping_window_ms: 5_000 });
+    const parsed = parseTunnelLog(log);
 
     expect(parsed.outages).toEqual([
       expect.objectContaining({
@@ -198,6 +270,27 @@ describe("Cloudflare tunnel diagnostics pure logic", () => {
     expect(parsed.observed_protocols).toEqual(["http2", "quic"]);
   });
 
+  it("tracks connection generations and does not invent a full outage from sequential recovery", () => {
+    const log = [0, 1, 2, 3].flatMap((connectionIndex) => [
+      `2026-08-09T10:00:0${connectionIndex}.000Z ERR connection closed connIndex=${connectionIndex}`,
+      `2026-08-09T10:00:0${connectionIndex}.500Z INF Registered tunnel connection connIndex=${connectionIndex} location=icn01 protocol=quic`,
+    ]).join("\n");
+
+    const parsed = parseTunnelLog(log);
+
+    expect(parsed.outages).toHaveLength(4);
+    expect(parsed.outages.every(({ simultaneous_full_outage }) =>
+      simultaneous_full_outage === false
+    )).toBe(true);
+    expect(parsed.outages.every(({ reconnect_missing_indexes }) =>
+      reconnect_missing_indexes.length === 0
+    )).toBe(true);
+    expect(parsed.connection_health).toEqual(expect.objectContaining({
+      healthy_connection_count: 4,
+      healthy_connection_indexes: [0, 1, 2, 3],
+    }));
+  });
+
   it("uses explicit scheduled/recorded/failure denominators and nearest-rank percentiles", () => {
     expect(summarizeProbeSamples([
       { success: true, total_ms: 100 },
@@ -218,6 +311,37 @@ describe("Cloudflare tunnel diagnostics pure logic", () => {
     });
   });
 
+  it("does not coerce absent or empty timing values to zero milliseconds", () => {
+    expect(parseCurlTiming(JSON.stringify({
+      http_code: 200,
+      time_connect: null,
+      time_starttransfer: "",
+    }))).toEqual({
+      http_status: 200,
+      connect_ms: null,
+      ttfb_ms: null,
+      total_ms: null,
+      malformed: false,
+    });
+    expect(summarizeProbeSamples([
+      { success: true, total_ms: null },
+      { success: true, total_ms: undefined },
+      { success: true, total_ms: "" },
+    ], { expected_count: 3, minimum_latency_samples: 3 })).toEqual(expect.objectContaining({
+      recorded: 3,
+      latency_sample_count: 0,
+      latency_samples_complete: false,
+      latency_ms: { p50: null, p95: null, max: null },
+    }));
+    expect(aggregatePantrySamples([
+      { timed_out: true, http_status: null, total_ms: null },
+    ]).by_outcome.transport_timeout_or_52x).toEqual(expect.objectContaining({
+      attempted: 1,
+      latency_sample_count: 0,
+      latency_ms: { p50: null, p95: null, max: null },
+    }));
+  });
+
   it("separates pantry transport/52x, auth 409, success and other failures without dropping attempts", () => {
     const rawSamples = [
       { timed_out: true, http_status: null, total_ms: 10_000, error: SECRET_MARKER },
@@ -228,7 +352,7 @@ describe("Cloudflare tunnel diagnostics pure logic", () => {
         http_status: 409,
         total_ms: 120,
         error_code: "ACCOUNT_SESSION_STALE::409",
-        correlation_id: UUID_MARKER,
+        correlation_id_hash: `hmac-sha256:${"a".repeat(64)}`,
       },
       { timed_out: false, http_status: 200, total_ms: 80 },
       { timed_out: false, http_status: 500, total_ms: 90, error: EMAIL_MARKER },
@@ -420,10 +544,11 @@ describe("Cloudflare tunnel diagnostics read-only CLI", () => {
     const evidence = await captureCloudflareTunnelDiagnostics({
       address_family: "ipv4",
       authenticated_pantry_cookie_file: "/tmp/homecook-test-cookie",
+      app_auth_issue_id: "APP-AUTH-42",
       captured_at: "2026-08-09T10:00:00.000Z",
       network_label: "wifi-01",
       samples: 2,
-    }, { runner });
+    }, { hmac_key: Buffer.alloc(32, 7), runner });
     const serialized = JSON.stringify(evidence);
 
     expect(evidence.schema_version).toBe(1);
@@ -439,7 +564,9 @@ describe("Cloudflare tunnel diagnostics read-only CLI", () => {
     expect(evidence.probes.authenticated_pantry.samples[0]).toEqual(expect.objectContaining({
       error_code: "ACCOUNT_SESSION_STALE",
       correlation_id_present: true,
+      correlation_id_hash: expect.stringMatching(/^hmac-sha256:[a-f0-9]{64}$/u),
     }));
+    expect(evidence.probes.authenticated_pantry.app_auth_issue_id).toBe("APP-AUTH-42");
     expect(serialized.match(new RegExp(SECRET_MARKER, "gu")) ?? []).toHaveLength(0);
     expect(serialized).not.toContain(EMAIL_MARKER);
     expect(serialized).not.toContain(UUID_MARKER);
@@ -459,6 +586,189 @@ describe("Cloudflare tunnel diagnostics read-only CLI", () => {
       /\b(?:restart|kickstart|bootout|bootstrap|load|unload|delete|update|route|dns)\b/iu,
     );
     expect(commandTranscript).not.toContain(SECRET_MARKER);
+  });
+
+  it("fails closed unless connector, freshness, probes, timing and authenticated denominators are complete", async () => {
+    const capturedAt = "2026-08-09T10:00:00.000Z";
+    const healthy = createHealthyRunner({ capturedAt });
+    const baseOptions = {
+      address_family: "ipv4",
+      authenticated_pantry_cookie_file: "/tmp/homecook-test-cookie",
+      captured_at: capturedAt,
+      network_label: "wifi-01",
+      samples: 30,
+    };
+    const goodEvidence = await captureCloudflareTunnelDiagnostics(
+      baseOptions,
+      { hmac_key: Buffer.alloc(32, 1), runner: healthy.runner },
+    );
+    expect(goodEvidence.success).toBe(true);
+    const cliHealthy = createHealthyRunner({ capturedAt });
+    expect(await runDiagnosticsCli([
+      "--network-label", "wifi-01",
+      "--address-family", "ipv4",
+      "--samples", "30",
+      "--authenticated-pantry-cookie-file", "/tmp/homecook-test-cookie",
+      "--output", "/tmp/cloudflare-diagnostics-success.json",
+    ], {
+      now: () => new Date(capturedAt),
+      runner: cliHealthy.runner,
+      stdout: () => {},
+      stderr: () => {},
+      writeEvidence: async () => {},
+    })).toBe(0);
+
+    const exited = createHealthyRunner({ capturedAt, launchState: "exited" });
+    const stale = createHealthyRunner({ capturedAt, logAgeMs: 10 * 60_000 });
+    const noCfRay = createHealthyRunner({ capturedAt, cfRayMissing: true });
+    const noTiming = createHealthyRunner({ capturedAt, timingMissing: true });
+    const [exitedEvidence, staleEvidence, noAuthEvidence, shortEvidence, noCfRayEvidence, noTimingEvidence] =
+      await Promise.all([
+        captureCloudflareTunnelDiagnostics(baseOptions, { runner: exited.runner }),
+        captureCloudflareTunnelDiagnostics(baseOptions, { runner: stale.runner }),
+        captureCloudflareTunnelDiagnostics({
+          ...baseOptions,
+          authenticated_pantry_cookie_file: null,
+        }, { runner: createHealthyRunner({ capturedAt }).runner }),
+        captureCloudflareTunnelDiagnostics({
+          ...baseOptions,
+          samples: 29,
+        }, { runner: createHealthyRunner({ capturedAt }).runner }),
+        captureCloudflareTunnelDiagnostics(baseOptions, { runner: noCfRay.runner }),
+        captureCloudflareTunnelDiagnostics(baseOptions, { runner: noTiming.runner }),
+      ]);
+
+    for (const evidence of [
+      exitedEvidence,
+      staleEvidence,
+      noAuthEvidence,
+      shortEvidence,
+      noCfRayEvidence,
+      noTimingEvidence,
+    ]) {
+      expect(evidence.success).toBe(false);
+    }
+  });
+
+  it("enforces exact read-only process arguments and disables hostile curl configuration", async () => {
+    const healthy = createHealthyRunner();
+    await captureCloudflareTunnelDiagnostics({
+      address_family: "ipv4",
+      authenticated_pantry_cookie_file: "/tmp/homecook-test-cookie",
+      captured_at: "2026-08-09T10:00:00.000Z",
+      network_label: "wifi-01",
+      samples: 1,
+    }, { runner: healthy.runner });
+    const curlCalls = healthy.calls.filter(({ command }) => command === "curl");
+    expect(curlCalls.length).toBeGreaterThan(0);
+    for (const { args } of curlCalls) {
+      expect(args[0]).toBe("--disable");
+      expect(args).toContain("--request");
+      expect(args[args.indexOf("--request") + 1]).toBe("GET");
+    }
+
+    const runReadOnlyCommand = diagnosticsCli.runReadOnlyCommand as unknown as (
+      runner: unknown,
+      command: string,
+      args: string[],
+    ) => Promise<unknown>;
+    let invoked = false;
+    await expect(runReadOnlyCommand(async () => {
+      invoked = true;
+      return { exit_code: 0, stdout: "", stderr: "", timed_out: false };
+    }, "launchctl", ["kickstart", "gui/501/com.homecook.cloudflare-tunnel"]))
+      .rejects.toThrow(/read-only command allowlist/u);
+    await expect(runReadOnlyCommand(async () => {
+      invoked = true;
+      return { exit_code: 0, stdout: "", stderr: "", timed_out: false };
+    }, "curl", [
+      "--disable",
+      "--request",
+      "POST",
+      "https://app.mumeok.kr/api/v1/pantry",
+    ])).rejects.toThrow(/read-only command allowlist/u);
+    await expect(runReadOnlyCommand(async () => {
+      invoked = true;
+      return { exit_code: 0, stdout: "", stderr: "", timed_out: false };
+    }, "curl", ["--config", "/tmp/hostile.curlrc", "https://app.mumeok.kr/cdn-cgi/trace"]))
+      .rejects.toThrow(/read-only command allowlist/u);
+    expect(invoked).toBe(false);
+  });
+
+  it("forces a timed-out allowlisted child from TERM to KILL", async () => {
+    vi.useFakeTimers();
+    try {
+      const child = new EventEmitter() as EventEmitter & {
+        stdout: EventEmitter & { setEncoding: (encoding: string) => void };
+        stderr: EventEmitter & { setEncoding: (encoding: string) => void };
+        kill: ReturnType<typeof vi.fn>;
+      };
+      child.stdout = Object.assign(new EventEmitter(), { setEncoding: () => {} });
+      child.stderr = Object.assign(new EventEmitter(), { setEncoding: () => {} });
+      child.kill = vi.fn();
+      const spawnProcess = vi.fn(() => child);
+      const createCommandRunner = diagnosticsCli.createCommandRunner as unknown as (
+        dependencies: { spawnProcess: typeof spawnProcess; killGraceMs: number },
+      ) => (input: { command: string; args: string[]; timeout_ms: number }) => Promise<unknown>;
+      const runner = createCommandRunner({ spawnProcess, killGraceMs: 5 });
+      const pending = runner({ command: "cloudflared", args: ["--version"], timeout_ms: 10 });
+
+      await vi.advanceTimersByTimeAsync(10);
+      expect(child.kill).toHaveBeenCalledWith("SIGTERM");
+      await vi.advanceTimersByTimeAsync(5);
+      expect(child.kill).toHaveBeenCalledWith("SIGKILL");
+      child.emit("close", null);
+      await expect(pending).resolves.toEqual(expect.objectContaining({ timed_out: true }));
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("uses a fixed repository root when cwd is outside the checkout", async () => {
+    const repositoryRoot = process.cwd();
+    const outsideCwd = mkdtempSync(path.join(tmpdir(), "cloudflare-diagnostics-cwd-"));
+    let invoked = false;
+    process.chdir(outsideCwd);
+    try {
+      const exitCode = await runDiagnosticsCli([
+        "--network-label", "wifi-01",
+        "--address-family", "ipv4",
+        "--samples", "30",
+        "--output", path.join(repositoryRoot, ".phase0-evidence", "evidence.json"),
+      ], {
+        runner: async () => {
+          invoked = true;
+          return { exit_code: 0, stdout: "", stderr: "", timed_out: false };
+        },
+        stdout: () => {},
+        stderr: () => {},
+        writeEvidence: async () => {},
+      });
+      expect(exitCode).toBe(1);
+      expect(invoked).toBe(false);
+    } finally {
+      process.chdir(repositoryRoot);
+    }
+  });
+
+  it("hashes correlation IDs per run and validates app/auth issue IDs", () => {
+    const createHasher = diagnosticsCli.createRunScopedCorrelationHasher as unknown as (
+      key: Buffer,
+    ) => (value: string) => string;
+    const hashA = createHasher(Buffer.alloc(32, 1))(UUID_MARKER);
+    const hashB = createHasher(Buffer.alloc(32, 2))(UUID_MARKER);
+    expect(hashA).toMatch(/^hmac-sha256:[a-f0-9]{64}$/u);
+    expect(hashB).toMatch(/^hmac-sha256:[a-f0-9]{64}$/u);
+    expect(hashA).not.toBe(hashB);
+    expect(hashA).not.toContain(UUID_MARKER);
+
+    const validateAppAuthIssueId = diagnosticsLogic.validateAppAuthIssueId as unknown as (
+      value: unknown,
+    ) => string | null;
+    expect(validateAppAuthIssueId("APP-AUTH-42")).toBe("APP-AUTH-42");
+    expect(validateAppAuthIssueId(null)).toBeNull();
+    expect(() => validateAppAuthIssueId(`APP-AUTH-${SECRET_MARKER}`)).toThrow(/issue ID/u);
+    expect(() => validateAppAuthIssueId("https://tracker.example/42")).toThrow(/issue ID/u);
   });
 
   it("redacts stdout/stderr/evidence on CLI failure and wires the focused package command", async () => {

@@ -20,12 +20,21 @@ const PANTRY_OUTCOMES = Object.freeze([
   "success",
   "other_failure",
 ]);
+const CORRELATION_HASH_PATTERN = /^hmac-sha256:[0-9a-f]{64}$/u;
+const APP_AUTH_ISSUE_ID_PATTERN = /^APP-AUTH-[1-9][0-9]{0,9}$/u;
 
 function asText(value) {
   return typeof value === "string" ? value : "";
 }
 
 function finiteNumber(value) {
+  if (
+    value === null
+    || value === undefined
+    || (typeof value === "string" && value.trim().length === 0)
+  ) {
+    return null;
+  }
   const number = typeof value === "number" ? value : Number(value);
   return Number.isFinite(number) && number >= 0 ? number : null;
 }
@@ -188,20 +197,7 @@ function parseTunnelEvent(line, sequence) {
   };
 }
 
-function groupDisconnects(events, groupingWindowMs) {
-  const groups = [];
-  for (const event of events.filter(({ type }) => type === "disconnect")) {
-    const current = groups.at(-1);
-    if (!current || event.timestamp_ms - current.started_at_ms > groupingWindowMs) {
-      groups.push({ started_at_ms: event.timestamp_ms, events: [event] });
-    } else {
-      current.events.push(event);
-    }
-  }
-  return groups;
-}
-
-export function parseTunnelLog(raw, { grouping_window_ms = 5_000 } = {}) {
+export function parseTunnelLog(raw) {
   const events = [];
   let malformedLineCount = 0;
   asText(raw).split(/\r?\n/u).forEach((line, sequence) => {
@@ -219,46 +215,67 @@ export function parseTunnelLog(raw, { grouping_window_ms = 5_000 } = {}) {
     left.timestamp_ms - right.timestamp_ms || left.sequence - right.sequence
   );
 
-  const outages = groupDisconnects(events, grouping_window_ms).map((group) => {
-    const disconnectCompletedAtMs = Math.max(
-      ...group.events.map(({ timestamp_ms: timestampMs }) => timestampMs),
-    );
-    const firstDisconnectByIndex = new Map();
-    for (const event of group.events) {
-      if (!firstDisconnectByIndex.has(event.connection_index)) {
-        firstDisconnectByIndex.set(event.connection_index, event);
-      }
-    }
-    const disconnectedIndexes = [...firstDisconnectByIndex.keys()].sort((left, right) => left - right);
-    const reconnects = disconnectedIndexes.map((connectionIndex) => {
-      const nextConnectionEvent = events.find((event) =>
-        event.connection_index === connectionIndex
-        && event.timestamp_ms >= disconnectCompletedAtMs
-        && !group.events.includes(event)
-      );
-      return nextConnectionEvent?.type === "reconnect" ? nextConnectionEvent : null;
-    });
-    const missingIndexes = disconnectedIndexes.filter((_, index) => reconnects[index] === null);
-    const recoveredAtMs = missingIndexes.length === 0
-      ? Math.max(...reconnects.map(({ timestamp_ms: timestampMs }) => timestampMs))
-      : null;
-    const colos = [...new Set(reconnects.flatMap((event) => event?.colo ? [event.colo] : []))].sort();
+  const outages = [];
+  const downConnections = new Set();
+  let incident = null;
+  const finishIncident = (recoveredAtMs = null) => {
+    const disconnectedIndexes = [...incident.disconnected_indexes].sort((left, right) => left - right);
+    const missingIndexes = recoveredAtMs === null ? [...downConnections].sort((left, right) => left - right) : [];
+    const reconnects = [...incident.reconnects.values()];
+    const colos = [...new Set(reconnects.flatMap((event) => event.colo ? [event.colo] : []))].sort();
     const protocols = [...new Set(
-      reconnects.flatMap((event) => event?.protocol ? [event.protocol] : []),
+      reconnects.flatMap((event) => event.protocol ? [event.protocol] : []),
     )].sort();
-    return {
+    outages.push({
       disconnected_connection_indexes: disconnectedIndexes,
-      disconnect_started_at: new Date(group.started_at_ms).toISOString(),
-      disconnect_completed_at: new Date(disconnectCompletedAtMs).toISOString(),
-      simultaneous_full_outage: disconnectedIndexes.length === 4,
+      disconnect_started_at: new Date(incident.started_at_ms).toISOString(),
+      disconnect_completed_at: new Date(incident.disconnect_completed_at_ms).toISOString(),
+      simultaneous_full_outage: incident.simultaneous_full_outage,
       recovered_at: recoveredAtMs === null ? null : new Date(recoveredAtMs).toISOString(),
-      recovery_ms: recoveredAtMs === null ? null : recoveredAtMs - group.started_at_ms,
+      recovery_ms: recoveredAtMs === null ? null : recoveredAtMs - incident.started_at_ms,
       reconnect_missing_indexes: missingIndexes,
       tunnel_colo_state: colos.length === 0 ? "missing" : colos.length === 1 ? "single" : "mixed",
       tunnel_colos: colos,
       tunnel_protocols: protocols,
-    };
-  });
+    });
+    incident = null;
+  };
+
+  for (const event of events) {
+    if (event.type === "disconnect") {
+      if (downConnections.has(event.connection_index)) {
+        continue;
+      }
+      if (downConnections.size === 0) {
+        incident = {
+          started_at_ms: event.timestamp_ms,
+          disconnect_completed_at_ms: event.timestamp_ms,
+          disconnected_indexes: new Set(),
+          reconnects: new Map(),
+          simultaneous_full_outage: false,
+        };
+      }
+      downConnections.add(event.connection_index);
+      incident.disconnected_indexes.add(event.connection_index);
+      incident.disconnect_completed_at_ms = event.timestamp_ms;
+      if (downConnections.size === 4) {
+        incident.simultaneous_full_outage = true;
+      }
+      continue;
+    }
+
+    if (!downConnections.has(event.connection_index)) {
+      continue;
+    }
+    downConnections.delete(event.connection_index);
+    incident.reconnects.set(event.connection_index, event);
+    if (downConnections.size === 0) {
+      finishIncident(event.timestamp_ms);
+    }
+  }
+  if (incident) {
+    finishIncident();
+  }
 
   const latestByIndex = new Map();
   for (const event of events) {
@@ -291,6 +308,12 @@ export function parseTunnelLog(raw, { grouping_window_ms = 5_000 } = {}) {
       unknown_connection_indexes: unknownIndexes,
     },
     observed_protocols: observedProtocols,
+    latest_connection_event_at: Object.fromEntries(
+      [0, 1, 2, 3].map((connectionIndex) => [
+        String(connectionIndex),
+        latestByIndex.get(connectionIndex)?.timestamp ?? null,
+      ]),
+    ),
     outages,
   };
 }
@@ -364,6 +387,10 @@ function normalizeErrorCode(value) {
 
 function normalizePantrySample(sample) {
   const outcome = classifyPantrySample(sample);
+  const correlationIdHash = typeof sample?.correlation_id_hash === "string"
+    && CORRELATION_HASH_PATTERN.test(sample.correlation_id_hash)
+    ? sample.correlation_id_hash
+    : null;
   return {
     outcome,
     success: outcome === "success",
@@ -374,11 +401,25 @@ function normalizePantrySample(sample) {
     ttfb_ms: finiteNumber(sample?.ttfb_ms),
     total_ms: finiteNumber(sample?.total_ms),
     error_code: normalizeErrorCode(sample?.error_code),
-    correlation_id_present: typeof sample?.correlation_id === "string" && sample.correlation_id.length > 0,
+    correlation_id_present: correlationIdHash !== null,
+    correlation_id_hash: correlationIdHash,
+    cf_ray: sample?.cf_ray?.present === true
+      ? { present: true, colo: TRACE_COLO_PATTERN.test(sample.cf_ray.colo) ? sample.cf_ray.colo : null }
+      : { present: false, colo: null },
   };
 }
 
-export function aggregatePantrySamples(samples) {
+export function validateAppAuthIssueId(value) {
+  if (value === null || value === undefined) {
+    return null;
+  }
+  if (typeof value !== "string" || !APP_AUTH_ISSUE_ID_PATTERN.test(value)) {
+    throw new Error("App/auth issue ID must match APP-AUTH-<positive integer>.");
+  }
+  return value;
+}
+
+export function aggregatePantrySamples(samples, { app_auth_issue_id = null } = {}) {
   const normalizedSamples = (Array.isArray(samples) ? samples : []).map(normalizePantrySample);
   const byOutcome = Object.fromEntries(PANTRY_OUTCOMES.map((outcome) => {
     const matching = normalizedSamples.filter((sample) => sample.outcome === outcome);
@@ -395,6 +436,9 @@ export function aggregatePantrySamples(samples) {
   }));
   return {
     attempted: normalizedSamples.length,
+    app_auth_issue_id: byOutcome.app_auth_409.attempted > 0
+      ? validateAppAuthIssueId(app_auth_issue_id)
+      : null,
     by_outcome: byOutcome,
     samples: normalizedSamples,
   };

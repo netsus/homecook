@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 
 import { spawn } from "node:child_process";
+import { createHmac, randomBytes } from "node:crypto";
+import { existsSync, realpathSync } from "node:fs";
 import { chmod, mkdir, realpath, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -16,6 +18,7 @@ import {
   sanitizeForEvidence,
   summarizeColos,
   summarizeProbeSamples,
+  validateAppAuthIssueId,
   validateAnonymousNetworkLabel,
 } from "./lib/cloudflare-tunnel-diagnostics.mjs";
 
@@ -24,6 +27,9 @@ const DEFAULT_APP_ORIGIN = "https://app.mumeok.kr";
 const DEFAULT_BASELINE_ORIGIN = "https://www.cloudflare.com";
 const DEFAULT_TUNNEL_LOG = "/Users/cwj/.homecook/logs/cloudflare-tunnel.err.log";
 const DEFAULT_LAUNCH_AGENT_LABEL = "com.homecook.cloudflare-tunnel";
+const REPOSITORY_ROOT = realpathSync(fileURLToPath(new URL("../", import.meta.url)));
+const LOG_FRESHNESS_MS = 5 * 60 * 1_000;
+const MINIMUM_AUTHENTICATED_SAMPLES = 30;
 const CURL_WRITE_OUT = `${TIMING_MARKER}{\"http_code\":%{http_code},\"time_connect\":%{time_connect},\"time_starttransfer\":%{time_starttransfer},\"time_total\":%{time_total}}`;
 const ADDRESS_FAMILIES = new Set(["ipv4", "ipv6"]);
 
@@ -36,54 +42,11 @@ function resultShape({ exitCode = 1, stdout = "", stderr = "", timedOut = false 
   };
 }
 
-export function defaultRunner({ command, args, timeout_ms = 15_000 }) {
-  return new Promise((resolve) => {
-    const child = spawn(command, args, {
-      env: process.env,
-      stdio: ["ignore", "pipe", "pipe"],
-    });
-    let stdout = "";
-    let stderr = "";
-    let timedOut = false;
-    const timer = setTimeout(() => {
-      timedOut = true;
-      child.kill("SIGTERM");
-    }, timeout_ms);
-    child.stdout.setEncoding("utf8");
-    child.stderr.setEncoding("utf8");
-    child.stdout.on("data", (chunk) => {
-      stdout += chunk;
-    });
-    child.stderr.on("data", (chunk) => {
-      stderr += chunk;
-    });
-    child.on("error", () => {
-      clearTimeout(timer);
-      resolve(resultShape({ timedOut }));
-    });
-    child.on("close", (code) => {
-      clearTimeout(timer);
-      resolve(resultShape({ exitCode: code ?? 1, stdout, stderr, timedOut }));
-    });
-  });
-}
-
-async function runReadOnly(runner, command, args, timeoutMs = 15_000) {
-  try {
-    const result = await runner({ command, args, timeout_ms: timeoutMs });
-    return {
-      exit_code: Number.isInteger(result?.exit_code) ? result.exit_code : 1,
-      stdout: typeof result?.stdout === "string" ? result.stdout : "",
-      stderr: typeof result?.stderr === "string" ? result.stderr : "",
-      timed_out: result?.timed_out === true,
-    };
-  } catch {
-    return resultShape();
-  }
-}
-
 function curlArgs(url, addressFamily, { cookieFile = null, discardBody = false } = {}) {
   const args = [
+    "--disable",
+    "--request",
+    "GET",
     addressFamily === "ipv6" ? "--ipv6" : "--ipv4",
     "--silent",
     "--show-error",
@@ -104,6 +67,126 @@ function curlArgs(url, addressFamily, { cookieFile = null, discardBody = false }
   return args;
 }
 
+function invocationAllowed(command, args) {
+  if (command === "cloudflared") {
+    return args.length === 1 && args[0] === "--version";
+  }
+  if (command === "launchctl") {
+    return args.length === 2
+      && args[0] === "print"
+      && /^gui\/\d+\/com\.homecook\.cloudflare-tunnel$/u.test(args[1]);
+  }
+  if (command === "tail") {
+    return JSON.stringify(args) === JSON.stringify(["-n", "500", DEFAULT_TUNNEL_LOG]);
+  }
+  if (command !== "curl" || !Array.isArray(args)) {
+    return false;
+  }
+  const url = args.at(-1);
+  const addressFamily = args.includes("--ipv6") ? "ipv6" : "ipv4";
+  const cookieIndex = args.indexOf("--cookie");
+  const cookieFile = cookieIndex < 0 ? null : args[cookieIndex + 1];
+  const publicPantryUrl = `${DEFAULT_APP_ORIGIN}/pantry`;
+  const authenticatedPantryUrl = `${DEFAULT_APP_ORIGIN}/api/v1/pantry`;
+  const traceUrls = new Set([
+    `${DEFAULT_APP_ORIGIN}/cdn-cgi/trace`,
+    `${DEFAULT_BASELINE_ORIGIN}/cdn-cgi/trace`,
+  ]);
+  if (traceUrls.has(url)) {
+    return cookieFile === null
+      && JSON.stringify(args) === JSON.stringify(curlArgs(url, addressFamily));
+  }
+  if (url === publicPantryUrl) {
+    return cookieFile === null
+      && JSON.stringify(args) === JSON.stringify(curlArgs(url, addressFamily, { discardBody: true }));
+  }
+  if (url === authenticatedPantryUrl) {
+    return typeof cookieFile === "string"
+      && path.isAbsolute(cookieFile)
+      && JSON.stringify(args) === JSON.stringify(curlArgs(url, addressFamily, { cookieFile }));
+  }
+  return false;
+}
+
+function assertReadOnlyInvocation(command, args) {
+  if (!invocationAllowed(command, args)) {
+    throw new Error("Command rejected by the read-only command allowlist.");
+  }
+}
+
+export function createCommandRunner({
+  spawnProcess = spawn,
+  killGraceMs = 1_000,
+  setTimer = setTimeout,
+  clearTimer = clearTimeout,
+} = {}) {
+  return ({ command, args, timeout_ms = 15_000 }) => {
+    assertReadOnlyInvocation(command, args);
+    return new Promise((resolve) => {
+      const child = spawnProcess(command, args, {
+        env: process.env,
+        stdio: ["ignore", "pipe", "pipe"],
+      });
+      let stdout = "";
+      let stderr = "";
+      let timedOut = false;
+      let settled = false;
+      let killTimer = null;
+      const finish = (result) => {
+        if (settled) {
+          return;
+        }
+        settled = true;
+        clearTimer(timeoutTimer);
+        if (killTimer !== null) {
+          clearTimer(killTimer);
+        }
+        resolve(result);
+      };
+      const timeoutTimer = setTimer(() => {
+        timedOut = true;
+        child.kill("SIGTERM");
+        killTimer = setTimer(() => {
+          if (!settled) {
+            child.kill("SIGKILL");
+          }
+        }, killGraceMs);
+      }, timeout_ms);
+      child.stdout.setEncoding("utf8");
+      child.stderr.setEncoding("utf8");
+      child.stdout.on("data", (chunk) => {
+        stdout += chunk;
+      });
+      child.stderr.on("data", (chunk) => {
+        stderr += chunk;
+      });
+      child.on("error", () => {
+        finish(resultShape({ timedOut }));
+      });
+      child.on("close", (code) => {
+        finish(resultShape({ exitCode: code ?? 1, stdout, stderr, timedOut }));
+      });
+    });
+  };
+}
+
+export const defaultRunner = createCommandRunner();
+
+export async function runReadOnlyCommand(runner, command, args, timeoutMs = 15_000) {
+  assertReadOnlyInvocation(command, args);
+  try {
+    const result = await runner({ command, args, timeout_ms: timeoutMs });
+    return {
+      exit_code: Number.isInteger(result?.exit_code) ? result.exit_code : 1,
+      stdout: typeof result?.stdout === "string" ? result.stdout : "",
+      stderr: typeof result?.stderr === "string" ? result.stderr : "",
+      timed_out: result?.timed_out === true,
+    };
+  } catch {
+    return resultShape();
+  }
+}
+
 function splitCurlOutput(raw) {
   const markerIndex = raw.lastIndexOf(TIMING_MARKER);
   if (markerIndex < 0) {
@@ -117,6 +200,22 @@ function splitCurlOutput(raw) {
 
 function extractErrorCode(raw) {
   return raw.match(/(?:^x-error-code:\s*|["']code["']\s*:\s*["'])([A-Z][A-Z0-9_]{1,63})(?:::\d{3})?/imu)?.[1] ?? null;
+}
+
+function extractCorrelationId(raw) {
+  return raw.match(/^x-correlation-id:\s*([^\r\n]+)\s*$/imu)?.[1]?.trim() ?? null;
+}
+
+export function createRunScopedCorrelationHasher(key = randomBytes(32)) {
+  if (!(key instanceof Uint8Array) || key.byteLength < 32) {
+    throw new Error("Correlation hash key must contain at least 32 bytes.");
+  }
+  return (value) => {
+    if (typeof value !== "string" || value.length === 0) {
+      return null;
+    }
+    return `hmac-sha256:${createHmac("sha256", key).update(value, "utf8").digest("hex")}`;
+  };
 }
 
 function parseProbeResult(result, { trace = false } = {}) {
@@ -135,9 +234,10 @@ function parseProbeResult(result, { trace = false } = {}) {
   };
 }
 
-function parseAuthenticatedPantryResult(result) {
+function parseAuthenticatedPantryResult(result, hashCorrelationId) {
   const { response, timing: timingRaw } = splitCurlOutput(result.stdout);
   const timing = parseCurlTiming(timingRaw);
+  const correlationId = extractCorrelationId(response);
   return {
     transport_error: result.exit_code !== 0,
     timed_out: result.timed_out,
@@ -146,7 +246,8 @@ function parseAuthenticatedPantryResult(result) {
     ttfb_ms: timing.ttfb_ms,
     total_ms: timing.total_ms,
     error_code: extractErrorCode(response),
-    correlation_id: /^x-correlation-id:\s*\S+/imu.test(response) ? "present" : null,
+    correlation_id_hash: correlationId === null ? null : hashCorrelationId(correlationId),
+    cf_ray: parseCfRayHeaders(response),
   };
 }
 
@@ -158,7 +259,32 @@ function allProbeSamplesSucceeded(samples) {
   return samples.every(({ success }) => success === true);
 }
 
-export async function captureCloudflareTunnelDiagnostics(options, { runner = defaultRunner } = {}) {
+function probeSampleComplete(sample, { trace = false } = {}) {
+  return sample.success === true
+    && sample.cf_ray?.present === true
+    && sample.connect_ms !== null
+    && sample.ttfb_ms !== null
+    && sample.total_ms !== null
+    && (!trace || sample.trace?.colo_state === "value");
+}
+
+function latestConnectionsAreFresh(tunnelLog, capturedAtMs) {
+  return [0, 1, 2, 3].every((connectionIndex) => {
+    const timestamp = tunnelLog.latest_connection_event_at?.[String(connectionIndex)];
+    const timestampMs = Date.parse(timestamp ?? "");
+    const ageMs = capturedAtMs - timestampMs;
+    return Number.isFinite(timestampMs) && ageMs >= 0 && ageMs <= LOG_FRESHNESS_MS;
+  });
+}
+
+/**
+ * @param {Record<string, unknown>} options
+ * @param {{ runner?: typeof defaultRunner, hmac_key?: Uint8Array }} [dependencies]
+ */
+export async function captureCloudflareTunnelDiagnostics(
+  options,
+  { runner = defaultRunner, hmac_key: hmacKey } = {},
+) {
   const networkLabel = validateAnonymousNetworkLabel(options?.network_label);
   const addressFamily = options?.address_family ?? "ipv4";
   if (!ADDRESS_FAMILIES.has(addressFamily)) {
@@ -169,9 +295,15 @@ export async function captureCloudflareTunnelDiagnostics(options, { runner = def
     throw new Error("Samples must be an integer between 1 and 100.");
   }
   const capturedAt = options?.captured_at ?? new Date().toISOString();
+  const capturedAtMs = Date.parse(capturedAt);
+  if (!Number.isFinite(capturedAtMs)) {
+    throw new Error("Captured time must be a valid ISO timestamp.");
+  }
   const appOrigin = options?.app_origin ?? DEFAULT_APP_ORIGIN;
   const baselineOrigin = options?.baseline_origin ?? DEFAULT_BASELINE_ORIGIN;
   const authenticatedPantryCookieFile = options?.authenticated_pantry_cookie_file ?? null;
+  const appAuthIssueId = validateAppAuthIssueId(options?.app_auth_issue_id ?? null);
+  const hashCorrelationId = createRunScopedCorrelationHasher(hmacKey);
   if (appOrigin !== DEFAULT_APP_ORIGIN) {
     throw new Error("Diagnostics require the canonical app origin.");
   }
@@ -187,9 +319,9 @@ export async function captureCloudflareTunnelDiagnostics(options, { runner = def
   const launchTarget = `gui/${typeof process.getuid === "function" ? process.getuid() : 0}/${DEFAULT_LAUNCH_AGENT_LABEL}`;
 
   const [versionResult, launchctlResult, logResult] = await Promise.all([
-    runReadOnly(runner, "cloudflared", ["--version"]),
-    runReadOnly(runner, "launchctl", ["print", launchTarget]),
-    runReadOnly(runner, "tail", ["-n", "500", options?.tunnel_log_path ?? DEFAULT_TUNNEL_LOG]),
+    runReadOnlyCommand(runner, "cloudflared", ["--version"]),
+    runReadOnlyCommand(runner, "launchctl", ["print", launchTarget]),
+    runReadOnlyCommand(runner, "tail", ["-n", "500", DEFAULT_TUNNEL_LOG]),
   ]);
 
   const appTraceSamples = [];
@@ -200,9 +332,9 @@ export async function captureCloudflareTunnelDiagnostics(options, { runner = def
 
   for (let index = 0; index < samples; index += 1) {
     const [appTraceResult, baselineTraceResult, publicPantryResult] = await Promise.all([
-      runReadOnly(runner, "curl", curlArgs(`${appOrigin}/cdn-cgi/trace`, addressFamily)),
-      runReadOnly(runner, "curl", curlArgs(`${baselineOrigin}/cdn-cgi/trace`, addressFamily)),
-      runReadOnly(runner, "curl", curlArgs(`${appOrigin}/pantry`, addressFamily, {
+      runReadOnlyCommand(runner, "curl", curlArgs(`${appOrigin}/cdn-cgi/trace`, addressFamily)),
+      runReadOnlyCommand(runner, "curl", curlArgs(`${baselineOrigin}/cdn-cgi/trace`, addressFamily)),
+      runReadOnlyCommand(runner, "curl", curlArgs(`${appOrigin}/pantry`, addressFamily, {
         discardBody: true,
       })),
     ]);
@@ -212,7 +344,7 @@ export async function captureCloudflareTunnelDiagnostics(options, { runner = def
     publicPantrySamples.push(parseProbeResult(publicPantryResult));
 
     if (authenticatedPantryCookieFile) {
-      const authenticatedPantryResult = await runReadOnly(
+      const authenticatedPantryResult = await runReadOnlyCommand(
         runner,
         "curl",
         curlArgs(`${appOrigin}/api/v1/pantry`, addressFamily, {
@@ -220,11 +352,16 @@ export async function captureCloudflareTunnelDiagnostics(options, { runner = def
         }),
       );
       rawCollectionResults.push(authenticatedPantryResult);
-      authenticatedPantrySamples.push(parseAuthenticatedPantryResult(authenticatedPantryResult));
+      authenticatedPantrySamples.push(parseAuthenticatedPantryResult(
+        authenticatedPantryResult,
+        hashCorrelationId,
+      ));
     }
   }
 
-  const authenticatedPantry = aggregatePantrySamples(authenticatedPantrySamples);
+  const authenticatedPantry = aggregatePantrySamples(authenticatedPantrySamples, {
+    app_auth_issue_id: appAuthIssueId,
+  });
   const cloudflared = commandSucceeded(versionResult)
     ? parseCloudflaredVersion(versionResult.stdout)
     : { version: null, available: false };
@@ -241,13 +378,31 @@ export async function captureCloudflareTunnelDiagnostics(options, { runner = def
     || authenticatedPantry.by_outcome.success.attempted === authenticatedPantrySamples.length;
   const connectorHealthy = cloudflared.available
     && launchAgent.loaded
+    && launchAgent.state === "running"
     && tunnelLog.connection_health.healthy_connection_count === 4;
+  const connectorFresh = latestConnectionsAreFresh(tunnelLog, capturedAtMs);
+  const publicProbeCompleteness = appTraceSamples.every((sample) =>
+    probeSampleComplete(sample, { trace: true })
+  ) && baselineTraceSamples.every((sample) =>
+    probeSampleComplete(sample, { trace: true })
+  ) && publicPantrySamples.every((sample) => probeSampleComplete(sample));
+  const authenticatedProbeComplete = authenticatedPantryCookieFile !== null
+    && authenticatedPantrySamples.length >= MINIMUM_AUTHENTICATED_SAMPLES
+    && authenticatedPantrySamples.every((sample) =>
+      sample.cf_ray?.present === true
+      && sample.connect_ms !== null
+      && sample.ttfb_ms !== null
+      && sample.total_ms !== null
+    );
   const evidence = {
     schema_version: 1,
     success: collectionCommandsSucceeded
       && publicProbesSucceeded
       && authenticatedProbeSucceeded
-      && connectorHealthy,
+      && connectorHealthy
+      && connectorFresh
+      && publicProbeCompleteness
+      && authenticatedProbeComplete,
     captured_at: capturedAt,
     network: { label: networkLabel, address_family: addressFamily },
     connector: {
@@ -333,6 +488,10 @@ function parseArgs(argv) {
         options.authenticated_pantry_cookie_file = next;
         index += 1;
         break;
+      case "--app-auth-issue-id":
+        options.app_auth_issue_id = next;
+        index += 1;
+        break;
       default:
         throw new Error("Unsupported diagnostics argument.");
     }
@@ -343,14 +502,35 @@ function parseArgs(argv) {
   if (!Number.isInteger(options.samples) || options.samples < 30 || options.samples > 100) {
     throw new Error("Operational diagnostics require between 30 and 100 samples.");
   }
-  const relativeOutput = path.relative(process.cwd(), options.output);
-  if (relativeOutput === "" || (!relativeOutput.startsWith("..") && !path.isAbsolute(relativeOutput))) {
-    throw new Error("--output must be outside the repository.");
-  }
+  assertOutputOutsideRepository(options.output);
+  validateAppAuthIssueId(options.app_auth_issue_id ?? null);
   return options;
 }
 
+function canonicalizeProspectivePath(targetPath) {
+  let existingAncestor = path.resolve(targetPath);
+  const missingSegments = [];
+  while (!existsSync(existingAncestor)) {
+    const parent = path.dirname(existingAncestor);
+    if (parent === existingAncestor) {
+      break;
+    }
+    missingSegments.unshift(path.basename(existingAncestor));
+    existingAncestor = parent;
+  }
+  return path.join(realpathSync(existingAncestor), ...missingSegments);
+}
+
+function assertOutputOutsideRepository(outputPath) {
+  const canonicalOutput = canonicalizeProspectivePath(outputPath);
+  const relativeOutput = path.relative(REPOSITORY_ROOT, canonicalOutput);
+  if (relativeOutput === "" || (!relativeOutput.startsWith("..") && !path.isAbsolute(relativeOutput))) {
+    throw new Error("--output must be outside the repository.");
+  }
+}
+
 export async function writeEvidenceFile(outputPath, evidence) {
+  assertOutputOutsideRepository(outputPath);
   const directory = path.dirname(outputPath);
   const createdPath = await mkdir(directory, { recursive: true, mode: 0o700 });
   if (createdPath === undefined) {
@@ -362,8 +542,7 @@ export async function writeEvidenceFile(outputPath, evidence) {
     await chmod(directory, 0o700);
   }
   const canonicalDirectory = await realpath(directory);
-  const canonicalRepository = await realpath(process.cwd());
-  const repositoryRelative = path.relative(canonicalRepository, canonicalDirectory);
+  const repositoryRelative = path.relative(REPOSITORY_ROOT, canonicalDirectory);
   if (
     repositoryRelative === ""
     || (!repositoryRelative.startsWith("..") && !path.isAbsolute(repositoryRelative))
