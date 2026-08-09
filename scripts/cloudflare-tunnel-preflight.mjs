@@ -2,17 +2,17 @@
 
 import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
-import { createReadStream, existsSync, realpathSync, statSync } from "node:fs";
-import { readFile, realpath, stat } from "node:fs/promises";
+import { constants, createReadStream, existsSync, realpathSync, statSync, watch } from "node:fs";
+import { open, readFile, realpath, stat } from "node:fs/promises";
 import { isIP } from "node:net";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { parseLaunchctlPrint } from "./lib/cloudflare-tunnel-diagnostics.mjs";
 import {
-  buildPreflightEvidence, classifyManagementMode, CLOUDFLARE_TUNNEL_ENDPOINTS,
-  evaluateReleaseGate, extractManagedPaths, hashEvidenceValue, parseDnsOutput,
-  isCanonicalCloudflaredVersion, parseTunnelMetrics,
+  buildPreflightEvidence, CLOUDFLARE_TUNNEL_ENDPOINTS,
+  evaluateReleaseGate, hashEvidenceValue, parseDnsOutput,
+  isCanonicalCloudflaredVersion, parseCloudflaredArguments, parseTunnelMetrics,
 } from "./lib/cloudflare-tunnel-preflight.mjs";
 import { writeEvidenceFile } from "./cloudflare-tunnel-diagnostics.mjs";
 
@@ -34,8 +34,7 @@ export const DEFAULT_TRUSTED_BINARY_ROOTS = Object.freeze([
 
 export const SYSTEM_TOOLS = Object.freeze({
   dig: "/usr/bin/dig", nc: "/usr/bin/nc", curl: "/usr/bin/curl",
-  plutil: "/usr/bin/plutil", launchctl: "/bin/launchctl", ps: "/bin/ps",
-  lsof: "/usr/sbin/lsof",
+  plutil: "/usr/bin/plutil", launchctl: "/bin/launchctl", lsof: "/usr/sbin/lsof",
 });
 
 const TUNNEL_HOSTNAMES = Object.freeze(Object.keys(CLOUDFLARE_TUNNEL_ENDPOINTS));
@@ -110,8 +109,6 @@ function isInternalInvocation(candidate) {
     && candidate.input.length <= MAX_COMMAND_OUTPUT_BYTES;
   if (command === SYSTEM_TOOLS.launchctl) return args.length === 2 && args[0] === "print"
     && /^gui\/[1-9][0-9]*\/com\.homecook\.cloudflare-tunnel$/u.test(args[1]);
-  if (command === SYSTEM_TOOLS.ps) return args.length === 5 && args[0] === "-ww" && args[1] === "-p"
-    && /^[1-9][0-9]*$/u.test(args[2]) && JSON.stringify(args.slice(3)) === JSON.stringify(["-o", "command="]);
   if (command === SYSTEM_TOOLS.lsof) return args.every((arg) => typeof arg === "string")
     && args.includes("-a") && args.some((arg) => /^-p[1-9][0-9]*$/u.test(arg));
   return false;
@@ -183,7 +180,7 @@ async function runNormalized(runner, candidate) {
     const result = await runner(candidate);
     return { ...resultShape({ exitCode: result?.exit_code, stdout: result?.stdout,
       stderr: result?.stderr, timedOut: result?.timed_out, outputOverflow: result?.output_overflow }),
-    command_missing: false };
+    command_missing: result?.command_missing === true };
   } catch { return { ...resultShape(), command_missing: true }; }
 }
 
@@ -198,6 +195,14 @@ function failureCode(results, { malformed = false } = {}) {
   if (results.some((result) => result.command_missing)) return "COMMAND_MISSING";
   if (malformed) return "MALFORMED_OUTPUT";
   return results.every((result) => result.exit_code === 0) ? null : "CHECK_FAILED";
+}
+
+function resultPassed(result, { stdoutRequired = false } = {}) {
+  const stdoutPresent = typeof result?.stdout === "string"
+    ? result.stdout.length > 0 : Buffer.isBuffer(result?.stdout) && result.stdout.length > 0;
+  return result?.exit_code === 0 && result?.timed_out !== true
+    && result?.output_overflow !== true && result?.command_missing !== true
+    && (!stdoutRequired || stdoutPresent);
 }
 
 async function hashFile(filePath) {
@@ -218,7 +223,10 @@ function hashArgumentVector(args) {
 }
 
 function modeString(stats) { return (stats.mode & 0o777).toString(8).padStart(4, "0"); }
-function fileIdentity(stats) { return `${stats.dev}:${stats.ino}:${stats.size}:${stats.mtimeMs}`; }
+function fileIdentity(stats) {
+  return `${stats.dev}:${stats.ino}:${stats.size}:${stats.mtimeMs}:${stats.ctimeMs}`;
+}
+function sameDeviceAndInode(left, right) { return left.dev === right.dev && left.ino === right.ino; }
 function isSafeOwnedFile(stats, { executable = false } = {}) {
   return stats.isFile() && [0, process.getuid()].includes(stats.uid) && (stats.mode & 0o022) === 0
     && (!executable || (stats.mode & 0o111) !== 0);
@@ -266,34 +274,107 @@ async function isExactTrustedPath(canonicalPath, trustedPaths) {
   return false;
 }
 
-async function inspectTrustedBinary(binaryPath, expectedSha256, expectedVersion, trustedRoots) {
+async function hashFileHandle(fileHandle) {
+  const hash = createHash("sha256");
+  const buffer = Buffer.alloc(64 * 1_024);
+  let position = 0;
+  while (true) {
+    const { bytesRead } = await fileHandle.read(buffer, 0, buffer.length, position);
+    if (bytesRead === 0) break;
+    hash.update(buffer.subarray(0, bytesRead));
+    position += bytesRead;
+  }
+  return `sha256:${hash.digest("hex")}`;
+}
+
+async function inspectTrustedBinary(binaryPath, expectedSha256, expectedVersion, trustedRoots, {
+  openFile = open,
+  watchPath = watch,
+} = {}) {
   if (!SHA256_PATTERN.test(expectedSha256 ?? "")
     || !isCanonicalCloudflaredVersion(expectedVersion)
     || !path.isAbsolute(binaryPath ?? "")) throw new Error("Verified binary metadata required.");
-  const canonical = await realpath(binaryPath); const before = await stat(canonical);
-  if (path.basename(canonical) !== "cloudflared" || !isOutsideRepository(canonical)
-    || !isWithinTrustedRoot(canonical, trustedRoots)
-    || !isSafeOwnedFile(before, { executable: true })) throw new Error("Untrusted cloudflared binary.");
-  const beforeHash = await hashFile(canonical);
-  if (beforeHash !== expectedSha256) throw new Error("Binary hash mismatch.");
-  const after = await stat(canonical); const afterHash = await hashFile(canonical);
-  if (fileIdentity(before) !== fileIdentity(after) || beforeHash !== afterHash) throw new Error("Binary identity changed.");
-  return {
-    path: canonical,
-    path_hash: hashEvidenceValue(canonical),
-    version: expectedVersion,
-    sha256: beforeHash,
-    mode: modeString(before),
-  };
+  const canonical = await realpath(binaryPath);
+  const parent = await realpath(path.dirname(canonical));
+  let changed = false;
+  const markChanged = () => { changed = true; };
+  const watchers = [];
+  let fileHandle;
+  try {
+    fileHandle = await openFile(canonical, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
+    for (const target of [parent, canonical]) {
+      const watcher = watchPath(target, { persistent: false }, markChanged);
+      watcher.on?.("error", markChanged);
+      watchers.push(watcher);
+    }
+    const [parentBefore, pathBefore, fdBefore] = await Promise.all([
+      stat(parent), stat(canonical), fileHandle.stat(),
+    ]);
+    if (path.basename(canonical) !== "cloudflared" || !isOutsideRepository(canonical)
+      || !isWithinTrustedRoot(canonical, trustedRoots)
+      || !isSafeOwnedDirectory(parentBefore)
+      || !isSafeOwnedFile(pathBefore, { executable: true })
+      || !isSafeOwnedFile(fdBefore, { executable: true })
+      || !sameDeviceAndInode(pathBefore, fdBefore)) throw new Error("Untrusted cloudflared binary.");
+    const beforeHash = await hashFileHandle(fileHandle);
+    if (beforeHash !== expectedSha256) throw new Error("Binary hash mismatch.");
+    const binary = {
+      path: canonical,
+      path_hash: hashEvidenceValue(canonical),
+      version: expectedVersion,
+      sha256: beforeHash,
+      mode: modeString(fdBefore),
+    };
+    return {
+      binary,
+      async verify() {
+        const [canonicalAfter, parentAfter, pathAfter, fdAfter, afterHash] = await Promise.all([
+          realpath(binaryPath), stat(parent), stat(canonical), fileHandle.stat(), hashFileHandle(fileHandle),
+        ]);
+        if (changed || canonicalAfter !== canonical
+          || fileIdentity(parentBefore) !== fileIdentity(parentAfter)
+          || !sameDeviceAndInode(pathAfter, fdAfter)
+          || !sameDeviceAndInode(fdBefore, fdAfter)
+          || fileIdentity(fdBefore) !== fileIdentity(fdAfter)
+          || beforeHash !== afterHash) throw new Error("Binary identity changed during snapshot.");
+      },
+      async close() {
+        for (const watcher of watchers) watcher.close();
+        await fileHandle.close();
+      },
+    };
+  } catch (error) {
+    for (const watcher of watchers) watcher.close();
+    if (fileHandle) await fileHandle.close();
+    throw error;
+  }
 }
 
 function parsePid(raw) { return Number(raw.match(/^\s*pid\s*=\s*([1-9][0-9]*)\s*$/mu)?.[1] ?? 0); }
 function parseRunningExecutable(raw) {
   return raw.split(/\r?\n/u).find((line) => line.startsWith("n/"))?.slice(1) ?? null;
 }
-function splitCommand(raw) {
-  const values = String(raw ?? "").trim().match(/(?:[^\s"']+|"[^"]*"|'[^']*')+/gu) ?? [];
-  return values.map((value) => value.replace(/^(?:"(.*)"|'(.*)')$/u, "$1$2"));
+export function parseKernProcArgs2(raw) {
+  if (!Buffer.isBuffer(raw) || raw.length < 8 || raw.length > MAX_COMMAND_OUTPUT_BYTES) {
+    return { success: false, arguments: [] };
+  }
+  const argc = raw.readInt32LE(0);
+  if (!Number.isInteger(argc) || argc < 1 || argc > 256) return { success: false, arguments: [] };
+  let cursor = raw.indexOf(0, 4);
+  if (cursor < 5) return { success: false, arguments: [] };
+  cursor += 1;
+  while (cursor < raw.length && raw[cursor] === 0) cursor += 1;
+  const decoder = new TextDecoder("utf-8", { fatal: true });
+  const args = [];
+  try {
+    for (let index = 0; index < argc; index += 1) {
+      const terminator = raw.indexOf(0, cursor);
+      if (terminator < cursor) return { success: false, arguments: [] };
+      args.push(decoder.decode(raw.subarray(cursor, terminator)));
+      cursor = terminator + 1;
+    }
+  } catch { return { success: false, arguments: [] }; }
+  return { success: args.length === argc && args[0].length > 0, arguments: args };
 }
 function parseMetricsPort(raw, requested) {
   const ports = [...String(raw ?? "").matchAll(/n127\.0\.0\.1:(2024[1-5])/gu)].map((match) => Number(match[1]));
@@ -304,33 +385,47 @@ function parseMetricsPort(raw, requested) {
   return ports.length === 1 ? ports[0] : null;
 }
 
-async function collectRuntime(pid, expectedCandidate, configuredArgs, runner) {
+async function unavailableRuntimeArgvReader() {
+  return { exit_code: 1, stdout: Buffer.alloc(0), stderr: "", timed_out: false,
+    output_overflow: false, command_missing: true };
+}
+
+async function collectRuntime(pid, expectedCandidate, configuredArgs, configuredParsed, runner,
+  readRuntimeArgv = unavailableRuntimeArgvReader) {
   if (!Number.isInteger(pid) || pid <= 0) throw new Error("PID unavailable.");
   const executableResult = await runNormalized(runner, invocation(SYSTEM_TOOLS.lsof,
     ["-a", `-p${pid}`, "-d", "txt", "-Fn"]));
+  if (!resultPassed(executableResult, { stdoutRequired: true })) {
+    throw new Error("Runtime executable unavailable.");
+  }
   const executablePath = parseRunningExecutable(executableResult.stdout);
-  if (executableResult.exit_code !== 0 || !executablePath) throw new Error("Runtime executable unavailable.");
+  if (!executablePath) throw new Error("Runtime executable unavailable.");
   const canonical = await realpath(executablePath); const stats = await stat(canonical);
   if (!isSafeOwnedFile(stats, { executable: true })) throw new Error("Runtime executable untrusted.");
   const sha256 = await hashFile(canonical);
-  const psResult = await runNormalized(runner, invocation(SYSTEM_TOOLS.ps,
-    ["-ww", "-p", String(pid), "-o", "command="]));
-  const runtimeCommand = splitCommand(psResult.stdout);
-  if (psResult.exit_code !== 0 || runtimeCommand.length < 2) throw new Error("Runtime arguments unavailable.");
-  const runtimeArgs = runtimeCommand.slice(1);
-  const runtimeArgumentsHash = hashArgumentVector(runtimeArgs);
+  let argvResult;
+  try { argvResult = await readRuntimeArgv(pid, { max_bytes: MAX_COMMAND_OUTPUT_BYTES }); }
+  catch { argvResult = await unavailableRuntimeArgvReader(); }
+  if (!resultPassed(argvResult, { stdoutRequired: true }) || !Buffer.isBuffer(argvResult.stdout)) {
+    throw new Error("Runtime arguments unavailable.");
+  }
+  const parsedRuntime = parseKernProcArgs2(argvResult.stdout);
+  const runtimeParsed = parseCloudflaredArguments(parsedRuntime.arguments);
+  if (!parsedRuntime.success || !runtimeParsed.success) throw new Error("Runtime arguments malformed.");
+  const runtimeArgumentsHash = hashArgumentVector(parsedRuntime.arguments.slice(1));
   const configuredArgumentsHash = hashArgumentVector(configuredArgs.slice(1));
   if (canonical !== expectedCandidate.path || sha256 !== expectedCandidate.sha256
-    || runtimeArgumentsHash !== configuredArgumentsHash) {
+    || runtimeArgumentsHash !== configuredArgumentsHash
+    || JSON.stringify(parsedRuntime.arguments) !== JSON.stringify(configuredArgs)) {
     throw new Error("Runtime identity mismatch.");
   }
   const listeners = await runNormalized(runner, invocation(SYSTEM_TOOLS.lsof,
     ["-a", `-p${pid}`, "-iTCP", "-sTCP:LISTEN", "-Pan", "-Fn"]));
-  const metricsPort = listeners.exit_code === 0
-    ? parseMetricsPort(listeners.stdout, extractManagedPaths(runtimeArgs).metrics) : null;
+  const metricsPort = resultPassed(listeners, { stdoutRequired: true })
+    ? parseMetricsPort(listeners.stdout, configuredParsed.metrics) : null;
   if (!metricsPort) throw new Error("Metrics endpoint unavailable.");
   const metricsResult = await runAllowedPreflightCommand(runner, metricsInvocation(metricsPort));
-  const metrics = metricsResult.exit_code === 0 && !metricsResult.timed_out && !metricsResult.output_overflow
+  const metrics = resultPassed(metricsResult, { stdoutRequired: true })
     ? parseTunnelMetrics(metricsResult.stdout) : { success: false, version: null,
       active_connections: null, active_edge_locations: null };
   if (!metrics.success || metrics.version !== expectedCandidate.version) {
@@ -348,8 +443,11 @@ async function collectRuntime(pid, expectedCandidate, configuredArgs, runner) {
 
 async function collectSnapshot(options, runner, {
   readTextFile = readFile,
+  readRuntimeArgv = unavailableRuntimeArgvReader,
   trustedBinaryRoots = DEFAULT_TRUSTED_BINARY_ROOTS,
   trustedPlistPaths = [DEFAULT_PLIST],
+  openFile = open,
+  watchPath = watch,
 } = {}) {
   const plistPath = await realpath(options.plist_path);
   if (!await isExactTrustedPath(plistPath, trustedPlistPaths)) throw new Error("Untrusted plist path.");
@@ -366,7 +464,7 @@ async function collectSnapshot(options, runner, {
     || plistHash !== options.expected_plist_sha256) throw new Error("Plist identity or hash mismatch.");
   const plistResult = await runNormalized(runner, invocation(SYSTEM_TOOLS.plutil,
     ["-convert", "json", "-o", "-", "-"], DEFAULT_TIMEOUT_MS, { input: plistBytes }));
-  if (plistResult.exit_code !== 0 || plistResult.timed_out) throw new Error("Plist parsing failed.");
+  if (!resultPassed(plistResult, { stdoutRequired: true })) throw new Error("Plist parsing failed.");
   let plist; try { plist = JSON.parse(plistResult.stdout); } catch { throw new Error("Malformed plist."); }
   const args = Array.isArray(plist?.ProgramArguments)
     && plist.ProgramArguments.every((value) => typeof value === "string")
@@ -375,44 +473,55 @@ async function collectSnapshot(options, runner, {
   if (plist.Label !== LAUNCH_AGENT_LABEL || args.length === 0 || configuredBinary !== args[0]) {
     throw new Error("Unexpected launch agent configuration.");
   }
-  const candidate = await inspectTrustedBinary(
+  const parsedArguments = parseCloudflaredArguments(args);
+  if (!parsedArguments.success || parsedArguments.metrics === null) {
+    throw new Error("Invalid cloudflared arguments.");
+  }
+  const candidateLease = await inspectTrustedBinary(
     configuredBinary,
     options.expected_binary_sha256,
     options.expected_binary_version,
     trustedBinaryRoots,
+    { openFile, watchPath },
   );
-  candidate.arguments_sha256 = hashArgumentVector(args.slice(1));
-  const launchctl = await runNormalized(runner, invocation(SYSTEM_TOOLS.launchctl,
-    ["print", `gui/${process.getuid()}/${LAUNCH_AGENT_LABEL}`]));
-  const launchd = launchctl.exit_code === 0 ? parseLaunchctlPrint(launchctl.stdout)
-    : { loaded: false, state: "unavailable" };
-  const pid = parsePid(launchctl.stdout);
-  const runtime = await collectRuntime(pid, candidate, args, runner);
-  const managedPaths = extractManagedPaths(args);
-  const initialManagement = classifyManagementMode(args);
-  const inspectLocal = initialManagement.mode !== "remotely-managed";
-  const configStats = inspectLocal && managedPaths.config ? await safeStat(managedPaths.config) : null;
-  const configExists = configStats?.isFile() === true && isSafeOwnedFile(configStats);
-  const configContents = configExists ? await readTextFile(managedPaths.config, "utf8") : "";
-  const localIngressConfig = configExists && isClearLocalIngressConfig(configContents);
-  const management = initialManagement.mode === "remotely-managed" ? initialManagement
-    : classifyManagementMode(args, { config_exists: configExists, local_ingress_config: localIngressConfig });
-  const token = await inspectTokenFile(managedPaths.token_file);
-  return {
-    snapshot: {
-      complete: launchd.loaded && launchd.state === "running" && runtime.metrics.success,
-      plist: { path_hash: hashEvidenceValue(plistPath), sha256: plistHash, mode: modeString(plistBefore) },
-      candidate_binary: candidate, running_binary: runtime.binary,
-      token_file_path_hash: token.path_hash, token_file_mode: token.mode,
-      launchd_state: launchd.state, tunnel_state: runtime.metrics.success ? "connected" : "unavailable",
-      tunnel: { active_connections: runtime.metrics.active_connections,
-        active_edge_locations: runtime.metrics.active_edge_locations, replica_state: "healthy" },
-      stable_metadata_sha256: hashEvidenceValue(JSON.stringify(options.stable_release)),
-    },
-    management, tokenSafe: token.safe && !managedPaths.inline_token_present,
-    configPath: managedPaths.config, configExists, localIngressConfig,
-    candidate,
-  };
+  try {
+    const candidate = candidateLease.binary;
+    candidate.arguments_sha256 = hashArgumentVector(args.slice(1));
+    const launchctl = await runNormalized(runner, invocation(SYSTEM_TOOLS.launchctl,
+      ["print", `gui/${process.getuid()}/${LAUNCH_AGENT_LABEL}`]));
+    if (!resultPassed(launchctl, { stdoutRequired: true })) throw new Error("Launchd state unavailable.");
+    const launchd = parseLaunchctlPrint(launchctl.stdout);
+    const pid = parsePid(launchctl.stdout);
+    const runtime = await collectRuntime(pid, candidate, args, parsedArguments, runner, readRuntimeArgv);
+    const inspectLocal = parsedArguments.mode === "locally-managed";
+    const configStats = inspectLocal && parsedArguments.config
+      ? await safeStat(parsedArguments.config) : null;
+    const configExists = configStats?.isFile() === true && isSafeOwnedFile(configStats);
+    const configContents = configExists ? await readTextFile(parsedArguments.config, "utf8") : "";
+    const localIngressConfig = configExists && isClearLocalIngressConfig(configContents);
+    const management = parsedArguments.mode === "remotely-managed"
+      ? { mode: "remotely-managed", success: true, config_required: false }
+      : parsedArguments.mode === "locally-managed"
+        ? { mode: "locally-managed", success: configExists && localIngressConfig, config_required: true }
+        : { mode: "unknown", success: false, config_required: false };
+    const token = await inspectTokenFile(parsedArguments.token_file);
+    await candidateLease.verify();
+    return {
+      snapshot: {
+        complete: launchd.loaded && launchd.state === "running" && runtime.metrics.success,
+        plist: { path_hash: hashEvidenceValue(plistPath), sha256: plistHash, mode: modeString(plistBefore) },
+        candidate_binary: candidate, running_binary: runtime.binary,
+        token_file_path_hash: token.path_hash, token_file_mode: token.mode,
+        launchd_state: launchd.state, tunnel_state: runtime.metrics.success ? "connected" : "unavailable",
+        tunnel: { active_connections: runtime.metrics.active_connections,
+          active_edge_locations: runtime.metrics.active_edge_locations, replica_state: "healthy" },
+        stable_metadata_sha256: hashEvidenceValue(JSON.stringify(options.stable_release)),
+      },
+      management, tokenSafe: token.safe && !parsedArguments.inline_token_present,
+      configPath: parsedArguments.config, configExists, localIngressConfig,
+      candidate,
+    };
+  } finally { await candidateLease.close(); }
 }
 
 function incompleteSnapshot(stableRelease) {
@@ -451,13 +560,13 @@ async function dnsCheck(runner, now) {
   for (const candidate of CHECK_INVOCATIONS.dns) {
     const hostname = candidate.args[2]; const family = candidate.args[1] === "A" ? "ipv4" : "ipv6";
     const targetStarted = now(); const result = await runAllowedPreflightCommand(runner, candidate);
-    const parsed = result.exit_code === 0 ? parseDnsOutput(result.stdout,
+    const resultReady = resultPassed(result, { stdoutRequired: true });
+    const parsed = resultReady ? parseDnsOutput(result.stdout,
       { hostname, address_family: family }) : { success: false, addresses: [] };
-    const success = result.exit_code === 0 && !result.timed_out && !result.output_overflow
-      && !result.command_missing && parsed.success;
+    const success = resultReady && parsed.success;
     targets.push({ hostname, address_family: family, protocol: "dns", port: 53, attempted: true,
       success, latency_ms: Math.max(0, now() - targetStarted),
-      error: success ? null : failureCode([result], { malformed: result.exit_code === 0 && !parsed.success }) });
+      error: success ? null : failureCode([result], { malformed: resultReady && !parsed.success }) });
     for (const address of parsed.addresses ?? []) verified.push({ hostname, family, address });
   }
   const success = targets.every((target) => target.success);
@@ -470,7 +579,7 @@ async function tcpCheck(runner, verified, now) {
   for (const endpoint of verified) {
     const targetStarted = now(); const result = await runAllowedPreflightCommand(runner,
       createTcpInvocation(endpoint.hostname, endpoint.family, endpoint.address));
-    const success = result.exit_code === 0 && !result.timed_out && !result.output_overflow && !result.command_missing;
+    const success = resultPassed(result);
     targets.push({ hostname: endpoint.hostname, address_family: endpoint.family, protocol: "tcp", port: 7844,
       attempted: true, success, latency_ms: Math.max(0, now() - targetStarted),
       error: success ? null : failureCode([result]) });
@@ -496,6 +605,33 @@ function quicTargetKey(target) {
   ]);
 }
 
+const QUIC_AGGREGATE_FIELDS = Object.freeze(["attempted", "success", "latency_ms", "error", "targets"]);
+const QUIC_TARGET_FIELDS = Object.freeze([
+  "hostname", "address_family", "address", "protocol", "port",
+  "attempted", "success", "latency_ms", "error",
+]);
+const QUIC_FAILURE_CODES = new Set([
+  "CHECK_FAILED", "TIMEOUT", "OUTPUT_LIMIT", "COMMAND_MISSING", "MALFORMED_OUTPUT",
+]);
+
+function hasExactOwnFields(value, fields) {
+  return value !== null && typeof value === "object" && !Array.isArray(value)
+    && fields.every((field) => Object.hasOwn(value, field))
+    && Object.keys(value).length === fields.length;
+}
+
+function validQuicError(success, error) {
+  return success ? error === null : typeof error === "string" && QUIC_FAILURE_CODES.has(error);
+}
+
+function validQuicTargetShape(target) {
+  return hasExactOwnFields(target, QUIC_TARGET_FIELDS)
+    && typeof target.attempted === "boolean"
+    && typeof target.success === "boolean"
+    && Number.isFinite(target.latency_ms) && target.latency_ms >= 0
+    && validQuicError(target.success, target.error);
+}
+
 async function runValidatedQuicProbe(probe, verifiedEndpoints, now) {
   let supplied;
   try {
@@ -511,7 +647,13 @@ async function runValidatedQuicProbe(probe, verifiedEndpoints, now) {
     protocol: "quic",
     port: 7844,
   }));
-  const suppliedTargets = Array.isArray(supplied?.targets) ? supplied.targets : [];
+  const aggregateShapeValid = hasExactOwnFields(supplied, QUIC_AGGREGATE_FIELDS)
+    && typeof supplied.attempted === "boolean"
+    && typeof supplied.success === "boolean"
+    && Number.isFinite(supplied.latency_ms) && supplied.latency_ms >= 0
+    && validQuicError(supplied.success, supplied.error)
+    && Array.isArray(supplied.targets);
+  const suppliedTargets = aggregateShapeValid ? supplied.targets : [];
   const expectedKeys = new Set(expectedTargets.map(quicTargetKey));
   const suppliedKeys = suppliedTargets.map(quicTargetKey);
   const suppliedKeySet = new Set(suppliedKeys);
@@ -519,14 +661,12 @@ async function runValidatedQuicProbe(probe, verifiedEndpoints, now) {
     && suppliedTargets.length === expectedTargets.length
     && suppliedKeySet.size === suppliedTargets.length
     && suppliedKeys.every((key) => key !== null && expectedKeys.has(key))
-    && suppliedTargets.every((target) => target?.attempted === true
+    && suppliedTargets.every((target) => validQuicTargetShape(target)
+      && target.attempted === true
       && target?.success === true
-      && Number.isFinite(target?.latency_ms)
-      && target.latency_ms >= 0
-      && (target.error === null || target.error === undefined));
-  if (supplied?.attempted !== true || supplied?.success !== true
-    || !Number.isFinite(supplied?.latency_ms) || supplied.latency_ms < 0
-    || (supplied.error !== null && supplied.error !== undefined) || !targetsMatch) {
+      && target.error === null);
+  if (!aggregateShapeValid || supplied.attempted !== true || supplied.success !== true
+    || supplied.error !== null || !targetsMatch) {
     return {
       attempted: supplied?.attempted === true,
       success: false,
@@ -556,7 +696,7 @@ async function runValidatedQuicProbe(probe, verifiedEndpoints, now) {
 async function managementCheck(runner, now) {
   const started = now(); const result = await runAllowedPreflightCommand(runner,
     CHECK_INVOCATIONS.management_api_https[0]);
-  const success = result.exit_code === 0 && !result.timed_out && !result.output_overflow && !result.command_missing;
+  const success = resultPassed(result);
   const target = { hostname: "api.cloudflare.com", address_family: "n/a", protocol: "https", port: 443,
     attempted: true, success, latency_ms: Math.max(0, now() - started), error: success ? null : failureCode([result]) };
   return { attempted: true, success, latency_ms: target.latency_ms, error: target.error, targets: [target] };
@@ -568,8 +708,11 @@ export async function collectCloudflareTunnelPreflight(options, dependencies = {
   let state;
   try { state = await collectSnapshot(options, runner, {
     readTextFile: dependencies.readTextFile,
+    readRuntimeArgv: dependencies.runtimeArgvReader,
     trustedBinaryRoots: dependencies.trustedBinaryRoots,
     trustedPlistPaths: dependencies.trustedPlistPaths,
+    openFile: dependencies.openFile,
+    watchPath: dependencies.watchPath,
   }); }
   catch { state = { snapshot: incompleteSnapshot(options.stable_release), management: { mode: "unknown", success: false },
     tokenSafe: false, configPath: null, configExists: false, localIngressConfig: false, candidate: null }; }
@@ -656,8 +799,11 @@ export async function runPreflightCli(argv, dependencies = {}) {
       platform, stable_release: { version: options.stable_version, verified_at: options.stable_verified_at,
         platform: options.stable_platform } }, { runner: dependencies.runner ?? defaultRunner,
       quicProbe: dependencies.quicProbe,
+      runtimeArgvReader: dependencies.runtimeArgvReader,
       trustedBinaryRoots: dependencies.trustedBinaryRoots,
-      trustedPlistPaths: dependencies.trustedPlistPaths });
+      trustedPlistPaths: dependencies.trustedPlistPaths,
+      openFile: dependencies.openFile,
+      watchPath: dependencies.watchPath });
     await writeEvidence(options.output, evidence);
     stdout(`${JSON.stringify({ schema: evidence.schema, version: evidence.version, success: evidence.success,
       evidence_written: true })}\n`);

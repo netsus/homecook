@@ -11,6 +11,19 @@ const CHECK_NAMES = Object.freeze([
   "tunnel_connections", "dns", "udp_7844", "tcp_7844",
   "management_api_https", "update_gate",
 ]);
+const SENSITIVE_FLAGS = Object.freeze(["--token-file", "--token", "--config", "--metrics"]);
+const CHECK_ERROR_CODES = Object.freeze({
+  snapshot: new Set(["SNAPSHOT_INCOMPLETE"]),
+  management_mode: new Set(["MANAGEMENT_MODE_UNKNOWN"]),
+  token_path_mode: new Set(["TOKEN_PATH_MODE_UNSAFE"]),
+  config: new Set(["CONFIG_MISSING", "CONFIG_VALIDATOR_UNAVAILABLE"]),
+  tunnel_connections: new Set(["CONNECTION_STATE_UNAVAILABLE"]),
+  dns: new Set(["TIMEOUT", "OUTPUT_LIMIT", "COMMAND_MISSING", "MALFORMED_OUTPUT"]),
+  udp_7844: new Set(["QUIC_PROBE_UNAVAILABLE", "QUIC_PROBE_FAILED", "QUIC_TARGET_MISMATCH"]),
+  tcp_7844: new Set(["TIMEOUT", "OUTPUT_LIMIT", "COMMAND_MISSING", "DNS_REQUIRED"]),
+  management_api_https: new Set(["TIMEOUT", "OUTPUT_LIMIT", "COMMAND_MISSING"]),
+  update_gate: new Set(["UNKNOWN", "STALE_METADATA", "OUTDATED", "UNSUPPORTED"]),
+});
 
 export const CLOUDFLARE_TUNNEL_ENDPOINTS = Object.freeze({
   "region1.v2.argotunnel.com": Object.freeze({
@@ -31,27 +44,64 @@ export const CLOUDFLARE_TUNNEL_ENDPOINTS = Object.freeze({
   }),
 });
 
-function findFlagValue(args, flag) {
-  for (let index = 0; index < args.length; index += 1) {
-    if (args[index] === flag) return typeof args[index + 1] === "string" ? args[index + 1] : null;
-    if (args[index]?.startsWith(`${flag}=`)) return args[index].slice(flag.length + 1) || null;
+export function parseCloudflaredArguments(args) {
+  if (!Array.isArray(args) || !args.every((argument) => typeof argument === "string")) {
+    return { success: false, mode: "unknown", token_file: null, token: null,
+      config: null, metrics: null, inline_token_present: false };
   }
-  return null;
-}
-
-function hasFlag(args, flag) {
-  return args.some((argument) => argument === flag || argument.startsWith(`${flag}=`));
+  const values = Object.fromEntries(SENSITIVE_FLAGS.map((flag) => [flag, []]));
+  let malformed = false;
+  for (let index = 0; index < args.length; index += 1) {
+    const argument = args[index];
+    const exactFlag = SENSITIVE_FLAGS.find((flag) => argument === flag);
+    const equalsFlag = SENSITIVE_FLAGS.find((flag) => argument.startsWith(`${flag}=`));
+    if (exactFlag) {
+      const value = args[index + 1];
+      if (typeof value !== "string" || value.length === 0 || value.startsWith("--")) {
+        malformed = true;
+      } else {
+        values[exactFlag].push(value);
+        index += 1;
+      }
+    } else if (equalsFlag) {
+      const value = argument.slice(equalsFlag.length + 1);
+      if (value.length === 0) malformed = true;
+      else values[equalsFlag].push(value);
+    }
+  }
+  if (SENSITIVE_FLAGS.some((flag) => values[flag].length > 1)) malformed = true;
+  const tokenFile = values["--token-file"][0] ?? null;
+  const token = values["--token"][0] ?? null;
+  const config = values["--config"][0] ?? null;
+  const metrics = values["--metrics"][0] ?? null;
+  if (tokenFile !== null && !tokenFile.startsWith("/")) malformed = true;
+  if (config !== null && !config.startsWith("/")) malformed = true;
+  if (metrics !== null && !/^127\.0\.0\.1:2024[1-5]$/u.test(metrics)) malformed = true;
+  const managementCount = Number(tokenFile !== null) + Number(token !== null) + Number(config !== null);
+  if (managementCount > 1) malformed = true;
+  const mode = malformed ? "unknown" : tokenFile !== null || token !== null
+    ? "remotely-managed" : config !== null ? "locally-managed" : "unknown";
+  return {
+    success: !malformed,
+    mode,
+    token_file: tokenFile,
+    token,
+    config,
+    metrics,
+    inline_token_present: token !== null,
+  };
 }
 
 export function classifyManagementMode(args, {
   config_exists: configExists = false,
   local_ingress_config: localIngressConfig = false,
 } = {}) {
-  const normalizedArgs = Array.isArray(args) ? args.filter((item) => typeof item === "string") : [];
-  if (hasFlag(normalizedArgs, "--token-file") || hasFlag(normalizedArgs, "--token")) {
+  const parsed = parseCloudflaredArguments(args);
+  if (!parsed.success) return { mode: "unknown", success: false, config_required: false };
+  if (parsed.mode === "remotely-managed") {
     return { mode: "remotely-managed", success: true, config_required: false };
   }
-  if (hasFlag(normalizedArgs, "--config")) {
+  if (parsed.mode === "locally-managed") {
     return {
       mode: "locally-managed",
       success: configExists === true && localIngressConfig === true,
@@ -62,12 +112,13 @@ export function classifyManagementMode(args, {
 }
 
 export function extractManagedPaths(args) {
-  const normalizedArgs = Array.isArray(args) ? args : [];
+  const parsed = parseCloudflaredArguments(args);
   return {
-    token_file: findFlagValue(normalizedArgs, "--token-file"),
-    config: findFlagValue(normalizedArgs, "--config"),
-    metrics: findFlagValue(normalizedArgs, "--metrics"),
-    inline_token_present: hasFlag(normalizedArgs, "--token"),
+    token_file: parsed.success ? parsed.token_file : null,
+    config: parsed.success ? parsed.config : null,
+    metrics: parsed.success ? parsed.metrics : null,
+    inline_token_present: parsed.inline_token_present,
+    success: parsed.success,
   };
 }
 
@@ -187,42 +238,46 @@ export function hashEvidenceValue(value) {
   return `sha256:${createHash("sha256").update(String(value), "utf8").digest("hex")}`;
 }
 
-function normalizeError(value) {
-  return typeof value === "string" && /^[A-Z][A-Z0-9_]{1,63}$/u.test(value)
-    ? value : value === null || value === undefined ? null : "CHECK_FAILED";
+function normalizeError(value, checkName) {
+  if (value === null || value === undefined) return null;
+  return CHECK_ERROR_CODES[checkName]?.has(value) ? value : "CHECK_FAILED";
 }
 
 function normalizeLatency(value) {
   return Number.isFinite(value) && value >= 0 ? Math.round(value * 1_000) / 1_000 : null;
 }
 
-function normalizeTargets(targets) {
+function normalizeTargets(targets, checkName) {
   if (!Array.isArray(targets)) return [];
-  return targets.map((target) => ({
-    hostname: [
-      ...Object.keys(CLOUDFLARE_TUNNEL_ENDPOINTS),
-      "api.cloudflare.com",
-      "loopback",
-    ].includes(target?.hostname) ? target.hostname : "unknown",
-    address_family: ["ipv4", "ipv6", "n/a"].includes(target?.address_family)
-      ? target.address_family : "n/a",
-    protocol: ["dns", "quic", "tcp", "https", "metrics"].includes(target?.protocol)
-      ? target.protocol : "unknown",
-    port: Number.isInteger(target?.port) && target.port > 0 ? target.port : null,
-    attempted: target?.attempted === true,
-    success: target?.success === true,
-    latency_ms: normalizeLatency(target?.latency_ms),
-    error: normalizeError(target?.error),
-  }));
+  return targets.map((target) => {
+    const error = normalizeError(target?.error, checkName);
+    return {
+      hostname: [
+        ...Object.keys(CLOUDFLARE_TUNNEL_ENDPOINTS),
+        "api.cloudflare.com",
+        "loopback",
+      ].includes(target?.hostname) ? target.hostname : "unknown",
+      address_family: ["ipv4", "ipv6", "n/a"].includes(target?.address_family)
+        ? target.address_family : "n/a",
+      protocol: ["dns", "quic", "tcp", "https", "metrics"].includes(target?.protocol)
+        ? target.protocol : "unknown",
+      port: Number.isInteger(target?.port) && target.port > 0 ? target.port : null,
+      attempted: target?.attempted === true,
+      success: target?.success === true && error === null,
+      latency_ms: normalizeLatency(target?.latency_ms),
+      error,
+    };
+  });
 }
 
-function normalizeCheck(value = {}) {
+function normalizeCheck(value = {}, checkName) {
+  const error = normalizeError(value.error, checkName);
   return {
     attempted: value.attempted === true,
-    success: value.success === true,
+    success: value.success === true && error === null,
     latency_ms: normalizeLatency(value.latency_ms),
-    error: normalizeError(value.error),
-    targets: normalizeTargets(value.targets),
+    error,
+    targets: normalizeTargets(value.targets, checkName),
   };
 }
 
@@ -314,20 +369,20 @@ export function buildPreflightEvidence({
   const isSnapshotComplete = snapshotComplete(snapshot, { tokenRequired });
   const checks = {
     snapshot: normalizeCheck({ attempted: true, success: isSnapshotComplete, latency_ms: 0,
-      error: isSnapshotComplete ? null : "SNAPSHOT_INCOMPLETE" }),
+      error: isSnapshotComplete ? null : "SNAPSHOT_INCOMPLETE" }, "snapshot"),
     management_mode: normalizeCheck({ attempted: true, success: managementModeSuccess,
-      latency_ms: 0, error: managementModeSuccess ? null : "MANAGEMENT_MODE_UNKNOWN" }),
+      latency_ms: 0, error: managementModeSuccess ? null : "MANAGEMENT_MODE_UNKNOWN" }, "management_mode"),
     token_path_mode: normalizeCheck({ attempted: tokenRequired,
       success: tokenRequired ? tokenPathModeSafe : true,
       latency_ms: tokenRequired ? 0 : null,
-      error: tokenRequired && !tokenPathModeSafe ? "TOKEN_PATH_MODE_UNSAFE" : null }),
-    config: normalizeCheck(suppliedChecks.config),
-    tunnel_connections: normalizeCheck(suppliedChecks.tunnel_connections),
-    dns: normalizeCheck(suppliedChecks.dns),
-    udp_7844: normalizeCheck(suppliedChecks.udp_7844),
-    tcp_7844: normalizeCheck(suppliedChecks.tcp_7844),
-    management_api_https: normalizeCheck(suppliedChecks.management_api_https),
-    update_gate: normalizeCheck(suppliedChecks.update_gate),
+      error: tokenRequired && !tokenPathModeSafe ? "TOKEN_PATH_MODE_UNSAFE" : null }, "token_path_mode"),
+    config: normalizeCheck(suppliedChecks.config, "config"),
+    tunnel_connections: normalizeCheck(suppliedChecks.tunnel_connections, "tunnel_connections"),
+    dns: normalizeCheck(suppliedChecks.dns, "dns"),
+    udp_7844: normalizeCheck(suppliedChecks.udp_7844, "udp_7844"),
+    tcp_7844: normalizeCheck(suppliedChecks.tcp_7844, "tcp_7844"),
+    management_api_https: normalizeCheck(suppliedChecks.management_api_https, "management_api_https"),
+    update_gate: normalizeCheck(suppliedChecks.update_gate, "update_gate"),
   };
   const allChecksPass = CHECK_NAMES.every((name) => {
     const check = checks[name];

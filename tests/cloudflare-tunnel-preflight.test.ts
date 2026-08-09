@@ -10,6 +10,7 @@ import {
   buildPreflightEvidence,
   classifyManagementMode,
   evaluateReleaseGate,
+  parseCloudflaredArguments,
   parseDnsOutput,
   redactArguments,
 } from "../scripts/lib/cloudflare-tunnel-preflight.mjs";
@@ -18,6 +19,7 @@ import {
   collectCloudflareTunnelPreflight,
   createTcpInvocation,
   createPreflightRunner,
+  parseKernProcArgs2,
   runAllowedPreflightCommand,
   runPreflightCli,
   writePreflightEvidence,
@@ -49,6 +51,16 @@ type QuicTarget = {
   latency_ms: number | null;
   error: string | null;
 };
+type MutableQuicTarget = Partial<Omit<QuicTarget, "error">> & {
+  error?: unknown;
+} & Record<string, unknown>;
+type MutableQuicProbe = {
+  attempted?: unknown;
+  success?: unknown;
+  latency_ms?: unknown;
+  error?: unknown;
+  targets: MutableQuicTarget[];
+} & Record<string, unknown>;
 
 async function privateRoot() {
   const root = await mkdtemp(path.join(tmpdir(), "homecook-cloudflare-preflight-"));
@@ -57,7 +69,7 @@ async function privateRoot() {
   return root;
 }
 
-function successResult(stdout = "") {
+function successResult(stdout: string | Buffer = "") {
   return { exit_code: 0, stdout, stderr: "", timed_out: false };
 }
 
@@ -128,6 +140,21 @@ function matchingQuicProbe({ verified_endpoints: endpoints }: { verified_endpoin
 
 const successfulQuicProbe = matchingQuicProbe;
 
+function kernProcArgs2Buffer(args: string[]) {
+  const argc = Buffer.alloc(4);
+  argc.writeInt32LE(args.length, 0);
+  return Buffer.concat([
+    argc,
+    Buffer.from(args[0] ?? "", "utf8"),
+    Buffer.from([0, 0]),
+    ...args.map((argument) => Buffer.concat([Buffer.from(argument, "utf8"), Buffer.from([0])])),
+  ]);
+}
+
+function runtimeArgvReader(args: string[]) {
+  return vi.fn(async () => successResult(kernProcArgs2Buffer(args)));
+}
+
 afterEach(async () => {
   vi.restoreAllMocks();
   await Promise.all(createdRoots.splice(0).map((root) => rm(root, {
@@ -137,7 +164,7 @@ afterEach(async () => {
 });
 
 describe("management mode and release gate", () => {
-  it("treats token-file execution as remotely-managed even when config is present", () => {
+  it("rejects conflicting remote and local management flags", () => {
     expect(classifyManagementMode([
       "tunnel",
       "--config",
@@ -145,11 +172,49 @@ describe("management mode and release gate", () => {
       "run",
       "--token-file",
       "/private/token",
-    ], { config_exists: true, local_ingress_config: true })).toEqual({
-      mode: "remotely-managed",
-      success: true,
-      config_required: false,
+    ], { config_exists: true, local_ingress_config: true })).toMatchObject({
+      mode: "unknown",
+      success: false,
     });
+  });
+
+  it.each([
+    ["duplicate separate", ["--token-file", "/private/a", "--token-file", "/private/b"]],
+    ["mixed form", ["--token-file", "/private/a", "--token-file=/private/b"]],
+    ["missing value", ["--token-file"]],
+    ["empty equals", ["--token-file="]],
+    ["inline conflict", ["--token-file=/private/a", "--token=secret"]],
+    ["duplicate config", ["--config=/private/a", "--config", "/private/b"]],
+    ["duplicate metrics", ["--metrics=127.0.0.1:20241", "--metrics", "127.0.0.1:20242"]],
+  ])("fails closed for malformed or duplicate sensitive flags: %s", (_case, args) => {
+    expect(classifyManagementMode(["tunnel", "run", ...args], {
+      config_exists: true,
+      local_ingress_config: true,
+    })).toMatchObject({ mode: "unknown", success: false });
+  });
+
+  it("parses sensitive flags once while preserving spaces and literal quotes", () => {
+    expect(parseCloudflaredArguments([
+      "tunnel", "run", "--token-file", "/private/token with space", "--metrics=127.0.0.1:20241",
+    ])).toMatchObject({
+      success: true,
+      mode: "remotely-managed",
+      token_file: "/private/token with space",
+      metrics: "127.0.0.1:20241",
+    });
+    expect(parseCloudflaredArguments([
+      "tunnel", "run", "--token-file=/private/\"quoted\"", "--metrics", "127.0.0.1:20241",
+    ])).toMatchObject({ success: true, token_file: "/private/\"quoted\"" });
+  });
+
+  it.each([
+    ["empty separate", ["--token-file", ""]],
+    ["metrics with whitespace", ["--metrics", "127.0.0.1:20241 extra"]],
+    ["flag consumed as value", ["--token-file", "--metrics", "127.0.0.1:20241"]],
+    ["relative token path", ["--token-file", "relative-token"]],
+    ["relative config path", ["--config=relative.yml"]],
+  ])("rejects ambiguous sensitive flag values: %s", (_case, args) => {
+    expect(parseCloudflaredArguments(["tunnel", "run", ...args]).success).toBe(false);
   });
 
   it("accepts locally-managed only with an explicit local ingress config", () => {
@@ -234,6 +299,21 @@ describe("management mode and release gate", () => {
 });
 
 describe("pure parsing and evidence projection", () => {
+  it("preserves NUL-delimited argv boundaries including spaces, quotes, and empty arguments", () => {
+    const args = [
+      "/opt/cloudflared", "tunnel", "run", "--token-file", "/private/token with space",
+      "literal-\"quote\"", "",
+    ];
+    expect(parseKernProcArgs2(kernProcArgs2Buffer(args))).toEqual({ success: true, arguments: args });
+  });
+
+  it("rejects truncated, malformed, and oversized KERN_PROCARGS2 buffers", () => {
+    const valid = kernProcArgs2Buffer(["/opt/cloudflared", "tunnel", "run"]);
+    expect(parseKernProcArgs2(valid.subarray(0, valid.length - 1)).success).toBe(false);
+    expect(parseKernProcArgs2(Buffer.from([1, 0, 0, 0, 0])).success).toBe(false);
+    expect(parseKernProcArgs2(Buffer.alloc(65 * 1_024)).success).toBe(false);
+  });
+
   it("accepts only addresses assigned to the exact official endpoint family", () => {
     expect(parseDnsOutput("198.41.192.167\n", {
       hostname: "region1.v2.argotunnel.com",
@@ -459,6 +539,39 @@ describe("pure parsing and evidence projection", () => {
     );
     expect(evidence.platform).toBe("unknown");
   });
+
+  it("maps unknown check and target errors to a closed non-sensitive code", () => {
+    const checks = successfulChecks();
+    checks.dns = {
+      attempted: true,
+      success: false,
+      latency_ms: 1,
+      error: SECRET_MARKER,
+      targets: [{
+        hostname: "region1.v2.argotunnel.com",
+        address_family: "ipv4",
+        protocol: "dns",
+        port: 53,
+        attempted: true,
+        success: false,
+        latency_ms: 1,
+        error: "/Users/operator@example.test/2606:4700:a0::1",
+      }],
+    } as never;
+    const evidence = buildPreflightEvidence({
+      timestamp: "2026-08-09T13:00:00.000Z",
+      platform: TEST_PLATFORM,
+      management_mode: "remotely-managed",
+      management_mode_success: true,
+      snapshot: completeSnapshot(),
+      token_path_mode_safe: true,
+      checks,
+    });
+    const serialized = JSON.stringify(evidence);
+    expect(serialized).not.toMatch(/PHASE1_SECRET|\/Users\/|operator@|2606:4700:a0::1/u);
+    expect(evidence.checks.dns).toMatchObject({ success: false, error: "CHECK_FAILED" });
+    expect(evidence.checks.dns.targets[0]).toMatchObject({ success: false, error: "CHECK_FAILED" });
+  });
 });
 
 describe("bounded allowlisted process runner", () => {
@@ -635,12 +748,6 @@ describe("read-only collection and CLI", () => {
       if (command === SYSTEM_TOOLS.lsof && args.includes("-iTCP")) {
         return runtimeEvidence ? successResult("p123\nn127.0.0.1:20241\n") : failedResult();
       }
-      if (command === SYSTEM_TOOLS.ps) {
-        return runtimeEvidence ? successResult([
-          paths.binaryPath, "tunnel", "run", "--metrics", "127.0.0.1:20241",
-          "--token-file", paths.tokenPath,
-        ].join(" ")) : failedResult();
-      }
       if (command === SYSTEM_TOOLS.dig) {
         const hostname = args[2];
         if (args[1] === "A") {
@@ -663,44 +770,28 @@ describe("read-only collection and CLI", () => {
     return { runner, invocations };
   }
 
-  it("snapshots a remotely-managed tunnel without reading token-file contents or invoking diag", async () => {
-    const paths = await fixturePaths();
-    const base = happyRunner(paths);
-    const runner = vi.fn(async (invocation) => {
-      if (invocation.command === SYSTEM_TOOLS.plutil) {
-        return successResult(JSON.stringify({
-          Label: "com.homecook.cloudflare-tunnel",
-          Program: paths.binaryPath,
-          ProgramArguments: [
-            paths.binaryPath,
-            "tunnel",
-            "--config",
-            paths.tokenPath,
-            "run",
-            "--metrics",
-            "127.0.0.1:20241",
-            "--token-file",
-            paths.tokenPath,
-          ],
-        }));
-      }
-      if (invocation.command === SYSTEM_TOOLS.ps) {
-        return successResult([
-          paths.binaryPath, "tunnel", "--config", paths.tokenPath, "run",
-          "--metrics", "127.0.0.1:20241", "--token-file", paths.tokenPath,
-        ].join(" "));
-      }
-      return base.runner(invocation);
-    });
-    const readTextFile = vi.fn(async () => {
-      throw new Error("token-file content access forbidden");
-    });
-    const evidence = await collectCloudflareTunnelPreflight({
+  function remoteArguments(paths: Awaited<ReturnType<typeof fixturePaths>>) {
+    return [
+      paths.binaryPath,
+      "tunnel",
+      "run",
+      "--metrics",
+      "127.0.0.1:20241",
+      "--token-file",
+      paths.tokenPath,
+    ];
+  }
+
+  function noEventWatchPath() {
+    return { on: vi.fn(), close: vi.fn() };
+  }
+
+  function validCollectorOptions(paths: Awaited<ReturnType<typeof fixturePaths>>) {
+    return {
       plist_path: paths.plistPath,
       expected_plist_sha256: FIXTURE_PLIST_SHA256,
       expected_binary_sha256: FIXTURE_BINARY_SHA256,
       expected_binary_version: "2026.5.2",
-      output: path.join(paths.root, "evidence", "preflight.json"),
       stable_release: {
         version: "2026.5.2",
         verified_at: "2026-08-09T13:00:00.000Z",
@@ -708,12 +799,282 @@ describe("read-only collection and CLI", () => {
       },
       captured_at: "2026-08-09T13:01:00.000Z",
       platform: TEST_PLATFORM,
-    }, {
+    };
+  }
+
+  function validCollectorDependencies(paths: Awaited<ReturnType<typeof fixturePaths>>, runner: ReturnType<typeof vi.fn>) {
+    return {
       runner,
-      readTextFile,
       quicProbe: successfulQuicProbe,
+      runtimeArgvReader: runtimeArgvReader(remoteArguments(paths)),
       trustedBinaryRoots: [paths.root],
       trustedPlistPaths: [paths.plistPath],
+      watchPath: noEventWatchPath,
+    };
+  }
+
+  it("rejects distinct raw argv vectors that collapse to the same ps command string", async () => {
+    const paths = await fixturePaths();
+    const base = happyRunner(paths);
+    const configured = [...remoteArguments(paths), "suffix"];
+    const actual = [
+      paths.binaryPath, "tunnel", "run", "--metrics", "127.0.0.1:20241",
+      "--token-file", `${paths.tokenPath} suffix`,
+    ];
+    expect(configured.join(" ")).toBe(actual.join(" "));
+    const runner = vi.fn(async (candidate) => {
+      if (candidate.command === SYSTEM_TOOLS.plutil) {
+        return successResult(JSON.stringify({
+          Label: "com.homecook.cloudflare-tunnel",
+          Program: paths.binaryPath,
+          ProgramArguments: configured,
+        }));
+      }
+      return base.runner(candidate);
+    });
+    const evidence = await collectCloudflareTunnelPreflight(validCollectorOptions(paths), {
+      ...validCollectorDependencies(paths, runner),
+      runtimeArgvReader: runtimeArgvReader(actual),
+    });
+    expect(evidence.success).toBe(false);
+    expect(evidence.checks.snapshot.error).toBe("SNAPSHOT_INCOMPLETE");
+  });
+
+  it("rejects a later duplicate token-file instead of accepting the first value", async () => {
+    const paths = await fixturePaths();
+    const base = happyRunner(paths);
+    const configured = [...remoteArguments(paths), "--token-file", "/private/second-token"];
+    const runner = vi.fn(async (candidate) => {
+      if (candidate.command === SYSTEM_TOOLS.plutil) {
+        return successResult(JSON.stringify({
+          Label: "com.homecook.cloudflare-tunnel",
+          Program: paths.binaryPath,
+          ProgramArguments: configured,
+        }));
+      }
+      return base.runner(candidate);
+    });
+    const evidence = await collectCloudflareTunnelPreflight(validCollectorOptions(paths), {
+      ...validCollectorDependencies(paths, runner),
+      runtimeArgvReader: runtimeArgvReader(configured),
+    });
+    expect(evidence.success).toBe(false);
+    expect(evidence.checks.snapshot.error).toBe("SNAPSHOT_INCOMPLETE");
+  });
+
+  it.each(["replace-restore", "write-restore", "rename-away-back"])(
+    "fails when the candidate binary changes during the snapshot: %s",
+    async (mutation) => {
+      const paths = await fixturePaths();
+      const base = happyRunner(paths);
+      const backupPath = path.join(paths.root, "cloudflared.snapshot-backup");
+      const listeners: Array<() => void> = [];
+      const watchPath = vi.fn((_watchedPath, _options, listener) => {
+        listeners.push(listener);
+        return { close: vi.fn() };
+      });
+      const runner = vi.fn(async (candidate) => {
+        if (candidate.command === SYSTEM_TOOLS.launchctl) {
+          if (mutation === "write-restore") {
+            await writeFile(paths.binaryPath, "malicious-binary");
+            await writeFile(paths.binaryPath, "fake-cloudflared-binary");
+          } else {
+            await rename(paths.binaryPath, backupPath);
+            if (mutation === "replace-restore") {
+              await writeFile(paths.binaryPath, "malicious-binary", { mode: 0o700 });
+              await rm(paths.binaryPath);
+            }
+            await rename(backupPath, paths.binaryPath);
+          }
+          if (mutation !== "write-restore") listeners.forEach((listener) => listener());
+        }
+        return base.runner(candidate);
+      });
+      const evidence = await collectCloudflareTunnelPreflight(validCollectorOptions(paths), {
+        ...validCollectorDependencies(paths, runner),
+        watchPath,
+      });
+      expect(evidence.success).toBe(false);
+      expect(evidence.checks.snapshot.error).toBe("SNAPSHOT_INCOMPLETE");
+    },
+  );
+
+  it("fails when a candidate or parent watcher emits any event", async () => {
+    const paths = await fixturePaths();
+    const base = happyRunner(paths);
+    const listeners: Array<() => void> = [];
+    const watchPath = vi.fn((_watchedPath, _options, listener) => {
+      listeners.push(listener);
+      return { close: vi.fn() };
+    });
+    const runner = vi.fn(async (candidate) => {
+      if (candidate.command === SYSTEM_TOOLS.launchctl) listeners.forEach((listener) => listener());
+      return base.runner(candidate);
+    });
+    const evidence = await collectCloudflareTunnelPreflight(validCollectorOptions(paths), {
+      ...validCollectorDependencies(paths, runner),
+      watchPath,
+    });
+    expect(evidence.success).toBe(false);
+  });
+
+  it.each([
+    ["aggregate missing error", (probe: MutableQuicProbe) => { delete probe.error; }],
+    ["aggregate undefined error", (probe: MutableQuicProbe) => { probe.error = undefined; }],
+    ["target missing error", (probe: MutableQuicProbe) => { delete probe.targets[0]?.error; }],
+    ["target undefined error", (probe: MutableQuicProbe) => { if (probe.targets[0]) probe.targets[0].error = undefined; }],
+    ["aggregate wrong error type", (probe: MutableQuicProbe) => { probe.error = 42; }],
+    ["target wrong error type", (probe: MutableQuicProbe) => { if (probe.targets[0]) probe.targets[0].error = 42; }],
+    ["target unknown failure code", (probe: MutableQuicProbe) => {
+      if (!probe.targets[0]) return;
+      probe.targets[0].success = false;
+      probe.targets[0].error = SECRET_MARKER;
+    }],
+    ["aggregate extra field", (probe: MutableQuicProbe) => { probe.raw_response = SECRET_MARKER; }],
+    ["target extra field", (probe: MutableQuicProbe) => {
+      if (probe.targets[0]) probe.targets[0].raw_ip = "198.41.192.167";
+    }],
+  ])("rejects incomplete or suspicious QUIC result objects: %s", async (_case, mutate) => {
+    const paths = await fixturePaths();
+    const { runner } = happyRunner(paths);
+    const evidence = await collectCloudflareTunnelPreflight(validCollectorOptions(paths), {
+      ...validCollectorDependencies(paths, runner),
+      quicProbe: (input: { verified_endpoints: VerifiedEndpoint[] }) => {
+        const probe = matchingQuicProbe(input) as unknown as MutableQuicProbe;
+        mutate(probe);
+        return probe;
+      },
+    });
+    expect(evidence.success).toBe(false);
+    expect(evidence.checks.udp_7844.error).toBe("QUIC_TARGET_MISMATCH");
+    expect(JSON.stringify(evidence)).not.toContain(SECRET_MARKER);
+  });
+
+  it.each(["plutil", "launchctl", "lsof-executable", "lsof-listener", "metrics"])(
+    "rejects overflow even when %s output starts with a valid prefix",
+    async (kind) => {
+      const paths = await fixturePaths();
+      const base = happyRunner(paths);
+      const runner = vi.fn(async (candidate) => {
+        const result = await base.runner(candidate);
+        const matches = kind === "plutil" && candidate.command === SYSTEM_TOOLS.plutil
+          || kind === "launchctl" && candidate.command === SYSTEM_TOOLS.launchctl
+          || kind === "lsof-executable" && candidate.command === SYSTEM_TOOLS.lsof
+            && candidate.args.includes("txt")
+          || kind === "lsof-listener" && candidate.command === SYSTEM_TOOLS.lsof
+            && candidate.args.includes("-iTCP")
+          || kind === "metrics" && candidate.command === SYSTEM_TOOLS.curl
+            && String(candidate.args.at(-1)).includes("/metrics");
+        return matches ? { ...result, output_overflow: true } : result;
+      });
+      const evidence = await collectCloudflareTunnelPreflight(validCollectorOptions(paths), {
+        ...validCollectorDependencies(paths, runner),
+      });
+      expect(evidence.success).toBe(false);
+      expect(evidence.checks.snapshot.error).toBe("SNAPSHOT_INCOMPLETE");
+    },
+  );
+
+  it("rejects overflow from the bounded runtime argv primitive", async () => {
+    const paths = await fixturePaths();
+    const { runner } = happyRunner(paths);
+    const evidence = await collectCloudflareTunnelPreflight(validCollectorOptions(paths), {
+      ...validCollectorDependencies(paths, runner),
+      runtimeArgvReader: vi.fn(async () => ({
+        ...successResult(kernProcArgs2Buffer(remoteArguments(paths))),
+        output_overflow: true,
+      })),
+    });
+    expect(evidence.success).toBe(false);
+    expect(evidence.checks.snapshot.error).toBe("SNAPSHOT_INCOMPLETE");
+  });
+
+  it.each([
+    ...["plutil", "launchctl", "lsof-executable", "lsof-listener", "metrics"].flatMap((command) =>
+      ["timeout", "missing", "truncated"].map((failure) => [command, failure])),
+  ])("rejects %s internal output when it is %s", async (kind, failure) => {
+    const paths = await fixturePaths();
+    const base = happyRunner(paths);
+    const runner = vi.fn(async (candidate) => {
+      const result = await base.runner(candidate);
+      const matches = kind === "plutil" && candidate.command === SYSTEM_TOOLS.plutil
+        || kind === "launchctl" && candidate.command === SYSTEM_TOOLS.launchctl
+        || kind === "lsof-executable" && candidate.command === SYSTEM_TOOLS.lsof
+          && candidate.args.includes("txt")
+        || kind === "lsof-listener" && candidate.command === SYSTEM_TOOLS.lsof
+          && candidate.args.includes("-iTCP")
+        || kind === "metrics" && candidate.command === SYSTEM_TOOLS.curl
+          && String(candidate.args.at(-1)).includes("/metrics");
+      if (!matches) return result;
+      if (failure === "timeout") return { ...result, timed_out: true };
+      if (failure === "missing") return { ...result, command_missing: true };
+      const stdout = kind === "plutil" ? "{"
+        : kind === "launchctl" ? "state = running\n"
+          : kind === "metrics" ? 'cloudflared_build_info{version="2026.5.2"} 1\n'
+            : "p123\n";
+      return { ...result, stdout };
+    });
+    const evidence = await collectCloudflareTunnelPreflight(validCollectorOptions(paths), {
+      ...validCollectorDependencies(paths, runner),
+    });
+    expect(evidence.success).toBe(false);
+    expect(evidence.checks.snapshot.error).toBe("SNAPSHOT_INCOMPLETE");
+  });
+
+  it.each(["timeout", "missing", "truncated"])(
+    "rejects runtime argv primitive output when it is %s",
+    async (failure) => {
+      const paths = await fixturePaths();
+      const { runner } = happyRunner(paths);
+      const buffer = kernProcArgs2Buffer(remoteArguments(paths));
+      const runtimeReader = vi.fn(async () => {
+        if (failure === "timeout") return { ...successResult(buffer), timed_out: true };
+        if (failure === "missing") return { ...successResult(buffer), command_missing: true };
+        return successResult(buffer.subarray(0, buffer.length - 1));
+      });
+      const evidence = await collectCloudflareTunnelPreflight(validCollectorOptions(paths), {
+        ...validCollectorDependencies(paths, runner),
+        runtimeArgvReader: runtimeReader,
+      });
+      expect(evidence.success).toBe(false);
+      expect(evidence.checks.snapshot.error).toBe("SNAPSHOT_INCOMPLETE");
+    },
+  );
+
+  it.each([
+    ...["dig", "tcp", "management"].flatMap((command) =>
+      ["timeout", "overflow", "missing"].map((failure) => [command, failure])),
+  ])("rejects %s connectivity results marked %s", async (kind, failure) => {
+    const paths = await fixturePaths();
+    const base = happyRunner(paths);
+    const runner = vi.fn(async (candidate) => {
+      const result = await base.runner(candidate);
+      const matches = kind === "dig" && candidate.command === SYSTEM_TOOLS.dig
+        || kind === "tcp" && candidate.command === SYSTEM_TOOLS.nc
+        || kind === "management" && candidate.command === SYSTEM_TOOLS.curl
+          && String(candidate.args.at(-1)).startsWith("https:");
+      if (!matches) return result;
+      if (failure === "timeout") return { ...result, timed_out: true };
+      if (failure === "overflow") return { ...result, output_overflow: true };
+      return { ...result, command_missing: true };
+    });
+    const evidence = await collectCloudflareTunnelPreflight(validCollectorOptions(paths), {
+      ...validCollectorDependencies(paths, runner),
+    });
+    expect(evidence.success).toBe(false);
+    const checkName = kind === "dig" ? "dns" : kind === "tcp" ? "tcp_7844" : "management_api_https";
+    expect(evidence.checks[checkName].success).toBe(false);
+  });
+
+  it("snapshots a remotely-managed tunnel without reading token-file contents or invoking diag", async () => {
+    const paths = await fixturePaths();
+    const { runner, invocations } = happyRunner(paths);
+    const readTextFile = vi.fn(async () => {
+      throw new Error("token-file content access forbidden");
+    });
+    const evidence = await collectCloudflareTunnelPreflight(validCollectorOptions(paths), {
+      ...validCollectorDependencies(paths, runner),
+      readTextFile,
     });
 
     expect(evidence.success).toBe(true);
@@ -722,7 +1083,7 @@ describe("read-only collection and CLI", () => {
     expect(JSON.stringify(evidence)).not.toContain(paths.tokenPath);
     expect(JSON.stringify(evidence)).not.toContain(SECRET_MARKER);
     expect(readTextFile).not.toHaveBeenCalled();
-    expect(base.invocations.filter(({ args }) => args.join(" ").includes("tunnel diag"))).toHaveLength(0);
+    expect(invocations.filter(({ args }) => args.join(" ").includes("tunnel diag"))).toHaveLength(0);
   });
 
   it("fails closed when actual HA connection metrics and running executable identity are unavailable", async () => {
@@ -757,6 +1118,26 @@ describe("read-only collection and CLI", () => {
     expect(evidence.snapshot.plist).toBeDefined();
   });
 
+  it("fails closed when no trusted raw argv primitive is available", async () => {
+    const paths = await fixturePaths();
+    const { runner, invocations } = happyRunner(paths);
+    const evidence = await collectCloudflareTunnelPreflight(validCollectorOptions(paths), {
+      runner,
+      quicProbe: matchingQuicProbe,
+      trustedBinaryRoots: [paths.root],
+      trustedPlistPaths: [paths.plistPath],
+    });
+
+    expect(evidence.success).toBe(false);
+    expect(evidence.checks.snapshot).toMatchObject({
+      attempted: true,
+      success: false,
+      error: "SNAPSHOT_INCOMPLETE",
+    });
+    expect(invocations.every(({ command }) => command !== "/bin/ps")).toBe(true);
+    expect(invocations.every(({ command }) => path.basename(command) !== "cloudflared")).toBe(true);
+  });
+
   it("never treats UDP netcat exit zero as a QUIC-aware PASS", async () => {
     const paths = await fixturePaths();
     const { runner } = happyRunner(paths);
@@ -783,6 +1164,7 @@ describe("read-only collection and CLI", () => {
       success: false,
       error: "QUIC_PROBE_UNAVAILABLE",
     });
+    expect(SYSTEM_TOOLS).not.toHaveProperty("ps");
   });
 
   it("rejects an injected QUIC PASS with an empty target set", async () => {
@@ -898,7 +1280,6 @@ describe("read-only collection and CLI", () => {
           ProgramArguments: configuredArgs,
         }));
       }
-      if (invocation.command === SYSTEM_TOOLS.ps) return successResult(runningArgs.join(" "));
       return base.runner(invocation);
     });
     const evidence = await collectCloudflareTunnelPreflight({
@@ -915,6 +1296,7 @@ describe("read-only collection and CLI", () => {
       platform: TEST_PLATFORM,
     }, {
       runner,
+      runtimeArgvReader: runtimeArgvReader(runningArgs),
       quicProbe: matchingQuicProbe,
       trustedBinaryRoots: [paths.root],
       trustedPlistPaths: [paths.plistPath],
@@ -1050,9 +1432,11 @@ describe("read-only collection and CLI", () => {
       platform: TEST_PLATFORM,
     }, {
       runner,
+      runtimeArgvReader: runtimeArgvReader(remoteArguments(paths)),
       quicProbe: matchingQuicProbe,
       trustedBinaryRoots: [paths.root],
       trustedPlistPaths: [paths.plistPath],
+      watchPath: noEventWatchPath,
     });
     expect(invocations.some(({ command }) => path.basename(command) === "cloudflared")).toBe(false);
     expect(evidence.snapshot.running_binary.version).toBe("2026.5.2");
@@ -1097,6 +1481,10 @@ describe("read-only collection and CLI", () => {
     ].join("\n"), { mode: 0o600 });
     const base = happyRunner(paths);
     const invocations: Array<{ command: string; args: string[] }> = [];
+    const localArguments = [
+      paths.binaryPath, "tunnel", `--config=${configPath}`, "run", "homecook",
+      "--metrics", "127.0.0.1:20241",
+    ];
     const runner = vi.fn(async (invocation) => {
       const { command, args } = invocation;
       invocations.push({ command, args });
@@ -1104,22 +1492,8 @@ describe("read-only collection and CLI", () => {
         return successResult(JSON.stringify({
           Label: "com.homecook.cloudflare-tunnel",
           Program: paths.binaryPath,
-          ProgramArguments: [
-            paths.binaryPath,
-            "tunnel",
-            `--config=${configPath}`,
-            "run",
-            "homecook",
-            "--metrics",
-            "127.0.0.1:20241",
-          ],
+          ProgramArguments: localArguments,
         }));
-      }
-      if (command === SYSTEM_TOOLS.ps) {
-        return successResult([
-          paths.binaryPath, "tunnel", `--config=${configPath}`, "run", "homecook",
-          "--metrics", "127.0.0.1:20241",
-        ].join(" "));
       }
       return base.runner(invocation);
     });
@@ -1138,6 +1512,7 @@ describe("read-only collection and CLI", () => {
       platform: TEST_PLATFORM,
     }, {
       runner,
+      runtimeArgvReader: runtimeArgvReader(localArguments),
       quicProbe: successfulQuicProbe,
       trustedBinaryRoots: [paths.root],
       trustedPlistPaths: [paths.plistPath],
@@ -1276,8 +1651,10 @@ describe("read-only collection and CLI", () => {
       stdout,
       stderr,
       quicProbe: successfulQuicProbe,
+      runtimeArgvReader: runtimeArgvReader(remoteArguments(paths)),
       trustedBinaryRoots: [paths.root],
       trustedPlistPaths: [paths.plistPath],
+      watchPath: noEventWatchPath,
     });
     expect(exitCode).toBe(0);
     expect(stdout).toHaveBeenCalledWith(
@@ -1304,6 +1681,7 @@ describe("read-only collection and CLI", () => {
       stdout,
       stderr,
       quicProbe: successfulQuicProbe,
+      runtimeArgvReader: runtimeArgvReader(remoteArguments(paths)),
       trustedBinaryRoots: [paths.root],
       trustedPlistPaths: [paths.plistPath],
     });
