@@ -113,7 +113,66 @@ export interface SnapshotV2CookModeData {
   mode: "planner" | "standalone";
   status: CookingSessionStatus;
   recipe: CookingModeRecipe;
-  pantry_candidates: Array<{ pantry_item_id: string; ingredient_id: string; item_type: "ingredient" | "food_product"; standard_name: string; food_product_id: string | null; food_product_nutrition_version_id: string | null; name: string; brand: string | null }>;
+  pantry_candidates: SnapshotV2PantryCandidate[];
+}
+
+export interface SnapshotV2PantryCandidate {
+  pantry_item_id: string;
+  ingredient_id: string;
+  item_type: "ingredient" | "food_product";
+  standard_name: string;
+  food_product_id: string | null;
+  food_product_nutrition_version_id: string | null;
+  name: string;
+  brand: string | null;
+}
+
+export type SnapshotV2CompleteBody =
+  | {
+      consumed_pantry_item_ids: string[];
+      weight_action: "set_finished_weight";
+      finished_weight_g: number;
+    }
+  | {
+      consumed_pantry_item_ids: string[];
+      weight_action: "weigh_later";
+      finished_weight_g: null;
+    };
+
+export interface CookedBatchProjection {
+  id: string;
+  recipe_id: string;
+  recipe_title: string;
+  recipe_thumbnail_url: string | null;
+  status: "leftover" | "eaten";
+  cooked_at: string;
+  cooking_servings: number | null;
+  finished_weight_g: number | null;
+  remaining_weight_g: number | null;
+  weight_status: "known" | "missing" | "unrecoverable" | null;
+  batch_status: "available" | "depleted" | null;
+  depleted_reason:
+    | "consumed"
+    | "discarded"
+    | "mixed"
+    | "consumed_unweighed"
+    | "discarded_unweighed"
+    | "mixed_unweighed"
+    | null;
+  revision: number | null;
+  nutrition_calculation_status: "complete" | "partial" | "unavailable" | null;
+  current_unweighed_closure_event_id: string | null;
+}
+
+export interface SnapshotV2CompleteData {
+  session_id: string;
+  contract_version: "snapshot_v2";
+  mode: "planner" | "standalone";
+  status: "completed";
+  cooked_batch: CookedBatchProjection;
+  meals_updated: number;
+  pantry_removed: number;
+  cook_count: number;
 }
 
 export interface SnapshotV2CancelData {

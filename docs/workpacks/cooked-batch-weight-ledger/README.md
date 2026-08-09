@@ -16,14 +16,14 @@ snapshot-v2 요리 완료를 session에 pin된 content/servings와 exact pantry 
 
 Stage 2는 current source-of-truth tuple requirements `v1.7.30`, screens `v1.5.34`, Flow `v1.3.32`, DB `v1.3.32`, API `v1.2.37`을 사용한다. API v1.2.37의 `0-CBW` compatibility block은 이 Stage 1 lock의 API v1.2.36 block과 byte-identical이므로 public endpoint/field/status/error 확장 없이 구현한다.
 
-Stage 1은 original internal 1.5 task `019fe0c0…` APPROVE, current-tuple re-lock reviewer task `019fe194-62d9-7ed2-9116-b820873bd48b` APPROVE `P0/P1/P2=0/0/0`, PR #1289 merge `635763041d6420c648e2b55336e6caa9f1f9143c`, closeout task `019fe19e…`로 닫혔다. Stage 2 backend 구현 lineage는 task `019fe1aa-82fd-7602-844e-e050efae93db`이며, base-drift 통합 task `019fe2b2-0ee4-77c3-a829-9ae04bfac07f`가 PR #1292 merge `eb4e878eb1d5b6fe5df00b1edd3a4f42fa472142`를 새 기준으로 사용한다. #1292의 canonical full-local session refresh authority가 우선하며 #8은 이를 재구현하지 않는다. 전체 lifecycle은 `in_progress`, Stage 3/Ready/merge와 approval/verification은 pending이다. #7 broader lifecycle, Manual/server-Mac/OAuth, R/R+1/R+2도 기존 pending 상태를 유지한다.
+Stage 1은 original internal 1.5 task `019fe0c0…` APPROVE, current-tuple re-lock reviewer task `019fe194-62d9-7ed2-9116-b820873bd48b` APPROVE `P0/P1/P2=0/0/0`, PR #1289 merge `635763041d6420c648e2b55336e6caa9f1f9143c`, closeout task `019fe19e…`로 닫혔다. Stage 2 backend 구현 lineage는 task `019fe1aa-82fd-7602-844e-e050efae93db`이며, base-drift 통합 task `019fe2b2-0ee4-77c3-a829-9ae04bfac07f`가 PR #1292 merge `eb4e878eb1d5b6fe5df00b1edd3a4f42fa472142`의 canonical full-local session refresh authority를 소비했다. Fresh Stage 3를 거친 PR #1291은 `master`에 exact `6981a432e9d64beb06d2bb9fd2729cba4dca8bb1`로 merge됐고, fresh Stage 4 frontend는 이 exact source에서 시작했다. 전체 lifecycle은 `in_progress`, Stage 5/final authority/Stage 6와 approval/verification은 pending이다. #7 broader lifecycle, Manual/server-Mac/OAuth, R/R+1/R+2도 기존 pending 상태를 유지한다.
 
 ## Branches
 
 - Fresh Stage 1 re-lock docs: `docs/cooked-batch-weight-ledger-stage1-relock`
 - Stage 2 backend/DB local successor: `feature/cooked-batch-weight-ledger-stage2-eb4e-successor` (Draft PR #1291 remote branch는 `feature/cooked-batch-weight-ledger-stage2-current` 유지)
 - Preserved held lineage: `feature/be-cooked-batch-weight-ledger` exact `3c5b6760ce8c9a8b51205c755f9f92d57177ca00`; rebase/cherry-pick/force/edit 금지
-- Stage 4 functional COOK_MODE integration: `feature/fe-cooked-batch-weight-ledger`
+- Stage 4 functional COOK_MODE integration: `feature/cooked-batch-weight-ledger-stage4-frontend-current` (Draft PR #1311; #1310 superseded without force-push)
 - Release train: D. 구현 선행조건은 #7 runtime과 merged `cook-mode-whole-board`다.
 - Stage 1 author, internal 1.5 reviewer/repair-final owner, implementation owner, security/DB reviewer, five-axis reviewer, design critic, product-design-authority reviewer, release verifier와 closeout reviewer는 서로 다른 Codex 세션을 사용한다. Claude는 사용하지 않는다.
 
@@ -238,7 +238,7 @@ creation flag rollback:
 
 ## Design Status
 
-`temporary`. Fresh independent critic task `019fe02c-1b12-7d42-bcaf-0d5a02847967` and 390px/320px product-design-authority task `019fe041-2ff4-7f62-9786-79a46aecae0c` passed with `0/0/0`. The old internal 1.5 `HOLD` and repairs remain in the Stage 1 evidence; original internal 1.5 task `019fe0c0…` and current-tuple re-lock reviewer `019fe194-62d9-7ed2-9116-b820873bd48b` subsequently returned `APPROVE`, and PR #1289 merged as `635763041d6420c648e2b55336e6caa9f1f9143c`. Stage 3 and #11 later visual/accessibility completion remain pending.
+`pending-review`. Fresh independent pre-Stage-4 critic task `019fe02c-1b12-7d42-bcaf-0d5a02847967` and 390px/320px product-design-authority task `019fe041-2ff4-7f62-9786-79a46aecae0c` passed with `0/0/0`. Stage 4 runtime evidence now exists at desktop `1280x900`, mobile `390x844`, and narrow `320x568`; the author-only `design-qa.md` comparison has actionable `P0/P1/P2=0/0/0`. This is not final product-design authority and does not set `confirmed`; separate Stage 5/final authority/Stage 6 and #11 later visual/accessibility completion remain pending.
 
 ## Primary User Path
 
@@ -289,7 +289,7 @@ creation flag rollback:
 
 Successor Stage 1 relock evidence is retained at [`evidence/2026-08-04-stage1-relock.md`](./evidence/2026-08-04-stage1-relock.md). It preserves the author/precheck lineage and #7 runtime-versus-lifecycle boundary, records critic/authority pass `0/0/0`, the old-head internal 1.5 `HOLD` findings `I15-B01`/`I15-B02`/`I15-B03`, and dependency repair PR `#1286` merged as `9ff5a920f063af22cd8a8dbee33a603b27c3af57`. Current audit high/critical is `0`; all three findings were repaired before the final independent APPROVE evidence listed above.
 
-Fresh Stage 2 backend evidence is retained at [`evidence/2026-08-09-stage2-backend-implementation.md`](./evidence/2026-08-09-stage2-backend-implementation.md). Stage 3 review, Ready, merge, server-production/local-rehearsal, capability activation and Discord remain outside this author task.
+Fresh Stage 2 backend evidence is retained at [`evidence/2026-08-09-stage2-backend-implementation.md`](./evidence/2026-08-09-stage2-backend-implementation.md), and the merged Stage 2/3 source is exact `6981a432e9d64beb06d2bb9fd2729cba4dca8bb1`. Fresh Stage 4 frontend evidence is retained at [`evidence/2026-08-09-stage4-frontend-implementation.md`](./evidence/2026-08-09-stage4-frontend-implementation.md). Stage 5, final authority, Stage 6, Ready, merge, server-production/local-rehearsal, capability activation and Discord remain outside this author task.
 
 - [x] v2 complete validates exact owner pantry rows against pinned product/effective ingredient authority <!-- omo:id=delivery-batch-complete-pantry;stage=2;scope=backend;review=3,6 -->
 - [x] complete atomically applies pantry batch ledger session claim Meal cook-count and XP once <!-- omo:id=delivery-batch-complete-atomic;stage=2;scope=backend;review=3,6 -->
@@ -301,8 +301,8 @@ Fresh Stage 2 backend evidence is retained at [`evidence/2026-08-09-stage2-backe
 - [x] new read model serves every leftover reader before protected direct updates are revoked <!-- omo:id=delivery-batch-reader-cutover;stage=2;scope=shared;review=3,6 -->
 - [x] legacy eaten projection and XP/activity apply only to consumed reasons exactly once <!-- omo:id=delivery-batch-legacy-projection;stage=2;scope=backend;review=3,6 -->
 - [x] legacy rows remain nullable and are never assigned inferred grams or fabricated content <!-- omo:id=delivery-batch-legacy-data;stage=2;scope=backend;review=3,6 -->
-- [ ] COOK_MODE exact-row/weight UI is fail-closed and waits for stored completion result <!-- omo:id=delivery-batch-complete-ui;stage=4;scope=frontend;review=5,6 -->
-- [ ] fresh independent design critic and 390px/320px screenshot/Figma product-design-authority pass before Stage 4 frontend entry <!-- omo:id=delivery-batch-design-authority;stage=4;scope=frontend;review=5,6 -->
+- [x] COOK_MODE exact-row/weight UI is fail-closed and waits for stored completion result <!-- omo:id=delivery-batch-complete-ui;stage=4;scope=frontend;review=5,6 -->
+- [x] fresh independent design critic and 390px/320px screenshot/Figma product-design-authority pass before Stage 4 frontend entry <!-- omo:id=delivery-batch-design-authority;stage=4;scope=frontend;review=5,6 -->
 - [ ] R/R+1 seeded v2 drain and current/previous v1 compatibility pass with new-write zero <!-- omo:id=delivery-batch-drain;stage=2;scope=shared;review=3,6 -->
 - [ ] R+2 joint activation and rollback preserve existing v2 drain <!-- omo:id=delivery-batch-activation;stage=2;scope=shared;review=3,6 -->
 - [x] #9 meal-log and #11 final UI boundaries are not preclaimed <!-- omo:id=delivery-batch-successor-boundary;stage=2;scope=shared;review=3,6 -->

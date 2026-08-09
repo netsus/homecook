@@ -15,6 +15,8 @@ interface ModalHeaderProps {
   closeDisabled?: boolean;
   /** Ref forwarded to the close button — used by modals that need focus management */
   closeButtonRef?: React.Ref<HTMLButtonElement>;
+  titleRef?: React.Ref<HTMLHeadingElement>;
+  titleTabIndex?: number;
 }
 
 /** D2: no eyebrow · D3: icon-only 44×44 circle close · description = copy-lock helper */
@@ -28,6 +30,8 @@ export function ModalHeader({
   onClose,
   closeDisabled,
   closeButtonRef,
+  titleRef,
+  titleTabIndex,
 }: ModalHeaderProps) {
   return (
     <div className="flex items-start justify-between gap-3">
@@ -35,8 +39,10 @@ export function ModalHeader({
       <div className="min-w-0 flex-1">
         <div className="flex items-start justify-between gap-2">
           <h2
-            className="min-w-0 flex-1 truncate text-lg font-bold text-[var(--wave1-ink)]"
+            className="min-w-0 flex-1 truncate text-lg font-bold text-[var(--wave1-ink)] outline-none"
             id={titleId}
+            ref={titleRef}
+            tabIndex={titleTabIndex}
           >
             {title}
           </h2>

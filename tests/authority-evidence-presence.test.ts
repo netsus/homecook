@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 
@@ -426,5 +426,35 @@ describe("authority evidence presence validator", () => {
     });
 
     expect(results).toEqual([]);
+  });
+
+  it("keeps slice8 design and implementation authority evidence valid across both reports", () => {
+    const automationSpec = JSON.parse(
+      readFileSync(
+        join(
+          process.cwd(),
+          "docs/workpacks/cooked-batch-weight-ledger/automation-spec.json",
+        ),
+        "utf8",
+      ),
+    );
+
+    expect.soft(
+      automationSpec.frontend.design_authority.authority_report_paths,
+    ).toEqual([
+      "ui/designs/authority/COOK_MODE-cooked-batch-weight-ledger-authority.md",
+      "docs/workpacks/cooked-batch-weight-ledger/evidence/2026-08-09-final-product-design-authority-post-typography-rereview.md",
+    ]);
+
+    const results = validateAuthorityEvidencePresence({
+      rootDir: process.cwd(),
+      env: {
+        ...process.env,
+        BRANCH_NAME: "feature/fe-cooked-batch-weight-ledger",
+        PR_IS_DRAFT: "false",
+      },
+    });
+
+    expect.soft(results).toEqual([]);
   });
 });

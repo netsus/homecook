@@ -148,7 +148,8 @@
         "ui/designs/evidence/cooked-batch-weight-ledger/COOK_MODE-implementation-mobile-narrow-320.png"
       ],
       "authority_report_paths": [
-        "ui/designs/authority/COOK_MODE-cooked-batch-weight-ledger-authority.md"
+        "ui/designs/authority/COOK_MODE-cooked-batch-weight-ledger-authority.md",
+        "docs/workpacks/cooked-batch-weight-ledger/evidence/2026-08-09-final-product-design-authority-post-typography-rereview.md"
       ]
     }
   },
