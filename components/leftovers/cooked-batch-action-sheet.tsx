@@ -130,7 +130,7 @@ export function CookedBatchActionSheet({
       testId="cooked-batch-action-sheet"
       title={titles[action]}
       titleRef={titleRef}
-      titleTabIndex={0}
+      titleTabIndex={-1}
     >
       {pending ? <p className="rounded-[var(--radius-card)] bg-[var(--brand-primary-soft)] p-3 text-sm" role="status">서버 결과를 기다리는 중이에요. 창을 닫지 않고 입력을 유지해요.</p> : null}
       {error ? <div className="rounded-[var(--radius-card)] border border-[var(--danger-border)] p-3 text-sm outline-none" ref={errorRef} role="alert" tabIndex={-1}>{error.message}<span className="mt-1 block text-xs text-[var(--text-3)]">입력값은 유지했어요. 서버의 최신 상태를 확인한 뒤 다시 시도해 주세요.</span></div> : null}

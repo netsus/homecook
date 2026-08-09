@@ -198,6 +198,7 @@ test("captures the pre-Stage-4 COOK_MODE and LEFTOVERS state", async ({ browser 
     await cook.context.close();
 
     const leftovers = await preparePage(browser, width, height);
+    await installCookedBatchRoutes(leftovers.page, []);
     await leftovers.page.goto("/leftovers");
     await expect(leftovers.page.getByTestId("leftovers-screen")).toBeVisible();
     await stabilize(leftovers.page);
@@ -231,10 +232,16 @@ test("captures and verifies the Stage-4 viewport, state, and accessibility matri
     await expect(dialog).toBeVisible();
     const first = dialog.getByRole("heading", { name: "요리 완료" });
     await expect(first).toBeFocused();
-    await cooked.page.keyboard.press("Shift+Tab");
-    runtime.focusTrapped = runtime.focusTrapped || await dialog.evaluate((node) => node.contains(document.activeElement));
     await dialog.getByRole("radio", { name: "음식만 무게(g)" }).click();
     await dialog.getByRole("spinbutton", { name: "완성 직후 음식 전체 중량" }).fill("640");
+    const confirm = dialog.getByRole("button", { name: "완료 저장" });
+    const close = dialog.getByRole("button", { name: "닫기" });
+    await confirm.focus();
+    await cooked.page.keyboard.press("Tab");
+    await expect(close).toBeFocused();
+    await cooked.page.keyboard.press("Shift+Tab");
+    await expect(confirm).toBeFocused();
+    runtime.focusTrapped = true;
     await stabilize(cooked.page);
     const knownName = width >= 1024
       ? "COOK_MODE-desktop-state-matrix.png"
