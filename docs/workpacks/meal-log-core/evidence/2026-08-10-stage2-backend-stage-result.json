@@ -43,6 +43,12 @@
     "stage3_self_approval": false,
     "discord_sent": false
   },
+  "ci_repair": {
+    "failed_head": "e64c8333b227845f62f93d79c6339518e4263397",
+    "cause": "new mutation routes and security-definer functions were absent from generated shared inventories",
+    "account_inventory": "67 routes / 93 write surfaces / 3 auth.users inbound FKs",
+    "failed_head_reused": false
+  },
   "pending": [
     "independent Stage 3",
     "Stage 4 three-source/concurrency/DST/aggregate and UI E2E",

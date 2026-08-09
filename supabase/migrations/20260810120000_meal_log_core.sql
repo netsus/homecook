@@ -196,7 +196,7 @@ create constraint trigger assert_meal_log_event_pointer
 after insert or update on public.cooked_batch_quantity_events deferrable initially deferred
 for each row execute function private.assert_meal_log_pointer_pair();
 
-create or replace function private.project_meal_log_entry(p_entry public.meal_log_entries)
+create or replace function private.project_meal_log_entry(p_entry meal_log_entries)
 returns jsonb language sql stable security definer
 set search_path = pg_catalog, public, private, pg_temp
 as $function$
@@ -481,7 +481,7 @@ for each row execute function private.cleanup_meal_log_before_cooked_batch_delet
 alter function private.resolve_meal_log_profile_nutrition(uuid,numeric,text) owner to postgres;
 alter function private.resolve_meal_log_product_nutrition(uuid,jsonb,numeric,text) owner to postgres;
 alter function private.assert_meal_log_pointer_pair() owner to postgres;
-alter function private.project_meal_log_entry(public.meal_log_entries) owner to postgres;
+alter function private.project_meal_log_entry(meal_log_entries) owner to postgres;
 alter function private.cleanup_meal_log_before_user_delete() owner to postgres;
 alter function private.cleanup_meal_log_before_cooked_batch_delete() owner to postgres;
 alter function public.get_meal_log_day(uuid,timestamptz,text,integer,timestamptz,date) owner to postgres;
@@ -490,7 +490,7 @@ alter function public.mutate_meal_log_entry(uuid,timestamptz,text,integer,timest
 revoke all on function private.resolve_meal_log_profile_nutrition(uuid,numeric,text) from public,anon,authenticated,service_role;
 revoke all on function private.resolve_meal_log_product_nutrition(uuid,jsonb,numeric,text) from public,anon,authenticated,service_role;
 revoke all on function private.assert_meal_log_pointer_pair() from public,anon,authenticated,service_role;
-revoke all on function private.project_meal_log_entry(public.meal_log_entries) from public,anon,authenticated,service_role;
+revoke all on function private.project_meal_log_entry(meal_log_entries) from public,anon,authenticated,service_role;
 revoke all on function private.cleanup_meal_log_before_user_delete() from public,anon,authenticated,service_role;
 revoke all on function private.cleanup_meal_log_before_cooked_batch_delete() from public,anon,authenticated,service_role;
 revoke all on function public.get_meal_log_day(uuid,timestamptz,text,integer,timestamptz,date) from public,anon,authenticated;

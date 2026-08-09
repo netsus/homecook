@@ -39,6 +39,12 @@
 - Follow-up review confirmed those repairs and identified same-source ingredient conversion drift; a RED/GREEN repair now reuses pinned conversion evidence.
 - A suggestion to add evidence identifiers to request bodies was rejected because the official API makes server-side evidence pinning authoritative and forbids unofficial fields.
 
+## Current-head CI repair
+
+- First PR head `e64c8333b227845f62f93d79c6339518e4263397` failed because the shared account/session inventory did not classify the three new mutation routes and the security-function inventory did not classify nine new functions.
+- The repair classifies the routes and `lib/server/meal-log.ts`, regenerates the inventory to 67 routes / 93 write surfaces / 3 `auth.users` inbound FKs, and adds the #9 additive function authorization manifest.
+- Local inventory tests pass. Full local authorization comparison reaches the existing Supabase CLI `graphql.get_schema_version()` environment-baseline mismatch; the GitHub fresh environment remains the authoritative check for the repaired head.
+
 ## Remaining gates
 
 - Independent Stage 3 security/DB and five-axis approval.

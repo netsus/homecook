@@ -51,6 +51,16 @@ const ADDITIVE_SOURCES = [
   {
     manifestPath: path.join(
       REPO_ROOT,
+      "docs/security/meal-log-core-security-function-authorization-manifest.json",
+    ),
+    migrationPath: path.join(
+      REPO_ROOT,
+      "supabase/migrations/20260810120000_meal_log_core.sql",
+    ),
+  },
+  {
+    manifestPath: path.join(
+      REPO_ROOT,
       "docs/security/hybrid-internal-operations-security-function-authorization-manifest.json",
     ),
     migrationPath: path.join(
