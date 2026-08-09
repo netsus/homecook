@@ -6,7 +6,7 @@ const PUBLIC_PROBE_IDS = Object.freeze([
   "public_auth_health",
 ]);
 const AUTHENTICATED_PROBE_ID = "authenticated_pantry_read";
-const ALLOWED_EVENT_KEYS = new Set([
+const PUBLIC_EVENT_KEYS = Object.freeze([
   "probe_id",
   "scheduled_at",
   "observed_at",
@@ -15,8 +15,8 @@ const ALLOWED_EVENT_KEYS = new Set([
   "ttfb_ms",
   "colo",
   "network_label",
-  "wrapper_valid",
 ]);
+const AUTHENTICATED_EVENT_KEYS = Object.freeze([...PUBLIC_EVENT_KEYS, "wrapper_valid"]);
 const ALLOWED_SOURCES = new Set([
   "local_connector",
   "external_public",
@@ -140,21 +140,26 @@ function latencySummary(values) {
   };
 }
 
-function classifyEvent(event, probe) {
-  if (Object.keys(event).some((key) => !ALLOWED_EVENT_KEYS.has(key))) {
+function classifyEvent(event, probe, windowStartMs, windowEndMs) {
+  const expectedKeys = probe.audience === "authenticated"
+    ? AUTHENTICATED_EVENT_KEYS
+    : PUBLIC_EVENT_KEYS;
+  if (Object.keys(event).length !== expectedKeys.length
+    || !expectedKeys.every((key) => Object.hasOwn(event, key))) {
     return { status: "invalid", error: "INVALID_EVENT" };
   }
   const observedAt = utcTimestamp(event.observed_at);
   const scheduledAt = utcTimestamp(event.scheduled_at);
-  if (observedAt === null || scheduledAt === null || observedAt < scheduledAt) {
+  if (observedAt === null || scheduledAt === null || observedAt < scheduledAt
+    || observedAt < windowStartMs || observedAt > windowEndMs) {
+    return { status: "invalid", error: "INVALID_EVENT" };
+  }
+  if (normalizeNetworkLabel(event.network_label) === null) {
     return { status: "invalid", error: "INVALID_EVENT" };
   }
   if (event.outcome === "timeout") return { status: "timeout", error: "TIMEOUT" };
   if (observedAt - scheduledAt > probe.timeout_seconds * 1_000) {
     return { status: "late", error: "LATE" };
-  }
-  if (normalizeNetworkLabel(event.network_label) === null) {
-    return { status: "invalid", error: "INVALID_EVENT" };
   }
   if (event.outcome !== "response") return { status: "invalid", error: "INVALID_EVENT" };
   if (!Number.isInteger(event.http_status) || event.http_status < 100 || event.http_status > 599) {
@@ -171,9 +176,6 @@ function classifyEvent(event, probe) {
   }
   if (probe.audience === "authenticated" && event.wrapper_valid !== true) {
     return { status: "invalid_wrapper", error: "INVALID_WRAPPER" };
-  }
-  if (probe.audience === "public" && Object.hasOwn(event, "wrapper_valid")) {
-    return { status: "invalid", error: "INVALID_EVENT" };
   }
   return { status: "expected", error: "NONE" };
 }
@@ -383,12 +385,17 @@ export function aggregateExternalProbeWindow(input = {}) {
       };
       continue;
     }
-    const classification = classifyEvent(event, probe);
+    const classification = classifyEvent(event, probe, windowStartMs, windowEndMs);
     if (classification.status === "invalid") rejectedEventCount += 1;
+    const observedAtMs = utcTimestamp(event.observed_at);
     slots[index] = {
       ...classification,
       scheduled_at: event.scheduled_at,
-      observed_at: utcTimestamp(event.observed_at) === null ? event.scheduled_at : event.observed_at,
+      observed_at: observedAtMs !== null
+        && observedAtMs >= windowStartMs
+        && observedAtMs <= windowEndMs
+        ? event.observed_at
+        : event.scheduled_at,
       colo: normalizeColo(event.colo),
       network_label: normalizeNetworkLabel(event.network_label),
       ttfb_ms: classification.status === "expected" ? event.ttfb_ms : null,

@@ -165,6 +165,7 @@ export function validateLocalConnectorHealth(value) {
   if (value.state !== expectedState) return false;
 
   const eventSignals = new Set();
+  const incidentIdentities = new Set();
   let slowReconnectIncidentCount = 0;
   const capturedAtMs = Date.parse(value.captured_at);
   for (const event of value.incident_events) {
@@ -182,6 +183,9 @@ export function validateLocalConnectorHealth(value) {
     if (!contract || event.severity !== contract.severity || event.error !== contract.error) {
       return false;
     }
+    const identity = JSON.stringify(INCIDENT_KEYS.map((key) => event[key]));
+    if (incidentIdentities.has(identity)) return false;
+    incidentIdentities.add(identity);
     if (!signals[contract.signal_group].includes(contract.signal)) return false;
     if (event.status === "reconnect_slow") slowReconnectIncidentCount += 1;
     eventSignals.add(contract.signal);

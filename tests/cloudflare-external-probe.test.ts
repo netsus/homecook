@@ -249,6 +249,43 @@ describe("provider-neutral external probe contract", () => {
     expect(aggregate.alerts.critical).toContain("public_timeout_or_52x_consecutive_2");
   });
 
+  it("validates audience, network, and observation-window schema before timeout classification", () => {
+    const events = completeEvents();
+    const publicTimeoutWithWrapper = events.find((event) =>
+      event.probe_id === "public_app_root" && event.scheduled_at === WINDOW_START
+    )!;
+    publicTimeoutWithWrapper.outcome = "timeout";
+    publicTimeoutWithWrapper.http_status = null;
+    publicTimeoutWithWrapper.wrapper_valid = true;
+
+    const timeoutWithoutNetwork = events.find((event) =>
+      event.probe_id === "public_pantry" && event.scheduled_at === WINDOW_START
+    )!;
+    timeoutWithoutNetwork.outcome = "timeout";
+    timeoutWithoutNetwork.http_status = null;
+    Reflect.deleteProperty(timeoutWithoutNetwork, "network_label");
+
+    const futureObservation = events.find((event) =>
+      event.probe_id === "public_auth_health" && event.scheduled_at === WINDOW_START
+    )!;
+    futureObservation.observed_at = "2026-08-12T00:00:00.000Z";
+
+    const aggregate = aggregateExternalProbeWindow({
+      window_start: WINDOW_START,
+      window_end: WINDOW_END,
+      events,
+    });
+
+    expect(aggregate.rejected_event_count).toBe(3);
+    expect(aggregate.by_probe.public_app_root.invalid).toBe(1);
+    expect(aggregate.by_probe.public_pantry.invalid).toBe(1);
+    expect(aggregate.by_probe.public_auth_health.invalid).toBe(1);
+    expect(aggregate.by_probe.public_app_root.timeout_or_52x).toBe(0);
+    expect(aggregate.incident_timeline.every(({ timestamp }) =>
+      timestamp >= WINDOW_START && timestamp <= WINDOW_END
+    )).toBe(true);
+  });
+
   it("separates endpoint completeness from response quality and keeps auth out of CLI success", async () => {
     const oneMissing = completeEvents();
     oneMissing.splice(oneMissing.findIndex((event) =>

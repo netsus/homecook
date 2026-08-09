@@ -384,6 +384,42 @@ describe("Cloudflare local connector health", () => {
     }
   });
 
+  it("rejects malformed server-location labelsets while preserving canonical extra labels", () => {
+    const canonical = metrics(4).replace(
+      'cloudflared_tunnel_server_locations{connection_id="0",edge_location="icn01"} 1',
+      'cloudflared_tunnel_server_locations{connection_id="0",edge_location="icn01",instance="local"} 1',
+    );
+    expect(parseTunnelMetrics(canonical)).toEqual(expect.objectContaining({
+      success: true,
+      samples_valid: true,
+    }));
+
+    const malformedSamples = [
+      'cloudflared_tunnel_server_locations{connection_id="0",edge_location="icn01",garbage} 1',
+      'cloudflared_tunnel_server_locations{connection_id="0",edge_location="icn01",edge_location="icn01"} 1',
+      'cloudflared_tunnel_server_locations{connection_id="0",edge_location="icn01",note="bad\\q"} 1',
+      'cloudflared_tunnel_server_locations{connection_id="0",edge_location="icn01",note=unquoted} 1',
+      'cloudflared_tunnel_server_locations{connection_id="0",edge_location="icn01",note="open" 1',
+    ];
+    for (const malformedSample of malformedSamples) {
+      const metricsRaw = metrics(4).replace(
+        'cloudflared_tunnel_server_locations{connection_id="0",edge_location="icn01"} 1',
+        malformedSample,
+      );
+      const parsed = parseTunnelMetrics(metricsRaw);
+      expect(parsed.samples_valid).toBe(false);
+      expect(parsed.success).toBe(false);
+      expect(buildLocalConnectorHealth({
+        captured_at: "2026-08-10T00:03:00.000Z",
+        metrics_raw: metricsRaw,
+        log_raw: initialConnections,
+      })).toEqual(expect.objectContaining({
+        state: "unknown",
+        connector: expect.objectContaining({ metrics_valid: false }),
+      }));
+    }
+  });
+
   it("validates the exact local health schema and state/incident invariants", () => {
     const valid = buildLocalConnectorHealth({
       captured_at: "2026-08-10T00:03:00.000Z",
@@ -444,6 +480,26 @@ describe("Cloudflare local connector health", () => {
         timestamp: "2026-08-09T00:02:59.999Z",
       }],
     })).toBe(false);
+  });
+
+  it("rejects exact duplicate incident projections", () => {
+    const critical = buildLocalConnectorHealth({
+      captured_at: "2026-08-10T00:03:00.000Z",
+      metrics_raw: metrics(0),
+      log_raw: initialConnections,
+    });
+    expect(validateLocalConnectorHealth(critical)).toBe(true);
+    expect(localConnectorHealthExitCode(critical)).toBe(1);
+
+    const duplicateIncident = {
+      ...critical,
+      incident_events: [
+        critical.incident_events[0],
+        { ...critical.incident_events[0] },
+      ],
+    };
+    expect(validateLocalConnectorHealth(duplicateIncident)).toBe(false);
+    expect(localConnectorHealthExitCode(duplicateIncident)).toBeNull();
   });
 
   it("never serializes raw metrics, logs, token, cookie, JWT, email, UUID, IP, path, header, or body", () => {

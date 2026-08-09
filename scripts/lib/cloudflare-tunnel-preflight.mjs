@@ -252,13 +252,12 @@ export function parseTunnelMetrics(raw) {
       if (connection && labels !== null) connectionSamples.push(connection[2]);
     }
     if (!/^cloudflared_tunnel_server_locations\{/u.test(line)) continue;
-    if (!/\}\s+1(?:\.0+)?$/u.test(line)) {
-      serverSamplesValid = false;
-      continue;
-    }
-    const connectionId = line.match(/(?:\{|,)connection_id="([^"]+)"/u)?.[1];
-    const edgeLocation = line.match(/(?:\{|,)edge_location="([^"]+)"/u)?.[1];
-    if (!connectionId || !edgeLocation || connectionLocations.has(connectionId)) {
+    const server = line.match(/^cloudflared_tunnel_server_locations(\{.*\})\s+1(?:\.0+)?$/u);
+    const labels = parsePrometheusLabels(server?.[1]);
+    const connectionId = labels?.get("connection_id");
+    const edgeLocation = labels?.get("edge_location");
+    if (!server || labels === null || !connectionId || !edgeLocation
+      || connectionLocations.has(connectionId)) {
       serverSamplesValid = false;
       continue;
     }
