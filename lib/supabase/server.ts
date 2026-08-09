@@ -665,6 +665,10 @@ export function createSessionLogoutInternalDataClient() {
   return createScopedDataServiceRoleClient("session-logout");
 }
 
+export function createSessionAuthorityInternalRpcClient() {
+  return createScopedInternalRpcClient("request-authority");
+}
+
 export function createRecipeImageInternalClient() {
   const client = createScopedDataServiceRoleClient("recipe-image");
   return client
