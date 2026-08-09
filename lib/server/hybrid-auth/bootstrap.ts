@@ -159,16 +159,17 @@ export function createRemoteRefreshAuthorityFetch({
     let user: VerifiedRemoteUser;
     try {
       const candidate = await userResponse.json() as Partial<VerifiedRemoteUser>;
+      const createdAtValue = candidate.created_at;
       if (
         typeof candidate.id !== "string"
-        || typeof candidate.created_at !== "string"
-        || !Number.isFinite(Date.parse(candidate.created_at))
+        || typeof createdAtValue !== "string"
+        || !Number.isFinite(Date.parse(createdAtValue))
       ) {
         return staleResponse();
       }
       user = {
         id: candidate.id,
-        created_at: new Date(candidate.created_at).toISOString(),
+        created_at: createdAtValue,
       };
     } catch {
       return staleResponse();
