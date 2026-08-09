@@ -254,6 +254,20 @@ describe("full-local production runtime static contract", () => {
     expect(compose).toContain(
       "S3_PROTOCOL_ACCESS_KEY_SECRET=storage_s3_access_key_secret",
     );
+    expect(compose).toMatch(
+      /auth:[\s\S]*?networks:[\s\S]*?- data-internal[\s\S]*?- auth-egress/u,
+    );
+    expect(compose).toMatch(
+      /postgres:[\s\S]*?networks:\s*\n\s*- data-internal[\s\S]*?\n\s*restart:/u,
+    );
+    expect(compose).toMatch(
+      /postgrest:[\s\S]*?networks:\s*\n\s*- data-internal[\s\S]*?\n\s*restart:/u,
+    );
+    expect(compose).toMatch(
+      /storage:[\s\S]*?networks:\s*\n\s*- data-internal[\s\S]*?\n\s*restart:/u,
+    );
+    expect(compose).toContain("auth-egress: {}");
+    expect(compose).toContain("data-internal:\n    internal: true");
     expect(kong).toMatch(
       /name:\s*storage-v1-all[\s\S]*?preserve_host:\s*true[\s\S]*?strip_path:\s*true/u,
     );
