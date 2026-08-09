@@ -39,19 +39,19 @@
       "path": "ui/designs/evidence/cooked-batch-weight-ledger/COOK_MODE-implementation-desktop-1280.png",
       "width": 1280,
       "height": 900,
-      "sha256": "73fd2b9d36034c1cf84c32f1ea6fd1e8d1d8aeeb308a3dc5c976912385ce5b62"
+      "sha256": "3aa8556589cde4280587a7e11005bb628fe3f414ac1ec24e9f767010f47bf696"
     },
     {
       "path": "ui/designs/evidence/cooked-batch-weight-ledger/COOK_MODE-implementation-mobile-default-390.png",
       "width": 390,
       "height": 844,
-      "sha256": "599ad98e281fd0bab26c959f5fffffe1b1ae8b8b53bc1a3820daa12474c0f589"
+      "sha256": "1ecd8b2137460b78925ad22b678939bae076d0a9b3af2b5e160719814284139b"
     },
     {
       "path": "ui/designs/evidence/cooked-batch-weight-ledger/COOK_MODE-implementation-mobile-narrow-320.png",
       "width": 320,
       "height": 568,
-      "sha256": "500ff117971f80f217d58b8680a616c8862ab7299495bc9e7958bad2fdc97ef8"
+      "sha256": "e6a05d3a29a6c58e7812d5fc42730665a1119160fbb2eb472021576911fb27d5"
     }
   ],
   "review": {

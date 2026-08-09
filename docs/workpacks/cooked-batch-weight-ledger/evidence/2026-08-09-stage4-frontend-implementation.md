@@ -28,11 +28,20 @@ The finished UI keeps initial pantry selection empty, allows explicit `[]`, expo
 
 | Evidence | Original size | SHA-256 |
 | --- | ---: | --- |
-| `ui/designs/evidence/cooked-batch-weight-ledger/COOK_MODE-implementation-desktop-1280.png` | `1280x900` | `73fd2b9d36034c1cf84c32f1ea6fd1e8d1d8aeeb308a3dc5c976912385ce5b62` |
-| `ui/designs/evidence/cooked-batch-weight-ledger/COOK_MODE-implementation-mobile-default-390.png` | `390x844` | `599ad98e281fd0bab26c959f5fffffe1b1ae8b8b53bc1a3820daa12474c0f589` |
-| `ui/designs/evidence/cooked-batch-weight-ledger/COOK_MODE-implementation-mobile-narrow-320.png` | `320x568` | `500ff117971f80f217d58b8680a616c8862ab7299495bc9e7958bad2fdc97ef8` |
+| `ui/designs/evidence/cooked-batch-weight-ledger/COOK_MODE-implementation-desktop-1280.png` | `1280x900` | `3aa8556589cde4280587a7e11005bb628fe3f414ac1ec24e9f767010f47bf696` |
+| `ui/designs/evidence/cooked-batch-weight-ledger/COOK_MODE-implementation-mobile-default-390.png` | `390x844` | `1ecd8b2137460b78925ad22b678939bae076d0a9b3af2b5e160719814284139b` |
+| `ui/designs/evidence/cooked-batch-weight-ledger/COOK_MODE-implementation-mobile-narrow-320.png` | `320x568` | `e6a05d3a29a6c58e7812d5fc42730665a1119160fbb2eb472021576911fb27d5` |
 
-The runtime comparison is recorded in `design-qa.md`. It is an author-only implementation QA artifact, not final product-design authority. Playwright proves 44px controls, 16px horizontal spacing, focus trap/restore, keyboard Escape behavior, narrow internal scrolling, no horizontal overflow, zero console errors, and zero serious/critical axe violations for the #8 sheet.
+The runtime comparison is recorded in `design-qa.md`. It is an author-only implementation QA artifact, not final product-design authority. The Playwright assertions prove 44px controls, 16px horizontal spacing, focus trap/restore, synthetic keyboard Escape behavior, narrow internal scrolling, no horizontal overflow, zero console errors, and zero serious/critical axe violations for the #8 sheet. The PNG files themselves do not prove a physical keyboard, physical iOS Safari, screen-reader behavior, or full WCAG conformance.
+
+The canonical screenshot reproduction command below starts the default clean fixture server for each run. Three consecutive runs produced byte-identical SHA-256 values for all three files:
+
+```bash
+for run in 1 2 3; do
+  pnpm test:e2e:regression:ci --grep cooked-batch-weight-ledger
+  sha256sum ui/designs/evidence/cooked-batch-weight-ledger/COOK_MODE-implementation-{desktop-1280,mobile-default-390,mobile-narrow-320}.png
+done
+```
 
 Internal visual review found and repaired:
 
