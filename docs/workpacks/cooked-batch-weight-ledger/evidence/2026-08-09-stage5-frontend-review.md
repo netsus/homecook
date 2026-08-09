@@ -14,7 +14,9 @@
 - Findings: `P0/P1/P2 = 0/1/1`; unresolved required findings `2`
 - Approval gate: actionable `P0/P1/P2 = 0/0/0` 및 unresolved required finding `0`을 충족하지 못했다.
 
-이 판정은 exact product head `4cf710461c3254b7e75e3bf1298f7385c1906a2c`에 대한 것이다. 이 파일을 추가하는 successor는 report-only head이며 제품 판정 대상을 바꾸지 않는다. 보고서 커밋은 자신의 미래 SHA를 내부에 self-reference할 수 없으므로 exact report-only successor SHA는 커밋·push 후 handoff에 기록한다.
+이 판정은 exact product head `4cf710461c3254b7e75e3bf1298f7385c1906a2c`에 대한 것이다. 이 보고서 커밋 자체는 report-only이며 제품 판정 대상을 바꾸지 않는다. 보고서 커밋은 자신의 미래 SHA를 내부에 self-reference할 수 없으므로 exact report-only successor SHA는 커밋·push 후 handoff에 기록한다.
+
+검토 종료와 보고서 커밋 사이에 별도 author가 같은 공유 branch에 evidence-only `e0940377a5a384020c361e1a75e107f73c0a21d6`을 추가해 retained SHA-256 두 문서를 committed blob 값으로 맞췄다. 따라서 final branch head는 `4cf710...`의 직접 report-only child가 아니라 `4cf710... -> e0940377 -> report-only review commit` 계보이다. 이 Stage 5 판정은 여전히 잠긴 `4cf710...`만 대상으로 하며, 동시 author repair를 fresh re-review하거나 승인하지 않는다. 특히 fresh exact grep에서 확인한 모바일 재캡처 비결정성은 digest 문서 교정만으로 닫혔다고 간주하지 않는다.
 
 ## Locked scope and material inspected
 
