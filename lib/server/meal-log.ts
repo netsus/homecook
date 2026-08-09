@@ -156,6 +156,7 @@ const RPC_ERRORS = {
   ACCOUNT_LIFECYCLE_MAINTENANCE: [503, "계정 정비 작업 중이에요."],
   CONSUMED_DATE_TIMEZONE_MISMATCH: [422, "날짜와 시간대를 확인해 주세요."],
   UNIT_CONVERSION_MISSING: [422, "정확한 단위 환산 정보를 찾지 못했어요."],
+  WEIGHT_UNRECOVERABLE: [409, "원래 완성 중량을 확인할 수 없는 요리예요."],
   IDEMPOTENCY_KEY_REUSED: [409, "이미 다른 요청에 사용된 요청 키예요."],
   RESOURCE_NOT_FOUND: [404, "요청한 항목을 찾을 수 없어요."],
   CONFLICT: [409, "다른 변경이 먼저 반영됐어요."],

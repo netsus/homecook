@@ -13,6 +13,12 @@ describe("meal-log batch event linkage", () => {
     expect(sql).toMatch(/event_type='reversal'[\s\S]*target\.meal_log_entry_id=v_event\.meal_log_entry_id/i);
   });
 
+  test("separates private existence from batch state errors", () => {
+    expect(sql).toMatch(/where id=v_source_id and user_id=p_owner_uuid for update/i);
+    expect(sql).toMatch(/weight_status='unrecoverable'[\s\S]*WEIGHT_UNRECOVERABLE/i);
+    expect(sql).toMatch(/weight_status<>'known' or v_batch\.batch_status<>'available'[\s\S]*CONFLICT/i);
+  });
+
   test("does not introduce a second batch or quantity-event table", () => {
     expect(sql.match(/create table/gi)).toHaveLength(1);
     expect([...sql.matchAll(/create table(?: if not exists)?\s+([\w.]+)/gi)].map((match) => match[1]))

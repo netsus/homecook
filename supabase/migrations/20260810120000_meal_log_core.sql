@@ -103,11 +103,11 @@ begin
     raise exception 'RESOURCE_NOT_FOUND' using errcode='P0002';
   end if;
   if p_unit is distinct from v_profile.basis_unit then
-    if not (p_unit='g' and v_profile.normalization_method='mass_100g') then
+    if not (p_unit in ('g','kg') and v_profile.normalization_method='mass_100g') then
       raise exception 'UNIT_CONVERSION_MISSING' using errcode='22023';
     end if;
   end if;
-  v_scale := p_amount / v_profile.basis_amount;
+  v_scale := (case when p_unit='kg' then p_amount*1000 else p_amount end) / v_profile.basis_amount;
   select jsonb_object_agg(nutrient_code,
       case when value_status='observed' then round(amount*v_scale,6) else null end),
     count(*) filter (where value_status<>'observed')
@@ -119,6 +119,33 @@ begin
     'basis_amount',v_profile.basis_amount,'basis_unit',v_profile.basis_unit,
     'amount',p_amount,'unit',p_unit,'values',coalesce(v_values,'{}'::jsonb)
   );
+end;
+$function$;
+
+create or replace function private.resolve_meal_log_product_nutrition(
+  p_profile_id uuid,p_relations jsonb,p_amount numeric,p_unit text
+) returns jsonb
+language plpgsql stable security definer
+set search_path = pg_catalog, public, private, pg_temp
+as $function$
+declare v_profile public.nutrition_profiles%rowtype; v_relation jsonb; v_basis_amount numeric;
+begin
+  select * into v_profile from public.nutrition_profiles where id=p_profile_id;
+  if v_profile.id is null then raise exception 'RESOURCE_NOT_FOUND' using errcode='P0002'; end if;
+  if p_unit=v_profile.basis_unit or (p_unit in ('g','kg') and v_profile.normalization_method='mass_100g') then
+    return private.resolve_meal_log_profile_nutrition(p_profile_id,p_amount,p_unit);
+  end if;
+  select relation into v_relation from jsonb_array_elements(p_relations) relation
+  where (relation#>>'{from,unit}'=p_unit and relation#>>'{to,unit}'=v_profile.basis_unit)
+     or (relation#>>'{to,unit}'=p_unit and relation#>>'{from,unit}'=v_profile.basis_unit)
+  limit 1;
+  if v_relation is null then raise exception 'UNIT_CONVERSION_MISSING' using errcode='22023'; end if;
+  if v_relation#>>'{from,unit}'=p_unit then
+    v_basis_amount:=p_amount/(v_relation#>>'{from,amount}')::numeric*(v_relation#>>'{to,amount}')::numeric;
+  else
+    v_basis_amount:=p_amount/(v_relation#>>'{to,amount}')::numeric*(v_relation#>>'{from,amount}')::numeric;
+  end if;
+  return private.resolve_meal_log_profile_nutrition(p_profile_id,v_basis_amount,v_profile.basis_unit);
 end;
 $function$;
 
@@ -248,15 +275,30 @@ declare v_authority jsonb; v_generation bigint; v_items jsonb;
 begin
   v_authority:=public.assert_recipe_future_session_authority(p_owner_uuid,p_auth_identity_created_at_snapshot,p_session_key_hash,p_hmac_key_version,p_session_issued_at);
   v_generation:=(v_authority->>'account_generation')::bigint;
+  with eligible as (
+    select entry.*,case entry.source_type when 'cooked_batch' then entry.cooked_batch_id when 'food_product' then entry.food_product_id else entry.ingredient_id end source_id
+    from public.meal_log_entries entry
+    where entry.owner_user_id=p_owner_uuid and entry.account_generation=v_generation and entry.deleted_at is null
+      and case entry.source_type
+        when 'cooked_batch' then exists(select 1 from public.leftover_dishes batch where batch.id=entry.cooked_batch_id and batch.user_id=p_owner_uuid)
+        when 'food_product' then exists(select 1 from public.food_products product where product.id=entry.food_product_id and product.deleted_at is null and product.moderation_status='visible' and (product.visibility='public' or product.owner_user_id=p_owner_uuid))
+        else exists(select 1 from public.ingredients ingredient where ingredient.id=entry.ingredient_id) end
+  ), latest as (
+    select distinct on (source_type,source_id) source_type,source_id,display_name_snapshot display_name,
+      display_brand_snapshot display_brand,actual_amount last_amount,actual_unit last_unit,consumed_local_date last_date,id last_id
+    from eligible order by source_type,source_id,consumed_local_date desc,created_at desc,id desc
+  ), frequencies as (
+    select source_type,source_id,count(*) frequency from eligible group by source_type,source_id
+  )
   select coalesce(jsonb_agg(to_jsonb(item) order by item.last_date desc,item.last_id desc),'[]') into v_items from (
-    select source_type,case source_type when 'cooked_batch' then cooked_batch_id when 'food_product' then food_product_id else ingredient_id end source_id,
-      max(display_name_snapshot) display_name,max(display_brand_snapshot) display_brand,max(actual_amount) last_amount,max(actual_unit) last_unit,
-      max(consumed_local_date) last_date,max(id) last_id,count(*) frequency
-    from public.meal_log_entries where owner_user_id=p_owner_uuid and account_generation=v_generation and deleted_at is null
-      and (p_cursor_date is null or (consumed_local_date,id)<(p_cursor_date,p_cursor_id))
-    group by source_type,source_id order by last_date desc,last_id desc limit greatest(1,least(p_limit,50))
+    select latest.*,frequencies.frequency from latest join frequencies using(source_type,source_id)
+    where p_cursor_date is null or (latest.last_date,latest.last_id)<(p_cursor_date,p_cursor_id)
+    order by latest.last_date desc,latest.last_id desc limit greatest(1,least(p_limit,50))+1
   ) item;
-  return jsonb_build_object('success',true,'data',jsonb_build_object('items',v_items,'has_next',jsonb_array_length(v_items)=p_limit),'error',null);
+  return jsonb_build_object('success',true,'data',jsonb_build_object(
+    'items',case when jsonb_array_length(v_items)>p_limit then v_items-p_limit else v_items end,
+    'has_next',jsonb_array_length(v_items)>p_limit
+  ),'error',null);
 end;
 $function$;
 
@@ -271,13 +313,15 @@ as $function$
 declare v_authority jsonb; v_generation bigint; v_claim jsonb; v_receipt uuid; v_entry public.meal_log_entries%rowtype;
   v_column public.meal_plan_columns%rowtype; v_batch public.leftover_dishes%rowtype; v_old_event public.cooked_batch_quantity_events%rowtype;
   v_event_id uuid; v_reversal_id uuid; v_source_type text; v_source_id uuid; v_amount numeric; v_unit text;
-  v_evidence jsonb; v_name text; v_brand text; v_product_version uuid; v_ingredient_profile uuid; v_result jsonb;
+  v_evidence jsonb; v_name text; v_brand text; v_product_version uuid; v_ingredient_profile uuid;
+  v_conversion_evidence uuid; v_nutrition_amount numeric; v_nutrition_unit text; v_result jsonb;
+  v_same_source boolean; v_same_quantity boolean; v_product_profile uuid; v_product_relations jsonb;
 begin
   if p_action not in ('create','patch','delete') then raise exception 'VALIDATION_ERROR' using errcode='22023'; end if;
   v_authority:=public.assert_recipe_future_session_authority(p_owner_uuid,p_auth_identity_created_at_snapshot,p_session_key_hash,p_hmac_key_version,p_session_issued_at);
   v_generation:=(v_authority->>'account_generation')::bigint;
   v_claim:=private.claim_cooked_batch_operation(p_owner_uuid,v_generation,'meal_log_'||p_action,p_idempotency_key,
-    jsonb_build_object('entry_id',p_entry_id,'expected_revision',p_expected_revision,'payload',p_payload),p_now);
+    jsonb_build_object('entry_id',case when p_action='create' then null else p_entry_id end,'expected_revision',p_expected_revision,'payload',p_payload),p_now);
   if v_claim ? 'replay' then return v_claim->'replay'; end if;
   v_receipt:=(v_claim->>'receipt_id')::uuid;
   if p_action<>'create' then
@@ -298,6 +342,9 @@ begin
   else
     v_source_type:=p_payload#>>'{source,type}'; v_source_id:=(p_payload#>>'{source,id}')::uuid;
     v_amount:=(p_payload#>>'{quantity,amount}')::numeric; v_unit:=p_payload#>>'{quantity,unit}';
+    v_same_source:=p_action='patch' and v_entry.source_type=v_source_type and
+      case v_source_type when 'cooked_batch' then v_entry.cooked_batch_id when 'food_product' then v_entry.food_product_id else v_entry.ingredient_id end=v_source_id;
+    v_same_quantity:=v_same_source and v_entry.actual_amount=v_amount and v_entry.actual_unit=v_unit;
     select * into v_column from public.meal_plan_columns where id=(p_payload->>'meal_plan_column_id')::uuid and user_id=p_owner_uuid for share;
     if v_column.id is null then raise exception 'RESOURCE_NOT_FOUND' using errcode='P0002'; end if;
     if not exists(select 1 from pg_timezone_names where name=p_payload->>'timezone_name_snapshot') then raise exception 'VALIDATION_ERROR' using errcode='22023'; end if;
@@ -306,35 +353,73 @@ begin
     end if;
     if v_source_type='cooked_batch' then
       if v_unit<>'g' then raise exception 'UNIT_CONVERSION_MISSING' using errcode='22023'; end if;
-      select * into v_batch from public.leftover_dishes where id=v_source_id and user_id=p_owner_uuid and weight_status='known' and batch_status='available' for update;
+      select * into v_batch from public.leftover_dishes where id=v_source_id and user_id=p_owner_uuid for update;
       if v_batch.id is null then raise exception 'RESOURCE_NOT_FOUND' using errcode='P0002'; end if;
+      if v_batch.weight_status='unrecoverable' then raise exception 'WEIGHT_UNRECOVERABLE' using errcode='55000'; end if;
+      if v_batch.weight_status<>'known' or v_batch.batch_status<>'available' then raise exception 'CONFLICT' using errcode='55000'; end if;
       if v_amount>v_batch.remaining_weight_g then raise exception 'CONFLICT' using errcode='22003'; end if;
       v_evidence:=private.resolve_cooked_batch_nutrition(v_batch.id,p_owner_uuid);
-      select title into v_name from public.recipes where id=v_batch.recipe_id;
+      if v_same_source then v_name:=v_entry.display_name_snapshot; v_brand:=v_entry.display_brand_snapshot;
+      else select title into v_name from public.recipes where id=v_batch.recipe_id; end if;
     elsif v_source_type='food_product' then
-      select product.name,product.brand,product.current_nutrition_version_id into v_name,v_brand,v_product_version
+      select product.name,product.brand,case when v_same_source then v_entry.food_product_nutrition_version_id else product.current_nutrition_version_id end into v_name,v_brand,v_product_version
       from public.food_products product where product.id=v_source_id and product.deleted_at is null
-        and (product.visibility='public' or product.owner_user_id=p_owner_uuid) for share;
+        and product.moderation_status='visible' and (product.visibility='public' or product.owner_user_id=p_owner_uuid) for share;
       if v_product_version is null then raise exception 'RESOURCE_NOT_FOUND' using errcode='P0002'; end if;
-      select private.resolve_meal_log_profile_nutrition(version.nutrition_profile_id,v_amount,v_unit) || jsonb_build_object('product_nutrition_version_id',version.id,'basis_relations',version.basis_relations_json)
-      into v_evidence from public.food_product_nutrition_versions version where version.id=v_product_version and version.product_id=v_source_id;
+      if v_same_source then v_name:=v_entry.display_name_snapshot; v_brand:=v_entry.display_brand_snapshot; end if;
+      if v_same_quantity then v_evidence:=v_entry.nutrition_evidence_json;
+      else
+        select version.nutrition_profile_id,version.basis_relations_json into v_product_profile,v_product_relations
+        from public.food_product_nutrition_versions version where version.id=v_product_version and version.product_id=v_source_id;
+        v_evidence:=private.resolve_meal_log_product_nutrition(v_product_profile,v_product_relations,v_amount,v_unit)
+          || jsonb_build_object('product_nutrition_version_id',v_product_version,'basis_relations',v_product_relations);
+      end if;
     elsif v_source_type='ingredient' then
-      select ingredient.standard_name,profile.id into v_name,v_ingredient_profile from public.ingredients ingredient
-      join public.ingredient_nutrition_profiles profile on profile.ingredient_id=ingredient.id and profile.is_primary and profile.is_active and profile.review_status='approved'
-      where ingredient.id=v_source_id for share;
+      select ingredient.standard_name into v_name from public.ingredients ingredient where ingredient.id=v_source_id for share;
+      if v_same_source then v_ingredient_profile:=v_entry.ingredient_nutrition_profile_id;
+      else select profile.id into v_ingredient_profile from public.ingredient_nutrition_profiles profile
+        where profile.ingredient_id=v_source_id and profile.is_primary and profile.is_active and profile.review_status='approved'; end if;
       if v_ingredient_profile is null then raise exception 'RESOURCE_NOT_FOUND' using errcode='P0002'; end if;
-      select private.resolve_meal_log_profile_nutrition(profile.nutrition_profile_id,v_amount,v_unit) || jsonb_build_object('ingredient_nutrition_profile_id',profile.id)
+      if v_same_source then v_name:=v_entry.display_name_snapshot; v_brand:=v_entry.display_brand_snapshot; end if;
+      if v_same_quantity then
+        v_evidence:=v_entry.nutrition_evidence_json; v_conversion_evidence:=v_entry.conversion_evidence_id;
+      else
+      v_nutrition_amount:=v_amount; v_nutrition_unit:=v_unit;
+      if v_unit in ('tbsp','tsp','cup') then
+        select evidence.id,
+          v_amount * (case v_unit when 'tbsp' then 15 when 'tsp' then 5 else 200 end) / 15 * evidence.normalized_g_per_15ml
+        into v_conversion_evidence,v_nutrition_amount
+        from public.ingredient_nutrition_profiles profile
+        join public.ingredient_conversion_assignments assignment
+          on assignment.ingredient_id=profile.ingredient_id
+          and assignment.preparation_state=profile.preparation_state
+          and assignment.is_active and assignment.review_status='approved'
+        join public.measurement_source_evidence evidence
+          on evidence.id=assignment.evidence_id and evidence.evidence_kind='volume_weight'
+          and evidence.is_active and evidence.review_status='approved'
+        where profile.id=v_ingredient_profile;
+        if v_conversion_evidence is null then raise exception 'UNIT_CONVERSION_MISSING' using errcode='22023'; end if;
+        v_nutrition_unit:='g';
+      elsif v_unit not in ('g','kg') then
+        raise exception 'UNIT_CONVERSION_MISSING' using errcode='22023';
+      end if;
+      select private.resolve_meal_log_profile_nutrition(profile.nutrition_profile_id,v_nutrition_amount,v_nutrition_unit)
+        || jsonb_build_object('ingredient_nutrition_profile_id',profile.id,'conversion_evidence_id',v_conversion_evidence)
       into v_evidence from public.ingredient_nutrition_profiles profile where profile.id=v_ingredient_profile;
+      end if;
     else raise exception 'VALIDATION_ERROR' using errcode='22023'; end if;
     if p_action='create' then
       insert into public.meal_log_entries(id,owner_user_id,account_generation,consumed_at,consumed_local_date,timezone_name_snapshot,meal_plan_column_id,slot_name_snapshot,source_type,cooked_batch_id,food_product_id,food_product_nutrition_version_id,ingredient_id,ingredient_nutrition_profile_id,actual_amount,actual_unit,display_name_snapshot,display_brand_snapshot,nutrition_evidence_json,created_at,updated_at)
       values(p_entry_id,p_owner_uuid,v_generation,nullif(p_payload->>'consumed_at','')::timestamptz,(p_payload->>'consumed_local_date')::date,p_payload->>'timezone_name_snapshot',v_column.id,v_column.name,v_source_type,
         case when v_source_type='cooked_batch' then v_source_id end,case when v_source_type='food_product' then v_source_id end,v_product_version,case when v_source_type='ingredient' then v_source_id end,v_ingredient_profile,
         v_amount,v_unit,v_name,v_brand,v_evidence,p_now,p_now) returning * into v_entry;
+      if v_source_type='ingredient' and v_conversion_evidence is not null then
+        update public.meal_log_entries set conversion_evidence_id=v_conversion_evidence where id=p_entry_id returning * into v_entry;
+      end if;
     else
       update public.meal_log_entries set consumed_at=nullif(p_payload->>'consumed_at','')::timestamptz,consumed_local_date=(p_payload->>'consumed_local_date')::date,timezone_name_snapshot=p_payload->>'timezone_name_snapshot',meal_plan_column_id=v_column.id,slot_name_snapshot=v_column.name,source_type=v_source_type,
         cooked_batch_id=case when v_source_type='cooked_batch' then v_source_id end,food_product_id=case when v_source_type='food_product' then v_source_id end,food_product_nutrition_version_id=v_product_version,
-        ingredient_id=case when v_source_type='ingredient' then v_source_id end,ingredient_nutrition_profile_id=v_ingredient_profile,conversion_evidence_id=null,actual_amount=v_amount,actual_unit=v_unit,
+        ingredient_id=case when v_source_type='ingredient' then v_source_id end,ingredient_nutrition_profile_id=v_ingredient_profile,conversion_evidence_id=v_conversion_evidence,actual_amount=v_amount,actual_unit=v_unit,
         display_name_snapshot=v_name,display_brand_snapshot=v_brand,nutrition_evidence_json=v_evidence,revision=revision+1,updated_at=p_now where id=p_entry_id returning * into v_entry;
     end if;
     if v_source_type='cooked_batch' then
@@ -343,6 +428,9 @@ begin
       values(v_event_id,p_owner_uuid,v_source_id,'consumed',-v_amount,'meal_log',p_entry_id,p_idempotency_key,case when v_reversal_id is null then 1 else 2 end,v_claim->>'payload_hash',p_now);
       update public.meal_log_entries set active_consumption_event_id=v_event_id where id=p_entry_id returning * into v_entry;
       perform private.replay_cooked_batch(v_source_id,p_owner_uuid,p_now);
+      if exists(select 1 from public.leftover_dishes where id=v_source_id and batch_status='depleted' and depleted_reason='consumed') then
+        perform private.project_cooked_batch_progress_activity(p_owner_uuid,'leftover_eaten',v_source_id,p_now);
+      end if;
     end if;
   end if;
   v_result:=jsonb_build_object('success',true,'data',jsonb_build_object('entry',private.project_meal_log_entry(v_entry)),'error',null);
@@ -381,6 +469,7 @@ create trigger zz_cleanup_meal_log_before_cooked_batch_delete before delete on p
 for each row execute function private.cleanup_meal_log_before_cooked_batch_delete();
 
 alter function private.resolve_meal_log_profile_nutrition(uuid,numeric,text) owner to postgres;
+alter function private.resolve_meal_log_product_nutrition(uuid,jsonb,numeric,text) owner to postgres;
 alter function private.assert_meal_log_pointer_pair() owner to postgres;
 alter function private.project_meal_log_entry(public.meal_log_entries) owner to postgres;
 alter function private.cleanup_meal_log_before_user_delete() owner to postgres;
@@ -389,6 +478,7 @@ alter function public.get_meal_log_day(uuid,timestamptz,text,integer,timestamptz
 alter function public.get_recent_meal_log_sources(uuid,timestamptz,text,integer,timestamptz,integer,date,uuid) owner to postgres;
 alter function public.mutate_meal_log_entry(uuid,timestamptz,text,integer,timestamptz,text,uuid,uuid,bigint,jsonb,timestamptz) owner to postgres;
 revoke all on function private.resolve_meal_log_profile_nutrition(uuid,numeric,text) from public,anon,authenticated,service_role;
+revoke all on function private.resolve_meal_log_product_nutrition(uuid,jsonb,numeric,text) from public,anon,authenticated,service_role;
 revoke all on function private.assert_meal_log_pointer_pair() from public,anon,authenticated,service_role;
 revoke all on function private.project_meal_log_entry(public.meal_log_entries) from public,anon,authenticated,service_role;
 revoke all on function private.cleanup_meal_log_before_user_delete() from public,anon,authenticated,service_role;

@@ -77,4 +77,31 @@ describe.runIf(enabled)("meal-log core PostgreSQL", () => {
       batch_cleanup: true,
     });
   });
+
+  test("create idempotency canonical payload replays across different generated entry ids", () => {
+    const result = psql(`
+      begin;
+      do $block$
+      declare first_claim jsonb; receipt uuid; stored jsonb;
+      begin
+        first_claim:=private.claim_cooked_batch_operation(
+          '92000000-0000-4000-8000-000000000001',1,'meal_log_create',
+          '92000000-0000-4000-8000-000000000002',
+          jsonb_build_object('entry_id',null,'expected_revision',null,'payload',jsonb_build_object('date','2026-08-10')),
+          clock_timestamp()
+        );
+        receipt:=(first_claim->>'receipt_id')::uuid;
+        stored:=jsonb_build_object('success',true,'data',jsonb_build_object('entry_id','92000000-0000-4000-8000-000000000003'),'error',null);
+        perform private.finish_cooked_batch_operation(receipt,stored,'92000000-0000-4000-8000-000000000003',clock_timestamp());
+      end $block$;
+      select private.claim_cooked_batch_operation(
+        '92000000-0000-4000-8000-000000000001',1,'meal_log_create',
+        '92000000-0000-4000-8000-000000000002',
+        jsonb_build_object('entry_id',null,'expected_revision',null,'payload',jsonb_build_object('date','2026-08-10')),
+        clock_timestamp()
+      )->'replay';
+      rollback;
+    `);
+    expect(result.stdout).toContain("92000000-0000-4000-8000-000000000003");
+  });
 });

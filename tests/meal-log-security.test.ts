@@ -18,5 +18,7 @@ describe("meal-log database authority", () => {
     expect(sql).toMatch(/revoke (?:all|insert, update, delete)[\s\S]*meal_log_entries[\s\S]*authenticated/i);
     expect(sql).toMatch(/create or replace function public\.mutate_meal_log_entry/i);
     expect(sql).toMatch(/private\.replay_cooked_batch/i);
+    expect(sql).toMatch(/product\.moderation_status='visible'/i);
+    expect(sql).toMatch(/distinct on \(source_type,source_id\)[\s\S]*actual_amount last_amount/i);
   });
 });
