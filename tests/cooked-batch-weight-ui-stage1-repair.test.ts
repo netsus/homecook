@@ -9,6 +9,16 @@ function read(path: string) {
   return readFileSync(join(root, path), "utf8");
 }
 
+function section(markdown: string, start: string, end: string) {
+  const startIndex = markdown.indexOf(start);
+  const endIndex = markdown.indexOf(end, startIndex + start.length);
+
+  expect(startIndex).toBeGreaterThanOrEqual(0);
+  expect(endIndex).toBeGreaterThan(startIndex);
+
+  return markdown.slice(startIndex, endIndex);
+}
+
 describe("cooked-batch-weight-ui Stage 1 docs and automation repair", () => {
   const readme = read("docs/workpacks/cooked-batch-weight-ui/README.md");
   const acceptance = read("docs/workpacks/cooked-batch-weight-ui/acceptance.md");
@@ -219,5 +229,34 @@ describe("cooked-batch-weight-ui Stage 1 docs and automation repair", () => {
     ]) {
       expect(mobileContract).toContain(expected);
     }
+  });
+
+  it("allows only exact projected current-closure cancel on depleted cards", () => {
+    const depletedRule =
+      "모든 depleted card에서 weight/discard/adjust/close/consume CTA를 제거";
+    const exactCancelRule =
+      "`current_unweighed_closure_event_id != null`인 exact current `closed_unweighed` projection에서만 secondary `[방금 종료 취소]`를 허용";
+    const noReopenRule =
+      "generic reopen, non-current closure cancel, unrecoverable reversal은 금지";
+    const readmeContracts = [
+      section(readme, "### LEFTOVERS weight and lifecycle UI", "## Schema Change"),
+      section(readme, "## Frontend Delivery Mode", "## State / Error Matrix"),
+      section(readme, "## State / Error Matrix", "## Primary User Path"),
+    ];
+
+    for (const contract of readmeContracts) {
+      expect(contract).toContain(depletedRule);
+      expect(contract).toContain(exactCancelRule);
+      expect(contract).toContain(noReopenRule);
+    }
+
+    const acceptanceRule = acceptance
+      .split("\n")
+      .find((line) => line.includes("accept-batch-weight-ui-empty-depleted"));
+    expect(acceptanceRule).toContain(depletedRule);
+    expect(acceptanceRule).toContain(exactCancelRule);
+    expect(acceptanceRule).toContain(noReopenRule);
+    expect(acceptance).not.toContain("every depleted state removes mutation CTAs");
+    expect(readme).not.toContain("generic reopen action");
   });
 });

@@ -34,7 +34,7 @@
 - [ ] all six depleted labels are distinct and only consumed variants project eaten/XP <!-- omo:id=accept-batch-weight-ui-depleted-copy;stage=4;scope=frontend;review=5,6 -->
 - [ ] `legacy-null` remains read-only unknown and is never treated as missing, 0g or depleted <!-- omo:id=accept-batch-weight-ui-legacy-null;stage=4;scope=frontend;review=5,6 -->
 - [ ] partial/unavailable stays explicit; missing weight never becomes zero or estimated nutrition <!-- omo:id=accept-batch-weight-ui-nutrition-truth;stage=4;scope=frontend;review=5,6 -->
-- [ ] empty LEFTOVERS offers safe Planner return only; every depleted state removes mutation CTAs <!-- omo:id=accept-batch-weight-ui-empty-depleted;stage=4;scope=frontend;review=5,6 -->
+- [ ] empty LEFTOVERS offers safe Planner return only; 모든 depleted card에서 weight/discard/adjust/close/consume CTA를 제거한다. 단, `current_unweighed_closure_event_id != null`인 exact current `closed_unweighed` projection에서만 secondary `[방금 종료 취소]`를 허용한다. generic reopen, non-current closure cancel, unrecoverable reversal은 금지한다. <!-- omo:id=accept-batch-weight-ui-empty-depleted;stage=4;scope=frontend;review=5,6 -->
 
 ## Security / Errors
 

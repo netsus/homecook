@@ -34,7 +34,7 @@ API v1.2.37은 #8 API v1.2.36의 `0-CBW` cooked-batch 계약을 보존한다. #1
 - 기존 delayed weight, mark-unrecoverable, discard, adjust, close-unweighed, exact current closure cancel mutation만 호출한다.
 - `known+available`에는 #11 소유 `버림 | 양 조정`만 제공한다. #12가 별도 merge/activation되기 전 consumed-amount CTA를 렌더하지 않는다.
 - depleted reason 여섯 종류를 구분하고 consumed 두 종류만 legacy eaten/XP 의미를 가진다.
-- every depleted state는 read-only이며 generic reopen, unrecoverable restore/reversal, gram action을 제공하지 않는다.
+- 모든 depleted card에서 weight/discard/adjust/close/consume CTA를 제거한다. 단, `current_unweighed_closure_event_id != null`인 exact current `closed_unweighed` projection에서만 secondary `[방금 종료 취소]`를 허용한다. generic reopen, non-current closure cancel, unrecoverable reversal은 금지한다.
 
 ## Schema Change
 
@@ -84,12 +84,12 @@ Required states:
 - `loading`: stable skeleton/status, guessed row/action/grams 없음
 - `empty`: COOK_MODE no-eligible-row는 explicit `[]`; LEFTOVERS empty는 safe Planner return only
 - `error`: 401/private-404/409/422/read failure/replay conflict를 nondisclosing·actionable하게 표시
-- `read-only`: completed/cancelled, `legacy-null`, every `depleted` state에서 mutation affordance 제거
+- `read-only`: completed/cancelled와 `legacy-null`은 mutation affordance를 제거한다. 모든 depleted card에서 weight/discard/adjust/close/consume CTA를 제거한다. 단, `current_unweighed_closure_event_id != null`인 exact current `closed_unweighed` projection에서만 secondary `[방금 종료 취소]`를 허용한다. generic reopen, non-current closure cancel, unrecoverable reversal은 금지한다.
 - `unauthorized`: private data를 렌더하지 않고 login guidance + return-to-action 제공
 - `ready/interactive`: known/missing/unrecoverable + available truth에 eligible #11 action만 제공
 - `pending`: duplicate submit, Escape, backdrop/close를 잠그고 input과 opener context 보존
 
-COOK_MODE에서 `legacy-null`/depleted projection이 실제 existing binding으로 도달 가능한지 여부와 LEFTOVERS legacy planner-add/pagination 결합은 design-generator 소유 repair다. #11 docs/automation author는 새 read나 route를 발명하지 않는다.
+COOK_MODE의 `legacy-null`/depleted는 LEFTOVERS read-model only이므로 N/A이며, LEFTOVERS의 legacy/v2 two-section과 cursor pagination 보수는 완료됐다. 이 exact-cancel 문서/테스트 보수 뒤 새 exact head/tree의 fresh independent design rereview는 pending이다. #11 docs/automation author는 새 read나 route를 발명하지 않는다.
 
 ## State / Error Matrix
 
@@ -100,7 +100,7 @@ COOK_MODE에서 `legacy-null`/depleted projection이 실제 existing binding으�
 | unauthorized | login guidance + return-to-action | private projection 미표시 |
 | other-owner/private 404 | nondisclosing error + safe back | mutation 0 |
 | legacy-null | `이전 기록 · 중량 상태를 확인할 수 없음` | missing/0g/depleted로 추정 금지 |
-| depleted | exact reason label, read-only | weight/discard/adjust/close/consume CTA 없음 |
+| depleted | exact reason label; 모든 depleted card에서 weight/discard/adjust/close/consume CTA를 제거한다. 단, `current_unweighed_closure_event_id != null`인 exact current `closed_unweighed` projection에서만 secondary `[방금 종료 취소]`를 허용한다. | generic reopen, non-current closure cancel, unrecoverable reversal은 금지한다. |
 | stale revision / 409 / 422 | input 유지, authority refresh, actionable error focus | optimistic terminal copy 없음 |
 | `WEIGHT_UNRECOVERABLE` | gram control 제거, unrecoverable truth refresh | restore/reversal 없음 |
 | stored replay | stored result 한 번 반영 | duplicate event/effect 없음 |
