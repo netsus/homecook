@@ -20,6 +20,19 @@ export interface CookingApiError extends Error {
   fields: ApiError["fields"];
 }
 
+type SnapshotV2SessionMode = SnapshotV2CompleteData["mode"];
+
+const MAX_REMEMBERED_SNAPSHOT_V2_SESSIONS = 32;
+const snapshotV2SessionModes = new Map<string, SnapshotV2SessionMode>();
+
+function rememberSnapshotV2SessionMode(sessionId: string, mode: SnapshotV2SessionMode) {
+  snapshotV2SessionModes.delete(sessionId);
+  snapshotV2SessionModes.set(sessionId, mode);
+  if (snapshotV2SessionModes.size <= MAX_REMEMBERED_SNAPSHOT_V2_SESSIONS) return;
+  const oldestSessionId = snapshotV2SessionModes.keys().next().value;
+  if (oldestSessionId !== undefined) snapshotV2SessionModes.delete(oldestSessionId);
+}
+
 export async function createSnapshotV2CookingSession(body: { mode: "planner"; meal_ids: string[]; expected_meal_revisions: Record<string, number> } | { mode: "standalone"; recipe_id: string; expected_recipe_revision: number; cooking_servings: number }, idempotencyKey = crypto.randomUUID()): Promise<SnapshotV2StartData> {
   const data = await requestCooking<SnapshotV2StartData>("/api/v1/cooking/session-attempts", { method: "POST", headers: { "content-type": "application/json", "Idempotency-Key": idempotencyKey }, body: JSON.stringify(body) });
   if (!isExactSnapshotV2StartData(data, body)) throw createCookingApiError({ status: 502, code: "INVALID_RESPONSE", fields: [], message: "요리 세션 응답을 확인하지 못했어요." });
@@ -27,14 +40,28 @@ export async function createSnapshotV2CookingSession(body: { mode: "planner"; me
 }
 
 export async function fetchSnapshotV2CookMode(sessionId: string): Promise<SnapshotV2CookModeData> {
+  snapshotV2SessionModes.delete(sessionId);
   const data = await requestCooking<SnapshotV2CookModeData>(`/api/v1/cooking/session-attempts/${sessionId}/cook-mode`);
-  if (data.contract_version !== "snapshot_v2") throw createCookingApiError({ status: 502, code: "INVALID_RESPONSE", fields: [], message: "요리 세션 버전을 확인하지 못했어요." });
+  if (
+    data.session_id !== sessionId
+    || data.contract_version !== "snapshot_v2"
+    || (data.mode !== "planner" && data.mode !== "standalone")
+  ) throw createCookingApiError({ status: 502, code: "INVALID_RESPONSE", fields: [], message: "요리 세션 버전을 확인하지 못했어요." });
+  rememberSnapshotV2SessionMode(sessionId, data.mode);
   return data;
 }
 
 export async function cancelSnapshotV2CookingSession(sessionId: string, idempotencyKey: string): Promise<SnapshotV2CancelData> {
+  const expectedMode = snapshotV2SessionModes.get(sessionId);
   const data = await requestCooking<SnapshotV2CancelData>(`/api/v1/cooking/session-attempts/${sessionId}/cancel`, { method: "POST", headers: { "content-type": "application/json", "Idempotency-Key": idempotencyKey }, body: JSON.stringify({}) });
-  if (data.contract_version !== "snapshot_v2" || data.status !== "cancelled") throw createCookingApiError({ status: 502, code: "INVALID_RESPONSE", fields: [], message: "요리 세션 버전을 확인하지 못했어요." });
+  if (
+    data.session_id !== sessionId
+    || data.contract_version !== "snapshot_v2"
+    || (data.mode !== "planner" && data.mode !== "standalone")
+    || (expectedMode !== undefined && data.mode !== expectedMode)
+    || data.status !== "cancelled"
+  ) throw createCookingApiError({ status: 502, code: "INVALID_RESPONSE", fields: [], message: "요리 세션 버전을 확인하지 못했어요." });
+  snapshotV2SessionModes.delete(sessionId);
   return data;
 }
 
@@ -42,7 +69,16 @@ export async function completeSnapshotV2CookingSession(
   sessionId: string,
   body: SnapshotV2CompleteBody,
   idempotencyKey: string,
+  expectedMode = snapshotV2SessionModes.get(sessionId),
 ): Promise<SnapshotV2CompleteData> {
+  if (!expectedMode) {
+    throw createCookingApiError({
+      status: 502,
+      code: "INVALID_RESPONSE",
+      fields: [],
+      message: "요리 완료 결과를 확인하지 못했어요.",
+    });
+  }
   const data = await requestCooking<SnapshotV2CompleteData>(
     `/api/v1/cooking/session-attempts/${sessionId}/complete`,
     {
@@ -54,7 +90,11 @@ export async function completeSnapshotV2CookingSession(
       body: JSON.stringify(body),
     },
   );
-  if (!isExactSnapshotV2CompleteData(data, sessionId)) {
+  if (!isExactSnapshotV2CompleteData(data, {
+    body,
+    mode: expectedMode,
+    sessionId,
+  })) {
     throw createCookingApiError({
       status: 502,
       code: "INVALID_RESPONSE",
@@ -62,6 +102,7 @@ export async function completeSnapshotV2CookingSession(
       message: "요리 완료 결과를 확인하지 못했어요.",
     });
   }
+  snapshotV2SessionModes.delete(sessionId);
   return data;
 }
 
@@ -117,7 +158,11 @@ const COOKED_BATCH_KEYS = [
 
 function isExactSnapshotV2CompleteData(
   value: unknown,
-  sessionId: string,
+  request: {
+    body: SnapshotV2CompleteBody;
+    mode: SnapshotV2SessionMode;
+    sessionId: string;
+  },
 ): value is SnapshotV2CompleteData {
   if (!isRecord(value) || !hasExactKeys(value, [
     "session_id",
@@ -130,12 +175,13 @@ function isExactSnapshotV2CompleteData(
     "cook_count",
   ])) return false;
   if (
-    value.session_id !== sessionId
+    value.session_id !== request.sessionId
     || value.contract_version !== "snapshot_v2"
-    || (value.mode !== "planner" && value.mode !== "standalone")
+    || value.mode !== request.mode
     || value.status !== "completed"
     || !Number.isSafeInteger(value.meals_updated)
     || Number(value.meals_updated) < 0
+    || (request.mode === "standalone" && value.meals_updated !== 0)
     || !Number.isSafeInteger(value.pantry_removed)
     || Number(value.pantry_removed) < 0
     || !Number.isSafeInteger(value.cook_count)
@@ -144,19 +190,13 @@ function isExactSnapshotV2CompleteData(
 
   const batch = value.cooked_batch;
   if (!isRecord(batch) || !hasExactKeys(batch, COOKED_BATCH_KEYS)) return false;
-  const hasKnownWeight = batch.weight_status === "known"
-    && typeof batch.finished_weight_g === "number"
-    && Number.isFinite(batch.finished_weight_g)
-    && batch.finished_weight_g > 0
-    && typeof batch.remaining_weight_g === "number"
-    && Number.isFinite(batch.remaining_weight_g)
-    && batch.remaining_weight_g >= 0
-    && batch.remaining_weight_g <= batch.finished_weight_g;
-  const hasNoWeight = (batch.weight_status === "missing"
-      || batch.weight_status === "unrecoverable"
-      || batch.weight_status === null)
-    && batch.finished_weight_g === null
-    && batch.remaining_weight_g === null;
+  const hasRequestedInitialWeight = request.body.weight_action === "set_finished_weight"
+    ? batch.weight_status === "known"
+      && batch.finished_weight_g === request.body.finished_weight_g
+      && batch.remaining_weight_g === request.body.finished_weight_g
+    : batch.weight_status === "missing"
+      && batch.finished_weight_g === null
+      && batch.remaining_weight_g === null;
   if (
     typeof batch.id !== "string"
     || !UUID_PATTERN.test(batch.id)
@@ -165,15 +205,17 @@ function isExactSnapshotV2CompleteData(
     || typeof batch.recipe_title !== "string"
     || batch.recipe_title.trim().length === 0
     || (batch.recipe_thumbnail_url !== null && typeof batch.recipe_thumbnail_url !== "string")
-    || (batch.status !== "leftover" && batch.status !== "eaten")
+    || batch.status !== "leftover"
     || typeof batch.cooked_at !== "string"
-    || (batch.cooking_servings !== null && (!Number.isSafeInteger(batch.cooking_servings) || Number(batch.cooking_servings) <= 0))
-    || (!hasKnownWeight && !hasNoWeight)
-    || !["available", "depleted", null].includes(batch.batch_status as never)
-    || !["consumed", "discarded", "mixed", "consumed_unweighed", "discarded_unweighed", "mixed_unweighed", null].includes(batch.depleted_reason as never)
-    || (batch.revision !== null && (!Number.isSafeInteger(batch.revision) || Number(batch.revision) <= 0))
-    || !["complete", "partial", "unavailable", null].includes(batch.nutrition_calculation_status as never)
-    || (batch.current_unweighed_closure_event_id !== null && (typeof batch.current_unweighed_closure_event_id !== "string" || !UUID_PATTERN.test(batch.current_unweighed_closure_event_id)))
+    || !Number.isSafeInteger(batch.cooking_servings)
+    || Number(batch.cooking_servings) <= 0
+    || !hasRequestedInitialWeight
+    || batch.batch_status !== "available"
+    || batch.depleted_reason !== null
+    || !Number.isSafeInteger(batch.revision)
+    || Number(batch.revision) <= 0
+    || !["complete", "partial", "unavailable"].includes(batch.nutrition_calculation_status as never)
+    || batch.current_unweighed_closure_event_id !== null
   ) return false;
   return true;
 }
