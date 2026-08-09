@@ -157,16 +157,18 @@ function classifyEvent(event, probe, windowStartMs, windowEndMs) {
   if (normalizeNetworkLabel(event.network_label) === null) {
     return { status: "invalid", error: "INVALID_EVENT" };
   }
-  if (event.outcome === "timeout") return { status: "timeout", error: "TIMEOUT" };
-  if (observedAt - scheduledAt > probe.timeout_seconds * 1_000) {
-    return { status: "late", error: "LATE" };
+  if (!["timeout", "response"].includes(event.outcome)) {
+    return { status: "invalid", error: "INVALID_EVENT" };
   }
-  if (event.outcome !== "response") return { status: "invalid", error: "INVALID_EVENT" };
+  if (event.outcome === "timeout") return { status: "timeout", error: "TIMEOUT" };
   if (!Number.isInteger(event.http_status) || event.http_status < 100 || event.http_status > 599) {
     return { status: "invalid", error: "INVALID_EVENT" };
   }
   if (!Number.isFinite(event.ttfb_ms) || event.ttfb_ms < 0) {
     return { status: "invalid", error: "INVALID_EVENT" };
+  }
+  if (observedAt - scheduledAt > probe.timeout_seconds * 1_000) {
+    return { status: "late", error: "LATE" };
   }
   if (event.http_status >= 520 && event.http_status <= 529) {
     return { status: "cloudflare_52x", error: "CLOUDFLARE_52X" };
@@ -378,7 +380,7 @@ export function aggregateExternalProbeWindow(input = {}) {
         status: "invalid",
         error: "INVALID_EVENT",
         scheduled_at: event.scheduled_at,
-        observed_at: event.observed_at,
+        observed_at: event.scheduled_at,
         colo: "MISSING",
         network_label: null,
         ttfb_ms: null,

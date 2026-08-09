@@ -251,7 +251,7 @@ export function parseTunnelMetrics(raw) {
       const labels = parsePrometheusLabels(connection?.[1]);
       if (connection && labels !== null) connectionSamples.push(connection[2]);
     }
-    if (!/^cloudflared_tunnel_server_locations\{/u.test(line)) continue;
+    if (!/^cloudflared_tunnel_server_locations(?:\{|\s)/u.test(line)) continue;
     const server = line.match(/^cloudflared_tunnel_server_locations(\{.*\})\s+1(?:\.0+)?$/u);
     const labels = parsePrometheusLabels(server?.[1]);
     const connectionId = labels?.get("connection_id");

@@ -166,13 +166,20 @@ export function validateLocalConnectorHealth(value) {
 
   const eventSignals = new Set();
   const incidentIdentities = new Set();
+  const currentStateIncidentCounts = {
+    connector_down: 0,
+    connector_degraded: 0,
+  };
   let slowReconnectIncidentCount = 0;
+  let previousIncidentTimestamp = null;
   const capturedAtMs = Date.parse(value.captured_at);
   for (const event of value.incident_events) {
+    const eventTimestamp = Date.parse(event?.timestamp ?? "");
     if (!exactObjectKeys(event, INCIDENT_KEYS)
       || !utcIsoTimestamp(event.timestamp)
-      || Date.parse(event.timestamp) < capturedAtMs - 86_400_000
-      || Date.parse(event.timestamp) > capturedAtMs
+      || eventTimestamp < capturedAtMs - 86_400_000
+      || eventTimestamp > capturedAtMs
+      || (previousIncidentTimestamp !== null && eventTimestamp < previousIncidentTimestamp)
       || event.source !== "local_connector"
       || event.kind !== "connector_health"
       || !["ICN", "LAX", "OTHER", "MISSING"].includes(event.colo)
@@ -186,11 +193,20 @@ export function validateLocalConnectorHealth(value) {
     const identity = JSON.stringify(INCIDENT_KEYS.map((key) => event[key]));
     if (incidentIdentities.has(identity)) return false;
     incidentIdentities.add(identity);
+    previousIncidentTimestamp = eventTimestamp;
+    if (event.status === "connector_down" || event.status === "connector_degraded") {
+      if (event.timestamp !== value.captured_at) return false;
+      currentStateIncidentCounts[event.status] += 1;
+    }
     if (!signals[contract.signal_group].includes(contract.signal)) return false;
     if (event.status === "reconnect_slow") slowReconnectIncidentCount += 1;
     eventSignals.add(contract.signal);
   }
-  return slowReconnectIncidentCount <= reconnect.count
+  return currentStateIncidentCounts.connector_down
+      === (signals.critical.includes("connector_down") ? 1 : 0)
+    && currentStateIncidentCounts.connector_degraded
+      === (signals.warning.includes("connector_below_4_over_60s") ? 1 : 0)
+    && slowReconnectIncidentCount <= reconnect.count
     && [...signals.critical, ...signals.warning, ...signals.diagnostic]
       .every((signal) => eventSignals.has(signal));
 }

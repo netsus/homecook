@@ -386,7 +386,7 @@ describe("full-local session lifecycle evidence contract", () => {
             diagnostic: [],
           },
           incident_events: [{
-            timestamp: "2026-08-10T00:00:00.000Z",
+            timestamp: "2026-08-10T00:03:00.000Z",
             source: "local_connector",
             kind: "connector_health",
             severity: "warning",
@@ -437,7 +437,7 @@ describe("full-local session lifecycle evidence contract", () => {
           },
           signals: { critical: ["connector_down"], warning: [], diagnostic: [] },
           incident_events: [{
-            timestamp: "2026-08-10T00:00:00.000Z",
+            timestamp: "2026-08-10T00:03:00.000Z",
             source: "local_connector",
             kind: "connector_health",
             severity: "critical",

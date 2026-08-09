@@ -286,6 +286,51 @@ describe("provider-neutral external probe contract", () => {
     )).toBe(true);
   });
 
+  it("rejects malformed response outcomes before late classification", () => {
+    const events = completeEvents();
+    const malformed = events.find((event) =>
+      event.probe_id === "public_app_root" && event.scheduled_at === WINDOW_START
+    )!;
+    malformed.outcome = "garbage";
+    malformed.observed_at = new Date(Date.parse(malformed.scheduled_at) + 11_000).toISOString();
+    (malformed as unknown as Record<string, unknown>).http_status = "not-a-status";
+    malformed.ttfb_ms = -1;
+
+    const aggregate = aggregateExternalProbeWindow({
+      window_start: WINDOW_START,
+      window_end: WINDOW_END,
+      events,
+    });
+
+    expect(aggregate.rejected_event_count).toBe(1);
+    expect(aggregate.by_probe.public_app_root.invalid).toBe(1);
+    expect(aggregate.by_probe.public_app_root.late).toBe(0);
+    expect(aggregate.by_probe.public_app_root.gate_pass).toBe(false);
+    expect(aggregate.public_paging_ready).toBe(false);
+  });
+
+  it("uses the canonical slot timestamp for rejected duplicate events", () => {
+    const events = completeEvents();
+    events.push(eventFor("public_app_root", 0, {
+      observed_at: "2026-08-12T00:00:00.000Z",
+    }));
+
+    const aggregate = aggregateExternalProbeWindow({
+      window_start: WINDOW_START,
+      window_end: WINDOW_END,
+      events,
+    });
+    const duplicateIncident = aggregate.incident_timeline.find((event) =>
+      event.source === "external_public" && event.status === "invalid"
+    );
+
+    expect(aggregate.rejected_event_count).toBe(1);
+    expect(duplicateIncident?.timestamp).toBe(WINDOW_START);
+    expect(aggregate.incident_timeline.every(({ timestamp }) =>
+      timestamp >= WINDOW_START && timestamp <= WINDOW_END
+    )).toBe(true);
+  });
+
   it("separates endpoint completeness from response quality and keeps auth out of CLI success", async () => {
     const oneMissing = completeEvents();
     oneMissing.splice(oneMissing.findIndex((event) =>

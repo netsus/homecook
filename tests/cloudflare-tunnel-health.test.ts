@@ -420,6 +420,33 @@ describe("Cloudflare local connector health", () => {
     }
   });
 
+  it("rejects every noncanonical exact server-location metric sample", () => {
+    const noncanonicalSamples = [
+      "cloudflared_tunnel_server_locations 1",
+      'cloudflared_tunnel_server_locations{connection_id="extra",edge_location="icn01"} 0',
+      'cloudflared_tunnel_server_locations{connection_id="extra",edge_location="icn01"} 1 1786300000',
+      'cloudflared_tunnel_server_locations{connection_id="extra",edge_location="icn01"} 1 # inline',
+    ];
+    for (const sample of noncanonicalSamples) {
+      const metricsRaw = `${metrics(4)}\n${sample}`;
+      const parsed = parseTunnelMetrics(metricsRaw);
+
+      expect(parsed.samples_valid).toBe(false);
+      expect(parsed.success).toBe(false);
+      expect(buildLocalConnectorHealth({
+        captured_at: "2026-08-10T00:03:00.000Z",
+        metrics_raw: metricsRaw,
+        log_raw: initialConnections,
+      })).toEqual(expect.objectContaining({
+        state: "unknown",
+        connector: expect.objectContaining({ metrics_valid: false }),
+      }));
+    }
+    expect(parseTunnelMetrics(
+      `${metrics(4)}\ncloudflared_tunnel_server_locations_total 1`,
+    )).toEqual(expect.objectContaining({ success: true, samples_valid: true }));
+  });
+
   it("validates the exact local health schema and state/incident invariants", () => {
     const valid = buildLocalConnectorHealth({
       captured_at: "2026-08-10T00:03:00.000Z",
@@ -500,6 +527,46 @@ describe("Cloudflare local connector health", () => {
     };
     expect(validateLocalConnectorHealth(duplicateIncident)).toBe(false);
     expect(localConnectorHealthExitCode(duplicateIncident)).toBeNull();
+  });
+
+  it("requires chronological incidents and one current-state incident at captured_at", () => {
+    const recoveredLog = [
+      initialConnections,
+      ...[0, 1, 2, 3].map((index) =>
+        `2026-08-10T00:01:00.000Z ERR connection closed connIndex=${index}`
+      ),
+      ...[0, 1, 2, 3].map((index) =>
+        `2026-08-10T00:01:${index === 3 ? "16" : "05"}.000Z INF Registered tunnel connection connIndex=${index} location=icn01 protocol=quic`
+      ),
+    ].join("\n");
+    const recovered = buildLocalConnectorHealth({
+      captured_at: "2026-08-10T00:02:00.000Z",
+      metrics_raw: metrics(4),
+      log_raw: recoveredLog,
+    });
+    expect(recovered.incident_events.map(({ status }) => status)).toEqual([
+      "simultaneous_disconnect",
+      "reconnect_slow",
+    ]);
+    expect(validateLocalConnectorHealth(recovered)).toBe(true);
+    expect(validateLocalConnectorHealth({
+      ...recovered,
+      incident_events: [...recovered.incident_events].reverse(),
+    })).toBe(false);
+
+    const critical = buildLocalConnectorHealth({
+      captured_at: "2026-08-10T00:03:00.000Z",
+      metrics_raw: metrics(0),
+      log_raw: initialConnections,
+    });
+    expect(validateLocalConnectorHealth(critical)).toBe(true);
+    expect(validateLocalConnectorHealth({
+      ...critical,
+      incident_events: [
+        { ...critical.incident_events[0], timestamp: "2026-08-10T00:02:00.000Z" },
+        critical.incident_events[0],
+      ],
+    })).toBe(false);
   });
 
   it("never serializes raw metrics, logs, token, cookie, JWT, email, UUID, IP, path, header, or body", () => {
