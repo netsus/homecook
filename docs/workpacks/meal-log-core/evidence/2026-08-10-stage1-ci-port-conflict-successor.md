@@ -13,7 +13,9 @@
 - workflow run: `31324302478`
 - job: `93272089222`
 - exact failed step: `Start fresh local Supabase and replay migrations`
-- failed-head current PR check rollup: terminal `success 8`, intended `skipped 5`, `failure 1`, `pending 0`
+- failed-head raw started check-run rollup: `total 20`; terminal `success 14`, intended `skipped 5`, `failure 1`, pending/cancel/rerun `0`
+
+The contemporaneous `gh pr` condensed surface showed `success 8`; the governing raw exact-head inventory also includes six additional completed PR Governance/Policy check runs, yielding all-started `total 20` and `success 14`.
 
 This is an evidence-only successor-head record. It changes no product code, public contract, migration, CI workflow, dependency, work item, lifecycle projection, or activation state. The GitHub log summary below excludes secrets, tokens, raw provider payloads, and unrelated runner details.
 
