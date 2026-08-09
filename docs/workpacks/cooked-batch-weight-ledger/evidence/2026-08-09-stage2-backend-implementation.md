@@ -36,6 +36,8 @@ This task changes only #8 DB/backend/API, the existing leftovers compatibility r
 
 The required final re-fetch then found master had advanced again to `d9b5ff9bf6e70552641c9b02d71c8d888d340079`. That exact OAuth/auth repair lineage merged cleanly after local repair commit `cfc5515716ba3b2bf1d10fd73cd1779a6991fe81`. Official account-inventory regeneration kept `64/93/3` and checksum `eb0a8c1cd875c38ad183c5bf4f06c9b336f08e4b00d4f2d8e425c76f72b91733`; only `generated_at` advanced. Focused auth + cooked-batch Vitest passed `11 files / 159 tests`, full Vitest passed `526 files / 5,377 tests` with `28 files / 369 tests` intended skip, and `verify:backend` passed `219 product files / 2,679 tests` with `11 files / 150 tests` intended skip plus build and security E2E `12/12`.
 
+A second required final re-fetch found master had advanced once more to `2177ea439a62c3a00acba4f9e7036ed2516bb665` with the scoped logout-cookie repair from PR #1304. It merged without textual conflicts after head `3fd816c7f7d02070c5042484498191cb80d603fa`. Official regeneration again kept inventory counts `64/93/3` and checksum `eb0a8c1cd875c38ad183c5bf4f06c9b336f08e4b00d4f2d8e425c76f72b91733`; only `generated_at` advanced. Focused auth + cooked-batch Vitest passed `11 files / 131 tests`, full Vitest remained `526 files / 5,377 tests` with `28 files / 369 tests` intended skip, and `verify:backend` again passed `219 product files / 2,679 tests` with `11 files / 150 tests` intended skip plus build and security E2E `12/12`.
+
 ## Backend contract implemented
 
 - `POST /api/v1/cooking/session-attempts/{id}/complete`

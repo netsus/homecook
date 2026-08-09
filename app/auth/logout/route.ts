@@ -4,10 +4,12 @@ import { NextResponse } from "next/server";
 import {
   expireAuthFlowCookie,
   expireSupabaseAuthCookies,
+  getSupabaseAuthStorageKey,
 } from "@/lib/auth/session-cookies";
 import { resolveNextPath } from "@/lib/auth/callback";
 import { buildSameAppRedirectUrl } from "@/lib/auth/redirect-origin";
 import { executeHybridLogout } from "@/lib/server/hybrid-auth/logout";
+import { getAuthSupabaseEnv } from "@/lib/supabase/auth-env";
 import { createAuthRouteHandlerClient } from "@/lib/supabase/server";
 
 function buildLogoutFailureRedirectUrl(requestUrl: URL, nextPath: string) {
@@ -23,6 +25,7 @@ export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
   const nextPath = resolveNextPath(requestUrl.searchParams.get("next"));
   const cookieStore = await cookies();
+  const authStorageKey = getSupabaseAuthStorageKey(getAuthSupabaseEnv().url);
   const supabase = await createAuthRouteHandlerClient();
 
   const logoutResult = await executeHybridLogout(supabase);
@@ -32,11 +35,17 @@ export async function GET(request: Request) {
         NextResponse.redirect(buildLogoutFailureRedirectUrl(requestUrl, nextPath)),
         request,
         cookieStore,
+        { storageKey: authStorageKey },
       ),
     );
   }
 
   return expireAuthFlowCookie(
-    NextResponse.redirect(buildSameAppRedirectUrl(nextPath, requestUrl)),
+    expireSupabaseAuthCookies(
+      NextResponse.redirect(buildSameAppRedirectUrl(nextPath, requestUrl)),
+      request,
+      cookieStore,
+      { storageKey: authStorageKey },
+    ),
   );
 }

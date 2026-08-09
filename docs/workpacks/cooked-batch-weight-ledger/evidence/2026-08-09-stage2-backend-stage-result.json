@@ -73,6 +73,18 @@
     "public_contract_expansion": false,
     "stage3_self_approval": false
   },
+  "final_logout_master_reintegration": {
+    "pre_integration_head": "3fd816c7f7d02070c5042484498191cb80d603fa",
+    "integrated_master": "2177ea439a62c3a00acba4f9e7036ed2516bb665",
+    "master_scope": "PR #1304 scoped logout-cookie expiration repair",
+    "conflicts": [],
+    "account_inventory": "official regeneration kept 64 routes / 93 write surfaces / 3 auth.users inbound fks and checksum eb0a8c1cd875c38ad183c5bf4f06c9b336f08e4b00d4f2d8e425c76f72b91733",
+    "focused_auth_and_cooked_batch": "11 files / 131 tests",
+    "full_vitest": "526 files / 5,377 tests passed; 28 files / 369 tests intended skip",
+    "verify_backend": "219 product files / 2,679 tests passed; 11 files / 150 tests intended skip; build and security E2E 12/12 passed",
+    "public_contract_expansion": false,
+    "stage3_self_approval": false
+  },
   "overall_status": {
     "lifecycle": "in_progress",
     "approval_state": "not_started",
@@ -103,7 +115,7 @@
       "passed_tests": 5377,
       "skipped_tests": 369
     },
-    "focused_vitest": "batch-nutrition RED 3 missing-function failures; GREEN 6 files / 59 tests; prior review repair GREEN backend/gamification/security/inventory 7 files / 69 tests and LEFTOVERS 27/27; first latest-master integration focused 11 files / 197 tests; migration-version RED 1 and GREEN 17/17; final master auth/cooked-batch focused 11 files / 159 tests; final full 5,377 passes / 369 skips",
+    "focused_vitest": "batch-nutrition RED 3 missing-function failures; GREEN 6 files / 59 tests; prior review repair GREEN backend/gamification/security/inventory 7 files / 69 tests and LEFTOVERS 27/27; first latest-master integration focused 11 files / 197 tests; migration-version RED 1 and GREEN 17/17; d9b5 auth/cooked-batch focused 11 files / 159 tests; 2177 logout/cooked-batch focused 11 files / 131 tests; final full 5,377 passes / 369 skips",
     "postgres_fresh_replay": "predecessor fresh 15 passed / 1 intended skip, replay 16 passed; cooked-batch fresh/replay 27/27; inherited inventory fresh/replay 26 passed / 33 intended skips after latest master added two inventory-only skipped full-local cases",
     "complete_cancel_race": "two real connections finish without deadlock; exactly one succeeds, one returns CONFLICT, and the session/Meal/claim/batch terminal state is valid",
     "live_gamification_projection": "snapshot-v2 completion, consumed-unweighed close and legacy eat reuse canonical progress/activity IDs with the existing official notification/badge/achievement helpers",
