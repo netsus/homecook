@@ -25,11 +25,11 @@
   "docs_refs": {
     "source_of_truth": [
       "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
-      "docs/요구사항기준선-v1.7.25.md",
-      "docs/화면정의서-v1.5.29.md",
-      "docs/유저flow맵-v1.3.27.md",
-      "docs/db설계-v1.3.26.md",
-      "docs/api문서-v1.2.29.md"
+      "docs/요구사항기준선-v1.7.30.md",
+      "docs/화면정의서-v1.5.34.md",
+      "docs/유저flow맵-v1.3.32.md",
+      "docs/db설계-v1.3.32.md",
+      "docs/api문서-v1.2.37.md"
     ],
     "governing_docs": [
       "AGENTS.md",
@@ -48,7 +48,7 @@
       "docs/engineering/tdd-vitest.md",
       "docs/engineering/qa-system.md",
       "docs/engineering/workflow-v2/README.md",
-      "/Users/shj/2025/2026/homecook1/.omx/plans/cooking-meal-log-and-product-search-master-plan-20260722.md#sha256-45f02013fbc1c3af1936d596605230d0cbac7839a783224aa9535844e4bda7dc"
+      "/Users/shj/2025/2026/homecook1/.omx/plans/cooking-meal-log-and-product-search-master-plan-20260722.md#sha256-d4d0fb39e80eeffc8b1e73ad92f0d91a35a9b6adc57a556ea8c9ec6ecffa951d"
     ]
   },
   "workflow": {
@@ -58,6 +58,7 @@
       "merged-exact-SHA server-production/local-rehearsal read-only meal-log schema function ACL RLS constraint capability inventory",
       "two-owner three-source nondisclosure and multi-table digest smoke",
       "idempotent create patch delete and different-payload zero-effect smoke",
+      "POST PATCH DELETE malformed UUID key exact 400 INVALID_IDEMPOTENCY_KEY and seven-surface zero-write smoke",
       "interleaved batch own-event reversal and full replay checksum smoke",
       "timezone DST null-instant and historical no-regroup smoke",
       "exact product ingredient evidence and aggregate-state smoke",
@@ -82,6 +83,7 @@
       "pnpm test:meal-log-core:postgres",
       "pnpm verify:backend",
       "pnpm test:e2e:regression:ci --grep meal-log-core",
+      "pnpm exec vitest run tests/meal-log-core-stage1-repair.test.ts",
       "pnpm validate:closeout-sync -- --slice meal-log-core",
       "node scripts/verify-meal-log-core-local-first.mjs --mode post-merge-read-only",
       "git diff --check"
@@ -92,7 +94,7 @@
       "BRANCH_NAME=docs/meal-log-core pnpm validate:workpack -- --slice meal-log-core",
       "node scripts/validate-automation-spec.mjs --slice meal-log-core",
       "pnpm validate:omo-bookkeeping",
-      "pnpm exec vitest run tests/workflow-v2-docs.test.ts tests/omo-automation-spec.test.ts tests/omo-bookkeeping.test.ts tests/omo-doc-gate.test.ts tests/source-of-truth-sync.test.ts",
+      "pnpm exec vitest run tests/meal-log-core-stage1-repair.test.ts tests/workflow-v2-docs.test.ts tests/omo-automation-spec.test.ts tests/omo-bookkeeping.test.ts tests/omo-doc-gate.test.ts tests/source-of-truth-sync.test.ts",
       "pnpm lint",
       "pnpm typecheck",
       "pnpm audit --audit-level high",
@@ -100,12 +102,13 @@
     ],
     "evaluator_commands": [
       "separate Codex internal 1.5 review of five core artifacts plus roadmap and status",
+      "fresh independent internal 1.5 rereview of P1-01 tuple-plan lineage and P1-02 malformed-key exact error zero-write closure",
       "separate Codex security and DB review of RLS exact-one evidence pointer locks replay cleanup and aggregate authority",
       "separate Codex five-axis review",
       "separate Codex Stage 3 Stage 6 and closeout reviews"
     ],
     "artifact_assertions": [
-      "approved-plan-sha256-and-1056-line-lock",
+      "approved-cooking-plan-sha256-d4d0fb39-and-1018-line-lock",
       "stage1-five-core-artifacts-plus-roadmap-and-status-projections",
       "roadmap-docs-workflow-lifecycle-planned-separation",
       "owner-generation-rls-nondisclosure-and-cleanup-order",
@@ -114,6 +117,7 @@
       "deleted-slot-snapshot-and-new-write-denial",
       "entry-event-pointer-deferred-constraint-and-own-event-reversal",
       "generation-idempotency-revision-and-whole-operation-zero-write",
+      "post-patch-delete-malformed-idempotency-key-exact-400-and-seven-surface-zero-write",
       "slice8-row-lock-full-replay-bounds-checksum-concurrency",
       "exact-product-basis-and-ingredient-profile-conversion-evidence",
       "complete-partial-unavailable-slot-day-aggregate",
@@ -148,5 +152,5 @@
     "Unapproved server-production migration or write or capability activation"
   ],
   "open_questions": [],
-  "notes": "Roadmap moves to docs while workflow lifecycle remains planned. Approval stays not_started until separate Codex internal1.5, security/DB and five-axis reviews reach zero findings. Stage 1 current commands are docs validators/tests/lint/typecheck/audit/diff; implementation evidence is future. Runtime waits for #1, #2, #4 and #8. #9 owns meal-log backend; #10 owns Planner shell, #12 owns MEAL_LOG UI/design, and production activation remains Manual Only."
+  "notes": "Stage 1 repair lineage is governing master base c16102a3072e929e45bb24a69464cd3110d03db5 with repair parent/HOLD report commit 076c5b22ec91dd600eb387be4930a2582054ac15. Repair author task 019fe746-8d84-7cd2-9f12-9c22560e914f closes P1-01/P1-02 only and cannot self-approve; fresh independent internal 1.5 rereview remains required. Roadmap stays docs while workflow lifecycle remains planned, approval not_started and verification pending. Stage 1 current commands are docs validators/tests/lint/typecheck/audit/diff; implementation evidence is future. Runtime waits for #1, #2, #4 and #8. #9 owns meal-log backend; #11 parallel work is limited to #8-consumer COOK_MODE/LEFTOVERS UI, #10 owns Planner shell, #12 owns MEAL_LOG UI/design, and Manual/server-Mac/OAuth evidence, capability, R/R+1/R+2 activation remain pending."
 }

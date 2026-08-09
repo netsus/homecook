@@ -6,12 +6,12 @@
 
 ## Official Sources
 
-- `docs/요구사항기준선-v1.7.25.md`
-- `docs/화면정의서-v1.5.29.md`
-- `docs/유저flow맵-v1.3.27.md`
-- `docs/db설계-v1.3.26.md`
-- `docs/api문서-v1.2.29.md`
-- approved master plan SHA-256 `45f02013fbc1c3af1936d596605230d0cbac7839a783224aa9535844e4bda7dc`, 1,056 lines
+- `docs/요구사항기준선-v1.7.30.md`
+- `docs/화면정의서-v1.5.34.md`
+- `docs/유저flow맵-v1.3.32.md`
+- `docs/db설계-v1.3.32.md`
+- `docs/api문서-v1.2.37.md`
+- approved master plan SHA-256 `d4d0fb39e80eeffc8b1e73ad92f0d91a35a9b6adc57a556ea8c9ec6ecffa951d`, 1,018 lines
 
 ## Scope
 
@@ -79,7 +79,7 @@
 | GET | `/food-catalog/search` | predecessor-provided unified ingredient/product search reader |
 | GET | `/cooked-batches` | predecessor-provided owner batch read model |
 
-All responses keep `{ success, data, error }`; errors keep `{ code, message, fields[] }`. This workpack adds no endpoint, field, enum, status, or public error outside the official v1.7.25/v1.5.29/v1.3.27/v1.3.26/v1.2.29 contract.
+All responses keep `{ success, data, error }`; errors keep `{ code, message, fields[] }`. This workpack adds no endpoint, field, enum, status, or public error outside the official v1.7.30/v1.5.34/v1.3.32/v1.3.32/v1.2.37 contract.
 
 ## Error / Zero-write Matrix
 
@@ -88,6 +88,7 @@ All responses keep `{ success, data, error }`; errors keep `{ code, message, fie
 | unauthenticated | `401` | return-to-action is #12 UI; backend row/event 0 |
 | other owner/private/deleted resource | `404` | nondisclosure; entry/event/projection 0 |
 | missing UUID key | `428 IDEMPOTENCY_KEY_REQUIRED` | mutation 0 |
+| malformed UUID key | `400 INVALID_IDEMPOTENCY_KEY` | mutation/operation/entry/event/pointer/projection/aggregate 0 |
 | same key, different payload | `409 IDEMPOTENCY_KEY_REUSED` | stored result unchanged; mutation 0 |
 | stale session/generation | `409 ACCOUNT_SESSION_STALE|ACCOUNT_GENERATION_STALE` | mutation 0 |
 | account deleting/maintenance | official `409|503` lifecycle code | mutation 0 |
@@ -112,6 +113,23 @@ All responses keep `{ success, data, error }`; errors keep `{ code, message, fie
 - #9 implementation remains dormant until predecessor runtime/migrations and #8 batch RPC/read models are available. No unmerged migration, production flag, or external-provider write is allowed from Stage 1.
 - #10 owns Planner shell navigation; #12 owns day-first `MEAL_LOG` UI/add-edit-delete sheets/design authority; #14 owns cross-slice release QA.
 
+## Stage 1 Repair Lineage
+
+- exact governing master base: `c16102a3072e929e45bb24a69464cd3110d03db5`.
+- exact repair parent and immutable HOLD report commit: `076c5b22ec91dd600eb387be4930a2582054ac15`.
+- repair author task: `019fe746-8d84-7cd2-9f12-9c22560e914f`; independent reviewer task remains `019fe738-2551-7be0-993a-deea4bf83de4`.
+- this repair closes only HOLD findings P1-01/P1-02. Stage 1 approval, broader lifecycle, Manual/server-Mac/OAuth evidence, capability, R/R+1/R+2 activation and product implementation remain pending.
+
+## #9 Stage 2 / #11 UI Parallel Ownership
+
+| Surface | #9 ownership | #11 ownership / prohibition |
+| --- | --- | --- |
+| DB | `meal_log_entries`, active consumption pointer, meal-log RLS/constraint/RPC/migration | #9 table/event/pointer를 만들거나 수정하지 않음 |
+| batch write | #8 row-lock/full-replay RPC를 meal-log transaction에서 호출 | 기존 #8 mutation을 UI에서 소비하고 새 event/RPC 의미를 만들지 않음 |
+| API | meal-log create/PATCH/DELETE/read routes and meal-log-only types/tests | COOK_MODE/LEFTOVERS presentation; meal-log API를 소유하지 않음 |
+| UI | #10/#12 shell/MEAL_LOG screen을 선점하지 않음 | #11 화면만 소유하고 #12 consumed UI/CTA를 미리 구현하지 않음 |
+| shared risk | migration ordering and meal-log-only modules | `docs/workpacks/README.md`와 `.workflow-v2/status.json` 같은 shared projection은 branch owner 한 명이 순차 통합 |
+
 ## Out of Scope
 
 - Planner `요리 계획 | 식사 기록` navigation and route/back/focus behavior (#10).
@@ -135,7 +153,7 @@ All responses keep `{ success, data, error }`; errors keep `{ code, message, fie
 
 ### Stage 1 current gate
 
-- run only SOT/workflow/workpack/automation/bookkeeping validators, focused workflow-doc tests, lint, typecheck, dependency audit and diff/parity checks.
+- run only SOT/workflow/workpack/automation/bookkeeping validators, `tests/meal-log-core-stage1-repair.test.ts` plus focused workflow-doc tests, lint, typecheck, dependency audit and diff/parity checks.
 - migration/RPC/PostgreSQL/route/component/E2E/visual/real DB/server-production/local-rehearsal checks below are future Stage 2/4/release evidence and are not claimed executable now.
 
 ### Future fixtures
