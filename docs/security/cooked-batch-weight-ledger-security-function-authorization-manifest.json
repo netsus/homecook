@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "slice": "cooked-batch-weight-ledger",
-  "migration": "supabase/migrations/20260809110000_cooked_batch_weight_ledger.sql",
+  "migration": "supabase/migrations/20260809120000_cooked_batch_weight_ledger.sql",
   "deployment_state": "pre-deployment",
   "baseline_application_contract_count": 74,
   "functions": [

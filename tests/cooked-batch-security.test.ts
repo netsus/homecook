@@ -13,6 +13,20 @@ function migration() {
 }
 
 describe("cooked batch database security contract", () => {
+  it("keeps every merged Supabase migration version unique", () => {
+    const migrations = readdirSync(join(process.cwd(), "supabase/migrations"))
+      .filter((name) => /^\d+_.+\.sql$/u.test(name));
+    const migrationsByVersion = Map.groupBy(
+      migrations,
+      (name) => name.slice(0, name.indexOf("_")),
+    );
+    const duplicateVersions = [...migrationsByVersion.entries()]
+      .filter(([, names]) => names.length > 1)
+      .map(([version, names]) => ({ version, names: names.sort() }));
+
+    expect(duplicateVersions).toEqual([]);
+  });
+
   it("adds owner RLS, append-only events, protected projections and exact account cleanup order", () => {
     const sql = migration();
     expect(sql).toMatch(/create table if not exists public\.cooked_batch_quantity_events/i);
@@ -289,7 +303,7 @@ describe("cooked batch database security contract", () => {
       "20260809100000_full_local_session_refresh_authority.sql",
     );
     const cookedBatchMigrationPosition = runner.indexOf(
-      "20260809110000_cooked_batch_weight_ledger.sql",
+      "20260809120000_cooked_batch_weight_ledger.sql",
     );
     expect(canonicalMigrationPosition).toBeGreaterThanOrEqual(0);
     expect(cookedBatchMigrationPosition).toBeGreaterThan(

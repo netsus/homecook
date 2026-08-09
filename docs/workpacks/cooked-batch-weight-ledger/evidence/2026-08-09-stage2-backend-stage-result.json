@@ -7,7 +7,7 @@
   },
   "pr": {
     "title": "feat(cooked-batch): implement weight ledger backend",
-    "body_markdown": "Draft Stage 2 backend implementation on PR #1292 merge eb4e878eb1d5b6fe5df00b1edd3a4f42fa472142. Repair commit e0884a6de5ce928f2dc087916d07f3d5858313c3 closes the lock/gamification/inventory/LIMIT findings. Performance-evidence repair 216a7429d27aa3de09b026cf4e6ef940a6c6f3c9 separates route/index/catalog proof. Batch-nutrition repair 8d1145b9 implements the official content-pinned scalable×servings/base+fixed-once authority without a public contract or #9 storage expansion. Stage 3, Ready, merge, remote rehearsal and activation remain pending."
+    "body_markdown": "Draft Stage 2 backend implementation on PR #1292 merge eb4e878eb1d5b6fe5df00b1edd3a4f42fa472142. Repair commit e0884a6de5ce928f2dc087916d07f3d5858313c3 closes the lock/gamification/inventory/LIMIT findings. Performance-evidence repair 216a7429d27aa3de09b026cf4e6ef940a6c6f3c9 separates route/index/catalog proof. Batch-nutrition repair 8d1145b9 implements the official content-pinned scalable×servings/base+fixed-once authority without a public contract or #9 storage expansion. Latest-master merge 01ae49c0 preserves that authority, regenerates the merged inventory, and moves the unmerged #8 migration to a unique version after CI reproduced a version collision. Stage 3, Ready, merge, remote rehearsal and activation remain pending."
   },
   "base_drift_integration": {
     "task_id": "019fe2b2-0ee4-77c3-a829-9ae04bfac07f",
@@ -19,7 +19,7 @@
     "draft_pr": 1291,
     "remote_branch": "feature/cooked-batch-weight-ledger-stage2-current",
     "canonical_refresh_migration": "supabase/migrations/20260809100000_full_local_session_refresh_authority.sql",
-    "cooked_batch_migration": "supabase/migrations/20260809110000_cooked_batch_weight_ledger.sql",
+    "cooked_batch_migration": "supabase/migrations/20260809120000_cooked_batch_weight_ledger.sql",
     "contract_evolution_candidate": null
   },
   "stage2_review_repair": {
@@ -53,6 +53,17 @@
     "public_contract_expansion": false,
     "stage3_self_approval": false
   },
+  "latest_master_integration": {
+    "pre_integration_head": "86f4a005eb755e473c967f30041c24b5c9ebe791",
+    "integrated_master": "508a9c26e9442ed54aa4920f17408d0d3156cdc3",
+    "merge_commit": "01ae49c09ff8421254a5ea549fa72fde95a7f6fe",
+    "successor_security_task": "019fe382-c33f-7ee2-8e65-faf330b0cc32 APPROVE 0/0/0",
+    "successor_integration_task": "019fe382-c340-7c20-980a-f7e5e87ea506 generated-inventory conflict and stale PR metadata",
+    "conflict_resolution": "official generator produced 64 routes / 93 write surfaces / 3 auth.users inbound fks with checksum eb0a8c1cd875c38ad183c5bf4f06c9b336f08e4b00d4f2d8e425c76f72b91733",
+    "migration_collision_tdd": "RED found duplicate version 20260809110000; GREEN moves only the unmerged #8 migration to 20260809120000 and keeps the master migration unchanged",
+    "public_contract_expansion": false,
+    "stage3_self_approval": false
+  },
   "overall_status": {
     "lifecycle": "in_progress",
     "approval_state": "not_started",
@@ -67,6 +78,7 @@
     "pnpm verify:backend",
     "pnpm test:security-functions:postgres",
     "node scripts/validate-security-function-authorization.mjs --contract-only",
+    "pnpm exec vitest run tests/cooked-batch-security.test.ts",
     "pnpm validate:source-of-truth-sync",
     "pnpm validate:workflow-v2",
     "pnpm validate:workpack -- --slice cooked-batch-weight-ledger",
@@ -77,16 +89,16 @@
   ],
   "verification_results": {
     "full_vitest_batch_nutrition_successor": {
-      "passed_files": 522,
+      "passed_files": 523,
       "skipped_files": 28,
-      "passed_tests": 5328,
-      "skipped_tests": 367
+      "passed_tests": 5357,
+      "skipped_tests": 369
     },
-    "focused_vitest": "batch-nutrition RED 3 missing-function failures; GREEN 6 files / 59 tests; prior review repair GREEN backend/gamification/security/inventory 7 files / 69 tests and LEFTOVERS 27/27; final full 5,328 passes / 367 skips",
-    "postgres_fresh_replay": "predecessor fresh 15 passed / 1 intended skip, replay 16 passed; cooked-batch fresh/replay 27/27; inherited inventory fresh/replay 26 passed / 31 intended skips",
+    "focused_vitest": "batch-nutrition RED 3 missing-function failures; GREEN 6 files / 59 tests; prior review repair GREEN backend/gamification/security/inventory 7 files / 69 tests and LEFTOVERS 27/27; latest-master integration focused 11 files / 197 tests; migration-version RED 1 and GREEN 17/17; final full 5,357 passes / 369 skips",
+    "postgres_fresh_replay": "predecessor fresh 15 passed / 1 intended skip, replay 16 passed; cooked-batch fresh/replay 27/27; inherited inventory fresh/replay 26 passed / 33 intended skips after latest master added two inventory-only skipped full-local cases",
     "complete_cancel_race": "two real connections finish without deadlock; exactly one succeeds, one returns CONFLICT, and the session/Meal/claim/batch terminal state is valid",
     "live_gamification_projection": "snapshot-v2 completion, consumed-unweighed close and legacy eat reuse canonical progress/activity IDs with the existing official notification/badge/achievement helpers",
-    "account_session_generation_inventory": "64 routes, 93 write surfaces, 3 auth.users inbound fks; checksum-valid omission fixture fails closed",
+    "account_session_generation_inventory": "64 routes, 93 write surfaces, 3 auth.users inbound fks; merged-tree checksum eb0a8c1cd875c38ad183c5bf4f06c9b336f08e4b00d4f2d8e425c76f72b91733; checksum-valid omission fixture fails closed",
     "canonical_refresh_regressions": "same stable session newer JWT accepted; stale/old, different-session, revoked and stale-generation attempts are zero-write",
     "progress_race": "two real connections serialize v1/v2 first awards to 60+45",
     "db_payload_rejection": "NULL and blank discard/adjust payloads fail at the final DB authority",
@@ -111,7 +123,7 @@
       "lib/server/cooked-batches.ts",
       "lib/server/leftovers.ts",
       "lib/supabase/server.ts",
-      "supabase/migrations/20260809110000_cooked_batch_weight_ledger.sql",
+      "supabase/migrations/20260809120000_cooked_batch_weight_ledger.sql",
       "scripts/run-cooked-batch-weight-ledger-postgres-integration.mjs",
       "scripts/run-recipe-snapshot-authority-postgres-integration.mjs",
       "scripts/check-workpack-docs.mjs",
@@ -207,7 +219,7 @@
     "scripts/run-recipe-snapshot-authority-postgres-integration.mjs",
     "scripts/validate-account-session-generation-inventory.mjs",
     "scripts/validate-security-function-authorization.mjs",
-    "supabase/migrations/20260809110000_cooked_batch_weight_ledger.sql",
+    "supabase/migrations/20260809120000_cooked_batch_weight_ledger.sql",
     "tests/account-session-generation-inventory.test.ts",
     "tests/check-workpack-docs.test.ts",
     "tests/cooked-batch-api-contract-v1-2-36.test.ts",
@@ -269,7 +281,7 @@
     {
       "id": "delivery-batch-ledger",
       "status": "checked",
-      "evidence_refs": ["supabase/migrations/20260809110000_cooked_batch_weight_ledger.sql", "pnpm test:cooked-batch-weight-ledger:postgres"]
+      "evidence_refs": ["supabase/migrations/20260809120000_cooked_batch_weight_ledger.sql", "pnpm test:cooked-batch-weight-ledger:postgres"]
     },
     {
       "id": "delivery-batch-mutations",
@@ -280,7 +292,7 @@
       "id": "delivery-batch-nutrition",
       "status": "checked",
       "evidence_refs": [
-        "supabase/migrations/20260809110000_cooked_batch_weight_ledger.sql",
+        "supabase/migrations/20260809120000_cooked_batch_weight_ledger.sql",
         "tests/cooked-batch-weight-ledger-postgres.integration.test.ts"
       ]
     },
@@ -307,15 +319,15 @@
     {"id":"accept-batch-complete-success-projection","status":"checked","evidence_refs":["tests/snapshot-v2-complete.test.ts"]},
     {"id":"accept-batch-complete-session","status":"checked","evidence_refs":["tests/snapshot-v2-complete.test.ts"]},
     {"id":"accept-batch-complete-weight","status":"checked","evidence_refs":["tests/snapshot-v2-complete.test.ts"]},
-    {"id":"accept-batch-product-row","status":"checked","evidence_refs":["supabase/migrations/20260809110000_cooked_batch_weight_ledger.sql"]},
+    {"id":"accept-batch-product-row","status":"checked","evidence_refs":["supabase/migrations/20260809120000_cooked_batch_weight_ledger.sql"]},
     {"id":"accept-batch-generic-row","status":"checked","evidence_refs":["tests/cooked-batch-weight-ledger-postgres.integration.test.ts"]},
     {"id":"accept-batch-pantry-denial","status":"checked","evidence_refs":["tests/cooked-batch-weight-ledger-postgres.integration.test.ts"]},
     {"id":"accept-batch-selected-only","status":"checked","evidence_refs":["tests/cooked-batch-weight-ledger-postgres.integration.test.ts"]},
     {"id":"accept-batch-empty-selection","status":"checked","evidence_refs":["tests/cooked-batch-weight-ledger-postgres.integration.test.ts"]},
     {"id":"accept-batch-complete-atomic","status":"checked","evidence_refs":["tests/cooked-batch-weight-ledger-postgres.integration.test.ts"]},
     {"id":"accept-batch-complete-idempotency","status":"checked","evidence_refs":["tests/cooked-batch-weight-ledger-postgres.integration.test.ts"]},
-    {"id":"accept-batch-content-only","status":"checked","evidence_refs":["supabase/migrations/20260809110000_cooked_batch_weight_ledger.sql"]},
-    {"id":"accept-batch-nutrition-formula","status":"checked","evidence_refs":["supabase/migrations/20260809110000_cooked_batch_weight_ledger.sql","tests/cooked-batch-weight-ledger-postgres.integration.test.ts"]},
+    {"id":"accept-batch-content-only","status":"checked","evidence_refs":["supabase/migrations/20260809120000_cooked_batch_weight_ledger.sql"]},
+    {"id":"accept-batch-nutrition-formula","status":"checked","evidence_refs":["supabase/migrations/20260809120000_cooked_batch_weight_ledger.sql","tests/cooked-batch-weight-ledger-postgres.integration.test.ts"]},
     {"id":"accept-batch-state-checks","status":"checked","evidence_refs":["tests/cooked-batch-weight-ledger-postgres.integration.test.ts"]},
     {"id":"accept-batch-weight-bounds","status":"checked","evidence_refs":["tests/cooked-batch-weight-ledger-postgres.integration.test.ts"]},
     {"id":"accept-batch-no-guessing","status":"checked","evidence_refs":["tests/snapshot-v2-complete.test.ts"]},
@@ -323,7 +335,7 @@
     {"id":"accept-batch-mark-unrecoverable","status":"checked","evidence_refs":["tests/cooked-batch-weight-ledger-postgres.integration.test.ts"]},
     {"id":"accept-batch-unrecoverable-error","status":"checked","evidence_refs":["tests/cooked-batch-weight-ledger-postgres.integration.test.ts"]},
     {"id":"accept-batch-event-immutability","status":"checked","evidence_refs":["tests/cooked-batch-security.test.ts"]},
-    {"id":"accept-batch-event-uniqueness","status":"checked","evidence_refs":["supabase/migrations/20260809110000_cooked_batch_weight_ledger.sql"]},
+    {"id":"accept-batch-event-uniqueness","status":"checked","evidence_refs":["supabase/migrations/20260809120000_cooked_batch_weight_ledger.sql"]},
     {"id":"accept-batch-replay-checksum","status":"checked","evidence_refs":["tests/cooked-batch-weight-ledger-postgres.integration.test.ts"]},
     {"id":"accept-batch-discard","status":"checked","evidence_refs":["tests/cooked-batch-weight-ledger-postgres.integration.test.ts"]},
     {"id":"accept-batch-adjust","status":"checked","evidence_refs":["tests/cooked-batch-weight-ledger-postgres.integration.test.ts"]},

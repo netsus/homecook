@@ -45,7 +45,7 @@ const ADDITIVE_SOURCES = [
     ),
     migrationPath: path.join(
       REPO_ROOT,
-      "supabase/migrations/20260809110000_cooked_batch_weight_ledger.sql",
+      "supabase/migrations/20260809120000_cooked_batch_weight_ledger.sql",
     ),
   },
   {

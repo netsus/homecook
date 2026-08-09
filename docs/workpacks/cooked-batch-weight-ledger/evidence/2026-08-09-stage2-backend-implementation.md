@@ -20,12 +20,19 @@ This task changes only #8 DB/backend/API, the existing leftovers compatibility r
 
 ## Latest-master base-drift integration
 
-- PR #1292 makes `supabase/migrations/20260809100000_full_local_session_refresh_authority.sql` the canonical stable-session refresh authority. The #8 migration is ordered after it as `20260809110000_cooked_batch_weight_ledger.sql`.
+- PR #1292 makes `supabase/migrations/20260809100000_full_local_session_refresh_authority.sql` the canonical stable-session refresh authority. The #8 migration is ordered after the latest-master request-transaction migration as `20260809120000_cooked_batch_weight_ledger.sql`.
 - The obsolete #8 copies of the refresh trigger, legacy record/assert functions, three replacement manifest entries and inventory branch were removed. #8 retains only its scope-aware `private.verify_full_local_internal_scope()` replacement and recognizes the canonical `record_full_local_session_authority_v2` / `assert_and_renew_full_local_session_authority_v2` RPC paths.
 - Integration RED first failed because the cooked-batch migration still defined `private.protect_full_local_session_binding_identity`; GREEN proves that the canonical migration alone owns monotonic token evidence and that the runner applies it before #8.
 - PostgreSQL regression covers a newer JWT for the same stable session, old/stale token, different session, revoked session and stale generation. Only the newer same-session token is accepted; every rejected case leaves the expanded owner digest unchanged.
 - `scripts/lib/full-local-security-inventory.mjs` follows #1292 canonical ownership. Shared inventory expectations were intentionally advanced from 29/33 to 32/36 functions; no #1292 security entry or user/external change was dropped.
 - Public API/status/field/error contracts are unchanged. Contract Evolution Candidate: none.
+
+### 2026-08-09 integration repair against master `508a9c26`
+
+- Exact pre-integration PR head `86f4a005eb755e473c967f30041c24b5c9ebe791` was merged with exact master `508a9c26e9442ed54aa4920f17408d0d3156cdc3` as merge commit `01ae49c09ff8421254a5ea549fa72fde95a7f6fe`; no rebase, force-push or history rewrite was used.
+- The only textual merge conflict was generated `docs/security/account-session-generation-inventory.json`. The official generator preserved all #8 additions and latest-master YouTube writer locations at `64 routes / 93 write surfaces / 3 auth.users inbound FKs`, checksum `eb0a8c1cd875c38ad183c5bf4f06c9b336f08e4b00d4f2d8e425c76f72b91733`.
+- Current-head CI supplied a second integration RED: master and the Draft #8 lineage both used Supabase migration version `20260809110000`. A new regression test reproduced the exact duplicate pair before the unmerged #8 migration alone moved to `20260809120000`; the already-merged master migration and both SQL bodies remain unchanged.
+- Successor security task `019fe382-c33f-7ee2-8e65-faf330b0cc32` returned APPROVE `0/0/0`. The 21-function cooked-batch manifest remains exact; this author repair is not Stage 3 approval.
 
 ## Backend contract implemented
 
@@ -135,6 +142,10 @@ The cooked-batch scenarios cover exact 21-function owner/ACL/search-path/scope i
 - account-session generation inventory — pass: `64 routes / 93 write surfaces / 3 auth.users inbound FKs`; all eight cooked-batch/legacy helper writers are explicit, and removing one from a checksum-valid alternate registry fails closed
 - `pnpm audit --audit-level high` — exit 0; residual `1 low / 1 moderate`, high `0`, critical `0`
 - `git diff --check` — pass
+- latest-master integration focused Vitest — `11 files / 197 tests`; migration-version TDD RED identified both `20260809110000` files, GREEN `17/17`
+- latest-master full Vitest — `523 files passed / 28 skipped`, `5,357 tests passed / 369 skipped`; master adds `1 file / 28 pass / 2 intended skip` and the migration-version regression adds one pass
+- latest-master `pnpm verify:backend` — pass: lint, typecheck, product `217 files / 2,665 tests` with `150 skipped`, Next build, security E2E `12/12`
+- latest-master PostgreSQL fresh/replay — predecessor `15 pass / 1 intended skip` then `16/16`; #8 `27/27` twice; inherited inventory `26 pass / 33 intended skip` twice, where the two added skips are new master full-local tests outside inventory-only mode
 
 The workpack-specific Stage 4 E2E grep returned `No tests found`; no pass-with-no-tests relaxation was added because frontend work is prohibited in Stage 2. Backend security E2E is covered by the successful `12/12` verification above.
 
