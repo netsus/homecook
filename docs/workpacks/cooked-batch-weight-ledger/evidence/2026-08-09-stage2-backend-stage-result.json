@@ -178,7 +178,7 @@
     "leftovers_snapshot_lookup_plan": "the explicit id,recipe_id,title lookup that supplies response titles is separate: one actual row and at most 16 root shared blocks; the unused embedded PostgREST relation was removed",
     "leftovers_selective_index_usage": "four separate selective representative plans each require an actual Index Scan, Index Only Scan or Bitmap Index Scan node with the exact Index Name, relevant scan conditions, positive actual rows and at most 320 root shared blocks",
     "leftovers_index_definitions": "four full PostgreSQL-normalized pg_catalog.pg_indexes.indexdef values compared exactly and separately from runtime plan assertions",
-    "product_catalog_readiness": "new master gate is present and parser/lifecycle static contracts pass; #8 fresh/replay remains 27/27 with required predecessor schema; no server-Mac/full-local runtime was started",
+    "product_catalog_readiness": "new master gate is present and parser/lifecycle static contracts pass; #8 fresh/replay remains 28/28 with required predecessor schema; no server-Mac/full-local runtime was started",
     "final_full_vitest": "526 files passed / 28 skipped; 5,381 tests passed / 370 skipped",
     "final_verify_backend": "219 product files / 2,679 tests passed / 150 skipped; build and security E2E 12/12 passed"
   },
