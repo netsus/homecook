@@ -161,7 +161,7 @@ export function CookedBatchCompletionSheet({
       testId="cooked-batch-completion-sheet"
       title="요리 완료"
       titleRef={titleRef}
-      titleTabIndex={-1}
+      titleTabIndex={0}
     >
       {submitting ? (
         <div

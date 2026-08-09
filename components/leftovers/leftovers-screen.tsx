@@ -2,11 +2,26 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 
 import { PlannerAddSheet } from "@/components/recipe/planner-add-sheet";
 import type { PlannerAddSheetState } from "@/components/recipe/planner-add-sheet";
+import {
+  CookedBatchActionSheet,
+  type CookedBatchActionError,
+} from "@/components/leftovers/cooked-batch-action-sheet";
+import {
+  CookedBatchSection,
+  type CookedBatchSectionState,
+} from "@/components/leftovers/cooked-batch-section";
+import {
+  mergeCookedBatchPages,
+  nextCookedBatchOperation,
+  type CookedBatchAction,
+  type CookedBatchMutationRequest,
+  type CookedBatchOperation,
+} from "@/components/leftovers/cooked-batch-state";
 import { AppFeedbackToast } from "@/components/shared/app-feedback-toast";
 import { ContentState } from "@/components/shared/content-state";
 import { SocialLoginButtons } from "@/components/auth/social-login-buttons";
@@ -29,6 +44,14 @@ import {
   isLeftoverApiError,
   keepLeftoverStaleReview,
 } from "@/lib/api/leftovers";
+import {
+  adjustCookedBatch,
+  closeUnweighedCookedBatch,
+  discardCookedBatch,
+  fetchCookedBatches,
+  isCookingApiError,
+  updateCookedBatchWeight,
+} from "@/lib/api/cooking";
 import { createMeal, isMealApiError } from "@/lib/api/meal";
 import { fetchPlanner } from "@/lib/api/planner";
 import { readE2EAuthOverride } from "@/lib/auth/e2e-auth-override";
@@ -37,6 +60,7 @@ import { buildReturnHref } from "@/lib/navigation/return-context";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { hasSupabasePublicEnv } from "@/lib/supabase/env";
 import type { LeftoverListItemData } from "@/types/leftover";
+import type { CookedBatchProjection } from "@/types/cooking";
 import type { PlannerColumnData } from "@/types/planner";
 
 type AuthState = "checking" | "authenticated" | "unauthorized";
@@ -240,6 +264,20 @@ export function LeftoversScreen({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [eatingId, setEatingId] = useState<string | null>(null);
   const [keepingId, setKeepingId] = useState<string | null>(null);
+  const [batchState, setBatchState] = useState<CookedBatchSectionState>("loading");
+  const [batchItems, setBatchItems] = useState<CookedBatchProjection[]>([]);
+  const [batchCursor, setBatchCursor] = useState<string | null>(null);
+  const [batchHasNext, setBatchHasNext] = useState(false);
+  const [batchError, setBatchError] = useState<string | null>(null);
+  const [batchPagePending, setBatchPagePending] = useState(false);
+  const [batchActionTarget, setBatchActionTarget] = useState<{
+    action: CookedBatchAction;
+    batch: CookedBatchProjection;
+  } | null>(null);
+  const [batchActionError, setBatchActionError] = useState<CookedBatchActionError | null>(null);
+  const [batchMutationPending, setBatchMutationPending] = useState(false);
+  const batchOperationRef = useRef<CookedBatchOperation | null>(null);
+  const batchActionReturnFocusRef = useRef<HTMLElement | null>(null);
 
   // Feedback toast
   const [feedback, setFeedback] = useState<{
@@ -374,6 +412,132 @@ export function LeftoversScreen({
     if (authState !== "authenticated") return;
     void loadLeftovers();
   }, [authState, loadLeftovers]);
+
+  const loadCookedBatches = useCallback(async ({ preserve = false }: { preserve?: boolean } = {}) => {
+    if (!preserve) setBatchState("loading");
+    setBatchError(null);
+    try {
+      const data = await fetchCookedBatches({ availability: "all", limit: 20 });
+      setBatchItems(data.items);
+      setBatchCursor(data.next_cursor);
+      setBatchHasNext(data.has_next);
+      setBatchState(data.items.length > 0 ? "ready" : "empty");
+      return data.items;
+    } catch (error) {
+      if (isCookingApiError(error) && error.status === 401) {
+        setAuthState("unauthorized");
+        return null;
+      }
+      const message = isCookingApiError(error) && error.status === 404
+        ? "요청한 기록을 찾을 수 없어요."
+        : error instanceof Error ? error.message : "중량·잔량 기록을 불러오지 못했어요.";
+      setBatchError(message);
+      if (!preserve) setBatchState("error");
+      return null;
+    }
+  }, []);
+
+  useEffect(() => {
+    if (authState !== "authenticated") return;
+    void loadCookedBatches();
+  }, [authState, loadCookedBatches]);
+
+  const loadMoreCookedBatches = useCallback(async () => {
+    if (!batchCursor || batchPagePending || batchMutationPending) return;
+    setBatchPagePending(true);
+    setBatchError(null);
+    try {
+      const data = await fetchCookedBatches({ availability: "all", cursor: batchCursor, limit: 20 });
+      setBatchItems((current) => mergeCookedBatchPages(current, data.items));
+      setBatchCursor(data.next_cursor);
+      setBatchHasNext(data.has_next);
+    } catch (error) {
+      if (isCookingApiError(error) && error.status === 401) {
+        setAuthState("unauthorized");
+      } else {
+        setBatchError(error instanceof Error ? error.message : "다음 기록을 불러오지 못했어요.");
+      }
+    } finally {
+      setBatchPagePending(false);
+    }
+  }, [batchCursor, batchMutationPending, batchPagePending]);
+
+  const openBatchAction = useCallback((batch: CookedBatchProjection, action: CookedBatchAction) => {
+    batchActionReturnFocusRef.current = document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : null;
+    setBatchActionTarget({ action, batch });
+    setBatchActionError(null);
+    batchOperationRef.current = null;
+  }, []);
+
+  const closeBatchAction = useCallback(() => {
+    if (batchMutationPending) return;
+    const returnTarget = batchActionReturnFocusRef.current;
+    const fallbackSelector = batchActionTarget
+      ? `[data-batch-id="${batchActionTarget.batch.id}"][data-batch-action="${batchActionTarget.action}"]`
+      : null;
+    setBatchActionTarget(null);
+    setBatchActionError(null);
+    batchOperationRef.current = null;
+    requestAnimationFrame(() => {
+      const fallbackTarget = fallbackSelector
+        ? document.querySelector<HTMLElement>(fallbackSelector)
+        : null;
+      if (returnTarget?.isConnected) returnTarget.focus();
+      else fallbackTarget?.focus();
+      batchActionReturnFocusRef.current = null;
+    });
+  }, [batchActionTarget, batchMutationPending]);
+
+  const submitBatchAction = useCallback(async (request: CookedBatchMutationRequest) => {
+    if (!batchActionTarget || batchMutationPending) return;
+    const operation = nextCookedBatchOperation(batchOperationRef.current, request);
+    batchOperationRef.current = operation;
+    setBatchMutationPending(true);
+    setBatchActionError(null);
+    try {
+      let result;
+      if (request.action === "set_finished_weight" || request.action === "mark_unrecoverable") {
+        result = await updateCookedBatchWeight(batchActionTarget.batch.id, request, operation.key);
+      } else if (request.action === "discard") {
+        const { action: _action, ...body } = request;
+        void _action;
+        result = await discardCookedBatch(batchActionTarget.batch.id, body, operation.key);
+      } else if (request.action === "adjust") {
+        const { action: _action, ...body } = request;
+        void _action;
+        result = await adjustCookedBatch(batchActionTarget.batch.id, body, operation.key);
+      } else {
+        result = await closeUnweighedCookedBatch(batchActionTarget.batch.id, request, operation.key);
+      }
+      setBatchItems((current) => current.map((item) => item.id === result.batch.id ? result.batch : item));
+      setBatchActionTarget(null);
+      setBatchActionError(null);
+      batchOperationRef.current = null;
+      setFeedback({ message: "서버의 최신 중량·잔량 기록을 반영했어요.", tone: "status" });
+    } catch (error) {
+      if (isCookingApiError(error) && error.status === 401) {
+        setBatchActionTarget(null);
+        setAuthState("unauthorized");
+      } else {
+        const apiError: CookedBatchActionError = isCookingApiError(error)
+          ? { code: error.code, fields: error.fields, message: error.status === 404 ? "요청한 기록을 찾을 수 없어요." : error.message, status: error.status }
+          : { code: "UNKNOWN_ERROR", fields: [], message: error instanceof Error ? error.message : "요청을 처리하지 못했어요.", status: 500 };
+        setBatchActionError(apiError);
+        const refreshed = apiError.status === 409 || apiError.status === 422
+          ? await loadCookedBatches({ preserve: true })
+          : null;
+        if (refreshed) {
+          const latest = refreshed.find((item) => item.id === batchActionTarget.batch.id);
+          if (latest) setBatchActionTarget((current) => current ? { ...current, batch: latest } : current);
+        }
+        if (apiError.code === "WEIGHT_UNRECOVERABLE") setBatchActionTarget(null);
+      }
+    } finally {
+      setBatchMutationPending(false);
+    }
+  }, [batchActionTarget, batchMutationPending, loadCookedBatches]);
 
   const staleReviewAgeById = useMemo(() => {
     const result = new Map<string, number>();
@@ -591,6 +755,36 @@ export function LeftoversScreen({
       defaultConfirmLabel={LEFTOVER_PLANNER_ADD_CONFIRM_LABEL}
     />
   );
+  const cookedBatchSection = authState === "authenticated" ? (
+    <>
+      <CookedBatchSection
+        error={batchError}
+        hasNext={batchHasNext}
+        items={batchItems}
+        onAction={openBatchAction}
+        onLoadMore={() => {
+          void loadMoreCookedBatches();
+        }}
+        onRetry={() => {
+          void loadCookedBatches();
+        }}
+        pagePending={batchPagePending}
+        state={batchState}
+      />
+      {batchActionTarget ? (
+        <CookedBatchActionSheet
+          action={batchActionTarget.action}
+          batch={batchActionTarget.batch}
+          error={batchActionError}
+          onClose={closeBatchAction}
+          onSubmit={(request) => {
+            void submitBatchAction(request);
+          }}
+          pending={batchMutationPending}
+        />
+      ) : null}
+    </>
+  ) : null;
   const leftoversSelfHref = buildReturnHref("/leftovers", {
     returnSurface: "leftovers.list",
     returnTo: appReturn.href,
@@ -668,6 +862,7 @@ export function LeftoversScreen({
         onPlannerAdd={openPlannerAddSheet}
         onRetry={loadLeftovers}
         plannerAddSheet={plannerAddSheet}
+        cookedBatchSection={cookedBatchSection}
         screenState={screenState}
         staleReviewAgeById={staleReviewAgeById}
         staleReviewCount={staleReviewCount}
@@ -723,6 +918,17 @@ export function LeftoversScreen({
             title="이 화면은 로그인이 필요해요"
           />
         ) : null}
+
+      {authState === "authenticated" ? (
+        <section aria-labelledby="legacy-leftovers-title" className="mb-4">
+          <h2 className="text-xl font-extrabold" id="legacy-leftovers-title">
+            남은요리 관리
+          </h2>
+          <p className="mt-1 text-sm text-[var(--text-3)]">
+            기존 남은 요리 기록이에요. 중량·잔량 기록과 섞지 않고 따로 보여드려요.
+          </p>
+        </section>
+      ) : null}
 
       {authState === "authenticated" && feedback ? (
         <AppFeedbackToast
@@ -805,6 +1011,8 @@ export function LeftoversScreen({
         </div>
       ) : null}
 
+      {cookedBatchSection}
+
       {plannerAddSheet}
       </div>
     </WebShell>
@@ -824,6 +1032,7 @@ function LeftoversMobileView({
   onPlannerAdd,
   onRetry,
   plannerAddSheet,
+  cookedBatchSection,
   screenState,
   staleReviewAgeById,
   staleReviewCount,
@@ -840,6 +1049,7 @@ function LeftoversMobileView({
   onPlannerAdd: (item: LeftoverListItemData) => void;
   onRetry: () => void;
   plannerAddSheet: React.ReactNode;
+  cookedBatchSection: React.ReactNode;
   screenState: ScreenState;
   staleReviewAgeById: Map<string, number>;
   staleReviewCount: number;
@@ -860,8 +1070,11 @@ function LeftoversMobileView({
 
       <section className="border-b border-[var(--line-strong)] bg-[var(--surface)] px-4 py-3">
         <h2 className="text-[18px] font-extrabold leading-[1.35] text-[var(--foreground)]">
-          남은 요리 {items.length}개
+          남은요리 관리
         </h2>
+        <h3 className="mt-2 text-[15px] font-extrabold leading-[1.35] text-[var(--foreground)]">
+          남은 요리 {items.length}개
+        </h3>
         <p className="mt-1 text-[12px] font-medium leading-[1.35] text-[var(--text-3)]">
           {LEFTOVERS_DESCRIPTION}
         </p>
@@ -928,6 +1141,8 @@ function LeftoversMobileView({
           ))}
         </div>
       ) : null}
+
+      {cookedBatchSection}
 
       {plannerAddSheet}
       <Wave1MobileBottomTab ariaLabel="남은 요리 하단 탭" currentTab="mypage" />
