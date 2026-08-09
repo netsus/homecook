@@ -144,6 +144,30 @@ async function openCompletion(page: Page) {
   return { dialog, opener };
 }
 
+async function stabilizeEvidenceCapture(page: Page) {
+  await page.waitForLoadState("networkidle");
+  await page.evaluate(() => document.fonts.ready);
+  expect(await page.evaluate(() => document.fonts.status)).toBe("loaded");
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.addStyleTag({
+    content: `
+      *, *::before, *::after {
+        animation: none !important;
+        transition: none !important;
+        caret-color: transparent !important;
+      }
+    `,
+  });
+}
+
+async function waitForSettledPaint(page: Page) {
+  await page.evaluate(
+    () => new Promise<void>((resolvePaint) => {
+      requestAnimationFrame(() => requestAnimationFrame(() => resolvePaint()));
+    }),
+  );
+}
+
 async function fulfillConflict(route: Route) {
   await route.fulfill({
     status: 409,
@@ -281,6 +305,7 @@ test.describe("cooked-batch-weight-ledger", () => {
       .violations
       .filter((violation) => violation.impact === "serious" || violation.impact === "critical");
     expect(seriousViolations).toEqual([]);
+    await stabilizeEvidenceCapture(page);
 
     for (const [width, height, filename] of [
       [1280, 900, "COOK_MODE-implementation-desktop-1280.png"],
@@ -288,9 +313,16 @@ test.describe("cooked-batch-weight-ledger", () => {
       [320, 568, "COOK_MODE-implementation-mobile-narrow-320.png"],
     ] as const) {
       await page.setViewportSize({ width, height });
+      await page.mouse.move(0, 0);
+      await waitForSettledPaint(page);
+      expect(
+        await dialog
+          .getByRole("button", { name: "완료 저장" })
+          .evaluate((button) => button.matches(":hover")),
+      ).toBe(false);
       const path = resolve(evidenceDirectory, filename);
       await mkdir(dirname(path), { recursive: true });
-      await page.screenshot({ fullPage: false, path });
+      await page.screenshot({ animations: "disabled", fullPage: false, path });
       expect(await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth)).toBe(false);
       const box = await dialog.boundingBox();
       expect(box?.width).toBeLessThanOrEqual(width);
