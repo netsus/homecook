@@ -86,6 +86,7 @@ The five-axis author review checked correctness, readability, architecture, secu
 - LEFTOVERS trigger restoration: server refresh can replace the trigger node; restoration now resolves the current card/action trigger after projection refresh.
 - Shared LEFTOVERS visual fixture: cooked-batches now has explicit ready/empty projection fixtures, avoiding environment fallthrough and unstable page height.
 - Existing full-page COOK_MODE contrast residual: `2` nodes retained and reported, not repaired or hidden.
+- Invalidated Draft head `15faebf1ad2346dcb3056b479121a214353fe3ca`: QA `smoke` stopped before test execution because the GitHub runner received a location-restricted Playwright CDN `403` while downloading Chrome Headless Shell. It is infrastructure evidence only, was not rerun, and is not used as Stage 4 proof; a successor head must pass its own complete check set.
 
 ## Contract Evolution Candidate
 
