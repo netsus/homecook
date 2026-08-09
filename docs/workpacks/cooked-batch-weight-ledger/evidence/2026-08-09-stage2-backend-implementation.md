@@ -42,6 +42,15 @@ This task changes only #8 DB/backend/API, the existing leftovers compatibility r
 - `pnpm verify:backend` passes lint, typecheck, product `219 passed files / 11 skipped files`, `2,679 passed / 150 skipped`, production build and security E2E `12/12`. Security functions deny `8/8` anonymous mutation signatures with unchanged checksums; authorization manifest remains `21` and account inventory remains `64/93/3`.
 - This repair adds no scope, principal, public endpoint, field, status, error or grant. Stage 3, merge, Manual/server-Mac/OAuth, R/R+1/R+2, activation and Discord remain unperformed; this author does not self-approve.
 
+## Fresh docs/evidence author current-projection repair
+
+- Task ID: `019fe543-9fa9-70c1-ab8a-a9f3b69818e1`; delegating coordinator task: `019fe028-be31-76f2-a5a7-986000a93374`.
+- Exact reviewed tuple: base `fa81587b0f34530cbc7099d82db6f9803b9e0edb`, head `dbfc5bcf93aaaf4832a9bdf13be73d4f322df898`, merge-ref `7f43ede5482d3eb023d3b67aeebbb7527021180a`; `18` started check runs were terminal with `17` success, `1` intended `full-regression` skip, and bad/nonterminal `0`.
+- Fresh security/DB reviewer task `019fe536-c29f-7e50-b7ae-bea469d4af8d` returned `APPROVE P0/P1/P2=0/0/0` on that exact tuple. Fresh five-axis reviewer task `019fe536-c29f-7e50-b7ae-be8b5e414d7a` returned `HOLD P0/P1/P2=0/0/1`; this was an independent Stage 2 pre-gate, not Stage 3 approval.
+- P2 finding: PR #1291 `Merge Gate` still presented historical head `7c49518bd21e440b49785a053a9d38e047eea281`, merge-ref `984f599b43095f1540915cfea514ded5d2436114`, and `2 success / 8 pending` as current. `Closeout Sync` also said `Design Status: pending` while the canonical workpack projection is `temporary`.
+- Resolution: preserve those older values only as historical lineage, then regenerate PR `Actual Verification`, `Closeout Sync`, and `Merge Gate` after the normal non-force successor push from the live GitHub tuple. The resulting PR body must name the successor head/base/merge-ref, all current-head started checks including any body-triggered runs, author/reviewer task IDs, and the canonical `in_progress / not_started / pending` plus `Design Status: temporary` projection.
+- This evidence repair does not invent lifecycle completion or alter product code, migration, public contract, acceptance, work-item, or status truth. Stage 3, merge, Manual/server-Mac/OAuth, R/R+1, R+2, activation and Discord remain pending or prohibited for this author task; this author does not self-approve.
+
 ## Latest-master base-drift integration
 
 - PR #1292 makes `supabase/migrations/20260809100000_full_local_session_refresh_authority.sql` the canonical stable-session refresh authority. The #8 migration is ordered after the latest-master request-transaction migration as `20260809120000_cooked_batch_weight_ledger.sql`.

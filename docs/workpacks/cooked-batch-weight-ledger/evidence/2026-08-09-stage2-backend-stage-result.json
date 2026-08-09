@@ -162,6 +162,54 @@
     "stage3_self_approval": false,
     "independent_rereview_performed": false
   },
+  "fresh_docs_evidence_current_projection_repair": {
+    "task_id": "019fe543-9fa9-70c1-ab8a-a9f3b69818e1",
+    "delegating_coordinator_task_id": "019fe028-be31-76f2-a5a7-986000a93374",
+    "reviewed_tuple": {
+      "base_sha": "fa81587b0f34530cbc7099d82db6f9803b9e0edb",
+      "head_sha": "dbfc5bcf93aaaf4832a9bdf13be73d4f322df898",
+      "merge_ref_sha": "7f43ede5482d3eb023d3b67aeebbb7527021180a",
+      "started_check_runs": 18,
+      "successful_check_runs": 17,
+      "intended_skipped_check_runs": 1,
+      "bad_or_nonterminal_check_runs": 0
+    },
+    "security_db_review": {
+      "task_id": "019fe536-c29f-7e50-b7ae-bea469d4af8d",
+      "verdict": "APPROVE",
+      "p0": 0,
+      "p1": 0,
+      "p2": 0,
+      "stage3_approval": false
+    },
+    "five_axis_review": {
+      "task_id": "019fe536-c29f-7e50-b7ae-be8b5e414d7a",
+      "verdict": "HOLD",
+      "p0": 0,
+      "p1": 0,
+      "p2": 1,
+      "stage3_approval": false
+    },
+    "p2_finding": "PR #1291 Merge Gate presented historical head 7c49518bd21e440b49785a053a9d38e047eea281, merge-ref 984f599b43095f1540915cfea514ded5d2436114 and 2 success / 8 pending as current; Closeout Sync also projected Design Status pending instead of canonical temporary",
+    "resolution": "preserve old tuples only as historical lineage and regenerate PR Actual Verification, Closeout Sync and Merge Gate after the normal non-force successor push from the live GitHub tuple, including every current-head and body-triggered started check",
+    "current_canonical_projection": {
+      "lifecycle": "in_progress",
+      "approval_state": "not_started",
+      "verification_status": "pending",
+      "design_status": "temporary"
+    },
+    "product_contract_changed": false,
+    "code_or_migration_changed": false,
+    "stage3_self_approval": false,
+    "pending": [
+      "independent Stage 3",
+      "Manual/server-Mac/OAuth evidence",
+      "R/R+1 drain",
+      "R+2 activation",
+      "merge",
+      "Discord"
+    ]
+  },
   "overall_status": {
     "lifecycle": "in_progress",
     "approval_state": "not_started",
