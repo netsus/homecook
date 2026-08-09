@@ -1145,7 +1145,8 @@ declare
   v_removed integer := 0; v_cook_count integer := 0;
   v_batch_id uuid := p_session_id;
 begin
-  if p_idempotency_key is null or p_weight_action not in ('set_finished_weight','weigh_later')
+  if p_idempotency_key is null or p_consumed_pantry_item_ids is null
+    or p_weight_action not in ('set_finished_weight','weigh_later')
     or (p_weight_action = 'set_finished_weight' and (p_finished_weight_g is null or p_finished_weight_g <= 0))
     or (p_weight_action = 'weigh_later' and p_finished_weight_g is not null)
     or cardinality(coalesce(p_consumed_pantry_item_ids, '{}'::uuid[])) is distinct from

@@ -1037,6 +1037,38 @@ describe.runIf(enabled)("cooked batch weight ledger PostgreSQL", () => {
     expect(legacy.nutrition_calculation_status).toBeNull();
   });
 
+  it("rejects a NULL pantry selection while preserving an explicit empty array", () => {
+    const before = ownerDigest(ownerA);
+    const nullSelection = psql(`
+      begin;
+      set local request.jwt.claim.role = 'service_role';
+      select public.complete_snapshot_v2_cooking_session(
+        ${authArgs(ownerA)},'${completeSession}',
+        'aa000000-0000-4000-8000-000000000000',null::uuid[],
+        'weigh_later',null,'2026-08-08T01:29:00Z'
+      );
+      rollback;
+    `, false);
+    expect(nullSelection.status).not.toBe(0);
+    expect(nullSelection.stderr).toContain("VALIDATION_ERROR");
+    expect(ownerDigest(ownerA)).toBe(before);
+
+    const emptySelection = psql(`
+      begin;
+      set local request.jwt.claim.role = 'service_role';
+      select public.complete_snapshot_v2_cooking_session(
+        ${authArgs(ownerA)},'${completeSession}',
+        'aa000000-0000-4000-8000-000000000000',array[]::uuid[],
+        'weigh_later',null,'2026-08-08T01:29:00Z'
+      );
+      rollback;
+    `);
+    expect(extractJson(emptySelection.stdout)).toMatchObject({
+      data: { pantry_removed: 0 },
+    });
+    expect(ownerDigest(ownerA)).toBe(before);
+  });
+
   it("completes one standalone snapshot atomically and replays its exact result", () => {
     const hiddenKey = "aa000000-0000-4000-8000-000000000001";
     const deniedBefore = [ownerDigest(ownerA), ownerDigest(ownerB)];

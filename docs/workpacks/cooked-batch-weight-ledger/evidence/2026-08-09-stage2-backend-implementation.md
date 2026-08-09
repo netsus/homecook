@@ -18,6 +18,17 @@
 
 This task changes only #8 DB/backend/API, the existing leftovers compatibility reader/writer boundary, and the repository-wide account-session route inventory entries required by the new #8 write routes. It does not change personal recipe editor product/docs, F0, another workpack, frontend/Stage 4, #9 meal-log public ownership or #11 visual ownership.
 
+## Fresh backend author P2 repair
+
+- Task ID: `019fe494-733a-7e93-9a07-1f7e9674195e`
+- Predecessor PR head: `de2108d94011b6e8d2e2bd04af99555168301d14`
+- Independent five-axis finding: `P2` — the completion RPC treated `p_consumed_pantry_item_ids=NULL` as the valid explicit empty array `[]`.
+- TDD RED: PostgreSQL fresh and replay each failed only the new regression (`1 failed / 27 passed`) because the NULL call returned success; the transaction rolled back so fixture state remained unchanged.
+- Minimal GREEN: the RPC validation now rejects NULL with existing `VALIDATION_ERROR`; explicit `array[]::uuid[]` still completes successfully with `pantry_removed=0`.
+- PostgreSQL GREEN: #8 fresh/replay `28/28`; predecessor fresh `15 pass / 1 intended skip`, predecessor replay `16/16`, inherited inventory fresh/replay `26 pass / 33 intended skip` remain green.
+- Focused Vitest `5 files / 42 tests`, full Vitest `526 passed files / 28 skipped files`, `5,381 passed / 370 intended skipped`, account inventory `64/93/3`, authorization manifest `21`, validators, and `verify:backend` product `2,679` + build + security E2E `12/12` are green.
+- Public endpoint/status/error/field/action contracts are unchanged. Stage 3, merge, Manual/server-Mac/OAuth, R/R+1/R+2, activation and Discord remain unperformed; this author does not self-approve.
+
 ## Latest-master base-drift integration
 
 - PR #1292 makes `supabase/migrations/20260809100000_full_local_session_refresh_authority.sql` the canonical stable-session refresh authority. The #8 migration is ordered after the latest-master request-transaction migration as `20260809120000_cooked_batch_weight_ledger.sql`.
@@ -155,7 +166,7 @@ The cooked-batch scenarios cover exact 21-function owner/ACL/search-path/scope i
 - `pnpm exec vitest run tests/check-workpack-docs.test.ts tests/cooked-batch-weight-ledger-stage1-relock.test.ts` — final automation/status repair `2 files / 37 tests`; the validator-only file is `27/27`
 - `pnpm validate:workpack -- --slice cooked-batch-weight-ledger` — pass with visible `Workpack docs OK for slice 'cooked-batch-weight-ledger' (base: master)` marker; `missing-cooked-batch-sentinel` exits `1` with both missing governing paths; legacy `BRANCH_NAME=feature/be-cooked-batch-weight-ledger pnpm validate:workpack` inference still resolves the real workpack and passes
 - batch-nutrition focused TDD — RED `3 failed` because the private resolver did not exist; GREEN focused Vitest `6 files / 59 tests`, PostgreSQL fresh/replay #8 `27/27`
-- `pnpm test:cooked-batch-weight-ledger:postgres` — current integrated pass: fresh predecessor `15 + 1 intended skip`, fresh/replay #8 `27/27`, replay predecessor `16/16`, inherited shared security inventory fresh/replay `26 passed / 33 intended skips`
+- `pnpm test:cooked-batch-weight-ledger:postgres` — current integrated pass: fresh predecessor `15 + 1 intended skip`, fresh/replay #8 `28/28`, replay predecessor `16/16`, inherited shared security inventory fresh/replay `26 passed / 33 intended skips`
 - `pnpm verify:backend` — pass: lint, typecheck, `217 files passed | 11 skipped`, `2,664 tests passed | 150 skipped`, Next build, security E2E `12/12`
 - `pnpm test:security-functions:postgres` — pass: 8 anonymous mutation signatures denied with unchanged checksums
 - `node scripts/validate-security-function-authorization.mjs --contract-only` — pass; #8 manifest classifies 21 pre-deployment functions and delegates all full-local refresh ownership to the canonical #1292 manifest/migration
