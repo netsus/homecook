@@ -68,6 +68,8 @@
       "task_id": "019fe7b3-881f-7152-b3fc-9ca58b5dba2a",
       "head": "d6843baa6d27addea5d79fa991c937dfc6dbf070",
       "tree": "0fa3545f9ec22d83dd4e969f1eef70364a2297ba",
+      "draft_pr": 1320,
+      "draft_pr_url": "https://github.com/netsus/homecook/pull/1320",
       "design_status": "pending-review",
       "evidence_manifest": "ui/designs/evidence/cooked-batch-weight-ui/manifest.json"
     }
@@ -163,6 +165,7 @@
       "390px-320px-bottom-sheet-44px-16px-focus-keyboard-overflow-screen-reader-WCAG-contract",
       "planned-not-started-pending-lifecycle-boundary",
       "stage4-implementation-d6843baa6d27addea5d79fa991c937dfc6dbf070-tree-0fa3545f9ec22d83dd4e969f1eef70364a2297ba",
+      "stage4-draft-pr-1320",
       "new-stage4-sheet-section-scoped-axe-zero-existing-cook-mode-full-page-contrast-residual-nodes-two"
     ]
   },
@@ -187,5 +190,5 @@
     "Design-generator-owned content repairs and independent approval"
   ],
   "open_questions": [],
-  "notes": "#8 Stage 2/3/4 is merged/green through PR #1311 head 2a2cd6fb81265ffa1f49e1c34ee68a26e1ddc49d and merge c16102a3072e929e45bb24a69464cd3110d03db5, but its broader Manual/server-Mac/OAuth, R/R+1/R+2 and capability activation lifecycle remains pending. #11 Stage 2/3 is N/A and Stage 4 UI implementation/evidence target is d6843baa6d27addea5d79fa991c937dfc6dbf070/0fa3545f9ec22d83dd4e969f1eef70364a2297ba. #9 owns meal-log backend DB/API/write/events/pointers, #12 owns consumed UI, and shared projection integration is sequential. Shared docs/workpacks/README.md and .workflow-v2/status.json require a later sequential projection update by the #9/shared owner. Lifecycle remains planned/not_started/pending until fresh authority precheck, Stage 5, final authority and Stage 6. Automated accessibility is scoped: new #11 completion/action sheets and LEFTOVERS section serious/critical 0; existing COOK_MODE full-page contrast residual nodes 2."
+  "notes": "#8 Stage 2/3/4 is merged/green through PR #1311 head 2a2cd6fb81265ffa1f49e1c34ee68a26e1ddc49d and merge c16102a3072e929e45bb24a69464cd3110d03db5, but its broader Manual/server-Mac/OAuth, R/R+1/R+2 and capability activation lifecycle remains pending. #11 Stage 2/3 is N/A and Stage 4 UI implementation/evidence target is d6843baa6d27addea5d79fa991c937dfc6dbf070/0fa3545f9ec22d83dd4e969f1eef70364a2297ba in Draft PR #1320. #9 owns meal-log backend DB/API/write/events/pointers, #12 owns consumed UI, and shared projection integration is sequential. Shared docs/workpacks/README.md and .workflow-v2/status.json require a later sequential projection update by the #9/shared owner. Lifecycle remains planned/not_started/pending until fresh authority precheck, Stage 5, final authority and Stage 6. Automated accessibility is scoped: new #11 completion/action sheets and LEFTOVERS section serious/critical 0; existing COOK_MODE full-page contrast residual nodes 2."
 }

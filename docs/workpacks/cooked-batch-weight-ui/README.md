@@ -77,7 +77,7 @@ All mutations keep UUID `Idempotency-Key` and the official `expected_revision` r
 
 ## Frontend Delivery Mode
 
-Design Status는 `pending-review`다. Stage 1 PR #1318 merge `8b1a4cce57e05d282c2a01fc54557ffc129fae1d`와 fresh internal/design `APPROVE 0/0/0`을 입력으로 Stage 4가 existing #8 client/API adapters만 소비해 구현·자동 증거를 준비했다. 구현 task `019fe7b3-881f-7152-b3fc-9ca58b5dba2a`의 evidence target은 head `d6843baa6d27addea5d79fa991c937dfc6dbf070`, tree `0fa3545f9ec22d83dd4e969f1eef70364a2297ba`다. 별도 authority precheck, Stage 5, final authority와 Stage 6은 아직 승인하지 않았다.
+Design Status는 `pending-review`다. Stage 1 PR #1318 merge `8b1a4cce57e05d282c2a01fc54557ffc129fae1d`와 fresh internal/design `APPROVE 0/0/0`을 입력으로 Stage 4가 existing #8 client/API adapters만 소비해 구현·자동 증거를 준비했다. 구현 task `019fe7b3-881f-7152-b3fc-9ca58b5dba2a`의 evidence target은 head `d6843baa6d27addea5d79fa991c937dfc6dbf070`, tree `0fa3545f9ec22d83dd4e969f1eef70364a2297ba`이며 Draft PR은 [#1320](https://github.com/netsus/homecook/pull/1320)이다. 별도 authority precheck, Stage 5, final authority와 Stage 6은 아직 승인하지 않았다.
 
 Required states:
 

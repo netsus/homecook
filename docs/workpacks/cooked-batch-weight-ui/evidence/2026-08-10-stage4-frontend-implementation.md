@@ -8,7 +8,7 @@
 - Exact base: `origin/master` `8b1a4cce57e05d282c2a01fc54557ffc129fae1d`, tree `7545e8e637f8641f7ef321a70a678e0c29252867` (merged Stage 1 PR #1318)
 - Branch: `feature/fe-cooked-batch-weight-ui`
 - Implementation evidence target: head `d6843baa6d27addea5d79fa991c937dfc6dbf070`, tree `0fa3545f9ec22d83dd4e969f1eef70364a2297ba`
-- Draft PR: pending creation at the time this implementation target was captured
+- Draft PR: [#1320](https://github.com/netsus/homecook/pull/1320), created as Draft; Ready/merge remain untouched
 - Public contract/schema/status/error/action expansion: none
 - Remote Supabase, production/staging, Vercel, server-Mac, OAuth, Cloudflare, migration, capability, R/R+1/R+2, activation and Discord mutation: none
 
@@ -93,7 +93,7 @@ None. No field, endpoint, status, error, action or screen outside the official m
 
 ## Pending and not claimed
 
-- current-head Draft PR checks until every started check is terminal green or intended skip
+- current-head Draft PR #1320 checks until every started check is terminal green or intended skip
 - fresh authority precheck
 - independent Stage 5
 - final product-design authority

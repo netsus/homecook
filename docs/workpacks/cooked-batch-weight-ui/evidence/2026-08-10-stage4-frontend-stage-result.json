@@ -12,7 +12,8 @@
     "branch": "feature/fe-cooked-batch-weight-ui",
     "implementation_head": "d6843baa6d27addea5d79fa991c937dfc6dbf070",
     "implementation_tree": "0fa3545f9ec22d83dd4e969f1eef70364a2297ba",
-    "draft_pr": null,
+    "draft_pr": 1320,
+    "draft_pr_url": "https://github.com/netsus/homecook/pull/1320",
     "history_rewrite": false
   },
   "contract": {
@@ -76,7 +77,7 @@
     "design_status": "pending-review"
   },
   "pending": [
-    "current-head Draft PR checks",
+    "current-head Draft PR #1320 checks",
     "fresh authority precheck",
     "independent Stage 5",
     "final product-design authority",
