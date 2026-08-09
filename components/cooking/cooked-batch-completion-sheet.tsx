@@ -125,14 +125,19 @@ export function CookedBatchCompletionSheet({
       description="실제로 사용한 팬트리 항목과 완성된 음식 전체 무게를 확인해요."
       descriptionClassName="mt-1 text-sm leading-5 text-[var(--wave1-text-2)]"
       footer={
-        <AppModalFooterActions
-          cancelDisabled={submitting}
-          cancelLabel="돌아가기"
-          confirmDisabled={!canSubmit}
-          confirmLabel={submitting ? "저장 중…" : "완료 저장"}
-          onCancel={onClose}
-          onConfirm={handleSubmit}
-        />
+        <div
+          className="[--wave1-mint-contrast:var(--brand-primary-text)] [--wave1-mint-contrast-deep:var(--foreground)]"
+          data-testid="cooked-batch-completion-actions"
+        >
+          <AppModalFooterActions
+            cancelDisabled={submitting}
+            cancelLabel="돌아가기"
+            confirmDisabled={!canSubmit}
+            confirmLabel={submitting ? "저장 중…" : "완료 저장"}
+            onCancel={onClose}
+            onConfirm={handleSubmit}
+          />
+        </div>
       }
       horizontalPaddingClassName="px-4"
       onClose={() => {
@@ -156,7 +161,7 @@ export function CookedBatchCompletionSheet({
 
       {serverError ? (
         <div
-          className="rounded-[var(--radius-card)] border border-[var(--danger)] bg-[var(--surface-fill)] px-4 py-3 text-sm leading-5 text-[var(--danger)] outline-none"
+          className="rounded-[var(--radius-card)] border border-[var(--danger)] bg-[var(--surface-fill)] px-4 py-3 text-sm leading-5 text-[var(--danger-strong)] outline-none"
           id="cooked-batch-completion-error"
           ref={errorRef}
           role="alert"

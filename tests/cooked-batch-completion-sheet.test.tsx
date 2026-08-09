@@ -54,6 +54,27 @@ describe("cooked batch completion sheet", () => {
     expect(screen.getByText(/현재 남은 양이 아니라 완성 직후 전체 음식 무게/)).toBeTruthy();
   });
 
+  it("scopes the active completion CTA to accessible existing color tokens", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <CookedBatchCompletionSheet
+        candidates={[candidate]}
+        onClose={() => undefined}
+        onSubmit={() => undefined}
+        serverError={null}
+        submitting={false}
+      />,
+    );
+
+    await user.click(screen.getByRole("radio", { name: "나중에 입력" }));
+
+    const actions = screen.getByTestId("cooked-batch-completion-actions");
+    expect(actions.className).toContain("[--wave1-mint-contrast:var(--brand-primary-text)]");
+    expect(actions.className).toContain("[--wave1-mint-contrast-deep:var(--foreground)]");
+    expect(screen.getByRole("button", { name: "완료 저장" }).hasAttribute("disabled")).toBe(false);
+  });
+
   it("locks every action while pending and keeps one progress label", async () => {
     render(
       <CookedBatchCompletionSheet
@@ -102,6 +123,7 @@ describe("cooked batch completion sheet", () => {
 
     const alert = screen.getByRole("alert");
     await waitFor(() => expect(document.activeElement).toBe(alert));
+    expect(alert.className).toContain("text-[var(--danger-strong)]");
     expect(screen.getByRole("checkbox").getAttribute("aria-checked")).toBe("true");
     expect((screen.getByRole("spinbutton", { name: "완성 직후 음식 전체 중량" }) as HTMLInputElement).value).toBe("640");
     expect(screen.getByRole("spinbutton", { name: "완성 직후 음식 전체 중량" }).getAttribute("aria-describedby")).toContain("cooked-batch-completion-error");

@@ -1,7 +1,7 @@
 import { mkdir } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import AxeBuilder from "@axe-core/playwright";
-import { expect, test, type Page, type Route } from "@playwright/test";
+import { expect, test, type Locator, type Page, type Route } from "@playwright/test";
 
 import { installAccountLibraryVisualRoutes, setE2EAuthOverride } from "./helpers/mock-routes";
 
@@ -179,6 +179,85 @@ async function fulfillConflict(route: Route) {
   });
 }
 
+async function fulfillValidationError(route: Route) {
+  await route.fulfill({
+    status: 422,
+    json: {
+      success: false,
+      data: null,
+      error: {
+        code: "VALIDATION_ERROR",
+        message: "음식 무게를 확인해 주세요.",
+        fields: [{ field: "finished_weight_g", reason: "invalid_positive_number" }],
+      },
+    },
+  });
+}
+
+async function readTextContrast(locator: Locator) {
+  return locator.evaluate((element) => {
+    const parseColor = (value: string) => {
+      const channels = value.match(/[\d.]+/g)?.map(Number);
+      if (!channels || channels.length < 3) {
+        throw new Error(`RGB 색상을 해석할 수 없습니다: ${value}`);
+      }
+      return [channels[0], channels[1], channels[2], channels[3] ?? 1];
+    };
+    const composite = (foreground: number[], background: number[]) => {
+      const alpha = foreground[3] + (background[3] * (1 - foreground[3]));
+      return [
+        ((foreground[0] * foreground[3]) + (background[0] * background[3] * (1 - foreground[3]))) / alpha,
+        ((foreground[1] * foreground[3]) + (background[1] * background[3] * (1 - foreground[3]))) / alpha,
+        ((foreground[2] * foreground[3]) + (background[2] * background[3] * (1 - foreground[3]))) / alpha,
+        alpha,
+      ];
+    };
+    const luminance = (color: number[]) => {
+      const channels = color.slice(0, 3).map((channel) => {
+        const value = channel / 255;
+        return value <= 0.04045
+          ? value / 12.92
+          : ((value + 0.055) / 1.055) ** 2.4;
+      });
+      return (0.2126 * channels[0]) + (0.7152 * channels[1]) + (0.0722 * channels[2]);
+    };
+
+    const style = window.getComputedStyle(element);
+    let background = parseColor(style.backgroundColor);
+    let parent = element.parentElement;
+    while (background[3] < 1 && parent) {
+      background = composite(background, parseColor(window.getComputedStyle(parent).backgroundColor));
+      parent = parent.parentElement;
+    }
+    if (background[3] < 1) background = composite(background, [255, 255, 255, 1]);
+    const foreground = composite(parseColor(style.color), background);
+    const foregroundLuminance = luminance(foreground);
+    const backgroundLuminance = luminance(background);
+
+    return {
+      background: style.backgroundColor,
+      foreground: style.color,
+      ratio: (Math.max(foregroundLuminance, backgroundLuminance) + 0.05)
+        / (Math.min(foregroundLuminance, backgroundLuminance) + 0.05),
+    };
+  });
+}
+
+async function expectNormalTextContrast(locator: Locator) {
+  const contrast = await readTextContrast(locator);
+  expect(contrast.ratio).toBeGreaterThanOrEqual(4.5);
+  return contrast;
+}
+
+async function expectNoSeriousAxeViolations(page: Page) {
+  const violations = (await new AxeBuilder({ page })
+    .include('[data-testid="cooked-batch-completion-sheet"]')
+    .analyze())
+    .violations
+    .filter((violation) => violation.impact === "serious" || violation.impact === "critical");
+  expect(violations).toEqual([]);
+}
+
 test.describe("cooked-batch-weight-ledger", () => {
   test.beforeEach(async ({ page }) => {
     await setE2EAuthOverride(page);
@@ -272,6 +351,67 @@ test.describe("cooked-batch-weight-ledger", () => {
     });
     release();
     await expect(dialog).toHaveCount(0);
+  });
+
+  test("keeps known-weight and weigh-later active CTA states above WCAG AA contrast", async ({ page }) => {
+    await installCookModeRoute(page);
+    await page.setViewportSize({ width: 390, height: 844 });
+    const { dialog } = await openCompletion(page);
+    const confirm = dialog.getByRole("button", { name: "완료 저장" });
+
+    await dialog.getByRole("radio", { name: "음식만 무게(g)" }).click();
+    await dialog.getByRole("spinbutton", { name: "완성 직후 음식 전체 중량" }).fill("640");
+    await expect(confirm).toBeEnabled();
+
+    for (const action of ["known-weight", "weigh-later"] as const) {
+      if (action === "weigh-later") {
+        await dialog.getByRole("radio", { name: "나중에 입력" }).click();
+      }
+
+      await page.mouse.move(0, 0);
+      await expectNormalTextContrast(confirm);
+      await confirm.focus();
+      await expect(confirm).toBeFocused();
+      await confirm.hover();
+      await expectNormalTextContrast(confirm);
+      await confirm.evaluate((button) => {
+        button.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopImmediatePropagation();
+        }, { once: true });
+      });
+      await page.mouse.down();
+      expect(await confirm.evaluate((button) => button.matches(":active"))).toBe(true);
+      await expectNormalTextContrast(confirm);
+      await page.mouse.up();
+      await page.mouse.move(0, 0);
+
+      await expectNoSeriousAxeViolations(page);
+    }
+  });
+
+  test("keeps a real 422 recovery state focused, linked, preserved, and above WCAG AA contrast", async ({ page }) => {
+    await installCookModeRoute(page);
+    await page.route("**/api/v1/cooking/session-attempts/*/complete", fulfillValidationError);
+    await page.setViewportSize({ width: 390, height: 844 });
+    const { dialog } = await openCompletion(page);
+    const product = dialog.getByRole("checkbox", { name: /닭가슴살 오리지널.*하림/ });
+    const weight = dialog.getByRole("spinbutton", { name: "완성 직후 음식 전체 중량" });
+
+    await product.click();
+    await dialog.getByRole("radio", { name: "음식만 무게(g)" }).click();
+    await weight.fill("640");
+    await dialog.getByRole("button", { name: "완료 저장" }).click();
+
+    const alert = dialog.getByRole("alert");
+    await expect(alert).toBeFocused();
+    await expect(alert).toContainText("음식 무게를 확인해 주세요.");
+    await expect(product).toBeChecked();
+    await expect(weight).toHaveValue("640");
+    await expect(weight).toHaveAttribute("aria-invalid", "true");
+    await expect(weight).toHaveAttribute("aria-describedby", "cooked-batch-completion-error");
+    await expectNormalTextContrast(alert.locator("strong"));
+    await expectNoSeriousAxeViolations(page);
   });
 
   test("captures desktop, 390px, and 320px evidence with focus, target, overflow, and WCAG checks", async ({ page }, testInfo) => {
