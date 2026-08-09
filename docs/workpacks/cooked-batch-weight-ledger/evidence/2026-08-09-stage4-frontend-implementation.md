@@ -28,18 +28,21 @@ The finished UI keeps initial pantry selection empty, allows explicit `[]`, expo
 
 | Evidence | Original size | SHA-256 |
 | --- | ---: | --- |
-| `ui/designs/evidence/cooked-batch-weight-ledger/COOK_MODE-implementation-desktop-1280.png` | `1280x900` | `3aa8556589cde4280587a7e11005bb628fe3f414ac1ec24e9f767010f47bf696` |
-| `ui/designs/evidence/cooked-batch-weight-ledger/COOK_MODE-implementation-mobile-default-390.png` | `390x844` | `1ecd8b2137460b78925ad22b678939bae076d0a9b3af2b5e160719814284139b` |
-| `ui/designs/evidence/cooked-batch-weight-ledger/COOK_MODE-implementation-mobile-narrow-320.png` | `320x568` | `e6a05d3a29a6c58e7812d5fc42730665a1119160fbb2eb472021576911fb27d5` |
+| `ui/designs/evidence/cooked-batch-weight-ledger/COOK_MODE-implementation-desktop-1280.png` | `1280x900` | `3a5fe330b39ea48da7f1ff5900ac1608748f99cb5f9934341ba8a36d3064297c` |
+| `ui/designs/evidence/cooked-batch-weight-ledger/COOK_MODE-implementation-mobile-default-390.png` | `390x844` | `8c2586bba25f55562cb88891d60e028b0c3d931b41513067c0895dd6b10b92f9` |
+| `ui/designs/evidence/cooked-batch-weight-ledger/COOK_MODE-implementation-mobile-narrow-320.png` | `320x568` | `67f59c7536ec6b57e5c83e0b8327630ed161653abd431c25bafb1d1273555027` |
 
 The runtime comparison is recorded in `design-qa.md`. It is an author-only implementation QA artifact, not final product-design authority. The Playwright assertions prove 44px controls, 16px horizontal spacing, focus trap/restore, synthetic keyboard Escape behavior, narrow internal scrolling, no horizontal overflow, zero console errors, and zero serious/critical axe violations for the #8 sheet. The PNG files themselves do not prove a physical keyboard, physical iOS Safari, screen-reader behavior, or full WCAG conformance.
 
-The canonical screenshot reproduction command below starts the default clean fixture server for each run. Three consecutive runs produced byte-identical SHA-256 values for all three files:
+The canonical screenshot reproduction command below disables server reuse, starts a clean fixture server for each run, and preserves every run separately. Three consecutive runs each produced `9 passed / 1 intended skip` and byte-identical SHA-256 values for all three files:
 
 ```bash
+EVIDENCE_TMP_DIR="$(mktemp -d /tmp/homecook-contrast-evidence.XXXXXX)"
 for run in 1 2 3; do
-  pnpm test:e2e:regression:ci --grep cooked-batch-weight-ledger
-  sha256sum ui/designs/evidence/cooked-batch-weight-ledger/COOK_MODE-implementation-{desktop-1280,mobile-default-390,mobile-narrow-320}.png
+  PLAYWRIGHT_REUSE_EXISTING_SERVER=0 pnpm test:e2e:regression:ci --grep cooked-batch-weight-ledger
+  mkdir -p "$EVIDENCE_TMP_DIR/run-$run"
+  cp ui/designs/evidence/cooked-batch-weight-ledger/COOK_MODE-implementation-{desktop-1280,mobile-default-390,mobile-narrow-320}.png "$EVIDENCE_TMP_DIR/run-$run/"
+  shasum -a 256 "$EVIDENCE_TMP_DIR/run-$run"/*.png
 done
 ```
 

@@ -39,21 +39,28 @@
       "path": "ui/designs/evidence/cooked-batch-weight-ledger/COOK_MODE-implementation-desktop-1280.png",
       "width": 1280,
       "height": 900,
-      "sha256": "3aa8556589cde4280587a7e11005bb628fe3f414ac1ec24e9f767010f47bf696"
+      "sha256": "3a5fe330b39ea48da7f1ff5900ac1608748f99cb5f9934341ba8a36d3064297c"
     },
     {
       "path": "ui/designs/evidence/cooked-batch-weight-ledger/COOK_MODE-implementation-mobile-default-390.png",
       "width": 390,
       "height": 844,
-      "sha256": "1ecd8b2137460b78925ad22b678939bae076d0a9b3af2b5e160719814284139b"
+      "sha256": "8c2586bba25f55562cb88891d60e028b0c3d931b41513067c0895dd6b10b92f9"
     },
     {
       "path": "ui/designs/evidence/cooked-batch-weight-ledger/COOK_MODE-implementation-mobile-narrow-320.png",
       "width": 320,
       "height": 568,
-      "sha256": "e6a05d3a29a6c58e7812d5fc42730665a1119160fbb2eb472021576911fb27d5"
+      "sha256": "67f59c7536ec6b57e5c83e0b8327630ed161653abd431c25bafb1d1273555027"
     }
   ],
+  "screenshot_capture": {
+    "command": "PLAYWRIGHT_REUSE_EXISTING_SERVER=0 pnpm test:e2e:regression:ci --grep cooked-batch-weight-ledger",
+    "runs": 3,
+    "per_run_result": "9 passed / 1 intended skip",
+    "clean_server_per_run": true,
+    "byte_identical": true
+  },
   "review": {
     "author_internal_actionable_findings": {
       "p0": 0,
