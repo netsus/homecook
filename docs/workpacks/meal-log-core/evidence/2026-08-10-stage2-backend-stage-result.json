@@ -8,8 +8,8 @@
     "base_branch": "origin/master",
     "base_sha": "8b1a4cce57e05d282c2a01fc54557ffc129fae1d",
     "branch": "feature/be-meal-log-core",
-    "implementation_head_before_evidence": "7dbfb44d",
-    "history_rewrite": false
+    "implementation_head_before_evidence": "11729775",
+    "history_rewrite": true
   },
   "contract": {
     "official_tuple": "v1.7.30/v1.5.34/v1.3.32/v1.3.32/v1.2.37",
