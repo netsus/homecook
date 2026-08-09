@@ -91,6 +91,7 @@ describe("cooked-batch-weight-ledger fresh Stage 1 re-lock", () => {
     );
     expect(authority.authority_report_paths).toEqual([
       "ui/designs/authority/COOK_MODE-cooked-batch-weight-ledger-authority.md",
+      "docs/workpacks/cooked-batch-weight-ledger/evidence/2026-08-09-final-product-design-authority-post-typography-rereview.md",
     ]);
     expect(authority.stage4_evidence_requirements).toEqual(
       expect.arrayContaining([
