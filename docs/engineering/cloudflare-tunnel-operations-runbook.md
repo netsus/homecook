@@ -36,7 +36,7 @@ pnpm cloudflare:tunnel-health
 - warning: reconnect p95 `15초 초과`
 - diagnostic: 4개 connection simultaneous disconnect
 
-metrics는 `0~4` connection 범위, connection ID 개수 일치, healthy 상태의 location 표본을 함께 검증한다. build/version과 connection count만 남은 잘린 응답은 healthy가 아니다. reconnect와 log incident의 집계 window는 capture 시각 직전 24시간이며 그보다 오래된 event는 제외한다.
+metrics는 `0~4` connection 범위, connection ID 개수 일치, healthy 상태의 location 표본을 함께 검증한다. build와 HA metric은 각각 정확히 한 표본이어야 하며 connection ID/location 중복·상충도 거부한다. build/version과 connection count만 남은 잘린 응답은 healthy가 아니다. Recovered outage는 `recovered_at`, simultaneous incident는 `disconnect_completed_at` 기준으로 capture 시각 직전 24시간에 포함하고, cutoff 전부터 계속 열린 outage는 유지한다. 미래 timestamp는 집계하지 않는다.
 
 ## Provider-neutral external probe contract
 
@@ -75,7 +75,7 @@ authenticated credential/session은 provider secret store 안에서만 사용한
 
 ## 24시간 집계와 독립 분모
 
-집계 입력은 정확히 24시간 window와 result event 배열이다. 파일 경로·credential 같은 값을 CLI argument로 전달하지 않고 stdin만 사용한다.
+집계 입력은 정확히 24시간 window와 result event 배열이다. Top-level key는 `window_start`, `window_end`, `events`만 허용하며 추가·누락·잘못된 타입은 값이 출력되지 않는 fail-closed 오류다. 파일 경로·credential 같은 값을 CLI argument로 전달하지 않고 stdin만 사용한다.
 
 ```bash
 pnpm aggregate:cloudflare-external-probe < /repo-outside/private/probe-events.json
@@ -110,7 +110,7 @@ LAX diagnostic은 paging 조건이 아니다. 초기 threshold는 24시간 자�
 
 `composeIncidentTimeline()`은 local connector event와 external result event를 시간순으로 합친다. 단일 public timeout과 authenticated timeout은 warning이며, 같은 public endpoint의 timeout/52x 두 번째 연속 표본에서만 critical이 된다. pantry TTFB p95와 LAX 지속 진단, local `<4 >60s`, reconnect 경보도 같은 timeline에 고정된 allowlist status로 들어간다. `summarizeCloudflareMonitoring()`은 그 timeline의 severity count에서 status를 한 번만 유도한다.
 
-기존 `capture-full-local-session-lifecycle-evidence.mjs`의 4개 phase와 schema version 1은 유지한다. 실제 capture 경로는 credential/provider 설정 없이 고정 local health CLI를 read-only로 실행하고, schema-valid JSON을 받은 경우에만 redacted counts-only `cloudflare_monitoring`을 optional root field로 합성한다. critical 상태의 CLI exit `1`도 유효한 incident summary로 보존하며, JSON 수집 자체가 실패하면 field를 생략한다. 따라서 기존 field를 바꾸거나 legacy JSON consumer에 필수값을 추가하지 않는다. Validator는 incident count 합계뿐 아니라 critical/warning count와 status의 불변식도 강제한다.
+기존 `capture-full-local-session-lifecycle-evidence.mjs`의 4개 phase와 schema version 1은 유지한다. 실제 capture 경로는 credential/provider 설정 없이 고정 local health CLI를 read-only로 실행하고, schema-valid JSON을 받은 경우에만 redacted counts-only `cloudflare_monitoring`을 optional root field로 합성한다. Signal 없이 끝난 exit `0`/`1`만 허용하고, `healthy|warning=0`, `critical|unknown=1` 대응을 검증한다. 따라서 critical exit `1`의 안전한 summary는 보존하지만 exit `2`, signal 종료, exit/state 불일치는 생략한다. 기존 field를 바꾸거나 legacy JSON consumer에 필수값을 추가하지 않는다. Validator는 incident count 합계뿐 아니라 critical/warning count와 status의 불변식도 강제한다.
 
 ## Manual Only 자산과 후속 live gate
 

@@ -325,11 +325,24 @@ function maxConsecutiveLax(slots, networkLabel) {
   return maximum;
 }
 
-export function aggregateExternalProbeWindow({
-  window_start: windowStart,
-  window_end: windowEnd,
-  events,
-} = {}) {
+export function aggregateExternalProbeWindow(input = {}) {
+  if (
+    input === null
+    || typeof input !== "object"
+    || Array.isArray(input)
+    || Object.keys(input).length !== 3
+    || !["window_start", "window_end", "events"].every((key) => Object.hasOwn(input, key))
+    || typeof input.window_start !== "string"
+    || typeof input.window_end !== "string"
+    || !Array.isArray(input.events)
+  ) {
+    throw new Error("Invalid aggregate envelope.");
+  }
+  const {
+    window_start: windowStart,
+    window_end: windowEnd,
+    events,
+  } = input;
   const windowStartMs = utcTimestamp(windowStart);
   const windowEndMs = utcTimestamp(windowEnd);
   if (
@@ -339,7 +352,6 @@ export function aggregateExternalProbeWindow({
   ) {
     throw new Error("The aggregation window must be exactly 24 hours.");
   }
-  if (!Array.isArray(events)) throw new Error("events must be an array.");
   const slotsByProbe = Object.fromEntries(Object.entries(EXTERNAL_PROBE_CONTRACT.probes)
     .map(([probeId, probe]) => [probeId, Array(probe.expected_samples_24h).fill(null)]));
   let rejectedEventCount = 0;

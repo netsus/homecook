@@ -1150,6 +1150,7 @@ export function collectCloudflareMonitoringSummary({
       [path.join(implementationRoot, "scripts/cloudflare-tunnel-health.mjs")],
       { cwd: implementationRoot, allowFailure: true },
     );
+    if (result.signal !== null || ![0, 1].includes(result.status)) return null;
     const raw = stdoutText(result);
     if (Buffer.byteLength(raw, "utf8") > 1_048_576) return null;
     const localHealth = JSON.parse(raw);
@@ -1160,6 +1161,12 @@ export function collectCloudflareMonitoringSummary({
     ) {
       return null;
     }
+    const expectedExit = ["healthy", "warning"].includes(localHealth.state)
+      ? 0
+      : ["critical", "unknown"].includes(localHealth.state)
+        ? 1
+        : null;
+    if (expectedExit === null || result.status !== expectedExit) return null;
     return summarizeCloudflareMonitoring({ local_health: localHealth });
   } catch {
     return null;

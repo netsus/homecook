@@ -36,7 +36,8 @@ export function validateMetricsEndpoint(value) {
 }
 
 function localTimeline(
-  tunnelLog,
+  recoveredOutages,
+  simultaneousOutages,
   healthyConnections,
   capturedAt,
   reconnectThresholdMs,
@@ -73,19 +74,19 @@ function localTimeline(
       network_label: null,
     });
   }
-  for (const outage of tunnelLog.outages) {
-    if (outage.simultaneous_full_outage) {
-      events.push({
-        timestamp: outage.disconnect_completed_at,
-        source: "local_connector",
-        kind: "connector_health",
-        severity: "diagnostic",
-        status: "simultaneous_disconnect",
-        error: "NONE",
-        colo: normalizeColo(outage.tunnel_colos?.[0]),
-        network_label: null,
-      });
-    }
+  for (const outage of simultaneousOutages) {
+    events.push({
+      timestamp: outage.disconnect_completed_at,
+      source: "local_connector",
+      kind: "connector_health",
+      severity: "diagnostic",
+      status: "simultaneous_disconnect",
+      error: "NONE",
+      colo: normalizeColo(outage.tunnel_colos?.[0]),
+      network_label: null,
+    });
+  }
+  for (const outage of recoveredOutages) {
     if (outage.recovery_ms !== null && outage.recovery_ms > reconnectThresholdMs) {
       events.push({
         timestamp: outage.recovered_at,
@@ -119,23 +120,31 @@ export function buildLocalConnectorHealth({
     && rawConnectionCount <= 4;
   const metricsValid = metrics.version !== null
     && connectionCountInRange
+    && metrics.samples_valid === true
     && metrics.connection_ids_consistent === true
     && (rawConnectionCount < 4 || metrics.success === true);
   const healthyConnections = metricsValid ? rawConnectionCount : null;
   const windowStartMs = capturedAtMs - 86_400_000;
-  const recentOutages = tunnelLog.outages.filter((outage) => {
+  const timestampInWindow = (value) => {
+    const timestamp = Date.parse(value ?? "");
+    return Number.isFinite(timestamp) && timestamp >= windowStartMs && timestamp <= capturedAtMs;
+  };
+  const recoveredOutages = tunnelLog.outages.filter((outage) =>
+    outage.recovered_at !== null && timestampInWindow(outage.recovered_at)
+  );
+  const simultaneousOutages = tunnelLog.outages.filter((outage) =>
+    outage.simultaneous_full_outage && timestampInWindow(outage.disconnect_completed_at)
+  );
+  const openOutages = tunnelLog.outages.filter((outage) => {
+    if (outage.recovered_at !== null) return false;
     const disconnectedAt = Date.parse(outage.disconnect_started_at);
-    return Number.isFinite(disconnectedAt)
-      && disconnectedAt >= windowStartMs
-      && disconnectedAt <= capturedAtMs;
+    return Number.isFinite(disconnectedAt) && disconnectedAt <= capturedAtMs;
   });
-  const recentTunnelLog = { ...tunnelLog, outages: recentOutages };
-  const recoveredDurations = recentOutages
+  const recoveredDurations = recoveredOutages
     .map((outage) => outage.recovery_ms)
     .filter((value) => value !== null);
   const reconnectMs = summarizeDurations(recoveredDurations);
-  const openOutageDurations = recentOutages
-    .filter((outage) => outage.recovered_at === null)
+  const openOutageDurations = openOutages
     .map((outage) => capturedAtMs - Date.parse(outage.disconnect_started_at))
     .filter((value) => Number.isFinite(value) && value >= 0);
   const degradedDurationMs = openOutageDurations.length === 0
@@ -157,7 +166,7 @@ export function buildLocalConnectorHealth({
   if (reconnectMs.p95 !== null && reconnectMs.p95 > 15_000) {
     warning.push("reconnect_over_15s");
   }
-  if (recentOutages.some((outage) => outage.simultaneous_full_outage)) {
+  if (simultaneousOutages.length > 0) {
     diagnostic.push("simultaneous_disconnect");
   }
   const connectionState = healthyConnections === null
@@ -191,7 +200,8 @@ export function buildLocalConnectorHealth({
     reconnect_ms: reconnectMs,
     signals: { critical, warning, diagnostic },
     incident_events: localTimeline(
-      recentTunnelLog,
+      recoveredOutages,
+      simultaneousOutages,
       healthyConnections,
       capturedAt,
       15_000,

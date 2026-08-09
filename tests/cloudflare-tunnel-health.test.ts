@@ -8,6 +8,7 @@ import {
   buildLocalConnectorHealth,
   validateMetricsEndpoint,
 } from "../scripts/lib/cloudflare-tunnel-health.mjs";
+import { parseTunnelMetrics } from "../scripts/lib/cloudflare-tunnel-preflight.mjs";
 import { runHealthCli } from "../scripts/cloudflare-tunnel-health.mjs";
 
 function metrics(activeConnections: number) {
@@ -147,6 +148,98 @@ describe("Cloudflare local connector health", () => {
     expect(health.signals.diagnostic).not.toContain("simultaneous_disconnect");
     expect(health.incident_events).toEqual([]);
     expect(health.state).toBe("healthy");
+  });
+
+  it("includes recovered outages by recovered_at at the 24h boundary", () => {
+    const log = [
+      initialConnections.replaceAll("2026-08-10", "2026-08-08"),
+      "2026-08-08T23:59:44.000Z ERR connection closed connIndex=3",
+      "2026-08-09T00:00:00.000Z INF Registered tunnel connection connIndex=3 location=icn01 protocol=quic",
+    ].join("\n");
+    const health = buildLocalConnectorHealth({
+      captured_at: "2026-08-10T00:00:00.000Z",
+      metrics_raw: metrics(4),
+      log_raw: log,
+    });
+
+    expect(health.reconnect_ms).toEqual({ count: 1, p50: 16_000, p95: 16_000, max: 16_000 });
+    expect(health.signals.warning).toContain("reconnect_over_15s");
+    expect(health.incident_events).toEqual(expect.arrayContaining([
+      expect.objectContaining({ status: "reconnect_slow", timestamp: "2026-08-09T00:00:00.000Z" }),
+    ]));
+  });
+
+  it("keeps an outage open across the cutoff and excludes future outage timestamps", () => {
+    const openLog = [
+      initialConnections.replaceAll("2026-08-10", "2026-08-08"),
+      "2026-08-08T23:00:00.000Z ERR connection closed connIndex=3",
+    ].join("\n");
+    const openHealth = buildLocalConnectorHealth({
+      captured_at: "2026-08-10T00:00:00.000Z",
+      metrics_raw: metrics(3),
+      log_raw: openLog,
+    });
+    expect(openHealth.degraded_duration_ms).toBe(90_000_000);
+    expect(openHealth.signals.warning).toContain("connector_below_4_over_60s");
+
+    const futureLog = [
+      initialConnections,
+      "2026-08-10T00:00:01.000Z ERR connection closed connIndex=3",
+    ].join("\n");
+    const futureHealth = buildLocalConnectorHealth({
+      captured_at: "2026-08-10T00:00:00.000Z",
+      metrics_raw: metrics(3),
+      log_raw: futureLog,
+    });
+    expect(futureHealth.degraded_duration_ms).toBeNull();
+    expect(futureHealth.signals.warning).not.toContain("connector_below_4_over_60s");
+  });
+
+  it("includes simultaneous disconnect at its completed_at cutoff boundary", () => {
+    const log = [
+      initialConnections.replaceAll("2026-08-10", "2026-08-08"),
+      "2026-08-08T23:59:57.000Z ERR connection closed connIndex=0",
+      "2026-08-08T23:59:58.000Z ERR connection closed connIndex=1",
+      "2026-08-08T23:59:59.000Z ERR connection closed connIndex=2",
+      "2026-08-09T00:00:00.000Z ERR connection closed connIndex=3",
+      ...[0, 1, 2, 3].map((index) =>
+        `2026-08-09T00:00:05.000Z INF Registered tunnel connection connIndex=${index} location=icn01 protocol=quic`
+      ),
+    ].join("\n");
+    const health = buildLocalConnectorHealth({
+      captured_at: "2026-08-10T00:00:00.000Z",
+      metrics_raw: metrics(4),
+      log_raw: log,
+    });
+
+    expect(health.signals.diagnostic).toContain("simultaneous_disconnect");
+    expect(health.incident_events).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        status: "simultaneous_disconnect",
+        timestamp: "2026-08-09T00:00:00.000Z",
+      }),
+    ]));
+  });
+
+  it("rejects duplicate or conflicting build, HA, and connection-location metrics", () => {
+    const cases = [
+      `${metrics(4)}\ncloudflared_build_info{version="2026.5.2"} 1`,
+      `${metrics(4)}\ncloudflared_tunnel_ha_connections 0`,
+      `${metrics(4)}\ncloudflared_tunnel_server_locations{connection_id="0",edge_location="icn01"} 1`,
+      `${metrics(4)}\ncloudflared_tunnel_server_locations{connection_id="0",edge_location="lax01"} 1`,
+    ];
+
+    for (const metricsRaw of cases) {
+      expect(parseTunnelMetrics(metricsRaw).success).toBe(false);
+      expect(buildLocalConnectorHealth({
+        captured_at: "2026-08-10T00:03:00.000Z",
+        metrics_raw: metricsRaw,
+        log_raw: initialConnections,
+      })).toEqual(expect.objectContaining({
+        state: "unknown",
+        connector: expect.objectContaining({ metrics_valid: false }),
+      }));
+    }
   });
 
   it("never serializes raw metrics, logs, token, cookie, JWT, email, UUID, IP, path, header, or body", () => {

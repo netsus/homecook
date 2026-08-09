@@ -326,6 +326,36 @@ describe("provider-neutral external probe contract", () => {
     expect(serialized).not.toContain("second-secret-marker");
   });
 
+  it("fails closed for extra, missing, or malformed top-level aggregate envelope fields", async () => {
+    const valid = {
+      window_start: WINDOW_START,
+      window_end: WINDOW_END,
+      events: completeEvents(),
+    };
+    const invalidInputs = [
+      { ...valid, credential: "root-secret-must-not-escape" },
+      { window_start: WINDOW_START, events: valid.events },
+      { ...valid, events: "not-an-array" },
+      null,
+      [],
+    ];
+
+    for (const input of invalidInputs) {
+      expect(() => aggregateExternalProbeWindow(input as never)).toThrow(/envelope/u);
+      const stdout: string[] = [];
+      const stderr: string[] = [];
+      expect(await runExternalProbeCli(["aggregate"], {
+        readStdin: async () => JSON.stringify(input),
+        stdout: (value: string) => stdout.push(value),
+        stderr: (value: string) => stderr.push(value),
+      })).toBe(1);
+      expect(`${stdout.join("")} ${stderr.join("")}`).not.toContain(
+        "root-secret-must-not-escape",
+      );
+      expect(stderr.at(-1)).toBe("cloudflare-external-probe: FAIL (redacted)\n");
+    }
+  });
+
   it("keeps single public and authenticated timeouts non-critical but promotes a public pair", () => {
     const events = completeEvents();
     for (const [probeId, slot] of [

@@ -415,6 +415,46 @@ describe("full-local session lifecycle evidence contract", () => {
       critical_count: 1,
     }));
 
+    const healthyPayload = JSON.stringify({
+      schema: "homecook.cloudflare-tunnel-health",
+      version: 1,
+      state: "healthy",
+      incident_events: [],
+    });
+    for (const processResult of [
+      { status: 2, signal: null },
+      { status: null, signal: "SIGKILL" },
+      { status: 1, signal: null },
+    ] satisfies Array<{ status: number | null; signal: NodeJS.Signals | null }>) {
+      expect(collectCloudflareMonitoringSummary({
+        implementationRoot: "/repo/homecook",
+        commandRunner: () => ({
+          pid: 0,
+          ...processResult,
+          stdout: healthyPayload,
+          stderr: "must-not-escape",
+          output: [null, healthyPayload, "must-not-escape"],
+        }),
+      })).toBeNull();
+    }
+
+    expect(collectCloudflareMonitoringSummary({
+      implementationRoot: "/repo/homecook",
+      commandRunner: () => ({
+        pid: 0,
+        status: 0,
+        signal: null,
+        stdout: JSON.stringify({
+          schema: "homecook.cloudflare-tunnel-health",
+          version: 1,
+          state: "critical",
+          incident_events: [],
+        }),
+        stderr: "",
+        output: [null, "", ""],
+      }),
+    })).toBeNull();
+
     const source = readFileSync("scripts/capture-full-local-session-lifecycle-evidence.mjs", "utf8");
     expect(source).toMatch(/cloudflareMonitoring:\s*collectCloudflareMonitoringSummary/u);
   });
