@@ -175,11 +175,11 @@ All responses keep `{ success, data, error }`; errors keep `{ code, message, fie
 ## Delivery Checklist
 
 - [x] Stage 1 README/acceptance/automation/work-item/status contract authored
-- [ ] Stage 1 independent internal1.5 review approved with zero findings
-- [ ] Stage 1 independent security/DB review approved with zero findings
-- [ ] Stage 1 independent five-axis review approved with zero findings
-- [ ] Stage 1 PR current-head checks and post-merge master checks green
-- [ ] Stage 2 TDD RED evidence recorded before implementation
-- [ ] Stage 2 schema/RLS/RPC/routes implemented behind dormant capability
+- [x] Stage 1 independent internal1.5 review approved with zero findings
+- [x] Stage 1 independent security/DB review approved with zero findings
+- [x] Stage 1 independent five-axis review approved with zero findings
+- [x] Stage 1 PR current-head checks and post-merge master checks green
+- [x] Stage 2 TDD RED evidence recorded before implementation
+- [x] Stage 2 schema/RLS/RPC/routes implemented behind dormant capability
 - [ ] Stage 4 backend integration, concurrency, aggregate and compatibility evidence green
 - [ ] Stage 6 merged-exact-SHA server-production/local-rehearsal read-only and release-train evidence green
