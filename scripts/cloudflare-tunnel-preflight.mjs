@@ -2,189 +2,175 @@
 
 import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
-import { createReadStream, existsSync, realpathSync } from "node:fs";
+import { createReadStream, existsSync, realpathSync, statSync } from "node:fs";
 import { readFile, realpath, stat } from "node:fs/promises";
+import { isIP } from "node:net";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { parseCloudflaredVersion, parseLaunchctlPrint } from "./lib/cloudflare-tunnel-diagnostics.mjs";
 import {
-  parseCloudflaredVersion,
-  parseLaunchctlPrint,
-} from "./lib/cloudflare-tunnel-diagnostics.mjs";
-import {
-  buildPreflightEvidence,
-  classifyManagementMode,
-  evaluateReleaseGate,
-  extractManagedPaths,
-  hashEvidenceValue,
-  parseDnsOutput,
-  redactArguments,
+  buildPreflightEvidence, classifyManagementMode, CLOUDFLARE_TUNNEL_ENDPOINTS,
+  evaluateReleaseGate, extractManagedPaths, hashEvidenceValue, parseDnsOutput,
+  parseTunnelMetrics, redactArguments,
 } from "./lib/cloudflare-tunnel-preflight.mjs";
 import { writeEvidenceFile } from "./cloudflare-tunnel-diagnostics.mjs";
 
 const REPOSITORY_ROOT = realpathSync(fileURLToPath(new URL("../", import.meta.url)));
 const DEFAULT_PLIST = "/Users/cwj/Library/LaunchAgents/com.homecook.cloudflare-tunnel.plist";
 const LAUNCH_AGENT_LABEL = "com.homecook.cloudflare-tunnel";
-const TUNNEL_HOSTNAMES = Object.freeze([
-  "region1.v2.argotunnel.com",
-  "region2.v2.argotunnel.com",
-]);
 const MANAGEMENT_API_URL = "https://api.cloudflare.com/client/v4/";
 const DEFAULT_TIMEOUT_MS = 5_000;
 const MAX_COMMAND_OUTPUT_BYTES = 64 * 1_024;
+const MINIMAL_ENV = Object.freeze({ PATH: "/usr/bin:/bin:/usr/sbin", LANG: "C", LC_ALL: "C" });
+const SHA256_PATTERN = /^sha256:[0-9a-f]{64}$/u;
 
-function invocation(command, args, timeoutMs = DEFAULT_TIMEOUT_MS) {
-  return Object.freeze({ command, args: Object.freeze(args), timeout_ms: timeoutMs });
+export const DEFAULT_TRUSTED_BINARY_ROOTS = Object.freeze([
+  "/opt/homebrew/Cellar/cloudflared",
+  "/usr/local/Cellar/cloudflared",
+  "/usr/local/bin",
+  "/usr/bin",
+]);
+
+export const SYSTEM_TOOLS = Object.freeze({
+  dig: "/usr/bin/dig", nc: "/usr/bin/nc", curl: "/usr/bin/curl",
+  plutil: "/usr/bin/plutil", launchctl: "/bin/launchctl", ps: "/bin/ps",
+  lsof: "/usr/sbin/lsof",
+});
+
+const TUNNEL_HOSTNAMES = Object.freeze(Object.keys(CLOUDFLARE_TUNNEL_ENDPOINTS));
+
+function invocation(command, args, timeoutMs = DEFAULT_TIMEOUT_MS, trust = {}) {
+  return Object.freeze({ command, args: Object.freeze(args), timeout_ms: timeoutMs, ...trust });
 }
 
 export const CHECK_INVOCATIONS = Object.freeze({
   dns: Object.freeze(TUNNEL_HOSTNAMES.flatMap((hostname) => [
-    invocation("dig", ["+short", "A", hostname]),
-    invocation("dig", ["+short", "AAAA", hostname]),
+    invocation(SYSTEM_TOOLS.dig, ["+short", "A", hostname]),
+    invocation(SYSTEM_TOOLS.dig, ["+short", "AAAA", hostname]),
   ])),
-  udp_7844: Object.freeze(TUNNEL_HOSTNAMES.map((hostname) =>
-    invocation("nc", ["-u", "-v", "-z", "-w", "3", hostname, "7844"])
-  )),
-  tcp_7844: Object.freeze(TUNNEL_HOSTNAMES.map((hostname) =>
-    invocation("nc", ["-v", "-z", "-w", "3", hostname, "7844"])
-  )),
-  management_api_https: Object.freeze([
-    invocation("curl", [
-      "--disable",
-      "--request",
-      "HEAD",
-      "--silent",
-      "--show-error",
-      "--output",
-      "/dev/null",
-      "--max-time",
-      "5",
-      MANAGEMENT_API_URL,
-    ]),
-  ]),
+  udp_7844: Object.freeze([]),
+  tcp_7844: Object.freeze([]),
+  management_api_https: Object.freeze([invocation(SYSTEM_TOOLS.curl, [
+    "--disable", "--request", "HEAD", "--silent", "--show-error", "--output", "/dev/null",
+    "--max-time", "5", MANAGEMENT_API_URL,
+  ])]),
 });
 
+export function createTcpInvocation(hostname, addressFamily, address) {
+  const family = addressFamily === "ipv4" ? "-4" : addressFamily === "ipv6" ? "-6" : null;
+  if (!family || !CLOUDFLARE_TUNNEL_ENDPOINTS[hostname]?.[addressFamily]?.includes(address)) {
+    throw new Error("Transport target rejected by the preflight allowlist.");
+  }
+  return invocation(SYSTEM_TOOLS.nc, [family, "-v", "-z", "-w", "3", address, "7844"]);
+}
+
+function metricsInvocation(port) {
+  if (!Number.isInteger(port) || port < 20241 || port > 20245) throw new Error("Metrics port rejected.");
+  return invocation(SYSTEM_TOOLS.curl, [
+    "--disable", "--request", "GET", "--silent", "--show-error", "--max-time", "5",
+    `http://127.0.0.1:${port}/metrics`,
+  ]);
+}
+
 function sameInvocation(left, right) {
-  return left.command === right.command
-    && JSON.stringify(left.args) === JSON.stringify(right.args)
+  return left.command === right.command && JSON.stringify(left.args) === JSON.stringify(right.args)
     && left.timeout_ms === right.timeout_ms;
 }
 
-function isConnectivityInvocation(candidate) {
-  return Object.values(CHECK_INVOCATIONS).flat().some((allowed) =>
-    sameInvocation(candidate, allowed)
-  );
+function isTcpInvocation(candidate) {
+  if (candidate.command !== SYSTEM_TOOLS.nc || candidate.timeout_ms !== DEFAULT_TIMEOUT_MS
+    || candidate.args.length !== 7 || candidate.args[6] !== "7844") return false;
+  const family = candidate.args[0] === "-4" ? "ipv4" : candidate.args[0] === "-6" ? "ipv6" : null;
+  const address = candidate.args[5];
+  return family !== null && isIP(address) === (family === "ipv4" ? 4 : 6)
+    && TUNNEL_HOSTNAMES.some((host) => CLOUDFLARE_TUNNEL_ENDPOINTS[host][family].includes(address));
 }
 
-function isInternalSnapshotInvocation({ command, args, timeout_ms: timeoutMs }) {
-  if (timeoutMs !== DEFAULT_TIMEOUT_MS || !Array.isArray(args)) {
-    return false;
-  }
-  if (command === "plutil") {
-    return args.length === 5
-      && JSON.stringify(args.slice(0, 4)) === JSON.stringify(["-convert", "json", "-o", "-"])
-      && path.isAbsolute(args[4]);
-  }
-  if (command === "launchctl") {
-    return args.length === 2
-      && args[0] === "print"
-      && /^gui\/[1-9][0-9]*\/com\.homecook\.cloudflare-tunnel$/u.test(args[1]);
-  }
-  if (path.isAbsolute(command) && args.length === 1 && args[0] === "--version") {
-    return true;
-  }
-  return path.isAbsolute(command)
-    && args.length === 5
-    && args[0] === "tunnel"
-    && args[1] === "--config"
-    && path.isAbsolute(args[2])
-    && args[3] === "ingress"
-    && args[4] === "validate";
+function isMetricsInvocation(candidate) {
+  if (candidate.command !== SYSTEM_TOOLS.curl || candidate.timeout_ms !== DEFAULT_TIMEOUT_MS) return false;
+  const match = candidate.args.at(-1)?.match(/^http:\/\/127\.0\.0\.1:(2024[1-5])\/metrics$/u);
+  return Boolean(match) && JSON.stringify(candidate.args.slice(0, -1)) === JSON.stringify([
+    "--disable", "--request", "GET", "--silent", "--show-error", "--max-time", "5",
+  ]);
+}
+
+function isConnectivityInvocation(candidate) {
+  return Object.values(CHECK_INVOCATIONS).flat().some((allowed) => sameInvocation(candidate, allowed))
+    || isTcpInvocation(candidate) || isMetricsInvocation(candidate);
+}
+
+function isInternalInvocation(candidate) {
+  const { command, args, timeout_ms: timeoutMs } = candidate;
+  if (timeoutMs !== DEFAULT_TIMEOUT_MS || !Array.isArray(args)) return false;
+  if (command === SYSTEM_TOOLS.plutil) return args.length === 5
+    && JSON.stringify(args.slice(0, 4)) === JSON.stringify(["-convert", "json", "-o", "-"])
+    && path.isAbsolute(args[4]);
+  if (command === SYSTEM_TOOLS.launchctl) return args.length === 2 && args[0] === "print"
+    && /^gui\/[1-9][0-9]*\/com\.homecook\.cloudflare-tunnel$/u.test(args[1]);
+  if (command === SYSTEM_TOOLS.ps) return args.length === 5 && args[0] === "-ww" && args[1] === "-p"
+    && /^[1-9][0-9]*$/u.test(args[2]) && JSON.stringify(args.slice(3)) === JSON.stringify(["-o", "command="]);
+  if (command === SYSTEM_TOOLS.lsof) return args.every((arg) => typeof arg === "string")
+    && args.includes("-a") && args.some((arg) => /^-p[1-9][0-9]*$/u.test(arg));
+  return candidate.trusted_binary_sha256 && SHA256_PATTERN.test(candidate.trusted_binary_sha256)
+    && path.isAbsolute(command)
+    && (JSON.stringify(args) === JSON.stringify(["--version"])
+      || (args.length === 5 && args[0] === "tunnel" && args[1] === "--config"
+        && path.isAbsolute(args[2]) && args[3] === "ingress" && args[4] === "validate"));
 }
 
 function assertInvocationAllowed(candidate) {
-  if (!isConnectivityInvocation(candidate) && !isInternalSnapshotInvocation(candidate)) {
+  if (!isConnectivityInvocation(candidate) && !isInternalInvocation(candidate)) {
     throw new Error("Command rejected by the preflight read-only allowlist.");
   }
 }
 
-function resultShape({
-  exitCode = 1,
-  stdout = "",
-  stderr = "",
-  timedOut = false,
-  outputOverflow = false,
-} = {}) {
-  return {
-    exit_code: Number.isInteger(exitCode) ? exitCode : 1,
-    stdout: String(stdout ?? ""),
-    stderr: String(stderr ?? ""),
-    timed_out: timedOut === true,
-    output_overflow: outputOverflow === true,
-  };
+function validateSystemExecutable(command) {
+  if (!Object.values(SYSTEM_TOOLS).includes(command)) return;
+  const canonical = realpathSync(command);
+  const stats = statSync(canonical);
+  if (canonical !== command || !stats.isFile() || stats.uid !== 0 || (stats.mode & 0o022) !== 0
+    || (stats.mode & 0o111) === 0) throw new Error("Untrusted system executable.");
 }
 
-export function createPreflightRunner({
-  spawnProcess = spawn,
-  killGraceMs = 1_000,
-  setTimer = setTimeout,
-  clearTimer = clearTimeout,
-} = {}) {
+function resultShape({ exitCode = 1, stdout = "", stderr = "", timedOut = false,
+  outputOverflow = false } = {}) {
+  return { exit_code: Number.isInteger(exitCode) ? exitCode : 1, stdout: String(stdout ?? ""),
+    stderr: String(stderr ?? ""), timed_out: timedOut === true, output_overflow: outputOverflow === true };
+}
+
+export function createPreflightRunner({ spawnProcess = spawn, killGraceMs = 1_000,
+  setTimer = setTimeout, clearTimer = clearTimeout, validateExecutable = validateSystemExecutable } = {}) {
   return (candidate) => {
     assertInvocationAllowed(candidate);
+    validateExecutable(candidate.command);
     return new Promise((resolve) => {
       const child = spawnProcess(candidate.command, candidate.args, {
-        env: process.env,
-        shell: false,
-        stdio: ["ignore", "pipe", "pipe"],
+        env: MINIMAL_ENV, shell: false, stdio: ["ignore", "pipe", "pipe"],
       });
-      let stdout = "";
-      let stderr = "";
-      let timedOut = false;
-      let outputOverflow = false;
-      let outputBytes = 0;
-      let settled = false;
-      let killTimer = null;
+      let stdout = ""; let stderr = ""; let timedOut = false; let outputOverflow = false;
+      let outputBytes = 0; let settled = false; let killTimer = null;
       const finish = (result) => {
         if (settled) return;
-        settled = true;
-        clearTimer(timeoutTimer);
-        if (killTimer !== null) clearTimer(killTimer);
-        resolve(result);
+        settled = true; clearTimer(timeoutTimer); if (killTimer !== null) clearTimer(killTimer); resolve(result);
       };
-      const timeoutTimer = setTimer(() => {
-        timedOut = true;
+      const terminate = () => {
         child.kill("SIGTERM");
-        killTimer = setTimer(() => {
-          if (!settled) child.kill("SIGKILL");
-        }, killGraceMs);
-      }, candidate.timeout_ms);
-      child.stdout.setEncoding("utf8");
-      child.stderr.setEncoding("utf8");
+        killTimer = setTimer(() => { if (!settled) child.kill("SIGKILL"); }, killGraceMs);
+      };
+      const timeoutTimer = setTimer(() => { timedOut = true; terminate(); }, candidate.timeout_ms);
+      child.stdout.setEncoding("utf8"); child.stderr.setEncoding("utf8");
       const capture = (channel, chunk) => {
         if (outputOverflow) return;
         outputBytes += Buffer.byteLength(chunk, "utf8");
-        if (outputBytes > MAX_COMMAND_OUTPUT_BYTES) {
-          outputOverflow = true;
-          child.kill("SIGTERM");
-          killTimer = setTimer(() => {
-            if (!settled) child.kill("SIGKILL");
-          }, killGraceMs);
-          return;
-        }
-        if (channel === "stdout") stdout += chunk;
-        else stderr += chunk;
+        if (outputBytes > MAX_COMMAND_OUTPUT_BYTES) { outputOverflow = true; terminate(); return; }
+        if (channel === "stdout") stdout += chunk; else stderr += chunk;
       };
       child.stdout.on("data", (chunk) => capture("stdout", chunk));
       child.stderr.on("data", (chunk) => capture("stderr", chunk));
       child.on("error", () => finish(resultShape({ timedOut })));
-      child.on("close", (code) => finish(resultShape({
-        exitCode: code ?? 1,
-        stdout,
-        stderr,
-        timedOut,
-        outputOverflow,
-      })));
+      child.on("close", (code) => finish(resultShape({ exitCode: code ?? 1, stdout, stderr,
+        timedOut, outputOverflow })));
     });
   };
 }
@@ -195,25 +181,14 @@ async function runNormalized(runner, candidate) {
   assertInvocationAllowed(candidate);
   try {
     const result = await runner(candidate);
-    return {
-      ...resultShape({
-        exitCode: result?.exit_code,
-        stdout: result?.stdout,
-        stderr: result?.stderr,
-        timedOut: result?.timed_out,
-        outputOverflow: result?.output_overflow,
-      }),
-      command_missing: false,
-    };
-  } catch {
-    return { ...resultShape(), command_missing: true };
-  }
+    return { ...resultShape({ exitCode: result?.exit_code, stdout: result?.stdout,
+      stderr: result?.stderr, timedOut: result?.timed_out, outputOverflow: result?.output_overflow }),
+    command_missing: false };
+  } catch { return { ...resultShape(), command_missing: true }; }
 }
 
 export async function runAllowedPreflightCommand(runner, candidate) {
-  if (!isConnectivityInvocation(candidate)) {
-    throw new Error("Command rejected by the connectivity allowlist.");
-  }
+  if (!isConnectivityInvocation(candidate)) throw new Error("Command rejected by the connectivity allowlist.");
   return runNormalized(runner, candidate);
 }
 
@@ -225,59 +200,36 @@ function failureCode(results, { malformed = false } = {}) {
   return results.every((result) => result.exit_code === 0) ? null : "CHECK_FAILED";
 }
 
-async function runCheck(runner, name, { now = Date.now } = {}) {
-  const startedAt = now();
-  const results = await Promise.all(CHECK_INVOCATIONS[name].map((candidate) =>
-    runAllowedPreflightCommand(runner, candidate)
-  ));
-  let malformed = false;
-  let success = results.every((result) =>
-    result.exit_code === 0
-    && !result.timed_out
-    && !result.output_overflow
-    && !result.command_missing
-  );
-  if (name === "dns") {
-    malformed = results.some((result) => result.exit_code === 0 && !parseDnsOutput(result.stdout).success);
-    success = success && !malformed;
-  }
-  return {
-    attempted: true,
-    success,
-    latency_ms: Math.max(0, now() - startedAt),
-    error: success ? null : failureCode(results, { malformed }),
-  };
-}
-
 async function hashFile(filePath) {
   const hash = createHash("sha256");
   await new Promise((resolve, reject) => {
     const stream = createReadStream(filePath);
-    stream.on("data", (chunk) => hash.update(chunk));
-    stream.on("error", reject);
-    stream.on("end", resolve);
+    stream.on("data", (chunk) => hash.update(chunk)); stream.on("error", reject); stream.on("end", resolve);
   });
   return `sha256:${hash.digest("hex")}`;
 }
 
+function modeString(stats) { return (stats.mode & 0o777).toString(8).padStart(4, "0"); }
+function fileIdentity(stats) { return `${stats.dev}:${stats.ino}:${stats.size}:${stats.mtimeMs}`; }
+function isSafeOwnedFile(stats, { executable = false } = {}) {
+  return stats.isFile() && [0, process.getuid()].includes(stats.uid) && (stats.mode & 0o022) === 0
+    && (!executable || (stats.mode & 0o111) !== 0);
+}
 function isOutsideRepository(canonicalPath) {
-  const relativePath = path.relative(REPOSITORY_ROOT, canonicalPath);
-  return relativePath !== ""
-    && (relativePath.startsWith("..") || path.isAbsolute(relativePath));
+  const relative = path.relative(REPOSITORY_ROOT, canonicalPath);
+  return relative !== "" && (relative.startsWith("..") || path.isAbsolute(relative));
 }
-
-async function safeStat(filePath) {
-  try {
-    return await stat(filePath);
-  } catch {
-    return null;
-  }
+function isWithinTrustedRoot(canonicalPath, trustedRoots) {
+  return trustedRoots.some((root) => {
+    const canonicalRoot = existsSync(root) ? realpathSync(root) : path.resolve(root);
+    const relative = path.relative(canonicalRoot, canonicalPath);
+    return relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative));
+  });
 }
-
+async function safeStat(filePath) { try { return await stat(filePath); } catch { return null; } }
 function isClearLocalIngressConfig(raw) {
   const text = String(raw ?? "");
-  return /^\s*tunnel\s*:\s*\S+/mu.test(text)
-    && /^\s*ingress\s*:\s*$/mu.test(text)
+  return /^\s*tunnel\s*:\s*\S+/mu.test(text) && /^\s*ingress\s*:\s*$/mu.test(text)
     && /^\s*-\s+hostname\s*:\s*\S+/mu.test(text);
 }
 
@@ -286,328 +238,294 @@ async function inspectTokenFile(tokenFilePath) {
     return { safe: false, path_hash: null, mode: null };
   }
   try {
-    const canonicalPath = await realpath(tokenFilePath);
-    const tokenStats = await stat(canonicalPath);
-    const mode = (tokenStats.mode & 0o777).toString(8).padStart(4, "0");
-    return {
-      safe: tokenStats.isFile()
-        && isOutsideRepository(canonicalPath)
-        && tokenStats.uid === process.getuid()
-        && mode === "0600",
-      path_hash: hashEvidenceValue(canonicalPath),
-      mode,
-    };
-  } catch {
-    return { safe: false, path_hash: null, mode: null };
-  }
+    const canonical = await realpath(tokenFilePath); const stats = await stat(canonical); const mode = modeString(stats);
+    return { safe: isSafeOwnedFile(stats) && isOutsideRepository(canonical) && stats.uid === process.getuid()
+      && mode === "0600", path_hash: hashEvidenceValue(canonical), mode };
+  } catch { return { safe: false, path_hash: null, mode: null }; }
 }
 
-async function collectSnapshot(options, runner, { readTextFile = readFile } = {}) {
-  const plistPath = await realpath(options.plist_path);
-  const plistStats = await stat(plistPath);
-  if (!plistStats.isFile()) throw new Error("Plist must be a regular file.");
-  const plistSha256 = await hashFile(plistPath);
-  const plistResult = await runNormalized(
-    runner,
-    invocation("plutil", ["-convert", "json", "-o", "-", plistPath]),
-  );
-  if (plistResult.exit_code !== 0 || plistResult.timed_out) {
-    throw new Error("Plist parsing failed.");
-  }
-  let plist;
-  try {
-    plist = JSON.parse(plistResult.stdout);
-  } catch {
-    throw new Error("Plist output was malformed.");
-  }
-  const programArguments = Array.isArray(plist?.ProgramArguments)
-    ? plist.ProgramArguments.filter((item) => typeof item === "string")
-    : [];
-  const configuredBinary = typeof plist?.Program === "string"
-    ? plist.Program
-    : programArguments[0];
-  if (!path.isAbsolute(configuredBinary ?? "") || programArguments.length === 0) {
-    throw new Error("Plist program arguments are incomplete.");
-  }
-  if (plist.Label !== LAUNCH_AGENT_LABEL) {
-    throw new Error("Unexpected launch agent label.");
-  }
-  const binaryPath = await realpath(configuredBinary);
-  const binaryStats = await stat(binaryPath);
-  if (!binaryStats.isFile() || (binaryStats.mode & 0o111) === 0) {
-    throw new Error("Configured binary is not executable.");
-  }
-  const versionResult = await runNormalized(runner, invocation(configuredBinary, ["--version"]));
-  const parsedVersion = versionResult.exit_code === 0
-    ? parseCloudflaredVersion(versionResult.stdout)
+async function inspectTrustedBinary(binaryPath, expectedSha256, runner, trustedRoots) {
+  if (!SHA256_PATTERN.test(expectedSha256 ?? "") || !path.isAbsolute(binaryPath ?? "")) throw new Error("Hash required.");
+  const canonical = await realpath(binaryPath); const before = await stat(canonical);
+  if (path.basename(canonical) !== "cloudflared" || !isOutsideRepository(canonical)
+    || !isWithinTrustedRoot(canonical, trustedRoots)
+    || !isSafeOwnedFile(before, { executable: true })) throw new Error("Untrusted cloudflared binary.");
+  const beforeHash = await hashFile(canonical);
+  if (beforeHash !== expectedSha256) throw new Error("Binary hash mismatch.");
+  const versionResult = await runNormalized(runner, invocation(canonical, ["--version"], DEFAULT_TIMEOUT_MS,
+    { trusted_binary_sha256: beforeHash }));
+  const after = await stat(canonical); const afterHash = await hashFile(canonical);
+  if (fileIdentity(before) !== fileIdentity(after) || beforeHash !== afterHash) throw new Error("Binary identity changed.");
+  const parsed = versionResult.exit_code === 0 ? parseCloudflaredVersion(versionResult.stdout)
     : { available: false, version: null };
-  const launchctlResult = await runNormalized(runner, invocation("launchctl", [
-    "print",
-    `gui/${process.getuid()}/${LAUNCH_AGENT_LABEL}`,
-  ]));
-  const launchd = launchctlResult.exit_code === 0
-    ? parseLaunchctlPrint(launchctlResult.stdout)
+  if (!parsed.available) throw new Error("Binary version unavailable.");
+  return { path: canonical, version: parsed.version, sha256: beforeHash, mode: modeString(before) };
+}
+
+function parsePid(raw) { return Number(raw.match(/^\s*pid\s*=\s*([1-9][0-9]*)\s*$/mu)?.[1] ?? 0); }
+function parseRunningExecutable(raw) {
+  return raw.split(/\r?\n/u).find((line) => line.startsWith("n/"))?.slice(1) ?? null;
+}
+function splitCommand(raw) {
+  const values = String(raw ?? "").trim().match(/(?:[^\s"']+|"[^"]*"|'[^']*')+/gu) ?? [];
+  return values.map((value) => value.replace(/^(?:"(.*)"|'(.*)')$/u, "$1$2"));
+}
+function parseMetricsPort(raw, requested) {
+  const ports = [...String(raw ?? "").matchAll(/n127\.0\.0\.1:(2024[1-5])/gu)].map((match) => Number(match[1]));
+  if (requested) {
+    const match = requested.match(/^127\.0\.0\.1:(2024[1-5])$/u);
+    return match && ports.includes(Number(match[1])) ? Number(match[1]) : null;
+  }
+  return ports.length === 1 ? ports[0] : null;
+}
+
+async function collectRuntime(pid, expectedCandidate, configuredArgs, runner) {
+  if (!Number.isInteger(pid) || pid <= 0) throw new Error("PID unavailable.");
+  const executableResult = await runNormalized(runner, invocation(SYSTEM_TOOLS.lsof,
+    ["-a", `-p${pid}`, "-d", "txt", "-Fn"]));
+  const executablePath = parseRunningExecutable(executableResult.stdout);
+  if (executableResult.exit_code !== 0 || !executablePath) throw new Error("Runtime executable unavailable.");
+  const canonical = await realpath(executablePath); const stats = await stat(canonical);
+  if (!isSafeOwnedFile(stats, { executable: true })) throw new Error("Runtime executable untrusted.");
+  const sha256 = await hashFile(canonical);
+  const psResult = await runNormalized(runner, invocation(SYSTEM_TOOLS.ps,
+    ["-ww", "-p", String(pid), "-o", "command="]));
+  const runtimeCommand = splitCommand(psResult.stdout);
+  if (psResult.exit_code !== 0 || runtimeCommand.length < 2) throw new Error("Runtime arguments unavailable.");
+  const runtimeArgs = runtimeCommand.slice(1);
+  const redactedArgs = redactArguments(runtimeArgs);
+  if (canonical !== expectedCandidate.path || sha256 !== expectedCandidate.sha256
+    || JSON.stringify(redactedArgs) !== JSON.stringify(redactArguments(configuredArgs.slice(1)))) {
+    throw new Error("Runtime identity mismatch.");
+  }
+  const listeners = await runNormalized(runner, invocation(SYSTEM_TOOLS.lsof,
+    ["-a", `-p${pid}`, "-iTCP", "-sTCP:LISTEN", "-Pan", "-Fn"]));
+  const metricsPort = listeners.exit_code === 0
+    ? parseMetricsPort(listeners.stdout, extractManagedPaths(runtimeArgs).metrics) : null;
+  if (!metricsPort) throw new Error("Metrics endpoint unavailable.");
+  const metricsResult = await runAllowedPreflightCommand(runner, metricsInvocation(metricsPort));
+  const metrics = metricsResult.exit_code === 0 && !metricsResult.timed_out && !metricsResult.output_overflow
+    ? parseTunnelMetrics(metricsResult.stdout) : { success: false, version: null,
+      active_connections: null, active_edge_locations: null };
+  if (!metrics.success || metrics.version !== expectedCandidate.version) {
+    throw new Error("Tunnel metrics unavailable.");
+  }
+  return { binary: { path: canonical, version: metrics.version, sha256, mode: modeString(stats),
+    arguments_redacted: redactedArgs }, metrics, port: metricsPort };
+}
+
+async function collectSnapshot(options, runner, {
+  readTextFile = readFile,
+  trustedBinaryRoots = DEFAULT_TRUSTED_BINARY_ROOTS,
+} = {}) {
+  const plistPath = await realpath(options.plist_path); const plistStats = await stat(plistPath);
+  if (!isSafeOwnedFile(plistStats)) throw new Error("Untrusted plist.");
+  const plistHash = await hashFile(plistPath);
+  const plistResult = await runNormalized(runner, invocation(SYSTEM_TOOLS.plutil,
+    ["-convert", "json", "-o", "-", plistPath]));
+  if (plistResult.exit_code !== 0 || plistResult.timed_out) throw new Error("Plist parsing failed.");
+  let plist; try { plist = JSON.parse(plistResult.stdout); } catch { throw new Error("Malformed plist."); }
+  const args = Array.isArray(plist?.ProgramArguments) ? plist.ProgramArguments.filter((x) => typeof x === "string") : [];
+  const configuredBinary = typeof plist?.Program === "string" ? plist.Program : args[0];
+  if (plist.Label !== LAUNCH_AGENT_LABEL || args.length === 0 || configuredBinary !== args[0]) {
+    throw new Error("Unexpected launch agent configuration.");
+  }
+  const candidate = await inspectTrustedBinary(
+    configuredBinary,
+    options.expected_binary_sha256,
+    runner,
+    trustedBinaryRoots,
+  );
+  candidate.arguments_redacted = redactArguments(args.slice(1));
+  const launchctl = await runNormalized(runner, invocation(SYSTEM_TOOLS.launchctl,
+    ["print", `gui/${process.getuid()}/${LAUNCH_AGENT_LABEL}`]));
+  const launchd = launchctl.exit_code === 0 ? parseLaunchctlPrint(launchctl.stdout)
     : { loaded: false, state: "unavailable" };
-  const tunnelState = launchd.loaded
-    && launchd.state === "running"
-    && /^\s*pid\s*=\s*[1-9][0-9]*\s*$/mu.test(launchctlResult.stdout)
-    ? "running"
-    : launchd.loaded ? "not_running" : "unavailable";
-  const managedPaths = extractManagedPaths(programArguments);
-  const initialManagement = classifyManagementMode(programArguments);
-  const inspectLocalConfig = initialManagement.mode !== "remotely-managed";
-  const configStats = inspectLocalConfig && managedPaths.config
-    ? await safeStat(managedPaths.config)
-    : null;
-  const configExists = configStats?.isFile() === true;
+  const pid = parsePid(launchctl.stdout);
+  const runtime = await collectRuntime(pid, candidate, args, runner);
+  const managedPaths = extractManagedPaths(args);
+  const initialManagement = classifyManagementMode(args);
+  const inspectLocal = initialManagement.mode !== "remotely-managed";
+  const configStats = inspectLocal && managedPaths.config ? await safeStat(managedPaths.config) : null;
+  const configExists = configStats?.isFile() === true && isSafeOwnedFile(configStats);
   const configContents = configExists ? await readTextFile(managedPaths.config, "utf8") : "";
   const localIngressConfig = configExists && isClearLocalIngressConfig(configContents);
-  const management = initialManagement.mode === "remotely-managed"
-    ? initialManagement
-    : classifyManagementMode(programArguments, {
-      config_exists: configExists,
-      local_ingress_config: localIngressConfig,
-    });
+  const management = initialManagement.mode === "remotely-managed" ? initialManagement
+    : classifyManagementMode(args, { config_exists: configExists, local_ingress_config: localIngressConfig });
   const token = await inspectTokenFile(managedPaths.token_file);
-  const redactedArguments = redactArguments(programArguments);
-  const snapshot = {
-    complete: parsedVersion.available && launchd.loaded,
-    binary_path_hash: hashEvidenceValue(binaryPath),
-    binary_version: parsedVersion.version,
-    binary_sha256: await hashFile(binaryPath),
-    plist_sha256: plistSha256,
-    arguments_sha256: hashEvidenceValue(JSON.stringify(redactedArguments)),
-    token_file_path_hash: token.path_hash,
-    token_file_mode: token.mode,
-    launchd_state: launchd.state,
-    tunnel_state: tunnelState,
-    stable_metadata_sha256: hashEvidenceValue(JSON.stringify(options.stable_release)),
-  };
   return {
-    snapshot,
-    management,
-    tokenSafe: token.safe && !managedPaths.inline_token_present,
-    configPath: managedPaths.config,
-    configExists,
-    localIngressConfig,
-    binaryPath: configuredBinary,
+    snapshot: {
+      complete: launchd.loaded && launchd.state === "running" && runtime.metrics.success,
+      plist: { path_hash: hashEvidenceValue(plistPath), sha256: plistHash, mode: modeString(plistStats) },
+      candidate_binary: candidate, running_binary: runtime.binary,
+      token_file_path_hash: token.path_hash, token_file_mode: token.mode,
+      launchd_state: launchd.state, tunnel_state: runtime.metrics.success ? "connected" : "unavailable",
+      tunnel: { active_connections: runtime.metrics.active_connections,
+        active_edge_locations: runtime.metrics.active_edge_locations, replica_state: "healthy" },
+      stable_metadata_sha256: hashEvidenceValue(JSON.stringify(options.stable_release)),
+    },
+    management, tokenSafe: token.safe && !managedPaths.inline_token_present,
+    configPath: managedPaths.config, configExists, localIngressConfig,
+    candidate,
   };
 }
 
 function incompleteSnapshot(stableRelease) {
-  return {
-    complete: false,
-    binary_path_hash: null,
-    binary_version: null,
-    binary_sha256: null,
-    plist_sha256: null,
-    arguments_sha256: null,
-    token_file_path_hash: null,
-    token_file_mode: null,
-    launchd_state: "unavailable",
-    tunnel_state: "unavailable",
-    stable_metadata_sha256: hashEvidenceValue(JSON.stringify(stableRelease)),
-  };
+  const emptyBinary = { path: null, version: null, sha256: null, mode: null, arguments_redacted: [] };
+  return { complete: false, plist: { path_hash: null, sha256: null, mode: null },
+    candidate_binary: emptyBinary, running_binary: emptyBinary,
+    token_file_path_hash: null, token_file_mode: null, launchd_state: "unavailable",
+    tunnel_state: "unavailable", tunnel: { active_connections: null, active_edge_locations: null,
+      replica_state: "unavailable" }, stable_metadata_sha256: hashEvidenceValue(JSON.stringify(stableRelease)) };
 }
 
-async function configCheck(snapshotState, runner, now) {
-  if (snapshotState.management.mode === "remotely-managed") {
-    return { attempted: false, success: true, latency_ms: null, error: null };
-  }
-  if (
-    snapshotState.management.mode !== "locally-managed"
-    || !snapshotState.configExists
-    || !snapshotState.localIngressConfig
-    || !path.isAbsolute(snapshotState.configPath ?? "")
-  ) {
+async function configCheck(state, runner, now) {
+  if (state.management.mode === "remotely-managed") return { attempted: false, success: true,
+    latency_ms: null, error: null };
+  if (state.management.mode !== "locally-managed" || !state.configExists || !state.localIngressConfig
+    || !path.isAbsolute(state.configPath ?? "") || !state.candidate) {
     return { attempted: false, success: false, latency_ms: null, error: "CONFIG_MISSING" };
   }
-  const startedAt = now();
-  const result = await runNormalized(runner, invocation(snapshotState.binaryPath, [
-    "tunnel",
-    "--config",
-    snapshotState.configPath,
-    "ingress",
-    "validate",
-  ]));
+  const started = now();
+  const result = await runNormalized(runner, invocation(state.candidate.path,
+    ["tunnel", "--config", state.configPath, "ingress", "validate"], DEFAULT_TIMEOUT_MS,
+    { trusted_binary_sha256: state.candidate.sha256 }));
   const success = result.exit_code === 0 && !result.timed_out && !result.command_missing;
-  return {
-    attempted: true,
-    success,
-    latency_ms: Math.max(0, now() - startedAt),
-    error: success ? null : failureCode([result]),
-  };
+  return { attempted: true, success, latency_ms: Math.max(0, now() - started),
+    error: success ? null : failureCode([result]) };
+}
+
+async function dnsCheck(runner, now) {
+  const started = now(); const targets = []; const verified = [];
+  for (const candidate of CHECK_INVOCATIONS.dns) {
+    const hostname = candidate.args[2]; const family = candidate.args[1] === "A" ? "ipv4" : "ipv6";
+    const targetStarted = now(); const result = await runAllowedPreflightCommand(runner, candidate);
+    const parsed = result.exit_code === 0 ? parseDnsOutput(result.stdout,
+      { hostname, address_family: family }) : { success: false, addresses: [] };
+    const success = result.exit_code === 0 && !result.timed_out && !result.output_overflow
+      && !result.command_missing && parsed.success;
+    targets.push({ hostname, address_family: family, protocol: "dns", port: 53, attempted: true,
+      success, latency_ms: Math.max(0, now() - targetStarted),
+      error: success ? null : failureCode([result], { malformed: result.exit_code === 0 && !parsed.success }) });
+    for (const address of parsed.addresses ?? []) verified.push({ hostname, family, address });
+  }
+  const success = targets.every((target) => target.success);
+  return { check: { attempted: true, success, latency_ms: Math.max(0, now() - started),
+    error: success ? null : targets.find((target) => !target.success)?.error ?? "CHECK_FAILED", targets }, verified };
+}
+
+async function tcpCheck(runner, verified, now) {
+  const started = now(); const targets = [];
+  for (const endpoint of verified) {
+    const targetStarted = now(); const result = await runAllowedPreflightCommand(runner,
+      createTcpInvocation(endpoint.hostname, endpoint.family, endpoint.address));
+    const success = result.exit_code === 0 && !result.timed_out && !result.output_overflow && !result.command_missing;
+    targets.push({ hostname: endpoint.hostname, address_family: endpoint.family, protocol: "tcp", port: 7844,
+      attempted: true, success, latency_ms: Math.max(0, now() - targetStarted),
+      error: success ? null : failureCode([result]) });
+  }
+  const required = TUNNEL_HOSTNAMES.every((hostname) => ["ipv4", "ipv6"].every((family) =>
+    targets.some((target) => target.hostname === hostname && target.address_family === family && target.success)));
+  return { attempted: targets.length > 0, success: required, latency_ms: Math.max(0, now() - started),
+    error: required ? null : targets.length ? "CHECK_FAILED" : "DNS_REQUIRED", targets };
+}
+
+function defaultQuicProbe() {
+  return { attempted: false, success: false, latency_ms: null, error: "QUIC_PROBE_UNAVAILABLE", targets: [] };
+}
+
+async function managementCheck(runner, now) {
+  const started = now(); const result = await runAllowedPreflightCommand(runner,
+    CHECK_INVOCATIONS.management_api_https[0]);
+  const success = result.exit_code === 0 && !result.timed_out && !result.output_overflow && !result.command_missing;
+  const target = { hostname: "api.cloudflare.com", address_family: "n/a", protocol: "https", port: 443,
+    attempted: true, success, latency_ms: Math.max(0, now() - started), error: success ? null : failureCode([result]) };
+  return { attempted: true, success, latency_ms: target.latency_ms, error: target.error, targets: [target] };
 }
 
 export async function collectCloudflareTunnelPreflight(options, dependencies = {}) {
-  const runner = dependencies.runner ?? defaultRunner;
-  const now = dependencies.monotonicNow ?? Date.now;
+  const runner = dependencies.runner ?? defaultRunner; const now = dependencies.monotonicNow ?? Date.now;
   const platform = options.platform ?? `${process.platform}-${process.arch}`;
-  let snapshotState;
-  try {
-    snapshotState = await collectSnapshot(options, runner, {
-      readTextFile: dependencies.readTextFile,
-    });
-  } catch {
-    snapshotState = {
-      snapshot: incompleteSnapshot(options.stable_release),
-      management: { mode: "unknown", success: false },
-      tokenSafe: false,
-      configPath: null,
-      configExists: false,
-      localIngressConfig: false,
-      binaryPath: null,
-    };
-  }
-  const [dns, udp, tcp, managementApi, config] = await Promise.all([
-    runCheck(runner, "dns", { now }),
-    runCheck(runner, "udp_7844", { now }),
-    runCheck(runner, "tcp_7844", { now }),
-    runCheck(runner, "management_api_https", { now }),
-    configCheck(snapshotState, runner, now),
+  let state;
+  try { state = await collectSnapshot(options, runner, {
+    readTextFile: dependencies.readTextFile,
+    trustedBinaryRoots: dependencies.trustedBinaryRoots,
+  }); }
+  catch { state = { snapshot: incompleteSnapshot(options.stable_release), management: { mode: "unknown", success: false },
+    tokenSafe: false, configPath: null, configExists: false, localIngressConfig: false, candidate: null }; }
+  const dns = await dnsCheck(runner, now);
+  const [tcp, managementApi, config, udp] = await Promise.all([
+    tcpCheck(runner, dns.verified, now), managementCheck(runner, now), configCheck(state, runner, now),
+    (dependencies.quicProbe ?? defaultQuicProbe)({ verified_endpoints: dns.verified, now }),
   ]);
-  const releaseGate = evaluateReleaseGate(
-    snapshotState.snapshot.binary_version,
-    options.stable_release,
-    platform,
-    options.captured_at,
-  );
-  return buildPreflightEvidence({
-    timestamp: options.captured_at,
-    platform,
-    management_mode: snapshotState.management.mode,
-    management_mode_success: snapshotState.management.success,
-    snapshot: snapshotState.snapshot,
-    token_path_mode_safe: snapshotState.tokenSafe,
-    checks: {
-      dns,
-      udp_7844: udp,
-      tcp_7844: tcp,
-      management_api_https: managementApi,
-      config,
-      update_gate: {
-        attempted: true,
-        success: releaseGate.success,
-        latency_ms: 0,
-        error: releaseGate.error,
-      },
-    },
+  const release = evaluateReleaseGate(state.snapshot.running_binary.version, options.stable_release,
+    platform, options.captured_at);
+  const metricsReady = state.snapshot.tunnel_state === "connected";
+  return buildPreflightEvidence({ timestamp: options.captured_at, platform,
+    management_mode: state.management.mode, management_mode_success: state.management.success,
+    snapshot: state.snapshot, token_path_mode_safe: state.tokenSafe,
+    checks: { dns: dns.check, udp_7844: udp, tcp_7844: tcp, management_api_https: managementApi, config,
+      tunnel_connections: { attempted: metricsReady, success: metricsReady, latency_ms: 0,
+        error: metricsReady ? null : "CONNECTION_STATE_UNAVAILABLE",
+        targets: [{ hostname: "loopback", address_family: "ipv4", protocol: "metrics", port: null,
+          attempted: metricsReady, success: metricsReady, latency_ms: 0,
+          error: metricsReady ? null : "CONNECTION_STATE_UNAVAILABLE" }] },
+      update_gate: { attempted: true, success: release.success, latency_ms: 0, error: release.error } },
   });
 }
 
 function canonicalizeProspectivePath(targetPath) {
-  let existingAncestor = path.resolve(targetPath);
-  const missingSegments = [];
-  while (!existsSync(existingAncestor)) {
-    const parent = path.dirname(existingAncestor);
-    if (parent === existingAncestor) break;
-    missingSegments.unshift(path.basename(existingAncestor));
-    existingAncestor = parent;
-  }
-  return path.join(realpathSync(existingAncestor), ...missingSegments);
+  let ancestor = path.resolve(targetPath); const missing = [];
+  while (!existsSync(ancestor)) { const parent = path.dirname(ancestor); if (parent === ancestor) break;
+    missing.unshift(path.basename(ancestor)); ancestor = parent; }
+  return path.join(realpathSync(ancestor), ...missing);
 }
-
 function assertOutputOutsideRepository(outputPath) {
-  const canonicalOutput = canonicalizeProspectivePath(outputPath);
-  if (!isOutsideRepository(canonicalOutput)) {
-    throw new Error("--output must be outside the repository.");
-  }
+  if (!isOutsideRepository(canonicalizeProspectivePath(outputPath))) throw new Error("--output must be outside the repository.");
 }
-
 function parseArgs(argv) {
   const options = { plist_path: DEFAULT_PLIST };
   for (let index = 0; index < argv.length; index += 1) {
-    const argument = argv[index];
-    const value = argv[index + 1];
-    switch (argument) {
-      case "--plist":
-        options.plist_path = value;
-        index += 1;
-        break;
-      case "--output":
-        options.output = value;
-        index += 1;
-        break;
-      case "--stable-version":
-        options.stable_version = value;
-        index += 1;
-        break;
-      case "--stable-verified-at":
-        options.stable_verified_at = value;
-        index += 1;
-        break;
-      case "--stable-platform":
-        options.stable_platform = value;
-        index += 1;
-        break;
-      default:
-        throw new Error("Unsupported preflight argument.");
-    }
+    const argument = argv[index]; const value = argv[index + 1];
+    const keys = { "--plist": "plist_path", "--output": "output", "--stable-version": "stable_version",
+      "--stable-verified-at": "stable_verified_at", "--stable-platform": "stable_platform",
+      "--expected-binary-sha256": "expected_binary_sha256" };
+    if (!keys[argument]) throw new Error("Unsupported preflight argument.");
+    options[keys[argument]] = value; index += 1;
   }
-  for (const [name, value] of Object.entries({
-    plist: options.plist_path,
-    output: options.output,
-  })) {
-    if (typeof value !== "string" || !path.isAbsolute(value)) {
-      throw new Error(`--${name} must be an absolute path.`);
-    }
+  for (const [name, value] of Object.entries({ plist: options.plist_path, output: options.output })) {
+    if (typeof value !== "string" || !path.isAbsolute(value)) throw new Error(`--${name} must be an absolute path.`);
   }
   assertOutputOutsideRepository(options.output);
-  if (!/^\d+\.\d+\.\d+$/u.test(options.stable_version ?? "")) {
-    throw new Error("Verified stable version is required.");
-  }
-  if (!Number.isFinite(Date.parse(options.stable_verified_at ?? ""))) {
-    throw new Error("Verified stable timestamp is required.");
-  }
-  if (!/^(?:darwin|linux)-(?:arm64|x64)$/u.test(options.stable_platform ?? "")) {
-    throw new Error("Verified stable platform is required.");
-  }
+  if (!/^\d+\.\d+\.\d+$/u.test(options.stable_version ?? "")) throw new Error("Verified stable version is required.");
+  if (!Number.isFinite(Date.parse(options.stable_verified_at ?? ""))) throw new Error("Verified stable timestamp is required.");
+  if (!/^(?:darwin|linux)-(?:arm64|x64)$/u.test(options.stable_platform ?? "")) throw new Error("Verified stable platform is required.");
+  if (!SHA256_PATTERN.test(options.expected_binary_sha256 ?? "")) throw new Error("Verified binary hash is required.");
   return options;
 }
 
-export async function writePreflightEvidence(outputPath, evidence) {
-  return writeEvidenceFile(outputPath, evidence);
-}
+export async function writePreflightEvidence(outputPath, evidence) { return writeEvidenceFile(outputPath, evidence); }
 
 export async function runPreflightCli(argv, dependencies = {}) {
   const stdout = dependencies.stdout ?? ((value) => process.stdout.write(value));
   const stderr = dependencies.stderr ?? ((value) => process.stderr.write(value));
   const writeEvidence = dependencies.writeEvidence ?? writePreflightEvidence;
   try {
-    const options = parseArgs(argv);
-    const capturedAt = (dependencies.now ?? (() => new Date()))().toISOString();
+    const options = parseArgs(argv); const capturedAt = (dependencies.now ?? (() => new Date()))().toISOString();
     const platform = dependencies.platform ?? `${process.platform}-${process.arch}`;
-    const evidence = await collectCloudflareTunnelPreflight({
-      plist_path: options.plist_path,
-      output: options.output,
-      captured_at: capturedAt,
-      platform,
-      stable_release: {
-        version: options.stable_version,
-        verified_at: options.stable_verified_at,
-        platform: options.stable_platform,
-      },
-    }, { runner: dependencies.runner ?? defaultRunner });
+    const evidence = await collectCloudflareTunnelPreflight({ plist_path: options.plist_path,
+      expected_binary_sha256: options.expected_binary_sha256, output: options.output, captured_at: capturedAt,
+      platform, stable_release: { version: options.stable_version, verified_at: options.stable_verified_at,
+        platform: options.stable_platform } }, { runner: dependencies.runner ?? defaultRunner,
+      quicProbe: dependencies.quicProbe,
+      trustedBinaryRoots: dependencies.trustedBinaryRoots });
     await writeEvidence(options.output, evidence);
-    stdout(`${JSON.stringify({
-      schema: evidence.schema,
-      version: evidence.version,
-      success: evidence.success,
-      evidence_written: true,
-    })}\n`);
-    if (!evidence.success) {
-      stderr("cloudflare-tunnel-preflight: FAIL (redacted)\n");
-      return 1;
-    }
+    stdout(`${JSON.stringify({ schema: evidence.schema, version: evidence.version, success: evidence.success,
+      evidence_written: true })}\n`);
+    if (!evidence.success) { stderr("cloudflare-tunnel-preflight: FAIL (redacted)\n"); return 1; }
     return 0;
-  } catch {
-    stderr("cloudflare-tunnel-preflight: FAIL (redacted)\n");
-    return 1;
-  }
+  } catch { stderr("cloudflare-tunnel-preflight: FAIL (redacted)\n"); return 1; }
 }
 
-const isMain = process.argv[1]
-  && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
-if (isMain) {
-  process.exitCode = await runPreflightCli(process.argv.slice(2));
-}
+const isMain = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+if (isMain) process.exitCode = await runPreflightCli(process.argv.slice(2));
