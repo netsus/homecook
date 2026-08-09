@@ -11,8 +11,9 @@
 - 과거 executable baseline에는 `omo:supervise`, `omo:tick`, dedicated worktree manager, `gh` automation, `omo:status`, `omo:status:brief`, `omo:tail`이 포함됐다.
 - actor/provider를 호출하는 hardening, scheduler, start/continue/resume primitive는 모두 신규 Stage에서 중지한다.
 - Stage 1~6 무인 merge를 수행하던 fullauto v1 의미는 더 이상 현재 운영 계약이 아니다.
+- 신규 Stage actor 기준은 `docs/engineering/codex-task-handoff.md`의 ChatGPT/Codex 새 task 규칙이다.
 
-## Purpose
+## Historical Purpose
 
 autonomous supervisor는 stage 실행 자체보다 `stage 사이의 운영 전이`를 책임진다.
 
@@ -28,8 +29,8 @@ autonomous supervisor는 stage 실행 자체보다 `stage 사이의 운영 전�
 - scheduler tick이 다시 깨워야 하는 대기 조건을 runtime state에 남긴다.
 - 실패 시 silent recovery 대신 `blocked` 또는 `human_escalation`으로 fail-closed 한다.
 
-즉, session-orchestrator가 `한 stage를 같은 session으로 실행`하는 코어라면,
-autonomous supervisor는 `그 stage 결과를 다음 GitHub 상태와 다음 stage 진입으로 연결`하는 코어다.
+즉, session-orchestrator가 `한 stage를 같은 session으로 실행`하는 코어였다면,
+autonomous supervisor는 `그 stage 결과를 다음 GitHub 상태와 다음 stage 진입으로 연결`하던 코어였다.
 
 ## Codex-Orchestrated Rail Boundary
 
@@ -49,6 +50,9 @@ Codex가 orchestration owner로서 blocker를 분류하고 repair route를 정�
 
 `human_escalation`은 catch-all fallback이 아니다.
 destructive operation, credential, external production, public contract change, scope-changing decision, ambiguous authority decision, 또는 bounded repair budget 소진 후 같은 finding이 남은 경우에만 사용한다.
+
+아래의 Claude actor, session reuse, scheduler execute 설명은 legacy runtime vocabulary다.
+새 product slice는 동일 세션 resume 대신 역할이 분리된 ChatGPT/Codex 새 task와 새 세션으로 handoff한다.
 
 ### Codex Repair Dispatcher
 
@@ -88,7 +92,7 @@ repair가 통과하면 supervisor가 수정분을 commit/push하고 기존 PR의
 - PR body required section drift
 - checklist/evidence reference drift
 
-## Public Interface
+## Historical Public Interface
 
 새 상위 명령:
 

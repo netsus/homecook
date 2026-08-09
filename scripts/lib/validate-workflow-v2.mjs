@@ -454,6 +454,10 @@ export function validateWorkflowV2DocContract({ rootDir = process.cwd() } = {}) 
   const supervisorDocErrors = [
     ...containsAll(supervisorDoc, [
       "**Actor dispatch suspended `2026-07-30`.**",
+      "신규 Stage actor 기준은 `docs/engineering/codex-task-handoff.md`의 ChatGPT/Codex 새 task 규칙이다.",
+      "## Historical Purpose",
+      "아래의 Claude actor, session reuse, scheduler execute 설명은 legacy runtime vocabulary다.",
+      "새 product slice는 동일 세션 resume 대신 역할이 분리된 ChatGPT/Codex 새 task와 새 세션으로 handoff한다.",
       "`pnpm omo:scheduler:install -- --work-item <id>`",
       "`pnpm omo:scheduler:verify -- --work-item <id>`",
       "`pnpm omo:smoke:control-plane -- --sandbox-repo <owner/name>`",
@@ -466,10 +470,8 @@ export function validateWorkflowV2DocContract({ rootDir = process.cwd() } = {}) 
       "authority-required frontend PR은 `merge_pending` 직전과 `mergePullRequest` 직전에 모두 `design_authority.status === \"reviewed\"`와 final authority verdict `pass`를 재검증한다.",
       "strict slice에서 Stage 2는 `$ralph` skill 기반 loop를 기본 실행 표면으로 사용하고, Stage 4는 현재 OMO-lite runner 기준으로 `single_pass`를 기본 실행 표면으로 유지한다.",
       "manual merge handoff",
-      "product slice에서 tracked work item/workpack이 없어도 Stage 1 Claude author로 bootstrap 시작한다.",
       "Stage 1 docs PR은 즉시 merge하지 않고",
       "`doc_gate_review`는 Codex",
-      "`doc_gate_repair`는 Claude",
       "execute kickoff인 `omo:supervise`, `omo:start`, `omo:continue`는 해당 work item launchd scheduler를 자동 bootstrap/refresh한다.",
     ]),
     ...containsNone(supervisorDoc, [
@@ -480,11 +482,13 @@ export function validateWorkflowV2DocContract({ rootDir = process.cwd() } = {}) 
   const sessionOrchestratorErrors = [
     ...containsAll(sessionOrchestrator, [
       "**Legacy provider-session spec.**",
-      "Stage `1 / 3 / 4` -> `claude_primary`",
-      "Stage `2 / 5 / 6` -> `codex_primary`",
-      "Stage 5 `final_authority_gate` -> `claude_primary`",
-      "Stage 1/3/4의 public actor는 Claude다.",
-      "Stage 2/5/6의 public actor는 Codex다.",
+      "신규 Stage actor 규칙의 단일 소스는 `docs/engineering/codex-task-handoff.md`다.",
+      "## Historical Session Model",
+      "새 product Stage는 아래 매핑을 복구하지 말고 `codex-task-handoff.md`의 역할별 새 task/새 세션 규칙을 따른다.",
+      "## Historical Retry And Resume Policy",
+      "신규 검토는 Claude resume이 아니라 별도 ChatGPT/Codex review task를 새로 만든다.",
+      "## Historical Homecook Mapping",
+      "현재 Homecook 운영 규칙은 `Stage 1/2/4 작성`과 `internal 1.5 / Stage 3 / Stage 5 / final authority / Stage 6 검토`를 서로 다른 ChatGPT/Codex task ID와 새 세션으로 분리한다.",
     ]),
   ];
 
@@ -501,12 +505,17 @@ export function validateWorkflowV2DocContract({ rootDir = process.cwd() } = {}) 
   const dispatchContractErrors = [
     ...containsAll(dispatchContract, [
       "**Legacy dispatch contract — 신규 실행 금지.**",
-      "### Stage 4 → Claude",
-      "### Stage 5 → Codex",
-      "### Stage 5 → Claude (`subphase=final_authority_gate`)",
-      "### Stage 6 → Codex",
-      "### Internal 1.5 → Claude (`stage=2`, `subphase=doc_gate_repair`)",
-      "### Internal 1.5 → Codex (`stage=2`, `subphase=doc_gate_review`)",
+      "현재 Stage 작성·검토 분리는 `docs/engineering/codex-task-handoff.md`의 ChatGPT/Codex 새 task + 새 세션 규칙을 따른다.",
+      "## Historical Dispatch Matrix",
+      "아래 표의 `Actor` 열은 과거 실행 기록을 읽기 위한 snapshot이다.",
+      "## Historical Session Binding Contract",
+      "## Historical Stage Prompt Skeletons",
+      "### Historical Stage 4 → Claude",
+      "### Historical Stage 5 → Codex",
+      "### Historical Stage 5 → Claude (`subphase=final_authority_gate`)",
+      "### Historical Stage 6 → Codex",
+      "### Historical Internal 1.5 → Claude (`stage=2`, `subphase=doc_gate_repair`)",
+      "### Historical Internal 1.5 → Codex (`stage=2`, `subphase=doc_gate_review`)",
       "`actor == codex`인 dispatch는 `codex_primary` session으로 실행한다.",
       "`actor == claude`인 dispatch는 `claude_primary` session으로 실행한다.",
       "strict slice여도 Stage 4는 현재 `single_pass`로 실행",
@@ -521,8 +530,10 @@ export function validateWorkflowV2DocContract({ rootDir = process.cwd() } = {}) 
   const claudeProviderErrors = [
     ...containsAll(claudeProviderDoc, [
       "**Retired `2026-07-30`: 신규 실행 금지.**",
+      "새 reviewer는 Claude resume이 아니라 역할이 분리된 ChatGPT/Codex 새 task와 새 세션으로 만든다.",
+      "## Historical Purpose",
+      "현재 Stage actor는 이 provider나 OpenCode의 Claude 경로를 사용하지 않는다.",
       "Claude Stage `1 / 3 / 4`와 Stage 5 `final_authority_gate`의 기본 실행 표면은 `raw claude CLI`다.",
-      "Codex Stage `2 / 5 / 6`와 Stage 4 `authority_precheck`는 기존 `OpenCode` provider를 유지한다.",
     ]),
   ];
 
@@ -530,7 +541,7 @@ export function validateWorkflowV2DocContract({ rootDir = process.cwd() } = {}) 
     ...containsAll(opencodeReadme, [
       "Claude는 사용하지 않는다.",
       "모든 primary agent model은 OpenAI GPT 계열을 사용한다.",
-      "Stage 실행은 `docs/engineering/codex-task-handoff.md`에 따라 역할별 Codex 새 작업이 맡는다.",
+      "Stage 실행은 `docs/engineering/codex-task-handoff.md`에 따라 역할별 ChatGPT/Codex 새 작업이 맡는다.",
       "`provider=retired`, `bin=disabled`",
       "## Allowed OMO Commands",
       "## Suspended Commands",

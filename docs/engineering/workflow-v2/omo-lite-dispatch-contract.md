@@ -3,10 +3,11 @@
 > **Legacy dispatch contract — 신규 실행 금지.**
 > Claude actor/provider dispatch는 retired 상태다. 신규 Stage는 역할별 Codex 새 작업 handoff를 사용한다.
 > 아래 actor/session/reason code는 과거 artifact와 schema 호환을 위한 기록이며 새 Claude 호출 권한이 아니다.
+> 현재 Stage 작성·검토 분리는 `docs/engineering/codex-task-handoff.md`의 ChatGPT/Codex 새 task + 새 세션 규칙을 따른다.
 
-## Purpose
+## Historical Purpose
 
-이 문서는 Codex supervisor가 stage별로 어떤 입력을 읽고, 어떤 actor에게 어떤 요청을 만들며, 어떤 산출물을 요구하는지 정의한다.
+이 문서는 과거 Codex supervisor가 stage별로 어떤 입력을 읽고, 어떤 actor에게 어떤 요청을 만들며, 어떤 산출물을 요구했는지 정의한다.
 
 dispatch contract가 고정되면:
 
@@ -20,7 +21,7 @@ dispatch contract가 고정되면:
 - `scripts/omo-lite-sync-status.mjs`
 - `scripts/omo-lite-run-stage.mjs`
 
-## Input Contract
+## Historical Input Contract
 
 각 dispatch는 최소한 아래 정보를 입력으로 가진다.
 
@@ -58,7 +59,7 @@ dispatch contract가 고정되면:
 3. `.opencode/claude-budget-state.json`
 4. provider-aware local auth / health hint
 
-## Output Contract
+## Historical Output Contract
 
 dispatch 결과는 아래를 포함한다.
 
@@ -144,7 +145,10 @@ Stage 5 authority subphase:
 - actor는 Claude다.
 - public Stage 5 Codex review가 authority-required slice를 통과시킨 뒤에만 실행한다.
 
-## Dispatch Matrix
+## Historical Dispatch Matrix
+
+아래 표의 `Actor` 열은 과거 실행 기록을 읽기 위한 snapshot이다.
+신규 product Stage actor assignment로 복원하지 않는다.
 
 | Stage | Actor | Goal | Required Reads | Deliverables |
 |------|-------|------|----------------|--------------|
@@ -155,7 +159,7 @@ Stage 5 authority subphase:
 | 5 | Codex | design review | FE PR diff, workpack UI scope, acceptance FE checklist, design tokens, authority report, mobile UX / anchor docs | design findings or approve, reviewed checklist ids, authority-required면 Claude `final_authority_gate`로 handoff, non-authority slice의 Design Status `confirmed` 근거 |
 | 6 | Codex | frontend PR review | FE PR diff, CI, acceptance, merged bookkeeping 포함 최종 PR diff | review summary, closeout checklist coverage, requested changes or approve, approve 뒤 supervisor final projection commit과 merge 또는 manual merge handoff |
 
-## Session Binding Contract
+## Historical Session Binding Contract
 
 session binding은 dispatch 전에 계산한다.
 
@@ -183,9 +187,9 @@ provider별 resume 규칙:
 - `opencode` -> `opencode run --session <session_id>`
 - `--continue`는 deterministic하지 않으므로 자동화에서 사용하지 않는다.
 
-## Stage Prompt Skeletons
+## Historical Stage Prompt Skeletons
 
-### Stage 1 → Claude
+### Historical Stage 1 → Claude
 
 - goal: `슬라이스 <id> 1단계 진행`
 - must read:
@@ -203,7 +207,7 @@ provider별 resume 규칙:
   - supervisor handoff용 commit subject/body 제안 작성
   - GitHub PR 생성/merge는 하지 않음
 
-### Stage 2 → Codex
+### Historical Stage 2 → Codex
 
 - goal: `슬라이스 <id> 2단계 진행`
 - must read:
@@ -227,7 +231,7 @@ provider별 resume 규칙:
   - supervisor handoff용 commit subject/body 제안 작성
   - GitHub PR 생성/merge는 하지 않음
 
-### Internal 1.5 → Claude (`stage=2`, `subphase=doc_gate_repair`)
+### Historical Internal 1.5 → Claude (`stage=2`, `subphase=doc_gate_repair`)
 
 - goal: `슬라이스 <id> internal 1.5 docs repair`
 - must read:
@@ -245,7 +249,7 @@ provider별 resume 규칙:
   - 필요 시 `contested_doc_fix_ids[]`, `rebuttals[]` 작성
   - GitHub PR 생성/merge는 하지 않음
 
-### Internal 1.5 → Codex (`stage=2`, `subphase=doc_gate_review`)
+### Historical Internal 1.5 → Codex (`stage=2`, `subphase=doc_gate_review`)
 
 - goal: `슬라이스 <id> internal 1.5 docs review`
 - must read:
@@ -257,7 +261,7 @@ provider별 resume 규칙:
   - `reviewed_doc_finding_ids[]`, `required_doc_fix_ids[]`, `waived_doc_fix_ids[]`
   - 승인 시 docs PR merge handoff, 이후 `doc_gate_recheck`
 
-### Stage 3 → Claude
+### Historical Stage 3 → Claude
 
 - goal: `슬라이스 <id> 3단계 리뷰`
 - must read:
@@ -270,7 +274,7 @@ provider별 resume 규칙:
   - `review_scope`, `reviewed_checklist_ids`, `required_fix_ids`, `waived_fix_ids` 작성
   - blocking / non-blocking 분리
 
-### Stage 4 → Claude
+### Historical Stage 4 → Claude
 
 - goal: `슬라이스 <id> 4단계 진행`
 - must read:
@@ -296,7 +300,7 @@ provider별 resume 규칙:
   - supervisor handoff용 commit subject/body 제안 작성
   - GitHub PR 생성/merge는 하지 않음
 
-### Stage 4 → Codex (`subphase=authority_precheck`)
+### Historical Stage 4 → Codex (`subphase=authority_precheck`)
 
 - goal: `슬라이스 <id> authority precheck`
 - must read:
@@ -313,7 +317,7 @@ provider별 resume 규칙:
   - `checklist_updates[]`는 delta-only로 기록할 수 있다. supervisor는 직전 Stage 4 implementation `stage-result`의 checklist snapshot을 deterministic merge해서 full snapshot으로 finalize한다.
   - blocker가 남으면 Stage 4로 route back
 
-### Stage 5 → Codex
+### Historical Stage 5 → Codex
 
 - goal: `슬라이스 <id> 5단계 디자인 리뷰`
 - must read:
@@ -333,7 +337,7 @@ provider별 resume 규칙:
   - non-authority slice는 `confirmed` or fix request
   - 승인 시 Stage 6 또는 `final_authority_gate` 진행 근거 제시
 
-### Stage 5 → Claude (`subphase=final_authority_gate`)
+### Historical Stage 5 → Claude (`subphase=final_authority_gate`)
 
 - goal: `슬라이스 <id> final authority gate`
 - must read:
@@ -346,7 +350,7 @@ provider별 resume 규칙:
   - `authority_verdict`, `reviewed_screen_ids`, `authority_report_paths`, `blocker_count`, `major_count`, `minor_count`
   - `pass`면 `confirmed` 가능, 그 외는 Stage 4로 route back
 
-### Stage 6 → Codex
+### Historical Stage 6 → Codex
 
 - goal: `슬라이스 <id> 6단계 코드 리뷰`
 - must read:
@@ -365,7 +369,7 @@ provider별 resume 규칙:
 
 ## Loop Dispatch Rules
 
-### Plan Loop
+### Historical Plan Loop
 
 Codex supervisor는 아래 중 하나면 plan loop dispatch를 만든다.
 
@@ -376,7 +380,7 @@ Codex supervisor는 아래 중 하나면 plan loop dispatch를 만든다.
 
 plan loop output에서 `required_changes`가 비어야 구현 단계로 간다.
 
-### Review Loop
+### Historical Review Loop
 
 Codex supervisor는 아래에서만 review loop dispatch를 만든다.
 
@@ -410,17 +414,17 @@ target 규칙:
 
 ## Fallback Routing
 
-### Claude Available
+### Historical Claude Available
 
 - normal route 사용
 - public review/approval은 stage owner가 담당하고, authority-required 추가 gate는 Claude가 담당한다
 
-### Claude Constrained
+### Historical Claude Constrained
 
 - 가능한 한 Stage 1 / 3 / 4와 Stage 5 `final_authority_gate`만 Claude에 배정
 - Stage 2 / 5 / 6과 Stage 4 `authority_precheck` 전후의 planning, verification, recovery는 Codex가 흡수
 
-### Claude Unavailable
+### Historical Claude Unavailable
 
 - Claude-owned stage는 시작하지 않고 `scheduled_retry`로 전환한다.
 - `status_patch.lifecycle = blocked`

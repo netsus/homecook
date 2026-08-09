@@ -6,8 +6,9 @@
 
 - Claude는 사용하지 않는다.
 - 모든 primary agent model은 OpenAI GPT 계열을 사용한다.
-- Stage 실행은 `docs/engineering/codex-task-handoff.md`에 따라 역할별 Codex 새 작업이 맡는다.
-- 작성·구현 작업과 독립 검토 작업은 다른 task ID를 사용한다.
+- Stage 실행은 `docs/engineering/codex-task-handoff.md`에 따라 역할별 ChatGPT/Codex 새 작업이 맡는다.
+- 작성·구현 작업과 독립 검토 작업은 다른 task ID와 다른 새 세션을 사용한다.
+- 같은 task 안 서브에이전트는 보조 작업만 맡고, 독립 Stage reviewer 새 task를 대체하지 않는다.
 - OMO는 actor를 호출하지 않는 status, validator, reconcile, closeout/report projection에만 사용한다.
 
 ## Config Files
