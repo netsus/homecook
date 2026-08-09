@@ -1,515 +1,536 @@
-# LEFTOVERS -- 남은요리 목록
+# LEFTOVERS — #11 cooked-batch weight and lifecycle UI
 
-> 기준 문서: 화면정의서 v1.5.1 SS 15 / 요구사항 v1.6.4 SS 1-7 / 유저플로우 v1.3.1 SS 6
-> 슬라이스: 16-leftovers
-> h8 분류: `prototype-derived design` (Baemin vocabulary/material 사용, screen-level parity 아님)
-> 생성일: 2026-04-29
-> Wave1 mobile 100% parity note: fixed prototype reference and `ui/designs/WAVE1_MOBILE_APP_BASELINE.md` supersede older h8 prototype-derived visual target notes when this surface is exact-reference-ready.
+> Stage: Homecook #11 `cooked-batch-weight-ui` fresh Stage 1 design-generator
+> Reviewed design input: commit `0d64660ff8a7059754f1534cf7663573247a5263`, tree `f41f2ed854a3596dc09928063a11308f38c6552f` (the exact bytes reviewed by the two cooked-batch-weight-ui critics)
+> Internal 1.5 HOLD evidence: commit `337daa808971802c79698df64c70240205addba4`, report `docs/workpacks/cooked-batch-weight-ui/evidence/2026-08-10-stage1-internal1-5-review.md`
+> Critic HOLD evidence / repair base: commit `ec1f1d816089bdb8973972107f7f0fedd7dbe033`, tree `7d244a636527d1530217b6b99c92b7de84fb6f22`, parent `0d64660ff8a7059754f1534cf7663573247a5263`
+> Evidence role rule: both HOLD sources are repair inputs only; neither approves this design or serves as its parent/base claim
+> Current official tuple: 요구사항 `v1.7.30` / 화면정의서 `v1.5.34` / 유저 Flow `v1.3.32` / DB `v1.3.32` / API `v1.2.37`
+> Contract lineage: API `v1.2.37` preserves #8 API `v1.2.36` section `0-CBW`.
+> Classification: `prototype-derived design`, high-risk UI change, not an anchor screen
+> Design status: `temporary` — fresh independent critic, runtime evidence, final authority pending
 
----
+## 1. Purpose and ownership
 
-## 화면 개요
+LEFTOVERS preserves the official legacy leftover-management journey and adds the owner-facing #8 cooked-batch weight/lifecycle presentation. These are two independent sections backed by two independent read models. A legacy row and a v2 batch row are never guessed to be the same record.
 
-PLANNER_WEEK 상단 [남은요리] 버튼에서 진입하는 화면.
-요리 완료 후 자동 저장된 남은요리를 최근순(cooked_at DESC)으로 리스트로 보여주고,
-사용자가 [다먹음] 또는 [플래너에 추가]를 통해 남은요리를 관리한다.
+#11 owns only the UI/client-adapter lane:
 
-- **권한**: 로그인 필수
-- **API**: `GET /leftovers` (status=leftover)
-- **진입**: PLANNER_WEEK 상단 [남은요리]
-- **이탈**: 뒤로가기 -> PLANNER_WEEK / [다먹음] -> ATE_LIST로 이동 / [플래너에 추가] -> PlannerAddSheet 열림
+- preserve the existing `/leftovers` section, `PlannerAddSheet`, planner reuse, `다먹음`, `ATE_LIST`, `덜먹음`, and stale-review/`계속 보관` behaviors without changing their contracts;
+- read the existing owner-only `GET /cooked-batches?availability=all` model;
+- display content/name, cooked time, cooking servings, finished/remaining grams, weight/batch/depleted state, revision, and nutrition availability;
+- present existing delayed weight, unrecoverable, discard, adjust, unweighed close, and exact current-closure cancel mutations;
+- preserve permission, revision, idempotency, replay, and nondisclosure behavior from #8.
 
----
+#11 does not own or render:
 
-## 레이아웃 와이어프레임
+- #9 meal-log backend write paths, entry/event links, or consumed events;
+- #12 `먹은 양 기록` / consumed-amount CTA, meal-log add/edit/delete sheet, or meal-log UI;
+- new endpoint, field, status, error code, action enum, mutation, direct DML, generic reopen, or unrecoverable restore;
+- servings-to-grams estimates, zero-filled nutrition, discard XP, or automatic meal entry.
 
-### 기본 상태 (남은요리 리스트 있음)
+### Two-source identity and action isolation
 
-```
-+---------------------------------------+  <- 375px (모바일 기준)
-|  < 뒤로      남은요리                  |  <- 상단 앱바 (56px)
-+---------------------------------------+     --surface, --foreground text-xl
-|                                       |
-|  (세로 스크롤 영역 시작)               |
-|                                       |
-| +-----------------------------------+ |
-| |                                   | |  <- 남은요리 카드 1
-| |  김치찌개                          | |     --surface 배경, --radius-lg
-| |  3월 1일 요리완료                  | |     --shadow-1
-| |                                   | |
-| |  [다먹음]       [플래너에 추가]    | |  <- 버튼 row
-| +-----------------------------------+ |     --space-3 카드 간격
-|                                       |
-| +-----------------------------------+ |
-| |                                   | |  <- 남은요리 카드 2
-| |  된장찌개                          | |
-| |  3월 1일 요리완료                  | |
-| |                                   | |
-| |  [다먹음]       [플래너에 추가]    | |
-| +-----------------------------------+ |
-|                                       |
-| +-----------------------------------+ |
-| |                                   | |  <- 남은요리 카드 3
-| |  제육볶음                          | |
-| |  2월 28일 요리완료                 | |
-| |                                   | |
-| |  [다먹음]       [플래너에 추가]    | |
-| +-----------------------------------+ |
-|                                       |
-|  (세로 스크롤 계속)                   |
-|                                       |
-+---------------------------------------+
-|  홈  |  플래너  |  팬트리  |  마이   |  <- 하단 탭바 (56px + safe-area)
-+---------------------------------------+
-```
+The official legacy journey is required existing behavior, not an optional compatibility surface. It remains visible in its own first section and retains its current route/action group:
 
-### 카드 내부 레이아웃 상세
+- **Legacy section source/identity:** `GET /leftovers?status=leftover`, keyed only by its returned `leftover_id` (`items[].id`). `다먹음`, `계속 보관`, and planner reuse send that exact `leftover_id`; ATE_LIST separately reads `status=eaten` and `덜먹음` sends its exact `leftover_id`.
+- **Cooked-batch section source/identity:** `GET /cooked-batches?availability=all`, keyed only by its returned `batch_id` (`items[].id`). Weight/discard/adjust/close/cancel send that exact `batch_id` and projected revision/event ID.
+- A client may namespace local DOM/state keys as `legacy:<leftover_id>` and `batch:<batch_id>` only to avoid collisions. Those prefixes are not public fields and are never persisted or sent.
+- Never join, merge, deduplicate, or cross-route the two sources by `id`, `recipe_id`, title, thumbnail, `cooked_at`, servings, array position, or any other guessed similarity. If both APIs return visually similar records, both remain in their clearly labeled sections until an approved contract supplies a stable relation.
+- Legacy cards never receive cooked-batch weight mutations. Cooked-batch cards never call legacy `eat`, `uneat`, `keep`, or planner-add actions. A v2 compatibility `status=eaten` is display compatibility only and does not authorize a legacy action.
+- Stale-review banner/card copy comes only from `/leftovers.stale_reviewed_at`; `source_meal_label` and `source_planned_servings` also remain legacy-only. They are never synthesized for a 15-field batch item.
 
-```
-+-------------------------------------------+  <- --surface, --radius-lg (16px)
-|                                           |     --shadow-1, 패딩 --space-4
-|  레시피명 (text-lg, 700)                  |  <- --foreground, 1줄 말줄임
-|  N월 D일 요리완료 (text-sm, 400)          |  <- --text-3
-|                                           |
-|  +----------+    +------------------+     |
-|  | 다먹음   |    | 플래너에 추가    |     |  <- 버튼 row
-|  +----------+    +------------------+     |
-|                                           |
-+-------------------------------------------+
+## 2. Existing #8 reference boundary
 
-[다먹음] 버튼:
-  - outlined 스타일
-  - 테두리: --line (평소) -> --text-2 (hover)
-  - 텍스트: --text-2, text-sm, 600
-  - --radius-md (12px)
-  - min 44px 높이, min-width 88px
+The #8 merged implementation/API/authority/Stage 6 lineage is the state and mutation authority. #11 must consume it, not redesign it:
 
-[플래너에 추가] 버튼:
-  - filled primary 스타일
-  - 배경: --brand (#ED7470)
-  - 텍스트: white, text-sm, 700
-  - --radius-md (12px)
-  - min 44px 높이, min-width 120px
-  - pressed: --brand-deep (#C84C48)
+- `types/cooking.ts` → exact `CookedBatchProjection`
+- `app/api/v1/cooked-batches/**` → existing owner-only mutations
+- `docs/workpacks/cooked-batch-weight-ledger/evidence/2026-08-09-stage4-frontend-implementation.md`
+- `docs/workpacks/cooked-batch-weight-ledger/evidence/2026-08-09-final-product-design-authority-post-typography-rereview.md`
+- `docs/workpacks/cooked-batch-weight-ledger/evidence/2026-08-09-stage6-frontend-successor-head-rereview.md`
+
+Those artifacts are references only. They are not fresh #11 design, runtime, critic, or authority evidence and do not approve this document.
+
+## 3. Mobile information architecture
+
+```text
+LEFTOVERS page — one vertical page scroll
+  ├─ sticky app bar: back / 남은요리 / 다먹은 목록
+  ├─ Section A: 남은요리 관리 (legacy `/leftovers` read model)
+  │    ├─ stale-storage banner + 계속 보관
+  │    └─ legacy card: planner-add / 다먹음 only
+  ├─ section divider + source-specific explanation
+  ├─ Section B: 중량·잔량 기록 (v2 `/cooked-batches` read model)
+  │    ├─ batch cards: weight/lifecycle truth + #11 actions only
+  │    └─ cursor control: 더 보기 / next pending / error / retry
+  └─ existing bottom navigation + safe area
+
+Eligible action
+  └─ familiar bottom sheet
+       ├─ title + state consequence
+       ├─ internally scrollable form / confirmation
+       ├─ inline or live error
+       └─ fixed footer + safe area: cancel / confirm
 ```
 
----
+- The page and cards never create horizontal page scroll. Both sections share one familiar vertical page scroll; neither creates a nested list scroll.
+- Each section owns its own loading, empty, error, ready, and action state. Failure or emptiness in one source does not erase or relabel the other section.
+- Every #11 cooked-batch mutation uses a familiar bottom sheet to preserve the list context. Destructive/irreversible batch actions are not inline one-tap mutations; existing legacy action patterns remain unchanged.
+- Sheet body scrolls internally, background is locked, and fixed footer stays above `env(safe-area-inset-bottom)`.
+- Default mobile width is 390px; 320px is the narrow sentinel. At 320px action buttons stack, labels wrap, numeric inputs remain at least 16px, and all targets stay at least 44×44px.
 
-### Loading 상태
+## 4. 390px wireframes
 
-```
-+---------------------------------------+
-|  < 뒤로      남은요리                  |
-+---------------------------------------+
-|                                       |
-| +-----------------------------------+ |  <- 스켈레톤 카드 1
-| |  ░░░░░░░░░░░░░░░                 | |
-| |  ░░░░░░░░░░░                     | |
-| |       ░░░░░░░     ░░░░░░░░░      | |
-| +-----------------------------------+ |
-|                                       |
-| +-----------------------------------+ |  <- 스켈레톤 카드 2
-| |  ░░░░░░░░░░░░░░░                 | |
-| |  ░░░░░░░░░░░                     | |
-| |       ░░░░░░░     ░░░░░░░░░      | |
-| +-----------------------------------+ |
-|                                       |
-| +-----------------------------------+ |  <- 스켈레톤 카드 3
-| |  ░░░░░░░░░░░░░░░                 | |
-| |  ░░░░░░░░░░░                     | |
-| |       ░░░░░░░     ░░░░░░░░░      | |
-| +-----------------------------------+ |
-|                                       |
-+---------------------------------------+
-|  홈  |  플래너  |  팬트리  |  마이   |
-+---------------------------------------+
-```
+### 4.1 Two-section list and action hierarchy
 
----
-
-### Empty 상태
-
-```
-+---------------------------------------+
-|  < 뒤로      남은요리                  |
-+---------------------------------------+
-|                                       |
-|                                       |
-|                                       |
-|          (일러스트/아이콘)             |  <- 중앙 정렬, 비표면적 아이콘
-|                                       |
-|    남은 요리가 없어요                 |  <- --foreground, text-lg, 700
-|                                       |
-|    요리를 완료하면                    |  <- --text-3, text-sm
-|    여기에 저장돼요                    |
-|                                       |
-|        [플래너로 돌아가기]            |  <- outlined, --brand 텍스트/테두리
-|                                       |     --radius-md (12px)
-|                                       |
-|                                       |
-+---------------------------------------+
-|  홈  |  플래너  |  팬트리  |  마이   |
-+---------------------------------------+
-```
-
----
-
-### Error 상태
-
-```
-+---------------------------------------+
-|  < 뒤로      남은요리                  |
-+---------------------------------------+
-|                                       |
-|                                       |
-|                                       |
-|          (오류 아이콘)                |  <- 중앙 정렬
-|                                       |
-|    남은요리를 불러오지 못했어요        |  <- --foreground, text-lg, 700
-|                                       |
-|        [다시 시도]                    |  <- --brand, primary CTA
-|                                       |     --radius-md (12px), 44px 높이
-|                                       |
-|                                       |
-+---------------------------------------+
-|  홈  |  플래너  |  팬트리  |  마이   |
-+---------------------------------------+
+```text
+┌──────────────────────────────────────┐ 390
+│ ‹                남은요리   [다먹은 목록]│ sticky app bar
+├──────────────────────────────────────┤
+│ 남은요리 관리                         │ Section A · `/leftovers`
+│ 플래너에 다시 쓰거나 다 먹음 처리해요 │
+│ 오래 보관한 요리 1개                  │ legacy stale banner
+│                                      │
+│ 김치찌개                     8월 1일  │ legacy card / leftover_id
+│ 저녁 · 계획 2인분 · 요리 4인분        │ legacy-only metadata
+│ 보관한 지 30일이 지났어요             │ stale_reviewed_at=null
+│ [계속 보관]                           │ `/leftovers/{id}/keep`
+│ [플래너에 추가]             [다먹음]  │ legacy action group
+├──────────────────────────────────────┤ strong section divider
+│ 중량·잔량 기록                        │ Section B · `/cooked-batches`
+│ 요리 직후 무게와 남은 양을 관리해요   │ no legacy actions in this section
+├──────────────────────────────────────┤
+│ 김치찌개                    남은 요리 │
+│ 8월 10일 요리 · 4인분                │
+│                                      │
+│ 완성 1,480g       남은 양 820g       │ known+available
+│ 영양 계산 가능 · 기록 버전 3         │
+│                                      │
+│ [양 조정]                    [버림]   │ neutral before destructive
+├──────────────────────────────────────┤
+│ 닭볶음탕               무게 입력 필요│ missing+available
+│ 8월 9일 요리 · 3인분                 │
+│ 완성 직후 음식 전체 무게가 필요해요  │
+│ 영양 계산은 무게 입력 전 사용할 수   │
+│ 없어요                               │
+│ [완성 중량 입력]                     │ primary unblock
+│ [원래 무게를 알 수 없음]             │ irreversible secondary/danger
+├──────────────────────────────────────┤
+│ 된장찌개          원래 무게 확인 불가 │ unrecoverable+available
+│ g 입력과 g 식사 기록을 사용할 수     │
+│ 없어요                               │
+│ [무게 없이 종료]                     │
+├──────────────────────────────────────┤
+│ 미역국                     이전 기록 │ legacy null / unknown
+│ 중량 상태를 확인할 수 없어요         │ no action; not “missing”
+├──────────────────────────────────────┤
+│ 카레                         모두 버림│ depleted+discarded
+│ 완성 900g · 남은 양 0g               │
+│ 종료된 기록이에요                    │ read-only
+├──────────────────────────────────────┤
+│               [더 보기]              │ has_next=true, 44px+
+└──────────────────────────────────────┘
 ```
 
----
+The same recipe title may appear once in each section. The UI does not imply that those cards share an ID or state. Section labels and spacing are always visible before their first cards, including at 320px.
 
-### Unauthorized 상태
+`먹은 양 기록` or any consumed-amount CTA is intentionally absent from the cooked-batch section. #12 may add it later only after its own merge and activation. Legacy `다먹음` remains only in Section A and is not a gram consumption action.
 
-비로그인 사용자가 PLANNER_WEEK [남은요리]를 탭한 경우.
-PLANNER_WEEK 자체가 로그인 필수이므로 일반적으로 도달하지 않지만,
-세션 만료 등 예외 상황에서 보호한다.
+### 4.2 Delayed original-weight sheet
 
-```
-+---------------------------------------+
-|        로그인이 필요해요              |  <- 모달 오버레이
-|                                       |     --panel 배경
-|  남은요리를 확인하려면               |     --radius-xl 상단
-|  로그인이 필요해요.                  |
-|                                       |
-|    [로그인]        [취소]            |  <- [로그인]: --brand
-|                                       |     [취소]: --text-2, ghost
-+---------------------------------------+
-
-로그인 성공 후: return-to-action -> LEFTOVERS 자동 진입
-```
-
----
-
-### [플래너에 추가] 바텀시트 (PlannerAddSheet)
-
-LEFTOVERS 카드에서 [플래너에 추가] 탭 시 열리는 바텀시트.
-RECIPE_DETAIL의 PlannerAddPopup과 동일한 구조와 토큰 규칙을 따른다.
-
-```
-+---------------------------------------+  <- 페이지 (dimmed overlay)
-|                                       |
-|  +--[남은요리 리스트 뒤 dimmed]---+   |
-|  |                               |   |
-|  +-------------------------------+   |
-|                                       |
-+=======================================+  <- 바텀시트 시작
-|                                 [X]  |  <- icon-only close (44x44)
-|  플래너에 추가                       |  <- title, text-lg, 700
-|  날짜와 끼니를 선택해 주세요         |  <- helper, text-sm, --text-3
-|                                       |
-|  --- 날짜 선택 -----------------------|
-|  [월 4/28] [화 4/29] [수 4/30] ...  |  <- compact date chip rail
-|                                       |     가로 스크롤, --radius-full
-|  --- 끼니 선택 -----------------------|
-|  [ 아침 | 점심 | 간식 | 저녁 ]      |  <- segmented row
-|                                       |
-|  --- 인분 ----------------------------|
-|  [-]  2  인분  [+]                   |  <- compact stepper
-|                                       |
-|          [추가하기]                   |  <- CTA, --brand, full-width
-|                                       |     --radius-md, 44px 높이
-+---------------------------------------+
+```text
+┌──────────────────────────────────────┐
+│ ───                                  │
+│ 완성 중량 입력                   [×] │
+│ 닭볶음탕의 요리 직후 음식 전체 무게  │
+├──────────────────────────────────────┤ internal scroll
+│ 음식만의 원래 전체 중량(g)           │
+│ [                              ] g   │ 16px+
+│ 용기·그릇·접시 무게는 제외해 주세요  │
+│ 현재 남은 양이 아니에요              │
+│                                      │
+│ □ 이 음식을 먹거나 버린 적이 없고,   │ required explicit confirmation
+│   요리 직후 전체 무게가 맞아요        │
+│                                      │
+│ 영양 상태: 무게 입력 뒤 다시 계산됨  │ server truth only
+├──────────────────────────────────────┤
+│ [취소]                  [중량 저장]  │ fixed + safe area
+└──────────────────────────────────────┘
 ```
 
-**PlannerAddSheet 토큰 규칙** (화면정의서 v1.5.0 기준):
-- eyebrow 없음
-- icon-only close 버튼
-- 날짜 chip 표기: `요일 + M/D` (예: `월 4/28`)
-- accent: `olive base + thin orange highlight`
-  - 선택된 날짜 chip: --brand-soft (#FDEBEA) 배경 + --brand (#ED7470) 텍스트
-  - 선택된 끼니: --olive (#1f6b52) 텍스트
-  - 오늘 날짜 hint: --brand 점 또는 미세 강조
-- 바텀시트 배경: --panel
-- 바텀시트 상단 radius: --radius-xl (20px)
+The server remains authority for no-prior-event eligibility and revision. The checkbox is user confirmation, not a replacement for server validation.
 
-**성공 동작**:
-- 바텀시트 닫힘
-- 토스트: "N월 D일 끼니에 추가됐어요"
-- LEFTOVERS 화면 유지 (이동 없음)
-- API: `POST /meals` with `leftover_dish_id`
+### 4.3 Mark unrecoverable confirmation
 
-**오류 동작**:
-- 토스트: "추가에 실패했어요. 다시 시도해 주세요"
+```text
+┌──────────────────────────────────────┐
+│ 원래 무게를 알 수 없음          [×] │
+│ 이 변경은 되돌릴 수 없어요           │
+├──────────────────────────────────────┤
+│ 이후에는 완성 중량 입력, known 복원, │
+│ g 식사 기록을 사용할 수 없어요       │
+│ 무게·영양을 0으로 기록하지 않아요    │
+│                                      │
+│ □ 되돌릴 수 없음을 이해했어요        │
+├──────────────────────────────────────┤
+│ [취소]            [확인하고 변경]    │ danger, not brand-primary
+└──────────────────────────────────────┘
+```
 
----
+### 4.4 Discard and adjustment sheets
 
-## 컴포넌트 상세
+```text
+discard input                         negative-adjust confirm
+┌──────────────────────────────┐      ┌──────────────────────────────┐
+│ 버린 양 기록            [×] │      │ 조정 내용 확인          [×] │
+│ 버린 양(g) [        ]        │      │ 현재 남은 양       820g     │
+│ 사유       [상해서      ]    │      │ 조정               -20g     │
+│ 예상 남은 양      700g       │      │ 조정 후            800g     │
+│ meal-log/XP는 만들지 않아요  │      │ 사유        계량 보정       │
+│ [취소] [내용 확인]           │      │ [취소] [조정 적용]           │
+└──────────────────────────────┘      └──────────────────────────────┘
+```
 
-### AppBar (상단 앱바)
+- Discard always requires positive grams, non-empty reason, and current revision, then a second confirmation summary of amount/reason/result.
+- Adjustment requires signed `delta_g`, non-empty reason, and current revision. A negative delta requires the confirmation summary above. Positive correction may submit from the form only after its resulting preview is valid.
+- Client result preview is guidance only. It cannot reach 0, exceed finished weight, or reopen a depleted batch; the server response replaces the preview.
+- Discard never creates a meal-log entry or XP. Adjustment never depletes or reopens.
 
-- **높이**: 56px
-- **좌측**: 뒤로가기 화살표 아이콘 (44x44px 터치 타겟) -> PLANNER_WEEK 복귀
-- **중앙**: "남은요리" (text-xl, 800, --foreground)
-- **우측**: 없음
-- **배경**: --surface
-- **하단 경계**: --line (1px)
-- **토큰**: `--surface` 배경, `--foreground` 텍스트, `--line` 하단 보더
+### 4.5 Unweighed close and exact cancel
 
-### LeftoverCard (남은요리 카드)
+```text
+┌──────────────────────────────────────┐
+│ 무게 없이 종료                  [×] │
+│ 종료 이유를 선택해 주세요            │
+│                                      │
+│ ○ 다 먹음                           │ consumed
+│ ○ 모두 버림                         │ discarded
+│ ○ 먹고 버림                         │ mixed
+│                                      │
+│ 무게·식사 영양·meal-log 기록은       │
+│ 남지 않아요                          │
+│ □ 위 내용을 확인했어요              │
+├──────────────────────────────────────┤
+│ [취소]              [이 상태로 종료]│
+└──────────────────────────────────────┘
+```
 
-- **기본 상태**:
-  - 상단 행: 레시피명 (text-lg, 700, --foreground), 1줄 말줄임
-  - 하단 메타: "N월 D일 요리완료" (text-sm, 400, --text-3)
-    - 포맷: cooked_at을 "M월 D일 요리완료"로 표시
-  - 버튼 row: [다먹음] + [플래너에 추가]
-- **카드 스타일**:
-  - 배경: --surface (#ffffff)
-  - border-radius: --radius-lg (16px)
-  - box-shadow: --shadow-1 (가벼운 그림자 -- 카드 수가 많아질 수 있어 시각 무게 절제)
-  - 패딩: --space-4 (16px)
-  - 카드 간 간격: --space-3 (12px)
-  - 컨테이너 좌우 여백: --space-4 (16px)
-- **[다먹음] 버튼**:
-  - outlined 스타일 (secondary action)
-  - 테두리: --line
-  - 텍스트: --text-2 (#495057), text-sm, 600
-  - border-radius: --radius-md (12px)
-  - 최소 터치 타겟: 44x44px
-  - hover/pressed: 테두리 --text-2, 배경 --surface-subtle
-- **[플래너에 추가] 버튼**:
-  - filled primary 스타일 (primary CTA)
-  - 배경: --brand (#ED7470)
-  - 텍스트: white, text-sm, 700
-  - border-radius: --radius-md (12px)
-  - 최소 터치 타겟: 44x44px (실제 크기: 약 120x44px)
-  - hover/pressed: --brand-deep (#C84C48)
-- **Loading**: 스켈레톤 카드 3개 (2줄 텍스트 + 2개 버튼 placeholder)
-- **토큰 힌트**:
-  - 카드 배경 <- `--surface`
-  - 카드 그림자 <- `--shadow-1`
-  - 카드 모서리 <- `--radius-lg`
-  - 레시피명 <- `--foreground`
-  - 날짜 텍스트 <- `--text-3`
-  - [다먹음] 테두리 <- `--line`, 텍스트 <- `--text-2`
-  - [플래너에 추가] 배경 <- `--brand`, pressed <- `--brand-deep`
+After an exact current `closed_unweighed` projection, `current_unweighed_closure_event_id` may expose one secondary action labeled `[방금 종료 취소]`. It calls only `cancel_current` with that exact event ID. It is not called `다시 열기`, is absent after later events, and is never available for `marked_unrecoverable`.
 
-### EmptyState
+### 4.6 Cursor pagination — familiar `더 보기`
 
-- **아이콘/일러스트**: 작은 중립 이미지 (냄비 또는 접시 관련, 과도하지 않게)
-- **제목**: "남은 요리가 없어요" (text-lg, 700, --foreground)
-- **설명**: "요리를 완료하면 여기에 저장돼요" (text-sm, 400, --text-3)
-- **CTA**: [플래너로 돌아가기] -- outlined 스타일
-  - 테두리: --brand
-  - 텍스트: --brand
-  - border-radius: --radius-md (12px)
-  - 최소 높이: 44px
-- **레이아웃**: 세로 중앙 정렬, 텍스트 center align
-- **토큰 힌트**:
-  - 제목 <- `--foreground`
-  - 설명 <- `--text-3`
-  - CTA 테두리/텍스트 <- `--brand`
+```text
+last loaded batch card
+├──────────────────────────────────────┤
+│               [더 보기]              │ idle, has_next=true
+│                                      │
+│          더 불러오는 중…             │ pending; current cards stay
+│                                      │
+│ 다음 기록을 불러오지 못했어요        │ next-page error, role=alert
+│              [다시 시도]             │ same untouched opaque cursor
+│                                      │
+│ 목록 조건이 바뀌었어요               │ cursor/filter 422
+│         [처음부터 새로고침]           │ no cursor, same `availability=all`
+└──────────────────────────────────────┘
+```
 
-### ErrorState
+- First and next pages use the exact `availability=all` filter. The client does not display, parse, edit, decode, log, or transplant the opaque cursor; it only returns the unchanged `next_cursor` from the immediately preceding successful page.
+- `has_next=false` requires `next_cursor=null` and removes the control. `has_next=true` requires a non-null next cursor; an invalid container fails closed as a read error rather than guessing a cursor.
+- Append order remains the server order `cooked_at DESC, id DESC`. Within the cooked-batch section, duplicate `batch.id` cards are not appended; this is page-overlap protection only, never a cross-source join or content-based dedupe.
+- Next-page pending keeps every already rendered card, open sheet, correctable input, idempotency key, and mutation pending state intact. It disables only duplicate `더 보기` requests and never cancels or replays an action.
+- While a batch mutation is pending, pagination retry/refresh controls are disabled. An already-running next-page request may append its cards but must not close, reset, replace, or refocus the mutation sheet or its invoking card.
+- A network/server next-page error keeps loaded cards and offers `[다시 시도]` with the same untouched cursor. A filter-bound/malformed cursor `422 VALIDATION_ERROR` is not retried as valid: `[처음부터 새로고침]` requests the first `availability=all` page without a cursor and replaces the batch list only after success.
+- On append, a polite live region announces `중량·잔량 기록 N개를 더 불러왔어요`. When pagination still owns focus, focus stays on `[더 보기]` while it remains; if the final append removes the control, focus moves to the first newly appended batch-card heading (`tabindex=-1`). If a mutation sheet has since taken focus, append never steals it. Error focus moves to the next-page alert only when pagination still owns focus; retry success follows the same rule.
 
-- **아이콘**: 오류 아이콘 (중립적, --text-3 색상)
-- **제목**: "남은요리를 불러오지 못했어요" (text-lg, 700, --foreground)
-- **CTA**: [다시 시도] -- primary filled
-  - 배경: --brand
-  - 텍스트: white
-  - border-radius: --radius-md (12px)
-  - 최소 높이: 44px
-- **토큰 힌트**:
-  - 제목 <- `--foreground`
-  - CTA <- `--brand`
+## 5. 320px narrow wireframes
 
-### BottomTabBar (하단 탭바)
+### 5.1 Both sections, known/missing, and pagination
 
-- 4탭 고정: 홈 / 플래너 / 팬트리 / 마이페이지
-- 높이: 56px + safe-area-inset-bottom
-- 활성 탭: 플래너 (이 화면의 부모가 PLANNER_WEEK이므로)
-- 활성 색상: --brand
-- 비활성 색상: --text-3
-- 배경: --panel
-- **토큰 힌트**:
-  - 배경 <- `--panel`
-  - 활성 탭 <- `--brand`
-  - 비활성 탭 <- `--text-3`
+```text
+┌──────────────────────────────┐ 320
+│ ‹       남은요리 [다먹은 목록]│
+├──────────────────────────────┤
+│ 남은요리 관리                │ Section A
+│ 플래너 재사용·다먹음         │
+│ 김치찌개 · 저녁 · 2인분      │ legacy card
+│ 보관한 지 30일이 지났어요    │
+│ [계속 보관]                  │
+│ [플래너에 추가]              │ 44px+, stack
+│ [다먹음]                     │
+├──────────────────────────────┤ strong section divider
+│ 중량·잔량 기록               │ Section B
+│ 음식 무게와 남은 양 관리     │
+├──────────────────────────────┤
+│ 김치찌개            남은 요리│
+│ 8월 10일 · 4인분             │
+│ 완성 1,480g                  │
+│ 남은 양 820g                 │
+│ 영양 계산 가능               │
+│ [양 조정]                    │ 44px+, safe/neutral first
+│ [버림]                       │ stacked destructive
+├──────────────────────────────┤
+│ 닭볶음탕       무게 입력 필요│
+│ 원래 음식 전체 무게가        │
+│ 필요해요                     │
+│ [완성 중량 입력]             │
+│ [원래 무게를 알 수 없음]     │
+├──────────────────────────────┤
+│ [더 보기]                    │ full width, 44px+
+└──────────────────────────────┘
+```
 
-### PlannerAddSheet (플래너 추가 바텀시트)
+### 5.2 Action sheet with keyboard
 
-RECIPE_DETAIL PlannerAddPopup (화면정의서 v1.5.0)과 동일한 컴포넌트를 재사용한다.
+```text
+┌──────────────────────────────┐
+│ 버린 양 기록            [×] │
+├──────────────────────────────┤ internal scroll
+│ 버린 양(g)                   │
+│ [                          ] │ 16px+
+│ 사유                         │
+│ [                          ] │
+│ error/status remains reachable│
+│                              │ virtual keyboard may reduce body
+├──────────────────────────────┤
+│ [계속]                       │ fixed CTA, primary first visually
+│ [취소]                       │ safe area
+└──────────────────────────────┘
+```
 
-- **헤더**: eyebrow 없음 / title "플래너에 추가" / helper "날짜와 끼니를 선택해 주세요" / icon-only close
-- **날짜 선택**: compact date chip rail, 표기 = `요일 + M/D`
-  - 비선택: --surface-fill 배경, --foreground 텍스트
-  - 선택: --brand-soft (#FDEBEA) 배경, --brand (#ED7470) 텍스트
-  - 오늘: --brand 점 hint
-  - 가로 스크롤, fade/peek affordance
-- **끼니 선택**: 아침 / 점심 / 간식 / 저녁 segmented row
-  - 비선택: --surface-fill 배경
-  - 선택: --olive (#1f6b52) 텍스트 + thin olive tint
-- **인분**: compact stepper
-  - 숫자 hierarchy 분리: `2` (text-lg, 700) + `인분` (text-sm, --text-3)
-  - +/- 버튼: 44x44px 터치 타겟, --line 테두리
-- **CTA**: [추가하기] full-width
-  - 배경: --brand
-  - 텍스트: white, text-base, 700
-  - --radius-md (12px), 높이 48px
-- **바텀시트**: --panel 배경, --radius-xl (20px) 상단, --shadow-3
-- **API**: `POST /meals` body: `{ recipe_id, plan_date, column_id, planned_servings, leftover_dish_id }`
+- Sheet width remains within viewport and has no page-level horizontal overflow.
+- Long Korean labels wrap. Buttons stack instead of reducing target height, font, or padding.
+- The active input, live error, and CTA remain reachable by internal scroll when the virtual keyboard is visible.
+- At 320px, the two section headings remain visible and action groups never share a row. `더 보기`, retry, and refresh controls use the same full-width 44px minimum pattern.
 
----
+## 6. Display truth and state matrix
 
-## 인터랙션 노트
+### 6.1 Legacy `/leftovers` truth
 
-| 액션 | 트리거 | 결과 | 로그인 필요 |
-|------|--------|------|------------|
-| 뒤로가기 | AppBar 좌측 화살표 탭 또는 브라우저 back | PLANNER_WEEK 복귀 | Y (이미 인증됨) |
-| [다먹음] | 카드 내 [다먹음] 버튼 탭 | POST /leftovers/{id}/eat -> 카드가 리스트에서 사라짐 + ATE_LIST로 이동 | Y |
-| [다먹음] 낙관적 UI | 버튼 탭 직후 | 카드에 fade-out 애니메이션 적용 후 리스트에서 제거 | Y |
-| [다먹음] 실패 | API 오류 | 토스트: "처리에 실패했어요. 다시 시도해 주세요." + 카드 복원 | Y |
-| [플래너에 추가] | 카드 내 [플래너에 추가] 버튼 탭 | PlannerAddSheet 바텀시트 열림 | Y |
-| 바텀시트 날짜 선택 | 날짜 chip 탭 | 해당 chip 활성 상태로 전환 (--brand-soft 배경) | Y |
-| 바텀시트 끼니 선택 | 끼니 세그먼트 탭 | 해당 세그먼트 활성 상태로 전환 | Y |
-| 바텀시트 인분 조절 | stepper +/- 탭 | 인분 숫자 증감 (최소 1) | Y |
-| 바텀시트 [추가하기] | CTA 탭 | POST /meals (leftover_dish_id 포함) -> 성공 시 시트 닫힘 + 토스트 "N월 D일 끼니에 추가됐어요" | Y |
-| 바텀시트 [추가하기] 실패 | API 오류 | 토스트: "추가에 실패했어요. 다시 시도해 주세요." | Y |
-| 바텀시트 닫기 | X 아이콘 탭 또는 바깥 영역 탭 또는 아래로 스와이프 | 바텀시트 닫힘, LEFTOVERS 유지 | Y |
-| 빈 리스트 CTA | [플래너로 돌아가기] 탭 | PLANNER_WEEK route 이동 | Y |
-| 에러 재시도 | [다시 시도] 탭 | GET /leftovers 재호출 | Y |
-| 하단 탭 전환 | 다른 탭 아이템 탭 | 해당 탭 route 이동 | 탭에 따라 다름 |
+| Legacy source state | Required UI/action | Forbidden crossover |
+| --- | --- | --- |
+| `status=leftover`, not stale | recipe/date/latest meal/planned + cooking servings | cooked-batch revision/weight/status inference |
+| `status=leftover`, stale and unreviewed | `보관한 지 N일이 지났어요`, `계속 보관` | automatic `eaten`, batch close/discard |
+| `status=leftover` action group | `플래너에 추가`, `다먹음` | weight/discard/adjust/close/cancel mutation |
+| `status=eaten` in ATE_LIST | eaten date + `덜먹음`; 30-day auto-hide policy | cooked-batch reopen/cancel inference |
 
-### [다먹음] 후 ATE_LIST 이동 정책
+Planner-add, `다먹음`, ATE_LIST, `덜먹음`, and stale review retain their existing loading/pending/error/focus behavior and current contracts. This design changes only their placement into the explicit legacy section; it does not rename their endpoint bodies or make them batch actions.
 
-화면정의서 SS 15에 "[다먹음] -> ATE_LIST로 이동"으로 명시되어 있다.
-이동 방식은 두 가지 해석이 가능하다:
+### 6.2 Weight/batch truth
 
-- **해석 A**: [다먹음] 탭 시 즉시 ATE_LIST 화면으로 route 이동 (push)
-- **해석 B**: [다먹음] 처리 후 LEFTOVERS에 머무르고, ATE_LIST 탭으로 전환 가능
+| Projection | Required label and values | #11 actions | Forbidden |
+| --- | --- | --- | --- |
+| `known + available` | finished/remaining g; nutrition status; revision | `버림`, `양 조정` | consumed-amount CTA before #12 |
+| `missing + available` | `무게 입력 필요`; no zero/estimate | `완성 중량 입력`, `원래 무게를 알 수 없음`, `무게 없이 종료` | g meal-log, guessed grams |
+| `unrecoverable + available` | `원래 무게 확인 불가`; weight values remain null | `무게 없이 종료` | weight input, restore, marker reversal, g meal-log |
+| legacy all-null authority | `이전 기록 · 중량 상태를 확인할 수 없음` | none; card copy is locally complete | treating as missing, unrecoverable, available, or depleted; detail endpoint/action |
+| `depleted` | one exact reason label; known weights may show remaining 0g | read-only; exact current-closure cancel only when projection provides eligibility | weight/discard/adjust/close/consume controls; generic reopen |
 
-화면정의서 문구("ATE_LIST로 이동")를 존중하여 **해석 A를 기본으로 채택**한다.
-단, 여러 남은요리를 연속으로 처리하는 사용 패턴을 고려하면 해석 B가 사용성에 유리할 수 있다.
-이 결정은 디자인 리뷰에서 재확인이 필요하다.
+### 6.3 Depleted reason labels
 
-### 스크롤 정책
+| `depleted_reason` | User label | Legacy eaten / XP meaning |
+| --- | --- | --- |
+| `consumed` | `다 먹음` | yes |
+| `discarded` | `모두 버림` | no |
+| `mixed` | `먹음·버림으로 소진` | no |
+| `consumed_unweighed` | `무게 없이 다 먹음` | yes |
+| `discarded_unweighed` | `무게 없이 모두 버림` | no |
+| `mixed_unweighed` | `무게 없이 먹고 버림` | no |
 
-| 영역 | 스크롤 방향 | 비고 |
-|------|-----------|------|
-| 남은요리 카드 리스트 | 세로 스크롤 | 화면 본문 전체가 세로 스크롤 |
-| AppBar | 고정 (sticky) | 스크롤 시 상단 고정 |
-| 하단 탭바 | 고정 (sticky) | 스크롤 시 하단 고정 |
-| PlannerAddSheet 날짜 chip rail | 가로 스크롤 | 바텀시트 내부 localized scroll |
-| 페이지 전체 | 가로 스크롤 금지 | whole-page horizontal scroll 금지 원칙 |
+Only the two consumed variants may look eaten. Discarded and mixed variants must not use eaten color, icon, copy, navigation, or celebration.
 
----
+### 6.4 Screen and request states
 
-## 화면 정의서 매핑
+| Scope/state | Visible response | Action behavior |
+| --- | --- | --- |
+| page `loading` | two stable section shells; each source reports its own progress | no stale/guessed buttons |
+| legacy section `empty` | official `남은 요리가 없어요. 요리를 완료하면 여기에 저장돼요.`; ATE_LIST link remains | safe Planner return; no fabricated batch meaning |
+| batch section `empty` | `중량·잔량 기록이 없어요` | no batch action; legacy section remains usable |
+| either section read `error` | source-local non-private retry message | retry only that source; the other section remains visible |
+| legacy `ready` | `/leftovers` recent order and exact legacy metadata | planner-add/eat/keep only; ATE_LIST remains separate route |
+| batch first page `ready` | authoritative `cooked_at DESC, id DESC` cards | state-eligible #11 actions and `더 보기` only |
+| batch next pending | existing cards + `더 불러오는 중` | one page request; all card/action state preserved |
+| batch next error | loaded cards + alert + retry | same cursor retry; mutation 0 |
+| batch cursor/filter 422 | loaded cards + `목록 조건이 바뀌었어요` | first-page refresh without cursor; no cursor repair/decoding |
+| `permission` 401 | login guidance | return-to-action; private cards not rendered |
+| private 404 | same nondisclosing missing message | safe back; no owner/state clue |
+| batch `read-only` | batch-model legacy unknown or depleted truth | no mutation affordance except exact eligible current-closure cancel |
+| mutation pending | values retained; progress/live status | duplicate submit, Escape, backdrop, and close locked |
+| 409 stale/state/bounds | actionable alert; refreshed card truth | input retained if still safe; require fresh deliberate retry |
+| 409 `WEIGHT_UNRECOVERABLE` | card refreshes to unrecoverable | all gram controls removed; no restore offered |
+| 409 `BATCH_ADJUSTMENT_INVALID` | reason/delta retained | correct input; no optimistic result |
+| 422 validation | field-linked message | focus alert then first invalid field |
+| same-key replay | stored result rendered once | one sheet close/card update; no duplicate feedback/effect |
+| same-key different payload | existing conflict alert | mutation 0; new deliberate action required |
 
-| 정의서 항목 (SS 15) | 구현 여부 | 비고 |
-|---------------------|----------|------|
-| 권한: 로그인 필요 | 해당 | 비로그인 시 로그인 게이트 모달 |
-| 남은요리 리스트 (최근순) | 해당 | cooked_at DESC, GET /leftovers |
-| 아이템 카드: 레시피명 | 해당 | text-lg, 1줄 말줄임 |
-| 아이템 카드: 생성일(요리완료일) | 해당 | "N월 D일 요리완료" 포맷 |
-| [다먹음] -> ATE_LIST 이동 | 해당 | POST /leftovers/{id}/eat -> route push |
-| [플래너에 추가] -> 날짜/끼니 선택 + 인분 입력 | 해당 | PlannerAddSheet 바텀시트 |
-| Meal 생성 (is_leftover=true) | 해당 | POST /meals with leftover_dish_id |
-| Empty: "남은 요리가 없어요..." | 해당 | 정의서 문구 그대로 사용 |
+The page is fully empty only when both independent sections are empty. Even then, the existing ATE_LIST route remains reachable if its product navigation normally exposes it; the page does not infer its contents from either empty response.
 
-| 요구사항 항목 (SS 1-7) | 구현 여부 | 비고 |
-|------------------------|----------|------|
-| 요리완료 시 자동 추가 | 해당 | 데이터 수신 측 (이 화면은 표시만) |
-| 최근순 정렬 | 해당 | cooked_at DESC |
-| 다먹음 처리 -> 다먹은 목록 이동 | 해당 | status=eaten, ATE_LIST route |
-| 플래너에 추가로 재활용 | 해당 | PlannerAddSheet -> POST /meals |
-| 30일 후 자동 숨김 | 해당 아님 (ATE_LIST 정책) | LEFTOVERS에서는 leftover 상태만 표시 |
+## 7. Action interaction notes
 
-| 유저플로우 항목 (SS 6) | 구현 여부 | 비고 |
-|------------------------|----------|------|
-| PLANNER_WEEK -> [남은요리] -> LEFTOVERS | 해당 | 뒤로가기 연결 포함 |
-| [다먹음] -> status=eaten, ATE_LIST 이동 | 해당 | POST /leftovers/{id}/eat |
-| [플래너에 추가] -> 날짜/끼니/인분 -> Meal 생성 | 해당 | PlannerAddSheet |
-| Meal (is_leftover=true, leftover_dish_id) | 해당 | API 계약 준수 |
-| LEFTOVERS <-> ATE_LIST | 해당 | 다먹음 -> ATE_LIST, 덜먹음 -> LEFTOVERS (ATE_LIST 측 구현) |
+### Legacy action group
 
----
+- `플래너에 추가` opens the existing `PlannerAddSheet` with its date/meal/serving controls and existing `POST /meals` body containing the exact legacy `leftover_dish_id`. It never receives a `batch_id`.
+- `다먹음` and `계속 보관` use the exact legacy card `leftover_id`. ATE_LIST reads its own `/leftovers?status=eaten` response, and `덜먹음` uses the exact ID from that response.
+- A legacy action pending/error is confined to its legacy card/sheet. It does not disable, remove, or update a visually similar batch card. Likewise, a batch success never optimistically changes a legacy card.
+- Existing stale-review, PlannerAddSheet, `다먹음`, ATE_LIST, and `덜먹음` focus/error/return behavior stays protected by current tests. #11 adds no new legacy mutation or navigation.
 
-## 320px 대응 (작은 모바일 sentinel)
+### Shared bottom-sheet behavior
 
-- 카드 내부 패딩: --space-4 (16px) -> --space-3 (12px) 축소
-- 컨테이너 좌우 여백: --space-4 (16px) -> --space-3 (12px)
-- 레시피명: text-lg (18px) 유지, 1줄 말줄임 확보
-- 버튼 row: flex-wrap 허용하지 않음 -- 두 버튼이 같은 행에 유지
-  - [다먹음] min-width를 줄여 공간 확보 (텍스트 기반 자동 크기)
-  - [플래너에 추가] min-width를 축소하되 44px 높이 유지
-- 바텀시트 날짜 chip: chip 내부 패딩 축소, 가로 스크롤로 대응
+This behavior applies to the #11 cooked-batch action sheets and to the existing PlannerAddSheet where its current contract already matches. It does not silently convert legacy `다먹음` or `계속 보관` into new sheets.
 
-320px에서 확인해야 할 blocker:
-- [ ] 두 버튼이 한 행에 나란히 표시되는지 (잘림 없음)
-- [ ] 레시피명이 1줄 말줄임으로 표시되는지
-- [ ] 터치 타겟 44px 유지 여부 (두 버튼 모두)
-- [ ] 바텀시트 날짜 chip이 잘리지 않고 가로 스크롤 가능한지
-- [ ] 바텀시트 stepper의 +/- 버튼이 44px 유지되는지
+1. Invoking CTA is stored for focus restoration.
+2. Sheet opens with initial focus on the title; background is inert and scroll-locked.
+3. In a non-destructive sheet, focus order is title → help → inputs/radios → primary submit → cancel/close. In a destructive or irreversible confirmation, the safe cancel action precedes the danger confirm in both DOM and visual order; initial focus never lands on the danger action.
+4. Tab and Shift+Tab are trapped. Escape, close button, and cancel dismiss only while not pending.
+5. Cancel/dismiss returns focus to the exact invoking card CTA. Success moves focus to the updated card heading/status.
+6. 409/422 moves focus to a `role=alert` summary connected through `aria-describedby`; correctable values stay present.
+7. Pending uses `role=status`, disables all actions, blocks duplicate pointer/keyboard submit, and prevents ambiguous dismiss.
 
----
+### Delayed weight
 
-## 디자인 결정 사항
+- Open only for explicit `missing+available`.
+- Require positive original food-only total and explicit no-eating/no-discard confirmation.
+- On success render the returned known projection. On eligibility conflict keep the input only if still safe and refresh the server card.
+- `WEIGHT_UNRECOVERABLE` immediately removes input and transitions visual truth to unrecoverable.
 
-1. **썸네일 미포함**: 화면정의서 SS 15에 카드 구성이 "레시피명, 생성일(요리완료일), 버튼"으로 명시되어 있고 썸네일 언급이 없다. API 응답에 `recipe_thumbnail_url`이 포함되지만, 정의서를 존중하여 카드에 썸네일을 포함하지 않는다. 이로 인해 카드가 텍스트 중심의 간결한 형태가 되며, 리스트의 정보 밀도가 높아진다.
+### Mark unrecoverable
 
-2. **카드 그림자 --shadow-1 선택**: COOK_READY_LIST 등 유사 리스트가 --shadow-2를 사용하나, 남은요리 카드는 썸네일 없이 텍스트+버튼만 있어 시각적으로 가볍다. --shadow-1로 절제하여 따뜻한 배경(--background)과 조화를 맞춘다. 디자인 리뷰에서 --shadow-2로 상향 가능하다.
+- Present as irreversible/danger secondary, never as the default primary path.
+- Confirmation explicitly states no later grams, known restore, g nutrition, or g meal-log.
+- Success and same-result replay close once. Existing `WEIGHT_UNRECOVERABLE` also refreshes and locks the UI.
 
-3. **[다먹음] 후 ATE_LIST 이동**: 정의서에 "ATE_LIST로 이동"이 명시되어 있으나, 연속 처리 패턴에서 매번 화면 전환이 발생하면 사용성이 떨어질 수 있다. 기본안은 정의서 문구를 따르되, 리뷰 시 "LEFTOVERS 유지 + 토스트 안내" 대안을 검토한다.
+### Discard / adjust
 
-4. **PlannerAddSheet 재사용**: 화면정의서 SS 15의 "[플래너에 추가] -> 날짜/끼니 선택 + 계획 인분 입력"은 RECIPE_DETAIL의 PlannerAddPopup (SS 3, v1.5.0)과 동일한 입력 구조다. 같은 컴포넌트를 재사용하고, 차이점은 API 호출 시 `leftover_dish_id`를 포함하는 것뿐이다.
+- Discard requires grams, reason, revision, and a confirmation summary with calculated remaining guidance.
+- Adjustment requires signed delta, reason, and revision; negative delta gets the same summary step.
+- All previews are non-authoritative. Only the returned `batch` changes the displayed remaining/status/reason.
+- Discard and adjustment remain hidden unless the already-merged #8 reader-before-writer cutover is confirmed in the implementation lineage.
 
-5. **날짜 표시 포맷**: 정의서에 "생성일(또는 요리완료일)"로 명시. API 응답의 `cooked_at`을 사용하여 "N월 D일 요리완료"로 표시한다. cooked_at은 NOT NULL 필드이므로 항상 존재한다.
+### Unweighed close / cancel current
 
-6. **CTA 위계**: [플래너에 추가]가 primary(filled --brand), [다먹음]이 secondary(outlined)다. 남은요리를 다시 활용하는 것이 서비스 핵심 사이클(요리 -> 남은요리 -> 재등록)에 부합하므로 플래너 추가를 강조한다.
+- Close is available only for missing/unrecoverable + available and requires exact `consumed|discarded|mixed` plus no-grams/no-nutrition confirmation.
+- Cancel uses the exact projected `current_unweighed_closure_event_id`, current revision, and `action=cancel_current` only.
+- There is no generic reopen label, no cancel of a non-current closure, and no reversal of `marked_unrecoverable`.
 
-7. **하단 탭바 노출**: LEFTOVERS는 PLANNER_WEEK의 하위 화면이지만 full-page route이므로 하단 탭바를 유지한다. COOK_MODE(전체화면 몰입형)와 달리 일반 navigation 흐름이다.
+## 8. Permission, idempotency, and replay
 
----
+- All reads and mutations are owner-only. Other-owner/missing batch stays the same `404 RESOURCE_NOT_FOUND` with `fields=[]` and no existence clue.
+- Every mutation sends a UUID `Idempotency-Key` and the current `expected_revision` required by the existing contract.
+- A retry of the same canonical payload reuses the operation key. Editing any canonical payload field creates a new deliberate key; the client never retries a changed payload under the old key.
+- Same-key replay consumes exact stored `action`, `batch`, and nullable `event_id`; it updates the card and closes once without duplicate toast, animation, event, or XP projection.
+- The client never authors `remaining_weight_g`, `batch_status`, `depleted_reason`, revision, nutrition state, or replay result.
 
-## Anchor Screen 영향 분석
+## 9. Data and API binding
 
-- **PLANNER_WEEK 의존**: 이 화면은 PLANNER_WEEK 상단 [남은요리] CTA에서 진입한다.
-- **Anchor extension 해당 여부**: 해당하지 않음. PLANNER_WEEK에 이미 [남은요리] 버튼이 화면정의서 SS 5에 명시되어 있고, 이 슬라이스는 그 버튼의 목적지 화면을 구현하는 것이다. PLANNER_WEEK의 핵심 CTA 추가/변경이 아니다.
-- **모바일 UX 리스크**: 낮음. 단순 리스트 화면으로, 가로 스크롤 없음, 바텀시트는 PlannerAddPopup 재사용.
+### 9.1 Legacy leftover-management read model
 
----
+`GET /leftovers?status=leftover` and the separate ATE_LIST `GET /leftovers?status=eaten`
 
-## 접근성 노트
+| Legacy UI | Existing field/source |
+| --- | --- |
+| card identity | `items[].id` as `leftover_id` only |
+| recipe/title/thumbnail | `recipe_id`, `recipe_title`, `recipe_thumbnail_url` |
+| time/status | `cooked_at`, `eaten_at`, `status` |
+| stale review | `stale_reviewed_at` |
+| planner context | `source_meal_label`, `source_planned_servings`, `cooking_servings` |
+| planner reuse | existing `POST /meals` with exact `leftover_dish_id` |
+| done / undo / keep | existing `/leftovers/{leftover_id}/eat|uneat|keep` |
 
-- **[다먹음] 버튼**: `aria-label="레시피명 다먹음 처리"` -- 스크린 리더가 어떤 요리의 다먹음인지 구분 가능
-- **[플래너에 추가] 버튼**: `aria-label="레시피명 플래너에 추가"` -- 동일 원칙
-- **카드 구조**: 각 카드는 `article` 또는 `li` 역할, 레시피명은 카드 제목 역할
-- **바텀시트**: `role="dialog"`, `aria-modal="true"`, 열릴 때 포커스 트랩 적용
-- **바텀시트 닫기**: Escape 키로 닫기 지원
-- **날짜 chip**: 선택 상태를 `aria-selected`로 전달
-- **끼니 segmented**: `role="radiogroup"` + 각 항목 `role="radio"`
-- **색상 대비**: --brand (#ED7470) on white 배경은 WCAG AA large text 기준 통과, 작은 텍스트에서는 --brand-deep (#C84C48) 사용 검토
-- **터치 타겟**: 모든 인터랙티브 요소 최소 44x44px
+This read model is the only source for PlannerAddSheet, `다먹음`, ATE_LIST, `덜먹음`, stale banner, and `계속 보관`. None of its fields authorize a cooked-batch mutation or supply `expected_revision`.
 
----
+### 9.2 Cooked-batch read model
 
-## design-critic 검토 필요 항목
+`GET /cooked-batches?availability=all&limit=20[&cursor=opaque]`
 
-- [ ] [다먹음] 후 ATE_LIST 즉시 이동 vs LEFTOVERS 유지 -- 연속 처리 사용성 확인
-- [ ] 썸네일 없는 카드의 시각적 밀도가 충분한지 -- 너무 텍스트만으로 밋밋하지 않은지
-- [ ] 두 버튼이 320px에서 같은 행에 배치 가능한지 (최소 폭 계산 필요)
-- [ ] [다먹음] 낙관적 UI의 fade-out 시간 -- 실수 복구(undo) 기회를 제공할지 여부
-- [ ] 빈 상태 일러스트가 서비스 톤(Baemin 따뜻한 주방)과 일치하는지
-- [ ] 카드가 1개만 있을 때의 화면 밀도 -- 여백이 과하지 않은지
-- [ ] PlannerAddSheet에서 기본 선택 날짜를 오늘로 할지, 다음 빈 슬롯으로 할지
-- [ ] [다먹음] 확인 모달 필요 여부 -- 실수 방지 vs 빠른 처리 트레이드오프
+| UI | Existing `CookedBatchProjection` field |
+| --- | --- |
+| recipe title/thumbnail | `recipe_title`, `recipe_thumbnail_url` |
+| cooked metadata | `cooked_at`, `cooking_servings` |
+| weight values | `finished_weight_g`, `remaining_weight_g`, `weight_status` |
+| lifecycle truth | `batch_status`, `depleted_reason` |
+| request concurrency | `revision` |
+| nutrition copy | `nutrition_calculation_status` |
+| exact cancel eligibility | `current_unweighed_closure_event_id` |
+| legacy compatibility only | `status`; never overrides new non-null authority |
+
+All 15 fields are present for authorized items, but legacy-only fields may be explicit `null`. The UI never derives grams or state from servings, title, thumbnail, or legacy `status`.
+
+The card itself completes the read-only legacy-null presentation with `recipe_title`, optional thumbnail, `cooked_at`, optional `cooking_servings`, and the explicit unknown labels derived only from null authority fields. There is no `[상세 확인]`, detail route, detail endpoint, hidden read, or mutation for that card.
+
+Nutrition copy:
+
+- `complete` → `영양 계산 가능`
+- `partial` → `일부 영양 정보 없음`
+- `unavailable` → `영양 정보 없음`
+- legacy `null` → `영양 상태를 확인할 수 없음`
+
+Pagination container and client rules:
+
+- Consume only exact `{ items, next_cursor, has_next }`.
+- `next_cursor` is opaque and filter-bound; the client neither interprets nor modifies it.
+- Append only within the batch section in server-provided `cooked_at DESC, id DESC` order, suppressing an overlapping duplicate `batch.id` without joining either read model.
+- Page state (`idle|pending|error`) is local UI state, not a new public status or response field.
+
+### 9.3 Existing cooked-batch mutation bodies
+
+| User action | Existing request |
+| --- | --- |
+| delayed weight | `PATCH /cooked-batches/{id}/weight` `{ action:"set_finished_weight", finished_weight_g, expected_revision }` |
+| mark unknown forever | `PATCH /cooked-batches/{id}/weight` `{ action:"mark_unrecoverable", expected_revision }` |
+| discard | `POST /cooked-batches/{id}/discard` `{ discarded_g, reason, expected_revision }` |
+| adjust | `POST /cooked-batches/{id}/adjust` `{ delta_g, reason, expected_revision }` |
+| unweighed close | `POST /cooked-batches/{id}/close-unweighed` `{ action:"close", closure_reason, expected_revision }` |
+| exact cancel | same endpoint `{ action:"cancel_current", reverses_event_id, expected_revision }` |
+
+Every success uses exact 3-key `{ action, batch, event_id }`. The wrapper remains `{ success, data, error }`; error remains `{ code, message, fields[] }`. No alias field, local status, new error name, or new mutation action is added.
+
+No endpoint in this table receives a `leftover_id`. No legacy endpoint in §9.1 receives a `batch_id`, batch revision, or batch event ID.
+
+## 10. Visual hierarchy and tokens
+
+- Use current app palette and shape tokens: `--brand-primary`, `--brand-primary-soft`, `--surface`, `--surface-fill`, `--text-2/3`, `--line`, `--danger`, `--danger-border`, `--radius-control/card/sheet`, `--control-height-md/lg`.
+- General card/section dividers use canonical `--line`; destructive confirmation borders use existing `--danger-border`. Do not add `--border`, a new global token, fallback hex, or ad-hoc color in this slice.
+- Known remaining grams are the strongest card datum after the recipe title. Status labels are text plus shape/icon, not color alone.
+- Unblocking `완성 중량 입력` is primary for missing state. Irreversible `원래 무게를 알 수 없음` is a separated danger secondary action.
+- `버림` is destructive secondary; `양 조정` is neutral secondary. Neither visually competes with a future #12 consumed CTA.
+- Depleted cards reduce action affordance and emphasize terminal reason. Consumed, discarded, and mixed use distinct text/icon treatment; discarded/mixed never use eaten celebration styling.
+- The required existing stale-storage notice stays visually separate from batch weight status and cannot introduce a new depleted reason.
+
+## 11. Accessibility contract
+
+- `남은요리 관리` and `중량·잔량 기록` are real section headings in the accessibility tree. Card accessible names include their section context so same-title records remain distinguishable without exposing IDs.
+- Card actions include recipe context: `김치찌개 버린 양 기록`, `김치찌개 남은 양 조정`, `닭볶음탕 완성 중량 입력`.
+- Numeric inputs have 16px+ text, visible unit, explicit label, `inputMode=decimal`, and field-linked errors. Reason input has a programmatic label and visible requirement.
+- Radio groups expose group labels and checked state. Irreversible confirmations are not prechecked.
+- Updated batch status is announced politely; mutation failure uses a live alert. Status meaning is not conveyed by color alone.
+- Batch-page append uses one polite announcement with the appended count. Focus behavior follows §4.6; cursor text and internal pagination state are never announced.
+- Every interactive target is 44×44px minimum. At 320px, controls stack and text reflows without horizontal scrolling or content loss.
+- Raw UUIDs, opaque cursor, revision integer, and event ID may be used internally. If revision is shown to satisfy auditability, it is labeled `기록 버전 N`, not exposed as an unlabeled developer value. Event IDs/cursors are never displayed or announced.
+
+## 12. Evidence plan and limitations
+
+Stage 4 must create fresh implementation evidence under `ui/designs/evidence/cooked-batch-weight-ui/` for 390px, 320px, and desktop. It must cover:
+
+- both section headings in one viewport/scroll journey, with legacy and batch action groups visibly separated;
+- legacy PlannerAddSheet, `다먹음`, ATE_LIST/`덜먹음`, stale-review/`계속 보관` preservation and exact legacy-ID routing;
+- no title/date/recipe/ID join, cross-source dedupe, legacy action on a batch card, or weight action on a legacy card;
+- known available with discard/adjust and no #12 consumed CTA;
+- missing delayed-weight confirmation;
+- unrecoverable irreversible confirmation and post-409 lock;
+- unweighed close plus exact current cancel eligibility;
+- batch-model legacy unknown/null as a complete read-only card with no `[상세 확인]`, distinct from every depleted reason;
+- all six depleted labels and read-only affordance removal;
+- independent section loading/empty/read error plus unauthorized/private nondisclosure, mutation pending, stale revision, 422, replay;
+- `더 보기` idle/pending/error/retry/final-page and filter-bound cursor 422 refresh, stable append/dedupe, action-state preservation, focus, and announcement;
+- sheet internal scroll, fixed CTA, safe area, 44px targets, 16px numeric input, keyboard avoidance, and no overflow.
+
+`ui/designs/evidence/cooked-batch-weight-ui/manifest.json` must record implementation head SHA, capture time, viewport, state, and path. Fresh authority reports may cite only that post-implementation manifest and artifacts.
+
+This Markdown and its ASCII wireframes do not prove runtime keyboard navigation, focus order/trap/restore, Escape behavior, virtual-keyboard occlusion, computed target size, screen-reader labels/live errors, contrast, or WCAG conformance. Static PNGs will prove only visible layout states. DOM/runtime tests plus Manual physical keyboard, real-device safe area, and VoiceOver/TalkBack checks remain separate. No runtime screenshot, full WCAG, or final authority claim is made in Stage 1.
+
+## 13. Independent review handoff
+
+- Fresh critic path: `ui/designs/critiques/LEFTOVERS-cooked-batch-weight-ui-critique.md`
+- Future runtime authority path: `ui/designs/authority/LEFTOVERS-authority.md`
+- The design-generator author does not write either report and does not approve this design.
+- Critic must check current tuple and exact evidence roles, #8 contract reuse, #9/#12 exclusions, required legacy feature preservation, two-source identity/action isolation, 390/320 two-section hierarchy, cursor pagination, all state and depleted distinctions, permission/replay, sheet behavior, keyboard/focus/accessibility, canonical tokens, and the no-runtime-claim boundary.
