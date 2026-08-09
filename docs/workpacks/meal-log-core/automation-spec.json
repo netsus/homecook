@@ -14,6 +14,7 @@
       "GET /cooked-batches predecessor batch availability reader"
     ],
     "invariants": [
+      "current-official-tuple-and-approved-cooking-plan-sha256-d4d0fb39-1018-lines",
       "owner-generation-rls-and-nondisclosure",
       "cooked-batch-food-product-ingredient-exact-one-source",
       "nullable-consumed-at-required-local-date-iana-zone-and-slot-snapshot",
@@ -28,6 +29,8 @@
       "deleted-slot-not-new-write-target",
       "recent-frequent-owner-generation-safe-source-and-opaque-cursor",
       "uuid-idempotency-key-generation-canonical-payload-hash",
+      "post-patch-delete-malformed-uuid-key-exact-400-invalid-idempotency-key",
+      "malformed-uuid-key-whole-operation-zero-write-mutation-operation-entry-event-pointer-projection-aggregate",
       "server-pinned-slot-display-and-exact-nutrition-evidence",
       "batch-known-available-enough-remaining-row-lock",
       "entry-event-pointer-full-replay-operation-result-one-transaction",
@@ -64,6 +67,7 @@
       "pnpm test:meal-log-core:postgres",
       "pnpm verify:backend",
       "pnpm test:e2e:regression:ci --grep meal-log-core",
+      "pnpm exec vitest run tests/meal-log-core-stage1-repair.test.ts",
       "pnpm validate:source-of-truth-sync",
       "pnpm validate:workflow-v2",
       "BRANCH_NAME=docs/meal-log-core pnpm validate:workpack -- --slice meal-log-core",
@@ -79,12 +83,17 @@
       "tests/meal-log-core-postgres.integration.test.ts",
       "three-source-exact-one-and-owner-generation-evidence",
       "create-patch-delete-operation-replay-and-zero-write-evidence",
+      "post-patch-delete-malformed-idempotency-key-exact-400-and-whole-operation-zero-write-evidence",
       "entry-event-pointer-deferred-constraint-and-account-cleanup-evidence",
       "batch-interleaving-full-replay-bounds-checksum-evidence",
       "timezone-null-instant-dst-and-no-regroup-evidence",
       "exact-product-ingredient-evidence-and-conversion-failure-evidence",
       "complete-partial-unavailable-slot-day-aggregate-evidence",
       "merged-exact-sha-server-production-local-rehearsal-read-only-function-policy-capability-evidence"
+    ],
+    "artifact_assertions": [
+      "approved-cooking-plan-sha256-d4d0fb39-and-1018-line-lock",
+      "post-patch-delete-malformed-idempotency-key-exact-400-and-seven-surface-zero-write"
     ]
   },
   "frontend": {
@@ -110,6 +119,7 @@
     "merged-exact-SHA server-production/local-rehearsal read-only meal-log schema function ACL RLS constraint and capability inventory",
     "two-owner three-source nondisclosure and before-after multi-table digests",
     "same-key replay and different-payload zero-effect",
+    "POST PATCH DELETE malformed UUID key exact 400 INVALID_IDEMPOTENCY_KEY and seven-surface zero-write",
     "interleaved batch entries own-event reversal and full-replay checksum",
     "IANA timezone DST null-instant and historical no-regroup",
     "product-version ingredient-profile conversion provenance and aggregate state",
@@ -119,6 +129,7 @@
     "stage1-artifacts-not-approved-by-separate-codex-internal-1.5-reviewer",
     "stage1-author-self-approval-or-claude-use",
     "official-doc-approved-plan-or-plan-hash-line-drift",
+    "post-patch-delete-malformed-uuid-key-not-exact-400-or-any-mutation-operation-entry-event-pointer-projection-aggregate-write",
     "runtime-predecessor-1-2-4-or-8-not-merged-green-before-implementation",
     "owner-generation-rls-nondisclosure-or-account-cleanup-order-missing",
     "source-or-evidence-not-exact-one",
@@ -144,5 +155,5 @@
     "backend": 6,
     "frontend": 0
   },
-  "notes": "High-risk DB/security/concurrency Stage 1 backend lock. Stage 1 runs only current docs validators, focused tests, lint, typecheck, audit and diff. Runtime/PostgreSQL/real DB/E2E/server-production/local-rehearsal evidence is future. Implementation waits for #1, #2, #4 and #8 runtime. #9 owns meal-log schema/RLS/RPC/API and exact evidence; #10 owns Planner shell, #12 owns MEAL_LOG UI/design, and production activation remains Manual Only."
+  "notes": "High-risk DB/security/concurrency Stage 1 backend lock on current official tuple v1.7.30/v1.5.34/v1.3.32/v1.3.32/v1.2.37 and approved cooking-plan SHA d4d0fb39 (1,018 lines). Stage 1 runs only current docs validators, focused tests, lint, typecheck, audit and diff. Runtime/PostgreSQL/real DB/E2E/server-production/local-rehearsal evidence is future. Implementation waits for #1, #2, #4 and #8 runtime. #9 owns meal-log schema/RLS/RPC/API and exact evidence; #11 may proceed in parallel only within COOK_MODE/LEFTOVERS #8-consumer UI ownership; #10 owns Planner shell, #12 owns MEAL_LOG UI/design, and production activation remains Manual Only."
 }

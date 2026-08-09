@@ -1,6 +1,7 @@
 # Acceptance Checklist
 
 > This Stage 1 document locks future meal-log backend and release evidence. Unchecked items do not claim that schema, RPCs, routes, real DB, E2E, #12 UI, local-first production/rehearsal verification, or production activation already exist.
+> Official authority is the current tuple `v1.7.30/v1.5.34/v1.3.32/v1.3.32/v1.2.37` and the Cooking Plan / Meal Log master-plan lineage SHA-256 `d4d0fb39e80eeffc8b1e73ad92f0d91a35a9b6adc57a556ea8c9ec6ecffa951d`, 1,018 lines.
 
 ## Schema / Ownership
 
@@ -37,6 +38,9 @@
 ## Patch / Delete / Idempotency
 
 - [ ] PATCH requires a fresh UUID key and expected revision <!-- omo:id=accept-meal-log-patch-key-revision;stage=2;scope=backend;review=3,6 -->
+- [ ] POST malformed UUID Idempotency-Key returns exact `400 INVALID_IDEMPOTENCY_KEY` and leaves mutation/operation/entry/event/pointer/projection/aggregate at zero <!-- omo:id=accept-meal-log-post-invalid-idempotency-key;stage=2;scope=backend;review=3,6 -->
+- [ ] PATCH malformed UUID Idempotency-Key returns exact `400 INVALID_IDEMPOTENCY_KEY` and leaves mutation/operation/entry/event/pointer/projection/aggregate at zero <!-- omo:id=accept-meal-log-patch-invalid-idempotency-key;stage=2;scope=backend;review=3,6 -->
+- [ ] DELETE malformed UUID Idempotency-Key returns exact `400 INVALID_IDEMPOTENCY_KEY` and leaves mutation/operation/entry/event/pointer/projection/aggregate at zero <!-- omo:id=accept-meal-log-delete-invalid-idempotency-key;stage=2;scope=backend;review=3,6 -->
 - [ ] batch PATCH reverses its own current event, appends replacement and swaps pointer atomically <!-- omo:id=accept-meal-log-patch-event-swap;stage=2;scope=backend;review=3,6 -->
 - [ ] event identity, not order or equal amount, selects the reversal target <!-- omo:id=accept-meal-log-event-identity;stage=2;scope=backend;review=3,6 -->
 - [ ] source changes handle old batch reversal and new batch replacement in the same transaction <!-- omo:id=accept-meal-log-source-change-atomic;stage=2;scope=backend;review=3,6 -->
@@ -77,7 +81,7 @@
 ## Error / Contract Safety
 
 - [ ] responses retain official wrapper and exact public codes <!-- omo:id=accept-meal-log-wrapper;stage=2;scope=backend;review=3,6 -->
-- [ ] 401/404 preserve nondisclosure and all 409/422/428/503 failures are whole-operation zero-write <!-- omo:id=accept-meal-log-errors;stage=2;scope=backend;review=3,6 -->
+- [ ] 401/404 preserve nondisclosure and all 400/409/422/428/503 failures are whole-operation zero-write <!-- omo:id=accept-meal-log-errors;stage=2;scope=backend;review=3,6 -->
 - [ ] no unofficial endpoint, source type, field, aggregate state, error or screen is introduced <!-- omo:id=accept-meal-log-no-contract-invention;stage=2;scope=shared;review=3,6 -->
 - [ ] implementation waits for #1+#2+#4+#8 runtime and required checks green <!-- omo:id=accept-meal-log-predecessors;stage=2;scope=shared;review=3,6 -->
 - [ ] no unmerged migration, external-provider mutation or production capability/flag change occurs <!-- omo:id=accept-meal-log-no-production-write;stage=2;scope=backend;review=3,6 -->

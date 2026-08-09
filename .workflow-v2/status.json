@@ -2567,7 +2567,7 @@
     {
       "id": "meal-log-core",
       "preset": "vertical-slice-strict",
-      "branch": "docs/meal-log-core",
+      "branch": "docs/meal-log-core-stage1-repair",
       "pr_path": "pending",
       "lifecycle": "planned",
       "approval_state": "not_started",
@@ -2582,11 +2582,12 @@
         "pnpm test:meal-log-core:postgres",
         "pnpm verify:backend",
         "pnpm test:e2e:regression:ci --grep meal-log-core",
+        "pnpm exec vitest run tests/meal-log-core-stage1-repair.test.ts",
         "pnpm validate:closeout-sync -- --slice meal-log-core",
         "node scripts/verify-meal-log-core-local-first.mjs --mode post-merge-read-only",
         "git diff --check"
       ],
-      "notes": "Roadmap moves to docs while workflow lifecycle remains planned. Approval stays not_started until separate Codex internal1.5, security/DB and five-axis reviews reach zero findings. Stage 1 current commands are docs validators/tests/lint/typecheck/audit/diff; implementation evidence is future. Runtime waits for #1, #2, #4 and #8. #9 owns meal-log backend; #10 owns Planner shell, #12 owns MEAL_LOG UI/design, and production activation remains Manual Only.",
+      "notes": "Stage 1 repair branch docs/meal-log-core-stage1-repair starts from repair parent/HOLD report 076c5b22ec91dd600eb387be4930a2582054ac15 over governing master base c16102a3072e929e45bb24a69464cd3110d03db5. Repair author task 019fe746-8d84-7cd2-9f12-9c22560e914f closes P1-01/P1-02 only; fresh independent internal 1.5 rereview is still required. Roadmap remains docs, workflow lifecycle planned, approval not_started and verification pending. Stage 1 current commands are docs validators/tests/lint/typecheck/audit/diff; implementation evidence is future. Runtime waits for #1, #2, #4 and #8. #9 owns meal-log backend; #11 parallel work remains limited to #8-consumer COOK_MODE/LEFTOVERS UI, #10 owns Planner shell, #12 owns MEAL_LOG UI/design, and Manual/server-Mac/OAuth evidence, capability, R/R+1/R+2 activation remain pending.",
       "evaluation_status": "not_started",
       "evaluation_round": 0,
       "last_evaluator_result": null,
