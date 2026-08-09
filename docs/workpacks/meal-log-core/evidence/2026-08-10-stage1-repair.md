@@ -9,9 +9,13 @@
 - governing master base: `c16102a3072e929e45bb24a69464cd3110d03db5`
 - repair parent / immutable HOLD report commit: `076c5b22ec91dd600eb387be4930a2582054ac15`
 - repair start tree: `f89f56be65e142f0c5693ec42a3d63e596317721`
+- validated repair content commit: `f950353979ca61ca55ed2a301656fcbc254feb76`
+- validated repair content tree: `454ff0ba541bdb6e59010310a88aec6030a2c965`
 - HOLD report: `docs/workpacks/meal-log-core/evidence/2026-08-10-stage1-internal1-5-review.md` (read-only)
 - self-approval: forbidden
 - fresh independent internal 1.5 rereview required
+
+The final branch head after this evidence-only record commit is intentionally reported in the task handoff rather than embedded here because a commit cannot contain its own SHA.
 
 The current external plan file is a later local-first revision. The approved #9 Cooking Plan / Meal Log lineage is instead the repo-portable authority in `docs/sync/CURRENT_SOURCE_OF_TRUTH.md`: SHA-256 `d4d0fb39e80eeffc8b1e73ad92f0d91a35a9b6adc57a556ea8c9ec6ecffa951d`, 1,018 lines.
 
