@@ -494,18 +494,31 @@ describe("full-local session lifecycle evidence contract", () => {
     )).toThrow(/database_catalog_marker/u);
   });
 
-  it("detects the request transaction read-only authority marker before the earlier refresh marker", () => {
+  it("reports the 110000 migration head only after the exact live authorization contract", () => {
     const sql = buildMigrationHeadSql();
     const readOnlyMarker = sql.indexOf("current_setting(''transaction_read_only'') = ''on''");
+    const recordV2Marker = sql.indexOf("/rpc/record_full_local_session_authority_v2");
     const refreshMarker = sql.indexOf("assert_and_renew_full_local_session_authority_v2");
+    const youtubeScopeMarker = sql.indexOf("v_scope = ''youtube-extraction''");
+    const authorizationGate = sql.indexOf("authorization_ready");
+    const currentHead = sql.indexOf(
+      "20260809110000_full_local_request_transaction_and_youtube_scope.sql",
+    );
     const previousMarker = sql.indexOf("v_request_nbf := coalesce(");
 
     expect(readOnlyMarker).toBeGreaterThanOrEqual(0);
+    expect(recordV2Marker).toBeGreaterThanOrEqual(0);
     expect(refreshMarker).toBeGreaterThan(readOnlyMarker);
     expect(refreshMarker).toBeGreaterThanOrEqual(0);
+    expect(youtubeScopeMarker).toBeGreaterThan(refreshMarker);
+    expect(authorizationGate).toBeGreaterThan(youtubeScopeMarker);
+    expect(currentHead).toBeGreaterThan(authorizationGate);
     expect(previousMarker).toBeGreaterThan(refreshMarker);
     expect(sql).toContain("20260809110000_full_local_request_transaction_and_youtube_scope.sql");
     expect(sql).toContain("20260809100000_full_local_session_refresh_authority.sql");
+    expect(sql).toMatch(
+      /when \(select authorization_ready from authorization_gate\)[\s\S]*then '20260809110000_full_local_request_transaction_and_youtube_scope\.sql'/u,
+    );
     expect(sql).toContain("begin transaction read only;");
     expect(sql).toContain("rollback;");
   });
