@@ -1,0 +1,21 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+
+import { describe, expect, test } from "vitest";
+
+const sql = readFileSync(resolve(process.cwd(), "supabase/migrations/20260810120000_meal_log_core.sql"), "utf8");
+
+describe("meal-log immutable nutrition aggregates", () => {
+  test("pins exact product and ingredient profile evidence", () => {
+    expect(sql).toMatch(/product_nutrition_version_id.*basis_relations/i);
+    expect(sql).toMatch(/ingredient_nutrition_profile_id/i);
+    expect(sql).toMatch(/UNIT_CONVERSION_MISSING/i);
+  });
+
+  test("keeps unknown nutrition separate from zero in slot and day totals", () => {
+    expect(sql).toMatch(/calculation_status[\s\S]*complete[\s\S]*partial[\s\S]*unavailable/i);
+    expect(sql).toMatch(/incomplete_count/i);
+    expect(sql).toMatch(/sum\(\(nutrition_evidence_json#>>'\{values,energy_kcal\}'\)::numeric\)/i);
+    expect(sql).not.toMatch(/coalesce\([^;]*energy_kcal[^;]*,\s*0\)/i);
+  });
+});
