@@ -9,8 +9,9 @@
 - 이 문서는 과거 OMO-lite의 `generic session-orchestrated runner` 규격을 보존한다.
 - `dispatch-stage / sync-status / run-stage / claude-budget` 조합은 legacy helper이며 신규 actor 실행에 사용하지 않는다.
 - `세션 재사용`, `pause/resume`, `runtime state` 설명은 과거 상태 해석에만 사용한다.
+- 신규 Stage actor 규칙의 단일 소스는 `docs/engineering/codex-task-handoff.md`다.
 
-## Purpose
+## Historical Purpose
 
 generic OMO session-orchestrator는 project-specific workflow 규칙과 provider-specific CLI 실행을 분리하는 reusable core다.
 
@@ -23,9 +24,9 @@ generic OMO session-orchestrator는 project-specific workflow 규칙과 provider
 - project adapter가 제공하는 stage graph, prompt, verify command를 실제 실행으로 연결한다.
 - 상위 autonomous supervisor가 읽을 수 있도록 stage execution metadata를 안정적으로 남긴다.
 
-즉, project adapter가 `무엇을 실행할지`를 정하고, session-orchestrator가 `어떻게 같은 세션으로 이어갈지`를 책임진다.
+즉, project adapter가 `무엇을 실행할지`를 정하고, session-orchestrator가 `어떻게 같은 세션으로 이어갈지`를 책임졌던 과거 구조를 설명한다.
 
-## Supervisor CLI Surface
+## Historical Supervisor CLI Surface
 
 구현 기본 표면은 아래 4개 명령이다.
 
@@ -47,7 +48,10 @@ Homecook 저장소에서는 repo script alias를 함께 둔다.
 - 기존 `pnpm omo:run-stage`는 low-level primitive로 남기고, 상위 supervisor CLI가 이를 내부적으로 호출한다.
 - `resume-pending`은 장시간 살아 있는 sleep process 대신 scheduler가 주기적으로 호출한다.
 
-## Session Model
+## Historical Session Model
+
+아래 역할/매핑은 과거 runtime snapshot이다.
+새 product Stage는 아래 매핑을 복구하지 말고 `codex-task-handoff.md`의 역할별 새 task/새 세션 규칙을 따른다.
 
 세션은 `per work item`으로 고정한다.
 
@@ -80,7 +84,7 @@ Homecook 저장소에서는 repo script alias를 함께 둔다.
 13. prior artifact/log 없이 저장된 session ID가 사라졌거나 재개가 불가능하면 조용히 새 세션을 만들지 않는다.
 14. 위 fallback도 불가능하면 session loss는 `blocked + human_escalation` 조건이다.
 
-이 규칙으로 Stage 1을 수행한 Claude 세션이 Stage 3/4와 Stage 5 `final_authority_gate`에서도 같은 문맥을 유지하고, Stage 2를 수행한 Codex 세션이 Stage 4 `authority_precheck`, Stage 5 public review, Stage 6 closeout을 이어받는다.
+이 규칙은 Stage 1을 수행한 Claude 세션이 Stage 3/4와 Stage 5 `final_authority_gate`에서도 같은 문맥을 유지하고, Stage 2를 수행한 Codex 세션이 Stage 4 `authority_precheck`, Stage 5 public review, Stage 6 closeout을 이어받던 과거 동작을 설명한다.
 
 ## Runtime State Contract
 
@@ -142,7 +146,10 @@ runtime state는 tracked workflow 상태와 분리한다.
 - partial-stage recovery evidence도 repo-local runtime에 저장한다.
 - tracked 상태에는 세션 ID를 넣지 않는다.
 
-## Retry And Resume Policy
+## Historical Retry And Resume Policy
+
+아래 재시도 규칙은 retired Claude session runtime을 읽을 때만 사용한다.
+신규 검토는 Claude resume이 아니라 별도 ChatGPT/Codex review task를 새로 만든다.
 
 기본 retry 정책:
 
@@ -212,7 +219,10 @@ status guidance 출력 규칙:
 - same-stage resume가 old session loss로 compacted rerun에 들어간 경우에는 최소한 current artifact의 `prompt.md`와 `run-metadata.json`에 prior artifact dir와 compaction fallback 사실이 남아야 한다.
 - `omo:tail`은 위 status guidance에 scheduler snapshot과 최근 stdout/stderr tail을 덧붙인 operator surface다. status만으로 stale/live 판단이 애매할 때 같은 work item의 recent tick 흔적을 한 번에 묶어 본다.
 
-## Homecook Mapping
+## Historical Homecook Mapping
+
+아래 actor ownership 표기는 과거 artifact vocabulary 설명이다.
+현재 Homecook 운영 규칙은 `Stage 1/2/4 작성`과 `internal 1.5 / Stage 3 / Stage 5 / final authority / Stage 6 검토`를 서로 다른 ChatGPT/Codex task ID와 새 세션으로 분리한다.
 
 Homecook에서는 아래 원칙으로 adapter를 둔다.
 
@@ -228,6 +238,7 @@ Homecook에서는 아래 원칙으로 adapter를 둔다.
 ## Non-Goals
 
 - Claude stage ownership 제거
+- ChatGPT/Codex 새 task 기반 현재 Stage 분리 규칙 재정의
 - blocked retry 중에는 approval_state를 덮어쓰지 않고 이전 승인 상태를 유지하기
 - session loss 시 자동 새 세션 생성
 - long-running `sleep 5h` 프로세스를 기본 경로로 채택하기

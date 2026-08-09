@@ -3,7 +3,7 @@
 ## 목적
 
 Homecook의 모든 신규 작업은 Claude를 사용하지 않는다.
-기존 Claude 담당 단계는 **역할이 분리된 별도 Codex 작업(새 세션)** 이 맡는다.
+기존 Claude 담당 단계는 **역할이 분리된 별도 ChatGPT/Codex 작업(새 task ID, 새 세션)** 이 맡는다.
 
 이 문서는 새 Codex 작업을 언제 만들고, 무엇을 전달하며, 어떤 증거를 받아야 다음 단계로 넘어갈 수 있는지 정의하는 단일 소스다.
 Stage별 산출물과 검증 기준은 `docs/engineering/slice-workflow.md`가 계속 담당한다.
@@ -12,15 +12,15 @@ Stage별 산출물과 검증 기준은 `docs/engineering/slice-workflow.md`가 �
 
 - **조정 작업(coordinator task)**: 사용자 요청을 받은 현재 Codex 작업. stage 순서, handoff, 상태, 최종 검증을 관리한다.
 - **Stage 작업(stage task)**: Stage 하나의 작성·구현·리뷰 책임을 맡도록 새로 연 별도 Codex 작업.
-- **새 작업**: Codex 앱 사이드바에 독립적으로 생기는 task/thread. 같은 작업 안의 서브에이전트는 새 작업을 대신하지 않는다.
+- **새 작업**: Codex 앱 사이드바에 독립적으로 생기는 ChatGPT/Codex task/thread. 같은 작업 안의 서브에이전트는 새 작업을 대신하지 않는다.
 - **작성 작업**: 문서 또는 코드를 직접 바꾸는 Stage 작업.
 - **검토 작업**: 작성 작업과 다른 task ID를 가진 read-only 우선 Stage 작업.
 
 ## 절대 규칙
 
-1. Claude CLI, Claude 앱, Claude API를 신규 Stage 실행에 사용하지 않는다.
+1. Claude CLI, Claude 앱, Claude API를 신규 Stage 실행이나 신규 검토 세션에 사용하지 않는다.
 2. 작성 작업은 자기 변경을 최종 승인하지 않는다.
-3. Stage 1, 2, 4 작성 작업과 internal 1.5, Stage 3, 5, final authority, Stage 6 검토 작업은 서로 다른 task ID를 사용한다.
+3. Stage 1, 2, 4 작성 작업과 internal 1.5, Stage 3, 5, final authority, Stage 6 검토 작업은 서로 다른 task ID와 서로 다른 새 세션을 사용한다.
 4. 같은 작업 안의 서브에이전트는 탐색·테스트·보조 리뷰에는 쓸 수 있지만, 독립 Stage 승인자 역할을 대신하지 않는다.
 5. 새 작업은 이전 대화 내용을 안다고 가정하지 않는다. 공식 문서, workpack, PR URL, commit SHA, evidence 경로를 handoff에 명시한다.
 6. 검토 작업은 finding과 verdict를 남긴다. 수정이 필요하면 작성 작업으로 되돌리고, 수정 후 같은 검토 작업 또는 새 독립 검토 작업이 재확인한다.

@@ -3,6 +3,7 @@
 > **Retired `2026-07-30`: 신규 실행 금지.**
 > Homecook은 Claude를 더 이상 사용하지 않는다. 이 문서는 과거 provider 동작과 artifact 해석을 위한 감사 기록이다.
 > 아래 명령, provider 설정, resume 절차를 신규 Stage에 실행하지 말고 `docs/engineering/codex-task-handoff.md`를 사용한다.
+> 새 reviewer는 Claude resume이 아니라 역할이 분리된 ChatGPT/Codex 새 task와 새 세션으로 만든다.
 
 ## Status
 
@@ -10,9 +11,9 @@
 - 현재 Stage actor는 이 provider나 OpenCode의 Claude 경로를 사용하지 않는다.
 - `session_id 추출 -> runtime 저장 -> deterministic resume` 규칙은 과거 artifact 해석에만 사용한다.
 
-## Purpose
+## Historical Purpose
 
-Homecook OMO는 Claude와 Codex를 섞어 쓰지만, 두 actor의 실행 표면이 반드시 같을 필요는 없다.
+Homecook OMO는 과거에 Claude와 Codex를 섞어 썼지만, 이 문서는 그 historical split을 설명할 뿐 현재 정책을 정의하지 않는다.
 
 이 문서의 역할은 아래를 고정하는 것이다.
 
