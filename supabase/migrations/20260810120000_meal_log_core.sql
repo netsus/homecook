@@ -376,7 +376,9 @@ begin
       end if;
     elsif v_source_type='ingredient' then
       select ingredient.standard_name into v_name from public.ingredients ingredient where ingredient.id=v_source_id for share;
-      if v_same_source then v_ingredient_profile:=v_entry.ingredient_nutrition_profile_id;
+      if v_same_source then
+        v_ingredient_profile:=v_entry.ingredient_nutrition_profile_id;
+        v_conversion_evidence:=v_entry.conversion_evidence_id;
       else select profile.id into v_ingredient_profile from public.ingredient_nutrition_profiles profile
         where profile.ingredient_id=v_source_id and profile.is_primary and profile.is_active and profile.review_status='approved'; end if;
       if v_ingredient_profile is null then raise exception 'RESOURCE_NOT_FOUND' using errcode='P0002'; end if;
@@ -386,22 +388,30 @@ begin
       else
       v_nutrition_amount:=v_amount; v_nutrition_unit:=v_unit;
       if v_unit in ('tbsp','tsp','cup') then
-        select evidence.id,
-          v_amount * (case v_unit when 'tbsp' then 15 when 'tsp' then 5 else 200 end) / 15 * evidence.normalized_g_per_15ml
-        into v_conversion_evidence,v_nutrition_amount
-        from public.ingredient_nutrition_profiles profile
-        join public.ingredient_conversion_assignments assignment
-          on assignment.ingredient_id=profile.ingredient_id
-          and assignment.preparation_state=profile.preparation_state
-          and assignment.is_active and assignment.review_status='approved'
-        join public.measurement_source_evidence evidence
-          on evidence.id=assignment.evidence_id and evidence.evidence_kind='volume_weight'
-          and evidence.is_active and evidence.review_status='approved'
-        where profile.id=v_ingredient_profile;
+        if v_same_source and v_conversion_evidence is not null then
+          select v_amount * (case v_unit when 'tbsp' then 15 when 'tsp' then 5 else 200 end) / 15 * evidence.normalized_g_per_15ml
+          into v_nutrition_amount from public.measurement_source_evidence evidence
+          where evidence.id=v_conversion_evidence and evidence.evidence_kind='volume_weight';
+        else
+          select evidence.id,
+            v_amount * (case v_unit when 'tbsp' then 15 when 'tsp' then 5 else 200 end) / 15 * evidence.normalized_g_per_15ml
+          into v_conversion_evidence,v_nutrition_amount
+          from public.ingredient_nutrition_profiles profile
+          join public.ingredient_conversion_assignments assignment
+            on assignment.ingredient_id=profile.ingredient_id
+            and assignment.preparation_state=profile.preparation_state
+            and assignment.is_active and assignment.review_status='approved'
+          join public.measurement_source_evidence evidence
+            on evidence.id=assignment.evidence_id and evidence.evidence_kind='volume_weight'
+            and evidence.is_active and evidence.review_status='approved'
+          where profile.id=v_ingredient_profile;
+        end if;
         if v_conversion_evidence is null then raise exception 'UNIT_CONVERSION_MISSING' using errcode='22023'; end if;
         v_nutrition_unit:='g';
       elsif v_unit not in ('g','kg') then
         raise exception 'UNIT_CONVERSION_MISSING' using errcode='22023';
+      else
+        v_conversion_evidence:=null;
       end if;
       select private.resolve_meal_log_profile_nutrition(profile.nutrition_profile_id,v_nutrition_amount,v_nutrition_unit)
         || jsonb_build_object('ingredient_nutrition_profile_id',profile.id,'conversion_evidence_id',v_conversion_evidence)

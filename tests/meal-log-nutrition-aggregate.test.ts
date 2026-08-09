@@ -12,6 +12,7 @@ describe("meal-log immutable nutrition aggregates", () => {
     expect(sql).toMatch(/UNIT_CONVERSION_MISSING/i);
     expect(sql).toMatch(/v_same_source[\s\S]*v_entry\.food_product_nutrition_version_id/i);
     expect(sql).toMatch(/v_same_source[\s\S]*v_entry\.ingredient_nutrition_profile_id/i);
+    expect(sql).toMatch(/if v_same_source then\s+v_ingredient_profile:=v_entry\.ingredient_nutrition_profile_id;\s+v_conversion_evidence:=v_entry\.conversion_evidence_id;/i);
     expect(sql).toMatch(/resolve_meal_log_product_nutrition[\s\S]*basis_relations/i);
   });
 
