@@ -1,0 +1,18 @@
+{
+  "confirmation_back_retained": true,
+  "field_422_alert_focused": true,
+  "field_422_inputs_retained_and_linked": true,
+  "focus_restored": true,
+  "focus_trapped": true,
+  "no_horizontal_overflow": [
+    390,
+    320,
+    1440
+  ],
+  "pending_controls_locked": true,
+  "pending_escape_locked": true,
+  "retained_409_input": true,
+  "replay_key_reused": true,
+  "unweighed_close_consequences_confirmed": true,
+  "virtual_keyboard": "Manual Only — automated viewport does not prove a physical keyboard"
+}

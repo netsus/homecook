@@ -8,6 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LeftoversScreen } from "@/components/leftovers/leftovers-screen";
 import { AteListScreen } from "@/components/leftovers/ate-list-screen";
 import * as leftoversApi from "@/lib/api/leftovers";
+import * as cookingApi from "@/lib/api/cooking";
 import * as mealApi from "@/lib/api/meal";
 import * as plannerApi from "@/lib/api/planner";
 import type { LeftoverListItemData } from "@/types/leftover";
@@ -155,6 +156,11 @@ describe("LeftoversScreen", () => {
     navigationMocks.searchParams.mockReset();
     navigationMocks.searchParams.mockReturnValue(new URLSearchParams());
     vi.spyOn(leftoversApi, "isLeftoverApiError").mockReturnValue(false);
+    vi.spyOn(cookingApi, "fetchCookedBatches").mockResolvedValue({
+      items: [],
+      next_cursor: null,
+      has_next: false,
+    });
   });
 
   afterEach(() => {
@@ -232,6 +238,41 @@ describe("LeftoversScreen", () => {
     expect(screen.getByRole("link", { name: "김치찌개" }).getAttribute("href")).toBe(
       "/recipe/recipe-1",
     );
+  });
+
+  it("keeps legacy leftovers and cooked batches in separate sections", async () => {
+    vi.spyOn(leftoversApi, "fetchLeftovers").mockResolvedValue({ items: [LEFTOVER_ITEMS[0]] });
+    vi.mocked(cookingApi.fetchCookedBatches).mockResolvedValue({
+      items: [{
+        id: "11111111-1111-4111-8111-111111111111",
+        recipe_id: "22222222-2222-4222-8222-222222222222",
+        recipe_title: "김치찌개",
+        recipe_thumbnail_url: null,
+        status: "leftover",
+        cooked_at: "2026-08-10T01:00:00.000Z",
+        cooking_servings: 2,
+        finished_weight_g: 800,
+        remaining_weight_g: 500,
+        weight_status: "known",
+        batch_status: "available",
+        depleted_reason: null,
+        revision: 3,
+        nutrition_calculation_status: "complete",
+        current_unweighed_closure_event_id: null,
+      }],
+      next_cursor: null,
+      has_next: false,
+    });
+
+    render(<LeftoversScreen initialAuthenticated />);
+
+    expect(await screen.findByRole("heading", { name: "남은요리 관리" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "중량·잔량 기록" })).toBeTruthy();
+    expect(screen.getAllByText("김치찌개")).toHaveLength(2);
+    expect(screen.getAllByTestId("leftover-card")).toHaveLength(1);
+    expect(screen.getAllByTestId("cooked-batch-card")).toHaveLength(1);
+    expect(screen.getAllByRole("button", { name: /플래너에 추가/ })).toHaveLength(1);
+    expect(screen.getAllByRole("button", { name: /김치찌개 양 조정/ })).toHaveLength(1);
   });
 
   it("shows a stale reminder for leftovers kept at least 30 days without eating automatically", async () => {

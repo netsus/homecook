@@ -44,6 +44,9 @@ export function CookedBatchCompletionSheet({
   const [selectedIds, setSelectedIds] = useState(() => new Set(initialSelection));
   const [weightAction, setWeightAction] = useState<"set_finished_weight" | "weigh_later" | null>(initialWeight?.action ?? null);
   const [finishedWeight, setFinishedWeight] = useState(initialWeight?.finishedWeight ?? "");
+  const [helperOpen, setHelperOpen] = useState(false);
+  const [grossWeight, setGrossWeight] = useState("");
+  const [tareWeight, setTareWeight] = useState("");
   const panelRef = useRef<HTMLDivElement | null>(null);
   const titleRef = useRef<HTMLHeadingElement | null>(null);
   const errorRef = useRef<HTMLDivElement | null>(null);
@@ -86,6 +89,16 @@ export function CookedBatchCompletionSheet({
       || (weightAction === "set_finished_weight" && validFinishedWeight));
   const weightError = serverError?.fields.some(({ field }) => field === "finished_weight_g") ?? false;
   const errorDescription = serverError ? "cooked-batch-completion-error" : undefined;
+  const parsedGrossWeight = Number(grossWeight);
+  const parsedTareWeight = Number(tareWeight);
+  const helperResult = parsedGrossWeight - parsedTareWeight;
+  const validHelperResult = grossWeight.trim() !== ""
+    && tareWeight.trim() !== ""
+    && Number.isFinite(parsedGrossWeight)
+    && Number.isFinite(parsedTareWeight)
+    && parsedGrossWeight > 0
+    && parsedTareWeight > 0
+    && helperResult > 0;
 
   const toggleCandidate = (pantryItemId: string) => {
     if (submitting) return;
@@ -271,6 +284,41 @@ export function CookedBatchCompletionSheet({
               value={finishedWeight}
             />
           </div>
+          <button
+            aria-expanded={helperOpen}
+            className="min-h-11 w-full rounded-[var(--radius-control)] border border-[var(--wave1-border)] bg-[var(--wave1-surface)] px-3 text-left text-sm font-bold text-[var(--wave1-text-2)]"
+            disabled={submitting}
+            onClick={() => setHelperOpen((open) => !open)}
+            type="button"
+          >
+            용기 무게 계산 도움
+          </button>
+          {helperOpen ? (
+            <div className="space-y-3 rounded-[var(--radius-card)] border border-[var(--wave1-border)] bg-[var(--wave1-surface)] p-3">
+              <p className="text-xs leading-5 text-[var(--wave1-text-2)]">이 계산값은 이 화면에서만 사용하고 저장하거나 전송하지 않아요.</p>
+              <label className="block text-sm font-bold">음식+용기 무게(g)
+                <input aria-label="음식과 용기를 합친 무게" className="mt-1 h-11 w-full rounded-[var(--radius-control)] border border-[var(--wave1-border)] px-3 text-base" disabled={submitting} inputMode="decimal" min="0" onChange={(event) => setGrossWeight(event.target.value)} type="number" value={grossWeight} />
+              </label>
+              <label className="block text-sm font-bold">빈 용기 무게(g)
+                <input aria-label="빈 용기 무게" className="mt-1 h-11 w-full rounded-[var(--radius-control)] border border-[var(--wave1-border)] px-3 text-base" disabled={submitting} inputMode="decimal" min="0" onChange={(event) => setTareWeight(event.target.value)} type="number" value={tareWeight} />
+              </label>
+              <div aria-label="계산한 음식만 무게" className="rounded-[var(--radius-control)] bg-[var(--wave1-surface-fill)] p-3 text-sm" role="status">
+                계산한 음식만 무게 <strong className="float-right">{validHelperResult ? `${helperResult.toLocaleString("ko-KR")}g` : "계산 전"}</strong>
+              </div>
+              {!validHelperResult && (grossWeight || tareWeight) ? <p className="text-xs text-[var(--danger-strong)]" role="status">두 무게를 양수로 입력하고 음식+용기 무게가 더 큰지 확인해 주세요.</p> : null}
+              <button
+                className="min-h-11 w-full rounded-[var(--radius-control)] bg-[var(--brand-primary)] px-3 text-sm font-bold text-[var(--brand-primary-text)] disabled:opacity-40"
+                disabled={submitting || !validHelperResult}
+                onClick={() => {
+                  setWeightAction("set_finished_weight");
+                  setFinishedWeight(String(helperResult));
+                }}
+                type="button"
+              >
+                계산한 음식만 무게 사용
+              </button>
+            </div>
+          ) : null}
           <label className="flex min-h-12 items-center gap-3 rounded-[var(--radius-control)] bg-[var(--wave1-surface)] px-3 py-2">
             <input
               checked={weightAction === "weigh_later"}
