@@ -7,6 +7,13 @@ import { describe, expect, it } from "vitest";
 import { validateAuthorityEvidencePresence } from "../scripts/lib/validate-authority-evidence-presence.mjs";
 import { writeRuntimeState } from "../scripts/lib/omo-session-runtime.mjs";
 
+const DEFAULT_VISUAL_EVIDENCE_REFS = [
+  "ui/designs/evidence/authority/RECIPE_DETAIL-mobile.png",
+  "ui/designs/evidence/authority/RECIPE_DETAIL-mobile-narrow.png",
+];
+const RUNTIME_EVIDENCE_REF = "ui/designs/evidence/authority/runtime-focus.json";
+const MANIFEST_REF = "ui/designs/evidence/authority/manifest.json";
+
 function writeFixtureFile(rootDir: string, relativePath: string, contents: string) {
   const filePath = join(rootDir, relativePath);
   mkdirSync(join(filePath, ".."), { recursive: true });
@@ -136,6 +143,51 @@ function createFixture({
   return rootDir;
 }
 
+function validateNonDraftFixture(rootDir: string) {
+  return validateAuthorityEvidencePresence({
+    rootDir,
+    env: {
+      ...process.env,
+      BRANCH_NAME: "feature/fe-06-recipe-to-planner",
+      PR_IS_DRAFT: "false",
+    },
+  });
+}
+
+function createMixedArtifactFixture({
+  artifactRequirements = [RUNTIME_EVIDENCE_REF, MANIFEST_REF],
+  reportArtifactRefs = artifactRequirements,
+  existingArtifactRefs = artifactRequirements,
+  runtimeArtifactRefs = null,
+}: {
+  artifactRequirements?: string[];
+  reportArtifactRefs?: string[];
+  existingArtifactRefs?: string[];
+  runtimeArtifactRefs?: string[] | null;
+} = {}) {
+  const reportRefs = [...DEFAULT_VISUAL_EVIDENCE_REFS, ...reportArtifactRefs];
+  return createFixture({
+    stage4EvidenceRequirements: [...DEFAULT_VISUAL_EVIDENCE_REFS, ...artifactRequirements],
+    authorityReportContents: buildAuthorityReport({
+      evidenceLines: reportRefs.map((ref) => `\`${ref}\``),
+    }),
+    evidenceFiles: [...DEFAULT_VISUAL_EVIDENCE_REFS, ...existingArtifactRefs],
+    runtimeDesignAuthority:
+      runtimeArtifactRefs === null
+        ? null
+        : {
+            status: "reviewed",
+            ui_risk: "anchor-extension",
+            authority_required: true,
+            authority_report_paths: ["ui/designs/authority/RECIPE_DETAIL-authority.md"],
+            evidence_artifact_refs: [...DEFAULT_VISUAL_EVIDENCE_REFS, ...runtimeArtifactRefs],
+            reviewed_screen_ids: ["RECIPE_DETAIL"],
+            authority_verdict: "pass",
+            source_stage: 5,
+          },
+  });
+}
+
 describe("authority evidence presence validator", () => {
   it("skips branches outside frontend ready-for-review or closeout", () => {
     const rootDir = createFixture();
@@ -160,14 +212,7 @@ describe("authority evidence presence validator", () => {
       evidenceFiles: [],
     });
 
-    const results = validateAuthorityEvidencePresence({
-      rootDir,
-      env: {
-        ...process.env,
-        BRANCH_NAME: "feature/fe-06-recipe-to-planner",
-        PR_IS_DRAFT: "false",
-      },
-    });
+    const results = validateNonDraftFixture(rootDir);
 
     expect(results).toEqual([]);
   });
@@ -179,14 +224,7 @@ describe("authority evidence presence validator", () => {
       createAuthorityReportFiles: false,
     });
 
-    const results = validateAuthorityEvidencePresence({
-      rootDir,
-      env: {
-        ...process.env,
-        BRANCH_NAME: "feature/fe-06-recipe-to-planner",
-        PR_IS_DRAFT: "false",
-      },
-    });
+    const results = validateNonDraftFixture(rootDir);
 
     expect(results[0]?.errors).toEqual(
       expect.arrayContaining([
@@ -205,14 +243,7 @@ describe("authority evidence presence validator", () => {
       evidenceFiles: [],
     });
 
-    const results = validateAuthorityEvidencePresence({
-      rootDir,
-      env: {
-        ...process.env,
-        BRANCH_NAME: "feature/fe-06-recipe-to-planner",
-        PR_IS_DRAFT: "false",
-      },
-    });
+    const results = validateNonDraftFixture(rootDir);
 
     expect(results[0]?.errors).toEqual(
       expect.arrayContaining([
@@ -234,14 +265,7 @@ describe("authority evidence presence validator", () => {
       evidenceFiles: [],
     });
 
-    const results = validateAuthorityEvidencePresence({
-      rootDir,
-      env: {
-        ...process.env,
-        BRANCH_NAME: "feature/fe-06-recipe-to-planner",
-        PR_IS_DRAFT: "false",
-      },
-    });
+    const results = validateNonDraftFixture(rootDir);
 
     expect(results[0]?.errors).toEqual(
       expect.arrayContaining([
@@ -255,16 +279,48 @@ describe("authority evidence presence validator", () => {
   it("passes when authority reports include existing default and narrow evidence files", () => {
     const rootDir = createFixture();
 
-    const results = validateAuthorityEvidencePresence({
-      rootDir,
-      env: {
-        ...process.env,
-        BRANCH_NAME: "feature/fe-06-recipe-to-planner",
-        PR_IS_DRAFT: "false",
-      },
-    });
+    const results = validateNonDraftFixture(rootDir);
 
     expect(results).toEqual([]);
+  });
+
+  it("passes mixed visual and local artifact requirements when report and runtime refs stay in sync", () => {
+    const rootDir = createMixedArtifactFixture({
+      runtimeArtifactRefs: [RUNTIME_EVIDENCE_REF, MANIFEST_REF],
+    });
+
+    const results = validateNonDraftFixture(rootDir);
+
+    expect(results).toEqual([]);
+  });
+
+  it("fails with the exact required artifact when a JSON ref is absent from the report", () => {
+    const rootDir = createMixedArtifactFixture({
+      artifactRequirements: [RUNTIME_EVIDENCE_REF],
+      reportArtifactRefs: [],
+      existingArtifactRefs: [RUNTIME_EVIDENCE_REF],
+    });
+
+    const results = validateNonDraftFixture(rootDir);
+
+    expect(results[0]?.errors).toContainEqual({
+      path: "authority_report_paths:evidence",
+      message: `Authority reports are missing required artifact evidence: ${RUNTIME_EVIDENCE_REF}`,
+    });
+  });
+
+  it("fails with the exact required artifact when a referenced JSON file is missing", () => {
+    const rootDir = createMixedArtifactFixture({
+      artifactRequirements: [RUNTIME_EVIDENCE_REF],
+      existingArtifactRefs: [],
+    });
+
+    const results = validateNonDraftFixture(rootDir);
+
+    expect(results[0]?.errors).toContainEqual({
+      path: "authority_report_paths:evidence",
+      message: `Required authority evidence artifact file is missing: ${RUNTIME_EVIDENCE_REF}`,
+    });
   });
 
   it("treats screenshot-suffixed mobile evidence requirements as default and narrow aliases", () => {
@@ -282,6 +338,44 @@ describe("authority evidence presence validator", () => {
     });
 
     expect(results).toEqual([]);
+  });
+
+  it("keeps Figma refs valid for default and narrow visual requirements", () => {
+    const rootDir = createFixture({
+      authorityReportContents: buildAuthorityReport({
+        evidenceLines: [
+          "https://www.figma.com/design/homecook?node-id=mobile-default",
+          "https://www.figma.com/design/homecook?node-id=mobile-narrow",
+        ],
+      }),
+      evidenceFiles: [],
+    });
+
+    const results = validateAuthorityEvidencePresence({
+      rootDir,
+      env: {
+        ...process.env,
+        BRANCH_NAME: "feature/fe-06-recipe-to-planner",
+        PR_IS_DRAFT: "false",
+      },
+    });
+
+    expect(results).toEqual([]);
+  });
+
+  it("does not let an external JSON URL satisfy a required local artifact path", () => {
+    const rootDir = createMixedArtifactFixture({
+      artifactRequirements: [MANIFEST_REF],
+      reportArtifactRefs: ["https://example.com/manifest.json"],
+      existingArtifactRefs: [MANIFEST_REF],
+    });
+
+    const results = validateNonDraftFixture(rootDir);
+
+    expect(results[0]?.errors).toContainEqual({
+      path: "authority_report_paths:evidence",
+      message: `Authority reports are missing required artifact evidence: ${MANIFEST_REF}`,
+    });
   });
 
   it("accepts slice-level evidence requirements when they are satisfied across multiple authority reports", () => {
@@ -397,6 +491,42 @@ describe("authority evidence presence validator", () => {
       expect.arrayContaining([
         expect.objectContaining({
           message: expect.stringContaining("runtime design_authority.evidence_artifact_refs"),
+        }),
+      ]),
+    );
+  });
+
+  it("fails with the exact required artifact when runtime evidence omits a required JSON ref", () => {
+    const rootDir = createMixedArtifactFixture({
+      artifactRequirements: [RUNTIME_EVIDENCE_REF],
+      runtimeArtifactRefs: [],
+    });
+
+    const results = validateNonDraftFixture(rootDir);
+
+    expect(results[0]?.errors).toContainEqual({
+      path: expect.stringContaining(".opencode/omo-runtime/06-recipe-to-planner.json"),
+      message: `runtime design_authority.evidence_artifact_refs is missing required artifact evidence: ${RUNTIME_EVIDENCE_REF}`,
+    });
+  });
+
+  it("fails when a runtime JSON ref does not exactly match the authority report artifact ref", () => {
+    const mismatchedRuntimeEvidence = "ui/designs/evidence/authority/runtime-focus-alt.json";
+    const rootDir = createMixedArtifactFixture({
+      artifactRequirements: [RUNTIME_EVIDENCE_REF],
+      existingArtifactRefs: [RUNTIME_EVIDENCE_REF, mismatchedRuntimeEvidence],
+      runtimeArtifactRefs: [mismatchedRuntimeEvidence],
+    });
+
+    const results = validateNonDraftFixture(rootDir);
+
+    expect(results[0]?.errors).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          message: `runtime design_authority.evidence_artifact_refs must be represented in the authority report > evidence block: ${mismatchedRuntimeEvidence}`,
+        }),
+        expect.objectContaining({
+          message: `runtime design_authority.evidence_artifact_refs is missing required artifact evidence: ${RUNTIME_EVIDENCE_REF}`,
         }),
       ]),
     );

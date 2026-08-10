@@ -60,7 +60,7 @@ function extractRefs(line) {
   const trimmed = line.trim();
   if (
     FIGMA_URL_PATTERN.test(trimmed) ||
-    /^[A-Za-z0-9_./-]+\.(?:png|jpe?g|webp|gif|avif|svg)$/i.test(trimmed)
+    isSafeLocalArtifactRef(trimmed)
   ) {
     return [trimmed];
   }
@@ -74,6 +74,29 @@ function isVisualRef(ref) {
 
 function isLocalRepoRef(ref) {
   return !/^https?:\/\//i.test(ref);
+}
+
+function isSafeLocalArtifactRef(ref) {
+  if (
+    typeof ref !== "string" ||
+    ref.length === 0 ||
+    !isLocalRepoRef(ref) ||
+    ref.startsWith("/") ||
+    ref.includes("\\")
+  ) {
+    return false;
+  }
+
+  const segments = ref.split("/");
+  const fileName = segments.at(-1) ?? "";
+  return (
+    segments.every((segment) => segment.length > 0 && segment !== "." && segment !== "..") &&
+    /^[A-Za-z0-9_.-]+\.[A-Za-z0-9]+$/.test(fileName)
+  );
+}
+
+function isNonVisualArtifactRequirement(requirement) {
+  return isSafeLocalArtifactRef(requirement) && !isVisualRef(requirement);
 }
 
 function resolveEvidenceRequirementMatcher(requirement) {
@@ -132,15 +155,16 @@ function inspectAuthorityReport({
     });
     return {
       errors,
+      artifactRefs: [],
       visualRefs: [],
     };
   }
 
   const reportText = readText(absoluteReportPath);
   const evidenceLines = extractEvidenceLines(reportText);
-  const visualRefs = evidenceLines
-    .flatMap((line) => extractRefs(line))
-    .filter((ref) => isVisualRef(ref));
+  const evidenceRefs = evidenceLines.flatMap((line) => extractRefs(line));
+  const artifactRefs = evidenceRefs.filter((ref) => isSafeLocalArtifactRef(ref));
+  const visualRefs = evidenceRefs.filter((ref) => isVisualRef(ref));
 
   if (visualRefs.length === 0) {
     errors.push({
@@ -164,6 +188,7 @@ function inspectAuthorityReport({
 
   return {
     errors,
+    artifactRefs,
     visualRefs,
   };
 }
@@ -172,7 +197,9 @@ function validateRuntimeAuthoritySync({
   rootDir,
   slice,
   authorityReportPaths,
+  reportArtifactRefs,
   reportVisualRefs,
+  stage4EvidenceRequirements,
 }) {
   const runtimePath = resolveRuntimePath({
     rootDir,
@@ -204,13 +231,43 @@ function validateRuntimeAuthoritySync({
   }
 
   const runtimeEvidenceArtifactRefs = normalizeStringArray(runtimeDesignAuthority.evidence_artifact_refs);
-  const missingReportRefs = runtimeEvidenceArtifactRefs.filter((ref) => !reportVisualRefs.includes(ref));
+  const runtimeVisualRefs = runtimeEvidenceArtifactRefs.filter((ref) => isVisualRef(ref));
+  const runtimeArtifactRefs = runtimeEvidenceArtifactRefs.filter((ref) => isSafeLocalArtifactRef(ref));
+  const missingReportRefs = runtimeEvidenceArtifactRefs.filter((ref) => {
+    if (isVisualRef(ref)) {
+      return !reportVisualRefs.includes(ref);
+    }
+
+    return !isSafeLocalArtifactRef(ref) || !reportArtifactRefs.includes(ref);
+  });
   if (missingReportRefs.length > 0) {
     errors.push({
       path: runtimePath,
       message:
         `runtime design_authority.evidence_artifact_refs must be represented in the authority report > evidence block: ${missingReportRefs.join(", ")}`,
     });
+  }
+
+  for (const requirement of stage4EvidenceRequirements) {
+    if (isNonVisualArtifactRequirement(requirement)) {
+      if (!runtimeArtifactRefs.includes(requirement)) {
+        errors.push({
+          path: runtimePath,
+          message:
+            `runtime design_authority.evidence_artifact_refs is missing required artifact evidence: ${requirement}`,
+        });
+      }
+      continue;
+    }
+
+    const matchesRequirement = resolveEvidenceRequirementMatcher(requirement);
+    if (!runtimeVisualRefs.some((ref) => matchesRequirement(ref))) {
+      errors.push({
+        path: runtimePath,
+        message:
+          `runtime design_authority.evidence_artifact_refs is missing required ${requirement} visual evidence.`,
+      });
+    }
   }
 
   return errors;
@@ -263,6 +320,7 @@ export function validateAuthorityEvidencePresence({
     });
   }
 
+  const reportArtifactRefs = [];
   const reportVisualRefs = [];
   for (const reportPath of authorityReportPaths) {
     const reportInspection = inspectAuthorityReport({
@@ -270,11 +328,28 @@ export function validateAuthorityEvidencePresence({
       reportPath,
     });
     errors.push(...reportInspection.errors);
+    reportArtifactRefs.push(...reportInspection.artifactRefs);
     reportVisualRefs.push(...reportInspection.visualRefs);
   }
 
+  const uniqueReportArtifactRefs = [...new Set(reportArtifactRefs)];
   const uniqueReportVisualRefs = [...new Set(reportVisualRefs)];
   for (const requirement of stage4EvidenceRequirements) {
+    if (isNonVisualArtifactRequirement(requirement)) {
+      if (!uniqueReportArtifactRefs.includes(requirement)) {
+        errors.push({
+          path: "authority_report_paths:evidence",
+          message: `Authority reports are missing required artifact evidence: ${requirement}`,
+        });
+      } else if (!existsSync(resolve(rootDir, requirement))) {
+        errors.push({
+          path: "authority_report_paths:evidence",
+          message: `Required authority evidence artifact file is missing: ${requirement}`,
+        });
+      }
+      continue;
+    }
+
     const matchesRequirement = resolveEvidenceRequirementMatcher(requirement);
     if (!uniqueReportVisualRefs.some((ref) => matchesRequirement(ref))) {
       errors.push({
@@ -289,7 +364,9 @@ export function validateAuthorityEvidencePresence({
       rootDir,
       slice: branchContext.slice,
       authorityReportPaths,
+      reportArtifactRefs: uniqueReportArtifactRefs,
       reportVisualRefs: uniqueReportVisualRefs,
+      stage4EvidenceRequirements,
     }),
   );
 
