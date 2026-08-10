@@ -38,6 +38,11 @@ Claude는 어떤 Stage에도 사용하지 않는다.
 - 1단계(docs) 브랜치: `docs/<slice>`
 - 백엔드 브랜치: `feature/be-<slice>`
 - 프론트엔드 브랜치: `feature/fe-<slice>`
+- 보존된 original PR의 base..head commit range가 policy 위반이고 force/rebase 없이 additive repair할 수 없는 예외에만 `feature/<be|fe>-<slice>-superseding-draft` clean successor를 허용한다.
+  - exact suffix 외 변형, `fix/*`, PR body/label override, skip env는 금지한다.
+  - original exact base/head/tree와 successor exact base/parent/head/tree, 동일-tree, clean Conventional range evidence를 PR에 남긴다.
+  - original history를 보존하고 force-push/amend/rebase/reset하지 않으며 successor는 Draft와 같은 product checks, 독립 review를 그대로 거친다.
+  - 상세 recovery 판정과 evidence 계약은 `docs/engineering/git-workflow.md`가 단일 소스다.
 - 파일 수정 전에는 먼저 해당 단계 브랜치로 전환한다. 표준 명령:
   - `pnpm branch:start -- --slice <slice> --role docs`
   - `pnpm branch:start -- --slice <slice> --role be`

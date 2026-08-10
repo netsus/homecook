@@ -2,6 +2,8 @@ import { existsSync, readFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { resolve } from "node:path";
 
+import { parseProductBranchContext } from "./product-branch-context.mjs";
+
 const CLOSEOUT_SLICE_BRANCH_PATTERN = /^docs\/omo-closeout-([0-9]{2}[-a-z0-9]+)$/;
 
 export function resolveBranchName({
@@ -41,24 +43,12 @@ export function resolveSliceBranchContext(
     includeCloseout = true,
   } = {},
 ) {
-  if (includeBackend) {
-    const backendMatch = /^feature\/be-(.+)$/.exec(branchName);
-    if (backendMatch) {
-      return {
-        kind: "feature-be",
-        slice: backendMatch[1],
-      };
-    }
-  }
-
-  if (includeFrontend) {
-    const frontendMatch = /^feature\/fe-(.+)$/.exec(branchName);
-    if (frontendMatch) {
-      return {
-        kind: "feature-fe",
-        slice: frontendMatch[1],
-      };
-    }
+  const productContext = parseProductBranchContext(branchName);
+  if (
+    (productContext.kind === "feature-be" && includeBackend)
+    || (productContext.kind === "feature-fe" && includeFrontend)
+  ) {
+    return productContext;
   }
 
   if (includeCloseout) {
@@ -67,6 +57,7 @@ export function resolveSliceBranchContext(
       return {
         kind: "omo-closeout",
         slice: closeoutMatch[1],
+        recovery: null,
       };
     }
   }
@@ -74,6 +65,7 @@ export function resolveSliceBranchContext(
   return {
     kind: null,
     slice: null,
+    recovery: null,
   };
 }
 

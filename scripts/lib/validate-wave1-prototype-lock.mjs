@@ -1,6 +1,8 @@
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
+import { resolveSliceBranchContext } from "./validator-shared.mjs";
+
 export const WAVE1_PROTOTYPE_LOCK = {
   manifestPath: "ui/designs/reference/wave1-fixed-prototype/manifest.json",
   fixedPrototypePath: "ui/designs/prototypes/claude-design-260505-wave1",
@@ -56,8 +58,7 @@ function resolveSlice({ slice, env }) {
   }
 
   const branchName = normalizeSlice(env?.BRANCH_NAME ?? env?.GITHUB_HEAD_REF);
-  const branchMatch = /^(?:feature\/(?:fe|be)-|docs\/omo-closeout-)(.+)$/.exec(branchName);
-  return branchMatch?.[1] ?? "";
+  return resolveSliceBranchContext(branchName, { includeBackend: true }).slice ?? "";
 }
 
 export function isWave1ServicePortingSlice(slice) {
