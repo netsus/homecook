@@ -1,0 +1,39 @@
+{
+  "confirmation_back_retained": true,
+  "cook_footer_320_primary_first_dom": true,
+  "cook_footer_320_primary_first_visual": true,
+  "cook_footer_320_stacked": true,
+  "cook_footer_control_height_px": 48,
+  "cook_footer_labels_preserved": true,
+  "cook_footer_pending_locked": true,
+  "cook_footer_viewport_contained": true,
+  "cook_footer_wide_layout_preserved": [
+    390,
+    1440
+  ],
+  "field_422_alert_focused": true,
+  "field_422_inputs_retained_and_linked": true,
+  "focus_restored": true,
+  "focus_trapped": true,
+  "leftovers_footer_control_height_px": 48,
+  "leftovers_footer_destructive_color_preserved": true,
+  "leftovers_footer_safe_cancel_first_dom": true,
+  "leftovers_footer_safe_cancel_first_visual": true,
+  "leftovers_footer_text_base_px": 16,
+  "leftovers_footer_viewport_contained": true,
+  "leftovers_footer_viewports": [
+    390,
+    320
+  ],
+  "no_horizontal_overflow": [
+    390,
+    320,
+    1440
+  ],
+  "pending_controls_locked": true,
+  "pending_escape_locked": true,
+  "retained_409_input": true,
+  "replay_key_reused": true,
+  "unweighed_close_consequences_confirmed": true,
+  "virtual_keyboard": "Manual Only — automated viewport does not prove a physical keyboard"
+}

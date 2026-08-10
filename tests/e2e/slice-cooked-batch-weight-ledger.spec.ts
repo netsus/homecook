@@ -444,11 +444,20 @@ test.describe("cooked-batch-weight-ledger", () => {
       expect(box ? box.y + box.height : undefined).toBeLessThanOrEqual(height);
     }
 
-    const close = dialog.getByRole("button", { name: "닫기" });
+    await page.setViewportSize({ width: 320, height: 568 });
+    await waitForSettledPaint(page);
+
     const confirm = dialog.getByRole("button", { name: "완료 저장" });
+    const back = dialog.getByRole("button", { name: "돌아가기" });
+    const close = dialog.getByRole("button", { name: "닫기" });
     await confirm.focus();
+    await expect(confirm).toBeFocused();
+    await page.keyboard.press("Tab");
+    await expect(back).toBeFocused();
     await page.keyboard.press("Tab");
     await expect(close).toBeFocused();
+    await page.keyboard.press("Shift+Tab");
+    await expect(back).toBeFocused();
     await page.keyboard.press("Shift+Tab");
     await expect(confirm).toBeFocused();
     await page.keyboard.press("Escape");

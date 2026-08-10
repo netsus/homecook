@@ -1,0 +1,34 @@
+{
+  "accessibility_scope": {
+    "existing_cook_mode_full_page_contrast_residual_nodes": 2,
+    "new_stage4_sheet_and_section_scoped_serious_or_critical": 0
+  },
+  "captured_at": "2026-08-10T18:34:02.621Z",
+  "files": [
+    "COOK_MODE-before-mobile-default-390.png",
+    "COOK_MODE-before-mobile-narrow-320.png",
+    "COOK_MODE-desktop-state-matrix.png",
+    "COOK_MODE-mobile-default-390-container-helper.png",
+    "COOK_MODE-mobile-default-390-known.png",
+    "COOK_MODE-mobile-default-390-weigh-later.png",
+    "COOK_MODE-mobile-narrow-320-known.png",
+    "COOK_MODE-mobile-narrow-320-pending-error-replay.png",
+    "LEFTOVERS-before-mobile-default-390.png",
+    "LEFTOVERS-before-mobile-narrow-320.png",
+    "LEFTOVERS-desktop-state-matrix.png",
+    "LEFTOVERS-mobile-default-390-known-missing-unrecoverable.png",
+    "LEFTOVERS-mobile-default-390-legacy-null-depleted.png",
+    "LEFTOVERS-mobile-narrow-320-actions.png",
+    "LEFTOVERS-mobile-narrow-320-pending-error.png",
+    "runtime-axe-wcag.json",
+    "runtime-focus-keyboard-overflow.json"
+  ],
+  "generated_by": "tests/e2e/slice-cooked-batch-weight-ui-evidence.spec.ts",
+  "implementation_head": "a44b3df8e16117af02ca56e398d6656f50683964",
+  "implementation_tree": "725ddf3b92c45a2d2c45b43c4592c72ebc2daec0",
+  "viewport_matrix": [
+    320,
+    390,
+    1440
+  ]
+}

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import React from "react";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -90,6 +90,30 @@ describe("cooked batch completion sheet", () => {
     expect(actions.className).toContain("[&_button]:text-base");
     expect(screen.getByRole("button", { name: "돌아가기" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "완료 저장" })).toBeTruthy();
+  });
+
+  it("keeps the 320px footer stacked with the primary submit first in DOM and visual order", () => {
+    render(
+      <CookedBatchCompletionSheet
+        candidates={[candidate]}
+        onClose={() => undefined}
+        onSubmit={() => undefined}
+        serverError={null}
+        submitting={false}
+      />,
+    );
+
+    const actions = screen.getByTestId("cooked-batch-completion-actions");
+    const buttons = within(actions).getAllByRole("button");
+
+    expect(actions.className).toContain("flex-col");
+    expect(actions.className).toContain("min-[321px]:flex-row-reverse");
+    expect(buttons.map((button) => button.textContent)).toEqual([
+      "완료 저장",
+      "돌아가기",
+    ]);
+    expect(buttons.every((button) => button.className.includes("h-[var(--control-height-lg)]"))).toBe(true);
+    expect(buttons.every((button) => button.className.includes("w-full"))).toBe(true);
   });
 
   it("locks every action while pending and keeps one progress label", async () => {
