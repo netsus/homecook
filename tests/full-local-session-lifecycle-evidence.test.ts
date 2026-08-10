@@ -20,6 +20,7 @@ import {
   assertEvidencePhaseReady,
   buildMigrationHeadSql,
   buildSessionLifecycleEvidence,
+  collectCloudflareMonitoringSummary,
   computeLiveDirtyDiffSha256,
   normalizeRuntimeStatus,
   parseCanaryObservationJson,
@@ -54,6 +55,27 @@ function createEvidence(overrides: Record<string, unknown> = {}) {
     productionDomainContractGate: "PASS",
     ...overrides,
   });
+}
+
+function localHealthPayload(overrides: Record<string, unknown> = {}) {
+  return {
+    schema: "homecook.cloudflare-tunnel-health",
+    version: 1,
+    captured_at: "2026-08-10T00:03:00.000Z",
+    state: "healthy",
+    connector: {
+      healthy_connections: 4,
+      expected_connections: 4,
+      connection_state: "healthy",
+      metrics_valid: true,
+      log_event_count: 4,
+    },
+    degraded_duration_ms: null,
+    reconnect_ms: { count: 0, p50: null, p95: null, max: null },
+    signals: { critical: [], warning: [], diagnostic: [] },
+    incident_events: [],
+    ...overrides,
+  };
 }
 
 function createGitFixture() {
@@ -266,6 +288,296 @@ describe("full-local session lifecycle evidence contract", () => {
         account_session_stale_count: 0,
       }),
     }));
+  });
+
+  it("accepts a projected Cloudflare monitoring summary as an optional root field", () => {
+    const legacyEvidence = createEvidence();
+    const monitoring = {
+      schema: "homecook.cloudflare-monitoring-summary",
+      version: 1,
+      status: "warning",
+      incident_count: 2,
+      critical_count: 0,
+      warning_count: 1,
+      diagnostic_count: 1,
+    };
+    const evidence = createEvidence({ cloudflareMonitoring: monitoring });
+
+    expect(validateSessionLifecycleEvidence(legacyEvidence)).toEqual([]);
+    expect(Object.keys(legacyEvidence)).not.toContain("cloudflare_monitoring");
+    expect(validateSessionLifecycleEvidence(evidence)).toEqual([]);
+    expect(evidence).toEqual(expect.objectContaining({
+      cloudflare_monitoring: monitoring,
+    }));
+
+    const degraded = createEvidence({
+      cloudflareMonitoring: {
+        ...monitoring,
+        status: "degraded",
+        incident_count: 0,
+        warning_count: 0,
+        diagnostic_count: 0,
+      },
+    });
+    expect(validateSessionLifecycleEvidence(degraded)).toEqual([]);
+
+    const unsafe = createEvidence({
+      cloudflareMonitoring: { ...monitoring, response_body: "must-not-be-accepted" },
+    });
+    expect(validateSessionLifecycleEvidence(unsafe)).toContain(
+      "unexpected key cloudflare_monitoring.response_body",
+    );
+
+    const inconsistent = createEvidence({
+      cloudflareMonitoring: { ...monitoring, incident_count: 3 },
+    });
+    expect(validateSessionLifecycleEvidence(inconsistent)).toContain(
+      "cloudflare_monitoring.incident_count must equal severity counts.",
+    );
+
+    const contradictory = createEvidence({
+      cloudflareMonitoring: {
+        ...monitoring,
+        status: "healthy",
+        incident_count: 1,
+        critical_count: 1,
+        warning_count: 0,
+        diagnostic_count: 0,
+      },
+    });
+    expect(validateSessionLifecycleEvidence(contradictory)).toContain(
+      "cloudflare_monitoring.status must match severity counts.",
+    );
+
+    const emptyCritical = createEvidence({
+      cloudflareMonitoring: {
+        ...monitoring,
+        status: "critical",
+        incident_count: 0,
+        critical_count: 0,
+        warning_count: 0,
+        diagnostic_count: 0,
+      },
+    });
+    expect(validateSessionLifecycleEvidence(emptyCritical)).toContain(
+      "cloudflare_monitoring.status must match severity counts.",
+    );
+  });
+
+  it("collects an optional redacted local monitoring summary on the actual capture path", () => {
+    const calls: Array<{ command: string; args: string[] }> = [];
+    const summary = collectCloudflareMonitoringSummary({
+      implementationRoot: "/repo/homecook",
+      commandRunner: (command: string, args: string[]) => {
+        calls.push({ command, args });
+        const stdout = JSON.stringify(localHealthPayload({
+          state: "warning",
+          connector: {
+            healthy_connections: 3,
+            expected_connections: 4,
+            connection_state: "degraded",
+            metrics_valid: true,
+            log_event_count: 5,
+          },
+          degraded_duration_ms: 60_001,
+          signals: {
+            critical: [],
+            warning: ["connector_below_4_over_60s"],
+            diagnostic: [],
+          },
+          incident_events: [{
+            timestamp: "2026-08-10T00:03:00.000Z",
+            source: "local_connector",
+            kind: "connector_health",
+            severity: "warning",
+            status: "connector_degraded",
+            error: "CONNECTOR_DEGRADED",
+            colo: "ICN",
+            network_label: null,
+          }],
+        }));
+        const stderr = "provider-secret-must-not-escape";
+        return {
+          pid: 0,
+          status: 0,
+          signal: null,
+          stdout,
+          stderr,
+          output: [null, stdout, stderr],
+        };
+      },
+    });
+
+    expect(calls).toEqual([{
+      command: process.execPath,
+      args: ["/repo/homecook/scripts/cloudflare-tunnel-health.mjs"],
+    }]);
+    expect(summary).toEqual({
+      schema: "homecook.cloudflare-monitoring-summary",
+      version: 1,
+      status: "warning",
+      incident_count: 1,
+      critical_count: 0,
+      warning_count: 1,
+      diagnostic_count: 0,
+    });
+    expect(JSON.stringify(summary)).not.toMatch(/must-not-escape|provider|credential|session/iu);
+
+    const criticalSummary = collectCloudflareMonitoringSummary({
+      implementationRoot: "/repo/homecook",
+      commandRunner: () => {
+        const stdout = JSON.stringify(localHealthPayload({
+          state: "critical",
+          connector: {
+            healthy_connections: 0,
+            expected_connections: 4,
+            connection_state: "down",
+            metrics_valid: true,
+            log_event_count: 4,
+          },
+          signals: { critical: ["connector_down"], warning: [], diagnostic: [] },
+          incident_events: [{
+            timestamp: "2026-08-10T00:03:00.000Z",
+            source: "local_connector",
+            kind: "connector_health",
+            severity: "critical",
+            status: "connector_down",
+            error: "CONNECTOR_DOWN",
+            colo: "MISSING",
+            network_label: null,
+          }],
+        }));
+        const stderr = "cloudflare-tunnel-health: FAIL (redacted)\n";
+        return {
+          pid: 0,
+          status: 1,
+          signal: null,
+          stdout,
+          stderr,
+          output: [null, stdout, stderr],
+        };
+      },
+    });
+    expect(criticalSummary).toEqual(expect.objectContaining({
+      status: "critical",
+      critical_count: 1,
+    }));
+
+    const healthyPayload = JSON.stringify(localHealthPayload());
+    for (const processResult of [
+      { status: 2, signal: null },
+      { status: null, signal: "SIGKILL" },
+      { status: 1, signal: null },
+    ] satisfies Array<{ status: number | null; signal: NodeJS.Signals | null }>) {
+      expect(collectCloudflareMonitoringSummary({
+        implementationRoot: "/repo/homecook",
+        commandRunner: () => ({
+          pid: 0,
+          ...processResult,
+          stdout: healthyPayload,
+          stderr: "must-not-escape",
+          output: [null, healthyPayload, "must-not-escape"],
+        }),
+      })).toBeNull();
+    }
+
+    expect(collectCloudflareMonitoringSummary({
+      implementationRoot: "/repo/homecook",
+      commandRunner: () => ({
+        pid: 0,
+        status: 0,
+        signal: null,
+        stdout: JSON.stringify({
+          schema: "homecook.cloudflare-tunnel-health",
+          version: 1,
+          state: "critical",
+          incident_events: [],
+        }),
+        stderr: "",
+        output: [null, "", ""],
+      }),
+    })).toBeNull();
+
+    const degradedPayload = localHealthPayload({
+      state: "degraded",
+      connector: {
+        healthy_connections: 3,
+        expected_connections: 4,
+        connection_state: "degraded",
+        metrics_valid: true,
+        log_event_count: 5,
+      },
+      degraded_duration_ms: 20_000,
+    });
+    expect(collectCloudflareMonitoringSummary({
+      implementationRoot: "/repo/homecook",
+      commandRunner: () => ({
+        pid: 0,
+        status: 1,
+        signal: null,
+        stdout: JSON.stringify(degradedPayload),
+        stderr: "",
+        output: [null, "", ""],
+      }),
+    })).toEqual({
+      schema: "homecook.cloudflare-monitoring-summary",
+      version: 1,
+      status: "degraded",
+      incident_count: 0,
+      critical_count: 0,
+      warning_count: 0,
+      diagnostic_count: 0,
+    });
+
+    const invalidPayloads = [
+      {
+        schema: "homecook.cloudflare-tunnel-health",
+        version: 1,
+        state: "healthy",
+        incident_events: [],
+      },
+      { ...localHealthPayload(), credential: "must-not-escape" },
+      {
+        ...localHealthPayload(),
+        incident_events: [{
+          timestamp: "2026-08-10T00:00:00.000Z",
+          source: "local_connector",
+          kind: "connector_health",
+          severity: "warning",
+          status: "reconnect_slow",
+          error: "RECONNECT_SLOW",
+          colo: "ICN",
+          network_label: null,
+          raw_log: "must-not-escape",
+        }],
+      },
+      {
+        ...localHealthPayload(),
+        connector: {
+          healthy_connections: 3,
+          expected_connections: 4,
+          connection_state: "degraded",
+          metrics_valid: true,
+          log_event_count: 5,
+        },
+      },
+    ];
+    for (const payload of invalidPayloads) {
+      expect(collectCloudflareMonitoringSummary({
+        implementationRoot: "/repo/homecook",
+        commandRunner: () => ({
+          pid: 0,
+          status: payload.state === "healthy" ? 0 : 1,
+          signal: null,
+          stdout: JSON.stringify(payload),
+          stderr: "must-not-escape",
+          output: [null, "", "must-not-escape"],
+        }),
+      })).toBeNull();
+    }
+
+    const source = readFileSync("scripts/capture-full-local-session-lifecycle-evidence.mjs", "utf8");
+    expect(source).toMatch(/cloudflareMonitoring:\s*collectCloudflareMonitoringSummary/u);
   });
 
   it("refuses milestone evidence while a required verification gate is not PASS", () => {
