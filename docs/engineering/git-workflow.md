@@ -38,6 +38,13 @@
   - `pnpm branch:status`
   - `pnpm branch:clear`
 - `feature/be-<slice>`와 `feature/fe-<slice>`는 `origin/master`에 해당 workpack README + acceptance가 이미 있어야만 시작할 수 있다.
+- product PR의 보존된 history 때문에 commit-range policy를 additive commit으로 고칠 수 없는 경우에만 exact recovery branch `feature/<be|fe>-<canonical-slice>-superseding-draft`를 사용할 수 있다.
+  - `-superseding-draft`는 예약 suffix다. 다른 suffix, 유사 suffix, PR body/label override, allowlist/skip env로 product branch 의미를 바꾸지 않는다.
+  - recovery branch는 parser와 모든 product validator에서 `feature/<be|fe>-<canonical-slice>`와 같은 kind/slice로 분류한다. `fix/*`는 product Ready gate를 실행하지 않으므로 대체 경로가 아니다.
+  - original PR/branch history는 force-push, amend, rebase, reset, silent branch recreation 없이 그대로 보존한다.
+  - recovery 시작 evidence에는 original PR, exact base/head/tree SHA, additive repair 불가 사유, successor의 exact base/parent/head/tree SHA, original과 successor의 동일-tree 증명을 남긴다.
+  - successor commit range는 처음부터 Conventional Commits와 Lore protocol을 만족해야 한다. head-only commit 검사는 clean range 증거를 대체하지 않는다.
+  - successor PR은 Draft로 만들고 canonical product PR과 같은 workpack, Policy, Ready, current-head 전체 check, 실제 동작, 독립 Stage review gate를 모두 거친다.
 - working branch 또는 PR head branch는 아래 패턴 중 하나여야 한다.
   - `feature/<slug>`
   - `fix/<slug>`
@@ -48,6 +55,8 @@
   - `release/<slug>`
   - `hotfix/<slug>`
 - `pnpm validate:branch`와 CI branch validation은 protected base branch를 작업 브랜치로 쓰는 경우 실패해야 한다.
+
+이 recovery는 제품 구현 tree를 바꾸기 위한 경로가 아니라 잘못된 보존 history를 우회하지 않고 clean successor history로 다시 제출하는 제한된 절차다. 동일-tree 증명이 없거나 product diff를 함께 바꿔야 하면 이 절차를 쓰지 않고 별도 범위의 product repair로 분리한다.
 
 예시:
 

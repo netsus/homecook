@@ -4,6 +4,7 @@ import { spawnSync } from "node:child_process";
 
 import { readAutomationSpec } from "./omo-automation-spec.mjs";
 import { projectCanonicalCloseoutToPrBodySections } from "./omo-closeout-state.mjs";
+import { parseProductBranchContext } from "./product-branch-context.mjs";
 import {
   REQUIRED_PR_SECTIONS,
   findEmptyPrSections,
@@ -95,9 +96,9 @@ function inferWorkItemIdFromBranch(branchName) {
     return null;
   }
 
-  const featureSliceMatch = /^feature\/(?:be|fe)-(.+)$/.exec(normalizedBranch);
-  if (featureSliceMatch?.[1]) {
-    return featureSliceMatch[1].trim();
+  const productBranchContext = parseProductBranchContext(normalizedBranch);
+  if (productBranchContext.slice) {
+    return productBranchContext.slice;
   }
 
   const docsSliceMatch = /^docs\/([0-9][0-9a-z]?-.+)$/.exec(normalizedBranch);
