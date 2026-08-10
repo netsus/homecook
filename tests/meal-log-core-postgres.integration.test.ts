@@ -159,6 +159,13 @@ function entryStateDigest(entryId: string) {
   )::text);`).stdout.trim();
 }
 
+function dayStateDigest(date = "2026-08-11") {
+  return psql(`set local request.jwt.claim.role='service_role';
+    select md5(public.get_meal_log_day(
+      '${owner}','${identity}','${sessionHash}',1,'${issued}','${date}'
+    )::text);`).stdout.trim();
+}
+
 describe.runIf(enabled)("meal-log core PostgreSQL", () => {
   beforeAll(() => {
     psql(`
@@ -376,6 +383,7 @@ describe.runIf(enabled)("meal-log core PostgreSQL", () => {
     const sourceChangeEntry = "94c00000-0000-4000-8000-000000000002";
     const newEntry = "94c00000-0000-4000-8000-000000000003";
     const patchKey = "94d00000-0000-4000-8000-000000000001";
+    const metadataPatchKey = "94d00000-0000-4000-8000-000000000006";
     mutation("create", pinnedEntry, "94d00000-0000-4000-8000-000000000002", payloadOnDate({ type: "food_product", id: productForward }, 1, "serving"));
     mutation("create", sourceChangeEntry, "94d00000-0000-4000-8000-000000000003", payloadOnDate({ type: "food_product", id: product }, 50, "g"));
     const patchBody = { ...payloadOnDate({ type: "food_product", id: productForward }, 2, "serving"), expected_revision: 1 };
@@ -419,6 +427,14 @@ describe.runIf(enabled)("meal-log core PostgreSQL", () => {
       select public.set_account_generation_internal_writer_marker('${cutover}',false);
       ${mutationSql("patch", pinnedEntry, patchKey, patchBody, 1)}
       ${mutationSql("patch", pinnedEntry, patchKey, patchBody, 1)}
+      ${mutationSql("patch", pinnedEntry, metadataPatchKey, {
+        ...payloadOnDate({ type: "food_product", id: productForward }, 2, "serving"),
+        meal_plan_column_id: columnPartial, expected_revision: 2,
+      }, 2)}
+      ${mutationSql("patch", pinnedEntry, metadataPatchKey, {
+        ...payloadOnDate({ type: "food_product", id: productForward }, 2, "serving"),
+        meal_plan_column_id: columnPartial, expected_revision: 2,
+      }, 2)}
       ${mutationSql("create", newEntry, "94d00000-0000-4000-8000-000000000004", payloadOnDate({ type: "food_product", id: productForward }, 1, "serving"))}
       ${mutationSql("patch", sourceChangeEntry, "94d00000-0000-4000-8000-000000000005", {
         ...payloadOnDate({ type: "food_product", id: productForward }, 1, "serving"), expected_revision: 1,
@@ -430,6 +446,9 @@ describe.runIf(enabled)("meal-log core PostgreSQL", () => {
         'patch_receipts',(select count(*) from public.mutation_idempotency_keys
           where owner_uuid='${owner}' and operation_scope='meal_log_patch'
             and key_hash=encode(extensions.digest(convert_to('${patchKey}','UTF8'),'sha256'),'hex')),
+        'metadata_patch_receipts',(select count(*) from public.mutation_idempotency_keys
+          where owner_uuid='${owner}' and operation_scope='meal_log_patch'
+            and key_hash=encode(extensions.digest(convert_to('${metadataPatchKey}','UTF8'),'sha256'),'hex')),
         'new_version',(select food_product_nutrition_version_id from public.meal_log_entries where id='${newEntry}'),
         'new_calories',(select (nutrition_evidence_json->>'calories_kcal')::numeric from public.meal_log_entries where id='${newEntry}'),
         'source_change_version',(select food_product_nutrition_version_id from public.meal_log_entries where id='${sourceChangeEntry}'),
@@ -438,11 +457,13 @@ describe.runIf(enabled)("meal-log core PostgreSQL", () => {
       rollback;`);
     const rows = jsonRows(result.stdout);
     expect(rows[0]).toEqual(rows[1]);
+    expect(rows[2]).toEqual(rows[3]);
     expect(rows.at(-1)).toEqual({
       pinned_version: productForwardVersion,
       pinned_calories: 200,
-      pinned_revision: 2,
+      pinned_revision: 3,
       patch_receipts: 1,
+      metadata_patch_receipts: 1,
       new_version: productReplacementVersion,
       new_calories: 200,
       source_change_version: productReplacementVersion,
@@ -455,6 +476,7 @@ describe.runIf(enabled)("meal-log core PostgreSQL", () => {
     const sourceChangeEntry = "94c00000-0000-4000-8000-000000000012";
     const newEntry = "94c00000-0000-4000-8000-000000000013";
     const patchKey = "94d00000-0000-4000-8000-000000000011";
+    const metadataPatchKey = "94d00000-0000-4000-8000-000000000016";
     mutation("create", pinnedEntry, "94d00000-0000-4000-8000-000000000012", payloadOnDate({ type: "ingredient", id: ingredient }, 10, "g"));
     mutation("create", sourceChangeEntry, "94d00000-0000-4000-8000-000000000013", payloadOnDate({ type: "food_product", id: product }, 10, "g"));
     const patchBody = { ...payloadOnDate({ type: "ingredient", id: ingredient }, 20, "g"), expected_revision: 1 };
@@ -505,6 +527,14 @@ describe.runIf(enabled)("meal-log core PostgreSQL", () => {
       select public.set_account_generation_internal_writer_marker('${cutover}',false);
       ${mutationSql("patch", pinnedEntry, patchKey, patchBody, 1)}
       ${mutationSql("patch", pinnedEntry, patchKey, patchBody, 1)}
+      ${mutationSql("patch", pinnedEntry, metadataPatchKey, {
+        ...payloadOnDate({ type: "ingredient", id: ingredient }, 20, "g"),
+        meal_plan_column_id: columnPartial, expected_revision: 2,
+      }, 2)}
+      ${mutationSql("patch", pinnedEntry, metadataPatchKey, {
+        ...payloadOnDate({ type: "ingredient", id: ingredient }, 20, "g"),
+        meal_plan_column_id: columnPartial, expected_revision: 2,
+      }, 2)}
       ${mutationSql("create", newEntry, "94d00000-0000-4000-8000-000000000014", payloadOnDate({ type: "ingredient", id: ingredient }, 10, "g"))}
       ${mutationSql("patch", sourceChangeEntry, "94d00000-0000-4000-8000-000000000015", {
         ...payloadOnDate({ type: "ingredient", id: ingredient }, 10, "g"), expected_revision: 1,
@@ -516,6 +546,9 @@ describe.runIf(enabled)("meal-log core PostgreSQL", () => {
         'patch_receipts',(select count(*) from public.mutation_idempotency_keys
           where owner_uuid='${owner}' and operation_scope='meal_log_patch'
             and key_hash=encode(extensions.digest(convert_to('${patchKey}','UTF8'),'sha256'),'hex')),
+        'metadata_patch_receipts',(select count(*) from public.mutation_idempotency_keys
+          where owner_uuid='${owner}' and operation_scope='meal_log_patch'
+            and key_hash=encode(extensions.digest(convert_to('${metadataPatchKey}','UTF8'),'sha256'),'hex')),
         'new_profile',(select ingredient_nutrition_profile_id from public.meal_log_entries where id='${newEntry}'),
         'new_calories',(select (nutrition_evidence_json->>'calories_kcal')::numeric from public.meal_log_entries where id='${newEntry}'),
         'source_change_profile',(select ingredient_nutrition_profile_id from public.meal_log_entries where id='${sourceChangeEntry}'),
@@ -524,11 +557,13 @@ describe.runIf(enabled)("meal-log core PostgreSQL", () => {
       rollback;`);
     const rows = jsonRows(result.stdout);
     expect(rows[0]).toEqual(rows[1]);
+    expect(rows[2]).toEqual(rows[3]);
     expect(rows.at(-1)).toEqual({
       pinned_profile: ingredientProfile,
       pinned_calories: 20,
-      pinned_revision: 2,
+      pinned_revision: 3,
       patch_receipts: 1,
+      metadata_patch_receipts: 1,
       new_profile: ingredientReplacementProfile,
       new_calories: 30,
       source_change_profile: ingredientReplacementProfile,
@@ -562,7 +597,176 @@ describe.runIf(enabled)("meal-log core PostgreSQL", () => {
       expect(psql(`select is_active || ':' || review_status
         from public.nutrition_profiles where id='${profileId}';`).stdout.trim()).toBe("true:approved");
     }
-  }, 10_000);
+  });
+
+  test("rejects a revoked pinned product profile before same-quantity cached reuse", () => {
+    const entryId = "94c00000-0000-4000-8000-000000000031";
+    const patchKey = "94d00000-0000-4000-8000-000000000031";
+    mutation("create", entryId, "94d00000-0000-4000-8000-000000000032", payloadOnDate({ type: "food_product", id: productForward }, 1, "serving"));
+    const entryBefore = entryStateDigest(entryId);
+    const dayBefore = dayStateDigest();
+
+    const failed = psql(`begin;
+      select public.set_account_generation_internal_writer_marker('${cutover}',true);
+      update public.nutrition_profiles
+      set review_status='revoked',is_active=false,decision_reason='stage3 revoked fast-path control',
+          reviewed_by='${owner}',reviewed_at=now()
+      where id='${productNutritionProfile}';
+      select public.set_account_generation_internal_writer_marker('${cutover}',false);
+      ${mutationSql("patch", entryId, patchKey, {
+        ...payloadOnDate({ type: "food_product", id: productForward }, 1, "serving"),
+        meal_plan_column_id: columnPartial,
+        expected_revision: 1,
+      }, 1)}`, false);
+
+    expect(failed.status).not.toBe(0);
+    expect(failed.stderr).toContain("RESOURCE_NOT_FOUND");
+    expect(entryStateDigest(entryId)).toBe(entryBefore);
+    expect(dayStateDigest()).toBe(dayBefore);
+    expect(psql(`select count(*) from public.mutation_idempotency_keys
+      where owner_uuid='${owner}' and operation_scope='meal_log_patch'
+        and key_hash=encode(extensions.digest(convert_to('${patchKey}','UTF8'),'sha256'),'hex');`).stdout.trim()).toBe("0");
+  });
+
+  test.each([
+    ["quantity", "94c00000-0000-4000-8000-000000000041", "94d00000-0000-4000-8000-000000000041", 20, columnComplete],
+    ["metadata", "94c00000-0000-4000-8000-000000000042", "94d00000-0000-4000-8000-000000000042", 10, columnPartial],
+  ] as const)("rejects a revoked pinned ingredient link before %s PATCH", (_kind, entryId, patchKey, amount, column) => {
+    mutation("create", entryId, `94e${entryId.slice(3)}`, payloadOnDate({ type: "ingredient", id: ingredient }, 10, "g"));
+    const entryBefore = entryStateDigest(entryId);
+    const dayBefore = dayStateDigest();
+
+    const failed = psql(`begin;
+      select public.set_account_generation_internal_writer_marker('${cutover}',true);
+      update public.ingredient_nutrition_profiles
+      set review_status='revoked',is_active=false,is_primary=false,
+          decision_reason='stage3 revoked link control',reviewed_by='${owner}',reviewed_at=now()
+      where id='${ingredientProfile}';
+      select public.set_account_generation_internal_writer_marker('${cutover}',false);
+      ${mutationSql("patch", entryId, patchKey, {
+        ...payloadOnDate({ type: "ingredient", id: ingredient }, amount, "g"),
+        meal_plan_column_id: column,
+        expected_revision: 1,
+      }, 1)}`, false);
+
+    expect(failed.status).not.toBe(0);
+    expect(failed.stderr).toContain("RESOURCE_NOT_FOUND");
+    expect(entryStateDigest(entryId)).toBe(entryBefore);
+    expect(dayStateDigest()).toBe(dayBefore);
+    expect(psql(`select count(*) from public.mutation_idempotency_keys
+      where owner_uuid='${owner}' and operation_scope='meal_log_patch'
+        and key_hash=encode(extensions.digest(convert_to('${patchKey}','UTF8'),'sha256'),'hex');`).stdout.trim()).toBe("0");
+  });
+
+  test.each([
+    ["assignment", "94c00000-0000-4000-8000-000000000051", "94d00000-0000-4000-8000-000000000051", "tbsp", 1, 2,
+      `update public.ingredient_conversion_assignments
+       set review_status='revoked',is_active=false,assignment_reason='stage3 revoked assignment control',
+           reviewed_by='${owner}',reviewed_at=now() where id='${volumeAssignment}'`],
+    ["piece", "94c00000-0000-4000-8000-000000000052", "94d00000-0000-4000-8000-000000000052", "piece", 1, 2,
+      `update public.piece_unit_weights
+       set review_status='revoked',is_active=false,decision_reason='stage3 revoked piece control',
+           reviewed_by='${owner}',reviewed_at=now() where id='${pieceWeight}'`],
+    ["evidence", "94c00000-0000-4000-8000-000000000053", "94d00000-0000-4000-8000-000000000053", "piece", 1, 1,
+      `set session_replication_role='replica';
+       update public.measurement_source_evidence
+       set review_status='rejected',is_active=false,decision_reason='stage3 rejected evidence control',
+           reviewed_by='${owner}',reviewed_at=now() where id='${pieceEvidence}';
+       set session_replication_role='origin'`],
+    ["source", "94c00000-0000-4000-8000-000000000054", "94d00000-0000-4000-8000-000000000054", "tbsp", 1, 2,
+      `set session_replication_role='replica';
+       update public.nutrition_sources
+       set freshness_status='stale',review_status='rejected',is_active=false,
+           decision_reason='stage3 rejected source control',reviewed_by='${owner}',reviewed_at=now()
+       where id='${measurementSource}';
+       set session_replication_role='origin'`],
+  ] as const)("rejects a disallowed pinned conversion %s with zero writes", (_kind, entryId, patchKey, unit, initialAmount, patchAmount, disableSql) => {
+    mutation("create", entryId, `94e${entryId.slice(3)}`, payloadOnDate({ type: "ingredient", id: ingredient }, initialAmount, unit));
+    const entryBefore = entryStateDigest(entryId);
+    const dayBefore = dayStateDigest();
+
+    const failed = psql(`begin;
+      select public.set_account_generation_internal_writer_marker('${cutover}',true);
+      ${disableSql};
+      select public.set_account_generation_internal_writer_marker('${cutover}',false);
+      ${mutationSql("patch", entryId, patchKey, {
+        ...payloadOnDate({ type: "ingredient", id: ingredient }, patchAmount, unit),
+        meal_plan_column_id: patchAmount === initialAmount ? columnPartial : columnComplete,
+        expected_revision: 1,
+      }, 1)}`, false);
+
+    expect(failed.status).not.toBe(0);
+    expect(failed.stderr).toContain("RESOURCE_NOT_FOUND");
+    expect(entryStateDigest(entryId)).toBe(entryBefore);
+    expect(dayStateDigest()).toBe(dayBefore);
+    expect(psql(`select count(*) from public.mutation_idempotency_keys
+      where owner_uuid='${owner}' and operation_scope='meal_log_patch'
+        and key_hash=encode(extensions.digest(convert_to('${patchKey}','UTF8'),'sha256'),'hex');`).stdout.trim()).toBe("0");
+  });
+
+  test("reuses exact superseded pinned piece and volume chains without repinning", () => {
+    const pieceEntry = "94c00000-0000-4000-8000-000000000061";
+    const volumeEntry = "94c00000-0000-4000-8000-000000000062";
+    const piecePatchKey = "94d00000-0000-4000-8000-000000000061";
+    const volumePatchKey = "94d00000-0000-4000-8000-000000000062";
+    mutation("create", pieceEntry, "94e00000-0000-4000-8000-000000000061", payloadOnDate({ type: "ingredient", id: ingredient }, 1, "piece"));
+    mutation("create", volumeEntry, "94e00000-0000-4000-8000-000000000062", payloadOnDate({ type: "ingredient", id: ingredient }, 1, "tbsp"));
+
+    const result = psql(`begin;
+      select public.set_account_generation_internal_writer_marker('${cutover}',true);
+      update public.piece_unit_weights
+      set review_status='superseded',is_active=false,decision_reason='stage3 historical pin',
+          reviewed_by='${owner}',reviewed_at=now() where id='${pieceWeight}';
+      update public.ingredient_conversion_assignments
+      set review_status='superseded',is_active=false,assignment_reason='stage3 historical pin',
+          reviewed_by='${owner}',reviewed_at=now() where id='${volumeAssignment}';
+      update public.measurement_source_evidence
+      set review_status='superseded',is_active=false,decision_reason='stage3 historical pin',
+          reviewed_by='${owner}',reviewed_at=now() where id in ('${pieceEvidence}','${volumeEvidence}');
+      update public.nutrition_sources
+      set freshness_status='stale',review_status='superseded',is_active=false,
+          decision_reason='stage3 historical pin',reviewed_by='${owner}',reviewed_at=now()
+      where id='${measurementSource}';
+      select public.set_account_generation_internal_writer_marker('${cutover}',false);
+      ${mutationSql("patch", pieceEntry, piecePatchKey, {
+        ...payloadOnDate({ type: "ingredient", id: ingredient }, 2, "piece"), expected_revision: 1,
+      }, 1)}
+      ${mutationSql("patch", pieceEntry, piecePatchKey, {
+        ...payloadOnDate({ type: "ingredient", id: ingredient }, 2, "piece"), expected_revision: 1,
+      }, 1)}
+      ${mutationSql("patch", volumeEntry, volumePatchKey, {
+        ...payloadOnDate({ type: "ingredient", id: ingredient }, 2, "tbsp"), expected_revision: 1,
+      }, 1)}
+      ${mutationSql("patch", volumeEntry, volumePatchKey, {
+        ...payloadOnDate({ type: "ingredient", id: ingredient }, 2, "tbsp"), expected_revision: 1,
+      }, 1)}
+      select jsonb_build_object(
+        'piece_evidence',(select conversion_evidence_id from public.meal_log_entries where id='${pieceEntry}'),
+        'piece_calories',(select (nutrition_evidence_json->>'calories_kcal')::numeric from public.meal_log_entries where id='${pieceEntry}'),
+        'piece_revision',(select revision from public.meal_log_entries where id='${pieceEntry}'),
+        'piece_receipts',(select count(*) from public.mutation_idempotency_keys where owner_uuid='${owner}'
+          and operation_scope='meal_log_patch' and key_hash=encode(extensions.digest(convert_to('${piecePatchKey}','UTF8'),'sha256'),'hex')),
+        'volume_evidence',(select conversion_evidence_id from public.meal_log_entries where id='${volumeEntry}'),
+        'volume_calories',(select (nutrition_evidence_json->>'calories_kcal')::numeric from public.meal_log_entries where id='${volumeEntry}'),
+        'volume_revision',(select revision from public.meal_log_entries where id='${volumeEntry}'),
+        'volume_receipts',(select count(*) from public.mutation_idempotency_keys where owner_uuid='${owner}'
+          and operation_scope='meal_log_patch' and key_hash=encode(extensions.digest(convert_to('${volumePatchKey}','UTF8'),'sha256'),'hex'))
+      );
+      rollback;`);
+    const rows = jsonRows(result.stdout);
+    expect(rows[0]).toEqual(rows[1]);
+    expect(rows[2]).toEqual(rows[3]);
+    expect(rows.at(-1)).toEqual({
+      piece_evidence: pieceEvidence,
+      piece_calories: 100,
+      piece_revision: 2,
+      piece_receipts: 1,
+      volume_evidence: volumeEvidence,
+      volume_calories: 20,
+      volume_revision: 2,
+      volume_receipts: 1,
+    });
+  });
 
   test("preserves exact piece pins and rejects missing, rejected, or stale evidence", () => {
     const patch = mutation("patch", "94000000-0000-4000-8000-000000000003", "94100000-0000-4000-8000-000000000004", {

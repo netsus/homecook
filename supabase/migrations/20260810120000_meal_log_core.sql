@@ -381,7 +381,7 @@ declare v_authority jsonb; v_generation bigint; v_claim jsonb; v_receipt uuid; v
   v_conversion_evidence uuid; v_nutrition_amount numeric; v_nutrition_unit text; v_result jsonb;
   v_same_source boolean; v_same_quantity boolean; v_product_profile uuid; v_product_relations jsonb;
   v_old_batch_id uuid; v_new_batch_id uuid; v_lock_batch_id uuid; v_locked_batch public.leftover_dishes%rowtype;
-  v_batch_nutrition jsonb; v_piece_count integer; v_conversion_count integer;
+  v_batch_nutrition jsonb; v_piece_count integer; v_conversion_count integer; v_conversion_kind text;
 begin
   if p_action not in ('create','patch','delete') then raise exception 'VALIDATION_ERROR' using errcode='22023'; end if;
   v_authority:=public.assert_recipe_future_session_authority(p_owner_uuid,p_auth_identity_created_at_snapshot,p_session_key_hash,p_hmac_key_version,p_session_issued_at);
@@ -461,10 +461,13 @@ begin
         and product.moderation_status='visible' and (product.visibility='public' or product.owner_user_id=p_owner_uuid) for share;
       if v_product_version is null then raise exception 'RESOURCE_NOT_FOUND' using errcode='P0002'; end if;
       if v_same_source then v_name:=v_entry.display_name_snapshot; v_brand:=v_entry.display_brand_snapshot; end if;
-      if v_same_quantity then v_evidence:=v_entry.nutrition_evidence_json;
+      select version.nutrition_profile_id,version.basis_relations_json into v_product_profile,v_product_relations
+      from public.food_product_nutrition_versions version where version.id=v_product_version and version.product_id=v_source_id;
+      if v_product_profile is null then raise exception 'RESOURCE_NOT_FOUND' using errcode='P0002'; end if;
+      if v_same_quantity then
+        perform private.resolve_meal_log_product_nutrition(v_product_profile,v_product_relations,v_amount,v_unit,true);
+        v_evidence:=v_entry.nutrition_evidence_json;
       else
-        select version.nutrition_profile_id,version.basis_relations_json into v_product_profile,v_product_relations
-        from public.food_product_nutrition_versions version where version.id=v_product_version and version.product_id=v_source_id;
         v_evidence:=private.resolve_meal_log_product_nutrition(v_product_profile,v_product_relations,v_amount,v_unit,v_same_source);
       end if;
     elsif v_source_type='ingredient' then
@@ -475,6 +478,69 @@ begin
       else select profile.id into v_ingredient_profile from public.ingredient_nutrition_profiles profile
         where profile.ingredient_id=v_source_id and profile.is_primary and profile.is_active and profile.review_status='approved'; end if;
       if v_ingredient_profile is null then raise exception 'RESOURCE_NOT_FOUND' using errcode='P0002'; end if;
+      if v_same_source and not exists(
+        select 1
+        from public.ingredient_nutrition_profiles profile
+        join public.nutrition_profiles nutrition on nutrition.id=profile.nutrition_profile_id
+        where profile.id=v_ingredient_profile and profile.ingredient_id=v_source_id
+          and ((profile.is_active and profile.review_status='approved')
+            or (not profile.is_active and profile.review_status='superseded'))
+          and ((nutrition.is_active and nutrition.review_status in ('approved','self_reported'))
+            or (not nutrition.is_active and nutrition.review_status='superseded'))
+      ) then
+        raise exception 'RESOURCE_NOT_FOUND' using errcode='P0002';
+      end if;
+      if v_same_source and v_conversion_evidence is not null then
+        select evidence.evidence_kind into v_conversion_kind
+        from public.measurement_source_evidence evidence
+        where evidence.id=v_conversion_evidence;
+        if v_conversion_kind='volume_weight' then
+          if not exists(
+            select 1
+            from public.ingredient_nutrition_profiles profile
+            join public.ingredient_conversion_assignments assignment
+              on assignment.ingredient_id=profile.ingredient_id
+              and assignment.preparation_state=profile.preparation_state
+              and assignment.evidence_id=v_conversion_evidence
+            join public.measurement_source_evidence evidence on evidence.id=assignment.evidence_id
+            join public.nutrition_sources source on source.id=evidence.source_id
+            where profile.id=v_ingredient_profile
+              and ((assignment.is_active and assignment.review_status='approved')
+                or (not assignment.is_active and assignment.review_status='superseded'))
+              and ((evidence.is_active and evidence.review_status='approved')
+                or (not evidence.is_active and evidence.review_status='superseded'))
+              and ((source.is_active and source.review_status='approved' and source.freshness_status='current')
+                or (not source.is_active and source.review_status='superseded'))
+          ) then
+            raise exception 'RESOURCE_NOT_FOUND' using errcode='P0002';
+          end if;
+        elsif v_conversion_kind='piece_weight' then
+          if not exists(
+            select 1
+            from public.ingredient_nutrition_profiles profile
+            join public.piece_unit_weights piece
+              on piece.ingredient_id=profile.ingredient_id
+              and piece.preparation_state=profile.preparation_state
+              and piece.evidence_id=v_conversion_evidence
+            join public.measurement_source_evidence evidence
+              on evidence.id=piece.evidence_id
+              and evidence.size_code=piece.size_code
+              and evidence.preparation_state=piece.preparation_state
+            join public.nutrition_sources source on source.id=evidence.source_id
+            where profile.id=v_ingredient_profile
+              and ((piece.is_active and piece.review_status='approved')
+                or (not piece.is_active and piece.review_status='superseded'))
+              and ((evidence.is_active and evidence.review_status='approved')
+                or (not evidence.is_active and evidence.review_status='superseded'))
+              and ((source.is_active and source.review_status='approved' and source.freshness_status='current')
+                or (not source.is_active and source.review_status='superseded'))
+          ) then
+            raise exception 'RESOURCE_NOT_FOUND' using errcode='P0002';
+          end if;
+        else
+          raise exception 'RESOURCE_NOT_FOUND' using errcode='P0002';
+        end if;
+      end if;
       if v_same_source then v_name:=v_entry.display_name_snapshot; v_brand:=v_entry.display_brand_snapshot; end if;
       if v_same_quantity then
         v_evidence:=v_entry.nutrition_evidence_json; v_conversion_evidence:=v_entry.conversion_evidence_id;
