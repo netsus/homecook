@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import { mkdir, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
@@ -212,15 +213,26 @@ test("captures and verifies the Stage-4 viewport, state, and accessibility matri
   test.skip(testInfo.project.name !== "desktop-chrome", "한 프로젝트에서 exact viewport를 직접 설정한다.");
   test.setTimeout(120_000);
   await mkdir(EVIDENCE_DIR, { recursive: true });
-  const files: string[] = [];
+  const files: string[] = [
+    "COOK_MODE-before-mobile-default-390.png",
+    "COOK_MODE-before-mobile-narrow-320.png",
+    "LEFTOVERS-before-mobile-default-390.png",
+    "LEFTOVERS-before-mobile-narrow-320.png",
+  ];
   const runtime = {
+    confirmationBackRetained: false,
     existingCookModeFullPageContrastResidualNodes: 0,
+    field422AlertFocused: false,
+    field422InputsRetainedAndLinked: false,
     focusRestored: false,
     focusTrapped: false,
     noHorizontalOverflow: [] as number[],
+    pendingControlsLocked: false,
     pendingEscapeLocked: false,
+    retained409Input: false,
     replayKeyReused: false,
     scopedNewUiSeriousOrCritical: 0,
+    unweighedCloseConsequencesConfirmed: false,
   };
 
   for (const [width, height, suffix] of [[390, 844, "mobile-default-390"], [320, 568, "mobile-narrow-320"], [1440, 1000, "desktop-1440"]] as const) {
@@ -301,47 +313,121 @@ test("captures and verifies the Stage-4 viewport, state, and accessibility matri
     await installCookedBatchRoutes(leftovers.page);
     await leftovers.page.goto("/leftovers");
     await expect(leftovers.page.getByRole("heading", { name: "중량·잔량 기록" })).toBeVisible();
-    await stabilize(leftovers.page);
     const stateName = width === 390
       ? "LEFTOVERS-mobile-default-390-known-missing-unrecoverable.png"
       : width === 320
         ? "LEFTOVERS-mobile-narrow-320-actions.png"
         : "LEFTOVERS-desktop-state-matrix.png";
-    await leftovers.page.screenshot({ path: resolve(EVIDENCE_DIR, stateName), fullPage: true });
-    files.push(stateName);
 
     if (width === 390) {
+      const closeOpener = leftovers.page.getByRole("button", { name: /현미 채소볶음 무게 없이 종료/ });
+      await closeOpener.click();
+      const closeDialog = leftovers.page.getByRole("dialog", { name: "무게 없이 종료" });
+      await closeDialog.getByRole("radio", { name: "먹고 버림" }).click();
+      await expect(closeDialog.getByText("선택한 종료 결과").locator("..").getByText("먹고 버림", { exact: true })).toBeVisible();
+      await expect(closeDialog.getByText("그램 중량을 남기지 않아요.")).toBeVisible();
+      await expect(closeDialog.getByText("식사 영양을 계산하지 않아요.")).toBeVisible();
+      await expect(closeDialog.getByText("meal-log 식사 기록을 만들지 않아요.")).toBeVisible();
+      await closeDialog.getByRole("checkbox", { name: /그램 중량.*식사 영양.*meal-log 식사 기록/ }).check();
+      runtime.unweighedCloseConsequencesConfirmed = true;
+      runtime.scopedNewUiSeriousOrCritical += (await expectNoSeriousAxeViolations(
+        leftovers.page,
+        '[data-testid="cooked-batch-action-sheet"]',
+      )).length;
+      await stabilize(leftovers.page);
+      await leftovers.page.screenshot({ path: resolve(EVIDENCE_DIR, stateName), fullPage: true });
+      files.push(stateName);
+      await leftovers.page.keyboard.press("Escape");
+      await expect(closeOpener).toBeFocused();
+      runtime.focusRestored = true;
       await leftovers.page.getByRole("button", { name: "더 보기" }).click();
       await expect(leftovers.page.getByText("무게 없이 다 먹음")).toBeVisible();
       const depletedName = "LEFTOVERS-mobile-default-390-legacy-null-depleted.png";
+      await stabilize(leftovers.page);
       await leftovers.page.screenshot({ path: resolve(EVIDENCE_DIR, depletedName), fullPage: true });
       files.push(depletedName);
     } else if (width === 320) {
-      const actionOpener = leftovers.page.getByRole("button", { name: /현미 채소볶음 완성 중량 입력/ });
-      await actionOpener.click();
-      const actionDialog = leftovers.page.getByRole("dialog", { name: "완성 중량 입력" });
-      await expect(actionDialog.getByRole("heading", { name: "완성 중량 입력" })).toBeFocused();
+      const weightOpener = leftovers.page.getByRole("button", { name: /현미 채소볶음 완성 중량 입력/ });
+      await weightOpener.click();
+      const weightDialog = leftovers.page.getByRole("dialog", { name: "완성 중량 입력" });
+      await expect(weightDialog.getByRole("heading", { name: "완성 중량 입력" })).toBeFocused();
       await leftovers.page.route("**/api/v1/cooked-batches/*/weight", async (route) => {
         await route.fulfill({
           status: 409,
           json: { success: false, data: null, error: { code: "CONFLICT", message: "서버 기록이 먼저 변경됐어요.", fields: [] } },
         });
       });
-      await actionDialog.getByRole("spinbutton", { name: "음식만의 원래 전체 중량" }).fill("780");
-      await actionDialog.getByRole("checkbox").check();
-      await actionDialog.getByRole("button", { name: "중량 저장" }).click();
-      await expect(actionDialog.getByRole("alert")).toBeFocused();
+      await weightDialog.getByRole("spinbutton", { name: "음식만의 원래 전체 중량" }).fill("780");
+      await weightDialog.getByRole("checkbox").check();
+      await weightDialog.getByRole("button", { name: "중량 저장" }).click();
+      await expect(weightDialog.getByRole("alert")).toBeFocused();
+      await expect(weightDialog.getByRole("spinbutton", { name: "음식만의 원래 전체 중량" })).toHaveValue("780");
+      runtime.retained409Input = true;
+      await leftovers.page.keyboard.press("Escape");
+      await expect(weightOpener).toBeFocused();
+
+      await leftovers.page.route("**/api/v1/cooked-batches/*/discard", async (route) => {
+        await route.fulfill({
+          status: 422,
+          json: {
+            success: false,
+            data: null,
+            error: {
+              code: "VALIDATION_ERROR",
+              message: "버린 양과 사유를 확인해 주세요.",
+              fields: [
+                { field: "discarded_g", reason: "invalid_positive_number" },
+                { field: "reason", reason: "required" },
+              ],
+            },
+          },
+        });
+      });
+      const actionOpener = leftovers.page.getByRole("button", { name: /바질 두부구이 버림/ });
+      await actionOpener.click();
+      const actionDialog = leftovers.page.getByRole("dialog", { name: "버린 양 기록" });
+      await actionDialog.getByRole("spinbutton", { name: "버린 양" }).fill("120");
+      await actionDialog.getByLabel("사유").fill("상해서 폐기");
+      await actionDialog.getByRole("button", { name: "내용 확인" }).click();
+      await expect(actionDialog.getByRole("group", { name: "버림 내용 확인" })).toContainText("400g");
+      await actionDialog.getByRole("button", { name: "입력 수정" }).click();
+      await expect(actionDialog.getByRole("spinbutton", { name: "버린 양" })).toHaveValue("120");
+      await expect(actionDialog.getByLabel("사유")).toHaveValue("상해서 폐기");
+      runtime.confirmationBackRetained = true;
+      await actionDialog.getByRole("button", { name: "내용 확인" }).click();
+      await stabilize(leftovers.page);
+      await leftovers.page.screenshot({ path: resolve(EVIDENCE_DIR, stateName) });
+      files.push(stateName);
+      await actionDialog.getByRole("button", { name: "버림 기록" }).click();
+      const alert = actionDialog.getByRole("alert");
+      await expect(alert).toBeFocused();
+      runtime.field422AlertFocused = true;
+      const alertId = await alert.getAttribute("id");
+      expect(alertId).toBeTruthy();
+      const retainedAmount = actionDialog.getByRole("spinbutton", { name: "버린 양" });
+      const retainedReason = actionDialog.getByLabel("사유");
+      await expect(retainedAmount).toHaveValue("120");
+      await expect(retainedReason).toHaveValue("상해서 폐기");
+      await expect(retainedAmount).toHaveAttribute("aria-invalid", "true");
+      await expect(retainedReason).toHaveAttribute("aria-invalid", "true");
+      await expect(retainedAmount).toHaveAttribute("aria-describedby", alertId!);
+      await expect(retainedReason).toHaveAttribute("aria-describedby", alertId!);
+      runtime.field422InputsRetainedAndLinked = true;
       runtime.scopedNewUiSeriousOrCritical += (await expectNoSeriousAxeViolations(
         leftovers.page,
         '[data-testid="cooked-batch-action-sheet"]',
       )).length;
       const errorName = "LEFTOVERS-mobile-narrow-320-pending-error.png";
+      await stabilize(leftovers.page);
       await leftovers.page.screenshot({ path: resolve(EVIDENCE_DIR, errorName) });
       files.push(errorName);
       await leftovers.page.keyboard.press("Escape");
       await expect(actionOpener).toBeFocused();
       runtime.focusRestored = true;
     } else {
+      await stabilize(leftovers.page);
+      await leftovers.page.screenshot({ path: resolve(EVIDENCE_DIR, stateName), fullPage: true });
+      files.push(stateName);
       let releaseMutation!: () => void;
       const mutationGate = new Promise<void>((resolveMutation) => {
         releaseMutation = resolveMutation;
@@ -364,9 +450,13 @@ test("captures and verifies the Stage-4 viewport, state, and accessibility matri
       const pendingDialog = leftovers.page.getByRole("dialog", { name: "남은 양 조정" });
       await pendingDialog.getByRole("spinbutton", { name: "남은 양 조정량" }).fill("-20");
       await pendingDialog.getByLabel("사유").fill("용기 잔량 보정");
-      await pendingDialog.getByRole("checkbox").check();
+      await pendingDialog.getByRole("button", { name: "내용 확인" }).click();
+      await expect(pendingDialog.getByRole("group", { name: "조정 내용 확인" })).toContainText("500g");
       await pendingDialog.getByRole("button", { name: "조정 적용" }).click();
       await expect(pendingDialog.getByRole("status")).toContainText("서버 결과를 기다리는 중");
+      await expect(pendingDialog.getByRole("button", { name: "처리 중…" })).toBeDisabled();
+      await expect(pendingDialog.getByRole("button", { name: "닫기" })).toBeDisabled();
+      runtime.pendingControlsLocked = true;
       await leftovers.page.keyboard.press("Escape");
       await expect(pendingDialog).toBeVisible();
       runtime.pendingEscapeLocked = true;
@@ -383,14 +473,26 @@ test("captures and verifies the Stage-4 viewport, state, and accessibility matri
 
   expect(runtime.focusTrapped).toBe(true);
   expect(runtime.focusRestored).toBe(true);
+  expect(runtime.confirmationBackRetained).toBe(true);
+  expect(runtime.field422AlertFocused).toBe(true);
+  expect(runtime.field422InputsRetainedAndLinked).toBe(true);
+  expect(runtime.pendingControlsLocked).toBe(true);
   expect(runtime.pendingEscapeLocked).toBe(true);
+  expect(runtime.retained409Input).toBe(true);
   expect(runtime.replayKeyReused).toBe(true);
+  expect(runtime.unweighedCloseConsequencesConfirmed).toBe(true);
   await writeFile(resolve(EVIDENCE_DIR, "runtime-focus-keyboard-overflow.json"), `${JSON.stringify({
+    confirmation_back_retained: runtime.confirmationBackRetained,
+    field_422_alert_focused: runtime.field422AlertFocused,
+    field_422_inputs_retained_and_linked: runtime.field422InputsRetainedAndLinked,
     focus_restored: runtime.focusRestored,
     focus_trapped: runtime.focusTrapped,
     no_horizontal_overflow: runtime.noHorizontalOverflow,
+    pending_controls_locked: runtime.pendingControlsLocked,
     pending_escape_locked: runtime.pendingEscapeLocked,
+    retained_409_input: runtime.retained409Input,
     replay_key_reused: runtime.replayKeyReused,
+    unweighed_close_consequences_confirmed: runtime.unweighedCloseConsequencesConfirmed,
     virtual_keyboard: "Manual Only — automated viewport does not prove a physical keyboard",
   }, null, 2)}\n`);
   files.push("runtime-focus-keyboard-overflow.json");
@@ -408,6 +510,8 @@ test("captures and verifies the Stage-4 viewport, state, and accessibility matri
     captured_at: new Date().toISOString(),
     files: files.sort(),
     generated_by: "tests/e2e/slice-cooked-batch-weight-ui-evidence.spec.ts",
+    implementation_head: execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim(),
+    implementation_tree: execFileSync("git", ["rev-parse", "HEAD^{tree}"], { encoding: "utf8" }).trim(),
     viewport_matrix: [320, 390, 1440],
   }, null, 2)}\n`);
 });
