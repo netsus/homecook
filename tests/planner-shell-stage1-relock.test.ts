@@ -1,4 +1,5 @@
-import { readFileSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
@@ -8,6 +9,8 @@ const sliceId = "planner-shell";
 const baseSha = "8ba3fa5a2a198eb4f9c19d59cea5f6ccc52fdd4f";
 const planSha =
   "d4d0fb39e80eeffc8b1e73ad92f0d91a35a9b6adc57a556ea8c9ec6ecffa951d";
+const planArtifact =
+  "docs/workpacks/planner-shell/evidence/cooking-meal-log-and-product-search-master-plan-20260722.md";
 
 function read(relativePath: string) {
   return readFileSync(join(root, relativePath), "utf8");
@@ -50,6 +53,17 @@ describe("planner-shell fresh Stage 1 relock", () => {
     expect(owningBundle).not.toContain("45f02013fbc1c3af");
     expect(owningBundle).not.toContain("1,056 lines");
     expect(owningBundle).not.toContain("1056-line");
+
+    expect(existsSync(join(root, planArtifact))).toBe(true);
+    if (!existsSync(join(root, planArtifact))) return;
+
+    const approvedPlan = readFileSync(join(root, planArtifact));
+    expect(createHash("sha256").update(approvedPlan).digest("hex")).toBe(planSha);
+    expect(approvedPlan.toString("utf8").match(/\n/gu)).toHaveLength(1_018);
+    expect(workItem.docs_refs.governing_docs).toContain(planArtifact);
+    expect(JSON.stringify(workItem)).not.toContain(
+      "/Users/shj/2025/2026/homecook1/.omx/plans/",
+    );
   });
 
   it("consumes merged #9 code without promoting its broader lifecycle", () => {
@@ -152,5 +166,59 @@ describe("planner-shell fresh Stage 1 relock", () => {
     expect(workItem.verification.evaluator_commands).toContain(
       "separate Codex design critic review before implementation",
     );
+  });
+
+  it("locks responsive seven-day containment and meal-column stress cases", () => {
+    const contract = [readme, acceptance, design, JSON.stringify(automation)].join(
+      "\n",
+    );
+
+    for (const expected of [
+      "7-day containment",
+      "at least 2-day overview",
+      "1/3/5 meal columns",
+      "long custom meal names",
+      "200% text scaling",
+      "localization expansion",
+      "bottom-tab safe-area",
+    ]) {
+      expect(contract).toContain(expected);
+    }
+  });
+
+  it("keeps empty slots contract-neutral and locks roving-tab focus behavior", () => {
+    const contract = [readme, acceptance, design].join("\n");
+
+    expect(contract).toContain("`비어 있음`");
+    expect(contract).toContain("Contract Evolution Candidate");
+    expect(contract).not.toContain("plan-only add affordance");
+    expect(contract).not.toContain("plan empty CTA");
+
+    for (const expected of [
+      "roving tabindex",
+      "Arrow Left/Right",
+      "Home/End",
+      "Tab enters the selected panel",
+      "deep-link/auth-return/invoker-loss fallback",
+    ]) {
+      expect(contract).toContain(expected);
+    }
+  });
+
+  it("separates static PNG, Playwright interaction, and Manual Only proof", () => {
+    const evidenceContract = [
+      readme,
+      acceptance,
+      JSON.stringify(automation),
+      JSON.stringify(workItem),
+    ].join("\n");
+
+    for (const expected of [
+      "PNG static-layout proof",
+      "Playwright history/focus/Escape proof",
+      "Manual physical keyboard/screen reader/device keyboard proof",
+    ]) {
+      expect(evidenceContract).toContain(expected);
+    }
   });
 });

@@ -3,7 +3,7 @@
 ## planner-shell #10 Stage 1 Active Contract — 2026-08-11
 
 > Design Status: `temporary`
-> Current authority: 요구사항 `v1.7.30`, 화면정의서 `v1.5.34`, 유저 Flow `v1.3.32`, DB `v1.3.32`, API `v1.2.37`, approved Cooking Plan / Meal Log master plan SHA-256 `d4d0fb39e80eeffc8b1e73ad92f0d91a35a9b6adc57a556ea8c9ec6ecffa951d` (1,018 lines).
+> Current authority: 요구사항 `v1.7.30`, 화면정의서 `v1.5.34`, 유저 Flow `v1.3.32`, DB `v1.3.32`, API `v1.2.37`, governed Cooking Plan / Meal Log master plan `docs/workpacks/planner-shell/evidence/cooking-meal-log-and-product-search-master-plan-20260722.md`, SHA-256 `d4d0fb39e80eeffc8b1e73ad92f0d91a35a9b6adc57a556ea8c9ec6ecffa951d` (1,018 lines).
 > Precedence: this #10 section supersedes the historical sections below where shell, CTA, plan-nutrition or product-planner behavior conflicts. Historical evidence and authority remain provenance only and do not approve #10.
 
 ### Product and ownership lock
@@ -24,15 +24,16 @@
 │ 16px content padding                │
 ├─────────────────────────────────────┤
 │ ‹  7월 20일 ~ 7월 26일  ›           │
-│ 월 20  화 21 [수 22] 목 23 금 24    │  localized containment
+│ 월20 화21 [수22] 목23 금24 토25 일26 │  7-day containment
 ├─────────────────────────────────────┤
-│ 수 7월 22일                         │
-│ 아침  김치찌개 · 등록                │
-│        [장보기] [상세]               │  primary → secondary
-│ 점심  샐러드 · 장보기 완료           │
-│        [요리하기] [상세]             │  primary → secondary
-│ 저녁  된장찌개 · 요리 완료           │
-│        [상세]                        │  cook_done ≠ consumed
+│ 수 7월 22일 · 아침/점심/저녁         │  day overview 1
+│ 목 7월 23일 · 아침/점심/저녁         │  day overview 2
+├─────────────────────────────────────┤
+│ 선택: 수 7월 22일                    │
+│ 아침  김치찌개 · 등록 [장보기] [상세] │
+│ 점심  샐러드 · 장보기 완료            │
+│              [요리하기] [상세]        │
+│ 저녁  된장찌개 · 요리 완료 [상세]     │  cook_done ≠ consumed
 ├─────────────────────────────────────┤
 │ 과거 완제품 계획 · 읽기 전용          │
 │ 제품명 · 브랜드 · 1봉                │
@@ -40,6 +41,7 @@
 └─────────────────────────────────────┘
 ```
 
+- all seven localized dates stay contained and reachable in the planner-local rail, while the first viewport keeps an `at least 2-day overview` before selected-day detail.
 - remove the plan nutrition aggregate card and all new UI calls to `GET /planner/nutrition`; keep the endpoint server-side for compatibility.
 - remove new product-plan add and quantity-edit affordances. The historical section allows same-screen pinned detail and owner delete only.
 - completed shopping remains read-only and never shows a reconcile/new-recipe mutation CTA.
@@ -50,10 +52,15 @@
 ```text
 ┌──────────────────────────────┐
 │ 16px  [요리 계획][식사 기록] │
-│                              │
-│ 아침  김치찌개 · 등록         │
+│ 월 화 [수] 목 금 토 일  →     │  planner-local rail, all 7 days
+│ 수 · 아침/점심/저녁           │  day overview 1
+│ 목 · 아침/점심/저녁           │  day overview 2
+├──────────────────────────────┤
+│ 선택: 수                     │
+│ 아주 긴 사용자 지정 브런치…  │
+│ 김치찌개 · 등록               │
 │ [장보기]                     │
-│ [상세]                       │  wrap; never shrink below 44px
+│ [상세]                       │  wrap; never below 44px
 │                              │
 │ 과거 완제품 계획 · 읽기 전용  │
 │ 제품명 · 브랜드 · 1봉         │
@@ -64,16 +71,30 @@
 
 - keep 16px horizontal content padding and at least 44×44px interactive targets.
 - preserve DOM/visual priority order when wrapping: primary, secondary, then destructive tertiary. Do not abbreviate labels or compress controls.
-- long title/brand/quantity text may truncate within its content column; it must not push buttons outside the viewport or create page-level horizontal overflow.
+- meal and product content may wrap or truncate with an accessible full name, but `long custom meal names` must not lose their slot association, push actions outside the viewport, or create page-level horizontal overflow.
+- `200% text scaling` and `localization expansion` keep two day summaries identifiable; additional content continues vertically or inside the planner-local rail rather than under the bottom tab.
 
 ### Desktop
 
-- center the planner in the existing content-width system. Keep the mobile information hierarchy and action order; desktop may place compatible actions inline.
+- center the planner in the existing content-width system. The seven-date rail and at least two day summaries remain visible; desktop may place compatible actions inline without turning meal slots into a separate dashboard.
 - do not introduce a dashboard-only side rail or a second navigation model. Route, segment, date and focus behavior stays identical to mobile.
+
+### Dynamic meal columns and responsive containment
+
+| Fixture | Locked presentation |
+| --- | --- |
+| 1 meal column | one user-defined meal label and its slot span the available day-card width |
+| 3 meal columns | three labels remain in configured order with state/action association intact |
+| 5 meal columns | five labels remain reachable through planner-local scrolling or wrapping; the page does not overflow |
+
+- implementation and evidence exercise user-configured `1/3/5 meal columns`, not only the historical four-meal example.
+- every viewport locks `7-day containment`, an `at least 2-day overview`, long custom meal names, 200% text scaling and localization expansion together, including an empty-slot case.
+- sticky segment/week controls, if used, are scoped to the Planner scroller and cannot cover the second day summary. The final content row keeps `bottom-tab safe-area` clearance for the bottom tab plus `env(safe-area-inset-bottom)` and device keyboard.
 
 ### Interaction, scroll and focus
 
-- segment control uses tab semantics with explicit accessible names. Arrow Left/Right changes the selected segment; Home/End moves to the first/last segment.
+- segment control uses tab semantics and `roving tabindex`: the selected tab alone has `tabindex=0`. Arrow Left/Right and Home/End stay inside the tablist, move focus, and change selection; Tab enters the selected panel.
+- ordinary pointer or keyboard selection never forces focus to the panel or heading. Forced panel/heading focus is restricted to the `deep-link/auth-return/invoker-loss fallback` when restored context needs an entry target or the original invoker no longer exists.
 - switching segments preserves the selected date and separately restores each panel's scroll/input state. Plan/log rows, totals, status chips, caches and mutations never share state.
 - deep link and browser back restore the originating segment/date without duplicate history. Back from a child detail/sheet restores scroll and the invoking focus.
 - child modal/sheet traps focus, closes with Escape where the platform pattern permits, stays above the virtual keyboard and restores focus. If the invoker disappeared, focus the restored panel heading.
@@ -85,7 +106,7 @@
 | State | Visual and interaction requirement |
 | --- | --- |
 | loading | skeleton preserves segment/date/day-card geometry; all mutations fail closed |
-| empty | selected date and meal slots remain visible; show plan-only add affordance, no fake total |
+| empty | selected date and meal slots remain visible; each empty slot says `비어 있음`; no new add affordance or fake total |
 | error | scope error to the active segment, retain safe loaded rows, announce retry, fail closed |
 | unauthorized | hide private rows; preserve segment/date/slot/pending action and return focus after login |
 | shopping read-only | completed list stays visible and immutable; no reconcile CTA |
@@ -100,12 +121,16 @@
 - week-level `남은요리` stays secondary and does not outrank the row's next plan action.
 - legacy `삭제` is destructive tertiary and follows read-only `상세` in DOM and visual order.
 - `식사 기록` is actual intake; `요리 계획` is future plan. Do not use nutrition-goal, achievement-rate or medical guidance language.
+- empty-slot tap keeps current behavior; the future slice decides its future behavior. A new add affordance or empty CTA remains a `Contract Evolution Candidate` until official approval and is not an implementation contract here.
 
 ### #10 evidence and independent review gate
 
 - canonical artifact: this document.
 - fresh independent design critic required before Stage 2: `ui/designs/critiques/PLANNER_WEEK-critique.md`. Its current historical content is not #10 approval and must be refreshed by a different Codex task.
-- future Stage 4 evidence root: `ui/designs/evidence/planner-shell/`; capture default/loading/empty/error/unauthorized/shopping-read-only/legacy-read-only/#12-disabled/segment-back-focus at 390px, 320px and desktop, with manifest head SHA and capture times.
+- future Stage 4 evidence root: `ui/designs/evidence/planner-shell/`; capture default/loading/empty/error/unauthorized/shopping-read-only/legacy-read-only/#12-disabled at 390px, 320px and desktop, with manifest head SHA and capture times.
+- `PNG static-layout proof` covers only geometry: 7-day containment, at least 2-day overview, 1/3/5 meal columns, long names, scaling/localization, sticky boundaries, bottom safe-area and page overflow.
+- `Playwright history/focus/Escape proof` covers route history/back, roving focus/selection, Tab panel entry, modal focus trap/restore and Escape sequences.
+- `Manual physical keyboard/screen reader/device keyboard proof` covers real hardware focus order, VoiceOver/TalkBack announcements, device safe-area and virtual-keyboard occlusion; PNG or Playwright evidence cannot substitute for it.
 - future authority report: `ui/designs/authority/PLANNER_WEEK-authority.md`, refreshed only after the exact implementation evidence exists. Current H2 authority is superseded history, not #10 evidence.
 - Stage 1 does not claim component, browser, screenshot, physical-device, screen-reader, server-Mac/OAuth, merged-exact rehearsal or activation evidence.
 

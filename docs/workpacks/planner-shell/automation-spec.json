@@ -48,8 +48,9 @@
       "segment-date-scroll-input-isolation",
       "route-deep-link-back-focus-restoration",
       "auth-return-segment-date-slot-pending-action-and-invoking-focus",
-      "keyboard-arrow-home-end-escape-and-focus-trap-restore",
-      "virtual-keyboard-safe-and-no-page-overflow"
+      "roving-tabindex-arrow-home-end-tab-panel-entry-and-focus-fallback",
+      "seven-day-two-day-overview-dynamic-one-three-five-meal-columns",
+      "virtual-keyboard-bottom-tab-safe-area-and-no-page-overflow"
     ],
     "verify_commands": [
       "pnpm exec vitest run tests/planner-shell.test.tsx tests/planner-shell-history.test.tsx tests/planner-shell-legacy-product.test.tsx",
@@ -67,7 +68,10 @@
       "legacy-readonly-detail-delete-only",
       "home-recipe-only",
       "existing-401-403-404-error-contract-no-new-code",
-      "390-320-desktop-16px-padding-44px-target-density-focus-keyboard-history-no-overflow"
+      "390-320-desktop-seven-day-two-day-overview-one-three-five-meal-columns-long-names-200-percent-localization-sticky-safe-area-no-overflow",
+      "PNG static-layout proof",
+      "Playwright history/focus/Escape proof",
+      "Manual physical keyboard/screen reader/device keyboard proof"
     ],
     "design_authority": {
       "ui_risk": "anchor-extension",
@@ -87,7 +91,6 @@
         "ui/designs/evidence/planner-shell/PLANNER_WEEK-mobile-default-shopping-read-only.png",
         "ui/designs/evidence/planner-shell/PLANNER_WEEK-mobile-default-legacy-read-only.png",
         "ui/designs/evidence/planner-shell/PLANNER_WEEK-mobile-default-meal-log-disabled.png",
-        "ui/designs/evidence/planner-shell/PLANNER_WEEK-mobile-default-segment-back-focus-sequence.png",
         "ui/designs/evidence/planner-shell/PLANNER_WEEK-mobile-narrow-default.png",
         "ui/designs/evidence/planner-shell/PLANNER_WEEK-mobile-narrow-loading.png",
         "ui/designs/evidence/planner-shell/PLANNER_WEEK-mobile-narrow-empty.png",
@@ -96,7 +99,6 @@
         "ui/designs/evidence/planner-shell/PLANNER_WEEK-mobile-narrow-shopping-read-only.png",
         "ui/designs/evidence/planner-shell/PLANNER_WEEK-mobile-narrow-legacy-read-only.png",
         "ui/designs/evidence/planner-shell/PLANNER_WEEK-mobile-narrow-meal-log-disabled.png",
-        "ui/designs/evidence/planner-shell/PLANNER_WEEK-mobile-narrow-segment-back-focus-sequence.png",
         "ui/designs/evidence/planner-shell/PLANNER_WEEK-desktop-default.png",
         "ui/designs/evidence/planner-shell/PLANNER_WEEK-desktop-loading.png",
         "ui/designs/evidence/planner-shell/PLANNER_WEEK-desktop-empty.png",
@@ -104,8 +106,7 @@
         "ui/designs/evidence/planner-shell/PLANNER_WEEK-desktop-unauthorized.png",
         "ui/designs/evidence/planner-shell/PLANNER_WEEK-desktop-shopping-read-only.png",
         "ui/designs/evidence/planner-shell/PLANNER_WEEK-desktop-legacy-read-only.png",
-        "ui/designs/evidence/planner-shell/PLANNER_WEEK-desktop-meal-log-disabled.png",
-        "ui/designs/evidence/planner-shell/PLANNER_WEEK-desktop-segment-back-focus-sequence.png"
+        "ui/designs/evidence/planner-shell/PLANNER_WEEK-desktop-meal-log-disabled.png"
       ],
       "authority_report_paths": ["ui/designs/authority/PLANNER_WEEK-authority.md"]
     }

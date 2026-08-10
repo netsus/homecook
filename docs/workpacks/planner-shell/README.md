@@ -11,7 +11,7 @@
 - `docs/유저flow맵-v1.3.32.md`
 - `docs/db설계-v1.3.32.md`
 - `docs/api문서-v1.2.37.md`
-- approved Cooking Plan / Meal Log master plan SHA-256 `d4d0fb39e80eeffc8b1e73ad92f0d91a35a9b6adc57a556ea8c9ec6ecffa951d`, 1,018 lines
+- approved Cooking Plan / Meal Log master plan: `docs/workpacks/planner-shell/evidence/cooking-meal-log-and-product-search-master-plan-20260722.md`, SHA-256 `d4d0fb39e80eeffc8b1e73ad92f0d91a35a9b6adc57a556ea8c9ec6ecffa951d`, 1,018 lines
 - Stage 1 relock base/tree: `8ba3fa5a2a198eb4f9c19d59cea5f6ccc52fdd4f` / `6b67f32a3a404b2d7d60a9c231a394c2e17c6c9a`
 
 ## Release-Chain Position
@@ -30,9 +30,10 @@
 - `PLANNER_WEEK` owns `요리 계획`; #12 `MEAL_LOG` owns `식사 기록` content after its own Stage 1/implementation gate.
 - switching segments preserves the selected date and safely restores each surface's scroll/input state without combining their rows, totals, status chips, caches, or mutations.
 - route/deep-link/back behavior is deterministic. Back from a child sheet/detail returns to the same segment/date/context; browser back does not duplicate history entries or unexpectedly switch segments.
-- focus moves to the selected segment panel or its heading, the tab semantics and accessible names are explicit, keyboard order follows visual order, and reduced-motion does not hide state change.
+- the segment control uses `roving tabindex`: the selected tab alone has `tabindex=0`; Arrow Left/Right and Home/End keep focus inside the tablist while moving focus and selection, and Tab enters the selected panel. Ordinary segment changes do not force focus into the panel or heading.
 - unauthenticated protected actions preserve date, slot and pending action for login return; private data is not rendered before authentication.
 - return-to-action also preserves the selected segment and the invoking control; after login, focus returns to that control or the restored panel heading when the original control no longer exists.
+- forced panel/heading focus is limited to the `deep-link/auth-return/invoker-loss fallback`; normal pointer or keyboard selection keeps the tab as the focus origin.
 
 ### PLANNER_WEEK plan-only composition
 
@@ -42,6 +43,15 @@
 - remove the plan-nutrition aggregate card and new UI calls to `GET /planner/nutrition`.
 - remove new product-plan CTA and product entry POST/PATCH UI. Do not redirect those actions to HOME or invent another product-planning surface.
 - completed shopping remains read-only and never receives a `새 레시피에 맞춰 장보기 변경` CTA.
+- an empty slot renders only `비어 있음`. Its tap follows the current behavior; the exact future-slice behavior is decided by that future slice. A new add affordance or empty CTA is a `Contract Evolution Candidate`, not this implementation contract.
+
+### Responsive planner containment
+
+- `390px`, `320px`, and desktop must preserve `7-day containment`: all seven localized dates remain reachable inside the planner-local rail without page-level horizontal overflow.
+- the first viewport preserves an `at least 2-day overview` before a user drills into one day. The selected day may expand, but it must not erase awareness of the adjacent day.
+- fixtures cover user-configured `1/3/5 meal columns`; every day uses the same configured column set, and one, three, or five meal labels remain associated with their slots.
+- stress fixtures include `long custom meal names`, `200% text scaling`, and `localization expansion`. Labels wrap without hiding state or actions; planner-local scrolling may be used, but the page itself must not overflow.
+- sticky week/segment controls, when implemented, stay inside the Planner scroller and never cover day content. The final row reserves `bottom-tab safe-area` clearance, including the bottom tab and `env(safe-area-inset-bottom)`, with and without the virtual keyboard.
 
 ### Legacy product compatibility
 
@@ -62,7 +72,7 @@
 | State | `요리 계획` | `식사 기록` shell destination |
 | --- | --- | --- |
 | loading | plan skeleton; actions fail closed | panel loading boundary; #12 owns content skeleton |
-| empty | date/slot plan empty CTA only | #12 empty state after implementation |
+| empty | date/slot remains visible and each empty slot says `비어 있음`; no new add CTA | #12 empty state after implementation |
 | error | keep already-loaded plan visible where safe and offer retry | isolate error to log panel; do not hide plan state |
 | unauthorized | login guidance and return-to-action | same shell auth boundary, no private data |
 | shopping read-only | completed shopping remains immutable | not a meal-log state |
@@ -156,8 +166,9 @@ segment switch:
 - deterministic Stage 1 fixtures are repository documents and workflow projections only; no DB bootstrap, production write, remote migration or OAuth session is required or allowed.
 - future component/E2E fixtures must include: authenticated owner with `registered`, `shopping_done`, `cook_done`; empty day; completed shopping; pinned `keep`; `legacy_backfill`; legacy product row; other-owner legacy row; unauthenticated return context; and #12 disabled.
 - real-data verification is read-only against the merged-exact head. Test users/fixtures must be isolated and cleanup must not mutate production/staging.
-- deterministic assertions cover `390px`, `320px`, desktop, keyboard order, focus restore, reduced motion, virtual-keyboard occlusion, horizontal/page overflow and state isolation.
-- Manual Only: physical keyboard and VoiceOver/TalkBack-equivalent review, real 390px/320px device safe-area/virtual keyboard, server-Mac/OAuth environment, merged-exact server-production/local-rehearsal, and #9 capability/`R/R+1/R+2`/activation evidence.
+- `PNG static-layout proof`: future screenshots prove only 390px/320px/desktop geometry, 7-day containment, at least 2-day overview, 1/3/5 meal columns, wrapping, sticky boundaries, bottom-tab safe-area and absence of page overflow.
+- `Playwright history/focus/Escape proof`: future browser tests prove history/back, roving-tab selection, Tab entry, modal focus trap/restore and Escape behavior; screenshots do not prove these sequences.
+- `Manual physical keyboard/screen reader/device keyboard proof`: Manual Only covers a physical keyboard, VoiceOver/TalkBack, real-device safe-area and device virtual-keyboard occlusion. It also retains server-Mac/OAuth, merged-exact server-production/local-rehearsal, and #9 capability/`R/R+1/R+2`/activation as pending.
 
 ## Primary User Path
 
@@ -180,12 +191,12 @@ segment switch:
 - anchor screen: `PLANNER_WEEK`; required screen: `PLANNER_WEEK`.
 - before Stage 2, update canonical `ui/designs/PLANNER_WEEK.md` for the two-segment shell, plan-only hierarchy, legacy read-only section and all states, then obtain independent critique at `ui/designs/critiques/PLANNER_WEEK-critique.md`.
 - legacy design/critique/authority artifacts are not #10 evidence unless explicitly refreshed against this contract.
-- Stage 4 requires mobile-default 390px, mobile-narrow 320px and desktop evidence covering default, loading, empty, error, unauthorized, shopping read-only, legacy read-only, segment/back/focus behavior and no horizontal overflow.
+- Stage 4 requires mobile-default 390px, mobile-narrow 320px and desktop evidence covering default, loading, empty, error, unauthorized, shopping read-only and legacy read-only. Static PNG, Playwright interaction, and Manual Only proof remain separate evidence classes.
 - authority report: `ui/designs/authority/PLANNER_WEEK-authority.md`, refreshed after new Stage 4 evidence.
 - CTA hierarchy is status-dependent and stable: `registered` uses `장보기` as primary, `shopping_done` uses `요리하기` as primary, `상세` and week-level `남은요리` remain secondary, and legacy `삭제` is destructive tertiary after read-only `상세`. No CTA is promoted across the plan/log boundary.
 - at 320px, keep primary before secondary in DOM and visual order, wrap secondary below rather than compressing touch targets, and place legacy destructive delete last; desktop may keep the same order inline.
-- use 16px mobile horizontal content padding, preserve day overview density, week controls proximity, readable 4–5 column behavior, minimum 44px targets, screen-reader segment semantics and visible focus.
-- segment controls support Arrow Left/Right, Home/End and visible keyboard focus. Panels receive an accessible name; errors are announced without stealing focus from correctable input.
+- use 16px mobile horizontal content padding, preserve 7-day containment and at least 2-day overview, verify user-configured 1/3/5 meal columns, and retain minimum 44px targets, screen-reader segment semantics and visible focus under long custom meal names, 200% text scaling and localization expansion.
+- segment controls use roving tabindex. Arrow Left/Right and Home/End remain inside the tablist and change selection; Tab enters the selected panel. Forced panel/heading focus is reserved for the deep-link/auth-return/invoker-loss fallback.
 - switching segments must not move the page unexpectedly. Localized planner overflow may follow the approved prototype, but unintended page-level horizontal overflow is forbidden at 390px, 320px and desktop.
 - sheets/details trap focus, close with Escape where the platform pattern permits, restore invoking focus, remain visible above the virtual keyboard and preserve scroll context.
 
