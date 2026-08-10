@@ -1056,7 +1056,7 @@ function LeftoversMobileView({
 }) {
   return (
     <div
-      className="min-h-dvh bg-[var(--surface-fill)] pb-[calc(98px+env(safe-area-inset-bottom))] text-[var(--foreground)] lg:hidden"
+      className="h-[calc(100dvh-8px-4rem-var(--space-5)-env(safe-area-inset-bottom))] overflow-y-auto overscroll-contain bg-[var(--surface-fill)] pb-4 text-[var(--foreground)] lg:hidden"
       data-testid="leftovers-screen"
     >
       <MobileAppBar
@@ -1167,7 +1167,7 @@ function LeftoversMobileStateShell({
 }) {
   return (
     <div
-      className="min-h-dvh bg-[var(--surface-fill)] pb-[calc(98px+env(safe-area-inset-bottom))] text-[var(--foreground)] lg:hidden"
+      className="h-[calc(100dvh-8px-4rem-var(--space-5)-env(safe-area-inset-bottom))] overflow-y-auto overscroll-contain bg-[var(--surface-fill)] pb-4 text-[var(--foreground)] lg:hidden"
       data-testid={testId}
     >
       <MobileAppBar
@@ -1252,7 +1252,7 @@ function MobileLeftoverCard({
       <div className="mt-3 flex justify-end gap-2">
         <button
           aria-label={LEFTOVER_LIST_PLANNER_ADD_LABEL}
-          className="flex h-9 w-[112px] min-w-0 items-center justify-center rounded-[var(--radius-control)] border border-[var(--brand)] bg-[var(--surface)] px-2 text-center text-[11px] font-extrabold leading-none text-[var(--brand)] disabled:opacity-60"
+          className="flex h-11 w-[112px] min-w-0 items-center justify-center rounded-[var(--radius-control)] border border-[var(--brand)] bg-[var(--surface)] px-2 text-center text-[11px] font-extrabold leading-none text-[var(--brand)] disabled:opacity-60"
           data-testid="planner-add-button"
           disabled={anyMutating}
           onClick={() => onPlannerAdd(item)}
@@ -1261,7 +1261,7 @@ function MobileLeftoverCard({
           <span className="whitespace-nowrap">플래너에 추가</span>
         </button>
         <button
-          className="flex h-9 w-[82px] min-w-0 items-center justify-center rounded-[var(--radius-control)] bg-[var(--surface-fill)] px-2 text-center text-[12px] font-extrabold leading-none text-[var(--text-2)] disabled:opacity-60"
+          className="flex h-11 w-[82px] min-w-0 items-center justify-center rounded-[var(--radius-control)] bg-[var(--surface-fill)] px-2 text-center text-[12px] font-extrabold leading-none text-[var(--text-2)] disabled:opacity-60"
           data-testid="eat-button"
           disabled={anyMutating}
           onClick={() => onEat(item.id)}
