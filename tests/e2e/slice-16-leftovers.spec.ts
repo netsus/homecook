@@ -84,6 +84,16 @@ async function installLeftoverRoutes(
   const leftoverItems = options?.leftoverItems ?? makeLeftoverItems();
   const eatenItems = options?.eatenItems ?? makeEatenItems();
 
+  await page.route("**/api/v1/cooked-batches?*", async (route) => {
+    await route.fulfill({
+      json: {
+        success: true,
+        data: { items: [], next_cursor: null, has_next: false },
+        error: null,
+      },
+    });
+  });
+
   await page.route("**/api/v1/leftovers?*", async (route) => {
     const url = new URL(route.request().url());
     const status = url.searchParams.get("status") ?? "leftover";
