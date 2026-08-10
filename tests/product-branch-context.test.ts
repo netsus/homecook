@@ -1,5 +1,12 @@
 import { spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -25,6 +32,11 @@ const AUTHORITY_EVIDENCE_PATHS = [
   "ui/designs/evidence/authority/cooked-batch-weight-ui-mobile.png",
   "ui/designs/evidence/authority/cooked-batch-weight-ui-mobile-narrow.png",
 ];
+const EXPLORATORY_QA_ARTIFACT_PATHS = [
+  `.artifacts/qa/${SLICE}/manual/exploratory-checklist.json`,
+  `.artifacts/qa/${SLICE}/manual/exploratory-report.json`,
+  `.artifacts/qa/${SLICE}/manual/eval-result.json`,
+];
 
 function nonDraftEnv(branchName: string) {
   return {
@@ -43,66 +55,105 @@ function writeFixtureFile(rootDir: string, relativePath: string, contents: strin
   writeFileSync(filePath, contents);
 }
 
-function createAuthorityFixture({ complete }: { complete: boolean }) {
+type FixtureWriter = typeof writeFixtureFile;
+
+function createAuthorityFixture({
+  complete,
+  writeFile = writeFixtureFile,
+}: {
+  complete: boolean;
+  writeFile?: FixtureWriter;
+}) {
   const rootDir = mkdtempSync(join(tmpdir(), "successor-authority-"));
 
-  writeFixtureFile(
-    rootDir,
-    `docs/workpacks/${SLICE}/automation-spec.json`,
-    JSON.stringify({
-      slice_id: SLICE,
-      execution_mode: "autonomous",
-      risk_class: "medium",
-      merge_policy: "conditional-auto",
-      backend: {
-        required_endpoints: [],
-        invariants: [],
-        verify_commands: [],
-        required_test_targets: [],
-      },
-      frontend: {
-        required_routes: [],
-        required_states: [],
-        playwright_projects: [],
-        artifact_assertions: [],
-        design_authority: {
-          ui_risk: "anchor-extension",
-          anchor_screens: ["COOK_MODE"],
-          required_screens: ["COOK_MODE"],
-          generator_required: false,
-          generator_artifact: null,
-          critic_required: false,
-          critic_artifact: null,
-          authority_required: true,
-          authority_report_paths: [AUTHORITY_REPORT_PATH],
-          stage4_evidence_requirements: ["mobile-default", "mobile-narrow"],
-        },
-      },
-      external_smokes: [],
-      blocked_conditions: [],
-      max_fix_rounds: {
-        backend: 2,
-        frontend: 2,
-      },
-    }),
-  );
-  if (complete) {
-    writeFixtureFile(
+  try {
+    writeFile(
       rootDir,
-      AUTHORITY_REPORT_PATH,
-      [
-        "# Authority review",
-        "",
-        "> evidence:",
-        ...AUTHORITY_EVIDENCE_PATHS.map((path) => `> - \`${path}\``),
-      ].join("\n"),
+      `docs/workpacks/${SLICE}/automation-spec.json`,
+      JSON.stringify({
+        slice_id: SLICE,
+        execution_mode: "autonomous",
+        risk_class: "medium",
+        merge_policy: "conditional-auto",
+        backend: {
+          required_endpoints: [],
+          invariants: [],
+          verify_commands: [],
+          required_test_targets: [],
+        },
+        frontend: {
+          required_routes: [],
+          required_states: [],
+          playwright_projects: [],
+          artifact_assertions: [],
+          design_authority: {
+            ui_risk: "anchor-extension",
+            anchor_screens: ["COOK_MODE"],
+            required_screens: ["COOK_MODE"],
+            generator_required: false,
+            generator_artifact: null,
+            critic_required: false,
+            critic_artifact: null,
+            authority_required: true,
+            authority_report_paths: [AUTHORITY_REPORT_PATH],
+            stage4_evidence_requirements: ["mobile-default", "mobile-narrow"],
+          },
+        },
+        external_smokes: [],
+        blocked_conditions: [],
+        max_fix_rounds: {
+          backend: 2,
+          frontend: 2,
+        },
+      }),
     );
-    for (const evidencePath of AUTHORITY_EVIDENCE_PATHS) {
-      writeFixtureFile(rootDir, evidencePath, "evidence");
+    if (complete) {
+      writeFile(
+        rootDir,
+        AUTHORITY_REPORT_PATH,
+        [
+          "# Authority review",
+          "",
+          "> evidence:",
+          ...AUTHORITY_EVIDENCE_PATHS.map((path) => `> - \`${path}\``),
+        ].join("\n"),
+      );
+      for (const evidencePath of AUTHORITY_EVIDENCE_PATHS) {
+        writeFile(rootDir, evidencePath, "evidence");
+      }
     }
-  }
 
-  return rootDir;
+    return rootDir;
+  } catch (error) {
+    rmSync(rootDir, { recursive: true, force: true });
+    throw error;
+  }
+}
+
+function createExploratoryQaFixture({
+  complete,
+  writeFile = writeFixtureFile,
+}: {
+  complete: boolean;
+  writeFile?: FixtureWriter;
+}) {
+  let rootDir: string | null = null;
+
+  try {
+    rootDir = createAuthorityFixture({ complete: false, writeFile });
+    if (complete) {
+      for (const artifactPath of EXPLORATORY_QA_ARTIFACT_PATHS) {
+        writeFile(rootDir, artifactPath, "{}");
+      }
+    }
+
+    return rootDir;
+  } catch (error) {
+    if (rootDir) {
+      rmSync(rootDir, { recursive: true, force: true });
+    }
+    throw error;
+  }
 }
 
 function authorityEnv(branchName: string) {
@@ -205,6 +256,34 @@ describe("product branch context", () => {
 });
 
 describe("successor product policy parity", () => {
+  it.each([
+    [
+      "authority",
+      (writeFile: FixtureWriter) =>
+        createAuthorityFixture({ complete: true, writeFile }),
+    ],
+    [
+      "exploratory QA",
+      (writeFile: FixtureWriter) =>
+        createExploratoryQaFixture({ complete: true, writeFile }),
+    ],
+  ])("removes a partial %s fixture when creation fails", (_label, createFixture) => {
+    let rootDir: string | null = null;
+    let writeCount = 0;
+    const failingWriter: FixtureWriter = (candidateRoot, relativePath, contents) => {
+      rootDir = candidateRoot;
+      writeCount += 1;
+      if (writeCount === 2) {
+        throw new Error("synthetic fixture write failure");
+      }
+      writeFixtureFile(candidateRoot, relativePath, contents);
+    };
+
+    expect(() => createFixture(failingWriter)).toThrow("synthetic fixture write failure");
+    expect(rootDir).not.toBeNull();
+    expect(existsSync(rootDir!)).toBe(false);
+  });
+
   it("runs workpack validation against the canonical slice", () => {
     const result = spawnSync("pnpm", ["validate:workpack"], {
       cwd: process.cwd(),
@@ -287,17 +366,29 @@ describe("successor product policy parity", () => {
   it("keeps exploratory QA and authority gates on the canonical slice", () => {
     let missingAuthorityRoot: string | null = null;
     let completeAuthorityRoot: string | null = null;
+    let missingQaRoot: string | null = null;
+    let completeQaRoot: string | null = null;
 
     try {
       missingAuthorityRoot = createAuthorityFixture({ complete: false });
       completeAuthorityRoot = createAuthorityFixture({ complete: true });
-      const canonicalQa = validateExploratoryQaEvidence({
-        rootDir: process.cwd(),
-        env: nonDraftEnv(CANONICAL_BRANCH),
+      missingQaRoot = createExploratoryQaFixture({ complete: false });
+      completeQaRoot = createExploratoryQaFixture({ complete: true });
+      const canonicalMissingQa = validateExploratoryQaEvidence({
+        rootDir: missingQaRoot,
+        env: authorityEnv(CANONICAL_BRANCH),
       });
-      const successorQa = validateExploratoryQaEvidence({
-        rootDir: process.cwd(),
-        env: nonDraftEnv(SUCCESSOR_BRANCH),
+      const successorMissingQa = validateExploratoryQaEvidence({
+        rootDir: missingQaRoot,
+        env: authorityEnv(SUCCESSOR_BRANCH),
+      });
+      const canonicalCompleteQa = validateExploratoryQaEvidence({
+        rootDir: completeQaRoot,
+        env: authorityEnv(CANONICAL_BRANCH),
+      });
+      const successorCompleteQa = validateExploratoryQaEvidence({
+        rootDir: completeQaRoot,
+        env: authorityEnv(SUCCESSOR_BRANCH),
       });
       const canonicalMissingAuthority = validateAuthorityEvidencePresence({
         rootDir: missingAuthorityRoot,
@@ -316,8 +407,29 @@ describe("successor product policy parity", () => {
         env: authorityEnv(SUCCESSOR_BRANCH),
       });
 
-      expect(canonicalQa).not.toEqual([]);
-      expect(successorQa).toEqual(canonicalQa);
+      expect(canonicalMissingQa).toEqual([
+        {
+          name: `exploratory-qa-evidence:${SLICE}`,
+          errors: [
+            {
+              path: join(
+                missingQaRoot,
+                `docs/workpacks/${SLICE}/automation-spec.json`,
+              ),
+              message:
+                `Slice '${SLICE}' has ui_risk 'anchor-extension', so exploratory QA evidence must satisfy the ready-for-review gate.`,
+            },
+            {
+              path: `.artifacts/qa/${SLICE}`,
+              message:
+                "Exploratory QA evidence could not be validated from PR body. Provide PR_BODY/PR_BODY_FILE or keep a local .artifacts/qa bundle before ready-for-review.",
+            },
+          ],
+        },
+      ]);
+      expect(successorMissingQa).toEqual(canonicalMissingQa);
+      expect(canonicalCompleteQa).toEqual([]);
+      expect(successorCompleteQa).toEqual(canonicalCompleteQa);
       expect(canonicalMissingAuthority).toEqual([
         {
           name: `authority-evidence-presence:${SLICE}`,
@@ -346,6 +458,12 @@ describe("successor product policy parity", () => {
       }
       if (completeAuthorityRoot) {
         rmSync(completeAuthorityRoot, { recursive: true, force: true });
+      }
+      if (missingQaRoot) {
+        rmSync(missingQaRoot, { recursive: true, force: true });
+      }
+      if (completeQaRoot) {
+        rmSync(completeQaRoot, { recursive: true, force: true });
       }
     }
   });
