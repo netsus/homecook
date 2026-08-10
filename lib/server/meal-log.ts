@@ -1,9 +1,18 @@
-import type { MealLogMutationInput, MealLogSourceType } from "@/types/meal-log";
+import type { MealLogMutationInput, MealLogNutritionEvidence, MealLogSourceType } from "@/types/meal-log";
 import { fail } from "@/lib/api/response";
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const SOURCE_TYPES = ["cooked_batch", "food_product", "ingredient"] as const;
+const NUTRITION_STATUSES = ["complete", "partial", "unavailable"] as const;
+const NUTRITION_KEYS = [
+  "calculation_status",
+  "calories_kcal",
+  "carbohydrate_g",
+  "protein_g",
+  "fat_g",
+  "sodium_mg",
+] as const;
 
 type FieldError = { field: string; reason: string };
 export type ParseResult<T> = { ok: true; value: T } | { ok: false; fields: FieldError[] };
@@ -128,9 +137,11 @@ export function parseMealLogMutationRequest(value: unknown, mode: "create" | "pa
     value: {
       consumedLocalDate: value.consumed_local_date as string,
       timezoneNameSnapshot: value.timezone_name_snapshot as string,
-      consumedAt: value.consumed_at as string | null,
-      mealPlanColumnId: value.meal_plan_column_id as string,
-      source: { type: source.type, id: source.id },
+      consumedAt: typeof value.consumed_at === "string"
+        ? new Date(value.consumed_at).toISOString()
+        : null,
+      mealPlanColumnId: (value.meal_plan_column_id as string).toLowerCase(),
+      source: { type: source.type, id: source.id.toLowerCase() },
       quantity: { amount: quantity.amount, unit: quantity.unit.trim() },
       expectedRevision: expectedRevision as number | null,
     },
@@ -143,6 +154,18 @@ export function parseMealLogDeleteRequest(value: unknown): ParseResult<{ expecte
     return { ok: false, fields: [{ field: "expected_revision", reason: "invalid_integer" }] };
   }
   return { ok: true, value: { expectedRevision: value.expected_revision as number } };
+}
+
+export function toMealLogRpcPayload(value: MealLogMutationInput) {
+  return {
+    consumed_local_date: value.consumedLocalDate,
+    timezone_name_snapshot: value.timezoneNameSnapshot,
+    consumed_at: value.consumedAt,
+    meal_plan_column_id: value.mealPlanColumnId,
+    source: value.source,
+    quantity: value.quantity,
+    ...(value.expectedRevision === null ? {} : { expected_revision: value.expectedRevision }),
+  };
 }
 
 export interface MealLogRpcClient {
@@ -170,6 +193,10 @@ function errorText(value: unknown) {
 
 function mealLogRpcError(value: unknown) {
   const text = errorText(value);
+  if (/40P01|deadlock detected/i.test(text)) {
+    const [status, message] = RPC_ERRORS.CONFLICT;
+    return fail("CONFLICT", message, status);
+  }
   const code = (Object.keys(RPC_ERRORS) as Array<keyof typeof RPC_ERRORS>).find((candidate) => text.includes(candidate));
   if (!code) return fail("INTERNAL_ERROR", "요청을 처리하지 못했어요.", 500);
   const [status, message] = RPC_ERRORS[code];
@@ -188,8 +215,49 @@ export async function callMealLogRpc(client: MealLogRpcClient, name: string, arg
   } catch { return { ok: false as const, response: fail("INTERNAL_ERROR", "요청을 처리하지 못했어요.", 500) }; }
 }
 
+export function isMealLogNutritionEvidence(value: unknown): value is MealLogNutritionEvidence {
+  if (!isRecord(value) || !hasOnlyKeys(value, NUTRITION_KEYS)
+    || !NUTRITION_KEYS.every((key) => key in value)
+    || !NUTRITION_STATUSES.includes(value.calculation_status as typeof NUTRITION_STATUSES[number])) return false;
+  return NUTRITION_KEYS.slice(1).every((key) => value[key] === null
+    || (typeof value[key] === "number" && Number.isFinite(value[key])));
+}
+
+function isMealLogEntryProjection(value: unknown) {
+  return isRecord(value) && isMealLogNutritionEvidence(value.nutrition);
+}
+
+function isMealLogSectionProjection(value: unknown) {
+  return isRecord(value)
+    && Array.isArray(value.entries)
+    && value.entries.every(isMealLogEntryProjection)
+    && isMealLogNutritionEvidence(value.subtotal)
+    && Number.isSafeInteger(value.incomplete_count)
+    && Number(value.incomplete_count) >= 0;
+}
+
+function isMealLogDayTotal(value: unknown) {
+  if (!isRecord(value)
+    || !hasOnlyKeys(value, [...NUTRITION_KEYS, "incomplete_count"])
+    || !Number.isSafeInteger(value.incomplete_count)
+    || Number(value.incomplete_count) < 0) return false;
+  const nutrition = Object.fromEntries(NUTRITION_KEYS.map((key) => [key, value[key]]));
+  return isMealLogNutritionEvidence(nutrition);
+}
+
 export function projectMealLogData(value: unknown) {
-  return isRecord(value) ? value : null;
+  if (!isRecord(value)) return null;
+  if ("entry" in value) return isMealLogEntryProjection(value.entry) ? value : null;
+  if (typeof value.date !== "string" || !isDate(value.date)
+    || !Array.isArray(value.active_columns)
+    || !Array.isArray(value.active_sections)
+    || !value.active_sections.every(isMealLogSectionProjection)
+    || !Array.isArray(value.deleted_column_sections)
+    || !value.deleted_column_sections.every(isMealLogSectionProjection)
+    || !Array.isArray(value.entries)
+    || !value.entries.every(isMealLogEntryProjection)
+    || !isMealLogDayTotal(value.day_total)) return null;
+  return value;
 }
 
 export function projectMealLogRecentData(value: unknown) {

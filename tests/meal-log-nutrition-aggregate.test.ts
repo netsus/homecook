@@ -7,7 +7,7 @@ const sql = readFileSync(resolve(process.cwd(), "supabase/migrations/20260810120
 
 describe("meal-log immutable nutrition aggregates", () => {
   test("pins exact product and ingredient profile evidence", () => {
-    expect(sql).toMatch(/product_nutrition_version_id.*basis_relations/i);
+    expect(sql).toMatch(/product_nutrition_version_id[\s\S]*basis_relations/i);
     expect(sql).toMatch(/ingredient_nutrition_profile_id/i);
     expect(sql).toMatch(/UNIT_CONVERSION_MISSING/i);
     expect(sql).toMatch(/v_same_source[\s\S]*v_entry\.food_product_nutrition_version_id/i);
@@ -18,8 +18,8 @@ describe("meal-log immutable nutrition aggregates", () => {
 
   test("keeps unknown nutrition separate from zero in slot and day totals", () => {
     expect(sql).toMatch(/fold_meal_log_nutrition_status/i);
-    expect(sql).toMatch(/active_sections[\s\S]*calculation_status/i);
-    expect(sql).toMatch(/deleted_column_sections[\s\S]*calculation_status/i);
+    expect(sql).toMatch(/'subtotal',x\.subtotal[\s\S]*fold_meal_log_nutrition_status/i);
+    expect(sql).toMatch(/'active_sections',v_active,'deleted_column_sections',v_deleted/i);
     expect(sql).toMatch(/incomplete_count/i);
     expect(sql).toMatch(/sum\(\(nutrition_evidence_json->>'calories_kcal'\)::numeric\)/i);
     expect(sql).not.toMatch(/coalesce\([^;]*calories_kcal[^;]*,\s*0\)/i);

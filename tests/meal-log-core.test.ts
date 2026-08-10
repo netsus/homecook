@@ -91,6 +91,30 @@ describe("meal-log core", () => {
       quantity: { amount: 1, unit: "g" },
       expected_revision: 2,
     });
+
+    const request = {
+      consumed_local_date: "2026-08-10",
+      timezone_name_snapshot: "Asia/Seoul",
+      consumed_at: "2026-08-09T15:30:00+00:00",
+      meal_plan_column_id: "AAAAAAAA-AAAA-4AAA-8AAA-AAAAAAAAAAAA",
+      source: { type: "ingredient", id: "BBBBBBBB-BBBB-4BBB-8BBB-BBBBBBBBBBBB" },
+      quantity: { amount: 1, unit: " g " },
+    };
+    const first = mealLog.parseMealLogMutationRequest(request, "create");
+    const retry = mealLog.parseMealLogMutationRequest({
+      ...request,
+      consumed_at: "2026-08-09T15:30:00.000Z",
+      meal_plan_column_id: request.meal_plan_column_id.toLowerCase(),
+      source: { ...request.source, id: request.source.id.toLowerCase() },
+      quantity: { amount: 1, unit: "g" },
+    }, "create");
+    expect(first.ok).toBe(true);
+    expect(retry.ok).toBe(true);
+    if (first.ok && retry.ok) {
+      expect(mealLog.toMealLogRpcPayload(first.value)).toEqual(
+        mealLog.toMealLogRpcPayload(retry.value),
+      );
+    }
   });
 
   test("maps PostgreSQL deadlocks to the official CONFLICT response", async () => {
@@ -106,5 +130,28 @@ describe("meal-log core", () => {
         error: { code: "CONFLICT" },
       });
     }
+  });
+
+  test("accepts only the exact compact nutrition response shape", () => {
+    const compact = {
+      calculation_status: "partial",
+      calories_kcal: 120,
+      carbohydrate_g: null,
+      protein_g: 8,
+      fat_g: 4,
+      sodium_mg: 30,
+    };
+    expect(mealLog.projectMealLogData({ entry: { nutrition: compact } })).not.toBeNull();
+    expect(mealLog.projectMealLogData({
+      entry: { nutrition: { ...compact, values: { energy_kcal: 120 } } },
+    })).toBeNull();
+    expect(mealLog.projectMealLogData({
+      entry: {
+        nutrition: {
+          calculation_status: "partial",
+          values: { energy_kcal: 120 },
+        },
+      },
+    })).toBeNull();
   });
 });

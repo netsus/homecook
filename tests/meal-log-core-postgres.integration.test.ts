@@ -316,11 +316,60 @@ describe.runIf(enabled)("meal-log core PostgreSQL", () => {
     expect(missing.status).not.toBe(0);
     expect(missing.stderr).toContain("UNIT_CONVERSION_MISSING");
 
-    const rejected = psql(`begin; update public.piece_unit_weights set is_active=false,review_status='rejected' where id='${pieceWeight}'; ${mutationSql("create", "94000000-0000-4000-8000-000000000005", "94100000-0000-4000-8000-000000000006", payload({ type: "ingredient", id: ingredient }, 1, "piece"))} rollback;`, false);
+    const rejected = psql(`begin;
+      insert into public.measurement_source_evidence(
+        id,source_id,evidence_kind,source_subject,preparation_state,size_code,source_observed_unit,
+        source_observed_amount,observed_weight_g,source_url,source_accessed_at,evidence_fingerprint,
+        review_status,decision_reason,reviewed_by,reviewed_at,version,is_active
+      ) values(
+        '93a00000-0000-4000-8000-000000000002','${measurementSource}','piece_weight','stage3 exact piece','raw','medium','piece',
+        1,50,'https://example.test/rejected-piece','2026-08-10',repeat('b',64),
+        'approved','stage3 rejected fixture source','${owner}',now(),1,true
+      );
+      insert into public.piece_unit_weights(
+        id,ingredient_id,evidence_id,size_code,preparation_state,weight_g,review_status,
+        decision_reason,reviewed_by,reviewed_at,version,is_active
+      ) values(
+        '93b00000-0000-4000-8000-000000000002','${ingredientMissingPiece}','93a00000-0000-4000-8000-000000000002',
+        'medium','raw',50,'rejected','stage3 rejected fixture','${owner}',now(),1,false
+      );
+      ${mutationSql("create", "94000000-0000-4000-8000-000000000005", "94100000-0000-4000-8000-000000000006", payload({ type: "ingredient", id: ingredientMissingPiece }, 1, "piece"))}
+      rollback;`, false);
     expect(rejected.status).not.toBe(0);
     expect(rejected.stderr).toContain("UNIT_CONVERSION_MISSING");
 
-    const stale = psql(`begin; update public.nutrition_sources set freshness_status='stale',is_active=false where id='${measurementSource}'; ${mutationSql("create", "94000000-0000-4000-8000-000000000006", "94100000-0000-4000-8000-000000000007", payload({ type: "ingredient", id: ingredient }, 1, "piece"))} rollback;`, false);
+    const stale = psql(`begin;
+      insert into public.nutrition_sources(
+        id,provider_code,dataset_name,source_kind,source_version,data_basis_date,fetched_at,
+        freshness_checked_at,freshness_status,priority_rank,source_url,license_name,license_url,
+        manifest_sha256,review_status,decision_reason,reviewed_by,reviewed_at,is_active
+      ) values(
+        '93900000-0000-4000-8000-000000000005','STAGE3S','stage3 stale piece','measurement_reference','1','2026-08-10',now(),now(),
+        'current',1,'https://example.test/stale-piece','test-only','https://example.test/license',repeat('c',64),
+        'approved','stage3 stale fixture','${owner}',now(),true
+      );
+      insert into public.measurement_source_evidence(
+        id,source_id,evidence_kind,source_subject,preparation_state,size_code,source_observed_unit,
+        source_observed_amount,observed_weight_g,source_url,source_accessed_at,evidence_fingerprint,
+        review_status,decision_reason,reviewed_by,reviewed_at,version,is_active
+      ) values(
+        '93a00000-0000-4000-8000-000000000003','93900000-0000-4000-8000-000000000005','piece_weight','stage3 exact piece','raw','medium','piece',
+        1,50,'https://example.test/stale-piece','2026-08-10',repeat('d',64),
+        'approved','stage3 stale fixture','${owner}',now(),1,true
+      );
+      insert into public.piece_unit_weights(
+        id,ingredient_id,evidence_id,size_code,preparation_state,weight_g,review_status,
+        decision_reason,reviewed_by,reviewed_at,version,is_active
+      ) values(
+        '93b00000-0000-4000-8000-000000000003','${ingredientMissingPiece}','93a00000-0000-4000-8000-000000000003',
+        'medium','raw',50,'approved','stage3 stale fixture','${owner}',now(),1,true
+      );
+      update public.nutrition_sources
+      set freshness_status='stale',review_status='superseded',is_active=false,
+          decision_reason='stage3 stale fixture',reviewed_by='${owner}',reviewed_at=now()
+      where id='93900000-0000-4000-8000-000000000005';
+      ${mutationSql("create", "94000000-0000-4000-8000-000000000006", "94100000-0000-4000-8000-000000000007", payload({ type: "ingredient", id: ingredientMissingPiece }, 1, "piece"))}
+      rollback;`, false);
     expect(stale.status).not.toBe(0);
     expect(stale.stderr).toContain("UNIT_CONVERSION_MISSING");
   });
@@ -328,18 +377,22 @@ describe.runIf(enabled)("meal-log core PostgreSQL", () => {
   test("preserves complete, partial, unavailable slot and day folds with deleted history", () => {
     mutation("create", "94000000-0000-4000-8000-000000000007", "94100000-0000-4000-8000-000000000008", payload({ type: "cooked_batch", id: batchPartial }, 100, "g", columnPartial));
     mutation("create", "94000000-0000-4000-8000-000000000008", "94100000-0000-4000-8000-000000000009", payload({ type: "cooked_batch", id: batchUnavailable }, 100, "g", columnUnavailable));
-    psql(`delete from public.meal_plan_columns where id='${columnUnavailable}';`);
+    mutation("delete", "94000000-0000-4000-8000-000000000002", "94100000-0000-4000-8000-000000000010", { expected_revision: 1 }, 1);
+    psql(`begin; select public.set_account_generation_internal_writer_marker('${cutover}',true); delete from public.meal_plan_columns where id='${columnUnavailable}'; select public.set_account_generation_internal_writer_marker('${cutover}',false); commit;`);
     const response = JSON.parse(psql(`begin; set local request.jwt.claim.role='service_role'; select public.get_meal_log_day('${owner}','${identity}','${sessionHash}',1,'${issued}','2026-08-10'); commit;`).stdout.trim().split("\n").find((line) => line.startsWith("{")) ?? "null") as {
       data: { active_sections: Array<Record<string, unknown>>; deleted_column_sections: Array<Record<string, unknown>>; day_total: Record<string, unknown>; entries: Array<Record<string, unknown>> };
     };
     const complete = response.data.active_sections.find((section) => section.slot_name_snapshot === "완전");
     const partial = response.data.active_sections.find((section) => section.slot_name_snapshot === "부분");
     const unavailable = response.data.deleted_column_sections.find((section) => section.slot_name_snapshot === "없음");
-    expect(complete?.calculation_status).toBe("complete");
-    expect(partial?.calculation_status).toBe("partial");
-    expect(unavailable?.calculation_status).toBe("unavailable");
+    expect((complete?.subtotal as Record<string, unknown>)?.calculation_status).toBe("complete");
+    expect((complete?.subtotal as Record<string, unknown>)?.calories_kcal).toBe(250);
+    expect((partial?.subtotal as Record<string, unknown>)?.calculation_status).toBe("partial");
+    expect((unavailable?.subtotal as Record<string, unknown>)?.calculation_status).toBe("unavailable");
     expect(response.data.day_total.calculation_status).toBe("partial");
-    expect(response.data.entries).toHaveLength(5);
+    expect(response.data.day_total.calories_kcal).toBe(300);
+    expect(response.data.entries).toHaveLength(4);
+    expect(psql(`select count(*) from public.meal_log_entries where id='94000000-0000-4000-8000-000000000002' and deleted_at is not null;`).stdout.trim()).toBe("1");
   });
 
   test.each([
@@ -372,7 +425,7 @@ describe.runIf(enabled)("meal-log core PostgreSQL", () => {
     mutation("create", "94600000-0000-4000-8000-000000000001", "94700000-0000-4000-8000-000000000001", payload({ type: "cooked_batch", id: batchSame }, 100, "g"));
     mutation("create", "94600000-0000-4000-8000-000000000002", "94700000-0000-4000-8000-000000000002", payload({ type: "cooked_batch", id: batchSame }, 200, "g"));
     mutation("patch", "94600000-0000-4000-8000-000000000001", "94700000-0000-4000-8000-000000000003", { ...payload({ type: "cooked_batch", id: batchSame }, 150, "g"), expected_revision: 1 }, 1);
-    expect(psql(`select remaining_weight_g from public.leftover_dishes where id='${batchSame}';`).stdout.trim()).toBe("650.0000");
+    expect(Number(psql(`select remaining_weight_g from public.leftover_dishes where id='${batchSame}';`).stdout.trim())).toBe(650);
     expect(psql(`select count(*) from public.cooked_batch_quantity_events e where e.cooked_batch_id='${batchSame}' and e.event_type='consumed' and not exists(select 1 from public.cooked_batch_quantity_events r where r.reverses_event_id=e.id);`).stdout.trim()).toBe("2");
   });
 });

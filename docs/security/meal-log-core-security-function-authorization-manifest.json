@@ -16,6 +16,16 @@
       "safe_search_path": ["pg_catalog", "public", "private", "pg_temp"]
     },
     {
+      "signature": "private.compact_meal_log_nutrition(text, jsonb, numeric)",
+      "control_class": "application-controlled",
+      "effect": "read-only",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "owner": "postgres",
+      "security_mode": "definer",
+      "safe_search_path": ["pg_catalog", "public", "private", "pg_temp"]
+    },
+    {
       "signature": "private.cleanup_meal_log_before_cooked_batch_delete()",
       "control_class": "application-controlled",
       "effect": "trigger/internal",
@@ -29,6 +39,16 @@
       "signature": "private.cleanup_meal_log_before_user_delete()",
       "control_class": "application-controlled",
       "effect": "trigger/internal",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "owner": "postgres",
+      "security_mode": "definer",
+      "safe_search_path": ["pg_catalog", "public", "private", "pg_temp"]
+    },
+    {
+      "signature": "private.fold_meal_log_nutrition_status(bigint, bigint, bigint)",
+      "control_class": "application-controlled",
+      "effect": "read-only",
       "exposure": "service-internal",
       "allowed_principals": [],
       "owner": "postgres",

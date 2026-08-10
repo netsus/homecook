@@ -9,12 +9,12 @@ describe("meal-log batch event linkage", () => {
   test("reverses the entry pointer target and delegates projection to slice 8 replay", () => {
     expect(sql).toMatch(/v_entry\.active_consumption_event_id[\s\S]*v_old_event/i);
     expect(sql).toMatch(/reverses_event_id[\s\S]*v_old_event\.id/i);
-    expect(sql).toMatch(/private\.replay_cooked_batch\(v_old_event\.cooked_batch_id/i);
+    expect(sql).toMatch(/unnest\([^;]*v_old_batch_id[^;]*v_new_batch_id[^;]*\)[\s\S]*private\.replay_cooked_batch\(v_lock_batch_id,p_owner_uuid,p_now\)/i);
     expect(sql).toMatch(/event_type='reversal'[\s\S]*target\.meal_log_entry_id=v_event\.meal_log_entry_id/i);
   });
 
   test("separates private existence from batch state errors", () => {
-    expect(sql).toMatch(/where id=v_source_id and user_id=p_owner_uuid for update/i);
+    expect(sql).toMatch(/where id=v_lock_batch_id and user_id=p_owner_uuid for update/i);
     expect(sql).toMatch(/weight_status='unrecoverable'[\s\S]*WEIGHT_UNRECOVERABLE/i);
     expect(sql).toMatch(/weight_status<>'known' or v_batch\.batch_status<>'available'[\s\S]*CONFLICT/i);
   });

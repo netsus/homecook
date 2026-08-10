@@ -1,6 +1,7 @@
 import { fail, ok } from "@/lib/api/response";
-import { callMealLogRpc, isMealLogEntryId, parseIdempotencyKey, parseMealLogDeleteRequest, parseMealLogMutationRequest, projectMealLogData } from "@/lib/server/meal-log";
+import { callMealLogRpc, isMealLogEntryId, parseIdempotencyKey, parseMealLogDeleteRequest, parseMealLogMutationRequest, projectMealLogData, toMealLogRpcPayload } from "@/lib/server/meal-log";
 import { authorizeMealLogRequest, readMealLogJson } from "@/lib/server/meal-log-route";
+import type { MealLogMutationInput } from "@/types/meal-log";
 
 interface Context { params: Promise<{ id: string }> }
 
@@ -22,7 +23,7 @@ async function mutate(request: Request, context: Context, action: "patch" | "del
     return fail(mismatch ? "CONSUMED_DATE_TIMEZONE_MISMATCH" : "VALIDATION_ERROR", mismatch ? "날짜와 시간대를 확인해 주세요." : "요청 값을 확인해 주세요.", 422, parsed.fields);
   }
   const expectedRevision = parsed.value.expectedRevision;
-  const result = await callMealLogRpc(authorized.client, "mutate_meal_log_entry", { ...authorized.authorityArgs, p_action: action, p_entry_id: id, p_idempotency_key: key.value, p_expected_revision: expectedRevision, p_payload: action === "patch" ? body.value : {} });
+  const result = await callMealLogRpc(authorized.client, "mutate_meal_log_entry", { ...authorized.authorityArgs, p_action: action, p_entry_id: id, p_idempotency_key: key.value, p_expected_revision: expectedRevision, p_payload: action === "patch" ? toMealLogRpcPayload(parsed.value as MealLogMutationInput) : {} });
   if (!result.ok) return result.response;
   const data = projectMealLogData(result.data);
   return data ? ok(data) : fail("INTERNAL_ERROR", "식사 기록 결과를 확인하지 못했어요.", 500);

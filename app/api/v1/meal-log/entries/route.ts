@@ -1,5 +1,5 @@
 import { fail, ok } from "@/lib/api/response";
-import { callMealLogRpc, parseIdempotencyKey, parseMealLogMutationRequest, projectMealLogData } from "@/lib/server/meal-log";
+import { callMealLogRpc, parseIdempotencyKey, parseMealLogMutationRequest, projectMealLogData, toMealLogRpcPayload } from "@/lib/server/meal-log";
 import { authorizeMealLogRequest, readMealLogJson } from "@/lib/server/meal-log-route";
 
 export async function POST(request: Request) {
@@ -16,7 +16,7 @@ export async function POST(request: Request) {
     return fail(mismatch ? "CONSUMED_DATE_TIMEZONE_MISMATCH" : "VALIDATION_ERROR", mismatch ? "날짜와 시간대를 확인해 주세요." : "요청 값을 확인해 주세요.", 422, parsed.fields);
   }
   const entryId = crypto.randomUUID();
-  const result = await callMealLogRpc(authorized.client, "mutate_meal_log_entry", { ...authorized.authorityArgs, p_action: "create", p_entry_id: entryId, p_idempotency_key: key.value, p_expected_revision: null, p_payload: body.value });
+  const result = await callMealLogRpc(authorized.client, "mutate_meal_log_entry", { ...authorized.authorityArgs, p_action: "create", p_entry_id: entryId, p_idempotency_key: key.value, p_expected_revision: null, p_payload: toMealLogRpcPayload(parsed.value) });
   if (!result.ok) return result.response;
   const data = projectMealLogData(result.data);
   return data ? ok(data, { status: 201 }) : fail("INTERNAL_ERROR", "식사 기록 결과를 확인하지 못했어요.", 500);

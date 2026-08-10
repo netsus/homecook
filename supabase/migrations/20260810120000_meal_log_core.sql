@@ -87,6 +87,58 @@ grant select (
   created_at, updated_at
 ) on public.meal_log_entries to authenticated;
 
+create or replace function private.compact_meal_log_nutrition(
+  p_status text,
+  p_values jsonb,
+  p_scale numeric default 1
+) returns jsonb
+language sql immutable security definer
+set search_path = pg_catalog, public, private, pg_temp
+as $function$
+  with nutrient_keys(public_key, source_key) as (
+    values
+      ('calories_kcal','energy_kcal'),
+      ('carbohydrate_g','carbohydrate_g'),
+      ('protein_g','protein_g'),
+      ('fat_g','fat_g'),
+      ('sodium_mg','sodium_mg')
+  ), projected as (
+    select public_key,
+      round((case jsonb_typeof(coalesce(p_values,'{}'::jsonb)->source_key)
+        when 'number' then (p_values->>source_key)::numeric
+        when 'object' then coalesce(
+          (p_values->source_key->>'amount')::numeric,
+          (p_values->source_key->>'known_amount')::numeric
+        )
+        else null
+      end) * p_scale,6) value
+    from nutrient_keys
+  )
+  select jsonb_build_object(
+    'calculation_status',p_status,
+    'calories_kcal',max(value) filter(where public_key='calories_kcal'),
+    'carbohydrate_g',max(value) filter(where public_key='carbohydrate_g'),
+    'protein_g',max(value) filter(where public_key='protein_g'),
+    'fat_g',max(value) filter(where public_key='fat_g'),
+    'sodium_mg',max(value) filter(where public_key='sodium_mg')
+  ) from projected;
+$function$;
+
+create or replace function private.fold_meal_log_nutrition_status(
+  p_complete bigint,
+  p_partial bigint,
+  p_unavailable bigint
+) returns text
+language sql immutable security definer
+set search_path = pg_catalog, public, private, pg_temp
+as $function$
+  select case
+    when p_complete=0 and p_partial=0 then 'unavailable'
+    when p_partial=0 and p_unavailable=0 then 'complete'
+    else 'partial'
+  end;
+$function$;
+
 create or replace function private.resolve_meal_log_profile_nutrition(
   p_profile_id uuid,
   p_amount numeric,
@@ -95,7 +147,7 @@ create or replace function private.resolve_meal_log_profile_nutrition(
 language plpgsql stable security definer
 set search_path = pg_catalog, public, private, pg_temp
 as $function$
-declare v_profile public.nutrition_profiles%rowtype; v_scale numeric; v_values jsonb; v_missing integer;
+declare v_profile public.nutrition_profiles%rowtype; v_scale numeric; v_values jsonb; v_observed integer;
 begin
   select * into v_profile from public.nutrition_profiles where id=p_profile_id;
   if v_profile.id is null or not v_profile.is_active
@@ -108,16 +160,15 @@ begin
     end if;
   end if;
   v_scale := (case when p_unit='kg' then p_amount*1000 else p_amount end) / v_profile.basis_amount;
-  select jsonb_object_agg(nutrient_code,
-      case when value_status='observed' then round(amount*v_scale,6) else null end),
-    count(*) filter (where value_status<>'observed')
-  into v_values,v_missing from public.nutrition_values where profile_id=p_profile_id;
-  return jsonb_build_object(
-    'calculation_status',case when coalesce(v_missing,0)=0 and v_values is not null then 'complete'
-      when v_values is null then 'unavailable' else 'partial' end,
-    'profile_id',p_profile_id,'profile_version',v_profile.version,
-    'basis_amount',v_profile.basis_amount,'basis_unit',v_profile.basis_unit,
-    'amount',p_amount,'unit',p_unit,'values',coalesce(v_values,'{}'::jsonb)
+  select jsonb_object_agg(nutrient_code,case when value_status='observed' then amount else null end),
+    count(*) filter(where value_status='observed')
+  into v_values,v_observed from public.nutrition_values
+  where profile_id=p_profile_id
+    and nutrient_code in ('energy_kcal','carbohydrate_g','protein_g','fat_g','sodium_mg');
+  return private.compact_meal_log_nutrition(
+    case when coalesce(v_observed,0)=5 then 'complete'
+      when coalesce(v_observed,0)=0 then 'unavailable' else 'partial' end,
+    coalesce(v_values,'{}'::jsonb),v_scale
   );
 end;
 $function$;
@@ -230,11 +281,15 @@ begin
   from (select e.meal_plan_column_id,max(e.slot_name_snapshot) slot_name_snapshot,max(c.sort_order) sort_order,
     jsonb_agg(private.project_meal_log_entry(e) order by e.created_at,e.id) entries,
     jsonb_build_object(
-      'energy_kcal',sum((e.nutrition_evidence_json#>>'{values,energy_kcal}')::numeric),
-      'carbohydrate_g',sum((e.nutrition_evidence_json#>>'{values,carbohydrate_g}')::numeric),
-      'protein_g',sum((e.nutrition_evidence_json#>>'{values,protein_g}')::numeric),
-      'fat_g',sum((e.nutrition_evidence_json#>>'{values,fat_g}')::numeric),
-      'sodium_mg',sum((e.nutrition_evidence_json#>>'{values,sodium_mg}')::numeric)
+      'calculation_status',private.fold_meal_log_nutrition_status(
+        count(*) filter(where e.nutrition_evidence_json->>'calculation_status'='complete'),
+        count(*) filter(where e.nutrition_evidence_json->>'calculation_status'='partial'),
+        count(*) filter(where e.nutrition_evidence_json->>'calculation_status'='unavailable')),
+      'calories_kcal',sum((e.nutrition_evidence_json->>'calories_kcal')::numeric),
+      'carbohydrate_g',sum((e.nutrition_evidence_json->>'carbohydrate_g')::numeric),
+      'protein_g',sum((e.nutrition_evidence_json->>'protein_g')::numeric),
+      'fat_g',sum((e.nutrition_evidence_json->>'fat_g')::numeric),
+      'sodium_mg',sum((e.nutrition_evidence_json->>'sodium_mg')::numeric)
     ) subtotal,count(*) filter(where e.nutrition_evidence_json->>'calculation_status'<>'complete') incomplete_count
     from public.meal_log_entries e join public.meal_plan_columns c on c.id=e.meal_plan_column_id
     where e.owner_user_id=p_owner_uuid and e.account_generation=v_generation and e.consumed_local_date=p_date and e.deleted_at is null
@@ -242,23 +297,30 @@ begin
   select coalesce(jsonb_agg(jsonb_build_object('slot_name_snapshot',x.slot_name_snapshot,'entries',x.entries,'subtotal',x.subtotal,'incomplete_count',x.incomplete_count) order by x.slot_name_snapshot),'[]') into v_deleted
   from (select e.slot_name_snapshot,jsonb_agg(private.project_meal_log_entry(e) order by e.created_at,e.id) entries,
     jsonb_build_object(
-      'energy_kcal',sum((e.nutrition_evidence_json#>>'{values,energy_kcal}')::numeric),
-      'carbohydrate_g',sum((e.nutrition_evidence_json#>>'{values,carbohydrate_g}')::numeric),
-      'protein_g',sum((e.nutrition_evidence_json#>>'{values,protein_g}')::numeric),
-      'fat_g',sum((e.nutrition_evidence_json#>>'{values,fat_g}')::numeric),
-      'sodium_mg',sum((e.nutrition_evidence_json#>>'{values,sodium_mg}')::numeric)
+      'calculation_status',private.fold_meal_log_nutrition_status(
+        count(*) filter(where e.nutrition_evidence_json->>'calculation_status'='complete'),
+        count(*) filter(where e.nutrition_evidence_json->>'calculation_status'='partial'),
+        count(*) filter(where e.nutrition_evidence_json->>'calculation_status'='unavailable')),
+      'calories_kcal',sum((e.nutrition_evidence_json->>'calories_kcal')::numeric),
+      'carbohydrate_g',sum((e.nutrition_evidence_json->>'carbohydrate_g')::numeric),
+      'protein_g',sum((e.nutrition_evidence_json->>'protein_g')::numeric),
+      'fat_g',sum((e.nutrition_evidence_json->>'fat_g')::numeric),
+      'sodium_mg',sum((e.nutrition_evidence_json->>'sodium_mg')::numeric)
     ) subtotal,
     count(*) filter(where e.nutrition_evidence_json->>'calculation_status'<>'complete') incomplete_count
     from public.meal_log_entries e
     where e.owner_user_id=p_owner_uuid and e.account_generation=v_generation and e.consumed_local_date=p_date and e.deleted_at is null and e.meal_plan_column_id is null group by e.slot_name_snapshot) x;
-  select jsonb_build_object('calculation_status',case when count(*)=0 then 'unavailable' when count(*) filter(where nutrition_evidence_json->>'calculation_status'<>'complete')=0 then 'complete' else 'partial' end,
-    'values',jsonb_build_object(
-      'energy_kcal',sum((nutrition_evidence_json#>>'{values,energy_kcal}')::numeric),
-      'carbohydrate_g',sum((nutrition_evidence_json#>>'{values,carbohydrate_g}')::numeric),
-      'protein_g',sum((nutrition_evidence_json#>>'{values,protein_g}')::numeric),
-      'fat_g',sum((nutrition_evidence_json#>>'{values,fat_g}')::numeric),
-      'sodium_mg',sum((nutrition_evidence_json#>>'{values,sodium_mg}')::numeric)
-    ),'incomplete_count',count(*) filter(where nutrition_evidence_json->>'calculation_status'<>'complete')) into v_total
+  select jsonb_build_object(
+    'calculation_status',private.fold_meal_log_nutrition_status(
+      count(*) filter(where nutrition_evidence_json->>'calculation_status'='complete'),
+      count(*) filter(where nutrition_evidence_json->>'calculation_status'='partial'),
+      count(*) filter(where nutrition_evidence_json->>'calculation_status'='unavailable')),
+    'calories_kcal',sum((nutrition_evidence_json->>'calories_kcal')::numeric),
+    'carbohydrate_g',sum((nutrition_evidence_json->>'carbohydrate_g')::numeric),
+    'protein_g',sum((nutrition_evidence_json->>'protein_g')::numeric),
+    'fat_g',sum((nutrition_evidence_json->>'fat_g')::numeric),
+    'sodium_mg',sum((nutrition_evidence_json->>'sodium_mg')::numeric),
+    'incomplete_count',count(*) filter(where nutrition_evidence_json->>'calculation_status'<>'complete')) into v_total
   from public.meal_log_entries where owner_user_id=p_owner_uuid and account_generation=v_generation and consumed_local_date=p_date and deleted_at is null;
   return jsonb_build_object('success',true,'data',jsonb_build_object('date',p_date,'active_columns',v_columns,'active_sections',v_active,'deleted_column_sections',v_deleted,'entries',v_entries,'day_total',v_total),'error',null);
 end;
@@ -316,10 +378,17 @@ declare v_authority jsonb; v_generation bigint; v_claim jsonb; v_receipt uuid; v
   v_evidence jsonb; v_name text; v_brand text; v_product_version uuid; v_ingredient_profile uuid;
   v_conversion_evidence uuid; v_nutrition_amount numeric; v_nutrition_unit text; v_result jsonb;
   v_same_source boolean; v_same_quantity boolean; v_product_profile uuid; v_product_relations jsonb;
+  v_old_batch_id uuid; v_new_batch_id uuid; v_lock_batch_id uuid; v_locked_batch public.leftover_dishes%rowtype;
+  v_batch_nutrition jsonb; v_piece_count integer;
 begin
   if p_action not in ('create','patch','delete') then raise exception 'VALIDATION_ERROR' using errcode='22023'; end if;
   v_authority:=public.assert_recipe_future_session_authority(p_owner_uuid,p_auth_identity_created_at_snapshot,p_session_key_hash,p_hmac_key_version,p_session_issued_at);
   v_generation:=(v_authority->>'account_generation')::bigint;
+  if p_action<>'delete' then
+    v_source_type:=p_payload#>>'{source,type}'; v_source_id:=(p_payload#>>'{source,id}')::uuid;
+    v_amount:=(p_payload#>>'{quantity,amount}')::numeric; v_unit:=p_payload#>>'{quantity,unit}';
+    v_new_batch_id:=case when v_source_type='cooked_batch' then v_source_id end;
+  end if;
   v_claim:=private.claim_cooked_batch_operation(p_owner_uuid,v_generation,'meal_log_'||p_action,p_idempotency_key,
     jsonb_build_object('entry_id',case when p_action='create' then null else p_entry_id end,'expected_revision',p_expected_revision,'payload',p_payload),p_now);
   if v_claim ? 'replay' then return v_claim->'replay'; end if;
@@ -328,20 +397,34 @@ begin
     select * into v_entry from public.meal_log_entries where id=p_entry_id and owner_user_id=p_owner_uuid and account_generation=v_generation and deleted_at is null for update;
     if v_entry.id is null then raise exception 'RESOURCE_NOT_FOUND' using errcode='P0002'; end if;
     if v_entry.revision is distinct from p_expected_revision then raise exception 'CONFLICT' using errcode='40001'; end if;
-    if v_entry.active_consumption_event_id is not null then
-      select * into v_old_event from public.cooked_batch_quantity_events where id=v_entry.active_consumption_event_id for update;
-      v_reversal_id:=extensions.gen_random_uuid();
-      insert into public.cooked_batch_quantity_events(id,owner_user_id,cooked_batch_id,event_type,delta_g,reason,meal_log_entry_id,reverses_event_id,operation_id,ordinal,payload_hash,created_at)
-      values(v_reversal_id,p_owner_uuid,v_old_event.cooked_batch_id,'reversal',-v_old_event.delta_g,'meal_log_'||p_action,p_entry_id,v_old_event.id,p_idempotency_key,1,v_claim->>'payload_hash',p_now);
-      update public.meal_log_entries set active_consumption_event_id=null where id=p_entry_id;
-      perform private.replay_cooked_batch(v_old_event.cooked_batch_id,p_owner_uuid,p_now);
-    end if;
+    v_old_batch_id:=v_entry.cooked_batch_id;
+  end if;
+
+  for v_lock_batch_id in
+    select distinct candidate.v_lock_batch_id
+    from unnest(array[v_old_batch_id,v_new_batch_id]) as candidate(v_lock_batch_id)
+    where candidate.v_lock_batch_id is not null
+    order by candidate.v_lock_batch_id
+  loop
+    select * into v_locked_batch from public.leftover_dishes
+    where id=v_lock_batch_id and user_id=p_owner_uuid for update;
+    if v_locked_batch.id is null then raise exception 'RESOURCE_NOT_FOUND' using errcode='P0002'; end if;
+    perform private.assert_cooked_batch_cached_projection(v_lock_batch_id,p_owner_uuid);
+  end loop;
+
+  perform public.set_account_generation_internal_writer_marker(
+    (v_authority->>'cutover_attempt_id')::uuid,true
+  );
+  if p_action<>'create' and v_entry.active_consumption_event_id is not null then
+    select * into v_old_event from public.cooked_batch_quantity_events where id=v_entry.active_consumption_event_id for update;
+    v_reversal_id:=extensions.gen_random_uuid();
+    insert into public.cooked_batch_quantity_events(id,owner_user_id,cooked_batch_id,event_type,delta_g,reason,meal_log_entry_id,reverses_event_id,operation_id,ordinal,payload_hash,created_at)
+    values(v_reversal_id,p_owner_uuid,v_old_event.cooked_batch_id,'reversal',-v_old_event.delta_g,'meal_log_'||p_action,p_entry_id,v_old_event.id,p_idempotency_key,1,v_claim->>'payload_hash',p_now);
+    update public.meal_log_entries set active_consumption_event_id=null where id=p_entry_id;
   end if;
   if p_action='delete' then
     update public.meal_log_entries set deleted_at=p_now,revision=revision+1,updated_at=p_now where id=p_entry_id returning * into v_entry;
   else
-    v_source_type:=p_payload#>>'{source,type}'; v_source_id:=(p_payload#>>'{source,id}')::uuid;
-    v_amount:=(p_payload#>>'{quantity,amount}')::numeric; v_unit:=p_payload#>>'{quantity,unit}';
     v_same_source:=p_action='patch' and v_entry.source_type=v_source_type and
       case v_source_type when 'cooked_batch' then v_entry.cooked_batch_id when 'food_product' then v_entry.food_product_id else v_entry.ingredient_id end=v_source_id;
     v_same_quantity:=v_same_source and v_entry.actual_amount=v_amount and v_entry.actual_unit=v_unit;
@@ -353,12 +436,18 @@ begin
     end if;
     if v_source_type='cooked_batch' then
       if v_unit<>'g' then raise exception 'UNIT_CONVERSION_MISSING' using errcode='22023'; end if;
-      select * into v_batch from public.leftover_dishes where id=v_source_id and user_id=p_owner_uuid for update;
+      select * into v_batch from public.leftover_dishes where id=v_source_id and user_id=p_owner_uuid;
       if v_batch.id is null then raise exception 'RESOURCE_NOT_FOUND' using errcode='P0002'; end if;
       if v_batch.weight_status='unrecoverable' then raise exception 'WEIGHT_UNRECOVERABLE' using errcode='55000'; end if;
       if v_batch.weight_status<>'known' or v_batch.batch_status<>'available' then raise exception 'CONFLICT' using errcode='55000'; end if;
+      if v_batch.finished_weight_g is null or v_batch.finished_weight_g<=0 then raise exception 'CONFLICT' using errcode='55000'; end if;
       if v_amount>v_batch.remaining_weight_g then raise exception 'CONFLICT' using errcode='22003'; end if;
-      v_evidence:=private.resolve_cooked_batch_nutrition(v_batch.id,p_owner_uuid);
+      v_batch_nutrition:=private.resolve_cooked_batch_nutrition(v_batch.id,p_owner_uuid);
+      v_evidence:=private.compact_meal_log_nutrition(
+        coalesce(v_batch_nutrition->>'calculation_status','unavailable'),
+        coalesce(v_batch_nutrition->'values','{}'::jsonb),
+        v_amount / v_batch.finished_weight_g
+      );
       if v_same_source then v_name:=v_entry.display_name_snapshot; v_brand:=v_entry.display_brand_snapshot;
       else select title into v_name from public.recipes where id=v_batch.recipe_id; end if;
     elsif v_source_type='food_product' then
@@ -371,8 +460,7 @@ begin
       else
         select version.nutrition_profile_id,version.basis_relations_json into v_product_profile,v_product_relations
         from public.food_product_nutrition_versions version where version.id=v_product_version and version.product_id=v_source_id;
-        v_evidence:=private.resolve_meal_log_product_nutrition(v_product_profile,v_product_relations,v_amount,v_unit)
-          || jsonb_build_object('product_nutrition_version_id',v_product_version,'basis_relations',v_product_relations);
+        v_evidence:=private.resolve_meal_log_product_nutrition(v_product_profile,v_product_relations,v_amount,v_unit);
       end if;
     elsif v_source_type='ingredient' then
       select ingredient.standard_name into v_name from public.ingredients ingredient where ingredient.id=v_source_id for share;
@@ -389,8 +477,8 @@ begin
       v_nutrition_amount:=v_amount; v_nutrition_unit:=v_unit;
       if v_unit in ('tbsp','tsp','cup') then
         if v_same_source and v_conversion_evidence is not null then
-          select v_amount * (case v_unit when 'tbsp' then 15 when 'tsp' then 5 else 200 end) / 15 * evidence.normalized_g_per_15ml
-          into v_nutrition_amount from public.measurement_source_evidence evidence
+          select evidence.id,v_amount * (case v_unit when 'tbsp' then 15 when 'tsp' then 5 else 200 end) / 15 * evidence.normalized_g_per_15ml
+          into v_conversion_evidence,v_nutrition_amount from public.measurement_source_evidence evidence
           where evidence.id=v_conversion_evidence and evidence.evidence_kind='volume_weight';
         else
           select evidence.id,
@@ -408,13 +496,54 @@ begin
         end if;
         if v_conversion_evidence is null then raise exception 'UNIT_CONVERSION_MISSING' using errcode='22023'; end if;
         v_nutrition_unit:='g';
+      elsif lower(v_unit) in ('개','장','piece','pieces') then
+        if v_same_source and v_conversion_evidence is not null then
+          select count(*),
+            (array_agg(evidence.id order by piece.id))[1],
+            (array_agg(v_amount*piece.weight_g order by piece.id))[1]
+          into v_piece_count,v_conversion_evidence,v_nutrition_amount
+          from public.ingredient_nutrition_profiles profile
+          join public.piece_unit_weights piece
+            on piece.ingredient_id=profile.ingredient_id
+            and piece.preparation_state=profile.preparation_state
+          join public.measurement_source_evidence evidence
+            on evidence.id=piece.evidence_id
+            and piece.size_code=evidence.size_code
+            and piece.preparation_state=evidence.preparation_state
+            and evidence.evidence_kind='piece_weight'
+            and lower(evidence.source_observed_unit) in ('개','장','piece','pieces')
+          where profile.id=v_ingredient_profile and evidence.id=v_entry.conversion_evidence_id;
+        else
+          select count(*),
+            (array_agg(evidence.id order by piece.id))[1],
+            (array_agg(v_amount*piece.weight_g order by piece.id))[1]
+          into v_piece_count,v_conversion_evidence,v_nutrition_amount
+          from public.ingredient_nutrition_profiles profile
+          join public.piece_unit_weights piece
+            on piece.ingredient_id=profile.ingredient_id
+            and piece.preparation_state=profile.preparation_state
+            and piece.is_active and piece.review_status='approved'
+          join public.measurement_source_evidence evidence
+            on evidence.id=piece.evidence_id
+            and piece.size_code=evidence.size_code
+            and piece.preparation_state=evidence.preparation_state
+            and evidence.evidence_kind='piece_weight'
+            and evidence.is_active and evidence.review_status='approved'
+            and lower(evidence.source_observed_unit) in ('개','장','piece','pieces')
+          join public.nutrition_sources source
+            on source.id=evidence.source_id
+            and source.is_active and source.review_status='approved'
+            and source.freshness_status='current'
+          where profile.id=v_ingredient_profile;
+        end if;
+        if v_piece_count<>1 or v_conversion_evidence is null then raise exception 'UNIT_CONVERSION_MISSING' using errcode='22023'; end if;
+        v_nutrition_unit:='g';
       elsif v_unit not in ('g','kg') then
         raise exception 'UNIT_CONVERSION_MISSING' using errcode='22023';
       else
         v_conversion_evidence:=null;
       end if;
       select private.resolve_meal_log_profile_nutrition(profile.nutrition_profile_id,v_nutrition_amount,v_nutrition_unit)
-        || jsonb_build_object('ingredient_nutrition_profile_id',profile.id,'conversion_evidence_id',v_conversion_evidence)
       into v_evidence from public.ingredient_nutrition_profiles profile where profile.id=v_ingredient_profile;
       end if;
     else raise exception 'VALIDATION_ERROR' using errcode='22023'; end if;
@@ -437,14 +566,27 @@ begin
       insert into public.cooked_batch_quantity_events(id,owner_user_id,cooked_batch_id,event_type,delta_g,reason,meal_log_entry_id,operation_id,ordinal,payload_hash,created_at)
       values(v_event_id,p_owner_uuid,v_source_id,'consumed',-v_amount,'meal_log',p_entry_id,p_idempotency_key,case when v_reversal_id is null then 1 else 2 end,v_claim->>'payload_hash',p_now);
       update public.meal_log_entries set active_consumption_event_id=v_event_id where id=p_entry_id returning * into v_entry;
-      perform private.replay_cooked_batch(v_source_id,p_owner_uuid,p_now);
-      if exists(select 1 from public.leftover_dishes where id=v_source_id and batch_status='depleted' and depleted_reason='consumed') then
-        perform private.project_cooked_batch_progress_activity(p_owner_uuid,'leftover_eaten',v_source_id,p_now);
-      end if;
     end if;
+  end if;
+  for v_lock_batch_id in
+    select distinct candidate.v_lock_batch_id
+    from unnest(array[v_old_batch_id,v_new_batch_id]) as candidate(v_lock_batch_id)
+    where candidate.v_lock_batch_id is not null
+    order by candidate.v_lock_batch_id
+  loop
+    perform private.replay_cooked_batch(v_lock_batch_id,p_owner_uuid,p_now);
+  end loop;
+  if v_new_batch_id is not null and exists(
+    select 1 from public.leftover_dishes
+    where id=v_new_batch_id and batch_status='depleted' and depleted_reason='consumed'
+  ) then
+    perform private.project_cooked_batch_progress_activity(p_owner_uuid,'leftover_eaten',v_new_batch_id,p_now);
   end if;
   v_result:=jsonb_build_object('success',true,'data',jsonb_build_object('entry',private.project_meal_log_entry(v_entry)),'error',null);
   perform private.finish_cooked_batch_operation(v_receipt,v_result,p_entry_id,p_now);
+  perform public.set_account_generation_internal_writer_marker(
+    (v_authority->>'cutover_attempt_id')::uuid,false
+  );
   return v_result;
 end;
 $function$;
@@ -478,6 +620,8 @@ $function$;
 create trigger zz_cleanup_meal_log_before_cooked_batch_delete before delete on public.leftover_dishes
 for each row execute function private.cleanup_meal_log_before_cooked_batch_delete();
 
+alter function private.compact_meal_log_nutrition(text,jsonb,numeric) owner to postgres;
+alter function private.fold_meal_log_nutrition_status(bigint,bigint,bigint) owner to postgres;
 alter function private.resolve_meal_log_profile_nutrition(uuid,numeric,text) owner to postgres;
 alter function private.resolve_meal_log_product_nutrition(uuid,jsonb,numeric,text) owner to postgres;
 alter function private.assert_meal_log_pointer_pair() owner to postgres;
@@ -487,6 +631,8 @@ alter function private.cleanup_meal_log_before_cooked_batch_delete() owner to po
 alter function public.get_meal_log_day(uuid,timestamptz,text,integer,timestamptz,date) owner to postgres;
 alter function public.get_recent_meal_log_sources(uuid,timestamptz,text,integer,timestamptz,integer,date,uuid) owner to postgres;
 alter function public.mutate_meal_log_entry(uuid,timestamptz,text,integer,timestamptz,text,uuid,uuid,bigint,jsonb,timestamptz) owner to postgres;
+revoke all on function private.compact_meal_log_nutrition(text,jsonb,numeric) from public,anon,authenticated,service_role;
+revoke all on function private.fold_meal_log_nutrition_status(bigint,bigint,bigint) from public,anon,authenticated,service_role;
 revoke all on function private.resolve_meal_log_profile_nutrition(uuid,numeric,text) from public,anon,authenticated,service_role;
 revoke all on function private.resolve_meal_log_product_nutrition(uuid,jsonb,numeric,text) from public,anon,authenticated,service_role;
 revoke all on function private.assert_meal_log_pointer_pair() from public,anon,authenticated,service_role;
