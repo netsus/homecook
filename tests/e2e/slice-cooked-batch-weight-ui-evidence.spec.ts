@@ -127,13 +127,23 @@ async function installCookedBatchRoutes(page: Page, items = primaryBatches) {
   });
 }
 
-async function installCompletionRoutes(page: Page, conflictOnce = false) {
+async function installCompletionRoutes(
+  page: Page,
+  { conflictOnce = false, pauseFirstAttempt = false } = {},
+) {
   let attempts = 0;
+  let releaseFirstAttempt: () => void = () => undefined;
+  const firstAttemptGate = pauseFirstAttempt
+    ? new Promise<void>((resolveAttempt) => {
+        releaseFirstAttempt = resolveAttempt;
+      })
+    : Promise.resolve();
   await page.route("**/api/v1/cooking/session-attempts/*/cook-mode", async (route) => {
     await route.fulfill({ json: { success: true, data: snapshot, error: null } });
   });
   await page.route("**/api/v1/cooking/session-attempts/*/complete", async (route) => {
     attempts += 1;
+    if (attempts === 1) await firstAttemptGate;
     if (conflictOnce && attempts === 1) {
       await route.fulfill({
         status: 409,
@@ -163,6 +173,7 @@ async function installCompletionRoutes(page: Page, conflictOnce = false) {
       },
     });
   });
+  return { releaseFirstAttempt };
 }
 
 async function assertNoHorizontalOverflow(page: Page) {
@@ -180,6 +191,43 @@ async function stabilize(page: Page) {
   await page.waitForLoadState("networkidle");
   await page.evaluate(() => document.fonts.ready);
   await page.addStyleTag({ content: "*,*::before,*::after{animation:none!important;transition:none!important;caret-color:transparent!important}nextjs-portal,[data-next-badge-root],[aria-label='Open Next.js Dev Tools']{display:none!important}" });
+}
+
+async function readFooterMetrics(page: Page, testId: string) {
+  return page.getByTestId(testId).evaluate((root) => {
+    const buttons = [...root.querySelectorAll("button")];
+    const layout = buttons[0]?.parentElement;
+    if (!layout || buttons.length !== 2) throw new Error("Expected exactly two footer buttons");
+    const rects = buttons.map((button) => button.getBoundingClientRect());
+    const dangerProbe = document.createElement("span");
+    dangerProbe.style.backgroundColor = "var(--danger-strong)";
+    root.appendChild(dangerProbe);
+    const dangerBackground = getComputedStyle(dangerProbe).backgroundColor;
+    dangerProbe.remove();
+    return {
+      backgrounds: buttons.map((button) => getComputedStyle(button).backgroundColor),
+      dangerBackground,
+      flexDirection: getComputedStyle(layout).flexDirection,
+      fontSizes: buttons.map((button) => Number.parseFloat(getComputedStyle(button).fontSize)),
+      bottoms: rects.map(({ bottom }) => Math.round(bottom)),
+      heights: rects.map(({ height }) => Math.round(height)),
+      labels: buttons.map((button) => button.textContent?.trim() ?? ""),
+      lefts: rects.map(({ left }) => Math.round(left)),
+      rights: rects.map(({ right }) => Math.round(right)),
+      tops: rects.map(({ top }) => Math.round(top)),
+      viewport: { height: window.innerHeight, width: window.innerWidth },
+      widths: rects.map(({ width }) => Math.round(width)),
+    };
+  });
+}
+
+function maxRgbChannelDelta(left: string, right: string) {
+  const leftChannels = left.match(/[\d.]+/g)?.slice(0, 3).map(Number);
+  const rightChannels = right.match(/[\d.]+/g)?.slice(0, 3).map(Number);
+  if (!leftChannels || !rightChannels || leftChannels.length !== 3 || rightChannels.length !== 3) {
+    throw new Error(`Unable to compare computed colors: ${left} / ${right}`);
+  }
+  return Math.max(...leftChannels.map((channel, index) => Math.abs(channel - rightChannels[index])));
 }
 
 test.describe("cooked-batch-weight-ui", () => {
@@ -221,11 +269,26 @@ test("captures and verifies the Stage-4 viewport, state, and accessibility matri
   ];
   const runtime = {
     confirmationBackRetained: false,
+    cookFooter320PrimaryFirstDom: false,
+    cookFooter320PrimaryFirstVisual: false,
+    cookFooter320Stacked: false,
+    cookFooterControlHeightPx: 0,
+    cookFooterLabelsPreserved: false,
+    cookFooterPendingLocked: false,
+    cookFooterViewportContained: false,
+    cookFooterWideLayoutPreserved: [] as number[],
     existingCookModeFullPageContrastResidualNodes: 0,
     field422AlertFocused: false,
     field422InputsRetainedAndLinked: false,
     focusRestored: false,
     focusTrapped: false,
+    leftoversFooterControlHeightPx: 0,
+    leftoversFooterDestructiveColorPreserved: false,
+    leftoversFooterSafeCancelFirstDom: false,
+    leftoversFooterSafeCancelFirstVisual: false,
+    leftoversFooterTextBasePx: 0,
+    leftoversFooterViewportContained: false,
+    leftoversFooterViewports: [] as number[],
     noHorizontalOverflow: [] as number[],
     pendingControlsLocked: false,
     pendingEscapeLocked: false,
@@ -237,7 +300,10 @@ test("captures and verifies the Stage-4 viewport, state, and accessibility matri
 
   for (const [width, height, suffix] of [[390, 844, "mobile-default-390"], [320, 568, "mobile-narrow-320"], [1440, 1000, "desktop-1440"]] as const) {
     const cooked = await preparePage(browser, width, height);
-    await installCompletionRoutes(cooked.page, width === 320);
+    const completionRoute = await installCompletionRoutes(cooked.page, {
+      conflictOnce: width === 320,
+      pauseFirstAttempt: width === 320,
+    });
     await cooked.page.goto(COOK_MODE_PATH);
     const opener = cooked.page.getByRole("button", { name: "요리 완료" });
     await opener.click();
@@ -248,10 +314,38 @@ test("captures and verifies the Stage-4 viewport, state, and accessibility matri
     await dialog.getByRole("radio", { name: "음식만 무게(g)" }).click();
     await dialog.getByRole("spinbutton", { name: "완성 직후 음식 전체 중량" }).fill("640");
     const confirm = dialog.getByRole("button", { name: "완료 저장" });
+    const back = dialog.getByRole("button", { name: "돌아가기" });
     const close = dialog.getByRole("button", { name: "닫기" });
+    const cookFooter = await readFooterMetrics(cooked.page, "cooked-batch-completion-actions");
+    expect(cookFooter.labels).toEqual(["완료 저장", "돌아가기"]);
+    expect(cookFooter.heights).toEqual([48, 48]);
+    expect(cookFooter.lefts.every((left) => left >= 0)).toBe(true);
+    expect(cookFooter.rights.every((right) => right <= cookFooter.viewport.width)).toBe(true);
+    expect(cookFooter.tops.every((top) => top >= 0)).toBe(true);
+    expect(cookFooter.bottoms.every((bottom) => bottom <= cookFooter.viewport.height)).toBe(true);
+    runtime.cookFooterControlHeightPx = 48;
+    runtime.cookFooterLabelsPreserved = true;
+    runtime.cookFooterViewportContained = true;
+    if (width === 320) {
+      expect(cookFooter.flexDirection).toBe("column");
+      expect(cookFooter.tops[0]).toBeLessThan(cookFooter.tops[1]);
+      expect(cookFooter.widths[0]).toBe(cookFooter.widths[1]);
+      runtime.cookFooter320PrimaryFirstDom = true;
+      runtime.cookFooter320PrimaryFirstVisual = true;
+      runtime.cookFooter320Stacked = true;
+    } else {
+      expect(cookFooter.flexDirection).toBe("row-reverse");
+      expect(cookFooter.tops[0]).toBe(cookFooter.tops[1]);
+      expect(cookFooter.lefts[1]).toBeLessThan(cookFooter.lefts[0]);
+      runtime.cookFooterWideLayoutPreserved.push(width);
+    }
     await confirm.focus();
     await cooked.page.keyboard.press("Tab");
+    await expect(back).toBeFocused();
+    await cooked.page.keyboard.press("Tab");
     await expect(close).toBeFocused();
+    await cooked.page.keyboard.press("Shift+Tab");
+    await expect(back).toBeFocused();
     await cooked.page.keyboard.press("Shift+Tab");
     await expect(confirm).toBeFocused();
     runtime.focusTrapped = true;
@@ -294,9 +388,21 @@ test("captures and verifies the Stage-4 viewport, state, and accessibility matri
         if (request.url().includes("/complete")) keys.push(request.headers()["idempotency-key"] ?? null);
       });
       await dialog.getByRole("button", { name: "완료 저장" }).click();
+      await expect(dialog.getByRole("status")).toContainText("완료 결과를 기다리는 중");
+      await expect(dialog.getByRole("button", { name: "저장 중…" })).toBeDisabled();
+      await expect(dialog.getByRole("button", { name: "돌아가기" })).toBeDisabled();
+      await cooked.page.keyboard.press("Escape");
+      await expect(dialog).toBeVisible();
+      runtime.cookFooterPendingLocked = true;
+      completionRoute.releaseFirstAttempt();
       const alert = dialog.getByRole("alert");
       await expect(alert).toBeFocused();
       await expect(dialog.getByRole("spinbutton", { name: "완성 직후 음식 전체 중량" })).toHaveValue("640");
+      const errorFooter = await readFooterMetrics(cooked.page, "cooked-batch-completion-actions");
+      expect(errorFooter.labels).toEqual(["완료 저장", "돌아가기"]);
+      expect(errorFooter.heights).toEqual([48, 48]);
+      expect(errorFooter.tops[0]).toBeLessThan(errorFooter.tops[1]);
+      expect(errorFooter.bottoms.every((bottom) => bottom <= errorFooter.viewport.height)).toBe(true);
       const errorName = "COOK_MODE-mobile-narrow-320-pending-error-replay.png";
       await cooked.page.screenshot({ path: resolve(EVIDENCE_DIR, errorName) });
       files.push(errorName);
@@ -329,6 +435,21 @@ test("captures and verifies the Stage-4 viewport, state, and accessibility matri
       await expect(closeDialog.getByText("식사 영양을 계산하지 않아요.")).toBeVisible();
       await expect(closeDialog.getByText("meal-log 식사 기록을 만들지 않아요.")).toBeVisible();
       await closeDialog.getByRole("checkbox", { name: /그램 중량.*식사 영양.*meal-log 식사 기록/ }).check();
+      const leftoversFooter = await readFooterMetrics(leftovers.page, "cooked-batch-action-actions");
+      expect(leftoversFooter.labels).toEqual(["취소", "이 상태로 종료"]);
+      expect(leftoversFooter.fontSizes).toEqual([16, 16]);
+      expect(leftoversFooter.heights).toEqual([48, 48]);
+      expect(leftoversFooter.bottoms.every((bottom) => bottom <= leftoversFooter.viewport.height)).toBe(true);
+      expect(leftoversFooter.lefts[0]).toBeLessThan(leftoversFooter.lefts[1]);
+      expect(leftoversFooter.tops[0]).toBe(leftoversFooter.tops[1]);
+      expect(maxRgbChannelDelta(leftoversFooter.backgrounds[1], leftoversFooter.dangerBackground)).toBeLessThanOrEqual(1);
+      runtime.leftoversFooterControlHeightPx = 48;
+      runtime.leftoversFooterDestructiveColorPreserved = true;
+      runtime.leftoversFooterSafeCancelFirstDom = true;
+      runtime.leftoversFooterSafeCancelFirstVisual = true;
+      runtime.leftoversFooterTextBasePx = 16;
+      runtime.leftoversFooterViewportContained = true;
+      runtime.leftoversFooterViewports.push(width);
       runtime.unweighedCloseConsequencesConfirmed = true;
       runtime.scopedNewUiSeriousOrCritical += (await expectNoSeriousAxeViolations(
         leftovers.page,
@@ -395,6 +516,21 @@ test("captures and verifies the Stage-4 viewport, state, and accessibility matri
       await expect(actionDialog.getByLabel("사유")).toHaveValue("상해서 폐기");
       runtime.confirmationBackRetained = true;
       await actionDialog.getByRole("button", { name: "내용 확인" }).click();
+      const leftoversFooter = await readFooterMetrics(leftovers.page, "cooked-batch-action-actions");
+      expect(leftoversFooter.labels).toEqual(["입력 수정", "버림 기록"]);
+      expect(leftoversFooter.fontSizes).toEqual([16, 16]);
+      expect(leftoversFooter.heights).toEqual([48, 48]);
+      expect(leftoversFooter.bottoms.every((bottom) => bottom <= leftoversFooter.viewport.height)).toBe(true);
+      expect(leftoversFooter.lefts[0]).toBeLessThan(leftoversFooter.lefts[1]);
+      expect(leftoversFooter.tops[0]).toBe(leftoversFooter.tops[1]);
+      expect(maxRgbChannelDelta(leftoversFooter.backgrounds[1], leftoversFooter.dangerBackground)).toBeLessThanOrEqual(1);
+      runtime.leftoversFooterControlHeightPx = 48;
+      runtime.leftoversFooterDestructiveColorPreserved = true;
+      runtime.leftoversFooterSafeCancelFirstDom = true;
+      runtime.leftoversFooterSafeCancelFirstVisual = true;
+      runtime.leftoversFooterTextBasePx = 16;
+      runtime.leftoversFooterViewportContained = true;
+      runtime.leftoversFooterViewports.push(width);
       await stabilize(leftovers.page);
       await leftovers.page.screenshot({ path: resolve(EVIDENCE_DIR, stateName) });
       files.push(stateName);
@@ -413,6 +549,11 @@ test("captures and verifies the Stage-4 viewport, state, and accessibility matri
       await expect(retainedAmount).toHaveAttribute("aria-describedby", alertId!);
       await expect(retainedReason).toHaveAttribute("aria-describedby", alertId!);
       runtime.field422InputsRetainedAndLinked = true;
+      const leftoversErrorFooter = await readFooterMetrics(leftovers.page, "cooked-batch-action-actions");
+      expect(leftoversErrorFooter.labels).toEqual(["취소", "내용 확인"]);
+      expect(leftoversErrorFooter.fontSizes).toEqual([16, 16]);
+      expect(leftoversErrorFooter.heights).toEqual([48, 48]);
+      expect(leftoversErrorFooter.bottoms.every((bottom) => bottom <= leftoversErrorFooter.viewport.height)).toBe(true);
       runtime.scopedNewUiSeriousOrCritical += (await expectNoSeriousAxeViolations(
         leftovers.page,
         '[data-testid="cooked-batch-action-sheet"]',
@@ -473,6 +614,14 @@ test("captures and verifies the Stage-4 viewport, state, and accessibility matri
 
   expect(runtime.focusTrapped).toBe(true);
   expect(runtime.focusRestored).toBe(true);
+  expect(runtime.cookFooter320PrimaryFirstDom).toBe(true);
+  expect(runtime.cookFooter320PrimaryFirstVisual).toBe(true);
+  expect(runtime.cookFooter320Stacked).toBe(true);
+  expect(runtime.cookFooterControlHeightPx).toBe(48);
+  expect(runtime.cookFooterLabelsPreserved).toBe(true);
+  expect(runtime.cookFooterPendingLocked).toBe(true);
+  expect(runtime.cookFooterViewportContained).toBe(true);
+  expect(runtime.cookFooterWideLayoutPreserved).toEqual([390, 1440]);
   expect(runtime.confirmationBackRetained).toBe(true);
   expect(runtime.field422AlertFocused).toBe(true);
   expect(runtime.field422InputsRetainedAndLinked).toBe(true);
@@ -480,13 +629,35 @@ test("captures and verifies the Stage-4 viewport, state, and accessibility matri
   expect(runtime.pendingEscapeLocked).toBe(true);
   expect(runtime.retained409Input).toBe(true);
   expect(runtime.replayKeyReused).toBe(true);
+  expect(runtime.leftoversFooterControlHeightPx).toBe(48);
+  expect(runtime.leftoversFooterDestructiveColorPreserved).toBe(true);
+  expect(runtime.leftoversFooterSafeCancelFirstDom).toBe(true);
+  expect(runtime.leftoversFooterSafeCancelFirstVisual).toBe(true);
+  expect(runtime.leftoversFooterTextBasePx).toBe(16);
+  expect(runtime.leftoversFooterViewportContained).toBe(true);
+  expect(runtime.leftoversFooterViewports).toEqual([390, 320]);
   expect(runtime.unweighedCloseConsequencesConfirmed).toBe(true);
   await writeFile(resolve(EVIDENCE_DIR, "runtime-focus-keyboard-overflow.json"), `${JSON.stringify({
     confirmation_back_retained: runtime.confirmationBackRetained,
+    cook_footer_320_primary_first_dom: runtime.cookFooter320PrimaryFirstDom,
+    cook_footer_320_primary_first_visual: runtime.cookFooter320PrimaryFirstVisual,
+    cook_footer_320_stacked: runtime.cookFooter320Stacked,
+    cook_footer_control_height_px: runtime.cookFooterControlHeightPx,
+    cook_footer_labels_preserved: runtime.cookFooterLabelsPreserved,
+    cook_footer_pending_locked: runtime.cookFooterPendingLocked,
+    cook_footer_viewport_contained: runtime.cookFooterViewportContained,
+    cook_footer_wide_layout_preserved: runtime.cookFooterWideLayoutPreserved,
     field_422_alert_focused: runtime.field422AlertFocused,
     field_422_inputs_retained_and_linked: runtime.field422InputsRetainedAndLinked,
     focus_restored: runtime.focusRestored,
     focus_trapped: runtime.focusTrapped,
+    leftovers_footer_control_height_px: runtime.leftoversFooterControlHeightPx,
+    leftovers_footer_destructive_color_preserved: runtime.leftoversFooterDestructiveColorPreserved,
+    leftovers_footer_safe_cancel_first_dom: runtime.leftoversFooterSafeCancelFirstDom,
+    leftovers_footer_safe_cancel_first_visual: runtime.leftoversFooterSafeCancelFirstVisual,
+    leftovers_footer_text_base_px: runtime.leftoversFooterTextBasePx,
+    leftovers_footer_viewport_contained: runtime.leftoversFooterViewportContained,
+    leftovers_footer_viewports: runtime.leftoversFooterViewports,
     no_horizontal_overflow: runtime.noHorizontalOverflow,
     pending_controls_locked: runtime.pendingControlsLocked,
     pending_escape_locked: runtime.pendingEscapeLocked,

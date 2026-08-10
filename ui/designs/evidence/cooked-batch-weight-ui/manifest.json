@@ -3,7 +3,7 @@
     "existing_cook_mode_full_page_contrast_residual_nodes": 2,
     "new_stage4_sheet_and_section_scoped_serious_or_critical": 0
   },
-  "captured_at": "2026-08-10T03:50:08.157Z",
+  "captured_at": "2026-08-10T11:42:51.017Z",
   "files": [
     "COOK_MODE-before-mobile-default-390.png",
     "COOK_MODE-before-mobile-narrow-320.png",
@@ -24,8 +24,8 @@
     "runtime-focus-keyboard-overflow.json"
   ],
   "generated_by": "tests/e2e/slice-cooked-batch-weight-ui-evidence.spec.ts",
-  "implementation_head": "6aac3c194f9606df8269fcd42a9cfa9f974fa1f0",
-  "implementation_tree": "cc2ebc645214433dada8492141ba950b5035a9d8",
+  "implementation_head": "a381f23237c001b232172317a948770d0efa364b",
+  "implementation_tree": "0f72334bdebeeb4e5930858aa781050b7391b91d",
   "viewport_matrix": [
     320,
     390,
