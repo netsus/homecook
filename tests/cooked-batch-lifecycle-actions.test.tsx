@@ -153,6 +153,33 @@ describe("cooked batch lifecycle presentation", () => {
     });
   });
 
+  it("scopes LEFTOVERS footer buttons to text-base without changing safe-cancel-first order", () => {
+    render(
+      <CookedBatchActionSheet
+        action="mark_unrecoverable"
+        batch={batch("10000000-0000-4000-8000-000000000001", {
+          finished_weight_g: null,
+          remaining_weight_g: null,
+          weight_status: "missing",
+        })}
+        error={null}
+        onClose={() => undefined}
+        onSubmit={() => undefined}
+        pending={false}
+      />,
+    );
+
+    const actions = screen.getByTestId("cooked-batch-action-actions");
+    const buttons = within(actions).getAllByRole("button");
+
+    expect(actions.className).toContain("[&_button]:text-base");
+    expect(buttons.map((button) => button.textContent)).toEqual([
+      "취소",
+      "확인하고 변경",
+    ]);
+    expect(buttons.every((button) => button.className.includes("h-[var(--control-height-lg)]"))).toBe(true);
+  });
+
   it("requires a second negative-adjust confirmation while positive correction stays direct", async () => {
     const user = userEvent.setup();
     const onSubmit = vi.fn();

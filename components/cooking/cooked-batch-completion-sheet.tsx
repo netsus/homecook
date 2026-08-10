@@ -2,10 +2,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 
-import {
-  AppBottomSheet,
-  AppModalFooterActions,
-} from "@/components/shared/app-overlay";
+import { AppBottomSheet } from "@/components/shared/app-overlay";
 import { useDialogBoundary } from "@/components/shared/use-dialog-boundary";
 import type {
   SnapshotV2CompleteBody,
@@ -139,17 +136,25 @@ export function CookedBatchCompletionSheet({
       descriptionClassName="mt-1 text-sm leading-5 text-[var(--wave1-text-2)]"
       footer={
         <div
-          className="[--wave1-mint-contrast:var(--brand-primary-text)] [--wave1-mint-contrast-deep:var(--foreground)] [&_button]:text-base"
+          className="flex flex-col gap-2.5 [--wave1-mint-contrast:var(--brand-primary-text)] [--wave1-mint-contrast-deep:var(--foreground)] [&_button]:text-base min-[321px]:flex-row-reverse"
           data-testid="cooked-batch-completion-actions"
         >
-          <AppModalFooterActions
-            cancelDisabled={submitting}
-            cancelLabel="돌아가기"
-            confirmDisabled={!canSubmit}
-            confirmLabel={submitting ? "저장 중…" : "완료 저장"}
-            onCancel={onClose}
-            onConfirm={handleSubmit}
-          />
+          <button
+            className="flex h-[var(--control-height-lg)] w-full min-w-0 items-center justify-center whitespace-nowrap rounded-[var(--radius-sm)] bg-[var(--wave1-mint-contrast)] px-4 text-base font-bold text-[var(--wave1-surface)] shadow-[var(--wave1-shadow-natural)] transition-colors hover:bg-[var(--wave1-mint-contrast-deep)] disabled:opacity-50 min-[321px]:w-auto min-[321px]:flex-[2]"
+            disabled={!canSubmit}
+            onClick={handleSubmit}
+            type="button"
+          >
+            {submitting ? "저장 중…" : "완료 저장"}
+          </button>
+          <button
+            className="flex h-[var(--control-height-lg)] w-full min-w-0 items-center justify-center whitespace-nowrap rounded-[var(--radius-sm)] border border-[var(--wave1-border)] bg-[var(--wave1-surface)] px-4 text-base font-semibold text-[var(--wave1-text-2)] transition-colors hover:bg-[var(--wave1-surface-fill)] disabled:opacity-40 min-[321px]:w-auto min-[321px]:flex-1"
+            disabled={submitting}
+            onClick={onClose}
+            type="button"
+          >
+            돌아가기
+          </button>
         </div>
       }
       horizontalPaddingClassName="px-4"
