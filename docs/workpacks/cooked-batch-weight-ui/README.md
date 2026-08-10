@@ -50,7 +50,7 @@ Migration, Route Handler, RPC, server helper, backend write transaction, protect
 | #8 `cooked-batch-weight-ledger` Stage 2/3/4 | merged/green — PR #1311 head `2a2cd6fb81265ffa1f49e1c34ee68a26e1ddc49d`, merge `c16102a3072e929e45bb24a69464cd3110d03db5` | 기존 API/runtime을 Stage 4 UI가 소비할 수 있다. reader-before-writer cutover도 merged predecessor fact다. |
 | `cook-mode-whole-board` | merged/green — PR #711 head `55b93ad7d29cfa8cba19e7942b18e6275fdc986a`, merge `2f8569cb56a53e9508d8d9571b94b260ec0bce73` | 기존 whole-board interaction을 보존한다. |
 | #8 broader lifecycle | pending — Manual/server-Mac/OAuth, R/R+1/R+2 drain/rollback, capability activation | merged delivery와 분리한다. #11이 완료·활성화했다고 주장하거나 activation을 수행하지 않는다. |
-| #9 `meal-log-core` | parallel backend owner; #11 비차단 | meal-log DB/API/write/events/pointers를 소유한다. #11은 해당 파일/계약을 수정하지 않는다. |
+| #9 `meal-log-core` | merged — PR #1319 head `be93bfc47281e2795c59c0fd1052a4ecf6085837`, merge `8ba3fa5a2a198eb4f9c19d59cea5f6ccc52fdd4f` | meal-log DB/API/write/events/pointers를 소유한다. #11은 normal two-parent merge로 shared projection을 순차 통합했으며 해당 계약 의미를 수정하지 않는다. |
 | #12 `meal-log-ui` | successor | consumed-amount add/edit/delete UI를 소유한다. #11이 선점하지 않는다. |
 | #14 cross-slice release QA | successor | broader integration/release evidence를 소유한다. |
 
@@ -77,7 +77,7 @@ All mutations keep UUID `Idempotency-Key` and the official `expected_revision` r
 
 ## Frontend Delivery Mode
 
-Design Status는 `pending-review`다. Stage 1 PR #1318 merge `8b1a4cce57e05d282c2a01fc54557ffc129fae1d`와 fresh internal/design `APPROVE 0/0/0`을 입력으로 Stage 4가 existing #8 client/API adapters만 소비해 구현·자동 증거를 준비했다. 구현 task `019fe7b3-881f-7152-b3fc-9ca58b5dba2a`의 evidence target은 head `d6843baa6d27addea5d79fa991c937dfc6dbf070`, tree `0fa3545f9ec22d83dd4e969f1eef70364a2297ba`이며 Draft PR은 [#1320](https://github.com/netsus/homecook/pull/1320)이다. 별도 authority precheck, Stage 5, final authority와 Stage 6은 아직 승인하지 않았다.
+Design Status는 `confirmed`다. Draft PR [#1323](https://github.com/netsus/homecook/pull/1323)의 제품 repair `a381f23237c001b232172317a948770d0efa364b` → fresh evidence `531055aca7038041411293b8a7e10a9cd27c2e8c` → Stage 5 publication `a17b0961f9aca4fc6ec740d62f81022fded962fc` → final authority publication `6cbfaf053b63d119f91225ce5fec500a229a7ad1` 계보가 현재 근거다. Fresh Stage 5 task `019feb85-1b83-7662-9c10-ab91d834c4f6`와 final authority task `019feb94-4d4f-7831-9000-01eaaf3a7569`는 각각 `APPROVE 0/0/0`이다. Stage 6 task `019feba0-7a3b-7851-bcf0-4ea106cc7c3c`는 제품 결함이 아니라 PR 본문/closeout 투영 drift 2건으로 `HOLD 0/2/0`을 냈고, repair author task `019febac-5498-73e0-bacf-b6948ff9c3a0`가 `CBW-S6-P1-01/02`만 수리했다. 이 수리는 Stage 6 승인이 아니며 fresh independent Stage 6 rereview가 pending이다.
 
 Required states:
 
@@ -89,7 +89,7 @@ Required states:
 - `ready/interactive`: known/missing/unrecoverable + available truth에 eligible #11 action만 제공
 - `pending`: duplicate submit, Escape, backdrop/close를 잠그고 input과 opener context 보존
 
-COOK_MODE의 `legacy-null`/depleted는 LEFTOVERS read-model only이므로 N/A이며, LEFTOVERS의 legacy/v2 two-section과 cursor pagination 보수는 완료됐다. 이 exact-cancel 문서/테스트 보수 뒤 새 exact head/tree의 fresh independent design rereview는 pending이다. #11 docs/automation author는 새 read나 route를 발명하지 않는다.
+COOK_MODE의 `legacy-null`/depleted는 LEFTOVERS read-model only이므로 N/A이며, LEFTOVERS의 legacy/v2 two-section과 cursor pagination 보수는 완료됐다. Fresh Stage 5와 final authority는 위 exact lineage에서 승인됐고, closeout repair publication head에 대한 fresh Stage 6 rereview만 남아 있다. #11 closeout repair author는 새 read나 route를 발명하지 않는다.
 
 ## State / Error Matrix
 
@@ -162,10 +162,12 @@ COOK_MODE의 `legacy-null`/depleted는 LEFTOVERS read-model only이므로 N/A이
   - `ui/designs/critiques/COOK_MODE-cooked-batch-weight-ui-critique.md`
   - `ui/designs/critiques/LEFTOVERS-cooked-batch-weight-ui-critique.md`
 - `automation-spec.json`의 supported `frontend.artifact_assertions` index가 위 two designs + two exact critics를 모두 기계적으로 잠근다. 한 화면, 단일 critic 또는 legacy generic critic path만 남으면 Stage 1 regression이 실패한다.
-- Stage 1 final internal task `019fe78f-1cfd-71e3-9286-de905478ce9e`와 final design task `019fe78e-f5a4-7662-b89a-8bdc9ee98269`는 두 화면/combined `APPROVE 0/0/0`이었다. Stage 4 구현에 대한 fresh authority precheck와 후속 승인 작업은 별개로 pending이다.
+- Stage 1 final internal task `019fe78f-1cfd-71e3-9286-de905478ce9e`와 final design task `019fe78e-f5a4-7662-b89a-8bdc9ee98269`는 두 화면/combined `APPROVE 0/0/0`이었다.
+- Fresh Stage 5 task `019feb85-1b83-7662-9c10-ab91d834c4f6`의 report `docs/workpacks/cooked-batch-weight-ui/evidence/2026-08-10-stage5-p2-repair-rereview.md`와 final authority task `019feb94-4d4f-7831-9000-01eaaf3a7569`의 report `docs/workpacks/cooked-batch-weight-ui/evidence/2026-08-10-final-authority-p2-repair-rereview.md`는 모두 `APPROVE 0/0/0`이다.
+- Stage 6 task `019feba0-7a3b-7851-bcf0-4ea106cc7c3c`의 `HOLD 0/2/0`은 `CBW-S6-P1-01` PR body drift와 `CBW-S6-P1-02` closeout projection drift에 한정된다. Repair evidence는 `docs/workpacks/cooked-batch-weight-ui/evidence/2026-08-10-stage6-closeout-drift-repair.md`이며 fresh Stage 6 rereview 전에는 승인으로 보지 않는다.
 - Future authority reports: `ui/designs/authority/COOK_MODE-authority.md`, `ui/designs/authority/LEFTOVERS-authority.md`.
 - Stage 4는 390px/320px/desktop에서 familiar bottom sheet, 44px target, 16px numeric input, sheet internal scroll/fixed CTA/safe-area, focus trap/focus restore/Escape, overflow, screen reader label/live error를 자동 evidence로 남겼다. #11 신규 sheet/section scoped serious/critical은 0이며, 기존 COOK_MODE full-page contrast residual node 2개는 별도 한계다.
-- Static Markdown/PNG는 runtime focus, virtual keyboard, VoiceOver/TalkBack, full WCAG 또는 physical device를 증명하지 않는다. 그 evidence는 Stage 4/manual pending이다.
+- Static Markdown/PNG와 deterministic runtime JSON은 실제 OS virtual keyboard, physical keyboard, VoiceOver/TalkBack, full WCAG 또는 physical device를 증명하지 않는다. 해당 evidence는 Manual pending이다.
 
 ## Out of Scope
 
@@ -184,7 +186,8 @@ COOK_MODE의 `legacy-null`/depleted는 LEFTOVERS read-model only이므로 N/A이
 - verification: `pending`
 - evaluation: `not_started`
 - #11 Stage 2/3: N/A
-- next review lanes: fresh authority precheck → Stage 5 → final authority → Stage 6. 현재 구현 작업은 어느 단계도 자기 승인하지 않는다.
+- completed independent lanes: fresh Stage 5 `APPROVE 0/0/0` → final authority `APPROVE 0/0/0`.
+- next review lane: closeout repair publication head의 fresh independent Stage 6 rereview. Repair author는 자기 수리를 Stage 6 승인하지 않는다.
 
 Stage 1 repair는 lifecycle을 docs/complete/merged로 올리지 않는다. #8 Stage 2/3/4 merged/green fact와 broader Manual/server-Mac/OAuth/R/R+1/R+2/activation pending을 계속 분리한다.
 
@@ -194,8 +197,8 @@ Stage 1 repair는 lifecycle을 docs/complete/merged로 올리지 않는다. #8 S
 - [x] LEFTOVERS가 known/missing/unrecoverable/legacy-null/depleted truth와 eligible #11 action만 표시한다. <!-- omo:id=delivery-batch-weight-ui-leftovers;stage=4;scope=frontend;review=5,6 -->
 - [x] #9 backend와 #12 consumed UI ownership을 선점하지 않고 new public contract가 없다. <!-- omo:id=delivery-batch-weight-ui-ownership;stage=4;scope=shared;review=5,6 -->
 - [x] two designs + two exact current critic paths가 regression으로 유지된다. <!-- omo:id=delivery-batch-weight-ui-artifact-index;stage=4;scope=frontend;review=5,6 -->
-- [ ] 390px/320px/desktop runtime visual·focus·overflow·a11y evidence와 authority reports가 준비된다. <!-- omo:id=delivery-batch-weight-ui-authority-evidence;stage=4;scope=frontend;review=5,6 -->
-- [ ] fresh independent internal 1.5/design/Stage 5/6/final authority에서 unresolved required finding이 0이다. <!-- omo:id=delivery-batch-weight-ui-independent-review;stage=4;scope=shared;review=5,6 -->
+- [x] 390px/320px/desktop runtime visual·focus·overflow·a11y evidence와 fresh Stage 5/final authority reports가 준비된다. <!-- omo:id=delivery-batch-weight-ui-authority-evidence;stage=4;scope=frontend;review=5,6 -->
+- [ ] closeout repair publication head의 fresh independent Stage 6 rereview에서 unresolved required finding이 0이다. <!-- omo:id=delivery-batch-weight-ui-independent-review;stage=4;scope=shared;review=5,6 -->
 
 ## Manual Only
 

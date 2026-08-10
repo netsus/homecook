@@ -10,7 +10,7 @@
   "goal": "새 public contract나 backend write 없이 cooked-batch 중량·잔량 상태를 정확하고 접근 가능하게 표시하고 irreversible/destructive action을 safe bottom sheet에서만 수행한다.",
   "owners": {
     "claude": "forbidden; Claude CLI, app and API must not be invoked",
-    "codex": "Stage 4 implementation task 019fe7b3-881f-7152-b3fc-9ca58b5dba2a; authority findings repair task 019fe9a4-f94c-7230-a1f7-9d0b8116d1c0; separate task IDs for Stage 1 author, internal 1.5, design critic, fresh authority rereview, Stage 5, final authority and Stage 6; no self-approval",
+    "codex": "Stage 4 implementation task 019fe7b3-881f-7152-b3fc-9ca58b5dba2a; Stage 5 P2 repair task 019feb34-89a1-7821-839a-857dabbb74bb; fresh Stage 5 task 019feb85-1b83-7662-9c10-ab91d834c4f6; final authority task 019feb94-4d4f-7831-9000-01eaaf3a7569; Stage 6 HOLD reviewer task 019feba0-7a3b-7851-bcf0-4ea106cc7c3c; closeout repair author task 019febac-5498-73e0-bacf-b6948ff9c3a0; fresh Stage 6 rereview remains a separate task; no self-approval",
     "workers": []
   },
   "dependencies": [
@@ -18,7 +18,7 @@
     "#8 cooked-batch-weight-ledger Stage 2/3/4 is merged/green through PR #1311 head 2a2cd6fb81265ffa1f49e1c34ee68a26e1ddc49d and merge c16102a3072e929e45bb24a69464cd3110d03db5; its existing API/runtime is available to #11 Stage 4",
     "cook-mode-whole-board is merged/green through PR #711 head 55b93ad7d29cfa8cba19e7942b18e6275fdc986a and merge 2f8569cb56a53e9508d8d9571b94b260ec0bce73",
     "#8 broader lifecycle remains pending: Manual/server-Mac/OAuth, R/R+1/R+2 drain/rollback and capability activation are not completed or performed by #11",
-    "#9 meal-log-core owns DB/API/write/events/pointers in a parallel backend lane; shared projection integration is sequential and #11 does not edit #9 surfaces",
+    "#9 meal-log-core PR #1319 head be93bfc47281e2795c59c0fd1052a4ecf6085837 is merged at 8ba3fa5a2a198eb4f9c19d59cea5f6ccc52fdd4f; #9 retains DB/API/write/events/pointers ownership and #11 integrated its shared projection sequentially without editing #9 semantics",
     "#12 meal-log-ui owns consumed-amount add/edit/delete UI and remains a successor that #11 does not preclaim"
   ],
   "docs_refs": {
@@ -65,13 +65,28 @@
       "line_count": "1,018 lines"
     },
     "stage4_implementation_target": {
-      "task_id": "019fe9a4-f94c-7230-a1f7-9d0b8116d1c0",
-      "head": "6aac3c194f9606df8269fcd42a9cfa9f974fa1f0",
-      "tree": "cc2ebc645214433dada8492141ba950b5035a9d8",
-      "draft_pr": 1320,
-      "draft_pr_url": "https://github.com/netsus/homecook/pull/1320",
-      "design_status": "pending-review",
-      "evidence_manifest": "ui/designs/evidence/cooked-batch-weight-ui/manifest.json"
+      "task_id": "019feb34-89a1-7821-839a-857dabbb74bb",
+      "head": "a381f23237c001b232172317a948770d0efa364b",
+      "tree": "0f72334bdebeeb4e5930858aa781050b7391b91d",
+      "evidence_head": "531055aca7038041411293b8a7e10a9cd27c2e8c",
+      "evidence_tree": "8cba47ba73792536f422e19ea5ca381f057c57e5",
+      "stage5_publication_head": "a17b0961f9aca4fc6ec740d62f81022fded962fc",
+      "final_authority_publication_head": "6cbfaf053b63d119f91225ce5fec500a229a7ad1",
+      "reviewed_lineage": "a381f23237c001b232172317a948770d0efa364b -> 531055aca7038041411293b8a7e10a9cd27c2e8c -> a17b0961f9aca4fc6ec740d62f81022fded962fc -> 6cbfaf053b63d119f91225ce5fec500a229a7ad1",
+      "master_integration_head": "2965c84b832b22595b19c8ef2aab1dfde58bdbcc",
+      "master_integration_parents": [
+        "6cbfaf053b63d119f91225ce5fec500a229a7ad1",
+        "8ba3fa5a2a198eb4f9c19d59cea5f6ccc52fdd4f"
+      ],
+      "draft_pr": 1323,
+      "draft_pr_url": "https://github.com/netsus/homecook/pull/1323",
+      "design_status": "confirmed",
+      "stage5": "APPROVE 0/0/0; task 019feb85-1b83-7662-9c10-ab91d834c4f6; report docs/workpacks/cooked-batch-weight-ui/evidence/2026-08-10-stage5-p2-repair-rereview.md",
+      "final_authority": "APPROVE 0/0/0; task 019feb94-4d4f-7831-9000-01eaaf3a7569; report docs/workpacks/cooked-batch-weight-ui/evidence/2026-08-10-final-authority-p2-repair-rereview.md",
+      "stage6": "HOLD 0/2/0 at 6cbfaf053b63d119f91225ce5fec500a229a7ad1; task 019feba0-7a3b-7851-bcf0-4ea106cc7c3c; CBW-S6-P1-01 and CBW-S6-P1-02 repaired by task 019febac-5498-73e0-bacf-b6948ff9c3a0; fresh independent rereview pending",
+      "reviewed_head_checks": "15 terminal: 13 SUCCESS + 2 intended SKIPPED; failure/pending/cancel/rerun/neutral 0",
+      "evidence_manifest": "ui/designs/evidence/cooked-batch-weight-ui/manifest.json",
+      "repair_evidence": "docs/workpacks/cooked-batch-weight-ui/evidence/2026-08-10-stage6-closeout-drift-repair.md"
     }
   },
   "workflow": {
@@ -95,37 +110,43 @@
     "required_checks": [
       "pnpm validate:source-of-truth-sync",
       "pnpm validate:workflow-v2",
-      "BRANCH_NAME=docs/cooked-batch-weight-ui pnpm validate:workpack -- --slice cooked-batch-weight-ui",
+      "BRANCH_NAME=feature/fe-cooked-batch-weight-ui-superseding-draft pnpm validate:workpack -- --slice cooked-batch-weight-ui",
       "node scripts/validate-automation-spec.mjs --slice cooked-batch-weight-ui",
       "pnpm validate:omo-bookkeeping",
-      "pnpm exec vitest run tests/cooked-batch-weight-ui-stage1-repair.test.ts tests/workflow-v2-docs.test.ts tests/omo-automation-spec.test.ts tests/omo-bookkeeping.test.ts tests/omo-doc-gate.test.ts tests/source-of-truth-sync.test.ts tests/cooked-batch-weight-ledger-stage1-relock.test.ts tests/authority-evidence-presence.test.ts",
+      "pnpm exec vitest run tests/cooked-batch-weight-ui.test.tsx tests/cooked-batch-delayed-weight.test.tsx tests/cooked-batch-lifecycle-actions.test.tsx tests/cooked-batch-weight-ui-history.test.tsx tests/cooked-batch-completion-sheet.test.tsx tests/cooked-batch-completion-replay.test.tsx tests/cooked-batch-pantry-row-selection.test.tsx",
+      "pnpm validate:authority-evidence-presence -- --slice cooked-batch-weight-ui",
+      "pnpm validate:closeout-sync -- --slice cooked-batch-weight-ui",
+      "pnpm validate:pr-ready -- --slice cooked-batch-weight-ui --pr-body <current-pr-body-file> --mode frontend",
       "pnpm lint",
       "pnpm typecheck",
-      "pnpm audit --audit-level high",
       "git diff --check"
     ],
     "verify_commands": [
       "pnpm validate:source-of-truth-sync",
       "pnpm validate:workflow-v2",
-      "BRANCH_NAME=docs/cooked-batch-weight-ui pnpm validate:workpack -- --slice cooked-batch-weight-ui",
+      "BRANCH_NAME=feature/fe-cooked-batch-weight-ui-superseding-draft pnpm validate:workpack -- --slice cooked-batch-weight-ui",
       "node scripts/validate-automation-spec.mjs --slice cooked-batch-weight-ui",
       "pnpm validate:omo-bookkeeping",
-      "pnpm exec vitest run tests/cooked-batch-weight-ui-stage1-repair.test.ts tests/workflow-v2-docs.test.ts tests/omo-automation-spec.test.ts tests/omo-bookkeeping.test.ts tests/omo-doc-gate.test.ts tests/source-of-truth-sync.test.ts tests/cooked-batch-weight-ledger-stage1-relock.test.ts tests/authority-evidence-presence.test.ts",
+      "pnpm exec vitest run tests/cooked-batch-weight-ui.test.tsx tests/cooked-batch-delayed-weight.test.tsx tests/cooked-batch-lifecycle-actions.test.tsx tests/cooked-batch-weight-ui-history.test.tsx tests/cooked-batch-completion-sheet.test.tsx tests/cooked-batch-completion-replay.test.tsx tests/cooked-batch-pantry-row-selection.test.tsx",
+      "pnpm validate:authority-evidence-presence -- --slice cooked-batch-weight-ui",
+      "pnpm validate:closeout-sync -- --slice cooked-batch-weight-ui",
+      "pnpm validate:pr-ready -- --slice cooked-batch-weight-ui --pr-body <current-pr-body-file> --mode frontend",
       "pnpm lint",
       "pnpm typecheck",
-      "pnpm audit --audit-level high",
       "git diff --check"
     ],
     "stage1_current_commands": [
       "pnpm validate:source-of-truth-sync",
       "pnpm validate:workflow-v2",
-      "BRANCH_NAME=docs/cooked-batch-weight-ui pnpm validate:workpack -- --slice cooked-batch-weight-ui",
+      "BRANCH_NAME=feature/fe-cooked-batch-weight-ui-superseding-draft pnpm validate:workpack -- --slice cooked-batch-weight-ui",
       "node scripts/validate-automation-spec.mjs --slice cooked-batch-weight-ui",
       "pnpm validate:omo-bookkeeping",
-      "pnpm exec vitest run tests/cooked-batch-weight-ui-stage1-repair.test.ts tests/workflow-v2-docs.test.ts tests/omo-automation-spec.test.ts tests/omo-bookkeeping.test.ts tests/omo-doc-gate.test.ts tests/source-of-truth-sync.test.ts tests/cooked-batch-weight-ledger-stage1-relock.test.ts tests/authority-evidence-presence.test.ts",
+      "pnpm exec vitest run tests/cooked-batch-weight-ui.test.tsx tests/cooked-batch-delayed-weight.test.tsx tests/cooked-batch-lifecycle-actions.test.tsx tests/cooked-batch-weight-ui-history.test.tsx tests/cooked-batch-completion-sheet.test.tsx tests/cooked-batch-completion-replay.test.tsx tests/cooked-batch-pantry-row-selection.test.tsx",
+      "pnpm validate:authority-evidence-presence -- --slice cooked-batch-weight-ui",
+      "pnpm validate:closeout-sync -- --slice cooked-batch-weight-ui",
+      "pnpm validate:pr-ready -- --slice cooked-batch-weight-ui --pr-body <current-pr-body-file> --mode frontend",
       "pnpm lint",
       "pnpm typecheck",
-      "pnpm audit --audit-level high",
       "git diff --check"
     ],
     "stage4_future_commands": [
@@ -163,9 +184,13 @@
       "two-designs-two-exact-current-critics-machine-locked",
       "stage1-current-vs-stage4-future-vs-manual-only-command-separation",
       "390px-320px-bottom-sheet-44px-16px-focus-keyboard-overflow-screen-reader-WCAG-contract",
-      "planned-not-started-pending-lifecycle-boundary",
-      "stage4-authority-repair-6aac3c194f9606df8269fcd42a9cfa9f974fa1f0-tree-cc2ebc645214433dada8492141ba950b5035a9d8",
-      "stage4-draft-pr-1320",
+      "planned-not-started-pending-lifecycle-boundary-until-fresh-stage6-and-merge",
+      "stage4-p2-repair-a381f23237c001b232172317a948770d0efa364b-tree-0f72334bdebeeb4e5930858aa781050b7391b91d",
+      "fresh-evidence-531055aca7038041411293b8a7e10a9cd27c2e8c-tree-8cba47ba73792536f422e19ea5ca381f057c57e5",
+      "stage5-a17b0961f9aca4fc6ec740d62f81022fded962fc-approve-0-0-0",
+      "final-authority-6cbfaf053b63d119f91225ce5fec500a229a7ad1-approve-0-0-0",
+      "stage6-hold-cbw-s6-p1-01-cbw-s6-p1-02-repaired-fresh-rereview-pending",
+      "stage4-draft-pr-1323",
       "new-stage4-sheet-section-scoped-axe-zero-existing-cook-mode-full-page-contrast-residual-nodes-two"
     ]
   },
@@ -190,5 +215,5 @@
     "Design-generator-owned content repairs and independent approval"
   ],
   "open_questions": [],
-  "notes": "#8 Stage 2/3/4 is merged/green through PR #1311 head 2a2cd6fb81265ffa1f49e1c34ee68a26e1ddc49d and merge c16102a3072e929e45bb24a69464cd3110d03db5, but its broader Manual/server-Mac/OAuth, R/R+1/R+2 and capability activation lifecycle remains pending. #11 Stage 2/3 is N/A. Stage 4 authority findings CBW-LO-MAJ-01/02 are repaired at 6aac3c194f9606df8269fcd42a9cfa9f974fa1f0/cc2ebc645214433dada8492141ba950b5035a9d8 in Draft PR #1320; CBW-CM-MIN-01 remains backlog and fresh authority rereview is required. #9 owns meal-log backend DB/API/write/events/pointers, #12 owns consumed UI, and shared projection integration is sequential. Shared docs/workpacks/README.md and .workflow-v2/status.json require a later sequential projection update by the #9/shared owner. Lifecycle remains planned/not_started/pending until fresh authority rereview, Stage 5, final authority and Stage 6. Automated accessibility is scoped: new #11 completion/action sheets and LEFTOVERS section serious/critical 0; existing COOK_MODE full-page contrast residual nodes 2. Ready-equivalent authority validation currently misclassifies runtime JSON/manifest requirements as visual refs and needs a separate tooling-repair decision."
+  "notes": "#8 Stage 2/3/4 is merged/green through PR #1311 head 2a2cd6fb81265ffa1f49e1c34ee68a26e1ddc49d and merge c16102a3072e929e45bb24a69464cd3110d03db5, while its broader Manual/server-Mac/OAuth, R/R+1/R+2 and capability activation lifecycle remains pending. #11 Stage 2/3 is N/A and Stage 4 is UI-only. Draft PR #1323 preserves lineage a381f23237c001b232172317a948770d0efa364b -> 531055aca7038041411293b8a7e10a9cd27c2e8c -> a17b0961f9aca4fc6ec740d62f81022fded962fc -> 6cbfaf053b63d119f91225ce5fec500a229a7ad1. Fresh Stage 5 task 019feb85-1b83-7662-9c10-ab91d834c4f6 and final authority task 019feb94-4d4f-7831-9000-01eaaf3a7569 are APPROVE 0/0/0. Stage 6 task 019feba0-7a3b-7851-bcf0-4ea106cc7c3c returned HOLD 0/2/0 only for CBW-S6-P1-01 PR-body drift and CBW-S6-P1-02 closeout projection drift; repair task 019febac-5498-73e0-bacf-b6948ff9c3a0 closes those two findings without self-approval, and fresh Stage 6 rereview remains pending. Latest master 8ba3fa5a2a198eb4f9c19d59cea5f6ccc52fdd4f from merged #9 PR #1319 is integrated through two-parent merge 2965c84b832b22595b19c8ef2aab1dfde58bdbcc, preserving #9 ownership and blobs. #12 still owns consumed UI. Lifecycle/approval/verification/evaluation remain planned/not_started/pending/not_started until fresh Stage 6 and merge; Manual/server-Mac/OAuth, actual device/AT/full WCAG, R/R+1/R+2 and activation remain pending. Automated accessibility stays scoped to #11 serious/critical 0 with two existing COOK_MODE full-page contrast residual nodes."
 }

@@ -4,7 +4,7 @@
 >
 > Exact Stage 1 master base/tree: `c16102a3072e929e45bb24a69464cd3110d03db5` / `674bc7bb5979f06759c3653ff4b5bf23fbe1cb1a`. Approved cooking plan SHA-256 is `d4d0fb39e80eeffc8b1e73ad92f0d91a35a9b6adc57a556ea8c9ec6ecffa951d`, 1,018 lines.
 >
-> #11 Stage 2/3 is N/A because #11 is a UI-only consumer of #8. Product implementation is Stage 4. #9 owns meal-log backend DB/API/write/events/pointers and #12 owns consumed-amount UI. Unchecked items do not claim implementation, runtime evidence, review approval, merge, activation or Manual evidence.
+> #11 Stage 2/3 is N/A because #11 is a UI-only consumer of #8. Product implementation is Stage 4. #9 PR #1319 is merged but retains meal-log backend DB/API/write/events/pointers ownership, and #12 owns consumed-amount UI. Unchecked items do not claim fresh Stage 6 approval, merge, activation or Manual evidence.
 
 ## COOK_MODE Completion
 
@@ -69,7 +69,7 @@
 - [x] screen reader names/status/live errors and non-color state meaning are programmatically exposed <!-- omo:id=accept-batch-weight-ui-screen-reader;stage=4;scope=frontend;review=5,6 -->
 - [x] 390px/320px/desktop evidence covers required states with no horizontal/page overflow <!-- omo:id=accept-batch-weight-ui-evidence;stage=4;scope=frontend;review=5,6 -->
 - [x] #11 신규 sheet/section scoped serious/critical은 0이고 기존 COOK_MODE full-page contrast residual node 2개는 별도 기록한다. full WCAG와 physical AT는 Manual Only다. <!-- omo:id=accept-batch-weight-ui-wcag-boundary;stage=4;scope=frontend;review=5,6 -->
-- [ ] evidence manifest records implementation head/capture time and both authority reports postdate/cite it <!-- omo:id=accept-batch-weight-ui-evidence-freshness;stage=4;scope=frontend;review=5,6 -->
+- [x] evidence manifest records implementation head/capture time and fresh Stage 5/final authority reports postdate/cite it <!-- omo:id=accept-batch-weight-ui-evidence-freshness;stage=4;scope=frontend;review=5,6 -->
 
 ## Data Setup / Preconditions
 
@@ -80,10 +80,10 @@
 
 ## Lifecycle / Verification
 
-- [x] lifecycle stays `planned`, approval `not_started`, verification `pending`, evaluation `not_started` until independent gates advance it <!-- omo:id=accept-batch-weight-ui-lifecycle-honesty;stage=4;scope=shared;review=5,6 -->
+- [x] lifecycle stays `planned`, approval `not_started`, verification `pending`, evaluation `not_started` until fresh Stage 6 and merge advance it; roadmap `in-progress` and Design Status `confirmed` do not imply terminal closeout <!-- omo:id=accept-batch-weight-ui-lifecycle-honesty;stage=4;scope=shared;review=5,6 -->
 - [ ] Stage 1 claims only docs validators, focused tests, lint/typecheck, audit and diff <!-- omo:id=accept-batch-weight-ui-stage1-honesty;stage=4;scope=shared;review=5,6 -->
-- [x] Stage 4 runtime/visual/a11y evidence is captured at the implementation target; fresh authority reports remain pending <!-- omo:id=accept-batch-weight-ui-future-evidence;stage=4;scope=frontend;review=5,6 -->
-- [ ] fresh independent internal 1.5/design/Stage 5/6/final authority findings are zero before closeout <!-- omo:id=accept-batch-weight-ui-independent-review;stage=4;scope=shared;review=5,6 -->
+- [x] Stage 4 runtime/visual/a11y evidence is captured at the implementation target and fresh Stage 5/final authority reports are `APPROVE 0/0/0` <!-- omo:id=accept-batch-weight-ui-future-evidence;stage=4;scope=frontend;review=5,6 -->
+- [ ] fresh independent Stage 6 rereview has zero required findings after `CBW-S6-P1-01/02` repair; author self-approval is forbidden <!-- omo:id=accept-batch-weight-ui-independent-review;stage=4;scope=shared;review=5,6 -->
 
 ## Manual QA
 
