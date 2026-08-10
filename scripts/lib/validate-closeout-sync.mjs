@@ -424,16 +424,96 @@ function checklistItemPath(item) {
   return `${item?.filePath}:${item?.lineNumber}`;
 }
 
+const REPAIRABLE_CHECKLIST_METADATA_FIELDS = ["id", "stage", "scope", "review"];
+
+function checklistMetadataFieldValue(item, field) {
+  const value = item?.metadata?.[field] ?? null;
+  return field === "review" && Array.isArray(value)
+    ? [...value].sort((left, right) => left - right)
+    : value;
+}
+
+function diagnosedChecklistMetadataFields(error, item) {
+  const message = error?.message ?? "";
+
+  if (message === "Checklist metadata is required for non-Manual checklist items when automation-spec.json is present.") {
+    if (
+      item?.source === "acceptance" &&
+      item?.section === "Manual Only" &&
+      item?.subsection === null &&
+      item?.manualOnly === false &&
+      typeof item?.manualOnlyParentSection === "string" &&
+      item.manualOnlyParentSection.length > 0
+    ) {
+      return { manualOnlyHeading: true, fields: [] };
+    }
+
+    return { manualOnlyHeading: false, fields: REPAIRABLE_CHECKLIST_METADATA_FIELDS };
+  }
+
+  if (
+    message === "Checklist metadata must include a non-empty id." ||
+    message.startsWith("Duplicate checklist metadata id '")
+  ) {
+    return { manualOnlyHeading: false, fields: ["id"] };
+  }
+
+  if (message === "Checklist metadata stage must be 2 or 4.") {
+    return { manualOnlyHeading: false, fields: ["stage"] };
+  }
+
+  if (
+    message === "Checklist metadata scope must be backend, frontend, or shared." ||
+    message === "Stage 2 checklist items can only use backend or shared scope." ||
+    message === "Stage 4 checklist items can only use frontend or shared scope."
+  ) {
+    return { manualOnlyHeading: false, fields: ["scope"] };
+  }
+
+  if (
+    message === "Checklist metadata review must include at least one review stage." ||
+    message === "Checklist metadata review can only include 3, 5, or 6."
+  ) {
+    return { manualOnlyHeading: false, fields: ["review"] };
+  }
+
+  if (message === "Review stage 3 can only be assigned to Stage 2-owned checklist items.") {
+    return { manualOnlyHeading: false, fields: ["stage", "review"] };
+  }
+
+  if (message === "Review stage 5 can only be assigned to Stage 4-owned frontend checklist items.") {
+    const fields = ["review"];
+    if (item?.metadata?.stage !== 4) {
+      fields.push("stage");
+    }
+    if (item?.metadata?.scope !== "frontend") {
+      fields.push("scope");
+    }
+    return { manualOnlyHeading: false, fields };
+  }
+
+  return null;
+}
+
 function isCanonicalManualOnlyHeadingRepair(baseItem, currentItem) {
   return (
     baseItem?.source === "acceptance" &&
     baseItem?.section === "Manual Only" &&
     baseItem?.subsection === null &&
     baseItem?.manualOnly === false &&
+    typeof baseItem?.manualOnlyParentSection === "string" &&
+    baseItem.manualOnlyParentSection.length > 0 &&
     currentItem?.source === "acceptance" &&
+    currentItem?.section === baseItem.manualOnlyParentSection &&
     currentItem?.subsection === "Manual Only" &&
     currentItem?.manualOnly === true &&
-    baseItem?.checked === currentItem?.checked
+    currentItem?.manualOnlyParentSection === baseItem.manualOnlyParentSection &&
+    baseItem?.lineNumber === currentItem?.lineNumber &&
+    baseItem?.checked === currentItem?.checked &&
+    JSON.stringify(baseItem?.metadata ?? null) ===
+      JSON.stringify(currentItem?.metadata ?? null) &&
+    JSON.stringify(checklistWaiverMetadata(baseItem)) ===
+      JSON.stringify(checklistWaiverMetadata(currentItem))
   );
 }
 
@@ -458,7 +538,12 @@ function normalizeRepairableBaseChecklistContract({ baseContract, currentContrac
     return null;
   }
 
-  const invalidBasePaths = new Set(baseContract.errors.map((error) => error.path));
+  const diagnosticsByPath = new Map();
+  for (const error of baseContract.errors) {
+    const diagnostics = diagnosticsByPath.get(error.path) ?? [];
+    diagnostics.push(error);
+    diagnosticsByPath.set(error.path, diagnostics);
+  }
   const normalizedItems = [];
 
   for (let index = 0; index < baseItems.length; index += 1) {
@@ -471,8 +556,8 @@ function normalizeRepairableBaseChecklistContract({ baseContract, currentContrac
       return null;
     }
 
-    const baseItemHasError = invalidBasePaths.has(checklistItemPath(baseItem));
-    if (!baseItemHasError) {
+    const itemDiagnostics = diagnosticsByPath.get(checklistItemPath(baseItem)) ?? [];
+    if (itemDiagnostics.length === 0) {
       if (
         baseItem.manualOnly !== currentItem.manualOnly ||
         baseItem.section !== currentItem.section ||
@@ -484,32 +569,55 @@ function normalizeRepairableBaseChecklistContract({ baseContract, currentContrac
       ) {
         return null;
       }
-    } else if (currentItem.manualOnly) {
-      if (!isCanonicalManualOnlyHeadingRepair(baseItem, currentItem)) {
-        return null;
-      }
     } else {
-      if (
-        baseItem.section !== currentItem.section ||
-        baseItem.subsection !== currentItem.subsection ||
-        !currentItem.metadata
-      ) {
-        return null;
+      const diagnosedFields = new Set();
+      let manualOnlyHeadingDiagnosed = false;
+      for (const error of itemDiagnostics) {
+        const diagnosis = diagnosedChecklistMetadataFields(error, baseItem);
+        if (!diagnosis) {
+          return null;
+        }
+        manualOnlyHeadingDiagnosed ||= diagnosis.manualOnlyHeading;
+        for (const field of diagnosis.fields) {
+          diagnosedFields.add(field);
+        }
       }
 
-      if (
-        baseItem.metadata?.id &&
-        baseItem.metadata.id !== currentItem.metadata.id
-      ) {
+      if (manualOnlyHeadingDiagnosed) {
+        if (
+          diagnosedFields.size > 0 ||
+          !isCanonicalManualOnlyHeadingRepair(baseItem, currentItem)
+        ) {
+          return null;
+        }
+      } else if (currentItem.manualOnly) {
         return null;
-      }
+      } else {
+        if (
+          baseItem.manualOnly !== currentItem.manualOnly ||
+          baseItem.section !== currentItem.section ||
+          baseItem.subsection !== currentItem.subsection ||
+          !currentItem.metadata
+        ) {
+          return null;
+        }
 
-      if (
-        baseItem.metadata?.waived === true &&
-        JSON.stringify(checklistWaiverMetadata(baseItem)) !==
+        for (const field of REPAIRABLE_CHECKLIST_METADATA_FIELDS) {
+          if (
+            !diagnosedFields.has(field) &&
+            JSON.stringify(checklistMetadataFieldValue(baseItem, field)) !==
+              JSON.stringify(checklistMetadataFieldValue(currentItem, field))
+          ) {
+            return null;
+          }
+        }
+
+        if (
+          JSON.stringify(checklistWaiverMetadata(baseItem)) !==
           JSON.stringify(checklistWaiverMetadata(currentItem))
-      ) {
-        return null;
+        ) {
+          return null;
+        }
       }
     }
 
