@@ -10,7 +10,7 @@
   "goal": "새 public contract나 backend write 없이 cooked-batch 중량·잔량 상태를 정확하고 접근 가능하게 표시하고 irreversible/destructive action을 safe bottom sheet에서만 수행한다.",
   "owners": {
     "claude": "forbidden; Claude CLI, app and API must not be invoked",
-    "codex": "Stage 4 implementation task 019fe7b3-881f-7152-b3fc-9ca58b5dba2a; separate task IDs for Stage 1 author, internal 1.5, design critic, Stage 5, final authority and Stage 6; no self-approval",
+    "codex": "Stage 4 implementation task 019fe7b3-881f-7152-b3fc-9ca58b5dba2a; authority findings repair task 019fe9a4-f94c-7230-a1f7-9d0b8116d1c0; separate task IDs for Stage 1 author, internal 1.5, design critic, fresh authority rereview, Stage 5, final authority and Stage 6; no self-approval",
     "workers": []
   },
   "dependencies": [
@@ -65,9 +65,9 @@
       "line_count": "1,018 lines"
     },
     "stage4_implementation_target": {
-      "task_id": "019fe7b3-881f-7152-b3fc-9ca58b5dba2a",
-      "head": "d6843baa6d27addea5d79fa991c937dfc6dbf070",
-      "tree": "0fa3545f9ec22d83dd4e969f1eef70364a2297ba",
+      "task_id": "019fe9a4-f94c-7230-a1f7-9d0b8116d1c0",
+      "head": "6aac3c194f9606df8269fcd42a9cfa9f974fa1f0",
+      "tree": "cc2ebc645214433dada8492141ba950b5035a9d8",
       "draft_pr": 1320,
       "draft_pr_url": "https://github.com/netsus/homecook/pull/1320",
       "design_status": "pending-review",
@@ -164,7 +164,7 @@
       "stage1-current-vs-stage4-future-vs-manual-only-command-separation",
       "390px-320px-bottom-sheet-44px-16px-focus-keyboard-overflow-screen-reader-WCAG-contract",
       "planned-not-started-pending-lifecycle-boundary",
-      "stage4-implementation-d6843baa6d27addea5d79fa991c937dfc6dbf070-tree-0fa3545f9ec22d83dd4e969f1eef70364a2297ba",
+      "stage4-authority-repair-6aac3c194f9606df8269fcd42a9cfa9f974fa1f0-tree-cc2ebc645214433dada8492141ba950b5035a9d8",
       "stage4-draft-pr-1320",
       "new-stage4-sheet-section-scoped-axe-zero-existing-cook-mode-full-page-contrast-residual-nodes-two"
     ]
@@ -190,5 +190,5 @@
     "Design-generator-owned content repairs and independent approval"
   ],
   "open_questions": [],
-  "notes": "#8 Stage 2/3/4 is merged/green through PR #1311 head 2a2cd6fb81265ffa1f49e1c34ee68a26e1ddc49d and merge c16102a3072e929e45bb24a69464cd3110d03db5, but its broader Manual/server-Mac/OAuth, R/R+1/R+2 and capability activation lifecycle remains pending. #11 Stage 2/3 is N/A and Stage 4 UI implementation/evidence target is d6843baa6d27addea5d79fa991c937dfc6dbf070/0fa3545f9ec22d83dd4e969f1eef70364a2297ba in Draft PR #1320. #9 owns meal-log backend DB/API/write/events/pointers, #12 owns consumed UI, and shared projection integration is sequential. Shared docs/workpacks/README.md and .workflow-v2/status.json require a later sequential projection update by the #9/shared owner. Lifecycle remains planned/not_started/pending until fresh authority precheck, Stage 5, final authority and Stage 6. Automated accessibility is scoped: new #11 completion/action sheets and LEFTOVERS section serious/critical 0; existing COOK_MODE full-page contrast residual nodes 2."
+  "notes": "#8 Stage 2/3/4 is merged/green through PR #1311 head 2a2cd6fb81265ffa1f49e1c34ee68a26e1ddc49d and merge c16102a3072e929e45bb24a69464cd3110d03db5, but its broader Manual/server-Mac/OAuth, R/R+1/R+2 and capability activation lifecycle remains pending. #11 Stage 2/3 is N/A. Stage 4 authority findings CBW-LO-MAJ-01/02 are repaired at 6aac3c194f9606df8269fcd42a9cfa9f974fa1f0/cc2ebc645214433dada8492141ba950b5035a9d8 in Draft PR #1320; CBW-CM-MIN-01 remains backlog and fresh authority rereview is required. #9 owns meal-log backend DB/API/write/events/pointers, #12 owns consumed UI, and shared projection integration is sequential. Shared docs/workpacks/README.md and .workflow-v2/status.json require a later sequential projection update by the #9/shared owner. Lifecycle remains planned/not_started/pending until fresh authority rereview, Stage 5, final authority and Stage 6. Automated accessibility is scoped: new #11 completion/action sheets and LEFTOVERS section serious/critical 0; existing COOK_MODE full-page contrast residual nodes 2. Ready-equivalent authority validation currently misclassifies runtime JSON/manifest requirements as visual refs and needs a separate tooling-repair decision."
 }

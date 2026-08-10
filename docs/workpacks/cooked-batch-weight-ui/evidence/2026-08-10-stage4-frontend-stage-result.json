@@ -1,17 +1,21 @@
 {
   "result": "done",
   "stage": 4,
-  "role": "fresh-frontend-implementer",
-  "summary_markdown": "#11 COOK_MODE와 LEFTOVERS가 merged #8 cooked-batch projection을 exact UI-only consumer로 사용한다. 기존 COOK_MODE full-page contrast residual 2 nodes와 신규 #11 scoped serious/critical 0을 분리하며 Stage 5, final authority, Stage 6, Manual 및 activation은 pending이다.",
+  "role": "fresh-authority-findings-repair-author",
+  "summary_markdown": "CBW-LO-MAJ-01/02를 exact existing contract 안에서 닫았다. discard/negative adjust 2차 확인, unweighed close consequence, official 422 field linkage와 retained 409 evidence를 추가했다. 기존 COOK_MODE full-page contrast residual 2 nodes와 신규 #11 scoped serious/critical 0을 분리하며 fresh authority rereview, Stage 5, final authority, Stage 6, Manual 및 activation은 pending이다.",
   "source": {
-    "task_id": "019fe7b3-881f-7152-b3fc-9ca58b5dba2a",
+    "task_id": "019fe9a4-f94c-7230-a1f7-9d0b8116d1c0",
     "base_branch": "origin/master",
-    "base_sha": "8b1a4cce57e05d282c2a01fc54557ffc129fae1d",
-    "base_tree": "7545e8eb04142f210f9f230d1ab49c1cbde7a957",
-    "source_pr": 1318,
-    "branch": "feature/fe-cooked-batch-weight-ui",
-    "implementation_head": "d6843baa6d27addea5d79fa991c937dfc6dbf070",
-    "implementation_tree": "0fa3545f9ec22d83dd4e969f1eef70364a2297ba",
+    "base_sha": "11883fb790dbe4664ed5f409fd0b5cf55ee02f41",
+    "base_tree": "f687f4723cbbd9135de64d53fc2050a0a83d9df8",
+    "source_pr": 1320,
+    "reviewed_head": "c9179cce6bc30134401fce770e41577b5d60e1b3",
+    "reviewed_tree": "c81ca940844bef333d0a8323ed2b7ecea12af59b",
+    "authority_report_commit": "9a9630b5b699a9b6c48561b0bab60fbc7c02ae42",
+    "branch": "feature/fe-cooked-batch-weight-ui-authority-repair",
+    "push_target": "feature/fe-cooked-batch-weight-ui",
+    "implementation_head": "6aac3c194f9606df8269fcd42a9cfa9f974fa1f0",
+    "implementation_tree": "cc2ebc645214433dada8492141ba950b5035a9d8",
     "draft_pr": 1320,
     "draft_pr_url": "https://github.com/netsus/homecook/pull/1320",
     "history_rewrite": false
@@ -25,18 +29,29 @@
     "contract_evolution_candidate": null
   },
   "verification": {
-    "focused_vitest": "5 files / 43 tests passed",
+    "focused_vitest": "4 files / 11 tests passed; lifecycle file 5/5 passed after 1 pass / 4 intended RED failures",
     "canonical_playwright": "2 passed / 2 intended skip",
-    "focused_ledger_and_ui_playwright": "8 passed",
-    "product_vitest": "227 files / 2,698 tests passed; 11 files / 150 tests intended skip",
+    "focused_ledger_and_ui_playwright": "not rerun as a separate command; clean full regression covers the shared ledger and repaired UI specs",
+    "product_vitest": "227 files / 2,702 tests passed; 11 files / 150 tests intended skip",
     "build": "passed; 78 static pages",
     "full_regression": "952 passed / 170 intended skip",
     "full_accessibility": "18 passed / 15 intended skip",
     "full_visual": "23 passed / 22 intended skip",
     "full_security": "12 passed",
     "lighthouse": "2 URLs x 3 runs passed",
-    "qa_eval": "93; validation errors 0; covered 52/63; blocked 11/63",
-    "audit": "high 0 / critical 0; residual low 1 / moderate 1"
+    "qa_eval": "93; validation errors 0; covered 52/63; blocked 11/63; new findings 0",
+    "audit": "high 0 / critical 0; residual low 1 / moderate 1",
+    "authority_validator": "Draft-context command passes by inactive gate; Ready-equivalent command exits 1 because runtime JSON/manifest requirements are compared against image-only visualRefs; separate tooling repair decision required"
+  },
+  "authority_repair": {
+    "closed_required_fix_ids": [
+      "CBW-LO-MAJ-01",
+      "CBW-LO-MAJ-02"
+    ],
+    "backlog_not_changed": "CBW-CM-MIN-01",
+    "public_contract_changed": false,
+    "fresh_authority_rereview_required": true,
+    "repair_evidence": "docs/workpacks/cooked-batch-weight-ui/evidence/2026-08-10-stage4-authority-findings-repair.md"
   },
   "accessibility_scope": {
     "existing_cook_mode_full_page_contrast_residual_nodes": 2,
@@ -46,14 +61,14 @@
   },
   "screenshots": {
     "manifest": "ui/designs/evidence/cooked-batch-weight-ui/manifest.json",
-    "captured_at": "2026-08-09T19:12:15.711Z",
+    "captured_at": "2026-08-10T03:50:08.157Z",
     "png_count": 15,
     "runtime_json_count": 2,
     "viewports": [320, 390, 1440],
     "originals_inspected": true
   },
   "review": {
-    "author_quality_gate": "pass_for_draft_pr",
+    "author_quality_gate": "repair_complete_for_draft_pr",
     "author_critical_findings": 0,
     "author_important_findings": 0,
     "stage5_self_approval": false,
