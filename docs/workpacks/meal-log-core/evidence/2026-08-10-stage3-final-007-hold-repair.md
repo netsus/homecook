@@ -74,6 +74,23 @@ No private function signature or private function definition changed. The existi
 
 Port `3100` was not stopped or reused. The repository-supported `PLAYWRIGHT_BASE_URL` isolated backend security verification on port `3111`.
 
+## Disqualified publication head and evidence successor rule
+
+The first repair publication head is not valid final check proof:
+
+- predecessor head: `ea865ee4ef17a4f211174ef39e037cb4e829ab1c`
+- predecessor tree: `d749466d5c82acc843d018bf4521afd3740b0623`
+- PR base: `b2bfd818dc26f2f2539d3f88128b16759b91656d`
+- terminal inventory: `15 SUCCESS + 2 intended SKIPPED + 1 NEUTRAL`
+- neutral check-run ID: `93407498614`
+- check name: `GitGuardian Security Checks`
+- conclusion: `neutral`
+- title: `Could not complete scanning of your commits`
+- summary: `Some resources do not exist on GitHub. Please retry.`
+- annotations: `0`
+
+This is an external scanner completion failure, not a reported secret finding. It still violates the governing final-head rule, which accepts only success or an explicitly intended skip and does not allow neutral, failure, pending, cancelled, or rerun state as final proof. The check was not rerun. Because a rerun-started head is also forbidden as final evidence, the legitimate recovery is one additive evidence-publication successor commit with no code, SQL, test, security-manifest, or contract change. Only that successor head's complete started-check inventory may become final proof.
+
 ## Changed files
 
 - `supabase/migrations/20260810120000_meal_log_core.sql`
