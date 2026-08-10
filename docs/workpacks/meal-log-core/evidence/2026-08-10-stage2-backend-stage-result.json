@@ -1,0 +1,58 @@
+{
+  "result": "done",
+  "stage": 2,
+  "role": "fresh-backend-author",
+  "summary_markdown": "#9 meal-log owner/generation schema, immutable evidence, #8 event-pointer replay, official reads and idempotent mutations are implemented without public contract or activation changes.",
+  "source": {
+    "delegating_task_id": "019fe028-be31-76f2-a5a7-986000a93374",
+    "base_branch": "origin/master",
+    "base_sha": "8b1a4cce57e05d282c2a01fc54557ffc129fae1d",
+    "branch": "feature/be-meal-log-core",
+    "implementation_head_before_evidence": "11729775",
+    "history_rewrite": true
+  },
+  "contract": {
+    "official_tuple": "v1.7.30/v1.5.34/v1.3.32/v1.3.32/v1.2.37",
+    "approved_plan_sha256": "d4d0fb39e80eeffc8b1e73ad92f0d91a35a9b6adc57a556ea8c9ec6ecffa951d",
+    "public_contract_changed": false,
+    "capability_changed": false,
+    "remote_or_production_write": false
+  },
+  "tdd": {
+    "initial_red": "1 failed because lib/server/meal-log.ts was absent",
+    "review_red": "1 failed because same-source ingredient edit did not explicitly preserve conversion evidence",
+    "green": "6 files / 19 focused tests; local PostgreSQL 4/4"
+  },
+  "verification": {
+    "fresh_local_supabase": "reset and all migrations applied",
+    "postgres": "4/4 passed",
+    "verify_backend": "product 2706 passed / 154 intended skipped; build passed; security E2E 12/12",
+    "validators": "source-of-truth, workflow-v2, workpack, automation-spec, OMO bookkeeping, closeout sync passed",
+    "audit": "high 0 / critical 0; low 1 / moderate 1",
+    "meal_log_ui_e2e": "no matching tests; pending Stage 4/#12"
+  },
+  "checklist_updates": [
+    "README Stage 1 independent review and postmerge facts projected from merged Stage 1 evidence",
+    "README Stage 2 TDD RED evidence recorded",
+    "README Stage 2 schema/RLS/RPC/routes implemented",
+    "acceptance owner-generation RLS and exact-one/time/slot/pointer schema",
+    "acceptance deferred pointer guard and authenticated protected-DML denial",
+    "acceptance no contract invention, no production write and TDD RED"
+  ],
+  "review": {
+    "stage3_self_approval": false,
+    "discord_sent": false
+  },
+  "ci_repair": {
+    "failed_head": "e64c8333b227845f62f93d79c6339518e4263397",
+    "cause": "new mutation routes and security-definer functions were absent from generated shared inventories",
+    "account_inventory": "67 routes / 93 write surfaces / 3 auth.users inbound FKs",
+    "failed_head_reused": false
+  },
+  "pending": [
+    "independent Stage 3",
+    "Stage 4 three-source/concurrency/DST/aggregate and UI E2E",
+    "server-Mac/OAuth/capability/R/R+1/R+2/activation",
+    "merge and post-merge exact-SHA evidence"
+  ]
+}

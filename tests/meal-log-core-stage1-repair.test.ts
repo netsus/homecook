@@ -136,7 +136,7 @@ describe("meal-log-core Stage 1 HOLD repair", () => {
       verification_status: "pending",
     });
     expect(roadmap).toMatch(
-      /\| 9 \| D \| `meal-log-core` \| docs \| #1 \+ #2 \+ #4 \+ #8 \|/,
+      /\| 9 \| D \| `meal-log-core` \| in-progress \| #1 \+ #2 \+ #4 \+ #8 \|/,
     );
     expect(evidence).toContain("fresh independent internal 1.5 rereview required");
     expect(evidence).toContain("self-approval: forbidden");

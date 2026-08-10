@@ -264,7 +264,7 @@ Slice Order 표의 Status 값은 위 이벤트가 발생한 PR 또는 closeout b
 | `personal-recipe-customization-write-core` | in-progress | Stage 3 backend runtime merge checkpoint: PR #1274 head `a27be0c7`는 독립 code/quality 및 security/DB 재리뷰 APPROVE 0/0/0과 latest unique Ready checks 15/15 success를 거쳐 `05683e4d`로 merge됐고 exact-merge verifier도 `POSTMERGE_VERIFIED YES`, P0/P1/P2 0/0/0을 확인했다. 서버 MacBook/local rehearsal, route/service·통합 E2E, terminal workpack closeout review, #7/#8와 R+2 activation은 pending이다 |
 | `recipe-content-snapshot-future-propagation` | in-progress | Stage 2/3 PR #1278 merge `ef5903b1`와 PR #1281 exact head `aab9a65e` merge `2173737e`로 actual owner editor, additive recipe/Meal revision, owner-only edit_context와 server-only joint capability projection runtime이 병합됐다. Design Status는 confirmed지만 Manual/server-Mac/OAuth, #8 R/R+1 gate와 R+2 activation이 남아 전체 lifecycle은 `in-progress`; approval/verification projection도 완료로 올리지 않는다 |
 | `cooked-batch-weight-ledger` | in-progress | cooked batch content-only nutrition, 전체/잔량 중량, append-only quantity/lifecycle event, weighted/unweighed/unrecoverable와 RPC-only mutation을 구현한다 |
-| `meal-log-core` | docs | Meal event pointer, record-time timezone/local date, exact nutrition evidence와 batch/product/ingredient 실제 섭취 기록의 멱등 backend를 구현한다 |
+| `meal-log-core` | in-progress | Meal event pointer, record-time timezone/local date, exact nutrition evidence와 batch/product/ingredient 실제 섭취 기록의 멱등 backend를 구현한다 |
 | `planner-shell` | docs | 플래너 내부를 `요리 계획 | 식사 기록` shell로 분리하고 계획 영양·신규 제품 계획 입력을 제거하되 legacy row 조회/삭제는 보존한다 |
 | `cooked-batch-weight-ui` | docs | COOK_MODE 완료 중량 입력과 weigh-later, 이후 exact weight/unrecoverable/discard/adjust UI를 ledger 계약에 연결한다 |
 | `meal-log-ui` | docs | 신규 MEAL_LOG의 날짜 중심 하루 합계·끼니 소계·음식 추가 sheet·수정/삭제·결측 상태를 구현한다 |
@@ -305,7 +305,7 @@ Slice Order 표의 Status 값은 위 이벤트가 발생한 PR 또는 closeout b
 | 6 | C | `personal-recipe-customization-write-core` | in-progress | #2 + #3 + #4 + #5 runtime merged. Stage 3 backend checkpoint PR #1274 head `a27be0c7` dual APPROVE와 Ready checks 15/15 success 후 merge `05683e4d`; exact-merge verifier `POSTMERGE_VERIFIED YES`, P0/P1/P2 0/0/0. 서버 MacBook/local rehearsal, route/service·통합 E2E, terminal workpack closeout review, #7/#8 및 R+2 activation은 pending |
 | 7 | C | `recipe-content-snapshot-future-propagation` | in-progress | #4 PR #1218 + #6 PR #1274 + `cook-mode-whole-board` PR #711 runtime merged; Stage 2/3 PR #1278 merge `ef5903b1`; Contract Evolution PR #1282 + re-lock PR #1283 이후 PR #1281 exact head `aab9a65e`가 merge `2173737e`로 병합되어 actual owner editor, additive revision/edit_context와 server-only joint projection runtime이 존재한다. final authority와 fresh Stage 6는 `0/0/0`, Design Status confirmed지만 Manual/server-Mac/OAuth, #8 gate와 activation이 남아 overall lifecycle은 in-progress다 |
 | 8 | D | `cooked-batch-weight-ledger` | in-progress | #7; `cook-mode-whole-board` merged |
-| 9 | D | `meal-log-core` | docs | #1 + #2 + #4 + #8 |
+| 9 | D | `meal-log-core` | in-progress | #1 + #2 + #4 + #8 |
 | 10 | E | `planner-shell` | docs | #9 |
 | 11 | E | `cooked-batch-weight-ui` | docs | #8; `cook-mode-whole-board` merged |
 | 12 | E | `meal-log-ui` | docs | #9 + #10 |

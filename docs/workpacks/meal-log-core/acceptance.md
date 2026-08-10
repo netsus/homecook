@@ -5,14 +5,14 @@
 
 ## Schema / Ownership
 
-- [ ] `meal_log_entries` is owner+generation scoped and RLS-isolated <!-- omo:id=accept-meal-log-owner-generation;stage=2;scope=backend;review=3,6 -->
-- [ ] source type is exact-one `cooked_batch|food_product|ingredient` with matching evidence FKs <!-- omo:id=accept-meal-log-source-exact-one;stage=2;scope=backend;review=3,6 -->
-- [ ] consumed_at is nullable while local date, validated IANA zone and slot snapshot are required <!-- omo:id=accept-meal-log-time-schema;stage=2;scope=backend;review=3,6 -->
-- [ ] meal column FK is nullable `ON DELETE SET NULL` and deleted-slot history retains the snapshot <!-- omo:id=accept-meal-log-slot-snapshot;stage=2;scope=backend;review=3,6 -->
-- [ ] active event pointer uses `ON DELETE RESTRICT` and is null for product/ingredient entries <!-- omo:id=accept-meal-log-event-pointer-schema;stage=2;scope=backend;review=3,6 -->
-- [ ] deferred constraint verifies active batch entry, owner/batch and non-reversed event identity at commit <!-- omo:id=accept-meal-log-event-pointer-constraint;stage=2;scope=backend;review=3,6 -->
+- [x] `meal_log_entries` is owner+generation scoped and RLS-isolated <!-- omo:id=accept-meal-log-owner-generation;stage=2;scope=backend;review=3,6 -->
+- [x] source type is exact-one `cooked_batch|food_product|ingredient` with matching evidence FKs <!-- omo:id=accept-meal-log-source-exact-one;stage=2;scope=backend;review=3,6 -->
+- [x] consumed_at is nullable while local date, validated IANA zone and slot snapshot are required <!-- omo:id=accept-meal-log-time-schema;stage=2;scope=backend;review=3,6 -->
+- [x] meal column FK is nullable `ON DELETE SET NULL` and deleted-slot history retains the snapshot <!-- omo:id=accept-meal-log-slot-snapshot;stage=2;scope=backend;review=3,6 -->
+- [x] active event pointer uses `ON DELETE RESTRICT` and is null for product/ingredient entries <!-- omo:id=accept-meal-log-event-pointer-schema;stage=2;scope=backend;review=3,6 -->
+- [x] deferred constraint verifies active batch entry, owner/batch and non-reversed event identity at commit <!-- omo:id=accept-meal-log-event-pointer-constraint;stage=2;scope=backend;review=3,6 -->
 - [ ] ordinary delete is soft and account cleanup alone may hard-delete in official pointer→event→entry order <!-- omo:id=accept-meal-log-soft-delete;stage=2;scope=backend;review=3,6 -->
-- [ ] authenticated direct hard delete, pointer edit, evidence edit and event/batch protected DML are denied <!-- omo:id=accept-meal-log-direct-dml-denied;stage=2;scope=backend;review=3,6 -->
+- [x] authenticated direct hard delete, pointer edit, evidence edit and event/batch protected DML are denied <!-- omo:id=accept-meal-log-direct-dml-denied;stage=2;scope=backend;review=3,6 -->
 
 ## Stored Date / Slot Reads
 
@@ -82,14 +82,16 @@
 
 - [ ] responses retain official wrapper and exact public codes <!-- omo:id=accept-meal-log-wrapper;stage=2;scope=backend;review=3,6 -->
 - [ ] 401/404 preserve nondisclosure and all 400/409/422/428/503 failures are whole-operation zero-write <!-- omo:id=accept-meal-log-errors;stage=2;scope=backend;review=3,6 -->
-- [ ] no unofficial endpoint, source type, field, aggregate state, error or screen is introduced <!-- omo:id=accept-meal-log-no-contract-invention;stage=2;scope=shared;review=3,6 -->
+- [x] no unofficial endpoint, source type, field, aggregate state, error or screen is introduced <!-- omo:id=accept-meal-log-no-contract-invention;stage=2;scope=shared;review=3,6 -->
 - [ ] implementation waits for #1+#2+#4+#8 runtime and required checks green <!-- omo:id=accept-meal-log-predecessors;stage=2;scope=shared;review=3,6 -->
-- [ ] no unmerged migration, external-provider mutation or production capability/flag change occurs <!-- omo:id=accept-meal-log-no-production-write;stage=2;scope=backend;review=3,6 -->
+- [x] no unmerged migration, external-provider mutation or production capability/flag change occurs <!-- omo:id=accept-meal-log-no-production-write;stage=2;scope=backend;review=3,6 -->
 
 ## Verification / Evidence
 
+> Backend Ready uses the current executable `automation-spec.json#external_smokes=[]` while `.workflow-v2/work-items/meal-log-core.json#workflow.external_smokes` preserves the eight-item future lifecycle gate. Because #9 is backend-only, a fresh post-merge/release closeout actor must relock that current list before the merged-exact/manual/release items below can be checked or whole-lifecycle completion can be claimed. This sequencing is not a waiver.
+
 - [ ] Stage 1 claims only docs validators, focused tests, lint/typecheck, audit and diff <!-- omo:id=accept-meal-log-stage1-honesty;stage=2;scope=shared;review=3,6 -->
-- [ ] implementation records failing route/DB tests before production changes <!-- omo:id=accept-meal-log-tdd-red;stage=2;scope=shared;review=3,6 -->
+- [x] implementation records failing route/DB tests before production changes <!-- omo:id=accept-meal-log-tdd-red;stage=2;scope=shared;review=3,6 -->
 - [ ] PostgreSQL fresh/replay covers RLS, exact-one checks, deferred pointer, RPCs and cleanup <!-- omo:id=accept-meal-log-postgres;stage=2;scope=backend;review=3,6 -->
 - [ ] A/B real DB digests prove nondisclosure, idempotency and zero-write failures <!-- omo:id=accept-meal-log-real-db;stage=2;scope=backend;review=3,6 -->
 - [ ] integration tests cover three sources, timezone/DST, evidence, aggregate and concurrent replay <!-- omo:id=accept-meal-log-integration;stage=2;scope=backend;review=3,6 -->

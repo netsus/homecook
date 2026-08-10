@@ -156,6 +156,13 @@ All responses keep `{ success, data, error }`; errors keep `{ code, message, fie
 - run only SOT/workflow/workpack/automation/bookkeeping validators, `tests/meal-log-core-stage1-repair.test.ts` plus focused workflow-doc tests, lint, typecheck, dependency audit and diff/parity checks.
 - migration/RPC/PostgreSQL/route/component/E2E/visual/real DB/server-production/local-rehearsal checks below are future Stage 2/4/release evidence and are not claimed executable now.
 
+### Backend Ready current/future smoke gate
+
+- `automation-spec.json#external_smokes` is the current executable Ready list. It is empty for the first #9 backend implementation PR because the first full-lifecycle item requires a merged exact SHA and the remaining Manual/post-merge evidence cannot truthfully exist before that merge.
+- `.workflow-v2/work-items/meal-log-core.json#workflow.external_smokes` remains the durable future gate and preserves all eight obligations. Emptying the current list does not delete, pass, skip, or waive any item in that future list.
+- The generic frontend Ready guard would require relocking the current list from the work item. #9 is backend-only, so Stage 4~6 are normally skipped here; instead, a fresh post-merge/release closeout actor must explicitly relock the current list from the preserved work-item array before claiming `ML3-LIFECYCLE-001`, release evidence, or whole-lifecycle completion.
+- Backend Stage 3 approval and the first backend merge close only the reviewed implementation gate. Until the later relock and evidence collection occur, merged-exact/server-Mac/OAuth/Manual/capability/R/R+1/R+2/activation obligations remain pending and the workflow lifecycle must not be projected as fully merged.
+
 ### Future fixtures
 
 - owners A/B, active/stale generations, active/deleted meal columns with stable order and slot snapshots.
@@ -175,11 +182,11 @@ All responses keep `{ success, data, error }`; errors keep `{ code, message, fie
 ## Delivery Checklist
 
 - [x] Stage 1 README/acceptance/automation/work-item/status contract authored <!-- omo:id=delivery-meal-log-stage1-contract;stage=2;scope=shared;review=3,6 -->
-- [ ] Stage 1 independent internal1.5 review approved with zero findings <!-- omo:id=delivery-meal-log-internal-review;stage=2;scope=shared;review=3,6 -->
-- [ ] Stage 1 independent security/DB review approved with zero findings <!-- omo:id=delivery-meal-log-security-review;stage=2;scope=backend;review=3,6 -->
-- [ ] Stage 1 independent five-axis review approved with zero findings <!-- omo:id=delivery-meal-log-five-axis-review;stage=2;scope=shared;review=3,6 -->
-- [ ] Stage 1 PR current-head checks and post-merge master checks green <!-- omo:id=delivery-meal-log-stage1-ci;stage=2;scope=shared;review=3,6 -->
-- [ ] Stage 2 TDD RED evidence recorded before implementation <!-- omo:id=delivery-meal-log-tdd-red;stage=2;scope=backend;review=3,6 -->
-- [ ] Stage 2 schema/RLS/RPC/routes implemented behind dormant capability <!-- omo:id=delivery-meal-log-backend;stage=2;scope=backend;review=3,6 -->
+- [x] Stage 1 independent internal1.5 review approved with zero findings <!-- omo:id=delivery-meal-log-internal-review;stage=2;scope=shared;review=3,6 -->
+- [x] Stage 1 independent security/DB review approved with zero findings <!-- omo:id=delivery-meal-log-security-review;stage=2;scope=backend;review=3,6 -->
+- [x] Stage 1 independent five-axis review approved with zero findings <!-- omo:id=delivery-meal-log-five-axis-review;stage=2;scope=shared;review=3,6 -->
+- [x] Stage 1 PR current-head checks and post-merge master checks green <!-- omo:id=delivery-meal-log-stage1-ci;stage=2;scope=shared;review=3,6 -->
+- [x] Stage 2 TDD RED evidence recorded before implementation <!-- omo:id=delivery-meal-log-tdd-red;stage=2;scope=backend;review=3,6 -->
+- [x] Stage 2 schema/RLS/RPC/routes implemented behind dormant capability <!-- omo:id=delivery-meal-log-backend;stage=2;scope=backend;review=3,6 -->
 - [ ] Stage 2 backend integration, concurrency, aggregate and compatibility evidence green <!-- omo:id=delivery-meal-log-backend-evidence;stage=2;scope=backend;review=3,6 -->
 - [ ] Stage 6 merged-exact-SHA server-production/local-rehearsal read-only and release-train evidence green <!-- omo:id=delivery-meal-log-release-evidence;stage=2;scope=shared;review=3,6 -->
