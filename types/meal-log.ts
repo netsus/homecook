@@ -43,4 +43,59 @@ export interface MealLogEntry {
   display_name: string;
   display_brand: string | null;
   nutrition: MealLogNutritionEvidence;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface MealLogColumn {
+  id: string;
+  name: string;
+  sort_order: number;
+}
+
+export interface MealLogActiveSection {
+  meal_plan_column_id: string;
+  slot_name_snapshot: string;
+  sort_order: number;
+  entries: MealLogEntry[];
+  subtotal: MealLogNutritionEvidence;
+  incomplete_count: number;
+}
+
+export interface MealLogDeletedColumnSection {
+  slot_name_snapshot: string;
+  entries: MealLogEntry[];
+  subtotal: MealLogNutritionEvidence;
+  incomplete_count: number;
+}
+
+export interface MealLogDayTotal extends MealLogNutritionEvidence {
+  incomplete_count: number;
+}
+
+export interface MealLogMutationData {
+  entry: MealLogEntry;
+}
+
+export interface MealLogDayData {
+  date: string;
+  active_columns: MealLogColumn[];
+  active_sections: MealLogActiveSection[];
+  deleted_column_sections: MealLogDeletedColumnSection[];
+  entries: MealLogEntry[];
+  day_total: MealLogDayTotal;
+}
+
+export interface MealLogRecentItem {
+  source: { type: MealLogSourceType; id: string };
+  display_name: string;
+  display_brand: string | null;
+  last_quantity: { amount: number; unit: string };
+  frequency: number;
+}
+
+export interface MealLogRecentData {
+  items: MealLogRecentItem[];
+  next_cursor: string | null;
+  has_next: boolean;
 }

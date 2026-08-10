@@ -1,4 +1,17 @@
-import type { MealLogMutationInput, MealLogNutritionEvidence, MealLogSourceType } from "@/types/meal-log";
+import type {
+  MealLogActiveSection,
+  MealLogColumn,
+  MealLogDayData,
+  MealLogDayTotal,
+  MealLogDeletedColumnSection,
+  MealLogEntry,
+  MealLogMutationData,
+  MealLogMutationInput,
+  MealLogNutritionEvidence,
+  MealLogRecentData,
+  MealLogRecentItem,
+  MealLogSourceType,
+} from "@/types/meal-log";
 import { fail } from "@/lib/api/response";
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -24,6 +37,12 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 function hasOnlyKeys(value: Record<string, unknown>, allowed: readonly string[]) {
   const keys = new Set(allowed);
   return Object.keys(value).every((key) => keys.has(key));
+}
+
+function hasExactKeys(value: Record<string, unknown>, expected: readonly string[]) {
+  return Object.keys(value).length === expected.length
+    && expected.every((key) => key in value)
+    && hasOnlyKeys(value, expected);
 }
 
 function isUuid(value: unknown): value is string {
@@ -223,48 +242,169 @@ export function isMealLogNutritionEvidence(value: unknown): value is MealLogNutr
     || (typeof value[key] === "number" && Number.isFinite(value[key])));
 }
 
-function isMealLogEntryProjection(value: unknown) {
-  return isRecord(value) && isMealLogNutritionEvidence(value.nutrition);
+function projectMealLogNutrition(value: unknown): MealLogNutritionEvidence | null {
+  if (!isMealLogNutritionEvidence(value)) return null;
+  return {
+    calculation_status: value.calculation_status,
+    calories_kcal: value.calories_kcal,
+    carbohydrate_g: value.carbohydrate_g,
+    protein_g: value.protein_g,
+    fat_g: value.fat_g,
+    sodium_mg: value.sodium_mg,
+  };
 }
 
-function isMealLogSectionProjection(value: unknown) {
-  return isRecord(value)
-    && Array.isArray(value.entries)
-    && value.entries.every(isMealLogEntryProjection)
-    && isMealLogNutritionEvidence(value.subtotal)
-    && Number.isSafeInteger(value.incomplete_count)
-    && Number(value.incomplete_count) >= 0;
+const ENTRY_KEYS = [
+  "id", "revision", "consumed_at", "consumed_local_date", "timezone_name_snapshot",
+  "meal_plan_column_id", "slot_name_snapshot", "source", "quantity", "display_name",
+  "display_brand", "nutrition", "created_at", "updated_at",
+] as const;
+
+function isTimestamp(value: unknown): value is string {
+  return typeof value === "string" && !Number.isNaN(Date.parse(value));
 }
 
-function isMealLogDayTotal(value: unknown) {
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
+function projectMealLogEntry(value: unknown): MealLogEntry | null {
+  if (!isRecord(value) || !hasExactKeys(value, ENTRY_KEYS)
+    || !isUuid(value.id)
+    || !Number.isSafeInteger(value.revision) || Number(value.revision) < 1
+    || (value.consumed_at !== null && !isTimestamp(value.consumed_at))
+    || !isDate(value.consumed_local_date)
+    || !isTimeZone(value.timezone_name_snapshot)
+    || (value.meal_plan_column_id !== null && !isUuid(value.meal_plan_column_id))
+    || !isNonEmptyString(value.slot_name_snapshot)
+    || !isRecord(value.source) || !hasExactKeys(value.source, ["type", "id"])
+    || !SOURCE_TYPES.includes(value.source.type as MealLogSourceType) || !isUuid(value.source.id)
+    || !isRecord(value.quantity) || !hasExactKeys(value.quantity, ["amount", "unit"])
+    || typeof value.quantity.amount !== "number" || !Number.isFinite(value.quantity.amount)
+    || value.quantity.amount <= 0 || !isNonEmptyString(value.quantity.unit)
+    || !isNonEmptyString(value.display_name)
+    || (value.display_brand !== null && typeof value.display_brand !== "string")
+    || !isTimestamp(value.created_at) || !isTimestamp(value.updated_at)) return null;
+  const nutrition = projectMealLogNutrition(value.nutrition);
+  if (!nutrition) return null;
+  return {
+    id: value.id,
+    revision: value.revision as number,
+    consumed_at: value.consumed_at as string | null,
+    consumed_local_date: value.consumed_local_date,
+    timezone_name_snapshot: value.timezone_name_snapshot,
+    meal_plan_column_id: value.meal_plan_column_id as string | null,
+    slot_name_snapshot: value.slot_name_snapshot,
+    source: { type: value.source.type as MealLogSourceType, id: value.source.id },
+    quantity: { amount: value.quantity.amount, unit: value.quantity.unit },
+    display_name: value.display_name,
+    display_brand: value.display_brand as string | null,
+    nutrition,
+    created_at: value.created_at,
+    updated_at: value.updated_at,
+  };
+}
+
+function projectMealLogColumn(value: unknown): MealLogColumn | null {
+  if (!isRecord(value) || !hasExactKeys(value, ["id", "name", "sort_order"])
+    || !isUuid(value.id) || !isNonEmptyString(value.name)
+    || !Number.isSafeInteger(value.sort_order)) return null;
+  return { id: value.id, name: value.name, sort_order: value.sort_order as number };
+}
+
+function projectMealLogEntries(value: unknown): MealLogEntry[] | null {
+  if (!Array.isArray(value)) return null;
+  const entries = value.map(projectMealLogEntry);
+  return entries.some((entry) => entry === null) ? null : entries as MealLogEntry[];
+}
+
+function projectMealLogDayTotal(value: unknown): MealLogDayTotal | null {
   if (!isRecord(value)
-    || !hasOnlyKeys(value, [...NUTRITION_KEYS, "incomplete_count"])
+    || !hasExactKeys(value, [...NUTRITION_KEYS, "incomplete_count"])
     || !Number.isSafeInteger(value.incomplete_count)
-    || Number(value.incomplete_count) < 0) return false;
+    || Number(value.incomplete_count) < 0) return null;
   const nutrition = Object.fromEntries(NUTRITION_KEYS.map((key) => [key, value[key]]));
-  return isMealLogNutritionEvidence(nutrition);
+  const projected = projectMealLogNutrition(nutrition);
+  return projected ? { ...projected, incomplete_count: value.incomplete_count as number } : null;
 }
 
-export function projectMealLogData(value: unknown) {
+function projectMealLogActiveSection(value: unknown): MealLogActiveSection | null {
+  if (!isRecord(value) || !hasExactKeys(value, [
+    "meal_plan_column_id", "slot_name_snapshot", "sort_order", "entries", "subtotal", "incomplete_count",
+  ]) || !isUuid(value.meal_plan_column_id) || !isNonEmptyString(value.slot_name_snapshot)
+    || !Number.isSafeInteger(value.sort_order) || !Number.isSafeInteger(value.incomplete_count)
+    || Number(value.incomplete_count) < 0) return null;
+  const entries = projectMealLogEntries(value.entries);
+  const subtotal = projectMealLogNutrition(value.subtotal);
+  return entries && subtotal ? {
+    meal_plan_column_id: value.meal_plan_column_id,
+    slot_name_snapshot: value.slot_name_snapshot,
+    sort_order: value.sort_order as number,
+    entries,
+    subtotal,
+    incomplete_count: value.incomplete_count as number,
+  } : null;
+}
+
+function projectMealLogDeletedSection(value: unknown): MealLogDeletedColumnSection | null {
+  if (!isRecord(value) || !hasExactKeys(value, [
+    "slot_name_snapshot", "entries", "subtotal", "incomplete_count",
+  ]) || !isNonEmptyString(value.slot_name_snapshot)
+    || !Number.isSafeInteger(value.incomplete_count) || Number(value.incomplete_count) < 0) return null;
+  const entries = projectMealLogEntries(value.entries);
+  const subtotal = projectMealLogNutrition(value.subtotal);
+  return entries && subtotal ? {
+    slot_name_snapshot: value.slot_name_snapshot,
+    entries,
+    subtotal,
+    incomplete_count: value.incomplete_count as number,
+  } : null;
+}
+
+function projectArray<T>(value: unknown, project: (item: unknown) => T | null): T[] | null {
+  if (!Array.isArray(value)) return null;
+  const projected = value.map(project);
+  return projected.some((item) => item === null) ? null : projected as T[];
+}
+
+export function projectMealLogData(value: unknown): MealLogMutationData | MealLogDayData | null {
   if (!isRecord(value)) return null;
-  if ("entry" in value) return isMealLogEntryProjection(value.entry) ? value : null;
-  if (typeof value.date !== "string" || !isDate(value.date)
-    || !Array.isArray(value.active_columns)
-    || !Array.isArray(value.active_sections)
-    || !value.active_sections.every(isMealLogSectionProjection)
-    || !Array.isArray(value.deleted_column_sections)
-    || !value.deleted_column_sections.every(isMealLogSectionProjection)
-    || !Array.isArray(value.entries)
-    || !value.entries.every(isMealLogEntryProjection)
-    || !isMealLogDayTotal(value.day_total)) return null;
-  return value;
+  if ("entry" in value) {
+    if (!hasExactKeys(value, ["entry"])) return null;
+    const entry = projectMealLogEntry(value.entry);
+    return entry ? { entry } : null;
+  }
+  if (!hasExactKeys(value, [
+    "date", "active_columns", "active_sections", "deleted_column_sections", "entries", "day_total",
+  ]) || !isDate(value.date)) return null;
+  const activeColumns = projectArray(value.active_columns, projectMealLogColumn);
+  const activeSections = projectArray(value.active_sections, projectMealLogActiveSection);
+  const deletedSections = projectArray(value.deleted_column_sections, projectMealLogDeletedSection);
+  const entries = projectMealLogEntries(value.entries);
+  const dayTotal = projectMealLogDayTotal(value.day_total);
+  return activeColumns && activeSections && deletedSections && entries && dayTotal ? {
+    date: value.date,
+    active_columns: activeColumns,
+    active_sections: activeSections,
+    deleted_column_sections: deletedSections,
+    entries,
+    day_total: dayTotal,
+  } : null;
 }
 
-export function projectMealLogRecentData(value: unknown) {
-  if (!isRecord(value) || !Array.isArray(value.items) || typeof value.has_next !== "boolean") return null;
+export function projectMealLogRecentData(value: unknown): MealLogRecentData | null {
+  if (!isRecord(value) || !hasExactKeys(value, ["items", "has_next"])
+    || !Array.isArray(value.items) || typeof value.has_next !== "boolean") return null;
   const projected = value.items.map((item) => {
-    if (!isRecord(item) || !SOURCE_TYPES.includes(item.source_type as MealLogSourceType)
+    if (!isRecord(item) || !hasExactKeys(item, [
+      "source_type", "source_id", "display_name", "display_brand", "last_amount", "last_unit",
+      "last_date", "last_id", "frequency",
+    ]) || !SOURCE_TYPES.includes(item.source_type as MealLogSourceType)
       || !isUuid(item.source_id) || typeof item.display_name !== "string"
+      || (item.display_brand !== null && typeof item.display_brand !== "string")
+      || typeof item.last_amount !== "number" || !Number.isFinite(item.last_amount) || item.last_amount <= 0
+      || !isNonEmptyString(item.last_unit)
+      || !Number.isSafeInteger(item.frequency) || Number(item.frequency) < 1
       || typeof item.last_date !== "string" || !isDate(item.last_date) || !isUuid(item.last_id)) return null;
     return {
       publicItem: {
@@ -272,8 +412,8 @@ export function projectMealLogRecentData(value: unknown) {
         display_name: item.display_name,
         display_brand: typeof item.display_brand === "string" ? item.display_brand : null,
         last_quantity: { amount: item.last_amount, unit: item.last_unit },
-        frequency: item.frequency,
-      },
+        frequency: item.frequency as number,
+      } satisfies MealLogRecentItem,
       date: item.last_date,
       id: item.last_id,
     };

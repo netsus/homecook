@@ -5,6 +5,57 @@ import { describe, expect, test } from "vitest";
 
 import * as mealLog from "@/lib/server/meal-log";
 
+const compactNutrition = {
+  calculation_status: "partial",
+  calories_kcal: 120,
+  carbohydrate_g: null,
+  protein_g: 8,
+  fat_g: 4,
+  sodium_mg: 30,
+};
+
+const entryProjection = {
+  id: "11111111-1111-4111-8111-111111111111",
+  revision: 2,
+  consumed_at: null,
+  consumed_local_date: "2026-08-10",
+  timezone_name_snapshot: "Asia/Seoul",
+  meal_plan_column_id: "22222222-2222-4222-8222-222222222222",
+  slot_name_snapshot: "점심",
+  source: { type: "ingredient", id: "33333333-3333-4333-8333-333333333333" },
+  quantity: { amount: 120, unit: "g" },
+  display_name: "두부",
+  display_brand: null,
+  nutrition: compactNutrition,
+  created_at: "2026-08-10T01:00:00.000Z",
+  updated_at: "2026-08-10T02:00:00.000Z",
+};
+
+const dayProjection = {
+  date: "2026-08-10",
+  active_columns: [{
+    id: "22222222-2222-4222-8222-222222222222",
+    name: "점심",
+    sort_order: 2,
+  }],
+  active_sections: [{
+    meal_plan_column_id: "22222222-2222-4222-8222-222222222222",
+    slot_name_snapshot: "점심",
+    sort_order: 2,
+    entries: [entryProjection],
+    subtotal: compactNutrition,
+    incomplete_count: 1,
+  }],
+  deleted_column_sections: [{
+    slot_name_snapshot: "야식",
+    entries: [entryProjection],
+    subtotal: compactNutrition,
+    incomplete_count: 1,
+  }],
+  entries: [entryProjection],
+  day_total: { ...compactNutrition, incomplete_count: 1 },
+};
+
 describe("meal-log core", () => {
   test("provides the dedicated server contract module", () => {
     expect(existsSync(resolve(process.cwd(), "lib/server/meal-log.ts"))).toBe(true);
@@ -132,26 +183,94 @@ describe("meal-log core", () => {
     }
   });
 
-  test("accepts only the exact compact nutrition response shape", () => {
-    const compact = {
-      calculation_status: "partial",
-      calories_kcal: 120,
-      carbohydrate_g: null,
-      protein_g: 8,
-      fat_g: 4,
-      sodium_mg: 30,
-    };
-    expect(mealLog.projectMealLogData({ entry: { nutrition: compact } })).not.toBeNull();
+  test("validates every mutation entry field through the shared runtime contract", () => {
+    expect(mealLog.projectMealLogData({ entry: entryProjection })).toEqual({ entry: entryProjection });
+    const missingId: Record<string, unknown> = { ...entryProjection };
+    delete missingId.id;
+    expect(mealLog.projectMealLogData({ entry: missingId })).toBeNull();
     expect(mealLog.projectMealLogData({
-      entry: { nutrition: { ...compact, values: { energy_kcal: 120 } } },
+      entry: { ...entryProjection, revision: "2" },
+    })).toBeNull();
+  });
+
+  test("accepts only the exact compact nutrition response shape", () => {
+    expect(mealLog.projectMealLogData({
+      entry: { ...entryProjection, nutrition: { ...compactNutrition, values: { energy_kcal: 120 } } },
     })).toBeNull();
     expect(mealLog.projectMealLogData({
       entry: {
+        ...entryProjection,
         nutrition: {
           calculation_status: "partial",
           values: { energy_kcal: 120 },
         },
       },
+    })).toBeNull();
+  });
+
+  test("validates every day, column, section, entry, and total field", () => {
+    expect(mealLog.projectMealLogData(dayProjection)).toEqual(dayProjection);
+    expect(mealLog.projectMealLogData({
+      ...dayProjection,
+      active_columns: [{ name: "점심", sort_order: 2 }],
+    })).toBeNull();
+    expect(mealLog.projectMealLogData({
+      ...dayProjection,
+      active_sections: [{
+        ...dayProjection.active_sections[0],
+        sort_order: "2",
+      }],
+    })).toBeNull();
+    expect(mealLog.projectMealLogData({
+      ...dayProjection,
+      deleted_column_sections: [{
+        ...dayProjection.deleted_column_sections[0],
+        slot_name_snapshot: 42,
+      }],
+    })).toBeNull();
+    expect(mealLog.projectMealLogData({
+      ...dayProjection,
+      entries: [{ ...entryProjection, quantity: { amount: "120", unit: "g" } }],
+    })).toBeNull();
+    expect(mealLog.projectMealLogData({
+      ...dayProjection,
+      day_total: { ...dayProjection.day_total, incomplete_count: "1" },
+    })).toBeNull();
+  });
+
+  test("validates recent quantity and frequency before publishing", () => {
+    const recent = {
+      items: [{
+        source_type: "ingredient",
+        source_id: "33333333-3333-4333-8333-333333333333",
+        display_name: "두부",
+        display_brand: null,
+        last_amount: 120,
+        last_unit: "g",
+        frequency: 3,
+        last_date: "2026-08-10",
+        last_id: "11111111-1111-4111-8111-111111111111",
+      }],
+      has_next: false,
+    };
+    expect(mealLog.projectMealLogRecentData(recent)).toEqual({
+      items: [{
+        source: { type: "ingredient", id: "33333333-3333-4333-8333-333333333333" },
+        display_name: "두부",
+        display_brand: null,
+        last_quantity: { amount: 120, unit: "g" },
+        frequency: 3,
+      }],
+      next_cursor: null,
+      has_next: false,
+    });
+    expect(mealLog.projectMealLogRecentData({
+      ...recent,
+      items: [{ ...recent.items[0], last_amount: "120" }],
+    })).toBeNull();
+    expect(mealLog.projectMealLogRecentData({
+      ...recent,
+      items: [{ ...recent.items[0], frequency: "3" }],
     })).toBeNull();
   });
 });

@@ -179,18 +179,17 @@ create or replace function private.resolve_meal_log_product_nutrition(
 language plpgsql stable security definer
 set search_path = pg_catalog, public, private, pg_temp
 as $function$
-declare v_profile public.nutrition_profiles%rowtype; v_relation jsonb; v_basis_amount numeric;
+declare v_profile public.nutrition_profiles%rowtype; v_relation jsonb; v_basis_amount numeric; v_relation_count integer;
 begin
   select * into v_profile from public.nutrition_profiles where id=p_profile_id;
   if v_profile.id is null then raise exception 'RESOURCE_NOT_FOUND' using errcode='P0002'; end if;
   if p_unit=v_profile.basis_unit or (p_unit in ('g','kg') and v_profile.normalization_method='mass_100g') then
     return private.resolve_meal_log_profile_nutrition(p_profile_id,p_amount,p_unit);
   end if;
-  select relation into v_relation from jsonb_array_elements(p_relations) relation
+  select count(*),(array_agg(relation))[1] into v_relation_count,v_relation from jsonb_array_elements(p_relations) relation
   where (relation#>>'{from,unit}'=p_unit and relation#>>'{to,unit}'=v_profile.basis_unit)
-     or (relation#>>'{to,unit}'=p_unit and relation#>>'{from,unit}'=v_profile.basis_unit)
-  limit 1;
-  if v_relation is null then raise exception 'UNIT_CONVERSION_MISSING' using errcode='22023'; end if;
+     or (relation#>>'{to,unit}'=p_unit and relation#>>'{from,unit}'=v_profile.basis_unit);
+  if v_relation_count<>1 or v_relation is null then raise exception 'UNIT_CONVERSION_MISSING' using errcode='22023'; end if;
   if v_relation#>>'{from,unit}'=p_unit then
     v_basis_amount:=p_amount/(v_relation#>>'{from,amount}')::numeric*(v_relation#>>'{to,amount}')::numeric;
   else
@@ -379,7 +378,7 @@ declare v_authority jsonb; v_generation bigint; v_claim jsonb; v_receipt uuid; v
   v_conversion_evidence uuid; v_nutrition_amount numeric; v_nutrition_unit text; v_result jsonb;
   v_same_source boolean; v_same_quantity boolean; v_product_profile uuid; v_product_relations jsonb;
   v_old_batch_id uuid; v_new_batch_id uuid; v_lock_batch_id uuid; v_locked_batch public.leftover_dishes%rowtype;
-  v_batch_nutrition jsonb; v_piece_count integer;
+  v_batch_nutrition jsonb; v_piece_count integer; v_conversion_count integer;
 begin
   if p_action not in ('create','patch','delete') then raise exception 'VALIDATION_ERROR' using errcode='22023'; end if;
   v_authority:=public.assert_recipe_future_session_authority(p_owner_uuid,p_auth_identity_created_at_snapshot,p_session_key_hash,p_hmac_key_version,p_session_issued_at);
@@ -421,6 +420,9 @@ begin
     insert into public.cooked_batch_quantity_events(id,owner_user_id,cooked_batch_id,event_type,delta_g,reason,meal_log_entry_id,reverses_event_id,operation_id,ordinal,payload_hash,created_at)
     values(v_reversal_id,p_owner_uuid,v_old_event.cooked_batch_id,'reversal',-v_old_event.delta_g,'meal_log_'||p_action,p_entry_id,v_old_event.id,p_idempotency_key,1,v_claim->>'payload_hash',p_now);
     update public.meal_log_entries set active_consumption_event_id=null where id=p_entry_id;
+    if p_action='patch' and v_old_batch_id=v_new_batch_id then
+      perform private.replay_cooked_batch(v_old_batch_id,p_owner_uuid,p_now);
+    end if;
   end if;
   if p_action='delete' then
     update public.meal_log_entries set deleted_at=p_now,revision=revision+1,updated_at=p_now where id=p_entry_id returning * into v_entry;
@@ -476,14 +478,25 @@ begin
       else
       v_nutrition_amount:=v_amount; v_nutrition_unit:=v_unit;
       if v_unit in ('tbsp','tsp','cup') then
+        v_conversion_count:=0;
         if v_same_source and v_conversion_evidence is not null then
-          select evidence.id,v_amount * (case v_unit when 'tbsp' then 15 when 'tsp' then 5 else 200 end) / 15 * evidence.normalized_g_per_15ml
-          into v_conversion_evidence,v_nutrition_amount from public.measurement_source_evidence evidence
-          where evidence.id=v_conversion_evidence and evidence.evidence_kind='volume_weight';
-        else
-          select evidence.id,
-            v_amount * (case v_unit when 'tbsp' then 15 when 'tsp' then 5 else 200 end) / 15 * evidence.normalized_g_per_15ml
-          into v_conversion_evidence,v_nutrition_amount
+          select count(distinct evidence.id),
+            (array_agg(evidence.id order by evidence.id))[1],
+            (array_agg(v_amount * (case v_unit when 'tbsp' then 15 when 'tsp' then 5 else 200 end) / 15 * evidence.normalized_g_per_15ml order by evidence.id))[1]
+          into v_conversion_count,v_conversion_evidence,v_nutrition_amount
+          from public.ingredient_nutrition_profiles profile
+          join public.ingredient_conversion_assignments assignment
+            on assignment.ingredient_id=profile.ingredient_id
+            and assignment.preparation_state=profile.preparation_state
+          join public.measurement_source_evidence evidence
+            on evidence.id=assignment.evidence_id and evidence.evidence_kind='volume_weight'
+          where profile.id=v_ingredient_profile and evidence.id=v_entry.conversion_evidence_id;
+        end if;
+        if v_conversion_count<>1 then
+          select count(distinct evidence.id),
+            (array_agg(evidence.id order by evidence.id))[1],
+            (array_agg(v_amount * (case v_unit when 'tbsp' then 15 when 'tsp' then 5 else 200 end) / 15 * evidence.normalized_g_per_15ml order by evidence.id))[1]
+          into v_conversion_count,v_conversion_evidence,v_nutrition_amount
           from public.ingredient_nutrition_profiles profile
           join public.ingredient_conversion_assignments assignment
             on assignment.ingredient_id=profile.ingredient_id
@@ -492,11 +505,16 @@ begin
           join public.measurement_source_evidence evidence
             on evidence.id=assignment.evidence_id and evidence.evidence_kind='volume_weight'
             and evidence.is_active and evidence.review_status='approved'
+          join public.nutrition_sources source
+            on source.id=evidence.source_id
+            and source.is_active and source.review_status='approved'
+            and source.freshness_status='current'
           where profile.id=v_ingredient_profile;
         end if;
-        if v_conversion_evidence is null then raise exception 'UNIT_CONVERSION_MISSING' using errcode='22023'; end if;
+        if v_conversion_count<>1 or v_conversion_evidence is null then raise exception 'UNIT_CONVERSION_MISSING' using errcode='22023'; end if;
         v_nutrition_unit:='g';
       elsif lower(v_unit) in ('개','장','piece','pieces') then
+        v_piece_count:=0;
         if v_same_source and v_conversion_evidence is not null then
           select count(*),
             (array_agg(evidence.id order by piece.id))[1],
@@ -513,7 +531,8 @@ begin
             and evidence.evidence_kind='piece_weight'
             and lower(evidence.source_observed_unit) in ('개','장','piece','pieces')
           where profile.id=v_ingredient_profile and evidence.id=v_entry.conversion_evidence_id;
-        else
+        end if;
+        if v_piece_count<>1 then
           select count(*),
             (array_agg(evidence.id order by piece.id))[1],
             (array_agg(v_amount*piece.weight_g order by piece.id))[1]

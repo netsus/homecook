@@ -26,6 +26,7 @@ const batchPartial = "93500000-0000-4000-8000-000000000003";
 const batchUnavailable = "93500000-0000-4000-8000-000000000004";
 const batchSame = "93500000-0000-4000-8000-000000000005";
 const batchDrift = "93500000-0000-4000-8000-000000000006";
+const batchCapacity = "93500000-0000-4000-8000-000000000007";
 const ingredient = "93600000-0000-4000-8000-000000000001";
 const ingredientMissingPiece = "93600000-0000-4000-8000-000000000002";
 const ingredientProfile = "93700000-0000-4000-8000-000000000001";
@@ -38,8 +39,18 @@ const ingredientSourceItem = "93900000-0000-4000-8000-000000000003";
 const productSourceItem = "93900000-0000-4000-8000-000000000004";
 const pieceEvidence = "93a00000-0000-4000-8000-000000000001";
 const pieceWeight = "93b00000-0000-4000-8000-000000000001";
+const volumeEvidence = "93a00000-0000-4000-8000-000000000010";
+const volumeAssignment = "93b00000-0000-4000-8000-000000000010";
 const product = "93c00000-0000-4000-8000-000000000001";
 const productVersion = "93d00000-0000-4000-8000-000000000001";
+const productForward = "93c00000-0000-4000-8000-000000000002";
+const productForwardVersion = "93d00000-0000-4000-8000-000000000002";
+const productReverse = "93c00000-0000-4000-8000-000000000003";
+const productReverseVersion = "93d00000-0000-4000-8000-000000000003";
+const productMissing = "93c00000-0000-4000-8000-000000000004";
+const productMissingVersion = "93d00000-0000-4000-8000-000000000004";
+const productDuplicate = "93c00000-0000-4000-8000-000000000005";
+const productDuplicateVersion = "93d00000-0000-4000-8000-000000000005";
 
 function psql(sql: string, expectSuccess = true) {
   const result = spawnSync("docker", [
@@ -82,6 +93,10 @@ function payload(source: { type: string; id: string }, amount: number, unit: str
   };
 }
 
+function payloadOnDate(source: { type: string; id: string }, amount: number, unit: string) {
+  return { ...payload(source, amount, unit), consumed_local_date: "2026-08-11" };
+}
+
 function mutationSql(
   action: "create" | "patch" | "delete",
   entryId: string,
@@ -120,6 +135,13 @@ function stateDigest(batchId = batchDrift) {
     'entry',(select coalesce(jsonb_agg(to_jsonb(e) order by e.id),'[]') from public.meal_log_entries e where e.cooked_batch_id='${batchId}'),
     'event',(select coalesce(jsonb_agg(to_jsonb(e) order by e.id),'[]') from public.cooked_batch_quantity_events e where e.cooked_batch_id='${batchId}'),
     'batch',(select to_jsonb(b) from public.leftover_dishes b where b.id='${batchId}'),
+    'receipt',(select coalesce(jsonb_agg(to_jsonb(r) order by r.id),'[]') from public.mutation_idempotency_keys r where r.owner_uuid='${owner}' and r.operation_scope like 'meal_log_%')
+  )::text);`).stdout.trim();
+}
+
+function entryStateDigest(entryId: string) {
+  return psql(`select md5(jsonb_build_object(
+    'entry',(select to_jsonb(e) from public.meal_log_entries e where e.id='${entryId}'),
     'receipt',(select coalesce(jsonb_agg(to_jsonb(r) order by r.id),'[]') from public.mutation_idempotency_keys r where r.owner_uuid='${owner}' and r.operation_scope like 'meal_log_%')
   )::text);`).stdout.trim();
 }
@@ -191,7 +213,8 @@ describe.runIf(enabled)("meal-log core PostgreSQL", () => {
         ('${batchPartial}','${owner}','${recipePartial}','${contentPartial}','leftover',now(),2,1000,1000,'known','available',null,1,encode(extensions.digest(convert_to('','UTF8'),'sha256'),'hex')),
         ('${batchUnavailable}','${owner}','${recipeUnavailable}','${contentUnavailable}','leftover',now(),2,1000,1000,'known','available',null,1,encode(extensions.digest(convert_to('','UTF8'),'sha256'),'hex')),
         ('${batchSame}','${owner}','${recipeComplete}','${contentComplete}','leftover',now(),2,1000,1000,'known','available',null,1,encode(extensions.digest(convert_to('','UTF8'),'sha256'),'hex')),
-        ('${batchDrift}','${owner}','${recipeComplete}','${contentComplete}','leftover',now(),2,1000,1000,'known','available',null,1,encode(extensions.digest(convert_to('','UTF8'),'sha256'),'hex'));
+        ('${batchDrift}','${owner}','${recipeComplete}','${contentComplete}','leftover',now(),2,1000,1000,'known','available',null,1,encode(extensions.digest(convert_to('','UTF8'),'sha256'),'hex')),
+        ('${batchCapacity}','${owner}','${recipeComplete}','${contentComplete}','leftover',now(),2,1000,1000,'known','available',null,1,encode(extensions.digest(convert_to('','UTF8'),'sha256'),'hex'));
       insert into public.ingredients(id,standard_name,category,default_unit) values
         ('${ingredient}','stage3 exact piece','test','개'),
         ('${ingredientMissingPiece}','stage3 missing piece','test','개');
@@ -257,14 +280,44 @@ describe.runIf(enabled)("meal-log core PostgreSQL", () => {
         '${pieceWeight}','${ingredient}','${pieceEvidence}','medium','raw',50,'approved',
         'stage3 fixture','${owner}',now(),1,true
       );
+      insert into public.measurement_source_evidence(
+        id,source_id,evidence_kind,source_subject,preparation_state,source_observed_unit,
+        source_observed_amount,observed_volume_ml,observed_weight_g,normalized_g_per_15ml,
+        source_url,source_accessed_at,evidence_fingerprint,review_status,decision_reason,
+        reviewed_by,reviewed_at,version,is_active
+      ) values(
+        '${volumeEvidence}','${measurementSource}','volume_weight','stage3 exact piece','raw','tbsp',
+        1,15,10,10,'https://example.test/volume','2026-08-10',repeat('e',64),
+        'approved','stage3 fixture','${owner}',now(),1,true
+      );
+      insert into public.ingredient_conversion_assignments(
+        id,ingredient_id,conversion_profile_id,evidence_id,preparation_state,distance_g_per_15ml,
+        candidate_rank,confidence_score,assignment_reason,review_status,reviewed_by,reviewed_at,version,is_active
+      ) select
+        '${volumeAssignment}','${ingredient}',profile.id,'${volumeEvidence}','raw',0,
+        1,1,'stage3 fixture','approved','${owner}',now(),1,true
+      from public.measurement_conversion_profiles profile where profile.code='VOLUME_G10' and profile.is_active;
       set session_replication_role='replica';
       set constraints all deferred;
       insert into public.food_products(
         id,owner_user_id,visibility,source_type,name,brand,current_nutrition_version_id,moderation_status
-      ) values('${product}','${owner}','private','manual','stage3 product','brand','${productVersion}','visible');
+      ) values
+        ('${product}','${owner}','private','manual','stage3 product','brand','${productVersion}','visible'),
+        ('${productForward}','${owner}','private','manual','stage3 forward product','brand','${productForwardVersion}','visible'),
+        ('${productReverse}','${owner}','private','manual','stage3 reverse product','brand','${productReverseVersion}','visible'),
+        ('${productMissing}','${owner}','private','manual','stage3 missing product','brand','${productMissingVersion}','visible'),
+        ('${productDuplicate}','${owner}','private','manual','stage3 duplicate product','brand','${productDuplicateVersion}','visible');
       insert into public.food_product_nutrition_versions(
         id,product_id,nutrition_profile_id,version,basis_relations_json,created_by
-      ) values('${productVersion}','${product}','${productNutritionProfile}',1,'[]','${owner}');
+      ) values
+        ('${productVersion}','${product}','${productNutritionProfile}',1,'[]','${owner}'),
+        ('${productForwardVersion}','${productForward}','${productNutritionProfile}',1,
+          '[{"from":{"amount":1,"unit":"serving"},"to":{"amount":50,"unit":"g"}}]','${owner}'),
+        ('${productReverseVersion}','${productReverse}','${productNutritionProfile}',1,
+          '[{"from":{"amount":100,"unit":"g"},"to":{"amount":2,"unit":"serving"}}]','${owner}'),
+        ('${productMissingVersion}','${productMissing}','${productNutritionProfile}',1,'[]','${owner}'),
+        ('${productDuplicateVersion}','${productDuplicate}','${productNutritionProfile}',1,
+          '[{"from":{"amount":1,"unit":"serving"},"to":{"amount":50,"unit":"g"}},{"from":{"amount":1,"unit":"serving"},"to":{"amount":80,"unit":"g"}}]','${owner}');
       set session_replication_role='origin';
       insert into public.nutrition_values(profile_id,nutrient_code,source_nutrient_code,source_unit,amount,value_status)
       select '${productNutritionProfile}'::uuid,nutrient_code,nutrient_code,case when nutrient_code='energy_kcal' then 'kcal' when nutrient_code='sodium_mg' then 'mg' else 'g' end,amount,'observed' from (values
@@ -374,6 +427,95 @@ describe.runIf(enabled)("meal-log core PostgreSQL", () => {
     expect(stale.stderr).toContain("UNIT_CONVERSION_MISSING");
   });
 
+  test("reselects exact evidence across piece, volume, and mass PATCH classes", () => {
+    const conversionEntry = "94800000-0000-4000-8000-000000000010";
+    mutation("create", conversionEntry, "94900000-0000-4000-8000-000000000010", payloadOnDate({ type: "ingredient", id: ingredient }, 1, "piece"));
+    const pieceToVolume = mutation("patch", conversionEntry, "94100000-0000-4000-8000-000000000011", {
+      ...payloadOnDate({ type: "ingredient", id: ingredient }, 1, "tbsp"), expected_revision: 1,
+    }, 1);
+    expect(pieceToVolume.data.entry.nutrition).toMatchObject({ calories_kcal: 10 });
+    expect(psql(`select conversion_evidence_id from public.meal_log_entries where id='${conversionEntry}';`).stdout.trim()).toBe(volumeEvidence);
+
+    const volumeToPiece = mutation("patch", conversionEntry, "94100000-0000-4000-8000-000000000012", {
+      ...payloadOnDate({ type: "ingredient", id: ingredient }, 1, "piece"), expected_revision: 2,
+    }, 2);
+    expect(volumeToPiece.data.entry.nutrition).toMatchObject({ calories_kcal: 50 });
+    expect(psql(`select conversion_evidence_id from public.meal_log_entries where id='${conversionEntry}';`).stdout.trim()).toBe(pieceEvidence);
+
+    const pieceToVolumeAgain = mutation("patch", conversionEntry, "94100000-0000-4000-8000-000000000013", {
+      ...payloadOnDate({ type: "ingredient", id: ingredient }, 2, "tbsp"), expected_revision: 3,
+    }, 3);
+    expect(pieceToVolumeAgain.data.entry.nutrition).toMatchObject({ calories_kcal: 20 });
+    expect(psql(`select conversion_evidence_id from public.meal_log_entries where id='${conversionEntry}';`).stdout.trim()).toBe(volumeEvidence);
+
+    const volumeToMass = mutation("patch", conversionEntry, "94100000-0000-4000-8000-000000000014", {
+      ...payloadOnDate({ type: "ingredient", id: ingredient }, 25, "g"), expected_revision: 4,
+    }, 4);
+    expect(volumeToMass.data.entry.nutrition).toMatchObject({ calories_kcal: 25 });
+    expect(psql(`select conversion_evidence_id is null from public.meal_log_entries where id='${conversionEntry}';`).stdout.trim()).toBe("t");
+  });
+
+  test("fails closed with rollback for missing or ambiguous requested conversion evidence", () => {
+    const missingEntry = "94800000-0000-4000-8000-000000000001";
+    mutation("create", missingEntry, "94900000-0000-4000-8000-000000000001", payloadOnDate({ type: "ingredient", id: ingredientMissingPiece }, 10, "g"));
+    const missingBefore = entryStateDigest(missingEntry);
+    const missing = psql(mutationSql("patch", missingEntry, "94900000-0000-4000-8000-000000000002", {
+      ...payloadOnDate({ type: "ingredient", id: ingredientMissingPiece }, 1, "tbsp"), expected_revision: 1,
+    }, 1), false);
+    expect(missing.status).not.toBe(0);
+    expect(missing.stderr).toContain("UNIT_CONVERSION_MISSING");
+    expect(entryStateDigest(missingEntry)).toBe(missingBefore);
+
+    const ambiguousEntry = "94800000-0000-4000-8000-000000000002";
+    mutation("create", ambiguousEntry, "94900000-0000-4000-8000-000000000003", payloadOnDate({ type: "ingredient", id: ingredient }, 10, "g"));
+    const ambiguousBefore = entryStateDigest(ambiguousEntry);
+    const ambiguous = psql(`begin;
+      drop index public.ingredient_conversion_assignments_active_idx;
+      insert into public.measurement_source_evidence(
+        id,source_id,evidence_kind,source_subject,preparation_state,source_observed_unit,
+        source_observed_amount,observed_volume_ml,observed_weight_g,normalized_g_per_15ml,
+        source_url,source_accessed_at,evidence_fingerprint,review_status,decision_reason,
+        reviewed_by,reviewed_at,version,is_active
+      ) values(
+        '93a00000-0000-4000-8000-000000000011','${measurementSource}','volume_weight','stage3 exact piece','raw','tbsp',
+        1,15,15,15,'https://example.test/ambiguous-volume','2026-08-10',repeat('f',64),
+        'approved','stage3 ambiguous fixture','${owner}',now(),1,true
+      );
+      insert into public.ingredient_conversion_assignments(
+        id,ingredient_id,conversion_profile_id,evidence_id,preparation_state,distance_g_per_15ml,
+        candidate_rank,confidence_score,assignment_reason,review_status,reviewed_by,reviewed_at,version,is_active
+      ) select
+        '93b00000-0000-4000-8000-000000000011','${ingredient}',profile.id,
+        '93a00000-0000-4000-8000-000000000011','raw',0,2,1,'stage3 ambiguous fixture',
+        'approved','${owner}',now(),1,true
+      from public.measurement_conversion_profiles profile where profile.code='VOLUME_G15' and profile.is_active;
+      ${mutationSql("patch", ambiguousEntry, "94900000-0000-4000-8000-000000000004", {
+        ...payloadOnDate({ type: "ingredient", id: ingredient }, 1, "tbsp"), expected_revision: 1,
+      }, 1)}
+      rollback;`, false);
+    expect(ambiguous.status).not.toBe(0);
+    expect(ambiguous.stderr).toContain("UNIT_CONVERSION_MISSING");
+    expect(entryStateDigest(ambiguousEntry)).toBe(ambiguousBefore);
+  });
+
+  test("requires exactly one direct product basis relation in either direction", () => {
+    const forward = mutation("create", "94800000-0000-4000-8000-000000000003", "94900000-0000-4000-8000-000000000005", payloadOnDate({ type: "food_product", id: productForward }, 1, "serving"));
+    const reverse = mutation("create", "94800000-0000-4000-8000-000000000004", "94900000-0000-4000-8000-000000000006", payloadOnDate({ type: "food_product", id: productReverse }, 1, "serving"));
+    expect(forward.data.entry.nutrition).toMatchObject({ calories_kcal: 100 });
+    expect(reverse.data.entry.nutrition).toMatchObject({ calories_kcal: 100 });
+
+    for (const [entryId, key, sourceId] of [
+      ["94800000-0000-4000-8000-000000000005", "94900000-0000-4000-8000-000000000007", productMissing],
+      ["94800000-0000-4000-8000-000000000006", "94900000-0000-4000-8000-000000000008", productDuplicate],
+    ] as const) {
+      const before = entryStateDigest(entryId);
+      const result = psql(`begin; ${mutationSql("create", entryId, key, payloadOnDate({ type: "food_product", id: sourceId }, 1, "serving"))} rollback;`, false);
+      expect(result.status).not.toBe(0);
+      expect(result.stderr).toContain("UNIT_CONVERSION_MISSING");
+      expect(entryStateDigest(entryId)).toBe(before);
+    }
+  });
+
   test("preserves complete, partial, unavailable slot and day folds with deleted history", () => {
     mutation("create", "94000000-0000-4000-8000-000000000007", "94100000-0000-4000-8000-000000000008", payload({ type: "cooked_batch", id: batchPartial }, 100, "g", columnPartial));
     mutation("create", "94000000-0000-4000-8000-000000000008", "94100000-0000-4000-8000-000000000009", payload({ type: "cooked_batch", id: batchUnavailable }, 100, "g", columnUnavailable));
@@ -421,11 +563,48 @@ describe.runIf(enabled)("meal-log core PostgreSQL", () => {
     expect(psql(`select jsonb_object_agg(id,remaining_weight_g) from public.leftover_dishes where id in ('${batchA}','${batchB}');`).stdout).toContain("900");
   });
 
-  test("replays only the changed entry for same-batch multiple-entry patches", () => {
+  test("preserves the full cached projection and accepts the next mutation after same-batch PATCH", () => {
     mutation("create", "94600000-0000-4000-8000-000000000001", "94700000-0000-4000-8000-000000000001", payload({ type: "cooked_batch", id: batchSame }, 100, "g"));
     mutation("create", "94600000-0000-4000-8000-000000000002", "94700000-0000-4000-8000-000000000002", payload({ type: "cooked_batch", id: batchSame }, 200, "g"));
     mutation("patch", "94600000-0000-4000-8000-000000000001", "94700000-0000-4000-8000-000000000003", { ...payload({ type: "cooked_batch", id: batchSame }, 150, "g"), expected_revision: 1 }, 1);
     expect(Number(psql(`select remaining_weight_g from public.leftover_dishes where id='${batchSame}';`).stdout.trim())).toBe(650);
     expect(psql(`select count(*) from public.cooked_batch_quantity_events e where e.cooked_batch_id='${batchSame}' and e.event_type='consumed' and not exists(select 1 from public.cooked_batch_quantity_events r where r.reverses_event_id=e.id);`).stdout.trim()).toBe("2");
+    const invariant = psql(`select private.assert_cooked_batch_cached_projection('${batchSame}','${owner}');`, false);
+    const next = psql(mutationSql("create", "94600000-0000-4000-8000-000000000003", "94700000-0000-4000-8000-000000000004", payload({ type: "cooked_batch", id: batchSame }, 10, "g")), false);
+    expect.soft(invariant.status, invariant.stderr).toBe(0);
+    expect.soft(next.status, next.stderr).toBe(0);
+    expect(Number(psql(`select remaining_weight_g from public.leftover_dishes where id='${batchSame}';`).stdout.trim())).toBe(640);
+  });
+
+  test("credits only the owned reversal for same-batch capacity, rollback, and replay", () => {
+    const changedEntry = "94a00000-0000-4000-8000-000000000001";
+    const otherEntry = "94a00000-0000-4000-8000-000000000002";
+    mutation("create", changedEntry, "94b00000-0000-4000-8000-000000000001", payload({ type: "cooked_batch", id: batchCapacity }, 300, "g"));
+    mutation("create", otherEntry, "94b00000-0000-4000-8000-000000000002", payload({ type: "cooked_batch", id: batchCapacity }, 200, "g"));
+    const otherEvent = psql(`select active_consumption_event_id from public.meal_log_entries where id='${otherEntry}';`).stdout.trim();
+
+    const increase = mutation("patch", changedEntry, "94b00000-0000-4000-8000-000000000003", {
+      ...payload({ type: "cooked_batch", id: batchCapacity }, 700, "g"), expected_revision: 1,
+    }, 1);
+    expect(increase.data.entry).toMatchObject({ revision: 2, quantity: { amount: 700, unit: "g" } });
+    expect(Number(psql(`select remaining_weight_g from public.leftover_dishes where id='${batchCapacity}';`).stdout.trim())).toBe(100);
+    expect(psql(`select active_consumption_event_id from public.meal_log_entries where id='${otherEntry}';`).stdout.trim()).toBe(otherEvent);
+
+    const equalityBody = { ...payload({ type: "cooked_batch", id: batchCapacity }, 800, "g"), expected_revision: 2 };
+    const equality = mutation("patch", changedEntry, "94b00000-0000-4000-8000-000000000004", equalityBody, 2);
+    const eventCount = psql(`select count(*) from public.cooked_batch_quantity_events where cooked_batch_id='${batchCapacity}';`).stdout.trim();
+    const replay = mutation("patch", changedEntry, "94b00000-0000-4000-8000-000000000004", equalityBody, 2);
+    expect(replay).toEqual(equality);
+    expect(psql(`select count(*) from public.cooked_batch_quantity_events where cooked_batch_id='${batchCapacity}';`).stdout.trim()).toBe(eventCount);
+    expect(Number(psql(`select remaining_weight_g from public.leftover_dishes where id='${batchCapacity}';`).stdout.trim())).toBe(0);
+    expect(psql(`select count(*) from public.meal_log_entries where cooked_batch_id='${batchCapacity}' and deleted_at is null;`).stdout.trim()).toBe("2");
+
+    const before = stateDigest(batchCapacity);
+    const overdraw = psql(mutationSql("patch", changedEntry, "94b00000-0000-4000-8000-000000000005", {
+      ...payload({ type: "cooked_batch", id: batchCapacity }, 801, "g"), expected_revision: 3,
+    }, 3), false);
+    expect(overdraw.status).not.toBe(0);
+    expect(overdraw.stderr).toContain("CONFLICT");
+    expect(stateDigest(batchCapacity)).toBe(before);
   });
 });
