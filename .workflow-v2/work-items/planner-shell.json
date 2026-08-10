@@ -16,18 +16,22 @@
   "dependencies": [
     "security-definer-mutation-authorization hotfix merged and deployed",
     "cooking-meal-log contract-evolution merged as PR #1072",
-    "meal-log-core Stage 1 docs merged as PR #1083; its runtime is the implementation predecessor",
+    "approved Cooking Plan / Meal Log master plan at docs/workpacks/planner-shell/evidence/cooking-meal-log-and-product-search-master-plan-20260722.md, SHA-256 d4d0fb39e80eeffc8b1e73ad92f0d91a35a9b6adc57a556ea8c9ec6ecffa951d, 1,018 lines",
+    "meal-log-core #9 Stage 2 backend PR #1319 exact head be93bfc47281e2795c59c0fd1052a4ecf6085837 passed independent Stage 3 task 019feb79-152f-7891-bd3a-435694e57cac with P0/P1/P2 0/0/0 and 25 current-head checks = 23 success + 2 intended historical skips, then merged as relock base 8ba3fa5a2a198eb4f9c19d59cea5f6ccc52fdd4f",
+    "meal-log-core merged code satisfies #10 implementation predecessor, while merged-exact server-production/local-rehearsal, Manual/server-Mac/OAuth, capability, R/R+1/R+2 and activation remain pending and must not be promoted",
+    "cooked-batch-weight-ui #11 proceeds separately inside COOK_MODE and LEFTOVERS #8-consumer UI ownership",
     "meal-log-ui #12 owns MEAL_LOG content and interaction design",
+    "meal-log-ui #12 implementation waits for both #9 backend and separately implemented merged-green #10 shell",
     "legacy-product-compat #13 owns compatibility telemetry and tombstones"
   ],
   "docs_refs": {
     "source_of_truth": [
       "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
-      "docs/요구사항기준선-v1.7.25.md",
-      "docs/화면정의서-v1.5.29.md",
-      "docs/유저flow맵-v1.3.27.md",
-      "docs/db설계-v1.3.26.md",
-      "docs/api문서-v1.2.29.md"
+      "docs/요구사항기준선-v1.7.30.md",
+      "docs/화면정의서-v1.5.34.md",
+      "docs/유저flow맵-v1.3.32.md",
+      "docs/db설계-v1.3.32.md",
+      "docs/api문서-v1.2.37.md"
     ],
     "governing_docs": [
       "AGENTS.md",
@@ -36,6 +40,8 @@
       "docs/workpacks/planner-shell/acceptance.md",
       "docs/workpacks/planner-shell/automation-spec.json",
       "docs/workpacks/meal-log-core/README.md",
+      "docs/workpacks/meal-log-ui/README.md",
+      "docs/workpacks/cooked-batch-weight-ui/README.md",
       "docs/engineering/slice-workflow.md",
       "docs/engineering/agent-workflow-overview.md",
       "docs/engineering/git-workflow.md",
@@ -45,10 +51,11 @@
       "docs/design/mobile-ux-rules.md",
       "docs/design/anchor-screens.md",
       "docs/engineering/workflow-v2/README.md",
+      "docs/workpacks/planner-shell/evidence/cooking-meal-log-and-product-search-master-plan-20260722.md",
+      "docs/workpacks/planner-shell/evidence/2026-08-11-stage1-design-critic-repair.md",
       "ui/designs/PLANNER_WEEK.md",
       "ui/designs/critiques/PLANNER_WEEK-critique.md",
-      "ui/designs/authority/PLANNER_WEEK-authority.md",
-      "/Users/shj/2025/2026/homecook1/.omx/plans/cooking-meal-log-and-product-search-master-plan-20260722.md#sha256-45f02013fbc1c3af1936d596605230d0cbac7839a783224aa9535844e4bda7dc"
+      "ui/designs/authority/PLANNER_WEEK-authority.md"
     ]
   },
   "workflow": {
@@ -78,19 +85,10 @@
       "BRANCH_NAME=docs/planner-shell pnpm validate:workpack -- --slice planner-shell",
       "node scripts/validate-automation-spec.mjs --slice planner-shell",
       "pnpm validate:omo-bookkeeping",
-      "pnpm exec vitest run tests/planner-shell.test.tsx tests/planner-shell-history.test.tsx tests/planner-shell-legacy-product.test.tsx",
-      "pnpm verify:backend",
-      "pnpm verify:frontend:pr",
-      "pnpm test:e2e:regression:ci --grep planner-shell",
-      "pnpm test:e2e:a11y",
-      "pnpm test:e2e:visual",
-      "pnpm qa:explore -- --slice planner-shell",
-      "pnpm qa:eval -- --checklist .artifacts/qa/planner-shell/latest/exploratory-checklist.json --report .artifacts/qa/planner-shell/latest/exploratory-report.json",
-      "pnpm verify:frontend",
-      "pnpm validate:exploratory-qa-evidence -- --slice planner-shell",
-      "pnpm validate:authority-evidence-presence -- --slice planner-shell",
-      "pnpm validate:closeout-sync -- --slice planner-shell",
-      "node scripts/verify-planner-shell-local-first.mjs --mode post-merge-read-only",
+      "pnpm exec vitest run tests/planner-shell-stage1-relock.test.ts tests/workflow-v2-docs.test.ts tests/omo-automation-spec.test.ts tests/omo-bookkeeping.test.ts tests/omo-doc-gate.test.ts tests/source-of-truth-sync.test.ts",
+      "pnpm lint",
+      "pnpm typecheck",
+      "pnpm audit --audit-level high",
       "git diff --check"
     ],
     "verify_commands": [
@@ -99,11 +97,37 @@
       "BRANCH_NAME=docs/planner-shell pnpm validate:workpack -- --slice planner-shell",
       "node scripts/validate-automation-spec.mjs --slice planner-shell",
       "pnpm validate:omo-bookkeeping",
-      "pnpm exec vitest run tests/workflow-v2-docs.test.ts tests/omo-automation-spec.test.ts tests/omo-bookkeeping.test.ts tests/omo-doc-gate.test.ts tests/source-of-truth-sync.test.ts",
+      "pnpm exec vitest run tests/planner-shell-stage1-relock.test.ts tests/workflow-v2-docs.test.ts tests/omo-automation-spec.test.ts tests/omo-bookkeeping.test.ts tests/omo-doc-gate.test.ts tests/source-of-truth-sync.test.ts",
       "pnpm lint",
       "pnpm typecheck",
       "pnpm audit --audit-level high",
       "git diff --check"
+    ],
+    "stage1_current_commands": [
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "BRANCH_NAME=docs/planner-shell pnpm validate:workpack -- --slice planner-shell",
+      "node scripts/validate-automation-spec.mjs --slice planner-shell",
+      "pnpm validate:omo-bookkeeping",
+      "pnpm exec vitest run tests/planner-shell-stage1-relock.test.ts tests/workflow-v2-docs.test.ts tests/omo-automation-spec.test.ts tests/omo-bookkeeping.test.ts tests/omo-doc-gate.test.ts tests/source-of-truth-sync.test.ts",
+      "pnpm lint",
+      "pnpm typecheck",
+      "pnpm audit --audit-level high",
+      "git diff --check"
+    ],
+    "stage4_future_commands": [
+      "pnpm exec vitest run tests/planner-shell.test.tsx tests/planner-shell-history.test.tsx tests/planner-shell-legacy-product.test.tsx",
+      "pnpm test:e2e:regression:ci --grep planner-shell",
+      "pnpm test:e2e:a11y",
+      "pnpm test:e2e:visual",
+      "pnpm qa:explore -- --slice planner-shell",
+      "pnpm verify:frontend"
+    ],
+    "manual_only_evidence": [
+      "Manual physical keyboard/screen reader/device keyboard proof: physical keyboard focus order, trap restore, Escape, reduced motion, VoiceOver or TalkBack announcements, and real 390px and 320px device safe-area and virtual-keyboard occlusion",
+      "merged-exact server-production and isolated local-rehearsal read-only evidence",
+      "server-Mac and OAuth environment evidence",
+      "meal-log-core capability R/R+1/R+2 and activation remain pending and are not performed by #10"
     ],
     "evaluator_commands": [
       "separate Codex internal 1.5 review of five core artifacts plus roadmap and status",
@@ -114,7 +138,9 @@
       "separate Codex Stage 3 Stage 6 and closeout reviews"
     ],
     "artifact_assertions": [
-      "approved-plan-sha256-and-1056-line-lock",
+      "current-official-tuple-v1.7.30-v1.5.34-v1.3.32-v1.3.32-v1.2.37",
+      "approved-cooking-plan-sha256-d4d0fb39-and-1018-line-lock",
+      "relock-base-8ba3fa5a-tree-6b67f32a",
       "stage1-five-core-artifacts-plus-roadmap-and-status-projections",
       "roadmap-docs-workflow-lifecycle-planned-separation",
       "existing-planner-route-and-bottom-tab-preserved",
@@ -128,9 +154,22 @@
       "legacy-no-auto-migrate-current-repin-shop-cook-leftovers-xp-or-status",
       "home-recipe-only-and-no-product-plan-writer",
       "slice12-meal-log-ui-and-slice13-compatibility-boundary",
+      "slice11-cook-mode-leftovers-boundary",
+      "exact-release-chain-8-9-10-and-11-12-13-14",
+      "meal-log-core-merged-code-with-broader-lifecycle-pending",
+      "slice12-waits-for-separately-merged-green-slice10-runtime",
+      "stage2-backend-implementation-na-no-schema-migration-rls-rpc-api-field-status",
       "planner-week-anchor-refresh-before-critic",
       "canonical-design-critic-authority-paths",
-      "390-320-desktop-density-focus-back-and-no-overflow",
+      "approved-plan-governed-path-actual-sha256-d4d0fb39-and-1018-line-byte-verification",
+      "390-320-desktop-7-day-containment-at-least-2-day-overview-1-3-5-meal-columns-long-names-200-percent-localization-sticky-bottom-tab-safe-area-no-page-overflow",
+      "PNG static-layout proof",
+      "Playwright history/focus/Escape proof",
+      "Manual physical keyboard/screen reader/device keyboard proof",
+      "roving-tabindex-arrow-home-end-tab-enters-selected-panel-deep-link-auth-return-invoker-loss-fallback",
+      "empty-slot-bieo-isseum-no-new-cta-contract-evolution-candidate-only",
+      "auth-return-segment-date-slot-pending-action-and-invoking-focus",
+      "existing-401-403-404-errors-no-new-code",
       "stage1-current-vs-future-command-honesty",
       "independent-required-findings-zero",
       "current-head-all-started-checks-terminal-green-or-intended-skip",
@@ -158,5 +197,5 @@
     "Unapproved server-production migration or write or capability activation"
   ],
   "open_questions": [],
-  "notes": "Roadmap moves to docs while workflow lifecycle remains planned. Approval stays not_started until separate Codex internal1.5, security/authorization/legacy, five-axis and design reviews reach zero findings. Stage 1 current commands are docs validators/tests/lint/typecheck/audit/diff; component/E2E/visual/a11y/browser/server-production/local-rehearsal evidence is future. Implementation waits for #9 runtime. #10 owns the existing Planner shell and PLANNER_WEEK plan-only composition, #12 owns MEAL_LOG UI, #13 owns compatibility tombstones."
+  "notes": "Roadmap remains docs while workflow lifecycle remains planned, approval not_started and verification pending. Approval stays not_started until fresh separate Codex internal1.5, security/authorization/legacy, five-axis and planner-shell-specific design critic reviews reach zero findings; this author does not approve its own changes. Stage 1 current commands are docs validators, focused Stage1/workflow tests, lint, typecheck, audit and diff. Component/E2E/visual/a11y/browser/server-production/local-rehearsal and authority evidence is future. #9 PR #1319 implementation is merged at base 8ba3fa5a2a198eb4f9c19d59cea5f6ccc52fdd4f, but Manual/server-Mac/OAuth, merged-exact server-production/local-rehearsal, capability, R/R+1/R+2 and activation remain pending. #10 owns the existing Planner shell and PLANNER_WEEK plan-only composition; #11 owns COOK_MODE/LEFTOVERS #8-consumer UI, #12 owns MEAL_LOG UI and must wait for merged-green #10 runtime, and #13 owns compatibility tombstones. Stage 2 backend implementation is N/A and no schema, migration, RLS, RPC, API field, endpoint or status is added."
 }

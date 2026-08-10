@@ -14,7 +14,11 @@
       "legacy-read-delete-owner-nondisclosure",
       "planner-nutrition-and-v1-decoder-compat-floor",
       "completed-shopping-read-only",
-      "no-home-food-search-widening"
+      "no-home-food-search-widening",
+      "current-official-tuple-v1.7.30-v1.5.34-v1.3.32-v1.3.32-v1.2.37",
+      "approved-cooking-plan-sha256-d4d0fb39-and-1018-line-lock",
+      "meal-log-core-implementation-merged-with-broader-lifecycle-still-pending",
+      "stage2-backend-implementation-na-no-schema-migration-rls-rpc-api-field-status"
     ],
     "verify_commands": [
       "pnpm verify:backend",
@@ -42,7 +46,11 @@
       "legacy-product-read-only-detail-delete",
       "meal-log-disabled-fail-closed",
       "segment-date-scroll-input-isolation",
-      "route-deep-link-back-focus-restoration"
+      "route-deep-link-back-focus-restoration",
+      "auth-return-segment-date-slot-pending-action-and-invoking-focus",
+      "roving-tabindex-arrow-home-end-tab-panel-entry-and-focus-fallback",
+      "seven-day-two-day-overview-dynamic-one-three-five-meal-columns",
+      "virtual-keyboard-bottom-tab-safe-area-and-no-page-overflow"
     ],
     "verify_commands": [
       "pnpm exec vitest run tests/planner-shell.test.tsx tests/planner-shell-history.test.tsx tests/planner-shell-legacy-product.test.tsx",
@@ -59,7 +67,11 @@
       "plan-nutrition-and-product-writer-ui-absent",
       "legacy-readonly-detail-delete-only",
       "home-recipe-only",
-      "390-320-desktop-density-focus-history-no-overflow"
+      "existing-401-403-404-error-contract-no-new-code",
+      "390-320-desktop-seven-day-two-day-overview-one-three-five-meal-columns-long-names-200-percent-localization-sticky-safe-area-no-overflow",
+      "PNG static-layout proof",
+      "Playwright history/focus/Escape proof",
+      "Manual physical keyboard/screen reader/device keyboard proof"
     ],
     "design_authority": {
       "ui_risk": "anchor-extension",
@@ -79,7 +91,6 @@
         "ui/designs/evidence/planner-shell/PLANNER_WEEK-mobile-default-shopping-read-only.png",
         "ui/designs/evidence/planner-shell/PLANNER_WEEK-mobile-default-legacy-read-only.png",
         "ui/designs/evidence/planner-shell/PLANNER_WEEK-mobile-default-meal-log-disabled.png",
-        "ui/designs/evidence/planner-shell/PLANNER_WEEK-mobile-default-segment-back-focus-sequence.png",
         "ui/designs/evidence/planner-shell/PLANNER_WEEK-mobile-narrow-default.png",
         "ui/designs/evidence/planner-shell/PLANNER_WEEK-mobile-narrow-loading.png",
         "ui/designs/evidence/planner-shell/PLANNER_WEEK-mobile-narrow-empty.png",
@@ -88,7 +99,6 @@
         "ui/designs/evidence/planner-shell/PLANNER_WEEK-mobile-narrow-shopping-read-only.png",
         "ui/designs/evidence/planner-shell/PLANNER_WEEK-mobile-narrow-legacy-read-only.png",
         "ui/designs/evidence/planner-shell/PLANNER_WEEK-mobile-narrow-meal-log-disabled.png",
-        "ui/designs/evidence/planner-shell/PLANNER_WEEK-mobile-narrow-segment-back-focus-sequence.png",
         "ui/designs/evidence/planner-shell/PLANNER_WEEK-desktop-default.png",
         "ui/designs/evidence/planner-shell/PLANNER_WEEK-desktop-loading.png",
         "ui/designs/evidence/planner-shell/PLANNER_WEEK-desktop-empty.png",
@@ -96,23 +106,18 @@
         "ui/designs/evidence/planner-shell/PLANNER_WEEK-desktop-unauthorized.png",
         "ui/designs/evidence/planner-shell/PLANNER_WEEK-desktop-shopping-read-only.png",
         "ui/designs/evidence/planner-shell/PLANNER_WEEK-desktop-legacy-read-only.png",
-        "ui/designs/evidence/planner-shell/PLANNER_WEEK-desktop-meal-log-disabled.png",
-        "ui/designs/evidence/planner-shell/PLANNER_WEEK-desktop-segment-back-focus-sequence.png"
+        "ui/designs/evidence/planner-shell/PLANNER_WEEK-desktop-meal-log-disabled.png"
       ],
       "authority_report_paths": ["ui/designs/authority/PLANNER_WEEK-authority.md"]
     }
   },
-  "external_smokes": [
-    "existing Planner route bottom-tab segment deep-link and back",
-    "other-owner legacy product delete nondisclosure",
-    "planner nutrition endpoint and legacy GET-delete compatibility",
-    "HOME recipe-only search regression",
-    "390px 320px desktop visual-a11y-authority evidence"
-  ],
+  "external_smokes": [],
   "blocked_conditions": [
     "stage1-independent-reviews-not-zero",
     "stage1-author-self-approval-or-claude-use",
-    "meal-log-core-runtime-not-merged-green-before-implementation",
+    "meal-log-core-merged-code-not-consumed-from-base-8ba3fa5a2a198eb4f9c19d59cea5f6ccc52fdd4f",
+    "meal-log-core-broader-lifecycle-manual-server-mac-oauth-merged-exact-capability-r-r1-r2-activation-falsely-promoted",
+    "meal-log-ui-implementation-started-before-planner-shell-runtime-merged-green",
     "new-bottom-tab-route-api-field-status-or-writer-invented",
     "plan-and-actual-log-row-total-cache-or-mutation-mixed",
     "planner-nutrition-legacy-get-delete-or-v1-cursor-removed-before-one-compatibility-release-and-slice13-approved-evidence-tombstone",
@@ -124,5 +129,5 @@
     "current-head-check-pending-absent-stale-failed-or-cancelled"
   ],
   "max_fix_rounds": {"backend": 3, "frontend": 6},
-  "notes": "Stage 1 runs docs validators, focused tests, lint, typecheck, audit and diff only. Component/E2E/visual/a11y/browser/local-first production-rehearsal evidence is future. #10 owns Planner shell and plan-only PLANNER_WEEK composition; #12 owns MEAL_LOG content, #13 owns legacy tombstones."
+  "notes": "Stage 1 runs only docs validators, the focused planner-shell Stage1 relock test plus workflow-doc tests, lint, typecheck, audit and diff. Current external_smokes is intentionally empty because component/E2E/visual/a11y/browser/local-first/server-production evidence belongs to future Stage 4/5/6 and cannot truthfully exist in this docs PR. The work item preserves those future obligations. #9 PR #1319 implementation is merged at base 8ba3fa5a2a198eb4f9c19d59cea5f6ccc52fdd4f, but merged-exact server-production/local-rehearsal, Manual/server-Mac/OAuth, capability, R/R+1/R+2 and activation remain pending. #10 owns Planner shell and plan-only PLANNER_WEEK composition; #11 owns COOK_MODE/LEFTOVERS #8-consumer UI, #12 owns MEAL_LOG content, #13 owns legacy tombstones. Stage 2 backend implementation is N/A; no schema, migration, RLS, RPC, endpoint, field or status is added."
 }

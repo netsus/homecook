@@ -1,4 +1,82 @@
-# PLANNER_WEEK 설계 리뷰
+# planner-shell #10 Stage 1 fresh independent design critique
+
+> task ID: `019fecf3-dac5-78e0-983d-deed2ac687b2`
+> review date: `2026-08-11`
+> role: fresh independent `design-critic`
+> verdict: `PASS` — blocker `0`, major `0`, minor `0`
+> scope: Stage 1 design contract and review evidence only. Product implementation, repair, product-design-authority, internal 1.5, Ready transition, merge, activation and external notification are not approved or performed here.
+
+## Reviewed exact tuple
+
+- PR: `#1326`, `OPEN`, `Draft`
+- branch: `docs/planner-shell-stage1-relock`
+- reviewed head: `0e48463d4aac784fd06be9014fd34ed73514a710`
+- reviewed tree: `31b9ca5e6df9cdd9e71c74d1e5bd761f600e6035`
+- base: `8ba3fa5a2a198eb4f9c19d59cea5f6ccc52fdd4f`
+- PR body SHA-256: `3dde10d220eedb3cd923d49b16cfa5fd2f878cd9f0b18d5a80b49e577fa47d29`
+- current-head check-runs at review: raw started `17` = success `12` + intended skip `5`; canonical unique contexts `14` = success `9` + intended skip `5`; fail/pending/cancel/rerun `0`; commit statuses `0`
+
+## Fresh re-review of previous HOLD
+
+Previous critic task `019fecc9-c471-7e02-9722-43b6ca6f3d89` reported B1 `1`, major `3`, and one evidence-separation minor. This review independently read the governing documents, current official five-source tuple, the complete 1,018-line managed plan artifact, PR body/diff/tests and the repaired workpack/design projections.
+
+### B1 — resolved
+
+- managed artifact: `docs/workpacks/planner-shell/evidence/cooking-meal-log-and-product-search-master-plan-20260722.md`
+- measured bytes: `233,219`
+- measured newline-terminated lines: `1,018`
+- measured SHA-256: `d4d0fb39e80eeffc8b1e73ad92f0d91a35a9b6adc57a556ea8c9ec6ecffa951d`
+- `tests/planner-shell-stage1-relock.test.ts` reads the artifact as a `Buffer`, hashes the actual bytes, counts actual newline bytes after UTF-8 decoding, checks the governed repository path, and rejects the displaced external absolute path. The exact hash locks the full byte length/content even though `233,219` is not a separate numeric test assertion.
+
+### M1 — resolved
+
+- `ui/designs/PLANNER_WEEK.md:17-92` locks 390px, 320px and desktop; all seven dates; at least two-day overview; dynamic 1/3/5 meal columns; long custom names; 200% scaling; localization expansion; planner-local scroll/sticky containment; bottom-tab safe area; virtual keyboard; and no page-level overflow.
+- The same contract is projected into `docs/workpacks/planner-shell/README.md:48-54`, acceptance and automation assertions, so this is not only an illustrative wireframe.
+
+### M2 — resolved
+
+- `ui/designs/PLANNER_WEEK.md:108-124` fixes the official empty label to `비어 있음`, retains current tap behavior, and puts any new add affordance/CTA behind a separately approved Contract Evolution Candidate.
+- README and acceptance repeat the no-new-CTA rule; the focused test rejects the prior `plan empty CTA` wording.
+
+### M3 — resolved
+
+- `ui/designs/PLANNER_WEEK.md:94-102` defines a tablist with selected-tab-only `tabindex=0`, Arrow Left/Right and Home/End focus+selection movement inside the tablist, and Tab entry into the selected panel.
+- Ordinary selection does not force panel focus. Forced panel/heading focus is limited to deep-link, auth-return, or invoker-loss fallback, eliminating the earlier contradiction.
+
+### Evidence responsibility — resolved
+
+- `ui/designs/PLANNER_WEEK.md:126-135` limits PNGs to static geometry, assigns browser history/focus/trap/restore/Escape sequences to Playwright, and keeps physical keyboard, screen reader, real-device safe-area and virtual-keyboard behavior as Manual evidence.
+- Stage 1 explicitly does not claim component/browser/screenshot/device/screen-reader/server-Mac/OAuth/merged-exact rehearsal/activation completion.
+
+## Boundary and lifecycle audit
+
+- no unofficial route, API, schema, migration, RLS, RPC, field, status or writer is introduced; existing `401 UNAUTHORIZED`, `403 FORBIDDEN` and `404 RESOURCE_NOT_FOUND` are official API contracts.
+- #10 owns Planner shell and plan-only `PLANNER_WEEK`; #11 remains `COOK_MODE/LEFTOVERS`, #12 remains `MEAL_LOG` body, and #13 remains compatibility/tombstones.
+- lifecycle stays `planned`; approval is `not_started`; verification is `pending`; evaluation is `not_started`; `auto_merge_eligible=false`.
+- Manual/server-Mac/OAuth, merged-exact server-production/local-rehearsal, capability, R/R+1/R+2, physical device and activation remain pending. No such completion is inferred from #9's merged backend code.
+
+## Verification
+
+- `pnpm validate:source-of-truth-sync` — pass
+- `pnpm validate:workflow-v2` — pass
+- `BRANCH_NAME=docs/planner-shell pnpm validate:workpack -- --slice planner-shell` — pass
+- `node scripts/validate-automation-spec.mjs --slice planner-shell` — pass
+- `pnpm validate:omo-bookkeeping` — pass
+- focused Vitest — `6 files / 57 tests` pass, including planner-shell relock `8/8`
+- `pnpm lint` — pass
+- `pnpm typecheck` — pass
+- `pnpm audit --audit-level high` — exit `0`; existing low `1`, moderate `1`, high/critical `0`
+- `git diff --check` — pass
+
+## Residual limitations, not findings
+
+- Static Stage 1 markdown cannot prove final rendered density, sticky behavior, scroll containment or bottom safe-area behavior.
+- Playwright evidence is future Stage 4 work and does not substitute for physical-keyboard or screen-reader verification.
+- Physical 390px/320px devices, VoiceOver/TalkBack-equivalent checks, server-Mac/OAuth, merged-exact rehearsal, capability/R/R+1/R+2 and activation remain explicitly pending.
+
+---
+
+# Historical PLANNER_WEEK design reviews
 
 > 검토 대상: `ui/designs/PLANNER_WEEK.md`
 > 기준 문서: 화면정의서 v1.2.3 §5 / 요구사항기준선 v1.6.3 §1-4 / API v1.2.2 §3 / `05-planner-week-core` accepted contract / AGENTS.md
