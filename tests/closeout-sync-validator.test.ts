@@ -742,10 +742,15 @@ describe("closeout sync validator", () => {
           text: "UI 연결",
           meta: metadata("delivery-ui", 4, "shared", "3,5,6"),
         },
+        {
+          checked: false,
+          text: "별도 Stage 2 완료",
+          meta: metadata("delivery-stage2-progress", 2, "backend", "3,6"),
+        },
       ],
       currentDeliveryItems: [
         {
-          checked: true,
+          checked: false,
           text: "백엔드 계약 고정",
           meta: metadata("delivery-backend-contract", 2, "backend", "3,6"),
         },
@@ -754,6 +759,11 @@ describe("closeout sync validator", () => {
           text: "UI 연결",
           meta: metadata("delivery-ui", 4, "shared", "6"),
         },
+        {
+          checked: true,
+          text: "별도 Stage 2 완료",
+          meta: metadata("delivery-stage2-progress", 2, "backend", "3,6"),
+        },
       ],
     });
 
@@ -761,6 +771,34 @@ describe("closeout sync validator", () => {
 
     expect(results).toEqual([]);
   });
+
+  it.each([
+    { baseChecked: false, currentChecked: true, transition: "unchecked to checked" },
+    { baseChecked: true, currentChecked: false, transition: "checked to unchecked" },
+  ])(
+    "rejects an invalid-base metadata repair that changes checked state from $transition",
+    ({ baseChecked, currentChecked }) => {
+      const { baseRootDir, rootDir } = createIncrementalBackendFixture({
+        baseDeliveryItems: [
+          {
+            checked: baseChecked,
+            text: "백엔드 계약 고정",
+          },
+        ],
+        currentDeliveryItems: [
+          {
+            checked: currentChecked,
+            text: "백엔드 계약 고정",
+            meta: metadata("delivery-backend-contract", 2, "backend", "3,6"),
+          },
+        ],
+      });
+
+      const results = validateIncrementalBackendFixture(rootDir, baseRootDir);
+
+      expectInvalidBaseChecklistContract(results);
+    },
+  );
 
   it("rejects an invalid-base metadata repair that also changes checklist text", () => {
     const { baseRootDir, rootDir } = createIncrementalBackendFixture({

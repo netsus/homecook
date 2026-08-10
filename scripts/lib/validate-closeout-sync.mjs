@@ -570,6 +570,10 @@ function normalizeRepairableBaseChecklistContract({ baseContract, currentContrac
         return null;
       }
     } else {
+      if (baseItem.checked !== currentItem.checked) {
+        return null;
+      }
+
       const diagnosedFields = new Set();
       let manualOnlyHeadingDiagnosed = false;
       for (const error of itemDiagnostics) {
