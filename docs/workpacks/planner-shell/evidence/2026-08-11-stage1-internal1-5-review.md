@@ -2,7 +2,7 @@
 
 ## 역할과 범위
 
-- reviewer task: `019fe028-be31-76f2-a5a7-986000a93374`
+- reviewer task: `019fed05-1676-72f2-85f0-e171994f4d55`
 - role: fresh independent `internal 1.5 docs-gate reviewer`
 - 이 task는 Stage 1 문서 gate만 검토한다. author/repair/design-critic/product-design-authority, 제품 구현, Stage 2+, Ready 전환, merge, activation, Discord/외부 알림은 수행하거나 승인하지 않는다.
 - original author, repair author, design-critic task와 분리된 검토다. Claude/Claude CLI/API는 사용하지 않았다.
