@@ -221,6 +221,18 @@ async function readFooterMetrics(page: Page, testId: string) {
   });
 }
 
+async function waitForFooterTransitions(page: Page, testId: string) {
+  await page.mouse.move(0, 0);
+  await page.getByTestId(testId).evaluate(async (root) => {
+    const animations = [...root.querySelectorAll("button")]
+      .flatMap((button) => button.getAnimations());
+    await Promise.all(animations.map((animation) => animation.finished.catch(() => undefined)));
+    await new Promise<void>((resolvePaint) => {
+      requestAnimationFrame(() => requestAnimationFrame(() => resolvePaint()));
+    });
+  });
+}
+
 function maxRgbChannelDelta(left: string, right: string) {
   const leftChannels = left.match(/[\d.]+/g)?.slice(0, 3).map(Number);
   const rightChannels = right.match(/[\d.]+/g)?.slice(0, 3).map(Number);
@@ -516,6 +528,7 @@ test("captures and verifies the Stage-4 viewport, state, and accessibility matri
       await expect(actionDialog.getByLabel("사유")).toHaveValue("상해서 폐기");
       runtime.confirmationBackRetained = true;
       await actionDialog.getByRole("button", { name: "내용 확인" }).click();
+      await waitForFooterTransitions(leftovers.page, "cooked-batch-action-actions");
       const leftoversFooter = await readFooterMetrics(leftovers.page, "cooked-batch-action-actions");
       expect(leftoversFooter.labels).toEqual(["입력 수정", "버림 기록"]);
       expect(leftoversFooter.fontSizes).toEqual([16, 16]);
