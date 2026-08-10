@@ -1,8 +1,8 @@
+import { isValidBranchSlug } from "./git-policy.mjs";
+
 export const PRODUCT_BRANCH_RECOVERY_SUFFIX = "-superseding-draft";
 
-const PRODUCT_BRANCH_PATTERN = /^feature\/(be|fe)-(.+)$/;
-const CANONICAL_SLICE_PATTERN = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/;
-const RESERVED_RECOVERY_TOKEN = "superseding";
+const PRODUCT_BRANCH_PATTERN = /^feature\/(be|fe)-(.*)$/;
 
 function emptyContext() {
   return {
@@ -31,13 +31,10 @@ export function parseProductBranchContext(branchName) {
   const branchSlice = match[2];
   const hasReservedSuffix = branchSlice.endsWith(PRODUCT_BRANCH_RECOVERY_SUFFIX);
 
-  if (
-    branchSlice.includes(RESERVED_RECOVERY_TOKEN)
-    && !hasReservedSuffix
-  ) {
+  if (!hasReservedSuffix && branchSlice.includes(`${PRODUCT_BRANCH_RECOVERY_SUFFIX}-`)) {
     failInvalidProductBranch(
       normalizedBranch,
-      `the reserved product recovery suffix must be exactly '${PRODUCT_BRANCH_RECOVERY_SUFFIX}'`,
+      `the product recovery suffix must be exactly one trailing '${PRODUCT_BRANCH_RECOVERY_SUFFIX}'`,
     );
   }
 
@@ -45,13 +42,17 @@ export function parseProductBranchContext(branchName) {
     ? branchSlice.slice(0, -PRODUCT_BRANCH_RECOVERY_SUFFIX.length)
     : branchSlice;
 
-  if (
-    !CANONICAL_SLICE_PATTERN.test(canonicalSlice)
-    || canonicalSlice.includes(RESERVED_RECOVERY_TOKEN)
-  ) {
+  if (hasReservedSuffix && canonicalSlice.includes(PRODUCT_BRANCH_RECOVERY_SUFFIX)) {
     failInvalidProductBranch(
       normalizedBranch,
-      "the canonical slice must be a lowercase hyphenated slug and cannot use the reserved recovery token",
+      `the product recovery suffix cannot be nested or repeated`,
+    );
+  }
+
+  if (!isValidBranchSlug(canonicalSlice)) {
+    failInvalidProductBranch(
+      normalizedBranch,
+      "the canonical slice must use the public lowercase hyphenated branch slug grammar",
     );
   }
 

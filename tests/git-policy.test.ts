@@ -7,6 +7,7 @@ import {
   isAllowedBranchName,
   isAllowedWorkBranchName,
   isProtectedBranchName,
+  isValidBranchSlug,
   isValidCommitMessage,
 } from "../scripts/lib/git-policy.mjs";
 
@@ -33,6 +34,15 @@ describe("git policy", () => {
   it("rejects invalid branch names", () => {
     expect(isAllowedBranchName("feature/login_gate")).toBe(false);
     expect(isAllowedBranchName("bugfix/auth")).toBe(false);
+  });
+
+  it("owns the public lowercase hyphenated branch slug grammar", () => {
+    expect(isValidBranchSlug("01-recipe")).toBe(true);
+    expect(isValidBranchSlug("wave1")).toBe(true);
+    expect(isValidBranchSlug("menu-superseding-notes")).toBe(true);
+    expect(isValidBranchSlug("")).toBe(false);
+    expect(isValidBranchSlug("cooked--batch")).toBe(false);
+    expect(isValidBranchSlug("Cooked-batch")).toBe(false);
   });
 
   it("accepts conventional commit messages", () => {

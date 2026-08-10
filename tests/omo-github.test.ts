@@ -707,6 +707,34 @@ describe("OMO GitHub automation client", () => {
     expect(argsLog).toContain("exploratory QA skipped");
   });
 
+  it("infers the canonical work item when creating a successor product PR", () => {
+    const rootDir = mkdtempSync(join(tmpdir(), "omo-gh-infer-successor-workitem-"));
+    const { binPath, argsPath } = createFakeGhBin(rootDir);
+    const client = createGithubAutomationClient({
+      rootDir,
+      ghBin: binPath,
+      environment: {
+        FAKE_GH_ARGS_PATH: argsPath,
+      },
+    });
+
+    client.createPullRequest({
+      base: "master",
+      head: "feature/be-08b-meal-add-books-pantry-superseding-draft",
+      title: "fix: preserve backend product gates",
+      body: "## Summary\n- successor backend",
+      draft: true,
+    });
+
+    const argsLog = readFileSync(argsPath, "utf8");
+    expect(argsLog).toContain(
+      ".workflow-v2/work-items/08b-meal-add-books-pantry.json",
+    );
+    expect(argsLog).not.toContain(
+      ".workflow-v2/work-items/08b-meal-add-books-pantry-superseding-draft.json",
+    );
+  });
+
   it("fills Actual Verification from declared external_smokes when the section is missing", () => {
     const rootDir = mkdtempSync(join(tmpdir(), "omo-gh-actual-verification-"));
     const { binPath, argsPath } = createFakeGhBin(rootDir);

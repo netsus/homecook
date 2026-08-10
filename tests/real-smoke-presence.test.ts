@@ -167,6 +167,31 @@ describe("real smoke presence validator", () => {
     );
   });
 
+  it("enforces identical smoke evidence on canonical and successor backend branches", () => {
+    const rootDir = createFixture({
+      externalSmokes: ["pnpm dev:local-supabase"],
+    });
+    const canonical = validateRealSmokePresence({
+      rootDir,
+      env: {
+        ...process.env,
+        BRANCH_NAME: "feature/be-06-recipe-to-planner",
+        PR_IS_DRAFT: "false",
+      },
+    });
+    const successor = validateRealSmokePresence({
+      rootDir,
+      env: {
+        ...process.env,
+        BRANCH_NAME: "feature/be-06-recipe-to-planner-superseding-draft",
+        PR_IS_DRAFT: "false",
+      },
+    });
+
+    expect(canonical).not.toEqual([]);
+    expect(successor).toEqual(canonical);
+  });
+
   it("passes when Actual Verification records local Supabase/bootstrap smoke evidence", () => {
     const rootDir = createFixture({
       externalSmokes: ["pnpm dev:local-supabase", "pnpm dev:demo"],
