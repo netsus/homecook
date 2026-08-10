@@ -713,6 +713,64 @@ describe("closeout sync validator", () => {
     expect(results).toEqual([]);
   });
 
+  it("accepts a metadata-only repair of an invalid base checklist while preserving its items", () => {
+    const { baseRootDir, rootDir } = createIncrementalBackendFixture({
+      baseDeliveryItems: [
+        {
+          checked: false,
+          text: "백엔드 계약 고정",
+        },
+        {
+          checked: false,
+          text: "UI 연결",
+          meta: metadata("delivery-ui", 4, "shared", "3,5,6"),
+        },
+      ],
+      currentDeliveryItems: [
+        {
+          checked: true,
+          text: "백엔드 계약 고정",
+          meta: metadata("delivery-backend-contract", 2, "backend", "3,6"),
+        },
+        {
+          checked: false,
+          text: "UI 연결",
+          meta: metadata("delivery-ui", 4, "shared", "6"),
+        },
+      ],
+    });
+
+    const results = validateIncrementalBackendFixture(rootDir, baseRootDir);
+
+    expect(results).toEqual([]);
+  });
+
+  it("rejects an invalid-base metadata repair that also changes checklist text", () => {
+    const { baseRootDir, rootDir } = createIncrementalBackendFixture({
+      baseDeliveryItems: [
+        {
+          checked: false,
+          text: "백엔드 계약 고정",
+        },
+      ],
+      currentDeliveryItems: [
+        {
+          checked: true,
+          text: "변경된 백엔드 계약",
+          meta: metadata("delivery-backend-contract", 2, "backend", "3,6"),
+        },
+      ],
+    });
+
+    const results = validateIncrementalBackendFixture(rootDir, baseRootDir);
+
+    expect(results[0]?.errors).toEqual([
+      expect.objectContaining({
+        message: expect.stringContaining("invalid base checklist contract"),
+      }),
+    ]);
+  });
+
   it("reads the base checklist contract from origin/master in the policy runtime", () => {
     const rootDir = createFixture({
       roadmapStatus: "docs",

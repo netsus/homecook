@@ -185,10 +185,13 @@ segment switch:
 - legacy product API/decoder removal or strict tombstone (#13).
 - new nutrition goals, weekly analysis, medical guidance, bottom tab, route, API, field or status.
 
-## Design / Accessibility Authority
+## Design Authority
 
 - UI risk: high-risk anchor extension of `PLANNER_WEEK`.
-- anchor screen: `PLANNER_WEEK`; required screen: `PLANNER_WEEK`.
+- Anchor screen dependency: `PLANNER_WEEK`; required screen: `PLANNER_WEEK`.
+- Visual artifact: canonical `ui/designs/PLANNER_WEEK.md`; future Stage 4 screenshot evidence paths are declared in `automation-spec.json`.
+- Authority status: `required`
+- Notes: refreshed Stage 4 runtime evidence and a fresh product-design-authority verdict remain pending; this metadata repair does not claim Stage 4 authority completion.
 - before Stage 2, update canonical `ui/designs/PLANNER_WEEK.md` for the two-segment shell, plan-only hierarchy, legacy read-only section and all states, then obtain independent critique at `ui/designs/critiques/PLANNER_WEEK-critique.md`.
 - legacy design/critique/authority artifacts are not #10 evidence unless explicitly refreshed against this contract.
 - Stage 4 requires mobile-default 390px, mobile-narrow 320px and desktop evidence covering default, loading, empty, error, unauthorized, shopping read-only and legacy read-only. Static PNG, Playwright interaction, and Manual Only proof remain separate evidence classes.
@@ -218,10 +221,12 @@ segment switch:
 
 ## Delivery Checklist
 
-- [x] Stage 1 exact-six docs authored
-- [ ] internal1.5/security/five-axis/design reviews approved with zero findings
-- [ ] every check started for the current head SHA is terminal green or an intended skip
-- [ ] post-merge master QA/Policy/Security/Vercel checks green
-- [x] Stage 2 existing-behavior characterization baseline GREEN; backend implementation/TDD behavior RED is N/A because runtime repair is N/A
-- [ ] Stage 4 390/320/desktop visual-a11y-route evidence green
-- [ ] product-design-authority approved before confirmed
+- [x] Stage 1 exact-six docs authored <!-- omo:id=delivery-planner-shell-stage1-docs;stage=2;scope=shared;review=3,6 -->
+- [ ] internal1.5/security/five-axis/design reviews approved with zero findings <!-- omo:id=delivery-planner-shell-independent-reviews;stage=2;scope=shared;review=3,6 -->
+- [ ] every check started for the current head SHA is terminal green or an intended skip <!-- omo:id=delivery-planner-shell-current-head-checks;stage=2;scope=shared;review=3,6 -->
+- [ ] post-merge master QA/Policy/Security/Vercel checks green <!-- omo:id=delivery-planner-shell-post-merge-checks;stage=2;scope=shared;review=6 -->
+- [ ] Stage 2 TDD RED before implementation <!-- omo:id=delivery-planner-shell-stage2-characterization;stage=2;scope=backend;review=3,6 -->
+- [ ] Stage 4 390/320/desktop visual-a11y-route evidence green <!-- omo:id=delivery-planner-shell-stage4-evidence;stage=4;scope=frontend;review=5,6 -->
+- [ ] product-design-authority approved before confirmed <!-- omo:id=delivery-planner-shell-design-authority;stage=4;scope=frontend;review=5,6 -->
+
+Stage 2 note: this test-only slice recorded an existing-behavior characterization baseline GREEN. Backend implementation and a behavioral TDD RED are N/A because no runtime repair was required; the stale generic checklist item therefore remains unchecked.

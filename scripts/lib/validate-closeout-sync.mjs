@@ -420,6 +420,112 @@ function isChecklistItemClosed(item) {
   return item?.checked === true || item?.metadata?.waived === true;
 }
 
+function checklistItemPath(item) {
+  return `${item?.filePath}:${item?.lineNumber}`;
+}
+
+function isCanonicalManualOnlyHeadingRepair(baseItem, currentItem) {
+  return (
+    baseItem?.source === "acceptance" &&
+    baseItem?.section === "Manual Only" &&
+    baseItem?.subsection === null &&
+    baseItem?.manualOnly === false &&
+    currentItem?.source === "acceptance" &&
+    currentItem?.subsection === "Manual Only" &&
+    currentItem?.manualOnly === true &&
+    baseItem?.checked === currentItem?.checked
+  );
+}
+
+function normalizeRepairableBaseChecklistContract({ baseContract, currentContract }) {
+  if (
+    !Array.isArray(baseContract?.errors) ||
+    baseContract.errors.length === 0 ||
+    !Array.isArray(currentContract?.errors) ||
+    currentContract.errors.length > 0
+  ) {
+    return null;
+  }
+
+  const baseItems = Array.isArray(baseContract.items) ? baseContract.items : [];
+  const currentItems = Array.isArray(currentContract.items) ? currentContract.items : [];
+  if (baseItems.length !== currentItems.length) {
+    return null;
+  }
+
+  const baseItemPaths = new Set(baseItems.map((item) => checklistItemPath(item)));
+  if (!baseContract.errors.every((error) => baseItemPaths.has(error?.path))) {
+    return null;
+  }
+
+  const invalidBasePaths = new Set(baseContract.errors.map((error) => error.path));
+  const normalizedItems = [];
+
+  for (let index = 0; index < baseItems.length; index += 1) {
+    const baseItem = baseItems[index];
+    const currentItem = currentItems[index];
+    if (
+      baseItem?.source !== currentItem?.source ||
+      baseItem?.text !== currentItem?.text
+    ) {
+      return null;
+    }
+
+    const baseItemHasError = invalidBasePaths.has(checklistItemPath(baseItem));
+    if (!baseItemHasError) {
+      if (
+        baseItem.manualOnly !== currentItem.manualOnly ||
+        baseItem.section !== currentItem.section ||
+        baseItem.subsection !== currentItem.subsection ||
+        JSON.stringify(checklistContractMetadata(baseItem)) !==
+          JSON.stringify(checklistContractMetadata(currentItem)) ||
+        JSON.stringify(checklistWaiverMetadata(baseItem)) !==
+          JSON.stringify(checklistWaiverMetadata(currentItem))
+      ) {
+        return null;
+      }
+    } else if (currentItem.manualOnly) {
+      if (!isCanonicalManualOnlyHeadingRepair(baseItem, currentItem)) {
+        return null;
+      }
+    } else {
+      if (
+        baseItem.section !== currentItem.section ||
+        baseItem.subsection !== currentItem.subsection ||
+        !currentItem.metadata
+      ) {
+        return null;
+      }
+
+      if (
+        baseItem.metadata?.id &&
+        baseItem.metadata.id !== currentItem.metadata.id
+      ) {
+        return null;
+      }
+
+      if (
+        baseItem.metadata?.waived === true &&
+        JSON.stringify(checklistWaiverMetadata(baseItem)) !==
+          JSON.stringify(checklistWaiverMetadata(currentItem))
+      ) {
+        return null;
+      }
+    }
+
+    normalizedItems.push({
+      ...currentItem,
+      checked: baseItem.checked,
+    });
+  }
+
+  return {
+    ...baseContract,
+    items: normalizedItems,
+    errors: [],
+  };
+}
+
 function validateIncrementalBackendChecklist({
   slice,
   currentContract,
@@ -445,7 +551,15 @@ function validateIncrementalBackendChecklist({
     ];
   }
 
-  if (baseContract.errors.length > 0) {
+  const comparableBaseContract =
+    baseContract.errors.length > 0
+      ? normalizeRepairableBaseChecklistContract({
+          baseContract,
+          currentContract,
+        })
+      : baseContract;
+
+  if (!comparableBaseContract) {
     return [
       {
         path: baseContract.automationSpecPath,
@@ -457,7 +571,7 @@ function validateIncrementalBackendChecklist({
 
   const errors = [];
   const currentItems = indexNonManualChecklistItems(currentContract);
-  const baseItems = indexNonManualChecklistItems(baseContract);
+  const baseItems = indexNonManualChecklistItems(comparableBaseContract);
   const currentIds = [...currentItems.keys()].sort();
   const baseIds = [...baseItems.keys()].sort();
 
