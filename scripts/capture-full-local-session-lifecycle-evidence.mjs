@@ -22,6 +22,11 @@ import { spawnSync } from "node:child_process";
 
 import { buildFullLocalProductCatalogCtesSql } from "./lib/full-local-product-catalog.mjs";
 import { buildFullLocalAuthorizationContractCtesSql } from "./full-local-production-runtime.mjs";
+import { summarizeCloudflareMonitoring } from "./lib/cloudflare-external-probe.mjs";
+import {
+  localConnectorHealthExitCode,
+  validateLocalConnectorHealth,
+} from "./lib/cloudflare-tunnel-health.mjs";
 
 export const EXPECTED_LIVE_ROOT = "/Users/cwj/01_vibe_coding/homecook-full-local-restore";
 export const REFRESH_LIFECYCLE_JSON_SCRIPT =
@@ -96,6 +101,15 @@ const EXACT_KEYS = Object.freeze({
   incident: ["binding_created_at", "binding_expires_at", "first_stale_at", "affected_route_classes"],
   verification: ["production_domain_contract_gate", "refresh_lifecycle_gate", "authority_static_contracts", "postgres_integration", "docker_refresh_smoke", "security_function_gate", "gotrue_policy_gate", "recent_auth_security_gate", "t65_canary", "canary_results", "account_session_stale_count", "stale_token_mutation_count"],
   canary_results: CANARY_RESULT_KEYS,
+  cloudflare_monitoring: [
+    "schema",
+    "version",
+    "status",
+    "incident_count",
+    "critical_count",
+    "warning_count",
+    "diagnostic_count",
+  ],
 });
 
 function run(command, args, options = {}) {
@@ -313,7 +327,13 @@ function isUtcIsoTimestamp(value) {
 
 export function validateSessionLifecycleEvidence(evidence) {
   const errors = [];
-  if (!exactObjectKeys(evidence, EXACT_KEYS.root, "evidence", errors)) {
+  const rootKeys = evidence !== null
+    && typeof evidence === "object"
+    && !Array.isArray(evidence)
+    && Object.hasOwn(evidence, "cloudflare_monitoring")
+    ? [...EXACT_KEYS.root, "cloudflare_monitoring"]
+    : EXACT_KEYS.root;
+  if (!exactObjectKeys(evidence, rootKeys, "evidence", errors)) {
     return errors;
   }
   exactObjectKeys(evidence.source, EXACT_KEYS.source, "source", errors);
@@ -327,6 +347,58 @@ export function validateSessionLifecycleEvidence(evidence) {
     "verification.canary_results",
     errors,
   );
+  if (Object.hasOwn(evidence, "cloudflare_monitoring")) {
+    exactObjectKeys(
+      evidence.cloudflare_monitoring,
+      EXACT_KEYS.cloudflare_monitoring,
+      "cloudflare_monitoring",
+      errors,
+    );
+    const monitoring = evidence.cloudflare_monitoring;
+    if (monitoring?.schema !== "homecook.cloudflare-monitoring-summary") {
+      errors.push("cloudflare_monitoring.schema is invalid.");
+    }
+    if (monitoring?.version !== 1) errors.push("cloudflare_monitoring.version must equal 1.");
+    if (!["healthy", "degraded", "warning", "critical", "unknown"].includes(monitoring?.status)) {
+      errors.push("cloudflare_monitoring.status is invalid.");
+    }
+    for (const key of [
+      "incident_count",
+      "critical_count",
+      "warning_count",
+      "diagnostic_count",
+    ]) {
+      if (!Number.isSafeInteger(monitoring?.[key]) || monitoring[key] < 0) {
+        errors.push(`cloudflare_monitoring.${key} must be a non-negative integer.`);
+      }
+    }
+    if (
+      Number.isSafeInteger(monitoring?.incident_count)
+      && Number.isSafeInteger(monitoring?.critical_count)
+      && Number.isSafeInteger(monitoring?.warning_count)
+      && Number.isSafeInteger(monitoring?.diagnostic_count)
+      && monitoring.incident_count !== monitoring.critical_count
+        + monitoring.warning_count
+        + monitoring.diagnostic_count
+    ) {
+      errors.push("cloudflare_monitoring.incident_count must equal severity counts.");
+    }
+    if (
+      Number.isSafeInteger(monitoring?.critical_count)
+      && Number.isSafeInteger(monitoring?.warning_count)
+    ) {
+      const expectedStatus = monitoring.critical_count > 0
+        ? "critical"
+        : monitoring.warning_count > 0
+          ? "warning"
+          : ["healthy", "degraded", "unknown"].includes(monitoring.status)
+            ? monitoring.status
+            : null;
+      if (expectedStatus === null || monitoring.status !== expectedStatus) {
+        errors.push("cloudflare_monitoring.status must match severity counts.");
+      }
+    }
+  }
 
   if (evidence.schema_version !== 1) errors.push("schema_version must equal 1.");
   if (!ALLOWED_PHASES.includes(evidence.phase)) errors.push("phase is invalid.");
@@ -430,6 +502,7 @@ export function buildSessionLifecycleEvidence({
   migrationHeadSource,
   phase,
   productionDomainContractGate,
+  cloudflareMonitoring = null,
   observation = {},
   verification = {},
 }) {
@@ -490,6 +563,9 @@ export function buildSessionLifecycleEvidence({
       stale_token_mutation_count: observation.staleTokenMutationCount ?? 0,
       ...verification,
     },
+    ...(cloudflareMonitoring === null ? {} : {
+      cloudflare_monitoring: cloudflareMonitoring,
+    }),
   };
 }
 
@@ -1068,6 +1144,29 @@ function verifyPublicOrigins() {
     && /^HTTP\/\S+ 401\b/mu.test(authHeaders);
 }
 
+export function collectCloudflareMonitoringSummary({
+  implementationRoot,
+  commandRunner = run,
+}) {
+  try {
+    const result = commandRunner(
+      process.execPath,
+      [path.join(implementationRoot, "scripts/cloudflare-tunnel-health.mjs")],
+      { cwd: implementationRoot, allowFailure: true },
+    );
+    if (result.signal !== null || ![0, 1].includes(result.status)) return null;
+    const raw = stdoutText(result);
+    if (Buffer.byteLength(raw, "utf8") > 1_048_576) return null;
+    const localHealth = JSON.parse(raw);
+    if (!validateLocalConnectorHealth(localHealth)) return null;
+    const expectedExit = localConnectorHealthExitCode(localHealth);
+    if (expectedExit === null || result.status !== expectedExit) return null;
+    return summarizeCloudflareMonitoring({ local_health: localHealth });
+  } catch {
+    return null;
+  }
+}
+
 function parseCliArgs(argv) {
   const [phase, ...rest] = argv;
   let liveRoot;
@@ -1153,6 +1252,7 @@ export function captureSessionLifecycleEvidence({ implementationRoot, liveRoot, 
     migrationHeadSource: migration.migrationHeadSource,
     phase,
     productionDomainContractGate,
+    cloudflareMonitoring: collectCloudflareMonitoringSummary({ implementationRoot }),
     observation,
     verification,
   });
