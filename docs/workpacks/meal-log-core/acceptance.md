@@ -74,8 +74,8 @@
 - [ ] product/ingredient discovery consumes #1 single ranked typed union/cursor without client merge <!-- omo:id=accept-meal-log-search-reader;stage=2;scope=shared;review=3,6 -->
 - [ ] effective product/ingredient identity consumes #2 approved represents projection only <!-- omo:id=accept-meal-log-effective-ingredient;stage=2;scope=shared;review=3,6 -->
 - [ ] batch choices consume #8 owner read model without raw protected-column inference <!-- omo:id=accept-meal-log-batch-reader;stage=2;scope=shared;review=3,6 -->
-- [ ] #10 alone owns Planner shell navigation <!-- omo:id=accept-meal-log-planner-shell-boundary;stage=4;scope=shared;review=5,6 -->
-- [ ] #12 alone owns MEAL_LOG UI, sheets, recent/frequent UX and design authority <!-- omo:id=accept-meal-log-ui-boundary;stage=4;scope=shared;review=5,6 -->
+- [ ] #10 alone owns Planner shell navigation <!-- omo:id=accept-meal-log-planner-shell-boundary;stage=4;scope=shared;review=6 -->
+- [ ] #12 alone owns MEAL_LOG UI, sheets, recent/frequent UX and design authority <!-- omo:id=accept-meal-log-ui-boundary;stage=4;scope=shared;review=6 -->
 - [ ] weekly analysis, goals, medical advice and generalized free-text food remain out of scope <!-- omo:id=accept-meal-log-product-boundary;stage=2;scope=shared;review=3,6 -->
 
 ## Error / Contract Safety
@@ -92,7 +92,7 @@
 - [x] implementation records failing route/DB tests before production changes <!-- omo:id=accept-meal-log-tdd-red;stage=2;scope=shared;review=3,6 -->
 - [ ] PostgreSQL fresh/replay covers RLS, exact-one checks, deferred pointer, RPCs and cleanup <!-- omo:id=accept-meal-log-postgres;stage=2;scope=backend;review=3,6 -->
 - [ ] A/B real DB digests prove nondisclosure, idempotency and zero-write failures <!-- omo:id=accept-meal-log-real-db;stage=2;scope=backend;review=3,6 -->
-- [ ] integration tests cover three sources, timezone/DST, evidence, aggregate and concurrent replay <!-- omo:id=accept-meal-log-integration;stage=4;scope=backend;review=3,6 -->
+- [ ] integration tests cover three sources, timezone/DST, evidence, aggregate and concurrent replay <!-- omo:id=accept-meal-log-integration;stage=2;scope=backend;review=3,6 -->
 - [ ] local-first verifier is merged-exact-SHA server-production/local-rehearsal read-only and flags stay off until release gate <!-- omo:id=accept-meal-log-remote;stage=2;scope=shared;review=3,6 -->
 - [ ] independent internal1.5/security-DB/five-axis/Stage3/6 reviews have zero findings <!-- omo:id=accept-meal-log-independent-review;stage=2;scope=shared;review=3,6 -->
 - [ ] current-head PR and post-merge QA/Policy/Security/Vercel are green/intended skip <!-- omo:id=accept-meal-log-ci;stage=2;scope=shared;review=3,6 -->
@@ -103,6 +103,6 @@
 - environment: local Supabase/PostgreSQL, owner A/B, merged-exact-SHA server-production/local-rehearsal read-only; production flags excluded
 - scenarios: three-source create/replay, batch edit/delete/interleaving, timezone/DST, slot deletion, exact evidence, aggregate states, account cleanup
 
-## Manual Only
+### Manual Only
 
 - [ ] production capability activation occurs only in the approved release train after predecessor and server-production/local-rehearsal evidence
