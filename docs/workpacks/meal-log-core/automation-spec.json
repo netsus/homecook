@@ -115,16 +115,7 @@
       "authority_report_paths": []
     }
   },
-  "external_smokes": [
-    "merged-exact-SHA server-production/local-rehearsal read-only meal-log schema function ACL RLS constraint and capability inventory",
-    "two-owner three-source nondisclosure and before-after multi-table digests",
-    "same-key replay and different-payload zero-effect",
-    "POST PATCH DELETE malformed UUID key exact 400 INVALID_IDEMPOTENCY_KEY and seven-surface zero-write",
-    "interleaved batch entries own-event reversal and full-replay checksum",
-    "IANA timezone DST null-instant and historical no-regroup",
-    "product-version ingredient-profile conversion provenance and aggregate state",
-    "account-cleanup pointer-event-entry order with public-shared source preservation"
-  ],
+  "external_smokes": [],
   "blocked_conditions": [
     "stage1-artifacts-not-approved-by-separate-codex-internal-1.5-reviewer",
     "stage1-author-self-approval-or-claude-use",
@@ -149,11 +140,12 @@
     "slice10-shell-or-slice12-ui-design-preclaimed",
     "unofficial-contract-unmerged-migration-production-write-or-capability-change",
     "local-first-verifier-not-merged-exact-sha",
+    "full-lifecycle-closeout-before-external-smokes-relocked-from-work-item-future-gate",
     "current-head-check-pending-absent-stale-failed-or-cancelled"
   ],
   "max_fix_rounds": {
     "backend": 6,
     "frontend": 0
   },
-  "notes": "High-risk DB/security/concurrency Stage 1 backend lock on current official tuple v1.7.30/v1.5.34/v1.3.32/v1.3.32/v1.2.37 and approved cooking-plan SHA d4d0fb39 (1,018 lines). Stage 1 runs only current docs validators, focused tests, lint, typecheck, audit and diff. Runtime/PostgreSQL/real DB/E2E/server-production/local-rehearsal evidence is future. Implementation waits for #1, #2, #4 and #8 runtime. #9 owns meal-log schema/RLS/RPC/API and exact evidence; #11 may proceed in parallel only within COOK_MODE/LEFTOVERS #8-consumer UI ownership; #10 owns Planner shell, #12 owns MEAL_LOG UI/design, and production activation remains Manual Only."
+  "notes": "High-risk DB/security/concurrency Stage 1 backend lock on current official tuple v1.7.30/v1.5.34/v1.3.32/v1.3.32/v1.2.37 and approved cooking-plan SHA d4d0fb39 (1,018 lines). Stage 1 runs only current docs validators, focused tests, lint, typecheck, audit and diff. Runtime/PostgreSQL/real DB/E2E/server-production/local-rehearsal evidence is future. The current automation external_smokes list is empty for the first backend implementation Ready gate because its merged-exact and Manual evidence cannot truthfully exist before merge; the work-item workflow.external_smokes list preserves all eight full-lifecycle obligations. Because #9 is backend-only, a fresh post-merge/release closeout actor must relock the current list from that preserved work-item gate before claiming full-lifecycle completion; this sequencing is not a waiver. Implementation waits for #1, #2, #4 and #8 runtime. #9 owns meal-log schema/RLS/RPC/API and exact evidence; #11 may proceed in parallel only within COOK_MODE/LEFTOVERS #8-consumer UI ownership; #10 owns Planner shell, #12 owns MEAL_LOG UI/design, and production activation remains Manual Only."
 }

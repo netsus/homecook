@@ -1,0 +1,119 @@
+{
+  "schema_version": 1,
+  "slice": "meal-log-core",
+  "migration": "supabase/migrations/20260810120000_meal_log_core.sql",
+  "deployment_state": "pre-deployment",
+  "baseline_application_contract_count": 74,
+  "functions": [
+    {
+      "signature": "private.assert_meal_log_pointer_pair()",
+      "control_class": "application-controlled",
+      "effect": "trigger/internal",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "owner": "postgres",
+      "security_mode": "definer",
+      "safe_search_path": ["pg_catalog", "public", "private", "pg_temp"]
+    },
+    {
+      "signature": "private.compact_meal_log_nutrition(text, jsonb, numeric)",
+      "control_class": "application-controlled",
+      "effect": "read-only",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "owner": "postgres",
+      "security_mode": "definer",
+      "safe_search_path": ["pg_catalog", "public", "private", "pg_temp"]
+    },
+    {
+      "signature": "private.cleanup_meal_log_before_cooked_batch_delete()",
+      "control_class": "application-controlled",
+      "effect": "trigger/internal",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "owner": "postgres",
+      "security_mode": "definer",
+      "safe_search_path": ["pg_catalog", "public", "private", "pg_temp"]
+    },
+    {
+      "signature": "private.cleanup_meal_log_before_user_delete()",
+      "control_class": "application-controlled",
+      "effect": "trigger/internal",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "owner": "postgres",
+      "security_mode": "definer",
+      "safe_search_path": ["pg_catalog", "public", "private", "pg_temp"]
+    },
+    {
+      "signature": "private.fold_meal_log_nutrition_status(bigint, bigint, bigint)",
+      "control_class": "application-controlled",
+      "effect": "read-only",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "owner": "postgres",
+      "security_mode": "definer",
+      "safe_search_path": ["pg_catalog", "public", "private", "pg_temp"]
+    },
+    {
+      "signature": "private.project_meal_log_entry(meal_log_entries)",
+      "control_class": "application-controlled",
+      "effect": "read-only",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "owner": "postgres",
+      "security_mode": "definer",
+      "safe_search_path": ["pg_catalog", "public", "private", "pg_temp"]
+    },
+    {
+      "signature": "private.resolve_meal_log_product_nutrition(uuid, jsonb, numeric, text, boolean)",
+      "control_class": "application-controlled",
+      "effect": "read-only",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "owner": "postgres",
+      "security_mode": "definer",
+      "safe_search_path": ["pg_catalog", "public", "private", "pg_temp"]
+    },
+    {
+      "signature": "private.resolve_meal_log_profile_nutrition(uuid, numeric, text, boolean)",
+      "control_class": "application-controlled",
+      "effect": "read-only",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "owner": "postgres",
+      "security_mode": "definer",
+      "safe_search_path": ["pg_catalog", "public", "private", "pg_temp"]
+    },
+    {
+      "signature": "public.get_meal_log_day(uuid, timestamp with time zone, text, integer, timestamp with time zone, date)",
+      "control_class": "application-controlled",
+      "effect": "read-only",
+      "exposure": "service-internal",
+      "allowed_principals": ["service_role"],
+      "owner": "postgres",
+      "security_mode": "definer",
+      "safe_search_path": ["pg_catalog", "public", "private", "pg_temp"]
+    },
+    {
+      "signature": "public.get_recent_meal_log_sources(uuid, timestamp with time zone, text, integer, timestamp with time zone, integer, date, uuid)",
+      "control_class": "application-controlled",
+      "effect": "read-only",
+      "exposure": "service-internal",
+      "allowed_principals": ["service_role"],
+      "owner": "postgres",
+      "security_mode": "definer",
+      "safe_search_path": ["pg_catalog", "public", "private", "pg_temp"]
+    },
+    {
+      "signature": "public.mutate_meal_log_entry(uuid, timestamp with time zone, text, integer, timestamp with time zone, text, uuid, uuid, bigint, jsonb, timestamp with time zone)",
+      "control_class": "application-controlled",
+      "effect": "mutation",
+      "exposure": "service-internal",
+      "allowed_principals": ["service_role"],
+      "owner": "postgres",
+      "security_mode": "definer",
+      "safe_search_path": ["pg_catalog", "public", "private", "pg_temp"]
+    }
+  ]
+}
