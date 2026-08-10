@@ -1,6 +1,7 @@
+import { parseProductBranchContext } from "./product-branch-context.mjs";
+
 export function resolveSliceFromBranch(branchName) {
-  const match = /^feature\/(be|fe)-(.+)$/.exec(branchName);
-  return match ? match[2] : null;
+  return parseProductBranchContext(branchName).slice;
 }
 
 export function resolveWorkpackSlice({ slice, baseRef, spawnSyncFn }) {

@@ -158,15 +158,22 @@ function runValidator({
   slice,
   bodyPath,
   mode = "frontend",
+  branch,
 }: {
   rootDir: string;
   slice: string;
   bodyPath: string;
   mode?: "backend" | "frontend";
+  branch?: string;
 }) {
+  const args = [SCRIPT_PATH, "--slice", slice, "--pr-body", bodyPath, "--mode", mode];
+  if (branch) {
+    args.push("--branch", branch);
+  }
+
   return spawnSync(
     "node",
-    [SCRIPT_PATH, "--slice", slice, "--pr-body", bodyPath, "--mode", mode],
+    args,
     {
       cwd: rootDir,
       encoding: "utf8",
@@ -216,6 +223,22 @@ describe("PR-ready validator", () => {
     const result = runValidator({
       ...fixture,
       mode: "backend",
+    });
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain("PR ready validation passed");
+  });
+
+  it("keeps a backend successor on the canonical Ready path", () => {
+    const fixture = createFixture("pass — test-only backend verification", {
+      automationExternalSmokes: [],
+      workItemExternalSmokes: ["pnpm dev:local-supabase"],
+    });
+
+    const result = runValidator({
+      ...fixture,
+      mode: "backend",
+      branch: `feature/be-${fixture.slice}-superseding-draft`,
     });
 
     expect(result.status).toBe(0);

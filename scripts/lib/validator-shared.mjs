@@ -2,7 +2,10 @@ import { existsSync, readFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { resolve } from "node:path";
 
-const CLOSEOUT_SLICE_BRANCH_PATTERN = /^docs\/omo-closeout-([0-9]{2}[-a-z0-9]+)$/;
+import { isValidBranchSlug } from "./git-policy.mjs";
+import { parseProductBranchContext } from "./product-branch-context.mjs";
+
+const CLOSEOUT_BRANCH_PREFIX = "docs/omo-closeout-";
 
 export function resolveBranchName({
   rootDir = process.cwd(),
@@ -41,39 +44,33 @@ export function resolveSliceBranchContext(
     includeCloseout = true,
   } = {},
 ) {
-  if (includeBackend) {
-    const backendMatch = /^feature\/be-(.+)$/.exec(branchName);
-    if (backendMatch) {
-      return {
-        kind: "feature-be",
-        slice: backendMatch[1],
-      };
-    }
+  const productContext = parseProductBranchContext(branchName);
+  if (
+    (productContext.kind === "feature-be" && includeBackend)
+    || (productContext.kind === "feature-fe" && includeFrontend)
+  ) {
+    return productContext;
   }
 
-  if (includeFrontend) {
-    const frontendMatch = /^feature\/fe-(.+)$/.exec(branchName);
-    if (frontendMatch) {
-      return {
-        kind: "feature-fe",
-        slice: frontendMatch[1],
-      };
+  if (includeCloseout && branchName.startsWith(CLOSEOUT_BRANCH_PREFIX)) {
+    const closeoutSlice = branchName.slice(CLOSEOUT_BRANCH_PREFIX.length);
+    if (!isValidBranchSlug(closeoutSlice)) {
+      throw new Error(
+        `Invalid closeout branch '${branchName}': the slice must use the public lowercase hyphenated branch slug grammar`,
+      );
     }
-  }
 
-  if (includeCloseout) {
-    const closeoutMatch = CLOSEOUT_SLICE_BRANCH_PATTERN.exec(branchName);
-    if (closeoutMatch) {
-      return {
-        kind: "omo-closeout",
-        slice: closeoutMatch[1],
-      };
-    }
+    return {
+      kind: "omo-closeout",
+      slice: closeoutSlice,
+      recovery: null,
+    };
   }
 
   return {
     kind: null,
     slice: null,
+    recovery: null,
   };
 }
 

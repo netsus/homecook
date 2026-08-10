@@ -108,6 +108,7 @@
     "verify:account-generation:storage-inventory-sample": "node scripts/verify-account-session-generation-remote.mjs --mode joint-storage-inventory-sample --json",
     "verify:account-generation:storage-inventory-compare": "node scripts/compare-account-session-generation-storage-samples.mjs --json",
     "test:recipe-visibility-read-hardening:focused": "vitest run tests/recipe-visibility-*.test.ts tests/recipe-image-*.test.ts --exclude '**/*.integration.test.ts' --exclude '**/*.live.test.ts'",
+    "test:product-superseding-draft-policy:focused": "vitest run tests/product-branch-context.test.ts tests/check-workpack-docs.test.ts tests/closeout-sync-validator.test.ts tests/exploratory-qa-evidence.test.ts tests/authority-evidence-presence.test.ts tests/real-smoke-presence.test.ts tests/omo-github.test.ts tests/wave1-prototype-lock-validator.test.ts tests/pr-ready-validator.test.ts tests/git-policy.test.ts",
     "test:recipe-visibility-read-hardening:postgres": "node scripts/run-recipe-visibility-read-hardening-postgres-integration.mjs",
     "test:recipe-snapshot-authority:postgres": "node scripts/run-recipe-snapshot-authority-postgres-integration.mjs",
     "test:personal-recipe-customization-write-core:postgres": "node scripts/run-personal-recipe-customization-write-core-postgres-integration.mjs",

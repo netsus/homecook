@@ -354,7 +354,7 @@ describe("closeout sync validator", () => {
     expect(results).toEqual([]);
   });
 
-  it("does not treat closeout-like docs branches without a slice id as closeout branches", () => {
+  it("fails closed when a valid closeout slug does not resolve to a tracked slice", () => {
     const rootDir = createFixture({
       roadmapStatus: "merged",
       designStatus: "confirmed",
@@ -372,7 +372,16 @@ describe("closeout sync validator", () => {
       changedFiles: [],
     });
 
-    expect(results).toEqual([]);
+    expect(results).toEqual([
+      expect.objectContaining({
+        name: "closeout-sync:projection-modes",
+        errors: expect.arrayContaining([
+          expect.objectContaining({
+            message: expect.stringContaining("projection-modes"),
+          }),
+        ]),
+      }),
+    ]);
   });
 
   it("fails non-draft frontend PRs with temporary design status and open closeout items", () => {

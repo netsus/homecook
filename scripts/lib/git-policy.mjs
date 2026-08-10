@@ -1,5 +1,11 @@
+const BRANCH_SLUG_SOURCE = "[a-z0-9]+(?:-[a-z0-9]+)*";
+
+export const BRANCH_SLUG_PATTERN = new RegExp(`^${BRANCH_SLUG_SOURCE}$`);
+
 export const WORK_BRANCH_PATTERNS = [
-  /^(feature|fix|chore|docs|refactor|test|release|hotfix)\/[a-z0-9]+(?:-[a-z0-9]+)*$/,
+  new RegExp(
+    `^(feature|fix|chore|docs|refactor|test|release|hotfix)\\/${BRANCH_SLUG_SOURCE}$`,
+  ),
 ];
 
 export const PROTECTED_BRANCH_PATTERN = /^(main|master|develop)$/;
@@ -29,6 +35,10 @@ export const REQUIRED_PR_SECTIONS = [
 
 export function isAllowedBranchName(branchName) {
   return ALLOWED_BRANCH_PATTERNS.some((pattern) => pattern.test(branchName));
+}
+
+export function isValidBranchSlug(slug) {
+  return typeof slug === "string" && BRANCH_SLUG_PATTERN.test(slug);
 }
 
 export function isAllowedWorkBranchName(branchName) {

@@ -6,6 +6,35 @@ import { describe, expect, it } from "vitest";
 
 import { validateRealSmokePresence } from "../scripts/lib/validate-real-smoke-presence.mjs";
 
+const PR_BODY_SOURCE_ENV_KEYS = [
+  "PR_BODY",
+  "PR_BODY_FILE",
+  "GITHUB_EVENT_PATH",
+  "SOURCE_PR_BODY",
+] as const;
+
+function withIsolatedPrBodySources<T>(run: () => T): T {
+  const originalValues = PR_BODY_SOURCE_ENV_KEYS.map(
+    (key) => [key, process.env[key]] as const,
+  );
+
+  for (const key of PR_BODY_SOURCE_ENV_KEYS) {
+    delete process.env[key];
+  }
+
+  try {
+    return run();
+  } finally {
+    for (const [key, value] of originalValues) {
+      if (value === undefined) {
+        delete process.env[key];
+      } else {
+        process.env[key] = value;
+      }
+    }
+  }
+}
+
 function writeFixtureFile(rootDir: string, relativePath: string, contents: string) {
   const filePath = join(rootDir, relativePath);
   mkdirSync(join(filePath, ".."), { recursive: true });
@@ -165,6 +194,33 @@ describe("real smoke presence validator", () => {
         }),
       ]),
     );
+  });
+
+  it("enforces identical smoke evidence on canonical and successor backend branches", () => {
+    withIsolatedPrBodySources(() => {
+      const rootDir = createFixture({
+        externalSmokes: ["pnpm dev:local-supabase"],
+      });
+      const canonical = validateRealSmokePresence({
+        rootDir,
+        env: {
+          ...process.env,
+          BRANCH_NAME: "feature/be-06-recipe-to-planner",
+          PR_IS_DRAFT: "false",
+        },
+      });
+      const successor = validateRealSmokePresence({
+        rootDir,
+        env: {
+          ...process.env,
+          BRANCH_NAME: "feature/be-06-recipe-to-planner-superseding-draft",
+          PR_IS_DRAFT: "false",
+        },
+      });
+
+      expect(canonical).not.toEqual([]);
+      expect(successor).toEqual(canonical);
+    });
   });
 
   it("passes when Actual Verification records local Supabase/bootstrap smoke evidence", () => {
