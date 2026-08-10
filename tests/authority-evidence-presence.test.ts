@@ -1,4 +1,10 @@
-import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 
@@ -323,6 +329,77 @@ describe("authority evidence presence validator", () => {
     });
   });
 
+  it("rejects a directory used as a required JSON artifact", () => {
+    const rootDir = createMixedArtifactFixture({
+      artifactRequirements: [MANIFEST_REF],
+      existingArtifactRefs: [],
+    });
+    mkdirSync(join(rootDir, MANIFEST_REF), { recursive: true });
+
+    const results = validateNonDraftFixture(rootDir);
+
+    expect(results[0]?.errors).toContainEqual({
+      path: "authority_report_paths:evidence",
+      message: `Required authority evidence artifact must be a regular repo-local JSON file: ${MANIFEST_REF}`,
+    });
+  });
+
+  it("rejects a final symlink to an external JSON artifact without exposing its contents", () => {
+    const rootDir = createMixedArtifactFixture({
+      artifactRequirements: [MANIFEST_REF],
+      existingArtifactRefs: [],
+    });
+    const externalDir = mkdtempSync(join(tmpdir(), "authority-evidence-external-"));
+    const externalArtifact = join(externalDir, "manifest.json");
+    writeFileSync(externalArtifact, "EXTERNAL_SECRET_MUST_NOT_APPEAR");
+    symlinkSync(externalArtifact, join(rootDir, MANIFEST_REF));
+
+    const results = validateNonDraftFixture(rootDir);
+
+    expect(results[0]?.errors).toContainEqual({
+      path: "authority_report_paths:evidence",
+      message: `Required authority evidence artifact must be a regular repo-local JSON file: ${MANIFEST_REF}`,
+    });
+    expect(JSON.stringify(results)).not.toContain("EXTERNAL_SECRET_MUST_NOT_APPEAR");
+  });
+
+  it("rejects a JSON artifact whose parent symlink escapes the repository", () => {
+    const escapedArtifactRef = "ui/designs/evidence/external/manifest.json";
+    const rootDir = createMixedArtifactFixture({
+      artifactRequirements: [escapedArtifactRef],
+      existingArtifactRefs: [],
+    });
+    const externalDir = mkdtempSync(join(tmpdir(), "authority-evidence-parent-external-"));
+    writeFileSync(join(externalDir, "manifest.json"), "external evidence");
+    symlinkSync(externalDir, join(rootDir, "ui/designs/evidence/external"), "dir");
+
+    const results = validateNonDraftFixture(rootDir);
+
+    expect(results[0]?.errors).toContainEqual({
+      path: "authority_report_paths:evidence",
+      message: `Required authority evidence artifact must be a regular repo-local JSON file: ${escapedArtifactRef}`,
+    });
+  });
+
+  it.each([
+    ["ui/designs/evidence/authority/runtime.log", true],
+    ["ui/designs/evidence/authority/secret.pem", true],
+    ["ui/designs/evidence/authority/validator.ts", true],
+    ["../outside/manifest.json", false],
+  ])("rejects unsupported artifact requirement %s", (artifactRef, createFile) => {
+    const rootDir = createMixedArtifactFixture({
+      artifactRequirements: [artifactRef],
+      existingArtifactRefs: createFile ? [artifactRef] : [],
+    });
+
+    const results = validateNonDraftFixture(rootDir);
+
+    expect(results[0]?.errors).toContainEqual({
+      path: "authority_report_paths:evidence",
+      message: `Unsupported authority evidence artifact requirement; expected a repo-relative .json path: ${artifactRef}`,
+    });
+  });
+
   it("treats screenshot-suffixed mobile evidence requirements as default and narrow aliases", () => {
     const rootDir = createFixture({
       stage4EvidenceRequirements: ["mobile-default-screenshot", "mobile-narrow-screenshot"],
@@ -530,6 +607,33 @@ describe("authority evidence presence validator", () => {
         }),
       ]),
     );
+  });
+
+  it("keeps runtime visual refs as a report subset when reports satisfy every visual requirement", () => {
+    const desktopVisualRef =
+      "ui/designs/evidence/authority/RECIPE_DETAIL-desktop-state.png";
+    const reportVisualRefs = [...DEFAULT_VISUAL_EVIDENCE_REFS, desktopVisualRef];
+    const rootDir = createFixture({
+      stage4EvidenceRequirements: reportVisualRefs,
+      authorityReportContents: buildAuthorityReport({
+        evidenceLines: reportVisualRefs.map((ref) => `\`${ref}\``),
+      }),
+      evidenceFiles: reportVisualRefs,
+      runtimeDesignAuthority: {
+        status: "reviewed",
+        ui_risk: "anchor-extension",
+        authority_required: true,
+        authority_report_paths: ["ui/designs/authority/RECIPE_DETAIL-authority.md"],
+        evidence_artifact_refs: DEFAULT_VISUAL_EVIDENCE_REFS,
+        reviewed_screen_ids: ["RECIPE_DETAIL"],
+        authority_verdict: "pass",
+        source_stage: 5,
+      },
+    });
+
+    const results = validateNonDraftFixture(rootDir);
+
+    expect(results).toEqual([]);
   });
 
   it("reuses the same evidence checks for closeout branches", () => {

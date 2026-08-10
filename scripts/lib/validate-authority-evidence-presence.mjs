@@ -1,5 +1,5 @@
-import { existsSync } from "node:fs";
-import { resolve } from "node:path";
+import { existsSync, lstatSync, realpathSync, statSync } from "node:fs";
+import { isAbsolute, relative, resolve, sep } from "node:path";
 
 import { readAutomationSpec } from "./omo-automation-spec.mjs";
 import { readRuntimeState, resolveRuntimePath } from "./omo-session-runtime.mjs";
@@ -60,7 +60,7 @@ function extractRefs(line) {
   const trimmed = line.trim();
   if (
     FIGMA_URL_PATTERN.test(trimmed) ||
-    isSafeLocalArtifactRef(trimmed)
+    isSafeLocalRepoPath(trimmed)
   ) {
     return [trimmed];
   }
@@ -76,7 +76,7 @@ function isLocalRepoRef(ref) {
   return !/^https?:\/\//i.test(ref);
 }
 
-function isSafeLocalArtifactRef(ref) {
+function isSafeLocalRepoPath(ref) {
   if (
     typeof ref !== "string" ||
     ref.length === 0 ||
@@ -95,8 +95,54 @@ function isSafeLocalArtifactRef(ref) {
   );
 }
 
+function isSafeLocalJsonArtifactRef(ref) {
+  return isSafeLocalRepoPath(ref) && ref.endsWith(".json");
+}
+
 function isNonVisualArtifactRequirement(requirement) {
-  return isSafeLocalArtifactRef(requirement) && !isVisualRef(requirement);
+  return isSafeLocalJsonArtifactRef(requirement) && !isVisualRef(requirement);
+}
+
+function isUnsupportedArtifactRequirement(requirement) {
+  if (typeof requirement !== "string" || isVisualRef(requirement)) {
+    return false;
+  }
+
+  return (
+    /^https?:\/\//i.test(requirement) ||
+    requirement.startsWith("/") ||
+    requirement.includes("/") ||
+    requirement.includes("\\") ||
+    /\.[A-Za-z0-9]+(?:[?#].*)?$/.test(requirement)
+  );
+}
+
+function isRegularRepoLocalJsonFile({ rootDir, ref }) {
+  const candidatePath = resolve(rootDir, ref);
+
+  try {
+    const candidateLstat = lstatSync(candidatePath);
+    if (candidateLstat.isSymbolicLink() || !candidateLstat.isFile()) {
+      return false;
+    }
+
+    const candidateStat = statSync(candidatePath);
+    if (!candidateStat.isFile()) {
+      return false;
+    }
+
+    const rootRealPath = realpathSync(rootDir);
+    const candidateRealPath = realpathSync(candidatePath);
+    const pathFromRoot = relative(rootRealPath, candidateRealPath);
+    return (
+      pathFromRoot.length > 0 &&
+      pathFromRoot !== ".." &&
+      !pathFromRoot.startsWith(`..${sep}`) &&
+      !isAbsolute(pathFromRoot)
+    );
+  } catch {
+    return false;
+  }
 }
 
 function resolveEvidenceRequirementMatcher(requirement) {
@@ -163,7 +209,7 @@ function inspectAuthorityReport({
   const reportText = readText(absoluteReportPath);
   const evidenceLines = extractEvidenceLines(reportText);
   const evidenceRefs = evidenceLines.flatMap((line) => extractRefs(line));
-  const artifactRefs = evidenceRefs.filter((ref) => isSafeLocalArtifactRef(ref));
+  const artifactRefs = evidenceRefs.filter((ref) => isSafeLocalJsonArtifactRef(ref));
   const visualRefs = evidenceRefs.filter((ref) => isVisualRef(ref));
 
   if (visualRefs.length === 0) {
@@ -231,14 +277,13 @@ function validateRuntimeAuthoritySync({
   }
 
   const runtimeEvidenceArtifactRefs = normalizeStringArray(runtimeDesignAuthority.evidence_artifact_refs);
-  const runtimeVisualRefs = runtimeEvidenceArtifactRefs.filter((ref) => isVisualRef(ref));
-  const runtimeArtifactRefs = runtimeEvidenceArtifactRefs.filter((ref) => isSafeLocalArtifactRef(ref));
+  const runtimeArtifactRefs = runtimeEvidenceArtifactRefs.filter((ref) => isSafeLocalJsonArtifactRef(ref));
   const missingReportRefs = runtimeEvidenceArtifactRefs.filter((ref) => {
     if (isVisualRef(ref)) {
       return !reportVisualRefs.includes(ref);
     }
 
-    return !isSafeLocalArtifactRef(ref) || !reportArtifactRefs.includes(ref);
+    return !isSafeLocalJsonArtifactRef(ref) || !reportArtifactRefs.includes(ref);
   });
   if (missingReportRefs.length > 0) {
     errors.push({
@@ -249,23 +294,15 @@ function validateRuntimeAuthoritySync({
   }
 
   for (const requirement of stage4EvidenceRequirements) {
-    if (isNonVisualArtifactRequirement(requirement)) {
-      if (!runtimeArtifactRefs.includes(requirement)) {
-        errors.push({
-          path: runtimePath,
-          message:
-            `runtime design_authority.evidence_artifact_refs is missing required artifact evidence: ${requirement}`,
-        });
-      }
+    if (!isNonVisualArtifactRequirement(requirement)) {
       continue;
     }
 
-    const matchesRequirement = resolveEvidenceRequirementMatcher(requirement);
-    if (!runtimeVisualRefs.some((ref) => matchesRequirement(ref))) {
+    if (!runtimeArtifactRefs.includes(requirement)) {
       errors.push({
         path: runtimePath,
         message:
-          `runtime design_authority.evidence_artifact_refs is missing required ${requirement} visual evidence.`,
+          `runtime design_authority.evidence_artifact_refs is missing required artifact evidence: ${requirement}`,
       });
     }
   }
@@ -346,7 +383,21 @@ export function validateAuthorityEvidencePresence({
           path: "authority_report_paths:evidence",
           message: `Required authority evidence artifact file is missing: ${requirement}`,
         });
+      } else if (!isRegularRepoLocalJsonFile({ rootDir, ref: requirement })) {
+        errors.push({
+          path: "authority_report_paths:evidence",
+          message: `Required authority evidence artifact must be a regular repo-local JSON file: ${requirement}`,
+        });
       }
+      continue;
+    }
+
+    if (isUnsupportedArtifactRequirement(requirement)) {
+      errors.push({
+        path: "authority_report_paths:evidence",
+        message:
+          `Unsupported authority evidence artifact requirement; expected a repo-relative .json path: ${requirement}`,
+      });
       continue;
     }
 
