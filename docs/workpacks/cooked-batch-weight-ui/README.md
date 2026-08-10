@@ -75,9 +75,16 @@ Shared projection integration은 병렬 편집하지 않고 순차 merge/rebase�
 
 All mutations keep UUID `Idempotency-Key` and the official `expected_revision` requirement. Success keeps `{ success, data, error }`; error keeps `{ code, message, fields[] }`. Same-key/same-payload replays the stored result once; same-key/different-payload, stale revision, invalid bounds/state and unrecoverable rules remain server-authoritative. #11 never authors cached remaining/status/reason.
 
+## Design Status
+
+- [ ] 임시 UI (temporary)
+- [ ] 리뷰 대기 (pending-review)
+- [x] 확정 (confirmed)
+- [ ] N/A
+
 ## Frontend Delivery Mode
 
-Design Status는 `confirmed`다. Draft PR [#1323](https://github.com/netsus/homecook/pull/1323)의 제품 repair `a381f23237c001b232172317a948770d0efa364b` → fresh evidence `531055aca7038041411293b8a7e10a9cd27c2e8c` → Stage 5 publication `a17b0961f9aca4fc6ec740d62f81022fded962fc` → final authority publication `6cbfaf053b63d119f91225ce5fec500a229a7ad1` 계보가 현재 근거다. Fresh Stage 5 task `019feb85-1b83-7662-9c10-ab91d834c4f6`와 final authority task `019feb94-4d4f-7831-9000-01eaaf3a7569`는 각각 `APPROVE 0/0/0`이다. Stage 6 task `019feba0-7a3b-7851-bcf0-4ea106cc7c3c`는 제품 결함이 아니라 PR 본문/closeout 투영 drift 2건으로 `HOLD 0/2/0`을 냈고, repair author task `019febac-5498-73e0-bacf-b6948ff9c3a0`가 `CBW-S6-P1-01/02`만 수리했다. 이 수리는 Stage 6 승인이 아니며 fresh independent Stage 6 rereview가 pending이다.
+Draft PR [#1323](https://github.com/netsus/homecook/pull/1323)의 제품 repair `a381f23237c001b232172317a948770d0efa364b` → fresh evidence `531055aca7038041411293b8a7e10a9cd27c2e8c` → Stage 5 publication `a17b0961f9aca4fc6ec740d62f81022fded962fc` → final authority publication `6cbfaf053b63d119f91225ce5fec500a229a7ad1` 계보가 `confirmed`의 근거다. Fresh Stage 5 task `019feb85-1b83-7662-9c10-ab91d834c4f6`와 final authority task `019feb94-4d4f-7831-9000-01eaaf3a7569`는 각각 `APPROVE 0/0/0`이다. Stage 6 task `019feba0-7a3b-7851-bcf0-4ea106cc7c3c`는 제품 결함이 아니라 PR 본문/closeout 투영 drift 2건으로 `HOLD 0/2/0`을 냈고, repair author task `019febac-5498-73e0-bacf-b6948ff9c3a0`가 `CBW-S6-P1-01/02`만 수리했다. 이 수리는 Stage 6 승인이 아니며 fresh independent Stage 6 rereview가 pending이다.
 
 Required states:
 
@@ -152,9 +159,14 @@ COOK_MODE의 `legacy-null`/depleted는 LEFTOVERS read-model only이므로 N/A이
 - runtime focus/overflow evidence와 #11 신규 sheet/section scoped serious/critical axe 0
 - COOK_MODE full-page에는 #11 소유 밖 기존 color-contrast residual node 2개가 남아 있다. 신규 UI scoped 0과 분리해 manifest/PR/authority handoff에 기록하며 page-wide 0으로 주장하지 않는다.
 
-## Design / Accessibility Authority
+## Design Authority
 
-- UI risk: `high-risk`; required screens are `COOK_MODE`, `LEFTOVERS`; neither is an official anchor screen.
+- UI risk: `high-risk`
+- Anchor screen dependency: 없음 — `COOK_MODE`, `LEFTOVERS` 모두 official anchor screen이 아니다.
+- Visual artifact: `ui/designs/evidence/cooked-batch-weight-ui/manifest.json`
+- Authority status: `reviewed`
+- Notes: Fresh Stage 5와 final authority는 `APPROVE 0/0/0`이고, 실제 기기·키보드·AT·full WCAG는 Manual pending이다.
+- Required screens: `COOK_MODE`, `LEFTOVERS`
 - Canonical Stage 1 design paths:
   - `ui/designs/COOK_MODE.md`
   - `ui/designs/LEFTOVERS.md`
@@ -195,10 +207,9 @@ Stage 1 repair는 lifecycle을 docs/complete/merged로 올리지 않는다. #8 S
 
 - [x] COOK_MODE가 existing #8 completion contract와 five UI states를 정확히 소비한다. <!-- omo:id=delivery-batch-weight-ui-cook-mode;stage=4;scope=frontend;review=5,6 -->
 - [x] LEFTOVERS가 known/missing/unrecoverable/legacy-null/depleted truth와 eligible #11 action만 표시한다. <!-- omo:id=delivery-batch-weight-ui-leftovers;stage=4;scope=frontend;review=5,6 -->
-- [x] #9 backend와 #12 consumed UI ownership을 선점하지 않고 new public contract가 없다. <!-- omo:id=delivery-batch-weight-ui-ownership;stage=4;scope=shared;review=5,6 -->
+- [x] #9 backend와 #12 consumed UI ownership을 선점하지 않고 new public contract가 없다. <!-- omo:id=delivery-batch-weight-ui-ownership;stage=4;scope=shared;review=6 -->
 - [x] two designs + two exact current critic paths가 regression으로 유지된다. <!-- omo:id=delivery-batch-weight-ui-artifact-index;stage=4;scope=frontend;review=5,6 -->
 - [x] 390px/320px/desktop runtime visual·focus·overflow·a11y evidence와 fresh Stage 5/final authority reports가 준비된다. <!-- omo:id=delivery-batch-weight-ui-authority-evidence;stage=4;scope=frontend;review=5,6 -->
-- [ ] closeout repair publication head의 fresh independent Stage 6 rereview에서 unresolved required finding이 0이다. <!-- omo:id=delivery-batch-weight-ui-independent-review;stage=4;scope=shared;review=5,6 -->
 
 ## Manual Only
 

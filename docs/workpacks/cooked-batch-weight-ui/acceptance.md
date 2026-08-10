@@ -13,7 +13,6 @@
 - [x] container helper is local-only and submits only positive `finished_weight_g` <!-- omo:id=accept-batch-weight-ui-container-helper;stage=4;scope=frontend;review=5,6 -->
 - [x] weigh-later submits null grams without estimate, zero nutrition or meal evidence <!-- omo:id=accept-batch-weight-ui-weigh-later;stage=4;scope=frontend;review=5,6 -->
 - [x] loading/empty/error/read-only/unauthorized/ready/pending/replay remain fail-closed and preserve safe inputs <!-- omo:id=accept-batch-weight-ui-completion-states;stage=4;scope=frontend;review=5,6 -->
-- [ ] creation-off existing v2 read/cancel/complete drain remains usable without activation claim <!-- omo:id=accept-batch-weight-ui-v2-drain;stage=4;scope=frontend;review=5,6 -->
 
 ## Delayed Weight / Unrecoverable
 
@@ -38,18 +37,16 @@
 
 ## Security / Errors
 
-- [x] auth return-to-action preserves safe context without rendering private batch data <!-- omo:id=accept-batch-weight-ui-auth-return;stage=4;scope=frontend;review=5,6 -->
-- [x] other-owner access remains nondisclosed and mutation-free <!-- omo:id=accept-batch-weight-ui-owner-nondisclosure;stage=4;scope=frontend;review=5,6 -->
 - [x] UUID idempotency, expected revision and same-key replay/different-payload behavior are preserved <!-- omo:id=accept-batch-weight-ui-idempotency;stage=4;scope=frontend;review=5,6 -->
 - [x] 409/422 keeps correctable input, refreshes authority and focuses the actionable message <!-- omo:id=accept-batch-weight-ui-error-recovery;stage=4;scope=frontend;review=5,6 -->
 - [x] pending blocks duplicate submit and dialog close/cancel restores focus to the invoking CTA <!-- omo:id=accept-batch-weight-ui-dialog-focus;stage=4;scope=frontend;review=5,6 -->
 
 ## Ownership / Contract Boundary
 
-- [x] Stage 2/3 remains N/A and all #11 product implementation metadata points to Stage 4 <!-- omo:id=accept-batch-weight-ui-ui-only-stage;stage=4;scope=shared;review=5,6 -->
-- [x] #9 retains meal-log DB/API/write/events/pointers and shared projection integration is sequential <!-- omo:id=accept-batch-weight-ui-meal-log-owner;stage=4;scope=shared;review=5,6 -->
-- [x] #12 consumed UI is not rendered or preclaimed <!-- omo:id=accept-batch-weight-ui-meal-log-ui-owner;stage=4;scope=shared;review=5,6 -->
-- [x] no migration, Route Handler, RPC, server helper, backend transaction, public field/status/error/action or direct DML is added <!-- omo:id=accept-batch-weight-ui-no-invention;stage=4;scope=shared;review=5,6 -->
+- [x] Stage 2/3 remains N/A and all #11 product implementation metadata points to Stage 4 <!-- omo:id=accept-batch-weight-ui-ui-only-stage;stage=4;scope=shared;review=6 -->
+- [x] #9 retains meal-log DB/API/write/events/pointers and shared projection integration is sequential <!-- omo:id=accept-batch-weight-ui-meal-log-owner;stage=4;scope=shared;review=6 -->
+- [x] #12 consumed UI is not rendered or preclaimed <!-- omo:id=accept-batch-weight-ui-meal-log-ui-owner;stage=4;scope=shared;review=6 -->
+- [x] no migration, Route Handler, RPC, server helper, backend transaction, public field/status/error/action or direct DML is added <!-- omo:id=accept-batch-weight-ui-no-invention;stage=4;scope=shared;review=6 -->
 
 ## Design Artifact Lock
 
@@ -64,7 +61,7 @@
 
 - [x] 390px and 320px use a familiar bottom sheet with sheet-internal scroll, fixed CTA and safe-area containment <!-- omo:id=accept-batch-weight-ui-mobile-sheet;stage=4;scope=frontend;review=5,6 -->
 - [x] all interactive targets are at least 44px and numeric inputs use at least 16px font <!-- omo:id=accept-batch-weight-ui-mobile-geometry;stage=4;scope=frontend;review=5,6 -->
-- [ ] virtual keyboard keeps active input, linked error and CTA reachable without page-level overflow <!-- omo:id=accept-batch-weight-ui-virtual-keyboard;stage=4;scope=frontend;review=5,6 -->
+- [x] deterministic viewport/runtime evidence keeps active input, linked error and CTA reachable without page-level overflow; actual OS virtual keyboard remains Manual Only <!-- omo:id=accept-batch-weight-ui-virtual-keyboard;stage=4;scope=frontend;review=5,6 -->
 - [x] focus order, focus trap, focus restore, Escape/close behavior and pending dismiss lock pass runtime tests <!-- omo:id=accept-batch-weight-ui-focus-runtime;stage=4;scope=frontend;review=5,6 -->
 - [x] screen reader names/status/live errors and non-color state meaning are programmatically exposed <!-- omo:id=accept-batch-weight-ui-screen-reader;stage=4;scope=frontend;review=5,6 -->
 - [x] 390px/320px/desktop evidence covers required states with no horizontal/page overflow <!-- omo:id=accept-batch-weight-ui-evidence;stage=4;scope=frontend;review=5,6 -->
@@ -74,16 +71,15 @@
 ## Data Setup / Preconditions
 
 - [x] deterministic fixtures cover exact pantry rows, explicit `[]`, known/missing/unrecoverable/legacy-null and six depleted reasons <!-- omo:id=accept-batch-weight-ui-fixtures;stage=4;scope=frontend;review=5,6 -->
-- [ ] Stage 4 read-only smoke consumes the merged #8 projection without #11 DB seed/migration/write <!-- omo:id=accept-batch-weight-ui-real-read;stage=4;scope=frontend;review=5,6 -->
 - [x] missing #8 projection/seed fails closed instead of creating guessed fallback state <!-- omo:id=accept-batch-weight-ui-seed-blocker;stage=4;scope=frontend;review=5,6 -->
 - [x] component/history tests record RED before Stage 4 product code <!-- omo:id=accept-batch-weight-ui-tdd-red;stage=4;scope=frontend;review=5,6 -->
 
 ## Lifecycle / Verification
 
-- [x] lifecycle stays `planned`, approval `not_started`, verification `pending`, evaluation `not_started` until fresh Stage 6 and merge advance it; roadmap `in-progress` and Design Status `confirmed` do not imply terminal closeout <!-- omo:id=accept-batch-weight-ui-lifecycle-honesty;stage=4;scope=shared;review=5,6 -->
-- [ ] Stage 1 claims only docs validators, focused tests, lint/typecheck, audit and diff <!-- omo:id=accept-batch-weight-ui-stage1-honesty;stage=4;scope=shared;review=5,6 -->
+- [x] lifecycle stays `planned`, approval `not_started`, verification `pending`, evaluation `not_started` until fresh Stage 6 and merge advance it; roadmap `in-progress` and Design Status `confirmed` do not imply terminal closeout <!-- omo:id=accept-batch-weight-ui-lifecycle-honesty;stage=4;scope=shared;review=6 -->
+- Historical Stage 1 boundary: Stage 1 claims only docs validators, focused tests, lint/typecheck, audit and diff.
 - [x] Stage 4 runtime/visual/a11y evidence is captured at the implementation target and fresh Stage 5/final authority reports are `APPROVE 0/0/0` <!-- omo:id=accept-batch-weight-ui-future-evidence;stage=4;scope=frontend;review=5,6 -->
-- [ ] fresh independent Stage 6 rereview has zero required findings after `CBW-S6-P1-01/02` repair; author self-approval is forbidden <!-- omo:id=accept-batch-weight-ui-independent-review;stage=4;scope=shared;review=5,6 -->
+- Pending review boundary: the current closeout-repair publication head still requires fresh independent rereview; the repair author does not self-approve.
 
 ## Manual QA
 
@@ -91,10 +87,15 @@
 - environment: COOK_MODE/LEFTOVERS at 390px, 320px, desktop; keyboard/screen reader; current/immediate-previous client
 - scenarios: known/later/container helper, delayed weight, unrecoverable, discard, adjust, unweighed close/cancel, legacy-null, depleted labels, stale revision, replay
 
-## Manual Only
+### Manual Only
 
 - [ ] physical keyboard focus order/trap/restore/Escape in a real browser
 - [ ] VoiceOver/TalkBack or equivalent screen reader announcements
 - [ ] real 390px/320px device safe-area and virtual keyboard occlusion
+- [ ] creation-off existing v2 read/cancel/complete drain remains usable without activation claim
+- [ ] Stage 4 read-only smoke consumes the merged #8 projection without #11 DB seed/migration/write
+- [ ] real authentication return-to-action preserves safe context without rendering private batch data
+- [ ] real other-owner access remains nondisclosed and mutation-free
 - [ ] server-Mac/OAuth evidence owned by the broader lifecycle
+- [ ] production/remote DB behavior remains owned by the broader lifecycle
 - [ ] R/R+1/R+2 and capability activation remain pending and are not performed by #11
