@@ -88,6 +88,8 @@
 
 ## Verification / Evidence
 
+> Backend Ready uses the current executable `automation-spec.json#external_smokes=[]` while `.workflow-v2/work-items/meal-log-core.json#workflow.external_smokes` preserves the eight-item future lifecycle gate. Because #9 is backend-only, a fresh post-merge/release closeout actor must relock that current list before the merged-exact/manual/release items below can be checked or whole-lifecycle completion can be claimed. This sequencing is not a waiver.
+
 - [ ] Stage 1 claims only docs validators, focused tests, lint/typecheck, audit and diff <!-- omo:id=accept-meal-log-stage1-honesty;stage=2;scope=shared;review=3,6 -->
 - [x] implementation records failing route/DB tests before production changes <!-- omo:id=accept-meal-log-tdd-red;stage=2;scope=shared;review=3,6 -->
 - [ ] PostgreSQL fresh/replay covers RLS, exact-one checks, deferred pointer, RPCs and cleanup <!-- omo:id=accept-meal-log-postgres;stage=2;scope=backend;review=3,6 -->
