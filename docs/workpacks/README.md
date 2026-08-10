@@ -305,14 +305,16 @@ Slice Order 표의 Status 값은 위 이벤트가 발생한 PR 또는 closeout b
 | 6 | C | `personal-recipe-customization-write-core` | in-progress | #2 + #3 + #4 + #5 runtime merged. Stage 3 backend checkpoint PR #1274 head `a27be0c7` dual APPROVE와 Ready checks 15/15 success 후 merge `05683e4d`; exact-merge verifier `POSTMERGE_VERIFIED YES`, P0/P1/P2 0/0/0. 서버 MacBook/local rehearsal, route/service·통합 E2E, terminal workpack closeout review, #7/#8 및 R+2 activation은 pending |
 | 7 | C | `recipe-content-snapshot-future-propagation` | in-progress | #4 PR #1218 + #6 PR #1274 + `cook-mode-whole-board` PR #711 runtime merged; Stage 2/3 PR #1278 merge `ef5903b1`; Contract Evolution PR #1282 + re-lock PR #1283 이후 PR #1281 exact head `aab9a65e`가 merge `2173737e`로 병합되어 actual owner editor, additive revision/edit_context와 server-only joint projection runtime이 존재한다. final authority와 fresh Stage 6는 `0/0/0`, Design Status confirmed지만 Manual/server-Mac/OAuth, #8 gate와 activation이 남아 overall lifecycle은 in-progress다 |
 | 8 | D | `cooked-batch-weight-ledger` | in-progress | #7; `cook-mode-whole-board` merged |
-| 9 | D | `meal-log-core` | in-progress | #1 + #2 + #4 + #8. PR #1319 구현은 base `8ba3fa5a2a198eb4f9c19d59cea5f6ccc52fdd4f`로 merge됐지만 Manual/server-Mac/OAuth, merged-exact server-production/local-rehearsal, capability, R/R+1/R+2와 activation은 pending |
-| 10 | E | `planner-shell` | docs | #9 merged backend code는 충족. #10 Stage1 fresh independent gates와 runtime implementation/merge는 pending |
+| 9 | D | `meal-log-core` | in-progress | #1 + #2 + #4 + #8 |
+| 10 | E | `planner-shell` | docs | #9 |
 | 11 | E | `cooked-batch-weight-ui` | docs | #8; `cook-mode-whole-board` merged |
 | 12 | E | `meal-log-ui` | docs | #9 + #10 |
 | 13 | E | `legacy-product-compat` | docs | #10 + #12 |
 | 14 | F | `cooking-meal-log-cross-slice-release-qa` | docs | F0 and #1~#13 all merged/current-head green on server-MacBook local production and isolated local rehearsal |
 
 > 이 표가 cooking/meal-log successor의 exact ID·dependency authority다. 실행 순서는 foundation F0 → 독립 Train A → Train B→C→D→E→F이며 `#1`은 stable successor 번호다. `recipebook-diary-port`는 선행조건이 아니며, #3/#5는 `31-recipe-media-tags`와 `36e-recipe-tags-frontend`를 되돌리거나 진행 중 MYPAGE/RECIPEBOOK_DETAIL 파일을 소유하지 않는다. 각 행은 독립 Stage 1 `README.md` + `acceptance.md` + `automation-spec.json` + workflow-v2 work item/status PR과 mandatory internal 1.5 pass가 main에 merge된 뒤에만 구현 상태로 전환한다.
+>
+> #9 PR #1319 implementation은 base `8ba3fa5a2a198eb4f9c19d59cea5f6ccc52fdd4f`로 merge되어 #10의 code predecessor를 만족한다. 다만 #9의 Manual/server-Mac/OAuth, merged-exact server-production/local-rehearsal, capability, R/R+1/R+2와 activation은 pending이며, #10은 fresh independent Stage1 gates와 별도 runtime implementation/merge 전까지 `docs`다.
 
 ### Cooking / Meal Log Design Gate
 
