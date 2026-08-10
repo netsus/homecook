@@ -121,6 +121,15 @@ function isRegularRepoLocalJsonFile({ rootDir, ref }) {
   const candidatePath = resolve(rootDir, ref);
 
   try {
+    let parentPath = rootDir;
+    for (const segment of ref.split("/").slice(0, -1)) {
+      parentPath = resolve(parentPath, segment);
+      const parentLstat = lstatSync(parentPath);
+      if (parentLstat.isSymbolicLink() || !parentLstat.isDirectory()) {
+        return false;
+      }
+    }
+
     const candidateLstat = lstatSync(candidatePath);
     if (candidateLstat.isSymbolicLink() || !candidateLstat.isFile()) {
       return false;

@@ -381,6 +381,25 @@ describe("authority evidence presence validator", () => {
     });
   });
 
+  it("rejects a JSON artifact whose parent path component is an internal symlink", () => {
+    const linkedArtifactRef = "ui/designs/evidence/link/manifest.json";
+    const rootDir = createMixedArtifactFixture({
+      artifactRequirements: [linkedArtifactRef],
+      existingArtifactRefs: [],
+    });
+    const realEvidenceDir = join(rootDir, "ui/designs/evidence/real");
+    mkdirSync(realEvidenceDir, { recursive: true });
+    writeFileSync(join(realEvidenceDir, "manifest.json"), "internal evidence");
+    symlinkSync(realEvidenceDir, join(rootDir, "ui/designs/evidence/link"), "dir");
+
+    const results = validateNonDraftFixture(rootDir);
+
+    expect(results[0]?.errors).toContainEqual({
+      path: "authority_report_paths:evidence",
+      message: `Required authority evidence artifact must be a regular repo-local JSON file: ${linkedArtifactRef}`,
+    });
+  });
+
   it.each([
     ["ui/designs/evidence/authority/runtime.log", true],
     ["ui/designs/evidence/authority/secret.pem", true],
