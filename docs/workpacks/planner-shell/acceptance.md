@@ -55,7 +55,7 @@
 
 ## Contract / Verification
 
-- [x] no unofficial API, route, field, status, bottom tab or writer is added <!-- omo:id=accept-planner-shell-no-invention;stage=2;scope=shared;review=3,6 -->
+- [ ] no unofficial API, route, field, status, bottom tab or writer is added <!-- omo:id=accept-planner-shell-no-invention;stage=2;scope=shared;review=3,6 -->
 - [ ] Stage 1 claims only docs validators/tests/lint/typecheck/audit/diff <!-- omo:id=accept-planner-shell-stage1-honesty;stage=2;scope=shared;review=3,6 -->
 - [ ] implementation records failing component/route-history tests before code <!-- omo:id=accept-planner-shell-tdd-red;stage=4;scope=frontend;review=5,6 -->
 - [ ] independent internal1.5/security/five-axis/design/Stage3/5/6 findings are zero <!-- omo:id=accept-planner-shell-independent-review;stage=2;scope=shared;review=3,6 -->
