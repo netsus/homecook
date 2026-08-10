@@ -7,12 +7,45 @@ import type {
   CookingSessionCreateData,
   CookingStandaloneCompleteData,
   CookingStandaloneCookModeData,
+  CookedBatchProjection,
   SnapshotV2CancelData,
   SnapshotV2CompleteBody,
   SnapshotV2CompleteData,
   SnapshotV2CookModeData,
   SnapshotV2StartData,
 } from "@/types/cooking";
+
+export interface CookedBatchListData {
+  items: CookedBatchProjection[];
+  next_cursor: string | null;
+  has_next: boolean;
+}
+
+export interface CookedBatchMutationData {
+  action: "set_finished_weight" | "mark_unrecoverable" | "discard" | "adjust" | "close" | "cancel_current";
+  batch: CookedBatchProjection;
+  event_id: string | null;
+}
+
+export type CookedBatchWeightBody =
+  | { action: "set_finished_weight"; finished_weight_g: number; expected_revision: number }
+  | { action: "mark_unrecoverable"; expected_revision: number };
+
+export interface CookedBatchDiscardBody {
+  discarded_g: number;
+  reason: string;
+  expected_revision: number;
+}
+
+export interface CookedBatchAdjustmentBody {
+  delta_g: number;
+  reason: string;
+  expected_revision: number;
+}
+
+export type CookedBatchCloseBody =
+  | { action: "close"; closure_reason: "consumed" | "discarded" | "mixed"; expected_revision: number }
+  | { action: "cancel_current"; reverses_event_id: string; expected_revision: number };
 
 export interface CookingApiError extends Error {
   status: number;
@@ -156,6 +189,38 @@ const COOKED_BATCH_KEYS = [
   "current_unweighed_closure_event_id",
 ];
 
+function isNullableFiniteNumber(value: unknown): value is number | null {
+  return value === null || (typeof value === "number" && Number.isFinite(value));
+}
+
+function isPositiveInteger(value: unknown): value is number {
+  return Number.isSafeInteger(value) && Number(value) > 0;
+}
+
+function isExactCookedBatchProjection(value: unknown): value is CookedBatchProjection {
+  if (!isRecord(value) || !hasExactKeys(value, COOKED_BATCH_KEYS)) return false;
+  return typeof value.id === "string"
+    && UUID_PATTERN.test(value.id)
+    && typeof value.recipe_id === "string"
+    && UUID_PATTERN.test(value.recipe_id)
+    && typeof value.recipe_title === "string"
+    && value.recipe_title.trim().length > 0
+    && (value.recipe_thumbnail_url === null || typeof value.recipe_thumbnail_url === "string")
+    && (value.status === "leftover" || value.status === "eaten")
+    && typeof value.cooked_at === "string"
+    && Number.isFinite(Date.parse(value.cooked_at))
+    && (value.cooking_servings === null || isPositiveInteger(value.cooking_servings))
+    && isNullableFiniteNumber(value.finished_weight_g)
+    && isNullableFiniteNumber(value.remaining_weight_g)
+    && (value.weight_status === null || ["known", "missing", "unrecoverable"].includes(String(value.weight_status)))
+    && (value.batch_status === null || ["available", "depleted"].includes(String(value.batch_status)))
+    && (value.depleted_reason === null || ["consumed", "discarded", "mixed", "consumed_unweighed", "discarded_unweighed", "mixed_unweighed"].includes(String(value.depleted_reason)))
+    && (value.revision === null || isPositiveInteger(value.revision))
+    && (value.nutrition_calculation_status === null || ["complete", "partial", "unavailable"].includes(String(value.nutrition_calculation_status)))
+    && (value.current_unweighed_closure_event_id === null
+      || (typeof value.current_unweighed_closure_event_id === "string" && UUID_PATTERN.test(value.current_unweighed_closure_event_id)));
+}
+
 function isExactSnapshotV2CompleteData(
   value: unknown,
   request: {
@@ -189,7 +254,7 @@ function isExactSnapshotV2CompleteData(
   ) return false;
 
   const batch = value.cooked_batch;
-  if (!isRecord(batch) || !hasExactKeys(batch, COOKED_BATCH_KEYS)) return false;
+  if (!isExactCookedBatchProjection(batch)) return false;
   const hasRequestedInitialWeight = request.body.weight_action === "set_finished_weight"
     ? batch.weight_status === "known"
       && batch.finished_weight_g === request.body.finished_weight_g
@@ -218,6 +283,99 @@ function isExactSnapshotV2CompleteData(
     || batch.current_unweighed_closure_event_id !== null
   ) return false;
   return true;
+}
+
+function isExactCookedBatchListData(value: unknown): value is CookedBatchListData {
+  if (!isRecord(value)
+    || !hasExactKeys(value, ["items", "next_cursor", "has_next"])
+    || !Array.isArray(value.items)
+    || !value.items.every(isExactCookedBatchProjection)
+    || typeof value.has_next !== "boolean"
+    || (value.next_cursor !== null && typeof value.next_cursor !== "string")) return false;
+  return value.has_next
+    ? typeof value.next_cursor === "string" && value.next_cursor.length > 0
+    : value.next_cursor === null;
+}
+
+function isExactCookedBatchMutationData(
+  value: unknown,
+  expectedAction: CookedBatchMutationData["action"],
+): value is CookedBatchMutationData {
+  if (!isRecord(value)
+    || !hasExactKeys(value, ["action", "batch", "event_id"])
+    || value.action !== expectedAction
+    || !isExactCookedBatchProjection(value.batch)) return false;
+  return expectedAction === "set_finished_weight"
+    ? value.event_id === null
+    : typeof value.event_id === "string" && UUID_PATTERN.test(value.event_id);
+}
+
+export async function fetchCookedBatches({
+  availability = "all",
+  cursor,
+  limit = 20,
+}: {
+  availability?: "loggable" | "all";
+  cursor?: string | null;
+  limit?: number;
+} = {}): Promise<CookedBatchListData> {
+  const params = new URLSearchParams({ availability, limit: String(limit) });
+  if (cursor) params.set("cursor", cursor);
+  const data = await requestCooking<CookedBatchListData>(`/api/v1/cooked-batches?${params.toString()}`);
+  if (!isExactCookedBatchListData(data)) {
+    throw createCookingApiError({ status: 502, code: "INVALID_RESPONSE", fields: [], message: "중량·잔량 기록 응답을 확인하지 못했어요." });
+  }
+  return data;
+}
+
+async function mutateCookedBatch(
+  input: string,
+  method: "PATCH" | "POST",
+  body: unknown,
+  idempotencyKey: string,
+  expectedAction: CookedBatchMutationData["action"],
+): Promise<CookedBatchMutationData> {
+  const data = await requestCooking<CookedBatchMutationData>(input, {
+    method,
+    headers: { "content-type": "application/json", "Idempotency-Key": idempotencyKey },
+    body: JSON.stringify(body),
+  });
+  if (!isExactCookedBatchMutationData(data, expectedAction)) {
+    throw createCookingApiError({ status: 502, code: "INVALID_RESPONSE", fields: [], message: "중량·잔량 변경 결과를 확인하지 못했어요." });
+  }
+  return data;
+}
+
+export function updateCookedBatchWeight(
+  batchId: string,
+  body: CookedBatchWeightBody,
+  idempotencyKey: string,
+) {
+  return mutateCookedBatch(`/api/v1/cooked-batches/${batchId}/weight`, "PATCH", body, idempotencyKey, body.action);
+}
+
+export function discardCookedBatch(
+  batchId: string,
+  body: CookedBatchDiscardBody,
+  idempotencyKey: string,
+) {
+  return mutateCookedBatch(`/api/v1/cooked-batches/${batchId}/discard`, "POST", body, idempotencyKey, "discard");
+}
+
+export function adjustCookedBatch(
+  batchId: string,
+  body: CookedBatchAdjustmentBody,
+  idempotencyKey: string,
+) {
+  return mutateCookedBatch(`/api/v1/cooked-batches/${batchId}/adjust`, "POST", body, idempotencyKey, "adjust");
+}
+
+export function closeUnweighedCookedBatch(
+  batchId: string,
+  body: CookedBatchCloseBody,
+  idempotencyKey: string,
+) {
+  return mutateCookedBatch(`/api/v1/cooked-batches/${batchId}/close-unweighed`, "POST", body, idempotencyKey, body.action);
 }
 
 function createCookingApiError({

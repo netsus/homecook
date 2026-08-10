@@ -265,8 +265,8 @@ Slice Order 표의 Status 값은 위 이벤트가 발생한 PR 또는 closeout b
 | `recipe-content-snapshot-future-propagation` | in-progress | Stage 2/3 PR #1278 merge `ef5903b1`와 PR #1281 exact head `aab9a65e` merge `2173737e`로 actual owner editor, additive recipe/Meal revision, owner-only edit_context와 server-only joint capability projection runtime이 병합됐다. Design Status는 confirmed지만 Manual/server-Mac/OAuth, #8 R/R+1 gate와 R+2 activation이 남아 전체 lifecycle은 `in-progress`; approval/verification projection도 완료로 올리지 않는다 |
 | `cooked-batch-weight-ledger` | in-progress | cooked batch content-only nutrition, 전체/잔량 중량, append-only quantity/lifecycle event, weighted/unweighed/unrecoverable와 RPC-only mutation을 구현한다 |
 | `meal-log-core` | in-progress | Stage 2 backend PR #1319 exact head `be93bfc4`가 독립 Stage 3 P0/P1/P2 `0/0/0`, current-head checks 25(23 success + 2 intended historical skips) 후 base `8ba3fa5a2a198eb4f9c19d59cea5f6ccc52fdd4f`로 merge됐다. Manual/server-Mac/OAuth, merged-exact server-production/local-rehearsal, capability, R/R+1/R+2와 activation은 pending이므로 전체 lifecycle은 `in-progress`다 |
-| `planner-shell` | docs | 플래너 내부를 `요리 계획 | 식사 기록` shell로 분리하고 계획 영양·신규 제품 계획 입력을 제거하되 legacy row 조회/삭제는 보존한다. #9 merged code는 predecessor를 만족하지만 #10 runtime과 fresh independent Stage1 gates는 아직 pending이다 |
-| `cooked-batch-weight-ui` | docs | COOK_MODE 완료 중량 입력과 weigh-later, 이후 exact weight/unrecoverable/discard/adjust UI를 ledger 계약에 연결한다 |
+| `planner-shell` | docs | Draft PR #1326의 Stage 1 docs/relock이 플래너 내부를 `요리 계획 | 식사 기록` shell로 분리하고 계획 영양·신규 제품 계획 입력을 제거하되 legacy row 조회/삭제를 보존한다. #9 merged code는 predecessor를 만족하지만 #10 runtime과 fresh post-integration review는 pending이며 이 상태를 merged/runtime-complete로 올리지 않는다 |
+| `cooked-batch-weight-ui` | in-progress | UI-only Stage 4, fresh Stage 5·final authority·Stage 6 `APPROVE 0/0/0`와 current-head checks를 거쳐 PR #1323이 merge `7c7d25a1d4deb930ddcf85611bb57f5fe14f00a0`로 병합됐다. Manual/actual-device·AT/full-WCAG, server-Mac/OAuth, R/R+1/R+2와 activation은 pending이므로 전체 lifecycle은 `in-progress`다 |
 | `meal-log-ui` | docs | 신규 MEAL_LOG의 날짜 중심 하루 합계·끼니 소계·음식 추가 sheet·수정/삭제·결측 상태를 구현한다 |
 | `legacy-product-compat` | docs | legacy product planner 조회/삭제, v1 session optional→required stable key, v2 dormant drain과 current/immediate-previous reader 호환·tombstone 전제조건을 검증한다 |
 | `cooking-meal-log-cross-slice-release-qa` | docs | F0와 #1~#13의 current-head 서버 MacBook local production·isolated local rehearsal DB/API/browser/security/performance/design/rollback/legacy 통합 gate를 닫는다 |
@@ -307,7 +307,7 @@ Slice Order 표의 Status 값은 위 이벤트가 발생한 PR 또는 closeout b
 | 8 | D | `cooked-batch-weight-ledger` | in-progress | #7; `cook-mode-whole-board` merged |
 | 9 | D | `meal-log-core` | in-progress | #1 + #2 + #4 + #8 |
 | 10 | E | `planner-shell` | docs | #9 |
-| 11 | E | `cooked-batch-weight-ui` | docs | #8; `cook-mode-whole-board` merged |
+| 11 | E | `cooked-batch-weight-ui` | in-progress | #8와 `cook-mode-whole-board` merged. UI-only Stage 4, fresh Stage 5·final authority·Stage 6 `APPROVE 0/0/0`와 current-head checks를 거쳐 PR #1323이 merge `7c7d25a1d4deb930ddcf85611bb57f5fe14f00a0`로 병합됐다. Manual/actual-device·AT/full-WCAG, server-Mac/OAuth, R/R+1/R+2와 activation은 pending |
 | 12 | E | `meal-log-ui` | docs | #9 + #10 |
 | 13 | E | `legacy-product-compat` | docs | #10 + #12 |
 | 14 | F | `cooking-meal-log-cross-slice-release-qa` | docs | F0 and #1~#13 all merged/current-head green on server-MacBook local production and isolated local rehearsal |
@@ -315,6 +315,8 @@ Slice Order 표의 Status 값은 위 이벤트가 발생한 PR 또는 closeout b
 > 이 표가 cooking/meal-log successor의 exact ID·dependency authority다. 실행 순서는 foundation F0 → 독립 Train A → Train B→C→D→E→F이며 `#1`은 stable successor 번호다. `recipebook-diary-port`는 선행조건이 아니며, #3/#5는 `31-recipe-media-tags`와 `36e-recipe-tags-frontend`를 되돌리거나 진행 중 MYPAGE/RECIPEBOOK_DETAIL 파일을 소유하지 않는다. 각 행은 독립 Stage 1 `README.md` + `acceptance.md` + `automation-spec.json` + workflow-v2 work item/status PR과 mandatory internal 1.5 pass가 main에 merge된 뒤에만 구현 상태로 전환한다.
 >
 > #9 PR #1319 implementation은 base `8ba3fa5a2a198eb4f9c19d59cea5f6ccc52fdd4f`로 merge되어 #10의 code predecessor를 만족한다. 다만 #9의 Manual/server-Mac/OAuth, merged-exact server-production/local-rehearsal, capability, R/R+1/R+2와 activation은 pending이며, #10은 fresh independent Stage1 gates와 별도 runtime implementation/merge 전까지 `docs`다.
+>
+> #11 PR #1323은 fresh Stage 6와 current-head checks를 통과해 merge `7c7d25a1d4deb930ddcf85611bb57f5fe14f00a0`로 병합됐다. 이 merge는 UI-only delivery 사실이며 Manual/actual-device·AT/full-WCAG, server-Mac/OAuth, R/R+1/R+2와 activation을 완료하거나 전체 lifecycle을 `merged`로 올리지 않는다.
 
 ### Cooking / Meal Log Design Gate
 

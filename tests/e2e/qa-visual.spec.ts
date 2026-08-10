@@ -757,7 +757,11 @@ test.describe("QA visual regression", () => {
     test.skip(isMobileViewport(page), "desktop-only leftovers parity baseline");
     await installFixedVisualClock(page, FIXED_LEFTOVERS_VISUAL_NOW);
     await setE2EAuthOverride(page);
-    await installLeftoversVisualRoutes(page, { ateItems: [], leftoverItems: [] });
+    await installLeftoversVisualRoutes(page, {
+      ateItems: [],
+      cookedBatchItems: [],
+      leftoverItems: [],
+    });
 
     await page.goto(LEFTOVERS_VISUAL_PATH);
     await expect(page.getByText("남은 요리가 없어요")).toBeVisible();

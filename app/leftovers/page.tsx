@@ -12,6 +12,7 @@ export default async function LeftoversPage() {
 
   return (
     <AppShell
+      bottomTabsMode="hidden"
       className="wave1-leftovers-shell wave1-leftovers-web-shell"
       currentTab="mypage"
       headerMode="hidden"

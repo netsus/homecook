@@ -15,6 +15,86 @@ interface LeftoverItem {
   source_planned_servings: number | null;
 }
 
+interface LeftoverRequestLog {
+  eat: string[];
+  planner: string[];
+}
+
+const MOBILE_ACTION_GUTTER_PX = 16;
+
+async function expectMobileActionClearOfBottomTab(
+  page: Page,
+  action: ReturnType<Page["getByTestId"]>,
+) {
+  if (!isMobileViewport(page)) return;
+
+  const bottomTabs = page.locator('[data-slot="bottom-tab-container"]');
+  const bottomTab = page.getByRole("navigation", {
+    name: "남은 요리 하단 탭",
+  });
+  expect.soft(await bottomTabs.count(), "LEFTOVERS must render one bottom tab").toBe(1);
+  await expect(bottomTab).toBeVisible();
+  await expect(action).toBeVisible();
+  await action.scrollIntoViewIfNeeded();
+
+  const geometry = await page.evaluate(
+    ({ actionTestId, actionIndex, gutter }) => {
+      const actions = Array.from(
+        document.querySelectorAll<HTMLElement>(`[data-testid="${actionTestId}"]`),
+      );
+      const target = actions[actionIndex];
+      const tab = document.querySelector<HTMLElement>(
+        'nav[aria-label="남은 요리 하단 탭"]',
+      );
+
+      if (!target || !tab) {
+        throw new Error("mobile action or bottom tab was not found");
+      }
+
+      const targetRect = target.getBoundingClientRect();
+      const tabRect = tab.getBoundingClientRect();
+      const centerX = targetRect.left + targetRect.width / 2;
+      const centerY = targetRect.top + targetRect.height / 2;
+      const lowerInteriorY = targetRect.bottom - 1;
+      const centerHit = document.elementFromPoint(centerX, centerY);
+      const lowerHit = document.elementFromPoint(centerX, lowerInteriorY);
+
+      return {
+        centerHitTarget: centerHit === target || target.contains(centerHit),
+        lowerHitTarget: lowerHit === target || target.contains(lowerHit),
+        target: {
+          bottom: targetRect.bottom,
+          height: targetRect.height,
+          top: targetRect.top,
+          width: targetRect.width,
+        },
+        tab: {
+          top: tabRect.top,
+        },
+        requiredMaximumBottom: tabRect.top - gutter,
+      };
+    },
+    {
+      actionIndex: await action.evaluate((element) => {
+        const testId = element.getAttribute("data-testid");
+        return Array.from(document.querySelectorAll(`[data-testid="${testId}"]`)).indexOf(
+          element,
+        );
+      }),
+      actionTestId: await action.getAttribute("data-testid"),
+      gutter: MOBILE_ACTION_GUTTER_PX,
+    },
+  );
+
+  expect.soft(geometry.target.height, JSON.stringify(geometry)).toBeGreaterThanOrEqual(44);
+  expect.soft(geometry.target.width, JSON.stringify(geometry)).toBeGreaterThanOrEqual(44);
+  expect
+    .soft(geometry.target.bottom, JSON.stringify(geometry))
+    .toBeLessThanOrEqual(geometry.requiredMaximumBottom);
+  expect.soft(geometry.centerHitTarget, JSON.stringify(geometry)).toBe(true);
+  expect.soft(geometry.lowerHitTarget, JSON.stringify(geometry)).toBe(true);
+}
+
 async function setAuthOverride(page: Page, value: "authenticated" | "guest") {
   await page.addInitScript(
     ({ key, state }) => {
@@ -83,6 +163,17 @@ async function installLeftoverRoutes(
 ) {
   const leftoverItems = options?.leftoverItems ?? makeLeftoverItems();
   const eatenItems = options?.eatenItems ?? makeEatenItems();
+  const requests: LeftoverRequestLog = { eat: [], planner: [] };
+
+  await page.route("**/api/v1/cooked-batches?*", async (route) => {
+    await route.fulfill({
+      json: {
+        success: true,
+        data: { items: [], next_cursor: null, has_next: false },
+        error: null,
+      },
+    });
+  });
 
   await page.route("**/api/v1/leftovers?*", async (route) => {
     const url = new URL(route.request().url());
@@ -100,6 +191,7 @@ async function installLeftoverRoutes(
   });
 
   await page.route("**/api/v1/leftovers/*/eat", async (route) => {
+    requests.eat.push(route.request().url());
     const urlParts = route.request().url().split("/");
     const idIndex = urlParts.indexOf("leftovers") + 1;
     const id = urlParts[idIndex];
@@ -156,6 +248,7 @@ async function installLeftoverRoutes(
   });
 
   await page.route("**/api/v1/planner?*", async (route) => {
+    requests.planner.push(route.request().url());
     await route.fulfill({
       json: {
         success: true,
@@ -195,6 +288,8 @@ async function installLeftoverRoutes(
       await route.continue();
     }
   });
+
+  return requests;
 }
 
 test.describe("LEFTOVERS screen", () => {
@@ -223,14 +318,40 @@ test.describe("LEFTOVERS screen", () => {
     await expect(page.getByTestId("leftover-card")).toHaveCount(2);
   });
 
+  test(
+    "keeps legacy action targets clear of the bottom tab at 390px",
+    async ({ page }, testInfo) => {
+      test.skip(
+        testInfo.project.name !== "mobile-ios-small",
+        "exact 390px mobile layout probe",
+      );
+      await page.setViewportSize({ height: 844, width: 390 });
+      await setAuthOverride(page, "authenticated");
+      await installLeftoverRoutes(page);
+      await page.goto("/leftovers");
+
+      await expectMobileActionClearOfBottomTab(
+        page,
+        page.getByTestId("planner-add-button").first(),
+      );
+      await expectMobileActionClearOfBottomTab(
+        page,
+        page.getByTestId("eat-button").first(),
+      );
+    },
+  );
+
   test("eat action removes item from list", async ({ page }) => {
     await setAuthOverride(page, "authenticated");
-    await installLeftoverRoutes(page);
+    const requests = await installLeftoverRoutes(page);
     await page.goto("/leftovers");
 
     await expect(page.getByTestId("leftover-card").first()).toBeVisible();
-    await page.getByTestId("eat-button").first().click();
+    const eatButton = page.getByTestId("eat-button").first();
+    await expectMobileActionClearOfBottomTab(page, eatButton);
+    await eatButton.click();
 
+    expect(requests.eat).toHaveLength(1);
     await expect(page.getByTestId("feedback-toast")).toBeVisible();
     await expect(page.getByTestId("feedback-toast")).toContainText("다먹음 처리됐어요");
     await expect(page.getByTestId("leftover-card")).toHaveCount(1);
@@ -238,23 +359,31 @@ test.describe("LEFTOVERS screen", () => {
 
   test("shows empty state when all leftovers are eaten", async ({ page }) => {
     await setAuthOverride(page, "authenticated");
-    await installLeftoverRoutes(page, { leftoverItems: makeLeftoverItems().slice(0, 1) });
+    const requests = await installLeftoverRoutes(page, {
+      leftoverItems: makeLeftoverItems().slice(0, 1),
+    });
     await page.goto("/leftovers");
 
     await expect(page.getByTestId("leftover-card").first()).toBeVisible();
-    await page.getByTestId("eat-button").first().click();
+    const eatButton = page.getByTestId("eat-button").first();
+    await expectMobileActionClearOfBottomTab(page, eatButton);
+    await eatButton.click();
 
+    expect(requests.eat).toHaveLength(1);
     await expect(page.getByText("남은 요리가 없어요")).toBeVisible();
   });
 
   test("planner add opens sheet", async ({ page }) => {
     await setAuthOverride(page, "authenticated");
-    await installLeftoverRoutes(page);
+    const requests = await installLeftoverRoutes(page);
     await page.goto("/leftovers");
 
     await expect(page.getByTestId("leftover-card").first()).toBeVisible();
-    await page.getByTestId("planner-add-button").first().click();
+    const plannerAddButton = page.getByTestId("planner-add-button").first();
+    await expectMobileActionClearOfBottomTab(page, plannerAddButton);
+    await plannerAddButton.click();
 
+    expect(requests.planner).toHaveLength(1);
     await expect(page.getByText("날짜와 끼니를 선택해 주세요")).toBeVisible();
   });
 

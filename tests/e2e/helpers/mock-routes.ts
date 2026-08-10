@@ -1650,15 +1650,51 @@ function cookingVisualRecipe(title = "김치볶음밥") {
   };
 }
 
+const COOKED_BATCH_VISUAL_ITEMS = [
+  {
+    batch_status: "available",
+    cooked_at: "2026-06-20T12:00:00.000Z",
+    cooking_servings: 2,
+    current_unweighed_closure_event_id: null,
+    depleted_reason: null,
+    finished_weight_g: 720,
+    id: "660e8400-e29b-41d4-a716-446655440001",
+    nutrition_calculation_status: "complete",
+    recipe_id: "770e8400-e29b-41d4-a716-446655440001",
+    recipe_thumbnail_url: null,
+    recipe_title: "김치볶음밥",
+    remaining_weight_g: 420,
+    revision: 2,
+    status: "leftover",
+    weight_status: "known",
+  },
+] as const;
+
 export async function installLeftoversVisualRoutes(
   page: Page,
   options: {
     ateItems?: ReadonlyArray<LeftoverListItemData>;
+    cookedBatchItems?: ReadonlyArray<Record<string, unknown>>;
     leftoverItems?: ReadonlyArray<LeftoverListItemData>;
   } = {},
 ) {
   const leftoverItems = [...(options.leftoverItems ?? LEFTOVERS_VISUAL_ITEMS)];
   const ateItems = [...(options.ateItems ?? ATE_LIST_VISUAL_ITEMS)];
+  const cookedBatchItems = [...(options.cookedBatchItems ?? COOKED_BATCH_VISUAL_ITEMS)];
+
+  await page.route("**/api/v1/cooked-batches?*", async (route) => {
+    await route.fulfill({
+      json: {
+        success: true,
+        data: {
+          has_next: false,
+          items: cookedBatchItems,
+          next_cursor: null,
+        },
+        error: null,
+      },
+    });
+  });
 
   await page.route("**/api/v1/leftovers?*", async (route) => {
     const requestUrl = new URL(route.request().url());
