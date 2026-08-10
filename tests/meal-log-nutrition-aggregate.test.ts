@@ -17,9 +17,24 @@ describe("meal-log immutable nutrition aggregates", () => {
   });
 
   test("keeps unknown nutrition separate from zero in slot and day totals", () => {
-    expect(sql).toMatch(/calculation_status[\s\S]*complete[\s\S]*partial[\s\S]*unavailable/i);
+    expect(sql).toMatch(/fold_meal_log_nutrition_status/i);
+    expect(sql).toMatch(/active_sections[\s\S]*calculation_status/i);
+    expect(sql).toMatch(/deleted_column_sections[\s\S]*calculation_status/i);
     expect(sql).toMatch(/incomplete_count/i);
-    expect(sql).toMatch(/sum\(\(nutrition_evidence_json#>>'\{values,energy_kcal\}'\)::numeric\)/i);
-    expect(sql).not.toMatch(/coalesce\([^;]*energy_kcal[^;]*,\s*0\)/i);
+    expect(sql).toMatch(/sum\(\(nutrition_evidence_json->>'calories_kcal'\)::numeric\)/i);
+    expect(sql).not.toMatch(/coalesce\([^;]*calories_kcal[^;]*,\s*0\)/i);
+  });
+
+  test("uses one exact compact nutrition response shape for every source", () => {
+    expect(sql).toMatch(/compact_meal_log_nutrition/i);
+    for (const key of ["calories_kcal", "carbohydrate_g", "protein_g", "fat_g", "sodium_mg"]) {
+      expect(sql).toContain(`'${key}'`);
+    }
+    expect(sql).not.toMatch(/'nutrition',p_entry\.nutrition_evidence_json\s*\|\|/i);
+  });
+
+  test("scales immutable cooked-batch nutrition by actual intake over original finished weight", () => {
+    expect(sql).toMatch(/resolve_cooked_batch_nutrition[\s\S]*v_amount\s*\/\s*v_batch\.finished_weight_g/i);
+    expect(sql).toMatch(/v_batch\.finished_weight_g\s+is\s+null[\s\S]*CONFLICT/i);
   });
 });

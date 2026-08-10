@@ -24,4 +24,21 @@ describe("meal-log batch event linkage", () => {
     expect([...sql.matchAll(/create table(?: if not exists)?\s+([\w.]+)/gi)].map((match) => match[1]))
       .toEqual(["public.meal_log_entries"]);
   });
+
+  test("locks old and new batches in canonical UUID order before integrity preflight and writes", () => {
+    expect(sql).toMatch(/unnest\([^;]*v_old_batch_id[^;]*v_new_batch_id[^;]*\)[\s\S]*order by[\s\S]*v_lock_batch_id/i);
+    expect(sql).toMatch(/assert_cooked_batch_cached_projection\(v_lock_batch_id,p_owner_uuid\)/i);
+    const assertion = sql.indexOf("assert_cooked_batch_cached_projection(v_lock_batch_id,p_owner_uuid)");
+    const firstEventWrite = sql.indexOf("insert into public.cooked_batch_quantity_events", sql.indexOf("mutate_meal_log_entry"));
+    expect(assertion).toBeGreaterThan(0);
+    expect(firstEventWrite).toBeGreaterThan(assertion);
+  });
+
+  test("pins exact approved piece evidence with matching size and preparation", () => {
+    expect(sql).toMatch(/piece_unit_weights/i);
+    expect(sql).toMatch(/piece\.size_code\s*=\s*evidence\.size_code/i);
+    expect(sql).toMatch(/piece\.preparation_state\s*=\s*evidence\.preparation_state/i);
+    expect(sql).toMatch(/source\.freshness_status\s*=\s*'current'/i);
+    expect(sql).toMatch(/v_entry\.conversion_evidence_id[\s\S]*piece_unit_weights/i);
+  });
 });
