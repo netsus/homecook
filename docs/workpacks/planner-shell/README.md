@@ -222,6 +222,6 @@ segment switch:
 - [ ] internal1.5/security/five-axis/design reviews approved with zero findings
 - [ ] every check started for the current head SHA is terminal green or an intended skip
 - [ ] post-merge master QA/Policy/Security/Vercel checks green
-- [ ] Stage 2 TDD RED before implementation
+- [x] Stage 2 compatibility target RED before test-only GREEN; backend implementation remains N/A
 - [ ] Stage 4 390/320/desktop visual-a11y-route evidence green
 - [ ] product-design-authority approved before confirmed

@@ -8,7 +8,7 @@
 
 - [ ] exact chain remains `#8 -> #9 -> (#10,#11) -> #12 -> #13 -> #14`; no successor is promoted by this docs relock <!-- omo:id=accept-planner-shell-chain;stage=2;scope=shared;review=3,6 -->
 - [ ] #9 PR #1319 exact head `be93bfc47281e2795c59c0fd1052a4ecf6085837` is consumed only as merged backend code at base `8ba3fa5a2a198eb4f9c19d59cea5f6ccc52fdd4f`; Manual/server-Mac/OAuth, merged-exact server-production/local-rehearsal, capability, R/R+1/R+2 and activation stay pending <!-- omo:id=accept-planner-shell-meal-log-core-readiness;stage=2;scope=shared;review=3,6 -->
-- [ ] #10 adds no DB schema/migration/RLS/RPC/public endpoint/field/status; Stage 2 backend implementation is N/A except compatibility contract tests <!-- omo:id=accept-planner-shell-no-backend-scope;stage=2;scope=shared;review=3,6 -->
+- [x] #10 adds no DB schema/migration/RLS/RPC/public endpoint/field/status; Stage 2 backend implementation is N/A except compatibility contract tests <!-- omo:id=accept-planner-shell-no-backend-scope;stage=2;scope=shared;review=3,6 -->
 - [ ] #11 COOK_MODE/LEFTOVERS, #12 MEAL_LOG body and #13 tombstone ownership remain untouched <!-- omo:id=accept-planner-shell-adjacent-ownership;stage=2;scope=shared;review=3,5,6 -->
 - [ ] #12 implementation does not start until #10 runtime is separately implemented, reviewed, merged and green <!-- omo:id=accept-planner-shell-meal-log-ui-gate;stage=2;scope=shared;review=3,5,6 -->
 
@@ -38,9 +38,9 @@
 - [ ] historical product cards show pinned identity/quantity in a read-only section <!-- omo:id=accept-planner-shell-legacy-card;stage=4;scope=frontend;review=5,6 -->
 - [ ] same-screen detail shows pinned nutrition; no new detail route <!-- omo:id=accept-planner-shell-legacy-detail;stage=4;scope=frontend;review=5,6 -->
 - [ ] owner delete is the only legacy mutation and preserves nondisclosure <!-- omo:id=accept-planner-shell-legacy-delete;stage=4;scope=shared;review=3,5,6 -->
-- [ ] unauthenticated access keeps existing `401 UNAUTHORIZED`; retained legacy delete keeps existing `401 UNAUTHORIZED`, `403 FORBIDDEN` and `404 RESOURCE_NOT_FOUND` without a new error code <!-- omo:id=accept-planner-shell-errors;stage=2;scope=shared;review=3,6 -->
+- [x] unauthenticated access keeps existing `401 UNAUTHORIZED`; retained legacy delete keeps existing `401 UNAUTHORIZED`, `403 FORBIDDEN` and `404 RESOURCE_NOT_FOUND` without a new error code <!-- omo:id=accept-planner-shell-errors;stage=2;scope=shared;review=3,6 -->
 - [ ] no auto meal-log migration, current-version repin, cook/shop/XP/status action <!-- omo:id=accept-planner-shell-no-legacy-expansion;stage=4;scope=shared;review=3,5,6 -->
-- [ ] GET /planner/nutrition, legacy GET/delete and v1 cursor survive at least one compatibility release and until #13 approved compatibility evidence/tombstone contract <!-- omo:id=accept-planner-shell-compat-floor;stage=2;scope=shared;review=3,6 -->
+- [x] GET /planner/nutrition, legacy GET/delete and v1 cursor survive at least one compatibility release and until #13 approved compatibility evidence/tombstone contract <!-- omo:id=accept-planner-shell-compat-floor;stage=2;scope=shared;review=3,6 -->
 - [ ] HOME remains recipe-only and unified food search is not added there <!-- omo:id=accept-planner-shell-home-boundary;stage=4;scope=frontend;review=5,6 -->
 - [ ] #12 owns MEAL_LOG UI and #13 owns tombstones <!-- omo:id=accept-planner-shell-successor-boundary;stage=2;scope=shared;review=3,5,6 -->
 
@@ -55,7 +55,7 @@
 
 ## Contract / Verification
 
-- [ ] no unofficial API, route, field, status, bottom tab or writer is added <!-- omo:id=accept-planner-shell-no-invention;stage=2;scope=shared;review=3,5,6 -->
+- [x] no unofficial API, route, field, status, bottom tab or writer is added <!-- omo:id=accept-planner-shell-no-invention;stage=2;scope=shared;review=3,5,6 -->
 - [ ] Stage 1 claims only docs validators/tests/lint/typecheck/audit/diff <!-- omo:id=accept-planner-shell-stage1-honesty;stage=2;scope=shared;review=3,6 -->
 - [ ] implementation records failing component/route-history tests before code <!-- omo:id=accept-planner-shell-tdd-red;stage=2;scope=frontend;review=5,6 -->
 - [ ] independent internal1.5/security/five-axis/design/Stage3/5/6 findings are zero <!-- omo:id=accept-planner-shell-independent-review;stage=2;scope=shared;review=3,5,6 -->
