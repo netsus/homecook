@@ -66,7 +66,7 @@
       "safe_search_path": ["pg_catalog", "public", "private", "pg_temp"]
     },
     {
-      "signature": "private.resolve_meal_log_product_nutrition(uuid, jsonb, numeric, text)",
+      "signature": "private.resolve_meal_log_product_nutrition(uuid, jsonb, numeric, text, boolean)",
       "control_class": "application-controlled",
       "effect": "read-only",
       "exposure": "service-internal",
@@ -76,7 +76,7 @@
       "safe_search_path": ["pg_catalog", "public", "private", "pg_temp"]
     },
     {
-      "signature": "private.resolve_meal_log_profile_nutrition(uuid, numeric, text)",
+      "signature": "private.resolve_meal_log_profile_nutrition(uuid, numeric, text, boolean)",
       "control_class": "application-controlled",
       "effect": "read-only",
       "exposure": "service-internal",

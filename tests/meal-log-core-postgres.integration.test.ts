@@ -51,6 +51,12 @@ const productMissing = "93c00000-0000-4000-8000-000000000004";
 const productMissingVersion = "93d00000-0000-4000-8000-000000000004";
 const productDuplicate = "93c00000-0000-4000-8000-000000000005";
 const productDuplicateVersion = "93d00000-0000-4000-8000-000000000005";
+const productReplacementSourceItem = "93900000-0000-4000-8000-000000000010";
+const productReplacementProfile = "93800000-0000-4000-8000-000000000010";
+const productReplacementVersion = "93d00000-0000-4000-8000-000000000010";
+const ingredientReplacementSourceItem = "93900000-0000-4000-8000-000000000011";
+const ingredientReplacementNutritionProfile = "93800000-0000-4000-8000-000000000011";
+const ingredientReplacementProfile = "93700000-0000-4000-8000-000000000011";
 
 function psql(sql: string, expectSuccess = true) {
   const result = spawnSync("docker", [
@@ -128,6 +134,13 @@ function mutation(
 function compactKeys(value: unknown) {
   expect(value).toBeTypeOf("object");
   return Object.keys(value as Record<string, unknown>).sort();
+}
+
+function jsonRows(stdout: string) {
+  return stdout.split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.startsWith("{"))
+    .map((line) => JSON.parse(line) as Record<string, unknown>);
 }
 
 function stateDigest(batchId = batchDrift) {
@@ -357,6 +370,199 @@ describe.runIf(enabled)("meal-log core PostgreSQL", () => {
     expect(piece.data.entry.nutrition).toMatchObject({ calculation_status: "complete", calories_kcal: 100 });
     expect(psql(`select conversion_evidence_id from public.meal_log_entries where id='94000000-0000-4000-8000-000000000003';`).stdout.trim()).toBe(pieceEvidence);
   });
+
+  test("recomputes a same-product amount PATCH from its superseded pinned immutable version", () => {
+    const pinnedEntry = "94c00000-0000-4000-8000-000000000001";
+    const sourceChangeEntry = "94c00000-0000-4000-8000-000000000002";
+    const newEntry = "94c00000-0000-4000-8000-000000000003";
+    const patchKey = "94d00000-0000-4000-8000-000000000001";
+    mutation("create", pinnedEntry, "94d00000-0000-4000-8000-000000000002", payloadOnDate({ type: "food_product", id: productForward }, 1, "serving"));
+    mutation("create", sourceChangeEntry, "94d00000-0000-4000-8000-000000000003", payloadOnDate({ type: "food_product", id: product }, 50, "g"));
+    const patchBody = { ...payloadOnDate({ type: "food_product", id: productForward }, 2, "serving"), expected_revision: 1 };
+
+    const result = psql(`begin;
+      select public.set_account_generation_internal_writer_marker('${cutover}',true);
+      insert into public.nutrition_source_items(
+        id,source_id,external_item_key,external_name,preparation_state,source_basis_text,
+        source_basis_amount,source_basis_unit,edible_portion_percent,stable_fingerprint,
+        review_status,decision_reason,reviewed_by,reviewed_at
+      ) values(
+        '${productReplacementSourceItem}','${nutrientSource}','stage3-product-v2','stage3 product v2',null,
+        '100 g',100,'g',100,repeat('1',64),'approved','stage3 replacement','${owner}',now()
+      );
+      insert into public.nutrition_profiles(
+        id,source_item_id,profile_kind,normalization_method,basis_amount,basis_unit,version,
+        review_status,decision_reason,reviewed_by,reviewed_at,is_active,created_by
+      ) values(
+        '${productReplacementProfile}','${productReplacementSourceItem}','product_label','mass_100g',
+        100,'g',2,'approved','stage3 replacement','${owner}',now(),true,'${owner}'
+      );
+      insert into public.nutrition_values(profile_id,nutrient_code,source_nutrient_code,source_unit,amount,value_status)
+      select '${productReplacementProfile}'::uuid,nutrient_code,nutrient_code,
+        case when nutrient_code='energy_kcal' then 'kcal' when nutrient_code='sodium_mg' then 'mg' else 'g' end,
+        amount,'observed' from (values
+          ('energy_kcal',400::numeric),('carbohydrate_g',80::numeric),('protein_g',40::numeric),
+          ('fat_g',20::numeric),('sodium_mg',200::numeric)
+        ) values(nutrient_code,amount);
+      insert into public.food_product_nutrition_versions(
+        id,product_id,nutrition_profile_id,version,basis_relations_json,created_by
+      ) values(
+        '${productReplacementVersion}','${productForward}','${productReplacementProfile}',2,
+        '[{"from":{"amount":1,"unit":"serving"},"to":{"amount":50,"unit":"g"}}]','${owner}'
+      );
+      update public.nutrition_profiles
+      set review_status='superseded',is_active=false,superseded_by_id='${productReplacementProfile}',
+          decision_reason='stage3 replacement',reviewed_by='${owner}',reviewed_at=now()
+      where id='${productNutritionProfile}';
+      update public.food_products set current_nutrition_version_id='${productReplacementVersion}'
+      where id='${productForward}';
+      select public.set_account_generation_internal_writer_marker('${cutover}',false);
+      ${mutationSql("patch", pinnedEntry, patchKey, patchBody, 1)}
+      ${mutationSql("patch", pinnedEntry, patchKey, patchBody, 1)}
+      ${mutationSql("create", newEntry, "94d00000-0000-4000-8000-000000000004", payloadOnDate({ type: "food_product", id: productForward }, 1, "serving"))}
+      ${mutationSql("patch", sourceChangeEntry, "94d00000-0000-4000-8000-000000000005", {
+        ...payloadOnDate({ type: "food_product", id: productForward }, 1, "serving"), expected_revision: 1,
+      }, 1)}
+      select jsonb_build_object(
+        'pinned_version',(select food_product_nutrition_version_id from public.meal_log_entries where id='${pinnedEntry}'),
+        'pinned_calories',(select (nutrition_evidence_json->>'calories_kcal')::numeric from public.meal_log_entries where id='${pinnedEntry}'),
+        'pinned_revision',(select revision from public.meal_log_entries where id='${pinnedEntry}'),
+        'patch_receipts',(select count(*) from public.mutation_idempotency_keys
+          where owner_uuid='${owner}' and operation_scope='meal_log_patch'
+            and key_hash=encode(extensions.digest(convert_to('${patchKey}','UTF8'),'sha256'),'hex')),
+        'new_version',(select food_product_nutrition_version_id from public.meal_log_entries where id='${newEntry}'),
+        'new_calories',(select (nutrition_evidence_json->>'calories_kcal')::numeric from public.meal_log_entries where id='${newEntry}'),
+        'source_change_version',(select food_product_nutrition_version_id from public.meal_log_entries where id='${sourceChangeEntry}'),
+        'source_change_calories',(select (nutrition_evidence_json->>'calories_kcal')::numeric from public.meal_log_entries where id='${sourceChangeEntry}')
+      );
+      rollback;`);
+    const rows = jsonRows(result.stdout);
+    expect(rows[0]).toEqual(rows[1]);
+    expect(rows.at(-1)).toEqual({
+      pinned_version: productForwardVersion,
+      pinned_calories: 200,
+      pinned_revision: 2,
+      patch_receipts: 1,
+      new_version: productReplacementVersion,
+      new_calories: 200,
+      source_change_version: productReplacementVersion,
+      source_change_calories: 200,
+    });
+  });
+
+  test("recomputes a same-ingredient amount PATCH from its superseded pinned immutable profile", () => {
+    const pinnedEntry = "94c00000-0000-4000-8000-000000000011";
+    const sourceChangeEntry = "94c00000-0000-4000-8000-000000000012";
+    const newEntry = "94c00000-0000-4000-8000-000000000013";
+    const patchKey = "94d00000-0000-4000-8000-000000000011";
+    mutation("create", pinnedEntry, "94d00000-0000-4000-8000-000000000012", payloadOnDate({ type: "ingredient", id: ingredient }, 10, "g"));
+    mutation("create", sourceChangeEntry, "94d00000-0000-4000-8000-000000000013", payloadOnDate({ type: "food_product", id: product }, 10, "g"));
+    const patchBody = { ...payloadOnDate({ type: "ingredient", id: ingredient }, 20, "g"), expected_revision: 1 };
+
+    const result = psql(`begin;
+      select public.set_account_generation_internal_writer_marker('${cutover}',true);
+      insert into public.nutrition_source_items(
+        id,source_id,external_item_key,external_name,preparation_state,source_basis_text,
+        source_basis_amount,source_basis_unit,edible_portion_percent,stable_fingerprint,
+        review_status,decision_reason,reviewed_by,reviewed_at
+      ) values(
+        '${ingredientReplacementSourceItem}','${nutrientSource}','stage3-ingredient-v2','stage3 exact piece','raw',
+        '100 g',100,'g',100,repeat('2',64),'approved','stage3 replacement','${owner}',now()
+      );
+      insert into public.nutrition_profiles(
+        id,source_item_id,profile_kind,normalization_method,basis_amount,basis_unit,version,
+        review_status,decision_reason,reviewed_by,reviewed_at,is_active,created_by
+      ) values(
+        '${ingredientReplacementNutritionProfile}','${ingredientReplacementSourceItem}','ingredient_source','mass_100g',
+        100,'g',2,'approved','stage3 replacement','${owner}',now(),true,'${owner}'
+      );
+      insert into public.nutrition_values(profile_id,nutrient_code,source_nutrient_code,source_unit,amount,value_status)
+      select '${ingredientReplacementNutritionProfile}'::uuid,nutrient_code,nutrient_code,
+        case when nutrient_code='energy_kcal' then 'kcal' when nutrient_code='sodium_mg' then 'mg' else 'g' end,
+        amount,'observed' from (values
+          ('energy_kcal',300::numeric),('carbohydrate_g',60::numeric),('protein_g',30::numeric),
+          ('fat_g',15::numeric),('sodium_mg',150::numeric)
+        ) values(nutrient_code,amount);
+      insert into public.ingredient_nutrition_profiles(
+        id,ingredient_id,nutrition_profile_id,preparation_state,match_method,is_primary,
+        review_status,decision_reason,reviewed_by,reviewed_at,version,is_active
+      ) values(
+        '${ingredientReplacementProfile}','${ingredient}','${ingredientReplacementNutritionProfile}','raw',
+        'exact_standard_name',false,'pending',null,null,null,2,false
+      );
+      update public.nutrition_profiles
+      set review_status='superseded',is_active=false,superseded_by_id='${ingredientReplacementNutritionProfile}',
+          decision_reason='stage3 replacement',reviewed_by='${owner}',reviewed_at=now()
+      where id='${ingredientNutritionProfile}';
+      update public.ingredient_nutrition_profiles
+      set review_status='superseded',is_active=false,is_primary=false,superseded_by_id='${ingredientReplacementProfile}',
+          decision_reason='stage3 replacement',reviewed_by='${owner}',reviewed_at=now()
+      where id='${ingredientProfile}';
+      update public.ingredient_nutrition_profiles
+      set review_status='approved',is_active=true,is_primary=true,
+          decision_reason='stage3 replacement',reviewed_by='${owner}',reviewed_at=now()
+      where id='${ingredientReplacementProfile}';
+      select public.set_account_generation_internal_writer_marker('${cutover}',false);
+      ${mutationSql("patch", pinnedEntry, patchKey, patchBody, 1)}
+      ${mutationSql("patch", pinnedEntry, patchKey, patchBody, 1)}
+      ${mutationSql("create", newEntry, "94d00000-0000-4000-8000-000000000014", payloadOnDate({ type: "ingredient", id: ingredient }, 10, "g"))}
+      ${mutationSql("patch", sourceChangeEntry, "94d00000-0000-4000-8000-000000000015", {
+        ...payloadOnDate({ type: "ingredient", id: ingredient }, 10, "g"), expected_revision: 1,
+      }, 1)}
+      select jsonb_build_object(
+        'pinned_profile',(select ingredient_nutrition_profile_id from public.meal_log_entries where id='${pinnedEntry}'),
+        'pinned_calories',(select (nutrition_evidence_json->>'calories_kcal')::numeric from public.meal_log_entries where id='${pinnedEntry}'),
+        'pinned_revision',(select revision from public.meal_log_entries where id='${pinnedEntry}'),
+        'patch_receipts',(select count(*) from public.mutation_idempotency_keys
+          where owner_uuid='${owner}' and operation_scope='meal_log_patch'
+            and key_hash=encode(extensions.digest(convert_to('${patchKey}','UTF8'),'sha256'),'hex')),
+        'new_profile',(select ingredient_nutrition_profile_id from public.meal_log_entries where id='${newEntry}'),
+        'new_calories',(select (nutrition_evidence_json->>'calories_kcal')::numeric from public.meal_log_entries where id='${newEntry}'),
+        'source_change_profile',(select ingredient_nutrition_profile_id from public.meal_log_entries where id='${sourceChangeEntry}'),
+        'source_change_calories',(select (nutrition_evidence_json->>'calories_kcal')::numeric from public.meal_log_entries where id='${sourceChangeEntry}')
+      );
+      rollback;`);
+    const rows = jsonRows(result.stdout);
+    expect(rows[0]).toEqual(rows[1]);
+    expect(rows.at(-1)).toEqual({
+      pinned_profile: ingredientProfile,
+      pinned_calories: 20,
+      pinned_revision: 2,
+      patch_receipts: 1,
+      new_profile: ingredientReplacementProfile,
+      new_calories: 30,
+      source_change_profile: ingredientReplacementProfile,
+      source_change_calories: 30,
+    });
+  });
+
+  test("keeps revoked historical product and ingredient profiles fail closed with zero writes", () => {
+    for (const [entryId, createKey, patchKey, source, profileId] of [
+      ["94c00000-0000-4000-8000-000000000021", "94d00000-0000-4000-8000-000000000021", "94d00000-0000-4000-8000-000000000022", { type: "food_product", id: productForward }, productNutritionProfile],
+      ["94c00000-0000-4000-8000-000000000022", "94d00000-0000-4000-8000-000000000023", "94d00000-0000-4000-8000-000000000024", { type: "ingredient", id: ingredient }, ingredientNutritionProfile],
+    ] as const) {
+      mutation("create", entryId, createKey, payloadOnDate(source, 10, "g"));
+      const before = entryStateDigest(entryId);
+      const failed = psql(`begin;
+        select public.set_account_generation_internal_writer_marker('${cutover}',true);
+        update public.nutrition_profiles
+        set review_status='revoked',is_active=false,decision_reason='stage3 revoked control',
+            reviewed_by='${owner}',reviewed_at=now()
+        where id='${profileId}';
+        select public.set_account_generation_internal_writer_marker('${cutover}',false);
+        ${mutationSql("patch", entryId, patchKey, {
+          ...payloadOnDate(source, 20, "g"), expected_revision: 1,
+        }, 1)}`, false);
+      expect(failed.status).not.toBe(0);
+      expect(failed.stderr).toContain("RESOURCE_NOT_FOUND");
+      expect(entryStateDigest(entryId)).toBe(before);
+      expect(psql(`select count(*) from public.mutation_idempotency_keys
+        where owner_uuid='${owner}' and operation_scope='meal_log_patch'
+          and key_hash=encode(extensions.digest(convert_to('${patchKey}','UTF8'),'sha256'),'hex');`).stdout.trim()).toBe("0");
+      expect(psql(`select is_active || ':' || review_status
+        from public.nutrition_profiles where id='${profileId}';`).stdout.trim()).toBe("true:approved");
+    }
+  }, 10_000);
 
   test("preserves exact piece pins and rejects missing, rejected, or stale evidence", () => {
     const patch = mutation("patch", "94000000-0000-4000-8000-000000000003", "94100000-0000-4000-8000-000000000004", {

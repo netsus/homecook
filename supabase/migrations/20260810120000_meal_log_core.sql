@@ -142,7 +142,8 @@ $function$;
 create or replace function private.resolve_meal_log_profile_nutrition(
   p_profile_id uuid,
   p_amount numeric,
-  p_unit text
+  p_unit text,
+  p_allow_superseded boolean
 ) returns jsonb
 language plpgsql stable security definer
 set search_path = pg_catalog, public, private, pg_temp
@@ -150,8 +151,10 @@ as $function$
 declare v_profile public.nutrition_profiles%rowtype; v_scale numeric; v_values jsonb; v_observed integer;
 begin
   select * into v_profile from public.nutrition_profiles where id=p_profile_id;
-  if v_profile.id is null or not v_profile.is_active
-    or v_profile.review_status not in ('approved','self_reported') then
+  if v_profile.id is null or not (
+    (v_profile.is_active and v_profile.review_status in ('approved','self_reported'))
+    or (p_allow_superseded and not v_profile.is_active and v_profile.review_status='superseded')
+  ) then
     raise exception 'RESOURCE_NOT_FOUND' using errcode='P0002';
   end if;
   if p_unit is distinct from v_profile.basis_unit then
@@ -174,7 +177,7 @@ end;
 $function$;
 
 create or replace function private.resolve_meal_log_product_nutrition(
-  p_profile_id uuid,p_relations jsonb,p_amount numeric,p_unit text
+  p_profile_id uuid,p_relations jsonb,p_amount numeric,p_unit text,p_allow_superseded boolean
 ) returns jsonb
 language plpgsql stable security definer
 set search_path = pg_catalog, public, private, pg_temp
@@ -184,7 +187,7 @@ begin
   select * into v_profile from public.nutrition_profiles where id=p_profile_id;
   if v_profile.id is null then raise exception 'RESOURCE_NOT_FOUND' using errcode='P0002'; end if;
   if p_unit=v_profile.basis_unit or (p_unit in ('g','kg') and v_profile.normalization_method='mass_100g') then
-    return private.resolve_meal_log_profile_nutrition(p_profile_id,p_amount,p_unit);
+    return private.resolve_meal_log_profile_nutrition(p_profile_id,p_amount,p_unit,p_allow_superseded);
   end if;
   select count(*),(array_agg(relation))[1] into v_relation_count,v_relation from jsonb_array_elements(p_relations) relation
   where (relation#>>'{from,unit}'=p_unit and relation#>>'{to,unit}'=v_profile.basis_unit)
@@ -195,7 +198,7 @@ begin
   else
     v_basis_amount:=p_amount/(v_relation#>>'{to,amount}')::numeric*(v_relation#>>'{from,amount}')::numeric;
   end if;
-  return private.resolve_meal_log_profile_nutrition(p_profile_id,v_basis_amount,v_profile.basis_unit);
+  return private.resolve_meal_log_profile_nutrition(p_profile_id,v_basis_amount,v_profile.basis_unit,p_allow_superseded);
 end;
 $function$;
 
@@ -462,7 +465,7 @@ begin
       else
         select version.nutrition_profile_id,version.basis_relations_json into v_product_profile,v_product_relations
         from public.food_product_nutrition_versions version where version.id=v_product_version and version.product_id=v_source_id;
-        v_evidence:=private.resolve_meal_log_product_nutrition(v_product_profile,v_product_relations,v_amount,v_unit);
+        v_evidence:=private.resolve_meal_log_product_nutrition(v_product_profile,v_product_relations,v_amount,v_unit,v_same_source);
       end if;
     elsif v_source_type='ingredient' then
       select ingredient.standard_name into v_name from public.ingredients ingredient where ingredient.id=v_source_id for share;
@@ -562,7 +565,7 @@ begin
       else
         v_conversion_evidence:=null;
       end if;
-      select private.resolve_meal_log_profile_nutrition(profile.nutrition_profile_id,v_nutrition_amount,v_nutrition_unit)
+      select private.resolve_meal_log_profile_nutrition(profile.nutrition_profile_id,v_nutrition_amount,v_nutrition_unit,v_same_source)
       into v_evidence from public.ingredient_nutrition_profiles profile where profile.id=v_ingredient_profile;
       end if;
     else raise exception 'VALIDATION_ERROR' using errcode='22023'; end if;
@@ -641,8 +644,8 @@ for each row execute function private.cleanup_meal_log_before_cooked_batch_delet
 
 alter function private.compact_meal_log_nutrition(text,jsonb,numeric) owner to postgres;
 alter function private.fold_meal_log_nutrition_status(bigint,bigint,bigint) owner to postgres;
-alter function private.resolve_meal_log_profile_nutrition(uuid,numeric,text) owner to postgres;
-alter function private.resolve_meal_log_product_nutrition(uuid,jsonb,numeric,text) owner to postgres;
+alter function private.resolve_meal_log_profile_nutrition(uuid,numeric,text,boolean) owner to postgres;
+alter function private.resolve_meal_log_product_nutrition(uuid,jsonb,numeric,text,boolean) owner to postgres;
 alter function private.assert_meal_log_pointer_pair() owner to postgres;
 alter function private.project_meal_log_entry(meal_log_entries) owner to postgres;
 alter function private.cleanup_meal_log_before_user_delete() owner to postgres;
@@ -652,8 +655,8 @@ alter function public.get_recent_meal_log_sources(uuid,timestamptz,text,integer,
 alter function public.mutate_meal_log_entry(uuid,timestamptz,text,integer,timestamptz,text,uuid,uuid,bigint,jsonb,timestamptz) owner to postgres;
 revoke all on function private.compact_meal_log_nutrition(text,jsonb,numeric) from public,anon,authenticated,service_role;
 revoke all on function private.fold_meal_log_nutrition_status(bigint,bigint,bigint) from public,anon,authenticated,service_role;
-revoke all on function private.resolve_meal_log_profile_nutrition(uuid,numeric,text) from public,anon,authenticated,service_role;
-revoke all on function private.resolve_meal_log_product_nutrition(uuid,jsonb,numeric,text) from public,anon,authenticated,service_role;
+revoke all on function private.resolve_meal_log_profile_nutrition(uuid,numeric,text,boolean) from public,anon,authenticated,service_role;
+revoke all on function private.resolve_meal_log_product_nutrition(uuid,jsonb,numeric,text,boolean) from public,anon,authenticated,service_role;
 revoke all on function private.assert_meal_log_pointer_pair() from public,anon,authenticated,service_role;
 revoke all on function private.project_meal_log_entry(meal_log_entries) from public,anon,authenticated,service_role;
 revoke all on function private.cleanup_meal_log_before_user_delete() from public,anon,authenticated,service_role;
