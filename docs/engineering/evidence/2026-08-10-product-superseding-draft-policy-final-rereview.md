@@ -11,15 +11,37 @@
 
 ## Verdict
 
-`APPROVE`
+`REQUEST_CHANGES`
 
-Required unresolved findings: `0`.
+Required unresolved findings: `1`.
 
 - Critical: `0`
-- Important: `0`
+- Important: `1`
 - Suggestion: `0`
 
-이전 리뷰의 `I-001`, `I-002`, `I-003`과 Suggestion은 모두 해결되었다. 새 required finding은 없다.
+이전 리뷰의 `I-001`, `I-002`, Suggestion은 해결되었다. `I-003`의 consumer wiring은 추가됐지만, 그 real-smoke 직접 regression이 CI ambient PR body를 격리하지 않아 current-head `quality`를 실패시켰다. 아래 `I-004`가 해결되기 전에는 `APPROVE`하지 않는다.
+
+## Findings
+
+### Critical
+
+- 없음.
+
+### Important
+
+#### I-004 — real-smoke successor regression이 ambient PR body를 fixture보다 우선 소비해 CI에서 실패한다
+
+- 위치: `tests/real-smoke-presence.test.ts:174-192`.
+- 새 test는 `env: { ...process.env, BRANCH_NAME, PR_IS_DRAFT }`를 canonical/successor 양쪽에 전달하지만 `PR_BODY`, `PR_BODY_FILE`, `GITHUB_EVENT_PATH`, `SOURCE_PR_BODY`를 격리하지 않는다.
+- `readPullRequestBody()`는 ambient `PR_BODY` 또는 GitHub event payload를 읽을 수 있다. current PR body에는 valid `pnpm dev:local-supabase` smoke evidence가 있으므로 fixture가 의도한 missing-evidence error 대신 canonical/successor 모두 `[]`가 된다.
+- publication successor head `fb072b5c...`의 `quality`는 정확히 `expect(canonical).not.toEqual([])`에서 실패했다: `1 failed / 5,714 passed / 372 skipped`.
+- 독립 재현: 실제 PR body를 `PR_BODY`로 주입한 focused test도 같은 assertion에서 `1 failed`했다.
+- 로컬 full suite 2회와 dedicated/focused suite는 ambient PR body가 없는 환경이어서 이 결함을 놓쳤다.
+- required fix: 이 regression의 env에서 PR body/event source를 명시적으로 제거하거나 fixture 전용 missing-evidence body를 명시해 canonical이 non-empty임을 hermetic하게 보장하고, CI-equivalent ambient body 조건에서도 test가 통과함을 확인해야 한다.
+
+### Suggestion
+
+- 없음.
 
 ## Prior Finding Resolution
 
@@ -39,12 +61,13 @@ Required unresolved findings: `0`.
 - exact single `-superseding-draft`만 canonical slice로 투영되고 extra/nested suffix는 throw했다.
 - `menu-superseding-notes`, `supersedingly-simple`, 일반 `-superseding`/`-superseding-ready` slug는 recovery로 오분류되거나 거부되지 않았다.
 
-### I-003 — resolved: 변경 consumer의 successor 직접 회귀
+### I-003 — consumer wiring added, but closure blocked by I-004
 
 - `tests/real-smoke-presence.test.ts`는 canonical/backend successor에 실제 `validateRealSmokePresence()`를 호출해 identical non-empty enforcement를 확인한다.
 - `tests/omo-github.test.ts`는 실제 `createPullRequest()` 경로로 successor backend head를 전달하고 생성 body가 canonical `.workflow-v2/work-items/<slice>.json`을 참조하는지 확인한다.
 - `tests/pr-ready-validator.test.ts`는 실제 CLI `--branch feature/be-...-superseding-draft`를 사용해 backend successor Ready/current-vs-future 경로를 통과시킨다.
 - `tests/product-branch-context.test.ts`는 backend closeout strict mode, real-smoke, exploratory QA, authority, Wave1, workpack consumer의 canonical/successor parity를 직접 비교한다.
+- 다만 `tests/real-smoke-presence.test.ts`의 dedicated regression은 I-004 때문에 GitHub PR 환경에서 안정적으로 실행되지 않으므로 prior required coverage finding을 완전히 닫았다고 볼 수 없다.
 
 ### Prior Suggestion — resolved: focused package script
 
@@ -81,7 +104,7 @@ Required unresolved findings: `0`.
 
 ## Five-Axis Review
 
-- Correctness: malformed product-like/closeout refs는 fail-closed하고 canonical/successor consumer 결과가 일치한다.
+- Correctness: production consumer에서는 malformed product-like/closeout refs가 fail-closed하고 canonical/successor 결과가 일치한다. 다만 I-004 때문에 이를 고정하는 real-smoke regression 자체는 GitHub PR 환경에서 hermetic하지 않다.
 - Readability & simplicity: shared slug helper와 product context module의 책임이 작고 명확하며 기존 consumer duplication을 줄였다.
 - Architecture: public branch grammar는 `git-policy.mjs`, product recovery 의미는 `product-branch-context.mjs`, consumer routing은 `validator-shared.mjs`로 경계가 분리된다.
 - Security: 입력 검증이 강화됐고 secret, auth, runtime API, production data surface 변경은 없다. 우회용 env/body/label 경로도 추가되지 않았다.
@@ -105,7 +128,8 @@ Required unresolved findings: `0`.
 - `pnpm validate:branch` — pass.
 - `pnpm validate:commits` — pass for all 5 base..input-head commits.
 - PR body, workpack, workflow-v2, source-of-truth-sync, OMO bookkeeping, closeout-sync validators — pass.
-- exploratory QA, authority evidence, real-smoke, Wave1 validators — pass in PR context; direct successor consumer regressions pass in focused tests.
+- exploratory QA, authority evidence, real-smoke, Wave1 validators — pass in PR context.
+- direct successor consumer regressions — ambient PR body가 없는 focused run에서는 pass; 실제 PR body를 주입한 I-004 focused reproduction에서는 fail.
 
 ## Input-Head GitHub Checks
 
@@ -116,6 +140,17 @@ Required unresolved findings: `0`.
 - legacy commit status contexts: `0`.
 - PR은 계속 `OPEN / Draft`다.
 
+## Publication-Successor Check Failure
+
+- 첫 report publication successor: `fb072b5c9e7c939f54f04e1fddb0b9085c82dd22`.
+- tree: `b0b170542299e496989be3cddd76b9733d1df2b5`.
+- raw check-runs: `15/15` terminal.
+- success: `12`.
+- intentional skipped: `2` — `lighthouse`, `full-regression`.
+- failure: `1` — `quality`.
+- pending / running / cancelled: `0 / 0 / 0`.
+- failure는 report markdown이 아니라 PR에서 추가된 `tests/real-smoke-presence.test.ts`의 I-004 test isolation 문제다.
+
 ## Publication Boundary
 
 - 이 rereview는 이 report만 additive commit/push한다.
@@ -124,5 +159,5 @@ Required unresolved findings: `0`.
 
 ## Remaining Risk
 
-- 알려진 코드·정책 required risk 없음.
-- report publication successor의 current-head GitHub checks가 terminal-green이어야 coordinator가 이 approval을 merge evidence로 사용할 수 있다.
+- I-004 수정과 fresh exact-head independent rereview가 필요하다.
+- current publication successor checks에 failure가 있으므로 이 report를 merge approval evidence로 사용하면 안 된다.
