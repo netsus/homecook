@@ -220,6 +220,62 @@ describe("13 pantry core backend", () => {
     });
   });
 
+  it("GET /pantry follows the pinned nutrition version relationship to list products", async () => {
+    const pantryItemsTable = createTable({
+      selectResults: [
+        { data: [], error: null },
+        {
+          data: [
+            {
+              id: "pantry-product-1",
+              food_product_id: "product-1",
+              food_product_nutrition_version_id: "version-1",
+              created_at: "2026-07-31T03:00:00.000Z",
+              food_product_nutrition_versions: {
+                food_products: { name: "현미밥", brand: "집밥" },
+              },
+            },
+          ],
+          error: null,
+        },
+      ],
+    });
+
+    createRouteHandlerClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })),
+      },
+      from: vi.fn((table: string) => {
+        if (table === "pantry_items") return pantryItemsTable;
+        throw new Error(`unexpected table: ${table}`);
+      }),
+    });
+
+    const { GET } = await importPantryRoute();
+    const response = await GET(new NextRequest("http://localhost:3000/api/v1/pantry"));
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      success: true,
+      data: {
+        product_items: [
+          {
+            food_product_id: "product-1",
+            food_product_nutrition_version_id: "version-1",
+            name: "현미밥",
+            brand: "집밥",
+          },
+        ],
+      },
+    });
+    expect(pantryItemsTable.select).toHaveBeenNthCalledWith(
+      2,
+      expect.stringContaining(
+        "food_product_nutrition_versions!pantry_items_product_version_fkey!inner(food_products!food_product_nutrition_versions_product_id_fkey!inner(name, brand))",
+      ),
+    );
+  });
+
   it("GET /pantry lists the current user's pantry ingredients with search and category filters", async () => {
     const pantryItemsTable = createTable({
       selectResults: [
@@ -683,7 +739,9 @@ describe("13 pantry core backend", () => {
               food_product_id: "product-1",
               food_product_nutrition_version_id: "version-1",
               created_at: "2026-07-31T03:00:00.000Z",
-              food_products: { name: "현미밥", brand: "집밥" },
+              food_product_nutrition_versions: {
+                food_products: { name: "현미밥", brand: "집밥" },
+              },
             },
           ],
           error: null,
