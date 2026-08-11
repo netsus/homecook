@@ -72,9 +72,19 @@ interface PantryProductJoinedRow {
   food_product_id: string;
   food_product_nutrition_version_id: string;
   created_at: string;
-  food_products:
-    | { name: string; brand: string | null }
-    | Array<{ name: string; brand: string | null }>
+  food_product_nutrition_versions:
+    | {
+        food_products:
+          | { name: string; brand: string | null }
+          | Array<{ name: string; brand: string | null }>
+          | null;
+      }
+    | Array<{
+        food_products:
+          | { name: string; brand: string | null }
+          | Array<{ name: string; brand: string | null }>
+          | null;
+      }>
     | null;
 }
 
@@ -152,8 +162,9 @@ const PANTRY_SELECT_LEGACY =
   "id, ingredient_id, created_at, ingredients!inner(standard_name, category)";
 const INGREDIENT_SELECT = "id, standard_name, category, category_code";
 const INGREDIENT_SELECT_LEGACY = "id, standard_name, category";
+// Product pantry rows reach food_products through their pinned composite version FK.
 const PANTRY_PRODUCT_SELECT =
-  "id, food_product_id, food_product_nutrition_version_id, created_at, food_products!inner(name, brand)";
+  "id, food_product_id, food_product_nutrition_version_id, created_at, food_product_nutrition_versions!pantry_items_product_version_fkey!inner(food_products!food_product_nutrition_versions_product_id_fkey!inner(name, brand))";
 
 interface NormalizedProductInput {
   food_product_id: string;
@@ -301,9 +312,12 @@ function normalizeProductItems(value: unknown): NormalizedProductInput[] | null 
 
 function toPantryProductItems(rows: PantryProductJoinedRow[]): PantryProductItem[] {
   return rows.map((row) => {
-    const product = Array.isArray(row.food_products)
-      ? row.food_products[0]
-      : row.food_products;
+    const version = Array.isArray(row.food_product_nutrition_versions)
+      ? row.food_product_nutrition_versions[0]
+      : row.food_product_nutrition_versions;
+    const product = Array.isArray(version?.food_products)
+      ? version.food_products[0]
+      : version?.food_products;
 
     return {
       id: row.id,
