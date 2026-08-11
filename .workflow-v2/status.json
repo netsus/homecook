@@ -2567,9 +2567,9 @@
     {
       "id": "meal-log-core",
       "preset": "vertical-slice-strict",
-      "branch": "docs/meal-log-core-stage1-repair",
-      "pr_path": "pending",
-      "lifecycle": "planned",
+      "branch": "feature/be-meal-log-core",
+      "pr_path": "https://github.com/netsus/homecook/pull/1319",
+      "lifecycle": "in_progress",
       "approval_state": "not_started",
       "verification_status": "pending",
       "required_checks": [
@@ -2587,7 +2587,7 @@
         "node scripts/verify-meal-log-core-local-first.mjs --mode post-merge-read-only",
         "git diff --check"
       ],
-      "notes": "Stage 1 repair lineage and approvals remain preserved, and PR #1319 contains the still-unmerged Stage 2 backend implementation evidence. Roadmap remains in-progress while workflow lifecycle stays planned, approval not_started and verification pending; this repair does not project the whole lifecycle as merged. Backend Ready uses automation-spec current external_smokes=[] because merged-exact and Manual evidence cannot exist before the first backend merge, while the work-item keeps all eight future obligations. Since #9 is backend-only, a fresh post-merge/release closeout actor must relock the current list from the preserved work-item gate before claiming full-lifecycle completion. #9 owns meal-log backend; #11 remains limited to #8-consumer COOK_MODE/LEFTOVERS UI, #10 owns Planner shell, #12 owns MEAL_LOG UI/design, and merged-exact/server-Mac/OAuth/Manual/capability/R/R+1/R+2/activation evidence remains pending.",
+      "notes": "Backend merge checkpoint only: PR #1319 exact head be93bfc47281e2795c59c0fd1052a4ecf6085837 passed independent Stage 3 task 019feb79-152f-7891-bd3a-435694e57cac with P0/P1/P2 0/0/0. The 2026-08-11T14:50:04Z head-check snapshot is raw 25 = 23 success + 2 intended historical skips, 15 unique names and bad/pending/rerun 0; the PR then merged as 8ba3fa5a2a198eb4f9c19d59cea5f6ccc52fdd4f at 2026-08-10T12:10:00Z. The merge supervisor preserved historical post-merge raw 14/14 success without a separate unique-name count. The 2026-08-11T14:50:04Z merge-SHA API snapshot is raw 20/20 success, 14 unique names, all run_attempt=1 and bad/pending/rerun 0. These are snapshots, not permanent live-check totals. This closes Stage 2/3 backend delivery only. #9 is backend-only, so Stage 4/5/final UI authority and frontend Stage 6 are N/A here and remain owned by #12. Overall lifecycle stays in_progress with approval not_started, verification pending, evaluation not_started and auto_merge_eligible=false until the eight future smokes are relocked and the merged-exact server-production/local-rehearsal, Manual/server-Mac/OAuth, capability, R/R+1/R+2, activation and independent post-merge/release review obligations are completed. #12 Stage 1 relock may proceed without this broader closeout. No Contract Evolution, production write, activation or Discord transmission is authorized by this checkpoint. closeout_phase=collecting closeout_repair=codex:2|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:Codex task handoffs,PR #1319 body,GitHub PR/CI,git history,docs/workpacks/meal-log-core/evidence last_recovery_at=2026-08-11T14:39:37Z",
       "evaluation_status": "not_started",
       "evaluation_round": 0,
       "last_evaluator_result": null,
