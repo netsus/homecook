@@ -146,7 +146,7 @@ function PlannerMealActions({
     <div className="mt-2 flex flex-wrap gap-2">
       {meal.status === "registered" ? (
         <Link
-          className="inline-flex min-h-11 items-center justify-center rounded-[var(--radius-control)] bg-[var(--brand)] px-4 text-sm font-bold text-[var(--text-inverse)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)] focus-visible:ring-offset-2"
+          className="inline-flex min-h-11 items-center justify-center rounded-[var(--radius-control)] bg-[var(--brand)] px-[16px] text-sm font-bold [word-break:keep-all] text-[var(--text-inverse)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)] focus-visible:ring-offset-2"
           href="/shopping/flow"
         >
           장보기
@@ -154,14 +154,14 @@ function PlannerMealActions({
       ) : null}
       {meal.status === "shopping_done" ? (
         <Link
-          className="inline-flex min-h-11 items-center justify-center rounded-[var(--radius-control)] bg-[var(--brand)] px-4 text-sm font-bold text-[var(--text-inverse)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)] focus-visible:ring-offset-2"
+          className="inline-flex min-h-11 items-center justify-center rounded-[var(--radius-control)] bg-[var(--brand)] px-[16px] text-sm font-bold [word-break:keep-all] text-[var(--text-inverse)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)] focus-visible:ring-offset-2"
           href={detailHref}
         >
           요리하기
         </Link>
       ) : null}
       <Link
-        className="inline-flex min-h-11 items-center justify-center rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] px-4 text-sm font-bold text-[var(--foreground)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)] focus-visible:ring-offset-2"
+        className="inline-flex min-h-11 items-center justify-center rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] px-[16px] text-sm font-bold [word-break:keep-all] text-[var(--foreground)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)] focus-visible:ring-offset-2"
         href={detailHref}
       >
         상세
@@ -189,17 +189,29 @@ function PlannerDayOverview({
   return (
     <div
       className={[
-        "min-w-0 rounded-[var(--radius-control)] border px-3 py-2.5",
+        "min-w-0 rounded-[var(--radius-control)] border px-[12px] py-2.5",
         selected
           ? "border-[var(--brand)] bg-[var(--brand-soft)]"
           : "border-[var(--line-strong)] bg-[var(--surface)]",
       ].join(" ")}
     >
-      <p className="truncate text-sm font-extrabold text-[var(--foreground)]">
+      <p className="text-sm font-extrabold [word-break:keep-all] text-[var(--foreground)]">
         {formatWeekdayLabel(dateKey)} {formatCompactDateLabel(dateKey)}
       </p>
-      <p className="mt-1 truncate text-xs text-[var(--text-2)]" title={labels}>
-        {labels || "끼니 설정 없음"}
+      <p
+        className="mt-1 flex flex-wrap gap-x-[4px] gap-y-1 text-xs text-[var(--text-2)]"
+        title={labels}
+      >
+        {columns.length > 0
+          ? columns.map((column, index) => (
+              <span
+                className="[overflow-wrap:anywhere] [word-break:keep-all]"
+                key={column.id}
+              >
+                {column.name}{index < columns.length - 1 ? " ·" : ""}
+              </span>
+            ))
+          : "끼니 설정 없음"}
       </p>
       <span className="sr-only">
         {plannedColumnIds.size}/{columns.length}개 끼니 계획
@@ -259,6 +271,7 @@ export function PlannerWeekScreen({
     log: 0,
     plan: 0,
   });
+  const dateRailRef = useRef<HTMLOListElement | null>(null);
   const previousSegmentRef = useRef(activeSegment);
   const hasLoadedPlannerRef = useRef(false);
   const selectedDateTitleRef = useRef<HTMLHeadingElement | null>(null);
@@ -477,6 +490,25 @@ export function PlannerWeekScreen({
     window.requestAnimationFrame(() => window.scrollTo({ top: target }));
   }, [activeSegment]);
 
+  useLayoutEffect(() => {
+    const rail = dateRailRef.current;
+    const selectedButton = rail?.querySelector<HTMLElement>('[aria-current="date"]');
+    if (!rail || !selectedButton) return;
+
+    const selectedItem = selectedButton.parentElement;
+    const selectedLeft = selectedItem?.offsetLeft ?? selectedButton.offsetLeft;
+    const selectedRight = selectedLeft
+      + (selectedItem?.offsetWidth ?? selectedButton.offsetWidth);
+    const visibleLeft = rail.scrollLeft;
+    const visibleRight = visibleLeft + rail.clientWidth;
+
+    if (selectedLeft < visibleLeft) {
+      rail.scrollLeft = selectedLeft;
+    } else if (selectedRight > visibleRight) {
+      rail.scrollLeft = selectedRight - rail.clientWidth;
+    }
+  }, [dateKeys, selectedDate]);
+
   if (authState === "checking") {
     return (
       <div
@@ -526,7 +558,7 @@ export function PlannerWeekScreen({
   );
 
   return (
-    <div className="min-h-screen overflow-x-hidden bg-[var(--surface-fill)] pb-[calc(104px+env(safe-area-inset-bottom))] text-[var(--foreground)] lg:pb-12">
+    <div className="min-h-screen overflow-x-hidden bg-[var(--surface-fill)] pb-[calc(6.5rem+env(safe-area-inset-bottom))] text-[var(--foreground)] lg:pb-12">
       <div className="hidden lg:block">
         <WebTopNav
           activeId="planner"
@@ -537,7 +569,7 @@ export function PlannerWeekScreen({
         className="sticky top-0 z-30 border-b border-[var(--line-strong)] bg-[var(--surface)] lg:static"
         data-testid="planner-shell-header"
       >
-        <div className="mx-auto flex min-h-[52px] max-w-5xl items-center justify-between px-4 lg:min-h-[64px]">
+        <div className="mx-auto flex min-h-[52px] max-w-5xl items-center justify-between px-[16px] lg:min-h-[64px]">
           <div>
             <p className="hidden text-xs font-bold text-[var(--brand)] lg:block">PLANNER</p>
             <h1 className="text-lg font-extrabold text-[var(--foreground)]">플래너</h1>
@@ -546,7 +578,7 @@ export function PlannerWeekScreen({
             <ProfileSummaryButton autoLoad isAuthenticated variant="mobile" />
           </div>
         </div>
-        <div className="mx-auto max-w-5xl px-4 pb-3">{segmentControl}</div>
+        <div className="mx-auto max-w-5xl px-[16px] pb-[12px]">{segmentControl}</div>
       </div>
 
       {activeSegment === "log" ? (
@@ -554,17 +586,17 @@ export function PlannerWeekScreen({
       ) : (
         <div
           aria-labelledby="planner-plan-tab"
-          className="mx-auto max-w-5xl px-4 py-4 lg:py-6"
+          className="mx-auto max-w-5xl px-[16px] py-4 lg:py-6"
           id="planner-plan-panel"
           role="tabpanel"
           tabIndex={0}
         >
           <section
             aria-label="주간 이동"
-            className="rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)] p-3 lg:p-4"
+            className="rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)] p-[12px] lg:p-4"
             data-testid="planner-week-shell"
           >
-            <div className="grid grid-cols-[44px_minmax(0,1fr)_44px] items-center gap-2">
+            <div className="grid grid-cols-[44px_minmax(0,1fr)_44px] items-center gap-[8px]">
               <button
                 aria-label="이전 주"
                 className="flex h-11 w-11 items-center justify-center rounded-full border border-[var(--line-strong)] text-xl outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)]"
@@ -574,11 +606,11 @@ export function PlannerWeekScreen({
                 ‹
               </button>
               <div className="min-w-0 text-center">
-                <p className="truncate text-sm font-extrabold lg:text-base">
+                <p className="text-sm font-extrabold [word-break:keep-all] lg:text-base">
                   {formatRangeLabel(rangeStartDate, rangeEndDate)}
                 </p>
                 <button
-                  className="mt-1 min-h-11 rounded-[var(--radius-control)] px-3 text-xs font-bold text-[var(--brand)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)] disabled:text-[var(--text-3)]"
+                  className="mt-1 min-h-11 rounded-[var(--radius-control)] px-[12px] text-xs font-bold [word-break:keep-all] text-[var(--brand)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)] disabled:text-[var(--text-3)]"
                   disabled={isCurrentRange}
                   onClick={resetRange}
                   type="button"
@@ -598,18 +630,19 @@ export function PlannerWeekScreen({
 
             <ol
               aria-label="주간 날짜"
-              className="mt-2 grid grid-cols-7 gap-1"
+              className="mt-2 flex snap-x snap-mandatory gap-[4px] overflow-x-auto overscroll-x-contain pb-1"
               data-testid="planner-week-date-rail"
+              ref={dateRailRef}
             >
               {dateKeys.map((dateKey) => {
                 const selected = dateKey === selectedDate;
                 return (
-                  <li className="min-w-0" key={dateKey}>
+                  <li className="w-[44px] shrink-0 snap-start" key={dateKey}>
                     <button
                       aria-current={selected ? "date" : undefined}
                       aria-label={`${formatCompactDateLabel(dateKey)} ${formatWeekdayLabel(dateKey)} 선택`}
                       className={[
-                        "flex min-h-11 w-full min-w-0 flex-col items-center justify-center rounded-[var(--radius-control)] px-0.5 text-center outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)]",
+                        "flex min-h-[44px] w-[44px] flex-col items-center justify-center rounded-[var(--radius-control)] px-[2px] py-[4px] text-center outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)]",
                         selected
                           ? "bg-[var(--brand)] text-[var(--text-inverse)]"
                           : "text-[var(--text-2)]",
@@ -631,7 +664,7 @@ export function PlannerWeekScreen({
 
             <div
               aria-label="이틀 계획 개요"
-              className="mt-3 grid grid-cols-2 gap-2"
+              className="mt-3 grid grid-cols-2 gap-[8px]"
               data-testid="planner-two-day-overview"
             >
               {overviewDates.map((dateKey) => (
@@ -728,11 +761,11 @@ export function PlannerWeekScreen({
                   return (
                     <article
                       aria-labelledby={`planner-column-${column.id}`}
-                      className="min-w-0 rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)] p-4"
+                      className="min-w-0 rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)] p-[16px]"
                       key={column.id}
                     >
                       <h3
-                        className="break-words text-sm font-extrabold"
+                        className="text-sm font-extrabold [overflow-wrap:anywhere] [word-break:keep-all]"
                         id={`planner-column-${column.id}`}
                       >
                         {column.name}
@@ -746,13 +779,13 @@ export function PlannerWeekScreen({
                           {columnMeals.map((meal) => (
                             <div
                               className={[
-                                "min-w-0 rounded-[var(--radius-control)] border border-l-4 border-[var(--line-strong)] bg-[var(--surface-fill)] p-3",
+                                "min-w-0 rounded-[var(--radius-control)] border border-l-4 border-[var(--line-strong)] bg-[var(--surface-fill)] p-[12px]",
                                 getStatusStyles(meal.status),
                               ].join(" ")}
                               data-testid={`planner-meal-${meal.id}`}
                               key={meal.id}
                             >
-                              <div className="flex min-w-0 items-center gap-3">
+                              <div className="flex min-w-0 items-center gap-[12px]">
                                 {meal.recipe_thumbnail_url ? (
                                   <Image
                                     alt=""
@@ -772,13 +805,13 @@ export function PlannerWeekScreen({
                                 )}
                                 <div className="min-w-0">
                                   <Link
-                                    className="break-words text-sm font-bold underline-offset-2 outline-none hover:underline focus-visible:ring-2 focus-visible:ring-[var(--brand)]"
+                                    className="text-sm font-bold [overflow-wrap:anywhere] [word-break:keep-all] underline-offset-2 outline-none hover:underline focus-visible:ring-2 focus-visible:ring-[var(--brand)]"
                                     href={`/planner/${meal.plan_date}/${meal.column_id}?slot=${encodeURIComponent(column.name)}`}
                                     title={meal.recipe_title}
                                   >
                                     {meal.recipe_title}
                                   </Link>
-                                  <p className="mt-1 text-xs text-[var(--text-2)]">
+                                  <p className="mt-1 text-xs [word-break:keep-all] text-[var(--text-2)]">
                                     {meal.planned_servings}인분 · {getStatusLabel(meal.status)}
                                     {meal.is_leftover ? " · 남은 요리" : ""}
                                   </p>

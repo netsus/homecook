@@ -10,12 +10,26 @@ async function setAuthenticated(page: Page) {
   );
 }
 
-async function installPlannerShellRoutes(page: Page) {
+async function installPlannerShellRoutes(
+  page: Page,
+  { columnCount = 3 }: { columnCount?: 1 | 3 | 5 } = {},
+) {
   let deleted = false;
   const requests = {
     nutrition: 0,
     productMethods: [] as string[],
   };
+  const columns = [
+    { id: "column-breakfast", name: "아침", sort_order: 0 },
+    { id: "column-lunch", name: "점심", sort_order: 1 },
+    {
+      id: "column-long",
+      name: "아주 긴 사용자 지정 오후 브런치 시간",
+      sort_order: 2,
+    },
+    { id: "column-snack", name: "간식과 가벼운 차", sort_order: 3 },
+    { id: "column-dinner", name: "늦은 저녁 식사", sort_order: 4 },
+  ].slice(0, columnCount);
 
   await page.route("**/api/v1/planner/nutrition?*", async (route) => {
     requests.nutrition += 1;
@@ -26,15 +40,7 @@ async function installPlannerShellRoutes(page: Page) {
     await route.fulfill({
       json: {
         data: {
-          columns: [
-            { id: "column-breakfast", name: "아침", sort_order: 0 },
-            { id: "column-lunch", name: "점심", sort_order: 1 },
-            {
-              id: "column-long",
-              name: "아주 긴 사용자 지정 브런치 이름",
-              sort_order: 2,
-            },
-          ],
+          columns,
           meals: [
             {
               column_id: "column-breakfast",
@@ -58,6 +64,21 @@ async function installPlannerShellRoutes(page: Page) {
               recipe_title: "샐러드",
               status: "shopping_done",
             },
+            ...(columnCount === 5
+              ? [
+                  {
+                    column_id: "column-long",
+                    id: "meal-cook-done",
+                    is_leftover: false,
+                    plan_date: PLAN_DATE,
+                    planned_servings: 3,
+                    recipe_id: "recipe-3",
+                    recipe_thumbnail_url: null,
+                    recipe_title: "된장찌개와 계절 채소를 곁들인 집밥",
+                    status: "cook_done",
+                  },
+                ]
+              : []),
           ],
           product_entries: deleted
             ? []
@@ -209,5 +230,172 @@ test.describe("planner-shell Stage 4", () => {
     await expect(invoker).toHaveCount(0);
     expect(requests.productMethods).toEqual(["DELETE"]);
     expect(requests.nutrition).toBe(0);
+  });
+
+  test("planner-shell keeps 320px targets, 200% text, and bottom actions usable", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ height: 693, width: 320 });
+    await setAuthenticated(page);
+    await installPlannerShellRoutes(page, { columnCount: 5 });
+    await page.goto(`/planner?date=${PLAN_DATE}`);
+    await expect(page.getByText("된장찌개와 계절 채소를 곁들인 집밥"))
+      .toBeVisible();
+
+    const measureLayout = () => page.evaluate(() => {
+      const rail = document.querySelector<HTMLElement>(
+        '[data-testid="planner-week-date-rail"]',
+      );
+      const dateButtons = [
+        ...document.querySelectorAll<HTMLButtonElement>(
+          '[data-testid="planner-week-date-rail"] button',
+        ),
+      ];
+      const bottomTab = document.querySelector<HTMLElement>(
+        'nav[aria-label="플래너 하단 탭"]',
+      );
+      const planPanel = document.querySelector<HTMLElement>("#planner-plan-panel");
+      const weekShell = document.querySelector<HTMLElement>(
+        '[data-testid="planner-week-shell"]',
+      );
+      const textTargets = [
+        ...document.querySelectorAll<HTMLElement>(
+          '[role="tab"], [aria-label="주간 이동"] > div p, '
+            + '[data-testid="planner-two-day-overview"] p, '
+            + '#planner-week-body h3, #planner-plan-panel a',
+        ),
+      ].filter((element) => (element.textContent ?? "").trim().length >= 2);
+
+      const textRuns = textTargets.map((element) => {
+        const range = document.createRange();
+        range.selectNodeContents(element);
+        const lineRects = [...range.getClientRects()].filter(
+          (rect) => rect.width > 0 && rect.height > 0,
+        );
+        const style = getComputedStyle(element);
+        return {
+          clipped:
+            element.scrollHeight > element.clientHeight + 1
+            || element.scrollWidth > element.clientWidth + 1,
+          fontSize: Number.parseFloat(style.fontSize),
+          maxLineWidth: Math.max(0, ...lineRects.map((rect) => rect.width)),
+          text: (element.textContent ?? "").trim().replace(/\s+/g, " "),
+        };
+      });
+
+      return {
+        bottomClearance:
+          bottomTab && planPanel
+            ? Math.round(bottomTab.getBoundingClientRect().top
+              - planPanel.getBoundingClientRect().bottom)
+            : null,
+        dateTargets: dateButtons.map((button) => {
+          const rect = button.getBoundingClientRect();
+          return { height: rect.height, width: rect.width };
+        }),
+        horizontalGutters: weekShell
+          ? {
+              left: Math.round(weekShell.getBoundingClientRect().left),
+              right: Math.round(
+                window.innerWidth - weekShell.getBoundingClientRect().right,
+              ),
+            }
+          : null,
+        overviewCount: document.querySelectorAll(
+          '[data-testid="planner-two-day-overview"] > div',
+        ).length,
+        pageOverflow:
+          document.documentElement.scrollWidth
+          > document.documentElement.clientWidth + 1,
+        railContained: rail
+          ? rail.getBoundingClientRect().right <= window.innerWidth + 1
+            && rail.getBoundingClientRect().left >= -1
+          : false,
+        railScrollable: rail ? rail.scrollWidth > rail.clientWidth : false,
+        textRuns,
+      };
+    });
+
+    const defaultLayout = await measureLayout();
+    expect.soft(defaultLayout.dateTargets).toHaveLength(7);
+    expect.soft(defaultLayout.dateTargets.every(
+      ({ height, width }) => height >= 44 && width >= 44,
+    )).toBe(true);
+    expect.soft(defaultLayout.railContained).toBe(true);
+    expect.soft(defaultLayout.railScrollable).toBe(true);
+    expect.soft(defaultLayout.pageOverflow).toBe(false);
+    expect.soft(defaultLayout.overviewCount).toBe(2);
+    expect.soft(defaultLayout.horizontalGutters).toEqual({ left: 16, right: 16 });
+
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    await page.waitForTimeout(100);
+    const defaultBottomLayout = await measureLayout();
+    expect.soft(defaultBottomLayout.bottomClearance ?? 0)
+      .toBeGreaterThanOrEqual(16);
+
+    await page.evaluate(() => {
+      document.documentElement.style.fontSize = "200%";
+      window.scrollTo(0, document.documentElement.scrollHeight);
+    });
+    await page.waitForTimeout(100);
+
+    const scaledLayout = await measureLayout();
+    expect.soft(scaledLayout.pageOverflow).toBe(false);
+    expect.soft(scaledLayout.overviewCount).toBe(2);
+    expect.soft(scaledLayout.horizontalGutters).toEqual({ left: 16, right: 16 });
+    expect.soft(scaledLayout.dateTargets.every(
+      ({ height, width }) => height >= 44 && width >= 44,
+    )).toBe(true);
+    expect.soft(scaledLayout.textRuns.filter(
+      ({ clipped, fontSize, maxLineWidth }) =>
+        clipped || maxLineWidth < fontSize * 1.5,
+    )).toEqual([]);
+    expect.soft(scaledLayout.bottomClearance).not.toBeNull();
+    expect.soft(scaledLayout.bottomClearance ?? 0).toBeGreaterThanOrEqual(16);
+
+    await page.goto("/planner?date=2026-07-26");
+    await expect(page.getByTestId("planner-week-date-rail")).toBeVisible();
+    const selectedDateGeometry = await page.evaluate(() => {
+      const rail = document.querySelector<HTMLElement>(
+        '[data-testid="planner-week-date-rail"]',
+      );
+      const selected = rail?.querySelector<HTMLElement>('[aria-current="date"]');
+      if (!rail || !selected) return null;
+      const railRect = rail.getBoundingClientRect();
+      const selectedRect = selected.getBoundingClientRect();
+      return {
+        rail: { left: railRect.left, right: railRect.right },
+        scrollLeft: rail.scrollLeft,
+        selected: { left: selectedRect.left, right: selectedRect.right },
+        visible: selectedRect.left >= railRect.left - 1
+          && selectedRect.right <= railRect.right + 1,
+      };
+    });
+    expect(selectedDateGeometry?.visible).toBe(true);
+    for (const viewport of [
+      { height: 844, width: 390 },
+      { height: 900, width: 1280 },
+    ]) {
+      await page.setViewportSize(viewport);
+      await page.goto(`/planner?date=${PLAN_DATE}`);
+      await expect(page.getByTestId("planner-week-date-rail")).toBeVisible();
+      const layout = await measureLayout();
+      expect.soft(layout.dateTargets).toHaveLength(7);
+      expect.soft(layout.dateTargets.every(
+        ({ height, width }) => height >= 44 && width >= 44,
+      )).toBe(true);
+      expect.soft(layout.pageOverflow).toBe(false);
+      expect.soft(layout.overviewCount).toBe(2);
+      if (viewport.width === 390) {
+        expect.soft(layout.horizontalGutters).toEqual({ left: 16, right: 16 });
+        await page.evaluate(
+          () => window.scrollTo(0, document.documentElement.scrollHeight),
+        );
+        await page.waitForTimeout(100);
+        const bottomLayout = await measureLayout();
+        expect.soft(bottomLayout.bottomClearance ?? 0)
+          .toBeGreaterThanOrEqual(16);
+      }
+    }
   });
 });

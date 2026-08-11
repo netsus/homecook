@@ -53,7 +53,7 @@ export function PlannerSegmentTabs({
   return (
     <div
       aria-label="플래너 보기"
-      className="grid grid-cols-2 gap-1 rounded-[var(--radius-control)] bg-[var(--surface-fill)] p-1"
+      className="grid grid-cols-2 gap-[4px] rounded-[var(--radius-control)] bg-[var(--surface-fill)] p-[4px]"
       role="tablist"
     >
       {SEGMENTS.map((segment) => {
@@ -64,7 +64,7 @@ export function PlannerSegmentTabs({
             aria-controls={`planner-${segment.id}-panel`}
             aria-selected={isActive}
             className={[
-              "min-h-11 rounded-[calc(var(--radius-control)-4px)] px-4 text-sm font-bold outline-none transition-colors focus-visible:ring-2 focus-visible:ring-[var(--brand)] focus-visible:ring-offset-2",
+              "min-h-11 rounded-[calc(var(--radius-control)-4px)] px-[12px] text-sm font-bold [word-break:keep-all] outline-none transition-colors focus-visible:ring-2 focus-visible:ring-[var(--brand)] focus-visible:ring-offset-2",
               isActive
                 ? "bg-[var(--surface)] text-[var(--brand)] shadow-[var(--shadow-sm)]"
                 : "text-[var(--text-2)]",
