@@ -94,6 +94,10 @@ function buildWeekRangeForDate(dateKey: string) {
   };
 }
 
+function getPlannerRangeKey(range: { endDate: string; startDate: string }) {
+  return `${range.startDate}:${range.endDate}`;
+}
+
 function formatDateLabel(dateKey: string) {
   return formatKoreaDate(dateKey, { day: "numeric", month: "long" });
 }
@@ -275,6 +279,11 @@ export function PlannerWeekScreen({
     useState<HTMLOListElement | null>(null);
   const previousSegmentRef = useRef(activeSegment);
   const hasLoadedPlannerRef = useRef(false);
+  const pendingNavigationRef = useRef<{
+    date: string;
+    segment: PlannerShellSegment;
+  } | null>(null);
+  const requestedRangeRef = useRef<string | null>(null);
   const selectedDateTitleRef = useRef<HTMLHeadingElement | null>(null);
 
   const dateKeys = useMemo(
@@ -316,6 +325,7 @@ export function PlannerWeekScreen({
         new URLSearchParams(searchParams.toString()),
         location,
       );
+      pendingNavigationRef.current = location;
       router[method](href);
     },
     [router, searchParams],
@@ -327,6 +337,20 @@ export function PlannerWeekScreen({
     const query = next.toString();
     router.replace(query ? `/planner?${query}` : "/planner");
   }, [router, searchParams]);
+  const requestPlannerRange = useCallback(
+    async (range: { endDate: string; startDate: string }) => {
+      requestedRangeRef.current = getPlannerRangeKey(range);
+      try {
+        await loadPlanner(range);
+      } catch (error) {
+        if (isPlannerApiError(error) && error.status === 401) {
+          hasLoadedPlannerRef.current = false;
+          setAuthState("unauthorized");
+        }
+      }
+    },
+    [loadPlanner],
+  );
 
   function handleSegmentSelect(segment: PlannerShellSegment) {
     if (segment === activeSegment) return;
@@ -343,15 +367,18 @@ export function PlannerWeekScreen({
 
   async function loadRange(startDate: string, endDate: string, date: string) {
     setSelectedDateKey(date);
+    const request = requestPlannerRange({ startDate, endDate });
     navigateShell({ date, segment: activeSegment });
-    try {
-      await loadPlanner({ startDate, endDate });
-    } catch (error) {
-      if (isPlannerApiError(error) && error.status === 401) {
-        hasLoadedPlannerRef.current = false;
-        setAuthState("unauthorized");
-      }
-    }
+    await request;
+  }
+
+  function retryPlannerLoad() {
+    const location = readPlannerShellLocation(searchParams, selectedDateKey);
+    const range =
+      location.date >= rangeStartDate && location.date <= rangeEndDate
+        ? { endDate: rangeEndDate, startDate: rangeStartDate }
+        : buildWeekRangeForDate(location.date);
+    void requestPlannerRange(range);
   }
 
   function shiftRange(dayDelta: number) {
@@ -447,14 +474,9 @@ export function PlannerWeekScreen({
     if (returnContext) {
       clearPlannerWeekReturnContext();
       setSelectedDateKey(returnContext.selectedDate);
-      void loadPlanner({
+      void requestPlannerRange({
         endDate: returnContext.endDate,
         startDate: returnContext.startDate,
-      }).catch((error) => {
-        if (isPlannerApiError(error) && error.status === 401) {
-          hasLoadedPlannerRef.current = false;
-          setAuthState("unauthorized");
-        }
       });
       return;
     }
@@ -463,18 +485,24 @@ export function PlannerWeekScreen({
       initialLocation.date >= rangeStartDate && initialLocation.date <= rangeEndDate
         ? { endDate: rangeEndDate, startDate: rangeStartDate }
         : buildWeekRangeForDate(initialLocation.date);
-    void loadPlanner(initialRange).catch((error) => {
-      if (isPlannerApiError(error) && error.status === 401) {
-        hasLoadedPlannerRef.current = false;
-        setAuthState("unauthorized");
-      }
-    });
+    void requestPlannerRange(initialRange);
     // The first authenticated plan-panel entry owns the initial request only.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeSegment, authState, loadPlanner]);
+  }, [activeSegment, authState, requestPlannerRange]);
 
   useEffect(() => {
     const location = readPlannerShellLocation(searchParams, selectedDate);
+    const pendingNavigation = pendingNavigationRef.current;
+    if (pendingNavigation) {
+      if (
+        location.date !== pendingNavigation.date ||
+        location.segment !== pendingNavigation.segment
+      ) {
+        return;
+      }
+      pendingNavigationRef.current = null;
+    }
+
     if (location.segment !== activeSegment) {
       previousSegmentRef.current = activeSegment;
       setActiveSegment(location.segment);
@@ -482,7 +510,29 @@ export function PlannerWeekScreen({
     if (location.date !== selectedDateKey) {
       setSelectedDateKey(location.date);
     }
-  }, [activeSegment, searchParams, selectedDate, selectedDateKey]);
+
+    if (
+      authState !== "authenticated" ||
+      location.segment !== "plan" ||
+      !hasLoadedPlannerRef.current ||
+      (location.date >= rangeStartDate && location.date <= rangeEndDate)
+    ) {
+      return;
+    }
+
+    const nextRange = buildWeekRangeForDate(location.date);
+    if (requestedRangeRef.current === getPlannerRangeKey(nextRange)) return;
+    void requestPlannerRange(nextRange);
+  }, [
+    activeSegment,
+    authState,
+    rangeEndDate,
+    rangeStartDate,
+    requestPlannerRange,
+    searchParams,
+    selectedDate,
+    selectedDateKey,
+  ]);
 
   useLayoutEffect(() => {
     if (previousSegmentRef.current === activeSegment) return;
@@ -726,7 +776,7 @@ export function PlannerWeekScreen({
               <ContentState
                 actionLabel="다시 시도"
                 description={errorMessage ?? "잠시 후 다시 시도해 주세요."}
-                onAction={() => void loadPlanner()}
+                onAction={retryPlannerLoad}
                 tone="error"
                 title="플래너를 불러오지 못했어요"
               />
@@ -740,7 +790,7 @@ export function PlannerWeekScreen({
                 <p>{errorMessage}</p>
                 <button
                   className="mt-2 min-h-11 font-bold text-[var(--brand)]"
-                  onClick={() => void loadPlanner()}
+                  onClick={retryPlannerLoad}
                   type="button"
                 >
                   다시 시도

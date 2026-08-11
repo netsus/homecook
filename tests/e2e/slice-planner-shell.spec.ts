@@ -18,6 +18,7 @@ async function installPlannerShellRoutes(
   let deleted = false;
   const requests = {
     nutrition: 0,
+    plannerRanges: [] as string[],
     productMethods: [] as string[],
   };
   const columns = [
@@ -38,6 +39,10 @@ async function installPlannerShellRoutes(
   });
 
   await page.route("**/api/v1/planner?*", async (route) => {
+    const url = new URL(route.request().url());
+    requests.plannerRanges.push(
+      `${url.searchParams.get("start_date")}:${url.searchParams.get("end_date")}`,
+    );
     await route.fulfill({
       json: {
         data: {
@@ -199,6 +204,50 @@ test.describe("planner-shell Stage 4", () => {
     );
     await expect(page.getByRole("button", { name: "Google로 시작하기" }))
       .toBeVisible();
+  });
+
+  test("planner-shell reloads the originating week on browser Back without duplicating history @smoke-core", async ({
+    page,
+  }) => {
+    await page.clock.setFixedTime(new Date(FIXED_NOW));
+    await setAuthenticated(page);
+    const requests = await installPlannerShellRoutes(page);
+
+    await page.goto(`/planner?date=${PLAN_DATE}`);
+    await expect(page.getByRole("heading", { name: "목 7월 23일" })).toBeVisible();
+    await expect.poll(() => requests.plannerRanges).toEqual([
+      "2026-07-20:2026-07-26",
+    ]);
+    const initialHistoryLength = await page.evaluate(() => window.history.length);
+
+    await page.getByRole("button", { name: "다음 주" }).click();
+    await expect(page).toHaveURL(/date=2026-07-27/);
+    await expect.poll(() => requests.plannerRanges).toEqual([
+      "2026-07-20:2026-07-26",
+      "2026-07-27:2026-08-02",
+    ]);
+    const shiftedHistoryLength = await page.evaluate(() => window.history.length);
+    expect(shiftedHistoryLength).toBe(initialHistoryLength + 1);
+
+    await page.goBack();
+    await expect(page).toHaveURL(new RegExp(`date=${PLAN_DATE}`));
+    await expect(page.getByRole("heading", { name: "목 7월 23일" })).toBeVisible();
+    await expect.poll(() => requests.plannerRanges).toEqual([
+      "2026-07-20:2026-07-26",
+      "2026-07-27:2026-08-02",
+      "2026-07-20:2026-07-26",
+    ]);
+    expect(await page.evaluate(() => window.history.length)).toBe(shiftedHistoryLength);
+
+    await page.goForward();
+    await expect(page).toHaveURL(/date=2026-07-27/);
+    await expect.poll(() => requests.plannerRanges).toEqual([
+      "2026-07-20:2026-07-26",
+      "2026-07-27:2026-08-02",
+      "2026-07-20:2026-07-26",
+      "2026-07-27:2026-08-02",
+    ]);
+    expect(await page.evaluate(() => window.history.length)).toBe(shiftedHistoryLength);
   });
 
   test("planner-shell keeps legacy product plans read/detail/delete-only with focus restore", async ({
