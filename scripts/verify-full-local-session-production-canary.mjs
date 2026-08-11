@@ -5,6 +5,8 @@ import { realpathSync } from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 import {
+  PRODUCTION_CANARY_STAGES,
+  ProductionCanaryStageFailure,
   buildRefreshLifecycleGateResult,
   buildProductionCanaryWorkerEnv,
   resolveProductionCanaryWorkerTimeout,
@@ -128,6 +130,7 @@ async function runAdapterWorker({ implementationSha: sha, phase }) {
       implementationSha: sha,
       observationReader: createParentBackedObservationReader(),
       phase,
+      reportStage: (event) => sendIpc({ ...event, type: "stage" }),
     });
     await sendIpc({ ok: true, result, type: "result" });
   } catch {
@@ -166,20 +169,50 @@ export function runCanaryInIsolatedWorker({
       stdio: ["ignore", "ignore", "ignore", "ipc"],
     });
     let settled = false;
+    let activeStage = null;
     let expectedObservationRequestId = 1;
+    let expectedStageIndex = 0;
     let observationReadPending = false;
-    const rejectClosed = (message) => {
+    const rejectClosed = (error) => {
       if (settled) return;
       settled = true;
       clearTimeout(timeout);
       worker.kill("SIGKILL");
-      reject(new Error(message));
+      reject(error instanceof Error ? error : new Error(error));
+    };
+    const rejectAtActiveStage = (fallbackMessage) => {
+      rejectClosed(activeStage === null
+        ? new Error(fallbackMessage)
+        : new ProductionCanaryStageFailure(activeStage));
     };
     const timeout = setTimeout(() => {
-      rejectClosed("Production canary worker timed out.");
+      rejectAtActiveStage("Production canary worker timed out.");
     }, timeoutMs);
     worker.on("message", (message) => {
       if (settled) return;
+      if (message?.type === "stage") {
+        if (!hasExactKeys(message, ["stage", "status", "type"])) {
+          rejectClosed("Production canary stage IPC is invalid.");
+          return;
+        }
+        const expectedStage = PRODUCTION_CANARY_STAGES[expectedStageIndex];
+        const validStart = message.status === "START"
+          && activeStage === null
+          && message.stage === expectedStage;
+        const validPass = message.status === "PASS"
+          && activeStage === expectedStage
+          && message.stage === expectedStage;
+        if (!validStart && !validPass) {
+          rejectClosed("Production canary stage IPC is invalid.");
+          return;
+        }
+        if (validStart) activeStage = message.stage;
+        else {
+          activeStage = null;
+          expectedStageIndex += 1;
+        }
+        return;
+      }
       if (hasExactKeys(message, ["requestId", "type"])
         && message.type === "observation-request") {
         if (observationReadPending
@@ -205,7 +238,7 @@ export function runCanaryInIsolatedWorker({
             }
           });
         }).catch(() => {
-          rejectClosed("Production canary observation reader failed closed.");
+          rejectAtActiveStage("Production canary observation reader failed closed.");
         });
         return;
       }
@@ -215,9 +248,15 @@ export function runCanaryInIsolatedWorker({
       const failure = hasExactKeys(message, ["ok", "type"])
         && message.type === "result"
         && message.ok === false;
-      if (!success || failure
+      if (failure) {
+        rejectAtActiveStage("Production canary adapter failed closed.");
+        return;
+      }
+      if (!success
         || observationReadPending
-        || expectedObservationRequestId !== 3) {
+        || expectedObservationRequestId !== 3
+        || activeStage !== null
+        || expectedStageIndex !== PRODUCTION_CANARY_STAGES.length) {
         rejectClosed("Production canary adapter failed closed.");
         return;
       }
@@ -237,7 +276,9 @@ export function runCanaryInIsolatedWorker({
       if (!settled) {
         settled = true;
         clearTimeout(timeout);
-        reject(new Error(`Production canary worker exited ${code ?? "unknown"}.`));
+        reject(activeStage === null
+          ? new Error(`Production canary worker exited ${code ?? "unknown"}.`)
+          : new ProductionCanaryStageFailure(activeStage));
       }
     });
     worker.once("error", () => {
@@ -280,8 +321,11 @@ async function main() {
         phase: args.phase,
       });
     process.stdout.write(`${JSON.stringify(result)}\n`);
-  } catch {
-    process.stderr.write("full-local-session-production-canary: FAIL (redacted)\n");
+  } catch (error) {
+    const stage = error instanceof ProductionCanaryStageFailure ? error.stage : null;
+    process.stderr.write(stage === null
+      ? "full-local-session-production-canary: FAIL (redacted)\n"
+      : `full-local-session-production-canary: FAIL stage=${stage}\n`);
     process.exitCode = 1;
   }
 }

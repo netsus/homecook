@@ -27,6 +27,10 @@ import {
   localConnectorHealthExitCode,
   validateLocalConnectorHealth,
 } from "./lib/cloudflare-tunnel-health.mjs";
+import {
+  ProductionCanaryStageFailure,
+  parseProductionCanaryFailureStage,
+} from "./lib/full-local-session-production-canary.mjs";
 
 export const REFRESH_LIFECYCLE_JSON_SCRIPT =
   "verify:full-local-session-refresh-lifecycle:json";
@@ -145,6 +149,22 @@ function stdoutText(result) {
   return Buffer.isBuffer(result.stdout)
     ? result.stdout.toString("utf8")
     : String(result.stdout ?? "");
+}
+
+function stderrText(result) {
+  return Buffer.isBuffer(result.stderr)
+    ? result.stderr.toString("utf8")
+    : String(result.stderr ?? "");
+}
+
+export function parseProductionCanaryGateFailureStage(stderr) {
+  return parseProductionCanaryFailureStage(stderr);
+}
+
+export function formatSessionLifecycleEvidenceFailure(error) {
+  return error instanceof ProductionCanaryStageFailure
+    ? `session-lifecycle-evidence: FAIL stage=${error.stage}\n`
+    : "session-lifecycle-evidence: FAIL (redacted)\n";
 }
 
 function sha256(buffers) {
@@ -824,7 +844,13 @@ function runPnpmJsonGate(implementationRoot, scriptName, parser, extraArgs = [])
     allowFailure: true,
     cwd: implementationRoot,
   });
-  if (result.status !== 0) throw new Error(`${scriptName} failed.`);
+  if (result.status !== 0) {
+    if (scriptName === "verify:full-local-session-production-canary") {
+      const stage = parseProductionCanaryGateFailureStage(stderrText(result));
+      if (stage !== null) throw new ProductionCanaryStageFailure(stage);
+    }
+    throw new Error(`${scriptName} failed.`);
+  }
   return parser(stdoutText(result));
 }
 
@@ -871,7 +897,8 @@ function collectVerification({ implementationRoot, implementationSha, phase }) {
         implementationSha,
       });
     }
-  } catch {
+  } catch (error) {
+    if (error instanceof ProductionCanaryStageFailure) throw error;
     verification.t65_canary = "FAIL";
   }
 
@@ -1324,8 +1351,8 @@ function main() {
     const implementationRoot = realpathSync(process.cwd());
     const evidence = captureSessionLifecycleEvidence({ implementationRoot, liveRoot, output, phase });
     process.stdout.write(`session-lifecycle-evidence: PASS (${evidence.phase})\n`);
-  } catch {
-    process.stderr.write("session-lifecycle-evidence: FAIL (redacted)\n");
+  } catch (error) {
+    process.stderr.write(formatSessionLifecycleEvidenceFailure(error));
     process.exitCode = 1;
   }
 }
