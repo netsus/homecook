@@ -20,12 +20,14 @@ export function useDialogBoundary({
   active = true,
   closeOnEscape = true,
   dialogRef,
+  fallbackFocusRef,
   initialFocusRef,
   onClose,
 }: {
   active?: boolean;
   closeOnEscape?: boolean;
   dialogRef: RefObject<HTMLElement | null>;
+  fallbackFocusRef?: RefObject<HTMLElement | null>;
   initialFocusRef?: RefObject<HTMLElement | null>;
   onClose: () => void;
 }) {
@@ -44,6 +46,7 @@ export function useDialogBoundary({
     const activeElement = document.activeElement instanceof HTMLElement
       ? document.activeElement
       : null;
+    const fallbackFocusTarget = fallbackFocusRef?.current ?? null;
     if (activeElement && !dialog.contains(activeElement)) {
       returnFocusRef.current = activeElement;
     }
@@ -120,11 +123,14 @@ export function useDialogBoundary({
       }
       requestAnimationFrame(() => {
         const returnTarget = returnFocusRef.current;
-        if (!dialog.isConnected && returnTarget?.isConnected) {
-          returnTarget.focus();
+        if (!dialog.isConnected) {
+          const target = returnTarget?.isConnected
+            ? returnTarget
+            : fallbackFocusTarget;
+          target?.focus();
           returnFocusRef.current = null;
         }
       });
     };
-  }, [active, closeOnEscape, dialogRef, initialFocusRef]);
+  }, [active, closeOnEscape, dialogRef, fallbackFocusRef, initialFocusRef]);
 }

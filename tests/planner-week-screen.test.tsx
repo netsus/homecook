@@ -1,26 +1,18 @@
 // @vitest-environment jsdom
 
 import React from "react";
-import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { PlannerWeekScreen } from "@/components/planner/planner-week-screen";
-import {
-  PLANNER_WEEK_RETURN_CONTEXT_KEY,
-  readPlannerWeekReturnContext,
-} from "@/lib/planner/planner-week-return-context";
 import { resetPlannerStore } from "@/stores/planner-store";
+import type { PlannerData } from "@/types/planner";
+import type { ProductPlannerEntryData } from "@/types/product-planner-entry";
 
 const readE2EAuthOverride = vi.fn();
 const fetchPlanner = vi.fn();
-const fetchPlannerNutrition = vi.fn();
-const fetchRecipes = vi.fn();
-const fetchRecipeBooks = vi.fn();
-const fetchRecipeBookRecipes = vi.fn();
-const fetchPantryMatchRecipes = vi.fn();
-const createMealSafe = vi.fn();
-const fetchLeftovers = vi.fn();
+const deleteProductPlannerEntry = vi.fn();
 const navigationMocks = vi.hoisted(() => ({
   push: vi.fn(),
   replace: vi.fn(),
@@ -40,51 +32,32 @@ vi.mock("@/lib/auth/e2e-auth-override", () => ({
   withE2EAuthOverrideHeaders: (init?: RequestInit) => init ?? {},
 }));
 
-vi.mock("@/lib/api/planner-nutrition", () => ({
-  fetchPlannerNutrition: (...args: unknown[]) => fetchPlannerNutrition(...args),
-  isPlannerNutritionApiError: (error: unknown) =>
-    Boolean(error) && typeof error === "object" && "status" in (error as object),
-}));
-
 vi.mock("@/lib/api/planner", () => ({
   createDefaultPlannerRange: () => ({
-    startDate: "2026-03-24",
     endDate: "2026-03-30",
+    startDate: "2026-03-24",
   }),
+  fetchPlanner: (...args: unknown[]) => fetchPlanner(...args),
+  isPlannerApiError: (error: unknown) =>
+    Boolean(error) && typeof error === "object" && "status" in (error as object),
   shiftPlannerRange: (
-    range: { startDate: string; endDate: string },
+    range: { endDate: string; startDate: string },
     dayDelta: number,
   ) => {
     const start = new Date(`${range.startDate}T00:00:00.000Z`);
     const end = new Date(`${range.endDate}T00:00:00.000Z`);
     start.setUTCDate(start.getUTCDate() + dayDelta);
     end.setUTCDate(end.getUTCDate() + dayDelta);
-
     return {
-      startDate: start.toISOString().slice(0, 10),
       endDate: end.toISOString().slice(0, 10),
+      startDate: start.toISOString().slice(0, 10),
     };
   },
-  fetchPlanner: (...args: unknown[]) => fetchPlanner(...args),
-  isPlannerApiError: (error: unknown) =>
-    Boolean(error) && typeof error === "object" && "status" in (error as Record<string, unknown>),
 }));
 
-vi.mock("@/lib/api/meal", () => ({
-  createMealSafe: (...args: unknown[]) => createMealSafe(...args),
-}));
-
-vi.mock("@/lib/api/leftovers", () => ({
-  fetchLeftovers: (...args: unknown[]) => fetchLeftovers(...args),
-}));
-
-vi.mock("@/lib/api/recipe", () => ({
-  fetchPantryMatchRecipes: (...args: unknown[]) =>
-    fetchPantryMatchRecipes(...args),
-  fetchRecipeBookRecipes: (...args: unknown[]) =>
-    fetchRecipeBookRecipes(...args),
-  fetchRecipeBooks: (...args: unknown[]) => fetchRecipeBooks(...args),
-  fetchRecipes: (...args: unknown[]) => fetchRecipes(...args),
+vi.mock("@/lib/api/product-planner-entry", () => ({
+  deleteProductPlannerEntry: (...args: unknown[]) =>
+    deleteProductPlannerEntry(...args),
 }));
 
 vi.mock("@/lib/supabase/env", () => ({
@@ -96,11 +69,7 @@ vi.mock("@/lib/supabase/browser", () => ({
     auth: {
       getSession: vi.fn(async () => ({ data: { session: null } })),
       onAuthStateChange: vi.fn(() => ({
-        data: {
-          subscription: {
-            unsubscribe: vi.fn(),
-          },
-        },
+        data: { subscription: { unsubscribe: vi.fn() } },
       })),
     },
   }),
@@ -108,1690 +77,279 @@ vi.mock("@/lib/supabase/browser", () => ({
 
 vi.mock("@/components/auth/social-login-buttons", () => ({
   SocialLoginButtons: ({ nextPath }: { nextPath: string }) => (
-    <div data-testid="social-login-buttons" data-next-path={nextPath} />
+    <div data-next-path={nextPath} data-testid="social-login-buttons" />
   ),
 }));
 
+vi.mock("@/components/shared/profile-summary-button", () => ({
+  ProfileSummaryButton: () => <button type="button">프로필</button>,
+}));
+
+function createProductEntry(
+  overrides: Partial<ProductPlannerEntryData> = {},
+): ProductPlannerEntryData {
+  return {
+    basis_relations: [],
+    column_id: "column-lunch",
+    entry_type: "product",
+    id: "legacy-product-1",
+    nutrition: {
+      basis: { amount: 1, unit: "serving" },
+      calculation_quality: "direct",
+      calculation_status: "complete",
+      sources: [],
+      values: {
+        energy_kcal: {
+          amount: 105,
+          display_mode: "total",
+          known_amount: null,
+          status: "complete",
+        },
+      },
+      warnings: [],
+    },
+    plan_date: "2026-03-24",
+    product_brand: "무먹 식품",
+    product_id: "product-1",
+    product_name: "플레인 요거트",
+    product_nutrition_version_id: "version-1",
+    quantity: { amount: 1, unit: "serving" },
+    workflow_status: null,
+    ...overrides,
+  };
+}
+
 function createPlannerData({
-  meals = [],
+  columns = [
+    { id: "column-breakfast", name: "아침", sort_order: 0 },
+    { id: "column-lunch", name: "점심", sort_order: 1 },
+    { id: "column-dinner", name: "저녁", sort_order: 2 },
+  ],
+  meals = [
+    {
+      column_id: "column-breakfast",
+      id: "meal-registered",
+      is_leftover: false,
+      plan_date: "2026-03-24",
+      planned_servings: 2,
+      recipe_id: "recipe-1",
+      recipe_thumbnail_url: null,
+      recipe_title: "김치찌개",
+      status: "registered" as const,
+    },
+    {
+      column_id: "column-lunch",
+      id: "meal-shopping-done",
+      is_leftover: false,
+      plan_date: "2026-03-24",
+      planned_servings: 1,
+      recipe_id: "recipe-2",
+      recipe_thumbnail_url: null,
+      recipe_title: "샐러드",
+      status: "shopping_done" as const,
+    },
+  ],
+  productEntries = [],
 }: {
-  meals?: Array<{
-    id: string;
-    recipe_id: string;
-    recipe_title: string;
-    recipe_thumbnail_url: string | null;
-    plan_date: string;
-    column_id: string;
-    planned_servings: number;
-    status: "registered" | "shopping_done" | "cook_done";
-    is_leftover: boolean;
-    shopping_list_id?: string | null;
-    shopping_list_title?: string | null;
-  }>;
-}) {
-  return {
-    columns: [
-      { id: "column-breakfast", name: "아침", sort_order: 0 },
-      { id: "column-lunch", name: "점심", sort_order: 1 },
-      { id: "column-snack", name: "간식", sort_order: 2 },
-      { id: "column-dinner", name: "저녁", sort_order: 3 },
-    ],
-    meals,
-  };
+  columns?: PlannerData["columns"];
+  meals?: PlannerData["meals"];
+  productEntries?: PlannerData["product_entries"];
+} = {}): PlannerData {
+  return { columns, meals, product_entries: productEntries };
 }
 
-function createPlannerNutritionData() {
-  const nutrition = {
-    basis: { amount: 1 as const, unit: "range" as const },
-    values: {
-      energy_kcal: { amount: 640, known_amount: null, status: "complete" as const, display_mode: "total" as const },
-      carbohydrate_g: { amount: 72, known_amount: null, status: "complete" as const, display_mode: "total" as const },
-      protein_g: { amount: 31, known_amount: null, status: "complete" as const, display_mode: "total" as const },
-      fat_g: { amount: 18, known_amount: null, status: "complete" as const, display_mode: "total" as const },
-      sodium_mg: { amount: 890, known_amount: null, status: "complete" as const, display_mode: "total" as const },
-    },
-    calculation_status: "complete" as const,
-    calculation_quality: "direct" as const,
-    incomplete_entry_count: 0,
-    warnings: [],
-    sources: [],
-  };
-
-  return {
-    range: { start_date: "2026-03-24", end_date: "2026-03-30" },
-    summary: { nutrition, recipe_entry_count: 1, product_entry_count: 0 },
-    days: [
-      { plan_date: "2026-03-24", nutrition, columns: [] },
-    ],
-  };
-}
-
-function createDeferred<T>() {
-  let resolve!: (value: T | PromiseLike<T>) => void;
-  let reject!: (reason?: unknown) => void;
-
-  const promise = new Promise<T>((res, rej) => {
-    resolve = res;
-    reject = rej;
-  });
-
-  return {
-    promise,
-    resolve,
-    reject,
-  };
-}
-
-function primeWeekStripViewport(strip: HTMLElement) {
-  let scrollLeft = 320;
-
-  Object.defineProperty(strip, "clientWidth", {
-    configurable: true,
-    get: () => 320,
-  });
-  Object.defineProperty(strip, "scrollLeft", {
-    configurable: true,
-    get: () => scrollLeft,
-    set: (value: number) => {
-      scrollLeft = value;
-    },
-  });
-
-  return {
-    scrollToPage(pageIndex: number) {
-      scrollLeft = 320 * pageIndex;
-      fireEvent.scroll(strip);
-    },
-  };
-}
-
-function attachLateMeasuredWeekStripViewport(strip: HTMLElement, width: number) {
-  let scrollLeft = 0;
-
-  Object.defineProperty(strip, "clientWidth", {
-    configurable: true,
-    get: () => width,
-  });
-  Object.defineProperty(strip, "scrollLeft", {
-    configurable: true,
-    get: () => scrollLeft,
-    set: (value: number) => {
-      scrollLeft = value;
-    },
-  });
-
-  return {
-    getScrollLeft() {
-      return scrollLeft;
-    },
-  };
-}
-
-function setDesktopViewport(enabled: boolean) {
-  Object.defineProperty(window, "matchMedia", {
-    configurable: true,
-    writable: true,
-    value: vi.fn().mockImplementation((query: string) => ({
-      matches: enabled && query === "(min-width: 1024px)",
-      media: query,
-      onchange: null,
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-      addListener: vi.fn(),
-      removeListener: vi.fn(),
-      dispatchEvent: vi.fn(),
-    })),
-  });
-}
-
-describe("planner week screen", () => {
+describe("planner week screen Stage 4", () => {
   beforeEach(() => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.setSystemTime(new Date("2026-03-24T03:00:00.000Z"));
     readE2EAuthOverride.mockReset();
+    readE2EAuthOverride.mockReturnValue(true);
     fetchPlanner.mockReset();
-    fetchPlannerNutrition.mockReset();
-    fetchPlannerNutrition.mockResolvedValue(createPlannerNutritionData());
-    fetchRecipes.mockReset();
-    fetchRecipeBooks.mockReset();
-    fetchRecipeBookRecipes.mockReset();
-    fetchPantryMatchRecipes.mockReset();
-    createMealSafe.mockReset();
-    fetchLeftovers.mockReset();
+    fetchPlanner.mockResolvedValue(createPlannerData());
+    deleteProductPlannerEntry.mockReset();
+    deleteProductPlannerEntry.mockResolvedValue({
+      deleted: true,
+      entry_id: "legacy-product-1",
+    });
     navigationMocks.push.mockReset();
     navigationMocks.replace.mockReset();
-    fetchRecipes.mockResolvedValue({
-      success: true,
-      data: {
-        has_next: false,
-        items: [],
-        next_cursor: null,
-      },
-      error: null,
-    });
-    fetchRecipeBooks.mockResolvedValue({
-      success: true,
-      data: { books: [] },
-      error: null,
-    });
-    fetchRecipeBookRecipes.mockResolvedValue({
-      success: true,
-      data: { has_next: false, items: [], next_cursor: null },
-      error: null,
-    });
-    fetchPantryMatchRecipes.mockResolvedValue({
-      success: true,
-      data: { has_next: false, items: [], next_cursor: null },
-      error: null,
-    });
     navigationMocks.searchParams.mockReset();
     navigationMocks.searchParams.mockReturnValue(new URLSearchParams());
+    Object.defineProperty(window, "scrollTo", {
+      configurable: true,
+      value: vi.fn(),
+    });
     window.sessionStorage.clear();
     resetPlannerStore();
-    setDesktopViewport(false);
   });
 
   afterEach(() => {
     cleanup();
+    vi.useRealTimers();
   });
 
-  it("shows unauthorized state and login options for guests", async () => {
+  it("preserves the exact segment/date deep link in the guest login return", async () => {
     readE2EAuthOverride.mockReturnValue(false);
-
-    render(<PlannerWeekScreen />);
-
-    expect(
-      await screen.findByRole("heading", { name: "이 화면은 로그인이 필요해요" }),
-    ).toBeTruthy();
-    expect(screen.getByText("플래너 접근")).toBeTruthy();
-    expect(
-      screen.getByText("로그인 후 보던 주간 범위로 돌아와 식단을 계속 관리할 수 있어요."),
-    ).toBeTruthy();
-    expect(screen.queryByText("잠시만 기다려 주세요")).toBeNull();
-    expect(screen.queryByText("로그인 화면으로 이동하고 있어요.")).toBeNull();
-    expect(navigationMocks.replace).not.toHaveBeenCalled();
-  });
-
-  it("does not show auth loading copy before the guest gate resolves", async () => {
-    readE2EAuthOverride.mockReturnValue(undefined);
-
-    render(<PlannerWeekScreen />);
-
-    expect(screen.queryByText("잠시만 기다려 주세요")).toBeNull();
-    expect(screen.queryByText("로그인 상태를 확인하고 있어요")).toBeNull();
-    expect(
-      await screen.findByRole("heading", { name: "이 화면은 로그인이 필요해요" }),
-    ).toBeTruthy();
-  });
-
-  it("restores the exact internal week context after a nutrition 401 without adding URL query fields", async () => {
-    readE2EAuthOverride.mockReturnValue(true);
-    fetchPlanner.mockResolvedValue(createPlannerData({ meals: [] }));
-    fetchPlannerNutrition
-      .mockResolvedValueOnce(createPlannerNutritionData())
-      .mockRejectedValueOnce(Object.assign(new Error("unauthorized"), { status: 401 }));
-
-    const firstRender = render(<PlannerWeekScreen />);
-    await screen.findByRole("heading", { name: "주간 플래너" });
-    await userEvent.click(screen.getAllByRole("button", { name: "다음 주" })[0]!);
-
-    await screen.findByRole("heading", { name: "이 화면은 로그인이 필요해요" });
-    expect(readPlannerWeekReturnContext()).toEqual({
-      version: 1,
-      startDate: "2026-03-31",
-      endDate: "2026-04-06",
-      selectedDate: "2026-03-31",
-      columnId: null,
-      slotName: null,
-    });
-    expect(navigationMocks.replace).not.toHaveBeenCalled();
-    expect(new URL(screen.getByTestId("social-login-buttons").getAttribute("data-next-path") ?? "/planner", "http://homecook.local").searchParams.size).toBe(0);
-
-    firstRender.unmount();
-    resetPlannerStore();
-    fetchPlanner.mockClear();
-    fetchPlannerNutrition.mockReset();
-    fetchPlannerNutrition.mockResolvedValue({
-      ...createPlannerNutritionData(),
-      range: { start_date: "2026-03-31", end_date: "2026-04-06" },
-    });
-
-    render(<PlannerWeekScreen />);
-    await waitFor(() =>
-      expect(fetchPlanner).toHaveBeenCalledWith("2026-03-31", "2026-04-06"),
+    navigationMocks.searchParams.mockReturnValue(
+      new URLSearchParams("segment=log&date=2026-03-25"),
     );
-    expect(window.sessionStorage.getItem(PLANNER_WEEK_RETURN_CONTEXT_KEY)).toBeNull();
-  });
-
-  it("uses the centered login gate state for guests on small screens", async () => {
-    readE2EAuthOverride.mockReturnValue(false);
 
     render(<PlannerWeekScreen />);
 
-    const heading = await screen.findByRole("heading", {
-      name: "이 화면은 로그인이 필요해요",
-    });
-    const authGate = heading.closest("[data-state-kind='prototype-derived']");
-
-    expect(authGate).not.toBeNull();
-    expect(authGate?.getAttribute("data-state-tone")).toBe("gate");
+    expect(await screen.findByRole("heading", { name: "이 화면은 로그인이 필요해요" }))
+      .toBeTruthy();
+    expect(screen.getByTestId("social-login-buttons").getAttribute("data-next-path"))
+      .toBe("/planner?segment=log&date=2026-03-25");
+    expect(fetchPlanner).not.toHaveBeenCalled();
   });
 
-  it("loads planner data into four fixed slots inside the same day card", async () => {
-    readE2EAuthOverride.mockReturnValue(true);
+  it("renders the plan shell without calling or showing planner nutrition", async () => {
+    render(<PlannerWeekScreen />);
+
+    expect(await screen.findByRole("tab", { name: "요리 계획" })).toBeTruthy();
+    expect(screen.getByRole("tab", { name: "식사 기록" })).toBeTruthy();
+    expect(screen.queryByText(/계획 영양/)).toBeNull();
+    expect(fetchPlanner).toHaveBeenCalledTimes(1);
+
+    const rail = screen.getByTestId("planner-week-date-rail");
+    expect(within(rail).getAllByRole("button")).toHaveLength(7);
+    expect(screen.getByTestId("planner-two-day-overview").children).toHaveLength(2);
+  });
+
+  it("keeps recipe meals in the selected-day detail with status-specific actions", async () => {
     fetchPlanner.mockResolvedValue(
       createPlannerData({
         meals: [
+          ...createPlannerData().meals,
           {
-            id: "meal-1",
-            recipe_id: "recipe-1",
-            recipe_title: "김치찌개",
-            recipe_thumbnail_url: null,
-            plan_date: "2026-03-24",
-            column_id: "column-breakfast",
-            planned_servings: 2,
-            status: "registered",
-            is_leftover: false,
-          },
-          {
-            id: "meal-2",
-            recipe_id: "recipe-2",
-            recipe_title: "샐러드",
-            recipe_thumbnail_url: null,
-            plan_date: "2026-03-24",
-            column_id: "column-lunch",
-            planned_servings: 1,
-            status: "shopping_done",
-            is_leftover: false,
-          },
-        ],
-      }),
-    );
-
-    render(<PlannerWeekScreen />);
-
-    expect((await screen.findByRole("heading", { name: "주간 플래너" })).className).toContain(
-      "text-[var(--brand)]",
-    );
-    expect(screen.getAllByText("아침").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("점심").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("간식").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("저녁").length).toBeGreaterThan(0);
-    expect(screen.getAllByLabelText(/식단 카드$/)).toHaveLength(7);
-    expect(screen.getByText("3월 24일 - 3월 30일")).toBeTruthy();
-    expect(screen.queryByText("이번 주 3월 24일 - 3월 30일")).toBeNull();
-    expect(screen.queryByText("화면 상태")).toBeNull();
-    // Wave1: week nav buttons now always visible (mobile uses icon-only)
-    expect(screen.getByRole("button", { name: "이전 주" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "다음 주" })).toBeTruthy();
-    expect(screen.getByText("김치찌개")).toBeTruthy();
-    expect(screen.getByText("샐러드")).toBeTruthy();
-    expect(screen.getByLabelText("식사 등록 완료")).toBeTruthy();
-    expect(screen.getByLabelText("장보기 완료")).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "컬럼 추가" })).toBeNull();
-  });
-
-  it.each([false, true])("shows the product badge once and keeps the %s quantity meta free of duplicate product copy", async (desktop) => {
-    setDesktopViewport(desktop);
-    readE2EAuthOverride.mockReturnValue(true);
-    fetchPlanner.mockResolvedValue({
-      ...createPlannerData({}),
-      product_entries: [
-        {
-          entry_type: "product",
-          id: "entry-yogurt",
-          product_id: "product-yogurt",
-          product_name: "플레인 요거트",
-          product_brand: null,
-          plan_date: "2026-03-24",
-          column_id: "column-breakfast",
-          quantity: { amount: 1, unit: "serving" },
-          workflow_status: null,
-          product_nutrition_version_id: "version-yogurt",
-          basis_relations: [],
-          nutrition: {
-            basis: { amount: 1, unit: "serving" },
-            values: {
-              energy_kcal: {
-                amount: 105,
-                known_amount: null,
-                status: "complete",
-                display_mode: "total",
-              },
-            },
-            calculation_status: "complete",
-            calculation_quality: "direct",
-            warnings: [],
-            sources: [],
-          },
-        },
-      ],
-    });
-
-    render(<PlannerWeekScreen />);
-
-    const productCard = await screen.findByTestId(
-      `${desktop ? "planner-web" : "planner-mobile"}-product-entry-yogurt`,
-    );
-    expect(within(productCard).getAllByText("완제품")).toHaveLength(1);
-    expect(productCard.textContent).toContain("1회");
-    expect(productCard.textContent).not.toContain("완제품 ·");
-  });
-
-  it("keeps Wave1 mobile navigation with a floating shopping CTA", async () => {
-    readE2EAuthOverride.mockReturnValue(true);
-    fetchPlanner.mockResolvedValue(createPlannerData({ meals: [] }));
-
-    render(<PlannerWeekScreen />);
-
-    expect(await screen.findByRole("heading", { name: "주간 플래너" })).toBeTruthy();
-
-    const shoppingLink = screen.getByRole("link", { name: "장보기" }) as HTMLAnchorElement;
-    const bottomTabs = screen.getByRole("navigation", { name: "플래너 하단 탭" });
-    const plannerTab = within(bottomTabs).getByRole("link", { name: "플래너" });
-
-    expect(shoppingLink.closest(".fixed")).not.toBeNull();
-    expect(shoppingLink.getAttribute("href")).toBe("/shopping/flow");
-    expect(shoppingLink.className).toContain("bg-[var(--brand)]");
-    expect(shoppingLink.className).toContain("active:scale-95");
-    expect(plannerTab.getAttribute("aria-current")).toBe("page");
-    expect(
-      within(bottomTabs).getByTestId("bottom-tab-icon-pantry-fridge"),
-    ).toBeTruthy();
-    expect(screen.queryByRole("group", { name: "플래너 보조 작업" })).toBeNull();
-  });
-
-  it("shows a current-week shortcut in the mobile week controls", async () => {
-    readE2EAuthOverride.mockReturnValue(true);
-    fetchPlanner.mockResolvedValue(createPlannerData({ meals: [] }));
-
-    render(<PlannerWeekScreen />);
-
-    expect(await screen.findByRole("heading", { name: "주간 플래너" })).toBeTruthy();
-
-    const weekShell = screen.getByTestId("planner-week-shell");
-    const currentWeekButton = within(weekShell).getByRole("button", {
-      name: "이번 주로 이동",
-    });
-
-    expect(currentWeekButton.textContent?.trim()).toBe("이번 주");
-    expect(currentWeekButton.className).toContain("rounded-[var(--radius-control)]");
-    expect(currentWeekButton.className).not.toContain("rounded-full");
-    expect(currentWeekButton.className).toContain("border-[var(--line-strong)]");
-    expect(weekShell.querySelector(".grid")?.className).toContain(
-      "grid-cols-[44px_minmax(0,1fr)_44px]",
-    );
-  });
-
-  it("adds narrow-screen density classes to the mobile overview, nutrition, and planner body", async () => {
-    readE2EAuthOverride.mockReturnValue(true);
-    fetchPlanner.mockResolvedValue(createPlannerData({ meals: [] }));
-
-    render(<PlannerWeekScreen />);
-
-    await screen.findByRole("heading", { name: "주간 플래너" });
-
-    expect(screen.getByTestId("planner-week-shell").className).toContain("max-[359px]:py-2");
-    expect(screen.getByTestId("planner-week-nutrition-summary").className).toContain("max-[359px]:px-2.5");
-    expect(screen.getByTestId("planner-week-body").className).toContain("max-[359px]:py-3");
-    expect(screen.getByTestId("planner-week-body").className).toContain("max-[359px]:px-3");
-  });
-
-  it("renders the desktop planner header with the prototype's three week actions", async () => {
-    const user = userEvent.setup();
-
-    setDesktopViewport(true);
-    readE2EAuthOverride.mockReturnValue(true);
-    fetchPlanner
-      .mockResolvedValueOnce(createPlannerData({ meals: [] }))
-      .mockResolvedValueOnce(createPlannerData({ meals: [] }))
-      .mockResolvedValueOnce(createPlannerData({ meals: [] }));
-
-    render(<PlannerWeekScreen />);
-
-    expect(await screen.findByRole("heading", { name: "주간 플래너" })).toBeTruthy();
-    expect(screen.getByTestId("web-profile-summary-button")).toBeTruthy();
-
-    const actions = screen.getByRole("group", { name: "플래너 작업" });
-    const previousWeekButton = within(actions).getByRole("button", { name: "이전 주" });
-    const currentWeekButton = within(actions).getByRole("button", { name: "이번 주" });
-    const nextWeekButton = within(actions).getByRole("button", { name: "다음 주" });
-    const shoppingPreviewLink = within(actions).getByRole("link", {
-      name: "장보기",
-    }) as HTMLAnchorElement;
-
-    expect(within(actions).getAllByRole("button")).toHaveLength(3);
-    expect(within(actions).getAllByRole("link")).toHaveLength(1);
-    expect(previousWeekButton.textContent?.trim()).toBe("< 이전 주");
-    expect(currentWeekButton.textContent?.trim()).toBe("이번 주");
-    expect(nextWeekButton.textContent?.trim()).toBe("다음 주 >");
-    expect(shoppingPreviewLink.getAttribute("href")).toBe("/shopping/flow");
-    expect(within(actions).queryByRole("link", { name: "요리 준비" })).toBeNull();
-
-    await user.click(nextWeekButton);
-
-    await waitFor(() => {
-      expect(fetchPlanner).toHaveBeenNthCalledWith(2, "2026-03-31", "2026-04-06");
-    });
-
-    await user.click(within(actions).getByRole("button", { name: "이번 주" }));
-
-    await waitFor(() => {
-      expect(fetchPlanner).toHaveBeenNthCalledWith(3, "2026-03-24", "2026-03-30");
-    });
-  });
-
-  it("keeps the desktop empty-week state simple without a first-meal chooser", async () => {
-    setDesktopViewport(true);
-    readE2EAuthOverride.mockReturnValue(true);
-    fetchPlanner.mockResolvedValue(createPlannerData({ meals: [] }));
-
-    render(<PlannerWeekScreen />);
-
-    expect(await screen.findByRole("heading", { name: "주간 플래너" })).toBeTruthy();
-    expect(screen.queryByText("아직 등록된 식사가 없어요")).toBeNull();
-    expect(screen.getByTestId("planner-week-body")).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "날짜와 끼니 선택" })).toBeNull();
-    expect(screen.queryByTestId("planner-first-meal-chooser")).toBeNull();
-  });
-
-  it("renders the desktop planner as date rows with meal columns", async () => {
-    setDesktopViewport(true);
-    readE2EAuthOverride.mockReturnValue(true);
-    fetchPlanner.mockResolvedValue(
-      createPlannerData({
-        meals: [
-          {
-            id: "meal-long-title",
-            recipe_id: "recipe-long-title",
-            recipe_title: "두부 듬뿍 넣은 얼큰한 집밥 김치찌개",
-            recipe_thumbnail_url: null,
-            plan_date: "2026-03-24",
-            column_id: "column-breakfast",
-            planned_servings: 2,
-            status: "registered",
-            is_leftover: false,
-          },
-        ],
-      }),
-    );
-
-    const { container } = render(<PlannerWeekScreen />);
-
-    await screen.findAllByText("두부 듬뿍 넣은 얼큰한 집밥 김치찌개");
-
-    expect(container.querySelectorAll(".web-planner-column-head")).toHaveLength(4);
-    expect(container.querySelectorAll(".web-planner-date-row-head")).toHaveLength(7);
-    expect(container.querySelector(".web-planner-time")).toBeNull();
-    expect(container.querySelector(".web-planner-head")).toBeNull();
-
-    const firstDateRow = screen.getByTestId("web-planner-date-row-2026-03-24");
-
-    expect(within(firstDateRow).getByText("3/24")).toBeTruthy();
-    expect(within(firstDateRow).getByText("화")).toBeTruthy();
-    expect(screen.getByText("아침").closest(".web-planner-column-head")).not.toBeNull();
-    expect(screen.getByText("점심").closest(".web-planner-column-head")).not.toBeNull();
-    expect(screen.getByText("간식").closest(".web-planner-column-head")).not.toBeNull();
-    expect(screen.getByText("저녁").closest(".web-planner-column-head")).not.toBeNull();
-    expect(
-      within(firstDateRow).getByText("두부 듬뿍 넣은 얼큰한 집밥 김치찌개"),
-    ).toBeTruthy();
-  });
-
-  it("uses the planner meal card edge as the desktop status indicator", async () => {
-    setDesktopViewport(true);
-    readE2EAuthOverride.mockReturnValue(true);
-    fetchPlanner.mockResolvedValue(
-      createPlannerData({
-        meals: [
-          {
-            id: "meal-registered",
-            recipe_id: "recipe-registered",
-            recipe_title: "된장찌개",
-            recipe_thumbnail_url: null,
-            plan_date: "2026-03-24",
-            column_id: "column-breakfast",
-            planned_servings: 2,
-            status: "registered",
-            is_leftover: false,
-          },
-        ],
-      }),
-    );
-
-    const { container } = render(<PlannerWeekScreen />);
-
-    await screen.findAllByText("된장찌개");
-
-    const meta = container.querySelector(".web-planner-meal-meta");
-    const mealCard = container.querySelector(".web-planner-meal");
-
-    expect(meta).not.toBeNull();
-    expect(mealCard).not.toBeNull();
-    expect(mealCard?.className).toContain("web-planner-meal-registered");
-    expect(within(meta as HTMLElement).getByText("2인분")).toBeTruthy();
-    expect(within(meta as HTMLElement).queryByText("등록")).toBeNull();
-    expect(within(meta as HTMLElement).getByLabelText("식사 등록 완료")).toBeTruthy();
-    expect(meta?.querySelector(".web-planner-meal-status-registered")).toBeNull();
-    expect(mealCard?.querySelector(".web-planner-meal-status")).toBeNull();
-    expect(screen.queryByText("2인분 · 등록")).toBeNull();
-  });
-
-  it("keeps the desktop planner side summary focused without duplicate registered totals or quick add", async () => {
-    setDesktopViewport(true);
-    readE2EAuthOverride.mockReturnValue(true);
-    fetchPlanner.mockResolvedValue(
-      createPlannerData({
-        meals: [
-          {
-            id: "meal-registered",
-            recipe_id: "recipe-registered",
-            recipe_title: "된장찌개",
-            recipe_thumbnail_url: null,
-            plan_date: "2026-03-24",
-            column_id: "column-breakfast",
-            planned_servings: 2,
-            status: "registered",
-            is_leftover: false,
-          },
-          {
-            id: "meal-shopping",
-            recipe_id: "recipe-shopping",
-            recipe_title: "카레",
-            recipe_thumbnail_url: null,
-            plan_date: "2026-03-24",
-            column_id: "column-lunch",
-            planned_servings: 2,
-            status: "shopping_done",
-            is_leftover: false,
-          },
-          {
-            id: "meal-cooked",
-            recipe_id: "recipe-cooked",
-            recipe_title: "불고기",
-            recipe_thumbnail_url: null,
-            plan_date: "2026-03-24",
             column_id: "column-dinner",
-            planned_servings: 2,
-            status: "cook_done",
+            id: "meal-next-day",
             is_leftover: false,
+            plan_date: "2026-03-25",
+            planned_servings: 2,
+            recipe_id: "recipe-3",
+            recipe_thumbnail_url: null,
+            recipe_title: "다음 날 된장찌개",
+            status: "cook_done",
           },
         ],
       }),
     );
-
     render(<PlannerWeekScreen />);
-
-    expect(await screen.findByRole("heading", { name: "주간 플래너" })).toBeTruthy();
-
-    const summary = screen.getByLabelText("플래너 요약");
-
-    expect(within(summary).getByText("이번 주 요약")).toBeTruthy();
-    expect(within(summary).queryByText("등록된 끼니")).toBeNull();
-    expect(within(summary).getByText("등록")).toBeTruthy();
-    expect(within(summary).getByText("장보기")).toBeTruthy();
-    expect(within(summary).getByText("요리 완료")).toBeTruthy();
-    expect(
-      within(summary).getAllByText(/등록|장보기|요리 완료/).map((node) => node.textContent),
-    ).toEqual(["등록", "장보기", "요리 완료"]);
-    expect(within(summary).queryByText("빠른 추가")).toBeNull();
-    expect(within(summary).queryByText("레시피 검색")).toBeNull();
-  });
-
-  it("labels the app stat cards as weekly summary without repeating the planned-food count", async () => {
-    readE2EAuthOverride.mockReturnValue(true);
-    fetchPlanner.mockResolvedValue(
-      createPlannerData({
-        meals: [
-          {
-            id: "meal-registered",
-            recipe_id: "recipe-registered",
-            recipe_title: "된장찌개",
-            recipe_thumbnail_url: null,
-            plan_date: "2026-03-24",
-            column_id: "column-breakfast",
-            planned_servings: 2,
-            status: "registered",
-            is_leftover: false,
-          },
-          {
-            id: "meal-shopping",
-            recipe_id: "recipe-shopping",
-            recipe_title: "카레",
-            recipe_thumbnail_url: null,
-            plan_date: "2026-03-24",
-            column_id: "column-lunch",
-            planned_servings: 2,
-            status: "shopping_done",
-            is_leftover: false,
-          },
-          {
-            id: "meal-cooked",
-            recipe_id: "recipe-cooked",
-            recipe_title: "불고기",
-            recipe_thumbnail_url: null,
-            plan_date: "2026-03-24",
-            column_id: "column-dinner",
-            planned_servings: 2,
-            status: "cook_done",
-            is_leftover: false,
-          },
-        ],
-      }),
-    );
-
-    render(<PlannerWeekScreen />);
-
-    expect(await screen.findByRole("heading", { name: "주간 플래너" })).toBeTruthy();
-    expect(screen.getByText("이번 주 요약")).toBeTruthy();
-    expect(screen.queryByText(/음식 계획 중/)).toBeNull();
-  });
-
-  it("opens the Wave1 meal-add sheet and opens picker options as modal sheets without leaving the planner", async () => {
-    const user = userEvent.setup();
-
-    readE2EAuthOverride.mockReturnValue(true);
-    fetchPlanner.mockResolvedValue(createPlannerData({ meals: [] }));
-
-    render(<PlannerWeekScreen />);
-
-    await screen.findByRole("heading", { name: "주간 플래너" });
-    await user.click(screen.getByRole("button", { name: "3/24 아침 식사 추가" }));
-
-    const sheet = screen.getByTestId("planner-meal-add-sheet");
-    expect(within(sheet).getByRole("heading", { name: "식사 추가" })).toBeTruthy();
-    expect(within(sheet).getByText("3/24 아침")).toBeTruthy();
-    expect(within(sheet).queryByText(/대상 ·/)).toBeNull();
-
-    const searchButton = within(sheet).getByRole("button", { name: /레시피 검색/ });
-    const recipeBookButton = within(sheet).getByTestId("meal-add-option-recipebook");
-    const pantryButton = within(sheet).getByTestId("meal-add-option-pantry");
-    const leftoverButton = within(sheet).getByTestId("meal-add-option-leftover");
-    const youtubeLink = within(sheet).getByRole("link", { name: "유튜브" });
-    const manualLink = within(sheet).getByRole("link", { name: /직접 등록/ });
-
-    expect(searchButton).toBeTruthy();
-    expect(recipeBookButton.textContent).toContain("레시피북");
-    expect(pantryButton.textContent).toContain("팬트리에서 찾기");
-    expect(leftoverButton.textContent).toContain("남은 요리");
-    expect(leftoverButton.textContent).not.toContain("남은 요리에서 추가");
-    expect(recipeBookButton.tagName).toBe("BUTTON");
-    expect(pantryButton.tagName).toBe("BUTTON");
-    expect(leftoverButton.tagName).toBe("BUTTON");
-    expect(youtubeLink.getAttribute("href")).toContain("/menu/add/youtube?");
-    expect(manualLink.getAttribute("href")).toContain("/menu/add/manual?");
-    expect(within(recipeBookButton).getByText("레시피북").className).toContain("text-[14px]");
-    expect(within(pantryButton).getByText("팬트리에서 찾기").className).toContain("text-[14px]");
-    expect(within(leftoverButton).getByText("남은 요리").className).toContain("text-[14px]");
-    expect(within(youtubeLink).getByText("유튜브").className).toContain("text-[14px]");
-    expect(within(manualLink).getByText("직접 등록").className).toContain("text-[14px]");
-
-    await user.click(searchButton);
-    const searchDialog = await screen.findByRole("dialog", { name: "검색으로 추가" });
-    expect(searchDialog.getAttribute("data-app-overlay-shell")).toBe("bottom-sheet");
-    const searchBackButton = within(searchDialog).getByLabelText("뒤로 가기");
-    expect(searchBackButton.className).toContain("h-[var(--app-back-button-size)]");
-    expect(searchBackButton.className).toContain("w-[var(--app-back-button-size)]");
-    expect(searchBackButton.querySelector("svg")?.getAttribute("viewBox")).toBe("0 0 24 24");
-    expect(searchBackButton.textContent).toBe("");
-    expect(screen.queryByTestId("planner-meal-add-sheet")).toBeNull();
-
-    await user.click(searchBackButton);
-    expect(screen.getByTestId("planner-meal-add-sheet")).toBeTruthy();
-
-    await user.click(within(screen.getByTestId("planner-meal-add-sheet")).getByTestId("meal-add-option-recipebook"));
-    const recipeBookDialog = await screen.findByRole("dialog", { name: "레시피북에서 추가" });
-    expect(recipeBookDialog.getAttribute("data-app-overlay-shell")).toBe("bottom-sheet");
-
-    await user.click(within(recipeBookDialog).getByLabelText("뒤로 가기"));
-    expect(screen.getByTestId("planner-meal-add-sheet")).toBeTruthy();
-
-    await user.click(within(screen.getByTestId("planner-meal-add-sheet")).getByTestId("meal-add-option-pantry"));
-    const pantryDialog = await screen.findByRole("dialog", { name: "팬트리 기반 추천" });
-    expect(pantryDialog.getAttribute("data-app-overlay-shell")).toBe("bottom-sheet");
-
-    await user.click(within(pantryDialog).getByLabelText("뒤로 가기"));
-    expect(screen.getByTestId("planner-meal-add-sheet")).toBeTruthy();
-
-    expect(
-      within(screen.getByTestId("planner-meal-add-sheet"))
-        .getByRole("link", { name: "유튜브" })
-        .getAttribute("href"),
-    ).toContain("/menu/add/youtube?");
-    expect(
-      screen.queryByRole("dialog", { name: "유튜브 가져오기" }),
-    ).toBeNull();
-  });
-
-  it("navigates to the completed meal screen after adding from the inline meal-add flow", async () => {
-    const user = userEvent.setup();
-
-    readE2EAuthOverride.mockReturnValue(true);
-    fetchPlanner.mockResolvedValue(createPlannerData({ meals: [] }));
-    fetchLeftovers.mockResolvedValue({
-      items: [
-        {
-          id: "leftover-1",
-          recipe_id: "recipe-1",
-          recipe_title: "김치찌개",
-          recipe_thumbnail_url: null,
-          status: "leftover",
-          cooked_at: "2026-03-23T00:00:00.000Z",
-          eaten_at: null,
-          cooking_servings: 2,
-          source_meal_label: "저녁",
-          source_planned_servings: 2,
-        },
-      ],
-    });
-    createMealSafe.mockResolvedValue({
-      success: true,
-      data: {
-        id: "meal-1",
-        recipe_id: "recipe-1",
-        plan_date: "2026-03-24",
-        column_id: "column-breakfast",
-        planned_servings: 1,
-        status: "registered",
-        is_leftover: true,
-        leftover_dish_id: "leftover-1",
-      },
-      error: null,
-    });
-
-    render(<PlannerWeekScreen />);
-
-    await screen.findByRole("heading", { name: "주간 플래너" });
-    await user.click(screen.getByRole("button", { name: "3/24 아침 식사 추가" }));
-    await user.click(
-      within(screen.getByTestId("planner-meal-add-sheet")).getByTestId(
-        "meal-add-option-leftover",
-      ),
-    );
 
     expect(await screen.findByText("김치찌개")).toBeTruthy();
-    await user.click(screen.getByRole("button", { name: "추가" }));
-
-    const servingsDialog = await screen.findByRole("dialog", { name: "계획 인분 입력" });
-    await user.click(within(servingsDialog).getByRole("button", { name: "추가하기" }));
-
-    await waitFor(() => {
-      expect(createMealSafe).toHaveBeenCalledWith({
-        recipe_id: "recipe-1",
-        plan_date: "2026-03-24",
-        column_id: "column-breakfast",
-        planned_servings: 1,
-        leftover_dish_id: "leftover-1",
-      });
-    });
-    expect(navigationMocks.replace).toHaveBeenCalledWith(
-      "/planner/2026-03-24/column-breakfast?slot=%EC%95%84%EC%B9%A8",
-    );
+    expect(screen.getByText("샐러드")).toBeTruthy();
+    expect(screen.getAllByRole("link", { name: "장보기" }).length).toBeGreaterThan(0);
+    expect(screen.getByRole("link", { name: "요리하기" })).toBeTruthy();
+    expect(screen.getAllByRole("link", { name: "상세" })).toHaveLength(2);
+    expect(screen.getByText("비어 있음")).toBeTruthy();
+    expect(screen.queryByText("식사 추가")).toBeNull();
+    expect(screen.queryByText("완제품 추가")).toBeNull();
+    expect(screen.getByText("등록 1 · 장보기 완료 1 · 요리 완료 0"))
+      .toBeTruthy();
+    expect(screen.queryByText("다음 날 된장찌개")).toBeNull();
   });
 
-  it("shows a direct link back to an existing shopping list", async () => {
-    readE2EAuthOverride.mockReturnValue(true);
-    setDesktopViewport(true);
-    fetchPlanner.mockResolvedValue(
-      createPlannerData({
-        meals: [
-          {
-            id: "meal-1",
-            recipe_id: "recipe-1",
-            recipe_title: "김치찌개",
-            recipe_thumbnail_url: null,
-            plan_date: "2026-04-28",
-            column_id: "column-breakfast",
-            planned_servings: 3,
-            status: "registered",
-            is_leftover: false,
-            shopping_list_id: "shopping-list-1",
-            shopping_list_title: "4/28 장보기",
-          },
-          {
-            id: "meal-2",
-            recipe_id: "recipe-2",
-            recipe_title: "된장찌개",
-            recipe_thumbnail_url: null,
-            plan_date: "2026-04-29",
-            column_id: "column-dinner",
-            planned_servings: 2,
-            status: "shopping_done",
-            is_leftover: false,
-            shopping_list_id: "shopping-list-2",
-            shopping_list_title: "4/29 장보기",
-          },
-        ],
-      }),
+  it("does not request private plan data for the unavailable meal-log segment", async () => {
+    navigationMocks.searchParams.mockReturnValue(
+      new URLSearchParams("segment=log&date=2026-03-24"),
     );
 
     render(<PlannerWeekScreen />);
 
-    const shoppingListLink = await screen.findByRole("link", {
-      name: "4/28 장보기 보기",
-    });
+    expect(await screen.findByRole("heading", { name: "식사 기록은 준비 중이에요" }))
+      .toBeTruthy();
+    expect(fetchPlanner).not.toHaveBeenCalled();
 
-    expect(shoppingListLink.getAttribute("href")).toBe("/shopping/lists/shopping-list-1");
-    expect(screen.getByText("진행 중").className).toContain(
-      "web-planner-shopping-status-active",
+    await userEvent.setup({ advanceTimers: vi.advanceTimersByTime }).click(
+      screen.getByRole("tab", { name: "요리 계획" }),
     );
-    expect(screen.getByText("✓ 완료").className).toContain(
-      "web-planner-shopping-status-complete",
-    );
+    await waitFor(() => expect(fetchPlanner).toHaveBeenCalledTimes(1));
+    expect(navigationMocks.push).toHaveBeenCalledWith("/planner?date=2026-03-24");
   });
 
-  it("compresses meal slot metadata while keeping empty slots with a quieter add CTA (Wave1)", async () => {
-    readE2EAuthOverride.mockReturnValue(true);
-    fetchPlanner.mockResolvedValue(
-      createPlannerData({
-        meals: [
-          {
-            id: "meal-1",
-            recipe_id: "recipe-1",
-            recipe_title: "김치찌개",
-            recipe_thumbnail_url: null,
-            plan_date: "2026-03-24",
-            column_id: "column-breakfast",
-            planned_servings: 2,
-            status: "registered",
-            is_leftover: false,
-          },
-        ],
-      }),
-    );
-
-    render(<PlannerWeekScreen />);
-
-    const firstDayCard = await screen.findAllByLabelText(/식단 카드$/).then((cards) => cards[0]);
-    // slot rows keep the meal link compact; empty rows open the Wave1 add sheet.
-    const breakfastRow = within(firstDayCard).getByText("김치찌개").closest("a");
-    const breakfastAddButton = within(firstDayCard).getByRole("button", {
-      name: "3/24 아침 식사 추가",
-    });
-    const dinnerButton = within(firstDayCard).getByRole("button", {
-      name: "3/24 저녁 식사 추가",
-    });
-
-    expect(breakfastRow).not.toBeNull();
-    expect(dinnerButton).toBeTruthy();
-    expect(breakfastRow?.className).toContain("mobile-planner-slot-meals");
-    expect(screen.getByTestId("planner-mobile-meal-meal-1").className).toContain("border-l-4");
-    expect(
-      within(screen.getByTestId("planner-mobile-meal-meal-1")).getByText("김치찌개").className,
-    ).toContain("mobile-planner-meal-title");
-    expect(within(breakfastRow as HTMLElement).getByText("2인분")).toBeTruthy();
-    expect(breakfastAddButton.className).toContain("bg-transparent");
-    expect(breakfastAddButton.className).toContain("text-[var(--text-3)]");
-    expect((breakfastAddButton.firstElementChild as HTMLElement | null)?.className).toContain(
-      "border-[var(--line-strong)]",
-    );
-    expect((breakfastAddButton.firstElementChild as HTMLElement | null)?.className).toContain(
-      "h-8",
-    );
-    expect((breakfastAddButton.firstElementChild as HTMLElement | null)?.className).toContain(
-      "w-8",
-    );
-    expect(dinnerButton.className).toContain("border-[var(--line-strong)]");
-    expect(dinnerButton.className).toContain("bg-transparent");
-    expect(dinnerButton.className).toContain("text-[var(--text-3)]");
-    expect(within(breakfastRow as HTMLElement).queryByText("등록")).toBeNull();
-    expect(within(breakfastRow as HTMLElement).getByLabelText("식사 등록 완료")).toBeTruthy();
-    expect(dinnerButton.textContent?.replace(/\s+/g, " ").trim()).toBe("+");
-  });
-
-  it("keeps mobile planner meal slots compact with one-line titles and a visible overflow badge", async () => {
-    readE2EAuthOverride.mockReturnValue(true);
-    fetchPlanner.mockResolvedValue(
-      createPlannerData({
-        meals: [
-          {
-            id: "meal-long",
-            recipe_id: "recipe-long",
-            recipe_title: "제목이 아주 길어서 앱 플래너 카드 높이를 키우면 안 되는 김치찌개",
-            recipe_thumbnail_url: null,
-            plan_date: "2026-03-24",
-            column_id: "column-breakfast",
-            planned_servings: 2,
-            status: "registered",
-            is_leftover: false,
-          },
-          {
-            id: "meal-side",
-            recipe_id: "recipe-side",
-            recipe_title: "달걀말이",
-            recipe_thumbnail_url: null,
-            plan_date: "2026-03-24",
-            column_id: "column-breakfast",
-            planned_servings: 1,
-            status: "shopping_done",
-            is_leftover: false,
-          },
-          {
-            id: "meal-hidden",
-            recipe_id: "recipe-hidden",
-            recipe_title: "숨겨진 반찬",
-            recipe_thumbnail_url: null,
-            plan_date: "2026-03-24",
-            column_id: "column-breakfast",
-            planned_servings: 1,
-            status: "cook_done",
-            is_leftover: false,
-          },
-        ],
-      }),
-    );
-
-    render(<PlannerWeekScreen />);
-
-    const slot = await screen.findByTestId(
-      "planner-mobile-slot-2026-03-24-column-breakfast",
-    );
-    const longTitle = within(slot).getByText(
-      "제목이 아주 길어서 앱 플래너 카드 높이를 키우면 안 되는 김치찌개",
-    );
-    const overflowBadge = within(slot).getByText("+1");
-
-    expect(slot.className).toContain("mobile-planner-slot-meals-multiple");
-    expect(slot.querySelectorAll(".mobile-planner-meal-card")).toHaveLength(2);
-    expect(longTitle.className).toContain("mobile-planner-meal-title");
-    expect(longTitle.className).not.toContain("line-clamp-2");
-    expect(screen.queryByText("숨겨진 반찬")).toBeNull();
-    expect(overflowBadge.className).toContain("mobile-planner-overflow-badge");
-    expect(overflowBadge.getAttribute("aria-label")).toBe("외 1개 더 있음");
-  });
-
-  it("uses global planner status tokens for the mobile summary cards", async () => {
-    readE2EAuthOverride.mockReturnValue(true);
-    fetchPlanner.mockResolvedValue(
-      createPlannerData({
-        meals: [
-          {
-            id: "meal-registered",
-            recipe_id: "recipe-registered",
-            recipe_title: "된장찌개",
-            recipe_thumbnail_url: null,
-            plan_date: "2026-03-24",
-            column_id: "column-breakfast",
-            planned_servings: 2,
-            status: "registered",
-            is_leftover: false,
-          },
-          {
-            id: "meal-shopping",
-            recipe_id: "recipe-shopping",
-            recipe_title: "카레",
-            recipe_thumbnail_url: null,
-            plan_date: "2026-03-24",
-            column_id: "column-lunch",
-            planned_servings: 2,
-            status: "shopping_done",
-            is_leftover: false,
-          },
-          {
-            id: "meal-cooked",
-            recipe_id: "recipe-cooked",
-            recipe_title: "불고기",
-            recipe_thumbnail_url: null,
-            plan_date: "2026-03-24",
-            column_id: "column-dinner",
-            planned_servings: 2,
-            status: "cook_done",
-            is_leftover: false,
-          },
-        ],
-      }),
-    );
-
-    render(<PlannerWeekScreen />);
-
-    const registeredLabel = await screen.findByText("등록");
-    const shoppingLabel = screen
-      .getAllByText("장보기")
-      .find((node) =>
-        node.className.includes("text-[var(--planner-status-shopping)]"),
-      );
-    const cookedLabel = screen
-      .getAllByText("요리 완료")
-      .find((node) =>
-        node.className.includes("text-[var(--planner-status-cooked)]"),
-      );
-    const cookedCard = cookedLabel?.closest("div");
-    expect(shoppingLabel).toBeTruthy();
-    expect(cookedLabel).toBeTruthy();
-    const shoppingCard = shoppingLabel?.closest("div");
-    const registeredCard = registeredLabel.closest("div");
-
-    expect(cookedCard?.className).toContain(
-      "bg-[var(--planner-status-cooked-soft)]",
-    );
-    expect(cookedCard?.className).toContain("text-center");
-    expect(cookedLabel?.className).toContain("text-[13px]");
-    expect(cookedLabel?.className).toContain("text-[var(--planner-status-cooked)]");
-    expect(cookedLabel?.nextElementSibling?.className).toContain(
-      "text-[var(--planner-status-cooked)]",
-    );
-    expect(cookedLabel?.nextElementSibling?.className).toContain("text-[22px]");
-    expect(shoppingCard?.className).toContain(
-      "bg-[var(--planner-status-shopping-soft)]",
-    );
-    expect(shoppingCard?.className).toContain("text-center");
-    expect(shoppingLabel?.className).toContain("text-[13px]");
-    expect(shoppingLabel?.className).toContain(
-      "text-[var(--planner-status-shopping)]",
-    );
-    expect(shoppingLabel?.nextElementSibling?.className).toContain(
-      "text-[var(--planner-status-shopping)]",
-    );
-    expect(registeredCard?.className).toContain(
-      "bg-[var(--planner-status-registered-soft)]",
-    );
-    expect(registeredCard?.className).toContain("text-center");
-    expect(registeredLabel.className).toContain("text-[13px]");
-    expect(registeredLabel.className).toContain(
-      "text-[var(--planner-status-registered)]",
-    );
-    expect(registeredLabel.nextElementSibling?.className).toContain(
-      "text-[var(--planner-status-registered-strong)]",
-    );
-  });
-
-  it("links mobile weekly shopping history back to the planner context", async () => {
-    readE2EAuthOverride.mockReturnValue(true);
-    fetchPlanner.mockResolvedValue(
-      createPlannerData({
-        meals: [
-          {
-            id: "meal-shopping-list",
-            recipe_id: "recipe-shopping-list",
-            recipe_title: "카레",
-            recipe_thumbnail_url: null,
-            plan_date: "2026-03-24",
-            column_id: "column-lunch",
-            planned_servings: 2,
-            status: "registered",
-            is_leftover: false,
-            shopping_list_id: "shopping-list-1",
-            shopping_list_title: "3/24 장보기",
-          },
-        ],
-      }),
-    );
-
-    render(<PlannerWeekScreen />);
-
-    const historyLink = await screen.findByRole("link", {
-      name: /이번 주 장보기 기록 1개.*캘린더 보기/,
-    });
-    const href = historyLink.getAttribute("href") ?? "";
-    const url = new URL(href, "http://homecook.local");
-
-    expect(url.pathname).toBe("/mypage");
-    expect(url.searchParams.get("returnTo")).toBe("/planner");
-    expect(url.searchParams.get("returnSurface")).toBe("planner.week");
-    expect(url.searchParams.get("restore")).toBe("shopping-history-tab");
-  });
-
-  it("marks leftover meals with an explicit leftover chip", async () => {
-    readE2EAuthOverride.mockReturnValue(true);
-    fetchPlanner.mockResolvedValue(
-      createPlannerData({
-        meals: [
-          {
-            id: "meal-leftover",
-            recipe_id: "recipe-1",
-            recipe_title: "김치찌개",
-            recipe_thumbnail_url: null,
-            plan_date: "2026-03-24",
-            column_id: "column-breakfast",
-            planned_servings: 1,
-            status: "registered",
-            is_leftover: true,
-          },
-        ],
-      }),
-    );
-
-    render(<PlannerWeekScreen />);
-
-    const firstDayCard = await screen.findAllByLabelText(/식단 카드$/).then((cards) => cards[0]);
-    const breakfastRow = within(firstDayCard).getByText("김치찌개").closest("a");
-
-    expect(breakfastRow).not.toBeNull();
-    expect(within(breakfastRow as HTMLElement).getByLabelText("남은 요리 식사")).toBeTruthy();
-  });
-
-  it("uses the server-authenticated flag when browser session is not hydrated yet", async () => {
-    fetchPlanner.mockResolvedValue(createPlannerData({ meals: [] }));
-
-    render(<PlannerWeekScreen initialAuthenticated />);
-
-    expect(await screen.findByText(/아직 등록된 식사가 없어요/)).toBeTruthy();
-    expect(fetchPlanner).toHaveBeenCalledTimes(1);
-  });
-
-  it("shows loading placeholders while planner data is pending", async () => {
-    const deferred = createDeferred<ReturnType<typeof createPlannerData>>();
-
-    readE2EAuthOverride.mockReturnValue(true);
-    fetchPlanner.mockImplementation(() => deferred.promise);
-
-    const { container } = render(<PlannerWeekScreen />);
-
-    await waitFor(() => {
-      expect(container.querySelectorAll(".animate-pulse").length).toBeGreaterThan(0);
-    });
-
-    deferred.resolve(createPlannerData({ meals: [] }));
-
-    expect(await screen.findByText(/아직 등록된 식사가 없어요/)).toBeTruthy();
-  });
-
-  it("shows fetch error UI and retries planner loading", async () => {
-    const user = userEvent.setup();
-
-    readE2EAuthOverride.mockReturnValue(true);
-    fetchPlanner
-      .mockRejectedValueOnce(new Error("planner failed"))
-      .mockResolvedValueOnce(createPlannerData({ meals: [] }));
-
-    render(<PlannerWeekScreen />);
-
-    expect(await screen.findByText("플래너를 불러오지 못했어요")).toBeTruthy();
-    expect(
-      screen
-        .getByRole("heading", { name: "플래너를 불러오지 못했어요" })
-        .closest("[data-state-kind='prototype-derived']")
-        ?.getAttribute("data-state-tone"),
-    ).toBe("error");
-    expect(screen.getByText("planner failed")).toBeTruthy();
-
-    await user.click(screen.getByRole("button", { name: "다시 시도" }));
-
-    expect(await screen.findByText(/아직 등록된 식사가 없어요/)).toBeTruthy();
-    expect(fetchPlanner).toHaveBeenCalledTimes(2);
-  });
-
-  it("shifts planner range when the native week strip scroll settles on the next page", async () => {
-    readE2EAuthOverride.mockReturnValue(true);
-    fetchPlanner
-      .mockResolvedValueOnce(createPlannerData({ meals: [] }))
-      .mockResolvedValueOnce(createPlannerData({ meals: [] }))
-      .mockResolvedValueOnce(createPlannerData({ meals: [] }));
-
-    render(<PlannerWeekScreen />);
-
-    expect(await screen.findByText(/아직 등록된 식사가 없어요/)).toBeTruthy();
-    await new Promise((resolve) => window.requestAnimationFrame(resolve));
-
-    const strip = await screen.findByTestId("planner-week-strip-viewport");
-    const viewport = primeWeekStripViewport(strip);
-
-    viewport.scrollToPage(2);
-    await new Promise((resolve) => window.setTimeout(resolve, 140));
-
-    await waitFor(() => {
-      expect(fetchPlanner).toHaveBeenNthCalledWith(2, "2026-03-31", "2026-04-06");
-    });
-
-    expect(screen.queryByRole("button", { name: "이번주로" })).toBeNull();
-  });
-
-  it("renders the week strip as a sticky native horizontal scroller with hidden scrollbar", async () => {
-    readE2EAuthOverride.mockReturnValue(true);
-    fetchPlanner.mockResolvedValue(
-      createPlannerData({
-        meals: [
-          {
-            id: "meal-1",
-            recipe_id: "recipe-1",
-            recipe_title: "김치찌개",
-            recipe_thumbnail_url: null,
-            plan_date: "2026-03-24",
-            column_id: "column-breakfast",
-            planned_servings: 2,
-            status: "registered",
-            is_leftover: false,
-          },
-        ],
-      }),
-    );
-
-    render(<PlannerWeekScreen />);
-
-    const strip = await screen.findByTestId("planner-week-strip-viewport");
-    const stickyShell = screen.getByTestId("planner-week-shell");
-    const plannerBody = screen.getByTestId("planner-week-body");
-
-    expect(strip.className).toContain("overflow-x-auto");
-    expect(strip.className).toContain("snap-x");
-    expect(strip.className).toContain("scrollbar-hide");
-    expect(strip.className).toContain("touch-pan-x");
-    expect(stickyShell.className).toContain("sticky");
-    expect(screen.getByTestId("planner-week-strip-page-prev").textContent ?? "").toContain("17");
-    expect(screen.getByTestId("planner-week-strip-page-current").textContent ?? "").toContain("24");
-    expect(screen.getByTestId("planner-week-strip-page-next").textContent ?? "").toContain("31");
-    expect(plannerBody.getAttribute("style")).toContain("translateX(0px)");
-  });
-
-  it.each([320, 390])(
-    "recenters the current week strip after a %ipx viewport width becomes available post-mount",
-    async (width) => {
-      readE2EAuthOverride.mockReturnValue(true);
-      fetchPlanner.mockResolvedValue(createPlannerData({ meals: [] }));
+  it.each([1, 3, 5])(
+    "keeps %i configured meal columns associated with their empty slots",
+    async (columnCount) => {
+      const columns = Array.from({ length: columnCount }, (_, index) => ({
+        id: `column-${index}`,
+        name: index === columnCount - 1
+          ? "아주 긴 사용자 지정 브런치 이름"
+          : `끼니 ${index + 1}`,
+        sort_order: index,
+      }));
+      fetchPlanner.mockResolvedValue(createPlannerData({ columns, meals: [] }));
 
       render(<PlannerWeekScreen />);
 
-      await screen.findByRole("heading", { name: "주간 플래너" });
-
-      const strip = screen.getByTestId("planner-week-strip-viewport");
-      const viewport = attachLateMeasuredWeekStripViewport(strip, width);
-
-      await new Promise((resolve) =>
-        window.requestAnimationFrame(() => window.requestAnimationFrame(resolve)),
-      );
-
-      expect(viewport.getScrollLeft()).toBe(width);
+      expect(
+        (await screen.findAllByText("아주 긴 사용자 지정 브런치 이름")).length,
+      ).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText("비어 있음")).toHaveLength(columnCount);
     },
   );
 
-  it("recenters the strip to the current page after a next-week swipe settles and the new range loads", async () => {
-    const secondLoad = createDeferred<ReturnType<typeof createPlannerData>>();
-
-    readE2EAuthOverride.mockReturnValue(true);
+  it("keeps legacy products separate and supports detail/delete only", async () => {
+    const withProduct = createPlannerData({
+      productEntries: [createProductEntry()],
+    });
     fetchPlanner
-      .mockResolvedValueOnce(createPlannerData({ meals: [] }))
-      .mockImplementationOnce(() => secondLoad.promise);
+      .mockResolvedValueOnce(withProduct)
+      .mockResolvedValueOnce(createPlannerData());
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
 
     render(<PlannerWeekScreen />);
 
-    await screen.findByRole("heading", { name: "주간 플래너" });
-    await new Promise((resolve) => window.requestAnimationFrame(resolve));
+    expect(await screen.findByRole("heading", { name: "기존 완제품 계획" }))
+      .toBeTruthy();
+    expect(screen.queryByTestId("planner-meal-legacy-product-1")).toBeNull();
+    expect(screen.queryByText("수정")).toBeNull();
 
-    const strip = screen.getByTestId("planner-week-strip-viewport");
-    const viewport = primeWeekStripViewport(strip);
-
-    viewport.scrollToPage(2);
-    await new Promise((resolve) => window.setTimeout(resolve, 140));
+    await user.click(screen.getByRole("button", { name: "플레인 요거트 상세 보기" }));
+    await user.click(screen.getByRole("button", { name: "계획에서 삭제" }));
+    await user.click(screen.getByRole("button", { name: "삭제" }));
 
     await waitFor(() => {
-      expect(fetchPlanner).toHaveBeenNthCalledWith(2, "2026-03-31", "2026-04-06");
+      expect(deleteProductPlannerEntry).toHaveBeenCalledWith("legacy-product-1");
+      expect(fetchPlanner).toHaveBeenCalledTimes(2);
     });
-
-    secondLoad.resolve(
-      createPlannerData({
-        meals: [
-          {
-            id: "meal-next-week",
-            recipe_id: "recipe-next-week",
-            recipe_title: "된장찌개",
-            recipe_thumbnail_url: null,
-            plan_date: "2026-03-31",
-            column_id: "column-breakfast",
-            planned_servings: 1,
-            status: "registered",
-            is_leftover: false,
-          },
-        ],
-      }),
-    );
-
-    expect(await screen.findByText("된장찌개")).toBeTruthy();
-    await new Promise((resolve) =>
-      window.requestAnimationFrame(() => window.requestAnimationFrame(resolve)),
-    );
-
-    expect(strip.scrollLeft).toBe(320);
   });
 
-  it("keeps the previous planner content visible while the next week is refreshing", async () => {
-    const firstLoad = createDeferred<ReturnType<typeof createPlannerData>>();
-    const secondLoad = createDeferred<ReturnType<typeof createPlannerData>>();
-
-    readE2EAuthOverride.mockReturnValue(true);
-    fetchPlanner
-      .mockImplementationOnce(() => firstLoad.promise)
-      .mockImplementationOnce(() => secondLoad.promise);
-
-    render(<PlannerWeekScreen />);
-
-    firstLoad.resolve(
-      createPlannerData({
-        meals: [
-          {
-            id: "meal-1",
-            recipe_id: "recipe-1",
-            recipe_title: "김치찌개",
-            recipe_thumbnail_url: null,
-            plan_date: "2026-03-24",
-            column_id: "column-breakfast",
-            planned_servings: 2,
-            status: "registered",
-            is_leftover: false,
-          },
-        ],
+  it("preserves loading geometry and exposes a scoped retry on load error", async () => {
+    let rejectRequest!: (reason: unknown) => void;
+    fetchPlanner.mockReturnValueOnce(
+      new Promise((_resolve, reject) => {
+        rejectRequest = reject;
       }),
     );
+    const view = render(<PlannerWeekScreen />);
 
+    expect(await screen.findByTestId("planner-loading-state")).toBeTruthy();
+    rejectRequest(new Error("플래너 연결 실패"));
+    expect(await screen.findByRole("heading", { name: "플래너를 불러오지 못했어요" }))
+      .toBeTruthy();
+
+    fetchPlanner.mockResolvedValueOnce(createPlannerData());
+    await userEvent.setup({ advanceTimers: vi.advanceTimersByTime }).click(
+      screen.getByRole("button", { name: "다시 시도" }),
+    );
     expect(await screen.findByText("김치찌개")).toBeTruthy();
-    await waitFor(() => {
-      expect(fetchPlanner).toHaveBeenCalledTimes(1);
-    });
-    await new Promise((resolve) => window.requestAnimationFrame(resolve));
-
-    const strip = screen.getByTestId("planner-week-strip-viewport");
-    const viewport = primeWeekStripViewport(strip);
-
-    viewport.scrollToPage(2);
-    await new Promise((resolve) => window.setTimeout(resolve, 140));
-
-    await waitFor(() => {
-      expect(fetchPlanner).toHaveBeenNthCalledWith(2, "2026-03-31", "2026-04-06");
-    });
-
-    expect(screen.getByText("김치찌개")).toBeTruthy();
-    expect(document.querySelectorAll(".animate-pulse").length).toBe(0);
-
-    secondLoad.resolve(
-      createPlannerData({
-        meals: [
-          {
-            id: "meal-2",
-            recipe_id: "recipe-2",
-            recipe_title: "오므라이스",
-            recipe_thumbnail_url: null,
-            plan_date: "2026-03-31",
-            column_id: "column-breakfast",
-            planned_servings: 1,
-            status: "shopping_done",
-            is_leftover: false,
-          },
-        ],
-      }),
-    );
-
-    expect(await screen.findByText("오므라이스")).toBeTruthy();
+    view.unmount();
   });
 
-  it("shows week navigation buttons on all viewports and shifts range with the next-week action (Wave1)", async () => {
-    const user = userEvent.setup();
-
-    // Wave1: buttons visible on mobile too (chevron icons); text labels visible on sm+
-    readE2EAuthOverride.mockReturnValue(true);
-    fetchPlanner
-      .mockResolvedValueOnce(createPlannerData({ meals: [] }))
-      .mockResolvedValueOnce(createPlannerData({ meals: [] }));
-
+  it("moves one week and records the destination date in browser history", async () => {
     render(<PlannerWeekScreen />);
+    await screen.findByText("김치찌개");
 
-    expect(await screen.findByText(/아직 등록된 식사가 없어요/)).toBeTruthy();
-
-    const previousWeekButton = screen.getByRole("button", { name: "이전 주" });
-    const nextWeekButton = screen.getByRole("button", { name: "다음 주" });
-
-    expect(previousWeekButton).toBeTruthy();
-    expect(nextWeekButton).toBeTruthy();
-
-    await user.click(nextWeekButton);
+    await userEvent.setup({ advanceTimers: vi.advanceTimersByTime }).click(
+      screen.getByRole("button", { name: "다음 주" }),
+    );
 
     await waitFor(() => {
-      expect(fetchPlanner).toHaveBeenNthCalledWith(2, "2026-03-31", "2026-04-06");
+      expect(fetchPlanner).toHaveBeenLastCalledWith("2026-03-31", "2026-04-06");
+      expect(navigationMocks.push).toHaveBeenLastCalledWith(
+        "/planner?date=2026-03-31",
+      );
     });
-  });
-
-  it("keeps the mobile week controls at a 44px touch target without changing their compact visual style", async () => {
-    readE2EAuthOverride.mockReturnValue(true);
-    fetchPlanner.mockResolvedValue(createPlannerData({ meals: [] }));
-
-    render(<PlannerWeekScreen />);
-
-    expect(await screen.findByText(/아직 등록된 식사가 없어요/)).toBeTruthy();
-
-    const previousWeekButton = screen.getByRole("button", { name: "이전 주" });
-    const currentWeekButton = screen.getByRole("button", { name: "이번 주로 이동" });
-    const nextWeekButton = screen.getByRole("button", { name: "다음 주" });
-    const previousWeekInner = previousWeekButton.firstElementChild as HTMLElement | null;
-    const nextWeekInner = nextWeekButton.firstElementChild as HTMLElement | null;
-
-    expect(previousWeekButton.className).toContain("h-11");
-    expect(previousWeekButton.className).toContain("w-11");
-    expect(previousWeekInner?.className).toContain("h-[30px]");
-    expect(previousWeekInner?.className).toContain("w-[30px]");
-    expect(currentWeekButton.className).toContain("min-h-11");
-    expect(nextWeekButton.className).toContain("h-11");
-    expect(nextWeekButton.className).toContain("w-11");
-    expect(nextWeekInner?.className).toContain("h-[30px]");
-    expect(nextWeekInner?.className).toContain("w-[30px]");
-  });
-
-  it("keeps empty state within the fixed four-slot card instead of showing column management", async () => {
-    readE2EAuthOverride.mockReturnValue(true);
-    fetchPlanner.mockResolvedValue(createPlannerData({ meals: [] }));
-
-    render(<PlannerWeekScreen />);
-
-    expect(await screen.findByText(/아직 등록된 식사가 없어요/)).toBeTruthy();
-    const firstEmptySlot = screen.getByRole("button", { name: "3/24 아침 식사 추가" });
-    expect(firstEmptySlot.textContent?.trim()).toBe("+");
-    expect(screen.queryByPlaceholderText("새 끼니 컬럼 이름")).toBeNull();
-  });
-
-  it("scrolls to the selected day card when a current-week date chip is tapped", async () => {
-    const user = userEvent.setup();
-    const scrollIntoView = vi.fn();
-    HTMLElement.prototype.scrollIntoView = scrollIntoView;
-
-    readE2EAuthOverride.mockReturnValue(true);
-    fetchPlanner.mockResolvedValue(createPlannerData({ meals: [] }));
-
-    render(<PlannerWeekScreen />);
-
-    await screen.findByRole("heading", { name: "주간 플래너" });
-    await user.click(screen.getByRole("button", { name: "3/26 목 식단으로 이동" }));
-
-    expect(scrollIntoView).toHaveBeenCalledWith({
-      behavior: "smooth",
-      block: "start",
-    });
-    expect(screen.getByTestId("planner-day-card-2026-03-26").className).toContain(
-      "border-2",
-    );
-    expect(screen.getByTestId("planner-day-card-2026-03-26").className).toContain(
-      "scroll-mt",
-    );
-  });
-
-  // ─── Wave1 acceptance tests ─────────────────────────────────────────────────
-
-  it("renders slot column names as text only without emoji (Wave1 SLOT_EMOJI removal)", async () => {
-    readE2EAuthOverride.mockReturnValue(true);
-    fetchPlanner.mockResolvedValue(
-      createPlannerData({
-        meals: [
-          {
-            id: "meal-1",
-            recipe_id: "recipe-1",
-            recipe_title: "비빔밥",
-            recipe_thumbnail_url: null,
-            plan_date: "2026-03-24",
-            column_id: "column-breakfast",
-            planned_servings: 2,
-            status: "registered",
-            is_leftover: false,
-          },
-        ],
-      }),
-    );
-
-    render(<PlannerWeekScreen />);
-
-    const firstDayCard = await screen.findAllByLabelText(/식단 카드$/).then((cards) => cards[0]);
-    const breakfastSlot = within(firstDayCard).getByText("비빔밥").closest("a");
-
-    expect(breakfastSlot).not.toBeNull();
-    // Slot name rendered as text — no emoji characters present
-    const slotNameEl = within(firstDayCard).getByText("아침");
-    expect(slotNameEl).toBeTruthy();
-    expect(slotNameEl.textContent).toBe("아침");
-    // Verify no emoji in the slot area (previously had 🌅 🌞 🍪 🌙)
-    const slotAreaText = firstDayCard.textContent ?? "";
-    expect(slotAreaText).not.toMatch(/[\u{1F300}-\u{1F9FF}]/u);
-  });
-
-  it("renders edge status indicators on filled meal slots", async () => {
-    readE2EAuthOverride.mockReturnValue(true);
-    fetchPlanner.mockResolvedValue(
-      createPlannerData({
-        meals: [
-          {
-            id: "meal-1",
-            recipe_id: "recipe-1",
-            recipe_title: "된장찌개",
-            recipe_thumbnail_url: null,
-            plan_date: "2026-03-24",
-            column_id: "column-breakfast",
-            planned_servings: 1,
-            status: "registered",
-            is_leftover: false,
-          },
-          {
-            id: "meal-2",
-            recipe_id: "recipe-2",
-            recipe_title: "파스타",
-            recipe_thumbnail_url: null,
-            plan_date: "2026-03-24",
-            column_id: "column-dinner",
-            planned_servings: 1,
-            status: "shopping_done",
-            is_leftover: false,
-          },
-        ],
-      }),
-    );
-
-    render(<PlannerWeekScreen />);
-
-    const firstDayCard = await screen.findAllByLabelText(/식단 카드$/).then((cards) => cards[0]);
-    // Check meal slot rows specifically — state is shown as a compact badge, not a full-card color wash.
-    const breakfastRow = within(firstDayCard).getByText("된장찌개").closest("a");
-    const dinnerRow = within(firstDayCard).getByText("파스타").closest("a");
-
-    expect(breakfastRow).not.toBeNull();
-    expect(dinnerRow).not.toBeNull();
-    expect(screen.getByTestId("planner-mobile-meal-meal-1").className).toContain(
-      "bg-[var(--surface-fill)]",
-    );
-    expect(screen.getByTestId("planner-mobile-meal-meal-1").className).toContain(
-      "border-l-4",
-    );
-    expect(screen.getByTestId("planner-mobile-meal-meal-1").className).toContain(
-      "border-l-[var(--planner-status-registered)]",
-    );
-    expect(screen.getByTestId("planner-mobile-meal-meal-1").className).not.toContain(
-      "bg-[var(--planner-status-registered-soft)]",
-    );
-    expect(screen.getByTestId("planner-mobile-meal-meal-2").className).toContain(
-      "bg-[var(--surface-fill)]",
-    );
-    expect(screen.getByTestId("planner-mobile-meal-meal-2").className).toContain(
-      "border-l-[var(--planner-status-shopping)]",
-    );
-    expect(screen.getByTestId("planner-mobile-meal-meal-2").className).not.toContain(
-      "bg-[var(--planner-status-shopping-soft)]",
-    );
-    expect(breakfastRow?.querySelector(".inline-flex.h-2")).toBeNull();
-    expect(dinnerRow?.querySelector(".inline-flex.h-2")).toBeNull();
-    expect(within(breakfastRow as HTMLElement).queryByText("등록")).toBeNull();
-    expect(within(dinnerRow as HTMLElement).queryByText("장보기")).toBeNull();
-    expect(within(breakfastRow as HTMLElement).getByLabelText("식사 등록 완료")).toBeTruthy();
-    expect(within(dinnerRow as HTMLElement).getByLabelText("장보기 완료")).toBeTruthy();
-  });
-
-  it("shows '+' button on filled slots and quieter add CTAs on empty slots (Wave1)", async () => {
-    readE2EAuthOverride.mockReturnValue(true);
-    fetchPlanner.mockResolvedValue(
-      createPlannerData({
-        meals: [
-          {
-            id: "meal-1",
-            recipe_id: "recipe-1",
-            recipe_title: "김밥",
-            recipe_thumbnail_url: null,
-            plan_date: "2026-03-24",
-            column_id: "column-breakfast",
-            planned_servings: 1,
-            status: "registered",
-            is_leftover: false,
-          },
-        ],
-      }),
-    );
-
-    render(<PlannerWeekScreen />);
-
-    const firstDayCard = await screen.findAllByLabelText(/식단 카드$/).then((cards) => cards[0]);
-    const filledAddButton = within(firstDayCard).getByRole("button", {
-      name: "3/24 아침 식사 추가",
-    });
-    const emptyAddButtons = within(firstDayCard).getAllByRole("button", {
-      name: /3\/24 .* 식사 추가/,
-    });
-
-    expect(filledAddButton.textContent?.trim()).toBe("+");
-    expect(emptyAddButtons.filter((button) => button !== filledAddButton)).toHaveLength(3);
-    expect(filledAddButton.className).toContain("h-11");
-    expect(filledAddButton.className).toContain("w-11");
-
-    const emptyAddButton = emptyAddButtons.find((button) => button !== filledAddButton);
-    expect(emptyAddButton).toBeTruthy();
-    expect(emptyAddButton?.className).toContain("min-h-11");
-  });
-
-  it("uses the floating shopping CTA from the Wave1 mobile reference", async () => {
-    readE2EAuthOverride.mockReturnValue(true);
-    fetchPlanner.mockResolvedValue(createPlannerData({ meals: [] }));
-
-    render(<PlannerWeekScreen />);
-
-    await screen.findByText(/아직 등록된 식사가 없어요/);
-
-    const shoppingLinks = screen.getAllByRole("link", { name: "장보기" });
-    expect(shoppingLinks).toHaveLength(1);
-    const fixedShoppingCta = shoppingLinks.find(
-      (link) => link.closest(".fixed") !== null,
-    );
-    expect(fixedShoppingCta).toBeTruthy();
-    expect(fixedShoppingCta?.getAttribute("href")).toBe("/shopping/flow");
-    expect(fixedShoppingCta?.textContent?.trim()).toBe("장보기");
-    expect(shoppingLinks[0]?.textContent).not.toContain("🛒");
-  });
-
-  it("shows empty-thumbnail placeholder with first character of column name instead of emoji (Wave1)", async () => {
-    readE2EAuthOverride.mockReturnValue(true);
-    fetchPlanner.mockResolvedValue(
-      createPlannerData({
-        meals: [
-          {
-            id: "meal-1",
-            recipe_id: "recipe-1",
-            recipe_title: "불고기",
-            recipe_thumbnail_url: null,
-            plan_date: "2026-03-24",
-            column_id: "column-dinner",
-            planned_servings: 1,
-            status: "registered",
-            is_leftover: false,
-          },
-        ],
-      }),
-    );
-
-    render(<PlannerWeekScreen />);
-
-    const firstDayCard = await screen.findAllByLabelText(/식단 카드$/).then((cards) => cards[0]);
-    const dinnerRow = within(firstDayCard).getByText("불고기").closest("a");
-
-    expect(dinnerRow).not.toBeNull();
-    // The empty-thumbnail placeholder should show "저" (first char of "저녁"), not the moon emoji
-    const placeholderTexts = within(dinnerRow as HTMLElement).getAllByText("저");
-    // At least one element shows "저" as thumbnail placeholder (the slot name "저녁" also starts with "저")
-    expect(placeholderTexts.length).toBeGreaterThanOrEqual(1);
   });
 });
