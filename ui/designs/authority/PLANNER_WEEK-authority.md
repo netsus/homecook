@@ -17,9 +17,30 @@
 > - `ui/designs/evidence/planner-shell/README.md`
 > - `ui/designs/evidence/planner-shell/manifest.json`
 > - `ui/designs/evidence/planner-shell/PLANNER_WEEK-mobile-default-default.png`
+> - `ui/designs/evidence/planner-shell/PLANNER_WEEK-mobile-default-loading.png`
+> - `ui/designs/evidence/planner-shell/PLANNER_WEEK-mobile-default-empty.png`
+> - `ui/designs/evidence/planner-shell/PLANNER_WEEK-mobile-default-error.png`
+> - `ui/designs/evidence/planner-shell/PLANNER_WEEK-mobile-default-unauthorized.png`
+> - `ui/designs/evidence/planner-shell/PLANNER_WEEK-mobile-default-shopping-read-only.png`
+> - `ui/designs/evidence/planner-shell/PLANNER_WEEK-mobile-default-legacy-read-only.png`
+> - `ui/designs/evidence/planner-shell/PLANNER_WEEK-mobile-default-meal-log-disabled.png`
 > - `ui/designs/evidence/planner-shell/PLANNER_WEEK-mobile-narrow-default.png`
+> - `ui/designs/evidence/planner-shell/PLANNER_WEEK-mobile-narrow-loading.png`
+> - `ui/designs/evidence/planner-shell/PLANNER_WEEK-mobile-narrow-empty.png`
+> - `ui/designs/evidence/planner-shell/PLANNER_WEEK-mobile-narrow-error.png`
+> - `ui/designs/evidence/planner-shell/PLANNER_WEEK-mobile-narrow-unauthorized.png`
+> - `ui/designs/evidence/planner-shell/PLANNER_WEEK-mobile-narrow-shopping-read-only.png`
+> - `ui/designs/evidence/planner-shell/PLANNER_WEEK-mobile-narrow-legacy-read-only.png`
+> - `ui/designs/evidence/planner-shell/PLANNER_WEEK-mobile-narrow-meal-log-disabled.png`
 > - `ui/designs/evidence/planner-shell/PLANNER_WEEK-desktop-default.png`
-> - required 24-PNG state matrix는 아래 보존된 Stage 5 supporting review의 `> evidence:` block과 `automation-spec.json`에 전부 열거돼 있다.
+> - `ui/designs/evidence/planner-shell/PLANNER_WEEK-desktop-loading.png`
+> - `ui/designs/evidence/planner-shell/PLANNER_WEEK-desktop-empty.png`
+> - `ui/designs/evidence/planner-shell/PLANNER_WEEK-desktop-error.png`
+> - `ui/designs/evidence/planner-shell/PLANNER_WEEK-desktop-unauthorized.png`
+> - `ui/designs/evidence/planner-shell/PLANNER_WEEK-desktop-shopping-read-only.png`
+> - `ui/designs/evidence/planner-shell/PLANNER_WEEK-desktop-legacy-read-only.png`
+> - `ui/designs/evidence/planner-shell/PLANNER_WEEK-desktop-meal-log-disabled.png`
+> - required 24-PNG state matrix를 이 final-authority evidence block에 직접 열거했다.
 
 ### Final verdict
 
