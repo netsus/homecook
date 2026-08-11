@@ -101,7 +101,7 @@ describe("planner-shell fresh Stage 1 relock", () => {
       /\| 9 \| D \| `meal-log-core` \| in-progress \|/u,
     );
     expect(roadmap).toMatch(
-      /\| 10 \| E \| `planner-shell` \| docs \|/u,
+      /\| 10 \| E \| `planner-shell` \| in-progress \|/u,
     );
   });
 

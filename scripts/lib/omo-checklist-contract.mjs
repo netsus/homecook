@@ -135,6 +135,7 @@ function buildChecklistItem({
   checked,
   rawText,
   manualOnly,
+  manualOnlyParentSection = null,
 }) {
   const metadataMatch = rawText.match(OMO_METADATA_PATTERN);
   const text = metadataMatch
@@ -162,6 +163,7 @@ function buildChecklistItem({
       checked,
       text,
       manualOnly,
+      manualOnlyParentSection,
       metadata: metadataResult.metadata,
     },
     errors: metadataResult.errors,
@@ -253,6 +255,7 @@ function parseAcceptanceChecklist({ filePath, contents = undefined }) {
   const errors = [];
   let currentSection = null;
   let currentSubsection = null;
+  let previousSection = null;
 
   for (let index = 0; index < lines.length; index += 1) {
     const line = lines[index];
@@ -260,6 +263,7 @@ function parseAcceptanceChecklist({ filePath, contents = undefined }) {
 
     const sectionMatch = trimmed.match(SECTION_PATTERN);
     if (sectionMatch) {
+      previousSection = currentSection;
       currentSection = sectionMatch[1].trim();
       currentSubsection = null;
       continue;
@@ -286,6 +290,12 @@ function parseAcceptanceChecklist({ filePath, contents = undefined }) {
       checked: checkboxMatch[1].toLowerCase() === "x",
       rawText: checkboxMatch[2],
       manualOnly,
+      manualOnlyParentSection:
+        currentSubsection === "Manual Only"
+          ? currentSection
+          : currentSection === "Manual Only"
+            ? previousSection
+            : null,
     });
     items.push(item);
     errors.push(...itemErrors);

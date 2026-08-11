@@ -12,6 +12,15 @@ function metadata(id: string, stage: 2 | 4, scope: "backend" | "frontend" | "sha
   return `<!-- omo:id=${id};stage=${stage};scope=${scope};review=${review} -->`;
 }
 
+function waivedMetadata(
+  id: string,
+  stage: 2 | 4,
+  scope: "backend" | "frontend" | "shared",
+  review: string,
+) {
+  return `<!-- omo:id=${id};stage=${stage};scope=${scope};review=${review};waived=true;waived_by=claude;waived_stage=3;waived_reason=historical -->`;
+}
+
 function writeFixtureFile(rootDir: string, relativePath: string, contents: string) {
   const filePath = join(rootDir, relativePath);
   mkdirSync(join(filePath, ".."), { recursive: true });
@@ -268,6 +277,14 @@ function validateIncrementalBackendFixture(rootDir: string, baseRootDir: string)
         slice: "05-planner-week-core",
       }),
   });
+}
+
+function expectInvalidBaseChecklistContract(results: ReturnType<typeof validateCloseoutSync>) {
+  expect(results[0]?.errors).toEqual([
+    expect.objectContaining({
+      message: expect.stringContaining("invalid base checklist contract"),
+    }),
+  ]);
 }
 
 describe("closeout sync validator", () => {
@@ -711,6 +728,333 @@ describe("closeout sync validator", () => {
     const results = validateIncrementalBackendFixture(rootDir, baseRootDir);
 
     expect(results).toEqual([]);
+  });
+
+  it("accepts a metadata-only repair of an invalid base checklist while preserving its items", () => {
+    const { baseRootDir, rootDir } = createIncrementalBackendFixture({
+      baseDeliveryItems: [
+        {
+          checked: false,
+          text: "백엔드 계약 고정",
+        },
+        {
+          checked: false,
+          text: "UI 연결",
+          meta: metadata("delivery-ui", 4, "shared", "3,5,6"),
+        },
+        {
+          checked: false,
+          text: "별도 Stage 2 완료",
+          meta: metadata("delivery-stage2-progress", 2, "backend", "3,6"),
+        },
+      ],
+      currentDeliveryItems: [
+        {
+          checked: false,
+          text: "백엔드 계약 고정",
+          meta: metadata("delivery-backend-contract", 2, "backend", "3,6"),
+        },
+        {
+          checked: false,
+          text: "UI 연결",
+          meta: metadata("delivery-ui", 4, "shared", "6"),
+        },
+        {
+          checked: true,
+          text: "별도 Stage 2 완료",
+          meta: metadata("delivery-stage2-progress", 2, "backend", "3,6"),
+        },
+      ],
+    });
+
+    const results = validateIncrementalBackendFixture(rootDir, baseRootDir);
+
+    expect(results).toEqual([]);
+  });
+
+  it.each([
+    { baseChecked: false, currentChecked: true, transition: "unchecked to checked" },
+    { baseChecked: true, currentChecked: false, transition: "checked to unchecked" },
+  ])(
+    "rejects an invalid-base metadata repair that changes checked state from $transition",
+    ({ baseChecked, currentChecked }) => {
+      const { baseRootDir, rootDir } = createIncrementalBackendFixture({
+        baseDeliveryItems: [
+          {
+            checked: baseChecked,
+            text: "백엔드 계약 고정",
+          },
+        ],
+        currentDeliveryItems: [
+          {
+            checked: currentChecked,
+            text: "백엔드 계약 고정",
+            meta: metadata("delivery-backend-contract", 2, "backend", "3,6"),
+          },
+        ],
+      });
+
+      const results = validateIncrementalBackendFixture(rootDir, baseRootDir);
+
+      expectInvalidBaseChecklistContract(results);
+    },
+  );
+
+  it("rejects an invalid-base metadata repair that also changes checklist text", () => {
+    const { baseRootDir, rootDir } = createIncrementalBackendFixture({
+      baseDeliveryItems: [
+        {
+          checked: false,
+          text: "백엔드 계약 고정",
+        },
+      ],
+      currentDeliveryItems: [
+        {
+          checked: true,
+          text: "변경된 백엔드 계약",
+          meta: metadata("delivery-backend-contract", 2, "backend", "3,6"),
+        },
+      ],
+    });
+
+    const results = validateIncrementalBackendFixture(rootDir, baseRootDir);
+
+    expectInvalidBaseChecklistContract(results);
+  });
+
+  it("rejects a new waiver injected while repairing an unrelated invalid metadata field", () => {
+    const { baseRootDir, rootDir } = createIncrementalBackendFixture({
+      baseDeliveryItems: [
+        {
+          checked: false,
+          text: "잘못된 review 조합",
+          meta: metadata("delivery-invalid-review", 4, "frontend", "3,5,6"),
+        },
+        {
+          checked: false,
+          text: "백엔드 계약 고정",
+          meta: metadata("delivery-backend-contract", 2, "backend", "3,6"),
+        },
+      ],
+      currentDeliveryItems: [
+        {
+          checked: false,
+          text: "잘못된 review 조합",
+          meta: waivedMetadata("delivery-invalid-review", 4, "frontend", "5,6"),
+        },
+        {
+          checked: true,
+          text: "백엔드 계약 고정",
+          meta: metadata("delivery-backend-contract", 2, "backend", "3,6"),
+        },
+      ],
+    });
+
+    const results = validateIncrementalBackendFixture(rootDir, baseRootDir);
+
+    expectInvalidBaseChecklistContract(results);
+  });
+
+  it.each([
+    {
+      field: "scope",
+      base: metadata("delivery-invalid-review", 4, "frontend", "3,5,6"),
+      current: metadata("delivery-invalid-review", 2, "shared", "3,6"),
+    },
+    {
+      field: "stage",
+      base: metadata("delivery-invalid-review", 4, "shared", "5,6"),
+      current: metadata("delivery-invalid-review", 2, "shared", "3,6"),
+    },
+    {
+      field: "review",
+      base: metadata("delivery-invalid-scope", 2, "frontend", "3,6"),
+      current: metadata("delivery-invalid-scope", 4, "frontend", "5,6"),
+    },
+  ])("rejects a valid $field mutation unrelated to the diagnosed base field", ({ base, current }) => {
+    const { baseRootDir, rootDir } = createIncrementalBackendFixture({
+      baseDeliveryItems: [
+        {
+          checked: false,
+          text: "필드 단위 수리",
+          meta: base,
+        },
+        {
+          checked: false,
+          text: "백엔드 계약 고정",
+          meta: metadata("delivery-backend-contract", 2, "backend", "3,6"),
+        },
+      ],
+      currentDeliveryItems: [
+        {
+          checked: false,
+          text: "필드 단위 수리",
+          meta: current,
+        },
+        {
+          checked: true,
+          text: "백엔드 계약 고정",
+          meta: metadata("delivery-backend-contract", 2, "backend", "3,6"),
+        },
+      ],
+    });
+
+    const results = validateIncrementalBackendFixture(rootDir, baseRootDir);
+
+    expectInvalidBaseChecklistContract(results);
+  });
+
+  it.each([
+    {
+      caseName: "wrong parent heading",
+      currentAcceptance: [
+        "# Acceptance Checklist",
+        "",
+        "## Wrong Parent",
+        "",
+        "### Manual Only",
+        "- [ ] 실제 운영 확인",
+        "",
+      ].join("\n"),
+    },
+    {
+      caseName: "moved item",
+      currentAcceptance: [
+        "# Acceptance Checklist",
+        "",
+        "## Manual QA",
+        "",
+        "### Manual Only",
+        "manual evidence remains pending",
+        "- [ ] 실제 운영 확인",
+        "",
+      ].join("\n"),
+    },
+  ])("rejects Manual Only repair with $caseName", ({ currentAcceptance }) => {
+    const { baseRootDir, rootDir } = createIncrementalBackendFixture({
+      baseDeliveryItems: [
+        {
+          checked: false,
+          text: "백엔드 계약 고정",
+          meta: metadata("delivery-backend-contract", 2, "backend", "3,6"),
+        },
+      ],
+      currentDeliveryItems: [
+        {
+          checked: true,
+          text: "백엔드 계약 고정",
+          meta: metadata("delivery-backend-contract", 2, "backend", "3,6"),
+        },
+      ],
+    });
+    writeFixtureFile(
+      baseRootDir,
+      "docs/workpacks/05-planner-week-core/acceptance.md",
+      [
+        "# Acceptance Checklist",
+        "",
+        "## Manual QA",
+        "",
+        "## Manual Only",
+        "- [ ] 실제 운영 확인",
+        "",
+      ].join("\n"),
+    );
+    writeFixtureFile(
+      rootDir,
+      "docs/workpacks/05-planner-week-core/acceptance.md",
+      currentAcceptance,
+    );
+
+    const results = validateIncrementalBackendFixture(rootDir, baseRootDir);
+
+    expectInvalidBaseChecklistContract(results);
+  });
+
+  it("accepts a canonical Manual Only heading repair without moving its item", () => {
+    const { baseRootDir, rootDir } = createIncrementalBackendFixture({
+      baseDeliveryItems: [
+        {
+          checked: false,
+          text: "백엔드 계약 고정",
+          meta: metadata("delivery-backend-contract", 2, "backend", "3,6"),
+        },
+      ],
+      currentDeliveryItems: [
+        {
+          checked: true,
+          text: "백엔드 계약 고정",
+          meta: metadata("delivery-backend-contract", 2, "backend", "3,6"),
+        },
+      ],
+    });
+    writeFixtureFile(
+      baseRootDir,
+      "docs/workpacks/05-planner-week-core/acceptance.md",
+      [
+        "# Acceptance Checklist",
+        "",
+        "## Manual QA",
+        "",
+        "## Manual Only",
+        "- [ ] 실제 운영 확인",
+        "",
+      ].join("\n"),
+    );
+    writeFixtureFile(
+      rootDir,
+      "docs/workpacks/05-planner-week-core/acceptance.md",
+      [
+        "# Acceptance Checklist",
+        "",
+        "## Manual QA",
+        "",
+        "### Manual Only",
+        "- [ ] 실제 운영 확인",
+        "",
+      ].join("\n"),
+    );
+
+    const results = validateIncrementalBackendFixture(rootDir, baseRootDir);
+
+    expect(results).toEqual([]);
+  });
+
+  it("fails closed when the invalid base diagnostic is not a repairable metadata field", () => {
+    const unknownMetadata = metadata("delivery-unknown", 2, "backend", "3,6").replace(
+      " -->",
+      ";unexpected=true -->",
+    );
+    const { baseRootDir, rootDir } = createIncrementalBackendFixture({
+      baseDeliveryItems: [
+        {
+          checked: false,
+          text: "알 수 없는 metadata",
+          meta: unknownMetadata,
+        },
+        {
+          checked: false,
+          text: "백엔드 계약 고정",
+          meta: metadata("delivery-backend-contract", 2, "backend", "3,6"),
+        },
+      ],
+      currentDeliveryItems: [
+        {
+          checked: false,
+          text: "알 수 없는 metadata",
+          meta: metadata("delivery-unknown", 2, "backend", "3,6"),
+        },
+        {
+          checked: true,
+          text: "백엔드 계약 고정",
+          meta: metadata("delivery-backend-contract", 2, "backend", "3,6"),
+        },
+      ],
+    });
+
+    const results = validateIncrementalBackendFixture(rootDir, baseRootDir);
+
+    expectInvalidBaseChecklistContract(results);
   });
 
   it("reads the base checklist contract from origin/master in the policy runtime", () => {
