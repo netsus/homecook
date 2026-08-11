@@ -7,12 +7,71 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import {
   buildRefreshLifecycleGateResult,
   buildProductionCanaryWorkerEnv,
+  resolveProductionCanaryWorkerTimeout,
   runProductionCanary,
   validateProductionCanaryAdapterPath,
   validateProductionCanaryResult,
 } from "./lib/full-local-session-production-canary.mjs";
+import { readFullLocalSessionObservation } from "./lib/full-local-session-observation-reader.mjs";
 
 const currentFile = realpathSync(fileURLToPath(import.meta.url));
+
+const OBSERVATION_RESPONSE_KEYS = Object.freeze([
+  "observation",
+  "requestId",
+  "type",
+]);
+
+function hasExactKeys(value, expectedKeys) {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) return false;
+  const actual = Object.keys(value).sort();
+  const expected = [...expectedKeys].sort();
+  return actual.length === expected.length
+    && actual.every((key, index) => key === expected[index]);
+}
+
+function sendIpc(message) {
+  return new Promise((resolve, reject) => {
+    if (typeof process.send !== "function" || !process.connected) {
+      reject(new Error("Production canary IPC is unavailable."));
+      return;
+    }
+    process.send(message, (error) => {
+      if (error) reject(new Error("Production canary IPC send failed."));
+      else resolve();
+    });
+  });
+}
+
+function createParentBackedObservationReader() {
+  let nextRequestId = 1;
+  let pending = false;
+  return () => new Promise((resolve, reject) => {
+    if (pending || nextRequestId > 2) {
+      reject(new Error("Production canary observation IPC sequence is invalid."));
+      return;
+    }
+    pending = true;
+    const requestId = nextRequestId;
+    const onMessage = (message) => {
+      pending = false;
+      if (!hasExactKeys(message, OBSERVATION_RESPONSE_KEYS)
+        || message.type !== "observation-response"
+        || message.requestId !== requestId) {
+        reject(new Error("Production canary observation IPC response is invalid."));
+        return;
+      }
+      nextRequestId += 1;
+      resolve(message.observation);
+    };
+    process.once("message", onMessage);
+    sendIpc({ requestId, type: "observation-request" }).catch(() => {
+      process.off("message", onMessage);
+      pending = false;
+      reject(new Error("Production canary observation IPC request failed."));
+    });
+  });
+}
 
 function parseArgs(argv) {
   const args = argv.filter((argument) => argument !== "--");
@@ -64,24 +123,35 @@ async function runAdapterWorker({ implementationSha: sha, phase }) {
       throw new Error("Production canary adapter factory is missing.");
     }
     const adapter = await adapterModule.createProductionCanaryAdapter({ phase });
-    const result = await runProductionCanary({ adapter, implementationSha: sha, phase });
-    process.send?.({ ok: true, result });
+    const result = await runProductionCanary({
+      adapter,
+      implementationSha: sha,
+      observationReader: createParentBackedObservationReader(),
+      phase,
+    });
+    await sendIpc({ ok: true, result, type: "result" });
   } catch {
-    process.send?.({ ok: false });
+    await sendIpc({ ok: false, type: "result" }).catch(() => undefined);
     process.exitCode = 1;
   }
 }
 
-function runCanaryInIsolatedWorker({ adapterPath, implementationSha: sha, phase }) {
+export function runCanaryInIsolatedWorker({
+  adapterPath,
+  ambientEnv = process.env,
+  implementationSha: sha,
+  observationReader = readFullLocalSessionObservation,
+  phase,
+}) {
   return new Promise((resolve, reject) => {
-    const configuredTimeout = process.env.FULL_LOCAL_SESSION_CANARY_TIMEOUT_MS ?? "1200000";
-    if (!/^\d+$/u.test(configuredTimeout)) {
-      reject(new Error("Production canary worker timeout is invalid."));
-      return;
-    }
-    const timeoutMs = Number(configuredTimeout);
-    if (!Number.isSafeInteger(timeoutMs) || timeoutMs < 100 || timeoutMs > 1_200_000) {
-      reject(new Error("Production canary worker timeout is out of range."));
+    let timeoutMs;
+    try {
+      timeoutMs = resolveProductionCanaryWorkerTimeout({
+        configuredTimeout: ambientEnv.FULL_LOCAL_SESSION_CANARY_TIMEOUT_MS,
+        phase,
+      });
+    } catch (error) {
+      reject(error);
       return;
     }
     const worker = fork(currentFile, [
@@ -91,32 +161,76 @@ function runCanaryInIsolatedWorker({ adapterPath, implementationSha: sha, phase 
       "--implementation-sha",
       sha,
     ], {
-      env: buildProductionCanaryWorkerEnv(process.env, adapterPath),
+      env: buildProductionCanaryWorkerEnv(ambientEnv, adapterPath),
       execArgv: [],
       stdio: ["ignore", "ignore", "ignore", "ipc"],
     });
     let settled = false;
-    const timeout = setTimeout(() => {
-      if (settled) return;
-      settled = true;
-      worker.kill("SIGKILL");
-      reject(new Error("Production canary worker timed out."));
-    }, timeoutMs);
-    worker.once("message", (message) => {
+    let expectedObservationRequestId = 1;
+    let observationReadPending = false;
+    const rejectClosed = (message) => {
       if (settled) return;
       settled = true;
       clearTimeout(timeout);
-      if (message?.ok !== true) {
-        reject(new Error("Production canary adapter failed closed."));
+      worker.kill("SIGKILL");
+      reject(new Error(message));
+    };
+    const timeout = setTimeout(() => {
+      rejectClosed("Production canary worker timed out.");
+    }, timeoutMs);
+    worker.on("message", (message) => {
+      if (settled) return;
+      if (hasExactKeys(message, ["requestId", "type"])
+        && message.type === "observation-request") {
+        if (observationReadPending
+          || message.requestId !== expectedObservationRequestId
+          || expectedObservationRequestId > 2) {
+          rejectClosed("Production canary observation IPC request is invalid.");
+          return;
+        }
+        observationReadPending = true;
+        const requestId = expectedObservationRequestId;
+        Promise.resolve().then(() => observationReader()).then((observation) => {
+          if (settled) return;
+          expectedObservationRequestId += 1;
+          observationReadPending = false;
+          worker.send({
+            observation,
+            requestId,
+            type: "observation-response",
+          }, (error) => {
+            if (settled) return;
+            if (error) {
+              rejectClosed("Production canary observation IPC response failed.");
+            }
+          });
+        }).catch(() => {
+          rejectClosed("Production canary observation reader failed closed.");
+        });
+        return;
+      }
+      const success = hasExactKeys(message, ["ok", "result", "type"])
+        && message.type === "result"
+        && message.ok === true;
+      const failure = hasExactKeys(message, ["ok", "type"])
+        && message.type === "result"
+        && message.ok === false;
+      if (!success || failure
+        || observationReadPending
+        || expectedObservationRequestId !== 3) {
+        rejectClosed("Production canary adapter failed closed.");
         return;
       }
       try {
-        resolve(validateProductionCanaryResult(message.result, {
+        const result = validateProductionCanaryResult(message.result, {
           implementationSha: sha,
           phase,
-        }));
+        });
+        settled = true;
+        clearTimeout(timeout);
+        resolve(result);
       } catch {
-        reject(new Error("Production canary adapter returned an invalid result."));
+        rejectClosed("Production canary adapter returned an invalid result.");
       }
     });
     worker.once("exit", (code) => {
@@ -172,4 +286,12 @@ async function main() {
   }
 }
 
-await main();
+function isMain() {
+  try {
+    return currentFile === realpathSync(process.argv[1]);
+  } catch {
+    return false;
+  }
+}
+
+if (isMain()) await main();

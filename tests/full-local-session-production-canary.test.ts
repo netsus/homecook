@@ -16,9 +16,11 @@ import {
   buildRefreshLifecycleGateResult,
   buildProductionCanaryWorkerEnv,
   runProductionCanary,
+  resolveProductionCanaryWorkerTimeout,
   validateProductionCanaryAdapterPath,
   validateProductionCanaryResult,
 } from "../scripts/lib/full-local-session-production-canary.mjs";
+import { runCanaryInIsolatedWorker } from "../scripts/verify-full-local-session-production-canary.mjs";
 
 function createAdapter(events: string[] = []) {
   const oldSession = { opaque: "old-session-handle" };
@@ -106,6 +108,32 @@ function createAdapter(events: string[] = []) {
 }
 
 describe("full-local production session canary", () => {
+  it("allows the T+65 hold window without widening later-phase worker timeouts", () => {
+    expect(resolveProductionCanaryWorkerTimeout({
+      configuredTimeout: undefined,
+      phase: "milestone-a-t65",
+    })).toBe(100 * 60 * 1_000);
+    expect(resolveProductionCanaryWorkerTimeout({
+      configuredTimeout: String(120 * 60 * 1_000),
+      phase: "milestone-a-t65",
+    })).toBe(120 * 60 * 1_000);
+    expect(() => resolveProductionCanaryWorkerTimeout({
+      configuredTimeout: String(120 * 60 * 1_000 + 1),
+      phase: "milestone-a-t65",
+    })).toThrow(/out of range/u);
+
+    for (const phase of ["milestone-a-24h", "milestone-b-7d"]) {
+      expect(resolveProductionCanaryWorkerTimeout({
+        configuredTimeout: undefined,
+        phase,
+      })).toBe(20 * 60 * 1_000);
+      expect(() => resolveProductionCanaryWorkerTimeout({
+        configuredTimeout: String(20 * 60 * 1_000 + 1),
+        phase,
+      })).toThrow(/out of range/u);
+    }
+  });
+
   it("requires an owner-only canonical adapter file and immediate parent directory", () => {
     const parent = realpathSync(mkdtempSync(path.join(tmpdir(), "trusted-canary-adapter-")));
     const adapterPath = path.join(parent, "adapter.mjs");
@@ -332,7 +360,7 @@ describe("full-local production session canary", () => {
     expect(() => buildRefreshLifecycleGateResult(1)).toThrow(/raw refresh lifecycle gate/u);
   });
 
-  it("isolates noisy operator adapter output and emits only the redacted exact JSON", () => {
+  it("isolates noisy operator adapter output and gets both observation snapshots only from the parent", async () => {
     const fixtureDir = realpathSync(mkdtempSync(path.join(tmpdir(), "production-canary-adapter-")));
     const adapterPath = path.join(fixtureDir, "adapter.mjs");
     writeFileSync(adapterPath, `
@@ -353,35 +381,37 @@ export function createProductionCanaryAdapter() {
     logout: async () => "PASS",
     plannerReadAfterLogout: async () => "BLOCKED",
     plannerWriteAfterLogout: async () => "BLOCKED",
-    readObservationCounters: async () => ({ counterScope: "SINCE_DEPLOY", accountSessionStaleCount: 0, staleTokenMutationCount: 0, firstStaleAt: null, observationStartedAt: "2026-08-01T00:00:00.000Z" }),
+    readObservationCounters: async () => { throw new Error("child must not read production observation counters"); },
     close: async () => undefined,
   };
 }
 `, "utf8");
     chmodSync(adapterPath, 0o600);
 
-    const execution = spawnSync(process.execPath, [
-      "scripts/verify-full-local-session-production-canary.mjs",
-      "--json",
-      "--phase",
-      "milestone-a-t65",
-    ], {
-      cwd: process.cwd(),
-      encoding: "utf8",
-      env: {
-        ...process.env,
-        FULL_LOCAL_SESSION_CANARY_ADAPTER: adapterPath,
+    let observationReads = 0;
+    const result = await runCanaryInIsolatedWorker({
+      adapterPath,
+      ambientEnv: process.env,
+      implementationSha: "e".repeat(40),
+      observationReader: () => {
+        observationReads += 1;
+        return {
+          accountSessionStaleCount: 0,
+          counterScope: "SINCE_DEPLOY",
+          firstStaleAt: null,
+          observationStartedAt: "2026-08-01T00:00:00.000Z",
+          staleTokenMutationCount: 0,
+        };
       },
+      phase: "milestone-a-t65",
     });
 
-    expect(execution.status).toBe(0);
-    expect(execution.stderr).toBe("");
-    expect(execution.stdout.trim().split("\n")).toHaveLength(1);
-    expect(JSON.parse(execution.stdout)).toEqual(expect.objectContaining({
+    expect(observationReads).toBe(2);
+    expect(result).toEqual(expect.objectContaining({
       phase: "milestone-a-t65",
       status: "PASS",
     }));
-    expect(`${execution.stdout}${execution.stderr}`).not.toMatch(/must-not-escape|eyJsecret|access_token|cookie=/u);
+    expect(JSON.stringify(result)).not.toMatch(/must-not-escape|eyJsecret|access_token|cookie=/u);
   });
 
   it("kills an unresponsive adapter after a bounded timeout and returns only a redacted failure", () => {
@@ -415,5 +445,25 @@ export async function createProductionCanaryAdapter() {
     expect(execution.status).not.toBe(0);
     expect(execution.stdout).toBe("");
     expect(execution.stderr).toBe("full-local-session-production-canary: FAIL (redacted)\n");
+  });
+
+  it("fails closed on an out-of-sequence observation IPC request", async () => {
+    const fixtureDir = realpathSync(mkdtempSync(path.join(tmpdir(), "production-canary-invalid-ipc-")));
+    const adapterPath = path.join(fixtureDir, "adapter.mjs");
+    writeFileSync(adapterPath, `
+export function createProductionCanaryAdapter() {
+  process.send?.({ requestId: 2, type: "observation-request" });
+  return {};
+}
+`, "utf8");
+    chmodSync(adapterPath, 0o600);
+
+    await expect(runCanaryInIsolatedWorker({
+      adapterPath,
+      ambientEnv: process.env,
+      implementationSha: "f".repeat(40),
+      observationReader: () => { throw new Error("raw output must never escape"); },
+      phase: "milestone-a-t65",
+    })).rejects.toThrow("Production canary observation IPC request is invalid.");
   });
 });

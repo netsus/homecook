@@ -42,8 +42,28 @@ function psqlResult(sql: string) {
     "-U", "postgres",
     "-d", database,
     "-At",
+    "-q",
     "-v", "ON_ERROR_STOP=1",
     "-c", sql,
+  ], {
+    encoding: "utf8",
+    env: {
+      PATH: process.env.PATH ?? "",
+      NODE_ENV: "test",
+    },
+  });
+}
+
+function psqlAsDatabaseOperator(sql: string) {
+  return spawnSync("psql", [
+    "-h", host,
+    "-p", port,
+    "-U", "postgres",
+    "-d", database,
+    "-At",
+    "-q",
+    "-v", "ON_ERROR_STOP=1",
+    "-c", `set role supabase_admin; ${sql}`,
   ], {
     encoding: "utf8",
     env: {
@@ -2054,7 +2074,7 @@ run("full-local Auth isolated PostgreSQL foundation", () => {
   it("accepts the exact manifest function and protected-table RLS inventory", () => {
     const { api, result } = securityInventoryAfter();
     expect(result).toMatchObject({
-      required_function_count: 16,
+      required_function_count: 19,
       function_missing_count: 0,
       function_source_drift_count: 0,
       function_security_drift_count: 0,
@@ -2081,6 +2101,70 @@ run("full-local Auth isolated PostgreSQL foundation", () => {
     });
     expect(result._policy_expression_inventory).toHaveLength(7);
     expect(() => api.assertResult(result)).not.toThrow();
+  });
+
+  it("keeps deployment-scoped session observations singleton, PII-free, and exact-role readable", () => {
+    for (const role of ["anon", "authenticated", "service_role"]) {
+      expect(psql(`
+        select concat_ws(
+          ':',
+          has_table_privilege(
+            '${role}',
+            'private.full_local_session_observability',
+            'SELECT'
+          ),
+          has_table_privilege(
+            '${role}',
+            'private.full_local_session_observability',
+            'UPDATE'
+          )
+        );
+      `)).toBe("f:f");
+    }
+
+    const denied = psqlResult(`
+      set role authenticated;
+      select public.read_full_local_session_observation();
+    `);
+    expect(denied.status).not.toBe(0);
+
+    expect(psql(`
+      ${serviceClaims}
+      set request.headers =
+        '{"x-homecook-internal-scope":"session-observability"}';
+      set request.method = 'POST';
+      set request.path = '/rpc/record_full_local_session_stale_observation';
+      select concat_ws(
+        ':',
+        public.record_full_local_session_stale_observation('revoked')
+          ->> 'recorded',
+        public.record_full_local_session_stale_observation('missing')
+          ->> 'recorded',
+        public.record_full_local_session_stale_observation('non_monotonic')
+          ->> 'recorded'
+      );
+    `)).toBe("false:false:true");
+
+    const operatorRead = psqlAsDatabaseOperator(`
+      select public.read_full_local_session_observation()::text;
+    `);
+    expect(operatorRead.status, operatorRead.stderr).toBe(0);
+    const summary = JSON.parse(operatorRead.stdout.trim()) as
+      Record<string, unknown>;
+    expect(Object.keys(summary).sort()).toEqual([
+      "account_session_stale_count",
+      "counter_scope",
+      "first_stale_at",
+      "observation_started_at",
+      "stale_token_mutation_count",
+    ]);
+    expect(summary).toMatchObject({
+      account_session_stale_count: 1,
+      counter_scope: "SINCE_DEPLOY",
+      stale_token_mutation_count: 0,
+    });
+    expect(summary.first_stale_at).toBeTypeOf("string");
+    expect(summary.observation_started_at).toBeTypeOf("string");
   });
 
   it("rejects an allow-all replacement body", () => {
@@ -2242,7 +2326,7 @@ activeInventoryRun("active full-local snapshot security inventory", () => {
     ]);
     expect(result).toMatchObject({
       required_function_count:
-        (includePersonalRecipeFunctions ? 36 : 32)
+        (includePersonalRecipeFunctions ? 39 : 35)
         + recipeFuturePropagationFunctionCount,
       required_role_count: 4,
       required_role_membership_count: 2,

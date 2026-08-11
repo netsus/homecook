@@ -219,6 +219,8 @@ describe("supabase server helpers", () => {
     const callbackClient = server.createAuthCallbackOperationsClient();
     server.createAuthRefreshInternalDataClient();
     server.createSessionLogoutInternalDataClient();
+    const observabilityClient =
+      server.createSessionObservabilityInternalRpcClient();
     const imageClient = server.createRecipeImageInternalClient();
     const recipeFutureClient =
       server.createRecipeFuturePropagationInternalClient();
@@ -238,6 +240,7 @@ describe("supabase server helpers", () => {
       "auth-callback",
       "auth-refresh",
       "session-logout",
+      "session-observability",
       "recipe-image",
       "recipe-future-propagation",
       "snapshot-v2-session",
@@ -295,6 +298,7 @@ describe("supabase server helpers", () => {
     );
     expect(feedbackClient).toEqual({ rpc: expect.any(Function) });
     expect(eventClient).toEqual({ rpc: expect.any(Function) });
+    expect(observabilityClient).toEqual({ rpc: expect.any(Function) });
   });
 
   it("keeps the legacy callback data facade only while Data authority is remote", async () => {

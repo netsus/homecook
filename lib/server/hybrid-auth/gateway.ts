@@ -12,6 +12,10 @@ import {
   recordHybridAuthorityFailure,
   recordHybridAuthorityFailureResponse,
 } from "./route-error-context";
+import {
+  isUnexpectedSessionAuthorityFailure,
+  type SessionAuthorityFailureReason,
+} from "./session-observability";
 
 interface RemoteAuthGatewayEnv {
   issuer: string;
@@ -27,10 +31,12 @@ interface RemoteAuthUser {
 export class HybridSessionAuthorityError extends Error {
   readonly publicCode = "ACCOUNT_SESSION_STALE";
   readonly publicStatus = 409;
+  readonly internalReason: SessionAuthorityFailureReason | undefined;
 
-  constructor() {
+  constructor(internalReason?: SessionAuthorityFailureReason) {
     super("Remote session authority verification failed");
     this.name = "HybridSessionAuthorityError";
+    this.internalReason = internalReason;
   }
 }
 
@@ -232,6 +238,7 @@ export function createHybridAuthorityFetch({
   localUpstreamFetch = globalThis.fetch,
   loadRemoteJwks,
   assertSessionAuthority,
+  recordSessionAuthorityFailure,
   auth,
   attestationSecret,
   sessionBindingSecret,
@@ -253,6 +260,9 @@ export function createHybridAuthorityFetch({
     sessionIssuedAt: string;
     verifiedAt: string;
   }) => Promise<void>;
+  recordSessionAuthorityFailure?: (
+    reason: SessionAuthorityFailureReason,
+  ) => Promise<void>;
   auth: RemoteAuthGatewayEnv;
   attestationSecret: string;
   sessionBindingSecret?: string;
@@ -373,17 +383,32 @@ export function createHybridAuthorityFetch({
       ).toISOString();
       const verifiedAt = new Date(now * 1_000).toISOString();
 
-      await assertSessionAuthority({
-        accessTokenExpiresAt: new Date(
-          validated.claims.expiresAt * 1_000,
-        ).toISOString(),
-        binding,
-        authCutoverEpoch: bindingKey.authCutoverEpoch,
-        lastTokenIssuedAt: sessionIssuedAt,
-        sessionId: validated.claims.sessionId,
-        sessionIssuedAt,
-        verifiedAt,
-      });
+      try {
+        await assertSessionAuthority({
+          accessTokenExpiresAt: new Date(
+            validated.claims.expiresAt * 1_000,
+          ).toISOString(),
+          binding,
+          authCutoverEpoch: bindingKey.authCutoverEpoch,
+          lastTokenIssuedAt: sessionIssuedAt,
+          sessionId: validated.claims.sessionId,
+          sessionIssuedAt,
+          verifiedAt,
+        });
+      } catch (error) {
+        if (
+          error instanceof HybridSessionAuthorityError
+          && isUnexpectedSessionAuthorityFailure(error.internalReason)
+          && recordSessionAuthorityFailure
+        ) {
+          try {
+            await recordSessionAuthorityFailure(error.internalReason!);
+          } catch {
+            // Observability must never change the public denial contract.
+          }
+        }
+        throw error;
+      }
 
       const attestation = createHybridRequestAttestation({
         secret: attestationSecret,

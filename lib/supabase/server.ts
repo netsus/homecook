@@ -18,6 +18,10 @@ import {
   beginHybridAuthorityResponseBoundary,
 } from "@/lib/server/hybrid-auth/route-error-context";
 import {
+  readSessionAuthorityFailureReason,
+  type SessionAuthorityFailureReason,
+} from "@/lib/server/hybrid-auth/session-observability";
+import {
   prepareFullLocalSessionAuthority,
   readFullLocalSessionControl,
   recordFullLocalSessionAuthority,
@@ -139,7 +143,7 @@ function createAssertSessionAuthority(
         || typeof sessionIssuedAt !== "string"
       )
     ) {
-      throw new HybridSessionAuthorityError();
+      throw new HybridSessionAuthorityError("auth_unavailable");
     }
     const { error } = await rpc.call(
       authorityClient,
@@ -185,7 +189,9 @@ function createAssertSessionAuthority(
       ) {
         throw new HybridLifecycleMaintenanceError();
       }
-      throw new HybridSessionAuthorityError();
+      throw new HybridSessionAuthorityError(
+        readSessionAuthorityFailureReason(error),
+      );
     }
   };
 }
@@ -201,6 +207,9 @@ function createGuardedLocalFetch({
 }) {
   const authEnv = getAuthSupabaseEnv();
   const localAuthority = getAuthAuthority() === "local";
+  const observabilityClient = localAuthority
+    ? createSessionObservabilityInternalRpcClient()
+    : null;
   return createHybridAuthorityFetch({
     getAccessToken,
     auth: {
@@ -237,6 +246,19 @@ function createGuardedLocalFetch({
       ),
     }),
     assertSessionAuthority: createAssertSessionAuthority(authorityClient),
+    ...(observabilityClient ? {
+      recordSessionAuthorityFailure: async (
+        reason: SessionAuthorityFailureReason,
+      ) => {
+        const result = await observabilityClient.rpc(
+          "record_full_local_session_stale_observation",
+          { p_reason: reason },
+        );
+        if (result.error) {
+          throw result.error;
+        }
+      },
+    } : {}),
     anonymousPublicReadScope,
   });
 }
@@ -405,6 +427,7 @@ type LocalInternalScope =
   | "recipe-future-propagation"
   | "recipe-image"
   | "request-authority"
+  | "session-observability"
   | "session-logout"
   | "shopping-create"
   | "snapshot-v2-session"
@@ -663,6 +686,10 @@ export function createAuthRefreshInternalDataClient() {
 
 export function createSessionLogoutInternalDataClient() {
   return createScopedDataServiceRoleClient("session-logout");
+}
+
+export function createSessionObservabilityInternalRpcClient() {
+  return createScopedInternalRpcClient("session-observability");
 }
 
 export function createSessionAuthorityInternalRpcClient() {

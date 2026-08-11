@@ -104,25 +104,26 @@ if (!postgresBin) {
     runRequired(path.join(postgresBin, "initdb"), [
       "-D", dataDirectory,
       "-U", "postgres",
-      "-A", "trust",
+      "--auth-local=trust",
+      "--auth-host=reject",
     ]);
-    mkdirSync(socketDirectory);
+    mkdirSync(socketDirectory, { mode: 0o700 });
     runRequired(path.join(postgresBin, "pg_ctl"), [
       "-D", dataDirectory,
-      "-o", `-p ${port} -h 127.0.0.1 -k ${socketDirectory}`,
+      "-o", `-p ${port} -h '' -k ${socketDirectory}`,
       "-l", path.join(root, "postgres.log"),
       "-w", "start",
     ]);
     started = true;
     runRequired(path.join(postgresBin, "createdb"), [
-      "-h", "127.0.0.1",
+      "-h", socketDirectory,
       "-p", String(port),
       "-U", "postgres",
       database,
     ]);
 
     const connectionArgs = [
-      "-h", "127.0.0.1",
+      "-h", socketDirectory,
       "-p", String(port),
       "-U", "postgres",
       "-d", database,
@@ -134,6 +135,7 @@ if (!postgresBin) {
         create role anon nologin;
         create role authenticated nologin;
         create role service_role nologin bypassrls;
+        create role supabase_admin nologin bypassrls;
         create role supabase_auth_admin nologin;
         create role authenticator noinherit login;
         grant anon, authenticated to authenticator;
@@ -445,6 +447,11 @@ if (!postgresBin) {
         "-f",
         "supabase/migrations/20260809110000_full_local_request_transaction_and_youtube_scope.sql",
       ]);
+      runRequired(path.join(postgresBin, "psql"), [
+        ...connectionArgs,
+        "-f",
+        "supabase/migrations/20260811120000_full_local_session_observability.sql",
+      ]);
     }
 
     const test = commandResult("pnpm", [
@@ -461,7 +468,7 @@ if (!postgresBin) {
         ...process.env,
         PATH: `${postgresBin}${path.delimiter}${process.env.PATH ?? ""}`,
         HOMECOOK_ACCOUNT_GENERATION_PG_INTEGRATION: "1",
-        HOMECOOK_ACCOUNT_GENERATION_PGHOST: "127.0.0.1",
+        HOMECOOK_ACCOUNT_GENERATION_PGHOST: socketDirectory,
         HOMECOOK_ACCOUNT_GENERATION_PGPORT: String(port),
         HOMECOOK_ACCOUNT_GENERATION_PGDATABASE: database,
         HOMECOOK_FULL_LOCAL_AUTH_DB_PG_INTEGRATION: fullLocalMode ? "1" : "0",
