@@ -226,9 +226,9 @@ segment switch:
 - [ ] every check started for the current head SHA is terminal green or an intended skip <!-- omo:id=delivery-planner-shell-current-head-checks;stage=2;scope=shared;review=3,6 -->
 - [ ] post-merge master QA/Policy/Security/Vercel checks green <!-- omo:id=delivery-planner-shell-post-merge-checks;stage=2;scope=shared;review=6 -->
 - [ ] Stage 2 TDD RED before implementation <!-- omo:id=delivery-planner-shell-stage2-characterization;stage=2;scope=backend;review=3,6 -->
-- [ ] Stage 4 390/320/desktop visual-a11y-route evidence green <!-- omo:id=delivery-planner-shell-stage4-evidence;stage=4;scope=frontend;review=5,6 -->
+- [x] Stage 4 390/320/desktop visual-a11y-route evidence green <!-- omo:id=delivery-planner-shell-stage4-evidence;stage=4;scope=frontend;review=5,6 -->
 - [ ] product-design-authority approved before confirmed <!-- omo:id=delivery-planner-shell-design-authority;stage=4;scope=frontend;review=5,6 -->
 
 Stage 2 note: this test-only slice recorded an existing-behavior characterization baseline GREEN. Backend implementation and a behavioral TDD RED are N/A because no runtime repair was required; the stale generic checklist item therefore remains unchecked.
 
-Stage 4 note: the frontend implementation and deterministic browser checks are present on `feature/fe-planner-shell`. The 390/320/desktop screenshot matrix, refreshed authority verdict, Stage 5/6 review, Manual/device/server evidence and activation remain pending and are not claimed by the Stage 4 author.
+Stage 5 note: the fresh independent review at exact head `2d11ad27249d05de6d21397c8787ce6f470c4219` approved the 390/320/1280 screenshot matrix and deterministic browser evidence with P0/P1/P2 `0/0/0`. Product-design final authority, Stage 6, Manual/device/server evidence and activation remain pending; Design Status stays `pending-review`.

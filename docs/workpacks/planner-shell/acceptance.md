@@ -19,7 +19,7 @@
 - [x] selected date is preserved and plan/log scroll-input state remains isolated <!-- omo:id=accept-planner-shell-state-isolation;stage=4;scope=frontend;review=5,6 -->
 - [x] route/deep-link/back returns to originating segment/date without duplicate history <!-- omo:id=accept-planner-shell-history;stage=4;scope=frontend;review=5,6 -->
 - [x] segment `roving tabindex` leaves only the selected tab at `tabindex=0`; Arrow Left/Right and Home/End stay in the tablist and change focus/selection, and Tab enters the selected panel <!-- omo:id=accept-planner-shell-a11y;stage=4;scope=frontend;review=5,6 -->
-- [ ] automatic panel/heading focus occurs only for the `deep-link/auth-return/invoker-loss fallback`, never for ordinary segment selection <!-- omo:id=accept-planner-shell-focus-entry;stage=4;scope=frontend;review=5,6 -->
+- [x] automatic panel/heading focus occurs only for the `deep-link/auth-return/invoker-loss fallback`, never for ordinary segment selection <!-- omo:id=accept-planner-shell-focus-entry;stage=4;scope=frontend;review=5,6 -->
 - [x] unauthorized actions preserve segment/date/slot/pending action and invoking focus without rendering private data <!-- omo:id=accept-planner-shell-auth-return;stage=4;scope=frontend;review=5,6 -->
 - [x] missing/disabled #12 fails closed while 요리 계획 remains usable <!-- omo:id=accept-planner-shell-log-disabled;stage=4;scope=frontend;review=5,6 -->
 
@@ -48,8 +48,8 @@
 
 - [x] loading/empty/error/unauthorized/shopping-readonly/legacy-readonly are distinct <!-- omo:id=accept-planner-shell-states;stage=4;scope=frontend;review=5,6 -->
 - [x] registered 장보기 and shopping_done 요리하기 stay primary, 상세/남은요리 stay secondary, and legacy 삭제 stays destructive tertiary; 320px wraps in that order <!-- omo:id=accept-planner-shell-cta-hierarchy;stage=4;scope=frontend;review=5,6 -->
-- [ ] canonical PLANNER_WEEK design refresh and independent critic pass before Stage 2 <!-- omo:id=accept-planner-shell-design-critic;stage=4;scope=frontend;review=5,6 -->
-- [ ] 390px/320px/desktop static evidence covers 16px padding, 44px targets, 7-day containment, at least 2-day overview, user-configured 1/3/5 meal columns, long custom meal names, 200% text scaling, localization expansion, sticky boundaries, bottom-tab safe-area and no page overflow <!-- omo:id=accept-planner-shell-design-evidence;stage=4;scope=frontend;review=5,6 -->
+- [x] canonical PLANNER_WEEK design refresh and independent critic pass before Stage 2 <!-- omo:id=accept-planner-shell-design-critic;stage=4;scope=frontend;review=5,6 -->
+- [x] 390px/320px/desktop static evidence covers 16px padding, 44px targets, 7-day containment, at least 2-day overview, user-configured 1/3/5 meal columns, long custom meal names, 200% text scaling, localization expansion, sticky boundaries, bottom-tab safe-area and no page overflow <!-- omo:id=accept-planner-shell-design-evidence;stage=4;scope=frontend;review=5,6 -->
 - [x] child sheet/detail traps focus, supports Escape where appropriate, restores the invoking control and preserves scroll context <!-- omo:id=accept-planner-shell-focus-trap;stage=4;scope=frontend;review=5,6 -->
 - [ ] refreshed product-design-authority report approves before confirmed <!-- omo:id=accept-planner-shell-authority;stage=4;scope=frontend;review=5,6 -->
 
