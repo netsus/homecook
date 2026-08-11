@@ -28,11 +28,12 @@ import {
   validateLocalConnectorHealth,
 } from "./lib/cloudflare-tunnel-health.mjs";
 
-export const EXPECTED_LIVE_ROOT = "/Users/cwj/01_vibe_coding/homecook-full-local-restore";
 export const REFRESH_LIFECYCLE_JSON_SCRIPT =
   "verify:full-local-session-refresh-lifecycle:json";
 export const SESSION_SECURITY_CONTRACT_SCRIPT =
   "verify:full-local-session-security-contracts";
+export const EXPECTED_BASELINE_LIVE_ROOT =
+  "/Users/cwj/01_vibe_coding/homecook-full-local-restore";
 export const ALLOWED_PHASES = Object.freeze([
   "baseline",
   "milestone-a-t65",
@@ -184,7 +185,7 @@ function untrackedPathsFromStatus(statusBuffer) {
 
 export function validateLiveRoot(
   liveRoot,
-  { expectedLiveRoot = EXPECTED_LIVE_ROOT } = {},
+  { expectedLiveRoot } = {},
 ) {
   if (typeof liveRoot !== "string" || !path.isAbsolute(liveRoot)) {
     throw new Error("--live-root must be an absolute path.");
@@ -230,6 +231,16 @@ export function validateEvidenceOutputPath(phase, outputPath, implementationRoot
     throw new Error(`--output must be the exact evidence output for ${phase}: ${expectedPath}`);
   }
   return actualPath;
+}
+
+export function resolveExpectedLiveRoot({ implementationRoot, phase }) {
+  if (!ALLOWED_PHASES.includes(phase)) {
+    throw new Error(`Unsupported evidence phase: ${phase}`);
+  }
+  if (phase === "baseline") {
+    return EXPECTED_BASELINE_LIVE_ROOT;
+  }
+  return realpathSync(implementationRoot);
 }
 
 export function computeLiveDirtyDiffSha256(liveRoot) {
@@ -1207,8 +1218,20 @@ function parseCliArgs(argv) {
 }
 
 export function captureSessionLifecycleEvidence({ implementationRoot, liveRoot, output, phase }) {
-  const canonicalLiveRoot = validateLiveRoot(liveRoot);
-  const outputPath = validateEvidenceOutputPath(phase, output, implementationRoot);
+  const canonicalImplementationRoot = realpathSync(implementationRoot);
+  const expectedLiveRoot = resolveExpectedLiveRoot({
+    implementationRoot: canonicalImplementationRoot,
+    phase,
+  });
+  const outputPath = validateEvidenceOutputPath(
+    phase,
+    output,
+    canonicalImplementationRoot,
+  );
+  const canonicalLiveRoot = validateLiveRoot(
+    liveRoot,
+    { expectedLiveRoot },
+  );
   const containers = collectContainers();
   const authContainers = containers.filter((container) => container.service === "auth");
   const postgresContainers = containers.filter((container) => container.service === "postgres");
@@ -1224,7 +1247,7 @@ export function captureSessionLifecycleEvidence({ implementationRoot, liveRoot, 
   const fullLocalLaunchAgent = collectLaunchAgent("com.homecook.full-local.production");
   const macProductionLaunchAgent = collectLaunchAgent("com.homecook.production");
   validateLaunchAgentProvenance({
-    implementationRoot,
+    implementationRoot: canonicalImplementationRoot,
     launchctlOutput: macProductionLaunchAgent.output,
     phase,
   });
@@ -1241,14 +1264,16 @@ export function captureSessionLifecycleEvidence({ implementationRoot, liveRoot, 
   const canonicalBaseSha = stdoutText(run(
     "git",
     ["merge-base", "HEAD", "origin/master"],
-    { cwd: implementationRoot },
+    { cwd: canonicalImplementationRoot },
   )).trim();
-  const implementationSha = stdoutText(run("git", ["rev-parse", "HEAD"], { cwd: implementationRoot })).trim();
+  const implementationSha = stdoutText(
+    run("git", ["rev-parse", "HEAD"], { cwd: canonicalImplementationRoot }),
+  ).trim();
   const liveHeadSha = stdoutText(run("git", ["-C", canonicalLiveRoot, "rev-parse", "HEAD"])).trim();
   const liveBranch = stdoutText(run("git", ["-C", canonicalLiveRoot, "branch", "--show-current"])).trim();
   const liveStatus = run("git", ["-C", canonicalLiveRoot, "status", "--porcelain=v2", "-z", "--untracked-files=all"]).stdout;
   const { observation, productionDomainContractGate, verification } = collectVerification({
-    implementationRoot,
+    implementationRoot: canonicalImplementationRoot,
     implementationSha,
     phase,
   });
@@ -1270,7 +1295,9 @@ export function captureSessionLifecycleEvidence({ implementationRoot, liveRoot, 
     migrationHeadSource: migration.migrationHeadSource,
     phase,
     productionDomainContractGate,
-    cloudflareMonitoring: collectCloudflareMonitoringSummary({ implementationRoot }),
+    cloudflareMonitoring: collectCloudflareMonitoringSummary({
+      implementationRoot: canonicalImplementationRoot,
+    }),
     observation,
     verification,
   });
@@ -1283,7 +1310,11 @@ export function captureSessionLifecycleEvidence({ implementationRoot, liveRoot, 
   }
   assertEvidencePhaseReady(evidence);
 
-  writeSessionLifecycleEvidence({ evidence, implementationRoot, outputPath });
+  writeSessionLifecycleEvidence({
+    evidence,
+    implementationRoot: canonicalImplementationRoot,
+    outputPath,
+  });
   return evidence;
 }
 

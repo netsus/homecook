@@ -15,7 +15,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   ALLOWED_PHASES,
-  EXPECTED_LIVE_ROOT,
+  EXPECTED_BASELINE_LIVE_ROOT,
   REFRESH_LIFECYCLE_JSON_SCRIPT,
   SESSION_SECURITY_CONTRACT_SCRIPT,
   assertEvidencePhaseReady,
@@ -28,6 +28,7 @@ import {
   parseGoTruePolicyGateJson,
   parseMigrationHeadSqlOutput,
   parseRefreshLifecycleGateJson,
+  resolveExpectedLiveRoot,
   loadPriorT65Evidence,
   runEvidenceCommand,
   validateEvidenceOutputPath,
@@ -138,30 +139,80 @@ describe("full-local session lifecycle evidence contract", () => {
     ]);
   });
 
-  it("accepts only the exact canonical live checkout realpath", () => {
-    const liveRoot = mkdtempSync(path.join(tmpdir(), "canonical-live-root-"));
+  it("accepts only the exact canonical implementation root as the live checkout", () => {
+    const implementationRoot = realpathSync(
+      mkdtempSync(path.join(tmpdir(), "implementation-root-")),
+    );
     const otherRoot = mkdtempSync(path.join(tmpdir(), "other-live-root-"));
     const aliasParent = mkdtempSync(path.join(tmpdir(), "live-root-alias-"));
-    const alias = path.join(aliasParent, "live-root");
-    symlinkSync(liveRoot, alias, "dir");
+    const liveRootAlias = path.join(aliasParent, "live-root");
+    const expectedRootAlias = path.join(aliasParent, "expected-root");
+    symlinkSync(implementationRoot, liveRootAlias, "dir");
+    symlinkSync(implementationRoot, expectedRootAlias, "dir");
 
-    expect(EXPECTED_LIVE_ROOT).toBe(
-      "/Users/cwj/01_vibe_coding/homecook-full-local-restore",
-    );
-    expect(validateLiveRoot(liveRoot, { expectedLiveRoot: liveRoot }))
-      .toBe(realpathSync(liveRoot));
+    expect(validateLiveRoot(
+      implementationRoot,
+      { expectedLiveRoot: implementationRoot },
+    )).toBe(implementationRoot);
     expect(() => validateLiveRoot(
-      alias,
-      { expectedLiveRoot: liveRoot },
+      liveRootAlias,
+      { expectedLiveRoot: implementationRoot },
     )).toThrow(/existing directory/u);
     expect(() => validateLiveRoot(
       "homecook-full-local-restore",
-      { expectedLiveRoot: liveRoot },
+      { expectedLiveRoot: implementationRoot },
     )).toThrow(/absolute/u);
     expect(() => validateLiveRoot(
       otherRoot,
-      { expectedLiveRoot: liveRoot },
+      { expectedLiveRoot: implementationRoot },
     )).toThrow(/exact live root/u);
+    expect(() => validateLiveRoot(
+      implementationRoot,
+      { expectedLiveRoot: expectedRootAlias },
+    )).toThrow(/existing directory/u);
+  });
+
+  it("requires an explicit absolute expected live root", () => {
+    const liveRoot = mkdtempSync(path.join(tmpdir(), "canonical-live-root-"));
+
+    expect(() => validateLiveRoot(liveRoot)).toThrow(/expected live root must be an absolute path/u);
+    expect(() => validateLiveRoot(
+      liveRoot,
+      { expectedLiveRoot: "relative-live-root" },
+    )).toThrow(/expected live root must be an absolute path/u);
+  });
+
+  it("resolves the expected live root by evidence phase", () => {
+    const implementationRoot = realpathSync(
+      mkdtempSync(path.join(tmpdir(), "resolver-implementation-root-")),
+    );
+    const aliasParent = mkdtempSync(path.join(tmpdir(), "resolver-live-root-alias-"));
+    const implementationAlias = path.join(aliasParent, "implementation-root");
+    symlinkSync(implementationRoot, implementationAlias, "dir");
+
+    expect(EXPECTED_BASELINE_LIVE_ROOT).toBe(
+      "/Users/cwj/01_vibe_coding/homecook-full-local-restore",
+    );
+    expect(resolveExpectedLiveRoot({
+      implementationRoot: implementationAlias,
+      phase: "baseline",
+    })).toBe(EXPECTED_BASELINE_LIVE_ROOT);
+    expect(resolveExpectedLiveRoot({
+      implementationRoot: implementationAlias,
+      phase: "milestone-a-t65",
+    })).toBe(implementationRoot);
+    expect(resolveExpectedLiveRoot({
+      implementationRoot: implementationAlias,
+      phase: "milestone-a-24h",
+    })).toBe(implementationRoot);
+    expect(resolveExpectedLiveRoot({
+      implementationRoot: implementationAlias,
+      phase: "milestone-b-7d",
+    })).toBe(implementationRoot);
+    expect(() => resolveExpectedLiveRoot({
+      implementationRoot,
+      phase: "invalid-phase",
+    })).toThrow(/Unsupported evidence phase/u);
   });
 
   it("accepts only the phase-matched evidence output path under the implementation checkout", () => {
