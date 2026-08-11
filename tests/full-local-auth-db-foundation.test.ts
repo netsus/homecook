@@ -15,6 +15,8 @@ const SESSION_ISSUE_TIME_PRECISION_MIGRATION_PATH =
 const MIGRATIONS_DIRECTORY = "supabase/migrations";
 const SECURITY_MANIFEST_PATH =
   "docs/security/full-local-auth-db-security-function-authorization-manifest.json";
+const SECURITY_FUNCTION_VALIDATOR_PATH =
+  "scripts/validate-security-function-authorization.mjs";
 const SECRET = "0123456789abcdef0123456789abcdef";
 const NOW = new Date("2026-08-01T10:00:00.000Z");
 
@@ -245,6 +247,18 @@ describe("full-local Auth flow ledger", () => {
 });
 
 describe("full-local Auth DB migration contract", () => {
+  it("compares privileged operator grants from explicit ACLs, not effective superuser access", async () => {
+    const validator = await readFile(SECURITY_FUNCTION_VALIDATOR_PATH, "utf8");
+
+    expect(validator).toContain(
+      "from pg_catalog.aclexplode(procedure.proacl)",
+    );
+    expect(validator).toContain("grantee_role.rolname = 'supabase_admin'");
+    expect(validator).not.toMatch(
+      /has_function_privilege\('supabase_admin'/u,
+    );
+  });
+
   it("classifies every new database function in the security inventory", async () => {
     const manifest = JSON.parse(
       await readFile(SECURITY_MANIFEST_PATH, "utf8"),

@@ -521,7 +521,14 @@ with extension_membership as (
     pg_catalog.has_schema_privilege('authenticated', namespace.oid, 'USAGE') as authenticated_schema_usage,
     pg_catalog.has_function_privilege('service_role', procedure.oid, 'EXECUTE') as service_role_execute,
     pg_catalog.has_schema_privilege('service_role', namespace.oid, 'USAGE') as service_role_schema_usage,
-    pg_catalog.has_function_privilege('supabase_admin', procedure.oid, 'EXECUTE') as supabase_admin_execute,
+    exists (
+      select 1
+      from pg_catalog.aclexplode(procedure.proacl) as explicit_acl
+      join pg_catalog.pg_roles as grantee_role
+        on grantee_role.oid = explicit_acl.grantee
+      where explicit_acl.privilege_type = 'EXECUTE'
+        and grantee_role.rolname = 'supabase_admin'
+    ) as supabase_admin_execute,
     pg_catalog.has_schema_privilege('supabase_admin', namespace.oid, 'USAGE') as supabase_admin_schema_usage,
     pg_catalog.has_function_privilege('supabase_auth_admin', procedure.oid, 'EXECUTE') as supabase_auth_admin_execute,
     pg_catalog.has_schema_privilege('supabase_auth_admin', namespace.oid, 'USAGE') as supabase_auth_admin_schema_usage
