@@ -663,7 +663,7 @@ describe("closeout sync validator", () => {
     expect(results).toEqual([]);
   });
 
-  it("accepts an incremental backend PR that newly closes part of the Stage 2 checklist", () => {
+  it("accepts Stage 2 progress from an already-valid preceding docs baseline", () => {
     const { baseRootDir, rootDir } = createIncrementalBackendFixture({
       baseDeliveryItems: [
         {
@@ -730,7 +730,7 @@ describe("closeout sync validator", () => {
     expect(results).toEqual([]);
   });
 
-  it("accepts a metadata-only repair of an invalid base checklist while preserving its items", () => {
+  it("rejects a same-PR repair of an invalid base checklist and requires a preceding docs baseline", () => {
     const { baseRootDir, rootDir } = createIncrementalBackendFixture({
       baseDeliveryItems: [
         {
@@ -769,7 +769,7 @@ describe("closeout sync validator", () => {
 
     const results = validateIncrementalBackendFixture(rootDir, baseRootDir);
 
-    expect(results).toEqual([]);
+    expectInvalidBaseChecklistContract(results);
   });
 
   it.each([
@@ -971,7 +971,7 @@ describe("closeout sync validator", () => {
     expectInvalidBaseChecklistContract(results);
   });
 
-  it("accepts a canonical Manual Only heading repair without moving its item", () => {
+  it("rejects a same-PR Manual Only heading repair and requires a preceding docs baseline", () => {
     const { baseRootDir, rootDir } = createIncrementalBackendFixture({
       baseDeliveryItems: [
         {
@@ -1017,7 +1017,7 @@ describe("closeout sync validator", () => {
 
     const results = validateIncrementalBackendFixture(rootDir, baseRootDir);
 
-    expect(results).toEqual([]);
+    expectInvalidBaseChecklistContract(results);
   });
 
   it("fails closed when the invalid base diagnostic is not a repairable metadata field", () => {

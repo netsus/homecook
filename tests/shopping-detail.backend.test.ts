@@ -1027,6 +1027,61 @@ describe("10a shopping detail backend", () => {
     });
   });
 
+  it("returns 409 before bulk item storage update for a completed shopping list", async () => {
+    const listQuery = createMaybeSingleQuery([
+      {
+        data: {
+          id: "550e8400-e29b-41d4-a716-446655440001",
+          user_id: "user-1",
+          is_completed: true,
+        },
+        error: null,
+      },
+    ]);
+    const update = vi.fn();
+
+    createRouteHandlerClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })),
+      },
+      from: vi.fn((table: string) => {
+        if (table === "shopping_lists") {
+          return { select: vi.fn(() => listQuery) };
+        }
+        if (table === "shopping_list_items") {
+          return { update };
+        }
+
+        throw new Error(`unexpected table: ${table}`);
+      }),
+    });
+
+    const { PATCH } = await importBulkItemPatchRoute();
+    const response = await PATCH(
+      new Request("http://localhost:3000/api/v1/shopping/lists/550e8400-e29b-41d4-a716-446655440001/items/bulk", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          item_ids: ["550e8400-e29b-41d4-a716-446655440111"],
+          is_checked: true,
+        }),
+      }),
+      {
+        params: Promise.resolve({
+          list_id: "550e8400-e29b-41d4-a716-446655440001",
+        }),
+      },
+    );
+
+    expect(response.status).toBe(409);
+    expect(await response.json()).toMatchObject({
+      success: false,
+      data: null,
+      error: { code: "CONFLICT" },
+    });
+    expect(update).not.toHaveBeenCalled();
+  });
+
   it("forces is_checked=false when item is moved to pantry excluded section", async () => {
     const listQuery = createMaybeSingleQuery([
       {

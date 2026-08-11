@@ -14,6 +14,7 @@ vi.mock("@/lib/server/user-bootstrap", () => ({
 }));
 
 const USER_ID = "550e8400-e29b-41d4-a716-446655440000";
+const OTHER_USER_ID = "550e8400-e29b-41d4-a716-446655440009";
 const PRODUCT_ID = "550e8400-e29b-41d4-a716-446655440001";
 const VERSION_ID = "550e8400-e29b-41d4-a716-446655440002";
 const COLUMN_ID = "550e8400-e29b-41d4-a716-446655440003";
@@ -144,6 +145,40 @@ describe("prepared food planner entry pinned nutrition projection", () => {
 });
 
 describe("prepared food planner entry existing read projections", () => {
+  it("keeps an other-user legacy GET empty at the owner boundary", async () => {
+    const columns = thenableQuery({ data: [], error: null });
+    const meals = thenableQuery({ data: [], error: null });
+    const rpc = vi.fn(async (_name: string, args: { p_user_id: string }) => ({
+      data: args.p_user_id === USER_ID ? [entry] : [],
+      error: null,
+    }));
+    const from = vi.fn((table: string) => {
+      if (table === "meal_plan_columns") return { select: vi.fn(() => columns) };
+      if (table === "meals") return { select: vi.fn(() => meals) };
+      throw new Error(`unexpected table: ${table}`);
+    });
+    createRouteHandlerClient.mockResolvedValue({
+      auth: { getUser: vi.fn(async () => ({ data: { user: { id: OTHER_USER_ID } } })) },
+      from,
+      rpc,
+    });
+
+    const { GET } = await import("@/app/api/v1/planner/route");
+    const response = await GET(new NextRequest(
+      "http://localhost/api/v1/planner?start_date=2026-07-14&end_date=2026-07-20",
+    ));
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.data.product_entries).toEqual([]);
+    expect(rpc).toHaveBeenCalledWith("list_product_planner_entries", {
+      p_user_id: OTHER_USER_ID,
+      p_start_date: "2026-07-14",
+      p_end_date: "2026-07-20",
+      p_column_id: null,
+    });
+  });
+
   it("adds a deduped pinned product projection to planner through one bounded RPC", async () => {
     const columns = thenableQuery({
       data: [{ id: COLUMN_ID, name: "아침", sort_order: 0 }],
