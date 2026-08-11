@@ -389,8 +389,6 @@ async function installRoutes(
   });
 
   await page.route("**/api/v1/planner?*", async (route) => {
-    const url = new URL(route.request().url());
-    const startDate = url.searchParams.get("start_date") ?? PLAN_DATE;
     await route.fulfill({
       json: {
         success: true,
@@ -400,9 +398,9 @@ async function installRoutes(
             { id: "col-lunch", name: "점심", sort_order: 1 },
             { id: "col-dinner", name: "저녁", sort_order: 2 },
           ],
-          meals: [recipeMeal(startDate)],
+          meals: [recipeMeal(PLAN_DATE)],
           product_entries: productEntry
-            ? [createPlannerProductEntry(productEntry, startDate)]
+            ? [createPlannerProductEntry(productEntry, PLAN_DATE)]
             : [],
         },
         error: null,
@@ -1050,7 +1048,7 @@ test.describe("prepared-food-planner-entry", () => {
       await setAuthenticated(beforePage);
       await installRoutes(beforePage);
 
-      await beforePage.goto("/planner");
+      await beforePage.goto(`/planner?date=${PLAN_DATE}`);
       await expect(beforePage.getByText("김치찌개", { exact: true }).filter({ visible: true }).first()).toBeVisible();
       await stabilize(beforePage);
       await beforePage.screenshot({ path: path.join(BEFORE_EVIDENCE_DIR, `PLANNER_WEEK-${viewport.suffix}.png`), scale: "css" });
@@ -1100,7 +1098,7 @@ test.describe("prepared-food-planner-entry", () => {
 
       {
         const { context, evidencePage } = await openEvidencePage();
-        await evidencePage.goto("/planner");
+        await evidencePage.goto(`/planner?date=${PLAN_DATE}`);
         await expect(evidencePage.getByText("플레인 요거트", { exact: true }).filter({ visible: true })).toBeVisible();
         await stabilize(evidencePage);
         await expectNoHorizontalOverflow(evidencePage);

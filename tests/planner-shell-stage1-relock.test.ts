@@ -66,7 +66,7 @@ describe("planner-shell fresh Stage 1 relock", () => {
     );
   });
 
-  it("consumes merged #9 code without promoting its broader lifecycle", () => {
+  it("keeps the active Stage 4 projection without promoting the broader lifecycle", () => {
     const projections = [
       readme,
       acceptance,
@@ -86,12 +86,12 @@ describe("planner-shell fresh Stage 1 relock", () => {
     }
 
     expect(workItem.status).toMatchObject({
-      lifecycle: "planned",
+      lifecycle: "in_progress",
       approval_state: "not_started",
       verification_status: "pending",
     });
     expect(status).toMatchObject({
-      lifecycle: "planned",
+      lifecycle: "in_progress",
       approval_state: "not_started",
       verification_status: "pending",
       evaluation_status: "not_started",

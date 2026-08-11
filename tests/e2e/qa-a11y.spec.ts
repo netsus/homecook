@@ -433,7 +433,7 @@ test.describe("QA accessibility smoke", () => {
 
     await page.goto("/planner");
     await expect(
-      page.getByRole("heading", { name: "주간 플래너" }),
+      page.getByRole("heading", { name: "플래너", exact: true }),
     ).toBeVisible();
     await expectNoAxeViolations(page, {
       allowPrototypeDesktopColorContrast: true,
