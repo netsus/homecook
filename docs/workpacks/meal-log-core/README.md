@@ -188,5 +188,5 @@ All responses keep `{ success, data, error }`; errors keep `{ code, message, fie
 - [x] Stage 1 PR current-head checks and post-merge master checks green <!-- omo:id=delivery-meal-log-stage1-ci;stage=2;scope=shared;review=3,6 -->
 - [x] Stage 2 TDD RED evidence recorded before implementation <!-- omo:id=delivery-meal-log-tdd-red;stage=2;scope=backend;review=3,6 -->
 - [x] Stage 2 schema/RLS/RPC/routes implemented behind dormant capability <!-- omo:id=delivery-meal-log-backend;stage=2;scope=backend;review=3,6 -->
-- [ ] Stage 2 backend integration, concurrency, aggregate and compatibility evidence green <!-- omo:id=delivery-meal-log-backend-evidence;stage=2;scope=backend;review=3,6 -->
+- [x] Stage 2 backend integration, concurrency, aggregate and compatibility evidence green <!-- omo:id=delivery-meal-log-backend-evidence;stage=2;scope=backend;review=3,6 -->
 - [ ] Stage 6 merged-exact-SHA server-production/local-rehearsal read-only and release-train evidence green <!-- omo:id=delivery-meal-log-release-evidence;stage=2;scope=shared;review=3,6 -->
