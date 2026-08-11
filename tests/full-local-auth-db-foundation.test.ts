@@ -255,7 +255,7 @@ describe("full-local Auth DB migration contract", () => {
       }>;
     };
 
-    expect(manifest.functions).toHaveLength(16);
+    expect(manifest.functions).toHaveLength(19);
     expect(manifest.functions.map((entry) => entry.signature)).toEqual(
       expect.arrayContaining([
         "public.read_auth_flow_attempt(text, text)",
@@ -268,11 +268,18 @@ describe("full-local Auth DB migration contract", () => {
         "private.revoke_full_local_bindings_on_auth_identity_change()",
         "public.record_full_local_session_authority_v2(text, uuid, timestamp with time zone, uuid, text, integer, bigint, timestamp with time zone, timestamp with time zone, timestamp with time zone, timestamp with time zone, timestamp with time zone)",
         "public.assert_and_renew_full_local_session_authority_v2(text, uuid, timestamp with time zone, uuid, text, integer, bigint, timestamp with time zone, timestamp with time zone, timestamp with time zone, timestamp with time zone, timestamp with time zone)",
+        "private.assert_full_local_session_observability_scope()",
+        "public.record_full_local_session_stale_observation(text)",
+        "public.read_full_local_session_observation()",
       ]),
     );
     for (const entry of manifest.functions) {
       expect(entry.allowed_principals).toEqual(
-        entry.signature.startsWith("private.") ? [] : ["service_role"],
+        entry.signature.startsWith("private.")
+          ? []
+          : entry.signature === "public.read_full_local_session_observation()"
+            ? ["service_role", "supabase_admin"]
+            : ["service_role"],
       );
     }
   });

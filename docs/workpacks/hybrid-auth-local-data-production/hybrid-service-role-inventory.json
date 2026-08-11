@@ -377,7 +377,7 @@
       "classification": "internal",
       "file": "lib/supabase/server.ts",
       "column": 26,
-      "line": 71,
+      "line": 75,
       "allowed": true,
       "factory": "createAuthRefreshInternalDataClient",
       "functionName": "createAuthServerClient",

@@ -43,10 +43,6 @@ const ADDITIVE_SOURCES = [
       REPO_ROOT,
       "docs/security/cooked-batch-weight-ledger-security-function-authorization-manifest.json",
     ),
-    migrationPath: path.join(
-      REPO_ROOT,
-      "supabase/migrations/20260809120000_cooked_batch_weight_ledger.sql",
-    ),
   },
   {
     manifestPath: path.join(
@@ -451,7 +447,11 @@ const LOCAL_DATABASE_URL =
 const FRESH_DATABASE_URL = process.env.SECURITY_FUNCTION_FRESH_DATABASE_URL ?? null;
 const DATA_API_SCHEMAS = new Set(["public", "storage", "graphql_public"]);
 const PRINCIPALS = ["anon", "authenticated", "service_role"];
-const ADDITIVE_PRINCIPALS = [...PRINCIPALS, "supabase_auth_admin"];
+const ADDITIVE_PRINCIPALS = [
+  ...PRINCIPALS,
+  "supabase_admin",
+  "supabase_auth_admin",
+];
 
 const args = new Set(process.argv.slice(2));
 const mode = args.has("--write") ? "write" : "check";
@@ -521,6 +521,8 @@ with extension_membership as (
     pg_catalog.has_schema_privilege('authenticated', namespace.oid, 'USAGE') as authenticated_schema_usage,
     pg_catalog.has_function_privilege('service_role', procedure.oid, 'EXECUTE') as service_role_execute,
     pg_catalog.has_schema_privilege('service_role', namespace.oid, 'USAGE') as service_role_schema_usage,
+    pg_catalog.has_function_privilege('supabase_admin', procedure.oid, 'EXECUTE') as supabase_admin_execute,
+    pg_catalog.has_schema_privilege('supabase_admin', namespace.oid, 'USAGE') as supabase_admin_schema_usage,
     pg_catalog.has_function_privilege('supabase_auth_admin', procedure.oid, 'EXECUTE') as supabase_auth_admin_execute,
     pg_catalog.has_schema_privilege('supabase_auth_admin', namespace.oid, 'USAGE') as supabase_auth_admin_schema_usage
   from pg_catalog.pg_proc procedure

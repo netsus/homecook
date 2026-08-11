@@ -118,7 +118,7 @@ const localResult = {
   stable_auth_uuid_drift_count: 0,
   local_session_binding_shape_drift_count: 0,
   full_local_security_inventory: {
-    required_function_count: 32,
+    required_function_count: 35,
     function_missing_count: 0,
     function_source_drift_count: 0,
     function_security_drift_count: 0,

@@ -10,6 +10,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   HYBRID_AUTHORITY_ERROR_HEADER,
   HybridLifecycleMaintenanceError,
+  HybridSessionAuthorityError,
   createHybridAuthorityMarker,
   createHybridAuthorityFetch,
   isHybridAuthorityFailureResponse,
@@ -521,6 +522,119 @@ describe("loopback session-authority gateway", () => {
 
     await expectAuthorityError(response, "ACCOUNT_SESSION_STALE");
     expect(localUpstreamFetch).not.toHaveBeenCalled();
+  });
+
+  it("records only unexpected assert failures and keeps the public response reason-free", async () => {
+    const recordSessionAuthorityFailure = vi.fn().mockResolvedValue(undefined);
+    const localUpstreamFetch = vi.fn();
+    const authorityFetch = createHybridAuthorityFetch({
+      getAccessToken: async () => accessToken(),
+      remoteLivenessFetch: vi.fn().mockResolvedValue(new Response(
+        JSON.stringify({
+          id: OWNER_UUID,
+          created_at: "2026-07-28T00:00:00.000Z",
+        }),
+        { status: 200 },
+      )),
+      localUpstreamFetch,
+      loadRemoteJwks: async () => ({ keys: [REMOTE_JWK] }),
+      assertSessionAuthority: vi.fn().mockRejectedValue(
+        new HybridSessionAuthorityError("non_monotonic"),
+      ),
+      recordSessionAuthorityFailure,
+      auth: {
+        issuer: ISSUER,
+        url: "https://remote.example.supabase.co",
+        publishableKey: "remote-publishable",
+      },
+      attestationSecret: SECRET,
+      sessionBindingSecret: SECRET,
+      nowSeconds: () => 1_800_000_100,
+    });
+
+    const response = await authorityFetch(
+      "http://127.0.0.1:8000/rest/v1/meals",
+      { method: "POST" },
+    );
+
+    await expectAuthorityError(response, "ACCOUNT_SESSION_STALE");
+    expect(recordSessionAuthorityFailure).toHaveBeenCalledWith(
+      "non_monotonic",
+    );
+    expect(localUpstreamFetch).not.toHaveBeenCalled();
+  });
+
+  it.each(["revoked", "missing"] as const)(
+    "does not count expected %s session denials",
+    async (reason) => {
+      const recordSessionAuthorityFailure = vi.fn();
+      const authorityFetch = createHybridAuthorityFetch({
+        getAccessToken: async () => accessToken(),
+        remoteLivenessFetch: vi.fn().mockResolvedValue(new Response(
+          JSON.stringify({
+            id: OWNER_UUID,
+            created_at: "2026-07-28T00:00:00.000Z",
+          }),
+          { status: 200 },
+        )),
+        localUpstreamFetch: vi.fn(),
+        loadRemoteJwks: async () => ({ keys: [REMOTE_JWK] }),
+        assertSessionAuthority: vi.fn().mockRejectedValue(
+          new HybridSessionAuthorityError(reason),
+        ),
+        recordSessionAuthorityFailure,
+        auth: {
+          issuer: ISSUER,
+          url: "https://remote.example.supabase.co",
+          publishableKey: "remote-publishable",
+        },
+        attestationSecret: SECRET,
+        sessionBindingSecret: SECRET,
+        nowSeconds: () => 1_800_000_100,
+      });
+
+      const response = await authorityFetch(
+        "http://127.0.0.1:8000/rest/v1/meals",
+      );
+
+      await expectAuthorityError(response, "ACCOUNT_SESSION_STALE");
+      expect(recordSessionAuthorityFailure).not.toHaveBeenCalled();
+    },
+  );
+
+  it("keeps stale denial fail-safe when the observability writer fails", async () => {
+    const authorityFetch = createHybridAuthorityFetch({
+      getAccessToken: async () => accessToken(),
+      remoteLivenessFetch: vi.fn().mockResolvedValue(new Response(
+        JSON.stringify({
+          id: OWNER_UUID,
+          created_at: "2026-07-28T00:00:00.000Z",
+        }),
+        { status: 200 },
+      )),
+      localUpstreamFetch: vi.fn(),
+      loadRemoteJwks: async () => ({ keys: [REMOTE_JWK] }),
+      assertSessionAuthority: vi.fn().mockRejectedValue(
+        new HybridSessionAuthorityError("identity_mismatch"),
+      ),
+      recordSessionAuthorityFailure: vi.fn().mockRejectedValue(
+        new Error("writer unavailable"),
+      ),
+      auth: {
+        issuer: ISSUER,
+        url: "https://remote.example.supabase.co",
+        publishableKey: "remote-publishable",
+      },
+      attestationSecret: SECRET,
+      sessionBindingSecret: SECRET,
+      nowSeconds: () => 1_800_000_100,
+    });
+
+    const response = await authorityFetch(
+      "http://127.0.0.1:8000/rest/v1/meals",
+    );
+
+    await expectAuthorityError(response, "ACCOUNT_SESSION_STALE");
   });
 
   it("returns a contracted 503 marker when the local authority verification plane is unavailable", async () => {
