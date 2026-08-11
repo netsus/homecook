@@ -1,0 +1,4533 @@
+{
+  "captured_at": "2026-08-11T07:24:52.810Z",
+  "evidence_scope": "planner-shell Stage 4 static screenshot evidence",
+  "generator_task_id": "019fefab-38cc-77b0-bcd5-00be9f024690",
+  "generator_verdict": "green",
+  "implementation_base": "2a32d20bc45279bebbcd2cf9f201898f2edc658b",
+  "implementation_head": "3556375f7d5a131c7a7ea9db333b5a6b05acb922",
+  "implementation_parent": "c38e0b10b794e34f954027840579e7d4523f8a4e",
+  "implementation_tree": "5892a3c2ce357d99f23af4b28cb0c0ebebb706d3",
+  "fixture_contract": {
+    "deep_link_date": "2026-07-26",
+    "fixed_now": "2026-07-23T09:00:00.000+09:00",
+    "locale": "ko-KR",
+    "reduced_motion": "reduce",
+    "selected_date": "2026-07-23"
+  },
+  "limitations": [
+    "PNG and DOM geometry prove visible static layout only.",
+    "They do not prove runtime keyboard or focus sequences, full WCAG conformance, screen-reader announcements, physical-device safe area, or virtual-keyboard occlusion.",
+    "Manual/server-Mac/OAuth, merged-exact server-production/local-rehearsal, capability, R/R+1/R+2, and activation remain pending."
+  ],
+  "viewport_contract": [
+    {
+      "label": "mobile-default",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "columnCount": 3
+    },
+    {
+      "label": "mobile-narrow",
+      "viewport": {
+        "width": 320,
+        "height": 693
+      },
+      "columnCount": 5
+    },
+    {
+      "label": "desktop",
+      "viewport": {
+        "width": 1280,
+        "height": 900
+      },
+      "columnCount": 1
+    }
+  ],
+  "required_states": [
+    "default",
+    "loading",
+    "empty",
+    "error",
+    "unauthorized",
+    "shopping-read-only",
+    "legacy-read-only",
+    "meal-log-disabled"
+  ],
+  "captures": [
+    {
+      "captured_at": "2026-08-11T07:24:52.810Z",
+      "counters": {
+        "nutrition": 0,
+        "planner": 1,
+        "productMethods": []
+      },
+      "file": "PLANNER_WEEK-mobile-default-default.png",
+      "fixture": {
+        "authenticated": true,
+        "column_count": 3,
+        "fixed_now": "2026-07-23T09:00:00.000+09:00",
+        "selected_date": "2026-07-23",
+        "state": "default"
+      },
+      "geometry": {
+        "configuredColumnCount": 3,
+        "contentPadding": {
+          "left": 16,
+          "right": 16
+        },
+        "dateRail": {
+          "buttonCount": 7,
+          "buttonSizes": [
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            }
+          ],
+          "clientWidth": 332,
+          "containedInViewport": true,
+          "maxScrollLeft": 0,
+          "scrollLeft": 0,
+          "scrollWidth": 332,
+          "selectedFullyVisible": true,
+          "selectedLabel": "7/23 목 선택"
+        },
+        "document": {
+          "clientWidth": 390,
+          "horizontalOverflowPx": 0,
+          "scrollHeight": 1253,
+          "scrollWidth": 390
+        },
+        "keyTargetBelow44": [],
+        "keyTargets": [
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "요리 계획",
+            "width": 173
+          },
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "식사 기록",
+            "width": 173
+          },
+          {
+            "ariaLabel": "7/20 월 선택",
+            "height": 44,
+            "text": "월20",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/21 화 선택",
+            "height": 44,
+            "text": "화21",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/22 수 선택",
+            "height": 44,
+            "text": "수22",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/23 목 선택",
+            "height": 44,
+            "text": "목23",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/24 금 선택",
+            "height": 44,
+            "text": "금24",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/25 토 선택",
+            "height": 44,
+            "text": "토25",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/26 일 선택",
+            "height": 44,
+            "text": "일26",
+            "width": 44
+          },
+          {
+            "ariaLabel": "이전 주",
+            "height": 44,
+            "text": "‹",
+            "width": 44
+          },
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "이번 주",
+            "width": 69.72
+          },
+          {
+            "ariaLabel": "다음 주",
+            "height": 44,
+            "text": "›",
+            "width": 44
+          },
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "장보기",
+            "width": 76.34
+          },
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "남은요리",
+            "width": 90.45
+          },
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "장보기",
+            "width": 68.34
+          },
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "상세",
+            "width": 58.23
+          },
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "요리하기",
+            "width": 80.45
+          },
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "상세",
+            "width": 58.23
+          },
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "상세",
+            "width": 58.23
+          }
+        ],
+        "mealColumnCount": 3,
+        "overviewCount": 2,
+        "segmentCount": 2,
+        "segmentLabels": [
+          "요리 계획",
+          "식사 기록"
+        ],
+        "state": "default",
+        "viewport": {
+          "height": 844,
+          "width": 390
+        },
+        "viewportLabel": "mobile-default",
+        "bottomAndText": {
+          "bottomClearance": 32,
+          "bottomTab": {
+            "x": 0,
+            "y": 772,
+            "width": 390,
+            "height": 64,
+            "top": 772,
+            "right": 390,
+            "bottom": 836,
+            "left": 0
+          },
+          "planPanel": {
+            "x": 0,
+            "y": -292,
+            "width": 390,
+            "height": 1032,
+            "top": -292,
+            "right": 390,
+            "bottom": 740,
+            "left": 0
+          },
+          "scrollY": 409,
+          "verticalCollapseCandidates": []
+        },
+        "deepLinkSunday": null
+      },
+      "bytes": 66705,
+      "png_dimensions": {
+        "height": 1253,
+        "width": 390
+      },
+      "png_signature_hex": "89504e470d0a1a0a",
+      "sha256": "8a005be0ac9f31a8d525fdcbf3b53aa208e93e26f3ceca774937bc042921c596"
+    },
+    {
+      "captured_at": "2026-08-11T07:24:52.810Z",
+      "counters": {
+        "nutrition": 0,
+        "planner": 1,
+        "productMethods": []
+      },
+      "file": "PLANNER_WEEK-mobile-default-loading.png",
+      "fixture": {
+        "authenticated": true,
+        "column_count": 3,
+        "fixed_now": "2026-07-23T09:00:00.000+09:00",
+        "selected_date": "2026-07-23",
+        "state": "loading"
+      },
+      "geometry": {
+        "configuredColumnCount": 3,
+        "contentPadding": {
+          "left": 16,
+          "right": 16
+        },
+        "dateRail": {
+          "buttonCount": 7,
+          "buttonSizes": [
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            }
+          ],
+          "clientWidth": 332,
+          "containedInViewport": true,
+          "maxScrollLeft": 0,
+          "scrollLeft": 0,
+          "scrollWidth": 332,
+          "selectedFullyVisible": true,
+          "selectedLabel": "7/23 목 선택"
+        },
+        "document": {
+          "clientWidth": 390,
+          "horizontalOverflowPx": 0,
+          "scrollHeight": 844,
+          "scrollWidth": 390
+        },
+        "keyTargetBelow44": [],
+        "keyTargets": [
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "요리 계획",
+            "width": 173
+          },
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "식사 기록",
+            "width": 173
+          },
+          {
+            "ariaLabel": "7/20 월 선택",
+            "height": 44,
+            "text": "월20",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/21 화 선택",
+            "height": 44,
+            "text": "화21",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/22 수 선택",
+            "height": 44,
+            "text": "수22",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/23 목 선택",
+            "height": 44,
+            "text": "목23",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/24 금 선택",
+            "height": 44,
+            "text": "금24",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/25 토 선택",
+            "height": 44,
+            "text": "토25",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/26 일 선택",
+            "height": 44,
+            "text": "일26",
+            "width": 44
+          },
+          {
+            "ariaLabel": "이전 주",
+            "height": 44,
+            "text": "‹",
+            "width": 44
+          },
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "이번 주",
+            "width": 69.72
+          },
+          {
+            "ariaLabel": "다음 주",
+            "height": 44,
+            "text": "›",
+            "width": 44
+          },
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "장보기",
+            "width": 76.34
+          },
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "남은요리",
+            "width": 90.45
+          }
+        ],
+        "mealColumnCount": 0,
+        "overviewCount": 2,
+        "segmentCount": 2,
+        "segmentLabels": [
+          "요리 계획",
+          "식사 기록"
+        ],
+        "state": "loading",
+        "viewport": {
+          "height": 844,
+          "width": 390
+        },
+        "viewportLabel": "mobile-default",
+        "bottomAndText": null,
+        "deepLinkSunday": null
+      },
+      "bytes": 37411,
+      "png_dimensions": {
+        "height": 844,
+        "width": 390
+      },
+      "png_signature_hex": "89504e470d0a1a0a",
+      "sha256": "faf50263fd906a5c95e47ea1cb182924bd49eceb28ae58c5e1e6652c57499aa6"
+    },
+    {
+      "captured_at": "2026-08-11T07:24:52.810Z",
+      "counters": {
+        "nutrition": 0,
+        "planner": 1,
+        "productMethods": []
+      },
+      "file": "PLANNER_WEEK-mobile-default-empty.png",
+      "fixture": {
+        "authenticated": true,
+        "column_count": 3,
+        "fixed_now": "2026-07-23T09:00:00.000+09:00",
+        "selected_date": "2026-07-23",
+        "state": "empty"
+      },
+      "geometry": {
+        "configuredColumnCount": 3,
+        "contentPadding": {
+          "left": 16,
+          "right": 16
+        },
+        "dateRail": {
+          "buttonCount": 7,
+          "buttonSizes": [
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            }
+          ],
+          "clientWidth": 332,
+          "containedInViewport": true,
+          "maxScrollLeft": 0,
+          "scrollLeft": 0,
+          "scrollWidth": 332,
+          "selectedFullyVisible": true,
+          "selectedLabel": "7/23 목 선택"
+        },
+        "document": {
+          "clientWidth": 390,
+          "horizontalOverflowPx": 0,
+          "scrollHeight": 1019,
+          "scrollWidth": 390
+        },
+        "keyTargetBelow44": [],
+        "keyTargets": [
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "요리 계획",
+            "width": 173
+          },
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "식사 기록",
+            "width": 173
+          },
+          {
+            "ariaLabel": "7/20 월 선택",
+            "height": 44,
+            "text": "월20",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/21 화 선택",
+            "height": 44,
+            "text": "화21",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/22 수 선택",
+            "height": 44,
+            "text": "수22",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/23 목 선택",
+            "height": 44,
+            "text": "목23",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/24 금 선택",
+            "height": 44,
+            "text": "금24",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/25 토 선택",
+            "height": 44,
+            "text": "토25",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/26 일 선택",
+            "height": 44,
+            "text": "일26",
+            "width": 44
+          },
+          {
+            "ariaLabel": "이전 주",
+            "height": 44,
+            "text": "‹",
+            "width": 44
+          },
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "이번 주",
+            "width": 69.72
+          },
+          {
+            "ariaLabel": "다음 주",
+            "height": 44,
+            "text": "›",
+            "width": 44
+          },
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "장보기",
+            "width": 76.34
+          },
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "남은요리",
+            "width": 90.45
+          }
+        ],
+        "mealColumnCount": 3,
+        "overviewCount": 2,
+        "segmentCount": 2,
+        "segmentLabels": [
+          "요리 계획",
+          "식사 기록"
+        ],
+        "state": "empty",
+        "viewport": {
+          "height": 844,
+          "width": 390
+        },
+        "viewportLabel": "mobile-default",
+        "bottomAndText": null,
+        "deepLinkSunday": null
+      },
+      "bytes": 49911,
+      "png_dimensions": {
+        "height": 1019,
+        "width": 390
+      },
+      "png_signature_hex": "89504e470d0a1a0a",
+      "sha256": "8897e272a1ae64ca7162d9a3c71eff6114b899aff300605df60ed4ae5e94e0f6"
+    },
+    {
+      "captured_at": "2026-08-11T07:24:52.810Z",
+      "counters": {
+        "nutrition": 0,
+        "planner": 1,
+        "productMethods": []
+      },
+      "file": "PLANNER_WEEK-mobile-default-error.png",
+      "fixture": {
+        "authenticated": true,
+        "column_count": 3,
+        "fixed_now": "2026-07-23T09:00:00.000+09:00",
+        "selected_date": "2026-07-23",
+        "state": "error"
+      },
+      "geometry": {
+        "configuredColumnCount": 3,
+        "contentPadding": {
+          "left": 16,
+          "right": 16
+        },
+        "dateRail": {
+          "buttonCount": 7,
+          "buttonSizes": [
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            }
+          ],
+          "clientWidth": 332,
+          "containedInViewport": true,
+          "maxScrollLeft": 0,
+          "scrollLeft": 0,
+          "scrollWidth": 332,
+          "selectedFullyVisible": true,
+          "selectedLabel": "7/23 목 선택"
+        },
+        "document": {
+          "clientWidth": 390,
+          "horizontalOverflowPx": 0,
+          "scrollHeight": 919,
+          "scrollWidth": 390
+        },
+        "keyTargetBelow44": [],
+        "keyTargets": [
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "요리 계획",
+            "width": 173
+          },
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "식사 기록",
+            "width": 173
+          },
+          {
+            "ariaLabel": "7/20 월 선택",
+            "height": 44,
+            "text": "월20",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/21 화 선택",
+            "height": 44,
+            "text": "화21",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/22 수 선택",
+            "height": 44,
+            "text": "수22",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/23 목 선택",
+            "height": 44,
+            "text": "목23",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/24 금 선택",
+            "height": 44,
+            "text": "금24",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/25 토 선택",
+            "height": 44,
+            "text": "토25",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/26 일 선택",
+            "height": 44,
+            "text": "일26",
+            "width": 44
+          },
+          {
+            "ariaLabel": "이전 주",
+            "height": 44,
+            "text": "‹",
+            "width": 44
+          },
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "이번 주",
+            "width": 69.72
+          },
+          {
+            "ariaLabel": "다음 주",
+            "height": 44,
+            "text": "›",
+            "width": 44
+          },
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "장보기",
+            "width": 76.34
+          },
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "남은요리",
+            "width": 90.45
+          }
+        ],
+        "mealColumnCount": 0,
+        "overviewCount": 2,
+        "segmentCount": 2,
+        "segmentLabels": [
+          "요리 계획",
+          "식사 기록"
+        ],
+        "state": "error",
+        "viewport": {
+          "height": 844,
+          "width": 390
+        },
+        "viewportLabel": "mobile-default",
+        "bottomAndText": null,
+        "deepLinkSunday": null
+      },
+      "bytes": 50099,
+      "png_dimensions": {
+        "height": 919,
+        "width": 390
+      },
+      "png_signature_hex": "89504e470d0a1a0a",
+      "sha256": "639aabbda4b1037d366ac2c0ca6fa2aebcd1b06aa55c0f9a988f6a9d99955578"
+    },
+    {
+      "captured_at": "2026-08-11T07:24:52.810Z",
+      "counters": {
+        "nutrition": 0,
+        "planner": 0,
+        "productMethods": []
+      },
+      "file": "PLANNER_WEEK-mobile-default-unauthorized.png",
+      "fixture": {
+        "authenticated": false,
+        "column_count": 3,
+        "fixed_now": "2026-07-23T09:00:00.000+09:00",
+        "selected_date": "2026-07-23",
+        "state": "unauthorized"
+      },
+      "geometry": {
+        "configuredColumnCount": 3,
+        "contentPadding": null,
+        "dateRail": null,
+        "document": {
+          "clientWidth": 390,
+          "horizontalOverflowPx": 0,
+          "scrollHeight": 844,
+          "scrollWidth": 390
+        },
+        "keyTargetBelow44": [],
+        "keyTargets": [],
+        "mealColumnCount": 0,
+        "overviewCount": 0,
+        "segmentCount": 0,
+        "segmentLabels": [],
+        "state": "unauthorized",
+        "viewport": {
+          "height": 844,
+          "width": 390
+        },
+        "viewportLabel": "mobile-default",
+        "bottomAndText": null,
+        "deepLinkSunday": null
+      },
+      "bytes": 42385,
+      "png_dimensions": {
+        "height": 844,
+        "width": 390
+      },
+      "png_signature_hex": "89504e470d0a1a0a",
+      "sha256": "4025f0123fc41ab481b5d557598b819f39f29210e3c13c7f9dc08e064a797bc4"
+    },
+    {
+      "captured_at": "2026-08-11T07:24:52.810Z",
+      "counters": {
+        "nutrition": 0,
+        "planner": 1,
+        "productMethods": []
+      },
+      "file": "PLANNER_WEEK-mobile-default-shopping-read-only.png",
+      "fixture": {
+        "authenticated": true,
+        "column_count": 3,
+        "fixed_now": "2026-07-23T09:00:00.000+09:00",
+        "selected_date": "2026-07-23",
+        "state": "shopping-read-only"
+      },
+      "geometry": {
+        "configuredColumnCount": 3,
+        "contentPadding": {
+          "left": 16,
+          "right": 16
+        },
+        "dateRail": {
+          "buttonCount": 7,
+          "buttonSizes": [
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            }
+          ],
+          "clientWidth": 332,
+          "containedInViewport": true,
+          "maxScrollLeft": 0,
+          "scrollLeft": 0,
+          "scrollWidth": 332,
+          "selectedFullyVisible": true,
+          "selectedLabel": "7/23 목 선택"
+        },
+        "document": {
+          "clientWidth": 390,
+          "horizontalOverflowPx": 0,
+          "scrollHeight": 1097,
+          "scrollWidth": 390
+        },
+        "keyTargetBelow44": [],
+        "keyTargets": [
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "요리 계획",
+            "width": 173
+          },
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "식사 기록",
+            "width": 173
+          },
+          {
+            "ariaLabel": "7/20 월 선택",
+            "height": 44,
+            "text": "월20",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/21 화 선택",
+            "height": 44,
+            "text": "화21",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/22 수 선택",
+            "height": 44,
+            "text": "수22",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/23 목 선택",
+            "height": 44,
+            "text": "목23",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/24 금 선택",
+            "height": 44,
+            "text": "금24",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/25 토 선택",
+            "height": 44,
+            "text": "토25",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/26 일 선택",
+            "height": 44,
+            "text": "일26",
+            "width": 44
+          },
+          {
+            "ariaLabel": "이전 주",
+            "height": 44,
+            "text": "‹",
+            "width": 44
+          },
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "이번 주",
+            "width": 69.72
+          },
+          {
+            "ariaLabel": "다음 주",
+            "height": 44,
+            "text": "›",
+            "width": 44
+          },
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "장보기",
+            "width": 76.34
+          },
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "남은요리",
+            "width": 90.45
+          },
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "요리하기",
+            "width": 80.45
+          },
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "상세",
+            "width": 58.23
+          }
+        ],
+        "mealColumnCount": 3,
+        "overviewCount": 2,
+        "segmentCount": 2,
+        "segmentLabels": [
+          "요리 계획",
+          "식사 기록"
+        ],
+        "state": "shopping-read-only",
+        "viewport": {
+          "height": 844,
+          "width": 390
+        },
+        "viewportLabel": "mobile-default",
+        "bottomAndText": null,
+        "deepLinkSunday": null
+      },
+      "bytes": 60287,
+      "png_dimensions": {
+        "height": 1097,
+        "width": 390
+      },
+      "png_signature_hex": "89504e470d0a1a0a",
+      "sha256": "c2c1a46dea626acc15c42ec10b51b08688f2d0ab42630c499335aab4181ea209"
+    },
+    {
+      "captured_at": "2026-08-11T07:24:52.810Z",
+      "counters": {
+        "nutrition": 0,
+        "planner": 1,
+        "productMethods": []
+      },
+      "file": "PLANNER_WEEK-mobile-default-legacy-read-only.png",
+      "fixture": {
+        "authenticated": true,
+        "column_count": 3,
+        "fixed_now": "2026-07-23T09:00:00.000+09:00",
+        "selected_date": "2026-07-23",
+        "state": "legacy-read-only"
+      },
+      "geometry": {
+        "configuredColumnCount": 3,
+        "contentPadding": {
+          "left": 16,
+          "right": 16
+        },
+        "dateRail": {
+          "buttonCount": 7,
+          "buttonSizes": [
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            }
+          ],
+          "clientWidth": 332,
+          "containedInViewport": true,
+          "maxScrollLeft": 0,
+          "scrollLeft": 0,
+          "scrollWidth": 332,
+          "selectedFullyVisible": true,
+          "selectedLabel": "7/23 목 선택"
+        },
+        "document": {
+          "clientWidth": 390,
+          "horizontalOverflowPx": 0,
+          "scrollHeight": 1172,
+          "scrollWidth": 390
+        },
+        "keyTargetBelow44": [],
+        "keyTargets": [
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "요리 계획",
+            "width": 173
+          },
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "식사 기록",
+            "width": 173
+          },
+          {
+            "ariaLabel": "7/20 월 선택",
+            "height": 44,
+            "text": "월20",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/21 화 선택",
+            "height": 44,
+            "text": "화21",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/22 수 선택",
+            "height": 44,
+            "text": "수22",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/23 목 선택",
+            "height": 44,
+            "text": "목23",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/24 금 선택",
+            "height": 44,
+            "text": "금24",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/25 토 선택",
+            "height": 44,
+            "text": "토25",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/26 일 선택",
+            "height": 44,
+            "text": "일26",
+            "width": 44
+          },
+          {
+            "ariaLabel": "이전 주",
+            "height": 44,
+            "text": "‹",
+            "width": 44
+          },
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "이번 주",
+            "width": 69.72
+          },
+          {
+            "ariaLabel": "다음 주",
+            "height": 44,
+            "text": "›",
+            "width": 44
+          },
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "장보기",
+            "width": 76.34
+          },
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "남은요리",
+            "width": 90.45
+          }
+        ],
+        "mealColumnCount": 3,
+        "overviewCount": 2,
+        "segmentCount": 2,
+        "segmentLabels": [
+          "요리 계획",
+          "식사 기록"
+        ],
+        "state": "legacy-read-only",
+        "viewport": {
+          "height": 844,
+          "width": 390
+        },
+        "viewportLabel": "mobile-default",
+        "bottomAndText": null,
+        "deepLinkSunday": null
+      },
+      "bytes": 61979,
+      "png_dimensions": {
+        "height": 1172,
+        "width": 390
+      },
+      "png_signature_hex": "89504e470d0a1a0a",
+      "sha256": "ea62494e9b216c56aa3329228fe192f2bae7b2d72b757ee2e84547a9da312096"
+    },
+    {
+      "captured_at": "2026-08-11T07:24:52.810Z",
+      "counters": {
+        "nutrition": 0,
+        "planner": 0,
+        "productMethods": []
+      },
+      "file": "PLANNER_WEEK-mobile-default-meal-log-disabled.png",
+      "fixture": {
+        "authenticated": true,
+        "column_count": 3,
+        "fixed_now": "2026-07-23T09:00:00.000+09:00",
+        "selected_date": "2026-07-23",
+        "state": "meal-log-disabled"
+      },
+      "geometry": {
+        "configuredColumnCount": 3,
+        "contentPadding": null,
+        "dateRail": null,
+        "document": {
+          "clientWidth": 390,
+          "horizontalOverflowPx": 0,
+          "scrollHeight": 844,
+          "scrollWidth": 390
+        },
+        "keyTargetBelow44": [],
+        "keyTargets": [
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "요리 계획",
+            "width": 173
+          },
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "식사 기록",
+            "width": 173
+          }
+        ],
+        "mealColumnCount": 0,
+        "overviewCount": 0,
+        "segmentCount": 2,
+        "segmentLabels": [
+          "요리 계획",
+          "식사 기록"
+        ],
+        "state": "meal-log-disabled",
+        "viewport": {
+          "height": 844,
+          "width": 390
+        },
+        "viewportLabel": "mobile-default",
+        "bottomAndText": null,
+        "deepLinkSunday": null
+      },
+      "bytes": 23683,
+      "png_dimensions": {
+        "height": 844,
+        "width": 390
+      },
+      "png_signature_hex": "89504e470d0a1a0a",
+      "sha256": "3d18c101858c5b6b1cb5d515634aeac72c0a95affce3d20d82c7787d6db44f5d"
+    },
+    {
+      "captured_at": "2026-08-11T07:24:52.810Z",
+      "counters": {
+        "nutrition": 0,
+        "planner": 2,
+        "productMethods": []
+      },
+      "file": "PLANNER_WEEK-mobile-narrow-default.png",
+      "fixture": {
+        "authenticated": true,
+        "column_count": 5,
+        "fixed_now": "2026-07-23T09:00:00.000+09:00",
+        "selected_date": "2026-07-23",
+        "state": "default"
+      },
+      "geometry": {
+        "configuredColumnCount": 5,
+        "contentPadding": {
+          "left": 16,
+          "right": 16
+        },
+        "dateRail": {
+          "buttonCount": 7,
+          "buttonSizes": [
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            }
+          ],
+          "clientWidth": 262,
+          "containedInViewport": true,
+          "maxScrollLeft": 70,
+          "scrollLeft": 0,
+          "scrollWidth": 332,
+          "selectedFullyVisible": true,
+          "selectedLabel": "7/23 목 선택"
+        },
+        "document": {
+          "clientWidth": 320,
+          "horizontalOverflowPx": 0,
+          "scrollHeight": 1561,
+          "scrollWidth": 320
+        },
+        "keyTargetBelow44": [],
+        "keyTargets": [
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "요리 계획",
+            "width": 138
+          },
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "식사 기록",
+            "width": 138
+          },
+          {
+            "ariaLabel": "7/20 월 선택",
+            "height": 44,
+            "text": "월20",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/21 화 선택",
+            "height": 44,
+            "text": "화21",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/22 수 선택",
+            "height": 44,
+            "text": "수22",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/23 목 선택",
+            "height": 44,
+            "text": "목23",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/24 금 선택",
+            "height": 44,
+            "text": "금24",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/25 토 선택",
+            "height": 44,
+            "text": "토25",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/26 일 선택",
+            "height": 44,
+            "text": "일26",
+            "width": 44
+          },
+          {
+            "ariaLabel": "이전 주",
+            "height": 44,
+            "text": "‹",
+            "width": 44
+          },
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "이번 주",
+            "width": 69.72
+          },
+          {
+            "ariaLabel": "다음 주",
+            "height": 44,
+            "text": "›",
+            "width": 44
+          },
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "장보기",
+            "width": 76.34
+          },
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "남은요리",
+            "width": 90.45
+          },
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "장보기",
+            "width": 68.34
+          },
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "상세",
+            "width": 58.23
+          },
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "요리하기",
+            "width": 80.45
+          },
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "상세",
+            "width": 58.23
+          },
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "상세",
+            "width": 58.23
+          }
+        ],
+        "mealColumnCount": 5,
+        "overviewCount": 2,
+        "segmentCount": 2,
+        "segmentLabels": [
+          "요리 계획",
+          "식사 기록"
+        ],
+        "state": "default",
+        "viewport": {
+          "height": 693,
+          "width": 320
+        },
+        "viewportLabel": "mobile-narrow",
+        "bottomAndText": {
+          "bottomClearance": 32,
+          "bottomTab": {
+            "x": 0,
+            "y": 621,
+            "width": 320,
+            "height": 64,
+            "top": 621,
+            "right": 320,
+            "bottom": 685,
+            "left": 0
+          },
+          "planPanel": {
+            "x": 0,
+            "y": -751,
+            "width": 320,
+            "height": 1340,
+            "top": -751,
+            "right": 320,
+            "bottom": 589,
+            "left": 0
+          },
+          "scrollY": 868,
+          "verticalCollapseCandidates": []
+        },
+        "deepLinkSunday": {
+          "buttonCount": 7,
+          "buttonSizes": [
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            }
+          ],
+          "clientWidth": 262,
+          "containedInViewport": true,
+          "maxScrollLeft": 70,
+          "scrollLeft": 70,
+          "scrollWidth": 332,
+          "selectedFullyVisible": true,
+          "selectedLabel": "7/26 일 선택"
+        }
+      },
+      "bytes": 77255,
+      "png_dimensions": {
+        "height": 1561,
+        "width": 320
+      },
+      "png_signature_hex": "89504e470d0a1a0a",
+      "sha256": "1a4814506756db26c1f77f323fb17f77cd4f8abf26d36e9dbcdc75d29655079c"
+    },
+    {
+      "captured_at": "2026-08-11T07:24:52.810Z",
+      "counters": {
+        "nutrition": 0,
+        "planner": 1,
+        "productMethods": []
+      },
+      "file": "PLANNER_WEEK-mobile-narrow-loading.png",
+      "fixture": {
+        "authenticated": true,
+        "column_count": 5,
+        "fixed_now": "2026-07-23T09:00:00.000+09:00",
+        "selected_date": "2026-07-23",
+        "state": "loading"
+      },
+      "geometry": {
+        "configuredColumnCount": 5,
+        "contentPadding": {
+          "left": 16,
+          "right": 16
+        },
+        "dateRail": {
+          "buttonCount": 7,
+          "buttonSizes": [
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            }
+          ],
+          "clientWidth": 262,
+          "containedInViewport": true,
+          "maxScrollLeft": 70,
+          "scrollLeft": 0,
+          "scrollWidth": 332,
+          "selectedFullyVisible": true,
+          "selectedLabel": "7/23 목 선택"
+        },
+        "document": {
+          "clientWidth": 320,
+          "horizontalOverflowPx": 0,
+          "scrollHeight": 725,
+          "scrollWidth": 320
+        },
+        "keyTargetBelow44": [],
+        "keyTargets": [
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "요리 계획",
+            "width": 138
+          },
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "식사 기록",
+            "width": 138
+          },
+          {
+            "ariaLabel": "7/20 월 선택",
+            "height": 44,
+            "text": "월20",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/21 화 선택",
+            "height": 44,
+            "text": "화21",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/22 수 선택",
+            "height": 44,
+            "text": "수22",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/23 목 선택",
+            "height": 44,
+            "text": "목23",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/24 금 선택",
+            "height": 44,
+            "text": "금24",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/25 토 선택",
+            "height": 44,
+            "text": "토25",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/26 일 선택",
+            "height": 44,
+            "text": "일26",
+            "width": 44
+          },
+          {
+            "ariaLabel": "이전 주",
+            "height": 44,
+            "text": "‹",
+            "width": 44
+          },
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "이번 주",
+            "width": 69.72
+          },
+          {
+            "ariaLabel": "다음 주",
+            "height": 44,
+            "text": "›",
+            "width": 44
+          },
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "장보기",
+            "width": 76.34
+          },
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "남은요리",
+            "width": 90.45
+          }
+        ],
+        "mealColumnCount": 0,
+        "overviewCount": 2,
+        "segmentCount": 2,
+        "segmentLabels": [
+          "요리 계획",
+          "식사 기록"
+        ],
+        "state": "loading",
+        "viewport": {
+          "height": 693,
+          "width": 320
+        },
+        "viewportLabel": "mobile-narrow",
+        "bottomAndText": null,
+        "deepLinkSunday": null
+      },
+      "bytes": 36732,
+      "png_dimensions": {
+        "height": 725,
+        "width": 320
+      },
+      "png_signature_hex": "89504e470d0a1a0a",
+      "sha256": "bb42500f4e4118c1d37a0e7c13d94905f6a38254149b5a14583b32552d3f826a"
+    },
+    {
+      "captured_at": "2026-08-11T07:24:52.810Z",
+      "counters": {
+        "nutrition": 0,
+        "planner": 1,
+        "productMethods": []
+      },
+      "file": "PLANNER_WEEK-mobile-narrow-empty.png",
+      "fixture": {
+        "authenticated": true,
+        "column_count": 5,
+        "fixed_now": "2026-07-23T09:00:00.000+09:00",
+        "selected_date": "2026-07-23",
+        "state": "empty"
+      },
+      "geometry": {
+        "configuredColumnCount": 5,
+        "contentPadding": {
+          "left": 16,
+          "right": 16
+        },
+        "dateRail": {
+          "buttonCount": 7,
+          "buttonSizes": [
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            }
+          ],
+          "clientWidth": 262,
+          "containedInViewport": true,
+          "maxScrollLeft": 70,
+          "scrollLeft": 0,
+          "scrollWidth": 332,
+          "selectedFullyVisible": true,
+          "selectedLabel": "7/23 목 선택"
+        },
+        "document": {
+          "clientWidth": 320,
+          "horizontalOverflowPx": 0,
+          "scrollHeight": 1303,
+          "scrollWidth": 320
+        },
+        "keyTargetBelow44": [],
+        "keyTargets": [
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "요리 계획",
+            "width": 138
+          },
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "식사 기록",
+            "width": 138
+          },
+          {
+            "ariaLabel": "7/20 월 선택",
+            "height": 44,
+            "text": "월20",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/21 화 선택",
+            "height": 44,
+            "text": "화21",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/22 수 선택",
+            "height": 44,
+            "text": "수22",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/23 목 선택",
+            "height": 44,
+            "text": "목23",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/24 금 선택",
+            "height": 44,
+            "text": "금24",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/25 토 선택",
+            "height": 44,
+            "text": "토25",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/26 일 선택",
+            "height": 44,
+            "text": "일26",
+            "width": 44
+          },
+          {
+            "ariaLabel": "이전 주",
+            "height": 44,
+            "text": "‹",
+            "width": 44
+          },
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "이번 주",
+            "width": 69.72
+          },
+          {
+            "ariaLabel": "다음 주",
+            "height": 44,
+            "text": "›",
+            "width": 44
+          },
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "장보기",
+            "width": 76.34
+          },
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "남은요리",
+            "width": 90.45
+          }
+        ],
+        "mealColumnCount": 5,
+        "overviewCount": 2,
+        "segmentCount": 2,
+        "segmentLabels": [
+          "요리 계획",
+          "식사 기록"
+        ],
+        "state": "empty",
+        "viewport": {
+          "height": 693,
+          "width": 320
+        },
+        "viewportLabel": "mobile-narrow",
+        "bottomAndText": null,
+        "deepLinkSunday": null
+      },
+      "bytes": 63461,
+      "png_dimensions": {
+        "height": 1303,
+        "width": 320
+      },
+      "png_signature_hex": "89504e470d0a1a0a",
+      "sha256": "0df42f490f96943a084690a09df4ebfa1b09b54cfb2f4777ce891adacc7f7b98"
+    },
+    {
+      "captured_at": "2026-08-11T07:24:52.810Z",
+      "counters": {
+        "nutrition": 0,
+        "planner": 1,
+        "productMethods": []
+      },
+      "file": "PLANNER_WEEK-mobile-narrow-error.png",
+      "fixture": {
+        "authenticated": true,
+        "column_count": 5,
+        "fixed_now": "2026-07-23T09:00:00.000+09:00",
+        "selected_date": "2026-07-23",
+        "state": "error"
+      },
+      "geometry": {
+        "configuredColumnCount": 5,
+        "contentPadding": {
+          "left": 16,
+          "right": 16
+        },
+        "dateRail": {
+          "buttonCount": 7,
+          "buttonSizes": [
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            }
+          ],
+          "clientWidth": 262,
+          "containedInViewport": true,
+          "maxScrollLeft": 70,
+          "scrollLeft": 0,
+          "scrollWidth": 332,
+          "selectedFullyVisible": true,
+          "selectedLabel": "7/23 목 선택"
+        },
+        "document": {
+          "clientWidth": 320,
+          "horizontalOverflowPx": 0,
+          "scrollHeight": 919,
+          "scrollWidth": 320
+        },
+        "keyTargetBelow44": [],
+        "keyTargets": [
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "요리 계획",
+            "width": 138
+          },
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "식사 기록",
+            "width": 138
+          },
+          {
+            "ariaLabel": "7/20 월 선택",
+            "height": 44,
+            "text": "월20",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/21 화 선택",
+            "height": 44,
+            "text": "화21",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/22 수 선택",
+            "height": 44,
+            "text": "수22",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/23 목 선택",
+            "height": 44,
+            "text": "목23",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/24 금 선택",
+            "height": 44,
+            "text": "금24",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/25 토 선택",
+            "height": 44,
+            "text": "토25",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/26 일 선택",
+            "height": 44,
+            "text": "일26",
+            "width": 44
+          },
+          {
+            "ariaLabel": "이전 주",
+            "height": 44,
+            "text": "‹",
+            "width": 44
+          },
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "이번 주",
+            "width": 69.72
+          },
+          {
+            "ariaLabel": "다음 주",
+            "height": 44,
+            "text": "›",
+            "width": 44
+          },
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "장보기",
+            "width": 76.34
+          },
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "남은요리",
+            "width": 90.45
+          }
+        ],
+        "mealColumnCount": 0,
+        "overviewCount": 2,
+        "segmentCount": 2,
+        "segmentLabels": [
+          "요리 계획",
+          "식사 기록"
+        ],
+        "state": "error",
+        "viewport": {
+          "height": 693,
+          "width": 320
+        },
+        "viewportLabel": "mobile-narrow",
+        "bottomAndText": null,
+        "deepLinkSunday": null
+      },
+      "bytes": 48252,
+      "png_dimensions": {
+        "height": 919,
+        "width": 320
+      },
+      "png_signature_hex": "89504e470d0a1a0a",
+      "sha256": "955b01bba98f4d5c2c34152fbb9e115a8b3a3eecc8cfe6be02ba1bdbe56ac604"
+    },
+    {
+      "captured_at": "2026-08-11T07:24:52.810Z",
+      "counters": {
+        "nutrition": 0,
+        "planner": 0,
+        "productMethods": []
+      },
+      "file": "PLANNER_WEEK-mobile-narrow-unauthorized.png",
+      "fixture": {
+        "authenticated": false,
+        "column_count": 5,
+        "fixed_now": "2026-07-23T09:00:00.000+09:00",
+        "selected_date": "2026-07-23",
+        "state": "unauthorized"
+      },
+      "geometry": {
+        "configuredColumnCount": 5,
+        "contentPadding": null,
+        "dateRail": null,
+        "document": {
+          "clientWidth": 320,
+          "horizontalOverflowPx": 0,
+          "scrollHeight": 693,
+          "scrollWidth": 320
+        },
+        "keyTargetBelow44": [],
+        "keyTargets": [],
+        "mealColumnCount": 0,
+        "overviewCount": 0,
+        "segmentCount": 0,
+        "segmentLabels": [],
+        "state": "unauthorized",
+        "viewport": {
+          "height": 693,
+          "width": 320
+        },
+        "viewportLabel": "mobile-narrow",
+        "bottomAndText": null,
+        "deepLinkSunday": null
+      },
+      "bytes": 40470,
+      "png_dimensions": {
+        "height": 693,
+        "width": 320
+      },
+      "png_signature_hex": "89504e470d0a1a0a",
+      "sha256": "fb9a00537daaa6df9e9cd75a5551d8b6fe8c0f3750fed02c1a97e8cec9a43520"
+    },
+    {
+      "captured_at": "2026-08-11T07:24:52.810Z",
+      "counters": {
+        "nutrition": 0,
+        "planner": 1,
+        "productMethods": []
+      },
+      "file": "PLANNER_WEEK-mobile-narrow-shopping-read-only.png",
+      "fixture": {
+        "authenticated": true,
+        "column_count": 5,
+        "fixed_now": "2026-07-23T09:00:00.000+09:00",
+        "selected_date": "2026-07-23",
+        "state": "shopping-read-only"
+      },
+      "geometry": {
+        "configuredColumnCount": 5,
+        "contentPadding": {
+          "left": 16,
+          "right": 16
+        },
+        "dateRail": {
+          "buttonCount": 7,
+          "buttonSizes": [
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            }
+          ],
+          "clientWidth": 262,
+          "containedInViewport": true,
+          "maxScrollLeft": 70,
+          "scrollLeft": 0,
+          "scrollWidth": 332,
+          "selectedFullyVisible": true,
+          "selectedLabel": "7/23 목 선택"
+        },
+        "document": {
+          "clientWidth": 320,
+          "horizontalOverflowPx": 0,
+          "scrollHeight": 1405,
+          "scrollWidth": 320
+        },
+        "keyTargetBelow44": [],
+        "keyTargets": [
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "요리 계획",
+            "width": 138
+          },
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "식사 기록",
+            "width": 138
+          },
+          {
+            "ariaLabel": "7/20 월 선택",
+            "height": 44,
+            "text": "월20",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/21 화 선택",
+            "height": 44,
+            "text": "화21",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/22 수 선택",
+            "height": 44,
+            "text": "수22",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/23 목 선택",
+            "height": 44,
+            "text": "목23",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/24 금 선택",
+            "height": 44,
+            "text": "금24",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/25 토 선택",
+            "height": 44,
+            "text": "토25",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/26 일 선택",
+            "height": 44,
+            "text": "일26",
+            "width": 44
+          },
+          {
+            "ariaLabel": "이전 주",
+            "height": 44,
+            "text": "‹",
+            "width": 44
+          },
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "이번 주",
+            "width": 69.72
+          },
+          {
+            "ariaLabel": "다음 주",
+            "height": 44,
+            "text": "›",
+            "width": 44
+          },
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "장보기",
+            "width": 76.34
+          },
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "남은요리",
+            "width": 90.45
+          },
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "요리하기",
+            "width": 80.45
+          },
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "상세",
+            "width": 58.23
+          }
+        ],
+        "mealColumnCount": 5,
+        "overviewCount": 2,
+        "segmentCount": 2,
+        "segmentLabels": [
+          "요리 계획",
+          "식사 기록"
+        ],
+        "state": "shopping-read-only",
+        "viewport": {
+          "height": 693,
+          "width": 320
+        },
+        "viewportLabel": "mobile-narrow",
+        "bottomAndText": null,
+        "deepLinkSunday": null
+      },
+      "bytes": 68618,
+      "png_dimensions": {
+        "height": 1405,
+        "width": 320
+      },
+      "png_signature_hex": "89504e470d0a1a0a",
+      "sha256": "c5a470fe3fe40ce5b36fb05c2f0e583ccbffaf5de56c395437e964edd99a540f"
+    },
+    {
+      "captured_at": "2026-08-11T07:24:52.810Z",
+      "counters": {
+        "nutrition": 0,
+        "planner": 1,
+        "productMethods": []
+      },
+      "file": "PLANNER_WEEK-mobile-narrow-legacy-read-only.png",
+      "fixture": {
+        "authenticated": true,
+        "column_count": 5,
+        "fixed_now": "2026-07-23T09:00:00.000+09:00",
+        "selected_date": "2026-07-23",
+        "state": "legacy-read-only"
+      },
+      "geometry": {
+        "configuredColumnCount": 5,
+        "contentPadding": {
+          "left": 16,
+          "right": 16
+        },
+        "dateRail": {
+          "buttonCount": 7,
+          "buttonSizes": [
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            }
+          ],
+          "clientWidth": 262,
+          "containedInViewport": true,
+          "maxScrollLeft": 70,
+          "scrollLeft": 0,
+          "scrollWidth": 332,
+          "selectedFullyVisible": true,
+          "selectedLabel": "7/23 목 선택"
+        },
+        "document": {
+          "clientWidth": 320,
+          "horizontalOverflowPx": 0,
+          "scrollHeight": 1456,
+          "scrollWidth": 320
+        },
+        "keyTargetBelow44": [],
+        "keyTargets": [
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "요리 계획",
+            "width": 138
+          },
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "식사 기록",
+            "width": 138
+          },
+          {
+            "ariaLabel": "7/20 월 선택",
+            "height": 44,
+            "text": "월20",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/21 화 선택",
+            "height": 44,
+            "text": "화21",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/22 수 선택",
+            "height": 44,
+            "text": "수22",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/23 목 선택",
+            "height": 44,
+            "text": "목23",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/24 금 선택",
+            "height": 44,
+            "text": "금24",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/25 토 선택",
+            "height": 44,
+            "text": "토25",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/26 일 선택",
+            "height": 44,
+            "text": "일26",
+            "width": 44
+          },
+          {
+            "ariaLabel": "이전 주",
+            "height": 44,
+            "text": "‹",
+            "width": 44
+          },
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "이번 주",
+            "width": 69.72
+          },
+          {
+            "ariaLabel": "다음 주",
+            "height": 44,
+            "text": "›",
+            "width": 44
+          },
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "장보기",
+            "width": 76.34
+          },
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "남은요리",
+            "width": 90.45
+          }
+        ],
+        "mealColumnCount": 5,
+        "overviewCount": 2,
+        "segmentCount": 2,
+        "segmentLabels": [
+          "요리 계획",
+          "식사 기록"
+        ],
+        "state": "legacy-read-only",
+        "viewport": {
+          "height": 693,
+          "width": 320
+        },
+        "viewportLabel": "mobile-narrow",
+        "bottomAndText": null,
+        "deepLinkSunday": null
+      },
+      "bytes": 75197,
+      "png_dimensions": {
+        "height": 1456,
+        "width": 320
+      },
+      "png_signature_hex": "89504e470d0a1a0a",
+      "sha256": "bad81203041b8c551022624d7f85e116104c36e72433cd2bd1aebef18166ac45"
+    },
+    {
+      "captured_at": "2026-08-11T07:24:52.810Z",
+      "counters": {
+        "nutrition": 0,
+        "planner": 0,
+        "productMethods": []
+      },
+      "file": "PLANNER_WEEK-mobile-narrow-meal-log-disabled.png",
+      "fixture": {
+        "authenticated": true,
+        "column_count": 5,
+        "fixed_now": "2026-07-23T09:00:00.000+09:00",
+        "selected_date": "2026-07-23",
+        "state": "meal-log-disabled"
+      },
+      "geometry": {
+        "configuredColumnCount": 5,
+        "contentPadding": null,
+        "dateRail": null,
+        "document": {
+          "clientWidth": 320,
+          "horizontalOverflowPx": 0,
+          "scrollHeight": 693,
+          "scrollWidth": 320
+        },
+        "keyTargetBelow44": [],
+        "keyTargets": [
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "요리 계획",
+            "width": 138
+          },
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "식사 기록",
+            "width": 138
+          }
+        ],
+        "mealColumnCount": 0,
+        "overviewCount": 0,
+        "segmentCount": 2,
+        "segmentLabels": [
+          "요리 계획",
+          "식사 기록"
+        ],
+        "state": "meal-log-disabled",
+        "viewport": {
+          "height": 693,
+          "width": 320
+        },
+        "viewportLabel": "mobile-narrow",
+        "bottomAndText": null,
+        "deepLinkSunday": null
+      },
+      "bytes": 22452,
+      "png_dimensions": {
+        "height": 693,
+        "width": 320
+      },
+      "png_signature_hex": "89504e470d0a1a0a",
+      "sha256": "a7c435246677a97c05eabcf870bb27c85ad823002871aa71243cfa0e07831508"
+    },
+    {
+      "captured_at": "2026-08-11T07:24:52.810Z",
+      "counters": {
+        "nutrition": 0,
+        "planner": 1,
+        "productMethods": []
+      },
+      "file": "PLANNER_WEEK-desktop-default.png",
+      "fixture": {
+        "authenticated": true,
+        "column_count": 1,
+        "fixed_now": "2026-07-23T09:00:00.000+09:00",
+        "selected_date": "2026-07-23",
+        "state": "default"
+      },
+      "geometry": {
+        "configuredColumnCount": 1,
+        "contentPadding": {
+          "left": 16,
+          "right": 16
+        },
+        "dateRail": {
+          "buttonCount": 7,
+          "buttonSizes": [
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            }
+          ],
+          "clientWidth": 958,
+          "containedInViewport": true,
+          "maxScrollLeft": 0,
+          "scrollLeft": 0,
+          "scrollWidth": 958,
+          "selectedFullyVisible": true,
+          "selectedLabel": "7/23 목 선택"
+        },
+        "document": {
+          "clientWidth": 1280,
+          "horizontalOverflowPx": 0,
+          "scrollHeight": 1069,
+          "scrollWidth": 1280
+        },
+        "keyTargetBelow44": [],
+        "keyTargets": [
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "요리 계획",
+            "width": 490
+          },
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "식사 기록",
+            "width": 490
+          },
+          {
+            "ariaLabel": "7/20 월 선택",
+            "height": 44,
+            "text": "월20",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/21 화 선택",
+            "height": 44,
+            "text": "화21",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/22 수 선택",
+            "height": 44,
+            "text": "수22",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/23 목 선택",
+            "height": 44,
+            "text": "목23",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/24 금 선택",
+            "height": 44,
+            "text": "금24",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/25 토 선택",
+            "height": 44,
+            "text": "토25",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/26 일 선택",
+            "height": 44,
+            "text": "일26",
+            "width": 44
+          },
+          {
+            "ariaLabel": "이전 주",
+            "height": 44,
+            "text": "‹",
+            "width": 44
+          },
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "이번 주",
+            "width": 69.72
+          },
+          {
+            "ariaLabel": "다음 주",
+            "height": 44,
+            "text": "›",
+            "width": 44
+          },
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "장보기",
+            "width": 76.34
+          },
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "남은요리",
+            "width": 90.45
+          },
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "장보기",
+            "width": 68.34
+          },
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "상세",
+            "width": 58.23
+          },
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "요리하기",
+            "width": 80.45
+          },
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "상세",
+            "width": 58.23
+          },
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "상세",
+            "width": 58.23
+          }
+        ],
+        "mealColumnCount": 1,
+        "overviewCount": 2,
+        "segmentCount": 2,
+        "segmentLabels": [
+          "요리 계획",
+          "식사 기록"
+        ],
+        "state": "default",
+        "viewport": {
+          "height": 900,
+          "width": 1280
+        },
+        "viewportLabel": "desktop",
+        "bottomAndText": null,
+        "deepLinkSunday": null
+      },
+      "bytes": 61789,
+      "png_dimensions": {
+        "height": 1069,
+        "width": 1280
+      },
+      "png_signature_hex": "89504e470d0a1a0a",
+      "sha256": "fd6fae6968bd879e37a3123700099a2a1fd006bb36034c2e20f93bd3125b0821"
+    },
+    {
+      "captured_at": "2026-08-11T07:24:52.810Z",
+      "counters": {
+        "nutrition": 0,
+        "planner": 1,
+        "productMethods": []
+      },
+      "file": "PLANNER_WEEK-desktop-loading.png",
+      "fixture": {
+        "authenticated": true,
+        "column_count": 1,
+        "fixed_now": "2026-07-23T09:00:00.000+09:00",
+        "selected_date": "2026-07-23",
+        "state": "loading"
+      },
+      "geometry": {
+        "configuredColumnCount": 1,
+        "contentPadding": {
+          "left": 16,
+          "right": 16
+        },
+        "dateRail": {
+          "buttonCount": 7,
+          "buttonSizes": [
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            }
+          ],
+          "clientWidth": 958,
+          "containedInViewport": true,
+          "maxScrollLeft": 0,
+          "scrollLeft": 0,
+          "scrollWidth": 958,
+          "selectedFullyVisible": true,
+          "selectedLabel": "7/23 목 선택"
+        },
+        "document": {
+          "clientWidth": 1280,
+          "horizontalOverflowPx": 0,
+          "scrollHeight": 900,
+          "scrollWidth": 1280
+        },
+        "keyTargetBelow44": [],
+        "keyTargets": [
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "요리 계획",
+            "width": 490
+          },
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "식사 기록",
+            "width": 490
+          },
+          {
+            "ariaLabel": "7/20 월 선택",
+            "height": 44,
+            "text": "월20",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/21 화 선택",
+            "height": 44,
+            "text": "화21",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/22 수 선택",
+            "height": 44,
+            "text": "수22",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/23 목 선택",
+            "height": 44,
+            "text": "목23",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/24 금 선택",
+            "height": 44,
+            "text": "금24",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/25 토 선택",
+            "height": 44,
+            "text": "토25",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/26 일 선택",
+            "height": 44,
+            "text": "일26",
+            "width": 44
+          },
+          {
+            "ariaLabel": "이전 주",
+            "height": 44,
+            "text": "‹",
+            "width": 44
+          },
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "이번 주",
+            "width": 69.72
+          },
+          {
+            "ariaLabel": "다음 주",
+            "height": 44,
+            "text": "›",
+            "width": 44
+          },
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "장보기",
+            "width": 76.34
+          },
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "남은요리",
+            "width": 90.45
+          }
+        ],
+        "mealColumnCount": 0,
+        "overviewCount": 2,
+        "segmentCount": 2,
+        "segmentLabels": [
+          "요리 계획",
+          "식사 기록"
+        ],
+        "state": "loading",
+        "viewport": {
+          "height": 900,
+          "width": 1280
+        },
+        "viewportLabel": "desktop",
+        "bottomAndText": null,
+        "deepLinkSunday": null
+      },
+      "bytes": 40858,
+      "png_dimensions": {
+        "height": 900,
+        "width": 1280
+      },
+      "png_signature_hex": "89504e470d0a1a0a",
+      "sha256": "e290263616b6c6157c46fda4579b358c1965a3d7457627b74955279fa40c0060"
+    },
+    {
+      "captured_at": "2026-08-11T07:24:52.810Z",
+      "counters": {
+        "nutrition": 0,
+        "planner": 1,
+        "productMethods": []
+      },
+      "file": "PLANNER_WEEK-desktop-empty.png",
+      "fixture": {
+        "authenticated": true,
+        "column_count": 1,
+        "fixed_now": "2026-07-23T09:00:00.000+09:00",
+        "selected_date": "2026-07-23",
+        "state": "empty"
+      },
+      "geometry": {
+        "configuredColumnCount": 1,
+        "contentPadding": {
+          "left": 16,
+          "right": 16
+        },
+        "dateRail": {
+          "buttonCount": 7,
+          "buttonSizes": [
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            }
+          ],
+          "clientWidth": 958,
+          "containedInViewport": true,
+          "maxScrollLeft": 0,
+          "scrollLeft": 0,
+          "scrollWidth": 958,
+          "selectedFullyVisible": true,
+          "selectedLabel": "7/23 목 선택"
+        },
+        "document": {
+          "clientWidth": 1280,
+          "horizontalOverflowPx": 0,
+          "scrollHeight": 900,
+          "scrollWidth": 1280
+        },
+        "keyTargetBelow44": [],
+        "keyTargets": [
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "요리 계획",
+            "width": 490
+          },
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "식사 기록",
+            "width": 490
+          },
+          {
+            "ariaLabel": "7/20 월 선택",
+            "height": 44,
+            "text": "월20",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/21 화 선택",
+            "height": 44,
+            "text": "화21",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/22 수 선택",
+            "height": 44,
+            "text": "수22",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/23 목 선택",
+            "height": 44,
+            "text": "목23",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/24 금 선택",
+            "height": 44,
+            "text": "금24",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/25 토 선택",
+            "height": 44,
+            "text": "토25",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/26 일 선택",
+            "height": 44,
+            "text": "일26",
+            "width": 44
+          },
+          {
+            "ariaLabel": "이전 주",
+            "height": 44,
+            "text": "‹",
+            "width": 44
+          },
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "이번 주",
+            "width": 69.72
+          },
+          {
+            "ariaLabel": "다음 주",
+            "height": 44,
+            "text": "›",
+            "width": 44
+          },
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "장보기",
+            "width": 76.34
+          },
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "남은요리",
+            "width": 90.45
+          }
+        ],
+        "mealColumnCount": 1,
+        "overviewCount": 2,
+        "segmentCount": 2,
+        "segmentLabels": [
+          "요리 계획",
+          "식사 기록"
+        ],
+        "state": "empty",
+        "viewport": {
+          "height": 900,
+          "width": 1280
+        },
+        "viewportLabel": "desktop",
+        "bottomAndText": null,
+        "deepLinkSunday": null
+      },
+      "bytes": 40986,
+      "png_dimensions": {
+        "height": 900,
+        "width": 1280
+      },
+      "png_signature_hex": "89504e470d0a1a0a",
+      "sha256": "eec8daf17c12a7461d26107442d58903c2a633218cd13697dcf6a74059637aab"
+    },
+    {
+      "captured_at": "2026-08-11T07:24:52.810Z",
+      "counters": {
+        "nutrition": 0,
+        "planner": 1,
+        "productMethods": []
+      },
+      "file": "PLANNER_WEEK-desktop-error.png",
+      "fixture": {
+        "authenticated": true,
+        "column_count": 1,
+        "fixed_now": "2026-07-23T09:00:00.000+09:00",
+        "selected_date": "2026-07-23",
+        "state": "error"
+      },
+      "geometry": {
+        "configuredColumnCount": 1,
+        "contentPadding": {
+          "left": 16,
+          "right": 16
+        },
+        "dateRail": {
+          "buttonCount": 7,
+          "buttonSizes": [
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            }
+          ],
+          "clientWidth": 958,
+          "containedInViewport": true,
+          "maxScrollLeft": 0,
+          "scrollLeft": 0,
+          "scrollWidth": 958,
+          "selectedFullyVisible": true,
+          "selectedLabel": "7/23 목 선택"
+        },
+        "document": {
+          "clientWidth": 1280,
+          "horizontalOverflowPx": 0,
+          "scrollHeight": 900,
+          "scrollWidth": 1280
+        },
+        "keyTargetBelow44": [],
+        "keyTargets": [
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "요리 계획",
+            "width": 490
+          },
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "식사 기록",
+            "width": 490
+          },
+          {
+            "ariaLabel": "7/20 월 선택",
+            "height": 44,
+            "text": "월20",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/21 화 선택",
+            "height": 44,
+            "text": "화21",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/22 수 선택",
+            "height": 44,
+            "text": "수22",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/23 목 선택",
+            "height": 44,
+            "text": "목23",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/24 금 선택",
+            "height": 44,
+            "text": "금24",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/25 토 선택",
+            "height": 44,
+            "text": "토25",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/26 일 선택",
+            "height": 44,
+            "text": "일26",
+            "width": 44
+          },
+          {
+            "ariaLabel": "이전 주",
+            "height": 44,
+            "text": "‹",
+            "width": 44
+          },
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "이번 주",
+            "width": 69.72
+          },
+          {
+            "ariaLabel": "다음 주",
+            "height": 44,
+            "text": "›",
+            "width": 44
+          },
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "장보기",
+            "width": 76.34
+          },
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "남은요리",
+            "width": 90.45
+          }
+        ],
+        "mealColumnCount": 0,
+        "overviewCount": 2,
+        "segmentCount": 2,
+        "segmentLabels": [
+          "요리 계획",
+          "식사 기록"
+        ],
+        "state": "error",
+        "viewport": {
+          "height": 900,
+          "width": 1280
+        },
+        "viewportLabel": "desktop",
+        "bottomAndText": null,
+        "deepLinkSunday": null
+      },
+      "bytes": 53730,
+      "png_dimensions": {
+        "height": 900,
+        "width": 1280
+      },
+      "png_signature_hex": "89504e470d0a1a0a",
+      "sha256": "bb172e4e4d3212d2f57bb107dabbb7434ddacf877e49cdee01ac0c948a9d85e3"
+    },
+    {
+      "captured_at": "2026-08-11T07:24:52.810Z",
+      "counters": {
+        "nutrition": 0,
+        "planner": 0,
+        "productMethods": []
+      },
+      "file": "PLANNER_WEEK-desktop-unauthorized.png",
+      "fixture": {
+        "authenticated": false,
+        "column_count": 1,
+        "fixed_now": "2026-07-23T09:00:00.000+09:00",
+        "selected_date": "2026-07-23",
+        "state": "unauthorized"
+      },
+      "geometry": {
+        "configuredColumnCount": 1,
+        "contentPadding": null,
+        "dateRail": null,
+        "document": {
+          "clientWidth": 1280,
+          "horizontalOverflowPx": 0,
+          "scrollHeight": 900,
+          "scrollWidth": 1280
+        },
+        "keyTargetBelow44": [],
+        "keyTargets": [],
+        "mealColumnCount": 0,
+        "overviewCount": 0,
+        "segmentCount": 0,
+        "segmentLabels": [],
+        "state": "unauthorized",
+        "viewport": {
+          "height": 900,
+          "width": 1280
+        },
+        "viewportLabel": "desktop",
+        "bottomAndText": null,
+        "deepLinkSunday": null
+      },
+      "bytes": 41138,
+      "png_dimensions": {
+        "height": 900,
+        "width": 1280
+      },
+      "png_signature_hex": "89504e470d0a1a0a",
+      "sha256": "190d7d2e0ef0fb8ac548592119a65e1a5e2c84024d69686944e7d79123103055"
+    },
+    {
+      "captured_at": "2026-08-11T07:24:52.810Z",
+      "counters": {
+        "nutrition": 0,
+        "planner": 1,
+        "productMethods": []
+      },
+      "file": "PLANNER_WEEK-desktop-shopping-read-only.png",
+      "fixture": {
+        "authenticated": true,
+        "column_count": 1,
+        "fixed_now": "2026-07-23T09:00:00.000+09:00",
+        "selected_date": "2026-07-23",
+        "state": "shopping-read-only"
+      },
+      "geometry": {
+        "configuredColumnCount": 1,
+        "contentPadding": {
+          "left": 16,
+          "right": 16
+        },
+        "dateRail": {
+          "buttonCount": 7,
+          "buttonSizes": [
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            }
+          ],
+          "clientWidth": 958,
+          "containedInViewport": true,
+          "maxScrollLeft": 0,
+          "scrollLeft": 0,
+          "scrollWidth": 958,
+          "selectedFullyVisible": true,
+          "selectedLabel": "7/23 목 선택"
+        },
+        "document": {
+          "clientWidth": 1280,
+          "horizontalOverflowPx": 0,
+          "scrollHeight": 900,
+          "scrollWidth": 1280
+        },
+        "keyTargetBelow44": [],
+        "keyTargets": [
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "요리 계획",
+            "width": 490
+          },
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "식사 기록",
+            "width": 490
+          },
+          {
+            "ariaLabel": "7/20 월 선택",
+            "height": 44,
+            "text": "월20",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/21 화 선택",
+            "height": 44,
+            "text": "화21",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/22 수 선택",
+            "height": 44,
+            "text": "수22",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/23 목 선택",
+            "height": 44,
+            "text": "목23",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/24 금 선택",
+            "height": 44,
+            "text": "금24",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/25 토 선택",
+            "height": 44,
+            "text": "토25",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/26 일 선택",
+            "height": 44,
+            "text": "일26",
+            "width": 44
+          },
+          {
+            "ariaLabel": "이전 주",
+            "height": 44,
+            "text": "‹",
+            "width": 44
+          },
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "이번 주",
+            "width": 69.72
+          },
+          {
+            "ariaLabel": "다음 주",
+            "height": 44,
+            "text": "›",
+            "width": 44
+          },
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "장보기",
+            "width": 76.34
+          },
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "남은요리",
+            "width": 90.45
+          },
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "요리하기",
+            "width": 80.45
+          },
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "상세",
+            "width": 58.23
+          }
+        ],
+        "mealColumnCount": 1,
+        "overviewCount": 2,
+        "segmentCount": 2,
+        "segmentLabels": [
+          "요리 계획",
+          "식사 기록"
+        ],
+        "state": "shopping-read-only",
+        "viewport": {
+          "height": 900,
+          "width": 1280
+        },
+        "viewportLabel": "desktop",
+        "bottomAndText": null,
+        "deepLinkSunday": null
+      },
+      "bytes": 49430,
+      "png_dimensions": {
+        "height": 900,
+        "width": 1280
+      },
+      "png_signature_hex": "89504e470d0a1a0a",
+      "sha256": "09dd6a9352235cb1f11987c704f4efc2da29764e79104d9dac41bab22cd6b058"
+    },
+    {
+      "captured_at": "2026-08-11T07:24:52.810Z",
+      "counters": {
+        "nutrition": 0,
+        "planner": 1,
+        "productMethods": []
+      },
+      "file": "PLANNER_WEEK-desktop-legacy-read-only.png",
+      "fixture": {
+        "authenticated": true,
+        "column_count": 1,
+        "fixed_now": "2026-07-23T09:00:00.000+09:00",
+        "selected_date": "2026-07-23",
+        "state": "legacy-read-only"
+      },
+      "geometry": {
+        "configuredColumnCount": 1,
+        "contentPadding": {
+          "left": 16,
+          "right": 16
+        },
+        "dateRail": {
+          "buttonCount": 7,
+          "buttonSizes": [
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            },
+            {
+              "height": 44,
+              "width": 44
+            }
+          ],
+          "clientWidth": 958,
+          "containedInViewport": true,
+          "maxScrollLeft": 0,
+          "scrollLeft": 0,
+          "scrollWidth": 958,
+          "selectedFullyVisible": true,
+          "selectedLabel": "7/23 목 선택"
+        },
+        "document": {
+          "clientWidth": 1280,
+          "horizontalOverflowPx": 0,
+          "scrollHeight": 900,
+          "scrollWidth": 1280
+        },
+        "keyTargetBelow44": [],
+        "keyTargets": [
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "요리 계획",
+            "width": 490
+          },
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "식사 기록",
+            "width": 490
+          },
+          {
+            "ariaLabel": "7/20 월 선택",
+            "height": 44,
+            "text": "월20",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/21 화 선택",
+            "height": 44,
+            "text": "화21",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/22 수 선택",
+            "height": 44,
+            "text": "수22",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/23 목 선택",
+            "height": 44,
+            "text": "목23",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/24 금 선택",
+            "height": 44,
+            "text": "금24",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/25 토 선택",
+            "height": 44,
+            "text": "토25",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/26 일 선택",
+            "height": 44,
+            "text": "일26",
+            "width": 44
+          },
+          {
+            "ariaLabel": "이전 주",
+            "height": 44,
+            "text": "‹",
+            "width": 44
+          },
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "이번 주",
+            "width": 69.72
+          },
+          {
+            "ariaLabel": "다음 주",
+            "height": 44,
+            "text": "›",
+            "width": 44
+          },
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "장보기",
+            "width": 76.34
+          },
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "남은요리",
+            "width": 90.45
+          }
+        ],
+        "mealColumnCount": 1,
+        "overviewCount": 2,
+        "segmentCount": 2,
+        "segmentLabels": [
+          "요리 계획",
+          "식사 기록"
+        ],
+        "state": "legacy-read-only",
+        "viewport": {
+          "height": 900,
+          "width": 1280
+        },
+        "viewportLabel": "desktop",
+        "bottomAndText": null,
+        "deepLinkSunday": null
+      },
+      "bytes": 53612,
+      "png_dimensions": {
+        "height": 900,
+        "width": 1280
+      },
+      "png_signature_hex": "89504e470d0a1a0a",
+      "sha256": "091b6c9b1accf5ee8a5af13d67e5c2c54f2d4f6b731ace3aa59f676e8639aa8a"
+    },
+    {
+      "captured_at": "2026-08-11T07:24:52.810Z",
+      "counters": {
+        "nutrition": 0,
+        "planner": 0,
+        "productMethods": []
+      },
+      "file": "PLANNER_WEEK-desktop-meal-log-disabled.png",
+      "fixture": {
+        "authenticated": true,
+        "column_count": 1,
+        "fixed_now": "2026-07-23T09:00:00.000+09:00",
+        "selected_date": "2026-07-23",
+        "state": "meal-log-disabled"
+      },
+      "geometry": {
+        "configuredColumnCount": 1,
+        "contentPadding": null,
+        "dateRail": null,
+        "document": {
+          "clientWidth": 1280,
+          "horizontalOverflowPx": 0,
+          "scrollHeight": 900,
+          "scrollWidth": 1280
+        },
+        "keyTargetBelow44": [],
+        "keyTargets": [
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "요리 계획",
+            "width": 490
+          },
+          {
+            "ariaLabel": null,
+            "height": 44,
+            "text": "식사 기록",
+            "width": 490
+          }
+        ],
+        "mealColumnCount": 0,
+        "overviewCount": 0,
+        "segmentCount": 2,
+        "segmentLabels": [
+          "요리 계획",
+          "식사 기록"
+        ],
+        "state": "meal-log-disabled",
+        "viewport": {
+          "height": 900,
+          "width": 1280
+        },
+        "viewportLabel": "desktop",
+        "bottomAndText": null,
+        "deepLinkSunday": null
+      },
+      "bytes": 26241,
+      "png_dimensions": {
+        "height": 900,
+        "width": 1280
+      },
+      "png_signature_hex": "89504e470d0a1a0a",
+      "sha256": "cdc481029d114ce342653cf9df655a4b4c854d5dca5c91a4098e026086a674d4"
+    }
+  ],
+  "supplemental_local_inspection": [
+    {
+      "bytes": 118520,
+      "captured_at": "2026-08-11T07:24:52.810Z",
+      "committed": false,
+      "counters": {
+        "nutrition": 0,
+        "planner": 1,
+        "productMethods": []
+      },
+      "file": "PLANNER_WEEK-mobile-default-text-200-local-only.png",
+      "fixture": {
+        "authenticated": true,
+        "column_count": 3,
+        "fixed_now": "2026-07-23T09:00:00.000+09:00",
+        "root_text_scale_percent": 200,
+        "selected_date": "2026-07-23",
+        "state": "text-200"
+      },
+      "geometry": {
+        "configuredColumnCount": 3,
+        "contentPadding": {
+          "left": 16,
+          "right": 16
+        },
+        "dateRail": {
+          "buttonCount": 7,
+          "buttonSizes": [
+            {
+              "height": 54,
+              "width": 44
+            },
+            {
+              "height": 54,
+              "width": 44
+            },
+            {
+              "height": 54,
+              "width": 44
+            },
+            {
+              "height": 54,
+              "width": 44
+            },
+            {
+              "height": 54,
+              "width": 44
+            },
+            {
+              "height": 54,
+              "width": 44
+            },
+            {
+              "height": 54,
+              "width": 44
+            }
+          ],
+          "clientWidth": 332,
+          "containedInViewport": true,
+          "maxScrollLeft": 0,
+          "scrollLeft": 0,
+          "scrollWidth": 332,
+          "selectedFullyVisible": true,
+          "selectedLabel": "7/23 목 선택"
+        },
+        "document": {
+          "clientWidth": 390,
+          "horizontalOverflowPx": 0,
+          "scrollHeight": 2499,
+          "scrollWidth": 390
+        },
+        "keyTargetBelow44": [],
+        "keyTargets": [
+          {
+            "ariaLabel": null,
+            "height": 88,
+            "text": "요리 계획",
+            "width": 173
+          },
+          {
+            "ariaLabel": null,
+            "height": 88,
+            "text": "식사 기록",
+            "width": 173
+          },
+          {
+            "ariaLabel": "7/20 월 선택",
+            "height": 54,
+            "text": "월20",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/21 화 선택",
+            "height": 54,
+            "text": "화21",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/22 수 선택",
+            "height": 54,
+            "text": "수22",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/23 목 선택",
+            "height": 54,
+            "text": "목23",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/24 금 선택",
+            "height": 54,
+            "text": "금24",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/25 토 선택",
+            "height": 54,
+            "text": "토25",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/26 일 선택",
+            "height": 54,
+            "text": "일26",
+            "width": 44
+          },
+          {
+            "ariaLabel": "이전 주",
+            "height": 88,
+            "text": "‹",
+            "width": 88
+          },
+          {
+            "ariaLabel": null,
+            "height": 88,
+            "text": "이번 주",
+            "width": 114.02
+          },
+          {
+            "ariaLabel": "다음 주",
+            "height": 88,
+            "text": "›",
+            "width": 88
+          },
+          {
+            "ariaLabel": null,
+            "height": 88,
+            "text": "장보기",
+            "width": 152.67
+          },
+          {
+            "ariaLabel": null,
+            "height": 88,
+            "text": "남은요리",
+            "width": 178.89
+          },
+          {
+            "ariaLabel": null,
+            "height": 88,
+            "text": "장보기",
+            "width": 104.67
+          },
+          {
+            "ariaLabel": null,
+            "height": 88,
+            "text": "상세",
+            "width": 82.45
+          },
+          {
+            "ariaLabel": null,
+            "height": 88,
+            "text": "요리하기",
+            "width": 128.89
+          },
+          {
+            "ariaLabel": null,
+            "height": 88,
+            "text": "상세",
+            "width": 82.45
+          },
+          {
+            "ariaLabel": null,
+            "height": 88,
+            "text": "상세",
+            "width": 82.45
+          }
+        ],
+        "mealColumnCount": 3,
+        "overviewCount": 2,
+        "segmentCount": 2,
+        "segmentLabels": [
+          "요리 계획",
+          "식사 기록"
+        ],
+        "state": "text-200",
+        "viewport": {
+          "height": 844,
+          "width": 390
+        },
+        "viewportLabel": "mobile-default",
+        "bottomAndText": {
+          "bottomClearance": 72,
+          "bottomTab": {
+            "x": 0,
+            "y": 708,
+            "width": 390,
+            "height": 128,
+            "top": 708,
+            "right": 390,
+            "bottom": 836,
+            "left": 0
+          },
+          "planPanel": {
+            "x": 0,
+            "y": -1490,
+            "width": 390,
+            "height": 2126,
+            "top": -1490,
+            "right": 390,
+            "bottom": 636,
+            "left": 0
+          },
+          "scrollY": 1655,
+          "verticalCollapseCandidates": []
+        }
+      },
+      "png_dimensions": {
+        "height": 2499,
+        "width": 390
+      },
+      "png_signature_hex": "89504e470d0a1a0a",
+      "sha256": "4ef62a9ac34de3cea225b1a00d95196eacf80a69ec5438065956d3a7b70309d5"
+    },
+    {
+      "bytes": 140111,
+      "captured_at": "2026-08-11T07:24:52.810Z",
+      "committed": false,
+      "counters": {
+        "nutrition": 0,
+        "planner": 1,
+        "productMethods": []
+      },
+      "file": "PLANNER_WEEK-mobile-narrow-text-200-local-only.png",
+      "fixture": {
+        "authenticated": true,
+        "column_count": 5,
+        "fixed_now": "2026-07-23T09:00:00.000+09:00",
+        "root_text_scale_percent": 200,
+        "selected_date": "2026-07-23",
+        "state": "text-200"
+      },
+      "geometry": {
+        "configuredColumnCount": 5,
+        "contentPadding": {
+          "left": 16,
+          "right": 16
+        },
+        "dateRail": {
+          "buttonCount": 7,
+          "buttonSizes": [
+            {
+              "height": 54,
+              "width": 44
+            },
+            {
+              "height": 54,
+              "width": 44
+            },
+            {
+              "height": 54,
+              "width": 44
+            },
+            {
+              "height": 54,
+              "width": 44
+            },
+            {
+              "height": 54,
+              "width": 44
+            },
+            {
+              "height": 54,
+              "width": 44
+            },
+            {
+              "height": 54,
+              "width": 44
+            }
+          ],
+          "clientWidth": 262,
+          "containedInViewport": true,
+          "maxScrollLeft": 70,
+          "scrollLeft": 0,
+          "scrollWidth": 332,
+          "selectedFullyVisible": true,
+          "selectedLabel": "7/23 목 선택"
+        },
+        "document": {
+          "clientWidth": 320,
+          "horizontalOverflowPx": 0,
+          "scrollHeight": 3575,
+          "scrollWidth": 320
+        },
+        "keyTargetBelow44": [],
+        "keyTargets": [
+          {
+            "ariaLabel": null,
+            "height": 96,
+            "text": "요리 계획",
+            "width": 138
+          },
+          {
+            "ariaLabel": null,
+            "height": 96,
+            "text": "식사 기록",
+            "width": 138
+          },
+          {
+            "ariaLabel": "7/20 월 선택",
+            "height": 54,
+            "text": "월20",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/21 화 선택",
+            "height": 54,
+            "text": "화21",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/22 수 선택",
+            "height": 54,
+            "text": "수22",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/23 목 선택",
+            "height": 54,
+            "text": "목23",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/24 금 선택",
+            "height": 54,
+            "text": "금24",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/25 토 선택",
+            "height": 54,
+            "text": "토25",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/26 일 선택",
+            "height": 54,
+            "text": "일26",
+            "width": 44
+          },
+          {
+            "ariaLabel": "이전 주",
+            "height": 88,
+            "text": "‹",
+            "width": 88
+          },
+          {
+            "ariaLabel": null,
+            "height": 88,
+            "text": "이번 주",
+            "width": 114.02
+          },
+          {
+            "ariaLabel": "다음 주",
+            "height": 88,
+            "text": "›",
+            "width": 88
+          },
+          {
+            "ariaLabel": null,
+            "height": 88,
+            "text": "장보기",
+            "width": 152.67
+          },
+          {
+            "ariaLabel": null,
+            "height": 88,
+            "text": "남은요리",
+            "width": 178.89
+          },
+          {
+            "ariaLabel": null,
+            "height": 88,
+            "text": "장보기",
+            "width": 104.67
+          },
+          {
+            "ariaLabel": null,
+            "height": 88,
+            "text": "상세",
+            "width": 82.45
+          },
+          {
+            "ariaLabel": null,
+            "height": 88,
+            "text": "요리하기",
+            "width": 128.89
+          },
+          {
+            "ariaLabel": null,
+            "height": 88,
+            "text": "상세",
+            "width": 82.45
+          },
+          {
+            "ariaLabel": null,
+            "height": 88,
+            "text": "상세",
+            "width": 82.45
+          }
+        ],
+        "mealColumnCount": 5,
+        "overviewCount": 2,
+        "segmentCount": 2,
+        "segmentLabels": [
+          "요리 계획",
+          "식사 기록"
+        ],
+        "state": "text-200",
+        "viewport": {
+          "height": 693,
+          "width": 320
+        },
+        "viewportLabel": "mobile-narrow",
+        "bottomAndText": {
+          "bottomClearance": 72,
+          "bottomTab": {
+            "x": 0,
+            "y": 557,
+            "width": 320,
+            "height": 128,
+            "top": 557,
+            "right": 320,
+            "bottom": 685,
+            "left": 0
+          },
+          "planPanel": {
+            "x": 0,
+            "y": -2709,
+            "width": 320,
+            "height": 3194,
+            "top": -2709,
+            "right": 320,
+            "bottom": 485,
+            "left": 0
+          },
+          "scrollY": 2882,
+          "verticalCollapseCandidates": []
+        }
+      },
+      "png_dimensions": {
+        "height": 3575,
+        "width": 320
+      },
+      "png_signature_hex": "89504e470d0a1a0a",
+      "sha256": "06b49a674875c12ee5c574ada2d82f30d21c303ff4c99de3ed56301da9d337a9"
+    },
+    {
+      "bytes": 101986,
+      "captured_at": "2026-08-11T07:24:52.810Z",
+      "committed": false,
+      "counters": {
+        "nutrition": 0,
+        "planner": 1,
+        "productMethods": []
+      },
+      "file": "PLANNER_WEEK-desktop-text-200-local-only.png",
+      "fixture": {
+        "authenticated": true,
+        "column_count": 1,
+        "fixed_now": "2026-07-23T09:00:00.000+09:00",
+        "root_text_scale_percent": 200,
+        "selected_date": "2026-07-23",
+        "state": "text-200"
+      },
+      "geometry": {
+        "configuredColumnCount": 1,
+        "contentPadding": {
+          "left": 16,
+          "right": 16
+        },
+        "dateRail": {
+          "buttonCount": 7,
+          "buttonSizes": [
+            {
+              "height": 54,
+              "width": 44
+            },
+            {
+              "height": 54,
+              "width": 44
+            },
+            {
+              "height": 54,
+              "width": 44
+            },
+            {
+              "height": 54,
+              "width": 44
+            },
+            {
+              "height": 54,
+              "width": 44
+            },
+            {
+              "height": 54,
+              "width": 44
+            },
+            {
+              "height": 54,
+              "width": 44
+            }
+          ],
+          "clientWidth": 1182,
+          "containedInViewport": true,
+          "maxScrollLeft": 0,
+          "scrollLeft": 0,
+          "scrollWidth": 1182,
+          "selectedFullyVisible": true,
+          "selectedLabel": "7/23 목 선택"
+        },
+        "document": {
+          "clientWidth": 1280,
+          "horizontalOverflowPx": 0,
+          "scrollHeight": 1927,
+          "scrollWidth": 1280
+        },
+        "keyTargetBelow44": [],
+        "keyTargets": [
+          {
+            "ariaLabel": null,
+            "height": 88,
+            "text": "요리 계획",
+            "width": 618
+          },
+          {
+            "ariaLabel": null,
+            "height": 88,
+            "text": "식사 기록",
+            "width": 618
+          },
+          {
+            "ariaLabel": "7/20 월 선택",
+            "height": 54,
+            "text": "월20",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/21 화 선택",
+            "height": 54,
+            "text": "화21",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/22 수 선택",
+            "height": 54,
+            "text": "수22",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/23 목 선택",
+            "height": 54,
+            "text": "목23",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/24 금 선택",
+            "height": 54,
+            "text": "금24",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/25 토 선택",
+            "height": 54,
+            "text": "토25",
+            "width": 44
+          },
+          {
+            "ariaLabel": "7/26 일 선택",
+            "height": 54,
+            "text": "일26",
+            "width": 44
+          },
+          {
+            "ariaLabel": "이전 주",
+            "height": 88,
+            "text": "‹",
+            "width": 88
+          },
+          {
+            "ariaLabel": null,
+            "height": 88,
+            "text": "이번 주",
+            "width": 114.02
+          },
+          {
+            "ariaLabel": "다음 주",
+            "height": 88,
+            "text": "›",
+            "width": 88
+          },
+          {
+            "ariaLabel": null,
+            "height": 88,
+            "text": "장보기",
+            "width": 152.67
+          },
+          {
+            "ariaLabel": null,
+            "height": 88,
+            "text": "남은요리",
+            "width": 178.89
+          },
+          {
+            "ariaLabel": null,
+            "height": 88,
+            "text": "장보기",
+            "width": 104.67
+          },
+          {
+            "ariaLabel": null,
+            "height": 88,
+            "text": "상세",
+            "width": 82.45
+          },
+          {
+            "ariaLabel": null,
+            "height": 88,
+            "text": "요리하기",
+            "width": 128.89
+          },
+          {
+            "ariaLabel": null,
+            "height": 88,
+            "text": "상세",
+            "width": 82.45
+          },
+          {
+            "ariaLabel": null,
+            "height": 88,
+            "text": "상세",
+            "width": 82.45
+          }
+        ],
+        "mealColumnCount": 1,
+        "overviewCount": 2,
+        "segmentCount": 2,
+        "segmentLabels": [
+          "요리 계획",
+          "식사 기록"
+        ],
+        "state": "text-200",
+        "viewport": {
+          "height": 900,
+          "width": 1280
+        },
+        "viewportLabel": "desktop",
+        "bottomAndText": {
+          "bottomClearance": -804,
+          "bottomTab": {
+            "x": 0,
+            "y": 0,
+            "width": 0,
+            "height": 0,
+            "top": 0,
+            "right": 0,
+            "bottom": 0,
+            "left": 0
+          },
+          "planPanel": {
+            "x": 0,
+            "y": -830,
+            "width": 1280,
+            "height": 1634,
+            "top": -830,
+            "right": 1280,
+            "bottom": 804,
+            "left": 0
+          },
+          "scrollY": 1027,
+          "verticalCollapseCandidates": []
+        }
+      },
+      "png_dimensions": {
+        "height": 1927,
+        "width": 1280
+      },
+      "png_signature_hex": "89504e470d0a1a0a",
+      "sha256": "0c987ce58b5f1acaa29650134965b56bc7aee2ba52d1aa29d18c27e995527a06"
+    }
+  ],
+  "validation": {
+    "checks": {
+      "exact_official_matrix_count": 24,
+      "expected_png_signature_hex": "89504e470d0a1a0a",
+      "minimum_bottom_clearance_px": 16,
+      "minimum_target_css_px": 44,
+      "mobile_panel_horizontal_padding_css_px": 16,
+      "required_date_count": 7,
+      "required_overview_count": 2,
+      "required_cold_320_geometry": {
+        "clientWidth": 262,
+        "maxScrollLeft": 70,
+        "scrollLeft": 70,
+        "scrollWidth": 332
+      }
+    },
+    "failures": [],
+    "pass": true
+  }
+}

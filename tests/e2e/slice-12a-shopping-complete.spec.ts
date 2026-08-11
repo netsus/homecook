@@ -136,8 +136,12 @@ async function installPlannerRoute(
       return;
     }
 
-    const requestUrl = new URL(route.request().url());
-    const planDate = requestUrl.searchParams.get("start_date") ?? "2026-04-12";
+    const now = new Date();
+    const planDate = [
+      now.getFullYear(),
+      String(now.getMonth() + 1).padStart(2, "0"),
+      String(now.getDate()).padStart(2, "0"),
+    ].join("-");
 
     await route.fulfill({
       json: {
@@ -312,10 +316,11 @@ test.describe("slice 12a: shopping complete", () => {
 
       await page.goto("/planner");
 
-      const completedMeal = page.getByRole("link", {
-        name: /김치찌개 4인분 장보기 완료/,
-      });
-      await expect(completedMeal).toBeVisible();
+      const completedMeal = page.getByTestId("planner-meal-meal-1");
+      await expect(
+        completedMeal.getByRole("link", { name: "김치찌개" }),
+      ).toBeVisible();
+      await expect(completedMeal).toContainText("4인분 · 장보기 완료");
     });
 
     test("should handle 401 error by redirecting to login", async ({ page }) => {

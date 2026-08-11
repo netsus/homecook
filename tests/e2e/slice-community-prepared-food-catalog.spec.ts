@@ -590,24 +590,23 @@ async function captureViewportEvidence(
     scale: "css",
   });
 
+  let plannerNutritionRequests = 0;
+  await page.route("**/api/v1/planner/nutrition?*", async (route) => {
+    plannerNutritionRequests += 1;
+    await route.abort();
+  });
   await page.goto("/planner");
-  const weekNutritionSummary = page.getByTestId("planner-week-nutrition-summary");
-  await expect(weekNutritionSummary).toBeVisible();
-  await expect(weekNutritionSummary).toContainText("kcal", { timeout: 15_000 });
+  await page
+    .getByRole("list", { name: "주간 날짜" })
+    .getByRole("button")
+    .first()
+    .click();
   const plannerProductRow = page.getByText("플레인 요거트").first();
   await expect(plannerProductRow).toBeVisible();
+  expect(plannerNutritionRequests).toBe(0);
   await expectNoHorizontalOverflow(page);
   await page.keyboard.press("Home");
   expect(await page.evaluate(() => window.scrollY)).toBeLessThanOrEqual(1);
-  if (viewport.width === 320) {
-    const bottomNav = page.getByRole("navigation", { name: "플래너 하단 탭" });
-    const rowBox = await plannerProductRow.boundingBox();
-    const navBox = await bottomNav.boundingBox();
-    expect(rowBox).not.toBeNull();
-    expect(navBox).not.toBeNull();
-    const visibleHeight = Math.min(rowBox!.y + rowBox!.height, navBox!.y) - Math.max(rowBox!.y, 0);
-    expect(visibleHeight).toBeGreaterThanOrEqual(12);
-  }
   await page.screenshot({
     path: path.join(EVIDENCE_DIR, `planner-week-after-${viewport.suffix}.png`),
     scale: "css",

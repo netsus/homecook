@@ -111,7 +111,15 @@
       "authority_report_paths": ["ui/designs/authority/PLANNER_WEEK-authority.md"]
     }
   },
-  "external_smokes": [],
+  "external_smokes": [
+    "existing Planner route bottom-tab segment deep-link back and focus restoration",
+    "plan and meal-log selected-date scroll input row total and cache isolation",
+    "completed shopping read-only regression",
+    "legacy product plan owner-only read detail and delete nondisclosure",
+    "planner nutrition endpoint and v1 decoder compatibility without new UI calls",
+    "HOME recipe-only search regression",
+    "390px 320px desktop visual accessibility and product-design-authority evidence"
+  ],
   "blocked_conditions": [
     "stage1-independent-reviews-not-zero",
     "stage1-author-self-approval-or-claude-use",
@@ -129,5 +137,5 @@
     "current-head-check-pending-absent-stale-failed-or-cancelled"
   ],
   "max_fix_rounds": {"backend": 3, "frontend": 6},
-  "notes": "Stage 1 runs only docs validators, the focused planner-shell Stage1 relock test plus workflow-doc tests, lint, typecheck, audit and diff. Current external_smokes is intentionally empty because component/E2E/visual/a11y/browser/local-first/server-production evidence belongs to future Stage 4/5/6 and cannot truthfully exist in this docs PR. The work item preserves those future obligations. #9 PR #1319 implementation is merged at base 8ba3fa5a2a198eb4f9c19d59cea5f6ccc52fdd4f, but merged-exact server-production/local-rehearsal, Manual/server-Mac/OAuth, capability, R/R+1/R+2 and activation remain pending. #10 owns Planner shell and plan-only PLANNER_WEEK composition; #11 owns COOK_MODE/LEFTOVERS #8-consumer UI, #12 owns MEAL_LOG content, #13 owns legacy tombstones. Stage 2 backend implementation is N/A; no schema, migration, RLS, RPC, endpoint, field or status is added."
+  "notes": "Stage 4 implementation and fresh 390px/320px/desktop evidence are present on the PR lineage, and the seven external_smokes are relocked verbatim from the current work item. Independent Stage 5 and final product-design-authority are APPROVE with P0/P1/P2 0/0/0; final authority task 019fefdd-5706-72a2-8e58-da8785723edd reviewed exact head ffd33d029b7f03bcb231e5b352dddedeed2d437f, and Design Status is confirmed in ui/designs/authority/PLANNER_WEEK-authority.md. This projection does not approve Stage 6, Ready or merge. #9 merged-exact server-production/local-rehearsal, Manual/server-Mac/OAuth, physical-device/AT, capability, R/R+1/R+2 and activation remain pending. #10 owns Planner shell and plan-only PLANNER_WEEK composition; #11 owns COOK_MODE/LEFTOVERS #8-consumer UI, #12 owns MEAL_LOG content, #13 owns legacy tombstones. Stage 2 backend implementation is N/A; no schema, migration, RLS, RPC, endpoint, field or status is added."
 }

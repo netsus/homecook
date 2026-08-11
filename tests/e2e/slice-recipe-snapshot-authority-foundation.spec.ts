@@ -14,8 +14,12 @@ async function setAuthenticated(page: Page) {
 
 async function installPinnedHistoryRoutes(page: Page) {
   await page.route("**/api/v1/planner?*", async (route) => {
-    const url = new URL(route.request().url());
-    const planDate = url.searchParams.get("start_date") ?? "2026-07-29";
+    const now = new Date();
+    const planDate = [
+      now.getFullYear(),
+      String(now.getMonth() + 1).padStart(2, "0"),
+      String(now.getDate()).padStart(2, "0"),
+    ].join("-");
 
     await route.fulfill({
       json: {
