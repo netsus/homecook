@@ -393,6 +393,38 @@ describe("planner week screen Stage 4", () => {
     expect(navigationMocks.push).toHaveBeenCalledTimes(1);
   });
 
+  it("treats the selected date as a no-op before browser Back restores the previous week", async () => {
+    const view = render(<PlannerWeekScreen />);
+    await screen.findByText("김치찌개");
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+
+    await user.click(screen.getByRole("button", { name: "다음 주" }));
+    await waitFor(() => {
+      expect(fetchPlanner).toHaveBeenCalledTimes(2);
+      expect(fetchPlanner).toHaveBeenLastCalledWith("2026-03-31", "2026-04-06");
+    });
+
+    navigationMocks.searchParams.mockReturnValue(
+      new URLSearchParams("date=2026-03-31"),
+    );
+    view.rerender(<PlannerWeekScreen />);
+    await user.click(screen.getByRole("button", { name: "3/31 화 선택" }));
+
+    expect(navigationMocks.push).toHaveBeenCalledTimes(1);
+    expect(fetchPlanner).toHaveBeenCalledTimes(2);
+
+    navigationMocks.searchParams.mockReturnValue(
+      new URLSearchParams("date=2026-03-24"),
+    );
+    view.rerender(<PlannerWeekScreen />);
+
+    await waitFor(() => {
+      expect(fetchPlanner).toHaveBeenCalledTimes(3);
+      expect(fetchPlanner).toHaveBeenLastCalledWith("2026-03-23", "2026-03-29");
+    });
+    expect(await screen.findByRole("heading", { name: "화 3월 24일" })).toBeTruthy();
+  });
+
   it("does not reload planner data for same-week segment and date URL changes", async () => {
     const view = render(<PlannerWeekScreen />);
     await screen.findByText("김치찌개");

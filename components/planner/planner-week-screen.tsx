@@ -321,6 +321,13 @@ export function PlannerWeekScreen({
       location: { date: string; segment: PlannerShellSegment },
       method: "push" | "replace" = "push",
     ) => {
+      const currentLocation = readPlannerShellLocation(searchParams, selectedDate);
+      if (
+        currentLocation.date === location.date &&
+        currentLocation.segment === location.segment
+      ) {
+        return;
+      }
       const href = buildPlannerShellHref(
         new URLSearchParams(searchParams.toString()),
         location,
@@ -328,7 +335,7 @@ export function PlannerWeekScreen({
       pendingNavigationRef.current = location;
       router[method](href);
     },
-    [router, searchParams],
+    [router, searchParams, selectedDate],
   );
   const handleRestoreConsumed = useCallback(() => {
     const next = new URLSearchParams(searchParams.toString());
@@ -361,6 +368,7 @@ export function PlannerWeekScreen({
   }
 
   function handleDateSelect(dateKey: string) {
+    if (dateKey === selectedDate) return;
     setSelectedDateKey(dateKey);
     navigateShell({ date: dateKey, segment: activeSegment });
   }
