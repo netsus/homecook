@@ -496,4 +496,26 @@ describe("prepared food planner entry API contract", () => {
     expect((await replay.json()).error.code).toBe("RESOURCE_NOT_FOUND");
     expect(replayDb.rpc).not.toHaveBeenCalled();
   });
+
+  it("rejects an other-user legacy delete before the delete RPC", async () => {
+    const db = serviceClient({ entryState: ownedEntry({ user_id: USER_ID }) });
+    createRouteHandlerClient.mockResolvedValue(routeClient({ id: OTHER_USER_ID }));
+    createServiceRoleClient.mockReturnValue(db);
+    const route = await importItemRoute();
+    expect(route).not.toBeNull();
+    if (!route) return;
+
+    const response = await route.DELETE(
+      new Request("http://localhost", { method: "DELETE" }),
+      { params: Promise.resolve({ entry_id: ENTRY_ID }) },
+    );
+
+    expect(response.status).toBe(403);
+    expect(await response.json()).toMatchObject({
+      success: false,
+      data: null,
+      error: { code: "FORBIDDEN", fields: [] },
+    });
+    expect(db.rpc).not.toHaveBeenCalled();
+  });
 });
