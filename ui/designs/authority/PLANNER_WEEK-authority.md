@@ -1,5 +1,88 @@
 # PLANNER_WEEK Authority Review
 
+## planner-shell #10 Fresh Independent Final Product Design Authority
+
+> 검토 역할: fresh independent Codex `product-design-authority` final authority gate
+> authority task ID: `019fefdd-5706-72a2-8e58-da8785723edd`
+> 검토일: 2026-08-11
+> reviewed PR / branch: PR #1331 / `feature/fe-planner-shell` (Draft, OPEN, MERGEABLE, CLEAN)
+> reviewed exact base: `2a32d20bc45279bebbcd2cf9f201898f2edc658b`
+> reviewed exact head: `ffd33d029b7f03bcb231e5b352dddedeed2d437f`
+> reviewed exact tree: `a292896357a9901ac6849efa4406b297b0171b14`
+> reviewed exact parent: `2d11ad27249d05de6d21397c8787ce6f470c4219`
+> product / evidence lineage: `3556375f7d5a131c7a7ea9db333b5a6b05acb922` / `2d11ad27249d05de6d21397c8787ce6f470c4219`
+> 공식 tuple: 요구사항 `v1.7.30` / 화면정의서 `v1.5.34` / 유저 Flow `v1.3.32` / DB `v1.3.32` / API `v1.2.37`
+
+> evidence:
+> - `ui/designs/evidence/planner-shell/README.md`
+> - `ui/designs/evidence/planner-shell/manifest.json`
+> - `ui/designs/evidence/planner-shell/PLANNER_WEEK-mobile-default-default.png`
+> - `ui/designs/evidence/planner-shell/PLANNER_WEEK-mobile-narrow-default.png`
+> - `ui/designs/evidence/planner-shell/PLANNER_WEEK-desktop-default.png`
+> - required 24-PNG state matrix는 아래 보존된 Stage 5 supporting review의 `> evidence:` block과 `automation-spec.json`에 전부 열거돼 있다.
+
+### Final verdict
+
+**APPROVE (`pass`)**
+
+- P0 / blocker: **0 / 0**
+- P1 / major: **0 / 0**
+- P2 / minor: **0 / 0**
+- unresolved required finding: **0**
+
+이 final authority는 exact reviewed head `ffd33d02...`의 제품 tree와 그 조상인 fresh Stage 4 evidence만 독립 판정한다. `ffd33d02...`는 product/evidence head `2d11ad27...` 위의 Stage 5 report/checklist-only successor이며 제품 코드, 테스트, PNG, manifest를 바꾸지 않았다. Stage 5 task `019fefc0-6775-7222-adb2-424bd0258a71`의 APPROVE와 generator task `019fefab-38cc-77b0-bcd5-00be9f024690`의 GREEN은 입력 evidence로만 사용했고, 결론은 이 task가 원본 이미지·코드·테스트·current-head delivery를 다시 확인해 내렸다.
+
+`Design Status`는 이 gate 소유 projection에서 `confirmed`로 전환할 수 있다. 이는 Stage 6, Ready, merge, production, Supabase/Vercel, capability 또는 activation 승인이 아니다. workpack lifecycle은 계속 `in_progress`, verification은 `pending`이다.
+
+### Scorecard
+
+| 축 | 판정 | 근거 |
+| --- | --- | --- |
+| mobile UX | pass | 390px/320px 모두 첫 planner block에 7-day rail과 2-day overview가 붙어 있고, 선택일 상세와 CTA가 세로 흐름으로 이어진다. |
+| interaction clarity | pass | 기존 Planner route/bottom tab 안의 두 segment, 주간 이동, 선택일, status별 primary/secondary action, legacy read-only 경계가 익숙한 패턴으로 구분된다. |
+| visual hierarchy | pass | segment → week/date → 2-day overview → week action → selected-day meals → legacy section 순서가 일관되고 상태/행동 위계가 명확하다. |
+| color/material fit | pass | 기존 app token, surface, border, brand/danger 상태를 재사용하며 loading/empty/error/unauthorized/read-only/disabled가 색만이 아니라 구조와 copy로도 구분된다. |
+| familiar app pattern fit | pass | planner-local date rail, bottom tab, tab semantics, bottom sheet/confirm dialog와 focus restore가 기존 모바일 mental model을 보존한다. |
+
+### Original-size 24-PNG audit and integrity
+
+24개 PNG를 thumbnail/manifest 대리 판정 없이 `original` 크기로 각각 직접 열었다. 독립 재계산 결과 PNG signature, bytes, width/height, SHA-256, capture timestamp가 manifest와 **24/24 일치**, 총 **1,192,681 bytes**, mismatch **0**이다. 공통 실제 capture timestamp는 `2026-08-11T07:24:52.810Z`다.
+
+- 390px × 8 states: 16px gutter, 44px target, 3 configured columns, 7-day rail, 2-day overview, CTA 순서와 bottom-tab clearance가 안정적이다.
+- 320px × 8 states: 5 configured columns와 긴 meal label이 세로 reflow를 유지하고 page-level overflow가 없다. cold Sunday는 rail `scrollWidth=332`, `clientWidth=262`, `maxScrollLeft=70`, `scrollLeft=70`에서 완전히 보인다.
+- 1280px × 8 states: 1 configured column, desktop top navigation, 동일 segment/date/state model과 2-day overview를 유지한다.
+- 각 viewport의 `default/loading/empty/error/unauthorized/shopping-read-only/legacy-read-only/meal-log-disabled`가 시각·문구·행동 면에서 구별된다.
+- full-page 모바일 캡처에서 fixed bottom tab이 중간 콘텐츠 위에 합성된 모습은 stitching 특성이다. 별도 runtime 측정에서 최하단으로 스크롤한 뒤 action과 tab 사이 clearance가 default/200% 모두 16px 이상임을 확인해 실제 차단 finding으로 세지 않았다.
+
+### Runtime, accessibility, history and focus evidence
+
+- focused Vitest: **5 files / 27 tests passed**.
+- focused Playwright: desktop/mobile **10/10 passed**.
+- segment는 `tablist/tab/tabpanel`, selected-only `tabIndex=0`, `aria-selected`, `aria-controls/aria-labelledby`를 사용한다.
+- Arrow Left/Right, Home/End는 focus와 selection을 함께 이동하고 ordinary selection은 panel/heading focus를 강제로 빼앗지 않는다.
+- URL `segment/date`가 deep-link와 back/forward의 source다. guest auth return은 requested segment/date를 보존하며 private plan fetch를 하지 않는다.
+- legacy detail bottom sheet와 delete confirmation은 focus trap, Escape, opener/fallback focus restore, 실패 시 confirmation 유지 동작이 잠겨 있다.
+- 320px/200%에서 7개 날짜 target은 모두 44×44 CSS px 이상이고, 16px gutter, 2-day overview, page overflow 0과 bottom clearance를 유지한다.
+
+### Official contract and ownership boundary
+
+1. `PLANNER_WEEK`는 plan-only Recipe Meal의 `registered -> shopping_done -> cook_done`과 장보기/요리 action만 표시하며 `cook_done`을 실제 섭취나 목표 달성으로 바꾸지 않는다.
+2. `MEAL_LOG`는 #12 전까지 fail-closed unavailable panel만 표시하고 initial/deep-link log 진입에서 private Planner fetch를 하지 않는다.
+3. 계획 영양 UI와 새 `GET /planner/nutrition` call은 없고 endpoint/decoder는 compatibility floor로 유지된다.
+4. legacy product는 selected-date read-only card, same-screen pinned detail, confirmed owner delete만 제공한다. add/edit/repin/auto-migrate/shop/cook/XP/status action은 없다.
+5. 새 route, bottom tab, API, schema, migration, RLS, RPC, endpoint, field, status 또는 public error code가 추가되지 않았다. #11 COOK_MODE/LEFTOVERS, #12 MEAL_LOG body, #13 tombstone, HOME recipe-only 경계도 유지된다.
+
+### Evidence limits and pending gates
+
+- static PNG와 deterministic mock은 physical device safe area, virtual keyboard occlusion, runtime focus timing, screen-reader announcement 또는 full WCAG conformance를 증명하지 않는다.
+- Playwright/DOM evidence도 실제 hardware keyboard, VoiceOver/TalkBack, 실제 320/390 device의 viewport chrome과 virtual keyboard를 대체하지 않는다.
+- Manual/device, server-Mac/OAuth, merged-exact server-production/local-rehearsal, capability, `R/R+1/R+2`, activation은 계속 pending이다.
+- 이 task는 제품 repair/generator/Stage 6/Ready/merge/Discord/remote production·Supabase·Vercel·activation을 수행하거나 승인하지 않는다.
+
+### Next action
+
+fresh independent Stage 6 `frontend-closeout-reviewer`가 이 final authority verdict, successor current-head 전체 checks, closeout projection과 non-manual checklist를 별도로 검토한다.
+
 ## planner-shell #10 Stage 5 Independent Frontend / Design Review
 
 > 검토 역할: fresh independent Codex `design-reviewer`

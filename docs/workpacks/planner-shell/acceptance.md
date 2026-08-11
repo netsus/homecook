@@ -51,7 +51,7 @@
 - [x] canonical PLANNER_WEEK design refresh and independent critic pass before Stage 2 <!-- omo:id=accept-planner-shell-design-critic;stage=4;scope=frontend;review=5,6 -->
 - [x] 390px/320px/desktop static evidence covers 16px padding, 44px targets, 7-day containment, at least 2-day overview, user-configured 1/3/5 meal columns, long custom meal names, 200% text scaling, localization expansion, sticky boundaries, bottom-tab safe-area and no page overflow <!-- omo:id=accept-planner-shell-design-evidence;stage=4;scope=frontend;review=5,6 -->
 - [x] child sheet/detail traps focus, supports Escape where appropriate, restores the invoking control and preserves scroll context <!-- omo:id=accept-planner-shell-focus-trap;stage=4;scope=frontend;review=5,6 -->
-- [ ] refreshed product-design-authority report approves before confirmed <!-- omo:id=accept-planner-shell-authority;stage=4;scope=frontend;review=5,6 -->
+- [x] refreshed product-design-authority report approves before confirmed <!-- omo:id=accept-planner-shell-authority;stage=4;scope=frontend;review=5,6 -->
 
 ## Contract / Verification
 

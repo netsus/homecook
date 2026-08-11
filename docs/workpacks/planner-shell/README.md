@@ -190,8 +190,8 @@ segment switch:
 - UI risk: high-risk anchor extension of `PLANNER_WEEK`.
 - Anchor screen dependency: `PLANNER_WEEK`; required screen: `PLANNER_WEEK`.
 - Visual artifact: canonical `ui/designs/PLANNER_WEEK.md`; future Stage 4 screenshot evidence paths are declared in `automation-spec.json`.
-- Authority status: `required`
-- Notes: refreshed Stage 4 runtime evidence and a fresh product-design-authority verdict remain pending; this metadata repair does not claim Stage 4 authority completion.
+- Authority status: `approved`
+- Notes: fresh independent final authority task `019fefdd-5706-72a2-8e58-da8785723edd` approved exact reviewed head `ffd33d029b7f03bcb231e5b352dddedeed2d437f` with P0/P1/P2 `0/0/0` and unresolved required findings `0`; Stage 6 and lifecycle/Manual/activation gates remain pending.
 - before Stage 2, update canonical `ui/designs/PLANNER_WEEK.md` for the two-segment shell, plan-only hierarchy, legacy read-only section and all states, then obtain independent critique at `ui/designs/critiques/PLANNER_WEEK-critique.md`.
 - legacy design/critique/authority artifacts are not #10 evidence unless explicitly refreshed against this contract.
 - Stage 4 requires mobile-default 390px, mobile-narrow 320px and desktop evidence covering default, loading, empty, error, unauthorized, shopping read-only and legacy read-only. Static PNG, Playwright interaction, and Manual Only proof remain separate evidence classes.
@@ -205,7 +205,7 @@ segment switch:
 
 ## Design Status
 
-`pending-review`. Stage 4 implements the locked structure and interaction. The separate evidence generator, Stage 5 review and refreshed screenshot/Figma product-design-authority verdict remain required; this status is not an approval.
+`confirmed`. The fresh evidence generator, Stage 5 review and independent final product-design-authority gate approved the exact implemented/evidence lineage with blocker/major/minor `0/0/0`. This design projection does not approve Stage 6, Ready, merge, production or activation.
 
 ## Stage 1 Current Gate
 
@@ -227,8 +227,10 @@ segment switch:
 - [ ] post-merge master QA/Policy/Security/Vercel checks green <!-- omo:id=delivery-planner-shell-post-merge-checks;stage=2;scope=shared;review=6 -->
 - [ ] Stage 2 TDD RED before implementation <!-- omo:id=delivery-planner-shell-stage2-characterization;stage=2;scope=backend;review=3,6 -->
 - [x] Stage 4 390/320/desktop visual-a11y-route evidence green <!-- omo:id=delivery-planner-shell-stage4-evidence;stage=4;scope=frontend;review=5,6 -->
-- [ ] product-design-authority approved before confirmed <!-- omo:id=delivery-planner-shell-design-authority;stage=4;scope=frontend;review=5,6 -->
+- [x] product-design-authority approved before confirmed <!-- omo:id=delivery-planner-shell-design-authority;stage=4;scope=frontend;review=5,6 -->
 
 Stage 2 note: this test-only slice recorded an existing-behavior characterization baseline GREEN. Backend implementation and a behavioral TDD RED are N/A because no runtime repair was required; the stale generic checklist item therefore remains unchecked.
 
-Stage 5 note: the fresh independent review at exact head `2d11ad27249d05de6d21397c8787ce6f470c4219` approved the 390/320/1280 screenshot matrix and deterministic browser evidence with P0/P1/P2 `0/0/0`. Product-design final authority, Stage 6, Manual/device/server evidence and activation remain pending; Design Status stays `pending-review`.
+Stage 5 note: the fresh independent review at exact head `2d11ad27249d05de6d21397c8787ce6f470c4219` approved the 390/320/1280 screenshot matrix and deterministic browser evidence with P0/P1/P2 `0/0/0`. At that publication point, product-design final authority remained pending and Design Status stayed `pending-review`.
+
+Final authority note: fresh independent task `019fefdd-5706-72a2-8e58-da8785723edd` approved exact head `ffd33d029b7f03bcb231e5b352dddedeed2d437f` with blocker/major/minor `0/0/0` and unresolved required findings `0`. Design Status is now `confirmed`; Stage 6, Ready, merge, Manual/device/server evidence and activation remain pending.
