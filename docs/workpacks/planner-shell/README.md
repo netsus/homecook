@@ -205,7 +205,12 @@ segment switch:
 
 ## Design Status
 
-`confirmed`. The fresh evidence generator, Stage 5 review and independent final product-design-authority gate approved the exact implemented/evidence lineage with blocker/major/minor `0/0/0`. This design projection does not approve Stage 6, Ready, merge, production or activation.
+- [ ] 임시 UI (temporary)
+- [ ] 리뷰 대기 (pending-review)
+- [x] 확정 (confirmed)
+- [ ] N/A
+
+The fresh evidence generator, Stage 5 review and independent final product-design-authority gate approved the exact implemented/evidence lineage with blocker/major/minor `0/0/0`. This design projection does not approve Stage 6, Ready, merge, production or activation.
 
 ## Stage 1 Current Gate
 

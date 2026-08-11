@@ -39,7 +39,7 @@
 - [x] same-screen detail shows pinned nutrition; no new detail route <!-- omo:id=accept-planner-shell-legacy-detail;stage=4;scope=frontend;review=5,6 -->
 - [ ] owner delete is the only legacy mutation and preserves nondisclosure <!-- omo:id=accept-planner-shell-legacy-delete;stage=2;scope=shared;review=3,6 -->
 - [x] unauthenticated access keeps existing `401 UNAUTHORIZED`; retained legacy delete keeps existing `401 UNAUTHORIZED`, `403 FORBIDDEN` and `404 RESOURCE_NOT_FOUND` without a new error code <!-- omo:id=accept-planner-shell-errors;stage=2;scope=shared;review=3,6 -->
-- [ ] no auto meal-log migration, current-version repin, cook/shop/XP/status action <!-- omo:id=accept-planner-shell-no-legacy-expansion;stage=4;scope=shared;review=6 -->
+- [x] no auto meal-log migration, current-version repin, cook/shop/XP/status action <!-- omo:id=accept-planner-shell-no-legacy-expansion;stage=4;scope=shared;review=6 -->
 - [x] GET /planner/nutrition, legacy GET/delete and v1 cursor survive at least one compatibility release and until #13 approved compatibility evidence/tombstone contract <!-- omo:id=accept-planner-shell-compat-floor;stage=2;scope=shared;review=3,6 -->
 - [x] HOME remains recipe-only and unified food search is not added there <!-- omo:id=accept-planner-shell-home-boundary;stage=4;scope=frontend;review=5,6 -->
 - [ ] #12 owns MEAL_LOG UI and #13 owns tombstones <!-- omo:id=accept-planner-shell-successor-boundary;stage=2;scope=shared;review=3,6 -->
