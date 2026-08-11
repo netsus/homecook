@@ -8,7 +8,7 @@
 2. `com.homecook.production` LaunchAgent의 working directory와 실행 script가 canary를 실행하는 exact implementation checkout을 가리켜야 한다. `baseline`만 기존 dirty live checkout을 허용한다.
 3. operator는 production 로그인 및 최소 planner mutation 권한이 있는 전용 canary 계정을 준비한다. 실제 로그인·mutation 실행은 Manual Only다.
 4. adapter 파일은 저장소 밖 canonical absolute path에 만들고 권한을 정확히 `0600`으로 둔다. 바로 위 parent directory도 canonical real directory이며 현재 실행 사용자 소유, 정확히 `0700`이어야 한다. 파일도 현재 사용자 소유여야 하며 symlink, 상대/alias path, 더 넓거나 더 좁은 권한은 거부된다.
-5. incident baseline 날짜는 `2026-08-08`이다. 이후 `2026-08-09 KST` 재점검에서 운영 로그의 `ACCOUNT_SESSION_STALE` 누적값이 이미 `4`임을 확인했다. 따라서 canary의 `account_session_stale_count=0`은 전체 누적값이 아니라 **배포 시작 이후 delta 0**을 뜻한다. 배포 시각 직전 누적값은 별도 안전한 숫자로만 기록하고 원문 로그, ID, 경로는 evidence JSON에 복사하지 않는다.
+5. incident baseline 날짜는 `2026-08-08`이다. 이후 `2026-08-09 KST` 재점검에서 운영 로그의 `ACCOUNT_SESSION_STALE` 누적값이 이미 `4`임을 확인했다. 따라서 canary의 `account_session_stale_count=0`은 전체 누적값이 아니라 **새 observability migration이 적용된 시점 이후 unexpected stale 0**을 뜻한다. 새 migration은 PII 없는 singleton 관찰 구간을 시작하며 재적용 시 카운터를 0으로 초기화한다. 원문 로그, ID, 경로는 evidence JSON에 복사하지 않는다.
 
 ## Adapter 경계
 
@@ -16,23 +16,24 @@
 
 | Method | 안전한 반환값 |
 | --- | --- |
-| `openSession()` | `{ session: <opaque>, bindingCreatedAt: <UTC ISO> }` |
-| `readBindingExpiry(session)` | UTC ISO timestamp |
+| `openSession()` | `{ session: <opaque>, bindingCreatedAt: <UTC ISO> }` (`bindingCreatedAt`은 호환용 key이며 실제 의미는 브라우저에서 관찰한 fresh login 완료 시각) |
+| `readBindingExpiry(session)` | UTC ISO timestamp (호환용 method 이름이며 실제 의미는 브라우저 auth session의 관찰된 만료 시각) |
 | `refreshSession(oldSession)` | 새 opaque session handle |
 | `plannerRead(session)` | `PASS` |
-| `plannerWrite(session)` | `{ status: "PASS", cleanupHandle: <opaque> }` |
-| `plannerCleanup(session, handle)` | `PASS` |
+| `plannerWrite(session)` | 임시 끼니를 추가하고 `{ status: "PASS", cleanupHandle: <opaque> }` 반환 |
+| `plannerCleanup(session, handle)` | 방금 추가한 임시 끼니 삭제 성공 시 `PASS` |
 | `pantryRead(session)` | `PASS` |
 | `youtubeExtract(session, { url })` | exact `f0E0p1R26Vk` 성공 시 `PASS` |
 | `logout(session)` | `PASS` |
 | `plannerReadAfterLogout(session)` | old/new 각각 `BLOCKED` |
 | `plannerWriteAfterLogout(session)` | old/new 각각 `BLOCKED` |
-| `readObservationCounters()` | `{ counterScope: "SINCE_DEPLOY", observationStartedAt: <UTC ISO>, accountSessionStaleCount: 0, staleTokenMutationCount: 0, firstStaleAt: null }` |
 | `close()` | session/browser 자원 정리 |
 
-planner canary row는 `plannerCleanup` 성공 후에만 planner write를 PASS로 판정한다. logout 뒤 old/new session의 read/write가 모두 차단되어야 한다. refresh 뒤 binding expiry는 이전 값보다 커야 한다.
+관찰 카운터는 adapter가 읽지 않는다. 권한이 분리된 부모 process가 exact `select public.read_full_local_session_observation()::text`만 `supabase_admin`으로 실행하고, `{ counterScope: "SINCE_DEPLOY", observationStartedAt, accountSessionStaleCount, staleTokenMutationCount, firstStaleAt }` 5개 안전 필드만 child에 IPC로 두 번 전달한다. Docker Compose project/service, 단일 healthy container, Docker binary canonical path가 하나라도 다르면 fail closed한다. `staleTokenMutationCount=0`은 차단 시도 0이 아니라 **stale 상태에서 실제 반영된 mutation 0**을 뜻한다.
 
-시간 경계도 runner가 직접 검증한다. session binding은 `observationStartedAt`과 같거나 그 뒤에 만들어져야 하므로 배포 전에 로그인한 오래된 session은 거부한다. `milestone-a-t65`는 `bindingCreatedAt` 이후 최소 65분, `milestone-a-24h`는 `observationStartedAt` 이후 최소 24시간, `milestone-b-7d`는 최소 7일이 지나지 않으면 즉시 실행해도 PASS할 수 없고 fail closed한다. adapter worker의 기본 제한 시간은 20분이며, 무응답이면 강제 종료하고 redaction된 실패만 반환한다.
+planner canary 끼니는 `plannerCleanup`으로 삭제된 뒤에만 planner write를 PASS로 판정한다. logout 뒤 old/new session의 read/write가 모두 차단되어야 한다. refresh 뒤 관찰된 auth session 만료 시각은 이전 값보다 커야 하며, refresh 직후 보호된 planner 조회도 성공해야 한다. DB binding 갱신 자체는 이 브라우저 관찰값 하나로 주장하지 않고 deterministic PostgreSQL gate와 보호 route 성공을 함께 증거로 사용한다.
+
+시간 경계도 runner가 직접 검증한다. fresh login 완료 관찰 시각은 `observationStartedAt`과 같거나 그 뒤여야 하므로 배포 전에 로그인한 오래된 session은 거부한다. `milestone-a-t65`는 같은 ephemeral browser session을 실제 65분 유지한다. 이 phase의 worker 기본 제한은 100분, hard max는 120분이다. `milestone-a-24h`는 `observationStartedAt` 이후 최소 24시간, `milestone-b-7d`는 최소 7일이 지나지 않으면 즉시 실행해도 PASS할 수 없고 fail closed하며 두 phase의 제한은 20분이다.
 
 ## 실행
 
@@ -48,7 +49,14 @@ evidence collector가 읽는 exact summary JSON은 별도 wrapper로 확인한�
 pnpm verify:full-local-session-refresh-lifecycle:json
 ```
 
-운영 adapter 경로는 화면이나 shell history에 token을 넣지 않는 방식으로 설정한다. 값은 secret이 아니라 저장소 밖 `0600` adapter 파일의 경로다.
+먼저 repo-owned adapter를 저장소 밖의 새 wrapper에 설치한다. parent directory와 파일이 이미 있거나 권한/소유권이 다르면 덮어쓰지 않고 실패한다.
+
+```sh
+pnpm install:full-local-session-production-browser-adapter -- \
+  --output /absolute/operator-0700/session-canary-adapter.mjs
+```
+
+운영 adapter 경로는 화면이나 shell history에 token을 넣지 않는 방식으로 설정한다. 값은 secret이 아니라 저장소 밖 `0600` adapter 파일의 경로다. `milestone-a-t65` 실행 시 headed ephemeral browser가 열리면 operator가 앱 로그인 버튼을 눌러 OAuth를 직접 완료한다. 기존 Chrome cookie나 저장된 token을 복사하지 않는다.
 
 ```sh
 FULL_LOCAL_SESSION_CANARY_ADAPTER=/absolute/operator/path/session-canary-adapter.mjs \
@@ -63,9 +71,11 @@ FULL_LOCAL_SESSION_CANARY_ADAPTER=/absolute/operator/path/session-canary-adapter
 
 canary JSON은 `scripts/capture-full-local-session-lifecycle-evidence.mjs`가 exact key와 implementation SHA를 다시 검증한다. post-deploy phase는 LaunchAgent provenance가 현재 implementation checkout과 일치하지 않으면 evidence를 쓰기 전에 fail closed한다. 결과 JSON에는 checkout path나 LaunchAgent raw output을 추가하지 않는다.
 
+`security_function_gate`는 `pnpm verify:full-local-session-security-contracts`로 session 관련 authorization manifest의 정적 계약만 검증한다. 실제 session PostgreSQL/Docker 동작은 별도 `refresh_lifecycle_gate`, `postgres_integration`, `docker_refresh_smoke`가 담당한다. broad `verify:security-functions`는 Supabase CLI가 제공하는 외부 extension 함수 버전까지 비교하므로 이 evidence gate에 대신 사용하지 않는다.
+
 ```sh
 node scripts/capture-full-local-session-lifecycle-evidence.mjs milestone-a-t65 \
-  --live-root /Users/cwj/01_vibe_coding/homecook-full-local-restore \
+  --live-root /absolute/exact-merged-deploy-worktree \
   --output docs/workpacks/full-local-supabase-production/evidence/2026-08-08-session-lifecycle/milestone-a-t65.json
 ```
 

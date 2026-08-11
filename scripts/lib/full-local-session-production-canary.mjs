@@ -17,6 +17,13 @@ const CANARY_RESULT_KEYS = Object.freeze([
   "planner_write",
   "youtube_extract",
 ]);
+const OBSERVATION_COUNTER_KEYS = Object.freeze([
+  "accountSessionStaleCount",
+  "counterScope",
+  "firstStaleAt",
+  "observationStartedAt",
+  "staleTokenMutationCount",
+]);
 const SAFETY_CHECK_KEYS = Object.freeze([
   "binding_expiry_monotonic",
   "logout_new_token_read",
@@ -39,7 +46,6 @@ const ADAPTER_METHODS = Object.freeze([
   "logout",
   "plannerReadAfterLogout",
   "plannerWriteAfterLogout",
-  "readObservationCounters",
   "close",
 ]);
 const SENSITIVE_PATTERN = /(?:\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}|\b[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\b|\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b|access[_-]?token|refresh[_-]?token|authorization|cookie|oauth[_-]?code|client[_-]?secret)/iu;
@@ -51,6 +57,24 @@ const WORKER_ENV_ALLOWLIST = Object.freeze([
   "PATH",
   "TMPDIR",
 ]);
+
+export function resolveProductionCanaryWorkerTimeout({ configuredTimeout, phase }) {
+  if (!PRODUCTION_CANARY_PHASES.includes(phase)) {
+    throw new Error("Production canary phase is invalid.");
+  }
+  const isT65 = phase === "milestone-a-t65";
+  const defaultTimeoutMs = (isT65 ? 100 : 20) * 60 * 1_000;
+  const maximumTimeoutMs = (isT65 ? 120 : 20) * 60 * 1_000;
+  if (configuredTimeout === undefined) return defaultTimeoutMs;
+  if (typeof configuredTimeout !== "string" || !/^\d+$/u.test(configuredTimeout)) {
+    throw new Error("Production canary worker timeout is invalid.");
+  }
+  const timeoutMs = Number(configuredTimeout);
+  if (!Number.isSafeInteger(timeoutMs) || timeoutMs < 100 || timeoutMs > maximumTimeoutMs) {
+    throw new Error("Production canary worker timeout is out of range.");
+  }
+  return timeoutMs;
+}
 
 export function validateProductionCanaryAdapterPath(
   candidate,
@@ -157,9 +181,7 @@ function assertPhaseAndSha({ implementationSha, phase }) {
 }
 
 function validateObservationCounters(counters) {
-  if (counters === null || typeof counters !== "object") {
-    throw new Error("Production canary observation counters are invalid.");
-  }
+  assertExactKeys(counters, OBSERVATION_COUNTER_KEYS, "production canary observation counters");
   if (counters.counterScope !== "SINCE_DEPLOY") {
     throw new Error("Production canary counters must be scoped since deploy.");
   }
@@ -229,10 +251,16 @@ export async function runProductionCanary({
   adapter,
   implementationSha,
   now = () => new Date(),
+  observationReader = undefined,
   phase,
 }) {
   assertAdapter(adapter);
   assertPhaseAndSha({ implementationSha, phase });
+  const readObservationCounters = observationReader
+    ?? adapter.readObservationCounters?.bind(adapter);
+  if (typeof readObservationCounters !== "function") {
+    throw new Error("Production canary observation reader is unavailable.");
+  }
 
   let result;
   try {
@@ -250,7 +278,7 @@ export async function runProductionCanary({
       throw new Error("Production canary must wait at least 65 minutes after session binding.");
     }
     const initialCounters = validateObservationCounters(
-      await adapter.readObservationCounters(),
+      await readObservationCounters(),
     );
     if (Date.parse(opened.bindingCreatedAt) < Date.parse(initialCounters.observationStartedAt)) {
       throw new Error("Production canary session binding must be created after deploy observation started.");
@@ -309,7 +337,7 @@ export async function runProductionCanary({
       assertExactStatus(value, "BLOCKED", key);
     }
 
-    const counters = validateObservationCounters(await adapter.readObservationCounters());
+    const counters = validateObservationCounters(await readObservationCounters());
     if (counters.observationStartedAt !== initialCounters.observationStartedAt) {
       throw new Error("Production canary observation window changed during the run.");
     }

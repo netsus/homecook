@@ -31,6 +31,8 @@ import {
 export const EXPECTED_LIVE_ROOT = "/Users/cwj/01_vibe_coding/homecook-full-local-restore";
 export const REFRESH_LIFECYCLE_JSON_SCRIPT =
   "verify:full-local-session-refresh-lifecycle:json";
+export const SESSION_SECURITY_CONTRACT_SCRIPT =
+  "verify:full-local-session-security-contracts";
 export const ALLOWED_PHASES = Object.freeze([
   "baseline",
   "milestone-a-t65",
@@ -86,6 +88,7 @@ const KNOWN_MIGRATION_HEADS = new Set([
   "20260803093000_full_local_read_only_request_authority.sql",
   "20260809100000_full_local_session_refresh_authority.sql",
   "20260809110000_full_local_request_transaction_and_youtube_scope.sql",
+  "20260811120000_full_local_session_observability.sql",
 ]);
 const SAFE_BRANCH_PATTERN = /^[A-Za-z0-9._/-]+$/u;
 const JWT_PATTERN = /\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}(?:\.[A-Za-z0-9_-]+)?\b/u;
@@ -839,7 +842,10 @@ function collectVerification({ implementationRoot, implementationSha, phase }) {
       docker_refresh_smoke: "FAIL",
     });
   }
-  const securityGate = runPnpmGate(implementationRoot, "verify:security-functions");
+  const securityGate = runPnpmGate(
+    implementationRoot,
+    SESSION_SECURITY_CONTRACT_SCRIPT,
+  );
   verification.security_function_gate = securityGate;
   try {
     observation = runPnpmJsonGate(
@@ -1063,10 +1069,22 @@ export function buildMigrationHeadSql() {
     "  select bool_and(present) as authorization_ready",
     "  from authorization_checks",
     "),",
+    "observability_gate as (",
+    "  select",
+    "    (select authorization_ready from authorization_gate)",
+    "      and to_regclass('private.full_local_session_observability') is not null",
+    "      and to_regprocedure('public.read_full_local_session_observation()') is not null",
+    "      and to_regprocedure('public.record_full_local_session_stale_observation(text)') is not null",
+    "      and position('SINCE_DEPLOY' in pg_get_functiondef(to_regprocedure('public.read_full_local_session_observation()'))) > 0",
+    "      and position('session-observability' in pg_get_functiondef(to_regprocedure('private.assert_full_local_session_observability_scope()'))) > 0",
+    "      as observability_ready",
+    "),",
     "catalog_marker as (",
     "  select case",
+    "    when (select observability_ready from observability_gate)",
+    "      then '20260811120000_full_local_session_observability.sql'",
     "    when (select authorization_ready from authorization_gate)",
-    "      then '20260809110000_full_local_request_transaction_and_youtube_scope.sql'",
+      "      then '20260809110000_full_local_request_transaction_and_youtube_scope.sql'",
     "    when to_regprocedure('public.assert_and_renew_full_local_session_authority_v2(text,uuid,timestamp with time zone,uuid,text,integer,bigint,timestamp with time zone,timestamp with time zone,timestamp with time zone,timestamp with time zone,timestamp with time zone)') is not null",
     "      and position('last_token_issued_at' in pg_get_functiondef(to_regprocedure('public.assert_and_renew_full_local_session_authority_v2(text,uuid,timestamp with time zone,uuid,text,integer,bigint,timestamp with time zone,timestamp with time zone,timestamp with time zone,timestamp with time zone,timestamp with time zone)'))) > 0",
     "      then '20260809100000_full_local_session_refresh_authority.sql'",
