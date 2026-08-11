@@ -11,7 +11,7 @@
 | source PR | #1311 |
 | 측정 구간 | 2026-08-04 12:21 ~ 2026-08-10 00:43 KST |
 | 벽시계 총 시간 | 7941.8분 |
-| 순수 진행 누적시간 | 1474.8분 (estimate) |
+| 순수 진행 누적시간 | 1482.0분 (estimate) |
 | human_escalation | 0회 |
 | manual_decision_required | 0회 |
 | post-merge stale | 0회 |
@@ -33,7 +33,7 @@
 | GitHub Actions/check-runs | current-head 및 post-merge terminal 결과, intended skip와 rerun 여부 확인 |
 | workpack/work-item/status | runtime merged-green과 broader lifecycle/Manual/activation pending 경계 분리 |
 
-순수 진행시간은 재현 가능한 보수적 규칙으로 산정했다. 각 관련 PR의 authored commit을 시간순으로 정렬하고 PR별 첫 작업에 30분을 배정한 뒤, 인접 commit 간격은 최대 30분까지만 active time으로 반영했다. 따라서 긴 handoff 공백, GitHub CI/check 대기와 단순 PR watch는 자동으로 제외된다. 결과는 Stage 1 PR군 `390.5분`, Stage 2/3 PR #1291 `712.3분`, Stage 4~6.5 PR #1311 `372.0분`, 합계 `1474.8분`이다. task 시작 시각과 retained evidence로 Stage 경계를 나눴으며, commit 없이 수행된 일부 작업은 과대 추정하지 않아 실제 actor 시간보다 작을 수 있다.
+순수 진행시간은 재현 가능한 보수적 규칙으로 산정했다. 각 관련 PR의 authored commit을 시간순으로 정렬하고 PR별 첫 작업에 30분을 배정한 뒤, 인접 commit 간격은 최대 30분까지만 active time으로 반영했다. 따라서 긴 handoff 공백, GitHub CI/check 대기와 단순 PR watch는 자동으로 제외된다. 결과는 Stage 1 PR #1285 `222.3분` + #1287 `89.4분` + #1289 `86.0분` = `397.7분`, Stage 2/3 PR #1291 `712.3분`, Stage 4~6.5 PR #1311 `372.0분`, 합계 `1482.0분`이다. task 시작 시각과 retained evidence로 Stage 경계를 나눴으며, commit 없이 수행된 일부 작업은 과대 추정하지 않아 실제 actor 시간보다 작을 수 있다.
 
 ## Evidence Sources
 
@@ -51,14 +51,14 @@
 
 | Stage | 순수 진행시간 | 산정 단위 | 결과 |
 | --- | ---: | ---: | --- |
-| 1 docs + contract + independent gates | 390.5분 (estimate) | PR #1285/#1287/#1289 | PR #1289 merged; fresh internal gate APPROVE `0/0/0` |
+| 1 docs + contract + independent gates | 397.7분 (estimate) | PR #1285/#1287/#1289 | PR #1289 merged; fresh internal gate APPROVE `0/0/0` |
 | 2 backend implementation/repair | 640.0분 (estimate) | PR #1291 author/repair lineage | atomic ledger/API/DB authority와 regression evidence merged |
 | 3 backend review/merge gate | 72.3분 (estimate) | PR #1291 independent review/Ready | fresh Stage 3 closure 후 merge `6981a432…` |
 | 4 frontend + runtime evidence | 95.0분 (estimate) | PR #1311 implementation/evidence | COOK_MODE completion UI와 1280/390/320 evidence |
 | 5 review + final authority | 210.0분 (estimate) | independent review/repair/authority | final tasks APPROVE/PASS, all finding counts `0/0/0` |
 | 6 closeout review/repair/re-review | 62.0분 (estimate) | independent Stage 6 lineage | successor head `5441c9a3…` APPROVE `0/0/0` |
 | 6.5 Ready/merge gate | 5.0분 (estimate) | final active supervision | PR #1311 merge; post-merge raw 14 terminal |
-| **Total** | **1474.8분 (estimate)** | **role-separated Codex task handoff** | broader lifecycle 미완료 유지 |
+| **Total** | **1482.0분 (estimate)** | **role-separated Codex task handoff** | broader lifecycle 미완료 유지 |
 
 ## Timeline Reconstruction
 
@@ -73,7 +73,7 @@
 | Ready/merge gate | 08-10 00:25 → 00:43 | 5.0분 active estimate; check watch 제외 |
 | post-merge checks | 08-10 00:43 → 00:58 | 0.0분 active; terminal 결과만 evidence로 사용 |
 
-벽시계 `7941.8분`에는 8월 4일 첫 fresh precheck부터 8월 10일 merge까지의 며칠짜리 handoff 공백과 CI 대기가 포함된다. 순수 진행 `1474.8분`은 commit cluster cap으로 이 공백을 제거한 비교용 estimate다. Stage 2/3과 Stage 4/5 reviewer가 일부 겹치므로 actor 합계와 단일 벽시계 구간은 1:1로 대응하지 않는다.
+벽시계 `7941.8분`에는 8월 4일 첫 fresh precheck부터 8월 10일 merge까지의 며칠짜리 handoff 공백과 CI 대기가 포함된다. 순수 진행 `1482.0분`은 commit cluster cap으로 이 공백을 제거한 비교용 estimate다. Stage 2/3과 Stage 4/5 reviewer가 일부 겹치므로 actor 합계와 단일 벽시계 구간은 1:1로 대응하지 않는다.
 
 ## Human Escalations
 
@@ -133,7 +133,7 @@
 
 ## Efficiency Notes
 
-- 순수 진행 누적시간은 `1474.8분`으로 추정된다. 초 단위 time tracking이 아니라 PR authored commit cluster와 task/evidence 경계를 이용한 OMO 효율 비교용 estimate다.
+- 순수 진행 누적시간은 `1482.0분`으로 추정된다. 초 단위 time tracking이 아니라 PR authored commit cluster와 task/evidence 경계를 이용한 OMO 효율 비교용 estimate다.
 - 가장 큰 비용은 Stage 2/3의 `712.3분`이다. one-transaction batch ledger, exact replay, inherited leftovers compatibility, PostgreSQL fresh/replay와 authorization replacement migration을 successor head마다 다시 검증했다.
 - Stage 4~6 runtime은 merged-green이지만 overall lifecycle은 `in_progress`, approval은 `not_started`, verification은 `pending`, evaluation은 `not_started`, `auto_merge_eligible=false`다.
 - Manual Only / follow-up은 physical device와 keyboard, VoiceOver/TalkBack, AT/full WCAG, server-Mac/OAuth, merged-exact server-production/local-rehearsal, creation-off drain, capability `R/R+1/R+2`, production/activation이다.
