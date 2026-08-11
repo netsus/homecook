@@ -9,6 +9,20 @@ export const PRODUCTION_CANARY_PHASES = Object.freeze([
   "milestone-b-7d",
 ]);
 
+export const PRODUCTION_CANARY_STAGES = Object.freeze([
+  "open_session",
+  "observation_initial",
+  "refresh",
+  "planner_read",
+  "planner_write",
+  "planner_cleanup",
+  "pantry_read",
+  "youtube_extract",
+  "logout",
+  "logout_checks",
+  "observation_final",
+]);
+
 const SHA_PATTERN = /^[a-f0-9]{40}$/u;
 const UTC_ISO_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/u;
 const CANARY_RESULT_KEYS = Object.freeze([
@@ -57,6 +71,36 @@ const WORKER_ENV_ALLOWLIST = Object.freeze([
   "PATH",
   "TMPDIR",
 ]);
+
+export class ProductionCanaryStageFailure extends Error {
+  constructor(stage) {
+    if (!PRODUCTION_CANARY_STAGES.includes(stage)) {
+      throw new Error("Production canary failure stage is invalid.");
+    }
+    super(`Production canary failed at stage ${stage}.`);
+    this.name = "ProductionCanaryStageFailure";
+    this.stage = stage;
+  }
+}
+
+export function parseProductionCanaryFailureStage(stderr) {
+  if (typeof stderr !== "string") return null;
+  const match = /^full-local-session-production-canary: FAIL stage=([a-z_]+)\n$/u.exec(stderr);
+  return match && PRODUCTION_CANARY_STAGES.includes(match[1]) ? match[1] : null;
+}
+
+async function runCanaryStage(stage, reportStage, operation) {
+  await reportStage({ stage, status: "START" });
+  const value = await operation();
+  await reportStage({ stage, status: "PASS" });
+  return value;
+}
+
+/** @param {{ stage: string, status: "START" | "PASS" }} _event */
+async function noopStageReporter(_event) {
+  void _event;
+  return undefined;
+}
 
 export function resolveProductionCanaryWorkerTimeout({ configuredTimeout, phase }) {
   if (!PRODUCTION_CANARY_PHASES.includes(phase)) {
@@ -253,6 +297,7 @@ export async function runProductionCanary({
   now = () => new Date(),
   observationReader = undefined,
   phase,
+  reportStage = noopStageReporter,
 }) {
   assertAdapter(adapter);
   assertPhaseAndSha({ implementationSha, phase });
@@ -261,86 +306,130 @@ export async function runProductionCanary({
   if (typeof readObservationCounters !== "function") {
     throw new Error("Production canary observation reader is unavailable.");
   }
+  if (typeof reportStage !== "function") {
+    throw new Error("Production canary stage reporter is invalid.");
+  }
 
   let result;
   try {
-    const opened = await adapter.openSession();
-    if (opened === null || typeof opened !== "object" || opened.session === undefined) {
-      throw new Error("Production canary session boundary is invalid.");
-    }
-    assertUtcIso(opened.bindingCreatedAt, "binding_created_at");
-    const observedNow = now();
-    if (!(observedNow instanceof Date) || Number.isNaN(observedNow.getTime())) {
-      throw new Error("Production canary clock is invalid.");
-    }
-    if (phase === "milestone-a-t65"
-      && observedNow.getTime() - Date.parse(opened.bindingCreatedAt) < 65 * 60 * 1_000) {
-      throw new Error("Production canary must wait at least 65 minutes after session binding.");
-    }
-    const initialCounters = validateObservationCounters(
-      await readObservationCounters(),
+    const { observedNow, opened } = await runCanaryStage(
+      "open_session",
+      reportStage,
+      async () => {
+        const openedSession = await adapter.openSession();
+        if (openedSession === null
+          || typeof openedSession !== "object"
+          || openedSession.session === undefined) {
+          throw new Error("Production canary session boundary is invalid.");
+        }
+        assertUtcIso(openedSession.bindingCreatedAt, "binding_created_at");
+        const currentTime = now();
+        if (!(currentTime instanceof Date) || Number.isNaN(currentTime.getTime())) {
+          throw new Error("Production canary clock is invalid.");
+        }
+        if (phase === "milestone-a-t65"
+          && currentTime.getTime() - Date.parse(openedSession.bindingCreatedAt) < 65 * 60 * 1_000) {
+          throw new Error("Production canary must wait at least 65 minutes after session binding.");
+        }
+        return { observedNow: currentTime, opened: openedSession };
+      },
     );
-    if (Date.parse(opened.bindingCreatedAt) < Date.parse(initialCounters.observationStartedAt)) {
-      throw new Error("Production canary session binding must be created after deploy observation started.");
-    }
-    const minimumObservationMs = phase === "milestone-a-24h"
-      ? 24 * 60 * 60 * 1_000
-      : phase === "milestone-b-7d"
-        ? 7 * 24 * 60 * 60 * 1_000
-        : 0;
-    if (observedNow.getTime() - Date.parse(initialCounters.observationStartedAt) < minimumObservationMs) {
-      throw new Error(`Production canary must observe for at least ${phase === "milestone-a-24h" ? "24 hours" : "7 days"}.`);
-    }
+    const initialCounters = await runCanaryStage(
+      "observation_initial",
+      reportStage,
+      async () => {
+        const counters = validateObservationCounters(await readObservationCounters());
+        if (Date.parse(opened.bindingCreatedAt) < Date.parse(counters.observationStartedAt)) {
+          throw new Error("Production canary session binding must be created after deploy observation started.");
+        }
+        const minimumObservationMs = phase === "milestone-a-24h"
+          ? 24 * 60 * 60 * 1_000
+          : phase === "milestone-b-7d"
+            ? 7 * 24 * 60 * 60 * 1_000
+            : 0;
+        if (observedNow.getTime() - Date.parse(counters.observationStartedAt) < minimumObservationMs) {
+          throw new Error(`Production canary must observe for at least ${phase === "milestone-a-24h" ? "24 hours" : "7 days"}.`);
+        }
+        return counters;
+      },
+    );
     const oldSession = opened.session;
-    const oldBindingExpiry = await adapter.readBindingExpiry(oldSession);
-    assertUtcIso(oldBindingExpiry, "old binding expiry");
-
-    const newSession = await adapter.refreshSession(oldSession);
-    if (newSession === undefined || newSession === null) {
-      throw new Error("Production canary refresh did not return an opaque session handle.");
-    }
-    const newBindingExpiry = await adapter.readBindingExpiry(newSession);
-    assertUtcIso(newBindingExpiry, "new binding expiry");
-    if (Date.parse(newBindingExpiry) <= Date.parse(oldBindingExpiry)) {
-      throw new Error("Production canary binding expiry did not increase monotonically.");
-    }
-
-    assertExactStatus(await adapter.plannerRead(newSession), "PASS", "planner read");
-    const plannerWrite = await adapter.plannerWrite(newSession);
-    if (plannerWrite === null || typeof plannerWrite !== "object") {
-      throw new Error("Planner write result is invalid.");
-    }
-    assertExactStatus(plannerWrite.status, "PASS", "planner write");
-    if (plannerWrite.cleanupHandle === undefined) {
-      throw new Error("Planner write cleanup handle is missing.");
-    }
-    assertExactStatus(
-      await adapter.plannerCleanup(newSession, plannerWrite.cleanupHandle),
-      "PASS",
-      "planner write cleanup",
+    const { newBindingExpiry, newSession } = await runCanaryStage(
+      "refresh",
+      reportStage,
+      async () => {
+        const oldBindingExpiry = await adapter.readBindingExpiry(oldSession);
+        assertUtcIso(oldBindingExpiry, "old binding expiry");
+        const refreshedSession = await adapter.refreshSession(oldSession);
+        if (refreshedSession === undefined || refreshedSession === null) {
+          throw new Error("Production canary refresh did not return an opaque session handle.");
+        }
+        const refreshedBindingExpiry = await adapter.readBindingExpiry(refreshedSession);
+        assertUtcIso(refreshedBindingExpiry, "new binding expiry");
+        if (Date.parse(refreshedBindingExpiry) <= Date.parse(oldBindingExpiry)) {
+          throw new Error("Production canary binding expiry did not increase monotonically.");
+        }
+        return {
+          newBindingExpiry: refreshedBindingExpiry,
+          newSession: refreshedSession,
+        };
+      },
     );
-    assertExactStatus(await adapter.pantryRead(newSession), "PASS", "pantry read");
-    assertExactStatus(
-      await adapter.youtubeExtract(newSession, { url: EXACT_YOUTUBE_CANARY_URL }),
-      "PASS",
-      "YouTube extraction",
-    );
-    assertExactStatus(await adapter.logout(newSession), "PASS", "logout");
 
-    const logoutChecks = {
-      logout_old_token_read: await adapter.plannerReadAfterLogout(oldSession),
-      logout_old_token_write: await adapter.plannerWriteAfterLogout(oldSession),
-      logout_new_token_read: await adapter.plannerReadAfterLogout(newSession),
-      logout_new_token_write: await adapter.plannerWriteAfterLogout(newSession),
-    };
-    for (const [key, value] of Object.entries(logoutChecks)) {
-      assertExactStatus(value, "BLOCKED", key);
-    }
+    await runCanaryStage("planner_read", reportStage, async () => {
+      assertExactStatus(await adapter.plannerRead(newSession), "PASS", "planner read");
+    });
+    const plannerWrite = await runCanaryStage("planner_write", reportStage, async () => {
+      const writeResult = await adapter.plannerWrite(newSession);
+      if (writeResult === null || typeof writeResult !== "object") {
+        throw new Error("Planner write result is invalid.");
+      }
+      assertExactStatus(writeResult.status, "PASS", "planner write");
+      if (writeResult.cleanupHandle === undefined) {
+        throw new Error("Planner write cleanup handle is missing.");
+      }
+      return writeResult;
+    });
+    await runCanaryStage("planner_cleanup", reportStage, async () => {
+      assertExactStatus(
+        await adapter.plannerCleanup(newSession, plannerWrite.cleanupHandle),
+        "PASS",
+        "planner write cleanup",
+      );
+    });
+    await runCanaryStage("pantry_read", reportStage, async () => {
+      assertExactStatus(await adapter.pantryRead(newSession), "PASS", "pantry read");
+    });
+    await runCanaryStage("youtube_extract", reportStage, async () => {
+      assertExactStatus(
+        await adapter.youtubeExtract(newSession, { url: EXACT_YOUTUBE_CANARY_URL }),
+        "PASS",
+        "YouTube extraction",
+      );
+    });
+    await runCanaryStage("logout", reportStage, async () => {
+      assertExactStatus(await adapter.logout(newSession), "PASS", "logout");
+    });
 
-    const counters = validateObservationCounters(await readObservationCounters());
-    if (counters.observationStartedAt !== initialCounters.observationStartedAt) {
-      throw new Error("Production canary observation window changed during the run.");
-    }
+    const logoutChecks = await runCanaryStage("logout_checks", reportStage, async () => {
+      const checks = {
+        logout_old_token_read: await adapter.plannerReadAfterLogout(oldSession),
+        logout_old_token_write: await adapter.plannerWriteAfterLogout(oldSession),
+        logout_new_token_read: await adapter.plannerReadAfterLogout(newSession),
+        logout_new_token_write: await adapter.plannerWriteAfterLogout(newSession),
+      };
+      for (const [key, value] of Object.entries(checks)) {
+        assertExactStatus(value, "BLOCKED", key);
+      }
+      return checks;
+    });
+
+    await runCanaryStage("observation_final", reportStage, async () => {
+      const counters = validateObservationCounters(await readObservationCounters());
+      if (counters.observationStartedAt !== initialCounters.observationStartedAt) {
+        throw new Error("Production canary observation window changed during the run.");
+      }
+    });
 
     result = {
       account_session_stale_count: 0,

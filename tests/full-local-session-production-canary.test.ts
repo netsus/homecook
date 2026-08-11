@@ -13,8 +13,10 @@ import { describe, expect, it } from "vitest";
 
 import {
   EXACT_YOUTUBE_CANARY_URL,
+  PRODUCTION_CANARY_STAGES,
   buildRefreshLifecycleGateResult,
   buildProductionCanaryWorkerEnv,
+  parseProductionCanaryFailureStage,
   runProductionCanary,
   resolveProductionCanaryWorkerTimeout,
   validateProductionCanaryAdapterPath,
@@ -185,11 +187,15 @@ describe("full-local production session canary", () => {
 
   it("runs the protected read/write/cleanup/extraction flow and blocks old/new sessions after logout", async () => {
     const events: string[] = [];
+    const stageEvents: string[] = [];
     const result = await runProductionCanary({
       adapter: createAdapter(events),
       implementationSha: "a".repeat(40),
       now: () => new Date("2026-08-10T02:00:00.000Z"),
       phase: "milestone-a-t65",
+      reportStage: async ({ stage, status }) => {
+        stageEvents.push(`${stage}:${status}`);
+      },
     });
 
     expect(events).toEqual([
@@ -211,6 +217,10 @@ describe("full-local production session canary", () => {
       "counters",
       "close",
     ]);
+    expect(stageEvents).toEqual(PRODUCTION_CANARY_STAGES.flatMap((stage) => [
+      `${stage}:START`,
+      `${stage}:PASS`,
+    ]));
     expect(result).toEqual({
       account_session_stale_count: 0,
       canary_results: {
@@ -244,6 +254,29 @@ describe("full-local production session canary", () => {
       phase: "milestone-a-t65",
     })).toEqual(result);
     expect(JSON.stringify(result)).not.toMatch(/old-session-handle|new-session-handle|cleanup-handle/u);
+  });
+
+  it("stops stage reporting at the exact failed operation while still closing the adapter", async () => {
+    const events: string[] = [];
+    const stageEvents: string[] = [];
+    const adapter = createAdapter(events);
+    adapter.youtubeExtract = async () => {
+      throw new Error("access_token=must-not-escape");
+    };
+
+    await expect(runProductionCanary({
+      adapter,
+      implementationSha: "a".repeat(40),
+      now: () => new Date("2026-08-10T02:00:00.000Z"),
+      phase: "milestone-a-t65",
+      reportStage: async ({ stage, status }) => {
+        stageEvents.push(`${stage}:${status}`);
+      },
+    })).rejects.toThrow("must-not-escape");
+
+    expect(stageEvents.at(-1)).toBe("youtube_extract:START");
+    expect(stageEvents).not.toContain("youtube_extract:PASS");
+    expect(events.at(-1)).toBe("close");
   });
 
   it("fails closed when refreshed binding expiry regresses and still closes the adapter", async () => {
@@ -465,5 +498,128 @@ export function createProductionCanaryAdapter() {
       observationReader: () => { throw new Error("raw output must never escape"); },
       phase: "milestone-a-t65",
     })).rejects.toThrow("Production canary observation IPC request is invalid.");
+  });
+
+  it("returns only the allowlisted active stage across the worker boundary", async () => {
+    const fixtureDir = realpathSync(mkdtempSync(path.join(tmpdir(), "production-canary-stage-failure-")));
+    const adapterPath = path.join(fixtureDir, "adapter.mjs");
+    writeFileSync(adapterPath, `
+const oldSession = {};
+const newSession = {};
+export function createProductionCanaryAdapter() {
+  return {
+    openSession: async () => ({ session: oldSession, bindingCreatedAt: "2026-08-01T00:00:00.000Z" }),
+    readBindingExpiry: async (session) => session === oldSession ? "2026-08-01T01:00:00.000Z" : "2026-08-01T02:00:00.000Z",
+    refreshSession: async () => newSession,
+    plannerRead: async () => "PASS",
+    plannerWrite: async () => ({ status: "PASS", cleanupHandle: {} }),
+    plannerCleanup: async () => "PASS",
+    pantryRead: async () => "PASS",
+    youtubeExtract: async () => { throw new Error("access_token=must-not-escape"); },
+    logout: async () => "PASS",
+    plannerReadAfterLogout: async () => "BLOCKED",
+    plannerWriteAfterLogout: async () => "BLOCKED",
+    close: async () => undefined,
+  };
+}
+`, "utf8");
+    chmodSync(adapterPath, 0o600);
+
+    const failure = await runCanaryInIsolatedWorker({
+      adapterPath,
+      ambientEnv: process.env,
+      implementationSha: "f".repeat(40),
+      observationReader: () => ({
+        accountSessionStaleCount: 0,
+        counterScope: "SINCE_DEPLOY",
+        firstStaleAt: null,
+        observationStartedAt: "2026-08-01T00:00:00.000Z",
+        staleTokenMutationCount: 0,
+      }),
+      phase: "milestone-a-t65",
+    }).catch((error: unknown) => error);
+
+    expect(failure).toMatchObject({
+      message: "Production canary failed at stage youtube_extract.",
+      stage: "youtube_extract",
+    });
+    expect(JSON.stringify(failure)).not.toContain("must-not-escape");
+  });
+
+  it("rejects unknown stage IPC and only parses exact redacted stage output", async () => {
+    const fixtureDir = realpathSync(mkdtempSync(path.join(tmpdir(), "production-canary-invalid-stage-")));
+    const adapterPath = path.join(fixtureDir, "adapter.mjs");
+    writeFileSync(adapterPath, `
+export function createProductionCanaryAdapter() {
+  process.send?.({ stage: "access_token=must-not-escape", status: "START", type: "stage" });
+  return {};
+}
+`, "utf8");
+    chmodSync(adapterPath, 0o600);
+
+    await expect(runCanaryInIsolatedWorker({
+      adapterPath,
+      ambientEnv: process.env,
+      implementationSha: "f".repeat(40),
+      observationReader: () => { throw new Error("must not run"); },
+      phase: "milestone-a-t65",
+    })).rejects.toThrow("Production canary stage IPC is invalid.");
+
+    expect(parseProductionCanaryFailureStage(
+      "full-local-session-production-canary: FAIL stage=youtube_extract\n",
+    )).toBe("youtube_extract");
+    expect(parseProductionCanaryFailureStage(
+      "full-local-session-production-canary: FAIL stage=access_token=must-not-escape\n",
+    )).toBeNull();
+    expect(parseProductionCanaryFailureStage(
+      "prefix\nfull-local-session-production-canary: FAIL stage=youtube_extract\n",
+    )).toBeNull();
+    expect(parseProductionCanaryFailureStage(
+      "full-local-session-production-canary: FAIL stage=youtube_extract",
+    )).toBeNull();
+  });
+
+  it("prints a fixed allowlisted stage without echoing a raw adapter failure", () => {
+    const fixtureDir = realpathSync(mkdtempSync(path.join(tmpdir(), "production-canary-cli-stage-")));
+    const adapterPath = path.join(fixtureDir, "adapter.mjs");
+    writeFileSync(adapterPath, `
+export function createProductionCanaryAdapter() {
+  return {
+    openSession: async () => { throw new Error("oauth_code=must-not-escape"); },
+    readBindingExpiry: async () => "",
+    refreshSession: async () => ({}),
+    plannerRead: async () => "PASS",
+    plannerWrite: async () => ({ status: "PASS", cleanupHandle: {} }),
+    plannerCleanup: async () => "PASS",
+    pantryRead: async () => "PASS",
+    youtubeExtract: async () => "PASS",
+    logout: async () => "PASS",
+    plannerReadAfterLogout: async () => "BLOCKED",
+    plannerWriteAfterLogout: async () => "BLOCKED",
+    close: async () => undefined,
+  };
+}
+`, "utf8");
+    chmodSync(adapterPath, 0o600);
+    const execution = spawnSync(process.execPath, [
+      "scripts/verify-full-local-session-production-canary.mjs",
+      "--json",
+      "--phase",
+      "milestone-a-t65",
+    ], {
+      cwd: process.cwd(),
+      encoding: "utf8",
+      env: {
+        ...process.env,
+        FULL_LOCAL_SESSION_CANARY_ADAPTER: adapterPath,
+      },
+    });
+
+    expect(execution.status).toBe(1);
+    expect(execution.stdout).toBe("");
+    expect(execution.stderr).toBe(
+      "full-local-session-production-canary: FAIL stage=open_session\n",
+    );
+    expect(execution.stderr).not.toContain("must-not-escape");
   });
 });

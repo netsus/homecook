@@ -13,6 +13,8 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+import { ProductionCanaryStageFailure } from "../scripts/lib/full-local-session-production-canary.mjs";
+
 import {
   ALLOWED_PHASES,
   EXPECTED_BASELINE_LIVE_ROOT,
@@ -23,8 +25,10 @@ import {
   buildSessionLifecycleEvidence,
   collectCloudflareMonitoringSummary,
   computeLiveDirtyDiffSha256,
+  formatSessionLifecycleEvidenceFailure,
   normalizeRuntimeStatus,
   parseCanaryObservationJson,
+  parseProductionCanaryGateFailureStage,
   parseGoTruePolicyGateJson,
   parseMigrationHeadSqlOutput,
   parseRefreshLifecycleGateJson,
@@ -128,6 +132,31 @@ describe("full-local session lifecycle evidence contract", () => {
     expect(result.stdout).toBe("");
     expect(result.stderr).toBe("session-lifecycle-evidence: FAIL (redacted)\n");
     expect(result.stderr).not.toContain("must-not-escape");
+  });
+
+  it("accepts only an exact allowlisted production canary failure stage", () => {
+    expect(parseProductionCanaryGateFailureStage(
+      "full-local-session-production-canary: FAIL stage=youtube_extract\n",
+    )).toBe("youtube_extract");
+    expect(parseProductionCanaryGateFailureStage(
+      "full-local-session-production-canary: FAIL (redacted)\n",
+    )).toBeNull();
+    expect(parseProductionCanaryGateFailureStage(
+      "full-local-session-production-canary: FAIL stage=oauth_code=must-not-escape\n",
+    )).toBeNull();
+    expect(parseProductionCanaryGateFailureStage(
+      "noise\nfull-local-session-production-canary: FAIL stage=youtube_extract\n",
+    )).toBeNull();
+    expect(parseProductionCanaryGateFailureStage(
+      "full-local-session-production-canary: FAIL stage=youtube_extract",
+    )).toBeNull();
+
+    expect(formatSessionLifecycleEvidenceFailure(
+      new ProductionCanaryStageFailure("youtube_extract"),
+    )).toBe("session-lifecycle-evidence: FAIL stage=youtube_extract\n");
+    expect(formatSessionLifecycleEvidenceFailure(
+      new Error("oauth_code=must-not-escape"),
+    )).toBe("session-lifecycle-evidence: FAIL (redacted)\n");
   });
 
   it("keeps the four planned phases exact", () => {
