@@ -271,7 +271,8 @@ export function PlannerWeekScreen({
     log: 0,
     plan: 0,
   });
-  const dateRailRef = useRef<HTMLOListElement | null>(null);
+  const [dateRailElement, setDateRailElement] =
+    useState<HTMLOListElement | null>(null);
   const previousSegmentRef = useRef(activeSegment);
   const hasLoadedPlannerRef = useRef(false);
   const selectedDateTitleRef = useRef<HTMLHeadingElement | null>(null);
@@ -491,7 +492,7 @@ export function PlannerWeekScreen({
   }, [activeSegment]);
 
   useLayoutEffect(() => {
-    const rail = dateRailRef.current;
+    const rail = dateRailElement;
     const selectedButton = rail?.querySelector<HTMLElement>('[aria-current="date"]');
     if (!rail || !selectedButton) return;
 
@@ -507,7 +508,7 @@ export function PlannerWeekScreen({
     } else if (selectedRight > visibleRight) {
       rail.scrollLeft = selectedRight - rail.clientWidth;
     }
-  }, [dateKeys, selectedDate]);
+  }, [dateKeys, dateRailElement, selectedDate]);
 
   if (authState === "checking") {
     return (
@@ -632,7 +633,7 @@ export function PlannerWeekScreen({
               aria-label="주간 날짜"
               className="mt-2 flex snap-x snap-mandatory gap-[4px] overflow-x-auto overscroll-x-contain pb-1"
               data-testid="planner-week-date-rail"
-              ref={dateRailRef}
+              ref={setDateRailElement}
             >
               {dateKeys.map((dateKey) => {
                 const selected = dateKey === selectedDate;

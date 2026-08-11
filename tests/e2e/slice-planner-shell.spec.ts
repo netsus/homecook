@@ -1,6 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
 const E2E_AUTH_OVERRIDE_KEY = "homecook.e2e-auth-override";
+const FIXED_NOW = "2026-07-23T09:00:00.000+09:00";
 const PLAN_DATE = "2026-07-23";
 
 async function setAuthenticated(page: Page) {
@@ -353,25 +354,6 @@ test.describe("planner-shell Stage 4", () => {
     expect.soft(scaledLayout.bottomClearance).not.toBeNull();
     expect.soft(scaledLayout.bottomClearance ?? 0).toBeGreaterThanOrEqual(16);
 
-    await page.goto("/planner?date=2026-07-26");
-    await expect(page.getByTestId("planner-week-date-rail")).toBeVisible();
-    const selectedDateGeometry = await page.evaluate(() => {
-      const rail = document.querySelector<HTMLElement>(
-        '[data-testid="planner-week-date-rail"]',
-      );
-      const selected = rail?.querySelector<HTMLElement>('[aria-current="date"]');
-      if (!rail || !selected) return null;
-      const railRect = rail.getBoundingClientRect();
-      const selectedRect = selected.getBoundingClientRect();
-      return {
-        rail: { left: railRect.left, right: railRect.right },
-        scrollLeft: rail.scrollLeft,
-        selected: { left: selectedRect.left, right: selectedRect.right },
-        visible: selectedRect.left >= railRect.left - 1
-          && selectedRect.right <= railRect.right + 1,
-      };
-    });
-    expect(selectedDateGeometry?.visible).toBe(true);
     for (const viewport of [
       { height: 844, width: 390 },
       { height: 900, width: 1280 },
@@ -397,5 +379,45 @@ test.describe("planner-shell Stage 4", () => {
           .toBeGreaterThanOrEqual(16);
       }
     }
+  });
+
+  test("planner-shell cold Sunday deep link scrolls the 320px date rail to the selected date", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ height: 693, width: 320 });
+    await page.clock.setFixedTime(new Date(FIXED_NOW));
+    await setAuthenticated(page);
+    await installPlannerShellRoutes(page, { columnCount: 5 });
+
+    await page.goto("/planner?date=2026-07-26");
+
+    const selectedSunday = page.getByRole("button", { name: "7/26 일 선택" });
+    await expect(selectedSunday).toHaveAttribute("aria-current", "date");
+    await expect(page.getByRole("heading", { name: "일 7월 26일" })).toBeVisible();
+
+    await expect.poll(() => page.evaluate(() => {
+      const rail = document.querySelector<HTMLElement>(
+        '[data-testid="planner-week-date-rail"]',
+      );
+      const selected = rail?.querySelector<HTMLElement>('[aria-current="date"]');
+      if (!rail || !selected) return null;
+      const railRect = rail.getBoundingClientRect();
+      const selectedRect = selected.getBoundingClientRect();
+      return {
+        clientWidth: rail.clientWidth,
+        fullyVisible:
+          selectedRect.left >= railRect.left - 1
+          && selectedRect.right <= railRect.right + 1,
+        maxScrollLeft: rail.scrollWidth - rail.clientWidth,
+        scrollLeft: rail.scrollLeft,
+        scrollWidth: rail.scrollWidth,
+      };
+    })).toEqual({
+      clientWidth: 262,
+      fullyVisible: true,
+      maxScrollLeft: 70,
+      scrollLeft: 70,
+      scrollWidth: 332,
+    });
   });
 });
