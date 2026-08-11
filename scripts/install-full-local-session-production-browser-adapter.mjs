@@ -18,7 +18,10 @@ import {
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { PRODUCTION_BROWSER_MANUAL_ACTION } from "./lib/full-local-session-production-browser-adapter.mjs";
+import {
+  PRODUCTION_BROWSER_MANUAL_ACTION,
+  validateConfiguredPublicAnonKey,
+} from "./lib/full-local-session-production-browser-adapter.mjs";
 
 const FAIL_OUTPUT = "install-full-local-session-production-browser-adapter: FAIL (redacted)\n";
 
@@ -94,7 +97,34 @@ function ensurePrivateDirectory(directoryPath, uid) {
   return directoryPath;
 }
 
-export function buildProductionBrowserAdapterWrapperSource({ adapterModulePath }) {
+function readConfiguredPublicAnonKey(repoRoot) {
+  const envPath = path.join(repoRoot, ".env.production.local");
+  const source = readFileSync(envPath, "utf8");
+  let found = null;
+  for (const rawLine of source.split(/\r?\n/u)) {
+    const line = rawLine.trim();
+    if (line.length === 0 || line.startsWith("#")) continue;
+    const match = line.match(/^NEXT_PUBLIC_SUPABASE_ANON_KEY=(.*)$/u);
+    if (!match) continue;
+    if (found !== null) fail("Production browser canary anon key is invalid.");
+    const rawValue = match[1]?.trim() ?? "";
+    const value = rawValue.replace(/^(['"])(.*)\1$/u, "$2");
+    try {
+      found = validateConfiguredPublicAnonKey(value);
+    } catch {
+      fail("Production browser canary anon key is invalid.");
+    }
+  }
+  if (found === null) {
+    fail("Production browser canary anon key is invalid.");
+  }
+  return found;
+}
+
+export function buildProductionBrowserAdapterWrapperSource({
+  adapterModulePath,
+  configuredPublicAnonKey,
+}) {
   const absoluteModulePath = assertAbsolute(
     adapterModulePath,
     "Production browser canary adapter module",
@@ -123,6 +153,15 @@ export function buildProductionBrowserAdapterWrapperSource({ adapterModulePath }
     || standaloneSource.includes('import("@playwright/test")')) {
     fail("Production browser canary adapter must be standalone.");
   }
+  let validatedConfiguredPublicAnonKey;
+  try {
+    validatedConfiguredPublicAnonKey = validateConfiguredPublicAnonKey(configuredPublicAnonKey);
+  } catch {
+    fail("Production browser canary anon key is invalid.");
+  }
+  if (typeof validatedConfiguredPublicAnonKey !== "string" || validatedConfiguredPublicAnonKey.length === 0) {
+    fail("Production browser canary anon key is invalid.");
+  }
   return `${standaloneSource.trimEnd()}
 
 export const REVIEWABLE_PRODUCTION_CANARY_GAPS = Object.freeze([
@@ -130,7 +169,14 @@ export const REVIEWABLE_PRODUCTION_CANARY_GAPS = Object.freeze([
 
 export const REVIEWABLE_PRODUCTION_CANARY_MANUAL_ACTION = ${JSON.stringify(PRODUCTION_BROWSER_MANUAL_ACTION)};
 
-export { createProductionBrowserCanaryAdapter as createProductionCanaryAdapter };
+const CONFIGURED_PUBLIC_ANON_KEY = ${JSON.stringify(validatedConfiguredPublicAnonKey)};
+
+export async function createProductionCanaryAdapter({ phase } = {}) {
+  return createProductionBrowserCanaryAdapter({
+    configuredPublicAnonKey: CONFIGURED_PUBLIC_ANON_KEY,
+    phase,
+  });
+}
 `;
 }
 
@@ -182,12 +228,14 @@ export function installProductionBrowserAdapterWrapper({
     if (!existing.isFile() || existing.isSymbolicLink()) fail("Production browser canary wrapper must be a regular file.");
     fail("Production browser canary wrapper already exists and must not be overwritten.");
   }
+  const configuredPublicAnonKey = readConfiguredPublicAnonKey(canonicalRepoRoot);
 
   const source = buildProductionBrowserAdapterWrapperSource({
     adapterModulePath: path.join(
       canonicalRepoRoot,
       "scripts/lib/full-local-session-production-browser-adapter.mjs",
     ),
+    configuredPublicAnonKey,
   });
   writeNewPrivateFile(targetPath, source, uid);
   chmodSync(targetPath, 0o600);

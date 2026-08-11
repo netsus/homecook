@@ -201,6 +201,30 @@ function expiresAtToIso(expiresAtSeconds) {
   return new Date(expiresAtSeconds * 1_000).toISOString();
 }
 
+export function validateConfiguredPublicAnonKey(value) {
+  if (value === undefined) return null;
+  if (typeof value !== "string") {
+    fail("Production browser canary public auth API key is invalid.");
+  }
+  if (value !== value.trim() || /[\u0000-\u001F\u007F\s]/u.test(value)) {
+    fail("Production browser canary public auth API key is invalid.");
+  }
+  const normalized = value;
+  if (/^sb_secret_/u.test(normalized)) {
+    fail("Production browser canary public auth API key is invalid.");
+  }
+  if (/^sb_publishable_[A-Za-z0-9_-]{16,200}$/u.test(normalized)) {
+    return normalized;
+  }
+  if (/^sb_/u.test(normalized)) {
+    fail("Production browser canary public auth API key is invalid.");
+  }
+  if (/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/u.test(normalized) && normalized.length >= 40) {
+    return normalized;
+  }
+  fail("Production browser canary public auth API key is invalid.");
+}
+
 /**
  * The canary reports observed browser auth evidence, not privileged DB binding timestamps.
  *
@@ -208,6 +232,7 @@ function expiresAtToIso(expiresAtSeconds) {
  *   appOrigin?: string;
  *   authOrigin?: string;
  *   createBrowserClientImpl?: typeof createBrowserClient;
+ *   configuredPublicAnonKey?: string;
  *   fetchImpl?: typeof globalThis.fetch;
  *   launchBrowser?: (launchOptions: { headless: boolean }) => Promise<unknown>;
   *   loginUrl?: string;
@@ -235,6 +260,7 @@ export async function createProductionBrowserCanaryAdapter({
   appOrigin = DEFAULT_APP_ORIGIN,
   authOrigin = DEFAULT_AUTH_ORIGIN,
   createBrowserClientImpl = createBrowserClient,
+  configuredPublicAnonKey,
   fetchImpl = globalThis.fetch,
   launchBrowser = defaultLaunchBrowser,
   loginUrl = DEFAULT_LOGIN_URL,
@@ -254,6 +280,7 @@ export async function createProductionBrowserCanaryAdapter({
   const safeFetch = ensureFetchImpl(fetchImpl);
   ensureExactAuthOrigin(authOrigin);
   normalizeAuthUrl(authOrigin, DEFAULT_AUTH_ORIGIN);
+  const validatedConfiguredPublicAnonKey = validateConfiguredPublicAnonKey(configuredPublicAnonKey);
 
   const state = {
     authRequestListener: null,
@@ -390,23 +417,37 @@ export async function createProductionBrowserCanaryAdapter({
     while (typeof state.publicApiKey !== "string" || state.publicApiKey.length === 0) {
       if (state.pendingAuthCaptureTasks.size > 0) {
         await Promise.race([...state.pendingAuthCaptureTasks]);
+        continue;
+      }
+      if (validatedConfiguredPublicAnonKey) {
+        break;
       } else if (Date.now() < deadline) {
         await new Promise((resolve) => setTimeout(resolve, 5));
       } else {
         break;
       }
     }
+    if (typeof state.publicApiKey === "string"
+      && validatedConfiguredPublicAnonKey
+      && state.publicApiKey !== validatedConfiguredPublicAnonKey) {
+      fail("Production browser canary public auth API key mismatch.");
+    }
+    if (typeof state.publicApiKey === "string" && state.publicApiKey.length > 0) {
+      return state.publicApiKey;
+    }
+    if (validatedConfiguredPublicAnonKey) {
+      return validatedConfiguredPublicAnonKey;
+    }
     if (typeof state.publicApiKey !== "string" || state.publicApiKey.length === 0) {
       fail("Production browser canary public auth API key capture is unavailable.");
     }
+    return state.publicApiKey;
   }
 
   async function createSupabaseTools() {
-    if (typeof state.publicApiKey !== "string" || state.publicApiKey.length === 0) {
-      fail("Production browser canary public auth API key capture is unavailable.");
-    }
+    const effectivePublicAnonKey = await waitForPublicApiKeyCapture();
     const cookies = createCookieBridge();
-    const client = createBrowserClientImpl(authOrigin, state.publicApiKey, {
+    const client = createBrowserClientImpl(authOrigin, effectivePublicAnonKey, {
       cookies: {
         getAll: cookies.getAll,
         setAll: cookies.setAll,

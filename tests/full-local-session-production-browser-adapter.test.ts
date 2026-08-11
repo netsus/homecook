@@ -110,6 +110,11 @@ function createBrowserFixture(initialUrl = "https://app.mumeok.kr/login?next=%2F
   };
 }
 
+const FALLBACK_PUBLIC_ANON_KEY =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.public-anon-key-signing-material.signature";
+const PUBLISHABLE_PUBLIC_ANON_KEY =
+  "sb_publishable_0123456789ABCD-EFGHIJKLMNOPQRSTUVWXYZabcdef";
+
 describe("production browser canary adapter", () => {
   it("captures the public auth key, waits T+65, refreshes via supabase ssr cookies, and proves monotonic protected auth evidence", async () => {
     const browserFixture = createBrowserFixture();
@@ -267,24 +272,162 @@ describe("production browser canary adapter", () => {
     await adapter.close();
   });
 
-  it("fails closed when the public auth key was never observed", async () => {
+  it("continues the t65 login flow with the legacy JWT fallback anon key when auth request capture is absent", async () => {
     const browserFixture = createBrowserFixture();
-    let createClientCalls = 0;
+    let nowMs = Date.parse("2026-08-11T05:00:00.000Z");
+    let sessionExpiresAt = Math.floor(Date.parse("2026-08-11T05:55:00.000Z") / 1_000);
+    const createdKeys: string[] = [];
+    const fetchCalls: Array<Record<string, unknown>> = [];
 
     const adapter = await createProductionBrowserCanaryAdapter({
-      createBrowserClientImpl: ((() => {
-        createClientCalls += 1;
-        throw new Error("must not create client");
-      }) as unknown) as never,
+      configuredPublicAnonKey: FALLBACK_PUBLIC_ANON_KEY,
+      createBrowserClientImpl: ((url: string, apiKey: string, options: Record<string, unknown>) => {
+        createdKeys.push(`${url}|${apiKey}`);
+        return {
+          auth: {
+            async getSession() {
+              return { data: { session: { expires_at: sessionExpiresAt } }, error: null };
+            },
+            async refreshSession() {
+              await (options.cookies as {
+                setAll: (cookies: Array<Record<string, unknown>>) => Promise<void>;
+              }).setAll([
+                {
+                  name: "sb-homecook-auth-token",
+                  options: { maxAge: 3600, path: "/" },
+                  value: "fallback-new-access",
+                },
+                {
+                  name: "sb-homecook-auth-token.0",
+                  options: { maxAge: 3600, path: "/" },
+                  value: "fallback-new-refresh",
+                },
+              ]);
+              sessionExpiresAt = Math.floor(Date.parse("2026-08-11T07:00:00.000Z") / 1_000);
+              return { data: { session: { expires_at: sessionExpiresAt } }, error: null };
+            },
+          },
+        };
+      }) as never,
+      fetchImpl: async (input, init) => {
+        const url = String(input);
+        const method = String(init?.method ?? "GET").toUpperCase();
+        const cookie = String((init?.headers as Record<string, string> | undefined)?.cookie ?? "");
+        fetchCalls.push({ cookie, method, url });
+        return {
+          async json() {
+            return {
+              data: {
+                columns: [{ id: "550e8400-e29b-41d4-a716-446655440010" }],
+                meals: [{ recipe_id: "550e8400-e29b-41d4-a716-446655440020" }],
+              },
+              error: null,
+              success: true,
+            };
+          },
+          ok: true,
+          status: 200,
+        } as Response;
+      },
       launchBrowser: (async () => browserFixture.browser) as never,
+      now: () => new Date(nowMs),
+      phase: "milestone-a-t65",
+      waitForDuration: async (durationMs: number) => {
+        expect(durationMs).toBe(65 * 60 * 1_000);
+        nowMs += durationMs;
+      },
       waitForManualLogin: async () => {
         browserFixture.context.setUrl("https://app.mumeok.kr/planner");
       },
     });
 
-    await expect(adapter.openSession()).rejects.toThrow(/public auth API key capture/u);
+    const opened = await adapter.openSession();
+    const refreshed = await adapter.refreshSession(opened.session);
+    expect(opened.bindingCreatedAt).toBe("2026-08-11T05:00:00.000Z");
+    expect(await adapter.readBindingExpiry(refreshed)).toBe("2026-08-11T07:00:00.000Z");
+    expect(createdKeys).toEqual([
+      `https://auth.mumeok.kr|${FALLBACK_PUBLIC_ANON_KEY}`,
+      `https://auth.mumeok.kr|${FALLBACK_PUBLIC_ANON_KEY}`,
+      `https://auth.mumeok.kr|${FALLBACK_PUBLIC_ANON_KEY}`,
+    ]);
+    expect(fetchCalls[0]?.url).toContain("/api/v1/planner?");
+    await adapter.close();
+  });
+
+  it("fails closed when the captured auth key disagrees with the configured fallback key", async () => {
+    const browserFixture = createBrowserFixture();
+    let createClientCalls = 0;
+
+    const adapter = await createProductionBrowserCanaryAdapter({
+      configuredPublicAnonKey: FALLBACK_PUBLIC_ANON_KEY,
+      createBrowserClientImpl: ((() => {
+        createClientCalls += 1;
+        throw new Error("must not create client");
+      }) as unknown) as never,
+      launchBrowser: (async () => browserFixture.browser) as never,
+      phase: "milestone-a-24h",
+      waitForManualLogin: async () => {
+        browserFixture.context.emitRequest("https://auth.mumeok.kr/auth/v1/authorize", {
+          apikey: "different-captured-public-key",
+        });
+        browserFixture.context.setUrl("https://app.mumeok.kr/planner");
+      },
+    });
+
+    await expect(adapter.openSession()).rejects.toThrow(/public auth API key/i);
     expect(createClientCalls).toBe(0);
     await adapter.close();
+  });
+
+  it("continues the login flow with the configured publishable fallback anon key when auth request capture is absent", async () => {
+    const browserFixture = createBrowserFixture();
+    const nowMs = Date.parse("2026-08-11T05:00:00.000Z");
+    let sessionExpiresAt = Math.floor(Date.parse("2026-08-11T05:55:00.000Z") / 1_000);
+    const createdKeys: string[] = [];
+
+    const adapter = await createProductionBrowserCanaryAdapter({
+      configuredPublicAnonKey: PUBLISHABLE_PUBLIC_ANON_KEY,
+      createBrowserClientImpl: ((url: string, apiKey: string) => {
+        createdKeys.push(`${url}|${apiKey}`);
+        return {
+          auth: {
+            async getSession() {
+              return { data: { session: { expires_at: sessionExpiresAt } }, error: null };
+            },
+            async refreshSession() {
+              sessionExpiresAt = Math.floor(Date.parse("2026-08-11T07:00:00.000Z") / 1_000);
+              return { data: { session: { expires_at: sessionExpiresAt } }, error: null };
+            },
+          },
+        };
+      }) as never,
+      launchBrowser: (async () => browserFixture.browser) as never,
+      now: () => new Date(nowMs),
+      phase: "milestone-a-24h",
+      waitForManualLogin: async () => {
+        browserFixture.context.setUrl("https://app.mumeok.kr/planner");
+      },
+    });
+
+    const opened = await adapter.openSession();
+    expect(opened.bindingCreatedAt).toBe("2026-08-11T05:00:00.000Z");
+    expect(createdKeys[0]).toBe(`https://auth.mumeok.kr|${PUBLISHABLE_PUBLIC_ANON_KEY}`);
+    await adapter.close();
+  });
+
+  it("rejects invalid configured public auth key formats", async () => {
+    await expect(createProductionBrowserCanaryAdapter({
+      configuredPublicAnonKey: "sb_secret_live_0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+    })).rejects.toThrow(/public auth API key is invalid/i);
+    await expect(createProductionBrowserCanaryAdapter({
+      configuredPublicAnonKey: "sb_arbitrary_0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+    })).rejects.toThrow(/public auth API key is invalid/i);
+    await expect(createProductionBrowserCanaryAdapter({
+      configuredPublicAnonKey: ` ${PUBLISHABLE_PUBLIC_ANON_KEY}`,
+    })).rejects.toThrow(/public auth API key is invalid/i);
+    await expect(createProductionBrowserCanaryAdapter({
+      configuredPublicAnonKey: `sb_publishable_bad\u000akey`,
+    })).rejects.toThrow(/public auth API key is invalid/i);
   });
 
   it("fails closed when a non-canonical auth origin is supplied", async () => {
