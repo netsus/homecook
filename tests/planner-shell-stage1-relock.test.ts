@@ -129,8 +129,10 @@ describe("planner-shell fresh Stage 1 relock", () => {
     expect(workItem.verification.stage4_future_commands).toEqual(
       automation.frontend.verify_commands,
     );
-    expect(automation.external_smokes).toEqual([]);
-    expect(workItem.workflow.external_smokes).toHaveLength(7);
+    expect(automation.external_smokes).toEqual(
+      workItem.workflow.external_smokes,
+    );
+    expect(automation.external_smokes).toHaveLength(7);
     expect(workItem.verification.manual_only_evidence).toEqual(
       expect.arrayContaining([
         expect.stringContaining("390px and 320px"),
