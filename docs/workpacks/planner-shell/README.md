@@ -205,7 +205,7 @@ segment switch:
 
 ## Design Status
 
-`temporary`. Stage 1 locks structure and interaction only; refreshed canonical design, independent critic and screenshot/Figma product-design-authority remain required.
+`pending-review`. Stage 4 implements the locked structure and interaction. The separate evidence generator, Stage 5 review and refreshed screenshot/Figma product-design-authority verdict remain required; this status is not an approval.
 
 ## Stage 1 Current Gate
 
@@ -230,3 +230,5 @@ segment switch:
 - [ ] product-design-authority approved before confirmed <!-- omo:id=delivery-planner-shell-design-authority;stage=4;scope=frontend;review=5,6 -->
 
 Stage 2 note: this test-only slice recorded an existing-behavior characterization baseline GREEN. Backend implementation and a behavioral TDD RED are N/A because no runtime repair was required; the stale generic checklist item therefore remains unchecked.
+
+Stage 4 note: the frontend implementation and deterministic browser checks are present on `feature/fe-planner-shell`. The 390/320/desktop screenshot matrix, refreshed authority verdict, Stage 5/6 review, Manual/device/server evidence and activation remain pending and are not claimed by the Stage 4 author.

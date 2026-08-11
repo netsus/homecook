@@ -2597,9 +2597,9 @@
     {
       "id": "planner-shell",
       "preset": "vertical-slice-strict",
-      "branch": "docs/planner-shell",
+      "branch": "feature/fe-planner-shell",
       "pr_path": "pending",
-      "lifecycle": "planned",
+      "lifecycle": "in_progress",
       "approval_state": "not_started",
       "verification_status": "pending",
       "required_checks": [
@@ -2614,7 +2614,7 @@
         "pnpm audit --audit-level high",
         "git diff --check"
       ],
-      "notes": "Roadmap is in-progress. Stage 2 backend implementation remains N/A, and the test-only compatibility characterization is complete. Fresh Stage 3 remains pending until the current P1/P2 findings repair is on the PR head and independently rereviewed. Workflow lifecycle remains planned, approval not_started and verification pending; Stage 4, authority, merge and activation are not promoted. This author does not approve its own changes. Component/E2E/visual/a11y/browser/server-production/local-rehearsal and authority evidence is future. #9 PR #1319 exact head be93bfc47281e2795c59c0fd1052a4ecf6085837 passed independent Stage 3 P0/P1/P2 0/0/0 and merged as base 8ba3fa5a2a198eb4f9c19d59cea5f6ccc52fdd4f; Manual/server-Mac/OAuth, merged-exact server-production/local-rehearsal, capability, R/R+1/R+2 and activation remain pending. #10 owns Planner shell and plan-only PLANNER_WEEK; #11 remains COOK_MODE/LEFTOVERS-only, #12 MEAL_LOG implementation waits for merged-green #10 runtime, and #13 owns compatibility tombstones. No schema, migration, RLS, RPC, endpoint, field or status is added.",
+      "notes": "Roadmap and workflow lifecycle are in-progress. Stage 2 backend implementation is N/A, compatibility characterization is complete, Stage 3 independently approved with P0/P1/P2 0/0/0, and Stage 4 frontend implementation is prepared on feature/fe-planner-shell. #9 PR #1319 merged code remains consumed from recorded base 8ba3fa5a2a198eb4f9c19d59cea5f6ccc52fdd4f without promoting its broader lifecycle. Approval remains not_started and verification remains pending until the Draft PR current-head checks, separate 390/320/desktop evidence generator, Stage 5, final authority and Stage 6 complete. This author does not approve its own changes. Manual/server-Mac/OAuth, merged-exact server-production/local-rehearsal, physical-device/AT, capability, R/R+1/R+2 and activation remain pending. #11 remains COOK_MODE/LEFTOVERS-only, #12 MEAL_LOG implementation waits for separately merged-green #10, and #13 owns compatibility tombstones. No schema, migration, RLS, RPC, endpoint, field or status is added.",
       "evaluation_status": "not_started",
       "evaluation_round": 0,
       "last_evaluator_result": null,
