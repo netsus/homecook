@@ -2598,7 +2598,7 @@
       "id": "planner-shell",
       "preset": "vertical-slice-strict",
       "branch": "feature/fe-planner-shell",
-      "pr_path": "pending",
+      "pr_path": "https://github.com/netsus/homecook/pull/1331",
       "lifecycle": "in_progress",
       "approval_state": "not_started",
       "verification_status": "pending",
