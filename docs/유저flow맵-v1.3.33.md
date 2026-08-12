@@ -16,11 +16,13 @@
 /menu/add/youtube URL 입력
 → 기존 validate / 로그인 / feature flag / URL 검증
 → POST /recipes/youtube/extraction-jobs exact { youtube_url } | { retry_job_id }
-→ route가 authenticated user binding과 current release policy descriptor 확정
-→ 외부 secret loader의 current/optional previous HMAC key로 current_digest/previous_digest 계산
-→ existing server-side authority가 user-bound request-scoped enqueue JWT 발급
-→ server-only youtube-extraction-enqueue scope / youtube_extraction_enqueue role RPC
-→ DB key version/window/format 검증 + dual-read dedupe + current-write durable INSERT
+→ route가 release expected-schema manifest의 app descriptor와 authenticated user binding 확정/preflight
+→ existing app external secret loader의 server-only allowlist에서 current/optional previous HMAC key로 current_digest/previous_digest 계산 (worker에는 금지)
+→ createRouteHandlerClient() 사용자 세션으로 SECURITY DEFINER enqueue RPC; owner는 auth.uid()에서만 도출
+→ RPC input: video_id + expected_policy_version + expected_policy_snapshot_digest + current/previous key versions/digests + submission_mode
+→ transaction advisory shared lock → enabled policy plain SELECT → expected version/digest exact match
+   ├─ mismatch/invalid digest: POLICY_CHANGED, insert/dedupe/budget 0
+   └─ match: key version/window/format 검증 + dual-read dedupe + current-write durable INSERT
 → 202 { job_id, status, deduplicated, submitted_at }
 → "추출을 시작했어요" + [이동] [작업 보기]
 → 사용자는 다른 화면·background·브라우저 종료 가능
@@ -75,11 +77,13 @@ non-retryable 또는 attempts 소진
    └─ false: [닫기] / 목록 유지, retry CTA·POST 없음
 → server가 본인 terminal failed/expired와 저장된 normalized video ID 확인
 → 이전 job에서는 youtube_video_id만 복사한다
-→ Next route가 retry 시점 current release descriptor와 authenticated user binding 사용
-→ 외부 secret loader가 current_digest + rotation window 안의 optional previous_digest 계산
-→ youtube-extraction-enqueue scope / youtube_extraction_enqueue role로 restricted RPC
-→ DB가 private.youtube_extraction_current_policy singleton lock/read
-→ current/previous key version + window + lowercase 64-hex format 검증
+→ Next route가 retry 시점 release expected-schema manifest의 app descriptor와 authenticated user binding 사용
+→ existing app external secret loader의 server-only allowlist가 current_digest + rotation window 안의 optional previous_digest 계산; worker에는 금지
+→ createRouteHandlerClient() 사용자 세션으로 SECURITY DEFINER RPC, owner=auth.uid()
+→ expected_policy_version + expected_policy_snapshot_digest 전달
+→ transaction advisory shared lock → enabled policy plain SELECT
+→ expected version/digest exact match + current/previous key version/window/lowercase 64-hex format 검증
+   └─ options-only rotation stale app 또는 invalid digest/policy mismatch: POLICY_CHANGED, insert/dedupe/budget 0
 → current complete mode/pipeline/options/policy_version/policy_snapshot_digest 새 결정
 → 이전 HMAC/options 역복원 금지
 → 같은 transaction/advisory lock에서 dual-read dedupe/budget + current-write immutable job 생성
@@ -88,9 +92,10 @@ non-retryable 또는 attempts 소진
 
 - enqueue request는 exact union `{ youtube_url } | { retry_job_id }`이며 두 branch를 함께 보내지 않는다. `can_retry`는 expired 또는 safe failed error의 `retryable=true`일 때만 true다.
 - can_retry=false이면 retry CTA를 렌더하지 않는다. `NOT_RECIPE_VIDEO` 등 non-retryable failure는 닫기/목록 유지이며 새 enqueue로 진행하지 않는다.
-- public client/route body는 mode/options/key version/digest를 지정할 수 없다. public route는 session과 URL/retry ID만 받고 trusted Next server layer가 digest를 만든다. existing server-side JWT/attestation authority의 user-bound request-scoped enqueue JWT는 exact role/scope와 `sub/session_id/generation`을 함께 전달한다. enqueue RPC input은 `video_id, current_key_version, current_digest, optional previous_key_version, optional previous_digest, submission_mode`뿐이다. exact pre-request `youtube-extraction-enqueue` scope와 authenticated user binding이 모두 없으면 fail closed하며 브라우저 직접 RPC 금지다. DB는 HMAC secret을 알지 못한다.
-- current/previous rotation은 dual-read/current-write다. new row는 current digest/version만 저장하고 previous pair는 rotation window 안의 active dedupe read에만 쓴다. `private.youtube_extraction_current_policy`는 승인된 release migration으로만 원자 전환하며 경합한 enqueue/retry는 old/new 중 한 complete snapshot만 사용한다.
+- public client/route body는 mode/options/key version/digest/descriptor를 지정할 수 없다. public route는 session과 URL/retry ID만 받고 trusted Next server layer가 digest를 만든다. enqueue RPC input은 `video_id, expected_policy_version, expected_policy_snapshot_digest, current_key_version, current_digest, optional previous_key_version, optional previous_digest, submission_mode`뿐이다. 별도 enqueue credential authority는 없고 `createRouteHandlerClient()`의 로그인 사용자 세션과 RPC 내부 `auth.uid()`가 owner authority다. 브라우저 직접 RPC 금지이며 invalid digest/policy mismatch로 write 0이다. DB는 HMAC secret을 알지 못한다. digest/descriptor는 response/log/browser bundle에 노출 금지다.
+- current/previous rotation은 dual-read/current-write다. new row는 current digest/version만 저장하고 previous pair는 rotation window 안의 active dedupe read에만 쓴다. `private.youtube_extraction_current_policy`는 승인된 release migration으로만 원자 전환한다. enqueue는 transaction advisory shared lock 뒤 enabled policy plain SELECT, rotation은 같은 advisory key의 exclusive transaction lock 뒤 UPDATE/CAS를 사용해 경합한 enqueue/retry가 old/new 중 한 complete snapshot만 사용하게 한다. policy row-level locking read는 사용하지 않는다.
 - canonical policy JSON은 UTF-8, sorted keys, no whitespace, unknown key 거부, defaults materialized다. initial async policy는 i031-only이고 workpack 33 manifest/options exact object만 쓴다. job `policy_snapshot_digest`는 `youtube-extraction-policy-snapshot-v1`의 non-secret SHA-256이며 worker `allowed_snapshot_digest`/artifact/credential attestation과 exact match한다. options-only rotation의 old worker reject를 반드시 검증한다.
+- app descriptor는 release expected-schema manifest에 포함되고 exact current policy snapshot을 preflight한다. options-only rotation stale app은 advisory lock 안 expected version/digest exact match에 실패해 `POLICY_CHANGED`, insert/dedupe/budget 0이어야 한다. current/previous HMAC key lifecycle은 app release와 policy rotation에 맞추며 existing app external secret loader의 server-only allowlist만 읽고 worker에는 금지한다.
 - permit 경합은 attempt를 소비하지 않는다. last allowed attempt 중 crash한 job은 reaper가 재실행하지 않고 `ATTEMPTS_EXHAUSTED`로 닫는다.
 - current/previous fingerprint key dual-read 또는 active queue drain 없이 key를 회전하지 않는다.
 - 타인/없는 job 또는 session은 동일 404로 처리해 존재 여부를 숨긴다.
@@ -123,7 +128,7 @@ rollout은 최초에는 initial bootstrap, 이후 정책 변경에는 later rota
 initial bootstrap
 → migration: disabled singleton/roles/RPC
 → same release app/worker install
-→ preflight/schema
+→ preflight/schema: release expected-schema manifest + exact current policy snapshot
 → credential/snapshot attestation
 → exclusive enable
 → enqueue publish
@@ -134,7 +139,7 @@ later rotation
 → disable/lock
 → CAS update disabled
 → new app/worker install
-→ preflight/schema + credential/snapshot attestation
+→ preflight/schema + credential/snapshot attestation: release expected-schema manifest + exact new policy snapshot
 → exclusive enable
 → resume
 
@@ -150,7 +155,7 @@ rollback
 
 - initial exact singleton은 `policy_key='primary'`, `policy_version=1`, `extractor_mode='i031_codex_vision'`, workpack 33 exact pipeline/options, `fingerprint_key_version='1'`, previous version/window null, `enabled=false`다. initial async policy는 i031-only다.
 - drain 실패 시 later rotation/rollback을 중단한다. 새 worker와 이전 direct sync provider를 동시에 실행하지 않는다.
-- policy 전환과 enqueue/retry 경합은 shared/exclusive advisory lock으로 old/new 중 한 complete snapshot만 사용한다. current/previous HMAC key는 DB 밖 external secret loader에만 있고 DB는 version/window/digest format만 검증한다. worker는 exact `policy_snapshot_digest`를 claim하고 current policy 재조회로 queued job을 바꾸지 않는다.
+- policy 전환과 enqueue/retry 경합은 한 canonical advisory key를 쓴다. enqueue는 transaction advisory shared lock → enabled policy plain SELECT, 전환은 같은 advisory key의 exclusive transaction lock → UPDATE/CAS 순서로 old/new 중 한 complete snapshot만 사용한다. current/previous HMAC key는 existing app external secret loader의 server-only allowlist에만 있고 worker에는 금지하며 DB는 version/window/digest format만 검증한다. worker는 exact `policy_snapshot_digest`를 claim하고 current policy 재조회로 queued job을 바꾸지 않는다.
 - additive queue schema는 자동 downgrade하지 않는다. schema/credential/release identity가 맞지 않으면 worker claim만 fail closed하고 앱의 다른 기능은 계속 서비스한다.
 - Web Push outbox/permission/subscription flow는 후속 contract-evolution 전에는 이 flow에 포함하지 않는다.
 

@@ -216,8 +216,11 @@ describe("YouTube background extraction contract evolution", () => {
       expect(jobFields).toContain(snapshotField);
     }
 
-    expect(db).toContain("enabled current policy row를 `SELECT ... FOR UPDATE`로 lock/read");
-    expect(db).toContain("같은 transaction/advisory lock");
+    expect(db).toContain("transaction advisory shared lock → enabled policy plain SELECT");
+    expect(db).toContain("같은 advisory key의 exclusive transaction lock → UPDATE/CAS");
+    expect(db).not.toMatch(
+      new RegExp("enabled current policy.*SELECT.*FOR " + "(?:UPDATE|SHARE)"),
+    );
     expect(db).toContain("job에 immutable snapshot으로 저장");
     expect(db).toContain("client/route는 mode/options를 지정할 수 없다");
     expect(db).toContain("승인된 release migration");
@@ -425,40 +428,106 @@ describe("YouTube background extraction contract evolution", () => {
     expect(db).toContain("전체 테이블 목록 (74개)");
   });
 
-  it("keeps HMAC secrets in the route and gives enqueue one exact restricted authority", () => {
+  it("uses the existing user session as the sole enqueue caller authority", () => {
     const requirements = read(officialTuple[0]);
+    const screens = read(officialTuple[1]);
     const flow = read(officialTuple[2]);
     const db = read(officialTuple[3]);
     const api = read(officialTuple[4]);
+    const source = read("docs/sync/CURRENT_SOURCE_OF_TRUTH.md");
 
-    for (const text of [requirements, flow, db, api]) {
-      expect(text).toContain("youtube-extraction-enqueue");
-      expect(text).toContain("youtube_extraction_enqueue");
+    for (const text of [requirements, screens, flow, db, api]) {
+      expect(text).toContain("createRouteHandlerClient()");
+      expect(text).toContain("auth.uid()");
       expect(text).toContain("current_digest");
       expect(text).toContain("previous_digest");
       expect(text).toContain("DB는 HMAC secret을 알지 못한다");
       expect(text).toContain("브라우저 직접 RPC 금지");
-      expect(text).toContain("request-scoped enqueue JWT");
       expect(text).toContain("current-write");
       expect(text).toContain("dual-read");
     }
 
     expect(db).toContain(
-      "enqueue_youtube_extraction_job(video_id, current_key_version, current_digest, previous_key_version, previous_digest, submission_mode)",
+      "enqueue_youtube_extraction_job(video_id, expected_policy_version, expected_policy_snapshot_digest, current_key_version, current_digest, previous_key_version, previous_digest, submission_mode)",
     );
-    expect(db).toContain("`youtube_extraction_enqueue` | PostgREST API role, `NOLOGIN`");
     expect(db).toContain("`youtube_extraction_enqueue_rpc_owner` | `NOLOGIN NOSUPERUSER");
-    expect(db).toContain("authenticator → youtube_extraction_enqueue");
     expect(db).toContain("table/sequence privilege 0");
     expect(db).toContain("SECURITY DEFINER SET search_path = ''");
-    expect(db).toContain("authenticated user binding");
+    expect(db).toContain("owner는 `auth.uid()`에서만 도출");
+    expect(db).toContain("exact signature를 `authenticated`에만 `GRANT EXECUTE`");
+    expect(db).toContain("`PUBLIC`, `anon`, `service_role`, worker, credential-manager, manager에서 `REVOKE EXECUTE`");
     expect(db).toContain("youtube_extraction_current_policy_enqueue_owner_select");
     expect(db).toContain("youtube_extraction_jobs_enqueue_owner_select");
     expect(db).toContain("youtube_extraction_jobs_enqueue_owner_insert");
     expect(db).toContain("FOR SELECT USING (user_id=auth.uid())");
     expect(db).toContain("FOR INSERT WITH CHECK (user_id=auth.uid())");
     expect(db).toContain("policy UPDATE와 jobs UPDATE/DELETE/TRUNCATE/REFERENCES/TRIGGER");
+    const removedApiRole = "`youtube_extraction_" + "enqueue`";
+    const removedScope = "youtube-extraction-" + "enqueue";
+    const removedJwt = "request-scoped enqueue " + "JWT";
+    const removedSigner = "enqueue signing " + "key";
+    for (const text of [...officialTuple.map(read), source]) {
+      expect(text).not.toContain(removedApiRole);
+      expect(text).not.toContain(removedScope);
+      expect(text).not.toContain(removedJwt);
+      expect(text).not.toContain(removedSigner);
+    }
+    expect(db).not.toContain("authenticator → youtube_extraction_" + "enqueue");
     expect(db).not.toMatch(/HMAC (?:secret|key).*private\.youtube_extraction_current_policy에 저장/);
+  });
+
+  it("serializes policy reads and rotations with one advisory lock authority", () => {
+    const db = read(officialTuple[3]);
+    const flow = read(officialTuple[2]);
+
+    for (const text of [db, flow]) {
+      expect(text).toContain("transaction advisory shared lock");
+      expect(text).toContain("enabled policy plain SELECT");
+      expect(text).toContain("같은 advisory key의 exclusive transaction lock");
+      expect(text).toContain("UPDATE/CAS");
+    }
+
+    expect(db).toContain("policy `SELECT`, jobs `SELECT,INSERT`뿐");
+    expect(db).toContain("policy UPDATE");
+    expect(db).toContain("0이다");
+    expect(db).not.toMatch(
+      new RegExp("enabled current policy.*SELECT.*FOR " + "(?:UPDATE|SHARE)"),
+    );
+  });
+
+  it("binds enqueue to the app expected policy snapshot and rejects stale descriptors before writes", () => {
+    const requirements = read(officialTuple[0]);
+    const screens = read(officialTuple[1]);
+    const flow = read(officialTuple[2]);
+    const db = read(officialTuple[3]);
+    const api = read(officialTuple[4]);
+
+    for (const text of [requirements, screens, flow, db, api]) {
+      expect(text).toContain("expected_policy_version");
+      expect(text).toContain("expected_policy_snapshot_digest");
+      expect(text).toContain("POLICY_CHANGED");
+      expect(text).toContain("insert/dedupe/budget 0");
+      expect(text).toContain("release expected-schema manifest");
+      expect(text).toContain("options-only rotation stale app");
+      expect(text).toContain("digest/descriptor는 response/log/browser bundle에 노출 금지");
+    }
+
+    expect(db).toContain("advisory lock 안에서 enabled policy plain SELECT");
+    expect(db).toContain("expected version/digest exact match");
+    expect(api).toContain("409 POLICY_CHANGED");
+    expect(api).toContain("추출 설정이 바뀌었어요. 다시 시도해 주세요.");
+  });
+
+  it("keeps fingerprint keys in the existing app secret loader and away from browser and worker", () => {
+    const documents = officialTuple.map(read);
+
+    for (const document of documents) {
+      expect(document).toContain("existing app external secret loader");
+      expect(document).toContain("server-only allowlist");
+      expect(document).toContain("worker에는 금지");
+      expect(document).toContain("invalid digest/policy mismatch");
+      expect(document).toContain("app release와 policy rotation");
+    }
   });
 
   it("pins the exact i031-only initial policy and canonical options schema", () => {
