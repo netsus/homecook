@@ -797,7 +797,7 @@ describe("YTASYNC-OPS preflight, drain, rollback, credential", () => {
       "exit 1",
       "",
     ].join("\n"), 0o700);
-    for (const executable of ["python3", "ffmpeg", "ffprobe"]) {
+    for (const executable of ["python3", "yt-dlp", "ffmpeg", "ffprobe"]) {
       writeModeFile(join(fakeBin, executable), "#!/bin/sh\necho ok\n", 0o700);
     }
     writeModeFile(providerPath, [
@@ -877,17 +877,23 @@ describe("YTASYNC-OPS preflight, drain, rollback, credential", () => {
       env: {
         ...process.env,
         HOME: fakeHome,
-        PATH: `${fakeBin}:${process.env.PATH ?? ""}`,
+        PATH: fakeBin,
       },
       stdio: ["ignore", "pipe", "pipe"],
     });
     let stderr = "";
     child.stderr.setEncoding("utf8");
     child.stderr.on("data", (chunk) => { stderr += chunk; });
+    const childExit = new Promise<number | null>((resolve) => child.once("exit", resolve));
     try {
-      await succeeded;
+      await Promise.race([
+        succeeded,
+        childExit.then((exitCode) => {
+          throw new Error(`worker exited before finalize (${String(exitCode)}): ${stderr}`);
+        }),
+      ]);
       child.kill("SIGTERM");
-      const exitCode = await new Promise<number | null>((resolve) => child.once("exit", resolve));
+      const exitCode = await childExit;
       expect(exitCode, stderr).toBe(0);
       expect(observedAuthorization).toBe("Bearer worker-token");
       expect(rpcCalls).toEqual(expect.arrayContaining([
@@ -904,5 +910,5 @@ describe("YTASYNC-OPS preflight, drain, rollback, credential", () => {
       if (child.exitCode === null) child.kill("SIGKILL");
       await new Promise<void>((resolve) => server.close(() => resolve()));
     }
-  }, 120_000);
+  }, 30_000);
 });
