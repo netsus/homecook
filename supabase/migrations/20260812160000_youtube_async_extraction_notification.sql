@@ -88,18 +88,9 @@ grant usage on schema public to youtube_extraction_credential_manager_rpc_owner;
 grant usage on schema private to youtube_extraction_enqueue_rpc_owner;
 grant usage on schema private to youtube_extraction_worker_rpc_owner;
 grant usage on schema private to youtube_extraction_credential_manager_rpc_owner;
-grant usage on schema auth to youtube_extraction_enqueue_rpc_owner;
-grant usage on schema auth to youtube_extraction_worker_rpc_owner;
-grant usage on schema auth to youtube_extraction_credential_manager_rpc_owner;
 grant usage on schema extensions to youtube_extraction_enqueue_rpc_owner;
 grant usage on schema extensions to youtube_extraction_worker_rpc_owner;
 grant usage on schema extensions to youtube_extraction_credential_manager_rpc_owner;
-grant execute on function auth.uid() to youtube_extraction_enqueue_rpc_owner;
-grant execute on function auth.uid() to youtube_extraction_worker_rpc_owner;
-grant execute on function auth.uid() to youtube_extraction_credential_manager_rpc_owner;
-grant execute on function auth.role() to youtube_extraction_enqueue_rpc_owner;
-grant execute on function auth.role() to youtube_extraction_worker_rpc_owner;
-grant execute on function auth.role() to youtube_extraction_credential_manager_rpc_owner;
 
 grant youtube_extraction_worker to authenticator;
 grant youtube_extraction_credential_manager to authenticator;
@@ -363,7 +354,15 @@ create policy youtube_extraction_jobs_enqueue_owner_select
   on public.youtube_extraction_jobs
   for select
   to youtube_extraction_enqueue_rpc_owner
-  using (user_id = auth.uid());
+  using (
+    user_id = nullif(
+      coalesce(
+        nullif(pg_catalog.current_setting('request.jwt.claims', true), ''),
+        '{}'
+      )::jsonb ->> 'sub',
+      ''
+    )::uuid
+  );
 
 drop policy if exists youtube_extraction_jobs_enqueue_owner_insert
   on public.youtube_extraction_jobs;
@@ -371,7 +370,15 @@ create policy youtube_extraction_jobs_enqueue_owner_insert
   on public.youtube_extraction_jobs
   for insert
   to youtube_extraction_enqueue_rpc_owner
-  with check (user_id = auth.uid());
+  with check (
+    user_id = nullif(
+      coalesce(
+        nullif(pg_catalog.current_setting('request.jwt.claims', true), ''),
+        '{}'
+      )::jsonb ->> 'sub',
+      ''
+    )::uuid
+  );
 
 drop policy if exists youtube_extraction_worker_credentials_enqueue_owner_select
   on private.youtube_extraction_worker_credentials;
@@ -387,7 +394,15 @@ create policy youtube_extraction_sessions_enqueue_owner_select
   on public.youtube_extraction_sessions
   for select
   to youtube_extraction_enqueue_rpc_owner
-  using (user_id = auth.uid());
+  using (
+    user_id = nullif(
+      coalesce(
+        nullif(pg_catalog.current_setting('request.jwt.claims', true), ''),
+        '{}'
+      )::jsonb ->> 'sub',
+      ''
+    )::uuid
+  );
 
 drop policy if exists youtube_extraction_current_policy_worker_owner_select
   on private.youtube_extraction_current_policy;
@@ -430,8 +445,24 @@ create policy youtube_extraction_jobs_delivery_owner_update
   on public.youtube_extraction_jobs
   for update
   to youtube_extraction_worker_rpc_owner
-  using (auth.uid() = user_id)
-  with check (auth.uid() = user_id);
+  using (
+    nullif(
+      coalesce(
+        nullif(pg_catalog.current_setting('request.jwt.claims', true), ''),
+        '{}'
+      )::jsonb ->> 'sub',
+      ''
+    )::uuid = user_id
+  )
+  with check (
+    nullif(
+      coalesce(
+        nullif(pg_catalog.current_setting('request.jwt.claims', true), ''),
+        '{}'
+      )::jsonb ->> 'sub',
+      ''
+    )::uuid = user_id
+  );
 
 drop policy if exists youtube_extractor_permits_worker_owner_select
   on public.youtube_extractor_permits;
@@ -1751,12 +1782,14 @@ begin
     select count(*) into v_used from public.youtube_transcript_fetch_events as event
     where event.user_id = v_job.user_id
       and event.provider = reserve_youtube_extraction_worker_quota.provider
+      and not event.cache_hit
       and (event.status = 'success' or event.reason = 'worker_quota_reserved')
       and event.created_at >= date_trunc('day', clock_timestamp() at time zone 'UTC') at time zone 'UTC';
   else
     select count(*) into v_used from public.youtube_llm_extraction_events as event
     where event.user_id = v_job.user_id
       and event.provider = reserve_youtube_extraction_worker_quota.provider
+      and not event.cache_hit
       and (event.status = 'success' or event.reason = 'worker_quota_reserved')
       and event.created_at >= date_trunc('day', clock_timestamp() at time zone 'UTC') at time zone 'UTC';
   end if;
@@ -1798,7 +1831,7 @@ declare
   v_catalog_fingerprint text;
 begin
   if coalesce(v_claims ->> 'role', '') is distinct from 'authenticated'
-    or auth.uid() is null then
+    or nullif(v_claims ->> 'sub', '') is null then
     raise exception 'YOUTUBE_EXTRACTION_ENQUEUE_UNAUTHORIZED'
       using errcode = '42501';
   end if;
@@ -1849,6 +1882,30 @@ begin
       from pg_catalog.pg_roles as role_row
       where role_row.rolname like 'youtube_extraction%'
     ), ''),
+    'role_attributes',
+    coalesce((
+      select pg_catalog.string_agg(
+        pg_catalog.format(
+          '%s|super=%s|inherit=%s|createrole=%s|createdb=%s|login=%s|replication=%s|bypassrls=%s|config=%s',
+          role_row.rolname,
+          role_row.rolsuper,
+          role_row.rolinherit,
+          role_row.rolcreaterole,
+          role_row.rolcreatedb,
+          role_row.rolcanlogin,
+          role_row.rolreplication,
+          role_row.rolbypassrls,
+          coalesce((
+            select pg_catalog.string_agg(setting, ',' order by setting)
+            from pg_catalog.unnest(role_row.rolconfig) as setting
+          ), '')
+        ),
+        E'\n'
+        order by role_row.rolname
+      )
+      from pg_catalog.pg_roles as role_row
+      where role_row.rolname like 'youtube_extraction%'
+    ), ''),
     'memberships',
     coalesce((
       select pg_catalog.string_agg(
@@ -1861,6 +1918,141 @@ begin
       join pg_catalog.pg_roles as member_role on member_role.oid = membership.member
       where member_role.rolname = 'authenticator'
         and granted_role.rolname like 'youtube_extraction%'
+    ), ''),
+    'table_security',
+    coalesce((
+      select pg_catalog.string_agg(
+        namespace.nspname || '.' || relation.relname
+          || '|rls=' || relation.relrowsecurity::text
+          || '|force=' || relation.relforcerowsecurity::text,
+        E'\n'
+        order by namespace.nspname, relation.relname
+      )
+      from pg_catalog.pg_class as relation
+      join pg_catalog.pg_namespace as namespace on namespace.oid = relation.relnamespace
+      where relation.relkind in ('r', 'p')
+        and (
+          (namespace.nspname = 'private' and relation.relname like 'youtube_extraction%')
+          or (
+            namespace.nspname = 'public'
+            and (
+              relation.relname like 'youtube_extraction%'
+              or relation.relname like 'youtube_extractor%'
+              or relation.relname like 'youtube_llm_extraction%'
+              or relation.relname like 'youtube_transcript%'
+              or relation.relname like 'youtube_visual_extraction%'
+              or relation.relname in ('cooking_methods', 'ingredient_synonyms', 'ingredients')
+            )
+          )
+        )
+    ), ''),
+    'rls_policies',
+    coalesce((
+      select pg_catalog.string_agg(
+        policy.schemaname || '.' || policy.tablename
+          || '|' || policy.policyname
+          || '|permissive=' || policy.permissive
+          || '|cmd=' || policy.cmd
+          || '|roles=' || coalesce(pg_catalog.array_to_string(policy.roles, ','), '')
+          || '|qual=' || coalesce(policy.qual, '')
+          || '|check=' || coalesce(policy.with_check, ''),
+        E'\n'
+        order by policy.schemaname, policy.tablename, policy.policyname
+      )
+      from pg_catalog.pg_policies as policy
+      where (
+        policy.schemaname = 'private'
+        and policy.tablename like 'youtube_extraction%'
+      ) or (
+        policy.schemaname = 'public'
+        and (
+          policy.tablename like 'youtube_extraction%'
+          or policy.tablename like 'youtube_extractor%'
+          or policy.tablename like 'youtube_llm_extraction%'
+          or policy.tablename like 'youtube_transcript%'
+          or policy.tablename like 'youtube_visual_extraction%'
+          or policy.tablename in ('cooking_methods', 'ingredient_synonyms', 'ingredients')
+        )
+      )
+    ), ''),
+    'table_privileges',
+    coalesce((
+      select pg_catalog.string_agg(
+        namespace.nspname || '.' || relation.relname
+          || '|' || coalesce(grantee.rolname, 'PUBLIC')
+          || '|' || privilege.privilege_type
+          || '|grantable=' || privilege.is_grantable::text,
+        E'\n'
+        order by namespace.nspname, relation.relname,
+          coalesce(grantee.rolname, 'PUBLIC'), privilege.privilege_type
+      )
+      from pg_catalog.pg_class as relation
+      join pg_catalog.pg_namespace as namespace on namespace.oid = relation.relnamespace
+      cross join lateral pg_catalog.aclexplode(
+        coalesce(relation.relacl, pg_catalog.acldefault('r', relation.relowner))
+      ) as privilege
+      left join pg_catalog.pg_roles as grantee on grantee.oid = privilege.grantee
+      where relation.relkind in ('r', 'p')
+        and (
+          coalesce(grantee.rolname, 'PUBLIC') like 'youtube_extraction%'
+          or (
+            coalesce(grantee.rolname, 'PUBLIC') in (
+              'PUBLIC', 'anon', 'authenticated', 'service_role'
+            )
+            and (
+              (namespace.nspname = 'private' and relation.relname in (
+                'youtube_extraction_current_policy',
+                'youtube_extraction_worker_credentials'
+              ))
+              or (namespace.nspname = 'public' and relation.relname in (
+                'youtube_extraction_jobs',
+                'youtube_extractor_permits'
+              ))
+            )
+          )
+        )
+        and (
+          (namespace.nspname = 'private' and relation.relname like 'youtube_extraction%')
+          or (
+            namespace.nspname = 'public'
+            and (
+              relation.relname like 'youtube_extraction%'
+              or relation.relname like 'youtube_extractor%'
+              or relation.relname like 'youtube_llm_extraction%'
+              or relation.relname like 'youtube_transcript%'
+              or relation.relname like 'youtube_visual_extraction%'
+              or relation.relname in ('cooking_methods', 'ingredient_synonyms', 'ingredients')
+            )
+          )
+        )
+    ), ''),
+    'sequence_privileges',
+    coalesce((
+      select pg_catalog.string_agg(
+        namespace.nspname || '.' || relation.relname
+          || '|' || coalesce(grantee.rolname, 'PUBLIC')
+          || '|' || privilege.privilege_type
+          || '|grantable=' || privilege.is_grantable::text,
+        E'\n'
+        order by namespace.nspname, relation.relname,
+          coalesce(grantee.rolname, 'PUBLIC'), privilege.privilege_type
+      )
+      from pg_catalog.pg_class as relation
+      join pg_catalog.pg_namespace as namespace on namespace.oid = relation.relnamespace
+      cross join lateral pg_catalog.aclexplode(
+        coalesce(relation.relacl, pg_catalog.acldefault('S', relation.relowner))
+      ) as privilege
+      left join pg_catalog.pg_roles as grantee on grantee.oid = privilege.grantee
+      where relation.relkind = 'S'
+        and namespace.nspname in ('private', 'public')
+        and relation.relname like 'youtube%'
+        and coalesce(grantee.rolname, 'PUBLIC') in (
+          'PUBLIC', 'anon', 'authenticated', 'service_role',
+          'youtube_extraction_enqueue_rpc_owner',
+          'youtube_extraction_worker', 'youtube_extraction_worker_rpc_owner',
+          'youtube_extraction_credential_manager',
+          'youtube_extraction_credential_manager_rpc_owner'
+        )
     ), ''),
     'rpc_signatures',
     coalesce((
@@ -1881,6 +2073,49 @@ begin
           procedure.proname like '%youtube_extraction%'
           or procedure.proname like '%youtube_extractor_permit%'
         )
+    ), ''),
+    'rpc_security',
+    coalesce((
+      select pg_catalog.string_agg(
+        namespace.nspname || '.' || procedure.proname || '('
+          || pg_catalog.replace(
+            pg_catalog.oidvectortypes(procedure.proargtypes),
+            ', ',
+            ','
+          ) || ')'
+          || '|owner=' || pg_catalog.pg_get_userbyid(procedure.proowner)
+          || '|security_definer=' || procedure.prosecdef::text
+          || '|config=' || coalesce((
+            select pg_catalog.string_agg(setting, ',' order by setting)
+            from pg_catalog.unnest(procedure.proconfig) as setting
+          ), '')
+          || '|acl=' || coalesce((
+            select pg_catalog.string_agg(
+              coalesce(grantee.rolname, 'PUBLIC') || ':'
+                || privilege.privilege_type || ':' || privilege.is_grantable::text,
+              ','
+              order by coalesce(grantee.rolname, 'PUBLIC'), privilege.privilege_type
+            )
+            from pg_catalog.aclexplode(
+              coalesce(procedure.proacl, pg_catalog.acldefault('f', procedure.proowner))
+            ) as privilege
+            left join pg_catalog.pg_roles as grantee on grantee.oid = privilege.grantee
+          ), ''),
+        E'\n'
+        order by namespace.nspname, procedure.proname, procedure.proargtypes::text
+      )
+      from pg_catalog.pg_proc as procedure
+      join pg_catalog.pg_namespace as namespace on namespace.oid = procedure.pronamespace
+      where (
+        namespace.nspname = 'public'
+        and (
+          procedure.proname like '%youtube_extraction%'
+          or procedure.proname like '%youtube_extractor_permit%'
+        )
+      ) or (
+        namespace.nspname = 'private'
+        and procedure.proname = 'youtube_extraction_job_fence_is_active'
+      )
     ), '')
   );
   v_catalog_fingerprint := pg_catalog.encode(
@@ -1892,7 +2127,7 @@ begin
     'ready', v_policy.enabled
       and v_credential.allowed_snapshot_digest = v_snapshot_digest
       and v_credential.expires_at > clock_timestamp() + interval '30 minutes'
-      and v_catalog_fingerprint = '8f424c31d61b2b17a9a574557f26600eefd51faff9412c414204460f6312739d',
+      and v_catalog_fingerprint = '90753d3d0db979c6088fc225294064e48ae57a6c39f500c1dff1bebc0b222ae7',
     'release_sha', v_credential.release_sha,
     'schema_identity', v_credential.schema_identity,
     'catalog_fingerprint', v_catalog_fingerprint,
@@ -1924,7 +2159,7 @@ declare
     '{}'
   )::jsonb;
   v_role text := coalesce(nullif(v_claims ->> 'role', ''), current_user);
-  v_requested_user_id uuid := auth.uid();
+  v_requested_user_id uuid := nullif(v_claims ->> 'sub', '')::uuid;
   v_requested_job_id uuid := job_id;
   v_payload jsonb;
 begin
@@ -1985,7 +2220,7 @@ declare
     '{}'
   )::jsonb;
   v_role text := coalesce(nullif(v_claims ->> 'role', ''), current_user);
-  v_requested_user_id uuid := auth.uid();
+  v_requested_user_id uuid := nullif(v_claims ->> 'sub', '')::uuid;
   v_requested_extraction_id uuid := extraction_id;
   v_payload jsonb;
 begin
@@ -2031,7 +2266,7 @@ declare
     '{}'
   )::jsonb;
   v_role text := coalesce(nullif(v_claims ->> 'role', ''), current_user);
-  v_requested_user_id uuid := auth.uid();
+  v_requested_user_id uuid := nullif(v_claims ->> 'sub', '')::uuid;
   v_requested_list_view text := list_view;
   v_requested_retention_floor timestamptz := retention_floor;
   v_cursor_completed_at timestamptz := cursor_completed_at;

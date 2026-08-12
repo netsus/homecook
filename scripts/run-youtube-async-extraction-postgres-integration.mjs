@@ -192,10 +192,6 @@ function bootstrapSql() {
       is_system boolean not null default true,
       display_order integer not null default 0
     );
-    alter table public.ingredients enable row level security;
-    alter table public.ingredient_synonyms enable row level security;
-    alter table public.cooking_methods enable row level security;
-
     create table public.youtube_transcript_cache (
       id uuid primary key default gen_random_uuid(), youtube_video_id varchar(20) not null,
       language text not null, source_provider text not null, source_kind text not null,
@@ -290,7 +286,6 @@ function bootstrapSql() {
     create policy youtube_extraction_sessions_select_own
       on public.youtube_extraction_sessions
       for select
-      to authenticated
       using (auth.uid() = user_id);
 
     create table public.youtube_extraction_candidates (
@@ -321,7 +316,6 @@ function bootstrapSql() {
     create policy youtube_extraction_candidates_select_own
       on public.youtube_extraction_candidates
       for select
-      to authenticated
       using (
         exists (
           select 1

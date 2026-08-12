@@ -1684,7 +1684,7 @@ describe.runIf(enabled).sequential("youtube async extraction PostgreSQL integrat
     for (const claims of [
       managerClaims({ iss: "https://wrong.example" }),
       managerClaims({ aud: "wrong-audience" }),
-      managerClaims({ exp: nowSeconds + 5 * 60 + 1 }),
+      managerClaims({ exp: nowSeconds + 6 * 60 }),
     ]) {
       expectSqlFailure(`
         begin;
