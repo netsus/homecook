@@ -2025,7 +2025,7 @@
       "kind": "rpc",
       "operation": "call",
       "target": "finalize_youtube_extraction_job",
-      "line": 97,
+      "line": 115,
       "source_file": "lib/server/youtube-extraction-worker-rpc.ts",
       "route": null,
       "owner_scope": "system",
@@ -2039,7 +2039,7 @@
       "kind": "rpc",
       "operation": "call",
       "target": "resolve_youtube_extraction_job_draft",
-      "line": 152,
+      "line": 170,
       "source_file": "lib/server/youtube-extraction-worker-rpc.ts",
       "route": null,
       "owner_scope": "system",
@@ -2053,7 +2053,7 @@
       "kind": "rpc",
       "operation": "call",
       "target": "start_youtube_extraction_attempt",
-      "line": 83,
+      "line": 101,
       "source_file": "lib/server/youtube-extraction-worker-rpc.ts",
       "route": null,
       "owner_scope": "system",
@@ -2067,7 +2067,7 @@
       "kind": "rpc",
       "operation": "call",
       "target": "consume_youtube_ingredient_registration_rate_limit",
-      "line": 10753,
+      "line": 10715,
       "source_file": "lib/server/youtube-import.ts",
       "route": null,
       "owner_scope": "authenticated-user",
@@ -2081,7 +2081,7 @@
       "kind": "rpc",
       "operation": "call",
       "target": "register_youtube_ingredient",
-      "line": 10780,
+      "line": 10742,
       "source_file": "lib/server/youtube-import.ts",
       "route": null,
       "owner_scope": "authenticated-user",
@@ -2095,7 +2095,7 @@
       "kind": "rpc",
       "operation": "call",
       "target": "register_youtube_recipe_from_session",
-      "line": 10911,
+      "line": 10873,
       "source_file": "lib/server/youtube-import.ts",
       "route": null,
       "owner_scope": "authenticated-user",
@@ -2142,6 +2142,6 @@
       "on_delete": "cascade"
     }
   ],
-  "generated_at": "2026-08-12T16:37:18.805Z",
-  "checksum": "21386a8ab409afc66594013a7fb3e43daf93d7188cd666a407f8b2f458b536c4"
+  "generated_at": "2026-08-12T18:18:21.012Z",
+  "checksum": "bae6939015d9e0146a27c4212e4890316eb3907ebdc8bc8ec864b933f414d1ad"
 }
