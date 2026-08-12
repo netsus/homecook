@@ -62,6 +62,10 @@ import {
   type YoutubeI031ExtractionResult,
   type YoutubeI031Extractor,
 } from "@/lib/server/youtube-i031-runtime";
+import { isYoutubeAsyncExtractionEnabled } from
+  "@/lib/server/youtube-async-extraction";
+import { youtubeAsyncExtractionHandlers } from
+  "@/lib/server/youtube-async-extraction-routes";
 import {
   fetchGeminiGenerateContentWithFailover,
   getGeminiApiKeyCandidates,
@@ -9263,6 +9267,10 @@ async function handleYoutubeI031Extract({
 export async function handleYoutubeExtract(request: Request) {
   if (!isYoutubeImportEnabled()) {
     return buildFeatureDisabledResponse();
+  }
+
+  if (isYoutubeAsyncExtractionEnabled()) {
+    return youtubeAsyncExtractionHandlers.syncWait(request);
   }
 
   const { routeClient, user } = await requireUser();

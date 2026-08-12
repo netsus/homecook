@@ -12,6 +12,10 @@ import {
   parseYoutubeExtractionJobRequest,
   projectYoutubeExtractionJob,
 } from "@/lib/server/youtube-async-extraction";
+import { createYoutubeAsyncExtractionHandlers } from
+  "@/lib/server/youtube-async-extraction-routes";
+import { createYoutubeExtractionService } from
+  "@/lib/server/youtube-extraction-service";
 
 describe("YTASYNC-CONTRACT/API", () => {
   it("keeps the async feature disabled unless the server-only rollout flag is explicit", () => {
@@ -159,6 +163,37 @@ describe("YTASYNC-CONTRACT/API", () => {
 });
 
 describe("YTASYNC-WORKER", () => {
+  it("keeps provider execution request-independent and delegates draft resolution", async () => {
+    const extractor = {
+      extract: vi.fn(async () => ({
+        identity: { provider: "i031" },
+        recipe: { title: "김치찌개", ingredients: [], steps: [] },
+        meta: { safe: true },
+      })),
+    };
+    const resolveDraft = vi.fn(async () => ({
+      extraction_id: "22222222-2222-4222-8222-222222222222",
+      title: "김치찌개",
+    }));
+    const service = createYoutubeExtractionService({ extractor, resolveDraft });
+    const result = await service.extract({
+      jobId: "11111111-1111-4111-8111-111111111111",
+      videoId: "abc123DEF45",
+      options: YOUTUBE_ASYNC_POLICY.resultAffectingOptions,
+      signal: new AbortController().signal,
+    });
+    expect(extractor.extract).toHaveBeenCalledWith(expect.objectContaining({
+      videoId: "abc123DEF45",
+    }));
+    expect(resolveDraft).toHaveBeenCalledWith(expect.objectContaining({
+      jobId: "11111111-1111-4111-8111-111111111111",
+    }));
+    expect(result).toEqual({ draft: {
+      extraction_id: "22222222-2222-4222-8222-222222222222",
+      title: "김치찌개",
+    } });
+  });
+
   it("claims permit before starting and finalizes with all fencing generations", async () => {
     const calls: string[] = [];
     const adapter = {
@@ -239,5 +274,173 @@ describe("YTASYNC-WORKER", () => {
     });
     expect(await worker.runOnce()).toBe("permit-unavailable");
     expect(extract).not.toHaveBeenCalled();
+  });
+});
+
+describe("YTASYNC-API route handlers", () => {
+  function buildHandlers(overrides: Record<string, unknown> = {}) {
+    const rpc = vi.fn(async () => ({
+      data: {
+        job_id: "11111111-1111-4111-8111-111111111111",
+        status: "queued",
+        deduplicated: false,
+        submitted_at: "2026-08-12T00:00:00.000Z",
+      },
+      error: null,
+    }));
+    const dependencies = {
+      authenticate: vi.fn(async () => ({
+        userId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        rpc,
+      })),
+      readJob: vi.fn(async () => null),
+      readSession: vi.fn(async () => null),
+      listJobs: vi.fn(async () => []),
+      markDelivered: vi.fn(async () => 0),
+      markSeen: vi.fn(async () => 0),
+      fingerprintKeys: vi.fn(() => ({ current: "k".repeat(32), previous: null })),
+      cursorSecret: vi.fn(() => "cursor-secret".repeat(4)),
+      asyncEnabled: vi.fn(() => true),
+      now: vi.fn(() => new Date("2026-08-12T01:00:00.000Z")),
+      ...overrides,
+    };
+    return { handlers: createYoutubeAsyncExtractionHandlers(dependencies), dependencies, rpc };
+  }
+
+  it("enqueues with the refreshed user-session RPC and returns exact 202 data", async () => {
+    const { handlers, rpc } = buildHandlers();
+    const response = await handlers.enqueue(new Request(
+      "http://localhost/api/v1/recipes/youtube/extraction-jobs",
+      {
+        method: "POST",
+        body: JSON.stringify({ youtube_url: "https://youtu.be/abc123DEF45" }),
+      },
+    ));
+    expect(response.status).toBe(202);
+    expect(await response.json()).toEqual({
+      success: true,
+      data: {
+        job_id: "11111111-1111-4111-8111-111111111111",
+        status: "queued",
+        deduplicated: false,
+        submitted_at: "2026-08-12T00:00:00.000Z",
+      },
+      error: null,
+    });
+    expect(rpc).toHaveBeenCalledWith("enqueue_youtube_extraction_job", {
+      video_id: "abc123DEF45",
+      expected_policy_version: 1,
+      expected_policy_snapshot_digest: YOUTUBE_ASYNC_POLICY.snapshotDigest,
+      current_key_version: "1",
+      current_digest: expect.stringMatching(/^[0-9a-f]{64}$/u),
+      previous_key_version: null,
+      previous_digest: null,
+      submission_mode: "background_notify",
+    });
+  });
+
+  it("fails malformed bodies before authentication or any DB write", async () => {
+    const { handlers, dependencies, rpc } = buildHandlers();
+    const response = await handlers.enqueue(new Request(
+      "http://localhost/api/v1/recipes/youtube/extraction-jobs",
+      { method: "POST", body: JSON.stringify({ youtube_url: "x", policy_version: 1 }) },
+    ));
+    expect(response.status).toBe(422);
+    expect((await response.json()).error.code).toBe("VALIDATION_ERROR");
+    expect(dependencies.authenticate).not.toHaveBeenCalled();
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it("uses indistinguishable 404 responses for missing or cross-owner jobs", async () => {
+    const { handlers } = buildHandlers();
+    const response = await handlers.status(
+      new Request("http://localhost"),
+      "11111111-1111-4111-8111-111111111111",
+    );
+    expect(response.status).toBe(404);
+    expect((await response.json()).error).toMatchObject({
+      code: "JOB_NOT_FOUND",
+      fields: [],
+    });
+  });
+
+  it("keeps the legacy sync success body while executing through sync_wait", async () => {
+    const draft = { extraction_id: "22222222-2222-4222-8222-222222222222", title: "김치찌개" };
+    const { handlers, rpc } = buildHandlers({
+      readJob: vi.fn(async () => ({
+        id: "11111111-1111-4111-8111-111111111111",
+        youtube_video_id: "abc123DEF45",
+        status: "succeeded",
+        created_at: "2026-08-12T00:00:00.000Z",
+        started_at: "2026-08-12T00:00:01.000Z",
+        completed_at: "2026-08-12T00:00:02.000Z",
+        error_code: null,
+        extraction_session: {
+          id: draft.extraction_id,
+          status: "draft",
+          recipe_id: null,
+          expires_at: "2026-08-13T00:00:00.000Z",
+        },
+      })),
+      readSession: vi.fn(async () => ({
+        id: draft.extraction_id,
+        status: "draft",
+        recipe_id: null,
+        expires_at: "2026-08-13T00:00:00.000Z",
+        draft_json: draft,
+      })),
+      sleep: vi.fn(async () => undefined),
+    });
+    const response = await handlers.syncWait(new Request("http://localhost", {
+      method: "POST",
+      body: JSON.stringify({ youtube_url: "https://youtu.be/abc123DEF45" }),
+    }));
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ success: true, data: draft, error: null });
+    expect(rpc).toHaveBeenCalledWith("enqueue_youtube_extraction_job", expect.objectContaining({
+      submission_mode: "sync_wait",
+    }));
+  });
+
+  it("returns consumed sessions after TTL and expires only unconsumed drafts", async () => {
+    const consumed = {
+      id: "22222222-2222-4222-8222-222222222222",
+      status: "consumed",
+      draft_json: { must: "not-return" },
+      recipe_id: "33333333-3333-4333-8333-333333333333",
+      expires_at: "2026-08-11T00:00:00.000Z",
+    };
+    const { handlers } = buildHandlers({ readSession: vi.fn(async () => consumed) });
+    const response = await handlers.session(
+      new Request("http://localhost"),
+      consumed.id,
+    );
+    expect(response.status).toBe(200);
+    expect((await response.json()).data).toEqual({
+      status: "consumed",
+      draft: null,
+      recipe_id: consumed.recipe_id,
+      recipe_path: `/recipes/${consumed.recipe_id}`,
+    });
+  });
+
+  it("keeps delivered and seen as separate idempotent owner mutations", async () => {
+    const markDelivered = vi.fn(async () => 1);
+    const markSeen = vi.fn(async () => 1);
+    const { handlers } = buildHandlers({ markDelivered, markSeen });
+    const delivered = await handlers.delivered(new Request("http://localhost", {
+      method: "POST",
+      body: JSON.stringify({ delivery_keys: ["delivery-1"] }),
+    }));
+    const seen = await handlers.seen(new Request("http://localhost", {
+      method: "POST",
+      body: JSON.stringify({
+        job_ids: ["11111111-1111-4111-8111-111111111111"],
+      }),
+    }));
+    expect(await delivered.json()).toMatchObject({ data: { delivered_count: 1 } });
+    expect(await seen.json()).toMatchObject({ data: { seen_count: 1 } });
+    expect(markDelivered).toHaveBeenCalledOnce();
+    expect(markSeen).toHaveBeenCalledOnce();
   });
 });
