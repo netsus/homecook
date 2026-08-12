@@ -7,9 +7,9 @@
 - original implementation commits: `267356fe`, `0139e987`, `eee52d6e`, `9aaa690c`, `a751209f`, `95c2b370`
 - first Stage 3 reviewed head: `95c2b370` — `REVISE`
 - second Stage 3 re-reviewed head: `3af52ff5` — `REVISE` (`P1` 5, `P2` 3)
-- second-revision RED commits: `d5f04962`, `4b264f1c`, `9c17affd`, `2edb82b4`, `b9edf7cb`, `afd74382`, `f4eb7bd0`
-- second-revision GREEN commits: `d45f32c0`, `f7c48364`, `27679695`, `b5619d63`
-- replacement implementation head: `b5619d63`; independent Stage 3 re-review is pending
+- second-revision RED commits: `d5f04962`, `4b264f1c`, `9c17affd`, `2edb82b4`, `b9edf7cb`, `afd74382`, `8b241750`
+- second-revision GREEN commits: `d45f32c0`, `f7c48364`, `147ae6e7`, `7bf11d88`
+- replacement implementation head: `7bf11d88`; independent Stage 3 re-review is pending
 - official tuple: requirements `1.7.31`, screen `1.5.35`, Flow `1.3.33`, DB `1.3.33`, API `1.2.38`
 - migration: `supabase/migrations/20260812160000_youtube_async_extraction_notification.sql`
 - production/staging/remote writes: `0`
@@ -78,8 +78,8 @@ Passed before Draft PR creation:
 - additive security-function contract — 31 YouTube functions classified and valid
 - `pnpm typecheck` — pass
 - targeted ESLint — pass
-- `PLAYWRIGHT_BASE_URL=http://127.0.0.1:3199 pnpm verify:backend` at `b5619d63` — lint, typecheck, product tests (238 files passed / 12 skipped; 2734 passed / 175 skipped), production build and security Playwright (12 passed) all pass; the existing port `3100` service was untouched
-- `pnpm local:reset:demo` at detached `b5619d63` on isolated `56320`–`56326` — migrations and `seed.sql` completed, but the unpinned current CLI stopped before step 2 because Realtime/REST/Storage health checks remained unhealthy/503; repeated with a shorter project id and got the same infrastructure timeout. The separately pinned clean PG17 chain above is green. Existing app port `3100` stayed untouched.
+- `PLAYWRIGHT_BASE_URL=http://127.0.0.1:3199 pnpm verify:backend` at implementation-equivalent head `7bf11d88` — lint, typecheck, product tests (238 files passed / 12 skipped; 2734 passed / 175 skipped), production build and security Playwright (12 passed) all pass; the existing port `3100` service was untouched
+- `pnpm local:reset:demo` at implementation-equivalent detached head `7bf11d88` on isolated `56320`–`56326` — migrations and `seed.sql` completed, but the unpinned current CLI stopped before step 2 because Realtime/REST/Storage health checks remained unhealthy/503; repeated with a shorter project id and got the same infrastructure timeout. The separately pinned clean PG17 chain above is green. Existing app port `3100` stayed untouched.
 
 The isolated DB runner allocates dynamic PostgreSQL/PostgREST ports, uses an ephemeral credential and temporary database, and removes the container/database afterward. The earlier isolated Supabase reset rehearsal used only `homecook_yta_stage2_retry` on ports `65520`–`65526`; the final clean-migration regression used the default local Supabase development ports. Neither path bound, reused or stopped port `3100`, and neither stopped or mutated any `homecook-full-local-*` stack.
 
