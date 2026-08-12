@@ -6,7 +6,7 @@
 
 > **2026-08-12 contract-evolution — YouTube async job과 durable notification public API**
 >
-> 사용자는 2026-08-12 신규 보호 endpoint 6개와 background job 상태/알림 계약을 명시적으로 승인했다. 기준은 `origin/master@d38ee2e4a4c8cafc00dce713919c3f3e8df2bdda`, 최초 승인 계획의 독립 검토 task `019ff4f7-806c-7151-b646-cab784606cde`는 최종 `PASS`였다. PR #1343 exact head `0d4496e71ba6db81dcaf8283fb3f4905447c55cf`의 독립 review task `019ff598-233b-72c1-92f5-4372596ede7a`가 요구한 retry/consumed/reaper/error 보강을 반영했으며, 수정 계획의 최신 SHA-256과 독립 `PASS` evidence는 부모 task가 전달하기 전까지 `PENDING`이다. 그 evidence 없이는 Ready/merge할 수 없다.
+> 사용자는 2026-08-12 신규 보호 endpoint 6개와 background job 상태/알림 계약을 명시적으로 승인했다. 기준은 `origin/master@d38ee2e4a4c8cafc00dce713919c3f3e8df2bdda`다. PR #1343 exact head `0d4496e71ba6db81dcaf8283fb3f4905447c55cf`의 독립 review task `019ff598-233b-72c1-92f5-4372596ede7a`가 요구한 retry/consumed/reaper/error 보강을 반영했다. 수정 계획 전체는 독립 plan reviewer task `019ff4f7-806c-7151-b646-cab784606cde`가 `Verdict PASS`, `Findings 없음`, `차단 없음`, exact SHA-256 `b560b60ff758171e1d52ad56b2a63a2e1877cd762d1f691c9cea32c753f8d332`, line count `873`, baseline `origin/master@d38ee2e4a4c8cafc00dce713919c3f3e8df2bdda`로 재승인했다. PR 자체의 exact-head 독립 계약 review와 current-head CI는 별도 merge gate다.
 >
 > 모든 endpoint는 기존 `/api/v1` prefix와 `{ success, data, error }` wrapper를 사용한다. wrapper `error`는 실패 시 `{ code, message, fields[] }`, 성공 시 `null`이다. 신규 public job status는 `queued | processing | succeeded | failed | expired`다. `expired`는 succeeded session TTL의 read projection이며 DB job terminal status를 바꾸지 않는다. 기존 `POST /recipes/youtube/extract` success data와 `/recipes/new/youtube` Quick Import UI·auto-register 의미는 유지한다.
 

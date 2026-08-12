@@ -6,7 +6,7 @@
 
 > **2026-08-12 contract-evolution — YouTube enqueue → worker → durable notification → review/register**
 >
-> 사용자는 2026-08-12 기존 `/menu/add/youtube` 검수형 흐름을 이탈 가능한 background job으로 바꾸고, 앱 재로그인·재실행 뒤 성공/실패를 복구하는 flow를 승인했다. 기존 `/recipes/new/youtube` Quick Import의 browser sync/auto-register 흐름은 유지한다. PR #1343 review task `019ff598-233b-72c1-92f5-4372596ede7a`의 Findings 1~4,6을 반영했으며 최신 계획 SHA-256/독립 `PASS` evidence는 부모 task 전달 전 `PENDING`이다.
+> 사용자는 2026-08-12 기존 `/menu/add/youtube` 검수형 흐름을 이탈 가능한 background job으로 바꾸고, 앱 재로그인·재실행 뒤 성공/실패를 복구하는 flow를 승인했다. 기존 `/recipes/new/youtube` Quick Import의 browser sync/auto-register 흐름은 유지한다. PR #1343 review task `019ff598-233b-72c1-92f5-4372596ede7a`의 Findings 1~4,6을 반영했다. 수정 계획 전체는 독립 plan reviewer task `019ff4f7-806c-7151-b646-cab784606cde`가 `Verdict PASS`, `Findings 없음`, `차단 없음`, exact SHA-256 `b560b60ff758171e1d52ad56b2a63a2e1877cd762d1f691c9cea32c753f8d332`, line count `873`, baseline `origin/master@d38ee2e4a4c8cafc00dce713919c3f3e8df2bdda`로 재승인했다.
 
 ## 0-YT-ASYNC. Background extraction과 durable 재진입
 

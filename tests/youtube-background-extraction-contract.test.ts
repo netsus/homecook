@@ -74,6 +74,31 @@ describe("YouTube background extraction contract evolution", () => {
     expect(source).toContain("자기 문서를 최종 승인하거나 merge하지 않는다");
   });
 
+  it("records the exact re-approved plan artifact without pending evidence placeholders", () => {
+    const source = read("docs/sync/CURRENT_SOURCE_OF_TRUTH.md");
+    const evidenceDocuments = [...officialTuple, "docs/sync/CURRENT_SOURCE_OF_TRUTH.md"];
+
+    for (const relativePath of evidenceDocuments) {
+      const document = read(relativePath);
+      const nextContractHeading = relativePath.includes("CURRENT_SOURCE_OF_TRUTH")
+        ? "## Session Refresh"
+        : "> **2026-08-08";
+      const evidenceSection = document.slice(0, document.indexOf(nextContractHeading));
+
+      expect(evidenceSection).toContain(
+        "b560b60ff758171e1d52ad56b2a63a2e1877cd762d1f691c9cea32c753f8d332",
+      );
+      expect(evidenceSection).toContain("873");
+      expect(evidenceSection).toContain("019ff4f7-806c-7151-b646-cab784606cde");
+      expect(evidenceSection).toContain("PASS");
+      expect(evidenceSection).not.toContain("PENDING");
+    }
+
+    expect(source).toContain("Findings 없음");
+    expect(source).toContain("차단 없음");
+    expect(source).toContain("origin/master@d38ee2e4a4c8cafc00dce713919c3f3e8df2bdda");
+  });
+
   it("locks the six public endpoints, states, wrappers, dedupe, and Quick Import compatibility", () => {
     const api = read(officialTuple[4]);
     const endpoints = [
