@@ -1,5 +1,12 @@
 import { createServer, type Server } from "node:http";
-import { chmodSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -257,6 +264,10 @@ describe("YTASYNC-WORKER standalone runner", () => {
           ? { permit_generation: 1 }
           : name === "read_youtube_extraction_worker_catalog"
             ? { applied: true, ingredients: [], ingredient_synonyms: [], cooking_methods: [] }
+            : name === "record_youtube_extraction_worker_event"
+              ? { applied: true, recorded: true }
+              : name === "resolve_youtube_extraction_worker_methods"
+                ? { applied: true, methods: [] }
             : name === "resolve_youtube_extraction_job_draft"
               ? { applied: true, draft: { title: "artifact-success" } }
               : name === "finalize_youtube_extraction_job"
@@ -288,6 +299,194 @@ describe("YTASYNC-WORKER standalone runner", () => {
       "finalize_youtube_extraction_job",
       expect.any(Object),
     );
+  });
+
+  it.each([
+    { cache: { id: "77777777-7777-4777-8777-777777777777" }, expected: "transcript_touch" },
+    { cache: null, expected: "transcript_upsert" },
+  ])("bridges child cache $expected and all provider writes through fenced RPCs", async ({
+    cache,
+    expected,
+  }) => {
+    const root = mkdtempSync(join(tmpdir(), "yta-child-rpc-bridge-"));
+    tempDirs.push(root);
+    const bundle = join(root, "lib/server/youtube-i031-runtime/bundle");
+    mkdirSync(bundle, { recursive: true });
+    const workerPath = join(bundle, "worker.mjs");
+    writeFileSync(workerPath, `
+      import { writeFile } from "node:fs/promises";
+      const args = Object.fromEntries(process.argv.slice(2).reduce((all, value, index, list) => {
+        if (value.startsWith("--")) all.push([value.slice(2), list[index + 1]]);
+        return all;
+      }, []));
+      let sequence = 0;
+      const pending = new Map();
+      process.on("message", (message) => {
+        if (message?.type !== "homecook-worker-rpc-response") return;
+        const entry = pending.get(message.requestId);
+        if (!entry) return;
+        pending.delete(message.requestId);
+        message.ok ? entry.resolve(message.data) : entry.reject(new Error(message.errorCode));
+      });
+      function request(operation, payload) {
+        const requestId = String(++sequence);
+        return new Promise((resolve, reject) => {
+          pending.set(requestId, { resolve, reject });
+          process.send({ type: "homecook-worker-rpc-request", requestId, operation, payload });
+        });
+      }
+      const cached = await request("cache", { operation: "transcript_read", payload: {} });
+      if (cached.cache?.id) {
+        await request("cache", {
+          operation: "transcript_touch",
+          payload: { id: cached.cache.id },
+        });
+      } else {
+        await request("cache", {
+          operation: "transcript_upsert",
+          payload: {
+            language: "ko",
+            source_provider: "youtube_timedtext",
+            source_kind: "caption",
+            transcript_text: "safe transcript",
+            segments_json: [],
+            expires_at: "2026-08-14T00:00:00.000Z",
+          },
+        });
+      }
+      await request("quota", { provider: "external_transcript_api", units: 1 });
+      await request("event", {
+        kind: "transcript",
+        payload: { provider: "external_transcript_api", cache_hit: false, status: "success" },
+      });
+      await request("methods", { methodLabels: ["끓이기"] });
+      await request("title", { title: "provider bridge title" });
+      await writeFile(args.result, JSON.stringify({
+        identity: { pipeline: "i031" },
+        videoTitle: "provider bridge title",
+        recipe: { title: "recipe title", ingredients: [], steps: [] },
+        meta: { modelCallCount: 2 }
+      }));
+    `);
+    chmodSync(workerPath, 0o555);
+    const calls: string[] = [];
+    const workerRpcClient = {
+      accessCache: vi.fn(async (operation: string) => {
+        calls.push(operation);
+        return { applied: true, cache };
+      }),
+      reserveQuota: vi.fn(async () => {
+        calls.push("quota");
+        return { applied: true, reserved: true };
+      }),
+      recordEvent: vi.fn(async () => {
+        calls.push("event");
+        return { applied: true, recorded: true };
+      }),
+      resolveMethods: vi.fn(async () => {
+        calls.push("methods");
+        return { applied: true, methods: [] };
+      }),
+      updateTitle: vi.fn(async () => {
+        calls.push("title");
+      }),
+    };
+    const extractor = createStandaloneYoutubeI031Extractor({
+      artifactRoot: root,
+      workerEnv: { NODE_ENV: "test" },
+      verifyPreflight: vi.fn(async () => ({
+        codexBin: "/opt/homebrew/bin/codex",
+        codexCliVersion: "0.144.0-alpha.4",
+      })),
+    });
+
+    await expect(extractor.extract({
+      videoId: "abc123DEF45",
+      signal: new AbortController().signal,
+      claimedJob: {
+        jobId: "77777777-7777-4777-8777-777777777777",
+        videoId: "abc123DEF45",
+        workerId: "worker-bridge",
+        leaseGeneration: 4,
+      },
+      workerRpcClient,
+    })).resolves.toMatchObject({
+      videoTitle: "provider bridge title",
+      recipe: { title: "recipe title" },
+    });
+    expect(calls).toEqual([
+      "transcript_read",
+      expected,
+      "quota",
+      "event",
+      "methods",
+      "title",
+    ]);
+  });
+
+  it("stops the child before provider fallback when fenced quota is denied", async () => {
+    const root = mkdtempSync(join(tmpdir(), "yta-child-quota-denied-"));
+    tempDirs.push(root);
+    const bundle = join(root, "lib/server/youtube-i031-runtime/bundle");
+    mkdirSync(bundle, { recursive: true });
+    const workerPath = join(bundle, "worker.mjs");
+    const providerMarker = join(root, "provider-called");
+    writeFileSync(workerPath, `
+      import { writeFile } from "node:fs/promises";
+      const args = Object.fromEntries(process.argv.slice(2).reduce((all, value, index, list) => {
+        if (value.startsWith("--")) all.push([value.slice(2), list[index + 1]]);
+        return all;
+      }, []));
+      process.on("message", async (message) => {
+        if (message?.type !== "homecook-worker-rpc-response") return;
+        if (message.ok) {
+          await writeFile(process.env.PROVIDER_MARKER, "called");
+          return;
+        }
+        await writeFile(args.error, JSON.stringify({
+          code: message.errorCode,
+          retryable: false,
+          stage: "provider"
+        }));
+        process.exitCode = 1;
+      });
+      process.send({
+        type: "homecook-worker-rpc-request",
+        requestId: "quota-1",
+        operation: "quota",
+        payload: { provider: "external_transcript_api", units: 1 }
+      });
+    `);
+    chmodSync(workerPath, 0o555);
+    const extractor = createStandaloneYoutubeI031Extractor({
+      artifactRoot: root,
+      workerEnv: { NODE_ENV: "test", PROVIDER_MARKER: providerMarker },
+      verifyPreflight: vi.fn(async () => ({
+        codexBin: "/opt/homebrew/bin/codex",
+        codexCliVersion: "0.144.0-alpha.4",
+      })),
+    });
+
+    await expect(extractor.extract({
+      videoId: "abc123DEF45",
+      signal: new AbortController().signal,
+      claimedJob: {
+        jobId: "88888888-8888-4888-8888-888888888888",
+        videoId: "abc123DEF45",
+        workerId: "worker-quota",
+        leaseGeneration: 5,
+      },
+      workerRpcClient: {
+        accessCache: vi.fn(async () => ({ applied: true, cache: null })),
+        reserveQuota: vi.fn(async () => {
+          throw Object.assign(new Error("QUOTA_EXCEEDED"), { code: "QUOTA_EXCEEDED" });
+        }),
+        recordEvent: vi.fn(),
+        resolveMethods: vi.fn(),
+        updateTitle: vi.fn(),
+      },
+    })).rejects.toMatchObject({ code: "QUOTA_EXCEEDED" });
+    expect(existsSync(providerMarker)).toBe(false);
   });
 
   it("fenced-persists provider video title before a later extraction failure", async () => {
@@ -349,6 +548,78 @@ describe("YTASYNC-WORKER standalone runner", () => {
     );
     expect(calls.indexOf("update_youtube_extraction_job_title"))
       .toBeLessThan(calls.indexOf("fail_or_retry_youtube_extraction_job"));
+  });
+
+  it.each([
+    "NETWORK_ERROR",
+    "RATE_LIMITED",
+    "PROVIDER_TIMEOUT",
+    "TRANSIENT_INTERNAL_ERROR",
+    "NOT_RECIPE_VIDEO",
+    "QUOTA_EXCEEDED",
+    "RUNTIME_UNAVAILABLE",
+    "EXTRACTION_FAILED",
+  ])("carries the bounded child error sidecar to fail_or_retry: %s", async (errorCode) => {
+    const root = mkdtempSync(join(tmpdir(), "yta-child-error-"));
+    tempDirs.push(root);
+    const bundle = join(root, "lib/server/youtube-i031-runtime/bundle");
+    mkdirSync(bundle, { recursive: true });
+    const workerPath = join(bundle, "worker.mjs");
+    writeFileSync(workerPath, `
+      import { writeFile } from "node:fs/promises";
+      const args = Object.fromEntries(process.argv.slice(2).reduce((all, value, index, list) => {
+        if (value.startsWith("--")) all.push([value.slice(2), list[index + 1]]);
+        return all;
+      }, []));
+      await writeFile(args.error, JSON.stringify({
+        code: process.env.TEST_ERROR_CODE,
+        retryable: true,
+        stage: "provider",
+        ignored_secret: "must-not-cross-boundary"
+      }));
+      process.exitCode = 1;
+    `);
+    chmodSync(workerPath, 0o555);
+    const digest = "f".repeat(64);
+    const rpc = vi.fn(async (name: string) => ({
+      data: name === "claim_youtube_extraction_job"
+        ? {
+            job_id: "66666666-6666-4666-8666-666666666666",
+            youtube_video_id: "abc123DEF45",
+            lease_generation: 3,
+            policy_snapshot_digest: digest,
+            result_affecting_options: {},
+          }
+        : name === "claim_youtube_extractor_permit"
+          ? { permit_generation: 3 }
+          : name === "read_youtube_extraction_worker_catalog"
+            ? { applied: true, ingredients: [], ingredient_synonyms: [], cooking_methods: [] }
+            : name === "access_youtube_extraction_worker_cache"
+              ? { applied: true, cache: null }
+              : { applied: true, updated: true, released: true },
+      error: null,
+    }));
+    const runtime = createYoutubeExtractionWorkerRuntime({
+      workerId: "worker-child-error",
+      allowedSnapshotDigest: digest,
+      rpc,
+      extractor: createStandaloneYoutubeI031Extractor({
+        artifactRoot: root,
+        workerEnv: { NODE_ENV: "test", TEST_ERROR_CODE: errorCode },
+        verifyPreflight: vi.fn(async () => ({
+          codexBin: "/opt/homebrew/bin/codex",
+          codexCliVersion: "0.144.0-alpha.4",
+        })),
+      }),
+    });
+
+    await expect(runtime.runOnce()).resolves.toBe("failed");
+    expect(rpc).toHaveBeenCalledWith("fail_or_retry_youtube_extraction_job", {
+      job_id: "66666666-6666-4666-8666-666666666666",
+      worker_id: "worker-child-error",
+      lease_generation: 3,
+      error_code: errorCode,
+    });
   });
 
   it("stops polling and aborts the active extractor on SIGTERM-equivalent shutdown", async () => {
