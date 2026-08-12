@@ -21,8 +21,9 @@
 | `request_fingerprint` | text | 목적별 keyed HMAC, NOT NULL |
 | `request_fingerprint_key_version` | text | HMAC rotation/dedupe version, NOT NULL |
 | `release_policy_key` | text | immutable policy singleton key snapshot, NOT NULL |
-| `release_policy_version` | bigint | immutable positive policy version snapshot, NOT NULL |
-| `extractor_mode` | text | immutable `legacy | i031_codex_vision` |
+| `policy_version` | bigint | immutable positive policy version snapshot, NOT NULL |
+| `policy_snapshot_digest` | text | complete snapshot의 non-secret canonical SHA-256, lowercase 64-hex, NOT NULL |
+| `extractor_mode` | text | immutable initial async value `i031_codex_vision` |
 | `pipeline_identity` | text | immutable release/manifest execution identity |
 | `result_affecting_options` | jsonb | immutable normalized result-affecting option snapshot, NOT NULL |
 | `submission_mode` | text | `background_notify | sync_wait`; provider executor는 둘 다 worker |
@@ -41,33 +42,44 @@
 | `created_at`, `updated_at` | timestamptz | NOT NULL |
 
 - 공개 `expired`는 stored job status가 아니다. unconsumed draft linked session만 TTL 경과 시 `expired`로 projection한다. consumed/registered recipe는 영구 recipe destination이 우선하며 stored job은 `succeeded`를 유지한다.
-- canonical fingerprint preimage는 versioned ordered JSON의 `user_id`, `youtube_video_id`, `extractor_mode`, `pipeline_identity`, 결과 영향 normalized option만 포함한다. `submission_mode`, waiter timeout, 화면/알림 option은 제외한다.
-- active dedupe partial unique는 `(user_id, request_fingerprint) WHERE status IN ('queued','processing')`다. HMAC rotation은 current/previous key dual-read 또는 active job 0 drain을 요구한다.
+- canonical fingerprint preimage는 `youtube-extraction-fingerprint-v1` schema identity, authenticated `user_id`, `youtube_video_id`, `extractor_mode`, `pipeline_identity`, `policy_version`, canonical `result_affecting_options`의 UTF-8 recursively sorted-key/no-whitespace JSON이다. unknown key 거부와 defaults materialized를 강제한다. `submission_mode`, waiter timeout, 화면/알림 option은 제외한다.
+- active dedupe partial unique는 `(user_id, request_fingerprint_key_version, request_fingerprint) WHERE status IN ('queued','processing')`다. lookup은 current pair와 유효 rotation window의 optional previous pair를 같은 transaction에서 dual-read하고, INSERT는 current pair만 쓰는 current-write다.
 - 필수 index는 `(status, available_at, created_at)` claim partial, `(user_id, created_at DESC)`, `(user_id, completion_seen_at, completed_at DESC)` terminal unseen partial이다. cursor 동률은 `id DESC`로 고정한다.
 - terminal state는 processing/queued로 되돌리지 않는다. failed/expired 사용자 retry는 새 row를 만든다. terminal retention은 30일이며 cleanup은 orphan session/link 불변식을 함께 검사한다.
-- enqueue exact union `{ youtube_url } | { retry_job_id }` 중 retry branch는 같은 transaction에서 owner terminal failed/expired projection과 `can_retry=true`를 확인한다. 이전 job에서는 youtube_video_id만 복사한다. retry 시점의 `private.youtube_extraction_current_policy`가 extractor mode, pipeline identity, result-affecting options와 fingerprint key version을 새로 결정한다. 이전 HMAC/options 역복원 금지이며 새 current complete snapshot으로 fingerprint/job을 만들어 dedupe/budget을 적용한다. identity 전환 전 terminal job도 전환 후 current worker가 claim 가능해야 한다. 이전 row는 UPDATE하지 않는다.
+- enqueue public exact union `{ youtube_url } | { retry_job_id }`의 retry branch는 server route가 owner-only status authority로 terminal failed/expired projection과 `can_retry=true`를 확인한다. 이전 job에서는 youtube_video_id만 복사하고 이전 row는 UPDATE하지 않는다. retry 시점의 `private.youtube_extraction_current_policy`가 extractor mode, pipeline identity, result-affecting options와 fingerprint key version을 새로 결정한다. 이전 HMAC/options 역복원 금지이며 새 current complete snapshot으로 fingerprint/job을 만들어 dedupe/budget을 적용한다. identity 전환 전 terminal job도 전환 후 current worker가 claim 가능해야 한다.
 - RLS는 enabled+forced다. owner SELECT는 refreshed `auth.uid() = user_id`만 허용한다. browser/`anon` direct INSERT/UPDATE/DELETE와 worker table/REST direct access는 모두 0이다. enqueue/delivered/seen과 worker mutation은 아래 exact RPC만 사용한다.
 
 ### `private.youtube_extraction_current_policy`
 
-민감값을 저장하지 않는 current release policy singleton이다. exact row는 `policy_key='youtube_extraction'` 하나이며 추가 row를 허용하지 않는다.
+민감값을 저장하지 않는 current release policy singleton이다. exact row는 `policy_key='primary'` 하나이며 추가 row를 허용하지 않는다. DB는 HMAC secret을 알지 못한다.
 
 | 컬럼 | 타입 | 제약/의미 |
 | --- | --- | --- |
-| `policy_key` | text | PK, exact singleton key `youtube_extraction` |
+| `policy_key` | text | PK, exact singleton key `primary` |
 | `policy_version` | bigint | positive monotonic policy revision, NOT NULL |
 | `extractor_mode` | text | current approved extractor mode, NOT NULL |
 | `pipeline_identity` | text | current approved release/manifest execution identity, NOT NULL |
 | `result_affecting_options` | jsonb | approved schema로 key/type/value를 정규화한 result-affecting options, NOT NULL |
 | `fingerprint_key_version` | text | current fingerprint HMAC key version 식별자, NOT NULL. key/HMAC 민감값 자체는 저장 금지 |
+| `previous_fingerprint_key_version` | text | nullable dual-read version label; HMAC key 자체 아님 |
+| `previous_fingerprint_valid_until` | timestamptz | nullable; previous version 허용 종료 시각과 함께 null/non-null pair |
 | `enabled` | boolean | enqueue 허용 여부, NOT NULL |
 | `updated_at` | timestamptz | policy 원자 전환 시각, NOT NULL |
 
-- enqueue transaction은 stable policy advisory key의 shared transaction lock을 먼저 잡고 enabled current policy row를 `SELECT ... FOR SHARE`로 lock/read한 뒤, user advisory lock 안에서 canonical fingerprint → active dedupe → active/daily budget → job INSERT 순서로 수행한다. policy의 `policy_key`, `policy_version`, `extractor_mode`, `pipeline_identity`, normalized `result_affecting_options`, `fingerprint_key_version`는 job에 immutable snapshot으로 저장한다.
-- client/route는 mode/options를 지정할 수 없다. enqueue RPC signature에도 policy/mode/pipeline/options/fingerprint key input을 두지 않으며, route 또는 retry source row는 policy authority가 아니다.
-- 정책 전환은 enqueue maintenance → old identity active queue drain=0 → old worker stop → stable policy advisory key의 exclusive transaction lock + singleton `FOR UPDATE` → expected `policy_version` CAS와 complete row update → new snapshot worker/schema preflight → enqueue 재개의 승인된 release migration으로만 수행한다. runtime policy mutation RPC는 없으며 browser, `anon`, `authenticated`, `service_role`, worker, credential-manager의 direct table privilege는 0이다.
-- shared/exclusive advisory lock과 row lock 때문에 retry/enqueue 경합은 old/new 중 한 complete snapshot만 사용한다. partial field 조합, disabled row enqueue, old HMAC/options 역복원은 fail closed다. worker는 job snapshot identity를 claim하며 current policy row를 실행 identity로 다시 읽어 이미 queued인 job을 바꾸지 않는다.
-- policy rotation vs retry concurrency 검증은 전환과 동시에 시작한 최초 enqueue/retry 각각이 old 또는 new complete snapshot 하나만 immutable 저장하고 mixed snapshot은 0건임을 고정한다. 전환 뒤 retry는 이전 video ID만 복사해 new snapshot을 사용하고 new worker가 claim할 수 있어야 한다.
+- initial async policy는 i031-only다. exact initial migration row는 `policy_key='primary'`, `policy_version=1`, `extractor_mode='i031_codex_vision'`, `pipeline_identity='9adc7876a02c2da55a92e3a65369bf4e803c78efb9a791717201eedc242c1908'`, 아래 exact options object, `fingerprint_key_version='1'`, `previous_fingerprint_key_version=NULL`, `previous_fingerprint_valid_until=NULL`, `enabled=false`다.
+
+```json
+{"codexEffort":"low","frameMode":"hybrid","hybridAnchorBudget":36,"interval":4,"keyframeTotalLimit":8,"keyframesPerRecipe":8,"packetPromptTextOnly":false,"publicSourceBundle":null,"recipeMode":"single","screenOcrMode":"auto","selectorCandidateLimit":12,"selectorEffort":"low","singleRecipeOnly":true,"sourceMode":"source-text","useApifyFallback":true,"useEvidencePackets":false,"useVisual":true}
+```
+
+- 이 options schema는 workpack 33의 production bundle `worker.mjs`가 실제 result에 영향을 주는 exact keys/types/defaults만 사용한다: `codexEffort:string(low)`, `frameMode:string(hybrid)`, `hybridAnchorBudget:integer(36)`, `interval:number(4)`, `keyframeTotalLimit:integer(8)`, `keyframesPerRecipe:integer(8)`, `packetPromptTextOnly:boolean(false)`, `publicSourceBundle:null`, `recipeMode:string(single)`, `screenOcrMode:string(auto)`, `selectorCandidateLimit:integer(12)`, `selectorEffort:string(low)`, `singleRecipeOnly:boolean(true)`, `sourceMode:string(source-text)`, `useApifyFallback:boolean(true)`, `useEvidencePackets:boolean(false)`, `useVisual:boolean(true)`. unknown key 거부와 defaults materialized를 강제한다. model/prompt/client/frame extractor/Codex CLI identity는 pipeline artifact이고, worker의 `noCache=true`, `runType='cold'`, cold model calls `2`, timeout/lease/concurrency/credential은 캐시·측정·운영 불변식이므로 result options에 넣지 않는다.
+- options와 모든 fingerprint/snapshot canonical JSON은 UTF-8, recursively sorted keys, no whitespace다. JSON number/boolean/null은 위 type 그대로 직렬화하고 locale, DB `jsonb::text`, insertion order에 의존하지 않는다.
+- `policy_snapshot_digest` preimage schema identity는 exact `youtube-extraction-policy-snapshot-v1`이다. exact ordered meaning은 `extractor_mode, pipeline_identity, canonical result_affecting_options, policy_version, schema_identity`이고 그 canonical JSON의 non-secret canonical SHA-256 lowercase 64-hex를 job에 저장한다.
+- enqueue transaction은 stable policy advisory key의 shared transaction lock을 먼저 잡고 enabled current policy row를 `SELECT ... FOR UPDATE`로 lock/read한 뒤 user advisory lock 안에서 supplied current/previous key version·window·digest format 검증 → active dual-read dedupe → active/daily budget → current-write job INSERT 순서로 수행한다. policy의 `policy_key`, `policy_version`, `extractor_mode`, `pipeline_identity`, normalized `result_affecting_options`, `fingerprint_key_version`, computed `policy_snapshot_digest`는 job에 immutable snapshot으로 저장한다.
+- client/route는 mode/options를 지정할 수 없다. client/public route body는 key version/digest도 지정할 수 없다. trusted Next server layer만 installed release descriptor와 authenticated user binding을 canonical preimage에 사용한다. 외부 secret loader가 current/optional previous HMAC key를 읽어 digest를 계산하고, exact server-only scoped internal client가 `youtube-extraction-enqueue` scope로 호출한다. 브라우저 직접 RPC 금지다.
+- 정책 전환은 승인된 release migration만 수행한다. initial bootstrap은 disabled singleton/roles/RPC → same release app/worker install → preflight/schema → credential/snapshot attestation → exclusive enable → enqueue publish 순서다. later rotation은 enqueue maintenance → drain old snapshot → disable/lock → CAS update disabled → new app/worker install → preflight/schema + credential/snapshot attestation → exclusive enable → resume 순서다. runtime policy mutation RPC는 없으며 direct table privilege는 0이다.
+- shared/exclusive advisory lock과 row lock 때문에 retry/enqueue 경합은 old/new 중 한 complete snapshot만 사용한다. partial field 조합, disabled row enqueue, old HMAC/options 역복원은 fail closed다. worker는 job `policy_snapshot_digest`를 claim하며 current policy row를 실행 identity로 다시 읽어 이미 queued인 job을 바꾸지 않는다.
+- policy rotation vs retry concurrency 검증은 전환과 동시에 시작한 최초 enqueue/retry 각각이 old 또는 new complete snapshot 하나만 immutable 저장하고 mixed snapshot은 0건임을 고정한다. HMAC rotation은 valid previous window에서 old active row를 dual-read하되 새 job은 current-write하고, options-only rotation은 digest가 달라 old worker reject/new worker exact claim이어야 한다.
 
 ### 기존 session linkage와 완료 원자성
 
@@ -100,13 +112,15 @@ processing -- lease expired + attempts remain --> queued/reclaim
 processing -- lease expired + attempts exhausted --> failed/ATTEMPTS_EXHAUSTED
 ```
 
-- `enqueue_youtube_extraction_job(user_id, video_id, retry_job_id, limits)`는 `video_id | retry_job_id` 정확히 하나만 non-null로 받고 authenticated user 일치 검증을 수행한다. 같은 transaction/advisory lock 경계에서 enabled `private.youtube_extraction_current_policy` complete snapshot, retry owner/terminal/`can_retry`, canonical fingerprint, current/previous fingerprint dedupe, active/daily budget, immutable job insert를 위 exact 순서로 결정한다. retry branch는 이전 `youtube_video_id`만 읽는다. client/route나 이전 row의 mode/options/HMAC은 input authority가 아니며 route의 count-then-insert는 금지한다.
-- `claim_youtube_extraction_job(worker_id, allowed_extractor_mode, allowed_pipeline_identity, lease_seconds)`의 같은 claim transaction은 반드시 **reaper → claim** 순서다.
-  1. reaper는 allowed mode/pipeline identity와 일치하는 lease-expired `processing` row를 먼저 `FOR UPDATE SKIP LOCKED`한다.
+- `enqueue_youtube_extraction_job(video_id, current_key_version, current_digest, previous_key_version, previous_digest, submission_mode)` exact signature만 유지한다. nullable previous version/digest는 둘 다 null 또는 둘 다 non-null이어야 하고, non-null이면 policy row version/window와 일치해야 한다. RPC는 exact `youtube-extraction-enqueue` pre-request scope, `youtube_extraction_enqueue` role, authenticated user binding을 먼저 검증하며 `user_id`, retry ID, URL, mode, pipeline, options, HMAC secret/key는 받지 않는다. DB는 HMAC secret을 알지 못한다.
+- Next route는 public `{ youtube_url } | { retry_job_id }`를 owner session으로 처리한다. retry branch는 exact owner status read에서 terminal failed/expired와 `can_retry=true`를 확인해 이전 `youtube_video_id`만 가져온다. route는 installed current policy descriptor와 bound user/video를 canonicalize하고 external secret loader에서 current/optional previous key를 읽어 lowercase 64-hex `current_digest`/`previous_digest`를 계산한다. existing server-side JWT/attestation authority는 verified current session의 `sub/session_id/generation`에 묶인 request-scoped enqueue JWT만 발급하며 browser/user token 전달이나 static cross-user token 재사용은 금지한다.
+- enqueue RPC는 같은 transaction/advisory lock 경계에서 enabled policy row를 `SELECT ... FOR UPDATE`하고 current key/version/digest format, optional previous version/window/digest format을 검증한 뒤 current+previous active row dual-read dedupe → active/daily budget → immutable current-write job INSERT 순서로 결정한다. active duplicate는 current 또는 previous stored pair가 일치한 한 row다. 새 row에는 `current_key_version/current_digest`만 저장한다. route count-then-insert와 DB secret access는 금지한다.
+- `claim_youtube_extraction_job(worker_id, allowed_snapshot_digest, lease_seconds)`의 같은 claim transaction은 반드시 **reaper → claim** 순서다. `allowed_snapshot_digest`는 pre-request가 검증한 worker JWT claim, credential singleton, installed artifact attestation과 exact match해야 한다.
+  1. reaper는 `policy_snapshot_digest = allowed_snapshot_digest`인 lease-expired `processing` row를 먼저 `FOR UPDATE SKIP LOCKED`한다.
   2. `attempt_count >= max_attempts`이면 `failed`, safe `ATTEMPTS_EXHAUSTED`, `completed_at`, unique completion delivery key를 원자 확정하고 lease를 지운다. terminal row는 재claim 금지다.
   3. `attempt_count < max_attempts`이면 attempt를 늘리지 않고 queued로 되돌려 lease owner/expiry를 지우며 기존 `started_at`은 보존한다.
   4. 그 뒤에만 available queued 중 `attempt_count < max_attempts` 한 건을 claim하고 `lease_generation`을 증가시킨다. identity mismatch는 queued 운영 차단으로 남긴다.
-- worker는 job snapshot identity를 claim한다. claim/start/finalize는 job의 immutable `release_policy_key/version`, `extractor_mode`, `pipeline_identity`, `result_affecting_options`, `request_fingerprint_key_version`를 실행 authority로 사용하고 current policy 재조회로 queued job identity를 변경하지 않는다.
+- worker는 job complete snapshot digest를 claim한다. claim/start/finalize는 job의 immutable `release_policy_key`, `policy_version`, `policy_snapshot_digest`, `extractor_mode`, `pipeline_identity`, `result_affecting_options`, `request_fingerprint_key_version`를 실행 authority로 사용하고 current policy 재조회로 queued job identity를 변경하지 않는다. options-only rotation은 새 digest를 만들며 old worker reject가 필수다.
 - reaper 권한은 claim RPC owner에만 있다. worker API role은 hardened claim RPC `EXECUTE`만 가지며 job table UPDATE, 별도 reaper RPC, lease-expired direct claim 권한은 0이다.
 - `heartbeat_youtube_extraction_job(job_id, worker_id, lease_generation, lease_seconds)`는 exact current owner+generation만 연장한다.
 - `start_youtube_extraction_attempt(job_id, worker_id, lease_generation, permit_generation)`는 current job lease와 permit generation, attempts 잔여를 함께 검증한 뒤에만 attempt를 증가시키고 최초 `started_at`을 기록한다.
@@ -117,23 +131,29 @@ processing -- lease expired + attempts exhausted --> failed/ATTEMPTS_EXHAUSTED
 - worker data RPC allowlist는 active `job_id + worker_id + lease_generation`을 검증하는 public ingredient/synonym/cooking-method projection, transcript/LLM/visual cache read·upsert·touch, paid-provider quota reservation/event, title snapshot, cooking-method resolve/create, queue/permit RPC로 제한한다. caller-supplied user UUID나 user token을 받지 않는다.
 - 만료된/stale generation의 heartbeat/start/finalize/fail/cache/event/method/permit write는 항상 0건이며 terminal row mutation은 거부한다.
 - DB/integration 검증은 같은 claim transaction의 `reaper → claim` 순서, `attempt_count >= max_attempts`의 `ATTEMPTS_EXHAUSTED`+delivery key 단일 terminal 전환, terminal 재claim 금지, attempts 잔여 row만 queued/새 generation claim, stale generation write 0, worker direct table privilege 0을 각각 고정한다.
-- release 전환 상호계약 검증은 전환 전 terminal job의 retry가 이전 job에서는 youtube_video_id만 복사한다는 것, retry 시점의 `private.youtube_extraction_current_policy` complete snapshot으로 새 identity/options/fingerprint를 만든다는 것, 이전 HMAC/options 역복원 금지, 전환 후 current worker가 claim 가능함을 고정한다. policy rotation vs retry concurrency는 advisory/row lock 아래 old/new 중 한 complete snapshot만 허용한다.
+- release 전환 상호계약 검증은 전환 전 terminal job의 retry가 이전 job에서는 youtube_video_id만 복사한다는 것, retry 시점의 `private.youtube_extraction_current_policy` complete snapshot으로 새 identity/options/fingerprint를 만든다는 것, 이전 HMAC/options 역복원 금지, 전환 후 current worker가 exact snapshot digest로 claim 가능함을 고정한다. policy rotation vs retry concurrency는 advisory/row lock 아래 old/new 중 한 complete snapshot만 허용한다. 별도 negative test는 options-only rotation에서 old `allowed_snapshot_digest` worker claim/reaper/start/finalize 0건을 증명한다.
 
 ### Exact roles, ownership, membership, ACL
 
 | 역할 | 속성/권한 |
 | --- | --- |
+| `youtube_extraction_enqueue` | PostgREST API role, `NOLOGIN`; table/sequence privilege 0, exact enqueue RPC `EXECUTE`만 보유 |
+| `youtube_extraction_enqueue_rpc_owner` | `NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS NOINHERIT`; enqueue SECURITY DEFINER owner, policy/jobs 최소 privilege + matching explicit RLS policy만 보유 |
 | `youtube_extraction_worker` | PostgREST API role, `NOLOGIN`; table/sequence privilege 0, exact worker RPC `EXECUTE`만 보유 |
 | `youtube_extraction_worker_rpc_owner` | `NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS NOINHERIT`; worker SECURITY DEFINER 함수 owner, inventory 최소 table/sequence operation + matching explicit RLS policy만 보유 |
 | `youtube_extraction_credential_manager` | PostgREST API role, `NOLOGIN`; table/sequence privilege 0, exact rotation RPC `EXECUTE`만 보유 |
 | `youtube_extraction_credential_manager_rpc_owner` | `NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS NOINHERIT`; credential singleton CAS 함수 owner, singleton 최소 privilege + matching RLS policy만 보유 |
 
-- `authenticator`의 additive membership edge는 `authenticator → youtube_extraction_worker`, `authenticator → youtube_extraction_credential_manager` 정확히 두 개다.
-- `authenticator`, 두 API role, `anon`, `authenticated`, `service_role`은 두 RPC owner의 member가 아니며 `SET ROLE ..._rpc_owner`할 수 없다. owner는 로그인/JWT role에 상속되지 않는다.
-- 모든 worker/rotation 함수는 exact signature의 hardened `SECURITY DEFINER SET search_path = ''`와 fully qualified object를 사용한다.
+- `authenticator`의 additive membership edge는 `authenticator → youtube_extraction_enqueue`, `authenticator → youtube_extraction_worker`, `authenticator → youtube_extraction_credential_manager` 정확히 세 개다. 각 edge는 `admin=false`, target PostgreSQL version의 PostgREST SET ROLE semantics에 맞는 exact inherit/set option을 사용하고 그 외 owner/상호 membership은 0이다.
+- `authenticator`, 세 API role, `anon`, `authenticated`, `service_role`은 세 RPC owner의 member가 아니며 `SET ROLE ..._rpc_owner`할 수 없다. owner는 로그인/JWT role에 상속되지 않는다.
+- 모든 enqueue/worker/rotation 함수는 exact signature의 hardened `SECURITY DEFINER SET search_path = ''`와 fully qualified object를 사용한다.
+- enqueue RPC는 exact signature별 `PUBLIC`, `anon`, `authenticated`, `service_role`, worker, credential-manager의 `EXECUTE`를 revoke하고 `youtube_extraction_enqueue`에만 grant한다. browser/user access JWT는 enqueue role을 가질 수 없고 브라우저 직접 RPC 금지다. enqueue owner는 policy SELECT/row lock, jobs owner-bound SELECT/INSERT와 allowlisted owner-bound budget-consume RPC EXECUTE만 허용하며 broad schema/table ownership, DELETE/TRUNCATE/TRIGGER/REFERENCES와 HMAC secret 접근은 0이다.
+- exact enqueue RLS/ACL inventory는 다음과 같다. 두 table은 ENABLE+FORCE RLS다. `youtube_extraction_current_policy_enqueue_owner_select`는 `TO youtube_extraction_enqueue_rpc_owner FOR SELECT USING (policy_key='primary')`, `youtube_extraction_jobs_enqueue_owner_select`는 `FOR SELECT USING (user_id=auth.uid())`, `youtube_extraction_jobs_enqueue_owner_insert`는 `FOR INSERT WITH CHECK (user_id=auth.uid())`다. owner table ACL은 policy `SELECT`, jobs `SELECT,INSERT`뿐이고 UUID server generation이라 sequence privilege는 0이다. budget은 allowlisted owner-bound consume RPC `EXECUTE`만 사용하며 budget table direct privilege는 0이다. API role은 모든 table/sequence privilege 0이다.
+- `youtube_extraction_enqueue_rpc_owner`는 policy/jobs의 table owner가 아니고 NOBYPASSRLS다. policy UPDATE와 jobs UPDATE/DELETE/TRUNCATE/REFERENCES/TRIGGER, 모든 protected column UPDATE, 다른 schema/table/function, credential/worker secret에 대한 privilege는 0이다. exact policy name/role/command/permissiveness/qual/with_check drift와 owner/API-role grant-option은 validator가 거부한다.
 - worker RPC는 exact signature별 `PUBLIC`, `anon`, `authenticated`, `service_role`, credential-manager role의 `EXECUTE`를 revoke하고 `youtube_extraction_worker`에만 grant한다.
 - rotation RPC는 `PUBLIC`, `anon`, `authenticated`, `service_role`, `youtube_extraction_worker`의 `EXECUTE`를 revoke하고 `youtube_extraction_credential_manager`에만 grant한다.
-- expected-schema/security manifest는 role attributes, `pg_auth_members` exact edge/owner edge 부재, API role table/sequence privilege 0, owner 최소 privilege/RLS, `pg_proc.proowner/prosecdef/proconfig/proacl`, exact RPC signature와 internal scope marker를 검증한다. 하나라도 drift면 worker claim/rotation readiness는 fail closed다.
+- DB pre-request는 request-scoped enqueue JWT의 `role=youtube_extraction_enqueue`, exact `youtube-extraction-enqueue` scope, route-issued current authenticated user binding의 `sub/session_id/generation`, method/path `/rpc/enqueue_youtube_extraction_job`, issuer/audience/expiry를 함께 검증한다. `auth.uid()`는 이 verified `sub`이고 위 exact enqueue RLS의 owner 값과 같다. scope/user binding mismatch, browser user token, static cross-user token, generic service-role scope는 RPC 진입 전에 거부한다.
+- expected-schema/security manifest는 role attributes, `pg_auth_members` exact 세 edge/owner edge 부재, API role table/sequence privilege 0, owner 최소 privilege/RLS, `pg_proc.proowner/prosecdef/proconfig/proacl`, exact RPC signature와 internal scope marker를 검증한다. 하나라도 drift면 enqueue/worker claim/rotation readiness는 fail closed다.
 
 ### `private.youtube_extraction_worker_credentials`와 pre-request/rotation
 
@@ -145,12 +165,13 @@ processing -- lease expired + attempts exhausted --> failed/ATTEMPTS_EXHAUSTED
 | `expires_at` | timestamptz | current worker JWT expiry |
 | `release_sha` | text | 승인 immutable app/worker release SHA |
 | `schema_identity` | text | expected schema manifest identity |
+| `allowed_snapshot_digest` | text | installed artifact가 실행 가능한 exact policy snapshot SHA-256 |
 | `updated_at` | timestamptz | audit 시각 |
 
 - raw worker/manager JWT, signing key, service-role key는 DB·log·Git에 저장하지 않는다. worker에는 repo 밖 `0600` file의 signed restricted JWT만 전달한다.
-- worker DB pre-request는 JWT의 exact `role`, issuer, audience, `youtube-extraction-worker` scope, credential generation, purpose-hashed JTI, expiry, release SHA, schema identity를 singleton과 모두 비교한다. mismatch/expired/missing은 RPC 진입 전에 거부한다.
+- worker DB pre-request는 JWT의 exact `role`, issuer, audience, `youtube-extraction-worker` scope, credential generation, purpose-hashed JTI, expiry, release SHA, schema identity, `allowed_snapshot_digest`를 singleton과 artifact/credential attestation에 모두 비교한다. mismatch/expired/missing은 RPC 진입 전에 거부한다.
 - privileged `mac-production` credential manager만 외부 signing authority를 읽고 5분 이하 manager JWT를 process 안에서 발급한다. manager pre-request는 exact role/issuer/audience/`youtube-extraction-credential-manager` scope와 승인된 실행 경계를 검증한다.
-- `rotate_youtube_extraction_worker_credential(expected_generation, new_generation, new_jti_hash, new_expires_at, release_sha, schema_identity)`는 `new_generation = expected_generation + 1`, TTL 최대 7일, 승인 release/schema identity를 검증하고 singleton을 compare-and-swap한다. stale expected generation은 0건 write로 거부한다.
+- `rotate_youtube_extraction_worker_credential(expected_generation, new_generation, new_jti_hash, new_expires_at, release_sha, schema_identity, allowed_snapshot_digest)`는 `new_generation = expected_generation + 1`, TTL 최대 7일, 승인 release/schema identity와 lowercase 64-hex snapshot digest를 검증하고 singleton을 compare-and-swap한다. stale expected generation은 0건 write로 거부한다.
 - worker JWT TTL은 최대 7일, 회전 시작점은 잔여 48시간, 새 claim cutoff는 잔여 30분이다. 순서는 enqueue maintenance → active job drain → worker stop → 새 token 임시 생성/검증 → DB generation CAS → atomic file rename → worker restart/preflight → enqueue 재개다.
 - DB generation 전환 뒤 file rename/restart가 실패하면 이전 generation으로 claim을 재개하지 않는다. 같은 generation의 검증된 token 복구 설치 또는 다음 generation 재회전까지 queue를 보존한다.
 - user access/refresh token, cookie, fingerprint HMAC key, platform signing key, service-role key는 worker credential/artifact/env/argv/plist/log에 허용하지 않는다.

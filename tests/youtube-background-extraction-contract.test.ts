@@ -180,7 +180,8 @@ describe("YouTube background extraction contract evolution", () => {
     for (const document of documents) {
       expect(document).toContain("private.youtube_extraction_current_policy");
       expect(document).toContain("old/new 중 한 complete snapshot");
-      expect(document).toContain("worker는 job snapshot identity를 claim");
+      expect(document).toContain("policy_snapshot_digest");
+      expect(document).toContain("allowed_snapshot_digest");
     }
 
     const policyFieldTypes = [
@@ -190,6 +191,8 @@ describe("YouTube background extraction contract evolution", () => {
       ["pipeline_identity", "text"],
       ["result_affecting_options", "jsonb"],
       ["fingerprint_key_version", "text"],
+      ["previous_fingerprint_key_version", "text"],
+      ["previous_fingerprint_valid_until", "timestamptz"],
       ["enabled", "boolean"],
       ["updated_at", "timestamptz"],
     ];
@@ -203,7 +206,8 @@ describe("YouTube background extraction contract evolution", () => {
     const jobFields = jobRows.map(([field]) => field);
     for (const snapshotField of [
       "release_policy_key",
-      "release_policy_version",
+      "policy_version",
+      "policy_snapshot_digest",
       "extractor_mode",
       "pipeline_identity",
       "result_affecting_options",
@@ -212,7 +216,7 @@ describe("YouTube background extraction contract evolution", () => {
       expect(jobFields).toContain(snapshotField);
     }
 
-    expect(db).toContain("enabled current policy row를 `SELECT ... FOR SHARE`로 lock/read");
+    expect(db).toContain("enabled current policy row를 `SELECT ... FOR UPDATE`로 lock/read");
     expect(db).toContain("같은 transaction/advisory lock");
     expect(db).toContain("job에 immutable snapshot으로 저장");
     expect(db).toContain("client/route는 mode/options를 지정할 수 없다");
@@ -419,5 +423,178 @@ describe("YouTube background extraction contract evolution", () => {
     }
 
     expect(db).toContain("전체 테이블 목록 (74개)");
+  });
+
+  it("keeps HMAC secrets in the route and gives enqueue one exact restricted authority", () => {
+    const requirements = read(officialTuple[0]);
+    const flow = read(officialTuple[2]);
+    const db = read(officialTuple[3]);
+    const api = read(officialTuple[4]);
+
+    for (const text of [requirements, flow, db, api]) {
+      expect(text).toContain("youtube-extraction-enqueue");
+      expect(text).toContain("youtube_extraction_enqueue");
+      expect(text).toContain("current_digest");
+      expect(text).toContain("previous_digest");
+      expect(text).toContain("DB는 HMAC secret을 알지 못한다");
+      expect(text).toContain("브라우저 직접 RPC 금지");
+      expect(text).toContain("request-scoped enqueue JWT");
+      expect(text).toContain("current-write");
+      expect(text).toContain("dual-read");
+    }
+
+    expect(db).toContain(
+      "enqueue_youtube_extraction_job(video_id, current_key_version, current_digest, previous_key_version, previous_digest, submission_mode)",
+    );
+    expect(db).toContain("`youtube_extraction_enqueue` | PostgREST API role, `NOLOGIN`");
+    expect(db).toContain("`youtube_extraction_enqueue_rpc_owner` | `NOLOGIN NOSUPERUSER");
+    expect(db).toContain("authenticator → youtube_extraction_enqueue");
+    expect(db).toContain("table/sequence privilege 0");
+    expect(db).toContain("SECURITY DEFINER SET search_path = ''");
+    expect(db).toContain("authenticated user binding");
+    expect(db).toContain("youtube_extraction_current_policy_enqueue_owner_select");
+    expect(db).toContain("youtube_extraction_jobs_enqueue_owner_select");
+    expect(db).toContain("youtube_extraction_jobs_enqueue_owner_insert");
+    expect(db).toContain("FOR SELECT USING (user_id=auth.uid())");
+    expect(db).toContain("FOR INSERT WITH CHECK (user_id=auth.uid())");
+    expect(db).toContain("policy UPDATE와 jobs UPDATE/DELETE/TRUNCATE/REFERENCES/TRIGGER");
+    expect(db).not.toMatch(/HMAC (?:secret|key).*private\.youtube_extraction_current_policy에 저장/);
+  });
+
+  it("pins the exact i031-only initial policy and canonical options schema", () => {
+    const requirements = read(officialTuple[0]);
+    const db = read(officialTuple[3]);
+    const api = read(officialTuple[4]);
+    const worker = read("lib/server/youtube-i031-runtime/bundle/worker.mjs");
+    const workpack = read("docs/workpacks/33-youtube-i031-direct-extraction/README.md");
+    const exactOptions =
+      '{"codexEffort":"low","frameMode":"hybrid","hybridAnchorBudget":36,"interval":4,"keyframeTotalLimit":8,"keyframesPerRecipe":8,"packetPromptTextOnly":false,"publicSourceBundle":null,"recipeMode":"single","screenOcrMode":"auto","selectorCandidateLimit":12,"selectorEffort":"low","singleRecipeOnly":true,"sourceMode":"source-text","useApifyFallback":true,"useEvidencePackets":false,"useVisual":true}';
+    const policySection = db.slice(
+      db.indexOf("### `private.youtube_extraction_current_policy`"),
+    );
+    const policyJson = policySection.match(/```json\n([^\n]+)\n```/u)?.[1];
+
+    expect(policyJson).toBe(exactOptions);
+    expect(JSON.stringify(JSON.parse(policyJson ?? ""))).toBe(exactOptions);
+
+    for (const text of [requirements, db, api]) {
+      expect(text).toContain("UTF-8");
+      expect(text).toContain("sorted keys");
+      expect(text).toContain("no whitespace");
+      expect(text).toContain("unknown key 거부");
+      expect(text).toContain("defaults materialized");
+      expect(text).toContain(exactOptions);
+      expect(text).toContain(
+        "9adc7876a02c2da55a92e3a65369bf4e803c78efb9a791717201eedc242c1908",
+      );
+      expect(text).toContain("initial async policy는 i031-only");
+    }
+
+    expect(db).toContain("policy_key='primary'");
+    expect(db).toContain("policy_version=1");
+    expect(db).toContain("fingerprint_key_version='1'");
+    expect(db).toContain("previous_fingerprint_key_version=NULL");
+    expect(db).toContain("previous_fingerprint_valid_until=NULL");
+    expect(db).toContain("enabled=false");
+    expect(db).not.toContain('"temperature"');
+    expect(db).not.toContain('"top_p"');
+    expect(policyJson).not.toContain('"noCache"');
+    expect(policyJson).not.toContain('"runType"');
+    expect(policyJson).not.toContain('"timeoutMs"');
+
+    expect(workpack).toContain(
+      "service safe-subset manifest | `9adc7876a02c2da55a92e3a65369bf4e803c78efb9a791717201eedc242c1908`",
+    );
+    for (const runtimeMarker of [
+      'codexEffort: "low"',
+      'selectorEffort: "low"',
+      "singleRecipeOnly: true",
+      "frameMode: EXACT.frameMode",
+      "interval: EXACT.interval",
+      "hybridAnchorBudget: EXACT.hybridAnchorBudget",
+      "selectorCandidateLimit: EXACT.selectorCandidateLimit",
+      "keyframeTotalLimit: EXACT.keyframeTotalLimit",
+      "keyframesPerRecipe: EXACT.keyframeTotalLimit",
+      "screenOcrMode: EXACT.screenOcrMode",
+      "{ useApifyFallback: true }",
+      "useVisual: true",
+      'sourceMode: "source-text"',
+      'recipeMode: "single"',
+      "useEvidencePackets: false",
+      "packetPromptTextOnly: false",
+      "publicSourceBundle: null",
+    ]) {
+      expect(worker).toContain(runtimeMarker);
+    }
+    expect(worker).toContain("noCache: true");
+    expect(worker).toContain('runType: "cold"');
+    expect(worker).toContain("timeoutMs: TOTAL_TIMEOUT_MS");
+  });
+
+  it("binds every worker claim to the complete policy snapshot digest", () => {
+    const requirements = read(officialTuple[0]);
+    const flow = read(officialTuple[2]);
+    const db = read(officialTuple[3]);
+
+    for (const text of [requirements, flow, db]) {
+      expect(text).toContain("policy_snapshot_digest");
+      expect(text).toContain("allowed_snapshot_digest");
+      expect(text).toContain("youtube-extraction-policy-snapshot-v1");
+      expect(text).toContain("options-only rotation");
+      expect(text).toContain("old worker reject");
+    }
+
+    expect(db).toContain(
+      "extractor_mode, pipeline_identity, canonical result_affecting_options, policy_version, schema_identity",
+    );
+    expect(db).toContain("non-secret canonical SHA-256");
+    expect(db).toContain(
+      "claim_youtube_extraction_job(worker_id, allowed_snapshot_digest, lease_seconds)",
+    );
+    expect(db).toContain("artifact/credential attestation");
+    expect(db).toContain("exact match");
+  });
+
+  it("separates disabled bootstrap from later policy rotation", () => {
+    const requirements = read(officialTuple[0]);
+    const flow = read(officialTuple[2]);
+    const db = read(officialTuple[3]);
+
+    for (const text of [requirements, flow, db]) {
+      expect(text).toContain("initial bootstrap");
+      expect(text).toContain("later rotation");
+      expect(text).toContain("exclusive enable");
+      expect(text).toContain("enqueue publish");
+      expect(text).toContain("CAS update disabled");
+    }
+
+    const bootstrapOrder = [
+      "disabled singleton/roles/RPC",
+      "same release app/worker install",
+      "preflight/schema",
+      "credential/snapshot attestation",
+      "exclusive enable",
+      "enqueue publish",
+    ];
+    const rotationOrder = [
+      "enqueue maintenance",
+      "drain old snapshot",
+      "disable/lock",
+      "CAS update disabled",
+      "new app/worker install",
+      "exclusive enable",
+      "resume",
+    ];
+    for (const [document, tokens] of [
+      [flow, bootstrapOrder],
+      [flow, rotationOrder],
+    ] as const) {
+      let cursor = -1;
+      for (const token of tokens) {
+        const next = document.indexOf(token, cursor + 1);
+        expect(next, `${token} must follow the previous release step`).toBeGreaterThan(cursor);
+        cursor = next;
+      }
+    }
   });
 });

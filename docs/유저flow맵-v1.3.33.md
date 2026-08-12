@@ -16,7 +16,11 @@
 /menu/add/youtube URL 입력
 → 기존 validate / 로그인 / feature flag / URL 검증
 → POST /recipes/youtube/extraction-jobs exact { youtube_url } | { retry_job_id }
-→ 원자적 dedupe + active/daily budget + durable INSERT
+→ route가 authenticated user binding과 current release policy descriptor 확정
+→ 외부 secret loader의 current/optional previous HMAC key로 current_digest/previous_digest 계산
+→ existing server-side authority가 user-bound request-scoped enqueue JWT 발급
+→ server-only youtube-extraction-enqueue scope / youtube_extraction_enqueue role RPC
+→ DB key version/window/format 검증 + dual-read dedupe + current-write durable INSERT
 → 202 { job_id, status, deduplicated, submitted_at }
 → "추출을 시작했어요" + [이동] [작업 보기]
 → 사용자는 다른 화면·background·브라우저 종료 가능
@@ -26,7 +30,7 @@
 → lease-expired processing reaper
    ├─ attempt_count >= max_attempts: failed / ATTEMPTS_EXHAUSTED + delivery key, 재claim 금지
    └─ attempt_count < max_attempts: queued 복귀 뒤 claim 후보
-→ allowed extractor mode/pipeline identity job claim
+→ artifact/credential attestation의 allowed_snapshot_digest와 exact match job claim
 → lease_generation + provider permit_generation 획득
 → 실제 provider 시작 때만 attempt_count++ / started_at 기록
 → 기존 legacy 또는 i031 pipeline 실행
@@ -71,16 +75,22 @@ non-retryable 또는 attempts 소진
    └─ false: [닫기] / 목록 유지, retry CTA·POST 없음
 → server가 본인 terminal failed/expired와 저장된 normalized video ID 확인
 → 이전 job에서는 youtube_video_id만 복사한다
-→ retry 시점의 private.youtube_extraction_current_policy singleton lock/read
-→ current complete mode/pipeline/options/fingerprint key snapshot 새 결정
+→ Next route가 retry 시점 current release descriptor와 authenticated user binding 사용
+→ 외부 secret loader가 current_digest + rotation window 안의 optional previous_digest 계산
+→ youtube-extraction-enqueue scope / youtube_extraction_enqueue role로 restricted RPC
+→ DB가 private.youtube_extraction_current_policy singleton lock/read
+→ current/previous key version + window + lowercase 64-hex format 검증
+→ current complete mode/pipeline/options/policy_version/policy_snapshot_digest 새 결정
 → 이전 HMAC/options 역복원 금지
-→ 같은 transaction/advisory lock에서 fingerprint + dedupe/budget + immutable job 생성
+→ 같은 transaction/advisory lock에서 dual-read dedupe/budget + current-write immutable job 생성
 → identity 전환 전 terminal job도 전환 후 current worker가 claim 가능
 ```
 
 - enqueue request는 exact union `{ youtube_url } | { retry_job_id }`이며 두 branch를 함께 보내지 않는다. `can_retry`는 expired 또는 safe failed error의 `retryable=true`일 때만 true다.
 - can_retry=false이면 retry CTA를 렌더하지 않는다. `NOT_RECIPE_VIDEO` 등 non-retryable failure는 닫기/목록 유지이며 새 enqueue로 진행하지 않는다.
-- client/route는 mode/options를 지정할 수 없다. `private.youtube_extraction_current_policy`는 승인된 release migration으로만 원자 전환하며 경합한 enqueue/retry는 old/new 중 한 complete snapshot만 사용한다. worker는 job snapshot identity를 claim한다.
+- public client/route body는 mode/options/key version/digest를 지정할 수 없다. public route는 session과 URL/retry ID만 받고 trusted Next server layer가 digest를 만든다. existing server-side JWT/attestation authority의 user-bound request-scoped enqueue JWT는 exact role/scope와 `sub/session_id/generation`을 함께 전달한다. enqueue RPC input은 `video_id, current_key_version, current_digest, optional previous_key_version, optional previous_digest, submission_mode`뿐이다. exact pre-request `youtube-extraction-enqueue` scope와 authenticated user binding이 모두 없으면 fail closed하며 브라우저 직접 RPC 금지다. DB는 HMAC secret을 알지 못한다.
+- current/previous rotation은 dual-read/current-write다. new row는 current digest/version만 저장하고 previous pair는 rotation window 안의 active dedupe read에만 쓴다. `private.youtube_extraction_current_policy`는 승인된 release migration으로만 원자 전환하며 경합한 enqueue/retry는 old/new 중 한 complete snapshot만 사용한다.
+- canonical policy JSON은 UTF-8, sorted keys, no whitespace, unknown key 거부, defaults materialized다. initial async policy는 i031-only이고 workpack 33 manifest/options exact object만 쓴다. job `policy_snapshot_digest`는 `youtube-extraction-policy-snapshot-v1`의 non-secret SHA-256이며 worker `allowed_snapshot_digest`/artifact/credential attestation과 exact match한다. options-only rotation의 old worker reject를 반드시 검증한다.
 - permit 경합은 attempt를 소비하지 않는다. last allowed attempt 중 crash한 job은 reaper가 재실행하지 않고 `ATTEMPTS_EXHAUSTED`로 닫는다.
 - current/previous fingerprint key dual-read 또는 active queue drain 없이 key를 회전하지 않는다.
 - 타인/없는 job 또는 session은 동일 404로 처리해 존재 여부를 숨긴다.
@@ -105,20 +115,28 @@ non-retryable 또는 attempts 소진
 - Quick Import register 성공 뒤 해당 job은 seen 처리하고 현재 화면은 같은 delivery key toast를 억제한다.
 - Quick Import 자체를 이탈 가능한 async UX로 바꾸거나 auto-registered 결과 알림을 추가하려면 별도 승인과 계약이 필요하다.
 
-### Rollout / rollback flow
+### Initial bootstrap / later rotation / rollback flow
+
+rollout은 최초에는 initial bootstrap, 이후 정책 변경에는 later rotation을 뜻한다.
 
 ```text
-rollout
-→ async enqueue maintenance
-→ 이전 pipeline identity queued/processing = 0 drain
-→ 이전 worker stop / permit release
-→ 승인된 release migration이 private.youtube_extraction_current_policy advisory/row lock
-→ expected policy version CAS + complete snapshot 원자 전환
-→ additive migration + app + 새 snapshot을 지원하는 같은 승인 SHA worker 설치
-→ expected schema / role·ACL / credential generation preflight
-→ Supabase → app → worker 재부팅 smoke
-→ Cloudflare 공개 URL success/failure notification smoke
-→ enqueue 재개
+initial bootstrap
+→ migration: disabled singleton/roles/RPC
+→ same release app/worker install
+→ preflight/schema
+→ credential/snapshot attestation
+→ exclusive enable
+→ enqueue publish
+
+later rotation
+→ enqueue maintenance
+→ drain old snapshot
+→ disable/lock
+→ CAS update disabled
+→ new app/worker install
+→ preflight/schema + credential/snapshot attestation
+→ exclusive enable
+→ resume
 
 rollback
 → enqueue 차단
@@ -130,8 +148,9 @@ rollback
 → 기존 Quick Import UI 공개
 ```
 
-- drain 실패 시 전환/rollback을 중단한다. 새 worker와 이전 direct sync provider를 동시에 실행하지 않는다.
-- policy 전환과 enqueue/retry 경합은 shared/exclusive advisory lock으로 old/new 중 한 complete snapshot만 사용한다. worker는 job snapshot identity를 claim하고 current policy 재조회로 queued job을 바꾸지 않는다.
+- initial exact singleton은 `policy_key='primary'`, `policy_version=1`, `extractor_mode='i031_codex_vision'`, workpack 33 exact pipeline/options, `fingerprint_key_version='1'`, previous version/window null, `enabled=false`다. initial async policy는 i031-only다.
+- drain 실패 시 later rotation/rollback을 중단한다. 새 worker와 이전 direct sync provider를 동시에 실행하지 않는다.
+- policy 전환과 enqueue/retry 경합은 shared/exclusive advisory lock으로 old/new 중 한 complete snapshot만 사용한다. current/previous HMAC key는 DB 밖 external secret loader에만 있고 DB는 version/window/digest format만 검증한다. worker는 exact `policy_snapshot_digest`를 claim하고 current policy 재조회로 queued job을 바꾸지 않는다.
 - additive queue schema는 자동 downgrade하지 않는다. schema/credential/release identity가 맞지 않으면 worker claim만 fail closed하고 앱의 다른 기능은 계속 서비스한다.
 - Web Push outbox/permission/subscription flow는 후속 contract-evolution 전에는 이 flow에 포함하지 않는다.
 
