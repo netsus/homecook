@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-08-09T09:08:15Z",
+  "updated_at": "2026-08-12T09:21:11Z",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -2724,9 +2724,9 @@
     {
       "id": "33-youtube-i031-direct-extraction",
       "preset": "vertical-slice-strict",
-      "branch": "docs/33-youtube-i031-direct-extraction",
-      "pr_path": "pending",
-      "lifecycle": "planned",
+      "branch": "feature/fe-33-youtube-i031-direct-extraction",
+      "pr_path": "https://github.com/netsus/homecook/pull/1341",
+      "lifecycle": "in_progress",
       "approval_state": "codex_approved",
       "verification_status": "passed",
       "required_checks": [
@@ -2739,7 +2739,7 @@
         "pnpm validate:workpack -- --slice 33-youtube-i031-direct-extraction",
         "git diff --check"
       ],
-      "notes": "User-approved Codex-only Stage 1. Independent native Codex internal 1.5 review passed with blocking findings 0. Implementation waits for this contract/workpack PR to merge. Fresh Train step coverage 0.655 missed the 0.675 threshold; initial enablement is localhost only, and Holdout/production rollout are not approved.",
+      "notes": "Canonical closeout candidate: .workflow-v2/work-items/33-youtube-i031-direct-extraction.json#closeout. Draft PR #1341 has current deterministic Stage 4 browser evidence and TDD repairs; retained PR #1110 real smoke remains separately identified. Non-manual Stage 4 acceptance is complete except current-head green plus merge. Independent Stage 6 review and merge remain pending. User-owned arbitrary URL confirmation, Holdout/production enablement, macOS worker installation, and operating secrets remain Manual Only. closeout_phase=collecting closeout_recovery=manual_patch:3|manual_handoff closeout_repair=codex:3|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:tests/e2e/slice-33-youtube-i031-direct-extraction.spec.ts,ui/designs/evidence/33-youtube-i031-direct-extraction,docs/workpacks/33-youtube-i031-direct-extraction/evidence/2026-08-12-stage4-6-closeout.md last_recovery_at=2026-08-12T18:21:11+09:00",
       "evaluation_status": "not_started",
       "evaluation_round": 0,
       "last_evaluator_result": null,

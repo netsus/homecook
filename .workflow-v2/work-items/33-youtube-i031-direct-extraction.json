@@ -80,7 +80,7 @@
     ]
   },
   "status": {
-    "lifecycle": "planned",
+    "lifecycle": "in_progress",
     "approval_state": "codex_approved",
     "verification_status": "passed",
     "evaluation_status": "not_started",
@@ -89,8 +89,63 @@
     "auto_merge_eligible": false,
     "blocked_reason_code": null
   },
-  "closeout": null,
-  "notes": "User-approved Codex-only slice. Stage 1 contract-evolution must merge before implementation. Independent native Codex internal 1.5 review passed with blocking findings 0. Fresh exact Validation passed promotion; fresh Train deterministic step coverage 0.655 missed 0.675, and Holdout is not approved. Initial release is localhost only.",
+  "closeout": {
+    "phase": "collecting",
+    "docs_projection": {
+      "roadmap_lifecycle": "in_progress",
+      "design_status": "confirmed",
+      "delivery_checklist": "pending",
+      "design_authority": "not_required",
+      "acceptance": "pending",
+      "automation_spec_metadata": "synced"
+    },
+    "verification_projection": {
+      "required_checks": "passed",
+      "external_smokes": "passed",
+      "authority_reports": [],
+      "actual_verification_refs": [
+        "docs/workpacks/33-youtube-i031-direct-extraction/evidence/2026-08-12-stage4-6-closeout.md",
+        "GitHub PR #1110 retained arbitrary-public-URL real smoke",
+        "GitHub Draft PR #1341 Stage 4/6 closeout candidate",
+        "pnpm exec vitest run tests/youtube-i031-runtime.test.ts tests/youtube-import.backend.test.ts tests/recipio-youtube-import.test.ts",
+        "pnpm exec playwright test tests/e2e/slice-33-youtube-i031-direct-extraction.spec.ts",
+        "pnpm verify:frontend",
+        "PLAYWRIGHT_BASE_URL=http://127.0.0.1:32133 pnpm verify:backend"
+      ]
+    },
+    "merge_gate_projection": {
+      "current_head_sha": null,
+      "approval_state": "codex_approved",
+      "all_checks_green": false
+    },
+    "recovery_summary": {
+      "manual_patch_count": 3,
+      "manual_handoff": true,
+      "stale_lock_count": 0,
+      "ci_resync_count": 0,
+      "artifact_missing": false,
+      "last_recovery_at": "2026-08-12T18:21:11+09:00"
+    },
+    "repair_summary": {
+      "codex_repairable_count": 3,
+      "claude_repairable_count": 0,
+      "manual_decision_required_count": 0,
+      "human_escalation_count": 0,
+      "post_merge_stale_count": 0,
+      "latest_reason_code": "stage4-browser-closeout-candidate-collected",
+      "evidence_sources": [
+        "tests/e2e/slice-33-youtube-i031-direct-extraction.spec.ts",
+        "ui/designs/evidence/33-youtube-i031-direct-extraction",
+        "docs/workpacks/33-youtube-i031-direct-extraction/evidence/2026-08-12-stage4-6-closeout.md"
+      ]
+    },
+    "projection_state": {
+      "docs_synced_at": "2026-08-12T18:21:11+09:00",
+      "status_synced_at": "2026-08-12T18:21:11+09:00",
+      "pr_body_synced_at": null
+    }
+  },
+  "notes": "Canonical closeout candidate: .workflow-v2/work-items/33-youtube-i031-direct-extraction.json#closeout. Stage 1 docs PR #1107 and implementation PR #1110 are merged. Retained arbitrary-public-URL real smoke from PR #1110 remains separate from current deterministic browser evidence. Draft PR #1341 repairs duplicate submit, dead-end retry, and 320px progress wrapping with TDD and records desktop/390/320 loading, error/retry, and review evidence. Non-manual Stage 4 acceptance is complete except current-head green plus merge; final Stage 6 approval is reserved for an independent Codex task. Fresh Holdout, user-owned arbitrary URL confirmation, production enablement, macOS worker installation, and operating secrets remain Manual Only. closeout_phase=collecting closeout_recovery=manual_patch:3|ci_resync:0|manual_handoff closeout_repair=codex:3|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:tests/e2e/slice-33-youtube-i031-direct-extraction.spec.ts,ui/designs/evidence/33-youtube-i031-direct-extraction,docs/workpacks/33-youtube-i031-direct-extraction/evidence/2026-08-12-stage4-6-closeout.md last_recovery_at=2026-08-12T18:21:11+09:00",
   "out_of_scope": [
     "preview-or-production-enablement",
     "holdout-promotion",

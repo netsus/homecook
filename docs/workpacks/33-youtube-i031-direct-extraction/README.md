@@ -170,6 +170,14 @@ existing route
 
 구현 완료 상태는 metadata가 잠긴 `acceptance.md`에서 관리한다. 이 섹션은 workflow v2 closeout validator가 workpack의 Delivery Checklist 경계를 확인할 수 있도록 유지한다.
 
+## Stage 4/6 Closeout Evidence — 2026-08-12
+
+- non-manual Stage 4 acceptance 8건은 [closeout evidence](./evidence/2026-08-12-stage4-6-closeout.md)의 retained real smoke와 current-head deterministic/browser 근거로 완료했다.
+- TDD 수리는 loading 중 동기식 중복 제출 차단, explicit retry 재실행, 320px 진행 단계 단일 행 유지에만 제한했다. 새 화면·key/model 설정 UI·공개 API 계약은 추가하지 않았다.
+- desktop 1280px, mobile 390px, mobile 320px에서 loading/error/retry/review를 캡처했고 console/page/HTTP error와 text overlap을 자동 검사했다.
+- roadmap은 `in-progress`를 유지한다. Draft PR의 current-head checks와 독립 Stage 6 검토·merge가 모두 끝나야 `accept-i031-current-head-green`을 완료할 수 있다.
+- 사용자 임의 URL 최종 확인, Holdout/preview/production 승인, production macOS worker와 운영 secret 승인은 계속 Manual Only다.
+
 ## Handoff
 
 Stage 1 docs PR `#1107`과 internal 1.5 PASS는 `master`에 merge됐다. 구현 branch는 safe production subset, runtime preflight/manifest/timeout/cleanup, 기존 import adapter와 tests를 포함한다. 2026-07-26 평가 외 공개 단일 레시피 영상 1건을 production TypeScript runner로 세 번 실행해 `42.41s`, hardening 후 `51.03s`, 누수 제거 후 `52.78s`에 recipe, 36 frames, 8 selected frames, model call 2회를 확인했고 임시 작업 폴더가 남지 않았다. 같은 날 localhost fixture E2E는 mobile Chrome/iPhone SE에서 10건 PASS했고 공식 `verify:frontend`도 전체 통과했다. 사용자 로그인 상태에서 자신의 임의 링크를 최종 확인하는 Manual Only 항목과 fresh sealed Holdout은 별도 완료선이다.

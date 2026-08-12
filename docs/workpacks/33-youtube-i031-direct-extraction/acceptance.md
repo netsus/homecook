@@ -26,11 +26,11 @@
 
 ## Frontend And Localhost
 
-- [ ] 기존 `/recipes/new/youtube`에서 임의 공개 레시피 URL을 붙여넣어 성공 draft를 확인한다 <!-- omo:id=accept-i031-localhost-arbitrary-url;stage=4;scope=frontend;review=5,6 -->
-- [ ] loading 중 중복 제출이 막힌다 <!-- omo:id=accept-i031-loading-submit-lock;stage=4;scope=frontend;review=5,6 -->
-- [ ] strict preflight/runtime 오류가 기존 error/retry UI에 표시된다 <!-- omo:id=accept-i031-error-retry;stage=4;scope=frontend;review=5,6 -->
-- [ ] 새 화면, API key 입력, 모델 설정 UI가 없다 <!-- omo:id=accept-i031-no-new-settings-ui;stage=4;scope=frontend;review=5,6 -->
-- [ ] browser console/page error가 0이고 mobile/desktop에서 text overlap이 없다 <!-- omo:id=accept-i031-browser-quality;stage=4;scope=frontend;review=5,6 -->
+- [x] 기존 `/recipes/new/youtube`에서 임의 공개 레시피 URL을 붙여넣어 성공 draft를 확인한다 <!-- omo:id=accept-i031-localhost-arbitrary-url;stage=4;scope=frontend;review=5,6 -->
+- [x] loading 중 중복 제출이 막힌다 <!-- omo:id=accept-i031-loading-submit-lock;stage=4;scope=frontend;review=5,6 -->
+- [x] strict preflight/runtime 오류가 기존 error/retry UI에 표시된다 <!-- omo:id=accept-i031-error-retry;stage=4;scope=frontend;review=5,6 -->
+- [x] 새 화면, API key 입력, 모델 설정 UI가 없다 <!-- omo:id=accept-i031-no-new-settings-ui;stage=4;scope=frontend;review=5,6 -->
+- [x] browser console/page error가 0이고 mobile/desktop에서 text overlap이 없다 <!-- omo:id=accept-i031-browser-quality;stage=4;scope=frontend;review=5,6 -->
 
 ## Leakage And Hardcoding
 
@@ -48,14 +48,14 @@
 
 ### Playwright
 
-- [ ] 기존 YT_IMPORT loading/error/retry/review 흐름을 desktop/mobile 브라우저에서 검증한다 <!-- omo:id=accept-i031-playwright-flow;stage=4;scope=frontend;review=5,6 -->
-- [ ] 실제 외부 URL smoke와 deterministic mock 회귀를 별도 evidence로 구분한다 <!-- omo:id=accept-i031-live-evidence-split;stage=4;scope=shared;review=6 -->
+- [x] 기존 YT_IMPORT loading/error/retry/review 흐름을 desktop/mobile 브라우저에서 검증한다 <!-- omo:id=accept-i031-playwright-flow;stage=4;scope=frontend;review=5,6 -->
+- [x] 실제 외부 URL smoke와 deterministic mock 회귀를 별도 evidence로 구분한다 <!-- omo:id=accept-i031-live-evidence-split;stage=4;scope=shared;review=6 -->
 
 ## Merge Gate
 
 - [x] `pnpm validate:source-of-truth-sync`와 workflow/workpack validation이 통과한다 <!-- omo:id=accept-i031-doc-validation;stage=2;scope=shared;review=3,6 -->
 - [x] `pnpm verify:backend`, lint, typecheck가 통과한다 <!-- omo:id=accept-i031-backend-gates;stage=2;scope=backend;review=3,6 -->
-- [ ] `pnpm verify:frontend`와 browser 검증이 통과한다 <!-- omo:id=accept-i031-frontend-gates;stage=4;scope=frontend;review=5,6 -->
+- [x] `pnpm verify:frontend`와 browser 검증이 통과한다 <!-- omo:id=accept-i031-frontend-gates;stage=4;scope=frontend;review=5,6 -->
 - [x] 독립 Codex code/security review blocking finding이 0이다 <!-- omo:id=accept-i031-independent-review;stage=2;scope=shared;review=3,6 -->
 - [ ] current PR head의 모든 GitHub checks가 green이고 PR이 merge된다 <!-- omo:id=accept-i031-current-head-green;stage=4;scope=shared;review=6 -->
 
