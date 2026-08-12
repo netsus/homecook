@@ -353,6 +353,8 @@ describe("YouTube i031 exact runtime", () => {
       .toBeLessThan(fallbackSource.indexOf("fetchApifyCaptions(env, videoId)"));
     expect(workerSource).toContain("workerRpcClient.resolveMethods(methodLabels(");
     expect(workerSource).toContain('event_type: "success"');
+    expect(workerSource).not.toContain("cache_hit: llmCache.cacheHit");
+    expect(workerSource).not.toContain("cache_hit: visualCache.cacheHit");
     expect(workerSource).not.toMatch(/updateTitle\([^)]*recipe\.title/u);
   });
 

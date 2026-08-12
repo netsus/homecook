@@ -1446,6 +1446,12 @@ describe.runIf(enabled).sequential("youtube async extraction PostgreSQL integrat
         '{"provider":"youtube_public_timedtext","status":"success"}'::jsonb
       )::text;
     `);
+    const paidCacheHit = runAsJson("youtube_extraction_worker", workerClaims(snapshotDigest), `
+      select public.record_youtube_extraction_worker_event(
+        '${claim.job_id}'::uuid, '${workerId}', ${fence}, 'transcript',
+        '{"provider":"external_transcript_api","cache_hit":true,"status":"success","reason":"cache_hit"}'::jsonb
+      )::text;
+    `);
     const llmEvent = runAsJson("youtube_extraction_worker", workerClaims(snapshotDigest), `
       select public.record_youtube_extraction_worker_event(
         '${claim.job_id}'::uuid, '${workerId}', ${fence}, 'llm',
@@ -1480,6 +1486,7 @@ describe.runIf(enabled).sequential("youtube async extraction PostgreSQL integrat
     expect(llmCache).toMatchObject({ applied: true });
     expect(visualCache).toMatchObject({ applied: true });
     expect(event).toEqual({ applied: true, recorded: true });
+    expect(paidCacheHit).toEqual({ applied: true, recorded: true });
     expect(llmEvent).toEqual({ applied: true, recorded: true });
     expect(visualEvent).toEqual({ applied: true, recorded: true });
     expect(quota).toMatchObject({ applied: true, reserved: true, used: 1 });
@@ -1577,6 +1584,28 @@ describe.runIf(enabled).sequential("youtube async extraction PostgreSQL integrat
       psql(`
         drop function if exists public.youtube_extraction_shadow_rpc();
         drop table if exists public.youtube_extraction_shadow;
+      `);
+    }
+  });
+
+  it("fails readiness closed when a worker RPC execute grant drifts", () => {
+    enablePolicy();
+    const snapshotDigest = policySnapshotDigest();
+    configureWorkerCredential(snapshotDigest);
+    psql(`
+      grant execute on function public.claim_youtube_extraction_job(text, text, integer)
+      to authenticated;
+    `);
+    try {
+      const readiness = runAsJson("authenticated", authenticatedClaims(ownerA), `
+        select public.read_youtube_extraction_enqueue_readiness()::text;
+      `);
+      expect(readiness.ready).toBe(false);
+      expect(readiness.catalog_fingerprint).not.toBe(expectedSchemaDocument.catalog_fingerprint);
+    } finally {
+      psql(`
+        revoke execute on function public.claim_youtube_extraction_job(text, text, integer)
+        from authenticated;
       `);
     }
   });

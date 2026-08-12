@@ -104,6 +104,15 @@ describe("YTASYNC-DB/SEC migration contract", () => {
     expect(sql).toContain("read_youtube_extraction_enqueue_readiness()");
     expect(sql).toContain("'catalog_fingerprint'");
     expect(sql).toContain("youtube-extraction-live-catalog-v1");
+    for (const component of [
+      "role_attributes",
+      "rls_policies",
+      "table_privileges",
+      "sequence_privileges",
+      "rpc_security",
+    ]) {
+      expect(sql, component).toContain(`'${component}'`);
+    }
     expect(sql).toContain("v_credential.expires_at <= clock_timestamp() + interval '30 minutes'");
     expect(sql).toContain("read_youtube_extraction_job_projection(uuid)");
     expect(sql).toContain("read_youtube_extraction_session_projection(uuid)");
@@ -121,6 +130,7 @@ describe("YTASYNC-DB/SEC migration contract", () => {
     expect(sql).toContain("v_audience is distinct from 'youtube-extraction'");
     expect(sql).toContain("clock_timestamp() + interval '5 minutes'");
     expect(sql).toContain("clock_timestamp() + interval '30 minutes'");
+    expect(sql).toContain("and not event.cache_hit");
   });
 
   it("seeds the exact i031-only policy disabled", () => {
