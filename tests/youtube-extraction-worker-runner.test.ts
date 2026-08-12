@@ -169,6 +169,7 @@ describe("YTASYNC-WORKER standalone runner", () => {
     });
     const extractor = { extract: vi.fn(async () => ({
       identity: { pipeline: "i031" },
+      videoTitle: "백종원의 원본 영상 제목",
       recipe: { title: "김치찌개" },
       meta: { modelCallCount: 2 },
       persistence: {
@@ -236,6 +237,7 @@ describe("YTASYNC-WORKER standalone runner", () => {
       }, []));
       await writeFile(args.result, JSON.stringify({
         identity: { pipeline: "i031" },
+        videoTitle: "provider-video-title",
         recipe: { title: "artifact-success", ingredients: [], steps: [] },
         meta: { modelCallCount: 2 }
       }));
@@ -280,12 +282,73 @@ describe("YTASYNC-WORKER standalone runner", () => {
     await expect(runtime.runOnce()).resolves.toBe("succeeded");
     expect(rpc).toHaveBeenCalledWith(
       "update_youtube_extraction_job_title",
-      expect.objectContaining({ title: "artifact-success" }),
+      expect.objectContaining({ title: "provider-video-title" }),
     );
     expect(rpc).toHaveBeenCalledWith(
       "finalize_youtube_extraction_job",
       expect.any(Object),
     );
+  });
+
+  it("fenced-persists provider video title before a later extraction failure", async () => {
+    const root = mkdtempSync(join(tmpdir(), "yta-title-before-failure-"));
+    tempDirs.push(root);
+    const bundle = join(root, "lib/server/youtube-i031-runtime/bundle");
+    mkdirSync(bundle, { recursive: true });
+    const workerPath = join(bundle, "worker.mjs");
+    writeFileSync(workerPath, `
+      import { writeFile } from "node:fs/promises";
+      const args = Object.fromEntries(process.argv.slice(2).reduce((all, value, index, list) => {
+        if (value.startsWith("--")) all.push([value.slice(2), list[index + 1]]);
+        return all;
+      }, []));
+      await writeFile(args.metadata, JSON.stringify({ videoTitle: "provider-title-survives" }));
+      process.exitCode = 1;
+    `);
+    chmodSync(workerPath, 0o555);
+    const digest = "e".repeat(64);
+    const calls: string[] = [];
+    const rpc = vi.fn(async (name: string) => {
+      calls.push(name);
+      return {
+        data: name === "claim_youtube_extraction_job"
+          ? {
+              job_id: "55555555-5555-4555-8555-555555555555",
+              youtube_video_id: "abc123DEF45",
+              lease_generation: 2,
+              policy_snapshot_digest: digest,
+              result_affecting_options: {},
+            }
+          : name === "claim_youtube_extractor_permit"
+            ? { permit_generation: 2 }
+            : name === "read_youtube_extraction_worker_catalog"
+              ? { applied: true, ingredients: [], ingredient_synonyms: [], cooking_methods: [] }
+              : { applied: true, updated: true, released: true },
+        error: null,
+      };
+    });
+    const extractor = createStandaloneYoutubeI031Extractor({
+      artifactRoot: root,
+      workerEnv: { NODE_ENV: "test" },
+      verifyPreflight: vi.fn(async () => ({
+        codexBin: "/opt/homebrew/bin/codex",
+        codexCliVersion: "0.144.0-alpha.4",
+      })),
+    });
+    const runtime = createYoutubeExtractionWorkerRuntime({
+      workerId: "worker-title-failure",
+      allowedSnapshotDigest: digest,
+      rpc,
+      extractor,
+    });
+
+    await expect(runtime.runOnce()).resolves.toBe("failed");
+    expect(rpc).toHaveBeenCalledWith(
+      "update_youtube_extraction_job_title",
+      expect.objectContaining({ title: "provider-title-survives" }),
+    );
+    expect(calls.indexOf("update_youtube_extraction_job_title"))
+      .toBeLessThan(calls.indexOf("fail_or_retry_youtube_extraction_job"));
   });
 
   it("stops polling and aborts the active extractor on SIGTERM-equivalent shutdown", async () => {
