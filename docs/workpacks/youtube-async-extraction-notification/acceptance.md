@@ -4,55 +4,55 @@
 
 ## Happy Path
 
-- [ ] `POST /api/v1/recipes/youtube/extraction-jobs`가 provider를 직접 호출하지 않고 exact union을 `202 {job_id,status,deduplicated,submitted_at}`로 접수한다 <!-- omo:id=accept-yta-enqueue-202;stage=2;scope=backend;review=3,6 -->
+- [x] `POST /api/v1/recipes/youtube/extraction-jobs`가 provider를 직접 호출하지 않고 exact union을 `202 {job_id,status,deduplicated,submitted_at}`로 접수한다 <!-- omo:id=accept-yta-enqueue-202;stage=2;scope=backend;review=3,6 -->
 - [ ] 사용자는 접수 뒤 다른 화면으로 이동·새로고침·앱 종료해도 같은 job의 terminal 결과를 복구한다 <!-- omo:id=accept-yta-background-durable;stage=4;scope=frontend;review=5,6 -->
-- [ ] worker 성공은 session/candidates/job을 한 finalize transaction으로 만들고 draft 검수·등록으로 연결한다 <!-- omo:id=accept-yta-finalize-review-register;stage=2;scope=shared;review=3,6 -->
+- [x] worker 성공은 session/candidates/job을 한 finalize transaction으로 만들고 draft 검수·등록으로 연결한다 <!-- omo:id=accept-yta-finalize-review-register;stage=2;scope=shared;review=3,6 -->
 - [ ] app shell은 재로그인/foreground/재실행 뒤 unseen success/failure/expired를 toast+badge+durable list로 표시한다 <!-- omo:id=accept-yta-shell-notification;stage=4;scope=frontend;review=5,6 -->
 - [ ] 성공 draft CTA `결과 확인`은 exact session-read로 검수 화면을 복원하고 consumed CTA `레시피 보기`는 등록 recipe로 이동한다 <!-- omo:id=accept-yta-success-destination;stage=4;scope=frontend;review=5,6 -->
-- [ ] 기존 `/recipes/new/youtube` Quick Import UI·sync response·auto-register 의미가 유지된다 <!-- omo:id=accept-yta-quick-import-compat;stage=2;scope=shared;review=3,6 -->
+- [x] 기존 `/recipes/new/youtube` Quick Import UI·sync response·auto-register 의미가 유지된다 <!-- omo:id=accept-yta-quick-import-compat;stage=2;scope=shared;review=3,6 -->
 
 ## State / Policy
 
-- [ ] stored transition은 `queued -> processing -> succeeded|failed`만 허용하고 terminal row를 되살리지 않는다 <!-- omo:id=accept-yta-terminal-transition;stage=2;scope=backend;review=3,6 -->
-- [ ] lease-expired processing은 같은 transaction의 `reaper -> claim`을 따르고 attempts 소진은 `ATTEMPTS_EXHAUSTED`+delivery key로 terminal 처리되어 재claim되지 않는다 <!-- omo:id=accept-yta-reaper-claim;stage=2;scope=backend;review=3,6 -->
-- [ ] `attempt_count`는 permit 획득 후 실제 provider start에서만 증가하고 permit 대기는 attempt를 소비하지 않는다 <!-- omo:id=accept-yta-attempt-authority;stage=2;scope=backend;review=3,6 -->
-- [ ] active current/previous fingerprint pair는 dual-read dedupe되고 새 job은 current-write만 사용한다 <!-- omo:id=accept-yta-dual-read-current-write;stage=2;scope=backend;review=3,6 -->
+- [x] stored transition은 `queued -> processing -> succeeded|failed`만 허용하고 terminal row를 되살리지 않는다 <!-- omo:id=accept-yta-terminal-transition;stage=2;scope=backend;review=3,6 -->
+- [x] lease-expired processing은 같은 transaction의 `reaper -> claim`을 따르고 attempts 소진은 `ATTEMPTS_EXHAUSTED`+delivery key로 terminal 처리되어 재claim되지 않는다 <!-- omo:id=accept-yta-reaper-claim;stage=2;scope=backend;review=3,6 -->
+- [x] `attempt_count`는 permit 획득 후 실제 provider start에서만 증가하고 permit 대기는 attempt를 소비하지 않는다 <!-- omo:id=accept-yta-attempt-authority;stage=2;scope=backend;review=3,6 -->
+- [x] active current/previous fingerprint pair는 dual-read dedupe되고 새 job은 current-write만 사용한다 <!-- omo:id=accept-yta-dual-read-current-write;stage=2;scope=backend;review=3,6 -->
 - [ ] enqueue/retry와 policy rotation 경합은 old/new 중 한 complete snapshot만 저장하고 mixed snapshot은 0이다 <!-- omo:id=accept-yta-policy-snapshot-atomic;stage=2;scope=backend;review=3,6 -->
-- [ ] options-only rotation은 stale app을 `POLICY_CHANGED` write 0으로 막고 old worker의 claim/reaper/start/finalize를 0으로 만든다 <!-- omo:id=accept-yta-options-rotation-fail-closed;stage=2;scope=backend;review=3,6 -->
-- [ ] unconsumed draft TTL 만료만 public `expired`이고 `consumed-after-TTL`은 succeeded+recipe destination+`can_retry=false`다 <!-- omo:id=accept-yta-consumed-ttl-precedence;stage=2;scope=shared;review=3,6 -->
-- [ ] toast 렌더는 delivered만 기록하고 목록 항목/CTA 확인만 seen을 기록하며 archive는 30일 retention을 유지한다 <!-- omo:id=accept-yta-delivered-seen-archive;stage=2;scope=shared;review=3,6 -->
+- [x] options-only rotation은 stale app을 `POLICY_CHANGED` write 0으로 막고 old worker의 claim/reaper/start/finalize를 0으로 만든다 <!-- omo:id=accept-yta-options-rotation-fail-closed;stage=2;scope=backend;review=3,6 -->
+- [x] unconsumed draft TTL 만료만 public `expired`이고 `consumed-after-TTL`은 succeeded+recipe destination+`can_retry=false`다 <!-- omo:id=accept-yta-consumed-ttl-precedence;stage=2;scope=shared;review=3,6 -->
+- [x] toast 렌더는 delivered만 기록하고 목록 항목/CTA 확인만 seen을 기록하며 archive는 30일 retention을 유지한다 <!-- omo:id=accept-yta-delivered-seen-archive;stage=2;scope=shared;review=3,6 -->
 - [ ] `can_retry=false`이면 toast/list/deep link 어디에도 retry CTA/body/POST가 없다 <!-- omo:id=accept-yta-can-retry-first;stage=4;scope=frontend;review=5,6 -->
 
 ## Error / Permission
 
 - [ ] unauthenticated route는 `401 UNAUTHORIZED`이고 private job count/title/thumbnail을 렌더하지 않으며 LOGIN return-to-action을 보존한다 <!-- omo:id=accept-yta-unauthorized-return;stage=4;scope=frontend;review=5,6 -->
-- [ ] 없는/타인 job과 session은 공식 동일 404 의미로 숨겨 소유 여부를 노출하지 않는다 <!-- omo:id=accept-yta-owner-nondisclosure;stage=2;scope=backend;review=3,6 -->
-- [ ] enqueue body의 두 branch 동시/empty/unknown policy·digest field는 `422 VALIDATION_ERROR`와 write 0이다 <!-- omo:id=accept-yta-exact-union-validation;stage=2;scope=backend;review=3,6 -->
+- [x] 없는/타인 job과 session은 공식 동일 404 의미로 숨겨 소유 여부를 노출하지 않는다 <!-- omo:id=accept-yta-owner-nondisclosure;stage=2;scope=backend;review=3,6 -->
+- [x] enqueue body의 두 branch 동시/empty/unknown policy·digest field는 `422 VALIDATION_ERROR`와 write 0이다 <!-- omo:id=accept-yta-exact-union-validation;stage=2;scope=backend;review=3,6 -->
 - [ ] `POLICY_CHANGED`는 URL 입력을 보존한 안전 문구를 표시하고 success/terminal 알림으로 저장하지 않는다 <!-- omo:id=accept-yta-policy-changed-ui;stage=4;scope=frontend;review=5,6 -->
 - [ ] offline 또는 enqueue response 미수신은 local success를 추측하지 않고 입력 보존+retry를 제공한다 <!-- omo:id=accept-yta-offline-unknown-submit;stage=4;scope=frontend;review=5,6 -->
 - [ ] exhaustive 6개 public failure code의 message/retryable/CTA가 공식 표와 exact match한다 <!-- omo:id=accept-yta-safe-failure-table;stage=4;scope=frontend;review=5,6 -->
-- [ ] `QUEUE_BUSY`/`EXTRACTION_TIMEOUT`과 disconnect는 shared job을 cancel/failed로 바꾸지 않고 durable completion으로 회복한다 <!-- omo:id=accept-yta-sync-wait-recovery;stage=2;scope=shared;review=3,6 -->
+- [x] `QUEUE_BUSY`/`EXTRACTION_TIMEOUT`과 disconnect는 shared job을 cancel/failed로 바꾸지 않고 durable completion으로 회복한다 <!-- omo:id=accept-yta-sync-wait-recovery;stage=2;scope=shared;review=3,6 -->
 - [ ] loading/empty/error/offline/read-only/unauthorized 화면 상태가 모두 존재하고 safe retry/recovery를 제공한다 <!-- omo:id=accept-yta-required-ui-states;stage=4;scope=frontend;review=5,6 -->
 
 ## Data Integrity
 
-- [ ] `youtube_extraction_sessions.source_job_id` unique linkage와 replay가 session/candidate/job exact one-result projection을 보장한다 <!-- omo:id=accept-yta-source-job-exactly-once;stage=2;scope=backend;review=3,6 -->
-- [ ] job에는 normalized video ID만 저장하고 raw/encrypted URL, transcript, frame, provider payload, secret이 저장되지 않는다 <!-- omo:id=accept-yta-private-data-minimization;stage=2;scope=backend;review=3,6 -->
-- [ ] enqueue owner는 `createRouteHandlerClient()` user session의 `auth.uid()`에서만 도출되고 caller-supplied user UUID를 받지 않는다 <!-- omo:id=accept-yta-user-session-authority;stage=2;scope=backend;review=3,6 -->
-- [ ] fingerprint HMAC을 인증/attestation으로 사용하지 않고 DB는 HMAC secret을 읽지 않으며 worker에는 key를 전달하지 않는다 <!-- omo:id=accept-yta-hmac-purpose-boundary;stage=2;scope=backend;review=3,6 -->
-- [ ] worker API roles는 table/sequence privilege 0이고 exact RPC owner/RLS/ACL/membership/pre-request만 통과한다 <!-- omo:id=accept-yta-worker-least-privilege;stage=2;scope=backend;review=3,6 -->
+- [x] `youtube_extraction_sessions.source_job_id` unique linkage와 replay가 session/candidate/job exact one-result projection을 보장한다 <!-- omo:id=accept-yta-source-job-exactly-once;stage=2;scope=backend;review=3,6 -->
+- [x] job에는 normalized video ID만 저장하고 raw/encrypted URL, transcript, frame, provider payload, secret이 저장되지 않는다 <!-- omo:id=accept-yta-private-data-minimization;stage=2;scope=backend;review=3,6 -->
+- [x] enqueue owner는 `createRouteHandlerClient()` user session의 `auth.uid()`에서만 도출되고 caller-supplied user UUID를 받지 않는다 <!-- omo:id=accept-yta-user-session-authority;stage=2;scope=backend;review=3,6 -->
+- [x] fingerprint HMAC을 인증/attestation으로 사용하지 않고 DB는 HMAC secret을 읽지 않으며 worker에는 key를 전달하지 않는다 <!-- omo:id=accept-yta-hmac-purpose-boundary;stage=2;scope=backend;review=3,6 -->
+- [x] worker API roles는 table/sequence privilege 0이고 exact RPC owner/RLS/ACL/membership/pre-request만 통과한다 <!-- omo:id=accept-yta-worker-least-privilege;stage=2;scope=backend;review=3,6 -->
 - [ ] stale job/permit/credential generation의 heartbeat/start/cache/event/method/finalize/fail/release write는 모두 0이다 <!-- omo:id=accept-yta-generation-fencing;stage=2;scope=backend;review=3,6 -->
-- [ ] raw worker/manager JWT, signing/service-role key, user access/refresh token, cookie, HMAC key가 DB·Git·artifact·env·argv·plist·log에 없다 <!-- omo:id=accept-yta-secret-boundary;stage=2;scope=backend;review=3,6 -->
+- [x] raw worker/manager JWT, signing/service-role key, user access/refresh token, cookie, HMAC key가 DB·Git·artifact·env·argv·plist·log에 없다 <!-- omo:id=accept-yta-secret-boundary;stage=2;scope=backend;review=3,6 -->
 - [ ] title snapshot은 nullable sanitized 160자이고 null이면 UI가 `YouTube 레시피` fallback을 쓴다 <!-- omo:id=accept-yta-title-snapshot;stage=4;scope=frontend;review=5,6 -->
 
 ## Data Setup / Preconditions
 
 - [ ] fixture가 두 owner와 queued/processing/succeeded draft/consumed/failed retryable/non-retryable/expired 상태를 결정론적으로 만든다 <!-- omo:id=accept-yta-fixture-matrix;stage=2;scope=shared;review=3,6 -->
-- [ ] 운영 volume과 분리된 pinned isolated local Supabase reset에서 4개 schema surface, roles, membership, RLS/ACL, exact RPC signature와 disabled initial policy를 검증한다 <!-- omo:id=accept-yta-local-db-readiness;stage=2;scope=shared;review=3,6 -->
-- [ ] app descriptor, worker artifact, credential singleton의 release SHA/schema identity/allowed snapshot digest가 exact match해야 enqueue/claim이 열린다 <!-- omo:id=accept-yta-release-attestation;stage=2;scope=shared;review=3,6 -->
-- [ ] restricted worker JWT로 allowlisted RPC만 성공하고 public Data API/other REST/RPC/table/owner role 접근은 실패한다 <!-- omo:id=accept-yta-postgrest-negative;stage=2;scope=shared;review=3,6 -->
-- [ ] workpack 33 exact i031 manifest/options/preflight/no-fallback/20분 timeout/cleanup 회귀가 green이다 <!-- omo:id=accept-yta-i031-regression;stage=2;scope=shared;review=3,6 -->
-- [ ] Supabase Cloud/linked/remote target은 N/A/forbidden이며 Stage 2~6 evidence가 remote link/credential access 0, isolated-local 사용과 운영 full-local destructive reset 0을 명시한다 <!-- omo:id=accept-yta-remote-write-zero;stage=2;scope=shared;review=3,6 -->
+- [x] 운영 volume과 분리된 pinned isolated local Supabase reset에서 4개 schema surface, roles, membership, RLS/ACL, exact RPC signature와 disabled initial policy를 검증한다 <!-- omo:id=accept-yta-local-db-readiness;stage=2;scope=shared;review=3,6 -->
+- [x] app descriptor, worker artifact, credential singleton의 release SHA/schema identity/allowed snapshot digest가 exact match해야 enqueue/claim이 열린다 <!-- omo:id=accept-yta-release-attestation;stage=2;scope=shared;review=3,6 -->
+- [x] restricted worker JWT로 allowlisted RPC만 성공하고 public Data API/other REST/RPC/table/owner role 접근은 실패한다 <!-- omo:id=accept-yta-postgrest-negative;stage=2;scope=shared;review=3,6 -->
+- [x] workpack 33 exact i031 manifest/options/preflight/no-fallback/20분 timeout/cleanup 회귀가 green이다 <!-- omo:id=accept-yta-i031-regression;stage=2;scope=shared;review=3,6 -->
+- [x] Supabase Cloud/linked/remote target은 N/A/forbidden이며 Stage 2~6 evidence가 remote link/credential access 0, isolated-local 사용과 운영 full-local destructive reset 0을 명시한다 <!-- omo:id=accept-yta-remote-write-zero;stage=2;scope=shared;review=3,6 -->
 
 ## Design / Accessibility
 
@@ -78,7 +78,7 @@
 ### PostgreSQL / PostgREST
 
 - [ ] 동시 enqueue/claim/reaper/finalize/policy rotation/credential CAS와 exact role/RLS/ACL을 실제 DB에서 검증한다 <!-- omo:id=accept-yta-postgres-integration;stage=2;scope=backend;review=3,6 -->
-- [ ] public proxy와 restricted JWT negative matrix가 loopback/private boundary drift를 fail closed한다 <!-- omo:id=accept-yta-data-api-boundary;stage=2;scope=backend;review=3,6 -->
+- [x] public proxy와 restricted JWT negative matrix가 loopback/private boundary drift를 fail closed한다 <!-- omo:id=accept-yta-data-api-boundary;stage=2;scope=backend;review=3,6 -->
 
 ### Playwright / Exploratory QA
 

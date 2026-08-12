@@ -763,6 +763,28 @@ as $function$
   select least(900, greatest(30, 30 * (2 ^ greatest(p_attempt_count, 0))));
 $function$;
 
+revoke all on function private.youtube_extraction_policy_snapshot_digest(text, text, jsonb, bigint)
+  from public, anon, authenticated, service_role;
+revoke all on function private.youtube_extraction_policy_options_valid(jsonb)
+  from public, anon, authenticated, service_role;
+revoke all on function private.youtube_extraction_completion_delivery_key(uuid, timestamptz)
+  from public, anon, authenticated, service_role;
+revoke all on function private.youtube_extraction_error_message(text)
+  from public, anon, authenticated, service_role;
+revoke all on function private.youtube_extraction_backoff_seconds(integer)
+  from public, anon, authenticated, service_role;
+
+grant execute on function private.youtube_extraction_policy_snapshot_digest(text, text, jsonb, bigint)
+  to youtube_extraction_enqueue_rpc_owner,
+     youtube_extraction_worker_rpc_owner,
+     youtube_extraction_credential_manager_rpc_owner;
+grant execute on function private.youtube_extraction_completion_delivery_key(uuid, timestamptz)
+  to youtube_extraction_worker_rpc_owner;
+grant execute on function private.youtube_extraction_error_message(text)
+  to youtube_extraction_worker_rpc_owner;
+grant execute on function private.youtube_extraction_backoff_seconds(integer)
+  to youtube_extraction_worker_rpc_owner;
+
 create or replace function public.check_youtube_extraction_worker_pre_request()
 returns void
 language plpgsql
@@ -2478,6 +2500,23 @@ begin
 end;
 $function$;
 
+-- Supabase migrations run as a non-superuser role. Grant only temporary
+-- membership so that role ownership can be assigned, then revoke every edge
+-- before commit; the release manifest requires zero owner membership edges.
+do $$
+begin
+  execute format(
+    'grant youtube_extraction_enqueue_rpc_owner, youtube_extraction_worker_rpc_owner, youtube_extraction_credential_manager_rpc_owner to %I',
+    current_user
+  );
+end;
+$$;
+
+grant create on schema public
+  to youtube_extraction_enqueue_rpc_owner,
+     youtube_extraction_worker_rpc_owner,
+     youtube_extraction_credential_manager_rpc_owner;
+
 alter function public.check_youtube_extraction_worker_pre_request()
   owner to youtube_extraction_worker_rpc_owner;
 alter function public.enqueue_youtube_extraction_job(
@@ -2514,8 +2553,6 @@ alter function public.mark_youtube_extraction_jobs_seen(uuid, uuid[])
 alter function public.rotate_youtube_extraction_worker_credential(
   bigint, bigint, text, timestamptz, text, text, text
 ) owner to youtube_extraction_credential_manager_rpc_owner;
-alter function private.verify_full_local_internal_scope()
-  owner to postgres;
 
 revoke all on function public.enqueue_youtube_extraction_job(
   text,
@@ -2635,5 +2672,19 @@ revoke all on function public.check_youtube_extraction_worker_pre_request()
 from public, anon, authenticated, service_role;
 grant execute on function public.check_youtube_extraction_worker_pre_request()
 to youtube_extraction_worker, youtube_extraction_credential_manager;
+
+revoke create on schema public
+  from youtube_extraction_enqueue_rpc_owner,
+       youtube_extraction_worker_rpc_owner,
+       youtube_extraction_credential_manager_rpc_owner;
+
+do $$
+begin
+  execute format(
+    'revoke youtube_extraction_enqueue_rpc_owner, youtube_extraction_worker_rpc_owner, youtube_extraction_credential_manager_rpc_owner from %I',
+    current_user
+  );
+end;
+$$;
 
 commit;

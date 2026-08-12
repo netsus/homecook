@@ -17,6 +17,13 @@ describe("prepared food search security function inventory", () => {
     )).toEqual(["pg_catalog", "public", "pg_temp"]);
   });
 
+  it("treats PostgreSQL's escaped empty search_path as catalog-only", () => {
+    expect(parseFunctionSearchPath('{"search_path=\\"\\""}')).toEqual([
+      "pg_catalog",
+      "pg_temp",
+    ]);
+  });
+
   it("classifies the locked-down helpers and service-only ranked RPC", () => {
     expect(existsSync(MANIFEST_PATH)).toBe(true);
 

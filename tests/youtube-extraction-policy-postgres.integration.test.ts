@@ -183,6 +183,11 @@ function resetRuntimeState() {
         expires_at = null;
     update private.youtube_extraction_current_policy
     set enabled = false,
+        policy_version = ${YOUTUBE_ASYNC_POLICY.policyVersion},
+        extractor_mode = '${YOUTUBE_ASYNC_POLICY.extractorMode}',
+        pipeline_identity = '${YOUTUBE_ASYNC_POLICY.pipelineIdentity}',
+        result_affecting_options = ${sqlJson(YOUTUBE_ASYNC_POLICY.resultAffectingOptions)}::jsonb,
+        fingerprint_key_version = '${YOUTUBE_ASYNC_POLICY.fingerprintKeyVersion}',
         previous_fingerprint_key_version = null,
         previous_fingerprint_valid_until = null,
         updated_at = now()
@@ -560,6 +565,68 @@ describe.runIf(enabled).sequential("youtube async extraction PostgreSQL integrat
     `))).toBe("1");
   });
 
+  it("deduplicates the active previous fingerprint while writing only the current key", () => {
+    enablePolicy();
+    const snapshotDigest = policySnapshotDigest();
+    const previousDigest = "8".repeat(64);
+    const currentDigest = "9".repeat(64);
+
+    psql(`
+      update private.youtube_extraction_current_policy
+      set previous_fingerprint_key_version = '0',
+          previous_fingerprint_valid_until = now() + interval '1 hour'
+      where policy_key = 'primary';
+    `);
+    insertJob({
+      id: "70000000-0000-4000-8000-000000000105",
+      userId: ownerA,
+      videoId: "previous001",
+      fingerprint: previousDigest,
+      status: "queued",
+    });
+    psql(`
+      update public.youtube_extraction_jobs
+      set request_fingerprint_key_version = '0'
+      where id = '70000000-0000-4000-8000-000000000105';
+    `);
+
+    const deduplicated = runAsJson("authenticated", authenticatedClaims(ownerA), `
+      select public.enqueue_youtube_extraction_job(
+        'previous001',
+        1,
+        '${snapshotDigest}',
+        '1',
+        '${currentDigest}',
+        '0',
+        '${previousDigest}',
+        'background_notify'
+      )::text;
+    `);
+    const created = runAsJson("authenticated", authenticatedClaims(ownerA), `
+      select public.enqueue_youtube_extraction_job(
+        'current001',
+        1,
+        '${snapshotDigest}',
+        '1',
+        '${"7".repeat(64)}',
+        '0',
+        '${"6".repeat(64)}',
+        'background_notify'
+      )::text;
+    `);
+
+    expect(deduplicated).toMatchObject({
+      job_id: "70000000-0000-4000-8000-000000000105",
+      deduplicated: true,
+    });
+    expect(created).toMatchObject({ deduplicated: false, status: "queued" });
+    expect(psql(`
+      select request_fingerprint_key_version
+      from public.youtube_extraction_jobs
+      where id = '${String(created.job_id)}'::uuid;
+    `)).toBe("1");
+  });
+
   it("enforces the approved per-user active and daily enqueue budgets inside the enqueue transaction", () => {
     enablePolicy();
     const snapshotDigest = policySnapshotDigest();
@@ -689,6 +756,77 @@ describe.runIf(enabled).sequential("youtube async extraction PostgreSQL integrat
       from public.youtube_extraction_jobs
       where user_id = '${ownerA}'::uuid;
     `))).toBe("0");
+  });
+
+  it("fails closed across an options-only policy rotation without claiming old work", () => {
+    enablePolicy();
+    const oldSnapshotDigest = policySnapshotDigest();
+    configureWorkerCredential(oldSnapshotDigest);
+    insertJob({
+      id: "70000000-0000-4000-8000-000000000106",
+      userId: ownerA,
+      videoId: "oldpolicy01",
+      fingerprint: "5".repeat(64),
+      status: "queued",
+    });
+
+    psql(`
+      update private.youtube_extraction_current_policy
+      set policy_version = policy_version + 1,
+          result_affecting_options = jsonb_set(
+            result_affecting_options,
+            '{interval}',
+            '6'::jsonb
+          ),
+          updated_at = now()
+      where policy_key = 'primary';
+    `);
+    const newSnapshotDigest = policySnapshotDigest();
+    configureWorkerCredential(newSnapshotDigest);
+
+    expectSqlFailure(`
+      begin;
+      set local role authenticated;
+      set local request.jwt.claims = ${sqlJson(authenticatedClaims(ownerA))};
+      select public.enqueue_youtube_extraction_job(
+        'newpolicy01',
+        1,
+        '${oldSnapshotDigest}',
+        '1',
+        '${"4".repeat(64)}',
+        null,
+        null,
+        'background_notify'
+      );
+      commit;
+    `, /POLICY_CHANGED/);
+    expectSqlFailure(`
+      begin;
+      set local role youtube_extraction_worker;
+      set local request.jwt.claims = ${sqlJson(workerClaims(oldSnapshotDigest))};
+      select public.claim_youtube_extraction_job(
+        '${workerId}',
+        '${oldSnapshotDigest}',
+        120
+      );
+      commit;
+    `, /YOUTUBE_EXTRACTION_WORKER_UNAUTHORIZED/);
+
+    const claim = runAsJson(
+      "youtube_extraction_worker",
+      workerClaims(newSnapshotDigest),
+      `select public.claim_youtube_extraction_job(
+        '${workerId}',
+        '${newSnapshotDigest}',
+        120
+      )::text;`,
+    );
+    expect(claim).toEqual({ status: "empty", applied: false });
+    expect(psql(`
+      select status || ':' || policy_snapshot_digest
+      from public.youtube_extraction_jobs
+      where id = '70000000-0000-4000-8000-000000000106';
+    `)).toBe(`queued:${oldSnapshotDigest}`);
   });
 
   it("reaps an exhausted stale lease to failed before claiming the next queued job", () => {

@@ -2,6 +2,8 @@ import { spawnSync } from "node:child_process";
 
 import { beforeEach, describe, expect, it } from "vitest";
 
+import { YOUTUBE_ASYNC_POLICY } from "@/lib/server/youtube-async-extraction";
+
 const enabled =
   process.env.HOMECOOK_YTA_POSTGREST_INTEGRATION === "1";
 const postgrestUrl = process.env.HOMECOOK_YTA_POSTGREST_URL ?? "";
@@ -65,6 +67,13 @@ function resetRuntimeState() {
         expires_at = null;
     update private.youtube_extraction_current_policy
     set enabled = true,
+        policy_version = ${YOUTUBE_ASYNC_POLICY.policyVersion},
+        extractor_mode = '${YOUTUBE_ASYNC_POLICY.extractorMode}',
+        pipeline_identity = '${YOUTUBE_ASYNC_POLICY.pipelineIdentity}',
+        result_affecting_options = $policy$${JSON.stringify(YOUTUBE_ASYNC_POLICY.resultAffectingOptions)}$policy$::jsonb,
+        fingerprint_key_version = '${YOUTUBE_ASYNC_POLICY.fingerprintKeyVersion}',
+        previous_fingerprint_key_version = null,
+        previous_fingerprint_valid_until = null,
         updated_at = now()
     where policy_key = 'primary';
     update private.youtube_extraction_worker_credentials

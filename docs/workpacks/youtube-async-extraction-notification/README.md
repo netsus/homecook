@@ -250,12 +250,12 @@ Stage 2A→2B→2C는 의존 순서다. 하나의 backend PR로 유지하면 RED
 
 > 체크는 해당 Stage의 테스트·review·runtime evidence가 생긴 뒤에만 한다. Stage 1 작성 작업은 아래 구현 항목을 미리 체크하지 않는다.
 
-- [ ] DB schema, policy snapshot, queue/permit/credential authority와 exact RPC가 공식 계약대로 구현된다 <!-- omo:id=delivery-yta-db-authority;stage=2;scope=backend;review=3,6 -->
-- [ ] 6개 신규 public endpoint와 기존 Quick Import `sync_wait` 호환 계약이 구현된다 <!-- omo:id=delivery-yta-api-contract;stage=2;scope=backend;review=3,6 -->
-- [ ] request-independent extraction service와 fenced worker/finalize가 구현된다 <!-- omo:id=delivery-yta-worker-runtime;stage=2;scope=backend;review=3,6 -->
-- [ ] same-release worker artifact와 installer/rotation/rollback dry-run 경로가 구현된다 <!-- omo:id=delivery-yta-worker-installer;stage=2;scope=backend;review=3,6 -->
-- [ ] owner/RLS/ACL/nondisclosure와 secret boundary가 PostgreSQL/PostgREST 테스트로 고정된다 <!-- omo:id=delivery-yta-security-tests;stage=2;scope=shared;review=3,6 -->
-- [ ] retry/dedupe/policy rotation/lease/permit/finalize/consumed-TTL 상태가 TDD로 고정된다 <!-- omo:id=delivery-yta-state-tests;stage=2;scope=shared;review=3,6 -->
+- [x] DB schema, policy snapshot, queue/permit/credential authority와 exact RPC가 공식 계약대로 구현된다 <!-- omo:id=delivery-yta-db-authority;stage=2;scope=backend;review=3,6 -->
+- [x] 6개 신규 public endpoint와 기존 Quick Import `sync_wait` 호환 계약이 구현된다 <!-- omo:id=delivery-yta-api-contract;stage=2;scope=backend;review=3,6 -->
+- [x] request-independent extraction service와 fenced worker/finalize가 구현된다 <!-- omo:id=delivery-yta-worker-runtime;stage=2;scope=backend;review=3,6 -->
+- [x] same-release worker artifact와 installer/rotation/rollback dry-run 경로가 구현된다 <!-- omo:id=delivery-yta-worker-installer;stage=2;scope=backend;review=3,6 -->
+- [x] owner/RLS/ACL/nondisclosure와 secret boundary가 PostgreSQL/PostgREST 테스트로 고정된다 <!-- omo:id=delivery-yta-security-tests;stage=2;scope=shared;review=3,6 -->
+- [x] retry/dedupe/policy rotation/lease/permit/finalize/consumed-TTL 상태가 TDD로 고정된다 <!-- omo:id=delivery-yta-state-tests;stage=2;scope=shared;review=3,6 -->
 - [ ] `YT_IMPORT_BACKGROUND` submit/duplicate/offline/re-entry UI가 연결된다 <!-- omo:id=delivery-yta-import-ui;stage=4;scope=frontend;review=5,6 -->
 - [ ] `APP_SHELL_YOUTUBE_NOTIFICATIONS` toast/badge/list/archive/seen UI가 연결된다 <!-- omo:id=delivery-yta-shell-ui;stage=4;scope=frontend;review=5,6 -->
 - [ ] loading/empty/error/offline/read-only/unauthorized 및 retry gate가 구현된다 <!-- omo:id=delivery-yta-state-ui;stage=4;scope=frontend;review=5,6 -->
