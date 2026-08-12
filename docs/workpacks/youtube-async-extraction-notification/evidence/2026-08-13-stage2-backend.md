@@ -9,7 +9,10 @@
 - second Stage 3 re-reviewed head: `3af52ff5` — `REVISE` (`P1` 5, `P2` 3)
 - second-revision RED commits: `d5f04962`, `4b264f1c`, `9c17affd`, `2edb82b4`, `b9edf7cb`, `afd74382`, `8b241750`
 - second-revision GREEN commits: `d45f32c0`, `f7c48364`, `147ae6e7`, `7bf11d88`
-- replacement implementation head: `7bf11d88`; independent Stage 3 re-review is pending
+- third Stage 3 re-reviewed head: `704d2f39` — `REVISE` (`P1` 1, `P2` 1)
+- third-revision RED commit: `78ffe9b9`
+- third-revision GREEN commit: `68a7d338`
+- replacement implementation head: `68a7d338`; independent Stage 3 re-review of the final PR head is pending
 - official tuple: requirements `1.7.31`, screen `1.5.35`, Flow `1.3.33`, DB `1.3.33`, API `1.2.38`
 - migration: `supabase/migrations/20260812160000_youtube_async_extraction_notification.sql`
 - production/staging/remote writes: `0`
@@ -46,6 +49,8 @@ Two internal read-only reviews then found three additional fail-closed gaps. RED
 
 The first replacement current-head CI run found two further regression-test failures: the generated account-session inventory had not yet recorded the new method/title worker RPC calls, and the immutable subprocess integration timed out only on Linux CI. The inventory is now regenerated from the exact call sites. Immediate child-exit diagnostics then exposed both hidden environment assumptions: the fixture omitted `yt-dlp`, and the production verifier correctly rejects non-Darwin hosts plus missing `/usr/bin/sandbox-exec` and `/usr/bin/swiftc`. Production verification remains unchanged and fail-closed. The cross-platform integration artifact now materializes an isolated Darwin-system-path simulation, supplies every exact tool without host `PATH`, rejects immediately if the child exits before finalize, and retains claim/persist/finalize/SIGTERM assertions under a bounded 30-second budget. Separate unit coverage locks the unmodified production platform, exact paths, Codex version/login, Python/OpenCV/yt-dlp, ffmpeg and ffprobe checks.
 
+The independent third re-review of `704d2f39` found two final catalog-attestation gaps. The RED suite first failed 2 of 23 focused tests because the live fingerprint omitted exact table/sequence/schema ownership and the expected-schema reader accepted duplicate JSON keys. The GREEN migration now fingerprints every target relation and schema owner, every distinct owner role's security attributes, and membership `admin`/`inherit`/`set` attributes. A real PostgreSQL regression transfers a target table to an arbitrary non-prefixed role and proves readiness becomes false before restoring ownership. The expected-schema manifest has one canonical memberships structure, and its reader rejects duplicate keys, incomplete component lists, incomplete membership attributes, and fingerprint-shape drift before installation or startup.
+
 ## Implemented surfaces
 
 Public Next endpoints:
@@ -69,20 +74,21 @@ Database/release surfaces:
 
 ## Verification evidence
 
-Passed before Draft PR creation:
+Current verified evidence:
 
 - `pnpm install --frozen-lockfile` — already up to date
 - `BRANCH_NAME=feature/be-youtube-async-extraction-notification pnpm validate:workpack -- --slice youtube-async-extraction-notification` — pass
-- second-revision focused migration/API/i031/runner/worker/installer suite — 6 files, 73 tests passed
-- isolated real PostgreSQL + real PostgREST suite — 2 files, 34 tests passed, including forbidden role-membership and RPC-ACL drift
+- third-revision focused migration/API/i031/runner/worker/installer/snapshot suite — 6 files, 70 tests passed
+- expected-schema/migration focused suite — 2 files, 23 tests passed
+- isolated real PostgreSQL + real PostgREST suite — 2 files, 35 tests passed, including arbitrary owner, forbidden role-membership and RPC-ACL drift
 - migration static contract — 6 tests passed
-- clean Supabase PostgreSQL 17.6 migration chain on isolated ports `55320`–`55326` — pass through migration and seed; `pg_graphql` absent; live catalog fingerprint `b3ad2b381c6d1a25fa40c30114d083371f66f3d5a82a828ea621bf8a8222fddf` equals the expected-schema manifest
+- portable real PostgreSQL catalog fingerprint `ba92ccdeb92c350548b09d556d561619b511ec7f614ff6436c376044747fda0f` equals the expected-schema manifest after exact owner and membership-attribute coverage
 - additive security-function contract — 31 YouTube functions classified and valid
 - `pnpm typecheck` — pass
 - targeted ESLint — pass
-- `pnpm test` — 563 files passed / 31 skipped; 5925 tests passed / 432 skipped
-- `PLAYWRIGHT_BASE_URL=http://127.0.0.1:3199 pnpm verify:backend` at implementation-equivalent head `7bf11d88` — lint, typecheck, product tests (238 files passed / 12 skipped; 2734 passed / 175 skipped), production build and security Playwright (12 passed) all pass; the existing port `3100` service was untouched
-- `pnpm local:reset:demo` at implementation-equivalent detached head `7bf11d88` on isolated `56320`–`56326` — migrations and `seed.sql` completed, but the unpinned current CLI stopped before step 2 because Realtime/REST/Storage health checks remained unhealthy/503; repeated with a shorter project id and got the same infrastructure timeout. The separately pinned clean PG17 chain above is green. Existing app port `3100` stayed untouched.
+- `pnpm test` at implementation head `68a7d338` — 563 files passed / 31 skipped; 5926 tests passed / 433 skipped
+- `PLAYWRIGHT_BASE_URL=http://127.0.0.1:3199 pnpm verify:backend` at implementation head `68a7d338` — lint, typecheck, product tests (238 files passed / 12 skipped; 2734 passed / 175 skipped), production build and security Playwright (12 passed) all pass; the existing port `3100` service was untouched
+- `pnpm local:reset:demo` at implementation-equivalent detached head `7bf11d88` on isolated `56320`–`56326` — migrations and `seed.sql` completed, but the unpinned current CLI stopped before step 2 because Realtime/REST/Storage health checks remained unhealthy/503; repeated with a shorter project id and got the same infrastructure timeout. The separately pinned isolated PG17 security run below is green. Existing app port `3100` stayed untouched.
 
 The isolated DB runner allocates dynamic PostgreSQL/PostgREST ports, uses an ephemeral credential and temporary database, and removes the container/database afterward. The earlier isolated Supabase reset rehearsal used only `homecook_yta_stage2_retry` on ports `65520`–`65526`; the final clean-migration regression used the default local Supabase development ports. Neither path bound, reused or stopped port `3100`, and neither stopped or mutated any `homecook-full-local-*` stack.
 
@@ -91,16 +97,16 @@ The isolated DB runner allocates dynamic PostgreSQL/PostgREST ports, uses an eph
 - The original `supabase_db_homecook` volume contained PostgreSQL 15 data and could not be opened by the newly selected 17.6 image.
 - Before the follow-up instruction to preserve user data arrived, `supabase stop --no-backup` had already been run against that default local development project. Its legacy local volume is no longer present. No production, staging or `homecook-full-local-*` volume was targeted.
 - The earlier revision reran `pnpm local:reset:demo` after the legacy-volume collision was isolated. At current head, the same canonical command was rerun in a detached isolated worktree, applied every migration and seed, then failed only its container health gate twice. This current-head automation item is therefore recorded as red/environment-blocked, not green. It did not touch the `3100` app or production/full-local stack; `ACCOUNT_SESSION_STALE` remains informational rather than a PR blocker.
-- `SECURITY_FUNCTION_DATABASE_URL=<isolated-PG17> pnpm verify:security-functions` is green: the clean catalog has 205 classified additive functions, and all 8 anonymous mutation probes (including `complete_cooking_session`) return the expected denial with unchanged checksums. This confirms the old `graphql.get_schema_version()` inventory drift and signal-11 failure were local CLI/image `17.6.1.106` defects; the isolated current image has `pg_graphql` absent and no backend crash.
-- `pnpm verify:security-functions:release` still stops before its linked-remote read-only half because this worktree has no `supabase/.temp/project-ref`/`SECURITY_FUNCTION_LINKED_ROOT`. No approved waiver exists, so the release gate remains a merge blocker even though its local half is now green.
+- `SECURITY_FUNCTION_DATABASE_URL=<isolated-PG17> pnpm verify:security-functions` was green on the isolated current image: the clean catalog had 205 classified additive functions, and all 8 anonymous mutation probes (including `complete_cooking_session`) returned the expected denial with unchanged checksums. This confirms the old signal-11 failure was specific to the stale local CLI/image `17.6.1.106`; the isolated image had `pg_graphql` absent and no backend crash.
+- The canonical current-worktree `pnpm verify:security-functions:release` attempt remains red before the linked-remote half because its stale local instance exposes the unexpected `graphql.get_schema_version()` inventory. Even after that local instance is replaced, this worktree still lacks `supabase/.temp/project-ref`/`SECURITY_FUNCTION_LINKED_ROOT` for the required linked-remote read-only authority. No approved waiver exists, so both facts remain merge blockers.
 - `pnpm local:reset:demo` remains a second merge-process blocker at current head because the current unpinned CLI health check times out after a successful migration/seed. No waiver was authored.
 - No secret value, raw JWT, service-role key or credential was copied into this evidence.
 
 ## Pending independent gates
 
-- Stage 3 independent backend/release re-review on the exact replacement PR head; the old reviewed head `95c2b370` remains `REVISE`
+- Stage 3 independent backend/release re-review on the exact replacement PR head; reviewed heads `95c2b370`, `3af52ff5`, and `704d2f39` remain `REVISE`
 - current-head CI completion and any Stage 3 requested fixes
-- approved independent disposition or root fix for the pre-existing security release-gate inventory/backend crash; this Stage 2 task does not self-author a waiver
+- replacement of the stale canonical local security instance plus linked-remote read-only authority, or an approved independent disposition; this Stage 2 task does not self-author a waiver
 - all Stage 4 frontend, Playwright, exploratory QA and design authority work
 - Stage 6 closeout/merge approval
 - every production/staging/remote action listed under `Manual Only`
