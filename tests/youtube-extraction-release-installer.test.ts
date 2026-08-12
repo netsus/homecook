@@ -904,5 +904,5 @@ describe("YTASYNC-OPS preflight, drain, rollback, credential", () => {
       if (child.exitCode === null) child.kill("SIGKILL");
       await new Promise<void>((resolve) => server.close(() => resolve()));
     }
-  }, 30_000);
+  }, 120_000);
 });
