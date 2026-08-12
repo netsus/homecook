@@ -96,4 +96,7 @@ Every check-run reports the exact reviewed `head_sha`. Ready transition and merg
 - user-owned arbitrary public URL confirmation: Manual Only, unchecked
 - Holdout promotion and preview/production enablement: Manual Only, unchecked
 - production macOS worker installation and operating secrets: Manual Only, unchecked
-- post-merge roadmap/acceptance projection and OMO report: not claimed by this pre-merge review record
+- final closeout projection: the reviewer-only successor marks canonical status `merged / dual_approved / passed`, roadmap `merged`, and non-manual acceptance complete before merge as required by internal 6.5
+- policy recovery: the Ready policy first exposed missing structured QA and retained-smoke labels in the PR body; those labels now distinguish the skipped formal exploratory pipeline from deterministic browser evidence and identify PR #1110 as retained, not fresh, real-smoke provenance
+- merge remains conditional on a clean successor-head check inventory; body-fix runs on predecessor heads are not final-head approval evidence
+- post-merge OMO report: generated only after the source PR merge and not claimed by this pre-merge review record
