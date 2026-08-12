@@ -6,7 +6,7 @@
 
 > **2026-08-12 contract-evolution — YouTube enqueue → worker → durable notification → review/register**
 >
-> 사용자는 2026-08-12 기존 `/menu/add/youtube` 검수형 흐름을 이탈 가능한 background job으로 바꾸고, 앱 재로그인·재실행 뒤 성공/실패를 복구하는 flow를 승인했다. 기존 `/recipes/new/youtube` Quick Import의 browser sync/auto-register 흐름은 유지한다.
+> 사용자는 2026-08-12 기존 `/menu/add/youtube` 검수형 흐름을 이탈 가능한 background job으로 바꾸고, 앱 재로그인·재실행 뒤 성공/실패를 복구하는 flow를 승인했다. 기존 `/recipes/new/youtube` Quick Import의 browser sync/auto-register 흐름은 유지한다. PR #1343 review task `019ff598-233b-72c1-92f5-4372596ede7a`의 Findings 1~4,6을 반영했으며 최신 계획 SHA-256/독립 `PASS` evidence는 부모 task 전달 전 `PENDING`이다.
 
 ## 0-YT-ASYNC. Background extraction과 durable 재진입
 
@@ -15,13 +15,17 @@
 ```text
 /menu/add/youtube URL 입력
 → 기존 validate / 로그인 / feature flag / URL 검증
-→ POST /recipes/youtube/extraction-jobs
+→ POST /recipes/youtube/extraction-jobs exact { youtube_url } | { retry_job_id }
 → 원자적 dedupe + active/daily budget + durable INSERT
 → 202 { job_id, status, deduplicated, submitted_at }
 → "추출을 시작했어요" + [이동] [작업 보기]
 → 사용자는 다른 화면·background·브라우저 종료 가능
 
 별도 worker
+→ 같은 claim transaction에서 reaper → claim
+→ lease-expired processing reaper
+   ├─ attempt_count >= max_attempts: failed / ATTEMPTS_EXHAUSTED + delivery key, 재claim 금지
+   └─ attempt_count < max_attempts: queued 복귀 뒤 claim 후보
 → allowed extractor mode/pipeline identity job claim
 → lease_generation + provider permit_generation 획득
 → 실제 provider 시작 때만 attempt_count++ / started_at 기록
@@ -33,15 +37,17 @@
 → GET /users/me/youtube-extraction-jobs?view=unseen-completed
 → toast + badge + durable list
 → toast 렌더 후 delivered, 사용자 확인 후 seen
-→ 성공 [결과 확인] → exact session read → 기존 Step 3 review → register
-→ 실패/expired [다시 시도] → 새 enqueue
+→ 성공 [결과 확인] → exact session read
+   ├─ status=draft: 기존 Step 3 review → register
+   └─ status=consumed, draft=null, recipe_id, recipe_path: [레시피 보기]
+→ 실패/expired + can_retry=true [다시 시도] → { retry_job_id } 새 enqueue
 ```
 
 - browser 연결이 끊겨도 job은 취소하지 않는다. worker/app 재시작 뒤 DB queue와 terminal notification이 authority다.
-- worker crash는 lease 만료 뒤 새 generation으로 reclaim한다. stale generation의 heartbeat/finalize/fail은 0건 write로 거부한다.
+- worker crash는 lease 만료 뒤 claim RPC의 reaper를 먼저 통과한다. `attempt_count < max_attempts`만 새 generation으로 reclaim할 수 있고 `attempt_count >= max_attempts`는 `ATTEMPTS_EXHAUSTED` terminal+delivery key로 닫아 재claim 금지한다. stale generation의 heartbeat/finalize/fail은 0건 write로 거부한다.
 - `source_job_id`로 session/candidate/job 완료를 한 transaction에서 멱등 확정한다. succeeded인데 session이 없거나 candidate 일부만 저장된 상태는 허용하지 않는다.
 - 성공 session TTL은 finalize 시점부터 24시간이다. TTL 뒤 job read/list는 computed `expired`를 보여주고 review 대신 새 enqueue로 연결한다.
-- 로그인되지 않은 app shell은 private job을 읽지 않는다. 재로그인 후 refreshed session authority와 owner RLS를 통과한 job만 복원한다.
+- 로그인되지 않은 app shell은 private job을 읽지 않는다. 재로그인 후 refreshed session authority와 owner RLS를 통과한 job만 복원한다. exact session-read의 타인/없는 session은 동일 404다.
 
 ### 중복·실패·재시도 flow
 
@@ -58,12 +64,17 @@ transient network/rate-limit + attempt 남음
 non-retryable 또는 attempts 소진
 → failed terminal + durable notification
 → 사용자가 [다시 시도]
-→ 이전 row 유지 + 새 job 생성
+→ status/list의 can_retry 확인
+→ POST body { retry_job_id }
+→ server가 본인 terminal failed/expired와 저장된 normalized video ID 확인
+→ 이전 row 유지 + dedupe/budget 재적용 + 새 job 생성
 ```
 
+- enqueue request는 exact union `{ youtube_url } | { retry_job_id }`이며 두 branch를 함께 보내지 않는다. `can_retry`는 expired 또는 safe failed error의 `retryable=true`일 때만 true다.
 - permit 경합은 attempt를 소비하지 않는다. last allowed attempt 중 crash한 job은 reaper가 재실행하지 않고 `ATTEMPTS_EXHAUSTED`로 닫는다.
 - current/previous fingerprint key dual-read 또는 active queue drain 없이 key를 회전하지 않는다.
 - 타인/없는 job 또는 session은 동일 404로 처리해 존재 여부를 숨긴다.
+- failed/expired safe projection은 API의 exhaustive `code/message/retryable/UI CTA` 표만 사용한다. queued/processing/succeeded의 inner error는 null이고 failed/expired는 non-null이며 outer success wrapper error는 null이다.
 
 ### Quick Import `sync_wait` 호환 flow
 

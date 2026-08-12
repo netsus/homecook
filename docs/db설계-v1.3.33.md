@@ -6,7 +6,7 @@
 
 > **2026-08-12 contract-evolution — YouTube durable queue, fenced worker, credential authority**
 >
-> 사용자는 2026-08-12 background extraction job, 기존 session의 `source_job_id`, global provider permit, private worker credential state와 최소권한 worker/credential-manager 역할을 승인했다. 이 문서는 additive target schema와 권한 불변식을 잠글 뿐 migration을 생성·적용하거나 production credential을 발급하지 않는다. 기준은 `origin/master@d38ee2e4a4c8cafc00dce713919c3f3e8df2bdda`, 독립 계획 검토 task `019ff4f7-806c-7151-b646-cab784606cde`의 최종 verdict는 `PASS`다.
+> 사용자는 2026-08-12 background extraction job, 기존 session의 `source_job_id`, global provider permit, private worker credential state와 최소권한 worker/credential-manager 역할을 승인했다. 이 문서는 additive target schema와 권한 불변식을 잠글 뿐 migration을 생성·적용하거나 production credential을 발급하지 않는다. 기준은 `origin/master@d38ee2e4a4c8cafc00dce713919c3f3e8df2bdda`, 최초 독립 계획 검토 task `019ff4f7-806c-7151-b646-cab784606cde`의 최종 verdict는 `PASS`였다. PR #1343 review task `019ff598-233b-72c1-92f5-4372596ede7a`의 Findings 1~4,6을 반영했으며 최신 계획 SHA-256/독립 `PASS` evidence는 부모 task 전달 전 `PENDING`이다.
 
 ## 0-YT-ASYNC. Durable queue와 exact least-privilege contract
 
@@ -42,6 +42,7 @@
 - active dedupe partial unique는 `(user_id, request_fingerprint) WHERE status IN ('queued','processing')`다. HMAC rotation은 current/previous key dual-read 또는 active job 0 drain을 요구한다.
 - 필수 index는 `(status, available_at, created_at)` claim partial, `(user_id, created_at DESC)`, `(user_id, completion_seen_at, completed_at DESC)` terminal unseen partial이다. cursor 동률은 `id DESC`로 고정한다.
 - terminal state는 processing/queued로 되돌리지 않는다. failed/expired 사용자 retry는 새 row를 만든다. terminal retention은 30일이며 cleanup은 orphan session/link 불변식을 함께 검사한다.
+- enqueue exact union `{ youtube_url } | { retry_job_id }` 중 retry branch는 같은 transaction에서 owner terminal failed/expired projection과 `can_retry=true`를 확인하고 locked 이전 row의 normalized `youtube_video_id` 및 결과 영향 option을 읽는다. 이전 row는 UPDATE하지 않으며 새 row 생성에 current/previous fingerprint dedupe와 active/daily budget을 다시 적용한다.
 - RLS는 enabled+forced다. owner SELECT는 refreshed `auth.uid() = user_id`만 허용한다. browser/`anon` direct INSERT/UPDATE/DELETE와 worker table/REST direct access는 모두 0이다. enqueue/delivered/seen과 worker mutation은 아래 exact RPC만 사용한다.
 
 ### 기존 session linkage와 완료 원자성
@@ -74,8 +75,13 @@ processing -- lease expired + attempts remain --> queued/reclaim
 processing -- lease expired + attempts exhausted --> failed/ATTEMPTS_EXHAUSTED
 ```
 
-- `enqueue_youtube_extraction_job(user_id, video_id, extractor_mode, pipeline_identity, limits)`는 authenticated user 일치 검증과 user advisory lock 안에서 current/previous fingerprint dedupe, active/daily budget, insert를 한 transaction으로 수행한다. route의 count-then-insert는 금지한다.
-- `claim_youtube_extraction_job(worker_id, allowed_extractor_mode, allowed_pipeline_identity, lease_seconds)`는 `FOR UPDATE SKIP LOCKED`로 identity가 일치하고 available한 queued/lease-expired row 하나만 claim해 generation을 증가시킨다. claim만으로 attempt를 소비하지 않는다. identity mismatch는 queued 운영 차단으로 남긴다.
+- `enqueue_youtube_extraction_job(user_id, video_id, retry_job_id, extractor_mode, pipeline_identity, limits)`는 `video_id | retry_job_id` 정확히 하나만 non-null로 받고 authenticated user 일치 검증과 user advisory lock 안에서 retry owner/terminal/`can_retry`, current/previous fingerprint dedupe, active/daily budget, insert를 한 transaction으로 수행한다. retry는 저장된 normalized video ID를 사용하고 이전 row는 불변이다. route의 count-then-insert는 금지한다.
+- `claim_youtube_extraction_job(worker_id, allowed_extractor_mode, allowed_pipeline_identity, lease_seconds)`의 같은 claim transaction은 반드시 **reaper → claim** 순서다.
+  1. reaper는 allowed mode/pipeline identity와 일치하는 lease-expired `processing` row를 먼저 `FOR UPDATE SKIP LOCKED`한다.
+  2. `attempt_count >= max_attempts`이면 `failed`, safe `ATTEMPTS_EXHAUSTED`, `completed_at`, unique completion delivery key를 원자 확정하고 lease를 지운다. terminal row는 재claim 금지다.
+  3. `attempt_count < max_attempts`이면 attempt를 늘리지 않고 queued로 되돌려 lease owner/expiry를 지우며 기존 `started_at`은 보존한다.
+  4. 그 뒤에만 available queued 중 `attempt_count < max_attempts` 한 건을 claim하고 `lease_generation`을 증가시킨다. identity mismatch는 queued 운영 차단으로 남긴다.
+- reaper 권한은 claim RPC owner에만 있다. worker API role은 hardened claim RPC `EXECUTE`만 가지며 job table UPDATE, 별도 reaper RPC, lease-expired direct claim 권한은 0이다.
 - `heartbeat_youtube_extraction_job(job_id, worker_id, lease_generation, lease_seconds)`는 exact current owner+generation만 연장한다.
 - `start_youtube_extraction_attempt(job_id, worker_id, lease_generation, permit_generation)`는 current job lease와 permit generation, attempts 잔여를 함께 검증한 뒤에만 attempt를 증가시키고 최초 `started_at`을 기록한다.
 - `finalize_youtube_extraction_job(job_id, worker_id, lease_generation, finalized_draft_json)`은 위 session/candidate/job 단일 transaction과 `source_job_id` replay를 수행한다.
@@ -84,6 +90,7 @@ processing -- lease expired + attempts exhausted --> failed/ATTEMPTS_EXHAUSTED
 - permit RPC exact set은 `claim_youtube_extractor_permit`, `heartbeat_youtube_extractor_permit`, `release_youtube_extractor_permit`이다.
 - worker data RPC allowlist는 active `job_id + worker_id + lease_generation`을 검증하는 public ingredient/synonym/cooking-method projection, transcript/LLM/visual cache read·upsert·touch, paid-provider quota reservation/event, title snapshot, cooking-method resolve/create, queue/permit RPC로 제한한다. caller-supplied user UUID나 user token을 받지 않는다.
 - 만료된/stale generation의 heartbeat/start/finalize/fail/cache/event/method/permit write는 항상 0건이며 terminal row mutation은 거부한다.
+- DB/integration 검증은 같은 claim transaction의 `reaper → claim` 순서, `attempt_count >= max_attempts`의 `ATTEMPTS_EXHAUSTED`+delivery key 단일 terminal 전환, terminal 재claim 금지, attempts 잔여 row만 queued/새 generation claim, stale generation write 0, worker direct table privilege 0을 각각 고정한다.
 
 ### Exact roles, ownership, membership, ACL
 

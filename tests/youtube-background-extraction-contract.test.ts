@@ -8,6 +8,32 @@ function read(relativePath: string) {
   return readFileSync(resolve(root, relativePath), "utf8");
 }
 
+function markdownTableBodyRowsAfter(text: string, heading: string) {
+  const headingIndex = text.indexOf(heading);
+  expect(headingIndex).toBeGreaterThanOrEqual(0);
+
+  const lines = text.slice(headingIndex + heading.length).split("\n");
+  const firstTableLine = lines.findIndex((line) => line.trimStart().startsWith("|"));
+  expect(firstTableLine).toBeGreaterThanOrEqual(0);
+
+  const contiguousTableLines: string[] = [];
+  for (const line of lines.slice(firstTableLine)) {
+    if (!line.trimStart().startsWith("|")) break;
+    contiguousTableLines.push(line);
+  }
+
+  return contiguousTableLines.slice(2);
+}
+
+function markdownTableCellsAfter(text: string, heading: string) {
+  return markdownTableBodyRowsAfter(text, heading).map((row) =>
+    row
+      .split("|")
+      .slice(1, -1)
+      .map((cell) => cell.trim().replaceAll("`", "")),
+  );
+}
+
 const officialTuple = [
   "docs/요구사항기준선-v1.7.31.md",
   "docs/화면정의서-v1.5.35.md",
@@ -73,6 +99,120 @@ describe("YouTube background extraction contract evolution", () => {
     expect(api).toContain("Quick Import UI·auto-register 의미는 유지");
     expect(api).toContain("엔드포인트 전체 목록 (108개) `v1.2.38`");
     expect(api).toContain("active 107개 + 삭제된 `2-4` tombstone 1개");
+  });
+
+  it("parses the official API and DB inventory tables instead of trusting their labels", () => {
+    const apiRows = markdownTableBodyRowsAfter(
+      read(officialTuple[4]),
+      "## 엔드포인트 전체 목록 (108개) `v1.2.38`",
+    );
+    const dbRows = markdownTableBodyRowsAfter(
+      read(officialTuple[3]),
+      "# 17. 전체 테이블 목록 (73개)",
+    );
+
+    expect(apiRows).toHaveLength(108);
+    expect(dbRows).toHaveLength(73);
+  });
+
+  it("locks retry enqueue as an exact union and exposes one exact retry action projection", () => {
+    const api = read(officialTuple[4]);
+    const requirements = read(officialTuple[0]);
+    const screens = read(officialTuple[1]);
+    const flow = read(officialTuple[2]);
+
+    for (const text of [api, requirements, screens, flow]) {
+      expect(text).toContain("{ youtube_url } | { retry_job_id }");
+      expect(text).toContain("can_retry");
+      expect(text).toContain("retry_job_id");
+    }
+
+    expect(api).toContain("본인 terminal `failed|expired` job");
+    expect(api).toContain("저장된 normalized video ID");
+    expect(api).toContain("이전 job row는 변경하지 않는다");
+    expect(api).toContain("dedupe와 active/daily budget을 다시 적용");
+  });
+
+  it("locks consumed session read as a successful owner projection without changing the wrapper", () => {
+    const api = read(officialTuple[4]);
+    const requirements = read(officialTuple[0]);
+    const screens = read(officialTuple[1]);
+    const flow = read(officialTuple[2]);
+
+    for (const text of [api, requirements, screens, flow]) {
+      expect(text).toContain("status=consumed");
+      expect(text).toContain("recipe_id");
+      expect(text).toContain("recipe_path");
+      expect(text).toContain("draft=null");
+    }
+
+    expect(api).toContain("본인 consumed session은 `200`");
+    expect(api).toContain("없는 session과 타인 session은 동일 `404 EXTRACTION_NOT_FOUND`");
+    expect(api).not.toContain("409 | `EXTRACTION_ALREADY_REGISTERED` | consumed session");
+  });
+
+  it("locks exhaustive safe public failures with exact retry and UI actions", () => {
+    const api = read(officialTuple[4]);
+    const screens = read(officialTuple[1]);
+    const failureRows = markdownTableCellsAfter(
+      api,
+      "## 0-YT-ASYNC. 공통 projection과 ownership",
+    );
+    const expectedFailures = [
+      ["NOT_RECIPE_VIDEO", "레시피 영상으로 확인되지 않았어요.", "false", "닫기"],
+      [
+        "QUOTA_EXCEEDED",
+        "오늘 추출 한도를 모두 사용했어요. 나중에 다시 시도해 주세요.",
+        "true",
+        "나중에 다시 시도",
+      ],
+      [
+        "RUNTIME_UNAVAILABLE",
+        "지금은 추출을 시작할 수 없어요. 잠시 후 다시 시도해 주세요.",
+        "true",
+        "다시 시도",
+      ],
+      [
+        "ATTEMPTS_EXHAUSTED",
+        "추출을 완료하지 못했어요. 다시 시도해 주세요.",
+        "true",
+        "다시 시도",
+      ],
+      [
+        "EXTRACTION_FAILED",
+        "레시피를 추출하지 못했어요. 다시 시도해 주세요.",
+        "true",
+        "다시 시도",
+      ],
+      [
+        "EXTRACTION_EXPIRED",
+        "결과가 만료됐어요. 다시 추출해 주세요.",
+        "true",
+        "다시 추출",
+      ],
+    ];
+
+    expect(failureRows).toEqual(expectedFailures);
+    for (const [code] of expectedFailures) expect(screens).toContain(code);
+
+    expect(api).toContain("queued|processing|succeeded에서는 `error=null`");
+    expect(api).toContain("failed|expired에서는 `error`가 non-null");
+  });
+
+  it("locks lease-expired processing reaping before claim and forbids exhausted reclaim", () => {
+    const db = read(officialTuple[3]);
+    const flow = read(officialTuple[2]);
+
+    for (const text of [db, flow]) {
+      expect(text).toContain("reaper → claim");
+      expect(text).toContain("attempt_count >= max_attempts");
+      expect(text).toContain("ATTEMPTS_EXHAUSTED");
+      expect(text).toContain("재claim 금지");
+      expect(text).toContain("delivery key");
+    }
+
+    expect(db).toContain("같은 claim transaction");
+    expect(db).toContain("reaper 권한은 claim RPC owner에만 있다");
   });
 
   it("locks durable UX, re-entry, retry, expiry, offline, and accessibility states", () => {

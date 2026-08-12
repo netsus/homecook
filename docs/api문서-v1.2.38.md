@@ -6,7 +6,7 @@
 
 > **2026-08-12 contract-evolution — YouTube async job과 durable notification public API**
 >
-> 사용자는 2026-08-12 신규 보호 endpoint 6개와 background job 상태/알림 계약을 명시적으로 승인했다. 기준은 `origin/master@d38ee2e4a4c8cafc00dce713919c3f3e8df2bdda`, 승인 계획의 독립 검토 task `019ff4f7-806c-7151-b646-cab784606cde`는 최종 `PASS`, Findings 없음이다.
+> 사용자는 2026-08-12 신규 보호 endpoint 6개와 background job 상태/알림 계약을 명시적으로 승인했다. 기준은 `origin/master@d38ee2e4a4c8cafc00dce713919c3f3e8df2bdda`, 최초 승인 계획의 독립 검토 task `019ff4f7-806c-7151-b646-cab784606cde`는 최종 `PASS`였다. PR #1343 exact head `0d4496e71ba6db81dcaf8283fb3f4905447c55cf`의 독립 review task `019ff598-233b-72c1-92f5-4372596ede7a`가 요구한 retry/consumed/reaper/error 보강을 반영했으며, 수정 계획의 최신 SHA-256과 독립 `PASS` evidence는 부모 task가 전달하기 전까지 `PENDING`이다. 그 evidence 없이는 Ready/merge할 수 없다.
 >
 > 모든 endpoint는 기존 `/api/v1` prefix와 `{ success, data, error }` wrapper를 사용한다. wrapper `error`는 실패 시 `{ code, message, fields[] }`, 성공 시 `null`이다. 신규 public job status는 `queued | processing | succeeded | failed | expired`다. `expired`는 succeeded session TTL의 read projection이며 DB job terminal status를 바꾸지 않는다. 기존 `POST /recipes/youtube/extract` success data와 `/recipes/new/youtube` Quick Import UI·auto-register 의미는 유지한다.
 
@@ -15,17 +15,38 @@
 - 모든 신규 endpoint는 로그인과 refreshed session authority를 요구한다. 타인 job/session과 없는 job/session은 endpoint별 동일 404로 처리하고 owner 존재 여부를 노출하지 않는다.
 - status/list response에는 원문 YouTube URL, fingerprint, raw source/transcript/frame/provider payload, lease/worker/permit/credential 정보가 없다.
 - `video_title_snapshot`은 nullable sanitized 160자이며 UI fallback은 `YouTube 레시피`다. `thumbnail_url`은 normalized video ID에서 만든 YouTube thumbnail URL이며 jobs table에 별도 raw URL로 저장하지 않는다.
-- public job failure/expiry projection의 exact field set은 `code`, `message`, `retryable` 3개다. 허용 code는 `NOT_RECIPE_VIDEO | QUOTA_EXCEEDED | RUNTIME_UNAVAILABLE | ATTEMPTS_EXHAUSTED | EXTRACTION_FAILED | EXTRACTION_EXPIRED`이며 raw internal/provider error를 그대로 반환하지 않는다.
+- public job failure/expiry projection의 exact field set은 `code`, `message`, `retryable` 3개다. `retryable`은 사용자가 새 job을 제출할 수 있는지 나타내며 worker 자동 retry 분류와 별개다. raw internal/provider error를 그대로 반환하지 않는다.
+- status/list의 성공 HTTP wrapper는 job이 failed/expired여도 항상 `{ success:true, data:<projection>, error:null }`이다. 내부 `data.error`는 queued|processing|succeeded에서는 `error=null`, failed|expired에서는 `error`가 non-null이다. HTTP 자체가 실패할 때만 기존 wrapper의 `success=false`, `data=null`, `error={code,message,fields[]}`를 사용한다.
+
+| public code | exact message | retryable | UI CTA |
+| --- | --- | --- | --- |
+| `NOT_RECIPE_VIDEO` | 레시피 영상으로 확인되지 않았어요. | false | 닫기 |
+| `QUOTA_EXCEEDED` | 오늘 추출 한도를 모두 사용했어요. 나중에 다시 시도해 주세요. | true | 나중에 다시 시도 |
+| `RUNTIME_UNAVAILABLE` | 지금은 추출을 시작할 수 없어요. 잠시 후 다시 시도해 주세요. | true | 다시 시도 |
+| `ATTEMPTS_EXHAUSTED` | 추출을 완료하지 못했어요. 다시 시도해 주세요. | true | 다시 시도 |
+| `EXTRACTION_FAILED` | 레시피를 추출하지 못했어요. 다시 시도해 주세요. | true | 다시 시도 |
+| `EXTRACTION_EXPIRED` | 결과가 만료됐어요. 다시 추출해 주세요. | true | 다시 추출 |
 
 ### `POST /recipes/youtube/extraction-jobs`
 
 `/menu/add/youtube` 검수형 background submit endpoint다.
 
-**Request exact field set**
+**Request exact union: `{ youtube_url } | { retry_job_id }`**
 
 ```json
 { "youtube_url": "https://www.youtube.com/watch?v=abc123" }
 ```
+
+또는
+
+```json
+{ "retry_job_id": "uuid" }
+```
+
+- request는 정확히 `{ youtube_url } | { retry_job_id }` 중 하나다. 두 key 동시 제출, 둘 다 누락, 추가 key, null/empty 값은 `422 VALIDATION_ERROR`이며 `youtube_url` branch의 URL 형식 오류만 `422 INVALID_URL`이다.
+- `retry_job_id`는 본인 terminal `failed|expired` job 중 status/list의 `can_retry=true` projection만 허용한다. 없는 ID와 타인 ID는 동일 `404 JOB_NOT_FOUND`, queued/processing/succeeded-unexpired 또는 `can_retry=false`는 `409 JOB_NOT_RETRYABLE`이다.
+- retry enqueue는 request URL을 받거나 이전 raw URL을 복원하지 않는다. locked 이전 job에 저장된 normalized video ID와 결과 영향 mode/pipeline option으로 canonical input을 재구성해 **새 job**을 만든다.
+- 이전 job row는 변경하지 않는다. 새 enqueue에는 현재 fingerprint key의 dedupe와 active/daily budget을 다시 적용하며, active duplicate가 있으면 그 job을 `deduplicated=true`로 반환할 수 있다.
 
 **Response `202 Accepted` exact `data` field set**
 
@@ -44,14 +65,17 @@
 
 - 새 job은 `status=queued`, `deduplicated=false`다. 같은 fingerprint의 active job은 새 row/provider 호출 없이 기존 `job_id`, 기존 `queued|processing`, `deduplicated=true`를 반환한다.
 - 아직 `draft`이고 미만료인 succeeded session이 있으면 같은 job을 `status=succeeded`, `deduplicated=true`로 반환할 수 있다. client는 status endpoint에서 exact review link를 읽는다.
-- failed 또는 expired 이전 job은 재사용하지 않고 새 queued job을 만든다. terminal history는 retention 동안 유지한다.
+- failed 또는 expired 이전 job은 `retry_job_id` branch로만 재시도하며 새 queued job을 만든다. terminal history는 retention 동안 유지한다.
 - route는 count 후 INSERT하지 않는다. atomic enqueue authority가 fingerprint dual-read, active/daily limit과 insert를 한 transaction으로 결정한다.
 
 | HTTP | code | 의미 |
 | --- | --- | --- |
 | 401 | `UNAUTHORIZED` | 로그인 필요 |
 | 404 | `FEATURE_DISABLED` | YouTube import 비활성 |
+| 404 | `JOB_NOT_FOUND` | retry 대상 없음 또는 cross-user |
 | 422 | `INVALID_URL` | YouTube URL/video ID validation 실패 |
+| 422 | `VALIDATION_ERROR` | exact request union/UUID/추가 field 오류 |
+| 409 | `JOB_NOT_RETRYABLE` | retry 대상이 terminal failed/expired가 아니거나 `can_retry=false` |
 | 429 | `RATE_LIMITED` | 사용자 active/daily enqueue/provider budget 초과 |
 | 503 | `QUEUE_UNAVAILABLE` | expected schema/queue/worker circuit breaker가 장기 비정상을 감지해 접수 차단 |
 
@@ -69,17 +93,19 @@
     "started_at": "2026-08-12T00:00:03Z",
     "completed_at": null,
     "result": null,
-    "error": null
+    "error": null,
+    "can_retry": false
   },
   "error": null
 }
 ```
 
-- exact field set은 `job_id`, `status`, `submitted_at`, `started_at`, `completed_at`, `result`, `error` 7개다.
+- exact field set은 `job_id`, `status`, `submitted_at`, `started_at`, `completed_at`, `result`, `error`, `can_retry` 8개다.
 - `started_at`은 실제 provider attempt가 시작되기 전 `null`; `completed_at`은 queued/processing에서 `null`, terminal projection에서 timestamp다.
 - `status=succeeded`일 때 `result` exact field set은 `extraction_id`, `review_path` 2개이며 `review_path=/menu/add/youtube?extractionId=<uuid>`다. 다른 status의 `result`는 `null`이다.
-- `status=failed`일 때 `error`는 위 public job failure projection, 다른 status에서는 `null`이다.
+- `status=failed`일 때 `error`는 위 exhaustive public table의 exact projection이다. `status=expired`는 `EXTRACTION_EXPIRED` row를 사용하고 queued|processing|succeeded에서는 `error=null`이다.
 - linked session TTL이 지나면 `status=expired`, `result=null`, `error={"code":"EXTRACTION_EXPIRED","message":"결과가 만료됐어요. 다시 추출해 주세요.","retryable":true}`로 projection한다. raw draft는 이 endpoint에 포함하지 않는다.
+- `can_retry`는 expired 또는 failed의 `error.retryable=true`일 때만 true이고 queued/processing/succeeded 또는 non-retryable failed에서는 false다. client는 true일 때만 `{retry_job_id:job_id}` CTA를 표시한다.
 - 진행률 퍼센트나 사실로 확인되지 않은 단계는 반환하지 않는다. queued/processing 외 내부 finishing 단계는 public enum을 늘리지 않고 processing으로 projection한다.
 
 | HTTP | code | 의미 |
@@ -89,10 +115,12 @@
 
 ### `GET /recipes/youtube/extractions/{extraction_id}`
 
-완료 알림 deep link가 기존 review draft를 복구하는 exact session-read endpoint다.
+완료 알림 deep link가 기존 review draft 또는 이미 등록된 recipe destination을 복구하는 exact session-read endpoint다.
 
-- 성공 `200`의 wrapper `data`는 §6-2 `POST /recipes/youtube/extract` 성공 `data`와 exact same field set/nullable/array 의미를 사용한다. 별도 alias나 job/lease field를 추가하지 않는다.
-- 본인 `status=draft`이며 미만료인 session만 읽는다. multi parent/child 의미, ingredient/quantity/component/candidate field는 기존 §6-2/§6-3b 계약을 그대로 사용한다.
+- 성공 `200` wrapper의 exact `data` field set은 `status`, `draft`, `recipe_id`, `recipe_path` 4개다.
+- 본인 미만료 draft session은 `{status:"draft", draft:<§6-2 YoutubeRecipeExtractData exact projection>, recipe_id:null, recipe_path:null}`다. multi parent/child 의미와 ingredient/quantity/component/candidate field는 nested `draft`에서 기존 §6-2/§6-3b 계약을 그대로 사용한다.
+- 본인 consumed session은 `200`이며 `{status:"consumed", draft:null, recipe_id:<uuid>, recipe_path:"/recipes/<recipe_id>"}`다. 즉 `status=consumed`, `recipe_id`, `recipe_path`를 주고 `draft=null`로 반환해 성공 wrapper를 깨지 않는다.
+- 없는 session과 타인 session은 동일 `404 EXTRACTION_NOT_FOUND`다. 본인 draft TTL 만료만 `410 EXTRACTION_EXPIRED`이며 consumed에는 기존 `409 EXTRACTION_ALREADY_REGISTERED`를 반환하지 않는다.
 - raw source text, raw provider payload, internal extraction metadata/worker/lease/job credential은 반환하지 않는다.
 
 | HTTP | code | 의미 |
@@ -100,7 +128,6 @@
 | 401 | `UNAUTHORIZED` | 로그인 필요 |
 | 404 | `EXTRACTION_NOT_FOUND` | 없는 session과 타인 session 동일 |
 | 410 | `EXTRACTION_EXPIRED` | 본인 draft TTL 만료 |
-| 409 | `EXTRACTION_ALREADY_REGISTERED` | consumed session. 기존 register 의미 유지 |
 
 ### `GET /users/me/youtube-extraction-jobs`
 
@@ -133,7 +160,8 @@
           "extraction_id": "uuid",
           "review_path": "/menu/add/youtube?extractionId=uuid"
         },
-        "error": null
+        "error": null,
+        "can_retry": false
       }
     ],
     "next_cursor": null
@@ -142,8 +170,9 @@
 }
 ```
 
-- item exact field set은 `job_id`, `status`, `submitted_at`, `completed_at`, `video_title_snapshot`, `thumbnail_url`, `delivery_key`, `delivered_at`, `seen_at`, `result`, `error` 11개다.
+- item exact field set은 `job_id`, `status`, `submitted_at`, `completed_at`, `video_title_snapshot`, `thumbnail_url`, `delivery_key`, `delivered_at`, `seen_at`, `result`, `error`, `can_retry` 12개다.
 - list status는 terminal projection `succeeded | failed | expired`만 허용한다. succeeded의 `result`는 status endpoint와 같은 exact 2-key object, failed/expired의 `result`는 `null`이다. failed의 `error`는 public job failure projection, expired는 status endpoint와 같은 safe expiry error다.
+- list의 `can_retry` 계산은 status endpoint와 exact same rule이다. `can_retry=true` CTA는 같은 enqueue endpoint에 `{retry_job_id:job_id}`를 보내며 이전 row를 수정하지 않는다.
 - `view=unseen-completed`는 `seen_at IS NULL`인 terminal projection만, `archive`는 retention 30일 안의 seen/unseen terminal projection을 모두 반환한다.
 - stable order/cursor tuple은 `(completed_at DESC, job_id DESC)`이며 cursor는 opaque하고 다른 user/view에서 재사용할 수 없다.
 

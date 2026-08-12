@@ -17,13 +17,15 @@
 
 | 문서 | 변경 내용 |
 |------|----------|
-| 요구사항 v1.7.31 | `/menu/add/youtube` 이탈 가능한 background extraction, durable success/failure, dedupe/retry/expiry/retention, Quick Import sync 호환, 앱 내 알림 1차/Web Push 후속 경계를 잠근다 |
-| 화면정의서 v1.5.35 | 제출 완료·작업 보기, app shell toast/badge/list, success/failure/expired/duplicate/offline/accessibility 상태를 추가하고 Quick Import UI 비변경을 명시한다 |
-| 유저 Flow맵 v1.3.33 | enqueue→이탈→fenced worker→durable notification→review/register, 재로그인/재실행, 실패 retry, `sync_wait`, rollout/rollback 순서를 고정한다 |
-| DB v1.3.33 | jobs/session `source_job_id`/global permit/private credential singleton, lease fencing/finalize atomicity, worker·credential-manager API role와 분리 owner, exact membership/ACL/pre-request/rotation을 잠근다 |
-| API v1.2.38 | 신규 보호 endpoint 6개, `202`, `queued|processing|succeeded|failed|expired`, exact response/error/cursor/dedupe와 기존 POST/Quick Import 호환을 잠근다. 총 108개 |
+| 요구사항 v1.7.31 | `/menu/add/youtube` 이탈 가능한 background extraction, durable success/failure, exact `{youtube_url}|{retry_job_id}`, consumed recovery, dedupe/retry/expiry/retention, Quick Import sync 호환, 앱 내 알림 1차/Web Push 후속 경계를 잠근다 |
+| 화면정의서 v1.5.35 | 제출 완료·작업 보기, app shell toast/badge/list, `can_retry`, consumed recipe 이동, exhaustive failure/expired copy·CTA, duplicate/offline/accessibility 상태와 Quick Import UI 비변경을 잠근다 |
+| 유저 Flow맵 v1.3.33 | enqueue→이탈→reaper-before-claim fenced worker→durable notification→review/register/consumed recipe, 재로그인/재실행, 실패 retry, `sync_wait`, rollout/rollback 순서를 고정한다 |
+| DB v1.3.33 | jobs/session `source_job_id`/global permit/private credential singleton, lease-expired reaper→claim과 exhausted terminal fencing/finalize atomicity, worker·credential-manager API role와 분리 owner, exact membership/ACL/pre-request/rotation을 잠근다 |
+| API v1.2.38 | 신규 보호 endpoint 6개, `202`, exact enqueue union, `queued|processing|succeeded|failed|expired`, consumed session-read `200`, `can_retry`, exhaustive safe error/cursor/dedupe와 기존 POST/Quick Import 호환을 잠근다. 총 108개 |
 
-> 사용자는 2026-08-12 이 작업에서 이 contract-evolution을 명시적으로 승인했다. 작성 baseline은 `origin/master@d38ee2e4a4c8cafc00dce713919c3f3e8df2bdda`이며 승인 계획 `/Users/cwj/01_vibe_coding/homecook/.omx/plans/youtube-background-extraction-notification-plan-20260808.md`는 독립 task `019ff4f7-806c-7151-b646-cab784606cde`에서 최종 `PASS`, Findings 없음으로 검토됐다. 선행 workpack `33-youtube-i031-direct-extraction`은 PR #1341과 post-merge report PR #1342 병합 뒤 non-manual complete다.
+> 사용자는 2026-08-12 이 작업에서 이 contract-evolution을 명시적으로 승인했다. 작성 baseline은 `origin/master@d38ee2e4a4c8cafc00dce713919c3f3e8df2bdda`이며 최초 승인 계획 `/Users/cwj/01_vibe_coding/homecook/.omx/plans/youtube-background-extraction-notification-plan-20260808.md`는 독립 task `019ff4f7-806c-7151-b646-cab784606cde`에서 최종 `PASS`로 검토됐다. 선행 workpack `33-youtube-i031-direct-extraction`은 PR #1341과 post-merge report PR #1342 병합 뒤 non-manual complete다.
+>
+> PR #1343 exact head `0d4496e71ba6db81dcaf8283fb3f4905447c55cf`의 독립 reviewer task `019ff598-233b-72c1-92f5-4372596ede7a`는 `REVISE` 6건을 냈다. Findings 1~4,6은 successor commit에서 공식 5종과 contract test에 반영한다. Finding 5 최신 계획 재승인은 부모 task 소유이며, evidence slot은 `plan_sha256=PENDING`, `plan_review_task=PENDING`, `verdict=PENDING`이다. 부모 task가 exact SHA-256과 독립 `PASS` task를 전달하기 전에는 이 tuple과 PR을 Ready/merge할 수 없고 placeholder를 승인 증거로 해석하지 않는다.
 >
 > public contract 영향은 `/api/v1` 보호 endpoint 6개, `202 Accepted`, job 상태·error·cursor·dedupe의 additive 추가다. 기존 `POST /recipes/youtube/extract`의 browser success data, `/recipes/new/youtube` Quick Import UI·sync·auto-register 의미와 기존 register/session ownership contract는 유지한다.
 >
