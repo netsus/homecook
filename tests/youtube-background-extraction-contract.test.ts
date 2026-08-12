@@ -133,11 +133,11 @@ describe("YouTube background extraction contract evolution", () => {
     );
     const dbRows = markdownTableBodyRowsAfter(
       read(officialTuple[3]),
-      "# 17. 전체 테이블 목록 (73개)",
+      "# 17. 전체 테이블 목록 (74개)",
     );
 
     expect(apiRows).toHaveLength(108);
-    expect(dbRows).toHaveLength(73);
+    expect(dbRows).toHaveLength(74);
   });
 
   it("locks retry enqueue as an exact union and exposes one exact retry action projection", () => {
@@ -163,13 +163,61 @@ describe("YouTube background extraction contract evolution", () => {
 
     for (const document of documents) {
       expect(document).toContain("이전 job에서는 youtube_video_id만 복사한다");
-      expect(document).toContain("retry 시점의 현재 승인된 server-side release policy");
+      expect(document).toContain("private.youtube_extraction_current_policy");
       expect(document).toContain("이전 HMAC/options 역복원 금지");
       expect(document).toContain("전환 후 current worker가 claim 가능");
     }
 
     const api = read(officialTuple[4]);
     expect(api).not.toContain("locked 이전 job에 저장된 normalized video ID와 결과 영향 mode/pipeline option");
+  });
+
+  it("locks one canonical current release policy and snapshots it atomically at enqueue", () => {
+    const source = read("docs/sync/CURRENT_SOURCE_OF_TRUTH.md");
+    const documents = [...officialTuple.map(read), source];
+    const db = read(officialTuple[3]);
+
+    for (const document of documents) {
+      expect(document).toContain("private.youtube_extraction_current_policy");
+      expect(document).toContain("old/new 중 한 complete snapshot");
+      expect(document).toContain("worker는 job snapshot identity를 claim");
+    }
+
+    const policyFieldTypes = [
+      ["policy_key", "text"],
+      ["policy_version", "bigint"],
+      ["extractor_mode", "text"],
+      ["pipeline_identity", "text"],
+      ["result_affecting_options", "jsonb"],
+      ["fingerprint_key_version", "text"],
+      ["enabled", "boolean"],
+      ["updated_at", "timestamptz"],
+    ];
+    const policyRows = markdownTableCellsAfter(
+      db,
+      "### `private.youtube_extraction_current_policy`",
+    );
+    expect(policyRows.map(([field, type]) => [field, type])).toEqual(policyFieldTypes);
+
+    const jobRows = markdownTableCellsAfter(db, "### `youtube_extraction_jobs`");
+    const jobFields = jobRows.map(([field]) => field);
+    for (const snapshotField of [
+      "release_policy_key",
+      "release_policy_version",
+      "extractor_mode",
+      "pipeline_identity",
+      "result_affecting_options",
+      "request_fingerprint_key_version",
+    ]) {
+      expect(jobFields).toContain(snapshotField);
+    }
+
+    expect(db).toContain("enabled current policy row를 `SELECT ... FOR SHARE`로 lock/read");
+    expect(db).toContain("같은 transaction/advisory lock");
+    expect(db).toContain("job에 immutable snapshot으로 저장");
+    expect(db).toContain("client/route는 mode/options를 지정할 수 없다");
+    expect(db).toContain("승인된 release migration");
+    expect(db).toContain("policy rotation vs retry concurrency");
   });
 
   it("locks consumed session read as a successful owner projection without changing the wrapper", () => {
@@ -206,6 +254,18 @@ describe("YouTube background extraction contract evolution", () => {
     );
     expect(api).toContain("draft가 unconsumed이고 TTL이 경과한 경우만 `status=expired`");
     expect(api).toContain("`consumed-after-TTL` session-read도 `200`");
+  });
+
+  it("expires only unconsumed drafts and rejects the broad succeeded-session rule", () => {
+    const db = read(officialTuple[3]);
+
+    expect(db).toContain(
+      "unconsumed draft linked session만 TTL 경과 시 `expired`로 projection",
+    );
+    expect(db).toContain("consumed/registered recipe는 영구 recipe destination이 우선");
+    expect(db).not.toContain(
+      "`status='succeeded'`의 linked session이 TTL을 지나면 read projection만 `expired`가 된다",
+    );
   });
 
   it("locks exhaustive safe public failures with exact retry and UI actions", () => {
@@ -270,6 +330,18 @@ describe("YouTube background extraction contract evolution", () => {
 
     expect(screens).not.toContain(
       "failure toast: `레시피를 추출하지 못했어요` + `다시 시도`",
+    );
+  });
+
+  it("decides can_retry before offering any retry action in the failure flow", () => {
+    const flow = read(officialTuple[2]);
+
+    expect(flow).toContain(
+      "failed/expired 수신\n→ status/list의 can_retry 판정\n   ├─ true: [다시 시도]",
+    );
+    expect(flow).toContain("└─ false: [닫기] / 목록 유지, retry CTA·POST 없음");
+    expect(flow).not.toContain(
+      "→ 사용자가 [다시 시도]\n→ status/list의 can_retry 확인",
     );
   });
 
@@ -346,6 +418,6 @@ describe("YouTube background extraction contract evolution", () => {
       expect(db).toContain(token);
     }
 
-    expect(db).toContain("전체 테이블 목록 (73개)");
+    expect(db).toContain("전체 테이블 목록 (74개)");
   });
 });

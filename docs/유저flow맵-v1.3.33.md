@@ -65,20 +65,22 @@ transient network/rate-limit + attempt 남음
 
 non-retryable 또는 attempts 소진
 → failed terminal + durable notification
-→ 사용자가 [다시 시도]
-→ status/list의 can_retry 확인
-   ├─ false: [닫기] / 목록 유지, retry CTA·POST 없음
-   └─ true: POST body { retry_job_id }
+→ failed/expired 수신
+→ status/list의 can_retry 판정
+   ├─ true: [다시 시도] → POST body { retry_job_id }
+   └─ false: [닫기] / 목록 유지, retry CTA·POST 없음
 → server가 본인 terminal failed/expired와 저장된 normalized video ID 확인
 → 이전 job에서는 youtube_video_id만 복사한다
-→ retry 시점의 현재 승인된 server-side release policy로 mode/pipeline/options 새 결정
+→ retry 시점의 private.youtube_extraction_current_policy singleton lock/read
+→ current complete mode/pipeline/options/fingerprint key snapshot 새 결정
 → 이전 HMAC/options 역복원 금지
-→ 새 current identity/options fingerprint + dedupe/budget + 새 job 생성
+→ 같은 transaction/advisory lock에서 fingerprint + dedupe/budget + immutable job 생성
 → identity 전환 전 terminal job도 전환 후 current worker가 claim 가능
 ```
 
 - enqueue request는 exact union `{ youtube_url } | { retry_job_id }`이며 두 branch를 함께 보내지 않는다. `can_retry`는 expired 또는 safe failed error의 `retryable=true`일 때만 true다.
 - can_retry=false이면 retry CTA를 렌더하지 않는다. `NOT_RECIPE_VIDEO` 등 non-retryable failure는 닫기/목록 유지이며 새 enqueue로 진행하지 않는다.
+- client/route는 mode/options를 지정할 수 없다. `private.youtube_extraction_current_policy`는 승인된 release migration으로만 원자 전환하며 경합한 enqueue/retry는 old/new 중 한 complete snapshot만 사용한다. worker는 job snapshot identity를 claim한다.
 - permit 경합은 attempt를 소비하지 않는다. last allowed attempt 중 crash한 job은 reaper가 재실행하지 않고 `ATTEMPTS_EXHAUSTED`로 닫는다.
 - current/previous fingerprint key dual-read 또는 active queue drain 없이 key를 회전하지 않는다.
 - 타인/없는 job 또는 session은 동일 404로 처리해 존재 여부를 숨긴다.
@@ -110,7 +112,9 @@ rollout
 → async enqueue maintenance
 → 이전 pipeline identity queued/processing = 0 drain
 → 이전 worker stop / permit release
-→ additive migration + app + 같은 승인 SHA worker 설치
+→ 승인된 release migration이 private.youtube_extraction_current_policy advisory/row lock
+→ expected policy version CAS + complete snapshot 원자 전환
+→ additive migration + app + 새 snapshot을 지원하는 같은 승인 SHA worker 설치
 → expected schema / role·ACL / credential generation preflight
 → Supabase → app → worker 재부팅 smoke
 → Cloudflare 공개 URL success/failure notification smoke
@@ -127,6 +131,7 @@ rollback
 ```
 
 - drain 실패 시 전환/rollback을 중단한다. 새 worker와 이전 direct sync provider를 동시에 실행하지 않는다.
+- policy 전환과 enqueue/retry 경합은 shared/exclusive advisory lock으로 old/new 중 한 complete snapshot만 사용한다. worker는 job snapshot identity를 claim하고 current policy 재조회로 queued job을 바꾸지 않는다.
 - additive queue schema는 자동 downgrade하지 않는다. schema/credential/release identity가 맞지 않으면 worker claim만 fail closed하고 앱의 다른 기능은 계속 서비스한다.
 - Web Push outbox/permission/subscription flow는 후속 contract-evolution 전에는 이 flow에 포함하지 않는다.
 

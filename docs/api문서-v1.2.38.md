@@ -47,8 +47,9 @@
 - request는 정확히 `{ youtube_url } | { retry_job_id }` 중 하나다. 두 key 동시 제출, 둘 다 누락, 추가 key, null/empty 값은 `422 VALIDATION_ERROR`이며 `youtube_url` branch의 URL 형식 오류만 `422 INVALID_URL`이다.
 - `retry_job_id`는 본인 terminal `failed|expired` job 중 status/list의 `can_retry=true` projection만 허용한다. 없는 ID와 타인 ID는 동일 `404 JOB_NOT_FOUND`, queued/processing/succeeded-unexpired 또는 `can_retry=false`는 `409 JOB_NOT_RETRYABLE`이다.
 - retry enqueue는 request URL을 받거나 이전 raw URL을 복원하지 않는다. 이전 job에서는 youtube_video_id만 복사한다.
-- retry 시점의 현재 승인된 server-side release policy가 extractor mode, pipeline identity, result-affecting options를 새로 결정한다. 이전 HMAC/options 역복원 금지이며 새 current identity/options로 fingerprint/job을 생성한다. 따라서 identity 전환 전 terminal job도 전환 후 current worker가 claim 가능하다.
+- retry 시점의 `private.youtube_extraction_current_policy` singleton이 extractor mode, pipeline identity, normalized result-affecting options와 fingerprint key version을 새로 결정한다. 이전 HMAC/options 역복원 금지이며 새 current complete snapshot으로 fingerprint/job을 생성한다. 따라서 identity 전환 전 terminal job도 전환 후 current worker가 claim 가능하다.
 - 이전 job row는 변경하지 않는다. 새 current identity/options enqueue에는 dedupe와 active/daily budget을 다시 적용하며, active duplicate가 있으면 그 job을 `deduplicated=true`로 반환할 수 있다.
+- client/route는 mode/options를 지정할 수 없다. server enqueue authority는 같은 transaction/advisory lock에서 enabled current policy row를 lock/read하고 canonical fingerprint→dedupe/budget→job immutable snapshot을 확정한다. 승인된 release migration과 경합해도 old/new 중 한 complete snapshot만 사용하며 worker는 job snapshot identity를 claim한다. 이 private table은 public response나 endpoint를 추가하지 않으므로 API inventory는 108개를 유지한다.
 
 **Response `202 Accepted` exact `data` field set**
 
@@ -69,6 +70,7 @@
 - 아직 `draft`이고 미만료인 succeeded session이 있으면 같은 job을 `status=succeeded`, `deduplicated=true`로 반환할 수 있다. client는 status endpoint에서 exact review link를 읽는다.
 - failed 또는 expired 이전 job은 `retry_job_id` branch로만 재시도하며 새 queued job을 만든다. terminal history는 retention 동안 유지한다.
 - route는 count 후 INSERT하지 않는다. atomic enqueue authority가 fingerprint dual-read, active/daily limit과 insert를 한 transaction으로 결정한다.
+- enabled `private.youtube_extraction_current_policy` singleton이 missing/disabled/invalid이거나 complete snapshot 검증에 실패하면 job을 만들지 않고 `503 QUEUE_UNAVAILABLE`로 fail closed한다.
 
 | HTTP | code | 의미 |
 | --- | --- | --- |
@@ -79,7 +81,7 @@
 | 422 | `VALIDATION_ERROR` | exact request union/UUID/추가 field 오류 |
 | 409 | `JOB_NOT_RETRYABLE` | retry 대상이 terminal failed/expired가 아니거나 `can_retry=false` |
 | 429 | `RATE_LIMITED` | 사용자 active/daily enqueue/provider budget 초과 |
-| 503 | `QUEUE_UNAVAILABLE` | expected schema/queue/worker circuit breaker가 장기 비정상을 감지해 접수 차단 |
+| 503 | `QUEUE_UNAVAILABLE` | expected schema/queue/worker/current-policy circuit breaker가 장기 비정상을 감지해 접수 차단 |
 
 ### `GET /recipes/youtube/extraction-jobs/{job_id}`
 

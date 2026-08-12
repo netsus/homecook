@@ -17,15 +17,16 @@
 
 | 문서 | 변경 내용 |
 |------|----------|
-| 요구사항 v1.7.31 | `/menu/add/youtube` background extraction, durable completion, retry의 previous video ID-only/current release policy 재결정, consumed-over-TTL, exact `can_retry` CTA, Quick Import sync 호환과 Web Push 후속 경계를 잠근다 |
-| 화면정의서 v1.5.35 | app shell toast/badge/list, draft/consumed destination, consumed-after-TTL, `can_retry=true` 전용 retry와 non-retryable 닫기/목록 유지, offline/accessibility, Quick Import UI 비변경을 잠근다 |
-| 유저 Flow맵 v1.3.33 | enqueue→이탈→reaper-before-claim worker→notification→review/register/consumed recipe, current-policy retry, consumed-over-TTL, non-retryable 분기, `sync_wait`, rollout/rollback 순서를 고정한다 |
-| DB v1.3.33 | jobs/session linkage, retry video ID-only/current identity fingerprint, consumed-over-TTL projection, reaper→claim/fencing/finalize atomicity, 분리 role/owner와 exact ACL/pre-request/rotation을 잠근다 |
-| API v1.2.38 | 신규 보호 endpoint 6개, exact enqueue union/current-policy retry, draft/consumed 4-key result, consumed-over-TTL `succeeded`, `can_retry`와 exhaustive safe error/cursor/dedupe, 기존 POST/Quick Import 호환을 잠근다. 총 108개 |
+| 요구사항 v1.7.31 | `/menu/add/youtube` background extraction, durable completion, `private.youtube_extraction_current_policy` authoritative retry snapshot, old/new 중 한 complete snapshot, consumed-over-TTL, exact `can_retry` CTA, Quick Import sync 호환을 잠근다 |
+| 화면정의서 v1.5.35 | app shell toast/badge/list, client mode/options 지정 금지, current-policy immutable snapshot, worker는 job snapshot identity를 claim, consumed-after-TTL, `can_retry=true` 전용 retry와 Quick Import UI 비변경을 잠근다 |
+| 유저 Flow맵 v1.3.33 | enqueue→이탈→reaper-before-claim worker→notification→review/register, `can_retry` 판정 후 retry CTA, policy maintenance/drain/원자 전환, old/new 중 한 complete snapshot, consumed-over-TTL, `sync_wait`, rollback 순서를 고정한다 |
+| DB v1.3.33 | jobs/session linkage, non-secret `private.youtube_extraction_current_policy` singleton과 immutable job snapshot, policy rotation vs retry concurrency, unconsumed-only expiry, reaper→claim/fencing/finalize, exact ACL/pre-request/rotation을 잠근다. 총 74개 |
+| API v1.2.38 | 신규 보호 endpoint 6개, exact enqueue union/private current-policy retry, client/route mode/options 금지, worker는 job snapshot identity를 claim, consumed-over-TTL `succeeded`, `can_retry`와 safe error/cursor/dedupe, 기존 POST/Quick Import 호환을 잠근다. 총 108개 |
 
 > 사용자는 2026-08-12 이 작업에서 이 contract-evolution을 명시적으로 승인했다. 작성 baseline은 `origin/master@d38ee2e4a4c8cafc00dce713919c3f3e8df2bdda`이며 최초 승인 계획 `/Users/cwj/01_vibe_coding/homecook/.omx/plans/youtube-background-extraction-notification-plan-20260808.md`는 독립 task `019ff4f7-806c-7151-b646-cab784606cde`에서 최종 `PASS`로 검토됐다. 선행 workpack `33-youtube-i031-direct-extraction`은 PR #1341과 post-merge report PR #1342 병합 뒤 non-manual complete다.
 >
 > PR #1343 exact head `0d4496e71ba6db81dcaf8283fb3f4905447c55cf`의 독립 reviewer task `019ff598-233b-72c1-92f5-4372596ede7a`는 `REVISE` 6건을 냈다. Findings 1~4,6은 successor commit에서 공식 5종과 contract test에 반영했다. Finding 5도 폐쇄됐다. 수정 계획 전체는 같은 독립 plan reviewer task `019ff4f7-806c-7151-b646-cab784606cde`가 다시 읽고 `Verdict PASS`, `Findings 없음`, `차단 없음`, exact SHA-256 `b560b60ff758171e1d52ad56b2a63a2e1877cd762d1f691c9cea32c753f8d332`, line count `873`, baseline `origin/master@d38ee2e4a4c8cafc00dce713919c3f3e8df2bdda`로 확정했다. PR 자체의 successor exact-head 독립 계약 review와 current-head CI는 별도 merge gate다.
+> exact head `9aa2c68563235faa950e18d7d878577ffba18296`의 후속 독립 review는 current release policy authority, DB의 광범위 expiry 문장, retry CTA 이전 `can_retry` 판정 순서 3건을 새 blocking finding으로 냈다. 이 revision은 non-secret canonical policy singleton/74-table inventory, unconsumed-only expiry, 선판정 Flow와 상호계약 테스트를 반영하며 다음 successor exact-head 독립 재검토 전에는 Ready/merge하지 않는다.
 >
 > public contract 영향은 `/api/v1` 보호 endpoint 6개, `202 Accepted`, job 상태·error·cursor·dedupe의 additive 추가다. 기존 `POST /recipes/youtube/extract`의 browser success data, `/recipes/new/youtube` Quick Import UI·sync·auto-register 의미와 기존 register/session ownership contract는 유지한다.
 >
