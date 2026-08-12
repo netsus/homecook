@@ -95,6 +95,9 @@ function failMaintenance(): never {
 function toPublicAuthorityError(
   error: unknown,
 ): HybridSessionAuthorityError | HybridLifecycleMaintenanceError {
+  if (error instanceof HybridSessionAuthorityError) {
+    return error;
+  }
   return error instanceof HybridLifecycleMaintenanceError
     ? error
     : new HybridSessionAuthorityError();
@@ -239,6 +242,7 @@ export function createHybridAuthorityFetch({
   loadRemoteJwks,
   assertSessionAuthority,
   recordSessionAuthorityFailure,
+  recoverSupersededSession,
   auth,
   attestationSecret,
   sessionBindingSecret,
@@ -263,6 +267,10 @@ export function createHybridAuthorityFetch({
   recordSessionAuthorityFailure?: (
     reason: SessionAuthorityFailureReason,
   ) => Promise<void>;
+  recoverSupersededSession?: (input: {
+    currentAccessToken: string;
+    sessionKeyHash: string;
+  }) => Promise<string | null>;
   auth: RemoteAuthGatewayEnv;
   attestationSecret: string;
   sessionBindingSecret?: string;
@@ -279,6 +287,119 @@ export function createHybridAuthorityFetch({
     const request = new Request(input, init);
     const authorityPath = downstreamAuthorityPath(new URL(request.url).pathname);
     const accessToken = (await getAccessToken())?.trim();
+    let latestSessionKeyHash: string | null = null;
+
+    const observeUnexpectedFailure = async (
+      reason: SessionAuthorityFailureReason | undefined,
+    ) => {
+      if (
+        !reason
+        || !isUnexpectedSessionAuthorityFailure(reason)
+        || !recordSessionAuthorityFailure
+      ) {
+        return;
+      }
+      try {
+        await recordSessionAuthorityFailure(reason);
+      } catch {
+        // Observability must never change the public denial contract.
+      }
+    };
+
+    const verifyAccessToken = async (token: string) => {
+      let jwks: unknown;
+      try {
+        jwks = loadRemoteJwks
+          ? await loadRemoteJwks()
+          : await readRemoteJwks({
+              auth,
+              fetch: remoteLivenessFetch,
+              signal: request.signal,
+              timeoutMs,
+            });
+      } catch (error) {
+        throw toPublicAuthorityError(error);
+      }
+      const decoded = verifyRemoteJwtSignature({ accessToken: token, jwks });
+      if (!decoded.ok) {
+        failClosed();
+      }
+      const now = nowSeconds();
+      const validated = validateRemoteJwtClaims({
+        claims: decoded.claims,
+        expectedIssuer: auth.issuer,
+        nowSeconds: now,
+      });
+      if (!validated.ok) {
+        failClosed();
+      }
+
+      const remoteUser = await readRemoteLiveUser({
+        accessToken: token,
+        auth,
+        fetch: remoteLivenessFetch,
+        signal: request.signal,
+        timeoutMs,
+      });
+      if (remoteUser.id !== validated.claims.ownerUuid) {
+        failClosed();
+      }
+
+      const bindingKey = resolveSessionBindingKey
+        ? await resolveSessionBindingKey()
+        : sessionBindingSecret
+          ? {
+              authCutoverEpoch: undefined,
+              keyVersion: 1,
+              secret: sessionBindingSecret,
+            }
+          : failClosed();
+      const binding = createSessionLivenessBinding({
+        secret: bindingKey.secret,
+        keyVersion: bindingKey.keyVersion,
+        issuer: validated.claims.issuer,
+        ownerUuid: validated.claims.ownerUuid,
+        sessionId: validated.claims.sessionId,
+        identityCreatedAt: remoteUser.createdAt,
+        remoteVerifiedAt: new Date(now * 1_000).toISOString(),
+        ttlSeconds: validated.claims.expiresAt - now,
+      });
+      latestSessionKeyHash = binding.session_key_hash;
+      const sessionIssuedAt = new Date(
+        validated.claims.issuedAt * 1_000,
+      ).toISOString();
+      const verifiedAt = new Date(now * 1_000).toISOString();
+
+      await assertSessionAuthority({
+        accessTokenExpiresAt: new Date(
+          validated.claims.expiresAt * 1_000,
+        ).toISOString(),
+        binding,
+        authCutoverEpoch: bindingKey.authCutoverEpoch,
+        lastTokenIssuedAt: sessionIssuedAt,
+        sessionId: validated.claims.sessionId,
+        sessionIssuedAt,
+        verifiedAt,
+      });
+
+      const attestation = createHybridRequestAttestation({
+        secret: attestationSecret,
+        keyVersion: bindingKey.keyVersion,
+        method: request.method,
+        path: authorityPath,
+        issuer: validated.claims.issuer,
+        ownerUuid: validated.claims.ownerUuid,
+        identityCreatedAt: remoteUser.createdAt,
+        sessionKeyHash: binding.session_key_hash,
+        issuedAtSeconds: now,
+        ttlSeconds: 30,
+      });
+
+      return {
+        attestation,
+        token,
+      };
+    };
 
     if (!accessToken) {
       const requestUrl = new URL(request.url);
@@ -321,116 +442,65 @@ export function createHybridAuthorityFetch({
     }
 
     try {
-      let jwks: unknown;
+      let verified: Awaited<ReturnType<typeof verifyAccessToken>>;
       try {
-        jwks = loadRemoteJwks
-          ? await loadRemoteJwks()
-          : await readRemoteJwks({
-              auth,
-              fetch: remoteLivenessFetch,
-              signal: request.signal,
-              timeoutMs,
-            });
+        verified = await verifyAccessToken(accessToken);
       } catch (error) {
-        throw toPublicAuthorityError(error);
-      }
-      const decoded = verifyRemoteJwtSignature({ accessToken, jwks });
-      if (!decoded.ok) {
-        failClosed();
-      }
-      const now = nowSeconds();
-      const validated = validateRemoteJwtClaims({
-        claims: decoded.claims,
-        expectedIssuer: auth.issuer,
-        nowSeconds: now,
-      });
-      if (!validated.ok) {
-        failClosed();
-      }
-
-      const remoteUser = await readRemoteLiveUser({
-        accessToken,
-        auth,
-        fetch: remoteLivenessFetch,
-        signal: request.signal,
-        timeoutMs,
-      });
-      if (remoteUser.id !== validated.claims.ownerUuid) {
-        failClosed();
-      }
-
-      const bindingKey = resolveSessionBindingKey
-        ? await resolveSessionBindingKey()
-        : sessionBindingSecret
-          ? {
-            authCutoverEpoch: undefined,
-            keyVersion: 1,
-            secret: sessionBindingSecret,
-          }
-          : failClosed();
-      const binding = createSessionLivenessBinding({
-        secret: bindingKey.secret,
-        keyVersion: bindingKey.keyVersion,
-        issuer: validated.claims.issuer,
-        ownerUuid: validated.claims.ownerUuid,
-        sessionId: validated.claims.sessionId,
-        identityCreatedAt: remoteUser.createdAt,
-        remoteVerifiedAt: new Date(now * 1_000).toISOString(),
-        ttlSeconds: validated.claims.expiresAt - now,
-      });
-      const sessionIssuedAt = new Date(
-        validated.claims.issuedAt * 1_000,
-      ).toISOString();
-      const verifiedAt = new Date(now * 1_000).toISOString();
-
-      try {
-        await assertSessionAuthority({
-          accessTokenExpiresAt: new Date(
-            validated.claims.expiresAt * 1_000,
-          ).toISOString(),
-          binding,
-          authCutoverEpoch: bindingKey.authCutoverEpoch,
-          lastTokenIssuedAt: sessionIssuedAt,
-          sessionId: validated.claims.sessionId,
-          sessionIssuedAt,
-          verifiedAt,
-        });
-      } catch (error) {
+        const authorityError = toPublicAuthorityError(error);
         if (
-          error instanceof HybridSessionAuthorityError
-          && isUnexpectedSessionAuthorityFailure(error.internalReason)
-          && recordSessionAuthorityFailure
+          authorityError instanceof HybridSessionAuthorityError
+          && authorityError.internalReason === "superseded_token"
         ) {
+          let replacementToken: string | null = null;
           try {
-            await recordSessionAuthorityFailure(error.internalReason!);
+            replacementToken = latestSessionKeyHash
+              ? (await recoverSupersededSession?.({
+                  currentAccessToken: accessToken,
+                  sessionKeyHash: latestSessionKeyHash,
+                }))?.trim() ?? null
+              : null;
           } catch {
-            // Observability must never change the public denial contract.
+            replacementToken = null;
           }
+          if (
+            replacementToken
+            && replacementToken !== accessToken
+          ) {
+            try {
+              verified = await verifyAccessToken(replacementToken);
+            } catch (replacementError) {
+              const replacementAuthorityError = toPublicAuthorityError(
+                replacementError,
+              );
+              if (
+                replacementAuthorityError
+                instanceof HybridLifecycleMaintenanceError
+              ) {
+                throw replacementAuthorityError;
+              }
+              await observeUnexpectedFailure("non_monotonic");
+              throw new HybridSessionAuthorityError("non_monotonic");
+            }
+          } else {
+            await observeUnexpectedFailure("non_monotonic");
+            throw new HybridSessionAuthorityError("non_monotonic");
+          }
+        } else {
+          if (authorityError instanceof HybridSessionAuthorityError) {
+            await observeUnexpectedFailure(authorityError.internalReason);
+          }
+          throw authorityError;
         }
-        throw error;
       }
-
-      const attestation = createHybridRequestAttestation({
-        secret: attestationSecret,
-        keyVersion: bindingKey.keyVersion,
-        method: request.method,
-        path: authorityPath,
-        issuer: validated.claims.issuer,
-        ownerUuid: validated.claims.ownerUuid,
-        identityCreatedAt: remoteUser.createdAt,
-        sessionKeyHash: binding.session_key_hash,
-        issuedAtSeconds: now,
-        ttlSeconds: 30,
-      });
       const headers = new Headers(request.headers);
-      headers.set("Authorization", `Bearer ${accessToken}`);
+      headers.set("Authorization", `Bearer ${verified.token}`);
       headers.set(
         "x-homecook-session-attestation",
-        attestation.payload,
+        verified.attestation.payload,
       );
       headers.set(
         "x-homecook-session-attestation-signature",
-        attestation.signature,
+        verified.attestation.signature,
       );
 
       try {

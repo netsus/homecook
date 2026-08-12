@@ -37,6 +37,10 @@ const FULL_LOCAL_SESSION_OBSERVABILITY_MIGRATION_PATH = join(
   REPOSITORY_ROOT,
   "supabase/migrations/20260811120000_full_local_session_observability.sql",
 );
+const FULL_LOCAL_SESSION_SUPERSEDED_TOKEN_MIGRATION_PATH = join(
+  REPOSITORY_ROOT,
+  "supabase/migrations/20260812143000_full_local_session_superseded_token_window.sql",
+);
 const SNAPSHOT_MIGRATION_PATH = join(
   REPOSITORY_ROOT,
   "supabase/migrations/20260729170500_recipe_snapshot_authority_foundation.sql",
@@ -96,6 +100,10 @@ const fullLocalSessionRefreshAuthorityMigration = readFileSync(
 );
 const fullLocalSessionObservabilityMigration = readFileSync(
   FULL_LOCAL_SESSION_OBSERVABILITY_MIGRATION_PATH,
+  "utf8",
+);
+const fullLocalSessionSupersededTokenMigration = readFileSync(
+  FULL_LOCAL_SESSION_SUPERSEDED_TOKEN_MIGRATION_PATH,
   "utf8",
 );
 const snapshotMigration = readFileSync(SNAPSHOT_MIGRATION_PATH, "utf8");
@@ -537,11 +545,15 @@ const FULL_LOCAL_SESSION_OBSERVABILITY_FUNCTIONS = new Set([
   "private.assert_full_local_session_observability_scope()",
   "public.record_full_local_session_stale_observation(text)",
   "public.read_full_local_session_observation()",
+]);
+const FULL_LOCAL_SESSION_SUPERSEDED_TOKEN_FUNCTIONS = new Set([
   "public.assert_and_renew_full_local_session_authority_v2(text, uuid, timestamp with time zone, uuid, text, integer, bigint, timestamp with time zone, timestamp with time zone, timestamp with time zone, timestamp with time zone, timestamp with time zone)",
 ]);
 const FUNCTION_CONTRACT = manifest.functions.map((entry) => parseFunction(
   entry,
-  FULL_LOCAL_SESSION_OBSERVABILITY_FUNCTIONS.has(entry.signature)
+  FULL_LOCAL_SESSION_SUPERSEDED_TOKEN_FUNCTIONS.has(entry.signature)
+    ? fullLocalSessionSupersededTokenMigration
+    : FULL_LOCAL_SESSION_OBSERVABILITY_FUNCTIONS.has(entry.signature)
     ? fullLocalSessionObservabilityMigration
     : FULL_LOCAL_SESSION_REFRESH_FUNCTIONS.has(entry.signature)
     ? fullLocalSessionRefreshAuthorityMigration

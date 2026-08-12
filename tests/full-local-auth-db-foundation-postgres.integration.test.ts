@@ -1124,7 +1124,7 @@ run("full-local Auth isolated PostgreSQL foundation", () => {
           sessionKeyHash: "repeat('6', 64)",
           sessionIssuedAtSql: "control.local_activated_at + interval '3 seconds'",
           lastTokenIssuedAtSql: "control.local_activated_at + interval '3 seconds'",
-          verifiedAtSql: "control.local_activated_at + interval '4 seconds'",
+          verifiedAtSql: "clock_timestamp()",
           accessTokenExpiresAtSql: "control.local_activated_at + interval '59 minutes'",
           bindingExpiresAtSql: "control.local_activated_at + interval '55 minutes'",
         })} as result
@@ -1191,7 +1191,7 @@ run("full-local Auth isolated PostgreSQL foundation", () => {
     `);
     expect(refreshedPreRequest.status, refreshedPreRequest.stderr).toBe(0);
 
-    const lateOlderToken = psqlResult(`
+    const callOlderToken = () => psqlResult(`
       ${serviceClaims}
       with control as (
         select local_activated_at
@@ -1219,8 +1219,12 @@ run("full-local Auth isolated PostgreSQL foundation", () => {
       })}
       from authority, control;
     `);
+    const lateOlderToken = callOlderToken();
     expect(lateOlderToken.status).not.toBe(0);
     expect(lateOlderToken.stderr).toContain("ACCOUNT_SESSION_STALE");
+    expect(lateOlderToken.stderr).toContain(
+      "HOMECOOK_SESSION_AUTHORITY_REASON::superseded_token",
+    );
     expect(psql(`
       with control as (
         select local_activated_at
@@ -1237,7 +1241,38 @@ run("full-local Auth isolated PostgreSQL foundation", () => {
       cross join control
       where session_key_hash = repeat('6', 64);
     `)).toBe("t:t:t:active");
-    expect(lateOlderToken.stderr).toContain("ACCOUNT_SESSION_STALE");
+
+    expect(psql(`
+      update public.user_session_generation_bindings
+      set local_verified_at = clock_timestamp() - interval '11 seconds'
+      where session_key_hash = repeat('6', 64);
+      select count(*)
+      from public.user_session_generation_bindings
+      where session_key_hash = repeat('6', 64)
+        and local_verified_at <= clock_timestamp() - interval '10 seconds';
+    `)).toBe("1");
+    const expiredWindowSnapshot = psql(`
+      select concat_ws(
+        ':', xmin::text, last_token_issued_at::text,
+        local_verified_at::text, binding_expires_at::text
+      )
+      from public.user_session_generation_bindings
+      where session_key_hash = repeat('6', 64);
+    `);
+    const expiredOlderToken = callOlderToken();
+    expect(expiredOlderToken.status).not.toBe(0);
+    expect(expiredOlderToken.stderr).toContain("ACCOUNT_SESSION_STALE");
+    expect(expiredOlderToken.stderr).toContain(
+      "HOMECOOK_SESSION_AUTHORITY_REASON::non_monotonic",
+    );
+    expect(psql(`
+      select concat_ws(
+        ':', xmin::text, last_token_issued_at::text,
+        local_verified_at::text, binding_expires_at::text
+      )
+      from public.user_session_generation_bindings
+      where session_key_hash = repeat('6', 64);
+    `)).toBe(expiredWindowSnapshot);
   });
 
   it("does not create a missing binding during protected-request renew", () => {

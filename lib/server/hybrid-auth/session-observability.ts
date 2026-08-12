@@ -4,6 +4,7 @@ export const SESSION_AUTHORITY_REASON_MARKER =
 export const SESSION_AUTHORITY_FAILURE_REASONS = [
   "revoked",
   "missing",
+  "superseded_token",
   "identity_mismatch",
   "generation_mismatch",
   "non_monotonic",

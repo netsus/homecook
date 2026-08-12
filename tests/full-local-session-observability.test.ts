@@ -9,6 +9,8 @@ import {
 
 const MIGRATION_PATH =
   "supabase/migrations/20260811120000_full_local_session_observability.sql";
+const FOLLOWUP_MIGRATION_PATH =
+  "supabase/migrations/20260812143000_full_local_session_superseded_token_window.sql";
 const MANIFEST_PATH =
   "docs/security/full-local-auth-db-security-function-authorization-manifest.json";
 
@@ -97,6 +99,19 @@ describe("full-local session observability contract", () => {
     expect(sql).toMatch(/p_reason in \('revoked', 'missing'\)[\s\S]*return/i);
   });
 
+  it("resets the observation window in the additive follow-up migration and adds bounded superseded-token diagnostics", async () => {
+    const sql = await readFile(FOLLOWUP_MIGRATION_PATH, "utf8");
+
+    expect(sql).toMatch(
+      /insert into private\.full_local_session_observability[\s\S]*on conflict \(singleton\) do update/i,
+    );
+    expect(sql).toMatch(/observation_started_at = clock_timestamp\(\)/i);
+    expect(sql).toMatch(/unexpected_account_session_stale_count = 0/i);
+    expect(sql).toMatch(/stale_token_mutation_count = 0/i);
+    expect(sql).toMatch(/first_stale_at = null/i);
+    expect(sql).toContain("HOMECOOK_SESSION_AUTHORITY_REASON::superseded_token");
+  });
+
   it("adds bounded internal stale reasons without changing public errors", async () => {
     const sql = await readFile(MIGRATION_PATH, "utf8");
 
@@ -126,6 +141,7 @@ describe("full-local session observability contract", () => {
     };
 
     expect(manifest.migrations).toContain(MIGRATION_PATH);
+    expect(manifest.migrations).toContain(FOLLOWUP_MIGRATION_PATH);
     for (const signature of [
       "private.assert_full_local_session_observability_scope()",
       "public.record_full_local_session_stale_observation(text)",

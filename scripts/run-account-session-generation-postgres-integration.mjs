@@ -452,6 +452,11 @@ if (!postgresBin) {
         "-f",
         "supabase/migrations/20260811120000_full_local_session_observability.sql",
       ]);
+      runRequired(path.join(postgresBin, "psql"), [
+        ...connectionArgs,
+        "-f",
+        "supabase/migrations/20260812143000_full_local_session_superseded_token_window.sql",
+      ]);
     }
 
     const test = commandResult("pnpm", [
