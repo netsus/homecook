@@ -10,6 +10,9 @@
 
 ## 0-YT-ASYNC. Background extraction과 durable 재진입
 
+- 공개 edge는 Next /api/v1만 공개한다. full-local Supabase Data API `/rest/v1`와 RPC는 loopback/private network의 server-only path이며 Cloudflare/public proxy에서 403/404로 차단한다. 로그인 route의 `createRouteHandlerClient()`만 사용자 세션으로 loopback RPC를 호출한다. browser에는 Supabase Data API URL/session direct-RPC capability/fingerprint descriptor/digest를 노출하지 않으며 loopback boundary config drift는 배포 preflight에서 fail closed한다.
+- fingerprint HMAC digest는 privacy-preserving dedupe/fingerprint일 뿐 authentication/attestation이 아니다. DB는 HMAC secret을 알지 못한다. DB는 digest의 key version/window/format과 expected policy snapshot만 검증하므로 cryptographic authenticity를 보장하지 않는다. HMAC key rotation은 dedupe continuity/privacy 계약으로만 유지한다.
+
 ### 검수형 background flow
 
 ```text
@@ -21,7 +24,7 @@
 → createRouteHandlerClient() 사용자 세션으로 SECURITY DEFINER enqueue RPC; owner는 auth.uid()에서만 도출
 → RPC input: video_id + expected_policy_version + expected_policy_snapshot_digest + current/previous key versions/digests + submission_mode
 → transaction advisory shared lock → enabled policy plain SELECT → expected version/digest exact match
-   ├─ mismatch/invalid digest: POLICY_CHANGED, insert/dedupe/budget 0
+   ├─ expected policy mismatch: POLICY_CHANGED, insert/dedupe/budget 0
    └─ match: key version/window/format 검증 + dual-read dedupe + current-write durable INSERT
 → 202 { job_id, status, deduplicated, submitted_at }
 → "추출을 시작했어요" + [이동] [작업 보기]
@@ -83,7 +86,7 @@ non-retryable 또는 attempts 소진
 → expected_policy_version + expected_policy_snapshot_digest 전달
 → transaction advisory shared lock → enabled policy plain SELECT
 → expected version/digest exact match + current/previous key version/window/lowercase 64-hex format 검증
-   └─ options-only rotation stale app 또는 invalid digest/policy mismatch: POLICY_CHANGED, insert/dedupe/budget 0
+   └─ options-only rotation stale app의 expected policy mismatch: POLICY_CHANGED, insert/dedupe/budget 0
 → current complete mode/pipeline/options/policy_version/policy_snapshot_digest 새 결정
 → 이전 HMAC/options 역복원 금지
 → 같은 transaction/advisory lock에서 dual-read dedupe/budget + current-write immutable job 생성
@@ -92,7 +95,7 @@ non-retryable 또는 attempts 소진
 
 - enqueue request는 exact union `{ youtube_url } | { retry_job_id }`이며 두 branch를 함께 보내지 않는다. `can_retry`는 expired 또는 safe failed error의 `retryable=true`일 때만 true다.
 - can_retry=false이면 retry CTA를 렌더하지 않는다. `NOT_RECIPE_VIDEO` 등 non-retryable failure는 닫기/목록 유지이며 새 enqueue로 진행하지 않는다.
-- public client/route body는 mode/options/key version/digest/descriptor를 지정할 수 없다. public route는 session과 URL/retry ID만 받고 trusted Next server layer가 digest를 만든다. enqueue RPC input은 `video_id, expected_policy_version, expected_policy_snapshot_digest, current_key_version, current_digest, optional previous_key_version, optional previous_digest, submission_mode`뿐이다. 별도 enqueue credential authority는 없고 `createRouteHandlerClient()`의 로그인 사용자 세션과 RPC 내부 `auth.uid()`가 owner authority다. 브라우저 직접 RPC 금지이며 invalid digest/policy mismatch로 write 0이다. DB는 HMAC secret을 알지 못한다. digest/descriptor는 response/log/browser bundle에 노출 금지다.
+- public client/route body는 exact `{ youtube_url } | { retry_job_id }` union뿐이며 mode/options/digest/key version/policy field를 추가하면 `422 VALIDATION_ERROR` unknown field다. public route는 session과 URL/retry ID만 받고 trusted Next server layer가 digest를 만든다. enqueue RPC input은 `video_id, expected_policy_version, expected_policy_snapshot_digest, current_key_version, current_digest, optional previous_key_version, optional previous_digest, submission_mode`뿐이다. 별도 enqueue credential authority는 없고 `createRouteHandlerClient()`의 로그인 사용자 세션과 RPC 내부 `auth.uid()`가 owner authority다. digest/descriptor는 response/log/browser bundle에 노출 금지다.
 - current/previous rotation은 dual-read/current-write다. new row는 current digest/version만 저장하고 previous pair는 rotation window 안의 active dedupe read에만 쓴다. `private.youtube_extraction_current_policy`는 승인된 release migration으로만 원자 전환한다. enqueue는 transaction advisory shared lock 뒤 enabled policy plain SELECT, rotation은 같은 advisory key의 exclusive transaction lock 뒤 UPDATE/CAS를 사용해 경합한 enqueue/retry가 old/new 중 한 complete snapshot만 사용하게 한다. policy row-level locking read는 사용하지 않는다.
 - canonical policy JSON은 UTF-8, sorted keys, no whitespace, unknown key 거부, defaults materialized다. initial async policy는 i031-only이고 workpack 33 manifest/options exact object만 쓴다. job `policy_snapshot_digest`는 `youtube-extraction-policy-snapshot-v1`의 non-secret SHA-256이며 worker `allowed_snapshot_digest`/artifact/credential attestation과 exact match한다. options-only rotation의 old worker reject를 반드시 검증한다.
 - app descriptor는 release expected-schema manifest에 포함되고 exact current policy snapshot을 preflight한다. options-only rotation stale app은 advisory lock 안 expected version/digest exact match에 실패해 `POLICY_CHANGED`, insert/dedupe/budget 0이어야 한다. current/previous HMAC key lifecycle은 app release와 policy rotation에 맞추며 existing app external secret loader의 server-only allowlist만 읽고 worker에는 금지한다.

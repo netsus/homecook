@@ -442,7 +442,6 @@ describe("YouTube background extraction contract evolution", () => {
       expect(text).toContain("current_digest");
       expect(text).toContain("previous_digest");
       expect(text).toContain("DB는 HMAC secret을 알지 못한다");
-      expect(text).toContain("브라우저 직접 RPC 금지");
       expect(text).toContain("current-write");
       expect(text).toContain("dual-read");
     }
@@ -525,9 +524,59 @@ describe("YouTube background extraction contract evolution", () => {
       expect(document).toContain("existing app external secret loader");
       expect(document).toContain("server-only allowlist");
       expect(document).toContain("worker에는 금지");
-      expect(document).toContain("invalid digest/policy mismatch");
       expect(document).toContain("app release와 policy rotation");
+      expect(document).toContain("dedupe continuity/privacy");
     }
+  });
+
+  it("treats fingerprint HMAC only as privacy-preserving dedupe metadata", () => {
+    const documents = officialTuple.map(read);
+    const source = read("docs/sync/CURRENT_SOURCE_OF_TRUTH.md");
+
+    for (const document of documents) {
+      expect(document).toContain("privacy-preserving dedupe/fingerprint");
+      expect(document).toContain("authentication/attestation이 아니다");
+      expect(document).toContain("cryptographic authenticity를 보장하지 않는다");
+    }
+
+    for (const document of [...documents, source]) {
+      expect(document).not.toContain("invalid digest");
+      expect(document).not.toContain(
+        "HMAC digest와 expected snapshot을 모르는 direct call",
+      );
+    }
+  });
+
+  it("keeps the Data API and enqueue RPC behind the loopback private boundary", () => {
+    const documents = officialTuple.map(read);
+    const api = documents[4];
+
+    for (const document of documents) {
+      expect(document).toContain("Next /api/v1만 공개");
+      expect(document).toContain("loopback/private network");
+      expect(document).toContain("Cloudflare/public proxy");
+      expect(document).toContain("403/404");
+      expect(document).toContain("server-only path");
+      expect(document).toContain(
+        "Supabase Data API URL/session direct-RPC capability/fingerprint descriptor/digest",
+      );
+      expect(document).toContain("loopback boundary config drift");
+      expect(document).toContain("fail closed");
+    }
+
+    expect(api).toContain("/rest/v1/rpc/enqueue_youtube_extraction_job");
+    for (const privateField of [
+      "current_digest",
+      "previous_digest",
+      "current_key_version",
+      "previous_key_version",
+      "expected_policy_version",
+      "expected_policy_snapshot_digest",
+    ]) {
+      expect(api).toContain(privateField);
+    }
+    expect(api).toContain("422 VALIDATION_ERROR");
+    expect(api).toContain("unknown field");
   });
 
   it("pins the exact i031-only initial policy and canonical options schema", () => {
