@@ -27,6 +27,7 @@ Additional RED→GREEN findings fixed during integration:
 - PostgreSQL serialized `SET search_path = ''` as an escaped empty string that the security inventory parser initially misclassified; a RED parser test now locks the catalog-only interpretation.
 - function owner membership was initially revoked before the final ACL statements, leaving default execute grants in place on a clean Supabase migration run; the migration now applies ACL/schema revokes first and removes temporary owner membership last.
 - an options-only policy rotation could leak state between the PostgreSQL and PostgREST test files; every integration test now restores the canonical policy snapshot, and previous-key dual-read/current-write plus stale-app/old-worker fail-closed behavior is covered explicitly.
+- first-head CI `quality` failed because the three new mutation routes and worker RPC adapter were absent from the fail-closed account-session-generation inventory; the route/source classifications and generated account/hybrid inventories were updated, and the exact failing tests plus the full Vitest suite passed locally before the replacement head.
 
 ## Implemented surfaces
 
@@ -61,6 +62,7 @@ Passed before Draft PR creation:
 - `pnpm typecheck` — pass
 - targeted ESLint — pass
 - `PLAYWRIGHT_BASE_URL=http://127.0.0.1:3117 pnpm verify:backend` — lint, typecheck, product tests (238 files passed / 12 skipped; 2733 passed / 175 skipped), production build and security Playwright (12 passed) all pass
+- `pnpm test` after CI inventory repair — 561 files passed / 31 skipped; 5879 passed / 420 skipped
 - clean isolated Supabase PostgreSQL 17 reset with every repository migration through `20260812160000_youtube_async_extraction_notification.sql` and `supabase/seed.sql` — pass
 - additive security-function contract classification — 22 new application functions classified; live ACL validation reached the unrelated baseline inventory phase with the new function ACL/owner/search-path checks green
 
