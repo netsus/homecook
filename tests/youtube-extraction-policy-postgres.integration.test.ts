@@ -1527,6 +1527,32 @@ describe.runIf(enabled).sequential("youtube async extraction PostgreSQL integrat
     expect(Date.parse(String(expired.previous_fingerprint_valid_until))).toBeLessThan(Date.now());
   });
 
+  it("fails readiness closed for unexpected async tables and prefixed RPCs", () => {
+    enablePolicy();
+    const snapshotDigest = policySnapshotDigest();
+    configureWorkerCredential(snapshotDigest);
+    psql(`
+      create table public.youtube_extraction_shadow (id uuid primary key);
+      create function public.youtube_extraction_shadow_rpc()
+      returns jsonb
+      language sql
+      stable
+      as $function$ select null::jsonb $function$;
+    `);
+    try {
+      const readiness = runAsJson("authenticated", authenticatedClaims(ownerA), `
+        select public.read_youtube_extraction_enqueue_readiness()::text;
+      `);
+      expect(readiness.ready).toBe(false);
+      expect(readiness.catalog_fingerprint).not.toBe(expectedSchemaDocument.catalog_fingerprint);
+    } finally {
+      psql(`
+        drop function if exists public.youtube_extraction_shadow_rpc();
+        drop table if exists public.youtube_extraction_shadow;
+      `);
+    }
+  });
+
   it("rejects worker preflight and claim when credential validity is at the 30 minute cutoff", () => {
     enablePolicy();
     const snapshotDigest = policySnapshotDigest();

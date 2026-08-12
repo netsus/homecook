@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 
 import {
@@ -47,6 +48,7 @@ interface EnqueueReadiness {
   expectedPolicySnapshotDigest: string;
   currentFingerprintKeyVersion: string;
   previousFingerprintKeyVersion: string | null;
+  previousFingerprintValidUntil: string | null;
 }
 
 interface FingerprintKey {
@@ -476,6 +478,7 @@ function readJsonRecord(path: string) {
 export async function loadYoutubeExtractionEnqueueReadiness(
   rpc: Rpc,
   env: Readonly<Record<string, string | undefined>> = process.env,
+  now = new Date(),
 ): Promise<EnqueueReadiness | null> {
   const descriptorPath = env.HOMECOOK_YOUTUBE_EXTRACTION_APP_DESCRIPTOR_PATH?.trim();
   const expectedSchemaPath =
@@ -485,7 +488,15 @@ export async function loadYoutubeExtractionEnqueueReadiness(
   if (!descriptorPath || !expectedSchemaPath || !workerManifestPath) return null;
   try {
     const descriptor = readJsonRecord(descriptorPath);
-    const expectedSchema = readJsonRecord(expectedSchemaPath);
+    const expectedSchemaBytes = readFileSync(expectedSchemaPath);
+    const expectedSchema = JSON.parse(expectedSchemaBytes.toString("utf8")) as unknown;
+    if (expectedSchema === null || typeof expectedSchema !== "object" || Array.isArray(expectedSchema)) {
+      return null;
+    }
+    const expectedSchemaRecord = expectedSchema as Record<string, unknown>;
+    const expectedSchemaSha256 = createHash("sha256")
+      .update(expectedSchemaBytes)
+      .digest("hex");
     const workerManifest = readJsonRecord(workerManifestPath);
     const result = await rpc("read_youtube_extraction_enqueue_readiness");
     if (result.error || result.data === null || typeof result.data !== "object") return null;
@@ -493,16 +504,19 @@ export async function loadYoutubeExtractionEnqueueReadiness(
     if (
       descriptor.schema !== "homecook.youtube-extraction-app-descriptor"
       || descriptor.version !== 1
-      || expectedSchema.schema !== "homecook.youtube-extraction-expected-schema"
-      || expectedSchema.version !== 1
+      || expectedSchemaRecord.schema !== "homecook.youtube-extraction-expected-schema"
+      || expectedSchemaRecord.version !== 1
       || workerManifest.schema !== "homecook.youtube-extraction-worker-artifact"
       || workerManifest.version !== 1
       || workerManifest.deterministic !== true
       || row.ready !== true
       || descriptor.release_sha !== row.release_sha
       || descriptor.release_sha !== workerManifest.release_sha
+      || descriptor.artifact_sha256 !== workerManifest.artifact_sha256
+      || descriptor.expected_schema_sha256 !== expectedSchemaSha256
+      || descriptor.expected_schema_sha256 !== workerManifest.expected_schema_sha256
       || descriptor.schema_identity !== row.schema_identity
-      || descriptor.schema_identity !== expectedSchema.schema_identity
+      || descriptor.schema_identity !== expectedSchemaRecord.schema_identity
       || descriptor.schema_identity !== workerManifest.schema_identity
       || descriptor.expected_policy_version !== YOUTUBE_ASYNC_POLICY.policyVersion
       || descriptor.expected_policy_version !== row.policy_version
@@ -511,16 +525,33 @@ export async function loadYoutubeExtractionEnqueueReadiness(
       || descriptor.expected_policy_snapshot_digest !== row.policy_snapshot_digest
       || descriptor.expected_policy_snapshot_digest !== row.allowed_snapshot_digest
       || descriptor.expected_policy_snapshot_digest !== workerManifest.allowed_snapshot_digest
+      || expectedSchemaRecord.catalog_fingerprint !== row.catalog_fingerprint
       || typeof row.fingerprint_key_version !== "string"
+      || !/^[a-f0-9]{64}$/u.test(String(descriptor.artifact_sha256 ?? ""))
+      || !/^[a-f0-9]{64}$/u.test(String(descriptor.expected_schema_sha256 ?? ""))
+      || !/^[a-f0-9]{64}$/u.test(String(expectedSchemaRecord.catalog_fingerprint ?? ""))
+      || typeof row.credential_expires_at !== "string"
+      || !Number.isFinite(Date.parse(row.credential_expires_at))
+      || Date.parse(row.credential_expires_at) <= now.getTime() + 30 * 60 * 1000
     ) return null;
+    const previousVersion = row.previous_fingerprint_key_version;
+    const previousValidUntil = row.previous_fingerprint_valid_until;
+    const previousIsDisabled = previousVersion === null
+      && previousValidUntil === null;
+    const previousIsConfigured = typeof previousVersion === "string"
+      && typeof previousValidUntil === "string"
+      && Number.isFinite(Date.parse(previousValidUntil));
+    if (!previousIsDisabled && !previousIsConfigured) return null;
+    const previousIsActive = previousIsConfigured
+      && Date.parse(previousValidUntil) > now.getTime();
     return {
       expectedPolicyVersion: Number(row.policy_version),
       expectedPolicySnapshotDigest: String(row.policy_snapshot_digest),
       currentFingerprintKeyVersion: row.fingerprint_key_version,
       previousFingerprintKeyVersion:
-        typeof row.previous_fingerprint_key_version === "string"
-          ? row.previous_fingerprint_key_version
-          : null,
+        previousIsActive ? previousVersion : null,
+      previousFingerprintValidUntil:
+        previousIsActive ? previousValidUntil : null,
     };
   } catch {
     return null;
@@ -592,7 +623,7 @@ export const youtubeAsyncExtractionHandlers = createYoutubeAsyncExtractionHandle
     return parseYoutubeExtractionMutationCount(result.data, "seen_count");
   },
   async enqueueReadiness(rpc) {
-    return loadYoutubeExtractionEnqueueReadiness(rpc);
+    return loadYoutubeExtractionEnqueueReadiness(rpc, process.env, new Date());
   },
   fingerprintKeys(readiness) {
     const current = requireSecret(

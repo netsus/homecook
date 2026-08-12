@@ -307,6 +307,7 @@ describe("YTASYNC-API route handlers", () => {
         expectedPolicySnapshotDigest: YOUTUBE_ASYNC_POLICY.snapshotDigest,
         currentFingerprintKeyVersion: "1",
         previousFingerprintKeyVersion: null,
+        previousFingerprintValidUntil: null,
       })),
       fingerprintKeys: vi.fn(() => ({
         current: { version: "1", secret: "k".repeat(32) },

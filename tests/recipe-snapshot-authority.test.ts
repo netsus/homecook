@@ -255,7 +255,9 @@ describe("recipe content snapshot authority", () => {
       "eligible Meal content backfill is missing",
     ).toBe(true);
     expect(
-      /insert into public\.recipe_content_snapshots[^;]*update public\.meals/i.test(backfill),
+      backfill.indexOf("insert into public.recipe_content_snapshots") >= 0
+        && backfill.indexOf("update public.meals")
+          > backfill.indexOf("insert into public.recipe_content_snapshots"),
       "backfill must create or reuse content snapshots before pinning Meals",
     ).toBe(true);
     expect(

@@ -893,7 +893,8 @@ begin
       or v_schema_identity is distinct from v_credential.schema_identity
       or v_allowed_snapshot_digest is distinct from v_credential.allowed_snapshot_digest
       or to_timestamp(v_exp) > v_credential.expires_at + interval '5 seconds'
-      or to_timestamp(v_exp) < clock_timestamp() then
+      or to_timestamp(v_exp) < clock_timestamp()
+      or v_credential.expires_at <= clock_timestamp() + interval '30 minutes' then
       raise exception 'YOUTUBE_EXTRACTION_WORKER_UNAUTHORIZED'
         using errcode = '42501';
     end if;
@@ -1143,6 +1144,11 @@ begin
     into strict v_credential
   from private.youtube_extraction_worker_credentials as credentials
   where credentials.credential_name = 'primary';
+
+  if v_credential.expires_at <= v_now + interval '30 minutes' then
+    raise exception 'YOUTUBE_EXTRACTION_WORKER_UNAUTHORIZED'
+      using errcode = '42501';
+  end if;
 
   if allowed_snapshot_digest is distinct from v_credential.allowed_snapshot_digest
     or allowed_snapshot_digest is distinct from (v_worker_claims ->> 'allowed_snapshot_digest') then
@@ -1768,6 +1774,8 @@ declare
   v_policy private.youtube_extraction_current_policy%rowtype;
   v_credential private.youtube_extraction_worker_credentials%rowtype;
   v_snapshot_digest text;
+  v_catalog_preimage text;
+  v_catalog_fingerprint text;
 begin
   if coalesce(v_claims ->> 'role', '') is distinct from 'authenticated'
     or auth.uid() is null then
@@ -1789,12 +1797,85 @@ begin
     v_policy.policy_version
   );
 
+  v_catalog_preimage := pg_catalog.concat_ws(
+    E'\n',
+    'youtube-extraction-live-catalog-v1',
+    'tables',
+    coalesce((
+      select pg_catalog.string_agg(
+        pg_catalog.format('%I.%I', table_row.schemaname, table_row.tablename),
+        E'\n'
+        order by table_row.schemaname, table_row.tablename
+      )
+      from pg_catalog.pg_tables as table_row
+      where (
+        table_row.schemaname = 'private'
+        and table_row.tablename like 'youtube_extraction%'
+      ) or (
+        table_row.schemaname = 'public'
+        and (
+          table_row.tablename like 'youtube_extraction%'
+          or table_row.tablename like 'youtube_extractor%'
+          or table_row.tablename like 'youtube_llm_extraction%'
+          or table_row.tablename like 'youtube_transcript%'
+          or table_row.tablename like 'youtube_visual_extraction%'
+          or table_row.tablename in ('cooking_methods', 'ingredient_synonyms', 'ingredients')
+        )
+      )
+    ), ''),
+    'roles',
+    coalesce((
+      select pg_catalog.string_agg(role_row.rolname, E'\n' order by role_row.rolname)
+      from pg_catalog.pg_roles as role_row
+      where role_row.rolname like 'youtube_extraction%'
+    ), ''),
+    'memberships',
+    coalesce((
+      select pg_catalog.string_agg(
+        member_role.rolname || '->' || granted_role.rolname,
+        E'\n'
+        order by member_role.rolname, granted_role.rolname
+      )
+      from pg_catalog.pg_auth_members as membership
+      join pg_catalog.pg_roles as granted_role on granted_role.oid = membership.roleid
+      join pg_catalog.pg_roles as member_role on member_role.oid = membership.member
+      where member_role.rolname = 'authenticator'
+        and granted_role.rolname like 'youtube_extraction%'
+    ), ''),
+    'rpc_signatures',
+    coalesce((
+      select pg_catalog.string_agg(
+        namespace.nspname || '.' || procedure.proname || '('
+          || pg_catalog.replace(
+            pg_catalog.oidvectortypes(procedure.proargtypes),
+            ', ',
+            ','
+          ) || ')',
+        E'\n'
+        order by procedure.proname, procedure.proargtypes::text
+      )
+      from pg_catalog.pg_proc as procedure
+      join pg_catalog.pg_namespace as namespace on namespace.oid = procedure.pronamespace
+      where namespace.nspname = 'public'
+        and (
+          procedure.proname like '%youtube_extraction%'
+          or procedure.proname like '%youtube_extractor_permit%'
+        )
+    ), '')
+  );
+  v_catalog_fingerprint := pg_catalog.encode(
+    extensions.digest(pg_catalog.convert_to(v_catalog_preimage, 'UTF8'), 'sha256'),
+    'hex'
+  );
+
   return jsonb_build_object(
     'ready', v_policy.enabled
       and v_credential.allowed_snapshot_digest = v_snapshot_digest
-      and v_credential.expires_at > clock_timestamp() + interval '30 minutes',
+      and v_credential.expires_at > clock_timestamp() + interval '30 minutes'
+      and v_catalog_fingerprint = '8f424c31d61b2b17a9a574557f26600eefd51faff9412c414204460f6312739d',
     'release_sha', v_credential.release_sha,
     'schema_identity', v_credential.schema_identity,
+    'catalog_fingerprint', v_catalog_fingerprint,
     'policy_version', v_policy.policy_version,
     'policy_snapshot_digest', v_snapshot_digest,
     'fingerprint_key_version', v_policy.fingerprint_key_version,

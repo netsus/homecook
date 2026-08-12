@@ -90,7 +90,7 @@ describe("YTASYNC Stage 3 API revise RED", () => {
     const expectedSchemaSha256 = createHash("sha256")
       .update(expectedSchema)
       .digest("hex");
-    writeFileSync(descriptorPath, JSON.stringify({
+    const descriptor = {
       schema: "homecook.youtube-extraction-app-descriptor",
       version: 1,
       release_sha: releaseSha,
@@ -99,7 +99,8 @@ describe("YTASYNC Stage 3 API revise RED", () => {
       expected_policy_snapshot_digest: digest,
       artifact_sha256: artifactDigest,
       expected_schema_sha256: expectedSchemaSha256,
-    }));
+    };
+    writeFileSync(descriptorPath, JSON.stringify(descriptor));
     writeFileSync(schemaPath, expectedSchema);
     writeFileSync(workerPath, JSON.stringify({
       schema: "homecook.youtube-extraction-worker-artifact",
@@ -140,6 +141,19 @@ describe("YTASYNC Stage 3 API revise RED", () => {
         previousFingerprintKeyVersion: "1",
         previousFingerprintValidUntil: "2026-08-14T00:00:00.000Z",
       });
+      writeFileSync(descriptorPath, JSON.stringify({
+        ...descriptor,
+        artifact_sha256: "c".repeat(64),
+      }));
+      expect(await loadYoutubeExtractionEnqueueReadiness(
+        rpc, env, new Date("2026-08-13T00:00:00.000Z"),
+      )).toBeNull();
+      writeFileSync(descriptorPath, JSON.stringify(descriptor));
+      writeFileSync(schemaPath, `${expectedSchema}\n`);
+      expect(await loadYoutubeExtractionEnqueueReadiness(
+        rpc, env, new Date("2026-08-13T00:00:00.000Z"),
+      )).toBeNull();
+      writeFileSync(schemaPath, expectedSchema);
       writeFileSync(workerPath, JSON.stringify({
         schema: "homecook.youtube-extraction-worker-artifact",
         version: 1,
@@ -222,6 +236,20 @@ describe("YTASYNC Stage 3 API revise RED", () => {
       expect(await loadYoutubeExtractionEnqueueReadiness(
         driftRpc, env, new Date("2026-08-13T00:00:00.000Z"),
       )).toBeNull();
+      const expiredPreviousRpc = vi.fn(async () => ({
+        data: {
+          ...base,
+          previous_fingerprint_key_version: "1",
+          previous_fingerprint_valid_until: "2026-08-12T23:59:59.000Z",
+        },
+        error: null,
+      }));
+      expect(await loadYoutubeExtractionEnqueueReadiness(
+        expiredPreviousRpc, env, new Date("2026-08-13T00:00:00.000Z"),
+      )).toMatchObject({
+        previousFingerprintKeyVersion: null,
+        previousFingerprintValidUntil: null,
+      });
       expect(readFileSync(schemaPath, "utf8")).toBe(schema);
     } finally {
       rmSync(root, { force: true, recursive: true });
