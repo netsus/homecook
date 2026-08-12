@@ -195,6 +195,7 @@ Slice Order 표의 Status 값은 위 이벤트가 발생한 PR 또는 closeout b
 | `31-recipe-media-tags` | in-progress | YouTube 등록 레시피 썸네일 영속화, 직접 등록 이미지 업로드, YouTube/직접 등록 공용 서버 태그 자동 생성 |
 | `32-youtube-visual-quantity-enrichment` | in-progress | YouTube 공개 텍스트 추출 이후 화면 속 수량 텍스트 기반 보강, quantity review fields, register confirmation contract, visual cache/events |
 | `33-youtube-i031-direct-extraction` | merged | 기존 YT_IMPORT에서 exact cv-goal-i031-ocr selector/final 추출을 localhost strict mode로 직접 실행하고 기존 재료 표준명 검수 흐름에 연결 |
+| `youtube-async-extraction-notification` | docs | 기존 i031 추출을 request-independent worker job으로 실행하고 이탈·재실행·재로그인 뒤에도 owner-scoped 결과를 toast, badge, durable list로 복구하는 Stage 1 계약 |
 | `admin-foundation` | merged | 런칭 초기 운영용 최소 내부 관리 기반. /admin 읽기 전용 shell, 사용자 조회, 운영 이벤트/감사 로그 조회. admin_members 기반 접근 제어, service-role fail-closed, PII 최소화 |
 | `planner-column-customization` | merged        | 끼니 컬럼 기본 3개 + 설정 커스터마이징(이름 변경/추가/삭제/순서 변경), 최소 1~최대 5, PLANNER_WEEK 동적 컬럼               |
 | `wave1-port-foundation` | merged | 공통 shell, 공용 UI 프리미티브(Button/Chip/Card/Modal/Sort Dropdown), CTA 위계, spacing/safe-area 정비 — Phase4 foundation re-audit PR #432 merged |
