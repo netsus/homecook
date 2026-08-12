@@ -25,7 +25,6 @@ function parseArgs(argv) {
     json: false,
     homeDir: process.env.HOME ?? "",
     nodeBin: process.execPath,
-    rootDir: process.cwd(),
     userId: process.getuid?.() ?? 0,
   };
 

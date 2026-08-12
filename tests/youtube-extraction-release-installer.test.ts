@@ -240,6 +240,30 @@ describe("YTASYNC-OPS launchd contract", () => {
     ).toThrow(/manual only/i);
   });
 
+  it("rejects a launchd root outside the attested artifact directory", () => {
+    const privateDir = createTempDir("yta-worker-root-drift-");
+    const configPath = join(privateDir, ".env.production.local");
+    const inputs = createReleaseInputs(privateDir);
+    writeModeFile(
+      configPath,
+      "HOMECOOK_YOUTUBE_WORKER_DATA_API_URL=http://127.0.0.1:54321/rest/v1\n",
+    );
+
+    expect(() => buildYoutubeExtractionWorkerInstallPlan({
+      configPath,
+      manifestPath: inputs.manifestPath,
+      credentialPath: inputs.credentialPath,
+      appDescriptorPath: inputs.appPath,
+      currentPolicyPath: inputs.policyPath,
+      expectedSchemaPath: inputs.expectedSchemaPath,
+      homeDir: "/Users/tester",
+      rootDir: process.cwd(),
+      nodeBin: "/usr/bin/node",
+      userId: 501,
+      dryRun: true,
+    })).toThrow(/artifact root mismatch/iu);
+  });
+
   it("refuses to emit launchctl commands when release preflight does not match", () => {
     const privateDir = createTempDir("yta-worker-install-blocked-");
     const configPath = join(privateDir, ".env.production.local");

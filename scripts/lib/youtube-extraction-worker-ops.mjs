@@ -162,7 +162,7 @@ export function renderYoutubeExtractionWorkerPlist({
   expectedSchemaPath,
   homeDir = process.env.HOME ?? "",
   nodeBin = process.execPath,
-  rootDir = process.cwd(),
+  rootDir,
 } = {}) {
   const normalizedConfigPath = validateYoutubeExtractionWorkerConfigPath(
     configPath,
@@ -190,7 +190,13 @@ export function renderYoutubeExtractionWorkerPlist({
   );
   const normalizedHomeDir = ensureAbsolutePath(homeDir, "homeDir");
   const normalizedNodeBin = ensureAbsolutePath(nodeBin, "nodeBin");
-  const normalizedRootDir = ensureAbsolutePath(rootDir, "rootDir");
+  const artifactRoot = dirname(normalizedManifestPath);
+  const normalizedRootDir = rootDir === undefined
+    ? artifactRoot
+    : ensureAbsolutePath(rootDir, "rootDir");
+  if (normalizedRootDir !== artifactRoot) {
+    throw new Error("worker artifact root mismatch");
+  }
   const paths = getYoutubeExtractionWorkerPaths(normalizedHomeDir);
   const template = readFileSync(TEMPLATE_PATH, "utf8");
 
@@ -292,7 +298,7 @@ export function buildYoutubeExtractionWorkerInstallPlan({
   expectedSchemaPath,
   homeDir = process.env.HOME ?? "",
   nodeBin = process.execPath,
-  rootDir = process.cwd(),
+  rootDir,
   userId = process.getuid?.() ?? 0,
   dryRun = false,
 } = {}) {
