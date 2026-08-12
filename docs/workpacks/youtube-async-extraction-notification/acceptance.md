@@ -41,7 +41,7 @@
 - [x] enqueue owner는 `createRouteHandlerClient()` user session의 `auth.uid()`에서만 도출되고 caller-supplied user UUID를 받지 않는다 <!-- omo:id=accept-yta-user-session-authority;stage=2;scope=backend;review=3,6 -->
 - [x] fingerprint HMAC을 인증/attestation으로 사용하지 않고 DB는 HMAC secret을 읽지 않으며 worker에는 key를 전달하지 않는다 <!-- omo:id=accept-yta-hmac-purpose-boundary;stage=2;scope=backend;review=3,6 -->
 - [x] worker API roles는 table/sequence privilege 0이고 exact RPC owner/RLS/ACL/membership/pre-request만 통과한다 <!-- omo:id=accept-yta-worker-least-privilege;stage=2;scope=backend;review=3,6 -->
-- [ ] stale job/permit/credential generation의 heartbeat/start/cache/event/method/finalize/fail/release write는 모두 0이다 <!-- omo:id=accept-yta-generation-fencing;stage=2;scope=backend;review=3,6 -->
+- [x] stale job/permit/credential generation의 heartbeat/start/cache/event/method/finalize/fail/release write는 모두 0이다 <!-- omo:id=accept-yta-generation-fencing;stage=2;scope=backend;review=3,6 -->
 - [x] raw worker/manager JWT, signing/service-role key, user access/refresh token, cookie, HMAC key가 DB·Git·artifact·env·argv·plist·log에 없다 <!-- omo:id=accept-yta-secret-boundary;stage=2;scope=backend;review=3,6 -->
 - [ ] title snapshot은 nullable sanitized 160자이고 null이면 UI가 `YouTube 레시피` fallback을 쓴다 <!-- omo:id=accept-yta-title-snapshot;stage=4;scope=frontend;review=5,6 -->
 
@@ -72,12 +72,12 @@
 
 ### Vitest
 
-- [ ] `YTASYNC-CONTRACT-*`, `API-*`, `WORKER-*`, `OPS-*`, `FE-*`가 contract/adapter/state/error/secret/installer dry-run을 결정론적으로 고정한다 <!-- omo:id=accept-yta-vitest-targets;stage=2;scope=shared;review=3,6 -->
-- [ ] 기존 `tests/youtube-background-extraction-contract.test.ts`, YouTube import/i031/full-local/mac-production 회귀가 additive 구현 뒤 green이다 <!-- omo:id=accept-yta-existing-regression;stage=2;scope=shared;review=3,6 -->
+- [x] `YTASYNC-CONTRACT-*`, `API-*`, `WORKER-*`, `OPS-*`, `FE-*`가 contract/adapter/state/error/secret/installer dry-run을 결정론적으로 고정한다 <!-- omo:id=accept-yta-vitest-targets;stage=2;scope=shared;review=3,6 -->
+- [x] 기존 `tests/youtube-background-extraction-contract.test.ts`, YouTube import/i031/full-local/mac-production 회귀가 additive 구현 뒤 green이다 <!-- omo:id=accept-yta-existing-regression;stage=2;scope=shared;review=3,6 -->
 
 ### PostgreSQL / PostgREST
 
-- [ ] 동시 enqueue/claim/reaper/finalize/policy rotation/credential CAS와 exact role/RLS/ACL을 실제 DB에서 검증한다 <!-- omo:id=accept-yta-postgres-integration;stage=2;scope=backend;review=3,6 -->
+- [x] 동시 enqueue/claim/reaper/finalize/policy rotation/credential CAS와 exact role/RLS/ACL을 실제 DB에서 검증한다 <!-- omo:id=accept-yta-postgres-integration;stage=2;scope=backend;review=3,6 -->
 - [x] public proxy와 restricted JWT negative matrix가 loopback/private boundary drift를 fail closed한다 <!-- omo:id=accept-yta-data-api-boundary;stage=2;scope=backend;review=3,6 -->
 
 ### Playwright / Exploratory QA
