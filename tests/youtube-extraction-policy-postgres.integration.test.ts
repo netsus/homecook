@@ -1428,10 +1428,34 @@ describe.runIf(enabled).sequential("youtube async extraction PostgreSQL integrat
         '{"language":"ko","source_provider":"external_transcript_api","source_kind":"transcript","transcript_text":"safe text","segments_json":[],"expires_at":"2099-01-01T00:00:00Z"}'::jsonb
       )::text;
     `);
+    const llmCache = runAsJson("youtube_extraction_worker", workerClaims(snapshotDigest), `
+      select public.access_youtube_extraction_worker_cache(
+        '${claim.job_id}'::uuid, '${workerId}', ${fence}, 'llm_upsert',
+        '{"source_hash":"${"a".repeat(64)}","schema_version":"single-recipe-four-source-v2","model":"gpt-5.4","source_kinds":["description","caption"],"result_json":{"safe":true},"expires_at":"2099-01-01T00:00:00Z"}'::jsonb
+      )::text;
+    `);
+    const visualCache = runAsJson("youtube_extraction_worker", workerClaims(snapshotDigest), `
+      select public.access_youtube_extraction_worker_cache(
+        '${claim.job_id}'::uuid, '${workerId}', ${fence}, 'visual_upsert',
+        '{"provider":"codex-vision-keyframes","schema_version":"keyframe-final-v44-explicit-action-clause","visual_request_hash":"${"b".repeat(64)}","result_json":{"safe":true},"expires_at":"2099-01-01T00:00:00Z"}'::jsonb
+      )::text;
+    `);
     const event = runAsJson("youtube_extraction_worker", workerClaims(snapshotDigest), `
       select public.record_youtube_extraction_worker_event(
         '${claim.job_id}'::uuid, '${workerId}', ${fence}, 'transcript',
         '{"provider":"youtube_public_timedtext","status":"success"}'::jsonb
+      )::text;
+    `);
+    const llmEvent = runAsJson("youtube_extraction_worker", workerClaims(snapshotDigest), `
+      select public.record_youtube_extraction_worker_event(
+        '${claim.job_id}'::uuid, '${workerId}', ${fence}, 'llm',
+        '{"provider":"codex-vision-keyframes","model":"gpt-5.4","cache_hit":false,"status":"success","reason":"i031_exact_cold_execution","input_tokens":0,"output_tokens":0,"estimated_cost_microusd":0}'::jsonb
+      )::text;
+    `);
+    const visualEvent = runAsJson("youtube_extraction_worker", workerClaims(snapshotDigest), `
+      select public.record_youtube_extraction_worker_event(
+        '${claim.job_id}'::uuid, '${workerId}', ${fence}, 'visual',
+        '{"provider":"codex-vision-keyframes","model":"gpt-5.4","cache_hit":false,"event_type":"success","status":"success","reason":"i031_exact_cold_execution","input_tokens":0,"output_tokens":0,"estimated_cost_microusd":0}'::jsonb
       )::text;
     `);
     const quota = runAsJson("youtube_extraction_worker", workerClaims(snapshotDigest), `
@@ -1453,7 +1477,11 @@ describe.runIf(enabled).sequential("youtube async extraction PostgreSQL integrat
     expect(methods).toMatchObject({ applied: true });
     expect(methods.methods).toHaveLength(2);
     expect(cache).toMatchObject({ applied: true });
+    expect(llmCache).toMatchObject({ applied: true });
+    expect(visualCache).toMatchObject({ applied: true });
     expect(event).toEqual({ applied: true, recorded: true });
+    expect(llmEvent).toEqual({ applied: true, recorded: true });
+    expect(visualEvent).toEqual({ applied: true, recorded: true });
     expect(quota).toMatchObject({ applied: true, reserved: true, used: 1 });
     expect(staleCache).toEqual({ applied: false });
     expect(lastLine(psql(`

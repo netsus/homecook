@@ -93,6 +93,10 @@ describe("YTASYNC-DB/SEC migration contract", () => {
       const functionBody = sql.split(`function public.${functionName}`)[1]?.split("$function$;")[0] ?? "";
       expect(functionBody, `${functionName} must hold the job fence row lock`).toContain("for update");
     }
+    expect(sql).toContain("youtube_llm_extraction_events_provider_check");
+    expect(sql).toContain("youtube_visual_extraction_cache_provider_check");
+    expect(sql).toContain("youtube_visual_extraction_events_provider_check");
+    expect(sql).toContain("provider in ('gemini', 'codex-vision-keyframes')");
   });
 
   it("uses auth.uid owner reads and returns exact delivered/seen count keys", () => {
