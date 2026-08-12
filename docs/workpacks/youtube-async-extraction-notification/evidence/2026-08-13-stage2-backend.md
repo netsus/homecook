@@ -5,9 +5,11 @@
 - baseline: `origin/master@6f6043d91a3cfdcc7da10a4f28f59676990a9d80`
 - branch: `feature/be-youtube-async-extraction-notification`
 - original implementation commits: `267356fe`, `0139e987`, `eee52d6e`, `9aaa690c`, `a751209f`, `95c2b370`
-- Stage 3 reviewed head: `95c2b370` — `REVISE`
-- revision RED commits: `918f1430`, `b817bcf9`
-- revision GREEN commits: `789efe37`, `e62405e0`, `7f659d5d`, `72f42143`, `8ef2c379`
+- first Stage 3 reviewed head: `95c2b370` — `REVISE`
+- second Stage 3 re-reviewed head: `3af52ff5` — `REVISE` (`P1` 5, `P2` 3)
+- second-revision RED commits: `d5f04962`, `4b264f1c`, `9c17affd`, `2edb82b4`, `b9edf7cb`, `afd74382`, `f4eb7bd0`
+- second-revision GREEN commits: `d45f32c0`, `f7c48364`, `27679695`, `b5619d63`
+- replacement implementation head: `b5619d63`; independent Stage 3 re-review is pending
 - official tuple: requirements `1.7.31`, screen `1.5.35`, Flow `1.3.33`, DB `1.3.33`, API `1.2.38`
 - migration: `supabase/migrations/20260812160000_youtube_async_extraction_notification.sql`
 - production/staging/remote writes: `0`
@@ -38,6 +40,10 @@ The independent Stage 3 review of `95c2b370` returned ten required findings. New
 
 An internal review after GREEN found one additional release-path defect: launchd could verify one manifest but execute a runner below a different `--root-dir`. A RED installer test reproduced it; the plist root is now derived from the manifest directory and any explicit mismatch fails closed. This internal review is implementation assistance only and is not the independent Stage 3 approval.
 
+The independent second re-review of `3af52ff5` returned eight more findings. Characterization tests reproduced missing exact i031 startup preflight, disconnected worker cache/quota/event/method persistence, collapsed subprocess errors, incomplete live release attestation, previous-HMAC expiry loss, credential cutoff claim leakage, recipe-title substitution, and the snapshot-authority regex flake. The replacement runs the immutable artifact through a real non-dry claim/extract/persist/finalize subprocess, bridges allowlisted fenced child RPCs, preserves bounded stable provider failures, snapshots only sanitized provider video titles, and checks the credential both before polling and immediately before claim.
+
+Two internal read-only reviews then found three additional fail-closed gaps. RED tests proved that cache-hit events could consume quota, cold no-cache LLM/visual events could be mislabeled as hits, and a forbidden principal could inherit a restricted worker owner role without changing readiness. The GREEN implementation excludes cache hits from paid quota, records cold execution with `cache_hit=false`, and fingerprints every membership edge touching `youtube_extraction*` authority. Clean PG17 and the portable PostgreSQL runner now produce the same catalog fingerprint. These internal reviews do not replace independent Stage 3 approval.
+
 ## Implemented surfaces
 
 Public Next endpoints:
@@ -65,18 +71,15 @@ Passed before Draft PR creation:
 
 - `pnpm install --frozen-lockfile` — already up to date
 - `BRANCH_NAME=feature/be-youtube-async-extraction-notification pnpm validate:workpack -- --slice youtube-async-extraction-notification` — pass
-- async unit/contract suite — 4 files, 48 tests passed
-- Stage 3 focused API/worker/Quick Import compatibility suite — 4 files, 128 tests passed
-- combined revised contract/API/worker/installer/migration suite — 8 files, 156 tests passed
-- isolated real PostgreSQL + real PostgREST suite — 2 files, 29 tests passed
+- second-revision focused migration/API/i031/runner/worker/installer suite — 6 files, 73 tests passed
+- isolated real PostgreSQL + real PostgREST suite — 2 files, 34 tests passed, including forbidden role-membership and RPC-ACL drift
 - migration static contract — 6 tests passed
-- clean Supabase PostgreSQL 17 migration reset — pass through the YouTube migration and seed; helper owner/ACL exact, `anon/authenticated/service_role=false`, persistent `private.CREATE=false`, runner `SET ROLE=false`
+- clean Supabase PostgreSQL 17.6 migration chain on isolated ports `55320`–`55326` — pass through migration and seed; `pg_graphql` absent; live catalog fingerprint `b3ad2b381c6d1a25fa40c30114d083371f66f3d5a82a828ea621bf8a8222fddf` equals the expected-schema manifest
 - additive security-function contract — 31 YouTube functions classified and valid
 - `pnpm typecheck` — pass
 - targeted ESLint — pass
-- `PLAYWRIGHT_BASE_URL=http://127.0.0.1:3117 pnpm verify:backend` — lint, typecheck, product tests (238 files passed / 12 skipped; 2733 passed / 175 skipped), production build and security Playwright (12 passed) all pass after caching repeated migration reads in one flaky contract test
-- `pnpm test` after CI inventory repair — 561 files passed / 31 skipped; 5879 passed / 420 skipped
-- `pnpm local:reset:demo` on the default local PG17 stack — database recreation reached successfully without deleting or reusing the incompatible legacy PG15 data directory during this revision; existing app port `3100` stayed untouched
+- `PLAYWRIGHT_BASE_URL=http://127.0.0.1:3199 pnpm verify:backend` at `b5619d63` — lint, typecheck, product tests (238 files passed / 12 skipped; 2734 passed / 175 skipped), production build and security Playwright (12 passed) all pass; the existing port `3100` service was untouched
+- `pnpm local:reset:demo` at detached `b5619d63` on isolated `56320`–`56326` — migrations and `seed.sql` completed, but the unpinned current CLI stopped before step 2 because Realtime/REST/Storage health checks remained unhealthy/503; repeated with a shorter project id and got the same infrastructure timeout. The separately pinned clean PG17 chain above is green. Existing app port `3100` stayed untouched.
 
 The isolated DB runner allocates dynamic PostgreSQL/PostgREST ports, uses an ephemeral credential and temporary database, and removes the container/database afterward. The earlier isolated Supabase reset rehearsal used only `homecook_yta_stage2_retry` on ports `65520`–`65526`; the final clean-migration regression used the default local Supabase development ports. Neither path bound, reused or stopped port `3100`, and neither stopped or mutated any `homecook-full-local-*` stack.
 
@@ -84,9 +87,10 @@ The isolated DB runner allocates dynamic PostgreSQL/PostgREST ports, uses an eph
 
 - The original `supabase_db_homecook` volume contained PostgreSQL 15 data and could not be opened by the newly selected 17.6 image.
 - Before the follow-up instruction to preserve user data arrived, `supabase stop --no-backup` had already been run against that default local development project. Its legacy local volume is no longer present. No production, staging or `homecook-full-local-*` volume was targeted.
-- The revision reran `pnpm local:reset:demo` after the legacy-volume collision had been isolated. It did not delete any additional data and did not touch the `3100` app or production/full-local stack. Database recreation completed; `ACCOUNT_SESSION_STALE` remains informational rather than a PR blocker.
-- `verify:security-functions:release` validates the 31 new additive YouTube functions, then stops in the pre-existing local provider inventory. The current first mismatch is `net.http_get(text,jsonb,jsonb,integer)`; earlier clean-PG17 evidence also records `graphql.get_schema_version()` drift. No approved waiver exists.
-- the existing broad PostgreSQL security-function integration is also blocked on PG17 because `public.complete_cooking_session(...)` terminates a backend with signal 11. The isolated server recovers, and the YouTube-specific 29-test PostgreSQL/PostgREST suite remains green.
+- The earlier revision reran `pnpm local:reset:demo` after the legacy-volume collision was isolated. At current head, the same canonical command was rerun in a detached isolated worktree, applied every migration and seed, then failed only its container health gate twice. This current-head automation item is therefore recorded as red/environment-blocked, not green. It did not touch the `3100` app or production/full-local stack; `ACCOUNT_SESSION_STALE` remains informational rather than a PR blocker.
+- `SECURITY_FUNCTION_DATABASE_URL=<isolated-PG17> pnpm verify:security-functions` is green: the clean catalog has 205 classified additive functions, and all 8 anonymous mutation probes (including `complete_cooking_session`) return the expected denial with unchanged checksums. This confirms the old `graphql.get_schema_version()` inventory drift and signal-11 failure were local CLI/image `17.6.1.106` defects; the isolated current image has `pg_graphql` absent and no backend crash.
+- `pnpm verify:security-functions:release` still stops before its linked-remote read-only half because this worktree has no `supabase/.temp/project-ref`/`SECURITY_FUNCTION_LINKED_ROOT`. No approved waiver exists, so the release gate remains a merge blocker even though its local half is now green.
+- `pnpm local:reset:demo` remains a second merge-process blocker at current head because the current unpinned CLI health check times out after a successful migration/seed. No waiver was authored.
 - No secret value, raw JWT, service-role key or credential was copied into this evidence.
 
 ## Pending independent gates
