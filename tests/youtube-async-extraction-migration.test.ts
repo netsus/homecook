@@ -59,6 +59,10 @@ describe("YTASYNC-DB/SEC migration contract", () => {
     expect(sql.match(/set search_path = ''/g)?.length ?? 0).toBeGreaterThanOrEqual(12);
     expect(sql).toContain("grant youtube_extraction_worker to authenticator");
     expect(sql).toContain("grant youtube_extraction_credential_manager to authenticator");
+    expect(sql).toContain("with inherit false, set true granted by %i");
+    expect(sql).toContain("from %i granted by %i");
+    expect(sql).toContain("grant create on schema private to youtube_extraction_worker_rpc_owner");
+    expect(sql).toContain("revoke create on schema private from youtube_extraction_worker_rpc_owner");
     expect(sql).toContain("revoke all on table public.youtube_extraction_jobs from public, anon, authenticated, service_role");
   });
 

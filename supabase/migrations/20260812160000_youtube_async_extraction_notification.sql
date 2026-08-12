@@ -3380,15 +3380,24 @@ begin
 end;
 $function$;
 
--- Supabase migrations run as a non-superuser role. Grant only temporary
--- membership so that role ownership can be assigned, then revoke every edge
--- before commit; the release manifest requires zero owner membership edges.
+-- Supabase migrations run as a non-superuser role. Grant only temporary SET
+-- membership so ownership can be assigned, then remove that grantor-specific
+-- edge. PostgreSQL 16+ may retain its automatic admin-only, non-SET creator
+-- edge; it cannot assume the RPC owner identity.
 do $$
 begin
-  execute format(
-    'grant youtube_extraction_enqueue_rpc_owner, youtube_extraction_worker_rpc_owner, youtube_extraction_credential_manager_rpc_owner to %I',
-    current_user
-  );
+  if current_setting('server_version_num')::integer >= 160000 then
+    execute format(
+      'grant youtube_extraction_enqueue_rpc_owner, youtube_extraction_worker_rpc_owner, youtube_extraction_credential_manager_rpc_owner to %I with inherit false, set true granted by %I',
+      current_user,
+      current_user
+    );
+  else
+    execute format(
+      'grant youtube_extraction_enqueue_rpc_owner, youtube_extraction_worker_rpc_owner, youtube_extraction_credential_manager_rpc_owner to %I',
+      current_user
+    );
+  end if;
 end;
 $$;
 
@@ -3396,6 +3405,10 @@ grant create on schema public
   to youtube_extraction_enqueue_rpc_owner,
      youtube_extraction_worker_rpc_owner,
      youtube_extraction_credential_manager_rpc_owner;
+
+-- PostgreSQL requires the prospective function owner to hold CREATE on the
+-- containing schema while ALTER OWNER runs. Keep this edge transaction-local.
+grant create on schema private to youtube_extraction_worker_rpc_owner;
 
 alter function public.check_youtube_extraction_worker_pre_request()
   owner to youtube_extraction_worker_rpc_owner;
@@ -3612,12 +3625,22 @@ revoke create on schema public
        youtube_extraction_worker_rpc_owner,
        youtube_extraction_credential_manager_rpc_owner;
 
+revoke create on schema private from youtube_extraction_worker_rpc_owner;
+
 do $$
 begin
-  execute format(
-    'revoke youtube_extraction_enqueue_rpc_owner, youtube_extraction_worker_rpc_owner, youtube_extraction_credential_manager_rpc_owner from %I',
-    current_user
-  );
+  if current_setting('server_version_num')::integer >= 160000 then
+    execute format(
+      'revoke youtube_extraction_enqueue_rpc_owner, youtube_extraction_worker_rpc_owner, youtube_extraction_credential_manager_rpc_owner from %I granted by %I',
+      current_user,
+      current_user
+    );
+  else
+    execute format(
+      'revoke youtube_extraction_enqueue_rpc_owner, youtube_extraction_worker_rpc_owner, youtube_extraction_credential_manager_rpc_owner from %I',
+      current_user
+    );
+  end if;
 end;
 $$;
 
