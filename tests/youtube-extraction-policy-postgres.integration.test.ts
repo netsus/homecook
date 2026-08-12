@@ -17,7 +17,13 @@ const expectedSchemaDocument = JSON.parse(readFileSync(
 )) as {
   tables: string[];
   roles: string[];
-  memberships: string[];
+  memberships: Array<{
+    member: string;
+    role: string;
+    admin: boolean;
+    inherit: boolean;
+    set: boolean;
+  }>;
   rpc_signatures: string[];
   catalog_fingerprint: string;
 };
@@ -433,7 +439,19 @@ describe.runIf(enabled).sequential("youtube async extraction PostgreSQL integrat
         ),
         'memberships', (
           select json_agg(
-            member_role.rolname || '->' || granted_role.rolname
+            json_build_object(
+              'member', member_role.rolname,
+              'role', granted_role.rolname,
+              'admin', membership.admin_option,
+              'inherit', coalesce(
+                (pg_catalog.to_jsonb(membership) ->> 'inherit_option')::boolean,
+                false
+              ),
+              'set', coalesce(
+                (pg_catalog.to_jsonb(membership) ->> 'set_option')::boolean,
+                true
+              )
+            )
             order by member_role.rolname, granted_role.rolname
           )
           from pg_catalog.pg_auth_members as membership
@@ -1584,6 +1602,33 @@ describe.runIf(enabled).sequential("youtube async extraction PostgreSQL integrat
       psql(`
         drop function if exists public.youtube_extraction_shadow_rpc();
         drop table if exists public.youtube_extraction_shadow;
+      `);
+    }
+  });
+
+  it("fails readiness closed when a target table moves to an arbitrary owner", () => {
+    enablePolicy();
+    const snapshotDigest = policySnapshotDigest();
+    configureWorkerCredential(snapshotDigest);
+    const originalOwner = psql(`
+      select pg_catalog.pg_get_userbyid(relation.relowner)
+      from pg_catalog.pg_class as relation
+      where relation.oid = 'public.youtube_extraction_jobs'::regclass;
+    `);
+    psql(`
+      create role unrelated_release_owner nologin noinherit;
+      alter table public.youtube_extraction_jobs owner to unrelated_release_owner;
+    `);
+    try {
+      const readiness = runAsJson("authenticated", authenticatedClaims(ownerA), `
+        select public.read_youtube_extraction_enqueue_readiness()::text;
+      `);
+      expect(readiness.ready).toBe(false);
+      expect(readiness.catalog_fingerprint).not.toBe(expectedSchemaDocument.catalog_fingerprint);
+    } finally {
+      psql(`
+        alter table public.youtube_extraction_jobs owner to ${originalOwner};
+        drop role unrelated_release_owner;
       `);
     }
   });

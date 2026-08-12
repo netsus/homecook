@@ -23,6 +23,7 @@ import {
   buildYoutubeExtractionWorkerQueueState,
   ensureAbsolutePath,
   materializeYoutubeExtractionWorkerArtifact,
+  readYoutubeExtractionExpectedSchema,
   sha256File,
   YOUTUBE_EXTRACTION_WORKER_LABEL,
   YOUTUBE_EXTRACTION_WORKER_RELEASE_SCHEMA_IDENTITY,
@@ -182,6 +183,37 @@ describe("YTASYNC-OPS deterministic artifact", () => {
       artifact_sha256: manifestA.artifact_sha256,
       expected_schema_sha256: manifestA.expected_schema_sha256,
     });
+  });
+
+  it("rejects duplicate and incomplete expected-schema authority inventories", () => {
+    const privateDir = createTempDir("yta-expected-schema-invalid-");
+    const schemaPath = join(privateDir, "expected-schema.json");
+    const valid = JSON.parse(readFileSync(
+      join(process.cwd(), "scripts/manifests/youtube-extraction-expected-schema.json"),
+      "utf8",
+    ));
+    const duplicate = JSON.stringify(valid).replace(
+      '"memberships":',
+      '"memberships": [], "memberships":',
+    );
+    writeModeFile(schemaPath, duplicate);
+    expect(() => readYoutubeExtractionExpectedSchema(schemaPath))
+      .toThrow(/duplicate json key/i);
+
+    const incomplete = {
+      ...valid,
+      catalog_fingerprint_components: valid.catalog_fingerprint_components.filter(
+        (component: string) => component !== "owner_role_attributes",
+      ),
+      memberships: [{
+        member: "authenticator",
+        role: "youtube_extraction_worker",
+        admin: false,
+      }],
+    };
+    writeModeFile(schemaPath, JSON.stringify(incomplete));
+    expect(() => readYoutubeExtractionExpectedSchema(schemaPath))
+      .toThrow(/expected schema manifest is invalid/i);
   });
 });
 

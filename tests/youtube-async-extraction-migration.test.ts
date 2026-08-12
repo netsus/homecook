@@ -106,6 +106,10 @@ describe("YTASYNC-DB/SEC migration contract", () => {
     expect(sql).toContain("youtube-extraction-live-catalog-v1");
     for (const component of [
       "role_attributes",
+      "table_owners",
+      "sequence_owners",
+      "schema_owners",
+      "owner_role_attributes",
       "rls_policies",
       "table_privileges",
       "sequence_privileges",
@@ -113,6 +117,8 @@ describe("YTASYNC-DB/SEC migration contract", () => {
     ]) {
       expect(sql, component).toContain(`'${component}'`);
     }
+    expect(sql).toContain("pg_catalog.pg_get_userbyid(relation.relowner)");
+    expect(sql).toContain("pg_catalog.pg_get_userbyid(namespace.nspowner)");
     expect(sql).toContain("v_credential.expires_at <= clock_timestamp() + interval '30 minutes'");
     expect(sql).toContain("read_youtube_extraction_job_projection(uuid)");
     expect(sql).toContain("read_youtube_extraction_session_projection(uuid)");
