@@ -7,7 +7,7 @@
 - original implementation commits: `267356fe`, `0139e987`, `eee52d6e`, `9aaa690c`, `a751209f`, `95c2b370`
 - Stage 3 reviewed head: `95c2b370` — `REVISE`
 - revision RED commits: `918f1430`, `b817bcf9`
-- revision GREEN commits: `789efe37`, `e62405e0`, `7f659d5d`, `72f42143`
+- revision GREEN commits: `789efe37`, `e62405e0`, `7f659d5d`, `72f42143`, `8ef2c379`
 - official tuple: requirements `1.7.31`, screen `1.5.35`, Flow `1.3.33`, DB `1.3.33`, API `1.2.38`
 - migration: `supabase/migrations/20260812160000_youtube_async_extraction_notification.sql`
 - production/staging/remote writes: `0`
@@ -32,6 +32,7 @@ Additional RED→GREEN findings fixed during integration:
 - an options-only policy rotation could leak state between the PostgreSQL and PostgREST test files; every integration test now restores the canonical policy snapshot, and previous-key dual-read/current-write plus stale-app/old-worker fail-closed behavior is covered explicitly.
 - first-head CI `quality` failed because the three new mutation routes and worker RPC adapter were absent from the fail-closed account-session-generation inventory; the route/source classifications and generated account/hybrid inventories were updated, and the exact failing tests plus the full Vitest suite passed locally before the replacement head.
 - replacement-head CI then reproduced a clean PostgreSQL 17 ownership-transfer failure for the new private fence helper. A migration-contract RED now requires the transaction-scoped `private.CREATE` grant/revoke pair; the migration also uses PostgreSQL 16+ grantor-specific, non-inheriting temporary `SET` membership. Clean Supabase reset proves the helper has the exact worker RPC owner while both `private.CREATE` and runner `SET ROLE` remain false after commit.
+- the next fresh security-function inventory exposed that a non-superuser runner could not revoke default function ACLs after transferring ownership. A second RED requires owner-scoped ACL application; every enqueue/worker/credential ACL group now runs under transaction-local `SET ROLE` and immediately resets. Clean catalog evidence has the private helper `anon/authenticated/service_role=false` and no persistent owner capability.
 
 The independent Stage 3 review of `95c2b370` returned ten required findings. New characterization tests first reproduced all ten: the non-dry runner, unused worker-data fences, disconnected release readiness, incomplete HMAC pairs, delivered/seen key mismatch, loose JWT lifetime, service-role read bypass, permit contention, cursor lifetime, and `music.youtube.com` incompatibility. A separate Quick Import RED then proved that raw `{identity,recipe,meta}` i031 output was being stored instead of the existing 14-key draft. The same tests are green at the revision code head.
 
@@ -69,7 +70,7 @@ Passed before Draft PR creation:
 - combined revised contract/API/worker/installer/migration suite — 8 files, 156 tests passed
 - isolated real PostgreSQL + real PostgREST suite — 2 files, 29 tests passed
 - migration static contract — 6 tests passed
-- clean Supabase PostgreSQL 17 migration reset — pass through the YouTube migration and seed; helper owner exact, persistent `private.CREATE=false`, runner `SET ROLE=false`
+- clean Supabase PostgreSQL 17 migration reset — pass through the YouTube migration and seed; helper owner/ACL exact, `anon/authenticated/service_role=false`, persistent `private.CREATE=false`, runner `SET ROLE=false`
 - additive security-function contract — 31 YouTube functions classified and valid
 - `pnpm typecheck` — pass
 - targeted ESLint — pass
