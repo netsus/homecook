@@ -74,6 +74,24 @@ export function createYoutubeExtractionWorkerRpcAdapter(client: RestrictedRpcCli
         ? { permitGeneration: row.permit_generation }
         : null;
     },
+    async requeueWithoutAttempt(input: {
+      jobId: string;
+      workerId: string;
+      leaseGeneration: number;
+      minimumDelaySeconds: number;
+      maximumDelaySeconds: number;
+    }) {
+      return booleanResult(await client.rpc(
+        "requeue_youtube_extraction_job_without_attempt",
+        {
+          job_id: input.jobId,
+          worker_id: input.workerId,
+          lease_generation: input.leaseGeneration,
+          min_delay_seconds: input.minimumDelaySeconds,
+          max_delay_seconds: input.maximumDelaySeconds,
+        },
+      ), "requeue without attempt");
+    },
     async startAttempt(input: {
       jobId: string;
       workerId: string;

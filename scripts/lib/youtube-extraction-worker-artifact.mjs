@@ -1,13 +1,27 @@
 import { createHash } from "node:crypto";
 import {
   chmodSync,
+  copyFileSync,
   existsSync,
+  lstatSync,
   mkdirSync,
+  mkdtempSync,
   readFileSync,
+  readdirSync,
+  renameSync,
+  rmSync,
   statSync,
   writeFileSync,
 } from "node:fs";
-import { dirname, isAbsolute, posix, relative, resolve } from "node:path";
+import {
+  basename,
+  dirname,
+  isAbsolute,
+  join,
+  posix,
+  relative,
+  resolve,
+} from "node:path";
 
 export const YOUTUBE_EXTRACTION_WORKER_LABEL =
   "com.homecook.youtube-extraction-worker";
@@ -23,6 +37,8 @@ export const YOUTUBE_EXTRACTION_WORKER_QUEUE_STATE_SCHEMA =
   "homecook.youtube-extraction-queue-state";
 export const YOUTUBE_EXTRACTION_WORKER_HEALTH_SCHEMA =
   "homecook.youtube-extraction-worker-health";
+export const YOUTUBE_EXTRACTION_EXPECTED_SCHEMA =
+  "homecook.youtube-extraction-expected-schema";
 export const YOUTUBE_EXTRACTION_WORKER_RELEASE_SCHEMA_IDENTITY =
   "youtube-extraction-worker-schema-v1";
 export const YOUTUBE_EXTRACTION_POLICY_SNAPSHOT_SCHEMA_IDENTITY =
@@ -34,16 +50,11 @@ export const DEFAULT_YOUTUBE_EXTRACTION_WORKER_PIPELINE_IDENTITY =
   "9adc7876a02c2da55a92e3a65369bf4e803c78efb9a791717201eedc242c1908";
 
 const DEFAULT_INCLUDED_PATHS = Object.freeze([
-  "lib/server/youtube-async-extraction.ts",
-  "lib/server/youtube-extraction-service.ts",
-  "lib/server/youtube-extraction-worker-rpc.ts",
-  "lib/server/youtube-i031-runtime/bundle/manifest.json",
-  "lib/server/youtube-i031-runtime/bundle/worker.mjs",
-  "scripts/youtube-extraction-worker-artifact.mjs",
-  "scripts/youtube-extraction-worker-mac-production.mjs",
+  "lib/server/youtube-i031-runtime/bundle",
   "scripts/youtube-extraction-worker-runner.mjs",
   "scripts/lib/youtube-extraction-worker-artifact.mjs",
   "scripts/lib/youtube-extraction-worker-ops.mjs",
+  "scripts/lib/youtube-extraction-worker-runtime.mjs",
   "scripts/manifests/youtube-extraction-expected-schema.json",
   "scripts/templates/com.homecook.youtube-extraction-worker.plist.template",
 ]);
@@ -221,23 +232,120 @@ function buildFileManifest(rootDir, includedPaths) {
   const seen = new Set();
   const files = [];
 
+  const addFile = (absolutePath) => {
+    const fileStat = lstatSync(absolutePath);
+    if (fileStat.isSymbolicLink() || !fileStat.isFile()) {
+      throw new Error(`artifact path must be a regular file: ${absolutePath}`);
+    }
+    const normalizedPath = normalizeRepoRelativePath(rootDir, absolutePath);
+    if (seen.has(normalizedPath)) return;
+    seen.add(normalizedPath);
+    files.push({ path: normalizedPath, sha256: sha256File(absolutePath) });
+  };
+
+  const addPath = (absolutePath) => {
+    const pathStat = lstatSync(absolutePath);
+    if (pathStat.isSymbolicLink()) {
+      throw new Error(`artifact path must not be a symbolic link: ${absolutePath}`);
+    }
+    if (pathStat.isFile()) {
+      addFile(absolutePath);
+      return;
+    }
+    if (!pathStat.isDirectory()) {
+      throw new Error(`artifact path is unsupported: ${absolutePath}`);
+    }
+    for (const entry of readdirSync(absolutePath, { withFileTypes: true })) {
+      addPath(join(absolutePath, entry.name));
+    }
+  };
+
   for (const relativePath of includedPaths) {
     const normalizedRelativePath = posix.normalize(
       ensureNonEmptyString(relativePath, "includedPath").split("\\").join("/"),
     );
-    if (seen.has(normalizedRelativePath)) continue;
-    seen.add(normalizedRelativePath);
-
     const absolutePath = resolve(rootDir, normalizedRelativePath);
-    ensureRegularFile(absolutePath, `artifact file ${normalizedRelativePath}`);
-
-    files.push({
-      path: normalizeRepoRelativePath(rootDir, absolutePath),
-      sha256: sha256File(absolutePath),
-    });
+    if (!existsSync(absolutePath)) {
+      throw new Error(`artifact path does not exist: ${normalizedRelativePath}`);
+    }
+    addPath(absolutePath);
   }
 
   return files.sort((left, right) => left.path.localeCompare(right.path));
+}
+
+function makeArtifactReadOnly(directory) {
+  for (const entry of readdirSync(directory, { withFileTypes: true })) {
+    const target = join(directory, entry.name);
+    if (entry.isDirectory()) {
+      makeArtifactReadOnly(target);
+      chmodSync(target, 0o555);
+    } else {
+      chmodSync(target, target.endsWith(".mjs") ? 0o555 : 0o444);
+    }
+  }
+  chmodSync(directory, 0o555);
+}
+
+/**
+ * Materializes the exact manifest bytes into a standalone, read-only directory.
+ * @param {{
+ *   rootDir?: string,
+ *   outputDir: string,
+ *   releaseSha: string,
+ *   schemaIdentity?: string,
+ *   allowedSnapshotDigest: string,
+ *   policyVersion?: number,
+ * }} options
+ */
+export function materializeYoutubeExtractionWorkerArtifact({
+  rootDir = process.cwd(),
+  outputDir,
+  releaseSha,
+  schemaIdentity = YOUTUBE_EXTRACTION_WORKER_RELEASE_SCHEMA_IDENTITY,
+  allowedSnapshotDigest,
+  policyVersion = DEFAULT_YOUTUBE_EXTRACTION_WORKER_POLICY_VERSION,
+} = {}) {
+  const normalizedRoot = ensureAbsolutePath(rootDir, "rootDir");
+  const normalizedOutput = ensureAbsolutePath(outputDir, "outputDir");
+  if (existsSync(normalizedOutput)) {
+    throw new Error("outputDir must not already exist");
+  }
+  mkdirSync(dirname(normalizedOutput), { recursive: true, mode: 0o700 });
+  const stagingRoot = mkdtempSync(join(
+    dirname(normalizedOutput),
+    `.${basename(normalizedOutput)}.staging-`,
+  ));
+  try {
+    const manifest = buildYoutubeExtractionWorkerArtifactManifest({
+      rootDir: normalizedRoot,
+      releaseSha,
+      schemaIdentity,
+      allowedSnapshotDigest,
+      policyVersion,
+    });
+    for (const file of manifest.files) {
+      const destination = resolve(stagingRoot, file.path);
+      mkdirSync(dirname(destination), { recursive: true, mode: 0o700 });
+      copyFileSync(resolve(normalizedRoot, file.path), destination);
+    }
+    const manifestPath = resolve(stagingRoot, "artifact.json");
+    writeFileSync(manifestPath, `${stableStringify(manifest)}\n`, {
+      encoding: "utf8",
+      mode: 0o444,
+    });
+    makeArtifactReadOnly(stagingRoot);
+    renameSync(stagingRoot, normalizedOutput);
+    return {
+      root_dir: normalizedOutput,
+      manifest_path: resolve(normalizedOutput, "artifact.json"),
+      entrypoint_path: resolve(normalizedOutput, manifest.entrypoint_relative_path),
+      manifest,
+    };
+  } catch (error) {
+    rmSync(stagingRoot, { recursive: true, force: true });
+    throw error;
+  }
 }
 
 /**
@@ -454,6 +562,51 @@ export function readYoutubeExtractionWorkerArtifact(path) {
   const value = readJsonFile(path, "worker artifact manifest");
   if (value.schema !== YOUTUBE_EXTRACTION_WORKER_ARTIFACT_SCHEMA) {
     throw new Error("worker artifact manifest schema is invalid.");
+  }
+  return value;
+}
+
+export function verifyYoutubeExtractionWorkerArtifact(path) {
+  const normalizedPath = ensureRegularFile(path, "worker artifact manifest");
+  const value = readYoutubeExtractionWorkerArtifact(normalizedPath);
+  const { artifact_sha256: artifactSha, ...baseManifest } = value;
+  if (artifactSha !== sha256Text(stableStringify(baseManifest))) {
+    throw new Error("worker artifact manifest digest is invalid.");
+  }
+  if (!Array.isArray(value.files) || value.files.length === 0) {
+    throw new Error("worker artifact file inventory is invalid.");
+  }
+  const artifactRoot = dirname(normalizedPath);
+  for (const file of value.files) {
+    if (
+      !file
+      || typeof file.path !== "string"
+      || file.path.startsWith("/")
+      || file.path.split("/").includes("..")
+      || !/^[a-f0-9]{64}$/u.test(file.sha256 ?? "")
+    ) {
+      throw new Error("worker artifact file inventory is invalid.");
+    }
+    const target = resolve(artifactRoot, file.path);
+    ensureRegularFile(target, `artifact file ${file.path}`);
+    if (sha256File(target) !== file.sha256) {
+      throw new Error(`worker artifact file drift: ${file.path}`);
+    }
+  }
+  return value;
+}
+
+export function readYoutubeExtractionExpectedSchema(path) {
+  const value = readJsonFile(path, "expected schema manifest");
+  if (
+    value.schema !== YOUTUBE_EXTRACTION_EXPECTED_SCHEMA
+    || value.version !== 1
+    || typeof value.schema_identity !== "string"
+    || !Array.isArray(value.tables)
+    || !Array.isArray(value.roles)
+    || !Array.isArray(value.rpc_signatures)
+  ) {
+    throw new Error("expected schema manifest is invalid.");
   }
   return value;
 }

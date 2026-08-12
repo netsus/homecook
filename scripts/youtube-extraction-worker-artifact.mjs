@@ -7,6 +7,7 @@ import {
   ensureNonEmptyString,
   ensureReleaseSha,
   ensureSnapshotDigest,
+  materializeYoutubeExtractionWorkerArtifact,
   writeJsonFile,
 } from "./lib/youtube-extraction-worker-artifact.mjs";
 
@@ -50,6 +51,9 @@ function parseArgs(argv) {
       case "--output":
         options.output = ensureAbsolutePath(value, "output");
         break;
+      case "--artifact-dir":
+        options.artifactDir = ensureAbsolutePath(value, "artifactDir");
+        break;
       case "--app-descriptor-output":
         options.appDescriptorOutput = ensureAbsolutePath(value, "appDescriptorOutput");
         break;
@@ -70,17 +74,28 @@ function main() {
   const options = parseArgs(process.argv.slice(2));
   if (options.command !== "build") {
     throw new Error(
-      "Usage: node scripts/youtube-extraction-worker-artifact.mjs build --release-sha <40-hex> --allowed-snapshot-digest <64-hex> [--schema-identity <id>] [--output <absolute .json path>] [--app-descriptor-output <absolute .json path>] [--json]",
+      "Usage: node scripts/youtube-extraction-worker-artifact.mjs build --release-sha <40-hex> --allowed-snapshot-digest <64-hex> [--schema-identity <id>] [--artifact-dir <absolute new dir>] [--output <absolute .json path>] [--app-descriptor-output <absolute .json path>] [--json]",
     );
   }
 
-  const manifest = buildYoutubeExtractionWorkerArtifactManifest({
-    rootDir: options.rootDir,
-    releaseSha: options.releaseSha,
-    schemaIdentity: options.schemaIdentity,
-    allowedSnapshotDigest: options.allowedSnapshotDigest,
-    policyVersion: options.policyVersion,
-  });
+  const materialized = options.artifactDir
+    ? materializeYoutubeExtractionWorkerArtifact({
+      rootDir: options.rootDir,
+      outputDir: options.artifactDir,
+      releaseSha: options.releaseSha,
+      schemaIdentity: options.schemaIdentity,
+      allowedSnapshotDigest: options.allowedSnapshotDigest,
+      policyVersion: options.policyVersion,
+    })
+    : null;
+  const manifest = materialized?.manifest
+    ?? buildYoutubeExtractionWorkerArtifactManifest({
+      rootDir: options.rootDir,
+      releaseSha: options.releaseSha,
+      schemaIdentity: options.schemaIdentity,
+      allowedSnapshotDigest: options.allowedSnapshotDigest,
+      policyVersion: options.policyVersion,
+    });
   const appDescriptor = buildYoutubeExtractionAppDescriptor({
     releaseSha: manifest.release_sha,
     schemaIdentity: manifest.schema_identity,
@@ -101,6 +116,8 @@ function main() {
     app_descriptor: appDescriptor,
     manifest_output: options.output ?? null,
     app_descriptor_output: options.appDescriptorOutput ?? null,
+    artifact_dir: materialized?.root_dir ?? null,
+    artifact_entrypoint: materialized?.entrypoint_path ?? null,
   });
 }
 

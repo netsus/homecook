@@ -302,7 +302,16 @@ describe("YTASYNC-API route handlers", () => {
       listJobs: vi.fn(async () => []),
       markDelivered: vi.fn(async () => 0),
       markSeen: vi.fn(async () => 0),
-      fingerprintKeys: vi.fn(() => ({ current: "k".repeat(32), previous: null })),
+      enqueueReadiness: vi.fn(async () => ({
+        expectedPolicyVersion: YOUTUBE_ASYNC_POLICY.policyVersion,
+        expectedPolicySnapshotDigest: YOUTUBE_ASYNC_POLICY.snapshotDigest,
+        currentFingerprintKeyVersion: "1",
+        previousFingerprintKeyVersion: null,
+      })),
+      fingerprintKeys: vi.fn(() => ({
+        current: { version: "1", secret: "k".repeat(32) },
+        previous: null,
+      })),
       cursorSecret: vi.fn(() => "cursor-secret".repeat(4)),
       asyncEnabled: vi.fn(() => true),
       now: vi.fn(() => new Date("2026-08-12T01:00:00.000Z")),

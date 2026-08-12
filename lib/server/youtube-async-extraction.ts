@@ -1,5 +1,7 @@
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 
+import { normalizeYoutubeUrl } from "@/lib/youtube-url";
+
 type RuntimeEnv = Readonly<Record<string, string | undefined>>;
 
 export const YOUTUBE_ASYNC_POLICY_OPTIONS = Object.freeze({
@@ -26,7 +28,6 @@ const POLICY_PIPELINE_IDENTITY =
   "9adc7876a02c2da55a92e3a65369bf4e803c78efb9a791717201eedc242c1908";
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
-const VIDEO_ID_PATTERN = /^[A-Za-z0-9_-]{6,20}$/u;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
@@ -80,27 +81,7 @@ export function isYoutubeAsyncExtractionEnabled(env: RuntimeEnv = process.env) {
 }
 
 function parseYoutubeVideoId(rawValue: unknown) {
-  if (typeof rawValue !== "string" || !rawValue.trim()) {
-    return null;
-  }
-  let url: URL;
-  try {
-    url = new URL(rawValue.trim());
-  } catch {
-    return null;
-  }
-  const host = url.hostname.toLowerCase().replace(/^www\./u, "");
-  let videoId: string | null = null;
-  if (host === "youtube.com" || host === "m.youtube.com") {
-    if (url.pathname === "/watch") {
-      videoId = url.searchParams.get("v");
-    } else if (url.pathname.startsWith("/shorts/") || url.pathname.startsWith("/embed/")) {
-      videoId = url.pathname.split("/").filter(Boolean)[1] ?? null;
-    }
-  } else if (host === "youtu.be") {
-    videoId = url.pathname.split("/").filter(Boolean)[0] ?? null;
-  }
-  return videoId && VIDEO_ID_PATTERN.test(videoId) ? videoId : null;
+  return normalizeYoutubeUrl(rawValue)?.videoId ?? null;
 }
 
 export type YoutubeExtractionJobRequest =
@@ -289,11 +270,15 @@ interface CursorInput {
   view: "unseen-completed" | "archive";
   completedAt: string;
   jobId: string;
+  now?: Date;
 }
 
 export function encodeYoutubeExtractionCursor(input: CursorInput) {
+  const issuedAt = Math.floor((input.now ?? new Date()).getTime() / 1000);
   const payload = Buffer.from(canonicalJson({
     completed_at: input.completedAt,
+    exp: issuedAt + 30 * 24 * 60 * 60,
+    iat: issuedAt,
     job_id: input.jobId,
     user_id: input.userId,
     version: 1,
@@ -308,11 +293,13 @@ export function decodeYoutubeExtractionCursor({
   secret,
   userId,
   view,
+  now = new Date(),
 }: {
   cursor: string;
   secret: string;
   userId: string;
   view: "unseen-completed" | "archive";
+  now?: Date;
 }) {
   try {
     const [payload, signature, extra] = cursor.split(".");
@@ -330,6 +317,14 @@ export function decodeYoutubeExtractionCursor({
       || decoded.version !== 1
       || decoded.user_id !== userId
       || decoded.view !== view
+      || typeof decoded.iat !== "number"
+      || !Number.isInteger(decoded.iat)
+      || typeof decoded.exp !== "number"
+      || !Number.isInteger(decoded.exp)
+      || decoded.exp <= decoded.iat
+      || decoded.exp - decoded.iat !== 30 * 24 * 60 * 60
+      || decoded.iat > Math.floor(now.getTime() / 1000)
+      || decoded.exp <= Math.floor(now.getTime() / 1000)
       || typeof decoded.completed_at !== "string"
       || typeof decoded.job_id !== "string"
       || !UUID_PATTERN.test(decoded.job_id)
@@ -357,6 +352,13 @@ interface YoutubeExtractionWorkerAdapter {
     allowedSnapshotDigest: string;
   }): Promise<ClaimedYoutubeExtractionJob | null>;
   claimPermit(input: { workerId: string }): Promise<{ permitGeneration: number } | null>;
+  requeueWithoutAttempt?(input: {
+    jobId: string;
+    workerId: string;
+    leaseGeneration: number;
+    minimumDelaySeconds: number;
+    maximumDelaySeconds: number;
+  }): Promise<boolean>;
   startAttempt(input: {
     jobId: string;
     workerId: string;
@@ -423,6 +425,13 @@ export function createYoutubeExtractionWorker({
       }
       const permit = await adapter.claimPermit({ workerId });
       if (!permit) {
+        await adapter.requeueWithoutAttempt?.({
+          jobId: job.id,
+          workerId,
+          leaseGeneration: job.leaseGeneration,
+          minimumDelaySeconds: 1,
+          maximumDelaySeconds: 4,
+        });
         return "permit-unavailable" as const;
       }
       try {

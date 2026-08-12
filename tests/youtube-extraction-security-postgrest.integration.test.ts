@@ -13,6 +13,8 @@ const database = process.env.HOMECOOK_YTA_PGDATABASE ?? "";
 const workerToken = process.env.HOMECOOK_YTA_WORKER_JWT ?? "";
 const managerToken = process.env.HOMECOOK_YTA_MANAGER_JWT ?? "";
 const invalidWorkerToken = process.env.HOMECOOK_YTA_INVALID_WORKER_JWT ?? "";
+const ownerAToken = process.env.HOMECOOK_YTA_OWNER_A_JWT ?? "";
+const ownerBToken = process.env.HOMECOOK_YTA_OWNER_B_JWT ?? "";
 
 function psql(sql: string) {
   const result = spawnSync(
@@ -157,6 +159,51 @@ describe.runIf(enabled).sequential("youtube async extraction PostgREST integrati
     expect(response.ok).toBe(false);
     expect([401, 403]).toContain(response.status);
     expect(JSON.stringify(payload)).toMatch(/42501|permission|unauthorized/i);
+  });
+
+  it("uses the authenticated PostgREST owner boundary for job reads", async () => {
+    psql(`
+      insert into public.youtube_extraction_jobs (
+        id, user_id, youtube_video_id, request_fingerprint,
+        request_fingerprint_key_version, release_policy_key, policy_version,
+        policy_snapshot_digest, extractor_mode, pipeline_identity,
+        result_affecting_options, submission_mode
+      ) select
+        '88000000-0000-4000-8000-000000000001'::uuid,
+        '70000000-0000-4000-8000-000000000001'::uuid,
+        'abc123DEF45', repeat('d', 64), fingerprint_key_version,
+        policy_key, policy_version,
+        private.youtube_extraction_policy_snapshot_digest(
+          extractor_mode, pipeline_identity, result_affecting_options, policy_version
+        ), extractor_mode, pipeline_identity, result_affecting_options,
+        'background_notify'
+      from private.youtube_extraction_current_policy where policy_key = 'primary';
+    `);
+    const own = await postgrest(
+      "POST",
+      "/rpc/read_youtube_extraction_job_projection",
+      ownerAToken,
+      { job_id: "88000000-0000-4000-8000-000000000001" },
+    );
+    const other = await postgrest(
+      "POST",
+      "/rpc/read_youtube_extraction_job_projection",
+      ownerBToken,
+      { job_id: "88000000-0000-4000-8000-000000000001" },
+    );
+    const worker = await postgrest(
+      "POST",
+      "/rpc/read_youtube_extraction_job_projection",
+      workerToken,
+      { job_id: "88000000-0000-4000-8000-000000000001" },
+    );
+
+    expect(own.response.status).toBe(200);
+    expect(own.payload).toMatchObject({ id: "88000000-0000-4000-8000-000000000001" });
+    expect(other.response.status).toBe(200);
+    expect(other.payload).toBeNull();
+    expect(worker.response.ok).toBe(false);
+    expect([401, 403]).toContain(worker.response.status);
   });
 
   it("rejects a worker JWT whose pre-request scope no longer matches the credential gate", async () => {

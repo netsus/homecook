@@ -144,7 +144,95 @@ describe("YTASYNC-WORKER standalone runner", () => {
     shutdown.abort(new Error("SIGTERM"));
 
     await expect(loop).resolves.toBe("stopped");
-    expect(receivedSignal?.aborted).toBe(true);
+    expect((receivedSignal as AbortSignal | null)?.aborted).toBe(true);
     expect(runOnce).toHaveBeenCalledTimes(1);
+  });
+
+  it("fenced-requeues without starting an attempt when the permit is contended", async () => {
+    const digest = "b".repeat(64);
+    const rpc = vi.fn(async (name: string) => ({
+      data: name === "claim_youtube_extraction_job"
+        ? {
+            job_id: "22222222-2222-4222-8222-222222222222",
+            youtube_video_id: "abc123DEF45",
+            lease_generation: 3,
+            policy_snapshot_digest: digest,
+            result_affecting_options: {},
+          }
+        : name === "requeue_youtube_extraction_job_without_attempt"
+          ? { requeued: true }
+          : null,
+      error: null,
+    }));
+    const runtime = createYoutubeExtractionWorkerRuntime({
+      workerId: "worker-2",
+      allowedSnapshotDigest: digest,
+      rpc,
+      extractor: { extract: vi.fn() },
+    });
+
+    await expect(runtime.runOnce()).resolves.toBe("permit-unavailable");
+    expect(rpc).toHaveBeenCalledWith(
+      "requeue_youtube_extraction_job_without_attempt",
+      {
+        job_id: "22222222-2222-4222-8222-222222222222",
+        worker_id: "worker-2",
+        lease_generation: 3,
+        min_delay_seconds: 2,
+        max_delay_seconds: 8,
+      },
+    );
+    expect(rpc).not.toHaveBeenCalledWith(
+      "start_youtube_extraction_attempt",
+      expect.anything(),
+    );
+  });
+
+  it("performs zero persistence after a stale lease generation loses heartbeat", async () => {
+    const digest = "c".repeat(64);
+    const rpc = vi.fn(async (name: string) => ({
+      data: name === "claim_youtube_extraction_job"
+        ? {
+            job_id: "33333333-3333-4333-8333-333333333333",
+            youtube_video_id: "abc123DEF45",
+            lease_generation: 8,
+            policy_snapshot_digest: digest,
+            result_affecting_options: {},
+          }
+        : name === "claim_youtube_extractor_permit"
+          ? { permit_generation: 11 }
+          : name === "start_youtube_extraction_attempt"
+            ? { applied: true }
+            : name === "heartbeat_youtube_extraction_job"
+              ? { updated: false }
+              : name === "heartbeat_youtube_extractor_permit"
+                ? { updated: true }
+                : name === "release_youtube_extractor_permit"
+                  ? { released: false }
+                  : null,
+      error: null,
+    }));
+    const extract = vi.fn();
+    const runtime = createYoutubeExtractionWorkerRuntime({
+      workerId: "worker-stale",
+      allowedSnapshotDigest: digest,
+      rpc,
+      extractor: { extract },
+    });
+
+    await expect(runtime.runOnce()).resolves.toBe("stale-fence");
+    expect(extract).not.toHaveBeenCalled();
+    expect(rpc).not.toHaveBeenCalledWith(
+      "resolve_youtube_extraction_job_draft",
+      expect.anything(),
+    );
+    expect(rpc).not.toHaveBeenCalledWith(
+      "finalize_youtube_extraction_job",
+      expect.anything(),
+    );
+    expect(rpc).not.toHaveBeenCalledWith(
+      "fail_or_retry_youtube_extraction_job",
+      expect.anything(),
+    );
   });
 });

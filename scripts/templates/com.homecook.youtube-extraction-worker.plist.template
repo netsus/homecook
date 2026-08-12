@@ -21,6 +21,12 @@
     <string>__MANIFEST_PATH__</string>
     <string>--credential</string>
     <string>__CREDENTIAL_PATH__</string>
+    <string>--app-descriptor</string>
+    <string>__APP_DESCRIPTOR_PATH__</string>
+    <string>--policy</string>
+    <string>__CURRENT_POLICY_PATH__</string>
+    <string>--expected-schema</string>
+    <string>__EXPECTED_SCHEMA_PATH__</string>
   </array>
   <key>ProcessType</key>
   <string>Background</string>

@@ -77,6 +77,15 @@ describe("YTASYNC-DB/SEC migration contract", () => {
     expect(sql).toContain("youtube_extraction_job_fence_is_active");
     expect(sql).toContain("greatest(1, min_delay_seconds)");
     expect(sql).toContain("least(30, max_delay_seconds)");
+    for (const functionName of [
+      "resolve_youtube_extraction_worker_methods",
+      "access_youtube_extraction_worker_cache",
+      "record_youtube_extraction_worker_event",
+      "reserve_youtube_extraction_worker_quota",
+    ]) {
+      const functionBody = sql.split(`function public.${functionName}`)[1]?.split("$function$;")[0] ?? "";
+      expect(functionBody, `${functionName} must hold the job fence row lock`).toContain("for update");
+    }
   });
 
   it("uses auth.uid owner reads and returns exact delivered/seen count keys", () => {

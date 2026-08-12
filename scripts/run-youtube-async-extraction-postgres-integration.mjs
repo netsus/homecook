@@ -172,6 +172,80 @@ function bootstrapSql() {
       social_id text not null
     );
 
+    create table public.ingredients (
+      id uuid primary key default gen_random_uuid(),
+      standard_name varchar(100) not null unique,
+      category varchar(50) not null,
+      default_unit varchar(20)
+    );
+    create table public.ingredient_synonyms (
+      id uuid primary key default gen_random_uuid(),
+      ingredient_id uuid not null references public.ingredients(id) on delete cascade,
+      synonym varchar(100) not null,
+      unique (ingredient_id, synonym)
+    );
+    create table public.cooking_methods (
+      id uuid primary key default gen_random_uuid(),
+      code varchar(20) not null unique,
+      label varchar(20) not null,
+      color_key varchar(20) not null default 'unassigned',
+      is_system boolean not null default true,
+      display_order integer not null default 0
+    );
+    alter table public.ingredients enable row level security;
+    alter table public.ingredient_synonyms enable row level security;
+    alter table public.cooking_methods enable row level security;
+
+    create table public.youtube_transcript_cache (
+      id uuid primary key default gen_random_uuid(), youtube_video_id varchar(20) not null,
+      language text not null, source_provider text not null, source_kind text not null,
+      transcript_text text not null, segments_json jsonb not null default '[]'::jsonb,
+      expires_at timestamptz not null, created_at timestamptz not null default now(),
+      last_used_at timestamptz not null default now(),
+      unique (youtube_video_id, language, source_provider)
+    );
+    create table public.youtube_transcript_fetch_events (
+      id uuid primary key default gen_random_uuid(), user_id uuid references public.users(id),
+      youtube_video_id varchar(20) not null, provider text not null,
+      cache_hit boolean not null default false, status text not null, reason text,
+      estimated_cost_microusd integer not null default 0, created_at timestamptz not null default now()
+    );
+    create table public.youtube_llm_extraction_cache (
+      id uuid primary key default gen_random_uuid(), youtube_video_id varchar(20) not null,
+      source_hash text not null, schema_version text not null, model text not null,
+      source_kinds text[] not null default '{}', result_json jsonb not null,
+      expires_at timestamptz not null, created_at timestamptz not null default now(),
+      last_used_at timestamptz not null default now(),
+      unique (youtube_video_id, source_hash, schema_version, model)
+    );
+    create table public.youtube_llm_extraction_events (
+      id uuid primary key default gen_random_uuid(), user_id uuid references public.users(id),
+      youtube_video_id varchar(20) not null, provider text not null, model text,
+      cache_hit boolean not null default false, status text not null, reason text,
+      input_tokens integer not null default 0, output_tokens integer not null default 0,
+      estimated_cost_microusd integer not null default 0, created_at timestamptz not null default now()
+    );
+    create table public.youtube_visual_extraction_cache (
+      id uuid primary key default gen_random_uuid(), youtube_video_id varchar(20) not null,
+      provider text not null, schema_version text not null, visual_request_hash text not null,
+      result_json jsonb not null, expires_at timestamptz not null,
+      created_at timestamptz not null default now(), last_used_at timestamptz not null default now(),
+      unique (youtube_video_id, provider, schema_version, visual_request_hash)
+    );
+    create table public.youtube_visual_extraction_events (
+      id uuid primary key default gen_random_uuid(), user_id uuid references public.users(id),
+      youtube_video_id varchar(20) not null, provider text not null, model text,
+      cache_hit boolean not null default false, event_type text not null, status text not null,
+      reason text, input_tokens integer not null default 0, output_tokens integer not null default 0,
+      estimated_cost_microusd integer not null default 0, created_at timestamptz not null default now()
+    );
+    alter table public.youtube_transcript_cache enable row level security;
+    alter table public.youtube_transcript_fetch_events enable row level security;
+    alter table public.youtube_llm_extraction_cache enable row level security;
+    alter table public.youtube_llm_extraction_events enable row level security;
+    alter table public.youtube_visual_extraction_cache enable row level security;
+    alter table public.youtube_visual_extraction_events enable row level security;
+
     create table public.recipes (
       id uuid primary key default gen_random_uuid(),
       created_by uuid references public.users(id) on delete set null,
@@ -374,6 +448,20 @@ if (!postgresBin) {
       scope: "youtube-extraction-credential-manager",
       iss: "https://worker.mumeok.kr",
       aud: "youtube-extraction",
+      exp: nowSeconds + 240,
+    });
+    const ownerAToken = signJwt({
+      role: "authenticated",
+      sub: "70000000-0000-4000-8000-000000000001",
+      iss: "https://auth.local",
+      aud: "authenticated",
+      exp: nowSeconds + 3600,
+    });
+    const ownerBToken = signJwt({
+      role: "authenticated",
+      sub: "70000000-0000-4000-8000-000000000002",
+      iss: "https://auth.local",
+      aud: "authenticated",
       exp: nowSeconds + 3600,
     });
 
@@ -440,6 +528,8 @@ if (!postgresBin) {
         HOMECOOK_YTA_WORKER_JWT: workerToken,
         HOMECOOK_YTA_INVALID_WORKER_JWT: invalidWorkerToken,
         HOMECOOK_YTA_MANAGER_JWT: managerToken,
+        HOMECOOK_YTA_OWNER_A_JWT: ownerAToken,
+        HOMECOOK_YTA_OWNER_B_JWT: ownerBToken,
       },
     });
     process.exitCode = test.status ?? 1;

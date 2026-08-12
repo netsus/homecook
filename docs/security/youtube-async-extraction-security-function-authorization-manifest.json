@@ -33,6 +33,16 @@
       "safe_search_path": ["pg_catalog", "pg_temp"]
     },
     {
+      "signature": "private.youtube_extraction_job_fence_is_active(uuid, text, bigint)",
+      "control_class": "application-controlled",
+      "effect": "read-only",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "owner": "youtube_extraction_worker_rpc_owner",
+      "security_mode": "invoker",
+      "safe_search_path": ["pg_catalog", "pg_temp"]
+    },
+    {
       "signature": "private.youtube_extraction_policy_options_valid(jsonb)",
       "control_class": "application-controlled",
       "effect": "read-only",
@@ -48,6 +58,16 @@
       "exposure": "service-internal",
       "allowed_principals": [],
       "security_mode": "invoker",
+      "safe_search_path": ["pg_catalog", "pg_temp"]
+    },
+    {
+      "signature": "public.access_youtube_extraction_worker_cache(uuid, text, bigint, text, jsonb)",
+      "control_class": "application-controlled",
+      "effect": "mutation",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "owner": "youtube_extraction_worker_rpc_owner",
+      "security_mode": "definer",
       "safe_search_path": ["pg_catalog", "pg_temp"]
     },
     {
@@ -131,12 +151,12 @@
       "safe_search_path": ["pg_catalog", "pg_temp"]
     },
     {
-      "signature": "public.list_youtube_extraction_job_projections(uuid, text, timestamp with time zone, timestamp with time zone, uuid, integer)",
+      "signature": "public.list_youtube_extraction_job_projections(text, timestamp with time zone, timestamp with time zone, uuid, integer)",
       "control_class": "application-controlled",
       "effect": "read-only",
-      "exposure": "service-internal",
-      "allowed_principals": ["service_role"],
-      "owner": "youtube_extraction_worker_rpc_owner",
+      "exposure": "authenticated-self",
+      "allowed_principals": ["authenticated"],
+      "owner": "youtube_extraction_enqueue_rpc_owner",
       "security_mode": "definer",
       "safe_search_path": ["pg_catalog", "pg_temp"]
     },
@@ -161,27 +181,77 @@
       "safe_search_path": ["pg_catalog", "pg_temp"]
     },
     {
-      "signature": "public.read_youtube_extraction_job_projection(uuid, uuid)",
+      "signature": "public.read_youtube_extraction_enqueue_readiness()",
+      "control_class": "application-controlled",
+      "effect": "read-only",
+      "exposure": "authenticated-self",
+      "allowed_principals": ["authenticated"],
+      "owner": "youtube_extraction_enqueue_rpc_owner",
+      "security_mode": "definer",
+      "safe_search_path": ["pg_catalog", "pg_temp"]
+    },
+    {
+      "signature": "public.read_youtube_extraction_job_projection(uuid)",
+      "control_class": "application-controlled",
+      "effect": "read-only",
+      "exposure": "authenticated-self",
+      "allowed_principals": ["authenticated"],
+      "owner": "youtube_extraction_enqueue_rpc_owner",
+      "security_mode": "definer",
+      "safe_search_path": ["pg_catalog", "pg_temp"]
+    },
+    {
+      "signature": "public.read_youtube_extraction_session_projection(uuid)",
+      "control_class": "application-controlled",
+      "effect": "read-only",
+      "exposure": "authenticated-self",
+      "allowed_principals": ["authenticated"],
+      "owner": "youtube_extraction_enqueue_rpc_owner",
+      "security_mode": "definer",
+      "safe_search_path": ["pg_catalog", "pg_temp"]
+    },
+    {
+      "signature": "public.read_youtube_extraction_worker_catalog(uuid, text, bigint)",
       "control_class": "application-controlled",
       "effect": "read-only",
       "exposure": "service-internal",
-      "allowed_principals": ["service_role"],
+      "allowed_principals": [],
       "owner": "youtube_extraction_worker_rpc_owner",
       "security_mode": "definer",
       "safe_search_path": ["pg_catalog", "pg_temp"]
     },
     {
-      "signature": "public.read_youtube_extraction_session_projection(uuid, uuid)",
+      "signature": "public.record_youtube_extraction_worker_event(uuid, text, bigint, text, jsonb)",
       "control_class": "application-controlled",
-      "effect": "read-only",
+      "effect": "mutation",
       "exposure": "service-internal",
-      "allowed_principals": ["service_role"],
+      "allowed_principals": [],
       "owner": "youtube_extraction_worker_rpc_owner",
       "security_mode": "definer",
       "safe_search_path": ["pg_catalog", "pg_temp"]
     },
     {
       "signature": "public.release_youtube_extractor_permit(text, bigint)",
+      "control_class": "application-controlled",
+      "effect": "mutation",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "owner": "youtube_extraction_worker_rpc_owner",
+      "security_mode": "definer",
+      "safe_search_path": ["pg_catalog", "pg_temp"]
+    },
+    {
+      "signature": "public.requeue_youtube_extraction_job_without_attempt(uuid, text, bigint, integer, integer)",
+      "control_class": "application-controlled",
+      "effect": "mutation",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "owner": "youtube_extraction_worker_rpc_owner",
+      "security_mode": "definer",
+      "safe_search_path": ["pg_catalog", "pg_temp"]
+    },
+    {
+      "signature": "public.reserve_youtube_extraction_worker_quota(uuid, text, bigint, text, integer)",
       "control_class": "application-controlled",
       "effect": "mutation",
       "exposure": "service-internal",
@@ -201,6 +271,16 @@
       "safe_search_path": ["pg_catalog", "pg_temp"]
     },
     {
+      "signature": "public.resolve_youtube_extraction_worker_methods(uuid, text, bigint, text[])",
+      "control_class": "application-controlled",
+      "effect": "mutation",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "owner": "youtube_extraction_worker_rpc_owner",
+      "security_mode": "definer",
+      "safe_search_path": ["pg_catalog", "pg_temp"]
+    },
+    {
       "signature": "public.rotate_youtube_extraction_worker_credential(bigint, bigint, text, timestamp with time zone, text, text, text)",
       "control_class": "application-controlled",
       "effect": "mutation",
@@ -212,6 +292,16 @@
     },
     {
       "signature": "public.start_youtube_extraction_attempt(uuid, text, bigint, bigint)",
+      "control_class": "application-controlled",
+      "effect": "mutation",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "owner": "youtube_extraction_worker_rpc_owner",
+      "security_mode": "definer",
+      "safe_search_path": ["pg_catalog", "pg_temp"]
+    },
+    {
+      "signature": "public.update_youtube_extraction_job_title(uuid, text, bigint, text)",
       "control_class": "application-controlled",
       "effect": "mutation",
       "exposure": "service-internal",

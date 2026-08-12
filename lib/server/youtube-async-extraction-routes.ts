@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+
 import {
   YOUTUBE_ASYNC_POLICY,
   buildYoutubeExtractionFingerprint,
@@ -10,15 +12,12 @@ import {
 } from "@/lib/server/youtube-async-extraction";
 import {
   createRouteHandlerClient,
-  createYoutubeAsyncExtractionInternalClient,
 } from "@/lib/supabase/server";
 
 interface RpcResult {
   data: unknown;
   error: unknown;
 }
-
-interface InternalClient { rpc: Rpc }
 
 type Rpc = (name: string, args?: Record<string, unknown>) => PromiseLike<RpcResult>;
 
@@ -43,27 +42,57 @@ interface ListJobRow extends YoutubeExtractionJobProjectionRow {
   completion_seen_at: string | null;
 }
 
+interface EnqueueReadiness {
+  expectedPolicyVersion: number;
+  expectedPolicySnapshotDigest: string;
+  currentFingerprintKeyVersion: string;
+  previousFingerprintKeyVersion: string | null;
+}
+
+interface FingerprintKey {
+  version: string;
+  secret: string;
+}
+
 interface HandlerDependencies {
   authenticate(): Promise<AuthenticatedRequest | null>;
-  readJob(userId: string, jobId: string): Promise<(YoutubeExtractionJobProjectionRow & {
+  readJob(jobId: string, rpc: Rpc): Promise<(YoutubeExtractionJobProjectionRow & {
     youtube_video_id?: string;
   }) | null>;
-  readSession(userId: string, extractionId: string): Promise<SessionRow | null>;
+  readSession(extractionId: string, rpc: Rpc): Promise<SessionRow | null>;
   listJobs(
-    userId: string,
     view: "unseen-completed" | "archive",
     cursor: { completedAt: string; jobId: string } | null,
     limit: number,
+    rpc: Rpc,
+    now: Date,
   ): Promise<ListJobRow[]>;
   markDelivered(userId: string, deliveryKeys: string[], rpc: Rpc): Promise<number>;
   markSeen(userId: string, jobIds: string[], rpc: Rpc): Promise<number>;
-  fingerprintKeys(): { current: string; previous: string | null };
+  enqueueReadiness(rpc: Rpc): Promise<EnqueueReadiness | null>;
+  fingerprintKeys(readiness: EnqueueReadiness): {
+    current: FingerprintKey;
+    previous: FingerprintKey | null;
+  };
   cursorSecret(): string;
   asyncEnabled(): boolean;
   now(): Date;
   sleep?(milliseconds: number): Promise<void>;
   syncWaitStartBudgetMs?: number;
   syncWaitProcessingBudgetMs?: number;
+}
+
+export function parseYoutubeExtractionMutationCount(
+  data: unknown,
+  key: "delivered_count" | "seen_count",
+) {
+  const count = data !== null && typeof data === "object" && !Array.isArray(data)
+    ? (data as Record<string, unknown>)[key]
+    : null;
+  if (!Number.isInteger(count) || Number(count) < 0) {
+    throw new Error("QUEUE_UNAVAILABLE");
+  }
+  return Number(count);
 }
 
 function json(data: unknown, status = 200) {
@@ -173,7 +202,7 @@ export function createYoutubeAsyncExtractionHandlers(deps: HandlerDependencies) 
       }
       let videoId = parsed.kind === "url" ? parsed.videoId : null;
       if (parsed.kind === "retry") {
-        const source = await deps.readJob(auth.userId, parsed.jobId);
+        const source = await deps.readJob(parsed.jobId, auth.rpc);
         if (!source) {
           return failure("JOB_NOT_FOUND", "추출 작업을 찾을 수 없어요.", 404);
         }
@@ -186,21 +215,25 @@ export function createYoutubeAsyncExtractionHandlers(deps: HandlerDependencies) 
       if (!videoId) {
         return failure("JOB_NOT_FOUND", "추출 작업을 찾을 수 없어요.", 404);
       }
+      let readiness: EnqueueReadiness | null = null;
       let keys: ReturnType<HandlerDependencies["fingerprintKeys"]>;
       try {
-        keys = deps.fingerprintKeys();
+        readiness = await deps.enqueueReadiness(auth.rpc);
+        if (!readiness) throw new Error("QUEUE_UNAVAILABLE");
+        keys = deps.fingerprintKeys(readiness);
       } catch {
         return failure("QUEUE_UNAVAILABLE", "추출 작업을 접수할 수 없어요. 잠시 후 다시 시도해 주세요.", 503);
       }
       const current = buildYoutubeExtractionFingerprint({
-        secret: keys.current,
+        secret: keys.current.secret,
         userId: auth.userId,
         videoId,
         policy: YOUTUBE_ASYNC_POLICY,
       });
-      const previous = keys.previous
+      const previousKey = keys.previous;
+      const previous = previousKey
         ? buildYoutubeExtractionFingerprint({
-            secret: keys.previous,
+            secret: previousKey.secret,
             userId: auth.userId,
             videoId,
             policy: YOUTUBE_ASYNC_POLICY,
@@ -208,12 +241,12 @@ export function createYoutubeAsyncExtractionHandlers(deps: HandlerDependencies) 
         : null;
       const rpcResult = await auth.rpc("enqueue_youtube_extraction_job", {
         video_id: videoId,
-        expected_policy_version: YOUTUBE_ASYNC_POLICY.policyVersion,
-        expected_policy_snapshot_digest: YOUTUBE_ASYNC_POLICY.snapshotDigest,
-        current_key_version: YOUTUBE_ASYNC_POLICY.fingerprintKeyVersion,
+        expected_policy_version: readiness.expectedPolicyVersion,
+        expected_policy_snapshot_digest: readiness.expectedPolicySnapshotDigest,
+        current_key_version: keys.current.version,
         current_digest: current.digest,
         previous_key_version: previous
-          ? YOUTUBE_ASYNC_POLICY.previousFingerprintKeyVersion
+          ? previousKey?.version ?? null
           : null,
         previous_digest: previous?.digest ?? null,
         submission_mode: submissionMode,
@@ -252,7 +285,7 @@ export function createYoutubeAsyncExtractionHandlers(deps: HandlerDependencies) 
       const processingDeadline = () => Date.now() + (deps.syncWaitProcessingBudgetMs ?? 20 * 60 * 1000 + 30_000);
       let terminalDeadline = Number.POSITIVE_INFINITY;
       while (Date.now() <= (observedStarted ? terminalDeadline : startDeadline)) {
-        const row = await deps.readJob(auth.userId, jobId);
+        const row = await deps.readJob(jobId, auth.rpc);
         if (!row) {
           return failure("QUEUE_UNAVAILABLE", "추출 작업을 확인하지 못했어요.", 503);
         }
@@ -262,7 +295,7 @@ export function createYoutubeAsyncExtractionHandlers(deps: HandlerDependencies) 
         }
         const projection = projectYoutubeExtractionJob(row, deps.now());
         if (projection.status === "succeeded" && projection.result) {
-          const session = await deps.readSession(auth.userId, projection.result.extraction_id);
+          const session = await deps.readSession(projection.result.extraction_id, auth.rpc);
           if (session?.status === "draft") {
             return success(session.draft_json);
           }
@@ -287,7 +320,7 @@ export function createYoutubeAsyncExtractionHandlers(deps: HandlerDependencies) 
     async status(_request: Request, jobId: string) {
       const auth = requireAuth(await deps.authenticate());
       if (isResponse(auth)) return auth;
-      const row = await deps.readJob(auth.userId, jobId);
+      const row = await deps.readJob(jobId, auth.rpc);
       return row
         ? success(projectYoutubeExtractionJob(row, deps.now()))
         : failure("JOB_NOT_FOUND", "추출 작업을 찾을 수 없어요.", 404);
@@ -296,7 +329,7 @@ export function createYoutubeAsyncExtractionHandlers(deps: HandlerDependencies) 
     async session(_request: Request, extractionId: string) {
       const auth = requireAuth(await deps.authenticate());
       if (isResponse(auth)) return auth;
-      const row = await deps.readSession(auth.userId, extractionId);
+      const row = await deps.readSession(extractionId, auth.rpc);
       if (!row) {
         return failure("EXTRACTION_NOT_FOUND", "추출 결과를 찾을 수 없어요.", 404);
       }
@@ -343,12 +376,13 @@ export function createYoutubeAsyncExtractionHandlers(deps: HandlerDependencies) 
             secret: deps.cursorSecret(),
             userId: auth.userId,
             view,
+            now: deps.now(),
           });
         } catch {
           return failure("INVALID_CURSOR", "목록 커서를 확인해 주세요.", 422);
         }
       }
-      let rows = await deps.listJobs(auth.userId, view, cursor, limit + 1);
+      let rows = await deps.listJobs(view, cursor, limit + 1, auth.rpc, deps.now());
       if (cursor) {
         rows = rows.filter((row) =>
           row.completed_at !== null
@@ -381,6 +415,7 @@ export function createYoutubeAsyncExtractionHandlers(deps: HandlerDependencies) 
             view,
             completedAt: tail.completed_at,
             jobId: tail.id,
+            now: deps.now(),
           })
         : null;
       return success({ items, next_cursor: nextCursor });
@@ -395,8 +430,12 @@ export function createYoutubeAsyncExtractionHandlers(deps: HandlerDependencies) 
         (value) => value.trim().length > 0 && value.length <= 200,
       );
       if (!values) return failure("VALIDATION_ERROR", "전달 항목을 확인해 주세요.", 422);
-      const count = await deps.markDelivered(auth.userId, values, auth.rpc);
-      return success({ delivered_count: count });
+      try {
+        const count = await deps.markDelivered(auth.userId, values, auth.rpc);
+        return success({ delivered_count: count });
+      } catch {
+        return failure("QUEUE_UNAVAILABLE", "전달 상태를 기록하지 못했어요.", 503);
+      }
     },
 
     async seen(request: Request) {
@@ -408,8 +447,12 @@ export function createYoutubeAsyncExtractionHandlers(deps: HandlerDependencies) 
         (value) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu.test(value),
       );
       if (!values) return failure("VALIDATION_ERROR", "확인 항목을 확인해 주세요.", 422);
-      const count = await deps.markSeen(auth.userId, values, auth.rpc);
-      return success({ seen_count: count });
+      try {
+        const count = await deps.markSeen(auth.userId, values, auth.rpc);
+        return success({ seen_count: count });
+      } catch {
+        return failure("QUEUE_UNAVAILABLE", "확인 상태를 기록하지 못했어요.", 503);
+      }
     },
   };
 }
@@ -422,10 +465,66 @@ function requireSecret(name: string) {
   return value;
 }
 
-function internalClient() {
-  const client = createYoutubeAsyncExtractionInternalClient();
-  if (!client) throw new Error("youtube async extraction store unavailable");
-  return client as unknown as InternalClient;
+function readJsonRecord(path: string) {
+  const value = JSON.parse(readFileSync(path, "utf8")) as unknown;
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error("QUEUE_UNAVAILABLE");
+  }
+  return value as Record<string, unknown>;
+}
+
+export async function loadYoutubeExtractionEnqueueReadiness(
+  rpc: Rpc,
+  env: Readonly<Record<string, string | undefined>> = process.env,
+): Promise<EnqueueReadiness | null> {
+  const descriptorPath = env.HOMECOOK_YOUTUBE_EXTRACTION_APP_DESCRIPTOR_PATH?.trim();
+  const expectedSchemaPath =
+    env.HOMECOOK_YOUTUBE_EXTRACTION_EXPECTED_SCHEMA_PATH?.trim();
+  const workerManifestPath =
+    env.HOMECOOK_YOUTUBE_EXTRACTION_WORKER_MANIFEST_PATH?.trim();
+  if (!descriptorPath || !expectedSchemaPath || !workerManifestPath) return null;
+  try {
+    const descriptor = readJsonRecord(descriptorPath);
+    const expectedSchema = readJsonRecord(expectedSchemaPath);
+    const workerManifest = readJsonRecord(workerManifestPath);
+    const result = await rpc("read_youtube_extraction_enqueue_readiness");
+    if (result.error || result.data === null || typeof result.data !== "object") return null;
+    const row = result.data as Record<string, unknown>;
+    if (
+      descriptor.schema !== "homecook.youtube-extraction-app-descriptor"
+      || descriptor.version !== 1
+      || expectedSchema.schema !== "homecook.youtube-extraction-expected-schema"
+      || expectedSchema.version !== 1
+      || workerManifest.schema !== "homecook.youtube-extraction-worker-artifact"
+      || workerManifest.version !== 1
+      || workerManifest.deterministic !== true
+      || row.ready !== true
+      || descriptor.release_sha !== row.release_sha
+      || descriptor.release_sha !== workerManifest.release_sha
+      || descriptor.schema_identity !== row.schema_identity
+      || descriptor.schema_identity !== expectedSchema.schema_identity
+      || descriptor.schema_identity !== workerManifest.schema_identity
+      || descriptor.expected_policy_version !== YOUTUBE_ASYNC_POLICY.policyVersion
+      || descriptor.expected_policy_version !== row.policy_version
+      || descriptor.expected_policy_version !== workerManifest.policy_version
+      || descriptor.expected_policy_snapshot_digest !== YOUTUBE_ASYNC_POLICY.snapshotDigest
+      || descriptor.expected_policy_snapshot_digest !== row.policy_snapshot_digest
+      || descriptor.expected_policy_snapshot_digest !== row.allowed_snapshot_digest
+      || descriptor.expected_policy_snapshot_digest !== workerManifest.allowed_snapshot_digest
+      || typeof row.fingerprint_key_version !== "string"
+    ) return null;
+    return {
+      expectedPolicyVersion: Number(row.policy_version),
+      expectedPolicySnapshotDigest: String(row.policy_snapshot_digest),
+      currentFingerprintKeyVersion: row.fingerprint_key_version,
+      previousFingerprintKeyVersion:
+        typeof row.previous_fingerprint_key_version === "string"
+          ? row.previous_fingerprint_key_version
+          : null,
+    };
+  } catch {
+    return null;
+  }
 }
 
 export const youtubeAsyncExtractionHandlers = createYoutubeAsyncExtractionHandlers({
@@ -436,10 +535,9 @@ export const youtubeAsyncExtractionHandlers = createYoutubeAsyncExtractionHandle
       ? { userId: result.data.user.id, rpc: client.rpc.bind(client) as Rpc }
       : null;
   },
-  async readJob(userId, jobId) {
+  async readJob(jobId, rpc) {
     try {
-      const result = await internalClient().rpc("read_youtube_extraction_job_projection", {
-        user_id: userId,
+      const result = await rpc("read_youtube_extraction_job_projection", {
         job_id: jobId,
       });
       return result.error ? null : result.data as (YoutubeExtractionJobProjectionRow & {
@@ -449,10 +547,9 @@ export const youtubeAsyncExtractionHandlers = createYoutubeAsyncExtractionHandle
       return null;
     }
   },
-  async readSession(userId, extractionId) {
+  async readSession(extractionId, rpc) {
     try {
-      const result = await internalClient().rpc("read_youtube_extraction_session_projection", {
-        user_id: userId,
+      const result = await rpc("read_youtube_extraction_session_projection", {
         extraction_id: extractionId,
       });
       return result.error ? null : result.data as SessionRow | null;
@@ -460,12 +557,13 @@ export const youtubeAsyncExtractionHandlers = createYoutubeAsyncExtractionHandle
       return null;
     }
   },
-  async listJobs(userId, view, cursor, limit) {
+  async listJobs(view, cursor, limit, rpc, now) {
     try {
-      const result = await internalClient().rpc("list_youtube_extraction_job_projections", {
-        user_id: userId,
+      const result = await rpc("list_youtube_extraction_job_projections", {
         list_view: view,
-        retention_floor: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+        retention_floor: new Date(
+          now.getTime() - 30 * 24 * 60 * 60 * 1000,
+        ).toISOString(),
         cursor_completed_at: cursor?.completedAt ?? null,
         cursor_job_id: cursor?.jobId ?? null,
         row_limit: limit,
@@ -482,22 +580,35 @@ export const youtubeAsyncExtractionHandlers = createYoutubeAsyncExtractionHandle
       user_id: userId,
       delivery_keys: deliveryKeys,
     });
-    if (result.error) return 0;
-    return Number((result.data as Record<string, unknown> | null)?.delivered_count ?? result.data ?? 0);
+    if (result.error) throw new Error("QUEUE_UNAVAILABLE");
+    return parseYoutubeExtractionMutationCount(result.data, "delivered_count");
   },
   async markSeen(userId, jobIds, rpc) {
     const result = await rpc("mark_youtube_extraction_jobs_seen", {
       user_id: userId,
       job_ids: jobIds,
     });
-    if (result.error) return 0;
-    return Number((result.data as Record<string, unknown> | null)?.seen_count ?? result.data ?? 0);
+    if (result.error) throw new Error("QUEUE_UNAVAILABLE");
+    return parseYoutubeExtractionMutationCount(result.data, "seen_count");
   },
-  fingerprintKeys() {
+  async enqueueReadiness(rpc) {
+    return loadYoutubeExtractionEnqueueReadiness(rpc);
+  },
+  fingerprintKeys(readiness) {
+    const current = requireSecret(
+      `HOMECOOK_YOUTUBE_EXTRACTION_FINGERPRINT_HMAC_KEY_V${readiness.currentFingerprintKeyVersion}`,
+    );
+    const previous = readiness.previousFingerprintKeyVersion
+      ? {
+          version: readiness.previousFingerprintKeyVersion,
+          secret: requireSecret(
+            `HOMECOOK_YOUTUBE_EXTRACTION_FINGERPRINT_HMAC_KEY_V${readiness.previousFingerprintKeyVersion}`,
+          ),
+        }
+      : null;
     return {
-      current: requireSecret("HOMECOOK_YOUTUBE_EXTRACTION_FINGERPRINT_HMAC_KEY_V1"),
-      previous: process.env.HOMECOOK_YOUTUBE_EXTRACTION_FINGERPRINT_HMAC_KEY_PREVIOUS?.trim()
-        || null,
+      current: { version: readiness.currentFingerprintKeyVersion, secret: current },
+      previous,
     };
   },
   cursorSecret() {

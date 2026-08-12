@@ -410,8 +410,19 @@ describe.runIf(enabled).sequential("youtube async extraction PostgreSQL integrat
           where format('%I.%I', schemaname, tablename) in (
             'private.youtube_extraction_current_policy',
             'private.youtube_extraction_worker_credentials',
+            'public.cooking_methods',
+            'public.ingredient_synonyms',
+            'public.ingredients',
+            'public.youtube_extraction_candidates',
             'public.youtube_extraction_jobs',
-            'public.youtube_extractor_permits'
+            'public.youtube_extraction_sessions',
+            'public.youtube_extractor_permits',
+            'public.youtube_llm_extraction_cache',
+            'public.youtube_llm_extraction_events',
+            'public.youtube_transcript_cache',
+            'public.youtube_transcript_fetch_events',
+            'public.youtube_visual_extraction_cache',
+            'public.youtube_visual_extraction_events'
           )
         ),
         'roles', (
@@ -440,6 +451,7 @@ describe.runIf(enabled).sequential("youtube async extraction PostgreSQL integrat
           join pg_catalog.pg_namespace as namespace on namespace.oid = procedure.pronamespace
           where namespace.nspname = 'public'
             and procedure.proname in (
+              'access_youtube_extraction_worker_cache',
               'check_youtube_extraction_worker_pre_request',
               'claim_youtube_extraction_job',
               'claim_youtube_extractor_permit',
@@ -451,12 +463,19 @@ describe.runIf(enabled).sequential("youtube async extraction PostgreSQL integrat
               'list_youtube_extraction_job_projections',
               'mark_youtube_extraction_jobs_delivered',
               'mark_youtube_extraction_jobs_seen',
+              'read_youtube_extraction_enqueue_readiness',
               'read_youtube_extraction_job_projection',
               'read_youtube_extraction_session_projection',
+              'read_youtube_extraction_worker_catalog',
+              'record_youtube_extraction_worker_event',
               'release_youtube_extractor_permit',
+              'requeue_youtube_extraction_job_without_attempt',
+              'reserve_youtube_extraction_worker_quota',
               'resolve_youtube_extraction_job_draft',
+              'resolve_youtube_extraction_worker_methods',
               'rotate_youtube_extraction_worker_credential',
-              'start_youtube_extraction_attempt'
+              'start_youtube_extraction_attempt',
+              'update_youtube_extraction_job_title'
             )
         )
       )::text;
@@ -487,7 +506,16 @@ describe.runIf(enabled).sequential("youtube async extraction PostgreSQL integrat
             'public.youtube_extraction_jobs',
             'public.youtube_extractor_permits',
             'private.youtube_extraction_current_policy',
-            'private.youtube_extraction_worker_credentials'
+            'private.youtube_extraction_worker_credentials',
+            'public.ingredients',
+            'public.ingredient_synonyms',
+            'public.cooking_methods',
+            'public.youtube_transcript_cache',
+            'public.youtube_transcript_fetch_events',
+            'public.youtube_llm_extraction_cache',
+            'public.youtube_llm_extraction_events',
+            'public.youtube_visual_extraction_cache',
+            'public.youtube_visual_extraction_events'
           ]) as relation_name
           where has_table_privilege(role_name, relation_name, 'SELECT,INSERT,UPDATE,DELETE')
         ),
@@ -998,6 +1026,62 @@ describe.runIf(enabled).sequential("youtube async extraction PostgreSQL integrat
         ${permit.permit_generation as number}
       )::text;`,
     );
+    psql(`
+      insert into public.ingredients (id, standard_name, category, default_unit)
+      values ('90000000-0000-4000-8000-000000000001', 'kimchi', 'vegetable', 'g')
+      on conflict (standard_name) do update set default_unit = excluded.default_unit;
+      insert into public.ingredient_synonyms (ingredient_id, synonym)
+      select id, 'aged kimchi'
+      from public.ingredients
+      where standard_name = 'kimchi'
+      on conflict (ingredient_id, synonym) do nothing;
+      insert into public.cooking_methods (code, label, color_key, is_system, display_order)
+      values ('boil', 'Boil', 'red', true, 60)
+      on conflict (code) do update set label = excluded.label, color_key = excluded.color_key;
+    `);
+    const runtimeResult = {
+      identity: {
+        provider: "codex-vision-keyframes",
+        model: "gpt-5.4",
+      },
+      recipe: {
+        title: "Aged kimchi stew",
+        ingredients: [{
+          name: "aged kimchi",
+          amount: "200",
+          unit: "g",
+          optional: false,
+          groupLabel: "stew",
+        }],
+        steps: ["Boil the aged kimchi."],
+      },
+      meta: {
+        sourceAvailability: {
+          description: true,
+          authorComment: false,
+          transcript: true,
+          onscreen: true,
+        },
+      },
+    };
+    const methodCountBeforeStaleResolve = lastLine(psql(`
+      select count(*)::text from public.cooking_methods;
+    `));
+    expectSqlFailure(`
+      begin;
+      set local role youtube_extraction_worker;
+      set local request.jwt.claims = ${sqlJson(workerClaims(snapshotDigest))};
+      select public.resolve_youtube_extraction_job_draft(
+        '${claim.job_id}'::uuid,
+        '${workerId}',
+        ${(claim.lease_generation as number) - 1},
+        'finalizeFence01',
+        (${sqlJson(runtimeResult)})::jsonb
+      );
+      commit;
+    `, /YOUTUBE_EXTRACTION_JOB_STALE/u);
+    expect(lastLine(psql(`select count(*)::text from public.cooking_methods;`)))
+      .toBe(methodCountBeforeStaleResolve);
     const resolved = runAsJson(
       "youtube_extraction_worker",
       workerClaims(snapshotDigest),
@@ -1006,9 +1090,64 @@ describe.runIf(enabled).sequential("youtube async extraction PostgreSQL integrat
         '${workerId}',
         ${claim.lease_generation as number},
         'finalizeFence01',
-        '{"draft":{"title":"김치찌개","ingredients":[],"steps":[]}}'::jsonb
+        (${sqlJson(runtimeResult)})::jsonb
       )::text;`,
     );
+    const draft = resolved.draft as Record<string, unknown>;
+    expect(Object.keys(draft).sort()).toEqual([
+      "base_servings",
+      "blocking_issues",
+      "draft_warnings",
+      "extraction_id",
+      "extraction_methods",
+      "ingredients",
+      "multi_recipe_status",
+      "new_cooking_methods",
+      "primary_candidate_id",
+      "recipe_candidates",
+      "steps",
+      "tags",
+      "thumbnail_url",
+      "title",
+    ]);
+    expect(draft).toMatchObject({
+      title: "Aged kimchi stew",
+      base_servings: 2,
+      thumbnail_url: "https://i.ytimg.com/vi/finalizeFence01/hqdefault.jpg",
+      tags: [],
+      extraction_methods: ["description", "caption"],
+      draft_warnings: [],
+      blocking_issues: [],
+      multi_recipe_status: "single",
+      primary_candidate_id: null,
+      recipe_candidates: [],
+      new_cooking_methods: [],
+    });
+    expect((draft.ingredients as Array<Record<string, unknown>>)[0]).toMatchObject({
+      ingredient_id: "90000000-0000-4000-8000-000000000001",
+      standard_name: "kimchi",
+      amount: 200,
+      unit: "g",
+      ingredient_type: "QUANT",
+      component_label: "stew",
+      resolution_status: "resolved",
+      sort_order: 1,
+    });
+    expect((draft.ingredients as Array<Record<string, unknown>>)[0].draft_ingredient_id)
+      .toMatch(/^[0-9a-f-]{36}$/u);
+    expect((draft.steps as Array<Record<string, unknown>>)[0]).toMatchObject({
+      step_number: 1,
+      instruction: "Boil the aged kimchi.",
+      cooking_method: {
+        code: "boil",
+        label: "Boil",
+        color_key: "red",
+        is_new: false,
+      },
+      duration_text: null,
+      is_incomplete: false,
+      missing_fields: [],
+    });
     const payload = {
       ...resolved,
       raw_source_text: "private transcript must not persist",
@@ -1049,12 +1188,27 @@ describe.runIf(enabled).sequential("youtube async extraction PostgreSQL integrat
     expect(stale).toEqual({ finalized: false });
     expect(finalized).toMatchObject({ applied: true, finalized: true });
     expect(replay).toMatchObject({ applied: true, finalized: true });
+    expect(finalized.extraction_session_id).toBe(draft.extraction_id);
+    expect(replay.extraction_session_id).toBe(draft.extraction_id);
     expect(lastLine(psql(`
       select count(*)::text
       from public.youtube_extraction_sessions
       where source_job_id = '${claim.job_id}'::uuid
         and user_id = '${ownerA}'::uuid;
     `))).toBe("1");
+    expect(parseJson(psql(`
+      select json_build_object(
+        'session_id', id,
+        'draft_extraction_id', draft_json ->> 'extraction_id',
+        'draft_ingredient_id', draft_json #>> '{ingredients,0,draft_ingredient_id}'
+      )::text
+      from public.youtube_extraction_sessions
+      where source_job_id = '${claim.job_id}'::uuid;
+    `))).toEqual({
+      session_id: draft.extraction_id,
+      draft_extraction_id: draft.extraction_id,
+      draft_ingredient_id: (draft.ingredients as Array<Record<string, unknown>>)[0].draft_ingredient_id,
+    });
     expect(parseJson(psql(`
       select json_build_object(
         'raw_source_is_null', raw_source_text is null,
@@ -1229,6 +1383,117 @@ describe.runIf(enabled).sequential("youtube async extraction PostgreSQL integrat
       from public.youtube_extraction_jobs
       where id = '${claim.job_id}'::uuid;
     `))).toBe("김치 찌개");
+  });
+
+  it("runs catalog, method, cache, event and durable quota operations only behind the active fence", () => {
+    enablePolicy();
+    const snapshotDigest = policySnapshotDigest();
+    configureWorkerCredential(snapshotDigest);
+    psql(`
+      insert into public.ingredients(id, standard_name, category, default_unit)
+      values ('82000000-0000-4000-8000-000000000001', '김치', '기타', 'g')
+      on conflict (standard_name) do nothing;
+      insert into public.ingredient_synonyms(ingredient_id, synonym)
+      select id, '묵은지' from public.ingredients where standard_name = '김치'
+      on conflict (ingredient_id, synonym) do nothing;
+      insert into public.cooking_methods(code, label, color_key, is_system, display_order)
+      values ('boil', '끓이기', 'red', true, 1)
+      on conflict (code) do nothing;
+    `);
+    insertJob({
+      id: "80000000-0000-4000-8000-000000000014",
+      userId: ownerA,
+      videoId: "workerData002",
+      fingerprint: "e".repeat(64),
+      status: "queued",
+    });
+    const claim = runAsJson("youtube_extraction_worker", workerClaims(snapshotDigest), `
+      select public.claim_youtube_extraction_job('${workerId}', '${snapshotDigest}', 120)::text;
+    `);
+    const fence = claim.lease_generation as number;
+    const catalog = runAsJson("youtube_extraction_worker", workerClaims(snapshotDigest), `
+      select public.read_youtube_extraction_worker_catalog(
+        '${claim.job_id}'::uuid, '${workerId}', ${fence}
+      )::text;
+    `);
+    const methods = runAsJson("youtube_extraction_worker", workerClaims(snapshotDigest), `
+      select public.resolve_youtube_extraction_worker_methods(
+        '${claim.job_id}'::uuid, '${workerId}', ${fence}, array['끓이기', '뜸들이기']
+      )::text;
+    `);
+    const cache = runAsJson("youtube_extraction_worker", workerClaims(snapshotDigest), `
+      select public.access_youtube_extraction_worker_cache(
+        '${claim.job_id}'::uuid, '${workerId}', ${fence}, 'transcript_upsert',
+        '{"language":"ko","source_provider":"external_transcript_api","source_kind":"transcript","transcript_text":"safe text","segments_json":[],"expires_at":"2099-01-01T00:00:00Z"}'::jsonb
+      )::text;
+    `);
+    const event = runAsJson("youtube_extraction_worker", workerClaims(snapshotDigest), `
+      select public.record_youtube_extraction_worker_event(
+        '${claim.job_id}'::uuid, '${workerId}', ${fence}, 'transcript',
+        '{"provider":"youtube_public_timedtext","status":"success"}'::jsonb
+      )::text;
+    `);
+    const quota = runAsJson("youtube_extraction_worker", workerClaims(snapshotDigest), `
+      select public.reserve_youtube_extraction_worker_quota(
+        '${claim.job_id}'::uuid, '${workerId}', ${fence}, 'external_transcript_api', 1
+      )::text;
+    `);
+    const staleCache = runAsJson("youtube_extraction_worker", workerClaims(snapshotDigest), `
+      select public.access_youtube_extraction_worker_cache(
+        '${claim.job_id}'::uuid, '${workerId}', ${fence - 1}, 'transcript_touch',
+        '{"id":"00000000-0000-4000-8000-000000000001"}'::jsonb
+      )::text;
+    `);
+
+    expect(catalog).toMatchObject({ applied: true });
+    expect(catalog.ingredients).toEqual(expect.arrayContaining([
+      expect.objectContaining({ standard_name: "김치" }),
+    ]));
+    expect(methods).toMatchObject({ applied: true });
+    expect(methods.methods).toHaveLength(2);
+    expect(cache).toMatchObject({ applied: true });
+    expect(event).toEqual({ applied: true, recorded: true });
+    expect(quota).toMatchObject({ applied: true, reserved: true, used: 1 });
+    expect(staleCache).toEqual({ applied: false });
+    expect(lastLine(psql(`
+      select count(*)::text from public.youtube_transcript_fetch_events
+      where user_id = '${ownerA}'::uuid and reason = 'worker_quota_reserved';
+    `))).toBe("1");
+  });
+
+  it("derives browser read ownership from auth.uid and exposes readiness without service role", () => {
+    enablePolicy();
+    const snapshotDigest = policySnapshotDigest();
+    configureWorkerCredential(snapshotDigest);
+    insertJob({
+      id: "80000000-0000-4000-8000-000000000015",
+      userId: ownerA,
+      videoId: "ownerRead001",
+      fingerprint: "f".repeat(64),
+      status: "queued",
+    });
+    const readiness = runAsJson("authenticated", authenticatedClaims(ownerA), `
+      select public.read_youtube_extraction_enqueue_readiness()::text;
+    `);
+    const own = runAsJson("authenticated", authenticatedClaims(ownerA), `
+      select public.read_youtube_extraction_job_projection(
+        '80000000-0000-4000-8000-000000000015'::uuid
+      )::text;
+    `);
+    const other = runAsJson("authenticated", authenticatedClaims(ownerB), `
+      select coalesce(public.read_youtube_extraction_job_projection(
+        '80000000-0000-4000-8000-000000000015'::uuid
+      ), 'null'::jsonb)::text;
+    `);
+
+    expect(readiness).toMatchObject({
+      ready: true,
+      release_sha: workerReleaseSha,
+      schema_identity: workerSchemaIdentity,
+      policy_snapshot_digest: snapshotDigest,
+    });
+    expect(own).toMatchObject({ id: "80000000-0000-4000-8000-000000000015" });
+    expect(other).toEqual(null);
   });
 
   it("rejects wrong worker authority and enforces manager and claim lifetime cutoffs", () => {

@@ -18,9 +18,11 @@ import {
   readMode,
   readYoutubeExtractionAppDescriptor,
   readYoutubeExtractionCurrentPolicy,
+  readYoutubeExtractionExpectedSchema,
   readYoutubeExtractionWorkerArtifact,
   readYoutubeExtractionWorkerQueueState,
   sha256File,
+  verifyYoutubeExtractionWorkerArtifact,
   writeJsonFile,
 } from "./youtube-extraction-worker-artifact.mjs";
 
@@ -40,6 +42,8 @@ const WORKER_CONFIG_ALLOWLIST = new Set([
   "HOMECOOK_YOUTUBE_WORKER_ISSUER",
   "HOMECOOK_YOUTUBE_WORKER_PROVIDER_SECRET_FILE",
   "HOMECOOK_YOUTUBE_WORKER_RUNTIME_ROOT",
+  "HOMECOOK_YOUTUBE_WORKER_ID",
+  "HOMECOOK_YOUTUBE_WORKER_POLL_INTERVAL_MS",
 ]);
 
 const WORKER_FORBIDDEN_CONFIG_PATTERN =
@@ -141,6 +145,9 @@ export function buildYoutubeExtractionWorkerServiceTarget({
  *   configPath: string,
  *   manifestPath: string,
  *   credentialPath: string,
+ *   appDescriptorPath: string,
+ *   currentPolicyPath: string,
+ *   expectedSchemaPath: string,
  *   homeDir?: string,
  *   nodeBin?: string,
  *   rootDir?: string,
@@ -150,6 +157,9 @@ export function renderYoutubeExtractionWorkerPlist({
   configPath,
   manifestPath,
   credentialPath,
+  appDescriptorPath,
+  currentPolicyPath,
+  expectedSchemaPath,
   homeDir = process.env.HOME ?? "",
   nodeBin = process.execPath,
   rootDir = process.cwd(),
@@ -165,6 +175,18 @@ export function renderYoutubeExtractionWorkerPlist({
     credentialPath,
     "worker credential metadata",
     { mode: DEFAULT_YOUTUBE_EXTRACTION_WORKER_SECRET_MODE },
+  );
+  const normalizedAppDescriptorPath = ensureRegularFile(
+    appDescriptorPath,
+    "app descriptor",
+  );
+  const normalizedCurrentPolicyPath = ensureRegularFile(
+    currentPolicyPath,
+    "current policy",
+  );
+  const normalizedExpectedSchemaPath = ensureRegularFile(
+    expectedSchemaPath,
+    "expected schema manifest",
   );
   const normalizedHomeDir = ensureAbsolutePath(homeDir, "homeDir");
   const normalizedNodeBin = ensureAbsolutePath(nodeBin, "nodeBin");
@@ -185,6 +207,9 @@ export function renderYoutubeExtractionWorkerPlist({
     .replaceAll("__CONFIG_PATH__", normalizedConfigPath)
     .replaceAll("__MANIFEST_PATH__", normalizedManifestPath)
     .replaceAll("__CREDENTIAL_PATH__", normalizedCredentialPath)
+    .replaceAll("__APP_DESCRIPTOR_PATH__", normalizedAppDescriptorPath)
+    .replaceAll("__CURRENT_POLICY_PATH__", normalizedCurrentPolicyPath)
+    .replaceAll("__EXPECTED_SCHEMA_PATH__", normalizedExpectedSchemaPath)
     .replaceAll("__STDOUT_LOG__", paths.stdoutPath)
     .replaceAll("__STDERR_LOG__", paths.stderrPath);
 }
@@ -248,6 +273,9 @@ function buildLaunchctlPlan(command, args) {
  *   configPath: string,
  *   manifestPath: string,
  *   credentialPath: string,
+ *   appDescriptorPath: string,
+ *   currentPolicyPath: string,
+ *   expectedSchemaPath: string,
  *   homeDir?: string,
  *   nodeBin?: string,
  *   rootDir?: string,
@@ -259,6 +287,9 @@ export function buildYoutubeExtractionWorkerInstallPlan({
   configPath,
   manifestPath,
   credentialPath,
+  appDescriptorPath,
+  currentPolicyPath,
+  expectedSchemaPath,
   homeDir = process.env.HOME ?? "",
   nodeBin = process.execPath,
   rootDir = process.cwd(),
@@ -266,11 +297,28 @@ export function buildYoutubeExtractionWorkerInstallPlan({
   dryRun = false,
 } = {}) {
   ensureDryRun(dryRun, "install");
+  const inputs = loadYoutubeExtractionWorkerRuntimeInputs({
+    appDescriptorPath,
+    workerArtifactPath: manifestPath,
+    currentPolicyPath,
+    credentialPath,
+    expectedSchemaPath,
+  });
+  const preflight = evaluateYoutubeExtractionWorkerPreflight({
+    ...inputs,
+    requirePolicyEnabled: false,
+  });
+  if (!preflight.ready) {
+    throw new Error(`worker install preflight failed: ${preflight.blockers.join(",")}`);
+  }
   const paths = getYoutubeExtractionWorkerPaths(homeDir);
   const plist = renderYoutubeExtractionWorkerPlist({
     configPath,
     manifestPath,
     credentialPath,
+    appDescriptorPath,
+    currentPolicyPath,
+    expectedSchemaPath,
     homeDir,
     nodeBin,
     rootDir,
@@ -287,6 +335,7 @@ export function buildYoutubeExtractionWorkerInstallPlan({
     stderr_path: paths.stderrPath,
     service_target: serviceTarget,
     plist_preview: plist,
+    preflight,
     commands: [
       buildLaunchctlPlan("bootstrap", ["bootstrap", `gui/${userId}`, paths.plistPath]),
       buildLaunchctlPlan("kickstart", [
@@ -508,6 +557,7 @@ export function evaluateYoutubeExtractionWorkerPreflight({
   workerArtifact,
   currentPolicy,
   credentialState,
+  expectedSchema = null,
   queueState = null,
   requirePolicyEnabled = false,
 } = {}) {
@@ -544,6 +594,9 @@ export function evaluateYoutubeExtractionWorkerPreflight({
       credentialState.token_file_mode === "0600",
     policy_enabled:
       currentPolicy.enabled === true,
+    expected_schema_match:
+      expectedSchema === null
+      || expectedSchema.schema_identity === workerArtifact.schema_identity,
   };
 
   if (!checks.release_sha_match) blockers.push("release_sha_mismatch");
@@ -557,6 +610,7 @@ export function evaluateYoutubeExtractionWorkerPreflight({
   if (requirePolicyEnabled && !checks.policy_enabled) {
     blockers.push("policy_disabled");
   }
+  if (!checks.expected_schema_match) blockers.push("expected_schema_mismatch");
 
   if (queueState) {
     if (
@@ -733,13 +787,19 @@ export function loadYoutubeExtractionWorkerRuntimeInputs({
   workerArtifactPath,
   currentPolicyPath,
   credentialPath,
+  expectedSchemaPath = null,
   queueStatePath = null,
 } = {}) {
   return {
     appDescriptor: readYoutubeExtractionAppDescriptor(appDescriptorPath),
-    workerArtifact: readYoutubeExtractionWorkerArtifact(workerArtifactPath),
+    workerArtifact: expectedSchemaPath
+      ? verifyYoutubeExtractionWorkerArtifact(workerArtifactPath)
+      : readYoutubeExtractionWorkerArtifact(workerArtifactPath),
     currentPolicy: readYoutubeExtractionCurrentPolicy(currentPolicyPath),
     credentialState: readYoutubeExtractionWorkerCredential(credentialPath),
+    expectedSchema: expectedSchemaPath
+      ? readYoutubeExtractionExpectedSchema(expectedSchemaPath)
+      : null,
     queueState:
       queueStatePath === null
         ? null

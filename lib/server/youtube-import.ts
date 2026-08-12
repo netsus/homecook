@@ -77,6 +77,7 @@ import {
   createYoutubeIngredientRegistrationInternalRpcClient,
 } from "@/lib/supabase/server";
 import { YOUTUBE_PREVIEW_ONLY_CLASSIFICATION_REASON } from "@/lib/youtube-import-constants";
+import { normalizeYoutubeUrl } from "@/lib/youtube-url";
 import type {
   IngredientCategory,
   ManualRecipeIngredientInput,
@@ -622,7 +623,6 @@ interface ParsedYoutubeCandidateDraft {
 }
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-const YOUTUBE_VIDEO_ID_PATTERN = /^[A-Za-z0-9_-]{6,20}$/;
 const DEFAULT_EXTRACTION_METHODS = ["description"] as const;
 const COMMENT_EXTRACTION_METHOD = "comment";
 const CAPTION_EXTRACTION_METHOD = "caption";
@@ -1421,50 +1421,12 @@ function normalizeOptionalLowercaseString(value: unknown) {
   return normalized ? normalized : null;
 }
 
-function canonicalYoutubeUrl(videoId: string) {
-  return `https://www.youtube.com/watch?v=${videoId}`;
-}
-
 function table<T>(dbClient: DbClient, tableName: string) {
   return dbClient.from(tableName) as T;
 }
 
 function parseYoutubeUrl(value: unknown) {
-  const rawUrl = typeof value === "string" ? value.trim() : "";
-
-  if (!rawUrl) {
-    return null;
-  }
-
-  let url: URL;
-
-  try {
-    url = new URL(rawUrl);
-  } catch {
-    return null;
-  }
-
-  const host = url.hostname.replace(/^www\./, "").toLowerCase();
-  let videoId: string | null = null;
-
-  if (host === "youtube.com" || host === "m.youtube.com" || host === "music.youtube.com") {
-    if (url.pathname === "/watch") {
-      videoId = url.searchParams.get("v");
-    } else if (url.pathname.startsWith("/shorts/") || url.pathname.startsWith("/embed/")) {
-      videoId = url.pathname.split("/").filter(Boolean)[1] ?? null;
-    }
-  } else if (host === "youtu.be") {
-    videoId = url.pathname.split("/").filter(Boolean)[0] ?? null;
-  }
-
-  if (!videoId || !YOUTUBE_VIDEO_ID_PATTERN.test(videoId)) {
-    return null;
-  }
-
-  return {
-    youtubeUrl: canonicalYoutubeUrl(videoId),
-    videoId,
-  };
+  return normalizeYoutubeUrl(value);
 }
 
 function parseYoutubeUrlBody(rawBody: unknown) {

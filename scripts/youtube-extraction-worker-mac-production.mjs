@@ -66,6 +66,9 @@ function parseArgs(argv) {
       case "--queue-state":
         options.queueStatePath = ensureAbsolutePath(value, "queueStatePath");
         break;
+      case "--expected-schema":
+        options.expectedSchemaPath = ensureAbsolutePath(value, "expectedSchemaPath");
+        break;
       case "--launchctl-output":
         options.launchctlOutputPath = ensureAbsolutePath(value, "launchctlOutputPath");
         break;
@@ -129,6 +132,9 @@ function runInstall(options) {
     configPath: options.configPath,
     manifestPath: options.workerArtifactPath,
     credentialPath: options.credentialPath,
+    appDescriptorPath: options.appDescriptorPath,
+    currentPolicyPath: options.currentPolicyPath,
+    expectedSchemaPath: options.expectedSchemaPath,
     homeDir: options.homeDir,
     nodeBin: options.nodeBin,
     rootDir: options.rootDir,

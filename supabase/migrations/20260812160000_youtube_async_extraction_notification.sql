@@ -353,6 +353,22 @@ create policy youtube_extraction_jobs_enqueue_owner_insert
   to youtube_extraction_enqueue_rpc_owner
   with check (user_id = auth.uid());
 
+drop policy if exists youtube_extraction_worker_credentials_enqueue_owner_select
+  on private.youtube_extraction_worker_credentials;
+create policy youtube_extraction_worker_credentials_enqueue_owner_select
+  on private.youtube_extraction_worker_credentials
+  for select
+  to youtube_extraction_enqueue_rpc_owner
+  using (credential_name = 'primary');
+
+drop policy if exists youtube_extraction_sessions_enqueue_owner_select
+  on public.youtube_extraction_sessions;
+create policy youtube_extraction_sessions_enqueue_owner_select
+  on public.youtube_extraction_sessions
+  for select
+  to youtube_extraction_enqueue_rpc_owner
+  using (user_id = auth.uid());
+
 drop policy if exists youtube_extraction_current_policy_worker_owner_select
   on private.youtube_extraction_current_policy;
 create policy youtube_extraction_current_policy_worker_owner_select
@@ -464,6 +480,35 @@ create policy youtube_extraction_candidates_worker_owner_update
   using (true)
   with check (true);
 
+drop policy if exists youtube_worker_catalog_ingredients_select on public.ingredients;
+create policy youtube_worker_catalog_ingredients_select on public.ingredients
+  for select to youtube_extraction_worker_rpc_owner using (true);
+drop policy if exists youtube_worker_catalog_ingredient_synonyms_select on public.ingredient_synonyms;
+create policy youtube_worker_catalog_ingredient_synonyms_select on public.ingredient_synonyms
+  for select to youtube_extraction_worker_rpc_owner using (true);
+drop policy if exists youtube_worker_catalog_cooking_methods_all on public.cooking_methods;
+create policy youtube_worker_catalog_cooking_methods_all on public.cooking_methods
+  for all to youtube_extraction_worker_rpc_owner using (true) with check (true);
+
+drop policy if exists youtube_worker_transcript_cache_all on public.youtube_transcript_cache;
+create policy youtube_worker_transcript_cache_all on public.youtube_transcript_cache
+  for all to youtube_extraction_worker_rpc_owner using (true) with check (true);
+drop policy if exists youtube_worker_transcript_events_all on public.youtube_transcript_fetch_events;
+create policy youtube_worker_transcript_events_all on public.youtube_transcript_fetch_events
+  for all to youtube_extraction_worker_rpc_owner using (true) with check (true);
+drop policy if exists youtube_worker_llm_cache_all on public.youtube_llm_extraction_cache;
+create policy youtube_worker_llm_cache_all on public.youtube_llm_extraction_cache
+  for all to youtube_extraction_worker_rpc_owner using (true) with check (true);
+drop policy if exists youtube_worker_llm_events_all on public.youtube_llm_extraction_events;
+create policy youtube_worker_llm_events_all on public.youtube_llm_extraction_events
+  for all to youtube_extraction_worker_rpc_owner using (true) with check (true);
+drop policy if exists youtube_worker_visual_cache_all on public.youtube_visual_extraction_cache;
+create policy youtube_worker_visual_cache_all on public.youtube_visual_extraction_cache
+  for all to youtube_extraction_worker_rpc_owner using (true) with check (true);
+drop policy if exists youtube_worker_visual_events_all on public.youtube_visual_extraction_events;
+create policy youtube_worker_visual_events_all on public.youtube_visual_extraction_events
+  for all to youtube_extraction_worker_rpc_owner using (true) with check (true);
+
 drop policy if exists youtube_extraction_worker_credentials_worker_owner_select
   on private.youtube_extraction_worker_credentials;
 create policy youtube_extraction_worker_credentials_worker_owner_select
@@ -502,6 +547,10 @@ grant select on table private.youtube_extraction_current_policy
   to youtube_extraction_enqueue_rpc_owner;
 grant select, insert on table public.youtube_extraction_jobs
   to youtube_extraction_enqueue_rpc_owner;
+grant select on table private.youtube_extraction_worker_credentials
+  to youtube_extraction_enqueue_rpc_owner;
+grant select on table public.youtube_extraction_sessions
+  to youtube_extraction_enqueue_rpc_owner;
 
 grant select on table private.youtube_extraction_current_policy
   to youtube_extraction_worker_rpc_owner;
@@ -514,6 +563,18 @@ grant select, update on table public.youtube_extractor_permits
 grant select, insert, update on table public.youtube_extraction_sessions
   to youtube_extraction_worker_rpc_owner;
 grant select, insert, update on table public.youtube_extraction_candidates
+  to youtube_extraction_worker_rpc_owner;
+grant select on table public.ingredients, public.ingredient_synonyms
+  to youtube_extraction_worker_rpc_owner;
+grant select, insert, update on table public.cooking_methods
+  to youtube_extraction_worker_rpc_owner;
+grant select, insert, update on table
+  public.youtube_transcript_cache,
+  public.youtube_transcript_fetch_events,
+  public.youtube_llm_extraction_cache,
+  public.youtube_llm_extraction_events,
+  public.youtube_visual_extraction_cache,
+  public.youtube_visual_extraction_events
   to youtube_extraction_worker_rpc_owner;
 
 grant select on table private.youtube_extraction_current_policy
@@ -818,8 +879,8 @@ begin
     where credentials.credential_name = 'primary';
 
     if v_scope is distinct from 'youtube-extraction-worker'
-      or v_issuer = ''
-      or v_audience = ''
+      or v_issuer is distinct from 'https://worker.mumeok.kr'
+      or v_audience is distinct from 'youtube-extraction'
       or v_generation is null
       or v_exp is null
       or v_jti_hash !~ '^[0-9a-f]{64}$'
@@ -838,10 +899,11 @@ begin
     end if;
   elsif v_role = 'youtube_extraction_credential_manager' then
     if v_scope is distinct from 'youtube-extraction-credential-manager'
-      or v_issuer = ''
-      or v_audience = ''
+      or v_issuer is distinct from 'https://worker.mumeok.kr'
+      or v_audience is distinct from 'youtube-extraction'
       or v_exp is null
-      or to_timestamp(v_exp) < clock_timestamp() then
+      or to_timestamp(v_exp) < clock_timestamp()
+      or to_timestamp(v_exp) > clock_timestamp() + interval '5 minutes' then
       raise exception 'YOUTUBE_EXTRACTION_CREDENTIAL_MANAGER_UNAUTHORIZED'
         using errcode = '42501';
     end if;
@@ -1061,6 +1123,12 @@ declare
   v_now timestamptz := clock_timestamp();
 begin
   perform public.check_youtube_extraction_worker_pre_request();
+
+  if to_timestamp(nullif(v_worker_claims ->> 'exp', '')::bigint)
+    <= clock_timestamp() + interval '30 minutes' then
+    raise exception 'YOUTUBE_EXTRACTION_WORKER_UNAUTHORIZED'
+      using errcode = '42501';
+  end if;
 
   if coalesce(btrim(worker_id), '') = ''
     or allowed_snapshot_digest !~ '^[0-9a-f]{64}$'
@@ -1283,8 +1351,465 @@ begin
 end;
 $function$;
 
+-- signature: private.youtube_extraction_job_fence_is_active(uuid, text, bigint)
+create or replace function private.youtube_extraction_job_fence_is_active(
+  p_job_id uuid,
+  p_worker_id text,
+  p_lease_generation bigint
+)
+returns boolean
+language sql
+stable
+set search_path = ''
+as $function$
+  select exists (
+    select 1
+    from public.youtube_extraction_jobs as job
+    where job.id = p_job_id
+      and job.status = 'processing'
+      and job.lease_owner = p_worker_id
+      and job.lease_generation = p_lease_generation
+      and job.lease_expires_at is not null
+      and job.lease_expires_at >= clock_timestamp()
+  );
+$function$;
+
+-- signature: public.requeue_youtube_extraction_job_without_attempt(uuid, text, bigint, integer, integer)
+create or replace function public.requeue_youtube_extraction_job_without_attempt(
+  job_id uuid,
+  worker_id text,
+  lease_generation bigint,
+  min_delay_seconds integer,
+  max_delay_seconds integer
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $function$
+declare
+  v_min integer := greatest(1, min_delay_seconds);
+  v_max integer := least(30, max_delay_seconds);
+  v_delay integer;
+begin
+  perform public.check_youtube_extraction_worker_pre_request();
+  if job_id is null or coalesce(btrim(worker_id), '') = ''
+    or lease_generation is null or min_delay_seconds is null
+    or max_delay_seconds is null or v_min > v_max then
+    raise exception 'VALIDATION_ERROR' using errcode = '22023';
+  end if;
+  v_delay := v_min + floor(random() * (v_max - v_min + 1))::integer;
+
+  update public.youtube_extraction_jobs as job
+  set status = 'queued',
+      available_at = clock_timestamp() + make_interval(secs => v_delay),
+      lease_owner = null,
+      lease_expires_at = null,
+      heartbeat_at = null,
+      updated_at = clock_timestamp()
+  where job.id = requeue_youtube_extraction_job_without_attempt.job_id
+    and job.status = 'processing'
+    and job.lease_owner = requeue_youtube_extraction_job_without_attempt.worker_id
+    and job.lease_generation = requeue_youtube_extraction_job_without_attempt.lease_generation;
+
+  if not found then
+    return jsonb_build_object('applied', false, 'requeued', false);
+  end if;
+  return jsonb_build_object('applied', true, 'requeued', true, 'delay_seconds', v_delay);
+end;
+$function$;
+
+-- signature: public.update_youtube_extraction_job_title(uuid, text, bigint, text)
+create or replace function public.update_youtube_extraction_job_title(
+  job_id uuid,
+  worker_id text,
+  lease_generation bigint,
+  title text
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $function$
+declare
+  v_title text := left(nullif(btrim(regexp_replace(title, '[[:cntrl:][:space:]]+', ' ', 'g')), ''), 160);
+begin
+  perform public.check_youtube_extraction_worker_pre_request();
+  if v_title is null then
+    raise exception 'VALIDATION_ERROR' using errcode = '22023';
+  end if;
+  update public.youtube_extraction_jobs as job
+  set video_title_snapshot = coalesce(job.video_title_snapshot, v_title),
+      updated_at = clock_timestamp()
+  where job.id = update_youtube_extraction_job_title.job_id
+    and job.status = 'processing'
+    and job.lease_owner = update_youtube_extraction_job_title.worker_id
+    and job.lease_generation = update_youtube_extraction_job_title.lease_generation
+    and job.lease_expires_at >= clock_timestamp();
+  return jsonb_build_object('applied', found, 'updated', found);
+end;
+$function$;
+
+-- signature: public.read_youtube_extraction_worker_catalog(uuid, text, bigint)
+create or replace function public.read_youtube_extraction_worker_catalog(
+  job_id uuid,
+  worker_id text,
+  lease_generation bigint
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $function$
+begin
+  perform public.check_youtube_extraction_worker_pre_request();
+  if not private.youtube_extraction_job_fence_is_active(job_id, worker_id, lease_generation) then
+    return jsonb_build_object('applied', false);
+  end if;
+  return jsonb_build_object(
+    'applied', true,
+    'ingredients', coalesce((select jsonb_agg(to_jsonb(row_value) order by row_value.standard_name)
+      from (select id, standard_name, category, default_unit from public.ingredients) row_value), '[]'::jsonb),
+    'ingredient_synonyms', coalesce((select jsonb_agg(to_jsonb(row_value) order by row_value.synonym)
+      from (select ingredient_id, synonym from public.ingredient_synonyms) row_value), '[]'::jsonb),
+    'cooking_methods', coalesce((select jsonb_agg(to_jsonb(row_value) order by row_value.display_order, row_value.code)
+      from (select id, code, label, color_key, is_system, display_order from public.cooking_methods) row_value), '[]'::jsonb)
+  );
+end;
+$function$;
+
+-- signature: public.resolve_youtube_extraction_worker_methods(uuid, text, bigint, text[])
+create or replace function public.resolve_youtube_extraction_worker_methods(
+  job_id uuid,
+  worker_id text,
+  lease_generation bigint,
+  method_labels text[]
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $function$
+declare
+  v_label text;
+  v_method public.cooking_methods%rowtype;
+  v_methods jsonb := '[]'::jsonb;
+  v_code text;
+  v_job public.youtube_extraction_jobs%rowtype;
+  v_is_new boolean;
+begin
+  perform public.check_youtube_extraction_worker_pre_request();
+  select job.* into v_job from public.youtube_extraction_jobs as job
+  where job.id = resolve_youtube_extraction_worker_methods.job_id
+    and job.status = 'processing'
+    and job.lease_owner = resolve_youtube_extraction_worker_methods.worker_id
+    and job.lease_generation = resolve_youtube_extraction_worker_methods.lease_generation
+    and job.lease_expires_at >= clock_timestamp()
+  for update;
+  if not found then
+    return jsonb_build_object('applied', false, 'methods', v_methods);
+  end if;
+  if method_labels is null or cardinality(method_labels) > 100 then
+    raise exception 'VALIDATION_ERROR' using errcode = '22023';
+  end if;
+  foreach v_label in array method_labels loop
+    v_is_new := false;
+    v_label := left(nullif(btrim(regexp_replace(v_label, '[[:cntrl:][:space:]]+', ' ', 'g')), ''), 20);
+    if v_label is null then raise exception 'VALIDATION_ERROR' using errcode = '22023'; end if;
+    select method.* into v_method from public.cooking_methods method
+    where lower(method.label) = lower(v_label) or lower(method.code) = lower(v_label)
+    order by method.is_system desc, method.display_order, method.id limit 1;
+    if not found then
+      v_code := 'custom_' || substr(encode(extensions.digest(convert_to(lower(v_label), 'UTF8'), 'sha256'), 'hex'), 1, 12);
+      insert into public.cooking_methods(code, label, color_key, is_system, display_order)
+      values (v_code, v_label, 'unassigned', false, 9999)
+      on conflict (code) do update set code = excluded.code
+      returning * into v_method;
+      v_is_new := true;
+    end if;
+    v_methods := v_methods || jsonb_build_array(jsonb_build_object(
+      'id', v_method.id, 'code', v_method.code, 'label', v_method.label,
+      'color_key', v_method.color_key, 'is_system', v_method.is_system,
+      'is_new', v_is_new
+    ));
+  end loop;
+  return jsonb_build_object('applied', true, 'methods', v_methods);
+end;
+$function$;
+
+-- signature: public.access_youtube_extraction_worker_cache(uuid, text, bigint, text, jsonb)
+create or replace function public.access_youtube_extraction_worker_cache(
+  job_id uuid,
+  worker_id text,
+  lease_generation bigint,
+  cache_operation text,
+  payload jsonb
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $function$
+declare
+  v_job public.youtube_extraction_jobs%rowtype;
+  v_result jsonb;
+begin
+  perform public.check_youtube_extraction_worker_pre_request();
+  select job.* into v_job from public.youtube_extraction_jobs job
+  where job.id = access_youtube_extraction_worker_cache.job_id
+    and job.status = 'processing'
+    and job.lease_owner = access_youtube_extraction_worker_cache.worker_id
+    and job.lease_generation = access_youtube_extraction_worker_cache.lease_generation
+    and job.lease_expires_at >= clock_timestamp()
+  for update;
+  if not found then return jsonb_build_object('applied', false); end if;
+  if cache_operation not in (
+    'transcript_read','transcript_upsert','transcript_touch',
+    'llm_read','llm_upsert','llm_touch','visual_read','visual_upsert','visual_touch'
+  ) or payload is null then
+    raise exception 'VALIDATION_ERROR' using errcode = '22023';
+  end if;
+
+  if cache_operation = 'transcript_read' then
+    select to_jsonb(cache) into v_result from public.youtube_transcript_cache cache
+    where cache.youtube_video_id = v_job.youtube_video_id and cache.expires_at > clock_timestamp()
+    order by cache.last_used_at desc limit 1;
+  elsif cache_operation = 'transcript_upsert' then
+    insert into public.youtube_transcript_cache (
+      youtube_video_id, language, source_provider, source_kind,
+      transcript_text, segments_json, expires_at, last_used_at
+    ) values (
+      v_job.youtube_video_id, payload ->> 'language', payload ->> 'source_provider',
+      coalesce(payload ->> 'source_kind', 'caption'), payload ->> 'transcript_text',
+      coalesce(payload -> 'segments_json', '[]'::jsonb),
+      (payload ->> 'expires_at')::timestamptz, clock_timestamp()
+    ) on conflict (youtube_video_id, language, source_provider) do update
+      set transcript_text = excluded.transcript_text, segments_json = excluded.segments_json,
+          expires_at = excluded.expires_at, last_used_at = excluded.last_used_at
+    returning to_jsonb(youtube_transcript_cache.*) into v_result;
+  elsif cache_operation = 'transcript_touch' then
+    update public.youtube_transcript_cache set last_used_at = clock_timestamp()
+    where id = (payload ->> 'id')::uuid and youtube_video_id = v_job.youtube_video_id
+    returning to_jsonb(youtube_transcript_cache.*) into v_result;
+  elsif cache_operation = 'llm_read' then
+    select to_jsonb(cache) into v_result from public.youtube_llm_extraction_cache cache
+    where cache.youtube_video_id = v_job.youtube_video_id
+      and cache.source_hash = payload ->> 'source_hash'
+      and cache.schema_version = payload ->> 'schema_version'
+      and cache.model = payload ->> 'model' and cache.expires_at > clock_timestamp()
+    order by cache.last_used_at desc limit 1;
+  elsif cache_operation = 'llm_upsert' then
+    insert into public.youtube_llm_extraction_cache (
+      youtube_video_id, source_hash, schema_version, model, source_kinds,
+      result_json, expires_at, last_used_at
+    ) values (
+      v_job.youtube_video_id, payload ->> 'source_hash', payload ->> 'schema_version',
+      payload ->> 'model', coalesce(array(select jsonb_array_elements_text(payload -> 'source_kinds')), '{}'::text[]),
+      payload -> 'result_json', (payload ->> 'expires_at')::timestamptz, clock_timestamp()
+    ) on conflict (youtube_video_id, source_hash, schema_version, model) do update
+      set source_kinds = excluded.source_kinds, result_json = excluded.result_json,
+          expires_at = excluded.expires_at, last_used_at = excluded.last_used_at
+    returning to_jsonb(youtube_llm_extraction_cache.*) into v_result;
+  elsif cache_operation = 'llm_touch' then
+    update public.youtube_llm_extraction_cache set last_used_at = clock_timestamp()
+    where id = (payload ->> 'id')::uuid and youtube_video_id = v_job.youtube_video_id
+    returning to_jsonb(youtube_llm_extraction_cache.*) into v_result;
+  elsif cache_operation = 'visual_read' then
+    select to_jsonb(cache) into v_result from public.youtube_visual_extraction_cache cache
+    where cache.youtube_video_id = v_job.youtube_video_id
+      and cache.provider = payload ->> 'provider'
+      and cache.schema_version = payload ->> 'schema_version'
+      and cache.visual_request_hash = payload ->> 'visual_request_hash'
+      and cache.expires_at > clock_timestamp() order by cache.last_used_at desc limit 1;
+  elsif cache_operation = 'visual_upsert' then
+    insert into public.youtube_visual_extraction_cache (
+      youtube_video_id, provider, schema_version, visual_request_hash,
+      result_json, expires_at, last_used_at
+    ) values (
+      v_job.youtube_video_id, payload ->> 'provider', payload ->> 'schema_version',
+      payload ->> 'visual_request_hash', payload -> 'result_json',
+      (payload ->> 'expires_at')::timestamptz, clock_timestamp()
+    ) on conflict (youtube_video_id, provider, schema_version, visual_request_hash) do update
+      set result_json = excluded.result_json, expires_at = excluded.expires_at,
+          last_used_at = excluded.last_used_at
+    returning to_jsonb(youtube_visual_extraction_cache.*) into v_result;
+  else
+    update public.youtube_visual_extraction_cache set last_used_at = clock_timestamp()
+    where id = (payload ->> 'id')::uuid and youtube_video_id = v_job.youtube_video_id
+    returning to_jsonb(youtube_visual_extraction_cache.*) into v_result;
+  end if;
+  return jsonb_build_object('applied', true, 'cache', v_result);
+end;
+$function$;
+
+-- signature: public.record_youtube_extraction_worker_event(uuid, text, bigint, text, jsonb)
+create or replace function public.record_youtube_extraction_worker_event(
+  job_id uuid,
+  worker_id text,
+  lease_generation bigint,
+  event_kind text,
+  payload jsonb
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $function$
+declare v_job public.youtube_extraction_jobs%rowtype;
+begin
+  perform public.check_youtube_extraction_worker_pre_request();
+  select job.* into v_job from public.youtube_extraction_jobs job
+  where job.id = record_youtube_extraction_worker_event.job_id
+    and job.status = 'processing'
+    and job.lease_owner = record_youtube_extraction_worker_event.worker_id
+    and job.lease_generation = record_youtube_extraction_worker_event.lease_generation
+    and job.lease_expires_at >= clock_timestamp()
+  for update;
+  if not found then return jsonb_build_object('applied', false, 'recorded', false); end if;
+  if event_kind = 'transcript' then
+    insert into public.youtube_transcript_fetch_events (
+      user_id, youtube_video_id, provider, cache_hit, status, reason, estimated_cost_microusd
+    ) values (v_job.user_id, v_job.youtube_video_id, payload ->> 'provider',
+      coalesce((payload ->> 'cache_hit')::boolean, false), payload ->> 'status',
+      payload ->> 'reason', coalesce((payload ->> 'estimated_cost_microusd')::integer, 0));
+  elsif event_kind = 'llm' then
+    insert into public.youtube_llm_extraction_events (
+      user_id, youtube_video_id, provider, model, cache_hit, status, reason,
+      input_tokens, output_tokens, estimated_cost_microusd
+    ) values (v_job.user_id, v_job.youtube_video_id, payload ->> 'provider', payload ->> 'model',
+      coalesce((payload ->> 'cache_hit')::boolean, false), payload ->> 'status', payload ->> 'reason',
+      coalesce((payload ->> 'input_tokens')::integer, 0), coalesce((payload ->> 'output_tokens')::integer, 0),
+      coalesce((payload ->> 'estimated_cost_microusd')::integer, 0));
+  elsif event_kind = 'visual' then
+    insert into public.youtube_visual_extraction_events (
+      user_id, youtube_video_id, provider, model, cache_hit, event_type, status,
+      reason, input_tokens, output_tokens, estimated_cost_microusd
+    ) values (v_job.user_id, v_job.youtube_video_id, payload ->> 'provider', payload ->> 'model',
+      coalesce((payload ->> 'cache_hit')::boolean, false), payload ->> 'event_type', payload ->> 'status',
+      payload ->> 'reason', coalesce((payload ->> 'input_tokens')::integer, 0),
+      coalesce((payload ->> 'output_tokens')::integer, 0), coalesce((payload ->> 'estimated_cost_microusd')::integer, 0));
+  else raise exception 'VALIDATION_ERROR' using errcode = '22023'; end if;
+  return jsonb_build_object('applied', true, 'recorded', true);
+end;
+$function$;
+
+-- signature: public.reserve_youtube_extraction_worker_quota(uuid, text, bigint, text, integer)
+create or replace function public.reserve_youtube_extraction_worker_quota(
+  job_id uuid,
+  worker_id text,
+  lease_generation bigint,
+  provider text,
+  units integer
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $function$
+declare v_job public.youtube_extraction_jobs%rowtype; v_used integer;
+begin
+  perform public.check_youtube_extraction_worker_pre_request();
+  if units is distinct from 1
+    or provider not in ('external_transcript_api', 'gemini') then
+    raise exception 'VALIDATION_ERROR' using errcode = '22023';
+  end if;
+  select job.* into v_job from public.youtube_extraction_jobs job
+  where job.id = reserve_youtube_extraction_worker_quota.job_id
+    and job.status = 'processing'
+    and job.lease_owner = reserve_youtube_extraction_worker_quota.worker_id
+    and job.lease_generation = reserve_youtube_extraction_worker_quota.lease_generation
+    and job.lease_expires_at >= clock_timestamp() for update;
+  if not found then return jsonb_build_object('applied', false, 'reserved', false); end if;
+  perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended(provider || ':' || v_job.user_id::text, 86120319));
+  if provider = 'external_transcript_api' then
+    select count(*) into v_used from public.youtube_transcript_fetch_events as event
+    where event.user_id = v_job.user_id
+      and event.provider = reserve_youtube_extraction_worker_quota.provider
+      and (event.status = 'success' or event.reason = 'worker_quota_reserved')
+      and event.created_at >= date_trunc('day', clock_timestamp() at time zone 'UTC') at time zone 'UTC';
+  else
+    select count(*) into v_used from public.youtube_llm_extraction_events as event
+    where event.user_id = v_job.user_id
+      and event.provider = reserve_youtube_extraction_worker_quota.provider
+      and (event.status = 'success' or event.reason = 'worker_quota_reserved')
+      and event.created_at >= date_trunc('day', clock_timestamp() at time zone 'UTC') at time zone 'UTC';
+  end if;
+  if v_used + units > 5 then
+    return jsonb_build_object('applied', true, 'reserved', false, 'used', v_used);
+  end if;
+  if provider = 'external_transcript_api' then
+    insert into public.youtube_transcript_fetch_events(
+      user_id, youtube_video_id, provider, cache_hit, status, reason, estimated_cost_microusd
+    ) values (v_job.user_id, v_job.youtube_video_id,
+      reserve_youtube_extraction_worker_quota.provider, false, 'skipped', 'worker_quota_reserved', 0);
+  else
+    insert into public.youtube_llm_extraction_events(
+      user_id, youtube_video_id, provider, model, cache_hit, status, reason,
+      input_tokens, output_tokens, estimated_cost_microusd
+    ) values (v_job.user_id, v_job.youtube_video_id,
+      reserve_youtube_extraction_worker_quota.provider, null, false, 'skipped',
+      'worker_quota_reserved', 0, 0, 0);
+  end if;
+  return jsonb_build_object('applied', true, 'reserved', true, 'used', v_used + units);
+end;
+$function$;
+
+create or replace function public.read_youtube_extraction_enqueue_readiness()
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $function$
+declare
+  v_claims jsonb := coalesce(
+    nullif(pg_catalog.current_setting('request.jwt.claims', true), ''),
+    '{}'
+  )::jsonb;
+  v_policy private.youtube_extraction_current_policy%rowtype;
+  v_credential private.youtube_extraction_worker_credentials%rowtype;
+  v_snapshot_digest text;
+begin
+  if coalesce(v_claims ->> 'role', '') is distinct from 'authenticated'
+    or auth.uid() is null then
+    raise exception 'YOUTUBE_EXTRACTION_ENQUEUE_UNAUTHORIZED'
+      using errcode = '42501';
+  end if;
+
+  select policy.* into strict v_policy
+  from private.youtube_extraction_current_policy as policy
+  where policy.policy_key = 'primary';
+  select credential.* into strict v_credential
+  from private.youtube_extraction_worker_credentials as credential
+  where credential.credential_name = 'primary';
+
+  v_snapshot_digest := private.youtube_extraction_policy_snapshot_digest(
+    v_policy.extractor_mode,
+    v_policy.pipeline_identity,
+    v_policy.result_affecting_options,
+    v_policy.policy_version
+  );
+
+  return jsonb_build_object(
+    'ready', v_policy.enabled
+      and v_credential.allowed_snapshot_digest = v_snapshot_digest
+      and v_credential.expires_at > clock_timestamp() + interval '30 minutes',
+    'release_sha', v_credential.release_sha,
+    'schema_identity', v_credential.schema_identity,
+    'policy_version', v_policy.policy_version,
+    'policy_snapshot_digest', v_snapshot_digest,
+    'fingerprint_key_version', v_policy.fingerprint_key_version,
+    'previous_fingerprint_key_version', v_policy.previous_fingerprint_key_version,
+    'previous_fingerprint_valid_until', v_policy.previous_fingerprint_valid_until,
+    'allowed_snapshot_digest', v_credential.allowed_snapshot_digest,
+    'credential_expires_at', v_credential.expires_at
+  );
+exception
+  when no_data_found then
+    return jsonb_build_object('ready', false);
+end;
+$function$;
+
 create or replace function public.read_youtube_extraction_job_projection(
-  user_id uuid,
   job_id uuid
 )
 returns jsonb
@@ -1298,11 +1823,11 @@ declare
     '{}'
   )::jsonb;
   v_role text := coalesce(nullif(v_claims ->> 'role', ''), current_user);
-  v_requested_user_id uuid := user_id;
+  v_requested_user_id uuid := auth.uid();
   v_requested_job_id uuid := job_id;
   v_payload jsonb;
 begin
-  if v_role is distinct from 'service_role'
+  if v_role is distinct from 'authenticated'
     or v_requested_user_id is null
     or v_requested_job_id is null then
     raise exception 'YOUTUBE_EXTRACTION_INTERNAL_UNAUTHORIZED'
@@ -1346,7 +1871,6 @@ end;
 $function$;
 
 create or replace function public.read_youtube_extraction_session_projection(
-  user_id uuid,
   extraction_id uuid
 )
 returns jsonb
@@ -1360,11 +1884,11 @@ declare
     '{}'
   )::jsonb;
   v_role text := coalesce(nullif(v_claims ->> 'role', ''), current_user);
-  v_requested_user_id uuid := user_id;
+  v_requested_user_id uuid := auth.uid();
   v_requested_extraction_id uuid := extraction_id;
   v_payload jsonb;
 begin
-  if v_role is distinct from 'service_role'
+  if v_role is distinct from 'authenticated'
     or v_requested_user_id is null
     or v_requested_extraction_id is null then
     raise exception 'YOUTUBE_EXTRACTION_INTERNAL_UNAUTHORIZED'
@@ -1387,8 +1911,8 @@ begin
 end;
 $function$;
 
+-- signature: public.list_youtube_extraction_job_projections(text, timestamp with time zone, timestamp with time zone, uuid, integer)
 create or replace function public.list_youtube_extraction_job_projections(
-  user_id uuid,
   list_view text,
   retention_floor timestamptz,
   cursor_completed_at timestamptz,
@@ -1406,14 +1930,14 @@ declare
     '{}'
   )::jsonb;
   v_role text := coalesce(nullif(v_claims ->> 'role', ''), current_user);
-  v_requested_user_id uuid := user_id;
+  v_requested_user_id uuid := auth.uid();
   v_requested_list_view text := list_view;
   v_requested_retention_floor timestamptz := retention_floor;
   v_cursor_completed_at timestamptz := cursor_completed_at;
   v_cursor_job_id uuid := cursor_job_id;
   v_limit integer := greatest(1, least(coalesce(row_limit, 20), 51));
 begin
-  if v_role is distinct from 'service_role'
+  if v_role is distinct from 'authenticated'
     or v_requested_user_id is null
     or v_requested_list_view not in ('unseen-completed', 'archive')
     or v_requested_retention_floor is null
@@ -1506,6 +2030,41 @@ declare
   v_requested_lease_generation bigint := lease_generation;
   v_requested_youtube_video_id text := youtube_video_id;
   v_job public.youtube_extraction_jobs%rowtype;
+  v_recipe jsonb;
+  v_ingredient jsonb;
+  v_ingredient_row jsonb;
+  v_ingredient_index bigint;
+  v_ingredient_name text;
+  v_ingredient_standard_name text;
+  v_ingredient_id uuid;
+  v_ingredient_match_count integer;
+  v_ingredient_candidates jsonb;
+  v_amount_text text;
+  v_amount_match text;
+  v_amount numeric;
+  v_unit text;
+  v_display_text text;
+  v_component_label text;
+  v_resolution_status text;
+  v_draft_ingredient_hash text;
+  v_draft_ingredient_id uuid;
+  v_ingredients jsonb := '[]'::jsonb;
+  v_blocking_issues jsonb := '[]'::jsonb;
+  v_method_labels text[] := '{}'::text[];
+  v_method_result jsonb;
+  v_method jsonb;
+  v_steps jsonb := '[]'::jsonb;
+  v_new_cooking_methods jsonb := '[]'::jsonb;
+  v_step jsonb;
+  v_step_text text;
+  v_step_index bigint;
+  v_title text;
+  v_source_availability jsonb;
+  v_extraction_methods jsonb := '[]'::jsonb;
+  v_source_providers jsonb := jsonb_build_array('youtube_videos_list');
+  v_session_hash text;
+  v_extraction_id uuid;
+  v_draft jsonb;
 begin
   perform public.check_youtube_extraction_worker_pre_request();
 
@@ -1513,7 +2072,14 @@ begin
     or coalesce(btrim(v_requested_youtube_video_id), '') = ''
     or runtime_result is null
     or coalesce(btrim(v_requested_worker_id), '') = ''
-    or v_requested_lease_generation is null then
+    or v_requested_lease_generation is null
+    or jsonb_typeof(runtime_result) <> 'object'
+    or jsonb_typeof(runtime_result -> 'identity') <> 'object'
+    or jsonb_typeof(runtime_result -> 'recipe') <> 'object'
+    or jsonb_typeof(runtime_result #> '{recipe,ingredients}') <> 'array'
+    or jsonb_typeof(runtime_result #> '{recipe,steps}') <> 'array'
+    or jsonb_array_length(runtime_result #> '{recipe,ingredients}') > 200
+    or jsonb_array_length(runtime_result #> '{recipe,steps}') > 200 then
     raise exception 'VALIDATION_ERROR'
       using errcode = '22023';
   end if;
@@ -1535,21 +2101,297 @@ begin
       using errcode = '55000';
   end if;
 
+  v_recipe := runtime_result -> 'recipe';
+  v_title := left(
+    nullif(btrim(regexp_replace(v_recipe ->> 'title', '[[:cntrl:][:space:]]+', ' ', 'g')), ''),
+    160
+  );
+  if v_title is null then
+    raise exception 'VALIDATION_ERROR'
+      using errcode = '22023';
+  end if;
+
+  v_session_hash := encode(
+    extensions.digest(
+      convert_to('youtube-extraction-session-v1:' || v_job.id::text, 'UTF8'),
+      'sha256'
+    ),
+    'hex'
+  );
+  v_extraction_id := (
+    substr(v_session_hash, 1, 8) || '-' ||
+    substr(v_session_hash, 9, 4) || '-5' ||
+    substr(v_session_hash, 14, 3) || '-8' ||
+    substr(v_session_hash, 18, 3) || '-' ||
+    substr(v_session_hash, 21, 12)
+  )::uuid;
+
+  for v_ingredient, v_ingredient_index in
+    select ingredient.value, ingredient.ordinality
+    from jsonb_array_elements(v_recipe -> 'ingredients')
+      with ordinality as ingredient(value, ordinality)
+  loop
+    if jsonb_typeof(v_ingredient) <> 'object' then
+      raise exception 'VALIDATION_ERROR'
+        using errcode = '22023';
+    end if;
+
+    v_ingredient_name := left(
+      nullif(btrim(regexp_replace(v_ingredient ->> 'name', '[[:cntrl:][:space:]]+', ' ', 'g')), ''),
+      100
+    );
+    if v_ingredient_name is null then
+      raise exception 'VALIDATION_ERROR'
+        using errcode = '22023';
+    end if;
+
+    v_amount_text := nullif(btrim(regexp_replace(v_ingredient ->> 'amount', '[[:cntrl:][:space:]]+', ' ', 'g')), '');
+    v_amount_match := substring(replace(v_amount_text, ',', '.') from '[0-9]+[.]?[0-9]*');
+    v_amount := case
+      when v_amount_match is not null and v_amount_match::numeric > 0
+        then v_amount_match::numeric
+      else null
+    end;
+    v_unit := case when v_amount is null then null else left(
+      nullif(btrim(regexp_replace(v_ingredient ->> 'unit', '[[:cntrl:][:space:]]+', ' ', 'g')), ''),
+      20
+    ) end;
+    v_component_label := left(
+      nullif(btrim(regexp_replace(v_ingredient ->> 'groupLabel', '[[:cntrl:][:space:]]+', ' ', 'g')), ''),
+      80
+    );
+    v_display_text := btrim(v_ingredient_name || ' ' || coalesce(v_amount_text, '') || coalesce(v_unit, ''));
+
+    v_ingredient_id := null;
+    v_ingredient_standard_name := v_ingredient_name;
+    v_ingredient_match_count := 0;
+    v_ingredient_candidates := '[]'::jsonb;
+
+    select ingredient.id, ingredient.standard_name
+      into v_ingredient_id, v_ingredient_standard_name
+    from public.ingredients as ingredient
+    where lower(ingredient.standard_name) = lower(v_ingredient_name)
+    order by ingredient.id
+    limit 1;
+
+    if found then
+      v_ingredient_match_count := 1;
+    else
+      select count(distinct synonym.ingredient_id)::integer,
+             coalesce(jsonb_agg(distinct jsonb_build_object(
+               'ingredient_id', ingredient.id,
+               'standard_name', ingredient.standard_name,
+               'confidence', 0.9
+             )), '[]'::jsonb)
+        into v_ingredient_match_count, v_ingredient_candidates
+      from public.ingredient_synonyms as synonym
+      join public.ingredients as ingredient on ingredient.id = synonym.ingredient_id
+      where lower(synonym.synonym) = lower(v_ingredient_name);
+
+      if v_ingredient_match_count = 1 then
+        select ingredient.id, ingredient.standard_name
+          into v_ingredient_id, v_ingredient_standard_name
+        from public.ingredient_synonyms as synonym
+        join public.ingredients as ingredient on ingredient.id = synonym.ingredient_id
+        where lower(synonym.synonym) = lower(v_ingredient_name)
+        order by ingredient.id
+        limit 1;
+      end if;
+    end if;
+
+    v_resolution_status := case
+      when v_ingredient_id is not null and v_ingredient_match_count = 1 then 'resolved'
+      when v_ingredient_match_count > 0 then 'needs_review'
+      else 'unresolved'
+    end;
+
+    v_draft_ingredient_hash := encode(
+      extensions.digest(
+        convert_to(
+          'youtube-draft-ingredient-v1:' || v_job.id::text || ':' ||
+          v_ingredient_index::text || ':' || lower(v_ingredient_name),
+          'UTF8'
+        ),
+        'sha256'
+      ),
+      'hex'
+    );
+    v_draft_ingredient_id := (
+      substr(v_draft_ingredient_hash, 1, 8) || '-' ||
+      substr(v_draft_ingredient_hash, 9, 4) || '-5' ||
+      substr(v_draft_ingredient_hash, 14, 3) || '-8' ||
+      substr(v_draft_ingredient_hash, 18, 3) || '-' ||
+      substr(v_draft_ingredient_hash, 21, 12)
+    )::uuid;
+
+    v_ingredient_row := jsonb_build_object(
+      'draft_ingredient_id', v_draft_ingredient_id,
+      'ingredient_id', coalesce(v_ingredient_id::text, ''),
+      'standard_name', case
+        when v_resolution_status = 'resolved' then v_ingredient_standard_name
+        else v_ingredient_name
+      end,
+      'amount', v_amount,
+      'unit', v_unit,
+      'ingredient_type', case when v_amount is null then 'TO_TASTE' else 'QUANT' end,
+      'display_text', v_display_text,
+      'sort_order', v_ingredient_index,
+      'scalable', v_amount is not null and v_unit is not null,
+      'confidence', case when v_ingredient_match_count > 0 then 0.9 else null end,
+      'resolution_status', v_resolution_status,
+      'component_label', v_component_label,
+      'raw_text', v_display_text,
+      'quantity_source', 'unknown',
+      'quantity_confidence', null,
+      'quantity_raw_text', v_display_text,
+      'quantity_evidence_refs', jsonb_build_array(),
+      'quantity_review_required', v_amount is not null and v_unit is null,
+      'quantity_user_confirmed', false
+    );
+    if v_resolution_status = 'needs_review' then
+      v_ingredient_row := v_ingredient_row || jsonb_build_object('candidates', v_ingredient_candidates);
+    elsif v_resolution_status = 'unresolved' then
+      v_ingredient_row := v_ingredient_row || jsonb_build_object('candidates', jsonb_build_array());
+    end if;
+    v_ingredients := v_ingredients || jsonb_build_array(v_ingredient_row);
+    if v_resolution_status <> 'resolved' then
+      v_blocking_issues := v_blocking_issues || jsonb_build_array(
+        'ingredients[' || (v_ingredient_index - 1)::text || '].ingredient_id'
+      );
+    end if;
+  end loop;
+
+  for v_step, v_step_index in
+    select step.value, step.ordinality
+    from jsonb_array_elements(v_recipe -> 'steps')
+      with ordinality as step(value, ordinality)
+  loop
+    if jsonb_typeof(v_step) <> 'string' then
+      raise exception 'VALIDATION_ERROR'
+        using errcode = '22023';
+    end if;
+    v_step_text := left(
+      nullif(btrim(regexp_replace(v_step #>> '{}', '[[:cntrl:][:space:]]+', ' ', 'g')), ''),
+      2000
+    );
+    if v_step_text is null then
+      raise exception 'VALIDATION_ERROR'
+        using errcode = '22023';
+    end if;
+    v_method_labels := array_append(v_method_labels, case
+      when lower(v_step_text) ~ '(에어[[:space:]]*프라이어|air[[:space:]]*fryer)' then 'air_fryer'
+      when lower(v_step_text) ~ '(전자[[:space:]]*레인지|전자렌지|전자레인지|microwave)' then 'microwave'
+      when lower(v_step_text) ~ '(오븐|oven)' then 'oven_bake'
+      when lower(v_step_text) ~ '(튀김|튀겨|튀기|deep[[:space:]]*fry)' then 'deep_fry'
+      when lower(v_step_text) ~ '(부쳐|부치|pan[[:space:]]*fry)' then 'pan_fry'
+      when lower(v_step_text) ~ '(볶|stir[[:space:]]*fry)' then 'stir_fry'
+      when lower(v_step_text) ~ '(찜기|찐|쪄|찌기|steam)' then 'steam'
+      when lower(v_step_text) ~ '(데쳐|데치|블랜칭)' then 'blanch'
+      when lower(v_step_text) ~ '(졸|줄여|reduce)' then 'reduce'
+      when lower(v_step_text) ~ '(조려|조림|brais)' then 'braise'
+      when lower(v_step_text) ~ '(삶|boil[[:space:]]+in)' then 'parboil'
+      when lower(v_step_text) ~ '(끓|boil)' then 'boil'
+      when lower(v_step_text) ~ '(굽|구워|토스트|grill|toast)' then 'grill'
+      when lower(v_step_text) ~ '(절여|절이|pickle)' then 'pickle'
+      when lower(v_step_text) ~ '(재워|재우|밑간|숙성|marinat)' then 'pre_season'
+      when lower(v_step_text) ~ '(해동|thaw)' then 'thaw'
+      when lower(v_step_text) ~ '(버무|무쳐|무치|toss)' then 'toss'
+      when lower(v_step_text) ~ '(섞|비벼|비비|풀어|mix)' then 'mix'
+      when lower(v_step_text) ~ '(다져|다지|mince)' then 'mince'
+      else 'slice'
+    end);
+  end loop;
+
+  v_method_result := public.resolve_youtube_extraction_worker_methods(
+    v_job.id,
+    v_requested_worker_id,
+    v_requested_lease_generation,
+    v_method_labels
+  );
+  if coalesce((v_method_result ->> 'applied')::boolean, false) is not true then
+    raise exception 'YOUTUBE_EXTRACTION_JOB_STALE'
+      using errcode = '55000';
+  end if;
+
+  for v_step, v_step_index in
+    select step.value, step.ordinality
+    from jsonb_array_elements(v_recipe -> 'steps')
+      with ordinality as step(value, ordinality)
+  loop
+    v_step_text := btrim(regexp_replace(v_step #>> '{}', '[[:cntrl:][:space:]]+', ' ', 'g'));
+    v_method := v_method_result #> array['methods', (v_step_index - 1)::text];
+    if v_method is null then
+      raise exception 'VALIDATION_ERROR'
+        using errcode = '22023';
+    end if;
+    v_steps := v_steps || jsonb_build_array(jsonb_build_object(
+      'step_number', v_step_index,
+      'instruction', v_step_text,
+      'component_label', null,
+      'cooking_method', (v_method - 'is_system'),
+      'duration_text', null,
+      'is_incomplete', false,
+      'missing_fields', jsonb_build_array(),
+      'raw_text', v_step_text
+    ));
+  end loop;
+
+  select coalesce(jsonb_agg(method order by method ->> 'code'), '[]'::jsonb)
+    into v_new_cooking_methods
+  from (
+    select distinct (method - 'is_system') as method
+    from jsonb_array_elements(coalesce(v_method_result -> 'methods', '[]'::jsonb)) as method
+    where coalesce((method ->> 'is_new')::boolean, false)
+  ) as newly_resolved_methods;
+
+  v_source_availability := coalesce(runtime_result #> '{meta,sourceAvailability}', '{}'::jsonb);
+  if coalesce((v_source_availability ->> 'description')::boolean, false) then
+    v_extraction_methods := v_extraction_methods || jsonb_build_array('description');
+    v_source_providers := v_source_providers || jsonb_build_array('youtube_description');
+  end if;
+  if coalesce((v_source_availability ->> 'authorComment')::boolean, false) then
+    v_extraction_methods := v_extraction_methods || jsonb_build_array('comment');
+    v_source_providers := v_source_providers || jsonb_build_array('youtube_comment_threads');
+  end if;
+  if coalesce((v_source_availability ->> 'transcript')::boolean, false) then
+    v_extraction_methods := v_extraction_methods || jsonb_build_array('caption');
+    v_source_providers := v_source_providers || jsonb_build_array('youtube_timedtext_or_apify');
+  end if;
+  v_source_providers := v_source_providers || jsonb_build_array('codex_vision_i031');
+
+  v_draft := jsonb_build_object(
+    'extraction_id', v_extraction_id,
+    'title', v_title,
+    'base_servings', 2,
+    'thumbnail_url', 'https://i.ytimg.com/vi/' || v_job.youtube_video_id || '/hqdefault.jpg',
+    'tags', jsonb_build_array(),
+    'extraction_methods', v_extraction_methods,
+    'draft_warnings', jsonb_build_array(),
+    'blocking_issues', v_blocking_issues,
+    'ingredients', v_ingredients,
+    'steps', v_steps,
+    'new_cooking_methods', v_new_cooking_methods,
+    'multi_recipe_status', 'single',
+    'primary_candidate_id', null,
+    'recipe_candidates', jsonb_build_array()
+  );
+
   return jsonb_build_object(
     'applied', true,
     'source_job_id', v_job.id,
     'youtube_video_id', v_job.youtube_video_id,
-    'video_title_snapshot', coalesce(
-      runtime_result ->> 'video_title_snapshot',
-      runtime_result ->> 'title',
-      v_job.video_title_snapshot
-    ),
-    'draft', coalesce(runtime_result -> 'draft', runtime_result, '{}'::jsonb),
+    'video_title_snapshot', v_title,
+    'source_providers', v_source_providers,
+    'draft', v_draft,
     'source_meta_json', jsonb_build_object(
       'policy_version', v_job.policy_version,
       'policy_snapshot_digest', v_job.policy_snapshot_digest,
       'extractor_mode', v_job.extractor_mode,
-      'pipeline_identity', v_job.pipeline_identity
+      'pipeline_identity', v_job.pipeline_identity,
+      'i031_extractor', jsonb_build_object(
+        'identity', runtime_result -> 'identity',
+        'meta', coalesce(runtime_result -> 'meta', '{}'::jsonb)
+      )
     )
   );
 end;
@@ -1588,6 +2430,8 @@ declare
     '{}'::jsonb
   );
   v_source_meta jsonb;
+  v_session_hash text;
+  v_session_id uuid;
   v_session_kind text := coalesce(
     nullif(btrim(v_draft_json ->> 'session_kind'), ''),
     'single'
@@ -1646,7 +2490,27 @@ begin
     ) else jsonb_build_object('applied', false, 'finalized', false) end;
   end if;
 
-  if jsonb_typeof(v_draft_json -> 'source_providers') = 'array' then
+  v_session_hash := encode(
+    extensions.digest(
+      convert_to('youtube-extraction-session-v1:' || v_job.id::text, 'UTF8'),
+      'sha256'
+    ),
+    'hex'
+  );
+  v_session_id := (
+    substr(v_session_hash, 1, 8) || '-' ||
+    substr(v_session_hash, 9, 4) || '-5' ||
+    substr(v_session_hash, 14, 3) || '-8' ||
+    substr(v_session_hash, 18, 3) || '-' ||
+    substr(v_session_hash, 21, 12)
+  )::uuid;
+
+  if jsonb_typeof(v_finalized_payload -> 'source_providers') = 'array' then
+    select coalesce(array_agg(value order by ordinality), array['youtube_async']::text[])
+      into v_source_providers
+    from jsonb_array_elements_text(v_finalized_payload -> 'source_providers')
+      with ordinality as t(value, ordinality);
+  elsif jsonb_typeof(v_draft_json -> 'source_providers') = 'array' then
     select coalesce(array_agg(value order by ordinality), array['youtube_async']::text[])
       into v_source_providers
     from jsonb_array_elements_text(v_draft_json -> 'source_providers') with ordinality as t(value, ordinality);
@@ -1703,6 +2567,13 @@ begin
   for update;
 
   if found then
+    v_session_id := v_session.id;
+    v_draft_json := jsonb_set(
+      v_draft_json,
+      '{extraction_id}',
+      to_jsonb(v_session_id::text),
+      true
+    );
     update public.youtube_extraction_sessions as session_row
     set youtube_url = 'https://www.youtube.com/watch?v=' || v_job.youtube_video_id,
         youtube_video_id = v_job.youtube_video_id,
@@ -1726,7 +2597,14 @@ begin
     returning *
       into v_session;
   else
+    v_draft_json := jsonb_set(
+      v_draft_json,
+      '{extraction_id}',
+      to_jsonb(v_session_id::text),
+      true
+    );
     insert into public.youtube_extraction_sessions (
+      id,
       user_id,
       youtube_url,
       youtube_video_id,
@@ -1746,6 +2624,7 @@ begin
       session_kind,
       source_job_id
     ) values (
+      v_session_id,
       v_job.user_id,
       'https://www.youtube.com/watch?v=' || v_job.youtube_video_id,
       v_job.youtube_video_id,
@@ -2131,7 +3010,7 @@ begin
   end if;
 
   if v_requested_delivery_keys is null or coalesce(array_length(v_requested_delivery_keys, 1), 0) = 0 then
-    return jsonb_build_object('updated', 0);
+    return jsonb_build_object('delivered_count', 0);
   end if;
 
   update public.youtube_extraction_jobs as job
@@ -2144,7 +3023,7 @@ begin
 
   get diagnostics v_count = row_count;
 
-  return jsonb_build_object('updated', v_count);
+  return jsonb_build_object('delivered_count', v_count);
 end;
 $function$;
 
@@ -2175,7 +3054,7 @@ begin
   end if;
 
   if v_requested_job_ids is null or coalesce(array_length(v_requested_job_ids, 1), 0) = 0 then
-    return jsonb_build_object('updated', 0);
+    return jsonb_build_object('seen_count', 0);
   end if;
 
   update public.youtube_extraction_jobs as job
@@ -2188,7 +3067,7 @@ begin
 
   get diagnostics v_count = row_count;
 
-  return jsonb_build_object('updated', v_count);
+  return jsonb_build_object('seen_count', v_count);
 end;
 $function$;
 
@@ -2228,10 +3107,11 @@ begin
   end if;
 
   if coalesce(v_claims ->> 'scope', '') is distinct from 'youtube-extraction-credential-manager'
-    or coalesce(v_claims ->> 'iss', '') = ''
-    or coalesce(v_claims ->> 'aud', '') = ''
+    or coalesce(v_claims ->> 'iss', '') is distinct from 'https://worker.mumeok.kr'
+    or coalesce(v_claims ->> 'aud', '') is distinct from 'youtube-extraction'
     or nullif(v_claims ->> 'exp', '')::bigint is null
-    or to_timestamp((v_claims ->> 'exp')::bigint) < clock_timestamp() then
+    or to_timestamp((v_claims ->> 'exp')::bigint) < clock_timestamp()
+    or to_timestamp((v_claims ->> 'exp')::bigint) > clock_timestamp() + interval '5 minutes' then
     raise exception 'YOUTUBE_EXTRACTION_CREDENTIAL_MANAGER_UNAUTHORIZED'
       using errcode = '42501';
   end if;
@@ -2528,11 +3408,29 @@ alter function public.heartbeat_youtube_extraction_job(uuid, text, bigint, integ
   owner to youtube_extraction_worker_rpc_owner;
 alter function public.start_youtube_extraction_attempt(uuid, text, bigint, bigint)
   owner to youtube_extraction_worker_rpc_owner;
-alter function public.read_youtube_extraction_job_projection(uuid, uuid)
+alter function public.read_youtube_extraction_enqueue_readiness()
+  owner to youtube_extraction_enqueue_rpc_owner;
+alter function public.read_youtube_extraction_job_projection(uuid)
+  owner to youtube_extraction_enqueue_rpc_owner;
+alter function public.read_youtube_extraction_session_projection(uuid)
+  owner to youtube_extraction_enqueue_rpc_owner;
+alter function public.list_youtube_extraction_job_projections(text, timestamptz, timestamptz, uuid, integer)
+  owner to youtube_extraction_enqueue_rpc_owner;
+alter function private.youtube_extraction_job_fence_is_active(uuid, text, bigint)
   owner to youtube_extraction_worker_rpc_owner;
-alter function public.read_youtube_extraction_session_projection(uuid, uuid)
+alter function public.requeue_youtube_extraction_job_without_attempt(uuid, text, bigint, integer, integer)
   owner to youtube_extraction_worker_rpc_owner;
-alter function public.list_youtube_extraction_job_projections(uuid, text, timestamptz, timestamptz, uuid, integer)
+alter function public.update_youtube_extraction_job_title(uuid, text, bigint, text)
+  owner to youtube_extraction_worker_rpc_owner;
+alter function public.read_youtube_extraction_worker_catalog(uuid, text, bigint)
+  owner to youtube_extraction_worker_rpc_owner;
+alter function public.resolve_youtube_extraction_worker_methods(uuid, text, bigint, text[])
+  owner to youtube_extraction_worker_rpc_owner;
+alter function public.access_youtube_extraction_worker_cache(uuid, text, bigint, text, jsonb)
+  owner to youtube_extraction_worker_rpc_owner;
+alter function public.record_youtube_extraction_worker_event(uuid, text, bigint, text, jsonb)
+  owner to youtube_extraction_worker_rpc_owner;
+alter function public.reserve_youtube_extraction_worker_quota(uuid, text, bigint, text, integer)
   owner to youtube_extraction_worker_rpc_owner;
 alter function public.resolve_youtube_extraction_job_draft(uuid, text, bigint, text, jsonb)
   owner to youtube_extraction_worker_rpc_owner;
@@ -2592,20 +3490,56 @@ from public, anon, authenticated, service_role, youtube_extraction_credential_ma
 grant execute on function public.start_youtube_extraction_attempt(uuid, text, bigint, bigint)
 to youtube_extraction_worker;
 
-revoke all on function public.read_youtube_extraction_job_projection(uuid, uuid)
-from public, anon, authenticated, youtube_extraction_worker, youtube_extraction_credential_manager;
-grant execute on function public.read_youtube_extraction_job_projection(uuid, uuid)
-to service_role;
+revoke all on function public.read_youtube_extraction_enqueue_readiness()
+from public, anon, service_role, youtube_extraction_worker, youtube_extraction_credential_manager;
+grant execute on function public.read_youtube_extraction_enqueue_readiness() to authenticated;
 
-revoke all on function public.read_youtube_extraction_session_projection(uuid, uuid)
-from public, anon, authenticated, youtube_extraction_worker, youtube_extraction_credential_manager;
-grant execute on function public.read_youtube_extraction_session_projection(uuid, uuid)
-to service_role;
+revoke all on function public.read_youtube_extraction_job_projection(uuid)
+from public, anon, service_role, youtube_extraction_worker, youtube_extraction_credential_manager;
+grant execute on function public.read_youtube_extraction_job_projection(uuid) to authenticated;
 
-revoke all on function public.list_youtube_extraction_job_projections(uuid, text, timestamptz, timestamptz, uuid, integer)
-from public, anon, authenticated, youtube_extraction_worker, youtube_extraction_credential_manager;
-grant execute on function public.list_youtube_extraction_job_projections(uuid, text, timestamptz, timestamptz, uuid, integer)
-to service_role;
+revoke all on function public.read_youtube_extraction_session_projection(uuid)
+from public, anon, service_role, youtube_extraction_worker, youtube_extraction_credential_manager;
+grant execute on function public.read_youtube_extraction_session_projection(uuid) to authenticated;
+
+revoke all on function public.list_youtube_extraction_job_projections(text, timestamptz, timestamptz, uuid, integer)
+from public, anon, service_role, youtube_extraction_worker, youtube_extraction_credential_manager;
+grant execute on function public.list_youtube_extraction_job_projections(text, timestamptz, timestamptz, uuid, integer)
+to authenticated;
+
+revoke all on function private.youtube_extraction_job_fence_is_active(uuid, text, bigint)
+from public, anon, authenticated, service_role, youtube_extraction_worker, youtube_extraction_credential_manager;
+grant execute on function private.youtube_extraction_job_fence_is_active(uuid, text, bigint)
+to youtube_extraction_worker_rpc_owner;
+
+revoke all on function public.requeue_youtube_extraction_job_without_attempt(uuid, text, bigint, integer, integer)
+from public, anon, authenticated, service_role, youtube_extraction_credential_manager;
+grant execute on function public.requeue_youtube_extraction_job_without_attempt(uuid, text, bigint, integer, integer)
+to youtube_extraction_worker;
+revoke all on function public.update_youtube_extraction_job_title(uuid, text, bigint, text)
+from public, anon, authenticated, service_role, youtube_extraction_credential_manager;
+grant execute on function public.update_youtube_extraction_job_title(uuid, text, bigint, text)
+to youtube_extraction_worker;
+revoke all on function public.read_youtube_extraction_worker_catalog(uuid, text, bigint)
+from public, anon, authenticated, service_role, youtube_extraction_credential_manager;
+grant execute on function public.read_youtube_extraction_worker_catalog(uuid, text, bigint)
+to youtube_extraction_worker;
+revoke all on function public.resolve_youtube_extraction_worker_methods(uuid, text, bigint, text[])
+from public, anon, authenticated, service_role, youtube_extraction_credential_manager;
+grant execute on function public.resolve_youtube_extraction_worker_methods(uuid, text, bigint, text[])
+to youtube_extraction_worker;
+revoke all on function public.access_youtube_extraction_worker_cache(uuid, text, bigint, text, jsonb)
+from public, anon, authenticated, service_role, youtube_extraction_credential_manager;
+grant execute on function public.access_youtube_extraction_worker_cache(uuid, text, bigint, text, jsonb)
+to youtube_extraction_worker;
+revoke all on function public.record_youtube_extraction_worker_event(uuid, text, bigint, text, jsonb)
+from public, anon, authenticated, service_role, youtube_extraction_credential_manager;
+grant execute on function public.record_youtube_extraction_worker_event(uuid, text, bigint, text, jsonb)
+to youtube_extraction_worker;
+revoke all on function public.reserve_youtube_extraction_worker_quota(uuid, text, bigint, text, integer)
+from public, anon, authenticated, service_role, youtube_extraction_credential_manager;
+grant execute on function public.reserve_youtube_extraction_worker_quota(uuid, text, bigint, text, integer)
+to youtube_extraction_worker;
 
 revoke all on function public.resolve_youtube_extraction_job_draft(uuid, text, bigint, text, jsonb)
 from public, anon, authenticated, service_role, youtube_extraction_credential_manager;
