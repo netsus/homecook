@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-08-09T09:08:15Z",
+  "updated_at": "2026-08-12T09:21:11Z",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -2724,10 +2724,10 @@
     {
       "id": "33-youtube-i031-direct-extraction",
       "preset": "vertical-slice-strict",
-      "branch": "docs/33-youtube-i031-direct-extraction",
-      "pr_path": "pending",
-      "lifecycle": "planned",
-      "approval_state": "codex_approved",
+      "branch": "feature/fe-33-youtube-i031-direct-extraction",
+      "pr_path": "https://github.com/netsus/homecook/pull/1341",
+      "lifecycle": "merged",
+      "approval_state": "dual_approved",
       "verification_status": "passed",
       "required_checks": [
         "pnpm validate:source-of-truth-sync",
@@ -2739,10 +2739,10 @@
         "pnpm validate:workpack -- --slice 33-youtube-i031-direct-extraction",
         "git diff --check"
       ],
-      "notes": "User-approved Codex-only Stage 1. Independent native Codex internal 1.5 review passed with blocking findings 0. Implementation waits for this contract/workpack PR to merge. Fresh Train step coverage 0.655 missed the 0.675 threshold; initial enablement is localhost only, and Holdout/production rollout are not approved.",
+      "notes": "Canonical closeout owner: .workflow-v2/work-items/33-youtube-i031-direct-extraction.json#closeout. Independent Stage 6 reviewer task 019ff552-b732-7aa0-80a2-8833acd9c23e approved reviewed head dbcf48f2c0fdaed8326fd7653962e19e9d2ccc17 with findings 0 after Ready-triggered full regression and Lighthouse success. PR #1110 retained arbitrary-public-URL real smoke remains separately identified. User-owned arbitrary URL confirmation, Holdout/production enablement, macOS worker installation, and operating secrets remain Manual Only. closeout_phase=completed closeout_recovery=manual_patch:3|manual_handoff closeout_repair=codex:3|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:tests/e2e/slice-33-youtube-i031-direct-extraction.spec.ts,ui/designs/evidence/33-youtube-i031-direct-extraction,docs/workpacks/33-youtube-i031-direct-extraction/evidence/2026-08-12-stage4-6-closeout.md,docs/workpacks/33-youtube-i031-direct-extraction/evidence/2026-08-12-stage6-current-head-review.md last_recovery_at=2026-08-12T18:21:11+09:00",
       "evaluation_status": "not_started",
       "evaluation_round": 0,
-      "last_evaluator_result": null,
+      "last_evaluator_result": "Independent Stage 6 PASS at reviewed head dbcf48f2c0fdaed8326fd7653962e19e9d2ccc17; findings 0",
       "auto_merge_eligible": false,
       "blocked_reason_code": null
     },

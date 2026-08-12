@@ -149,7 +149,10 @@ function ProgressPanel({
       </div>
       <div className="mt-5 grid grid-cols-4 gap-2 text-center text-[11px] font-semibold text-[var(--text-3)]">
         {["중복 확인", "영상 분석", "레시피 구성", "저장"].map((label) => (
-          <span key={label} className="rounded-[var(--radius-sm)] bg-[var(--surface-fill)] px-1 py-2">
+          <span
+            key={label}
+            className="whitespace-nowrap rounded-[var(--radius-sm)] bg-[var(--surface-fill)] py-2"
+          >
             {label}
           </span>
         ))}
@@ -210,6 +213,10 @@ export function RecipioYoutubeImportScreen({
   const [reviewBlockers, setReviewBlockers] = useState<string[]>([]);
   const [registeredRecipeId, setRegisteredRecipeId] = useState<string | null>(null);
   const requestSeqRef = useRef(0);
+  const importInFlightRef = useRef(false);
+  const lastAutoInspectUrlRef = useRef<string | null>(null);
+
+  const isBusy = status === "checking" || status === "importing";
 
   const canSubmit = useMemo(
     () => Boolean(normalizeRecipioYoutubeUrl(youtubeUrl)),
@@ -232,64 +239,70 @@ export function RecipioYoutubeImportScreen({
   }, []);
 
   const startImport = useCallback(async (targetUrl = normalizedUrl) => {
-    if (!targetUrl) return;
+    if (!targetUrl || importInFlightRef.current) return;
 
-    const seq = requestSeqRef.current + 1;
-    requestSeqRef.current = seq;
-    setStatus("importing");
-    setErrorMessage(null);
-    setReviewDraft(null);
-    setReviewBlockers([]);
-    setTimedPhase("extracting");
+    importInFlightRef.current = true;
 
-    const duplicate = await checkRecipioYoutubeDuplicate(targetUrl.youtubeUrl);
-    if (seq !== requestSeqRef.current) return;
+    try {
+      const seq = requestSeqRef.current + 1;
+      requestSeqRef.current = seq;
+      setStatus("importing");
+      setErrorMessage(null);
+      setReviewDraft(null);
+      setReviewBlockers([]);
+      setTimedPhase("extracting");
 
-    if (duplicate.success && duplicate.data?.is_duplicate && duplicate.data.recipe) {
-      setDuplicateRecipe(duplicate.data.recipe);
-      setStatus("duplicate");
+      const duplicate = await checkRecipioYoutubeDuplicate(targetUrl.youtubeUrl);
+      if (seq !== requestSeqRef.current) return;
+
+      if (duplicate.success && duplicate.data?.is_duplicate && duplicate.data.recipe) {
+        setDuplicateRecipe(duplicate.data.recipe);
+        setStatus("duplicate");
+        setTimedPhase("complete");
+        return;
+      }
+
+      const extracted = await extractYoutubeRecipe({ youtube_url: targetUrl.youtubeUrl });
+      if (seq !== requestSeqRef.current) return;
+
+      if (!extracted.success || !extracted.data) {
+        setStatus("error");
+        setTimedPhase("idle");
+        setErrorMessage(getApiMessage("레시피를 추출하지 못했어요.", extracted.error?.message));
+        return;
+      }
+
+      const blockers = getRecipioAutoRegisterBlockers(extracted.data);
+      if (blockers.length > 0) {
+        setReviewDraft(extracted.data);
+        setReviewBlockers(blockers);
+        setStatus("review-required");
+        setTimedPhase("idle");
+        return;
+      }
+
+      setTimedPhase("registering");
+      const registered = await registerYoutubeRecipe(
+        buildRecipioYoutubeRegisterBody(extracted.data, targetUrl.youtubeUrl),
+      );
+      if (seq !== requestSeqRef.current) return;
+
+      if (!registered.success || !registered.data) {
+        setStatus("error");
+        setTimedPhase("idle");
+        setErrorMessage(getApiMessage("레시피를 등록하지 못했어요.", registered.error?.message));
+        return;
+      }
+
+      setRegisteredRecipeId(registered.data.recipe_id);
+      setStatus("complete");
       setTimedPhase("complete");
-      return;
+      window.setTimeout(() => {
+        router.push(`/recipes/${registered.data?.recipe_id}`);
+      }, 800);
+    } finally {
+      importInFlightRef.current = false;
     }
-
-    const extracted = await extractYoutubeRecipe({ youtube_url: targetUrl.youtubeUrl });
-    if (seq !== requestSeqRef.current) return;
-
-    if (!extracted.success || !extracted.data) {
-      setStatus("error");
-      setTimedPhase("idle");
-      setErrorMessage(getApiMessage("레시피를 추출하지 못했어요.", extracted.error?.message));
-      return;
-    }
-
-    const blockers = getRecipioAutoRegisterBlockers(extracted.data);
-    if (blockers.length > 0) {
-      setReviewDraft(extracted.data);
-      setReviewBlockers(blockers);
-      setStatus("review-required");
-      setTimedPhase("idle");
-      return;
-    }
-
-    setTimedPhase("registering");
-    const registered = await registerYoutubeRecipe(
-      buildRecipioYoutubeRegisterBody(extracted.data, targetUrl.youtubeUrl),
-    );
-    if (seq !== requestSeqRef.current) return;
-
-    if (!registered.success || !registered.data) {
-      setStatus("error");
-      setTimedPhase("idle");
-      setErrorMessage(getApiMessage("레시피를 등록하지 못했어요.", registered.error?.message));
-      return;
-    }
-
-    setRegisteredRecipeId(registered.data.recipe_id);
-    setStatus("complete");
-    setTimedPhase("complete");
-    window.setTimeout(() => {
-      router.push(`/recipes/${registered.data?.recipe_id}`);
-    }, 800);
   }, [normalizedUrl, router, setTimedPhase]);
 
   const inspectUrl = useCallback(async (targetUrl: string, options: { autoStart?: boolean } = {}) => {
@@ -350,6 +363,11 @@ export function RecipioYoutubeImportScreen({
   }, [inspectUrl]);
 
   useEffect(() => {
+    if (isBusy) return;
+    if (lastAutoInspectUrlRef.current === youtubeUrl) return;
+
+    lastAutoInspectUrlRef.current = youtubeUrl;
+
     const parsed = normalizeRecipioYoutubeUrl(youtubeUrl);
     syncNormalizedUrl(parsed);
 
@@ -370,7 +388,7 @@ export function RecipioYoutubeImportScreen({
     }, 500);
 
     return () => window.clearTimeout(timer);
-  }, [setTimedPhase, syncNormalizedUrl, youtubeUrl]);
+  }, [isBusy, setTimedPhase, syncNormalizedUrl, youtubeUrl]);
 
   useEffect(() => {
     if (phase !== "extracting" && phase !== "registering") return;
@@ -383,6 +401,8 @@ export function RecipioYoutubeImportScreen({
   }, [phase, phaseStartedAt]);
 
   const handleSubmit = useCallback(() => {
+    if (isBusy) return;
+
     const parsed = normalizeRecipioYoutubeUrl(youtubeUrl);
     if (!parsed) {
       setStatus("error");
@@ -391,9 +411,10 @@ export function RecipioYoutubeImportScreen({
     }
     syncNormalizedUrl(parsed);
     void startImport(parsed);
-  }, [startImport, syncNormalizedUrl, youtubeUrl]);
+  }, [isBusy, startImport, syncNormalizedUrl, youtubeUrl]);
 
   const handleRecommendedSelect = useCallback((url: string) => {
+    lastAutoInspectUrlRef.current = url;
     setYoutubeUrl(url);
     const parsed = normalizeRecipioYoutubeUrl(url);
     if (parsed) {
@@ -455,9 +476,10 @@ export function RecipioYoutubeImportScreen({
                 inputMode="url"
                 placeholder="유튜브 링크를 붙여넣으세요"
                 value={youtubeUrl}
+                disabled={isBusy}
                 onChange={(event) => setYoutubeUrl(event.target.value)}
                 onKeyDown={(event) => {
-                  if (event.key === "Enter" && canSubmit) {
+                  if (event.key === "Enter" && canSubmit && !isBusy) {
                     handleSubmit();
                   }
                 }}
@@ -466,10 +488,10 @@ export function RecipioYoutubeImportScreen({
               <button
                 type="button"
                 onClick={handleSubmit}
-                disabled={!canSubmit || status === "checking" || status === "importing"}
+                disabled={!canSubmit || isBusy}
                 className={[
                   "h-12 rounded-[var(--radius-sm)] px-5 text-base font-bold",
-                  canSubmit && status !== "checking" && status !== "importing"
+                  canSubmit && !isBusy
                     ? "bg-[var(--brand)] text-[var(--text-inverse)] hover:bg-[var(--brand-deep)]"
                     : "cursor-not-allowed bg-[var(--line-strong)] text-[var(--text-4)]",
                 ].join(" ")}
