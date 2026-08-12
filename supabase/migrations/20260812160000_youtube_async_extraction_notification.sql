@@ -1909,15 +1909,25 @@ begin
     'memberships',
     coalesce((
       select pg_catalog.string_agg(
-        member_role.rolname || '->' || granted_role.rolname,
+        member_role.rolname || '->' || granted_role.rolname
+          || '|admin=' || membership.admin_option::text,
         E'\n'
         order by member_role.rolname, granted_role.rolname
       )
       from pg_catalog.pg_auth_members as membership
       join pg_catalog.pg_roles as granted_role on granted_role.oid = membership.roleid
       join pg_catalog.pg_roles as member_role on member_role.oid = membership.member
-      where member_role.rolname = 'authenticator'
+      where (
+        granted_role.rolname like 'youtube_extraction%'
+        or member_role.rolname like 'youtube_extraction%'
+      )
+      and not (
+        member_role.rolname = 'postgres'
         and granted_role.rolname like 'youtube_extraction%'
+        and membership.admin_option
+        and coalesce((pg_catalog.to_jsonb(membership) ->> 'inherit_option')::boolean, false) = false
+        and coalesce((pg_catalog.to_jsonb(membership) ->> 'set_option')::boolean, false) = false
+      )
     ), ''),
     'table_security',
     coalesce((
@@ -2127,7 +2137,7 @@ begin
     'ready', v_policy.enabled
       and v_credential.allowed_snapshot_digest = v_snapshot_digest
       and v_credential.expires_at > clock_timestamp() + interval '30 minutes'
-      and v_catalog_fingerprint = '90753d3d0db979c6088fc225294064e48ae57a6c39f500c1dff1bebc0b222ae7',
+      and v_catalog_fingerprint = 'b3ad2b381c6d1a25fa40c30114d083371f66f3d5a82a828ea621bf8a8222fddf',
     'release_sha', v_credential.release_sha,
     'schema_identity', v_credential.schema_identity,
     'catalog_fingerprint', v_catalog_fingerprint,

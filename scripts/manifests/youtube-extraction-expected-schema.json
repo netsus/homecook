@@ -2,7 +2,7 @@
   "schema": "homecook.youtube-extraction-expected-schema",
   "version": 1,
   "schema_identity": "youtube-extraction-worker-schema-v1",
-  "catalog_fingerprint": "90753d3d0db979c6088fc225294064e48ae57a6c39f500c1dff1bebc0b222ae7",
+  "catalog_fingerprint": "b3ad2b381c6d1a25fa40c30114d083371f66f3d5a82a828ea621bf8a8222fddf",
   "catalog_fingerprint_algorithm": "sha256:youtube-extraction-live-catalog-v1",
   "catalog_fingerprint_components": [
     "tables",
@@ -40,6 +40,11 @@
     "youtube_extraction_worker",
     "youtube_extraction_worker_rpc_owner"
   ],
+  "memberships": [
+    "authenticator->youtube_extraction_credential_manager|admin=false",
+    "authenticator->youtube_extraction_worker|admin=false"
+  ],
+  "migration_owner_membership_exception": "postgres admin=true inherit=false set=false on youtube_extraction* roles (PostgreSQL 16+ automatic creator edge; cannot SET)",
   "memberships": [
     "authenticator->youtube_extraction_credential_manager",
     "authenticator->youtube_extraction_worker"
