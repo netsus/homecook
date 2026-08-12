@@ -44,6 +44,8 @@ The independent second re-review of `3af52ff5` returned eight more findings. Cha
 
 Two internal read-only reviews then found three additional fail-closed gaps. RED tests proved that cache-hit events could consume quota, cold no-cache LLM/visual events could be mislabeled as hits, and a forbidden principal could inherit a restricted worker owner role without changing readiness. The GREEN implementation excludes cache hits from paid quota, records cold execution with `cache_hit=false`, and fingerprints every membership edge touching `youtube_extraction*` authority. Clean PG17 and the portable PostgreSQL runner now produce the same catalog fingerprint. These internal reviews do not replace independent Stage 3 approval.
 
+The first replacement current-head CI run found two further regression-test failures: the generated account-session inventory had not yet recorded the new method/title worker RPC calls, and the immutable subprocess integration exceeded Vitest's default five-second timeout only under the full parallel suite. The inventory is now regenerated from the exact call sites, and the real subprocess test has an explicit 30-second upper bound while retaining its claim/persist/finalize/SIGTERM assertions. The same two tests pass `18/18`, and the full Vitest suite passes under parallel load.
+
 ## Implemented surfaces
 
 Public Next endpoints:
@@ -78,6 +80,7 @@ Passed before Draft PR creation:
 - additive security-function contract — 31 YouTube functions classified and valid
 - `pnpm typecheck` — pass
 - targeted ESLint — pass
+- `pnpm test` — 563 files passed / 31 skipped; 5925 tests passed / 432 skipped
 - `PLAYWRIGHT_BASE_URL=http://127.0.0.1:3199 pnpm verify:backend` at implementation-equivalent head `7bf11d88` — lint, typecheck, product tests (238 files passed / 12 skipped; 2734 passed / 175 skipped), production build and security Playwright (12 passed) all pass; the existing port `3100` service was untouched
 - `pnpm local:reset:demo` at implementation-equivalent detached head `7bf11d88` on isolated `56320`–`56326` — migrations and `seed.sql` completed, but the unpinned current CLI stopped before step 2 because Realtime/REST/Storage health checks remained unhealthy/503; repeated with a shorter project id and got the same infrastructure timeout. The separately pinned clean PG17 chain above is green. Existing app port `3100` stayed untouched.
 

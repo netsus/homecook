@@ -2021,11 +2021,11 @@
       "activation_phase": "always"
     },
     {
-      "key": "rpc|lib/server/youtube-extraction-worker-rpc.ts|finalize_youtube_extraction_job|2",
+      "key": "rpc|lib/server/youtube-extraction-worker-rpc.ts|finalize_youtube_extraction_job|4",
       "kind": "rpc",
       "operation": "call",
       "target": "finalize_youtube_extraction_job",
-      "line": 115,
+      "line": 218,
       "source_file": "lib/server/youtube-extraction-worker-rpc.ts",
       "route": null,
       "owner_scope": "system",
@@ -2035,11 +2035,11 @@
       "activation_phase": "always"
     },
     {
-      "key": "rpc|lib/server/youtube-extraction-worker-rpc.ts|resolve_youtube_extraction_job_draft|3",
+      "key": "rpc|lib/server/youtube-extraction-worker-rpc.ts|resolve_youtube_extraction_job_draft|5",
       "kind": "rpc",
       "operation": "call",
       "target": "resolve_youtube_extraction_job_draft",
-      "line": 170,
+      "line": 273,
       "source_file": "lib/server/youtube-extraction-worker-rpc.ts",
       "route": null,
       "owner_scope": "system",
@@ -2049,11 +2049,39 @@
       "activation_phase": "always"
     },
     {
-      "key": "rpc|lib/server/youtube-extraction-worker-rpc.ts|start_youtube_extraction_attempt|1",
+      "key": "rpc|lib/server/youtube-extraction-worker-rpc.ts|resolve_youtube_extraction_worker_methods|1",
+      "kind": "rpc",
+      "operation": "call",
+      "target": "resolve_youtube_extraction_worker_methods",
+      "line": 121,
+      "source_file": "lib/server/youtube-extraction-worker-rpc.ts",
+      "route": null,
+      "owner_scope": "system",
+      "persists_personal_state": false,
+      "guard_mode": "not_applicable",
+      "expected_generation": "not_applicable",
+      "activation_phase": "always"
+    },
+    {
+      "key": "rpc|lib/server/youtube-extraction-worker-rpc.ts|start_youtube_extraction_attempt|3",
       "kind": "rpc",
       "operation": "call",
       "target": "start_youtube_extraction_attempt",
-      "line": 101,
+      "line": 204,
+      "source_file": "lib/server/youtube-extraction-worker-rpc.ts",
+      "route": null,
+      "owner_scope": "system",
+      "persists_personal_state": false,
+      "guard_mode": "not_applicable",
+      "expected_generation": "not_applicable",
+      "activation_phase": "always"
+    },
+    {
+      "key": "rpc|lib/server/youtube-extraction-worker-rpc.ts|update_youtube_extraction_job_title|2",
+      "kind": "rpc",
+      "operation": "call",
+      "target": "update_youtube_extraction_job_title",
+      "line": 132,
       "source_file": "lib/server/youtube-extraction-worker-rpc.ts",
       "route": null,
       "owner_scope": "system",
@@ -2142,6 +2170,6 @@
       "on_delete": "cascade"
     }
   ],
-  "generated_at": "2026-08-12T18:18:21.012Z",
-  "checksum": "bae6939015d9e0146a27c4212e4890316eb3907ebdc8bc8ec864b933f414d1ad"
+  "generated_at": "2026-08-12T20:11:03.796Z",
+  "checksum": "fb7528652725e0d6931263c280a04de26e1fc72bebf940d4abef53cce1fa6ee8"
 }
