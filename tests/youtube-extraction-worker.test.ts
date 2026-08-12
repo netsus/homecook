@@ -103,6 +103,75 @@ describe("YTASYNC-WORKER restricted RPC adapter", () => {
     );
   });
 
+  it("uses every fenced worker data RPC through the restricted adapter", async () => {
+    const rpc = vi.fn(async (name: string) => ({
+      data: name === "read_youtube_extraction_worker_catalog"
+        ? { applied: true, ingredients: [], ingredient_synonyms: [], cooking_methods: [] }
+        : name === "access_youtube_extraction_worker_cache"
+          ? { applied: true, cache: null }
+          : name === "reserve_youtube_extraction_worker_quota"
+            ? { applied: true, reserved: true }
+            : name === "record_youtube_extraction_worker_event"
+              ? { applied: true, recorded: true }
+              : name === "resolve_youtube_extraction_worker_methods"
+                ? { applied: true, methods: [] }
+                : { applied: true, updated: true },
+      error: null,
+    }));
+    const adapter = createYoutubeExtractionWorkerRpcAdapter({ rpc });
+    const fence = {
+      jobId: "11111111-1111-4111-8111-111111111111",
+      workerId: "worker-1",
+      leaseGeneration: 7,
+    };
+
+    await expect(adapter.readCatalog(fence)).resolves.toMatchObject({ applied: true });
+    for (const operation of [
+      "transcript_read",
+      "transcript_upsert",
+      "transcript_touch",
+      "llm_read",
+      "llm_upsert",
+      "llm_touch",
+      "visual_read",
+      "visual_upsert",
+      "visual_touch",
+    ] as const) {
+      await expect(adapter.accessCache({
+        ...fence,
+        operation,
+        payload: { id: "22222222-2222-4222-8222-222222222222" },
+      })).resolves.toMatchObject({ applied: true });
+    }
+    await expect(adapter.reserveQuota({
+      ...fence,
+      provider: "external_transcript_api",
+      units: 1,
+    })).resolves.toMatchObject({ reserved: true });
+    await expect(adapter.recordEvent({
+      ...fence,
+      kind: "visual",
+      payload: { status: "success" },
+    })).resolves.toMatchObject({ recorded: true });
+    await expect(adapter.resolveMethods({
+      ...fence,
+      methodLabels: ["끓이기"],
+    })).resolves.toMatchObject({ methods: [] });
+    await expect(adapter.updateTitle({
+      ...fence,
+      title: "김치찌개",
+    })).resolves.toBe(true);
+
+    expect(rpc).toHaveBeenCalledWith("update_youtube_extraction_job_title", {
+      job_id: fence.jobId,
+      worker_id: fence.workerId,
+      lease_generation: fence.leaseGeneration,
+      title: "김치찌개",
+    });
+    expect(rpc.mock.calls.filter(([name]) =>
+      name === "access_youtube_extraction_worker_cache")).toHaveLength(9);
+  });
+
   it("immediately releases a claimed job when the provider permit is contended", async () => {
     const extract = vi.fn();
     const adapter = {

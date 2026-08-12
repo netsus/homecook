@@ -98,6 +98,9 @@ describe("YTASYNC-DB/SEC migration contract", () => {
   it("uses auth.uid owner reads and returns exact delivered/seen count keys", () => {
     const sql = readFileSync(migrationPath, "utf8").toLowerCase();
     expect(sql).toContain("read_youtube_extraction_enqueue_readiness()");
+    expect(sql).toContain("'catalog_fingerprint'");
+    expect(sql).toContain("youtube-extraction-live-catalog-v1");
+    expect(sql).toContain("v_credential.expires_at <= clock_timestamp() + interval '30 minutes'");
     expect(sql).toContain("read_youtube_extraction_job_projection(uuid)");
     expect(sql).toContain("read_youtube_extraction_session_projection(uuid)");
     expect(sql).toContain(

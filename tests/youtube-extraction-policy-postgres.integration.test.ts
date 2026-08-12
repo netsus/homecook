@@ -19,6 +19,7 @@ const expectedSchemaDocument = JSON.parse(readFileSync(
   roles: string[];
   memberships: string[];
   rpc_signatures: string[];
+  catalog_fingerprint: string;
 };
 const expectedSchema = {
   tables: expectedSchemaDocument.tables,
@@ -1491,9 +1492,88 @@ describe.runIf(enabled).sequential("youtube async extraction PostgreSQL integrat
       release_sha: workerReleaseSha,
       schema_identity: workerSchemaIdentity,
       policy_snapshot_digest: snapshotDigest,
+      catalog_fingerprint: expectedSchemaDocument.catalog_fingerprint,
     });
     expect(own).toMatchObject({ id: "80000000-0000-4000-8000-000000000015" });
     expect(other).toEqual(null);
+  });
+
+  it("reports the previous fingerprint validity window for active and expired rotations", () => {
+    enablePolicy();
+    const snapshotDigest = policySnapshotDigest();
+    configureWorkerCredential(snapshotDigest);
+
+    psql(`
+      update private.youtube_extraction_current_policy
+      set previous_fingerprint_key_version = '0',
+          previous_fingerprint_valid_until = now() + interval '1 hour'
+      where policy_key = 'primary';
+    `);
+    const active = runAsJson("authenticated", authenticatedClaims(ownerA), `
+      select public.read_youtube_extraction_enqueue_readiness()::text;
+    `);
+    expect(active.previous_fingerprint_key_version).toBe("0");
+    expect(Date.parse(String(active.previous_fingerprint_valid_until))).toBeGreaterThan(Date.now());
+
+    psql(`
+      update private.youtube_extraction_current_policy
+      set previous_fingerprint_valid_until = now() - interval '1 second'
+      where policy_key = 'primary';
+    `);
+    const expired = runAsJson("authenticated", authenticatedClaims(ownerA), `
+      select public.read_youtube_extraction_enqueue_readiness()::text;
+    `);
+    expect(expired.previous_fingerprint_key_version).toBe("0");
+    expect(Date.parse(String(expired.previous_fingerprint_valid_until))).toBeLessThan(Date.now());
+  });
+
+  it("rejects worker preflight and claim when credential validity is at the 30 minute cutoff", () => {
+    enablePolicy();
+    const snapshotDigest = policySnapshotDigest();
+    configureWorkerCredential(snapshotDigest);
+    insertJob({
+      id: "80000000-0000-4000-8000-000000000016",
+      userId: ownerA,
+      videoId: "credCutoff01",
+      fingerprint: "1".repeat(64),
+      status: "queued",
+    });
+    psql(`
+      update private.youtube_extraction_worker_credentials
+      set expires_at = now() + interval '30 minutes'
+      where credential_name = 'primary';
+    `);
+    const claims = workerClaims(snapshotDigest, {
+      exp: Math.floor(Date.now() / 1000) + 29 * 60,
+    });
+
+    expectSqlFailure(`
+      begin;
+      set local role youtube_extraction_worker;
+      set local request.jwt.claims = ${sqlJson(claims)};
+      select public.check_youtube_extraction_worker_pre_request();
+      commit;
+    `, /YOUTUBE_EXTRACTION_WORKER_UNAUTHORIZED/u);
+    expectSqlFailure(`
+      begin;
+      set local role youtube_extraction_worker;
+      set local request.jwt.claims = ${sqlJson(claims)};
+      select public.claim_youtube_extraction_job('${workerId}', '${snapshotDigest}', 120);
+      commit;
+    `, /YOUTUBE_EXTRACTION_WORKER_UNAUTHORIZED/u);
+    expect(parseJson(psql(`
+      select json_build_object(
+        'status', status,
+        'lease_generation', lease_generation,
+        'lease_owner', lease_owner
+      )::text
+      from public.youtube_extraction_jobs
+      where id = '80000000-0000-4000-8000-000000000016'::uuid;
+    `))).toEqual({
+      status: "queued",
+      lease_generation: 0,
+      lease_owner: null,
+    });
   });
 
   it("rejects wrong worker authority and enforces manager and claim lifetime cutoffs", () => {
