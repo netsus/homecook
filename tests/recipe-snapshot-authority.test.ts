@@ -4,13 +4,15 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const migrationsDirectory = join(process.cwd(), "supabase", "migrations");
+let migrationSource: string | null = null;
 
 function readMigrationSource() {
-  return readdirSync(migrationsDirectory)
+  migrationSource ??= readdirSync(migrationsDirectory)
     .filter((fileName) => fileName.endsWith(".sql"))
     .sort()
     .map((fileName) => readFileSync(join(migrationsDirectory, fileName), "utf8"))
     .join("\n");
+  return migrationSource;
 }
 
 describe("recipe content snapshot authority", () => {
