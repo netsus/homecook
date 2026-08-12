@@ -176,8 +176,8 @@
     },
     "projection_state": {
       "docs_synced_at": "2026-08-12T13:46:49Z",
-      "status_synced_at": "2026-08-12T13:46:49Z",
-      "pr_body_synced_at": null
+      "status_synced_at": "2026-08-12T13:54:07Z",
+      "pr_body_synced_at": "2026-08-12T13:54:07Z"
     }
   },
   "notes": "Canonical closeout owner: .workflow-v2/work-items/youtube-async-extraction-notification.json#closeout. Roadmap is docs while canonical workflow lifecycle remains planned. Stage 1 docs-only current commands are verify_commands; required_checks describes the full Stage 2-6 lifecycle. Product code, migration, runtime writes and installer execution are forbidden in this task. Independent internal 1.5 must approve the exact docs head before merge or implementation. closeout_phase=collecting closeout_repair=codex:0|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0",

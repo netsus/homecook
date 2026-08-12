@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-08-12T13:46:49Z",
+  "updated_at": "2026-08-12T13:54:07Z",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -2812,7 +2812,7 @@
       "id": "youtube-async-extraction-notification",
       "preset": "vertical-slice-strict",
       "branch": "docs/youtube-async-extraction-notification",
-      "pr_path": "pending",
+      "pr_path": "https://github.com/netsus/homecook/pull/1344",
       "lifecycle": "planned",
       "approval_state": "not_started",
       "verification_status": "pending",
