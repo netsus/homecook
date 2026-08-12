@@ -1610,6 +1610,26 @@ describe.runIf(enabled).sequential("youtube async extraction PostgreSQL integrat
     }
   });
 
+  it("fails readiness closed when any principal inherits a restricted worker role", () => {
+    enablePolicy();
+    const snapshotDigest = policySnapshotDigest();
+    configureWorkerCredential(snapshotDigest);
+    psql(`
+      grant youtube_extraction_worker_rpc_owner to authenticated;
+    `);
+    try {
+      const readiness = runAsJson("authenticated", authenticatedClaims(ownerA), `
+        select public.read_youtube_extraction_enqueue_readiness()::text;
+      `);
+      expect(readiness.ready).toBe(false);
+      expect(readiness.catalog_fingerprint).not.toBe(expectedSchemaDocument.catalog_fingerprint);
+    } finally {
+      psql(`
+        revoke youtube_extraction_worker_rpc_owner from authenticated;
+      `);
+    }
+  });
+
   it("rejects worker preflight and claim when credential validity is at the 30 minute cutoff", () => {
     enablePolicy();
     const snapshotDigest = policySnapshotDigest();
