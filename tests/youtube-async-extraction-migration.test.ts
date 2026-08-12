@@ -62,6 +62,44 @@ describe("YTASYNC-DB/SEC migration contract", () => {
     expect(sql).toContain("revoke all on table public.youtube_extraction_jobs from public, anon, authenticated, service_role");
   });
 
+  it("exposes only lease-fenced worker data and permit-contention mutation RPCs", () => {
+    const sql = readFileSync(migrationPath, "utf8").toLowerCase();
+    for (const signature of [
+      "read_youtube_extraction_worker_catalog(uuid, text, bigint)",
+      "access_youtube_extraction_worker_cache(uuid, text, bigint, text, jsonb)",
+      "record_youtube_extraction_worker_event(uuid, text, bigint, text, jsonb)",
+      "reserve_youtube_extraction_worker_quota(uuid, text, bigint, text, integer)",
+      "update_youtube_extraction_job_title(uuid, text, bigint, text)",
+      "requeue_youtube_extraction_job_without_attempt(uuid, text, bigint, integer, integer)",
+    ]) {
+      expect(sql, signature).toContain(signature);
+    }
+    expect(sql).toContain("youtube_extraction_job_fence_is_active");
+    expect(sql).toContain("greatest(1, min_delay_seconds)");
+    expect(sql).toContain("least(30, max_delay_seconds)");
+  });
+
+  it("uses auth.uid owner reads and returns exact delivered/seen count keys", () => {
+    const sql = readFileSync(migrationPath, "utf8").toLowerCase();
+    expect(sql).toContain("read_youtube_extraction_enqueue_readiness()");
+    expect(sql).toContain("read_youtube_extraction_job_projection(uuid)");
+    expect(sql).toContain("read_youtube_extraction_session_projection(uuid)");
+    expect(sql).toContain(
+      "list_youtube_extraction_job_projections(text, timestamp with time zone, timestamp with time zone, uuid, integer)",
+    );
+    expect(sql).toContain("jsonb_build_object('delivered_count', v_count)");
+    expect(sql).toContain("jsonb_build_object('seen_count', v_count)");
+    expect(sql).not.toContain("returns jsonb_build_object('updated', v_count)");
+  });
+
+  it("pins exact worker JWT authority and lifetime limits", () => {
+    const sql = readFileSync(migrationPath, "utf8").toLowerCase();
+    expect(sql).toContain("v_issuer is distinct from 'https://worker.mumeok.kr'");
+    expect(sql).toContain("v_audience is distinct from 'youtube-extraction'");
+    expect(sql).toContain("clock_timestamp() + interval '5 minutes'");
+    expect(sql).toContain("clock_timestamp() + interval '30 minutes'");
+  });
+
   it("seeds the exact i031-only policy disabled", () => {
     const sql = readFileSync(migrationPath, "utf8");
     expect(sql).toContain("9adc7876a02c2da55a92e3a65369bf4e803c78efb9a791717201eedc242c1908");
