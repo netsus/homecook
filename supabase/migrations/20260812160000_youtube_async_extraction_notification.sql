@@ -3465,6 +3465,8 @@ alter function public.rotate_youtube_extraction_worker_credential(
   bigint, bigint, text, timestamptz, text, text, text
 ) owner to youtube_extraction_credential_manager_rpc_owner;
 
+set local role youtube_extraction_enqueue_rpc_owner;
+
 revoke all on function public.enqueue_youtube_extraction_job(
   text,
   bigint,
@@ -3488,6 +3490,9 @@ grant execute on function public.enqueue_youtube_extraction_job(
 )
 to authenticated;
 
+reset role;
+set local role youtube_extraction_worker_rpc_owner;
+
 revoke all on function public.claim_youtube_extraction_job(text, text, integer)
 from public, anon, authenticated, service_role, youtube_extraction_credential_manager;
 grant execute on function public.claim_youtube_extraction_job(text, text, integer)
@@ -3502,6 +3507,9 @@ revoke all on function public.start_youtube_extraction_attempt(uuid, text, bigin
 from public, anon, authenticated, service_role, youtube_extraction_credential_manager;
 grant execute on function public.start_youtube_extraction_attempt(uuid, text, bigint, bigint)
 to youtube_extraction_worker;
+
+reset role;
+set local role youtube_extraction_enqueue_rpc_owner;
 
 revoke all on function public.read_youtube_extraction_enqueue_readiness()
 from public, anon, service_role, youtube_extraction_worker, youtube_extraction_credential_manager;
@@ -3520,10 +3528,11 @@ from public, anon, service_role, youtube_extraction_worker, youtube_extraction_c
 grant execute on function public.list_youtube_extraction_job_projections(text, timestamptz, timestamptz, uuid, integer)
 to authenticated;
 
+reset role;
+set local role youtube_extraction_worker_rpc_owner;
+
 revoke all on function private.youtube_extraction_job_fence_is_active(uuid, text, bigint)
 from public, anon, authenticated, service_role, youtube_extraction_worker, youtube_extraction_credential_manager;
-grant execute on function private.youtube_extraction_job_fence_is_active(uuid, text, bigint)
-to youtube_extraction_worker_rpc_owner;
 
 revoke all on function public.requeue_youtube_extraction_job_without_attempt(uuid, text, bigint, integer, integer)
 from public, anon, authenticated, service_role, youtube_extraction_credential_manager;
@@ -3594,6 +3603,9 @@ from public, anon, service_role, youtube_extraction_worker, youtube_extraction_c
 grant execute on function public.mark_youtube_extraction_jobs_seen(uuid, uuid[])
 to authenticated;
 
+reset role;
+set local role youtube_extraction_credential_manager_rpc_owner;
+
 revoke all on function public.rotate_youtube_extraction_worker_credential(
   bigint,
   bigint,
@@ -3615,10 +3627,15 @@ grant execute on function public.rotate_youtube_extraction_worker_credential(
 )
 to youtube_extraction_credential_manager;
 
+reset role;
+set local role youtube_extraction_worker_rpc_owner;
+
 revoke all on function public.check_youtube_extraction_worker_pre_request()
 from public, anon, authenticated, service_role;
 grant execute on function public.check_youtube_extraction_worker_pre_request()
 to youtube_extraction_worker, youtube_extraction_credential_manager;
+
+reset role;
 
 revoke create on schema public
   from youtube_extraction_enqueue_rpc_owner,

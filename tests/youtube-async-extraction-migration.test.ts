@@ -63,6 +63,9 @@ describe("YTASYNC-DB/SEC migration contract", () => {
     expect(sql).toContain("from %i granted by %i");
     expect(sql).toContain("grant create on schema private to youtube_extraction_worker_rpc_owner");
     expect(sql).toContain("revoke create on schema private from youtube_extraction_worker_rpc_owner");
+    expect(sql.match(/set local role youtube_extraction_enqueue_rpc_owner/g)?.length).toBe(2);
+    expect(sql.match(/set local role youtube_extraction_worker_rpc_owner/g)?.length).toBe(3);
+    expect(sql).toContain("set local role youtube_extraction_credential_manager_rpc_owner");
     expect(sql).toContain("revoke all on table public.youtube_extraction_jobs from public, anon, authenticated, service_role");
   });
 
