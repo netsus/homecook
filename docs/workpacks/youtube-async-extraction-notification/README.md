@@ -163,6 +163,20 @@
 - blocker:
   - official tuple/plan hash drift, workpack 33 regression, expected-schema/RPC/role inventory drift, current policy disabled/mismatch, app/worker release SHA drift, worker credential/secret provenance 실패, current-head check 미완료 중 하나라도 있으면 다음 gate로 진행하지 않는다.
 
+## Stage 1 Validation Boundary
+
+- Stage 1 pre-merge required validation은 현재 branch의 README, acceptance, automation, workflow projection을 직접 읽는 local doc gate와 targeted Vitest다. 아직 `origin/master`에 이 workpack이 없다는 이유로 실패하는 `validate:workpack -- --slice`를 현재 gate로 선언하지 않는다.
+- current required commands:
+  - `pnpm validate:source-of-truth-sync`
+  - `pnpm validate:workflow-v2`
+  - `node scripts/validate-automation-spec.mjs --slice youtube-async-extraction-notification`
+  - `pnpm validate:omo-bookkeeping`
+  - `node --input-type=module -e "import { evaluateDocGate } from './scripts/lib/omo-doc-gate.mjs'; const result = evaluateDocGate({ slice: 'youtube-async-extraction-notification' }); console.log(result.summary); if (result.outcome !== 'pass') process.exit(1);"`
+  - `pnpm exec vitest run tests/youtube-async-extraction-notification-stage1.test.ts tests/youtube-background-extraction-contract.test.ts tests/workflow-v2-docs.test.ts tests/omo-automation-spec.test.ts tests/omo-bookkeeping.test.ts tests/omo-doc-gate.test.ts tests/source-of-truth-sync.test.ts`
+  - `pnpm lint`, `pnpm typecheck`, `pnpm audit --audit-level high`, `git diff --check`
+- post-merge / Stage 2 preflight는 이 docs PR이 `master`에 merge된 뒤 `BRANCH_NAME=feature/be-youtube-async-extraction-notification pnpm validate:workpack -- --slice youtube-async-extraction-notification`로 `origin/master`의 workpack 존재를 fail closed한다.
+- CTA contract regression은 `YT_IMPORT_BACKGROUND=가져오기`, success draft notification=`결과 확인`을 exact match하고 다른 대체 문구를 거부한다.
+
 ## Key Rules
 
 1. `consumed`가 TTL보다 우선한다. `consumed-after-TTL`은 성공 recipe destination이며 retry를 제공하지 않는다.

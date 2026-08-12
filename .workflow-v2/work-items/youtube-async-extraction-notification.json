@@ -75,18 +75,10 @@
     "required_checks": [
       "pnpm validate:source-of-truth-sync",
       "pnpm validate:workflow-v2",
-      "BRANCH_NAME=docs/youtube-async-extraction-notification pnpm validate:workpack -- --slice youtube-async-extraction-notification",
       "node scripts/validate-automation-spec.mjs --slice youtube-async-extraction-notification",
       "pnpm validate:omo-bookkeeping",
-      "pnpm exec vitest run tests/youtube-background-extraction-contract.test.ts tests/workflow-v2-docs.test.ts tests/omo-automation-spec.test.ts tests/omo-bookkeeping.test.ts tests/omo-doc-gate.test.ts tests/source-of-truth-sync.test.ts",
-      "pnpm verify:backend",
-      "CI=1 pnpm verify:frontend:pr",
-      "pnpm exec playwright test tests/e2e/youtube-async-extraction-notification.spec.ts --project desktop-chrome --project mobile-chrome --project mobile-ios-small",
-      "pnpm qa:explore -- --slice youtube-async-extraction-notification --base-url http://127.0.0.1:3100",
-      "pnpm qa:eval -- --checklist .artifacts/qa/youtube-async-extraction-notification/latest/exploratory-checklist.json --report .artifacts/qa/youtube-async-extraction-notification/latest/exploratory-report.json --fail-under 90",
-      "pnpm validate:exploratory-qa-evidence -- --slice youtube-async-extraction-notification",
-      "pnpm validate:authority-evidence-presence -- --slice youtube-async-extraction-notification",
-      "pnpm validate:closeout-sync -- --slice youtube-async-extraction-notification",
+      "node --input-type=module -e \"import { evaluateDocGate } from './scripts/lib/omo-doc-gate.mjs'; const result = evaluateDocGate({ slice: 'youtube-async-extraction-notification' }); console.log(result.summary); if (result.outcome !== 'pass') process.exit(1);\"",
+      "pnpm exec vitest run tests/youtube-async-extraction-notification-stage1.test.ts tests/youtube-background-extraction-contract.test.ts tests/workflow-v2-docs.test.ts tests/omo-automation-spec.test.ts tests/omo-bookkeeping.test.ts tests/omo-doc-gate.test.ts tests/source-of-truth-sync.test.ts",
       "pnpm lint",
       "pnpm typecheck",
       "pnpm audit --audit-level high",
@@ -95,14 +87,40 @@
     "verify_commands": [
       "pnpm validate:source-of-truth-sync",
       "pnpm validate:workflow-v2",
-      "BRANCH_NAME=docs/youtube-async-extraction-notification pnpm validate:workpack",
       "node scripts/validate-automation-spec.mjs --slice youtube-async-extraction-notification",
       "pnpm validate:omo-bookkeeping",
-      "pnpm exec vitest run tests/youtube-background-extraction-contract.test.ts tests/workflow-v2-docs.test.ts tests/omo-automation-spec.test.ts tests/omo-bookkeeping.test.ts tests/omo-doc-gate.test.ts tests/source-of-truth-sync.test.ts",
+      "node --input-type=module -e \"import { evaluateDocGate } from './scripts/lib/omo-doc-gate.mjs'; const result = evaluateDocGate({ slice: 'youtube-async-extraction-notification' }); console.log(result.summary); if (result.outcome !== 'pass') process.exit(1);\"",
+      "pnpm exec vitest run tests/youtube-async-extraction-notification-stage1.test.ts tests/youtube-background-extraction-contract.test.ts tests/workflow-v2-docs.test.ts tests/omo-automation-spec.test.ts tests/omo-bookkeeping.test.ts tests/omo-doc-gate.test.ts tests/source-of-truth-sync.test.ts",
       "pnpm lint",
       "pnpm typecheck",
       "pnpm audit --audit-level high",
       "git diff --check"
+    ],
+    "stage1_current_commands": [
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "node scripts/validate-automation-spec.mjs --slice youtube-async-extraction-notification",
+      "pnpm validate:omo-bookkeeping",
+      "node --input-type=module -e \"import { evaluateDocGate } from './scripts/lib/omo-doc-gate.mjs'; const result = evaluateDocGate({ slice: 'youtube-async-extraction-notification' }); console.log(result.summary); if (result.outcome !== 'pass') process.exit(1);\"",
+      "pnpm exec vitest run tests/youtube-async-extraction-notification-stage1.test.ts tests/youtube-background-extraction-contract.test.ts tests/workflow-v2-docs.test.ts tests/omo-automation-spec.test.ts tests/omo-bookkeeping.test.ts tests/omo-doc-gate.test.ts tests/source-of-truth-sync.test.ts",
+      "pnpm lint",
+      "pnpm typecheck",
+      "pnpm audit --audit-level high",
+      "git diff --check"
+    ],
+    "stage2_post_merge_preflight": [
+      "BRANCH_NAME=feature/be-youtube-async-extraction-notification pnpm validate:workpack -- --slice youtube-async-extraction-notification"
+    ],
+    "full_lifecycle_checks": [
+      "BRANCH_NAME=feature/be-youtube-async-extraction-notification pnpm validate:workpack -- --slice youtube-async-extraction-notification",
+      "pnpm verify:backend",
+      "CI=1 pnpm verify:frontend:pr",
+      "pnpm exec playwright test tests/e2e/youtube-async-extraction-notification.spec.ts --project desktop-chrome --project mobile-chrome --project mobile-ios-small",
+      "pnpm qa:explore -- --slice youtube-async-extraction-notification --base-url http://127.0.0.1:3100",
+      "pnpm qa:eval -- --checklist .artifacts/qa/youtube-async-extraction-notification/latest/exploratory-checklist.json --report .artifacts/qa/youtube-async-extraction-notification/latest/exploratory-report.json --fail-under 90",
+      "pnpm validate:exploratory-qa-evidence -- --slice youtube-async-extraction-notification",
+      "pnpm validate:authority-evidence-presence -- --slice youtube-async-extraction-notification",
+      "pnpm validate:closeout-sync -- --slice youtube-async-extraction-notification"
     ],
     "evaluator_commands": [
       "independent Codex internal 1.5 contract and checklist review on exact Stage 1 head",
@@ -122,19 +140,22 @@
       "non-null-design-authority-generator-critic-evidence-and-report-paths",
       "before-and-future-after-390-320-desktop-evidence-plan",
       "roadmap-docs-and-workflow-planned-projection",
+      "stage1-premerge-local-doc-gate-and-targeted-test-without-origin-master-workpack-check",
+      "stage2-post-merge-origin-master-workpack-preflight",
+      "official-cta-copy-youtube-import-and-success-result-confirmation",
       "stage1-current-command-subset-separated-from-full-lifecycle-checks",
       "current-head-all-started-checks-terminal-green-before-manual-merge"
     ]
   },
   "status": {
     "lifecycle": "planned",
-    "approval_state": "not_started",
+    "approval_state": "needs_revision",
     "verification_status": "pending",
-    "evaluation_status": "not_started",
-    "evaluation_round": 0,
-    "last_evaluator_result": null,
+    "evaluation_status": "fixable",
+    "evaluation_round": 1,
+    "last_evaluator_result": "REVISE with 3 required findings by independent internal 1.5 task 019ff643-988a-7013-9edb-4d4f61986930 at head 17ef00f44800fe34f382191c3850722f9d3929bf; repair pushed for exact-head re-review",
     "auto_merge_eligible": false,
-    "blocked_reason_code": "independent-internal-1.5-pending"
+    "blocked_reason_code": "independent-internal-1.5-rereview-pending"
   },
   "closeout": {
     "phase": "collecting",
@@ -154,33 +175,35 @@
     },
     "merge_gate_projection": {
       "current_head_sha": null,
-      "approval_state": "not_started",
+      "approval_state": "needs_revision",
       "all_checks_green": false
     },
     "recovery_summary": {
-      "manual_patch_count": 0,
+      "manual_patch_count": 1,
       "manual_handoff": false,
       "stale_lock_count": 0,
       "ci_resync_count": 0,
       "artifact_missing": false,
-      "last_recovery_at": null
+      "last_recovery_at": "2026-08-12T14:07:53Z"
     },
     "repair_summary": {
-      "codex_repairable_count": 0,
+      "codex_repairable_count": 3,
       "claude_repairable_count": 0,
       "manual_decision_required_count": 0,
       "human_escalation_count": 0,
       "post_merge_stale_count": 0,
-      "latest_reason_code": null,
-      "evidence_sources": []
+      "latest_reason_code": "internal-1.5-revise-three",
+      "evidence_sources": [
+        "Codex_task_019ff643-988a-7013-9edb-4d4f61986930_REVISE"
+      ]
     },
     "projection_state": {
-      "docs_synced_at": "2026-08-12T13:46:49Z",
-      "status_synced_at": "2026-08-12T13:54:07Z",
+      "docs_synced_at": "2026-08-12T14:07:53Z",
+      "status_synced_at": "2026-08-12T14:07:53Z",
       "pr_body_synced_at": "2026-08-12T13:54:07Z"
     }
   },
-  "notes": "Canonical closeout owner: .workflow-v2/work-items/youtube-async-extraction-notification.json#closeout. Roadmap is docs while canonical workflow lifecycle remains planned. Stage 1 docs-only current commands are verify_commands; required_checks describes the full Stage 2-6 lifecycle. Product code, migration, runtime writes and installer execution are forbidden in this task. Independent internal 1.5 must approve the exact docs head before merge or implementation. closeout_phase=collecting closeout_repair=codex:0|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0",
+  "notes": "Canonical closeout owner: .workflow-v2/work-items/youtube-async-extraction-notification.json#closeout. Roadmap is docs while canonical workflow lifecycle remains planned. Stage 1 required_checks, verify_commands and stage1_current_commands are the same executable local pre-merge gate; origin/master validate:workpack is isolated in stage2_post_merge_preflight and full_lifecycle_checks. Product code, migration, runtime writes and installer execution are forbidden. Internal 1.5 task 019ff643-988a-7013-9edb-4d4f61986930 returned REVISE 3 at head 17ef00f44800fe34f382191c3850722f9d3929bf; approval remains needs_revision until independent exact-head re-review. closeout_phase=collecting closeout_recovery=manual_patch:1 closeout_repair=codex:3|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:Codex_task_019ff643-988a-7013-9edb-4d4f61986930_REVISE last_recovery_at=2026-08-12T14:07:53Z",
   "out_of_scope": [
     "Web Push subscription service worker VAPID or push outbox",
     "Quick Import async UI conversion or public response change",

@@ -34,6 +34,7 @@
       "production-installer-migration-policy-enable-and-secrets-remain-manual-only"
     ],
     "verify_commands": [
+      "BRANCH_NAME=feature/be-youtube-async-extraction-notification pnpm validate:workpack -- --slice youtube-async-extraction-notification",
       "pnpm exec vitest run tests/youtube-background-extraction-contract.test.ts tests/youtube-async-extraction-jobs.backend.test.ts tests/youtube-extraction-worker.test.ts tests/youtube-extraction-release-installer.test.ts",
       "pnpm exec vitest run tests/youtube-extraction-policy-postgres.integration.test.ts tests/youtube-extraction-security-postgrest.integration.test.ts",
       "pnpm local:reset:demo",
@@ -101,6 +102,9 @@
       "consumed-after-ttl-links-recipe-and-never-expires",
       "private-count-title-thumbnail-hidden-while-unauthorized",
       "quick-import-ui-and-sync-response-unchanged",
+      "stage1-premerge-uses-local-doc-gate-and-targeted-contract-test",
+      "origin-master-workpack-validation-is-stage2-post-merge-preflight-only",
+      "yt-import-primary-cta-and-success-draft-cta-use-exact-official-copy",
       "mobile-390-mobile-320-desktop-no-overflow-or-cta-occlusion",
       "aria-live-polite-no-forced-focus-and-icon-plus-text",
       "before-after-evidence-manifest-records-exact-frontend-head"

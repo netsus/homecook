@@ -8,7 +8,7 @@
 - [ ] 사용자는 접수 뒤 다른 화면으로 이동·새로고침·앱 종료해도 같은 job의 terminal 결과를 복구한다 <!-- omo:id=accept-yta-background-durable;stage=4;scope=frontend;review=5,6 -->
 - [ ] worker 성공은 session/candidates/job을 한 finalize transaction으로 만들고 draft 검수·등록으로 연결한다 <!-- omo:id=accept-yta-finalize-review-register;stage=2;scope=shared;review=3,6 -->
 - [ ] app shell은 재로그인/foreground/재실행 뒤 unseen success/failure/expired를 toast+badge+durable list로 표시한다 <!-- omo:id=accept-yta-shell-notification;stage=4;scope=frontend;review=5,6 -->
-- [ ] 성공 draft CTA는 exact session-read로 검수 화면을 복원하고 consumed CTA는 등록 recipe로 이동한다 <!-- omo:id=accept-yta-success-destination;stage=4;scope=frontend;review=5,6 -->
+- [ ] 성공 draft CTA `결과 확인`은 exact session-read로 검수 화면을 복원하고 consumed CTA `레시피 보기`는 등록 recipe로 이동한다 <!-- omo:id=accept-yta-success-destination;stage=4;scope=frontend;review=5,6 -->
 - [ ] 기존 `/recipes/new/youtube` Quick Import UI·sync response·auto-register 의미가 유지된다 <!-- omo:id=accept-yta-quick-import-compat;stage=2;scope=shared;review=3,6 -->
 
 ## State / Policy
@@ -56,7 +56,7 @@
 
 ## Design / Accessibility
 
-- [ ] `YT_IMPORT_BACKGROUND`가 390/320/desktop에서 primary CTA, 작업 보기, duplicate/offline/error copy와 scroll containment를 보존한다 <!-- omo:id=accept-yta-import-visual;stage=4;scope=frontend;review=5,6 -->
+- [ ] `YT_IMPORT_BACKGROUND`가 390/320/desktop에서 primary CTA `가져오기`, `작업 보기`, duplicate/offline/error copy와 scroll containment를 보존한다 <!-- omo:id=accept-yta-import-visual;stage=4;scope=frontend;review=5,6 -->
 - [ ] `APP_SHELL_YOUTUBE_NOTIFICATIONS`가 390/320/desktop에서 badge/toast/list/archive를 page-level overflow 없이 제공한다 <!-- omo:id=accept-yta-shell-visual;stage=4;scope=frontend;review=5,6 -->
 - [ ] toast는 `aria-live=polite`, non-forced focus, exact CTA label을 사용하고 상태는 icon+text로 전달한다 <!-- omo:id=accept-yta-notification-a11y;stage=4;scope=frontend;review=5,6 -->
 - [ ] keyboard, 200% text, reduced motion, narrow safe-area에서 CTA 잘림·modal/panel footer 가림·text overlap이 없다 <!-- omo:id=accept-yta-small-viewport-a11y;stage=4;scope=frontend;review=5,6 -->

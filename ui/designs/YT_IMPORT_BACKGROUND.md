@@ -2,12 +2,12 @@
 
 ## Decision
 
-기존 `YT_IMPORT`의 URL 입력·검수 visual language는 유지하고, 동기 대기 화면을 background 접수 확인 상태로 바꾼다. 사용자는 `추출 시작` primary CTA로 작업을 접수한 뒤 `작업 보기` 또는 다른 앱 화면으로 이동할 수 있다. 이 문서는 design-generator 산출물이자 Stage 4 구현 계약이며, 구현 완료나 design authority PASS를 뜻하지 않는다.
+기존 `YT_IMPORT`의 URL 입력·검수 visual language는 유지하고, 동기 대기 화면을 background 접수 확인 상태로 바꾼다. 사용자는 `가져오기` primary CTA로 작업을 접수한 뒤 `작업 보기` 또는 다른 앱 화면으로 이동할 수 있다. 이 문서는 design-generator 산출물이자 Stage 4 구현 계약이며, 구현 완료나 design authority PASS를 뜻하지 않는다.
 
 - UI risk: `high-risk`
 - Design Status: `temporary`
 - Anchor dependency: 없음. 기존 `YT_IMPORT` shell을 기준으로 하며 `HOME`, `RECIPE_DETAIL`, `PLANNER_WEEK` anchor screen은 수정하지 않는다.
-- Primary CTA: `추출 시작`; 접수 뒤 CTA는 `작업 보기`
+- Primary CTA: `가져오기`; 접수 뒤 CTA는 `작업 보기`
 - Mobile baseline: `390px`; narrow 검증: `320px`; desktop 검증: `1280px 이상`
 - Scroll containment: 문서 전체가 한 축으로 스크롤되고 footer/CTA가 입력·오류·safe-area를 가리지 않는다.
 
@@ -31,7 +31,7 @@
 │ └──────────────────────────────────┘ │
 │ 주소를 넣으면 백그라운드에서 추출해요 │
 │                                      │
-│ [          추출 시작           ]     │ primary CTA
+│ [            가져오기            ]     │ primary CTA
 │                                      │
 │ ┌──────────────────────────────────┐ │
 │ │ ✓ 추출 작업을 시작했어요         │ │ accepted
@@ -49,7 +49,7 @@
 
 - 좌우 padding은 role token 최소값까지 줄이되 input/CTA tap target은 44px 이상 유지한다.
 - 긴 URL과 오류 문구는 줄바꿈하며 가로 overflow를 만들지 않는다.
-- `추출 시작`과 `작업 보기`는 세로 stack으로 한 줄 전체 폭을 사용한다.
+- `가져오기`와 `작업 보기`는 세로 stack으로 한 줄 전체 폭을 사용한다.
 - 200% text에서도 primary CTA와 browser bottom/safe-area가 겹치지 않도록 page-level scroll containment를 유지한다.
 
 ## Desktop Adaptation
@@ -62,7 +62,7 @@
 
 | 상태 | 화면 계약 | 행동 |
 | --- | --- | --- |
-| initial | URL input + 설명 + `추출 시작` | valid URL만 submit |
+| initial | URL input + 설명 + `가져오기` | valid URL만 submit |
 | submitting/loading | CTA disabled, 짧은 진행 문구 | 중복 submit 차단 |
 | accepted | 접수 완료, 이동 가능 안내 | `작업 보기` |
 | active duplicate | 이미 진행 중인 작업 안내 | 같은 job으로 이동 |

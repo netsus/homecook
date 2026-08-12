@@ -15,7 +15,7 @@
 
 1. toast를 ephemeral 안내, unseen list를 durable authority로 분리하고 delivered와 seen을 혼합하지 않았다.
 2. growth notification은 layout reference만 허용하며 source collection과 mutation authority를 합치지 않는 경계가 분명하다.
-3. primary CTA가 draft/consumed/retryable 상태별로 정해지고 `can_retry=false`에는 CTA가 없다.
+3. 공식 화면 계약의 success draft CTA `결과 확인`을 포함해 consumed/retryable 상태별 CTA가 정해지고 `can_retry=false`에는 retry CTA가 없다.
 4. 390 mobile baseline, 320 narrow, desktop 1440, panel 내부 scroll containment, bottom tab/safe-area, focus trap/return이 명시됐다.
 5. private count/title/thumbnail nondisclosure, title fallback, icon+text, `aria-live=polite`, reduced motion이 포함됐다.
 6. Stage 4 before/after evidence matrix와 두 번째 authority report 경로가 독립적으로 지정됐다.

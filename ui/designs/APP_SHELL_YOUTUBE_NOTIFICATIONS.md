@@ -7,7 +7,7 @@ app shell에 YouTube 추출 작업 전용 toast, badge, durable list/panel을 �
 - UI risk: `high-risk`
 - Design Status: `temporary`
 - Anchor dependency: 없음. 전역 shell을 확장하지만 `HOME`, `RECIPE_DETAIL`, `PLANNER_WEEK` anchor screen의 정보 구조는 바꾸지 않는다.
-- Primary CTA: 성공 draft `레시피 확인`, consumed success `레시피 보기`, retryable failure/expired `다시 시도`
+- Primary CTA: 성공 draft `결과 확인`, consumed success `레시피 보기`, retryable failure/expired `다시 시도`
 - Mobile baseline: `390px`; narrow 검증: `320px`; desktop 검증: `1440px`
 - Scroll containment: toast stack은 viewport에 고정하되 content/하단 탭을 가리지 않고, panel/list 내부만 스크롤하며 page-level double scroll을 만들지 않는다.
 
@@ -37,7 +37,7 @@ growth toast와 시각 계층은 가까워도 source collection, delivery key, d
 │ ┌──────────────────────────────────┐ │
 │ │ ✓ YouTube 레시피 추출 완료       │ │ aria-live=polite
 │ │ 김치찌개                          │ │
-│ │ [레시피 확인]                    │ │ primary CTA
+│ │ [결과 확인]                      │ │ primary CTA
 │ └──────────────────────────────────┘ │
 │                                      │
 ├──────────────────────────────────────┤
@@ -50,7 +50,7 @@ growth toast와 시각 계층은 가까워도 source collection, delivery key, d
 │ 진행 중 1 · 새 소식 2               │
 │ ┌──────────────────────────────────┐ │
 │ │ 완료 · 김치찌개                  │ │
-│ │ [레시피 확인]                    │ │
+│ │ [결과 확인]                      │ │
 │ └──────────────────────────────────┘ │
 │ ┌──────────────────────────────────┐ │
 │ │ 실패 · YouTube 레시피            │ │
@@ -78,7 +78,7 @@ growth toast와 시각 계층은 가까워도 source collection, delivery key, d
 | 서버 projection | 표현 | primary CTA |
 | --- | --- | --- |
 | queued/processing | 진행 중, unseen terminal count와 분리 | 작업 상세/목록 |
-| succeeded + draft | 완료 + title/thumbnail | `레시피 확인` → review path |
+| succeeded + draft | 완료 + title/thumbnail | `결과 확인` → review path |
 | succeeded + consumed recipe | 등록 완료 | `레시피 보기` → recipe path |
 | failed + `can_retry=true` | safe failure copy | `다시 시도` |
 | failed + `can_retry=false` | safe failure copy | retry CTA 없음 |

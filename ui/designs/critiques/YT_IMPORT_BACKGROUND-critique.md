@@ -14,7 +14,7 @@
 ## Review Findings
 
 1. 기존 YT_IMPORT anchor-like visual language를 보존하면서 background 접수라는 새 행동을 accepted card와 `작업 보기`로 분명히 구분했다.
-2. primary CTA, 390 mobile baseline, 320 narrow, desktop, 200% text와 page-level scroll containment가 명시됐다.
+2. 공식 화면 계약의 primary CTA `가져오기`, 390 mobile baseline, 320 narrow, desktop, 200% text와 page-level scroll containment가 명시됐다.
 3. offline/response unknown, active duplicate, `POLICY_CHANGED`, unauthorized가 local success 추측이나 private data 노출 없이 분리됐다.
 4. browser가 exact union 밖의 policy/HMAC/worker authority를 갖지 않는다는 계약이 UI 문서에도 잠겼다.
 5. Stage 4 before/after evidence와 별도 authority report 경로가 구체적이다.
