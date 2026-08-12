@@ -780,7 +780,6 @@ describe("YTASYNC-OPS preflight, drain, rollback, credential", () => {
       }));
       process.disconnect();
     `, 0o700);
-    const inputs = createReleaseInputs(privateDir, { rootDir: fixtureRoot });
     const providerPath = join(privateDir, "provider.env");
     const configPath = join(privateDir, ".env.production.local");
     const fakeHome = join(privateDir, "home");
@@ -797,9 +796,39 @@ describe("YTASYNC-OPS preflight, drain, rollback, credential", () => {
       "exit 1",
       "",
     ].join("\n"), 0o700);
-    for (const executable of ["python3", "yt-dlp", "ffmpeg", "ffprobe"]) {
+    for (const executable of [
+      "python3",
+      "yt-dlp",
+      "ffmpeg",
+      "ffprobe",
+      "sandbox-exec",
+      "swiftc",
+    ]) {
       writeModeFile(join(fakeBin, executable), "#!/bin/sh\necho ok\n", 0o700);
     }
+    const fixtureRuntimePath = join(
+      fixtureRoot,
+      "scripts/lib/youtube-extraction-worker-runtime.mjs",
+    );
+    const fixtureRuntimeSource = readFileSync(fixtureRuntimePath, "utf8");
+    expect(fixtureRuntimeSource).toContain("platform = process.platform,");
+    expect(fixtureRuntimeSource).toContain('accessPath("/usr/bin/sandbox-exec")');
+    expect(fixtureRuntimeSource).toContain('accessPath("/usr/bin/swiftc")');
+    writeFileSync(
+      fixtureRuntimePath,
+      fixtureRuntimeSource
+        .replace("platform = process.platform,", 'platform = "darwin",')
+        .replace(
+          'accessPath("/usr/bin/sandbox-exec")',
+          `accessPath(${JSON.stringify(join(fakeBin, "sandbox-exec"))})`,
+        )
+        .replace(
+          'accessPath("/usr/bin/swiftc")',
+          `accessPath(${JSON.stringify(join(fakeBin, "swiftc"))})`,
+        ),
+      "utf8",
+    );
+    const inputs = createReleaseInputs(privateDir, { rootDir: fixtureRoot });
     writeModeFile(providerPath, [
       "YOUTUBE_API_KEY=fake-test-key",
       `YOUTUBE_I031_CODEX_BIN=${codexBin}`,
