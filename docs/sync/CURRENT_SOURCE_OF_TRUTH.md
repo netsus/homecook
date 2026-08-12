@@ -1,17 +1,35 @@
 # Current Source of Truth
 
 ## Official Files
-- `docs/요구사항기준선-v1.7.30.md`
-- `docs/화면정의서-v1.5.34.md`
-- `docs/유저flow맵-v1.3.32.md`
-- `docs/db설계-v1.3.32.md`
-- `docs/api문서-v1.2.37.md`
+- `docs/요구사항기준선-v1.7.31.md`
+- `docs/화면정의서-v1.5.35.md`
+- `docs/유저flow맵-v1.3.33.md`
+- `docs/db설계-v1.3.33.md`
+- `docs/api문서-v1.2.38.md`
 
 ## Notes
 - 위 5개 파일이 현재 공식 기준 문서다.
 - `docs/reference/wireframes/`는 보조 참고 자료다.
 - 구현 중 문서 충돌이 보이면 먼저 충돌 항목을 정리하고 작업 범위를 다시 확정한다.
 - 사용자 승인으로 공식 계약을 바꾸는 경우에도 구현보다 문서가 먼저다. 관련 공식 문서와 이 파일의 버전/경로를 같은 `contract-evolution` PR에서 먼저 갱신한다.
+
+## YouTube Background Extraction / Durable In-App Notification Contract-Evolution `2026-08-12`
+
+| 문서 | 변경 내용 |
+|------|----------|
+| 요구사항 v1.7.31 | `/menu/add/youtube` 이탈 가능한 background extraction, durable success/failure, dedupe/retry/expiry/retention, Quick Import sync 호환, 앱 내 알림 1차/Web Push 후속 경계를 잠근다 |
+| 화면정의서 v1.5.35 | 제출 완료·작업 보기, app shell toast/badge/list, success/failure/expired/duplicate/offline/accessibility 상태를 추가하고 Quick Import UI 비변경을 명시한다 |
+| 유저 Flow맵 v1.3.33 | enqueue→이탈→fenced worker→durable notification→review/register, 재로그인/재실행, 실패 retry, `sync_wait`, rollout/rollback 순서를 고정한다 |
+| DB v1.3.33 | jobs/session `source_job_id`/global permit/private credential singleton, lease fencing/finalize atomicity, worker·credential-manager API role와 분리 owner, exact membership/ACL/pre-request/rotation을 잠근다 |
+| API v1.2.38 | 신규 보호 endpoint 6개, `202`, `queued|processing|succeeded|failed|expired`, exact response/error/cursor/dedupe와 기존 POST/Quick Import 호환을 잠근다. 총 108개 |
+
+> 사용자는 2026-08-12 이 작업에서 이 contract-evolution을 명시적으로 승인했다. 작성 baseline은 `origin/master@d38ee2e4a4c8cafc00dce713919c3f3e8df2bdda`이며 승인 계획 `/Users/cwj/01_vibe_coding/homecook/.omx/plans/youtube-background-extraction-notification-plan-20260808.md`는 독립 task `019ff4f7-806c-7151-b646-cab784606cde`에서 최종 `PASS`, Findings 없음으로 검토됐다. 선행 workpack `33-youtube-i031-direct-extraction`은 PR #1341과 post-merge report PR #1342 병합 뒤 non-manual complete다.
+>
+> public contract 영향은 `/api/v1` 보호 endpoint 6개, `202 Accepted`, job 상태·error·cursor·dedupe의 additive 추가다. 기존 `POST /recipes/youtube/extract`의 browser success data, `/recipes/new/youtube` Quick Import UI·sync·auto-register 의미와 기존 register/session ownership contract는 유지한다.
+>
+> rejected alternatives는 기존 동기 POST에 화면 이탈만 추가, 초기 외부 managed queue/Edge Function 전체 실행, 성장 전용 `user_progress_notifications` 재사용, 1차 Web Push 동시 도입이다. 선택은 Supabase durable DB queue + 동일 승인 SHA의 별도 restricted worker + terminal job 기반 앱 내 알림이다.
+>
+> 제품 구현, DB migration/apply, worker/credential 설치, production/staging/remote write, rollout/rollback 실행, Web Push는 승인 밖이다. 신규 async workpack/acceptance/automation/work item은 이 contract PR에 만들지 않으며 merge 뒤 별도 fresh Stage 1 Codex task가 새 tuple로 잠근다. 이 작성 task는 자기 문서를 최종 승인하거나 merge하지 않는다.
 
 ## Session Refresh Authority Contract-Evolution `2026-08-08 / 1A`
 

@@ -36,11 +36,11 @@ function createFixtureRoot() {
       "# Current Source of Truth",
       "",
       "## Official Files",
-      "- `docs/요구사항기준선-v1.7.30.md`",
-      "- `docs/화면정의서-v1.5.34.md`",
-      "- `docs/유저flow맵-v1.3.32.md`",
-      "- `docs/db설계-v1.3.32.md`",
-      "- `docs/api문서-v1.2.37.md`",
+      "- `docs/요구사항기준선-v1.7.31.md`",
+      "- `docs/화면정의서-v1.5.35.md`",
+      "- `docs/유저flow맵-v1.3.33.md`",
+      "- `docs/db설계-v1.3.33.md`",
+      "- `docs/api문서-v1.2.38.md`",
       "",
       `> production 단일 origin은 ${PRODUCTION_DOMAIN_TUPLE.appOrigin}와 ${PRODUCTION_DOMAIN_TUPLE.authOrigin}다.`,
       "> callback은 /auth/callback, /auth/link/callback 두 기존 경로만 사용한다.",
@@ -48,11 +48,11 @@ function createFixtureRoot() {
     ].join("\n"),
   );
   for (const relativePath of [
-    "docs/요구사항기준선-v1.7.30.md",
-    "docs/화면정의서-v1.5.34.md",
-    "docs/유저flow맵-v1.3.32.md",
-    "docs/db설계-v1.3.32.md",
-    "docs/api문서-v1.2.37.md",
+    "docs/요구사항기준선-v1.7.31.md",
+    "docs/화면정의서-v1.5.35.md",
+    "docs/유저flow맵-v1.3.33.md",
+    "docs/db설계-v1.3.33.md",
+    "docs/api문서-v1.2.38.md",
   ]) {
     write(rootDir, relativePath, "# official\n");
   }
@@ -114,7 +114,7 @@ describe("production domain contract validator", () => {
 
   it("fails closed when an official file listed in CURRENT_SOURCE_OF_TRUTH is missing", () => {
     const rootDir = createFixtureRoot();
-    rmSync(join(rootDir, "docs/api문서-v1.2.37.md"));
+    rmSync(join(rootDir, "docs/api문서-v1.2.38.md"));
 
     const [result] = validateProductionDomainContract({ rootDir });
 
@@ -122,7 +122,7 @@ describe("production domain contract validator", () => {
       expect.arrayContaining([
         expect.objectContaining({
           code: "MISSING_OFFICIAL_FILE",
-          path: "docs/api문서-v1.2.37.md",
+          path: "docs/api문서-v1.2.38.md",
         }),
       ]),
     );
@@ -146,14 +146,14 @@ describe("production domain contract validator", () => {
 
   it("fails when an official document keeps an active .com production reference", () => {
     const rootDir = createFixtureRoot();
-    write(rootDir, "docs/api문서-v1.2.37.md", `callback ${legacyAppCallback}\n`);
+    write(rootDir, "docs/api문서-v1.2.38.md", `callback ${legacyAppCallback}\n`);
 
     const [result] = validateProductionDomainContract({ rootDir });
 
     expect(result.errors).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          path: "docs/api문서-v1.2.37.md:1",
+          path: "docs/api문서-v1.2.38.md:1",
           message: expect.stringContaining(legacyDomain),
         }),
       ]),
@@ -173,10 +173,10 @@ describe("production domain contract validator", () => {
         "",
         "## Official Files",
         "- `../escaped.md`",
-        "- `docs/화면정의서-v1.5.34.md`",
-        "- `docs/유저flow맵-v1.3.32.md`",
-        "- `docs/db설계-v1.3.32.md`",
-        "- `docs/api문서-v1.2.37.md`",
+        "- `docs/화면정의서-v1.5.35.md`",
+        "- `docs/유저flow맵-v1.3.33.md`",
+        "- `docs/db설계-v1.3.33.md`",
+        "- `docs/api문서-v1.2.38.md`",
         "",
         `> production 단일 origin은 ${PRODUCTION_DOMAIN_TUPLE.appOrigin}와 ${PRODUCTION_DOMAIN_TUPLE.authOrigin}다.`,
         "> callback은 /auth/callback, /auth/link/callback 두 기존 경로만 사용한다.",
@@ -210,10 +210,10 @@ describe("production domain contract validator", () => {
         "",
         "## Official Files",
         `- \`${absolutePath}\``,
-        "- `docs/화면정의서-v1.5.34.md`",
-        "- `docs/유저flow맵-v1.3.32.md`",
-        "- `docs/db설계-v1.3.32.md`",
-        "- `docs/api문서-v1.2.37.md`",
+        "- `docs/화면정의서-v1.5.35.md`",
+        "- `docs/유저flow맵-v1.3.33.md`",
+        "- `docs/db설계-v1.3.33.md`",
+        "- `docs/api문서-v1.2.38.md`",
         "",
         `> production 단일 origin은 ${PRODUCTION_DOMAIN_TUPLE.appOrigin}와 ${PRODUCTION_DOMAIN_TUPLE.authOrigin}다.`,
         "> callback은 /auth/callback, /auth/link/callback 두 기존 경로만 사용한다.",
@@ -248,10 +248,10 @@ describe("production domain contract validator", () => {
         "",
         "## Official Files",
         "- `docs/leaked-official.md`",
-        "- `docs/화면정의서-v1.5.34.md`",
-        "- `docs/유저flow맵-v1.3.32.md`",
-        "- `docs/db설계-v1.3.32.md`",
-        "- `docs/api문서-v1.2.37.md`",
+        "- `docs/화면정의서-v1.5.35.md`",
+        "- `docs/유저flow맵-v1.3.33.md`",
+        "- `docs/db설계-v1.3.33.md`",
+        "- `docs/api문서-v1.2.38.md`",
         "",
         `> production 단일 origin은 ${PRODUCTION_DOMAIN_TUPLE.appOrigin}와 ${PRODUCTION_DOMAIN_TUPLE.authOrigin}다.`,
         "> callback은 /auth/callback, /auth/link/callback 두 기존 경로만 사용한다.",
@@ -319,11 +319,11 @@ describe("production domain contract validator", () => {
         "# Current Source of Truth",
         "",
         "## Official Files",
-        "- `docs/요구사항기준선-v1.7.30.md`",
-        "- `docs/화면정의서-v1.5.34.md`",
-        "- `docs/유저flow맵-v1.3.32.md`",
-        "- `docs/db설계-v1.3.32.md`",
-        "- `docs/api문서-v1.2.37.md`",
+        "- `docs/요구사항기준선-v1.7.31.md`",
+        "- `docs/화면정의서-v1.5.35.md`",
+        "- `docs/유저flow맵-v1.3.33.md`",
+        "- `docs/db설계-v1.3.33.md`",
+        "- `docs/api문서-v1.2.38.md`",
         "",
         `> production 단일 origin은 ${PRODUCTION_DOMAIN_TUPLE.appOrigin}와 ${PRODUCTION_DOMAIN_TUPLE.authOrigin}다.`,
         "> callback은 /auth/callback 두 기존 경로만 사용한다.",
