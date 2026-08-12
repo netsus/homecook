@@ -1,0 +1,168 @@
+{
+  "slice_id": "youtube-async-extraction-notification",
+  "execution_mode": "manual",
+  "risk_class": "high",
+  "merge_policy": "manual",
+  "backend": {
+    "required_endpoints": [
+      "POST /api/v1/recipes/youtube/extraction-jobs",
+      "GET /api/v1/recipes/youtube/extraction-jobs/{job_id}",
+      "GET /api/v1/recipes/youtube/extractions/{extraction_id}",
+      "GET /api/v1/users/me/youtube-extraction-jobs",
+      "POST /api/v1/users/me/youtube-extraction-jobs/delivered",
+      "POST /api/v1/users/me/youtube-extraction-jobs/seen",
+      "POST /api/v1/recipes/youtube/extract"
+    ],
+    "invariants": [
+      "exact-enqueue-union-youtube-url-or-retry-job-id-and-unknown-fields-422",
+      "next-api-v1-user-session-is-sole-public-enqueue-authority",
+      "owner-derived-only-from-auth-uid-and-cross-owner-nondisclosure",
+      "hmac-fingerprint-is-dedupe-privacy-only-never-auth-or-worker-attestation",
+      "shared-advisory-lock-complete-policy-snapshot-dual-read-current-write",
+      "policy-changed-causes-zero-insert-dedupe-and-budget",
+      "stored-queued-processing-succeeded-failed-with-expired-computed-only",
+      "consumed-after-ttl-precedes-expiry-and-remains-succeeded",
+      "reaper-before-claim-and-terminal-attempts-exhausted-never-reclaimed",
+      "job-permit-worker-credential-generation-fencing-on-every-write",
+      "single-finalize-transaction-and-source-job-id-exactly-once-projection",
+      "delivered-is-toast-render-and-seen-is-user-confirmation",
+      "safe-six-public-failure-codes-and-can-retry-first",
+      "quick-import-public-sync-contract-unchanged-and-worker-is-only-provider-executor",
+      "terminal-retention-30-days-and-session-draft-ttl-24-hours-from-finalize",
+      "raw-url-transcript-frame-provider-payload-and-secrets-never-persisted",
+      "same-release-sha-schema-policy-and-worker-credential-attestation",
+      "production-installer-migration-policy-enable-and-secrets-remain-manual-only"
+    ],
+    "verify_commands": [
+      "pnpm exec vitest run tests/youtube-background-extraction-contract.test.ts tests/youtube-async-extraction-jobs.backend.test.ts tests/youtube-extraction-worker.test.ts tests/youtube-extraction-release-installer.test.ts",
+      "pnpm exec vitest run tests/youtube-extraction-policy-postgres.integration.test.ts tests/youtube-extraction-security-postgrest.integration.test.ts",
+      "pnpm local:reset:demo",
+      "pnpm verify:backend",
+      "pnpm verify:security-functions:release"
+    ],
+    "required_test_targets": [
+      "tests/youtube-background-extraction-contract.test.ts",
+      "tests/youtube-async-extraction-jobs.backend.test.ts",
+      "tests/youtube-extraction-worker.test.ts",
+      "tests/youtube-extraction-policy-postgres.integration.test.ts",
+      "tests/youtube-extraction-security-postgrest.integration.test.ts",
+      "tests/youtube-extraction-release-installer.test.ts"
+    ]
+  },
+  "frontend": {
+    "required_routes": [
+      "/menu/add/youtube",
+      "/menu/add/youtube?extractionId=<uuid>",
+      "/recipes/new/youtube",
+      "app-shell:youtube-extraction-notifications"
+    ],
+    "required_states": [
+      "loading",
+      "empty",
+      "error",
+      "offline",
+      "read-only",
+      "unauthorized",
+      "accepted",
+      "active-duplicate",
+      "policy-changed",
+      "queued-processing",
+      "succeeded-draft",
+      "succeeded-consumed",
+      "failed-retryable",
+      "failed-non-retryable",
+      "expired",
+      "delivered-not-seen",
+      "seen",
+      "archive"
+    ],
+    "verify_commands": [
+      "pnpm exec vitest run tests/youtube-async-extraction-ui.test.tsx tests/youtube-extraction-notifications.test.tsx tests/youtube-extraction-api-client.test.ts",
+      "pnpm exec playwright test tests/e2e/youtube-async-extraction-notification.spec.ts --project desktop-chrome --project mobile-chrome --project mobile-ios-small",
+      "CI=1 pnpm verify:frontend:pr",
+      "pnpm qa:explore -- --slice youtube-async-extraction-notification --base-url http://127.0.0.1:3100",
+      "pnpm qa:eval -- --checklist .artifacts/qa/youtube-async-extraction-notification/latest/exploratory-checklist.json --report .artifacts/qa/youtube-async-extraction-notification/latest/exploratory-report.json --fail-under 90",
+      "pnpm validate:exploratory-qa-evidence -- --slice youtube-async-extraction-notification",
+      "pnpm validate:authority-evidence-presence -- --slice youtube-async-extraction-notification"
+    ],
+    "playwright_projects": [
+      "desktop-chrome",
+      "mobile-chrome",
+      "mobile-ios-small"
+    ],
+    "artifact_assertions": [
+      "background-submit-does-not-block-navigation",
+      "unknown-submit-never-assumed-success",
+      "active-duplicate-reuses-existing-job",
+      "policy-changed-preserves-url-and-is-not-terminal-notification",
+      "unseen-terminal-list-recovers-after-restart-and-relogin",
+      "delivered-does-not-clear-unseen-before-seen",
+      "can-retry-false-never-renders-or-posts-retry",
+      "consumed-after-ttl-links-recipe-and-never-expires",
+      "private-count-title-thumbnail-hidden-while-unauthorized",
+      "quick-import-ui-and-sync-response-unchanged",
+      "mobile-390-mobile-320-desktop-no-overflow-or-cta-occlusion",
+      "aria-live-polite-no-forced-focus-and-icon-plus-text",
+      "before-after-evidence-manifest-records-exact-frontend-head"
+    ],
+    "design_authority": {
+      "ui_risk": "high-risk",
+      "anchor_screens": [],
+      "required_screens": [
+        "YT_IMPORT_BACKGROUND",
+        "APP_SHELL_YOUTUBE_NOTIFICATIONS"
+      ],
+      "generator_required": true,
+      "generator_artifact": "ui/designs/YT_IMPORT_BACKGROUND.md",
+      "critic_required": true,
+      "critic_artifact": "ui/designs/critiques/YT_IMPORT_BACKGROUND-critique.md",
+      "authority_required": true,
+      "stage4_evidence_requirements": [
+        "before:ui/designs/evidence/33-youtube-i031-direct-extraction/mobile-390-loading.png",
+        "before:ui/designs/evidence/33-youtube-i031-direct-extraction/mobile-320-loading.png",
+        "before:ui/designs/evidence/33-youtube-i031-direct-extraction/desktop-1280-loading.png",
+        "before:ui/designs/evidence/34c-growth-notification-ui/mobile-390.png",
+        "before:ui/designs/evidence/34c-growth-notification-ui/mobile-320.png",
+        "before:ui/designs/evidence/34c-growth-notification-ui/desktop-1440.png",
+        "after:ui/designs/evidence/youtube-async-extraction-notification/YT_IMPORT_BACKGROUND/mobile-390-accepted.png",
+        "after:ui/designs/evidence/youtube-async-extraction-notification/YT_IMPORT_BACKGROUND/mobile-320-offline.png",
+        "after:ui/designs/evidence/youtube-async-extraction-notification/YT_IMPORT_BACKGROUND/desktop-1280-active-duplicate.png",
+        "after:ui/designs/evidence/youtube-async-extraction-notification/APP_SHELL_YOUTUBE_NOTIFICATIONS/mobile-390-success-toast.png",
+        "after:ui/designs/evidence/youtube-async-extraction-notification/APP_SHELL_YOUTUBE_NOTIFICATIONS/mobile-320-failure-panel.png",
+        "after:ui/designs/evidence/youtube-async-extraction-notification/APP_SHELL_YOUTUBE_NOTIFICATIONS/desktop-1440-archive.png",
+        "manifest:exact-frontend-head-viewport-state-and-timestamp"
+      ],
+      "authority_report_paths": [
+        "ui/designs/authority/YT_IMPORT_BACKGROUND-authority.md",
+        "ui/designs/authority/APP_SHELL_YOUTUBE_NOTIFICATIONS-authority.md"
+      ]
+    }
+  },
+  "external_smokes": [
+    "local same-release app and worker: arbitrary public YouTube URL enqueue then navigate away then terminal notification then review and register",
+    "local worker SIGTERM after provider start then lease expiry reaper reclaim and exactly-one final session",
+    "browser restart and re-login: unseen terminal job recovered before delivered and only explicit inspection records seen",
+    "restricted worker JWT: allowlisted RPC succeeds while table REST other RPC owner role and public proxy paths fail",
+    "mac-production worker installer dry-run plus drain restart credential rotation and rollback rehearsal without production writes",
+    "legacy Quick Import sync_wait timeout or disconnect followed by durable job completion with unchanged public response"
+  ],
+  "blocked_conditions": [
+    "official-tuple-or-approved-plan-sha256-drift",
+    "independent-internal-1.5-not-approved-on-exact-docs-head",
+    "workpack-33-i031-regression",
+    "public-data-api-or-rpc-loopback-boundary-exposed",
+    "mixed-or-stale-policy-snapshot-accepted",
+    "worker-job-permit-or-credential-fence-bypass",
+    "app-worker-release-sha-schema-or-policy-attestation-mismatch",
+    "secret-token-raw-url-transcript-frame-or-provider-payload-persistence",
+    "quick-import-contract-or-provider-executor-regression",
+    "missing-390-320-desktop-evidence-or-authority-report",
+    "stage5-or-final-authority-blocker-or-major-finding",
+    "current-head-check-pending-failed-rerunning-or-not-started",
+    "production-migration-secret-policy-enable-installer-or-rollout-attempted-outside-manual-only"
+  ],
+  "max_fix_rounds": {
+    "backend": 4,
+    "frontend": 4
+  }
+}

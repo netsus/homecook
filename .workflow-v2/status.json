@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-08-12T09:21:11Z",
+  "updated_at": "2026-08-12T13:46:49Z",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -2807,6 +2807,41 @@
       "last_evaluator_result": "PASS by Codex task 019faf4f-1c1d-7af1-84e2-97e3c694265a at e83524ecce73a99e211c73cfad9f43d323106e1f",
       "auto_merge_eligible": false,
       "blocked_reason_code": null
+    },
+    {
+      "id": "youtube-async-extraction-notification",
+      "preset": "vertical-slice-strict",
+      "branch": "docs/youtube-async-extraction-notification",
+      "pr_path": "pending",
+      "lifecycle": "planned",
+      "approval_state": "not_started",
+      "verification_status": "pending",
+      "required_checks": [
+        "pnpm validate:source-of-truth-sync",
+        "pnpm validate:workflow-v2",
+        "BRANCH_NAME=docs/youtube-async-extraction-notification pnpm validate:workpack -- --slice youtube-async-extraction-notification",
+        "node scripts/validate-automation-spec.mjs --slice youtube-async-extraction-notification",
+        "pnpm validate:omo-bookkeeping",
+        "pnpm exec vitest run tests/youtube-background-extraction-contract.test.ts tests/workflow-v2-docs.test.ts tests/omo-automation-spec.test.ts tests/omo-bookkeeping.test.ts tests/omo-doc-gate.test.ts tests/source-of-truth-sync.test.ts",
+        "pnpm verify:backend",
+        "CI=1 pnpm verify:frontend:pr",
+        "pnpm exec playwright test tests/e2e/youtube-async-extraction-notification.spec.ts --project desktop-chrome --project mobile-chrome --project mobile-ios-small",
+        "pnpm qa:explore -- --slice youtube-async-extraction-notification --base-url http://127.0.0.1:3100",
+        "pnpm qa:eval -- --checklist .artifacts/qa/youtube-async-extraction-notification/latest/exploratory-checklist.json --report .artifacts/qa/youtube-async-extraction-notification/latest/exploratory-report.json --fail-under 90",
+        "pnpm validate:exploratory-qa-evidence -- --slice youtube-async-extraction-notification",
+        "pnpm validate:authority-evidence-presence -- --slice youtube-async-extraction-notification",
+        "pnpm validate:closeout-sync -- --slice youtube-async-extraction-notification",
+        "pnpm lint",
+        "pnpm typecheck",
+        "pnpm audit --audit-level high",
+        "git diff --check"
+      ],
+      "notes": "Canonical closeout owner: .workflow-v2/work-items/youtube-async-extraction-notification.json#closeout. Roadmap is docs while canonical workflow lifecycle remains planned. Stage 1 current validation is the work-item verify_commands subset; runtime and authority checks are future full-lifecycle gates. Product code, migration and production installer writes are forbidden. Independent internal 1.5 review on the exact docs head is pending. closeout_phase=collecting closeout_repair=codex:0|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0",
+      "evaluation_status": "not_started",
+      "evaluation_round": 0,
+      "last_evaluator_result": null,
+      "auto_merge_eligible": false,
+      "blocked_reason_code": "independent-internal-1.5-pending"
     }
   ]
 }
