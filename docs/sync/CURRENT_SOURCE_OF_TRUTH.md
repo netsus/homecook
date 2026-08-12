@@ -17,11 +17,11 @@
 
 | 문서 | 변경 내용 |
 |------|----------|
-| 요구사항 v1.7.31 | `/menu/add/youtube` 이탈 가능한 background extraction, durable success/failure, exact `{youtube_url}|{retry_job_id}`, consumed recovery, dedupe/retry/expiry/retention, Quick Import sync 호환, 앱 내 알림 1차/Web Push 후속 경계를 잠근다 |
-| 화면정의서 v1.5.35 | 제출 완료·작업 보기, app shell toast/badge/list, `can_retry`, consumed recipe 이동, exhaustive failure/expired copy·CTA, duplicate/offline/accessibility 상태와 Quick Import UI 비변경을 잠근다 |
-| 유저 Flow맵 v1.3.33 | enqueue→이탈→reaper-before-claim fenced worker→durable notification→review/register/consumed recipe, 재로그인/재실행, 실패 retry, `sync_wait`, rollout/rollback 순서를 고정한다 |
-| DB v1.3.33 | jobs/session `source_job_id`/global permit/private credential singleton, lease-expired reaper→claim과 exhausted terminal fencing/finalize atomicity, worker·credential-manager API role와 분리 owner, exact membership/ACL/pre-request/rotation을 잠근다 |
-| API v1.2.38 | 신규 보호 endpoint 6개, `202`, exact enqueue union, `queued|processing|succeeded|failed|expired`, consumed session-read `200`, `can_retry`, exhaustive safe error/cursor/dedupe와 기존 POST/Quick Import 호환을 잠근다. 총 108개 |
+| 요구사항 v1.7.31 | `/menu/add/youtube` background extraction, durable completion, retry의 previous video ID-only/current release policy 재결정, consumed-over-TTL, exact `can_retry` CTA, Quick Import sync 호환과 Web Push 후속 경계를 잠근다 |
+| 화면정의서 v1.5.35 | app shell toast/badge/list, draft/consumed destination, consumed-after-TTL, `can_retry=true` 전용 retry와 non-retryable 닫기/목록 유지, offline/accessibility, Quick Import UI 비변경을 잠근다 |
+| 유저 Flow맵 v1.3.33 | enqueue→이탈→reaper-before-claim worker→notification→review/register/consumed recipe, current-policy retry, consumed-over-TTL, non-retryable 분기, `sync_wait`, rollout/rollback 순서를 고정한다 |
+| DB v1.3.33 | jobs/session linkage, retry video ID-only/current identity fingerprint, consumed-over-TTL projection, reaper→claim/fencing/finalize atomicity, 분리 role/owner와 exact ACL/pre-request/rotation을 잠근다 |
+| API v1.2.38 | 신규 보호 endpoint 6개, exact enqueue union/current-policy retry, draft/consumed 4-key result, consumed-over-TTL `succeeded`, `can_retry`와 exhaustive safe error/cursor/dedupe, 기존 POST/Quick Import 호환을 잠근다. 총 108개 |
 
 > 사용자는 2026-08-12 이 작업에서 이 contract-evolution을 명시적으로 승인했다. 작성 baseline은 `origin/master@d38ee2e4a4c8cafc00dce713919c3f3e8df2bdda`이며 최초 승인 계획 `/Users/cwj/01_vibe_coding/homecook/.omx/plans/youtube-background-extraction-notification-plan-20260808.md`는 독립 task `019ff4f7-806c-7151-b646-cab784606cde`에서 최종 `PASS`로 검토됐다. 선행 workpack `33-youtube-i031-direct-extraction`은 PR #1341과 post-merge report PR #1342 병합 뒤 non-manual complete다.
 >

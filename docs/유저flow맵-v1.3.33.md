@@ -39,14 +39,16 @@
 → toast 렌더 후 delivered, 사용자 확인 후 seen
 → 성공 [결과 확인] → exact session read
    ├─ status=draft: 기존 Step 3 review → register
-   └─ status=consumed, draft=null, recipe_id, recipe_path: [레시피 보기]
+   └─ status=consumed, draft=null, recipe_id, recipe_path: TTL과 무관하게 [레시피 보기]
 → 실패/expired + can_retry=true [다시 시도] → { retry_job_id } 새 enqueue
+→ 실패 + can_retry=false → [닫기] / 목록 유지, retry CTA 0
 ```
 
 - browser 연결이 끊겨도 job은 취소하지 않는다. worker/app 재시작 뒤 DB queue와 terminal notification이 authority다.
 - worker crash는 lease 만료 뒤 claim RPC의 reaper를 먼저 통과한다. `attempt_count < max_attempts`만 새 generation으로 reclaim할 수 있고 `attempt_count >= max_attempts`는 `ATTEMPTS_EXHAUSTED` terminal+delivery key로 닫아 재claim 금지한다. stale generation의 heartbeat/finalize/fail은 0건 write로 거부한다.
 - `source_job_id`로 session/candidate/job 완료를 한 transaction에서 멱등 확정한다. succeeded인데 session이 없거나 candidate 일부만 저장된 상태는 허용하지 않는다.
-- 성공 session TTL은 finalize 시점부터 24시간이다. TTL 뒤 job read/list는 computed `expired`를 보여주고 review 대신 새 enqueue로 연결한다.
+- 성공 session TTL은 finalize 시점부터 24시간이다. unconsumed draft가 TTL을 지난 경우에만 job read/list는 computed `expired`를 보여주고 review 대신 새 enqueue로 연결한다.
+- consumed가 TTL보다 우선한다. `consumed-after-TTL`은 status/list `succeeded` + recipe destination + `can_retry=false`, session-read `200`으로 진행한다. draft가 unconsumed이고 TTL이 경과한 경우만 `expired` + retry flow다.
 - 로그인되지 않은 app shell은 private job을 읽지 않는다. 재로그인 후 refreshed session authority와 owner RLS를 통과한 job만 복원한다. exact session-read의 타인/없는 session은 동일 404다.
 
 ### 중복·실패·재시도 flow
@@ -65,12 +67,18 @@ non-retryable 또는 attempts 소진
 → failed terminal + durable notification
 → 사용자가 [다시 시도]
 → status/list의 can_retry 확인
-→ POST body { retry_job_id }
+   ├─ false: [닫기] / 목록 유지, retry CTA·POST 없음
+   └─ true: POST body { retry_job_id }
 → server가 본인 terminal failed/expired와 저장된 normalized video ID 확인
-→ 이전 row 유지 + dedupe/budget 재적용 + 새 job 생성
+→ 이전 job에서는 youtube_video_id만 복사한다
+→ retry 시점의 현재 승인된 server-side release policy로 mode/pipeline/options 새 결정
+→ 이전 HMAC/options 역복원 금지
+→ 새 current identity/options fingerprint + dedupe/budget + 새 job 생성
+→ identity 전환 전 terminal job도 전환 후 current worker가 claim 가능
 ```
 
 - enqueue request는 exact union `{ youtube_url } | { retry_job_id }`이며 두 branch를 함께 보내지 않는다. `can_retry`는 expired 또는 safe failed error의 `retryable=true`일 때만 true다.
+- can_retry=false이면 retry CTA를 렌더하지 않는다. `NOT_RECIPE_VIDEO` 등 non-retryable failure는 닫기/목록 유지이며 새 enqueue로 진행하지 않는다.
 - permit 경합은 attempt를 소비하지 않는다. last allowed attempt 중 crash한 job은 reaper가 재실행하지 않고 `ATTEMPTS_EXHAUSTED`로 닫는다.
 - current/previous fingerprint key dual-read 또는 active queue drain 없이 key를 회전하지 않는다.
 - 타인/없는 job 또는 session은 동일 404로 처리해 존재 여부를 숨긴다.

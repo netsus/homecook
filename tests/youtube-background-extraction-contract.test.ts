@@ -153,9 +153,23 @@ describe("YouTube background extraction contract evolution", () => {
     }
 
     expect(api).toContain("본인 terminal `failed|expired` job");
-    expect(api).toContain("저장된 normalized video ID");
+    expect(api).toContain("이전 job에서는 youtube_video_id만 복사한다");
     expect(api).toContain("이전 job row는 변경하지 않는다");
     expect(api).toContain("dedupe와 active/daily budget을 다시 적용");
+  });
+
+  it("recomputes retry identity from the current approved release policy", () => {
+    const documents = officialTuple.map(read);
+
+    for (const document of documents) {
+      expect(document).toContain("이전 job에서는 youtube_video_id만 복사한다");
+      expect(document).toContain("retry 시점의 현재 승인된 server-side release policy");
+      expect(document).toContain("이전 HMAC/options 역복원 금지");
+      expect(document).toContain("전환 후 current worker가 claim 가능");
+    }
+
+    const api = read(officialTuple[4]);
+    expect(api).not.toContain("locked 이전 job에 저장된 normalized video ID와 결과 영향 mode/pipeline option");
   });
 
   it("locks consumed session read as a successful owner projection without changing the wrapper", () => {
@@ -174,6 +188,24 @@ describe("YouTube background extraction contract evolution", () => {
     expect(api).toContain("본인 consumed session은 `200`");
     expect(api).toContain("없는 session과 타인 session은 동일 `404 EXTRACTION_NOT_FOUND`");
     expect(api).not.toContain("409 | `EXTRACTION_ALREADY_REGISTERED` | consumed session");
+  });
+
+  it("gives consumed results precedence over TTL across status, list, and session read", () => {
+    const documents = officialTuple.map(read);
+
+    for (const document of documents) {
+      expect(document).toContain("consumed가 TTL보다 우선");
+      expect(document).toContain("consumed-after-TTL");
+      expect(document).toContain("can_retry=false");
+      expect(document).toContain("recipe_path");
+    }
+
+    const api = read(officialTuple[4]);
+    expect(api).toContain(
+      "result exact field set은 `extraction_id`, `review_path`, `recipe_id`, `recipe_path` 4개",
+    );
+    expect(api).toContain("draft가 unconsumed이고 TTL이 경과한 경우만 `status=expired`");
+    expect(api).toContain("`consumed-after-TTL` session-read도 `200`");
   });
 
   it("locks exhaustive safe public failures with exact retry and UI actions", () => {
@@ -222,6 +254,23 @@ describe("YouTube background extraction contract evolution", () => {
 
     expect(api).toContain("queued|processing|succeeded에서는 `error=null`");
     expect(api).toContain("failed|expired에서는 `error`가 non-null");
+  });
+
+  it("never renders a retry action for non-retryable failures", () => {
+    const requirements = read(officialTuple[0]);
+    const screens = read(officialTuple[1]);
+    const flow = read(officialTuple[2]);
+    const api = read(officialTuple[4]);
+
+    for (const document of [requirements, screens, flow, api]) {
+      expect(document).toContain("can_retry=false이면 retry CTA를 렌더하지 않는다");
+      expect(document).toContain("NOT_RECIPE_VIDEO");
+      expect(document).toContain("닫기/목록 유지");
+    }
+
+    expect(screens).not.toContain(
+      "failure toast: `레시피를 추출하지 못했어요` + `다시 시도`",
+    );
   });
 
   it("locks lease-expired processing reaping before claim and forbids exhausted reclaim", () => {
