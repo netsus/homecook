@@ -21,6 +21,7 @@ import {
   buildYoutubeExtractionWorkerQueueState,
   ensureAbsolutePath,
   materializeYoutubeExtractionWorkerArtifact,
+  sha256File,
   YOUTUBE_EXTRACTION_WORKER_LABEL,
   YOUTUBE_EXTRACTION_WORKER_RELEASE_SCHEMA_IDENTITY,
 } from "../scripts/lib/youtube-extraction-worker-artifact.mjs";
@@ -155,6 +156,21 @@ describe("YTASYNC-OPS deterministic artifact", () => {
       "scripts/youtube-extraction-worker-runner.mjs",
     ]));
     expect(manifestA.artifact_sha256).toMatch(/^[0-9a-f]{64}$/u);
+    expect(manifestA.expected_schema_sha256).toBe(sha256File(
+      join(process.cwd(), "scripts/manifests/youtube-extraction-expected-schema.json"),
+    ));
+    const app = buildYoutubeExtractionAppDescriptor({
+      releaseSha: manifestA.release_sha,
+      schemaIdentity: manifestA.schema_identity,
+      expectedPolicyVersion: manifestA.policy_version,
+      expectedPolicySnapshotDigest: manifestA.allowed_snapshot_digest,
+      artifactSha256: manifestA.artifact_sha256,
+      expectedSchemaSha256: manifestA.expected_schema_sha256,
+    });
+    expect(app).toMatchObject({
+      artifact_sha256: manifestA.artifact_sha256,
+      expected_schema_sha256: manifestA.expected_schema_sha256,
+    });
   });
 });
 
@@ -294,6 +310,36 @@ describe("YTASYNC-OPS launchd contract", () => {
     })).toThrow(/preflight failed: allowed_snapshot_digest_mismatch/u);
   });
 
+  it("refuses install when the exact i031 startup preflight is not attested", () => {
+    const privateDir = createTempDir("yta-worker-i031-preflight-");
+    const configPath = join(privateDir, ".env.production.local");
+    const inputs = createReleaseInputs(privateDir);
+    writeModeFile(
+      configPath,
+      "HOMECOOK_YOUTUBE_WORKER_DATA_API_URL=http://127.0.0.1:54321/rest/v1\n",
+    );
+
+    expect(() => buildYoutubeExtractionWorkerInstallPlan({
+      configPath,
+      manifestPath: inputs.manifestPath,
+      credentialPath: inputs.credentialPath,
+      appDescriptorPath: inputs.appPath,
+      currentPolicyPath: inputs.policyPath,
+      expectedSchemaPath: inputs.expectedSchemaPath,
+      homeDir: "/Users/tester",
+      rootDir: inputs.artifactDir,
+      nodeBin: "/usr/bin/node",
+      userId: 501,
+      dryRun: true,
+      i031Preflight: {
+        ready: true,
+        codexCliVersion: "0.145.0",
+        chatGptLogin: true,
+        toolsReady: true,
+      },
+    })).toThrow(/i031 preflight/i);
+  });
+
   it("rejects service-role and secret-bearing worker config keys", () => {
     const privateDir = createTempDir("yta-worker-forbidden-config-");
     const configPath = join(privateDir, ".env.production.local");
@@ -340,6 +386,57 @@ describe("YTASYNC-OPS launchd contract", () => {
 });
 
 describe("YTASYNC-OPS preflight, drain, rollback, credential", () => {
+  it("fails closed when descriptor artifact or expected-schema byte digests drift", () => {
+    const privateDir = createTempDir("yta-worker-digest-drift-");
+    const inputs = createReleaseInputs(privateDir);
+    const artifact = JSON.parse(readFileSync(inputs.manifestPath, "utf8"));
+    const app = buildYoutubeExtractionAppDescriptor({
+      releaseSha: inputs.releaseSha,
+      schemaIdentity: artifact.schema_identity,
+      expectedPolicyVersion: artifact.policy_version,
+      expectedPolicySnapshotDigest: inputs.digest,
+      artifactSha256: "a".repeat(64),
+      expectedSchemaSha256: "b".repeat(64),
+    });
+    const preflight = evaluateYoutubeExtractionWorkerPreflight({
+      appDescriptor: app,
+      workerArtifact: artifact,
+      currentPolicy: buildYoutubeExtractionCurrentPolicy({
+        policySnapshotDigest: inputs.digest,
+        enabled: true,
+      }),
+      credentialState: JSON.parse(readFileSync(inputs.credentialPath, "utf8")),
+      expectedSchema: JSON.parse(readFileSync(inputs.expectedSchemaPath, "utf8")),
+      expectedSchemaSha256: sha256File(inputs.expectedSchemaPath),
+      requirePolicyEnabled: true,
+    });
+
+    expect(preflight.ready).toBe(false);
+    expect(preflight.blockers).toEqual(expect.arrayContaining([
+      "artifact_digest_mismatch",
+      "expected_schema_digest_mismatch",
+    ]));
+  });
+
+  it("passes expected schema bytes into the mac-production preflight loader", () => {
+    const privateDir = createTempDir("yta-worker-cli-schema-drift-");
+    const inputs = createReleaseInputs(privateDir);
+    chmodSync(inputs.expectedSchemaPath, 0o600);
+    writeFileSync(inputs.expectedSchemaPath, `${readFileSync(inputs.expectedSchemaPath, "utf8")} `);
+    const result = spawnSync(process.execPath, [
+      "scripts/youtube-extraction-worker-mac-production.mjs",
+      "preflight",
+      "--manifest", inputs.manifestPath,
+      "--credential", inputs.credentialPath,
+      "--app-descriptor", inputs.appPath,
+      "--policy", inputs.policyPath,
+      "--expected-schema", inputs.expectedSchemaPath,
+    ], { cwd: process.cwd(), encoding: "utf8" });
+
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toMatch(/artifact file drift|expected schema/i);
+  });
+
   it("fails closed on release, schema, digest, and queue drift", () => {
     const releaseSha = "0123456789abcdef0123456789abcdef01234567";
     const digest =
