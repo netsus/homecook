@@ -185,6 +185,40 @@ const PUBLIC_FAILURES = Object.freeze({
 
 export type YoutubePublicFailureCode = keyof typeof PUBLIC_FAILURES;
 
+export type YoutubeExtractionWorkerFailureCode =
+  | "NOT_RECIPE_VIDEO"
+  | "QUOTA_EXCEEDED"
+  | "RUNTIME_UNAVAILABLE"
+  | "EXTRACTION_FAILED"
+  | "NETWORK_ERROR"
+  | "RATE_LIMITED"
+  | "PROVIDER_TIMEOUT"
+  | "TRANSIENT_INTERNAL_ERROR";
+
+const WORKER_FAILURE_CODES: readonly YoutubeExtractionWorkerFailureCode[] = [
+  "NOT_RECIPE_VIDEO",
+  "QUOTA_EXCEEDED",
+  "RUNTIME_UNAVAILABLE",
+  "NETWORK_ERROR",
+  "RATE_LIMITED",
+  "PROVIDER_TIMEOUT",
+  "TRANSIENT_INTERNAL_ERROR",
+  "EXTRACTION_FAILED",
+];
+
+export function classifyYoutubeExtractionWorkerError(
+  error: unknown,
+): YoutubeExtractionWorkerFailureCode {
+  const record = error !== null && typeof error === "object"
+    ? error as Record<string, unknown>
+    : null;
+  const evidence = [record?.code, record?.name, record?.message, error]
+    .filter((value): value is string => typeof value === "string")
+    .join(" ");
+  return WORKER_FAILURE_CODES.find((code) => evidence.includes(code))
+    ?? "EXTRACTION_FAILED";
+}
+
 interface ExtractionSessionProjectionRow {
   id: string;
   status: "draft" | "consumed" | "expired";
@@ -340,7 +374,7 @@ interface YoutubeExtractionWorkerAdapter {
     jobId: string;
     workerId: string;
     leaseGeneration: number;
-    errorCode: "RUNTIME_UNAVAILABLE" | "EXTRACTION_FAILED";
+    errorCode: YoutubeExtractionWorkerFailureCode;
   }): Promise<boolean>;
   releasePermit(input: {
     workerId: string;
@@ -366,6 +400,10 @@ export function createYoutubeExtractionWorker({
 }: {
   adapter: YoutubeExtractionWorkerAdapter;
   extract(input: {
+    jobId: string;
+    workerId: string;
+    leaseGeneration: number;
+    permitGeneration: number;
     videoId: string;
     options: Readonly<Record<string, unknown>>;
     signal: AbortSignal;
@@ -435,6 +473,10 @@ export function createYoutubeExtractionWorker({
           await heartbeat();
           const extracted = await Promise.race([
             extract({
+              jobId: job.id,
+              workerId,
+              leaseGeneration: job.leaseGeneration,
+              permitGeneration: permit.permitGeneration,
               videoId: job.videoId,
               options: job.resultAffectingOptions,
               signal: controller.signal,
@@ -451,12 +493,15 @@ export function createYoutubeExtractionWorker({
             finalizedDraft: extracted.draft,
           });
           return finalized ? "succeeded" as const : "stale-fence" as const;
-        } catch {
+        } catch (error) {
+          if (controller.signal.aborted) {
+            return "stale-fence" as const;
+          }
           await adapter.failOrRetry({
             jobId: job.id,
             workerId,
             leaseGeneration: job.leaseGeneration,
-            errorCode: "EXTRACTION_FAILED",
+            errorCode: classifyYoutubeExtractionWorkerError(error),
           });
           return "failed" as const;
         } finally {

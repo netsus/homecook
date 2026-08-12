@@ -18,18 +18,7 @@ interface RpcResult {
   error: unknown;
 }
 
-interface InternalQueryResult { data: unknown; error: unknown }
-interface InternalQuery extends PromiseLike<InternalQueryResult> {
-  select(columns: string): InternalQuery;
-  eq(column: string, value: unknown): InternalQuery;
-  not(column: string, operator: string, value: unknown): InternalQuery;
-  gte(column: string, value: unknown): InternalQuery;
-  is(column: string, value: unknown): InternalQuery;
-  order(column: string, options: { ascending: boolean }): InternalQuery;
-  limit(count: number): InternalQuery;
-  maybeSingle(): PromiseLike<InternalQueryResult>;
-}
-interface InternalClient { from(table: string): InternalQuery }
+interface InternalClient { rpc: Rpc }
 
 type Rpc = (name: string, args?: Record<string, unknown>) => PromiseLike<RpcResult>;
 
@@ -60,7 +49,12 @@ interface HandlerDependencies {
     youtube_video_id?: string;
   }) | null>;
   readSession(userId: string, extractionId: string): Promise<SessionRow | null>;
-  listJobs(userId: string, view: "unseen-completed" | "archive"): Promise<ListJobRow[]>;
+  listJobs(
+    userId: string,
+    view: "unseen-completed" | "archive",
+    cursor: { completedAt: string; jobId: string } | null,
+    limit: number,
+  ): Promise<ListJobRow[]>;
   markDelivered(userId: string, deliveryKeys: string[], rpc: Rpc): Promise<number>;
   markSeen(userId: string, jobIds: string[], rpc: Rpc): Promise<number>;
   fingerprintKeys(): { current: string; previous: string | null };
@@ -160,6 +154,10 @@ function isResponse(value: AuthenticatedRequest | Response): value is Response {
 export function createYoutubeAsyncExtractionHandlers(deps: HandlerDependencies) {
   return {
     async enqueue(request: Request, submissionMode: "background_notify" | "sync_wait" = "background_notify") {
+      const auth = requireAuth(await deps.authenticate());
+      if (isResponse(auth)) {
+        return auth;
+      }
       const parsed = parseYoutubeExtractionJobRequest(await readJson(request));
       if ("code" in parsed) {
         return parsed.code === "INVALID_URL"
@@ -172,10 +170,6 @@ export function createYoutubeAsyncExtractionHandlers(deps: HandlerDependencies) 
       }
       if (!deps.asyncEnabled()) {
         return failure("FEATURE_DISABLED", "유튜브 가져오기는 준비 중이에요.", 404);
-      }
-      const auth = requireAuth(await deps.authenticate());
-      if (isResponse(auth)) {
-        return auth;
       }
       let videoId = parsed.kind === "url" ? parsed.videoId : null;
       if (parsed.kind === "retry") {
@@ -354,7 +348,7 @@ export function createYoutubeAsyncExtractionHandlers(deps: HandlerDependencies) 
           return failure("INVALID_CURSOR", "목록 커서를 확인해 주세요.", 422);
         }
       }
-      let rows = await deps.listJobs(auth.userId, view);
+      let rows = await deps.listJobs(auth.userId, view, cursor, limit + 1);
       if (cursor) {
         rows = rows.filter((row) =>
           row.completed_at !== null
@@ -393,27 +387,27 @@ export function createYoutubeAsyncExtractionHandlers(deps: HandlerDependencies) 
     },
 
     async delivered(request: Request) {
+      const auth = requireAuth(await deps.authenticate());
+      if (isResponse(auth)) return auth;
       const values = validateStringArray(
         await readJson(request),
         "delivery_keys",
         (value) => value.trim().length > 0 && value.length <= 200,
       );
       if (!values) return failure("VALIDATION_ERROR", "전달 항목을 확인해 주세요.", 422);
-      const auth = requireAuth(await deps.authenticate());
-      if (isResponse(auth)) return auth;
       const count = await deps.markDelivered(auth.userId, values, auth.rpc);
       return success({ delivered_count: count });
     },
 
     async seen(request: Request) {
+      const auth = requireAuth(await deps.authenticate());
+      if (isResponse(auth)) return auth;
       const values = validateStringArray(
         await readJson(request),
         "job_ids",
         (value) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu.test(value),
       );
       if (!values) return failure("VALIDATION_ERROR", "확인 항목을 확인해 주세요.", 422);
-      const auth = requireAuth(await deps.authenticate());
-      if (isResponse(auth)) return auth;
       const count = await deps.markSeen(auth.userId, values, auth.rpc);
       return success({ seen_count: count });
     },
@@ -444,12 +438,10 @@ export const youtubeAsyncExtractionHandlers = createYoutubeAsyncExtractionHandle
   },
   async readJob(userId, jobId) {
     try {
-      const result = await internalClient()
-        .from("youtube_extraction_jobs")
-        .select("*, extraction_session:youtube_extraction_sessions!youtube_extraction_jobs_extraction_session_id_fkey(id,status,recipe_id,expires_at)")
-        .eq("id", jobId)
-        .eq("user_id", userId)
-        .maybeSingle();
+      const result = await internalClient().rpc("read_youtube_extraction_job_projection", {
+        user_id: userId,
+        job_id: jobId,
+      });
       return result.error ? null : result.data as (YoutubeExtractionJobProjectionRow & {
         youtube_video_id?: string;
       }) | null;
@@ -459,30 +451,25 @@ export const youtubeAsyncExtractionHandlers = createYoutubeAsyncExtractionHandle
   },
   async readSession(userId, extractionId) {
     try {
-      const result = await internalClient()
-        .from("youtube_extraction_sessions")
-        .select("id,status,draft_json,recipe_id,expires_at")
-        .eq("id", extractionId)
-        .eq("user_id", userId)
-        .maybeSingle();
+      const result = await internalClient().rpc("read_youtube_extraction_session_projection", {
+        user_id: userId,
+        extraction_id: extractionId,
+      });
       return result.error ? null : result.data as SessionRow | null;
     } catch {
       return null;
     }
   },
-  async listJobs(userId, view) {
+  async listJobs(userId, view, cursor, limit) {
     try {
-      let query = internalClient()
-        .from("youtube_extraction_jobs")
-        .select("*, extraction_session:youtube_extraction_sessions!youtube_extraction_jobs_extraction_session_id_fkey(id,status,recipe_id,expires_at)")
-        .eq("user_id", userId)
-        .not("completed_at", "is", null)
-        .gte("completed_at", new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
-        .order("completed_at", { ascending: false })
-        .order("id", { ascending: false })
-        .limit(51);
-      if (view === "unseen-completed") query = query.is("completion_seen_at", null);
-      const result = await query;
+      const result = await internalClient().rpc("list_youtube_extraction_job_projections", {
+        user_id: userId,
+        list_view: view,
+        retention_floor: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+        cursor_completed_at: cursor?.completedAt ?? null,
+        cursor_job_id: cursor?.jobId ?? null,
+        row_limit: limit,
+      });
       return result.error || !Array.isArray(result.data)
         ? []
         : result.data as ListJobRow[];

@@ -808,7 +808,6 @@ export function createYoutubeIngredientRegistrationInternalRpcClient() {
 }
 
 const YOUTUBE_EXTRACTION_TABLES = new Set([
-  "youtube_extraction_jobs",
   "youtube_extraction_sessions",
   "youtube_extraction_candidates",
   "youtube_transcript_cache",
@@ -833,10 +832,6 @@ export function createYoutubeAsyncExtractionInternalClient() {
   const client = createScopedDataServiceRoleClient("youtube-extraction");
   return client
     ? {
-        from: exactInternalFrom(client, new Set([
-          "youtube_extraction_jobs",
-          "youtube_extraction_sessions",
-        ])),
         rpc: client.rpc.bind(client),
       }
     : null;

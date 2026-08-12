@@ -1,0 +1,48 @@
+{
+  "schema": "homecook.youtube-extraction-expected-schema",
+  "version": 1,
+  "schema_identity": "youtube-extraction-worker-schema-v1",
+  "tables": [
+    "private.youtube_extraction_current_policy",
+    "private.youtube_extraction_worker_credentials",
+    "public.youtube_extraction_jobs",
+    "public.youtube_extractor_permits"
+  ],
+  "roles": [
+    "youtube_extraction_credential_manager",
+    "youtube_extraction_credential_manager_rpc_owner",
+    "youtube_extraction_enqueue_rpc_owner",
+    "youtube_extraction_worker",
+    "youtube_extraction_worker_rpc_owner"
+  ],
+  "memberships": [
+    "authenticator->youtube_extraction_credential_manager",
+    "authenticator->youtube_extraction_worker"
+  ],
+  "rpc_signatures": [
+    "public.check_youtube_extraction_worker_pre_request()",
+    "public.claim_youtube_extraction_job(text,text,integer)",
+    "public.claim_youtube_extractor_permit(text,integer)",
+    "public.enqueue_youtube_extraction_job(text,bigint,text,text,text,text,text,text)",
+    "public.fail_or_retry_youtube_extraction_job(uuid,text,bigint,text)",
+    "public.finalize_youtube_extraction_job(uuid,text,bigint,jsonb)",
+    "public.heartbeat_youtube_extraction_job(uuid,text,bigint,integer)",
+    "public.heartbeat_youtube_extractor_permit(text,bigint,integer)",
+    "public.list_youtube_extraction_job_projections(uuid,text,timestamp with time zone,timestamp with time zone,uuid,integer)",
+    "public.mark_youtube_extraction_jobs_delivered(uuid,text[])",
+    "public.mark_youtube_extraction_jobs_seen(uuid,uuid[])",
+    "public.read_youtube_extraction_job_projection(uuid,uuid)",
+    "public.read_youtube_extraction_session_projection(uuid,uuid)",
+    "public.release_youtube_extractor_permit(text,bigint)",
+    "public.resolve_youtube_extraction_job_draft(uuid,text,bigint,text,jsonb)",
+    "public.rotate_youtube_extraction_worker_credential(bigint,bigint,text,timestamp with time zone,text,text,text)",
+    "public.start_youtube_extraction_attempt(uuid,text,bigint,bigint)"
+  ],
+  "initial_policy": {
+    "policy_key": "primary",
+    "policy_version": 1,
+    "extractor_mode": "i031_codex_vision",
+    "pipeline_identity": "9adc7876a02c2da55a92e3a65369bf4e803c78efb9a791717201eedc242c1908",
+    "enabled": false
+  }
+}

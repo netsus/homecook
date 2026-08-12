@@ -178,6 +178,8 @@ describe("YTASYNC-WORKER", () => {
     const service = createYoutubeExtractionService({ extractor, resolveDraft });
     const result = await service.extract({
       jobId: "11111111-1111-4111-8111-111111111111",
+      workerId: "worker-1",
+      leaseGeneration: 7,
       videoId: "abc123DEF45",
       options: YOUTUBE_ASYNC_POLICY.resultAffectingOptions,
       signal: new AbortController().signal,
@@ -187,6 +189,8 @@ describe("YTASYNC-WORKER", () => {
     }));
     expect(resolveDraft).toHaveBeenCalledWith(expect.objectContaining({
       jobId: "11111111-1111-4111-8111-111111111111",
+      workerId: "worker-1",
+      leaseGeneration: 7,
     }));
     expect(result).toEqual({ draft: {
       extraction_id: "22222222-2222-4222-8222-222222222222",
@@ -339,7 +343,7 @@ describe("YTASYNC-API route handlers", () => {
     });
   });
 
-  it("fails malformed bodies before authentication or any DB write", async () => {
+  it("fails malformed bodies before any DB write", async () => {
     const { handlers, dependencies, rpc } = buildHandlers();
     const response = await handlers.enqueue(new Request(
       "http://localhost/api/v1/recipes/youtube/extraction-jobs",
@@ -347,7 +351,18 @@ describe("YTASYNC-API route handlers", () => {
     ));
     expect(response.status).toBe(422);
     expect((await response.json()).error.code).toBe("VALIDATION_ERROR");
-    expect(dependencies.authenticate).not.toHaveBeenCalled();
+    expect(dependencies.authenticate).toHaveBeenCalledOnce();
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it("returns 401 before validation when the refreshed session is absent", async () => {
+    const { handlers, rpc } = buildHandlers({ authenticate: vi.fn(async () => null) });
+    const response = await handlers.enqueue(new Request("http://localhost", {
+      method: "POST",
+      body: JSON.stringify({ unexpected: true }),
+    }));
+    expect(response.status).toBe(401);
+    expect((await response.json()).error.code).toBe("UNAUTHORIZED");
     expect(rpc).not.toHaveBeenCalled();
   });
 

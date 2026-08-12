@@ -1,4 +1,7 @@
-import type { ClaimedYoutubeExtractionJob } from
+import type {
+  ClaimedYoutubeExtractionJob,
+  YoutubeExtractionWorkerFailureCode,
+} from
   "@/lib/server/youtube-async-extraction";
 
 interface RpcResult { data: unknown; error: unknown }
@@ -22,7 +25,13 @@ function booleanResult(result: RpcResult, operation: string) {
   if (typeof data === "boolean") return data;
   if (typeof data === "number") return data > 0;
   const row = record(data);
-  return row ? row.applied === true || Number(row.affected_count ?? 0) > 0 : false;
+  return row
+    ? row.applied === true
+      || row.updated === true
+      || row.finalized === true
+      || row.released === true
+      || Number(row.affected_count ?? 0) > 0
+    : false;
 }
 
 export function createYoutubeExtractionWorkerRpcAdapter(client: RestrictedRpcClient) {
@@ -89,15 +98,17 @@ export function createYoutubeExtractionWorkerRpcAdapter(client: RestrictedRpcCli
         job_id: input.jobId,
         worker_id: input.workerId,
         lease_generation: input.leaseGeneration,
-        permit_generation: input.permitGeneration,
-        finalized_draft_json: input.finalizedDraft,
+        finalized_draft_json: {
+          ...(record(input.finalizedDraft) ?? { draft: input.finalizedDraft }),
+          worker_permit_generation: input.permitGeneration,
+        },
       }), "finalize job");
     },
     async failOrRetry(input: {
       jobId: string;
       workerId: string;
       leaseGeneration: number;
-      errorCode: "RUNTIME_UNAVAILABLE" | "EXTRACTION_FAILED";
+      errorCode: YoutubeExtractionWorkerFailureCode;
     }) {
       return booleanResult(await client.rpc("fail_or_retry_youtube_extraction_job", {
         job_id: input.jobId,
@@ -133,11 +144,15 @@ export function createYoutubeExtractionWorkerRpcAdapter(client: RestrictedRpcCli
     },
     async resolveDraft(input: {
       jobId: string;
+      workerId: string;
+      leaseGeneration: number;
       videoId: string;
       runtimeResult: unknown;
     }) {
       return requireSuccess(await client.rpc("resolve_youtube_extraction_job_draft", {
         job_id: input.jobId,
+        worker_id: input.workerId,
+        lease_generation: input.leaseGeneration,
         youtube_video_id: input.videoId,
         runtime_result: input.runtimeResult,
       }), "resolve draft");

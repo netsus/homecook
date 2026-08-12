@@ -1,5 +1,7 @@
 interface ExtractionServiceInput {
   jobId: string;
+  workerId: string;
+  leaseGeneration: number;
   videoId: string;
   options: Readonly<Record<string, unknown>>;
   signal: AbortSignal;
@@ -17,6 +19,8 @@ interface YoutubeExtractionServiceDependencies {
   };
   resolveDraft(input: {
     jobId: string;
+    workerId: string;
+    leaseGeneration: number;
     videoId: string;
     runtimeResult: ExtractionRuntimeResult;
     signal: AbortSignal;
@@ -47,6 +51,8 @@ export function createYoutubeExtractionService({
       });
       const draft = await resolveDraft({
         jobId: input.jobId,
+        workerId: input.workerId,
+        leaseGeneration: input.leaseGeneration,
         videoId: input.videoId,
         runtimeResult,
         signal: input.signal,
