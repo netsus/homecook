@@ -57,7 +57,7 @@
 - [x] `pnpm verify:backend`, lint, typecheck가 통과한다 <!-- omo:id=accept-i031-backend-gates;stage=2;scope=backend;review=3,6 -->
 - [x] `pnpm verify:frontend`와 browser 검증이 통과한다 <!-- omo:id=accept-i031-frontend-gates;stage=4;scope=frontend;review=5,6 -->
 - [x] 독립 Codex code/security review blocking finding이 0이다 <!-- omo:id=accept-i031-independent-review;stage=2;scope=shared;review=3,6 -->
-- [ ] current PR head의 모든 GitHub checks가 green이고 PR이 merge된다 <!-- omo:id=accept-i031-current-head-green;stage=4;scope=shared;review=6 -->
+- [x] current PR head의 모든 GitHub checks가 green이고 PR이 merge된다 <!-- omo:id=accept-i031-current-head-green;stage=4;scope=shared;review=6 -->
 
 ## Manual QA
 

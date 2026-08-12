@@ -175,7 +175,7 @@ existing route
 - non-manual Stage 4 acceptance 8건은 [closeout evidence](./evidence/2026-08-12-stage4-6-closeout.md)의 retained real smoke와 current-head deterministic/browser 근거로 완료했다.
 - TDD 수리는 loading 중 동기식 중복 제출 차단, explicit retry 재실행, 320px 진행 단계 단일 행 유지에만 제한했다. 새 화면·key/model 설정 UI·공개 API 계약은 추가하지 않았다.
 - desktop 1280px, mobile 390px, mobile 320px에서 loading/error/retry/review를 캡처했고 console/page/HTTP error와 text overlap을 자동 검사했다.
-- roadmap은 `in-progress`를 유지한다. Draft PR의 current-head checks와 독립 Stage 6 검토·merge가 모두 끝나야 `accept-i031-current-head-green`을 완료할 수 있다.
+- 독립 Stage 6 reviewer는 reviewed head `dbcf48f2c0fdaed8326fd7653962e19e9d2ccc17`을 Findings 0으로 승인했고, Ready 전환 뒤 full regression과 Lighthouse를 포함한 current-head checks가 통과했다. roadmap과 non-manual acceptance는 merge 직전 final closeout projection인 `merged` / 완료 상태로 동기화한다.
 - 사용자 임의 URL 최종 확인, Holdout/preview/production 승인, production macOS worker와 운영 secret 승인은 계속 Manual Only다.
 
 ## Handoff

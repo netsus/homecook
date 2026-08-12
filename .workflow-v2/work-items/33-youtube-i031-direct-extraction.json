@@ -80,23 +80,23 @@
     ]
   },
   "status": {
-    "lifecycle": "in_progress",
-    "approval_state": "codex_approved",
+    "lifecycle": "merged",
+    "approval_state": "dual_approved",
     "verification_status": "passed",
     "evaluation_status": "not_started",
     "evaluation_round": 0,
-    "last_evaluator_result": null,
+    "last_evaluator_result": "Independent Stage 6 PASS at reviewed head dbcf48f2c0fdaed8326fd7653962e19e9d2ccc17; findings 0",
     "auto_merge_eligible": false,
     "blocked_reason_code": null
   },
   "closeout": {
-    "phase": "collecting",
+    "phase": "completed",
     "docs_projection": {
-      "roadmap_lifecycle": "in_progress",
+      "roadmap_lifecycle": "merged",
       "design_status": "confirmed",
-      "delivery_checklist": "pending",
+      "delivery_checklist": "complete",
       "design_authority": "not_required",
-      "acceptance": "pending",
+      "acceptance": "complete",
       "automation_spec_metadata": "synced"
     },
     "verification_projection": {
@@ -105,8 +105,9 @@
       "authority_reports": [],
       "actual_verification_refs": [
         "docs/workpacks/33-youtube-i031-direct-extraction/evidence/2026-08-12-stage4-6-closeout.md",
+        "docs/workpacks/33-youtube-i031-direct-extraction/evidence/2026-08-12-stage6-current-head-review.md",
         "GitHub PR #1110 retained arbitrary-public-URL real smoke",
-        "GitHub Draft PR #1341 Stage 4/6 closeout candidate",
+        "GitHub PR #1341 Ready-triggered current-head CI and Stage 6 closeout",
         "pnpm exec vitest run tests/youtube-i031-runtime.test.ts tests/youtube-import.backend.test.ts tests/recipio-youtube-import.test.ts",
         "pnpm exec playwright test tests/e2e/slice-33-youtube-i031-direct-extraction.spec.ts",
         "pnpm verify:frontend",
@@ -114,9 +115,9 @@
       ]
     },
     "merge_gate_projection": {
-      "current_head_sha": null,
-      "approval_state": "codex_approved",
-      "all_checks_green": false
+      "current_head_sha": "dbcf48f2c0fdaed8326fd7653962e19e9d2ccc17",
+      "approval_state": "dual_approved",
+      "all_checks_green": true
     },
     "recovery_summary": {
       "manual_patch_count": 3,
@@ -132,20 +133,21 @@
       "manual_decision_required_count": 0,
       "human_escalation_count": 0,
       "post_merge_stale_count": 0,
-      "latest_reason_code": "stage4-browser-closeout-candidate-collected",
+      "latest_reason_code": "stage6-current-head-approved",
       "evidence_sources": [
         "tests/e2e/slice-33-youtube-i031-direct-extraction.spec.ts",
         "ui/designs/evidence/33-youtube-i031-direct-extraction",
-        "docs/workpacks/33-youtube-i031-direct-extraction/evidence/2026-08-12-stage4-6-closeout.md"
+        "docs/workpacks/33-youtube-i031-direct-extraction/evidence/2026-08-12-stage4-6-closeout.md",
+        "docs/workpacks/33-youtube-i031-direct-extraction/evidence/2026-08-12-stage6-current-head-review.md"
       ]
     },
     "projection_state": {
-      "docs_synced_at": "2026-08-12T18:21:11+09:00",
-      "status_synced_at": "2026-08-12T18:21:11+09:00",
-      "pr_body_synced_at": null
+      "docs_synced_at": "2026-08-12T10:06:19Z",
+      "status_synced_at": "2026-08-12T10:06:19Z",
+      "pr_body_synced_at": "2026-08-12T10:06:19Z"
     }
   },
-  "notes": "Canonical closeout candidate: .workflow-v2/work-items/33-youtube-i031-direct-extraction.json#closeout. Stage 1 docs PR #1107 and implementation PR #1110 are merged. Retained arbitrary-public-URL real smoke from PR #1110 remains separate from current deterministic browser evidence. Draft PR #1341 repairs duplicate submit, dead-end retry, and 320px progress wrapping with TDD and records desktop/390/320 loading, error/retry, and review evidence. Non-manual Stage 4 acceptance is complete except current-head green plus merge; final Stage 6 approval is reserved for an independent Codex task. Fresh Holdout, user-owned arbitrary URL confirmation, production enablement, macOS worker installation, and operating secrets remain Manual Only. closeout_phase=collecting closeout_recovery=manual_patch:3|ci_resync:0|manual_handoff closeout_repair=codex:3|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:tests/e2e/slice-33-youtube-i031-direct-extraction.spec.ts,ui/designs/evidence/33-youtube-i031-direct-extraction,docs/workpacks/33-youtube-i031-direct-extraction/evidence/2026-08-12-stage4-6-closeout.md last_recovery_at=2026-08-12T18:21:11+09:00",
+  "notes": "Canonical closeout owner: .workflow-v2/work-items/33-youtube-i031-direct-extraction.json#closeout. Independent Stage 6 reviewer task 019ff552-b732-7aa0-80a2-8833acd9c23e approved reviewed head dbcf48f2c0fdaed8326fd7653962e19e9d2ccc17 with findings 0 after Ready-triggered full regression and Lighthouse success. PR #1110 retained arbitrary-public-URL real smoke remains separately identified. User-owned arbitrary URL confirmation, Holdout/production enablement, macOS worker installation, and operating secrets remain Manual Only. closeout_phase=completed closeout_recovery=manual_patch:3|ci_resync:0|manual_handoff closeout_repair=codex:3|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:tests/e2e/slice-33-youtube-i031-direct-extraction.spec.ts,ui/designs/evidence/33-youtube-i031-direct-extraction,docs/workpacks/33-youtube-i031-direct-extraction/evidence/2026-08-12-stage4-6-closeout.md,docs/workpacks/33-youtube-i031-direct-extraction/evidence/2026-08-12-stage6-current-head-review.md last_recovery_at=2026-08-12T18:21:11+09:00",
   "out_of_scope": [
     "preview-or-production-enablement",
     "holdout-promotion",
