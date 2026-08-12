@@ -100,7 +100,10 @@ function authenticatedClaims(userId: string) {
   };
 }
 
-function workerClaims(allowedSnapshotDigest: string) {
+function workerClaims(
+  allowedSnapshotDigest: string,
+  overrides: Record<string, unknown> = {},
+) {
   return {
     role: "youtube_extraction_worker",
     scope: "youtube-extraction-worker",
@@ -112,16 +115,18 @@ function workerClaims(allowedSnapshotDigest: string) {
     allowed_snapshot_digest: allowedSnapshotDigest,
     generation: 7,
     exp: Math.floor(Date.now() / 1000) + 3600,
+    ...overrides,
   };
 }
 
-function managerClaims() {
+function managerClaims(overrides: Record<string, unknown> = {}) {
   return {
     role: "youtube_extraction_credential_manager",
     scope: "youtube-extraction-credential-manager",
     iss: managerIssuer,
     aud: audience,
-    exp: Math.floor(Date.now() / 1000) + 3600,
+    exp: Math.floor(Date.now() / 1000) + 240,
+    ...overrides,
   };
 }
 
@@ -627,6 +632,36 @@ describe.runIf(enabled).sequential("youtube async extraction PostgreSQL integrat
     `)).toBe("1");
   });
 
+  it("requires the previous fingerprint version and digest to travel as one complete pair", () => {
+    enablePolicy();
+    const snapshotDigest = policySnapshotDigest();
+    psql(`
+      update private.youtube_extraction_current_policy
+      set previous_fingerprint_key_version = '0',
+          previous_fingerprint_valid_until = now() + interval '1 hour'
+      where policy_key = 'primary';
+    `);
+
+    const completePair = runAsJson("authenticated", authenticatedClaims(ownerA), `
+      select public.enqueue_youtube_extraction_job(
+        'pairAtomic01', 1, '${snapshotDigest}', '1', '${"1".repeat(64)}',
+        '0', '${"2".repeat(64)}', 'background_notify'
+      )::text;
+    `);
+    expect(completePair).toMatchObject({ deduplicated: false, status: "queued" });
+
+    expectSqlFailure(`
+      begin;
+      set local role authenticated;
+      set local request.jwt.claims = ${sqlJson(authenticatedClaims(ownerA))};
+      select public.enqueue_youtube_extraction_job(
+        'pairInvalid01', 1, '${snapshotDigest}', '1', '${"3".repeat(64)}',
+        null, '${"4".repeat(64)}', 'background_notify'
+      );
+      commit;
+    `, /VALIDATION_ERROR/u);
+  });
+
   it("enforces the approved per-user active and daily enqueue budgets inside the enqueue transaction", () => {
     enablePolicy();
     const snapshotDigest = policySnapshotDigest();
@@ -1072,6 +1107,170 @@ describe.runIf(enabled).sequential("youtube async extraction PostgreSQL integrat
     });
   });
 
+  it("requeues permit contention with bounded jitter without consuming an attempt", () => {
+    enablePolicy();
+    const snapshotDigest = policySnapshotDigest();
+    configureWorkerCredential(snapshotDigest);
+    insertJob({
+      id: "80000000-0000-4000-8000-000000000012",
+      userId: ownerA,
+      videoId: "permitWait001",
+      fingerprint: "c".repeat(64),
+      status: "queued",
+    });
+    const claim = runAsJson(
+      "youtube_extraction_worker",
+      workerClaims(snapshotDigest),
+      `select public.claim_youtube_extraction_job(
+        '${workerId}', '${snapshotDigest}', 120
+      )::text;`,
+    );
+    const stale = runAsJson(
+      "youtube_extraction_worker",
+      workerClaims(snapshotDigest),
+      `select public.requeue_youtube_extraction_job_without_attempt(
+        '${claim.job_id}'::uuid,
+        '${workerId}',
+        ${(claim.lease_generation as number) - 1},
+        2,
+        8
+      )::text;`,
+    );
+    const beforeRequeueMs = Date.now();
+    const requeued = runAsJson(
+      "youtube_extraction_worker",
+      workerClaims(snapshotDigest),
+      `select public.requeue_youtube_extraction_job_without_attempt(
+        '${claim.job_id}'::uuid,
+        '${workerId}',
+        ${claim.lease_generation as number},
+        2,
+        8
+      )::text;`,
+    );
+    const state = parseJson(psql(`
+      select json_build_object(
+        'status', status,
+        'attempt_count', attempt_count,
+        'lease_cleared', lease_owner is null and lease_expires_at is null,
+        'available_at', available_at
+      )::text
+      from public.youtube_extraction_jobs
+      where id = '${claim.job_id}'::uuid;
+    `));
+    const delayMs = Date.parse(String(state.available_at)) - beforeRequeueMs;
+
+    expect(stale).toEqual({ applied: false, requeued: false });
+    expect(requeued).toMatchObject({ applied: true, requeued: true });
+    expect(state).toMatchObject({
+      status: "queued",
+      attempt_count: 0,
+      lease_cleared: true,
+    });
+    expect(delayMs).toBeGreaterThanOrEqual(1_500);
+    expect(delayMs).toBeLessThanOrEqual(8_500);
+  });
+
+  it("fences title and worker-data writes by the active lease generation", () => {
+    enablePolicy();
+    const snapshotDigest = policySnapshotDigest();
+    configureWorkerCredential(snapshotDigest);
+    insertJob({
+      id: "80000000-0000-4000-8000-000000000013",
+      userId: ownerA,
+      videoId: "workerData001",
+      fingerprint: "d".repeat(64),
+      status: "queued",
+    });
+    const claim = runAsJson(
+      "youtube_extraction_worker",
+      workerClaims(snapshotDigest),
+      `select public.claim_youtube_extraction_job(
+        '${workerId}', '${snapshotDigest}', 120
+      )::text;`,
+    );
+    const staleTitle = runAsJson(
+      "youtube_extraction_worker",
+      workerClaims(snapshotDigest),
+      `select public.update_youtube_extraction_job_title(
+        '${claim.job_id}'::uuid,
+        '${workerId}',
+        ${(claim.lease_generation as number) - 1},
+        'stale title'
+      )::text;`,
+    );
+    const title = runAsJson(
+      "youtube_extraction_worker",
+      workerClaims(snapshotDigest),
+      `select public.update_youtube_extraction_job_title(
+        '${claim.job_id}'::uuid,
+        '${workerId}',
+        ${claim.lease_generation as number},
+        E'  김치\\n찌개  '
+      )::text;`,
+    );
+    const staleEvent = runAsJson(
+      "youtube_extraction_worker",
+      workerClaims(snapshotDigest),
+      `select public.record_youtube_extraction_worker_event(
+        '${claim.job_id}'::uuid,
+        '${workerId}',
+        ${(claim.lease_generation as number) - 1},
+        'transcript',
+        '{"provider":"youtube_public_timedtext","status":"success"}'::jsonb
+      )::text;`,
+    );
+
+    expect(staleTitle).toEqual({ applied: false, updated: false });
+    expect(title).toEqual({ applied: true, updated: true });
+    expect(staleEvent).toEqual({ applied: false, recorded: false });
+    expect(lastLine(psql(`
+      select video_title_snapshot
+      from public.youtube_extraction_jobs
+      where id = '${claim.job_id}'::uuid;
+    `))).toBe("김치 찌개");
+  });
+
+  it("rejects wrong worker authority and enforces manager and claim lifetime cutoffs", () => {
+    enablePolicy();
+    const snapshotDigest = policySnapshotDigest();
+    configureWorkerCredential(snapshotDigest);
+    const nowSeconds = Math.floor(Date.now() / 1000);
+    const claimSql = `select public.claim_youtube_extraction_job(
+      '${workerId}', '${snapshotDigest}', 120
+    )::text;`;
+
+    for (const claims of [
+      workerClaims(snapshotDigest, { iss: "https://wrong.example" }),
+      workerClaims(snapshotDigest, { aud: "wrong-audience" }),
+      workerClaims(snapshotDigest, { exp: nowSeconds + 30 * 60 }),
+    ]) {
+      expectSqlFailure(`
+        begin;
+        set local role youtube_extraction_worker;
+        set local request.jwt.claims = ${sqlJson(claims)};
+        ${claimSql}
+        commit;
+      `, /YOUTUBE_EXTRACTION_WORKER_UNAUTHORIZED/u);
+    }
+    for (const claims of [
+      managerClaims({ iss: "https://wrong.example" }),
+      managerClaims({ aud: "wrong-audience" }),
+      managerClaims({ exp: nowSeconds + 5 * 60 + 1 }),
+    ]) {
+      expectSqlFailure(`
+        begin;
+        set local role youtube_extraction_credential_manager;
+        set local request.jwt.claims = ${sqlJson(claims)};
+        select public.rotate_youtube_extraction_worker_credential(
+          7, 8, '${nextWorkerJtiHash}', now() + interval '12 hours',
+          '${workerReleaseSha}', '${workerSchemaIdentity}', '${snapshotDigest}'
+        );
+        commit;
+      `, /YOUTUBE_EXTRACTION_CREDENTIAL_MANAGER_UNAUTHORIZED/u);
+    }
+  });
+
   it("records delivered and seen independently for the matching owner only", () => {
     insertJob({
       id: "80000000-0000-4000-8000-000000000010",
@@ -1116,8 +1315,8 @@ describe.runIf(enabled).sequential("youtube async extraction PostgreSQL integrat
       )::text;`,
     );
 
-    expect(delivered).toEqual({ updated: 1 });
-    expect(seen).toEqual({ updated: 1 });
+    expect(delivered).toEqual({ delivered_count: 1 });
+    expect(seen).toEqual({ seen_count: 1 });
     expect(parseJson(psql(`
       select json_agg(
         json_build_object(
