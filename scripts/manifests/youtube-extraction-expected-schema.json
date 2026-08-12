@@ -2,13 +2,17 @@
   "schema": "homecook.youtube-extraction-expected-schema",
   "version": 1,
   "schema_identity": "youtube-extraction-worker-schema-v1",
-  "catalog_fingerprint": "b3ad2b381c6d1a25fa40c30114d083371f66f3d5a82a828ea621bf8a8222fddf",
+  "catalog_fingerprint": "ba92ccdeb92c350548b09d556d561619b511ec7f614ff6436c376044747fda0f",
   "catalog_fingerprint_algorithm": "sha256:youtube-extraction-live-catalog-v1",
   "catalog_fingerprint_components": [
     "tables",
+    "table_owners",
+    "sequence_owners",
+    "schema_owners",
     "roles",
     "role_attributes",
-    "authenticator_memberships",
+    "owner_role_attributes",
+    "memberships",
     "table_security",
     "rls_policies",
     "table_privileges",
@@ -41,14 +45,22 @@
     "youtube_extraction_worker_rpc_owner"
   ],
   "memberships": [
-    "authenticator->youtube_extraction_credential_manager|admin=false",
-    "authenticator->youtube_extraction_worker|admin=false"
+    {
+      "member": "authenticator",
+      "role": "youtube_extraction_credential_manager",
+      "admin": false,
+      "inherit": false,
+      "set": true
+    },
+    {
+      "member": "authenticator",
+      "role": "youtube_extraction_worker",
+      "admin": false,
+      "inherit": false,
+      "set": true
+    }
   ],
   "migration_owner_membership_exception": "postgres admin=true inherit=false set=false on youtube_extraction* roles (PostgreSQL 16+ automatic creator edge; cannot SET)",
-  "memberships": [
-    "authenticator->youtube_extraction_credential_manager",
-    "authenticator->youtube_extraction_worker"
-  ],
   "rpc_signatures": [
     "public.access_youtube_extraction_worker_cache(uuid,text,bigint,text,jsonb)",
     "public.check_youtube_extraction_worker_pre_request()",

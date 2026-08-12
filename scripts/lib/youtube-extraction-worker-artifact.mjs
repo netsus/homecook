@@ -564,11 +564,96 @@ export function buildYoutubeExtractionWorkerQueueState({
  */
 export function readJsonFile(path, label, { mode } = {}) {
   const normalizedPath = ensureRegularFile(path, label, { mode });
-  const parsed = JSON.parse(readFileSync(normalizedPath, "utf8"));
+  const source = readFileSync(normalizedPath, "utf8");
+  assertNoDuplicateJsonKeys(source, label);
+  const parsed = JSON.parse(source);
   if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
     throw new Error(`${label} must be a JSON object.`);
   }
   return parsed;
+}
+
+function assertNoDuplicateJsonKeys(source, label) {
+  let index = 0;
+  const skipWhitespace = () => {
+    while (/\s/u.test(source[index] ?? "")) index += 1;
+  };
+  const parseString = () => {
+    const start = index;
+    index += 1;
+    while (index < source.length) {
+      if (source[index] === "\\") {
+        index += 2;
+        continue;
+      }
+      if (source[index] === '"') {
+        index += 1;
+        return JSON.parse(source.slice(start, index));
+      }
+      index += 1;
+    }
+    throw new Error(`${label} contains invalid JSON.`);
+  };
+  const parseValue = () => {
+    skipWhitespace();
+    if (source[index] === "{") {
+      index += 1;
+      skipWhitespace();
+      const keys = new Set();
+      if (source[index] === "}") {
+        index += 1;
+        return;
+      }
+      while (index < source.length) {
+        if (source[index] !== '"') throw new Error(`${label} contains invalid JSON.`);
+        const key = parseString();
+        if (keys.has(key)) throw new Error(`${label} contains duplicate JSON key: ${key}`);
+        keys.add(key);
+        skipWhitespace();
+        if (source[index] !== ":") throw new Error(`${label} contains invalid JSON.`);
+        index += 1;
+        parseValue();
+        skipWhitespace();
+        if (source[index] === "}") {
+          index += 1;
+          return;
+        }
+        if (source[index] !== ",") throw new Error(`${label} contains invalid JSON.`);
+        index += 1;
+        skipWhitespace();
+      }
+      throw new Error(`${label} contains invalid JSON.`);
+    }
+    if (source[index] === "[") {
+      index += 1;
+      skipWhitespace();
+      if (source[index] === "]") {
+        index += 1;
+        return;
+      }
+      while (index < source.length) {
+        parseValue();
+        skipWhitespace();
+        if (source[index] === "]") {
+          index += 1;
+          return;
+        }
+        if (source[index] !== ",") throw new Error(`${label} contains invalid JSON.`);
+        index += 1;
+      }
+      throw new Error(`${label} contains invalid JSON.`);
+    }
+    if (source[index] === '"') {
+      parseString();
+      return;
+    }
+    const primitive = source.slice(index).match(/^(?:-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?|true|false|null)/u)?.[0];
+    if (!primitive) throw new Error(`${label} contains invalid JSON.`);
+    index += primitive.length;
+  };
+  parseValue();
+  skipWhitespace();
+  if (index !== source.length) throw new Error(`${label} contains invalid JSON.`);
 }
 
 /**
@@ -623,13 +708,63 @@ export function verifyYoutubeExtractionWorkerArtifact(path) {
 
 export function readYoutubeExtractionExpectedSchema(path) {
   const value = readJsonFile(path, "expected schema manifest");
+  const exactFingerprintComponents = [
+    "tables",
+    "table_owners",
+    "sequence_owners",
+    "schema_owners",
+    "roles",
+    "role_attributes",
+    "owner_role_attributes",
+    "memberships",
+    "table_security",
+    "rls_policies",
+    "table_privileges",
+    "sequence_privileges",
+    "rpc_signatures",
+    "rpc_security",
+  ];
+  const exactMemberships = [
+    {
+      member: "authenticator",
+      role: "youtube_extraction_credential_manager",
+      admin: false,
+      inherit: false,
+      set: true,
+    },
+    {
+      member: "authenticator",
+      role: "youtube_extraction_worker",
+      admin: false,
+      inherit: false,
+      set: true,
+    },
+  ];
+  const isUniqueStringArray = (input) => Array.isArray(input)
+    && input.length > 0
+    && input.every((entry) => typeof entry === "string" && entry.length > 0)
+    && new Set(input).size === input.length;
   if (
     value.schema !== YOUTUBE_EXTRACTION_EXPECTED_SCHEMA
     || value.version !== 1
     || typeof value.schema_identity !== "string"
-    || !Array.isArray(value.tables)
-    || !Array.isArray(value.roles)
-    || !Array.isArray(value.rpc_signatures)
+    || !/^[a-f0-9]{64}$/u.test(value.catalog_fingerprint ?? "")
+    || value.catalog_fingerprint_algorithm
+      !== "sha256:youtube-extraction-live-catalog-v1"
+    || JSON.stringify(value.catalog_fingerprint_components)
+      !== JSON.stringify(exactFingerprintComponents)
+    || !isUniqueStringArray(value.tables)
+    || !isUniqueStringArray(value.roles)
+    || !isUniqueStringArray(value.rpc_signatures)
+    || JSON.stringify(value.memberships) !== JSON.stringify(exactMemberships)
+    || typeof value.migration_owner_membership_exception !== "string"
+    || !value.initial_policy
+    || typeof value.initial_policy !== "object"
+    || typeof value.initial_policy.policy_key !== "string"
+    || !Number.isInteger(value.initial_policy.policy_version)
+    || typeof value.initial_policy.extractor_mode !== "string"
+    || !/^[a-f0-9]{64}$/u.test(value.initial_policy.pipeline_identity ?? "")
+    || typeof value.initial_policy.enabled !== "boolean"
   ) {
     throw new Error("expected schema manifest is invalid.");
   }

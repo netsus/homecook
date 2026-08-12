@@ -188,10 +188,39 @@ describe("YTASYNC-OPS deterministic artifact", () => {
   it("rejects duplicate and incomplete expected-schema authority inventories", () => {
     const privateDir = createTempDir("yta-expected-schema-invalid-");
     const schemaPath = join(privateDir, "expected-schema.json");
+    const canonicalPath = join(
+      process.cwd(),
+      "scripts/manifests/youtube-extraction-expected-schema.json",
+    );
     const valid = JSON.parse(readFileSync(
-      join(process.cwd(), "scripts/manifests/youtube-extraction-expected-schema.json"),
+      canonicalPath,
       "utf8",
     ));
+    expect(readYoutubeExtractionExpectedSchema(canonicalPath)).toMatchObject({
+      catalog_fingerprint_components: expect.arrayContaining([
+        "table_owners",
+        "sequence_owners",
+        "schema_owners",
+        "owner_role_attributes",
+        "memberships",
+      ]),
+      memberships: [
+        {
+          member: "authenticator",
+          role: "youtube_extraction_credential_manager",
+          admin: false,
+          inherit: false,
+          set: true,
+        },
+        {
+          member: "authenticator",
+          role: "youtube_extraction_worker",
+          admin: false,
+          inherit: false,
+          set: true,
+        },
+      ],
+    });
     const duplicate = JSON.stringify(valid).replace(
       '"memberships":',
       '"memberships": [], "memberships":',

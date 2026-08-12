@@ -1876,6 +1876,57 @@ begin
         )
       )
     ), ''),
+    'table_owners',
+    coalesce((
+      select pg_catalog.string_agg(
+        namespace.nspname || '.' || relation.relname
+          || '|owner=' || pg_catalog.pg_get_userbyid(relation.relowner),
+        E'\n'
+        order by namespace.nspname, relation.relname
+      )
+      from pg_catalog.pg_class as relation
+      join pg_catalog.pg_namespace as namespace on namespace.oid = relation.relnamespace
+      where relation.relkind in ('r', 'p')
+        and (
+          (namespace.nspname = 'private' and relation.relname like 'youtube_extraction%')
+          or (
+            namespace.nspname = 'public'
+            and (
+              relation.relname like 'youtube_extraction%'
+              or relation.relname like 'youtube_extractor%'
+              or relation.relname like 'youtube_llm_extraction%'
+              or relation.relname like 'youtube_transcript%'
+              or relation.relname like 'youtube_visual_extraction%'
+              or relation.relname in ('cooking_methods', 'ingredient_synonyms', 'ingredients')
+            )
+          )
+        )
+    ), ''),
+    'sequence_owners',
+    coalesce((
+      select pg_catalog.string_agg(
+        namespace.nspname || '.' || relation.relname
+          || '|owner=' || pg_catalog.pg_get_userbyid(relation.relowner),
+        E'\n'
+        order by namespace.nspname, relation.relname
+      )
+      from pg_catalog.pg_class as relation
+      join pg_catalog.pg_namespace as namespace on namespace.oid = relation.relnamespace
+      where relation.relkind = 'S'
+        and namespace.nspname in ('private', 'public')
+        and relation.relname like 'youtube%'
+    ), ''),
+    'schema_owners',
+    coalesce((
+      select pg_catalog.string_agg(
+        namespace.nspname
+          || '|owner=' || pg_catalog.pg_get_userbyid(namespace.nspowner),
+        E'\n'
+        order by namespace.nspname
+      )
+      from pg_catalog.pg_namespace as namespace
+      where namespace.nspname in ('private', 'public')
+    ), ''),
     'roles',
     coalesce((
       select pg_catalog.string_agg(role_row.rolname, E'\n' order by role_row.rolname)
@@ -1906,11 +1957,72 @@ begin
       from pg_catalog.pg_roles as role_row
       where role_row.rolname like 'youtube_extraction%'
     ), ''),
+    'owner_role_attributes',
+    coalesce((
+      select pg_catalog.string_agg(
+        pg_catalog.format(
+          '%s|super=%s|inherit=%s|createrole=%s|createdb=%s|login=%s|replication=%s|bypassrls=%s|config=%s',
+          role_row.rolname,
+          role_row.rolsuper,
+          role_row.rolinherit,
+          role_row.rolcreaterole,
+          role_row.rolcreatedb,
+          role_row.rolcanlogin,
+          role_row.rolreplication,
+          role_row.rolbypassrls,
+          coalesce((
+            select pg_catalog.string_agg(setting, ',' order by setting)
+            from pg_catalog.unnest(role_row.rolconfig) as setting
+          ), '')
+        ),
+        E'\n'
+        order by role_row.rolname
+      )
+      from pg_catalog.pg_roles as role_row
+      where role_row.oid in (
+        select relation.relowner
+        from pg_catalog.pg_class as relation
+        join pg_catalog.pg_namespace as namespace on namespace.oid = relation.relnamespace
+        where (
+          relation.relkind in ('r', 'p')
+          and (
+            (namespace.nspname = 'private' and relation.relname like 'youtube_extraction%')
+            or (
+              namespace.nspname = 'public'
+              and (
+                relation.relname like 'youtube_extraction%'
+                or relation.relname like 'youtube_extractor%'
+                or relation.relname like 'youtube_llm_extraction%'
+                or relation.relname like 'youtube_transcript%'
+                or relation.relname like 'youtube_visual_extraction%'
+                or relation.relname in ('cooking_methods', 'ingredient_synonyms', 'ingredients')
+              )
+            )
+          )
+        ) or (
+          relation.relkind = 'S'
+          and namespace.nspname in ('private', 'public')
+          and relation.relname like 'youtube%'
+        )
+        union
+        select namespace.nspowner
+        from pg_catalog.pg_namespace as namespace
+        where namespace.nspname in ('private', 'public')
+      )
+    ), ''),
     'memberships',
     coalesce((
       select pg_catalog.string_agg(
         member_role.rolname || '->' || granted_role.rolname
-          || '|admin=' || membership.admin_option::text,
+          || '|admin=' || membership.admin_option::text
+          || '|inherit=' || coalesce(
+            (pg_catalog.to_jsonb(membership) ->> 'inherit_option')::boolean,
+            false
+          )::text
+          || '|set=' || coalesce(
+            (pg_catalog.to_jsonb(membership) ->> 'set_option')::boolean,
+            true
+          )::text,
         E'\n'
         order by member_role.rolname, granted_role.rolname
       )
@@ -2137,7 +2249,7 @@ begin
     'ready', v_policy.enabled
       and v_credential.allowed_snapshot_digest = v_snapshot_digest
       and v_credential.expires_at > clock_timestamp() + interval '30 minutes'
-      and v_catalog_fingerprint = 'b3ad2b381c6d1a25fa40c30114d083371f66f3d5a82a828ea621bf8a8222fddf',
+      and v_catalog_fingerprint = 'ba92ccdeb92c350548b09d556d561619b511ec7f614ff6436c376044747fda0f',
     'release_sha', v_credential.release_sha,
     'schema_identity', v_credential.schema_identity,
     'catalog_fingerprint', v_catalog_fingerprint,
