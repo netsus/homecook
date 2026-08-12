@@ -634,7 +634,6 @@ describe("YouTube background extraction contract evolution", () => {
       "keyframeTotalLimit: EXACT.keyframeTotalLimit",
       "keyframesPerRecipe: EXACT.keyframeTotalLimit",
       "screenOcrMode: EXACT.screenOcrMode",
-      "{ useApifyFallback: true }",
       "useVisual: true",
       'sourceMode: "source-text"',
       'recipeMode: "single"',
@@ -644,6 +643,8 @@ describe("YouTube background extraction contract evolution", () => {
     ]) {
       expect(worker).toContain(runtimeMarker);
     }
+    expect(worker).toMatch(/useApifyFallback:\s*true/u);
+    expect(worker).toContain("workerRpcClient");
     expect(worker).toContain("noCache: true");
     expect(worker).toContain('runType: "cold"');
     expect(worker).toContain("timeoutMs: TOTAL_TIMEOUT_MS");

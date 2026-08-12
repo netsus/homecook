@@ -11,7 +11,7 @@
     "scripts/recipe-loop/lib/codex-vision-keyframes-client.mjs": "bc688304f0c10d895205c0415ec7d25cf052f9528b5409ed193a54537351c263",
     "scripts/recipe-loop/lib/screen-ocr-scout.mjs": "d57f3a610dcd9958a9c96759e011f98722cd60b16e6eb2461bf858593a17608c",
     "scripts/recipe-loop/macos-vision-ocr.swift": "b9a99806eea9866a630fecba851e29b847f9b4f1e4212bede634396bd0d20892",
-    "scripts/recipe-loop/snapshot-video.mjs": "d5b72604701960dc268ee0db1eb88180d219861ec57ca266c73fe7428934d42a",
-    "worker.mjs": "f4069f2664f1a3ea4f3a1f6120709db75120096a971801ddc84cf46ccbfb2c6e"
+    "scripts/recipe-loop/snapshot-video.mjs": "f8fb30b727f9b12f697e23ae1cf71803bf838cea7692ebe9e5d83f0b079dbd4a",
+    "worker.mjs": "d61694d5d5c81750bc844f0d35df4387815a4d51fa503e91f397685bff2f346e"
   }
 }

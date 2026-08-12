@@ -58,6 +58,8 @@ const DEFAULT_INCLUDED_PATHS = Object.freeze([
   "scripts/manifests/youtube-extraction-expected-schema.json",
   "scripts/templates/com.homecook.youtube-extraction-worker.plist.template",
 ]);
+const EXPECTED_SCHEMA_RELATIVE_PATH =
+  "scripts/manifests/youtube-extraction-expected-schema.json";
 
 export function ensureNonEmptyString(value, label) {
   if (typeof value !== "string" || value.trim().length === 0) {
@@ -391,6 +393,10 @@ export function buildYoutubeExtractionWorkerArtifactManifest({
     "pipelineIdentity",
   );
   const fileManifest = buildFileManifest(normalizedRootDir, includedPaths);
+  const expectedSchemaSha = sha256File(resolve(
+    normalizedRootDir,
+    EXPECTED_SCHEMA_RELATIVE_PATH,
+  ));
   const baseManifest = {
     schema: YOUTUBE_EXTRACTION_WORKER_ARTIFACT_SCHEMA,
     version: 1,
@@ -403,6 +409,7 @@ export function buildYoutubeExtractionWorkerArtifactManifest({
     extractor_mode: normalizedExtractorMode,
     pipeline_identity: normalizedPipelineIdentity,
     allowed_snapshot_digest: normalizedAllowedSnapshotDigest,
+    expected_schema_sha256: expectedSchemaSha,
     entrypoint_relative_path: "scripts/youtube-extraction-worker-runner.mjs",
     launchd_template_relative_path:
       "scripts/templates/com.homecook.youtube-extraction-worker.plist.template",
@@ -421,6 +428,8 @@ export function buildYoutubeExtractionWorkerArtifactManifest({
  *   schemaIdentity?: string,
  *   expectedPolicyVersion?: number,
  *   expectedPolicySnapshotDigest: string,
+ *   artifactSha256: string,
+ *   expectedSchemaSha256: string,
  * }} options
  */
 export function buildYoutubeExtractionAppDescriptor({
@@ -428,6 +437,8 @@ export function buildYoutubeExtractionAppDescriptor({
   schemaIdentity = YOUTUBE_EXTRACTION_WORKER_RELEASE_SCHEMA_IDENTITY,
   expectedPolicyVersion = DEFAULT_YOUTUBE_EXTRACTION_WORKER_POLICY_VERSION,
   expectedPolicySnapshotDigest,
+  artifactSha256,
+  expectedSchemaSha256,
 } = {}) {
   return {
     schema: YOUTUBE_EXTRACTION_WORKER_APP_DESCRIPTOR_SCHEMA,
@@ -442,6 +453,11 @@ export function buildYoutubeExtractionAppDescriptor({
     expected_policy_snapshot_digest: ensureSnapshotDigest(
       expectedPolicySnapshotDigest,
       "expectedPolicySnapshotDigest",
+    ),
+    artifact_sha256: ensureSnapshotDigest(artifactSha256, "artifactSha256"),
+    expected_schema_sha256: ensureSnapshotDigest(
+      expectedSchemaSha256,
+      "expectedSchemaSha256",
     ),
   };
 }
@@ -593,6 +609,15 @@ export function verifyYoutubeExtractionWorkerArtifact(path) {
       throw new Error(`worker artifact file drift: ${file.path}`);
     }
   }
+  const expectedSchemaEntry = value.files.find(
+    (file) => file.path === EXPECTED_SCHEMA_RELATIVE_PATH,
+  );
+  if (
+    !expectedSchemaEntry
+    || value.expected_schema_sha256 !== expectedSchemaEntry.sha256
+  ) {
+    throw new Error("worker artifact expected schema digest is invalid.");
+  }
   return value;
 }
 
@@ -619,6 +644,11 @@ export function readYoutubeExtractionAppDescriptor(path) {
   if (value.schema !== YOUTUBE_EXTRACTION_WORKER_APP_DESCRIPTOR_SCHEMA) {
     throw new Error("app descriptor schema is invalid.");
   }
+  ensureSnapshotDigest(value.artifact_sha256, "app descriptor artifact_sha256");
+  ensureSnapshotDigest(
+    value.expected_schema_sha256,
+    "app descriptor expected_schema_sha256",
+  );
   return value;
 }
 

@@ -1,6 +1,8 @@
 import {
   chmodSync,
+  cpSync,
   existsSync,
+  mkdirSync,
   mkdtempSync,
   readFileSync,
   readdirSync,
@@ -40,6 +42,12 @@ import {
 } from "../scripts/lib/youtube-extraction-worker-ops.mjs";
 
 const tempDirs: string[] = [];
+const GREEN_I031_PREFLIGHT = Object.freeze({
+  ready: true,
+  codexCliVersion: "0.144.0-alpha.4",
+  chatGptLogin: true,
+  toolsReady: true,
+});
 
 function createTempDir(prefix: string) {
   const directory = mkdtempSync(join(tmpdir(), prefix));
@@ -64,6 +72,7 @@ function createReleaseInputs(privateDir: string, {
   releaseSha = "0123456789abcdef0123456789abcdef01234567",
   digest = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
   enabled = true,
+  rootDir = process.cwd(),
 } = {}) {
   const tokenPath = join(privateDir, "worker.jwt");
   const credentialPath = join(privateDir, "credential.json");
@@ -72,7 +81,7 @@ function createReleaseInputs(privateDir: string, {
   const artifactDir = join(privateDir, "worker-release");
   writeModeFile(tokenPath, "worker-token\n");
   const materialized = materializeYoutubeExtractionWorkerArtifact({
-    rootDir: process.cwd(),
+    rootDir,
     outputDir: artifactDir,
     releaseSha,
     schemaIdentity: YOUTUBE_EXTRACTION_WORKER_RELEASE_SCHEMA_IDENTITY,
@@ -83,6 +92,8 @@ function createReleaseInputs(privateDir: string, {
     schemaIdentity: YOUTUBE_EXTRACTION_WORKER_RELEASE_SCHEMA_IDENTITY,
     expectedPolicyVersion: 1,
     expectedPolicySnapshotDigest: digest,
+    artifactSha256: materialized.manifest.artifact_sha256,
+    expectedSchemaSha256: materialized.manifest.expected_schema_sha256,
   })));
   writeModeFile(policyPath, JSON.stringify(buildYoutubeExtractionCurrentPolicy({
     policySnapshotDigest: digest,
@@ -92,7 +103,7 @@ function createReleaseInputs(privateDir: string, {
     tokenFile: tokenPath,
     generation: 1,
     jtiHash: "abcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcd",
-    expiresAt: "2026-08-19T00:00:00.000Z",
+    expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
     releaseSha,
     schemaIdentity: YOUTUBE_EXTRACTION_WORKER_RELEASE_SCHEMA_IDENTITY,
     allowedSnapshotDigest: digest,
@@ -231,6 +242,7 @@ describe("YTASYNC-OPS launchd contract", () => {
       nodeBin: "/usr/bin/node",
       userId: 501,
       dryRun: true,
+      i031Preflight: GREEN_I031_PREFLIGHT,
     });
     expect(installPlan.commands).toHaveLength(2);
     expect(installPlan.preflight.ready).toBe(true);
@@ -243,6 +255,7 @@ describe("YTASYNC-OPS launchd contract", () => {
       homeDir: "/Users/tester",
       userId: 501,
       dryRun: true,
+      i031Preflight: GREEN_I031_PREFLIGHT,
     });
     expect(restartPlan.commands).toHaveLength(3);
 
@@ -277,6 +290,7 @@ describe("YTASYNC-OPS launchd contract", () => {
       nodeBin: "/usr/bin/node",
       userId: 501,
       dryRun: true,
+      i031Preflight: GREEN_I031_PREFLIGHT,
     })).toThrow(/artifact root mismatch/iu);
   });
 
@@ -289,6 +303,8 @@ describe("YTASYNC-OPS launchd contract", () => {
       schemaIdentity: YOUTUBE_EXTRACTION_WORKER_RELEASE_SCHEMA_IDENTITY,
       expectedPolicyVersion: 1,
       expectedPolicySnapshotDigest: "f".repeat(64),
+      artifactSha256: JSON.parse(readFileSync(inputs.manifestPath, "utf8")).artifact_sha256,
+      expectedSchemaSha256: sha256File(inputs.expectedSchemaPath),
     })));
     writeModeFile(
       configPath,
@@ -465,6 +481,8 @@ describe("YTASYNC-OPS preflight, drain, rollback, credential", () => {
       schemaIdentity: YOUTUBE_EXTRACTION_WORKER_RELEASE_SCHEMA_IDENTITY,
       expectedPolicyVersion: 1,
       expectedPolicySnapshotDigest: digest,
+      artifactSha256: artifact.artifact_sha256,
+      expectedSchemaSha256: artifact.expected_schema_sha256,
     });
     const policy = buildYoutubeExtractionCurrentPolicy({
       policySnapshotDigest: digest,
@@ -553,6 +571,8 @@ describe("YTASYNC-OPS preflight, drain, rollback, credential", () => {
         expectedPolicyVersion: 1,
         expectedPolicySnapshotDigest:
           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        artifactSha256: artifact.artifact_sha256,
+        expectedSchemaSha256: artifact.expected_schema_sha256,
       }),
       queueState: buildYoutubeExtractionWorkerQueueState({
         queuedJobs: 0,
@@ -688,23 +708,148 @@ describe("YTASYNC-OPS preflight, drain, rollback, credential", () => {
     expect(health.ok).toBe(true);
   });
 
-  it("runs the immutable artifact outside the repository and drains on SIGTERM", async () => {
+  it("runs an immutable i031 artifact through claim, persistence, finalize, and SIGTERM", async () => {
     const privateDir = createTempDir("yta-worker-non-dry-run-");
-    const inputs = createReleaseInputs(privateDir);
+    const fixtureRoot = join(privateDir, "fixture-root");
+    for (const relativePath of [
+      "scripts/youtube-extraction-worker-runner.mjs",
+      "scripts/lib/youtube-extraction-worker-artifact.mjs",
+      "scripts/lib/youtube-extraction-worker-ops.mjs",
+      "scripts/lib/youtube-extraction-worker-runtime.mjs",
+      "scripts/manifests/youtube-extraction-expected-schema.json",
+      "scripts/templates/com.homecook.youtube-extraction-worker.plist.template",
+    ]) {
+      const destination = join(fixtureRoot, relativePath);
+      mkdirSync(join(destination, ".."), { recursive: true });
+      cpSync(join(process.cwd(), relativePath), destination);
+    }
+    const fixtureBundle = join(fixtureRoot, "lib/server/youtube-i031-runtime/bundle");
+    mkdirSync(fixtureBundle, { recursive: true });
+    writeModeFile(join(fixtureBundle, "worker.mjs"), `
+      import { writeFile } from "node:fs/promises";
+      const args = Object.fromEntries(process.argv.slice(2).reduce((all, value, index, list) => {
+        if (value.startsWith("--")) all.push([value.slice(2), list[index + 1]]);
+        return all;
+      }, []));
+      let sequence = 0;
+      const pending = new Map();
+      process.on("message", (message) => {
+        if (message?.type !== "homecook-worker-rpc-response") return;
+        const entry = pending.get(message.requestId);
+        if (!entry) return;
+        pending.delete(message.requestId);
+        message.ok ? entry.resolve(message.data) : entry.reject(new Error(message.errorCode));
+      });
+      function request(operation, payload) {
+        const requestId = String(++sequence);
+        return new Promise((resolve, reject) => {
+          pending.set(requestId, { resolve, reject });
+          process.send({ type: "homecook-worker-rpc-request", requestId, operation, payload });
+        });
+      }
+      await request("title", { title: "provider artifact title" });
+      await writeFile(args.metadata, JSON.stringify({ videoTitle: "provider artifact title" }));
+      const transcript = await request("cache", {
+        operation: "transcript_read",
+        payload: {},
+      });
+      if (!transcript.cache) {
+        await request("cache", {
+          operation: "transcript_upsert",
+          payload: {
+            language: "ko",
+            source_provider: "youtube_timedtext",
+            source_kind: "caption",
+            transcript_text: "bounded transcript",
+            segments_json: [],
+            expires_at: "2099-01-01T00:00:00.000Z",
+          },
+        });
+      }
+      await request("event", {
+        kind: "transcript",
+        payload: { provider: "youtube_timedtext", cache_hit: false, status: "success" },
+      });
+      await request("methods", { methodLabels: ["boil"] });
+      await writeFile(args.result, JSON.stringify({
+        identity: { pipeline: "i031" },
+        videoTitle: "provider artifact title",
+        recipe: { title: "artifact recipe title", ingredients: [], steps: ["끓인다"] },
+        meta: { modelCallCount: 2 },
+        workerDataPersisted: true,
+      }));
+      process.disconnect();
+    `, 0o700);
+    const inputs = createReleaseInputs(privateDir, { rootDir: fixtureRoot });
     const providerPath = join(privateDir, "provider.env");
     const configPath = join(privateDir, ".env.production.local");
-    writeModeFile(providerPath, "YOUTUBE_API_KEY=fake-test-key\n");
+    const fakeHome = join(privateDir, "home");
+    const fakeBin = join(privateDir, "bin");
+    const authDir = join(fakeHome, ".codex");
+    mkdirSync(fakeBin, { recursive: true });
+    mkdirSync(authDir, { recursive: true });
+    writeModeFile(join(authDir, "auth.json"), "{}\n");
+    const codexBin = join(fakeBin, "codex");
+    writeModeFile(codexBin, [
+      "#!/bin/sh",
+      "if [ \"$1\" = \"--version\" ]; then echo 'codex-cli 0.144.0-alpha.4'; exit 0; fi",
+      "if [ \"$1\" = \"login\" ]; then echo 'Logged in using ChatGPT'; exit 0; fi",
+      "exit 1",
+      "",
+    ].join("\n"), 0o700);
+    for (const executable of ["python3", "ffmpeg", "ffprobe"]) {
+      writeModeFile(join(fakeBin, executable), "#!/bin/sh\necho ok\n", 0o700);
+    }
+    writeModeFile(providerPath, [
+      "YOUTUBE_API_KEY=fake-test-key",
+      `YOUTUBE_I031_CODEX_BIN=${codexBin}`,
+      "",
+    ].join("\n"));
 
     let observedAuthorization: string | undefined;
-    let resolveClaim!: () => void;
-    const claimed = new Promise<void>((resolve) => { resolveClaim = resolve; });
+    const rpcCalls: string[] = [];
+    let resolveSucceeded!: () => void;
+    const succeeded = new Promise<void>((resolve) => { resolveSucceeded = resolve; });
     const server = createServer((request, response) => {
       observedAuthorization = request.headers.authorization;
-      request.resume();
+      let body = "";
+      request.setEncoding("utf8");
+      request.on("data", (chunk) => { body += chunk; });
       request.once("end", () => {
+        const rpcName = request.url?.split("/").at(-1) ?? "";
+        rpcCalls.push(rpcName);
+        const payloadByRpc: Record<string, unknown> = {
+          claim_youtube_extraction_job: {
+            job_id: "99999999-9999-4999-8999-999999999999",
+            youtube_video_id: "abc123DEF45",
+            lease_generation: 2,
+            policy_snapshot_digest: inputs.digest,
+            result_affecting_options: {},
+          },
+          claim_youtube_extractor_permit: { permit_generation: 3 },
+          start_youtube_extraction_attempt: { applied: true },
+          heartbeat_youtube_extraction_job: { updated: true },
+          heartbeat_youtube_extractor_permit: { updated: true },
+          read_youtube_extraction_worker_catalog: {
+            applied: true,
+            ingredients: [],
+            ingredient_synonyms: [],
+            cooking_methods: [],
+          },
+          access_youtube_extraction_worker_cache: {
+            applied: true,
+            cache: body.includes("transcript_read") ? null : { id: "cache-row" },
+          },
+          record_youtube_extraction_worker_event: { applied: true, recorded: true },
+          resolve_youtube_extraction_worker_methods: { applied: true, methods: [] },
+          update_youtube_extraction_job_title: { applied: true, updated: true },
+          resolve_youtube_extraction_job_draft: { title: "artifact recipe title" },
+          finalize_youtube_extraction_job: { finalized: true },
+          release_youtube_extractor_permit: { released: true },
+        };
         response.writeHead(200, { "content-type": "application/json" });
-        response.end(JSON.stringify({ status: "empty", applied: false }));
-        resolveClaim();
+        response.end(JSON.stringify(payloadByRpc[rpcName] ?? null));
+        if (rpcName === "finalize_youtube_extraction_job") resolveSucceeded();
       });
     });
     await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
@@ -727,16 +872,34 @@ describe("YTASYNC-OPS preflight, drain, rollback, credential", () => {
       "--app-descriptor", inputs.appPath,
       "--policy", inputs.policyPath,
       "--expected-schema", inputs.expectedSchemaPath,
-    ], { cwd: privateDir, stdio: ["ignore", "pipe", "pipe"] });
+    ], {
+      cwd: privateDir,
+      env: {
+        ...process.env,
+        HOME: fakeHome,
+        PATH: `${fakeBin}:${process.env.PATH ?? ""}`,
+      },
+      stdio: ["ignore", "pipe", "pipe"],
+    });
     let stderr = "";
     child.stderr.setEncoding("utf8");
     child.stderr.on("data", (chunk) => { stderr += chunk; });
     try {
-      await claimed;
+      await succeeded;
       child.kill("SIGTERM");
       const exitCode = await new Promise<number | null>((resolve) => child.once("exit", resolve));
       expect(exitCode, stderr).toBe(0);
       expect(observedAuthorization).toBe("Bearer worker-token");
+      expect(rpcCalls).toEqual(expect.arrayContaining([
+        "claim_youtube_extraction_job",
+        "read_youtube_extraction_worker_catalog",
+        "access_youtube_extraction_worker_cache",
+        "record_youtube_extraction_worker_event",
+        "resolve_youtube_extraction_worker_methods",
+        "update_youtube_extraction_job_title",
+        "resolve_youtube_extraction_job_draft",
+        "finalize_youtube_extraction_job",
+      ]));
     } finally {
       if (child.exitCode === null) child.kill("SIGKILL");
       await new Promise<void>((resolve) => server.close(() => resolve()));

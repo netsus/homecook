@@ -35,6 +35,7 @@ const TEMPLATE_PATH = resolve(
 
 export const DEFAULT_YOUTUBE_EXTRACTION_WORKER_SECRET_MODE = 0o600;
 export const DEFAULT_YOUTUBE_EXTRACTION_WORKER_LOG_DIR_NAME = "Homecook";
+const EXACT_I031_CODEX_CLI_VERSION = "0.144.0-alpha.4";
 
 const WORKER_CONFIG_ALLOWLIST = new Set([
   "HOMECOOK_YOUTUBE_WORKER_AUDIENCE",
@@ -266,6 +267,19 @@ function ensureDryRun(dryRun, action) {
   }
 }
 
+function validateI031PreflightAttestation(value) {
+  if (
+    !value
+    || value.ready !== true
+    || value.codexCliVersion !== EXACT_I031_CODEX_CLI_VERSION
+    || value.chatGptLogin !== true
+    || value.toolsReady !== true
+  ) {
+    throw new Error("exact i031 preflight attestation is required");
+  }
+  return value;
+}
+
 function buildLaunchctlPlan(command, args) {
   return {
     command: "/bin/launchctl",
@@ -287,6 +301,7 @@ function buildLaunchctlPlan(command, args) {
  *   rootDir?: string,
  *   userId?: number,
  *   dryRun?: boolean,
+ *   i031Preflight?: {ready: boolean, codexCliVersion: string, chatGptLogin: boolean, toolsReady: boolean},
  * }} options
  */
 export function buildYoutubeExtractionWorkerInstallPlan({
@@ -301,6 +316,7 @@ export function buildYoutubeExtractionWorkerInstallPlan({
   rootDir,
   userId = process.getuid?.() ?? 0,
   dryRun = false,
+  i031Preflight,
 } = {}) {
   ensureDryRun(dryRun, "install");
   const inputs = loadYoutubeExtractionWorkerRuntimeInputs({
@@ -317,6 +333,7 @@ export function buildYoutubeExtractionWorkerInstallPlan({
   if (!preflight.ready) {
     throw new Error(`worker install preflight failed: ${preflight.blockers.join(",")}`);
   }
+  const runtimePreflight = validateI031PreflightAttestation(i031Preflight);
   const paths = getYoutubeExtractionWorkerPaths(homeDir);
   const plist = renderYoutubeExtractionWorkerPlist({
     configPath,
@@ -342,6 +359,7 @@ export function buildYoutubeExtractionWorkerInstallPlan({
     service_target: serviceTarget,
     plist_preview: plist,
     preflight,
+    i031_preflight: runtimePreflight,
     commands: [
       buildLaunchctlPlan("bootstrap", ["bootstrap", `gui/${userId}`, paths.plistPath]),
       buildLaunchctlPlan("kickstart", [
@@ -359,6 +377,7 @@ export function buildYoutubeExtractionWorkerInstallPlan({
  *   homeDir?: string,
  *   userId?: number,
  *   dryRun?: boolean,
+ *   i031Preflight?: {ready: boolean, codexCliVersion: string, chatGptLogin: boolean, toolsReady: boolean},
  * }} options
  */
 export function buildYoutubeExtractionWorkerLifecyclePlan({
@@ -366,6 +385,7 @@ export function buildYoutubeExtractionWorkerLifecyclePlan({
   homeDir = process.env.HOME ?? "",
   userId = process.getuid?.() ?? 0,
   dryRun = false,
+  i031Preflight,
 } = {}) {
   ensureDryRun(dryRun, action);
   const paths = getYoutubeExtractionWorkerPaths(homeDir);
@@ -380,8 +400,10 @@ export function buildYoutubeExtractionWorkerLifecyclePlan({
   };
 
   if (action === "start") {
+    const runtimePreflight = validateI031PreflightAttestation(i031Preflight);
     return {
       ...base,
+      i031_preflight: runtimePreflight,
       commands: [
         buildLaunchctlPlan("kickstart", ["kickstart", "-k", serviceTarget]),
       ],
@@ -398,8 +420,10 @@ export function buildYoutubeExtractionWorkerLifecyclePlan({
   }
 
   if (action === "restart") {
+    const runtimePreflight = validateI031PreflightAttestation(i031Preflight);
     return {
       ...base,
+      i031_preflight: runtimePreflight,
       commands: [
         buildLaunchctlPlan("bootout", ["bootout", serviceTarget]),
         buildLaunchctlPlan("bootstrap", ["bootstrap", `gui/${userId}`, paths.plistPath]),
@@ -556,6 +580,8 @@ export function readYoutubeExtractionWorkerCredential(path) {
  *   credentialState: ReturnType<typeof readYoutubeExtractionWorkerCredential>,
  *   queueState?: ReturnType<typeof readYoutubeExtractionWorkerQueueState> | null,
  *   requirePolicyEnabled?: boolean,
+ *   expectedSchema?: ReturnType<typeof readYoutubeExtractionExpectedSchema> | null,
+ *   expectedSchemaSha256?: string | null,
  * }} options
  */
 export function evaluateYoutubeExtractionWorkerPreflight({
@@ -564,6 +590,7 @@ export function evaluateYoutubeExtractionWorkerPreflight({
   currentPolicy,
   credentialState,
   expectedSchema = null,
+  expectedSchemaSha256 = null,
   queueState = null,
   requirePolicyEnabled = false,
 } = {}) {
@@ -593,7 +620,7 @@ export function evaluateYoutubeExtractionWorkerPreflight({
       currentPolicy.extractor_mode === workerArtifact.extractor_mode
       && currentPolicy.pipeline_identity === workerArtifact.pipeline_identity,
     credential_not_expired:
-      Date.parse(credentialState.expires_at) > Date.now(),
+      Date.parse(credentialState.expires_at) > Date.now() + (30 * 60 * 1000),
     label_match:
       workerArtifact.launchd_label === YOUTUBE_EXTRACTION_WORKER_LABEL,
     token_file_0600:
@@ -603,6 +630,12 @@ export function evaluateYoutubeExtractionWorkerPreflight({
     expected_schema_match:
       expectedSchema === null
       || expectedSchema.schema_identity === workerArtifact.schema_identity,
+    artifact_digest_match:
+      appDescriptor.artifact_sha256 === workerArtifact.artifact_sha256,
+    expected_schema_digest_match:
+      appDescriptor.expected_schema_sha256 === workerArtifact.expected_schema_sha256
+      && (expectedSchemaSha256 === null
+        || workerArtifact.expected_schema_sha256 === expectedSchemaSha256),
   };
 
   if (!checks.release_sha_match) blockers.push("release_sha_mismatch");
@@ -617,6 +650,10 @@ export function evaluateYoutubeExtractionWorkerPreflight({
     blockers.push("policy_disabled");
   }
   if (!checks.expected_schema_match) blockers.push("expected_schema_mismatch");
+  if (!checks.artifact_digest_match) blockers.push("artifact_digest_mismatch");
+  if (!checks.expected_schema_digest_match) {
+    blockers.push("expected_schema_digest_mismatch");
+  }
 
   if (queueState) {
     if (
@@ -805,6 +842,9 @@ export function loadYoutubeExtractionWorkerRuntimeInputs({
     credentialState: readYoutubeExtractionWorkerCredential(credentialPath),
     expectedSchema: expectedSchemaPath
       ? readYoutubeExtractionExpectedSchema(expectedSchemaPath)
+      : null,
+    expectedSchemaSha256: expectedSchemaPath
+      ? sha256File(expectedSchemaPath)
       : null,
     queueState:
       queueStatePath === null

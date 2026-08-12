@@ -104,6 +104,26 @@ grant execute on function auth.role() to youtube_extraction_credential_manager_r
 grant youtube_extraction_worker to authenticator;
 grant youtube_extraction_credential_manager to authenticator;
 
+-- i031 writes only bounded, allowlisted cache/event projections. Widen the
+-- legacy Gemini-only provider constraints without removing either provider.
+alter table public.youtube_llm_extraction_events
+  drop constraint if exists youtube_llm_extraction_events_provider_check;
+alter table public.youtube_llm_extraction_events
+  add constraint youtube_llm_extraction_events_provider_check
+  check (provider in ('gemini', 'codex-vision-keyframes'));
+
+alter table public.youtube_visual_extraction_cache
+  drop constraint if exists youtube_visual_extraction_cache_provider_check;
+alter table public.youtube_visual_extraction_cache
+  add constraint youtube_visual_extraction_cache_provider_check
+  check (provider in ('gemini', 'codex-vision-keyframes'));
+
+alter table public.youtube_visual_extraction_events
+  drop constraint if exists youtube_visual_extraction_events_provider_check;
+alter table public.youtube_visual_extraction_events
+  add constraint youtube_visual_extraction_events_provider_check
+  check (provider in ('gemini', 'codex-vision-keyframes'));
+
 alter role youtube_extraction_worker
   set pgrst.db_pre_request = 'public.check_youtube_extraction_worker_pre_request';
 

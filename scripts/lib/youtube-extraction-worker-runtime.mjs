@@ -1,11 +1,47 @@
-import { spawn } from "node:child_process";
-import { cp, mkdtemp, readFile, rm, stat } from "node:fs/promises";
+import { execFile, spawn } from "node:child_process";
+import { access, cp, mkdtemp, readFile, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
 const LOOPBACK_HOSTS = new Set(["127.0.0.1", "localhost", "[::1]", "::1"]);
 const MAX_RESULT_BYTES = 2 * 1024 * 1024;
 const DEFAULT_EXTRACTION_TIMEOUT_MS = 20 * 60 * 1000;
+const I031_CODEX_CLI_VERSION = "0.144.0-alpha.4";
+const CACHE_OPERATIONS = new Set([
+  "transcript_read",
+  "transcript_upsert",
+  "transcript_touch",
+  "llm_read",
+  "llm_upsert",
+  "llm_touch",
+  "visual_read",
+  "visual_upsert",
+  "visual_touch",
+]);
+const EVENT_KINDS = new Set(["transcript", "llm", "visual"]);
+const QUOTA_PROVIDERS = new Set(["external_transcript_api", "gemini"]);
+const RETRYABLE_RUNTIME_CODES = new Set([
+  "NETWORK_ERROR",
+  "RATE_LIMITED",
+  "PROVIDER_TIMEOUT",
+  "TRANSIENT_INTERNAL_ERROR",
+]);
+const TERMINAL_RUNTIME_CODES = new Set([
+  "NOT_RECIPE_VIDEO",
+  "QUOTA_EXCEEDED",
+  "RUNTIME_UNAVAILABLE",
+  "EXTRACTION_FAILED",
+]);
+
+class YoutubeExtractionRuntimeError extends Error {
+  constructor(code, stage = "provider") {
+    super(code);
+    this.name = "YoutubeExtractionRuntimeError";
+    this.code = code;
+    this.retryable = RETRYABLE_RUNTIME_CODES.has(code);
+    this.stage = stage;
+  }
+}
 
 function record(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value)
@@ -45,20 +81,207 @@ function resultRow(result, operation) {
   return record(Array.isArray(result?.data) ? result.data[0] : result?.data);
 }
 
-function classifyFailure(error) {
-  const text = error instanceof Error ? `${error.name} ${error.message}` : String(error);
-  for (const code of [
-    "NOT_RECIPE_VIDEO",
-    "QUOTA_EXCEEDED",
-    "RUNTIME_UNAVAILABLE",
-    "NETWORK_ERROR",
-    "RATE_LIMITED",
-    "PROVIDER_TIMEOUT",
-    "TRANSIENT_INTERNAL_ERROR",
-  ]) {
-    if (text.includes(code)) return code;
+export function normalizeYoutubeExtractionRuntimeError(error) {
+  const errorRecord = record(error);
+  if (
+    typeof errorRecord?.code === "string"
+    && (RETRYABLE_RUNTIME_CODES.has(errorRecord.code)
+      || TERMINAL_RUNTIME_CODES.has(errorRecord.code))
+  ) {
+    return {
+      code: errorRecord.code,
+      retryable: RETRYABLE_RUNTIME_CODES.has(errorRecord.code),
+      stage: "provider",
+    };
   }
-  return "EXTRACTION_FAILED";
+  const text = error instanceof Error ? `${error.name} ${error.message}` : String(error);
+  for (const code of [...RETRYABLE_RUNTIME_CODES, ...TERMINAL_RUNTIME_CODES]) {
+    if (text.includes(code)) {
+      return { code, retryable: RETRYABLE_RUNTIME_CODES.has(code), stage: "provider" };
+    }
+  }
+  return { code: "EXTRACTION_FAILED", retryable: false, stage: "provider" };
+}
+
+function classifyFailure(error) {
+  return normalizeYoutubeExtractionRuntimeError(error).code;
+}
+
+function requireFencedWrite(result, operation) {
+  if (!successBoolean(result, operation)) {
+    throw new Error("YOUTUBE_EXTRACTION_FENCE_LOST");
+  }
+}
+
+function boundedObjectArray(value, label, maximum = 30) {
+  if (value === undefined) return [];
+  if (!Array.isArray(value) || value.length > maximum) {
+    throw new Error(`${label} is invalid`);
+  }
+  return value.map((entry) => {
+    const row = record(entry);
+    if (!row) throw new Error(`${label} is invalid`);
+    return row;
+  });
+}
+
+function providerVideoTitle(runtimeResult) {
+  const result = record(runtimeResult);
+  const value = result?.videoTitle;
+  if (typeof value !== "string") return null;
+  const normalized = value.trim();
+  return normalized.length > 0 && normalized.length <= 160 ? normalized : null;
+}
+
+function createFencedWorkerRpcClient({ rpc, claim, workerId }) {
+  const fence = {
+    job_id: claim.job_id,
+    worker_id: workerId,
+    lease_generation: claim.lease_generation,
+  };
+  return {
+    async readCatalog() {
+      const catalog = resultRow(await rpc("read_youtube_extraction_worker_catalog", fence),
+        "read worker catalog");
+      if (!catalog || catalog.applied !== true) {
+        throw new Error("YOUTUBE_EXTRACTION_FENCE_LOST");
+      }
+      return catalog;
+    },
+    async accessCache(operation, payload) {
+      if (!CACHE_OPERATIONS.has(operation) || !record(payload)) {
+        throw new Error("cache operation is invalid");
+      }
+      const row = resultRow(await rpc("access_youtube_extraction_worker_cache", {
+        ...fence,
+        cache_operation: operation,
+        payload,
+      }), "access worker cache");
+      if (!row || row.applied !== true) throw new Error("YOUTUBE_EXTRACTION_FENCE_LOST");
+      return row;
+    },
+    async reserveQuota(provider, units = 1) {
+      if (!QUOTA_PROVIDERS.has(provider) || units !== 1) {
+        throw new Error("quota reservation is invalid");
+      }
+      const row = resultRow(await rpc("reserve_youtube_extraction_worker_quota", {
+        ...fence,
+        provider,
+        units,
+      }), "reserve worker quota");
+      if (!row || row.applied !== true) throw new Error("YOUTUBE_EXTRACTION_FENCE_LOST");
+      if (row.reserved !== true) throw new YoutubeExtractionRuntimeError("QUOTA_EXCEEDED");
+      return row;
+    },
+    async recordEvent(kind, payload) {
+      if (!EVENT_KINDS.has(kind) || !record(payload)) throw new Error("event is invalid");
+      const row = resultRow(await rpc("record_youtube_extraction_worker_event", {
+        ...fence,
+        event_kind: kind,
+        payload,
+      }), "record worker event");
+      if (!row || row.applied !== true || row.recorded !== true) {
+        throw new Error("YOUTUBE_EXTRACTION_FENCE_LOST");
+      }
+      return row;
+    },
+    async resolveMethods(methodLabels) {
+      if (
+        !Array.isArray(methodLabels)
+        || methodLabels.length > 100
+        || methodLabels.some((label) => typeof label !== "string" || label.trim().length === 0)
+      ) {
+        throw new Error("method labels are invalid");
+      }
+      const row = resultRow(await rpc("resolve_youtube_extraction_worker_methods", {
+        ...fence,
+        method_labels: methodLabels.map((label) => label.trim()),
+      }), "resolve worker methods");
+      if (!row || row.applied !== true) throw new Error("YOUTUBE_EXTRACTION_FENCE_LOST");
+      return row;
+    },
+    async updateTitle(title) {
+      const normalized = providerVideoTitle({ videoTitle: title });
+      if (!normalized) throw new Error("provider video title is invalid");
+      requireFencedWrite(await rpc("update_youtube_extraction_job_title", {
+        ...fence,
+        title: normalized,
+      }), "update job title");
+    },
+  };
+}
+
+function withoutPersistence(runtimeResult) {
+  const result = record(runtimeResult);
+  if (!result) return runtimeResult;
+  const publicResult = { ...result };
+  delete publicResult.persistence;
+  delete publicResult.workerDataPersisted;
+  return publicResult;
+}
+
+async function defaultRunCommand(command, args, { env } = {}) {
+  return new Promise((resolve, reject) => {
+    execFile(command, args, {
+      env,
+      timeout: 30_000,
+      maxBuffer: 128 * 1024,
+      windowsHide: true,
+    }, (error, stdout, stderr) => {
+      if (error) {
+        reject(new YoutubeExtractionRuntimeError("RUNTIME_UNAVAILABLE", "preflight"));
+        return;
+      }
+      resolve({ stdout: String(stdout), stderr: String(stderr) });
+    });
+  });
+}
+
+/**
+ * @param {{
+ *   workerEnv?: Record<string, string | undefined>,
+ *   accessPath?: (pathname: string) => Promise<void>,
+ *   runCommand?: (command: string, args: string[], options?: {env?: Record<string, string | undefined>}) => Promise<{stdout?: string, stderr?: string}>,
+ *   platform?: NodeJS.Platform,
+ * }} options
+ */
+export async function verifyStandaloneYoutubeI031Preflight({
+  workerEnv = process.env,
+  accessPath = access,
+  runCommand = defaultRunCommand,
+  platform = process.platform,
+} = {}) {
+  try {
+    if (platform !== "darwin") throw new Error();
+    requiredString(workerEnv.YOUTUBE_API_KEY, "YOUTUBE_API_KEY");
+    const home = requiredString(workerEnv.HOME, "HOME");
+    const codexBin = path.resolve(
+      workerEnv.YOUTUBE_I031_CODEX_BIN ?? "/opt/homebrew/bin/codex",
+    );
+    await Promise.all([
+      accessPath(codexBin),
+      accessPath(path.join(home, ".codex", "auth.json")),
+      accessPath("/usr/bin/sandbox-exec"),
+      accessPath("/usr/bin/swiftc"),
+    ]);
+    const commandEnv = { ...workerEnv, HOME: home };
+    const versionResult = await runCommand(codexBin, ["--version"], { env: commandEnv });
+    const versionMatch = String(versionResult.stdout ?? "")
+      .match(/(?:^|\s)(\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?)(?:\s|$)/u);
+    if (versionMatch?.[1] !== I031_CODEX_CLI_VERSION) throw new Error();
+    const loginResult = await runCommand(codexBin, ["login", "status"], { env: commandEnv });
+    if (!/^Logged in using ChatGPT\b/mu.test(
+      `${loginResult.stdout ?? ""}\n${loginResult.stderr ?? ""}`,
+    )) {
+      throw new Error();
+    }
+    await runCommand("python3", ["-c", "import cv2, yt_dlp"], { env: commandEnv });
+    await runCommand("ffmpeg", ["-version"], { env: commandEnv });
+    await runCommand("ffprobe", ["-version"], { env: commandEnv });
+    return { codexBin, codexCliVersion: I031_CODEX_CLI_VERSION };
+  } catch {
+    throw new YoutubeExtractionRuntimeError("RUNTIME_UNAVAILABLE", "preflight");
+  }
 }
 
 function abortableDelay(milliseconds, signal) {
@@ -132,7 +355,13 @@ export function createRestrictedPostgrestRpcClient({
  *   workerId: string,
  *   allowedSnapshotDigest: string,
  *   rpc: (name: string, args?: Record<string, unknown>) => Promise<{data: unknown, error: unknown}>,
- *   extractor: { extract(input: {videoId: string, signal: AbortSignal}): Promise<unknown> },
+ *   extractor: { extract(input: {
+ *     videoId: string,
+ *     signal: AbortSignal,
+ *     catalog: Record<string, unknown>,
+ *     claimedJob: {jobId: string, videoId: string, workerId: string, leaseGeneration: number},
+ *     workerRpcClient: Record<string, (...args: any[]) => Promise<unknown>>,
+ *   }): Promise<unknown> },
  *   heartbeatIntervalMs?: number,
  *   leaseSeconds?: number,
  * }} options
@@ -243,21 +472,80 @@ export function createYoutubeExtractionWorkerRuntime({
         }, heartbeatIntervalMs);
         heartbeatTimer.unref?.();
 
+        const workerRpcClient = createFencedWorkerRpcClient({
+          rpc,
+          claim,
+          workerId: normalizedWorkerId,
+        });
+        const catalog = await workerRpcClient.readCatalog();
+
         const runtimeResult = await Promise.race([
           extractor.extract({
             videoId: claim.youtube_video_id,
             signal: controller.signal,
+            catalog,
+            claimedJob: {
+              jobId: claim.job_id,
+              videoId: claim.youtube_video_id,
+              workerId: normalizedWorkerId,
+              leaseGeneration,
+            },
+            workerRpcClient,
           }),
           heartbeatFailed,
         ]);
         if (controller.signal.aborted) return "stale-fence";
+
+        const runtimeRow = record(runtimeResult);
+        const persistence = record(runtimeRow?.persistence) ?? {};
+        for (const operation of boundedObjectArray(
+          persistence.cache_operations,
+          "cache operations",
+        )) {
+          if (!CACHE_OPERATIONS.has(operation.operation) || !record(operation.payload)) {
+            throw new Error("cache operations are invalid");
+          }
+          await workerRpcClient.accessCache(operation.operation, operation.payload);
+        }
+        for (const reservation of boundedObjectArray(
+          persistence.quota_reservations,
+          "quota reservations",
+          4,
+        )) {
+          if (!QUOTA_PROVIDERS.has(reservation.provider) || reservation.units !== 1) {
+            throw new Error("quota reservations are invalid");
+          }
+          await workerRpcClient.reserveQuota(reservation.provider, reservation.units);
+        }
+        for (const event of boundedObjectArray(persistence.events, "events")) {
+          if (!EVENT_KINDS.has(event.kind) || !record(event.payload)) {
+            throw new Error("events are invalid");
+          }
+          await workerRpcClient.recordEvent(event.kind, event.payload);
+        }
+        const methodLabels = persistence.method_labels ?? [];
+        if (
+          !Array.isArray(methodLabels)
+          || methodLabels.length > 100
+          || methodLabels.some((label) => typeof label !== "string" || label.trim().length === 0)
+        ) {
+          throw new Error("method labels are invalid");
+        }
+        if (runtimeRow?.workerDataPersisted !== true) {
+          await workerRpcClient.resolveMethods(methodLabels);
+        }
+
+        const title = providerVideoTitle(runtimeResult);
+        if (title && runtimeRow?.workerDataPersisted !== true) {
+          await workerRpcClient.updateTitle(title);
+        }
 
         const resolved = resultRow(await rpc("resolve_youtube_extraction_job_draft", {
           job_id: claim.job_id,
           worker_id: normalizedWorkerId,
           lease_generation: leaseGeneration,
           youtube_video_id: claim.youtube_video_id,
-          runtime_result: runtimeResult,
+          runtime_result: withoutPersistence(runtimeResult),
         }), "resolve draft");
         if (!resolved) throw new Error("resolve draft returned no result");
         await heartbeat();
@@ -328,30 +616,167 @@ function terminateProcess(child) {
   }
 }
 
+function sendChildMessage(child, message) {
+  return new Promise((resolve, reject) => {
+    if (!child?.connected) {
+      reject(new Error("worker child IPC is unavailable"));
+      return;
+    }
+    child.send(message, (error) => {
+      if (error) reject(error);
+      else resolve();
+    });
+  });
+}
+
+function validateChildRpcRequest(message) {
+  const request = record(message);
+  const payload = record(request?.payload);
+  if (
+    request?.type !== "homecook-worker-rpc-request"
+    || typeof request.requestId !== "string"
+    || !/^[A-Za-z0-9_-]{1,64}$/u.test(request.requestId)
+    || typeof request.operation !== "string"
+    || !payload
+    || Buffer.byteLength(JSON.stringify(request), "utf8") > MAX_RESULT_BYTES
+  ) {
+    throw new YoutubeExtractionRuntimeError("RUNTIME_UNAVAILABLE");
+  }
+  return { ...request, payload };
+}
+
+async function dispatchChildRpcRequest(workerRpcClient, request) {
+  switch (request.operation) {
+    case "cache":
+      return workerRpcClient.accessCache(
+        request.payload.operation,
+        request.payload.payload,
+      );
+    case "quota":
+      return workerRpcClient.reserveQuota(
+        request.payload.provider,
+        request.payload.units,
+      );
+    case "event":
+      return workerRpcClient.recordEvent(
+        request.payload.kind,
+        request.payload.payload,
+      );
+    case "methods":
+      return workerRpcClient.resolveMethods(request.payload.methodLabels);
+    case "title":
+      await workerRpcClient.updateTitle(request.payload.title);
+      return { applied: true, updated: true };
+    default:
+      throw new YoutubeExtractionRuntimeError("RUNTIME_UNAVAILABLE");
+  }
+}
+
+function attachChildRpcBridge(child, workerRpcClient) {
+  let bridgeFailure = null;
+  let chain = Promise.resolve();
+  const onMessage = (message) => {
+    chain = chain.then(async () => {
+      let request;
+      try {
+        request = validateChildRpcRequest(message);
+        const data = await dispatchChildRpcRequest(workerRpcClient, request);
+        const response = JSON.stringify(data);
+        if (Buffer.byteLength(response, "utf8") > MAX_RESULT_BYTES) {
+          throw new YoutubeExtractionRuntimeError("RUNTIME_UNAVAILABLE");
+        }
+        await sendChildMessage(child, {
+          type: "homecook-worker-rpc-response",
+          requestId: request.requestId,
+          ok: true,
+          data,
+        });
+      } catch (error) {
+        const normalized = normalizeYoutubeExtractionRuntimeError(error);
+        bridgeFailure = new YoutubeExtractionRuntimeError(normalized.code);
+        if (request) {
+          await sendChildMessage(child, {
+            type: "homecook-worker-rpc-response",
+            requestId: request.requestId,
+            ok: false,
+            errorCode: normalized.code,
+          }).catch(() => {});
+        } else {
+          terminateProcess(child);
+        }
+      }
+    });
+  };
+  child.on("message", onMessage);
+  return {
+    async settle() {
+      await chain;
+      return bridgeFailure;
+    },
+    close() {
+      child.off("message", onMessage);
+    },
+  };
+}
+
+async function readBoundedJson(pathname, maximumBytes) {
+  const fileStat = await stat(pathname);
+  if (fileStat.size < 2 || fileStat.size > maximumBytes) throw new Error();
+  const value = JSON.parse(await readFile(pathname, "utf8"));
+  if (!record(value)) throw new Error();
+  return value;
+}
+
 /**
  * @param {{
  *   artifactRoot: string,
- *   workerEnv?: NodeJS.ProcessEnv,
+ *   workerEnv?: Record<string, string | undefined>,
  *   timeoutMs?: number,
+ *   verifyPreflight?: (options: {workerEnv: NodeJS.ProcessEnv}) => Promise<{codexBin: string, codexCliVersion: string}>,
  * }} options
  */
 export function createStandaloneYoutubeI031Extractor({
   artifactRoot,
   workerEnv = process.env,
   timeoutMs = DEFAULT_EXTRACTION_TIMEOUT_MS,
+  verifyPreflight = verifyStandaloneYoutubeI031Preflight,
 } = {}) {
   const root = path.resolve(requiredString(artifactRoot, "artifactRoot"));
   const bundleRoot = path.join(root, "lib/server/youtube-i031-runtime/bundle");
   positiveInteger(timeoutMs, "timeoutMs");
   return {
-    async extract({ videoId, signal }) {
+    async extract({ videoId, signal, claimedJob, workerRpcClient }) {
       if (!/^[A-Za-z0-9_-]{11}$/u.test(videoId ?? "")) {
         throw new Error("I031_INVALID_VIDEO_ID");
       }
+      if (!record(claimedJob) || !workerRpcClient) {
+        throw new YoutubeExtractionRuntimeError("RUNTIME_UNAVAILABLE");
+      }
       const workspace = await mkdtemp(path.join(tmpdir(), "homecook-youtube-worker-"));
       const resultPath = path.join(workspace, "result.json");
+      const metadataPath = path.join(workspace, "metadata.json");
+      const errorPath = path.join(workspace, "error.json");
       let child;
+      let childRpcBridge;
+      let publishedTitle = false;
+      let metadataPublishPromise = null;
+      const publishMetadata = async () => {
+        if (publishedTitle) return;
+        if (metadataPublishPromise) return metadataPublishPromise;
+        metadataPublishPromise = readBoundedJson(metadataPath, 4 * 1024)
+          .then(async (metadata) => {
+            const title = providerVideoTitle(metadata);
+            if (!title) throw new Error();
+            await workerRpcClient.updateTitle(title);
+            publishedTitle = true;
+          })
+          .finally(() => {
+            metadataPublishPromise = null;
+          });
+        return metadataPublishPromise;
+      };
       try {
+        const preflight = await verifyPreflight({ workerEnv });
         await cp(bundleRoot, workspace, { recursive: true, force: true });
         child = spawn(process.execPath, [
           path.join(workspace, "worker.mjs"),
@@ -359,12 +784,22 @@ export function createStandaloneYoutubeI031Extractor({
           videoId,
           "--result",
           resultPath,
+          "--metadata",
+          metadataPath,
+          "--error",
+          errorPath,
         ], {
           cwd: workspace,
-          env: { ...workerEnv, NODE_ENV: "production" },
+          env: {
+            ...workerEnv,
+            NODE_ENV: "production",
+            YOUTUBE_I031_CODEX_BIN: preflight.codexBin,
+            HOMECOOK_I031_CODEX_CLI_VERSION: preflight.codexCliVersion,
+          },
           detached: true,
-          stdio: ["ignore", "ignore", "ignore"],
+          stdio: ["ignore", "ignore", "ignore", "ipc"],
         });
+        childRpcBridge = attachChildRpcBridge(child, workerRpcClient);
         return await new Promise((resolve, reject) => {
           const timeout = setTimeout(() => {
             terminateProcess(child);
@@ -379,20 +814,63 @@ export function createStandaloneYoutubeI031Extractor({
           child.once("close", async (code) => {
             clearTimeout(timeout);
             signal.removeEventListener("abort", onAbort);
-            if (code !== 0) {
-              reject(new Error("EXTRACTION_FAILED"));
+            const bridgeFailure = await childRpcBridge.settle();
+            if (bridgeFailure) {
+              reject(bridgeFailure);
               return;
             }
             try {
-              const resultStat = await stat(resultPath);
-              if (resultStat.size > MAX_RESULT_BYTES) throw new Error();
-              resolve(JSON.parse(await readFile(resultPath, "utf8")));
+              await stat(metadataPath);
+              await publishMetadata();
+            } catch (metadataError) {
+              if (metadataError?.code !== "ENOENT") {
+                reject(metadataError);
+                return;
+              }
+            }
+            if (code !== 0) {
+              try {
+                const envelope = await readBoundedJson(errorPath, 4 * 1024);
+                const normalized = normalizeYoutubeExtractionRuntimeError({
+                  code: envelope.code,
+                });
+                reject(new YoutubeExtractionRuntimeError(normalized.code));
+              } catch {
+                reject(new YoutubeExtractionRuntimeError("EXTRACTION_FAILED"));
+              }
+              return;
+            }
+            try {
+              const result = await readBoundedJson(resultPath, MAX_RESULT_BYTES);
+              const title = providerVideoTitle(result);
+              if (
+                title
+                && !publishedTitle
+                && result.workerDataPersisted !== true
+              ) {
+                await workerRpcClient.updateTitle(title);
+              }
+              if (result.workerDataPersisted !== true) {
+                await workerRpcClient.recordEvent("visual", {
+                  provider: "codex-vision-keyframes",
+                  model: "gpt-5.4",
+                  cache_hit: false,
+                  event_type: "recipe_extraction",
+                  status: "success",
+                  reason: null,
+                  input_tokens: 0,
+                  output_tokens: 0,
+                  estimated_cost_microusd: 0,
+                });
+              }
+              resolve({ ...result, workerDataPersisted: true });
             } catch {
-              reject(new Error("EXTRACTION_FAILED"));
+              reject(new YoutubeExtractionRuntimeError("EXTRACTION_FAILED"));
             }
           });
         });
       } finally {
+        childRpcBridge?.close();
         terminateProcess(child);
         await rm(workspace, { recursive: true, force: true });
       }

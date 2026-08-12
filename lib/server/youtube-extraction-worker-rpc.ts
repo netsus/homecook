@@ -34,8 +34,111 @@ function booleanResult(result: RpcResult, operation: string) {
     : false;
 }
 
+function fencedRecordResult(result: RpcResult, operation: string) {
+  const data = requireSuccess(result, operation);
+  const row = record(Array.isArray(data) ? data[0] : data);
+  if (!row || row.applied !== true) throw new Error(`${operation} lost its lease fence`);
+  return row;
+}
+
+type YoutubeExtractionWorkerCacheOperation =
+  | "transcript_read"
+  | "transcript_upsert"
+  | "transcript_touch"
+  | "llm_read"
+  | "llm_upsert"
+  | "llm_touch"
+  | "visual_read"
+  | "visual_upsert"
+  | "visual_touch";
+
+interface YoutubeExtractionWorkerFence {
+  jobId: string;
+  workerId: string;
+  leaseGeneration: number;
+}
+
 export function createYoutubeExtractionWorkerRpcAdapter(client: RestrictedRpcClient) {
   return {
+    async readCatalog(input: YoutubeExtractionWorkerFence) {
+      return fencedRecordResult(await client.rpc(
+        "read_youtube_extraction_worker_catalog",
+        {
+          job_id: input.jobId,
+          worker_id: input.workerId,
+          lease_generation: input.leaseGeneration,
+        },
+      ), "read worker catalog");
+    },
+    async accessCache(input: YoutubeExtractionWorkerFence & {
+      operation: YoutubeExtractionWorkerCacheOperation;
+      payload: Record<string, unknown>;
+    }) {
+      return fencedRecordResult(await client.rpc(
+        "access_youtube_extraction_worker_cache",
+        {
+          job_id: input.jobId,
+          worker_id: input.workerId,
+          lease_generation: input.leaseGeneration,
+          cache_operation: input.operation,
+          payload: input.payload,
+        },
+      ), "access worker cache");
+    },
+    async reserveQuota(input: YoutubeExtractionWorkerFence & {
+      provider: "external_transcript_api" | "gemini";
+      units: 1;
+    }) {
+      return fencedRecordResult(await client.rpc(
+        "reserve_youtube_extraction_worker_quota",
+        {
+          job_id: input.jobId,
+          worker_id: input.workerId,
+          lease_generation: input.leaseGeneration,
+          provider: input.provider,
+          units: input.units,
+        },
+      ), "reserve worker quota");
+    },
+    async recordEvent(input: YoutubeExtractionWorkerFence & {
+      kind: "transcript" | "llm" | "visual";
+      payload: Record<string, unknown>;
+    }) {
+      return fencedRecordResult(await client.rpc(
+        "record_youtube_extraction_worker_event",
+        {
+          job_id: input.jobId,
+          worker_id: input.workerId,
+          lease_generation: input.leaseGeneration,
+          event_kind: input.kind,
+          payload: input.payload,
+        },
+      ), "record worker event");
+    },
+    async resolveMethods(input: YoutubeExtractionWorkerFence & {
+      methodLabels: string[];
+    }) {
+      return fencedRecordResult(await client.rpc(
+        "resolve_youtube_extraction_worker_methods",
+        {
+          job_id: input.jobId,
+          worker_id: input.workerId,
+          lease_generation: input.leaseGeneration,
+          method_labels: input.methodLabels,
+        },
+      ), "resolve worker methods");
+    },
+    async updateTitle(input: YoutubeExtractionWorkerFence & { title: string }) {
+      return booleanResult(await client.rpc(
+        "update_youtube_extraction_job_title",
+        {
+          job_id: input.jobId,
+          worker_id: input.workerId,
+          lease_generation: input.leaseGeneration,
+          title: input.title,
+        },
+      ), "update job title");
+    },
     async claimJob({ workerId, allowedSnapshotDigest }: {
       workerId: string;
       allowedSnapshotDigest: string;

@@ -26,6 +26,7 @@ import {
   readWorkerEnvironment,
   readWorkerProviderEnvironment,
   runYoutubeExtractionWorkerPollLoop,
+  verifyStandaloneYoutubeI031Preflight,
 } from "./lib/youtube-extraction-worker-runtime.mjs";
 
 function parseArgs(argv) {
@@ -162,6 +163,13 @@ async function main() {
     workerEnvironment.HOMECOOK_YOUTUBE_WORKER_PROVIDER_SECRET_FILE,
   );
   const providerEnvironment = await readWorkerProviderEnvironment(providerSecretFile);
+  const runtimeEnvironment = { ...process.env, ...providerEnvironment };
+  const i031Preflight = await verifyStandaloneYoutubeI031Preflight({
+    workerEnv: runtimeEnvironment,
+  });
+  if (Date.parse(credentialState.expires_at) <= Date.now() + (30 * 60 * 1000)) {
+    throw new Error("worker credential expires within the required 30 minute window");
+  }
   const token = readFile(credentialState.token_file, "utf8")
     .then((value) => value.trim());
   const restrictedClient = createRestrictedPostgrestRpcClient({
@@ -175,7 +183,8 @@ async function main() {
     rpc: restrictedClient.rpc,
     extractor: createStandaloneYoutubeI031Extractor({
       artifactRoot: dirname(options.workerArtifactPath),
-      workerEnv: { ...process.env, ...providerEnvironment },
+      workerEnv: runtimeEnvironment,
+      verifyPreflight: async () => i031Preflight,
     }),
   });
   const shutdown = new AbortController();

@@ -16,6 +16,11 @@ import {
   writeCredentialMetadata,
 } from "./lib/youtube-extraction-worker-ops.mjs";
 import { ensureAbsolutePath } from "./lib/youtube-extraction-worker-artifact.mjs";
+import {
+  readWorkerEnvironment,
+  readWorkerProviderEnvironment,
+  verifyStandaloneYoutubeI031Preflight,
+} from "./lib/youtube-extraction-worker-runtime.mjs";
 
 function parseArgs(argv) {
   const [command, ...rest] = argv;
@@ -126,7 +131,28 @@ function print(result) {
   process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
 }
 
-function runInstall(options) {
+async function runI031Preflight(options) {
+  const workerConfig = await readWorkerEnvironment(options.configPath);
+  const providerEnvironment = await readWorkerProviderEnvironment(
+    workerConfig.HOMECOOK_YOUTUBE_WORKER_PROVIDER_SECRET_FILE,
+  );
+  const result = await verifyStandaloneYoutubeI031Preflight({
+    workerEnv: { ...process.env, ...providerEnvironment },
+  });
+  return {
+    ready: true,
+    codexCliVersion: result.codexCliVersion,
+    chatGptLogin: true,
+    toolsReady: true,
+  };
+}
+
+async function runInstall(options) {
+  const releasePreflight = runReleasePreflight(options);
+  if (!releasePreflight.ready) {
+    throw new Error(`worker install preflight failed: ${releasePreflight.blockers.join(",")}`);
+  }
+  const i031Preflight = await runI031Preflight(options);
   return buildYoutubeExtractionWorkerInstallPlan({
     configPath: options.configPath,
     manifestPath: options.workerArtifactPath,
@@ -139,27 +165,45 @@ function runInstall(options) {
     rootDir: options.rootDir,
     userId: options.userId,
     dryRun: options.dryRun,
+    i031Preflight,
   });
 }
 
-function runLifecycle(action, options) {
+async function runLifecycle(action, options) {
+  let i031Preflight;
+  if (action === "start" || action === "restart") {
+    const releasePreflight = runReleasePreflight(options);
+    if (!releasePreflight.ready) {
+      throw new Error(`worker startup preflight failed: ${releasePreflight.blockers.join(",")}`);
+    }
+    i031Preflight = await runI031Preflight(options);
+  }
   return buildYoutubeExtractionWorkerLifecyclePlan({
     action,
     homeDir: options.homeDir,
     userId: options.userId,
     dryRun: options.dryRun,
+    i031Preflight,
   });
 }
 
-function runPreflight(options) {
+function runReleasePreflight(options) {
   const inputs = loadYoutubeExtractionWorkerRuntimeInputs({
     appDescriptorPath: options.appDescriptorPath,
     workerArtifactPath: options.workerArtifactPath,
     currentPolicyPath: options.currentPolicyPath,
     credentialPath: options.credentialPath,
+    expectedSchemaPath: options.expectedSchemaPath,
     queueStatePath: options.queueStatePath ?? null,
   });
   return evaluateYoutubeExtractionWorkerPreflight(inputs);
+}
+
+async function runPreflight(options) {
+  const preflight = runReleasePreflight(options);
+  if (!preflight.ready) return preflight;
+  const i031Preflight = await runI031Preflight(options);
+  return { ...preflight, i031_preflight: i031Preflight };
 }
 
 function runDrain(options) {
@@ -261,8 +305,8 @@ function runCredentialRotate(options) {
   };
 }
 
-function runHealth(options) {
-  const preflight = runPreflight(options);
+async function runHealth(options) {
+  const preflight = await runPreflight(options);
   const drain = options.queueStatePath ? runDrain(options) : null;
   const status = options.launchctlOutputPath ? runStatus(options) : null;
   return buildYoutubeExtractionWorkerHealth({
@@ -272,25 +316,25 @@ function runHealth(options) {
   });
 }
 
-function main() {
+async function main() {
   const options = parseArgs(process.argv.slice(2));
   let result;
 
   switch (options.command) {
     case "install":
-      result = runInstall(options);
+      result = await runInstall(options);
       break;
     case "start":
     case "stop":
     case "restart":
     case "uninstall":
-      result = runLifecycle(options.command, options);
+      result = await runLifecycle(options.command, options);
       break;
     case "status":
       result = runStatus(options);
       break;
     case "preflight":
-      result = runPreflight(options);
+      result = await runPreflight(options);
       break;
     case "drain":
       result = runDrain(options);
@@ -305,7 +349,7 @@ function main() {
       result = runCredentialRotate(options);
       break;
     case "health":
-      result = runHealth(options);
+      result = await runHealth(options);
       break;
     default:
       throw new Error(
@@ -317,7 +361,7 @@ function main() {
 }
 
 try {
-  main();
+  await main();
 } catch (error) {
   process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
   process.exitCode = 1;

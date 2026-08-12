@@ -101,6 +101,8 @@ function main() {
     schemaIdentity: manifest.schema_identity,
     expectedPolicyVersion: manifest.policy_version,
     expectedPolicySnapshotDigest: manifest.allowed_snapshot_digest,
+    artifactSha256: manifest.artifact_sha256,
+    expectedSchemaSha256: manifest.expected_schema_sha256,
   });
 
   if (options.output) {

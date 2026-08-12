@@ -365,8 +365,10 @@ describe("YTASYNC-WORKER standalone runner", () => {
         identity: { pipeline: "i031" },
         videoTitle: "provider bridge title",
         recipe: { title: "recipe title", ingredients: [], steps: [] },
-        meta: { modelCallCount: 2 }
+        meta: { modelCallCount: 2 },
+        workerDataPersisted: true
       }));
+      process.disconnect();
     `);
     chmodSync(workerPath, 0o555);
     const calls: string[] = [];
@@ -448,6 +450,7 @@ describe("YTASYNC-WORKER standalone runner", () => {
           retryable: false,
           stage: "provider"
         }));
+        process.disconnect();
         process.exitCode = 1;
       });
       process.send({
