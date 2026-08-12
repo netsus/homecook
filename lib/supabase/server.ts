@@ -1,3 +1,5 @@
+import { createHmac } from "node:crypto";
+
 import { cookies } from "next/headers";
 
 import { createServerClient } from "@supabase/ssr";
@@ -52,6 +54,112 @@ function requireHmacSecret(name: string) {
   }
 
   return value;
+}
+
+const SUPERSEDED_SESSION_RECOVERY_TTL_MS = 10_000;
+const SUPERSEDED_SESSION_RECOVERY_MAX_ENTRIES = 256;
+
+type SupersededSessionRecoveryEntry = {
+  expiresAt: number;
+  promise: Promise<string | null>;
+  timeout: ReturnType<typeof setTimeout>;
+};
+
+const supersededSessionRecoveryCache = new Map<
+  string,
+  SupersededSessionRecoveryEntry
+>();
+
+function createSupersededSessionRecovery(
+  authClient: object,
+  enabled: boolean,
+  cacheKeySecret?: string,
+) {
+  if (!enabled || !cacheKeySecret) {
+    return undefined;
+  }
+
+  return async ({
+    currentAccessToken,
+    sessionKeyHash,
+  }: {
+    currentAccessToken: string;
+    sessionKeyHash: string;
+  }) => {
+    const normalizedSessionKeyHash = sessionKeyHash.trim();
+    if (!normalizedSessionKeyHash) {
+      return null;
+    }
+    const oldTokenFingerprint = createHmac("sha256", cacheKeySecret)
+      .update(currentAccessToken, "utf8")
+      .digest("hex");
+    const key = `${normalizedSessionKeyHash}:${oldTokenFingerprint}`;
+
+    const now = Date.now();
+    const cached = supersededSessionRecoveryCache.get(key);
+    if (cached) {
+      if (cached.expiresAt > now) {
+        return cached.promise;
+      }
+      clearTimeout(cached.timeout);
+      supersededSessionRecoveryCache.delete(key);
+    }
+
+    if (supersededSessionRecoveryCache.size >= SUPERSEDED_SESSION_RECOVERY_MAX_ENTRIES) {
+      return null;
+    }
+
+    const auth = Reflect.get(authClient, "auth") as {
+      refreshSession?: () => Promise<{
+        data?: { session?: { access_token?: string } | null };
+        error?: unknown;
+      }>;
+    };
+    if (typeof auth?.refreshSession !== "function") {
+      return null;
+    }
+
+    const timeout = setTimeout(() => {
+      const current = supersededSessionRecoveryCache.get(key);
+      if (current?.timeout === timeout) {
+        supersededSessionRecoveryCache.delete(key);
+      }
+    }, SUPERSEDED_SESSION_RECOVERY_TTL_MS);
+    timeout.unref?.();
+
+    const entry: SupersededSessionRecoveryEntry = {
+      expiresAt: now + SUPERSEDED_SESSION_RECOVERY_TTL_MS,
+      promise: Promise.resolve(null),
+      timeout,
+    };
+    const discardCurrentEntry = () => {
+      if (supersededSessionRecoveryCache.get(key) !== entry) {
+        return;
+      }
+      clearTimeout(timeout);
+      supersededSessionRecoveryCache.delete(key);
+    };
+    entry.promise = auth.refreshSession()
+      .then((result) => {
+        if (result.error) {
+          discardCurrentEntry();
+          return null;
+        }
+        const replacementToken = result.data?.session?.access_token?.trim() ?? "";
+        if (!replacementToken || replacementToken === currentAccessToken) {
+          discardCurrentEntry();
+          return null;
+        }
+        return replacementToken;
+      })
+      .catch(() => {
+        discardCurrentEntry();
+        return null;
+      });
+
+    supersededSessionRecoveryCache.set(key, entry);
+    return entry.promise;
+  };
 }
 
 async function createAuthServerClient({
@@ -200,10 +308,15 @@ function createGuardedLocalFetch({
   authorityClient,
   getAccessToken,
   anonymousPublicReadScope,
+  recoverSupersededSession,
 }: {
   authorityClient: LocalAuthorityClient;
   getAccessToken: () => Promise<string | null>;
   anonymousPublicReadScope?: HybridPublicReadScope;
+  recoverSupersededSession?: (input: {
+    currentAccessToken: string;
+    sessionKeyHash: string;
+  }) => Promise<string | null>;
 }) {
   const authEnv = getAuthSupabaseEnv();
   const localAuthority = getAuthAuthority() === "local";
@@ -246,6 +359,7 @@ function createGuardedLocalFetch({
       ),
     }),
     assertSessionAuthority: createAssertSessionAuthority(authorityClient),
+    recoverSupersededSession,
     ...(observabilityClient ? {
       recordSessionAuthorityFailure: async (
         reason: SessionAuthorityFailureReason,
@@ -309,6 +423,7 @@ function bindClientMember(
 function attachLocalDataAuthority<TAuthClient extends object>(
   authClient: TAuthClient,
   anonymousPublicReadScope?: HybridPublicReadScope,
+  allowSupersededSessionRecovery = false,
 ): TAuthClient {
   const dataEnv = getDataSupabaseEnv();
   if (dataEnv.authority !== "local") {
@@ -334,6 +449,13 @@ function attachLocalDataAuthority<TAuthClient extends object>(
       return result.error ? null : result.data.session?.access_token ?? null;
     },
     anonymousPublicReadScope,
+    recoverSupersededSession: createSupersededSessionRecovery(
+      authClient,
+      allowSupersededSessionRecovery,
+      allowSupersededSessionRecovery
+        ? requireHmacSecret("HOMECOOK_SESSION_ATTESTATION_HMAC_KEY_V1")
+        : undefined,
+    ),
   });
   const dataClient = createClient(dataEnv.url, dataEnv.anonKey, {
     auth: {
@@ -384,6 +506,7 @@ export async function createRouteHandlerClient(options?: {
   return attachLocalDataAuthority(
     authClient,
     options?.anonymousPublicReadScope,
+    true,
   );
 }
 
@@ -393,7 +516,7 @@ export async function createDataRouteHandlerClient() {
 
 export async function createServerComponentClient() {
   const authClient = await createAuthServerComponentClient();
-  return attachLocalDataAuthority(authClient);
+  return attachLocalDataAuthority(authClient, undefined, false);
 }
 
 export async function createServerDataComponentClient() {
