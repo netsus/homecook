@@ -12,14 +12,15 @@
 - third Stage 3 re-reviewed head: `704d2f39` — `REVISE` (`P1` 1, `P2` 1)
 - third-revision RED commit: `78ffe9b9`
 - third-revision GREEN commit: `68a7d338`
-- replacement implementation head: `68a7d338`; independent Stage 3 re-review of the final PR head is pending
+- fourth Stage 3 re-reviewed head: `898cf0c70292646a30aba9eca816ad44b68364f6` — `PASS` (implementation findings none)
+- replacement implementation head: `68a7d338`; reviewed documentation head: `898cf0c70292646a30aba9eca816ad44b68364f6`
 - official tuple: requirements `1.7.31`, screen `1.5.35`, Flow `1.3.33`, DB `1.3.33`, API `1.2.38`
 - migration: `supabase/migrations/20260812160000_youtube_async_extraction_notification.sql`
 - production/staging/remote writes: `0`
 - production migration/policy enable/credential issuance/launchd activation: `0` (`Manual Only`)
 - existing app service on port `3100`: untouched
 
-This task implements and verifies Stage 2. It does not perform Stage 3 approval, Ready transition, merge, or production activation.
+This evidence records the Stage 2 implementation and the independent Stage 3 approval. The PR remains Draft and merge-blocked; no Ready transition, merge, or production activation was performed.
 
 ## TDD evidence
 
@@ -90,6 +91,16 @@ Current verified evidence:
 - `PLAYWRIGHT_BASE_URL=http://127.0.0.1:3199 pnpm verify:backend` at implementation head `68a7d338` — lint, typecheck, product tests (238 files passed / 12 skipped; 2734 passed / 175 skipped), production build and security Playwright (12 passed) all pass; the existing port `3100` service was untouched
 - `pnpm local:reset:demo` at implementation-equivalent detached head `7bf11d88` on isolated `56320`–`56326` — migrations and `seed.sql` completed, but the unpinned current CLI stopped before step 2 because Realtime/REST/Storage health checks remained unhealthy/503; repeated with a shorter project id and got the same infrastructure timeout. The separately pinned isolated PG17 security run below is green. Existing app port `3100` stayed untouched.
 
+Independent fourth Stage 3 verification on exact head `898cf0c70292646a30aba9eca816ad44b68364f6`:
+
+- findings: none; the prior 11 required findings and the final owner/fingerprint plus duplicate-membership findings are closed without a new correctness, security, performance or maintainability regression
+- `pnpm exec vitest run tests/youtube-async-extraction-migration.test.ts tests/youtube-extraction-release-installer.test.ts` — 2 files / 23 tests passed; a separate raw duplicate-JSON probe rejected the second `memberships` key before parsing
+- `pnpm test:youtube-async:postgres` — isolated real PostgreSQL/PostgREST, 2 files / 35 tests passed; the suite transferred `public.youtube_extraction_jobs` to an arbitrary unrelated owner and proved readiness/fingerprint fail closed before restoring ownership
+- focused migration/i031/runner/worker/installer/snapshot suite — 6 files / 70 tests passed
+- `pnpm test` — 563 files passed / 31 skipped; 5926 tests passed / 433 skipped
+- `PLAYWRIGHT_BASE_URL=http://127.0.0.1:3199 pnpm verify:backend` — lint, typecheck, 238 product files / 2734 tests passed, production build passed, security Playwright 12 passed
+- exact-head GitHub checks — 13 unique successful checks; repeated governance runs were also successful, conditional `lighthouse` and `full-regression` were skipped by the workflow, and no check was pending or failed
+
 The isolated DB runner allocates dynamic PostgreSQL/PostgREST ports, uses an ephemeral credential and temporary database, and removes the container/database afterward. The earlier isolated Supabase reset rehearsal used only `homecook_yta_stage2_retry` on ports `65520`–`65526`; the final clean-migration regression used the default local Supabase development ports. Neither path bound, reused or stopped port `3100`, and neither stopped or mutated any `homecook-full-local-*` stack.
 
 ## Local reset and release-gate facts
@@ -100,13 +111,13 @@ The isolated DB runner allocates dynamic PostgreSQL/PostgREST ports, uses an eph
 - `SECURITY_FUNCTION_DATABASE_URL=<isolated-PG17> pnpm verify:security-functions` was green on the isolated current image: the clean catalog had 205 classified additive functions, and all 8 anonymous mutation probes (including `complete_cooking_session`) returned the expected denial with unchanged checksums. This confirms the old signal-11 failure was specific to the stale local CLI/image `17.6.1.106`; the isolated image had `pg_graphql` absent and no backend crash.
 - The canonical current-worktree `pnpm verify:security-functions:release` attempt remains red before the linked-remote half because its stale local instance exposes the unexpected `graphql.get_schema_version()` inventory. Even after that local instance is replaced, this worktree still lacks `supabase/.temp/project-ref`/`SECURITY_FUNCTION_LINKED_ROOT` for the required linked-remote read-only authority. No approved waiver exists, so both facts remain merge blockers.
 - `pnpm local:reset:demo` remains a second merge-process blocker at current head because the current unpinned CLI health check times out after a successful migration/seed. No waiver was authored.
+- The fourth Stage 3 reviewer reproduced all three blockers read-only or in isolation. `pnpm verify:security-functions:release` failed at `local baseline drift for graphql.get_schema_version()`; the remote half independently failed before access because no linked Supabase root/project authority was configured. An isolated exact-head reset using project id `yta_stage3_fourth` and ports `57320`–`57327` applied every migration and `seed.sql`, then failed with `LegacyHealthCheckTimeoutError` (`Realtime` and multiple services unhealthy, REST 503). The isolated stack and worktree were removed after the run. No production, staging, existing local database, credential, or port `3100` state was changed.
 - No secret value, raw JWT, service-role key or credential was copied into this evidence.
 
 ## Pending independent gates
 
-- Stage 3 independent backend/release re-review on the exact replacement PR head; reviewed heads `95c2b370`, `3af52ff5`, and `704d2f39` remain `REVISE`
-- current-head CI completion and any Stage 3 requested fixes
-- replacement of the stale canonical local security instance plus linked-remote read-only authority, or an approved independent disposition; this Stage 2 task does not self-author a waiver
+- Stage 3 implementation review is complete with `PASS` and findings none at exact head `898cf0c70292646a30aba9eca816ad44b68364f6`; reviewed heads `95c2b370`, `3af52ff5`, and `704d2f39` remain `REVISE`
+- replacement of the stale canonical local security instance, linked-remote read-only authority, and isolated local reset health timeout, or an approved independent disposition; no reviewer waiver exists
 - all Stage 4 frontend, Playwright, exploratory QA and design authority work
 - Stage 6 closeout/merge approval
 - every production/staging/remote action listed under `Manual Only`

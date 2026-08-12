@@ -87,7 +87,7 @@
 
 ### Release / Closeout
 
-- [ ] same-SHA worker artifact/installer/rotation/rollback dry-run과 current-head backend checks가 Stage 3에서 승인된다 <!-- omo:id=accept-yta-stage3-release-review;stage=2;scope=shared;review=3,6 -->
+- [x] same-SHA worker artifact/installer/rotation/rollback dry-run과 current-head backend checks가 Stage 3에서 승인된다 <!-- omo:id=accept-yta-stage3-release-review;stage=2;scope=shared;review=3,6 -->
 - [ ] README/acceptance/automation/work-item/status/roadmap projection과 PR Actual Verification/Closeout Sync/Merge Gate가 Stage 6에서 일치한다 <!-- omo:id=accept-yta-closeout-sync;stage=4;scope=shared;review=6 -->
 - [ ] final product PR은 current-head started checks 전체 green 뒤 manual merge handoff되고 자동 merge되지 않는다 <!-- omo:id=accept-yta-manual-merge-handoff;stage=4;scope=shared;review=6 -->
 
