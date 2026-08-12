@@ -31,6 +31,9 @@ describe("YouTube async extraction Stage 1 contract", () => {
   const shellCritique = read(
     "ui/designs/critiques/APP_SHELL_YOUTUBE_NOTIFICATIONS-critique.md",
   );
+  const reviewEvidence = read(
+    `docs/workpacks/${sliceId}/evidence/2026-08-12-stage1-internal1-5-rereview.md`,
+  );
 
   it("uses the exact official CTA copy on every Stage 1 design surface", () => {
     const officialScreens = read("docs/화면정의서-v1.5.35.md");
@@ -97,26 +100,31 @@ describe("YouTube async extraction Stage 1 contract", () => {
     expect(readme).toContain(postMergePreflight);
   });
 
-  it("keeps the independent REVISE state and high-risk authority metadata explicit", () => {
+  it("records independent internal 1.5 approval and high-risk authority metadata", () => {
     expect(workItem.status).toMatchObject({
       lifecycle: "planned",
-      approval_state: "needs_revision",
-      verification_status: "pending",
-      evaluation_status: "fixable",
-      evaluation_round: 1,
-      blocked_reason_code: "independent-internal-1.5-rereview-pending",
+      approval_state: "codex_approved",
+      verification_status: "passed",
+      evaluation_status: "passed",
+      evaluation_round: 2,
+      blocked_reason_code: null,
     });
     expect(status).toMatchObject({
       lifecycle: "planned",
-      approval_state: "needs_revision",
-      verification_status: "pending",
-      evaluation_status: "fixable",
-      evaluation_round: 1,
-      blocked_reason_code: "independent-internal-1.5-rereview-pending",
+      approval_state: "codex_approved",
+      verification_status: "passed",
+      evaluation_status: "passed",
+      evaluation_round: 2,
+      blocked_reason_code: null,
     });
     expect(workItem.status.last_evaluator_result).toContain(
       "019ff643-988a-7013-9edb-4d4f61986930",
     );
+    expect(workItem.status.last_evaluator_result).toContain(
+      "50598f7ce7b30dccab148a575738db23bb9f1eed",
+    );
+    expect(reviewEvidence).toContain("**PASS**");
+    expect(reviewEvidence).toContain("P0 0 / P1 0 / P2 0");
 
     expect(automation.frontend.design_authority).toMatchObject({
       ui_risk: "high-risk",

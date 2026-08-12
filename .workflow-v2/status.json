@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-08-12T14:07:53Z",
+  "updated_at": "2026-08-12T14:27:33Z",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -2814,8 +2814,8 @@
       "branch": "docs/youtube-async-extraction-notification",
       "pr_path": "https://github.com/netsus/homecook/pull/1344",
       "lifecycle": "planned",
-      "approval_state": "needs_revision",
-      "verification_status": "pending",
+      "approval_state": "codex_approved",
+      "verification_status": "passed",
       "required_checks": [
         "pnpm validate:source-of-truth-sync",
         "pnpm validate:workflow-v2",
@@ -2828,12 +2828,12 @@
         "pnpm audit --audit-level high",
         "git diff --check"
       ],
-      "notes": "Canonical closeout owner: .workflow-v2/work-items/youtube-async-extraction-notification.json#closeout. Roadmap is docs while canonical workflow lifecycle remains planned. Stage 1 required checks are local branch files, direct doc gate, automation/workflow/bookkeeping and targeted tests; origin/master validate:workpack is Stage 2 post-merge preflight only. Product code, migration and production installer writes are forbidden. Internal 1.5 task 019ff643-988a-7013-9edb-4d4f61986930 returned REVISE 3 at head 17ef00f44800fe34f382191c3850722f9d3929bf; exact-head re-review is pending. closeout_phase=collecting closeout_recovery=manual_patch:1 closeout_repair=codex:3|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:Codex_task_019ff643-988a-7013-9edb-4d4f61986930_REVISE last_recovery_at=2026-08-12T14:07:53Z",
-      "evaluation_status": "fixable",
-      "evaluation_round": 1,
-      "last_evaluator_result": "REVISE with 3 required findings by independent internal 1.5 task 019ff643-988a-7013-9edb-4d4f61986930 at head 17ef00f44800fe34f382191c3850722f9d3929bf; repair pushed for exact-head re-review",
+      "notes": "Canonical closeout owner: .workflow-v2/work-items/youtube-async-extraction-notification.json#closeout. Roadmap is docs while canonical workflow lifecycle remains planned. Stage 1 required checks are local branch files, direct doc gate, automation/workflow/bookkeeping and targeted tests; origin/master validate:workpack is Stage 2 post-merge preflight only. Product code, migration and production installer writes are forbidden. Independent internal 1.5 task 019ff643-988a-7013-9edb-4d4f61986930 closed all three prior findings and returned PASS with P0/P1/P2 0/0/0 at head 50598f7ce7b30dccab148a575738db23bb9f1eed. closeout_phase=collecting closeout_recovery=manual_patch:1 closeout_repair=codex:3|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:Codex_task_019ff643-988a-7013-9edb-4d4f61986930_REVISE,docs/workpacks/youtube-async-extraction-notification/evidence/2026-08-12-stage1-internal1-5-rereview.md last_recovery_at=2026-08-12T14:07:53Z",
+      "evaluation_status": "passed",
+      "evaluation_round": 2,
+      "last_evaluator_result": "PASS with P0/P1/P2 0/0/0 by independent internal 1.5 task 019ff643-988a-7013-9edb-4d4f61986930 at head 50598f7ce7b30dccab148a575738db23bb9f1eed",
       "auto_merge_eligible": false,
-      "blocked_reason_code": "independent-internal-1.5-rereview-pending"
+      "blocked_reason_code": null
     }
   ]
 }

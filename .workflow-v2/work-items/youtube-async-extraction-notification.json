@@ -149,13 +149,13 @@
   },
   "status": {
     "lifecycle": "planned",
-    "approval_state": "needs_revision",
-    "verification_status": "pending",
-    "evaluation_status": "fixable",
-    "evaluation_round": 1,
-    "last_evaluator_result": "REVISE with 3 required findings by independent internal 1.5 task 019ff643-988a-7013-9edb-4d4f61986930 at head 17ef00f44800fe34f382191c3850722f9d3929bf; repair pushed for exact-head re-review",
+    "approval_state": "codex_approved",
+    "verification_status": "passed",
+    "evaluation_status": "passed",
+    "evaluation_round": 2,
+    "last_evaluator_result": "PASS with P0/P1/P2 0/0/0 by independent internal 1.5 task 019ff643-988a-7013-9edb-4d4f61986930 at head 50598f7ce7b30dccab148a575738db23bb9f1eed",
     "auto_merge_eligible": false,
-    "blocked_reason_code": "independent-internal-1.5-rereview-pending"
+    "blocked_reason_code": null
   },
   "closeout": {
     "phase": "collecting",
@@ -168,14 +168,18 @@
       "automation_spec_metadata": "synced"
     },
     "verification_projection": {
-      "required_checks": "pending",
+      "required_checks": "passed",
       "external_smokes": "pending",
       "authority_reports": [],
-      "actual_verification_refs": []
+      "actual_verification_refs": [
+        "docs/workpacks/youtube-async-extraction-notification/evidence/2026-08-12-stage1-internal1-5-rereview.md",
+        "Independent internal 1.5 task 019ff643-988a-7013-9edb-4d4f61986930 approved reviewed head 50598f7ce7b30dccab148a575738db23bb9f1eed with findings 0",
+        "Reviewed-head local Stage 1 gate passed with targeted Vitest 78/78 and GitHub success 9 / intended Draft skip 5 / pending or failure 0"
+      ]
     },
     "merge_gate_projection": {
       "current_head_sha": null,
-      "approval_state": "needs_revision",
+      "approval_state": "codex_approved",
       "all_checks_green": false
     },
     "recovery_summary": {
@@ -192,18 +196,19 @@
       "manual_decision_required_count": 0,
       "human_escalation_count": 0,
       "post_merge_stale_count": 0,
-      "latest_reason_code": "internal-1.5-revise-three",
+      "latest_reason_code": "internal-1.5-revise-three-closed",
       "evidence_sources": [
-        "Codex_task_019ff643-988a-7013-9edb-4d4f61986930_REVISE"
+        "Codex_task_019ff643-988a-7013-9edb-4d4f61986930_REVISE",
+        "docs/workpacks/youtube-async-extraction-notification/evidence/2026-08-12-stage1-internal1-5-rereview.md"
       ]
     },
     "projection_state": {
-      "docs_synced_at": "2026-08-12T14:07:53Z",
-      "status_synced_at": "2026-08-12T14:07:53Z",
+      "docs_synced_at": "2026-08-12T14:27:33Z",
+      "status_synced_at": "2026-08-12T14:27:33Z",
       "pr_body_synced_at": "2026-08-12T14:14:23Z"
     }
   },
-  "notes": "Canonical closeout owner: .workflow-v2/work-items/youtube-async-extraction-notification.json#closeout. Roadmap is docs while canonical workflow lifecycle remains planned. Stage 1 required_checks, verify_commands and stage1_current_commands are the same executable local pre-merge gate; origin/master validate:workpack is isolated in stage2_post_merge_preflight and full_lifecycle_checks. Product code, migration, runtime writes and installer execution are forbidden. Internal 1.5 task 019ff643-988a-7013-9edb-4d4f61986930 returned REVISE 3 at head 17ef00f44800fe34f382191c3850722f9d3929bf; approval remains needs_revision until independent exact-head re-review. closeout_phase=collecting closeout_recovery=manual_patch:1 closeout_repair=codex:3|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:Codex_task_019ff643-988a-7013-9edb-4d4f61986930_REVISE last_recovery_at=2026-08-12T14:07:53Z",
+  "notes": "Canonical closeout owner: .workflow-v2/work-items/youtube-async-extraction-notification.json#closeout. Roadmap is docs while canonical workflow lifecycle remains planned. Stage 1 required_checks, verify_commands and stage1_current_commands are the same executable local pre-merge gate; origin/master validate:workpack is isolated in stage2_post_merge_preflight and full_lifecycle_checks. Product code, migration, runtime writes and installer execution are forbidden. Independent internal 1.5 task 019ff643-988a-7013-9edb-4d4f61986930 closed all three prior findings and returned PASS with P0/P1/P2 0/0/0 at head 50598f7ce7b30dccab148a575738db23bb9f1eed. closeout_phase=collecting closeout_recovery=manual_patch:1 closeout_repair=codex:3|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:Codex_task_019ff643-988a-7013-9edb-4d4f61986930_REVISE,docs/workpacks/youtube-async-extraction-notification/evidence/2026-08-12-stage1-internal1-5-rereview.md last_recovery_at=2026-08-12T14:07:53Z",
   "out_of_scope": [
     "Web Push subscription service worker VAPID or push outbox",
     "Quick Import async UI conversion or public response change",
