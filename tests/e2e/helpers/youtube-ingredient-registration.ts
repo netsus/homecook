@@ -5,6 +5,7 @@ const E2E_AUTH_OVERRIDE_COOKIE = E2E_AUTH_OVERRIDE_KEY;
 const E2E_APP_ORIGIN = process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:3100";
 
 export const YOUTUBE_INGREDIENT_REGISTRATION_URL = "/menu/add/youtube";
+const YOUTUBE_INGREDIENT_REGISTRATION_EXTRACTION_ID = "ext-ingredient-registration";
 
 export interface CapturedYoutubeRegistrationRequests {
   ingredientRegistrationBody: Record<string, unknown> | null;
@@ -32,6 +33,49 @@ export async function installYoutubeIngredientRegistrationRoutes(page: Page) {
   const captured: CapturedYoutubeRegistrationRequests = {
     ingredientRegistrationBody: null,
     recipeRegistrationBody: null,
+  };
+  const extractionDraft = {
+    extraction_id: YOUTUBE_INGREDIENT_REGISTRATION_EXTRACTION_ID,
+    title: "목살 양념구이",
+    base_servings: 2,
+    extraction_methods: ["description"],
+    draft_warnings: [],
+    blocking_issues: ["ingredients[0].ingredient_id"],
+    ingredients: [
+      {
+        draft_ingredient_id: "draft-mustard",
+        ingredient_id: "",
+        standard_name: "연겨자",
+        amount: 0.2,
+        unit: "스푼",
+        ingredient_type: "QUANT",
+        display_text: "연겨자 0.2스푼",
+        sort_order: 1,
+        scalable: true,
+        confidence: 0.72,
+        resolution_status: "unresolved",
+        raw_text: "연겨자 0.2스푼",
+        candidates: [],
+      },
+    ],
+    steps: [
+      {
+        step_number: 1,
+        instruction: "양념을 섞어 고기에 바른다",
+        cooking_method: {
+          id: "method-mix",
+          code: "mix",
+          label: "섞기",
+          color_key: "gray",
+          is_new: false,
+        },
+        duration_text: null,
+        is_incomplete: false,
+        missing_fields: [],
+        raw_text: "양념을 섞어 고기에 바른다",
+      },
+    ],
+    new_cooking_methods: [],
   };
 
   await page.route("**/api/v1/cooking-methods", async (route) => {
@@ -91,53 +135,29 @@ export async function installYoutubeIngredientRegistrationRoutes(page: Page) {
     await route.fulfill({
       json: {
         success: true,
-        data: {
-          extraction_id: "ext-ingredient-registration",
-          title: "목살 양념구이",
-          base_servings: 2,
-          extraction_methods: ["description"],
-          draft_warnings: [],
-          blocking_issues: ["ingredients[0].ingredient_id"],
-          ingredients: [
-            {
-              draft_ingredient_id: "draft-mustard",
-              ingredient_id: "",
-              standard_name: "연겨자",
-              amount: 0.2,
-              unit: "스푼",
-              ingredient_type: "QUANT",
-              display_text: "연겨자 0.2스푼",
-              sort_order: 1,
-              scalable: true,
-              confidence: 0.72,
-              resolution_status: "unresolved",
-              raw_text: "연겨자 0.2스푼",
-              candidates: [],
-            },
-          ],
-          steps: [
-            {
-              step_number: 1,
-              instruction: "양념을 섞어 고기에 바른다",
-              cooking_method: {
-                id: "method-mix",
-                code: "mix",
-                label: "섞기",
-                color_key: "gray",
-                is_new: false,
-              },
-              duration_text: null,
-              is_incomplete: false,
-              missing_fields: [],
-              raw_text: "양념을 섞어 고기에 바른다",
-            },
-          ],
-          new_cooking_methods: [],
-        },
+        data: extractionDraft,
         error: null,
       },
     });
   });
+
+  await page.route(
+    `**/api/v1/recipes/youtube/extractions/${YOUTUBE_INGREDIENT_REGISTRATION_EXTRACTION_ID}`,
+    async (route) => {
+      await route.fulfill({
+        json: {
+          success: true,
+          data: {
+            status: "draft",
+            draft: extractionDraft,
+            recipe_id: null,
+            recipe_path: null,
+          },
+          error: null,
+        },
+      });
+    },
+  );
 
   await page.route("**/api/v1/recipes/youtube/ingredient-registration", async (route) => {
     if (route.request().method() !== "POST") {
@@ -188,8 +208,8 @@ export async function installYoutubeIngredientRegistrationRoutes(page: Page) {
 }
 
 export async function openYoutubeIngredientRegistrationReview(page: Page) {
-  await page.goto(YOUTUBE_INGREDIENT_REGISTRATION_URL);
-  await page.locator('input[type="url"]').fill("https://www.youtube.com/watch?v=mustard123");
-  await page.getByRole("button", { name: "가져오기" }).click();
+  await page.goto(
+    `${YOUTUBE_INGREDIENT_REGISTRATION_URL}?extractionId=${YOUTUBE_INGREDIENT_REGISTRATION_EXTRACTION_ID}`,
+  );
   await page.getByTestId("register-ingredient-action").waitFor({ state: "visible" });
 }

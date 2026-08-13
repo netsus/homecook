@@ -164,56 +164,66 @@ test.describe("Slice 25: YouTube bulk ingredient registration", () => {
       });
     });
 
+    const singleDraft = {
+      extraction_id: "ext-single",
+      title: "단일 재료 레시피",
+      base_servings: 1,
+      extraction_methods: ["description"],
+      draft_warnings: [],
+      blocking_issues: ["ingredients[0].ingredient_id"],
+      ingredients: [
+        {
+          draft_ingredient_id: "draft-single",
+          ingredient_id: "",
+          standard_name: "소금",
+          amount: 1,
+          unit: "큰술",
+          ingredient_type: "QUANT",
+          display_text: "소금 1큰술",
+          sort_order: 1,
+          scalable: true,
+          confidence: 0.5,
+          resolution_status: "unresolved",
+          raw_text: "소금 1큰술",
+          candidates: [],
+        },
+      ],
+      steps: [
+        {
+          step_number: 1,
+          instruction: "소금을 넣는다",
+          cooking_method: { id: "m1", code: "boil", label: "끓이기", color_key: "red", is_new: false },
+          duration_text: null,
+          is_incomplete: false,
+          missing_fields: [],
+          raw_text: "소금을 넣는다",
+        },
+      ],
+      new_cooking_methods: [],
+    };
+
     await page.route("**/api/v1/recipes/youtube/extract", async (route) => {
       if (route.request().method() !== "POST") { await route.continue(); return; }
       await route.fulfill({
         json: {
           success: true,
-          data: {
-            extraction_id: "ext-single",
-            title: "단일 재료 레시피",
-            base_servings: 1,
-            extraction_methods: ["description"],
-            draft_warnings: [],
-            blocking_issues: ["ingredients[0].ingredient_id"],
-            ingredients: [
-              {
-                draft_ingredient_id: "draft-single",
-                ingredient_id: "",
-                standard_name: "소금",
-                amount: 1,
-                unit: "큰술",
-                ingredient_type: "QUANT",
-                display_text: "소금 1큰술",
-                sort_order: 1,
-                scalable: true,
-                confidence: 0.5,
-                resolution_status: "unresolved",
-                raw_text: "소금 1큰술",
-                candidates: [],
-              },
-            ],
-            steps: [
-              {
-                step_number: 1,
-                instruction: "소금을 넣는다",
-                cooking_method: { id: "m1", code: "boil", label: "끓이기", color_key: "red", is_new: false },
-                duration_text: null,
-                is_incomplete: false,
-                missing_fields: [],
-                raw_text: "소금을 넣는다",
-              },
-            ],
-            new_cooking_methods: [],
-          },
+          data: singleDraft,
           error: null,
         },
       });
     });
 
-    await page.goto("/menu/add/youtube");
-    await page.locator('input[type="url"]').fill("https://www.youtube.com/watch?v=single-test");
-    await page.getByRole("button", { name: "가져오기" }).click();
+    await page.route("**/api/v1/recipes/youtube/extractions/ext-single", async (route) => {
+      await route.fulfill({
+        json: {
+          success: true,
+          data: { status: "draft", draft: singleDraft, recipe_id: null, recipe_path: null },
+          error: null,
+        },
+      });
+    });
+
+    await page.goto("/menu/add/youtube?extractionId=ext-single");
 
     // Wait for the review step to render
     await page.getByText("재료를 찾지 못했어요").waitFor({ state: "visible" });
