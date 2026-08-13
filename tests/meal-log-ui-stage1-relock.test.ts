@@ -333,7 +333,22 @@ describe("meal-log-ui fresh Stage 1 relock", () => {
     expect(acceptance).toMatch(
       /- \[x\] canonical MEAL_LOG design and independent critique pass before Stage 2/u,
     );
-    expect(acceptance.match(/^- \[x\]/gmu)).toHaveLength(8);
+    const checkedAcceptanceIds = [...acceptance.matchAll(
+      /^- \[x\].*<!-- omo:id=([^;]+);/gmu,
+    )].map((match) => match[1]);
+    expect(checkedAcceptanceIds).toHaveLength(7);
+    expect(checkedAcceptanceIds).toEqual([
+      "accept-meal-log-ui-deleted-entry-absence",
+      "accept-meal-log-ui-search-union",
+      "accept-meal-log-ui-no-invention",
+      "accept-meal-log-ui-runtime-predecessors",
+      "accept-meal-log-ui-design",
+      "accept-meal-log-ui-doc-gate-regression",
+      "accept-meal-log-ui-stage1-honesty",
+    ]);
+    expect(acceptance).toMatch(
+      /- \[ \] implementation records failing component\/history tests before code.*omo:id=accept-meal-log-ui-tdd-red/u,
+    );
     expect(acceptance).toMatch(
       /- \[ \] independent internal1\.5\/security\/five-axis\/design\/Stage3\/5\/6 findings are zero/u,
     );
