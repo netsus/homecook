@@ -46,11 +46,13 @@
       "review"
     ],
     "verify_commands": [
-      "pnpm verify:frontend"
+      "pnpm verify:frontend",
+      "pnpm exec playwright test tests/e2e/slice-33-youtube-i031-direct-extraction.spec.ts"
     ],
     "playwright_projects": [
       "desktop-chrome",
-      "mobile-chrome"
+      "mobile-chrome",
+      "mobile-ios-small"
     ],
     "artifact_assertions": [
       "playwright-report",
@@ -66,7 +68,14 @@
       "critic_required": false,
       "critic_artifact": null,
       "authority_required": false,
-      "stage4_evidence_requirements": [],
+      "stage4_evidence_requirements": [
+        "desktop-1280-loading-error-retry-review",
+        "mobile-390-loading-error-retry-review",
+        "mobile-320-loading-error-retry-review",
+        "duplicate-submit-lock",
+        "console-page-http-error-zero",
+        "no-settings-key-model-ui"
+      ],
       "authority_report_paths": []
     }
   },

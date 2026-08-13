@@ -1,17 +1,43 @@
 # Current Source of Truth
 
 ## Official Files
-- `docs/요구사항기준선-v1.7.30.md`
-- `docs/화면정의서-v1.5.34.md`
-- `docs/유저flow맵-v1.3.32.md`
-- `docs/db설계-v1.3.32.md`
-- `docs/api문서-v1.2.37.md`
+- `docs/요구사항기준선-v1.7.31.md`
+- `docs/화면정의서-v1.5.35.md`
+- `docs/유저flow맵-v1.3.33.md`
+- `docs/db설계-v1.3.33.md`
+- `docs/api문서-v1.2.38.md`
 
 ## Notes
 - 위 5개 파일이 현재 공식 기준 문서다.
 - `docs/reference/wireframes/`는 보조 참고 자료다.
 - 구현 중 문서 충돌이 보이면 먼저 충돌 항목을 정리하고 작업 범위를 다시 확정한다.
 - 사용자 승인으로 공식 계약을 바꾸는 경우에도 구현보다 문서가 먼저다. 관련 공식 문서와 이 파일의 버전/경로를 같은 `contract-evolution` PR에서 먼저 갱신한다.
+
+## YouTube Background Extraction / Durable In-App Notification Contract-Evolution `2026-08-12`
+
+| 문서 | 변경 내용 |
+|------|----------|
+| 요구사항 v1.7.31 | `/menu/add/youtube` durable extraction, privacy-preserving dedupe HMAC, Next-only public edge/loopback RPC, expected policy snapshot binding, exact i031 policy/claim, consumed-over-TTL과 Quick Import 호환을 잠근다 |
+| 화면정의서 v1.5.35 | app shell toast/badge/list, Data API/RPC private boundary, browser internal metadata 비노출, `createRouteHandlerClient()` user-session enqueue, stale app `POLICY_CHANGED`, consumed-after-TTL, `can_retry=true` 전용 retry와 Quick Import UI 비변경을 잠근다 |
+| 유저 Flow맵 v1.3.33 | enqueue→이탈→reaper-before-claim worker→notification→review/register, Next route HMAC→loopback user-session RPC→advisory shared plain SELECT/dual-read/current-write, exclusive rotation, snapshot attestation, `sync_wait`, rollback 순서를 고정한다 |
+| DB v1.3.33 | jobs/session linkage, non-secret `private.youtube_extraction_current_policy`, exact i031 options, HMAC 비인증 목적, private Data API와 authenticated-only SECURITY DEFINER enqueue, expected snapshot binding, `policy_snapshot_digest`, unconsumed-only expiry, fencing/finalize와 exact ACL/rotation을 잠근다. 총 74개 |
+| API v1.2.38 | 신규 보호 endpoint 6개, exact public union/unknown-field 422, Next-only edge와 loopback user-session enqueue, expected policy/snapshot digest와 `409 POLICY_CHANGED`, consumed-over-TTL `succeeded`, safe error/cursor/dedupe, 기존 POST/Quick Import 호환을 잠근다. 총 108개 |
+
+> 사용자는 2026-08-12 이 작업에서 이 contract-evolution을 명시적으로 승인했다. 작성 baseline은 `origin/master@d38ee2e4a4c8cafc00dce713919c3f3e8df2bdda`이며 최초 승인 계획 `/Users/cwj/01_vibe_coding/homecook/.omx/plans/youtube-background-extraction-notification-plan-20260808.md`는 독립 task `019ff4f7-806c-7151-b646-cab784606cde`에서 최종 `PASS`로 검토됐다. 선행 workpack `33-youtube-i031-direct-extraction`은 PR #1341과 post-merge report PR #1342 병합 뒤 non-manual complete다.
+>
+> PR #1343 exact head `0d4496e71ba6db81dcaf8283fb3f4905447c55cf`의 독립 reviewer task `019ff598-233b-72c1-92f5-4372596ede7a`는 `REVISE` 6건을 냈다. Findings 1~4,6은 successor commit에서 공식 5종과 contract test에 반영했다. Finding 5도 폐쇄됐다. 수정 계획 전체는 같은 독립 plan reviewer task `019ff4f7-806c-7151-b646-cab784606cde`가 다시 읽고 `Verdict PASS`, `Findings 없음`, `차단 없음`, exact SHA-256 `b560b60ff758171e1d52ad56b2a63a2e1877cd762d1f691c9cea32c753f8d332`, line count `873`, baseline `origin/master@d38ee2e4a4c8cafc00dce713919c3f3e8df2bdda`로 확정했다. PR 자체의 successor exact-head 독립 계약 review와 current-head CI는 별도 merge gate다.
+> exact head `9aa2c68563235faa950e18d7d878577ffba18296`의 후속 독립 review는 current release policy authority, DB의 광범위 expiry 문장, retry CTA 이전 `can_retry` 판정 순서 3건을 새 blocking finding으로 냈다. 이 revision은 non-secret canonical policy singleton/74-table inventory, unconsumed-only expiry, 선판정 Flow와 상호계약 테스트를 반영하며 다음 successor exact-head 독립 재검토 전에는 Ready/merge하지 않는다.
+> exact head `e23f9491a76dffe62957adf135d4e43d0bbacab6`의 다음 독립 review는 HMAC/enqueue authority, exact options/initial policy, worker complete snapshot, bootstrap/rotation 분리 4건을 blocking finding으로 냈다. 해당 successor는 DB 밖 external current/previous HMAC loader, dual-read/current-write, workpack 33 exact i031 manifest/options, `policy_version`/`policy_snapshot_digest`/`allowed_snapshot_digest`, disabled initial bootstrap와 drained later rotation을 공식 5종·CSoT·contract test에 동기화했다.
+> exact head `0ce3f69badf19b13fec9ccf75441004c68645e7f`의 후속 독립 review는 policy lock/privilege, app expected snapshot binding, auth authority 단순화 3건을 blocking finding으로 냈다. 이 revision은 enqueue의 transaction advisory shared lock → enabled policy plain SELECT, 같은 advisory key의 exclusive rotation → UPDATE/CAS, `expected_policy_version`/`expected_policy_snapshot_digest` mismatch의 safe `POLICY_CHANGED`·insert/dedupe/budget 0, existing app external secret loader + `createRouteHandlerClient()` user session + `auth.uid()` owner로 정리한다. 별도 enqueue credential authority를 두지 않고 API 108/DB 74를 유지한다. 제품 구현/migration 없이 Draft를 유지하고 successor exact-head 독립 재검토와 current-head CI 전에는 Ready/merge하지 않는다.
+> exact head `ac4f79f0a8e25e558d0f94da426f2cc3e39dc7bd`의 마지막 독립 finding은 fingerprint HMAC을 인증 수단처럼 과장한 문구를 지적했다. 이 revision은 HMAC을 privacy-preserving dedupe/fingerprint와 rotation continuity로만 제한하고, 실제 trust boundary를 Next /api/v1 public edge와 loopback/private Data API·RPC, Cloudflare/public proxy 403/404, browser unknown-field 422, metadata redaction, boundary drift fail-closed로 명시한다. DB는 key version/window/format과 expected policy snapshot만 검증하며 cryptographic authenticity를 보장하지 않는다. API 108/DB 74는 유지한다.
+> exact head `57319a1c2552f1dad517a78786716be0596ddb3d`는 독립 reviewer task `019ff598-233b-72c1-92f5-4372596ede7a`가 공식 5종, CSoT, 승인 계획, full-local security/runtime 경계와 관련 tests/validators/current-head CI를 재검토해 `PASS`, Findings 0, 차단 0으로 확정했다. reviewer evidence successor는 계약 의미를 바꾸지 않는다.
+> enqueue/retry와 policy 전환 경합은 old/new 중 한 complete snapshot만 허용하며 mixed snapshot은 fail closed한다.
+>
+> public contract 영향은 `/api/v1` 보호 endpoint 6개, `202 Accepted`, job 상태·error·cursor·dedupe의 additive 추가다. 기존 `POST /recipes/youtube/extract`의 browser success data, `/recipes/new/youtube` Quick Import UI·sync·auto-register 의미와 기존 register/session ownership contract는 유지한다.
+>
+> rejected alternatives는 기존 동기 POST에 화면 이탈만 추가, 초기 외부 managed queue/Edge Function 전체 실행, 성장 전용 `user_progress_notifications` 재사용, 1차 Web Push 동시 도입이다. 선택은 Supabase durable DB queue + 동일 승인 SHA의 별도 restricted worker + terminal job 기반 앱 내 알림이다.
+>
+> 제품 구현, DB migration/apply, worker/credential 설치, production/staging/remote write, rollout/rollback 실행, Web Push는 승인 밖이다. 신규 async workpack/acceptance/automation/work item은 이 contract PR에 만들지 않으며 merge 뒤 별도 fresh Stage 1 Codex task가 새 tuple로 잠근다. 이 작성 task는 자기 문서를 최종 승인하거나 merge하지 않는다.
 
 ## Session Refresh Authority Contract-Evolution `2026-08-08 / 1A`
 

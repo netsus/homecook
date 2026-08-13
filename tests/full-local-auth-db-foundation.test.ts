@@ -34,6 +34,23 @@ async function readRefreshAuthorityMigration() {
   };
 }
 
+async function readSupersededTokenMigration() {
+  const migrationFiles = await readdir(MIGRATIONS_DIRECTORY);
+  const supersededTokenMigrationName = migrationFiles.find((file) =>
+    file.includes("full_local_session_superseded_token_window"),
+  );
+
+  return {
+    supersededTokenMigrationName,
+    migration: supersededTokenMigrationName
+      ? await readFile(
+          `${MIGRATIONS_DIRECTORY}/${supersededTokenMigrationName}`,
+          "utf8",
+        )
+      : "",
+  };
+}
+
 function clientWithRpc(rpc = vi.fn()) {
   return { client: { rpc }, rpc };
 }
@@ -472,6 +489,29 @@ describe("full-local Auth DB migration contract", () => {
     expect(normalized).toMatch(/binding_state[\s\S]*active/iu);
     expect(normalized).toMatch(/revoked_at[\s\S]*is null/iu);
     expect(normalized).toContain("account_session_stale");
+  });
+
+  it("adds a dedicated follow-up migration for bounded superseded-token classification and observation reset", async () => {
+    const { supersededTokenMigrationName, migration } =
+      await readSupersededTokenMigration();
+    expect(supersededTokenMigrationName).toMatch(
+      /^[0-9]{14}_full_local_session_superseded_token_window\.sql$/u,
+    );
+
+    const normalized = migration.toLowerCase();
+    expect(normalized).toContain(
+      "homecook_session_authority_reason::superseded_token",
+    );
+    expect(normalized).toContain("interval '10 seconds'");
+    expect(normalized).toMatch(
+      /clock_timestamp\(\)\s*<=\s*v_binding\.local_verified_at\s*\+\s*interval '10 seconds'/u,
+    );
+    expect(normalized).toMatch(
+      /if p_last_token_issued_at < v_binding\.last_token_issued_at[\s\S]*superseded_token[\s\S]*else[\s\S]*non_monotonic/iu,
+    );
+    expect(normalized).toMatch(
+      /insert into private\.full_local_session_observability[\s\S]*on conflict \(singleton\) do update[\s\S]*observation_started_at = clock_timestamp\(\)[\s\S]*unexpected_account_session_stale_count = 0[\s\S]*stale_token_mutation_count = 0[\s\S]*first_stale_at = null/iu,
+    );
   });
 
   it("replaces the legacy exact-signature assert wrapper with latest-token compatibility only in the additive refresh migration", async () => {

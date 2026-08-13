@@ -1,7 +1,7 @@
 # Acceptance Checklist
 
 > This checkpoint records the independently approved and merged Stage 2/3 backend scope. Unchecked items do not claim #12 UI, future-smoke relock, merged-exact server-production/local-rehearsal verification, independent post-merge/release review, or production activation.
-> Official authority is the current tuple `v1.7.30/v1.5.34/v1.3.32/v1.3.32/v1.2.37` and the Cooking Plan / Meal Log master-plan lineage SHA-256 `d4d0fb39e80eeffc8b1e73ad92f0d91a35a9b6adc57a556ea8c9ec6ecffa951d`, 1,018 lines.
+> The backend checkpoint implementation-pinned tuple is `v1.7.30/v1.5.34/v1.3.32/v1.3.32/v1.2.37`, together with the Cooking Plan / Meal Log master-plan lineage SHA-256 `d4d0fb39e80eeffc8b1e73ad92f0d91a35a9b6adc57a556ea8c9ec6ecffa951d`, 1,018 lines. Latest official authority is `v1.7.31/v1.5.35/v1.3.33/v1.3.33/v1.2.38`; a fresh successor audit found no weakening or change to #9 endpoint, field, status, error, action, ownership, idempotency, zero-write, lifecycle, or activation boundaries.
 
 ## Schema / Ownership
 

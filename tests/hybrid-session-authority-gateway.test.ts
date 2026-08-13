@@ -16,6 +16,10 @@ import {
   isHybridAuthorityFailureResponse,
 } from "@/lib/server/hybrid-auth/gateway";
 import { verifyHybridRequestAttestation } from "@/lib/server/hybrid-auth/session-authority";
+import {
+  isUnexpectedSessionAuthorityFailure,
+  readSessionAuthorityFailureReason,
+} from "@/lib/server/hybrid-auth/session-observability";
 
 const OWNER_UUID = "11111111-1111-4111-8111-111111111111";
 const SESSION_UUID = "22222222-2222-4222-8222-222222222222";
@@ -77,6 +81,13 @@ async function expectAuthorityError(
 }
 
 describe("loopback session-authority gateway", () => {
+  it("parses superseded_token as an internal-only reason without marking it unexpected", () => {
+    expect(readSessionAuthorityFailureReason({
+      details: "HOMECOOK_SESSION_AUTHORITY_REASON::superseded_token",
+    })).toBe("superseded_token");
+    expect(isUnexpectedSessionAuthorityFailure("superseded_token")).toBe(false);
+  });
+
   it("rechecks remote liveness, verifies an existing active binding, and attests the exact local method/path", async () => {
     const token = accessToken();
     const remoteLivenessFetch = vi.fn().mockResolvedValue(new Response(
@@ -564,10 +575,314 @@ describe("loopback session-authority gateway", () => {
     expect(localUpstreamFetch).not.toHaveBeenCalled();
   });
 
+  it("retries exactly once with a recovered replacement token after a superseded_token authority denial", async () => {
+    const originalToken = accessToken({
+      exp: 1_800_003_000,
+    });
+    const replacementToken = accessToken({
+      iat: 1_800_002_520,
+      exp: 1_800_003_120,
+    });
+    const remoteLivenessFetch = vi.fn().mockImplementation(async () => new Response(
+      JSON.stringify({
+        id: OWNER_UUID,
+        created_at: "2026-07-28T00:00:00.000Z",
+      }),
+      { status: 200, headers: { "content-type": "application/json" } },
+    ));
+    const localUpstreamFetch = vi.fn().mockResolvedValue(
+      new Response("{}", { status: 200 }),
+    );
+    const loadRemoteJwks = vi.fn().mockResolvedValue({ keys: [REMOTE_JWK] });
+    const assertSessionAuthority = vi.fn()
+      .mockRejectedValueOnce(
+        new HybridSessionAuthorityError("superseded_token" as never),
+      )
+      .mockResolvedValueOnce(undefined);
+    const recoverSupersededSession = vi.fn().mockResolvedValue(replacementToken);
+    const recordSessionAuthorityFailure = vi.fn().mockResolvedValue(undefined);
+    const authorityFetch = createHybridAuthorityFetch({
+      getAccessToken: async () => originalToken,
+      remoteLivenessFetch,
+      localUpstreamFetch,
+      loadRemoteJwks,
+      assertSessionAuthority,
+      recordSessionAuthorityFailure,
+      auth: {
+        issuer: ISSUER,
+        url: "https://remote.example.supabase.co",
+        publishableKey: "remote-publishable",
+      },
+      attestationSecret: SECRET,
+      sessionBindingSecret: SECRET,
+      nowSeconds: () => 1_800_002_700,
+      recoverSupersededSession,
+    });
+
+    const response = await authorityFetch(
+      "http://127.0.0.1:8000/rest/v1/meals",
+      { method: "POST", body: "{}" },
+    );
+
+    expect(response.status).toBe(200);
+    expect(recoverSupersededSession).toHaveBeenCalledTimes(1);
+    expect(loadRemoteJwks).toHaveBeenCalledTimes(2);
+    expect(remoteLivenessFetch).toHaveBeenCalledTimes(2);
+    expect(assertSessionAuthority).toHaveBeenCalledTimes(2);
+    expect(localUpstreamFetch).toHaveBeenCalledTimes(1);
+    expect(recordSessionAuthorityFailure).not.toHaveBeenCalled();
+    const [, localInit] = localUpstreamFetch.mock.calls[0];
+    const localHeaders = new Headers(localInit.headers);
+    expect(localHeaders.get("authorization")).toBe(
+      `Bearer ${replacementToken}`,
+    );
+  });
+
+  it("normalizes failed superseded_token recovery to non_monotonic and records it once", async () => {
+    const originalToken = accessToken({
+      exp: 1_800_003_000,
+    });
+    const remoteLivenessFetch = vi.fn().mockImplementation(async () => new Response(
+      JSON.stringify({
+        id: OWNER_UUID,
+        created_at: "2026-07-28T00:00:00.000Z",
+      }),
+      { status: 200, headers: { "content-type": "application/json" } },
+    ));
+    const localUpstreamFetch = vi.fn();
+    const loadRemoteJwks = vi.fn().mockResolvedValue({ keys: [REMOTE_JWK] });
+    const recoverSupersededSession = vi.fn().mockResolvedValue(null);
+    const recordSessionAuthorityFailure = vi.fn().mockResolvedValue(undefined);
+    const authorityFetch = createHybridAuthorityFetch({
+      getAccessToken: async () => originalToken,
+      remoteLivenessFetch,
+      localUpstreamFetch,
+      loadRemoteJwks,
+      assertSessionAuthority: vi.fn().mockRejectedValue(
+        new HybridSessionAuthorityError("superseded_token" as never),
+      ),
+      recordSessionAuthorityFailure,
+      auth: {
+        issuer: ISSUER,
+        url: "https://remote.example.supabase.co",
+        publishableKey: "remote-publishable",
+      },
+      attestationSecret: SECRET,
+      sessionBindingSecret: SECRET,
+      nowSeconds: () => 1_800_002_700,
+      recoverSupersededSession,
+    });
+
+    const response = await authorityFetch(
+      "http://127.0.0.1:8000/rest/v1/meals",
+      { method: "POST" },
+    );
+
+    await expectAuthorityError(response, "ACCOUNT_SESSION_STALE");
+    expect(recoverSupersededSession).toHaveBeenCalledTimes(1);
+    expect(loadRemoteJwks).toHaveBeenCalledTimes(1);
+    expect(remoteLivenessFetch).toHaveBeenCalledTimes(1);
+    expect(recordSessionAuthorityFailure).toHaveBeenCalledTimes(1);
+    expect(recordSessionAuthorityFailure).toHaveBeenCalledWith(
+      "non_monotonic",
+    );
+    expect(localUpstreamFetch).not.toHaveBeenCalled();
+  });
+
+  it("normalizes a same-token superseded recovery to non_monotonic and records it once", async () => {
+    const originalToken = accessToken({
+      exp: 1_800_003_000,
+    });
+    const recoverSupersededSession = vi.fn().mockResolvedValue(originalToken);
+    const recordSessionAuthorityFailure = vi.fn().mockResolvedValue(undefined);
+    const authorityFetch = createHybridAuthorityFetch({
+      getAccessToken: async () => originalToken,
+      remoteLivenessFetch: vi.fn().mockImplementation(async () => new Response(
+        JSON.stringify({
+          id: OWNER_UUID,
+          created_at: "2026-07-28T00:00:00.000Z",
+        }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      )),
+      localUpstreamFetch: vi.fn(),
+      loadRemoteJwks: vi.fn().mockResolvedValue({ keys: [REMOTE_JWK] }),
+      assertSessionAuthority: vi.fn().mockRejectedValue(
+        new HybridSessionAuthorityError("superseded_token"),
+      ),
+      recordSessionAuthorityFailure,
+      auth: {
+        issuer: ISSUER,
+        url: "https://remote.example.supabase.co",
+        publishableKey: "remote-publishable",
+      },
+      attestationSecret: SECRET,
+      sessionBindingSecret: SECRET,
+      nowSeconds: () => 1_800_002_700,
+      recoverSupersededSession,
+    });
+
+    const response = await authorityFetch(
+      "http://127.0.0.1:8000/rest/v1/meals",
+      { method: "POST" },
+    );
+
+    await expectAuthorityError(response, "ACCOUNT_SESSION_STALE");
+    expect(recoverSupersededSession).toHaveBeenCalledTimes(1);
+    expect(recordSessionAuthorityFailure).toHaveBeenCalledTimes(1);
+    expect(recordSessionAuthorityFailure).toHaveBeenCalledWith(
+      "non_monotonic",
+    );
+  });
+
+  it("does not attempt superseded recovery for a direct non_monotonic denial", async () => {
+    const recoverSupersededSession = vi.fn();
+    const recordSessionAuthorityFailure = vi.fn().mockResolvedValue(undefined);
+    const authorityFetch = createHybridAuthorityFetch({
+      getAccessToken: async () => accessToken({
+        exp: 1_800_003_000,
+      }),
+      remoteLivenessFetch: vi.fn().mockImplementation(async () => new Response(
+        JSON.stringify({
+          id: OWNER_UUID,
+          created_at: "2026-07-28T00:00:00.000Z",
+        }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      )),
+      localUpstreamFetch: vi.fn(),
+      loadRemoteJwks: vi.fn().mockResolvedValue({ keys: [REMOTE_JWK] }),
+      assertSessionAuthority: vi.fn().mockRejectedValue(
+        new HybridSessionAuthorityError("non_monotonic"),
+      ),
+      recordSessionAuthorityFailure,
+      recoverSupersededSession,
+      auth: {
+        issuer: ISSUER,
+        url: "https://remote.example.supabase.co",
+        publishableKey: "remote-publishable",
+      },
+      attestationSecret: SECRET,
+      sessionBindingSecret: SECRET,
+      nowSeconds: () => 1_800_002_700,
+    });
+
+    const response = await authorityFetch(
+      "http://127.0.0.1:8000/rest/v1/meals",
+      { method: "POST" },
+    );
+
+    await expectAuthorityError(response, "ACCOUNT_SESSION_STALE");
+    expect(recoverSupersededSession).not.toHaveBeenCalled();
+    expect(recordSessionAuthorityFailure).toHaveBeenCalledTimes(1);
+    expect(recordSessionAuthorityFailure).toHaveBeenCalledWith(
+      "non_monotonic",
+    );
+  });
+
+  it("normalizes a second authority failure after superseded recovery to non_monotonic once", async () => {
+    const recordSessionAuthorityFailure = vi.fn().mockResolvedValue(undefined);
+    const recoverSupersededSession = vi.fn().mockResolvedValue(accessToken({
+      iat: 1_800_002_520,
+      exp: 1_800_003_120,
+    }));
+    const localUpstreamFetch = vi.fn();
+    const authorityFetch = createHybridAuthorityFetch({
+      getAccessToken: async () => accessToken({
+        exp: 1_800_003_000,
+      }),
+      remoteLivenessFetch: vi.fn().mockImplementation(async () => new Response(
+        JSON.stringify({
+          id: OWNER_UUID,
+          created_at: "2026-07-28T00:00:00.000Z",
+        }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      )),
+      localUpstreamFetch,
+      loadRemoteJwks: vi.fn().mockResolvedValue({ keys: [REMOTE_JWK] }),
+      assertSessionAuthority: vi.fn()
+        .mockRejectedValueOnce(
+          new HybridSessionAuthorityError("superseded_token"),
+        )
+        .mockRejectedValueOnce(
+          new HybridSessionAuthorityError("revoked"),
+        ),
+      recordSessionAuthorityFailure,
+      recoverSupersededSession,
+      auth: {
+        issuer: ISSUER,
+        url: "https://remote.example.supabase.co",
+        publishableKey: "remote-publishable",
+      },
+      attestationSecret: SECRET,
+      sessionBindingSecret: SECRET,
+      nowSeconds: () => 1_800_002_700,
+    });
+
+    const response = await authorityFetch(
+      "http://127.0.0.1:8000/rest/v1/meals",
+      { method: "POST" },
+    );
+
+    await expectAuthorityError(response, "ACCOUNT_SESSION_STALE");
+    expect(recoverSupersededSession).toHaveBeenCalledTimes(1);
+    expect(recordSessionAuthorityFailure).toHaveBeenCalledTimes(1);
+    expect(recordSessionAuthorityFailure).toHaveBeenCalledWith(
+      "non_monotonic",
+    );
+    expect(localUpstreamFetch).not.toHaveBeenCalled();
+  });
+
+  it("preserves maintenance when replacement-token verification cannot reach authority", async () => {
+    const originalToken = accessToken({ exp: 1_800_003_000 });
+    const replacementToken = accessToken({
+      iat: 1_800_002_520,
+      exp: 1_800_003_120,
+    });
+    const remoteLivenessFetch = vi.fn().mockImplementation(() => Promise.resolve(
+      new Response(JSON.stringify({
+        id: OWNER_UUID,
+        created_at: "2026-07-28T00:00:00.000Z",
+      }), { status: 200, headers: { "content-type": "application/json" } }),
+    ));
+    const localUpstreamFetch = vi.fn();
+    const loadRemoteJwks = vi.fn()
+      .mockResolvedValueOnce({ keys: [REMOTE_JWK] })
+      .mockRejectedValueOnce(new HybridLifecycleMaintenanceError());
+    const recordSessionAuthorityFailure = vi.fn().mockResolvedValue(undefined);
+    const authorityFetch = createHybridAuthorityFetch({
+      getAccessToken: async () => originalToken,
+      remoteLivenessFetch,
+      localUpstreamFetch,
+      loadRemoteJwks,
+      assertSessionAuthority: vi.fn().mockRejectedValueOnce(
+        new HybridSessionAuthorityError("superseded_token"),
+      ),
+      recoverSupersededSession: vi.fn().mockResolvedValue(replacementToken),
+      recordSessionAuthorityFailure,
+      auth: {
+        issuer: ISSUER,
+        url: "https://remote.example.supabase.co",
+        publishableKey: "remote-publishable",
+      },
+      attestationSecret: SECRET,
+      sessionBindingSecret: SECRET,
+      nowSeconds: () => 1_800_002_700,
+    });
+
+    const response = await authorityFetch(
+      "http://127.0.0.1:8000/rest/v1/meals",
+      { method: "POST", body: "{}" },
+    );
+
+    await expectAuthorityError(response, "ACCOUNT_LIFECYCLE_MAINTENANCE");
+    expect(recordSessionAuthorityFailure).not.toHaveBeenCalled();
+    expect(localUpstreamFetch).not.toHaveBeenCalled();
+  });
+
   it.each(["revoked", "missing"] as const)(
     "does not count expected %s session denials",
     async (reason) => {
       const recordSessionAuthorityFailure = vi.fn();
+      const recoverSupersededSession = vi.fn();
       const authorityFetch = createHybridAuthorityFetch({
         getAccessToken: async () => accessToken(),
         remoteLivenessFetch: vi.fn().mockResolvedValue(new Response(
@@ -583,6 +898,7 @@ describe("loopback session-authority gateway", () => {
           new HybridSessionAuthorityError(reason),
         ),
         recordSessionAuthorityFailure,
+        recoverSupersededSession,
         auth: {
           issuer: ISSUER,
           url: "https://remote.example.supabase.co",
@@ -599,6 +915,7 @@ describe("loopback session-authority gateway", () => {
 
       await expectAuthorityError(response, "ACCOUNT_SESSION_STALE");
       expect(recordSessionAuthorityFailure).not.toHaveBeenCalled();
+      expect(recoverSupersededSession).not.toHaveBeenCalled();
     },
   );
 
