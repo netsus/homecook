@@ -2401,14 +2401,14 @@ begin
       jsonb_build_object(
         'id', job.id,
         'status', job.status,
-        'created_at', to_char(job.created_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'),
+        'created_at', to_char(job.created_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"'),
         'started_at', case
           when job.started_at is null then null
-          else to_char(job.started_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')
+          else to_char(job.started_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"')
         end,
         'completed_at', case
           when job.completed_at is null then null
-          else to_char(job.completed_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')
+          else to_char(job.completed_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"')
         end,
         'error_code', job.error_code,
         'youtube_video_id', job.youtube_video_id,
@@ -2416,11 +2416,11 @@ begin
         'completion_delivery_key', job.completion_delivery_key,
         'completion_delivered_at', case
           when job.completion_delivered_at is null then null
-          else to_char(job.completion_delivered_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')
+          else to_char(job.completion_delivered_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"')
         end,
         'completion_seen_at', case
           when job.completion_seen_at is null then null
-          else to_char(job.completion_seen_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')
+          else to_char(job.completion_seen_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"')
         end,
         'extraction_session', case
           when session_row.id is null then null
@@ -2428,7 +2428,7 @@ begin
             'id', session_row.id,
             'status', session_row.status,
             'recipe_id', session_row.recipe_id,
-            'expires_at', to_char(session_row.expires_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')
+            'expires_at', to_char(session_row.expires_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"')
           )
         end
       )
@@ -2929,6 +2929,8 @@ begin
     from public.youtube_extraction_jobs as existing_job
     where existing_job.id = v_requested_job_id
       and existing_job.status = 'succeeded'
+      and existing_job.lease_owner = v_requested_worker_id
+      and existing_job.lease_generation = v_requested_lease_generation
       and existing_job.extraction_session_id is not null;
 
     return case when found then jsonb_build_object(
@@ -3148,7 +3150,6 @@ begin
         job.completion_delivery_key,
         private.youtube_extraction_completion_delivery_key(job.id, v_now)
       ),
-      lease_owner = null,
       lease_expires_at = null,
       heartbeat_at = null,
       updated_at = v_now

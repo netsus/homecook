@@ -394,7 +394,12 @@ export function createYoutubeAsyncExtractionHandlers(deps: HandlerDependencies) 
           return failure("INVALID_CURSOR", "목록 커서를 확인해 주세요.", 422);
         }
       }
-      let rows = await deps.listJobs(view, cursor, limit + 1, auth.rpc, deps.now());
+      let rows: ListJobRow[];
+      try {
+        rows = await deps.listJobs(view, cursor, limit + 1, auth.rpc, deps.now());
+      } catch {
+        return failure("QUEUE_UNAVAILABLE", "알림을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.", 503);
+      }
       if (cursor) {
         rows = rows.filter((row) =>
           row.completed_at !== null
@@ -623,11 +628,10 @@ export const youtubeAsyncExtractionHandlers = createYoutubeAsyncExtractionHandle
         cursor_job_id: cursor?.jobId ?? null,
         row_limit: limit,
       });
-      return result.error || !Array.isArray(result.data)
-        ? []
-        : result.data as ListJobRow[];
+      if (result.error || !Array.isArray(result.data)) throw new Error("QUEUE_UNAVAILABLE");
+      return result.data as ListJobRow[];
     } catch {
-      return [];
+      throw new Error("QUEUE_UNAVAILABLE");
     }
   },
   async markDelivered(userId, deliveryKeys, rpc) {

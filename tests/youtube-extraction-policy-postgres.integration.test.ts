@@ -1473,10 +1473,21 @@ describe.runIf(enabled).sequential("youtube async extraction PostgreSQL integrat
         (${sqlJson(payload)})::jsonb
       )::text;`,
     );
+    const staleGenerationReplay = runAsJson(
+      "youtube_extraction_worker",
+      workerClaims(snapshotDigest),
+      `select public.finalize_youtube_extraction_job(
+        '${claim.job_id}'::uuid,
+        '${workerId}',
+        ${(claim.lease_generation as number) + 1},
+        (${sqlJson(payload)})::jsonb
+      )::text;`,
+    );
 
     expect(stale).toEqual({ finalized: false });
     expect(finalized).toMatchObject({ applied: true, finalized: true });
     expect(replay).toMatchObject({ applied: true, finalized: true });
+    expect(staleGenerationReplay).toEqual({ applied: false, finalized: false });
     expect(finalized.extraction_session_id).toBe(draft.extraction_id);
     expect(replay.extraction_session_id).toBe(draft.extraction_id);
     expect(lastLine(psql(`
@@ -2111,6 +2122,46 @@ describe.runIf(enabled).sequential("youtube async extraction PostgreSQL integrat
         seen: false,
       },
     ]);
+  });
+
+  it("paginates same-millisecond completions without skipping microsecond-distinct rows", () => {
+    for (const [suffix, microseconds] of [["021", "123456"], ["022", "123455"], ["023", "123454"]]) {
+      insertJob({
+        id: `80000000-0000-4000-8000-000000000${suffix}`,
+        userId: ownerA,
+        videoId: `smMillis${suffix}`,
+        fingerprint: suffix.repeat(22).slice(0, 64),
+        status: "failed",
+        attemptCount: 3,
+        maxAttempts: 3,
+        completedAtSql: `'2026-08-14 01:02:03.${microseconds}+00'::timestamptz`,
+        deliveryKeySql: `'ytasync:same-ms-${suffix}'`,
+      });
+    }
+
+    const first = runAsJson(
+      "authenticated",
+      authenticatedClaims(ownerA),
+      `select public.list_youtube_extraction_job_projections(
+        'archive', '2026-08-01T00:00:00Z'::timestamptz, null, null, 2
+      )::text;`,
+    ) as unknown as Array<{ id: string; completed_at: string }>;
+    const second = runAsJson(
+      "authenticated",
+      authenticatedClaims(ownerA),
+      `select public.list_youtube_extraction_job_projections(
+        'archive', '2026-08-01T00:00:00Z'::timestamptz,
+        '${first[1].completed_at}'::timestamptz, '${first[1].id}'::uuid, 2
+      )::text;`,
+    ) as unknown as Array<{ id: string; completed_at: string }>;
+
+    expect(new Set([...first, ...second].map(({ id }) => id))).toEqual(new Set([
+      "80000000-0000-4000-8000-000000000021",
+      "80000000-0000-4000-8000-000000000022",
+      "80000000-0000-4000-8000-000000000023",
+    ]));
+    expect(first[0].completed_at).toContain(".123456Z");
+    expect(first[1].completed_at).toContain(".123455Z");
   });
 
   it("rotates worker credentials with compare-and-swap generation control", () => {

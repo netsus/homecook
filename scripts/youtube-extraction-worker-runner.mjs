@@ -26,6 +26,7 @@ import {
   readWorkerEnvironment,
   readWorkerProviderEnvironment,
   runYoutubeExtractionWorkerPollLoop,
+  sanitizeYoutubeExtractionChildEnvironment,
   verifyStandaloneYoutubeI031Preflight,
 } from "./lib/youtube-extraction-worker-runtime.mjs";
 
@@ -163,7 +164,10 @@ async function main() {
     workerEnvironment.HOMECOOK_YOUTUBE_WORKER_PROVIDER_SECRET_FILE,
   );
   const providerEnvironment = await readWorkerProviderEnvironment(providerSecretFile);
-  const runtimeEnvironment = { ...process.env, ...providerEnvironment };
+  const runtimeEnvironment = sanitizeYoutubeExtractionChildEnvironment({
+    ...process.env,
+    ...providerEnvironment,
+  });
   const i031Preflight = await verifyStandaloneYoutubeI031Preflight({
     workerEnv: runtimeEnvironment,
   });

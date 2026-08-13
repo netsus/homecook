@@ -18,6 +18,7 @@ import {
   createYoutubeExtractionWorkerRuntime,
   normalizeYoutubeExtractionRuntimeError,
   runYoutubeExtractionWorkerPollLoop,
+  sanitizeYoutubeExtractionChildEnvironment,
   verifyStandaloneYoutubeI031Preflight,
 } from "../scripts/lib/youtube-extraction-worker-runtime.mjs";
 
@@ -49,6 +50,7 @@ describe("YTASYNC-WORKER standalone runner", () => {
         YOUTUBE_I031_CODEX_BIN: "/opt/homebrew/bin/codex",
       },
       accessPath: vi.fn(async () => undefined),
+      inspectAuthFile: vi.fn(async () => undefined),
       runCommand,
       platform: "darwin",
     })).resolves.toMatchObject({
@@ -70,9 +72,147 @@ describe("YTASYNC-WORKER standalone runner", () => {
         YOUTUBE_I031_CODEX_BIN: "/opt/homebrew/bin/codex",
       },
       accessPath: vi.fn(async () => undefined),
+      inspectAuthFile: vi.fn(async () => undefined),
       runCommand: vi.fn(async () => ({ stdout: "codex-cli 0.145.0\n" })),
       platform: "darwin",
     })).rejects.toMatchObject({ code: "RUNTIME_UNAVAILABLE" });
+  });
+
+  it("passes only provider-required variables to every extraction child", async () => {
+    const childEnv = sanitizeYoutubeExtractionChildEnvironment({
+      HOME: "/tmp/worker-b",
+      PATH: "/usr/bin:/bin",
+      YOUTUBE_API_KEY: "provider-key",
+      APIFY_TOKEN: "provider-fallback",
+      SUPABASE_SERVICE_ROLE_KEY: "forbidden-service-role",
+      HOMECOOK_YOUTUBE_WORKER_SIGNING_KEY: "forbidden-signing",
+      HOMECOOK_USER_TOKEN: "forbidden-user-token",
+    });
+
+    expect(childEnv).toMatchObject({
+      HOME: "/tmp/worker-b",
+      PATH: "/usr/bin:/bin",
+      YOUTUBE_API_KEY: "provider-key",
+      APIFY_TOKEN: "provider-fallback",
+    });
+    expect(childEnv).not.toHaveProperty("SUPABASE_SERVICE_ROLE_KEY");
+    expect(childEnv).not.toHaveProperty("HOMECOOK_YOUTUBE_WORKER_SIGNING_KEY");
+    expect(childEnv).not.toHaveProperty("HOMECOOK_USER_TOKEN");
+  });
+
+  it("does not expose forbidden sentinels to the actual extraction child process", async () => {
+    const root = mkdtempSync(join(tmpdir(), "yta-child-env-"));
+    tempDirs.push(root);
+    const bundle = join(root, "lib/server/youtube-i031-runtime/bundle");
+    mkdirSync(bundle, { recursive: true });
+    writeFileSync(join(bundle, "worker.mjs"), `
+      import { writeFile } from "node:fs/promises";
+      const args = Object.fromEntries(process.argv.slice(2).reduce((all, value, index, list) => {
+        if (value.startsWith("--")) all.push([value.slice(2), list[index + 1]]);
+        return all;
+      }, []));
+      await writeFile(args.result, JSON.stringify({
+        workerDataPersisted: true,
+        providerKeyPresent: process.env.YOUTUBE_API_KEY === "provider-key",
+        forbiddenPresent: [
+          process.env.SUPABASE_SERVICE_ROLE_KEY,
+          process.env.HOMECOOK_YOUTUBE_WORKER_SIGNING_KEY,
+          process.env.HOMECOOK_USER_TOKEN
+        ].some(Boolean)
+      }));
+    `);
+    chmodSync(join(bundle, "worker.mjs"), 0o555);
+    const extractor = createStandaloneYoutubeI031Extractor({
+      artifactRoot: root,
+      workerEnv: {
+        NODE_ENV: "test",
+        YOUTUBE_API_KEY: "provider-key",
+        SUPABASE_SERVICE_ROLE_KEY: "forbidden-service-role",
+        HOMECOOK_YOUTUBE_WORKER_SIGNING_KEY: "forbidden-signing",
+        HOMECOOK_USER_TOKEN: "forbidden-user-token",
+      },
+      verifyPreflight: vi.fn(async () => ({
+        codexBin: "/opt/homebrew/bin/codex",
+        codexCliVersion: "0.144.0-alpha.4",
+      })),
+    });
+
+    await expect(extractor.extract({
+      videoId: "abc123DEF45",
+      signal: new AbortController().signal,
+      claimedJob: {
+        jobId: "99999999-9999-4999-8999-999999999999",
+        videoId: "abc123DEF45",
+        workerId: "worker-env",
+        leaseGeneration: 1,
+      },
+      workerRpcClient: {
+        accessCache: vi.fn(),
+        recordEvent: vi.fn(),
+        reserveQuota: vi.fn(),
+        resolveMethods: vi.fn(),
+        updateTitle: vi.fn(),
+      },
+    })).resolves.toMatchObject({
+      providerKeyPresent: true,
+      forbiddenPresent: false,
+    });
+  });
+
+  it("rejects an auth.json whose owner-mode provenance is not exact", async () => {
+    const workerHome = mkdtempSync(join(tmpdir(), "yta-worker-home-"));
+    tempDirs.push(workerHome);
+    const authDir = join(workerHome, ".codex");
+    const authPath = join(authDir, "auth.json");
+    mkdirSync(authDir, { recursive: true });
+    writeFileSync(authPath, "{}\n");
+    chmodSync(authPath, 0o644);
+
+    await expect(verifyStandaloneYoutubeI031Preflight({
+      workerEnv: { HOME: workerHome, YOUTUBE_API_KEY: "provider-key" },
+      expectedUserId: process.getuid?.(),
+      accessPath: vi.fn(async () => undefined),
+      runCommand: vi.fn(),
+      platform: "darwin",
+    })).rejects.toMatchObject({ code: "RUNTIME_UNAVAILABLE" });
+  });
+
+  it("verifies auth.json from the exact requested worker HOME with owner and mode provenance", async () => {
+    const inspectAuthFile = vi.fn(async () => undefined);
+    const commandEnvironments: Array<Record<string, string | undefined> | undefined> = [];
+    const runCommand = vi.fn(async (
+      _command: string,
+      args: string[],
+      options?: { env?: Record<string, string | undefined> },
+    ) => {
+      commandEnvironments.push(options?.env);
+      return args[0] === "--version"
+        ? { stdout: "codex-cli 0.144.0-alpha.4\n" }
+        : args[0] === "login"
+          ? { stdout: "Logged in using ChatGPT\n" }
+          : { stdout: "ok\n" };
+    });
+
+    await verifyStandaloneYoutubeI031Preflight({
+      workerEnv: {
+        HOME: "/tmp/worker-home-b",
+        YOUTUBE_API_KEY: "provider-key",
+      },
+      expectedUserId: 501,
+      inspectAuthFile,
+      accessPath: vi.fn(async () => undefined),
+      runCommand,
+      platform: "darwin",
+    });
+
+    expect(inspectAuthFile).toHaveBeenCalledWith(
+      "/tmp/worker-home-b/.codex/auth.json",
+      501,
+    );
+    for (const environment of commandEnvironments) {
+      expect(environment?.HOME).toBe("/tmp/worker-home-b");
+      expect(environment).not.toHaveProperty("SUPABASE_SERVICE_ROLE_KEY");
+    }
   });
 
   it("normalizes provider failures into a bounded stable retry envelope", () => {
@@ -575,7 +715,7 @@ describe("YTASYNC-WORKER standalone runner", () => {
         return all;
       }, []));
       await writeFile(args.error, JSON.stringify({
-        code: process.env.TEST_ERROR_CODE,
+        code: ${JSON.stringify(errorCode)},
         retryable: true,
         stage: "provider",
         ignored_secret: "must-not-cross-boundary"
@@ -608,7 +748,7 @@ describe("YTASYNC-WORKER standalone runner", () => {
       rpc,
       extractor: createStandaloneYoutubeI031Extractor({
         artifactRoot: root,
-        workerEnv: { NODE_ENV: "test", TEST_ERROR_CODE: errorCode },
+        workerEnv: { NODE_ENV: "test" },
         verifyPreflight: vi.fn(async () => ({
           codexBin: "/opt/homebrew/bin/codex",
           codexCliVersion: "0.144.0-alpha.4",

@@ -1,5 +1,5 @@
 import { execFile, spawn } from "node:child_process";
-import { access, cp, mkdtemp, readFile, rm, stat } from "node:fs/promises";
+import { access, cp, lstat, mkdtemp, readFile, realpath, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
@@ -7,6 +7,27 @@ const LOOPBACK_HOSTS = new Set(["127.0.0.1", "localhost", "[::1]", "::1"]);
 const MAX_RESULT_BYTES = 2 * 1024 * 1024;
 const DEFAULT_EXTRACTION_TIMEOUT_MS = 20 * 60 * 1000;
 const I031_CODEX_CLI_VERSION = "0.144.0-alpha.4";
+const CHILD_ENV_ALLOWLIST = new Set([
+  "APIFY_TOKEN",
+  "HOME",
+  "HTTPS_PROXY",
+  "HTTP_PROXY",
+  "LANG",
+  "LC_ALL",
+  "LC_CTYPE",
+  "NODE_EXTRA_CA_CERTS",
+  "NO_PROXY",
+  "PATH",
+  "SSL_CERT_DIR",
+  "SSL_CERT_FILE",
+  "TMPDIR",
+  "YOUTUBE_API_KEY",
+  "YOUTUBE_I031_CODEX_BIN",
+  "YOUTUBE_TRANSCRIPT_APIFY_ACTOR_ID",
+  "YOUTUBE_TRANSCRIPT_PAID_TIMEOUT_MS",
+  "HOMECOOK_I031_CODEX_CLI_VERSION",
+  "NODE_ENV",
+]);
 const CACHE_OPERATIONS = new Set([
   "transcript_read",
   "transcript_upsert",
@@ -61,6 +82,24 @@ function positiveInteger(value, label) {
     throw new Error(`${label} must be a positive integer`);
   }
   return value;
+}
+
+export function sanitizeYoutubeExtractionChildEnvironment(environment = {}, overrides = {}) {
+  const sanitized = {};
+  for (const [key, value] of Object.entries({ ...environment, ...overrides })) {
+    if (CHILD_ENV_ALLOWLIST.has(key) && typeof value === "string" && value.length > 0) {
+      sanitized[key] = value;
+    }
+  }
+  return sanitized;
+}
+
+async function inspectWorkerAuthFile(pathname, expectedUserId) {
+  const file = await lstat(pathname);
+  if (!file.isFile() || file.isSymbolicLink()) throw new Error();
+  if (Number.isInteger(expectedUserId) && file.uid !== expectedUserId) throw new Error();
+  if ((file.mode & 0o777) !== 0o600) throw new Error();
+  if (await realpath(pathname) !== path.resolve(pathname)) throw new Error();
 }
 
 function successBoolean(result, operation) {
@@ -243,6 +282,8 @@ async function defaultRunCommand(command, args, { env } = {}) {
  *   accessPath?: (pathname: string) => Promise<void>,
  *   runCommand?: (command: string, args: string[], options?: {env?: Record<string, string | undefined>}) => Promise<{stdout?: string, stderr?: string}>,
  *   platform?: NodeJS.Platform,
+ *   expectedUserId?: number,
+ *   inspectAuthFile?: (pathname: string, expectedUserId?: number) => Promise<void>,
  * }} options
  */
 export async function verifyStandaloneYoutubeI031Preflight({
@@ -250,6 +291,8 @@ export async function verifyStandaloneYoutubeI031Preflight({
   accessPath = access,
   runCommand = defaultRunCommand,
   platform = process.platform,
+  expectedUserId = process.getuid?.(),
+  inspectAuthFile = inspectWorkerAuthFile,
 } = {}) {
   try {
     if (platform !== "darwin") throw new Error();
@@ -258,13 +301,14 @@ export async function verifyStandaloneYoutubeI031Preflight({
     const codexBin = path.resolve(
       workerEnv.YOUTUBE_I031_CODEX_BIN ?? "/opt/homebrew/bin/codex",
     );
+    const authPath = path.join(home, ".codex", "auth.json");
     await Promise.all([
       accessPath(codexBin),
-      accessPath(path.join(home, ".codex", "auth.json")),
+      inspectAuthFile(authPath, expectedUserId),
       accessPath("/usr/bin/sandbox-exec"),
       accessPath("/usr/bin/swiftc"),
     ]);
-    const commandEnv = { ...workerEnv, HOME: home };
+    const commandEnv = sanitizeYoutubeExtractionChildEnvironment(workerEnv, { HOME: home });
     const versionResult = await runCommand(codexBin, ["--version"], { env: commandEnv });
     const versionMatch = String(versionResult.stdout ?? "")
       .match(/(?:^|\s)(\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?)(?:\s|$)/u);
@@ -742,6 +786,7 @@ export function createStandaloneYoutubeI031Extractor({
   verifyPreflight = verifyStandaloneYoutubeI031Preflight,
 } = {}) {
   const root = path.resolve(requiredString(artifactRoot, "artifactRoot"));
+  const childEnvironment = sanitizeYoutubeExtractionChildEnvironment(workerEnv);
   const bundleRoot = path.join(root, "lib/server/youtube-i031-runtime/bundle");
   positiveInteger(timeoutMs, "timeoutMs");
   return {
@@ -776,7 +821,7 @@ export function createStandaloneYoutubeI031Extractor({
         return metadataPublishPromise;
       };
       try {
-        const preflight = await verifyPreflight({ workerEnv });
+        const preflight = await verifyPreflight({ workerEnv: childEnvironment });
         await cp(bundleRoot, workspace, { recursive: true, force: true });
         child = spawn(process.execPath, [
           path.join(workspace, "worker.mjs"),
@@ -791,7 +836,7 @@ export function createStandaloneYoutubeI031Extractor({
         ], {
           cwd: workspace,
           env: {
-            ...workerEnv,
+            ...childEnvironment,
             NODE_ENV: "production",
             YOUTUBE_I031_CODEX_BIN: preflight.codexBin,
             HOMECOOK_I031_CODEX_CLI_VERSION: preflight.codexCliVersion,

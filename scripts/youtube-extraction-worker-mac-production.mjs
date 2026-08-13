@@ -19,6 +19,7 @@ import { ensureAbsolutePath } from "./lib/youtube-extraction-worker-artifact.mjs
 import {
   readWorkerEnvironment,
   readWorkerProviderEnvironment,
+  sanitizeYoutubeExtractionChildEnvironment,
   verifyStandaloneYoutubeI031Preflight,
 } from "./lib/youtube-extraction-worker-runtime.mjs";
 
@@ -137,7 +138,11 @@ async function runI031Preflight(options) {
     workerConfig.HOMECOOK_YOUTUBE_WORKER_PROVIDER_SECRET_FILE,
   );
   const result = await verifyStandaloneYoutubeI031Preflight({
-    workerEnv: { ...process.env, ...providerEnvironment },
+    workerEnv: sanitizeYoutubeExtractionChildEnvironment(
+      { ...process.env, ...providerEnvironment },
+      { HOME: options.homeDir },
+    ),
+    expectedUserId: options.userId,
   });
   return {
     ready: true,

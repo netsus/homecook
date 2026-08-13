@@ -5,6 +5,7 @@ import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  realpathSync,
   readdirSync,
   rmSync,
   writeFileSync,
@@ -966,7 +967,7 @@ describe("YTASYNC-OPS preflight, drain, rollback, credential", () => {
       cwd: privateDir,
       env: {
         ...process.env,
-        HOME: fakeHome,
+        HOME: realpathSync(fakeHome),
         PATH: fakeBin,
       },
       stdio: ["ignore", "pipe", "pipe"],

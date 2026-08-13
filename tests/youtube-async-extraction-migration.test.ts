@@ -194,6 +194,24 @@ describe("YTASYNC-DB/SEC migration contract", () => {
     expect(sql).toContain("and not event.cache_hit");
   });
 
+  it("fences successful finalize replay by the exact original worker and lease generation", () => {
+    const sql = readFileSync(migrationPath, "utf8").toLowerCase();
+    const finalize = sql.split("function public.finalize_youtube_extraction_job")[1]
+      ?.split("$function$;")[0] ?? "";
+    const succeededReplay = finalize.split("if not found then")[1]?.split("end if;")[0] ?? "";
+    expect(succeededReplay).toContain("existing_job.lease_owner = v_requested_worker_id");
+    expect(succeededReplay).toContain("existing_job.lease_generation = v_requested_lease_generation");
+    expect(finalize).not.toContain("lease_owner = null");
+  });
+
+  it("serializes projection timestamps without millisecond truncation", () => {
+    const sql = readFileSync(migrationPath, "utf8").toLowerCase();
+    const list = sql.split("function public.list_youtube_extraction_job_projections")[1]
+      ?.split("$function$;")[0] ?? "";
+    expect(list).toContain("yyyy-mm-dd\"t\"hh24:mi:ss.us\"z\"");
+    expect(list).not.toContain("yyyy-mm-dd\"t\"hh24:mi:ss.ms\"z\"");
+  });
+
   it("seeds the exact i031-only policy disabled", () => {
     const sql = readFileSync(migrationPath, "utf8");
     expect(sql).toContain("9adc7876a02c2da55a92e3a65369bf4e803c78efb9a791717201eedc242c1908");
