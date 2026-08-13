@@ -77,6 +77,25 @@ Database/release surfaces:
 
 ## Verification evidence
 
+### 2026-08-14 second independent-review repair candidate
+
+- verification content head: `782646e7cb093803930f1c490682c2cb6e042095`; the following evidence commit changes documentation only
+- independent reviewer task `019ffbd0-a22f-7270-b8c0-3a4360cd0875` returned `REVISE` on `78b0a38825b48129b9c6f12d42cbaa5d038a08a7`; all three findings were repaired with RED-first regressions and the same task must re-review the replacement head
+- readiness now validates the enabled/valid database state before policy comparison: disabled, credential-cutoff, catalog/schema drift, `ready=false`, and malformed descriptors fail before write as `503 QUEUE_UNAVAILABLE`; only an enabled valid stale app descriptor returns `409 POLICY_CHANGED`
+- the migration preserves the official exact five-role set. The existing credential-manager owner executes readiness inside its already-frozen policy/credential boundary, the existing worker owner executes owner-filtered projections inside its jobs/sessions boundary, and the enqueue owner remains limited to policy `SELECT` plus jobs `SELECT,INSERT`; enqueue credential/session authority remains 0
+- the advisory-lock regression no longer acquires a test-owned shared lock. A second connection observes the actual enqueue RPC transaction's granted `ShareLock` by application name, backend PID, lock mode and grant state, then proves the rotation `ExclusiveLock` and retry `ShareLock` wait in order; accepted rows contain complete old/new snapshots and mixed snapshot count is 0
+- RED evidence: focused route/migration 3 failures / 18 passes before the minimal implementation
+- GREEN focused route/migration: 2 files / 21 tests passed; focused backend/migration/worker/installer regression: 9 files / 122 tests passed
+- product PostgreSQL/PostgREST integration: isolated real database and loopback Data API, 2 files / 36 tests passed; catalog fingerprint `42343e34fadbe3ddc4b73026c97cd6606e1f864182be2cd9ff571410289c8bb0`
+- focused local-only/workpack regression: 5 files / 35 tests passed
+- `verify:security-functions:isolated`: exact Supabase CLI `2.110.0`, migration tree SHA-256 `a0a75cef529d1e5e5b4632c448b4605a8eccacd57df5a4335313926761b225d9`, temporary project `hcg_7638_dd594b`; 205 additive functions classified, 8 anonymous mutations denied with unchanged checksums, 4 Data API probes returned `406/PGRST106`, cleanup residue 0
+- `verify:local-supabase-runtime:isolated`: the same CLI and migration tree, temporary project `hcg_11804_b9503c`; migration+seed and Data API `200` passed, cleanup residue 0
+- operating-state read-only comparison before/after both gates: Docker volume inventory SHA-256 `cfe7d35201429e2ab5421ab9867f1344665308553f801f12020092b09edf59f7` identical, app `127.0.0.1:3100` listener PID `3640` identical, isolated-gate labeled container/network/volume residue 0; only unrelated self-restarting `real_django_django_1` uptime changed
+- `pnpm lint`, `pnpm typecheck`, `pnpm build`, workpack/source-of-truth/workflow-v2/OMO validators and `git diff --check`: pass
+- `pnpm test`: 570 files passed / 31 skipped; 6066 tests passed / 439 skipped
+- `PLAYWRIGHT_BASE_URL=http://127.0.0.1:3199 pnpm verify:backend`: lint, typecheck, 238 product files passed / 12 skipped and 2741 tests passed / 175 skipped, production build, security Playwright 12/12 passed; operating app `3100` untouched
+- Supabase Cloud/linked/remote access, hosted URL or credential lookup, production migration, feature activation, launchd action and operating full-local mutation: 0
+
 ### 2026-08-14 independent-review repair candidate
 
 - verification content head: `57722981d9fa7aed7a709ffeb85ee36fd4fb9315`; the following evidence commit changes documentation only
