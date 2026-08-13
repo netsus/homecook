@@ -1,0 +1,21 @@
+{
+  "score": 95,
+  "status": "pass",
+  "breakdown": {
+    "composition": 24,
+    "hierarchy": 20,
+    "typography": 14,
+    "color": 15,
+    "craft": 13,
+    "fidelity": 9
+  },
+  "feedback": {
+    "critical": [],
+    "high": [],
+    "medium": [],
+    "low": [
+      "320px 실패 목록은 의도한 내부 스크롤을 사용하므로 첫 화면에는 한 항목만 보인다.",
+      "실기기 safe-area와 가상 키보드 가림은 Manual Only 검증으로 남는다."
+    ]
+  }
+}

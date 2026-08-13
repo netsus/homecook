@@ -5,10 +5,10 @@
 ## Happy Path
 
 - [x] `POST /api/v1/recipes/youtube/extraction-jobs`가 provider를 직접 호출하지 않고 exact union을 `202 {job_id,status,deduplicated,submitted_at}`로 접수한다 <!-- omo:id=accept-yta-enqueue-202;stage=2;scope=backend;review=3,6 -->
-- [ ] 사용자는 접수 뒤 다른 화면으로 이동·새로고침·앱 종료해도 같은 job의 terminal 결과를 복구한다 <!-- omo:id=accept-yta-background-durable;stage=4;scope=frontend;review=5,6 -->
+- [x] 사용자는 접수 뒤 다른 화면으로 이동·새로고침·앱 종료해도 같은 job의 terminal 결과를 복구한다 <!-- omo:id=accept-yta-background-durable;stage=4;scope=frontend;review=5,6 -->
 - [x] worker 성공은 session/candidates/job을 한 finalize transaction으로 만들고 draft 검수·등록으로 연결한다 <!-- omo:id=accept-yta-finalize-review-register;stage=2;scope=shared;review=3,6 -->
-- [ ] app shell은 재로그인/foreground/재실행 뒤 unseen success/failure/expired를 toast+badge+durable list로 표시한다 <!-- omo:id=accept-yta-shell-notification;stage=4;scope=frontend;review=5,6 -->
-- [ ] 성공 draft CTA `결과 확인`은 exact session-read로 검수 화면을 복원하고 consumed CTA `레시피 보기`는 등록 recipe로 이동한다 <!-- omo:id=accept-yta-success-destination;stage=4;scope=frontend;review=5,6 -->
+- [x] app shell은 재로그인/foreground/재실행 뒤 unseen success/failure/expired를 toast+badge+durable list로 표시한다 <!-- omo:id=accept-yta-shell-notification;stage=4;scope=frontend;review=5,6 -->
+- [x] 성공 draft CTA `결과 확인`은 exact session-read로 검수 화면을 복원하고 consumed CTA `레시피 보기`는 등록 recipe로 이동한다 <!-- omo:id=accept-yta-success-destination;stage=4;scope=frontend;review=5,6 -->
 - [x] 기존 `/recipes/new/youtube` Quick Import UI·sync response·auto-register 의미가 유지된다 <!-- omo:id=accept-yta-quick-import-compat;stage=2;scope=shared;review=3,6 -->
 
 ## State / Policy
@@ -21,18 +21,18 @@
 - [x] options-only rotation은 stale app을 `POLICY_CHANGED` write 0으로 막고 old worker의 claim/reaper/start/finalize를 0으로 만든다 <!-- omo:id=accept-yta-options-rotation-fail-closed;stage=2;scope=backend;review=3,6 -->
 - [x] unconsumed draft TTL 만료만 public `expired`이고 `consumed-after-TTL`은 succeeded+recipe destination+`can_retry=false`다 <!-- omo:id=accept-yta-consumed-ttl-precedence;stage=2;scope=shared;review=3,6 -->
 - [x] toast 렌더는 delivered만 기록하고 목록 항목/CTA 확인만 seen을 기록하며 archive는 30일 retention을 유지한다 <!-- omo:id=accept-yta-delivered-seen-archive;stage=2;scope=shared;review=3,6 -->
-- [ ] `can_retry=false`이면 toast/list/deep link 어디에도 retry CTA/body/POST가 없다 <!-- omo:id=accept-yta-can-retry-first;stage=4;scope=frontend;review=5,6 -->
+- [x] `can_retry=false`이면 toast/list/deep link 어디에도 retry CTA/body/POST가 없다 <!-- omo:id=accept-yta-can-retry-first;stage=4;scope=frontend;review=5,6 -->
 
 ## Error / Permission
 
-- [ ] unauthenticated route는 `401 UNAUTHORIZED`이고 private job count/title/thumbnail을 렌더하지 않으며 LOGIN return-to-action을 보존한다 <!-- omo:id=accept-yta-unauthorized-return;stage=4;scope=frontend;review=5,6 -->
+- [x] unauthenticated route는 `401 UNAUTHORIZED`이고 private job count/title/thumbnail을 렌더하지 않으며 LOGIN return-to-action을 보존한다 <!-- omo:id=accept-yta-unauthorized-return;stage=4;scope=frontend;review=5,6 -->
 - [x] 없는/타인 job과 session은 공식 동일 404 의미로 숨겨 소유 여부를 노출하지 않는다 <!-- omo:id=accept-yta-owner-nondisclosure;stage=2;scope=backend;review=3,6 -->
 - [x] enqueue body의 두 branch 동시/empty/unknown policy·digest field는 `422 VALIDATION_ERROR`와 write 0이다 <!-- omo:id=accept-yta-exact-union-validation;stage=2;scope=backend;review=3,6 -->
-- [ ] `POLICY_CHANGED`는 URL 입력을 보존한 안전 문구를 표시하고 success/terminal 알림으로 저장하지 않는다 <!-- omo:id=accept-yta-policy-changed-ui;stage=4;scope=frontend;review=5,6 -->
-- [ ] offline 또는 enqueue response 미수신은 local success를 추측하지 않고 입력 보존+retry를 제공한다 <!-- omo:id=accept-yta-offline-unknown-submit;stage=4;scope=frontend;review=5,6 -->
-- [ ] exhaustive 6개 public failure code의 message/retryable/CTA가 공식 표와 exact match한다 <!-- omo:id=accept-yta-safe-failure-table;stage=4;scope=frontend;review=5,6 -->
+- [x] `POLICY_CHANGED`는 URL 입력을 보존한 안전 문구를 표시하고 success/terminal 알림으로 저장하지 않는다 <!-- omo:id=accept-yta-policy-changed-ui;stage=4;scope=frontend;review=5,6 -->
+- [x] offline 또는 enqueue response 미수신은 local success를 추측하지 않고 입력 보존+retry를 제공한다 <!-- omo:id=accept-yta-offline-unknown-submit;stage=4;scope=frontend;review=5,6 -->
+- [x] exhaustive 6개 public failure code의 message/retryable/CTA가 공식 표와 exact match한다 <!-- omo:id=accept-yta-safe-failure-table;stage=4;scope=frontend;review=5,6 -->
 - [x] `QUEUE_BUSY`/`EXTRACTION_TIMEOUT`과 disconnect는 shared job을 cancel/failed로 바꾸지 않고 durable completion으로 회복한다 <!-- omo:id=accept-yta-sync-wait-recovery;stage=2;scope=shared;review=3,6 -->
-- [ ] loading/empty/error/offline/read-only/unauthorized 화면 상태가 모두 존재하고 safe retry/recovery를 제공한다 <!-- omo:id=accept-yta-required-ui-states;stage=4;scope=frontend;review=5,6 -->
+- [x] loading/empty/error/offline/read-only/unauthorized 화면 상태가 모두 존재하고 safe retry/recovery를 제공한다 <!-- omo:id=accept-yta-required-ui-states;stage=4;scope=frontend;review=5,6 -->
 
 ## Data Integrity
 
@@ -43,7 +43,7 @@
 - [x] worker API roles는 table/sequence privilege 0이고 exact RPC owner/RLS/ACL/membership/pre-request만 통과한다 <!-- omo:id=accept-yta-worker-least-privilege;stage=2;scope=backend;review=3,6 -->
 - [x] stale job/permit/credential generation의 heartbeat/start/cache/event/method/finalize/fail/release write는 모두 0이다 <!-- omo:id=accept-yta-generation-fencing;stage=2;scope=backend;review=3,6 -->
 - [x] raw worker/manager JWT, signing/service-role key, user access/refresh token, cookie, HMAC key가 DB·Git·artifact·env·argv·plist·log에 없다 <!-- omo:id=accept-yta-secret-boundary;stage=2;scope=backend;review=3,6 -->
-- [ ] title snapshot은 nullable sanitized 160자이고 null이면 UI가 `YouTube 레시피` fallback을 쓴다 <!-- omo:id=accept-yta-title-snapshot;stage=4;scope=frontend;review=5,6 -->
+- [x] title snapshot은 nullable sanitized 160자이고 null이면 UI가 `YouTube 레시피` fallback을 쓴다 <!-- omo:id=accept-yta-title-snapshot;stage=4;scope=frontend;review=5,6 -->
 
 ## Data Setup / Preconditions
 
@@ -56,10 +56,10 @@
 
 ## Design / Accessibility
 
-- [ ] `YT_IMPORT_BACKGROUND`가 390/320/desktop에서 primary CTA `가져오기`, `작업 보기`, duplicate/offline/error copy와 scroll containment를 보존한다 <!-- omo:id=accept-yta-import-visual;stage=4;scope=frontend;review=5,6 -->
-- [ ] `APP_SHELL_YOUTUBE_NOTIFICATIONS`가 390/320/desktop에서 badge/toast/list/archive를 page-level overflow 없이 제공한다 <!-- omo:id=accept-yta-shell-visual;stage=4;scope=frontend;review=5,6 -->
-- [ ] toast는 `aria-live=polite`, non-forced focus, exact CTA label을 사용하고 상태는 icon+text로 전달한다 <!-- omo:id=accept-yta-notification-a11y;stage=4;scope=frontend;review=5,6 -->
-- [ ] keyboard, 200% text, reduced motion, narrow safe-area에서 CTA 잘림·modal/panel footer 가림·text overlap이 없다 <!-- omo:id=accept-yta-small-viewport-a11y;stage=4;scope=frontend;review=5,6 -->
+- [x] `YT_IMPORT_BACKGROUND`가 390/320/desktop에서 primary CTA `가져오기`, `작업 보기`, duplicate/offline/error copy와 scroll containment를 보존한다 <!-- omo:id=accept-yta-import-visual;stage=4;scope=frontend;review=5,6 -->
+- [x] `APP_SHELL_YOUTUBE_NOTIFICATIONS`가 390/320/desktop에서 badge/toast/list/archive를 page-level overflow 없이 제공한다 <!-- omo:id=accept-yta-shell-visual;stage=4;scope=frontend;review=5,6 -->
+- [x] toast는 `aria-live=polite`, non-forced focus, exact CTA label을 사용하고 상태는 icon+text로 전달한다 <!-- omo:id=accept-yta-notification-a11y;stage=4;scope=frontend;review=5,6 -->
+- [x] keyboard, 200% text, reduced motion, narrow safe-area에서 CTA 잘림·modal/panel footer 가림·text overlap이 없다 <!-- omo:id=accept-yta-small-viewport-a11y;stage=4;scope=frontend;review=5,6 -->
 - [ ] Stage 4와 다른 authority precheck, Stage 5, final authority가 current head의 두 screen을 blocker/major 0으로 승인한다 <!-- omo:id=accept-yta-authority-pass;stage=4;scope=frontend;review=5,6 -->
 
 ## Manual QA
@@ -82,8 +82,8 @@
 
 ### Playwright / Exploratory QA
 
-- [ ] `YTASYNC-E2E-*`가 background submit→이탈→notification→review/register와 Quick Import 비변경을 desktop/390/320에서 검증한다 <!-- omo:id=accept-yta-playwright-flow;stage=4;scope=frontend;review=5,6 -->
-- [ ] high-risk exploratory QA report와 `qa:eval`이 current frontend head에서 required device coverage와 recovery UX를 통과한다 <!-- omo:id=accept-yta-exploratory-qa;stage=4;scope=frontend;review=5,6 -->
+- [x] `YTASYNC-E2E-*`가 background submit→이탈→notification→review/register와 Quick Import 비변경을 desktop/390/320에서 검증한다 <!-- omo:id=accept-yta-playwright-flow;stage=4;scope=frontend;review=5,6 -->
+- [x] high-risk exploratory QA report와 `qa:eval`이 current frontend head에서 required device coverage와 recovery UX를 통과한다 <!-- omo:id=accept-yta-exploratory-qa;stage=4;scope=frontend;review=5,6 -->
 
 ### Release / Closeout
 
