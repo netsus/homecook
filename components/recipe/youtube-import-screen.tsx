@@ -462,7 +462,7 @@ interface AppBarProps {
 function AppBar({ step, onBack, onRegister, canRegister, isRegistering }: AppBarProps) {
   return (
     <div className="shrink-0 border-b border-[var(--line)] bg-[var(--surface)]">
-      <div className="flex h-14 items-center gap-2 px-2">
+      <div className="flex min-h-14 items-center gap-2 px-2 py-2">
         {step !== "complete" && (
           <AppBackButton
             ariaLabel="뒤로 가기"
@@ -470,9 +470,10 @@ function AppBar({ step, onBack, onRegister, canRegister, isRegistering }: AppBar
             onClick={onBack}
           />
         )}
-        <h1 className="min-w-0 flex-1 truncate text-lg font-semibold text-[var(--foreground)]">
+        <h1 className="min-w-0 flex-1 break-keep text-base font-semibold leading-tight text-[var(--foreground)] sm:text-lg">
           {step === "review" ? "추출 결과 확인" : "유튜브 가져오기"}
         </h1>
+        {step !== "review" ? <span aria-hidden="true" className="h-[44px] w-[44px] shrink-0" /> : null}
         {step === "review" && (
           <button
             className={[
@@ -802,7 +803,11 @@ function BackgroundAcceptedStep({
           {failed ? "!" : "✓"}
         </div>
         <h2 className="mt-5 break-keep text-xl font-bold text-[var(--foreground)]">
-          {failed ? "추출을 완료하지 못했어요" : "추출을 시작했어요. 완료되면 알려드릴게요."}
+          {failed
+            ? "추출을 완료하지 못했어요"
+            : deduplicated
+              ? "이미 추출 중이에요"
+              : "추출을 시작했어요. 완료되면 알려드릴게요."}
         </h2>
         <p className="mt-3 break-keep text-base text-[var(--text-2)]">
           {failed
@@ -814,18 +819,19 @@ function BackgroundAcceptedStep({
         {videoTitle ? <p className="mt-2 max-w-full truncate text-sm font-semibold text-[var(--foreground)]">{videoTitle}</p> : null}
         <div className="mt-7 flex w-full flex-col gap-3 sm:flex-row sm:justify-center">
           {failed && job.can_retry ? (
-            <Button onClick={onRetry} style={{ color: "var(--foreground)" }}>
+            <Button className="h-auto min-h-11 w-full whitespace-nowrap px-2 py-3 text-sm leading-tight" onClick={onRetry} style={{ color: "var(--foreground)" }}>
               {getAcceptedRetryLabel(job)}
             </Button>
           ) : null}
           <Button
+            className="h-auto min-h-11 w-full whitespace-nowrap px-2 py-3 text-sm leading-tight"
             onClick={onExit}
             style={failed ? undefined : { color: "var(--foreground)" }}
             variant={failed ? "neutral" : "primary"}
           >
             나가기
           </Button>
-          <Button onClick={onOpenJobs} variant="neutral">작업 보기</Button>
+          <Button className="h-auto min-h-11 w-full whitespace-nowrap px-2 py-3 text-sm leading-tight" onClick={onOpenJobs} variant="neutral">작업 보기</Button>
         </div>
       </div>
     </div>
@@ -3699,7 +3705,13 @@ export function YoutubeImportScreen({
 
   if (presentation === "screen") {
     return (
-      <div className="yt-mobile-import-shell flex h-dvh flex-col overflow-hidden">
+      <div
+        className="yt-mobile-import-shell flex h-dvh flex-col overflow-hidden"
+        style={{
+          paddingBottom: "var(--youtube-import-safe-area-bottom, env(safe-area-inset-bottom))",
+          paddingTop: "var(--youtube-import-safe-area-top, env(safe-area-inset-top))",
+        }}
+      >
         <AppBar
           canRegister={canRegister}
           isRegistering={isRegistering}

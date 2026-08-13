@@ -118,7 +118,7 @@ describe("YouTube extraction notification center", () => {
     renderCenter();
 
     expect(await screen.findByText("YouTube 레시피 추출이 완료됐어요")).toBeTruthy();
-    expect(screen.getByText("YouTube 레시피")).toBeTruthy();
+    expect(screen.getByText("추출 결과를 확인하고 레시피로 등록할 수 있어요.")).toBeTruthy();
     expect(screen.getByLabelText("YouTube 추출 알림 1개")).toBeTruthy();
 
     await waitFor(() => {
@@ -163,15 +163,25 @@ describe("YouTube extraction notification center", () => {
       data: { items: [consumedItem], next_cursor: null },
       error: null,
     });
-    const user = userEvent.setup();
-
     renderCenter();
-    await user.click(await screen.findByRole("button", { name: "YouTube 추출 알림 1개" }));
 
-    expect(screen.getByText("이미 등록한 레시피예요")).toBeTruthy();
+    expect(await screen.findByText("이미 등록한 레시피예요")).toBeTruthy();
     expect(screen.queryByText("추출 결과를 확인하고 레시피로 등록할 수 있어요.")).toBeNull();
     expect(screen.getByRole("link", { name: "레시피 보기" }).getAttribute("href"))
       .toBe("/recipes/recipe-registered");
+  });
+
+  it("shows the exact safe failure message in an individual toast", async () => {
+    vi.mocked(api.fetchYoutubeExtractionNotifications).mockResolvedValue({
+      success: true,
+      data: { items: [failedItem], next_cursor: null },
+      error: null,
+    });
+
+    renderCenter();
+
+    expect(await screen.findByText("YouTube 레시피 추출에 실패했어요")).toBeTruthy();
+    expect(screen.getByText("레시피 영상으로 확인되지 않았어요.")).toBeTruthy();
   });
 
   it("marks only the exact owner-scoped job seen after the browser observes registration success", async () => {
@@ -333,6 +343,30 @@ describe("YouTube extraction notification center", () => {
     )).toEqual(["extraction-success"]);
   });
 
+  it("clears a pending ack when the exact owner-scoped archive row is already seen", async () => {
+    const alreadySeen = {
+      ...successItem,
+      delivered_at: "2026-08-14T01:04:00.000Z",
+      seen_at: "2026-08-14T01:05:00.000Z",
+    };
+    vi.mocked(api.fetchYoutubeExtractionNotifications).mockImplementation(async (view, options) => {
+      if (options?.limit === 50 && view === "archive") {
+        return { success: true, data: { items: [alreadySeen], next_cursor: null }, error: null };
+      }
+      return { success: true, data: { items: [], next_cursor: null }, error: null };
+    });
+
+    renderCenter();
+    expect(await screen.findByLabelText("YouTube 추출 알림 없음")).toBeTruthy();
+    act(() => notifyYoutubeExtractionSessionRegistered("extraction-success"));
+
+    await waitFor(() => expect(
+      window.sessionStorage.getItem(YOUTUBE_EXTRACTION_REGISTERED_ACKS_STORAGE_KEY),
+    ).toBe("[]"));
+    expect(api.fetchYoutubeExtractionNotifications).toHaveBeenCalledWith("archive", { limit: 50 });
+    expect(api.markYoutubeExtractionSeen).not.toHaveBeenCalled();
+  });
+
   it("keeps registration successful and retries durable seen after a network failure without permanent hiding", async () => {
     vi.mocked(api.fetchYoutubeExtractionNotifications).mockResolvedValue({
       success: true,
@@ -408,6 +442,9 @@ describe("YouTube extraction notification center", () => {
     expect(await screen.findByText("레시피 추출 2건이 끝났어요")).toBeTruthy();
     expect(screen.queryByText("YouTube 레시피 추출이 완료됐어요")).toBeNull();
     expect(screen.queryByText("YouTube 레시피 추출에 실패했어요")).toBeNull();
+    expect(screen.getByTestId("youtube-notification-toast-icon").textContent).toBe("•");
+    expect(screen.getByTestId("youtube-notification-toast-icon").getAttribute("data-outcome"))
+      .toBe("mixed");
     await waitFor(() => {
       expect(api.markYoutubeExtractionDelivered).toHaveBeenCalledWith([
         successItem.delivery_key,
@@ -477,6 +514,30 @@ describe("YouTube extraction notification center", () => {
     expect(screen.queryByRole("dialog", { name: "YouTube 추출 알림" })).toBeNull();
   });
 
+  it("keeps the badge unseen until the seen mutation succeeds and offers a retry", async () => {
+    vi.mocked(api.fetchYoutubeExtractionNotifications).mockResolvedValue({
+      success: true,
+      data: { items: [successItem], next_cursor: null },
+      error: null,
+    });
+    vi.mocked(api.markYoutubeExtractionSeen)
+      .mockResolvedValueOnce({
+        success: false,
+        data: null,
+        error: { code: "NETWORK_ERROR", message: "연결을 확인해 주세요.", fields: [] },
+      })
+      .mockResolvedValueOnce({ success: true, data: { seen_count: 1 }, error: null });
+    const user = userEvent.setup();
+
+    renderCenter();
+    await user.click(await screen.findByRole("button", { name: "YouTube 추출 알림 1개" }));
+
+    expect(await screen.findByRole("button", { name: "확인 상태 다시 저장" })).toBeTruthy();
+    expect(screen.getByLabelText("YouTube 추출 알림 1개")).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "확인 상태 다시 저장" }));
+    await waitFor(() => expect(screen.getByLabelText("YouTube 추출 알림 없음")).toBeTruthy());
+  });
+
   it("marks seen when the user follows a toast CTA, not when merely delivered", async () => {
     vi.mocked(api.fetchYoutubeExtractionNotifications).mockResolvedValue({
       success: true,
@@ -532,8 +593,27 @@ describe("YouTube extraction notification center", () => {
 
     const login = await screen.findByRole("link", { name: "로그인하고 돌아오기" });
     expect(login.getAttribute("href")).toContain("/login?next=");
+    expect(screen.getByRole("button", { name: "로그인 안내 닫기" })).toBeTruthy();
+    expect(login.closest("aside")?.className).not.toContain("top-[");
     expect(screen.queryByText("매콤한 두부조림")).toBeNull();
     expect(screen.queryByText("YouTube 레시피")).toBeNull();
+  });
+
+  it("keeps mobile toasts below primary controls and uses a compact mobile row", async () => {
+    vi.mocked(api.fetchYoutubeExtractionNotifications).mockResolvedValue({
+      success: true,
+      data: { items: [successItem], next_cursor: null },
+      error: null,
+    });
+    const user = userEvent.setup();
+    renderCenter();
+
+    const toast = await screen.findByTestId("youtube-notification-toast-stack");
+    expect(toast.className).toContain("bottom-");
+    expect(toast.className).toContain("sm:top-");
+    await user.click(screen.getByRole("button", { name: "YouTube 추출 알림 1개" }));
+    const row = screen.getByRole("article", { name: "YouTube 레시피" });
+    expect(row.className).toContain("grid-cols-[48px_minmax(0,1fr)]");
   });
 
   it("uses the official retry label and exact retry body for quota failures", async () => {

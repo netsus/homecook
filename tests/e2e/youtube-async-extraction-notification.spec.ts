@@ -401,6 +401,43 @@ test("async enqueue is immediately escapable and visually stable at 390", async 
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });
 
+test("accepted actions remain reachable at 320 and 200% in a keyboard-reduced safe area", async ({ page }, testInfo) => {
+  await openImport(page, "accepted", 320, 568);
+  await page.addStyleTag({
+    content: ":root { --youtube-import-safe-area-top: 24px; --youtube-import-safe-area-bottom: 34px; font-size: 200%; }",
+  });
+  const scroll = page.locator(".yt-mobile-import-scroll");
+  const screenTitle = page.getByRole("heading", { name: "유튜브 가져오기" });
+  const leave = page.getByRole("button", { name: "나가기" });
+  const jobs = page.getByRole("button", { name: "작업 보기" });
+  await expect(page.getByRole("heading", { name: "추출을 시작했어요. 완료되면 알려드릴게요." })).toBeVisible();
+  await leave.scrollIntoViewIfNeeded();
+  await expect(leave).toBeVisible();
+  await expect(jobs).toBeVisible();
+  await expect(leave).toHaveCSS("white-space", "nowrap");
+  await expect(jobs).toHaveCSS("white-space", "nowrap");
+  expect(await screenTitle.evaluate((element) => (
+    element.scrollWidth <= element.clientWidth && element.scrollHeight <= element.clientHeight
+  ))).toBe(true);
+  const [titleBox, notificationTriggerBox] = await Promise.all([
+    screenTitle.boundingBox(),
+    page.locator("[data-youtube-extraction-trigger='global']").boundingBox(),
+  ]);
+  expect((titleBox?.x ?? 0) + (titleBox?.width ?? 0)).toBeLessThanOrEqual(
+    notificationTriggerBox?.x ?? 0,
+  );
+  const [leaveBox, jobsBox] = await Promise.all([leave.boundingBox(), jobs.boundingBox()]);
+  expect(leaveBox?.y).toBeGreaterThanOrEqual(24);
+  expect((jobsBox?.y ?? 0) + (jobsBox?.height ?? 0)).toBeLessThanOrEqual(568 - 34);
+  expect(await scroll.evaluate((element) => element.scrollHeight > element.clientHeight)).toBe(true);
+  expect(await scroll.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
+  await captureEvidence(
+    page,
+    testInfo,
+    path.join(IMPORT_EVIDENCE, "mobile-320-accepted-200-keyboard.png"),
+  );
+});
+
 test("offline keeps the URL and gives a retryable 320 state", async ({ page }, testInfo) => {
   await openImport(page, "offline", 320, 568);
   await expect(page.locator(".web-menu-add-error")).toContainText("인터넷 연결을 확인한 뒤 다시 시도해 주세요.");
@@ -437,6 +474,7 @@ test("accepted retry uses quota copy and projects the replacement job before exi
 
 test("duplicate active work is explicit on desktop", async ({ page }, testInfo) => {
   await openImport(page, "duplicate", 1280, 800);
+  await expect(page.getByRole("heading", { name: "이미 추출 중이에요" })).toBeVisible();
   await expect(page.getByText("같은 영상의 작업이 이미 진행 중이에요. 이 화면을 나가도 계속 처리돼요.")).toBeVisible();
   await captureEvidence(page, testInfo, path.join(IMPORT_EVIDENCE, "desktop-1280-active-duplicate.png"), true);
 });
@@ -459,10 +497,16 @@ test("app shell groups terminal outcomes and keeps the badge until list exposure
   ]);
   await page.goto("/");
   await expect(page.getByText("레시피 추출 2건이 끝났어요")).toBeVisible();
+  await expect(page.getByTestId("youtube-notification-toast-icon")).toHaveAttribute("data-outcome", "mixed");
+  await expect(page.getByTestId("youtube-notification-toast-icon")).toHaveText("•");
   const stableTrigger = page.locator(
     "[data-youtube-extraction-trigger='header'], [data-youtube-extraction-trigger='global']",
   );
   await expect(stableTrigger).toBeVisible();
+  const toastBox = await page.getByTestId("youtube-notification-toast-stack").boundingBox();
+  const searchBox = await page.locator(".home-mobile-discovery-search").boundingBox();
+  expect((toastBox?.y ?? 0) >= (searchBox?.y ?? 0) + (searchBox?.height ?? 0)
+    || (toastBox?.y ?? 0) + (toastBox?.height ?? 0) <= (searchBox?.y ?? 0)).toBe(true);
   const results = await new AxeBuilder({ page })
     .include("[data-youtube-notification-toast]")
     .analyze();
@@ -482,13 +526,79 @@ test("consumed notification shows the registered-recipe meaning and destination"
     notificationItem({ consumed: true, status: "succeeded", title: "이미 등록한 감자 수프" }),
   ]);
   await page.goto("/");
+  await expect(page.getByTestId("youtube-notification-toast-stack").getByText("이미 등록한 레시피예요")).toBeVisible();
+  await captureEvidence(page, testInfo, path.join(SHELL_EVIDENCE, "mobile-390-consumed-toast.png"));
   await page.getByRole("button", { name: "YouTube 추출 알림 1개" }).click();
-  await expect(page.getByText("이미 등록한 레시피예요")).toBeVisible();
+  await expect(page.getByTestId("youtube-notification-list").getByText("이미 등록한 레시피예요")).toBeVisible();
   await expect(page.getByTestId("youtube-notification-list").getByRole("link", { name: "레시피 보기" })).toHaveAttribute(
     "href",
     "/recipes/recipe-potato-soup",
   );
   await captureEvidence(page, testInfo, path.join(SHELL_EVIDENCE, "mobile-390-consumed.png"));
+});
+
+test("individual draft and failed toasts include exact state body copy", async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await setE2EAuthOverride(page);
+  await installDiscoveryRoutes(page);
+  await installNotificationRoutes(page, [notificationItem({ status: "succeeded", title: "감자 수프" })]);
+  await page.goto("/");
+  await expect(page.getByText("추출 결과를 확인하고 레시피로 등록할 수 있어요.")).toBeVisible();
+  await captureEvidence(page, testInfo, path.join(SHELL_EVIDENCE, "mobile-390-draft-toast.png"));
+
+  await page.unroute("**/api/v1/users/me/youtube-extraction-jobs**");
+  await installNotificationRoutes(page, [
+    notificationItem({ code: "NOT_RECIPE_VIDEO", status: "failed", title: "레시피가 아닌 영상" }),
+  ]);
+  await page.reload();
+  await expect(page.getByText("레시피 영상으로 확인되지 않았어요.")).toBeVisible();
+  await captureEvidence(page, testInfo, path.join(SHELL_EVIDENCE, "mobile-390-failed-toast.png"));
+});
+
+test("real reload and logout-login restore badge list and exact destination", async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await setE2EAuthOverride(page);
+  await installDiscoveryRoutes(page);
+  await installNotificationRoutes(page, [notificationItem({ status: "succeeded", title: "감자 수프" })]);
+  await page.goto("/");
+  await expect(page.getByRole("button", { name: "YouTube 추출 알림 1개" })).toBeVisible();
+
+  await page.reload();
+  await expect(page.getByRole("button", { name: "YouTube 추출 알림 1개" })).toBeVisible();
+  await setE2EAuthOverride(page, "guest");
+  await page.reload();
+  await expect(page.locator("[data-youtube-extraction-trigger]")).toHaveCount(0);
+
+  await setE2EAuthOverride(page, "authenticated");
+  await page.reload();
+  await page.getByRole("button", { name: "YouTube 추출 알림 1개" }).click();
+  const destination = page.getByTestId("youtube-notification-list").getByRole("link", { name: "결과 확인" });
+  await expect(destination).toHaveAttribute(
+    "href",
+    `/menu/add/youtube?extractionId=${EXTRACTION_ID}`,
+  );
+  await captureEvidence(page, testInfo, path.join(SHELL_EVIDENCE, "mobile-390-relogin-recovery.png"));
+});
+
+test("desktop toast remains clear of discovery controls", async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await setE2EAuthOverride(page);
+  await installDiscoveryRoutes(page);
+  await installNotificationRoutes(page, [notificationItem({ status: "succeeded", title: "감자 수프" })]);
+  await page.goto("/");
+  await expect(page.getByText("추출 결과를 확인하고 레시피로 등록할 수 있어요.")).toBeVisible();
+  const toastBox = await page.getByTestId("youtube-notification-toast-stack").boundingBox();
+  for (const control of [
+    page.getByPlaceholder("레시피 제목 검색"),
+    page.getByRole("button", { name: "재료로 검색" }),
+  ]) {
+    const controlBox = await control.boundingBox();
+    expect((toastBox?.x ?? 0) >= (controlBox?.x ?? 0) + (controlBox?.width ?? 0)
+      || (toastBox?.x ?? 0) + (toastBox?.width ?? 0) <= (controlBox?.x ?? 0)
+      || (toastBox?.y ?? 0) >= (controlBox?.y ?? 0) + (controlBox?.height ?? 0)
+      || (toastBox?.y ?? 0) + (toastBox?.height ?? 0) <= (controlBox?.y ?? 0)).toBe(true);
+  }
+  await captureEvidence(page, testInfo, path.join(SHELL_EVIDENCE, "desktop-1440-draft-toast.png"));
 });
 
 test("expired and non-retryable outcomes remain distinguishable", async ({ page }, testInfo) => {
@@ -540,6 +650,12 @@ test("shell unauthorized state keeps a return-to-login action", async ({ page },
   await page.goto("/");
   await expect(page.getByText("로그인이 필요해요")).toBeVisible();
   await expect(page.getByRole("link", { name: "로그인하고 돌아오기" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "로그인 안내 닫기" })).toBeVisible();
+  const notice = page.getByRole("complementary", { name: "로그인 안내" });
+  const search = page.locator(".home-mobile-discovery-search");
+  const [noticeBox, searchBox] = await Promise.all([notice.boundingBox(), search.boundingBox()]);
+  expect((noticeBox?.y ?? 0) >= (searchBox?.y ?? 0) + (searchBox?.height ?? 0)
+    || (noticeBox?.y ?? 0) + (noticeBox?.height ?? 0) <= (searchBox?.y ?? 0)).toBe(true);
   await captureEvidence(page, testInfo, path.join(SHELL_EVIDENCE, "mobile-390-unauthorized.png"));
 });
 

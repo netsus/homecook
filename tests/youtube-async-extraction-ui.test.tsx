@@ -151,6 +151,24 @@ describe("YT_IMPORT async extraction", () => {
     expect(jobs.className).not.toContain("bg-[var(--wave1-mint-contrast)]");
   });
 
+  it("uses the exact duplicate-active accepted heading", async () => {
+    vi.mocked(asyncApi.enqueueYoutubeExtraction).mockResolvedValue({
+      success: true,
+      data: {
+        job_id: "11111111-1111-4111-8111-111111111111",
+        status: "queued",
+        deduplicated: true,
+        submitted_at: "2026-08-14T01:00:00.000Z",
+      },
+      error: null,
+    });
+
+    renderImport({ initialYoutubeUrl: youtubeUrl });
+
+    expect(await screen.findByRole("heading", { name: "이미 추출 중이에요" })).toBeTruthy();
+    expect(screen.queryByText("추출을 시작했어요. 완료되면 알려드릴게요.")).toBeNull();
+  });
+
   it("keeps Korean accepted-state copy on whole-word wrapping boundaries", async () => {
     vi.mocked(asyncApi.enqueueYoutubeExtraction).mockResolvedValue({
       success: true,
