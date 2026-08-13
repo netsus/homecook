@@ -1,6 +1,6 @@
 # Acceptance Checklist
 
-> Stage 1 locks future MEAL_LOG UI and evidence. Unchecked items do not claim runtime or design evidence exists.
+> Fresh Stage 1 relock base `origin/master` `16cfce44d32d5b618742a0e20460df4772a19142` locks the current official tuple (`v1.7.31 / v1.5.35 / v1.3.33 / DB v1.3.33 / API v1.2.38`) and repository plan `docs/workpacks/planner-shell/evidence/cooking-meal-log-and-product-search-master-plan-20260722.md`, SHA-256 `d4d0fb39e80eeffc8b1e73ad92f0d91a35a9b6adc57a556ea8c9ec6ecffa951d`, 1,018 lines. #9 PR #1319 merged as `8ba3fa5a2a198eb4f9c19d59cea5f6ccc52fdd4f`, followed by checkpoint projection `4597ca835ba81307d0bdf9e1b1c41806b17e7a68`, security repair `16cfce44d32d5b618742a0e20460df4772a19142`, and historical post-merge raw 14/14 success. #10 PR #1331 merged as `2185b59d1b460dac916aa4a4a4a5e061c8b795f0`; Stage 4~6 merged-green and OMO completion are recorded in `docs/workpacks/planner-shell/omo-report.md`. The Stage 2 implementation dependency is available after Stage 1 independent reviews and the design prerequisite. #12 owns UI only. Fresh independent internal1.5, fresh design-generator task and fresh independent design critic remain pending; the author does not approve its own changes. Unchecked items do not claim runtime or design evidence exists.
 
 ## Day / Sections
 
@@ -51,4 +51,4 @@
 
 ## Manual Only
 
-- [ ] production enable only after #9 runtime and #10 shell plus required design/security evidence are green
+- [ ] Manual/server-Mac/OAuth, merged-exact server-production/local-rehearsal, physical-device/AT, capability R/R+1/R+2, production and activation evidence remain pending; #12 does not perform or claim them

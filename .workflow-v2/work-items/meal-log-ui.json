@@ -16,8 +16,9 @@
   "dependencies": [
     "security-definer-mutation-authorization hotfix merged and deployed",
     "cooking-meal-log contract-evolution merged as PR #1072",
-    "meal-log-core Stage 1 docs merged as PR #1083; its runtime is the backend implementation predecessor",
-    "planner-shell Stage 1 docs merged as PR #1084; its runtime is the frontend shell implementation predecessor",
+    "meal-log-core #9 PR #1319 exact head be93bfc47281e2795c59c0fd1052a4ecf6085837 merged as 8ba3fa5a2a198eb4f9c19d59cea5f6ccc52fdd4f; checkpoint projection 4597ca835ba81307d0bdf9e1b1c41806b17e7a68, security repair 16cfce44d32d5b618742a0e20460df4772a19142 and historical post-merge raw 14/14 success are backend predecessor evidence, while broader Manual/server-Mac/OAuth, merged-exact server-production/local-rehearsal, capability R/R+1/R+2 and activation remain pending",
+    "planner-shell #10 PR #1331 merged as 2185b59d1b460dac916aa4a4a4a5e061c8b795f0; Stage 4~6 merged-green runtime and OMO completion are recorded in docs/workpacks/planner-shell/omo-report.md, while broader Manual/server-Mac/OAuth, physical-device/AT, production and activation remain pending",
+    "Stage 2 implementation dependency is available after Stage 1 independent reviews and the design prerequisite",
     "prepared-food-search-relevance #1 supplies the typed union search contract",
     "cooked-batch-weight-ledger #8 supplies cooked batch authority",
     "cooked-batch-weight-ui #11 is a sibling consumer of the same batch authority",
@@ -26,11 +27,11 @@
   "docs_refs": {
     "source_of_truth": [
       "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
-      "docs/요구사항기준선-v1.7.25.md",
-      "docs/화면정의서-v1.5.29.md",
-      "docs/유저flow맵-v1.3.27.md",
-      "docs/db설계-v1.3.26.md",
-      "docs/api문서-v1.2.29.md"
+      "docs/요구사항기준선-v1.7.31.md",
+      "docs/화면정의서-v1.5.35.md",
+      "docs/유저flow맵-v1.3.33.md",
+      "docs/db설계-v1.3.33.md",
+      "docs/api문서-v1.2.38.md"
     ],
     "governing_docs": [
       "AGENTS.md",
@@ -55,7 +56,7 @@
       "ui/designs/MEAL_LOG.md",
       "ui/designs/critiques/MEAL_LOG-critique.md",
       "ui/designs/authority/MEAL_LOG-authority.md",
-      "/Users/shj/2025/2026/homecook1/.omx/plans/cooking-meal-log-and-product-search-master-plan-20260722.md#sha256-45f02013fbc1c3af1936d596605230d0cbac7839a783224aa9535844e4bda7dc"
+      "docs/workpacks/planner-shell/evidence/cooking-meal-log-and-product-search-master-plan-20260722.md"
     ]
   },
   "workflow": {
@@ -81,9 +82,10 @@
     "required_checks": [
       "pnpm validate:source-of-truth-sync",
       "pnpm validate:workflow-v2",
-      "BRANCH_NAME=docs/meal-log-ui pnpm validate:workpack -- --slice meal-log-ui",
+      "BRANCH_NAME=docs/meal-log-ui-stage1-relock-current pnpm validate:workpack -- --slice meal-log-ui",
       "node scripts/validate-automation-spec.mjs --slice meal-log-ui",
       "pnpm validate:omo-bookkeeping",
+      "pnpm exec vitest run tests/meal-log-ui-stage1-relock.test.ts tests/workflow-v2-docs.test.ts tests/omo-automation-spec.test.ts tests/omo-bookkeeping.test.ts tests/omo-doc-gate.test.ts tests/source-of-truth-sync.test.ts",
       "pnpm exec vitest run tests/meal-log-ui.test.tsx tests/meal-log-add-sheet.test.tsx tests/meal-log-entry-mutations.test.tsx tests/meal-log-ui-history.test.tsx",
       "pnpm verify:backend",
       "pnpm verify:frontend:pr",
@@ -102,25 +104,56 @@
     "verify_commands": [
       "pnpm validate:source-of-truth-sync",
       "pnpm validate:workflow-v2",
-      "BRANCH_NAME=docs/meal-log-ui pnpm validate:workpack -- --slice meal-log-ui",
+      "BRANCH_NAME=docs/meal-log-ui-stage1-relock-current pnpm validate:workpack -- --slice meal-log-ui",
       "node scripts/validate-automation-spec.mjs --slice meal-log-ui",
       "pnpm validate:omo-bookkeeping",
-      "pnpm exec vitest run tests/workflow-v2-docs.test.ts tests/omo-automation-spec.test.ts tests/omo-bookkeeping.test.ts tests/omo-doc-gate.test.ts tests/source-of-truth-sync.test.ts",
+      "pnpm exec vitest run tests/meal-log-ui-stage1-relock.test.ts tests/workflow-v2-docs.test.ts tests/omo-automation-spec.test.ts tests/omo-bookkeeping.test.ts tests/omo-doc-gate.test.ts tests/source-of-truth-sync.test.ts",
       "pnpm lint",
       "pnpm typecheck",
       "pnpm audit --audit-level high",
       "git diff --check"
     ],
+    "stage1_current_commands": [
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "BRANCH_NAME=docs/meal-log-ui-stage1-relock-current pnpm validate:workpack -- --slice meal-log-ui",
+      "node scripts/validate-automation-spec.mjs --slice meal-log-ui",
+      "pnpm validate:omo-bookkeeping",
+      "pnpm exec vitest run tests/meal-log-ui-stage1-relock.test.ts tests/workflow-v2-docs.test.ts tests/omo-automation-spec.test.ts tests/omo-bookkeeping.test.ts tests/omo-doc-gate.test.ts tests/source-of-truth-sync.test.ts",
+      "pnpm lint",
+      "pnpm typecheck",
+      "pnpm audit --audit-level high",
+      "git diff --check"
+    ],
+    "stage4_future_commands": [
+      "pnpm exec vitest run tests/meal-log-ui.test.tsx tests/meal-log-add-sheet.test.tsx tests/meal-log-entry-mutations.test.tsx tests/meal-log-ui-history.test.tsx",
+      "pnpm test:e2e:regression:ci --grep meal-log-ui",
+      "pnpm test:e2e:a11y",
+      "pnpm test:e2e:visual",
+      "pnpm qa:explore -- --slice meal-log-ui",
+      "pnpm verify:frontend"
+    ],
+    "manual_only_evidence": [
+      "Manual physical keyboard/screen reader/device proof: physical keyboard focus order and restore, VoiceOver or TalkBack announcements, and real 390px and 320px device safe-area and virtual-keyboard occlusion",
+      "merged-exact server-production and isolated local-rehearsal read-only evidence",
+      "server-Mac and OAuth environment evidence",
+      "meal-log-core and planner-shell capability R/R+1/R+2, production and activation remain pending and are not performed by #12"
+    ],
     "evaluator_commands": [
-      "separate Codex internal 1.5 review of five core artifacts plus roadmap and status",
+      "fresh independent Codex internal 1.5 review of the Stage 1 relock candidate",
       "separate Codex security authorization and API boundary review",
       "separate Codex five-axis review",
-      "separate Codex design critic review of the new MEAL_LOG contract",
+      "fresh independent Codex design critic review after the fresh design-generator task and before implementation",
       "separate Codex product-design-authority review of 390px 320px desktop runtime evidence",
       "separate Codex Stage 3 Stage 6 and closeout reviews"
     ],
     "artifact_assertions": [
-      "approved-plan-sha256-and-1056-line-lock",
+      "current-official-tuple-v1.7.31-v1.5.35-v1.3.33-v1.3.33-v1.2.38",
+      "approved-cooking-plan-sha256-d4d0fb39-and-1018-line-lock",
+      "stage1-relock-base-16cfce44-with-no-drift",
+      "slice9-source-checkpoint-security-merges-and-postmerge-14-of-14",
+      "slice10-pr1331-stage4-through-6-runtime-and-omo-merged-green",
+      "slice12-ui-only-and-stage2-after-independent-review-and-design-prerequisite",
       "stage1-five-core-artifacts-plus-roadmap-and-status-projections",
       "roadmap-docs-workflow-lifecycle-planned-separation",
       "existing-planner-route-and-two-segment-labels-only",
@@ -172,5 +205,5 @@
     "Unapproved server-production migration or write or feature activation"
   ],
   "open_questions": [],
-  "notes": "Roadmap moves to docs while workflow lifecycle remains planned. Approval stays not_started until separate Codex internal1.5, security/API, five-axis and design reviews reach zero findings. Stage 1 current commands are docs validators/tests/lint/typecheck/audit/diff; component/E2E/visual/a11y/browser/server-production/local-rehearsal evidence is future. Implementation waits for #9 runtime and #10 shell, consumes #1 search and #8 batch authority, may link the eligible #11 weight action, and leaves #13/#14 as successors."
+  "notes": "Fresh Stage 1 relock base is origin/master 16cfce44d32d5b618742a0e20460df4772a19142 with no base drift. The current official tuple is v1.7.31/v1.5.35/v1.3.33/v1.3.33/v1.2.38. The approved repository plan is docs/workpacks/planner-shell/evidence/cooking-meal-log-and-product-search-master-plan-20260722.md at SHA-256 d4d0fb39e80eeffc8b1e73ad92f0d91a35a9b6adc57a556ea8c9ec6ecffa951d, 1,018 lines. #9 PR #1319 merged as 8ba3fa5a2a198eb4f9c19d59cea5f6ccc52fdd4f, followed by checkpoint projection 4597ca835ba81307d0bdf9e1b1c41806b17e7a68, security repair 16cfce44d32d5b618742a0e20460df4772a19142 and historical post-merge raw 14/14 success. #10 PR #1331 merged as 2185b59d1b460dac916aa4a4a4a5e061c8b795f0; Stage 4~6 merged-green and OMO completion are recorded in docs/workpacks/planner-shell/omo-report.md. The Stage 2 implementation dependency is available after Stage 1 independent reviews and the design prerequisite. Roadmap stays docs while #12 runtime lifecycle remains planned, approval not_started, verification pending, evaluation not_started and auto_merge_eligible false. This author does not approve its own changes; a fresh independent internal1.5, security/API, five-axis, fresh design-generator task and fresh independent design critic remain pending. Current commands are docs validators/tests/lint/typecheck/audit/diff only; component/E2E/visual/a11y/browser/server-production/local-rehearsal and authority evidence is future. Manual/server-Mac/OAuth, physical-device/AT, capability R/R+1/R+2, production and activation remain pending. #12 owns UI only, consumes #1 search and #8 batch authority inside #10 shell, may link eligible #11 weight actions, and adds no endpoint, schema, migration, capability or activation."
 }

@@ -2653,7 +2653,7 @@
     {
       "id": "meal-log-ui",
       "preset": "vertical-slice-strict",
-      "branch": "docs/meal-log-ui",
+      "branch": "docs/meal-log-ui-stage1-relock-current",
       "pr_path": "pending",
       "lifecycle": "planned",
       "approval_state": "not_started",
@@ -2661,9 +2661,10 @@
       "required_checks": [
         "pnpm validate:source-of-truth-sync",
         "pnpm validate:workflow-v2",
-        "BRANCH_NAME=docs/meal-log-ui pnpm validate:workpack -- --slice meal-log-ui",
+        "BRANCH_NAME=docs/meal-log-ui-stage1-relock-current pnpm validate:workpack -- --slice meal-log-ui",
         "node scripts/validate-automation-spec.mjs --slice meal-log-ui",
         "pnpm validate:omo-bookkeeping",
+        "pnpm exec vitest run tests/meal-log-ui-stage1-relock.test.ts tests/workflow-v2-docs.test.ts tests/omo-automation-spec.test.ts tests/omo-bookkeeping.test.ts tests/omo-doc-gate.test.ts tests/source-of-truth-sync.test.ts",
         "pnpm exec vitest run tests/meal-log-ui.test.tsx tests/meal-log-add-sheet.test.tsx tests/meal-log-entry-mutations.test.tsx tests/meal-log-ui-history.test.tsx",
         "pnpm verify:backend",
         "pnpm verify:frontend:pr",
@@ -2679,7 +2680,7 @@
         "node scripts/verify-meal-log-ui-local-first.mjs --mode post-merge-read-only",
         "git diff --check"
       ],
-      "notes": "Roadmap moves to docs while workflow lifecycle remains planned. Approval stays not_started until separate Codex internal1.5, security/API, five-axis and design reviews reach zero findings. Stage 1 current commands are docs validators/tests/lint/typecheck/audit/diff; component/E2E/visual/a11y/browser/server-production/local-rehearsal evidence is future. Implementation waits for #9 runtime and #10 shell, consumes #1 search and #8 batch authority, may link the eligible #11 weight action, and leaves #13/#14 as successors.",
+      "notes": "Fresh Stage 1 relock base is origin/master 16cfce44d32d5b618742a0e20460df4772a19142 with no base drift. The current official tuple is v1.7.31/v1.5.35/v1.3.33/v1.3.33/v1.2.38 and the approved repository plan is docs/workpacks/planner-shell/evidence/cooking-meal-log-and-product-search-master-plan-20260722.md at SHA-256 d4d0fb39e80eeffc8b1e73ad92f0d91a35a9b6adc57a556ea8c9ec6ecffa951d, 1,018 lines. #9 PR #1319 merged as 8ba3fa5a2a198eb4f9c19d59cea5f6ccc52fdd4f, followed by checkpoint projection 4597ca835ba81307d0bdf9e1b1c41806b17e7a68, security repair 16cfce44d32d5b618742a0e20460df4772a19142 and historical post-merge raw 14/14 success. #10 PR #1331 merged as 2185b59d1b460dac916aa4a4a4a5e061c8b795f0; Stage 4~6 merged-green and OMO completion are recorded in docs/workpacks/planner-shell/omo-report.md. The Stage 2 implementation dependency is available after Stage 1 independent reviews and the design prerequisite. Roadmap stays docs while #12 runtime lifecycle remains planned, approval not_started, verification pending, evaluation not_started and auto_merge_eligible false. This author does not approve its own changes; fresh independent internal1.5, security/API, five-axis, fresh design-generator task and fresh independent design critic remain pending. Current Stage 1 evidence is docs validators/tests/lint/typecheck/audit/diff only; component/E2E/visual/a11y/browser/server-production/local-rehearsal and authority evidence is future. Manual/server-Mac/OAuth, physical-device/AT, capability R/R+1/R+2, production and activation remain pending. #12 owns UI only and adds no endpoint, schema, migration, capability or activation.",
       "evaluation_status": "not_started",
       "evaluation_round": 0,
       "last_evaluator_result": null,

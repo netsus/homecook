@@ -6,12 +6,20 @@
 
 ## Official Sources
 
-- `docs/요구사항기준선-v1.7.25.md`
-- `docs/화면정의서-v1.5.29.md`
-- `docs/유저flow맵-v1.3.27.md`
-- `docs/db설계-v1.3.26.md`
-- `docs/api문서-v1.2.29.md`
-- approved plan SHA-256 `45f02013fbc1c3af1936d596605230d0cbac7839a783224aa9535844e4bda7dc`, 1,056 lines
+- `docs/요구사항기준선-v1.7.31.md`
+- `docs/화면정의서-v1.5.35.md`
+- `docs/유저flow맵-v1.3.33.md`
+- `docs/db설계-v1.3.33.md`
+- `docs/api문서-v1.2.38.md`
+- approved Cooking Plan / Meal Log master plan: `docs/workpacks/planner-shell/evidence/cooking-meal-log-and-product-search-master-plan-20260722.md`, SHA-256 `d4d0fb39e80eeffc8b1e73ad92f0d91a35a9b6adc57a556ea8c9ec6ecffa951d`, 1,018 lines
+
+## Stage 1 Relock Lineage
+
+- fresh relock base: `origin/master` `16cfce44d32d5b618742a0e20460df4772a19142`; the expected and fetched base matched, so there is no base drift.
+- #9 PR #1319 exact head `be93bfc47281e2795c59c0fd1052a4ecf6085837` merged as `8ba3fa5a2a198eb4f9c19d59cea5f6ccc52fdd4f`. Checkpoint projection merge `4597ca835ba81307d0bdf9e1b1c41806b17e7a68`, security repair merge `16cfce44d32d5b618742a0e20460df4772a19142`, and historical post-merge raw 14/14 success are recorded backend predecessor evidence only.
+- #10 PR #1331 merged as `2185b59d1b460dac916aa4a4a4a5e061c8b795f0`; its Stage 4~6 merged-green runtime and OMO completion are recorded in `docs/workpacks/planner-shell/omo-report.md`.
+- #9/#10 broader Manual/server-Mac/OAuth, merged-exact server-production/local-rehearsal, physical-device/AT, capability `R/R+1/R+2`, production and activation remain pending. These pending gates are not promoted by #12.
+- this Stage 1 author produces docs only. A fresh independent internal1.5 task, fresh design-generator task, and fresh independent design critic task remain required; the author does not approve its own changes.
 
 ## Scope
 
@@ -116,9 +124,11 @@ query empty: 최근 / 자주 먹은 음식
 
 ## Dependencies / Successors
 
-- implementation waits until #9 `meal-log-core` runtime and #10 `planner-shell` runtime are merged and green. Stage 1 docs may proceed now.
+- #9 backend and #10 Planner shell runtime are merged-green. The Stage 2 implementation dependency is available after Stage 1 independent reviews and the design prerequisite.
+- #9/#10 broader Manual/server-Mac/OAuth, merged-exact server-production/local-rehearsal, physical-device/AT, capability `R/R+1/R+2`, production and activation remain pending and are not #12 implementation blockers unless a later release gate explicitly requires them.
 - #1 owns unified product search relevance; #8 owns batch ledger/weight authority; #11 owns batch weight/lifecycle presentation.
 - #13 owns legacy product planner compatibility; #14 owns cross-slice release QA.
+- #12 owns UI only. It consumes the existing #9 API/DB authority inside the existing #10 shell and adds no endpoint, schema, migration, capability or activation.
 
 ## Out of Scope
 
@@ -130,7 +140,7 @@ query empty: 최근 / 자주 먹은 음식
 ## Design / Accessibility Authority
 
 - UI risk: new high-risk required screen `MEAL_LOG`; it is not an official anchor screen.
-- before Stage 2, create/refresh `ui/designs/MEAL_LOG.md` and obtain independent critique at `ui/designs/critiques/MEAL_LOG-critique.md`.
+- before Stage 2, a fresh design-generator task must create/revalidate `ui/designs/MEAL_LOG.md`, followed by a fresh independent design critic task at `ui/designs/critiques/MEAL_LOG-critique.md`.
 - Stage 4 requires separate 390px, 320px and desktop evidence for default, loading, empty, error, unauthorized, partial, unavailable, deleted-column, add-sheet recent, add-sheet search, missing batch, unrecoverable batch, edit, delete confirmation, pending, replay and conflict.
 - legacy or unrelated evidence is not #12 evidence unless explicitly refreshed against this contract. Fresh manifest records implementation head SHA and capture times.
 - authority report: `ui/designs/authority/MEAL_LOG-authority.md`, authored after and citing fresh evidence.
@@ -143,8 +153,9 @@ query empty: 최근 / 자주 먹은 음식
 
 ## Stage 1 Current Gate
 
-- run SOT/workflow/workpack/automation/bookkeeping validators, focused workflow-doc tests, lint, typecheck, dependency audit and diff/parity only.
-- component/E2E/visual/a11y/browser/local-first production-rehearsal/design-authority commands are future Stage 4/6 evidence.
+- current: run SOT/workflow/workpack/automation/bookkeeping validators, `tests/meal-log-ui-stage1-relock.test.ts` plus focused workflow-doc tests, lint, typecheck, dependency audit and diff only.
+- future: component/E2E/visual/a11y/browser/local-first production-rehearsal/design-authority commands belong to Stage 4/6 and are not claimed by this Stage 1 relock.
+- Manual Only: physical keyboard/screen reader/device evidence, server-Mac and OAuth evidence, #9/#10 merged-exact production/rehearsal, capability `R/R+1/R+2`, production and activation evidence remain pending.
 
 ## Delivery Checklist
 

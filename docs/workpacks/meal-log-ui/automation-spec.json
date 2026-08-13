@@ -14,6 +14,12 @@
       "GET /food-catalog/search existing typed union search"
     ],
     "invariants": [
+      "current-official-tuple-v1.7.31-v1.5.35-v1.3.33-v1.3.33-v1.2.38",
+      "approved-cooking-plan-sha256-d4d0fb39-and-1018-line-lock",
+      "slice9-source-checkpoint-security-merges-and-postmerge-14-of-14-recorded",
+      "slice10-pr1331-stage4-through-6-runtime-and-omo-merged-green",
+      "slice12-ui-only-no-contract-capability-or-activation-change",
+      "fresh-design-generator-and-independent-critic-before-stage2",
       "stored-local-date-no-current-timezone-regroup",
       "day-total-equals-active-subtotals-with-incomplete-count",
       "deleted-column-history-read-only-no-new-entry",
@@ -31,12 +37,13 @@
       "pnpm verify:backend",
       "pnpm validate:source-of-truth-sync",
       "pnpm validate:workflow-v2",
-      "BRANCH_NAME=docs/meal-log-ui pnpm validate:workpack -- --slice meal-log-ui",
+      "BRANCH_NAME=docs/meal-log-ui-stage1-relock-current pnpm validate:workpack -- --slice meal-log-ui",
       "node scripts/validate-automation-spec.mjs --slice meal-log-ui",
       "pnpm validate:omo-bookkeeping",
       "git diff --check"
     ],
     "required_test_targets": [
+      "tests/meal-log-ui-stage1-relock.test.ts",
       "tests/meal-log-ui-api-contract.test.ts",
       "stored-date-subtotal-total-incomplete-evidence",
       "three-source-exact-evidence-and-search-union-evidence",
@@ -141,18 +148,11 @@
       "authority_report_paths": ["ui/designs/authority/MEAL_LOG-authority.md"]
     }
   },
-  "external_smokes": [
-    "owner day read selected-date totals and deleted-column history",
-    "three-source create edit delete own-event replay and conflict",
-    "recent frequent and single-cursor typed-union visibility",
-    "timezone nullable-instant and historical no-regroup",
-    "partial unavailable never zero or complete",
-    "390px 320px desktop visual accessibility authority evidence"
-  ],
+  "external_smokes": [],
   "blocked_conditions": [
     "stage1-independent-reviews-not-zero",
     "stage1-author-self-approval-or-claude-use",
-    "slice9-runtime-or-slice10-shell-not-green-before-implementation",
+    "stage1-independent-review-or-fresh-design-prerequisite-missing-before-implementation",
     "new-route-tab-api-source-field-status-or-client-total-invented",
     "history-regrouped-by-current-timezone",
     "deleted-column-accepts-new-entry",
@@ -166,5 +166,5 @@
     "current-head-check-pending-absent-stale-failed-or-cancelled"
   ],
   "max_fix_rounds": {"backend": 3, "frontend": 6},
-  "notes": "Stage 1 runs docs validators, focused tests, lint, typecheck, audit and diff only. Component/E2E/visual/a11y/browser/local-first production-rehearsal evidence is future. #12 consumes #9 backend inside #10 shell, reuses #1 search and #8 batch authority, and does not change HOME or Planner plan rows."
+  "notes": "Fresh Stage 1 relock base is origin/master 16cfce44d32d5b618742a0e20460df4772a19142 with no base drift. The current official tuple is v1.7.31/v1.5.35/v1.3.33/v1.3.33/v1.2.38 and the repository plan is docs/workpacks/planner-shell/evidence/cooking-meal-log-and-product-search-master-plan-20260722.md at SHA-256 d4d0fb39e80eeffc8b1e73ad92f0d91a35a9b6adc57a556ea8c9ec6ecffa951d, 1,018 lines. #9 PR #1319 source merge 8ba3fa5a2a198eb4f9c19d59cea5f6ccc52fdd4f, checkpoint projection 4597ca835ba81307d0bdf9e1b1c41806b17e7a68, security repair 16cfce44d32d5b618742a0e20460df4772a19142 and historical post-merge raw 14/14 success are recorded without promoting broader gates. #10 PR #1331 merge 2185b59d1b460dac916aa4a4a4a5e061c8b795f0 is Stage 4~6 merged-green and its OMO completion is recorded in docs/workpacks/planner-shell/omo-report.md. The Stage 2 implementation dependency is available after Stage 1 independent reviews and the design prerequisite. Current commands are docs validators, tests/meal-log-ui-stage1-relock.test.ts plus focused workflow-doc tests, lint, typecheck, audit and diff only; current external_smokes is empty because component/E2E/visual/a11y/browser/local-first production-rehearsal evidence is future. Manual/server-Mac/OAuth, merged-exact server-production/local-rehearsal, physical-device/AT, capability R/R+1/R+2, production and activation remain pending. #12 owns UI only, consumes #1 search and #8 batch authority inside #10 shell, and adds no contract, capability or activation. A fresh design-generator task and fresh independent design critic remain prerequisites."
 }
