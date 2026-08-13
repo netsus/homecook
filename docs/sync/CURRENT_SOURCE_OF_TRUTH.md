@@ -1,17 +1,34 @@
 # Current Source of Truth
 
 ## Official Files
-- `docs/요구사항기준선-v1.7.31.md`
-- `docs/화면정의서-v1.5.35.md`
-- `docs/유저flow맵-v1.3.33.md`
-- `docs/db설계-v1.3.33.md`
-- `docs/api문서-v1.2.38.md`
+- `docs/요구사항기준선-v1.7.32.md`
+- `docs/화면정의서-v1.5.36.md`
+- `docs/유저flow맵-v1.3.34.md`
+- `docs/db설계-v1.3.34.md`
+- `docs/api문서-v1.2.39.md`
 
 ## Notes
 - 위 5개 파일이 현재 공식 기준 문서다.
 - `docs/reference/wireframes/`는 보조 참고 자료다.
 - 구현 중 문서 충돌이 보이면 먼저 충돌 항목을 정리하고 작업 범위를 다시 확정한다.
 - 사용자 승인으로 공식 계약을 바꾸는 경우에도 구현보다 문서가 먼저다. 관련 공식 문서와 이 파일의 버전/경로를 같은 `contract-evolution` PR에서 먼저 갱신한다.
+- Supabase target과 gate의 canonical 운영 계약은 `docs/engineering/supabase-local-only-operations.md`다.
+
+## Supabase Local-Only Operations Contract-Evolution `2026-08-13`
+
+| 문서 | 변경 내용 |
+|------|----------|
+| 요구사항 v1.7.32 | app/runtime/worker/data/Auth/Storage/Realtime/PostgREST의 full-local 단일 authority, 새 session/worktree의 remote prerequisite 금지, 단일 Mac backup/restore 안전 gate를 잠근다 |
+| 화면정의서 v1.5.36 | remote URL/key/link 입력 UI가 없고 기존 화면·상태·navigation 영향이 N/A임을 명시한다 |
+| 유저 Flow맵 v1.3.34 | pinned isolated local gate와 controlled full-local read-only, off-Mac backup→clean restore flow를 잠근다 |
+| DB v1.3.34 | Cloud/linked DB를 source/verifier/fallback으로 쓰지 않고 운영 DB destructive reset 금지와 local replay/checksum gate를 잠근다. schema 변경은 N/A다 |
+| API v1.2.39 | internal target을 full-local로 고정하고 public endpoint/status/error/field 영향이 N/A임을 명시한다 |
+
+> 사용자는 `origin/master@4462ac8784e40478ad8be6bd35ff585fc01d68d4`를 기준으로 Supabase Cloud project, linked root, remote DB/credential/security gate/deploy db push를 사용하지 않는 local-only 운영 전환을 명시 승인했다. canonical 세부 계약, reference inventory, local backup/restore/isolated-gate acceptance와 remote forbidden matrix는 `docs/engineering/supabase-local-only-operations.md`다.
+>
+> 이 전환은 일반 Supabase SDK/CLI 명칭, public API shape, DB schema 또는 제품 UI를 바꾸지 않는다. 공식 5종은 운영 authority를 동일하게 읽도록 모두 version bump했으며 화면/API/DB 제품 계약 영향은 각 문서에 정확히 N/A로 기록했다. 2026-07-30 hybrid와 remote migration/source 문단은 역사 감사 기록으로만 보존되고 신규 session prerequisite, required gate, fallback 또는 현재 사실로 사용할 수 없다.
+>
+> PR #1346의 remote/linked credential·security gate blocker는 이제 missing dependency가 아니라 forbidden/N/A이므로 공식적으로 제거된다. PR #1346 제품 코드는 이 docs-governance PR에서 수정·승인하지 않으며, successor/current head의 local-only gate·독립 review·전체 checks는 별도로 필요하다.
 
 ## YouTube Background Extraction / Durable In-App Notification Contract-Evolution `2026-08-12`
 

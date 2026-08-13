@@ -1,16 +1,23 @@
+import { createHash } from "node:crypto";
+
 import { describe, expect, it } from "vitest";
 
 import {
   assertDestructiveRestoreAllowed,
   assertFreshRestoreExecutionApproved,
   assertFreshRestoreAllowed,
+  assertRestoredStorageVolumeProvenance,
+  buildBootstrapAwareDatabaseResetSql,
+  buildComposeLabeledStorageVolumeCreateArgs,
   buildPlatformRestoreSql,
   buildCutoverPreflight,
   buildSanitizedPlatformData,
   classifyRollbackMode,
   compareRestoreReplayManifests,
   compareStorageObjectManifests,
+  executeBootstrapAwarePlatformRestore,
   inventoryPlatformDataRelations,
+  verifyRestoredPlatformDataSnapshot,
 } from "@/scripts/lib/full-local-restore-cutover.mjs";
 
 const platformData = `-- platform data\nCOPY auth.users (id, email) FROM stdin;
@@ -40,6 +47,28 @@ object-a\trecipe-images\tuser-a/a.jpg
 `;
 
 describe("full-local platform restore boundary", () => {
+  it("binds clean restore evidence to the archive's exact sanitized DB/Auth data", () => {
+    const sanitized = buildSanitizedPlatformData(platformData);
+    const sourceDataSha256 = createHash("sha256").update(sanitized.sql).digest("hex");
+
+    expect(verifyRestoredPlatformDataSnapshot({
+      restoredDataSql: platformData,
+      sourceDataSha256,
+      sourceRelationClassificationDigest:
+        sanitized.manifest.relation_classification_digest,
+    })).toEqual({
+      restored_data_sha256: sourceDataSha256,
+      restored_relation_classification_digest:
+        sanitized.manifest.relation_classification_digest,
+    });
+    expect(() => verifyRestoredPlatformDataSnapshot({
+      restoredDataSql: platformData.replace("a@example.com", "drift@example.com"),
+      sourceDataSha256,
+      sourceRelationClassificationDigest:
+        sanitized.manifest.relation_classification_digest,
+    })).toThrow(/archive|DB|data/iu);
+  });
+
   it("restores only into brand-new PostgreSQL and Storage volumes", () => {
     expect(assertFreshRestoreAllowed({ postgresVolumeExists: false, storageVolumeExists: false })).toBe(true);
     expect(() => assertFreshRestoreAllowed({
@@ -74,7 +103,50 @@ describe("full-local platform restore boundary", () => {
     ].join("\n"));
   });
 
-  it("keeps stable Auth UUID data and removes remote transient sessions and Storage metadata", () => {
+  it("recreates the bootstrap database from template0 before replaying a non-clean schema dump", () => {
+    expect(buildBootstrapAwareDatabaseResetSql()).toBe([
+      "\\set ON_ERROR_STOP on",
+      "SELECT pg_terminate_backend(pid)",
+      "FROM pg_catalog.pg_stat_activity",
+      "WHERE datname = 'postgres' AND pid <> pg_backend_pid();",
+      "DROP DATABASE IF EXISTS postgres WITH (FORCE);",
+      "CREATE DATABASE postgres WITH TEMPLATE template0 OWNER supabase_admin;",
+      "",
+    ].join("\n"));
+  });
+
+  it("runs the restore-platform integration boundary in the required clean replay order", async () => {
+    const calls: string[] = [];
+    const result = await executeBootstrapAwarePlatformRestore({
+      bootstrapServices: async () => calls.push("bootstrap-services"),
+      replayDatabase: async () => calls.push("replay-database"),
+      resetDatabase: async () => calls.push("reset-database"),
+      restoreStoragePayload: async () => calls.push("restore-storage"),
+      startPostgres: async () => calls.push("start-postgres"),
+      startServices: async () => calls.push("start-services"),
+      stopServices: async () => calls.push("stop-services"),
+      verifyResources: async () => calls.push("verify-resources"),
+      verifyRestoredPlatform: async () => {
+        calls.push("verify-restored-platform");
+        return { status: "PASS" };
+      },
+    });
+
+    expect(calls).toEqual([
+      "bootstrap-services",
+      "stop-services",
+      "restore-storage",
+      "start-postgres",
+      "reset-database",
+      "replay-database",
+      "start-services",
+      "verify-resources",
+      "verify-restored-platform",
+    ]);
+    expect(result).toEqual({ status: "PASS" });
+  });
+
+  it("keeps stable Auth UUID and Storage object metadata while removing transient sessions", () => {
     const result = buildSanitizedPlatformData(platformData);
 
     expect(result.sql).toContain("COPY auth.users");
@@ -84,13 +156,13 @@ describe("full-local platform restore boundary", () => {
     expect(result.sql).not.toContain("COPY auth.sessions");
     expect(result.sql).not.toContain("COPY auth.refresh_tokens");
     expect(result.sql).not.toContain("COPY auth.flow_state");
-    expect(result.sql).not.toContain("COPY storage.objects");
+    expect(result.sql).toContain("COPY storage.objects");
     expect(result.manifest.unclassified).toEqual([]);
     expect(result.manifest.transient_promote_count).toBe(0);
     expect(result.manifest.relations).toEqual(expect.arrayContaining([
       expect.objectContaining({ relation: "auth.users", action: "include" }),
       expect.objectContaining({ relation: "auth.sessions", action: "exclude" }),
-      expect.objectContaining({ relation: "storage.objects", action: "exclude" }),
+      expect.objectContaining({ relation: "storage.objects", action: "include" }),
     ]));
   });
 
@@ -114,11 +186,23 @@ state-a
 COPY storage.s3_multipart_uploads (id) FROM stdin;
 upload-a
 \\.
+COPY storage.iceberg_namespaces (id) FROM stdin;
+namespace-a
+\\.
+COPY storage.iceberg_tables (id) FROM stdin;
+table-a
+\\.
+COPY supabase_functions.hooks (id) FROM stdin;
+hook-a
+\\.
 `);
     expect(result.sql).not.toContain("custom_oauth_providers");
     expect(result.sql).not.toContain("mfa_amr_claims");
     expect(result.sql).not.toContain("oauth_client_states");
     expect(result.sql).not.toContain("s3_multipart_uploads");
+    expect(result.sql).not.toContain("iceberg_namespaces");
+    expect(result.sql).not.toContain("iceberg_tables");
+    expect(result.sql).not.toContain("supabase_functions.hooks");
   });
 
   it("inventories relation and column names without exposing row values", () => {
@@ -219,6 +303,46 @@ describe("full-local Storage and cutover boundary", () => {
       ...objects[0],
       owner_prefix: "user-b",
     }])).toThrow("Storage manifest mismatch");
+  });
+
+  it("creates and verifies the restored Storage volume with exact Compose provenance", () => {
+    expect(buildComposeLabeledStorageVolumeCreateArgs({
+      attemptToken: "attempt-token-storage-restore",
+      composeProject: "homecook-restore-fixture",
+      volumeName: "homecook-restore-fixture-storage",
+    })).toEqual([
+      "volume",
+      "create",
+      "--label",
+      "com.docker.compose.project=homecook-restore-fixture",
+      "--label",
+      "com.docker.compose.volume=storage-data",
+      "--label",
+      "homecook.local/restore-attempt=attempt-token-storage-restore",
+      "homecook-restore-fixture-storage",
+    ]);
+    expect(assertRestoredStorageVolumeProvenance({
+      attemptToken: "attempt-token-storage-restore",
+      composeProject: "homecook-restore-fixture",
+      inspect: {
+        Name: "homecook-restore-fixture-storage",
+        Labels: {
+          "com.docker.compose.project": "homecook-restore-fixture",
+          "com.docker.compose.volume": "storage-data",
+          "homecook.local/restore-attempt": "attempt-token-storage-restore",
+        },
+      },
+      volumeName: "homecook-restore-fixture-storage",
+    })).toBe(true);
+    expect(() => assertRestoredStorageVolumeProvenance({
+      attemptToken: "attempt-token-storage-restore",
+      composeProject: "homecook-restore-fixture",
+      inspect: {
+        Name: "homecook-restore-fixture-storage",
+        Labels: {},
+      },
+      volumeName: "homecook-restore-fixture-storage",
+    })).toThrow(/provenance|Compose|label/iu);
   });
 
   it("never reports cutover ready without every manual-only gate", () => {

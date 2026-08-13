@@ -29,6 +29,7 @@ import {
   generateFullLocalSecretBundle,
   materializeFullLocalSecrets,
   parseFullLocalProductCatalogSqlOutput,
+  selectNewlyStartedFullLocalWriterServices,
   summarizeFullLocalRuntimeStates,
   validateExternalSecretDirectory,
   validateFullLocalProductionConfig,
@@ -44,6 +45,8 @@ function validConfig(overrides: Record<string, string> = {}) {
     FULL_LOCAL_API_EXTERNAL_URL: "https://auth.mumeok.kr/auth/v1",
     FULL_LOCAL_AUTH_IMAGE: images.auth,
     FULL_LOCAL_AUTH_PROXY_PORT: "54482",
+    FULL_LOCAL_BACKUP_READINESS_PATH:
+      "/Users/tester/.homecook/state/full-local-backup-readiness.json",
     FULL_LOCAL_COMPOSE_PROJECT_NAME: "homecook-full-local-isolated",
     FULL_LOCAL_DOCKER_PLATFORM: "linux/arm64",
     FULL_LOCAL_ENABLE_ANONYMOUS_USERS: "false",
@@ -82,6 +85,95 @@ function validSecrets() {
 }
 
 describe("full-local production runtime static contract", () => {
+  it("compensates only writer services newly started by this start attempt", () => {
+    const container = (project: string, service: string, running: boolean) => ({
+      Config: { Labels: {
+        "com.docker.compose.project": project,
+        "com.docker.compose.service": service,
+      } },
+      State: { Running: running },
+    });
+    const before = [
+      container("homecook-full-local-isolated", "auth", true),
+      container("homecook-full-local-isolated", "storage", false),
+    ];
+    const after = [
+      container("homecook-full-local-isolated", "auth", true),
+      container("homecook-full-local-isolated", "storage", true),
+      container("homecook-full-local-isolated", "postgres", true),
+      container("supabase-dev", "postgrest", true),
+    ];
+
+    expect(selectNewlyStartedFullLocalWriterServices({
+      after,
+      before,
+      composeProject: "homecook-full-local-isolated",
+    })).toEqual(["storage"]);
+  });
+
+  it("re-inventories exact production resources after restore before issuing evidence", () => {
+    const source = readFileSync(
+      join(process.cwd(), "scripts/full-local-production-runtime.mjs"),
+      "utf8",
+    );
+    const restorePath = source.slice(
+      source.indexOf("async function restorePlatformBackup"),
+      source.indexOf("function compareRestoreManifests"),
+    );
+
+    expect(restorePath).toMatch(
+      /await waitForRuntimeHealthy\(restoreRuntime\);[\s\S]*liveFullLocalProductionResources\(restoreRuntime\);[\s\S]*writeRestoreManifest/iu,
+    );
+  });
+
+  it("returns an empty Docker inventory without invoking inspect with zero ids", async () => {
+    const runtimeCli = await import("../scripts/full-local-production-runtime.mjs");
+    const calls: string[][] = [];
+
+    expect(runtimeCli.dockerResourceInventory("container", {
+      execute: (_command: string, args: string[]) => {
+        calls.push(args);
+        if (args.includes("inspect")) throw new Error("empty inspect must not run");
+        return "\n";
+      },
+    })).toEqual([]);
+    expect(runtimeCli.dockerResourceInventory("volume", {
+      execute: (_command: string, args: string[]) => {
+        calls.push(args);
+        if (args.includes("inspect")) throw new Error("empty inspect must not run");
+        return "";
+      },
+    })).toEqual([]);
+    expect(calls).toEqual([
+      ["container", "ls", "--quiet"],
+      ["volume", "ls", "--quiet"],
+    ]);
+  });
+
+  it("treats a dangling replacement artifact symlink as manual recovery, never absence", async () => {
+    const runtimeCli = await import("../scripts/full-local-production-runtime.mjs");
+    const rootDir = mkdtempSync(join(tmpdir(), "full-local-artifact-race-"));
+    const artifactPath = join(rootDir, "restore.json");
+    writeFileSync(artifactPath, "attempt-owned", { mode: 0o600 });
+    const identity = runtimeCli.attemptCreatedArtifactIdentity({
+      attemptToken: "attempt-token-safe",
+      path: artifactPath,
+    });
+    rmSync(artifactPath);
+    symlinkSync(join(rootDir, "missing-racing-target"), artifactPath);
+
+    try {
+      expect(() => runtimeCli.removeAttemptCreatedArtifact(identity))
+        .toThrow(/manual recovery required/iu);
+      expect(() => runtimeCli.assertFailedAttemptArtifactsCleared([artifactPath]))
+        .toThrow(/manual recovery required/iu);
+      expect(() => writeFileSync(artifactPath, "retry", { flag: "wx", mode: 0o600 }))
+        .toThrow(/EEXIST/iu);
+    } finally {
+      rmSync(rootDir, { force: true, recursive: true });
+    }
+  });
+
   it("can be imported for mock-based authorization contract tests without running the CLI", () => {
     const result = spawnSync(
       process.execPath,

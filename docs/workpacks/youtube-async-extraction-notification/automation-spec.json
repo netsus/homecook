@@ -31,6 +31,9 @@
       "terminal-retention-30-days-and-session-draft-ttl-24-hours-from-finalize",
       "raw-url-transcript-frame-provider-payload-and-secrets-never-persisted",
       "same-release-sha-schema-policy-and-worker-credential-attestation",
+      "supabase-cloud-linked-root-remote-database-and-credentials-are-forbidden",
+      "isolated-local-gates-never-share-production-volume-port-or-secret-mount",
+      "full-local-production-destructive-reset-is-forbidden",
       "production-installer-migration-policy-enable-and-secrets-remain-manual-only"
     ],
     "verify_commands": [
@@ -163,7 +166,10 @@
     "missing-390-320-desktop-evidence-or-authority-report",
     "stage5-or-final-authority-blocker-or-major-finding",
     "current-head-check-pending-failed-rerunning-or-not-started",
-    "production-migration-secret-policy-enable-installer-or-rollout-attempted-outside-manual-only"
+    "production-migration-secret-policy-enable-installer-or-rollout-attempted-outside-manual-only",
+    "supabase-cloud-link-linked-root-remote-database-or-remote-credential-used",
+    "isolated-local-gate-shares-production-volume-port-or-secret-mount",
+    "full-local-production-destructive-reset-attempted"
   ],
   "max_fix_rounds": {
     "backend": 4,

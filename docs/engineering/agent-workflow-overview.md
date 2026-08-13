@@ -1,5 +1,7 @@
 # 에이전트 협업 워크플로우 개요
 
+Supabase를 사용하는 모든 변경의 target/gate 기준은 `docs/engineering/supabase-local-only-operations.md`다. remote/linked Supabase check는 required 또는 optional review로 지정하지 않으며 `N/A / forbidden`이다. 대응 required evidence는 pinned isolated local Supabase 또는 실제 full-local read-only/controlled local target에서 수집한다.
+
 ## 역할 요약
 
 Claude는 더 이상 사용하지 않는다.

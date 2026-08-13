@@ -772,7 +772,7 @@ describe("account session generation remote verifier", () => {
     ).toThrow("stable nonzero gate blockers");
   });
 
-  it("keeps the storage inventory sample CLI and compare CLI wired to official package commands", async () => {
+  it("keeps remote inventory CLIs as unexposed historical artifacts", async () => {
     const packageJson = JSON.parse(
       readFileSync("package.json", "utf8"),
     ) as {
@@ -789,9 +789,7 @@ describe("account session generation remote verifier", () => {
 
     expect(
       packageJson.scripts["verify:account-generation:storage-inventory-sample"],
-    ).toBe(
-      "node scripts/verify-account-session-generation-remote.mjs --mode joint-storage-inventory-sample --json",
-    );
+    ).toBeUndefined();
     expect(cli).toContain('const mode = readOption("--mode");');
     expect(cli).toContain("buildAccountGenerationRemoteVerificationPlan({ mode })");
     expect(cli).toContain("buildAccountGenerationRemotePsqlRequest");
@@ -800,9 +798,7 @@ describe("account session generation remote verifier", () => {
     expect(cli).toContain('mode === "joint-storage-inventory-sample"');
     expect(
       packageJson.scripts["verify:account-generation:storage-inventory-compare"],
-    ).toBe(
-      "node scripts/compare-account-session-generation-storage-samples.mjs --json",
-    );
+    ).toBeUndefined();
     expect(compareCli).toContain('const firstPath = readOption("--first");');
     expect(compareCli).toContain('const forbiddenSecondPath = readOption("--second");');
     expect(compareCli).toContain("process.execPath");

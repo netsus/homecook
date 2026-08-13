@@ -645,18 +645,14 @@ describe("hybrid production restore safety", () => {
     }
   });
 
-  it("hashes every inner Storage regular file during verify-backup before restore", () => {
+  it("keeps historical Storage restore orchestration non-executable", () => {
     const cli = readFileSync(
       "scripts/hybrid-production-runtime.mjs",
       "utf8",
     );
 
-    expect(cli).toMatch(
-      /function inspectStorageXattrArchive[\s\S]*stdoutPath:[\s\S]*sha256File[\s\S]*validateStoragePayloadInventory/u,
-    );
-    expect(cli).toMatch(
-      /function extractBackup[\s\S]*inspectStorageXattrArchive[\s\S]*return manifest/u,
-    );
+    expect(cli).toContain("FORBIDDEN: hybrid production runtime is historical");
+    expect(cli).not.toContain("inspectStorageXattrArchive");
   });
 
   it("omits only legacy auth.users FK entries during compatibility restore", () => {
@@ -870,15 +866,8 @@ describe("hybrid production restore safety", () => {
       "scripts/hybrid-production-runtime.mjs",
       "utf8",
     );
-    expect(cli).toMatch(
-      /archiveState = assertInstalled[\s\S]*archiveManifest = currentManifest[\s\S]*compareCatalogManifests[\s\S]*applyPendingMigrationsAtomically\(runtime\)[\s\S]*forwardState = assertInstalled/u,
-    );
-    expect(cli).toMatch(
-      /forwardAppliedVersions\.length[\s\S]*migrationAdvance\.forwardMigrationCount[\s\S]*Forward migration plan did not match applied versions/u,
-    );
-    expect(cli).toMatch(
-      /migration_count_applied:\s*forwardAppliedVersions\.length/u,
-    );
+    expect(cli).toContain("FORBIDDEN: hybrid production runtime is historical");
+    expect(cli).not.toContain("applyPendingMigrationsAtomically");
   });
 
   it("requires the exact semantic restore order", () => {
@@ -1050,63 +1039,32 @@ describe("hybrid production recovery and capacity", () => {
 });
 
 describe("hybrid production verification routing", () => {
-  it("automates production artifacts while keeping live reboot, shadow, and cutover manual", () => {
+  it("tombstones every historical hybrid remote/local verification mode", () => {
     const verifier = readFileSync(
       "scripts/verify-hybrid-supabase.mjs",
       "utf8",
     );
 
-    for (const mode of [
-      "production-runtime-artifacts",
-      "backup-restore-dry-run",
-      "ordered-recovery-dry-run",
-      "capacity-preflight-dry-run",
-      "network-loopback-fixture",
-    ]) {
-      expect(verifier).toContain(`"${mode}"`);
-    }
-    expect(verifier).toMatch(
-      /manualOnlyModes[\s\S]*mac-reboot-ordered-recovery-live/u,
+    expect(verifier).toContain(
+      "FORBIDDEN: hybrid remote/local verification is historical",
     );
-    expect(verifier).toMatch(/manualOnlyModes[\s\S]*shadow-read/u);
-    expect(verifier).toMatch(/manualOnlyModes[\s\S]*final-cutover/u);
+    expect(verifier).not.toContain("production-runtime-artifacts");
+    expect(verifier).not.toContain("shadow-read");
+    expect(verifier).not.toContain("final-cutover");
   });
 
-  it("builds the current allowlisted gateway source during production install", () => {
+  it("does not expose the historical hybrid production install command", () => {
     const cli = readFileSync(
       "scripts/hybrid-production-runtime.mjs",
       "utf8",
     );
 
-    expect(cli).toMatch(
-      /case "install"[\s\S]*compose\(runtime, \["build", "gateway"\]/u,
-    );
-    expect(cli).toMatch(
-      /docker[\s\S]*pull[\s\S]*--platform[\s\S]*HYBRID_DOCKER_PLATFORM/u,
-    );
-    expect(cli).toMatch(
-      /delete env\.DOCKER_DEFAULT_PLATFORM/u,
-    );
-    expect(cli).toMatch(/assertPinnedImageInspection/u);
-    expect(cli).toMatch(/RepoDigests/u);
-    expect(cli).not.toContain("runtime-storage-bootstrap.sql");
-    expect(cli).not.toContain("runtime-bootstrap.sql");
-    expect(cli).toContain("auth_users_external_depend_residual");
-    expect(cli).toContain("pg_catalog.pg_depend");
-    expect(cli).toMatch(
-      /Storage reference manifest does not match the persisted files/u,
-    );
-    expect(cli).toMatch(
-      /verifyPreRestoreBackup[\s\S]*extractBackup/u,
-    );
-    expect(cli).toContain('"/backup/$1"');
-    expect(cli).not.toContain("/backup/${basename(archivePath)}");
-    expect(cli).toContain("homecook-storage-xattrs-v1");
-    expect(cli).toContain("user.supabase.content-type");
-    expect(cli).toContain("user.supabase.cache-control");
+    expect(cli).toContain("FORBIDDEN: hybrid production runtime is historical");
+    expect(cli).not.toContain('case "install"');
+    expect(cli).not.toContain("spawnSync");
   });
 
-  it("applies repo-only forward migrations atomically behind a verified current backup", () => {
+  it("does not expose the historical hybrid forward-migration command", () => {
     const cli = readFileSync(
       "scripts/hybrid-production-runtime.mjs",
       "utf8",
@@ -1114,12 +1072,8 @@ describe("hybrid production verification routing", () => {
     const packageJson = JSON.parse(readFileSync("package.json", "utf8"));
 
     expect(packageJson.scripts["hybrid-production:migrate-forward"])
-      .toBe("node scripts/hybrid-production-runtime.mjs migrate-forward");
-    expect(cli).toMatch(
-      /case "migrate-forward"[\s\S]*verifyBackupArchive[\s\S]*applyPendingMigrationsAtomically[\s\S]*assertInstalled/u,
-    );
-    expect(cli).toMatch(
-      /applyPendingMigrationsAtomically[\s\S]*lock table auth\.users in share row exclusive mode[\s\S]*insert into supabase_migrations\.schema_migrations[\s\S]*commit;/u,
-    );
+      .toBeUndefined();
+    expect(cli).toContain("FORBIDDEN: hybrid production runtime is historical");
+    expect(cli).not.toContain('case "migrate-forward"');
   });
 });

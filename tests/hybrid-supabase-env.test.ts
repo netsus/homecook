@@ -1,188 +1,186 @@
+import { readFileSync } from "node:fs";
+
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const ORIGINAL_ENV = { ...process.env };
 
-describe("hybrid Supabase environment boundary", () => {
+function parseEnvExample(text: string) {
+  return Object.fromEntries(
+    text
+      .split(/\r?\n/u)
+      .filter((line) => /^[A-Za-z_][A-Za-z0-9_]*=/u.test(line))
+      .map((line) => {
+        const separator = line.indexOf("=");
+        return [line.slice(0, separator), line.slice(separator + 1)];
+      }),
+  );
+}
+
+describe("local-only Supabase environment boundary", () => {
   beforeEach(() => {
     vi.resetModules();
     process.env = { ...ORIGINAL_ENV };
-    delete process.env.NEXT_PUBLIC_AUTH_SUPABASE_URL;
-    delete process.env.NEXT_PUBLIC_AUTH_SUPABASE_PUBLISHABLE_KEY;
-    delete process.env.AUTH_SUPABASE_EXPECTED_ISSUER;
-    delete process.env.AUTH_SUPABASE_JWKS_URL;
-    delete process.env.HOMECOOK_AUTH_AUTHORITY;
-    delete process.env.LOCAL_SUPABASE_INTERNAL_URL;
-    delete process.env.DATA_SUPABASE_URL;
-    delete process.env.DATA_SUPABASE_PUBLISHABLE_KEY;
-    delete process.env.DATA_SUPABASE_SECRET_KEY;
-    delete process.env.HOMECOOK_DATA_AUTHORITY;
+    for (const name of [
+      "AUTH_SUPABASE_EXPECTED_ISSUER",
+      "AUTH_SUPABASE_JWKS_URL",
+      "AUTH_SUPABASE_SECRET_KEY",
+      "DATA_SUPABASE_PUBLISHABLE_KEY",
+      "DATA_SUPABASE_SECRET_KEY",
+      "DATA_SUPABASE_URL",
+      "HOMECOOK_AUTH_AUTHORITY",
+      "HOMECOOK_DATA_AUTHORITY",
+      "LOCAL_SUPABASE_INTERNAL_URL",
+      "LOCAL_SUPABASE_SECRET_KEY",
+      "NEXT_PUBLIC_AUTH_SUPABASE_PUBLISHABLE_KEY",
+      "NEXT_PUBLIC_AUTH_SUPABASE_URL",
+      "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+      "NEXT_PUBLIC_SUPABASE_URL",
+      "SUPABASE_SERVICE_ROLE_KEY",
+    ]) {
+      delete process.env[name];
+    }
   });
 
   afterEach(() => {
     process.env = { ...ORIGINAL_ENV };
   });
 
-  it("keeps the legacy remote-only environment as the default compatibility mode", async () => {
-    process.env.NEXT_PUBLIC_SUPABASE_URL = "https://remote.example.supabase.co";
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "remote-publishable";
+  it("fails closed when either runtime authority is missing", async () => {
+    const { getAuthAuthority } = await import("@/lib/supabase/auth-env");
+    const { getDataAuthority } = await import("@/lib/supabase/data-env");
 
-    const { getAuthSupabaseEnv } = await import("@/lib/supabase/auth-env");
-    const { getDataAuthority, getDataSupabaseEnv } = await import(
-      "@/lib/supabase/data-env"
-    );
-
-    expect(getDataAuthority()).toBe("remote");
-    expect(getAuthSupabaseEnv()).toMatchObject({
-      url: "https://remote.example.supabase.co",
-      publishableKey: "remote-publishable",
-      issuer: "https://remote.example.supabase.co/auth/v1",
-    });
-    expect(getDataSupabaseEnv()).toMatchObject({
-      url: "https://remote.example.supabase.co",
-      publishableKey: "remote-publishable",
-      authority: "remote",
-    });
+    expect(() => getAuthAuthority()).toThrow(/HOMECOOK_AUTH_AUTHORITY.*local/iu);
+    expect(() => getDataAuthority()).toThrow(/HOMECOOK_DATA_AUTHORITY.*local/iu);
   });
 
-  it("treats explicit public Auth env as available", async () => {
-    process.env.NEXT_PUBLIC_AUTH_SUPABASE_URL
-      = "https://remote.example.supabase.co";
-    process.env.NEXT_PUBLIC_AUTH_SUPABASE_PUBLISHABLE_KEY
-      = "remote-publishable";
+  it.each(["remote", "local-shadow", "hosted", "typo"])(
+    "rejects forbidden authority %s",
+    async (authority) => {
+      process.env.HOMECOOK_AUTH_AUTHORITY = authority;
+      process.env.HOMECOOK_DATA_AUTHORITY = authority;
 
-    const { hasAuthSupabasePublicEnv } = await import("@/lib/supabase/auth-env");
+      const { getAuthAuthority } = await import("@/lib/supabase/auth-env");
+      const { getDataAuthority } = await import("@/lib/supabase/data-env");
 
-    expect(hasAuthSupabasePublicEnv()).toBe(true);
-  });
+      expect(() => getAuthAuthority()).toThrow(/local-only|local only|local이어야/iu);
+      expect(() => getDataAuthority()).toThrow(/local-only|local only|local이어야/iu);
+    },
+  );
 
-  it("treats legacy public Auth env as available", async () => {
-    process.env.NEXT_PUBLIC_SUPABASE_URL = "https://remote.example.supabase.co";
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "remote-publishable";
-
-    const { hasAuthSupabasePublicEnv } = await import("@/lib/supabase/auth-env");
-
-    expect(hasAuthSupabasePublicEnv()).toBe(true);
-  });
-
-  it("requires explicit remote Auth and loopback local Data values in local mode", async () => {
-    process.env.HOMECOOK_DATA_AUTHORITY = "local";
-    process.env.NEXT_PUBLIC_AUTH_SUPABASE_URL
-      = "https://remote.example.supabase.co";
-    process.env.NEXT_PUBLIC_AUTH_SUPABASE_PUBLISHABLE_KEY
-      = "remote-publishable";
-    process.env.AUTH_SUPABASE_EXPECTED_ISSUER
-      = "https://remote.example.supabase.co/auth/v1";
-    process.env.AUTH_SUPABASE_JWKS_URL
-      = "https://remote.example.supabase.co/auth/v1/.well-known/jwks.json";
-    process.env.DATA_SUPABASE_URL = "http://127.0.0.1:8000";
-    process.env.DATA_SUPABASE_PUBLISHABLE_KEY = "local-publishable";
-
-    const { getAuthSupabaseEnv } = await import("@/lib/supabase/auth-env");
-    const { getDataSupabaseEnv } = await import("@/lib/supabase/data-env");
-
-    expect(getAuthSupabaseEnv()).toMatchObject({
-      url: "https://remote.example.supabase.co",
-      issuer: "https://remote.example.supabase.co/auth/v1",
-      jwksUrl:
-        "https://remote.example.supabase.co/auth/v1/.well-known/jwks.json",
-    });
-    expect(getDataSupabaseEnv()).toEqual({
-      authority: "local",
-      url: "http://127.0.0.1:8000",
-      publishableKey: "local-publishable",
-    });
-  });
-
-  it("keeps local-shadow responses and writes remote while exposing a read-only local target", async () => {
-    process.env.HOMECOOK_DATA_AUTHORITY = "local-shadow";
-    process.env.NEXT_PUBLIC_AUTH_SUPABASE_URL
-      = "https://remote.example.supabase.co";
-    process.env.NEXT_PUBLIC_AUTH_SUPABASE_PUBLISHABLE_KEY
-      = "remote-publishable";
-    process.env.DATA_SUPABASE_URL = "http://127.0.0.1:8000";
-    process.env.DATA_SUPABASE_PUBLISHABLE_KEY = "local-publishable";
-
-    const {
-      getDataSupabaseEnv,
-      getLocalShadowDataSupabaseEnv,
-    } = await import("@/lib/supabase/data-env");
-
-    expect(getDataSupabaseEnv()).toEqual({
-      authority: "local-shadow",
-      url: "https://remote.example.supabase.co",
-      publishableKey: "remote-publishable",
-    });
-    expect(getLocalShadowDataSupabaseEnv()).toEqual({
-      url: "http://127.0.0.1:8000",
-      publishableKey: "local-publishable",
-    });
-  });
-
-  it("fails closed when local production Data is not loopback", async () => {
-    (process.env as Record<string, string | undefined>).NODE_ENV = "production";
-    process.env.HOMECOOK_DATA_AUTHORITY = "local";
-    process.env.DATA_SUPABASE_URL = "http://192.168.0.36:8000";
-    process.env.DATA_SUPABASE_PUBLISHABLE_KEY = "local-publishable";
-
-    const { getDataSupabaseEnv } = await import("@/lib/supabase/data-env");
-
-    expect(() => getDataSupabaseEnv()).toThrow(/loopback/i);
-  });
-
-  it("rejects an issuer override that does not exactly match remote Auth", async () => {
-    process.env.NEXT_PUBLIC_AUTH_SUPABASE_URL
-      = "https://remote.example.supabase.co";
-    process.env.NEXT_PUBLIC_AUTH_SUPABASE_PUBLISHABLE_KEY
-      = "remote-publishable";
-    process.env.AUTH_SUPABASE_EXPECTED_ISSUER
-      = "https://other.example.supabase.co/auth/v1";
-
-    const { getAuthSupabaseEnv } = await import("@/lib/supabase/auth-env");
-
-    expect(() => getAuthSupabaseEnv()).toThrow(/issuer/i);
-  });
-
-  it("separates the public HTTPS Auth origin from the local server loopback origin", async () => {
+  it("does not accept legacy or hosted Supabase public values", async () => {
     process.env.HOMECOOK_AUTH_AUTHORITY = "local";
-    process.env.NEXT_PUBLIC_AUTH_SUPABASE_URL = "https://auth.mumeok.kr";
-    process.env.NEXT_PUBLIC_AUTH_SUPABASE_PUBLISHABLE_KEY = "local-publishable";
-    process.env.LOCAL_SUPABASE_INTERNAL_URL = "http://127.0.0.1:54321";
+    process.env.NEXT_PUBLIC_SUPABASE_URL = "https://project.supabase.co";
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "legacy-publishable";
 
-    const {
-      getAuthAuthority,
-      getAuthSupabaseEnv,
-      getAuthSupabaseServerEnv,
-    } = await import("@/lib/supabase/auth-env");
-
-    expect(getAuthAuthority()).toBe("local");
-    expect(getAuthSupabaseEnv()).toMatchObject({
-      url: "https://auth.mumeok.kr",
-      issuer: "https://auth.mumeok.kr/auth/v1",
-    });
-    expect(getAuthSupabaseServerEnv()).toMatchObject({
-      url: "http://127.0.0.1:54321",
-      issuer: "https://auth.mumeok.kr/auth/v1",
-    });
-  });
-
-  it("fails closed when local Auth uses a non-loopback internal origin", async () => {
-    process.env.HOMECOOK_AUTH_AUTHORITY = "local";
-    process.env.NEXT_PUBLIC_AUTH_SUPABASE_URL = "https://auth.mumeok.kr";
-    process.env.NEXT_PUBLIC_AUTH_SUPABASE_PUBLISHABLE_KEY = "local-publishable";
-    process.env.LOCAL_SUPABASE_INTERNAL_URL = "http://192.168.0.36:54321";
-
-    const { getAuthSupabaseServerEnv } = await import(
+    const { getAuthSupabaseEnv, hasAuthSupabasePublicEnv } = await import(
       "@/lib/supabase/auth-env"
     );
 
-    expect(() => getAuthSupabaseServerEnv()).toThrow(/loopback/i);
+    expect(() => getAuthSupabaseEnv()).toThrow(/NEXT_PUBLIC_AUTH_SUPABASE_URL/iu);
+    expect(hasAuthSupabasePublicEnv()).toBe(false);
+
+    process.env.NEXT_PUBLIC_AUTH_SUPABASE_URL = "https://project.supabase.co";
+    process.env.NEXT_PUBLIC_AUTH_SUPABASE_PUBLISHABLE_KEY = "publishable";
+    expect(() => getAuthSupabaseEnv()).toThrow(/hosted|Cloud|local-only/iu);
   });
 
-  it("rejects an unknown Auth authority instead of silently falling back", async () => {
-    process.env.HOMECOOK_AUTH_AUTHORITY = "typo";
+  it("allows HTTP only for exact loopback Auth and Data origins", async () => {
+    process.env.HOMECOOK_AUTH_AUTHORITY = "local";
+    process.env.HOMECOOK_DATA_AUTHORITY = "local";
+    process.env.NEXT_PUBLIC_AUTH_SUPABASE_URL = "http://127.0.0.1:54321";
+    process.env.NEXT_PUBLIC_AUTH_SUPABASE_PUBLISHABLE_KEY = "local-publishable";
+    process.env.LOCAL_SUPABASE_INTERNAL_URL = "http://localhost:54321";
+    process.env.DATA_SUPABASE_URL = "http://[::1]:54321";
+    process.env.DATA_SUPABASE_PUBLISHABLE_KEY = "local-data-publishable";
 
-    const { getAuthAuthority } = await import("@/lib/supabase/auth-env");
+    const { getAuthSupabaseEnv, getAuthSupabaseServerEnv } = await import(
+      "@/lib/supabase/auth-env"
+    );
+    const { getDataSupabaseEnv } = await import("@/lib/supabase/data-env");
 
-    expect(() => getAuthAuthority()).toThrow(/remote.*local/i);
+    expect(getAuthSupabaseEnv()).toMatchObject({
+      issuer: "http://127.0.0.1:54321/auth/v1",
+      url: "http://127.0.0.1:54321",
+    });
+    expect(getAuthSupabaseServerEnv().url).toBe("http://localhost:54321");
+    expect(getDataSupabaseEnv()).toEqual({
+      authority: "local",
+      publishableKey: "local-data-publishable",
+      url: "http://[::1]:54321",
+    });
+  });
+
+  it.each([
+    "http://192.168.0.36:54321",
+    "http://auth.mumeok.kr",
+    "https://project.supabase.co",
+  ])("rejects non-local Auth origin %s", async (url) => {
+    process.env.HOMECOOK_AUTH_AUTHORITY = "local";
+    process.env.NEXT_PUBLIC_AUTH_SUPABASE_URL = url;
+    process.env.NEXT_PUBLIC_AUTH_SUPABASE_PUBLISHABLE_KEY = "local-publishable";
+
+    const { getAuthSupabaseEnv } = await import("@/lib/supabase/auth-env");
+
+    expect(() => getAuthSupabaseEnv()).toThrow(/loopback|HTTPS|hosted|Cloud|local-only/iu);
+  });
+
+  it("allows an explicit self-hosted HTTPS Auth origin with a loopback server origin", async () => {
+    process.env.HOMECOOK_AUTH_AUTHORITY = "local";
+    process.env.NEXT_PUBLIC_AUTH_SUPABASE_URL = "https://auth.mumeok.kr";
+    process.env.NEXT_PUBLIC_AUTH_SUPABASE_PUBLISHABLE_KEY = "local-publishable";
+    process.env.LOCAL_SUPABASE_INTERNAL_URL = "http://127.0.0.1:54481";
+
+    const { getAuthSupabaseEnv, getAuthSupabaseServerEnv } = await import(
+      "@/lib/supabase/auth-env"
+    );
+
+    expect(getAuthSupabaseEnv().url).toBe("https://auth.mumeok.kr");
+    expect(getAuthSupabaseServerEnv().url).toBe("http://127.0.0.1:54481");
+  });
+
+  it("rejects non-loopback Data origins in every runtime mode", async () => {
+    (process.env as Record<string, string | undefined>).NODE_ENV = "development";
+    process.env.HOMECOOK_DATA_AUTHORITY = "local";
+    process.env.DATA_SUPABASE_URL = "http://192.168.0.36:54321";
+    process.env.DATA_SUPABASE_PUBLISHABLE_KEY = "local-publishable";
+
+    const { getDataSupabaseEnv } = await import("@/lib/supabase/data-env");
+
+    expect(() => getDataSupabaseEnv()).toThrow(/loopback/iu);
+  });
+
+  it("uses only the local Auth secret and never falls back to legacy remote secrets", async () => {
+    process.env.HOMECOOK_AUTH_AUTHORITY = "local";
+    process.env.HOMECOOK_DATA_AUTHORITY = "local";
+    process.env.AUTH_SUPABASE_SECRET_KEY = "legacy-auth-secret";
+    process.env.SUPABASE_SERVICE_ROLE_KEY = "legacy-service-secret";
+
+    const { getAuthSupabaseSecretKey } = await import("@/lib/supabase/auth-env");
+
+    expect(getAuthSupabaseSecretKey()).toBeNull();
+    process.env.LOCAL_SUPABASE_SECRET_KEY = "local-secret";
+    expect(getAuthSupabaseSecretKey()).toBe("local-secret");
+  });
+
+  it("loads the complete .env.example through the real Auth and Data parsers", async () => {
+    process.env = {
+      ...ORIGINAL_ENV,
+      ...parseEnvExample(readFileSync(".env.example", "utf8")),
+    };
+
+    const { getAuthSupabaseEnv, getAuthSupabaseServerEnv } = await import(
+      "@/lib/supabase/auth-env"
+    );
+    const { getDataSupabaseEnv } = await import("@/lib/supabase/data-env");
+
+    expect(getAuthSupabaseEnv()).toMatchObject({
+      issuer: "http://127.0.0.1:54321/auth/v1",
+      url: "http://127.0.0.1:54321",
+    });
+    expect(getAuthSupabaseServerEnv().url).toBe("http://127.0.0.1:54481");
+    expect(getDataSupabaseEnv()).toMatchObject({
+      authority: "local",
+      url: "http://127.0.0.1:54321",
+    });
   });
 });

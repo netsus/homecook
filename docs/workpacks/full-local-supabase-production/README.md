@@ -2,117 +2,60 @@
 
 ## Goal
 
-현재 Mac에서 self-hosted Supabase Auth, PostgreSQL, PostgREST와 Storage를 하나의 production authority로 운영한다. Google/Naver/Kakao 로그인, 기존 사용자 UUID, `auth.uid()` RLS, account-generation과 owner/read-only/delete/recreate 경계를 유지하면서 remote Auth identity mirror와 two-system barrier를 안정화 뒤 제거 가능한 dormant 경로로 전환한다.
+현재 Mac의 self-hosted Supabase Auth, PostgreSQL, PostgREST, Storage, Realtime를 Homecook의 단일 production authority로 운영한다. canonical target 계약은 `docs/engineering/supabase-local-only-operations.md`다.
 
-## Branches
+## Current official tuple
 
-- Stage -1 contract: `docs/full-local-supabase-contract`
-- runtime/secret/S3: `feature/full-local-supabase-runtime`
-- DB/session/flow ledger: `feature/full-local-auth-db-foundation`
-- app callback/client: `feature/full-local-auth-app-adapter`
-- restore/cutover automation: `chore/full-local-supabase-restore-cutover`
+- 요구사항 `v1.7.32`
+- 화면정의서 `v1.5.36`
+- 유저 Flow맵 `v1.3.34`
+- DB v1.3.34
+- API v1.2.39
 
-한 PR이 다른 단계의 gate를 우회하지 않는다. Stage -1 문서가 master에 merge되기 전 product code/schema를 변경하지 않으며, final cutover는 PR merge가 아닌 Manual Only 운영자 gate다.
+이 tuple은 public API 또는 DB schema shape를 바꾸지 않고 target authority와 운영 안전 gate를 local-only로 고정한다.
 
-## In Scope
+## Active scope
 
-- pinned self-hosted Supabase Auth/API gateway/PostgREST/Storage runtime
-- production-only social Auth policy와 public `/auth/v1/*` allowlist reverse proxy
-- Keychain → repo 밖 mode 제한 file → read-only secret mount → entrypoint 전달
-- Google/Kakao provider와 Naver `custom:naver` isolated HTTPS login/link 검증
-- `HOMECOOK_AUTH_AUTHORITY=remote|local` remote-default adapter와 fail-closed env guard
-- server-issued `/auth/flow/start|cancel`, private `auth_flow_attempts`, 900초 TTL/960초 drain/epoch rotation
-- local issuer용 app-owned session authority binding과 pre-expiry revoke
-- stable Auth UUID restore, transient remote session 제외, account lifecycle/delete/recreate 보호
-- official S3/rclone Storage copy, semantic manifest, off-Mac encrypted backup/restore
-- Cloudflare app/Auth hostname, public path 차단, rate limit/forwarded IP/cache 정책
-- provider별 login/link, RLS/Storage A/B, reboot/recovery, pre/post-floor rollback rehearsal
+Production domain tuple: `https://app.mumeok.kr`, `https://auth.mumeok.kr`, `https://app.mumeok.kr/auth/callback`, `https://app.mumeok.kr/auth/link/callback`.
 
-Schema Change:
-- [x] 있음. 과거 migration은 수정하지 않고 additive migration으로 flow ledger, local session binding와 compatibility transition을 추가한다.
+- app/runtime/worker/data/Auth/Storage/Realtime/PostgREST는 `HOMECOOK_AUTH_AUTHORITY=local`, `HOMECOOK_DATA_AUTHORITY=local`만 허용한다.
+- Auth public origin은 exact loopback HTTP 또는 승인된 self-hosted HTTPS이고, 내부/Data origin은 exact loopback이다. hosted Supabase URL은 fail closed한다.
+- pinned local CLI/runtime, isolated migration replay, local security negative smoke만 required gate다.
+- complete encrypted backup은 DB metadata와 Storage payload를 같은 consistent cut 안에서 묶고 object count/bytes/SHA-256/DB reference/source identity를 manifest에 기록한다.
+- production backup은 `infra/full-local-supabase/.env.production.local`의 exact Compose project와 PostgreSQL/Storage volume names, Compose labels, reviewed image digest, running+healthy state를 모두 검증한 뒤 그 PostgreSQL container에서만 `pg_dump`한다. Supabase CLI dev project id나 `db dump --local` stack으로 fallback하지 않는다.
+- production `validate`/`start`/`status`는 HMAC 인증된 mode `0600` readiness와 canonical owner/mode-`0700` parent를 required gate로 사용한다. 24시간 안의 authenticated archives, signed clean restore, `restore-platform` actual restore 뒤 isolated replacement environment-held Ed25519 issuer key로 발급한 recovery manifest, exact escrow path/hash/HMAC/device가 하나라도 없으면 fail closed한다. fixture 명칭은 `isolated_replacement_environment_verified`로 한정한다.
+- 실패한 isolated replacement restore는 restore 전 inventory에 없고 exact Compose identity와 동일 attempt token으로 증명된 container·volume·manifest/HMAC artifact만 정리한다. preexisting/dev/production/decoy 또는 label mismatch는 보존하며 cleanup 불완전 시 수동 복구 없이는 재시도하지 않는다.
+- restore gate는 운영 volume을 건드리지 않는 clean isolated namespace에서 DB metadata와 실제 object bytes/hash/reference의 일치를 증명한다.
+- 운영 데이터의 `db reset`, volume 삭제, 기존 archive overwrite는 금지한다.
+- public internet에는 승인된 app/Auth surface만 허용하고 PostgreSQL/PostgREST/Storage/Realtime/internal RPC는 loopback/private boundary에 둔다.
 
-## Out of Scope
+## Required evidence
 
-- OAuth, PKCE, refresh token 또는 session 서버를 Homecook 코드로 직접 구현
-- browser direct PostgREST/Storage 또는 user path service-role fallback
-- remote session/refresh token/flow state 이관
-- hosted Storage 내부 파일이나 Docker volume 직접 복사
-- PostgreSQL, Studio, Docker socket, `/rest/v1`, `/storage/v1` public 노출
-- official contract/restore/provider evidence 없이 first local production Auth mutation 실행
-- 14일 안정화와 dependency 0 이전 hybrid migration/history 삭제
-- 운영자 별도 승인 없는 remote project 삭제 또는 env-only post-floor rollback
+- `.env.example` 전체가 실제 Auth/Data parser를 통과한다.
+- 미설정, `remote`, `local-shadow`, hosted URL, non-loopback HTTP 조합이 runtime에서 거부된다.
+- `supabase@2.110.0` exact version과 repository migration SHA를 기록한다.
+- `pnpm verify:full-local-backup-restore-drill`이 production-compatible Compose-label fixture에서 complete backup/clean restore를 통과하고, 공존하는 dev stack을 선택하지 않았음을 증명한다.
+- active package/CI/runbook/workpack에서 remote command/credential consumer가 0이고 historical allowlist 밖 match가 0이다.
+- independent review findings 0과 current-head checks pending/fail 0 전에는 Ready/merge하지 않는다.
 
-## Dependencies
-
-| Gate | 상태 | 의미 |
-| --- | --- | --- |
-| official tuple v1.7.28/v1.5.32/v1.3.30/DB v1.3.30/API v1.2.34 | Stage -1 | 본 workpack 구현 전 merge 필수 |
-| `account-session-generation-foundation` | merged, relock required | local issuer/session binding으로 의미 재검증 |
-| `recipe-visibility-read-hardening` | merged, relock required | owner/private Storage와 delete/recreate 보호 유지 |
-| hybrid runtime/data migration | historical implementation | reusable infra는 선별 재사용하고 remote-only authority는 dormant 처리 |
-| domain/Cloudflare/provider consoles | Manual Only | 실제 public callback/live OAuth에 필요 |
-| off-Mac encrypted backup target | Manual Only | final cutover 전 실제 restore 2회 필요 |
-
-현재 deployment에는 hybrid final cutover와 local application write가 없었다. 따라서 remote Auth·application DB·Storage가 하나의 migration source-of-record이며, 기존 local rehearsal 데이터는 fresh restore 전에 폐기하고 source와 merge하지 않는다.
-
-## Backend First Contract
-
-### Auth and flow authority
-
-- production public URL contract는 `SUPABASE_PUBLIC_URL=https://auth.mumeok.kr`, `API_EXTERNAL_URL=https://auth.mumeok.kr/auth/v1`, callback `https://app.mumeok.kr/auth/callback`, link callback `https://app.mumeok.kr/auth/link/callback`, site `https://app.mumeok.kr`이다. `.com` origin/callback 혼용은 허용하지 않는다.
-- OAuth SDK는 `/auth/flow/start`가 ledger insert와 `__Host-homecook-auth-flow` HttpOnly cookie를 발급한 뒤에만 호출한다.
-- callback/link callback은 ledger provider/flow/authority/epoch와 local Auth identity를 exact 비교한다. query provider와 client-written cookie는 authority가 아니다.
-- local JWT `sub`는 existing `auth.uid()`와 exact 일치해야 한다. callback/refresh/첫 protected request는 stable `session_id` HMAC binding과 rotating JWT `iat`/`exp` evidence를 분리해 검증하고, 같은 active session의 최신 evidence와 expiry/last-seen만 단조 갱신한다. missing/revoked binding은 자동 복구하지 않는다.
-- logout/delete/quarantine/identity replacement는 binding을 즉시 revoke하고 pre-expiry stale JWT mutation을 차단한다.
-
-### Runtime and secret boundary
-
-- Docker images는 exact digest로 pin하고 Postgres → Auth → PostgREST/Storage → gateway → Next.js ordered health를 사용한다.
-- social-only production config는 email/password, OTP, SMS와 anonymous signup을 차단하고 Studio/public DB/Storage port를 열지 않는다.
-- secret은 Keychain에서 repo 밖 `0700`/`0600` file로 materialize하고 `/run/secrets` read-only mount로 전달한다. Compose/Docker `Config.Env`, Git, bundle, build와 log의 raw/base64/URL-encoded secret match는 0이다.
-
-### Data and rollback authority
-
-- `auth.users.id`와 identity UUID를 보존하고 remote transient session/refresh/flow row는 local promote count 0이어야 한다.
-- Auth/application DB/Storage는 같은 maintenance attempt의 remote snapshot만 source로 사용하고 기존 local rehearsal row/object의 승격·병합은 0이어야 한다.
-- Storage는 matching bucket을 준비한 뒤 source hosted S3 → pinned rclone → loopback local S3로 복사한다. path/count/bytes/MIME/SHA-256/DB reference/owner prefix mismatch는 0이다.
-- rollback floor는 첫 local session, identity link 또는 user-scoped write 중 최초 성공이다. floor 뒤에는 Auth/application/Storage delta 없는 env-only rollback을 거부한다.
-
-## Frontend Delivery Mode
-
-- 기존 LOGIN, callback/link callback, SETTINGS/MYPAGE와 return-to-action을 재사용한다.
-- 신규 제품 화면·navigation·layout은 없다. maintenance, re-login, provider error/retry 상태를 기존 surface에 연결한다.
-- 320/390/desktop에서 중복 제출, CTA 가림, focus loss와 horizontal overflow가 없어야 한다.
-
-## Design Authority
-
-- UI risk: `low-risk`
-- 신규 화면: 없음
-- 기존 로그인 상태 연결만 변경하므로 Stage 1 design artifact는 N/A다. Stage 4는 실제 320/390/desktop screenshot과 accessibility regression evidence를 요구한다.
-
-## QA / Test Data Plan
-
-- isolated fresh/replay PostgreSQL with stable A/B UUID, linked identities, revoked/stale sessions와 G1/G2 recreate fixture
-- Google/Naver/Kakao login/link success, cancel, conflict, wrong provider/flow/epoch, replay, expiry
-- Auth/DB/Storage down, stale key, 429, Cloudflare reconnect와 Mac reboot fault injection
-- hosted/local Storage count/digest/reference/owner-prefix manifest와 temporary credential cleanup
-- production mutation은 merged exact SHA, restore/provider/manual evidence와 별도 운영자 승인 전 0이다.
-
-## Source Links
+## Source links
 
 - `docs/sync/CURRENT_SOURCE_OF_TRUTH.md`
+- `docs/engineering/supabase-local-only-operations.md`
 - `docs/engineering/full-local-supabase-production-plan.md`
-- `docs/요구사항기준선-v1.7.28.md`
-- `docs/화면정의서-v1.5.32.md`
-- `docs/유저flow맵-v1.3.30.md`
-- `docs/db설계-v1.3.30.md`
-- `docs/api문서-v1.2.34.md`
+- `docs/요구사항기준선-v1.7.32.md`
+- `docs/화면정의서-v1.5.36.md`
+- `docs/유저flow맵-v1.3.34.md`
+- `docs/db설계-v1.3.34.md`
+- `docs/api문서-v1.2.39.md`
 
-## Manual Only
+## Manual only
 
-- 실제 소유 domain, Cloudflare named tunnel과 app/Auth HTTPS hostname 설정
-- Google/Kakao/Naver 개발자 console callback·secret 변경과 실제 계정 smoke
-- remote `auth.*`/Storage inventory, temporary hosted S3 key 생성·revoke
-- Keychain production secret, off-Mac backup key/target와 실제 restore 2회
-- final maintenance window, 960초 drain, provider callback 전환과 first local Auth mutation 승인
-- 14일 안정화 뒤 remote/hybrid cleanup 또는 장기 보존 결정
+- 실제 소유 domain과 full-local public HTTPS reverse proxy 변경
+- provider console callback/secret 변경과 실제 계정 smoke
+- Keychain production secret, off-Mac backup target, production maintenance window
+- first production mutation, bounded production restore 또는 rollback 실행
+
+## Historical appendix / FORBIDDEN N/A
+
+2026-08-01 이전의 remote-default adapter, local-shadow, remote migration source-of-record, hosted S3 credential/rclone copy, linked DB/security gate와 remote rollback은 감사 기록일 뿐이다. 신규 task의 prerequisite, package entrypoint, runtime fallback, recovery source 또는 required gate로 실행하면 안 된다. 과거 migration과 evidence 문서는 삭제하지 않되 explicit historical allowlist 밖에서 executable하게 노출하지 않는다.

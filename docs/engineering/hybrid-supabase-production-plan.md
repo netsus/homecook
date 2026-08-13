@@ -1,5 +1,7 @@
 # 원격 Auth + 로컬 DB/Storage production 전환 계획
 
+> **HISTORICAL / FORBIDDEN N/A (2026-08-13):** 이 계획의 remote Auth, linked DB, credential, migration/cutover 절차는 감사 기록이며 실행 경로가 아니다. 현재 authority는 `docs/engineering/supabase-local-only-operations.md`다.
+
 상태: **Stage 1 doc gate PASS / 문서 PR merge 대기 / local write 미개방**
 작성일: **2026-07-30 KST**
 대상 서비스: `homecook`

@@ -5,6 +5,8 @@ import { createHash } from "node:crypto";
 import {
   chmodSync,
   existsSync,
+  lstatSync,
+  mkdirSync,
   mkdtempSync,
   readFileSync,
   realpathSync,
@@ -28,19 +30,51 @@ import {
   materializeFullLocalSecrets,
   parseFullLocalProductCatalogSqlOutput,
   summarizeFullLocalRuntimeStates,
+  selectNewlyStartedFullLocalWriterServices,
   validateExternalSecretDirectory,
   validateFullLocalProductionConfig,
 } from "./lib/full-local-production-runtime.mjs";
 import {
+  buildPlatformBackupAuthentication,
+  buildDockerStorageVolumeCaptureInvocation,
+  buildDockerStorageVolumeRestoreInvocation,
+  listStoragePayloadPaths,
   PLATFORM_BACKUP_KEYCHAIN_ACCOUNT,
   PLATFORM_BACKUP_KEYCHAIN_SERVICE,
+  platformBackupAuthenticationPath,
+  verifyPlatformBackupAuthentication,
+  verifyStoragePayloadManifest,
   withVerifiedPlatformBackup,
 } from "./lib/full-local-platform-backup.mjs";
+import { mapStorageRowsToPayloadReferences } from "./lib/isolated-local-backup-restore-drill.mjs";
+import { verifyFullLocalBackupReadiness } from "./lib/full-local-backup-readiness.mjs";
+import {
+  openFullLocalBackupKeyEscrow,
+  signFullLocalBackupKeyRecoveryEvidence,
+  verifyFullLocalBackupKeyEscrowBinding,
+  verifyFullLocalBackupKeyRecoveryIssuerAttestation,
+  withReplacementRestoreAttemptCleanup,
+  withRecoveredBackupKeyCreateOnlyRegistration,
+} from "./lib/full-local-backup-key-recovery.mjs";
+import {
+  assertPrivateArtifactParent,
+  assertRegularReadinessArtifact,
+  authenticateFullLocalBackupArchives,
+  fullLocalBackupMetadataSha256,
+} from "./lib/full-local-backup-readiness.mjs";
+import {
+  selectFullLocalProductionResources,
+} from "./lib/full-local-production-resources.mjs";
 import {
   assertFreshRestoreExecutionApproved,
   assertFreshRestoreAllowed,
+  assertRestoredStorageVolumeProvenance,
+  buildBootstrapAwareDatabaseResetSql,
+  buildComposeLabeledStorageVolumeCreateArgs,
   buildCutoverPreflight,
   buildPlatformRestoreSql,
+  executeBootstrapAwarePlatformRestore,
+  verifyRestoredPlatformDataSnapshot,
   compareRestoreReplayManifests,
 } from "./lib/full-local-restore-cutover.mjs";
 import {
@@ -57,6 +91,7 @@ const COMPOSE_FILE = join(INFRA, "docker-compose.production.yml");
 const OAUTH_COMPOSE_FILE = join(INFRA, "docker-compose.oauth.production.yml");
 const CONFIG_EXAMPLE = join(INFRA, ".env.production.example");
 const DEFAULT_CONFIG = join(INFRA, ".env.production.local");
+const KEYCHAIN_CREATOR = join(INFRA, "keychain-create.exp");
 const KEYCHAIN_WRITER = join(INFRA, "keychain-store.exp");
 const KEYCHAIN_CHUNK_SIZE = 96;
 const KEYCHAIN_MAX_CHUNKS = 128;
@@ -330,6 +365,17 @@ function keychainItemExists(service, account) {
   ).status === 0;
 }
 
+function keychainDirectItemExists(service, account) {
+  const result = spawnSync(
+    "security",
+    ["find-generic-password", "-s", service, "-a", account],
+    { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] },
+  );
+  if (result.status === 0) return true;
+  if (result.status === 44) return false;
+  fail("Recovery could not verify the direct Keychain account safely.");
+}
+
 function dockerVolumeExists(name) {
   const result = spawnSync("docker", ["volume", "inspect", name], {
     encoding: "utf8",
@@ -343,6 +389,17 @@ function dockerVolumeExists(name) {
     return false;
   }
   fail("Docker could not verify whether the persistent PostgreSQL volume exists.");
+}
+
+function inspectDockerVolume(name) {
+  const output = run("docker", ["volume", "inspect", name], {
+    failure: "Docker Storage volume provenance inspection failed.",
+  });
+  const inspected = JSON.parse(output);
+  if (!Array.isArray(inspected) || inspected.length !== 1) {
+    fail("Docker Storage volume provenance inspection was ambiguous.");
+  }
+  return inspected[0];
 }
 
 function keychainChunkCount(service, account) {
@@ -359,6 +416,94 @@ function storeKeychainValue(service, account, secretPath) {
   run("expect", [KEYCHAIN_WRITER, service, account, secretPath], {
     failure: `Keychain item ${account} could not be stored.`,
   });
+}
+
+function createKeychainValue(service, account, ownershipToken, secretPath) {
+  run("expect", [KEYCHAIN_CREATOR, service, account, ownershipToken, secretPath], {
+    failure: `Keychain item ${account} could not be created because it already exists or Keychain rejected it.`,
+  });
+}
+
+function keychainOwnedDirectValue(service, account, ownershipToken) {
+  return run(
+    "security",
+    [
+      "find-generic-password",
+      "-s",
+      service,
+      "-a",
+      account,
+      "-G",
+      ownershipToken,
+      "-w",
+    ],
+    { failure: "Attempt-owned recovered backup Keychain item is unavailable." },
+  ).trim();
+}
+
+function deleteOwnedKeychainDirectItem(service, account, ownershipToken) {
+  run(
+    "security",
+    [
+      "delete-generic-password",
+      "-s",
+      service,
+      "-a",
+      account,
+      "-G",
+      ownershipToken,
+    ],
+    { failure: "Attempt-owned recovered backup Keychain item could not be removed." },
+  );
+}
+
+export function attemptCreatedArtifactIdentity({ attemptToken, path }) {
+  const artifact = lstatSync(path);
+  if (!artifact.isFile() || artifact.isSymbolicLink()) {
+    fail("Attempt-created restore artifact must be a regular file.");
+  }
+  return Object.freeze({
+    attemptToken,
+    dev: artifact.dev,
+    ino: artifact.ino,
+    path,
+    sha256: sha256File(path),
+    size: artifact.size,
+  });
+}
+
+function pathEntryExists(path) {
+  try {
+    lstatSync(path);
+    return true;
+  } catch (error) {
+    if (error?.code === "ENOENT") return false;
+    throw error;
+  }
+}
+
+export function removeAttemptCreatedArtifact(expected) {
+  const { path } = expected;
+  if (!pathEntryExists(path)) return;
+  const artifact = lstatSync(path);
+  if (
+    !artifact.isFile()
+    || artifact.isSymbolicLink()
+    || artifact.dev !== expected.dev
+    || artifact.ino !== expected.ino
+    || artifact.size !== expected.size
+    || sha256File(path) !== expected.sha256
+  ) {
+    fail("Attempt-created restore artifact changed type; manual recovery required.");
+  }
+  assertPrivateArtifactParent(path);
+  rmSync(path);
+}
+
+export function assertFailedAttemptArtifactsCleared(paths) {
+  if (paths.some((path) => pathEntryExists(path))) {
+    fail("attempt artifact ownership changed; manual recovery required before retry");
+  }
 }
 
 function deleteKeychainSecret(service, account) {
@@ -741,6 +886,219 @@ function sha256Text(value) {
   return createHash("sha256").update(value).digest("hex");
 }
 
+function sha256File(path) {
+  const output = run("openssl", ["dgst", "-sha256", "-r", path], {
+    failure: "Backup readiness file digest failed.",
+  });
+  const digest = /^([0-9a-f]{64})\s/u.exec(output)?.[1];
+  if (!digest) fail("Backup readiness file digest is invalid.");
+  return digest;
+}
+
+export function dockerResourceInventory(type, { execute = run } = {}) {
+  const ids = execute(
+    "docker",
+    [type, "ls", "--quiet"],
+    { failure: `Docker ${type} inventory listing failed.` },
+  ).trim().split("\n").filter(Boolean);
+  if (ids.length === 0) return [];
+  return JSON.parse(execute("docker", [type, "inspect", ...ids], {
+    failure: `Docker ${type} inventory inspection failed.`,
+  }) || "[]");
+}
+
+function liveFullLocalProductionResources(runtime) {
+  return selectFullLocalProductionResources({
+    config: runtime.config,
+    containers: dockerResourceInventory("container"),
+    volumes: dockerResourceInventory("volume"),
+  });
+}
+
+function configuredFullLocalProductionResources(runtime) {
+  return {
+    composeProject: runtime.config.FULL_LOCAL_COMPOSE_PROJECT_NAME,
+    postgresContainerName:
+      `${runtime.config.FULL_LOCAL_COMPOSE_PROJECT_NAME}-postgres-1`,
+    postgresImage: runtime.config.FULL_LOCAL_POSTGRES_IMAGE,
+    postgresVolumeName: runtime.config.FULL_LOCAL_POSTGRES_VOLUME_NAME,
+    storageVolumeName: runtime.config.FULL_LOCAL_STORAGE_VOLUME_NAME,
+  };
+}
+
+async function loadFullLocalBackupReadiness(runtime, resources) {
+  const path = runtime.config.FULL_LOCAL_BACKUP_READINESS_PATH;
+  if (!path || !isAbsolute(path) || !existsSync(path)) {
+    fail("FULL_LOCAL_BACKUP_READINESS_PATH must reference existing readiness evidence.");
+  }
+  const readinessPath = assertRegularReadinessArtifact(path);
+  assertPrivateArtifactParent(readinessPath);
+  validateExternalSecretDirectory({
+    repositoryRoot: ROOT,
+    secretDirectory: dirname(readinessPath),
+  });
+  const evidenceStat = statSync(readinessPath);
+  if (!evidenceStat.isFile() || (evidenceStat.mode & 0o777) !== 0o600) {
+    fail("Full-local backup readiness evidence must be a mode 0600 file.");
+  }
+  const backupKey = keychainValue(
+    PLATFORM_BACKUP_KEYCHAIN_SERVICE,
+    PLATFORM_BACKUP_KEYCHAIN_ACCOUNT,
+  );
+  const authenticationPath = assertRegularReadinessArtifact(
+    platformBackupAuthenticationPath(readinessPath),
+  );
+  assertPrivateArtifactParent(authenticationPath);
+  validateExternalSecretDirectory({
+    repositoryRoot: ROOT,
+    secretDirectory: dirname(authenticationPath),
+  });
+  const readinessBytes = readFileSync(readinessPath);
+  verifyPlatformBackupAuthentication({
+    archive: readinessPath,
+    archiveBytes: readinessBytes,
+    authentication: JSON.parse(readFileSync(authenticationPath, "utf8")),
+    backupKey,
+  });
+  const evidence = JSON.parse(readinessBytes.toString("utf8"));
+  const keyRecoveryManifestPath = assertRegularReadinessArtifact(
+    evidence?.key_recovery?.evidence_path,
+  );
+  assertPrivateArtifactParent(keyRecoveryManifestPath);
+  const keyRecoveryAuthenticationPath = assertRegularReadinessArtifact(
+    platformBackupAuthenticationPath(keyRecoveryManifestPath),
+  );
+  assertPrivateArtifactParent(keyRecoveryAuthenticationPath);
+  const keyRecoveryManifestBytes = readFileSync(keyRecoveryManifestPath);
+  verifyPlatformBackupAuthentication({
+    archive: keyRecoveryManifestPath,
+    archiveBytes: keyRecoveryManifestBytes,
+    authentication: JSON.parse(readFileSync(keyRecoveryAuthenticationPath, "utf8")),
+    backupKey,
+  });
+  const keyRecoveryManifest = JSON.parse(keyRecoveryManifestBytes.toString("utf8"));
+  const escrowEnvelopePath = assertRegularReadinessArtifact(
+    keyRecoveryManifest.escrow_envelope_path,
+  );
+  assertPrivateArtifactParent(escrowEnvelopePath);
+  const escrowAuthenticationPath = assertRegularReadinessArtifact(
+    platformBackupAuthenticationPath(escrowEnvelopePath),
+  );
+  assertPrivateArtifactParent(escrowAuthenticationPath);
+  const escrowEnvelopeBytes = readFileSync(escrowEnvelopePath);
+  verifyPlatformBackupAuthentication({
+    archive: escrowEnvelopePath,
+    archiveBytes: escrowEnvelopeBytes,
+    authentication: JSON.parse(readFileSync(escrowAuthenticationPath, "utf8")),
+    backupKey,
+  });
+  const escrowEnvelope = JSON.parse(escrowEnvelopeBytes.toString("utf8"));
+  if (
+    escrowEnvelope?.format !== "homecook-full-local-backup-key-escrow-v1"
+    || escrowEnvelope?.cipher !== "AES-256-GCM"
+    || escrowEnvelope?.kdf !== "scrypt"
+  ) {
+    fail("Backup key escrow envelope format is invalid.");
+  }
+  verifyFullLocalBackupKeyRecoveryIssuerAttestation({
+    envelope: escrowEnvelope,
+    evidence: keyRecoveryManifest,
+  });
+  if (
+    sha256File(keyRecoveryManifestPath) !== evidence.key_recovery.evidence_sha256
+    || keyRecoveryManifest.escrow_envelope_path
+      !== evidence.key_recovery.escrow_envelope_path
+    || keyRecoveryManifest.escrow_envelope_sha256
+      !== evidence.key_recovery.escrow_envelope_sha256
+  ) {
+    fail("Signed backup key recovery evidence does not match readiness.");
+  }
+  const restoreManifestPath = assertRegularReadinessArtifact(
+    evidence?.restore?.manifest_path,
+  );
+  assertPrivateArtifactParent(restoreManifestPath);
+  const restoreAuthenticationPath = assertRegularReadinessArtifact(
+    platformBackupAuthenticationPath(restoreManifestPath),
+  );
+  assertPrivateArtifactParent(restoreAuthenticationPath);
+  const restoreManifestBytes = readFileSync(restoreManifestPath);
+  verifyPlatformBackupAuthentication({
+    archive: restoreManifestPath,
+    archiveBytes: restoreManifestBytes,
+    authentication: JSON.parse(readFileSync(restoreAuthenticationPath, "utf8")),
+    backupKey,
+  });
+  if (sha256File(restoreManifestPath) !== evidence.restore.manifest_sha256) {
+    fail("Signed restore manifest digest does not match readiness evidence.");
+  }
+  const observedFiles = {};
+  const archiveStats = [];
+  for (const archivePath of [
+    evidence?.backup?.archive_path,
+    evidence?.off_mac_copy?.archive_path,
+  ]) {
+    if (typeof archivePath !== "string" || !isAbsolute(archivePath) || !existsSync(archivePath)) {
+      fail("Backup readiness archive or off-Mac copy is unavailable.");
+    }
+    if (lstatSync(archivePath).isSymbolicLink()) {
+      fail("Backup readiness archives must not be symlinks.");
+    }
+    assertPrivateArtifactParent(archivePath);
+    assertPrivateArtifactParent(platformBackupAuthenticationPath(archivePath));
+    const archiveStat = statSync(realpathSync(archivePath));
+    if (!archiveStat.isFile() || (archiveStat.mode & 0o777) !== 0o600) {
+      fail("Backup readiness archives must be regular mode 0600 files.");
+    }
+    archiveStats.push(archiveStat);
+    observedFiles[resolve(archivePath)] = sha256File(archivePath);
+  }
+  if (archiveStats[0].dev === archiveStats[1].dev) {
+    fail("Backup readiness off-Mac copy must remain on a distinct filesystem device.");
+  }
+  if (
+    String(archiveStats[1].dev) !== evidence.key_recovery.archive_device_id
+    || archiveStats[1].dev === statSync(escrowEnvelopePath).dev
+    || archiveStats[0].dev === statSync(escrowEnvelopePath).dev
+  ) {
+    fail("Backup key escrow must remain on a medium distinct from the off-Mac archive.");
+  }
+  verifyFullLocalBackupKeyEscrowBinding({
+    archiveDeviceIds: archiveStats.map((stat) => String(stat.dev)),
+    manifest: evidence.key_recovery,
+    observedDeviceId: String(statSync(escrowEnvelopePath).dev),
+    observedPath: escrowEnvelopePath,
+    observedSha256: sha256File(escrowEnvelopePath),
+  });
+  const authenticatedMetadata = await authenticateFullLocalBackupArchives({
+    evidence,
+    verifyArchive: (archive) => withVerifiedPlatformBackup({
+      archive,
+      backupKey,
+      consume: ({ metadata }) => metadata,
+    }),
+  });
+  if (authenticatedMetadata.components?.data_sha256 !== evidence?.backup?.data_sha256) {
+    fail("Authenticated backup metadata does not match readiness evidence.");
+  }
+  return verifyFullLocalBackupReadiness({
+    authenticatedBackupMetadataSha256:
+      fullLocalBackupMetadataSha256(authenticatedMetadata),
+    evidence,
+    evidenceFileMode: evidenceStat.mode & 0o777,
+    observedEscrowFiles: {
+      [escrowEnvelopePath]: sha256File(escrowEnvelopePath),
+    },
+    observedFiles,
+    production: {
+      composeProject: resources.composeProject,
+      postgresContainerName: resources.postgresContainerName,
+      postgresImage: resources.postgresImage,
+      postgresVolumeName: resources.postgresVolumeName,
+      storageVolumeName: resources.storageVolumeName,
+    },
+  });
+}
+
 function restoredSemanticManifest(runtime) {
   const sql = String.raw`
     create temporary table homecook_restore_manifest (
@@ -945,14 +1303,27 @@ function restoredSemanticManifest(runtime) {
   };
 }
 
-function writeRestoreManifest({ manifestPath, metadata, runtime, semantic }) {
+function writeRestoreManifest({
+  archiveSha256,
+  attemptToken,
+  backupKey,
+  createdArtifacts,
+  manifestPath,
+  metadata,
+  runtime,
+  semantic,
+}) {
   const restoreManifest = {
     ...semantic,
     compose_project: runtime.config.FULL_LOCAL_COMPOSE_PROJECT_NAME,
     created_at: new Date().toISOString(),
     format: "homecook-full-local-restore-v1",
+    fresh_target_attested: true,
     postgres_volume: runtime.config.FULL_LOCAL_POSTGRES_VOLUME_NAME,
     relation_classification_digest: metadata.manifest.relation_classification_digest,
+    restore_execution: "clean-isolated-restore-platform-v1",
+    restore_attempt_token: attemptToken,
+    source_archive_sha256: archiveSha256,
     source_backup_created_at: metadata.created_at,
     source_data_sha256: metadata.components.data_sha256,
     source_roles_sha256: metadata.components.roles_sha256,
@@ -960,12 +1331,158 @@ function writeRestoreManifest({ manifestPath, metadata, runtime, semantic }) {
     storage_volume: runtime.config.FULL_LOCAL_STORAGE_VOLUME_NAME,
     unclassified_count: metadata.manifest.unclassified.length,
   };
-  writeFileSync(manifestPath, `${JSON.stringify(restoreManifest, null, 2)}\n`, {
+  const manifestContents = `${JSON.stringify(restoreManifest, null, 2)}\n`;
+  writeFileSync(manifestPath, manifestContents, {
     encoding: "utf8",
+    flag: "wx",
     mode: 0o600,
   });
+  createdArtifacts.push(attemptCreatedArtifactIdentity({ attemptToken, path: manifestPath }));
   chmodSync(manifestPath, 0o600);
+  const authenticationPath = platformBackupAuthenticationPath(manifestPath);
+  const authentication = buildPlatformBackupAuthentication({
+    archive: manifestPath,
+    archiveBytes: Buffer.from(manifestContents, "utf8"),
+    backupKey,
+  });
+  writeFileSync(authenticationPath, `${JSON.stringify(authentication, null, 2)}\n`, {
+    encoding: "utf8",
+    flag: "wx",
+    mode: 0o600,
+  });
+  createdArtifacts.push(attemptCreatedArtifactIdentity({ attemptToken, path: authenticationPath }));
+  chmodSync(authenticationPath, 0o600);
   return restoreManifest;
+}
+
+function restoredPlatformDataSnapshot(runtime, metadata) {
+  const restoredDataSql = compose(runtime, [
+    "exec",
+    "-T",
+    "postgres",
+    "pg_dump",
+    "--data-only",
+    "--username",
+    "supabase_admin",
+    "--dbname",
+    "postgres",
+  ]);
+  return verifyRestoredPlatformDataSnapshot({
+    restoredDataSql,
+    sourceDataSha256: metadata.components.data_sha256,
+    sourceRelationClassificationDigest:
+      metadata.manifest.relation_classification_digest,
+  });
+}
+
+function restoredStorageRows(runtime) {
+  const sql = `
+    select coalesce(json_agg(json_build_object(
+      'bucket_id', bucket_id,
+      'name', name,
+      'version', version::text
+    ) order by bucket_id, name), '[]'::json)::text
+    from storage.objects;
+  `;
+  return JSON.parse(composeWithInput(runtime, [
+    "exec",
+    "-T",
+    "postgres",
+    "psql",
+    "--tuples-only",
+    "--no-align",
+    "--variable",
+    "ON_ERROR_STOP=1",
+    "--username",
+    "supabase_admin",
+    "--dbname",
+    "postgres",
+  ], sql).trim());
+}
+
+function restoreStoragePayloadVolume(runtime, storagePayloadPath) {
+  const staging = mkdtempSync(join(tmpdir(), "homecook-storage-volume-restore-"));
+  chmodSync(staging, 0o700);
+  try {
+    writeFileSync(
+      join(staging, "storage.payload.tar"),
+      readFileSync(storagePayloadPath),
+      { mode: 0o600 },
+    );
+    const volumeName = runtime.config.FULL_LOCAL_STORAGE_VOLUME_NAME;
+    if (dockerVolumeExists(volumeName)) {
+      run("docker", ["volume", "rm", volumeName], {
+        env: runtime.env,
+        failure: "Fresh full-local Storage volume reset failed.",
+      });
+    }
+    run("docker", buildComposeLabeledStorageVolumeCreateArgs({
+      attemptToken: runtime.env.FULL_LOCAL_RESTORE_ATTEMPT_TOKEN,
+      composeProject: runtime.config.FULL_LOCAL_COMPOSE_PROJECT_NAME,
+      volumeName,
+    }), {
+      env: runtime.env,
+      failure: "Fresh full-local Storage volume creation failed.",
+    });
+    assertRestoredStorageVolumeProvenance({
+      attemptToken: runtime.env.FULL_LOCAL_RESTORE_ATTEMPT_TOKEN,
+      composeProject: runtime.config.FULL_LOCAL_COMPOSE_PROJECT_NAME,
+      inspect: inspectDockerVolume(volumeName),
+      volumeName,
+    });
+    const invocation = buildDockerStorageVolumeRestoreInvocation({
+      archiveDirectory: staging,
+      volumeName,
+    });
+    run(invocation.command, invocation.args, {
+      env: runtime.env,
+      failure: "Verified full-local Storage payload restore failed.",
+    });
+  } finally {
+    rmSync(staging, { force: true, recursive: true });
+  }
+}
+
+function verifyRestoredStoragePayload(runtime, manifest) {
+  const staging = mkdtempSync(join(tmpdir(), "homecook-storage-volume-verify-"));
+  chmodSync(staging, 0o700);
+  const archiveDirectory = join(staging, "archive");
+  const sourceDirectory = join(staging, "snapshot");
+  mkdirSync(archiveDirectory, { recursive: true, mode: 0o700 });
+  mkdirSync(sourceDirectory, { recursive: true, mode: 0o700 });
+  try {
+    const invocation = buildDockerStorageVolumeCaptureInvocation({
+      archiveDirectory,
+      volumeName: runtime.config.FULL_LOCAL_STORAGE_VOLUME_NAME,
+    });
+    run(invocation.command, invocation.args, {
+      env: runtime.env,
+      failure: "Restored full-local Storage payload capture failed.",
+    });
+    run("tar", [
+      "-C",
+      sourceDirectory,
+      "-xf",
+      join(archiveDirectory, "storage.payload.tar"),
+    ], { failure: "Restored full-local Storage payload extraction failed." });
+    const references = mapStorageRowsToPayloadReferences(
+      restoredStorageRows(runtime),
+      listStoragePayloadPaths(sourceDirectory),
+    );
+    verifyStoragePayloadManifest(manifest, {
+      references,
+      sourceDirectory,
+      sourceIdentity: manifest.source_identity,
+    });
+    return {
+      storage_payload_catalog_sha256: manifest.catalog_sha256,
+      storage_payload_object_count: manifest.object_count,
+      storage_payload_total_bytes: manifest.total_bytes,
+      storage_reference_count: references.length,
+    };
+  } finally {
+    rmSync(staging, { force: true, recursive: true });
+  }
 }
 
 function restoreEvidenceOptions(args, command) {
@@ -984,6 +1501,9 @@ function restoreEvidenceOptions(args, command) {
   });
   if (existsSync(manifestPath)) {
     fail("Restore manifest output already exists.");
+  }
+  if (existsSync(platformBackupAuthenticationPath(manifestPath))) {
+    fail("Restore manifest authentication output already exists.");
   }
   return { archive: resolve(archiveOption), manifestPath };
 }
@@ -1022,6 +1542,100 @@ function runCutoverPreflight(args) {
   };
 }
 
+function writeCanonicalRecoveryManifest({
+  archive,
+  archiveSha256,
+  args,
+  attemptToken,
+  backupKey,
+  createdArtifacts,
+  metadata,
+  restoreManifest,
+}) {
+  const output = optionValue(args, "--recovery-manifest");
+  const envelopePath = optionValue(args, "--escrow-envelope");
+  const issuerKeyPath = optionValue(args, "--recovery-issuer-private-key");
+  for (const [label, path] of Object.entries({ output, envelopePath, issuerKeyPath })) {
+    if (!path || !isAbsolute(path)) fail(`restore-platform requires --${label} absolute path.`);
+  }
+  const canonicalEnvelope = assertRegularReadinessArtifact(envelopePath);
+  const canonicalIssuerKey = assertRegularReadinessArtifact(issuerKeyPath);
+  assertPrivateArtifactParent(canonicalEnvelope);
+  assertPrivateArtifactParent(canonicalIssuerKey);
+  if (
+    statSync(canonicalEnvelope).dev === statSync(archive).dev
+    || statSync(canonicalIssuerKey).dev !== statSync(canonicalEnvelope).dev
+  ) {
+    fail("Recovery issuer key and escrow must share a medium distinct from the archive.");
+  }
+  const outputPath = resolve(output);
+  if (existsSync(outputPath) || existsSync(platformBackupAuthenticationPath(outputPath))) {
+    fail("Canonical recovery manifest output already exists.");
+  }
+  validateExternalSecretDirectory({ repositoryRoot: ROOT, secretDirectory: dirname(outputPath) });
+  const envelope = JSON.parse(readFileSync(canonicalEnvelope, "utf8"));
+  const unsigned = {
+    archive_device_id: String(statSync(archive).dev),
+    archive_sha256: archiveSha256,
+    clean_restore_verified: restoreManifest.fresh_target_attested === true,
+    created_at: new Date().toISOString(),
+    escrow_device_id: String(statSync(canonicalEnvelope).dev),
+    escrow_envelope_path: canonicalEnvelope,
+    escrow_envelope_sha256: sha256File(canonicalEnvelope),
+    format: "homecook-full-local-backup-key-recovery-v1",
+    isolated_replacement_environment_verified:
+      restoreManifest.restore_execution === "clean-isolated-restore-platform-v1",
+    keychain_reregistered: true,
+    keychain_registration: {
+      account: PLATFORM_BACKUP_KEYCHAIN_ACCOUNT,
+      adapter: "macos-keychain-recovered-key-v1",
+      key_sha256: createHash("sha256").update(backupKey).digest("hex"),
+    },
+    restored_metadata_sha256: fullLocalBackupMetadataSha256(metadata),
+    restore_attempt_token: attemptToken,
+    restore_manifest_path: resolve(optionValue(args, "--manifest")),
+    restore_manifest_sha256: sha256File(resolve(optionValue(args, "--manifest"))),
+  };
+  const evidence = signFullLocalBackupKeyRecoveryEvidence({
+    evidence: unsigned,
+    privateKey: readFileSync(canonicalIssuerKey, "utf8"),
+  });
+  verifyFullLocalBackupKeyRecoveryIssuerAttestation({ envelope, evidence });
+  const contents = `${JSON.stringify(evidence, null, 2)}\n`;
+  writeFileSync(outputPath, contents, { encoding: "utf8", flag: "wx", mode: 0o600 });
+  createdArtifacts.push(attemptCreatedArtifactIdentity({ attemptToken, path: outputPath }));
+  const authentication = buildPlatformBackupAuthentication({
+    archive: outputPath,
+    archiveBytes: Buffer.from(contents),
+    backupKey,
+  });
+  const authenticationPath = platformBackupAuthenticationPath(outputPath);
+  writeFileSync(
+    authenticationPath,
+    `${JSON.stringify(authentication, null, 2)}\n`,
+    { encoding: "utf8", flag: "wx", mode: 0o600 },
+  );
+  createdArtifacts.push(attemptCreatedArtifactIdentity({ attemptToken, path: authenticationPath }));
+  return evidence;
+}
+
+function recoveryManifestOutputPaths(args) {
+  const output = optionValue(args, "--recovery-manifest");
+  if (!output || !isAbsolute(output)) {
+    fail("restore-platform requires --recovery-manifest absolute path.");
+  }
+  const outputPath = resolve(output);
+  const authenticationPath = platformBackupAuthenticationPath(outputPath);
+  if (existsSync(outputPath) || existsSync(authenticationPath)) {
+    fail("Canonical recovery manifest output already exists.");
+  }
+  validateExternalSecretDirectory({
+    repositoryRoot: ROOT,
+    secretDirectory: dirname(outputPath),
+  });
+  return { authenticationPath, outputPath };
+}
+
 async function restorePlatformBackup(args) {
   const { archive, manifestPath } = restoreEvidenceOptions(args, "restore-platform");
   assertFreshRestoreExecutionApproved({
@@ -1029,56 +1643,221 @@ async function restorePlatformBackup(args) {
   });
 
   const runtime = validateAndMaterialize(args);
+  const recoveryOutputs = recoveryManifestOutputPaths(args);
   assertFreshRestoreAllowed({
     postgresVolumeExists: dockerVolumeExists(runtime.config.FULL_LOCAL_POSTGRES_VOLUME_NAME),
     storageVolumeExists: dockerVolumeExists(runtime.config.FULL_LOCAL_STORAGE_VOLUME_NAME),
   });
-  const backupKey = keychainValue(
-    PLATFORM_BACKUP_KEYCHAIN_SERVICE,
-    PLATFORM_BACKUP_KEYCHAIN_ACCOUNT,
+  const envelopePath = assertRegularReadinessArtifact(
+    optionValue(args, "--escrow-envelope"),
   );
+  const credentialPath = assertRegularReadinessArtifact(
+    optionValue(args, "--recovery-credential-file"),
+  );
+  assertPrivateArtifactParent(envelopePath);
+  assertPrivateArtifactParent(credentialPath);
+  if (statSync(envelopePath).dev !== statSync(credentialPath).dev) {
+    fail("Recovery credential and escrow envelope must share the replacement medium.");
+  }
+  const backupKey = openFullLocalBackupKeyEscrow({
+    envelope: JSON.parse(readFileSync(envelopePath, "utf8")),
+    recoveryCredential: readFileSync(credentialPath, "utf8").trim(),
+  });
+  const archiveSha256 = sha256File(archive);
+  const createdArtifacts = [];
+  const expectedArtifactPaths = [
+    manifestPath,
+    platformBackupAuthenticationPath(manifestPath),
+    recoveryOutputs.outputPath,
+    recoveryOutputs.authenticationPath,
+  ];
 
-  return withVerifiedPlatformBackup({
-    archive,
-    backupKey,
-    consume: async ({ dataPath, metadata, rolesPath, schemaPath }) => {
-      // GoTrue and Storage own their internal schemas. Bootstrap the exact
-      // pinned service versions before applying the platform dump.
-      compose(runtime, ["up", "-d"]);
-      await waitForRuntimeHealthy(runtime);
-      compose(runtime, [
-        "stop",
-        "auth-proxy",
-        "api-gateway",
-        "storage",
-        "postgrest-probe",
-        "postgrest",
-        "auth",
-      ]);
-      await waitForServiceHealthy(runtime, "postgres");
-      const restoreSql = buildPlatformRestoreSql({
-        dataSql: readFileSync(dataPath, "utf8"),
-        rolesSql: readFileSync(rolesPath, "utf8"),
-        schemaSql: readFileSync(schemaPath, "utf8"),
-      });
-      composeWithInput(runtime, [
-        "exec",
-        "-T",
-        "postgres",
-        "psql",
-        "--single-transaction",
-        "--variable",
-        "ON_ERROR_STOP=1",
-        "--username",
-        "supabase_admin",
-        "--dbname",
-        "postgres",
-      ], restoreSql);
-      compose(runtime, ["up", "-d"]);
-      await waitForRuntimeHealthy(runtime);
-      const semantic = restoredSemanticManifest(runtime);
-      return writeRestoreManifest({ manifestPath, metadata, runtime, semantic });
+  return withRecoveredBackupKeyCreateOnlyRegistration({
+    createItem: (recoveredKey, ownershipToken) => {
+      const keyStaging = mkdtempSync(join(tmpdir(), "homecook-recovered-backup-key-"));
+      chmodSync(keyStaging, 0o700);
+      try {
+        const keyPath = join(keyStaging, "recovered.key");
+        writeFileSync(keyPath, recoveredKey, { encoding: "utf8", mode: 0o600 });
+        createKeychainValue(
+          PLATFORM_BACKUP_KEYCHAIN_SERVICE,
+          PLATFORM_BACKUP_KEYCHAIN_ACCOUNT,
+          ownershipToken,
+          keyPath,
+        );
+      } finally {
+        rmSync(keyStaging, { force: true, recursive: true });
+      }
     },
+    deleteOwnedItem: (ownershipToken) => deleteOwnedKeychainDirectItem(
+      PLATFORM_BACKUP_KEYCHAIN_SERVICE,
+      PLATFORM_BACKUP_KEYCHAIN_ACCOUNT,
+      ownershipToken,
+    ),
+    directItemExists: () => keychainDirectItemExists(
+      PLATFORM_BACKUP_KEYCHAIN_SERVICE,
+      PLATFORM_BACKUP_KEYCHAIN_ACCOUNT,
+    ),
+    execute: async (attemptToken) => {
+      const restoreRuntime = Object.freeze({
+        ...runtime,
+        env: {
+          ...runtime.env,
+          FULL_LOCAL_RESTORE_ATTEMPT_TOKEN: attemptToken,
+        },
+      });
+      return withReplacementRestoreAttemptCleanup({
+        attemptToken,
+        composeProject: runtime.config.FULL_LOCAL_COMPOSE_PROJECT_NAME,
+        createdArtifacts,
+        execute: async () => {
+          assertFreshRestoreAllowed({
+            postgresVolumeExists: dockerVolumeExists(
+              restoreRuntime.config.FULL_LOCAL_POSTGRES_VOLUME_NAME,
+            ),
+            storageVolumeExists: dockerVolumeExists(
+              restoreRuntime.config.FULL_LOCAL_STORAGE_VOLUME_NAME,
+            ),
+          });
+          return withVerifiedPlatformBackup({
+            archive,
+            backupKey,
+            consume: async ({
+              dataPath,
+              metadata,
+              rolesPath,
+              schemaPath,
+              storagePayloadPath,
+            }) => executeBootstrapAwarePlatformRestore({
+            // GoTrue and Storage bootstrap the exact pinned service-owned roles
+            // before the database itself is cleanly recreated from template0.
+            bootstrapServices: async () => {
+              compose(restoreRuntime, ["up", "-d"]);
+              await waitForRuntimeHealthy(restoreRuntime);
+            },
+            replayDatabase: () => composeWithInput(restoreRuntime, [
+              "exec",
+              "-T",
+              "postgres",
+              "psql",
+              "--single-transaction",
+              "--variable",
+              "ON_ERROR_STOP=1",
+              "--username",
+              "supabase_admin",
+              "--dbname",
+              "postgres",
+            ], buildPlatformRestoreSql({
+              dataSql: readFileSync(dataPath, "utf8"),
+              rolesSql: readFileSync(rolesPath, "utf8"),
+              schemaSql: readFileSync(schemaPath, "utf8"),
+            })),
+            resetDatabase: () => composeWithInput(restoreRuntime, [
+              "exec",
+              "-T",
+              "postgres",
+              "psql",
+              "--variable",
+              "ON_ERROR_STOP=1",
+              "--username",
+              "supabase_admin",
+              "--dbname",
+              "template1",
+            ], buildBootstrapAwareDatabaseResetSql()),
+            restoreStoragePayload: () => restoreStoragePayloadVolume(
+              restoreRuntime,
+              storagePayloadPath,
+            ),
+            startPostgres: async () => {
+              compose(restoreRuntime, ["up", "-d", "postgres"]);
+              await waitForServiceHealthy(restoreRuntime, "postgres");
+            },
+            startServices: async () => {
+              compose(restoreRuntime, ["up", "-d"]);
+              await waitForRuntimeHealthy(restoreRuntime);
+            },
+            stopServices: () => compose(restoreRuntime, ["down"]),
+            verifyResources: () => {
+              assertRestoredStorageVolumeProvenance({
+                attemptToken: restoreRuntime.env.FULL_LOCAL_RESTORE_ATTEMPT_TOKEN,
+                composeProject: restoreRuntime.config.FULL_LOCAL_COMPOSE_PROJECT_NAME,
+                inspect: inspectDockerVolume(restoreRuntime.config.FULL_LOCAL_STORAGE_VOLUME_NAME),
+                volumeName: restoreRuntime.config.FULL_LOCAL_STORAGE_VOLUME_NAME,
+              });
+              liveFullLocalProductionResources(restoreRuntime);
+            },
+            verifyRestoredPlatform: () => {
+              const restoreManifest = writeRestoreManifest({
+                archiveSha256,
+                attemptToken,
+                backupKey,
+                createdArtifacts,
+                manifestPath,
+                metadata,
+                runtime: restoreRuntime,
+                semantic: {
+                  ...restoredPlatformDataSnapshot(restoreRuntime, metadata),
+                  ...restoredSemanticManifest(restoreRuntime),
+                  ...verifyRestoredStoragePayload(restoreRuntime, metadata.storage_payload),
+                },
+              });
+              const recoveryManifest = writeCanonicalRecoveryManifest({
+                archive,
+                archiveSha256,
+                args,
+                attemptToken,
+                backupKey,
+                createdArtifacts,
+                metadata,
+                restoreManifest,
+              });
+              return { recovery_manifest: recoveryManifest, restore_manifest: restoreManifest };
+            },
+            }),
+          });
+        },
+        expectedServices: [
+          "api-gateway",
+          "auth",
+          "auth-proxy",
+          "postgres",
+          "postgrest",
+          "postgrest-probe",
+          "storage",
+        ],
+        expectedVolumes: [
+          {
+            composeVolume: "postgres-data",
+            name: runtime.config.FULL_LOCAL_POSTGRES_VOLUME_NAME,
+          },
+          {
+            composeVolume: "storage-data",
+            name: runtime.config.FULL_LOCAL_STORAGE_VOLUME_NAME,
+          },
+        ],
+        inventoryContainers: () => dockerResourceInventory("container"),
+        inventoryVolumes: () => dockerResourceInventory("volume"),
+        removeArtifact: removeAttemptCreatedArtifact,
+        removeContainer: (containerId) => run("docker", ["rm", "--force", containerId], {
+          failure: "Attempt-owned replacement container could not be removed.",
+        }),
+        removeVolume: (volumeName) => run("docker", ["volume", "rm", volumeName], {
+          failure: "Attempt-owned replacement volume could not be removed.",
+        }),
+        verifyCleanup: () => assertFailedAttemptArtifactsCleared(expectedArtifactPaths),
+      });
+    },
+    readOwnedItem: (ownershipToken) => keychainOwnedDirectValue(
+      PLATFORM_BACKUP_KEYCHAIN_SERVICE,
+      PLATFORM_BACKUP_KEYCHAIN_ACCOUNT,
+      ownershipToken,
+    ),
+    recoveredKey: backupKey,
+    verifyArchive: (recoveredKey) => withVerifiedPlatformBackup({
+      archive,
+      backupKey: recoveredKey,
+      consume: ({ metadata }) => metadata,
+    }),
   });
 }
 
@@ -1114,27 +1893,6 @@ function compareRestoreManifests(args) {
   });
   chmodSync(outputPath, 0o600);
   return result;
-}
-
-async function verifyRestoredPlatform(args) {
-  const { archive, manifestPath } = restoreEvidenceOptions(args, "verify-restored-platform");
-  const runtime = validateAndMaterialize(args);
-  const status = runtimeStatus(runtime);
-  if (!status.healthy) fail("Full-local runtime must be healthy before restore verification.");
-  const backupKey = keychainValue(
-    PLATFORM_BACKUP_KEYCHAIN_SERVICE,
-    PLATFORM_BACKUP_KEYCHAIN_ACCOUNT,
-  );
-  return withVerifiedPlatformBackup({
-    archive,
-    backupKey,
-    consume: ({ metadata }) => writeRestoreManifest({
-      manifestPath,
-      metadata,
-      runtime,
-      semantic: restoredSemanticManifest(runtime),
-    }),
-  });
 }
 
 function createLocalSupabaseAdmin(runtime) {
@@ -1226,7 +1984,10 @@ async function main() {
       break;
     case "validate": {
       const runtime = validateAndMaterialize(args);
+      const resources = liveFullLocalProductionResources(runtime);
+      const backupReadiness = await loadFullLocalBackupReadiness(runtime, resources);
       const base = {
+        ...backupReadiness,
         ...runtime.validation,
         oauth_provider_count: runtime.oauth.provider_count,
         social_providers_enabled: runtime.oauth.enabled,
@@ -1277,19 +2038,46 @@ async function main() {
     }
     case "start": {
       const runtime = validateAndMaterialize(args);
-      compose(runtime, ["up", "-d"]);
-      const status = await waitForRuntimeHealthy(runtime);
-      const gate = collectFullLocalProductCatalog(postgresContainerId(runtime));
-      assertFullLocalProductCatalogPass(gate);
-      print({ ...status, ...runtimeCatalogPayload(gate), status: "PASS" });
+      await loadFullLocalBackupReadiness(
+        runtime,
+        configuredFullLocalProductionResources(runtime),
+      );
+      const containersBeforeStart = dockerResourceInventory("container");
+      try {
+        compose(runtime, ["up", "-d"]);
+        const status = await waitForRuntimeHealthy(runtime);
+        const resources = liveFullLocalProductionResources(runtime);
+        const backupReadiness = await loadFullLocalBackupReadiness(runtime, resources);
+        const gate = collectFullLocalProductCatalog(postgresContainerId(runtime));
+        assertFullLocalProductCatalogPass(gate);
+        print({
+          ...status,
+          ...runtimeCatalogPayload(gate),
+          backup_readiness: backupReadiness,
+          status: "PASS",
+        });
+      } catch (error) {
+        const newlyStartedWriters = selectNewlyStartedFullLocalWriterServices({
+          after: dockerResourceInventory("container"),
+          before: containersBeforeStart,
+          composeProject: runtime.config.FULL_LOCAL_COMPOSE_PROJECT_NAME,
+        });
+        if (newlyStartedWriters.length > 0) {
+          compose(runtime, ["stop", ...newlyStartedWriters]);
+        }
+        throw error;
+      }
       break;
     }
     case "status": {
       const runtime = validateAndMaterialize(args);
+      const resources = liveFullLocalProductionResources(runtime);
+      const backupReadiness = await loadFullLocalBackupReadiness(runtime, resources);
       const status = runtimeStatus(runtime);
       if (!status.healthy) {
         print({
           ...status,
+          backup_readiness: backupReadiness,
           ...runtimeAuthorizationContractPayload({
             authorizationContractGate: null,
             productCatalogGate: null,
@@ -1307,6 +2095,7 @@ async function main() {
       });
       print({
         ...status,
+        backup_readiness: backupReadiness,
         ...gatePayload,
       });
       if (gatePayload.authorization_contract_status !== "PASS"
@@ -1323,11 +2112,6 @@ async function main() {
     }
     case "restore-platform": {
       const result = await restorePlatformBackup(args);
-      print({ ...result, status: "PASS" });
-      break;
-    }
-    case "verify-restored-platform": {
-      const result = await verifyRestoredPlatform(args);
       print({ ...result, status: "PASS" });
       break;
     }

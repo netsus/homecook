@@ -9,6 +9,7 @@ import {
   assertHistoricalReplacementIdentity,
   classifyAdditiveDeploymentState,
 } from "./security-function-additive-state.mjs";
+import { assertExactLoopbackPostgresUrl } from "./lib/exact-loopback-postgres-url.mjs";
 import { parseFunctionSearchPath } from "./lib/security-function-config.mjs";
 
 const REPO_ROOT = process.cwd();
@@ -441,10 +442,17 @@ const ADDITIVE_SOURCES = [
       ),
   },
 ];
-const LOCAL_DATABASE_URL =
+const LOCAL_DATABASE_URL = assertExactLoopbackPostgresUrl(
   process.env.SECURITY_FUNCTION_DATABASE_URL
-  ?? "postgresql://postgres:postgres@127.0.0.1:54322/postgres";
-const FRESH_DATABASE_URL = process.env.SECURITY_FUNCTION_FRESH_DATABASE_URL ?? null;
+    ?? "postgresql://postgres:postgres@127.0.0.1:54322/postgres",
+  { name: "SECURITY_FUNCTION_DATABASE_URL" },
+);
+const FRESH_DATABASE_URL = process.env.SECURITY_FUNCTION_FRESH_DATABASE_URL
+  ? assertExactLoopbackPostgresUrl(
+      process.env.SECURITY_FUNCTION_FRESH_DATABASE_URL,
+      { name: "SECURITY_FUNCTION_FRESH_DATABASE_URL" },
+    )
+  : null;
 const DATA_API_SCHEMAS = new Set(["public", "storage", "graphql_public"]);
 const PRINCIPALS = ["anon", "authenticated", "service_role"];
 const ADDITIVE_PRINCIPALS = [
@@ -456,6 +464,11 @@ const ADDITIVE_PRINCIPALS = [
 const args = new Set(process.argv.slice(2));
 const mode = args.has("--write") ? "write" : "check";
 const useLinkedRemote = args.has("--linked-remote");
+if (useLinkedRemote || args.has("--remote-state")) {
+  throw new Error(
+    "Remote/linked Supabase verification is forbidden; use the isolated local or controlled full-local gate.",
+  );
+}
 const contractOnly = args.has("--contract-only");
 const linkedRoot = useLinkedRemote
   ? resolveSecurityFunctionLinkedRoot()

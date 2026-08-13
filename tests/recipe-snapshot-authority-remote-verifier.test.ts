@@ -55,7 +55,13 @@ describe("recipe snapshot authority remote verifier", () => {
         },
       );
       expect(result.status, result.stdout).toBe(1);
-      expect(result.stderr).toMatch(/merged into origin\/master|grafts/i);
+      if (cli === remoteCli) {
+        expect(result.stderr).toContain(
+          "FORBIDDEN: remote recipe-snapshot verification is historical",
+        );
+      } else {
+        expect(result.stderr).toMatch(/merged into origin\/master|grafts/i);
+      }
     };
 
     try {

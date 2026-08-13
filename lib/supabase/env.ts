@@ -11,7 +11,6 @@ import {
   getDataSupabaseEnv as readDataSupabaseEnv,
   getDataSupabaseSecretKey,
   getLocalDataSupabaseSecretKey,
-  getLocalShadowDataSupabaseEnv,
 } from "./data-env";
 
 export function getAuthSupabaseEnv() {
@@ -41,10 +40,6 @@ export function getDataSupabaseEnv() {
     url: env.url,
     anonKey: env.publishableKey,
   };
-}
-
-export function getRemoteAuthEnv() {
-  return getAuthSupabaseEnv();
 }
 
 export function getLocalDataEnv() {
@@ -84,20 +79,8 @@ export function getLocalDataServiceRoleKey() {
   return getLocalDataSupabaseSecretKey();
 }
 
-export function getLocalShadowDataEnv() {
-  const env = getLocalShadowDataSupabaseEnv();
-  return {
-    url: env.url,
-    anonKey: env.publishableKey,
-  };
-}
-
 export function getAuthServiceRoleKey() {
   return getAuthSupabaseSecretKey();
-}
-
-export function getSupabaseRemoteIssuer() {
-  return readAuthSupabaseEnv().issuer;
 }
 
 export const AUTH_ENV_VARS = {

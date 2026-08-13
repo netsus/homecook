@@ -1,0 +1,35 @@
+#!/usr/bin/expect -f
+set timeout 30
+
+if {$argc != 4} {
+  puts stderr "Usage: keychain-create.exp <service> <account> <ownership-token> <secret-file>"
+  exit 64
+}
+
+set service [lindex $argv 0]
+set account [lindex $argv 1]
+set ownership_token [lindex $argv 2]
+set secret_path [lindex $argv 3]
+set handle [open $secret_path r]
+fconfigure $handle -translation binary
+set secret [read $handle]
+close $handle
+
+# Intentionally omit -U: an item created after the caller's existence check
+# must make this command fail instead of overwriting the competing value.
+spawn -noecho /usr/bin/security add-generic-password -s $service -a $account -G $ownership_token -w
+expect {
+  -re {password data for new item:} {
+    send -- "$secret\r"
+    expect -re {retype password for new item:}
+    send -- "$secret\r"
+    expect eof
+  }
+  eof
+  timeout {
+    puts stderr "Keychain password prompt timed out."
+    exit 70
+  }
+}
+set result [wait]
+exit [lindex $result 3]

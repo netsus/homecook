@@ -1,6 +1,6 @@
 # Acceptance Checklist: hybrid-auth-local-data-production
 
-> **Superseded 2026-08-01:** 아래 체크는 hybrid 단계의 역사 증거다. full-local 완료 조건은 `docs/workpacks/full-local-supabase-production/acceptance.md`가 소유하며, 이 문서의 과거 체크를 local Auth/provider/restore 증거로 재사용하지 않는다.
+> **HISTORICAL / FORBIDDEN N/A (2026-08-13):** 아래 체크는 hybrid 단계의 감사 기록이다. remote command/credential/gate를 실행하지 않으며 full-local 완료 조건은 `docs/workpacks/full-local-supabase-production/acceptance.md`가 소유한다.
 
 > 이 문서는 implementation 완료를 주장하지 않는다. 모든 구현 체크박스는 Stage 2/4 evidence가 생긴 뒤에만 체크한다.
 > Manual Only를 제외한 모든 체크박스는 `omo` metadata를 유지한다.

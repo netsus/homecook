@@ -21,6 +21,7 @@
 ## Source of Truth
 
 - 최신 공식 버전과 파일 경로는 `docs/sync/CURRENT_SOURCE_OF_TRUTH.md`가 단일 소스다.
+- Supabase 운영·개발·검증 target의 단일 기준은 `docs/engineering/supabase-local-only-operations.md`다. 새 세션·새 worktree를 포함해 Supabase Cloud project, linked root, remote DB/credential을 요구·탐색·생성·복사하거나 remote gate를 실행하지 않는다.
 - 공식 기준 문서는 요구사항, 화면정의서, 유저 Flow맵, DB 설계, API 문서 5종이다.
 - `wireframes`는 보조 레퍼런스다.
 - wireframe과 공식 문서가 충돌하면 공식 문서가 우선이다.
@@ -73,6 +74,7 @@
 ## Absolute Safeguards
 
 - 공식 문서 우선, 문서 충돌 시 충돌 정리 우선. 공식 계약 변경이 필요하면 먼저 `contract-evolution` docs-governance PR로 문서를 갱신한다.
+- 운영 데이터가 있는 full-local Supabase에 destructive reset/volume delete를 실행하지 않는다. schema·security required gate는 pinned isolated local stack을 사용하고, 실제 full-local target은 read-only 또는 사전 승인된 controlled local runbook으로만 검증한다.
 - 문서에 없는 API/status/field/endpoint를 임의 추가하지 않는다.
 - public contract 변경 시 문서 영향도를 먼저 적는다.
 - 사용자 승인 없는 `contract-evolution`은 금지한다.

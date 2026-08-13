@@ -1,11 +1,9 @@
 import { createHmac, randomUUID } from "node:crypto";
-import { readFile } from "node:fs/promises";
 import { spawnSync } from "node:child_process";
-import path from "node:path";
 
-import { resolveSecurityFunctionLinkedRoot } from "./security-function-linked-root.mjs";
+import { assertExactLoopbackHttpOrigin } from "./lib/local-only-supabase-operator-env.mjs";
 
-const linkedRoot = resolveSecurityFunctionLinkedRoot({ requireEnvironment: true });
+const repositoryRoot = process.cwd();
 
 function parseAssignments(contents) {
   const values = {};
@@ -40,34 +38,17 @@ function signLocalAuthenticatedJwt(secret) {
   return `${unsigned}.${signature}`;
 }
 
-async function readRemoteEnvironment() {
-  const contents = await readFile(path.join(linkedRoot, ".env.local"), "utf8");
-  const values = parseAssignments(contents);
-  if (!values.NEXT_PUBLIC_SUPABASE_URL || !values.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-    throw new Error("remote Supabase public environment is unavailable");
-  }
-  return {
-    url: values.NEXT_PUBLIC_SUPABASE_URL,
-    tokens: [
-      { role: "anon", token: values.NEXT_PUBLIC_SUPABASE_ANON_KEY },
-      ...(values.SUPABASE_SERVICE_ROLE_KEY
-        ? [{ role: "service_role", token: values.SUPABASE_SERVICE_ROLE_KEY }]
-        : []),
-    ],
-  };
-}
-
 function readLocalEnvironment() {
   const values = parseAssignments(run(
     "pnpm",
     ["exec", "supabase", "status", "-o", "env"],
-    { cwd: linkedRoot },
+    { cwd: repositoryRoot },
   ));
   if (!values.API_URL || !values.ANON_KEY || !values.JWT_SECRET) {
     throw new Error("local Supabase environment is unavailable");
   }
   return {
-    url: values.API_URL,
+    url: assertExactLoopbackHttpOrigin(values.API_URL, { label: "API_URL" }),
     tokens: [
       { role: "anon", token: values.ANON_KEY },
       { role: "authenticated", token: signLocalAuthenticatedJwt(values.JWT_SECRET) },
@@ -115,7 +96,6 @@ async function assertRejected({ environment, role, token, url, functionName }) {
 
 const environments = [
   { environment: "local", ...readLocalEnvironment() },
-  { environment: "remote", ...await readRemoteEnvironment() },
 ];
 const results = [];
 for (const current of environments) {
