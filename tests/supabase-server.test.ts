@@ -101,11 +101,11 @@ describe("supabase server helpers", () => {
     getSupabaseEnv.mockReturnValue({
       url: "http://127.0.0.1:54321",
       anonKey: "anon-key",
-      authority: "remote",
+      authority: "local",
       issuer: "http://127.0.0.1:54321/auth/v1",
       jwksUrl: "http://127.0.0.1:54321/auth/v1/.well-known/jwks.json",
     });
-    getAuthAuthority.mockReturnValue("remote");
+    getAuthAuthority.mockReturnValue("local");
     getAuthSupabaseServerEnv.mockReturnValue({
       url: "http://127.0.0.1:54321",
       anonKey: "anon-key",
@@ -193,21 +193,14 @@ describe("supabase server helpers", () => {
     );
   });
 
-  it("wires safe semantic comparison into the real server fetch path in local-shadow", async () => {
-    const shadowFetch = vi.fn();
-    createHybridShadowReadFetch.mockReturnValue(shadowFetch);
+  it("keeps the real server fetch path local and never starts local-shadow", async () => {
     getSupabaseEnv.mockReturnValue({
-      url: "https://remote.example",
-      anonKey: "remote-publishable",
-      authority: "local-shadow",
-      issuer: "https://remote.example/auth/v1",
-      jwksUrl: "https://remote.example/auth/v1/.well-known/jwks.json",
-    });
-    getLocalShadowDataEnv.mockReturnValue({
-      url: "http://127.0.0.1:8000",
+      url: "http://127.0.0.1:54321",
       anonKey: "local-publishable",
+      authority: "local",
+      issuer: "https://auth.mumeok.kr/auth/v1",
+      jwksUrl: "https://auth.mumeok.kr/auth/v1/.well-known/jwks.json",
     });
-    getLocalDataServiceRoleKey.mockReturnValue("local-service-secret");
     createClient.mockReturnValue({ rpc: vi.fn() });
     createServerClient.mockReturnValue({ auth: {} });
 
@@ -215,17 +208,11 @@ describe("supabase server helpers", () => {
       await import("@/lib/supabase/server");
     await createAuthRouteHandlerClient();
 
-    expect(createHybridShadowReadFetch).toHaveBeenCalledWith(
-      expect.objectContaining({
-        localDataUrl: "http://127.0.0.1:8000",
-      }),
-    );
+    expect(createHybridShadowReadFetch).not.toHaveBeenCalled();
     expect(createServerClient).toHaveBeenCalledWith(
-      "https://remote.example",
-      "remote-publishable",
-      expect.objectContaining({
-        global: { fetch: shadowFetch },
-      }),
+      "http://127.0.0.1:54321",
+      "local-publishable",
+      expect.any(Object),
     );
   });
 
@@ -686,8 +673,8 @@ describe("supabase server helpers", () => {
     expect(observabilityClient).toEqual({ rpc: expect.any(Function) });
   });
 
-  it("keeps the legacy callback data facade only while Data authority is remote", async () => {
-    getServiceRoleKey.mockReturnValue("remote-service-secret");
+  it("never exposes the legacy callback table facade under local-only authority", async () => {
+    getServiceRoleKey.mockReturnValue("local-service-secret");
     const client = {
       from: vi.fn(),
       rpc: vi.fn(),
@@ -698,7 +685,8 @@ describe("supabase server helpers", () => {
     const server = await import("@/lib/supabase/server");
     const callbackClient = server.createAuthCallbackInternalDataClient();
 
-    expect(callbackClient).toHaveProperty("from", client.from);
+    expect(callbackClient).not.toHaveProperty("from");
+    expect(callbackClient).toEqual({ rpc: expect.any(Function) });
   });
 
   it("executes local legacy callback bootstrap through RPC without exposing from", async () => {

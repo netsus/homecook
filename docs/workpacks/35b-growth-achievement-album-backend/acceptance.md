@@ -44,7 +44,7 @@
 
 - [x] `user_achievement_awards` migration이 table, unique index, category index를 포함한다 <!-- omo:id=accept-migration-schema;stage=2;scope=backend;review=3,6 -->
 - [x] Vitest fixture에서 progress/activity/notification baseline을 구성할 수 있다 <!-- omo:id=accept-fixture-baseline;stage=2;scope=backend;review=3,6 -->
-- [x] real DB smoke는 가능한 환경에서 `supabase db push` 후 table/index 확인으로 분리된다 <!-- omo:id=accept-real-db-ready;stage=2;scope=backend;review=3,6 -->
+- [x] real DB smoke는 pinned isolated local migration replay 뒤 table/index 확인으로 분리되며 운영 DB reset은 금지된다 <!-- omo:id=accept-real-db-ready;stage=2;scope=backend;review=3,6 -->
 
 ## Automation Split
 

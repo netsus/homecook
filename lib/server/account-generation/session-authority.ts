@@ -2,7 +2,7 @@ import { createHmac } from "node:crypto";
 
 import {
   getAuthAuthority,
-  getRemoteAuthIssuer,
+  getAuthIssuer,
 } from "@/lib/supabase/auth-env";
 import { createSessionAuthorityInternalRpcClient } from "@/lib/supabase/server";
 import { createSessionKeyHash } from
@@ -156,7 +156,7 @@ function decodeJwtHeader(accessToken: string) {
 
 function readProjectIssuer() {
   try {
-    return getRemoteAuthIssuer();
+    return getAuthIssuer();
   } catch {
     return null;
   }

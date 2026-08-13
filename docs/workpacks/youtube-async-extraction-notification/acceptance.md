@@ -48,11 +48,11 @@
 ## Data Setup / Preconditions
 
 - [ ] fixture가 두 owner와 queued/processing/succeeded draft/consumed/failed retryable/non-retryable/expired 상태를 결정론적으로 만든다 <!-- omo:id=accept-yta-fixture-matrix;stage=2;scope=shared;review=3,6 -->
-- [ ] local Supabase reset에서 4개 schema surface, roles, membership, RLS/ACL, exact RPC signature와 disabled initial policy를 검증한다 <!-- omo:id=accept-yta-local-db-readiness;stage=2;scope=shared;review=3,6 -->
+- [ ] 운영 volume과 분리된 pinned isolated local Supabase reset에서 4개 schema surface, roles, membership, RLS/ACL, exact RPC signature와 disabled initial policy를 검증한다 <!-- omo:id=accept-yta-local-db-readiness;stage=2;scope=shared;review=3,6 -->
 - [ ] app descriptor, worker artifact, credential singleton의 release SHA/schema identity/allowed snapshot digest가 exact match해야 enqueue/claim이 열린다 <!-- omo:id=accept-yta-release-attestation;stage=2;scope=shared;review=3,6 -->
 - [ ] restricted worker JWT로 allowlisted RPC만 성공하고 public Data API/other REST/RPC/table/owner role 접근은 실패한다 <!-- omo:id=accept-yta-postgrest-negative;stage=2;scope=shared;review=3,6 -->
 - [ ] workpack 33 exact i031 manifest/options/preflight/no-fallback/20분 timeout/cleanup 회귀가 green이다 <!-- omo:id=accept-yta-i031-regression;stage=2;scope=shared;review=3,6 -->
-- [ ] production/staging/remote target write가 0임을 Stage 2~6 evidence가 명시한다 <!-- omo:id=accept-yta-remote-write-zero;stage=2;scope=shared;review=3,6 -->
+- [ ] Supabase Cloud/linked/remote target은 N/A/forbidden이며 Stage 2~6 evidence가 remote link/credential access 0, isolated-local 사용과 운영 full-local destructive reset 0을 명시한다 <!-- omo:id=accept-yta-remote-write-zero;stage=2;scope=shared;review=3,6 -->
 
 ## Design / Accessibility
 
@@ -93,7 +93,7 @@
 
 ### Manual Only
 
-- [ ] production/staging DB migration apply와 initial policy enable
+- [ ] 실제 full-local production DB의 controlled migration apply와 initial policy enable(immutable backup, target identity, maintenance fence, rollback/forward-fix 승인 필요)
 - [ ] production worker restricted JWT/manager credential 발급과 `0600` secret file 설치
 - [ ] `com.homecook.youtube-extraction-worker` 실제 Mac 설치·start·reboot recovery·Cloudflare 공개 경로 확인
 - [ ] production allowlist→제한 비율→전체 rollout과 실제 queue/metric/SLO 관찰
@@ -101,3 +101,5 @@
 - [ ] 사용자가 자신의 임의 공개 YouTube URL 결과를 최종 확인
 - [ ] physical device의 VoiceOver/TalkBack, 실제 keyboard, safe-area/virtual-keyboard 확인
 - [ ] Web Push, Quick Import async UI, sync endpoint deprecation, multi-host worker에 대한 별도 사용자 승인
+
+Supabase Cloud project/link/remote DB/security gate/credential은 Manual Only가 아니라 `docs/engineering/supabase-local-only-operations.md`에 따른 **forbidden/N/A**다.

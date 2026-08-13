@@ -1,5 +1,7 @@
 # Full-local session lifecycle production canary runbook
 
+Supabase target은 `docs/engineering/supabase-local-only-operations.md`를 따른다. 이 runbook은 Cloud project, linked root, remote credential 또는 remote Auth evidence를 prerequisite/fallback으로 사용하지 않는다. capture는 실제 full-local target의 controlled local evidence이며 destructive reset 없이 수행한다.
+
 이 문서는 session refresh hotfix의 `milestone-a-t65`, `milestone-a-24h`, `milestone-b-7d` 운영 확인 절차다. public API를 추가하지 않으며, production token·cookie·raw session ID·사용자 UUID·이메일은 결과, 파일, 표준 출력, 표준 오류에 남기지 않는다.
 
 ## 실행 전 조건

@@ -153,7 +153,7 @@ describe("hybrid remote Auth identity mirror", () => {
     );
   });
 
-  it("ships server-only dry-run/apply/verify commands without weakening restore", () => {
+  it("keeps the historical mirror library but tombstones its executable CLI", () => {
     const packageJson = JSON.parse(
       readFileSync(resolve(ROOT, "package.json"), "utf8"),
     );
@@ -163,11 +163,10 @@ describe("hybrid remote Auth identity mirror", () => {
     );
 
     expect(packageJson.scripts["hybrid-production:mirror-auth"])
-      .toBe("node scripts/hybrid-remote-auth-mirror.mjs");
-    expect(cli).toContain('createClient(');
-    expect(cli).toContain('"dry-run"');
-    expect(cli).toContain('"apply"');
-    expect(cli).toContain('"verify"');
-    expect(cli).not.toContain("console.log");
+      .toBeUndefined();
+    expect(cli).toContain("FORBIDDEN: remote Auth mirror is historical");
+    expect(cli).not.toContain("createClient(");
+    expect(cli).not.toContain("SUPABASE_SERVICE_ROLE_KEY");
+    expect(cli).not.toContain("--remote-env");
   });
 });

@@ -29,6 +29,33 @@ Stop containers without deleting data:
 pnpm full-local-production:stop
 ```
 
+Create or inventory a production backup only through the exact mode-0600 runtime config. The command verifies the Compose project/service labels, reviewed PostgreSQL image digest, healthy container, and labeled PostgreSQL/Storage named volumes before any read. It never falls back to the Supabase CLI development stack:
+
+```bash
+pnpm full-local-production:platform-inventory -- --config /absolute/path/.env.production.local
+pnpm full-local-production:platform-backup -- --config /absolute/path/.env.production.local --output /absolute/off-mac/platform.tar.gz.enc
+pnpm full-local-production:platform-backup:verify -- --archive /absolute/off-mac/platform.tar.gz.enc
+```
+
+Backup pauses only the exact production writer services for one bounded consistent cut, runs `pg_dump` inside the verified production PostgreSQL container, and snapshots the exact labeled Storage volume. A partial stop failure restarts every writer that was actually stopped. It never resets or removes an operating volume.
+
+`FULL_LOCAL_BACKUP_READINESS_PATH` must be an absolute path in an owner-controlled, canonical external mode-0700 directory. Before readiness issuance, store the AES-256-GCM escrow envelope and its backup-key HMAC `.auth.json` sidecar on a second medium or credential manager that is distinct from both archives. The envelope pins an Ed25519 recovery-issuer public key. `restore-platform` first checks the exact direct source backup Keychain account, opens the exact envelope with mode-0600 `--recovery-credential-file`, authenticates the archive with the recovered key, and only then registers it in the isolated replacement environment with an atomic create-only operation and cryptographic ownership token. An existing item or registration race fails without overwrite. It snapshots Docker inventory before restore and applies the same random attempt token to every replacement container and named volume. Any downstream restore or signing failure removes only resources absent from that snapshot whose exact Compose project/service-or-volume/attempt-token labels match, immutable restore/recovery manifest files and HMAC sidecars whose creation-time device/inode/size/SHA-256 identity still matches, and the Keychain item whose ownership token and recovered value still match. Pre-existing, production, development, decoy, racing, or label-mismatched resources and artifacts are preserved. Any ownership mismatch or cleanup failure stops with explicit manual recovery required. Only after clean restore may it issue `--recovery-manifest` with the same-medium `--recovery-issuer-private-key`. `record-readiness` rejects backup-key-HMAC-valid self-assertions without that issuer signature.
+
+After copying the archive and `.auth.json` sidecar to a distinct off-Mac filesystem, completing a signed clean restore manifest, and completing the signed isolated replacement environment key recovery evidence, record immutable readiness evidence. Physical off-device production evidence is separately required; the fixture cannot satisfy it:
+
+```bash
+pnpm full-local-production:backup-readiness:record -- \
+  --config /absolute/path/.env.production.local \
+  --archive /absolute/primary/platform.tar.gz.enc \
+  --off-mac-copy /absolute/off-mac/platform.tar.gz.enc \
+  --restore-manifest /absolute/evidence/restore-manifest.json \
+  --key-recovery-manifest /absolute/separate-key-escrow/key-recovery.json \
+  --output /absolute/state/full-local-backup-readiness.json \
+  --confirm-off-mac-copy OFF_MAC_COPY_VERIFIED
+```
+
+`validate`, `start`, and `status` reject missing, stale (>24h), mismatched, symlinked, non-0600, non-owner/mode-0700 parent, incomplete-Storage, or wrong-production readiness evidence. Every gate verifies the readiness HMAC before parsing, re-authenticates and decrypts both archive copies, verifies the signed restore and recovery manifests, and revalidates the bound escrow envelope path/hash/HMAC/device. Envelope deletion, mutation, path substitution, or reuse of either archive filesystem is blocked. `start` performs this offline preflight before Compose, then re-inventories live labels/image/health; a post-start failure stops only writer services newly started by that attempt. Only `restore-platform` on fresh empty volumes can issue eligible clean-restore evidence. `stop` and isolated recovery commands remain available without resetting operating data.
+
 Do not start the persistent production volumes before the restore/cutover runbook says the same-maintenance Auth, application DB, and Storage snapshot is ready. The Docker integration test always uses disposable names and removes its volumes:
 
 ```sh

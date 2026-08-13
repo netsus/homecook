@@ -169,6 +169,9 @@ describe("auth callback", () => {
     });
     ensurePublicUserRow.mockResolvedValue({});
     ensureUserBootstrapState.mockResolvedValue(undefined);
+    vi.stubEnv("HOMECOOK_AUTH_AUTHORITY", "local");
+    vi.stubEnv("NEXT_PUBLIC_AUTH_SUPABASE_URL", "https://auth.mumeok.kr");
+    vi.stubEnv("NEXT_PUBLIC_AUTH_SUPABASE_PUBLISHABLE_KEY", "local-publishable");
   });
 
   it("sanitizes external redirect targets", async () => {
@@ -848,7 +851,7 @@ describe("auth callback", () => {
         aud: "authenticated",
         exp: expiresAt,
         iat: issuedAt,
-        iss: "https://example.supabase.co/auth/v1",
+        iss: "https://auth.mumeok.kr/auth/v1",
         nbf: issuedAt,
         role: "authenticated",
         session_id: sessionId,
@@ -909,7 +912,18 @@ describe("auth callback", () => {
       "HOMECOOK_SESSION_GENERATION_HMAC_KEY_V1",
       "auth-callback-session-hmac-secret-32-bytes-minimum",
     );
-    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://example.supabase.co");
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "http://127.0.0.1:54321");
+    prepareFullLocalSessionAuthority.mockResolvedValue({
+      ok: true,
+      accountBootstrap: {
+        ownerUuid,
+        authIdentityCreatedAt: identityCreatedAt,
+        sessionIssuedAt: new Date(issuedAt * 1_000).toISOString(),
+        sessionKeyHash: "a".repeat(64),
+        hmacKeyVersion: 1,
+      },
+      record: {},
+    });
 
     const { GET } = await import("@/app/auth/callback/route");
     const response = await GET(new Request(
@@ -942,7 +956,7 @@ describe("auth callback", () => {
         aud: "authenticated",
         exp: expiresAt,
         iat: issuedAt,
-        iss: "https://example.supabase.co/auth/v1",
+        iss: "https://auth.mumeok.kr/auth/v1",
         nbf: issuedAt,
         role: "authenticated",
         session_id: sessionId,
@@ -1004,7 +1018,18 @@ describe("auth callback", () => {
       "HOMECOOK_SESSION_GENERATION_HMAC_KEY_V1",
       "auth-callback-session-hmac-secret-32-bytes-minimum",
     );
-    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://example.supabase.co");
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "http://127.0.0.1:54321");
+    prepareFullLocalSessionAuthority.mockResolvedValue({
+      ok: true,
+      accountBootstrap: {
+        ownerUuid,
+        authIdentityCreatedAt: identityCreatedAt,
+        sessionIssuedAt: new Date(issuedAt * 1_000).toISOString(),
+        sessionKeyHash: "a".repeat(64),
+        hmacKeyVersion: 1,
+      },
+      record: {},
+    });
 
     const { GET } = await import("@/app/auth/callback/route");
     const response = await GET(new Request(

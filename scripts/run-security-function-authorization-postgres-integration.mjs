@@ -1,15 +1,24 @@
 import { createHash, randomUUID } from "node:crypto";
 import { spawn, spawnSync } from "node:child_process";
 
+import { assertExactLoopbackPostgresUrl } from "./lib/exact-loopback-postgres-url.mjs";
 import { resolveSecurityFunctionLinkedRoot } from "./security-function-linked-root.mjs";
 
 const useLinkedRemote = process.argv.includes("--linked-remote");
+if (useLinkedRemote || process.argv.includes("--check-linked-environment")) {
+  throw new Error(
+    "Remote/linked Supabase verification is forbidden; use the isolated local or controlled full-local gate.",
+  );
+}
 const useProductionSafe = process.argv.includes("--production-safe");
 const linkedRoot = useLinkedRemote
   ? resolveSecurityFunctionLinkedRoot()
   : process.cwd();
-const databaseUrl = process.env.SECURITY_FUNCTION_DATABASE_URL
-  ?? (useLinkedRemote ? null : "postgresql://postgres:postgres@127.0.0.1:54322/postgres");
+const databaseUrl = assertExactLoopbackPostgresUrl(
+  process.env.SECURITY_FUNCTION_DATABASE_URL
+    ?? "postgresql://postgres:postgres@127.0.0.1:54322/postgres",
+  { name: "SECURITY_FUNCTION_DATABASE_URL" },
+);
 const databaseEnvironment = useLinkedRemote
   ? readLinkedDatabaseEnvironment()
   : process.env;

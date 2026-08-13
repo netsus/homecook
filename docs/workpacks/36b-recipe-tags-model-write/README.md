@@ -133,7 +133,7 @@
   - 정규화 edge: 앞 `#`, 공백, 중복, 빈 문자열, 최대 길이 초과, 금지어/스팸 입력
 - Real DB smoke:
   - migration file 존재 및 SQL 정합성 확인 (table 2종 + unique/index + seed)
-  - local Supabase가 가능한 환경에서는 `supabase db push` 후 `tags` / `recipe_tags` table, `tags.normalized_key` UNIQUE, `recipe_tags` PK/index 확인
+  - pinned isolated local Supabase에서는 clean migration replay 후 `tags` / `recipe_tags` table, `tags.normalized_key` UNIQUE, `recipe_tags` PK/index 확인. 운영 full-local DB reset은 금지
   - 현재 CI는 migration을 적용하지 않으므로 SQL file + repository tests를 기본 evidence로 둔다.
 - Seed/reset:
   - P0 seed는 migration의 idempotent UPSERT로 적용한다 (`normalized_key` 기준).

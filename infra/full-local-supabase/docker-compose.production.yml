@@ -2,8 +2,12 @@ name: homecook-full-local-isolated
 
 # Compose mounts every declared secret read-only under /run/secrets.
 
+x-restore-attempt-labels: &restore-attempt-labels
+  homecook.local/restore-attempt: ${FULL_LOCAL_RESTORE_ATTEMPT_TOKEN:-runtime}
+
 services:
   postgres:
+    labels: *restore-attempt-labels
     image: public.ecr.aws/supabase/postgres@sha256:a9946f08d31e8eb1149229c94e5c26603a9233116807cbbd93d75179cbac516a
     platform: ${FULL_LOCAL_DOCKER_PLATFORM:?FULL_LOCAL_DOCKER_PLATFORM is required}
     entrypoint: ["/homecook/secret-entrypoint.sh"]
@@ -35,6 +39,7 @@ services:
       - ./full-local-role-passwords.sh:/docker-entrypoint-initdb.d/zz-homecook-role-passwords.sh:ro
 
   auth:
+    labels: *restore-attempt-labels
     image: supabase/gotrue@sha256:385184459f57569c54c25209f51f3b2be99ddd7c4ce9e3555b5d3eea8447b7cf
     platform: ${FULL_LOCAL_DOCKER_PLATFORM:?FULL_LOCAL_DOCKER_PLATFORM is required}
     entrypoint: ["/homecook/secret-entrypoint.sh"]
@@ -85,6 +90,7 @@ services:
       - ./start-auth.sh:/homecook/start-auth.sh:ro
 
   postgrest:
+    labels: *restore-attempt-labels
     image: postgrest/postgrest@sha256:844785450d6b046ee97f1c67ea37e3ff6b4ed7ee3570b1b91c03f66f032c4805
     platform: ${FULL_LOCAL_DOCKER_PLATFORM:?FULL_LOCAL_DOCKER_PLATFORM is required}
     entrypoint: ["/homecook/secret-entrypoint.sh"]
@@ -113,6 +119,7 @@ services:
       - ./start-postgrest.sh:/homecook/start-postgrest.sh:ro
 
   postgrest-probe:
+    labels: *restore-attempt-labels
     image: docker.io/library/node@sha256:74e144386aaec923ce092c3371b351d96c4f977a4ac3f58431fa9164b9399534
     platform: ${FULL_LOCAL_DOCKER_PLATFORM:?FULL_LOCAL_DOCKER_PLATFORM is required}
     command: ["node", "-e", "setInterval(() => {}, 2147483647)"]
@@ -132,6 +139,7 @@ services:
       - no-new-privileges:true
 
   storage:
+    labels: *restore-attempt-labels
     image: supabase/storage-api@sha256:9326eb9c6b74c0a5ba393ab46a08a51d16bc5ea5f2978fc5b0f17fc67c64a4de
     platform: ${FULL_LOCAL_DOCKER_PLATFORM:?FULL_LOCAL_DOCKER_PLATFORM is required}
     entrypoint: ["/homecook/secret-entrypoint.sh"]
@@ -181,6 +189,7 @@ services:
       - ./start-storage.sh:/homecook/start-storage.sh:ro
 
   api-gateway:
+    labels: *restore-attempt-labels
     image: kong/kong@sha256:6addf50e6bd8d578314cb9ce4f2d2d1e3781d2edecef59f707e00c6e05d384f5
     platform: ${FULL_LOCAL_DOCKER_PLATFORM:?FULL_LOCAL_DOCKER_PLATFORM is required}
     entrypoint: ["/homecook/secret-entrypoint.sh"]
@@ -233,6 +242,7 @@ services:
       - ./kong/plugins/homecook-attestation:/usr/local/share/lua/5.1/kong/plugins/homecook-attestation:ro
 
   auth-proxy:
+    labels: *restore-attempt-labels
     image: docker.io/library/node@sha256:74e144386aaec923ce092c3371b351d96c4f977a4ac3f58431fa9164b9399534
     platform: ${FULL_LOCAL_DOCKER_PLATFORM:?FULL_LOCAL_DOCKER_PLATFORM is required}
     command: ["node", "/homecook/auth-only-proxy.mjs"]
@@ -299,5 +309,7 @@ secrets:
 volumes:
   postgres-data:
     name: ${FULL_LOCAL_POSTGRES_VOLUME_NAME:?FULL_LOCAL_POSTGRES_VOLUME_NAME is required}
+    labels: *restore-attempt-labels
   storage-data:
     name: ${FULL_LOCAL_STORAGE_VOLUME_NAME:?FULL_LOCAL_STORAGE_VOLUME_NAME is required}
+    labels: *restore-attempt-labels

@@ -11,6 +11,7 @@ import { pathToFileURL } from "node:url";
 import { chromium } from "@playwright/test";
 import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
+import { assertLocalOnlySupabaseOperatorEnv } from "./lib/local-only-supabase-operator-env.mjs";
 
 const ROOT = process.cwd();
 const DEFAULT_PORT_START = 3200;
@@ -449,6 +450,7 @@ function assertLiveSmokeEnvironment(env) {
   if (env.HOMECOOK_YOUTUBE_FIXTURE_PROVIDER !== "0") {
     throw new Error("Live YouTube smoke requires HOMECOOK_YOUTUBE_FIXTURE_PROVIDER=0.");
   }
+  return assertLocalOnlySupabaseOperatorEnv(env);
 }
 
 function requireEnv(env, key) {
@@ -1479,9 +1481,7 @@ async function main() {
   const args = parseArgs(process.argv.slice(2));
   const envFile = await readEnvFile(path.join(ROOT, ".env.local"));
   const env = mergeEnv(envFile);
-  assertLiveSmokeEnvironment(env);
-  const supabaseUrl = requireEnv(env, "NEXT_PUBLIC_SUPABASE_URL");
-  const serviceRoleKey = requireEnv(env, "SUPABASE_SERVICE_ROLE_KEY");
+  const { serviceRoleKey, url: supabaseUrl } = assertLiveSmokeEnvironment(env);
   requireEnv(env, "NEXT_PUBLIC_SUPABASE_ANON_KEY");
   requireEnv(env, "YOUTUBE_API_KEY");
 

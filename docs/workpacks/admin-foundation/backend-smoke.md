@@ -1,11 +1,11 @@
 # Admin Foundation Backend Smoke
 
-Stage 2 local/ops smoke 절차다. 실제 Supabase 인스턴스에서 실행할 때만 evidence로 인정한다.
+Stage 2 local/ops smoke 절차다. pinned isolated local Supabase 또는 사전 승인된 controlled full-local target에서만 evidence로 인정한다. canonical target은 `docs/engineering/supabase-local-only-operations.md`다.
 
 ## 1. Migration
 
 ```bash
-supabase db push
+pnpm dlx supabase@2.110.0 db reset --local
 ```
 
 확인 SQL:
@@ -20,7 +20,7 @@ select to_regclass('public.admin_members') as admin_members,
 
 ## 2. First Admin Bootstrap
 
-운영자가 OAuth로 한 번 로그인해 `auth.users.id`가 생긴 뒤, service-role 또는 Supabase SQL editor에서 정확히 한 명만 등록한다.
+운영자가 OAuth로 한 번 로그인해 `auth.users.id`가 생긴 뒤, controlled full-local transaction에서 정확히 한 명만 등록한다. 운영 DB reset은 금지한다.
 
 ```sql
 insert into public.admin_members (user_id, role)

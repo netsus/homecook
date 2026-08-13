@@ -1009,21 +1009,11 @@ export function formatCliOutput(result, { json = false } = {}) {
   return `${output}\n`;
 }
 
-export function main(argv, {
-  env = process.env,
-  repositoryRoot = DEFAULT_REPOSITORY_ROOT,
-  runCommand = defaultRunCommand,
-} = {}) {
-  const cli = parseStorageCopyCliArgs(argv);
-  const result = runStorageCopyOperation({
-    cli,
-    configDirectory: cli.configDirectory,
-    env,
-    repositoryRoot,
-    runCommand,
-  });
-  process.stdout.write(formatCliOutput(result, { json: cli.json || true }));
-  return result;
+export function main(...ignoredArguments) {
+  void ignoredArguments;
+  throw new Error(
+    "FORBIDDEN: hosted-to-local Storage copy is historical and unavailable under the local-only contract.",
+  );
 }
 
 const currentFile = fileURLToPath(import.meta.url);

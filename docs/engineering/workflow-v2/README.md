@@ -129,6 +129,7 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
 ## Adoption Rules
 
 - workflow-v2는 현재 Homecook의 OMO 기본 운영 경로다.
+- Homecook의 Supabase target과 external/local gate는 `../supabase-local-only-operations.md`를 따른다. Cloud/linked/remote Supabase evidence는 forbidden/N/A이며 promotion·closeout prerequisite가 될 수 없다.
 - 현재 기본 운영 모델은 `Codex task orchestration + OMO deterministic rail`이다. Codex 새 작업들이 Stage를 수행하고, OMO는 actor를 호출하지 않는 state validation / current-head gate / closeout-report projection만 맡는다.
 - `Codex-orchestrated OMO rail`이 usable하다는 말은 promotion gate가 ready라는 뜻이 아니다. promotion readiness는 `.workflow-v2/promotion-evidence.json`과 `promotion-readiness.md`가 정한 별도 gate로 판단한다.
 - 12b 이후 product slice는 시작 전에 해당 slice의 report/evidence 체크리스트와 escalation 기준을 명시하고, `human_escalation`은 manual decision 또는 repair budget exhaustion으로만 남긴다.

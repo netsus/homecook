@@ -1,5 +1,7 @@
 # 서버 MacBook local-first production 운영 계획
 
+> Supabase target, backup/restore acceptance와 remote forbidden matrix의 canonical authority는 `docs/engineering/supabase-local-only-operations.md`다. 이 문서의 historical SHA·절차가 충돌하면 canonical 계약이 우선한다.
+
 상태: **local-first 초기 배포 계약 기준**
 최종 갱신: 2026-07-29 KST
 서비스: `homecook` Next.js 앱
@@ -41,6 +43,8 @@ flowchart LR
 ```
 
 원격 Supabase 프로젝트는 이번 계약에서 삭제된 것으로 본다. 따라서 원격 migration, 원격 verifier, provider-managed maintenance barrier는 이 문서 범위에서 `N/A`다.
+
+새 session/worktree는 remote link, project-ref, remote URL/DB password/API key를 찾거나 복사하지 않는다. required gate는 운영 volume과 분리된 pinned isolated local Supabase 또는 실제 full-local target의 read-only/controlled local runbook만 사용한다.
 
 2026-07-29 이전의 원격 Supabase 운영·migration 완료 서사는 이 문서에서 **superseded**다. 과거 이력은 참고용일 수 있지만, 현재 production 정의와 재현 절차의 authority로 사용하지 않는다.
 

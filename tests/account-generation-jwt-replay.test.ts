@@ -6,7 +6,7 @@ import {
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const projectUrl = "https://project.supabase.co";
+const projectUrl = "https://auth.mumeok.kr";
 const ownerUuid = "550e8400-e29b-41d4-a716-446655440001";
 const sessionId = "550e8400-e29b-41d4-a716-446655440099";
 const nowSeconds = 1_784_764_900;
@@ -101,6 +101,7 @@ describe("account delete JWKS replay verifier", () => {
     vi.resetModules();
     vi.unstubAllEnvs();
     vi.unstubAllGlobals();
+    vi.stubEnv("HOMECOOK_AUTH_AUTHORITY", "local");
     vi.stubEnv("NEXT_PUBLIC_AUTH_SUPABASE_URL", projectUrl);
     vi.stubEnv(
       "AUTH_SUPABASE_EXPECTED_ISSUER",

@@ -18,11 +18,11 @@
 
 ## 2. Source Of Truth
 
-- 요구사항: [요구사항기준선-v1.7.31.md](../../../요구사항기준선-v1.7.31.md)
-- 화면 정의: [화면정의서-v1.5.35.md](../../../화면정의서-v1.5.35.md)
-- 유저 flow: [유저flow맵-v1.3.33.md](../../../유저flow맵-v1.3.33.md)
-- DB/Schema: [db설계-v1.3.33.md](../../../db설계-v1.3.33.md)
-- API 문서: [api문서-v1.2.38.md](../../../api문서-v1.2.38.md)
+- 요구사항: [요구사항기준선-v1.7.32.md](../../../요구사항기준선-v1.7.32.md)
+- 화면 정의: [화면정의서-v1.5.36.md](../../../화면정의서-v1.5.36.md)
+- 유저 flow: [유저flow맵-v1.3.34.md](../../../유저flow맵-v1.3.34.md)
+- DB/Schema: [db설계-v1.3.34.md](../../../db설계-v1.3.34.md)
+- API 문서: [api문서-v1.2.39.md](../../../api문서-v1.2.39.md)
 - 현재 운영 규칙: [AGENTS.md](../../../AGENTS.md), [agent-workflow-overview.md](../agent-workflow-overview.md), [slice-workflow.md](../slice-workflow.md)
 
 우선순위:
@@ -82,9 +82,10 @@
 ## 7. External Smoke Checklist
 
 - auth / Supabase:
-  - Supabase server reachable
-  - `NEXT_PUBLIC_SUPABASE_URL` 존재
-  - `NEXT_PUBLIC_SUPABASE_ANON_KEY` 존재
+  - `docs/engineering/supabase-local-only-operations.md`의 local-only target 준수
+  - pinned isolated local Supabase 또는 controlled full-local server reachable
+  - local `NEXT_PUBLIC_SUPABASE_URL`과 local publishable/anon key 존재
+  - Cloud project/link/remote credential 요구·탐색·fallback 0
   - OAuth provider enabled
   - OAuth redirect URL 일치
 - live OAuth:

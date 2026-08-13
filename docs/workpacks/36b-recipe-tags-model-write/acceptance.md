@@ -42,7 +42,7 @@
 
 - [x] `tags` / `recipe_tags` migration이 table, check constraints, unique/index, seed를 포함한다 <!-- omo:id=accept-migration-schema;stage=2;scope=backend;review=3,6 -->
 - [x] Vitest fixture에서 manual/youtube recipe + tag seed baseline을 구성할 수 있다 <!-- omo:id=accept-fixture-baseline;stage=2;scope=shared;review=3,6 -->
-- [x] real DB smoke는 가능한 환경에서 `supabase db push` 후 table/index/seed 확인으로 분리된다 <!-- omo:id=accept-real-db-ready;stage=2;scope=shared;review=3,6 -->
+- [x] real DB smoke는 pinned isolated local migration replay 뒤 table/index/seed 확인으로 분리되며 운영 DB reset은 금지된다 <!-- omo:id=accept-real-db-ready;stage=2;scope=shared;review=3,6 -->
 - [x] 운영 기존 레시피 backfill은 36d 범위로 분리되어 36b에서 실행하지 않는다 <!-- omo:id=accept-backfill-deferred;stage=2;scope=shared;review=3,6 -->
 
 ## Automation Split

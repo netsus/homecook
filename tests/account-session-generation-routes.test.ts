@@ -8,6 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const createRouteHandlerClient = vi.fn();
 const createServiceRoleClient = vi.fn();
+const createSessionAuthorityClient = vi.fn();
 const ensurePublicUserRow = vi.fn();
 const ensureUserBootstrapState = vi.fn();
 const formatBootstrapErrorMessage = vi.fn((_error: unknown, fallbackMessage: string) => {
@@ -20,7 +21,7 @@ vi.mock("@/lib/supabase/server", () => ({
   createRecipeFuturePropagationInternalClient: createServiceRoleClient,
   createRemoteCompatibilityServiceRoleClient: createServiceRoleClient,
   createRouteHandlerClient,
-  createSessionAuthorityInternalRpcClient: createServiceRoleClient,
+  createSessionAuthorityInternalRpcClient: createSessionAuthorityClient,
   createServiceRoleClient,
 }));
 
@@ -58,7 +59,7 @@ function createTestAccessToken(payload: Record<string, unknown>) {
 
   return `${encode({ alg: "RS256", kid: "test-key", typ: "JWT" })}.${encode({
     aud: "authenticated",
-    iss: "https://project.supabase.co/auth/v1",
+    iss: "https://auth.mumeok.kr/auth/v1",
     role: "authenticated",
     nbf: payload.iat,
     ...payload,
@@ -122,13 +123,29 @@ describe("account session generation F0 routes", () => {
     vi.resetModules();
     createRouteHandlerClient.mockReset();
     createServiceRoleClient.mockReset();
+    createSessionAuthorityClient.mockReset();
     ensurePublicUserRow.mockReset();
     ensureUserBootstrapState.mockReset();
     formatBootstrapErrorMessage.mockClear();
     recordOperationalEvent.mockClear();
     ensurePublicUserRow.mockResolvedValue({});
     ensureUserBootstrapState.mockResolvedValue(undefined);
-    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://project.supabase.co");
+    createSessionAuthorityClient.mockReturnValue({
+      rpc: vi.fn(async () => ({
+        data: {
+          authority: "local",
+          cutover_epoch: 1,
+          flows_open: true,
+          hmac_key_version: 1,
+          local_issuer: "https://auth.mumeok.kr/auth/v1",
+        },
+        error: null,
+      })),
+    });
+    vi.stubEnv("HOMECOOK_AUTH_AUTHORITY", "local");
+    vi.stubEnv("NEXT_PUBLIC_AUTH_SUPABASE_URL", "https://auth.mumeok.kr");
+    vi.stubEnv("NEXT_PUBLIC_AUTH_SUPABASE_PUBLISHABLE_KEY", "local-publishable");
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "http://127.0.0.1:54321");
   });
 
   afterEach(() => {
@@ -287,7 +304,7 @@ describe("account session generation F0 routes", () => {
       sub: user.id,
       session_id: "550e8400-e29b-41d4-a716-446655440099",
       iat: 1784764800,
-      exp: 4102444800,
+      exp: Math.floor(Date.now() / 1_000) + 3_600,
     });
     createRouteHandlerClient.mockResolvedValue({
       auth: {
@@ -338,14 +355,14 @@ describe("account session generation F0 routes", () => {
       "HOMECOOK_SESSION_GENERATION_HMAC_KEY_V1",
       "test-only-session-generation-secret-at-least-32-bytes",
     );
-    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://project.supabase.co");
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://auth.mumeok.kr");
     const ownerUuid = "550e8400-e29b-41d4-a716-446655440001";
     const sessionId = "550e8400-e29b-41d4-a716-446655440099";
     const { accessToken, jwk } = createSignedTestAccessToken({
       aud: "authenticated",
-      exp: 4102444800,
+      exp: Math.floor(Date.now() / 1_000) + 3_600,
       iat: 1784764800,
-      iss: "https://project.supabase.co/auth/v1",
+      iss: "https://auth.mumeok.kr/auth/v1",
       session_id: sessionId,
       sub: ownerUuid,
     });
@@ -388,7 +405,7 @@ describe("account session generation F0 routes", () => {
       error: null,
     });
     expect(fetchJwks).toHaveBeenCalledWith(
-      "https://project.supabase.co/auth/v1/.well-known/jwks.json",
+      "https://auth.mumeok.kr/auth/v1/.well-known/jwks.json",
       expect.objectContaining({ cache: "no-store" }),
     );
     expect(rpc).toHaveBeenCalledWith(
@@ -417,13 +434,13 @@ describe("account session generation F0 routes", () => {
       "HOMECOOK_SESSION_GENERATION_HMAC_KEY_V1",
       "test-only-session-generation-secret-at-least-32-bytes",
     );
-    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://project.supabase.co");
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://auth.mumeok.kr");
     const ownerUuid = "550e8400-e29b-41d4-a716-446655440001";
     const { accessToken, jwk } = createSignedTestAccessToken({
       aud: "authenticated",
-      exp: 4102444800,
+      exp: Math.floor(Date.now() / 1_000) + 3_600,
       iat: 1784764800,
-      iss: "https://project.supabase.co/auth/v1",
+      iss: "https://auth.mumeok.kr/auth/v1",
       session_id: "550e8400-e29b-41d4-a716-446655440099",
       sub: ownerUuid,
     });
@@ -477,12 +494,12 @@ describe("account session generation F0 routes", () => {
       "HOMECOOK_SESSION_GENERATION_HMAC_KEY_V1",
       "test-only-session-generation-secret-at-least-32-bytes",
     );
-    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://project.supabase.co");
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://auth.mumeok.kr");
     const { accessToken } = createSignedTestAccessToken({
       aud: "authenticated",
-      exp: 4102444800,
+      exp: Math.floor(Date.now() / 1_000) + 3_600,
       iat: 1784764800,
-      iss: "https://project.supabase.co/auth/v1",
+      iss: "https://auth.mumeok.kr/auth/v1",
       session_id: "550e8400-e29b-41d4-a716-446655440099",
       sub: "550e8400-e29b-41d4-a716-446655440001",
     });
@@ -677,7 +694,7 @@ describe("account session generation F0 routes", () => {
       sub: user.id,
       session_id: sessionId,
       iat: 1784764800,
-      exp: 4102444800,
+      exp: Math.floor(Date.now() / 1_000) + 3_600,
     });
     const getUser = vi.fn(async (token?: string) => ({
       data: { user: token === accessToken ? user : null },
@@ -707,7 +724,7 @@ describe("account session generation F0 routes", () => {
         )
           .update([
             "v1",
-            "https://project.supabase.co/auth/v1",
+            "https://auth.mumeok.kr/auth/v1",
             user.id,
             user.created_at,
             sessionId,
@@ -768,7 +785,7 @@ describe("account session generation F0 routes", () => {
       },
       error: null,
     }));
-    createServiceRoleClient.mockReturnValue({ rpc: controlRpc });
+    createSessionAuthorityClient.mockReturnValue({ rpc: controlRpc });
     const routeClient = {
       auth: {
         getSession: vi.fn(async () => ({
@@ -834,7 +851,7 @@ describe("account session generation F0 routes", () => {
     const sessionId = "550e8400-e29b-41d4-a716-446655440099";
     const { accessToken, jwk } = createSignedTestAccessToken({
       aud: "authenticated",
-      exp: 4102444800,
+      exp: Math.floor(Date.now() / 1_000) + 3_600,
       iat: 1784764800,
       iss: "https://auth.mumeok.kr/auth/v1",
       session_id: sessionId,
@@ -857,7 +874,7 @@ describe("account session generation F0 routes", () => {
       },
       error: null,
     }));
-    createServiceRoleClient.mockReturnValue({ rpc: controlRpc });
+    createSessionAuthorityClient.mockReturnValue({ rpc: controlRpc });
     const routeClient = {
       auth: {
         getSession: vi.fn(async () => ({
@@ -914,7 +931,7 @@ describe("account session generation F0 routes", () => {
       exp: now + 3_600,
       iss: "https://auth.mumeok.kr/auth/v1",
     });
-    createServiceRoleClient.mockReturnValue(null);
+    createSessionAuthorityClient.mockReturnValue(null);
     const routeClient = {
       auth: {
         getSession: vi.fn(async () => ({
@@ -958,7 +975,7 @@ describe("account session generation F0 routes", () => {
       data: null,
       error: { message: "read failed" },
     }));
-    createServiceRoleClient.mockReturnValue({ rpc: controlRpc });
+    createSessionAuthorityClient.mockReturnValue({ rpc: controlRpc });
     const routeClient = {
       auth: {
         getSession: vi.fn(async () => ({
@@ -1000,7 +1017,7 @@ describe("account session generation F0 routes", () => {
     const sessionId = "550e8400-e29b-41d4-a716-446655440099";
     const { accessToken, jwk } = createSignedTestAccessToken({
       aud: "authenticated",
-      exp: 4102444800,
+      exp: Math.floor(Date.now() / 1_000) + 3_600,
       iat: 1784764800,
       iss: "https://auth.mumeok.kr/auth/v1",
       session_id: sessionId,
@@ -1022,7 +1039,7 @@ describe("account session generation F0 routes", () => {
       },
       error: null,
     }));
-    createServiceRoleClient.mockReturnValue({ rpc: controlRpc });
+    createSessionAuthorityClient.mockReturnValue({ rpc: controlRpc });
     const routeClient = {
       auth: {
         getSession: vi.fn(async () => ({
@@ -1099,13 +1116,13 @@ describe("account session generation F0 routes", () => {
       "HOMECOOK_SESSION_GENERATION_HMAC_KEY_V1",
       "test-only-session-generation-secret-at-least-32-bytes",
     );
-    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://project.supabase.co");
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://auth.mumeok.kr");
     const ownerUuid = "550e8400-e29b-41d4-a716-446655440001";
     const { accessToken, jwk } = createSignedTestAccessToken({
       aud: "authenticated",
-      exp: 4102444800,
+      exp: Math.floor(Date.now() / 1_000) + 3_600,
       iat: 1784764800,
-      iss: "https://project.supabase.co/auth/v1",
+      iss: "https://auth.mumeok.kr/auth/v1",
       session_id: "550e8400-e29b-41d4-a716-446655440099",
       sub: ownerUuid,
     });
@@ -1161,12 +1178,12 @@ describe("account session generation F0 routes", () => {
       "HOMECOOK_SESSION_GENERATION_HMAC_KEY_V1",
       "test-only-session-generation-secret-at-least-32-bytes",
     );
-    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://project.supabase.co");
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://auth.mumeok.kr");
     const { accessToken } = createSignedTestAccessToken({
       aud: "authenticated",
-      exp: 4102444800,
+      exp: Math.floor(Date.now() / 1_000) + 3_600,
       iat: 1784764800,
-      iss: "https://project.supabase.co/auth/v1",
+      iss: "https://auth.mumeok.kr/auth/v1",
       session_id: "550e8400-e29b-41d4-a716-446655440099",
       sub: "550e8400-e29b-41d4-a716-446655440001",
     });
@@ -1250,7 +1267,7 @@ describe("account session generation F0 routes", () => {
       sub: user.id,
       session_id: "550e8400-e29b-41d4-a716-446655440099",
       iat: 1784764800,
-      exp: 4102444800,
+      exp: Math.floor(Date.now() / 1_000) + 3_600,
     });
     createRouteHandlerClient.mockResolvedValue({
       auth: {

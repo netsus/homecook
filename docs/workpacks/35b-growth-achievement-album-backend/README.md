@@ -117,7 +117,7 @@
   - legacy/backfill user: achievement state만 반영, notification 없음
 - Real DB smoke:
   - migration file 존재 및 SQL 정합성 확인
-  - local Supabase가 가능한 환경에서는 `supabase db push` 후 `user_achievement_awards` table/index 확인
+  - pinned isolated local Supabase에서는 clean migration replay 후 `user_achievement_awards` table/index 확인. 운영 full-local DB reset은 금지
   - 현재 CI는 migration을 적용하지 않으므로 SQL file + repository tests를 기본 evidence로 둔다.
 - Seed/reset:
   - 기존 Vitest fixture builder로 progress/activity/notification rows를 구성한다.

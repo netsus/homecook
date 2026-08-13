@@ -36,8 +36,8 @@ describe("YouTube async extraction Stage 1 contract", () => {
   );
 
   it("uses the exact official CTA copy on every Stage 1 design surface", () => {
-    const officialScreens = read("docs/화면정의서-v1.5.35.md");
-    const officialFlow = read("docs/유저flow맵-v1.3.33.md");
+    const officialScreens = read("docs/화면정의서-v1.5.36.md");
+    const officialFlow = read("docs/유저flow맵-v1.3.34.md");
 
     expect(officialScreens).toContain("[가져오기]");
     expect(officialScreens).toContain("`결과 확인`");
