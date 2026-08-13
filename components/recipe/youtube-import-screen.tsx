@@ -780,6 +780,12 @@ interface BackgroundAcceptedStepProps {
   videoTitle: string;
 }
 
+function getAcceptedRetryLabel(job: YoutubeExtractionJobData) {
+  if (job.error?.code === "QUOTA_EXCEEDED") return "나중에 다시 시도";
+  if (job.error?.code === "EXTRACTION_EXPIRED") return "다시 추출";
+  return "다시 시도";
+}
+
 function BackgroundAcceptedStep({
   deduplicated,
   job,
@@ -808,7 +814,9 @@ function BackgroundAcceptedStep({
         {videoTitle ? <p className="mt-2 max-w-full truncate text-sm font-semibold text-[var(--foreground)]">{videoTitle}</p> : null}
         <div className="mt-7 flex w-full flex-col gap-3 sm:flex-row sm:justify-center">
           {failed && job.can_retry ? (
-            <Button onClick={onRetry} style={{ color: "var(--foreground)" }}>다시 시도</Button>
+            <Button onClick={onRetry} style={{ color: "var(--foreground)" }}>
+              {getAcceptedRetryLabel(job)}
+            </Button>
           ) : null}
           <Button
             onClick={onExit}
@@ -3282,6 +3290,7 @@ export function YoutubeImportScreen({
     setAcceptedJobId(result.data.job_id);
     setAcceptedDeduplicated(result.data.deduplicated);
     setAcceptedJob(null);
+    trackYoutubeExtractionJob(result.data.job_id);
   }, [acceptedJob]);
 
   // ─── Render ────────────────────────────────────────────────────────

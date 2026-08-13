@@ -14,10 +14,11 @@ const IMPORT_EVIDENCE = path.join(EVIDENCE_ROOT, "YT_IMPORT_BACKGROUND");
 const SHELL_EVIDENCE = path.join(EVIDENCE_ROOT, "APP_SHELL_YOUTUBE_NOTIFICATIONS");
 const YOUTUBE_URL = "https://www.youtube.com/watch?v=abcdefghijk";
 const JOB_ID = "11111111-1111-4111-8111-111111111111";
+const RETRY_JOB_ID = "44444444-4444-4444-8444-444444444444";
 const EXTRACTION_ID = "22222222-2222-4222-8222-222222222222";
 const THUMBNAIL = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='320' height='180'%3E%3Crect width='320' height='180' fill='%23dff5ff'/%3E%3Ctext x='160' y='98' text-anchor='middle' font-size='64'%3E🍲%3C/text%3E%3C/svg%3E";
 
-type ImportMode = "accepted" | "duplicate" | "offline" | "review";
+type ImportMode = "accepted" | "accepted-retry" | "duplicate" | "offline" | "review";
 
 function notificationItem({
   code,
@@ -150,12 +151,13 @@ async function installImportRoutes(page: Page, mode: ImportMode) {
       await route.abort("internetdisconnected");
       return;
     }
+    const retry = route.request().postDataJSON()?.retry_job_id === JOB_ID;
     await route.fulfill({
       status: 202,
       json: {
         success: true,
         data: {
-          job_id: JOB_ID,
+          job_id: retry ? RETRY_JOB_ID : JOB_ID,
           status: "queued",
           deduplicated: mode === "duplicate",
           submitted_at: "2026-08-14T01:00:00.000Z",
@@ -165,13 +167,36 @@ async function installImportRoutes(page: Page, mode: ImportMode) {
     });
   });
   await page.route(`**/api/v1/recipes/youtube/extraction-jobs/${JOB_ID}`, async (route) => {
+    const retryableFailure = mode === "accepted-retry";
     await route.fulfill({
       json: {
         success: true,
         data: {
           job_id: JOB_ID,
-          status: "queued",
+          status: retryableFailure ? "failed" : "queued",
           submitted_at: "2026-08-14T01:00:00.000Z",
+          started_at: retryableFailure ? "2026-08-14T01:00:01.000Z" : null,
+          completed_at: retryableFailure ? "2026-08-14T01:03:00.000Z" : null,
+          result: null,
+          error: retryableFailure ? {
+            code: "QUOTA_EXCEEDED",
+            message: "오늘 추출 한도를 모두 사용했어요. 나중에 다시 시도해 주세요.",
+            retryable: true,
+          } : null,
+          can_retry: retryableFailure,
+        },
+        error: null,
+      },
+    });
+  });
+  await page.route(`**/api/v1/recipes/youtube/extraction-jobs/${RETRY_JOB_ID}`, async (route) => {
+    await route.fulfill({
+      json: {
+        success: true,
+        data: {
+          job_id: RETRY_JOB_ID,
+          status: "queued",
+          submitted_at: "2026-08-14T01:05:00.000Z",
           started_at: null,
           completed_at: null,
           result: null,
@@ -298,6 +323,33 @@ test("offline keeps the URL and gives a retryable 320 state", async ({ page }, t
   await expect(page.locator(".web-menu-add-error")).toContainText("인터넷 연결을 확인한 뒤 다시 시도해 주세요.");
   await expect(page.getByLabel("유튜브 URL")).toHaveValue(YOUTUBE_URL);
   await captureEvidence(page, testInfo, path.join(IMPORT_EVIDENCE, "mobile-320-offline.png"), true);
+});
+
+test("accepted retry uses quota copy and projects the replacement job before exit", async ({ page }, testInfo) => {
+  await openImport(page, "accepted-retry", 390, 844);
+  const retry = page.getByRole("button", { name: "나중에 다시 시도" });
+  await expect(retry).toBeVisible();
+  await expect(page.getByRole("button", { name: "다시 시도" })).toHaveCount(0);
+  await captureEvidence(
+    page,
+    testInfo,
+    path.join(IMPORT_EVIDENCE, "mobile-390-quota-retry.png"),
+    true,
+  );
+
+  await retry.click();
+  await page.getByRole("button", { name: "작업 보기" }).click();
+  await expect(page.getByText("추출 대기 중")).toBeVisible();
+  await expect(page.locator(`[data-youtube-active-job-id='${RETRY_JOB_ID}']`)).toBeVisible();
+  await captureEvidence(
+    page,
+    testInfo,
+    path.join(IMPORT_EVIDENCE, "mobile-390-retry-active-projection.png"),
+    true,
+  );
+  await page.getByRole("button", { name: "알림 닫기" }).click();
+  await page.getByRole("button", { name: "나가기" }).click();
+  await expect(page).toHaveURL(/\/$/);
 });
 
 test("duplicate active work is explicit on desktop", async ({ page }, testInfo) => {
