@@ -63,9 +63,19 @@ async function installNotificationRoutes(
   page: Page,
   unseenItems = [notificationItem({ status: "succeeded", title: null })],
 ) {
-  const archiveItems = [
-    { ...notificationItem({ status: "succeeded", title: "감자 수프" }), seen_at: "2026-08-14T01:04:00.000Z" },
-    { ...notificationItem({ code: "QUOTA_EXCEEDED", status: "failed", title: "두부조림" }), seen_at: "2026-08-14T01:05:00.000Z" },
+  const archiveFirstPage = Array.from({ length: 8 }, (_, index) => ({
+    ...notificationItem({ status: "succeeded", title: index === 0 ? "감자 수프" : `지난 레시피 ${index + 1}` }),
+    job_id: `66666666-6666-4666-8666-${String(index).padStart(12, "0")}`,
+    delivery_key: `delivery-archive-${index}`,
+    seen_at: "2026-08-14T01:04:00.000Z",
+  }));
+  const archiveSecondPage = [
+    archiveFirstPage[0],
+    {
+      ...notificationItem({ code: "QUOTA_EXCEEDED", status: "failed", title: "두부조림" }),
+      job_id: "55555555-5555-4555-8555-555555555555",
+      seen_at: "2026-08-14T01:05:00.000Z",
+    },
   ];
   await page.route("**/api/v1/users/me/youtube-extraction-jobs**", async (route) => {
     const request = route.request();
@@ -79,10 +89,16 @@ async function installNotificationRoutes(
       return;
     }
     const archive = url.searchParams.get("view") === "archive";
+    const cursor = url.searchParams.get("cursor");
     await route.fulfill({
       json: {
         success: true,
-        data: { items: archive ? archiveItems : unseenItems, next_cursor: null },
+        data: archive
+          ? {
+              items: cursor === "archive-cursor-2" ? archiveSecondPage : archiveFirstPage,
+              next_cursor: cursor === "archive-cursor-2" ? null : "archive-cursor-2",
+            }
+          : { items: unseenItems, next_cursor: null },
         error: null,
       },
     });
@@ -255,13 +271,13 @@ test("async enqueue is immediately escapable and visually stable at 390", async 
   await expect(page.getByText("추출을 시작했어요. 완료되면 알려드릴게요.")).toBeVisible();
   await expect(page.getByRole("button", { name: "나가기" })).toBeVisible();
   await expect(page.getByRole("button", { name: "작업 보기" })).toBeVisible();
-  // The locked Wave 1 bright-brand palette is an existing repository-wide
-  // exception; keep every structural/interactive axe rule active here.
   const results = await new AxeBuilder({ page })
-    .include(".yt-mobile-import-shell")
-    .disableRules(["color-contrast"])
+    .include("[data-youtube-extraction-accepted]")
     .analyze();
   expect(results.violations).toEqual([]);
+  await page.getByRole("button", { name: "YouTube 추출 알림 없음" }).click();
+  await expect(page.getByText("추출 대기 중")).toBeVisible();
+  await page.getByRole("button", { name: "알림 닫기" }).click();
   await page.screenshot({ path: path.join(IMPORT_EVIDENCE, "mobile-390-accepted.png"), fullPage: true });
   await page.evaluate(() => {
     document.documentElement.style.fontSize = "200%";
@@ -289,40 +305,52 @@ test("completed session re-entry can register the reviewed recipe", async ({ pag
   await expect(page.getByText("레시피가 등록됐어요")).toBeVisible();
 });
 
-test("app shell success toast keeps badge until list exposure", async ({ page }) => {
+test("app shell groups terminal outcomes and keeps the badge until list exposure", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.setViewportSize({ width: 390, height: 844 });
   await setE2EAuthOverride(page);
   await installDiscoveryRoutes(page);
-  await installNotificationRoutes(page);
+  await installNotificationRoutes(page, [
+    notificationItem({ status: "succeeded", title: "감자 수프" }),
+    notificationItem({ code: "QUOTA_EXCEEDED", status: "failed", title: "두부조림" }),
+  ]);
   await page.goto("/");
-  await expect(page.getByText("YouTube 레시피 추출이 완료됐어요")).toBeVisible();
-  await expect(page.getByRole("button", { name: "YouTube 추출 알림 1개" })).toBeVisible();
+  await expect(page.getByText("레시피 추출 2건이 끝났어요")).toBeVisible();
+  await expect(page.getByRole("button", { name: "YouTube 추출 알림 2개" })).toBeVisible();
+  const results = await new AxeBuilder({ page })
+    .include("[data-youtube-notification-toast]")
+    .analyze();
+  expect(results.violations).toEqual([]);
   await page.screenshot({ path: path.join(SHELL_EVIDENCE, "mobile-390-success-toast.png") });
 });
 
-test("failure panel is keyboard-contained at 320", async ({ page }) => {
+test("failure panel reflows at 200% text with non-zero safe areas at 320", async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 568 });
   await setE2EAuthOverride(page);
   await installDiscoveryRoutes(page);
-  await installNotificationRoutes(page, [notificationItem({ status: "failed", title: "두부조림" })]);
+  await installNotificationRoutes(page, [notificationItem({ code: "QUOTA_EXCEEDED", status: "failed", title: "두부조림" })]);
   await page.goto("/");
   await page.getByRole("button", { name: "YouTube 추출 알림 1개" }).click();
+  await page.addStyleTag({ content: ":root { --youtube-notification-safe-area-top: 24px; --youtube-notification-safe-area-bottom: 34px; font-size: 200%; }" });
   const dialog = page.getByRole("dialog", { name: "YouTube 추출 알림" });
+  const overlay = page.getByTestId("youtube-notification-overlay");
   await expect(dialog).toBeVisible();
   await expect(page.getByRole("button", { name: "알림 닫기" })).toBeFocused();
+  const retry = page.getByRole("button", { name: "나중에 다시 시도" });
+  await retry.scrollIntoViewIfNeeded();
+  await expect(retry).toBeVisible();
   await page.keyboard.press("Shift+Tab");
   expect(await dialog.evaluate((element) => element.contains(document.activeElement))).toBe(true);
   const results = await new AxeBuilder({ page })
     .include("[role='dialog']")
-    .disableRules(["color-contrast"])
     .analyze();
   expect(results.violations).toEqual([]);
-  await page.screenshot({ path: path.join(SHELL_EVIDENCE, "mobile-320-failure-panel.png") });
-  await page.evaluate(() => {
-    document.documentElement.style.fontSize = "200%";
-  });
+  const overlayBox = await overlay.boundingBox();
+  const dialogBox = await dialog.boundingBox();
+  expect(overlayBox?.y).toBeGreaterThanOrEqual(24);
+  expect((dialogBox?.y ?? 0) + (dialogBox?.height ?? 0)).toBeLessThanOrEqual(568);
   expect(await dialog.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
+  await page.screenshot({ path: path.join(SHELL_EVIDENCE, "mobile-320-failure-panel.png") });
   await page.keyboard.press("Escape");
   await expect(dialog).toBeHidden();
 });
@@ -333,9 +361,22 @@ test("desktop archive remains internally scrollable without page overlap", async
   await installDiscoveryRoutes(page);
   await installNotificationRoutes(page);
   await page.goto("/");
-  await page.getByRole("button", { name: "YouTube 추출 알림 1개" }).click();
+  const trigger = page.locator('button[aria-label^="YouTube 추출 알림"]');
+  await trigger.click();
+  const overlay = page.getByTestId("youtube-notification-overlay");
+  expect(Number(await overlay.evaluate((element) => getComputedStyle(element).zIndex)))
+    .toBeGreaterThan(Number(await page.locator(".web-topnav").evaluate((element) => getComputedStyle(element).zIndex)));
+  await expect(page.getByRole("heading", { name: "YouTube 추출 알림" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "알림 닫기" })).toBeVisible();
   await page.getByRole("tab", { name: "지난 알림" }).click();
   await expect(page.getByRole("heading", { name: "감자 수프" })).toBeVisible();
+  const list = page.getByTestId("youtube-notification-list");
+  await list.evaluate((element) => { element.scrollTop = 40; });
+  await page.getByRole("button", { name: "알림 더 보기" }).click();
+  await expect(page.getByRole("heading", { name: "두부조림" })).toBeVisible();
+  expect(await list.evaluate((element) => element.scrollTop)).toBeGreaterThanOrEqual(40);
   await expect(page.getByRole("button", { name: "나중에 다시 시도" })).toBeVisible();
   await page.screenshot({ path: path.join(SHELL_EVIDENCE, "desktop-1440-archive.png") });
+  await page.getByRole("button", { name: "알림 닫기" }).click();
+  await expect(trigger).toBeFocused();
 });

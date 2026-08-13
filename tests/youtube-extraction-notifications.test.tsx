@@ -54,6 +54,17 @@ const failedItem = {
   },
 };
 
+const activeJob = {
+  job_id: "44444444-4444-4444-8444-444444444444",
+  status: "queued" as const,
+  submitted_at: "2026-08-14T01:10:00.000Z",
+  started_at: null,
+  completed_at: null,
+  result: null,
+  error: null,
+  can_retry: false,
+};
+
 function renderCenter() {
   return render(
     <>
@@ -94,13 +105,17 @@ describe("YouTube extraction notification center", () => {
   afterEach(() => cleanup());
 
   it("records delivered for visible toasts without clearing the unseen badge", async () => {
+    vi.mocked(api.fetchYoutubeExtractionNotifications).mockResolvedValue({
+      success: true,
+      data: { items: [successItem], next_cursor: null },
+      error: null,
+    });
     const user = userEvent.setup();
     renderCenter();
 
     expect(await screen.findByText("YouTube 레시피 추출이 완료됐어요")).toBeTruthy();
     expect(screen.getByText("YouTube 레시피")).toBeTruthy();
-    expect(screen.queryByText("매콤한 두부조림")).toBeNull();
-    expect(screen.getByLabelText("YouTube 추출 알림 2개")).toBeTruthy();
+    expect(screen.getByLabelText("YouTube 추출 알림 1개")).toBeTruthy();
 
     await waitFor(() => {
       expect(api.markYoutubeExtractionDelivered).toHaveBeenCalledWith(["delivery-success"]);
@@ -108,8 +123,63 @@ describe("YouTube extraction notification center", () => {
     expect(api.markYoutubeExtractionSeen).not.toHaveBeenCalled();
 
     await user.click(screen.getAllByRole("button", { name: "toast 닫기" })[0]);
-    expect(screen.getByLabelText("YouTube 추출 알림 2개")).toBeTruthy();
+    expect(screen.getByLabelText("YouTube 추출 알림 1개")).toBeTruthy();
     expect(api.markYoutubeExtractionSeen).not.toHaveBeenCalled();
+  });
+
+  it("groups multiple terminal items into one toast and delivers every represented key", async () => {
+    renderCenter();
+
+    expect(await screen.findByText("레시피 추출 2건이 끝났어요")).toBeTruthy();
+    expect(screen.queryByText("YouTube 레시피 추출이 완료됐어요")).toBeNull();
+    expect(screen.queryByText("YouTube 레시피 추출에 실패했어요")).toBeNull();
+    await waitFor(() => {
+      expect(api.markYoutubeExtractionDelivered).toHaveBeenCalledWith([
+        successItem.delivery_key,
+        failedItem.delivery_key,
+      ]);
+    });
+  });
+
+  it("projects a stored active job immediately and replaces it with its terminal notification", async () => {
+    window.sessionStorage.setItem(
+      "homecook.youtube-extraction-jobs",
+      JSON.stringify([activeJob.job_id]),
+    );
+    vi.mocked(api.fetchYoutubeExtractionNotifications)
+      .mockResolvedValueOnce({
+        success: true,
+        data: { items: [], next_cursor: null },
+        error: null,
+      })
+      .mockResolvedValue({
+        success: true,
+        data: { items: [successItem], next_cursor: null },
+        error: null,
+      });
+    vi.mocked(api.fetchYoutubeExtractionJob)
+      .mockResolvedValueOnce({ success: true, data: activeJob, error: null })
+      .mockResolvedValueOnce({
+        success: true,
+        data: {
+          ...activeJob,
+          status: "succeeded",
+          completed_at: successItem.completed_at,
+          result: successItem.result,
+        },
+        error: null,
+      });
+    const user = userEvent.setup();
+
+    renderCenter();
+    await user.click(await screen.findByRole("button", { name: "YouTube 추출 알림 없음" }));
+    expect(await screen.findByText("추출 대기 중")).toBeTruthy();
+    expect(screen.getByText("진행 중 1 · 새 소식 0")).toBeTruthy();
+
+    window.dispatchEvent(new CustomEvent("homecook:youtube-extraction-job-enqueued"));
+
+    await waitFor(() => expect(screen.queryByText("추출 대기 중")).toBeNull());
+    expect(await screen.findByRole("heading", { name: "YouTube 레시피" })).toBeTruthy();
   });
 
   it("marks exposed list rows seen, supports Escape, and gates retry by can_retry", async () => {
@@ -249,5 +319,71 @@ describe("YouTube extraction notification center", () => {
 
     expect(await screen.findByRole("heading", { name: "감자 수프 archive" })).toBeTruthy();
     expect(screen.queryByRole("heading", { name: "YouTube 레시피" })).toBeNull();
+  });
+
+  it("appends cursor pages without duplicates and preserves list scroll and focus", async () => {
+    const archiveFirst = {
+      ...successItem,
+      seen_at: "2026-08-14T02:00:00.000Z",
+      video_title_snapshot: "감자 수프 page one",
+    };
+    const archiveSecond = {
+      ...failedItem,
+      job_id: "55555555-5555-4555-8555-555555555555",
+      seen_at: "2026-08-14T02:05:00.000Z",
+      video_title_snapshot: "두부조림 page two",
+    };
+    vi.mocked(api.fetchYoutubeExtractionNotifications).mockImplementation(async (view, options) => {
+      if (view !== "archive") {
+        return { success: true, data: { items: [successItem], next_cursor: null }, error: null };
+      }
+      if (options?.cursor === "cursor-2") {
+        return {
+          success: true,
+          data: { items: [archiveFirst, archiveSecond], next_cursor: null },
+          error: null,
+        };
+      }
+      return {
+        success: true,
+        data: { items: [archiveFirst], next_cursor: "cursor-2" },
+        error: null,
+      };
+    });
+    const user = userEvent.setup();
+
+    renderCenter();
+    await user.click(await screen.findByRole("button", { name: "YouTube 추출 알림 1개" }));
+    await user.click(screen.getByRole("tab", { name: "지난 알림" }));
+    const list = await screen.findByTestId("youtube-notification-list");
+    const loadMore = await screen.findByRole("button", { name: "알림 더 보기" });
+    Object.defineProperty(list, "scrollTop", { configurable: true, value: 36, writable: true });
+    loadMore.focus();
+
+    await user.click(loadMore);
+
+    expect(await screen.findByRole("heading", { name: "두부조림 page two" })).toBeTruthy();
+    expect(screen.getAllByRole("heading", { name: "감자 수프 page one" })).toHaveLength(1);
+    expect(list.scrollTop).toBe(36);
+    expect(document.activeElement).toBe(list);
+    expect(api.fetchYoutubeExtractionNotifications).toHaveBeenCalledWith("archive", {
+      cursor: "cursor-2",
+    });
+  });
+
+  it("keeps the drawer above the app header and returns focus to its trigger", async () => {
+    const user = userEvent.setup();
+    renderCenter();
+    const trigger = await screen.findByRole("button", { name: "YouTube 추출 알림 2개" });
+    trigger.focus();
+
+    await user.click(trigger);
+
+    const overlay = screen.getByTestId("youtube-notification-overlay");
+    expect(overlay.className).toContain("z-[500]");
+    expect(screen.getByRole("heading", { name: "YouTube 추출 알림" })).toBeTruthy();
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "알림 닫기" }));
+    await user.keyboard("{Escape}");
+    expect(document.activeElement).toBe(trigger);
   });
 });
