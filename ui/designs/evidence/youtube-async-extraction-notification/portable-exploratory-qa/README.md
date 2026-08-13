@@ -3,14 +3,14 @@
 ## 목적
 - acceptance checklist를 기반으로 desktop/mobile 사용자 흐름과 edge case를 탐색한다.
 - 기능 버그뿐 아니라 디자인, 접근성, copy, affordance, 복구 UX 문제도 함께 기록한다.
-- 이 bundle은 code head `d5924b14fcc416ad11db70b96f2faf0c98c0c005`에서 `2026-08-13T20:29:14.119Z`에 다시 생성하고, 3217의 24개 Playwright 실행 결과로 보고서를 채웠다.
+- 이 bundle은 동일 code tree의 superseding head `479531b270701b78b82cc35c3cfb2a2342436d79`에서 `2026-08-13T21:00:17Z`에 다시 잠그고, 3217의 45개 Playwright 실행 결과로 보고서를 채웠다.
 
 ## 입력 자료
 - 체크리스트: `ui/designs/evidence/youtube-async-extraction-notification/portable-exploratory-qa/exploratory-checklist.json`
 - 보고서 템플릿: `ui/designs/evidence/youtube-async-extraction-notification/portable-exploratory-qa/exploratory-report.json`
 - 기본 URL: `http://127.0.0.1:3217`
 - 필수 device coverage: `desktop-chrome, mobile-chrome, mobile-ios-small`
-- 시각 증거: 상위 evidence 폴더의 390/320/1280/1440 PNG 8개. quota retry와 replacement active projection 캡처를 포함한다.
+- 시각 증거: 상위 evidence 폴더의 390/320/1280/1440 PNG 16개. import initial/submitting/POLICY_CHANGED, shell consumed/expired/non-retryable/empty/offline/unauthorized, quota retry와 replacement active projection 캡처를 포함한다.
 
 ## 권장 데이터 셋업
 - fixture baseline
