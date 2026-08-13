@@ -23,6 +23,7 @@ import {
 import { fetchCookingMethods } from "@/lib/api/cooking-methods";
 import {
   validateYoutubeUrl,
+  extractYoutubeRecipe,
   createYoutubeCandidateDraft,
   registerYoutubeRecipe,
   registerYoutubeIngredient,
@@ -75,6 +76,7 @@ interface YoutubeImportScreenProps {
   planDate: string;
   columnId: string;
   presentation?: "screen" | "embedded";
+  submissionMode?: "background" | "sync";
   slotName: string;
 }
 
@@ -787,7 +789,7 @@ function BackgroundAcceptedStep({
 }: BackgroundAcceptedStepProps) {
   const failed = job?.status === "failed" || job?.status === "expired";
   return (
-    <div className="px-4 py-8" aria-live="polite">
+    <div aria-live="polite" className="px-4 py-8" data-youtube-extraction-accepted>
       <div className="mx-auto flex max-w-lg flex-col items-center text-center">
         <div aria-hidden="true" className="flex h-16 w-16 items-center justify-center rounded-full bg-[var(--brand-soft)] text-3xl text-[var(--brand-deep)]">
           {failed ? "!" : "✓"}
@@ -805,9 +807,9 @@ function BackgroundAcceptedStep({
         {videoTitle ? <p className="mt-2 max-w-full truncate text-sm font-semibold text-[var(--foreground)]">{videoTitle}</p> : null}
         <div className="mt-7 flex w-full flex-col gap-3 sm:flex-row sm:justify-center">
           {failed && job.can_retry ? (
-            <Button onClick={onRetry}>다시 시도</Button>
+            <Button onClick={onRetry} style={{ color: "var(--foreground)" }}>다시 시도</Button>
           ) : null}
-          <Button onClick={onOpenJobs} variant={failed ? "neutral" : "primary"}>작업 보기</Button>
+          <Button onClick={onOpenJobs} style={failed ? undefined : { color: "var(--foreground)" }} variant={failed ? "neutral" : "primary"}>작업 보기</Button>
           <Button onClick={onExit} variant="neutral">나가기</Button>
         </div>
       </div>
@@ -831,11 +833,11 @@ function ExtractionSessionStatus({
         {recipePath ? "등록된 레시피에서 내용을 확인해 주세요." : error}
       </p>
       {recipePath ? (
-        <Link className="mt-6 inline-flex min-h-11 items-center rounded-full bg-[var(--brand-primary)] px-5 font-bold text-white" href={recipePath}>
+        <Link className="mt-6 inline-flex min-h-11 items-center rounded-full bg-[var(--brand-primary)] px-5 font-bold text-[var(--foreground)]" href={recipePath}>
           레시피 보기
         </Link>
       ) : (
-        <Link className="mt-6 inline-flex min-h-11 items-center rounded-full bg-[var(--brand-primary)] px-5 font-bold text-white" href="/menu/add/youtube">
+        <Link className="mt-6 inline-flex min-h-11 items-center rounded-full bg-[var(--brand-primary)] px-5 font-bold text-[var(--foreground)]" href="/menu/add/youtube">
           다시 추출
         </Link>
       )}
@@ -2422,6 +2424,7 @@ export function YoutubeImportScreen({
   planDate,
   columnId,
   presentation = "screen",
+  submissionMode = "background",
   slotName,
 }: YoutubeImportScreenProps) {
   const router = useRouter();
@@ -2686,7 +2689,7 @@ export function YoutubeImportScreen({
     );
   }, []);
 
-  // ─── Background extraction (triggered by entering "extracting" step) ────
+  // ─── Extraction (triggered by entering "extracting" step) ──────────────
 
   // Ref to avoid double-fire in StrictMode
   const extractionFiredRef = useRef(false);
@@ -2698,6 +2701,37 @@ export function YoutubeImportScreen({
     let cancelled = false;
 
     (async () => {
+      if (submissionMode === "sync") {
+        const result = await extractYoutubeRecipe({ youtube_url: youtubeUrl.trim() });
+
+        if (cancelled) return;
+
+        if (!result.success || !result.data) {
+          if (result.error?.code === "NOT_RECIPE_VIDEO") {
+            setClassificationStatus("non_recipe");
+            setClassificationReasons([result.error.message]);
+            setExtractionError(null);
+            pushStep("non-recipe-warning");
+            return;
+          }
+
+          setExtractionError(
+            getApiErrorMessage("레시피를 추출하지 못했어요.", result.error?.message),
+          );
+          return;
+        }
+
+        const data = result.data;
+        const candidates = data.recipe_candidates ?? [];
+        setRecipeCandidates(candidates);
+        setParentExtractionId(candidates.length > 0 ? data.extraction_id : null);
+        setSelectedCandidateId(data.primary_candidate_id ?? candidates[0]?.candidate_id ?? null);
+        setCandidatePromotionError(null);
+        applyExtractDataToReview(data);
+        pushStep("review");
+        return;
+      }
+
       const result = await enqueueYoutubeExtraction({ youtube_url: youtubeUrl.trim() });
 
       if (cancelled) return;
@@ -2721,6 +2755,7 @@ export function YoutubeImportScreen({
           "homecook.youtube-extraction-jobs",
           JSON.stringify([...new Set([...ids, result.data.job_id])].slice(-20)),
         );
+        window.dispatchEvent(new CustomEvent("homecook:youtube-extraction-job-enqueued"));
       } catch {
         // Polling still works in the current page when storage is unavailable.
       }
@@ -2728,7 +2763,7 @@ export function YoutubeImportScreen({
     })();
 
     return () => { cancelled = true; };
-  }, [currentStep, extractionAttempt, youtubeUrl, pushStep]);
+  }, [applyExtractDataToReview, currentStep, extractionAttempt, submissionMode, youtubeUrl, pushStep]);
 
   useEffect(() => {
     if (currentStep !== "accepted" || !acceptedJobId) return;

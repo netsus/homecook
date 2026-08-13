@@ -17,6 +17,7 @@ import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { hasSupabasePublicEnv } from "@/lib/supabase/env";
 import { useYoutubeExtractionStore } from "@/stores/youtube-extraction-store";
 import type {
+  YoutubeExtractionJobData,
   YoutubeExtractionNotificationItem,
   YoutubeExtractionNotificationView,
 } from "@/types/youtube-extraction";
@@ -82,7 +83,7 @@ export function YoutubeExtractionNotificationTrigger({
     >
       <BellIcon filled={unseenCount > 0} />
       {unseenCount > 0 ? (
-        <span className="absolute right-0.5 top-0.5 flex min-h-4 min-w-4 items-center justify-center rounded-full bg-[var(--danger)] px-1 text-[10px] font-bold leading-none text-white">
+        <span className="absolute right-0.5 top-0.5 flex min-h-4 min-w-4 items-center justify-center rounded-full bg-[var(--danger-strong)] px-1 text-[10px] font-bold leading-none text-[var(--text-inverse)]">
           {unseenCount > 99 ? "99+" : unseenCount}
         </span>
       ) : null}
@@ -100,7 +101,7 @@ function NotificationRow({
   const copy = statusCopy(item);
   const destination = item.result?.review_path ?? item.result?.recipe_path;
   return (
-    <article className="grid grid-cols-[56px_minmax(0,1fr)] gap-3 border-b border-[var(--wave1-border)] py-4 last:border-0" data-youtube-job-id={item.job_id}>
+    <article className="grid grid-cols-1 gap-3 border-b border-[var(--wave1-border)] py-4 last:border-0 sm:grid-cols-[56px_minmax(0,1fr)]" data-youtube-job-id={item.job_id}>
       <div className="relative h-14 w-14 overflow-hidden rounded-[var(--radius-control)] bg-[var(--surface-fill)]">
         <Image alt="" fill sizes="56px" src={item.thumbnail_url} unoptimized />
       </div>
@@ -116,12 +117,12 @@ function NotificationRow({
         </div>
         <div className="mt-3 flex flex-wrap gap-2">
           {destination ? (
-            <Link className="inline-flex min-h-11 items-center rounded-full bg-[var(--brand-primary)] px-4 text-sm font-bold text-white" href={destination}>
+            <Link className="inline-flex min-h-11 w-full items-center justify-center whitespace-nowrap rounded-full bg-[var(--brand-primary)] px-4 text-sm font-bold text-[var(--foreground)] sm:w-auto" href={destination}>
               {item.result?.review_path ? "결과 확인" : "레시피 보기"}
             </Link>
           ) : null}
           {item.can_retry ? (
-            <button className="min-h-11 rounded-full border border-[var(--wave1-border)] px-4 text-sm font-bold" onClick={() => onRetry(item)} type="button">
+            <button className="min-h-11 w-full whitespace-nowrap rounded-full border border-[var(--wave1-border)] px-4 text-sm font-bold sm:w-auto" onClick={() => onRetry(item)} type="button">
               {retryLabel(item)}
             </button>
           ) : null}
@@ -129,6 +130,34 @@ function NotificationRow({
       </div>
     </article>
   );
+}
+
+function ActiveJobRow({ job }: { job: YoutubeExtractionJobData }) {
+  const processing = job.status === "processing";
+  return (
+    <article className="border-b border-[var(--wave1-border)] py-4" data-youtube-active-job-id={job.job_id}>
+      <div className="flex items-start gap-3">
+        <span aria-hidden="true" className="mt-0.5 text-[var(--brand-deep)]">↻</span>
+        <div className="min-w-0 flex-1">
+          <h3 className="text-sm font-bold text-[var(--foreground)]">
+            {processing ? "레시피 추출 중" : "추출 대기 중"}
+          </h3>
+          <p className="mt-1 text-sm leading-5 text-[var(--muted)]">
+            이 화면을 닫아도 작업은 계속돼요.
+          </p>
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function appendUniqueItems(
+  current: YoutubeExtractionNotificationItem[],
+  incoming: YoutubeExtractionNotificationItem[],
+) {
+  const byId = new Map(current.map((item) => [item.job_id, item]));
+  incoming.forEach((item) => byId.set(item.job_id, item));
+  return [...byId.values()];
 }
 
 export function YoutubeExtractionNotificationCenter({
@@ -150,6 +179,9 @@ export function YoutubeExtractionNotificationCenter({
   const [hiddenToastIds, setHiddenToastIds] = useState<string[]>([]);
   const [retryingId, setRetryingId] = useState<string | null>(null);
   const [hasHeaderTrigger, setHasHeaderTrigger] = useState(false);
+  const [activeJobs, setActiveJobs] = useState<YoutubeExtractionJobData[]>([]);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [loadingMore, setLoadingMore] = useState(false);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const dialogRef = useRef<HTMLElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
@@ -219,6 +251,7 @@ export function YoutubeExtractionNotificationCenter({
       return;
     }
     setItems(result.data.items);
+    setNextCursor(result.data.next_cursor);
   }, [authenticated, setItems]);
 
   useEffect(() => {
@@ -253,6 +286,9 @@ export function YoutubeExtractionNotificationCenter({
         .filter(({ result }) => result.success && result.data
           && (result.data.status === "queued" || result.data.status === "processing"))
         .map(({ jobId }) => jobId);
+      setActiveJobs(results
+        .flatMap(({ result }) => result.success && result.data ? [result.data] : [])
+        .filter((job) => job.status === "queued" || job.status === "processing"));
       const hasTerminal = results.some(({ result }) => result.success && result.data
         && !activeIds.includes(result.data.job_id));
       window.sessionStorage.setItem(
@@ -266,9 +302,11 @@ export function YoutubeExtractionNotificationCenter({
     };
 
     void pollPending();
+    window.addEventListener("homecook:youtube-extraction-job-enqueued", pollPending);
     return () => {
       current = false;
       if (timer) window.clearTimeout(timer);
+      window.removeEventListener("homecook:youtube-extraction-job-enqueued", pollPending);
     };
   }, [authenticated, refresh]);
 
@@ -278,7 +316,6 @@ export function YoutubeExtractionNotificationCenter({
         && !hiddenToastIds.includes(item.job_id)
         && item.delivered_at === null
         && !deliveredRef.current.has(item.delivery_key))
-      .slice(0, 1)
       .map((item) => item.delivery_key);
     if (keys.length === 0) return;
     keys.forEach((key) => deliveredRef.current.add(key));
@@ -359,23 +396,22 @@ export function YoutubeExtractionNotificationCenter({
     };
   }, [refresh, view]);
 
-  const visibleToasts = useMemo(
+  const visibleToastItems = useMemo(
     () => items
-      .filter((item) => item.seen_at === null && !hiddenToastIds.includes(item.job_id))
-      .slice(0, 1),
+      .filter((item) => item.seen_at === null && !hiddenToastIds.includes(item.job_id)),
     [hiddenToastIds, items],
   );
 
   useEffect(() => {
-    const toast = visibleToasts.at(0);
-    if (!toast) return;
+    if (visibleToastItems.length === 0) return;
     const timer = window.setTimeout(() => {
-      setHiddenToastIds((current) => current.includes(toast.job_id)
-        ? current
-        : [...current, toast.job_id]);
+      setHiddenToastIds((current) => [...new Set([
+        ...current,
+        ...visibleToastItems.map((item) => item.job_id),
+      ])]);
     }, 6000);
     return () => window.clearTimeout(timer);
-  }, [visibleToasts]);
+  }, [visibleToastItems]);
 
   const handleView = useCallback((nextView: YoutubeExtractionNotificationView) => {
     setView(nextView);
@@ -401,6 +437,26 @@ export function YoutubeExtractionNotificationCenter({
     void markYoutubeExtractionSeen([item.job_id]);
   }, [markSeenInStore]);
 
+  const handleLoadMore = useCallback(async () => {
+    if (!nextCursor || loadingMore) return;
+    const list = listRef.current;
+    const scrollTop = list?.scrollTop ?? 0;
+    setLoadingMore(true);
+    setLoadError(null);
+    const result = await fetchYoutubeExtractionNotifications(view, { cursor: nextCursor });
+    setLoadingMore(false);
+    if (!result.success || !result.data) {
+      setLoadError(result.error?.message ?? "알림을 더 불러오지 못했어요.");
+      return;
+    }
+    setItems(appendUniqueItems(items, result.data.items));
+    setNextCursor(result.data.next_cursor);
+    if (list) {
+      list.scrollTop = scrollTop;
+      list.focus({ preventScroll: true });
+    }
+  }, [items, loadingMore, nextCursor, setItems, view]);
+
   if (authExpired) {
     const returnPath = typeof window === "undefined"
       ? "/"
@@ -409,7 +465,7 @@ export function YoutubeExtractionNotificationCenter({
       <div aria-live="polite" className="fixed inset-x-3 top-[calc(env(safe-area-inset-top)+72px)] z-50 mx-auto max-w-sm rounded-[var(--radius-card)] border border-[var(--wave1-border)] bg-[var(--surface)] p-4 shadow-[var(--shadow-floating)]">
         <p className="font-bold text-[var(--foreground)]">로그인이 필요해요</p>
         <p className="mt-1 text-sm text-[var(--muted)]">로그인하면 추출 작업을 이어서 확인할 수 있어요.</p>
-        <Link className="mt-3 inline-flex min-h-11 items-center rounded-full bg-[var(--brand-primary)] px-4 text-sm font-bold text-white" href={`/login?next=${encodeURIComponent(returnPath)}`}>
+        <Link className="mt-3 inline-flex min-h-11 items-center rounded-full bg-[var(--brand-primary)] px-4 text-sm font-bold text-[var(--foreground)]" href={`/login?next=${encodeURIComponent(returnPath)}`}>
           로그인하고 돌아오기
         </Link>
       </div>
@@ -426,21 +482,25 @@ export function YoutubeExtractionNotificationCenter({
         </div>
       ) : null}
       <div aria-live="polite" className="pointer-events-none fixed inset-x-3 top-[calc(env(safe-area-inset-top)+124px)] z-50 mx-auto flex max-w-sm flex-col gap-2 sm:left-auto sm:right-5 sm:mx-0 sm:w-[360px]">
-        {visibleToasts.map((item) => {
-          const copy = statusCopy(item);
-          const destination = item.result?.review_path ?? item.result?.recipe_path;
+        {visibleToastItems.length > 0 ? (() => {
+          const item = visibleToastItems[0];
+          const grouped = visibleToastItems.length > 1;
+          const copy = grouped ? null : statusCopy(item);
+          const destination = grouped ? null : item.result?.review_path ?? item.result?.recipe_path;
           return (
-            <article aria-atomic="true" className="pointer-events-auto rounded-[var(--radius-card)] border border-[var(--wave1-border)] bg-[var(--surface)] p-4 shadow-[var(--shadow-floating)]" key={item.job_id}>
+            <article aria-atomic="true" className="pointer-events-auto rounded-[var(--radius-card)] border border-[var(--wave1-border)] bg-[var(--surface)] p-4 shadow-[var(--shadow-floating)]" data-youtube-notification-toast key={visibleToastItems.map(({ job_id }) => job_id).join(":")}>
               <div className="flex items-start gap-3">
-                <span aria-hidden="true" className={item.status === "succeeded" ? "text-[var(--success)]" : "text-[var(--danger)]"}>{item.status === "succeeded" ? "✓" : "!"}</span>
+                <span aria-hidden="true" className={grouped ? "text-[var(--brand-deep)]" : item.status === "succeeded" ? "text-[var(--success)]" : "text-[var(--danger)]"}>{grouped ? "✓" : item.status === "succeeded" ? "✓" : "!"}</span>
                 <div className="min-w-0 flex-1">
-                  <p className="font-bold text-[var(--foreground)]">{copy.title}</p>
-                  <p className="mt-1 break-words text-sm text-[var(--muted)]">{itemTitle(item)}</p>
+                  <p className="font-bold text-[var(--foreground)]">{grouped ? `레시피 추출 ${visibleToastItems.length}건이 끝났어요` : copy?.title}</p>
+                  <p className="mt-1 break-words text-sm text-[var(--muted)]">{grouped ? "완료·실패 결과를 알림 목록에서 확인해 주세요." : itemTitle(item)}</p>
                 </div>
-                <button aria-label="toast 닫기" className="-m-2 inline-flex min-h-11 min-w-11 items-center justify-center rounded-full text-lg text-[var(--muted)]" onClick={() => setHiddenToastIds((current) => [...current, item.job_id])} type="button">×</button>
+                <button aria-label="toast 닫기" className="-m-2 inline-flex min-h-11 min-w-11 items-center justify-center rounded-full text-lg text-[var(--muted)]" onClick={() => setHiddenToastIds((current) => [...new Set([...current, ...visibleToastItems.map(({ job_id }) => job_id)])])} type="button">×</button>
               </div>
-              {destination ? (
-                <Link className="mt-3 inline-flex min-h-11 items-center rounded-full bg-[var(--brand-soft)] px-4 text-sm font-bold text-[var(--brand-deep)]" href={destination} onClick={() => handleToastSeen(item)}>
+              {grouped ? (
+                <button className="mt-3 min-h-11 rounded-full bg-[var(--brand-soft)] px-4 text-sm font-bold text-[var(--foreground)]" onClick={() => setOpen(true)} type="button">알림 보기</button>
+              ) : destination ? (
+                <Link className="mt-3 inline-flex min-h-11 items-center rounded-full bg-[var(--brand-soft)] px-4 text-sm font-bold text-[var(--foreground)]" href={destination} onClick={() => handleToastSeen(item)}>
                   {item.result?.review_path ? "결과 확인" : "레시피 보기"}
                 </Link>
               ) : item.can_retry ? (
@@ -453,27 +513,34 @@ export function YoutubeExtractionNotificationCenter({
               ) : null}
             </article>
           );
-        })}
+        })() : null}
       </div>
 
       {open ? (
-        <div className="fixed inset-0 z-[60] flex items-end bg-black/35 p-0 sm:items-stretch sm:justify-end" onMouseDown={(event) => {
+        <div className="fixed inset-x-0 bottom-0 z-[500] flex items-end bg-[var(--overlay-35)] p-0 sm:items-stretch sm:justify-end" data-testid="youtube-notification-overlay" onMouseDown={(event) => {
           if (event.currentTarget === event.target) setOpen(false);
-        }}>
-          <section aria-labelledby="youtube-extraction-notifications-title" aria-modal="true" className="flex max-h-[min(82dvh,720px)] w-full flex-col overflow-hidden rounded-t-[24px] bg-[var(--surface)] pb-[env(safe-area-inset-bottom)] shadow-2xl sm:h-full sm:max-h-none sm:max-w-[420px] sm:rounded-none" ref={dialogRef} role="dialog">
-            <div className="flex items-center justify-between border-b border-[var(--wave1-border)] px-4 py-3">
+        }} style={{ top: "var(--youtube-notification-safe-area-top, env(safe-area-inset-top))" }}>
+          <section aria-labelledby="youtube-extraction-notifications-title" aria-modal="true" className="flex max-h-full w-full flex-col overflow-hidden rounded-t-[24px] bg-[var(--surface)] shadow-[var(--shadow-floating)] sm:h-full sm:max-w-[420px] sm:rounded-none" ref={dialogRef} role="dialog" style={{ paddingBottom: "var(--youtube-notification-safe-area-bottom, env(safe-area-inset-bottom))" }}>
+            <div className="flex shrink-0 items-center justify-between border-b border-[var(--wave1-border)] px-4 py-3">
               <h2 className="text-lg font-bold" id="youtube-extraction-notifications-title">YouTube 추출 알림</h2>
               <button aria-label="알림 닫기" className="min-h-11 min-w-11 rounded-full text-xl" onClick={() => setOpen(false)} ref={closeButtonRef} type="button">×</button>
             </div>
-            <div aria-label="알림 보기" className="grid grid-cols-2 gap-1 border-b border-[var(--wave1-border)] p-2" role="tablist">
-              <button aria-selected={view === "unseen-completed"} className="min-h-11 rounded-full px-3 text-sm font-bold aria-selected:bg-[var(--brand-soft)] aria-selected:text-[var(--brand-deep)]" onClick={() => handleView("unseen-completed")} role="tab" type="button">새 알림</button>
-              <button aria-selected={view === "archive"} className="min-h-11 rounded-full px-3 text-sm font-bold aria-selected:bg-[var(--brand-soft)] aria-selected:text-[var(--brand-deep)]" onClick={() => handleView("archive")} role="tab" type="button">지난 알림</button>
+            <p className="shrink-0 px-4 pt-3 text-sm text-[var(--muted)]">진행 중 {activeJobs.length} · 새 소식 {items.filter((item) => item.seen_at === null).length}</p>
+            <div aria-label="알림 보기" className="grid shrink-0 grid-cols-2 gap-1 border-b border-[var(--wave1-border)] p-2" role="tablist">
+              <button aria-selected={view === "unseen-completed"} className="min-h-11 whitespace-nowrap rounded-full px-3 text-sm font-bold aria-selected:bg-[var(--brand-soft)] aria-selected:text-[var(--foreground)]" onClick={() => handleView("unseen-completed")} role="tab" type="button">새 알림</button>
+              <button aria-selected={view === "archive"} className="min-h-11 whitespace-nowrap rounded-full px-3 text-sm font-bold aria-selected:bg-[var(--brand-soft)] aria-selected:text-[var(--foreground)]" onClick={() => handleView("archive")} role="tab" type="button">지난 알림</button>
             </div>
-            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4" ref={listRef}>
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-4 focus:outline-none" data-testid="youtube-notification-list" ref={listRef} tabIndex={-1}>
               {loading ? <p aria-live="polite" className="py-8 text-center text-sm text-[var(--muted)]">알림을 불러오는 중이에요…</p> : null}
               {loadError ? <div className="py-8 text-center"><p role="status">{loadError}</p><button className="mt-3 min-h-11 rounded-full border px-4 font-bold" onClick={() => refresh(view)} type="button">다시 불러오기</button></div> : null}
-              {!loading && !loadError && items.length === 0 ? <p className="py-12 text-center text-sm text-[var(--muted)]">표시할 알림이 없어요.</p> : null}
+              {!loading && !loadError && view === "unseen-completed" ? activeJobs.map((job) => <ActiveJobRow job={job} key={job.job_id} />) : null}
+              {!loading && !loadError && items.length === 0 && (view === "archive" || activeJobs.length === 0) ? <p className="py-12 text-center text-sm text-[var(--muted)]">표시할 알림이 없어요.</p> : null}
               {!loading && !loadError ? items.map((item) => <NotificationRow item={item} key={item.job_id} onRetry={handleRetry} />) : null}
+              {!loading && !loadError && nextCursor ? (
+                <button className="my-4 min-h-11 w-full rounded-full border border-[var(--wave1-border)] px-4 text-sm font-bold text-[var(--foreground)]" disabled={loadingMore} onClick={handleLoadMore} type="button">
+                  {loadingMore ? "불러오는 중…" : "알림 더 보기"}
+                </button>
+              ) : null}
             </div>
           </section>
         </div>
