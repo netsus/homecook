@@ -60,7 +60,8 @@ permissions:
   contents: read
 
 env:
-  NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+  # Build-only local placeholder. This workflow never contacts a Cloud project.
+  NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
   NEXT_PUBLIC_SUPABASE_ANON_KEY: test-anon-key
   NEXT_PUBLIC_APP_URL: http://127.0.0.1:3000
 

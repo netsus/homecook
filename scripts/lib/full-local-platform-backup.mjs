@@ -121,9 +121,9 @@ export function assertExternalBackupPath({ output, repositoryRoot }) {
 
 export function buildPlatformDumpCommands(directory) {
   return [
-    ["db", "dump", "--linked", "--file", join(directory, "roles.sql"), "--role-only"],
-    ["db", "dump", "--linked", "--file", join(directory, "schema.sql")],
-    ["db", "dump", "--linked", "--file", join(directory, "data.sql"), "--use-copy", "--data-only"],
+    ["db", "dump", "--local", "--file", join(directory, "roles.sql"), "--role-only"],
+    ["db", "dump", "--local", "--file", join(directory, "schema.sql")],
+    ["db", "dump", "--local", "--file", join(directory, "data.sql"), "--use-copy", "--data-only"],
   ];
 }
 

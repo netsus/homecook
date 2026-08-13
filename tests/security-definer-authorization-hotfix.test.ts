@@ -102,14 +102,15 @@ describe("SECURITY DEFINER mutation authorization hotfix", () => {
     expect(runner).toContain("const afterChecksum = databaseChecksum()");
     expect(runner).toContain("anon_mutation_evidence: anonMutationEvidence");
     expect(runner).toContain('process.argv.includes("--linked-remote")');
-    expect(runner).toContain("resolveSecurityFunctionLinkedRoot()");
-    expect(runner).toContain('process.argv.includes("--check-linked-environment")');
+    expect(runner).toContain("Remote/linked Supabase verification is forbidden");
     expect(runner).toContain('process.argv.includes("--production-safe")');
     expect(runner).toContain("begin read only; set local role anon");
     expect(runner).toContain("expected SQLSTATE 42501");
     expect(runner).toContain('mode: "production-safe"');
-    expect(packageJson.scripts["verify:security-functions:remote"]).toContain(
-      "--production-safe",
+    expect(packageJson.scripts["verify:security-functions:remote"]).toBeUndefined();
+    expect(packageJson.scripts["closeout:security-functions:remote"]).toBeUndefined();
+    expect(packageJson.scripts["verify:security-functions:release"]).toBe(
+      "pnpm verify:security-functions && pnpm verify:security-functions:data-api",
     );
   });
 

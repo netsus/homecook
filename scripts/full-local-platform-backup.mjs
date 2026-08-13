@@ -133,7 +133,7 @@ async function main() {
       chmodSync(staging, 0o700);
       try {
         const dataPath = join(staging, "data.sql");
-        run("supabase", ["db", "dump", "--linked", "--file", dataPath, "--use-copy", "--data-only"], {
+        run("supabase", ["db", "dump", "--local", "--file", dataPath, "--use-copy", "--data-only"], {
           failure: "Supabase platform inventory dump failed.",
         });
         print({

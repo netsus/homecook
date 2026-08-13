@@ -12,14 +12,15 @@ import {
 } from "@/scripts/lib/full-local-platform-backup.mjs";
 
 describe("full-local platform backup boundary", () => {
-  it("uses the Supabase CLI linked-project flow without credentials in argv", () => {
+  it("uses the Supabase CLI local flow without credentials or remote links", () => {
     const commands = buildPlatformDumpCommands("/tmp/homecook-platform-backup");
 
     expect(commands).toEqual([
-      ["db", "dump", "--linked", "--file", "/tmp/homecook-platform-backup/roles.sql", "--role-only"],
-      ["db", "dump", "--linked", "--file", "/tmp/homecook-platform-backup/schema.sql"],
-      ["db", "dump", "--linked", "--file", "/tmp/homecook-platform-backup/data.sql", "--use-copy", "--data-only"],
+      ["db", "dump", "--local", "--file", "/tmp/homecook-platform-backup/roles.sql", "--role-only"],
+      ["db", "dump", "--local", "--file", "/tmp/homecook-platform-backup/schema.sql"],
+      ["db", "dump", "--local", "--file", "/tmp/homecook-platform-backup/data.sql", "--use-copy", "--data-only"],
     ]);
+    expect(commands.flat()).not.toContain("--linked");
     expect(commands.flat()).not.toContain("--db-url");
     expect(commands.flat()).not.toContain("--password");
   });

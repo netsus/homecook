@@ -35,11 +35,11 @@ function markdownTableCellsAfter(text: string, heading: string) {
 }
 
 const officialTuple = [
-  "docs/요구사항기준선-v1.7.31.md",
-  "docs/화면정의서-v1.5.35.md",
-  "docs/유저flow맵-v1.3.33.md",
-  "docs/db설계-v1.3.33.md",
-  "docs/api문서-v1.2.38.md",
+  "docs/요구사항기준선-v1.7.32.md",
+  "docs/화면정의서-v1.5.36.md",
+  "docs/유저flow맵-v1.3.34.md",
+  "docs/db설계-v1.3.34.md",
+  "docs/api문서-v1.2.39.md",
 ];
 
 describe("YouTube background extraction contract evolution", () => {
@@ -51,11 +51,11 @@ describe("YouTube background extraction contract evolution", () => {
       expect(read(relativePath)).toContain("2026-08-12 contract-evolution");
     }
 
-    expect(read(officialTuple[0])).toContain("# 요구사항 기준선 v1.7.31");
-    expect(read(officialTuple[1])).toContain("# 화면정의서 v1.5.35");
-    expect(read(officialTuple[2])).toContain("# 유저 Flow맵 v1.3.33");
-    expect(read(officialTuple[3])).toContain("# DB 설계 v1.3.33");
-    expect(read(officialTuple[4])).toContain("v1.2.38");
+    expect(read(officialTuple[0])).toContain("# 요구사항 기준선 v1.7.32");
+    expect(read(officialTuple[1])).toContain("# 화면정의서 v1.5.36");
+    expect(read(officialTuple[2])).toContain("# 유저 Flow맵 v1.3.34");
+    expect(read(officialTuple[3])).toContain("# DB 설계 v1.3.34");
+    expect(read(officialTuple[4])).toContain("v1.2.39");
   });
 
   it("records approval, public impact, exclusions, and rejected alternatives", () => {
@@ -122,14 +122,14 @@ describe("YouTube background extraction contract evolution", () => {
     expect(api).toContain("503 QUEUE_BUSY");
     expect(api).toContain("504 EXTRACTION_TIMEOUT");
     expect(api).toContain("Quick Import UI·auto-register 의미는 유지");
-    expect(api).toContain("엔드포인트 전체 목록 (108개) `v1.2.38`");
+    expect(api).toContain("엔드포인트 전체 목록 (108개) `v1.2.39`");
     expect(api).toContain("active 107개 + 삭제된 `2-4` tombstone 1개");
   });
 
   it("parses the official API and DB inventory tables instead of trusting their labels", () => {
     const apiRows = markdownTableBodyRowsAfter(
       read(officialTuple[4]),
-      "## 엔드포인트 전체 목록 (108개) `v1.2.38`",
+      "## 엔드포인트 전체 목록 (108개) `v1.2.39`",
     );
     const dbRows = markdownTableBodyRowsAfter(
       read(officialTuple[3]),

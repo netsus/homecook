@@ -60,14 +60,10 @@ function executeStorageFixtureClient({
 }
 
 describe("hybrid production legacy data migration plan", () => {
-  it("exposes explicit read-only verification and migration commands", () => {
+  it("keeps historical migration helpers unexposed from package commands", () => {
     const packageJson = JSON.parse(readFileSync("package.json", "utf8"));
-    expect(packageJson.scripts["hybrid-production:verify-backup"]).toBe(
-      "node scripts/hybrid-production-runtime.mjs verify-backup",
-    );
-    expect(packageJson.scripts["hybrid-production:migrate-data"]).toBe(
-      "node scripts/hybrid-production-data-migration.mjs",
-    );
+    expect(packageJson.scripts["hybrid-production:verify-backup"]).toBeUndefined();
+    expect(packageJson.scripts["hybrid-production:migrate-data"]).toBeUndefined();
 
     const result = spawnSync(
       process.execPath,

@@ -134,11 +134,12 @@
 ## Source Links
 
 - `docs/sync/CURRENT_SOURCE_OF_TRUTH.md`
-- `docs/요구사항기준선-v1.7.31.md` §0-YT-ASYNC
-- `docs/화면정의서-v1.5.35.md` §0-YT-ASYNC
-- `docs/유저flow맵-v1.3.33.md` §0-YT-ASYNC
-- `docs/db설계-v1.3.33.md` §0-YT-ASYNC
-- `docs/api문서-v1.2.38.md` §0-YT-ASYNC
+- `docs/요구사항기준선-v1.7.32.md` §0-YT-ASYNC
+- `docs/화면정의서-v1.5.36.md` §0-YT-ASYNC
+- `docs/유저flow맵-v1.3.34.md` §0-YT-ASYNC
+- `docs/db설계-v1.3.34.md` §0-YT-ASYNC
+- `docs/api문서-v1.2.39.md` §0-YT-ASYNC
+- `docs/engineering/supabase-local-only-operations.md`
 - `docs/workpacks/33-youtube-i031-direct-extraction/README.md`
 - 승인 계획: `/Users/cwj/01_vibe_coding/homecook/.omx/plans/youtube-background-extraction-notification-plan-20260808.md`, SHA-256 `b560b60ff758171e1d52ad56b2a63a2e1877cd762d1f691c9cea32c753f8d332`, 873 lines
 - independent plan PASS task `019ff4f7-806c-7151-b646-cab784606cde`
@@ -151,17 +152,17 @@
   - active duplicate current/previous HMAC pair, options-only policy rotation stale app/worker, lease/permit/credential stale generations
   - null/160-char sanitized title, grouped completion, delivered/seen split, invalid cursor, offline and auth-return
 - real DB smoke:
-  - clean local Supabase reset 후 migration apply, PostgreSQL role/RLS/ACL/RPC inventory와 Data API negative boundary를 검증한다.
+  - 운영 volume과 분리된 pinned isolated local Supabase reset 후 migration replay, PostgreSQL role/RLS/ACL/RPC inventory와 Data API negative boundary를 검증한다.
   - app route enqueue/status/session/list/delivered/seen smoke는 `createRouteHandlerClient()` owner session과 cross-user nondisclosure를 확인한다.
   - restricted worker JWT로 exact RPC만 성공하고 table/REST/other scope/owner role access가 모두 실패하는지 확인한다.
 - seed/reset:
   - `pnpm local:reset:demo` 또는 해당 Stage 2에서 추가한 isolated test reset command를 사용한다.
-  - production/staging/remote target write는 Stage 2~6 자동화에서 금지한다.
+  - Supabase Cloud/linked/remote target은 N/A/forbidden이다. Stage 2~6 evidence는 remote link/credential access 0과 운영 full-local destructive reset 0을 명시한다.
 - external/live smoke:
   - arbitrary public YouTube URL을 local worker에서 enqueue→HOME 이탈→terminal notification→review/register까지 확인한다.
   - worker 강제 종료/lease recovery, app 재실행·재로그인 unseen recovery, Quick Import `sync_wait` 호환, release installer dry-run/rollback rehearsal을 별도 evidence로 남긴다.
 - blocker:
-  - official tuple/plan hash drift, workpack 33 regression, expected-schema/RPC/role inventory drift, current policy disabled/mismatch, app/worker release SHA drift, worker credential/secret provenance 실패, current-head check 미완료 중 하나라도 있으면 다음 gate로 진행하지 않는다.
+  - official tuple/plan hash drift, workpack 33 regression, expected-schema/RPC/role inventory drift, current policy disabled/mismatch, app/worker release SHA drift, worker credential/secret provenance 실패, remote link/credential 사용, 운영 full-local destructive reset, current-head check 미완료 중 하나라도 있으면 다음 gate로 진행하지 않는다.
 
 ## Stage 1 Validation Boundary
 

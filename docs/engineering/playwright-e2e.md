@@ -98,7 +98,7 @@ npx playwright install --with-deps chromium
 - `.env.development.local`이 local Supabase(`127.0.0.1` / `localhost`)를 가리키면 `LocalDevLoginPanel`이 활성화된다.
 - local Google OAuth env가 없으면 `Google로 시작하기` 대신 로컬 테스트 계정으로 검증해야 한다.
 - local Google OAuth env가 있으면 `pnpm dev:demo`에서도 Google OAuth와 로컬 테스트 계정을 함께 사용할 수 있다.
-- 실제 remote Supabase 기준 manual closeout을 확인하려면 local override를 끄고 dev 서버를 다시 시작해 remote Supabase 환경으로 띄운다.
+- 실제 full-local manual closeout은 `docs/engineering/supabase-local-only-operations.md`에 따라 target identity와 backup freshness를 먼저 확인한 controlled local 환경에서 수행한다. remote Supabase URL/credential로 전환하는 경로는 금지한다.
 
 ## Flaky Rules
 

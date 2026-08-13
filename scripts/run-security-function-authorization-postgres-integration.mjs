@@ -4,6 +4,11 @@ import { spawn, spawnSync } from "node:child_process";
 import { resolveSecurityFunctionLinkedRoot } from "./security-function-linked-root.mjs";
 
 const useLinkedRemote = process.argv.includes("--linked-remote");
+if (useLinkedRemote || process.argv.includes("--check-linked-environment")) {
+  throw new Error(
+    "Remote/linked Supabase verification is forbidden; use the isolated local or controlled full-local gate.",
+  );
+}
 const useProductionSafe = process.argv.includes("--production-safe");
 const linkedRoot = useLinkedRemote
   ? resolveSecurityFunctionLinkedRoot()

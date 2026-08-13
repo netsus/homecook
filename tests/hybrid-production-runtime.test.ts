@@ -1114,7 +1114,7 @@ describe("hybrid production verification routing", () => {
     const packageJson = JSON.parse(readFileSync("package.json", "utf8"));
 
     expect(packageJson.scripts["hybrid-production:migrate-forward"])
-      .toBe("node scripts/hybrid-production-runtime.mjs migrate-forward");
+      .toBeUndefined();
     expect(cli).toMatch(
       /case "migrate-forward"[\s\S]*verifyBackupArchive[\s\S]*applyPendingMigrationsAtomically[\s\S]*assertInstalled/u,
     );

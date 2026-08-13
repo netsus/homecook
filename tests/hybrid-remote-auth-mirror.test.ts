@@ -153,7 +153,7 @@ describe("hybrid remote Auth identity mirror", () => {
     );
   });
 
-  it("ships server-only dry-run/apply/verify commands without weakening restore", () => {
+  it("keeps the historical mirror CLI unexposed from package commands", () => {
     const packageJson = JSON.parse(
       readFileSync(resolve(ROOT, "package.json"), "utf8"),
     );
@@ -163,7 +163,7 @@ describe("hybrid remote Auth identity mirror", () => {
     );
 
     expect(packageJson.scripts["hybrid-production:mirror-auth"])
-      .toBe("node scripts/hybrid-remote-auth-mirror.mjs");
+      .toBeUndefined();
     expect(cli).toContain('createClient(');
     expect(cli).toContain('"dry-run"');
     expect(cli).toContain('"apply"');

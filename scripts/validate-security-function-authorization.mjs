@@ -456,6 +456,11 @@ const ADDITIVE_PRINCIPALS = [
 const args = new Set(process.argv.slice(2));
 const mode = args.has("--write") ? "write" : "check";
 const useLinkedRemote = args.has("--linked-remote");
+if (useLinkedRemote || args.has("--remote-state")) {
+  throw new Error(
+    "Remote/linked Supabase verification is forbidden; use the isolated local or controlled full-local gate.",
+  );
+}
 const contractOnly = args.has("--contract-only");
 const linkedRoot = useLinkedRemote
   ? resolveSecurityFunctionLinkedRoot()

@@ -1,11 +1,13 @@
 # 전체 로컬 Supabase Auth + DB + Storage production 전환 계획
 
+> **2026-08-13 authority update:** 목표 전환은 사용자 승인으로 local-only active contract가 됐다. Supabase Cloud/linked/remote target은 prerequisite, migration source, verifier, backup source나 fallback이 아니다. canonical 현재 기준은 `docs/engineering/supabase-local-only-operations.md`이며, 아래 remote source/cutover 서술은 2026-08-01 당시의 historical migration plan으로만 보존한다.
+
 상태: **Stage -1~3 코드·복원 rehearsal 완료 / 실제 도메인·Cloudflare·provider callback·live OAuth·최종 cutover 대기**
 작성일: **2026-07-31 KST**
 최종 갱신: **2026-08-01 23:21 KST**
 대상 서비스: `homecook`
 목표 구조: **현재 Mac의 self-hosted Supabase Auth + DB + Storage + 기존 RLS**
-현재 운영 구조: **원격 Supabase Auth + 원격 DB/Storage, Mac Next.js `0.0.0.0:3100`**
+현재 운영 구조: **full-local Supabase Auth + DB/Storage + Mac Next.js**
 선행 계획: `docs/engineering/hybrid-supabase-production-plan.md`
 
 ## 딱 한 줄 요약
@@ -43,7 +45,7 @@ Google·네이버·카카오 자체 로그인 화면을 새로 만들지 않고,
 - 원격 `/auth/v1/user` liveness, HMAC attestation, identity epoch 검증: `lib/server/hybrid-auth/gateway.ts:129-227`
 - callback 뒤 local mirror/session authority 기록: `app/auth/callback/route.ts:231-262`
 - 원격 identity mirror: `supabase/migrations/20260730090000_hybrid_auth_remote_identity_epoch_mirror.sql:10-96`
-- 과거 hybrid 계약의 local `auth.users=0` invariant: `docs/db설계-v1.3.33.md`
+- 과거 hybrid 계약의 local `auth.users=0` invariant: `docs/db설계-v1.3.34.md`
 - Docker gateway가 remote Auth와 local PostgREST/Storage를 연결: `infra/hybrid-supabase/docker-compose.production.yml:136-180`
 
 이 장치들은 원격 Auth와 로컬 DB가 서로 다른 시스템이기 때문에 필요하다. Auth까지 같은 local Supabase로 이동하면 remote JWKS sync, remote identity mirror, two-system barrier, remote liveness outage 경계를 제거할 수 있다. 다만 Supabase sign-out 뒤 access token은 `exp`까지 서명상 유효할 수 있으므로, callback/refresh 때 결합하고 logout/delete/quarantine/identity replacement 때 즉시 revoke하는 **app-owned local session authority binding**은 최소 14일 안정화까지 유지한다.
@@ -333,11 +335,11 @@ Docker Compose의 `environment`나 `.env`에 secret 값을 직접 넣지 않는�
 
 새 공식 문서 묶음:
 
-- `docs/요구사항기준선-v1.7.31.md`
-- `docs/화면정의서-v1.5.35.md`
-- `docs/유저flow맵-v1.3.33.md`
-- `docs/db설계-v1.3.33.md`
-- `docs/api문서-v1.2.38.md`
+- `docs/요구사항기준선-v1.7.32.md`
+- `docs/화면정의서-v1.5.36.md`
+- `docs/유저flow맵-v1.3.34.md`
+- `docs/db설계-v1.3.34.md`
+- `docs/api문서-v1.2.39.md`
 - `docs/workpacks/full-local-supabase-production/`
 
 작업:
