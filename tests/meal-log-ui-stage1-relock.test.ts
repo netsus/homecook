@@ -167,16 +167,16 @@ describe("meal-log-ui fresh Stage 1 relock", () => {
       "Stage 2 implementation dependency is available",
     );
     expect(dependencyProjection).toContain(
-      "after the remaining Stage 1 independent reviews; the canonical design+critique prerequisite is complete",
+      "independent internal1.5, security/API, five-axis",
     );
     expect(dependencyProjection).not.toMatch(
       /#10[^\n]*(?:open Draft|dependency pending)|implementation waits until #9|#10 frontend runtime[^\n]*pending/u,
     );
   });
 
-  it("keeps the #12 runtime lifecycle planned and Stage 1 evidence honest", () => {
+  it("moves #12 to Stage 2 in progress without promoting later evidence", () => {
     expect(workItem.status).toMatchObject({
-      lifecycle: "planned",
+      lifecycle: "in_progress",
       approval_state: "not_started",
       verification_status: "pending",
       evaluation_status: "not_started",
@@ -185,9 +185,9 @@ describe("meal-log-ui fresh Stage 1 relock", () => {
       auto_merge_eligible: false,
     });
     expect(status).toMatchObject({
-      branch: "docs/meal-log-ui-stage1-relock-current",
-      pr_path: "https://github.com/netsus/homecook/pull/1349",
-      lifecycle: "planned",
+      branch: "feature/be-meal-log-ui",
+      pr_path: "pending",
+      lifecycle: "in_progress",
       approval_state: "not_started",
       verification_status: "pending",
       evaluation_status: "not_started",
@@ -195,7 +195,7 @@ describe("meal-log-ui fresh Stage 1 relock", () => {
       last_evaluator_result: null,
       auto_merge_eligible: false,
     });
-    expect(roadmap).toMatch(/\| 12 \| E \| `meal-log-ui` \| docs \|/u);
+    expect(roadmap).toMatch(/\| 12 \| E \| `meal-log-ui` \| in-progress \|/u);
 
     expect(workItem.verification.stage1_current_commands).toEqual(
       workItem.verification.verify_commands,
@@ -333,7 +333,10 @@ describe("meal-log-ui fresh Stage 1 relock", () => {
     expect(acceptance).toMatch(
       /- \[x\] canonical MEAL_LOG design and independent critique pass before Stage 2/u,
     );
-    expect(acceptance.match(/^- \[x\]/gmu)).toHaveLength(1);
+    expect(acceptance.match(/^- \[x\]/gmu)).toHaveLength(8);
+    expect(acceptance).toMatch(
+      /- \[ \] independent internal1\.5\/security\/five-axis\/design\/Stage3\/5\/6 findings are zero/u,
+    );
     for (const staleParts of [
       ["fresh design-", "generator task and fresh independent design critic", " remain pending"],
       ["A fresh design-", "generator task and fresh independent design critic", " remain prerequisites"],

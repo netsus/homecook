@@ -74,7 +74,7 @@
 
 - #9 exact source head `be93bfc47281e2795c59c0fd1052a4ecf6085837` merged as `8ba3fa5a2a198eb4f9c19d59cea5f6ccc52fdd4f`; checkpoint projection `4597ca835ba81307d0bdf9e1b1c41806b17e7a68`, security repair `16cfce44d32d5b618742a0e20460df4772a19142`, historical post-merge raw 14/14 success는 backend predecessor evidence다.
 - #10 merged as `2185b59d1b460dac916aa4a4a4a5e061c8b795f0`; Stage 4~6 merged-green runtime와 OMO completion은 `docs/workpacks/planner-shell/omo-report.md`에 기록돼 있다.
-- Stage 2 implementation dependency is available after the remaining Stage 1 independent reviews; the canonical design+critique prerequisite is complete. #9/#10의 Manual/server-Mac/OAuth와 capability `R/R+1/R+2`/production/activation pending은 #12가 승격하지 않는다.
+- Stage 2 implementation dependency is available. Stage 1 independent internal1.5, security/API, five-axis reviews are `APPROVE 0/0/0`; the canonical design+critique prerequisite is also complete. #9/#10의 Manual/server-Mac/OAuth와 capability `R/R+1/R+2`/production/activation pending은 #12가 승격하지 않는다.
 
 ## Backend First Contract
 
@@ -182,7 +182,7 @@ query empty: 최근 / 자주 먹은 음식
 - drifted tuple은 full-local Supabase local-only operating authority만 추가한다. #12 product UI, public endpoint/status/error/field, DB schema, user flow는 바꾸지 않으므로 Contract Evolution은 N/A다.
 - PR head `2b5071e22048d94e476cfde635664a2521a90396` 뒤 latest `origin/master` `c4045705ef72c76f7e7258d10c460f56b6847dd7`(PR #1350 content `a625aefa7baab63f183a9d46e6f12d607d4e017f`)를 parent 2로 normal two-parent merge `0e7fe07a5719dd3f4e9833d163c25c47e8d8e375`에 통합했다. 추가된 YouTube async isolated-local tooling은 #12 product UI, public endpoint/status/error/field/action, DB schema, user flow를 바꾸지 않으므로 #12 Contract Evolution is N/A다.
 - remote #1349 head `bdd0280bddea8ad2caf32c98bd25ac65a70293fe`를 잠근 뒤 security PR #1352 reviewed head `3708cd9fe3e86a85db17946b165ee6456c596af6`가 merge된 latest `origin/master` `fb1119baae72862efefdb1cad13cc811bbd91a1c`를 parent 2로 normal no-ff merge `f79cc89895e19e388422c4799f23cca5c095d6c0`(tree `b1bc3500da9ef9cbd0fb0b75359cac1d4abdd2f9`)에 통합했다. `postcss>nanoid` override `3.3.18`은 #12 제품 계약에 영향이 없고 exact master post-merge checks는 13/13 success, fail/pending/rerun 0이며 high/critical audit 0이다.
-- 이 Stage 1 author는 docs만 작성한다. canonical design+critique prerequisite는 위 exact provenance로 완료됐다. fresh independent internal1.5, security/API, five-axis re-review는 별도 task로 남고, Stage 4 runtime evidence·Stage 5/final authority·Stage 6은 계속 pending이다.
+- 이 Stage 1 author는 docs만 작성했다. canonical design+critique prerequisite와 fresh independent internal1.5/security/API/five-axis review는 별도 task에서 `APPROVE 0/0/0`으로 완료됐다. Stage 4 runtime evidence·Stage 5/final authority·Stage 6은 계속 pending이다.
 
 ## QA / Test Data Plan
 
@@ -191,7 +191,7 @@ query empty: 최근 / 자주 먹은 음식
 - isolated local: schema/security/API integration이 필요하면 pinned isolated-local stack에서만 실행하며 운영 full-local volume/port/env를 공유하지 않는다.
 - controlled full-local: runtime smoke가 필요할 때 exact target identity와 read-only 여부를 기록하고 기본 `BEGIN READ ONLY` 및 checksum before/after 동일성을 사용한다. 현재 Stage 1은 이 runtime evidence를 수행하거나 주장하지 않는다.
 - seed/reset: #12는 schema/seed를 추가하지 않는다. isolated-local fixture seed만 허용하며 실제 full-local target에는 destructive reset/volume delete를 실행하지 않는다.
-- blockers: independent internal1.5/security/API/five-axis review finding 잔존, #9/#10 contract drift, required fixture/bootstrap 부재, current-head check pending/fail, local-only target boundary 또는 exact-head evidence 부재. canonical design+critique prerequisite는 blocker가 아니다.
+- blockers: #9/#10 contract drift, required fixture/bootstrap 부재, current-head check pending/fail, local-only target boundary 또는 exact-head evidence 부재. independent internal1.5/security/API/five-axis review와 canonical design+critique prerequisite는 blocker가 아니다.
 - Manual Only: physical keyboard/screen reader/device, server-Mac/OAuth, capability `R/R+1/R+2`, production/activation evidence는 future pending이며 #12 Stage 1이 닫지 않는다.
 
 ## Key Rules
@@ -216,8 +216,8 @@ query empty: 최근 / 자주 먹은 음식
 
 > Stage 1 exact-six artifacts와 roadmap/status projection은 작성됐지만, 아래 runtime closeout 항목은 evidence가 생기기 전까지 unchecked다.
 
-- [ ] 기존 #9 API와 typed adapter 계약 및 shared policy tests 고정 <!-- omo:id=delivery-meal-log-ui-shared-contract;stage=2;scope=shared;review=3,6 -->
-- [ ] idempotency/revision/own-event/history 회귀 TDD RED와 GREEN 증거 <!-- omo:id=delivery-meal-log-ui-policy-tests;stage=2;scope=shared;review=3,6 -->
+- [x] 기존 #9 API와 typed adapter 계약 및 shared policy tests 고정 <!-- omo:id=delivery-meal-log-ui-shared-contract;stage=2;scope=shared;review=3,6 -->
+- [x] idempotency/revision/own-event/history 회귀 TDD RED와 GREEN 증거 <!-- omo:id=delivery-meal-log-ui-policy-tests;stage=2;scope=shared;review=3,6 -->
 - [ ] 기존 #10 Planner shell 안 MEAL_LOG와 add sheet UI 연결 <!-- omo:id=delivery-meal-log-ui-connection;stage=4;scope=frontend;review=5,6 -->
 - [ ] required states, focus, 44px, 390/320/desktop 접근성 검증 <!-- omo:id=delivery-meal-log-ui-state-accessibility;stage=4;scope=frontend;review=5,6 -->
 - [ ] fresh design evidence와 independent critic/final authority 승인 <!-- omo:id=delivery-meal-log-ui-design-authority;stage=4;scope=frontend;review=5,6 -->
