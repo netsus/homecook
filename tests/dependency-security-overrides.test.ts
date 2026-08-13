@@ -1,6 +1,7 @@
 import { spawnSync } from "node:child_process";
+import { existsSync, readFileSync } from "node:fs";
 import { createRequire } from "node:module";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
@@ -38,6 +39,26 @@ function createDependencyRequire(packageName: string) {
   return createRequire(require.resolve(packageName));
 }
 
+function readResolvedPackageVersion(packageEntry: string, packageName: string) {
+  let directory = dirname(packageEntry);
+
+  while (directory !== dirname(directory)) {
+    const packagePath = join(directory, "package.json");
+    if (existsSync(packagePath)) {
+      const packageJson = JSON.parse(readFileSync(packagePath, "utf8")) as {
+        name?: string;
+        version?: string;
+      };
+      if (packageJson.name === packageName) {
+        return packageJson.version;
+      }
+    }
+    directory = dirname(directory);
+  }
+
+  return null;
+}
+
 function resolveTypescriptEstreeRequire() {
   const nextConfigRequire = createDependencyRequire("eslint-config-next");
   const eslintPluginRequire = createRequire(
@@ -62,6 +83,8 @@ describe("dependency security overrides", () => {
 
     expect(overrides).toMatchObject({
       "@eslint/eslintrc>js-yaml": "4.3.1",
+      "@lhci/cli>lighthouse": "13.4.1",
+      "@lhci/utils>lighthouse": "13.4.1",
       "@lhci/utils>js-yaml": "3.15.1",
       "minimatch@3.1.5>brace-expansion": "5.0.9",
       "minimatch@10.2.5>brace-expansion": "5.0.9",
@@ -111,6 +134,32 @@ describe("dependency security overrides", () => {
     expect(
       (postcssRequire("nanoid/package.json") as { version: string }).version,
     ).toBe("3.3.17");
+  });
+
+  it("keeps Lighthouse CI on the extract-zip-free browser stack", () => {
+    const lhciCliRequire = createRequire(
+      require.resolve("@lhci/cli/package.json"),
+    );
+    const lighthouseRequire = createRequire(
+      lhciCliRequire.resolve("lighthouse/package.json"),
+    );
+    const puppeteerRequire = createRequire(
+      lighthouseRequire.resolve("puppeteer-core/package.json"),
+    );
+    const browsersEntry = puppeteerRequire.resolve("@puppeteer/browsers");
+    const browsersRequire = createRequire(browsersEntry);
+
+    expect(
+      (lhciCliRequire("lighthouse/package.json") as { version: string })
+        .version,
+    ).toBe("13.4.1");
+    expect(
+      (lighthouseRequire("puppeteer-core/package.json") as { version: string })
+        .version,
+    ).toBe("25.6.0");
+    expect(readResolvedPackageVersion(browsersEntry, "@puppeteer/browsers"))
+      .toBe("3.2.0");
+    expect(() => browsersRequire.resolve("extract-zip/package.json")).toThrow();
   });
 
   it("expands braces through both installed minimatch major versions", () => {
