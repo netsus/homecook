@@ -37,17 +37,23 @@ function strongSecret(value, label) {
  * Keychain item. `createItem` must use create-only platform semantics.
  *
  * @param {{
- *   createItem: (recoveredKey: string) => unknown | Promise<unknown>,
+ *   createItem: (recoveredKey: string, ownershipToken: string) => unknown | Promise<unknown>,
+ *   deleteOwnedItem: (ownershipToken: string) => unknown | Promise<unknown>,
  *   directItemExists: () => boolean,
- *   readItem: () => string,
+ *   execute: () => unknown | Promise<unknown>,
+ *   ownershipToken?: () => string,
+ *   readOwnedItem: (ownershipToken: string) => string,
  *   recoveredKey: string,
  *   verifyArchive: (recoveredKey: string) => unknown | Promise<unknown>,
  * }} input
  */
-export async function registerRecoveredBackupKeyCreateOnly({
+export async function withRecoveredBackupKeyCreateOnlyRegistration({
   createItem,
+  deleteOwnedItem,
   directItemExists,
-  readItem,
+  execute,
+  ownershipToken = () => randomBytes(32).toString("hex"),
+  readOwnedItem,
   recoveredKey,
   verifyArchive,
 }) {
@@ -56,11 +62,30 @@ export async function registerRecoveredBackupKeyCreateOnly({
     fail("source backup Keychain direct item already exists");
   }
   await verifyArchive(verifiedKey);
-  await createItem(verifiedKey);
-  if (readItem() !== verifiedKey) {
-    fail("create-only Keychain registration does not match the recovered backup key");
+  const attemptToken = ownershipToken();
+  if (!/^[a-zA-Z0-9_-]{12,128}$/u.test(attemptToken)) {
+    fail("Keychain registration ownership token is invalid");
   }
-  return Object.freeze({ registered: true });
+  let createdThisAttempt = false;
+  try {
+    await createItem(verifiedKey, attemptToken);
+    createdThisAttempt = true;
+    if (readOwnedItem(attemptToken) !== verifiedKey) {
+      fail("create-only Keychain registration does not match the recovered backup key");
+    }
+    return await execute();
+  } catch (error) {
+    if (!createdThisAttempt) throw error;
+    try {
+      if (readOwnedItem(attemptToken) !== verifiedKey) {
+        throw new Error("attempt ownership or recovered value changed");
+      }
+      await deleteOwnedItem(attemptToken);
+    } catch {
+      fail("attempt-owned Keychain cleanup failed; manual recovery required before retry");
+    }
+    throw error;
+  }
 }
 
 /** @param {{backupKey: string, recoveryCredential: string, recoveryIssuerPublicKey?: import("node:crypto").KeyLike | import("node:crypto").KeyObject | null}} input */

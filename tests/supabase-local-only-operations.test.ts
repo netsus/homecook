@@ -37,6 +37,8 @@ describe("Supabase local-only operations contract", () => {
     const activeRecoverySurfaces = [
       "docs/engineering/supabase-local-only-operations.md",
       "docs/workpacks/full-local-supabase-production/automation-spec.json",
+      "docs/workpacks/full-local-supabase-production/README.md",
+      "docs/workpacks/full-local-supabase-production/acceptance.md",
       "infra/full-local-supabase/README.md",
       "scripts/run-isolated-local-backup-restore-drill.mjs",
       "tests/full-local-backup-readiness.test.ts",
@@ -47,6 +49,7 @@ describe("Supabase local-only operations contract", () => {
       "iu",
     );
     expect(activeRecoverySurfaces).not.toMatch(forbiddenPhysicalClaim);
+    expect(activeRecoverySurfaces).not.toMatch(/\breplacement-held\b/iu);
     expect(activeRecoverySurfaces).toContain(
       "isolated_replacement_environment_verified",
     );

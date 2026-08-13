@@ -50,10 +50,10 @@ import { mapStorageRowsToPayloadReferences } from "./lib/isolated-local-backup-r
 import { verifyFullLocalBackupReadiness } from "./lib/full-local-backup-readiness.mjs";
 import {
   openFullLocalBackupKeyEscrow,
-  registerRecoveredBackupKeyCreateOnly,
   signFullLocalBackupKeyRecoveryEvidence,
   verifyFullLocalBackupKeyEscrowBinding,
   verifyFullLocalBackupKeyRecoveryIssuerAttestation,
+  withRecoveredBackupKeyCreateOnlyRegistration,
 } from "./lib/full-local-backup-key-recovery.mjs";
 import {
   assertPrivateArtifactParent,
@@ -417,10 +417,43 @@ function storeKeychainValue(service, account, secretPath) {
   });
 }
 
-function createKeychainValue(service, account, secretPath) {
-  run("expect", [KEYCHAIN_CREATOR, service, account, secretPath], {
+function createKeychainValue(service, account, ownershipToken, secretPath) {
+  run("expect", [KEYCHAIN_CREATOR, service, account, ownershipToken, secretPath], {
     failure: `Keychain item ${account} could not be created because it already exists or Keychain rejected it.`,
   });
+}
+
+function keychainOwnedDirectValue(service, account, ownershipToken) {
+  return run(
+    "security",
+    [
+      "find-generic-password",
+      "-s",
+      service,
+      "-a",
+      account,
+      "-G",
+      ownershipToken,
+      "-w",
+    ],
+    { failure: "Attempt-owned recovered backup Keychain item is unavailable." },
+  ).trim();
+}
+
+function deleteOwnedKeychainDirectItem(service, account, ownershipToken) {
+  run(
+    "security",
+    [
+      "delete-generic-password",
+      "-s",
+      service,
+      "-a",
+      account,
+      "-G",
+      ownershipToken,
+    ],
+    { failure: "Attempt-owned recovered backup Keychain item could not be removed." },
+  );
 }
 
 function deleteKeychainSecret(service, account) {
@@ -1547,8 +1580,10 @@ async function restorePlatformBackup(args) {
     envelope: JSON.parse(readFileSync(envelopePath, "utf8")),
     recoveryCredential: readFileSync(credentialPath, "utf8").trim(),
   });
-  await registerRecoveredBackupKeyCreateOnly({
-    createItem: (recoveredKey) => {
+  const archiveSha256 = sha256File(archive);
+
+  return withRecoveredBackupKeyCreateOnlyRegistration({
+    createItem: (recoveredKey, ownershipToken) => {
       const keyStaging = mkdtempSync(join(tmpdir(), "homecook-recovered-backup-key-"));
       chmodSync(keyStaging, 0o700);
       try {
@@ -1557,118 +1592,123 @@ async function restorePlatformBackup(args) {
         createKeychainValue(
           PLATFORM_BACKUP_KEYCHAIN_SERVICE,
           PLATFORM_BACKUP_KEYCHAIN_ACCOUNT,
+          ownershipToken,
           keyPath,
         );
       } finally {
         rmSync(keyStaging, { force: true, recursive: true });
       }
     },
+    deleteOwnedItem: (ownershipToken) => deleteOwnedKeychainDirectItem(
+      PLATFORM_BACKUP_KEYCHAIN_SERVICE,
+      PLATFORM_BACKUP_KEYCHAIN_ACCOUNT,
+      ownershipToken,
+    ),
     directItemExists: () => keychainDirectItemExists(
       PLATFORM_BACKUP_KEYCHAIN_SERVICE,
       PLATFORM_BACKUP_KEYCHAIN_ACCOUNT,
     ),
-    readItem: () => keychainValue(
+    execute: () => withVerifiedPlatformBackup({
+      archive,
+      backupKey,
+      consume: async ({
+        dataPath,
+        metadata,
+        rolesPath,
+        schemaPath,
+        storagePayloadPath,
+      }) => executeBootstrapAwarePlatformRestore({
+        // GoTrue and Storage bootstrap the exact pinned service-owned roles
+        // before the database itself is cleanly recreated from template0.
+        bootstrapServices: async () => {
+          compose(runtime, ["up", "-d"]);
+          await waitForRuntimeHealthy(runtime);
+        },
+        replayDatabase: () => composeWithInput(runtime, [
+          "exec",
+          "-T",
+          "postgres",
+          "psql",
+          "--single-transaction",
+          "--variable",
+          "ON_ERROR_STOP=1",
+          "--username",
+          "supabase_admin",
+          "--dbname",
+          "postgres",
+        ], buildPlatformRestoreSql({
+          dataSql: readFileSync(dataPath, "utf8"),
+          rolesSql: readFileSync(rolesPath, "utf8"),
+          schemaSql: readFileSync(schemaPath, "utf8"),
+        })),
+        resetDatabase: () => composeWithInput(runtime, [
+          "exec",
+          "-T",
+          "postgres",
+          "psql",
+          "--variable",
+          "ON_ERROR_STOP=1",
+          "--username",
+          "supabase_admin",
+          "--dbname",
+          "template1",
+        ], buildBootstrapAwareDatabaseResetSql()),
+        restoreStoragePayload: () => restoreStoragePayloadVolume(
+          runtime,
+          storagePayloadPath,
+        ),
+        startPostgres: async () => {
+          compose(runtime, ["up", "-d", "postgres"]);
+          await waitForServiceHealthy(runtime, "postgres");
+        },
+        startServices: async () => {
+          compose(runtime, ["up", "-d"]);
+          await waitForRuntimeHealthy(runtime);
+        },
+        stopServices: () => compose(runtime, ["down"]),
+        verifyResources: () => {
+          assertRestoredStorageVolumeProvenance({
+            composeProject: runtime.config.FULL_LOCAL_COMPOSE_PROJECT_NAME,
+            inspect: inspectDockerVolume(runtime.config.FULL_LOCAL_STORAGE_VOLUME_NAME),
+            volumeName: runtime.config.FULL_LOCAL_STORAGE_VOLUME_NAME,
+          });
+          liveFullLocalProductionResources(runtime);
+        },
+        verifyRestoredPlatform: () => {
+          const restoreManifest = writeRestoreManifest({
+            archiveSha256,
+            backupKey,
+            manifestPath,
+            metadata,
+            runtime,
+            semantic: {
+              ...restoredPlatformDataSnapshot(runtime, metadata),
+              ...restoredSemanticManifest(runtime),
+              ...verifyRestoredStoragePayload(runtime, metadata.storage_payload),
+            },
+          });
+          const recoveryManifest = writeCanonicalRecoveryManifest({
+            archive,
+            archiveSha256,
+            args,
+            backupKey,
+            metadata,
+            restoreManifest,
+          });
+          return { recovery_manifest: recoveryManifest, restore_manifest: restoreManifest };
+        },
+      }),
+    }),
+    readOwnedItem: (ownershipToken) => keychainOwnedDirectValue(
       PLATFORM_BACKUP_KEYCHAIN_SERVICE,
       PLATFORM_BACKUP_KEYCHAIN_ACCOUNT,
+      ownershipToken,
     ),
     recoveredKey: backupKey,
     verifyArchive: (recoveredKey) => withVerifiedPlatformBackup({
       archive,
       backupKey: recoveredKey,
       consume: ({ metadata }) => metadata,
-    }),
-  });
-  const archiveSha256 = sha256File(archive);
-
-  return withVerifiedPlatformBackup({
-    archive,
-    backupKey,
-    consume: async ({
-      dataPath,
-      metadata,
-      rolesPath,
-      schemaPath,
-      storagePayloadPath,
-    }) => executeBootstrapAwarePlatformRestore({
-      // GoTrue and Storage bootstrap the exact pinned service-owned roles
-      // before the database itself is cleanly recreated from template0.
-      bootstrapServices: async () => {
-        compose(runtime, ["up", "-d"]);
-        await waitForRuntimeHealthy(runtime);
-      },
-      replayDatabase: () => composeWithInput(runtime, [
-        "exec",
-        "-T",
-        "postgres",
-        "psql",
-        "--single-transaction",
-        "--variable",
-        "ON_ERROR_STOP=1",
-        "--username",
-        "supabase_admin",
-        "--dbname",
-        "postgres",
-      ], buildPlatformRestoreSql({
-        dataSql: readFileSync(dataPath, "utf8"),
-        rolesSql: readFileSync(rolesPath, "utf8"),
-        schemaSql: readFileSync(schemaPath, "utf8"),
-      })),
-      resetDatabase: () => composeWithInput(runtime, [
-        "exec",
-        "-T",
-        "postgres",
-        "psql",
-        "--variable",
-        "ON_ERROR_STOP=1",
-        "--username",
-        "supabase_admin",
-        "--dbname",
-        "template1",
-      ], buildBootstrapAwareDatabaseResetSql()),
-      restoreStoragePayload: () => restoreStoragePayloadVolume(
-        runtime,
-        storagePayloadPath,
-      ),
-      startPostgres: async () => {
-        compose(runtime, ["up", "-d", "postgres"]);
-        await waitForServiceHealthy(runtime, "postgres");
-      },
-      startServices: async () => {
-        compose(runtime, ["up", "-d"]);
-        await waitForRuntimeHealthy(runtime);
-      },
-      stopServices: () => compose(runtime, ["down"]),
-      verifyResources: () => {
-        assertRestoredStorageVolumeProvenance({
-          composeProject: runtime.config.FULL_LOCAL_COMPOSE_PROJECT_NAME,
-          inspect: inspectDockerVolume(runtime.config.FULL_LOCAL_STORAGE_VOLUME_NAME),
-          volumeName: runtime.config.FULL_LOCAL_STORAGE_VOLUME_NAME,
-        });
-        liveFullLocalProductionResources(runtime);
-      },
-      verifyRestoredPlatform: () => {
-        const restoreManifest = writeRestoreManifest({
-          archiveSha256,
-          backupKey,
-          manifestPath,
-          metadata,
-          runtime,
-          semantic: {
-            ...restoredPlatformDataSnapshot(runtime, metadata),
-            ...restoredSemanticManifest(runtime),
-            ...verifyRestoredStoragePayload(runtime, metadata.storage_payload),
-          },
-        });
-        const recoveryManifest = writeCanonicalRecoveryManifest({
-          archive,
-          archiveSha256,
-          args,
-          backupKey,
-          metadata,
-          restoreManifest,
-        });
-        return { recovery_manifest: recoveryManifest, restore_manifest: restoreManifest };
-      },
     }),
   });
 }

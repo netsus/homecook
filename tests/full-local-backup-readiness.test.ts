@@ -441,7 +441,7 @@ describe("full-local backup readiness", () => {
     expect(runtime).toContain("--recovery-issuer-private-key");
     expect(runtime).toContain("--recovery-credential-file");
     expect(restorePlatform).toMatch(
-      /openFullLocalBackupKeyEscrow[\s\S]*registerRecoveredBackupKeyCreateOnly/u,
+      /openFullLocalBackupKeyEscrow[\s\S]*withRecoveredBackupKeyCreateOnlyRegistration/u,
     );
     expect(restorePlatform).toContain("keychainDirectItemExists");
     expect(runtime).toMatch(
@@ -450,10 +450,14 @@ describe("full-local backup readiness", () => {
     expect(runtime).toContain("keychain-create.exp");
     expect(restorePlatform).not.toContain("storeKeychainValue");
     expect(recovery).toMatch(
-      /directItemExists\(\)[\s\S]*verifyArchive\(verifiedKey\)[\s\S]*createItem\(verifiedKey\)/u,
+      /directItemExists\(\)[\s\S]*verifyArchive\(verifiedKey\)[\s\S]*createItem\(verifiedKey, attemptToken\)[\s\S]*execute\(\)[\s\S]*deleteOwnedItem\(attemptToken\)/u,
     );
     expect(createOnlyWriter).toMatch(/add-generic-password -s \$service -a \$account/u);
+    expect(createOnlyWriter).toContain("-G $ownership_token");
     expect(createOnlyWriter).not.toMatch(/add-generic-password -U/u);
+    expect(runtime).toMatch(
+      /deleteOwnedKeychainDirectItem[\s\S]*delete-generic-password[\s\S]*"-G"[\s\S]*ownershipToken/u,
+    );
   });
 
   it("rejects a fabricated recovery manifest even when its backup-key HMAC could be valid", () => {
