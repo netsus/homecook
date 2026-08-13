@@ -1,6 +1,6 @@
 # Acceptance - youtube-async-extraction-notification
 
-> 공식 tuple은 `requirements 1.7.31 / screen 1.5.35 / Flow 1.3.33 / DB 1.3.33 / API 1.2.38`다. 체크는 실제 구현·테스트·독립 review evidence 뒤에만 한다. `Manual Only` 항목에는 omo metadata를 붙이지 않으며 자동화 완료와 섞지 않는다.
+> 공식 tuple은 `requirements 1.7.32 / screen 1.5.36 / Flow 1.3.34 / DB 1.3.34 / API 1.2.39`다. 체크는 실제 구현·테스트·독립 review evidence 뒤에만 한다. `Manual Only` 항목에는 omo metadata를 붙이지 않으며 자동화 완료와 섞지 않는다.
 
 ## Happy Path
 

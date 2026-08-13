@@ -66,8 +66,9 @@
 | --- | --- | --- |
 | `33-youtube-i031-direct-extraction` | merged | [x] |
 | 공식 contract PR `#1343` merge `25e10a7805f5bf171d4c1fbd94a573560b715786` | merged | [x] |
-| 공식 tuple `1.7.31 / 1.5.35 / 1.3.33 / 1.3.33 / 1.2.38` | current | [x] |
+| 공식 tuple `1.7.32 / 1.5.36 / 1.3.34 / 1.3.34 / 1.2.39` | current | [x] |
 | 최종 동결 계획 SHA-256 `7906f9ec975f309c310b2275714873cebb78e109770f885f09878e5c6bbed57a`, 991 lines, review task `019ffb44-5614-7af3-86a9-4ebd50977123` | independent PASS / Findings 없음 | [x] |
+| Phase 1.5 local-only repair PR #1350, exact head `a625aefa7baab63f183a9d46e6f12d607d4e017f`, merge `c4045705ef72c76f7e7258d10c460f56b6847dd7` | independent PASS / Findings 없음, merged | [x] |
 
 > 제품 구현은 이 Stage 1 docs PR이 independent internal 1.5에서 approve되고 `master`에 merge된 뒤에만 시작한다.
 

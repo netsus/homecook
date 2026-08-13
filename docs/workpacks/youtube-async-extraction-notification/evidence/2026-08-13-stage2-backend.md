@@ -2,7 +2,7 @@
 
 ## Scope and authority
 
-- baseline: `origin/master@6f6043d91a3cfdcc7da10a4f28f59676990a9d80`
+- baseline: `origin/master@c4045705ef72c76f7e7258d10c460f56b6847dd7`
 - branch: `feature/be-youtube-async-extraction-notification`
 - original implementation commits: `267356fe`, `0139e987`, `eee52d6e`, `9aaa690c`, `a751209f`, `95c2b370`
 - first Stage 3 reviewed head: `95c2b370` — `REVISE`
@@ -14,7 +14,9 @@
 - third-revision GREEN commit: `68a7d338`
 - fourth Stage 3 re-reviewed head: `898cf0c70292646a30aba9eca816ad44b68364f6` — `PASS` (implementation findings none)
 - replacement implementation head: `68a7d338`; reviewed documentation head: `898cf0c70292646a30aba9eca816ad44b68364f6`
-- official tuple: requirements `1.7.31`, screen `1.5.35`, Flow `1.3.33`, DB `1.3.33`, API `1.2.38`
+- official tuple: requirements `1.7.32`, screen `1.5.36`, Flow `1.3.34`, DB `1.3.34`, API `1.2.39`
+- frozen plan: SHA-256 `7906f9ec975f309c310b2275714873cebb78e109770f885f09878e5c6bbed57a`, 991 lines, independent review task `019ffb44-5614-7af3-86a9-4ebd50977123` (`PASS`, Findings 없음)
+- Phase 1.5 local-only repair: PR #1350 exact head `a625aefa7baab63f183a9d46e6f12d607d4e017f`, merged as `c4045705ef72c76f7e7258d10c460f56b6847dd7` after independent `PASS` / Findings 없음 and current-head checks green
 - migration: `supabase/migrations/20260812160000_youtube_async_extraction_notification.sql`
 - production/staging/remote writes: `0`
 - production migration/policy enable/credential issuance/launchd activation: `0` (`Manual Only`)
@@ -89,7 +91,7 @@ Current verified evidence:
 - targeted ESLint — pass
 - `pnpm test` at implementation head `68a7d338` — 563 files passed / 31 skipped; 5926 tests passed / 433 skipped
 - `PLAYWRIGHT_BASE_URL=http://127.0.0.1:3199 pnpm verify:backend` at implementation head `68a7d338` — lint, typecheck, product tests (238 files passed / 12 skipped; 2734 passed / 175 skipped), production build and security Playwright (12 passed) all pass; the existing port `3100` service was untouched
-- `pnpm local:reset:demo` at implementation-equivalent detached head `7bf11d88` on isolated `56320`–`56326` — migrations and `seed.sql` completed, but the unpinned current CLI stopped before step 2 because Realtime/REST/Storage health checks remained unhealthy/503; repeated with a shorter project id and got the same infrastructure timeout. The separately pinned isolated PG17 security run below is green. Existing app port `3100` stayed untouched.
+- historical pre-repair reset rehearsal at implementation-equivalent detached head `7bf11d88` used isolated `56320`–`56326`; its unpinned multi-service health timeout is superseded by the merged pinned DB+Data API isolated lifecycle. Existing app port `3100` stayed untouched.
 
 Independent fourth Stage 3 verification on exact head `898cf0c70292646a30aba9eca816ad44b68364f6`:
 
@@ -103,21 +105,22 @@ Independent fourth Stage 3 verification on exact head `898cf0c70292646a30aba9eca
 
 The isolated DB runner allocates dynamic PostgreSQL/PostgREST ports, uses an ephemeral credential and temporary database, and removes the container/database afterward. The earlier isolated Supabase reset rehearsal used only `homecook_yta_stage2_retry` on ports `65520`–`65526`; the final clean-migration regression used the default local Supabase development ports. Neither path bound, reused or stopped port `3100`, and neither stopped or mutated any `homecook-full-local-*` stack.
 
-## Local reset and release-gate facts
+## Phase 1.5 local-only rebaseline
 
 - The original `supabase_db_homecook` volume contained PostgreSQL 15 data and could not be opened by the newly selected 17.6 image.
 - Before the follow-up instruction to preserve user data arrived, `supabase stop --no-backup` had already been run against that default local development project. Its legacy local volume is no longer present. No production, staging or `homecook-full-local-*` volume was targeted.
-- The earlier revision reran `pnpm local:reset:demo` after the legacy-volume collision was isolated. At current head, the same canonical command was rerun in a detached isolated worktree, applied every migration and seed, then failed only its container health gate twice. This current-head automation item is therefore recorded as red/environment-blocked, not green. It did not touch the `3100` app or production/full-local stack; `ACCOUNT_SESSION_STALE` remains informational rather than a PR blocker.
+- Earlier unpinned multi-service reset attempts are historical evidence only. PR #1350 replaced that required path with pinned isolated PostgreSQL plus Data API lifecycles that own their temporary project, ports, volumes, network, environment and secrets.
 - `SECURITY_FUNCTION_DATABASE_URL=<isolated-PG17> pnpm verify:security-functions` was green on the isolated current image: the clean catalog had 205 classified additive functions, and all 8 anonymous mutation probes (including `complete_cooking_session`) returned the expected denial with unchanged checksums. This confirms the old signal-11 failure was specific to the stale local CLI/image `17.6.1.106`; the isolated image had `pg_graphql` absent and no backend crash.
-- The canonical current-worktree `pnpm verify:security-functions:release` attempt remains red before the linked-remote half because its stale local instance exposes the unexpected `graphql.get_schema_version()` inventory. Even after that local instance is replaced, this worktree still lacks `supabase/.temp/project-ref`/`SECURITY_FUNCTION_LINKED_ROOT` for the required linked-remote read-only authority. No approved waiver exists, so both facts remain merge blockers.
-- `pnpm local:reset:demo` remains a second merge-process blocker at current head because the current unpinned CLI health check times out after a successful migration/seed. No waiver was authored.
-- The fourth Stage 3 reviewer reproduced all three blockers read-only or in isolation. `pnpm verify:security-functions:release` failed at `local baseline drift for graphql.get_schema_version()`; the remote half independently failed before access because no linked Supabase root/project authority was configured. An isolated exact-head reset using project id `yta_stage3_fourth` and ports `57320`–`57327` applied every migration and `seed.sql`, then failed with `LegacyHealthCheckTimeoutError` (`Realtime` and multiple services unhealthy, REST 503). The isolated stack and worktree were removed after the run. No production, staging, existing local database, credential, or port `3100` state was changed.
+- Supabase Cloud, linked projects, hosted endpoints and remote credentials are forbidden/N/A. Their absence is not a blocker and no such target is queried during Stage 2/3 verification.
+- Required schema/security verification uses merged `verify:security-functions:isolated`; required migration/runtime verification uses merged `verify:local-supabase-runtime:isolated`. Both fail closed if labeled temporary resources remain after cleanup.
+- Product PostgreSQL/PostgREST integration runs only against its own temporary database and loopback Data API. The operating full-local stack, app port `3100`, user data, production ports/volumes/environment/secrets and launchd remain read-only and untouched.
 - No secret value, raw JWT, service-role key or credential was copied into this evidence.
 
 ## Pending independent gates
 
 - Stage 3 implementation review is complete with `PASS` and findings none at exact head `898cf0c70292646a30aba9eca816ad44b68364f6`; reviewed heads `95c2b370`, `3af52ff5`, and `704d2f39` remain `REVISE`
-- replacement of the stale canonical local security instance, linked-remote read-only authority, and isolated local reset health timeout, or an approved independent disposition; no reviewer waiver exists
+- current rebased product head의 merged isolated security/runtime gates, focused/full checks, current-head GitHub checks
+- current rebased exact head에 대한 새 독립 Stage 3 reviewer Findings 0 확인
 - all Stage 4 frontend, Playwright, exploratory QA and design authority work
 - Stage 6 closeout/merge approval
 - every production/staging/remote action listed under `Manual Only`
