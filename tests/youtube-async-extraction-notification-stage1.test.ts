@@ -34,6 +34,9 @@ describe("YouTube async extraction Stage 1 contract", () => {
   const reviewEvidence = read(
     `docs/workpacks/${sliceId}/evidence/2026-08-12-stage1-internal1-5-rereview.md`,
   );
+  const backendEvidence = read(
+    `docs/workpacks/${sliceId}/evidence/2026-08-13-stage2-backend.md`,
+  );
 
   it("uses the exact official CTA copy on every Stage 1 design surface", () => {
     const officialScreens = read("docs/화면정의서-v1.5.36.md");
@@ -154,5 +157,22 @@ describe("YouTube async extraction Stage 1 contract", () => {
       "b560b60ff758171e1d52ad56b2a63a2e1877cd762d1f691c9cea32c753f8d332",
     );
     expect(readme).not.toContain("873 lines");
+  });
+
+  it("rebaselines the backend evidence to the merged local-only repair contract", () => {
+    const officialTuple = ["1.7.32", "1.5.36", "1.3.34", "1.3.34", "1.2.39"];
+    for (const document of [readme, acceptance, backendEvidence]) {
+      for (const version of officialTuple) expect(document).toContain(version);
+    }
+
+    for (const document of [readme, backendEvidence]) {
+      expect(document).toContain("PR #1350");
+      expect(document).toContain("a625aefa7baab63f183a9d46e6f12d607d4e017f");
+      expect(document).toContain("c4045705ef72c76f7e7258d10c460f56b6847dd7");
+    }
+    expect(backendEvidence).not.toContain("SECURITY_FUNCTION_LINKED_ROOT");
+    expect(backendEvidence).not.toContain("SUPABASE_ACCESS_TOKEN");
+    expect(backendEvidence).not.toContain("linked-remote read-only authority");
+    expect(backendEvidence).not.toContain("pnpm local:reset:demo");
   });
 });
