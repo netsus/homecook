@@ -128,17 +128,17 @@
 ## Design Status
 
 - [ ] 임시 UI (temporary) — Stage 1 설계 계약만 잠겼고 실제 구현 evidence는 없음
-- [x] 리뷰 대기 (pending-review) — authority precheck REVISE findings를 수정한 Stage 4 구현 head `46e6e68704c700ab10a88fa738857354502e2156`의 390/320/desktop evidence와 exploratory QA 97점이 생성됐으며 독립 재검토 대기 중
+- [x] 리뷰 대기 (pending-review) — authority precheck REVISE findings를 수정한 Stage 4 구현 head `635717d7d139ed498799371bbacfda8e09503b08`의 390/320/desktop evidence와 exploratory QA 97점이 생성됐으며 독립 재검토 대기 중
 - [ ] 확정 (confirmed) — Stage 5와 별도 final authority가 current frontend head를 blocker 0으로 승인한 뒤 전환
 - [ ] N/A — BE-only 슬라이스
 
 ### Stage 4 Frontend Evidence
 
-- Implementation base/head: `25e8da8b04c2322f68d8f54837135399d7586da7` → `46e6e68704c700ab10a88fa738857354502e2156`
+- Implementation base/head: `25e8da8b04c2322f68d8f54837135399d7586da7` → `635717d7d139ed498799371bbacfda8e09503b08`
 - Screenshot manifest: `ui/designs/evidence/youtube-async-extraction-notification/manifest.json`
 - Visual verdict: `ui/designs/evidence/youtube-async-extraction-notification/visual-verdict.json` — `96/100`, pass (구현 task 판정이며 독립 authority 승인 아님)
 - Exploratory QA: `ui/designs/evidence/youtube-async-extraction-notification/exploratory-qa.json` — `97/100`, 42/46 covered, finding 0
-- Deterministic browser QA: `tests/e2e/youtube-async-extraction-notification.spec.ts` — port `3217`, 7 passed, 390/320/desktop screenshots generated
+- Deterministic browser QA: `tests/e2e/youtube-async-extraction-notification.spec.ts` — port `3217`, 7 evidence-capture scenarios와 3-project 21 executions passed, 390/320/desktop screenshots regenerated
 - Focused component/integration QA: notification/import/planner sync compatibility/theme-token 포함 53 passed; 전체 quality 6,086 passed
 - Boundary: Supabase Cloud/linked/remote/credential access 0, 운영 local Supabase/app `3100`/user data/port/volume/env/secret/launchd mutation 0. Stage 5/final authority/Stage 6와 Manual Only는 미완료다.
 

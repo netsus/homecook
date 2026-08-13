@@ -1,9 +1,9 @@
 {
-  "captured_at": "2026-08-13T18:35:13Z",
+  "captured_at": "2026-08-13T18:50:50Z",
   "evidence_scope": "youtube-async-extraction-notification Stage 4 frontend",
   "implementation_base": "25e8da8b04c2322f68d8f54837135399d7586da7",
-  "implementation_head": "46e6e68704c700ab10a88fa738857354502e2156",
-  "implementation_tree": "80a29546decd24cf25d0e3859621b002b4f05f3e",
+  "implementation_head": "635717d7d139ed498799371bbacfda8e09503b08",
+  "implementation_tree": "373d0340346f8d9d370d8cfa759ae675e5555a49",
   "generator": "tests/e2e/youtube-async-extraction-notification.spec.ts",
   "base_url": "http://127.0.0.1:3217",
   "remote_supabase_access_count": 0,
@@ -43,7 +43,7 @@
   ],
   "verification": {
     "focused_vitest": "53 passed including notification, import, planner sync compatibility, and theme-token coverage",
-    "playwright": "7 passed",
+    "playwright": "7 evidence-capture scenarios passed; 21 cross-project executions passed",
     "axe": "0 violations on the new accepted, grouped-toast, and drawer surfaces with color-contrast enabled",
     "exploratory_qa": "97/100; 42/46 covered; 4 independent authority or real-worker/DB items intentionally not covered",
     "visual_verdict": "96/100 pass"
