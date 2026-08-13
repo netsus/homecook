@@ -21,11 +21,13 @@
       "slice9-source-checkpoint-security-merges-and-postmerge-14-of-14-recorded",
       "slice10-pr1331-stage4-through-6-runtime-and-omo-merged-green",
       "slice12-ui-only-no-contract-capability-or-activation-change",
-      "fresh-design-generator-and-independent-critic-before-stage2",
+      "canonical-design-prerequisite-complete-generator-019ffb5f-head-1b44bb72-tree-851ceaa3",
+      "canonical-design-repair-019ffb73-head-910d14e9-tree-a578bf1d",
+      "canonical-design-rereview-019ffb81-head-1da1a186-tree-c09dd364-approve-0-0-0",
       "stored-local-date-no-current-timezone-regroup",
-      "day-total-equals-active-subtotals-with-incomplete-count",
-      "deleted-column-history-read-only-no-new-entry",
-      "soft-deleted-entry-absent-from-read-and-active-aggregate",
+      "day-total-equals-all-visible-non-deleted-section-subtotals-with-incomplete-count",
+      "deleted-column-no-new-target-existing-entry-edit-delete-preserved",
+      "soft-deleted-entry-absent-from-read-and-aggregate",
       "exact-one-cooked-batch-food-product-ingredient",
       "owner-generation-visibility-and-nondisclosure",
       "single-server-union-order-cursor-no-client-merge",
@@ -78,9 +80,9 @@
     "playwright_projects": ["mobile-default", "mobile-narrow", "desktop"],
     "artifact_assertions": [
       "day-first-stored-local-date-and-no-weekly-analysis",
-      "meal-subtotals-day-total-and-incomplete-truth",
-      "deleted-column-read-only-history",
-      "soft-deleted-entry-absent-from-read-and-active-aggregate",
+      "meal-subtotals-all-visible-section-day-total-and-incomplete-truth",
+      "deleted-column-no-add-existing-entry-edit-delete-history",
+      "soft-deleted-entry-absent-from-read-and-aggregate",
       "recent-search-three-source-add-sheet",
       "exact-evidence-create-edit-delete-and-replay",
       "fresh-manifest-head-sha-capture-times",
@@ -156,7 +158,7 @@
   "blocked_conditions": [
     "stage1-independent-reviews-not-zero",
     "stage1-author-self-approval-or-claude-use",
-    "stage1-independent-review-or-fresh-design-prerequisite-missing-before-implementation",
+    "stage1-independent-current-head-rereviews-not-zero-before-implementation",
     "new-route-tab-api-source-field-status-or-client-total-invented",
     "history-regrouped-by-current-timezone",
     "deleted-column-accepts-new-entry",
@@ -165,10 +167,10 @@
     "missing-unrecoverable-batch-gram-save-enabled",
     "mutable-current-product-profile-silently-repinned",
     "batch-edit-delete-targets-another-event",
-    "canonical-design-critic-authority-or-fresh-evidence-missing",
+    "stage4-runtime-evidence-stage5-or-final-authority-missing",
     "local-only-target-boundary-or-isolated-local-controlled-full-local-read-only-evidence-missing",
     "current-head-check-pending-absent-stale-failed-or-cancelled"
   ],
   "max_fix_rounds": {"backend": 3, "frontend": 6},
-  "notes": "Initial fetch matched expected origin/master 16cfce44d32d5b618742a0e20460df4772a19142. Before Draft PR creation, base drift advanced master to c12afbccd15f4935a1a52b9f2c2c23882a5033ff, which was integrated by a normal merge without rebase, reset or force-push. The current official tuple is v1.7.32/v1.5.36/v1.3.34/v1.3.34/v1.2.39 and the repository plan is docs/workpacks/planner-shell/evidence/cooking-meal-log-and-product-search-master-plan-20260722.md at SHA-256 d4d0fb39e80eeffc8b1e73ad92f0d91a35a9b6adc57a556ea8c9ec6ecffa951d, 1,018 lines. The drift adds full-local Supabase local-only operating authority only and explicitly changes no product UI, public endpoint/status/error/field, DB schema or #12 user flow, so no #12 Contract Evolution is required. #9 PR #1319 source merge 8ba3fa5a2a198eb4f9c19d59cea5f6ccc52fdd4f, checkpoint projection 4597ca835ba81307d0bdf9e1b1c41806b17e7a68, security repair 16cfce44d32d5b618742a0e20460df4772a19142 and historical post-merge raw 14/14 success are recorded without promoting broader gates. #10 PR #1331 merge 2185b59d1b460dac916aa4a4a4a5e061c8b795f0 is Stage 4~6 merged-green and its OMO completion is recorded in docs/workpacks/planner-shell/omo-report.md. The Stage 2 implementation dependency is available after Stage 1 independent reviews and the design prerequisite. Current commands are docs validators, tests/meal-log-ui-stage1-relock.test.ts plus focused workflow-doc tests, lint, typecheck, audit and diff only; current external_smokes is empty because component/E2E/visual/a11y/browser and pinned isolated-local or controlled full-local read-only runtime evidence are future. Manual/server-Mac/OAuth, controlled full-local physical-device/AT, capability R/R+1/R+2, production and activation remain pending. #12 owns UI only, consumes #1 search and #8 batch authority inside #10 shell, and adds no contract, capability or activation. A fresh design-generator task and fresh independent design critic remain prerequisites."
+  "notes": "Initial fetch matched expected origin/master 16cfce44d32d5b618742a0e20460df4772a19142. Before Draft PR creation, base drift advanced master to c12afbccd15f4935a1a52b9f2c2c23882a5033ff, which was integrated by a normal merge without rebase, reset or force-push. The current official tuple is v1.7.32/v1.5.36/v1.3.34/v1.3.34/v1.2.39 and the repository plan is docs/workpacks/planner-shell/evidence/cooking-meal-log-and-product-search-master-plan-20260722.md at SHA-256 d4d0fb39e80eeffc8b1e73ad92f0d91a35a9b6adc57a556ea8c9ec6ecffa951d, 1,018 lines. The drift adds full-local Supabase local-only operating authority only and explicitly changes no product UI, public endpoint/status/error/field, DB schema or #12 user flow, so no #12 Contract Evolution is required. #9 PR #1319 source merge 8ba3fa5a2a198eb4f9c19d59cea5f6ccc52fdd4f, checkpoint projection 4597ca835ba81307d0bdf9e1b1c41806b17e7a68, security repair 16cfce44d32d5b618742a0e20460df4772a19142 and historical post-merge raw 14/14 success are recorded without promoting broader gates. #10 PR #1331 merge 2185b59d1b460dac916aa4a4a4a5e061c8b795f0 is Stage 4~6 merged-green and its OMO completion is recorded in docs/workpacks/planner-shell/omo-report.md. The Stage 2 implementation dependency is available after the remaining Stage 1 independent reviews; the canonical design+critique prerequisite is complete. Generator task/head/tree 019ffb5f-b4be-7153-84b8-e4f341bd5ae5 / 1b44bb7238cc6d0381805585f371fe12e0cb90f0 / 851ceaa34835b7f5288590a3f0b74f7666e50eb7, repair 019ffb73-1f48-7832-8d18-b043209f208a / 910d14e99e71c9a05aa623cbf0a9c3b6f1f9456b / a578bf1d8da21a3bce230051399c6be1fd9da78c, and re-review 019ffb81-4bad-7353-b92b-add4924a4a40 / 1da1a186b99044d12fc9a940321a9bbefe44ae07 / c09dd364c8523ffc975836ab5df2c9db9388e3fe APPROVE 0/0/0 are exact provenance. Current commands are docs validators, tests/meal-log-ui-stage1-relock.test.ts plus focused workflow-doc tests, lint, typecheck, audit and diff only; current external_smokes is empty because component/E2E/visual/a11y/browser and pinned isolated-local or controlled full-local read-only runtime evidence are future. Manual/server-Mac/OAuth, controlled full-local physical-device/AT, capability R/R+1/R+2, production and activation remain pending. #12 owns UI only, consumes #1 search and #8 batch authority inside #10 shell, and adds no contract, capability or activation. Current-head internal1.5/security/API/five-axis and design-delta critic refresh remain pending; no generator prerequisite remains."
 }

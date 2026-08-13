@@ -25,15 +25,15 @@
 - 7-day horizontal strip은 하루만 선택하며 record presence만 표시하고 weekly analysis를 제공하지 않는다.
 - 저장된 `consumed_local_date`가 grouping authority다. 현재 device/profile timezone으로 history를 다시 묶지 않는다.
 - energy, carbohydrate, protein, fat을 먼저, sodium을 다음에 표시한다. goal, achievement rate, medical/disease guidance는 표시하지 않는다.
-- day total은 non-deleted entry의 active column subtotal 합이다. `partial/unavailable`은 zero가 아니며 `일부 정보 없음 N건`을 표시한다.
+- day total은 `GET /meal-log`가 반환한 모든 visible non-deleted entry/section subtotal의 server projection이다. active section뿐 아니라 deleted-column snapshot section도 포함하며, `partial/unavailable` count를 포함해 `일부 정보 없음 N건`을 표시한다. client는 이를 active-only로 다시 계산하지 않는다.
 
 ### Meal sections and entries
 
 - active `meal_plan_columns`의 label/order를 display setting으로 재사용하되 Recipe Meal row나 plan status chip과 섞지 않는다.
-- 삭제된 column history는 read-only `삭제된 끼니 · {slot_name_snapshot}` section으로 보존하고 새 entry를 받지 않는다.
+- 삭제된 column history는 `삭제된 끼니 · {slot_name_snapshot}` section으로 보존한다. 금지되는 것은 add CTA와 신규 기록 target뿐이며, 기존 entry는 공식 PATCH/DELETE에 따른 수정·삭제 action을 유지한다.
 - section header는 subtotal과 incomplete count를 표시한다.
 - entry는 display name, optional brand/source badge, actual quantity/unit, core nutrition, `예상 | 최소 | 정보 준비 중`, edit/delete를 표시한다.
-- empty active section은 단일 add-food CTA를 제공하고 deleted section은 history-only로 유지한다.
+- empty active section은 단일 add-food CTA를 제공하고 deleted section에는 add CTA를 두지 않는다. deleted/null column의 기존 entry에서 slot을 바꾸려면 사용자가 active meal column을 명시적으로 선택하고 server validation을 통과해야 하며, slot을 바꾸지 않는 quantity/source/date edit는 기존 PATCH 계약을 그대로 따른다.
 
 ### Add-food full-height sheet
 
@@ -74,7 +74,7 @@
 
 - #9 exact source head `be93bfc47281e2795c59c0fd1052a4ecf6085837` merged as `8ba3fa5a2a198eb4f9c19d59cea5f6ccc52fdd4f`; checkpoint projection `4597ca835ba81307d0bdf9e1b1c41806b17e7a68`, security repair `16cfce44d32d5b618742a0e20460df4772a19142`, historical post-merge raw 14/14 success는 backend predecessor evidence다.
 - #10 merged as `2185b59d1b460dac916aa4a4a4a5e061c8b795f0`; Stage 4~6 merged-green runtime와 OMO completion은 `docs/workpacks/planner-shell/omo-report.md`에 기록돼 있다.
-- Stage 2 implementation dependency is available after Stage 1 independent reviews and the design prerequisite. #9/#10의 Manual/server-Mac/OAuth와 capability `R/R+1/R+2`/production/activation pending은 #12가 승격하지 않는다.
+- Stage 2 implementation dependency is available after the remaining Stage 1 independent reviews; the canonical design+critique prerequisite is complete. #9/#10의 Manual/server-Mac/OAuth와 capability `R/R+1/R+2`/production/activation pending은 #12가 승격하지 않는다.
 
 ## Backend First Contract
 
@@ -101,7 +101,7 @@
 | unauthorized | login guidance와 return-to-action; private data hidden |
 | partial | known minimum과 missing count/reason |
 | unavailable | number 없이 `정보 준비 중` |
-| deleted meal column | snapshot label/history read-only; no add |
+| deleted meal column | snapshot label/subtotal/history; no add/new target; existing entry edit/delete 유지 |
 | missing/unrecoverable batch | no gram save; eligible weight guidance only |
 | pending/replay | duplicate submit disabled; stored result applied once |
 | stale revision/422 | input retained, authority refreshed, error focused |
@@ -123,8 +123,8 @@
   생크림빵 0.5봉 · 사용자 등록          [수정] [삭제]
   [+ 아침에 먹은 음식 추가]
 
-삭제된 끼니 · 야식                      read-only
-  과거 기록 · 정보 준비 중
+삭제된 끼니 · 야식                      새 음식 추가 없음
+  과거 기록 · 정보 준비 중              [수정] [삭제]
 ```
 
 ```text
@@ -146,7 +146,11 @@ query empty: 최근 / 자주 먹은 음식
 - Anchor screen dependency: 없음. 기존 #10 Planner shell 안 segment만 소비한다.
 - Visual artifact: `ui/designs/MEAL_LOG.md`; Stage 4 screenshot evidence는 `ui/designs/evidence/meal-log-ui/`의 390px, 320px, desktop state set과 `manifest.json`이다.
 - Authority status: `required`
-- Notes: fresh design-generator task 뒤 fresh independent design critic이 `ui/designs/critiques/MEAL_LOG-critique.md`를 검토하고, runtime evidence 이후 별도 product-design-authority가 `ui/designs/authority/MEAL_LOG-authority.md`를 작성한다. 이 Stage 1 author does not approve its own changes.
+- Notes: canonical design+critique prerequisite는 아래 exact provenance에서 완료됐고 fresh re-review는 `APPROVE 0/0/0`이다. `ui/designs/critiques/MEAL_LOG-critique.md`는 reviewer-owned artifact이므로 이 repair author가 수정하지 않는다. runtime evidence 이후 별도 product-design-authority가 `ui/designs/authority/MEAL_LOG-authority.md`를 작성하며, 이 Stage 1 author does not approve its own changes.
+
+- generator: task `019ffb5f-b4be-7153-84b8-e4f341bd5ae5`, content head `1b44bb7238cc6d0381805585f371fe12e0cb90f0`, tree `851ceaa34835b7f5288590a3f0b74f7666e50eb7`, normalized integration `d3f76711f98439cd2f4279a53b06775f28d948d8`.
+- design repair: task `019ffb73-1f48-7832-8d18-b043209f208a`, content head `910d14e99e71c9a05aa623cbf0a9c3b6f1f9456b`, tree `a578bf1d8da21a3bce230051399c6be1fd9da78c`, normalized integration `f07367a3109b2651d83e4f382b78dc2b85cd96b9`.
+- fresh re-review: task `019ffb81-4bad-7353-b92b-add4924a4a40`, critique content head `1da1a186b99044d12fc9a940321a9bbefe44ae07`, tree `c09dd364c8523ffc975836ab5df2c9db9388e3fe`, reviewed design head/tree `910d14e99e71c9a05aa623cbf0a9c3b6f1f9456b` / `a578bf1d8da21a3bce230051399c6be1fd9da78c`, normalized integration `ac188b6e4aa590cac35f5f6df873f5c654a69330`, verdict `APPROVE 0/0/0`.
 
 - Stage 4 evidence는 default, loading, empty, error, unauthorized, partial, unavailable, deleted-column, add-sheet recent/search, missing/unrecoverable batch, edit, delete confirmation, pending, replay, conflict를 각 viewport에서 포함한다.
 - fresh manifest는 implementation head SHA와 capture times를 기록한다. legacy/unrelated evidence는 이 계약으로 refresh되지 않으면 #12 evidence가 아니다.
@@ -174,7 +178,7 @@ query empty: 최근 / 자주 먹은 음식
 
 - initial fetch는 expected `origin/master` `16cfce44d32d5b618742a0e20460df4772a19142`와 일치했다. Draft PR 생성 전 base drift로 `origin/master`가 `c12afbccd15f4935a1a52b9f2c2c23882a5033ff`로 이동했고 normal merge로 통합했다. rebase, reset, force-push는 사용하지 않았다.
 - drifted tuple은 full-local Supabase local-only operating authority만 추가한다. #12 product UI, public endpoint/status/error/field, DB schema, user flow는 바꾸지 않으므로 Contract Evolution은 N/A다.
-- 이 Stage 1 author는 docs만 작성한다. fresh independent internal1.5, security/API, five-axis, fresh design-generator task와 fresh independent design critic이 별도 task로 남는다.
+- 이 Stage 1 author는 docs만 작성한다. canonical design+critique prerequisite는 위 exact provenance로 완료됐다. fresh independent internal1.5, security/API, five-axis re-review는 별도 task로 남고, Stage 4 runtime evidence·Stage 5/final authority·Stage 6은 계속 pending이다.
 
 ## QA / Test Data Plan
 
@@ -183,13 +187,15 @@ query empty: 최근 / 자주 먹은 음식
 - isolated local: schema/security/API integration이 필요하면 pinned isolated-local stack에서만 실행하며 운영 full-local volume/port/env를 공유하지 않는다.
 - controlled full-local: runtime smoke가 필요할 때 exact target identity와 read-only 여부를 기록하고 기본 `BEGIN READ ONLY` 및 checksum before/after 동일성을 사용한다. 현재 Stage 1은 이 runtime evidence를 수행하거나 주장하지 않는다.
 - seed/reset: #12는 schema/seed를 추가하지 않는다. isolated-local fixture seed만 허용하며 실제 full-local target에는 destructive reset/volume delete를 실행하지 않는다.
-- blockers: design-generator/critic 미완료, independent review finding 잔존, #9/#10 contract drift, required fixture/bootstrap 부재, current-head check pending/fail, local-only target boundary 또는 exact-head evidence 부재.
+- blockers: independent internal1.5/security/API/five-axis review finding 잔존, #9/#10 contract drift, required fixture/bootstrap 부재, current-head check pending/fail, local-only target boundary 또는 exact-head evidence 부재. canonical design+critique prerequisite는 blocker가 아니다.
 - Manual Only: physical keyboard/screen reader/device, server-Mac/OAuth, capability `R/R+1/R+2`, production/activation evidence는 future pending이며 #12 Stage 1이 닫지 않는다.
 
 ## Key Rules
 
 - #12 owns UI only. 기존 #9 API/DB authority를 #10 shell 안에서 소비하고 endpoint, schema, migration, capability, activation을 추가하지 않는다.
-- stored local date authority, active subtotal/day total/incomplete truth, deleted-column read-only와 soft-deleted absence를 보존한다.
+- stored local date authority와 server projection of all visible non-deleted entries and section subtotals를 보존한다. 여기에는 deleted-column snapshot sections와 partial/unavailable counts included가 포함되며 server is authority다.
+- `day-total-equals-all-visible-non-deleted-section-subtotals-with-incomplete-count`와 `deleted-column-no-new-target-existing-entry-edit-delete-preserved`를 회귀 불변식으로 고정한다.
+- deleted column은 prohibit add CTA and new target only다. existing entries retain edit and delete하며, slot 변경 시 select and validate an active meal column when changing slot을 요구한다. quantity/source/date edits follow the existing PATCH contract이고 DELETE soft-deletes and reverses the entry's own active batch event다. focus returns to the invoking entry action or deleted section heading이다.
 - `unavailable`을 zero/complete로 표시하지 않는다.
 - client-side product/ingredient merge, unofficial source/field/status/total, mutable-current evidence repin, 다른 event reversal을 금지한다.
 - missing/unrecoverable batch의 gram save를 막고 eligible #11 weight action만 연결한다.

@@ -22,6 +22,15 @@ const stage1TestCommand =
   "pnpm exec vitest run tests/meal-log-ui-stage1-relock.test.ts tests/workflow-v2-docs.test.ts tests/omo-automation-spec.test.ts tests/omo-bookkeeping.test.ts tests/omo-doc-gate.test.ts tests/source-of-truth-sync.test.ts";
 const localOnlySmokeEvidenceCommand =
   "pnpm validate:real-smoke-presence -- --slice meal-log-ui";
+const designGeneratorTask = "019ffb5f-b4be-7153-84b8-e4f341bd5ae5";
+const designGeneratorHead = "1b44bb7238cc6d0381805585f371fe12e0cb90f0";
+const designGeneratorTree = "851ceaa34835b7f5288590a3f0b74f7666e50eb7";
+const designRepairTask = "019ffb73-1f48-7832-8d18-b043209f208a";
+const designRepairHead = "910d14e99e71c9a05aa623cbf0a9c3b6f1f9456b";
+const designRepairTree = "a578bf1d8da21a3bce230051399c6be1fd9da78c";
+const designRereviewTask = "019ffb81-4bad-7353-b92b-add4924a4a40";
+const designRereviewHead = "1da1a186b99044d12fc9a940321a9bbefe44ae07";
+const designRereviewTree = "c09dd364c8523ffc975836ab5df2c9db9388e3fe";
 
 function read(relativePath: string) {
   return readFileSync(join(root, relativePath), "utf8");
@@ -43,6 +52,7 @@ describe("meal-log-ui fresh Stage 1 relock", () => {
     (item: { id: string }) => item.id === sliceId,
   );
   const roadmap = read("docs/workpacks/README.md");
+  const design = read("ui/designs/MEAL_LOG.md");
 
   it("passes the actual Stage 1 doc gate and checklist contract", () => {
     const docGate = evaluateDocGate({ rootDir: root, slice: sliceId });
@@ -142,7 +152,7 @@ describe("meal-log-ui fresh Stage 1 relock", () => {
       "Stage 2 implementation dependency is available",
     );
     expect(dependencyProjection).toContain(
-      "after Stage 1 independent reviews and the design prerequisite",
+      "after the remaining Stage 1 independent reviews; the canonical design+critique prerequisite is complete",
     );
     expect(dependencyProjection).not.toMatch(
       /#10[^\n]*(?:open Draft|dependency pending)|implementation waits until #9|#10 frontend runtime[^\n]*pending/u,
@@ -155,6 +165,8 @@ describe("meal-log-ui fresh Stage 1 relock", () => {
       approval_state: "not_started",
       verification_status: "pending",
       evaluation_status: "not_started",
+      evaluation_round: 0,
+      last_evaluator_result: null,
       auto_merge_eligible: false,
     });
     expect(status).toMatchObject({
@@ -164,6 +176,8 @@ describe("meal-log-ui fresh Stage 1 relock", () => {
       approval_state: "not_started",
       verification_status: "pending",
       evaluation_status: "not_started",
+      evaluation_round: 0,
+      last_evaluator_result: null,
       auto_merge_eligible: false,
     });
     expect(roadmap).toMatch(/\| 12 \| E \| `meal-log-ui` \| docs \|/u);
@@ -232,17 +246,33 @@ describe("meal-log-ui fresh Stage 1 relock", () => {
       authority_required: true,
     });
 
-    const reviewProjection = [readme, acceptance, workItem.notes].join("\n");
+    const reviewProjection = [
+      readme,
+      acceptance,
+      JSON.stringify(automation),
+      JSON.stringify(workItem),
+      status.notes,
+      roadmap,
+      design,
+    ].join("\n");
     for (const required of [
       initialRelockBase,
       finalRelockBase,
       "base drift",
       "Design Status",
       "temporary",
-      "fresh design-generator task",
-      "fresh independent design critic",
       "fresh independent internal1.5",
       "author does not approve its own changes",
+      designGeneratorTask,
+      designGeneratorHead,
+      designGeneratorTree,
+      designRepairTask,
+      designRepairHead,
+      designRepairTree,
+      designRereviewTask,
+      designRereviewHead,
+      designRereviewTree,
+      "APPROVE 0/0/0",
     ]) {
       expect(reviewProjection).toContain(required);
     }
@@ -252,11 +282,77 @@ describe("meal-log-ui fresh Stage 1 relock", () => {
         expect.stringContaining("fresh independent Codex internal 1.5"),
         expect.stringContaining("security authorization and API boundary"),
         expect.stringContaining("five-axis"),
-        expect.stringContaining("fresh independent Codex design critic"),
       ]),
     );
     expect(acceptance).toMatch(
-      /- \[ \] canonical MEAL_LOG design and independent critique pass before Stage 2/u,
+      /- \[x\] canonical MEAL_LOG design and independent critique pass before Stage 2/u,
+    );
+    expect(acceptance.match(/^- \[x\]/gmu)).toHaveLength(1);
+    for (const staleParts of [
+      ["fresh design-", "generator task and fresh independent design critic", " remain pending"],
+      ["A fresh design-", "generator task and fresh independent design critic", " remain prerequisites"],
+      ["design-generator/critic", " 미완료"],
+    ]) {
+      expect(reviewProjection).not.toContain(staleParts.join(""));
+    }
+  });
+
+  it("uses the server day total across every visible non-deleted section", () => {
+    const totalProjection = [
+      readme,
+      acceptance,
+      JSON.stringify(automation),
+      JSON.stringify(workItem),
+      status.notes,
+      roadmap,
+      design,
+    ].join("\n");
+
+    expect(totalProjection).toContain(
+      "day-total-equals-all-visible-non-deleted-section-subtotals-with-incomplete-count",
+    );
+    expect(totalProjection).toContain(
+      "server projection of all visible non-deleted entries and section subtotals",
+    );
+    expect(totalProjection).toContain(
+      "deleted-column snapshot sections",
+    );
+    expect(totalProjection).toContain("partial/unavailable counts included");
+    expect(totalProjection).toContain("server is authority");
+    expect(totalProjection).not.toContain(
+      ["day-total-equals-active", "-subtotals-with-incomplete-count"].join(""),
+    );
+    expect(totalProjection).not.toContain(
+      ["day total은 non-deleted entry의 active", " column subtotal 합"].join(""),
+    );
+  });
+
+  it("keeps existing deleted-column entries editable and deletable without reopening add", () => {
+    const deletedColumnProjection = [
+      readme,
+      acceptance,
+      JSON.stringify(automation),
+      JSON.stringify(workItem),
+      design,
+    ].join("\n");
+
+    for (const required of [
+      "deleted-column-no-new-target-existing-entry-edit-delete-preserved",
+      "prohibit add CTA and new target only",
+      "existing entries retain edit and delete",
+      "select and validate an active meal column when changing slot",
+      "quantity/source/date edits follow the existing PATCH contract",
+      "DELETE soft-deletes and reverses the entry's own active batch event",
+      "focus returns to the invoking entry action or deleted section heading",
+    ]) {
+      expect(deletedColumnProjection).toContain(required);
+    }
+
+    expect(deletedColumnProjection).not.toContain(
+      ["deleted-column-history-read-only", "-no-new-entry"].join(""),
+    );
+    expect(deletedColumnProjection).not.toContain(
+      ["deleted-column-snapshot-read-only", "-history"].join(""),
     );
   });
 

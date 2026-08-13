@@ -2,7 +2,7 @@
 
 > Design Status: `temporary`
 >
-> 작성 역할: Homecook #12 `meal-log-ui` Stage 1 fresh design-generator
+> 작성 역할: Homecook #12 `meal-log-ui` Stage 1 generator/repair lineage. 현재 successor repair author는 reviewer가 아니며 자기 변경을 승인하지 않는다.
 >
 > 작성 기준: upstream Draft PR #1349 exact head `cb68ade3d834e137b7d9ad72c49701370794c5a6`, base `origin/master@c12afbccd15f4935a1a52b9f2c2c23882a5033ff`
 >
@@ -11,6 +11,8 @@
 > 계획 authority: `docs/workpacks/planner-shell/evidence/cooking-meal-log-and-product-search-master-plan-20260722.md`, SHA-256 `d4d0fb39e80eeffc8b1e73ad92f0d91a35a9b6adc57a556ea8c9ec6ecffa951d`, 1,018 lines
 >
 > repair lineage: independent critique parent `f2442e22ec919f51ffc67ff7b6403a8021a5c90c`의 `P1-ML-01`~`P1-ML-04`만 최소 수정한다. 새 API/field/action/route 또는 Contract Evolution을 만들지 않는다.
+>
+> canonical prerequisite provenance: generator task `019ffb5f-b4be-7153-84b8-e4f341bd5ae5`, content head/tree `1b44bb7238cc6d0381805585f371fe12e0cb90f0` / `851ceaa34835b7f5288590a3f0b74f7666e50eb7`; repair task `019ffb73-1f48-7832-8d18-b043209f208a`, content head/tree `910d14e99e71c9a05aa623cbf0a9c3b6f1f9456b` / `a578bf1d8da21a3bce230051399c6be1fd9da78c`; fresh re-review task `019ffb81-4bad-7353-b92b-add4924a4a40`, critique content head/tree `1da1a186b99044d12fc9a940321a9bbefe44ae07` / `c09dd364c8523ffc975836ab5df2c9db9388e3fe`, verdict `APPROVE 0/0/0`. Normalized PR integrations are `d3f76711f98439cd2f4279a53b06775f28d948d8`, `f07367a3109b2651d83e4f382b78dc2b85cd96b9`, `ac188b6e4aa590cac35f5f6df873f5c654a69330`.
 >
 > 독립성: 이 문서는 작성 산출물이며 critic, product-design-authority 또는 Stage 승인 산출물이 아니다. 작성자는 자기 변경을 승인하지 않는다.
 
@@ -75,7 +77,7 @@ MEAL_LOG panel
 └─ deleted-column history
    ├─ 삭제된 끼니 · {slot_name_snapshot}
    ├─ 과거 non-deleted entries
-   └─ read-only, add/edit target 아님
+   └─ add CTA/new target만 없음; existing entry edit/delete 유지
 ```
 
 - rail은 현재 7일 범위를 탐색하고, 44px `이전 7일`/`다음 7일` control로 인접 범위에 도달한다. 본문은 선택한 하루만 표시한다.
@@ -83,8 +85,8 @@ MEAL_LOG panel
 - grouping authority는 저장된 `consumed_local_date`다. 현재 device/profile timezone으로 과거 `consumed_at`을 다시 계산하거나 다른 날짜로 옮기지 않는다.
 - rail의 dot/mark는 `기록 있음/없음`만 뜻한다. 수치, 추세, 주간 합계, 비교, 목표 달성 의미를 넣지 않는다.
 - 새 범위의 mark는 각 날짜에 기존 `GET /meal-log?date=YYYY-MM-DD`만 bounded·deduplicated하게 호출해 non-deleted entry 존재 여부로 만든다. 선택일 response는 본문에도 재사용하고, 나머지 response의 entry/total을 주간 값으로 합치거나 표시하지 않는다.
-- day total과 section subtotal은 `GET /meal-log`의 server projection을 그대로 표시한다. client가 entry에서 다시 계산해 권위값을 만들지 않는다.
-- soft-deleted entry는 day read와 active aggregate에서 보이지 않는다.
+- day total은 active section과 deleted-column snapshot section을 포함한 모든 visible non-deleted entry/section subtotal의 `GET /meal-log` server projection이다. partial/unavailable incomplete count도 포함하며 client가 active-only로 다시 계산하지 않는다.
+- soft-deleted entry는 day read와 aggregate에서 보이지 않는다.
 - `partial`과 `unavailable`은 0이 아니다. 아는 최소값은 `최소`, 값이 없으면 `정보 준비 중`, 합계에는 `일부 정보 없음 N건`을 함께 표시한다.
 
 ### 영양 위계
@@ -136,8 +138,9 @@ MEAL_LOG panel
 │                         [수정] [삭제] │
 │ [ + 점심에 먹은 음식 추가 ]          │
 ├──────────────────────────────────────┤
-│ 삭제된 끼니 · 야식          읽기 전용│
+│ 삭제된 끼니 · 야식       새 추가 없음│
 │ 과거 기록 120g · 정보 준비 중        │
+│                         [수정] [삭제] │
 └──────────────────────────────────────┘
  bottom tab + env(safe-area-inset-bottom) clearance
 ```
@@ -183,7 +186,10 @@ MEAL_LOG panel
 │ [ + 브런치에 먹은 음식 추가 ]│
 ├──────────────────────────────┤
 │ 삭제된 끼니 · 아주 긴 야식   │
-│ 읽기 전용                    │
+│ 새 음식 추가 없음            │
+│ 과거 기록                    │
+│ [수정]                       │
+│ [삭제]                       │
 └──────────────────────────────┘
 ```
 
@@ -214,7 +220,7 @@ MEAL_LOG panel
 │ │ ordered entry list         │ ordered entry list          │ │
 │ │ + 음식 추가                │ + 음식 추가                 │ │
 │ └────────────────────────────┴─────────────────────────────┘ │
-│ 삭제된 끼니 history · full-width · read-only                 │
+│ 삭제된 끼니 history · full-width · no add · edit/delete rows │
 └──────────────────────────────────────────────────────────────┘
 ```
 
@@ -223,6 +229,12 @@ MEAL_LOG panel
 - 새 dashboard, weekly analytics, side rail 또는 desktop-only navigation을 만들지 않는다.
 - add/edit는 mobile의 full-height sheet mental model을 유지하되 가운데 제한 폭 dialog surface로 표현할 수 있다. header/body/footer와 focus contract는 동일하다.
 - hover에만 의존하는 정보나 action을 만들지 않는다.
+
+### Deleted-column entry accessibility
+
+- deleted section heading은 snapshot label, subtotal, incomplete count를 programmatic name에 포함하고 section row를 `aria-labelledby`로 연결한다. section 자체를 read-only로 announce하지 않는다.
+- 각 기존 row의 action name은 `{slot_name_snapshot}의 {display_name} 기록 수정` / `{slot_name_snapshot}의 {display_name} 기록 삭제`처럼 entry와 snapshot 끼니를 함께 식별한다. 두 action은 44×44px 이상이며 색만으로 destructive 의미를 전달하지 않는다.
+- add CTA는 DOM에 없고 keyboard/screen reader focus order에도 새 target이 없다. edit/delete는 section의 server order 안에서 row 다음에 오며, stale/error에서는 기존 scoped fail-closed 규칙에 따라 disabled reason과 retry를 연결한다.
 
 ## 6. 음식 추가 full-height sheet
 
@@ -393,6 +405,8 @@ legacy-null · read-only
 │ 기록 수정 · 7월 22일 · 아침    [닫기]│
 │ 김치찌개 · 요리한 음식               │
 │ 실제 양 [300] g                      │
+│ 끼니 [현재 삭제된 끼니 · 야식]       │
+│      [변경 시 active 끼니 선택]       │
 │ 날짜 [2026-07-22]                    │
 │ 시간대 [Asia/Seoul]                  │
 │ 실제 시각 [알 수 없음 / 값]          │
@@ -404,7 +418,8 @@ legacy-null · read-only
 
 - 시작값은 current entry의 pinned source/evidence와 current `revision`이다.
 - request는 `expected_revision`을 포함한다.
-- source/quantity/date/timezone/column 변경은 하나의 official PATCH operation이다.
+- deleted/null column의 기존 entry도 이 editor를 연다. slot을 바꾸지 않는 quantity/source/date/timezone edit는 기존 nullable `meal_plan_column_id`와 `slot_name_snapshot`을 조용히 바꾸지 않고 official PATCH contract를 따른다.
+- slot을 바꾸면 사용자가 현재 `active_columns[]` 중 하나를 명시적으로 선택해야 하며 server가 active owner column을 검증한다. deleted/null column을 silent target이나 기본값으로 보내지 않는다. source/quantity/date/timezone/column 변경은 기존 하나의 official PATCH operation 안에서만 처리한다.
 - batch edit는 자기 active consumed event만 reversal하고 replacement를 append한다. 같은 양의 다른 entry는 건드리지 않는다.
 - product/ingredient edit는 새 exact evidence가 필요한 경우 그 evidence를 pin하며 current mutable product/profile로 조용히 repin하지 않는다.
 - `consumed_local_date`, IANA `timezone_name_snapshot`, nullable `consumed_at`을 함께 저장한다. 과거 시각을 모르면 `consumed_at=null`을 유지한다.
@@ -426,7 +441,7 @@ legacy-null · read-only
 - delete는 current `expected_revision`과 fresh UUID key를 보낸다.
 - 모든 source에서 `deleted_at` soft delete다. batch는 자기 event reversal + pointer null + soft delete를 한 transaction에서 수행한다.
 - hard delete, 다른 same-amount entry 변경, client-side optimistic aggregate 확정은 없다.
-- 취소/성공/오류 뒤 invoking delete control 또는 유효한 section heading에 focus를 복원한다.
+- 취소/성공/오류 뒤 invoking edit/delete control로 focus를 복원한다. soft delete로 invoker가 사라지면 같은 deleted section heading, 그것도 없으면 panel heading을 사용한다.
 
 ## 8. Required state matrix
 
@@ -439,7 +454,7 @@ legacy-null · read-only
 | `unauthorized` | private row 숨김 + login guidance | login, safe back | segment/date/meal/pending action 보존 |
 | `partial` | known minimum + incomplete count + `최소` | 정상 탐색/정정 | minimum을 complete로 표현하지 않음 |
 | `unavailable` | number 없이 `정보 준비 중` | 정상 탐색/정정 | 0 보충/current repin 금지 |
-| deleted column | snapshot label + past entries + read-only | none | add/edit target에서 제외 |
+| deleted column | snapshot label + subtotal/incomplete + past entries | existing entry edit/delete | add CTA/new target만 제외; slot 변경은 active column 명시 선택 |
 | missing batch | `무게 입력 필요`, disabled reason | eligible #11 안내만 | g save 없음 |
 | unrecoverable batch | `원래 무게 확인 불가` | safe close/back | weight/g save 없음 |
 | depleted batch | exact #11 six-reason copy + read-only | none | gram/nutrition 추정, meal-log save, lifecycle action 없음 |
@@ -613,7 +628,7 @@ Current #9 consumer spelling은 `types/meal-log.ts`의 아래 projection을 사�
 | --- | --- | --- |
 | selected date | `MealLogDayData.date` | `consumed_local_date` grouping 결과 |
 | active order | `active_columns[]`, `active_sections[]` | server order 그대로 |
-| deleted history | `deleted_column_sections[]` | active 뒤 read-only |
+| deleted history | `deleted_column_sections[]` | active 뒤 표시; add/new target 없음, existing entry edit/delete 유지 |
 | section truth | `subtotal`, `incomplete_count` | partial/unavailable 유지 |
 | day truth | `day_total`, `day_total.incomplete_count` | client 재합산 금지 |
 | entry identity | `id`, `revision` | raw ID 미노출, revision mutation에만 사용 |
@@ -716,7 +731,7 @@ manifest는 implementation head SHA, viewport, fixture/state, capture time을 �
 | rail geometry | 7 targets same top, 44px min | `scrollWidth > clientWidth`, no wrap | all seven visible when possible | page no overflow; rail only moves |
 | loading/empty/error/auth | panel-scoped states | text/action reflow | same state semantics | mutations fail closed; safe rows preserved |
 | partial/unavailable | minimum/missing truth | no clipping/zero | same truth | null never becomes zero |
-| deleted history | active 뒤 read-only | no add/action leak | full-width after active | new entry impossible |
+| deleted history | active 뒤 no-add + row edit/delete | actions stack, 44px 유지 | full-width after active | new entry impossible; existing PATCH/DELETE preserved |
 | add recent/search | header/body/footer boundaries | keyboard-safe stack | limited-width sheet | confirmation; one union/cursor |
 | batch blocked | exact missing/unrecoverable copy | disabled reason visible | same behavior | no g save/new weight action |
 | edit/delete | context and hierarchy | primary/cancel/destructive stack | visible focus | expected revision; own event only |
@@ -736,6 +751,7 @@ manifest는 implementation head SHA, viewport, fixture/state, capture time을 �
 - sheet open/close, Tab/Shift+Tab trap, Escape, pending dismiss lock, invoker restore를 검증한다.
 - virtual keyboard에서 active input, linked error, primary CTA가 도달 가능한지 검증한다.
 - pending duplicate block, same-key replay one-apply, stale revision refresh/input preservation를 검증한다.
+- deleted-column fixture에서 add CTA/new target은 0이고 기존 row의 edit/delete는 각각 노출되는지 검증한다. quantity/source/date edit는 null/snapshot slot을 묵시적으로 바꾸지 않고, slot change는 active column 선택·server validation을 요구하며, 취소/오류는 invoking action으로, 성공 삭제는 deleted section heading으로 focus를 복원해야 한다.
 - typed union request/response가 single list/cursor이며 client dual-API merge가 없는지 검증한다.
 - `P1-ML-02`: `availability=all` fixture의 known+available, missing+available, unrecoverable+available, six depleted reasons, legacy-null을 같은 server order/cursor로 통과시키고 depleted/legacy-null의 select/save/weight/lifecycle action이 0인지 검증한다.
 - `P1-ML-03`: recent pages를 한 server order와 한 cursor로 append하고 `frequency`가 metadata로만 렌더링되며 client section split, threshold, duplicate, re-sort가 0인지 검증한다.
@@ -758,18 +774,17 @@ manifest는 implementation head SHA, viewport, fixture/state, capture time을 �
 - 공식 7개 endpoint 밖의 API가 필요한 경우
 - source type, quantity unit authority, public error, nutrition state, mutation action이 부족한 경우
 - ingredient row에서 mutation 전 approved conversion/piece unit 전체를 반드시 확정 표시해야 하는 제품 요구가 다시 생기는 경우
-- deleted column entry의 수정 가능 여부처럼 공식 문서가 허용하지 않은 action이 필요한 경우
+- deleted column 기존 entry의 official PATCH/DELETE 밖 새 mutation action이 필요한 경우
 - batch missing/unrecoverable에서 #11에 없는 새 weight action이 필요한 경우
 - server projection 없이 client total/weekly analysis를 만들 필요가 생긴 경우
 - public API와 merged #9 TypeScript projection이 충돌하는 경우
 
 Contract Evolution은 사용자 승인 → 공식 5종 문서/CURRENT_SOURCE_OF_TRUTH 갱신 → workpack/acceptance relock 뒤에만 구현한다.
 
-## 14. Independent critic handoff
+## 14. Completed critic prerequisite and pending authority handoff
 
-- 다음 actor는 이 작성 task와 다른 task ID의 fresh independent design critic이다.
-- critic artifact는 별도 `ui/designs/critiques/MEAL_LOG-critique.md`이며 이 task는 생성하지 않는다.
-- critic은 exact commit을 기준으로 official contract 정합성, Planner shell ownership, 390/320/desktop 구조, 모든 required state, add/edit/delete/replay/conflict, focus/a11y, no-overflow, no-invention을 검토한다.
-- unresolved finding이 있으면 이 design author가 별도 normal commit으로 repair하고 critic이 새 exact head를 재검토한다.
-- Stage 4 구현 뒤에는 fresh evidence를 인용하는 별도 `ui/designs/authority/MEAL_LOG-authority.md`가 필요하다.
-- Design Status는 계속 `temporary`이며 critic/authority가 실제로 통과하기 전 `confirmed`, Stage 승인 또는 merge-ready를 주장하지 않는다.
+- reviewer-owned `ui/designs/critiques/MEAL_LOG-critique.md`는 fresh re-review task `019ffb81-4bad-7353-b92b-add4924a4a40`의 exact `APPROVE 0/0/0` artifact이며 이 repair author는 수정하지 않는다.
+- re-review output head/tree는 `1da1a186b99044d12fc9a940321a9bbefe44ae07` / `c09dd364c8523ffc975836ab5df2c9db9388e3fe`이고, reviewed design head/tree는 `910d14e99e71c9a05aa623cbf0a9c3b6f1f9456b` / `a578bf1d8da21a3bce230051399c6be1fd9da78c`이다.
+- 이 successor가 추가한 day-total/deleted-column projection delta는 새 generator 작업을 요구하지 않는다. push된 exact repair head를 별도 fresh critic이 다시 읽고 reviewer-owned critique를 갱신해야 하며, 현재 author는 그 verdict를 선점하지 않는다.
+- Stage 4 구현 뒤에는 fresh 390px/320px/desktop screenshot/Figma evidence와 이를 인용하는 별도 `ui/designs/authority/MEAL_LOG-authority.md`가 필요하다.
+- Design Status는 계속 `temporary`다. completed Stage 1 critique prerequisite를 Stage 4 runtime evidence, Stage 5/final authority, Stage 6, Ready, merge, production 또는 activation 승인으로 투영하지 않는다.

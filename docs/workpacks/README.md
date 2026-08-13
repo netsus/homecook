@@ -309,7 +309,7 @@ Slice Order 표의 Status 값은 위 이벤트가 발생한 PR 또는 closeout b
 | 9 | D | `meal-log-core` | in-progress | #1 + #2 + #4 + #8 |
 | 10 | E | `planner-shell` | in-progress | #9. PR #1331 merge `2185b59d1b460dac916aa4a4a4a5e061c8b795f0`; Stage 4~6 merged-green runtime 및 OMO report 완료. broader Manual/activation lifecycle pending |
 | 11 | E | `cooked-batch-weight-ui` | in-progress | #8와 `cook-mode-whole-board` merged. UI-only Stage 4, fresh Stage 5·final authority·Stage 6 `APPROVE 0/0/0`와 current-head checks를 거쳐 PR #1323이 merge `7c7d25a1d4deb930ddcf85611bb57f5fe14f00a0`로 병합됐다. Manual/actual-device·AT/full-WCAG, server-Mac/OAuth, R/R+1/R+2와 activation은 pending |
-| 12 | E | `meal-log-ui` | docs | #9 + #10 |
+| 12 | E | `meal-log-ui` | docs | #9 + #10. canonical design prerequisite: generator `019ffb5f-b4be-7153-84b8-e4f341bd5ae5` head/tree `1b44bb7238cc6d0381805585f371fe12e0cb90f0`/`851ceaa34835b7f5288590a3f0b74f7666e50eb7`; repair `019ffb73-1f48-7832-8d18-b043209f208a` `910d14e99e71c9a05aa623cbf0a9c3b6f1f9456b`/`a578bf1d8da21a3bce230051399c6be1fd9da78c`; re-review `019ffb81-4bad-7353-b92b-add4924a4a40` `1da1a186b99044d12fc9a940321a9bbefe44ae07`/`c09dd364c8523ffc975836ab5df2c9db9388e3fe`, `APPROVE 0/0/0`. lifecycle `planned/not_started/pending/not_started`, round 0, auto-merge false; current-head independent re-reviews and runtime/Manual/activation pending |
 | 13 | E | `legacy-product-compat` | docs | #10 + #12 |
 | 14 | F | `cooking-meal-log-cross-slice-release-qa` | docs | F0 and #1~#13 all merged/current-head green on server-MacBook local production and isolated local rehearsal |
 
