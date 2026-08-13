@@ -77,6 +77,25 @@ Database/release surfaces:
 
 ## Verification evidence
 
+### 2026-08-14 independent-review repair candidate
+
+- verification content head: `57722981d9fa7aed7a709ffeb85ee36fd4fb9315`; the following evidence commit changes documentation only
+- independent reviewer task `019ffbd0-a22f-7270-b8c0-3a4360cd0875` returned `REVISE` on `a236649657b5db648b0c9eb76e86c6017d7ae821`; all four findings were repaired with RED-first regressions and the same task must re-review the replacement head
+- stale app descriptor versus rotated DB policy now fails before write as `409 POLICY_CHANGED`; malformed/unavailable readiness remains `503 QUEUE_UNAVAILABLE`
+- exact authority split is enqueue owner = policy `SELECT` + jobs `SELECT,INSERT`, readiness owner = policy/credential `SELECT`, projection owner = jobs/sessions owner-scoped `SELECT`; enqueue credential/session ACL and RLS count is 0
+- provider `video_title_snapshot` remains independent from the finalized recipe title, proven with different provider and recipe titles in the real PostgreSQL suite
+- two independent `psql` connections prove shared enqueue/retry versus exclusive rotation on advisory key `86120317`; accepted jobs contain complete old/new snapshots and mixed snapshot count is 0
+- RED evidence: focused route/migration 4 failures / 16 passes, isolated PostgreSQL/PostgREST 3 failures / 32 passes; the merged security gate also rejected the stale security-function owner inventory before its TDD repair
+- GREEN focused local-only/workpack regression: 5 files / 35 tests passed; focused backend/migration/worker/installer regression: 9 files / 122 tests passed
+- product PostgreSQL/PostgREST integration: isolated real database and loopback Data API, 2 files / 36 tests passed; catalog fingerprint `0662b6cb4086710a91970011c3867c628db97f8e18edcae89570131d9ddc90cf`
+- `verify:security-functions:isolated`: exact Supabase CLI `2.110.0`, migration tree SHA-256 `ff7e12b28c1f06c6678b351994158de8ebbcbd4ef7e69677d233ea5811e3daf6`, temporary project `hcg_45511_6dd661`; 205 additive functions classified, 8 anonymous mutations denied with unchanged checksums, 4 Data API probes returned `406/PGRST106`, cleanup residue 0
+- `verify:local-supabase-runtime:isolated`: the same CLI and migration tree, temporary project `hcg_49796_ea7680`; migration+seed and Data API `200` passed, cleanup residue 0
+- operating-state read-only comparison before/after both gates: container inventory unchanged except an unrelated self-restarting `real_django_django_1` uptime, Docker volume inventory SHA-256 `cfe7d35201429e2ab5421ab9867f1344665308553f801f12020092b09edf59f7` identical, app `127.0.0.1:3100` listener PID `3640` identical, isolated-gate labeled container/network/volume residue 0
+- `pnpm lint`, `pnpm typecheck`, `pnpm build`, workpack/source-of-truth/workflow-v2/OMO validators and `git diff --check`: pass
+- `pnpm test`: 570 files passed / 31 skipped; 6066 tests passed / 439 skipped
+- `PLAYWRIGHT_BASE_URL=http://127.0.0.1:3199 pnpm verify:backend`: lint, typecheck, 238 product files passed / 12 skipped and 2741 tests passed / 175 skipped, production build, security Playwright 12/12 passed; operating app `3100` untouched
+- Supabase Cloud/linked/remote access, hosted URL or credential lookup, production migration, feature activation, launchd action and operating full-local mutation: 0
+
 ### 2026-08-14 rebased local-only candidate
 
 - verification content head: `ca94794dff0f748ced357985982b8f7c1cb5168b` on `origin/master@c4045705ef72c76f7e7258d10c460f56b6847dd7`; the following evidence commit changes documentation only

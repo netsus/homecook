@@ -17,7 +17,7 @@
 - [x] lease-expired processing은 같은 transaction의 `reaper -> claim`을 따르고 attempts 소진은 `ATTEMPTS_EXHAUSTED`+delivery key로 terminal 처리되어 재claim되지 않는다 <!-- omo:id=accept-yta-reaper-claim;stage=2;scope=backend;review=3,6 -->
 - [x] `attempt_count`는 permit 획득 후 실제 provider start에서만 증가하고 permit 대기는 attempt를 소비하지 않는다 <!-- omo:id=accept-yta-attempt-authority;stage=2;scope=backend;review=3,6 -->
 - [x] active current/previous fingerprint pair는 dual-read dedupe되고 새 job은 current-write만 사용한다 <!-- omo:id=accept-yta-dual-read-current-write;stage=2;scope=backend;review=3,6 -->
-- [ ] enqueue/retry와 policy rotation 경합은 old/new 중 한 complete snapshot만 저장하고 mixed snapshot은 0이다 <!-- omo:id=accept-yta-policy-snapshot-atomic;stage=2;scope=backend;review=3,6 -->
+- [x] enqueue/retry와 policy rotation 경합은 old/new 중 한 complete snapshot만 저장하고 mixed snapshot은 0이다 <!-- omo:id=accept-yta-policy-snapshot-atomic;stage=2;scope=backend;review=3,6 -->
 - [x] options-only rotation은 stale app을 `POLICY_CHANGED` write 0으로 막고 old worker의 claim/reaper/start/finalize를 0으로 만든다 <!-- omo:id=accept-yta-options-rotation-fail-closed;stage=2;scope=backend;review=3,6 -->
 - [x] unconsumed draft TTL 만료만 public `expired`이고 `consumed-after-TTL`은 succeeded+recipe destination+`can_retry=false`다 <!-- omo:id=accept-yta-consumed-ttl-precedence;stage=2;scope=shared;review=3,6 -->
 - [x] toast 렌더는 delivered만 기록하고 목록 항목/CTA 확인만 seen을 기록하며 archive는 30일 retention을 유지한다 <!-- omo:id=accept-yta-delivered-seen-archive;stage=2;scope=shared;review=3,6 -->
