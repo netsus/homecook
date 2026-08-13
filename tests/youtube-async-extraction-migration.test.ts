@@ -31,6 +31,8 @@ describe("YTASYNC-DB/SEC migration contract", () => {
     const sql = readFileSync(migrationPath, "utf8").toLowerCase();
     for (const role of [
       "youtube_extraction_enqueue_rpc_owner",
+      "youtube_extraction_readiness_rpc_owner",
+      "youtube_extraction_projection_rpc_owner",
       "youtube_extraction_worker",
       "youtube_extraction_worker_rpc_owner",
       "youtube_extraction_credential_manager",
@@ -63,10 +65,35 @@ describe("YTASYNC-DB/SEC migration contract", () => {
     expect(sql).toContain("from %i granted by %i");
     expect(sql).toContain("grant create on schema private to youtube_extraction_worker_rpc_owner");
     expect(sql).toContain("revoke create on schema private from youtube_extraction_worker_rpc_owner");
-    expect(sql.match(/set local role youtube_extraction_enqueue_rpc_owner/g)?.length).toBe(2);
+    expect(sql.match(/set local role youtube_extraction_enqueue_rpc_owner/g)?.length).toBe(1);
+    expect(sql).toContain("set local role youtube_extraction_readiness_rpc_owner");
+    expect(sql).toContain("set local role youtube_extraction_projection_rpc_owner");
     expect(sql.match(/set local role youtube_extraction_worker_rpc_owner/g)?.length).toBe(3);
     expect(sql).toContain("set local role youtube_extraction_credential_manager_rpc_owner");
     expect(sql).toContain("revoke all on table public.youtube_extraction_jobs from public, anon, authenticated, service_role");
+    expect(sql).not.toContain(
+      "grant select on table private.youtube_extraction_worker_credentials\n  to youtube_extraction_enqueue_rpc_owner",
+    );
+    expect(sql).not.toContain(
+      "grant select on table public.youtube_extraction_sessions\n  to youtube_extraction_enqueue_rpc_owner",
+    );
+    expect(sql).not.toContain("youtube_extraction_worker_credentials_enqueue_owner_select");
+    expect(sql).not.toContain("youtube_extraction_sessions_enqueue_owner_select");
+    expect(sql).toContain(
+      "alter function public.read_youtube_extraction_enqueue_readiness()\n  owner to youtube_extraction_readiness_rpc_owner",
+    );
+    expect(sql).toContain(
+      "alter function public.read_youtube_extraction_job_projection(uuid)\n  owner to youtube_extraction_projection_rpc_owner",
+    );
+  });
+
+  it("locks a real two-connection enqueue/retry versus policy rotation race", () => {
+    const integration = readFileSync(
+      "tests/youtube-extraction-policy-postgres.integration.test.ts",
+      "utf8",
+    );
+    expect(integration).toContain("YTASYNC-DB-POLICY-RACE");
+    expect(integration).toContain("runPsqlAsync");
   });
 
   it("exposes only lease-fenced worker data and permit-contention mutation RPCs", () => {

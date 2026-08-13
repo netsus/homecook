@@ -386,6 +386,18 @@ describe.runIf(enabled).sequential("youtube async extraction PostgreSQL integrat
           where proname = 'enqueue_youtube_extraction_job'
             and pronamespace = 'public'::regnamespace
         ),
+        'readiness', (
+          select pg_get_userbyid(proowner)
+          from pg_proc
+          where proname = 'read_youtube_extraction_enqueue_readiness'
+            and pronamespace = 'public'::regnamespace
+        ),
+        'projection', (
+          select pg_get_userbyid(proowner)
+          from pg_proc
+          where proname = 'read_youtube_extraction_job_projection'
+            and pronamespace = 'public'::regnamespace
+        ),
         'claim', (
           select pg_get_userbyid(proowner)
           from pg_proc
@@ -403,6 +415,8 @@ describe.runIf(enabled).sequential("youtube async extraction PostgreSQL integrat
 
     expect(result).toEqual({
       enqueue: "youtube_extraction_enqueue_rpc_owner",
+      readiness: "youtube_extraction_readiness_rpc_owner",
+      projection: "youtube_extraction_projection_rpc_owner",
       claim: "youtube_extraction_worker_rpc_owner",
       rotate: "youtube_extraction_credential_manager_rpc_owner",
     });
@@ -543,6 +557,25 @@ describe.runIf(enabled).sequential("youtube async extraction PostgreSQL integrat
           and not has_table_privilege('youtube_extraction_enqueue_rpc_owner', 'public.youtube_extraction_jobs', 'UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER')
           and has_table_privilege('youtube_extraction_enqueue_rpc_owner', 'private.youtube_extraction_current_policy', 'SELECT')
           and not has_table_privilege('youtube_extraction_enqueue_rpc_owner', 'private.youtube_extraction_current_policy', 'INSERT,UPDATE,DELETE'),
+        'enqueue_owner_extra_privilege_count', (
+          select count(*)
+          from information_schema.role_table_grants
+          where grantee = 'youtube_extraction_enqueue_rpc_owner'
+            and not (
+              (table_schema = 'private' and table_name = 'youtube_extraction_current_policy' and privilege_type = 'SELECT')
+              or (table_schema = 'public' and table_name = 'youtube_extraction_jobs' and privilege_type in ('SELECT', 'INSERT'))
+            )
+        ),
+        'enqueue_owner_extra_policy_count', (
+          select count(*)
+          from pg_catalog.pg_policies
+          where 'youtube_extraction_enqueue_rpc_owner' = any(roles)
+            and policyname not in (
+              'youtube_extraction_current_policy_enqueue_owner_select',
+              'youtube_extraction_jobs_enqueue_owner_select',
+              'youtube_extraction_jobs_enqueue_owner_insert'
+            )
+        ),
         'owner_membership_count', (
           select count(*)
           from pg_catalog.pg_auth_members as membership
@@ -569,6 +602,8 @@ describe.runIf(enabled).sequential("youtube async extraction PostgreSQL integrat
       unsafe_role_count: 0,
       api_table_privilege_count: 0,
       enqueue_owner_minimum: true,
+      enqueue_owner_extra_privilege_count: 0,
+      enqueue_owner_extra_policy_count: 0,
       owner_membership_count: 0,
       admin_membership_count: 0,
     });
@@ -1112,6 +1147,16 @@ describe.runIf(enabled).sequential("youtube async extraction PostgreSQL integrat
         (${sqlJson(runtimeResult)})::jsonb
       )::text;`,
     );
+    runAsJson(
+      "youtube_extraction_worker",
+      workerClaims(snapshotDigest),
+      `select public.update_youtube_extraction_job_title(
+        '${claim.job_id}'::uuid,
+        '${workerId}',
+        ${claim.lease_generation as number},
+        'Provider metadata title'
+      )::text;`,
+    );
     const draft = resolved.draft as Record<string, unknown>;
     expect(Object.keys(draft).sort()).toEqual([
       "base_servings",
@@ -1239,6 +1284,11 @@ describe.runIf(enabled).sequential("youtube async extraction PostgreSQL integrat
       raw_source_is_null: true,
       provider_payload_absent: true,
     });
+    expect(lastLine(psql(`
+      select video_title_snapshot
+      from public.youtube_extraction_jobs
+      where id = '${claim.job_id}'::uuid;
+    `))).toBe("Provider metadata title");
   });
 
   it("keeps the current permit when a stale release generation is presented", () => {

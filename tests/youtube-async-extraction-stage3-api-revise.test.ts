@@ -141,6 +141,19 @@ describe("YTASYNC Stage 3 API revise RED", () => {
         previousFingerprintKeyVersion: "1",
         previousFingerprintValidUntil: "2026-08-14T00:00:00.000Z",
       });
+      const rotatedPolicyRpc = vi.fn(async () => ({
+        data: {
+          ...(await rpc()).data as Record<string, unknown>,
+          policy_version: 2,
+          policy_snapshot_digest: "d".repeat(64),
+        },
+        error: null,
+      }));
+      expect(await loadYoutubeExtractionEnqueueReadiness(
+        rotatedPolicyRpc,
+        env,
+        new Date("2026-08-13T00:00:00.000Z"),
+      )).toEqual({ code: "POLICY_CHANGED" });
       writeFileSync(descriptorPath, JSON.stringify({
         ...descriptor,
         artifact_sha256: "c".repeat(64),
@@ -267,6 +280,23 @@ describe("YTASYNC Stage 3 API revise RED", () => {
 
     expect(response.status).toBe(503);
     expect((await response.json()).error.code).toBe("QUEUE_UNAVAILABLE");
+    expect(rpc).not.toHaveBeenCalledWith(
+      "enqueue_youtube_extraction_job",
+      expect.anything(),
+    );
+  });
+
+  it("returns POLICY_CHANGED before write when the installed app policy is stale", async () => {
+    const { handlers, rpc } = buildHandlers({
+      enqueueReadiness: vi.fn(async () => ({ code: "POLICY_CHANGED" })),
+    });
+    const response = await handlers.enqueue(new Request("http://localhost", {
+      method: "POST",
+      body: JSON.stringify({ youtube_url: "https://youtu.be/abc123DEF45" }),
+    }));
+
+    expect(response.status).toBe(409);
+    expect((await response.json()).error.code).toBe("POLICY_CHANGED");
     expect(rpc).not.toHaveBeenCalledWith(
       "enqueue_youtube_extraction_job",
       expect.anything(),
