@@ -175,7 +175,7 @@ function buildSession() {
   };
 }
 
-function createDbClient() {
+function createDbClient({ includeAsyncJob = false }: { includeAsyncJob?: boolean } = {}) {
   const sessionsTable = createSessionTable({
     data: buildSession(),
     error: null,
@@ -188,10 +188,34 @@ function createDbClient() {
     data: [{ id: cookingMethodId }],
     error: null,
   });
-  const rpc = vi.fn(async () => ({
-    data: { recipe_id: recipeId, title: "백종원 김치찌개" },
-    error: null,
-  }));
+  const rpc = vi.fn(async (name: string) => {
+    if (name === "list_youtube_extraction_job_projections") {
+      return {
+        data: includeAsyncJob ? [{
+          id: "550e8400-e29b-41d4-a716-446655440501",
+          status: "succeeded",
+          created_at: "2026-08-14T01:00:00.000Z",
+          started_at: "2026-08-14T01:00:01.000Z",
+          completed_at: "2026-08-14T01:03:00.000Z",
+          error_code: null,
+          extraction_session: {
+            id: extractionId,
+            status: "consumed",
+            recipe_id: recipeId,
+            expires_at: "2026-08-15T01:03:00.000Z",
+          },
+        }] : [],
+        error: null,
+      };
+    }
+    if (name === "mark_youtube_extraction_jobs_seen") {
+      return { data: { seen_count: 1 }, error: null };
+    }
+    return {
+      data: { recipe_id: recipeId, title: "백종원 김치찌개" },
+      error: null,
+    };
+  });
   const from = vi.fn((table: string) => {
     if (table === "youtube_extraction_sessions") return sessionsTable;
     if (table === "ingredients") return ingredientsTable;
@@ -257,6 +281,30 @@ describe("36b YouTube recipe register tag write path", () => {
       p_tags: null,
       p_tag_source: "system_suggested",
     }));
+  });
+
+  it("marks the related async job seen after register success and preserves the public response", async () => {
+    const dbClient = createDbClient({ includeAsyncJob: true });
+    createServiceRoleClient.mockReturnValue(dbClient);
+
+    const { POST } = await importRegisterRoute();
+    const response = await POST(new Request("http://localhost:3000/api/v1/recipes/youtube/register", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(buildRegisterBody()),
+    }));
+    const body = await response.json();
+
+    expect(response.status).toBe(201);
+    expect(body).toEqual({
+      success: true,
+      data: { recipe_id: recipeId, title: "백종원 김치찌개" },
+      error: null,
+    });
+    expect(dbClient.rpc).toHaveBeenCalledWith(
+      "mark_youtube_extraction_jobs_seen",
+      { user_id: userId, job_ids: ["550e8400-e29b-41d4-a716-446655440501"] },
+    );
   });
 
   it("keeps the committed YouTube recipe response stable when snapshot creation needs retry", async () => {
