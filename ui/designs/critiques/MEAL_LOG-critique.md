@@ -1,82 +1,90 @@
-# meal-log-ui #12 Stage 1 current-head fresh independent design re-review
+# meal-log-ui #12 Stage 1 repaired exact-head fresh independent design re-review
 
-> critic task ID: `019ffbb4-28ab-7410-b1c1-369c7848342e`
+> critic task ID: `019ffbc5-0c4a-7b11-afd9-6346a76b762c`
 > review date: `2026-08-14`
-> role: fresh independent design critic; latest repair author task `019ffba3-1c21-7f41-9ae0-8a6456dbd145`와 분리
-> verdict: `🔴 HOLD`
-> grade: `🔴` — P0 `0`, P1 `1`, P2 `0`
-> scope: PR #1349 current design delta와 `ui/designs/MEAL_LOG.md` 전체 설계 계약. Design/workpack/projection/test/code, PR body, Ready/merge, Discord, runtime final authority는 이 critic이 변경하거나 승인하지 않는다.
+> role: fresh independent design critic; HOLD critic task `019ffbb4-28ab-7410-b1c1-369c7848342e`, repair author task `019ffbbc`와 분리
+> verdict: `APPROVE`
+> grade: `🟢` — P0 `0`, P1 `0`, P2 `0`
+> scope: repaired exact head의 `ui/designs/MEAL_LOG.md` 전체와 HOLD base 대비 한 design-file delta. PR/workpack, implementation, runtime evidence, final authority, Ready/merge 상태는 이 critic이 변경하거나 승인하지 않는다.
 
 ## Reviewed exact tuple and provenance
 
-- PR: #1349 Draft, branch `docs/meal-log-ui-stage1-relock-current`
-- exact base: `c12afbccd15f4935a1a52b9f2c2c23882a5033ff`
-- exact reviewed head: `69965f5292792d8b4b4555a518d3bbb4c4860971`
-- exact reviewed tree: `3f7fd32e88c238ccebba6fc537f242e102055c09`
+- repair branch: `docs/meal-log-ui-stage1-p1-ml-05-current-contract-repair`
+- HOLD base/critique commit: `497faaab314e3c864eaf4f6b0d0f3179c16e58c0`
+- exact reviewed design head: `e2959ef523e57770a4cb2b490f7b00a972ab8845`
+- exact reviewed tree: `7932fc6d026d9f2c0aa963041efcf315be12c9e9`
 - reviewed artifact: `ui/designs/MEAL_LOG.md`
-- reviewed artifact blob: `110b106cdb94034c9d46af8f86cf3652b1bb205a`
-- current critique predecessor blob, superseded by this report: `56cbbeb89d9f9e556bfcabb9c834960158aeaa9c`
-- immediate pre-delta integration: `ac188b6e4aa590cac35f5f6df873f5c654a69330`; design blob `103d67e470ee42aa751c6a52fff914460d9cc71a`
-- generator task/head/tree: `019ffb5f-b4be-7153-84b8-e4f341bd5ae5` / `1b44bb7238cc6d0381805585f371fe12e0cb90f0` / `851ceaa34835b7f5288590a3f0b74f7666e50eb7`
-- design repair task/head/tree: `019ffb73-1f48-7832-8d18-b043209f208a` / `910d14e99e71c9a05aa623cbf0a9c3b6f1f9456b` / `a578bf1d8da21a3bce230051399c6be1fd9da78c`
-- prior fresh re-review task and verdict: `019ffb81-4bad-7353-b92b-add4924a4a40`, `APPROVE 0/0/0`, reviewed the earlier repaired design head/tree `910d14e99e71c9a05aa623cbf0a9c3b6f1f9456b` / `a578bf1d8da21a3bce230051399c6be1fd9da78c`
-- latest successor repair author task: `019ffba3-1c21-7f41-9ae0-8a6456dbd145`; this report is its required independent current-head refresh
+- reviewed artifact blob: `9bade6235acd9c6f60d128216260d9c0408718c2`
+- predecessor HOLD critique blob: `57fff2d5c641d24bf20fada31b76b57276ca7a54`
+- current PR docs context: `69965f5292792d8b4b4555a518d3bbb4c4860971`, tree `3f7fd32e88c238ccebba6fc537f242e102055c09`
 - current official authority: requirements `v1.7.32`, screen `v1.5.36`, flow `v1.3.34`, DB `v1.3.34`, API `v1.2.39`
 - approved master plan: SHA-256 `d4d0fb39e80eeffc8b1e73ad92f0d91a35a9b6adc57a556ea8c9ec6ecffa951d`, 1,018 lines
+- merged #9 contract evidence: `types/meal-log.ts`, `lib/server/meal-log.ts`, `supabase/migrations/20260810120000_meal_log_core.sql`, meal-log parser/projection/RPC tests
 
-Remote `refs/heads/docs/meal-log-ui-stage1-relock-current`, GitHub PR #1349 `headRefOid`, local checkout head and tree를 각각 대조해 위 exact tuple이 일치함을 확인했다.
+Local checkout head/tree, named repaired head/tree, one-file delta, artifact blob and predecessor critique blob을 각각 대조해 위 exact tuple이 일치함을 확인했다.
 
 ## Executive verdict
 
-latest delta의 server-owned day total 수정은 공식 계약과 merged #9 projection에 맞다. `GET /meal-log`의 `day_total`은 active section뿐 아니라 `meal_plan_column_id IS NULL`인 deleted-column snapshot section까지 포함한 모든 visible non-deleted entry에서 계산되고, incomplete count도 같은 전체 집합에서 나온다. 설계가 이를 client active-only 합산으로 다시 만들지 않도록 잠근 점은 승인 가능하다.
+`P1-ML-05`는 current #9 계약을 바꾸지 않는 design-only repair로 해소됐다. 삭제된 끼니 row에서 시작한 모든 edit save는 수정 field 종류와 무관하게 현재 owner의 `active_columns[]` 중 하나를 사용자가 명시 선택해야 한다. selector는 매번 미선택으로 열리고, null snapshot·삭제된 UUID·첫 active column을 자동 선택하지 않으며, 선택 전 save는 disabled다.
 
-deleted-column 기존 row에 add CTA/new target을 두지 않으면서 edit/delete를 노출한 방향도 공식 화면/API 계약에 맞다. DELETE의 expected revision, soft delete, own active batch event reversal, focus fallback, 44px action name은 구현 가능한 수준이다.
+선택 후에는 기존 full PATCH body와 current `expected_revision`, 선택한 active owner `meal_plan_column_id`만 사용한다. client가 `slot_name_snapshot`을 보내거나 null 위치를 보존하지 않고, server RPC가 선택 column의 current ID/name으로 `meal_plan_column_id`와 `slot_name_snapshot`을 함께 교체한다. 이는 non-null mutation type, strict parser, owner-column lookup, RPC update와 정확히 일치하며 새 endpoint/field/action/error를 만들지 않는다.
 
-그러나 deleted-column edit의 저장 계약 한 곳이 현재 merged #9와 맞지 않아 Stage 1 current-head design prerequisite를 통과시킬 수 없다. 설계는 `meal_plan_column_id=null`과 snapshot slot을 유지한 quantity/source/date/timezone PATCH를 약속하지만, 현행 request type/parser/RPC는 모든 PATCH에 non-null active owner column UUID를 요구하고 성공 시 `slot_name_snapshot`도 그 active column name으로 교체한다. null 유지 요청은 보낼 수 없고, 삭제된 예전 UUID도 유효 target이 아니다. 이 모순은 구현자가 silent default, 실패하는 저장, 또는 문서 밖 partial PATCH를 선택하게 만든다.
+active column 0건, list read error, authorization loss, 선택 column 소실, stale revision에서는 correctable input/return context를 보존하면서 save를 fail closed한다. refresh 뒤 prior selection을 재사용하지 않고 selector/error로 focus한 다음 explicit reselection을 요구한다. corrected payload는 fresh key, identical network retry만 same key를 사용하고 stored replay는 한 번만 적용한다.
 
-따라서 verdict는 `🔴 HOLD`, P1 1건이다. 현행 공식 계약만으로 닫는 design-only repair 경로는 deleted-column row의 모든 edit save에서 active column 명시 선택을 필수화하는 것이다. null/snapshot 위치를 그대로 유지하는 edit가 제품 요구라면 public PATCH 계약 변경이 필요하지만, 이번 PR에는 Contract Evolution이 없으므로 그 경로를 설계에 포함하면 안 된다.
+따라서 current exact head/tree의 Stage 1 design prerequisite verdict는 `APPROVE`, findings `0/0/0`이다.
 
-## Latest repair review
+## P1-ML-05 repair verification
 
-| Area | Result | Evidence and boundary |
+| Required repair | Result | Exact design evidence |
 | --- | --- | --- |
-| server-owned day total | PASS | Official screen says day total equals every non-deleted meal subtotal; API returns active and deleted-column sections plus one day total. Merged #9 SQL calculates `v_total` from every non-deleted row, not only active sections. Design lines 88-90 and 610-641 preserve the server projection and incomplete truth. |
-| deleted-column no-add boundary | PASS | Official screen/flow exclude deleted columns only from new record targets. Design removes add CTA from DOM and selection while retaining existing row actions. |
-| deleted-column DELETE | PASS | Design lines 427-444 match official expected revision, all-source soft delete, batch own-event reversal/pointer null and nondestructive focus fallback. No new action exists. |
-| deleted-column PATCH | **HOLD** | Design lines 421-422 promise a null/snapshot-preserving PATCH that current #9 cannot accept. See `P1-ML-05`. |
-| provenance / self-approval | PASS | Generator, repair and earlier review lineage is recorded; latest author explicitly leaves exact-head critique refresh to a different task. This report supplies that refresh and does not promote runtime/final authority. |
+| every deleted-column edit save requires explicit active owner column | PASS | Edit sheet와 mutation rules가 quantity/source/date/timezone 변경 여부와 무관한 필수 선택을 고정한다. |
+| no preselection/null snapshot preservation | PASS | 미선택 placeholder, disabled save, null/삭제 UUID/첫 active column 금지를 390/320/desktop과 accessibility contract에 반복 고정한다. |
+| server replaces column ID and snapshot | PASS | Existing PATCH full body에는 selected `meal_plan_column_id`만 보내고 `slot_name_snapshot`은 server가 current column name으로 교체한다고 명시한다. |
+| active 0/error/unauthorized fail closed | PASS | 입력과 return context를 보존하되 save를 disabled하고 retry/login/cancel만 허용한다. private 값은 authorization loss에서 숨긴다. |
+| conflict/replay recovery | PASS | stale/list refresh/selected-column loss 뒤 selection clear, linked focus, explicit reselection, fresh corrected key, identical replay one-apply가 분리돼 있다. |
+| DELETE retains official behavior | PASS | active-column 선택 없이 origin snapshot에서 expected revision + fresh key DELETE, soft delete, own event reversal, pointer null, focus fallback을 유지한다. |
 
 ## Prior four finding regression check
 
 | Finding | Current result | Regression evidence |
 | --- | --- | --- |
-| `P1-ML-01` seven-day range movement | RESOLVED / NO REGRESSION | Exact ±7 calendar days, selected-date visibility, existing Planner `date` history, Back/Forward zero-write sync, bounded existing day reads remain intact. |
-| `P1-ML-02` `availability=all` depleted/legacy-null | RESOLVED / NO REGRESSION | Exact six depleted reasons, legacy-null copy, server order/cursor and no inferred gram/nutrition/action remain intact. |
-| `P1-ML-03` recent/frequent grouping | RESOLVED / NO REGRESSION | One server-ordered `최근·자주 먹은 음식` list, frequency metadata and one cursor remain intact. |
-| `P1-ML-04` ingredient approved-unit projection | RESOLVED / NO REGRESSION | `default_unit` remains non-authoritative; mutation-owned evidence and correctable `422 UNIT_CONVERSION_MISSING` preserve input and cursor. |
+| `P1-ML-01` seven-day range movement | RESOLVED / NO REGRESSION | Exact ±7 calendar days, selected-date visibility, existing Planner `date` history, Back/Forward zero-write sync, bounded existing day reads가 유지된다. |
+| `P1-ML-02` `availability=all` depleted/legacy-null | RESOLVED / NO REGRESSION | Known/missing/unrecoverable, six depleted reasons, legacy-null copy, one server order/cursor와 no inferred action이 유지된다. |
+| `P1-ML-03` recent/frequent grouping | RESOLVED / NO REGRESSION | One server-ordered `최근·자주 먹은 음식` list, frequency metadata, one cursor, no client split/re-sort가 유지된다. |
+| `P1-ML-04` ingredient approved-unit projection | RESOLVED / NO REGRESSION | `default_unit`은 suggestion일 뿐이고 quantity/unit은 correctable하며 mutation-owned `422 UNIT_CONVERSION_MISSING`이 input/cursor를 보존한다. |
 
-## Mobile baseline and accessibility review
+## Day total and deleted-history behavior
 
-| Keyword / axis | Result | Evidence |
+- PASS: day total은 active section과 `meal_plan_column_id IS NULL` deleted-column snapshot section을 모두 포함하는 모든 visible non-deleted entry의 server projection이다. client active-only 재합산이 금지되고 incomplete count도 같은 전체 집합을 사용한다.
+- PASS: deleted section은 snapshot label/subtotal/incomplete/history를 표시하고 add CTA/new target은 DOM과 selection source 모두에서 0이다.
+- PASS: existing deleted-column entry의 edit/delete는 유지된다. edit 성공은 선택 destination으로 이동하고 DELETE는 origin에서 그대로 수행된다.
+- PASS: `partial`/`unavailable`은 zero/complete로 승격되지 않으며 soft-deleted entry는 read/aggregate에서 제외된다.
+
+## Focus, accessibility, conflict and replay
+
+- PASS: deleted edit는 read-only origin을 먼저 연결하고 최초 focus를 required selector에 둔다. selector는 `required`, help/error, selection state를 programmatically 노출한다.
+- PASS: 44×44px row actions, named edit/delete actions, dialog focus trap, Escape/cancel contract, linked `role=alert`, reduced motion, 200% text와 no color-only meaning이 명시돼 있다.
+- PASS: cancel/error는 invoking action과 scroll을 복원하고, edit success는 destination entry/section heading, delete success는 deleted section/panel heading으로 deterministic fallback한다.
+- PASS: pending 중 duplicate submit/dismiss를 잠그고 same key/same payload replay는 authoritative result를 한 번만 적용한다. same key/different payload는 성공처럼 반영하지 않는다.
+- PASS: stale authority에서는 entry와 `active_columns[]`를 refresh하되 correctable draft를 유지하고, selection을 clear한 뒤 explicit reselection을 요구한다.
+
+## 390px, 320px and desktop review
+
+| Axis | Result | Evidence |
 | --- | --- | --- |
-| `mobile-first` information hierarchy | PASS | selected day → compact server summary → active sections → deleted snapshot history; plan rows and weekly analysis remain separate. |
-| `390px mobile baseline` | PASS | 16px gutter, localized one-row rail, 44×44px range/edit/delete targets, visible subtotal/incomplete and safe-area clearance. |
-| `320px narrow baseline` | PASS | page horizontal overflow is forbidden; only the rail scrolls; labels and edit/delete actions stack without shrinking targets. |
-| `desktop adaptation` | PASS | Same route, segment, DOM/reading order and day-first model; no desktop-only dashboard/navigation/analysis. |
-| `scroll containment` | PASS | Rail owns horizontal overflow; sheet body owns vertical scroll; background lock and header/body/footer boundaries are explicit. |
-| `primary CTA / destructive hierarchy` | PASS | add/save primary, edit/cancel/retry secondary, delete destructive tertiary; DOM and visual order stay aligned. |
-| `focus / keyboard / screen reader / reduced motion` | PASS WITH P1 DEPENDENCY | radiogroup, roving tabindex, dialog trap/restore, named deleted-row actions, live errors, 200% text and reduced motion are specified. Deleted edit error/focus behavior must be rebound to the required active-column selector when `P1-ML-05` is repaired. |
-| `44px / no-overflow / state matrix` | PASS | Target geometry, rail-only overflow, 17 planned states and deterministic evidence matrix remain present across 390/320/desktop. |
-| screenshot/Figma evidence | STAGE 1 PLAN ONLY | Fresh runtime screenshots/Figma and product-design-authority remain pending; markdown is not final visual authority. |
+| 390px mobile baseline / mobile-first hierarchy | PASS | selected day → compact server summary → active sections → deleted history 순서이며 origin/required selector가 편집 field보다 먼저 온다. |
+| 320px narrow | PASS | page overflow는 금지, rail만 local x-scroll, action/selector/error/CTA는 세로 stack, label/target 축소와 silent default가 금지된다. |
+| desktop adaptation | PASS | 같은 route/segment/DOM/reading order와 limited-width dialog를 유지하고 첫 active column 자동 선택 또는 origin/target 축약이 금지된다. |
+| scroll containment | PASS | rail만 horizontal overflow, sheet body만 vertical scroll, background lock과 safe-area footer 경계가 명확하다. |
+| CTA hierarchy | PASS | add/save primary, edit/cancel/retry secondary, delete destructive tertiary이며 DOM/visual order가 일치한다. |
 
-## State, typed-union and evidence boundaries
+## Contract and invention audit
 
-- PASS: default/loading/empty/error/unauthorized/partial/unavailable/deleted-column/missing/unrecoverable/depleted/legacy-null/pending/replay/conflict/correctable-422 stay distinct and fail closed.
-- PASS: day total, section subtotal, incomplete count, active/deleted grouping and nutrition status remain server-owned; null is never rendered as zero.
-- PASS: `GET /food-catalog/search` remains a single `ingredient | food_product` discriminated union with one server order and opaque cursor; no client merge or unofficial field is added.
-- PASS: product exact basis, ingredient approved conversion/piece evidence, owner/generation visibility and raw ID/cursor/event/operation nondisclosure boundaries remain intact.
-- PASS: pending locks duplicate submit/dismiss, same-key replay applies one stored result, and stale revision refreshes authority while retaining correctable input.
-- HOLD: deleted-column edit conflict/replay can only be made deterministic after the payload-valid active-column selection rule is explicit.
+- PASS: existing 7 endpoints, `active_columns[]`, full PATCH `meal_plan_column_id`, current error `code/message/fields[]`만 사용한다.
+- PASS: `slot_name_snapshot` client field, partial PATCH, relocation endpoint/action, null-preserve alias, new status/error는 추가하지 않는다.
+- PASS: product/ingredient typed union은 one server order/cursor이며 client merge가 없다.
+- PASS: owner/generation, exact evidence, own-event reversal, nullable instant, nondisclosure 경계를 완화하지 않는다.
+- PASS: current repair는 official API와 merged #9 implementation을 presentation에 정확히 binding하므로 Contract Evolution이 필요하지 않다.
 
 ## Findings
 
@@ -84,40 +92,21 @@ deleted-column 기존 row에 add CTA/new target을 두지 않으면서 edit/dele
 
 없음.
 
-### P1 (1)
+### P1 (0)
 
-#### `P1-ML-05` Deleted-column edit promises a PATCH shape that merged #9 rejects
-
-**Evidence**
-
-- `ui/designs/MEAL_LOG.md:421-422` says quantity/source/date/timezone edits can preserve nullable `meal_plan_column_id` and `slot_name_snapshot`, and active-column selection is needed only when the user changes the slot.
-- `types/meal-log.ts:14-21` defines mutation `mealPlanColumnId` as non-null `string`, while read entries correctly allow `meal_plan_column_id: string | null` at lines 33-40.
-- `lib/server/meal-log.ts:117-165` requires the full mutation body for PATCH and rejects a null/non-UUID `meal_plan_column_id`.
-- `supabase/migrations/20260810120000_meal_log_core.sql:299-314` builds deleted-column sections only from rows whose `meal_plan_column_id IS NULL`.
-- The same RPC at lines 436-437 requires an existing owner column and at lines 647-650 always writes that active column ID and its current name snapshot.
-- The edit wireframe itself says `기록 수정 · 7월 22일 · 아침` while the selected current context says `삭제된 끼니 · 야식`, leaving the exact context and required target ambiguous.
-
-**Impact**
-
-The promised “edit in place” path cannot be implemented from the current read projection and existing PATCH contract. Sending null fails validation, sending the deleted column's former UUID fails server lookup, silently selecting the first active column violates explicit choice, and inventing omit/preserve semantics would add an unofficial request shape. A user can therefore enter a valid-looking edit flow that cannot safely save, or have history moved to another meal without informed consent.
-
-**Required design repair — no Contract Evolution**
-
-1. For every PATCH opened from a deleted-column row, display the current snapshot slot as read-only origin context and require the user to explicitly choose one item from current `active_columns[]` before save, even when only quantity/source/date/timezone changes.
-2. Keep save disabled until that selection exists. Do not send null, the deleted former UUID, or a silent/default active column. The existing PATCH operation and existing `meal_plan_column_id` field are sufficient; no endpoint/field/action is added.
-3. Make the sheet title, origin context and target label consistent: for example `기록 수정 · 7월 22일 · 삭제된 끼니 야식` plus required `옮길 끼니` active-column selector.
-4. If the selected active column disappears or authority becomes stale, retain every correctable input, refresh `active_columns[]` and entry revision, focus the linked selector/error, require explicit reselection and use the existing server code/message/fields without inventing an alias. A corrected payload is a new deliberate operation with a fresh UUID; retry of the identical payload reuses its key.
-5. Preserve the current pending/replay/delete/focus contracts: duplicate submit and dismiss stay locked, replay applies once, cancel/error returns to the invoking edit action, successful move focuses the destination section/entry or its heading, and successful delete falls back to the deleted section heading/panel heading.
-6. Update the deleted-column deterministic assertion so null-preserving PATCH is not expected. Assert `add/new target=0`, edit/delete visible, edit save requires explicit active target, no silent default, current contract fields only, stale selector recovery, own-event replacement, soft-delete reversal and focus restoration.
-
-If preserving `meal_plan_column_id=null` after editing is non-negotiable, stop this Stage 1 path and request an explicitly approved Contract Evolution. That alternative is not approved or recommended by this review.
+없음. `P1-ML-05`는 resolved다.
 
 ### P2 (0)
 
-없음. The contradictory sheet title is included in `P1-ML-05` because it is part of the same payload/context ambiguity.
+없음.
 
-## Stage boundary and handoff
+## Evidence limits and stage handoff
 
-`🔴 HOLD`. The earlier four findings remain resolved and the new day-total/deleted-section inclusion is approved, but the current exact head/tree has one unresolved P1. The repair author should edit the design/workpack projections as needed on a normal successor commit and request a fresh exact-head critic re-review. This critic does not perform that repair.
+- 이 리뷰는 Stage 1 markdown design contract 심사다. static markdown은 실제 DOM geometry, focus trap/restore, live announcement, virtual keyboard, screen reader 또는 physical device 동작을 증명하지 않는다.
+- Stage 4는 exact implementation head에서 390px, 320px, desktop의 17-state screenshot/manifest와 deterministic browser/axe evidence를 만들어야 한다.
+- 별도 `product-design-authority`는 runtime visual evidence를 읽고 mobile UX/visual hierarchy/scroll containment를 다시 판정해야 한다. 그 전까지 `Design Status`는 `temporary`이며 `confirmed`가 아니다.
+- Stage 1 **design prerequisite만** current exact repaired head/tree에서 pass다. internal 1.5, Stage 2/4 implementation, Stage 5/final authority, Stage 6, Ready/merge, Manual/server-Mac/OAuth/device/AT, `R/R+1/R+2`, production/activation은 모두 pending이며 이 리뷰가 승인하지 않는다.
 
-Stage 1 design prerequisite is not current-head complete while `P1-ML-05` remains open. `Design Status` stays `temporary`. Stage 4 runtime implementation/evidence, fresh 390px/320px/desktop screenshots or Figma, Stage 5, final `product-design-authority`, Stage 6, Ready/merge, Manual/server-Mac/OAuth/device/AT, `R/R+1/R+2`, production and activation all remain pending and are not approved by this report.
+## Integration handoff
+
+`APPROVE 0/0/0`. Reviewer-owned critique commit을 repaired design head `e2959ef523e57770a4cb2b490f7b00a972ab8845` 위에 normal integration하면 current-head Stage 1 design+critique prerequisite를 충족한다. 후속 구현은 explicit active-column selection, server-owned snapshot replacement, fail-closed recovery와 unchanged DELETE를 deterministic tests로 그대로 고정해야 한다.
