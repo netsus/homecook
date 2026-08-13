@@ -1,13 +1,17 @@
 #!/usr/bin/env node
 
 import { spawnSync } from "node:child_process";
-import { randomBytes } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import {
   chmodSync,
+  closeSync,
+  existsSync,
   mkdirSync,
   mkdtempSync,
+  openSync,
   readFileSync,
   rmSync,
+  statSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -24,11 +28,22 @@ import {
   listStoragePayloadPaths,
   withVerifiedPlatformBackup,
 } from "./lib/full-local-platform-backup.mjs";
+import {
+  buildFullLocalBackupReadinessEvidence,
+  verifyFullLocalBackupReadiness,
+} from "./lib/full-local-backup-readiness.mjs";
+import { validateExternalSecretDirectory } from "./lib/full-local-production-runtime.mjs";
 import { inventoryPlatformDataRelations } from "./lib/full-local-restore-cutover.mjs";
 import { mapStorageRowsToPayloadReferences } from "./lib/isolated-local-backup-restore-drill.mjs";
+import {
+  makePostgresRoleDumpIdempotent,
+  parseFullLocalProductionConfig,
+  selectFullLocalProductionResources,
+} from "./lib/full-local-production-resources.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const KEYCHAIN_WRITER = join(ROOT, "infra/full-local-supabase/keychain-store.exp");
+const DEFAULT_CONFIG = join(ROOT, "infra/full-local-supabase/.env.production.local");
 const KEYCHAIN_SERVICE = PLATFORM_BACKUP_KEYCHAIN_SERVICE;
 const KEYCHAIN_ACCOUNT = PLATFORM_BACKUP_KEYCHAIN_ACCOUNT;
 
@@ -116,32 +131,312 @@ function print(value) {
   process.stdout.write(`${JSON.stringify(value, null, 2)}\n`);
 }
 
-function localProjectId() {
-  const config = readFileSync(join(ROOT, "supabase/config.toml"), "utf8");
-  const projectId = config.match(/^project_id\s*=\s*"([a-z0-9_-]+)"\s*$/mu)?.[1];
-  if (!projectId || !/^[a-z0-9][a-z0-9_-]{2,63}$/u.test(projectId)) {
-    fail("Local Supabase project identity is invalid.");
+function exactConfigPath(args) {
+  return resolve(optionValue(args, "--config") ?? DEFAULT_CONFIG);
+}
+
+function dockerInventory(kind) {
+  const listArgs = kind === "volume"
+    ? ["volume", "ls", "--quiet"]
+    : ["container", "ls", "--all", "--quiet"];
+  const ids = run("docker", listArgs, { failure: `Docker ${kind} inventory failed.` })
+    .split(/\r?\n/u)
+    .filter(Boolean);
+  if (ids.length === 0) return [];
+  return JSON.parse(run(
+    "docker",
+    kind === "volume" ? ["volume", "inspect", ...ids] : ["container", "inspect", ...ids],
+    { failure: `Docker ${kind} inspection failed.` },
+  ));
+}
+
+function productionResourceController(args) {
+  const path = exactConfigPath(args);
+  if ((statSync(path).mode & 0o777) !== 0o600) {
+    fail("Full-local production config must use exact mode 0600.");
   }
-  return projectId;
+  const config = parseFullLocalProductionConfig(readFileSync(path, "utf8"));
+  const containers = dockerInventory("container");
+  const volumes = dockerInventory("volume");
+  const resources = selectFullLocalProductionResources({ config, containers, volumes });
+  const requiredWriterServices = ["api-gateway", "auth", "postgrest", "storage"];
+  const optionalWriterServices = ["realtime"];
+  const productionContainers = containers.filter((container) =>
+    container?.Config?.Labels?.["com.docker.compose.project"] === resources.composeProject);
+  const writers = [];
+  for (const service of [...requiredWriterServices, ...optionalWriterServices]) {
+    const matches = productionContainers.filter((container) =>
+      container?.Config?.Labels?.["com.docker.compose.service"] === service);
+    const required = requiredWriterServices.includes(service);
+    if (matches.length !== (required ? 1 : Math.min(matches.length, 1))) {
+      fail("The exact production writer set is incomplete or ambiguous.");
+    }
+    if (matches.length === 1) {
+      if (matches[0]?.State?.Running !== true) {
+        fail("The exact production writer set is not running.");
+      }
+      writers.push(matches[0].Id);
+    }
+  }
+  const root = mkdtempSync(join(tmpdir(), "homecook-storage-backup-"));
+  chmodSync(root, 0o700);
+  const archiveDirectory = join(root, "archive");
+  const sourceDirectory = join(root, "snapshot");
+  const provenance = {};
+  let rows;
+  return {
+    cleanup: () => rmSync(root, { force: true, recursive: true }),
+    database: {
+      dumpComponents: (staging) => {
+        Object.assign(provenance, readProductionDatabaseProvenance(resources));
+        dumpFullLocalProductionDatabase({
+          container: resources.postgresContainerId,
+          staging,
+        });
+      },
+      provenance,
+      sourceIdentity: [
+        "docker-compose",
+        resources.composeProject,
+        resources.postgresContainerName,
+        resources.postgresVolumeName,
+      ].join(":"),
+    },
+    config,
+    resources,
+    storage: {
+      beginConsistentCut: () => setContainerState(
+        "stop",
+        writers,
+        "Production consistent cut failed.",
+      ),
+      captureSource: () => {
+        rows = readStorageRows(resources.postgresContainerId);
+        const invocation = buildDockerStorageVolumeCaptureInvocation({
+          archiveDirectory,
+          volumeName: resources.storageVolumeName,
+        });
+        mkdirSync(archiveDirectory, { recursive: true, mode: 0o700 });
+        run(invocation.command, invocation.args, {
+          failure: "Production Storage volume capture failed.",
+        });
+        mkdirSync(sourceDirectory, { recursive: true, mode: 0o700 });
+        run("tar", [
+          "-C",
+          sourceDirectory,
+          "-xf",
+          join(archiveDirectory, "storage.payload.tar"),
+        ], { failure: "Production Storage snapshot extraction failed." });
+      },
+      endConsistentCut: () => setContainerState(
+        "start",
+        writers,
+        "Production consistent cut release failed.",
+      ),
+      references: () => mapStorageRowsToPayloadReferences(
+        rows,
+        listStoragePayloadPaths(sourceDirectory),
+      ),
+      sourceDirectory,
+      sourceIdentity: [
+        "docker-compose-volume",
+        resources.composeProject,
+        resources.storageVolumeName,
+      ].join(":"),
+    },
+  };
 }
 
-function assertLocalResource(kind, name) {
-  const args = kind === "volume"
-    ? ["volume", "inspect", name]
-    : ["container", "inspect", name];
-  run("docker", args, { failure: `Required local Supabase ${kind} is unavailable.` });
+function existingMode600Path(args, name) {
+  const path = requiredAbsolutePath(args, name);
+  if (!existsSync(path)) fail(`${name} must reference an existing file.`);
+  const stat = statSync(path);
+  if (!stat.isFile() || (stat.mode & 0o777) !== 0o600) {
+    fail(`${name} must reference a regular mode 0600 file.`);
+  }
+  return path;
 }
 
-function runningLocalContainers(names) {
-  return names.filter((name) => {
-    assertLocalResource("container", name);
-    return run("docker", ["inspect", "--format", "{{.State.Running}}", name]).trim()
-      === "true";
+function sha256File(path) {
+  const output = run("openssl", ["dgst", "-sha256", "-r", path], {
+    failure: "Backup readiness archive digest failed.",
   });
+  const digest = /^([0-9a-f]{64})\s/u.exec(output)?.[1];
+  if (!digest) fail("Backup readiness archive digest is invalid.");
+  return digest;
+}
+
+async function recordBackupReadiness(args) {
+  if (optionValue(args, "--confirm-off-mac-copy") !== "OFF_MAC_COPY_VERIFIED") {
+    fail("record-readiness requires --confirm-off-mac-copy OFF_MAC_COPY_VERIFIED.");
+  }
+  const archive = existingMode600Path(args, "--archive");
+  const offMacCopy = existingMode600Path(args, "--off-mac-copy");
+  const restoreManifestPath = existingMode600Path(args, "--restore-manifest");
+  const output = requiredAbsolutePath(args, "--output");
+  if (archive === offMacCopy) fail("The off-Mac copy must use a distinct path.");
+  if (statSync(archive).dev === statSync(offMacCopy).dev) {
+    fail("The off-Mac copy must be on a distinct filesystem device.");
+  }
+  for (const path of [archive, offMacCopy, restoreManifestPath]) {
+    validateExternalSecretDirectory({
+      repositoryRoot: ROOT,
+      secretDirectory: dirname(path),
+    });
+  }
+  validateExternalSecretDirectory({
+    repositoryRoot: ROOT,
+    secretDirectory: dirname(output),
+  });
+  if (existsSync(output)) fail("Backup readiness output already exists.");
+  const controller = productionResourceController(args);
+  try {
+    if (resolve(controller.config.FULL_LOCAL_BACKUP_READINESS_PATH ?? "") !== output) {
+      fail("--output must equal FULL_LOCAL_BACKUP_READINESS_PATH in production config.");
+    }
+    const backupKey = loadBackupKey();
+    const metadata = await withVerifiedPlatformBackup({
+      archive,
+      backupKey,
+      consume: ({ metadata: verified }) => verified,
+    });
+    const copyMetadata = await withVerifiedPlatformBackup({
+      archive: offMacCopy,
+      backupKey,
+      consume: ({ metadata: verified }) => verified,
+    });
+    if (JSON.stringify(copyMetadata) !== JSON.stringify(metadata)) {
+      fail("The off-Mac copy metadata does not match the production backup.");
+    }
+    const archiveSha256 = sha256File(archive);
+    const offMacCopySha256 = sha256File(offMacCopy);
+    const evidence = buildFullLocalBackupReadinessEvidence({
+      archivePath: archive,
+      archiveSha256,
+      backupMetadata: metadata,
+      now: new Date().toISOString(),
+      offMacCopyPath: offMacCopy,
+      offMacCopySha256,
+      restoreManifest: JSON.parse(readFileSync(restoreManifestPath, "utf8")),
+    });
+    const readiness = verifyFullLocalBackupReadiness({
+      evidence,
+      evidenceFileMode: 0o600,
+      observedFiles: {
+        [archive]: archiveSha256,
+        [offMacCopy]: offMacCopySha256,
+      },
+      production: controller.resources,
+    });
+    writeFileSync(output, `${JSON.stringify(evidence, null, 2)}\n`, {
+      encoding: "utf8",
+      flag: "wx",
+      mode: 0o600,
+    });
+    return { evidence: output, ...readiness };
+  } finally {
+    controller.cleanup();
+  }
 }
 
 function setContainerState(action, names, failure) {
   if (names.length > 0) run("docker", [action, ...names], { failure });
+}
+
+function runToFile(command, args, path, failure) {
+  const descriptor = openSync(path, "wx", 0o600);
+  try {
+    const result = spawnSync(command, args, {
+      cwd: ROOT,
+      encoding: "utf8",
+      env: process.env,
+      maxBuffer: 8 * 1024 * 1024,
+      stdio: ["ignore", descriptor, "pipe"],
+    });
+    if (result.status !== 0) fail(failure);
+  } finally {
+    closeSync(descriptor);
+  }
+}
+
+function dumpFullLocalProductionDatabase({ container, staging }) {
+  const common = ["exec", container];
+  const roleDump = run("docker", [
+    ...common,
+    "pg_dumpall",
+    "--roles-only",
+    "--no-role-passwords",
+    "--username",
+    "supabase_admin",
+  ], { failure: "Production database roles.sql dump failed." });
+  writeFileSync(
+    join(staging, "roles.sql"),
+    makePostgresRoleDumpIdempotent(roleDump),
+    { encoding: "utf8", flag: "wx", mode: 0o600 },
+  );
+  const dumps = [
+    {
+      args: [...common, "pg_dump", "--schema-only", "--username", "supabase_admin", "--dbname", "postgres"],
+      file: "schema.sql",
+    },
+    {
+      args: [...common, "pg_dump", "--data-only", "--username", "supabase_admin", "--dbname", "postgres"],
+      file: "data.sql",
+    },
+  ];
+  for (const dump of dumps) {
+    runToFile(
+      "docker",
+      dump.args,
+      join(staging, dump.file),
+      `Production database ${dump.file} dump failed.`,
+    );
+  }
+}
+
+function readProductionDatabaseProvenance(resources) {
+  const catalog = run("docker", [
+    "exec",
+    resources.postgresContainerId,
+    "psql",
+    "--tuples-only",
+    "--no-align",
+    "--username",
+    "supabase_admin",
+    "--dbname",
+    "postgres",
+    "--command",
+    "select nspname from pg_namespace order by nspname;",
+  ], { failure: "Production schema catalog provenance failed." });
+  const identity = run("docker", [
+    "exec",
+    resources.postgresContainerId,
+    "psql",
+    "--tuples-only",
+    "--no-align",
+    "--field-separator",
+    "|",
+    "--username",
+    "supabase_admin",
+    "--dbname",
+    "postgres",
+    "--command",
+    "select current_database(), current_setting('server_version_num'), count(*) from pg_namespace;",
+  ], { failure: "Production database identity provenance failed." }).trim().split("|");
+  if (identity.length !== 3 || identity[0] !== "postgres" || !/^\d+$/u.test(identity[1])) {
+    fail("Production database identity provenance is invalid.");
+  }
+  return Object.freeze({
+    compose_project: resources.composeProject,
+    container_id: resources.postgresContainerId,
+    container_name: resources.postgresContainerName,
+    database: identity[0],
+    image: resources.postgresImage,
+    postgres_volume: resources.postgresVolumeName,
+    schema_catalog_sha256: createHash("sha256").update(catalog, "utf8").digest("hex"),
+    schema_count: Number(identity[2]),
+    server_version_num: identity[1],
+  });
 }
 
 function readStorageRows(databaseContainer) {
@@ -160,70 +455,12 @@ function readStorageRows(databaseContainer) {
     "--tuples-only",
     "--no-align",
     "--username",
-    "postgres",
+    "supabase_admin",
     "--dbname",
     "postgres",
     "--command",
     sql,
   ], { failure: "Local Storage reference inventory failed." }).trim());
-}
-
-function localStorageController() {
-  const projectId = localProjectId();
-  const databaseContainer = `supabase_db_${projectId}`;
-  const volumeName = `supabase_storage_${projectId}`;
-  assertLocalResource("container", databaseContainer);
-  assertLocalResource("volume", volumeName);
-  const writers = runningLocalContainers([
-    `supabase_auth_${projectId}`,
-    `supabase_realtime_${projectId}`,
-    `supabase_rest_${projectId}`,
-    `supabase_storage_${projectId}`,
-  ]);
-  const root = mkdtempSync(join(tmpdir(), "homecook-storage-backup-"));
-  chmodSync(root, 0o700);
-  const archiveDirectory = join(root, "archive");
-  const sourceDirectory = join(root, "snapshot");
-  let rows;
-  return {
-    cleanup: () => rmSync(root, { force: true, recursive: true }),
-    storage: {
-      beginConsistentCut: () => setContainerState(
-        "stop",
-        writers,
-        "Local consistent cut failed.",
-      ),
-      captureSource: () => {
-        rows = readStorageRows(databaseContainer);
-        const invocation = buildDockerStorageVolumeCaptureInvocation({
-          archiveDirectory,
-          volumeName,
-        });
-        mkdirSync(archiveDirectory, { recursive: true, mode: 0o700 });
-        run(invocation.command, invocation.args, {
-          failure: "Local Storage volume capture failed.",
-        });
-        mkdirSync(sourceDirectory, { recursive: true, mode: 0o700 });
-        run("tar", [
-          "-C",
-          sourceDirectory,
-          "-xf",
-          join(archiveDirectory, "storage.payload.tar"),
-        ], { failure: "Local Storage snapshot extraction failed." });
-      },
-      endConsistentCut: () => setContainerState(
-        "start",
-        writers,
-        "Local consistent cut release failed.",
-      ),
-      references: () => mapStorageRowsToPayloadReferences(
-        rows,
-        listStoragePayloadPaths(sourceDirectory),
-      ),
-      sourceDirectory,
-      sourceIdentity: `docker-volume:${volumeName}`,
-    },
-  };
 }
 
 function runPinnedSupabase(args, failure) {
@@ -250,10 +487,11 @@ async function main() {
       break;
     case "backup": {
       const output = requiredAbsolutePath(args, "--output");
-      const controller = localStorageController();
+      const controller = productionResourceController(args);
       try {
         const result = createEncryptedPlatformBackup({
           backupKey: loadBackupKey(),
+          database: controller.database,
           output,
           repositoryRoot: ROOT,
           storage: controller.storage,
@@ -267,19 +505,19 @@ async function main() {
     case "inventory": {
       const staging = mkdtempSync(join(tmpdir(), "homecook-platform-inventory-"));
       chmodSync(staging, 0o700);
+      const controller = productionResourceController(args);
       try {
         const dataPath = join(staging, "data.sql");
         const cliVersion = assertPinnedSupabaseCli();
-        runPinnedSupabase(
-          ["db", "dump", "--local", "--file", dataPath, "--use-copy", "--data-only"],
-          "Supabase platform inventory dump failed.",
-        );
+        controller.database.dumpComponents(staging);
         print({
           cli_version: cliVersion,
+          database_provenance: controller.database.provenance,
           relations: inventoryPlatformDataRelations(readFileSync(dataPath, "utf8")),
           status: "PASS",
         });
       } finally {
+        controller.cleanup();
         rmSync(staging, { force: true, recursive: true });
       }
       break;
@@ -301,6 +539,9 @@ async function main() {
       print({ ...result, status: "PASS" });
       break;
     }
+    case "record-readiness":
+      print({ ...await recordBackupReadiness(args), status: "PASS" });
+      break;
     default:
       fail(`Unknown command: ${command ?? "<missing>"}`);
   }

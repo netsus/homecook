@@ -24,11 +24,11 @@
 | 운영 계획 | `current-mac-production-plan.md`, `full-local-supabase-production-plan.md`, session/backup/recovery/runbook 문서 | 이 문서에 위임하고 local backup·restore·boundary gate를 유지한다. |
 | migration 안내 | `supabase-migrations.md`의 `supabase link`, 무표시 `db push` | remote prerequisite를 제거하고 isolated `db reset --local` 및 controlled local apply만 허용한다. |
 | security function | `verify:security-functions:remote`, `closeout:security-functions:remote`, `--linked-remote` | required/closeout surface에서 제거한다. historical helper를 실행하면 정책 위반이다. release gate는 isolated local PostgreSQL + local Data API negative smoke다. |
-| full-local backup | 이름은 full-local이나 `supabase db dump --linked` 사용 | `--local` dump로 교체하고 remote link 없이 재현한다. |
+| full-local backup | 과거 `supabase db dump --linked` 또는 dev CLI `--local` stack 선택 | production command는 mode `0600` full-local config의 exact Compose project, healthy digest-pinned PostgreSQL container와 labeled PostgreSQL/Storage named volumes만 선택한다. DB dump는 그 verified container 내부 `pg_dump`; dev `supabase_db_homecook`/`supabase_storage_homecook` fallback은 금지한다. `--local` adapter는 disposable isolated fixture 내부에서만 허용한다. |
 | CI | fresh `supabase start`/migration replay | 허용. URL placeholder는 네트워크 target이 아닌 build-only dummy임을 명시한다. secret 기반 Cloud Supabase live OAuth는 required gate가 아니며 local-only 전환 뒤 금지/N/A다. |
 | env templates | root `.env.example`의 hosted URL/remote authority 기본값, hybrid production env template | root template을 loopback/local authority로 교체하고 hybrid template은 forbidden tombstone만 남긴다. |
 | workpack | `youtube-async-extraction-notification`의 production/staging/remote write 0, security release gate | remote target 개념을 forbidden/N/A로 바꾸고 local isolated/rehearsal evidence로 잠근다. |
-| historical hybrid artifacts | hybrid docs/scripts/tests/migrations, package `test:hybrid-supabase:runtime`, CI `hybrid-authority-runtime` | rollback/audit history로만 보존한다. package key와 CI job은 제거하고 `scripts/verify-hybrid-supabase.mjs`는 unconditional forbidden tombstone으로 둔다. 신규 session prerequisite, release gate 또는 운영 fallback으로 호출하지 않는다. |
+| historical hybrid artifacts | hybrid docs/scripts/tests/migrations, package `test:hybrid-supabase:runtime`, `test:hybrid-supabase:postgres`, `test:hybrid-supabase:storage`, CI `hybrid-authority-runtime` | rollback/audit history로만 보존한다. 세 package key와 CI job은 제거하고 `scripts/verify-hybrid-supabase.mjs`, `scripts/hybrid-remote-auth-mirror.mjs` 같은 executable remote credential consumer는 network/env read 전에 unconditional forbidden tombstone으로 둔다. 신규 session prerequisite, release gate 또는 운영 fallback으로 호출하지 않는다. |
 | 일반 용어 | Supabase SDK, git remote, rclone remote, 외부 URL | Cloud target 의미가 아니므로 변경하지 않는다. |
 
 전체 검색은 다음 범위를 포함했다.
@@ -44,7 +44,7 @@ rg -n -i '(supabase cloud|remote supabase|remote db|linked root|supabase link|--
 - 공식 5종: 요구사항 `v1.7.32`, 화면 `v1.5.36`, Flow `v1.3.34`, DB `v1.3.34`, API `v1.2.39`
 - engineering entry/runbook: `agent-workflow-overview.md`, `slice-workflow.md`, `supabase-migrations.md`, `current-mac-production-plan.md`, `full-local-supabase-production-plan.md`, `full-local-session-lifecycle-runbook.md`, `playwright-e2e.md`, workflow-v2 Homecook profile와 공식 tuple을 소비하는 YouTube entry docs
 - workpack: `youtube-async-extraction-notification` README, acceptance, automation spec, workflow-v2 work item
-- config/tooling: root `.env.example`, hybrid env/verifier forbidden tombstone, `package.json`의 `test:hybrid-supabase:runtime` 제거, CI `hybrid-authority-runtime` 제거, full-local backup/inventory, security-function release/Data API gate, Playwright/security-smoke local placeholder, Cloud-secret live OAuth workflow 제거
+- config/tooling: root `.env.example`, hybrid env/verifier forbidden tombstone, `package.json`의 세 `test:hybrid-supabase:*` entrypoint 제거, CI `hybrid-authority-runtime` 제거, full-local backup/inventory, security-function release/Data API gate, Playwright/security-smoke local placeholder, Cloud-secret live OAuth workflow 제거
 - regression locks: source-of-truth/production-domain/YouTube/workflow pointer tests, full-local backup/security/historical-hybrid exposure tests와 `tests/supabase-local-only-operations.test.ts`
 - historical/N/A inventory: `docs/engineering/hybrid-*`, `docs/workpacks/hybrid-auth-local-data-production/*`, hybrid/remote migrations·scripts·tests와 이전 official version은 감사 기록으로 남긴다. package/CI/required gate에서의 executable entrypoint는 제거하며 canonical 계약 없이 다시 노출할 수 없다.
 
@@ -69,8 +69,8 @@ rg -n -i '(supabase cloud|remote supabase|remote db|linked root|supabase link|--
 - backup encryption key는 데이터와 분리한다. secret source는 Keychain 또는 repo 밖 `0700` directory의 `0600` read-only file이며 log, Git, browser bundle, Docker inspect에 원문 노출이 0이어야 한다.
 - backup은 immutable output path, SHA-256와 HMAC/authentication metadata를 사용하고 기존 archive를 덮어쓰지 않는다.
 - isolated clean target restore를 정기적으로 수행해 manifest, migration head, row/count/digest/owner semantics, Storage object count/bytes/hash/reference, Auth/provider login, RLS, stale/revoked session, reboot ordered recovery를 검증한다.
-- executable fixture gate는 `pnpm verify:full-local-backup-restore-drill`이다. exact disposable namespace에서 DB metadata와 named-volume object payload를 backup/clean restore하고 source identity, count, bytes, SHA-256와 DB reference가 모두 같아야 PASS다.
-- RPO 목표는 24시간, RTO 목표는 4시간이다. 마지막 성공 backup/restore age가 목표를 넘거나 off-Mac copy가 없으면 production readiness는 fail closed한다.
+- executable fixture gate는 `pnpm verify:full-local-backup-restore-drill`이다. exact disposable namespace에 production-compatible Compose labels, pinned PostgreSQL image와 labeled named volumes를 만들고, dev stack이 동시에 있어도 production fixture만 선택해야 한다. DB metadata와 object payload를 backup/clean restore한 뒤 source identity, count, bytes, SHA-256와 DB reference가 모두 같아야 PASS다.
+- RPO 목표는 24시간, RTO 목표는 4시간이다. `validate`, `start`, `status`는 mode `0600` `FULL_LOCAL_BACKUP_READINESS_PATH`를 읽어 exact production identity, 인증된 primary archive와 별도 off-Mac copy의 동일 SHA-256, complete Storage restore evidence를 검증한다. backup 또는 restore age가 24시간을 넘거나 copy가 unavailable/mismatch면 production readiness는 fail closed한다. readiness evidence는 `full-local-production:backup-readiness:record`만 immutable하게 생성하며 직접 덮어쓰지 않는다.
 - rollback rehearsal은 schema/app immediate-previous 호환, local delta 보존, destructive reset 불사용을 확인한다. 첫 local user-scoped state mutation 뒤에는 env-only rollback을 금지하고 coherent restore 또는 forward-fix한다.
 
 ## Remote forbidden matrix

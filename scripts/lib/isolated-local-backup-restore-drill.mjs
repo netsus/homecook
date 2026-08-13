@@ -1,7 +1,7 @@
 import { PINNED_SUPABASE_CLI_VERSION } from "./full-local-platform-backup.mjs";
 
 const SAFE_SUFFIX = /^[a-z0-9][a-z0-9-]{2,7}$/u;
-const ISOLATED_TARGET = /^(?:supabase_(?:auth|db|realtime|rest|storage)_)?homecook-backup-drill-[a-z0-9-]+(?:-restore-storage)?$/u;
+const ISOLATED_TARGET = /^homecook-backup-drill-[a-z0-9-]+$/u;
 
 export function assertIsolatedDrillTarget(target) {
   if (typeof target !== "string" || !ISOLATED_TARGET.test(target)) {
@@ -20,16 +20,13 @@ export function buildIsolatedDrillPlan({ suffix }) {
     cli_version: PINNED_SUPABASE_CLI_VERSION,
     destructive_scope: "isolated-fixture-only",
     project_id: projectId,
-    restore_database_container: assertIsolatedDrillTarget(`supabase_db_${restoreProjectId}`),
+    restore_database_container: assertIsolatedDrillTarget(`${restoreProjectId}-postgres-1`),
+    restore_postgres_volume: assertIsolatedDrillTarget(`${restoreProjectId}-postgres`),
     restore_project_id: restoreProjectId,
-    restore_storage_container: assertIsolatedDrillTarget(`supabase_storage_${restoreProjectId}`),
-    restore_storage_volume: assertIsolatedDrillTarget(`supabase_storage_${restoreProjectId}`),
-    source_auth_container: assertIsolatedDrillTarget(`supabase_auth_${projectId}`),
-    source_database_container: assertIsolatedDrillTarget(`supabase_db_${projectId}`),
-    source_realtime_container: assertIsolatedDrillTarget(`supabase_realtime_${projectId}`),
-    source_rest_container: assertIsolatedDrillTarget(`supabase_rest_${projectId}`),
-    source_storage_container: assertIsolatedDrillTarget(`supabase_storage_${projectId}`),
-    source_storage_volume: assertIsolatedDrillTarget(`supabase_storage_${projectId}`),
+    restore_storage_volume: assertIsolatedDrillTarget(`${restoreProjectId}-storage`),
+    source_database_container: assertIsolatedDrillTarget(`${projectId}-postgres-1`),
+    source_postgres_volume: assertIsolatedDrillTarget(`${projectId}-postgres`),
+    source_storage_volume: assertIsolatedDrillTarget(`${projectId}-storage`),
   });
 }
 

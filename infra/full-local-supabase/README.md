@@ -29,6 +29,30 @@ Stop containers without deleting data:
 pnpm full-local-production:stop
 ```
 
+Create or inventory a production backup only through the exact mode-0600 runtime config. The command verifies the Compose project/service labels, reviewed PostgreSQL image digest, healthy container, and labeled PostgreSQL/Storage named volumes before any read. It never falls back to the Supabase CLI development stack:
+
+```bash
+pnpm full-local-production:platform-inventory -- --config /absolute/path/.env.production.local
+pnpm full-local-production:platform-backup -- --config /absolute/path/.env.production.local --output /absolute/off-mac/platform.tar.gz.enc
+pnpm full-local-production:platform-backup:verify -- --archive /absolute/off-mac/platform.tar.gz.enc
+```
+
+Backup pauses only the exact production writer services for one bounded consistent cut, runs `pg_dump` inside the verified production PostgreSQL container, and snapshots the exact labeled Storage volume. It never resets or removes an operating volume.
+
+`FULL_LOCAL_BACKUP_READINESS_PATH` must be an absolute path in an external mode-0700 directory. After copying both the archive and its `.auth.json` sidecar to a distinct off-Mac filesystem device and completing a clean isolated restore verification manifest for that exact archive, record immutable readiness evidence:
+
+```bash
+pnpm full-local-production:backup-readiness:record -- \
+  --config /absolute/path/.env.production.local \
+  --archive /absolute/primary/platform.tar.gz.enc \
+  --off-mac-copy /absolute/off-mac/platform-copy.tar.gz.enc \
+  --restore-manifest /absolute/evidence/restore-manifest.json \
+  --output /absolute/state/full-local-backup-readiness.json \
+  --confirm-off-mac-copy OFF_MAC_COPY_VERIFIED
+```
+
+`validate`, `start`, and `status` reject missing, stale (>24h), mismatched, non-0600, incomplete-Storage, or wrong-production readiness evidence. `stop` and isolated recovery commands remain available so a blocked runtime can be recovered without resetting operating data.
+
 Do not start the persistent production volumes before the restore/cutover runbook says the same-maintenance Auth, application DB, and Storage snapshot is ready. The Docker integration test always uses disposable names and removes its volumes:
 
 ```sh

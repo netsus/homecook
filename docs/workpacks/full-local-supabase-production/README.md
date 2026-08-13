@@ -22,6 +22,8 @@ Production domain tuple: `https://app.mumeok.kr`, `https://auth.mumeok.kr`, `htt
 - Auth public origin은 exact loopback HTTP 또는 승인된 self-hosted HTTPS이고, 내부/Data origin은 exact loopback이다. hosted Supabase URL은 fail closed한다.
 - pinned local CLI/runtime, isolated migration replay, local security negative smoke만 required gate다.
 - complete encrypted backup은 DB metadata와 Storage payload를 같은 consistent cut 안에서 묶고 object count/bytes/SHA-256/DB reference/source identity를 manifest에 기록한다.
+- production backup은 `infra/full-local-supabase/.env.production.local`의 exact Compose project와 PostgreSQL/Storage volume names, Compose labels, reviewed image digest, running+healthy state를 모두 검증한 뒤 그 PostgreSQL container에서만 `pg_dump`한다. Supabase CLI dev project id나 `db dump --local` stack으로 fallback하지 않는다.
+- production `validate`/`start`/`status`는 `FULL_LOCAL_BACKUP_READINESS_PATH`의 mode `0600` evidence를 required gate로 사용한다. 24시간 안의 인증된 backup과 complete restore, distinct off-Mac copy의 동일 digest, exact production resource identity가 하나라도 없으면 fail closed한다.
 - restore gate는 운영 volume을 건드리지 않는 clean isolated namespace에서 DB metadata와 실제 object bytes/hash/reference의 일치를 증명한다.
 - 운영 데이터의 `db reset`, volume 삭제, 기존 archive overwrite는 금지한다.
 - public internet에는 승인된 app/Auth surface만 허용하고 PostgreSQL/PostgREST/Storage/Realtime/internal RPC는 loopback/private boundary에 둔다.
@@ -31,7 +33,7 @@ Production domain tuple: `https://app.mumeok.kr`, `https://auth.mumeok.kr`, `htt
 - `.env.example` 전체가 실제 Auth/Data parser를 통과한다.
 - 미설정, `remote`, `local-shadow`, hosted URL, non-loopback HTTP 조합이 runtime에서 거부된다.
 - `supabase@2.110.0` exact version과 repository migration SHA를 기록한다.
-- `pnpm verify:full-local-backup-restore-drill`이 disposable fixture에서 complete backup/clean restore를 통과한다.
+- `pnpm verify:full-local-backup-restore-drill`이 production-compatible Compose-label fixture에서 complete backup/clean restore를 통과하고, 공존하는 dev stack을 선택하지 않았음을 증명한다.
 - active package/CI/runbook/workpack에서 remote command/credential consumer가 0이고 historical allowlist 밖 match가 0이다.
 - independent review findings 0과 current-head checks pending/fail 0 전에는 Ready/merge하지 않는다.
 

@@ -42,6 +42,7 @@ import {
   withVerifiedPlatformBackup,
 } from "./lib/full-local-platform-backup.mjs";
 import { mapStorageRowsToPayloadReferences } from "./lib/isolated-local-backup-restore-drill.mjs";
+import { verifyFullLocalBackupReadiness } from "./lib/full-local-backup-readiness.mjs";
 import {
   assertFreshRestoreExecutionApproved,
   assertFreshRestoreAllowed,
@@ -747,6 +748,63 @@ function sha256Text(value) {
   return createHash("sha256").update(value).digest("hex");
 }
 
+function sha256File(path) {
+  const output = run("openssl", ["dgst", "-sha256", "-r", path], {
+    failure: "Backup readiness file digest failed.",
+  });
+  const digest = /^([0-9a-f]{64})\s/u.exec(output)?.[1];
+  if (!digest) fail("Backup readiness file digest is invalid.");
+  return digest;
+}
+
+function loadFullLocalBackupReadiness(runtime) {
+  const path = runtime.config.FULL_LOCAL_BACKUP_READINESS_PATH;
+  if (!path || !isAbsolute(path) || !existsSync(path)) {
+    fail("FULL_LOCAL_BACKUP_READINESS_PATH must reference existing readiness evidence.");
+  }
+  validateExternalSecretDirectory({
+    repositoryRoot: ROOT,
+    secretDirectory: dirname(path),
+  });
+  const evidenceStat = statSync(path);
+  if (!evidenceStat.isFile() || (evidenceStat.mode & 0o777) !== 0o600) {
+    fail("Full-local backup readiness evidence must be a mode 0600 file.");
+  }
+  const evidence = JSON.parse(readFileSync(path, "utf8"));
+  const observedFiles = {};
+  const archiveStats = [];
+  for (const archivePath of [
+    evidence?.backup?.archive_path,
+    evidence?.off_mac_copy?.archive_path,
+  ]) {
+    if (typeof archivePath !== "string" || !isAbsolute(archivePath) || !existsSync(archivePath)) {
+      fail("Backup readiness archive or off-Mac copy is unavailable.");
+    }
+    const archiveStat = statSync(archivePath);
+    if (!archiveStat.isFile() || (archiveStat.mode & 0o777) !== 0o600) {
+      fail("Backup readiness archives must be regular mode 0600 files.");
+    }
+    archiveStats.push(archiveStat);
+    observedFiles[resolve(archivePath)] = sha256File(archivePath);
+  }
+  if (archiveStats[0].dev === archiveStats[1].dev) {
+    fail("Backup readiness off-Mac copy must remain on a distinct filesystem device.");
+  }
+  return verifyFullLocalBackupReadiness({
+    evidence,
+    evidenceFileMode: evidenceStat.mode & 0o777,
+    observedFiles,
+    production: {
+      composeProject: runtime.config.FULL_LOCAL_COMPOSE_PROJECT_NAME,
+      postgresContainerName:
+        `${runtime.config.FULL_LOCAL_COMPOSE_PROJECT_NAME}-postgres-1`,
+      postgresImage: runtime.config.FULL_LOCAL_POSTGRES_IMAGE,
+      postgresVolumeName: runtime.config.FULL_LOCAL_POSTGRES_VOLUME_NAME,
+      storageVolumeName: runtime.config.FULL_LOCAL_STORAGE_VOLUME_NAME,
+    },
+  });
+}
+
 function restoredSemanticManifest(runtime) {
   const sql = String.raw`
     create temporary table homecook_restore_manifest (
@@ -951,7 +1009,7 @@ function restoredSemanticManifest(runtime) {
   };
 }
 
-function writeRestoreManifest({ manifestPath, metadata, runtime, semantic }) {
+function writeRestoreManifest({ archiveSha256, manifestPath, metadata, runtime, semantic }) {
   const restoreManifest = {
     ...semantic,
     compose_project: runtime.config.FULL_LOCAL_COMPOSE_PROJECT_NAME,
@@ -959,6 +1017,7 @@ function writeRestoreManifest({ manifestPath, metadata, runtime, semantic }) {
     format: "homecook-full-local-restore-v1",
     postgres_volume: runtime.config.FULL_LOCAL_POSTGRES_VOLUME_NAME,
     relation_classification_digest: metadata.manifest.relation_classification_digest,
+    source_archive_sha256: archiveSha256,
     source_backup_created_at: metadata.created_at,
     source_data_sha256: metadata.components.data_sha256,
     source_roles_sha256: metadata.components.roles_sha256,
@@ -1143,6 +1202,7 @@ async function restorePlatformBackup(args) {
     PLATFORM_BACKUP_KEYCHAIN_SERVICE,
     PLATFORM_BACKUP_KEYCHAIN_ACCOUNT,
   );
+  const archiveSha256 = sha256File(archive);
 
   return withVerifiedPlatformBackup({
     archive,
@@ -1186,7 +1246,13 @@ async function restorePlatformBackup(args) {
         ...restoredSemanticManifest(runtime),
         ...verifyRestoredStoragePayload(runtime, metadata.storage_payload),
       };
-      return writeRestoreManifest({ manifestPath, metadata, runtime, semantic });
+      return writeRestoreManifest({
+        archiveSha256,
+        manifestPath,
+        metadata,
+        runtime,
+        semantic,
+      });
     },
   });
 }
@@ -1234,10 +1300,12 @@ async function verifyRestoredPlatform(args) {
     PLATFORM_BACKUP_KEYCHAIN_SERVICE,
     PLATFORM_BACKUP_KEYCHAIN_ACCOUNT,
   );
+  const archiveSha256 = sha256File(archive);
   return withVerifiedPlatformBackup({
     archive,
     backupKey,
     consume: ({ metadata }) => writeRestoreManifest({
+      archiveSha256,
       manifestPath,
       metadata,
       runtime,
@@ -1338,7 +1406,9 @@ async function main() {
       break;
     case "validate": {
       const runtime = validateAndMaterialize(args);
+      const backupReadiness = loadFullLocalBackupReadiness(runtime);
       const base = {
+        ...backupReadiness,
         ...runtime.validation,
         oauth_provider_count: runtime.oauth.provider_count,
         social_providers_enabled: runtime.oauth.enabled,
@@ -1389,19 +1459,27 @@ async function main() {
     }
     case "start": {
       const runtime = validateAndMaterialize(args);
+      const backupReadiness = loadFullLocalBackupReadiness(runtime);
       compose(runtime, ["up", "-d"]);
       const status = await waitForRuntimeHealthy(runtime);
       const gate = collectFullLocalProductCatalog(postgresContainerId(runtime));
       assertFullLocalProductCatalogPass(gate);
-      print({ ...status, ...runtimeCatalogPayload(gate), status: "PASS" });
+      print({
+        ...status,
+        ...runtimeCatalogPayload(gate),
+        backup_readiness: backupReadiness,
+        status: "PASS",
+      });
       break;
     }
     case "status": {
       const runtime = validateAndMaterialize(args);
+      const backupReadiness = loadFullLocalBackupReadiness(runtime);
       const status = runtimeStatus(runtime);
       if (!status.healthy) {
         print({
           ...status,
+          backup_readiness: backupReadiness,
           ...runtimeAuthorizationContractPayload({
             authorizationContractGate: null,
             productCatalogGate: null,
@@ -1419,6 +1497,7 @@ async function main() {
       });
       print({
         ...status,
+        backup_readiness: backupReadiness,
         ...gatePayload,
       });
       if (gatePayload.authorization_contract_status !== "PASS"

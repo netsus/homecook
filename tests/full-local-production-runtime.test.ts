@@ -44,6 +44,8 @@ function validConfig(overrides: Record<string, string> = {}) {
     FULL_LOCAL_API_EXTERNAL_URL: "https://auth.mumeok.kr/auth/v1",
     FULL_LOCAL_AUTH_IMAGE: images.auth,
     FULL_LOCAL_AUTH_PROXY_PORT: "54482",
+    FULL_LOCAL_BACKUP_READINESS_PATH:
+      "/Users/tester/.homecook/state/full-local-backup-readiness.json",
     FULL_LOCAL_COMPOSE_PROJECT_NAME: "homecook-full-local-isolated",
     FULL_LOCAL_DOCKER_PLATFORM: "linux/arm64",
     FULL_LOCAL_ENABLE_ANONYMOUS_USERS: "false",

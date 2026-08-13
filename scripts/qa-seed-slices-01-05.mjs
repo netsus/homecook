@@ -4,6 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { createClient } from "@supabase/supabase-js";
+import { assertLocalOnlySupabaseOperatorEnv } from "./lib/local-only-supabase-operator-env.mjs";
 
 function readFixtureData() {
   const fixturePath = path.join(process.cwd(), "qa", "fixtures", "slices-01-05.json");
@@ -72,16 +73,7 @@ function buildSeedWindow(startDateArg) {
 }
 
 function createSupabaseClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-  if (!url) {
-    fail("NEXT_PUBLIC_SUPABASE_URL 환경 변수가 필요합니다.");
-  }
-
-  if (!serviceRoleKey) {
-    fail("SUPABASE_SERVICE_ROLE_KEY 환경 변수가 필요합니다.");
-  }
+  const { serviceRoleKey, url } = assertLocalOnlySupabaseOperatorEnv(process.env);
 
   return createClient(url, serviceRoleKey, {
     auth: {

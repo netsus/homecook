@@ -333,6 +333,29 @@ function validSha256(value) {
   return typeof value === "string" && /^[0-9a-f]{64}$/u.test(value);
 }
 
+function validDatabaseProvenance(provenance) {
+  if (provenance?.adapter === "isolated-supabase-cli-local") return true;
+  return (
+    provenance?.adapter === undefined
+    && typeof provenance?.compose_project === "string"
+    && provenance.compose_project.length > 0
+    && typeof provenance?.container_id === "string"
+    && provenance.container_id.length > 0
+    && typeof provenance?.container_name === "string"
+    && provenance.container_name.length > 0
+    && provenance?.database === "postgres"
+    && typeof provenance?.image === "string"
+    && /@sha256:[0-9a-f]{64}$/u.test(provenance.image)
+    && typeof provenance?.postgres_volume === "string"
+    && provenance.postgres_volume.length > 0
+    && validSha256(provenance?.schema_catalog_sha256)
+    && Number.isSafeInteger(provenance?.schema_count)
+    && provenance.schema_count > 0
+    && typeof provenance?.server_version_num === "string"
+    && /^\d+$/u.test(provenance.server_version_num)
+  );
+}
+
 export function verifyPlatformBackupMetadata(metadata, observed) {
   if (metadata?.format !== PLATFORM_BACKUP_FORMAT) {
     throw new Error("Platform backup format is invalid");
@@ -346,6 +369,13 @@ export function verifyPlatformBackupMetadata(metadata, observed) {
   }
   if (!validSha256(metadata.manifest?.relation_classification_digest)) {
     throw new Error("Platform backup relation classification digest is invalid");
+  }
+  if (
+    typeof metadata.database?.source_identity !== "string"
+    || !metadata.database.source_identity
+    || !validDatabaseProvenance(metadata.database?.provenance)
+  ) {
+    throw new Error("Platform backup database provenance is invalid");
   }
   if (
     metadata.storage_payload_included !== true
@@ -382,6 +412,7 @@ export function verifyPlatformBackupMetadata(metadata, observed) {
 
 export function createEncryptedPlatformBackup({
   backupKey,
+  database = null,
   dependencies: suppliedDependencies,
   output,
   repositoryRoot,
@@ -399,6 +430,18 @@ export function createEncryptedPlatformBackup({
     || typeof storage.endConsistentCut !== "function"
   ) {
     throw new Error("A complete Storage payload and consistent-cut controller are required");
+  }
+  if (
+    database
+    && (
+      typeof database.dumpComponents !== "function"
+      || typeof database.sourceIdentity !== "string"
+      || !database.sourceIdentity
+      || typeof database.provenance !== "object"
+      || database.provenance === null
+    )
+  ) {
+    throw new Error("Production database dump controller provenance is invalid");
   }
   const authenticationPath = platformBackupAuthenticationPath(destination);
   if (dependencies.exists(destination) || dependencies.exists(authenticationPath)) {
@@ -420,15 +463,19 @@ export function createEncryptedPlatformBackup({
 
     storage.beginConsistentCut();
     try {
-      for (const args of buildPlatformDumpCommands(staging)) {
-        if (args.includes("--db-url") || args.includes("--password")) {
-          throw new Error("Database credentials may not be passed on the command line");
+      if (database) {
+        database.dumpComponents(staging);
+      } else {
+        for (const args of buildPlatformDumpCommands(staging)) {
+          if (args.includes("--db-url") || args.includes("--password")) {
+            throw new Error("Database credentials may not be passed on the command line");
+          }
+          const invocation = buildPinnedSupabaseCliInvocation(args);
+          dependencies.run(invocation.command, invocation.args, {
+            cwd: repositoryRoot,
+            failure: "Supabase platform dump failed",
+          });
         }
-        const invocation = buildPinnedSupabaseCliInvocation(args);
-        dependencies.run(invocation.command, invocation.args, {
-          cwd: repositoryRoot,
-          failure: "Supabase platform dump failed",
-        });
       }
       storage.captureSource();
       const storagePayloadPath = join(staging, "storage.payload.tar");
@@ -478,6 +525,15 @@ export function createEncryptedPlatformBackup({
         pbkdf2_iterations: PBKDF2_ITERATIONS,
       },
       format: PLATFORM_BACKUP_FORMAT,
+      database: database
+        ? {
+            provenance: database.provenance,
+            source_identity: database.sourceIdentity,
+          }
+        : {
+            provenance: { adapter: "isolated-supabase-cli-local" },
+            source_identity: "isolated-supabase-cli-local",
+          },
       manifest: sanitized.manifest,
       storage_payload: storagePayload,
       storage_payload_included: true,

@@ -22,6 +22,10 @@ import {
   verifyStoragePayloadManifest,
   withVerifiedPlatformBackup,
 } from "@/scripts/lib/full-local-platform-backup.mjs";
+import {
+  makePostgresRoleDumpIdempotent,
+  selectFullLocalProductionResources,
+} from "@/scripts/lib/full-local-production-resources.mjs";
 
 const temporaryDirectories: string[] = [];
 
@@ -32,7 +36,7 @@ afterEach(() => {
 });
 
 describe("full-local platform backup boundary", () => {
-  it("uses the Supabase CLI local flow without credentials or remote links", () => {
+  it("keeps the Supabase CLI local dump adapter isolated-fixture only", () => {
     const commands = buildPlatformDumpCommands("/tmp/homecook-platform-backup");
 
     expect(commands).toEqual([
@@ -43,6 +47,102 @@ describe("full-local platform backup boundary", () => {
     expect(commands.flat()).not.toContain("--linked");
     expect(commands.flat()).not.toContain("--db-url");
     expect(commands.flat()).not.toContain("--password");
+  });
+
+  it("binds the production backup entrypoint to the full-local Compose manifest, never the dev CLI stack", () => {
+    const entrypoint = readFileSync("scripts/full-local-platform-backup.mjs", "utf8");
+    const resolver = readFileSync(
+      "scripts/lib/full-local-production-resources.mjs",
+      "utf8",
+    );
+    const productionPath = `${entrypoint}\n${resolver}`;
+
+    expect(productionPath).toContain("FULL_LOCAL_COMPOSE_PROJECT_NAME");
+    expect(productionPath).toContain("FULL_LOCAL_POSTGRES_VOLUME_NAME");
+    expect(productionPath).toContain("FULL_LOCAL_STORAGE_VOLUME_NAME");
+    expect(productionPath).toContain("com.docker.compose.project");
+    expect(productionPath).toContain("com.docker.compose.service");
+    expect(entrypoint).toContain("dumpFullLocalProductionDatabase");
+    expect(productionPath).not.toContain("supabase/config.toml");
+    expect(productionPath).not.toContain("supabase_db_");
+    expect(productionPath).not.toContain("supabase_storage_");
+    expect(productionPath).not.toContain('["db", "dump", "--local"');
+  });
+
+  it("selects the exact healthy production stack when a dev Supabase stack also exists", () => {
+    const project = "homecook-full-local-isolated";
+    const image = `public.ecr.aws/supabase/postgres@sha256:${"a".repeat(64)}`;
+    const result = selectFullLocalProductionResources({
+      config: {
+        FULL_LOCAL_COMPOSE_PROJECT_NAME: project,
+        FULL_LOCAL_POSTGRES_IMAGE: image,
+        FULL_LOCAL_POSTGRES_VOLUME_NAME: "homecook-full-local-postgres",
+        FULL_LOCAL_STORAGE_VOLUME_NAME: "homecook-full-local-storage",
+      },
+      containers: [
+        {
+          Config: { Image: "supabase/postgres:dev", Labels: {} },
+          Id: "dev-db",
+          Name: "/supabase_db_homecook",
+          State: { Health: { Status: "healthy" }, Running: true },
+        },
+        {
+          Config: {
+            Image: image,
+            Labels: {
+              "com.docker.compose.project": project,
+              "com.docker.compose.service": "postgres",
+            },
+          },
+          Id: "prod-db",
+          Name: "/homecook-full-local-isolated-postgres-1",
+          State: { Health: { Status: "healthy" }, Running: true },
+        },
+      ],
+      volumes: [
+        { Labels: null, Name: "supabase_storage_homecook" },
+        {
+          Labels: {
+            "com.docker.compose.project": project,
+            "com.docker.compose.volume": "postgres-data",
+          },
+          Name: "homecook-full-local-postgres",
+        },
+        {
+          Labels: {
+            "com.docker.compose.project": project,
+            "com.docker.compose.volume": "storage-data",
+          },
+          Name: "homecook-full-local-storage",
+        },
+      ],
+    });
+
+    expect(result).toMatchObject({
+      postgresContainerId: "prod-db",
+      postgresContainerName: "homecook-full-local-isolated-postgres-1",
+      storageVolumeName: "homecook-full-local-storage",
+    });
+  });
+
+  it("makes production role creation safe for a clean image that already owns pinned roles", () => {
+    const dump = [
+      "CREATE ROLE anon;",
+      "ALTER ROLE anon WITH NOSUPERUSER NOLOGIN;",
+      'CREATE ROLE "quoted-role";',
+      'ALTER ROLE "quoted-role" WITH LOGIN;',
+      "",
+    ].join("\n");
+
+    const normalized = makePostgresRoleDumpIdempotent(dump);
+
+    expect(normalized).not.toMatch(/^CREATE ROLE /mu);
+    expect(normalized).toContain("WHERE rolname = 'anon'");
+    expect(normalized).toContain("quote_ident('anon')");
+    expect(normalized).toContain("WHERE rolname = 'quoted-role'");
+    expect(normalized).toContain("ALTER ROLE anon WITH NOSUPERUSER NOLOGIN;");
+    expect(() => makePostgresRoleDumpIdempotent("CREATE ROLE broken role;\n"))
+      .toThrow(/unsafe CREATE ROLE/iu);
   });
 
   it("uses only the exact pinned Supabase CLI package and records its version", () => {
@@ -323,6 +423,10 @@ describe("full-local platform backup boundary", () => {
 
   it("fails closed unless DB and complete Storage payload checksums are bound", () => {
     const metadata = {
+      database: {
+        provenance: { adapter: "isolated-supabase-cli-local" },
+        source_identity: "isolated-supabase-cli-local",
+      },
       components: {
         data_sha256: "a".repeat(64),
         roles_sha256: "b".repeat(64),
@@ -363,6 +467,24 @@ describe("full-local platform backup boundary", () => {
       ...metadata,
       storage_payload_included: false,
     }, metadata.components)).toThrow(/Storage payload/iu);
+    expect(() => verifyPlatformBackupMetadata({
+      ...metadata,
+      database: {
+        provenance: { adapter: "remote-or-unreviewed-adapter" },
+        source_identity: "remote-or-unreviewed-adapter",
+      },
+    }, metadata.components)).toThrow(/database provenance/iu);
+    expect(() => verifyPlatformBackupMetadata({
+      ...metadata,
+      database: {
+        provenance: {
+          compose_project: "homecook-full-local-isolated",
+          container_name: "homecook-full-local-isolated-postgres-1",
+          image: `public.ecr.aws/supabase/postgres@sha256:${"a".repeat(64)}`,
+        },
+        source_identity: "docker-compose:incomplete",
+      },
+    }, metadata.components)).toThrow(/database provenance/iu);
   });
 
   it("authenticates the encrypted archive before decryption", () => {
@@ -392,6 +514,10 @@ describe("full-local platform backup boundary", () => {
   it("removes decrypted plaintext when verification consumers fail", async () => {
     const remove = vi.fn();
     const metadata = {
+      database: {
+        provenance: { adapter: "isolated-supabase-cli-local" },
+        source_identity: "isolated-supabase-cli-local",
+      },
       components: {
         data_sha256: "a".repeat(64),
         roles_sha256: "b".repeat(64),

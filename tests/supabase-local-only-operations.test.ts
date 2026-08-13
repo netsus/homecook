@@ -42,6 +42,8 @@ describe("Supabase local-only operations contract", () => {
     expect(packageJson.scripts["closeout:security-functions:remote"]).toBeUndefined();
     expect(packageJson.scripts["hybrid-production:start"]).toBeUndefined();
     expect(packageJson.scripts["test:hybrid-supabase:runtime"]).toBeUndefined();
+    expect(packageJson.scripts["test:hybrid-supabase:postgres"]).toBeUndefined();
+    expect(packageJson.scripts["test:hybrid-supabase:storage"]).toBeUndefined();
     expect(packageJson.scripts["test:hybrid-production:runtime"]).toBeUndefined();
     expect(packageJson.scripts["verify:account-generation:joint-preflight"]).toBeUndefined();
     expect(packageJson.scripts["full-local-production:storage-copy:plan"]).toBeUndefined();
@@ -170,6 +172,50 @@ describe("Supabase local-only operations contract", () => {
     expect(hybridVerifier.stderr).toContain(
       "FORBIDDEN: hybrid remote/local verification is historical",
     );
+    const remoteMirror = spawnSync(
+      process.execPath,
+      ["scripts/hybrid-remote-auth-mirror.mjs", "apply", "--remote-env", "/tmp/forbidden"],
+      { cwd: process.cwd(), encoding: "utf8" },
+    );
+    expect(remoteMirror.status).not.toBe(0);
+    expect(remoteMirror.stderr).toContain(
+      "FORBIDDEN: remote Auth mirror is historical",
+    );
+    for (const [path, message] of [
+      ["scripts/verify-account-generation-auth-hook-config.mjs", "remote Supabase auth-hook"],
+      ["scripts/verify-account-session-generation-remote.mjs", "remote account-session"],
+      ["scripts/verify-recipe-snapshot-authority-remote.mjs", "remote recipe-snapshot"],
+      ["scripts/verify-recipe-visibility-read-hardening-remote.mjs", "remote recipe-visibility"],
+    ]) {
+      const historicalCli = spawnSync(
+        process.execPath,
+        [path, "--remote-env", "/tmp/forbidden", "--linked-root", "/tmp/forbidden"],
+        { cwd: process.cwd(), encoding: "utf8" },
+      );
+      expect(historicalCli.status, path).not.toBe(0);
+      expect(historicalCli.stderr, path).toContain(`FORBIDDEN: ${message}`);
+    }
+
+    for (const path of [
+      "scripts/youtube-real-app-route-smoke.mjs",
+      "scripts/qa-seed-slices-01-05.mjs",
+    ]) {
+      const hostedOperator = spawnSync(process.execPath, [path], {
+        cwd: process.cwd(),
+        encoding: "utf8",
+        env: {
+          ...process.env,
+          HOMECOOK_AUTH_AUTHORITY: "local",
+          HOMECOOK_DATA_AUTHORITY: "local",
+          HOMECOOK_YOUTUBE_FIXTURE_PROVIDER: "0",
+          NEXT_PUBLIC_SUPABASE_URL: "https://forbidden-project.supabase.co",
+          NODE_ENV: "development",
+          SUPABASE_SERVICE_ROLE_KEY: "forbidden-service-role-key",
+        },
+      });
+      expect(hostedOperator.status, path).not.toBe(0);
+      expect(hostedOperator.stderr, path).toMatch(/local-only|loopback/iu);
+    }
   });
 
   it("keeps required backup and Data API gates local", () => {
@@ -180,7 +226,9 @@ describe("Supabase local-only operations contract", () => {
 
     expect(backup).toContain('["db", "dump", "--local"');
     expect(backup).not.toContain('"--linked"');
-    expect(inventory).toContain('["db", "dump", "--local"');
+    expect(inventory).not.toContain('["db", "dump", "--local"');
+    expect(inventory).toContain("dumpFullLocalProductionDatabase");
+    expect(inventory).toContain("selectFullLocalProductionResources");
     expect(inventory).toContain("buildPinnedSupabaseCliInvocation");
     expect(inventory).toContain("PINNED_SUPABASE_CLI_VERSION");
     expect(inventory).toContain("beginConsistentCut");

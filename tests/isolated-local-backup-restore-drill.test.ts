@@ -13,10 +13,11 @@ describe("isolated local Supabase backup and restore drill", () => {
       cli_version: "2.110.0",
       destructive_scope: "isolated-fixture-only",
       project_id: "homecook-backup-drill-fixtr001",
-      source_storage_container: "supabase_storage_homecook-backup-drill-fixtr001",
-      source_storage_volume: "supabase_storage_homecook-backup-drill-fixtr001",
+      source_database_container: "homecook-backup-drill-fixtr001-postgres-1",
+      source_postgres_volume: "homecook-backup-drill-fixtr001-postgres",
+      source_storage_volume: "homecook-backup-drill-fixtr001-storage",
       restore_project_id: "homecook-backup-drill-fixtr001-restore",
-      restore_storage_volume: "supabase_storage_homecook-backup-drill-fixtr001-restore",
+      restore_storage_volume: "homecook-backup-drill-fixtr001-restore-storage",
     });
   });
 
@@ -65,12 +66,12 @@ describe("isolated local Supabase backup and restore drill", () => {
 
   it("stops only running isolated writers during a cut", () => {
     expect(filterRunningIsolatedContainers([
-      { name: "supabase_auth_homecook-backup-drill-fixture01", running: true },
-      { name: "supabase_rest_homecook-backup-drill-fixture01", running: false },
-      { name: "supabase_storage_homecook-backup-drill-fixture01", running: true },
+      { name: "homecook-backup-drill-fixture01-auth", running: true },
+      { name: "homecook-backup-drill-fixture01-rest", running: false },
+      { name: "homecook-backup-drill-fixture01-storage", running: true },
     ])).toEqual([
-      "supabase_auth_homecook-backup-drill-fixture01",
-      "supabase_storage_homecook-backup-drill-fixture01",
+      "homecook-backup-drill-fixture01-auth",
+      "homecook-backup-drill-fixture01-storage",
     ]);
   });
 });

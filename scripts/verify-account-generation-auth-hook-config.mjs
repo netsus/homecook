@@ -12,6 +12,13 @@ import {
   verifyAccountGenerationAuthHookConfig,
 } from "./lib/account-generation-auth-hook-config-verifier.mjs";
 
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  process.stderr.write(
+    "FORBIDDEN: remote Supabase auth-hook verification is historical under the local-only contract.\n",
+  );
+  process.exit(1);
+}
+
 /**
  * @typedef {Record<string, string | undefined>} LooseEnvironment
  * @typedef {(filePath: string, encoding: string) => string} ReadTextFile
@@ -129,9 +136,4 @@ export async function runAccountGenerationAuthHookConfigVerification({
     );
     return 1;
   }
-}
-
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  const exitCode = await runAccountGenerationAuthHookConfigVerification();
-  process.exit(exitCode);
 }

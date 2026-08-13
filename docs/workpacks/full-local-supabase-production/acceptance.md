@@ -14,11 +14,14 @@ Production domain tuple: `https://app.mumeok.kr`, `https://auth.mumeok.kr`, `htt
 ## Complete backup and isolated restore
 
 - [ ] DB dump와 Storage volume snapshot은 같은 consistent cut 안에서 생성된다.
+- [ ] DB/Storage source는 mode `0600` production config의 exact Compose project, healthy digest-pinned PostgreSQL container, labeled named volumes로 일치하며 dev CLI stack 또는 ambiguous/missing label은 fail closed한다.
 - [ ] encrypted immutable archive는 Storage payload를 반드시 포함하고 count/bytes/hash/reference/source identity를 인증 manifest로 묶는다.
 - [ ] `storage_payload_included=false`, payload 누락, 불일치, unsafe path는 readiness를 fail closed한다.
 - [ ] `supabase@2.110.0` exact version이 실행 전에 검증·기록된다.
 - [ ] clean disposable namespace restore가 DB metadata와 object bytes/hash/reference exact 일치를 증명한다.
 - [ ] 운영 DB reset, 운영 volume 삭제, 기존 backup overwrite는 0이다.
+- [ ] isolated drill은 production-compatible labels를 쓰고 dev stack 공존 반례에서도 production fixture만 선택했다는 evidence를 남긴다.
+- [ ] `validate`/`start`/`status`가 24시간 이내 backup+restore, distinct off-Mac copy와 exact production identity를 mode `0600` readiness evidence로 검사하고 stale/missing/mismatch를 fail closed한다.
 
 ## Semantic gate
 
@@ -29,7 +32,7 @@ Production domain tuple: `https://app.mumeok.kr`, `https://auth.mumeok.kr`, `htt
 
 ## Manual only
 
-- [ ] production Keychain/off-Mac target 및 실제 운영 backup schedule 설정
+- [ ] production Keychain/off-Mac target, `FULL_LOCAL_BACKUP_READINESS_PATH` 및 24시간 이내 실제 운영 backup+restore schedule 설정
 - [ ] actual full-local controlled restore/recovery와 provider login/RLS/reboot 확인
 - [ ] first production mutation 또는 rollback 승인
 

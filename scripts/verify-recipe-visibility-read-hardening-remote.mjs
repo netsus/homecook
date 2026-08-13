@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { spawnSync } from "node:child_process";
+import { pathToFileURL } from "node:url";
 
 import {
   assertRecipeVisibilityMergedExactSource,
@@ -10,6 +11,13 @@ import {
   parseRecipeVisibilityDatabaseEnvironment,
 } from "./lib/recipe-visibility-read-hardening-remote-verifier.mjs";
 import { resolveSecurityFunctionLinkedRoot } from "./security-function-linked-root.mjs";
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  process.stderr.write(
+    "FORBIDDEN: remote recipe-visibility verification is historical under the local-only contract.\n",
+  );
+  process.exit(1);
+}
 
 function readOption(name) {
   const index = process.argv.indexOf(name);

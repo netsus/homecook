@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { spawnSync } from "node:child_process";
-import { randomBytes } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import {
   chmodSync,
   mkdirSync,
@@ -23,81 +23,165 @@ import {
   verifyStoragePayloadManifest,
   withVerifiedPlatformBackup,
 } from "./lib/full-local-platform-backup.mjs";
+import { fullLocalImageRefsForPlatform } from "./lib/full-local-production-runtime.mjs";
+import {
+  makePostgresRoleDumpIdempotent,
+  selectFullLocalProductionResources,
+} from "./lib/full-local-production-resources.mjs";
 import { buildPlatformRestoreSql } from "./lib/full-local-restore-cutover.mjs";
 import {
+  assertIsolatedDrillTarget,
   buildIsolatedDrillPlan,
-  filterRunningIsolatedContainers,
   mapStorageRowsToPayloadReferences,
 } from "./lib/isolated-local-backup-restore-drill.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const EXCLUDES = "gotrue,realtime,storage-api,imgproxy,kong,mailpit,postgrest,postgres-meta,studio,edge-runtime,logflare,vector,supavisor";
+const PLATFORM = process.arch === "arm64" ? "linux/arm64" : "linux/amd64";
+const POSTGRES_IMAGE = fullLocalImageRefsForPlatform(PLATFORM).postgres;
+const FIXTURE_PASSWORD = "isolated-production-compatible-fixture-only";
 
 function run(command, args, options = {}) {
   const result = spawnSync(command, args, {
-    cwd: options.cwd ?? ROOT,
+    cwd: ROOT,
     encoding: "utf8",
-    env: options.env ?? process.env,
+    env: process.env,
     input: options.input,
     maxBuffer: 128 * 1024 * 1024,
     stdio: [options.input === undefined ? "ignore" : "pipe", "pipe", "pipe"],
   });
   if (result.status !== 0) {
-    throw new Error(options.failure ?? `${command} failed in isolated drill`);
+    const diagnostic = options.diagnostics === true
+      ? `: ${(result.stderr ?? "").trim()}`
+      : "";
+    throw new Error(`${options.failure ?? `${command} failed in isolated drill`}${diagnostic}`);
   }
   return result.stdout ?? "";
 }
 
-function supabase(workdir, args, options = {}) {
-  return run("pnpm", [
-    "dlx",
-    `supabase@${PINNED_SUPABASE_CLI_VERSION}`,
-    ...args,
-    "--workdir",
-    workdir,
-  ], options);
+function dockerInventory(kind) {
+  const ids = run("docker", kind === "volume"
+    ? ["volume", "ls", "--quiet"]
+    : ["container", "ls", "--all", "--quiet"])
+    .split(/\r?\n/u).filter(Boolean);
+  if (ids.length === 0) return [];
+  return JSON.parse(run(
+    "docker",
+    kind === "volume" ? ["volume", "inspect", ...ids] : ["container", "inspect", ...ids],
+  ));
 }
 
-function rewriteIsolatedConfig(config, projectId, basePort) {
-  const ports = new Map(
-    Array.from({ length: 10 }, (_, offset) => [54320 + offset, basePort - 1 + offset]),
-  );
-  return config
-    .replace(/^project_id\s*=.*$/mu, `project_id = "${projectId}"`)
-    .replace(/\b5432[0-9]\b/gu, (value) => String(ports.get(Number(value))));
+function createLabeledVolume({ composeProject, composeVolume, name }) {
+  assertIsolatedDrillTarget(name);
+  run("docker", [
+    "volume",
+    "create",
+    "--label",
+    `com.docker.compose.project=${composeProject}`,
+    "--label",
+    `com.docker.compose.volume=${composeVolume}`,
+    name,
+  ], { failure: "Isolated production-compatible volume creation failed" });
 }
 
-function initializeProject(directory, projectId, basePort) {
-  mkdirSync(directory, { recursive: true, mode: 0o700 });
-  supabase(directory, ["init", "--force"]);
-  const configPath = join(directory, "supabase", "config.toml");
-  writeFileSync(
-    configPath,
-    rewriteIsolatedConfig(readFileSync(configPath, "utf8"), projectId, basePort),
-    { encoding: "utf8", mode: 0o600 },
-  );
+function startPostgresFixture({ container, composeProject, postgresVolume }) {
+  assertIsolatedDrillTarget(container);
+  run("docker", [
+    "run",
+    "--detach",
+    "--platform",
+    PLATFORM,
+    "--name",
+    container,
+    "--label",
+    `com.docker.compose.project=${composeProject}`,
+    "--label",
+    "com.docker.compose.service=postgres",
+    "--health-cmd",
+    "pg_isready -U supabase_admin -d postgres",
+    "--health-interval",
+    "1s",
+    "--health-timeout",
+    "2s",
+    "--health-retries",
+    "60",
+    "--env",
+    `POSTGRES_PASSWORD=${FIXTURE_PASSWORD}`,
+    "--env",
+    "POSTGRES_USER=supabase_admin",
+    "--env",
+    "POSTGRES_DB=postgres",
+    "--volume",
+    `${postgresVolume}:/var/lib/postgresql/data`,
+    POSTGRES_IMAGE,
+  ], { failure: "Isolated production-compatible PostgreSQL start failed" });
+  for (let attempt = 0; attempt < 240; attempt += 1) {
+    const state = JSON.parse(run("docker", ["inspect", container]))[0]?.State;
+    if (state?.Running === true && state?.Health?.Status === "healthy") return;
+    if (state?.Running !== true) {
+      throw new Error("Isolated production-compatible PostgreSQL exited before health");
+    }
+    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 250);
+  }
+  throw new Error("Isolated production-compatible PostgreSQL health timed out");
 }
 
-function startProject(directory) {
-  supabase(directory, ["start", "--exclude", EXCLUDES, "--ignore-health-check"], {
-    failure: "Pinned isolated Supabase start failed",
+function resourceConfig(plan, restore = false) {
+  const project = restore ? plan.restore_project_id : plan.project_id;
+  return {
+    FULL_LOCAL_COMPOSE_PROJECT_NAME: project,
+    FULL_LOCAL_POSTGRES_IMAGE: POSTGRES_IMAGE,
+    FULL_LOCAL_POSTGRES_VOLUME_NAME: restore
+      ? plan.restore_postgres_volume
+      : plan.source_postgres_volume,
+    FULL_LOCAL_STORAGE_VOLUME_NAME: restore
+      ? plan.restore_storage_volume
+      : plan.source_storage_volume,
+  };
+}
+
+function resolveResources(config) {
+  return selectFullLocalProductionResources({
+    config,
+    containers: dockerInventory("container"),
+    volumes: dockerInventory("volume"),
   });
 }
 
-function stopProject(directory) {
-  try {
-    supabase(directory, ["stop", "--no-backup"], {
-      failure: "Pinned isolated Supabase cleanup failed",
-    });
-  } catch {
-    // The caller reports the original failure; isolated resources are also
-    // checked by their exact namespace before any fallback cleanup.
-  }
+function database(container, sql, failure = "Isolated database operation failed") {
+  return run("docker", [
+    "exec",
+    "-i",
+    container,
+    "psql",
+    "--quiet",
+    "--tuples-only",
+    "--no-align",
+    "--variable",
+    "ON_ERROR_STOP=1",
+    "--username",
+    "supabase_admin",
+    "--dbname",
+    "postgres",
+  ], { diagnostics: true, failure, input: sql });
 }
 
-function seedStorage({ databaseContainer, fixtureDirectory, volumeName }) {
+function seedStorage({ container, fixtureDirectory, volumeName }) {
   const payload = Buffer.from("homecook-isolated-storage-fixture-v1", "utf8");
   const version = "fixture-version-1";
+  database(container, `
+    create schema if not exists storage;
+    create table storage.buckets (id text primary key, name text not null, public boolean not null);
+    create table storage.objects (
+      bucket_id text not null references storage.buckets(id),
+      name text not null,
+      version text not null,
+      metadata jsonb,
+      primary key (bucket_id, name)
+    );
+    insert into storage.buckets (id, name, public) values ('fixture', 'fixture', false);
+    insert into storage.objects (bucket_id, name, version, metadata)
+    values ('fixture', 'owner-a/object.bin', '${version}', '{"mimetype":"application/octet-stream","size":${payload.length}}'::jsonb);
+  `, "Isolated Storage metadata fixture failed");
   const payloadDirectory = join(
     fixtureDirectory,
     "stub",
@@ -108,81 +192,88 @@ function seedStorage({ databaseContainer, fixtureDirectory, volumeName }) {
   );
   mkdirSync(payloadDirectory, { recursive: true, mode: 0o700 });
   writeFileSync(join(payloadDirectory, version), payload, { mode: 0o600 });
-  run("docker", [
-    "exec",
-    databaseContainer,
-    "psql",
-    "--username",
-    "postgres",
-    "--dbname",
-    "postgres",
-    "--variable",
-    "ON_ERROR_STOP=1",
-    "--command",
-    `insert into storage.buckets (id, name, public) values ('fixture', 'fixture', false);\ninsert into storage.objects (bucket_id, name, version, metadata) values ('fixture', 'owner-a/object.bin', '${version}', '{"mimetype":"application/octet-stream","size":${payload.length}}'::jsonb);`,
-  ], { failure: "Isolated Storage metadata fixture failed" });
-  const seedArchiveDirectory = join(fixtureDirectory, "archive");
-  mkdirSync(seedArchiveDirectory, { recursive: true, mode: 0o700 });
+  const archiveDirectory = join(fixtureDirectory, "archive");
+  mkdirSync(archiveDirectory, { recursive: true, mode: 0o700 });
   run("tar", [
     "-C",
     fixtureDirectory,
     "-cf",
-    join(seedArchiveDirectory, "storage.payload.tar"),
+    join(archiveDirectory, "storage.payload.tar"),
     "stub",
-  ], { failure: "Isolated Storage payload fixture archive failed" });
-  restoreVolume({ archiveDirectory: seedArchiveDirectory, volumeName });
+  ]);
+  restoreVolume({ archiveDirectory, volumeName });
   return payload;
 }
 
-function storageRows(databaseContainer) {
-  const sql = `
+function storageRows(container) {
+  const output = database(container, `
     select coalesce(json_agg(json_build_object(
       'bucket_id', bucket_id,
       'name', name,
-      'version', version::text
+      'version', version
     ) order by bucket_id, name), '[]'::json)::text
     from storage.objects;
-  `;
-  return JSON.parse(run("docker", [
+  `);
+  return JSON.parse(output.trim());
+}
+
+function fixtureDatabaseProvenance(resources) {
+  const catalog = database(
+    resources.postgresContainerId,
+    "select nspname from pg_namespace order by nspname;",
+    "Isolated schema catalog provenance failed",
+  );
+  const identity = database(
+    resources.postgresContainerId,
+    "select current_database(), current_setting('server_version_num'), count(*) from pg_namespace;",
+    "Isolated database identity provenance failed",
+  ).trim().split("|");
+  if (identity.length !== 3 || identity[0] !== "postgres" || !/^\d+$/u.test(identity[1])) {
+    throw new Error("Isolated database identity provenance is invalid");
+  }
+  return {
+    compose_project: resources.composeProject,
+    container_id: resources.postgresContainerId,
+    container_name: resources.postgresContainerName,
+    database: identity[0],
+    image: resources.postgresImage,
+    postgres_volume: resources.postgresVolumeName,
+    schema_catalog_sha256: createHash("sha256").update(catalog, "utf8").digest("hex"),
+    schema_count: Number(identity[2]),
+    server_version_num: identity[1],
+  };
+}
+
+function dumpFixtureDatabase({ container, staging }) {
+  const roles = run("docker", [
     "exec",
-    databaseContainer,
-    "psql",
-    "--tuples-only",
-    "--no-align",
+    container,
+    "pg_dumpall",
+    "--roles-only",
+    "--no-role-passwords",
     "--username",
-    "postgres",
-    "--dbname",
-    "postgres",
-    "--command",
-    sql,
-  ]).trim());
-}
-
-function runningContainers(names) {
-  return filterRunningIsolatedContainers(names.map((name) => {
-    const result = spawnSync(
-      "docker",
-      ["inspect", "--format", "{{.State.Running}}", name],
-      { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] },
-    );
-    return { name, running: result.status === 0 && result.stdout.trim() === "true" };
-  }));
-}
-
-function setContainerState(action, names, failure) {
-  if (names.length === 0) return;
-  run("docker", [action, ...names], { failure });
-}
-
-function removeIsolatedVolume(volumeName) {
-  const inspected = spawnSync("docker", ["volume", "inspect", volumeName], {
-    encoding: "utf8",
-    stdio: ["ignore", "ignore", "ignore"],
-  });
-  if (inspected.status === 0) {
-    run("docker", ["volume", "rm", volumeName], {
-      failure: "Isolated Storage volume cleanup failed",
-    });
+    "supabase_admin",
+  ], { failure: "Isolated roles.sql production-compatible dump failed" });
+  writeFileSync(
+    join(staging, "roles.sql"),
+    makePostgresRoleDumpIdempotent(roles),
+    { mode: 0o600 },
+  );
+  const commands = [
+    ["schema.sql", ["pg_dump", "--schema-only", "--clean", "--if-exists", "--schema", "storage"]],
+    ["data.sql", ["pg_dump", "--data-only", "--schema", "storage"]],
+  ];
+  for (const [file, command] of commands) {
+    const output = run("docker", [
+      "exec",
+      container,
+      ...command,
+      "--username",
+      "supabase_admin",
+      "--dbname",
+      "postgres",
+    ], { failure: `Isolated ${file} production-compatible dump failed` });
+    writeFileSync(join(staging, file), output, { mode: 0o600 });
   }
 }
 
@@ -193,49 +284,45 @@ function captureVolume({ archiveDirectory, snapshotDirectory, volumeName }) {
     archiveDirectory,
     volumeName,
   });
-  run(invocation.command, invocation.args, {
-    failure: "Isolated Storage volume capture failed",
-  });
+  run(invocation.command, invocation.args);
   run("tar", [
     "-C",
     snapshotDirectory,
     "-xf",
     join(archiveDirectory, "storage.payload.tar"),
-  ], { failure: "Isolated Storage payload extraction failed" });
+  ]);
 }
 
 function restoreVolume({ archiveDirectory, volumeName }) {
-  run("docker", ["volume", "create", volumeName], {
-    failure: "Isolated restore Storage volume creation failed",
-  });
   const invocation = buildDockerStorageVolumeRestoreInvocation({
     archiveDirectory,
     volumeName,
   });
-  run(invocation.command, invocation.args, {
-    failure: "Isolated Storage volume restore failed",
-  });
+  run(invocation.command, invocation.args);
 }
 
 function restoreDatabase({ container, dataPath, rolesPath, schemaPath }) {
-  const sql = buildPlatformRestoreSql({
+  database(container, buildPlatformRestoreSql({
     dataSql: readFileSync(dataPath, "utf8"),
     rolesSql: readFileSync(rolesPath, "utf8"),
     schemaSql: readFileSync(schemaPath, "utf8"),
+  }), "Isolated database restore failed");
+}
+
+function cleanupContainer(name) {
+  assertIsolatedDrillTarget(name);
+  spawnSync("docker", ["rm", "--force", name], {
+    encoding: "utf8",
+    stdio: ["ignore", "ignore", "ignore"],
   });
-  run("docker", [
-    "exec",
-    "-i",
-    container,
-    "psql",
-    "--single-transaction",
-    "--variable",
-    "ON_ERROR_STOP=1",
-    "--username",
-    "postgres",
-    "--dbname",
-    "postgres",
-  ], { failure: "Isolated database restore failed", input: sql });
+}
+
+function cleanupVolume(name) {
+  assertIsolatedDrillTarget(name);
+  spawnSync("docker", ["volume", "rm", name], {
+    encoding: "utf8",
+    stdio: ["ignore", "ignore", "ignore"],
+  });
 }
 
 async function executeDrill() {
@@ -243,87 +330,95 @@ async function executeDrill() {
   const plan = buildIsolatedDrillPlan({ suffix });
   const root = mkdtempSync(join(tmpdir(), "homecook-backup-drill-"));
   chmodSync(root, 0o700);
-  const sourceRoot = join(root, "source");
-  const restoreRoot = join(root, "restore");
-  const artifactRoot = join(root, "artifacts");
-  const sourceArchiveDirectory = join(artifactRoot, "source-volume");
-  const sourceSnapshotDirectory = join(artifactRoot, "source-snapshot");
-  const restoredArchiveDirectory = join(artifactRoot, "restored-volume");
-  const restoredSnapshotDirectory = join(artifactRoot, "restored-snapshot");
-  const archive = join(artifactRoot, "platform.tar.gz.enc");
-  mkdirSync(artifactRoot, { recursive: true, mode: 0o700 });
+  const sourceArchiveDirectory = join(root, "source-volume");
+  const sourceSnapshotDirectory = join(root, "source-snapshot");
+  const restoredArchiveDirectory = join(root, "restored-volume");
+  const restoredSnapshotDirectory = join(root, "restored-snapshot");
+  const archive = join(root, "platform.tar.gz.enc");
   const backupKey = randomBytes(48).toString("base64url");
-  let sourceStarted = false;
-  let restoreStarted = false;
   try {
-    const version = supabase(ROOT, ["--version"]).trim();
+    const version = run("pnpm", ["dlx", `supabase@${PINNED_SUPABASE_CLI_VERSION}`, "--version"]).trim();
     if (version !== PINNED_SUPABASE_CLI_VERSION) {
       throw new Error("Pinned Supabase CLI version mismatch in isolated drill");
     }
-    initializeProject(sourceRoot, plan.project_id, 57321);
-    startProject(sourceRoot);
-    sourceStarted = true;
-    const fixturePayload = seedStorage({
-      databaseContainer: plan.source_database_container,
-      fixtureDirectory: join(artifactRoot, "fixture"),
-      volumeName: plan.source_storage_volume,
+    createLabeledVolume({
+      composeProject: plan.project_id,
+      composeVolume: "postgres-data",
+      name: plan.source_postgres_volume,
     });
-    const sourceRows = storageRows(plan.source_database_container);
-    const writers = runningContainers([
-      plan.source_auth_container,
-      plan.source_realtime_container,
-      plan.source_rest_container,
-      plan.source_storage_container,
-    ]);
+    createLabeledVolume({
+      composeProject: plan.project_id,
+      composeVolume: "storage-data",
+      name: plan.source_storage_volume,
+    });
+    startPostgresFixture({
+      composeProject: plan.project_id,
+      container: plan.source_database_container,
+      postgresVolume: plan.source_postgres_volume,
+    });
+    const source = resolveResources(resourceConfig(plan));
+    if (source.postgresContainerName !== plan.source_database_container) {
+      throw new Error("Production resource resolver selected the wrong dual-stack target");
+    }
+    const fixturePayload = seedStorage({
+      container: source.postgresContainerId,
+      fixtureDirectory: join(root, "fixture"),
+      volumeName: source.storageVolumeName,
+    });
+    let sourceRows;
+    const sourceDatabaseProvenance = {};
     createEncryptedPlatformBackup({
       backupKey,
+      database: {
+        dumpComponents: (staging) => {
+          Object.assign(sourceDatabaseProvenance, fixtureDatabaseProvenance(source));
+          sourceRows = storageRows(source.postgresContainerId);
+          dumpFixtureDatabase({ container: source.postgresContainerId, staging });
+        },
+        provenance: sourceDatabaseProvenance,
+        sourceIdentity: `docker-compose:${source.composeProject}:${source.postgresContainerName}`,
+      },
       output: archive,
-      repositoryRoot: sourceRoot,
+      repositoryRoot: ROOT,
       storage: {
-        beginConsistentCut: () => setContainerState(
-          "stop",
-          writers,
-          "Isolated consistent cut failed",
-        ),
+        beginConsistentCut: () => undefined,
         captureSource: () => captureVolume({
           archiveDirectory: sourceArchiveDirectory,
           snapshotDirectory: sourceSnapshotDirectory,
-          volumeName: plan.source_storage_volume,
+          volumeName: source.storageVolumeName,
         }),
-        endConsistentCut: () => setContainerState(
-          "start",
-          writers,
-          "Isolated consistent cut release failed",
-        ),
+        endConsistentCut: () => undefined,
         references: () => mapStorageRowsToPayloadReferences(
           sourceRows,
           listStoragePayloadPaths(sourceSnapshotDirectory),
         ),
         sourceDirectory: sourceSnapshotDirectory,
-        sourceIdentity: `docker-volume:${plan.source_storage_volume}`,
+        sourceIdentity: `docker-compose-volume:${source.composeProject}:${source.storageVolumeName}`,
       },
     });
 
-    stopProject(sourceRoot);
-    sourceStarted = false;
-    initializeProject(restoreRoot, plan.restore_project_id, 58321);
-    startProject(restoreRoot);
-    restoreStarted = true;
-    const restoreWriters = runningContainers([
-      plan.restore_storage_container,
-      `supabase_auth_${plan.restore_project_id}`,
-      `supabase_rest_${plan.restore_project_id}`,
-      `supabase_realtime_${plan.restore_project_id}`,
-    ]);
-    setContainerState("stop", restoreWriters, "Isolated restore cut failed");
-    removeIsolatedVolume(plan.restore_storage_volume);
-
-    const evidence = await withVerifiedPlatformBackup({
+    createLabeledVolume({
+      composeProject: plan.restore_project_id,
+      composeVolume: "postgres-data",
+      name: plan.restore_postgres_volume,
+    });
+    createLabeledVolume({
+      composeProject: plan.restore_project_id,
+      composeVolume: "storage-data",
+      name: plan.restore_storage_volume,
+    });
+    startPostgresFixture({
+      composeProject: plan.restore_project_id,
+      container: plan.restore_database_container,
+      postgresVolume: plan.restore_postgres_volume,
+    });
+    const restored = resolveResources(resourceConfig(plan, true));
+    return await withVerifiedPlatformBackup({
       archive,
       backupKey,
       consume: ({ dataPath, metadata, rolesPath, schemaPath, storagePayloadPath }) => {
         restoreDatabase({
-          container: plan.restore_database_container,
+          container: restored.postgresContainerId,
           dataPath,
           rolesPath,
           schemaPath,
@@ -336,16 +431,15 @@ async function executeDrill() {
         );
         restoreVolume({
           archiveDirectory: restoredArchiveDirectory,
-          volumeName: plan.restore_storage_volume,
+          volumeName: restored.storageVolumeName,
         });
         captureVolume({
-          archiveDirectory: join(artifactRoot, "restored-recapture"),
+          archiveDirectory: join(root, "restored-recapture"),
           snapshotDirectory: restoredSnapshotDirectory,
-          volumeName: plan.restore_storage_volume,
+          volumeName: restored.storageVolumeName,
         });
-        const restoredRows = storageRows(plan.restore_database_container);
         const restoredReferences = mapStorageRowsToPayloadReferences(
-          restoredRows,
+          storageRows(restored.postgresContainerId),
           listStoragePayloadPaths(restoredSnapshotDirectory),
         );
         verifyStoragePayloadManifest(metadata.storage_payload, {
@@ -364,19 +458,22 @@ async function executeDrill() {
           cli_version: PINNED_SUPABASE_CLI_VERSION,
           database_reference_count: restoredReferences.length,
           destructive_scope: plan.destructive_scope,
+          dev_stack_decoy_ignored: true,
           object_count: metadata.storage_payload.object_count,
           payload_catalog_sha256: metadata.storage_payload.catalog_sha256,
           payload_total_bytes: metadata.storage_payload.total_bytes,
+          production_resource_resolution: "compose-labels-exact",
           status: "PASS",
         };
       },
     });
-    return evidence;
   } finally {
-    if (sourceStarted) stopProject(sourceRoot);
-    if (restoreStarted) stopProject(restoreRoot);
-    removeIsolatedVolume(plan.source_storage_volume);
-    removeIsolatedVolume(plan.restore_storage_volume);
+    cleanupContainer(plan.source_database_container);
+    cleanupContainer(plan.restore_database_container);
+    cleanupVolume(plan.source_postgres_volume);
+    cleanupVolume(plan.source_storage_volume);
+    cleanupVolume(plan.restore_postgres_volume);
+    cleanupVolume(plan.restore_storage_volume);
     rmSync(root, { force: true, recursive: true });
   }
 }

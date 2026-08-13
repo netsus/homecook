@@ -500,6 +500,10 @@ export function validateFullLocalProductionConfig({
       throw new Error(`${name} is not a safe Docker resource name.`);
     }
   }
+  const readinessPath = requiredValue(config, "FULL_LOCAL_BACKUP_READINESS_PATH");
+  if (!isAbsolute(readinessPath) || !readinessPath.endsWith(".json")) {
+    throw new Error("FULL_LOCAL_BACKUP_READINESS_PATH must be an absolute JSON path.");
+  }
 
   const secretCount = validateSecretValues(secrets);
   return Object.freeze({
