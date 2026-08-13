@@ -17,6 +17,8 @@ import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { hasSupabasePublicEnv } from "@/lib/supabase/env";
 import { useYoutubeExtractionStore } from "@/stores/youtube-extraction-store";
 import {
+  forgetYoutubeExtractionRegistrationAck,
+  readPendingYoutubeExtractionRegistrationAcks,
   trackYoutubeExtractionJob,
   YOUTUBE_EXTRACTION_JOB_ENQUEUED_EVENT,
   YOUTUBE_EXTRACTION_JOBS_STORAGE_KEY,
@@ -214,11 +216,17 @@ export function YoutubeExtractionNotificationCenter({
   const [activeJobs, setActiveJobs] = useState<YoutubeExtractionJobData[]>([]);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [registrationAckIds, setRegistrationAckIds] = useState<string[]>(
+    () => readPendingYoutubeExtractionRegistrationAcks(),
+  );
+  const [registrationAckRevision, setRegistrationAckRevision] = useState(0);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const dialogRef = useRef<HTMLElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const triggerBeforeOpenRef = useRef<HTMLElement | null>(null);
   const deliveredRef = useRef(new Set<string>());
+  const registrationAckInFlightRef = useRef(new Set<string>());
+  const registrationAckRetryRef = useRef(new Set<string>());
 
   useEffect(() => setAuthenticatedLocal(initialAuthenticated), [initialAuthenticated]);
 
@@ -420,26 +428,101 @@ export function YoutubeExtractionNotificationCenter({
   }, [open]);
 
   useEffect(() => {
-    const suppressRegisteredSession = (event: Event) => {
+    const queueRegisteredSessionAck = (event: Event) => {
       const extractionId = (event as CustomEvent<{ extractionId?: unknown }>).detail?.extractionId;
       if (typeof extractionId !== "string") return;
       const matchingIds = items
         .filter((item) => item.result?.extraction_id === extractionId)
         .map((item) => item.job_id);
-      if (matchingIds.length === 0) return;
-      setHiddenToastIds((current) => [...new Set([...current, ...matchingIds])]);
-      markSeenInStore(matchingIds);
+      setRegistrationAckIds((current) => [...new Set([...current, extractionId])]);
+      if (matchingIds.length > 0) {
+        setHiddenToastIds((current) => [...new Set([...current, ...matchingIds])]);
+      }
     };
-    window.addEventListener(YOUTUBE_EXTRACTION_SESSION_REGISTERED_EVENT, suppressRegisteredSession);
+    window.addEventListener(YOUTUBE_EXTRACTION_SESSION_REGISTERED_EVENT, queueRegisteredSessionAck);
     return () => window.removeEventListener(
       YOUTUBE_EXTRACTION_SESSION_REGISTERED_EVENT,
-      suppressRegisteredSession,
+      queueRegisteredSessionAck,
     );
-  }, [items, markSeenInStore]);
+  }, [items]);
+
+  useEffect(() => {
+    if (!authenticated || registrationAckIds.length === 0) return;
+    let current = true;
+
+    const reconcile = async (extractionId: string) => {
+      if (registrationAckInFlightRef.current.has(extractionId)) {
+        registrationAckRetryRef.current.add(extractionId);
+        return;
+      }
+      registrationAckInFlightRef.current.add(extractionId);
+      let matchingItem = view === "unseen-completed"
+        ? items.find((item) => item.result?.extraction_id === extractionId)
+        : undefined;
+      let cursor = matchingItem ? null : view === "unseen-completed" ? nextCursor : null;
+
+      try {
+        if (!matchingItem && view !== "unseen-completed") {
+          const firstPage = await fetchYoutubeExtractionNotifications("unseen-completed", {
+            limit: 50,
+          });
+          if (firstPage.success && firstPage.data) {
+            matchingItem = firstPage.data.items.find(
+              (item) => item.result?.extraction_id === extractionId,
+            );
+            cursor = firstPage.data.next_cursor;
+          }
+        }
+        while (!matchingItem && cursor && current) {
+          const page = await fetchYoutubeExtractionNotifications("unseen-completed", {
+            cursor,
+            limit: 50,
+          });
+          if (!page.success || !page.data) break;
+          matchingItem = page.data.items.find(
+            (item) => item.result?.extraction_id === extractionId,
+          );
+          cursor = page.data.next_cursor;
+        }
+
+        if (!matchingItem || !current) return;
+        const seen = await markYoutubeExtractionSeen([matchingItem.job_id]);
+        if (!current) return;
+        if (seen.success && seen.data && seen.data.seen_count > 0) {
+          forgetYoutubeExtractionRegistrationAck(extractionId);
+          setRegistrationAckIds((ids) => ids.filter((id) => id !== extractionId));
+          setHiddenToastIds((ids) => [...new Set([...ids, matchingItem!.job_id])]);
+          markSeenInStore([matchingItem.job_id]);
+          return;
+        }
+        setHiddenToastIds((ids) => ids.filter((id) => id !== matchingItem!.job_id));
+      } finally {
+        registrationAckInFlightRef.current.delete(extractionId);
+        if (registrationAckRetryRef.current.delete(extractionId)) {
+          setRegistrationAckRevision((value) => value + 1);
+        }
+      }
+    };
+
+    registrationAckIds.forEach((extractionId) => void reconcile(extractionId));
+    return () => {
+      current = false;
+    };
+  }, [
+    authenticated,
+    items,
+    markSeenInStore,
+    nextCursor,
+    registrationAckIds,
+    registrationAckRevision,
+    view,
+  ]);
 
   useEffect(() => {
     const refreshOnFocus = () => {
-      if (document.visibilityState === "visible") void refresh(view);
+      if (document.visibilityState === "visible") {
+        void refresh(view).finally(() => setRegistrationAckRevision((value) => value + 1));
+      }
     };
     window.addEventListener("focus", refreshOnFocus);
     document.addEventListener("visibilitychange", refreshOnFocus);

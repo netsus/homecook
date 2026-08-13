@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import React from "react";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -11,6 +11,10 @@ import {
 } from "@/components/youtube-extraction/youtube-extraction-notification-center";
 import * as api from "@/lib/api/youtube-extraction-jobs";
 import { useYoutubeExtractionStore } from "@/stores/youtube-extraction-store";
+import {
+  notifyYoutubeExtractionSessionRegistered,
+  YOUTUBE_EXTRACTION_REGISTERED_ACKS_STORAGE_KEY,
+} from "@/lib/youtube-extraction-client-state";
 
 vi.mock("@/lib/api/youtube-extraction-jobs", () => ({
   enqueueYoutubeExtraction: vi.fn(),
@@ -142,6 +146,108 @@ describe("YouTube extraction notification center", () => {
     expect(await screen.findByLabelText("YouTube 추출 알림 1개")).toBeTruthy();
     expect(screen.queryByText("YouTube 레시피 추출이 완료됐어요")).toBeNull();
     expect(api.markYoutubeExtractionDelivered).not.toHaveBeenCalled();
+  });
+
+  it("marks only the exact owner-scoped job seen after the browser observes registration success", async () => {
+    const unrelatedItem = {
+      ...successItem,
+      job_id: "66666666-6666-4666-8666-666666666666",
+      delivery_key: "delivery-unrelated",
+      result: {
+        ...successItem.result,
+        extraction_id: "extraction-unrelated",
+      },
+    };
+    vi.mocked(api.fetchYoutubeExtractionNotifications).mockResolvedValue({
+      success: true,
+      data: { items: [successItem, unrelatedItem], next_cursor: null },
+      error: null,
+    });
+    vi.mocked(api.markYoutubeExtractionSeen).mockResolvedValue({
+      success: true,
+      data: { seen_count: 1 },
+      error: null,
+    });
+
+    renderCenter();
+    expect(await screen.findByLabelText("YouTube 추출 알림 2개")).toBeTruthy();
+    act(() => notifyYoutubeExtractionSessionRegistered("extraction-success"));
+
+    await waitFor(() => {
+      expect(api.markYoutubeExtractionSeen).toHaveBeenCalledWith([successItem.job_id]);
+    });
+    expect(api.markYoutubeExtractionSeen).not.toHaveBeenCalledWith([unrelatedItem.job_id]);
+    expect(screen.getByLabelText("YouTube 추출 알림 1개")).toBeTruthy();
+    expect(window.sessionStorage.getItem(YOUTUBE_EXTRACTION_REGISTERED_ACKS_STORAGE_KEY)).toBe("[]");
+  });
+
+  it("keeps registration successful and retries durable seen after a network failure without permanent hiding", async () => {
+    vi.mocked(api.fetchYoutubeExtractionNotifications).mockResolvedValue({
+      success: true,
+      data: { items: [successItem], next_cursor: null },
+      error: null,
+    });
+    vi.mocked(api.markYoutubeExtractionSeen)
+      .mockResolvedValueOnce({
+        success: false,
+        data: null,
+        error: { code: "NETWORK_ERROR", message: "연결을 확인해 주세요.", fields: [] },
+      })
+      .mockResolvedValueOnce({
+        success: true,
+        data: { seen_count: 1 },
+        error: null,
+      });
+
+    renderCenter();
+    expect(await screen.findByText("YouTube 레시피 추출이 완료됐어요")).toBeTruthy();
+    act(() => notifyYoutubeExtractionSessionRegistered("extraction-success"));
+
+    await waitFor(() => expect(api.markYoutubeExtractionSeen).toHaveBeenCalledTimes(1));
+    expect(screen.getByLabelText("YouTube 추출 알림 1개")).toBeTruthy();
+    expect(JSON.parse(
+      window.sessionStorage.getItem(YOUTUBE_EXTRACTION_REGISTERED_ACKS_STORAGE_KEY) ?? "[]",
+    )).toEqual(["extraction-success"]);
+
+    act(() => window.dispatchEvent(new Event("online")));
+
+    await waitFor(() => expect(api.markYoutubeExtractionSeen).toHaveBeenCalledTimes(2));
+    expect(screen.getByLabelText("YouTube 추출 알림 없음")).toBeTruthy();
+    expect(window.sessionStorage.getItem(YOUTUBE_EXTRACTION_REGISTERED_ACKS_STORAGE_KEY)).toBe("[]");
+  });
+
+  it("paginates the owner-scoped unseen list and never marks a different extraction", async () => {
+    const unrelatedItem = {
+      ...successItem,
+      job_id: "77777777-7777-4777-8777-777777777777",
+      delivery_key: "delivery-unrelated-page-one",
+      result: { ...successItem.result, extraction_id: "extraction-unrelated" },
+    };
+    vi.mocked(api.fetchYoutubeExtractionNotifications).mockImplementation(async (_view, options) => ({
+      success: true,
+      data: options?.cursor === "cursor-2"
+        ? { items: [successItem], next_cursor: null }
+        : { items: [unrelatedItem], next_cursor: "cursor-2" },
+      error: null,
+    }));
+    vi.mocked(api.markYoutubeExtractionSeen).mockResolvedValue({
+      success: true,
+      data: { seen_count: 1 },
+      error: null,
+    });
+
+    renderCenter();
+    expect(await screen.findByLabelText("YouTube 추출 알림 1개")).toBeTruthy();
+    act(() => notifyYoutubeExtractionSessionRegistered("extraction-success"));
+
+    await waitFor(() => {
+      expect(api.fetchYoutubeExtractionNotifications).toHaveBeenCalledWith(
+        "unseen-completed",
+        { cursor: "cursor-2", limit: 50 },
+      );
+    });
+    expect(api.markYoutubeExtractionSeen).toHaveBeenCalledWith([successItem.job_id]);
+    expect(api.markYoutubeExtractionSeen).not.toHaveBeenCalledWith([unrelatedItem.job_id]);
   });
 
   it("groups multiple terminal items into one toast and delivers every represented key", async () => {

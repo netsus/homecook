@@ -8,6 +8,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { RecipioYoutubeImportScreen } from "@/components/recipe/recipio-youtube-import-screen";
 import { checkRecipioYoutubeDuplicate } from "@/lib/api/recipio-youtube-import";
 import * as youtubeApi from "@/lib/api/youtube-import";
+import { YOUTUBE_EXTRACTION_REGISTERED_ACKS_STORAGE_KEY } from
+  "@/lib/youtube-extraction-client-state";
 import type { YoutubeRecipeExtractData } from "@/types/recipe";
 
 const routerPush = vi.fn();
@@ -75,6 +77,7 @@ function buildExtractData(): YoutubeRecipeExtractData {
 
 describe("Recipio Quick Import notification handoff", () => {
   beforeEach(() => {
+    window.sessionStorage.clear();
     routerPush.mockReset();
     vi.mocked(checkRecipioYoutubeDuplicate).mockResolvedValue({
       success: true,
@@ -108,7 +111,31 @@ describe("Recipio Quick Import notification handoff", () => {
       expect(registered).toHaveBeenCalledTimes(1);
     });
     expect((registered.mock.calls[0]?.[0] as CustomEvent).detail).toEqual({ extractionId });
+    expect(JSON.parse(
+      window.sessionStorage.getItem(YOUTUBE_EXTRACTION_REGISTERED_ACKS_STORAGE_KEY) ?? "[]",
+    )).toEqual([extractionId]);
     expect(await screen.findByText("레시피 저장 완료")).toBeTruthy();
+
+    window.removeEventListener("homecook:youtube-extraction-session-registered", registered);
+  });
+
+  it("keeps the async notification unseen when the register response is lost before client acknowledgement", async () => {
+    vi.mocked(youtubeApi.registerYoutubeRecipe).mockResolvedValueOnce({
+      success: false,
+      data: null,
+      error: { code: "NETWORK_ERROR", message: "응답을 확인하지 못했어요.", fields: [] },
+    });
+    const registered = vi.fn();
+    window.addEventListener("homecook:youtube-extraction-session-registered", registered);
+    const user = userEvent.setup();
+
+    render(<RecipioYoutubeImportScreen />);
+    await user.type(screen.getByLabelText("유튜브 링크"), youtubeUrl);
+    await user.click(screen.getByRole("button", { name: "가져오기" }));
+
+    expect(await screen.findByText("응답을 확인하지 못했어요.")).toBeTruthy();
+    expect(registered).not.toHaveBeenCalled();
+    expect(window.sessionStorage.getItem(YOUTUBE_EXTRACTION_REGISTERED_ACKS_STORAGE_KEY)).toBeNull();
 
     window.removeEventListener("homecook:youtube-extraction-session-registered", registered);
   });
