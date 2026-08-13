@@ -4,6 +4,7 @@ import {
   chmodSync,
   existsSync,
   mkdtempSync,
+  readdirSync,
   readFileSync,
   rmSync,
   statSync,
@@ -19,6 +20,10 @@ export const PLATFORM_BACKUP_AUTH_FORMAT = "homecook-full-local-platform-auth-v1
 export const PLATFORM_BACKUP_KEY_ENV = "HOMECOOK_FULL_LOCAL_BACKUP_KEY";
 export const PLATFORM_BACKUP_KEYCHAIN_ACCOUNT = "platform-backup-encryption-key";
 export const PLATFORM_BACKUP_KEYCHAIN_SERVICE = "homecook-full-local-backup-v1";
+export const PINNED_SUPABASE_CLI_VERSION = "2.110.0";
+export const PINNED_STORAGE_ARCHIVE_IMAGE =
+  "supabase/storage-api@sha256:9326eb9c6b74c0a5ba393ab46a08a51d16bc5ea5f2978fc5b0f17fc67c64a4de";
+export const PINNED_STORAGE_ARCHIVE_PLATFORM = "linux/arm64";
 const PBKDF2_ITERATIONS = 600_000;
 const MAC_KEY_CONTEXT = "homecook-full-local-platform-backup-mac-key-v1";
 const BUNDLE_ENTRIES = Object.freeze([
@@ -26,6 +31,7 @@ const BUNDLE_ENTRIES = Object.freeze([
   "manifest.json",
   "roles.sql",
   "schema.sql",
+  "storage.payload.tar",
 ]);
 
 function defaultRun(command, args, options = {}) {
@@ -127,6 +133,194 @@ export function buildPlatformDumpCommands(directory) {
   ];
 }
 
+export function buildPinnedSupabaseCliInvocation(args) {
+  return Object.freeze({
+    args: ["dlx", `supabase@${PINNED_SUPABASE_CLI_VERSION}`, ...args],
+    command: "pnpm",
+  });
+}
+
+function assertDockerStorageInput({ archiveDirectory, volumeName }) {
+  if (!isAbsolute(archiveDirectory)) {
+    throw new Error("Storage archive directory must be absolute");
+  }
+  if (!/^[a-z0-9][a-z0-9_.-]{2,127}$/u.test(volumeName)) {
+    throw new Error("Storage volume name is invalid");
+  }
+}
+
+export function buildDockerStorageVolumeCaptureInvocation(input) {
+  assertDockerStorageInput(input);
+  return Object.freeze({
+    args: [
+      "run",
+      "--rm",
+      "--platform",
+      PINNED_STORAGE_ARCHIVE_PLATFORM,
+      "--entrypoint",
+      "tar",
+      "--mount",
+      `type=volume,src=${input.volumeName},dst=/source,readonly`,
+      "--mount",
+      `type=bind,src=${input.archiveDirectory},dst=/backup`,
+      PINNED_STORAGE_ARCHIVE_IMAGE,
+      "-C",
+      "/source",
+      "-cf",
+      "/backup/storage.payload.tar",
+      ".",
+    ],
+    command: "docker",
+  });
+}
+
+export function buildDockerStorageVolumeRestoreInvocation(input) {
+  assertDockerStorageInput(input);
+  return Object.freeze({
+    args: [
+      "run",
+      "--rm",
+      "--platform",
+      PINNED_STORAGE_ARCHIVE_PLATFORM,
+      "--entrypoint",
+      "tar",
+      "--mount",
+      `type=volume,src=${input.volumeName},dst=/destination`,
+      "--mount",
+      `type=bind,src=${input.archiveDirectory},dst=/backup,readonly`,
+      PINNED_STORAGE_ARCHIVE_IMAGE,
+      "-C",
+      "/destination",
+      "-xf",
+      "/backup/storage.payload.tar",
+    ],
+    command: "docker",
+  });
+}
+
+function listStoragePayloadFiles(directory, prefix = "") {
+  return readdirSync(join(directory, prefix), { withFileTypes: true })
+    .sort((left, right) => left.name.localeCompare(right.name))
+    .flatMap((entry) => {
+      const path = prefix ? `${prefix}/${entry.name}` : entry.name;
+      if (entry.isSymbolicLink()) {
+        throw new Error("Storage payload may not contain symbolic links");
+      }
+      if (entry.isDirectory()) {
+        return listStoragePayloadFiles(directory, path);
+      }
+      if (!entry.isFile()) {
+        throw new Error("Storage payload may contain regular files only");
+      }
+      return [path];
+    });
+}
+
+export function listStoragePayloadPaths(directory) {
+  if (!isAbsolute(directory)) {
+    throw new Error("Storage payload directory must be absolute");
+  }
+  return listStoragePayloadFiles(directory);
+}
+
+export function buildStoragePayloadManifest({
+  references,
+  sourceDirectory,
+  sourceIdentity,
+}) {
+  if (!isAbsolute(sourceDirectory) || typeof sourceIdentity !== "string" || !sourceIdentity.trim()) {
+    throw new Error("Storage payload requires an absolute source and source identity");
+  }
+  const files = listStoragePayloadFiles(sourceDirectory);
+  const normalizedReferences = (references ?? [])
+    .map((entry) => typeof entry === "string"
+      ? { path: entry, reference: entry }
+      : { path: entry?.path, reference: entry?.reference })
+    .sort((left, right) => String(left.path).localeCompare(String(right.path)));
+  if (
+    files.length !== normalizedReferences.length
+    || files.some((path, index) =>
+      path !== normalizedReferences[index]?.path
+      || typeof normalizedReferences[index]?.reference !== "string"
+      || !normalizedReferences[index].reference
+    )
+  ) {
+    throw new Error(
+      `Storage payload files and database references must match exactly (${files.length} files, ${normalizedReferences.length} references)`,
+    );
+  }
+  const objects = files.map((path, index) => {
+    const absolutePath = join(sourceDirectory, path);
+    const bytes = statSync(absolutePath).size;
+    return Object.freeze({
+      bytes,
+      path,
+      reference: normalizedReferences[index].reference,
+      sha256: defaultHashFile(absolutePath),
+    });
+  });
+  const catalogSha256 = createHash("sha256")
+    .update(JSON.stringify(objects))
+    .digest("hex");
+  return Object.freeze({
+    catalog_sha256: catalogSha256,
+    object_count: objects.length,
+    objects,
+    source_identity: sourceIdentity.trim(),
+    total_bytes: objects.reduce((total, object) => total + object.bytes, 0),
+  });
+}
+
+export function verifyStoragePayloadManifest(manifest, input) {
+  const observed = buildStoragePayloadManifest(input);
+  if (JSON.stringify(manifest) !== JSON.stringify(observed)) {
+    throw new Error("Storage payload manifest does not match restored bytes and references");
+  }
+  return true;
+}
+
+export function restoreVerifiedStoragePayload({
+  destinationDirectory,
+  manifest,
+  storagePayloadPath,
+  run = defaultRun,
+}) {
+  if (!isAbsolute(destinationDirectory) || !isAbsolute(storagePayloadPath)) {
+    throw new Error("Storage restore paths must be absolute");
+  }
+  if (readdirSync(destinationDirectory).length !== 0) {
+    throw new Error("Storage restore target must be clean and empty");
+  }
+  const entries = run("tar", ["-tf", storagePayloadPath])
+    .split(/\r?\n/u)
+    .filter(Boolean);
+  if (entries.some((entry) => {
+    const normalized = entry.replace(/^\.\//u, "");
+    return isAbsolute(normalized) || normalized.split("/").includes("..");
+  })) {
+    throw new Error("Storage payload archive contains an unsafe path");
+  }
+  run("tar", ["-C", destinationDirectory, "-xf", storagePayloadPath]);
+  const references = manifest.objects.map((object) => ({
+    path: object.path,
+    reference: object.reference,
+  }));
+  verifyStoragePayloadManifest(manifest, {
+    references,
+    sourceDirectory: destinationDirectory,
+    sourceIdentity: manifest.source_identity,
+  });
+  return Object.freeze({
+    catalog_sha256: manifest.catalog_sha256,
+    database_reference_count: new Set(
+      manifest.objects.map((object) => object.reference),
+    ).size,
+    object_count: manifest.object_count,
+    source_identity: manifest.source_identity,
+    total_bytes: manifest.total_bytes,
+  });
+}
+
 export function assertSafeBackupEntries(entries) {
   const observed = entries.split(/\r?\n/u).filter(Boolean).sort();
   if (JSON.stringify(observed) !== JSON.stringify([...BUNDLE_ENTRIES].sort())) {
@@ -153,10 +347,32 @@ export function verifyPlatformBackupMetadata(metadata, observed) {
   if (!validSha256(metadata.manifest?.relation_classification_digest)) {
     throw new Error("Platform backup relation classification digest is invalid");
   }
-  if (metadata.storage_payload_included !== false) {
+  if (
+    metadata.storage_payload_included !== true
+    || !validSha256(metadata.storage_payload?.catalog_sha256)
+    || typeof metadata.storage_payload?.source_identity !== "string"
+    || !metadata.storage_payload.source_identity
+    || !Number.isSafeInteger(metadata.storage_payload?.object_count)
+    || !Number.isSafeInteger(metadata.storage_payload?.total_bytes)
+    || !Array.isArray(metadata.storage_payload?.objects)
+    || metadata.storage_payload.object_count !== metadata.storage_payload.objects.length
+    || metadata.storage_payload.objects.some((object) =>
+      !Number.isSafeInteger(object?.bytes)
+      || object.bytes < 0
+      || typeof object?.path !== "string"
+      || typeof object.reference !== "string"
+      || !object.reference
+      || !validSha256(object?.sha256)
+    )
+  ) {
     throw new Error("Platform backup Storage payload declaration is invalid");
   }
-  for (const component of ["roles_sha256", "schema_sha256", "data_sha256"]) {
+  for (const component of [
+    "roles_sha256",
+    "schema_sha256",
+    "data_sha256",
+    "storage_payload_sha256",
+  ]) {
     if (!validSha256(metadata.components?.[component]) || metadata.components[component] !== observed?.[component]) {
       throw new Error(`Platform backup ${component} mismatch`);
     }
@@ -169,12 +385,21 @@ export function createEncryptedPlatformBackup({
   dependencies: suppliedDependencies,
   output,
   repositoryRoot,
+  storage,
 }) {
   const destination = assertExternalBackupPath({ output, repositoryRoot });
   if (typeof backupKey !== "string" || backupKey.length < 24) {
     throw new Error("A separate backup encryption key is required");
   }
   const dependencies = { ...defaults(), ...suppliedDependencies };
+  if (
+    !storage
+    || typeof storage.beginConsistentCut !== "function"
+    || typeof storage.captureSource !== "function"
+    || typeof storage.endConsistentCut !== "function"
+  ) {
+    throw new Error("A complete Storage payload and consistent-cut controller are required");
+  }
   const authenticationPath = platformBackupAuthenticationPath(destination);
   if (dependencies.exists(destination) || dependencies.exists(authenticationPath)) {
     throw new Error("Backup output already exists");
@@ -183,14 +408,41 @@ export function createEncryptedPlatformBackup({
   const staging = dependencies.createTempDirectory();
   dependencies.chmod(staging, 0o700);
   try {
-    for (const args of buildPlatformDumpCommands(staging)) {
-      if (args.includes("--db-url") || args.includes("--password")) {
-        throw new Error("Database credentials may not be passed on the command line");
+    const versionInvocation = buildPinnedSupabaseCliInvocation(["--version"]);
+    const observedCliVersion = dependencies.run(
+      versionInvocation.command,
+      versionInvocation.args,
+      { cwd: repositoryRoot, failure: "Pinned Supabase CLI version check failed" },
+    ).trim();
+    if (observedCliVersion !== PINNED_SUPABASE_CLI_VERSION) {
+      throw new Error("Pinned Supabase CLI version mismatch");
+    }
+
+    storage.beginConsistentCut();
+    try {
+      for (const args of buildPlatformDumpCommands(staging)) {
+        if (args.includes("--db-url") || args.includes("--password")) {
+          throw new Error("Database credentials may not be passed on the command line");
+        }
+        const invocation = buildPinnedSupabaseCliInvocation(args);
+        dependencies.run(invocation.command, invocation.args, {
+          cwd: repositoryRoot,
+          failure: "Supabase platform dump failed",
+        });
       }
-      dependencies.run("supabase", args, {
-        cwd: repositoryRoot,
-        failure: "Supabase platform dump failed",
+      storage.captureSource();
+      const storagePayloadPath = join(staging, "storage.payload.tar");
+      dependencies.run("tar", [
+        "-C",
+        storage.sourceDirectory,
+        "-cf",
+        storagePayloadPath,
+        ".",
+      ], {
+        failure: "Local Storage payload capture failed",
       });
+    } finally {
+      storage.endConsistentCut();
     }
 
     const sanitized = buildSanitizedPlatformData(
@@ -204,8 +456,20 @@ export function createEncryptedPlatformBackup({
       data_sha256: dependencies.hashFile(sanitizedPath),
       roles_sha256: dependencies.hashFile(join(staging, "roles.sql")),
       schema_sha256: dependencies.hashFile(join(staging, "schema.sql")),
+      storage_payload_sha256: dependencies.hashFile(join(staging, "storage.payload.tar")),
     };
+    const storagePayload = buildStoragePayloadManifest({
+      references: typeof storage.references === "function"
+        ? storage.references()
+        : storage.references,
+      sourceDirectory: storage.sourceDirectory,
+      sourceIdentity: storage.sourceIdentity,
+    });
     const metadata = {
+      cli: {
+        package: `supabase@${PINNED_SUPABASE_CLI_VERSION}`,
+        version: observedCliVersion,
+      },
       components,
       created_at: dependencies.now(),
       encryption: {
@@ -215,7 +479,8 @@ export function createEncryptedPlatformBackup({
       },
       format: PLATFORM_BACKUP_FORMAT,
       manifest: sanitized.manifest,
-      storage_payload_included: false,
+      storage_payload: storagePayload,
+      storage_payload_included: true,
     };
     dependencies.write(
       join(staging, "manifest.json"),
@@ -260,7 +525,9 @@ export function createEncryptedPlatformBackup({
       relation_classification_digest: sanitized.manifest.relation_classification_digest,
       transient_promote_count: 0,
       unclassified_count: 0,
-      storage_payload_included: false,
+      storage_object_count: storagePayload.object_count,
+      storage_payload_included: true,
+      storage_total_bytes: storagePayload.total_bytes,
     };
   } catch (error) {
     dependencies.remove(destination, { force: true });
@@ -325,6 +592,7 @@ export async function withVerifiedPlatformBackup({
       data_sha256: dependencies.hashFile(join(staging, "data.sanitized.sql")),
       roles_sha256: dependencies.hashFile(join(staging, "roles.sql")),
       schema_sha256: dependencies.hashFile(join(staging, "schema.sql")),
+      storage_payload_sha256: dependencies.hashFile(join(staging, "storage.payload.tar")),
     };
     verifyPlatformBackupMetadata(metadata, observed);
     return await consume({
@@ -332,6 +600,7 @@ export async function withVerifiedPlatformBackup({
       metadata,
       rolesPath: join(staging, "roles.sql"),
       schemaPath: join(staging, "schema.sql"),
+      storagePayloadPath: join(staging, "storage.payload.tar"),
     });
   } finally {
     dependencies.remove(staging, { force: true, recursive: true });

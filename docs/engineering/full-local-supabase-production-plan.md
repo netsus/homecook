@@ -2,7 +2,7 @@
 
 > **2026-08-13 authority update:** 목표 전환은 사용자 승인으로 local-only active contract가 됐다. Supabase Cloud/linked/remote target은 prerequisite, migration source, verifier, backup source나 fallback이 아니다. canonical 현재 기준은 `docs/engineering/supabase-local-only-operations.md`이며, 아래 remote source/cutover 서술은 2026-08-01 당시의 historical migration plan으로만 보존한다.
 
-상태: **Stage -1~3 코드·복원 rehearsal 완료 / 실제 도메인·Cloudflare·provider callback·live OAuth·최종 cutover 대기**
+상태: **historical migration plan / remote 단계 실행 FORBIDDEN·N/A / current local-only 운영은 canonical 문서 참조**
 작성일: **2026-07-31 KST**
 최종 갱신: **2026-08-01 23:21 KST**
 대상 서비스: `homecook`
@@ -12,9 +12,9 @@
 
 ## 딱 한 줄 요약
 
-Google·네이버·카카오 자체 로그인 화면을 새로 만들지 않고, 검증된 Supabase Auth를 현재 Mac에 self-hosting하여 로그인·세션·DB·이미지를 한 로컬 Supabase에 모으되, 도메인·HTTPS·백업·보안 업데이트·실제 OAuth 검증이 끝날 때까지 원격 Supabase를 현재 운영 권위로 유지한다.
+Google·네이버·카카오 자체 로그인 화면을 새로 만들지 않고, 검증된 Supabase Auth를 현재 Mac에 self-hosting하여 로그인·세션·DB·이미지를 한 local Supabase에 모은다. remote authority 유지·migration source·fallback은 현재 금지다.
 
-> 비유: 지금은 신분증 발급소는 원격 Supabase, 개인 보관함은 Mac으로 나누려는 공사 중이다. 새 계획은 신분증 발급소와 보관함을 같은 Mac 건물에 두되, 신분증 발급 프로그램 자체는 직접 만들지 않고 검증된 Supabase Auth를 설치하는 것이다.
+> 아래 2026-08-01 remote cutover 서술은 역사 부록이다. 신규 task는 실행하지 않고 canonical local-only 계약과 최신 workpack만 따른다.
 
 ## 1. 결정 요약
 
@@ -305,12 +305,12 @@ Docker Compose의 `environment`나 `.env`에 secret 값을 직접 넣지 않는�
 | `infra/local-supabase/` | Auth/API gateway 포함 production Compose와 public Auth allowlist reverse proxy |
 | `infra/local-supabase/entrypoints/export-secrets-and-exec.sh` | read-only secret file을 runtime process env로만 전달 |
 | `scripts/local-supabase-secrets-materialize.mjs` | Keychain → repo 밖 mode `0600` runtime file 생성과 검증 |
-| `scripts/local-supabase-storage-copy.mjs` | ephemeral rclone config로 hosted S3 → loopback local S3 copy와 검증 |
+| `scripts/full-local-platform-backup.mjs` | local DB metadata와 Storage payload를 같은 cut line의 암호화 archive로 묶고 clean isolated restore로 검증 |
 | `app/auth/flow/start/route.ts` | nonce/ledger row/HttpOnly cookie를 발급한 뒤 OAuth 시작 허용 |
 | `app/auth/flow/cancel/route.ts` | provider 시작 실패를 terminal 처리하고 flow cookie 제거 |
 | `lib/server/auth-flow-ledger.ts` | HMAC, ledger RPC, outstanding/terminal/cutover epoch 계약의 단일 구현 |
 | `lib/supabase/auth-env.ts` | remote-only URL/JWKS 가정을 local public/internal origin으로 교체 |
-| `lib/supabase/data-env.ts` | migration 완료 후 remote/local-shadow 분기 축소 |
+| `lib/supabase/data-env.ts` | 명시적 local authority와 loopback Data origin만 허용하고 그 밖의 target은 fail closed |
 | `lib/supabase/server.ts` | remote refresh/mirror bootstrap 제거, local session guard 연결 |
 | Auth callback/link/logout/delete | hybrid binding을 local Auth lifecycle 검증으로 대체 |
 | local DB migration | `auth.users=0` 해제, exact owner/session/generation guard와 local session authority binding 도입 |

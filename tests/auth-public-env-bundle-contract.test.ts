@@ -8,8 +8,8 @@ describe("auth public env bundle contract", () => {
 
     expect(source).toContain("process.env.NEXT_PUBLIC_AUTH_SUPABASE_URL");
     expect(source).toContain("process.env.NEXT_PUBLIC_AUTH_SUPABASE_PUBLISHABLE_KEY");
-    expect(source).toContain("process.env.NEXT_PUBLIC_SUPABASE_URL");
-    expect(source).toContain("process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY");
+    expect(source).not.toContain("process.env.NEXT_PUBLIC_SUPABASE_URL");
+    expect(source).not.toContain("process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY");
 
     expect(source).not.toContain("process.env[REMOTE_AUTH_URL_ENV]");
     expect(source).not.toContain("process.env[REMOTE_AUTH_KEY_ENV]");

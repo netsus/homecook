@@ -148,7 +148,8 @@ describe("17c settings/account backend", () => {
       getAll: cookieGetAll,
     });
     cookieGetAll.mockReturnValue([]);
-    vi.stubEnv("NEXT_PUBLIC_AUTH_SUPABASE_URL", "https://local.supabase.co");
+    vi.stubEnv("HOMECOOK_AUTH_AUTHORITY", "local");
+    vi.stubEnv("NEXT_PUBLIC_AUTH_SUPABASE_URL", "https://local.mumeok.kr");
     vi.stubEnv("NEXT_PUBLIC_AUTH_SUPABASE_PUBLISHABLE_KEY", "test-publishable-key");
     delete process.env.HOMECOOK_ENABLE_QA_FIXTURES;
   });

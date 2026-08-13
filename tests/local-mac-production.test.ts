@@ -2,7 +2,7 @@ import { spawnSync } from "node:child_process";
 import { EventEmitter } from "node:events";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
@@ -89,9 +89,21 @@ describe("local Mac production environment", () => {
   it("keeps production keys while removing development and unrelated credentials", () => {
     const result = createProductionEnvContents({
       sourceText: [
-        "NEXT_PUBLIC_SUPABASE_URL=https://project.supabase.co",
+        "NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321",
         "NEXT_PUBLIC_SUPABASE_ANON_KEY=anon-secret",
         "SUPABASE_SERVICE_ROLE_KEY=service-secret",
+        "HOMECOOK_AUTH_AUTHORITY=local",
+        "NEXT_PUBLIC_AUTH_SUPABASE_URL=http://127.0.0.1:54321",
+        "NEXT_PUBLIC_AUTH_SUPABASE_PUBLISHABLE_KEY=auth-anon-secret",
+        "AUTH_SUPABASE_EXPECTED_ISSUER=http://127.0.0.1:54321/auth/v1",
+        "AUTH_SUPABASE_JWKS_URL=http://127.0.0.1:54321/auth/v1/.well-known/jwks.json",
+        "AUTH_SUPABASE_SECRET_KEY=auth-secret",
+        "LOCAL_SUPABASE_INTERNAL_URL=http://127.0.0.1:54481",
+        "LOCAL_SUPABASE_SECRET_KEY=local-secret",
+        "HOMECOOK_DATA_AUTHORITY=local",
+        "DATA_SUPABASE_URL=http://127.0.0.1:54321",
+        "DATA_SUPABASE_PUBLISHABLE_KEY=data-anon-secret",
+        "DATA_SUPABASE_SECRET_KEY=data-secret",
         "GEMINI_API_KEY=gemini-secret",
         "GH_TOKEN=must-not-copy",
         "HOMECOOK_MAINTENANCE_WORKER_SECRET=must-not-copy",
@@ -104,13 +116,25 @@ describe("local Mac production environment", () => {
         "NEXT_PUBLIC_SUPABASE_URL=",
         "NEXT_PUBLIC_SUPABASE_ANON_KEY=",
         "SUPABASE_SERVICE_ROLE_KEY=",
+        "HOMECOOK_AUTH_AUTHORITY=",
+        "NEXT_PUBLIC_AUTH_SUPABASE_URL=",
+        "NEXT_PUBLIC_AUTH_SUPABASE_PUBLISHABLE_KEY=",
+        "AUTH_SUPABASE_EXPECTED_ISSUER=",
+        "AUTH_SUPABASE_JWKS_URL=",
+        "AUTH_SUPABASE_SECRET_KEY=",
+        "LOCAL_SUPABASE_INTERNAL_URL=",
+        "LOCAL_SUPABASE_SECRET_KEY=",
+        "HOMECOOK_DATA_AUTHORITY=",
+        "DATA_SUPABASE_URL=",
+        "DATA_SUPABASE_PUBLISHABLE_KEY=",
+        "DATA_SUPABASE_SECRET_KEY=",
         "GEMINI_API_KEY=",
         "NEXT_PUBLIC_APP_URL=",
       ].join("\n"),
       origin: "http://127.0.0.1:3100",
     });
 
-    expect(result.contents).toContain("NEXT_PUBLIC_SUPABASE_URL=https://project.supabase.co");
+    expect(result.contents).toContain("NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321");
     expect(result.contents).toContain("SUPABASE_SERVICE_ROLE_KEY=service-secret");
     expect(result.contents).toContain("NEXT_PUBLIC_APP_URL=http://127.0.0.1:3100");
     expect(result.contents).toContain("NEXT_PUBLIC_SITE_URL=http://127.0.0.1:3100");
@@ -129,6 +153,32 @@ describe("local Mac production environment", () => {
         "NEXT_PUBLIC_HOMECOOK_ENABLE_LOCAL_DEV_AUTH",
       ]),
     );
+  });
+
+  it("fails closed when the generated production env is not local-only", () => {
+    const exampleText = readFileSync(resolve(process.cwd(), ".env.example"), "utf8");
+    const valid = exampleText
+      .replaceAll("your-local-anon-key", "anon")
+      .replaceAll("your-local-service-role-key", "secret")
+      .replaceAll("your-local-auth-publishable-key", "auth-anon")
+      .replaceAll("your-local-auth-service-role-key", "auth-secret")
+      .replaceAll("your-local-supabase-secret-key", "local-secret")
+      .replaceAll("your-local-data-publishable-key", "data-anon")
+      .replaceAll("your-local-data-service-role-key", "data-secret");
+
+    expect(() => createProductionEnvContents({
+      sourceText: valid.replace(
+        "DATA_SUPABASE_URL=http://127.0.0.1:54321",
+        "DATA_SUPABASE_URL=https://project.supabase.co",
+      ),
+      exampleText,
+      origin: "http://127.0.0.1:3100",
+    })).toThrow(/local|loopback|hosted/iu);
+    expect(() => createProductionEnvContents({
+      sourceText: valid.replace("HOMECOOK_AUTH_AUTHORITY=local", "HOMECOOK_AUTH_AUTHORITY=remote"),
+      exampleText,
+      origin: "http://127.0.0.1:3100",
+    })).toThrow(/local/iu);
   });
 });
 

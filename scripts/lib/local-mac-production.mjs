@@ -32,6 +32,18 @@ const REQUIRED_PRODUCTION_ENV_KEYS = [
   "NEXT_PUBLIC_SUPABASE_URL",
   "NEXT_PUBLIC_SUPABASE_ANON_KEY",
   "SUPABASE_SERVICE_ROLE_KEY",
+  "HOMECOOK_AUTH_AUTHORITY",
+  "NEXT_PUBLIC_AUTH_SUPABASE_URL",
+  "NEXT_PUBLIC_AUTH_SUPABASE_PUBLISHABLE_KEY",
+  "AUTH_SUPABASE_EXPECTED_ISSUER",
+  "AUTH_SUPABASE_JWKS_URL",
+  "AUTH_SUPABASE_SECRET_KEY",
+  "LOCAL_SUPABASE_INTERNAL_URL",
+  "LOCAL_SUPABASE_SECRET_KEY",
+  "HOMECOOK_DATA_AUTHORITY",
+  "DATA_SUPABASE_URL",
+  "DATA_SUPABASE_PUBLISHABLE_KEY",
+  "DATA_SUPABASE_SECRET_KEY",
 ];
 
 const DENIED_PRODUCTION_ENV_KEYS = new Set([
@@ -209,6 +221,62 @@ function resolveLocalOrigin(origin) {
   return parsed.origin;
 }
 
+function assertLoopbackHttpOrigin(value, label) {
+  const parsed = new URL(ensureNonEmptyString(value, label));
+  if (
+    parsed.protocol !== "http:"
+    || !["127.0.0.1", "localhost", "::1"].includes(parsed.hostname)
+    || parsed.pathname !== "/"
+    || parsed.search
+    || parsed.hash
+  ) {
+    throw new Error(`${label} must be an exact loopback HTTP origin.`);
+  }
+  return parsed.origin;
+}
+
+function assertLocalOnlySupabaseEntries(entries) {
+  for (const authority of ["HOMECOOK_AUTH_AUTHORITY", "HOMECOOK_DATA_AUTHORITY"]) {
+    if (entries.get(authority)?.trim() !== "local") {
+      throw new Error(`${authority} must be local.`);
+    }
+  }
+  for (const key of [
+    "NEXT_PUBLIC_SUPABASE_URL",
+    "DATA_SUPABASE_URL",
+    "LOCAL_SUPABASE_INTERNAL_URL",
+  ]) {
+    assertLoopbackHttpOrigin(entries.get(key), key);
+  }
+  const authOrigin = new URL(ensureNonEmptyString(
+    entries.get("NEXT_PUBLIC_AUTH_SUPABASE_URL"),
+    "NEXT_PUBLIC_AUTH_SUPABASE_URL",
+  ));
+  const hosted = authOrigin.hostname.endsWith(".supabase.co")
+    || authOrigin.hostname.endsWith(".supabase.in");
+  const loopback = ["127.0.0.1", "localhost", "::1"].includes(authOrigin.hostname);
+  if (
+    hosted
+    || !["http:", "https:"].includes(authOrigin.protocol)
+    || (authOrigin.protocol === "http:" && !loopback)
+    || authOrigin.pathname !== "/"
+    || authOrigin.search
+    || authOrigin.hash
+  ) {
+    throw new Error("NEXT_PUBLIC_AUTH_SUPABASE_URL must be loopback HTTP or self-hosted HTTPS.");
+  }
+  const expectedIssuer = `${authOrigin.origin}/auth/v1`;
+  if (entries.get("AUTH_SUPABASE_EXPECTED_ISSUER")?.trim() !== expectedIssuer) {
+    throw new Error("AUTH_SUPABASE_EXPECTED_ISSUER must match the local Auth origin.");
+  }
+  if (
+    entries.get("AUTH_SUPABASE_JWKS_URL")?.trim()
+    !== `${expectedIssuer}/.well-known/jwks.json`
+  ) {
+    throw new Error("AUTH_SUPABASE_JWKS_URL must match the local Auth issuer.");
+  }
+}
+
 export function createProductionEnvContents({ sourceText, exampleText, origin }) {
   const sourceEntries = parseEnvEntries(sourceText);
   const exampleKeys = new Set(parseEnvEntries(exampleText).keys());
@@ -232,6 +300,7 @@ export function createProductionEnvContents({ sourceText, exampleText, origin })
   if (missingRequiredKeys.length > 0) {
     throw new Error(`Missing required production env keys: ${missingRequiredKeys.join(", ")}`);
   }
+  assertLocalOnlySupabaseEntries(selectedEntries);
 
   selectedEntries.set("HOMECOOK_PRODUCTION_EXPOSURE", "local-only");
   selectedEntries.set("NEXT_PUBLIC_APP_URL", localOrigin);

@@ -5,6 +5,7 @@ import { createHash } from "node:crypto";
 import {
   chmodSync,
   existsSync,
+  mkdirSync,
   mkdtempSync,
   readFileSync,
   realpathSync,
@@ -32,10 +33,15 @@ import {
   validateFullLocalProductionConfig,
 } from "./lib/full-local-production-runtime.mjs";
 import {
+  buildDockerStorageVolumeCaptureInvocation,
+  buildDockerStorageVolumeRestoreInvocation,
+  listStoragePayloadPaths,
   PLATFORM_BACKUP_KEYCHAIN_ACCOUNT,
   PLATFORM_BACKUP_KEYCHAIN_SERVICE,
+  verifyStoragePayloadManifest,
   withVerifiedPlatformBackup,
 } from "./lib/full-local-platform-backup.mjs";
+import { mapStorageRowsToPayloadReferences } from "./lib/isolated-local-backup-restore-drill.mjs";
 import {
   assertFreshRestoreExecutionApproved,
   assertFreshRestoreAllowed,
@@ -968,6 +974,106 @@ function writeRestoreManifest({ manifestPath, metadata, runtime, semantic }) {
   return restoreManifest;
 }
 
+function restoredStorageRows(runtime) {
+  const sql = `
+    select coalesce(json_agg(json_build_object(
+      'bucket_id', bucket_id,
+      'name', name,
+      'version', version::text
+    ) order by bucket_id, name), '[]'::json)::text
+    from storage.objects;
+  `;
+  return JSON.parse(composeWithInput(runtime, [
+    "exec",
+    "-T",
+    "postgres",
+    "psql",
+    "--tuples-only",
+    "--no-align",
+    "--variable",
+    "ON_ERROR_STOP=1",
+    "--username",
+    "supabase_admin",
+    "--dbname",
+    "postgres",
+  ], sql).trim());
+}
+
+function restoreStoragePayloadVolume(runtime, storagePayloadPath) {
+  const staging = mkdtempSync(join(tmpdir(), "homecook-storage-volume-restore-"));
+  chmodSync(staging, 0o700);
+  try {
+    writeFileSync(
+      join(staging, "storage.payload.tar"),
+      readFileSync(storagePayloadPath),
+      { mode: 0o600 },
+    );
+    const volumeName = runtime.config.FULL_LOCAL_STORAGE_VOLUME_NAME;
+    if (dockerVolumeExists(volumeName)) {
+      run("docker", ["volume", "rm", volumeName], {
+        env: runtime.env,
+        failure: "Fresh full-local Storage volume reset failed.",
+      });
+    }
+    run("docker", ["volume", "create", volumeName], {
+      env: runtime.env,
+      failure: "Fresh full-local Storage volume creation failed.",
+    });
+    const invocation = buildDockerStorageVolumeRestoreInvocation({
+      archiveDirectory: staging,
+      volumeName,
+    });
+    run(invocation.command, invocation.args, {
+      env: runtime.env,
+      failure: "Verified full-local Storage payload restore failed.",
+    });
+  } finally {
+    rmSync(staging, { force: true, recursive: true });
+  }
+}
+
+function verifyRestoredStoragePayload(runtime, manifest) {
+  const staging = mkdtempSync(join(tmpdir(), "homecook-storage-volume-verify-"));
+  chmodSync(staging, 0o700);
+  const archiveDirectory = join(staging, "archive");
+  const sourceDirectory = join(staging, "snapshot");
+  mkdirSync(archiveDirectory, { recursive: true, mode: 0o700 });
+  mkdirSync(sourceDirectory, { recursive: true, mode: 0o700 });
+  try {
+    const invocation = buildDockerStorageVolumeCaptureInvocation({
+      archiveDirectory,
+      volumeName: runtime.config.FULL_LOCAL_STORAGE_VOLUME_NAME,
+    });
+    run(invocation.command, invocation.args, {
+      env: runtime.env,
+      failure: "Restored full-local Storage payload capture failed.",
+    });
+    run("tar", [
+      "-C",
+      sourceDirectory,
+      "-xf",
+      join(archiveDirectory, "storage.payload.tar"),
+    ], { failure: "Restored full-local Storage payload extraction failed." });
+    const references = mapStorageRowsToPayloadReferences(
+      restoredStorageRows(runtime),
+      listStoragePayloadPaths(sourceDirectory),
+    );
+    verifyStoragePayloadManifest(manifest, {
+      references,
+      sourceDirectory,
+      sourceIdentity: manifest.source_identity,
+    });
+    return {
+      storage_payload_catalog_sha256: manifest.catalog_sha256,
+      storage_payload_object_count: manifest.object_count,
+      storage_payload_total_bytes: manifest.total_bytes,
+      storage_reference_count: references.length,
+    };
+  } finally {
+    rmSync(staging, { force: true, recursive: true });
+  }
+}
+
 function restoreEvidenceOptions(args, command) {
   const archiveOption = optionValue(args, "--archive");
   const manifestOption = optionValue(args, "--manifest");
@@ -1041,20 +1147,20 @@ async function restorePlatformBackup(args) {
   return withVerifiedPlatformBackup({
     archive,
     backupKey,
-    consume: async ({ dataPath, metadata, rolesPath, schemaPath }) => {
+    consume: async ({
+      dataPath,
+      metadata,
+      rolesPath,
+      schemaPath,
+      storagePayloadPath,
+    }) => {
       // GoTrue and Storage own their internal schemas. Bootstrap the exact
       // pinned service versions before applying the platform dump.
       compose(runtime, ["up", "-d"]);
       await waitForRuntimeHealthy(runtime);
-      compose(runtime, [
-        "stop",
-        "auth-proxy",
-        "api-gateway",
-        "storage",
-        "postgrest-probe",
-        "postgrest",
-        "auth",
-      ]);
+      compose(runtime, ["down"]);
+      restoreStoragePayloadVolume(runtime, storagePayloadPath);
+      compose(runtime, ["up", "-d", "postgres"]);
       await waitForServiceHealthy(runtime, "postgres");
       const restoreSql = buildPlatformRestoreSql({
         dataSql: readFileSync(dataPath, "utf8"),
@@ -1076,7 +1182,10 @@ async function restorePlatformBackup(args) {
       ], restoreSql);
       compose(runtime, ["up", "-d"]);
       await waitForRuntimeHealthy(runtime);
-      const semantic = restoredSemanticManifest(runtime);
+      const semantic = {
+        ...restoredSemanticManifest(runtime),
+        ...verifyRestoredStoragePayload(runtime, metadata.storage_payload),
+      };
       return writeRestoreManifest({ manifestPath, metadata, runtime, semantic });
     },
   });
@@ -1132,7 +1241,10 @@ async function verifyRestoredPlatform(args) {
       manifestPath,
       metadata,
       runtime,
-      semantic: restoredSemanticManifest(runtime),
+      semantic: {
+        ...restoredSemanticManifest(runtime),
+        ...verifyRestoredStoragePayload(runtime, metadata.storage_payload),
+      },
     }),
   });
 }

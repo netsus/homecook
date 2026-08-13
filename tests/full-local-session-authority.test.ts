@@ -10,6 +10,14 @@ import {
   readVerifiedAccountGenerationSession,
 } from "@/lib/server/account-generation/session-authority";
 
+const { createSessionAuthorityInternalRpcClient } = vi.hoisted(() => ({
+  createSessionAuthorityInternalRpcClient: vi.fn(),
+}));
+
+vi.mock("@/lib/supabase/server", () => ({
+  createSessionAuthorityInternalRpcClient,
+}));
+
 const OWNER_UUID = "11111111-1111-4111-8111-111111111111";
 const SESSION_UUID = "22222222-2222-4222-8222-222222222222";
 const ISSUER = "https://auth.mumeok.kr/auth/v1";
@@ -22,6 +30,7 @@ function jwt(claims: Record<string, unknown>) {
 
 describe("full-local session authority", () => {
   afterEach(() => {
+    createSessionAuthorityInternalRpcClient.mockReset();
     delete process.env.AUTH_SUPABASE_EXPECTED_ISSUER;
     delete process.env.HOMECOOK_AUTH_AUTHORITY;
     delete process.env.HOMECOOK_SESSION_GENERATION_HMAC_KEY_V1;
@@ -175,7 +184,7 @@ describe("full-local session authority", () => {
   it("reuses an already live-verified Auth user without a second network lookup", async () => {
     const now = Math.floor(Date.now() / 1_000);
     process.env.AUTH_SUPABASE_EXPECTED_ISSUER = ISSUER;
-    process.env.HOMECOOK_AUTH_AUTHORITY = "remote";
+    process.env.HOMECOOK_AUTH_AUTHORITY = "local";
     process.env.HOMECOOK_SESSION_GENERATION_HMAC_KEY_V1 = SECRET_V2;
     process.env.NEXT_PUBLIC_AUTH_SUPABASE_PUBLISHABLE_KEY = "local-publishable";
     process.env.NEXT_PUBLIC_AUTH_SUPABASE_URL = "https://auth.mumeok.kr";
@@ -205,6 +214,18 @@ describe("full-local session authority", () => {
       id: OWNER_UUID,
       created_at: "2026-08-01T00:00:00.123456Z",
     };
+    createSessionAuthorityInternalRpcClient.mockReturnValue({
+      rpc: vi.fn().mockResolvedValue({
+        data: {
+          authority: "local",
+          cutover_epoch: 7,
+          flows_open: true,
+          hmac_key_version: 1,
+          local_issuer: ISSUER,
+        },
+        error: null,
+      }),
+    });
 
     await expect(readVerifiedAccountGenerationSession(
       routeClient,

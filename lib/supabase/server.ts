@@ -15,7 +15,6 @@ import {
   createRemoteRefreshAuthorityFetch,
   recordHybridSessionAuthorityBootstrap,
 } from "@/lib/server/hybrid-auth/bootstrap";
-import { createHybridShadowReadFetch } from "@/lib/server/hybrid-auth/shadow-read";
 import {
   beginHybridAuthorityResponseBoundary,
 } from "@/lib/server/hybrid-auth/route-error-context";
@@ -43,8 +42,6 @@ import {
   getAuthSupabaseServerEnv,
   getDataServiceRoleKey,
   getDataSupabaseEnv,
-  getLocalDataServiceRoleKey,
-  getLocalShadowDataEnv,
 } from "@/lib/supabase/env";
 
 function requireHmacSecret(name: string) {
@@ -169,12 +166,8 @@ async function createAuthServerClient({
 }) {
   const cookieStore = await cookies();
   const { url, anonKey } = getAuthSupabaseEnv();
-  const dataEnv = getDataSupabaseEnv();
-  const shadowFetch = dataEnv.authority === "local-shadow"
-    ? createLocalShadowReadFetch()
-    : undefined;
-  const refreshFetch = dataEnv.authority === "local"
-    ? createRemoteRefreshAuthorityFetch({
+  getDataSupabaseEnv();
+  const authFetch = createRemoteRefreshAuthorityFetch({
         auth: {
           publishableKey: anonKey,
           url,
@@ -191,9 +184,7 @@ async function createAuthServerClient({
             user,
           });
         },
-      })
-    : undefined;
-  const authFetch = shadowFetch ?? refreshFetch;
+      });
 
   return createServerClient(url, anonKey, {
     cookies: {
@@ -374,41 +365,6 @@ function createGuardedLocalFetch({
       },
     } : {}),
     anonymousPublicReadScope,
-  });
-}
-
-function createLocalShadowReadFetch() {
-  const localEnv = getLocalShadowDataEnv();
-  const localServiceRoleKey = getLocalDataServiceRoleKey();
-  if (!localServiceRoleKey) {
-    throw new Error(
-      "local-shadow Data authority에는 DATA_SUPABASE_SECRET_KEY가 필요해요.",
-    );
-  }
-  const authorityClient = createRequestAuthorityInternalClient({
-    key: localServiceRoleKey,
-    url: localEnv.url,
-  });
-  if (!authorityClient) {
-    throw new Error(
-      "local-shadow Data authority에는 scoped authority client가 필요해요.",
-    );
-  }
-
-  return createHybridShadowReadFetch({
-    localDataUrl: localEnv.url,
-    localFetch: async (input, init) => {
-      const request = new Request(input, init);
-      const authorization = request.headers.get("authorization") ?? "";
-      const accessToken = authorization.startsWith("Bearer ")
-        ? authorization.slice("Bearer ".length).trim()
-        : null;
-      const guardedFetch = createGuardedLocalFetch({
-        authorityClient,
-        getAccessToken: async () => accessToken,
-      });
-      return guardedFetch(input, init);
-    },
   });
 }
 

@@ -74,7 +74,7 @@ describe("full-local platform restore boundary", () => {
     ].join("\n"));
   });
 
-  it("keeps stable Auth UUID data and removes remote transient sessions and Storage metadata", () => {
+  it("keeps stable Auth UUID and Storage object metadata while removing transient sessions", () => {
     const result = buildSanitizedPlatformData(platformData);
 
     expect(result.sql).toContain("COPY auth.users");
@@ -84,13 +84,13 @@ describe("full-local platform restore boundary", () => {
     expect(result.sql).not.toContain("COPY auth.sessions");
     expect(result.sql).not.toContain("COPY auth.refresh_tokens");
     expect(result.sql).not.toContain("COPY auth.flow_state");
-    expect(result.sql).not.toContain("COPY storage.objects");
+    expect(result.sql).toContain("COPY storage.objects");
     expect(result.manifest.unclassified).toEqual([]);
     expect(result.manifest.transient_promote_count).toBe(0);
     expect(result.manifest.relations).toEqual(expect.arrayContaining([
       expect.objectContaining({ relation: "auth.users", action: "include" }),
       expect.objectContaining({ relation: "auth.sessions", action: "exclude" }),
-      expect.objectContaining({ relation: "storage.objects", action: "exclude" }),
+      expect.objectContaining({ relation: "storage.objects", action: "include" }),
     ]));
   });
 
@@ -114,11 +114,23 @@ state-a
 COPY storage.s3_multipart_uploads (id) FROM stdin;
 upload-a
 \\.
+COPY storage.iceberg_namespaces (id) FROM stdin;
+namespace-a
+\\.
+COPY storage.iceberg_tables (id) FROM stdin;
+table-a
+\\.
+COPY supabase_functions.hooks (id) FROM stdin;
+hook-a
+\\.
 `);
     expect(result.sql).not.toContain("custom_oauth_providers");
     expect(result.sql).not.toContain("mfa_amr_claims");
     expect(result.sql).not.toContain("oauth_client_states");
     expect(result.sql).not.toContain("s3_multipart_uploads");
+    expect(result.sql).not.toContain("iceberg_namespaces");
+    expect(result.sql).not.toContain("iceberg_tables");
+    expect(result.sql).not.toContain("supabase_functions.hooks");
   });
 
   it("inventories relation and column names without exposing row values", () => {

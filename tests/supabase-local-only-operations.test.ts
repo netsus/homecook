@@ -1,9 +1,18 @@
-import { existsSync, readFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
 function read(path: string) {
   return readFileSync(path, "utf8");
+}
+
+function filesUnder(root: string): string[] {
+  return readdirSync(root, { withFileTypes: true }).flatMap((entry) => {
+    const path = join(root, entry.name);
+    return entry.isDirectory() ? filesUnder(path) : [path];
+  });
 }
 
 describe("Supabase local-only operations contract", () => {
@@ -32,7 +41,11 @@ describe("Supabase local-only operations contract", () => {
     expect(packageJson.scripts["verify:security-functions:remote"]).toBeUndefined();
     expect(packageJson.scripts["closeout:security-functions:remote"]).toBeUndefined();
     expect(packageJson.scripts["hybrid-production:start"]).toBeUndefined();
+    expect(packageJson.scripts["test:hybrid-production:runtime"]).toBeUndefined();
     expect(packageJson.scripts["verify:account-generation:joint-preflight"]).toBeUndefined();
+    expect(packageJson.scripts["full-local-production:storage-copy:plan"]).toBeUndefined();
+    expect(packageJson.scripts["full-local-production:storage-copy"]).toBeUndefined();
+    expect(packageJson.scripts["full-local-production:storage-copy:verify"]).toBeUndefined();
     expect(packageJson.scripts["verify:security-functions:release"]).toBe(
       "pnpm verify:security-functions && pnpm verify:security-functions:data-api",
     );
@@ -51,17 +64,132 @@ describe("Supabase local-only operations contract", () => {
     );
   });
 
+  it("relocks the active full-local workpack to the current tuple and quarantines migration history", () => {
+    const readme = read("docs/workpacks/full-local-supabase-production/README.md");
+    const acceptance = read("docs/workpacks/full-local-supabase-production/acceptance.md");
+    const activeReadme = readme.split("## Historical appendix / FORBIDDEN N/A")[0];
+
+    for (const expected of [
+      "v1.7.32",
+      "v1.5.36",
+      "v1.3.34",
+      "DB v1.3.34",
+      "API v1.2.39",
+    ]) {
+      expect(readme).toContain(expected);
+    }
+    expect(acceptance).toContain("v1.7.32/v1.5.36/v1.3.34/DB v1.3.34/API v1.2.39");
+    expect(readme).toContain("## Historical appendix / FORBIDDEN N/A");
+    expect(activeReadme).not.toMatch(/remote-default|hosted S3|migration source-of-record/iu);
+  });
+
+  it("keeps active package, CI, runbook, and workpack surfaces free of remote execution", () => {
+    const packageScripts = JSON.stringify(
+      (JSON.parse(read("package.json")) as { scripts: Record<string, string> }).scripts,
+    );
+    const workflowText = filesUnder(".github/workflows")
+      .map((path) => read(path))
+      .join("\n");
+    const ciWorkflow = read(".github/workflows/ci.yml");
+    const activeDocs = [
+      "docs/engineering/current-mac-production-plan.md",
+      "docs/engineering/full-local-session-lifecycle-runbook.md",
+      "docs/workpacks/youtube-async-extraction-notification/README.md",
+      "docs/workpacks/youtube-async-extraction-notification/acceptance.md",
+      "docs/workpacks/full-local-supabase-production/README.md",
+      "docs/workpacks/full-local-supabase-production/acceptance.md",
+    ].map((path) => {
+      const text = read(path);
+      return text.split("## Historical appendix / FORBIDDEN N/A")[0];
+    }).join("\n");
+    const forbiddenExecution = /(?:supabase\s+link|db\s+push|--linked|HOMECOOK_HOSTED_SUPABASE|SUPABASE_ACCESS_TOKEN|SUPABASE_DB_PASSWORD)/iu;
+
+    expect(packageScripts).not.toMatch(forbiddenExecution);
+    expect(workflowText).not.toMatch(forbiddenExecution);
+    expect(ciWorkflow).toMatch(/supabase\/setup-cli@\S+[\s\S]*?version:\s*2\.110\.0/iu);
+    expect(activeDocs).not.toMatch(forbiddenExecution);
+  });
+
+  it("allows remote command and credential literals only in the explicit historical inventory", () => {
+    const forbiddenExecution = /(?:supabase\s+link|db\s+push|--linked|HOMECOOK_HOSTED_SUPABASE|SUPABASE_ACCESS_TOKEN|SUPABASE_DB_PASSWORD)/iu;
+    const allowedScriptHistory = new Set([
+      "scripts/lib/account-generation-auth-hook-config-verifier.mjs",
+      "scripts/local-supabase-storage-copy.mjs",
+      "scripts/run-security-function-authorization-postgres-integration.mjs",
+      "scripts/security-function-linked-root.mjs",
+      "scripts/validate-security-function-authorization.mjs",
+      "scripts/verify-account-generation-auth-hook-config.mjs",
+      "scripts/verify-account-session-generation-remote.mjs",
+      "scripts/verify-recipe-snapshot-authority-remote.mjs",
+      "scripts/verify-recipe-visibility-read-hardening-remote.mjs",
+    ]);
+    const allowedDocHistory = new Set([
+      "docs/engineering/supabase-local-only-operations.md",
+      "docs/engineering/supabase-migrations.md",
+      "docs/workpacks/28-external-ingredient-data-ingest-gate/db-quality-report-2026-06-25.md",
+      "docs/workpacks/28-external-ingredient-data-ingest-gate/launch-ingredient-db-load-plan-2026-06-24.md",
+      "docs/workpacks/28-external-ingredient-data-ingest-gate/launch-recipe-db-load-plan-2026-06-25.md",
+      "docs/workpacks/28-external-ingredient-data-ingest-gate/live-fetch-balanced-sample-2026-05-29.md",
+      "docs/workpacks/full-local-supabase-production/acceptance.md",
+    ]);
+    const scriptMatches = filesUnder("scripts")
+      .filter((path) => forbiddenExecution.test(read(path)));
+    const docMatches = [
+      ...filesUnder("docs/engineering"),
+      ...filesUnder("docs/workpacks"),
+    ].filter((path) => forbiddenExecution.test(read(path)));
+    const packageScripts = Object.values(
+      (JSON.parse(read("package.json")) as { scripts: Record<string, string> }).scripts,
+    ).join("\n");
+
+    expect(new Set(scriptMatches)).toEqual(allowedScriptHistory);
+    expect(new Set(docMatches)).toEqual(allowedDocHistory);
+    for (const historicalPath of [...allowedScriptHistory].filter((path) => ![
+      "scripts/run-security-function-authorization-postgres-integration.mjs",
+      "scripts/validate-security-function-authorization.mjs",
+    ].includes(path))) {
+      expect(packageScripts).not.toContain(historicalPath);
+    }
+    expect(read("scripts/run-security-function-authorization-postgres-integration.mjs"))
+      .toContain("Remote/linked Supabase verification is forbidden");
+    expect(read("scripts/validate-security-function-authorization.mjs"))
+      .toContain("Remote/linked Supabase verification is forbidden");
+    expect(read("scripts/local-supabase-storage-copy.mjs")).toContain(
+      "FORBIDDEN: hosted-to-local Storage copy",
+    );
+    const hybridVerifier = spawnSync(
+      process.execPath,
+      ["scripts/verify-hybrid-supabase.mjs", "--mode", "production-runtime-docker"],
+      { cwd: process.cwd(), encoding: "utf8" },
+    );
+    expect(hybridVerifier.status).not.toBe(0);
+    expect(hybridVerifier.stderr).toContain(
+      "FORBIDDEN: hybrid remote/local verification is historical",
+    );
+  });
+
   it("keeps required backup and Data API gates local", () => {
     const backup = read("scripts/lib/full-local-platform-backup.mjs");
     const inventory = read("scripts/full-local-platform-backup.mjs");
     const dataApi = read("scripts/run-security-function-data-api-negative-smoke.mjs");
+    const productionRuntime = read("scripts/full-local-production-runtime.mjs");
 
     expect(backup).toContain('["db", "dump", "--local"');
     expect(backup).not.toContain('"--linked"');
     expect(inventory).toContain('["db", "dump", "--local"');
+    expect(inventory).toContain("buildPinnedSupabaseCliInvocation");
+    expect(inventory).toContain("PINNED_SUPABASE_CLI_VERSION");
+    expect(inventory).toContain("beginConsistentCut");
+    expect(inventory).toContain("captureSource");
+    expect(inventory).toContain("sourceIdentity");
+    expect(inventory).not.toContain('run("supabase"');
     expect(inventory).not.toContain('"--linked"');
     expect(dataApi).toContain('{ environment: "local", ...readLocalEnvironment() }');
     expect(dataApi).not.toContain("readRemoteEnvironment");
     expect(dataApi).not.toContain("resolveSecurityFunctionLinkedRoot");
+    expect(productionRuntime).toContain("storagePayloadPath");
+    expect(productionRuntime).toContain("buildDockerStorageVolumeRestoreInvocation");
+    expect(productionRuntime).toContain("verifyStoragePayloadManifest");
+    expect(productionRuntime).toContain("mapStorageRowsToPayloadReferences");
   });
 });

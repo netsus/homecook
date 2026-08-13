@@ -1,9 +1,6 @@
-import {
-  getAuthSupabaseEnv,
-  getAuthSupabaseSecretKey,
-} from "./auth-env";
+export type DataAuthority = "local";
 
-export type DataAuthority = "remote" | "local-shadow" | "local";
+const LOOPBACK_HOSTS = new Set(["127.0.0.1", "localhost", "::1", "[::1]"]);
 
 function requireNonEmpty(value: string | undefined, name: string) {
   const normalized = value?.trim();
@@ -14,22 +11,7 @@ function requireNonEmpty(value: string | undefined, name: string) {
   return normalized;
 }
 
-function parseDataAuthority(value: string | undefined): DataAuthority {
-  const normalized = value?.trim() || "remote";
-  if (
-    normalized !== "remote"
-    && normalized !== "local-shadow"
-    && normalized !== "local"
-  ) {
-    throw new Error(
-      "HOMECOOK_DATA_AUTHORITY는 remote, local-shadow, local 중 하나여야 해요.",
-    );
-  }
-
-  return normalized;
-}
-
-function normalizeDataUrl(value: string, requireLoopback: boolean) {
+function normalizeLocalDataUrl(value: string) {
   let parsed: URL;
   try {
     parsed = new URL(value);
@@ -37,24 +19,32 @@ function normalizeDataUrl(value: string, requireLoopback: boolean) {
     throw new Error("DATA_SUPABASE_URL 값은 유효한 URL이어야 해요.");
   }
 
-  const isLoopback = parsed.hostname === "127.0.0.1"
-    || parsed.hostname === "localhost"
-    || parsed.hostname === "::1"
-    || parsed.hostname === "[::1]";
-  if (requireLoopback && !isLoopback) {
+  if (!LOOPBACK_HOSTS.has(parsed.hostname)) {
+    throw new Error("local Data/Storage URL은 loopback 주소여야 해요.");
+  }
+  if (
+    !["http:", "https:"].includes(parsed.protocol)
+    || parsed.username
+    || parsed.password
+    || parsed.search
+    || parsed.hash
+    || parsed.pathname !== "/"
+  ) {
     throw new Error(
-      "production local Data/Storage URL은 loopback 주소여야 해요.",
+      "DATA_SUPABASE_URL 값은 path, 인증정보나 query가 없는 loopback URL이어야 해요.",
     );
   }
-  if (parsed.username || parsed.password || parsed.search || parsed.hash) {
-    throw new Error("DATA_SUPABASE_URL 값에 인증정보나 query를 넣을 수 없어요.");
-  }
-
   return parsed.origin;
 }
 
 export function getDataAuthority(): DataAuthority {
-  return parseDataAuthority(process.env.HOMECOOK_DATA_AUTHORITY);
+  const authority = process.env.HOMECOOK_DATA_AUTHORITY?.trim();
+  if (authority !== "local") {
+    throw new Error(
+      "HOMECOOK_DATA_AUTHORITY는 local-only 계약에 따라 local이어야 해요.",
+    );
+  }
+  return authority;
 }
 
 export function getDataSupabaseEnv(): {
@@ -63,58 +53,23 @@ export function getDataSupabaseEnv(): {
   publishableKey: string;
 } {
   const authority = getDataAuthority();
-  if (authority === "remote" || authority === "local-shadow") {
-    const authEnv = getAuthSupabaseEnv();
-    return {
-      authority,
-      url: authEnv.url,
-      publishableKey: authEnv.publishableKey,
-    };
-  }
-
-  const url = normalizeDataUrl(
+  const url = normalizeLocalDataUrl(
     requireNonEmpty(process.env.DATA_SUPABASE_URL, "DATA_SUPABASE_URL"),
-    process.env.NODE_ENV === "production",
   );
   const publishableKey = requireNonEmpty(
     process.env.DATA_SUPABASE_PUBLISHABLE_KEY,
     "DATA_SUPABASE_PUBLISHABLE_KEY",
   );
-
   return { authority, url, publishableKey };
 }
 
-export function getLocalShadowDataSupabaseEnv() {
-  if (getDataAuthority() !== "local-shadow") {
-    throw new Error(
-      "local shadow Data target은 local-shadow 모드에서만 사용할 수 있어요.",
-    );
-  }
-
-  return {
-    url: normalizeDataUrl(
-      requireNonEmpty(process.env.DATA_SUPABASE_URL, "DATA_SUPABASE_URL"),
-      process.env.NODE_ENV === "production",
-    ),
-    publishableKey: requireNonEmpty(
-      process.env.DATA_SUPABASE_PUBLISHABLE_KEY,
-      "DATA_SUPABASE_PUBLISHABLE_KEY",
-    ),
-  };
+export function getLocalShadowDataSupabaseEnv(): never {
+  throw new Error("local-shadow Data authority는 local-only 계약에서 금지돼요.");
 }
 
 export function getDataSupabaseSecretKey() {
-  const explicit = getLocalDataSupabaseSecretKey();
-  if (explicit) {
-    return explicit;
-  }
-
-  const authority = getDataAuthority();
-  if (authority === "remote" || authority === "local-shadow") {
-    return getAuthSupabaseSecretKey();
-  }
-
-  return null;
+  getDataAuthority();
+  return getLocalDataSupabaseSecretKey();
 }
 
 export function getLocalDataSupabaseSecretKey() {

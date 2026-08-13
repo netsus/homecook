@@ -1050,26 +1050,18 @@ describe("hybrid production recovery and capacity", () => {
 });
 
 describe("hybrid production verification routing", () => {
-  it("automates production artifacts while keeping live reboot, shadow, and cutover manual", () => {
+  it("tombstones every historical hybrid remote/local verification mode", () => {
     const verifier = readFileSync(
       "scripts/verify-hybrid-supabase.mjs",
       "utf8",
     );
 
-    for (const mode of [
-      "production-runtime-artifacts",
-      "backup-restore-dry-run",
-      "ordered-recovery-dry-run",
-      "capacity-preflight-dry-run",
-      "network-loopback-fixture",
-    ]) {
-      expect(verifier).toContain(`"${mode}"`);
-    }
-    expect(verifier).toMatch(
-      /manualOnlyModes[\s\S]*mac-reboot-ordered-recovery-live/u,
+    expect(verifier).toContain(
+      "FORBIDDEN: hybrid remote/local verification is historical",
     );
-    expect(verifier).toMatch(/manualOnlyModes[\s\S]*shadow-read/u);
-    expect(verifier).toMatch(/manualOnlyModes[\s\S]*final-cutover/u);
+    expect(verifier).not.toContain("production-runtime-artifacts");
+    expect(verifier).not.toContain("shadow-read");
+    expect(verifier).not.toContain("final-cutover");
   });
 
   it("builds the current allowlisted gateway source during production install", () => {

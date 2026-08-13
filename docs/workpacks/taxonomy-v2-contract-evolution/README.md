@@ -137,7 +137,7 @@
 - Stage 2 migration은 additive-only다. `ingredients.category`와 기존 `cooking_methods` 기본 응답 필드는 유지하고, 새 column/table은 nullable 또는 seed registry로만 추가한다.
 - migration은 `create table if not exists`, `add column if not exists`, `on conflict do update`를 사용해 재실행 가능해야 한다.
 - rollback은 기존 v1 field 소비 코드로 되돌려도 데이터가 깨지지 않는 방식으로 한다. 즉시 drop 대신 새 table/column을 남겨도 기존 public contract는 유지된다.
-- production smoke는 Supabase linked project에 migration 적용 후 registry count와 fruit-like row 매핑을 확인한다.
+- database smoke는 pinned isolated local migration replay 또는 승인된 controlled full-local target에서 registry count와 fruit-like row 매핑을 확인한다. 운영 DB reset은 금지한다.
 
 ### Error Cases
 

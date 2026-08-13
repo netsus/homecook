@@ -1,6 +1,6 @@
 # Slice: hybrid-auth-local-data-production
 
-> **Superseded 2026-08-01:** `full-local-supabase-production` contract가 active production authority를 대체한다. 이 workpack의 remote Auth/local Data 설계와 체크는 역사·recovery evidence이며 새 구현 완료로 승격하지 않는다. migration/code 삭제는 full-local cutover 14일 안정화, dependency 0과 별도 cleanup 승인 뒤에만 가능하다.
+> **HISTORICAL / FORBIDDEN N/A (2026-08-13):** `full-local-supabase-production`과 `docs/engineering/supabase-local-only-operations.md`가 active authority다. 이 workpack의 remote Auth/local Data 설계·command·credential은 감사 기록일 뿐 신규 prerequisite, gate, fallback 또는 recovery source로 실행하지 않는다.
 
 ## Goal
 

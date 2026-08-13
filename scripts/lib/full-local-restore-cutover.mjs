@@ -4,6 +4,7 @@ const INCLUDED_RELATIONS = new Set([
   "auth.identities",
   "auth.users",
   "storage.buckets",
+  "storage.objects",
 ]);
 
 const EXCLUDED_RELATIONS = new Set([
@@ -29,10 +30,12 @@ const EXCLUDED_RELATIONS = new Set([
   "auth.webauthn_credentials",
   "storage.buckets_analytics",
   "storage.buckets_vectors",
-  "storage.objects",
+  "storage.iceberg_namespaces",
+  "storage.iceberg_tables",
   "storage.s3_multipart_uploads",
   "storage.s3_multipart_uploads_parts",
   "storage.vector_indexes",
+  "supabase_functions.hooks",
 ]);
 
 const COPY_HEADER = /^COPY\s+((?:"[^"]+"|[a-zA-Z_][\w$]*)\.(?:"[^"]+"|[a-zA-Z_][\w$]*))\s+\(([^)]*)\)\s+FROM\s+stdin;\s*$/;

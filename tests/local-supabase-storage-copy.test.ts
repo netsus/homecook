@@ -10,6 +10,7 @@ import {
   buildRcloneConfig,
   buildStorageCopyRuntime,
   compareStorageObjectCatalogs,
+  main,
   normalizeHostedSupabaseS3Endpoint,
   normalizeLoopbackSupabaseS3Endpoint,
   parseStorageCopyCliArgs,
@@ -19,6 +20,19 @@ import {
   writeVerificationManifest,
   writeEphemeralRcloneConfig,
 } from "@/scripts/local-supabase-storage-copy.mjs";
+
+describe("historical hosted Storage copy tombstone", () => {
+  it("fails before reading any remote credential or starting a copy", () => {
+    const runCommand = vi.fn();
+
+    expect(() => main(["plan"], {
+      env: baseEnv(),
+      repositoryRoot: process.cwd(),
+      runCommand,
+    })).toThrow(/FORBIDDEN|local-only/iu);
+    expect(runCommand).not.toHaveBeenCalled();
+  });
+});
 
 function baseEnv() {
   return {

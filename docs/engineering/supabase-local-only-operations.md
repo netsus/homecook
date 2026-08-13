@@ -52,7 +52,7 @@ rg -n -i '(supabase cloud|remote supabase|remote db|linked root|supabase link|--
 
 ### Isolated deterministic gate
 
-- pinned Supabase CLI와 repository migration SHA를 기록한다.
+- `supabase@2.110.0` pinned CLI exact version과 repository migration SHA를 실행 시작 전에 검증·기록한다. bare `PATH`의 `supabase`는 gate authority가 아니다.
 - fresh isolated local stack은 운영 volume, 운영 port, 운영 env/secret mount를 공유하지 않는다.
 - clean migration replay, seed/fixture, role/grant/RLS/ACL/function search path, owner A/B, anonymous denial, Data API/RPC public negative smoke를 통과한다.
 - 같은 input으로 다시 실행해 schema identity와 결과가 재현되며 remote network·link·credential access가 0임을 증명한다.
@@ -69,6 +69,7 @@ rg -n -i '(supabase cloud|remote supabase|remote db|linked root|supabase link|--
 - backup encryption key는 데이터와 분리한다. secret source는 Keychain 또는 repo 밖 `0700` directory의 `0600` read-only file이며 log, Git, browser bundle, Docker inspect에 원문 노출이 0이어야 한다.
 - backup은 immutable output path, SHA-256와 HMAC/authentication metadata를 사용하고 기존 archive를 덮어쓰지 않는다.
 - isolated clean target restore를 정기적으로 수행해 manifest, migration head, row/count/digest/owner semantics, Storage object count/bytes/hash/reference, Auth/provider login, RLS, stale/revoked session, reboot ordered recovery를 검증한다.
+- executable fixture gate는 `pnpm verify:full-local-backup-restore-drill`이다. exact disposable namespace에서 DB metadata와 named-volume object payload를 backup/clean restore하고 source identity, count, bytes, SHA-256와 DB reference가 모두 같아야 PASS다.
 - RPO 목표는 24시간, RTO 목표는 4시간이다. 마지막 성공 backup/restore age가 목표를 넘거나 off-Mac copy가 없으면 production readiness는 fail closed한다.
 - rollback rehearsal은 schema/app immediate-previous 호환, local delta 보존, destructive reset 불사용을 확인한다. 첫 local user-scoped state mutation 뒤에는 env-only rollback을 금지하고 coherent restore 또는 forward-fix한다.
 
