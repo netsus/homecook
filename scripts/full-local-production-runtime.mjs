@@ -48,7 +48,11 @@ import {
 } from "./lib/full-local-platform-backup.mjs";
 import { mapStorageRowsToPayloadReferences } from "./lib/isolated-local-backup-restore-drill.mjs";
 import { verifyFullLocalBackupReadiness } from "./lib/full-local-backup-readiness.mjs";
-import { verifyFullLocalBackupKeyEscrowBinding } from "./lib/full-local-backup-key-recovery.mjs";
+import {
+  signFullLocalBackupKeyRecoveryEvidence,
+  verifyFullLocalBackupKeyEscrowBinding,
+  verifyFullLocalBackupKeyRecoveryIssuerAttestation,
+} from "./lib/full-local-backup-key-recovery.mjs";
 import {
   assertPrivateArtifactParent,
   assertRegularReadinessArtifact,
@@ -891,6 +895,10 @@ async function loadFullLocalBackupReadiness(runtime, resources) {
   ) {
     fail("Backup key escrow envelope format is invalid.");
   }
+  verifyFullLocalBackupKeyRecoveryIssuerAttestation({
+    envelope: escrowEnvelope,
+    evidence: keyRecoveryManifest,
+  });
   if (
     sha256File(keyRecoveryManifestPath) !== evidence.key_recovery.evidence_sha256
     || keyRecoveryManifest.escrow_envelope_path
@@ -1422,6 +1430,77 @@ function runCutoverPreflight(args) {
   };
 }
 
+function writeCanonicalRecoveryManifest({
+  archive,
+  archiveSha256,
+  args,
+  backupKey,
+  metadata,
+  restoreManifest,
+}) {
+  const output = optionValue(args, "--recovery-manifest");
+  const envelopePath = optionValue(args, "--escrow-envelope");
+  const issuerKeyPath = optionValue(args, "--recovery-issuer-private-key");
+  for (const [label, path] of Object.entries({ output, envelopePath, issuerKeyPath })) {
+    if (!path || !isAbsolute(path)) fail(`restore-platform requires --${label} absolute path.`);
+  }
+  const canonicalEnvelope = assertRegularReadinessArtifact(envelopePath);
+  const canonicalIssuerKey = assertRegularReadinessArtifact(issuerKeyPath);
+  assertPrivateArtifactParent(canonicalEnvelope);
+  assertPrivateArtifactParent(canonicalIssuerKey);
+  if (
+    statSync(canonicalEnvelope).dev === statSync(archive).dev
+    || statSync(canonicalIssuerKey).dev !== statSync(canonicalEnvelope).dev
+  ) {
+    fail("Recovery issuer key and escrow must share a medium distinct from the archive.");
+  }
+  const outputPath = resolve(output);
+  if (existsSync(outputPath) || existsSync(platformBackupAuthenticationPath(outputPath))) {
+    fail("Canonical recovery manifest output already exists.");
+  }
+  validateExternalSecretDirectory({ repositoryRoot: ROOT, secretDirectory: dirname(outputPath) });
+  const envelope = JSON.parse(readFileSync(canonicalEnvelope, "utf8"));
+  const unsigned = {
+    archive_device_id: String(statSync(archive).dev),
+    archive_sha256: archiveSha256,
+    clean_restore_verified: restoreManifest.fresh_target_attested === true,
+    created_at: new Date().toISOString(),
+    escrow_device_id: String(statSync(canonicalEnvelope).dev),
+    escrow_envelope_path: canonicalEnvelope,
+    escrow_envelope_sha256: sha256File(canonicalEnvelope),
+    format: "homecook-full-local-backup-key-recovery-v1",
+    isolated_replacement_environment_verified:
+      restoreManifest.restore_execution === "clean-isolated-restore-platform-v1",
+    keychain_reregistered: true,
+    keychain_registration: {
+      account: PLATFORM_BACKUP_KEYCHAIN_ACCOUNT,
+      adapter: "macos-keychain-recovered-key-v1",
+      key_sha256: createHash("sha256").update(backupKey).digest("hex"),
+    },
+    restored_metadata_sha256: fullLocalBackupMetadataSha256(metadata),
+    restore_manifest_path: resolve(optionValue(args, "--manifest")),
+    restore_manifest_sha256: sha256File(resolve(optionValue(args, "--manifest"))),
+  };
+  const evidence = signFullLocalBackupKeyRecoveryEvidence({
+    evidence: unsigned,
+    privateKey: readFileSync(canonicalIssuerKey, "utf8"),
+  });
+  verifyFullLocalBackupKeyRecoveryIssuerAttestation({ envelope, evidence });
+  const contents = `${JSON.stringify(evidence, null, 2)}\n`;
+  writeFileSync(outputPath, contents, { encoding: "utf8", flag: "wx", mode: 0o600 });
+  const authentication = buildPlatformBackupAuthentication({
+    archive: outputPath,
+    archiveBytes: Buffer.from(contents),
+    backupKey,
+  });
+  writeFileSync(
+    platformBackupAuthenticationPath(outputPath),
+    `${JSON.stringify(authentication, null, 2)}\n`,
+    { encoding: "utf8", flag: "wx", mode: 0o600 },
+  );
+  return evidence;
+}
+
 async function restorePlatformBackup(args) {
   const { archive, manifestPath } = restoreEvidenceOptions(args, "restore-platform");
   assertFreshRestoreExecutionApproved({
@@ -1505,18 +1584,29 @@ async function restorePlatformBackup(args) {
         });
         liveFullLocalProductionResources(runtime);
       },
-      verifyRestoredPlatform: () => writeRestoreManifest({
-        archiveSha256,
-        backupKey,
-        manifestPath,
-        metadata,
-        runtime,
-        semantic: {
-          ...restoredPlatformDataSnapshot(runtime, metadata),
-          ...restoredSemanticManifest(runtime),
-          ...verifyRestoredStoragePayload(runtime, metadata.storage_payload),
-        },
-      }),
+      verifyRestoredPlatform: () => {
+        const restoreManifest = writeRestoreManifest({
+          archiveSha256,
+          backupKey,
+          manifestPath,
+          metadata,
+          runtime,
+          semantic: {
+            ...restoredPlatformDataSnapshot(runtime, metadata),
+            ...restoredSemanticManifest(runtime),
+            ...verifyRestoredStoragePayload(runtime, metadata.storage_payload),
+          },
+        });
+        const recoveryManifest = writeCanonicalRecoveryManifest({
+          archive,
+          archiveSha256,
+          args,
+          backupKey,
+          metadata,
+          restoreManifest,
+        });
+        return { recovery_manifest: recoveryManifest, restore_manifest: restoreManifest };
+      },
     }),
   });
 }

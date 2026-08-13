@@ -27,6 +27,8 @@ if (
   || evidence?.clean_restore_verified !== true
   || evidence?.escrow_envelope_authenticated !== true
   || evidence?.keychain_reregistered !== true
+  || evidence?.isolated_replacement_environment_verified !== true
+  || evidence?.recovery_issuer_attestation_verified !== true
   || evidence?.recovery_evidence_derived_from_restore !== true
   || evidence?.production_readiness_issued !== false
 ) {

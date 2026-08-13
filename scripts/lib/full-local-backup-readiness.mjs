@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { isAbsolute, resolve } from "node:path";
 import { dirname } from "node:path";
 import { lstatSync, realpathSync, statSync } from "node:fs";
+import { verifyFullLocalBackupKeyRecoveryIssuerAttestation } from "./full-local-backup-key-recovery.mjs";
 
 export const FULL_LOCAL_BACKUP_READINESS_FORMAT =
   "homecook-full-local-backup-readiness-v1";
@@ -84,6 +85,7 @@ export function buildFullLocalBackupReadinessEvidence({
   archiveSha256,
   backupMetadata,
   keyRecoveryManifest,
+  keyRecoveryEscrowEnvelope,
   keyRecoveryManifestPath,
   keyRecoveryManifestSha256,
   now,
@@ -93,6 +95,10 @@ export function buildFullLocalBackupReadinessEvidence({
   restoreManifestPath,
   restoreManifestSha256,
 }) {
+  verifyFullLocalBackupKeyRecoveryIssuerAttestation({
+    envelope: keyRecoveryEscrowEnvelope,
+    evidence: keyRecoveryManifest,
+  });
   const components = backupMetadata?.components;
   const backupManifest = backupMetadata?.manifest;
   const metadataSha256 = fullLocalBackupMetadataSha256(backupMetadata);
@@ -124,8 +130,10 @@ export function buildFullLocalBackupReadinessEvidence({
     || typeof keyRecoveryManifest?.escrow_envelope_path !== "string"
     || !isAbsolute(keyRecoveryManifest.escrow_envelope_path)
     || !SHA256.test(keyRecoveryManifest?.escrow_envelope_sha256)
-    || keyRecoveryManifest?.source_machine_id
-      === keyRecoveryManifest?.replacement_machine_id
+    || keyRecoveryManifest?.isolated_replacement_environment_verified !== true
+    || resolve(keyRecoveryManifest?.restore_manifest_path ?? "")
+      !== resolve(restoreManifestPath ?? "")
+    || keyRecoveryManifest?.restore_manifest_sha256 !== restoreManifestSha256
     || typeof keyRecoveryManifestPath !== "string"
     || !isAbsolute(keyRecoveryManifestPath)
     || !SHA256.test(keyRecoveryManifestSha256)
@@ -318,8 +326,9 @@ export function verifyFullLocalBackupReadiness({
     || evidence.key_recovery.escrow_device_id.length === 0
     || evidence.key_recovery.archive_device_id
       === evidence.key_recovery.escrow_device_id
-    || evidence?.key_recovery?.source_machine_id
-      === evidence?.key_recovery?.replacement_machine_id
+    || evidence?.key_recovery?.isolated_replacement_environment_verified !== true
+    || evidence?.key_recovery?.restore_manifest_path !== evidence?.restore?.manifest_path
+    || evidence?.key_recovery?.restore_manifest_sha256 !== evidence?.restore?.manifest_sha256
     || typeof evidence?.key_recovery?.evidence_path !== "string"
     || !isAbsolute(evidence.key_recovery.evidence_path)
     || !SHA256.test(evidence?.key_recovery?.evidence_sha256)

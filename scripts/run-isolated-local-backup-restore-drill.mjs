@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { spawnSync } from "node:child_process";
-import { createHash, randomBytes } from "node:crypto";
+import { createHash, generateKeyPairSync, randomBytes } from "node:crypto";
 import {
   chmodSync,
   mkdirSync,
@@ -30,6 +30,8 @@ import {
   createIsolatedKeychainAdapter,
   openFullLocalBackupKeyEscrow,
   sealFullLocalBackupKeyEscrow,
+  signFullLocalBackupKeyRecoveryEvidence,
+  verifyFullLocalBackupKeyRecoveryIssuerAttestation,
   verifyIsolatedKeychainRegistration,
 } from "./lib/full-local-backup-key-recovery.mjs";
 import { fullLocalBackupMetadataSha256 } from "./lib/full-local-backup-readiness.mjs";
@@ -378,9 +380,8 @@ async function executeDrill() {
   const backupKey = randomBytes(48).toString("base64url");
   const keyRecoveryMode = process.argv.includes("--key-recovery");
   const recoveryCredential = randomBytes(48).toString("base64url");
+  const recoveryIssuer = generateKeyPairSync("ed25519");
   const escrowEnvelopePath = join(root, "key-escrow", "platform-key.escrow.json");
-  const sourceMachineId = `source-adapter-${suffix}`;
-  const replacementMachineId = `replacement-adapter-${suffix}`;
   let recoveryContext = null;
   try {
     const version = run("pnpm", ["dlx", `supabase@${PINNED_SUPABASE_CLI_VERSION}`, "--version"]).trim();
@@ -449,6 +450,7 @@ async function executeDrill() {
       const envelopeContents = `${JSON.stringify(sealFullLocalBackupKeyEscrow({
         backupKey,
         recoveryCredential,
+        recoveryIssuerPublicKey: recoveryIssuer.publicKey,
       }), null, 2)}\n`;
       writeFileSync(escrowEnvelopePath, envelopeContents, { mode: 0o600 });
       const escrowAuthentication = buildPlatformBackupAuthentication({
@@ -610,6 +612,37 @@ async function executeDrill() {
     ) {
       throw new Error("Actual replacement-Mac recovery outputs are not bound");
     }
+    const restoreResultPath = join(root, "replacement-restore-result.json");
+    writeFileSync(restoreResultPath, `${JSON.stringify(restoreResult, null, 2)}\n`, {
+      mode: 0o600,
+    });
+    const recoveryManifest = signFullLocalBackupKeyRecoveryEvidence({
+      evidence: {
+        archive_device_id: "isolated-archive-adapter",
+        archive_sha256: restoreResult.archive_sha256,
+        clean_restore_verified: restoreResult.clean_restore_verified,
+        created_at: new Date().toISOString(),
+        escrow_device_id: "isolated-escrow-adapter",
+        escrow_envelope_path: escrowEnvelopePath,
+        escrow_envelope_sha256: recoveryContext.envelope_sha256,
+        format: "homecook-full-local-backup-key-recovery-v1",
+        isolated_replacement_environment_verified: true,
+        keychain_reregistered:
+          recoveryContext.keychain_receipt.key_sha256
+            === createHash("sha256").update(restoreKey).digest("hex"),
+        keychain_registration: recoveryContext.keychain_receipt,
+        restored_metadata_sha256: restoreResult.metadata_sha256,
+        restore_manifest_path: restoreResultPath,
+        restore_manifest_sha256: createHash("sha256")
+          .update(readFileSync(restoreResultPath))
+          .digest("hex"),
+      },
+      privateKey: recoveryIssuer.privateKey,
+    });
+    verifyFullLocalBackupKeyRecoveryIssuerAttestation({
+      envelope: JSON.parse(readFileSync(escrowEnvelopePath, "utf8")),
+      evidence: recoveryManifest,
+    });
     return {
       ...restoreResult,
       escrow_envelope_authenticated: recoveryContext.envelope_authenticated,
@@ -620,7 +653,9 @@ async function executeDrill() {
           === createHash("sha256").update(restoreKey).digest("hex"),
       production_readiness_issued: false,
       recovery_evidence_derived_from_restore: true,
-      replacement_machine_verified: sourceMachineId !== replacementMachineId,
+      recovery_issuer_attestation_verified: true,
+      recovery_manifest: recoveryManifest,
+      isolated_replacement_environment_verified: true,
     };
   } finally {
     cleanupContainer(plan.source_database_container);

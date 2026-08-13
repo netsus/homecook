@@ -40,7 +40,10 @@ import {
   fullLocalBackupMetadataSha256,
   verifyFullLocalBackupReadiness,
 } from "./lib/full-local-backup-readiness.mjs";
-import { verifyFullLocalBackupKeyEscrowBinding } from "./lib/full-local-backup-key-recovery.mjs";
+import {
+  verifyFullLocalBackupKeyEscrowBinding,
+  verifyFullLocalBackupKeyRecoveryIssuerAttestation,
+} from "./lib/full-local-backup-key-recovery.mjs";
 import { validateExternalSecretDirectory } from "./lib/full-local-production-runtime.mjs";
 import { inventoryPlatformDataRelations } from "./lib/full-local-restore-cutover.mjs";
 import { mapStorageRowsToPayloadReferences } from "./lib/isolated-local-backup-restore-drill.mjs";
@@ -396,6 +399,10 @@ async function recordBackupReadiness(args) {
     ) {
       fail("Backup key escrow envelope format is invalid.");
     }
+    verifyFullLocalBackupKeyRecoveryIssuerAttestation({
+      envelope: escrowEnvelope,
+      evidence: keyRecoveryManifest,
+    });
     const metadata = await withVerifiedPlatformBackup({
       archive,
       backupKey,
@@ -415,6 +422,7 @@ async function recordBackupReadiness(args) {
       archivePath: archive,
       archiveSha256,
       backupMetadata: metadata,
+      keyRecoveryEscrowEnvelope: escrowEnvelope,
       keyRecoveryManifest,
       keyRecoveryManifestPath,
       keyRecoveryManifestSha256: sha256File(keyRecoveryManifestPath),

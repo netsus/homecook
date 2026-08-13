@@ -7,6 +7,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { generateKeyPairSync } from "node:crypto";
 
 import { describe, expect, it, vi } from "vitest";
 
@@ -18,6 +19,10 @@ import {
   assertRegularReadinessArtifact,
   verifyFullLocalBackupReadiness,
 } from "@/scripts/lib/full-local-backup-readiness.mjs";
+import {
+  sealFullLocalBackupKeyEscrow,
+  signFullLocalBackupKeyRecoveryEvidence,
+} from "@/scripts/lib/full-local-backup-key-recovery.mjs";
 
 const NOW = Date.parse("2026-08-13T08:00:00.000Z");
 const SHA = "a".repeat(64);
@@ -54,6 +59,38 @@ function validBackupMetadata() {
 }
 
 const METADATA_SHA = fullLocalBackupMetadataSha256(validBackupMetadata());
+const RECOVERY_ISSUER = generateKeyPairSync("ed25519");
+const RECOVERY_ENVELOPE = sealFullLocalBackupKeyEscrow({
+  backupKey: "backup-key-with-at-least-twenty-four-characters",
+  recoveryCredential: "independent-credential-manager-secret",
+  recoveryIssuerPublicKey: RECOVERY_ISSUER.publicKey,
+});
+
+function validRecoveryManifest() {
+  return signFullLocalBackupKeyRecoveryEvidence({
+    evidence: {
+      archive_device_id: "11",
+      archive_sha256: SHA,
+      clean_restore_verified: true,
+      created_at: "2026-08-13T07:10:00.000Z",
+      escrow_device_id: "12",
+      escrow_envelope_path: "/Volumes/homecook-key-escrow/platform-key.escrow.json",
+      escrow_envelope_sha256: "c".repeat(64),
+      format: "homecook-full-local-backup-key-recovery-v1",
+      keychain_reregistered: true,
+      keychain_registration: {
+        account: "platform-backup",
+        adapter: "isolated-filesystem-keychain-adapter-v1",
+        key_sha256: "8".repeat(64),
+      },
+      isolated_replacement_environment_verified: true,
+      restored_metadata_sha256: METADATA_SHA,
+      restore_manifest_path: "/Volumes/homecook-restore/restore.json",
+      restore_manifest_sha256: "6".repeat(64),
+    },
+    privateKey: RECOVERY_ISSUER.privateKey,
+  });
+}
 
 function validEvidence() {
   return {
@@ -69,25 +106,9 @@ function validEvidence() {
     },
     format: "homecook-full-local-backup-readiness-v1",
     key_recovery: {
-      archive_device_id: "11",
-      archive_sha256: SHA,
-      clean_restore_verified: true,
-      created_at: "2026-08-13T07:10:00.000Z",
-      escrow_device_id: "12",
-      escrow_envelope_path: "/Volumes/homecook-key-escrow/platform-key.escrow.json",
-      escrow_envelope_sha256: "c".repeat(64),
+      ...validRecoveryManifest(),
       evidence_path: "/Volumes/homecook-key-escrow/recovery.json",
       evidence_sha256: "7".repeat(64),
-      format: "homecook-full-local-backup-key-recovery-v1",
-      keychain_reregistered: true,
-      keychain_registration: {
-        account: "platform-backup",
-        adapter: "isolated-filesystem-keychain-adapter-v1",
-        key_sha256: "8".repeat(64),
-      },
-      replacement_machine_id: "replacement-mac",
-      restored_metadata_sha256: METADATA_SHA,
-      source_machine_id: "source-mac",
     },
     off_mac_copy: {
       archive_path: "/Volumes/homecook-off-mac/platform-copy.tar.gz.enc",
@@ -190,25 +211,8 @@ describe("full-local backup readiness", () => {
       archiveSha256: SHA,
       backupMetadata: validBackupMetadata(),
       now: "2026-08-13T07:30:00.000Z",
-      keyRecoveryManifest: {
-        archive_device_id: "11",
-        archive_sha256: SHA,
-        clean_restore_verified: true,
-        created_at: "2026-08-13T07:10:00.000Z",
-        escrow_device_id: "12",
-        escrow_envelope_path: "/Volumes/homecook-key-escrow/platform-key.escrow.json",
-        escrow_envelope_sha256: "c".repeat(64),
-        format: "homecook-full-local-backup-key-recovery-v1",
-        keychain_reregistered: true,
-        keychain_registration: {
-          account: "platform-backup",
-          adapter: "isolated-filesystem-keychain-adapter-v1",
-          key_sha256: "8".repeat(64),
-        },
-        replacement_machine_id: "replacement-mac",
-        restored_metadata_sha256: METADATA_SHA,
-        source_machine_id: "source-mac",
-      },
+      keyRecoveryEscrowEnvelope: RECOVERY_ENVELOPE,
+      keyRecoveryManifest: validRecoveryManifest(),
       keyRecoveryManifestPath: "/Volumes/homecook-key-escrow/recovery.json",
       keyRecoveryManifestSha256: "7".repeat(64),
       offMacCopyPath: "/Volumes/homecook-off-mac/platform-copy.tar.gz.enc",
@@ -415,6 +419,38 @@ describe("full-local backup readiness", () => {
         /platformBackupAuthenticationPath\(escrowEnvelopePath\)[\s\S]*verifyPlatformBackupAuthentication/u,
       );
     }
+  });
+
+  it("permits only restore-platform to issue an issuer-attested recovery manifest", async () => {
+    const { readFileSync } = await import("node:fs");
+    const runtime = readFileSync("scripts/full-local-production-runtime.mjs", "utf8");
+    expect(runtime).toMatch(
+      /restorePlatformBackup[\s\S]*executeBootstrapAwarePlatformRestore[\s\S]*writeCanonicalRecoveryManifest/u,
+    );
+    expect(runtime).toContain("signFullLocalBackupKeyRecoveryEvidence");
+    expect(runtime).toContain("--recovery-issuer-private-key");
+  });
+
+  it("rejects a fabricated recovery manifest even when its backup-key HMAC could be valid", () => {
+    const fabricated = {
+      ...validRecoveryManifest(),
+      isolated_replacement_environment_verified: false,
+    };
+    expect(() => buildFullLocalBackupReadinessEvidence({
+      archivePath: "/Volumes/homecook-off-mac/platform.tar.gz.enc",
+      archiveSha256: SHA,
+      backupMetadata: validBackupMetadata(),
+      keyRecoveryEscrowEnvelope: RECOVERY_ENVELOPE,
+      keyRecoveryManifest: fabricated,
+      keyRecoveryManifestPath: "/Volumes/homecook-key-escrow/recovery.json",
+      keyRecoveryManifestSha256: "7".repeat(64),
+      now: "2026-08-13T07:30:00.000Z",
+      offMacCopyPath: "/Volumes/homecook-off-mac/platform-copy.tar.gz.enc",
+      offMacCopySha256: SHA,
+      restoreManifest: {},
+      restoreManifestPath: "/Volumes/homecook-restore/restore.json",
+      restoreManifestSha256: "6".repeat(64),
+    })).toThrow(/issuer|attestation|signature/iu);
   });
 
   it("allows only restore-platform to issue readiness-eligible clean restore evidence", async () => {

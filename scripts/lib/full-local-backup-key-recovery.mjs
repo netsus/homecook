@@ -2,8 +2,11 @@ import {
   createCipheriv,
   createDecipheriv,
   createHash,
+  createPublicKey,
   randomBytes,
   scryptSync,
+  sign,
+  verify,
 } from "node:crypto";
 import {
   chmodSync,
@@ -29,7 +32,12 @@ function strongSecret(value, label) {
   return value;
 }
 
-export function sealFullLocalBackupKeyEscrow({ backupKey, recoveryCredential }) {
+/** @param {{backupKey: string, recoveryCredential: string, recoveryIssuerPublicKey?: import("node:crypto").KeyLike | import("node:crypto").KeyObject | null}} input */
+export function sealFullLocalBackupKeyEscrow({
+  backupKey,
+  recoveryCredential,
+  recoveryIssuerPublicKey = null,
+}) {
   const salt = randomBytes(16);
   const iv = randomBytes(12);
   const key = scryptSync(strongSecret(recoveryCredential, "recovery credential"), salt, 32);
@@ -38,6 +46,12 @@ export function sealFullLocalBackupKeyEscrow({ backupKey, recoveryCredential }) 
     cipher.update(strongSecret(backupKey, "backup key"), "utf8"),
     cipher.final(),
   ]);
+  const issuerPublicKey = recoveryIssuerPublicKey
+    ? (recoveryIssuerPublicKey.type === "public"
+        ? recoveryIssuerPublicKey
+        : createPublicKey(recoveryIssuerPublicKey))
+      .export({ format: "der", type: "spki" })
+    : null;
   return Object.freeze({
     authentication_tag: cipher.getAuthTag().toString("base64url"),
     cipher: "AES-256-GCM",
@@ -45,8 +59,56 @@ export function sealFullLocalBackupKeyEscrow({ backupKey, recoveryCredential }) 
     format: FORMAT,
     iv: iv.toString("base64url"),
     kdf: "scrypt",
+    recovery_issuer_public_key: issuerPublicKey?.toString("base64url"),
+    recovery_issuer_public_key_sha256: issuerPublicKey
+      ? createHash("sha256").update(issuerPublicKey).digest("hex")
+      : undefined,
     salt: salt.toString("base64url"),
   });
+}
+
+function recoveryEvidencePayload(evidence) {
+  const payload = { ...(evidence ?? {}) };
+  delete payload.issuer_attestation;
+  return Buffer.from(JSON.stringify(payload), "utf8");
+}
+
+export function signFullLocalBackupKeyRecoveryEvidence({ evidence, privateKey }) {
+  const publicKey = createPublicKey(privateKey).export({ format: "der", type: "spki" });
+  return Object.freeze({
+    ...evidence,
+    issuer_attestation: {
+      algorithm: "Ed25519",
+      public_key_sha256: createHash("sha256").update(publicKey).digest("hex"),
+      signature: sign(null, recoveryEvidencePayload(evidence), privateKey).toString("base64url"),
+    },
+  });
+}
+
+export function verifyFullLocalBackupKeyRecoveryIssuerAttestation({ envelope, evidence }) {
+  try {
+    const publicKeyBytes = Buffer.from(envelope?.recovery_issuer_public_key ?? "", "base64url");
+    const fingerprint = createHash("sha256").update(publicKeyBytes).digest("hex");
+    const attestation = evidence?.issuer_attestation;
+    const publicKey = createPublicKey({ key: publicKeyBytes, format: "der", type: "spki" });
+    if (
+      envelope?.recovery_issuer_public_key_sha256 !== fingerprint
+      || attestation?.algorithm !== "Ed25519"
+      || attestation?.public_key_sha256 !== fingerprint
+      || !verify(
+        null,
+        recoveryEvidencePayload(evidence),
+        publicKey,
+        Buffer.from(attestation.signature ?? "", "base64url"),
+      )
+    ) {
+      fail("recovery issuer attestation signature is invalid");
+    }
+    return true;
+  } catch (error) {
+    if (error instanceof Error && error.message.startsWith("Full-local backup")) throw error;
+    fail("recovery issuer attestation signature is invalid");
+  }
 }
 
 export function openFullLocalBackupKeyEscrow({ envelope, recoveryCredential }) {
