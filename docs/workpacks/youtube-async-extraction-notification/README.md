@@ -128,18 +128,18 @@
 ## Design Status
 
 - [ ] 임시 UI (temporary) — Stage 1 설계 계약만 잠겼고 실제 구현 evidence는 없음
-- [x] 리뷰 대기 (pending-review) — 최신 authority REVISE findings를 수정한 Stage 4 code head `5dd595d02791648489c4ceb7bb8a043ac3cdd18d`의 390/320/desktop evidence와 portable exploratory QA 97점이 생성됐으며 새 PR head의 독립 재검토 대기 중
+- [x] 리뷰 대기 (pending-review) — backend/security crash-window와 최신 authority findings를 수정한 Stage 4 code head `d5924b14fcc416ad11db70b96f2faf0c98c0c005`의 390/320/desktop evidence와 portable exploratory QA 97점이 생성됐으며 새 PR head의 독립 backend/security 및 authority 재검토 대기 중
 - [ ] 확정 (confirmed) — Stage 5와 별도 final authority가 current frontend head를 blocker 0으로 승인한 뒤 전환
 - [ ] N/A — BE-only 슬라이스
 
 ### Stage 4 Frontend Evidence
 
-- Implementation base/code head: `25e8da8b04c2322f68d8f54837135399d7586da7` → `5dd595d02791648489c4ceb7bb8a043ac3cdd18d`
+- Implementation base/code head: `25e8da8b04c2322f68d8f54837135399d7586da7` → `d5924b14fcc416ad11db70b96f2faf0c98c0c005`
 - Screenshot manifest: `ui/designs/evidence/youtube-async-extraction-notification/manifest.json`
-- Visual verdict: `ui/designs/evidence/youtube-async-extraction-notification/visual-verdict.json` — `97/100`, pass (구현 task 판정이며 독립 authority 승인 아님)
+- Visual verdict: `ui/designs/evidence/youtube-async-extraction-notification/visual-verdict.json` — `98/100`, pass (구현 task 판정이며 독립 authority 승인 아님)
 - Exploratory QA: `ui/designs/evidence/youtube-async-extraction-notification/exploratory-qa.json` 및 tracked `portable-exploratory-qa/` raw bundle — `97/100`, 42/46 covered, finding 0
-- Deterministic browser QA: `tests/e2e/youtube-async-extraction-notification.spec.ts` — port `3217`, 7 evidence-capture scenarios와 3-project 21 executions passed, 390/320/desktop screenshots regenerated
-- Focused component/integration QA: CTA 위계·delivered replay·retry active projection·focus race·완료 시각·Quick Import suppression·theme token 29 passed; backend/Stage 3 security regression 81 passed; product 2,741 passed
+- Deterministic browser QA: `tests/e2e/youtube-async-extraction-notification.spec.ts` — port `3217`, 8 evidence-capture scenarios와 3-project 24 executions passed, quota retry/replacement projection을 포함한 390/320/desktop screenshots regenerated
+- Focused component/integration QA: response-loss·observed-201 ack·owner isolation·seen retry·accepted exact copy·retry active projection 50 passed; backend/Stage 3 security regression 87 passed; full Vitest 6,101 passed; product 2,741 passed
 - Boundary: Supabase Cloud/linked/remote/credential access 0, 운영 local Supabase/app `3100`/user data/port/volume/env/secret/launchd mutation 0. Stage 5/final authority/Stage 6와 Manual Only는 미완료다.
 
 ## Source Links

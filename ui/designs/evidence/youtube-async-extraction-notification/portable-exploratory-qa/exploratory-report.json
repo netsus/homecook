@@ -1,14 +1,14 @@
 {
   "schemaVersion": "1.0",
   "slice": "youtube-async-extraction-notification",
-  "generatedAt": "2026-08-13T19:32:33Z",
+  "generatedAt": "2026-08-13T20:33:24Z",
   "baseUrl": "http://127.0.0.1:3217",
   "devices": [
     "desktop-chrome",
     "mobile-chrome",
     "mobile-ios-small"
   ],
-  "summary": "구현 head 5dd595d02791648489c4ceb7bb8a043ac3cdd18d에서 mock API 기반 격리 앱을 포트 3217로 실행해 desktop 1280/1440, mobile 390, small mobile 320 흐름을 다시 탐색했다. 이번 authority 재검토 8개 finding인 accepted CTA 위계와 4.5:1 대비, delivered toast 재생 방지, retry job active projection, 6초 opener 해제 뒤 안정적 focus 복귀, Quick Import seen/toast 억제와 공개 응답 호환, 완료 시각, portable raw QA bundle, archive empty copy를 focused test와 browser assertions로 확인했고 새 blocker/major/minor finding은 없었다. 기존 archive cursor·grouped delivery·320px 200% safe-area·desktop stacking도 재검증했으며 remote Supabase와 운영 local app/DB는 사용하지 않았다.",
+  "summary": "구현 head d5924b14fcc416ad11db70b96f2faf0c98c0c005에서 mock API 기반 격리 앱을 포트 3217로 실행해 desktop 1280/1440, mobile 390, small mobile 320 흐름을 다시 탐색했다. 서버가 register 201 전에 durable seen을 기록하던 crash window를 제거하고, 브라우저가 201을 확인한 뒤 owner-scoped public list/seen API로 exact job만 멱등 확인하며 실패 시 다음 online/focus에서 재시도하는 경계를 focused test로 확인했다. accepted retry는 새 job ID를 공통 tracking helper에 등록해 작업 보기와 이탈 뒤 active projection을 유지하고 QUOTA_EXCEEDED는 `나중에 다시 시도`, EXTRACTION_EXPIRED는 `다시 추출`을 표시한다. 새 390px 두 장을 포함한 8개 visual scenario, 기존 archive cursor·grouped delivery·320px 200% safe-area·desktop stacking을 재검증했으며 remote Supabase와 운영 local app/DB는 사용하지 않았다.",
   "findings": [],
   "remainingRisks": [
     "이번 authority REVISE findings는 수정했지만 새 exact head의 독립 authority 재검토, Stage 5, final authority, Stage 6 승인은 아직 수행하지 않았다.",
@@ -49,7 +49,7 @@
     {
       "item_id": "happy-path-6",
       "status": "covered",
-      "notes": "Quick Import 등록 성공은 관련 async job을 기존 seen RPC로 처리하고 같은 extraction delivery toast를 현재 화면에서 억제하며 public 201 응답은 exact 유지했다.",
+      "notes": "Quick Import public 201 응답은 exact 유지한다. 브라우저가 201을 관측한 뒤 extraction ID를 sessionStorage에 보존하고 owner-scoped public unseen list에서 exact related job만 찾아 seen 처리하며, seen 전달 실패는 등록 성공 UX를 바꾸지 않고 online/focus reconciliation으로 재시도한다.",
       "linked_findings": []
     },
     {
