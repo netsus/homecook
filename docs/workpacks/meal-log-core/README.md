@@ -4,7 +4,7 @@
 
 실제 섭취 기록을 Recipe Meal과 분리된 owner/generation-scoped read/write model로 구현할 계약을 잠근다. `cooked_batch|food_product|ingredient` exact-one source, 저장 당시 날짜·timezone authority, exact nutrition evidence, batch consumption event pointer, append-only reversal과 멱등 transaction을 같은 backend slice에서 닫는다.
 
-## Official Sources
+## Backend Checkpoint Implementation-Pinned Sources
 
 - `docs/요구사항기준선-v1.7.30.md`
 - `docs/화면정의서-v1.5.34.md`
@@ -12,6 +12,8 @@
 - `docs/db설계-v1.3.32.md`
 - `docs/api문서-v1.2.37.md`
 - approved master plan SHA-256 `d4d0fb39e80eeffc8b1e73ad92f0d91a35a9b6adc57a556ea8c9ec6ecffa951d`, 1,018 lines
+
+> 위 tuple은 #9 Stage 2/3 backend checkpoint 구현·검토 당시 고정된 historical implementation input이다. 최신 official authority는 `v1.7.31/v1.5.35/v1.3.33/v1.3.33/v1.2.38`이며, fresh successor audit 결과 새 tuple은 #9의 endpoint, field, status, error, action, 권한·소유권, 멱등성, zero-write, lifecycle 또는 activation 계약을 약화하거나 변경하지 않는다.
 
 ## Scope
 
@@ -79,7 +81,7 @@
 | GET | `/food-catalog/search` | predecessor-provided unified ingredient/product search reader |
 | GET | `/cooked-batches` | predecessor-provided owner batch read model |
 
-All responses keep `{ success, data, error }`; errors keep `{ code, message, fields[] }`. This workpack adds no endpoint, field, enum, status, or public error outside the official v1.7.30/v1.5.34/v1.3.32/v1.3.32/v1.2.37 contract.
+All responses keep `{ success, data, error }`; errors keep `{ code, message, fields[] }`. The backend checkpoint added no endpoint, field, enum, status, or public error outside its implementation-pinned v1.7.30/v1.5.34/v1.3.32/v1.3.32/v1.2.37 tuple, and the latest official v1.7.31/v1.5.35/v1.3.33/v1.3.33/v1.2.38 tuple does not weaken or change that #9 contract.
 
 ## Error / Zero-write Matrix
 
@@ -188,5 +190,5 @@ All responses keep `{ success, data, error }`; errors keep `{ code, message, fie
 - [x] Stage 1 PR current-head checks and post-merge master checks green <!-- omo:id=delivery-meal-log-stage1-ci;stage=2;scope=shared;review=3,6 -->
 - [x] Stage 2 TDD RED evidence recorded before implementation <!-- omo:id=delivery-meal-log-tdd-red;stage=2;scope=backend;review=3,6 -->
 - [x] Stage 2 schema/RLS/RPC/routes implemented behind dormant capability <!-- omo:id=delivery-meal-log-backend;stage=2;scope=backend;review=3,6 -->
-- [ ] Stage 2 backend integration, concurrency, aggregate and compatibility evidence green <!-- omo:id=delivery-meal-log-backend-evidence;stage=2;scope=backend;review=3,6 -->
+- [x] Stage 2 backend integration, concurrency, aggregate and compatibility evidence green <!-- omo:id=delivery-meal-log-backend-evidence;stage=2;scope=backend;review=3,6 -->
 - [ ] Stage 6 merged-exact-SHA server-production/local-rehearsal read-only and release-train evidence green <!-- omo:id=delivery-meal-log-release-evidence;stage=2;scope=shared;review=3,6 -->

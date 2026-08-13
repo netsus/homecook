@@ -131,7 +131,7 @@
     ]
   },
   "status": {
-    "lifecycle": "planned",
+    "lifecycle": "in_progress",
     "approval_state": "not_started",
     "verification_status": "pending",
     "evaluation_status": "not_started",
@@ -139,6 +139,63 @@
     "last_evaluator_result": null,
     "auto_merge_eligible": false,
     "blocked_reason_code": null
+  },
+  "closeout": {
+    "phase": "collecting",
+    "docs_projection": {
+      "roadmap_lifecycle": "in_progress",
+      "design_status": "N/A",
+      "delivery_checklist": "pending",
+      "design_authority": "not_required",
+      "acceptance": "pending",
+      "automation_spec_metadata": "synced"
+    },
+    "verification_projection": {
+      "required_checks": "pending",
+      "external_smokes": "pending",
+      "authority_reports": [],
+      "actual_verification_refs": [
+        "PR #1319 head be93bfc47281e2795c59c0fd1052a4ecf6085837 check snapshot at 2026-08-11T14:50:04Z: raw 25 = 23 success and 2 intended historical skips, 15 unique names, bad/pending/rerun 0",
+        "Stage 3 task 019feb79-152f-7891-bd3a-435694e57cac: APPROVE P0/P1/P2 0/0/0",
+        "PR #1319 merge 8ba3fa5a2a198eb4f9c19d59cea5f6ccc52fdd4f at 2026-08-10T12:10:00Z",
+        "Merge supervisor task 019feb83-879b-7e40-ac4c-34e3bc4d86b8: post-merge 14/14 success",
+        "Merge SHA API snapshot at 2026-08-11T14:50:04Z: raw 20/20 success, 14 unique names, all run_attempt=1, bad/pending/rerun 0",
+        "Post-merge auditor task 019ff134-7ade-7463-8c65-24f066a12f2d: backend checkpoint approved, overall lifecycle HOLD"
+      ]
+    },
+    "merge_gate_projection": {
+      "current_head_sha": "be93bfc47281e2795c59c0fd1052a4ecf6085837",
+      "approval_state": "not_started",
+      "all_checks_green": false
+    },
+    "recovery_summary": {
+      "manual_patch_count": 0,
+      "manual_handoff": false,
+      "stale_lock_count": 0,
+      "ci_resync_count": 0,
+      "artifact_missing": false,
+      "last_recovery_at": "2026-08-11T14:39:37Z"
+    },
+    "repair_summary": {
+      "codex_repairable_count": 2,
+      "claude_repairable_count": 0,
+      "manual_decision_required_count": 0,
+      "human_escalation_count": 0,
+      "post_merge_stale_count": 0,
+      "latest_reason_code": "backend_checkpoint_projection_repair",
+      "evidence_sources": [
+        "Codex task handoffs",
+        "PR #1319 body",
+        "GitHub PR/CI",
+        "git history",
+        "docs/workpacks/meal-log-core/evidence"
+      ]
+    },
+    "projection_state": {
+      "docs_synced_at": "2026-08-11T14:39:37Z",
+      "status_synced_at": "2026-08-11T14:39:37Z",
+      "pr_body_synced_at": "pending-draft-pr"
+    }
   },
   "out_of_scope": [
     "Planner shell navigation owned by #10",
@@ -152,5 +209,5 @@
     "Unapproved server-production migration or write or capability activation"
   ],
   "open_questions": [],
-  "notes": "Stage 1 repair lineage is governing master base c16102a3072e929e45bb24a69464cd3110d03db5 with repair parent/HOLD report commit 076c5b22ec91dd600eb387be4930a2582054ac15. Repair author task 019fe746-8d84-7cd2-9f12-9c22560e914f closes P1-01/P1-02 only and cannot self-approve; fresh independent internal 1.5 rereview remains required. Roadmap stays docs while workflow lifecycle remains planned, approval not_started and verification pending. Stage 1 current commands are docs validators/tests/lint/typecheck/audit/diff; implementation evidence is future. Runtime waits for #1, #2, #4 and #8. #9 owns meal-log backend; #11 parallel work is limited to #8-consumer COOK_MODE/LEFTOVERS UI, #10 owns Planner shell, #12 owns MEAL_LOG UI/design, and Manual/server-Mac/OAuth evidence, capability, R/R+1/R+2 activation remain pending."
+  "notes": "Backend merge checkpoint only: PR #1319 exact head be93bfc47281e2795c59c0fd1052a4ecf6085837 passed independent Stage 3 task 019feb79-152f-7891-bd3a-435694e57cac with P0/P1/P2 0/0/0. The 2026-08-11T14:50:04Z head-check snapshot is raw 25 = 23 success + 2 intended historical skips, 15 unique names and bad/pending/rerun 0; the PR then merged as 8ba3fa5a2a198eb4f9c19d59cea5f6ccc52fdd4f at 2026-08-10T12:10:00Z. The merge supervisor preserved historical post-merge raw 14/14 success without a separate unique-name count. The 2026-08-11T14:50:04Z merge-SHA API snapshot is raw 20/20 success, 14 unique names, all run_attempt=1 and bad/pending/rerun 0. These are snapshots, not permanent live-check totals. This closes Stage 2/3 backend delivery only. #9 is backend-only, so Stage 4/5/final UI authority and frontend Stage 6 are N/A here and remain owned by #12. Overall lifecycle stays in_progress with approval not_started, verification pending, evaluation not_started and auto_merge_eligible=false until the eight future smokes are relocked and the merged-exact server-production/local-rehearsal, Manual/server-Mac/OAuth, capability, R/R+1/R+2, activation and independent post-merge/release review obligations are completed. #12 Stage 1 relock may proceed without this broader closeout. No Contract Evolution, production write, activation or Discord transmission is authorized by this checkpoint. closeout_phase=collecting closeout_repair=codex:2|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:Codex task handoffs,PR #1319 body,GitHub PR/CI,git history,docs/workpacks/meal-log-core/evidence last_recovery_at=2026-08-11T14:39:37Z"
 }
