@@ -1,4 +1,6 @@
+import { createHash } from "node:crypto";
 import { isAbsolute, resolve } from "node:path";
+import { dirname } from "node:path";
 import { lstatSync, realpathSync, statSync } from "node:fs";
 
 export const FULL_LOCAL_BACKUP_READINESS_FORMAT =
@@ -25,6 +27,28 @@ function exactPath(value, label) {
     fail(`${label} must be an absolute path`);
   }
   return resolve(value);
+}
+
+export function fullLocalBackupMetadataSha256(metadata) {
+  return createHash("sha256").update(JSON.stringify(metadata)).digest("hex");
+}
+
+export function assertPrivateArtifactParent(path, expectedUid = process.getuid?.()) {
+  const directParent = dirname(resolve(path));
+  const directStat = lstatSync(directParent);
+  const canonicalParent = realpathSync(directParent);
+  const stat = statSync(canonicalParent);
+  if (
+    directStat.isSymbolicLink()
+    || directParent !== canonicalParent
+    || !stat.isDirectory()
+    || (stat.mode & 0o777) !== 0o700
+    || !Number.isSafeInteger(expectedUid)
+    || stat.uid !== expectedUid
+  ) {
+    fail("artifact parent must be canonical, owner-controlled, and exact mode 0700");
+  }
+  return canonicalParent;
 }
 
 export function assertRegularReadinessArtifact(path) {
@@ -59,13 +83,19 @@ export function buildFullLocalBackupReadinessEvidence({
   archivePath,
   archiveSha256,
   backupMetadata,
+  keyRecoveryManifest,
+  keyRecoveryManifestPath,
+  keyRecoveryManifestSha256,
   now,
   offMacCopyPath,
   offMacCopySha256,
   restoreManifest,
+  restoreManifestPath,
+  restoreManifestSha256,
 }) {
   const components = backupMetadata?.components;
   const backupManifest = backupMetadata?.manifest;
+  const metadataSha256 = fullLocalBackupMetadataSha256(backupMetadata);
   const provenance = backupMetadata?.database?.provenance;
   const storageSourcePrefix = `docker-compose-volume:${provenance?.compose_project}:`;
   const storageSourceIdentity = backupMetadata?.storage_payload?.source_identity;
@@ -75,9 +105,28 @@ export function buildFullLocalBackupReadinessEvidence({
     : null;
   if (
     !SHA256.test(archiveSha256)
+    || keyRecoveryManifest?.format
+      !== "homecook-full-local-backup-key-recovery-v1"
+    || keyRecoveryManifest?.archive_sha256 !== archiveSha256
+    || keyRecoveryManifest?.clean_restore_verified !== true
+    || keyRecoveryManifest?.keychain_reregistered !== true
+    || keyRecoveryManifest?.restored_metadata_sha256 !== metadataSha256
+    || typeof keyRecoveryManifest?.archive_device_id !== "string"
+    || keyRecoveryManifest.archive_device_id.length === 0
+    || typeof keyRecoveryManifest?.escrow_device_id !== "string"
+    || keyRecoveryManifest.escrow_device_id.length === 0
+    || keyRecoveryManifest.archive_device_id === keyRecoveryManifest.escrow_device_id
+    || keyRecoveryManifest?.source_machine_id
+      === keyRecoveryManifest?.replacement_machine_id
+    || typeof keyRecoveryManifestPath !== "string"
+    || !isAbsolute(keyRecoveryManifestPath)
+    || !SHA256.test(keyRecoveryManifestSha256)
     || offMacCopySha256 !== archiveSha256
     || backupMetadata?.storage_payload_included !== true
     || restoreManifest?.format !== "homecook-full-local-restore-v1"
+    || typeof restoreManifestPath !== "string"
+    || !isAbsolute(restoreManifestPath)
+    || !SHA256.test(restoreManifestSha256)
     || restoreManifest?.restore_execution
       !== "clean-isolated-restore-platform-v1"
     || restoreManifest?.fresh_target_attested !== true
@@ -135,11 +184,20 @@ export function buildFullLocalBackupReadinessEvidence({
       archive_sha256: archiveSha256,
       created_at: backupMetadata.created_at,
       data_sha256: components.data_sha256,
+      metadata_sha256: metadataSha256,
       relation_classification_digest: backupManifest.relation_classification_digest,
       roles_sha256: components.roles_sha256,
       schema_sha256: components.schema_sha256,
     },
     format: FULL_LOCAL_BACKUP_READINESS_FORMAT,
+    key_recovery: {
+      ...keyRecoveryManifest,
+      evidence_path: exactPath(
+        keyRecoveryManifestPath,
+        "backup key recovery evidence",
+      ),
+      evidence_sha256: keyRecoveryManifestSha256,
+    },
     off_mac_copy: {
       archive_path: exactPath(offMacCopyPath, "off-Mac copy"),
       archive_sha256: offMacCopySha256,
@@ -166,6 +224,8 @@ export function buildFullLocalBackupReadinessEvidence({
       public_relation_count: restoreManifest.public_relation_count,
       relation_classification_digest:
         restoreManifest.relation_classification_digest,
+      manifest_path: exactPath(restoreManifestPath, "restore manifest"),
+      manifest_sha256: restoreManifestSha256,
       source_archive_sha256: restoreManifest.source_archive_sha256,
       source_data_sha256: restoreManifest.source_data_sha256,
       source_roles_sha256: restoreManifest.source_roles_sha256,
@@ -186,6 +246,7 @@ export function buildFullLocalBackupReadinessEvidence({
 }
 
 export function verifyFullLocalBackupReadiness({
+  authenticatedBackupMetadataSha256,
   evidence,
   evidenceFileMode,
   nowMs = Date.now(),
@@ -198,6 +259,12 @@ export function verifyFullLocalBackupReadiness({
   }
   const archiveSha = evidence?.backup?.archive_sha256;
   if (!SHA256.test(archiveSha)) fail("backup archive digest is invalid");
+  if (
+    !SHA256.test(authenticatedBackupMetadataSha256)
+    || evidence?.backup?.metadata_sha256 !== authenticatedBackupMetadataSha256
+  ) {
+    fail("authenticated backup metadata binding is invalid");
+  }
   const archivePath = exactPath(evidence?.backup?.archive_path, "backup archive");
   const offMacPath = exactPath(evidence?.off_mac_copy?.archive_path, "off-Mac copy");
   if (archivePath === offMacPath) fail("off-Mac copy must be a distinct path");
@@ -209,11 +276,33 @@ export function verifyFullLocalBackupReadiness({
     fail("backup and off-Mac copy digests must match observed files");
   }
   const backupAge = ageHours(evidence?.backup?.created_at, nowMs, "backup");
+  ageHours(evidence?.key_recovery?.created_at, nowMs, "backup key recovery");
   ageHours(evidence?.off_mac_copy?.verified_at, nowMs, "off-Mac copy");
   const restoreAge = ageHours(evidence?.restore?.verified_at, nowMs, "restore");
   if (
     evidence?.restore?.source_archive_sha256 !== archiveSha
+    || evidence?.key_recovery?.format
+      !== "homecook-full-local-backup-key-recovery-v1"
+    || evidence?.key_recovery?.archive_sha256 !== archiveSha
+    || evidence?.key_recovery?.restored_metadata_sha256
+      !== authenticatedBackupMetadataSha256
+    || evidence?.key_recovery?.clean_restore_verified !== true
+    || evidence?.key_recovery?.keychain_reregistered !== true
+    || typeof evidence?.key_recovery?.archive_device_id !== "string"
+    || evidence.key_recovery.archive_device_id.length === 0
+    || typeof evidence?.key_recovery?.escrow_device_id !== "string"
+    || evidence.key_recovery.escrow_device_id.length === 0
+    || evidence.key_recovery.archive_device_id
+      === evidence.key_recovery.escrow_device_id
+    || evidence?.key_recovery?.source_machine_id
+      === evidence?.key_recovery?.replacement_machine_id
+    || typeof evidence?.key_recovery?.evidence_path !== "string"
+    || !isAbsolute(evidence.key_recovery.evidence_path)
+    || !SHA256.test(evidence?.key_recovery?.evidence_sha256)
     || evidence?.restore?.execution !== "clean-isolated-restore-platform-v1"
+    || typeof evidence?.restore?.manifest_path !== "string"
+    || !isAbsolute(evidence.restore.manifest_path)
+    || !SHA256.test(evidence?.restore?.manifest_sha256)
     || evidence?.restore?.fresh_target_attested !== true
     || !SHA256.test(evidence?.restore?.database_data_sha256)
     || evidence.restore.database_data_sha256 !== evidence?.backup?.data_sha256

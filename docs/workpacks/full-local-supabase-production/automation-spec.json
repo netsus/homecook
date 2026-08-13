@@ -95,7 +95,8 @@
   "external_smokes": [
     "Google Kakao Naver local Auth login and linking over owned HTTPS domain",
     "LTE 5G app and public Auth path allowlist smoke",
-    "off-Mac encrypted full restore twice",
+    "off-Mac encrypted full restore twice with signed readiness and restore evidence",
+    "separate-medium key escrow replacement-Mac Keychain re-registration and clean restore",
     "Mac reboot Docker restart Cloudflare reconnect ordered recovery",
     "pre-floor and post-floor rollback rehearsal"
   ],
@@ -110,7 +111,7 @@
     "public-rest-storage-studio-postgres-or-direct-origin-exposed",
     "secret-found-in-config-env-git-bundle-build-or-log",
     "complete-local-storage-payload-or-semantic-mismatch",
-    "off-mac-restore-or-rollback-rehearsal-missing",
+    "off-mac-restore-key-recovery-or-rollback-rehearsal-missing",
     "dependency-or-image-release-blocker-present",
     "production-auth-state-mutation-before-operator-approval",
     "current-head-check-pending-absent-stale-failed-or-cancelled"

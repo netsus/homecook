@@ -78,6 +78,7 @@
     "full-local-production:platform-backup:verify": "node scripts/full-local-platform-backup.mjs verify-backup",
     "full-local-production:backup-readiness:record": "node scripts/full-local-platform-backup.mjs record-readiness",
     "verify:full-local-backup-restore-drill": "node scripts/run-isolated-local-backup-restore-drill.mjs --execute",
+    "verify:full-local-backup-key-recovery-drill": "node scripts/run-full-local-backup-key-recovery-drill.mjs --execute",
     "full-local-production:oauth:provision": "node scripts/full-local-production-runtime.mjs provision-oauth",
     "full-local-production:oauth:verify": "node scripts/full-local-production-runtime.mjs verify-oauth",
     "full-local-production:cutover-preflight": "node scripts/full-local-production-runtime.mjs cutover-preflight",

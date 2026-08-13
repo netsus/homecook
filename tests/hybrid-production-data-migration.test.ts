@@ -70,10 +70,11 @@ describe("hybrid production legacy data migration plan", () => {
       ["scripts/hybrid-production-data-migration.mjs", "--help"],
       { encoding: "utf8" },
     );
-    expect(result.status).toBe(0);
-    expect(result.stdout).toContain("plan");
-    expect(result.stdout).toContain("dry-run");
-    expect(result.stdout).toContain("apply");
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain(
+      "FORBIDDEN: hybrid production data migration is historical",
+    );
+    expect(result.stdout).not.toContain("plan");
   });
 
   it("replaces every target public table while transferring only source-compatible columns", async () => {
@@ -366,9 +367,10 @@ describe("hybrid production legacy data migration plan", () => {
       "scripts/hybrid-production-data-migration.mjs",
       "utf8",
     );
-    expect(cli).toMatch(
-      /archivePlan\.storageEntries\.map[\s\S]*stdoutPath:[\s\S]*sha256File[\s\S]*validateLegacyStoragePayloadInventory/u,
+    expect(cli).toContain(
+      "FORBIDDEN: hybrid production data migration is historical",
     );
+    expect(cli).not.toContain("archivePlan.storageEntries.map");
   });
 
   it("accepts zero, PNG, WebP, and order-independent Storage evidence before commit", async () => {
@@ -713,38 +715,11 @@ describe("hybrid production legacy data migration plan", () => {
       "utf8",
     );
 
-    expect(cli).toMatch(
-      /validateStorageMigrationEvidence[\s\S]*executePublicMigration/u,
-    );
-    const storageValidation = cli.indexOf(
-      "storageEvidence = validateStorageMigrationEvidence",
-    );
-    const publicExecution = cli.indexOf(
-      "const execution = executePublicMigration",
-    );
-    expect(storageValidation).toBeGreaterThan(-1);
-    expect(publicExecution).toBeGreaterThan(storageValidation);
-    expect(cli.slice(publicExecution)).not.toContain(
-      "validateStorageMigrationEvidence",
-    );
-    expect(cli.slice(publicExecution)).not.toContain(
-      "catalogSnapshot(target)",
-    );
-    expect(cli).toContain("probePublicMigrationAttempt");
-    expect(cli).toMatch(
-      /psql\(target, sql,[\s\S]*applicationName:[\s\S]*attempt\.applicationName/u,
-    );
-    expect(cli).toMatch(
-      /const first = probePublicMigrationAttemptOnce[\s\S]*const second = probePublicMigrationAttemptOnce/u,
-    );
-    expect(cli).not.toContain("storageEvidence[0]");
-    expect(cli).not.toContain("storagePairs[0]");
-    expect(cli).not.toContain("publicCommitted");
-    expect(cli).not.toContain("storageMutation.verify()");
     expect(cli).toContain(
-      "remote-auth-provider-revision-cas-not-evaluated",
+      "FORBIDDEN: hybrid production data migration is historical",
     );
-    expect(cli).toContain("publication_safe: false");
+    expect(cli).not.toContain("executePublicMigration");
+    expect(cli).not.toContain("spawnSync");
     expect(
       readFileSync(
         "scripts/lib/hybrid-production-data-migration.mjs",

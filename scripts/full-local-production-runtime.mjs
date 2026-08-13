@@ -30,6 +30,7 @@ import {
   materializeFullLocalSecrets,
   parseFullLocalProductCatalogSqlOutput,
   summarizeFullLocalRuntimeStates,
+  selectNewlyStartedFullLocalWriterServices,
   validateExternalSecretDirectory,
   validateFullLocalProductionConfig,
 } from "./lib/full-local-production-runtime.mjs";
@@ -41,14 +42,17 @@ import {
   PLATFORM_BACKUP_KEYCHAIN_ACCOUNT,
   PLATFORM_BACKUP_KEYCHAIN_SERVICE,
   platformBackupAuthenticationPath,
+  verifyPlatformBackupAuthentication,
   verifyStoragePayloadManifest,
   withVerifiedPlatformBackup,
 } from "./lib/full-local-platform-backup.mjs";
 import { mapStorageRowsToPayloadReferences } from "./lib/isolated-local-backup-restore-drill.mjs";
 import { verifyFullLocalBackupReadiness } from "./lib/full-local-backup-readiness.mjs";
 import {
+  assertPrivateArtifactParent,
   assertRegularReadinessArtifact,
   authenticateFullLocalBackupArchives,
+  fullLocalBackupMetadataSha256,
 } from "./lib/full-local-backup-readiness.mjs";
 import {
   selectFullLocalProductionResources,
@@ -801,21 +805,92 @@ function liveFullLocalProductionResources(runtime) {
   });
 }
 
+function configuredFullLocalProductionResources(runtime) {
+  return {
+    composeProject: runtime.config.FULL_LOCAL_COMPOSE_PROJECT_NAME,
+    postgresContainerName:
+      `${runtime.config.FULL_LOCAL_COMPOSE_PROJECT_NAME}-postgres-1`,
+    postgresImage: runtime.config.FULL_LOCAL_POSTGRES_IMAGE,
+    postgresVolumeName: runtime.config.FULL_LOCAL_POSTGRES_VOLUME_NAME,
+    storageVolumeName: runtime.config.FULL_LOCAL_STORAGE_VOLUME_NAME,
+  };
+}
+
 async function loadFullLocalBackupReadiness(runtime, resources) {
   const path = runtime.config.FULL_LOCAL_BACKUP_READINESS_PATH;
   if (!path || !isAbsolute(path) || !existsSync(path)) {
     fail("FULL_LOCAL_BACKUP_READINESS_PATH must reference existing readiness evidence.");
   }
-  assertRegularReadinessArtifact(path);
+  const readinessPath = assertRegularReadinessArtifact(path);
+  assertPrivateArtifactParent(readinessPath);
   validateExternalSecretDirectory({
     repositoryRoot: ROOT,
-    secretDirectory: dirname(path),
+    secretDirectory: dirname(readinessPath),
   });
-  const evidenceStat = statSync(path);
+  const evidenceStat = statSync(readinessPath);
   if (!evidenceStat.isFile() || (evidenceStat.mode & 0o777) !== 0o600) {
     fail("Full-local backup readiness evidence must be a mode 0600 file.");
   }
-  const evidence = JSON.parse(readFileSync(realpathSync(path), "utf8"));
+  const backupKey = keychainValue(
+    PLATFORM_BACKUP_KEYCHAIN_SERVICE,
+    PLATFORM_BACKUP_KEYCHAIN_ACCOUNT,
+  );
+  const authenticationPath = assertRegularReadinessArtifact(
+    platformBackupAuthenticationPath(readinessPath),
+  );
+  assertPrivateArtifactParent(authenticationPath);
+  validateExternalSecretDirectory({
+    repositoryRoot: ROOT,
+    secretDirectory: dirname(authenticationPath),
+  });
+  const readinessBytes = readFileSync(readinessPath);
+  verifyPlatformBackupAuthentication({
+    archive: readinessPath,
+    archiveBytes: readinessBytes,
+    authentication: JSON.parse(readFileSync(authenticationPath, "utf8")),
+    backupKey,
+  });
+  const evidence = JSON.parse(readinessBytes.toString("utf8"));
+  const keyRecoveryManifestPath = assertRegularReadinessArtifact(
+    evidence?.key_recovery?.evidence_path,
+  );
+  assertPrivateArtifactParent(keyRecoveryManifestPath);
+  const keyRecoveryAuthenticationPath = assertRegularReadinessArtifact(
+    platformBackupAuthenticationPath(keyRecoveryManifestPath),
+  );
+  assertPrivateArtifactParent(keyRecoveryAuthenticationPath);
+  const keyRecoveryManifestBytes = readFileSync(keyRecoveryManifestPath);
+  verifyPlatformBackupAuthentication({
+    archive: keyRecoveryManifestPath,
+    archiveBytes: keyRecoveryManifestBytes,
+    authentication: JSON.parse(readFileSync(keyRecoveryAuthenticationPath, "utf8")),
+    backupKey,
+  });
+  if (
+    sha256File(keyRecoveryManifestPath) !== evidence.key_recovery.evidence_sha256
+    || String(statSync(keyRecoveryManifestPath).dev)
+      !== evidence.key_recovery.escrow_device_id
+  ) {
+    fail("Signed backup key recovery evidence does not match readiness.");
+  }
+  const restoreManifestPath = assertRegularReadinessArtifact(
+    evidence?.restore?.manifest_path,
+  );
+  assertPrivateArtifactParent(restoreManifestPath);
+  const restoreAuthenticationPath = assertRegularReadinessArtifact(
+    platformBackupAuthenticationPath(restoreManifestPath),
+  );
+  assertPrivateArtifactParent(restoreAuthenticationPath);
+  const restoreManifestBytes = readFileSync(restoreManifestPath);
+  verifyPlatformBackupAuthentication({
+    archive: restoreManifestPath,
+    archiveBytes: restoreManifestBytes,
+    authentication: JSON.parse(readFileSync(restoreAuthenticationPath, "utf8")),
+    backupKey,
+  });
+  if (sha256File(restoreManifestPath) !== evidence.restore.manifest_sha256) {
+    fail("Signed restore manifest digest does not match readiness evidence.");
+  }
   const observedFiles = {};
   const archiveStats = [];
   for (const archivePath of [
@@ -828,6 +903,8 @@ async function loadFullLocalBackupReadiness(runtime, resources) {
     if (lstatSync(archivePath).isSymbolicLink()) {
       fail("Backup readiness archives must not be symlinks.");
     }
+    assertPrivateArtifactParent(archivePath);
+    assertPrivateArtifactParent(platformBackupAuthenticationPath(archivePath));
     const archiveStat = statSync(realpathSync(archivePath));
     if (!archiveStat.isFile() || (archiveStat.mode & 0o777) !== 0o600) {
       fail("Backup readiness archives must be regular mode 0600 files.");
@@ -838,10 +915,12 @@ async function loadFullLocalBackupReadiness(runtime, resources) {
   if (archiveStats[0].dev === archiveStats[1].dev) {
     fail("Backup readiness off-Mac copy must remain on a distinct filesystem device.");
   }
-  const backupKey = keychainValue(
-    PLATFORM_BACKUP_KEYCHAIN_SERVICE,
-    PLATFORM_BACKUP_KEYCHAIN_ACCOUNT,
-  );
+  if (
+    String(archiveStats[1].dev) !== evidence.key_recovery.archive_device_id
+    || archiveStats[1].dev === statSync(keyRecoveryManifestPath).dev
+  ) {
+    fail("Backup key escrow must remain on a medium distinct from the off-Mac archive.");
+  }
   const authenticatedMetadata = await authenticateFullLocalBackupArchives({
     evidence,
     verifyArchive: (archive) => withVerifiedPlatformBackup({
@@ -854,6 +933,8 @@ async function loadFullLocalBackupReadiness(runtime, resources) {
     fail("Authenticated backup metadata does not match readiness evidence.");
   }
   return verifyFullLocalBackupReadiness({
+    authenticatedBackupMetadataSha256:
+      fullLocalBackupMetadataSha256(authenticatedMetadata),
     evidence,
     evidenceFileMode: evidenceStat.mode & 0o777,
     observedFiles,
@@ -1579,18 +1660,35 @@ async function main() {
     }
     case "start": {
       const runtime = validateAndMaterialize(args);
-      compose(runtime, ["up", "-d"]);
-      const status = await waitForRuntimeHealthy(runtime);
-      const resources = liveFullLocalProductionResources(runtime);
-      const backupReadiness = await loadFullLocalBackupReadiness(runtime, resources);
-      const gate = collectFullLocalProductCatalog(postgresContainerId(runtime));
-      assertFullLocalProductCatalogPass(gate);
-      print({
-        ...status,
-        ...runtimeCatalogPayload(gate),
-        backup_readiness: backupReadiness,
-        status: "PASS",
-      });
+      await loadFullLocalBackupReadiness(
+        runtime,
+        configuredFullLocalProductionResources(runtime),
+      );
+      const containersBeforeStart = dockerResourceInventory("container");
+      try {
+        compose(runtime, ["up", "-d"]);
+        const status = await waitForRuntimeHealthy(runtime);
+        const resources = liveFullLocalProductionResources(runtime);
+        const backupReadiness = await loadFullLocalBackupReadiness(runtime, resources);
+        const gate = collectFullLocalProductCatalog(postgresContainerId(runtime));
+        assertFullLocalProductCatalogPass(gate);
+        print({
+          ...status,
+          ...runtimeCatalogPayload(gate),
+          backup_readiness: backupReadiness,
+          status: "PASS",
+        });
+      } catch (error) {
+        const newlyStartedWriters = selectNewlyStartedFullLocalWriterServices({
+          after: dockerResourceInventory("container"),
+          before: containersBeforeStart,
+          composeProject: runtime.config.FULL_LOCAL_COMPOSE_PROJECT_NAME,
+        });
+        if (newlyStartedWriters.length > 0) {
+          compose(runtime, ["stop", ...newlyStartedWriters]);
+        }
+        throw error;
+      }
       break;
     }
     case "status": {

@@ -39,7 +39,9 @@ pnpm full-local-production:platform-backup:verify -- --archive /absolute/off-mac
 
 Backup pauses only the exact production writer services for one bounded consistent cut, runs `pg_dump` inside the verified production PostgreSQL container, and snapshots the exact labeled Storage volume. A partial stop failure restarts every writer that was actually stopped. It never resets or removes an operating volume.
 
-`FULL_LOCAL_BACKUP_READINESS_PATH` must be an absolute path in an external mode-0700 directory. After copying both the archive and its `.auth.json` sidecar to a distinct off-Mac filesystem device and completing a clean isolated restore verification manifest for that exact archive, record immutable readiness evidence:
+`FULL_LOCAL_BACKUP_READINESS_PATH` must be an absolute path in an owner-controlled, canonical external mode-0700 directory. Before readiness issuance, escrow the archive key on a second medium or credential manager that is distinct from the off-Mac archive, then run a clean replacement-Mac recovery: open the escrow, re-register the recovered key in the replacement Keychain, authenticate/decrypt the archive, and complete the isolated restore drill. The recovery evidence and its `.auth.json` sidecar must be on that second medium. The executable fixture contract is `pnpm verify:full-local-backup-key-recovery-drill`; it does not claim real media issuance.
+
+After copying the archive and `.auth.json` sidecar to a distinct off-Mac filesystem, completing a signed clean restore manifest, and completing the signed replacement-Mac key recovery evidence, record immutable readiness evidence:
 
 ```bash
 pnpm full-local-production:backup-readiness:record -- \
@@ -47,11 +49,12 @@ pnpm full-local-production:backup-readiness:record -- \
   --archive /absolute/primary/platform.tar.gz.enc \
   --off-mac-copy /absolute/off-mac/platform.tar.gz.enc \
   --restore-manifest /absolute/evidence/restore-manifest.json \
+  --key-recovery-manifest /absolute/separate-key-escrow/key-recovery.json \
   --output /absolute/state/full-local-backup-readiness.json \
   --confirm-off-mac-copy OFF_MAC_COPY_VERIFIED
 ```
 
-`validate`, `start`, and `status` reject missing, stale (>24h), mismatched, symlinked, non-0600, incomplete-Storage, or wrong-production readiness evidence. Every gate re-authenticates and decrypts both archive copies with their sidecars and the Keychain key, verifies the restore manifest's own HMAC sidecar, and re-inventories the live Compose labels/image/health. Only `restore-platform` on fresh empty volumes can issue eligible clean-restore evidence; it binds the source roles/schema/data digests plus DB/Auth relation and Storage payload digests/counts. `stop` and isolated recovery commands remain available so a blocked runtime can be recovered without resetting operating data.
+`validate`, `start`, and `status` reject missing, stale (>24h), mismatched, symlinked, non-0600, non-owner/mode-0700 parent, incomplete-Storage, or wrong-production readiness evidence. Every gate verifies the readiness HMAC before parsing, re-authenticates and decrypts both archive copies, verifies the signed restore manifest and signed replacement-Mac key-recovery evidence, then binds their paths/digests and the full authenticated archive metadata. `start` performs this offline preflight before Compose, then re-inventories live labels/image/health; a post-start failure stops only writer services newly started by that attempt. Only `restore-platform` on fresh empty volumes can issue eligible clean-restore evidence. `stop` and isolated recovery commands remain available without resetting operating data.
 
 Do not start the persistent production volumes before the restore/cutover runbook says the same-maintenance Auth, application DB, and Storage snapshot is ready. The Docker integration test always uses disposable names and removes its volumes:
 

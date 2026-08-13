@@ -29,6 +29,7 @@ import {
   generateFullLocalSecretBundle,
   materializeFullLocalSecrets,
   parseFullLocalProductCatalogSqlOutput,
+  selectNewlyStartedFullLocalWriterServices,
   summarizeFullLocalRuntimeStates,
   validateExternalSecretDirectory,
   validateFullLocalProductionConfig,
@@ -84,6 +85,32 @@ function validSecrets() {
 }
 
 describe("full-local production runtime static contract", () => {
+  it("compensates only writer services newly started by this start attempt", () => {
+    const container = (project: string, service: string, running: boolean) => ({
+      Config: { Labels: {
+        "com.docker.compose.project": project,
+        "com.docker.compose.service": service,
+      } },
+      State: { Running: running },
+    });
+    const before = [
+      container("homecook-full-local-isolated", "auth", true),
+      container("homecook-full-local-isolated", "storage", false),
+    ];
+    const after = [
+      container("homecook-full-local-isolated", "auth", true),
+      container("homecook-full-local-isolated", "storage", true),
+      container("homecook-full-local-isolated", "postgres", true),
+      container("supabase-dev", "postgrest", true),
+    ];
+
+    expect(selectNewlyStartedFullLocalWriterServices({
+      after,
+      before,
+      composeProject: "homecook-full-local-isolated",
+    })).toEqual(["storage"]);
+  });
+
   it("re-inventories exact production resources after restore before issuing evidence", () => {
     const source = readFileSync(
       join(process.cwd(), "scripts/full-local-production-runtime.mjs"),

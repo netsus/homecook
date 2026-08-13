@@ -181,6 +181,39 @@ describe("Supabase local-only operations contract", () => {
     expect(remoteMirror.stderr).toContain(
       "FORBIDDEN: remote Auth mirror is historical",
     );
+    const hybridProductionRuntime = spawnSync(
+      process.execPath,
+      ["scripts/hybrid-production-runtime.mjs", "install", "--remote-env", "/tmp/forbidden"],
+      {
+        cwd: process.cwd(),
+        encoding: "utf8",
+        env: {
+          ...process.env,
+          HOMECOOK_HOSTED_SUPABASE_SERVICE_ROLE_KEY: "forbidden-service-role",
+        },
+      },
+    );
+    expect(hybridProductionRuntime.status).not.toBe(0);
+    expect(hybridProductionRuntime.stderr).toContain(
+      "FORBIDDEN: hybrid production runtime is historical",
+    );
+    expect(hybridProductionRuntime.stdout).not.toContain("Usage:");
+    const hybridDataMigration = spawnSync(
+      process.execPath,
+      ["scripts/hybrid-production-data-migration.mjs", "apply", "--remote-env", "/tmp/forbidden"],
+      {
+        cwd: process.cwd(),
+        encoding: "utf8",
+        env: {
+          ...process.env,
+          HOMECOOK_HOSTED_SUPABASE_SERVICE_ROLE_KEY: "forbidden-service-role",
+        },
+      },
+    );
+    expect(hybridDataMigration.status).not.toBe(0);
+    expect(hybridDataMigration.stderr).toContain(
+      "FORBIDDEN: hybrid production data migration is historical",
+    );
     for (const [path, message] of [
       ["scripts/verify-account-generation-auth-hook-config.mjs", "remote Supabase auth-hook"],
       ["scripts/verify-account-session-generation-remote.mjs", "remote account-session"],

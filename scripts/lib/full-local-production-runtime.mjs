@@ -136,6 +136,37 @@ export function summarizeFullLocalRuntimeStates(states) {
   });
 }
 
+const FULL_LOCAL_WRITER_SERVICES = Object.freeze([
+  "api-gateway",
+  "auth",
+  "postgrest",
+  "realtime",
+  "storage",
+]);
+
+function runningWriterServices(containers, composeProject) {
+  return new Set(containers
+    .filter((container) =>
+      container?.State?.Running === true
+      && container?.Config?.Labels?.["com.docker.compose.project"] === composeProject
+      && FULL_LOCAL_WRITER_SERVICES.includes(
+        container?.Config?.Labels?.["com.docker.compose.service"],
+      ))
+    .map((container) =>
+      container.Config.Labels["com.docker.compose.service"]));
+}
+
+export function selectNewlyStartedFullLocalWriterServices({
+  after,
+  before,
+  composeProject,
+}) {
+  const beforeServices = runningWriterServices(before, composeProject);
+  const afterServices = runningWriterServices(after, composeProject);
+  return FULL_LOCAL_WRITER_SERVICES.filter((service) =>
+    afterServices.has(service) && !beforeServices.has(service));
+}
+
 function requiredValue(record, name) {
   const value = record?.[name];
   if (typeof value !== "string" || value.trim().length === 0) {

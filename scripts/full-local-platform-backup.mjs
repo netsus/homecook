@@ -21,6 +21,7 @@ import { dirname, isAbsolute, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import {
+  buildPlatformBackupAuthentication,
   buildDockerStorageVolumeCaptureInvocation,
   buildPinnedSupabaseCliInvocation,
   createFailSafeConsistentCutController,
@@ -34,7 +35,9 @@ import {
   withVerifiedPlatformBackup,
 } from "./lib/full-local-platform-backup.mjs";
 import {
+  assertPrivateArtifactParent,
   buildFullLocalBackupReadinessEvidence,
+  fullLocalBackupMetadataSha256,
   verifyFullLocalBackupReadiness,
 } from "./lib/full-local-backup-readiness.mjs";
 import { validateExternalSecretDirectory } from "./lib/full-local-production-runtime.mjs";
@@ -291,12 +294,29 @@ async function recordBackupReadiness(args) {
   const archive = existingMode600Path(args, "--archive");
   const offMacCopy = existingMode600Path(args, "--off-mac-copy");
   const restoreManifestPath = existingMode600Path(args, "--restore-manifest");
+  const keyRecoveryManifestPath = existingMode600Path(
+    args,
+    "--key-recovery-manifest",
+  );
   const output = requiredAbsolutePath(args, "--output");
   if (archive === offMacCopy) fail("The off-Mac copy must use a distinct path.");
   if (statSync(archive).dev === statSync(offMacCopy).dev) {
     fail("The off-Mac copy must be on a distinct filesystem device.");
   }
-  for (const path of [archive, offMacCopy, restoreManifestPath]) {
+  if (
+    statSync(keyRecoveryManifestPath).dev === statSync(archive).dev
+    || statSync(keyRecoveryManifestPath).dev === statSync(offMacCopy).dev
+  ) {
+    fail("Backup key recovery evidence must use a second medium distinct from both archives.");
+  }
+  for (const path of [
+    archive,
+    keyRecoveryManifestPath,
+    offMacCopy,
+    restoreManifestPath,
+  ]) {
+    assertPrivateArtifactParent(path);
+    assertPrivateArtifactParent(platformBackupAuthenticationPath(path));
     validateExternalSecretDirectory({
       repositoryRoot: ROOT,
       secretDirectory: dirname(path),
@@ -306,7 +326,12 @@ async function recordBackupReadiness(args) {
     repositoryRoot: ROOT,
     secretDirectory: dirname(output),
   });
+  assertPrivateArtifactParent(output);
   if (existsSync(output)) fail("Backup readiness output already exists.");
+  const readinessAuthenticationPath = platformBackupAuthenticationPath(output);
+  if (existsSync(readinessAuthenticationPath)) {
+    fail("Backup readiness authentication output already exists.");
+  }
   const controller = productionResourceController(args);
   try {
     if (resolve(controller.config.FULL_LOCAL_BACKUP_READINESS_PATH ?? "") !== output) {
@@ -323,6 +348,25 @@ async function recordBackupReadiness(args) {
       authentication: JSON.parse(readFileSync(restoreAuthenticationPath, "utf8")),
       backupKey,
     });
+    const keyRecoveryAuthenticationPath = existingMode600Artifact(
+      platformBackupAuthenticationPath(keyRecoveryManifestPath),
+      "backup key recovery authentication",
+    );
+    const keyRecoveryManifestBytes = readFileSync(keyRecoveryManifestPath);
+    verifyPlatformBackupAuthentication({
+      archive: keyRecoveryManifestPath,
+      archiveBytes: keyRecoveryManifestBytes,
+      authentication: JSON.parse(readFileSync(keyRecoveryAuthenticationPath, "utf8")),
+      backupKey,
+    });
+    const keyRecoveryManifest = JSON.parse(keyRecoveryManifestBytes.toString("utf8"));
+    if (
+      keyRecoveryManifest.archive_device_id !== String(statSync(offMacCopy).dev)
+      || keyRecoveryManifest.escrow_device_id
+        !== String(statSync(keyRecoveryManifestPath).dev)
+    ) {
+      fail("Backup key recovery device identity does not match the mounted media.");
+    }
     const metadata = await withVerifiedPlatformBackup({
       archive,
       backupKey,
@@ -342,12 +386,18 @@ async function recordBackupReadiness(args) {
       archivePath: archive,
       archiveSha256,
       backupMetadata: metadata,
+      keyRecoveryManifest,
+      keyRecoveryManifestPath,
+      keyRecoveryManifestSha256: sha256File(keyRecoveryManifestPath),
       now: new Date().toISOString(),
       offMacCopyPath: offMacCopy,
       offMacCopySha256,
       restoreManifest: JSON.parse(readFileSync(restoreManifestPath, "utf8")),
+      restoreManifestPath,
+      restoreManifestSha256: sha256File(restoreManifestPath),
     });
     const readiness = verifyFullLocalBackupReadiness({
+      authenticatedBackupMetadataSha256: fullLocalBackupMetadataSha256(metadata),
       evidence,
       evidenceFileMode: 0o600,
       observedFiles: {
@@ -356,11 +406,24 @@ async function recordBackupReadiness(args) {
       },
       production: controller.resources,
     });
-    writeFileSync(output, `${JSON.stringify(evidence, null, 2)}\n`, {
+    const evidenceContents = `${JSON.stringify(evidence, null, 2)}\n`;
+    writeFileSync(output, evidenceContents, {
       encoding: "utf8",
       flag: "wx",
       mode: 0o600,
     });
+    chmodSync(output, 0o600);
+    const authentication = buildPlatformBackupAuthentication({
+      archive: output,
+      archiveBytes: Buffer.from(evidenceContents, "utf8"),
+      backupKey,
+    });
+    writeFileSync(
+      readinessAuthenticationPath,
+      `${JSON.stringify(authentication, null, 2)}\n`,
+      { encoding: "utf8", flag: "wx", mode: 0o600 },
+    );
+    chmodSync(readinessAuthenticationPath, 0o600);
     return { evidence: output, ...readiness };
   } finally {
     controller.cleanup();

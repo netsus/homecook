@@ -11,7 +11,9 @@ import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 
 import {
+  assertPrivateArtifactParent,
   buildFullLocalBackupReadinessEvidence,
+  fullLocalBackupMetadataSha256,
   authenticateFullLocalBackupArchives,
   assertRegularReadinessArtifact,
   verifyFullLocalBackupReadiness,
@@ -20,6 +22,39 @@ import {
 const NOW = Date.parse("2026-08-13T08:00:00.000Z");
 const SHA = "a".repeat(64);
 
+function validBackupMetadata() {
+  return {
+    components: {
+      data_sha256: "e".repeat(64),
+      roles_sha256: "f".repeat(64),
+      schema_sha256: "0".repeat(64),
+    },
+    created_at: "2026-08-13T07:00:00.000Z",
+    database: {
+      provenance: {
+        compose_project: "homecook-full-local-isolated",
+        container_name: "homecook-full-local-isolated-postgres-1",
+        image: `public.ecr.aws/supabase/postgres@sha256:${"b".repeat(64)}`,
+        postgres_volume: "homecook-full-local-postgres",
+      },
+    },
+    manifest: {
+      relation_classification_digest: "4".repeat(64),
+      unclassified: [],
+    },
+    storage_payload: {
+      catalog_sha256: "d".repeat(64),
+      object_count: 1,
+      source_identity:
+        "docker-compose-volume:homecook-full-local-isolated:homecook-full-local-storage",
+      total_bytes: 36,
+    },
+    storage_payload_included: true,
+  };
+}
+
+const METADATA_SHA = fullLocalBackupMetadataSha256(validBackupMetadata());
+
 function validEvidence() {
   return {
     backup: {
@@ -27,11 +62,26 @@ function validEvidence() {
       archive_sha256: SHA,
       created_at: "2026-08-13T07:00:00.000Z",
       data_sha256: "e".repeat(64),
+      metadata_sha256: METADATA_SHA,
       relation_classification_digest: "4".repeat(64),
       roles_sha256: "f".repeat(64),
       schema_sha256: "0".repeat(64),
     },
     format: "homecook-full-local-backup-readiness-v1",
+    key_recovery: {
+      archive_device_id: "11",
+      archive_sha256: SHA,
+      clean_restore_verified: true,
+      created_at: "2026-08-13T07:10:00.000Z",
+      escrow_device_id: "12",
+      evidence_path: "/Volumes/homecook-key-escrow/recovery.json",
+      evidence_sha256: "7".repeat(64),
+      format: "homecook-full-local-backup-key-recovery-v1",
+      keychain_reregistered: true,
+      replacement_machine_id: "replacement-mac",
+      restored_metadata_sha256: METADATA_SHA,
+      source_machine_id: "source-mac",
+    },
     off_mac_copy: {
       archive_path: "/Volumes/homecook-off-mac/platform-copy.tar.gz.enc",
       archive_sha256: SHA,
@@ -57,6 +107,8 @@ function validEvidence() {
       payload_catalog_sha256: "d".repeat(64),
       public_relation_count: 1,
       relation_classification_digest: "4".repeat(64),
+      manifest_path: "/Volumes/homecook-restore/restore.json",
+      manifest_sha256: "6".repeat(64),
       source_archive_sha256: SHA,
       source_data_sha256: "e".repeat(64),
       source_roles_sha256: "f".repeat(64),
@@ -112,41 +164,43 @@ describe("full-local backup readiness", () => {
     expect(assertRegularReadinessArtifact(target)).toEqual(realpathSync(target));
   });
 
+  it("requires canonical owner-controlled mode 0700 artifact parents", () => {
+    const directory = realpathSync(
+      mkdtempSync(join(tmpdir(), "homecook-private-parent-")),
+    );
+    const artifact = join(directory, "artifact.enc");
+    writeFileSync(artifact, "fixture", { mode: 0o600 });
+    chmodSync(directory, 0o700);
+    expect(assertPrivateArtifactParent(artifact)).toEqual(realpathSync(directory));
+
+    chmodSync(directory, 0o755);
+    expect(() => assertPrivateArtifactParent(artifact)).toThrow(/0700|owner/iu);
+  });
+
   it("builds readiness only from one authenticated archive and complete restore manifest", () => {
     expect(buildFullLocalBackupReadinessEvidence({
       archivePath: "/Volumes/homecook-off-mac/platform.tar.gz.enc",
       archiveSha256: SHA,
-      backupMetadata: {
-        components: {
-          data_sha256: "e".repeat(64),
-          roles_sha256: "f".repeat(64),
-          schema_sha256: "0".repeat(64),
-        },
-        created_at: "2026-08-13T07:00:00.000Z",
-        database: {
-          provenance: {
-            compose_project: "homecook-full-local-isolated",
-            container_name: "homecook-full-local-isolated-postgres-1",
-            image: `public.ecr.aws/supabase/postgres@sha256:${"b".repeat(64)}`,
-            postgres_volume: "homecook-full-local-postgres",
-          },
-        },
-        manifest: {
-          relation_classification_digest: "4".repeat(64),
-          unclassified: [],
-        },
-        storage_payload: {
-          catalog_sha256: "d".repeat(64),
-          object_count: 1,
-          source_identity:
-            "docker-compose-volume:homecook-full-local-isolated:homecook-full-local-storage",
-          total_bytes: 36,
-        },
-        storage_payload_included: true,
-      },
+      backupMetadata: validBackupMetadata(),
       now: "2026-08-13T07:30:00.000Z",
+      keyRecoveryManifest: {
+        archive_device_id: "11",
+        archive_sha256: SHA,
+        clean_restore_verified: true,
+        created_at: "2026-08-13T07:10:00.000Z",
+        escrow_device_id: "12",
+        format: "homecook-full-local-backup-key-recovery-v1",
+        keychain_reregistered: true,
+        replacement_machine_id: "replacement-mac",
+        restored_metadata_sha256: METADATA_SHA,
+        source_machine_id: "source-mac",
+      },
+      keyRecoveryManifestPath: "/Volumes/homecook-key-escrow/recovery.json",
+      keyRecoveryManifestSha256: "7".repeat(64),
       offMacCopyPath: "/Volumes/homecook-off-mac/platform-copy.tar.gz.enc",
       offMacCopySha256: SHA,
+      restoreManifestPath: "/Volumes/homecook-restore/restore.json",
+      restoreManifestSha256: "6".repeat(64),
       restoreManifest: {
         auth_identity_digest: "1".repeat(64),
         auth_identities: 1,
@@ -181,6 +235,7 @@ describe("full-local backup readiness", () => {
 
   it("accepts only recent backup, distinct off-Mac copy, and clean restore evidence for the exact production stack", () => {
     expect(verifyFullLocalBackupReadiness({
+      authenticatedBackupMetadataSha256: METADATA_SHA,
       evidence: validEvidence(),
       evidenceFileMode: 0o600,
       nowMs: NOW,
@@ -212,6 +267,9 @@ describe("full-local backup readiness", () => {
     ["wrong restored DB/Auth data", { restore: { database_data_sha256: "c".repeat(64) } }],
     ["missing Auth digest", { restore: { auth_identity_digest: null } }],
     ["wrong archive roles component", { restore: { source_roles_sha256: "c".repeat(64) } }],
+    ["wrong authenticated metadata binding", { backup: { metadata_sha256: "c".repeat(64) } }],
+    ["missing signed restore path", { restore: { manifest_path: null } }],
+    ["missing replacement-Mac key recovery", { key_recovery: { clean_restore_verified: false } }],
     ["same-path copy", { off_mac_copy: { archive_path: "/Volumes/homecook-off-mac/platform.tar.gz.enc" } }],
     ["wrong production volume", { production: { storage_volume: "supabase_storage_homecook" } }],
   ])("fails closed for %s", (_label, override) => {
@@ -220,6 +278,7 @@ describe("full-local backup readiness", () => {
       Object.assign(evidence[section as keyof ReturnType<typeof validEvidence>], values);
     }
     expect(() => verifyFullLocalBackupReadiness({
+      authenticatedBackupMetadataSha256: METADATA_SHA,
       evidence,
       evidenceFileMode: 0o600,
       nowMs: NOW,
@@ -253,6 +312,22 @@ describe("full-local backup readiness", () => {
     );
   });
 
+  it("preflights authenticated readiness before start and stops services if live identity fails", async () => {
+    const { readFileSync } = await import("node:fs");
+    const runtime = readFileSync("scripts/full-local-production-runtime.mjs", "utf8");
+    const start = /case "start": \{([\s\S]*?)\n\s*case "status":/u
+      .exec(runtime)?.[1] ?? "";
+
+    expect(start.indexOf("configuredFullLocalProductionResources"))
+      .toBeLessThan(start.indexOf('compose(runtime, ["up", "-d"])'));
+    expect(start).toMatch(
+      /loadFullLocalBackupReadiness[\s\S]*configuredFullLocalProductionResources[\s\S]*compose\(runtime, \["up", "-d"\]\)[\s\S]*liveFullLocalProductionResources[\s\S]*loadFullLocalBackupReadiness/u,
+    );
+    expect(start).toMatch(
+      /catch[\s\S]*selectNewlyStartedFullLocalWriterServices[\s\S]*compose\(runtime, \["stop", \.\.\.newlyStartedWriters\]\)[\s\S]*throw/u,
+    );
+  });
+
   it("provides one authenticated command to record immutable readiness evidence", async () => {
     const { readFileSync } = await import("node:fs");
     const packageJson = JSON.parse(readFileSync("package.json", "utf8"));
@@ -263,6 +338,22 @@ describe("full-local backup readiness", () => {
     expect(backupCli).toContain('case "record-readiness"');
     expect(backupCli).toContain("buildFullLocalBackupReadinessEvidence");
     expect(backupCli).toContain("--confirm-off-mac-copy");
+  });
+
+  it("HMAC-authenticates readiness itself before parsing it on every runtime gate", async () => {
+    const { readFileSync } = await import("node:fs");
+    const backupCli = readFileSync("scripts/full-local-platform-backup.mjs", "utf8");
+    const runtime = readFileSync("scripts/full-local-production-runtime.mjs", "utf8");
+
+    expect(backupCli).toMatch(
+      /recordBackupReadiness[\s\S]*platformBackupAuthenticationPath\(output\)[\s\S]*buildPlatformBackupAuthentication/u,
+    );
+    expect(runtime).toMatch(
+      /loadFullLocalBackupReadiness[\s\S]*platformBackupAuthenticationPath\(readinessPath\)[\s\S]*verifyPlatformBackupAuthentication[\s\S]*JSON\.parse/u,
+    );
+    expect(runtime).toMatch(
+      /evidence\?\.restore\?\.manifest_path[\s\S]*platformBackupAuthenticationPath\(restoreManifestPath\)[\s\S]*verifyPlatformBackupAuthentication[\s\S]*manifest_sha256/u,
+    );
   });
 
   it("allows only restore-platform to issue readiness-eligible clean restore evidence", async () => {
