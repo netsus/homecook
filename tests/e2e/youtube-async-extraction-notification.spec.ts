@@ -329,7 +329,7 @@ test("accepted retry uses quota copy and projects the replacement job before exi
   await openImport(page, "accepted-retry", 390, 844);
   const retry = page.getByRole("button", { name: "나중에 다시 시도" });
   await expect(retry).toBeVisible();
-  await expect(page.getByRole("button", { name: "다시 시도" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "다시 시도", exact: true })).toHaveCount(0);
   await captureEvidence(
     page,
     testInfo,
