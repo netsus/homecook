@@ -2,7 +2,7 @@ import { mkdir } from "node:fs/promises";
 import path from "node:path";
 
 import AxeBuilder from "@axe-core/playwright";
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Page, type TestInfo } from "@playwright/test";
 
 import { installDiscoveryRoutes, setE2EAuthOverride } from "./helpers/mock-routes";
 
@@ -261,16 +261,24 @@ async function openImport(page: Page, mode: ImportMode, width: number, height: n
   await page.goto(path);
 }
 
+async function captureEvidence(page: Page, testInfo: TestInfo, filePath: string, fullPage = false) {
+  if (testInfo.project.name !== "desktop-chrome") return;
+  await page.screenshot({ path: filePath, fullPage });
+}
+
 test.beforeAll(async () => {
   await mkdir(IMPORT_EVIDENCE, { recursive: true });
   await mkdir(SHELL_EVIDENCE, { recursive: true });
 });
 
-test("async enqueue is immediately escapable and visually stable at 390", async ({ page }) => {
+test("async enqueue is immediately escapable and visually stable at 390", async ({ page }, testInfo) => {
   await openImport(page, "accepted", 390, 844);
   await expect(page.getByText("추출을 시작했어요. 완료되면 알려드릴게요.")).toBeVisible();
-  await expect(page.getByRole("button", { name: "나가기" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "작업 보기" })).toBeVisible();
+  const leave = page.getByRole("button", { name: "나가기" });
+  const jobs = page.getByRole("button", { name: "작업 보기" });
+  await expect(leave).toHaveClass(/bg-\[var\(--wave1-mint-contrast\)\]/);
+  await expect(leave).toHaveAttribute("style", /color: var\(--foreground\)/);
+  await expect(jobs).toHaveClass(/bg-\[var\(--wave1-surface-fill\)\]/);
   const results = await new AxeBuilder({ page })
     .include("[data-youtube-extraction-accepted]")
     .analyze();
@@ -278,24 +286,24 @@ test("async enqueue is immediately escapable and visually stable at 390", async 
   await page.getByRole("button", { name: "YouTube 추출 알림 없음" }).click();
   await expect(page.getByText("추출 대기 중")).toBeVisible();
   await page.getByRole("button", { name: "알림 닫기" }).click();
-  await page.screenshot({ path: path.join(IMPORT_EVIDENCE, "mobile-390-accepted.png"), fullPage: true });
+  await captureEvidence(page, testInfo, path.join(IMPORT_EVIDENCE, "mobile-390-accepted.png"), true);
   await page.evaluate(() => {
     document.documentElement.style.fontSize = "200%";
   });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });
 
-test("offline keeps the URL and gives a retryable 320 state", async ({ page }) => {
+test("offline keeps the URL and gives a retryable 320 state", async ({ page }, testInfo) => {
   await openImport(page, "offline", 320, 568);
   await expect(page.locator(".web-menu-add-error")).toContainText("인터넷 연결을 확인한 뒤 다시 시도해 주세요.");
   await expect(page.getByLabel("유튜브 URL")).toHaveValue(YOUTUBE_URL);
-  await page.screenshot({ path: path.join(IMPORT_EVIDENCE, "mobile-320-offline.png"), fullPage: true });
+  await captureEvidence(page, testInfo, path.join(IMPORT_EVIDENCE, "mobile-320-offline.png"), true);
 });
 
-test("duplicate active work is explicit on desktop", async ({ page }) => {
+test("duplicate active work is explicit on desktop", async ({ page }, testInfo) => {
   await openImport(page, "duplicate", 1280, 800);
   await expect(page.getByText("같은 영상의 작업이 이미 진행 중이에요. 이 화면을 나가도 계속 처리돼요.")).toBeVisible();
-  await page.screenshot({ path: path.join(IMPORT_EVIDENCE, "desktop-1280-active-duplicate.png"), fullPage: true });
+  await captureEvidence(page, testInfo, path.join(IMPORT_EVIDENCE, "desktop-1280-active-duplicate.png"), true);
 });
 
 test("completed session re-entry can register the reviewed recipe", async ({ page }) => {
@@ -305,7 +313,7 @@ test("completed session re-entry can register the reviewed recipe", async ({ pag
   await expect(page.getByText("레시피가 등록됐어요")).toBeVisible();
 });
 
-test("app shell groups terminal outcomes and keeps the badge until list exposure", async ({ page }) => {
+test("app shell groups terminal outcomes and keeps the badge until list exposure", async ({ page }, testInfo) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.setViewportSize({ width: 390, height: 844 });
   await setE2EAuthOverride(page);
@@ -316,15 +324,22 @@ test("app shell groups terminal outcomes and keeps the badge until list exposure
   ]);
   await page.goto("/");
   await expect(page.getByText("레시피 추출 2건이 끝났어요")).toBeVisible();
-  await expect(page.getByRole("button", { name: "YouTube 추출 알림 2개" })).toBeVisible();
+  const stableTrigger = page.locator(
+    "[data-youtube-extraction-trigger='header'], [data-youtube-extraction-trigger='global']",
+  );
+  await expect(stableTrigger).toBeVisible();
   const results = await new AxeBuilder({ page })
     .include("[data-youtube-notification-toast]")
     .analyze();
   expect(results.violations).toEqual([]);
-  await page.screenshot({ path: path.join(SHELL_EVIDENCE, "mobile-390-success-toast.png") });
+  await captureEvidence(page, testInfo, path.join(SHELL_EVIDENCE, "mobile-390-success-toast.png"));
+  await page.getByRole("button", { name: "알림 보기" }).click();
+  await page.waitForTimeout(6_100);
+  await page.getByRole("button", { name: "알림 닫기" }).click();
+  await expect(stableTrigger).toBeFocused();
 });
 
-test("failure panel reflows at 200% text with non-zero safe areas at 320", async ({ page }) => {
+test("failure panel reflows at 200% text with non-zero safe areas at 320", async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 320, height: 568 });
   await setE2EAuthOverride(page);
   await installDiscoveryRoutes(page);
@@ -350,12 +365,12 @@ test("failure panel reflows at 200% text with non-zero safe areas at 320", async
   expect(overlayBox?.y).toBeGreaterThanOrEqual(24);
   expect((dialogBox?.y ?? 0) + (dialogBox?.height ?? 0)).toBeLessThanOrEqual(568);
   expect(await dialog.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
-  await page.screenshot({ path: path.join(SHELL_EVIDENCE, "mobile-320-failure-panel.png") });
+  await captureEvidence(page, testInfo, path.join(SHELL_EVIDENCE, "mobile-320-failure-panel.png"));
   await page.keyboard.press("Escape");
   await expect(dialog).toBeHidden();
 });
 
-test("desktop archive remains internally scrollable without page overlap", async ({ page }) => {
+test("desktop archive remains internally scrollable without page overlap", async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await setE2EAuthOverride(page);
   await installDiscoveryRoutes(page);
@@ -370,13 +385,14 @@ test("desktop archive remains internally scrollable without page overlap", async
   await expect(page.getByRole("button", { name: "알림 닫기" })).toBeVisible();
   await page.getByRole("tab", { name: "지난 알림" }).click();
   await expect(page.getByRole("heading", { name: "감자 수프" })).toBeVisible();
+  await expect(page.getByLabel("완료 시각 2026년 8월 14일 오전 10:03").first()).toBeVisible();
   const list = page.getByTestId("youtube-notification-list");
   await list.evaluate((element) => { element.scrollTop = 40; });
   await page.getByRole("button", { name: "알림 더 보기" }).click();
   await expect(page.getByRole("heading", { name: "두부조림" })).toBeVisible();
   expect(await list.evaluate((element) => element.scrollTop)).toBeGreaterThanOrEqual(40);
   await expect(page.getByRole("button", { name: "나중에 다시 시도" })).toBeVisible();
-  await page.screenshot({ path: path.join(SHELL_EVIDENCE, "desktop-1440-archive.png") });
+  await captureEvidence(page, testInfo, path.join(SHELL_EVIDENCE, "desktop-1440-archive.png"));
   await page.getByRole("button", { name: "알림 닫기" }).click();
   await expect(trigger).toBeFocused();
 });

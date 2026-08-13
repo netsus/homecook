@@ -123,6 +123,28 @@ describe("YT_IMPORT async extraction", () => {
     expect(syncApi.extractYoutubeRecipe).not.toHaveBeenCalled();
   });
 
+  it("keeps leaving as the accepted-state primary action and job viewing secondary", async () => {
+    vi.mocked(asyncApi.enqueueYoutubeExtraction).mockResolvedValue({
+      success: true,
+      data: {
+        job_id: "11111111-1111-4111-8111-111111111111",
+        status: "queued",
+        deduplicated: false,
+        submitted_at: "2026-08-14T01:00:00.000Z",
+      },
+      error: null,
+    });
+
+    renderImport({ initialYoutubeUrl: youtubeUrl });
+
+    const leave = await screen.findByRole("button", { name: "나가기" });
+    const jobs = screen.getByRole("button", { name: "작업 보기" });
+    expect(leave.className).toContain("bg-[var(--wave1-mint-contrast)]");
+    expect(leave.style.color).toBe("var(--foreground)");
+    expect(jobs.className).toContain("bg-[var(--wave1-surface-fill)]");
+    expect(jobs.className).not.toContain("bg-[var(--wave1-mint-contrast)]");
+  });
+
   it.each([
     ["POLICY_CHANGED", "추출 설정이 바뀌었어요. 다시 시도해 주세요."],
     ["NETWORK_ERROR", "인터넷 연결을 확인한 뒤 다시 시도해 주세요."],
