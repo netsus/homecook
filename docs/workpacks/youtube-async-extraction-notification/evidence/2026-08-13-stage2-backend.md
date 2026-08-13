@@ -77,7 +77,21 @@ Database/release surfaces:
 
 ## Verification evidence
 
-Current verified evidence:
+### 2026-08-14 rebased local-only candidate
+
+- verification content head: `ca94794dff0f748ced357985982b8f7c1cb5168b` on `origin/master@c4045705ef72c76f7e7258d10c460f56b6847dd7`; the following evidence commit changes documentation only
+- focused local-only/workpack regression — 5 files / 36 tests passed; workpack and automation-spec validators passed
+- focused backend/migration/worker/installer regression — 9 files / 119 tests passed
+- product PostgreSQL/PostgREST integration — isolated real database and loopback Data API, 2 files / 35 tests passed
+- `verify:security-functions:isolated` — exact Supabase CLI `2.110.0`, migration tree SHA-256 `417db58eed9eb28a0adc83a99651086804c3a8a885753cf04fc59912d6065aa5`, temporary project `hcg_63576_07a904`; 205 additive functions classified, 8 anonymous mutations denied with unchanged checksums, 4 Data API negative probes returned `406/PGRST106`, cleanup residue 0
+- `verify:local-supabase-runtime:isolated` — exact Supabase CLI `2.110.0`, the same migration tree SHA-256, temporary project `hcg_67853_8f55d4`; migration+seed and Data API `200` readiness passed, cleanup residue 0
+- operating-state read-only comparison before/after both gates — running container inventory identical, Docker volume inventory SHA-256 `cfe7d35201429e2ab5421ab9867f1344665308553f801f12020092b09edf59f7` identical, app `127.0.0.1:3100` listener/PID identical, isolated-gate labeled container/network/volume residue 0
+- `pnpm lint`, `pnpm typecheck`, `pnpm build` — pass
+- `pnpm test` — 570 files passed / 31 skipped; 6063 tests passed / 438 skipped
+- `PLAYWRIGHT_BASE_URL=http://127.0.0.1:3199 pnpm verify:backend` — lint, typecheck, 238 product files passed / 12 skipped and 2741 tests passed / 175 skipped, production build, security Playwright 12/12 passed; the operating app on `3100` was untouched
+- Supabase Cloud/linked/remote access, hosted URL or credential lookup, production migration, feature activation, launchd action and operating full-local mutation — 0
+
+### Historical Stage 2/3 verified evidence
 
 - `pnpm install --frozen-lockfile` — already up to date
 - `BRANCH_NAME=feature/be-youtube-async-extraction-notification pnpm validate:workpack -- --slice youtube-async-extraction-notification` — pass
@@ -119,7 +133,7 @@ The isolated DB runner allocates dynamic PostgreSQL/PostgREST ports, uses an eph
 ## Pending independent gates
 
 - Stage 3 implementation review is complete with `PASS` and findings none at exact head `898cf0c70292646a30aba9eca816ad44b68364f6`; reviewed heads `95c2b370`, `3af52ff5`, and `704d2f39` remain `REVISE`
-- current rebased product head의 merged isolated security/runtime gates, focused/full checks, current-head GitHub checks
+- current rebased product head의 current-head GitHub checks
 - current rebased exact head에 대한 새 독립 Stage 3 reviewer Findings 0 확인
 - all Stage 4 frontend, Playwright, exploratory QA and design authority work
 - Stage 6 closeout/merge approval
