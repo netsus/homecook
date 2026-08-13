@@ -66,7 +66,7 @@ describe("meal-log-core Stage 1 HOLD repair", () => {
     expect(owningBundle).not.toContain("1,056 lines");
   });
 
-  it("locks malformed UUID keys for POST PATCH and DELETE to exact 400 and whole-operation zero-write", () => {
+  it("locks completed malformed UUID acceptance to exact 400 and whole-operation zero-write", () => {
     const readme = read(readmePath);
     const acceptance = read(acceptancePath);
     const automation = readJson(automationPath);
@@ -80,7 +80,7 @@ describe("meal-log-core Stage 1 HOLD repair", () => {
 
     for (const method of ["POST", "PATCH", "DELETE"]) {
       expect(acceptance).toContain(
-        `- [ ] ${method} malformed UUID Idempotency-Key returns exact \`400 INVALID_IDEMPOTENCY_KEY\` and leaves mutation/operation/entry/event/pointer/projection/aggregate at zero <!-- omo:id=accept-meal-log-${method.toLowerCase()}-invalid-idempotency-key;stage=2;scope=backend;review=3,6 -->`,
+        `- [x] ${method} malformed UUID Idempotency-Key returns exact \`400 INVALID_IDEMPOTENCY_KEY\` and leaves mutation/operation/entry/event/pointer/projection/aggregate at zero <!-- omo:id=accept-meal-log-${method.toLowerCase()}-invalid-idempotency-key;stage=2;scope=backend;review=3,6 -->`,
       );
     }
 
@@ -104,7 +104,7 @@ describe("meal-log-core Stage 1 HOLD repair", () => {
     );
   });
 
-  it("records the exact HOLD repair lineage without promoting lifecycle or approval", () => {
+  it("preserves HOLD lineage while projecting the current incomplete lifecycle", () => {
     const readme = read(readmePath);
     const evidenceExists = existsSync(join(root, evidencePath));
     const evidence = evidenceExists ? read(evidencePath) : "";
@@ -125,13 +125,14 @@ describe("meal-log-core Stage 1 HOLD repair", () => {
       );
     }
     expect(workItem.status).toMatchObject({
-      lifecycle: "planned",
+      lifecycle: "in_progress",
       approval_state: "not_started",
       verification_status: "pending",
+      auto_merge_eligible: false,
     });
     expect(status).toMatchObject({
-      branch: "docs/meal-log-core-stage1-repair",
-      lifecycle: "planned",
+      branch: "feature/be-meal-log-core",
+      lifecycle: "in_progress",
       approval_state: "not_started",
       verification_status: "pending",
     });
@@ -140,6 +141,9 @@ describe("meal-log-core Stage 1 HOLD repair", () => {
     );
     expect(evidence).toContain("fresh independent internal 1.5 rereview required");
     expect(evidence).toContain("self-approval: forbidden");
+    expect(read(acceptancePath)).toContain(
+      "- [ ] production capability activation occurs only in the approved release train after predecessor and server-production/local-rehearsal evidence",
+    );
   });
 
   it("preserves #9 backend Stage 2 and #11 UI parallel ownership boundaries", () => {
