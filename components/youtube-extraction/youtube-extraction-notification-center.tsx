@@ -46,7 +46,9 @@ function BellIcon({ filled = false }: { filled?: boolean }) {
 function statusCopy(item: YoutubeExtractionNotificationItem) {
   if (item.status === "succeeded") {
     return {
-      body: "추출 결과를 확인하고 레시피로 등록할 수 있어요.",
+      body: item.result?.recipe_path
+        ? "이미 등록한 레시피예요"
+        : "추출 결과를 확인하고 레시피로 등록할 수 있어요.",
       title: "YouTube 레시피 추출이 완료됐어요",
     };
   }
@@ -459,19 +461,18 @@ export function YoutubeExtractionNotificationCenter({
       let matchingItem = view === "unseen-completed"
         ? items.find((item) => item.result?.extraction_id === extractionId)
         : undefined;
-      let cursor = matchingItem ? null : view === "unseen-completed" ? nextCursor : null;
+      let cursor: string | null = null;
 
       try {
-        if (!matchingItem && view !== "unseen-completed") {
+        if (!matchingItem) {
           const firstPage = await fetchYoutubeExtractionNotifications("unseen-completed", {
             limit: 50,
           });
-          if (firstPage.success && firstPage.data) {
-            matchingItem = firstPage.data.items.find(
-              (item) => item.result?.extraction_id === extractionId,
-            );
-            cursor = firstPage.data.next_cursor;
-          }
+          if (!firstPage.success || !firstPage.data) return;
+          matchingItem = firstPage.data.items.find(
+            (item) => item.result?.extraction_id === extractionId,
+          );
+          cursor = firstPage.data.next_cursor;
         }
         while (!matchingItem && cursor && current) {
           const page = await fetchYoutubeExtractionNotifications("unseen-completed", {
@@ -512,7 +513,6 @@ export function YoutubeExtractionNotificationCenter({
     authenticated,
     items,
     markSeenInStore,
-    nextCursor,
     registrationAckIds,
     registrationAckRevision,
     view,

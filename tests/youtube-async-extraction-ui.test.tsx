@@ -151,6 +151,27 @@ describe("YT_IMPORT async extraction", () => {
     expect(jobs.className).not.toContain("bg-[var(--wave1-mint-contrast)]");
   });
 
+  it("keeps Korean accepted-state copy on whole-word wrapping boundaries", async () => {
+    vi.mocked(asyncApi.enqueueYoutubeExtraction).mockResolvedValue({
+      success: true,
+      data: {
+        job_id: "11111111-1111-4111-8111-111111111111",
+        status: "queued",
+        deduplicated: false,
+        submitted_at: "2026-08-14T01:00:00.000Z",
+      },
+      error: null,
+    });
+
+    renderImport({ initialYoutubeUrl: youtubeUrl });
+
+    const heading = await screen.findByText("추출을 시작했어요. 완료되면 알려드릴게요.");
+    const message = screen.getByText("이 화면을 나가도 추출은 계속돼요.");
+    expect(heading.className).toContain("break-keep");
+    expect(message.className).toContain("break-keep");
+    expect(message.className).not.toContain("break-words");
+  });
+
   it.each([
     ["POLICY_CHANGED", "추출 설정이 바뀌었어요. 다시 시도해 주세요."],
     ["NETWORK_ERROR", "인터넷 연결을 확인한 뒤 다시 시도해 주세요."],
