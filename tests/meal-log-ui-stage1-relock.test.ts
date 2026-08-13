@@ -142,7 +142,7 @@ describe("meal-log-ui fresh Stage 1 relock", () => {
     });
     expect(status).toMatchObject({
       branch: "docs/meal-log-ui-stage1-relock-current",
-      pr_path: "pending",
+      pr_path: "https://github.com/netsus/homecook/pull/1349",
       lifecycle: "planned",
       approval_state: "not_started",
       verification_status: "pending",

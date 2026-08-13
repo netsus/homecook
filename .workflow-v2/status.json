@@ -2654,7 +2654,7 @@
       "id": "meal-log-ui",
       "preset": "vertical-slice-strict",
       "branch": "docs/meal-log-ui-stage1-relock-current",
-      "pr_path": "pending",
+      "pr_path": "https://github.com/netsus/homecook/pull/1349",
       "lifecycle": "planned",
       "approval_state": "not_started",
       "verification_status": "pending",
