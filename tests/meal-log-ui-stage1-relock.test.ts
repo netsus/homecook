@@ -215,15 +215,19 @@ describe("meal-log-ui fresh Stage 1 relock", () => {
       localOnlySmokeEvidenceCommand,
     );
     expect(status.required_checks).toContain(localOnlySmokeEvidenceCommand);
-    expect(automation.external_smokes).toEqual([]);
-    expect(workItem.workflow.external_smokes).toHaveLength(6);
-
     const currentCommands = workItem.verification.stage1_current_commands.join(
       "\n",
     );
     expect(currentCommands).not.toMatch(
       /meal-log-ui\.test\.tsx|test:e2e|qa:explore|verify:frontend|real-smoke/u,
     );
+  });
+
+  it("keeps automation external smokes exact and non-empty", () => {
+    expect(automation.external_smokes).toEqual(
+      workItem.workflow.external_smokes,
+    );
+    expect(automation.external_smokes.length).toBeGreaterThan(0);
   });
 
   it("uses the canonical local-only verification authority without stale commands", () => {

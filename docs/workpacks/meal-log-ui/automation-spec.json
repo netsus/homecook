@@ -160,7 +160,14 @@
       "authority_report_paths": ["ui/designs/authority/MEAL_LOG-authority.md"]
     }
   },
-  "external_smokes": [],
+  "external_smokes": [
+    "owner day read selected-date totals and deleted-column history",
+    "three-source create edit delete own-event replay and conflict",
+    "recent frequent and single-cursor typed-union visibility",
+    "timezone nullable-instant and historical no-regroup",
+    "partial unavailable never zero or complete",
+    "390px 320px desktop visual accessibility and product-design-authority evidence"
+  ],
   "blocked_conditions": [
     "stage1-independent-reviews-not-zero",
     "stage1-author-self-approval-or-claude-use",
