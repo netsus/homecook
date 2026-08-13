@@ -175,7 +175,7 @@ function buildSession() {
   };
 }
 
-function createDbClient({ includeAsyncJob = false }: { includeAsyncJob?: boolean } = {}) {
+function createDbClient() {
   const sessionsTable = createSessionTable({
     data: buildSession(),
     error: null,
@@ -188,29 +188,7 @@ function createDbClient({ includeAsyncJob = false }: { includeAsyncJob?: boolean
     data: [{ id: cookingMethodId }],
     error: null,
   });
-  const rpc = vi.fn(async (name: string) => {
-    if (name === "list_youtube_extraction_job_projections") {
-      return {
-        data: includeAsyncJob ? [{
-          id: "550e8400-e29b-41d4-a716-446655440501",
-          status: "succeeded",
-          created_at: "2026-08-14T01:00:00.000Z",
-          started_at: "2026-08-14T01:00:01.000Z",
-          completed_at: "2026-08-14T01:03:00.000Z",
-          error_code: null,
-          extraction_session: {
-            id: extractionId,
-            status: "consumed",
-            recipe_id: recipeId,
-            expires_at: "2026-08-15T01:03:00.000Z",
-          },
-        }] : [],
-        error: null,
-      };
-    }
-    if (name === "mark_youtube_extraction_jobs_seen") {
-      return { data: { seen_count: 1 }, error: null };
-    }
+  const rpc = vi.fn(async () => {
     return {
       data: { recipe_id: recipeId, title: "백종원 김치찌개" },
       error: null,
@@ -283,8 +261,8 @@ describe("36b YouTube recipe register tag write path", () => {
     }));
   });
 
-  it("marks the related async job seen after register success and preserves the public response", async () => {
-    const dbClient = createDbClient({ includeAsyncJob: true });
+  it("returns the committed register response before any durable notification acknowledgement", async () => {
+    const dbClient = createDbClient();
     createServiceRoleClient.mockReturnValue(dbClient);
 
     const { POST } = await importRegisterRoute();
@@ -301,9 +279,13 @@ describe("36b YouTube recipe register tag write path", () => {
       data: { recipe_id: recipeId, title: "백종원 김치찌개" },
       error: null,
     });
-    expect(dbClient.rpc).toHaveBeenCalledWith(
+    expect(dbClient.rpc).not.toHaveBeenCalledWith(
+      "list_youtube_extraction_job_projections",
+      expect.anything(),
+    );
+    expect(dbClient.rpc).not.toHaveBeenCalledWith(
       "mark_youtube_extraction_jobs_seen",
-      { user_id: userId, job_ids: ["550e8400-e29b-41d4-a716-446655440501"] },
+      expect.anything(),
     );
   });
 
