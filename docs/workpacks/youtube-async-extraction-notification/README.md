@@ -67,7 +67,7 @@
 | `33-youtube-i031-direct-extraction` | merged | [x] |
 | 공식 contract PR `#1343` merge `25e10a7805f5bf171d4c1fbd94a573560b715786` | merged | [x] |
 | 공식 tuple `1.7.31 / 1.5.35 / 1.3.33 / 1.3.33 / 1.2.38` | current | [x] |
-| 승인 계획 SHA-256 `b560b60ff758171e1d52ad56b2a63a2e1877cd762d1f691c9cea32c753f8d332`, 873 lines | independent PASS | [x] |
+| 최종 동결 계획 SHA-256 `7906f9ec975f309c310b2275714873cebb78e109770f885f09878e5c6bbed57a`, 991 lines, review task `019ffb44-5614-7af3-86a9-4ebd50977123` | independent PASS / Findings 없음 | [x] |
 
 > 제품 구현은 이 Stage 1 docs PR이 independent internal 1.5에서 approve되고 `master`에 merge된 뒤에만 시작한다.
 
@@ -141,8 +141,8 @@
 - `docs/api문서-v1.2.39.md` §0-YT-ASYNC
 - `docs/engineering/supabase-local-only-operations.md`
 - `docs/workpacks/33-youtube-i031-direct-extraction/README.md`
-- 승인 계획: `/Users/cwj/01_vibe_coding/homecook/.omx/plans/youtube-background-extraction-notification-plan-20260808.md`, SHA-256 `b560b60ff758171e1d52ad56b2a63a2e1877cd762d1f691c9cea32c753f8d332`, 873 lines
-- independent plan PASS task `019ff4f7-806c-7151-b646-cab784606cde`
+- 최종 동결 계획: `/Users/cwj/01_vibe_coding/homecook/.omx/plans/youtube-background-extraction-notification-plan-20260808.md`, SHA-256 `7906f9ec975f309c310b2275714873cebb78e109770f885f09878e5c6bbed57a`, 991 lines
+- independent plan PASS / Findings 없음 task `019ffb44-5614-7af3-86a9-4ebd50977123`
 - contract reviewer PASS task `019ff598-233b-72c1-92f5-4372596ede7a`
 
 ## QA / Test Data Plan
@@ -156,7 +156,7 @@
   - app route enqueue/status/session/list/delivered/seen smoke는 `createRouteHandlerClient()` owner session과 cross-user nondisclosure를 확인한다.
   - restricted worker JWT로 exact RPC만 성공하고 table/REST/other scope/owner role access가 모두 실패하는지 확인한다.
 - seed/reset:
-  - `pnpm local:reset:demo` 또는 해당 Stage 2에서 추가한 isolated test reset command를 사용한다.
+  - 운영 stack과 분리된 `pnpm verify:security-functions:isolated` 및 `pnpm verify:local-supabase-runtime:isolated`만 사용한다.
   - Supabase Cloud/linked/remote target은 N/A/forbidden이다. Stage 2~6 evidence는 remote link/credential access 0과 운영 full-local destructive reset 0을 명시한다.
 - external/live smoke:
   - arbitrary public YouTube URL을 local worker에서 enqueue→HOME 이탈→terminal notification→review/register까지 확인한다.
