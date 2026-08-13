@@ -148,6 +148,32 @@ describe("YouTube extraction notification center", () => {
     expect(api.markYoutubeExtractionDelivered).not.toHaveBeenCalled();
   });
 
+  it("describes a consumed successful extraction as an already registered recipe", async () => {
+    const consumedItem = {
+      ...successItem,
+      result: {
+        extraction_id: "extraction-consumed",
+        review_path: null,
+        recipe_id: "recipe-registered",
+        recipe_path: "/recipes/recipe-registered",
+      },
+    };
+    vi.mocked(api.fetchYoutubeExtractionNotifications).mockResolvedValue({
+      success: true,
+      data: { items: [consumedItem], next_cursor: null },
+      error: null,
+    });
+    const user = userEvent.setup();
+
+    renderCenter();
+    await user.click(await screen.findByRole("button", { name: "YouTube 추출 알림 1개" }));
+
+    expect(screen.getByText("이미 등록한 레시피예요")).toBeTruthy();
+    expect(screen.queryByText("추출 결과를 확인하고 레시피로 등록할 수 있어요.")).toBeNull();
+    expect(screen.getByRole("link", { name: "레시피 보기" }).getAttribute("href"))
+      .toBe("/recipes/recipe-registered");
+  });
+
   it("marks only the exact owner-scoped job seen after the browser observes registration success", async () => {
     const unrelatedItem = {
       ...successItem,
@@ -179,6 +205,132 @@ describe("YouTube extraction notification center", () => {
     expect(api.markYoutubeExtractionSeen).not.toHaveBeenCalledWith([unrelatedItem.job_id]);
     expect(screen.getByLabelText("YouTube 추출 알림 1개")).toBeTruthy();
     expect(window.sessionStorage.getItem(YOUTUBE_EXTRACTION_REGISTERED_ACKS_STORAGE_KEY)).toBe("[]");
+  });
+
+  it("fresh-fetches the first unseen page when local items and cursor miss the registration ack", async () => {
+    vi.mocked(api.fetchYoutubeExtractionNotifications).mockImplementation(async (_view, options) => ({
+      success: true,
+      data: options?.limit === 50
+        ? { items: [successItem], next_cursor: null }
+        : { items: [], next_cursor: null },
+      error: null,
+    }));
+    vi.mocked(api.markYoutubeExtractionSeen).mockResolvedValue({
+      success: true,
+      data: { seen_count: 1 },
+      error: null,
+    });
+
+    renderCenter();
+    expect(await screen.findByLabelText("YouTube 추출 알림 없음")).toBeTruthy();
+    act(() => notifyYoutubeExtractionSessionRegistered("extraction-success"));
+
+    await waitFor(() => {
+      expect(api.fetchYoutubeExtractionNotifications).toHaveBeenCalledWith(
+        "unseen-completed",
+        { limit: 50 },
+      );
+      expect(api.markYoutubeExtractionSeen).toHaveBeenCalledWith([successItem.job_id]);
+    });
+    expect(window.sessionStorage.getItem(YOUTUBE_EXTRACTION_REGISTERED_ACKS_STORAGE_KEY)).toBe("[]");
+  });
+
+  it("continues from the fresh first-page cursor to find the exact registration ack", async () => {
+    const unrelatedItem = {
+      ...successItem,
+      job_id: "77777777-7777-4777-8777-777777777777",
+      delivery_key: "delivery-unrelated-page-one",
+      result: { ...successItem.result, extraction_id: "extraction-unrelated" },
+    };
+    vi.mocked(api.fetchYoutubeExtractionNotifications).mockImplementation(async (_view, options) => {
+      if (options?.cursor === "fresh-cursor-2") {
+        return { success: true, data: { items: [successItem], next_cursor: null }, error: null };
+      }
+      if (options?.limit === 50) {
+        return {
+          success: true,
+          data: { items: [unrelatedItem], next_cursor: "fresh-cursor-2" },
+          error: null,
+        };
+      }
+      return { success: true, data: { items: [], next_cursor: null }, error: null };
+    });
+    vi.mocked(api.markYoutubeExtractionSeen).mockResolvedValue({
+      success: true,
+      data: { seen_count: 1 },
+      error: null,
+    });
+
+    renderCenter();
+    expect(await screen.findByLabelText("YouTube 추출 알림 없음")).toBeTruthy();
+    act(() => notifyYoutubeExtractionSessionRegistered("extraction-success"));
+
+    await waitFor(() => {
+      expect(api.fetchYoutubeExtractionNotifications).toHaveBeenCalledWith(
+        "unseen-completed",
+        { cursor: "fresh-cursor-2", limit: 50 },
+      );
+      expect(api.markYoutubeExtractionSeen).toHaveBeenCalledWith([successItem.job_id]);
+    });
+    expect(api.markYoutubeExtractionSeen).not.toHaveBeenCalledWith([unrelatedItem.job_id]);
+  });
+
+  it("preserves a pending registration ack when its fresh reconciliation fetch fails", async () => {
+    vi.mocked(api.fetchYoutubeExtractionNotifications).mockImplementation(async (_view, options) => (
+      options?.limit === 50
+        ? {
+            success: false,
+            data: null,
+            error: { code: "NETWORK_ERROR", message: "연결을 확인해 주세요.", fields: [] },
+          }
+        : { success: true, data: { items: [], next_cursor: null }, error: null }
+    ));
+
+    renderCenter();
+    expect(await screen.findByLabelText("YouTube 추출 알림 없음")).toBeTruthy();
+    act(() => notifyYoutubeExtractionSessionRegistered("extraction-success"));
+
+    await waitFor(() => {
+      expect(api.fetchYoutubeExtractionNotifications).toHaveBeenCalledWith(
+        "unseen-completed",
+        { limit: 50 },
+      );
+    });
+    expect(api.markYoutubeExtractionSeen).not.toHaveBeenCalled();
+    expect(JSON.parse(
+      window.sessionStorage.getItem(YOUTUBE_EXTRACTION_REGISTERED_ACKS_STORAGE_KEY) ?? "[]",
+    )).toEqual(["extraction-success"]);
+  });
+
+  it("leaves a different extraction unseen when the fresh reconciliation pages do not match", async () => {
+    const unrelatedItem = {
+      ...successItem,
+      job_id: "88888888-8888-4888-8888-888888888888",
+      delivery_key: "delivery-unrelated-fresh",
+      result: { ...successItem.result, extraction_id: "extraction-unrelated" },
+    };
+    vi.mocked(api.fetchYoutubeExtractionNotifications).mockImplementation(async (_view, options) => ({
+      success: true,
+      data: options?.limit === 50
+        ? { items: [unrelatedItem], next_cursor: null }
+        : { items: [], next_cursor: null },
+      error: null,
+    }));
+
+    renderCenter();
+    expect(await screen.findByLabelText("YouTube 추출 알림 없음")).toBeTruthy();
+    act(() => notifyYoutubeExtractionSessionRegistered("extraction-success"));
+
+    await waitFor(() => {
+      expect(api.fetchYoutubeExtractionNotifications).toHaveBeenCalledWith(
+        "unseen-completed",
+        { limit: 50 },
+      );
+    });
+    expect(api.markYoutubeExtractionSeen).not.toHaveBeenCalled();
+    expect(JSON.parse(
+      window.sessionStorage.getItem(YOUTUBE_EXTRACTION_REGISTERED_ACKS_STORAGE_KEY) ?? "[]",
+    )).toEqual(["extraction-success"]);
   });
 
   it("keeps registration successful and retries durable seen after a network failure without permanent hiding", async () => {

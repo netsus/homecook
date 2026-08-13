@@ -18,45 +18,60 @@ const RETRY_JOB_ID = "44444444-4444-4444-8444-444444444444";
 const EXTRACTION_ID = "22222222-2222-4222-8222-222222222222";
 const THUMBNAIL = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='320' height='180'%3E%3Crect width='320' height='180' fill='%23dff5ff'/%3E%3Ctext x='160' y='98' text-anchor='middle' font-size='64'%3E🍲%3C/text%3E%3C/svg%3E";
 
-type ImportMode = "accepted" | "accepted-retry" | "duplicate" | "offline" | "review";
+type ImportMode =
+  | "accepted"
+  | "accepted-retry"
+  | "duplicate"
+  | "initial"
+  | "offline"
+  | "policy-changed"
+  | "review"
+  | "submitting";
 
 function notificationItem({
   code,
+  consumed = false,
   status,
   title,
 }: {
-  code?: "NOT_RECIPE_VIDEO" | "QUOTA_EXCEEDED";
-  status: "failed" | "succeeded";
+  code?: "EXTRACTION_EXPIRED" | "NOT_RECIPE_VIDEO" | "QUOTA_EXCEEDED";
+  consumed?: boolean;
+  status: "expired" | "failed" | "succeeded";
   title: string | null;
 }) {
+  const terminalId = code === "EXTRACTION_EXPIRED"
+    ? "22222222-2222-4222-8222-222222222222"
+    : "33333333-3333-4333-8333-333333333333";
   return {
-    job_id: status === "succeeded" ? JOB_ID : "33333333-3333-4333-8333-333333333333",
+    job_id: status === "succeeded" ? JOB_ID : terminalId,
     status,
     submitted_at: "2026-08-14T01:00:00.000Z",
     completed_at: "2026-08-14T01:03:00.000Z",
     video_title_snapshot: title,
     thumbnail_url: THUMBNAIL,
-    delivery_key: status === "succeeded" ? "delivery-success" : "delivery-failed",
+    delivery_key: status === "succeeded" ? "delivery-success" : `delivery-${code ?? "failed"}`,
     delivered_at: null,
     seen_at: null,
     result: status === "succeeded"
       ? {
           extraction_id: EXTRACTION_ID,
-          review_path: `/menu/add/youtube?extractionId=${EXTRACTION_ID}`,
-          recipe_id: null,
-          recipe_path: null,
+          review_path: consumed ? null : `/menu/add/youtube?extractionId=${EXTRACTION_ID}`,
+          recipe_id: consumed ? "recipe-potato-soup" : null,
+          recipe_path: consumed ? "/recipes/recipe-potato-soup" : null,
         }
       : null,
-    error: status === "failed"
+    error: status === "failed" || status === "expired"
       ? {
           code: code ?? "NOT_RECIPE_VIDEO",
           message: code === "QUOTA_EXCEEDED"
             ? "오늘 추출 한도를 모두 사용했어요. 나중에 다시 시도해 주세요."
-            : "레시피 영상으로 확인되지 않았어요.",
-          retryable: code === "QUOTA_EXCEEDED",
+            : code === "EXTRACTION_EXPIRED"
+              ? "결과가 만료됐어요. 다시 추출해 주세요."
+              : "레시피 영상으로 확인되지 않았어요.",
+          retryable: code === "QUOTA_EXCEEDED" || code === "EXTRACTION_EXPIRED",
         }
       : null,
-    can_retry: code === "QUOTA_EXCEEDED",
+    can_retry: code === "QUOTA_EXCEEDED" || code === "EXTRACTION_EXPIRED",
   };
 }
 
@@ -106,8 +121,34 @@ async function installNotificationRoutes(
   });
 }
 
+async function installNotificationFailureRoute(
+  page: Page,
+  code: "NETWORK_ERROR" | "UNAUTHORIZED",
+) {
+  await page.route("**/api/v1/users/me/youtube-extraction-jobs**", async (route) => {
+    await route.fulfill({
+      status: code === "UNAUTHORIZED" ? 401 : 503,
+      json: {
+        success: false,
+        data: null,
+        error: {
+          code,
+          message: code === "UNAUTHORIZED"
+            ? "로그인이 필요해요."
+            : "인터넷 연결을 확인한 뒤 다시 시도해 주세요.",
+          fields: [],
+        },
+      },
+    });
+  });
+}
+
 async function installImportRoutes(page: Page, mode: ImportMode) {
   await installNotificationRoutes(page, []);
+  let releaseValidation = () => {};
+  const validationGate = mode === "submitting"
+    ? new Promise<void>((resolve) => { releaseValidation = resolve; })
+    : Promise.resolve();
   await page.route("**/api/v1/cooking-methods", async (route) => {
     await route.fulfill({
       json: {
@@ -126,6 +167,7 @@ async function installImportRoutes(page: Page, mode: ImportMode) {
     });
   });
   await page.route("**/api/v1/recipes/youtube/validate", async (route) => {
+    await validationGate;
     await route.fulfill({
       json: {
         success: true,
@@ -149,6 +191,21 @@ async function installImportRoutes(page: Page, mode: ImportMode) {
   await page.route("**/api/v1/recipes/youtube/extraction-jobs", async (route) => {
     if (mode === "offline") {
       await route.abort("internetdisconnected");
+      return;
+    }
+    if (mode === "policy-changed") {
+      await route.fulfill({
+        status: 409,
+        json: {
+          success: false,
+          data: null,
+          error: {
+            code: "POLICY_CHANGED",
+            message: "추출 설정이 바뀌었어요. 다시 시도해 주세요.",
+            fields: [],
+          },
+        },
+      });
       return;
     }
     const retry = route.request().postDataJSON()?.retry_job_id === JOB_ID;
@@ -274,16 +331,21 @@ async function installImportRoutes(page: Page, mode: ImportMode) {
       });
     });
   }
+
+  return { releaseValidation };
 }
 
 async function openImport(page: Page, mode: ImportMode, width: number, height: number) {
   await page.setViewportSize({ width, height });
   await setE2EAuthOverride(page);
-  await installImportRoutes(page, mode);
+  const controls = await installImportRoutes(page, mode);
   const path = mode === "review"
     ? `/menu/add/youtube?extractionId=${EXTRACTION_ID}`
-    : `/menu/add/youtube?youtubeUrl=${encodeURIComponent(YOUTUBE_URL)}`;
+    : mode === "initial" || mode === "submitting"
+      ? "/menu/add/youtube"
+      : `/menu/add/youtube?youtubeUrl=${encodeURIComponent(YOUTUBE_URL)}`;
   await page.goto(path);
+  return controls;
 }
 
 async function captureEvidence(page: Page, testInfo: TestInfo, filePath: string, fullPage = false) {
@@ -294,6 +356,27 @@ async function captureEvidence(page: Page, testInfo: TestInfo, filePath: string,
 test.beforeAll(async () => {
   await mkdir(IMPORT_EVIDENCE, { recursive: true });
   await mkdir(SHELL_EVIDENCE, { recursive: true });
+});
+
+test("import initial and submitting states are visually explicit", async ({ page }, testInfo) => {
+  const controls = await openImport(page, "submitting", 390, 844);
+  await expect(page.getByLabel("유튜브 URL")).toBeVisible();
+  await expect(page.getByRole("button", { name: "가져오기" })).toBeDisabled();
+  await captureEvidence(page, testInfo, path.join(IMPORT_EVIDENCE, "mobile-390-initial.png"), true);
+
+  await page.getByLabel("유튜브 URL").fill(YOUTUBE_URL);
+  await page.getByRole("button", { name: "가져오기" }).click();
+  await expect(page.getByRole("button", { name: "확인 중..." })).toBeDisabled();
+  await expect(page.getByLabel("유튜브 URL")).toBeDisabled();
+  await captureEvidence(page, testInfo, path.join(IMPORT_EVIDENCE, "mobile-390-submitting.png"), true);
+  controls.releaseValidation();
+});
+
+test("policy change preserves the URL in a safe import error state", async ({ page }, testInfo) => {
+  await openImport(page, "policy-changed", 390, 844);
+  await expect(page.locator(".web-menu-add-error")).toContainText("추출 설정이 바뀌었어요. 다시 시도해 주세요.");
+  await expect(page.getByLabel("유튜브 URL")).toHaveValue(YOUTUBE_URL);
+  await captureEvidence(page, testInfo, path.join(IMPORT_EVIDENCE, "mobile-390-policy-changed.png"), true);
 });
 
 test("async enqueue is immediately escapable and visually stable at 390", async ({ page }, testInfo) => {
@@ -391,8 +474,77 @@ test("app shell groups terminal outcomes and keeps the badge until list exposure
   await expect(stableTrigger).toBeFocused();
 });
 
+test("consumed notification shows the registered-recipe meaning and destination", async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await setE2EAuthOverride(page);
+  await installDiscoveryRoutes(page);
+  await installNotificationRoutes(page, [
+    notificationItem({ consumed: true, status: "succeeded", title: "이미 등록한 감자 수프" }),
+  ]);
+  await page.goto("/");
+  await page.getByRole("button", { name: "YouTube 추출 알림 1개" }).click();
+  await expect(page.getByText("이미 등록한 레시피예요")).toBeVisible();
+  await expect(page.getByTestId("youtube-notification-list").getByRole("link", { name: "레시피 보기" })).toHaveAttribute(
+    "href",
+    "/recipes/recipe-potato-soup",
+  );
+  await captureEvidence(page, testInfo, path.join(SHELL_EVIDENCE, "mobile-390-consumed.png"));
+});
+
+test("expired and non-retryable outcomes remain distinguishable", async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await setE2EAuthOverride(page);
+  await installDiscoveryRoutes(page);
+  await installNotificationRoutes(page, [
+    notificationItem({ code: "EXTRACTION_EXPIRED", status: "expired", title: "만료된 감자 수프" }),
+    notificationItem({ code: "NOT_RECIPE_VIDEO", status: "failed", title: "레시피가 아닌 영상" }),
+  ]);
+  await page.goto("/");
+  await page.getByRole("button", { name: "YouTube 추출 알림 2개" }).click();
+  await expect(page.getByText("결과가 만료됐어요. 다시 추출해 주세요.")).toBeVisible();
+  await expect(page.getByRole("button", { name: "다시 추출" })).toBeVisible();
+  await expect(page.getByText("레시피 영상으로 확인되지 않았어요.")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "레시피가 아닌 영상" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "다시 시도", exact: true })).toHaveCount(0);
+  await captureEvidence(page, testInfo, path.join(SHELL_EVIDENCE, "mobile-390-expired-non-retryable.png"));
+});
+
+test("shell empty state is explicit", async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await setE2EAuthOverride(page);
+  await installDiscoveryRoutes(page);
+  await installNotificationRoutes(page, []);
+  await page.goto("/");
+  await page.getByRole("button", { name: "YouTube 추출 알림 없음" }).click();
+  await expect(page.getByText("표시할 알림이 없어요.")).toBeVisible();
+  await captureEvidence(page, testInfo, path.join(SHELL_EVIDENCE, "mobile-390-empty.png"));
+});
+
+test("shell offline state offers an inline retry without guessing success", async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await setE2EAuthOverride(page);
+  await installDiscoveryRoutes(page);
+  await installNotificationFailureRoute(page, "NETWORK_ERROR");
+  await page.goto("/");
+  await page.getByRole("button", { name: "YouTube 추출 알림 없음" }).click();
+  await expect(page.getByText("인터넷 연결을 확인한 뒤 다시 시도해 주세요.")).toBeVisible();
+  await expect(page.getByRole("button", { name: "다시 불러오기" })).toBeVisible();
+  await captureEvidence(page, testInfo, path.join(SHELL_EVIDENCE, "mobile-390-offline.png"));
+});
+
+test("shell unauthorized state keeps a return-to-login action", async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await setE2EAuthOverride(page);
+  await installDiscoveryRoutes(page);
+  await installNotificationFailureRoute(page, "UNAUTHORIZED");
+  await page.goto("/");
+  await expect(page.getByText("로그인이 필요해요")).toBeVisible();
+  await expect(page.getByRole("link", { name: "로그인하고 돌아오기" })).toBeVisible();
+  await captureEvidence(page, testInfo, path.join(SHELL_EVIDENCE, "mobile-390-unauthorized.png"));
+});
+
 test("failure panel reflows at 200% text with non-zero safe areas at 320", async ({ page }, testInfo) => {
-  await page.setViewportSize({ width: 320, height: 568 });
+  await page.setViewportSize({ width: 320, height: 844 });
   await setE2EAuthOverride(page);
   await installDiscoveryRoutes(page);
   await installNotificationRoutes(page, [notificationItem({ code: "QUOTA_EXCEEDED", status: "failed", title: "두부조림" })]);
@@ -403,6 +555,9 @@ test("failure panel reflows at 200% text with non-zero safe areas at 320", async
   const overlay = page.getByTestId("youtube-notification-overlay");
   await expect(dialog).toBeVisible();
   await expect(page.getByRole("button", { name: "알림 닫기" })).toBeFocused();
+  await expect(page.getByRole("heading", { name: "두부조림" })).toBeVisible();
+  await expect(page.getByText("오늘 추출 한도를 모두 사용했어요. 나중에 다시 시도해 주세요.")).toBeVisible();
+  await captureEvidence(page, testInfo, path.join(SHELL_EVIDENCE, "mobile-320-failure-panel.png"));
   const retry = page.getByRole("button", { name: "나중에 다시 시도" });
   await retry.scrollIntoViewIfNeeded();
   await expect(retry).toBeVisible();
@@ -415,9 +570,8 @@ test("failure panel reflows at 200% text with non-zero safe areas at 320", async
   const overlayBox = await overlay.boundingBox();
   const dialogBox = await dialog.boundingBox();
   expect(overlayBox?.y).toBeGreaterThanOrEqual(24);
-  expect((dialogBox?.y ?? 0) + (dialogBox?.height ?? 0)).toBeLessThanOrEqual(568);
+  expect((dialogBox?.y ?? 0) + (dialogBox?.height ?? 0)).toBeLessThanOrEqual(844);
   expect(await dialog.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
-  await captureEvidence(page, testInfo, path.join(SHELL_EVIDENCE, "mobile-320-failure-panel.png"));
   await page.keyboard.press("Escape");
   await expect(dialog).toBeHidden();
 });

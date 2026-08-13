@@ -801,10 +801,10 @@ function BackgroundAcceptedStep({
         <div aria-hidden="true" className="flex h-16 w-16 items-center justify-center rounded-full bg-[var(--brand-soft)] text-3xl text-[var(--brand-deep)]">
           {failed ? "!" : "✓"}
         </div>
-        <h2 className="mt-5 text-xl font-bold text-[var(--foreground)]">
+        <h2 className="mt-5 break-keep text-xl font-bold text-[var(--foreground)]">
           {failed ? "추출을 완료하지 못했어요" : "추출을 시작했어요. 완료되면 알려드릴게요."}
         </h2>
-        <p className="mt-3 break-words text-base text-[var(--text-2)]">
+        <p className="mt-3 break-keep text-base text-[var(--text-2)]">
           {failed
             ? job.error?.message ?? "레시피를 추출하지 못했어요."
             : deduplicated
