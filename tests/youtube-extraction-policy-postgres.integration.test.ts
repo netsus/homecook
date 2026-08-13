@@ -1,4 +1,4 @@
-import { spawnSync } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
@@ -74,6 +74,52 @@ function psql(sql: string) {
   const result = psqlResult(sql);
   expect(result.status, result.stderr).toBe(0);
   return result.stdout.trim();
+}
+
+function runPsqlAsync(sql: string) {
+  return new Promise<{ status: number | null; stdout: string; stderr: string }>((resolve, reject) => {
+    const child = spawn("psql", [
+      "-h",
+      host,
+      "-p",
+      port,
+      "-U",
+      "postgres",
+      "-d",
+      database,
+      "-At",
+      "-q",
+      "-v",
+      "ON_ERROR_STOP=1",
+      "-c",
+      sql,
+    ], {
+      env: { ...process.env, PGPASSWORD: "" },
+    });
+    let stdout = "";
+    let stderr = "";
+    child.stdout.setEncoding("utf8");
+    child.stderr.setEncoding("utf8");
+    child.stdout.on("data", (chunk: string) => { stdout += chunk; });
+    child.stderr.on("data", (chunk: string) => { stderr += chunk; });
+    child.on("error", reject);
+    child.on("close", (status) => resolve({ status, stdout, stderr }));
+  });
+}
+
+async function waitForPolicyAdvisoryLock() {
+  for (let attempt = 0; attempt < 80; attempt += 1) {
+    const lockCount = Number(lastLine(psql(`
+      select count(*)::text
+      from pg_catalog.pg_locks
+      where locktype = 'advisory'
+        and granted
+        and objid = 86120317;
+    `)));
+    if (lockCount > 0) return;
+    await new Promise((resolve) => setTimeout(resolve, 25));
+  }
+  throw new Error("policy advisory lock was not observed");
 }
 
 function expectSqlFailure(sql: string, pattern: RegExp) {
@@ -582,6 +628,8 @@ describe.runIf(enabled).sequential("youtube async extraction PostgreSQL integrat
           join pg_catalog.pg_roles as granted_role on granted_role.oid = membership.roleid
           where granted_role.rolname in (
             'youtube_extraction_enqueue_rpc_owner',
+            'youtube_extraction_readiness_rpc_owner',
+            'youtube_extraction_projection_rpc_owner',
             'youtube_extraction_worker_rpc_owner',
             'youtube_extraction_credential_manager_rpc_owner'
           )
@@ -945,6 +993,128 @@ describe.runIf(enabled).sequential("youtube async extraction PostgreSQL integrat
       where id = '70000000-0000-4000-8000-000000000106';
     `)).toBe(`queued:${oldSnapshotDigest}`);
   });
+
+  it("YTASYNC-DB-POLICY-RACE serializes two-connection enqueue/retry against exclusive rotation", async () => {
+    enablePolicy();
+    const oldSnapshotDigest = policySnapshotDigest();
+    insertJob({
+      id: "70000000-0000-4000-8000-000000000107",
+      userId: ownerA,
+      videoId: "policyRace02",
+      fingerprint: "c".repeat(64),
+      status: "failed",
+      attemptCount: 3,
+      maxAttempts: 3,
+      completedAtSql: "now() - interval '1 minute'",
+    });
+    const enqueueBeforeRotation = runPsqlAsync(`
+      begin;
+      set local role authenticated;
+      set local request.jwt.claims = ${sqlJson(authenticatedClaims(ownerA))};
+      select pg_advisory_xact_lock_shared(86120317);
+      select pg_sleep(0.25);
+      select public.enqueue_youtube_extraction_job(
+        'policyRace01', 1, '${oldSnapshotDigest}', '1', repeat('a', 64),
+        null, null, 'background_notify'
+      )::text;
+      select pg_sleep(0.75);
+      commit;
+    `);
+    await waitForPolicyAdvisoryLock();
+    const rotateAfterEnqueue = await runPsqlAsync(`
+      begin;
+      select pg_advisory_xact_lock(86120317);
+      update private.youtube_extraction_current_policy
+      set policy_version = 2,
+          result_affecting_options = jsonb_set(result_affecting_options, '{interval}', '6'::jsonb),
+          updated_at = now()
+      where policy_key = 'primary';
+      commit;
+    `);
+    const enqueueBeforeResult = await enqueueBeforeRotation;
+    expect(enqueueBeforeResult.status, enqueueBeforeResult.stderr).toBe(0);
+    expect(rotateAfterEnqueue.status, rotateAfterEnqueue.stderr).toBe(0);
+
+    const oldAccepted = parseJson(psql(`
+      select json_build_object(
+        'policy_version', policy_version,
+        'interval', (result_affecting_options ->> 'interval')::integer,
+        'snapshot_digest', policy_snapshot_digest
+      )::text
+      from public.youtube_extraction_jobs
+      where youtube_video_id = 'policyRace01';
+    `));
+    expect(oldAccepted).toEqual({
+      policy_version: 1,
+      interval: 4,
+      snapshot_digest: oldSnapshotDigest,
+    });
+
+    const newSnapshotDigest = lastLine(psql(`
+      select private.youtube_extraction_policy_snapshot_digest(
+        extractor_mode,
+        pipeline_identity,
+        jsonb_set(result_affecting_options, '{interval}', '7'::jsonb),
+        policy_version + 1
+      )
+      from private.youtube_extraction_current_policy
+      where policy_key = 'primary';
+    `));
+    const rotationBeforeRetry = runPsqlAsync(`
+      begin;
+      select pg_advisory_xact_lock(86120317);
+      update private.youtube_extraction_current_policy
+      set policy_version = 3,
+          result_affecting_options = jsonb_set(result_affecting_options, '{interval}', '7'::jsonb),
+          updated_at = now()
+      where policy_key = 'primary';
+      select pg_sleep(0.75);
+      commit;
+    `);
+    await waitForPolicyAdvisoryLock();
+    const retryAfterRotation = runPsqlAsync(`
+      begin;
+      set local role authenticated;
+      set local request.jwt.claims = ${sqlJson(authenticatedClaims(ownerA))};
+      select public.enqueue_youtube_extraction_job(
+        'policyRace02', 3, '${newSnapshotDigest}', '1', repeat('d', 64),
+        null, null, 'background_notify'
+      )::text;
+      commit;
+    `);
+    const [rotationBeforeResult, retryAfterResult] = await Promise.all([
+      rotationBeforeRetry,
+      retryAfterRotation,
+    ]);
+    expect(rotationBeforeResult.status, rotationBeforeResult.stderr).toBe(0);
+    expect(retryAfterResult.status, retryAfterResult.stderr).toBe(0);
+
+    const newAccepted = parseJson(psql(`
+      select json_build_object(
+        'policy_version', policy_version,
+        'interval', (result_affecting_options ->> 'interval')::integer,
+        'snapshot_digest', policy_snapshot_digest
+      )::text
+      from public.youtube_extraction_jobs
+      where youtube_video_id = 'policyRace02'
+        and status = 'queued';
+    `));
+    expect(newAccepted).toEqual({
+      policy_version: 3,
+      interval: 7,
+      snapshot_digest: newSnapshotDigest,
+    });
+    expect(lastLine(psql(`
+      select count(*)::text
+      from public.youtube_extraction_jobs
+      where youtube_video_id in ('policyRace01', 'policyRace02')
+        and (
+          (policy_version = 1 and (result_affecting_options ->> 'interval')::integer <> 4)
+          or (policy_version = 3 and (result_affecting_options ->> 'interval')::integer <> 7)
+          or policy_version not in (1, 3)
+        );
+    `))).toBe("0");
+  }, 15_000);
 
   it("reaps an exhausted stale lease to failed before claiming the next queued job", () => {
     enablePolicy();

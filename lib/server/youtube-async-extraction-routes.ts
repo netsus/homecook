@@ -51,6 +51,10 @@ interface EnqueueReadiness {
   previousFingerprintValidUntil: string | null;
 }
 
+interface EnqueueReadinessFailure {
+  code: "POLICY_CHANGED" | "QUEUE_UNAVAILABLE";
+}
+
 interface FingerprintKey {
   version: string;
   secret: string;
@@ -71,7 +75,7 @@ interface HandlerDependencies {
   ): Promise<ListJobRow[]>;
   markDelivered(userId: string, deliveryKeys: string[], rpc: Rpc): Promise<number>;
   markSeen(userId: string, jobIds: string[], rpc: Rpc): Promise<number>;
-  enqueueReadiness(rpc: Rpc): Promise<EnqueueReadiness | null>;
+  enqueueReadiness(rpc: Rpc): Promise<EnqueueReadiness | EnqueueReadinessFailure | null>;
   fingerprintKeys(readiness: EnqueueReadiness): {
     current: FingerprintKey;
     previous: FingerprintKey | null;
@@ -220,8 +224,14 @@ export function createYoutubeAsyncExtractionHandlers(deps: HandlerDependencies) 
       let readiness: EnqueueReadiness | null = null;
       let keys: ReturnType<HandlerDependencies["fingerprintKeys"]>;
       try {
-        readiness = await deps.enqueueReadiness(auth.rpc);
-        if (!readiness) throw new Error("QUEUE_UNAVAILABLE");
+        const readinessResult = await deps.enqueueReadiness(auth.rpc);
+        if (!readinessResult) throw new Error("QUEUE_UNAVAILABLE");
+        if ("code" in readinessResult) {
+          return readinessResult.code === "POLICY_CHANGED"
+            ? failure("POLICY_CHANGED", "추출 설정이 바뀌었어요. 다시 시도해 주세요.", 409)
+            : failure("QUEUE_UNAVAILABLE", "추출 작업을 접수할 수 없어요. 잠시 후 다시 시도해 주세요.", 503);
+        }
+        readiness = readinessResult;
         keys = deps.fingerprintKeys(readiness);
       } catch {
         return failure("QUEUE_UNAVAILABLE", "추출 작업을 접수할 수 없어요. 잠시 후 다시 시도해 주세요.", 503);
@@ -479,7 +489,7 @@ export async function loadYoutubeExtractionEnqueueReadiness(
   rpc: Rpc,
   env: Readonly<Record<string, string | undefined>> = process.env,
   now = new Date(),
-): Promise<EnqueueReadiness | null> {
+): Promise<EnqueueReadiness | EnqueueReadinessFailure | null> {
   const descriptorPath = env.HOMECOOK_YOUTUBE_EXTRACTION_APP_DESCRIPTOR_PATH?.trim();
   const expectedSchemaPath =
     env.HOMECOOK_YOUTUBE_EXTRACTION_EXPECTED_SCHEMA_PATH?.trim();
@@ -501,6 +511,24 @@ export async function loadYoutubeExtractionEnqueueReadiness(
     const result = await rpc("read_youtube_extraction_enqueue_readiness");
     if (result.error || result.data === null || typeof result.data !== "object") return null;
     const row = result.data as Record<string, unknown>;
+    const descriptorPolicyVersion = descriptor.expected_policy_version;
+    const descriptorPolicyDigest = descriptor.expected_policy_snapshot_digest;
+    const rowPolicyVersion = row.policy_version;
+    const rowPolicyDigest = row.policy_snapshot_digest;
+    if (
+      Number.isInteger(descriptorPolicyVersion)
+      && Number(descriptorPolicyVersion) > 0
+      && typeof descriptorPolicyDigest === "string"
+      && /^[a-f0-9]{64}$/u.test(descriptorPolicyDigest)
+      && Number.isInteger(rowPolicyVersion)
+      && Number(rowPolicyVersion) > 0
+      && typeof rowPolicyDigest === "string"
+      && /^[a-f0-9]{64}$/u.test(rowPolicyDigest)
+      && (
+        descriptorPolicyVersion !== rowPolicyVersion
+        || descriptorPolicyDigest !== rowPolicyDigest
+      )
+    ) return { code: "POLICY_CHANGED" };
     if (
       descriptor.schema !== "homecook.youtube-extraction-app-descriptor"
       || descriptor.version !== 1

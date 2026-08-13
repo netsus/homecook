@@ -77,8 +77,12 @@ describe("YTASYNC-DB/SEC migration contract", () => {
     expect(sql).not.toContain(
       "grant select on table public.youtube_extraction_sessions\n  to youtube_extraction_enqueue_rpc_owner",
     );
-    expect(sql).not.toContain("youtube_extraction_worker_credentials_enqueue_owner_select");
-    expect(sql).not.toContain("youtube_extraction_sessions_enqueue_owner_select");
+    expect(sql).not.toContain(
+      "create policy youtube_extraction_worker_credentials_enqueue_owner_select",
+    );
+    expect(sql).not.toContain(
+      "create policy youtube_extraction_sessions_enqueue_owner_select",
+    );
     expect(sql).toContain(
       "alter function public.read_youtube_extraction_enqueue_readiness()\n  owner to youtube_extraction_readiness_rpc_owner",
     );

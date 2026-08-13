@@ -25,6 +25,36 @@ begin
   if not exists (
     select 1
     from pg_catalog.pg_roles
+    where rolname = 'youtube_extraction_readiness_rpc_owner'
+  ) then
+    execute
+      'create role youtube_extraction_readiness_rpc_owner '
+      || 'nologin nosuperuser nocreatedb nocreaterole '
+      || 'noreplication nobypassrls noinherit';
+  end if;
+end;
+$$;
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_catalog.pg_roles
+    where rolname = 'youtube_extraction_projection_rpc_owner'
+  ) then
+    execute
+      'create role youtube_extraction_projection_rpc_owner '
+      || 'nologin nosuperuser nocreatedb nocreaterole '
+      || 'noreplication nobypassrls noinherit';
+  end if;
+end;
+$$;
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_catalog.pg_roles
     where rolname = 'youtube_extraction_worker'
   ) then
     execute
@@ -81,14 +111,18 @@ end;
 $$;
 
 grant usage on schema public to youtube_extraction_enqueue_rpc_owner;
+grant usage on schema public to youtube_extraction_readiness_rpc_owner;
+grant usage on schema public to youtube_extraction_projection_rpc_owner;
 grant usage on schema public to youtube_extraction_worker;
 grant usage on schema public to youtube_extraction_worker_rpc_owner;
 grant usage on schema public to youtube_extraction_credential_manager;
 grant usage on schema public to youtube_extraction_credential_manager_rpc_owner;
 grant usage on schema private to youtube_extraction_enqueue_rpc_owner;
+grant usage on schema private to youtube_extraction_readiness_rpc_owner;
 grant usage on schema private to youtube_extraction_worker_rpc_owner;
 grant usage on schema private to youtube_extraction_credential_manager_rpc_owner;
 grant usage on schema extensions to youtube_extraction_enqueue_rpc_owner;
+grant usage on schema extensions to youtube_extraction_readiness_rpc_owner;
 grant usage on schema extensions to youtube_extraction_worker_rpc_owner;
 grant usage on schema extensions to youtube_extraction_credential_manager_rpc_owner;
 
@@ -382,18 +416,46 @@ create policy youtube_extraction_jobs_enqueue_owner_insert
 
 drop policy if exists youtube_extraction_worker_credentials_enqueue_owner_select
   on private.youtube_extraction_worker_credentials;
-create policy youtube_extraction_worker_credentials_enqueue_owner_select
+drop policy if exists youtube_extraction_worker_credentials_readiness_owner_select
+  on private.youtube_extraction_worker_credentials;
+create policy youtube_extraction_worker_credentials_readiness_owner_select
   on private.youtube_extraction_worker_credentials
   for select
-  to youtube_extraction_enqueue_rpc_owner
+  to youtube_extraction_readiness_rpc_owner
   using (credential_name = 'primary');
 
 drop policy if exists youtube_extraction_sessions_enqueue_owner_select
   on public.youtube_extraction_sessions;
-create policy youtube_extraction_sessions_enqueue_owner_select
+drop policy if exists youtube_extraction_sessions_projection_owner_select
+  on public.youtube_extraction_sessions;
+create policy youtube_extraction_sessions_projection_owner_select
   on public.youtube_extraction_sessions
   for select
-  to youtube_extraction_enqueue_rpc_owner
+  to youtube_extraction_projection_rpc_owner
+  using (
+    user_id = nullif(
+      coalesce(
+        nullif(pg_catalog.current_setting('request.jwt.claims', true), ''),
+        '{}'
+      )::jsonb ->> 'sub',
+      ''
+    )::uuid
+  );
+
+drop policy if exists youtube_extraction_current_policy_readiness_owner_select
+  on private.youtube_extraction_current_policy;
+create policy youtube_extraction_current_policy_readiness_owner_select
+  on private.youtube_extraction_current_policy
+  for select
+  to youtube_extraction_readiness_rpc_owner
+  using (policy_key = 'primary');
+
+drop policy if exists youtube_extraction_jobs_projection_owner_select
+  on public.youtube_extraction_jobs;
+create policy youtube_extraction_jobs_projection_owner_select
+  on public.youtube_extraction_jobs
+  for select
+  to youtube_extraction_projection_rpc_owner
   using (
     user_id = nullif(
       coalesce(
@@ -598,10 +660,17 @@ grant select on table private.youtube_extraction_current_policy
   to youtube_extraction_enqueue_rpc_owner;
 grant select, insert on table public.youtube_extraction_jobs
   to youtube_extraction_enqueue_rpc_owner;
-grant select on table private.youtube_extraction_worker_credentials
-  to youtube_extraction_enqueue_rpc_owner;
-grant select on table public.youtube_extraction_sessions
-  to youtube_extraction_enqueue_rpc_owner;
+revoke all on table private.youtube_extraction_worker_credentials
+  from youtube_extraction_enqueue_rpc_owner;
+revoke all on table public.youtube_extraction_sessions
+  from youtube_extraction_enqueue_rpc_owner;
+
+grant select on table private.youtube_extraction_current_policy,
+  private.youtube_extraction_worker_credentials
+  to youtube_extraction_readiness_rpc_owner;
+grant select on table public.youtube_extraction_jobs,
+  public.youtube_extraction_sessions
+  to youtube_extraction_projection_rpc_owner;
 
 grant select on table private.youtube_extraction_current_policy
   to youtube_extraction_worker_rpc_owner;
@@ -888,6 +957,7 @@ revoke all on function private.youtube_extraction_backoff_seconds(integer)
 
 grant execute on function private.youtube_extraction_policy_snapshot_digest(text, text, jsonb, bigint)
   to youtube_extraction_enqueue_rpc_owner,
+     youtube_extraction_readiness_rpc_owner,
      youtube_extraction_worker_rpc_owner,
      youtube_extraction_credential_manager_rpc_owner;
 grant execute on function private.youtube_extraction_completion_delivery_key(uuid, timestamptz)
@@ -2249,7 +2319,7 @@ begin
     'ready', v_policy.enabled
       and v_credential.allowed_snapshot_digest = v_snapshot_digest
       and v_credential.expires_at > clock_timestamp() + interval '30 minutes'
-      and v_catalog_fingerprint = 'ba92ccdeb92c350548b09d556d561619b511ec7f614ff6436c376044747fda0f',
+      and v_catalog_fingerprint = '0662b6cb4086710a91970011c3867c628db97f8e18edcae89570131d9ddc90cf',
     'release_sha', v_credential.release_sha,
     'schema_identity', v_credential.schema_identity,
     'catalog_fingerprint', v_catalog_fingerprint,
@@ -2838,7 +2908,7 @@ begin
     'applied', true,
     'source_job_id', v_job.id,
     'youtube_video_id', v_job.youtube_video_id,
-    'video_title_snapshot', v_title,
+    'video_title_snapshot', v_job.video_title_snapshot,
     'source_providers', v_source_providers,
     'draft', v_draft,
     'source_meta_json', jsonb_build_object(
@@ -2991,7 +3061,6 @@ begin
     nullif(
       regexp_replace(
         coalesce(
-          v_finalized_payload ->> 'video_title_snapshot',
           v_draft_json ->> 'title',
           ''
         ),
@@ -3150,7 +3219,6 @@ begin
   update public.youtube_extraction_jobs as job
   set status = 'succeeded',
       extraction_session_id = v_session.id,
-      video_title_snapshot = coalesce(v_title, job.video_title_snapshot),
       error_code = null,
       error_message = null,
       completed_at = v_now,
@@ -3846,13 +3914,13 @@ do $$
 begin
   if current_setting('server_version_num')::integer >= 160000 then
     execute format(
-      'grant youtube_extraction_enqueue_rpc_owner, youtube_extraction_worker_rpc_owner, youtube_extraction_credential_manager_rpc_owner to %I with inherit false, set true granted by %I',
+      'grant youtube_extraction_enqueue_rpc_owner, youtube_extraction_readiness_rpc_owner, youtube_extraction_projection_rpc_owner, youtube_extraction_worker_rpc_owner, youtube_extraction_credential_manager_rpc_owner to %I with inherit false, set true granted by %I',
       current_user,
       current_user
     );
   else
     execute format(
-      'grant youtube_extraction_enqueue_rpc_owner, youtube_extraction_worker_rpc_owner, youtube_extraction_credential_manager_rpc_owner to %I',
+      'grant youtube_extraction_enqueue_rpc_owner, youtube_extraction_readiness_rpc_owner, youtube_extraction_projection_rpc_owner, youtube_extraction_worker_rpc_owner, youtube_extraction_credential_manager_rpc_owner to %I',
       current_user
     );
   end if;
@@ -3861,6 +3929,8 @@ $$;
 
 grant create on schema public
   to youtube_extraction_enqueue_rpc_owner,
+     youtube_extraction_readiness_rpc_owner,
+     youtube_extraction_projection_rpc_owner,
      youtube_extraction_worker_rpc_owner,
      youtube_extraction_credential_manager_rpc_owner;
 
@@ -3880,13 +3950,13 @@ alter function public.heartbeat_youtube_extraction_job(uuid, text, bigint, integ
 alter function public.start_youtube_extraction_attempt(uuid, text, bigint, bigint)
   owner to youtube_extraction_worker_rpc_owner;
 alter function public.read_youtube_extraction_enqueue_readiness()
-  owner to youtube_extraction_enqueue_rpc_owner;
+  owner to youtube_extraction_readiness_rpc_owner;
 alter function public.read_youtube_extraction_job_projection(uuid)
-  owner to youtube_extraction_enqueue_rpc_owner;
+  owner to youtube_extraction_projection_rpc_owner;
 alter function public.read_youtube_extraction_session_projection(uuid)
-  owner to youtube_extraction_enqueue_rpc_owner;
+  owner to youtube_extraction_projection_rpc_owner;
 alter function public.list_youtube_extraction_job_projections(text, timestamptz, timestamptz, uuid, integer)
-  owner to youtube_extraction_enqueue_rpc_owner;
+  owner to youtube_extraction_projection_rpc_owner;
 alter function private.youtube_extraction_job_fence_is_active(uuid, text, bigint)
   owner to youtube_extraction_worker_rpc_owner;
 alter function public.requeue_youtube_extraction_job_without_attempt(uuid, text, bigint, integer, integer)
@@ -3967,11 +4037,14 @@ grant execute on function public.start_youtube_extraction_attempt(uuid, text, bi
 to youtube_extraction_worker;
 
 reset role;
-set local role youtube_extraction_enqueue_rpc_owner;
+set local role youtube_extraction_readiness_rpc_owner;
 
 revoke all on function public.read_youtube_extraction_enqueue_readiness()
 from public, anon, service_role, youtube_extraction_worker, youtube_extraction_credential_manager;
 grant execute on function public.read_youtube_extraction_enqueue_readiness() to authenticated;
+
+reset role;
+set local role youtube_extraction_projection_rpc_owner;
 
 revoke all on function public.read_youtube_extraction_job_projection(uuid)
 from public, anon, service_role, youtube_extraction_worker, youtube_extraction_credential_manager;
@@ -4097,6 +4170,8 @@ reset role;
 
 revoke create on schema public
   from youtube_extraction_enqueue_rpc_owner,
+       youtube_extraction_readiness_rpc_owner,
+       youtube_extraction_projection_rpc_owner,
        youtube_extraction_worker_rpc_owner,
        youtube_extraction_credential_manager_rpc_owner;
 
@@ -4106,13 +4181,13 @@ do $$
 begin
   if current_setting('server_version_num')::integer >= 160000 then
     execute format(
-      'revoke youtube_extraction_enqueue_rpc_owner, youtube_extraction_worker_rpc_owner, youtube_extraction_credential_manager_rpc_owner from %I granted by %I',
+      'revoke youtube_extraction_enqueue_rpc_owner, youtube_extraction_readiness_rpc_owner, youtube_extraction_projection_rpc_owner, youtube_extraction_worker_rpc_owner, youtube_extraction_credential_manager_rpc_owner from %I granted by %I',
       current_user,
       current_user
     );
   else
     execute format(
-      'revoke youtube_extraction_enqueue_rpc_owner, youtube_extraction_worker_rpc_owner, youtube_extraction_credential_manager_rpc_owner from %I',
+      'revoke youtube_extraction_enqueue_rpc_owner, youtube_extraction_readiness_rpc_owner, youtube_extraction_projection_rpc_owner, youtube_extraction_worker_rpc_owner, youtube_extraction_credential_manager_rpc_owner from %I',
       current_user
     );
   end if;
