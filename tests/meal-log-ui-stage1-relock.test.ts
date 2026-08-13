@@ -11,6 +11,9 @@ const root = process.cwd();
 const sliceId = "meal-log-ui";
 const initialRelockBase = "16cfce44d32d5b618742a0e20460df4772a19142";
 const finalRelockBase = "c12afbccd15f4935a1a52b9f2c2c23882a5033ff";
+const latestMasterBase = "c4045705ef72c76f7e7258d10c460f56b6847dd7";
+const latestMasterContent = "a625aefa7baab63f183a9d46e6f12d607d4e017f";
+const latestMasterMerge = "0e7fe07a5719dd3f4e9833d163c25c47e8d8e375";
 const mealLogCoreMerge = "8ba3fa5a2a198eb4f9c19d59cea5f6ccc52fdd4f";
 const mealLogCheckpointMerge = "4597ca835ba81307d0bdf9e1b1c41806b17e7a68";
 const plannerShellMerge = "2185b59d1b460dac916aa4a4a4a5e061c8b795f0";
@@ -258,7 +261,13 @@ describe("meal-log-ui fresh Stage 1 relock", () => {
     for (const required of [
       initialRelockBase,
       finalRelockBase,
+      latestMasterBase,
+      latestMasterContent,
+      latestMasterMerge,
       "base drift",
+      "normal two-parent merge",
+      "YouTube async isolated-local tooling",
+      "Contract Evolution is N/A",
       "Design Status",
       "temporary",
       "fresh independent internal1.5",
