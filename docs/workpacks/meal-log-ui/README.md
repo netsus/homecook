@@ -161,8 +161,8 @@ query empty: 최근 / 자주 먹은 음식
 
 ## Design Status
 
-- [x] 임시 UI (temporary) — Stage 1 계약 상태
-- [ ] 리뷰 대기 (pending-review) — Stage 4 완료 후
+- [ ] 임시 UI (temporary) — Stage 1 계약 상태
+- [x] 리뷰 대기 (pending-review) — Stage 4 완료 후
 - [ ] 확정 (confirmed) — Stage 5와 required final authority 통과 후
 - [ ] N/A — FE 화면이 있으므로 해당 없음
 
@@ -218,7 +218,7 @@ query empty: 최근 / 자주 먹은 음식
 
 - [x] 기존 #9 API와 typed adapter 계약 및 shared policy tests 고정 <!-- omo:id=delivery-meal-log-ui-shared-contract;stage=2;scope=shared;review=3,6 -->
 - [x] idempotency/revision/own-event/history 회귀 TDD RED와 GREEN 증거 <!-- omo:id=delivery-meal-log-ui-policy-tests;stage=2;scope=shared;review=3,6 -->
-- [ ] 기존 #10 Planner shell 안 MEAL_LOG와 add sheet UI 연결 <!-- omo:id=delivery-meal-log-ui-connection;stage=4;scope=frontend;review=5,6 -->
-- [ ] required states, focus, 44px, 390/320/desktop 접근성 검증 <!-- omo:id=delivery-meal-log-ui-state-accessibility;stage=4;scope=frontend;review=5,6 -->
+- [x] 기존 #10 Planner shell 안 MEAL_LOG와 add sheet UI 연결 <!-- omo:id=delivery-meal-log-ui-connection;stage=4;scope=frontend;review=5,6 -->
+- [x] required states, focus, 44px, 390/320/desktop 접근성 검증 <!-- omo:id=delivery-meal-log-ui-state-accessibility;stage=4;scope=frontend;review=5,6 -->
 - [ ] fresh design evidence와 independent critic/final authority 승인 <!-- omo:id=delivery-meal-log-ui-design-authority;stage=4;scope=frontend;review=5,6 -->
 - [ ] local-only target evidence, current-head checks와 post-merge closeout 동기화 <!-- omo:id=delivery-meal-log-ui-closeout;stage=4;scope=shared;review=6 -->

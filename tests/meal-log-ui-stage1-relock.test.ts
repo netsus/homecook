@@ -336,8 +336,7 @@ describe("meal-log-ui fresh Stage 1 relock", () => {
     const checkedAcceptanceIds = [...acceptance.matchAll(
       /^- \[x\].*<!-- omo:id=([^;]+);/gmu,
     )].map((match) => match[1]);
-    expect(checkedAcceptanceIds).toHaveLength(7);
-    expect(checkedAcceptanceIds).toEqual([
+    expect(checkedAcceptanceIds).toEqual(expect.arrayContaining([
       "accept-meal-log-ui-deleted-entry-absence",
       "accept-meal-log-ui-search-union",
       "accept-meal-log-ui-no-invention",
@@ -345,7 +344,13 @@ describe("meal-log-ui fresh Stage 1 relock", () => {
       "accept-meal-log-ui-design",
       "accept-meal-log-ui-doc-gate-regression",
       "accept-meal-log-ui-stage1-honesty",
-    ]);
+    ]));
+    for (const pendingId of [
+      "accept-meal-log-ui-authority",
+      "accept-meal-log-ui-local-only-boundary",
+      "accept-meal-log-ui-reviews",
+      "accept-meal-log-ui-ci",
+    ]) expect(checkedAcceptanceIds).not.toContain(pendingId);
     expect(acceptance).toMatch(
       /- \[ \] implementation records failing component\/history tests before code.*omo:id=accept-meal-log-ui-tdd-red/u,
     );
