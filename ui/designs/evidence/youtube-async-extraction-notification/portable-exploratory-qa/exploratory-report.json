@@ -1,14 +1,14 @@
 {
   "schemaVersion": "1.0",
   "slice": "youtube-async-extraction-notification",
-  "generatedAt": "2026-08-13T22:12:38Z",
+  "generatedAt": "2026-08-13T23:15:15Z",
   "baseUrl": "http://127.0.0.1:3217",
   "devices": [
     "desktop-chrome",
     "mobile-chrome",
     "mobile-ios-small"
   ],
-  "summary": "code head 85752b46b142654ec1ec7289828dd577ab8049e4, tree dc1e79c25a8f70351cb56bd0769749adb9808ce5에서 mock API 기반 격리 앱을 포트 3217로 실행해 desktop 1280/1440, mobile 390, small mobile 320 흐름을 다시 탐색했다. 브라우저가 register 201을 확인한 뒤 owner-scoped unseen first page와 archive fallback을 fresh fetch해 exact extraction만 확인하고 pending ack를 안전하게 유지·제거한다. 개별 draft/consumed/failed exact body, mixed neutral toast, seen 성공 후 badge 감소, dismissible unauthorized 안내를 확인했다. 실제 browser reload·logout→login 뒤 badge/list/destination을 복구했으며 320px 200% text, non-zero safe-area, keyboard-reduced viewport에서 accepted CTA 내부 스크롤 도달성과 non-overlap을 검증했다. strict child env allowlist, exact HOME auth provenance, successful replay generation fence, full-precision cursor, list fail-closed는 focused 및 37개 격리 PostgreSQL/PostgREST test로 확인했다. 총 22개 screenshot과 57개 cross-project 실행을 재생성했으며 remote Supabase와 운영 local app/DB는 사용하지 않았다.",
+  "summary": "code head 8460a43b21e7f4e4f568a38314411828af28985d, tree 15eb53b63d0131d7296ce343e23eb4c54d0205ce에서 mock API 기반 격리 앱을 포트 3217로 실행해 desktop 1280/1440, mobile 390, small mobile 320 흐름을 다시 탐색했다. 브라우저가 register 201을 확인한 뒤 owner-scoped unseen first page와 archive fallback을 fresh fetch해 exact extraction만 확인하고 pending ack를 안전하게 유지·제거한다. 개별 성공 title '레시피 추출이 끝났어요'와 draft/consumed/failed exact body, mixed neutral toast, seen 성공 후 badge 감소, 현재 focus를 빼앗지 않는 dismissible unauthorized 안내, accepted retry network 오류와 원래 terminal quota copy의 분리를 확인했다. 390/desktop에서 global bell과 toast 닫기·YT_IMPORT 뒤로가기 실제 DOM rectangle이 겹치지 않고 desktop bell center hit ownership도 유지한다. 실제 browser reload·logout→login 뒤 badge/list/destination을 복구했으며 320px 200% text, non-zero safe-area, keyboard-reduced viewport에서 accepted CTA 내부 스크롤 도달성과 non-overlap을 검증했다. strict child env allowlist, exact HOME 및 config/provider/credential/token no-symlink·UID·0600·canonical-realpath provenance, live lease/permit write fence, permit release 뒤 exact succeeded replay, 1-success=1-unit quota, durable fail-or-retry fail-closed, full-precision cursor, list fail-closed를 focused 및 39개 격리 PostgreSQL/PostgREST test로 확인했다. 총 22개 screenshot과 57개 cross-project 실행을 재생성했으며 remote Supabase와 운영 local app/DB는 사용하지 않았다.",
   "findings": [],
   "remainingRisks": [
     "이번 authority REVISE findings는 수정했지만 새 exact head의 독립 authority 재검토, Stage 5, final authority, Stage 6 승인은 아직 수행하지 않았다.",
@@ -61,13 +61,13 @@
     {
       "item_id": "state-policy-2",
       "status": "covered",
-      "notes": "Stage 3 reaper/claim evidence를 재사용하고 successful finalize replay가 exact retained worker_id+lease_generation에만 idempotent임을 격리 PostgreSQL에서 확인했다.",
+      "notes": "Stage 3 reaper/claim evidence를 재사용하고 processing write는 live lease를 요구하며 permit release 뒤 successful finalize replay도 exact retained worker_id+lease_generation에만 idempotent임을 격리 PostgreSQL에서 확인했다.",
       "linked_findings": []
     },
     {
       "item_id": "state-policy-3",
       "status": "covered",
-      "notes": "starting backend head의 permit/attempt evidence와 product regression으로 확인했다.",
+      "notes": "job 및 permit lease 만료 뒤 heartbeat/start/requeue/finalize/fail-retry가 모두 applied false 또는 0으로 닫히며, stale worker가 연장하거나 상태를 바꾸지 못함을 격리 PostgreSQL matrix로 확인했다.",
       "linked_findings": []
     },
     {
@@ -97,7 +97,7 @@
     {
       "item_id": "state-policy-8",
       "status": "covered",
-      "notes": "여러 terminal 결과는 한 grouped toast로 렌더하고 실제 대표한 delivery key만 delivered 처리한다. delivered_at 항목은 재생하지 않고, 6초 opener 해제 뒤 drawer close는 안정적 shell trigger로 focus를 돌린다.",
+      "notes": "여러 terminal 결과는 한 grouped toast로 렌더하고 실제 대표한 delivery key만 delivered 처리한다. 개별 성공 toast는 exact title과 state body를 함께 렌더한다. delivered_at 항목은 재생하지 않고, 6초 opener 해제 뒤 drawer close는 안정적 shell trigger로 focus를 돌린다.",
       "linked_findings": []
     },
     {
@@ -181,13 +181,13 @@
     {
       "item_id": "data-integrity-5",
       "status": "covered",
-      "notes": "restricted worker privilege는 Stage 3 evidence를 유지하고, Codex/Python/ffmpeg/extraction child가 strict allowlist 환경만 상속하며 service-role/signing/user-token sentinel을 받지 않음을 focused test로 확인했다.",
+      "notes": "restricted worker privilege는 Stage 3 evidence를 유지한다. Codex/Python/ffmpeg/extraction child는 strict allowlist 환경만 상속하고 service-role/signing/user-token sentinel을 받지 않는다. config/provider secret/credential metadata/token은 lstat no-symlink, expected UID, 0600, canonical realpath를 모두 만족해야 함을 focused test로 확인했다.",
       "linked_findings": []
     },
     {
       "item_id": "data-integrity-6",
       "status": "covered",
-      "notes": "successful finalize replay도 retained worker_id+lease_generation exact fence를 요구해 stale generation이 항상 거부되고 exact generation replay만 idempotent임을 SQL 및 격리 integration test로 확인했다.",
+      "notes": "successful finalize replay도 retained worker_id+lease_generation exact fence를 요구해 stale generation이 항상 거부되고 permit release 뒤에도 exact generation replay만 idempotent임을 SQL 및 격리 integration test로 확인했다. fail_or_retry RPC error/applied=false는 production/common worker 모두 durable failure 미기록으로 보고 fail closed한다.",
       "linked_findings": []
     },
     {
@@ -211,7 +211,7 @@
     {
       "item_id": "design-accessibility-2",
       "status": "covered",
-      "notes": "390 grouped toast, 320 failure sheet, 1440 cursor archive 캡처에서 badge/list/archive, active projection, stacking과 page overflow 0을 확인했다.",
+      "notes": "390 grouped toast, 320 failure sheet, 1440 cursor archive 캡처에서 badge/list/archive, active projection, stacking과 page overflow 0을 확인했다. 390/desktop bell↔toast close 및 bell↔back button의 실제 rectangle 분리와 desktop bell center-point hit ownership도 assertion으로 고정했다.",
       "linked_findings": []
     },
     {
