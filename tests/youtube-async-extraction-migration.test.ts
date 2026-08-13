@@ -31,8 +31,6 @@ describe("YTASYNC-DB/SEC migration contract", () => {
     const sql = readFileSync(migrationPath, "utf8").toLowerCase();
     for (const role of [
       "youtube_extraction_enqueue_rpc_owner",
-      "youtube_extraction_readiness_rpc_owner",
-      "youtube_extraction_projection_rpc_owner",
       "youtube_extraction_worker",
       "youtube_extraction_worker_rpc_owner",
       "youtube_extraction_credential_manager",
@@ -40,6 +38,8 @@ describe("YTASYNC-DB/SEC migration contract", () => {
     ]) {
       expect(sql).toContain(role);
     }
+    expect(sql).not.toContain("create role youtube_extraction_readiness_rpc_owner");
+    expect(sql).not.toContain("create role youtube_extraction_projection_rpc_owner");
     for (const rpc of [
       "enqueue_youtube_extraction_job",
       "claim_youtube_extraction_job",
@@ -66,8 +66,6 @@ describe("YTASYNC-DB/SEC migration contract", () => {
     expect(sql).toContain("grant create on schema private to youtube_extraction_worker_rpc_owner");
     expect(sql).toContain("revoke create on schema private from youtube_extraction_worker_rpc_owner");
     expect(sql.match(/set local role youtube_extraction_enqueue_rpc_owner/g)?.length).toBe(1);
-    expect(sql).toContain("set local role youtube_extraction_readiness_rpc_owner");
-    expect(sql).toContain("set local role youtube_extraction_projection_rpc_owner");
     expect(sql.match(/set local role youtube_extraction_worker_rpc_owner/g)?.length).toBe(3);
     expect(sql).toContain("set local role youtube_extraction_credential_manager_rpc_owner");
     expect(sql).toContain("revoke all on table public.youtube_extraction_jobs from public, anon, authenticated, service_role");
@@ -84,10 +82,10 @@ describe("YTASYNC-DB/SEC migration contract", () => {
       "create policy youtube_extraction_sessions_enqueue_owner_select",
     );
     expect(sql).toContain(
-      "alter function public.read_youtube_extraction_enqueue_readiness()\n  owner to youtube_extraction_readiness_rpc_owner",
+      "alter function public.read_youtube_extraction_enqueue_readiness()\n  owner to youtube_extraction_credential_manager_rpc_owner",
     );
     expect(sql).toContain(
-      "alter function public.read_youtube_extraction_job_projection(uuid)\n  owner to youtube_extraction_projection_rpc_owner",
+      "alter function public.read_youtube_extraction_job_projection(uuid)\n  owner to youtube_extraction_worker_rpc_owner",
     );
   });
 
@@ -98,6 +96,11 @@ describe("YTASYNC-DB/SEC migration contract", () => {
     );
     expect(integration).toContain("YTASYNC-DB-POLICY-RACE");
     expect(integration).toContain("runPsqlAsync");
+    expect(integration).toContain("pg_catalog.pg_stat_activity");
+    expect(integration).toContain("yta-policy-race-enqueue");
+    expect(integration).toContain("ShareLock");
+    expect(integration).toContain("ExclusiveLock");
+    expect(integration).not.toContain("select pg_advisory_xact_lock_shared(86120317);");
   });
 
   it("keeps the security-function inventory aligned with split read owners", () => {
@@ -110,14 +113,14 @@ describe("YTASYNC-DB/SEC migration contract", () => {
     );
 
     expect(owners["public.read_youtube_extraction_enqueue_readiness()"]).toBe(
-      "youtube_extraction_readiness_rpc_owner",
+      "youtube_extraction_credential_manager_rpc_owner",
     );
     for (const signature of [
       "public.list_youtube_extraction_job_projections(text, timestamp with time zone, timestamp with time zone, uuid, integer)",
       "public.read_youtube_extraction_job_projection(uuid)",
       "public.read_youtube_extraction_session_projection(uuid)",
     ]) {
-      expect(owners[signature], signature).toBe("youtube_extraction_projection_rpc_owner");
+      expect(owners[signature], signature).toBe("youtube_extraction_worker_rpc_owner");
     }
   });
 

@@ -154,6 +154,27 @@ describe("YTASYNC Stage 3 API revise RED", () => {
         env,
         new Date("2026-08-13T00:00:00.000Z"),
       )).toEqual({ code: "POLICY_CHANGED" });
+      const disabledRotatedPolicyRpc = vi.fn(async () => ({
+        data: {
+          ...(await rotatedPolicyRpc()).data as Record<string, unknown>,
+          ready: false,
+        },
+        error: null,
+      }));
+      expect(await loadYoutubeExtractionEnqueueReadiness(
+        disabledRotatedPolicyRpc,
+        env,
+        new Date("2026-08-13T00:00:00.000Z"),
+      )).toBeNull();
+      writeFileSync(descriptorPath, JSON.stringify({
+        ...descriptor,
+        schema: "malformed-app-descriptor",
+      }));
+      expect(await loadYoutubeExtractionEnqueueReadiness(
+        rotatedPolicyRpc,
+        env,
+        new Date("2026-08-13T00:00:00.000Z"),
+      )).toBeNull();
       writeFileSync(descriptorPath, JSON.stringify({
         ...descriptor,
         artifact_sha256: "c".repeat(64),
