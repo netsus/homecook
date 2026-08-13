@@ -16,6 +16,12 @@ import { readE2EAuthOverride } from "@/lib/auth/e2e-auth-override";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { hasSupabasePublicEnv } from "@/lib/supabase/env";
 import { useYoutubeExtractionStore } from "@/stores/youtube-extraction-store";
+import {
+  trackYoutubeExtractionJob,
+  YOUTUBE_EXTRACTION_JOB_ENQUEUED_EVENT,
+  YOUTUBE_EXTRACTION_JOBS_STORAGE_KEY,
+  YOUTUBE_EXTRACTION_SESSION_REGISTERED_EVENT,
+} from "@/lib/youtube-extraction-client-state";
 import type {
   YoutubeExtractionJobData,
   YoutubeExtractionNotificationItem,
@@ -56,6 +62,18 @@ function retryLabel(item: YoutubeExtractionNotificationItem) {
   if (item.error?.code === "QUOTA_EXCEEDED") return "나중에 다시 시도";
   if (item.error?.code === "EXTRACTION_EXPIRED") return "다시 추출";
   return "다시 시도";
+}
+
+function formatCompletedAt(completedAt: string) {
+  return new Intl.DateTimeFormat("ko-KR", {
+    day: "numeric",
+    hour: "2-digit",
+    hour12: true,
+    minute: "2-digit",
+    month: "long",
+    timeZone: "Asia/Seoul",
+    year: "numeric",
+  }).format(new Date(completedAt));
 }
 
 export function YoutubeExtractionNotificationTrigger({
@@ -113,6 +131,15 @@ function NotificationRow({
           <div className="min-w-0 flex-1">
             <h3 className="break-words text-sm font-bold text-[var(--foreground)]">{itemTitle(item)}</h3>
             <p className="mt-1 text-sm leading-5 text-[var(--muted)]">{copy.body}</p>
+            {item.completed_at ? (
+              <time
+                aria-label={`완료 시각 ${formatCompletedAt(item.completed_at)}`}
+                className="mt-1 block text-xs text-[var(--muted)]"
+                dateTime={item.completed_at}
+              >
+                {formatCompletedAt(item.completed_at)}
+              </time>
+            ) : null}
           </div>
         </div>
         <div className="mt-3 flex flex-wrap gap-2">
@@ -265,7 +292,7 @@ export function YoutubeExtractionNotificationCenter({
 
     const readPendingIds = () => {
       try {
-        const value = JSON.parse(window.sessionStorage.getItem("homecook.youtube-extraction-jobs") ?? "[]") as unknown;
+        const value = JSON.parse(window.sessionStorage.getItem(YOUTUBE_EXTRACTION_JOBS_STORAGE_KEY) ?? "[]") as unknown;
         return Array.isArray(value)
           ? value.filter((item): item is string => typeof item === "string")
           : [];
@@ -292,7 +319,7 @@ export function YoutubeExtractionNotificationCenter({
       const hasTerminal = results.some(({ result }) => result.success && result.data
         && !activeIds.includes(result.data.job_id));
       window.sessionStorage.setItem(
-        "homecook.youtube-extraction-jobs",
+        YOUTUBE_EXTRACTION_JOBS_STORAGE_KEY,
         JSON.stringify(activeIds),
       );
       if (hasTerminal) await refresh("unseen-completed");
@@ -302,11 +329,11 @@ export function YoutubeExtractionNotificationCenter({
     };
 
     void pollPending();
-    window.addEventListener("homecook:youtube-extraction-job-enqueued", pollPending);
+    window.addEventListener(YOUTUBE_EXTRACTION_JOB_ENQUEUED_EVENT, pollPending);
     return () => {
       current = false;
       if (timer) window.clearTimeout(timer);
-      window.removeEventListener("homecook:youtube-extraction-job-enqueued", pollPending);
+      window.removeEventListener(YOUTUBE_EXTRACTION_JOB_ENQUEUED_EVENT, pollPending);
     };
   }, [authenticated, refresh]);
 
@@ -379,8 +406,31 @@ export function YoutubeExtractionNotificationCenter({
   }, [items, markSeenInStore, open]);
 
   useEffect(() => {
-    if (!open) triggerBeforeOpenRef.current?.focus();
+    if (open) return;
+    const previousTrigger = triggerBeforeOpenRef.current;
+    const fallbackTrigger = document.querySelector<HTMLElement>(
+      "[data-youtube-extraction-trigger='header'], [data-youtube-extraction-trigger='global']",
+    );
+    (previousTrigger?.isConnected ? previousTrigger : fallbackTrigger)?.focus();
   }, [open]);
+
+  useEffect(() => {
+    const suppressRegisteredSession = (event: Event) => {
+      const extractionId = (event as CustomEvent<{ extractionId?: unknown }>).detail?.extractionId;
+      if (typeof extractionId !== "string") return;
+      const matchingIds = items
+        .filter((item) => item.result?.extraction_id === extractionId)
+        .map((item) => item.job_id);
+      if (matchingIds.length === 0) return;
+      setHiddenToastIds((current) => [...new Set([...current, ...matchingIds])]);
+      markSeenInStore(matchingIds);
+    };
+    window.addEventListener(YOUTUBE_EXTRACTION_SESSION_REGISTERED_EVENT, suppressRegisteredSession);
+    return () => window.removeEventListener(
+      YOUTUBE_EXTRACTION_SESSION_REGISTERED_EVENT,
+      suppressRegisteredSession,
+    );
+  }, [items, markSeenInStore]);
 
   useEffect(() => {
     const refreshOnFocus = () => {
@@ -398,7 +448,9 @@ export function YoutubeExtractionNotificationCenter({
 
   const visibleToastItems = useMemo(
     () => items
-      .filter((item) => item.seen_at === null && !hiddenToastIds.includes(item.job_id)),
+      .filter((item) => item.seen_at === null
+        && item.delivered_at === null
+        && !hiddenToastIds.includes(item.job_id)),
     [hiddenToastIds, items],
   );
 
@@ -423,7 +475,8 @@ export function YoutubeExtractionNotificationCenter({
     setRetryingId(item.job_id);
     const result = await enqueueYoutubeExtraction({ retry_job_id: item.job_id });
     setRetryingId(null);
-    if (result.success) {
+    if (result.success && result.data) {
+      trackYoutubeExtractionJob(result.data.job_id);
       setOpen(false);
       setView("unseen-completed");
       void refresh("unseen-completed");
@@ -534,7 +587,11 @@ export function YoutubeExtractionNotificationCenter({
               {loading ? <p aria-live="polite" className="py-8 text-center text-sm text-[var(--muted)]">알림을 불러오는 중이에요…</p> : null}
               {loadError ? <div className="py-8 text-center"><p role="status">{loadError}</p><button className="mt-3 min-h-11 rounded-full border px-4 font-bold" onClick={() => refresh(view)} type="button">다시 불러오기</button></div> : null}
               {!loading && !loadError && view === "unseen-completed" ? activeJobs.map((job) => <ActiveJobRow job={job} key={job.job_id} />) : null}
-              {!loading && !loadError && items.length === 0 && (view === "archive" || activeJobs.length === 0) ? <p className="py-12 text-center text-sm text-[var(--muted)]">표시할 알림이 없어요.</p> : null}
+              {!loading && !loadError && items.length === 0 && (view === "archive" || activeJobs.length === 0) ? (
+                <p className="py-12 text-center text-sm text-[var(--muted)]">
+                  {view === "archive" ? "완료된 추출 작업이 없어요." : "표시할 알림이 없어요."}
+                </p>
+              ) : null}
               {!loading && !loadError ? items.map((item) => <NotificationRow item={item} key={item.job_id} onRetry={handleRetry} />) : null}
               {!loading && !loadError && nextCursor ? (
                 <button className="my-4 min-h-11 w-full rounded-full border border-[var(--wave1-border)] px-4 text-sm font-bold text-[var(--foreground)]" disabled={loadingMore} onClick={handleLoadMore} type="button">

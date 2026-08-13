@@ -9,6 +9,7 @@ import { formatMealAddTargetLabel } from "@/components/planner/meal-add-target-b
 import { RecipeIngredientAddModal } from "@/components/recipe/recipe-ingredient-add-modal";
 import { RecipeTagEditor } from "@/components/recipe/recipe-tag-editor";
 import { Button } from "@/components/ui/button";
+import { trackYoutubeExtractionJob } from "@/lib/youtube-extraction-client-state";
 import { NumericStepperCompact } from "@/components/shared/numeric-stepper-compact";
 import { AppBackButton } from "@/components/shared/app-back-button";
 import { ModalHeader } from "@/components/shared/modal-header";
@@ -809,8 +810,14 @@ function BackgroundAcceptedStep({
           {failed && job.can_retry ? (
             <Button onClick={onRetry} style={{ color: "var(--foreground)" }}>다시 시도</Button>
           ) : null}
-          <Button onClick={onOpenJobs} style={failed ? undefined : { color: "var(--foreground)" }} variant={failed ? "neutral" : "primary"}>작업 보기</Button>
-          <Button onClick={onExit} variant="neutral">나가기</Button>
+          <Button
+            onClick={onExit}
+            style={failed ? undefined : { color: "var(--foreground)" }}
+            variant={failed ? "neutral" : "primary"}
+          >
+            나가기
+          </Button>
+          <Button onClick={onOpenJobs} variant="neutral">작업 보기</Button>
         </div>
       </div>
     </div>
@@ -2746,19 +2753,7 @@ export function YoutubeImportScreen({
       setAcceptedJobId(result.data.job_id);
       setAcceptedDeduplicated(result.data.deduplicated);
       setAcceptedJob(null);
-      try {
-        const stored = JSON.parse(window.sessionStorage.getItem("homecook.youtube-extraction-jobs") ?? "[]") as unknown;
-        const ids = Array.isArray(stored)
-          ? stored.filter((value): value is string => typeof value === "string")
-          : [];
-        window.sessionStorage.setItem(
-          "homecook.youtube-extraction-jobs",
-          JSON.stringify([...new Set([...ids, result.data.job_id])].slice(-20)),
-        );
-        window.dispatchEvent(new CustomEvent("homecook:youtube-extraction-job-enqueued"));
-      } catch {
-        // Polling still works in the current page when storage is unavailable.
-      }
+      trackYoutubeExtractionJob(result.data.job_id);
       pushStep("accepted");
     })();
 
