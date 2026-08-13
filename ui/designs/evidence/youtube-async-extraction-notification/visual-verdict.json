@@ -1,21 +1,10 @@
 {
-  "score": 95,
-  "status": "pass",
-  "breakdown": {
-    "composition": 24,
-    "hierarchy": 20,
-    "typography": 14,
-    "color": 15,
-    "craft": 13,
-    "fidelity": 9
-  },
-  "feedback": {
-    "critical": [],
-    "high": [],
-    "medium": [],
-    "low": [
-      "320px 실패 목록은 의도한 내부 스크롤을 사용하므로 첫 화면에는 한 항목만 보인다.",
-      "실기기 safe-area와 가상 키보드 가림은 Manual Only 검증으로 남는다."
-    ]
-  }
+  "score": 96,
+  "verdict": "pass",
+  "category_match": true,
+  "differences": [],
+  "suggestions": [
+    "실기기 safe-area와 가상 키보드 가림은 Manual Only 검증에서 다시 확인한다."
+  ],
+  "reasoning": "확정 artifact의 기존 YT_IMPORT visual language와 app-shell drawer 패턴을 유지했다. 새 evidence에서 grouped toast의 위계, desktop drawer 제목·닫기 stacking, cursor archive 내부 스크롤, 320px 200% 텍스트와 simulated safe-area의 닫기·CTA 도달성, 승인 token 기반 대비를 확인했으며 blocker 또는 major 시각 차이는 보이지 않았다. 이 판정은 구현 task의 screenshot 비교 결과이며 독립 authority 승인을 대신하지 않는다."
 }
