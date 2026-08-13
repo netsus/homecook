@@ -122,7 +122,7 @@ export function renderMealLogShell({
   navigationMocks.searchParams.mockReturnValue(
     new URLSearchParams("segment=log&date=2026-08-10"),
   );
-  const fetchMock = vi.fn(async (input: RequestInfo | URL, _init?: RequestInit) => {
+  const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
     const path = String(input);
     const url = new URL(path, "http://localhost");
     if (failDate && path.includes(`/meal-log?date=${failDate}`)) {
