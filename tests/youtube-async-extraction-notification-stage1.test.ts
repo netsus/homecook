@@ -140,4 +140,19 @@ describe("YouTube async extraction Stage 1 contract", () => {
       automation.frontend.design_authority.authority_report_paths,
     ).toHaveLength(2);
   });
+
+  it("records the final frozen plan provenance without rewriting the plan artifact", () => {
+    expect(readme).toContain(
+      "/Users/cwj/01_vibe_coding/homecook/.omx/plans/youtube-background-extraction-notification-plan-20260808.md",
+    );
+    expect(readme).toContain(
+      "7906f9ec975f309c310b2275714873cebb78e109770f885f09878e5c6bbed57a",
+    );
+    expect(readme).toContain("991 lines");
+    expect(readme).toContain("019ffb44-5614-7af3-86a9-4ebd50977123");
+    expect(readme).not.toContain(
+      "b560b60ff758171e1d52ad56b2a63a2e1877cd762d1f691c9cea32c753f8d332",
+    );
+    expect(readme).not.toContain("873 lines");
+  });
 });

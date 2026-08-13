@@ -40,7 +40,7 @@
       "BRANCH_NAME=feature/be-youtube-async-extraction-notification pnpm validate:workpack -- --slice youtube-async-extraction-notification",
       "pnpm exec vitest run tests/youtube-background-extraction-contract.test.ts tests/youtube-async-extraction-jobs.backend.test.ts tests/youtube-extraction-worker.test.ts tests/youtube-extraction-release-installer.test.ts",
       "pnpm exec vitest run tests/youtube-extraction-policy-postgres.integration.test.ts tests/youtube-extraction-security-postgrest.integration.test.ts",
-      "pnpm local:reset:demo",
+      "pnpm verify:local-supabase-runtime:isolated",
       "pnpm verify:backend",
       "pnpm verify:security-functions:release"
     ],

@@ -76,7 +76,7 @@ describe("Supabase local-only operations contract", () => {
     expect(packageJson.scripts["full-local-production:storage-copy"]).toBeUndefined();
     expect(packageJson.scripts["full-local-production:storage-copy:verify"]).toBeUndefined();
     expect(packageJson.scripts["verify:security-functions:release"]).toBe(
-      "pnpm verify:security-functions && pnpm verify:security-functions:data-api",
+      "pnpm verify:security-functions:isolated",
     );
     expect(existsSync(".github/workflows/playwright-live-oauth.yml")).toBe(false);
     expect(read(".env.example")).toContain("HOMECOOK_AUTH_AUTHORITY=local");
@@ -376,7 +376,10 @@ describe("Supabase local-only operations contract", () => {
     expect(inventory).toContain("sourceIdentity");
     expect(inventory).not.toContain('run("supabase"');
     expect(inventory).not.toContain('"--linked"');
-    expect(dataApi).toContain('{ environment: "local", ...readLocalEnvironment() }');
+    expect(dataApi).toContain(
+      '{ environment: "local", ...(readInjectedEnvironment() ?? readLocalEnvironment()) }',
+    );
+    expect(dataApi).toContain("assertExactLoopbackHttpOrigin");
     expect(dataApi).not.toContain("readRemoteEnvironment");
     expect(dataApi).not.toContain("resolveSecurityFunctionLinkedRoot");
     expect(productionRuntime).toContain("storagePayloadPath");
