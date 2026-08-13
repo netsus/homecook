@@ -49,6 +49,7 @@ import {
 import { mapStorageRowsToPayloadReferences } from "./lib/isolated-local-backup-restore-drill.mjs";
 import { verifyFullLocalBackupReadiness } from "./lib/full-local-backup-readiness.mjs";
 import {
+  openFullLocalBackupKeyEscrow,
   signFullLocalBackupKeyRecoveryEvidence,
   verifyFullLocalBackupKeyEscrowBinding,
   verifyFullLocalBackupKeyRecoveryIssuerAttestation,
@@ -1512,10 +1513,46 @@ async function restorePlatformBackup(args) {
     postgresVolumeExists: dockerVolumeExists(runtime.config.FULL_LOCAL_POSTGRES_VOLUME_NAME),
     storageVolumeExists: dockerVolumeExists(runtime.config.FULL_LOCAL_STORAGE_VOLUME_NAME),
   });
-  const backupKey = keychainValue(
+  const envelopePath = assertRegularReadinessArtifact(
+    optionValue(args, "--escrow-envelope"),
+  );
+  const credentialPath = assertRegularReadinessArtifact(
+    optionValue(args, "--recovery-credential-file"),
+  );
+  assertPrivateArtifactParent(envelopePath);
+  assertPrivateArtifactParent(credentialPath);
+  if (statSync(envelopePath).dev !== statSync(credentialPath).dev) {
+    fail("Recovery credential and escrow envelope must share the replacement medium.");
+  }
+  if (keychainItemExists(
     PLATFORM_BACKUP_KEYCHAIN_SERVICE,
     PLATFORM_BACKUP_KEYCHAIN_ACCOUNT,
-  );
+  )) {
+    fail("Replacement recovery requires the source backup Keychain item to be absent.");
+  }
+  const backupKey = openFullLocalBackupKeyEscrow({
+    envelope: JSON.parse(readFileSync(envelopePath, "utf8")),
+    recoveryCredential: readFileSync(credentialPath, "utf8").trim(),
+  });
+  const keyStaging = mkdtempSync(join(tmpdir(), "homecook-recovered-backup-key-"));
+  chmodSync(keyStaging, 0o700);
+  try {
+    const keyPath = join(keyStaging, "recovered.key");
+    writeFileSync(keyPath, backupKey, { encoding: "utf8", mode: 0o600 });
+    storeKeychainValue(
+      PLATFORM_BACKUP_KEYCHAIN_SERVICE,
+      PLATFORM_BACKUP_KEYCHAIN_ACCOUNT,
+      keyPath,
+    );
+  } finally {
+    rmSync(keyStaging, { force: true, recursive: true });
+  }
+  if (keychainValue(
+    PLATFORM_BACKUP_KEYCHAIN_SERVICE,
+    PLATFORM_BACKUP_KEYCHAIN_ACCOUNT,
+  ) !== backupKey) {
+    fail("Recovered backup key was not registered in the replacement Keychain.");
+  }
   const archiveSha256 = sha256File(archive);
 
   return withVerifiedPlatformBackup({

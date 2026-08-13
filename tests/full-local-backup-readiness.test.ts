@@ -429,6 +429,10 @@ describe("full-local backup readiness", () => {
     );
     expect(runtime).toContain("signFullLocalBackupKeyRecoveryEvidence");
     expect(runtime).toContain("--recovery-issuer-private-key");
+    expect(runtime).toContain("--recovery-credential-file");
+    expect(runtime).toMatch(
+      /keychainItemExists[\s\S]*source backup Keychain item to be absent[\s\S]*openFullLocalBackupKeyEscrow[\s\S]*storeKeychainValue[\s\S]*withVerifiedPlatformBackup/u,
+    );
   });
 
   it("rejects a fabricated recovery manifest even when its backup-key HMAC could be valid", () => {
