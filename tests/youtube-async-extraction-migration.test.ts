@@ -100,6 +100,27 @@ describe("YTASYNC-DB/SEC migration contract", () => {
     expect(integration).toContain("runPsqlAsync");
   });
 
+  it("keeps the security-function inventory aligned with split read owners", () => {
+    const manifest = JSON.parse(readFileSync(
+      "docs/security/youtube-async-extraction-security-function-authorization-manifest.json",
+      "utf8",
+    )) as { functions: Array<{ signature: string; owner?: string }> };
+    const owners = Object.fromEntries(
+      manifest.functions.map((entry) => [entry.signature, entry.owner]),
+    );
+
+    expect(owners["public.read_youtube_extraction_enqueue_readiness()"]).toBe(
+      "youtube_extraction_readiness_rpc_owner",
+    );
+    for (const signature of [
+      "public.list_youtube_extraction_job_projections(text, timestamp with time zone, timestamp with time zone, uuid, integer)",
+      "public.read_youtube_extraction_job_projection(uuid)",
+      "public.read_youtube_extraction_session_projection(uuid)",
+    ]) {
+      expect(owners[signature], signature).toBe("youtube_extraction_projection_rpc_owner");
+    }
+  });
+
   it("exposes only lease-fenced worker data and permit-contention mutation RPCs", () => {
     const sql = readFileSync(migrationPath, "utf8").toLowerCase();
     for (const signature of [
