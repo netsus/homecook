@@ -1,9 +1,9 @@
 {
-  "captured_at": "2026-08-13T20:33:24Z",
+  "captured_at": "2026-08-13T21:00:17Z",
   "evidence_scope": "youtube-async-extraction-notification Stage 4 frontend",
   "implementation_base": "25e8da8b04c2322f68d8f54837135399d7586da7",
-  "implementation_head": "d5924b14fcc416ad11db70b96f2faf0c98c0c005",
-  "implementation_tree": "527f1fbf89bf2b3af565678c71f15e195ac27c0e",
+  "implementation_head": "ad25fe3ff4e4ca1b0f9b9f03be0a43cdb0b94368",
+  "implementation_tree": "9088f67edc4aeca68fdc5174a56fc0ac696d938c",
   "generator": "tests/e2e/youtube-async-extraction-notification.spec.ts",
   "base_url": "http://127.0.0.1:3217",
   "remote_supabase_access_count": 0,
@@ -11,9 +11,24 @@
   "operational_app_3100_use_count": 0,
   "captures": [
     {
+      "file": "YT_IMPORT_BACKGROUND/mobile-390-initial.png",
+      "viewport": { "width": 390, "height": 844 },
+      "state": "initial-url-entry"
+    },
+    {
+      "file": "YT_IMPORT_BACKGROUND/mobile-390-submitting.png",
+      "viewport": { "width": 390, "height": 844 },
+      "state": "submitting-validation-in-flight"
+    },
+    {
+      "file": "YT_IMPORT_BACKGROUND/mobile-390-policy-changed.png",
+      "viewport": { "width": 390, "height": 844 },
+      "state": "policy-changed-url-preserved"
+    },
+    {
       "file": "YT_IMPORT_BACKGROUND/mobile-390-accepted.png",
       "viewport": { "width": 390, "height": 844 },
-      "state": "accepted-active-job-projected"
+      "state": "accepted-active-job-projected-whole-word-wrap"
     },
     {
       "file": "YT_IMPORT_BACKGROUND/mobile-320-offline.png",
@@ -23,7 +38,7 @@
     {
       "file": "YT_IMPORT_BACKGROUND/mobile-390-quota-retry.png",
       "viewport": { "width": 390, "height": 844 },
-      "state": "quota-exceeded-exact-retry-copy"
+      "state": "quota-exceeded-exact-retry-copy-whole-word-wrap"
     },
     {
       "file": "YT_IMPORT_BACKGROUND/mobile-390-retry-active-projection.png",
@@ -41,9 +56,34 @@
       "state": "grouped-terminal-toast-unseen-badge"
     },
     {
+      "file": "APP_SHELL_YOUTUBE_NOTIFICATIONS/mobile-390-consumed.png",
+      "viewport": { "width": 390, "height": 844 },
+      "state": "consumed-already-registered-recipe"
+    },
+    {
+      "file": "APP_SHELL_YOUTUBE_NOTIFICATIONS/mobile-390-expired-non-retryable.png",
+      "viewport": { "width": 390, "height": 844 },
+      "state": "expired-retryable-and-failed-non-retryable"
+    },
+    {
+      "file": "APP_SHELL_YOUTUBE_NOTIFICATIONS/mobile-390-empty.png",
+      "viewport": { "width": 390, "height": 844 },
+      "state": "unseen-shell-empty"
+    },
+    {
+      "file": "APP_SHELL_YOUTUBE_NOTIFICATIONS/mobile-390-offline.png",
+      "viewport": { "width": 390, "height": 844 },
+      "state": "shell-offline-inline-retry"
+    },
+    {
+      "file": "APP_SHELL_YOUTUBE_NOTIFICATIONS/mobile-390-unauthorized.png",
+      "viewport": { "width": 390, "height": 844 },
+      "state": "shell-unauthorized-return-to-login"
+    },
+    {
       "file": "APP_SHELL_YOUTUBE_NOTIFICATIONS/mobile-320-failure-panel.png",
-      "viewport": { "width": 320, "height": 568 },
-      "state": "failure-list-320-200-percent-simulated-safe-area"
+      "viewport": { "width": 320, "height": 844 },
+      "state": "failure-title-message-320-200-percent-simulated-safe-area"
     },
     {
       "file": "APP_SHELL_YOUTUBE_NOTIFICATIONS/desktop-1440-archive.png",
@@ -52,19 +92,20 @@
     }
   ],
   "verification": {
-    "focused_vitest": "50 passed including response-loss recovery, observed-201 acknowledgement, exact owner job seen, acknowledgement retry, accepted CTA copy, and replacement-job projection",
-    "backend_stage3_regression": "87 passed across route, async contract, worker, release installer, Stage 3 API revise, and local-only security boundaries",
-    "playwright": "8 evidence-capture scenarios passed; 24 cross-project executions passed on isolated port 3217",
+    "focused_vitest": "34 passed including fresh-first-page registration acknowledgement, next-page reconciliation, network retry preservation, owner isolation, consumed copy, and Korean whole-word wrapping",
+    "youtube_async_regression": "148 passed across frontend notifications/import, API client, backend routes, migration contract, Stage 3 API revise, worker, release installer, and evidence boundaries",
+    "playwright": "15 deterministic scenarios passed; 45 cross-project executions passed on isolated port 3217; 16 exact-head screenshots captured",
     "axe": "0 violations on accepted CTA, grouped-toast, and 320px drawer surfaces with color-contrast enabled",
     "exploratory_qa": "97/100; 42/46 covered; 4 independent authority or real-worker/DB items intentionally not covered",
+    "lint_typecheck": "passed on exact code head",
     "official_frontend_pr_gate": "passed on isolated port 3217: lint, typecheck, 2,741 product tests, build, 62 smoke passed/10 skipped, 8 a11y passed/1 skipped, and 12 visual passed",
     "security_e2e": "12 passed on isolated port 3217",
-    "full_vitest": "6,101 passed and 439 skipped",
+    "full_vitest": "6,107 passed and 439 skipped",
     "visual_verdict": "98/100 pass"
   },
   "limitations": [
     "This is mock-API browser evidence and does not replace real local Supabase worker crash/reclaim or cross-user DB verification.",
-    "The latest authority REVISE findings are repaired, but independent re-review of the new exact PR head, Stage 5, final authority, and Stage 6 remain pending.",
+    "The latest authority and backend/security REVISE findings are repaired, but independent re-review of the new exact PR head, Stage 5, final authority, and Stage 6 remain pending.",
     "Physical-device screen reader, safe-area, and virtual-keyboard checks remain Manual Only."
   ]
 }
