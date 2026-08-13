@@ -51,7 +51,6 @@
     "test:full-local-auth-db-foundation:postgres": "node scripts/run-account-session-generation-postgres-integration.mjs --full-local",
     "test:hybrid-supabase:postgres": "vitest run tests/hybrid-supabase-postgres.integration.test.ts",
     "test:hybrid-supabase:storage": "vitest run tests/hybrid-supabase-storage.integration.test.ts tests/hybrid-session-authority-gateway.test.ts",
-    "test:hybrid-supabase:runtime": "HYBRID_RUNTIME_COMPOSE=1 vitest run tests/hybrid-isolated-runtime.test.ts",
     "test:full-local-production:runtime": "FULL_LOCAL_PRODUCTION_DOCKER_SMOKE=1 vitest run tests/full-local-production-docker.integration.test.ts",
     "full-local-production:init-config": "node scripts/full-local-production-runtime.mjs init-config",
     "full-local-production:bootstrap-secrets": "node scripts/full-local-production-runtime.mjs bootstrap-secrets",

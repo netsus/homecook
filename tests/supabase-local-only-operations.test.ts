@@ -41,6 +41,7 @@ describe("Supabase local-only operations contract", () => {
     expect(packageJson.scripts["verify:security-functions:remote"]).toBeUndefined();
     expect(packageJson.scripts["closeout:security-functions:remote"]).toBeUndefined();
     expect(packageJson.scripts["hybrid-production:start"]).toBeUndefined();
+    expect(packageJson.scripts["test:hybrid-supabase:runtime"]).toBeUndefined();
     expect(packageJson.scripts["test:hybrid-production:runtime"]).toBeUndefined();
     expect(packageJson.scripts["verify:account-generation:joint-preflight"]).toBeUndefined();
     expect(packageJson.scripts["full-local-production:storage-copy:plan"]).toBeUndefined();
@@ -106,6 +107,9 @@ describe("Supabase local-only operations contract", () => {
 
     expect(packageScripts).not.toMatch(forbiddenExecution);
     expect(workflowText).not.toMatch(forbiddenExecution);
+    expect(packageScripts).not.toContain("tests/hybrid-isolated-runtime.test.ts");
+    expect(ciWorkflow).not.toContain("hybrid-authority-runtime");
+    expect(ciWorkflow).not.toContain("test:hybrid-supabase:runtime");
     expect(ciWorkflow).toMatch(/supabase\/setup-cli@\S+[\s\S]*?version:\s*2\.110\.0/iu);
     expect(activeDocs).not.toMatch(forbiddenExecution);
   });

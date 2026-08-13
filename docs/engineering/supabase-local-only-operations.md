@@ -28,7 +28,7 @@
 | CI | fresh `supabase start`/migration replay | 허용. URL placeholder는 네트워크 target이 아닌 build-only dummy임을 명시한다. secret 기반 Cloud Supabase live OAuth는 required gate가 아니며 local-only 전환 뒤 금지/N/A다. |
 | env templates | root `.env.example`의 hosted URL/remote authority 기본값, hybrid production env template | root template을 loopback/local authority로 교체하고 hybrid template은 forbidden tombstone만 남긴다. |
 | workpack | `youtube-async-extraction-notification`의 production/staging/remote write 0, security release gate | remote target 개념을 forbidden/N/A로 바꾸고 local isolated/rehearsal evidence로 잠근다. |
-| historical hybrid artifacts | hybrid docs/scripts/tests/migrations | rollback/audit history로만 보존한다. 신규 session prerequisite, release gate 또는 운영 fallback으로 호출하지 않는다. |
+| historical hybrid artifacts | hybrid docs/scripts/tests/migrations, package `test:hybrid-supabase:runtime`, CI `hybrid-authority-runtime` | rollback/audit history로만 보존한다. package key와 CI job은 제거하고 `scripts/verify-hybrid-supabase.mjs`는 unconditional forbidden tombstone으로 둔다. 신규 session prerequisite, release gate 또는 운영 fallback으로 호출하지 않는다. |
 | 일반 용어 | Supabase SDK, git remote, rclone remote, 외부 URL | Cloud target 의미가 아니므로 변경하지 않는다. |
 
 전체 검색은 다음 범위를 포함했다.
@@ -44,7 +44,7 @@ rg -n -i '(supabase cloud|remote supabase|remote db|linked root|supabase link|--
 - 공식 5종: 요구사항 `v1.7.32`, 화면 `v1.5.36`, Flow `v1.3.34`, DB `v1.3.34`, API `v1.2.39`
 - engineering entry/runbook: `agent-workflow-overview.md`, `slice-workflow.md`, `supabase-migrations.md`, `current-mac-production-plan.md`, `full-local-supabase-production-plan.md`, `full-local-session-lifecycle-runbook.md`, `playwright-e2e.md`, workflow-v2 Homecook profile와 공식 tuple을 소비하는 YouTube entry docs
 - workpack: `youtube-async-extraction-notification` README, acceptance, automation spec, workflow-v2 work item
-- config/tooling: root `.env.example`, hybrid env forbidden tombstone, `package.json`, full-local backup/inventory, security-function release/Data API gate, Playwright/security-smoke local placeholder, Cloud-secret live OAuth workflow 제거
+- config/tooling: root `.env.example`, hybrid env/verifier forbidden tombstone, `package.json`의 `test:hybrid-supabase:runtime` 제거, CI `hybrid-authority-runtime` 제거, full-local backup/inventory, security-function release/Data API gate, Playwright/security-smoke local placeholder, Cloud-secret live OAuth workflow 제거
 - regression locks: source-of-truth/production-domain/YouTube/workflow pointer tests, full-local backup/security/historical-hybrid exposure tests와 `tests/supabase-local-only-operations.test.ts`
 - historical/N/A inventory: `docs/engineering/hybrid-*`, `docs/workpacks/hybrid-auth-local-data-production/*`, hybrid/remote migrations·scripts·tests와 이전 official version은 감사 기록으로 남긴다. package/CI/required gate에서의 executable entrypoint는 제거하며 canonical 계약 없이 다시 노출할 수 없다.
 
