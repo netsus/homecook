@@ -616,6 +616,12 @@ test("desktop toast remains clear of discovery controls", async ({ page }, testI
   await expect(page.getByText("추출 결과를 확인하고 레시피로 등록할 수 있어요.")).toBeVisible();
   const bell = page.locator("[data-youtube-extraction-trigger='global']");
   const toastClose = page.getByRole("button", { name: "toast 닫기" });
+  const bellHitOwned = await bell.evaluate((element) => {
+    const box = element.getBoundingClientRect();
+    const hit = document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2);
+    return hit === element || element.contains(hit);
+  });
+  expect(bellHitOwned).toBe(true);
   const [bellBox, toastCloseBox] = await Promise.all([bell.boundingBox(), toastClose.boundingBox()]);
   expect(rectanglesAreDisjoint(bellBox, toastCloseBox)).toBe(true);
   const toastBox = await page.getByTestId("youtube-notification-toast-stack").boundingBox();

@@ -665,7 +665,7 @@ export function YoutubeExtractionNotificationCenter({
   return (
     <>
       {!hasHeaderTrigger ? (
-        <div className="fixed right-3 top-[calc(env(safe-area-inset-top)+68px)] z-40 rounded-full bg-[var(--surface)] shadow-sm sm:right-5 sm:top-[calc(env(safe-area-inset-top)+16px)]">
+        <div className="fixed right-3 top-[calc(env(safe-area-inset-top)+68px)] z-[110] rounded-full bg-[var(--surface)] shadow-sm sm:right-[80px] sm:top-[calc(env(safe-area-inset-top)+16px)]">
           <YoutubeExtractionNotificationTrigger placement="global" />
         </div>
       ) : null}
