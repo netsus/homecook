@@ -1,81 +1,88 @@
-# meal-log-ui #12 Stage 1 fresh independent design critique
+# meal-log-ui #12 Stage 1 fresh independent design re-review
 
-> task ID: `019ffb6a-0cc4-7e42-85ad-956003e657b3`
+> task ID: `019ffb81-4bad-7353-b92b-add4924a4a40`
 > review date: `2026-08-13`
-> role: fresh independent `design-critic`
-> verdict: `🔴 HOLD` — P0 `0`, P1 `4`, P2 `0`
-> scope: exact `ui/designs/MEAL_LOG.md` design contract only. Design repair, product code, PR #1349, workpack/projection repair, Ready/merge, authority approval, production/activation and notification are not performed or approved here.
+> role: fresh independent design re-review critic
+> verdict: `🟢 APPROVE`
+> grade: `🟢` — P0 `0`, P1 `0`, P2 `0`
+> scope: exact repaired `ui/designs/MEAL_LOG.md` design contract only. Design source, workpack, projection, product code, PR #1349 target, Ready/merge, final runtime authority and notification are not changed or approved here.
 
 ## Reviewed exact tuple
 
-- generator task: `019ffb5f-b4be-7153-84b8-e4f341bd5ae5`
-- generator branch: `origin/docs/meal-log-ui-design-generator`
-- reviewed commit: `1b44bb7238cc6d0381805585f371fe12e0cb90f0`
-- reviewed tree: `851ceaa34835b7f5288590a3f0b74f7666e50eb7`
+- initial HOLD critique/base: `f2442e22ec919f51ffc67ff7b6403a8021a5c90c`
+- initial HOLD tree: `510b0bc61bb0b3481d87e0093a81f8cf9b4fa555`
+- repaired design branch: `origin/docs/meal-log-ui-design-critique-repair-f244`
+- reviewed repaired head: `910d14e99e71c9a05aa623cbf0a9c3b6f1f9456b`
+- reviewed repaired tree: `a578bf1d8da21a3bce230051399c6be1fd9da78c`
 - reviewed artifact: `ui/designs/MEAL_LOG.md`
-- parent/base: `c12afbccd15f4935a1a52b9f2c2c23882a5033ff`
-- Stage 1 contract reference: PR #1349 head `cb68ade3d834e137b7d9ad72c49701370794c5a6`
-- official authority: requirements `v1.7.32`, screen `v1.5.36`, flow `v1.3.34`, DB `v1.3.34`, API `v1.2.39`
+- unchanged lineage artifact superseded by this report: `ui/designs/critiques/MEAL_LOG-critique.md`
+- Stage 1 workpack reference: PR #1349 exact head `cb68ade3d834e137b7d9ad72c49701370794c5a6`
+- current official authority: requirements `v1.7.32`, screen `v1.5.36`, flow `v1.3.34`, DB `v1.3.34`, API `v1.2.39`
 - approved master plan: SHA-256 `d4d0fb39e80eeffc8b1e73ad92f0d91a35a9b6adc57a556ea8c9ec6ecffa951d`, 1,018 lines
 
 ## Executive verdict
 
-Planner shell placement, day-first hierarchy, 390px/320px/desktop containment, the required meal-log state matrix, 44px targets, focus trap/restoration, live announcements, reduced motion, delete hierarchy and no-page-overflow rules are materially strong. The design also avoids weekly analysis, medical guidance, unofficial source/status/action and client-authored totals.
+exact `f2442e22..910d14e9` repair는 route, endpoint, field, status, source type, mutation action 또는 client-authored authority를 추가하지 않고 기존 P1 네 건을 모두 해소했다. 설계는 day-first를 유지하고 기존 Planner shell과 selected-date URL/history 계약을 보존하며 weekly analysis를 범위 밖에 둔다.
 
-However, four P1 gaps make the current artifact non-implementable without local product/contract invention: the seven-day rail has no way to leave its current range; `availability=all` batch states are only partially designed; one globally ordered recent projection is presented as two undefined groups; and ingredient search does not expose the evidence needed for the promised approved-unit picker. Stage 2 design prerequisite therefore remains blocked.
+전체 설계도 문서 수준에서 구현 가능하다. mobile-first 위계, 390px/320px containment, desktop adaptation, 44px target, required state, focus/keyboard/screen-reader 동작, server-owned totals/evidence/order/cursor, idempotency와 read-only 경계가 명시돼 있다. 새 P0, P1, P2 회귀는 발견되지 않았다.
 
-## Mobile baseline scorecard
+`meal-log-ui` Stage 1 design prerequisite는 통과한다. 이 승인은 final runtime authority가 아니다. 구현, fresh 390px/320px/desktop evidence, screenshot/Figma 기반 product-design-authority review, Stage 4/5/6 gate와 production/activation evidence는 계속 pending이다.
+
+## Original finding resolution table
+
+| Finding | Resolution | Exact repaired evidence | Re-review result |
+| --- | --- | --- | --- |
+| `P1-ML-01` seven-day range movement | 인접 7일 control이 range와 selected date를 정확히 ±7 calendar days 이동하고 selected date를 계속 보이게 한다. 기존 Planner `date` URL과 deliberate history push 1회를 재사용하고 unrelated query state/focus를 보존하며, Back/Forward는 새 write 없이 복원한다. mark는 weekly aggregation 없이 bounded existing day read만 사용한다. | `ui/designs/MEAL_LOG.md:80-85`, `:99-146`, `:552-561`, `:594-606`, `:724`, `:731-732` | RESOLVED |
+| `P1-ML-02` `availability=all` depleted/legacy-null | depleted 여섯 reason과 legacy-null row의 exhaustive read-only disposition을 추가했다. server order와 cursor 하나를 보존하고 inferred gram/nutrition/status 및 meal-log, weight, lifecycle action을 금지한다. | `ui/designs/MEAL_LOG.md:315-369`, `:441-447`, `:597`, `:632-638`, `:725`, `:740` | RESOLVED |
+| `P1-ML-03` recent/frequent grouping | 정의되지 않은 client group 두 개를 server-ordered `최근·자주 먹은 음식` list 하나로 교체했다. `frequency`는 metadata로만 쓰며 pagination은 `next_cursor`/`has_next` 하나와 server append order를 사용한다. | `ui/designs/MEAL_LOG.md:256-283`, `:446`, `:596`, `:726`, `:741` | RESOLVED |
+| `P1-ML-04` ingredient approved-unit projection | public `default_unit`은 non-authoritative suggestion으로만 취급한다. quantity/unit을 correctable하게 유지하고 기존 mutation을 evidence authority로 두며, linked `422 UNIT_CONVERSION_MISSING`에서 두 input과 cursor를 보존한다. 새 lookup API/field는 없다. | `ui/designs/MEAL_LOG.md:253`, `:285-313`, `:447`, `:539`, `:622-648`, `:727`, `:742` | RESOLVED |
+
+## Mobile baseline and accessibility re-review
 
 | Axis | Result | Evidence |
 | --- | --- | --- |
-| Planner shell ownership | PASS | Existing Planner route and exact `요리 계획 | 식사 기록` segment are preserved; #12 owns only the log panel. |
-| Day-first hierarchy | PASS | Selected-day heading, compact day summary, ordered meal sections and deleted-column history are correctly separated from plan rows and weekly analysis. |
-| 390px containment | PASS | 16px gutter, one-row seven-date rail, compact rows, 44px actions and bottom-tab safe-area are explicitly locked. |
-| 320px containment | PASS with blocking navigation gap | Page width, rail-local overflow, action stacking and no target compression are specified, but P1-ML-01 leaves the reachable date range undefined. |
-| Desktop adaptation | PASS | Same IA/DOM order, centered width, optional two-column active sections and dialog adaptation preserve the mobile mental model. |
-| Required meal-log states | PASS | loading, empty, error, unauthorized, partial, unavailable, deleted column, missing/unrecoverable batch, edit/delete, pending/replay/conflict and correctable 422 are distinct. |
-| Accessibility | PASS | roving controls, dialog trap/restore, focused errors, live regions, non-color semantics, reduced motion and 200% text behavior are specified. |
-| API/source implementability | HOLD | P1-ML-02 through P1-ML-04 require decisions or data not supplied by the consumed projections. |
+| mobile-first information hierarchy | PASS | Selected day → compact nutrition summary → ordered meal section → read-only deleted history가 Planner plan row와 weekly analysis에서 분리돼 있다. |
+| 390px mobile baseline | PASS | 16px gutter, one-row localized rail, 인접 44×44px range control, compact row, 44px edit/delete target과 safe-area clearance가 잠겨 있다. |
+| 320px narrow baseline | PASS | page horizontal overflow를 금지하고 rail만 가로 scroll한다. text/touch target 축소 없이 label/action을 쌓고 keyboard/error/primary CTA 도달성을 유지한다. |
+| desktop adaptation | PASS | 같은 route, segment, DOM/reading order와 day-first mental model을 유지한다. optional 2-column active section은 한 section을 분할하거나 desktop-only navigation/analysis를 추가하지 않는다. |
+| scroll containment | PASS | page-level horizontal scroll을 금지하고 range control을 rail 가까이에 둔다. rail만 inline overflow를 소유하며 sheet header/body/footer 경계와 background lock이 명확하다. |
+| primary CTA and destructive hierarchy | PASS | add/save는 primary, edit/cancel/retry는 secondary, delete는 destructive tertiary다. 320px DOM/visual order도 일치한다. |
+| keyboard/focus/screen reader | PASS | named range button, date radiogroup/roving tabindex, bounded Arrow/Home/End, focus preservation, dialog trap/restore, linked focused 409/422 alert와 non-color semantics가 명시돼 있다. |
+| text/reduced motion | PASS | 200% text, 긴 한국어 label, non-compressed target, reduced-motion sheet/rail과 full-target visible focus를 다룬다. |
+| Figma/screenshot evidence planned | PASS FOR STAGE 1 | fresh 390px, 320px, desktop capture와 deterministic browser/a11y assertion이 계획돼 있으며 현재 runtime/final authority evidence를 주장하지 않는다. |
+| anchor boundary | PASS | `MEAL_LOG`를 기존 `PLANNER_WEEK` anchor shell 안의 new high-risk required screen으로 정확히 취급하며 outer route/segment interaction model을 바꾸지 않는다. |
 
-## Required findings
+## Required states and interaction boundaries
 
-### P1-ML-01 — The seven-day rail cannot navigate beyond its initial seven dates
+- PASS: `default`, `loading`, `empty`, `error`, `unauthorized`, `partial`, `unavailable`, deleted-column, missing batch, unrecoverable batch, depleted batch, legacy-null batch, `pending`, replay, stale conflict and correctable 422 are distinct and fail closed.
+- PASS: safe already-loaded rows survive scoped read errors, while stale authority disables mutation.
+- PASS: close/back restores route, segment, selected date, section, scroll and invoker focus; invoker-loss fallback is defined.
+- PASS: create/edit/delete use fresh UUID idempotency keys, retries reuse the same key/payload, edit/delete use current revision, and replay is applied once.
+- PASS: delete remains soft delete; a cooked-batch edit/delete targets only its own active consumed event.
 
-- **Design evidence:** `ui/designs/MEAL_LOG.md:103-105`, `:154-155`, `:182-185`, `:196-197`, `:514-525` define exactly seven targets, explicitly reject previous/next arrows, and only define movement within the current rail.
-- **Contract evidence:** the official screen wireframe at `docs/화면정의서-v1.5.36.md:201` places previous/next range controls around the seven dates. The product goal is historical day-first logging, not a single immutable seven-day window.
-- **Impact:** a user cannot reach a date outside the initially rendered range, and an implementer must invent edge behavior, week/range shifting, URL/history semantics and focus behavior. This also leaves keyboard `Home/End` trapped inside one unexplained range.
-- **Minimal repair:** define one deterministic existing-route mechanism for previous/next seven-day range movement. It may use compact 44px range controls or an explicitly specified rail gesture, but must preserve the #10 selected-date URL/history contract, keep the selected date visible, restore focus without page movement, work at 390/320/desktop and add no weekly analysis. State how record-presence marks for the new range are obtained only from existing reads.
+## API, data and security boundaries
 
-### P1-ML-02 — `availability=all` exposes official batch states that have no picker behavior
+- PASS: only the seven existing APIs listed in the workpack are consumed. Seven-day presence marks reuse bounded `GET /meal-log?date=...` reads; no range/weekly endpoint is invented.
+- PASS: day/section totals, incomplete counts, meal-column order, source/evidence validity, batch lifecycle, recent/search ordering and cursors remain server authority.
+- PASS: `partial`/`unavailable` and legacy null are never coerced to zero or inferred from names, servings or legacy `status`.
+- PASS: recent pages and product/ingredient search each preserve one server order and one opaque cursor; no client split, threshold, dual-API merge or re-sort is introduced.
+- PASS: ingredient prevalidation does not claim unseen approved evidence; mutation-owned `422 UNIT_CONVERSION_MISSING` remains zero-write and correctable.
+- PASS: other-owner/private/deleted/hidden sources remain nondisclosed; raw UUID, cursor, event, operation, generation and payload metadata are not exposed.
 
-- **Design evidence:** `ui/designs/MEAL_LOG.md:303-337` designs only `known+available`, `missing+available` and `unrecoverable+available`; `:399-416` has no depleted or legacy-null row; yet `:558` requires `GET /cooked-batches?availability=all`, and `:588-595` acknowledges nullable legacy projection fields.
-- **Contract evidence:** `CookedBatchProjection` allows legacy-null fields and `batch_status=depleted`; #11 explicitly distinguishes known/missing/unrecoverable/legacy-null/depleted and six depleted reasons. `availability=all` returns these owner rows rather than only gram-loggable rows.
-- **Impact:** implementation must guess whether depleted and legacy-null rows are hidden or rendered, what copy they use, whether any #11 link is legal, and how null nutrition/weight values appear. A guessed fallback can expose an invalid save/action or coerce unknown data.
-- **Minimal repair:** define an exhaustive picker disposition for `depleted` and legacy-null projections. Either exclude them by an explicit client presentation rule while preserving the server cursor, or render a read-only disabled row. Legacy-null must use an unknown-history message with no inferred grams/nutrition/action; depleted must have no meal-log save or lifecycle mutation and may use only existing #11 reason copy. Add deterministic evidence coverage without inventing a new status, API or action.
+## Findings
 
-### P1-ML-03 — The recent endpoint cannot author the two proposed `최근` / `자주` groups
+### P0 (0)
 
-- **Design evidence:** `ui/designs/MEAL_LOG.md:247-270` renders separate `최근 먹은 음식` and `자주 먹는 음식` sections but defines no grouping threshold, duplication rule or ordering rule.
-- **Projection evidence:** `types/meal-log.ts:89-100` exposes one server-ordered `items[]` with `source`, display identity, `last_quantity`, numeric `frequency`, one `next_cursor` and one `has_next`; it has no `group`, `kind`, `is_frequent` or server-authored section boundary.
-- **Impact:** splitting the list requires a client-authored frequency threshold/re-sort or duplicated rows, which breaks the exact server ordering/cursor authority and can behave inconsistently across source tabs and pages.
-- **Minimal repair:** render one server-ordered `최근·자주 먹은 음식` list and use `frequency` only as faithful metadata, preserving the single cursor. If two semantic sections are required, stop with Contract Evolution instead of inventing the discriminator. Rich cooked-batch weight/status copy must come from the existing cooked-batch projection, not be inferred from the recent item.
+없음.
 
-### P1-ML-04 — Ingredient search cannot supply the promised approved conversion-unit picker
+### P1 (0)
 
-- **Design evidence:** `ui/designs/MEAL_LOG.md:283-301`, `:580`, `:599-605` promises that ingredient rows and the quantity control show only units backed by approved conversion/piece evidence.
-- **Projection evidence:** `lib/api/food-catalog-search.ts:8-14` exposes ingredient search items as only `type`, `id`, `standard_name`, `category`, `default_unit`. It exposes neither approved profile identity nor conversion/piece unit availability. Product items separately expose `basis_relations` through `types/food-product.ts:74-94`, so the product half is implementable but the ingredient half is not.
-- **Impact:** the UI cannot truthfully label a spoon/piece/unit option as approved before submission. The implementer must query an unofficial source, infer evidence from `default_unit`, or hard-code conversion knowledge. All three violate the no-invention boundary.
-- **Minimal repair:** for ingredient selection, remove the claim that the client pre-knows approved conversion/piece units. Use only public search fields as non-authoritative display/suggestion, keep quantity/unit correctable, let the existing meal-log mutation remain the evidence authority, and retain the exact linked `422 UNIT_CONVERSION_MISSING` recovery. If the product requirement remains a prevalidated approved-unit picker, report a Contract Evolution HOLD instead of adding a field or endpoint in this design.
+없음. `P1-ML-01`~`P1-ML-04`는 모두 해소됐다.
 
-## Confirmed non-findings
+### P2 (0)
 
-- No unofficial meal-log endpoint, source type, mutation action, public error alias, weekly analysis, goal, calorie budget, medical guidance or new screen/route is introduced.
-- Day and section totals remain server projections; `partial/unavailable` are not coerced to zero and soft-deleted entries are absent.
-- Deleted meal-column history is separated and read-only, with no add/edit target.
-- Create/edit/delete idempotency, expected revision, same-key replay, own-event reversal, exact evidence and nullable historical instant are correctly bound.
-- The source switch is exactly `요리한 음식 | 제품·재료`; product/ingredient search preserves the typed union, server order and single opaque cursor.
-- Touch target, focus, keyboard, screen-reader, live announcement, reduced-motion, destructive hierarchy and scroll-containment requirements are sufficiently specific for a later runtime evidence gate.
+없음.
 
-## Repair and re-review handoff
+## Integration handoff
 
-`🔴 HOLD`. The design-generator must repair P1-ML-01 through P1-ML-04 in `ui/designs/MEAL_LOG.md` on a new normal commit. This critic does not edit the design source. A fresh independent critic must then review the exact repaired commit/tree; this report does not approve Stage 2, PR #1349 integration, Ready, merge or final design authority.
+`🟢 APPROVE`. 이 re-review artifact를 `f2442e22` HOLD report의 successor로 통합한다. Stage 1 design prerequisite는 exact reviewed head/tree에 대해서만 충족된다. 이 결과를 implementation approval, `Design Status: confirmed`, final product-design authority, Ready/merge approval, production readiness 또는 activation completion으로 투영하지 않는다. 해당 항목은 별도 fresh-task/runtime-evidence gate로 계속 pending이다.
