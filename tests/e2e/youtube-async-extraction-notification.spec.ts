@@ -349,7 +349,7 @@ test("accepted retry uses quota copy and projects the replacement job before exi
   );
   await page.getByRole("button", { name: "알림 닫기" }).click();
   await page.getByRole("button", { name: "나가기" }).click();
-  await expect(page).toHaveURL(/\/$/);
+  await expect(page).toHaveURL(/\/planner$/);
 });
 
 test("duplicate active work is explicit on desktop", async ({ page }, testInfo) => {
