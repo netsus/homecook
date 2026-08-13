@@ -22,6 +22,7 @@ Production domain tuple: `https://app.mumeok.kr`, `https://auth.mumeok.kr`, `htt
 - [ ] 운영 DB reset, 운영 volume 삭제, 기존 backup overwrite는 0이다.
 - [ ] isolated drill은 production-compatible labels를 쓰고 dev stack 공존 반례에서도 production fixture만 선택했다는 evidence를 남긴다.
 - [ ] `restore-platform` actual restore만 isolated replacement environment-held Ed25519 issuer key로 recovery manifest+sidecar를 발급하며, backup-key-HMAC-valid fabricated manifest는 거부한다. `validate`/`start`/`status`는 signed clean restore, `isolated_replacement_environment_verified`, actual escrow exact path/hash/HMAC/device를 검사하고 fail closed한다.
+- [ ] restore/서명 단계 실패 시 restore 전 inventory에 없고 exact Compose project/service-or-volume/attempt-token provenance가 일치하는 replacement container·volume과 해당 attempt가 만든 manifest/HMAC만 정리된다. preexisting/dev/production/decoy/label-mismatch는 보존되고 cleanup 실패는 `manual recovery required`로 재시도를 막는다.
 
 ## Semantic gate
 

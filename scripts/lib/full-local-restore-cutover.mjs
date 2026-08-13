@@ -111,10 +111,12 @@ function exactDockerResourceName(value, label) {
 }
 
 export function buildComposeLabeledStorageVolumeCreateArgs({
+  attemptToken,
   composeProject,
   volumeName,
 }) {
   const project = exactDockerResourceName(composeProject, "Compose project");
+  const attempt = exactDockerResourceName(attemptToken, "Restore attempt token");
   const volume = exactDockerResourceName(volumeName, "Storage volume");
   return [
     "volume",
@@ -123,22 +125,27 @@ export function buildComposeLabeledStorageVolumeCreateArgs({
     `com.docker.compose.project=${project}`,
     "--label",
     "com.docker.compose.volume=storage-data",
+    "--label",
+    `homecook.local/restore-attempt=${attempt}`,
     volume,
   ];
 }
 
 export function assertRestoredStorageVolumeProvenance({
+  attemptToken,
   composeProject,
   inspect,
   volumeName,
 }) {
   const project = exactDockerResourceName(composeProject, "Compose project");
+  const attempt = exactDockerResourceName(attemptToken, "Restore attempt token");
   const volume = exactDockerResourceName(volumeName, "Storage volume");
   if (
     !inspect
     || inspect.Name !== volume
     || inspect.Labels?.["com.docker.compose.project"] !== project
     || inspect.Labels?.["com.docker.compose.volume"] !== "storage-data"
+    || inspect.Labels?.["homecook.local/restore-attempt"] !== attempt
   ) {
     throw new Error("Restored Storage volume Compose provenance labels mismatch");
   }

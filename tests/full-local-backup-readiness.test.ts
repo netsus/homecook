@@ -450,13 +450,28 @@ describe("full-local backup readiness", () => {
     expect(runtime).toContain("keychain-create.exp");
     expect(restorePlatform).not.toContain("storeKeychainValue");
     expect(recovery).toMatch(
-      /directItemExists\(\)[\s\S]*verifyArchive\(verifiedKey\)[\s\S]*createItem\(verifiedKey, attemptToken\)[\s\S]*execute\(\)[\s\S]*deleteOwnedItem\(attemptToken\)/u,
+      /directItemExists\(\)[\s\S]*verifyArchive\(verifiedKey\)[\s\S]*createItem\(verifiedKey, attemptToken\)[\s\S]*execute\(attemptToken\)[\s\S]*deleteOwnedItem\(attemptToken\)/u,
     );
     expect(createOnlyWriter).toMatch(/add-generic-password -s \$service -a \$account/u);
     expect(createOnlyWriter).toContain("-G $ownership_token");
     expect(createOnlyWriter).not.toMatch(/add-generic-password -U/u);
     expect(runtime).toMatch(
       /deleteOwnedKeychainDirectItem[\s\S]*delete-generic-password[\s\S]*"-G"[\s\S]*ownershipToken/u,
+    );
+    expect(runtime).toMatch(
+      /FULL_LOCAL_RESTORE_ATTEMPT_TOKEN[\s\S]*withReplacementRestoreAttemptCleanup[\s\S]*inventoryContainers[\s\S]*inventoryVolumes/u,
+    );
+    expect(recovery).toMatch(
+      /containersBefore[\s\S]*volumesBefore[\s\S]*cleanupFailedReplacementRestoreAttempt/u,
+    );
+    expect(runtime).toMatch(
+      /writeRestoreManifest[\s\S]*createdArtifacts[\s\S]*writeCanonicalRecoveryManifest/u,
+    );
+    expect(restorePlatform).toMatch(
+      /expectedArtifactPaths[\s\S]*withReplacementRestoreAttemptCleanup[\s\S]*assertFailedAttemptArtifactsCleared/u,
+    );
+    expect(runtime).toMatch(
+      /function pathEntryExists[\s\S]*lstatSync\(path\)[\s\S]*function removeAttemptCreatedArtifact[\s\S]*pathEntryExists\(path\)/u,
     );
   });
 

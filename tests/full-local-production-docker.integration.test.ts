@@ -1,6 +1,13 @@
 import { execFileSync, spawnSync } from "node:child_process";
-import { createHmac } from "node:crypto";
-import { mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { createHash, createHmac } from "node:crypto";
+import {
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createServer as createNetServer } from "node:net";
@@ -9,6 +16,9 @@ import { describe, expect, it } from "vitest";
 
 import { createHybridAuthorityFetch } from "@/lib/server/hybrid-auth/gateway";
 import { createSessionKeyHash } from "@/lib/server/hybrid-auth/session-authority";
+import {
+  withReplacementRestoreAttemptCleanup,
+} from "../scripts/lib/full-local-backup-key-recovery.mjs";
 import {
   assertFullLocalComposeModel,
   assertNoSecretLeakage,
@@ -328,6 +338,185 @@ describe("full-local production Docker verification gate", () => {
 });
 
 run("full-local production Docker runtime", () => {
+  it.each(["compose", "database", "storage", "restore-manifest", "recovery-manifest"])(
+    "removes only exact attempt-owned replacement resources after %s failure and permits identical retry",
+    async (failureStage) => {
+      const suffix = `${process.pid}-${failureStage}`.replaceAll(/[^a-z0-9-]/giu, "-");
+      const project = `homecook-retry-${suffix}`;
+      const attemptToken = `attempt-token-${suffix}`;
+      const postgresVolume = `${project}-postgres`;
+      const storageVolume = `${project}-storage`;
+      const decoyVolume = `${project}-decoy`;
+      const ownedContainer = `${project}-postgres-1`;
+      const decoyContainer = `${project}-dev-decoy`;
+      const artifactDirectory = mkdtempSync(join(tmpdir(), "homecook-retry-artifacts-"));
+      const restoreArtifact = join(artifactDirectory, "restore.json");
+      const restoreAuthentication = join(artifactDirectory, "restore.json.auth.json");
+      const recoveryArtifact = join(artifactDirectory, "recovery.json");
+      const recoveryAuthentication = join(artifactDirectory, "recovery.json.auth.json");
+      const preexistingArtifact = join(artifactDirectory, "operator-evidence.json");
+      writeFileSync(preexistingArtifact, "preserve", { mode: 0o600 });
+      const volumeArgs = (name: string, composeVolume: string, token: string) => [
+        "volume",
+        "create",
+        "--label",
+        `com.docker.compose.project=${project}`,
+        "--label",
+        `com.docker.compose.volume=${composeVolume}`,
+        "--label",
+        `homecook.local/restore-attempt=${token}`,
+        name,
+      ];
+      try {
+        command("docker", volumeArgs(decoyVolume, "storage-data", "other-attempt"), process.env);
+        const nodeImage = fullLocalImageRefsForPlatform("linux/arm64").node;
+        command("docker", [
+          "create",
+          "--platform",
+          "linux/arm64",
+          "--name",
+          decoyContainer,
+          "--label",
+          "com.docker.compose.project=homecook-dev-decoy",
+          "--label",
+          "com.docker.compose.service=postgres",
+          "--label",
+          `homecook.local/restore-attempt=${attemptToken}`,
+          nodeImage,
+          "node",
+          "--version",
+        ], process.env);
+        const artifactPaths = failureStage === "recovery-manifest"
+          ? [restoreArtifact, restoreAuthentication, recoveryArtifact, recoveryAuthentication]
+          : failureStage === "restore-manifest"
+            ? [restoreArtifact, restoreAuthentication]
+            : [];
+        const inventory = (kind: "container" | "volume") => {
+          const ids = command(
+            "docker",
+            kind === "volume"
+              ? ["volume", "ls", "--quiet"]
+              : ["container", "ls", "--all", "--quiet"],
+            process.env,
+          ).split(/\r?\n/u).filter(Boolean);
+          if (ids.length === 0) return [];
+          return JSON.parse(command(
+            "docker",
+            kind === "volume"
+              ? ["volume", "inspect", ...ids]
+              : ["container", "inspect", ...ids],
+            process.env,
+          )) as Array<Record<string, unknown>>;
+        };
+        const recordArtifacts = (token: string) => artifactPaths.map((path) => {
+            const stat = statSync(path);
+            return {
+              attemptToken: token,
+              dev: stat.dev,
+              ino: stat.ino,
+              path,
+              sha256: createHash("sha256").update(readFileSync(path)).digest("hex"),
+              size: stat.size,
+            };
+          });
+        const createAttemptResources = (token: string) => {
+          command("docker", volumeArgs(postgresVolume, "postgres-data", token), process.env);
+          command("docker", volumeArgs(storageVolume, "storage-data", token), process.env);
+          command("docker", [
+            "create",
+            "--platform",
+            "linux/arm64",
+            "--name",
+            ownedContainer,
+            "--label",
+            `com.docker.compose.project=${project}`,
+            "--label",
+            "com.docker.compose.service=postgres",
+            "--label",
+            `homecook.local/restore-attempt=${token}`,
+            nodeImage,
+            "node",
+            "--version",
+          ], process.env);
+          for (const path of artifactPaths) {
+            writeFileSync(path, token, { mode: 0o600 });
+          }
+        };
+        const cleanupInputs = {
+          composeProject: project,
+          expectedServices: ["postgres", "storage"],
+          expectedVolumes: [
+            { composeVolume: "postgres-data", name: postgresVolume },
+            { composeVolume: "storage-data", name: storageVolume },
+          ],
+          inventoryContainers: () => inventory("container"),
+          inventoryVolumes: () => inventory("volume"),
+          removeArtifact: (artifact: { path: string }) => rmSync(artifact.path),
+          removeContainer: (containerId: string) => command(
+            "docker",
+            ["rm", "--force", containerId],
+            process.env,
+          ),
+          removeVolume: (name: string) => command(
+            "docker",
+            ["volume", "rm", name],
+            process.env,
+          ),
+        };
+        const createdArtifacts: ReturnType<typeof recordArtifacts> = [];
+
+        await expect(withReplacementRestoreAttemptCleanup({
+          ...cleanupInputs,
+          attemptToken,
+          createdArtifacts,
+          execute: () => {
+            createAttemptResources(attemptToken);
+            createdArtifacts.push(...recordArtifacts(attemptToken));
+            throw new Error(`${failureStage} restore failure`);
+          },
+        })).rejects.toThrow(`${failureStage} restore failure`);
+
+        expect(spawnSync("docker", ["volume", "inspect", postgresVolume]).status).not.toBe(0);
+        expect(spawnSync("docker", ["volume", "inspect", storageVolume]).status).not.toBe(0);
+        expect(spawnSync("docker", ["volume", "inspect", decoyVolume]).status).toBe(0);
+        expect(spawnSync("docker", ["container", "inspect", ownedContainer]).status).not.toBe(0);
+        expect(spawnSync("docker", ["container", "inspect", decoyContainer]).status).toBe(0);
+        for (const path of artifactPaths) {
+          expect(() => readFileSync(path, "utf8")).toThrow();
+        }
+        expect(readFileSync(preexistingArtifact, "utf8")).toBe("preserve");
+
+        const retryToken = `${attemptToken}-retry`;
+        const retryArtifacts: ReturnType<typeof recordArtifacts> = [];
+        await expect(withReplacementRestoreAttemptCleanup({
+          ...cleanupInputs,
+          attemptToken: retryToken,
+          createdArtifacts: retryArtifacts,
+          execute: () => {
+            createAttemptResources(retryToken);
+            retryArtifacts.push(...recordArtifacts(retryToken));
+            return "restored";
+          },
+        })).resolves.toBe("restored");
+        expect(spawnSync("docker", ["volume", "inspect", postgresVolume]).status).toBe(0);
+        expect(spawnSync("docker", ["volume", "inspect", storageVolume]).status).toBe(0);
+        expect(spawnSync("docker", ["container", "inspect", ownedContainer]).status).toBe(0);
+        for (const path of artifactPaths) {
+          expect(readFileSync(path, "utf8")).toBe(retryToken);
+        }
+      } finally {
+        for (const container of [ownedContainer, decoyContainer]) {
+          spawnSync("docker", ["rm", "--force", container], { stdio: "ignore" });
+        }
+        for (const volume of [postgresVolume, storageVolume, decoyVolume]) {
+          spawnSync("docker", ["volume", "rm", volume], { stdio: "ignore" });
+        }
+        rmSync(artifactDirectory, { force: true, recursive: true });
+      }
+    },
+    30_000,
+  );
+
   it("boots healthy with file-mounted secrets and an Auth-only public edge", async () => {
     const root = mkdtempSync(join(tmpdir(), "homecook-full-local-docker-"));
     const project = `homecook-full-local-test-${Date.now()}`;

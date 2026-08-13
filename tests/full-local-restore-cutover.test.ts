@@ -307,6 +307,7 @@ describe("full-local Storage and cutover boundary", () => {
 
   it("creates and verifies the restored Storage volume with exact Compose provenance", () => {
     expect(buildComposeLabeledStorageVolumeCreateArgs({
+      attemptToken: "attempt-token-storage-restore",
       composeProject: "homecook-restore-fixture",
       volumeName: "homecook-restore-fixture-storage",
     })).toEqual([
@@ -316,20 +317,25 @@ describe("full-local Storage and cutover boundary", () => {
       "com.docker.compose.project=homecook-restore-fixture",
       "--label",
       "com.docker.compose.volume=storage-data",
+      "--label",
+      "homecook.local/restore-attempt=attempt-token-storage-restore",
       "homecook-restore-fixture-storage",
     ]);
     expect(assertRestoredStorageVolumeProvenance({
+      attemptToken: "attempt-token-storage-restore",
       composeProject: "homecook-restore-fixture",
       inspect: {
         Name: "homecook-restore-fixture-storage",
         Labels: {
           "com.docker.compose.project": "homecook-restore-fixture",
           "com.docker.compose.volume": "storage-data",
+          "homecook.local/restore-attempt": "attempt-token-storage-restore",
         },
       },
       volumeName: "homecook-restore-fixture-storage",
     })).toBe(true);
     expect(() => assertRestoredStorageVolumeProvenance({
+      attemptToken: "attempt-token-storage-restore",
       composeProject: "homecook-restore-fixture",
       inspect: {
         Name: "homecook-restore-fixture-storage",

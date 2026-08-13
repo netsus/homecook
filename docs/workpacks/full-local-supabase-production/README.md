@@ -24,6 +24,7 @@ Production domain tuple: `https://app.mumeok.kr`, `https://auth.mumeok.kr`, `htt
 - complete encrypted backup은 DB metadata와 Storage payload를 같은 consistent cut 안에서 묶고 object count/bytes/SHA-256/DB reference/source identity를 manifest에 기록한다.
 - production backup은 `infra/full-local-supabase/.env.production.local`의 exact Compose project와 PostgreSQL/Storage volume names, Compose labels, reviewed image digest, running+healthy state를 모두 검증한 뒤 그 PostgreSQL container에서만 `pg_dump`한다. Supabase CLI dev project id나 `db dump --local` stack으로 fallback하지 않는다.
 - production `validate`/`start`/`status`는 HMAC 인증된 mode `0600` readiness와 canonical owner/mode-`0700` parent를 required gate로 사용한다. 24시간 안의 authenticated archives, signed clean restore, `restore-platform` actual restore 뒤 isolated replacement environment-held Ed25519 issuer key로 발급한 recovery manifest, exact escrow path/hash/HMAC/device가 하나라도 없으면 fail closed한다. fixture 명칭은 `isolated_replacement_environment_verified`로 한정한다.
+- 실패한 isolated replacement restore는 restore 전 inventory에 없고 exact Compose identity와 동일 attempt token으로 증명된 container·volume·manifest/HMAC artifact만 정리한다. preexisting/dev/production/decoy 또는 label mismatch는 보존하며 cleanup 불완전 시 수동 복구 없이는 재시도하지 않는다.
 - restore gate는 운영 volume을 건드리지 않는 clean isolated namespace에서 DB metadata와 실제 object bytes/hash/reference의 일치를 증명한다.
 - 운영 데이터의 `db reset`, volume 삭제, 기존 archive overwrite는 금지한다.
 - public internet에는 승인된 app/Auth surface만 허용하고 PostgreSQL/PostgREST/Storage/Realtime/internal RPC는 loopback/private boundary에 둔다.

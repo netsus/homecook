@@ -5,12 +5,14 @@ import { generateKeyPairSync } from "node:crypto";
 import { describe, expect, it } from "vitest";
 
 import {
+  cleanupFailedReplacementRestoreAttempt,
   createIsolatedKeychainAdapter,
   openFullLocalBackupKeyEscrow,
   sealFullLocalBackupKeyEscrow,
   signFullLocalBackupKeyRecoveryEvidence,
   verifyFullLocalBackupKeyEscrowBinding,
   verifyFullLocalBackupKeyRecoveryIssuerAttestation,
+  withReplacementRestoreAttemptCleanup,
   withRecoveredBackupKeyCreateOnlyRegistration,
 } from "@/scripts/lib/full-local-backup-key-recovery.mjs";
 
@@ -193,6 +195,288 @@ describe("full-local backup key recovery", () => {
     })).resolves.toBe("restored");
     expect(deleted).toBe(false);
   });
+
+  it("preserves racing or label-mismatched expected resources and requires manual recovery", async () => {
+    const removed: string[] = [];
+
+    await expect(cleanupFailedReplacementRestoreAttempt({
+      attemptToken: "attempt-token-safe",
+      composeProject: "homecook-replacement",
+      containersBefore: [],
+      createdArtifacts: [],
+      currentContainers: [{
+        Config: { Labels: {
+          "com.docker.compose.project": "homecook-replacement",
+          "com.docker.compose.service": "postgres",
+          "homecook.local/restore-attempt": "racing-attempt-token",
+        } },
+        Id: "homecook-replacement-postgres",
+      }],
+      currentVolumes: [{
+        Labels: {
+          "com.docker.compose.project": "homecook-replacement",
+          "com.docker.compose.volume": "storage-data",
+          "homecook.local/restore-attempt": "racing-attempt-token",
+        },
+        Name: "homecook-replacement-storage",
+      }],
+      expectedServices: ["postgres"],
+      expectedVolumes: [{
+        composeVolume: "storage-data",
+        name: "homecook-replacement-storage",
+      }],
+      removeArtifact: () => undefined,
+      removeContainer: (id: string) => removed.push(id),
+      removeVolume: (name: string) => removed.push(name),
+      volumesBefore: [],
+    })).rejects.toThrow(/cleanup failed.*manual recovery required/iu);
+    expect(removed).toEqual([]);
+  });
+
+  it("removes only attempt-created exact resources and artifacts", async () => {
+    const removed = { artifacts: [] as string[], containers: [] as string[], volumes: [] as string[] };
+    const project = "homecook-replacement";
+    const attemptToken = "attempt-token-safe";
+
+    await expect(cleanupFailedReplacementRestoreAttempt({
+      attemptToken,
+      composeProject: project,
+      containersBefore: [{ Id: "preexisting-container" }],
+      createdArtifacts: [
+        { attemptToken, path: "/private/recovery/restore.json" },
+        { attemptToken: "other-attempt", path: "/private/recovery/preexisting.json" },
+      ],
+      currentContainers: [
+        {
+          Config: { Labels: {
+            "com.docker.compose.project": project,
+            "com.docker.compose.service": "postgres",
+            "homecook.local/restore-attempt": attemptToken,
+          } },
+          Id: "attempt-container",
+        },
+        {
+          Config: { Labels: {
+            "com.docker.compose.project": project,
+            "com.docker.compose.service": "postgres",
+            "homecook.local/restore-attempt": attemptToken,
+          } },
+          Id: "preexisting-container",
+        },
+        {
+          Config: { Labels: {
+            "com.docker.compose.project": "homecook-dev",
+            "com.docker.compose.service": "postgres",
+            "homecook.local/restore-attempt": attemptToken,
+          } },
+          Id: "dev-decoy",
+        },
+      ],
+      currentVolumes: [
+        {
+          Labels: {
+            "com.docker.compose.project": project,
+            "com.docker.compose.volume": "storage-data",
+            "homecook.local/restore-attempt": attemptToken,
+          },
+          Name: "attempt-storage",
+        },
+        {
+          Labels: {
+            "com.docker.compose.project": project,
+            "com.docker.compose.volume": "postgres-data",
+            "homecook.local/restore-attempt": attemptToken,
+          },
+          Name: "preexisting-postgres",
+        },
+      ],
+      expectedServices: ["postgres", "storage"],
+      expectedVolumes: [
+        { composeVolume: "storage-data", name: "attempt-storage" },
+        { composeVolume: "postgres-data", name: "preexisting-postgres" },
+      ],
+      removeArtifact: (artifact: { path: string }) => removed.artifacts.push(artifact.path),
+      removeContainer: (id: string) => removed.containers.push(id),
+      removeVolume: (name: string) => removed.volumes.push(name),
+      volumesBefore: [{ Name: "preexisting-postgres" }],
+    })).resolves.toEqual({
+      artifacts_removed: 1,
+      containers_removed: 1,
+      volumes_removed: 1,
+    });
+    expect(removed).toEqual({
+      artifacts: ["/private/recovery/restore.json"],
+      containers: ["attempt-container"],
+      volumes: ["attempt-storage"],
+    });
+  });
+
+  it("requires manual recovery when attempt-owned resource cleanup fails", async () => {
+    await expect(cleanupFailedReplacementRestoreAttempt({
+      attemptToken: "attempt-token-safe",
+      composeProject: "homecook-replacement",
+      containersBefore: [],
+      createdArtifacts: [],
+      currentContainers: [],
+      currentVolumes: [{
+        Labels: {
+          "com.docker.compose.project": "homecook-replacement",
+          "com.docker.compose.volume": "storage-data",
+          "homecook.local/restore-attempt": "attempt-token-safe",
+        },
+        Name: "attempt-storage",
+      }],
+      expectedServices: [],
+      expectedVolumes: [{ composeVolume: "storage-data", name: "attempt-storage" }],
+      removeArtifact: () => undefined,
+      removeContainer: () => undefined,
+      removeVolume: () => {
+        throw new Error("Docker unavailable");
+      },
+      volumesBefore: [],
+    })).rejects.toThrow(/cleanup failed.*manual recovery required/iu);
+  });
+
+  it("passes immutable artifact identity to cleanup and fails closed when it changed", async () => {
+    const removed: Array<Record<string, unknown>> = [];
+    const artifact = {
+      attemptToken: "attempt-token-safe",
+      dev: 12,
+      ino: 34,
+      path: "/private/recovery/restore.json",
+      sha256: "a".repeat(64),
+      size: 123,
+    };
+
+    await expect(cleanupFailedReplacementRestoreAttempt({
+      attemptToken: "attempt-token-safe",
+      composeProject: "homecook-replacement",
+      containersBefore: [],
+      createdArtifacts: [artifact],
+      currentContainers: [],
+      currentVolumes: [],
+      expectedServices: [],
+      expectedVolumes: [],
+      removeArtifact: (identity: Record<string, unknown>) => {
+        removed.push(identity);
+        throw new Error("artifact identity changed");
+      },
+      removeContainer: () => undefined,
+      removeVolume: () => undefined,
+      volumesBefore: [],
+    })).rejects.toThrow(/cleanup failed.*manual recovery required/iu);
+    expect(removed).toEqual([artifact]);
+  });
+
+  it("snapshots resources before the restore attempt, cleans failure, and permits retry", async () => {
+    const token = "attempt-token-safe";
+    let containers: Array<Record<string, unknown>> = [{ Id: "preexisting" }];
+    let volumes: Array<Record<string, unknown>> = [{ Name: "preexisting" }];
+    const removed: string[] = [];
+    const inputs = {
+      attemptToken: token,
+      composeProject: "homecook-replacement",
+      createdArtifacts: [],
+      expectedServices: ["postgres"],
+      expectedVolumes: [{ composeVolume: "postgres-data", name: "attempt-postgres" }],
+      inventoryContainers: () => containers,
+      inventoryVolumes: () => volumes,
+      removeArtifact: () => undefined,
+      removeContainer: (id: string) => {
+        removed.push(id);
+        containers = containers.filter((item) => item.Id !== id);
+      },
+      removeVolume: (name: string) => {
+        removed.push(name);
+        volumes = volumes.filter((item) => item.Name !== name);
+      },
+    };
+
+    await expect(withReplacementRestoreAttemptCleanup({
+      ...inputs,
+      execute: () => {
+        containers = [...containers, {
+          Config: { Labels: {
+            "com.docker.compose.project": "homecook-replacement",
+            "com.docker.compose.service": "postgres",
+            "homecook.local/restore-attempt": token,
+          } },
+          Id: "attempt-container",
+        }];
+        volumes = [...volumes, {
+          Labels: {
+            "com.docker.compose.project": "homecook-replacement",
+            "com.docker.compose.volume": "postgres-data",
+            "homecook.local/restore-attempt": token,
+          },
+          Name: "attempt-postgres",
+        }];
+        throw new Error("database restore failed");
+      },
+    })).rejects.toThrow("database restore failed");
+    expect(removed).toEqual(["attempt-container", "attempt-postgres"]);
+    expect(containers).toEqual([{ Id: "preexisting" }]);
+    expect(volumes).toEqual([{ Name: "preexisting" }]);
+
+    await expect(withReplacementRestoreAttemptCleanup({
+      ...inputs,
+      execute: () => "restored",
+    })).resolves.toBe("restored");
+  });
+
+  it.each(["container-inventory", "volume-inventory", "verification"])(
+    "requires manual recovery when post-failure %s cannot prove cleanup",
+    async (failurePoint) => {
+      let containerInventories = 0;
+      let volumeInventories = 0;
+
+      let rejection: unknown;
+      try {
+        await withReplacementRestoreAttemptCleanup({
+          attemptToken: "attempt-token-safe",
+          composeProject: "homecook-replacement",
+          createdArtifacts: [],
+          execute: () => {
+            throw new Error("restore failed");
+          },
+          expectedServices: [],
+          expectedVolumes: [],
+          inventoryContainers: () => {
+            containerInventories += 1;
+            if (failurePoint === "container-inventory" && containerInventories === 2) {
+              throw new Error("Docker container inventory unavailable");
+            }
+            return [];
+          },
+          inventoryVolumes: () => {
+            volumeInventories += 1;
+            if (failurePoint === "volume-inventory" && volumeInventories === 2) {
+              throw new Error("Docker volume inventory unavailable");
+            }
+            return [];
+          },
+          removeArtifact: () => undefined,
+          removeContainer: () => undefined,
+          removeVolume: () => undefined,
+          verifyCleanup: () => {
+            if (failurePoint === "verification") {
+              throw new Error("artifact ownership changed");
+            }
+          },
+        });
+      } catch (error) {
+        rejection = error;
+      }
+      expect(rejection).toBeInstanceOf(Error);
+      expect((rejection as Error).message).toMatch(/cleanup failed.*manual recovery required/iu);
+      expect((rejection as Error).cause).toBeInstanceOf(AggregateError);
+      expect(((rejection as Error).cause as AggregateError).errors)
+        .toEqual(expect.arrayContaining([
+          expect.objectContaining({ message: "restore failed" }),
+          expect.any(Error),
+        ]));
+    },
+  );
 
   it("recovers the archive key from an authenticated escrow envelope", () => {
     const backupKey = "backup-key-with-at-least-twenty-four-characters";

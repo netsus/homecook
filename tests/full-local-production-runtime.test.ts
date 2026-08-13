@@ -122,8 +122,56 @@ describe("full-local production runtime static contract", () => {
     );
 
     expect(restorePath).toMatch(
-      /await waitForRuntimeHealthy\(runtime\);[\s\S]*liveFullLocalProductionResources\(runtime\);[\s\S]*writeRestoreManifest/iu,
+      /await waitForRuntimeHealthy\(restoreRuntime\);[\s\S]*liveFullLocalProductionResources\(restoreRuntime\);[\s\S]*writeRestoreManifest/iu,
     );
+  });
+
+  it("returns an empty Docker inventory without invoking inspect with zero ids", async () => {
+    const runtimeCli = await import("../scripts/full-local-production-runtime.mjs");
+    const calls: string[][] = [];
+
+    expect(runtimeCli.dockerResourceInventory("container", {
+      execute: (_command: string, args: string[]) => {
+        calls.push(args);
+        if (args.includes("inspect")) throw new Error("empty inspect must not run");
+        return "\n";
+      },
+    })).toEqual([]);
+    expect(runtimeCli.dockerResourceInventory("volume", {
+      execute: (_command: string, args: string[]) => {
+        calls.push(args);
+        if (args.includes("inspect")) throw new Error("empty inspect must not run");
+        return "";
+      },
+    })).toEqual([]);
+    expect(calls).toEqual([
+      ["container", "ls", "--quiet"],
+      ["volume", "ls", "--quiet"],
+    ]);
+  });
+
+  it("treats a dangling replacement artifact symlink as manual recovery, never absence", async () => {
+    const runtimeCli = await import("../scripts/full-local-production-runtime.mjs");
+    const rootDir = mkdtempSync(join(tmpdir(), "full-local-artifact-race-"));
+    const artifactPath = join(rootDir, "restore.json");
+    writeFileSync(artifactPath, "attempt-owned", { mode: 0o600 });
+    const identity = runtimeCli.attemptCreatedArtifactIdentity({
+      attemptToken: "attempt-token-safe",
+      path: artifactPath,
+    });
+    rmSync(artifactPath);
+    symlinkSync(join(rootDir, "missing-racing-target"), artifactPath);
+
+    try {
+      expect(() => runtimeCli.removeAttemptCreatedArtifact(identity))
+        .toThrow(/manual recovery required/iu);
+      expect(() => runtimeCli.assertFailedAttemptArtifactsCleared([artifactPath]))
+        .toThrow(/manual recovery required/iu);
+      expect(() => writeFileSync(artifactPath, "retry", { flag: "wx", mode: 0o600 }))
+        .toThrow(/EEXIST/iu);
+    } finally {
+      rmSync(rootDir, { force: true, recursive: true });
+    }
   });
 
   it("can be imported for mock-based authorization contract tests without running the CLI", () => {

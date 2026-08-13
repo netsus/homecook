@@ -40,7 +40,7 @@ function strongSecret(value, label) {
  *   createItem: (recoveredKey: string, ownershipToken: string) => unknown | Promise<unknown>,
  *   deleteOwnedItem: (ownershipToken: string) => unknown | Promise<unknown>,
  *   directItemExists: () => boolean,
- *   execute: () => unknown | Promise<unknown>,
+ *   execute: (attemptToken: string) => unknown | Promise<unknown>,
  *   ownershipToken?: () => string,
  *   readOwnedItem: (ownershipToken: string) => string,
  *   recoveredKey: string,
@@ -73,7 +73,7 @@ export async function withRecoveredBackupKeyCreateOnlyRegistration({
     if (readOwnedItem(attemptToken) !== verifiedKey) {
       fail("create-only Keychain registration does not match the recovered backup key");
     }
-    return await execute();
+    return await execute(attemptToken);
   } catch (error) {
     if (!createdThisAttempt) throw error;
     try {
@@ -83,6 +83,156 @@ export async function withRecoveredBackupKeyCreateOnlyRegistration({
       await deleteOwnedItem(attemptToken);
     } catch {
       fail("attempt-owned Keychain cleanup failed; manual recovery required before retry");
+    }
+    throw error;
+  }
+}
+
+function containerLabels(container) {
+  return container?.Config?.Labels ?? {};
+}
+
+function volumeLabels(volume) {
+  return volume?.Labels ?? {};
+}
+
+export async function cleanupFailedReplacementRestoreAttempt({
+  attemptToken,
+  composeProject,
+  containersBefore,
+  createdArtifacts,
+  currentContainers,
+  currentVolumes,
+  expectedServices,
+  expectedVolumes,
+  removeArtifact,
+  removeContainer,
+  removeVolume,
+  volumesBefore,
+}) {
+  if (!/^[a-zA-Z0-9_-]{12,128}$/u.test(attemptToken)) {
+    fail("restore cleanup attempt token is invalid");
+  }
+  const beforeContainerIds = new Set(containersBefore.map((item) => item.Id));
+  const beforeVolumeNames = new Set(volumesBefore.map((item) => item.Name));
+  const serviceAllowlist = new Set(expectedServices);
+  const expectedVolumeMap = new Map(
+    expectedVolumes.map(({ composeVolume, name }) => [name, composeVolume]),
+  );
+  const ownedContainers = currentContainers.filter((container) => {
+    const labels = containerLabels(container);
+    return typeof container?.Id === "string"
+      && !beforeContainerIds.has(container.Id)
+      && labels["com.docker.compose.project"] === composeProject
+      && labels["homecook.local/restore-attempt"] === attemptToken
+      && serviceAllowlist.has(labels["com.docker.compose.service"]);
+  });
+  const ownedVolumes = currentVolumes.filter((volume) => {
+    const labels = volumeLabels(volume);
+    return typeof volume?.Name === "string"
+      && !beforeVolumeNames.has(volume.Name)
+      && expectedVolumeMap.get(volume.Name) === labels["com.docker.compose.volume"]
+      && labels["com.docker.compose.project"] === composeProject
+      && labels["homecook.local/restore-attempt"] === attemptToken;
+  });
+  const conflictingContainers = currentContainers.filter((container) => {
+    const labels = containerLabels(container);
+    return typeof container?.Id === "string"
+      && !beforeContainerIds.has(container.Id)
+      && labels["com.docker.compose.project"] === composeProject
+      && serviceAllowlist.has(labels["com.docker.compose.service"])
+      && labels["homecook.local/restore-attempt"] !== attemptToken;
+  });
+  const conflictingVolumes = currentVolumes.filter((volume) => {
+    const labels = volumeLabels(volume);
+    return typeof volume?.Name === "string"
+      && !beforeVolumeNames.has(volume.Name)
+      && expectedVolumeMap.has(volume.Name)
+      && (
+        expectedVolumeMap.get(volume.Name) !== labels["com.docker.compose.volume"]
+        || labels["com.docker.compose.project"] !== composeProject
+        || labels["homecook.local/restore-attempt"] !== attemptToken
+      );
+  });
+  const ownedArtifacts = createdArtifacts.filter((artifact) =>
+    artifact?.attemptToken === attemptToken && typeof artifact.path === "string");
+  const cleanupFailures = [
+    ...conflictingContainers.map((container) => `container-conflict:${container.Id}`),
+    ...conflictingVolumes.map((volume) => `volume-conflict:${volume.Name}`),
+  ];
+  for (const container of ownedContainers) {
+    try {
+      await removeContainer(container.Id);
+    } catch {
+      cleanupFailures.push(`container:${container.Id}`);
+    }
+  }
+  for (const volume of ownedVolumes) {
+    try {
+      await removeVolume(volume.Name);
+    } catch {
+      cleanupFailures.push(`volume:${volume.Name}`);
+    }
+  }
+  for (const artifact of ownedArtifacts) {
+    try {
+      await removeArtifact(artifact);
+    } catch {
+      cleanupFailures.push("artifact");
+    }
+  }
+  if (cleanupFailures.length > 0) {
+    fail("attempt-owned replacement cleanup failed; manual recovery required before retry");
+  }
+  return Object.freeze({
+    artifacts_removed: ownedArtifacts.length,
+    containers_removed: ownedContainers.length,
+    volumes_removed: ownedVolumes.length,
+  });
+}
+
+export async function withReplacementRestoreAttemptCleanup({
+  attemptToken,
+  composeProject,
+  createdArtifacts,
+  execute,
+  expectedServices,
+  expectedVolumes,
+  inventoryContainers,
+  inventoryVolumes,
+  removeArtifact,
+  removeContainer,
+  removeVolume,
+  verifyCleanup = () => undefined,
+}) {
+  const containersBefore = await inventoryContainers();
+  const volumesBefore = await inventoryVolumes();
+  try {
+    return await execute();
+  } catch (error) {
+    try {
+      const currentContainers = await inventoryContainers();
+      const currentVolumes = await inventoryVolumes();
+      await cleanupFailedReplacementRestoreAttempt({
+        attemptToken,
+        composeProject,
+        containersBefore,
+        createdArtifacts,
+        currentContainers,
+        currentVolumes,
+        expectedServices,
+        expectedVolumes,
+        removeArtifact,
+        removeContainer,
+        removeVolume,
+        volumesBefore,
+      });
+      await verifyCleanup();
+    } catch (cleanupError) {
+      throw new Error(
+        "Full-local backup key recovery failed: attempt-owned replacement cleanup failed; manual recovery required before retry",
+        { cause: new AggregateError([error, cleanupError], "restore and cleanup both failed") },
+      );
     }
     throw error;
   }

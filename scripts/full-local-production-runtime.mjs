@@ -53,6 +53,7 @@ import {
   signFullLocalBackupKeyRecoveryEvidence,
   verifyFullLocalBackupKeyEscrowBinding,
   verifyFullLocalBackupKeyRecoveryIssuerAttestation,
+  withReplacementRestoreAttemptCleanup,
   withRecoveredBackupKeyCreateOnlyRegistration,
 } from "./lib/full-local-backup-key-recovery.mjs";
 import {
@@ -456,6 +457,55 @@ function deleteOwnedKeychainDirectItem(service, account, ownershipToken) {
   );
 }
 
+export function attemptCreatedArtifactIdentity({ attemptToken, path }) {
+  const artifact = lstatSync(path);
+  if (!artifact.isFile() || artifact.isSymbolicLink()) {
+    fail("Attempt-created restore artifact must be a regular file.");
+  }
+  return Object.freeze({
+    attemptToken,
+    dev: artifact.dev,
+    ino: artifact.ino,
+    path,
+    sha256: sha256File(path),
+    size: artifact.size,
+  });
+}
+
+function pathEntryExists(path) {
+  try {
+    lstatSync(path);
+    return true;
+  } catch (error) {
+    if (error?.code === "ENOENT") return false;
+    throw error;
+  }
+}
+
+export function removeAttemptCreatedArtifact(expected) {
+  const { path } = expected;
+  if (!pathEntryExists(path)) return;
+  const artifact = lstatSync(path);
+  if (
+    !artifact.isFile()
+    || artifact.isSymbolicLink()
+    || artifact.dev !== expected.dev
+    || artifact.ino !== expected.ino
+    || artifact.size !== expected.size
+    || sha256File(path) !== expected.sha256
+  ) {
+    fail("Attempt-created restore artifact changed type; manual recovery required.");
+  }
+  assertPrivateArtifactParent(path);
+  rmSync(path);
+}
+
+export function assertFailedAttemptArtifactsCleared(paths) {
+  if (paths.some((path) => pathEntryExists(path))) {
+    fail("attempt artifact ownership changed; manual recovery required before retry");
+  }
+}
+
 function deleteKeychainSecret(service, account) {
   const count = keychainChunkCount(service, account);
   for (const item of [
@@ -845,12 +895,14 @@ function sha256File(path) {
   return digest;
 }
 
-function dockerResourceInventory(type) {
-  return JSON.parse(run("docker", [type, "inspect", ...run(
+export function dockerResourceInventory(type, { execute = run } = {}) {
+  const ids = execute(
     "docker",
     [type, "ls", "--quiet"],
     { failure: `Docker ${type} inventory listing failed.` },
-  ).trim().split("\n").filter(Boolean)], {
+  ).trim().split("\n").filter(Boolean);
+  if (ids.length === 0) return [];
+  return JSON.parse(execute("docker", [type, "inspect", ...ids], {
     failure: `Docker ${type} inventory inspection failed.`,
   }) || "[]");
 }
@@ -1253,7 +1305,9 @@ function restoredSemanticManifest(runtime) {
 
 function writeRestoreManifest({
   archiveSha256,
+  attemptToken,
   backupKey,
+  createdArtifacts,
   manifestPath,
   metadata,
   runtime,
@@ -1268,6 +1322,7 @@ function writeRestoreManifest({
     postgres_volume: runtime.config.FULL_LOCAL_POSTGRES_VOLUME_NAME,
     relation_classification_digest: metadata.manifest.relation_classification_digest,
     restore_execution: "clean-isolated-restore-platform-v1",
+    restore_attempt_token: attemptToken,
     source_archive_sha256: archiveSha256,
     source_backup_created_at: metadata.created_at,
     source_data_sha256: metadata.components.data_sha256,
@@ -1282,6 +1337,7 @@ function writeRestoreManifest({
     flag: "wx",
     mode: 0o600,
   });
+  createdArtifacts.push(attemptCreatedArtifactIdentity({ attemptToken, path: manifestPath }));
   chmodSync(manifestPath, 0o600);
   const authenticationPath = platformBackupAuthenticationPath(manifestPath);
   const authentication = buildPlatformBackupAuthentication({
@@ -1294,6 +1350,7 @@ function writeRestoreManifest({
     flag: "wx",
     mode: 0o600,
   });
+  createdArtifacts.push(attemptCreatedArtifactIdentity({ attemptToken, path: authenticationPath }));
   chmodSync(authenticationPath, 0o600);
   return restoreManifest;
 }
@@ -1360,6 +1417,7 @@ function restoreStoragePayloadVolume(runtime, storagePayloadPath) {
       });
     }
     run("docker", buildComposeLabeledStorageVolumeCreateArgs({
+      attemptToken: runtime.env.FULL_LOCAL_RESTORE_ATTEMPT_TOKEN,
       composeProject: runtime.config.FULL_LOCAL_COMPOSE_PROJECT_NAME,
       volumeName,
     }), {
@@ -1367,6 +1425,7 @@ function restoreStoragePayloadVolume(runtime, storagePayloadPath) {
       failure: "Fresh full-local Storage volume creation failed.",
     });
     assertRestoredStorageVolumeProvenance({
+      attemptToken: runtime.env.FULL_LOCAL_RESTORE_ATTEMPT_TOKEN,
       composeProject: runtime.config.FULL_LOCAL_COMPOSE_PROJECT_NAME,
       inspect: inspectDockerVolume(volumeName),
       volumeName,
@@ -1487,7 +1546,9 @@ function writeCanonicalRecoveryManifest({
   archive,
   archiveSha256,
   args,
+  attemptToken,
   backupKey,
+  createdArtifacts,
   metadata,
   restoreManifest,
 }) {
@@ -1531,6 +1592,7 @@ function writeCanonicalRecoveryManifest({
       key_sha256: createHash("sha256").update(backupKey).digest("hex"),
     },
     restored_metadata_sha256: fullLocalBackupMetadataSha256(metadata),
+    restore_attempt_token: attemptToken,
     restore_manifest_path: resolve(optionValue(args, "--manifest")),
     restore_manifest_sha256: sha256File(resolve(optionValue(args, "--manifest"))),
   };
@@ -1541,17 +1603,37 @@ function writeCanonicalRecoveryManifest({
   verifyFullLocalBackupKeyRecoveryIssuerAttestation({ envelope, evidence });
   const contents = `${JSON.stringify(evidence, null, 2)}\n`;
   writeFileSync(outputPath, contents, { encoding: "utf8", flag: "wx", mode: 0o600 });
+  createdArtifacts.push(attemptCreatedArtifactIdentity({ attemptToken, path: outputPath }));
   const authentication = buildPlatformBackupAuthentication({
     archive: outputPath,
     archiveBytes: Buffer.from(contents),
     backupKey,
   });
+  const authenticationPath = platformBackupAuthenticationPath(outputPath);
   writeFileSync(
-    platformBackupAuthenticationPath(outputPath),
+    authenticationPath,
     `${JSON.stringify(authentication, null, 2)}\n`,
     { encoding: "utf8", flag: "wx", mode: 0o600 },
   );
+  createdArtifacts.push(attemptCreatedArtifactIdentity({ attemptToken, path: authenticationPath }));
   return evidence;
+}
+
+function recoveryManifestOutputPaths(args) {
+  const output = optionValue(args, "--recovery-manifest");
+  if (!output || !isAbsolute(output)) {
+    fail("restore-platform requires --recovery-manifest absolute path.");
+  }
+  const outputPath = resolve(output);
+  const authenticationPath = platformBackupAuthenticationPath(outputPath);
+  if (existsSync(outputPath) || existsSync(authenticationPath)) {
+    fail("Canonical recovery manifest output already exists.");
+  }
+  validateExternalSecretDirectory({
+    repositoryRoot: ROOT,
+    secretDirectory: dirname(outputPath),
+  });
+  return { authenticationPath, outputPath };
 }
 
 async function restorePlatformBackup(args) {
@@ -1561,6 +1643,7 @@ async function restorePlatformBackup(args) {
   });
 
   const runtime = validateAndMaterialize(args);
+  const recoveryOutputs = recoveryManifestOutputPaths(args);
   assertFreshRestoreAllowed({
     postgresVolumeExists: dockerVolumeExists(runtime.config.FULL_LOCAL_POSTGRES_VOLUME_NAME),
     storageVolumeExists: dockerVolumeExists(runtime.config.FULL_LOCAL_STORAGE_VOLUME_NAME),
@@ -1581,6 +1664,13 @@ async function restorePlatformBackup(args) {
     recoveryCredential: readFileSync(credentialPath, "utf8").trim(),
   });
   const archiveSha256 = sha256File(archive);
+  const createdArtifacts = [];
+  const expectedArtifactPaths = [
+    manifestPath,
+    platformBackupAuthenticationPath(manifestPath),
+    recoveryOutputs.outputPath,
+    recoveryOutputs.authenticationPath,
+  ];
 
   return withRecoveredBackupKeyCreateOnlyRegistration({
     createItem: (recoveredKey, ownershipToken) => {
@@ -1608,97 +1698,155 @@ async function restorePlatformBackup(args) {
       PLATFORM_BACKUP_KEYCHAIN_SERVICE,
       PLATFORM_BACKUP_KEYCHAIN_ACCOUNT,
     ),
-    execute: () => withVerifiedPlatformBackup({
-      archive,
-      backupKey,
-      consume: async ({
-        dataPath,
-        metadata,
-        rolesPath,
-        schemaPath,
-        storagePayloadPath,
-      }) => executeBootstrapAwarePlatformRestore({
-        // GoTrue and Storage bootstrap the exact pinned service-owned roles
-        // before the database itself is cleanly recreated from template0.
-        bootstrapServices: async () => {
-          compose(runtime, ["up", "-d"]);
-          await waitForRuntimeHealthy(runtime);
+    execute: async (attemptToken) => {
+      const restoreRuntime = Object.freeze({
+        ...runtime,
+        env: {
+          ...runtime.env,
+          FULL_LOCAL_RESTORE_ATTEMPT_TOKEN: attemptToken,
         },
-        replayDatabase: () => composeWithInput(runtime, [
-          "exec",
-          "-T",
-          "postgres",
-          "psql",
-          "--single-transaction",
-          "--variable",
-          "ON_ERROR_STOP=1",
-          "--username",
-          "supabase_admin",
-          "--dbname",
-          "postgres",
-        ], buildPlatformRestoreSql({
-          dataSql: readFileSync(dataPath, "utf8"),
-          rolesSql: readFileSync(rolesPath, "utf8"),
-          schemaSql: readFileSync(schemaPath, "utf8"),
-        })),
-        resetDatabase: () => composeWithInput(runtime, [
-          "exec",
-          "-T",
-          "postgres",
-          "psql",
-          "--variable",
-          "ON_ERROR_STOP=1",
-          "--username",
-          "supabase_admin",
-          "--dbname",
-          "template1",
-        ], buildBootstrapAwareDatabaseResetSql()),
-        restoreStoragePayload: () => restoreStoragePayloadVolume(
-          runtime,
-          storagePayloadPath,
-        ),
-        startPostgres: async () => {
-          compose(runtime, ["up", "-d", "postgres"]);
-          await waitForServiceHealthy(runtime, "postgres");
-        },
-        startServices: async () => {
-          compose(runtime, ["up", "-d"]);
-          await waitForRuntimeHealthy(runtime);
-        },
-        stopServices: () => compose(runtime, ["down"]),
-        verifyResources: () => {
-          assertRestoredStorageVolumeProvenance({
-            composeProject: runtime.config.FULL_LOCAL_COMPOSE_PROJECT_NAME,
-            inspect: inspectDockerVolume(runtime.config.FULL_LOCAL_STORAGE_VOLUME_NAME),
-            volumeName: runtime.config.FULL_LOCAL_STORAGE_VOLUME_NAME,
+      });
+      return withReplacementRestoreAttemptCleanup({
+        attemptToken,
+        composeProject: runtime.config.FULL_LOCAL_COMPOSE_PROJECT_NAME,
+        createdArtifacts,
+        execute: async () => {
+          assertFreshRestoreAllowed({
+            postgresVolumeExists: dockerVolumeExists(
+              restoreRuntime.config.FULL_LOCAL_POSTGRES_VOLUME_NAME,
+            ),
+            storageVolumeExists: dockerVolumeExists(
+              restoreRuntime.config.FULL_LOCAL_STORAGE_VOLUME_NAME,
+            ),
           });
-          liveFullLocalProductionResources(runtime);
-        },
-        verifyRestoredPlatform: () => {
-          const restoreManifest = writeRestoreManifest({
-            archiveSha256,
-            backupKey,
-            manifestPath,
-            metadata,
-            runtime,
-            semantic: {
-              ...restoredPlatformDataSnapshot(runtime, metadata),
-              ...restoredSemanticManifest(runtime),
-              ...verifyRestoredStoragePayload(runtime, metadata.storage_payload),
-            },
-          });
-          const recoveryManifest = writeCanonicalRecoveryManifest({
+          return withVerifiedPlatformBackup({
             archive,
-            archiveSha256,
-            args,
             backupKey,
-            metadata,
-            restoreManifest,
+            consume: async ({
+              dataPath,
+              metadata,
+              rolesPath,
+              schemaPath,
+              storagePayloadPath,
+            }) => executeBootstrapAwarePlatformRestore({
+            // GoTrue and Storage bootstrap the exact pinned service-owned roles
+            // before the database itself is cleanly recreated from template0.
+            bootstrapServices: async () => {
+              compose(restoreRuntime, ["up", "-d"]);
+              await waitForRuntimeHealthy(restoreRuntime);
+            },
+            replayDatabase: () => composeWithInput(restoreRuntime, [
+              "exec",
+              "-T",
+              "postgres",
+              "psql",
+              "--single-transaction",
+              "--variable",
+              "ON_ERROR_STOP=1",
+              "--username",
+              "supabase_admin",
+              "--dbname",
+              "postgres",
+            ], buildPlatformRestoreSql({
+              dataSql: readFileSync(dataPath, "utf8"),
+              rolesSql: readFileSync(rolesPath, "utf8"),
+              schemaSql: readFileSync(schemaPath, "utf8"),
+            })),
+            resetDatabase: () => composeWithInput(restoreRuntime, [
+              "exec",
+              "-T",
+              "postgres",
+              "psql",
+              "--variable",
+              "ON_ERROR_STOP=1",
+              "--username",
+              "supabase_admin",
+              "--dbname",
+              "template1",
+            ], buildBootstrapAwareDatabaseResetSql()),
+            restoreStoragePayload: () => restoreStoragePayloadVolume(
+              restoreRuntime,
+              storagePayloadPath,
+            ),
+            startPostgres: async () => {
+              compose(restoreRuntime, ["up", "-d", "postgres"]);
+              await waitForServiceHealthy(restoreRuntime, "postgres");
+            },
+            startServices: async () => {
+              compose(restoreRuntime, ["up", "-d"]);
+              await waitForRuntimeHealthy(restoreRuntime);
+            },
+            stopServices: () => compose(restoreRuntime, ["down"]),
+            verifyResources: () => {
+              assertRestoredStorageVolumeProvenance({
+                attemptToken: restoreRuntime.env.FULL_LOCAL_RESTORE_ATTEMPT_TOKEN,
+                composeProject: restoreRuntime.config.FULL_LOCAL_COMPOSE_PROJECT_NAME,
+                inspect: inspectDockerVolume(restoreRuntime.config.FULL_LOCAL_STORAGE_VOLUME_NAME),
+                volumeName: restoreRuntime.config.FULL_LOCAL_STORAGE_VOLUME_NAME,
+              });
+              liveFullLocalProductionResources(restoreRuntime);
+            },
+            verifyRestoredPlatform: () => {
+              const restoreManifest = writeRestoreManifest({
+                archiveSha256,
+                attemptToken,
+                backupKey,
+                createdArtifacts,
+                manifestPath,
+                metadata,
+                runtime: restoreRuntime,
+                semantic: {
+                  ...restoredPlatformDataSnapshot(restoreRuntime, metadata),
+                  ...restoredSemanticManifest(restoreRuntime),
+                  ...verifyRestoredStoragePayload(restoreRuntime, metadata.storage_payload),
+                },
+              });
+              const recoveryManifest = writeCanonicalRecoveryManifest({
+                archive,
+                archiveSha256,
+                args,
+                attemptToken,
+                backupKey,
+                createdArtifacts,
+                metadata,
+                restoreManifest,
+              });
+              return { recovery_manifest: recoveryManifest, restore_manifest: restoreManifest };
+            },
+            }),
           });
-          return { recovery_manifest: recoveryManifest, restore_manifest: restoreManifest };
         },
-      }),
-    }),
+        expectedServices: [
+          "api-gateway",
+          "auth",
+          "auth-proxy",
+          "postgres",
+          "postgrest",
+          "postgrest-probe",
+          "storage",
+        ],
+        expectedVolumes: [
+          {
+            composeVolume: "postgres-data",
+            name: runtime.config.FULL_LOCAL_POSTGRES_VOLUME_NAME,
+          },
+          {
+            composeVolume: "storage-data",
+            name: runtime.config.FULL_LOCAL_STORAGE_VOLUME_NAME,
+          },
+        ],
+        inventoryContainers: () => dockerResourceInventory("container"),
+        inventoryVolumes: () => dockerResourceInventory("volume"),
+        removeArtifact: removeAttemptCreatedArtifact,
+        removeContainer: (containerId) => run("docker", ["rm", "--force", containerId], {
+          failure: "Attempt-owned replacement container could not be removed.",
+        }),
+        removeVolume: (volumeName) => run("docker", ["volume", "rm", volumeName], {
+          failure: "Attempt-owned replacement volume could not be removed.",
+        }),
+        verifyCleanup: () => assertFailedAttemptArtifactsCleared(expectedArtifactPaths),
+      });
+    },
     readOwnedItem: (ownershipToken) => keychainOwnedDirectValue(
       PLATFORM_BACKUP_KEYCHAIN_SERVICE,
       PLATFORM_BACKUP_KEYCHAIN_ACCOUNT,
