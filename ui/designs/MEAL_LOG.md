@@ -10,6 +10,8 @@
 >
 > 계획 authority: `docs/workpacks/planner-shell/evidence/cooking-meal-log-and-product-search-master-plan-20260722.md`, SHA-256 `d4d0fb39e80eeffc8b1e73ad92f0d91a35a9b6adc57a556ea8c9ec6ecffa951d`, 1,018 lines
 >
+> repair lineage: independent critique parent `f2442e22ec919f51ffc67ff7b6403a8021a5c90c`의 `P1-ML-01`~`P1-ML-04`만 최소 수정한다. 새 API/field/action/route 또는 Contract Evolution을 만들지 않는다.
+>
 > 독립성: 이 문서는 작성 산출물이며 critic, product-design-authority 또는 Stage 승인 산출물이 아니다. 작성자는 자기 변경을 승인하지 않는다.
 
 ## 1. 목적과 소유권
@@ -55,7 +57,8 @@ MEAL_LOG는 사용자가 선택한 하루에 실제로 먹은 음식과 양을 �
 
 ```text
 MEAL_LOG panel
-├─ 7-day date rail
+├─ 7-day range controls + date rail
+│  ├─ 이전 7일 / 다음 7일
 │  ├─ 정확히 한 날짜 선택
 │  └─ 기록 유무만 표시
 ├─ 선택한 하루 heading
@@ -75,9 +78,11 @@ MEAL_LOG panel
    └─ read-only, add/edit target 아님
 ```
 
-- rail은 7일을 탐색하지만 본문은 선택한 하루만 표시한다.
+- rail은 현재 7일 범위를 탐색하고, 44px `이전 7일`/`다음 7일` control로 인접 범위에 도달한다. 본문은 선택한 하루만 표시한다.
+- 범위 이동은 현재 범위의 시작·끝과 선택일에 같은 `-7일` 또는 `+7일`을 적용한다. 따라서 선택일의 범위 내 상대 위치가 유지되고 새 선택일은 항상 새 rail 안에 보인다.
 - grouping authority는 저장된 `consumed_local_date`다. 현재 device/profile timezone으로 과거 `consumed_at`을 다시 계산하거나 다른 날짜로 옮기지 않는다.
 - rail의 dot/mark는 `기록 있음/없음`만 뜻한다. 수치, 추세, 주간 합계, 비교, 목표 달성 의미를 넣지 않는다.
+- 새 범위의 mark는 각 날짜에 기존 `GET /meal-log?date=YYYY-MM-DD`만 bounded·deduplicated하게 호출해 non-deleted entry 존재 여부로 만든다. 선택일 response는 본문에도 재사용하고, 나머지 response의 entry/total을 주간 값으로 합치거나 표시하지 않는다.
 - day total과 section subtotal은 `GET /meal-log`의 server projection을 그대로 표시한다. client가 entry에서 다시 계산해 권위값을 만들지 않는다.
 - soft-deleted entry는 day read와 active aggregate에서 보이지 않는다.
 - `partial`과 `unavailable`은 0이 아니다. 아는 최소값은 `최소`, 값이 없으면 `정보 준비 중`, 합계에는 `일부 정보 없음 N건`을 함께 표시한다.
@@ -100,6 +105,7 @@ MEAL_LOG panel
 │ 플래너                               │ #10 shell
 │ [ 요리 계획 ] [ 식사 기록 ]          │ selected: 식사 기록
 ├──────────────────────────────────────┤
+│ [‹]       7월 20일–7월 26일       [›]│ 44px range controls
 │ 날짜 rail viewport · 한 줄           │ local x-scroll only
 │ [월20][화21][수22][목23][금24][토25][일26]│
 │              └ 선택 · 기록 있음      │
@@ -136,6 +142,7 @@ MEAL_LOG panel
  bottom tab + env(safe-area-inset-bottom) clearance
 ```
 
+- range control row는 rail 바로 위에 붙고 양쪽 control은 각각 44×44px이다. accessible name은 `이전 7일`/`다음 7일`이며 가운데 visible range label은 분석 summary가 아니다.
 - 390px content 폭 안에서 7개 date target은 한 줄 non-wrapping track을 유지한다. 공간이 충분하면 전부 보이고, 200% text/localization에서만 rail 내부가 overflow할 수 있다.
 - section 안에 card를 반복 중첩하지 않는다. header + compact list row + divider 구조로 첫 viewport에 summary와 실제 entry가 함께 보이게 한다.
 - entry 이름은 최대 2행까지 자연스럽게 줄바꿈한다. 전체 accessible name은 손실하지 않는다.
@@ -151,6 +158,7 @@ MEAL_LOG panel
 │ 플래너                       │
 │ [요리 계획] [식사 기록]      │ 44px min; 200%에서는 reflow
 ├──────────────────────────────┤
+│ [‹]  7월20일–7월26일    [›]  │ 44px each
 │ 날짜 rail viewport · 한 줄   │
 │ [월20][화21][수22][목23]…    │ rail만 x-scroll
 ├──────────────────────────────┤
@@ -181,7 +189,7 @@ MEAL_LOG panel
 
 - page content 폭은 288px이며 page 자체에는 horizontal overflow가 없어야 한다.
 - 7개 44px target은 rail 내부의 한 줄 track에서만 overflow한다. 둘째 줄로 wrap하지 않는다.
-- rail 양 끝의 fade/peek는 장식이고 pointer target이 아니다. 별도 큰 이전/다음 화살표를 중복하지 않는다.
+- rail 양 끝의 fade/peek는 장식이고 pointer target이 아니다. 바로 위의 range control 한 쌍만 이동 action이며 rail 안에는 이전/다음 control을 중복하지 않는다.
 - 선택 날짜가 rail 밖이면 rail의 inline scroll만 `nearest`로 움직인다. page x/y scroll과 focus는 움직이지 않는다.
 - section header가 한 줄에 맞지 않으면 `label → subtotal → incomplete` 순서로 쌓는다.
 - row action과 sheet footer는 primary/secondary/destructive 우선순서를 DOM과 시각 순서에서 함께 유지한다. label을 줄이거나 target을 압축하지 않는다.
@@ -193,6 +201,7 @@ MEAL_LOG panel
 │ 기존 desktop Planner shell / [요리 계획] [식사 기록]         │
 ├──────────────────────────────────────────────────────────────┤
 │ centered existing content-width system                       │
+│ [이전 7일]        7월 20일–7월 26일        [다음 7일]          │
 │ 월20 화21 [수22] 목23 금24 토25 일26                          │
 │ 7월 22일 수요일 식사 기록                                    │
 │ ┌──────────────────────────────────────────────────────────┐ │
@@ -241,23 +250,22 @@ dialog / viewport boundary
 - selected tab만 `tabindex=0`인 roving tabindex를 쓴다.
 - `ArrowLeft/Right`, `Home/End`, `Enter/Space`로 focus와 selection을 명확히 이동한다.
 - source를 바꿔도 sheet를 닫거나 다시 열지 않으며 focus는 selected tab에 남는다.
-- 이미 사용자가 확인한 quantity를 source switch가 묵시적으로 변경하지 않는다. 다른 item을 명시적으로 선택하면 해당 item의 공식 허용 단위로 새 확인 단계가 시작된다.
+- 이미 사용자가 확인한 quantity를 source switch가 묵시적으로 변경하지 않는다. 다른 item을 명시적으로 선택하면 새 quantity/unit 확인 단계가 시작된다. product는 public direct basis relation을 적용하고, ingredient는 public `default_unit`을 suggestion으로만 채운 뒤 mutation evidence 판정 전까지 허용 단위라고 단정하지 않는다.
 - outer Planner tablist와 ID, label, history 또는 panel state를 공유하지 않는다.
 
-### Query empty — recent/frequent
+### Query empty — one server-ordered recent/frequent list
 
 ```text
 ┌──────────────────────────────────────┐
 │ 음식 추가 · 7월 22일 · 아침    [닫기]│
 │ [ 요리한 음식 ] [ 제품·재료 ]        │
 ├──────────────────────────────────────┤
-│ 최근 먹은 음식                       │
+│ 최근·자주 먹은 음식                  │
 │ 김치찌개                              │
-│ 7월 21일 · 완성 1,480g · 남은 740g  │
-│                                      │
-│ 자주 먹는 음식                       │
+│ 최근 300g · 3회 기록                 │
 │ 연세우유 생크림빵 초코               │
-│ 연세우유 · 사용자 등록 · 최근 0.5봉  │
+│ 연세우유 · 최근 0.5봉 · 5회 기록     │
+│ [더 불러오기]                         │ single cursor
 ├──────────────────────────────────────┤
 │ 선택한 음식                          │
 │ 실제 양 [ 0.5 ] [봉]                 │
@@ -267,8 +275,11 @@ dialog / viewport boundary
 └──────────────────────────────────────┘
 ```
 
-- `GET /meal-log/recent`의 owner/generation recent/frequent projection만 사용한다.
+- `GET /meal-log/recent`의 한 `items[]`를 server 순서 그대로 하나의 `최근·자주 먹은 음식` list에 렌더링한다.
+- `frequency`는 `{N}회 기록` metadata로만 표시한다. client threshold, `최근`/`자주` 분리, 중복 row, local re-sort를 만들지 않는다.
+- pagination은 response의 한 `next_cursor`와 한 `has_next`만 사용한다. 이전 page와 다음 page는 도착 순서대로 append하고 source별 cursor를 만들지 않는다.
 - safe label/brand와 `last amount/unit`은 제안값이다. 선택만으로 저장하지 않고 사용자가 실제 양을 확인해야 save가 활성화된다.
+- recent item에는 batch finished/remaining/weight/lifecycle 정보가 없다. cooked-batch source의 rich copy나 gram-save eligibility는 existing `GET /cooked-batches?availability=all`에서 matching `CookedBatchProjection`을 실제로 읽은 경우에만 표시한다. 아직 matching projection이 없으면 recent item의 이름·최근 양·frequency로 추론하지 않고 gram confirmation/save를 fail closed한다.
 - 다른 owner/private/deleted/hidden source는 row, count, placeholder, timing copy로도 노출하지 않는다.
 
 ### Product/ingredient typed-union search
@@ -283,11 +294,11 @@ dialog / viewport boundary
 │ label basis / 공식 허용 unit         │
 │                                      │
 │ 식빵                                 │
-│ [재료] · 승인 conversion/piece unit  │
+│ [재료] · 기본 단위 제안: g           │ non-authoritative
 │                                      │
 │ [더 불러오기]                        │ same opaque cursor
 ├──────────────────────────────────────┤
-│ 실제 양 [____] [허용 unit]           │
+│ 실제 양 [____] [단위____]            │ quantity/unit correctable
 │ [기록 저장]                          │
 │ [취소]                               │
 └──────────────────────────────────────┘
@@ -297,8 +308,9 @@ dialog / viewport boundary
 - pagination은 하나의 `next_cursor`와 `has_next`만 사용한다. source별 API/page/array merge, local re-sort, `브랜드 제품 더보기`는 금지한다.
 - no-space brand+product coverage와 relevance는 server authority다. client popularity/source 우선 정렬을 더하지 않는다.
 - product는 pin된 exact nutrition version의 direct basis relation으로 허용되는 단위만 제시한다.
-- ingredient는 approved profile + exact conversion/piece evidence로 허용되는 단위만 제시한다.
-- exact 환산이 없으면 입력을 보존한 채 `UNIT_CONVERSION_MISSING`을 표시하고 row/event를 만들지 않는다. 임의 g/mL/개 환산을 제안하지 않는다.
+- ingredient search row의 public field는 `id`, `standard_name`, `category`, `default_unit`뿐이다. `default_unit`은 입력을 돕는 non-authoritative suggestion이며 approved profile/conversion/piece evidence 또는 허용 단위 목록으로 표현하지 않는다.
+- ingredient 선택 뒤 quantity와 unit은 모두 사용자가 교정할 수 있다. client는 `default_unit`, 이름, category 또는 hard-coded table로 g/mL/개/장/스푼 환산 가능성을 선판정하지 않는다.
+- ingredient mutation이 기존 approved profile + exact conversion/piece evidence를 최종 검증·pin하는 authority다. exact 환산이 없으면 입력한 quantity/unit과 현재 search result/cursor context를 그대로 보존하고 linked field error `422 UNIT_CONVERSION_MISSING`을 표시하며 row/event를 만들지 않는다. 새 search field나 evidence lookup API를 요구하지 않는다.
 
 ### Cooked batch cards
 
@@ -328,6 +340,23 @@ unrecoverable + available
 │ 중량 입력과 g 식사 기록을 제공하지 않음│
 │ 저장 불가                            │
 └──────────────────────────────────────┘
+
+depleted · read-only
+┌──────────────────────────────────────┐
+│ 김치찌개 · 7월 21일                  │
+│ 무게 없이 모두 버림                  │ exact #11 reason copy
+│ action 없음                          │
+└──────────────────────────────────────┘
+
+legacy-null · read-only
+┌──────────────────────────────────────┐
+│ 김치찌개 · 7월 21일                  │
+│ 이전 기록 · 중량 상태를 확인할 수 없음│ exact #11 copy
+│ 이전 기록이라 중량과 잔량 상태를     │ exact #11 copy
+│ 추정하지 않아요                      │
+│ 영양 상태를 확인할 수 없음           │ exact #11 copy
+│ action 없음                          │
+└──────────────────────────────────────┘
 ```
 
 - card는 공식 `CookedBatchProjection`에서 `cooked_at`, `recipe_title`, `finished_weight_g`, `remaining_weight_g`, `weight_status`, `batch_status`, `nutrition_calculation_status`, `revision`을 소비한다.
@@ -335,6 +364,9 @@ unrecoverable + available
 - missing에서 실제 #11 eligibility가 있을 때만 기존 #11 surface/action으로 안내한다. MEAL_LOG가 새 weight mutation, route, status, error 또는 action을 정의하지 않는다.
 - unrecoverable은 weight/known 복원과 g meal-log를 제공하지 않는다.
 - missing/unrecoverable의 비-g 종료는 nutrition/meal-log entry를 만들지 않으며 #12의 action이 아니다.
+- `availability=all` page의 item을 client가 상태별로 제거하거나 다시 정렬하지 않는다. `items[]`를 server 순서대로 모두 소비하고 `next_cursor`/`has_next`를 그대로 이어서, disabled row가 cursor boundary나 다음 page 도달을 바꾸지 않게 한다.
+- `batch_status=depleted`는 `depleted_reason`의 기존 #11 여섯 문구 `다 먹음 | 모두 버림 | 먹음·버림으로 소진 | 무게 없이 다 먹음 | 무게 없이 모두 버림 | 무게 없이 먹고 버림` 중 exact one만 표시한다. finished/remaining/nutrition을 추정·재계산하지 않고 meal-log save, #11 lifecycle mutation, `방금 종료 취소` link를 모두 제공하지 않는다.
+- `weight_status` 또는 `batch_status`가 legacy `null`이면 기존 #11 copy `이전 기록 · 중량 상태를 확인할 수 없음`, `이전 기록이라 중량과 잔량 상태를 추정하지 않아요.`, `영양 상태를 확인할 수 없음`만 사용한다. servings/name/legacy `status`로 gram, nutrition, missing 또는 depleted를 추론하지 않고 선택·save·weight/lifecycle action을 제공하지 않는다.
 
 ## 7. Add / edit / delete mutation wireframes
 
@@ -410,6 +442,8 @@ unrecoverable + available
 | deleted column | snapshot label + past entries + read-only | none | add/edit target에서 제외 |
 | missing batch | `무게 입력 필요`, disabled reason | eligible #11 안내만 | g save 없음 |
 | unrecoverable batch | `원래 무게 확인 불가` | safe close/back | weight/g save 없음 |
+| depleted batch | exact #11 six-reason copy + read-only | none | gram/nutrition 추정, meal-log save, lifecycle action 없음 |
+| legacy-null batch | exact #11 unknown-history + nutrition-unknown copy | none | status/servings/name에서 gram·nutrition·action 추정 없음 |
 | `pending` | retained input + `저장 중` status | none | duplicate submit/dismiss 차단 |
 | stored replay | authoritative first result, one feedback | safe continuation | duplicate row/toast/remaining change 없음 |
 | stale conflict | retained input + refreshed authority + focused alert | correct/retry | stale success projection 없음 |
@@ -502,7 +536,7 @@ conflict: 입력 유지
 - pending 중 Escape, close, browser back으로 동일 operation을 애매하게 중복 시작하지 않는다. safe cancellation 계약이 없는 in-flight mutation은 dismiss를 잠근다.
 - same key + different payload는 성공처럼 반영하지 않는다.
 - stale `expected_revision`은 server conflict를 표시하고 correctable input을 보존한다.
-- `UNIT_CONVERSION_MISSING`과 `CONSUMED_DATE_TIMEZONE_MISMATCH`는 관련 field group과 error를 programmatically 연결한다.
+- ingredient의 `UNIT_CONVERSION_MISSING`은 client prevalidation 결과가 아니라 mutation의 evidence 판정이다. 사용자가 입력한 quantity/unit을 유지하고 해당 field group과 error를 programmatically 연결한다. `CONSUMED_DATE_TIMEZONE_MISMATCH`도 관련 field group과 연결한다.
 
 ## 9. Focus, keyboard, screen reader
 
@@ -515,11 +549,16 @@ conflict: 입력 유지
 ### 7-day rail
 
 - accessible name `식사 기록 날짜 선택`인 single-selection `radiogroup`을 사용한다.
+- rail 바로 앞의 `이전 7일`/`다음 7일`은 각각 44×44px 이상인 ordinary button이다. activation은 현재 범위와 선택일 모두를 정확히 7 calendar days 이동하고, selected date를 새 range 안의 같은 상대 위치에 둔다.
+- 최초 진입, cold deep-link, Back/Forward 복원의 7일 범위는 URL selected date를 포함하는 월요일~일요일이다. range 자체를 새 query parameter로 저장하지 않고 existing `date`만으로 동일 범위를 결정한다.
+- range/date 선택은 기존 `/planner?segment=log&date=YYYY-MM-DD`와 #10 `buildPlannerShellHref` 의미를 사용해 unrelated Planner query context를 보존하며 deliberate change마다 history에 한 번만 `push`한다. 동일 destination은 no-op이다.
+- browser Back/Forward와 cold deep-link는 URL의 `date`를 authority로 삼아 그 날짜를 포함하는 7일 range와 selected radio를 복원하고, sync 과정에서 `push`/`replace`를 추가 호출하지 않는다.
+- pointer/keyboard로 range button을 누른 뒤 focus는 invoked button에 남는다. data가 도착해도 page x/y scroll이나 focus를 옮기지 않고, selected radio가 rail 밖에 있을 때만 rail inline scroll을 `nearest`로 조정한다. Back/Forward의 ordinary sync도 강제 heading focus를 만들지 않으며 #10의 deep-link/auth-return/invoker-loss fallback만 예외다.
 - 7개 target은 `radio`, 정확히 하나만 `aria-checked=true`이며 selected radio만 `tabindex=0`이다.
 - accessible name은 `2026년 7월 22일 수요일, 기록 있음`처럼 full date/day와 presence만 포함한다.
-- `ArrowLeft/Right`는 이전/다음 날짜, `Home/End`는 처음/마지막 날짜로 focus와 selection을 함께 이동한다. `Space/Enter`는 멱등 선택이다.
+- `ArrowLeft/Right`는 현재 7일 안의 이전/다음 날짜, `Home/End`는 현재 range의 처음/마지막 날짜로 focus와 selection을 함께 이동한다. edge에서는 cyclic wrap하거나 암묵적으로 range를 바꾸지 않으며, 인접 range는 명명된 44px range button으로 이동한다. `Space/Enter`는 멱등 선택이다.
 - selected target이 rail 밖이면 rail만 최소 거리로 스크롤하며 44×44px focus target 전체가 보인다.
-- 선택 후 visible heading과 day body를 갱신한다. 중복 history push나 동일 문구의 중복 live announcement는 없다.
+- 선택 후 visible heading과 day body를 갱신한다. 새 range의 mark read가 진행 중이거나 일부 date read가 실패하면 해당 mark만 unknown/loading/error로 두고 기록 없음으로 단정하지 않는다. stale/aborted range response가 현재 range mark를 덮지 못한다. 중복 history push나 동일 문구의 중복 live announcement는 없다.
 
 ### Sheet/dialog focus lifecycle
 
@@ -554,7 +593,7 @@ conflict: 입력 유지
 | UI 책임 | Existing endpoint | Official authority | UI binding / 금지 |
 | --- | --- | --- | --- |
 | selected day read | `GET /meal-log?date=YYYY-MM-DD` | API v1.2.39 §H | stored date exact match, ordered active/deleted sections, subtotal/day total; client regroup/re-total 금지 |
-| recent/frequent | `GET /meal-log/recent` | API v1.2.39 §H | owner/generation safe source + last amount/unit; suggestion requires confirmation |
+| recent projection | `GET /meal-log/recent` | API v1.2.39 §H | one server-ordered `최근·자주 먹은 음식` list + one cursor; `frequency` metadata only, suggestion requires confirmation |
 | batch picker | `GET /cooked-batches?availability=all` | API v1.2.39 §0-CBW, §G | owner-only `CookedBatchProjection`; cursor/filter 해석 금지 |
 | create | `POST /meal-log/entries` | API v1.2.39 §H | fresh UUID key, exact-one source, date/timezone/nullable instant |
 | edit | `PATCH /meal-log/entries/{id}` | API v1.2.39 §H | fresh/retry key semantics + expected revision + exact evidence |
@@ -562,6 +601,9 @@ conflict: 입력 유지
 | product/ingredient search | `GET /food-catalog/search` | API v1.2.39 §I | single typed union/order/cursor; no visibility param/client merge |
 
 MEAL_LOG는 `PATCH /cooked-batches/{id}/weight`, discard, adjust, close-unweighed 또는 직접 DB/RPC를 호출하지 않는다.
+
+- 7-day range의 presence mark도 위 selected-day endpoint를 날짜별로 bounded reuse한다. range/weekly endpoint를 추가하지 않고 seven responses를 합산·분석하지 않는다.
+- range 전환 중 request identity는 owner/generation + exact date에 묶고 현재 range 밖 response는 화면 mark에 반영하지 않는다.
 
 ### Day and entry projection
 
@@ -577,7 +619,7 @@ Current #9 consumer spelling은 `types/meal-log.ts`의 아래 projection을 사�
 | entry identity | `id`, `revision` | raw ID 미노출, revision mutation에만 사용 |
 | stored context | `consumed_local_date`, `timezone_name_snapshot`, `consumed_at`, `meal_plan_column_id`, `slot_name_snapshot` | nullable instant 보존, deleted column snapshot label 사용 |
 | exact source | `source.type`, `source.id` | type은 `cooked_batch | food_product | ingredient` exact-one |
-| actual intake | `quantity.amount`, `quantity.unit` | server/evidence가 허용한 단위만 |
+| actual intake | `quantity.amount`, `quantity.unit` | product public relation 또는 ingredient mutation evidence가 검증한 단위; ingredient prevalidation claim 금지 |
 | display snapshot | `display_name`, nullable `display_brand` | current source로 조용히 교체 금지 |
 | nutrition compact | `nutrition.calculation_status`, 5 nutrient values | complete/partial/unavailable과 null 유지 |
 
@@ -591,7 +633,8 @@ Current #9 consumer spelling은 `types/meal-log.ts`의 아래 projection을 사�
 
 - MEAL_LOG picker는 name/date/finished/remaining/weight/batch/nutrition state만 표시한다.
 - legacy `status`를 새 authority로 사용하지 않는다. 신규 authority는 `weight_status`, `batch_status`, `depleted_reason`이다.
-- legacy null에서 servings/name으로 g 또는 nutrition을 추론하지 않는다.
+- `availability=all`의 server order와 single cursor를 보존한다. known+available만 gram 후보이며 missing/unrecoverable+available은 기존 차단/eligible #11 안내, depleted와 legacy-null은 read-only/no-action row로 disposition한다.
+- depleted는 exact six-reason copy 외 gram/nutrition/action을 만들지 않는다. legacy null에서는 servings/name/legacy `status`로 g, nutrition, missing/depleted 또는 action을 추론하지 않는다.
 - content snapshot ID, generation, event/operation metadata는 public/UI에 노출하지 않는다.
 
 ### Mutation and evidence rules
@@ -599,10 +642,10 @@ Current #9 consumer spelling은 `types/meal-log.ts`의 아래 projection을 사�
 - source는 exact-one `cooked_batch | food_product | ingredient`다.
 - batch는 `known + available + enough remaining`을 server가 lock한 경우만 entry + consumed event + active pointer + remaining projection을 한 transaction에서 만든다.
 - product는 pinned exact nutrition version의 direct basis relation만 쓴다.
-- ingredient는 approved profile + exact conversion/piece evidence만 쓴다.
+- ingredient search의 `default_unit`은 non-authoritative suggestion일 뿐이다. mutation만 approved profile + exact conversion/piece evidence를 검증·pin하며 client는 evidence 존재나 허용 단위를 선판정하지 않는다.
 - product/ingredient edit는 current mutable source로 silent repin하지 않는다.
 - date/timezone/nullable instant는 함께 저장하며 불일치는 `422 CONSUMED_DATE_TIMEZONE_MISMATCH`다.
-- exact conversion 부재는 row/event 0의 `422 UNIT_CONVERSION_MISSING`이다.
+- exact conversion 부재는 입력 quantity/unit을 보존하는 row/event 0의 `422 UNIT_CONVERSION_MISSING`이다.
 - same key/same payload는 최초 durable result, same key/different payload는 `409 IDEMPOTENCY_KEY_REUSED`다.
 - key 누락은 `428 IDEMPOTENCY_KEY_REQUIRED`, UUID 형식 오류는 `400 INVALID_IDEMPOTENCY_KEY`다.
 - current implementation의 stale revision은 `409 CONFLICT`, missing/other-owner entry는 nondisclosing `404 RESOURCE_NOT_FOUND`다. UI는 server `code/message/fields[]`를 표시하며 새 public alias를 만들지 않는다.
@@ -663,6 +706,8 @@ automation spec의 각 390px mobile-default, 320px mobile-narrow, desktop captur
 
 manifest는 implementation head SHA, viewport, fixture/state, capture time을 기록한다.
 
+위 17개 filename/state 계약은 automation spec과 동일하게 유지한다. 아래 repair는 새 artifact 이름을 발명하지 않고 `default`, `add-sheet-recent`, `add-sheet-search`, `missing-batch`, `unrecoverable-batch` capture의 fixture와 deterministic assertion에서 함께 증명한다.
+
 ### Evidence matrix
 
 | Evidence | 390px | 320px | Desktop | Runtime assertion |
@@ -676,10 +721,15 @@ manifest는 implementation head SHA, viewport, fixture/state, capture time을 �
 | batch blocked | exact missing/unrecoverable copy | disabled reason visible | same behavior | no g save/new weight action |
 | edit/delete | context and hierarchy | primary/cancel/destructive stack | visible focus | expected revision; own event only |
 | pending/replay/conflict | retained input/status | error above keyboard/footer | same behavior | one in-flight/apply; refresh + preserve |
+| `P1-ML-01` range movement | 44px controls + selected date visible | controls do not compress rail | same route/IA | ±7 days; one push; Back/Forward no extra history; existing day reads only |
+| `P1-ML-02` `availability=all` | depleted/legacy-null read-only fixture | reason/unknown copy wraps | same order/cursor | exhaustive disposition; no guessed gram/nutrition/action; cursor preserved |
+| `P1-ML-03` recent projection | one `최근·자주 먹은 음식` list | frequency metadata fits | same single list | server order + single cursor; no threshold/split/duplicate |
+| `P1-ML-04` ingredient evidence | `default_unit` shown only as suggestion | quantity/unit + linked 422 reachable | same correction flow | mutation is evidence authority; input preserved; no pre-known approved-unit claim |
 
 ### Future deterministic/browser evidence
 
 - route/deep-link/back이 same segment/date/section/scroll/focus를 복원하고 duplicate history를 만들지 않는다.
+- `P1-ML-01`: range button click이 start/end/selected date를 exact ±7일 이동하고 selected date를 visible하게 유지하며 `/planner?segment=log&date=...`에 deliberate push exactly one을 만드는지 검증한다. Back/Forward/cold deep-link sync는 history write 0, page scroll/focus 이동 0, mark source는 seven bounded existing day reads뿐이어야 한다.
 - 390/320/desktop에서 date radiogroup의 one checked radio, roving tabindex, Arrow/Home/End/Space, visible focus를 검증한다.
 - selected radio 이동이 rail `scrollLeft`만 바꾸고 page x/y scroll을 바꾸지 않는지 검증한다.
 - source tablist의 tab/panel 연결, keyboard 이동, active-tab focus 유지, sheet non-reopen을 검증한다.
@@ -687,6 +737,9 @@ manifest는 implementation head SHA, viewport, fixture/state, capture time을 �
 - virtual keyboard에서 active input, linked error, primary CTA가 도달 가능한지 검증한다.
 - pending duplicate block, same-key replay one-apply, stale revision refresh/input preservation를 검증한다.
 - typed union request/response가 single list/cursor이며 client dual-API merge가 없는지 검증한다.
+- `P1-ML-02`: `availability=all` fixture의 known+available, missing+available, unrecoverable+available, six depleted reasons, legacy-null을 같은 server order/cursor로 통과시키고 depleted/legacy-null의 select/save/weight/lifecycle action이 0인지 검증한다.
+- `P1-ML-03`: recent pages를 한 server order와 한 cursor로 append하고 `frequency`가 metadata로만 렌더링되며 client section split, threshold, duplicate, re-sort가 0인지 검증한다.
+- `P1-ML-04`: ingredient `default_unit`이 approved evidence로 announce되지 않고 quantity/unit이 교정 가능하며 mutation `422 UNIT_CONVERSION_MISSING` 뒤 두 입력과 cursor가 유지되고 row/event가 0인지 검증한다.
 - `axe`와 keyboard-only flow에서 critical/serious finding 0과 name/role/value를 확인한다.
 
 ### Evidence 한계와 Manual Only
@@ -698,10 +751,13 @@ manifest는 implementation head SHA, viewport, fixture/state, capture time을 �
 
 ## 13. Contract Evolution HOLD 기준
 
+현재 `P1-ML-01`~`P1-ML-04` repair는 existing route와 7개 read/mutation contract의 presentation binding만 명확히 하므로 Contract Evolution을 요구하지 않는다.
+
 아래가 필요하면 이 파일에서 해결하거나 새 UI로 우회하지 않고 HOLD로 보고한다.
 
 - 공식 7개 endpoint 밖의 API가 필요한 경우
 - source type, quantity unit authority, public error, nutrition state, mutation action이 부족한 경우
+- ingredient row에서 mutation 전 approved conversion/piece unit 전체를 반드시 확정 표시해야 하는 제품 요구가 다시 생기는 경우
 - deleted column entry의 수정 가능 여부처럼 공식 문서가 허용하지 않은 action이 필요한 경우
 - batch missing/unrecoverable에서 #11에 없는 새 weight action이 필요한 경우
 - server projection 없이 client total/weekly analysis를 만들 필요가 생긴 경우
