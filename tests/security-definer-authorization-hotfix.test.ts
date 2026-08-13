@@ -110,7 +110,7 @@ describe("SECURITY DEFINER mutation authorization hotfix", () => {
     expect(packageJson.scripts["verify:security-functions:remote"]).toBeUndefined();
     expect(packageJson.scripts["closeout:security-functions:remote"]).toBeUndefined();
     expect(packageJson.scripts["verify:security-functions:release"]).toBe(
-      "pnpm verify:security-functions && pnpm verify:security-functions:data-api",
+      "pnpm verify:security-functions:isolated",
     );
   });
 
