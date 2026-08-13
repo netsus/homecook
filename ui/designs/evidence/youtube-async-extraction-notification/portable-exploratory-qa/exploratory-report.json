@@ -1,14 +1,14 @@
 {
   "schemaVersion": "1.0",
   "slice": "youtube-async-extraction-notification",
-  "generatedAt": "2026-08-13T20:33:24Z",
+  "generatedAt": "2026-08-13T21:00:17Z",
   "baseUrl": "http://127.0.0.1:3217",
   "devices": [
     "desktop-chrome",
     "mobile-chrome",
     "mobile-ios-small"
   ],
-  "summary": "구현 head d5924b14fcc416ad11db70b96f2faf0c98c0c005에서 mock API 기반 격리 앱을 포트 3217로 실행해 desktop 1280/1440, mobile 390, small mobile 320 흐름을 다시 탐색했다. 서버가 register 201 전에 durable seen을 기록하던 crash window를 제거하고, 브라우저가 201을 확인한 뒤 owner-scoped public list/seen API로 exact job만 멱등 확인하며 실패 시 다음 online/focus에서 재시도하는 경계를 focused test로 확인했다. accepted retry는 새 job ID를 공통 tracking helper에 등록해 작업 보기와 이탈 뒤 active projection을 유지하고 QUOTA_EXCEEDED는 `나중에 다시 시도`, EXTRACTION_EXPIRED는 `다시 추출`을 표시한다. 새 390px 두 장을 포함한 8개 visual scenario, 기존 archive cursor·grouped delivery·320px 200% safe-area·desktop stacking을 재검증했으며 remote Supabase와 운영 local app/DB는 사용하지 않았다.",
+  "summary": "동일 구현 tree의 superseding head 7e8cf65a25e4fc79c1e8d98b557c984865c4e6d7에서 mock API 기반 격리 앱을 포트 3217로 실행해 desktop 1280/1440, mobile 390, small mobile 320 흐름을 다시 탐색했다. 브라우저가 register 201을 확인한 뒤 local items와 stale cursor가 miss해도 owner-scoped unseen 첫 페이지를 fresh fetch하고 exact extraction job만 seen 처리하며, 다음 cursor·network failure pending retry·다른 extraction 격리를 focused test로 고정했다. consumed 알림은 `이미 등록한 레시피예요`로 분기하고 accepted/quota 한국어 카피는 단어 단위로 줄바꿈한다. import initial/submitting/POLICY_CHANGED와 shell consumed/expired/non-retryable/empty/offline/unauthorized를 포함한 16개 screenshot, archive cursor·grouped delivery·320px 200% safe-area·desktop stacking을 45개 cross-project 실행으로 재검증했으며 remote Supabase와 운영 local app/DB는 사용하지 않았다.",
   "findings": [],
   "remainingRisks": [
     "이번 authority REVISE findings는 수정했지만 새 exact head의 독립 authority 재검토, Stage 5, final authority, Stage 6 승인은 아직 수행하지 않았다.",
@@ -259,7 +259,7 @@
     {
       "item_id": "heuristic-small-viewport-cta",
       "status": "covered",
-      "notes": "320x568에서 primary CTA와 sheet close/tab/list가 짧은 스크롤 또는 내부 스크롤로 도달 가능하다.",
+      "notes": "320x844, 200% text와 non-zero safe-area에서 실패 제목·메시지가 함께 보이고 primary CTA와 sheet close/tab/list가 내부 스크롤로 도달 가능하다.",
       "linked_findings": []
     },
     {

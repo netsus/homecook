@@ -1,7 +1,7 @@
 {
   "schemaVersion": "1.0",
   "slice": "youtube-async-extraction-notification",
-  "generatedAt": "2026-08-13T20:29:14.119Z",
+  "generatedAt": "2026-08-13T21:00:17Z",
   "baseUrl": "http://127.0.0.1:3217",
   "sourceFiles": {
     "readme": "docs/workpacks/youtube-async-extraction-notification/README.md",

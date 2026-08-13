@@ -128,18 +128,18 @@
 ## Design Status
 
 - [ ] 임시 UI (temporary) — Stage 1 설계 계약만 잠겼고 실제 구현 evidence는 없음
-- [x] 리뷰 대기 (pending-review) — backend/security crash-window와 최신 authority findings를 수정한 Stage 4 code head `d5924b14fcc416ad11db70b96f2faf0c98c0c005`의 390/320/desktop evidence와 portable exploratory QA 97점이 생성됐으며 새 PR head의 독립 backend/security 및 authority 재검토 대기 중
+- [x] 리뷰 대기 (pending-review) — backend/security reconciliation과 최신 authority findings를 수정한 Stage 4 code head `7e8cf65a25e4fc79c1e8d98b557c984865c4e6d7`의 390/320/desktop evidence와 portable exploratory QA 97점이 생성됐으며 새 PR head의 독립 backend/security 및 authority 재검토 대기 중
 - [ ] 확정 (confirmed) — Stage 5와 별도 final authority가 current frontend head를 blocker 0으로 승인한 뒤 전환
 - [ ] N/A — BE-only 슬라이스
 
 ### Stage 4 Frontend Evidence
 
-- Implementation base/code head: `25e8da8b04c2322f68d8f54837135399d7586da7` → `d5924b14fcc416ad11db70b96f2faf0c98c0c005`
+- Implementation base/code head: `25e8da8b04c2322f68d8f54837135399d7586da7` → `7e8cf65a25e4fc79c1e8d98b557c984865c4e6d7`
 - Screenshot manifest: `ui/designs/evidence/youtube-async-extraction-notification/manifest.json`
 - Visual verdict: `ui/designs/evidence/youtube-async-extraction-notification/visual-verdict.json` — `98/100`, pass (구현 task 판정이며 독립 authority 승인 아님)
 - Exploratory QA: `ui/designs/evidence/youtube-async-extraction-notification/exploratory-qa.json` 및 tracked `portable-exploratory-qa/` raw bundle — `97/100`, 42/46 covered, finding 0
-- Deterministic browser QA: `tests/e2e/youtube-async-extraction-notification.spec.ts` — port `3217`, 8 evidence-capture scenarios와 3-project 24 executions passed, quota retry/replacement projection을 포함한 390/320/desktop screenshots regenerated
-- Focused component/integration QA: response-loss·observed-201 ack·owner isolation·seen retry·accepted exact copy·retry active projection 50 passed; backend/Stage 3 security regression 87 passed; full Vitest 6,101 passed; product 2,741 passed
+- Deterministic browser QA: `tests/e2e/youtube-async-extraction-notification.spec.ts` — port `3217`, 15 scenarios와 3-project 45 executions passed, official core states를 명시하는 390/320/desktop screenshot 16개 regenerated
+- Focused component/integration QA: fresh first-page ack·cursor continuation·network pending retry·owner isolation·consumed exact copy·accepted whole-word wrapping 34 passed; YouTube async FE/backend/security regression 148 passed; full Vitest 6,107 passed/439 skipped; product 2,741 passed; security E2E 12 passed
 - Boundary: Supabase Cloud/linked/remote/credential access 0, 운영 local Supabase/app `3100`/user data/port/volume/env/secret/launchd mutation 0. Stage 5/final authority/Stage 6와 Manual Only는 미완료다.
 
 ## Source Links
