@@ -19,6 +19,7 @@ interface YoutubeImportPageProps {
   searchParams: Promise<{
     columnId?: string;
     date?: string;
+    extractionId?: string;
     restore?: string;
     returnSurface?: string;
     returnTo?: string;
@@ -32,7 +33,7 @@ export default async function YoutubeImportPage({ searchParams }: YoutubeImportP
     notFound();
   }
 
-  const { date, columnId, restore, returnSurface, returnTo, slot, youtubeUrl } =
+  const { date, columnId, extractionId, restore, returnSurface, returnTo, slot, youtubeUrl } =
     await searchParams;
   const cookieStore = await cookies();
   const authOverride = readE2EAuthOverrideCookie(cookieStore);
@@ -56,6 +57,7 @@ export default async function YoutubeImportPage({ searchParams }: YoutubeImportP
     if (columnId) queryParts.push(`columnId=${encodeURIComponent(columnId)}`);
     if (slot) queryParts.push(`slot=${encodeURIComponent(slot)}`);
     if (youtubeUrl) queryParts.push(`youtubeUrl=${encodeURIComponent(youtubeUrl)}`);
+    if (extractionId) queryParts.push(`extractionId=${encodeURIComponent(extractionId)}`);
     if (returnTo) queryParts.push(`returnTo=${encodeURIComponent(returnTo)}`);
     if (returnSurface) {
       queryParts.push(`returnSurface=${encodeURIComponent(returnSurface)}`);
@@ -69,6 +71,7 @@ export default async function YoutubeImportPage({ searchParams }: YoutubeImportP
   return (
     <main>
       <YoutubeImportScreen
+        initialExtractionId={extractionId ?? ""}
         initialYoutubeUrl={youtubeUrl ?? ""}
         planDate={date ?? ""}
         columnId={columnId ?? ""}

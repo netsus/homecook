@@ -1,0 +1,70 @@
+{
+  "captured_at": "2026-08-13T20:33:24Z",
+  "evidence_scope": "youtube-async-extraction-notification Stage 4 frontend",
+  "implementation_base": "25e8da8b04c2322f68d8f54837135399d7586da7",
+  "implementation_head": "d5924b14fcc416ad11db70b96f2faf0c98c0c005",
+  "implementation_tree": "527f1fbf89bf2b3af565678c71f15e195ac27c0e",
+  "generator": "tests/e2e/youtube-async-extraction-notification.spec.ts",
+  "base_url": "http://127.0.0.1:3217",
+  "remote_supabase_access_count": 0,
+  "operational_local_supabase_mutation_count": 0,
+  "operational_app_3100_use_count": 0,
+  "captures": [
+    {
+      "file": "YT_IMPORT_BACKGROUND/mobile-390-accepted.png",
+      "viewport": { "width": 390, "height": 844 },
+      "state": "accepted-active-job-projected"
+    },
+    {
+      "file": "YT_IMPORT_BACKGROUND/mobile-320-offline.png",
+      "viewport": { "width": 320, "height": 568 },
+      "state": "offline-input-preserved"
+    },
+    {
+      "file": "YT_IMPORT_BACKGROUND/mobile-390-quota-retry.png",
+      "viewport": { "width": 390, "height": 844 },
+      "state": "quota-exceeded-exact-retry-copy"
+    },
+    {
+      "file": "YT_IMPORT_BACKGROUND/mobile-390-retry-active-projection.png",
+      "viewport": { "width": 390, "height": 844 },
+      "state": "accepted-retry-replacement-job-active-projection"
+    },
+    {
+      "file": "YT_IMPORT_BACKGROUND/desktop-1280-active-duplicate.png",
+      "viewport": { "width": 1280, "height": 800 },
+      "state": "active-duplicate"
+    },
+    {
+      "file": "APP_SHELL_YOUTUBE_NOTIFICATIONS/mobile-390-success-toast.png",
+      "viewport": { "width": 390, "height": 844 },
+      "state": "grouped-terminal-toast-unseen-badge"
+    },
+    {
+      "file": "APP_SHELL_YOUTUBE_NOTIFICATIONS/mobile-320-failure-panel.png",
+      "viewport": { "width": 320, "height": 568 },
+      "state": "failure-list-320-200-percent-simulated-safe-area"
+    },
+    {
+      "file": "APP_SHELL_YOUTUBE_NOTIFICATIONS/desktop-1440-archive.png",
+      "viewport": { "width": 1440, "height": 900 },
+      "state": "cursor-archive-dedupe-scroll-focus-and-retryable-failure"
+    }
+  ],
+  "verification": {
+    "focused_vitest": "50 passed including response-loss recovery, observed-201 acknowledgement, exact owner job seen, acknowledgement retry, accepted CTA copy, and replacement-job projection",
+    "backend_stage3_regression": "87 passed across route, async contract, worker, release installer, Stage 3 API revise, and local-only security boundaries",
+    "playwright": "8 evidence-capture scenarios passed; 24 cross-project executions passed on isolated port 3217",
+    "axe": "0 violations on accepted CTA, grouped-toast, and 320px drawer surfaces with color-contrast enabled",
+    "exploratory_qa": "97/100; 42/46 covered; 4 independent authority or real-worker/DB items intentionally not covered",
+    "official_frontend_pr_gate": "passed on isolated port 3217: lint, typecheck, 2,741 product tests, build, 62 smoke passed/10 skipped, 8 a11y passed/1 skipped, and 12 visual passed",
+    "security_e2e": "12 passed on isolated port 3217",
+    "full_vitest": "6,101 passed and 439 skipped",
+    "visual_verdict": "98/100 pass"
+  },
+  "limitations": [
+    "This is mock-API browser evidence and does not replace real local Supabase worker crash/reclaim or cross-user DB verification.",
+    "The latest authority REVISE findings are repaired, but independent re-review of the new exact PR head, Stage 5, final authority, and Stage 6 remain pending.",
+    "Physical-device screen reader, safe-area, and virtual-keyboard checks remain Manual Only."
+  ]
+}

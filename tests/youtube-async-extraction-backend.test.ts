@@ -466,6 +466,10 @@ describe("YTASYNC-API route handlers", () => {
     expect(await delivered.json()).toMatchObject({ data: { delivered_count: 1 } });
     expect(await seen.json()).toMatchObject({ data: { seen_count: 1 } });
     expect(markDelivered).toHaveBeenCalledOnce();
-    expect(markSeen).toHaveBeenCalledOnce();
+    expect(markSeen).toHaveBeenCalledWith(
+      "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      ["11111111-1111-4111-8111-111111111111"],
+      expect.any(Function),
+    );
   });
 });

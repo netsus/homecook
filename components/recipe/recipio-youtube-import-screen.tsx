@@ -26,6 +26,7 @@ import type {
   YoutubeRecipeExtractData,
   YoutubeVideoInfo,
 } from "@/types/recipe";
+import { notifyYoutubeExtractionSessionRegistered } from "@/lib/youtube-extraction-client-state";
 
 interface RecipioYoutubeImportScreenProps {
   initialYoutubeUrl?: string;
@@ -294,6 +295,7 @@ export function RecipioYoutubeImportScreen({
         return;
       }
 
+      notifyYoutubeExtractionSessionRegistered(extracted.data.extraction_id);
       setRegisteredRecipeId(registered.data.recipe_id);
       setStatus("complete");
       setTimedPhase("complete");

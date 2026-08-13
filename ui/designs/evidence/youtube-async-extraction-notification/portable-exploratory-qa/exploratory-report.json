@@ -1,0 +1,296 @@
+{
+  "schemaVersion": "1.0",
+  "slice": "youtube-async-extraction-notification",
+  "generatedAt": "2026-08-13T20:33:24Z",
+  "baseUrl": "http://127.0.0.1:3217",
+  "devices": [
+    "desktop-chrome",
+    "mobile-chrome",
+    "mobile-ios-small"
+  ],
+  "summary": "구현 head d5924b14fcc416ad11db70b96f2faf0c98c0c005에서 mock API 기반 격리 앱을 포트 3217로 실행해 desktop 1280/1440, mobile 390, small mobile 320 흐름을 다시 탐색했다. 서버가 register 201 전에 durable seen을 기록하던 crash window를 제거하고, 브라우저가 201을 확인한 뒤 owner-scoped public list/seen API로 exact job만 멱등 확인하며 실패 시 다음 online/focus에서 재시도하는 경계를 focused test로 확인했다. accepted retry는 새 job ID를 공통 tracking helper에 등록해 작업 보기와 이탈 뒤 active projection을 유지하고 QUOTA_EXCEEDED는 `나중에 다시 시도`, EXTRACTION_EXPIRED는 `다시 추출`을 표시한다. 새 390px 두 장을 포함한 8개 visual scenario, 기존 archive cursor·grouped delivery·320px 200% safe-area·desktop stacking을 재검증했으며 remote Supabase와 운영 local app/DB는 사용하지 않았다.",
+  "findings": [],
+  "remainingRisks": [
+    "이번 authority REVISE findings는 수정했지만 새 exact head의 독립 authority 재검토, Stage 5, final authority, Stage 6 승인은 아직 수행하지 않았다.",
+    "실제 local Supabase worker crash/reclaim, cross-user DB 격리, relogin은 backend integration/별도 verifier 범위이며 이번 mock browser QA에서 재실행하지 않았다.",
+    "physical device VoiceOver/TalkBack, 실제 safe-area와 virtual-keyboard 가림은 Manual Only다."
+  ],
+  "checklistCoverage": [
+    {
+      "item_id": "happy-path-1",
+      "status": "covered",
+      "notes": "exact enqueue union은 API adapter Vitest와 starting backend head의 기존 Stage 3 contract evidence로 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "happy-path-2",
+      "status": "covered",
+      "notes": "최초 enqueue와 retry 성공이 같은 helper로 새 job ID를 sessionStorage/event projection에 등록하고 hard refresh poll로 복구됨을 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "happy-path-3",
+      "status": "covered",
+      "notes": "완료 session 재진입 후 검수·등록을 browser 시나리오와 기존 backend finalize evidence로 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "happy-path-4",
+      "status": "covered",
+      "notes": "foreground/online/visibility refresh와 startup unseen badge·목록 복구를 확인하고 delivered_at이 있는 unseen 항목은 restart/relogin toast에서 제외했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "happy-path-5",
+      "status": "covered",
+      "notes": "draft 결과 확인, consumed 레시피 이동, 등록 redirect를 component/browser에서 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "happy-path-6",
+      "status": "covered",
+      "notes": "Quick Import public 201 응답은 exact 유지한다. 브라우저가 201을 관측한 뒤 extraction ID를 sessionStorage에 보존하고 owner-scoped public unseen list에서 exact related job만 찾아 seen 처리하며, seen 전달 실패는 등록 성공 UX를 바꾸지 않고 online/focus reconciliation으로 재시도한다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "state-policy-1",
+      "status": "covered",
+      "notes": "starting backend head의 Stage 3 transition evidence와 current product regression을 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "state-policy-2",
+      "status": "covered",
+      "notes": "starting backend head의 Stage 3 reaper/claim evidence를 재사용했으며 FE diff는 backend를 수정하지 않는다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "state-policy-3",
+      "status": "covered",
+      "notes": "starting backend head의 permit/attempt evidence와 product regression으로 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "state-policy-4",
+      "status": "covered",
+      "notes": "active duplicate response를 exact union으로 렌더하며 backend dual-read evidence는 starting head에서 유지된다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "state-policy-5",
+      "status": "covered",
+      "notes": "starting backend head의 atomic snapshot evidence를 product regression으로 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "state-policy-6",
+      "status": "covered",
+      "notes": "POLICY_CHANGED 409를 terminal success로 추측하지 않고 입력을 보존하는 FE 경계를 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "state-policy-7",
+      "status": "covered",
+      "notes": "expired fresh action과 consumed recipe destination 우선순위를 component test로 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "state-policy-8",
+      "status": "covered",
+      "notes": "여러 terminal 결과는 한 grouped toast로 렌더하고 실제 대표한 delivery key만 delivered 처리한다. delivered_at 항목은 재생하지 않고, 6초 opener 해제 뒤 drawer close는 안정적 shell trigger로 focus를 돌린다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "state-policy-9",
+      "status": "covered",
+      "notes": "can_retry=false failure에는 toast/list 어디에도 retry CTA가 없음을 component test로 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "error-permission-1",
+      "status": "covered",
+      "notes": "401 시 private store를 비우고 generic LOGIN return-to-action만 남기는 동작을 unit test로 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "error-permission-2",
+      "status": "covered",
+      "notes": "owner nondisclosure는 starting backend head의 Stage 3 evidence로 확인했고 FE는 server error body를 확장하지 않는다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "error-permission-3",
+      "status": "covered",
+      "notes": "client는 URL 또는 extraction_id exact branch만 전송하며 unknown policy/digest 필드를 만들지 않음을 adapter test로 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "error-permission-4",
+      "status": "covered",
+      "notes": "POLICY_CHANGED 안전 문구와 URL 보존, terminal 알림 미생성을 component test로 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "error-permission-5",
+      "status": "covered",
+      "notes": "320px offline browser evidence에서 URL과 재시도 동선을 보존하고 local success를 만들지 않음을 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "error-permission-6",
+      "status": "covered",
+      "notes": "6개 public failure code의 공식 label/retry gate를 exact union 및 component matrix로 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "error-permission-7",
+      "status": "covered",
+      "notes": "disconnect 뒤 active job polling/foreground recovery가 shared job mutation 없이 재개됨을 component test로 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "error-permission-8",
+      "status": "covered",
+      "notes": "loading, empty, error, offline, read-only, unauthorized와 안전 복구 CTA를 component matrix에서 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "data-integrity-1",
+      "status": "covered",
+      "notes": "source_job exactly-once는 starting backend head의 Stage 3 evidence로 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "data-integrity-2",
+      "status": "covered",
+      "notes": "FE sessionStorage에는 job ID만 저장하며 raw URL/provider payload/token을 저장하지 않음을 code review로 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "data-integrity-3",
+      "status": "covered",
+      "notes": "client request는 caller user UUID를 전송하지 않고 cookie session 기반 public route만 사용한다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "data-integrity-4",
+      "status": "covered",
+      "notes": "FE diff에 fingerprint HMAC 또는 secret 취급 로직이 없고 backend 경계는 starting head 그대로다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "data-integrity-5",
+      "status": "covered",
+      "notes": "restricted worker privilege는 starting backend head Stage 3 evidence로 확인했고 FE는 worker surface에 접근하지 않는다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "data-integrity-6",
+      "status": "covered",
+      "notes": "fencing evidence는 starting backend head에 있고 FE diff는 해당 write 경로를 수정하지 않는다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "data-integrity-7",
+      "status": "covered",
+      "notes": "새 FE source/evidence에 credential, cookie, token, provider payload를 기록하지 않음을 diff review로 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "data-integrity-8",
+      "status": "covered",
+      "notes": "nullable title은 `YouTube 레시피`로 fallback하며 private title은 authenticated list에서만 표시함을 unit test로 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "design-accessibility-1",
+      "status": "covered",
+      "notes": "390 accepted, 320 offline, 1280 duplicate 캡처와 browser geometry에서 CTA·copy·overflow를 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "design-accessibility-2",
+      "status": "covered",
+      "notes": "390 grouped toast, 320 failure sheet, 1440 cursor archive 캡처에서 badge/list/archive, active projection, stacking과 page overflow 0을 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "design-accessibility-3",
+      "status": "covered",
+      "notes": "aria-live polite/atomic, exact CTA, icon+text, 완료 시각의 접근성 copy, drawer focus return과 primary CTA 4.5:1 이상 대비를 component와 axe browser audit로 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "design-accessibility-4",
+      "status": "covered",
+      "notes": "320px, 200% text, 24px/34px simulated safe-area, reduced motion, Tab/Escape/focus restore와 internal scroll containment를 browser test로 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "design-accessibility-5",
+      "status": "not-covered",
+      "notes": "현재 구현 task의 visual-verdict만 pass이며 수정 exact head에 대한 독립 authority 재검토/Stage 5/final authority는 대기 중이다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "manual-qa-1",
+      "status": "not-covered",
+      "notes": "독립 verifier와 final authority는 이 Stage 4 구현 task가 수행하지 않는다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "manual-qa-2",
+      "status": "not-covered",
+      "notes": "운영 local Supabase/app3100은 금지되어 사용하지 않았고 mock API 기반 same-head app만 3217에서 검증했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "manual-qa-3",
+      "status": "not-covered",
+      "notes": "FE 시나리오는 검증했으나 worker crash/reclaim과 cross-user real DB는 별도 backend/verifier 증거 범위다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "heuristic-mobile-readability",
+      "status": "covered",
+      "notes": "390/320 캡처와 200% text audit에서 버튼·상태 문구가 읽히고 겹치지 않음을 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "heuristic-small-viewport-cta",
+      "status": "covered",
+      "notes": "320x568에서 primary CTA와 sheet close/tab/list가 짧은 스크롤 또는 내부 스크롤로 도달 가능하다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "heuristic-duplicate-cta",
+      "status": "covered",
+      "notes": "accepted/duplicate/toast/list 각 맥락에서 primary action은 한 번만 노출된다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "heuristic-information-hierarchy",
+      "status": "covered",
+      "notes": "상태 메시지와 작업 보기/결과 확인/나중에 다시 시도 CTA가 같은 카드 또는 row에 배치된다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "heuristic-copy-sanity",
+      "status": "covered",
+      "notes": "공식 failure label과 확정 design artifact 문구를 사용하며 320px wrapping을 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "heuristic-empty-noop",
+      "status": "covered",
+      "notes": "empty/loading에는 무의미한 CTA가 없고 retry는 can_retry=true일 때만 노출된다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "heuristic-placeholder-polish",
+      "status": "covered",
+      "notes": "기존 브랜드 token, Lucide icon, shared card/sheet pattern을 사용해 임시 placeholder 표현을 제거했다.",
+      "linked_findings": []
+    }
+  ]
+}

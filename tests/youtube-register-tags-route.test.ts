@@ -188,10 +188,12 @@ function createDbClient() {
     data: [{ id: cookingMethodId }],
     error: null,
   });
-  const rpc = vi.fn(async () => ({
-    data: { recipe_id: recipeId, title: "백종원 김치찌개" },
-    error: null,
-  }));
+  const rpc = vi.fn(async () => {
+    return {
+      data: { recipe_id: recipeId, title: "백종원 김치찌개" },
+      error: null,
+    };
+  });
   const from = vi.fn((table: string) => {
     if (table === "youtube_extraction_sessions") return sessionsTable;
     if (table === "ingredients") return ingredientsTable;
@@ -257,6 +259,34 @@ describe("36b YouTube recipe register tag write path", () => {
       p_tags: null,
       p_tag_source: "system_suggested",
     }));
+  });
+
+  it("returns the committed register response before any durable notification acknowledgement", async () => {
+    const dbClient = createDbClient();
+    createServiceRoleClient.mockReturnValue(dbClient);
+
+    const { POST } = await importRegisterRoute();
+    const response = await POST(new Request("http://localhost:3000/api/v1/recipes/youtube/register", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(buildRegisterBody()),
+    }));
+    const body = await response.json();
+
+    expect(response.status).toBe(201);
+    expect(body).toEqual({
+      success: true,
+      data: { recipe_id: recipeId, title: "백종원 김치찌개" },
+      error: null,
+    });
+    expect(dbClient.rpc).not.toHaveBeenCalledWith(
+      "list_youtube_extraction_job_projections",
+      expect.anything(),
+    );
+    expect(dbClient.rpc).not.toHaveBeenCalledWith(
+      "mark_youtube_extraction_jobs_seen",
+      expect.anything(),
+    );
   });
 
   it("keeps the committed YouTube recipe response stable when snapshot creation needs retry", async () => {

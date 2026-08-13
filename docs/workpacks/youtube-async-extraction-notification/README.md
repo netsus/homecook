@@ -106,7 +106,7 @@
 
 ## Frontend Delivery Mode
 
-- Design Status는 Stage 1에서 `temporary`다. 기존 YT_IMPORT visual language와 app shell 패턴을 재사용하되 새 핵심 flow이므로 high-risk evidence 없이는 `confirmed`로 올리지 않는다.
+- Design Status는 Stage 4 evidence 생성으로 `pending-review`다. 기존 YT_IMPORT visual language와 app shell 패턴을 재사용하되 새 핵심 flow이므로 Stage 5와 별도 final authority 없이는 `confirmed`로 올리지 않는다.
 - 필수 상태: `loading / empty / error / offline / read-only / unauthorized`.
 - 추가 상태: accepted, active duplicate, succeeded draft, consumed success, failed retryable, failed non-retryable, expired, grouped terminal notifications, archive.
 - 비로그인 shell과 보호 CTA는 private count/title/thumbnail을 렌더하지 않고 LOGIN + allowlisted return-to-action을 유지한다.
@@ -127,10 +127,20 @@
 
 ## Design Status
 
-- [x] 임시 UI (temporary) — Stage 1 설계 계약만 잠겼고 실제 구현 evidence는 없음
-- [ ] 리뷰 대기 (pending-review) — Stage 4 구현·390/320/desktop evidence·exploratory QA 완료 뒤 전환
+- [ ] 임시 UI (temporary) — Stage 1 설계 계약만 잠겼고 실제 구현 evidence는 없음
+- [x] 리뷰 대기 (pending-review) — backend/security crash-window와 최신 authority findings를 수정한 Stage 4 code head `d5924b14fcc416ad11db70b96f2faf0c98c0c005`의 390/320/desktop evidence와 portable exploratory QA 97점이 생성됐으며 새 PR head의 독립 backend/security 및 authority 재검토 대기 중
 - [ ] 확정 (confirmed) — Stage 5와 별도 final authority가 current frontend head를 blocker 0으로 승인한 뒤 전환
 - [ ] N/A — BE-only 슬라이스
+
+### Stage 4 Frontend Evidence
+
+- Implementation base/code head: `25e8da8b04c2322f68d8f54837135399d7586da7` → `d5924b14fcc416ad11db70b96f2faf0c98c0c005`
+- Screenshot manifest: `ui/designs/evidence/youtube-async-extraction-notification/manifest.json`
+- Visual verdict: `ui/designs/evidence/youtube-async-extraction-notification/visual-verdict.json` — `98/100`, pass (구현 task 판정이며 독립 authority 승인 아님)
+- Exploratory QA: `ui/designs/evidence/youtube-async-extraction-notification/exploratory-qa.json` 및 tracked `portable-exploratory-qa/` raw bundle — `97/100`, 42/46 covered, finding 0
+- Deterministic browser QA: `tests/e2e/youtube-async-extraction-notification.spec.ts` — port `3217`, 8 evidence-capture scenarios와 3-project 24 executions passed, quota retry/replacement projection을 포함한 390/320/desktop screenshots regenerated
+- Focused component/integration QA: response-loss·observed-201 ack·owner isolation·seen retry·accepted exact copy·retry active projection 50 passed; backend/Stage 3 security regression 87 passed; full Vitest 6,101 passed; product 2,741 passed
+- Boundary: Supabase Cloud/linked/remote/credential access 0, 운영 local Supabase/app `3100`/user data/port/volume/env/secret/launchd mutation 0. Stage 5/final authority/Stage 6와 Manual Only는 미완료다.
 
 ## Source Links
 
@@ -257,11 +267,11 @@ Stage 2A→2B→2C는 의존 순서다. 하나의 backend PR로 유지하면 RED
 - [x] same-release worker artifact와 installer/rotation/rollback dry-run 경로가 구현된다 <!-- omo:id=delivery-yta-worker-installer;stage=2;scope=backend;review=3,6 -->
 - [x] owner/RLS/ACL/nondisclosure와 secret boundary가 PostgreSQL/PostgREST 테스트로 고정된다 <!-- omo:id=delivery-yta-security-tests;stage=2;scope=shared;review=3,6 -->
 - [x] retry/dedupe/policy rotation/lease/permit/finalize/consumed-TTL 상태가 TDD로 고정된다 <!-- omo:id=delivery-yta-state-tests;stage=2;scope=shared;review=3,6 -->
-- [ ] `YT_IMPORT_BACKGROUND` submit/duplicate/offline/re-entry UI가 연결된다 <!-- omo:id=delivery-yta-import-ui;stage=4;scope=frontend;review=5,6 -->
-- [ ] `APP_SHELL_YOUTUBE_NOTIFICATIONS` toast/badge/list/archive/seen UI가 연결된다 <!-- omo:id=delivery-yta-shell-ui;stage=4;scope=frontend;review=5,6 -->
-- [ ] loading/empty/error/offline/read-only/unauthorized 및 retry gate가 구현된다 <!-- omo:id=delivery-yta-state-ui;stage=4;scope=frontend;review=5,6 -->
-- [ ] 390/320/desktop visual·a11y·scroll/focus evidence가 생성된다 <!-- omo:id=delivery-yta-design-evidence;stage=4;scope=frontend;review=5,6 -->
-- [ ] deterministic E2E와 exploratory QA/eval이 분리되어 current frontend head에서 통과한다 <!-- omo:id=delivery-yta-qa-split;stage=4;scope=frontend;review=5,6 -->
+- [x] `YT_IMPORT_BACKGROUND` submit/duplicate/offline/re-entry UI가 연결된다 <!-- omo:id=delivery-yta-import-ui;stage=4;scope=frontend;review=5,6 -->
+- [x] `APP_SHELL_YOUTUBE_NOTIFICATIONS` toast/badge/list/archive/seen UI가 연결된다 <!-- omo:id=delivery-yta-shell-ui;stage=4;scope=frontend;review=5,6 -->
+- [x] loading/empty/error/offline/read-only/unauthorized 및 retry gate가 구현된다 <!-- omo:id=delivery-yta-state-ui;stage=4;scope=frontend;review=5,6 -->
+- [x] 390/320/desktop visual·a11y·scroll/focus evidence가 생성된다 <!-- omo:id=delivery-yta-design-evidence;stage=4;scope=frontend;review=5,6 -->
+- [x] deterministic E2E와 exploratory QA/eval이 분리되어 current frontend head에서 통과한다 <!-- omo:id=delivery-yta-qa-split;stage=4;scope=frontend;review=5,6 -->
 - [ ] fixture/real DB/restricted worker/external smoke와 Manual Only 경계가 evidence에 구분된다 <!-- omo:id=delivery-yta-evidence-split;stage=4;scope=shared;review=6 -->
 - [ ] Stage 5와 final authority가 두 screen을 blocker 0으로 승인한다 <!-- omo:id=delivery-yta-final-authority;stage=4;scope=frontend;review=5,6 -->
 - [ ] Stage 6가 non-manual closeout, canonical bookkeeping, current-head checks를 승인한다 <!-- omo:id=delivery-yta-closeout;stage=4;scope=shared;review=6 -->
