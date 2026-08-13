@@ -6,7 +6,8 @@ import { describe, expect, it } from "vitest";
 
 const root = process.cwd();
 const sliceId = "meal-log-ui";
-const relockBase = "16cfce44d32d5b618742a0e20460df4772a19142";
+const initialRelockBase = "16cfce44d32d5b618742a0e20460df4772a19142";
+const finalRelockBase = "c12afbccd15f4935a1a52b9f2c2c23882a5033ff";
 const mealLogCoreMerge = "8ba3fa5a2a198eb4f9c19d59cea5f6ccc52fdd4f";
 const mealLogCheckpointMerge = "4597ca835ba81307d0bdf9e1b1c41806b17e7a68";
 const plannerShellMerge = "2185b59d1b460dac916aa4a4a4a5e061c8b795f0";
@@ -41,11 +42,11 @@ describe("meal-log-ui fresh Stage 1 relock", () => {
   it("locks the latest official tuple and repository-owned plan bytes", () => {
     expect(workItem.docs_refs.source_of_truth).toEqual([
       "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
-      "docs/요구사항기준선-v1.7.31.md",
-      "docs/화면정의서-v1.5.35.md",
-      "docs/유저flow맵-v1.3.33.md",
-      "docs/db설계-v1.3.33.md",
-      "docs/api문서-v1.2.38.md",
+      "docs/요구사항기준선-v1.7.32.md",
+      "docs/화면정의서-v1.5.36.md",
+      "docs/유저flow맵-v1.3.34.md",
+      "docs/db설계-v1.3.34.md",
+      "docs/api문서-v1.2.39.md",
     ]);
 
     const owningBundle = [
@@ -56,11 +57,11 @@ describe("meal-log-ui fresh Stage 1 relock", () => {
     ].join("\n");
 
     for (const required of [
-      "요구사항기준선-v1.7.31.md",
-      "화면정의서-v1.5.35.md",
-      "유저flow맵-v1.3.33.md",
-      "db설계-v1.3.33.md",
-      "api문서-v1.2.38.md",
+      "요구사항기준선-v1.7.32.md",
+      "화면정의서-v1.5.36.md",
+      "유저flow맵-v1.3.34.md",
+      "db설계-v1.3.34.md",
+      "api문서-v1.2.39.md",
       approvedPlanSha,
       approvedPlanPath,
     ]) {
@@ -74,6 +75,11 @@ describe("meal-log-ui fresh Stage 1 relock", () => {
       "유저flow맵-v1.3.27.md",
       "db설계-v1.3.26.md",
       "api문서-v1.2.29.md",
+      "요구사항기준선-v1.7.31.md",
+      "화면정의서-v1.5.35.md",
+      "유저flow맵-v1.3.33.md",
+      "db설계-v1.3.33.md",
+      "api문서-v1.2.38.md",
       "45f02013fbc1c3af",
       "1,056 lines",
     ]) {
@@ -176,7 +182,9 @@ describe("meal-log-ui fresh Stage 1 relock", () => {
 
     const reviewProjection = [readme, acceptance, workItem.notes].join("\n");
     for (const required of [
-      relockBase,
+      initialRelockBase,
+      finalRelockBase,
+      "base drift",
       "Design Status",
       "temporary",
       "fresh design-generator task",

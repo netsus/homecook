@@ -6,16 +6,17 @@
 
 ## Official Sources
 
-- `docs/요구사항기준선-v1.7.31.md`
-- `docs/화면정의서-v1.5.35.md`
-- `docs/유저flow맵-v1.3.33.md`
-- `docs/db설계-v1.3.33.md`
-- `docs/api문서-v1.2.38.md`
+- `docs/요구사항기준선-v1.7.32.md`
+- `docs/화면정의서-v1.5.36.md`
+- `docs/유저flow맵-v1.3.34.md`
+- `docs/db설계-v1.3.34.md`
+- `docs/api문서-v1.2.39.md`
 - approved Cooking Plan / Meal Log master plan: `docs/workpacks/planner-shell/evidence/cooking-meal-log-and-product-search-master-plan-20260722.md`, SHA-256 `d4d0fb39e80eeffc8b1e73ad92f0d91a35a9b6adc57a556ea8c9ec6ecffa951d`, 1,018 lines
 
 ## Stage 1 Relock Lineage
 
-- fresh relock base: `origin/master` `16cfce44d32d5b618742a0e20460df4772a19142`; the expected and fetched base matched, so there is no base drift.
+- initial fetch matched expected `origin/master` `16cfce44d32d5b618742a0e20460df4772a19142`. Before Draft PR creation, base drift advanced `origin/master` to `c12afbccd15f4935a1a52b9f2c2c23882a5033ff`; that exact master was integrated by a normal merge without rebase, reset or force-push.
+- the drifted tuple adds full-local Supabase operating authority only. It explicitly changes no product UI, public endpoint/status/error/field, DB schema or #12 user flow, so #12 needs no Contract Evolution.
 - #9 PR #1319 exact head `be93bfc47281e2795c59c0fd1052a4ecf6085837` merged as `8ba3fa5a2a198eb4f9c19d59cea5f6ccc52fdd4f`. Checkpoint projection merge `4597ca835ba81307d0bdf9e1b1c41806b17e7a68`, security repair merge `16cfce44d32d5b618742a0e20460df4772a19142`, and historical post-merge raw 14/14 success are recorded backend predecessor evidence only.
 - #10 PR #1331 merged as `2185b59d1b460dac916aa4a4a4a5e061c8b795f0`; its Stage 4~6 merged-green runtime and OMO completion are recorded in `docs/workpacks/planner-shell/omo-report.md`.
 - #9/#10 broader Manual/server-Mac/OAuth, merged-exact server-production/local-rehearsal, physical-device/AT, capability `R/R+1/R+2`, production and activation remain pending. These pending gates are not promoted by #12.
