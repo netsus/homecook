@@ -40,8 +40,6 @@ import { cleanYoutubeTitle } from "@/lib/youtube-title";
 import {
   recordOperationalEventFromServiceRole,
 } from "@/lib/server/admin-events";
-import { markRegisteredYoutubeExtractionSeen } from
-  "@/lib/server/youtube-extraction-registration-notification";
 import {
   recalculateRecipeNutritionSnapshot,
   type RecipeNutritionServiceClient,
@@ -10936,14 +10934,6 @@ export async function handleYoutubeRegister(request: Request) {
   } catch {
     // Activity history is secondary; YouTube recipe registration remains authoritative.
   }
-
-  await markRegisteredYoutubeExtractionSeen({
-    extractionId: parsed.extractionId,
-    rpc: (name, args) => (
-      dbClient as unknown as { rpc: (rpcName: string, rpcArgs?: Record<string, unknown>) => PromiseLike<{ data: unknown; error: unknown }> }
-    ).rpc(name, args),
-    userId: user.id,
-  });
 
   return ok(data, { status: 201 });
 }
