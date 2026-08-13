@@ -347,7 +347,7 @@
       "classification": "user",
       "file": "lib/server/youtube-import.ts",
       "column": 35,
-      "line": 9266,
+      "line": 9268,
       "allowed": true,
       "factory": "createYoutubeExtractionInternalClient",
       "functionName": "handleYoutubeExtract",
@@ -357,7 +357,7 @@
       "classification": "user",
       "file": "lib/server/youtube-import.ts",
       "column": 35,
-      "line": 10513,
+      "line": 10515,
       "allowed": true,
       "factory": "createYoutubeExtractionInternalClient",
       "functionName": "handleYoutubeCandidateDraft",
@@ -367,7 +367,7 @@
       "classification": "user",
       "file": "lib/server/youtube-import.ts",
       "column": 5,
-      "line": 10696,
+      "line": 10698,
       "allowed": true,
       "factory": "createYoutubeIngredientRegistrationInternalRpcClient",
       "functionName": "handleYoutubeIngredientRegistration",
@@ -470,14 +470,14 @@
       "classification": "user",
       "file": "lib/server/youtube-import.ts",
       "column": 35,
-      "line": 9266,
+      "line": 9268,
       "kind": "service-role-call"
     },
     {
       "classification": "user",
       "file": "lib/server/youtube-import.ts",
       "column": 35,
-      "line": 10513,
+      "line": 10515,
       "kind": "service-role-call"
     }
   ],
