@@ -4,6 +4,9 @@ import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+import { readWorkpackChecklistContract } from "../scripts/lib/omo-checklist-contract.mjs";
+import { evaluateDocGate } from "../scripts/lib/omo-doc-gate.mjs";
+
 const root = process.cwd();
 const sliceId = "meal-log-ui";
 const initialRelockBase = "16cfce44d32d5b618742a0e20460df4772a19142";
@@ -17,6 +20,8 @@ const approvedPlanPath =
   "docs/workpacks/planner-shell/evidence/cooking-meal-log-and-product-search-master-plan-20260722.md";
 const stage1TestCommand =
   "pnpm exec vitest run tests/meal-log-ui-stage1-relock.test.ts tests/workflow-v2-docs.test.ts tests/omo-automation-spec.test.ts tests/omo-bookkeeping.test.ts tests/omo-doc-gate.test.ts tests/source-of-truth-sync.test.ts";
+const localOnlySmokeEvidenceCommand =
+  "pnpm validate:real-smoke-presence -- --slice meal-log-ui";
 
 function read(relativePath: string) {
   return readFileSync(join(root, relativePath), "utf8");
@@ -38,6 +43,18 @@ describe("meal-log-ui fresh Stage 1 relock", () => {
     (item: { id: string }) => item.id === sliceId,
   );
   const roadmap = read("docs/workpacks/README.md");
+
+  it("passes the actual Stage 1 doc gate and checklist contract", () => {
+    const docGate = evaluateDocGate({ rootDir: root, slice: sliceId });
+    const checklist = readWorkpackChecklistContract({
+      rootDir: root,
+      slice: sliceId,
+    });
+
+    expect(docGate.outcome, docGate.summary).toBe("pass");
+    expect(docGate.findings).toEqual([]);
+    expect(checklist.errors).toEqual([]);
+  });
 
   it("locks the latest official tuple and repository-owned plan bytes", () => {
     expect(workItem.docs_refs.source_of_truth).toEqual([
@@ -157,9 +174,18 @@ describe("meal-log-ui fresh Stage 1 relock", () => {
     expect(workItem.verification.stage1_current_commands).toContain(
       stage1TestCommand,
     );
+    expect(automation.backend.verify_commands).toContain(stage1TestCommand);
+    expect(status.required_checks).toContain(stage1TestCommand);
     expect(workItem.verification.stage4_future_commands).toEqual(
       automation.frontend.verify_commands,
     );
+    expect(workItem.verification.required_checks).toContain(
+      localOnlySmokeEvidenceCommand,
+    );
+    expect(workItem.verification.stage4_future_commands).toContain(
+      localOnlySmokeEvidenceCommand,
+    );
+    expect(status.required_checks).toContain(localOnlySmokeEvidenceCommand);
     expect(automation.external_smokes).toEqual([]);
     expect(workItem.workflow.external_smokes).toHaveLength(6);
 
@@ -167,8 +193,34 @@ describe("meal-log-ui fresh Stage 1 relock", () => {
       "\n",
     );
     expect(currentCommands).not.toMatch(
-      /meal-log-ui\.test\.tsx|test:e2e|qa:explore|verify:frontend|local-first/u,
+      /meal-log-ui\.test\.tsx|test:e2e|qa:explore|verify:frontend|real-smoke/u,
     );
+  });
+
+  it("uses the canonical local-only verification authority without stale commands", () => {
+    const localOnlyProjection = [
+      readme,
+      acceptance,
+      JSON.stringify(automation),
+      JSON.stringify(workItem),
+      status.notes,
+      status.required_checks.join("\n"),
+    ].join("\n");
+
+    for (const required of [
+      "local-only",
+      "isolated-local",
+      "controlled full-local",
+      "read-only",
+    ]) {
+      expect(localOnlyProjection).toContain(required);
+    }
+
+    expect(
+      workItem.verification.required_checks.filter(
+        (command: string) => command === localOnlySmokeEvidenceCommand,
+      ),
+    ).toHaveLength(1);
   });
 
   it("reserves independent design and review work without fabricating approval", () => {

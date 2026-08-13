@@ -42,6 +42,7 @@
       "BRANCH_NAME=docs/meal-log-ui-stage1-relock-current pnpm validate:workpack -- --slice meal-log-ui",
       "node scripts/validate-automation-spec.mjs --slice meal-log-ui",
       "pnpm validate:omo-bookkeeping",
+      "pnpm exec vitest run tests/meal-log-ui-stage1-relock.test.ts tests/workflow-v2-docs.test.ts tests/omo-automation-spec.test.ts tests/omo-bookkeeping.test.ts tests/omo-doc-gate.test.ts tests/source-of-truth-sync.test.ts",
       "git diff --check"
     ],
     "required_test_targets": [
@@ -71,7 +72,8 @@
       "pnpm test:e2e:a11y",
       "pnpm test:e2e:visual",
       "pnpm qa:explore -- --slice meal-log-ui",
-      "pnpm verify:frontend"
+      "pnpm verify:frontend",
+      "pnpm validate:real-smoke-presence -- --slice meal-log-ui"
     ],
     "playwright_projects": ["mobile-default", "mobile-narrow", "desktop"],
     "artifact_assertions": [
@@ -164,9 +166,9 @@
     "mutable-current-product-profile-silently-repinned",
     "batch-edit-delete-targets-another-event",
     "canonical-design-critic-authority-or-fresh-evidence-missing",
-    "local-first-verifier-not-merged-exact-sha",
+    "local-only-target-boundary-or-isolated-local-controlled-full-local-read-only-evidence-missing",
     "current-head-check-pending-absent-stale-failed-or-cancelled"
   ],
   "max_fix_rounds": {"backend": 3, "frontend": 6},
-  "notes": "Initial fetch matched expected origin/master 16cfce44d32d5b618742a0e20460df4772a19142. Before Draft PR creation, base drift advanced master to c12afbccd15f4935a1a52b9f2c2c23882a5033ff, which was integrated by a normal merge without rebase, reset or force-push. The current official tuple is v1.7.32/v1.5.36/v1.3.34/v1.3.34/v1.2.39 and the repository plan is docs/workpacks/planner-shell/evidence/cooking-meal-log-and-product-search-master-plan-20260722.md at SHA-256 d4d0fb39e80eeffc8b1e73ad92f0d91a35a9b6adc57a556ea8c9ec6ecffa951d, 1,018 lines. The drift adds full-local Supabase operating authority only and explicitly changes no product UI, public endpoint/status/error/field, DB schema or #12 user flow, so no #12 Contract Evolution is required. #9 PR #1319 source merge 8ba3fa5a2a198eb4f9c19d59cea5f6ccc52fdd4f, checkpoint projection 4597ca835ba81307d0bdf9e1b1c41806b17e7a68, security repair 16cfce44d32d5b618742a0e20460df4772a19142 and historical post-merge raw 14/14 success are recorded without promoting broader gates. #10 PR #1331 merge 2185b59d1b460dac916aa4a4a4a5e061c8b795f0 is Stage 4~6 merged-green and its OMO completion is recorded in docs/workpacks/planner-shell/omo-report.md. The Stage 2 implementation dependency is available after Stage 1 independent reviews and the design prerequisite. Current commands are docs validators, tests/meal-log-ui-stage1-relock.test.ts plus focused workflow-doc tests, lint, typecheck, audit and diff only; current external_smokes is empty because component/E2E/visual/a11y/browser/local-first production-rehearsal evidence is future. Manual/server-Mac/OAuth, merged-exact server-production/local-rehearsal, physical-device/AT, capability R/R+1/R+2, production and activation remain pending. #12 owns UI only, consumes #1 search and #8 batch authority inside #10 shell, and adds no contract, capability or activation. A fresh design-generator task and fresh independent design critic remain prerequisites."
+  "notes": "Initial fetch matched expected origin/master 16cfce44d32d5b618742a0e20460df4772a19142. Before Draft PR creation, base drift advanced master to c12afbccd15f4935a1a52b9f2c2c23882a5033ff, which was integrated by a normal merge without rebase, reset or force-push. The current official tuple is v1.7.32/v1.5.36/v1.3.34/v1.3.34/v1.2.39 and the repository plan is docs/workpacks/planner-shell/evidence/cooking-meal-log-and-product-search-master-plan-20260722.md at SHA-256 d4d0fb39e80eeffc8b1e73ad92f0d91a35a9b6adc57a556ea8c9ec6ecffa951d, 1,018 lines. The drift adds full-local Supabase local-only operating authority only and explicitly changes no product UI, public endpoint/status/error/field, DB schema or #12 user flow, so no #12 Contract Evolution is required. #9 PR #1319 source merge 8ba3fa5a2a198eb4f9c19d59cea5f6ccc52fdd4f, checkpoint projection 4597ca835ba81307d0bdf9e1b1c41806b17e7a68, security repair 16cfce44d32d5b618742a0e20460df4772a19142 and historical post-merge raw 14/14 success are recorded without promoting broader gates. #10 PR #1331 merge 2185b59d1b460dac916aa4a4a4a5e061c8b795f0 is Stage 4~6 merged-green and its OMO completion is recorded in docs/workpacks/planner-shell/omo-report.md. The Stage 2 implementation dependency is available after Stage 1 independent reviews and the design prerequisite. Current commands are docs validators, tests/meal-log-ui-stage1-relock.test.ts plus focused workflow-doc tests, lint, typecheck, audit and diff only; current external_smokes is empty because component/E2E/visual/a11y/browser and pinned isolated-local or controlled full-local read-only runtime evidence are future. Manual/server-Mac/OAuth, controlled full-local physical-device/AT, capability R/R+1/R+2, production and activation remain pending. #12 owns UI only, consumes #1 search and #8 batch authority inside #10 shell, and adds no contract, capability or activation. A fresh design-generator task and fresh independent design critic remain prerequisites."
 }
