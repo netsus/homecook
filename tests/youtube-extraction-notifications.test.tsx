@@ -117,7 +117,7 @@ describe("YouTube extraction notification center", () => {
     const user = userEvent.setup();
     renderCenter();
 
-    expect(await screen.findByText("YouTube 레시피 추출이 완료됐어요")).toBeTruthy();
+    expect(await screen.findByText("레시피 추출이 끝났어요")).toBeTruthy();
     expect(screen.getByText("추출 결과를 확인하고 레시피로 등록할 수 있어요.")).toBeTruthy();
     expect(screen.getByLabelText("YouTube 추출 알림 1개")).toBeTruthy();
 
@@ -144,7 +144,7 @@ describe("YouTube extraction notification center", () => {
     renderCenter();
 
     expect(await screen.findByLabelText("YouTube 추출 알림 1개")).toBeTruthy();
-    expect(screen.queryByText("YouTube 레시피 추출이 완료됐어요")).toBeNull();
+    expect(screen.queryByText("레시피 추출이 끝났어요")).toBeNull();
     expect(api.markYoutubeExtractionDelivered).not.toHaveBeenCalled();
   });
 
@@ -182,6 +182,29 @@ describe("YouTube extraction notification center", () => {
 
     expect(await screen.findByText("YouTube 레시피 추출에 실패했어요")).toBeTruthy();
     expect(screen.getByText("레시피 영상으로 확인되지 않았어요.")).toBeTruthy();
+  });
+
+  it("preserves the user's current focus when a nonmodal unauthorized notice appears", async () => {
+    vi.mocked(api.fetchYoutubeExtractionNotifications).mockResolvedValue({
+      success: false,
+      data: null,
+      error: { code: "UNAUTHORIZED", message: "로그인이 필요해요.", fields: [] },
+    });
+    const user = userEvent.setup();
+    render(
+      <>
+        <button type="button">현재 작업</button>
+        <YoutubeExtractionNotificationCenter initialAuthenticated />
+      </>,
+    );
+    const currentAction = screen.getByRole("button", { name: "현재 작업" });
+    await user.click(currentAction);
+
+    expect(await screen.findByRole("complementary", { name: "로그인 안내" })).toBeTruthy();
+    expect(document.activeElement).toBe(currentAction);
+    expect(document.activeElement).not.toBe(
+      screen.getByRole("button", { name: "로그인 안내 닫기" }),
+    );
   });
 
   it("marks only the exact owner-scoped job seen after the browser observes registration success", async () => {
@@ -386,7 +409,7 @@ describe("YouTube extraction notification center", () => {
       });
 
     renderCenter();
-    expect(await screen.findByText("YouTube 레시피 추출이 완료됐어요")).toBeTruthy();
+    expect(await screen.findByText("레시피 추출이 끝났어요")).toBeTruthy();
     act(() => notifyYoutubeExtractionSessionRegistered("extraction-success"));
 
     await waitFor(() => expect(api.markYoutubeExtractionSeen).toHaveBeenCalledTimes(1));
@@ -440,7 +463,7 @@ describe("YouTube extraction notification center", () => {
     renderCenter();
 
     expect(await screen.findByText("레시피 추출 2건이 끝났어요")).toBeTruthy();
-    expect(screen.queryByText("YouTube 레시피 추출이 완료됐어요")).toBeNull();
+    expect(screen.queryByText("레시피 추출이 끝났어요")).toBeNull();
     expect(screen.queryByText("YouTube 레시피 추출에 실패했어요")).toBeNull();
     expect(screen.getByTestId("youtube-notification-toast-icon").textContent).toBe("•");
     expect(screen.getByTestId("youtube-notification-toast-icon").getAttribute("data-outcome"))

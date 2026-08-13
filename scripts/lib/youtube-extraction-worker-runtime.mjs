@@ -606,12 +606,18 @@ export function createYoutubeExtractionWorkerRuntime({
       } catch (error) {
         if (shutdownSignal.aborted) return "stopped";
         if (controller.signal.aborted) return "stale-fence";
-        await rpc("fail_or_retry_youtube_extraction_job", {
+        const failureTransition = await rpc("fail_or_retry_youtube_extraction_job", {
           job_id: claim.job_id,
           worker_id: normalizedWorkerId,
           lease_generation: leaseGeneration,
           error_code: classifyFailure(error),
         });
+        const failureRow = record(Array.isArray(failureTransition?.data)
+          ? failureTransition.data[0]
+          : failureTransition?.data);
+        if (failureTransition?.error || failureRow?.applied !== true || failureRow?.updated !== true) {
+          throw new Error("durable failure transition was not recorded");
+        }
         return "failed";
       } finally {
         if (heartbeatTimer) clearInterval(heartbeatTimer);

@@ -778,6 +778,7 @@ interface BackgroundAcceptedStepProps {
   onExit: () => void;
   onOpenJobs: () => void;
   onRetry: () => void;
+  retryError: string | null;
   videoTitle: string;
 }
 
@@ -793,6 +794,7 @@ function BackgroundAcceptedStep({
   onExit,
   onOpenJobs,
   onRetry,
+  retryError,
   videoTitle,
 }: BackgroundAcceptedStepProps) {
   const failed = job?.status === "failed" || job?.status === "expired";
@@ -816,6 +818,11 @@ function BackgroundAcceptedStep({
               ? "같은 영상의 작업이 이미 진행 중이에요. 이 화면을 나가도 계속 처리돼요."
               : "이 화면을 나가도 추출은 계속돼요."}
         </p>
+        {retryError ? (
+          <p className="mt-3 w-full rounded-[var(--radius-control)] border border-[var(--danger-border)] bg-[var(--danger-soft)] px-3 py-2 text-left text-sm text-[var(--danger)]" role="alert">
+            {retryError}
+          </p>
+        ) : null}
         {videoTitle ? <p className="mt-2 max-w-full truncate text-sm font-semibold text-[var(--foreground)]">{videoTitle}</p> : null}
         <div className="mt-7 flex w-full flex-col gap-3 sm:flex-row sm:justify-center">
           {failed && job.can_retry ? (
@@ -2486,6 +2493,7 @@ export function YoutubeImportScreen({
   const [acceptedJobId, setAcceptedJobId] = useState("");
   const [acceptedDeduplicated, setAcceptedDeduplicated] = useState(false);
   const [acceptedJob, setAcceptedJob] = useState<YoutubeExtractionJobData | null>(null);
+  const [acceptedRetryError, setAcceptedRetryError] = useState<string | null>(null);
   const [sessionRecipePath, setSessionRecipePath] = useState<string | null>(null);
   const [sessionError, setSessionError] = useState<string | null>(null);
   const [draftWarnings, setDraftWarnings] = useState<string[]>([]);
@@ -2767,6 +2775,7 @@ export function YoutubeImportScreen({
       setAcceptedJobId(result.data.job_id);
       setAcceptedDeduplicated(result.data.deduplicated);
       setAcceptedJob(null);
+      setAcceptedRetryError(null);
       trackYoutubeExtractionJob(result.data.job_id);
       pushStep("accepted");
     })();
@@ -3283,14 +3292,10 @@ export function YoutubeImportScreen({
 
   const handleAcceptedRetry = useCallback(async () => {
     if (!acceptedJob?.can_retry) return;
+    setAcceptedRetryError(null);
     const result = await enqueueYoutubeExtraction({ retry_job_id: acceptedJob.job_id });
     if (!result.success || !result.data) {
-      setAcceptedJob({
-        ...acceptedJob,
-        error: acceptedJob.error
-          ? { ...acceptedJob.error, message: result.error?.message ?? acceptedJob.error.message }
-          : acceptedJob.error,
-      });
+      setAcceptedRetryError(result.error?.message ?? "다시 시도하지 못했어요.");
       return;
     }
     setAcceptedJobId(result.data.job_id);
@@ -3465,6 +3470,7 @@ export function YoutubeImportScreen({
             onExit={exitImportFlow}
             onOpenJobs={() => openNotificationCenter(true)}
             onRetry={handleAcceptedRetry}
+            retryError={acceptedRetryError}
             videoTitle={videoInfo?.title ?? ""}
           />
         </section>
@@ -3799,6 +3805,7 @@ export function YoutubeImportScreen({
             onExit={exitImportFlow}
             onOpenJobs={() => openNotificationCenter(true)}
             onRetry={handleAcceptedRetry}
+            retryError={acceptedRetryError}
             videoTitle={videoInfo?.title ?? ""}
           />
         )}

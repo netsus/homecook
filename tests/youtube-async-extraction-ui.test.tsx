@@ -381,4 +381,46 @@ describe("YT_IMPORT async extraction", () => {
     expect(screen.getByRole("button", { name: "작업 보기" })).toBeTruthy();
     window.removeEventListener(YOUTUBE_EXTRACTION_JOB_ENQUEUED_EVENT, enqueued);
   });
+
+  it("keeps the quota terminal copy when an accepted retry request fails", async () => {
+    const user = userEvent.setup();
+    const quotaMessage = "오늘 추출 한도를 모두 사용했어요. 나중에 다시 시도해 주세요.";
+    vi.mocked(asyncApi.enqueueYoutubeExtraction)
+      .mockResolvedValueOnce({
+        success: true,
+        data: {
+          job_id: "11111111-1111-4111-8111-111111111111",
+          status: "queued",
+          deduplicated: false,
+          submitted_at: "2026-08-14T01:00:00.000Z",
+        },
+        error: null,
+      })
+      .mockResolvedValueOnce({
+        success: false,
+        data: null,
+        error: { code: "NETWORK_ERROR", message: "연결이 끊겼어요.", fields: [] },
+      });
+    vi.mocked(asyncApi.fetchYoutubeExtractionJob).mockResolvedValue({
+      success: true,
+      data: {
+        job_id: "11111111-1111-4111-8111-111111111111",
+        status: "failed",
+        submitted_at: "2026-08-14T01:00:00.000Z",
+        started_at: "2026-08-14T01:00:01.000Z",
+        completed_at: "2026-08-14T01:03:00.000Z",
+        result: null,
+        error: { code: "QUOTA_EXCEEDED", message: quotaMessage, retryable: true },
+        can_retry: true,
+      },
+      error: null,
+    });
+
+    renderImport({ initialYoutubeUrl: youtubeUrl });
+    await user.click(await screen.findByRole("button", { name: "나중에 다시 시도" }));
+
+    expect(screen.getByText(quotaMessage)).toBeTruthy();
+    expect(screen.getByRole("alert").textContent).toContain("연결이 끊겼어요.");
+    expect(screen.getByRole("button", { name: "나중에 다시 시도" })).toBeTruthy();
+  });
 });

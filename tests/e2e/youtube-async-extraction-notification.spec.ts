@@ -353,6 +353,17 @@ async function captureEvidence(page: Page, testInfo: TestInfo, filePath: string,
   await page.screenshot({ path: filePath, fullPage });
 }
 
+function rectanglesAreDisjoint(
+  first: { x: number; y: number; width: number; height: number } | null,
+  second: { x: number; y: number; width: number; height: number } | null,
+) {
+  if (!first || !second) return false;
+  return first.x >= second.x + second.width
+    || first.x + first.width <= second.x
+    || first.y >= second.y + second.height
+    || first.y + first.height <= second.y;
+}
+
 test.beforeAll(async () => {
   await mkdir(IMPORT_EVIDENCE, { recursive: true });
   await mkdir(SHELL_EVIDENCE, { recursive: true });
@@ -387,6 +398,11 @@ test("async enqueue is immediately escapable and visually stable at 390", async 
   await expect(leave).toHaveClass(/bg-\[var\(--wave1-mint-contrast\)\]/);
   await expect(leave).toHaveAttribute("style", /color: var\(--foreground\)/);
   await expect(jobs).toHaveClass(/bg-\[var\(--wave1-surface-fill\)\]/);
+  const [bellBox, backBox] = await Promise.all([
+    page.locator("[data-youtube-extraction-trigger='global']").boundingBox(),
+    page.getByRole("button", { name: "뒤로 가기" }).boundingBox(),
+  ]);
+  expect(rectanglesAreDisjoint(bellBox, backBox)).toBe(true);
   const results = await new AxeBuilder({ page })
     .include("[data-youtube-extraction-accepted]")
     .analyze();
@@ -476,6 +492,11 @@ test("duplicate active work is explicit on desktop", async ({ page }, testInfo) 
   await openImport(page, "duplicate", 1280, 800);
   await expect(page.getByRole("heading", { name: "이미 추출 중이에요" })).toBeVisible();
   await expect(page.getByText("같은 영상의 작업이 이미 진행 중이에요. 이 화면을 나가도 계속 처리돼요.")).toBeVisible();
+  const [bellBox, backBox] = await Promise.all([
+    page.locator("[data-youtube-extraction-trigger='global']").boundingBox(),
+    page.getByRole("button", { name: "뒤로", exact: true }).boundingBox(),
+  ]);
+  expect(rectanglesAreDisjoint(bellBox, backBox)).toBe(true);
   await captureEvidence(page, testInfo, path.join(IMPORT_EVIDENCE, "desktop-1280-active-duplicate.png"), true);
 });
 
@@ -503,6 +524,11 @@ test("app shell groups terminal outcomes and keeps the badge until list exposure
     "[data-youtube-extraction-trigger='header'], [data-youtube-extraction-trigger='global']",
   );
   await expect(stableTrigger).toBeVisible();
+  const [mobileBellBox, mobileToastCloseBox] = await Promise.all([
+    stableTrigger.boundingBox(),
+    page.getByRole("button", { name: "toast 닫기" }).boundingBox(),
+  ]);
+  expect(rectanglesAreDisjoint(mobileBellBox, mobileToastCloseBox)).toBe(true);
   const toastBox = await page.getByTestId("youtube-notification-toast-stack").boundingBox();
   const searchBox = await page.locator(".home-mobile-discovery-search").boundingBox();
   expect((toastBox?.y ?? 0) >= (searchBox?.y ?? 0) + (searchBox?.height ?? 0)
@@ -543,6 +569,7 @@ test("individual draft and failed toasts include exact state body copy", async (
   await installDiscoveryRoutes(page);
   await installNotificationRoutes(page, [notificationItem({ status: "succeeded", title: "감자 수프" })]);
   await page.goto("/");
+  await expect(page.getByText("레시피 추출이 끝났어요")).toBeVisible();
   await expect(page.getByText("추출 결과를 확인하고 레시피로 등록할 수 있어요.")).toBeVisible();
   await captureEvidence(page, testInfo, path.join(SHELL_EVIDENCE, "mobile-390-draft-toast.png"));
 
@@ -587,6 +614,10 @@ test("desktop toast remains clear of discovery controls", async ({ page }, testI
   await installNotificationRoutes(page, [notificationItem({ status: "succeeded", title: "감자 수프" })]);
   await page.goto("/");
   await expect(page.getByText("추출 결과를 확인하고 레시피로 등록할 수 있어요.")).toBeVisible();
+  const bell = page.locator("[data-youtube-extraction-trigger='global']");
+  const toastClose = page.getByRole("button", { name: "toast 닫기" });
+  const [bellBox, toastCloseBox] = await Promise.all([bell.boundingBox(), toastClose.boundingBox()]);
+  expect(rectanglesAreDisjoint(bellBox, toastCloseBox)).toBe(true);
   const toastBox = await page.getByTestId("youtube-notification-toast-stack").boundingBox();
   for (const control of [
     page.getByPlaceholder("레시피 제목 검색"),

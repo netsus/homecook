@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readFileSync, realpathSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -72,10 +72,14 @@ function buildPathEnv(nodeBin) {
 
 /**
  * @param {string} configPath
+ * @param {{ expectedUserId?: number }} [options]
  */
-export function validateYoutubeExtractionWorkerConfigPath(configPath) {
+export function validateYoutubeExtractionWorkerConfigPath(configPath, {
+  expectedUserId = process.getuid?.(),
+} = {}) {
   const normalizedPath = ensureRegularFile(configPath, "worker config", {
     mode: DEFAULT_YOUTUBE_EXTRACTION_WORKER_SECRET_MODE,
+    expectedUserId,
   });
   const lines = readFileSync(normalizedPath, "utf8").split(/\r?\n/u);
   for (const line of lines) {
@@ -93,10 +97,14 @@ export function validateYoutubeExtractionWorkerConfigPath(configPath) {
 
 /**
  * @param {string} secretFile
+ * @param {{ expectedUserId?: number }} [options]
  */
-export function validateYoutubeExtractionWorkerSecretFile(secretFile) {
+export function validateYoutubeExtractionWorkerSecretFile(secretFile, {
+  expectedUserId = process.getuid?.(),
+} = {}) {
   return ensureRegularFile(secretFile, "worker secret file", {
     mode: DEFAULT_YOUTUBE_EXTRACTION_WORKER_SECRET_MODE,
+    expectedUserId,
   });
 }
 
@@ -194,7 +202,7 @@ export function renderYoutubeExtractionWorkerPlist({
   const artifactRoot = dirname(normalizedManifestPath);
   const normalizedRootDir = rootDir === undefined
     ? artifactRoot
-    : ensureAbsolutePath(rootDir, "rootDir");
+    : realpathSync(ensureAbsolutePath(rootDir, "rootDir"));
   if (normalizedRootDir !== artifactRoot) {
     throw new Error("worker artifact root mismatch");
   }
@@ -558,18 +566,19 @@ export function rotateYoutubeExtractionWorkerCredential({
 export function readYoutubeExtractionWorkerCredential(path) {
   const value = readJsonFile(path, "worker credential metadata", {
     mode: DEFAULT_YOUTUBE_EXTRACTION_WORKER_SECRET_MODE,
+    expectedUserId: process.getuid?.(),
   });
   if (value.schema !== YOUTUBE_EXTRACTION_WORKER_CREDENTIAL_SCHEMA) {
     throw new Error("worker credential metadata schema is invalid.");
   }
-  validateYoutubeExtractionWorkerSecretFile(value.token_file);
-  if (value.token_file_sha256 !== sha256File(value.token_file)) {
+  const normalizedTokenFile = validateYoutubeExtractionWorkerSecretFile(value.token_file);
+  if (value.token_file_sha256 !== sha256File(normalizedTokenFile)) {
     throw new Error("worker token file digest does not match metadata.");
   }
-  if (value.token_file_mode !== `0${modeBits(readMode(value.token_file)).toString(8)}`) {
+  if (value.token_file_mode !== `0${modeBits(readMode(normalizedTokenFile)).toString(8)}`) {
     throw new Error("worker token file mode does not match metadata.");
   }
-  return value;
+  return { ...value, token_file: normalizedTokenFile };
 }
 
 /**

@@ -1316,6 +1316,8 @@ begin
     and job.status = 'processing'
     and job.lease_owner = v_requested_worker_id
     and job.lease_generation = v_requested_lease_generation
+    and job.lease_expires_at is not null
+    and job.lease_expires_at >= v_now
   returning *
     into v_job;
 
@@ -1372,8 +1374,7 @@ begin
     or v_permit.permit_generation is distinct from v_requested_permit_generation
     or v_permit.expires_at is null
     or v_permit.expires_at < v_now then
-    raise exception 'YOUTUBE_EXTRACTION_PERMIT_STALE'
-      using errcode = '55000';
+    return jsonb_build_object('started', false);
   end if;
 
   update public.youtube_extraction_jobs as job
@@ -1384,6 +1385,8 @@ begin
     and job.status = 'processing'
     and job.lease_owner = v_requested_worker_id
     and job.lease_generation = v_requested_lease_generation
+    and job.lease_expires_at is not null
+    and job.lease_expires_at >= v_now
     and job.attempt_count < job.max_attempts
   returning *
     into v_job;
@@ -1459,7 +1462,9 @@ begin
   where job.id = requeue_youtube_extraction_job_without_attempt.job_id
     and job.status = 'processing'
     and job.lease_owner = requeue_youtube_extraction_job_without_attempt.worker_id
-    and job.lease_generation = requeue_youtube_extraction_job_without_attempt.lease_generation;
+    and job.lease_generation = requeue_youtube_extraction_job_without_attempt.lease_generation
+    and job.lease_expires_at is not null
+    and job.lease_expires_at >= clock_timestamp();
 
   if not found then
     return jsonb_build_object('applied', false, 'requeued', false);
@@ -1775,14 +1780,14 @@ begin
     where event.user_id = v_job.user_id
       and event.provider = reserve_youtube_extraction_worker_quota.provider
       and not event.cache_hit
-      and (event.status = 'success' or event.reason = 'worker_quota_reserved')
+      and event.reason = 'worker_quota_reserved'
       and event.created_at >= date_trunc('day', clock_timestamp() at time zone 'UTC') at time zone 'UTC';
   else
     select count(*) into v_used from public.youtube_llm_extraction_events as event
     where event.user_id = v_job.user_id
       and event.provider = reserve_youtube_extraction_worker_quota.provider
       and not event.cache_hit
-      and (event.status = 'success' or event.reason = 'worker_quota_reserved')
+      and event.reason = 'worker_quota_reserved'
       and event.created_at >= date_trunc('day', clock_timestamp() at time zone 'UTC') at time zone 'UTC';
   end if;
   if v_used + units > 5 then
@@ -2901,6 +2906,25 @@ begin
       using errcode = '22023';
   end if;
 
+  select existing_job.*
+    into v_job
+  from public.youtube_extraction_jobs as existing_job
+  where existing_job.id = v_requested_job_id
+    and existing_job.status = 'succeeded'
+    and existing_job.lease_owner = v_requested_worker_id
+    and existing_job.lease_generation = v_requested_lease_generation
+    and existing_job.extraction_session_id is not null;
+
+  if found then
+    return jsonb_build_object(
+      'applied', true,
+      'finalized', true,
+      'job_id', v_job.id,
+      'extraction_session_id', v_job.extraction_session_id,
+      'completion_delivery_key', v_job.completion_delivery_key
+    );
+  end if;
+
   select permit.*
     into strict v_permit
   from public.youtube_extractor_permits as permit
@@ -2911,7 +2935,7 @@ begin
     or v_permit.permit_generation is distinct from v_permit_generation
     or v_permit.expires_at is null
     or v_permit.expires_at < v_now then
-    return jsonb_build_object('finalized', false);
+    return jsonb_build_object('applied', false, 'finalized', false);
   end if;
 
   update public.youtube_extraction_jobs as job
@@ -2920,26 +2944,13 @@ begin
     and job.status = 'processing'
     and job.lease_owner = v_requested_worker_id
     and job.lease_generation = v_requested_lease_generation
+    and job.lease_expires_at is not null
+    and job.lease_expires_at >= v_now
   returning *
     into v_job;
 
   if not found then
-    select existing_job.*
-      into v_job
-    from public.youtube_extraction_jobs as existing_job
-    where existing_job.id = v_requested_job_id
-      and existing_job.status = 'succeeded'
-      and existing_job.lease_owner = v_requested_worker_id
-      and existing_job.lease_generation = v_requested_lease_generation
-      and existing_job.extraction_session_id is not null;
-
-    return case when found then jsonb_build_object(
-      'applied', true,
-      'finalized', true,
-      'job_id', v_job.id,
-      'extraction_session_id', v_job.extraction_session_id,
-      'completion_delivery_key', v_job.completion_delivery_key
-    ) else jsonb_build_object('applied', false, 'finalized', false) end;
+    return jsonb_build_object('applied', false, 'finalized', false);
   end if;
 
   v_session_hash := encode(
@@ -3211,12 +3222,14 @@ begin
       using errcode = '22023';
   end if;
 
-  update public.youtube_extraction_jobs
-  set updated_at = updated_at
-  where id = v_requested_job_id
-    and status = 'processing'
-    and lease_owner = v_requested_worker_id
-    and lease_generation = v_requested_lease_generation
+  update public.youtube_extraction_jobs as job
+  set updated_at = job.updated_at
+  where job.id = v_requested_job_id
+    and job.status = 'processing'
+    and job.lease_owner = v_requested_worker_id
+    and job.lease_generation = v_requested_lease_generation
+    and job.lease_expires_at is not null
+    and job.lease_expires_at >= v_now
   returning *
     into v_job;
 
@@ -3312,7 +3325,7 @@ begin
     );
   end if;
 
-  update public.youtube_extractor_permits
+  update public.youtube_extractor_permits as permit
   set owner_id = v_requested_worker_id,
       permit_generation = permit_generation + 1,
       heartbeat_at = v_now,
@@ -3357,12 +3370,14 @@ begin
       using errcode = '22023';
   end if;
 
-  update public.youtube_extractor_permits
+  update public.youtube_extractor_permits as permit
   set heartbeat_at = v_now,
       expires_at = v_now + make_interval(secs => v_requested_lease_seconds)
-  where permit_key = 'primary'
-    and owner_id = v_requested_worker_id
-    and permit_generation = v_requested_permit_generation
+  where permit.permit_key = 'primary'
+    and permit.owner_id = v_requested_worker_id
+    and permit.permit_generation = v_requested_permit_generation
+    and permit.expires_at is not null
+    and permit.expires_at >= v_now
   returning *
     into v_permit;
 
@@ -3415,6 +3430,8 @@ begin
   where permit.permit_key = 'primary'
     and permit.owner_id = v_requested_worker_id
     and permit.permit_generation = v_requested_permit_generation
+    and permit.expires_at is not null
+    and permit.expires_at >= clock_timestamp()
   returning *
     into v_permit;
 

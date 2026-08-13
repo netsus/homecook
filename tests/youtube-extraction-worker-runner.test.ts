@@ -765,6 +765,44 @@ describe("YTASYNC-WORKER standalone runner", () => {
     });
   });
 
+  it.each([
+    ["RPC error", { data: null, error: { code: "DB_UNAVAILABLE", message: "db unavailable" } }],
+    ["lost fence", { data: { applied: false, updated: false }, error: null }],
+  ])("fails closed when durable fail_or_retry reports %s", async (_label, failureResponse) => {
+    const digest = "9".repeat(64);
+    const rpc = vi.fn(async (name: string) => {
+      if (name === "claim_youtube_extraction_job") {
+        return {
+          data: {
+            job_id: "99999999-9999-4999-8999-999999999991",
+            youtube_video_id: "abc123DEF45",
+            lease_generation: 12,
+            policy_snapshot_digest: digest,
+            result_affecting_options: {},
+          },
+          error: null,
+        };
+      }
+      if (name === "claim_youtube_extractor_permit") {
+        return { data: { permit_generation: 18 }, error: null };
+      }
+      if (name === "fail_or_retry_youtube_extraction_job") return failureResponse;
+      return { data: { applied: true, updated: true, released: true }, error: null };
+    });
+    const runtime = createYoutubeExtractionWorkerRuntime({
+      workerId: "worker-fail-closed",
+      allowedSnapshotDigest: digest,
+      rpc,
+      extractor: { extract: vi.fn(async () => { throw new Error("NETWORK_ERROR"); }) },
+    });
+
+    await expect(runtime.runOnce()).rejects.toThrow(/durable failure transition/iu);
+    expect(rpc).toHaveBeenCalledWith("release_youtube_extractor_permit", {
+      worker_id: "worker-fail-closed",
+      permit_generation: 18,
+    });
+  });
+
   it("stops polling and aborts the active extractor on SIGTERM-equivalent shutdown", async () => {
     const shutdown = new AbortController();
     let receivedSignal: AbortSignal | null = null;

@@ -7,10 +7,10 @@ import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  realpathSync,
   readdirSync,
   renameSync,
   rmSync,
-  statSync,
   writeFileSync,
 } from "node:fs";
 import {
@@ -134,7 +134,7 @@ export function modeBits(mode) {
  * @param {string} path
  */
 export function readMode(path) {
-  return modeBits(statSync(path).mode);
+  return modeBits(lstatSync(path).mode);
 }
 
 /**
@@ -152,15 +152,18 @@ export function validateMode(path, expectedMode, label) {
 /**
  * @param {string} path
  * @param {string} label
- * @param {{ mode?: number }} [options]
+ * @param {{ mode?: number, expectedUserId?: number }} [options]
  */
-export function ensureRegularFile(path, label, { mode } = {}) {
+export function ensureRegularFile(path, label, { mode, expectedUserId } = {}) {
   const normalizedPath = ensureAbsolutePath(path, label);
   if (!existsSync(normalizedPath)) {
     throw new Error(`${label} does not exist: ${normalizedPath}`);
   }
 
-  const stat = statSync(normalizedPath);
+  const stat = lstatSync(normalizedPath);
+  if (stat.isSymbolicLink()) {
+    throw new Error(`${label} must not be a symbolic link: ${normalizedPath}`);
+  }
   if (!stat.isFile()) {
     throw new Error(`${label} must be a regular file: ${normalizedPath}`);
   }
@@ -169,7 +172,11 @@ export function ensureRegularFile(path, label, { mode } = {}) {
     validateMode(normalizedPath, mode, label);
   }
 
-  return normalizedPath;
+  if (Number.isInteger(expectedUserId) && stat.uid !== expectedUserId) {
+    throw new Error(`${label} owner must match the worker user.`);
+  }
+
+  return realpathSync(normalizedPath);
 }
 
 /**
@@ -560,10 +567,10 @@ export function buildYoutubeExtractionWorkerQueueState({
 /**
  * @param {string} path
  * @param {string} label
- * @param {{ mode?: number }} [options]
+ * @param {{ mode?: number, expectedUserId?: number }} [options]
  */
-export function readJsonFile(path, label, { mode } = {}) {
-  const normalizedPath = ensureRegularFile(path, label, { mode });
+export function readJsonFile(path, label, { mode, expectedUserId } = {}) {
+  const normalizedPath = ensureRegularFile(path, label, { mode, expectedUserId });
   const source = readFileSync(normalizedPath, "utf8");
   assertNoDuplicateJsonKeys(source, label);
   const parsed = JSON.parse(source);

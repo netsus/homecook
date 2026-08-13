@@ -8,6 +8,7 @@ import {
   realpathSync,
   readdirSync,
   rmSync,
+  symlinkSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -38,8 +39,11 @@ import {
   buildYoutubeExtractionWorkerRollbackPlan,
   evaluateYoutubeExtractionWorkerPreflight,
   parseLaunchctlPrintStatus,
+  readYoutubeExtractionWorkerCredential,
   renderYoutubeExtractionWorkerPlist,
   rotateYoutubeExtractionWorkerCredential,
+  validateYoutubeExtractionWorkerConfigPath,
+  validateYoutubeExtractionWorkerSecretFile,
   writeCredentialMetadata,
 } from "../scripts/lib/youtube-extraction-worker-ops.mjs";
 
@@ -248,6 +252,31 @@ describe("YTASYNC-OPS deterministic artifact", () => {
 });
 
 describe("YTASYNC-OPS launchd contract", () => {
+  it("rejects symlinked or wrong-owner secret inputs and returns canonical paths", () => {
+    const privateDir = createTempDir("yta-worker-secret-provenance-");
+    const configPath = join(privateDir, ".env.production.local");
+    const configLink = join(privateDir, "config-link");
+    writeModeFile(
+      configPath,
+      "HOMECOOK_YOUTUBE_WORKER_DATA_API_URL=http://127.0.0.1:54321/rest/v1\n",
+    );
+    symlinkSync(configPath, configLink);
+
+    expect(() => validateYoutubeExtractionWorkerConfigPath(configLink))
+      .toThrow(/symbolic link/iu);
+    expect(() => validateYoutubeExtractionWorkerSecretFile(configPath, {
+      expectedUserId: (process.getuid?.() ?? 0) + 1,
+    })).toThrow(/owner/iu);
+    expect(validateYoutubeExtractionWorkerSecretFile(configPath))
+      .toBe(realpathSync(configPath));
+
+    const inputs = createReleaseInputs(privateDir);
+    const credentialLink = join(privateDir, "credential-link.json");
+    symlinkSync(inputs.credentialPath, credentialLink);
+    expect(() => readYoutubeExtractionWorkerCredential(credentialLink))
+      .toThrow(/symbolic link/iu);
+  });
+
   it("renders a plist that runs the worker via env -i and never embeds token contents", () => {
     const homeDir = createTempDir("yta-worker-home-");
     const privateDir = createTempDir("yta-worker-private-");
@@ -276,9 +305,9 @@ describe("YTASYNC-OPS launchd contract", () => {
     expect(plist).toContain(`<string>HOME=${homeDir}</string>`);
     expect(plist).toContain("<string>/opt/homebrew/bin/node</string>");
     expect(plist).toContain("<string>run</string>");
-    expect(plist).toContain(`<string>${configPath}</string>`);
-    expect(plist).toContain(`<string>${inputs.manifestPath}</string>`);
-    expect(plist).toContain(`<string>${inputs.credentialPath}</string>`);
+    expect(plist).toContain(`<string>${realpathSync(configPath)}</string>`);
+    expect(plist).toContain(`<string>${realpathSync(inputs.manifestPath)}</string>`);
+    expect(plist).toContain(`<string>${realpathSync(inputs.credentialPath)}</string>`);
     expect(plist).not.toContain("worker-token");
     expect(plist).not.toContain("HOMECOOK_YOUTUBE_WORKER_DATA_API_URL");
     expect(plist).not.toContain("<key>EnvironmentVariables</key>");

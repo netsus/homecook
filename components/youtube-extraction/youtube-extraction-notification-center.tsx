@@ -49,7 +49,7 @@ function statusCopy(item: YoutubeExtractionNotificationItem) {
       body: item.result?.recipe_path
         ? "이미 등록한 레시피예요"
         : "추출 결과를 확인하고 레시피로 등록할 수 있어요.",
-      title: "YouTube 레시피 추출이 완료됐어요",
+      title: "레시피 추출이 끝났어요",
     };
   }
   return {
@@ -651,7 +651,7 @@ export function YoutubeExtractionNotificationCenter({
             <p className="font-bold text-[var(--foreground)]">로그인이 필요해요</p>
             <p className="mt-1 text-sm text-[var(--muted)]">로그인하면 추출 작업을 이어서 확인할 수 있어요.</p>
           </div>
-          <button aria-label="로그인 안내 닫기" autoFocus className="-m-2 inline-flex min-h-11 min-w-11 items-center justify-center rounded-full text-lg text-[var(--muted)]" onClick={() => setAuthExpired(false)} type="button">×</button>
+          <button aria-label="로그인 안내 닫기" className="-m-2 inline-flex min-h-11 min-w-11 items-center justify-center rounded-full text-lg text-[var(--muted)]" onClick={() => setAuthExpired(false)} type="button">×</button>
         </div>
         <Link className="mt-3 inline-flex min-h-11 items-center rounded-full bg-[var(--brand-primary)] px-4 text-sm font-bold text-[var(--foreground)]" href={`/login?next=${encodeURIComponent(returnPath)}`}>
           로그인하고 돌아오기
@@ -665,7 +665,7 @@ export function YoutubeExtractionNotificationCenter({
   return (
     <>
       {!hasHeaderTrigger ? (
-        <div className="fixed right-3 top-[calc(env(safe-area-inset-top)+68px)] z-[55] rounded-full bg-[var(--surface)] shadow-sm">
+        <div className="fixed right-3 top-[calc(env(safe-area-inset-top)+68px)] z-40 rounded-full bg-[var(--surface)] shadow-sm sm:right-5 sm:top-[calc(env(safe-area-inset-top)+16px)]">
           <YoutubeExtractionNotificationTrigger placement="global" />
         </div>
       ) : null}

@@ -198,9 +198,10 @@ describe("YTASYNC-DB/SEC migration contract", () => {
     const sql = readFileSync(migrationPath, "utf8").toLowerCase();
     const finalize = sql.split("function public.finalize_youtube_extraction_job")[1]
       ?.split("$function$;")[0] ?? "";
-    const succeededReplay = finalize.split("if not found then")[1]?.split("end if;")[0] ?? "";
-    expect(succeededReplay).toContain("existing_job.lease_owner = v_requested_worker_id");
-    expect(succeededReplay).toContain("existing_job.lease_generation = v_requested_lease_generation");
+    expect(finalize).toContain("existing_job.lease_owner = v_requested_worker_id");
+    expect(finalize).toContain("existing_job.lease_generation = v_requested_lease_generation");
+    expect(finalize.indexOf("existing_job.status = 'succeeded'"))
+      .toBeLessThan(finalize.indexOf("select permit.*"));
     expect(finalize).not.toContain("lease_owner = null");
   });
 
