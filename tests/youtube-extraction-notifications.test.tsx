@@ -1,0 +1,253 @@
+// @vitest-environment jsdom
+
+import React from "react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+import {
+  YoutubeExtractionNotificationCenter,
+  YoutubeExtractionNotificationTrigger,
+} from "@/components/youtube-extraction/youtube-extraction-notification-center";
+import * as api from "@/lib/api/youtube-extraction-jobs";
+import { useYoutubeExtractionStore } from "@/stores/youtube-extraction-store";
+
+vi.mock("@/lib/api/youtube-extraction-jobs", () => ({
+  enqueueYoutubeExtraction: vi.fn(),
+  fetchYoutubeExtractionJob: vi.fn(),
+  fetchYoutubeExtractionNotifications: vi.fn(),
+  markYoutubeExtractionDelivered: vi.fn(),
+  markYoutubeExtractionSeen: vi.fn(),
+}));
+
+const successItem = {
+  job_id: "11111111-1111-4111-8111-111111111111",
+  status: "succeeded" as const,
+  submitted_at: "2026-08-14T01:00:00.000Z",
+  completed_at: "2026-08-14T01:03:00.000Z",
+  video_title_snapshot: null,
+  thumbnail_url: "https://i.ytimg.com/vi/abcdefghijk/hqdefault.jpg",
+  delivery_key: "delivery-success",
+  delivered_at: null,
+  seen_at: null,
+  result: {
+    extraction_id: "extraction-success",
+    review_path: "/menu/add/youtube?extractionId=extraction-success",
+    recipe_id: null,
+    recipe_path: null,
+  },
+  error: null,
+  can_retry: false,
+};
+
+const failedItem = {
+  ...successItem,
+  job_id: "22222222-2222-4222-8222-222222222222",
+  status: "failed" as const,
+  delivery_key: "delivery-failed",
+  video_title_snapshot: "매콤한 두부조림",
+  result: null,
+  error: {
+    code: "NOT_RECIPE_VIDEO" as const,
+    message: "레시피 영상으로 확인되지 않았어요.",
+    retryable: false,
+  },
+};
+
+function renderCenter() {
+  return render(
+    <>
+      <YoutubeExtractionNotificationTrigger />
+      <YoutubeExtractionNotificationCenter initialAuthenticated />
+    </>,
+  );
+}
+
+describe("YouTube extraction notification center", () => {
+  beforeEach(() => {
+    window.sessionStorage.clear();
+    useYoutubeExtractionStore.getState().setAuthenticated(false);
+    useYoutubeExtractionStore.getState().setItems([]);
+    useYoutubeExtractionStore.getState().setOpen(false);
+    vi.mocked(api.fetchYoutubeExtractionNotifications).mockReset();
+    vi.mocked(api.fetchYoutubeExtractionNotifications).mockResolvedValue({
+      success: true,
+      data: { items: [successItem, failedItem], next_cursor: null },
+      error: null,
+    });
+    vi.mocked(api.markYoutubeExtractionDelivered).mockReset();
+    vi.mocked(api.markYoutubeExtractionDelivered).mockResolvedValue({
+      success: true,
+      data: { delivered_count: 2 },
+      error: null,
+    });
+    vi.mocked(api.markYoutubeExtractionSeen).mockReset();
+    vi.mocked(api.markYoutubeExtractionSeen).mockResolvedValue({
+      success: true,
+      data: { seen_count: 2 },
+      error: null,
+    });
+    vi.mocked(api.enqueueYoutubeExtraction).mockReset();
+    vi.mocked(api.fetchYoutubeExtractionJob).mockReset();
+  });
+
+  afterEach(() => cleanup());
+
+  it("records delivered for visible toasts without clearing the unseen badge", async () => {
+    const user = userEvent.setup();
+    renderCenter();
+
+    expect(await screen.findByText("YouTube 레시피 추출이 완료됐어요")).toBeTruthy();
+    expect(screen.getByText("YouTube 레시피")).toBeTruthy();
+    expect(screen.queryByText("매콤한 두부조림")).toBeNull();
+    expect(screen.getByLabelText("YouTube 추출 알림 2개")).toBeTruthy();
+
+    await waitFor(() => {
+      expect(api.markYoutubeExtractionDelivered).toHaveBeenCalledWith(["delivery-success"]);
+    });
+    expect(api.markYoutubeExtractionSeen).not.toHaveBeenCalled();
+
+    await user.click(screen.getAllByRole("button", { name: "toast 닫기" })[0]);
+    expect(screen.getByLabelText("YouTube 추출 알림 2개")).toBeTruthy();
+    expect(api.markYoutubeExtractionSeen).not.toHaveBeenCalled();
+  });
+
+  it("marks exposed list rows seen, supports Escape, and gates retry by can_retry", async () => {
+    const user = userEvent.setup();
+    renderCenter();
+
+    await user.click(await screen.findByRole("button", { name: "YouTube 추출 알림 2개" }));
+    expect(screen.getByRole("dialog", { name: "YouTube 추출 알림" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "다시 시도" })).toBeNull();
+
+    await waitFor(() => {
+      expect(api.markYoutubeExtractionSeen).toHaveBeenCalledWith([
+        successItem.job_id,
+        failedItem.job_id,
+      ]);
+    });
+    expect(screen.getByLabelText("YouTube 추출 알림 없음")).toBeTruthy();
+
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("dialog", { name: "YouTube 추출 알림" })).toBeNull();
+  });
+
+  it("marks seen when the user follows a toast CTA, not when merely delivered", async () => {
+    vi.mocked(api.fetchYoutubeExtractionNotifications).mockResolvedValue({
+      success: true,
+      data: { items: [successItem], next_cursor: null },
+      error: null,
+    });
+    const user = userEvent.setup();
+
+    renderCenter();
+    const cta = await screen.findByRole("link", { name: "결과 확인" });
+    cta.addEventListener("click", (event) => event.preventDefault(), { once: true });
+    expect(api.markYoutubeExtractionSeen).not.toHaveBeenCalled();
+    await user.click(cta);
+
+    expect(api.markYoutubeExtractionSeen).toHaveBeenCalledWith([successItem.job_id]);
+  });
+
+  it("recovers a pending job after navigation or restart and refreshes terminal notifications", async () => {
+    window.sessionStorage.setItem(
+      "homecook.youtube-extraction-jobs",
+      JSON.stringify([successItem.job_id]),
+    );
+    vi.mocked(api.fetchYoutubeExtractionJob).mockResolvedValue({
+      success: true,
+      data: {
+        job_id: successItem.job_id,
+        status: "succeeded",
+        submitted_at: successItem.submitted_at,
+        started_at: successItem.submitted_at,
+        completed_at: successItem.completed_at,
+        result: successItem.result,
+        error: null,
+        can_retry: false,
+      },
+      error: null,
+    });
+
+    renderCenter();
+
+    await waitFor(() => expect(api.fetchYoutubeExtractionJob).toHaveBeenCalledWith(successItem.job_id));
+    await waitFor(() => expect(api.fetchYoutubeExtractionNotifications).toHaveBeenCalledTimes(2));
+    expect(window.sessionStorage.getItem("homecook.youtube-extraction-jobs")).toBe("[]");
+  });
+
+  it("shows only a login return action when the session expires", async () => {
+    vi.mocked(api.fetchYoutubeExtractionNotifications).mockResolvedValue({
+      success: false,
+      data: null,
+      error: { code: "UNAUTHORIZED", message: "로그인이 필요해요.", fields: [] },
+    });
+
+    renderCenter();
+
+    const login = await screen.findByRole("link", { name: "로그인하고 돌아오기" });
+    expect(login.getAttribute("href")).toContain("/login?next=");
+    expect(screen.queryByText("매콤한 두부조림")).toBeNull();
+    expect(screen.queryByText("YouTube 레시피")).toBeNull();
+  });
+
+  it("uses the official retry label and exact retry body for quota failures", async () => {
+    const quotaItem = {
+      ...failedItem,
+      can_retry: true,
+      error: {
+        code: "QUOTA_EXCEEDED" as const,
+        message: "오늘 추출 한도를 모두 사용했어요. 나중에 다시 시도해 주세요.",
+        retryable: true,
+      },
+    };
+    vi.mocked(api.fetchYoutubeExtractionNotifications).mockResolvedValue({
+      success: true,
+      data: { items: [quotaItem], next_cursor: null },
+      error: null,
+    });
+    vi.mocked(api.enqueueYoutubeExtraction).mockResolvedValue({
+      success: true,
+      data: {
+        job_id: "33333333-3333-4333-8333-333333333333",
+        status: "queued",
+        deduplicated: false,
+        submitted_at: "2026-08-14T02:00:00.000Z",
+      },
+      error: null,
+    });
+    const user = userEvent.setup();
+
+    renderCenter();
+    await user.click(await screen.findByRole("button", { name: "YouTube 추출 알림 1개" }));
+    await user.click(screen.getByRole("button", { name: "나중에 다시 시도" }));
+
+    expect(api.enqueueYoutubeExtraction).toHaveBeenCalledWith({
+      retry_job_id: quotaItem.job_id,
+    });
+  });
+
+  it("keeps the archive response after switching tabs", async () => {
+    const archiveItem = {
+      ...successItem,
+      seen_at: "2026-08-14T02:00:00.000Z",
+      video_title_snapshot: "감자 수프 archive",
+    };
+    vi.mocked(api.fetchYoutubeExtractionNotifications).mockImplementation(async (view) => ({
+      success: true,
+      data: {
+        items: view === "archive" ? [archiveItem] : [successItem],
+        next_cursor: null,
+      },
+      error: null,
+    }));
+    const user = userEvent.setup();
+
+    renderCenter();
+    await user.click(await screen.findByRole("button", { name: "YouTube 추출 알림 1개" }));
+    await user.click(screen.getByRole("tab", { name: "지난 알림" }));
+
+    expect(await screen.findByRole("heading", { name: "감자 수프 archive" })).toBeTruthy();
+    expect(screen.queryByRole("heading", { name: "YouTube 레시피" })).toBeNull();
+  });
+});
