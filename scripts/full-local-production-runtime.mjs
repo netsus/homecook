@@ -50,6 +50,7 @@ import { mapStorageRowsToPayloadReferences } from "./lib/isolated-local-backup-r
 import { verifyFullLocalBackupReadiness } from "./lib/full-local-backup-readiness.mjs";
 import {
   openFullLocalBackupKeyEscrow,
+  registerRecoveredBackupKeyCreateOnly,
   signFullLocalBackupKeyRecoveryEvidence,
   verifyFullLocalBackupKeyEscrowBinding,
   verifyFullLocalBackupKeyRecoveryIssuerAttestation,
@@ -89,6 +90,7 @@ const COMPOSE_FILE = join(INFRA, "docker-compose.production.yml");
 const OAUTH_COMPOSE_FILE = join(INFRA, "docker-compose.oauth.production.yml");
 const CONFIG_EXAMPLE = join(INFRA, ".env.production.example");
 const DEFAULT_CONFIG = join(INFRA, ".env.production.local");
+const KEYCHAIN_CREATOR = join(INFRA, "keychain-create.exp");
 const KEYCHAIN_WRITER = join(INFRA, "keychain-store.exp");
 const KEYCHAIN_CHUNK_SIZE = 96;
 const KEYCHAIN_MAX_CHUNKS = 128;
@@ -362,6 +364,17 @@ function keychainItemExists(service, account) {
   ).status === 0;
 }
 
+function keychainDirectItemExists(service, account) {
+  const result = spawnSync(
+    "security",
+    ["find-generic-password", "-s", service, "-a", account],
+    { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] },
+  );
+  if (result.status === 0) return true;
+  if (result.status === 44) return false;
+  fail("Recovery could not verify the direct Keychain account safely.");
+}
+
 function dockerVolumeExists(name) {
   const result = spawnSync("docker", ["volume", "inspect", name], {
     encoding: "utf8",
@@ -401,6 +414,12 @@ function keychainChunkCount(service, account) {
 function storeKeychainValue(service, account, secretPath) {
   run("expect", [KEYCHAIN_WRITER, service, account, secretPath], {
     failure: `Keychain item ${account} could not be stored.`,
+  });
+}
+
+function createKeychainValue(service, account, secretPath) {
+  run("expect", [KEYCHAIN_CREATOR, service, account, secretPath], {
+    failure: `Keychain item ${account} could not be created because it already exists or Keychain rejected it.`,
   });
 }
 
@@ -1524,35 +1543,41 @@ async function restorePlatformBackup(args) {
   if (statSync(envelopePath).dev !== statSync(credentialPath).dev) {
     fail("Recovery credential and escrow envelope must share the replacement medium.");
   }
-  if (keychainItemExists(
-    PLATFORM_BACKUP_KEYCHAIN_SERVICE,
-    PLATFORM_BACKUP_KEYCHAIN_ACCOUNT,
-  )) {
-    fail("Replacement recovery requires the source backup Keychain item to be absent.");
-  }
   const backupKey = openFullLocalBackupKeyEscrow({
     envelope: JSON.parse(readFileSync(envelopePath, "utf8")),
     recoveryCredential: readFileSync(credentialPath, "utf8").trim(),
   });
-  const keyStaging = mkdtempSync(join(tmpdir(), "homecook-recovered-backup-key-"));
-  chmodSync(keyStaging, 0o700);
-  try {
-    const keyPath = join(keyStaging, "recovered.key");
-    writeFileSync(keyPath, backupKey, { encoding: "utf8", mode: 0o600 });
-    storeKeychainValue(
+  await registerRecoveredBackupKeyCreateOnly({
+    createItem: (recoveredKey) => {
+      const keyStaging = mkdtempSync(join(tmpdir(), "homecook-recovered-backup-key-"));
+      chmodSync(keyStaging, 0o700);
+      try {
+        const keyPath = join(keyStaging, "recovered.key");
+        writeFileSync(keyPath, recoveredKey, { encoding: "utf8", mode: 0o600 });
+        createKeychainValue(
+          PLATFORM_BACKUP_KEYCHAIN_SERVICE,
+          PLATFORM_BACKUP_KEYCHAIN_ACCOUNT,
+          keyPath,
+        );
+      } finally {
+        rmSync(keyStaging, { force: true, recursive: true });
+      }
+    },
+    directItemExists: () => keychainDirectItemExists(
       PLATFORM_BACKUP_KEYCHAIN_SERVICE,
       PLATFORM_BACKUP_KEYCHAIN_ACCOUNT,
-      keyPath,
-    );
-  } finally {
-    rmSync(keyStaging, { force: true, recursive: true });
-  }
-  if (keychainValue(
-    PLATFORM_BACKUP_KEYCHAIN_SERVICE,
-    PLATFORM_BACKUP_KEYCHAIN_ACCOUNT,
-  ) !== backupKey) {
-    fail("Recovered backup key was not registered in the replacement Keychain.");
-  }
+    ),
+    readItem: () => keychainValue(
+      PLATFORM_BACKUP_KEYCHAIN_SERVICE,
+      PLATFORM_BACKUP_KEYCHAIN_ACCOUNT,
+    ),
+    recoveredKey: backupKey,
+    verifyArchive: (recoveredKey) => withVerifiedPlatformBackup({
+      archive,
+      backupKey: recoveredKey,
+      consume: ({ metadata }) => metadata,
+    }),
+  });
   const archiveSha256 = sha256File(archive);
 
   return withVerifiedPlatformBackup({

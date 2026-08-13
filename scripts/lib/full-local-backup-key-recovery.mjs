@@ -32,6 +32,37 @@ function strongSecret(value, label) {
   return value;
 }
 
+/**
+ * Authenticate the archive before atomically creating the recovered direct
+ * Keychain item. `createItem` must use create-only platform semantics.
+ *
+ * @param {{
+ *   createItem: (recoveredKey: string) => unknown | Promise<unknown>,
+ *   directItemExists: () => boolean,
+ *   readItem: () => string,
+ *   recoveredKey: string,
+ *   verifyArchive: (recoveredKey: string) => unknown | Promise<unknown>,
+ * }} input
+ */
+export async function registerRecoveredBackupKeyCreateOnly({
+  createItem,
+  directItemExists,
+  readItem,
+  recoveredKey,
+  verifyArchive,
+}) {
+  const verifiedKey = strongSecret(recoveredKey, "recovered backup key");
+  if (directItemExists()) {
+    fail("source backup Keychain direct item already exists");
+  }
+  await verifyArchive(verifiedKey);
+  await createItem(verifiedKey);
+  if (readItem() !== verifiedKey) {
+    fail("create-only Keychain registration does not match the recovered backup key");
+  }
+  return Object.freeze({ registered: true });
+}
+
 /** @param {{backupKey: string, recoveryCredential: string, recoveryIssuerPublicKey?: import("node:crypto").KeyLike | import("node:crypto").KeyObject | null}} input */
 export function sealFullLocalBackupKeyEscrow({
   backupKey,

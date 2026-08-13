@@ -96,7 +96,7 @@
     "Google Kakao Naver local Auth login and linking over owned HTTPS domain",
     "LTE 5G app and public Auth path allowlist smoke",
     "off-Mac encrypted full restore twice with signed readiness and restore evidence",
-    "separate-medium key escrow replacement-Mac Keychain re-registration and clean restore",
+    "separate-medium key escrow isolated replacement environment Keychain re-registration and clean restore; physical off-device production evidence is separately required and the fixture cannot satisfy it",
     "Mac reboot Docker restart Cloudflare reconnect ordered recovery",
     "pre-floor and post-floor rollback rehearsal"
   ],

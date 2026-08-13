@@ -290,7 +290,7 @@ describe("full-local backup readiness", () => {
     ["wrong archive roles component", { restore: { source_roles_sha256: "c".repeat(64) } }],
     ["wrong authenticated metadata binding", { backup: { metadata_sha256: "c".repeat(64) } }],
     ["missing signed restore path", { restore: { manifest_path: null } }],
-    ["missing replacement-Mac key recovery", { key_recovery: { clean_restore_verified: false } }],
+    ["missing isolated replacement environment recovery", { key_recovery: { clean_restore_verified: false } }],
     ["same-path copy", { off_mac_copy: { archive_path: "/Volumes/homecook-off-mac/platform.tar.gz.enc" } }],
     ["wrong production volume", { production: { storage_volume: "supabase_storage_homecook" } }],
   ])("fails closed for %s", (_label, override) => {
@@ -424,15 +424,36 @@ describe("full-local backup readiness", () => {
   it("permits only restore-platform to issue an issuer-attested recovery manifest", async () => {
     const { readFileSync } = await import("node:fs");
     const runtime = readFileSync("scripts/full-local-production-runtime.mjs", "utf8");
+    const recovery = readFileSync(
+      "scripts/lib/full-local-backup-key-recovery.mjs",
+      "utf8",
+    );
+    const createOnlyWriter = readFileSync(
+      "infra/full-local-supabase/keychain-create.exp",
+      "utf8",
+    );
+    const restorePlatform = /async function restorePlatformBackup\(args\) \{([\s\S]*?)\n\}\n\nfunction /u
+      .exec(runtime)?.[1] ?? "";
     expect(runtime).toMatch(
       /restorePlatformBackup[\s\S]*executeBootstrapAwarePlatformRestore[\s\S]*writeCanonicalRecoveryManifest/u,
     );
     expect(runtime).toContain("signFullLocalBackupKeyRecoveryEvidence");
     expect(runtime).toContain("--recovery-issuer-private-key");
     expect(runtime).toContain("--recovery-credential-file");
-    expect(runtime).toMatch(
-      /keychainItemExists[\s\S]*source backup Keychain item to be absent[\s\S]*openFullLocalBackupKeyEscrow[\s\S]*storeKeychainValue[\s\S]*withVerifiedPlatformBackup/u,
+    expect(restorePlatform).toMatch(
+      /openFullLocalBackupKeyEscrow[\s\S]*registerRecoveredBackupKeyCreateOnly/u,
     );
+    expect(restorePlatform).toContain("keychainDirectItemExists");
+    expect(runtime).toMatch(
+      /function keychainDirectItemExists[\s\S]*"-a", account[\s\S]*status === 44[\s\S]*could not verify the direct Keychain account/u,
+    );
+    expect(runtime).toContain("keychain-create.exp");
+    expect(restorePlatform).not.toContain("storeKeychainValue");
+    expect(recovery).toMatch(
+      /directItemExists\(\)[\s\S]*verifyArchive\(verifiedKey\)[\s\S]*createItem\(verifiedKey\)/u,
+    );
+    expect(createOnlyWriter).toMatch(/add-generic-password -s \$service -a \$account/u);
+    expect(createOnlyWriter).not.toMatch(/add-generic-password -U/u);
   });
 
   it("rejects a fabricated recovery manifest even when its backup-key HMAC could be valid", () => {

@@ -7,6 +7,7 @@ import { describe, expect, it } from "vitest";
 import {
   createIsolatedKeychainAdapter,
   openFullLocalBackupKeyEscrow,
+  registerRecoveredBackupKeyCreateOnly,
   sealFullLocalBackupKeyEscrow,
   signFullLocalBackupKeyRecoveryEvidence,
   verifyFullLocalBackupKeyEscrowBinding,
@@ -17,6 +18,72 @@ const ESCROW_SHA = "c".repeat(64);
 const ESCROW_PATH = "/Volumes/homecook-key-escrow/platform-key.escrow.json";
 
 describe("full-local backup key recovery", () => {
+  it("rejects an existing direct platform backup account before archive verification", async () => {
+    const calls: string[] = [];
+
+    await expect(registerRecoveredBackupKeyCreateOnly({
+      createItem: () => calls.push("create"),
+      directItemExists: () => true,
+      readItem: () => "original-source-key",
+      recoveredKey: "recovered-backup-key-with-at-least-twenty-four-characters",
+      verifyArchive: () => calls.push("verify"),
+    })).rejects.toThrow(/already exists|source backup Keychain/iu);
+    expect(calls).toEqual([]);
+  });
+
+  it("does not confuse a chunk-count account with the direct platform backup account", async () => {
+    const calls: string[] = [];
+    const recoveredKey = "recovered-backup-key-with-at-least-twenty-four-characters";
+    const accounts = new Set(["platform-backup-encryption-key__count"]);
+
+    await expect(registerRecoveredBackupKeyCreateOnly({
+      createItem: () => calls.push("create"),
+      directItemExists: () => accounts.has("platform-backup-encryption-key"),
+      readItem: () => recoveredKey,
+      recoveredKey,
+      verifyArchive: () => calls.push("verify"),
+    })).resolves.toEqual(expect.objectContaining({ registered: true }));
+    expect(calls).toEqual(["verify", "create"]);
+  });
+
+  it("fails closed when another process creates the direct item after the precheck", async () => {
+    let directItem: string | null = "competitor-owned-original-key";
+
+    await expect(registerRecoveredBackupKeyCreateOnly({
+      createItem: () => {
+        if (directItem !== null) {
+          throw new Error("Keychain item already exists");
+        }
+        directItem = "overwritten";
+      },
+      directItemExists: () => false,
+      readItem: () => directItem ?? "",
+      recoveredKey: "recovered-backup-key-with-at-least-twenty-four-characters",
+      verifyArchive: () => undefined,
+    })).rejects.toThrow(/already exists/iu);
+    expect(directItem).toBe("competitor-owned-original-key");
+  });
+
+  it("never persists a recovered key when archive authentication fails", async () => {
+    let original = "original-key-remains-untouched";
+    let createCalled = false;
+
+    await expect(registerRecoveredBackupKeyCreateOnly({
+      createItem: () => {
+        createCalled = true;
+        original = "overwritten";
+      },
+      directItemExists: () => false,
+      readItem: () => original,
+      recoveredKey: "mismatched-recovered-key-with-at-least-twenty-four-characters",
+      verifyArchive: () => {
+        throw new Error("archive authentication failed");
+      },
+    })).rejects.toThrow(/archive authentication/iu);
+    expect(createCalled).toBe(false);
+    expect(original).toBe("original-key-remains-untouched");
+  });
+
   it("recovers the archive key from an authenticated escrow envelope", () => {
     const backupKey = "backup-key-with-at-least-twenty-four-characters";
     const recoveryCredential = "independent-credential-manager-secret";

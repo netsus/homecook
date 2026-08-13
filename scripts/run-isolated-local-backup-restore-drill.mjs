@@ -610,7 +610,7 @@ async function executeDrill() {
       || recoveryContext.keychain_receipt.key_sha256
         !== createHash("sha256").update(restoreKey).digest("hex")
     ) {
-      throw new Error("Actual replacement-Mac recovery outputs are not bound");
+      throw new Error("Actual isolated replacement environment recovery outputs are not bound");
     }
     const restoreResultPath = join(root, "replacement-restore-result.json");
     writeFileSync(restoreResultPath, `${JSON.stringify(restoreResult, null, 2)}\n`, {

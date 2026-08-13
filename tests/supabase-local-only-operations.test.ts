@@ -33,6 +33,29 @@ describe("Supabase local-only operations contract", () => {
     expect(canonical).toContain("Required local gate acceptance");
   });
 
+  it("uses isolated replacement environment terminology without claiming physical hardware", () => {
+    const activeRecoverySurfaces = [
+      "docs/engineering/supabase-local-only-operations.md",
+      "docs/workpacks/full-local-supabase-production/automation-spec.json",
+      "infra/full-local-supabase/README.md",
+      "scripts/run-isolated-local-backup-restore-drill.mjs",
+      "tests/full-local-backup-readiness.test.ts",
+    ].map((path) => read(path)).join("\n");
+
+    const forbiddenPhysicalClaim = new RegExp(
+      `${["replacement", "Mac"].join("[- ]")}|${["replacement", "machine", "verified"].join("_")}`,
+      "iu",
+    );
+    expect(activeRecoverySurfaces).not.toMatch(forbiddenPhysicalClaim);
+    expect(activeRecoverySurfaces).toContain(
+      "isolated_replacement_environment_verified",
+    );
+    expect(activeRecoverySurfaces).toMatch(
+      /physical.*off-device.*separately required|off-device.*physical.*separately required/iu,
+    );
+    expect(activeRecoverySurfaces).toMatch(/fixture.*cannot satisfy/iu);
+  });
+
   it("removes remote package entrypoints and the Cloud-secret OAuth workflow", () => {
     const packageJson = JSON.parse(read("package.json")) as {
       scripts: Record<string, string>;
