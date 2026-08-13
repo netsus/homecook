@@ -1,9 +1,9 @@
 {
-  "captured_at": "2026-08-13T21:00:17Z",
+  "captured_at": "2026-08-13T22:12:38Z",
   "evidence_scope": "youtube-async-extraction-notification Stage 4 frontend",
   "implementation_base": "25e8da8b04c2322f68d8f54837135399d7586da7",
-  "implementation_head": "7e8cf65a25e4fc79c1e8d98b557c984865c4e6d7",
-  "implementation_tree": "9088f67edc4aeca68fdc5174a56fc0ac696d938c",
+  "implementation_head": "85752b46b142654ec1ec7289828dd577ab8049e4",
+  "implementation_tree": "dc1e79c25a8f70351cb56bd0769749adb9808ce5",
   "generator": "tests/e2e/youtube-async-extraction-notification.spec.ts",
   "base_url": "http://127.0.0.1:3217",
   "remote_supabase_access_count": 0,
@@ -31,6 +31,11 @@
       "state": "accepted-active-job-projected-whole-word-wrap"
     },
     {
+      "file": "YT_IMPORT_BACKGROUND/mobile-320-accepted-200-keyboard.png",
+      "viewport": { "width": 320, "height": 568 },
+      "state": "accepted-200-percent-keyboard-reduced-safe-area-cta-reflow"
+    },
+    {
       "file": "YT_IMPORT_BACKGROUND/mobile-320-offline.png",
       "viewport": { "width": 320, "height": 568 },
       "state": "offline-input-preserved"
@@ -56,6 +61,21 @@
       "state": "grouped-terminal-toast-unseen-badge"
     },
     {
+      "file": "APP_SHELL_YOUTUBE_NOTIFICATIONS/mobile-390-draft-toast.png",
+      "viewport": { "width": 390, "height": 844 },
+      "state": "individual-draft-exact-body-primary-controls-non-overlap"
+    },
+    {
+      "file": "APP_SHELL_YOUTUBE_NOTIFICATIONS/mobile-390-consumed-toast.png",
+      "viewport": { "width": 390, "height": 844 },
+      "state": "individual-consumed-exact-body"
+    },
+    {
+      "file": "APP_SHELL_YOUTUBE_NOTIFICATIONS/mobile-390-failed-toast.png",
+      "viewport": { "width": 390, "height": 844 },
+      "state": "individual-failed-exact-safe-body"
+    },
+    {
       "file": "APP_SHELL_YOUTUBE_NOTIFICATIONS/mobile-390-consumed.png",
       "viewport": { "width": 390, "height": 844 },
       "state": "consumed-already-registered-recipe"
@@ -78,7 +98,12 @@
     {
       "file": "APP_SHELL_YOUTUBE_NOTIFICATIONS/mobile-390-unauthorized.png",
       "viewport": { "width": 390, "height": 844 },
-      "state": "shell-unauthorized-return-to-login"
+      "state": "shell-unauthorized-dismissible-non-overlap-return-to-login"
+    },
+    {
+      "file": "APP_SHELL_YOUTUBE_NOTIFICATIONS/mobile-390-relogin-recovery.png",
+      "viewport": { "width": 390, "height": 844 },
+      "state": "actual-reload-logout-login-badge-list-destination-recovery"
     },
     {
       "file": "APP_SHELL_YOUTUBE_NOTIFICATIONS/mobile-320-failure-panel.png",
@@ -89,19 +114,24 @@
       "file": "APP_SHELL_YOUTUBE_NOTIFICATIONS/desktop-1440-archive.png",
       "viewport": { "width": 1440, "height": 900 },
       "state": "cursor-archive-dedupe-scroll-focus-and-retryable-failure"
+    },
+    {
+      "file": "APP_SHELL_YOUTUBE_NOTIFICATIONS/desktop-1440-draft-toast.png",
+      "viewport": { "width": 1440, "height": 900 },
+      "state": "desktop-toast-primary-controls-non-overlap"
     }
   ],
   "verification": {
-    "focused_vitest": "34 passed including fresh-first-page registration acknowledgement, next-page reconciliation, network retry preservation, owner isolation, consumed copy, and Korean whole-word wrapping",
-    "youtube_async_regression": "148 passed across frontend notifications/import, API client, backend routes, migration contract, Stage 3 API revise, worker, release installer, and evidence boundaries",
-    "playwright": "15 deterministic scenarios passed; 45 cross-project executions passed on isolated port 3217; 16 exact-head screenshots captured",
-    "axe": "0 violations on accepted CTA, grouped-toast, and 320px drawer surfaces with color-contrast enabled",
+    "focused_vitest": "89 passed across notification/import UI, worker child-environment, release installer provenance, API list failure, migration fence/cursor, and evidence boundaries",
+    "youtube_async_regression": "189 passed across frontend notifications/import, API client, backend routes, migration contract, Stage 3 API revise, worker, release installer, and evidence boundaries; 37 isolated PostgreSQL/PostgREST integration tests passed",
+    "playwright": "19 deterministic scenarios passed; 57 cross-project executions passed on isolated port 3217; 22 exact-code-head screenshots captured",
+    "axe": "0 violations on accepted CTA, grouped and individual toast, unauthorized notice, and 320px reflow surfaces with color-contrast enabled",
     "exploratory_qa": "97/100; 42/46 covered; 4 independent authority or real-worker/DB items intentionally not covered",
     "lint_typecheck": "passed on exact code head",
     "official_frontend_pr_gate": "passed on isolated port 3217: lint, typecheck, 2,741 product tests, build, 62 smoke passed/10 skipped, 8 a11y passed/1 skipped, and 12 visual passed",
     "security_e2e": "12 passed on isolated port 3217",
-    "full_vitest": "6,107 passed and 439 skipped",
-    "visual_verdict": "98/100 pass"
+    "full_vitest": "6,119 passed and 440 skipped",
+    "visual_verdict": "96/100 pass"
   },
   "limitations": [
     "This is mock-API browser evidence and does not replace real local Supabase worker crash/reclaim or cross-user DB verification.",

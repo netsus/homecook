@@ -1,18 +1,18 @@
 {
   "schemaVersion": "1.0",
   "slice": "youtube-async-extraction-notification",
-  "generatedAt": "2026-08-13T21:00:17Z",
+  "generatedAt": "2026-08-13T22:12:38Z",
   "baseUrl": "http://127.0.0.1:3217",
   "devices": [
     "desktop-chrome",
     "mobile-chrome",
     "mobile-ios-small"
   ],
-  "summary": "동일 구현 tree의 superseding head 7e8cf65a25e4fc79c1e8d98b557c984865c4e6d7에서 mock API 기반 격리 앱을 포트 3217로 실행해 desktop 1280/1440, mobile 390, small mobile 320 흐름을 다시 탐색했다. 브라우저가 register 201을 확인한 뒤 local items와 stale cursor가 miss해도 owner-scoped unseen 첫 페이지를 fresh fetch하고 exact extraction job만 seen 처리하며, 다음 cursor·network failure pending retry·다른 extraction 격리를 focused test로 고정했다. consumed 알림은 `이미 등록한 레시피예요`로 분기하고 accepted/quota 한국어 카피는 단어 단위로 줄바꿈한다. import initial/submitting/POLICY_CHANGED와 shell consumed/expired/non-retryable/empty/offline/unauthorized를 포함한 16개 screenshot, archive cursor·grouped delivery·320px 200% safe-area·desktop stacking을 45개 cross-project 실행으로 재검증했으며 remote Supabase와 운영 local app/DB는 사용하지 않았다.",
+  "summary": "code head 85752b46b142654ec1ec7289828dd577ab8049e4, tree dc1e79c25a8f70351cb56bd0769749adb9808ce5에서 mock API 기반 격리 앱을 포트 3217로 실행해 desktop 1280/1440, mobile 390, small mobile 320 흐름을 다시 탐색했다. 브라우저가 register 201을 확인한 뒤 owner-scoped unseen first page와 archive fallback을 fresh fetch해 exact extraction만 확인하고 pending ack를 안전하게 유지·제거한다. 개별 draft/consumed/failed exact body, mixed neutral toast, seen 성공 후 badge 감소, dismissible unauthorized 안내를 확인했다. 실제 browser reload·logout→login 뒤 badge/list/destination을 복구했으며 320px 200% text, non-zero safe-area, keyboard-reduced viewport에서 accepted CTA 내부 스크롤 도달성과 non-overlap을 검증했다. strict child env allowlist, exact HOME auth provenance, successful replay generation fence, full-precision cursor, list fail-closed는 focused 및 37개 격리 PostgreSQL/PostgREST test로 확인했다. 총 22개 screenshot과 57개 cross-project 실행을 재생성했으며 remote Supabase와 운영 local app/DB는 사용하지 않았다.",
   "findings": [],
   "remainingRisks": [
     "이번 authority REVISE findings는 수정했지만 새 exact head의 독립 authority 재검토, Stage 5, final authority, Stage 6 승인은 아직 수행하지 않았다.",
-    "실제 local Supabase worker crash/reclaim, cross-user DB 격리, relogin은 backend integration/별도 verifier 범위이며 이번 mock browser QA에서 재실행하지 않았다.",
+    "실제 local Supabase worker crash/reclaim과 실제 사용자 세션의 cross-user DB 격리는 별도 verifier 범위이며, 이번에는 격리 PostgreSQL/PostgREST 및 fixture browser만 사용했다.",
     "physical device VoiceOver/TalkBack, 실제 safe-area와 virtual-keyboard 가림은 Manual Only다."
   ],
   "checklistCoverage": [
@@ -37,7 +37,7 @@
     {
       "item_id": "happy-path-4",
       "status": "covered",
-      "notes": "foreground/online/visibility refresh와 startup unseen badge·목록 복구를 확인하고 delivered_at이 있는 unseen 항목은 restart/relogin toast에서 제외했다.",
+      "notes": "실제 browser reload, guest reload, authenticated reload 순서로 badge·목록·exact destination 복구를 확인하고 delivered_at이 있는 unseen 항목은 restart/relogin toast에서 제외했다.",
       "linked_findings": []
     },
     {
@@ -61,7 +61,7 @@
     {
       "item_id": "state-policy-2",
       "status": "covered",
-      "notes": "starting backend head의 Stage 3 reaper/claim evidence를 재사용했으며 FE diff는 backend를 수정하지 않는다.",
+      "notes": "Stage 3 reaper/claim evidence를 재사용하고 successful finalize replay가 exact retained worker_id+lease_generation에만 idempotent임을 격리 PostgreSQL에서 확인했다.",
       "linked_findings": []
     },
     {
@@ -181,13 +181,13 @@
     {
       "item_id": "data-integrity-5",
       "status": "covered",
-      "notes": "restricted worker privilege는 starting backend head Stage 3 evidence로 확인했고 FE는 worker surface에 접근하지 않는다.",
+      "notes": "restricted worker privilege는 Stage 3 evidence를 유지하고, Codex/Python/ffmpeg/extraction child가 strict allowlist 환경만 상속하며 service-role/signing/user-token sentinel을 받지 않음을 focused test로 확인했다.",
       "linked_findings": []
     },
     {
       "item_id": "data-integrity-6",
       "status": "covered",
-      "notes": "fencing evidence는 starting backend head에 있고 FE diff는 해당 write 경로를 수정하지 않는다.",
+      "notes": "successful finalize replay도 retained worker_id+lease_generation exact fence를 요구해 stale generation이 항상 거부되고 exact generation replay만 idempotent임을 SQL 및 격리 integration test로 확인했다.",
       "linked_findings": []
     },
     {

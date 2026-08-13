@@ -1,7 +1,7 @@
 {
   "status": "pass",
   "score": 97,
-  "implementation_head": "7e8cf65a25e4fc79c1e8d98b557c984865c4e6d7",
+  "implementation_head": "85752b46b142654ec1ec7289828dd577ab8049e4",
   "base_url": "http://127.0.0.1:3217",
   "devices": [
     "desktop-chrome",
@@ -20,7 +20,7 @@
     "independent authority re-review of the repaired exact head, Stage 5, and final authority",
     "independent verifier role",
     "same-SHA real local Supabase app/worker rehearsal",
-    "worker crash/reclaim and cross-user real DB scenarios"
+    "real worker crash/reclaim and real cross-user database scenarios"
   ],
   "forbidden_operations": {
     "remote_or_cloud_supabase": 0,

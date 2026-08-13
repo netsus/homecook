@@ -1,13 +1,13 @@
 # YouTube async extraction Stage 4 evidence
 
-- exact code head: `7e8cf65a25e4fc79c1e8d98b557c984865c4e6d7`
-- exact code tree: `9088f67edc4aeca68fdc5174a56fc0ac696d938c`
-- superseded code tree equivalence: PR #1353 code head `ad25fe3ff4e4ca1b0f9b9f03be0a43cdb0b94368`와 동일
+- exact code head: `85752b46b142654ec1ec7289828dd577ab8049e4`
+- exact code tree: `dc1e79c25a8f70351cb56bd0769749adb9808ce5`
+- evidence relation: screenshot과 deterministic browser evidence는 위 code head/tree에서 생성했고, 이후 evidence-only commit은 제품 tree를 변경하지 않는다.
 - isolated app: `http://127.0.0.1:3217`
-- captured: `2026-08-13T21:00:17Z`
+- captured: `2026-08-13T22:12:38Z`
 - remote/cloud Supabase access: `0`
 - operational local Supabase/app 3100 mutation or use: `0`
 
-`manifest.json`은 16개 screenshot의 viewport와 상태를 고정한다. `portable-exploratory-qa/`는 같은 code head에서 재잠근 checklist, 작성 완료 report, eval 결과, 실행 README를 저장한다. `visual-verdict.json`은 구현 task의 screenshot 판정이며 독립 authority 또는 Stage 5 승인을 대신하지 않는다.
+`manifest.json`은 22개 screenshot의 viewport와 상태를 고정한다. `portable-exploratory-qa/`는 같은 code head에서 재잠근 checklist, 작성 완료 report, eval 결과, 실행 README를 저장한다. `visual-verdict.json`은 구현 task의 screenshot 판정이며 독립 authority 또는 Stage 5 승인을 대신하지 않는다.
 
-신규 증거는 import initial/submitting/`POLICY_CHANGED`, shell consumed/expired/non-retryable/empty/offline/unauthorized를 각각 명시적으로 고정한다. `mobile-390-accepted.png`와 `mobile-390-quota-retry.png`는 한국어 단어 단위 줄바꿈을, `mobile-320-failure-panel.png`는 200% text와 simulated safe-area에서 실패 제목·메시지 동시 가시성과 CTA 도달성을 입증한다. desktop drawer stacking/archive cursor, grouped toast, retry replacement projection도 같은 exact-head 실행에서 다시 검증했다.
+신규 증거는 import initial/submitting/`POLICY_CHANGED`, shell consumed/expired/non-retryable/empty/offline/unauthorized를 각각 명시적으로 고정한다. 개별 draft/consumed/failed toast exact body, mixed grouped toast의 중립 의미, HOME primary controls와 mobile/desktop toast 비겹침을 별도 캡처했다. `mobile-320-accepted-200-keyboard.png`는 200% text, non-zero simulated safe-area, keyboard-reduced viewport에서도 두 CTA가 내부 스크롤로 도달 가능하고 앱 제목·알림 trigger가 겹치지 않음을 입증한다. 실제 browser reload와 guest reload 후 재로그인 badge/list/destination 복구도 결정론적 fixture로 검증했다.
