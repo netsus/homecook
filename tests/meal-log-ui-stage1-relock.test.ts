@@ -34,6 +34,13 @@ const designRepairTree = "a578bf1d8da21a3bce230051399c6be1fd9da78c";
 const designRereviewTask = "019ffb81-4bad-7353-b92b-add4924a4a40";
 const designRereviewHead = "1da1a186b99044d12fc9a940321a9bbefe44ae07";
 const designRereviewTree = "c09dd364c8523ffc975836ab5df2c9db9388e3fe";
+const latestDesignRepairTask = "019ffbbc-d4f1-7730-be56-0d8d6d28ce8c";
+const latestDesignHead = "e2959ef523e57770a4cb2b490f7b00a972ab8845";
+const latestDesignTree = "7932fc6d026d9f2c0aa963041efcf315be12c9e9";
+const latestDesignBlob = "9bade6235acd9c6f60d128216260d9c0408718c2";
+const latestDesignReviewTask = "019ffbc5-0c4a-7b11-afd9-6346a76b762c";
+const latestCritiqueCommit = "4e1bdaae2335fd41bb46db1ede5d835a2f164faa";
+const latestCritiqueTree = "467f698b61775eea81487aaddf2aeac91bea1e00";
 
 function read(relativePath: string) {
   return readFileSync(join(root, relativePath), "utf8");
@@ -56,6 +63,7 @@ describe("meal-log-ui fresh Stage 1 relock", () => {
   );
   const roadmap = read("docs/workpacks/README.md");
   const design = read("ui/designs/MEAL_LOG.md");
+  const critique = read("ui/designs/critiques/MEAL_LOG-critique.md");
 
   it("passes the actual Stage 1 doc gate and checklist contract", () => {
     const docGate = evaluateDocGate({ rootDir: root, slice: sliceId });
@@ -240,7 +248,7 @@ describe("meal-log-ui fresh Stage 1 relock", () => {
     ).toHaveLength(1);
   });
 
-  it("reserves independent design and review work without fabricating approval", () => {
+  it("records the current approved P1-ML-05 design provenance without fabricating later authority", () => {
     expect(automation.frontend.design_authority).toMatchObject({
       generator_required: true,
       generator_artifact: "ui/designs/MEAL_LOG.md",
@@ -257,6 +265,7 @@ describe("meal-log-ui fresh Stage 1 relock", () => {
       status.notes,
       roadmap,
       design,
+      critique,
     ].join("\n");
     for (const required of [
       initialRelockBase,
@@ -281,7 +290,15 @@ describe("meal-log-ui fresh Stage 1 relock", () => {
       designRereviewTask,
       designRereviewHead,
       designRereviewTree,
+      latestDesignRepairTask,
+      latestDesignHead,
+      latestDesignTree,
+      latestDesignBlob,
+      latestDesignReviewTask,
+      latestCritiqueCommit,
+      latestCritiqueTree,
       "APPROVE 0/0/0",
+      "superseded",
     ]) {
       expect(reviewProjection).toContain(required);
     }
@@ -292,6 +309,9 @@ describe("meal-log-ui fresh Stage 1 relock", () => {
         expect.stringContaining("security authorization and API boundary"),
         expect.stringContaining("five-axis"),
       ]),
+    );
+    expect(workItem.verification.evaluator_commands.join("\n")).not.toMatch(
+      /design-delta critic refresh|fresh independent Codex design critic refresh/u,
     );
     expect(acceptance).toMatch(
       /- \[x\] canonical MEAL_LOG design and independent critique pass before Stage 2/u,
@@ -336,26 +356,42 @@ describe("meal-log-ui fresh Stage 1 relock", () => {
     );
   });
 
-  it("keeps existing deleted-column entries editable and deletable without reopening add", () => {
-    const deletedColumnProjection = [
+  it("requires an explicit active owner column for every deleted/null-origin edit save", () => {
+    const owningProjections = [
       readme,
       acceptance,
       JSON.stringify(automation),
       JSON.stringify(workItem),
-      design,
-    ].join("\n");
+      roadmap,
+      status.notes,
+    ];
 
-    for (const required of [
-      "deleted-column-no-new-target-existing-entry-edit-delete-preserved",
-      "prohibit add CTA and new target only",
-      "existing entries retain edit and delete",
-      "select and validate an active meal column when changing slot",
-      "quantity/source/date edits follow the existing PATCH contract",
-      "DELETE soft-deletes and reverses the entry's own active batch event",
-      "focus returns to the invoking entry action or deleted section heading",
-    ]) {
-      expect(deletedColumnProjection).toContain(required);
+    for (const projection of owningProjections) {
+      for (const required of [
+        "every edit save from a deleted/null origin",
+        "regardless of quantity/source/date/timezone fields",
+        "explicit current active owner meal column selection",
+        "save fail-closed until selection",
+        "server replaces meal_plan_column_id + slot_name_snapshot",
+        "DELETE remains no relocation",
+      ]) {
+        expect(projection).toContain(required);
+      }
     }
+
+    const deletedColumnProjection = [...owningProjections, design].join("\n");
+    expect(deletedColumnProjection).toContain(
+      "deleted-column-no-new-target-existing-entry-edit-delete-preserved",
+    );
+    expect(deletedColumnProjection).toContain(
+      "DELETE soft-deletes and reverses the entry's own active batch event",
+    );
+    expect(deletedColumnProjection).not.toContain(
+      "select and validate an active meal column when changing slot",
+    );
+    expect(deletedColumnProjection).not.toContain(
+      "quantity/source/date edits follow the existing PATCH contract",
+    );
 
     expect(deletedColumnProjection).not.toContain(
       ["deleted-column-history-read-only", "-no-new-entry"].join(""),
