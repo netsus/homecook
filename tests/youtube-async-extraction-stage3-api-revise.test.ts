@@ -146,6 +146,7 @@ describe("YTASYNC Stage 3 API revise RED", () => {
           ...(await rpc()).data as Record<string, unknown>,
           policy_version: 2,
           policy_snapshot_digest: "d".repeat(64),
+          allowed_snapshot_digest: "d".repeat(64),
         },
         error: null,
       }));

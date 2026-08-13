@@ -156,7 +156,7 @@
       "effect": "read-only",
       "exposure": "authenticated-self",
       "allowed_principals": ["authenticated"],
-      "owner": "youtube_extraction_projection_rpc_owner",
+      "owner": "youtube_extraction_worker_rpc_owner",
       "security_mode": "definer",
       "safe_search_path": ["pg_catalog", "pg_temp"]
     },
@@ -186,7 +186,7 @@
       "effect": "read-only",
       "exposure": "authenticated-self",
       "allowed_principals": ["authenticated"],
-      "owner": "youtube_extraction_readiness_rpc_owner",
+      "owner": "youtube_extraction_credential_manager_rpc_owner",
       "security_mode": "definer",
       "safe_search_path": ["pg_catalog", "pg_temp"]
     },
@@ -196,7 +196,7 @@
       "effect": "read-only",
       "exposure": "authenticated-self",
       "allowed_principals": ["authenticated"],
-      "owner": "youtube_extraction_projection_rpc_owner",
+      "owner": "youtube_extraction_worker_rpc_owner",
       "security_mode": "definer",
       "safe_search_path": ["pg_catalog", "pg_temp"]
     },
@@ -206,7 +206,7 @@
       "effect": "read-only",
       "exposure": "authenticated-self",
       "allowed_principals": ["authenticated"],
-      "owner": "youtube_extraction_projection_rpc_owner",
+      "owner": "youtube_extraction_worker_rpc_owner",
       "security_mode": "definer",
       "safe_search_path": ["pg_catalog", "pg_temp"]
     },

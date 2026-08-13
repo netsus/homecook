@@ -516,20 +516,6 @@ export async function loadYoutubeExtractionEnqueueReadiness(
     const rowPolicyVersion = row.policy_version;
     const rowPolicyDigest = row.policy_snapshot_digest;
     if (
-      Number.isInteger(descriptorPolicyVersion)
-      && Number(descriptorPolicyVersion) > 0
-      && typeof descriptorPolicyDigest === "string"
-      && /^[a-f0-9]{64}$/u.test(descriptorPolicyDigest)
-      && Number.isInteger(rowPolicyVersion)
-      && Number(rowPolicyVersion) > 0
-      && typeof rowPolicyDigest === "string"
-      && /^[a-f0-9]{64}$/u.test(rowPolicyDigest)
-      && (
-        descriptorPolicyVersion !== rowPolicyVersion
-        || descriptorPolicyDigest !== rowPolicyDigest
-      )
-    ) return { code: "POLICY_CHANGED" };
-    if (
       descriptor.schema !== "homecook.youtube-extraction-app-descriptor"
       || descriptor.version !== 1
       || expectedSchemaRecord.schema !== "homecook.youtube-extraction-expected-schema"
@@ -546,22 +532,32 @@ export async function loadYoutubeExtractionEnqueueReadiness(
       || descriptor.schema_identity !== row.schema_identity
       || descriptor.schema_identity !== expectedSchemaRecord.schema_identity
       || descriptor.schema_identity !== workerManifest.schema_identity
-      || descriptor.expected_policy_version !== YOUTUBE_ASYNC_POLICY.policyVersion
-      || descriptor.expected_policy_version !== row.policy_version
-      || descriptor.expected_policy_version !== workerManifest.policy_version
-      || descriptor.expected_policy_snapshot_digest !== YOUTUBE_ASYNC_POLICY.snapshotDigest
-      || descriptor.expected_policy_snapshot_digest !== row.policy_snapshot_digest
-      || descriptor.expected_policy_snapshot_digest !== row.allowed_snapshot_digest
-      || descriptor.expected_policy_snapshot_digest !== workerManifest.allowed_snapshot_digest
       || expectedSchemaRecord.catalog_fingerprint !== row.catalog_fingerprint
       || typeof row.fingerprint_key_version !== "string"
       || !/^[a-f0-9]{64}$/u.test(String(descriptor.artifact_sha256 ?? ""))
       || !/^[a-f0-9]{64}$/u.test(String(descriptor.expected_schema_sha256 ?? ""))
       || !/^[a-f0-9]{64}$/u.test(String(expectedSchemaRecord.catalog_fingerprint ?? ""))
+      || !Number.isInteger(descriptorPolicyVersion)
+      || Number(descriptorPolicyVersion) <= 0
+      || descriptorPolicyVersion !== YOUTUBE_ASYNC_POLICY.policyVersion
+      || descriptorPolicyVersion !== workerManifest.policy_version
+      || typeof descriptorPolicyDigest !== "string"
+      || !/^[a-f0-9]{64}$/u.test(descriptorPolicyDigest)
+      || descriptorPolicyDigest !== YOUTUBE_ASYNC_POLICY.snapshotDigest
+      || descriptorPolicyDigest !== workerManifest.allowed_snapshot_digest
+      || !Number.isInteger(rowPolicyVersion)
+      || Number(rowPolicyVersion) <= 0
+      || typeof rowPolicyDigest !== "string"
+      || !/^[a-f0-9]{64}$/u.test(rowPolicyDigest)
+      || rowPolicyDigest !== row.allowed_snapshot_digest
       || typeof row.credential_expires_at !== "string"
       || !Number.isFinite(Date.parse(row.credential_expires_at))
       || Date.parse(row.credential_expires_at) <= now.getTime() + 30 * 60 * 1000
     ) return null;
+    if (
+      descriptorPolicyVersion !== rowPolicyVersion
+      || descriptorPolicyDigest !== rowPolicyDigest
+    ) return { code: "POLICY_CHANGED" };
     const previousVersion = row.previous_fingerprint_key_version;
     const previousValidUntil = row.previous_fingerprint_valid_until;
     const previousIsDisabled = previousVersion === null

@@ -107,19 +107,35 @@ function runPsqlAsync(sql: string) {
   });
 }
 
-async function waitForPolicyAdvisoryLock() {
+async function waitForPolicyAdvisoryLock(
+  applicationName: string,
+  mode: "ShareLock" | "ExclusiveLock",
+  granted: boolean,
+) {
   for (let attempt = 0; attempt < 80; attempt += 1) {
-    const lockCount = Number(lastLine(psql(`
-      select count(*)::text
-      from pg_catalog.pg_locks
-      where locktype = 'advisory'
-        and granted
-        and objid = 86120317;
+    const observed = parseJson(lastLine(psql(`
+      select coalesce((
+        select pg_catalog.json_build_object(
+          'pid', lock.pid,
+          'mode', lock.mode,
+          'granted', lock.granted
+        )
+        from pg_catalog.pg_locks as lock
+        join pg_catalog.pg_stat_activity as activity on activity.pid = lock.pid
+        where activity.application_name = '${applicationName}'
+          and lock.locktype = 'advisory'
+          and lock.objid = 86120317
+          and lock.mode = '${mode}'
+          and lock.granted = ${granted}
+        limit 1
+      ), '{}'::json)::text;
     `)));
-    if (lockCount > 0) return;
+    if (typeof observed.pid === "number") return observed;
     await new Promise((resolve) => setTimeout(resolve, 25));
   }
-  throw new Error("policy advisory lock was not observed");
+  throw new Error(
+    `policy advisory lock was not observed for ${applicationName}:${mode}:${granted}`,
+  );
 }
 
 function expectSqlFailure(sql: string, pattern: RegExp) {
@@ -461,8 +477,8 @@ describe.runIf(enabled).sequential("youtube async extraction PostgreSQL integrat
 
     expect(result).toEqual({
       enqueue: "youtube_extraction_enqueue_rpc_owner",
-      readiness: "youtube_extraction_readiness_rpc_owner",
-      projection: "youtube_extraction_projection_rpc_owner",
+      readiness: "youtube_extraction_credential_manager_rpc_owner",
+      projection: "youtube_extraction_worker_rpc_owner",
       claim: "youtube_extraction_worker_rpc_owner",
       rotate: "youtube_extraction_credential_manager_rpc_owner",
     });
@@ -628,8 +644,6 @@ describe.runIf(enabled).sequential("youtube async extraction PostgreSQL integrat
           join pg_catalog.pg_roles as granted_role on granted_role.oid = membership.roleid
           where granted_role.rolname in (
             'youtube_extraction_enqueue_rpc_owner',
-            'youtube_extraction_readiness_rpc_owner',
-            'youtube_extraction_projection_rpc_owner',
             'youtube_extraction_worker_rpc_owner',
             'youtube_extraction_credential_manager_rpc_owner'
           )
@@ -1009,10 +1023,9 @@ describe.runIf(enabled).sequential("youtube async extraction PostgreSQL integrat
     });
     const enqueueBeforeRotation = runPsqlAsync(`
       begin;
+      set application_name = 'yta-policy-race-enqueue';
       set local role authenticated;
       set local request.jwt.claims = ${sqlJson(authenticatedClaims(ownerA))};
-      select pg_advisory_xact_lock_shared(86120317);
-      select pg_sleep(0.25);
       select public.enqueue_youtube_extraction_job(
         'policyRace01', 1, '${oldSnapshotDigest}', '1', repeat('a', 64),
         null, null, 'background_notify'
@@ -1020,9 +1033,19 @@ describe.runIf(enabled).sequential("youtube async extraction PostgreSQL integrat
       select pg_sleep(0.75);
       commit;
     `);
-    await waitForPolicyAdvisoryLock();
-    const rotateAfterEnqueue = await runPsqlAsync(`
+    const enqueueLock = await waitForPolicyAdvisoryLock(
+      "yta-policy-race-enqueue",
+      "ShareLock",
+      true,
+    );
+    expect(enqueueLock).toMatchObject({
+      pid: expect.any(Number),
+      mode: "ShareLock",
+      granted: true,
+    });
+    const rotateAfterEnqueue = runPsqlAsync(`
       begin;
+      set application_name = 'yta-policy-race-rotation-after-enqueue';
       select pg_advisory_xact_lock(86120317);
       update private.youtube_extraction_current_policy
       set policy_version = 2,
@@ -1031,9 +1054,20 @@ describe.runIf(enabled).sequential("youtube async extraction PostgreSQL integrat
       where policy_key = 'primary';
       commit;
     `);
+    const waitingRotationLock = await waitForPolicyAdvisoryLock(
+      "yta-policy-race-rotation-after-enqueue",
+      "ExclusiveLock",
+      false,
+    );
+    expect(waitingRotationLock).toMatchObject({
+      pid: expect.any(Number),
+      mode: "ExclusiveLock",
+      granted: false,
+    });
     const enqueueBeforeResult = await enqueueBeforeRotation;
+    const rotateAfterResult = await rotateAfterEnqueue;
     expect(enqueueBeforeResult.status, enqueueBeforeResult.stderr).toBe(0);
-    expect(rotateAfterEnqueue.status, rotateAfterEnqueue.stderr).toBe(0);
+    expect(rotateAfterResult.status, rotateAfterResult.stderr).toBe(0);
 
     const oldAccepted = parseJson(psql(`
       select json_build_object(
@@ -1062,6 +1096,7 @@ describe.runIf(enabled).sequential("youtube async extraction PostgreSQL integrat
     `));
     const rotationBeforeRetry = runPsqlAsync(`
       begin;
+      set application_name = 'yta-policy-race-rotation-before-retry';
       select pg_advisory_xact_lock(86120317);
       update private.youtube_extraction_current_policy
       set policy_version = 3,
@@ -1071,9 +1106,19 @@ describe.runIf(enabled).sequential("youtube async extraction PostgreSQL integrat
       select pg_sleep(0.75);
       commit;
     `);
-    await waitForPolicyAdvisoryLock();
+    const rotationLock = await waitForPolicyAdvisoryLock(
+      "yta-policy-race-rotation-before-retry",
+      "ExclusiveLock",
+      true,
+    );
+    expect(rotationLock).toMatchObject({
+      pid: expect.any(Number),
+      mode: "ExclusiveLock",
+      granted: true,
+    });
     const retryAfterRotation = runPsqlAsync(`
       begin;
+      set application_name = 'yta-policy-race-retry';
       set local role authenticated;
       set local request.jwt.claims = ${sqlJson(authenticatedClaims(ownerA))};
       select public.enqueue_youtube_extraction_job(
@@ -1082,6 +1127,16 @@ describe.runIf(enabled).sequential("youtube async extraction PostgreSQL integrat
       )::text;
       commit;
     `);
+    const waitingRetryLock = await waitForPolicyAdvisoryLock(
+      "yta-policy-race-retry",
+      "ShareLock",
+      false,
+    );
+    expect(waitingRetryLock).toMatchObject({
+      pid: expect.any(Number),
+      mode: "ShareLock",
+      granted: false,
+    });
     const [rotationBeforeResult, retryAfterResult] = await Promise.all([
       rotationBeforeRetry,
       retryAfterRotation,
