@@ -7,7 +7,7 @@
 - UI risk: `high-risk`
 - Design Status: `temporary`
 - Anchor dependency: 없음. 기존 `YT_IMPORT` shell을 기준으로 하며 `HOME`, `RECIPE_DETAIL`, `PLANNER_WEEK` anchor screen은 수정하지 않는다.
-- Primary CTA: 접수 전 `가져오기`; 접수 뒤 `나가기`(이전 화면/HOME). `작업 보기`는 secondary CTA다.
+- Primary CTA: `가져오기`(접수 전), `나가기`(접수 뒤 이전 화면/HOME). 접수 뒤 `작업 보기`는 secondary CTA다.
 - Mobile baseline: `390px`; narrow 검증: `320px`; desktop 검증: `1280px 이상`
 - Scroll containment: 문서 전체가 한 축으로 스크롤되고 footer/CTA가 입력·오류·safe-area를 가리지 않는다.
 

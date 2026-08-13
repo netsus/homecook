@@ -65,15 +65,20 @@ function retryLabel(item: YoutubeExtractionNotificationItem) {
 }
 
 function formatCompletedAt(completedAt: string) {
-  return new Intl.DateTimeFormat("ko-KR", {
+  const parts = new Intl.DateTimeFormat("en-US", {
     day: "numeric",
-    hour: "2-digit",
-    hour12: true,
+    hour: "numeric",
+    hourCycle: "h23",
     minute: "2-digit",
-    month: "long",
+    month: "numeric",
     timeZone: "Asia/Seoul",
     year: "numeric",
-  }).format(new Date(completedAt));
+  }).formatToParts(new Date(completedAt));
+  const values = Object.fromEntries(parts.map(({ type, value }) => [type, value]));
+  const hour = Number(values.hour);
+  const displayHour = hour % 12 || 12;
+
+  return `${values.year}년 ${values.month}월 ${values.day}일 ${hour < 12 ? "오전" : "오후"} ${displayHour}:${values.minute}`;
 }
 
 export function YoutubeExtractionNotificationTrigger({
