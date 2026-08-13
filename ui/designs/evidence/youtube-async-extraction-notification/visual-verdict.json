@@ -1,10 +1,10 @@
 {
-  "score": 97,
+  "score": 98,
   "verdict": "pass",
   "category_match": true,
   "differences": [],
   "suggestions": [
     "실기기 safe-area와 가상 키보드 가림은 Manual Only 검증에서 다시 확인한다."
   ],
-  "reasoning": "확정 artifact의 기존 YT_IMPORT visual language와 app-shell drawer 패턴을 유지하면서 공식 accepted CTA 위계를 기본 나가기·보조 작업 보기로 바로잡았다. 새 evidence에서 foreground token을 사용한 primary CTA 대비, grouped toast, 완료 시각이 있는 archive row, desktop drawer 제목·닫기 stacking, 320px 200% 텍스트와 simulated safe-area의 닫기·CTA 도달성을 확인했으며 blocker 또는 major 시각 차이는 보이지 않았다. 이 판정은 구현 task의 screenshot 비교 결과이며 독립 authority 승인을 대신하지 않는다."
+  "reasoning": "확정 artifact의 YT_IMPORT visual language와 app-shell drawer 패턴을 유지하면서 QUOTA_EXCEEDED의 정확한 CTA 문구와 retry replacement job의 active projection을 새 390px 증거로 확인했다. 기존 primary CTA 대비, grouped toast, 완료 시각 archive, desktop stacking, 320px 200% 텍스트와 simulated safe-area 도달성도 code head d5924b14에서 다시 확인했으며 blocker 또는 major 시각 차이는 보이지 않았다. 이 판정은 구현 task의 screenshot 비교 결과이며 독립 authority 승인을 대신하지 않는다."
 }

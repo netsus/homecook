@@ -3,12 +3,14 @@
 ## 목적
 - acceptance checklist를 기반으로 desktop/mobile 사용자 흐름과 edge case를 탐색한다.
 - 기능 버그뿐 아니라 디자인, 접근성, copy, affordance, 복구 UX 문제도 함께 기록한다.
+- 이 bundle은 code head `d5924b14fcc416ad11db70b96f2faf0c98c0c005`에서 `2026-08-13T20:29:14.119Z`에 다시 생성하고, 3217의 24개 Playwright 실행 결과로 보고서를 채웠다.
 
 ## 입력 자료
 - 체크리스트: `ui/designs/evidence/youtube-async-extraction-notification/portable-exploratory-qa/exploratory-checklist.json`
-- 보고서: `ui/designs/evidence/youtube-async-extraction-notification/portable-exploratory-qa/exploratory-report.json`
+- 보고서 템플릿: `ui/designs/evidence/youtube-async-extraction-notification/portable-exploratory-qa/exploratory-report.json`
 - 기본 URL: `http://127.0.0.1:3217`
 - 필수 device coverage: `desktop-chrome, mobile-chrome, mobile-ios-small`
+- 시각 증거: 상위 evidence 폴더의 390/320/1280/1440 PNG 8개. quota retry와 replacement active projection 캡처를 포함한다.
 
 ## 권장 데이터 셋업
 - fixture baseline
@@ -39,8 +41,8 @@
 ## 권장 실행 예시
 - `pnpm dev`로 앱을 띄운다.
 - `http://127.0.0.1:3217`에서 브라우저 탐색을 시작한다.
-- 이 tracked bundle은 위 실행에서 생성한 raw checklist/report/eval을 portable 경로로 보존한다. 재검증은 `pnpm qa:eval -- --checklist ui/designs/evidence/youtube-async-extraction-notification/portable-exploratory-qa/exploratory-checklist.json --report ui/designs/evidence/youtube-async-extraction-notification/portable-exploratory-qa/exploratory-report.json --fail-under 90`을 사용한다.
-- eval 결과는 `ui/designs/evidence/youtube-async-extraction-notification/portable-exploratory-qa/eval-result.json`에 보존한다.
+- 완료 후 `ui/designs/evidence/youtube-async-extraction-notification/portable-exploratory-qa/exploratory-report.json`를 채우고 `pnpm qa:eval -- --checklist ui/designs/evidence/youtube-async-extraction-notification/portable-exploratory-qa/exploratory-checklist.json --report ui/designs/evidence/youtube-async-extraction-notification/portable-exploratory-qa/exploratory-report.json`로 점수화한다.
+- eval 결과는 기본값으로 `ui/designs/evidence/youtube-async-extraction-notification/portable-exploratory-qa/eval-result.json`에 저장된다.
 
 ## 필수 휴리스틱
 - 모바일에서 정렬, 필터, CTA처럼 자주 쓰는 control의 텍스트가 읽기 어려울 정도로 작지 않은지 확인한다.
