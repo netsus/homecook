@@ -2,12 +2,17 @@
 
 import React from "react";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { YoutubeImportScreen } from "@/components/recipe/youtube-import-screen";
 import { fetchCookingMethods } from "@/lib/api/cooking-methods";
 import * as asyncApi from "@/lib/api/youtube-extraction-jobs";
 import * as syncApi from "@/lib/api/youtube-import";
+import {
+  YOUTUBE_EXTRACTION_JOB_ENQUEUED_EVENT,
+  YOUTUBE_EXTRACTION_JOBS_STORAGE_KEY,
+} from "@/lib/youtube-extraction-client-state";
 
 const routerReplace = vi.fn();
 
@@ -49,6 +54,7 @@ function renderImport(props: { initialExtractionId?: string; initialYoutubeUrl?:
 
 describe("YT_IMPORT async extraction", () => {
   beforeEach(() => {
+    window.sessionStorage.clear();
     Object.defineProperty(window, "matchMedia", {
       configurable: true,
       value: vi.fn().mockReturnValue({
@@ -236,5 +242,104 @@ describe("YT_IMPORT async extraction", () => {
     expect(await screen.findByText("결과가 만료됐어요. 다시 추출해 주세요.")).toBeTruthy();
     expect(screen.getByRole("link", { name: "다시 추출" }).getAttribute("href"))
       .toBe("/menu/add/youtube");
+  });
+
+  it.each([
+    ["QUOTA_EXCEEDED", "나중에 다시 시도"],
+    ["EXTRACTION_EXPIRED", "다시 추출"],
+  ] as const)("uses the exact accepted retry CTA for %s", async (code, retryLabel) => {
+    vi.mocked(asyncApi.enqueueYoutubeExtraction).mockResolvedValue({
+      success: true,
+      data: {
+        job_id: "11111111-1111-4111-8111-111111111111",
+        status: "queued",
+        deduplicated: false,
+        submitted_at: "2026-08-14T01:00:00.000Z",
+      },
+      error: null,
+    });
+    vi.mocked(asyncApi.fetchYoutubeExtractionJob).mockResolvedValue({
+      success: true,
+      data: {
+        job_id: "11111111-1111-4111-8111-111111111111",
+        status: code === "EXTRACTION_EXPIRED" ? "expired" : "failed",
+        submitted_at: "2026-08-14T01:00:00.000Z",
+        started_at: "2026-08-14T01:00:01.000Z",
+        completed_at: "2026-08-14T01:03:00.000Z",
+        result: null,
+        error: {
+          code,
+          message: code === "EXTRACTION_EXPIRED"
+            ? "결과가 만료됐어요. 다시 추출해 주세요."
+            : "오늘 추출 한도를 모두 사용했어요. 나중에 다시 시도해 주세요.",
+          retryable: true,
+        },
+        can_retry: true,
+      },
+      error: null,
+    });
+
+    renderImport({ initialYoutubeUrl: youtubeUrl });
+
+    expect(await screen.findByRole("button", { name: retryLabel })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "다시 시도" })).toBeNull();
+  });
+
+  it("tracks the new accepted retry job for exit and task-view active projection", async () => {
+    const user = userEvent.setup();
+    const firstJobId = "11111111-1111-4111-8111-111111111111";
+    const retryJobId = "55555555-5555-4555-8555-555555555555";
+    const enqueued = vi.fn();
+    window.addEventListener(YOUTUBE_EXTRACTION_JOB_ENQUEUED_EVENT, enqueued);
+    vi.mocked(asyncApi.enqueueYoutubeExtraction)
+      .mockResolvedValueOnce({
+        success: true,
+        data: {
+          job_id: firstJobId,
+          status: "queued",
+          deduplicated: false,
+          submitted_at: "2026-08-14T01:00:00.000Z",
+        },
+        error: null,
+      })
+      .mockResolvedValueOnce({
+        success: true,
+        data: {
+          job_id: retryJobId,
+          status: "queued",
+          deduplicated: false,
+          submitted_at: "2026-08-14T01:05:00.000Z",
+        },
+        error: null,
+      });
+    vi.mocked(asyncApi.fetchYoutubeExtractionJob).mockResolvedValue({
+      success: true,
+      data: {
+        job_id: firstJobId,
+        status: "failed",
+        submitted_at: "2026-08-14T01:00:00.000Z",
+        started_at: "2026-08-14T01:00:01.000Z",
+        completed_at: "2026-08-14T01:03:00.000Z",
+        result: null,
+        error: {
+          code: "QUOTA_EXCEEDED",
+          message: "오늘 추출 한도를 모두 사용했어요. 나중에 다시 시도해 주세요.",
+          retryable: true,
+        },
+        can_retry: true,
+      },
+      error: null,
+    });
+
+    renderImport({ initialYoutubeUrl: youtubeUrl });
+    await user.click(await screen.findByRole("button", { name: "나중에 다시 시도" }));
+
+    expect(JSON.parse(
+      window.sessionStorage.getItem(YOUTUBE_EXTRACTION_JOBS_STORAGE_KEY) ?? "[]",
+    )).toEqual([firstJobId, retryJobId]);
+    expect(enqueued).toHaveBeenCalledTimes(2);
+    expect(screen.getByRole("button", { name: "나가기" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "작업 보기" })).toBeTruthy();
+    window.removeEventListener(YOUTUBE_EXTRACTION_JOB_ENQUEUED_EVENT, enqueued);
   });
 });
