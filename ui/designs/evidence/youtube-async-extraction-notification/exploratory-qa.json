@@ -1,7 +1,7 @@
 {
   "status": "pass",
   "score": 97,
-  "implementation_head": "673b671dcd9b93f350416d9c39339d8fc078c099",
+  "implementation_head": "46e6e68704c700ab10a88fa738857354502e2156",
   "base_url": "http://127.0.0.1:3217",
   "devices": [
     "desktop-chrome",
@@ -15,9 +15,9 @@
     "validation_errors": 0
   },
   "findings": [],
-  "local_bundle": ".artifacts/qa/youtube-async-extraction-notification/stage4-673b671d",
+  "local_bundle": ".artifacts/qa/youtube-async-extraction-notification/2026-08-13T18-35-13-352Z",
   "not_covered": [
-    "independent authority precheck, Stage 5, and final authority",
+    "independent authority re-review of the repaired exact head, Stage 5, and final authority",
     "independent verifier role",
     "same-SHA real local Supabase app/worker rehearsal",
     "worker crash/reclaim and cross-user real DB scenarios"
