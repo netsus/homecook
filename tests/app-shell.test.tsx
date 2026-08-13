@@ -5,6 +5,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { AppShell } from "@/components/layout/app-shell";
+import { useYoutubeExtractionStore } from "@/stores/youtube-extraction-store";
 
 vi.mock("@/components/layout/bottom-tabs", () => ({
   BottomTabs: ({ currentTab }: { currentTab: string }) => (
@@ -14,10 +15,12 @@ vi.mock("@/components/layout/bottom-tabs", () => ({
 
 afterEach(() => {
   cleanup();
+  useYoutubeExtractionStore.getState().setAuthenticated(false);
 });
 
 describe("app shell", () => {
   it("uses the shared brand header without MVP or local-dev badges", () => {
+    useYoutubeExtractionStore.getState().setAuthenticated(true);
     render(
       <AppShell currentTab="home">
         <div>content</div>
@@ -33,6 +36,7 @@ describe("app shell", () => {
     expect(screen.queryByText("MVP Slice 01")).toBeNull();
     expect(screen.queryByText("local-dev-controls")).toBeNull();
     expect(screen.getByText("content")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "YouTube 추출 알림 없음" })).toBeTruthy();
   });
 
   it("can hide the shared header when a screen needs its own hero header", () => {

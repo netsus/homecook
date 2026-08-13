@@ -2,6 +2,7 @@ import Link from "next/link";
 import * as React from "react";
 
 import { MumeokBrandSymbol } from "@/components/brand/mumeok-brand-symbol";
+import { YoutubeExtractionNotificationTrigger } from "@/components/youtube-extraction/youtube-extraction-notification-center";
 import { PRIMARY_WEB_NAV_ITEMS } from "@/lib/navigation/app-nav";
 
 interface AppHeaderProps {
@@ -29,7 +30,7 @@ export function AppHeader({
       className="sticky top-0 z-20 border-b border-[var(--wave1-border)] bg-[var(--wave1-surface)]"
       style={{ borderBottomWidth: "0.5px" }}
     >
-      <div className="flex min-h-[var(--control-height-xl)] items-center justify-center px-4 md:min-h-[56px] md:px-6">
+      <div className="mx-auto flex min-h-[var(--control-height-xl)] max-w-6xl items-center justify-between gap-3 px-4 md:min-h-[56px] md:px-6">
         {brandAsPageTitle ? <h1>{brandLink}</h1> : brandLink}
         <nav aria-label="데스크탑 주요 메뉴" className="hidden items-center gap-1 lg:flex">
           {PRIMARY_WEB_NAV_ITEMS.map((item) => {
@@ -52,6 +53,7 @@ export function AppHeader({
             );
           })}
         </nav>
+        <YoutubeExtractionNotificationTrigger />
       </div>
     </header>
   );
