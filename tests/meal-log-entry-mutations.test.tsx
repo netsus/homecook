@@ -77,8 +77,9 @@ describe("MEAL_LOG entry mutations", () => {
 
     await user.click(await screen.findByRole("button", { name: /아침의 달걀 식사 기록 수정/u }));
     const dialog = screen.getByRole("dialog", { name: "식사 기록 수정" });
-    fetchMock.mockImplementation(async (_input, init) => {
-      keys.push(new Headers(init?.headers).get("Idempotency-Key") ?? "");
+    fetchMock.mockImplementation(async () => {
+      const call = fetchMock.mock.calls.at(-1) as unknown as [RequestInfo | URL, RequestInit?];
+      keys.push(new Headers(call[1]?.headers).get("Idempotency-Key") ?? "");
       return new Response(JSON.stringify({
         success: false,
         data: null,
