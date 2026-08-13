@@ -14,6 +14,10 @@ const finalRelockBase = "c12afbccd15f4935a1a52b9f2c2c23882a5033ff";
 const latestMasterBase = "c4045705ef72c76f7e7258d10c460f56b6847dd7";
 const latestMasterContent = "a625aefa7baab63f183a9d46e6f12d607d4e017f";
 const latestMasterMerge = "0e7fe07a5719dd3f4e9833d163c25c47e8d8e375";
+const securityReviewedHead = "3708cd9fe3e86a85db17946b165ee6456c596af6";
+const securityMasterBase = "fb1119baae72862efefdb1cad13cc811bbd91a1c";
+const securityMasterMerge = "f79cc89895e19e388422c4799f23cca5c095d6c0";
+const securityMasterMergeTree = "b1bc3500da9ef9cbd0fb0b75359cac1d4abdd2f9";
 const mealLogCoreMerge = "8ba3fa5a2a198eb4f9c19d59cea5f6ccc52fdd4f";
 const mealLogCheckpointMerge = "4597ca835ba81307d0bdf9e1b1c41806b17e7a68";
 const plannerShellMerge = "2185b59d1b460dac916aa4a4a4a5e061c8b795f0";
@@ -273,6 +277,15 @@ describe("meal-log-ui fresh Stage 1 relock", () => {
       latestMasterBase,
       latestMasterContent,
       latestMasterMerge,
+      securityReviewedHead,
+      securityMasterBase,
+      securityMasterMerge,
+      securityMasterMergeTree,
+      "#1352",
+      "postcss>nanoid",
+      "3.3.18",
+      "13/13 success",
+      "high/critical audit 0",
       "base drift",
       "normal two-parent merge",
       "YouTube async isolated-local tooling",
