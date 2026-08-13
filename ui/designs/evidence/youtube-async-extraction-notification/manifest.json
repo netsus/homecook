@@ -1,0 +1,56 @@
+{
+  "captured_at": "2026-08-13T17:52:04Z",
+  "evidence_scope": "youtube-async-extraction-notification Stage 4 frontend",
+  "implementation_base": "25e8da8b04c2322f68d8f54837135399d7586da7",
+  "implementation_head": "07425916519d739f19f6be41c6d92c34a46b33b8",
+  "implementation_tree": "f458dc630870398cb13fafe5b0dde9fc39d7fc7f",
+  "generator": "tests/e2e/youtube-async-extraction-notification.spec.ts",
+  "base_url": "http://127.0.0.1:3217",
+  "remote_supabase_access_count": 0,
+  "operational_local_supabase_mutation_count": 0,
+  "operational_app_3100_use_count": 0,
+  "captures": [
+    {
+      "file": "YT_IMPORT_BACKGROUND/mobile-390-accepted.png",
+      "viewport": { "width": 390, "height": 844 },
+      "state": "accepted"
+    },
+    {
+      "file": "YT_IMPORT_BACKGROUND/mobile-320-offline.png",
+      "viewport": { "width": 320, "height": 568 },
+      "state": "offline-input-preserved"
+    },
+    {
+      "file": "YT_IMPORT_BACKGROUND/desktop-1280-active-duplicate.png",
+      "viewport": { "width": 1280, "height": 800 },
+      "state": "active-duplicate"
+    },
+    {
+      "file": "APP_SHELL_YOUTUBE_NOTIFICATIONS/mobile-390-success-toast.png",
+      "viewport": { "width": 390, "height": 844 },
+      "state": "success-toast-unseen-badge"
+    },
+    {
+      "file": "APP_SHELL_YOUTUBE_NOTIFICATIONS/mobile-320-failure-panel.png",
+      "viewport": { "width": 320, "height": 568 },
+      "state": "failure-list-focus-scroll"
+    },
+    {
+      "file": "APP_SHELL_YOUTUBE_NOTIFICATIONS/desktop-1440-archive.png",
+      "viewport": { "width": 1440, "height": 900 },
+      "state": "archive-draft-and-retryable-failure"
+    }
+  ],
+  "verification": {
+    "focused_vitest": "24 passed",
+    "playwright": "7 passed",
+    "axe": "0 new serious or critical violations; existing bright-brand contrast rule excluded by documented test boundary",
+    "exploratory_qa": "97/100; 42/46 covered; 4 independent authority or real-worker/DB items intentionally not covered",
+    "visual_verdict": "95/100 pass"
+  },
+  "limitations": [
+    "This is mock-API browser evidence and does not replace real local Supabase worker crash/reclaim or cross-user DB verification.",
+    "Independent authority precheck, Stage 5, final authority, and Stage 6 remain pending.",
+    "Physical-device screen reader, safe-area, and virtual-keyboard checks remain Manual Only."
+  ]
+}
