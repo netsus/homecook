@@ -1,7 +1,7 @@
 {
   "status": "pass",
   "score": 97,
-  "implementation_head": "635717d7d139ed498799371bbacfda8e09503b08",
+  "implementation_head": "5dd595d02791648489c4ceb7bb8a043ac3cdd18d",
   "base_url": "http://127.0.0.1:3217",
   "devices": [
     "desktop-chrome",
@@ -15,7 +15,7 @@
     "validation_errors": 0
   },
   "findings": [],
-  "local_bundle": ".artifacts/qa/youtube-async-extraction-notification/2026-08-13T18-50-50-000Z",
+  "portable_bundle": "portable-exploratory-qa",
   "not_covered": [
     "independent authority re-review of the repaired exact head, Stage 5, and final authority",
     "independent verifier role",
