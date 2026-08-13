@@ -3,15 +3,17 @@ import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 import {
   chmodSync,
   existsSync,
+  lstatSync,
   mkdtempSync,
   readdirSync,
   readFileSync,
+  realpathSync,
   rmSync,
   statSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { basename, isAbsolute, join, relative, resolve } from "node:path";
+import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
 
 import { buildSanitizedPlatformData } from "./full-local-restore-cutover.mjs";
 
@@ -117,12 +119,70 @@ export function assertExternalBackupPath({ output, repositoryRoot }) {
     throw new Error("Backup output must be an absolute .tar.gz.enc path");
   }
   const normalizedOutput = resolve(output);
-  const normalizedRepository = resolve(repositoryRoot);
-  const outputRelative = relative(normalizedRepository, normalizedOutput);
+  if (existsSync(normalizedOutput) && lstatSync(normalizedOutput).isSymbolicLink()) {
+    throw new Error("Backup output must not be a symbolic link");
+  }
+  const canonicalize = (candidate) => {
+    const suffix = [];
+    let ancestor = resolve(candidate);
+    while (!existsSync(ancestor)) {
+      suffix.unshift(basename(ancestor));
+      const parent = dirname(ancestor);
+      if (parent === ancestor) break;
+      ancestor = parent;
+    }
+    return resolve(realpathSync(ancestor), ...suffix);
+  };
+  const canonicalOutput = canonicalize(normalizedOutput);
+  const normalizedRepository = canonicalize(repositoryRoot);
+  const outputRelative = relative(normalizedRepository, canonicalOutput);
   if (outputRelative === "" || (!outputRelative.startsWith("..") && !isAbsolute(outputRelative))) {
     throw new Error("Backup output must stay outside the repository");
   }
-  return normalizedOutput;
+  return canonicalOutput;
+}
+
+export function createFailSafeConsistentCutController({
+  startWriter,
+  stopWriter,
+  writers,
+}) {
+  if (
+    !Array.isArray(writers)
+    || writers.some((writer) => typeof writer !== "string" || !writer)
+    || new Set(writers).size !== writers.length
+    || typeof startWriter !== "function"
+    || typeof stopWriter !== "function"
+  ) {
+    throw new Error("Consistent-cut writer controller is invalid");
+  }
+  const stopped = new Set();
+  return Object.freeze({
+    beginConsistentCut() {
+      if (stopped.size !== 0) {
+        throw new Error("Consistent cut is already active");
+      }
+      for (const writer of writers) {
+        stopWriter(writer);
+        stopped.add(writer);
+      }
+    },
+    endConsistentCut() {
+      const failures = [];
+      for (const writer of [...stopped].reverse()) {
+        try {
+          startWriter(writer);
+          stopped.delete(writer);
+        } catch (error) {
+          failures.push(error);
+        }
+      }
+      if (failures.length > 0) {
+        throw new AggregateError(failures, "Consistent-cut writer release failed");
+      }
+    },
+    stoppedWriters: () => Object.freeze([...stopped]),
+  });
 }
 
 export function buildPlatformDumpCommands(directory) {
@@ -461,8 +521,10 @@ export function createEncryptedPlatformBackup({
       throw new Error("Pinned Supabase CLI version mismatch");
     }
 
-    storage.beginConsistentCut();
+    let cutAttempted = false;
     try {
+      cutAttempted = true;
+      storage.beginConsistentCut();
       if (database) {
         database.dumpComponents(staging);
       } else {
@@ -489,7 +551,7 @@ export function createEncryptedPlatformBackup({
         failure: "Local Storage payload capture failed",
       });
     } finally {
-      storage.endConsistentCut();
+      if (cutAttempted) storage.endConsistentCut();
     }
 
     const sanitized = buildSanitizedPlatformData(
@@ -598,13 +660,19 @@ export async function withVerifiedPlatformBackup({
   archive,
   backupKey,
   consume = ({ metadata }) => metadata,
-  dependencies: suppliedDependencies,
+  dependencies: suppliedDependencies = {},
 }) {
   if (!isAbsolute(archive) || typeof backupKey !== "string" || backupKey.length < 24) {
     throw new Error("An absolute archive path and separate backup key are required");
   }
   const dependencies = { ...defaults(), ...suppliedDependencies };
+  const artifactLstat = suppliedDependencies?.lstat
+    ?? suppliedDependencies?.stat
+    ?? lstatSync;
+  const artifactRealpath = suppliedDependencies?.realpath
+    ?? (suppliedDependencies?.stat ? (path) => path : realpathSync);
   const authenticationPath = platformBackupAuthenticationPath(archive);
+  const canonicalArtifacts = new Map();
   for (const [path, label] of [
     [archive, "Platform backup archive"],
     [authenticationPath, "Platform backup authentication"],
@@ -612,15 +680,23 @@ export async function withVerifiedPlatformBackup({
     if (!dependencies.exists(path)) {
       throw new Error(`${label} is missing`);
     }
-    const stat = dependencies.stat(path);
+    const directStat = artifactLstat(path);
+    if (directStat.isSymbolicLink?.() === true) {
+      throw new Error(`${label} must not be a symbolic link`);
+    }
+    const canonicalPath = artifactRealpath(path);
+    canonicalArtifacts.set(path, canonicalPath);
+    const stat = dependencies.stat(canonicalPath);
     if (!stat.isFile() || (stat.mode & 0o777) !== 0o600) {
       throw new Error(`${label} must be a regular mode 0600 file`);
     }
   }
+  const canonicalArchive = canonicalArtifacts.get(archive);
+  const canonicalAuthentication = canonicalArtifacts.get(authenticationPath);
   verifyPlatformBackupAuthentication({
     archive,
-    archiveBytes: dependencies.readBuffer(archive),
-    authentication: JSON.parse(dependencies.read(authenticationPath)),
+    archiveBytes: dependencies.readBuffer(canonicalArchive),
+    authentication: JSON.parse(dependencies.read(canonicalAuthentication)),
     backupKey,
   });
   const staging = dependencies.createTempDirectory();
@@ -637,7 +713,7 @@ export async function withVerifiedPlatformBackup({
       "-pass",
       `env:${PLATFORM_BACKUP_KEY_ENV}`,
       "-in",
-      archive,
+      canonicalArchive,
       "-out",
       bundle,
     ], { env: { ...process.env, [PLATFORM_BACKUP_KEY_ENV]: backupKey } });

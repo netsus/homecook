@@ -1,6 +1,8 @@
 import { createHmac, randomUUID } from "node:crypto";
 import { spawnSync } from "node:child_process";
 
+import { assertExactLoopbackHttpOrigin } from "./lib/local-only-supabase-operator-env.mjs";
+
 const repositoryRoot = process.cwd();
 
 function parseAssignments(contents) {
@@ -46,7 +48,7 @@ function readLocalEnvironment() {
     throw new Error("local Supabase environment is unavailable");
   }
   return {
-    url: values.API_URL,
+    url: assertExactLoopbackHttpOrigin(values.API_URL, { label: "API_URL" }),
     tokens: [
       { role: "anon", token: values.ANON_KEY },
       { role: "authenticated", token: signLocalAuthenticatedJwt(values.JWT_SECRET) },

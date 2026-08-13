@@ -71,7 +71,6 @@
     "full-local-production:status": "node scripts/full-local-production-runtime.mjs status",
     "full-local-production:stop": "node scripts/full-local-production-runtime.mjs stop",
     "full-local-production:restore-platform": "node scripts/full-local-production-runtime.mjs restore-platform",
-    "full-local-production:restore-platform:verify": "node scripts/full-local-production-runtime.mjs verify-restored-platform",
     "full-local-production:restore-platform:compare": "node scripts/full-local-production-runtime.mjs compare-restore-manifests",
     "full-local-production:backup-key:bootstrap": "node scripts/full-local-platform-backup.mjs bootstrap-key",
     "full-local-production:platform-backup": "node scripts/full-local-platform-backup.mjs backup",

@@ -1,5 +1,13 @@
-import { execFileSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { execFileSync, spawnSync } from "node:child_process";
+import {
+  chmodSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -15,6 +23,7 @@ import {
   buildPlatformDumpCommands,
   buildStoragePayloadManifest,
   createEncryptedPlatformBackup,
+  createFailSafeConsistentCutController,
   PINNED_SUPABASE_CLI_VERSION,
   restoreVerifiedStoragePayload,
   verifyPlatformBackupMetadata,
@@ -320,6 +329,90 @@ describe("full-local platform backup boundary", () => {
     })).toBe("/off-mac/platform.tar.gz.enc");
   });
 
+  it("rejects an external-looking backup path whose parent symlink resolves inside the repository", () => {
+    const repositoryRoot = mkdtempSync(join(tmpdir(), "homecook-backup-repo-"));
+    const externalRoot = mkdtempSync(join(tmpdir(), "homecook-backup-external-"));
+    temporaryDirectories.push(repositoryRoot, externalRoot);
+    const alias = join(externalRoot, "repository-alias");
+    symlinkSync(repositoryRoot, alias, "dir");
+
+    expect(() => assertExternalBackupPath({
+      output: join(alias, "platform.tar.gz.enc"),
+      repositoryRoot,
+    })).toThrow(/real|outside|symbolic/iu);
+  });
+
+  it("rejects a symbolic-link archive before authentication or decryption", async () => {
+    const externalRoot = mkdtempSync(join(tmpdir(), "homecook-backup-link-"));
+    temporaryDirectories.push(externalRoot);
+    const target = join(externalRoot, "target.tar.gz.enc");
+    const archive = join(externalRoot, "platform.tar.gz.enc");
+    writeFileSync(target, "encrypted bytes");
+    chmodSync(target, 0o600);
+    symlinkSync(target, archive, "file");
+
+    await expect(withVerifiedPlatformBackup({
+      archive,
+      backupKey: "test-backup-key-with-enough-entropy",
+    })).rejects.toThrow(/symbolic link/iu);
+  });
+
+  it("rejects a symbolic-link authentication sidecar before decryption", async () => {
+    const externalRoot = mkdtempSync(join(tmpdir(), "homecook-backup-auth-link-"));
+    temporaryDirectories.push(externalRoot);
+    const archive = join(externalRoot, "platform.tar.gz.enc");
+    const authenticationTarget = join(externalRoot, "authentication-target.json");
+    writeFileSync(archive, "encrypted bytes");
+    writeFileSync(authenticationTarget, "{}");
+    chmodSync(archive, 0o600);
+    chmodSync(authenticationTarget, 0o600);
+    symlinkSync(authenticationTarget, `${archive}.auth.json`, "file");
+
+    await expect(withVerifiedPlatformBackup({
+      archive,
+      backupKey: "test-backup-key-with-enough-entropy",
+    })).rejects.toThrow(/authentication.*symbolic link/iu);
+  });
+
+  it("requires an authenticated restore-manifest sidecar before readiness recording", () => {
+    const backupCli = readFileSync("scripts/full-local-platform-backup.mjs", "utf8");
+    const runtimeCli = readFileSync("scripts/full-local-production-runtime.mjs", "utf8");
+
+    expect(runtimeCli).toContain("buildPlatformBackupAuthentication");
+    expect(runtimeCli).toContain("platformBackupAuthenticationPath(manifestPath)");
+    expect(backupCli).toContain("verifyPlatformBackupAuthentication");
+    expect(backupCli).toContain("platformBackupAuthenticationPath(restoreManifestPath)");
+  });
+
+  it("rejects a symbolic-link readiness archive before config, Keychain, or digest access", () => {
+    const externalRoot = mkdtempSync(join(tmpdir(), "homecook-readiness-link-"));
+    temporaryDirectories.push(externalRoot);
+    const target = join(externalRoot, "target.tar.gz.enc");
+    const archive = join(externalRoot, "platform.tar.gz.enc");
+    writeFileSync(target, "encrypted bytes");
+    chmodSync(target, 0o600);
+    symlinkSync(target, archive, "file");
+
+    const result = spawnSync(process.execPath, [
+      "scripts/full-local-platform-backup.mjs",
+      "record-readiness",
+      "--confirm-off-mac-copy",
+      "OFF_MAC_COPY_VERIFIED",
+      "--archive",
+      archive,
+      "--off-mac-copy",
+      target,
+      "--restore-manifest",
+      target,
+      "--output",
+      join(externalRoot, "readiness.json"),
+    ], { cwd: process.cwd(), encoding: "utf8" });
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toMatch(/--archive.*symbolic link/iu);
+    expect(result.stderr).not.toMatch(/Keychain|digest|Docker/iu);
+  });
+
   it("accepts only the exact encrypted bundle entries", () => {
     expect(assertSafeBackupEntries(
       "manifest.json\nroles.sql\nschema.sql\ndata.sanitized.sql\nstorage.payload.tar\n",
@@ -419,6 +512,49 @@ describe("full-local platform backup boundary", () => {
       "storage-archive",
       "end-cut",
     ]);
+  });
+
+  it("restarts the exact successfully stopped writers when a later stop fails", () => {
+    const stopped: string[] = [];
+    const restarted: string[] = [];
+    const cut = createFailSafeConsistentCutController({
+      startWriter: (writer: string) => restarted.push(writer),
+      stopWriter: (writer: string) => {
+        if (writer === "storage") throw new Error("storage stop failed");
+        stopped.push(writer);
+      },
+      writers: ["auth", "storage", "postgrest"],
+    });
+    const storageRoot = mkdtempSync(join(tmpdir(), "homecook-storage-partial-cut-"));
+    temporaryDirectories.push(storageRoot);
+
+    expect(() => createEncryptedPlatformBackup({
+      backupKey: "test-backup-key-with-enough-entropy",
+      output: "/off-mac/platform.tar.gz.enc",
+      repositoryRoot: "/repo",
+      dependencies: {
+        chmod: vi.fn(),
+        createTempDirectory: () => "/private/tmp/homecook-platform-partial-cut",
+        exists: () => false,
+        hashFile: () => "a".repeat(64),
+        now: () => "2026-08-01T00:00:00.000Z",
+        read: () => "sql",
+        remove: vi.fn(),
+        run: (command: string) => command === "pnpm" ? "2.110.0\n" : "",
+        write: vi.fn(),
+      },
+      storage: {
+        ...cut,
+        captureSource: vi.fn(),
+        references: [],
+        sourceDirectory: storageRoot,
+        sourceIdentity: "fixture:partial-consistent-cut",
+      },
+    })).toThrow("storage stop failed");
+
+    expect(stopped).toEqual(["auth"]);
+    expect(restarted).toEqual(["auth"]);
+    expect(cut.stoppedWriters()).toEqual([]);
   });
 
   it("fails closed unless DB and complete Storage payload checksums are bound", () => {

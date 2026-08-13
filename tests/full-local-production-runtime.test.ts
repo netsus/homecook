@@ -84,6 +84,21 @@ function validSecrets() {
 }
 
 describe("full-local production runtime static contract", () => {
+  it("re-inventories exact production resources after restore before issuing evidence", () => {
+    const source = readFileSync(
+      join(process.cwd(), "scripts/full-local-production-runtime.mjs"),
+      "utf8",
+    );
+    const restorePath = source.slice(
+      source.indexOf("async function restorePlatformBackup"),
+      source.indexOf("function compareRestoreManifests"),
+    );
+
+    expect(restorePath).toMatch(
+      /await waitForRuntimeHealthy\(runtime\);[\s\S]*liveFullLocalProductionResources\(runtime\);[\s\S]*writeRestoreManifest/iu,
+    );
+  });
+
   it("can be imported for mock-based authorization contract tests without running the CLI", () => {
     const result = spawnSync(
       process.execPath,

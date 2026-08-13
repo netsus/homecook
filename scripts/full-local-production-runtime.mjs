@@ -5,6 +5,7 @@ import { createHash } from "node:crypto";
 import {
   chmodSync,
   existsSync,
+  lstatSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -33,21 +34,35 @@ import {
   validateFullLocalProductionConfig,
 } from "./lib/full-local-production-runtime.mjs";
 import {
+  buildPlatformBackupAuthentication,
   buildDockerStorageVolumeCaptureInvocation,
   buildDockerStorageVolumeRestoreInvocation,
   listStoragePayloadPaths,
   PLATFORM_BACKUP_KEYCHAIN_ACCOUNT,
   PLATFORM_BACKUP_KEYCHAIN_SERVICE,
+  platformBackupAuthenticationPath,
   verifyStoragePayloadManifest,
   withVerifiedPlatformBackup,
 } from "./lib/full-local-platform-backup.mjs";
 import { mapStorageRowsToPayloadReferences } from "./lib/isolated-local-backup-restore-drill.mjs";
 import { verifyFullLocalBackupReadiness } from "./lib/full-local-backup-readiness.mjs";
 import {
+  assertRegularReadinessArtifact,
+  authenticateFullLocalBackupArchives,
+} from "./lib/full-local-backup-readiness.mjs";
+import {
+  selectFullLocalProductionResources,
+} from "./lib/full-local-production-resources.mjs";
+import {
   assertFreshRestoreExecutionApproved,
   assertFreshRestoreAllowed,
+  assertRestoredStorageVolumeProvenance,
+  buildBootstrapAwareDatabaseResetSql,
+  buildComposeLabeledStorageVolumeCreateArgs,
   buildCutoverPreflight,
   buildPlatformRestoreSql,
+  executeBootstrapAwarePlatformRestore,
+  verifyRestoredPlatformDataSnapshot,
   compareRestoreReplayManifests,
 } from "./lib/full-local-restore-cutover.mjs";
 import {
@@ -350,6 +365,17 @@ function dockerVolumeExists(name) {
     return false;
   }
   fail("Docker could not verify whether the persistent PostgreSQL volume exists.");
+}
+
+function inspectDockerVolume(name) {
+  const output = run("docker", ["volume", "inspect", name], {
+    failure: "Docker Storage volume provenance inspection failed.",
+  });
+  const inspected = JSON.parse(output);
+  if (!Array.isArray(inspected) || inspected.length !== 1) {
+    fail("Docker Storage volume provenance inspection was ambiguous.");
+  }
+  return inspected[0];
 }
 
 function keychainChunkCount(service, account) {
@@ -757,11 +783,30 @@ function sha256File(path) {
   return digest;
 }
 
-function loadFullLocalBackupReadiness(runtime) {
+function dockerResourceInventory(type) {
+  return JSON.parse(run("docker", [type, "inspect", ...run(
+    "docker",
+    [type, "ls", "--quiet"],
+    { failure: `Docker ${type} inventory listing failed.` },
+  ).trim().split("\n").filter(Boolean)], {
+    failure: `Docker ${type} inventory inspection failed.`,
+  }) || "[]");
+}
+
+function liveFullLocalProductionResources(runtime) {
+  return selectFullLocalProductionResources({
+    config: runtime.config,
+    containers: dockerResourceInventory("container"),
+    volumes: dockerResourceInventory("volume"),
+  });
+}
+
+async function loadFullLocalBackupReadiness(runtime, resources) {
   const path = runtime.config.FULL_LOCAL_BACKUP_READINESS_PATH;
   if (!path || !isAbsolute(path) || !existsSync(path)) {
     fail("FULL_LOCAL_BACKUP_READINESS_PATH must reference existing readiness evidence.");
   }
+  assertRegularReadinessArtifact(path);
   validateExternalSecretDirectory({
     repositoryRoot: ROOT,
     secretDirectory: dirname(path),
@@ -770,7 +815,7 @@ function loadFullLocalBackupReadiness(runtime) {
   if (!evidenceStat.isFile() || (evidenceStat.mode & 0o777) !== 0o600) {
     fail("Full-local backup readiness evidence must be a mode 0600 file.");
   }
-  const evidence = JSON.parse(readFileSync(path, "utf8"));
+  const evidence = JSON.parse(readFileSync(realpathSync(path), "utf8"));
   const observedFiles = {};
   const archiveStats = [];
   for (const archivePath of [
@@ -780,7 +825,10 @@ function loadFullLocalBackupReadiness(runtime) {
     if (typeof archivePath !== "string" || !isAbsolute(archivePath) || !existsSync(archivePath)) {
       fail("Backup readiness archive or off-Mac copy is unavailable.");
     }
-    const archiveStat = statSync(archivePath);
+    if (lstatSync(archivePath).isSymbolicLink()) {
+      fail("Backup readiness archives must not be symlinks.");
+    }
+    const archiveStat = statSync(realpathSync(archivePath));
     if (!archiveStat.isFile() || (archiveStat.mode & 0o777) !== 0o600) {
       fail("Backup readiness archives must be regular mode 0600 files.");
     }
@@ -790,17 +838,31 @@ function loadFullLocalBackupReadiness(runtime) {
   if (archiveStats[0].dev === archiveStats[1].dev) {
     fail("Backup readiness off-Mac copy must remain on a distinct filesystem device.");
   }
+  const backupKey = keychainValue(
+    PLATFORM_BACKUP_KEYCHAIN_SERVICE,
+    PLATFORM_BACKUP_KEYCHAIN_ACCOUNT,
+  );
+  const authenticatedMetadata = await authenticateFullLocalBackupArchives({
+    evidence,
+    verifyArchive: (archive) => withVerifiedPlatformBackup({
+      archive,
+      backupKey,
+      consume: ({ metadata }) => metadata,
+    }),
+  });
+  if (authenticatedMetadata.components?.data_sha256 !== evidence?.backup?.data_sha256) {
+    fail("Authenticated backup metadata does not match readiness evidence.");
+  }
   return verifyFullLocalBackupReadiness({
     evidence,
     evidenceFileMode: evidenceStat.mode & 0o777,
     observedFiles,
     production: {
-      composeProject: runtime.config.FULL_LOCAL_COMPOSE_PROJECT_NAME,
-      postgresContainerName:
-        `${runtime.config.FULL_LOCAL_COMPOSE_PROJECT_NAME}-postgres-1`,
-      postgresImage: runtime.config.FULL_LOCAL_POSTGRES_IMAGE,
-      postgresVolumeName: runtime.config.FULL_LOCAL_POSTGRES_VOLUME_NAME,
-      storageVolumeName: runtime.config.FULL_LOCAL_STORAGE_VOLUME_NAME,
+      composeProject: resources.composeProject,
+      postgresContainerName: resources.postgresContainerName,
+      postgresImage: resources.postgresImage,
+      postgresVolumeName: resources.postgresVolumeName,
+      storageVolumeName: resources.storageVolumeName,
     },
   });
 }
@@ -1009,14 +1071,23 @@ function restoredSemanticManifest(runtime) {
   };
 }
 
-function writeRestoreManifest({ archiveSha256, manifestPath, metadata, runtime, semantic }) {
+function writeRestoreManifest({
+  archiveSha256,
+  backupKey,
+  manifestPath,
+  metadata,
+  runtime,
+  semantic,
+}) {
   const restoreManifest = {
     ...semantic,
     compose_project: runtime.config.FULL_LOCAL_COMPOSE_PROJECT_NAME,
     created_at: new Date().toISOString(),
     format: "homecook-full-local-restore-v1",
+    fresh_target_attested: true,
     postgres_volume: runtime.config.FULL_LOCAL_POSTGRES_VOLUME_NAME,
     relation_classification_digest: metadata.manifest.relation_classification_digest,
+    restore_execution: "clean-isolated-restore-platform-v1",
     source_archive_sha256: archiveSha256,
     source_backup_created_at: metadata.created_at,
     source_data_sha256: metadata.components.data_sha256,
@@ -1025,12 +1096,46 @@ function writeRestoreManifest({ archiveSha256, manifestPath, metadata, runtime, 
     storage_volume: runtime.config.FULL_LOCAL_STORAGE_VOLUME_NAME,
     unclassified_count: metadata.manifest.unclassified.length,
   };
-  writeFileSync(manifestPath, `${JSON.stringify(restoreManifest, null, 2)}\n`, {
+  const manifestContents = `${JSON.stringify(restoreManifest, null, 2)}\n`;
+  writeFileSync(manifestPath, manifestContents, {
     encoding: "utf8",
+    flag: "wx",
     mode: 0o600,
   });
   chmodSync(manifestPath, 0o600);
+  const authenticationPath = platformBackupAuthenticationPath(manifestPath);
+  const authentication = buildPlatformBackupAuthentication({
+    archive: manifestPath,
+    archiveBytes: Buffer.from(manifestContents, "utf8"),
+    backupKey,
+  });
+  writeFileSync(authenticationPath, `${JSON.stringify(authentication, null, 2)}\n`, {
+    encoding: "utf8",
+    flag: "wx",
+    mode: 0o600,
+  });
+  chmodSync(authenticationPath, 0o600);
   return restoreManifest;
+}
+
+function restoredPlatformDataSnapshot(runtime, metadata) {
+  const restoredDataSql = compose(runtime, [
+    "exec",
+    "-T",
+    "postgres",
+    "pg_dump",
+    "--data-only",
+    "--username",
+    "supabase_admin",
+    "--dbname",
+    "postgres",
+  ]);
+  return verifyRestoredPlatformDataSnapshot({
+    restoredDataSql,
+    sourceDataSha256: metadata.components.data_sha256,
+    sourceRelationClassificationDigest:
+      metadata.manifest.relation_classification_digest,
+  });
 }
 
 function restoredStorageRows(runtime) {
@@ -1074,9 +1179,17 @@ function restoreStoragePayloadVolume(runtime, storagePayloadPath) {
         failure: "Fresh full-local Storage volume reset failed.",
       });
     }
-    run("docker", ["volume", "create", volumeName], {
+    run("docker", buildComposeLabeledStorageVolumeCreateArgs({
+      composeProject: runtime.config.FULL_LOCAL_COMPOSE_PROJECT_NAME,
+      volumeName,
+    }), {
       env: runtime.env,
       failure: "Fresh full-local Storage volume creation failed.",
+    });
+    assertRestoredStorageVolumeProvenance({
+      composeProject: runtime.config.FULL_LOCAL_COMPOSE_PROJECT_NAME,
+      inspect: inspectDockerVolume(volumeName),
+      volumeName,
     });
     const invocation = buildDockerStorageVolumeRestoreInvocation({
       archiveDirectory: staging,
@@ -1150,6 +1263,9 @@ function restoreEvidenceOptions(args, command) {
   if (existsSync(manifestPath)) {
     fail("Restore manifest output already exists.");
   }
+  if (existsSync(platformBackupAuthenticationPath(manifestPath))) {
+    fail("Restore manifest authentication output already exists.");
+  }
   return { archive: resolve(archiveOption), manifestPath };
 }
 
@@ -1213,21 +1329,14 @@ async function restorePlatformBackup(args) {
       rolesPath,
       schemaPath,
       storagePayloadPath,
-    }) => {
-      // GoTrue and Storage own their internal schemas. Bootstrap the exact
-      // pinned service versions before applying the platform dump.
-      compose(runtime, ["up", "-d"]);
-      await waitForRuntimeHealthy(runtime);
-      compose(runtime, ["down"]);
-      restoreStoragePayloadVolume(runtime, storagePayloadPath);
-      compose(runtime, ["up", "-d", "postgres"]);
-      await waitForServiceHealthy(runtime, "postgres");
-      const restoreSql = buildPlatformRestoreSql({
-        dataSql: readFileSync(dataPath, "utf8"),
-        rolesSql: readFileSync(rolesPath, "utf8"),
-        schemaSql: readFileSync(schemaPath, "utf8"),
-      });
-      composeWithInput(runtime, [
+    }) => executeBootstrapAwarePlatformRestore({
+      // GoTrue and Storage bootstrap the exact pinned service-owned roles
+      // before the database itself is cleanly recreated from template0.
+      bootstrapServices: async () => {
+        compose(runtime, ["up", "-d"]);
+        await waitForRuntimeHealthy(runtime);
+      },
+      replayDatabase: () => composeWithInput(runtime, [
         "exec",
         "-T",
         "postgres",
@@ -1239,21 +1348,57 @@ async function restorePlatformBackup(args) {
         "supabase_admin",
         "--dbname",
         "postgres",
-      ], restoreSql);
-      compose(runtime, ["up", "-d"]);
-      await waitForRuntimeHealthy(runtime);
-      const semantic = {
-        ...restoredSemanticManifest(runtime),
-        ...verifyRestoredStoragePayload(runtime, metadata.storage_payload),
-      };
-      return writeRestoreManifest({
+      ], buildPlatformRestoreSql({
+        dataSql: readFileSync(dataPath, "utf8"),
+        rolesSql: readFileSync(rolesPath, "utf8"),
+        schemaSql: readFileSync(schemaPath, "utf8"),
+      })),
+      resetDatabase: () => composeWithInput(runtime, [
+        "exec",
+        "-T",
+        "postgres",
+        "psql",
+        "--variable",
+        "ON_ERROR_STOP=1",
+        "--username",
+        "supabase_admin",
+        "--dbname",
+        "template1",
+      ], buildBootstrapAwareDatabaseResetSql()),
+      restoreStoragePayload: () => restoreStoragePayloadVolume(
+        runtime,
+        storagePayloadPath,
+      ),
+      startPostgres: async () => {
+        compose(runtime, ["up", "-d", "postgres"]);
+        await waitForServiceHealthy(runtime, "postgres");
+      },
+      startServices: async () => {
+        compose(runtime, ["up", "-d"]);
+        await waitForRuntimeHealthy(runtime);
+      },
+      stopServices: () => compose(runtime, ["down"]),
+      verifyResources: () => {
+        assertRestoredStorageVolumeProvenance({
+          composeProject: runtime.config.FULL_LOCAL_COMPOSE_PROJECT_NAME,
+          inspect: inspectDockerVolume(runtime.config.FULL_LOCAL_STORAGE_VOLUME_NAME),
+          volumeName: runtime.config.FULL_LOCAL_STORAGE_VOLUME_NAME,
+        });
+        liveFullLocalProductionResources(runtime);
+      },
+      verifyRestoredPlatform: () => writeRestoreManifest({
         archiveSha256,
+        backupKey,
         manifestPath,
         metadata,
         runtime,
-        semantic,
-      });
-    },
+        semantic: {
+          ...restoredPlatformDataSnapshot(runtime, metadata),
+          ...restoredSemanticManifest(runtime),
+          ...verifyRestoredStoragePayload(runtime, metadata.storage_payload),
+        },
+      }),
+    }),
   });
 }
 
@@ -1289,32 +1434,6 @@ function compareRestoreManifests(args) {
   });
   chmodSync(outputPath, 0o600);
   return result;
-}
-
-async function verifyRestoredPlatform(args) {
-  const { archive, manifestPath } = restoreEvidenceOptions(args, "verify-restored-platform");
-  const runtime = validateAndMaterialize(args);
-  const status = runtimeStatus(runtime);
-  if (!status.healthy) fail("Full-local runtime must be healthy before restore verification.");
-  const backupKey = keychainValue(
-    PLATFORM_BACKUP_KEYCHAIN_SERVICE,
-    PLATFORM_BACKUP_KEYCHAIN_ACCOUNT,
-  );
-  const archiveSha256 = sha256File(archive);
-  return withVerifiedPlatformBackup({
-    archive,
-    backupKey,
-    consume: ({ metadata }) => writeRestoreManifest({
-      archiveSha256,
-      manifestPath,
-      metadata,
-      runtime,
-      semantic: {
-        ...restoredSemanticManifest(runtime),
-        ...verifyRestoredStoragePayload(runtime, metadata.storage_payload),
-      },
-    }),
-  });
 }
 
 function createLocalSupabaseAdmin(runtime) {
@@ -1406,7 +1525,8 @@ async function main() {
       break;
     case "validate": {
       const runtime = validateAndMaterialize(args);
-      const backupReadiness = loadFullLocalBackupReadiness(runtime);
+      const resources = liveFullLocalProductionResources(runtime);
+      const backupReadiness = await loadFullLocalBackupReadiness(runtime, resources);
       const base = {
         ...backupReadiness,
         ...runtime.validation,
@@ -1459,9 +1579,10 @@ async function main() {
     }
     case "start": {
       const runtime = validateAndMaterialize(args);
-      const backupReadiness = loadFullLocalBackupReadiness(runtime);
       compose(runtime, ["up", "-d"]);
       const status = await waitForRuntimeHealthy(runtime);
+      const resources = liveFullLocalProductionResources(runtime);
+      const backupReadiness = await loadFullLocalBackupReadiness(runtime, resources);
       const gate = collectFullLocalProductCatalog(postgresContainerId(runtime));
       assertFullLocalProductCatalogPass(gate);
       print({
@@ -1474,7 +1595,8 @@ async function main() {
     }
     case "status": {
       const runtime = validateAndMaterialize(args);
-      const backupReadiness = loadFullLocalBackupReadiness(runtime);
+      const resources = liveFullLocalProductionResources(runtime);
+      const backupReadiness = await loadFullLocalBackupReadiness(runtime, resources);
       const status = runtimeStatus(runtime);
       if (!status.healthy) {
         print({
@@ -1514,11 +1636,6 @@ async function main() {
     }
     case "restore-platform": {
       const result = await restorePlatformBackup(args);
-      print({ ...result, status: "PASS" });
-      break;
-    }
-    case "verify-restored-platform": {
-      const result = await verifyRestoredPlatform(args);
       print({ ...result, status: "PASS" });
       break;
     }

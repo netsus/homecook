@@ -6,10 +6,12 @@ import {
   chmodSync,
   closeSync,
   existsSync,
+  lstatSync,
   mkdirSync,
   mkdtempSync,
   openSync,
   readFileSync,
+  realpathSync,
   rmSync,
   statSync,
   writeFileSync,
@@ -21,11 +23,14 @@ import { fileURLToPath } from "node:url";
 import {
   buildDockerStorageVolumeCaptureInvocation,
   buildPinnedSupabaseCliInvocation,
+  createFailSafeConsistentCutController,
   createEncryptedPlatformBackup,
   PINNED_SUPABASE_CLI_VERSION,
   PLATFORM_BACKUP_KEYCHAIN_ACCOUNT,
   PLATFORM_BACKUP_KEYCHAIN_SERVICE,
   listStoragePayloadPaths,
+  platformBackupAuthenticationPath,
+  verifyPlatformBackupAuthentication,
   withVerifiedPlatformBackup,
 } from "./lib/full-local-platform-backup.mjs";
 import {
@@ -184,6 +189,19 @@ function productionResourceController(args) {
   const sourceDirectory = join(root, "snapshot");
   const provenance = {};
   let rows;
+  const cut = createFailSafeConsistentCutController({
+    startWriter: (writer) => setContainerState(
+      "start",
+      [writer],
+      "Production consistent cut release failed.",
+    ),
+    stopWriter: (writer) => setContainerState(
+      "stop",
+      [writer],
+      "Production consistent cut failed.",
+    ),
+    writers,
+  });
   return {
     cleanup: () => rmSync(root, { force: true, recursive: true }),
     database: {
@@ -205,11 +223,7 @@ function productionResourceController(args) {
     config,
     resources,
     storage: {
-      beginConsistentCut: () => setContainerState(
-        "stop",
-        writers,
-        "Production consistent cut failed.",
-      ),
+      beginConsistentCut: cut.beginConsistentCut,
       captureSource: () => {
         rows = readStorageRows(resources.postgresContainerId);
         const invocation = buildDockerStorageVolumeCaptureInvocation({
@@ -228,11 +242,7 @@ function productionResourceController(args) {
           join(archiveDirectory, "storage.payload.tar"),
         ], { failure: "Production Storage snapshot extraction failed." });
       },
-      endConsistentCut: () => setContainerState(
-        "start",
-        writers,
-        "Production consistent cut release failed.",
-      ),
+      endConsistentCut: cut.endConsistentCut,
       references: () => mapStorageRowsToPayloadReferences(
         rows,
         listStoragePayloadPaths(sourceDirectory),
@@ -247,14 +257,22 @@ function productionResourceController(args) {
   };
 }
 
-function existingMode600Path(args, name) {
-  const path = requiredAbsolutePath(args, name);
-  if (!existsSync(path)) fail(`${name} must reference an existing file.`);
-  const stat = statSync(path);
-  if (!stat.isFile() || (stat.mode & 0o777) !== 0o600) {
-    fail(`${name} must reference a regular mode 0600 file.`);
+function existingMode600Artifact(path, label) {
+  if (!existsSync(path)) fail(`${label} must reference an existing file.`);
+  const directStat = lstatSync(path);
+  if (directStat.isSymbolicLink()) {
+    fail(`${label} must not reference a symbolic link.`);
   }
-  return path;
+  const canonicalPath = realpathSync(path);
+  const stat = statSync(canonicalPath);
+  if (!stat.isFile() || (stat.mode & 0o777) !== 0o600) {
+    fail(`${label} must reference a regular mode 0600 file.`);
+  }
+  return canonicalPath;
+}
+
+function existingMode600Path(args, name) {
+  return existingMode600Artifact(requiredAbsolutePath(args, name), name);
 }
 
 function sha256File(path) {
@@ -295,6 +313,16 @@ async function recordBackupReadiness(args) {
       fail("--output must equal FULL_LOCAL_BACKUP_READINESS_PATH in production config.");
     }
     const backupKey = loadBackupKey();
+    const restoreAuthenticationPath = existingMode600Artifact(
+      platformBackupAuthenticationPath(restoreManifestPath),
+      "restore manifest authentication",
+    );
+    verifyPlatformBackupAuthentication({
+      archive: restoreManifestPath,
+      archiveBytes: readFileSync(restoreManifestPath),
+      authentication: JSON.parse(readFileSync(restoreAuthenticationPath, "utf8")),
+      backupKey,
+    });
     const metadata = await withVerifiedPlatformBackup({
       archive,
       backupKey,

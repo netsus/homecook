@@ -28,7 +28,11 @@ import {
   makePostgresRoleDumpIdempotent,
   selectFullLocalProductionResources,
 } from "./lib/full-local-production-resources.mjs";
-import { buildPlatformRestoreSql } from "./lib/full-local-restore-cutover.mjs";
+import {
+  buildBootstrapAwareDatabaseResetSql,
+  buildPlatformRestoreSql,
+  executeBootstrapAwarePlatformRestore,
+} from "./lib/full-local-restore-cutover.mjs";
 import {
   assertIsolatedDrillTarget,
   buildIsolatedDrillPlan,
@@ -147,7 +151,12 @@ function resolveResources(config) {
   });
 }
 
-function database(container, sql, failure = "Isolated database operation failed") {
+function database(
+  container,
+  sql,
+  failure = "Isolated database operation failed",
+  databaseName = "postgres",
+) {
   return run("docker", [
     "exec",
     "-i",
@@ -161,7 +170,7 @@ function database(container, sql, failure = "Isolated database operation failed"
     "--username",
     "supabase_admin",
     "--dbname",
-    "postgres",
+    databaseName,
   ], { diagnostics: true, failure, input: sql });
 }
 
@@ -260,7 +269,7 @@ function dumpFixtureDatabase({ container, staging }) {
     { mode: 0o600 },
   );
   const commands = [
-    ["schema.sql", ["pg_dump", "--schema-only", "--clean", "--if-exists", "--schema", "storage"]],
+    ["schema.sql", ["pg_dump", "--schema-only", "--schema", "storage"]],
     ["data.sql", ["pg_dump", "--data-only", "--schema", "storage"]],
   ];
   for (const [file, command] of commands) {
@@ -301,12 +310,33 @@ function restoreVolume({ archiveDirectory, volumeName }) {
   run(invocation.command, invocation.args);
 }
 
-function restoreDatabase({ container, dataPath, rolesPath, schemaPath }) {
+function resetDatabase(container) {
+  database(
+    container,
+    buildBootstrapAwareDatabaseResetSql(),
+    "Isolated bootstrap-aware database reset failed",
+    "template1",
+  );
+}
+
+function replayDatabase({ container, dataPath, rolesPath, schemaPath }) {
   database(container, buildPlatformRestoreSql({
     dataSql: readFileSync(dataPath, "utf8"),
     rolesSql: readFileSync(rolesPath, "utf8"),
     schemaSql: readFileSync(schemaPath, "utf8"),
   }), "Isolated database restore failed");
+}
+
+function seedBootstrapSchemaCollision(container) {
+  database(container, `
+    create schema if not exists storage;
+    create table storage.buckets (
+      id text primary key,
+      bootstrap_marker text not null
+    );
+    insert into storage.buckets (id, bootstrap_marker)
+    values ('bootstrap-owned', 'must-be-removed-before-replay');
+  `, "Isolated bootstrap schema collision fixture failed");
 }
 
 function cleanupContainer(name) {
@@ -417,54 +447,87 @@ async function executeDrill() {
       archive,
       backupKey,
       consume: ({ dataPath, metadata, rolesPath, schemaPath, storagePayloadPath }) => {
-        restoreDatabase({
-          container: restored.postgresContainerId,
-          dataPath,
-          rolesPath,
-          schemaPath,
+        let postRestoreResources;
+        return executeBootstrapAwarePlatformRestore({
+          bootstrapServices: () => seedBootstrapSchemaCollision(
+            restored.postgresContainerId,
+          ),
+          replayDatabase: () => replayDatabase({
+            container: restored.postgresContainerId,
+            dataPath,
+            rolesPath,
+            schemaPath,
+          }),
+          resetDatabase: () => resetDatabase(restored.postgresContainerId),
+          restoreStoragePayload: () => {
+            mkdirSync(restoredArchiveDirectory, { recursive: true, mode: 0o700 });
+            writeFileSync(
+              join(restoredArchiveDirectory, "storage.payload.tar"),
+              readFileSync(storagePayloadPath),
+              { mode: 0o600 },
+            );
+            restoreVolume({
+              archiveDirectory: restoredArchiveDirectory,
+              volumeName: restored.storageVolumeName,
+            });
+          },
+          startPostgres: () => undefined,
+          startServices: () => undefined,
+          stopServices: () => undefined,
+          verifyResources: () => {
+            postRestoreResources = resolveResources(resourceConfig(plan, true));
+            if (postRestoreResources.storageVolumeName !== plan.restore_storage_volume) {
+              throw new Error("Restored Storage volume lost exact Compose provenance");
+            }
+          },
+          verifyRestoredPlatform: () => {
+            const bootstrapMarkerCount = Number(database(
+              restored.postgresContainerId,
+              `select count(*) from information_schema.columns
+               where table_schema = 'storage'
+                 and table_name = 'buckets'
+                 and column_name = 'bootstrap_marker';`,
+            ).trim());
+            if (bootstrapMarkerCount !== 0) {
+              throw new Error("Bootstrap-owned schema state survived the clean restore replay");
+            }
+            captureVolume({
+              archiveDirectory: join(root, "restored-recapture"),
+              snapshotDirectory: restoredSnapshotDirectory,
+              volumeName: postRestoreResources.storageVolumeName,
+            });
+            const restoredReferences = mapStorageRowsToPayloadReferences(
+              storageRows(restored.postgresContainerId),
+              listStoragePayloadPaths(restoredSnapshotDirectory),
+            );
+            verifyStoragePayloadManifest(metadata.storage_payload, {
+              references: restoredReferences,
+              sourceDirectory: restoredSnapshotDirectory,
+              sourceIdentity: metadata.storage_payload.source_identity,
+            });
+            const restoredPayload = readFileSync(
+              join(restoredSnapshotDirectory, restoredReferences[0].path),
+            );
+            if (!restoredPayload.equals(fixturePayload)) {
+              throw new Error("Isolated restored Storage fixture bytes mismatch");
+            }
+            return {
+              archive_authenticated: true,
+              bootstrap_schema_clean_replay: true,
+              cli_version: PINNED_SUPABASE_CLI_VERSION,
+              database_reference_count: restoredReferences.length,
+              destructive_scope: plan.destructive_scope,
+              dev_stack_decoy_ignored: true,
+              object_count: metadata.storage_payload.object_count,
+              payload_catalog_sha256: metadata.storage_payload.catalog_sha256,
+              payload_total_bytes: metadata.storage_payload.total_bytes,
+              production_resource_resolution: "compose-labels-exact",
+              restored_storage_compose_provenance: true,
+              next_backup_inventory_verified: true,
+              status: "PASS",
+            };
+          },
         });
-        mkdirSync(restoredArchiveDirectory, { recursive: true, mode: 0o700 });
-        writeFileSync(
-          join(restoredArchiveDirectory, "storage.payload.tar"),
-          readFileSync(storagePayloadPath),
-          { mode: 0o600 },
-        );
-        restoreVolume({
-          archiveDirectory: restoredArchiveDirectory,
-          volumeName: restored.storageVolumeName,
-        });
-        captureVolume({
-          archiveDirectory: join(root, "restored-recapture"),
-          snapshotDirectory: restoredSnapshotDirectory,
-          volumeName: restored.storageVolumeName,
-        });
-        const restoredReferences = mapStorageRowsToPayloadReferences(
-          storageRows(restored.postgresContainerId),
-          listStoragePayloadPaths(restoredSnapshotDirectory),
-        );
-        verifyStoragePayloadManifest(metadata.storage_payload, {
-          references: restoredReferences,
-          sourceDirectory: restoredSnapshotDirectory,
-          sourceIdentity: metadata.storage_payload.source_identity,
-        });
-        const restoredPayload = readFileSync(
-          join(restoredSnapshotDirectory, restoredReferences[0].path),
-        );
-        if (!restoredPayload.equals(fixturePayload)) {
-          throw new Error("Isolated restored Storage fixture bytes mismatch");
-        }
-        return {
-          archive_authenticated: true,
-          cli_version: PINNED_SUPABASE_CLI_VERSION,
-          database_reference_count: restoredReferences.length,
-          destructive_scope: plan.destructive_scope,
-          dev_stack_decoy_ignored: true,
-          object_count: metadata.storage_payload.object_count,
-          payload_catalog_sha256: metadata.storage_payload.catalog_sha256,
-          payload_total_bytes: metadata.storage_payload.total_bytes,
-          production_resource_resolution: "compose-labels-exact",
-          status: "PASS",
-        };
       },
     });
   } finally {

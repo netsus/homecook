@@ -1,4 +1,25 @@
-const LOOPBACK_HOSTS = new Set(["127.0.0.1", "localhost", "::1", "[::1]"]);
+const LOOPBACK_HOSTS = new Set(["127.0.0.1", "[::1]"]);
+
+export function assertExactLoopbackHttpOrigin(value, { label = "URL" } = {}) {
+  let parsed;
+  try {
+    parsed = new URL(value?.trim());
+  } catch {
+    throw new Error(`${label} must be an exact loopback HTTP(S) origin.`);
+  }
+  if (
+    !LOOPBACK_HOSTS.has(parsed.hostname)
+    || !["http:", "https:"].includes(parsed.protocol)
+    || parsed.username
+    || parsed.password
+    || parsed.pathname !== "/"
+    || parsed.search
+    || parsed.hash
+  ) {
+    throw new Error(`${label} must be an exact loopback HTTP(S) origin.`);
+  }
+  return parsed.origin;
+}
 
 function required(env, name) {
   const value = env?.[name]?.trim();
@@ -15,25 +36,9 @@ export function assertLocalOnlySupabaseOperatorEnv(
       throw new Error(`${authority} must be local for a local-only Supabase operator.`);
     }
   }
-  let parsed;
-  try {
-    parsed = new URL(required(env, urlKey));
-  } catch {
-    throw new Error(`${urlKey} must be an exact loopback URL for local-only operation.`);
-  }
-  if (
-    !LOOPBACK_HOSTS.has(parsed.hostname)
-    || !["http:", "https:"].includes(parsed.protocol)
-    || parsed.username
-    || parsed.password
-    || parsed.pathname !== "/"
-    || parsed.search
-    || parsed.hash
-  ) {
-    throw new Error(`${urlKey} must be an exact loopback URL for local-only operation.`);
-  }
+  const url = assertExactLoopbackHttpOrigin(required(env, urlKey), { label: urlKey });
   return Object.freeze({
     serviceRoleKey: required(env, "SUPABASE_SERVICE_ROLE_KEY"),
-    url: parsed.origin,
+    url,
   });
 }

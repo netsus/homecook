@@ -218,6 +218,87 @@ describe("Supabase local-only operations contract", () => {
     }
   });
 
+  it("tombstones every directly executable remote Auth legacy command before credentials or network", () => {
+    const legacyCommands = [
+      {
+        path: "scripts/run-hybrid-revoked-session-canary.mjs",
+        args: [
+          "--allow-hosted-session-revocation",
+          "--expected-project-ref",
+          "forbidden-project",
+        ],
+        message: "FORBIDDEN: hosted revoked-session canary is historical",
+      },
+      {
+        path: "scripts/sync-remote-auth-jwks.mjs",
+        args: [
+          "--endpoint",
+          "https://forbidden-project.supabase.co/auth/v1/.well-known/jwks.json",
+          "--issuer",
+          "https://forbidden-project.supabase.co/auth/v1",
+          "--local-jwks",
+          "/tmp/forbidden-local-jwks.json",
+          "--output",
+          "/tmp/forbidden-combined-jwks.json",
+        ],
+        message: "FORBIDDEN: remote Auth JWKS sync is historical",
+      },
+    ];
+
+    for (const legacyCommand of legacyCommands) {
+      const result = spawnSync(process.execPath, [
+        legacyCommand.path,
+        ...legacyCommand.args,
+      ], {
+        cwd: process.cwd(),
+        encoding: "utf8",
+        env: {
+          ...process.env,
+          AUTH_SUPABASE_EXPECTED_ISSUER:
+            "https://forbidden-project.supabase.co/auth/v1",
+          AUTH_SUPABASE_JWKS_URL:
+            "https://forbidden-project.supabase.co/auth/v1/.well-known/jwks.json",
+          HYBRID_CANARY_ACCESS_TOKEN: "forbidden-access-token",
+          HYBRID_CANARY_DISPOSABLE: "YES-REVOKE-THIS-SESSION",
+          HYBRID_CANARY_REFRESH_TOKEN: "forbidden-refresh-token",
+          NEXT_PUBLIC_AUTH_SUPABASE_PUBLISHABLE_KEY: "forbidden-publishable-key",
+          NEXT_PUBLIC_AUTH_SUPABASE_URL:
+            "https://forbidden-project.supabase.co",
+        },
+      });
+
+      expect(result.status, legacyCommand.path).not.toBe(0);
+      expect(result.stderr, legacyCommand.path).toContain(legacyCommand.message);
+      const source = read(legacyCommand.path);
+      expect(source, legacyCommand.path).not.toMatch(
+        /@supabase\/supabase-js|\bfetch\s*\(|process\.env|readFileSync|writeFileSync|renameSync/,
+      );
+    }
+  });
+
+  it("keeps remote Auth legacy commands out of active imports, package scripts, and CI", () => {
+    const legacyCommands = [
+      "run-hybrid-revoked-session-canary.mjs",
+      "sync-remote-auth-jwks.mjs",
+    ];
+    const packageScripts = Object.values(
+      (JSON.parse(read("package.json")) as { scripts: Record<string, string> }).scripts,
+    ).join("\n");
+    const workflows = filesUnder(".github/workflows")
+      .map((path) => read(path))
+      .join("\n");
+    const activeScriptImports = filesUnder("scripts")
+      .filter((path) => !legacyCommands.some((name) => path.endsWith(name)))
+      .map((path) => read(path))
+      .join("\n");
+
+    for (const legacyCommand of legacyCommands) {
+      expect(packageScripts).not.toContain(legacyCommand);
+      expect(workflows).not.toContain(legacyCommand);
+      expect(activeScriptImports).not.toContain(legacyCommand);
+    }
+  });
+
   it("keeps required backup and Data API gates local", () => {
     const backup = read("scripts/lib/full-local-platform-backup.mjs");
     const inventory = read("scripts/full-local-platform-backup.mjs");

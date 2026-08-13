@@ -39,6 +39,7 @@ const EXCLUDED_RELATIONS = new Set([
 ]);
 
 const COPY_HEADER = /^COPY\s+((?:"[^"]+"|[a-zA-Z_][\w$]*)\.(?:"[^"]+"|[a-zA-Z_][\w$]*))\s+\(([^)]*)\)\s+FROM\s+stdin;\s*$/;
+const SAFE_DOCKER_RESOURCE_NAME = /^[a-z0-9][a-z0-9_.-]{2,127}$/u;
 
 function stableJson(value) {
   if (Array.isArray(value)) {
@@ -88,6 +89,91 @@ export function assertFreshRestoreExecutionApproved({ confirmation }) {
     );
   }
   return true;
+}
+
+export function buildBootstrapAwareDatabaseResetSql() {
+  return [
+    "\\set ON_ERROR_STOP on",
+    "SELECT pg_terminate_backend(pid)",
+    "FROM pg_catalog.pg_stat_activity",
+    "WHERE datname = 'postgres' AND pid <> pg_backend_pid();",
+    "DROP DATABASE IF EXISTS postgres WITH (FORCE);",
+    "CREATE DATABASE postgres WITH TEMPLATE template0 OWNER supabase_admin;",
+    "",
+  ].join("\n");
+}
+
+function exactDockerResourceName(value, label) {
+  if (typeof value !== "string" || !SAFE_DOCKER_RESOURCE_NAME.test(value)) {
+    throw new Error(`${label} must be an exact safe Docker resource name`);
+  }
+  return value;
+}
+
+export function buildComposeLabeledStorageVolumeCreateArgs({
+  composeProject,
+  volumeName,
+}) {
+  const project = exactDockerResourceName(composeProject, "Compose project");
+  const volume = exactDockerResourceName(volumeName, "Storage volume");
+  return [
+    "volume",
+    "create",
+    "--label",
+    `com.docker.compose.project=${project}`,
+    "--label",
+    "com.docker.compose.volume=storage-data",
+    volume,
+  ];
+}
+
+export function assertRestoredStorageVolumeProvenance({
+  composeProject,
+  inspect,
+  volumeName,
+}) {
+  const project = exactDockerResourceName(composeProject, "Compose project");
+  const volume = exactDockerResourceName(volumeName, "Storage volume");
+  if (
+    !inspect
+    || inspect.Name !== volume
+    || inspect.Labels?.["com.docker.compose.project"] !== project
+    || inspect.Labels?.["com.docker.compose.volume"] !== "storage-data"
+  ) {
+    throw new Error("Restored Storage volume Compose provenance labels mismatch");
+  }
+  return true;
+}
+
+export async function executeBootstrapAwarePlatformRestore({
+  bootstrapServices,
+  replayDatabase,
+  resetDatabase,
+  restoreStoragePayload,
+  startPostgres,
+  startServices,
+  stopServices,
+  verifyResources,
+  verifyRestoredPlatform,
+}) {
+  const steps = [
+    bootstrapServices,
+    stopServices,
+    restoreStoragePayload,
+    startPostgres,
+    resetDatabase,
+    replayDatabase,
+    startServices,
+    verifyResources,
+  ];
+  if (
+    steps.some((step) => typeof step !== "function")
+    || typeof verifyRestoredPlatform !== "function"
+  ) {
+    throw new TypeError("Complete bootstrap-aware platform restore steps are required");
+  }
+  for (const step of steps) await step();
+  return verifyRestoredPlatform();
 }
 
 export function buildPlatformRestoreSql({ dataSql, rolesSql, schemaSql }) {
@@ -204,6 +290,29 @@ export function buildSanitizedPlatformData(sql) {
     },
     sql: output.join("\n"),
   };
+}
+
+export function verifyRestoredPlatformDataSnapshot({
+  restoredDataSql,
+  sourceDataSha256,
+  sourceRelationClassificationDigest,
+}) {
+  const restored = buildSanitizedPlatformData(restoredDataSql);
+  const restoredDataSha256 = createHash("sha256")
+    .update(restored.sql)
+    .digest("hex");
+  if (
+    restoredDataSha256 !== sourceDataSha256
+    || restored.manifest.relation_classification_digest
+      !== sourceRelationClassificationDigest
+  ) {
+    throw new Error("Restored DB/Auth data does not match the authenticated archive");
+  }
+  return Object.freeze({
+    restored_data_sha256: restoredDataSha256,
+    restored_relation_classification_digest:
+      restored.manifest.relation_classification_digest,
+  });
 }
 
 export function assertDestructiveRestoreAllowed({ current, destructive, preRestoreBackup }) {

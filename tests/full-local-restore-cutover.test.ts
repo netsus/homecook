@@ -1,16 +1,23 @@
+import { createHash } from "node:crypto";
+
 import { describe, expect, it } from "vitest";
 
 import {
   assertDestructiveRestoreAllowed,
   assertFreshRestoreExecutionApproved,
   assertFreshRestoreAllowed,
+  assertRestoredStorageVolumeProvenance,
+  buildBootstrapAwareDatabaseResetSql,
+  buildComposeLabeledStorageVolumeCreateArgs,
   buildPlatformRestoreSql,
   buildCutoverPreflight,
   buildSanitizedPlatformData,
   classifyRollbackMode,
   compareRestoreReplayManifests,
   compareStorageObjectManifests,
+  executeBootstrapAwarePlatformRestore,
   inventoryPlatformDataRelations,
+  verifyRestoredPlatformDataSnapshot,
 } from "@/scripts/lib/full-local-restore-cutover.mjs";
 
 const platformData = `-- platform data\nCOPY auth.users (id, email) FROM stdin;
@@ -40,6 +47,28 @@ object-a\trecipe-images\tuser-a/a.jpg
 `;
 
 describe("full-local platform restore boundary", () => {
+  it("binds clean restore evidence to the archive's exact sanitized DB/Auth data", () => {
+    const sanitized = buildSanitizedPlatformData(platformData);
+    const sourceDataSha256 = createHash("sha256").update(sanitized.sql).digest("hex");
+
+    expect(verifyRestoredPlatformDataSnapshot({
+      restoredDataSql: platformData,
+      sourceDataSha256,
+      sourceRelationClassificationDigest:
+        sanitized.manifest.relation_classification_digest,
+    })).toEqual({
+      restored_data_sha256: sourceDataSha256,
+      restored_relation_classification_digest:
+        sanitized.manifest.relation_classification_digest,
+    });
+    expect(() => verifyRestoredPlatformDataSnapshot({
+      restoredDataSql: platformData.replace("a@example.com", "drift@example.com"),
+      sourceDataSha256,
+      sourceRelationClassificationDigest:
+        sanitized.manifest.relation_classification_digest,
+    })).toThrow(/archive|DB|data/iu);
+  });
+
   it("restores only into brand-new PostgreSQL and Storage volumes", () => {
     expect(assertFreshRestoreAllowed({ postgresVolumeExists: false, storageVolumeExists: false })).toBe(true);
     expect(() => assertFreshRestoreAllowed({
@@ -72,6 +101,49 @@ describe("full-local platform restore boundary", () => {
       "SET session_replication_role = origin;",
       "",
     ].join("\n"));
+  });
+
+  it("recreates the bootstrap database from template0 before replaying a non-clean schema dump", () => {
+    expect(buildBootstrapAwareDatabaseResetSql()).toBe([
+      "\\set ON_ERROR_STOP on",
+      "SELECT pg_terminate_backend(pid)",
+      "FROM pg_catalog.pg_stat_activity",
+      "WHERE datname = 'postgres' AND pid <> pg_backend_pid();",
+      "DROP DATABASE IF EXISTS postgres WITH (FORCE);",
+      "CREATE DATABASE postgres WITH TEMPLATE template0 OWNER supabase_admin;",
+      "",
+    ].join("\n"));
+  });
+
+  it("runs the restore-platform integration boundary in the required clean replay order", async () => {
+    const calls: string[] = [];
+    const result = await executeBootstrapAwarePlatformRestore({
+      bootstrapServices: async () => calls.push("bootstrap-services"),
+      replayDatabase: async () => calls.push("replay-database"),
+      resetDatabase: async () => calls.push("reset-database"),
+      restoreStoragePayload: async () => calls.push("restore-storage"),
+      startPostgres: async () => calls.push("start-postgres"),
+      startServices: async () => calls.push("start-services"),
+      stopServices: async () => calls.push("stop-services"),
+      verifyResources: async () => calls.push("verify-resources"),
+      verifyRestoredPlatform: async () => {
+        calls.push("verify-restored-platform");
+        return { status: "PASS" };
+      },
+    });
+
+    expect(calls).toEqual([
+      "bootstrap-services",
+      "stop-services",
+      "restore-storage",
+      "start-postgres",
+      "reset-database",
+      "replay-database",
+      "start-services",
+      "verify-resources",
+      "verify-restored-platform",
+    ]);
+    expect(result).toEqual({ status: "PASS" });
   });
 
   it("keeps stable Auth UUID and Storage object metadata while removing transient sessions", () => {
@@ -231,6 +303,40 @@ describe("full-local Storage and cutover boundary", () => {
       ...objects[0],
       owner_prefix: "user-b",
     }])).toThrow("Storage manifest mismatch");
+  });
+
+  it("creates and verifies the restored Storage volume with exact Compose provenance", () => {
+    expect(buildComposeLabeledStorageVolumeCreateArgs({
+      composeProject: "homecook-restore-fixture",
+      volumeName: "homecook-restore-fixture-storage",
+    })).toEqual([
+      "volume",
+      "create",
+      "--label",
+      "com.docker.compose.project=homecook-restore-fixture",
+      "--label",
+      "com.docker.compose.volume=storage-data",
+      "homecook-restore-fixture-storage",
+    ]);
+    expect(assertRestoredStorageVolumeProvenance({
+      composeProject: "homecook-restore-fixture",
+      inspect: {
+        Name: "homecook-restore-fixture-storage",
+        Labels: {
+          "com.docker.compose.project": "homecook-restore-fixture",
+          "com.docker.compose.volume": "storage-data",
+        },
+      },
+      volumeName: "homecook-restore-fixture-storage",
+    })).toBe(true);
+    expect(() => assertRestoredStorageVolumeProvenance({
+      composeProject: "homecook-restore-fixture",
+      inspect: {
+        Name: "homecook-restore-fixture-storage",
+        Labels: {},
+      },
+      volumeName: "homecook-restore-fixture-storage",
+    })).toThrow(/provenance|Compose|label/iu);
   });
 
   it("never reports cutover ready without every manual-only gate", () => {

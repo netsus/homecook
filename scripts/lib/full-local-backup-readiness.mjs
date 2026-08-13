@@ -1,4 +1,5 @@
 import { isAbsolute, resolve } from "node:path";
+import { lstatSync, realpathSync, statSync } from "node:fs";
 
 export const FULL_LOCAL_BACKUP_READINESS_FORMAT =
   "homecook-full-local-backup-readiness-v1";
@@ -26,6 +27,34 @@ function exactPath(value, label) {
   return resolve(value);
 }
 
+export function assertRegularReadinessArtifact(path) {
+  const linkStat = lstatSync(path);
+  if (linkStat.isSymbolicLink()) {
+    fail("readiness and archive artifacts must not be symlinks");
+  }
+  const canonicalPath = realpathSync(path);
+  const artifactStat = statSync(canonicalPath);
+  if (!artifactStat.isFile() || (artifactStat.mode & 0o777) !== 0o600) {
+    fail("readiness and archive artifacts must be regular mode 0600 files");
+  }
+  return canonicalPath;
+}
+
+export async function authenticateFullLocalBackupArchives({
+  evidence,
+  verifyArchive,
+}) {
+  if (typeof verifyArchive !== "function") {
+    fail("archive authentication verifier is required");
+  }
+  const primary = await verifyArchive(evidence?.backup?.archive_path);
+  const offMac = await verifyArchive(evidence?.off_mac_copy?.archive_path);
+  if (JSON.stringify(primary) !== JSON.stringify(offMac)) {
+    fail("primary and off-Mac authenticated backup metadata differ");
+  }
+  return primary;
+}
+
 export function buildFullLocalBackupReadinessEvidence({
   archivePath,
   archiveSha256,
@@ -35,6 +64,8 @@ export function buildFullLocalBackupReadinessEvidence({
   offMacCopySha256,
   restoreManifest,
 }) {
+  const components = backupMetadata?.components;
+  const backupManifest = backupMetadata?.manifest;
   const provenance = backupMetadata?.database?.provenance;
   const storageSourcePrefix = `docker-compose-volume:${provenance?.compose_project}:`;
   const storageSourceIdentity = backupMetadata?.storage_payload?.source_identity;
@@ -47,6 +78,33 @@ export function buildFullLocalBackupReadinessEvidence({
     || offMacCopySha256 !== archiveSha256
     || backupMetadata?.storage_payload_included !== true
     || restoreManifest?.format !== "homecook-full-local-restore-v1"
+    || restoreManifest?.restore_execution
+      !== "clean-isolated-restore-platform-v1"
+    || restoreManifest?.fresh_target_attested !== true
+    || restoreManifest?.restored_data_sha256
+      !== components?.data_sha256
+    || restoreManifest?.source_data_sha256 !== components?.data_sha256
+    || restoreManifest?.source_roles_sha256 !== components?.roles_sha256
+    || restoreManifest?.source_schema_sha256 !== components?.schema_sha256
+    || restoreManifest?.relation_classification_digest
+      !== backupManifest?.relation_classification_digest
+    || restoreManifest?.unclassified_count !== 0
+    || backupManifest?.unclassified?.length !== 0
+    || !SHA256.test(restoreManifest?.auth_identity_digest)
+    || !SHA256.test(restoreManifest?.database_digest)
+    || !SHA256.test(restoreManifest?.storage_digest)
+    || !Number.isSafeInteger(restoreManifest?.auth_users)
+    || restoreManifest.auth_users < 0
+    || !Number.isSafeInteger(restoreManifest?.auth_identities)
+    || restoreManifest.auth_identities < 0
+    || !Number.isSafeInteger(restoreManifest?.public_relation_count)
+    || restoreManifest.public_relation_count < 0
+    || !Number.isSafeInteger(restoreManifest?.storage_bucket_count)
+    || restoreManifest.storage_bucket_count < 0
+    || !Number.isSafeInteger(restoreManifest?.storage_object_count)
+    || restoreManifest.storage_object_count < 0
+    || !Number.isSafeInteger(restoreManifest?.storage_referenced_object_count)
+    || restoreManifest.storage_referenced_object_count < 0
     || typeof productionStorageVolume !== "string"
     || productionStorageVolume.length === 0
     || restoreManifest?.source_archive_sha256 !== archiveSha256
@@ -76,6 +134,10 @@ export function buildFullLocalBackupReadinessEvidence({
       archive_path: exactPath(archivePath, "backup archive"),
       archive_sha256: archiveSha256,
       created_at: backupMetadata.created_at,
+      data_sha256: components.data_sha256,
+      relation_classification_digest: backupManifest.relation_classification_digest,
+      roles_sha256: components.roles_sha256,
+      schema_sha256: components.schema_sha256,
     },
     format: FULL_LOCAL_BACKUP_READINESS_FORMAT,
     off_mac_copy: {
@@ -91,14 +153,33 @@ export function buildFullLocalBackupReadinessEvidence({
       storage_volume: productionStorageVolume,
     },
     restore: {
+      auth_identity_digest: restoreManifest.auth_identity_digest,
+      auth_identities: restoreManifest.auth_identities,
+      auth_users: restoreManifest.auth_users,
+      database_digest: restoreManifest.database_digest,
+      database_data_sha256: restoreManifest.restored_data_sha256,
       database_reference_count: restoreManifest.storage_reference_count,
+      execution: restoreManifest.restore_execution,
+      fresh_target_attested: true,
       object_count: restoreManifest.storage_payload_object_count,
       payload_catalog_sha256: restoreManifest.storage_payload_catalog_sha256,
+      public_relation_count: restoreManifest.public_relation_count,
+      relation_classification_digest:
+        restoreManifest.relation_classification_digest,
       source_archive_sha256: restoreManifest.source_archive_sha256,
+      source_data_sha256: restoreManifest.source_data_sha256,
+      source_roles_sha256: restoreManifest.source_roles_sha256,
+      source_schema_sha256: restoreManifest.source_schema_sha256,
+      storage_bucket_count: restoreManifest.storage_bucket_count,
+      storage_digest: restoreManifest.storage_digest,
+      storage_object_count: restoreManifest.storage_object_count,
       storage_payload_included: true,
+      storage_referenced_object_count:
+        restoreManifest.storage_referenced_object_count,
       target_compose_project: restoreManifest.compose_project,
       target_storage_volume: restoreManifest.storage_volume,
       total_bytes: restoreManifest.storage_payload_total_bytes,
+      unclassified_count: 0,
       verified_at: restoreManifest.created_at,
     },
   });
@@ -132,6 +213,34 @@ export function verifyFullLocalBackupReadiness({
   const restoreAge = ageHours(evidence?.restore?.verified_at, nowMs, "restore");
   if (
     evidence?.restore?.source_archive_sha256 !== archiveSha
+    || evidence?.restore?.execution !== "clean-isolated-restore-platform-v1"
+    || evidence?.restore?.fresh_target_attested !== true
+    || !SHA256.test(evidence?.restore?.database_data_sha256)
+    || evidence.restore.database_data_sha256 !== evidence?.backup?.data_sha256
+    || evidence?.restore?.source_data_sha256 !== evidence?.backup?.data_sha256
+    || !SHA256.test(evidence?.backup?.roles_sha256)
+    || evidence?.restore?.source_roles_sha256 !== evidence.backup.roles_sha256
+    || !SHA256.test(evidence?.backup?.schema_sha256)
+    || evidence?.restore?.source_schema_sha256 !== evidence.backup.schema_sha256
+    || !SHA256.test(evidence?.backup?.relation_classification_digest)
+    || evidence?.restore?.relation_classification_digest
+      !== evidence.backup.relation_classification_digest
+    || evidence?.restore?.unclassified_count !== 0
+    || !SHA256.test(evidence?.restore?.auth_identity_digest)
+    || !SHA256.test(evidence?.restore?.database_digest)
+    || !SHA256.test(evidence?.restore?.storage_digest)
+    || !Number.isSafeInteger(evidence?.restore?.auth_users)
+    || evidence.restore.auth_users < 0
+    || !Number.isSafeInteger(evidence?.restore?.auth_identities)
+    || evidence.restore.auth_identities < 0
+    || !Number.isSafeInteger(evidence?.restore?.public_relation_count)
+    || evidence.restore.public_relation_count < 0
+    || !Number.isSafeInteger(evidence?.restore?.storage_bucket_count)
+    || evidence.restore.storage_bucket_count < 0
+    || !Number.isSafeInteger(evidence?.restore?.storage_object_count)
+    || evidence.restore.storage_object_count !== evidence.restore.object_count
+    || !Number.isSafeInteger(evidence?.restore?.storage_referenced_object_count)
+    || evidence.restore.storage_referenced_object_count !== evidence.restore.object_count
     || evidence?.restore?.storage_payload_included !== true
     || !SHA256.test(evidence?.restore?.payload_catalog_sha256)
     || !Number.isSafeInteger(evidence?.restore?.object_count)

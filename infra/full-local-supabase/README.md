@@ -37,7 +37,7 @@ pnpm full-local-production:platform-backup -- --config /absolute/path/.env.produ
 pnpm full-local-production:platform-backup:verify -- --archive /absolute/off-mac/platform.tar.gz.enc
 ```
 
-Backup pauses only the exact production writer services for one bounded consistent cut, runs `pg_dump` inside the verified production PostgreSQL container, and snapshots the exact labeled Storage volume. It never resets or removes an operating volume.
+Backup pauses only the exact production writer services for one bounded consistent cut, runs `pg_dump` inside the verified production PostgreSQL container, and snapshots the exact labeled Storage volume. A partial stop failure restarts every writer that was actually stopped. It never resets or removes an operating volume.
 
 `FULL_LOCAL_BACKUP_READINESS_PATH` must be an absolute path in an external mode-0700 directory. After copying both the archive and its `.auth.json` sidecar to a distinct off-Mac filesystem device and completing a clean isolated restore verification manifest for that exact archive, record immutable readiness evidence:
 
@@ -45,13 +45,13 @@ Backup pauses only the exact production writer services for one bounded consiste
 pnpm full-local-production:backup-readiness:record -- \
   --config /absolute/path/.env.production.local \
   --archive /absolute/primary/platform.tar.gz.enc \
-  --off-mac-copy /absolute/off-mac/platform-copy.tar.gz.enc \
+  --off-mac-copy /absolute/off-mac/platform.tar.gz.enc \
   --restore-manifest /absolute/evidence/restore-manifest.json \
   --output /absolute/state/full-local-backup-readiness.json \
   --confirm-off-mac-copy OFF_MAC_COPY_VERIFIED
 ```
 
-`validate`, `start`, and `status` reject missing, stale (>24h), mismatched, non-0600, incomplete-Storage, or wrong-production readiness evidence. `stop` and isolated recovery commands remain available so a blocked runtime can be recovered without resetting operating data.
+`validate`, `start`, and `status` reject missing, stale (>24h), mismatched, symlinked, non-0600, incomplete-Storage, or wrong-production readiness evidence. Every gate re-authenticates and decrypts both archive copies with their sidecars and the Keychain key, verifies the restore manifest's own HMAC sidecar, and re-inventories the live Compose labels/image/health. Only `restore-platform` on fresh empty volumes can issue eligible clean-restore evidence; it binds the source roles/schema/data digests plus DB/Auth relation and Storage payload digests/counts. `stop` and isolated recovery commands remain available so a blocked runtime can be recovered without resetting operating data.
 
 Do not start the persistent production volumes before the restore/cutover runbook says the same-maintenance Auth, application DB, and Storage snapshot is ready. The Docker integration test always uses disposable names and removes its volumes:
 
