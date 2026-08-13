@@ -17,12 +17,22 @@ import { fileURLToPath } from "node:url";
 import {
   buildDockerStorageVolumeCaptureInvocation,
   buildDockerStorageVolumeRestoreInvocation,
+  buildPlatformBackupAuthentication,
   createEncryptedPlatformBackup,
   PINNED_SUPABASE_CLI_VERSION,
+  platformBackupAuthenticationPath,
   listStoragePayloadPaths,
   verifyStoragePayloadManifest,
+  verifyPlatformBackupAuthentication,
   withVerifiedPlatformBackup,
 } from "./lib/full-local-platform-backup.mjs";
+import {
+  createIsolatedKeychainAdapter,
+  openFullLocalBackupKeyEscrow,
+  sealFullLocalBackupKeyEscrow,
+  verifyIsolatedKeychainRegistration,
+} from "./lib/full-local-backup-key-recovery.mjs";
+import { fullLocalBackupMetadataSha256 } from "./lib/full-local-backup-readiness.mjs";
 import { fullLocalImageRefsForPlatform } from "./lib/full-local-production-runtime.mjs";
 import {
   makePostgresRoleDumpIdempotent,
@@ -366,6 +376,12 @@ async function executeDrill() {
   const restoredSnapshotDirectory = join(root, "restored-snapshot");
   const archive = join(root, "platform.tar.gz.enc");
   const backupKey = randomBytes(48).toString("base64url");
+  const keyRecoveryMode = process.argv.includes("--key-recovery");
+  const recoveryCredential = randomBytes(48).toString("base64url");
+  const escrowEnvelopePath = join(root, "key-escrow", "platform-key.escrow.json");
+  const sourceMachineId = `source-adapter-${suffix}`;
+  const replacementMachineId = `replacement-adapter-${suffix}`;
+  let recoveryContext = null;
   try {
     const version = run("pnpm", ["dlx", `supabase@${PINNED_SUPABASE_CLI_VERSION}`, "--version"]).trim();
     if (version !== PINNED_SUPABASE_CLI_VERSION) {
@@ -397,7 +413,7 @@ async function executeDrill() {
     });
     let sourceRows;
     const sourceDatabaseProvenance = {};
-    createEncryptedPlatformBackup({
+    const backupResult = createEncryptedPlatformBackup({
       backupKey,
       database: {
         dumpComponents: (staging) => {
@@ -427,6 +443,55 @@ async function executeDrill() {
       },
     });
 
+    let restoreKey = backupKey;
+    if (keyRecoveryMode) {
+      mkdirSync(dirname(escrowEnvelopePath), { recursive: true, mode: 0o700 });
+      const envelopeContents = `${JSON.stringify(sealFullLocalBackupKeyEscrow({
+        backupKey,
+        recoveryCredential,
+      }), null, 2)}\n`;
+      writeFileSync(escrowEnvelopePath, envelopeContents, { mode: 0o600 });
+      const escrowAuthentication = buildPlatformBackupAuthentication({
+        archive: escrowEnvelopePath,
+        archiveBytes: Buffer.from(envelopeContents, "utf8"),
+        backupKey,
+      });
+      writeFileSync(
+        platformBackupAuthenticationPath(escrowEnvelopePath),
+        `${JSON.stringify(escrowAuthentication, null, 2)}\n`,
+        { mode: 0o600 },
+      );
+      verifyPlatformBackupAuthentication({
+        archive: escrowEnvelopePath,
+        archiveBytes: readFileSync(escrowEnvelopePath),
+        authentication: JSON.parse(readFileSync(
+          platformBackupAuthenticationPath(escrowEnvelopePath),
+          "utf8",
+        )),
+        backupKey,
+      });
+      const recoveredKey = openFullLocalBackupKeyEscrow({
+        envelope: JSON.parse(readFileSync(escrowEnvelopePath, "utf8")),
+        recoveryCredential,
+      });
+      const keychain = createIsolatedKeychainAdapter({
+        directory: join(root, "replacement-keychain"),
+      });
+      keychain.register("platform-backup", recoveredKey);
+      recoveryContext = {
+        envelope_authenticated: recoveredKey === backupKey,
+        envelope_sha256: createHash("sha256")
+          .update(readFileSync(escrowEnvelopePath))
+          .digest("hex"),
+        keychain_receipt: verifyIsolatedKeychainRegistration({
+          account: "platform-backup",
+          adapter: keychain,
+          expectedKey: backupKey,
+        }),
+      };
+      restoreKey = keychain.read("platform-backup");
+    }
+
     createLabeledVolume({
       composeProject: plan.restore_project_id,
       composeVolume: "postgres-data",
@@ -443,10 +508,12 @@ async function executeDrill() {
       postgresVolume: plan.restore_postgres_volume,
     });
     const restored = resolveResources(resourceConfig(plan, true));
-    return await withVerifiedPlatformBackup({
+    let authenticatedMetadata;
+    const restoreResult = await withVerifiedPlatformBackup({
       archive,
-      backupKey,
+      backupKey: restoreKey,
       consume: ({ dataPath, metadata, rolesPath, schemaPath, storagePayloadPath }) => {
+        authenticatedMetadata = metadata;
         let postRestoreResources;
         return executeBootstrapAwarePlatformRestore({
           bootstrapServices: () => seedBootstrapSchemaCollision(
@@ -513,7 +580,9 @@ async function executeDrill() {
             }
             return {
               archive_authenticated: true,
+              archive_sha256: backupResult.archive_sha256,
               bootstrap_schema_clean_replay: true,
+              clean_restore_verified: true,
               cli_version: PINNED_SUPABASE_CLI_VERSION,
               database_reference_count: restoredReferences.length,
               destructive_scope: plan.destructive_scope,
@@ -521,6 +590,7 @@ async function executeDrill() {
               object_count: metadata.storage_payload.object_count,
               payload_catalog_sha256: metadata.storage_payload.catalog_sha256,
               payload_total_bytes: metadata.storage_payload.total_bytes,
+              metadata_sha256: fullLocalBackupMetadataSha256(metadata),
               production_resource_resolution: "compose-labels-exact",
               restored_storage_compose_provenance: true,
               next_backup_inventory_verified: true,
@@ -530,6 +600,28 @@ async function executeDrill() {
         });
       },
     });
+    if (!keyRecoveryMode) return restoreResult;
+    if (
+      restoreResult.archive_sha256 !== backupResult.archive_sha256
+      || restoreResult.metadata_sha256
+        !== fullLocalBackupMetadataSha256(authenticatedMetadata)
+      || recoveryContext.keychain_receipt.key_sha256
+        !== createHash("sha256").update(restoreKey).digest("hex")
+    ) {
+      throw new Error("Actual replacement-Mac recovery outputs are not bound");
+    }
+    return {
+      ...restoreResult,
+      escrow_envelope_authenticated: recoveryContext.envelope_authenticated,
+      escrow_envelope_sha256: recoveryContext.envelope_sha256,
+      keychain_adapter: recoveryContext.keychain_receipt.adapter,
+      keychain_reregistered:
+        recoveryContext.keychain_receipt.key_sha256
+          === createHash("sha256").update(restoreKey).digest("hex"),
+      production_readiness_issued: false,
+      recovery_evidence_derived_from_restore: true,
+      replacement_machine_verified: sourceMachineId !== replacementMachineId,
+    };
   } finally {
     cleanupContainer(plan.source_database_container);
     cleanupContainer(plan.restore_database_container);

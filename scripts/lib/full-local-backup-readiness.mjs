@@ -110,12 +110,20 @@ export function buildFullLocalBackupReadinessEvidence({
     || keyRecoveryManifest?.archive_sha256 !== archiveSha256
     || keyRecoveryManifest?.clean_restore_verified !== true
     || keyRecoveryManifest?.keychain_reregistered !== true
+    || typeof keyRecoveryManifest?.keychain_registration?.account !== "string"
+    || keyRecoveryManifest.keychain_registration.account.length === 0
+    || typeof keyRecoveryManifest?.keychain_registration?.adapter !== "string"
+    || keyRecoveryManifest.keychain_registration.adapter.length === 0
+    || !SHA256.test(keyRecoveryManifest?.keychain_registration?.key_sha256)
     || keyRecoveryManifest?.restored_metadata_sha256 !== metadataSha256
     || typeof keyRecoveryManifest?.archive_device_id !== "string"
     || keyRecoveryManifest.archive_device_id.length === 0
     || typeof keyRecoveryManifest?.escrow_device_id !== "string"
     || keyRecoveryManifest.escrow_device_id.length === 0
     || keyRecoveryManifest.archive_device_id === keyRecoveryManifest.escrow_device_id
+    || typeof keyRecoveryManifest?.escrow_envelope_path !== "string"
+    || !isAbsolute(keyRecoveryManifest.escrow_envelope_path)
+    || !SHA256.test(keyRecoveryManifest?.escrow_envelope_sha256)
     || keyRecoveryManifest?.source_machine_id
       === keyRecoveryManifest?.replacement_machine_id
     || typeof keyRecoveryManifestPath !== "string"
@@ -250,6 +258,7 @@ export function verifyFullLocalBackupReadiness({
   evidence,
   evidenceFileMode,
   nowMs = Date.now(),
+  observedEscrowFiles,
   observedFiles,
   production,
 }) {
@@ -279,6 +288,16 @@ export function verifyFullLocalBackupReadiness({
   ageHours(evidence?.key_recovery?.created_at, nowMs, "backup key recovery");
   ageHours(evidence?.off_mac_copy?.verified_at, nowMs, "off-Mac copy");
   const restoreAge = ageHours(evidence?.restore?.verified_at, nowMs, "restore");
+  const escrowEnvelopePath = evidence?.key_recovery?.escrow_envelope_path;
+  const escrowEnvelopeSha256 = evidence?.key_recovery?.escrow_envelope_sha256;
+  if (
+    typeof escrowEnvelopePath !== "string"
+    || !isAbsolute(escrowEnvelopePath)
+    || !SHA256.test(escrowEnvelopeSha256)
+    || observedEscrowFiles?.[resolve(escrowEnvelopePath)] !== escrowEnvelopeSha256
+  ) {
+    fail("authenticated backup key escrow envelope is unavailable or mismatched");
+  }
   if (
     evidence?.restore?.source_archive_sha256 !== archiveSha
     || evidence?.key_recovery?.format
@@ -288,6 +307,11 @@ export function verifyFullLocalBackupReadiness({
       !== authenticatedBackupMetadataSha256
     || evidence?.key_recovery?.clean_restore_verified !== true
     || evidence?.key_recovery?.keychain_reregistered !== true
+    || typeof evidence?.key_recovery?.keychain_registration?.account !== "string"
+    || evidence.key_recovery.keychain_registration.account.length === 0
+    || typeof evidence?.key_recovery?.keychain_registration?.adapter !== "string"
+    || evidence.key_recovery.keychain_registration.adapter.length === 0
+    || !SHA256.test(evidence?.key_recovery?.keychain_registration?.key_sha256)
     || typeof evidence?.key_recovery?.archive_device_id !== "string"
     || evidence.key_recovery.archive_device_id.length === 0
     || typeof evidence?.key_recovery?.escrow_device_id !== "string"

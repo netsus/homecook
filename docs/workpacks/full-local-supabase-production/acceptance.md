@@ -21,7 +21,7 @@ Production domain tuple: `https://app.mumeok.kr`, `https://auth.mumeok.kr`, `htt
 - [ ] clean disposable namespace restore가 DB metadata와 object bytes/hash/reference exact 일치를 증명한다.
 - [ ] 운영 DB reset, 운영 volume 삭제, 기존 backup overwrite는 0이다.
 - [ ] isolated drill은 production-compatible labels를 쓰고 dev stack 공존 반례에서도 production fixture만 선택했다는 evidence를 남긴다.
-- [ ] `validate`/`start`/`status`가 HMAC readiness, authenticated primary/off-Mac archive full metadata, signed clean restore, 별도 매체 signed replacement-Mac key recovery, exact production identity를 검사하고 stale/missing/mismatch를 fail closed한다. `start`는 offline preflight 전 writer를 올리지 않고 live 2차 실패 시 newly-started writer만 정지한다.
+- [ ] `validate`/`start`/`status`가 HMAC readiness, authenticated primary/off-Mac archive full metadata, signed clean restore, 별도 매체 signed replacement-Mac key recovery와 actual escrow envelope exact path/hash/HMAC/device, exact production identity를 검사하고 삭제·변조·경로 바꿔치기·동일 device·stale/missing/mismatch를 fail closed한다. `start`는 offline preflight 전 writer를 올리지 않고 live 2차 실패 시 newly-started writer만 정지한다.
 
 ## Semantic gate
 

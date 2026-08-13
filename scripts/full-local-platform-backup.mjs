@@ -40,6 +40,7 @@ import {
   fullLocalBackupMetadataSha256,
   verifyFullLocalBackupReadiness,
 } from "./lib/full-local-backup-readiness.mjs";
+import { verifyFullLocalBackupKeyEscrowBinding } from "./lib/full-local-backup-key-recovery.mjs";
 import { validateExternalSecretDirectory } from "./lib/full-local-production-runtime.mjs";
 import { inventoryPlatformDataRelations } from "./lib/full-local-restore-cutover.mjs";
 import { mapStorageRowsToPayloadReferences } from "./lib/isolated-local-backup-restore-drill.mjs";
@@ -303,12 +304,6 @@ async function recordBackupReadiness(args) {
   if (statSync(archive).dev === statSync(offMacCopy).dev) {
     fail("The off-Mac copy must be on a distinct filesystem device.");
   }
-  if (
-    statSync(keyRecoveryManifestPath).dev === statSync(archive).dev
-    || statSync(keyRecoveryManifestPath).dev === statSync(offMacCopy).dev
-  ) {
-    fail("Backup key recovery evidence must use a second medium distinct from both archives.");
-  }
   for (const path of [
     archive,
     keyRecoveryManifestPath,
@@ -360,12 +355,46 @@ async function recordBackupReadiness(args) {
       backupKey,
     });
     const keyRecoveryManifest = JSON.parse(keyRecoveryManifestBytes.toString("utf8"));
-    if (
-      keyRecoveryManifest.archive_device_id !== String(statSync(offMacCopy).dev)
-      || keyRecoveryManifest.escrow_device_id
-        !== String(statSync(keyRecoveryManifestPath).dev)
-    ) {
+    const escrowEnvelopePath = existingMode600Artifact(
+      keyRecoveryManifest.escrow_envelope_path,
+      "backup key escrow envelope",
+    );
+    const escrowAuthenticationPath = existingMode600Artifact(
+      platformBackupAuthenticationPath(escrowEnvelopePath),
+      "backup key escrow authentication",
+    );
+    for (const path of [escrowEnvelopePath, escrowAuthenticationPath]) {
+      assertPrivateArtifactParent(path);
+      validateExternalSecretDirectory({
+        repositoryRoot: ROOT,
+        secretDirectory: dirname(path),
+      });
+    }
+    const escrowDevice = statSync(escrowEnvelopePath).dev;
+    if (keyRecoveryManifest.archive_device_id !== String(statSync(offMacCopy).dev)) {
       fail("Backup key recovery device identity does not match the mounted media.");
+    }
+    verifyFullLocalBackupKeyEscrowBinding({
+      archiveDeviceIds: [String(statSync(archive).dev), String(statSync(offMacCopy).dev)],
+      manifest: keyRecoveryManifest,
+      observedDeviceId: String(escrowDevice),
+      observedPath: escrowEnvelopePath,
+      observedSha256: sha256File(escrowEnvelopePath),
+    });
+    const escrowEnvelopeBytes = readFileSync(escrowEnvelopePath);
+    verifyPlatformBackupAuthentication({
+      archive: escrowEnvelopePath,
+      archiveBytes: escrowEnvelopeBytes,
+      authentication: JSON.parse(readFileSync(escrowAuthenticationPath, "utf8")),
+      backupKey,
+    });
+    const escrowEnvelope = JSON.parse(escrowEnvelopeBytes.toString("utf8"));
+    if (
+      escrowEnvelope?.format !== "homecook-full-local-backup-key-escrow-v1"
+      || escrowEnvelope?.cipher !== "AES-256-GCM"
+      || escrowEnvelope?.kdf !== "scrypt"
+    ) {
+      fail("Backup key escrow envelope format is invalid.");
     }
     const metadata = await withVerifiedPlatformBackup({
       archive,
@@ -400,6 +429,9 @@ async function recordBackupReadiness(args) {
       authenticatedBackupMetadataSha256: fullLocalBackupMetadataSha256(metadata),
       evidence,
       evidenceFileMode: 0o600,
+      observedEscrowFiles: {
+        [escrowEnvelopePath]: keyRecoveryManifest.escrow_envelope_sha256,
+      },
       observedFiles: {
         [archive]: archiveSha256,
         [offMacCopy]: offMacCopySha256,

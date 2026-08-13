@@ -1,13 +1,22 @@
 import {
   createCipheriv,
   createDecipheriv,
+  createHash,
   randomBytes,
   scryptSync,
 } from "node:crypto";
+import {
+  chmodSync,
+  mkdirSync,
+  readFileSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
+import { isAbsolute, join, resolve } from "node:path";
 
 const FORMAT = "homecook-full-local-backup-key-escrow-v1";
-const RECOVERY_FORMAT = "homecook-full-local-backup-key-recovery-v1";
 const SHA256 = /^[0-9a-f]{64}$/u;
+const KEYCHAIN_ADAPTER_FORMAT = "isolated-filesystem-keychain-adapter-v1";
 
 function fail(message) {
   throw new Error(`Full-local backup key recovery failed: ${message}`);
@@ -72,50 +81,73 @@ export function openFullLocalBackupKeyEscrow({ envelope, recoveryCredential }) {
   }
 }
 
-export function buildFullLocalBackupKeyRecoveryEvidence({
-  archiveDeviceId,
-  archiveSha256,
-  cleanRestoreVerified,
-  createdAt,
-  escrowDeviceId,
-  expectedMetadataSha256,
-  keychainReregistered,
-  replacementMachineId,
-  restoredArchiveSha256,
-  restoredMetadataSha256,
-  sourceMachineId,
-}) {
-  if (
-    typeof archiveDeviceId !== "string"
-    || archiveDeviceId.length === 0
-    || typeof escrowDeviceId !== "string"
-    || escrowDeviceId.length === 0
-    || archiveDeviceId === escrowDeviceId
-    || typeof sourceMachineId !== "string"
-    || sourceMachineId.length === 0
-    || typeof replacementMachineId !== "string"
-    || replacementMachineId.length === 0
-    || sourceMachineId === replacementMachineId
-    || keychainReregistered !== true
-    || cleanRestoreVerified !== true
-    || !SHA256.test(archiveSha256)
-    || restoredArchiveSha256 !== archiveSha256
-    || !SHA256.test(expectedMetadataSha256)
-    || restoredMetadataSha256 !== expectedMetadataSha256
-    || !Number.isFinite(Date.parse(createdAt))
-  ) {
-    fail("separate escrow, replacement Mac Keychain, and clean restore proof are required");
+export function createIsolatedKeychainAdapter({ directory }) {
+  if (typeof directory !== "string" || !isAbsolute(directory)) {
+    fail("isolated Keychain directory must be absolute");
+  }
+  mkdirSync(directory, { recursive: true, mode: 0o700 });
+  chmodSync(directory, 0o700);
+  const secretPath = (account) => {
+    if (typeof account !== "string" || !/^[a-z0-9][a-z0-9-]{2,63}$/u.test(account)) {
+      fail("isolated Keychain account is invalid");
+    }
+    return join(directory, `${account}.secret`);
+  };
+  return Object.freeze({
+    format: KEYCHAIN_ADAPTER_FORMAT,
+    read(account) {
+      const path = secretPath(account);
+      const stat = statSync(path);
+      if (!stat.isFile() || (stat.mode & 0o777) !== 0o600) {
+        fail("isolated Keychain item must be a mode 0600 file");
+      }
+      return readFileSync(path, "utf8");
+    },
+    register(account, secret) {
+      writeFileSync(secretPath(account), strongSecret(secret, "recovered backup key"), {
+        encoding: "utf8",
+        flag: "wx",
+        mode: 0o600,
+      });
+    },
+  });
+}
+
+export function verifyIsolatedKeychainRegistration({ account, adapter, expectedKey }) {
+  if (adapter?.format !== KEYCHAIN_ADAPTER_FORMAT || typeof adapter.read !== "function") {
+    fail("isolated Keychain adapter is invalid");
+  }
+  const registeredKey = adapter.read(account);
+  if (registeredKey !== strongSecret(expectedKey, "expected backup key")) {
+    fail("isolated Keychain registration does not match the recovered backup key");
   }
   return Object.freeze({
-    archive_device_id: archiveDeviceId,
-    archive_sha256: archiveSha256,
-    clean_restore_verified: true,
-    created_at: createdAt,
-    escrow_device_id: escrowDeviceId,
-    format: RECOVERY_FORMAT,
-    keychain_reregistered: true,
-    replacement_machine_id: replacementMachineId,
-    restored_metadata_sha256: restoredMetadataSha256,
-    source_machine_id: sourceMachineId,
+    account,
+    adapter: KEYCHAIN_ADAPTER_FORMAT,
+    key_sha256: createHash("sha256").update(registeredKey).digest("hex"),
   });
+}
+
+export function verifyFullLocalBackupKeyEscrowBinding({
+  archiveDeviceIds,
+  manifest,
+  observedDeviceId,
+  observedPath,
+  observedSha256,
+}) {
+  if (
+    !Array.isArray(archiveDeviceIds)
+    || archiveDeviceIds.length !== 2
+    || archiveDeviceIds.some((device) => typeof device !== "string" || !device)
+    || typeof observedPath !== "string"
+    || !isAbsolute(observedPath)
+    || resolve(observedPath) !== resolve(manifest?.escrow_envelope_path ?? "")
+    || observedSha256 !== manifest?.escrow_envelope_sha256
+    || !SHA256.test(observedSha256)
+    || observedDeviceId !== manifest?.escrow_device_id
+    || archiveDeviceIds.includes(observedDeviceId)
+  ) {
+    fail("escrow envelope path, digest, or independent device binding is invalid");
+  }
+  return true;
 }

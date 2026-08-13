@@ -48,6 +48,7 @@ import {
 } from "./lib/full-local-platform-backup.mjs";
 import { mapStorageRowsToPayloadReferences } from "./lib/isolated-local-backup-restore-drill.mjs";
 import { verifyFullLocalBackupReadiness } from "./lib/full-local-backup-readiness.mjs";
+import { verifyFullLocalBackupKeyEscrowBinding } from "./lib/full-local-backup-key-recovery.mjs";
 import {
   assertPrivateArtifactParent,
   assertRegularReadinessArtifact,
@@ -866,10 +867,36 @@ async function loadFullLocalBackupReadiness(runtime, resources) {
     authentication: JSON.parse(readFileSync(keyRecoveryAuthenticationPath, "utf8")),
     backupKey,
   });
+  const keyRecoveryManifest = JSON.parse(keyRecoveryManifestBytes.toString("utf8"));
+  const escrowEnvelopePath = assertRegularReadinessArtifact(
+    keyRecoveryManifest.escrow_envelope_path,
+  );
+  assertPrivateArtifactParent(escrowEnvelopePath);
+  const escrowAuthenticationPath = assertRegularReadinessArtifact(
+    platformBackupAuthenticationPath(escrowEnvelopePath),
+  );
+  assertPrivateArtifactParent(escrowAuthenticationPath);
+  const escrowEnvelopeBytes = readFileSync(escrowEnvelopePath);
+  verifyPlatformBackupAuthentication({
+    archive: escrowEnvelopePath,
+    archiveBytes: escrowEnvelopeBytes,
+    authentication: JSON.parse(readFileSync(escrowAuthenticationPath, "utf8")),
+    backupKey,
+  });
+  const escrowEnvelope = JSON.parse(escrowEnvelopeBytes.toString("utf8"));
+  if (
+    escrowEnvelope?.format !== "homecook-full-local-backup-key-escrow-v1"
+    || escrowEnvelope?.cipher !== "AES-256-GCM"
+    || escrowEnvelope?.kdf !== "scrypt"
+  ) {
+    fail("Backup key escrow envelope format is invalid.");
+  }
   if (
     sha256File(keyRecoveryManifestPath) !== evidence.key_recovery.evidence_sha256
-    || String(statSync(keyRecoveryManifestPath).dev)
-      !== evidence.key_recovery.escrow_device_id
+    || keyRecoveryManifest.escrow_envelope_path
+      !== evidence.key_recovery.escrow_envelope_path
+    || keyRecoveryManifest.escrow_envelope_sha256
+      !== evidence.key_recovery.escrow_envelope_sha256
   ) {
     fail("Signed backup key recovery evidence does not match readiness.");
   }
@@ -917,10 +944,18 @@ async function loadFullLocalBackupReadiness(runtime, resources) {
   }
   if (
     String(archiveStats[1].dev) !== evidence.key_recovery.archive_device_id
-    || archiveStats[1].dev === statSync(keyRecoveryManifestPath).dev
+    || archiveStats[1].dev === statSync(escrowEnvelopePath).dev
+    || archiveStats[0].dev === statSync(escrowEnvelopePath).dev
   ) {
     fail("Backup key escrow must remain on a medium distinct from the off-Mac archive.");
   }
+  verifyFullLocalBackupKeyEscrowBinding({
+    archiveDeviceIds: archiveStats.map((stat) => String(stat.dev)),
+    manifest: evidence.key_recovery,
+    observedDeviceId: String(statSync(escrowEnvelopePath).dev),
+    observedPath: escrowEnvelopePath,
+    observedSha256: sha256File(escrowEnvelopePath),
+  });
   const authenticatedMetadata = await authenticateFullLocalBackupArchives({
     evidence,
     verifyArchive: (archive) => withVerifiedPlatformBackup({
@@ -937,6 +972,9 @@ async function loadFullLocalBackupReadiness(runtime, resources) {
       fullLocalBackupMetadataSha256(authenticatedMetadata),
     evidence,
     evidenceFileMode: evidenceStat.mode & 0o777,
+    observedEscrowFiles: {
+      [escrowEnvelopePath]: sha256File(escrowEnvelopePath),
+    },
     observedFiles,
     production: {
       composeProject: resources.composeProject,

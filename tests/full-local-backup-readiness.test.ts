@@ -74,10 +74,17 @@ function validEvidence() {
       clean_restore_verified: true,
       created_at: "2026-08-13T07:10:00.000Z",
       escrow_device_id: "12",
+      escrow_envelope_path: "/Volumes/homecook-key-escrow/platform-key.escrow.json",
+      escrow_envelope_sha256: "c".repeat(64),
       evidence_path: "/Volumes/homecook-key-escrow/recovery.json",
       evidence_sha256: "7".repeat(64),
       format: "homecook-full-local-backup-key-recovery-v1",
       keychain_reregistered: true,
+      keychain_registration: {
+        account: "platform-backup",
+        adapter: "isolated-filesystem-keychain-adapter-v1",
+        key_sha256: "8".repeat(64),
+      },
       replacement_machine_id: "replacement-mac",
       restored_metadata_sha256: METADATA_SHA,
       source_machine_id: "source-mac",
@@ -189,8 +196,15 @@ describe("full-local backup readiness", () => {
         clean_restore_verified: true,
         created_at: "2026-08-13T07:10:00.000Z",
         escrow_device_id: "12",
+        escrow_envelope_path: "/Volumes/homecook-key-escrow/platform-key.escrow.json",
+        escrow_envelope_sha256: "c".repeat(64),
         format: "homecook-full-local-backup-key-recovery-v1",
         keychain_reregistered: true,
+        keychain_registration: {
+          account: "platform-backup",
+          adapter: "isolated-filesystem-keychain-adapter-v1",
+          key_sha256: "8".repeat(64),
+        },
         replacement_machine_id: "replacement-mac",
         restored_metadata_sha256: METADATA_SHA,
         source_machine_id: "source-mac",
@@ -239,6 +253,9 @@ describe("full-local backup readiness", () => {
       evidence: validEvidence(),
       evidenceFileMode: 0o600,
       nowMs: NOW,
+      observedEscrowFiles: {
+        "/Volumes/homecook-key-escrow/platform-key.escrow.json": "c".repeat(64),
+      },
       observedFiles: {
         "/Volumes/homecook-off-mac/platform.tar.gz.enc": SHA,
         "/Volumes/homecook-off-mac/platform-copy.tar.gz.enc": SHA,
@@ -282,6 +299,9 @@ describe("full-local backup readiness", () => {
       evidence,
       evidenceFileMode: 0o600,
       nowMs: NOW,
+      observedEscrowFiles: {
+        "/Volumes/homecook-key-escrow/platform-key.escrow.json": "c".repeat(64),
+      },
       observedFiles: {
         "/Volumes/homecook-off-mac/platform.tar.gz.enc": SHA,
         "/Volumes/homecook-off-mac/platform-copy.tar.gz.enc": SHA,
@@ -294,6 +314,32 @@ describe("full-local backup readiness", () => {
         storageVolumeName: "homecook-full-local-storage",
       },
     })).toThrow(/readiness|backup|restore|off-Mac|production/iu);
+  });
+
+  it.each([
+    ["deleted escrow envelope", {}],
+    ["mutated escrow envelope", {
+      "/Volumes/homecook-key-escrow/platform-key.escrow.json": "d".repeat(64),
+    }],
+  ])("fails closed for %s", (_label, observedEscrowFiles) => {
+    expect(() => verifyFullLocalBackupReadiness({
+      authenticatedBackupMetadataSha256: METADATA_SHA,
+      evidence: validEvidence(),
+      evidenceFileMode: 0o600,
+      nowMs: NOW,
+      observedEscrowFiles,
+      observedFiles: {
+        "/Volumes/homecook-off-mac/platform.tar.gz.enc": SHA,
+        "/Volumes/homecook-off-mac/platform-copy.tar.gz.enc": SHA,
+      },
+      production: {
+        composeProject: "homecook-full-local-isolated",
+        postgresContainerName: "homecook-full-local-isolated-postgres-1",
+        postgresImage: `public.ecr.aws/supabase/postgres@sha256:${"b".repeat(64)}`,
+        postgresVolumeName: "homecook-full-local-postgres",
+        storageVolumeName: "homecook-full-local-storage",
+      },
+    })).toThrow(/escrow|recovery/iu);
   });
 
   it("wires validate, start, and status to readiness before reporting PASS", async () => {
@@ -354,6 +400,21 @@ describe("full-local backup readiness", () => {
     expect(runtime).toMatch(
       /evidence\?\.restore\?\.manifest_path[\s\S]*platformBackupAuthenticationPath\(restoreManifestPath\)[\s\S]*verifyPlatformBackupAuthentication[\s\S]*manifest_sha256/u,
     );
+  });
+
+  it("revalidates the exact escrow envelope and sidecar on record and every runtime gate", async () => {
+    const { readFileSync } = await import("node:fs");
+    const recorder = readFileSync("scripts/full-local-platform-backup.mjs", "utf8");
+    const runtime = readFileSync("scripts/full-local-production-runtime.mjs", "utf8");
+
+    for (const source of [recorder, runtime]) {
+      expect(source).toContain("escrow_envelope_path");
+      expect(source).toContain("escrow_envelope_sha256");
+      expect(source).toContain("verifyFullLocalBackupKeyEscrowBinding");
+      expect(source).toMatch(
+        /platformBackupAuthenticationPath\(escrowEnvelopePath\)[\s\S]*verifyPlatformBackupAuthentication/u,
+      );
+    }
   });
 
   it("allows only restore-platform to issue readiness-eligible clean restore evidence", async () => {

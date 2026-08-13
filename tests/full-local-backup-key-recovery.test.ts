@@ -1,14 +1,17 @@
-import { spawnSync } from "node:child_process";
+import { mkdtempSync, readFileSync, statSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import {
-  buildFullLocalBackupKeyRecoveryEvidence,
+  createIsolatedKeychainAdapter,
   openFullLocalBackupKeyEscrow,
   sealFullLocalBackupKeyEscrow,
+  verifyFullLocalBackupKeyEscrowBinding,
 } from "@/scripts/lib/full-local-backup-key-recovery.mjs";
 
-const ARCHIVE_SHA = "a".repeat(64);
-const METADATA_SHA = "b".repeat(64);
+const ESCROW_SHA = "c".repeat(64);
+const ESCROW_PATH = "/Volumes/homecook-key-escrow/platform-key.escrow.json";
 
 describe("full-local backup key recovery", () => {
   it("recovers the archive key from an authenticated escrow envelope", () => {
@@ -24,71 +27,60 @@ describe("full-local backup key recovery", () => {
     })).toThrow(/escrow|authentication|decrypt/iu);
   });
 
-  it("issues evidence only for a clean replacement-Mac drill with separate media", () => {
-    expect(buildFullLocalBackupKeyRecoveryEvidence({
-      archiveDeviceId: "off-mac-archive-device",
-      archiveSha256: ARCHIVE_SHA,
-      cleanRestoreVerified: true,
-      createdAt: "2026-08-13T08:00:00.000Z",
-      escrowDeviceId: "independent-key-escrow-device",
-      expectedMetadataSha256: METADATA_SHA,
-      keychainReregistered: true,
-      replacementMachineId: "replacement-mac",
-      restoredArchiveSha256: ARCHIVE_SHA,
-      restoredMetadataSha256: METADATA_SHA,
-      sourceMachineId: "source-mac",
-    })).toEqual({
-      archive_device_id: "off-mac-archive-device",
-      archive_sha256: ARCHIVE_SHA,
-      clean_restore_verified: true,
-      created_at: "2026-08-13T08:00:00.000Z",
-      escrow_device_id: "independent-key-escrow-device",
-      format: "homecook-full-local-backup-key-recovery-v1",
-      keychain_reregistered: true,
-      replacement_machine_id: "replacement-mac",
-      restored_metadata_sha256: METADATA_SHA,
-      source_machine_id: "source-mac",
-    });
+  it("registers and reads the recovered key through an isolated Keychain adapter", () => {
+    const directory = mkdtempSync(join(tmpdir(), "homecook-isolated-keychain-test-"));
+    const adapter = createIsolatedKeychainAdapter({ directory });
+    const secret = "recovered-backup-key-with-at-least-twenty-four-characters";
+
+    adapter.register("platform-backup", secret);
+
+    expect(adapter.read("platform-backup")).toBe(secret);
+    expect(statSync(directory).mode & 0o777).toBe(0o700);
+    expect(statSync(join(directory, "platform-backup.secret")).mode & 0o777).toBe(0o600);
+    expect(readFileSync(join(directory, "platform-backup.secret"), "utf8")).toBe(secret);
   });
 
   it.each([
-    ["same medium", { escrowDeviceId: "off-mac-archive-device" }],
-    ["same Mac", { replacementMachineId: "source-mac" }],
-    ["missing Keychain registration", { keychainReregistered: false }],
-    ["missing clean restore", { cleanRestoreVerified: false }],
-    ["wrong restored archive", { restoredArchiveSha256: "c".repeat(64) }],
-    ["wrong restored metadata", { restoredMetadataSha256: "c".repeat(64) }],
-  ])("fails closed for %s", (_label, override) => {
-    expect(() => buildFullLocalBackupKeyRecoveryEvidence({
-      archiveDeviceId: "off-mac-archive-device",
-      archiveSha256: ARCHIVE_SHA,
-      cleanRestoreVerified: true,
-      createdAt: "2026-08-13T08:00:00.000Z",
-      escrowDeviceId: "independent-key-escrow-device",
-      expectedMetadataSha256: METADATA_SHA,
-      keychainReregistered: true,
-      replacementMachineId: "replacement-mac",
-      restoredArchiveSha256: ARCHIVE_SHA,
-      restoredMetadataSha256: METADATA_SHA,
-      sourceMachineId: "source-mac",
+    ["deleted envelope", { observedPath: undefined }],
+    ["mutated envelope", { observedSha256: "e".repeat(64) }],
+    ["path substitution", { observedPath: "/Volumes/other/platform-key.escrow.json" }],
+    ["same archive device", { observedDeviceId: "archive-device" }],
+  ])("rejects %s before readiness", (_label, override) => {
+    expect(() => verifyFullLocalBackupKeyEscrowBinding({
+      archiveDeviceIds: ["archive-device", "copy-device"],
+      manifest: {
+        escrow_device_id: "escrow-device",
+        escrow_envelope_path: ESCROW_PATH,
+        escrow_envelope_sha256: ESCROW_SHA,
+      },
+      observedDeviceId: "escrow-device",
+      observedPath: ESCROW_PATH,
+      observedSha256: ESCROW_SHA,
       ...override,
-    })).toThrow(/recovery|escrow|replacement|restore|Keychain/iu);
+    })).toThrow(/escrow|envelope|device|path/iu);
   });
 
-  it("runs a replacement-Mac-compatible isolated key recovery drill", () => {
-    const result = spawnSync(
-      process.execPath,
-      ["scripts/run-full-local-backup-key-recovery-drill.mjs", "--execute"],
-      { cwd: process.cwd(), encoding: "utf8" },
+  it("accepts only an exact independent escrow artifact binding", () => {
+    expect(verifyFullLocalBackupKeyEscrowBinding({
+      archiveDeviceIds: ["archive-device", "copy-device"],
+      manifest: {
+        escrow_device_id: "escrow-device",
+        escrow_envelope_path: ESCROW_PATH,
+        escrow_envelope_sha256: ESCROW_SHA,
+      },
+      observedDeviceId: "escrow-device",
+      observedPath: ESCROW_PATH,
+      observedSha256: ESCROW_SHA,
+    })).toBe(true);
+  });
+
+  it("delegates the recovery drill to the actual encrypted Docker backup/restore chain", () => {
+    const script = readFileSync(
+      "scripts/run-full-local-backup-key-recovery-drill.mjs",
+      "utf8",
     );
-    expect(result.status).toBe(0);
-    expect(JSON.parse(result.stdout)).toMatchObject({
-      clean_restore_verified: true,
-      destructive_scope: "isolated-fixture-only",
-      keychain_reregistered: true,
-      media_distinct: true,
-      replacement_machine_verified: true,
-      status: "PASS",
-    });
+    expect(script).toContain("run-isolated-local-backup-restore-drill.mjs");
+    expect(script).toContain("--key-recovery");
+    expect(script).not.toMatch(/new Map|cleanRestoreVerified:\s*true|isolated-encrypted-archive-fixture/iu);
   });
 });
