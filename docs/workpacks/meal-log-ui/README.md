@@ -182,7 +182,7 @@ query empty: 최근 / 자주 먹은 음식
 - drifted tuple은 full-local Supabase local-only operating authority만 추가한다. #12 product UI, public endpoint/status/error/field, DB schema, user flow는 바꾸지 않으므로 Contract Evolution은 N/A다.
 - PR head `2b5071e22048d94e476cfde635664a2521a90396` 뒤 latest `origin/master` `c4045705ef72c76f7e7258d10c460f56b6847dd7`(PR #1350 content `a625aefa7baab63f183a9d46e6f12d607d4e017f`)를 parent 2로 normal two-parent merge `0e7fe07a5719dd3f4e9833d163c25c47e8d8e375`에 통합했다. 추가된 YouTube async isolated-local tooling은 #12 product UI, public endpoint/status/error/field/action, DB schema, user flow를 바꾸지 않으므로 #12 Contract Evolution is N/A다.
 - remote #1349 head `bdd0280bddea8ad2caf32c98bd25ac65a70293fe`를 잠근 뒤 security PR #1352 reviewed head `3708cd9fe3e86a85db17946b165ee6456c596af6`가 merge된 latest `origin/master` `fb1119baae72862efefdb1cad13cc811bbd91a1c`를 parent 2로 normal no-ff merge `f79cc89895e19e388422c4799f23cca5c095d6c0`(tree `b1bc3500da9ef9cbd0fb0b75359cac1d4abdd2f9`)에 통합했다. `postcss>nanoid` override `3.3.18`은 #12 제품 계약에 영향이 없고 exact master post-merge checks는 13/13 success, fail/pending/rerun 0이며 high/critical audit 0이다.
-- 이 Stage 1 author는 docs만 작성했다. canonical design+critique prerequisite와 fresh independent internal1.5/security/API/five-axis review는 별도 task에서 `APPROVE 0/0/0`으로 완료됐다. 이후 Stage 4 runtime evidence, Stage 5와 fresh final authority도 별도 task에서 `PASS/APPROVE P0/P1/P2 0/0/0`으로 완료됐다. fresh Stage 6 task `01a000d1-d3da-77c3-ace5-a405f6a7a41b`도 PR #1361 terminal projection exact head/tree `01ffc810031d044929b35d6199f3b9ca7a6f8e0e` / `0bd20437c01425807d69bcda57a892a797112271`와 raw checks 17 = 15 success + 2 intended skip를 기준으로 `APPROVE P0/P1/P2 0/0/0`을 확정했다. internal 6.5는 `MERGE-PENDING`이며 Manual Only와 activation은 계속 pending이다.
+- 이 Stage 1 author는 docs만 작성했고 canonical design+critique, fresh independent internal1.5/security/API/five-axis, Stage 4/5/final authority와 fresh Stage 6 task `01a000d1-d3da-77c3-ace5-a405f6a7a41b`는 별도 task에서 모두 `PASS/APPROVE P0/P1/P2 0/0/0`으로 완료됐다. #12 runtime delivery는 PR #1361 merge `4264fe6bd5b3429029ba895a6b79cd32a5d3fa35`와 post-merge focus repair PR #1364 final reviewed/source head `c9b7ef56febc485df69d5ffd144dfab8ffa1330a`, merge/tree `358450e44da691256b0eeb51d8ae131a520b6cbd` / `0682a30d9d5aba11ae7e0ae706e2b13797d0d167`로 merged/completed다. final postmerge raw 13은 12 success + 1 intended skip, bad/pending/rerun 0이다. OMO report closeout PR #1365 merge/tree `4f3e8522ebbb6faaf48509154f04bc3e9d7d9d98` / `270e6f8c8d7b1fe2cb3c77233ad44f1753f452e8`와 retained `docs/workpacks/meal-log-ui/omo-report.md`까지 기록했다. Manual/device/AT/full WCAG/server-Mac/OAuth/merged-exact rehearsal/R/R+1/R+2/production activation은 계속 pending이다.
 
 ## QA / Test Data Plan
 
@@ -214,7 +214,7 @@ query empty: 최근 / 자주 먹은 음식
 
 ## Delivery Checklist
 
-> Stage 4/Ready와 fresh Stage 6/current-head evidence로 닫힌 항목만 checked다. post-merge, controlled full-local, Manual Only, activation은 아래 successor projection에 unchecked로 남겨 완료를 주장하지 않는다.
+> Runtime delivery와 post-merge repository checks로 닫힌 항목만 checked다. broader Manual Only, controlled full-local/merged-exact rehearsal과 activation 의무는 아래에 unchecked로 남겨 완료를 주장하지 않는다.
 
 - [x] 기존 #9 API와 typed adapter 계약 및 shared policy tests 고정 <!-- omo:id=delivery-meal-log-ui-shared-contract;stage=2;scope=shared;review=3,6 -->
 - [x] idempotency/revision/own-event/history 회귀 TDD RED와 GREEN 증거 <!-- omo:id=delivery-meal-log-ui-policy-tests;stage=2;scope=shared;review=3,6 -->
@@ -223,10 +223,12 @@ query empty: 최근 / 자주 먹은 음식
 - [x] fresh design evidence와 independent critic/final authority 승인 <!-- omo:id=delivery-meal-log-ui-design-authority;stage=4;scope=frontend;review=5,6 -->
 - [x] Ready handoff에 local deterministic evidence 범위와 후속 Stage 6/local-only/CI/Manual/activation 경계를 분리해 기록 <!-- omo:id=delivery-meal-log-ui-closeout;stage=4;scope=shared;review=6 -->
 
-> Successor closeout projection — Stage 6와 current-head CI는 terminal projection으로 닫혔고 나머지는 이 internal 6.5가 닫지 않는다.
+> Canonical closeout projection — #12 runtime delivery는 merged/completed이고 broader Manual/activation 의무는 별도 pending이다.
 >
 > - [x] independent Stage 6 closeout — task `01a000d1-d3da-77c3-ace5-a405f6a7a41b`, `APPROVE P0/P1/P2 0/0/0`
-> - [x] exact current-head CI 전체 green/intended skip — PR #1361 head/tree `01ffc810031d044929b35d6199f3b9ca7a6f8e0e` / `0bd20437c01425807d69bcda57a892a797112271`, raw 17 = 15 success + 2 intended skip
-> - [ ] post-merge QA/Policy/Security/Vercel closeout
+> - [x] runtime source merge — PR #1361 merge `4264fe6bd5b3429029ba895a6b79cd32a5d3fa35`
+> - [x] final repair publication — PR #1364 reviewed/source head `c9b7ef56febc485df69d5ffd144dfab8ffa1330a`, merge/tree `358450e44da691256b0eeb51d8ae131a520b6cbd` / `0682a30d9d5aba11ae7e0ae706e2b13797d0d167`
+> - [x] final postmerge repository checks — raw 13 = 12 success + 1 intended skip, bad/pending/rerun 0
+> - [x] OMO report projection — PR #1365 merge/tree `4f3e8522ebbb6faaf48509154f04bc3e9d7d9d98` / `270e6f8c8d7b1fe2cb3c77233ad44f1753f452e8`, retained `docs/workpacks/meal-log-ui/omo-report.md`
 > - [ ] pinned isolated-local 및 controlled full-local read-only evidence
-> - [ ] Manual/server-Mac/OAuth/device/AT, capability R/R+1/R+2, production, activation evidence
+> - [ ] Manual/device/AT/full WCAG/server-Mac/OAuth/merged-exact rehearsal, capability R/R+1/R+2, production activation evidence

@@ -204,7 +204,7 @@
     "blocked_reason_code": null
   },
   "closeout": {
-    "phase": "projecting",
+    "phase": "completed",
     "docs_projection": {
       "roadmap_lifecycle": "merged",
       "design_status": "confirmed",
@@ -221,12 +221,15 @@
       ],
       "actual_verification_refs": [
         "Stage 6 task 01a000d1-d3da-77c3-ace5-a405f6a7a41b: APPROVE P0/P1/P2 0/0/0",
-        "PR #1361 terminal projection exact head 01ffc810031d044929b35d6199f3b9ca7a6f8e0e, tree 0bd20437c01425807d69bcda57a892a797112271, remote mirror bd079a4d…, checks 15 success + 2 intended skip",
-        "internal 6.5 MERGE-PENDING; Manual and activation pending"
+        "PR #1361 runtime source merged as 4264fe6bd5b3429029ba895a6b79cd32a5d3fa35",
+        "PR #1364 final reviewed/source head c9b7ef56febc485df69d5ffd144dfab8ffa1330a merged as 358450e44da691256b0eeb51d8ae131a520b6cbd with tree 0682a30d9d5aba11ae7e0ae706e2b13797d0d167",
+        "Final postmerge raw 13 = 12 success + 1 intended skip with bad/pending/rerun 0",
+        "OMO report closeout PR #1365 merged as 4f3e8522ebbb6faaf48509154f04bc3e9d7d9d98 with report tree 270e6f8c8d7b1fe2cb3c77233ad44f1753f452e8; retained evidence docs/workpacks/meal-log-ui/omo-report.md",
+        "Runtime delivery is merged/completed; Manual/device/AT/full WCAG/server-Mac/OAuth/merged-exact rehearsal/R/R+1/R+2/production activation remain pending"
       ]
     },
     "merge_gate_projection": {
-      "current_head_sha": "01ffc810031d044929b35d6199f3b9ca7a6f8e0e",
+      "current_head_sha": "c9b7ef56febc485df69d5ffd144dfab8ffa1330a",
       "approval_state": "dual_approved",
       "all_checks_green": true
     },
@@ -236,12 +239,26 @@
       "stale_lock_count": 0,
       "ci_resync_count": 0,
       "artifact_missing": false,
-      "last_recovery_at": null
+      "last_recovery_at": "2026-08-15T02:40:39+09:00"
+    },
+    "repair_summary": {
+      "codex_repairable_count": 9,
+      "claude_repairable_count": 0,
+      "manual_decision_required_count": 0,
+      "human_escalation_count": 0,
+      "post_merge_stale_count": 0,
+      "latest_reason_code": "post-merge-focus-regression-repaired",
+      "evidence_sources": [
+        "docs/workpacks/meal-log-ui/omo-report.md",
+        "PR #1361 runtime merge",
+        "PR #1364 post-merge focus repair",
+        "PR #1365 OMO report closeout"
+      ]
     },
     "projection_state": {
-      "docs_synced_at": "internal-6.5-merge-pending",
-      "status_synced_at": "internal-6.5-merge-pending",
-      "pr_body_synced_at": "pending-internal-6.5-projection-commit"
+      "docs_synced_at": "2026-08-14T19:31:55Z",
+      "status_synced_at": "2026-08-14T19:31:55Z",
+      "pr_body_synced_at": "pending-pr-body"
     }
   },
   "out_of_scope": [
@@ -256,5 +273,5 @@
     "Unapproved full-local mutation or destructive reset, non-local target access, or feature activation"
   ],
   "open_questions": [],
-  "notes": "Current successor locked remote #1349 head bdd0280bddea8ad2caf32c98bd25ac65a70293fe; security PR #1352 reviewed head 3708cd9fe3e86a85db17946b165ee6456c596af6 merged as latest origin/master fb1119baae72862efefdb1cad13cc811bbd91a1c; normal no-ff integration f79cc89895e19e388422c4799f23cca5c095d6c0 has tree b1bc3500da9ef9cbd0fb0b75359cac1d4abdd2f9; exact master post-merge checks were 13/13 success with fail/pending/rerun 0 and postcss>nanoid 3.3.18 leaves high/critical audit 0. Historical initial fetch matched expected origin/master 16cfce44d32d5b618742a0e20460df4772a19142; base drift c12afbccd15f4935a1a52b9f2c2c23882a5033ff and latest origin/master c4045705ef72c76f7e7258d10c460f56b6847dd7 were integrated by normal merges without rebase, reset, amend, or force. Current official tuple is v1.7.32/v1.5.36/v1.3.34/v1.3.34/v1.2.39; the approved 1,018-line plan remains d4d0fb39e80eeffc8b1e73ad92f0d91a35a9b6adc57a556ea8c9ec6ecffa951d. #9 PR #1319 merge 8ba3fa5a2a198eb4f9c19d59cea5f6ccc52fdd4f, checkpoint 4597ca835ba81307d0bdf9e1b1c41806b17e7a68, security repair 16cfce44d32d5b618742a0e20460df4772a19142 and historical post-merge raw 14/14 success remain predecessor evidence; #10 PR #1331 merge 2185b59d1b460dac916aa4a4a5e061c8b795f0 is Stage 4~6 merged-green. Generator 019ffb5f-b4be-7153-84b8-e4f341bd5ae5 remains current history. Repair/re-review 019ffb73-1f48-7832-8d18-b043209f208a / 019ffb81-4bad-7353-b92b-add4924a4a40 at 910d14e99e71c9a05aa623cbf0a9c3b6f1f9456b / 1da1a186b99044d12fc9a940321a9bbefe44ae07 are superseded historical provenance. Current P1-ML-05 repair task 019ffbbc-d4f1-7730-be56-0d8d6d28ce8c produced design head/tree/blob e2959ef523e57770a4cb2b490f7b00a972ab8845 / 7932fc6d026d9f2c0aa963041efcf315be12c9e9 / 9bade6235acd9c6f60d128216260d9c0408718c2; fresh review task 019ffbc5-0c4a-7b11-afd9-6346a76b762c produced critique commit/tree 4e1bdaae2335fd41bb46db1ede5d835a2f164faa / 467f698b61775eea81487aaddf2aeac91bea1e00 with APPROVE P0/P1/P2 0/0/0. Every edit save from a deleted/null origin requires explicit current active owner meal column selection regardless of quantity/source/date/timezone fields; save fail-closed until selection; server replaces meal_plan_column_id + slot_name_snapshot. DELETE remains no relocation. The current design-delta review is complete, not pending. Stage 1 independent internal1.5 task 019ffc50-0573-7343-9d4d-00434f994398, security/API task 019ffc50-0573-7343-9d4d-002a97d92640, and five-axis/design task 019ffc50-0572-7240-85fd-530ca4e8f5a2 are APPROVE 0/0/0; Stage 1 merged as d5164357e85772833518c5e4766cef020735b7f1 with tree f65303832851004f07df2b2ee6b3678cc6a56018. UI-only Stage 4 runtime, Stage 5 and final authority are complete. Stage 6 task 01a000d1-d3da-77c3-ace5-a405f6a7a41b returned APPROVE P0/P1/P2 0/0/0. PR #1361 terminal projection exact head 01ffc810031d044929b35d6199f3b9ca7a6f8e0e has tree 0bd20437c01425807d69bcda57a892a797112271, remote mirror bd079a4d…, and current-head checks 15 success + 2 intended skip with bad/pending/rerun 0. internal 6.5 is MERGE-PENDING; closeout_phase=projecting. Actual merge SHA, merged_at, postmerge and OMO are not recorded. Manual/server-Mac/OAuth/device/AT, R/R+1/R+2, production and activation remain pending. #12 owns UI only and adds no endpoint, schema, migration, capability, or activation."
+  "notes": "Canonical runtime delivery closeout is completed without changing the official product contract. Final reviewed/source head c9b7ef56febc485df69d5ffd144dfab8ffa1330a follows PR #1361 merge 4264fe6bd5b3429029ba895a6b79cd32a5d3fa35 and merged through repair PR #1364 as 358450e44da691256b0eeb51d8ae131a520b6cbd with tree 0682a30d9d5aba11ae7e0ae706e2b13797d0d167. Final postmerge raw 13 = 12 success + 1 intended skip with bad/pending/rerun 0. OMO report closeout PR #1365 merged as 4f3e8522ebbb6faaf48509154f04bc3e9d7d9d98 with report tree 270e6f8c8d7b1fe2cb3c77233ad44f1753f452e8; retained evidence is docs/workpacks/meal-log-ui/omo-report.md. Runtime delivery is merged/completed while Manual/device/AT/full WCAG/server-Mac/OAuth/merged-exact rehearsal/R/R+1/R+2/production activation remain pending. auto_merge_eligible remains false. #12 owns UI only and adds no endpoint, schema, migration, capability, or activation."
 }

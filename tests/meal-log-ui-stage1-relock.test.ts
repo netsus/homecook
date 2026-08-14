@@ -45,6 +45,14 @@ const latestDesignBlob = "9bade6235acd9c6f60d128216260d9c0408718c2";
 const latestDesignReviewTask = "019ffbc5-0c4a-7b11-afd9-6346a76b762c";
 const latestCritiqueCommit = "4e1bdaae2335fd41bb46db1ede5d835a2f164faa";
 const latestCritiqueTree = "467f698b61775eea81487aaddf2aeac91bea1e00";
+const finalReviewedHead = "c9b7ef56febc485df69d5ffd144dfab8ffa1330a";
+const sourceMerge = "4264fe6bd5b3429029ba895a6b79cd32a5d3fa35";
+const finalRepairMerge = "358450e44da691256b0eeb51d8ae131a520b6cbd";
+const finalRepairTree = "0682a30d9d5aba11ae7e0ae706e2b13797d0d167";
+const omoReportMerge = "4f3e8522ebbb6faaf48509154f04bc3e9d7d9d98";
+const omoReportTree = "270e6f8c8d7b1fe2cb3c77233ad44f1753f452e8";
+const repairProjectionSyncedAt = "2026-08-14T19:31:55Z";
+const unsyncedPrBodyMarker = "pending-pr-body";
 
 function read(relativePath: string) {
   return readFileSync(join(root, relativePath), "utf8");
@@ -174,7 +182,7 @@ describe("meal-log-ui fresh Stage 1 relock", () => {
     );
   });
 
-  it("locks the internal 6.5 MERGE-PENDING terminal projection without promoting post-merge or Manual evidence", () => {
+  it("projects the completed runtime closeout without promoting broader Manual or activation evidence", () => {
     expect(workItem.status).toMatchObject({
       lifecycle: "merged",
       approval_state: "dual_approved",
@@ -196,7 +204,7 @@ describe("meal-log-ui fresh Stage 1 relock", () => {
       auto_merge_eligible: false,
     });
     expect(workItem.closeout).toMatchObject({
-      phase: "projecting",
+      phase: "completed",
       docs_projection: {
         roadmap_lifecycle: "merged",
       },
@@ -205,29 +213,85 @@ describe("meal-log-ui fresh Stage 1 relock", () => {
         external_smokes: "pending",
       },
       merge_gate_projection: {
+        current_head_sha: finalReviewedHead,
         approval_state: "dual_approved",
         all_checks_green: true,
       },
     });
 
-    const roadmapSliceRow = roadmap
+    const roadmapSliceRows = roadmap
       .split("\n")
-      .find((line) => line.startsWith("| 12 | E | `meal-log-ui` |"));
-    expect(roadmapSliceRow).toContain("| merged |");
-    expect(roadmapSliceRow).toContain("MERGE-PENDING");
-    expect(roadmapSliceRow).toContain("Manual");
-    expect(roadmapSliceRow).toContain("activation");
-    expect(roadmapSliceRow).toContain("pending");
+      .filter((line) =>
+        line.startsWith("| `meal-log-ui` |") ||
+        line.startsWith("| 12 | E | `meal-log-ui` |"),
+      );
+    expect(roadmapSliceRows).toHaveLength(2);
 
-    expect(JSON.stringify(workItem.closeout)).not.toMatch(
-      /"merge_sha"|"merged_at"|"postmerge"|"omo_report"/u,
-    );
-    expect(status.notes).toContain(
+    const completedRuntimeProjection = [
+      readme,
+      acceptance,
+      JSON.stringify(automation),
+      JSON.stringify(workItem),
+      status.notes,
+      ...roadmapSliceRows,
+    ].join("\n");
+    for (const required of [
+      finalReviewedHead,
+      sourceMerge,
+      finalRepairMerge,
+      finalRepairTree,
+      "raw 13 = 12 success + 1 intended skip",
+      "bad/pending/rerun 0",
+      omoReportMerge,
+      omoReportTree,
+      "docs/workpacks/meal-log-ui/omo-report.md",
+      "Manual",
+      "device",
+      "AT",
+      "full WCAG",
+      "server-Mac",
+      "OAuth",
+      "R/R+1/R+2",
+      "production",
+      "activation",
+      "pending",
+    ]) {
+      expect(completedRuntimeProjection).toContain(required);
+    }
+    for (const stale of [
+      "MERGE-PENDING",
+      "closeout_phase=projecting",
       "Actual merge SHA, merged_at, postmerge and OMO are not recorded",
+      "actual merge SHA/merged_at/postmerge/OMO는 아직 없고",
+    ]) {
+      expect(completedRuntimeProjection).not.toContain(stale);
+    }
+
+    expect(workItem.closeout.verification_projection.actual_verification_refs).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining(finalReviewedHead),
+        expect.stringContaining(sourceMerge),
+        expect.stringContaining(finalRepairMerge),
+        expect.stringContaining(finalRepairTree),
+        expect.stringContaining("12 success + 1 intended skip"),
+        expect.stringContaining(omoReportMerge),
+        expect.stringContaining(omoReportTree),
+      ]),
     );
+    expect(workItem.closeout.repair_summary).toMatchObject({
+      codex_repairable_count: 9,
+      claude_repairable_count: 0,
+      manual_decision_required_count: 0,
+      human_escalation_count: 0,
+      post_merge_stale_count: 0,
+    });
+    expect(status.notes).toContain("closeout_phase=completed");
+    expect(status.notes).toContain("runtime delivery merged/completed");
     expect(status.notes).toContain(
-      "Manual/server-Mac/OAuth/device/AT, R/R+1/R+2, production and activation remain pending",
+      "Manual/device/AT/full WCAG/server-Mac/OAuth/merged-exact rehearsal/R/R+1/R+2/production activation remain pending",
     );
+    expect(workItem.status.auto_merge_eligible).toBe(false);
+    expect(status.auto_merge_eligible).toBe(false);
 
     expect(workItem.verification.stage1_current_commands).toEqual(
       workItem.verification.verify_commands,
@@ -253,6 +317,16 @@ describe("meal-log-ui fresh Stage 1 relock", () => {
     expect(currentCommands).not.toMatch(
       /meal-log-ui\.test\.tsx|test:e2e|qa:explore|verify:frontend|real-smoke/u,
     );
+  });
+
+  it("records the repair projection time without claiming an unsynced PR body", () => {
+    expect(workItem.closeout.projection_state).toEqual({
+      docs_synced_at: repairProjectionSyncedAt,
+      status_synced_at: repairProjectionSyncedAt,
+      pr_body_synced_at: unsyncedPrBodyMarker,
+    });
+    expect(Date.parse(repairProjectionSyncedAt)).not.toBeNaN();
+    expect(Date.parse(unsyncedPrBodyMarker)).toBeNaN();
   });
 
   it("keeps automation external smokes exact and non-empty", () => {
@@ -387,10 +461,10 @@ describe("meal-log-ui fresh Stage 1 relock", () => {
       /- \[x\] independent internal1\.5\/security\/five-axis\/design\/Stage3\/5\/6 findings are zero/u,
     );
     expect(acceptance).toMatch(
-      /> - \[ \] post-merge QA\/Policy\/Security\/Vercel closeout/u,
+      /> - \[x\] post-merge repository checks closeout.*raw 13 = 12 success \+ 1 intended skip/u,
     );
     expect(acceptance).toMatch(
-      /- \[ \] Manual\/server-Mac\/OAuth.*production and activation evidence remain pending/u,
+      /- \[ \] Manual\/device\/AT\/full WCAG\/server-Mac\/OAuth\/merged-exact rehearsal.*production activation evidence remain pending/u,
     );
     for (const staleParts of [
       ["fresh design-", "generator task and fresh independent design critic", " remain pending"],
