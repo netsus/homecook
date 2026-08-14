@@ -231,6 +231,47 @@ describe("YT_IMPORT async extraction", () => {
       .toBe("/recipes/recipe-registered");
   });
 
+  it("moves focus to the review heading only after an async session restoration completes", async () => {
+    vi.mocked(asyncApi.fetchYoutubeExtractionSession).mockResolvedValue({
+      success: true,
+      data: {
+        status: "draft",
+        draft: {
+          extraction_id: "extraction-restored",
+          title: "복원된 감자 수프",
+          base_servings: 2,
+          thumbnail_url: null,
+          tags: [],
+          suggested_tags: [],
+          extraction_methods: ["description"],
+          draft_warnings: [],
+          blocking_issues: [],
+          ingredients: [],
+          steps: [],
+          new_cooking_methods: [],
+        },
+        recipe_id: null,
+        recipe_path: null,
+      },
+      error: null,
+    });
+
+    renderImport({ initialExtractionId: "extraction-restored" });
+
+    const heading = await screen.findByRole("heading", { name: "추출 결과를 확인해 주세요" });
+    await waitFor(() => expect(document.activeElement).toBe(heading));
+    expect(heading.getAttribute("tabindex")).toBe("-1");
+  });
+
+  it("does not move focus when the ordinary URL input screen opens", async () => {
+    renderImport();
+    const input = screen.getByLabelText("유튜브 URL");
+    input.focus();
+
+    await waitFor(() => expect(document.activeElement).toBe(input));
+    expect(asyncApi.fetchYoutubeExtractionSession).not.toHaveBeenCalled();
+  });
+
   it("moves a deduplicated completed job directly to its exact review path", async () => {
     vi.mocked(asyncApi.enqueueYoutubeExtraction).mockResolvedValue({
       success: true,

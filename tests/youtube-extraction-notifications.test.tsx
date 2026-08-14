@@ -167,6 +167,8 @@ describe("YouTube extraction notification center", () => {
     renderCenter();
 
     expect(await screen.findByText("이미 등록한 레시피예요")).toBeTruthy();
+    const toast = document.querySelector("[data-youtube-notification-toast]");
+    expect(toast?.querySelector("p")?.textContent).toBe("이미 등록한 레시피예요");
     expect(screen.queryByText("추출 결과를 확인하고 레시피로 등록할 수 있어요.")).toBeNull();
     expect(screen.getByRole("link", { name: "레시피 보기" }).getAttribute("href"))
       .toBe("/recipes/recipe-registered");
@@ -775,6 +777,19 @@ describe("YouTube extraction notification center", () => {
     const panel = screen.getByRole("tabpanel");
     expect(panel.id).toBe("youtube-extraction-archive-panel");
     expect(panel.getAttribute("aria-labelledby")).toBe("youtube-extraction-archive-tab");
+
+    await user.keyboard("{ArrowRight}");
+    expect(document.activeElement).toBe(unseenTab);
+    expect(unseenTab.getAttribute("aria-selected")).toBe("true");
+
+    await user.keyboard("{ArrowLeft}");
+    expect(document.activeElement).toBe(archiveTab);
+    expect(archiveTab.getAttribute("aria-selected")).toBe("true");
+
+    await user.keyboard("{Home}");
+    expect(document.activeElement).toBe(unseenTab);
+    await user.keyboard("{End}");
+    expect(document.activeElement).toBe(archiveTab);
   });
 
   it("announces and displays the official completed time in current and archive rows", async () => {

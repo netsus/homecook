@@ -582,7 +582,12 @@ test("consumed notification shows the registered-recipe meaning and destination"
     notificationItem({ consumed: true, status: "succeeded", title: "이미 등록한 감자 수프" }),
   ]);
   await page.goto("/");
-  await expect(page.getByTestId("youtube-notification-toast-stack").getByText("이미 등록한 레시피예요")).toBeVisible();
+  const toast = page.locator("[data-youtube-notification-toast]");
+  await expect(toast.locator("p").first()).toHaveText("이미 등록한 레시피예요");
+  await expect(toast.getByRole("link", { name: "레시피 보기" })).toHaveAttribute(
+    "href",
+    "/recipes/recipe-potato-soup",
+  );
   await captureEvidence(page, testInfo, path.join(SHELL_EVIDENCE, "mobile-390-consumed-toast.png"));
   await page.getByRole("button", { name: "YouTube 추출 알림 1개" }).click();
   await expect(page.getByTestId("youtube-notification-list").getByText("이미 등록한 레시피예요")).toBeVisible();
@@ -615,6 +620,7 @@ test("individual draft and failed toasts include exact state body copy", async (
 test("real reload and logout-login restore badge list and exact destination", async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await setE2EAuthOverride(page);
+  await installImportRoutes(page, "review");
   await installDiscoveryRoutes(page);
   await installNotificationRoutes(page, [notificationItem({ status: "succeeded", title: "감자 수프" })]);
   await page.goto("/");
@@ -635,6 +641,32 @@ test("real reload and logout-login restore badge list and exact destination", as
     `/menu/add/youtube?extractionId=${EXTRACTION_ID}`,
   );
   await captureEvidence(page, testInfo, path.join(SHELL_EVIDENCE, "mobile-390-relogin-recovery.png"));
+  await destination.click();
+  await expect(page).toHaveURL(new RegExp(`extractionId=${EXTRACTION_ID}`));
+  const reviewHeading = page.getByRole("heading", { name: "추출 결과를 확인해 주세요" });
+  await expect(reviewHeading).toBeVisible();
+  await expect(reviewHeading).toBeFocused();
+});
+
+test("notification tabs wrap in both directions and support Home and End", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await setE2EAuthOverride(page);
+  await installDiscoveryRoutes(page);
+  await installNotificationRoutes(page, [notificationItem({ status: "succeeded", title: null })]);
+  await page.goto("/");
+  await page.getByRole("button", { name: "YouTube 추출 알림 1개" }).click();
+
+  const unseenTab = page.getByRole("tab", { name: "새 알림" });
+  const archiveTab = page.getByRole("tab", { name: "지난 알림" });
+  await unseenTab.focus();
+  await page.keyboard.press("ArrowLeft");
+  await expect(archiveTab).toBeFocused();
+  await page.keyboard.press("ArrowRight");
+  await expect(unseenTab).toBeFocused();
+  await page.keyboard.press("End");
+  await expect(archiveTab).toBeFocused();
+  await page.keyboard.press("Home");
+  await expect(unseenTab).toBeFocused();
 });
 
 test("archive stays visible while online recovery discovers new unseen work", async ({ page }, testInfo) => {

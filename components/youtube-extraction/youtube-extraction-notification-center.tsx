@@ -45,11 +45,12 @@ function BellIcon({ filled = false }: { filled?: boolean }) {
 
 function statusCopy(item: YoutubeExtractionNotificationItem) {
   if (item.status === "succeeded") {
+    const consumed = Boolean(item.result?.recipe_path);
     return {
-      body: item.result?.recipe_path
+      body: consumed
         ? "이미 등록한 레시피예요"
         : "추출 결과를 확인하고 레시피로 등록할 수 있어요.",
-      title: "레시피 추출이 끝났어요",
+      title: consumed ? "이미 등록한 레시피예요" : "레시피 추출이 끝났어요",
     };
   }
   return {
@@ -620,9 +621,18 @@ export function YoutubeExtractionNotificationCenter({
   const handleTabKeyDown = useCallback((event: React.KeyboardEvent<HTMLButtonElement>) => {
     if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
     event.preventDefault();
-    const nextView = event.key === "ArrowLeft" || event.key === "Home"
-      ? "unseen-completed"
-      : "archive";
+    const views: YoutubeExtractionNotificationView[] = ["unseen-completed", "archive"];
+    const currentView = event.currentTarget.id === "youtube-extraction-archive-tab"
+      ? "archive"
+      : "unseen-completed";
+    const currentIndex = views.indexOf(currentView);
+    const nextView = event.key === "Home"
+      ? views[0]
+      : event.key === "End"
+        ? views[views.length - 1]
+        : event.key === "ArrowRight"
+          ? views[(currentIndex + 1) % views.length]
+          : views[(currentIndex - 1 + views.length) % views.length];
     handleView(nextView);
     (nextView === "archive" ? archiveTabRef.current : unseenTabRef.current)?.focus();
   }, [handleView]);
@@ -725,7 +735,9 @@ export function YoutubeExtractionNotificationCenter({
                 <span aria-hidden="true" className={groupedOutcome === "mixed" ? "text-[var(--muted)]" : groupedOutcome === "succeeded" ? "text-[var(--success)]" : "text-[var(--danger)]"} data-outcome={groupedOutcome} data-testid="youtube-notification-toast-icon">{groupedOutcome === "mixed" ? "•" : groupedOutcome === "succeeded" ? "✓" : "!"}</span>
                 <div className="min-w-0 flex-1">
                   <p className="font-bold text-[var(--foreground)]">{grouped ? `레시피 추출 ${visibleToastItems.length}건이 끝났어요` : copy?.title}</p>
-                  <p className="mt-1 break-words text-sm text-[var(--muted)]">{grouped ? "완료·실패 결과를 알림 목록에서 확인해 주세요." : copy?.body}</p>
+                  {grouped || copy?.body !== copy?.title ? (
+                    <p className="mt-1 break-words text-sm text-[var(--muted)]">{grouped ? "완료·실패 결과를 알림 목록에서 확인해 주세요." : copy?.body}</p>
+                  ) : null}
                   {!grouped && itemTitle(item) !== "YouTube 레시피" ? <p className="mt-1 break-words text-xs text-[var(--muted)]">{itemTitle(item)}</p> : null}
                 </div>
                 <button aria-label="toast 닫기" className="-m-2 inline-flex min-h-11 min-w-11 items-center justify-center rounded-full text-lg text-[var(--muted)]" onClick={() => setHiddenToastIds((current) => [...new Set([...current, ...visibleToastItems.map(({ job_id }) => job_id)])])} type="button">×</button>

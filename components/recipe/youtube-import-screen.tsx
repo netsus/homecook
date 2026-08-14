@@ -889,6 +889,7 @@ function ExtractionSessionStatus({
 // ─── Step 3: Review / Edit ────────────────────────────────────────────────────
 
 interface ReviewStepProps {
+  headingRef?: React.Ref<HTMLHeadingElement>;
   title: string;
   onTitleChange: (title: string) => void;
   baseServings: number;
@@ -1273,6 +1274,7 @@ function ReviewCookingStepRow({
 }
 
 function ReviewStep({
+  headingRef,
   title,
   onTitleChange,
   baseServings,
@@ -1313,7 +1315,11 @@ function ReviewStep({
 
   return (
     <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-8">
-      <p className="pt-4 text-base text-[var(--text-2)]">추출 결과를 확인해 주세요</p>
+      {headingRef ? (
+        <h2 className="pt-4 text-base font-normal text-[var(--text-2)]" ref={headingRef} tabIndex={-1}>추출 결과를 확인해 주세요</h2>
+      ) : (
+        <p className="pt-4 text-base text-[var(--text-2)]">추출 결과를 확인해 주세요</p>
+      )}
 
       {thumbnailUrl ? (
         <div
@@ -2509,6 +2515,7 @@ export function YoutubeImportScreen({
   const [acceptedRetryError, setAcceptedRetryError] = useState<string | null>(null);
   const [sessionRecipePath, setSessionRecipePath] = useState<string | null>(null);
   const [sessionError, setSessionError] = useState<string | null>(null);
+  const reviewHeadingRef = useRef<HTMLHeadingElement>(null);
   const [draftWarnings, setDraftWarnings] = useState<string[]>([]);
   const [blockingIssues, setBlockingIssues] = useState<string[]>([]);
 
@@ -2869,6 +2876,11 @@ export function YoutubeImportScreen({
       current = false;
     };
   }, [applyExtractDataToReview, initialExtractionId]);
+
+  useEffect(() => {
+    if (!initialExtractionId || currentStep !== "review") return;
+    reviewHeadingRef.current?.focus({ preventScroll: true });
+  }, [currentStep, initialExtractionId]);
 
   const handleSelectCandidate = useCallback(async (candidateId: string) => {
     const parentId = parentExtractionId ?? extractionId;
@@ -3508,7 +3520,7 @@ export function YoutubeImportScreen({
       {currentStep === "review" ? (
         <section className="web-yt-content web-yt-review">
           <div>
-            <h2>추출 결과를 확인해 주세요</h2>
+            <h2 ref={reviewHeadingRef} tabIndex={-1}>추출 결과를 확인해 주세요</h2>
             <p>영상에서 찾은 재료와 만들기를 등록 전에 확인해요.</p>
           </div>
           {desktopRegisterRequirements.length > 0 ? (
@@ -3839,6 +3851,7 @@ export function YoutubeImportScreen({
 
         {currentStep === "review" && (
           <ReviewStep
+            headingRef={reviewHeadingRef}
             title={title}
             onTitleChange={setTitle}
             baseServings={baseServings}
