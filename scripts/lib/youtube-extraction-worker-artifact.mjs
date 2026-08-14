@@ -674,6 +674,31 @@ export function readYoutubeExtractionWorkerArtifact(path) {
   return value;
 }
 
+function readMaterializedArtifactFileInventory(artifactRoot, manifestPath) {
+  const files = [];
+  const visit = (directory) => {
+    for (const entry of readdirSync(directory, { withFileTypes: true })) {
+      const target = resolve(directory, entry.name);
+      const stat = lstatSync(target);
+      if (stat.isSymbolicLink()) {
+        throw new Error(`worker artifact inventory contains a symbolic link: ${target}`);
+      }
+      if (stat.isDirectory()) {
+        visit(target);
+        continue;
+      }
+      if (!stat.isFile()) {
+        throw new Error(`worker artifact inventory contains an unsupported path: ${target}`);
+      }
+      if (target !== manifestPath) {
+        files.push(normalizeRepoRelativePath(artifactRoot, target));
+      }
+    }
+  };
+  visit(artifactRoot);
+  return files.sort();
+}
+
 export function verifyYoutubeExtractionWorkerArtifact(path) {
   const normalizedPath = ensureRegularFile(path, "worker artifact manifest");
   const value = readYoutubeExtractionWorkerArtifact(normalizedPath);
@@ -685,6 +710,7 @@ export function verifyYoutubeExtractionWorkerArtifact(path) {
     throw new Error("worker artifact file inventory is invalid.");
   }
   const artifactRoot = dirname(normalizedPath);
+  const manifestFiles = new Set();
   for (const file of value.files) {
     if (
       !file
@@ -696,10 +722,20 @@ export function verifyYoutubeExtractionWorkerArtifact(path) {
       throw new Error("worker artifact file inventory is invalid.");
     }
     const target = resolve(artifactRoot, file.path);
+    const normalizedFilePath = normalizeRepoRelativePath(artifactRoot, target);
+    if (normalizedFilePath !== file.path || manifestFiles.has(file.path)) {
+      throw new Error("worker artifact file inventory is invalid.");
+    }
+    manifestFiles.add(file.path);
     ensureRegularFile(target, `artifact file ${file.path}`);
     if (sha256File(target) !== file.sha256) {
       throw new Error(`worker artifact file drift: ${file.path}`);
     }
+  }
+  if (JSON.stringify([...manifestFiles].sort()) !== JSON.stringify(
+    readMaterializedArtifactFileInventory(artifactRoot, normalizedPath),
+  )) {
+    throw new Error("worker artifact file inventory is invalid.");
   }
   const expectedSchemaEntry = value.files.find(
     (file) => file.path === EXPECTED_SCHEMA_RELATIVE_PATH,
