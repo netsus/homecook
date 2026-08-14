@@ -18,11 +18,13 @@ type GlobalToastChannel = "growth" | "youtube";
 
 interface GlobalToastPresentationContextValue {
   grants: Record<GlobalToastChannel, boolean>;
+  limits: Record<GlobalToastChannel, number>;
   setCandidate: (channel: GlobalToastChannel, active: boolean) => void;
 }
 
 const GlobalToastPresentationContext = createContext<GlobalToastPresentationContextValue>({
   grants: { growth: true, youtube: true },
+  limits: { growth: Number.POSITIVE_INFINITY, youtube: Number.POSITIVE_INFINITY },
   setCandidate: () => undefined,
 });
 
@@ -56,13 +58,27 @@ export function GlobalToastPresentationProvider({ children }: { children: ReactN
         youtube: candidates.youtube,
       }
     : { growth: true, youtube: true }, [candidates, narrow]);
-  const value = useMemo(() => ({ grants, setCandidate }), [grants, setCandidate]);
+  const limits = useMemo<Record<GlobalToastChannel, number>>(() => narrow
+    ? { growth: 1, youtube: 1 }
+    : { growth: Number.POSITIVE_INFINITY, youtube: Number.POSITIVE_INFINITY }, [narrow]);
+  const value = useMemo(
+    () => ({ grants, limits, setCandidate }),
+    [grants, limits, setCandidate],
+  );
 
   return (
     <GlobalToastPresentationContext.Provider value={value}>
       {children}
     </GlobalToastPresentationContext.Provider>
   );
+}
+
+export function useGlobalToastPresentationLimit(
+  channel: GlobalToastChannel,
+  coordinated: boolean,
+) {
+  const { limits } = useContext(GlobalToastPresentationContext);
+  return coordinated ? limits[channel] : Number.POSITIVE_INFINITY;
 }
 
 export function useGlobalToastPresentationGrant(

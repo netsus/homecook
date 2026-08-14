@@ -10,6 +10,7 @@ import {
   GLOBAL_TOAST_GROWTH_SLOT_ID,
   GlobalToastPortal,
   useGlobalToastPresentationGrant,
+  useGlobalToastPresentationLimit,
 } from "@/components/shared/global-toast-presentation-slot";
 import {
   fetchUserGamification,
@@ -424,6 +425,10 @@ export function GrowthToastStack({
     views.length > 0,
     presentationMode === "shared",
   );
+  const presentationLimit = useGlobalToastPresentationLimit(
+    "growth",
+    presentationMode === "shared",
+  );
   const [gamification, setGamification] = useState<UserGamificationData | null>(null);
   const [isNotificationDialogOpen, setIsNotificationDialogOpen] = useState(false);
   const [visibleMax, setVisibleMax] = useState(MOBILE_VISIBLE_MAX);
@@ -597,12 +602,14 @@ export function GrowthToastStack({
   }, [refresh]);
 
   // Only visible toasts get auto-dismiss timers; queued rows stay unseen.
-  const { queued, visible } = useMemo(() => presentationGranted
-    ? {
-        queued: views.slice(visibleMax),
-        visible: views.slice(0, visibleMax),
-      }
-    : { queued: [], visible: [] }, [presentationGranted, views, visibleMax]);
+  const { queued, visible } = useMemo(() => {
+    if (!presentationGranted) return { queued: [], visible: [] };
+    const grantedVisibleMax = Math.min(visibleMax, presentationLimit);
+    return {
+      queued: views.slice(grantedVisibleMax),
+      visible: views.slice(0, grantedVisibleMax),
+    };
+  }, [presentationGranted, presentationLimit, views, visibleMax]);
   useEffect(() => {
     const timers = timersRef.current;
     const visibleIds = new Set(visible.map((view) => view.id));

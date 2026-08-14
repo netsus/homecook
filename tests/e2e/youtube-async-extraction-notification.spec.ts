@@ -144,7 +144,23 @@ async function installNotificationFailureRoute(
   });
 }
 
-async function installGrowthToastRoute(page: Page) {
+async function installGrowthToastRoute(
+  page: Page,
+  options: { count?: number; seenRequests?: string[][] } = {},
+) {
+  const count = options.count ?? 1;
+  await page.route("**/api/v1/users/me/gamification/notifications/seen", async (route) => {
+    const body = route.request().postDataJSON() as { notification_ids?: string[] };
+    const ids = body.notification_ids ?? [];
+    options.seenRequests?.push(ids);
+    await route.fulfill({
+      json: {
+        success: true,
+        data: { seen_notification_ids: ids },
+        error: null,
+      },
+    });
+  });
   await page.route(
     (url) => url.pathname === "/api/v1/users/me/gamification",
     async (route) => {
@@ -160,20 +176,20 @@ async function installGrowthToastRoute(page: Page) {
             level: { current_level: 2, progress_percent: 20, total_xp: 120, xp_to_next_level: 80 },
             notifications: {
               archive_preview: [],
-              priority_unseen: [{
-                body: "첫 요리를 기록해 15 XP를 받았어요.",
+              priority_unseen: Array.from({ length: count }, (_, index) => ({
+                body: `${index + 1}번째 요리를 기록해 15 XP를 받았어요.`,
                 category: "cooking",
-                created_at: "2026-08-14T01:05:00.000Z",
+                created_at: `2026-08-14T01:0${5 + index}:00.000Z`,
                 delivery_channel: "toast",
                 group_key: null,
-                id: "growth-toast-simultaneous",
+                id: `growth-toast-simultaneous-${index + 1}`,
                 notification_type: "xp_awarded",
                 payload: { event_type: "cooking_completed", xp_delta: 15 },
                 priority: 3,
                 seen_at: null,
-                title: "집밥 경험치 획득",
+                title: `집밥 경험치 획득 ${index + 1}`,
                 toast_eligible: true,
-              }],
+              })),
               unseen: [],
             },
             quests: { active: [], completed_recent: [] },
@@ -479,7 +495,8 @@ for (const viewport of [
     await page.setViewportSize({ width: viewport.width, height: viewport.height });
     await setE2EAuthOverride(page);
     await installDiscoveryRoutes(page);
-    await installGrowthToastRoute(page);
+    const growthSeenRequests: string[][] = [];
+    await installGrowthToastRoute(page, { count: 3, seenRequests: growthSeenRequests });
     await installNotificationRoutes(page, [
       notificationItem({ status: "succeeded", title: "감자 수프" }),
     ]);
@@ -490,17 +507,24 @@ for (const viewport of [
     const growthToast = page.getByTestId("growth-toast");
     await expect(layer).toHaveAttribute("aria-live", "polite");
     await expect(youtubeToast).toBeVisible();
+    const expectedGrowthCount = viewport.width === 320 ? 0 : viewport.width === 390 ? 2 : 3;
     if (viewport.width === 320) {
       await expect(growthToast).toHaveCount(0);
     } else {
-      await expect(growthToast).toBeVisible();
+      await expect(growthToast).toHaveCount(expectedGrowthCount);
     }
 
-    const [youtubeBox, growthBox, searchBox, filterBox] = await Promise.all([
+    const [youtubeBox, growthBoxes, searchBox, filterBox, bottomNavBox] = await Promise.all([
       youtubeToast.boundingBox(),
-      viewport.width === 320 ? Promise.resolve(null) : growthToast.boundingBox(),
+      growthToast.evaluateAll((elements) => elements.map((element) => {
+        const rect = element.getBoundingClientRect();
+        return { height: rect.height, width: rect.width, x: rect.x, y: rect.y };
+      })),
       page.getByPlaceholder("레시피 제목 검색").first().boundingBox(),
       page.getByRole("button", { name: "재료로 검색" }).first().boundingBox(),
+      viewport.width === 1440
+        ? Promise.resolve(null)
+        : page.getByRole("navigation", { name: "홈 하단 탭" }).boundingBox(),
     ]);
     expect(
       rectanglesAreDisjoint(youtubeBox, searchBox),
@@ -510,10 +534,15 @@ for (const viewport of [
       rectanglesAreDisjoint(youtubeBox, filterBox),
       JSON.stringify({ filterBox, youtubeBox }),
     ).toBe(true);
-    if (viewport.width !== 320) {
+    for (const growthBox of growthBoxes) {
       expect(rectanglesAreDisjoint(youtubeBox, growthBox)).toBe(true);
+      expect(rectanglesAreDisjoint(growthBox, searchBox)).toBe(true);
+      expect(rectanglesAreDisjoint(growthBox, filterBox)).toBe(true);
+      if (bottomNavBox) {
+        expect(rectanglesAreDisjoint(growthBox, bottomNavBox)).toBe(true);
+      }
     }
-    for (const box of [youtubeBox, ...(viewport.width === 320 ? [] : [growthBox])]) {
+    for (const box of [youtubeBox, ...growthBoxes]) {
       expect(box).not.toBeNull();
       expect(box?.x ?? -1).toBeGreaterThanOrEqual(0);
       expect((box?.x ?? 0) + (box?.width ?? 0)).toBeLessThanOrEqual(viewport.width);
@@ -525,9 +554,10 @@ for (const viewport of [
       "[data-youtube-notification-toast], [data-testid='growth-toast']",
     ).evaluateAll((elements) => elements.map((element) =>
       element.hasAttribute("data-youtube-notification-toast") ? "youtube" : "growth"));
-    expect(readingOrder).toEqual(viewport.width === 320
-      ? ["youtube"]
-      : ["youtube", "growth"]);
+    expect(readingOrder).toEqual([
+      "youtube",
+      ...Array.from({ length: expectedGrowthCount }, () => "growth"),
+    ]);
 
     await captureEvidence(page, testInfo, path.join(SHELL_EVIDENCE, viewport.file));
 
@@ -535,7 +565,11 @@ for (const viewport of [
       await expect(page.getByRole("button", { name: "YouTube 추출 알림 1개" })).toBeVisible();
       await youtubeToast.getByRole("button", { name: "toast 닫기" }).click();
       await expect(youtubeToast).toHaveCount(0);
-      await expect(growthToast).toBeVisible();
+      await expect(growthToast).toHaveCount(1);
+      await expect(growthToast).toContainText("집밥 경험치 획득 1");
+      await expect(page.getByTestId("growth-toast-collapsed")).toContainText("+2개의 새 소식 확인");
+      await expect(page.getByText("집밥 경험치 획득 2")).toHaveCount(0);
+      expect(growthSeenRequests).toEqual([]);
       const handoffOrder = await layer.locator(
         "[data-youtube-notification-toast], [data-testid='growth-toast']",
       ).evaluateAll((elements) => elements.map((element) =>
@@ -547,14 +581,39 @@ for (const viewport of [
         path.join(SHELL_EVIDENCE, "mobile-320-global-toast-handoff.png"),
       );
       await growthToast.getByRole("button", { name: "알림 닫기" }).click();
-      await expect(growthToast).toHaveCount(0);
+      await expect(growthToast).toHaveCount(1);
+      await expect(growthToast).toContainText("집밥 경험치 획득 2");
+      await expect(page.getByTestId("growth-toast-collapsed")).toContainText("+1개의 새 소식 확인");
+      expect(growthSeenRequests).toEqual([["growth-toast-simultaneous-1"]]);
+      await captureEvidence(
+        page,
+        testInfo,
+        path.join(SHELL_EVIDENCE, "mobile-320-growth-toast-sequential-handoff.png"),
+      );
+      await growthToast.getByRole("button", { name: "알림 닫기" }).click();
+      await expect(growthToast).toHaveCount(1);
+      await expect(growthToast).toContainText("집밥 경험치 획득 3");
+      expect(growthSeenRequests).toEqual([
+        ["growth-toast-simultaneous-1"],
+        ["growth-toast-simultaneous-2"],
+      ]);
+
+      const [growthBox, searchAfterBox, filterAfterBox, navAfterBox] = await Promise.all([
+        growthToast.boundingBox(),
+        page.getByPlaceholder("레시피 제목 검색").first().boundingBox(),
+        page.getByRole("button", { name: "재료로 검색" }).first().boundingBox(),
+        page.getByRole("navigation", { name: "홈 하단 탭" }).boundingBox(),
+      ]);
+      expect(rectanglesAreDisjoint(growthBox, searchAfterBox)).toBe(true);
+      expect(rectanglesAreDisjoint(growthBox, filterAfterBox)).toBe(true);
+      expect(rectanglesAreDisjoint(growthBox, navAfterBox)).toBe(true);
       await page.getByRole("button", { name: "YouTube 추출 알림 1개" }).click();
       await expect(page.getByTestId("youtube-notification-list").getByText("감자 수프")).toBeVisible();
       return;
     }
 
-    await growthToast.getByRole("button", { name: "알림 닫기" }).click();
-    await expect(growthToast).toHaveCount(0);
+    await growthToast.first().getByRole("button", { name: "알림 닫기" }).click();
+    await expect(growthToast).toHaveCount(Math.min(expectedGrowthCount, 2));
     await expect(youtubeToast).toBeVisible();
     await youtubeToast.getByRole("button", { name: "toast 닫기" }).click();
     await expect(youtubeToast).toHaveCount(0);
