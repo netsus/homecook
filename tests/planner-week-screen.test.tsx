@@ -250,14 +250,14 @@ describe("planner week screen Stage 4", () => {
     expect(screen.queryByText("다음 날 된장찌개")).toBeNull();
   });
 
-  it("does not request private plan data for the unavailable meal-log segment", async () => {
+  it("loads the meal-log segment without requesting private planner data", async () => {
     navigationMocks.searchParams.mockReturnValue(
       new URLSearchParams("segment=log&date=2026-03-24"),
     );
 
     render(<PlannerWeekScreen />);
 
-    expect(await screen.findByRole("heading", { name: "식사 기록은 준비 중이에요" }))
+    expect(await screen.findByRole("heading", { name: "3월 24일 화요일 식사 기록" }))
       .toBeTruthy();
     expect(fetchPlanner).not.toHaveBeenCalled();
 
@@ -433,7 +433,7 @@ describe("planner week screen Stage 4", () => {
       new URLSearchParams("segment=log&date=2026-03-25"),
     );
     view.rerender(<PlannerWeekScreen />);
-    expect(await screen.findByRole("heading", { name: "식사 기록은 준비 중이에요" }))
+    expect(await screen.findByRole("heading", { name: "3월 25일 수요일 식사 기록" }))
       .toBeTruthy();
 
     navigationMocks.searchParams.mockReturnValue(

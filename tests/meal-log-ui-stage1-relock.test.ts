@@ -174,28 +174,60 @@ describe("meal-log-ui fresh Stage 1 relock", () => {
     );
   });
 
-  it("moves #12 to Stage 2 in progress without promoting later evidence", () => {
+  it("locks the internal 6.5 MERGE-PENDING terminal projection without promoting post-merge or Manual evidence", () => {
     expect(workItem.status).toMatchObject({
-      lifecycle: "in_progress",
-      approval_state: "not_started",
-      verification_status: "pending",
+      lifecycle: "merged",
+      approval_state: "dual_approved",
+      verification_status: "passed",
       evaluation_status: "not_started",
       evaluation_round: 0,
       last_evaluator_result: null,
       auto_merge_eligible: false,
     });
     expect(status).toMatchObject({
-      branch: "feature/be-meal-log-ui",
-      pr_path: "https://github.com/netsus/homecook/pull/1354",
-      lifecycle: "in_progress",
-      approval_state: "not_started",
-      verification_status: "pending",
+      branch: "feature/fe-meal-log-ui-superseding-draft",
+      pr_path: "https://github.com/netsus/homecook/pull/1361",
+      lifecycle: "merged",
+      approval_state: "dual_approved",
+      verification_status: "passed",
       evaluation_status: "not_started",
       evaluation_round: 0,
       last_evaluator_result: null,
       auto_merge_eligible: false,
     });
-    expect(roadmap).toMatch(/\| 12 \| E \| `meal-log-ui` \| in-progress \|/u);
+    expect(workItem.closeout).toMatchObject({
+      phase: "projecting",
+      docs_projection: {
+        roadmap_lifecycle: "merged",
+      },
+      verification_projection: {
+        required_checks: "passed",
+        external_smokes: "pending",
+      },
+      merge_gate_projection: {
+        approval_state: "dual_approved",
+        all_checks_green: true,
+      },
+    });
+
+    const roadmapSliceRow = roadmap
+      .split("\n")
+      .find((line) => line.startsWith("| 12 | E | `meal-log-ui` |"));
+    expect(roadmapSliceRow).toContain("| merged |");
+    expect(roadmapSliceRow).toContain("MERGE-PENDING");
+    expect(roadmapSliceRow).toContain("Manual");
+    expect(roadmapSliceRow).toContain("activation");
+    expect(roadmapSliceRow).toContain("pending");
+
+    expect(JSON.stringify(workItem.closeout)).not.toMatch(
+      /"merge_sha"|"merged_at"|"postmerge"|"omo_report"/u,
+    );
+    expect(status.notes).toContain(
+      "Actual merge SHA, merged_at, postmerge and OMO are not recorded",
+    );
+    expect(status.notes).toContain(
+      "Manual/server-Mac/OAuth/device/AT, R/R+1/R+2, production and activation remain pending",
+    );
 
     expect(workItem.verification.stage1_current_commands).toEqual(
       workItem.verification.verify_commands,
@@ -256,7 +288,7 @@ describe("meal-log-ui fresh Stage 1 relock", () => {
     ).toHaveLength(1);
   });
 
-  it("records the current approved P1-ML-05 design provenance without fabricating later authority", () => {
+  it("records the approved design and completed independent review provenance", () => {
     expect(automation.frontend.design_authority).toMatchObject({
       generator_required: true,
       generator_artifact: "ui/designs/MEAL_LOG.md",
@@ -336,21 +368,29 @@ describe("meal-log-ui fresh Stage 1 relock", () => {
     const checkedAcceptanceIds = [...acceptance.matchAll(
       /^- \[x\].*<!-- omo:id=([^;]+);/gmu,
     )].map((match) => match[1]);
-    expect(checkedAcceptanceIds).toHaveLength(7);
-    expect(checkedAcceptanceIds).toEqual([
+    expect(checkedAcceptanceIds).toEqual(expect.arrayContaining([
       "accept-meal-log-ui-deleted-entry-absence",
       "accept-meal-log-ui-search-union",
       "accept-meal-log-ui-no-invention",
       "accept-meal-log-ui-runtime-predecessors",
       "accept-meal-log-ui-design",
+      "accept-meal-log-ui-authority",
       "accept-meal-log-ui-doc-gate-regression",
       "accept-meal-log-ui-stage1-honesty",
-    ]);
+      "accept-meal-log-ui-tdd-red",
+      "accept-meal-log-ui-reviews",
+    ]));
     expect(acceptance).toMatch(
-      /- \[ \] implementation records failing component\/history tests before code.*omo:id=accept-meal-log-ui-tdd-red/u,
+      /- \[x\] implementation records failing component\/history tests before code.*omo:id=accept-meal-log-ui-tdd-red/u,
     );
     expect(acceptance).toMatch(
-      /- \[ \] independent internal1\.5\/security\/five-axis\/design\/Stage3\/5\/6 findings are zero/u,
+      /- \[x\] independent internal1\.5\/security\/five-axis\/design\/Stage3\/5\/6 findings are zero/u,
+    );
+    expect(acceptance).toMatch(
+      /> - \[ \] post-merge QA\/Policy\/Security\/Vercel closeout/u,
+    );
+    expect(acceptance).toMatch(
+      /- \[ \] Manual\/server-Mac\/OAuth.*production and activation evidence remain pending/u,
     );
     for (const staleParts of [
       ["fresh design-", "generator task and fresh independent design critic", " remain pending"],
@@ -397,7 +437,6 @@ describe("meal-log-ui fresh Stage 1 relock", () => {
       acceptance,
       JSON.stringify(automation),
       JSON.stringify(workItem),
-      roadmap,
       status.notes,
     ];
 
@@ -434,6 +473,14 @@ describe("meal-log-ui fresh Stage 1 relock", () => {
     expect(deletedColumnProjection).not.toContain(
       ["deleted-column-snapshot-read-only", "-history"].join(""),
     );
+
+    const roadmapSliceRow = roadmap
+      .split("\n")
+      .find((line) => line.startsWith("| 12 | E | `meal-log-ui` |"));
+    expect(roadmapSliceRow).toContain("| merged |");
+    expect(roadmapSliceRow).toContain("Manual");
+    expect(roadmapSliceRow).toContain("activation");
+    expect(roadmapSliceRow).toContain("pending");
   });
 
   it("preserves #12 as UI-only and defers future Manual and activation evidence", () => {

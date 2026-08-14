@@ -17,9 +17,9 @@ import { SocialLoginButtons } from "@/components/auth/social-login-buttons";
 import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-tab";
 import { LegacyProductPlanSection } from "@/components/planner/legacy-product-plan-section";
 import {
-  MealLogUnavailableState,
   PlannerSegmentTabs,
 } from "@/components/planner/planner-shell-segments";
+import { MealLogScreen } from "@/components/planner/meal-log-screen";
 import { ContentState } from "@/components/shared/content-state";
 import { ProfileSummaryButton } from "@/components/shared/profile-summary-button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -52,6 +52,16 @@ import { usePlannerStore } from "@/stores/planner-store";
 import type { PlannerColumnData, PlannerMealData } from "@/types/planner";
 
 type AuthState = "checking" | "authenticated" | "unauthorized";
+
+type PendingShellNavigation = {
+  generation: number;
+  href: string;
+  location: {
+    date: string;
+    segment: PlannerShellSegment;
+  };
+  method: "push" | "replace";
+};
 
 export interface PlannerWeekScreenProps {
   initialAuthenticated?: boolean;
@@ -279,18 +289,22 @@ export function PlannerWeekScreen({
     useState<HTMLOListElement | null>(null);
   const previousSegmentRef = useRef(activeSegment);
   const hasLoadedPlannerRef = useRef(false);
-  const pendingNavigationRef = useRef<{
-    date: string;
-    segment: PlannerShellSegment;
-  } | null>(null);
+  const navigationGenerationRef = useRef(0);
+  const pendingNavigationRef = useRef<PendingShellNavigation | null>(null);
+  const latestNavigationRef = useRef<PendingShellNavigation | null>(null);
   const requestedRangeRef = useRef<string | null>(null);
   const selectedDateTitleRef = useRef<HTMLHeadingElement | null>(null);
+  const handleMealLogUnauthorized = useCallback(() => {
+    setAuthState("unauthorized");
+  }, []);
 
   const dateKeys = useMemo(
     () => buildDateKeys(rangeStartDate, rangeEndDate),
     [rangeEndDate, rangeStartDate],
   );
-  const selectedDate = dateKeys.includes(selectedDateKey)
+  const selectedDate = activeSegment === "log"
+    ? selectedDateKey
+    : dateKeys.includes(selectedDateKey)
     ? selectedDateKey
     : dateKeys[0] ?? selectedDateKey;
   const overviewDates = useMemo(
@@ -322,9 +336,19 @@ export function PlannerWeekScreen({
       method: "push" | "replace" = "push",
     ) => {
       const currentLocation = readPlannerShellLocation(searchParams, selectedDate);
+      const pendingNavigation = pendingNavigationRef.current;
+      const latestNavigation = latestNavigationRef.current;
       if (
+        !pendingNavigation &&
         currentLocation.date === location.date &&
         currentLocation.segment === location.segment
+      ) {
+        return;
+      }
+      if (
+        pendingNavigation &&
+        latestNavigation?.location.date === location.date &&
+        latestNavigation.location.segment === location.segment
       ) {
         return;
       }
@@ -332,7 +356,15 @@ export function PlannerWeekScreen({
         new URLSearchParams(searchParams.toString()),
         location,
       );
-      pendingNavigationRef.current = location;
+      const navigation = {
+        generation: ++navigationGenerationRef.current,
+        href,
+        location,
+        method,
+      } satisfies PendingShellNavigation;
+      latestNavigationRef.current = navigation;
+      if (pendingNavigation) return;
+      pendingNavigationRef.current = navigation;
       router[method](href);
     },
     [router, searchParams, selectedDate],
@@ -503,12 +535,22 @@ export function PlannerWeekScreen({
     const pendingNavigation = pendingNavigationRef.current;
     if (pendingNavigation) {
       if (
-        location.date !== pendingNavigation.date ||
-        location.segment !== pendingNavigation.segment
+        location.date !== pendingNavigation.location.date ||
+        location.segment !== pendingNavigation.location.segment
       ) {
         return;
       }
       pendingNavigationRef.current = null;
+      const latestNavigation = latestNavigationRef.current;
+      if (
+        latestNavigation &&
+        latestNavigation.generation > pendingNavigation.generation
+      ) {
+        pendingNavigationRef.current = latestNavigation;
+        router[latestNavigation.method](latestNavigation.href);
+        return;
+      }
+      latestNavigationRef.current = null;
     }
 
     if (location.segment !== activeSegment) {
@@ -537,6 +579,7 @@ export function PlannerWeekScreen({
     rangeEndDate,
     rangeStartDate,
     requestPlannerRange,
+    router,
     searchParams,
     selectedDate,
     selectedDateKey,
@@ -593,7 +636,9 @@ export function PlannerWeekScreen({
           tone="gate"
         >
           <div className="space-y-3">
-            <SocialLoginButtons nextPath={nextPath} />
+            <div data-next-path={nextPath} data-testid="meal-log-auth-gate-login">
+              <SocialLoginButtons nextPath={nextPath} />
+            </div>
             <Link
               className="inline-flex min-h-11 items-center justify-center rounded-full border border-[var(--line)] bg-[var(--surface)] px-5 py-3 text-sm font-semibold text-[var(--muted)]"
               href="/"
@@ -641,7 +686,7 @@ export function PlannerWeekScreen({
       </div>
 
       {activeSegment === "log" ? (
-        <MealLogUnavailableState />
+        <MealLogScreen date={selectedDate} onDateChange={handleDateSelect} onUnauthorized={handleMealLogUnauthorized} />
       ) : (
         <div
           aria-labelledby="planner-plan-tab"

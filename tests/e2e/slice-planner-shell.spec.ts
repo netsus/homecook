@@ -17,10 +17,31 @@ async function installPlannerShellRoutes(
 ) {
   let deleted = false;
   const requests = {
+    mealLog: 0,
     nutrition: 0,
     plannerRanges: [] as string[],
     productMethods: [] as string[],
   };
+  await page.route("**/api/v1/meal-log?*", async (route) => {
+    requests.mealLog += 1;
+    const date = new URL(route.request().url()).searchParams.get("date") ?? PLAN_DATE;
+    const mealColumnId = "20000000-0000-4000-8000-000000000001";
+    const zero = { calculation_status: "complete", calories_kcal: 0, carbohydrate_g: 0, protein_g: 0, fat_g: 0, sodium_mg: 0 };
+    await route.fulfill({
+      json: {
+        success: true,
+        data: {
+          date,
+          active_columns: [{ id: mealColumnId, name: "아침", sort_order: 0 }],
+          active_sections: [{ meal_plan_column_id: mealColumnId, slot_name_snapshot: "아침", sort_order: 0, entries: [], subtotal: zero, incomplete_count: 0 }],
+          deleted_column_sections: [],
+          entries: [],
+          day_total: { ...zero, incomplete_count: 0 },
+        },
+        error: null,
+      },
+    });
+  });
   const columns = [
     { id: "column-breakfast", name: "아침", sort_order: 0 },
     { id: "column-lunch", name: "점심", sort_order: 1 },
@@ -172,8 +193,9 @@ test.describe("planner-shell Stage 4", () => {
     await expect(logTab).toHaveAttribute("aria-selected", "true");
     await expect(page).toHaveURL(/segment=log/);
     await expect(
-      page.getByRole("heading", { name: "식사 기록은 준비 중이에요" }),
+      page.getByRole("heading", { name: "7월 23일 목요일 식사 기록" }),
     ).toBeVisible();
+    expect(requests.mealLog).toBe(7);
 
     await page.goBack();
     await expect(planTab).toHaveAttribute("aria-selected", "true");
