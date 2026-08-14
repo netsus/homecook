@@ -478,17 +478,22 @@ test.describe("34c growth notification UI @smoke-core", () => {
     });
     await showToastStack(page);
 
-    const visibleMax = (page.viewportSize()?.width ?? 0) >= 768 ? 3 : 2;
+    const viewportWidth = page.viewportSize()?.width ?? 0;
+    const visibleMax = viewportWidth >= 768 ? 3 : viewportWidth < 360 ? 1 : 2;
     await expect(page.getByTestId("growth-toast")).toHaveCount(visibleMax);
     await expect(page.getByTestId("growth-toast").nth(0)).toContainText("업적 달성!");
     await expect(page.getByTestId("growth-toast").nth(0)).toContainText("첫 한상 배지를 획득했어요.");
     await expect(page.getByTestId("growth-toast").nth(0)).toContainText("+20 XP");
-    await expect(page.getByTestId("growth-toast").nth(1)).toContainText("등급 획득!");
+    if (visibleMax >= 2) {
+      await expect(page.getByTestId("growth-toast").nth(1)).toContainText("등급 획득!");
+    }
     if (visibleMax === 3) {
       await expect(page.getByTestId("growth-toast").nth(2)).toContainText("새 배지 획득!");
       await expect(page.getByTestId("growth-toast-collapsed")).toHaveCount(0);
     } else {
-      await expect(page.getByTestId("growth-toast-collapsed")).toContainText("+1개의 새 소식 확인");
+      await expect(page.getByTestId("growth-toast-collapsed")).toContainText(
+        visibleMax === 1 ? "+2개의 새 소식 확인" : "+1개의 새 소식 확인",
+      );
     }
     expect(seenRequests).toEqual([]);
 
