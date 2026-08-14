@@ -103,4 +103,18 @@ describe("MEAL_LOG add sheet", () => {
     expect((unmatched as HTMLButtonElement).disabled).toBe(true);
     expect(screen.getByText("현재 중량·잔량 상태를 확인할 수 없어 저장할 수 없어요.")).toBeTruthy();
   });
+
+  it("shows the recent brand and the contracted catalog source badges", async () => {
+    const user = userEvent.setup();
+    renderMealLogShell({ catalogBadges: true });
+
+    await user.click(await screen.findByRole("button", { name: "아침에 먹은 음식 추가" }));
+    await user.click(screen.getByRole("tab", { name: "제품·재료" }));
+    expect(await screen.findByText("무먹식품 · 제품 · 최근 2개 · 3회 기록")).toBeTruthy();
+
+    await user.type(screen.getByRole("textbox", { name: "제품·재료 검색" }), "요거트");
+    await user.click(screen.getByRole("button", { name: "검색" }));
+    expect(await screen.findByText("공공브랜드 · 제품 · 공공 영양DB")).toBeTruthy();
+    expect(screen.getByText("동네브랜드 · 제품 · 사용자 등록")).toBeTruthy();
+  });
 });

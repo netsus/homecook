@@ -7,7 +7,7 @@ import { createPortal } from "react-dom";
 import { useDialogBoundary } from "@/components/shared/use-dialog-boundary";
 import { fetchFoodCatalogSearch, type FoodCatalogSearchItem } from "@/lib/api/food-catalog-search";
 import { fetchCookedBatches } from "@/lib/api/cooking";
-import { fetchMealLogRecent } from "@/lib/api/meal-log";
+import { fetchMealLogRecent, isMealLogApiError } from "@/lib/api/meal-log";
 import type { CookedBatchProjection } from "@/types/cooking";
 import type { MealLogColumn, MealLogRecentItem, MealLogSourceType } from "@/types/meal-log";
 
@@ -27,8 +27,12 @@ interface MealLogAddSheetProps {
   columns: MealLogColumn[];
   date: string;
   initialColumnId: string;
+  initialSelection?: MealLogSourceSelection;
+  initialSuggestionConfirmed?: boolean;
+  mutationEnabled?: boolean;
   onClose: () => void;
   onSave: (selection: MealLogSourceSelection, columnId: string) => Promise<void>;
+  onUnauthorized: (selection: MealLogSourceSelection | null, columnId: string) => void;
 }
 
 const DEPLETED_LABELS: Record<string, string> = {
@@ -75,17 +79,40 @@ function sourceUnit(item: FoodCatalogSearchItem) {
   return item.type === "ingredient" ? item.default_unit : item.nutrition.basis.unit;
 }
 
+function recentSourceLabel(type: MealLogSourceType) {
+  if (type === "cooked_batch") return "요리한 음식";
+  return type === "food_product" ? "제품" : "재료";
+}
+
+function catalogSourceLabel(item: FoodCatalogSearchItem) {
+  if (item.type === "ingredient") return "재료";
+  if (item.source_type === "public_dataset") return "제품 · 공공 영양DB";
+  return item.visibility === "public" ? "제품 · 사용자 등록" : "제품 · 비공개 보관";
+}
+
+function isUnauthorized(error: unknown) {
+  return error instanceof Error
+    && "status" in error
+    && (error as Error & { status: unknown }).status === 401;
+}
+
 export function MealLogAddSheet({
   columns,
   date,
   initialColumnId,
+  initialSelection,
+  initialSuggestionConfirmed = true,
+  mutationEnabled = true,
   onClose,
   onSave,
+  onUnauthorized,
 }: MealLogAddSheetProps) {
   const dialogRef = useRef<HTMLDivElement | null>(null);
   const closeRef = useRef<HTMLButtonElement | null>(null);
   const errorRef = useRef<HTMLParagraphElement | null>(null);
-  const [tab, setTab] = useState<SourceTab>("cooked");
+  const [tab, setTab] = useState<SourceTab>(
+    initialSelection?.type === "cooked_batch" ? "cooked" : initialSelection ? "catalog" : "cooked",
+  );
   const columnId = initialColumnId;
   const [recent, setRecent] = useState<MealLogRecentItem[]>([]);
   const [recentCursor, setRecentCursor] = useState<string | null>(null);
@@ -97,8 +124,8 @@ export function MealLogAddSheet({
   const [catalogCursor, setCatalogCursor] = useState<string | null>(null);
   const [catalogHasNext, setCatalogHasNext] = useState(false);
   const [query, setQuery] = useState("");
-  const [selection, setSelection] = useState<MealLogSourceSelection | null>(null);
-  const [suggestionConfirmed, setSuggestionConfirmed] = useState(true);
+  const [selection, setSelection] = useState<MealLogSourceSelection | null>(initialSelection ?? null);
+  const [suggestionConfirmed, setSuggestionConfirmed] = useState(initialSuggestionConfirmed);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState<"batch" | "catalog" | "recent" | null>(null);
   const [saving, setSaving] = useState(false);
@@ -132,7 +159,12 @@ export function MealLogAddSheet({
         setBatchHasNext(batchData.has_next);
       })
       .catch((reason: unknown) => {
-        if (active) setError(reason instanceof Error ? reason.message : "음식 목록을 불러오지 못했어요.");
+        if (!active) return;
+        if (isUnauthorized(reason)) {
+          onUnauthorized(initialSelection ?? null, columnId);
+          return;
+        }
+        setError(reason instanceof Error ? reason.message : "음식 목록을 불러오지 못했어요.");
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -140,7 +172,7 @@ export function MealLogAddSheet({
     return () => {
       active = false;
     };
-  }, []);
+  }, [columnId, initialSelection, onUnauthorized]);
 
   const selectedColumn = useMemo(
     () => columns.find((column) => column.id === columnId),
@@ -160,6 +192,10 @@ export function MealLogAddSheet({
       setCatalogCursor(result.next_cursor);
       setCatalogHasNext(result.has_next);
     } catch (reason) {
+      if (isUnauthorized(reason)) {
+        onUnauthorized(selection, columnId);
+        return;
+      }
       setError(reason instanceof Error ? reason.message : "제품·재료를 검색하지 못했어요.");
     } finally {
       setLoading(false);
@@ -176,6 +212,10 @@ export function MealLogAddSheet({
       setRecentCursor(result.next_cursor);
       setRecentHasNext(result.has_next);
     } catch (reason) {
+      if (isUnauthorized(reason)) {
+        onUnauthorized(selection, columnId);
+        return;
+      }
       setError(reason instanceof Error ? reason.message : "최근 음식을 더 불러오지 못했어요.");
     } finally {
       setLoadingMore(null);
@@ -192,6 +232,10 @@ export function MealLogAddSheet({
       setBatchCursor(result.next_cursor);
       setBatchHasNext(result.has_next);
     } catch (reason) {
+      if (isUnauthorized(reason)) {
+        onUnauthorized(selection, columnId);
+        return;
+      }
       setError(reason instanceof Error ? reason.message : "요리한 음식을 더 불러오지 못했어요.");
     } finally {
       setLoadingMore(null);
@@ -212,6 +256,10 @@ export function MealLogAddSheet({
       setCatalogCursor(result.next_cursor);
       setCatalogHasNext(result.has_next);
     } catch (reason) {
+      if (isUnauthorized(reason)) {
+        onUnauthorized(selection, columnId);
+        return;
+      }
       setError(reason instanceof Error ? reason.message : "제품·재료를 더 불러오지 못했어요.");
     } finally {
       setLoadingMore(null);
@@ -254,6 +302,7 @@ export function MealLogAddSheet({
 
   async function submit() {
     if (!selection
+      || !mutationEnabled
       || !columnId
       || selection.amount <= 0
       || !suggestionConfirmed
@@ -264,6 +313,10 @@ export function MealLogAddSheet({
     try {
       await onSave(selection, columnId);
     } catch (reason) {
+      if (isMealLogApiError(reason) && reason.status === 401) {
+        onUnauthorized(selection, columnId);
+        return;
+      }
       setError(reason instanceof Error ? reason.message : "식사 기록을 저장하지 못했어요.");
       setSaving(false);
     }
@@ -433,7 +486,7 @@ export function MealLogAddSheet({
                           type="button"
                         >
                           <span className="block font-bold">{item.display_name}</span>
-                          <span className="block text-xs text-[var(--text-2)]">최근 {item.last_quantity.amount}{item.last_quantity.unit} · {item.frequency}회 기록</span>
+                          <span className="block text-xs text-[var(--text-2)]">{item.display_brand ? `${item.display_brand} · ` : ""}{recentSourceLabel(item.source.type)} · 최근 {item.last_quantity.amount}{item.last_quantity.unit} · {item.frequency}회 기록</span>
                         </button>
                         {item.source.type === "cooked_batch" && !batches.some((batch) => batch.id === item.source.id && batch.weight_status === "known" && batch.batch_status === "available" && (batch.remaining_weight_g ?? 0) > 0 && item.last_quantity.unit === "g") ? (
                           <p className="px-3 pb-3 text-xs text-[var(--text-2)]">현재 중량·잔량 상태를 확인할 수 없어 저장할 수 없어요.</p>
@@ -454,7 +507,7 @@ export function MealLogAddSheet({
                       <li key={`${item.type}-${item.id}`}>
                         <button className="min-h-11 w-full px-3 py-3 text-left" onClick={() => chooseCatalog(item)} type="button">
                           <span className="block font-bold">{sourceName(item)}</span>
-                          <span className="block text-xs text-[var(--text-2)]">{sourceBrand(item) ? `${sourceBrand(item)} · ` : ""}{item.type === "ingredient" ? `재료 · 기본 단위 제안 ${item.default_unit}` : "제품"}</span>
+                          <span className="block text-xs text-[var(--text-2)]">{sourceBrand(item) ? `${sourceBrand(item)} · ` : ""}{catalogSourceLabel(item)}{item.type === "ingredient" ? ` · 기본 단위 제안 ${item.default_unit}` : ""}</span>
                         </button>
                       </li>
                     ))}
@@ -486,7 +539,7 @@ export function MealLogAddSheet({
               <p className="mt-2 text-sm font-bold text-[var(--danger-strong)]" role="alert">남은 양 {selection.maxAmount}g 이하로 입력해 주세요.</p>
             ) : null}
             <div className="mt-3 grid gap-2 min-[360px]:grid-cols-2">
-              <button className="min-h-11 rounded-[var(--radius-control)] bg-[var(--brand-primary-text)] px-4 font-bold text-[var(--text-inverse)] disabled:opacity-50" disabled={saving || !suggestionConfirmed || selection.amount <= 0 || (selection.maxAmount !== undefined && selection.amount > selection.maxAmount) || !selection.unit.trim()} onClick={() => void submit()} type="button">{saving ? "저장 중…" : "기록 저장"}</button>
+              <button className="min-h-11 rounded-[var(--radius-control)] bg-[var(--brand-primary-text)] px-4 font-bold text-[var(--text-inverse)] disabled:opacity-50" disabled={!mutationEnabled || saving || !suggestionConfirmed || selection.amount <= 0 || (selection.maxAmount !== undefined && selection.amount > selection.maxAmount) || !selection.unit.trim()} onClick={() => void submit()} type="button">{saving ? "저장 중…" : "기록 저장"}</button>
               <button className="min-h-11 rounded-[var(--radius-control)] border border-[var(--line-strong)] px-4 font-bold" disabled={saving} onClick={onClose} type="button">취소</button>
             </div>
           </footer>

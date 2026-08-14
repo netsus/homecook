@@ -294,6 +294,9 @@ export function PlannerWeekScreen({
   const latestNavigationRef = useRef<PendingShellNavigation | null>(null);
   const requestedRangeRef = useRef<string | null>(null);
   const selectedDateTitleRef = useRef<HTMLHeadingElement | null>(null);
+  const handleMealLogUnauthorized = useCallback(() => {
+    setAuthState("unauthorized");
+  }, []);
 
   const dateKeys = useMemo(
     () => buildDateKeys(rangeStartDate, rangeEndDate),
@@ -633,7 +636,9 @@ export function PlannerWeekScreen({
           tone="gate"
         >
           <div className="space-y-3">
-            <SocialLoginButtons nextPath={nextPath} />
+            <div data-next-path={nextPath} data-testid="meal-log-auth-gate-login">
+              <SocialLoginButtons nextPath={nextPath} />
+            </div>
             <Link
               className="inline-flex min-h-11 items-center justify-center rounded-full border border-[var(--line)] bg-[var(--surface)] px-5 py-3 text-sm font-semibold text-[var(--muted)]"
               href="/"
@@ -681,7 +686,7 @@ export function PlannerWeekScreen({
       </div>
 
       {activeSegment === "log" ? (
-        <MealLogScreen date={selectedDate} onDateChange={handleDateSelect} />
+        <MealLogScreen date={selectedDate} onDateChange={handleDateSelect} onUnauthorized={handleMealLogUnauthorized} />
       ) : (
         <div
           aria-labelledby="planner-plan-tab"

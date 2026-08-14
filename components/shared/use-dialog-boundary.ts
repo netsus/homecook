@@ -11,6 +11,8 @@ const FOCUSABLE_SELECTOR = [
   "[tabindex]:not([tabindex='-1'])",
 ].join(",");
 
+type ReturnFocusTarget = HTMLElement | (() => HTMLElement | null) | null;
+
 function focusableElements(dialog: HTMLElement) {
   return Array.from(dialog.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR))
     .filter((element) => !element.hidden && element.getAttribute("aria-hidden") !== "true");
@@ -34,8 +36,8 @@ export function useDialogBoundary({
   const closeRef = useRef(onClose);
   const closeOnEscapeRef = useRef(closeOnEscape);
   const invokerFocusRef = useRef<HTMLElement | null>(null);
-  const requestedReturnFocusRef = useRef<HTMLElement | null>(null);
-  const setReturnFocusTarget = useCallback((target: HTMLElement | null) => {
+  const requestedReturnFocusRef = useRef<ReturnFocusTarget>(null);
+  const setReturnFocusTarget = useCallback((target: ReturnFocusTarget) => {
     requestedReturnFocusRef.current = target;
   }, []);
 
@@ -128,7 +130,9 @@ export function useDialogBoundary({
         else element.setAttribute("aria-hidden", ariaHidden);
       }
       requestAnimationFrame(() => {
-        const requestedTarget = requestedReturnFocusRef?.current;
+        const requestedTarget = typeof requestedReturnFocusRef.current === "function"
+          ? requestedReturnFocusRef.current()
+          : requestedReturnFocusRef.current;
         const returnTarget = invokerFocusRef.current;
         if (!dialog.isConnected) {
           const target = requestedTarget?.isConnected

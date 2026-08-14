@@ -8,6 +8,7 @@ const ENTRY_ID = "10000000-0000-4000-8000-000000000001";
 const DELETED_ENTRY_ID = "10000000-0000-4000-8000-000000000002";
 const BREAKFAST_ID = "20000000-0000-4000-8000-000000000001";
 const LUNCH_ID = "20000000-0000-4000-8000-000000000002";
+const DINNER_ID = "20000000-0000-4000-8000-000000000003";
 const SOURCE_ID = "30000000-0000-4000-8000-000000000001";
 
 const nutrition = {
@@ -105,19 +106,33 @@ vi.mock("@/components/shared/profile-summary-button", () => ({
 }));
 
 export function renderMealLogShell({
+  applyMutationRefresh = false,
+  catalogBadges = false,
+  conflictColumnAuthority = "unchanged",
+  conflictCount = 1,
+  conflictMutation = null,
   empty = false,
   deferNavigation = false,
   failDate,
+  failRefreshAfterMutation = false,
   includeCookedBatch = false,
   recentCookedWithoutProjection = false,
+  unauthorized = null,
   batchWeightStatus = "known",
   paginatedSources = false,
 }: {
+  applyMutationRefresh?: boolean;
+  catalogBadges?: boolean;
+  conflictColumnAuthority?: "deleted" | "moved" | "unchanged";
+  conflictCount?: number;
+  conflictMutation?: "edit" | "delete" | null;
   empty?: boolean;
   deferNavigation?: boolean;
   failDate?: string;
+  failRefreshAfterMutation?: boolean;
   includeCookedBatch?: boolean;
   recentCookedWithoutProjection?: boolean;
+  unauthorized?: "read" | "create" | "edit" | "delete" | null;
   batchWeightStatus?: "known" | "missing" | "unrecoverable";
   paginatedSources?: boolean;
 } = {}) {
@@ -139,9 +154,55 @@ export function renderMealLogShell({
       deferredRequests.push({ href, method: "replace" });
     });
   }
-  const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+  let conflictResponses = 0;
+  let mutationSucceeded = false;
+  let refreshFailureReturned = false;
+  let successfulMutation: { entryId: string; method: string; targetColumnId: string | null } | null = null;
+  const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const path = String(input);
     const url = new URL(path, "http://localhost");
+    const method = init?.method ?? "GET";
+    const isDayRead = path.includes("/meal-log?");
+    const isEntryMutation = path.includes("/meal-log/entries");
+    const unauthorizedRequest = unauthorized === "read" && isDayRead
+      || unauthorized === "create" && isEntryMutation && method === "POST"
+      || unauthorized === "edit" && isEntryMutation && method === "PATCH"
+      || unauthorized === "delete" && isEntryMutation && method === "DELETE";
+    if (unauthorizedRequest) {
+      return new Response(JSON.stringify({
+        success: false,
+        data: null,
+        error: { code: "UNAUTHORIZED", message: "로그인이 필요해요.", fields: [] },
+      }), {
+        headers: { "content-type": "application/json" },
+        status: 401,
+      });
+    }
+    if (conflictResponses < conflictCount && isEntryMutation && (
+      conflictMutation === "edit" && method === "PATCH"
+      || conflictMutation === "delete" && method === "DELETE"
+    )) {
+      conflictResponses += 1;
+      return new Response(JSON.stringify({
+        success: false,
+        data: null,
+        error: { code: "CONFLICT", message: "현재 기록이 먼저 변경됐어요.", fields: [] },
+      }), {
+        headers: { "content-type": "application/json" },
+        status: 409,
+      });
+    }
+    if (failRefreshAfterMutation && mutationSucceeded && !refreshFailureReturned && isDayRead && path.includes("date=2026-08-10")) {
+      refreshFailureReturned = true;
+      return new Response(JSON.stringify({
+        success: false,
+        data: null,
+        error: { code: "READ_FAILED", message: "최신 기록을 확인하지 못했어요.", fields: [] },
+      }), {
+        headers: { "content-type": "application/json" },
+        status: 503,
+      });
+    }
     if (failDate && path.includes(`/meal-log?date=${failDate}`)) {
       return new Response(JSON.stringify({
         success: false,
@@ -152,6 +213,91 @@ export function renderMealLogShell({
         status: 503,
       });
     }
+    if (isEntryMutation && method !== "GET") {
+      mutationSucceeded = true;
+      if (applyMutationRefresh && (method === "DELETE" || method === "PATCH")) {
+        const entryId = path.split("/").at(-1) ?? "";
+        const body = init?.body ? JSON.parse(String(init.body)) as { meal_plan_column_id?: string } : {};
+        successfulMutation = {
+          entryId,
+          method,
+          targetColumnId: method === "PATCH" ? body.meal_plan_column_id ?? null : null,
+        };
+      }
+    }
+    const refreshedColumnId = conflictColumnAuthority === "moved"
+      ? DINNER_ID
+      : conflictColumnAuthority === "deleted" ? null : BREAKFAST_ID;
+    const conflictDay = conflictResponses > 0 ? {
+      ...day,
+      active_columns: [
+        ...day.active_columns,
+        { id: DINNER_ID, name: "저녁", sort_order: 2 },
+      ],
+      active_sections: day.active_sections.map((section) => ({
+        ...section,
+        entries: section.entries.map((item) => item.id === ENTRY_ID ? {
+          ...item,
+          revision: conflictResponses + 1,
+          meal_plan_column_id: refreshedColumnId,
+          slot_name_snapshot: conflictColumnAuthority === "moved"
+            ? "저녁"
+            : conflictColumnAuthority === "deleted" ? "야식" : "아침",
+          source: { type: "ingredient" as const, id: "30000000-0000-4000-8000-000000000002" },
+        } : item),
+      })),
+      entries: day.entries.map((item) => item.id === ENTRY_ID ? {
+        ...item,
+        revision: conflictResponses + 1,
+        meal_plan_column_id: refreshedColumnId,
+        slot_name_snapshot: conflictColumnAuthority === "moved"
+          ? "저녁"
+          : conflictColumnAuthority === "deleted" ? "야식" : "아침",
+        source: { type: "ingredient" as const, id: "30000000-0000-4000-8000-000000000002" },
+      } : item),
+    } : day;
+    const refreshedDay = successfulMutation?.method === "DELETE"
+      ? {
+          ...conflictDay,
+          active_sections: conflictDay.active_sections.map((section) => ({
+            ...section,
+            entries: section.entries.filter((item) => item.id !== successfulMutation?.entryId),
+          })),
+          deleted_column_sections: conflictDay.deleted_column_sections.map((section) => ({
+            ...section,
+            entries: section.entries.filter((item) => item.id !== successfulMutation?.entryId),
+          })),
+          entries: conflictDay.entries.filter((item) => item.id !== successfulMutation?.entryId),
+        }
+      : successfulMutation?.method === "PATCH" && successfulMutation.targetColumnId
+        ? (() => {
+            const targetColumn = conflictDay.active_columns.find(
+              (column) => column.id === successfulMutation?.targetColumnId,
+            );
+            const currentEntry = conflictDay.entries.find((item) => item.id === successfulMutation?.entryId);
+            if (!targetColumn || !currentEntry) return conflictDay;
+            const updatedEntry = {
+              ...currentEntry,
+              meal_plan_column_id: targetColumn.id,
+              slot_name_snapshot: targetColumn.name,
+            };
+            return {
+              ...conflictDay,
+              active_sections: conflictDay.active_sections.map((section) => ({
+                ...section,
+                entries: [
+                  ...section.entries.filter((item) => item.id !== updatedEntry.id),
+                  ...(section.meal_plan_column_id === targetColumn.id ? [updatedEntry] : []),
+                ],
+              })),
+              deleted_column_sections: conflictDay.deleted_column_sections.map((section) => ({
+                ...section,
+                entries: section.entries.filter((item) => item.id !== updatedEntry.id),
+              })),
+              entries: conflictDay.entries.map((item) => item.id === updatedEntry.id ? updatedEntry : item),
+            };
+          })()
+        : conflictDay;
     const data = path.includes("/meal-log/recent")
       ? url.searchParams.has("cursor") && paginatedSources
         ? {
@@ -169,9 +315,11 @@ export function renderMealLogShell({
           items: [{
             source: recentCookedWithoutProjection
               ? { type: "cooked_batch", id: "40000000-0000-4000-8000-000000000009" }
-              : { type: "ingredient", id: SOURCE_ID },
-            display_name: recentCookedWithoutProjection ? "예전 카레" : "달걀",
-            display_brand: null,
+              : catalogBadges
+                ? { type: "food_product", id: SOURCE_ID }
+                : { type: "ingredient", id: SOURCE_ID },
+            display_name: recentCookedWithoutProjection ? "예전 카레" : catalogBadges ? "플레인 요거트" : "달걀",
+            display_brand: catalogBadges ? "무먹식품" : null,
             last_quantity: { amount: 2, unit: "개" },
             frequency: 3,
           }],
@@ -200,7 +348,7 @@ export function renderMealLogShell({
                   incomplete_count: 0,
                 },
               }
-            : day
+            : refreshedDay
           : path.includes("/cooked-batches")
             ? {
                 items: includeCookedBatch || paginatedSources ? [{
@@ -225,7 +373,52 @@ export function renderMealLogShell({
                 next_cursor: paginatedSources && !url.searchParams.has("cursor") ? "batch-cursor" : null,
                 has_next: paginatedSources && !url.searchParams.has("cursor"),
               }
-            : path.includes("/food-catalog/search") && paginatedSources
+            : path.includes("/food-catalog/search") && catalogBadges
+              ? {
+                  items: [
+                    {
+                      type: "food_product",
+                      id: "50000000-0000-4000-8000-000000000001",
+                      name: "공공 두유",
+                      brand: "공공브랜드",
+                      visibility: "public",
+                      source_type: "public_dataset",
+                      editable: false,
+                      nutrition_version_id: "60000000-0000-4000-8000-000000000001",
+                      basis_relations: [],
+                      nutrition: {
+                        basis: { amount: 100, unit: "ml" },
+                        values: {},
+                        calculation_status: "complete",
+                        calculation_quality: "direct",
+                        warnings: [],
+                        sources: [],
+                      },
+                    },
+                    {
+                      type: "food_product",
+                      id: "50000000-0000-4000-8000-000000000002",
+                      name: "등록 요거트",
+                      brand: "동네브랜드",
+                      visibility: "public",
+                      source_type: "manual",
+                      editable: false,
+                      nutrition_version_id: "60000000-0000-4000-8000-000000000002",
+                      basis_relations: [],
+                      nutrition: {
+                        basis: { amount: 1, unit: "serving" },
+                        values: {},
+                        calculation_status: "complete",
+                        calculation_quality: "direct",
+                        warnings: [],
+                        sources: [],
+                      },
+                    },
+                  ],
+                  next_cursor: null,
+                  has_next: false,
+                }
+              : path.includes("/food-catalog/search") && paginatedSources
               ? {
                   items: [{
                     type: "ingredient",
