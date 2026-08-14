@@ -9,6 +9,47 @@ import { createYoutubeExtractionWorkerRpcAdapter } from
   "@/lib/server/youtube-extraction-worker-rpc";
 
 describe("YTASYNC-WORKER restricted RPC adapter", () => {
+  it("uses the frozen 300-second lease for every claim and heartbeat", async () => {
+    const rpc = vi.fn(async (
+      name: string,
+      _args?: Record<string, unknown>,
+    ) => ({
+      data: name === "claim_youtube_extraction_job"
+        ? null
+        : name === "claim_youtube_extractor_permit"
+          ? { claimed: false }
+          : { updated: true },
+      error: null,
+    }));
+    const adapter = createYoutubeExtractionWorkerRpcAdapter({ rpc });
+
+    await adapter.claimJob({
+      workerId: "worker-1",
+      allowedSnapshotDigest: "a".repeat(64),
+    });
+    await adapter.claimPermit({ workerId: "worker-1" });
+    await adapter.heartbeatJob({
+      jobId: "11111111-1111-4111-8111-111111111111",
+      workerId: "worker-1",
+      leaseGeneration: 7,
+      permitGeneration: 9,
+    });
+    await adapter.heartbeatPermit({
+      jobId: "11111111-1111-4111-8111-111111111111",
+      workerId: "worker-1",
+      leaseGeneration: 7,
+      permitGeneration: 9,
+    });
+
+    expect(rpc.mock.calls.map(([name, args]) => ({ name, lease: args?.lease_seconds })))
+      .toEqual([
+        { name: "claim_youtube_extraction_job", lease: 300 },
+        { name: "claim_youtube_extractor_permit", lease: 300 },
+        { name: "heartbeat_youtube_extraction_job", lease: 300 },
+        { name: "heartbeat_youtube_extractor_permit", lease: 300 },
+      ]);
+  });
+
   it("maps only stable worker failure codes and keeps generic provider text out of persistence", () => {
     expect(classifyYoutubeExtractionWorkerError({ code: "QUOTA_EXCEEDED" }))
       .toBe("QUOTA_EXCEEDED");

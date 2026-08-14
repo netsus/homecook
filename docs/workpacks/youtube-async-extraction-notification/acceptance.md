@@ -14,7 +14,7 @@
 ## State / Policy
 
 - [x] stored transition은 `queued -> processing -> succeeded|failed`만 허용하고 terminal row를 되살리지 않는다 <!-- omo:id=accept-yta-terminal-transition;stage=2;scope=backend;review=3,6 -->
-- [x] lease-expired processing은 같은 transaction의 `reaper -> claim`을 따르고 attempts 소진은 `ATTEMPTS_EXHAUSTED`+delivery key로 terminal 처리되어 재claim되지 않는다 <!-- omo:id=accept-yta-reaper-claim;stage=2;scope=backend;review=3,6 -->
+- [x] worker job/permit lease는 300초이고 30초마다 heartbeat하며, lease-expired processing은 같은 transaction의 `reaper -> claim`을 따르고 attempts 소진은 `ATTEMPTS_EXHAUSTED`+delivery key로 terminal 처리되어 재claim되지 않는다 <!-- omo:id=accept-yta-reaper-claim;stage=2;scope=backend;review=3,6 -->
 - [x] `attempt_count`는 permit 획득 후 실제 provider start에서만 증가하고 permit 대기는 attempt를 소비하지 않는다 <!-- omo:id=accept-yta-attempt-authority;stage=2;scope=backend;review=3,6 -->
 - [x] active current/previous fingerprint pair는 dual-read dedupe되고 새 job은 current-write만 사용한다 <!-- omo:id=accept-yta-dual-read-current-write;stage=2;scope=backend;review=3,6 -->
 - [x] enqueue/retry와 policy rotation 경합은 old/new 중 한 complete snapshot만 저장하고 mixed snapshot은 0이다 <!-- omo:id=accept-yta-policy-snapshot-atomic;stage=2;scope=backend;review=3,6 -->

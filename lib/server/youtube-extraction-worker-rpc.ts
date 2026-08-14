@@ -3,6 +3,8 @@ import type {
   YoutubeExtractionWorkerFailureCode,
 } from
   "@/lib/server/youtube-async-extraction";
+import { YOUTUBE_EXTRACTION_WORKER_LEASE_SECONDS } from
+  "@/lib/server/youtube-extraction-worker-timing";
 
 interface RpcResult { data: unknown; error: unknown }
 interface RestrictedRpcClient {
@@ -155,7 +157,7 @@ export function createYoutubeExtractionWorkerRpcAdapter(client: RestrictedRpcCli
       const data = requireSuccess(await client.rpc("claim_youtube_extraction_job", {
         worker_id: workerId,
         allowed_snapshot_digest: allowedSnapshotDigest,
-        lease_seconds: 120,
+        lease_seconds: YOUTUBE_EXTRACTION_WORKER_LEASE_SECONDS,
       }), "claim job");
       const row = record(Array.isArray(data) ? data[0] : data);
       if (!row) return null;
@@ -179,7 +181,7 @@ export function createYoutubeExtractionWorkerRpcAdapter(client: RestrictedRpcCli
     async claimPermit({ workerId }: { workerId: string }) {
       const data = requireSuccess(await client.rpc("claim_youtube_extractor_permit", {
         worker_id: workerId,
-        lease_seconds: 120,
+        lease_seconds: YOUTUBE_EXTRACTION_WORKER_LEASE_SECONDS,
       }), "claim permit");
       const row = record(Array.isArray(data) ? data[0] : data);
       return row?.claimed === true && typeof row.permit_generation === "number"
@@ -266,7 +268,7 @@ export function createYoutubeExtractionWorkerRpcAdapter(client: RestrictedRpcCli
         worker_id: input.workerId,
         lease_generation: input.leaseGeneration,
         permit_generation: input.permitGeneration,
-        lease_seconds: 120,
+        lease_seconds: YOUTUBE_EXTRACTION_WORKER_LEASE_SECONDS,
       }), "heartbeat job");
     },
     async heartbeatPermit(input: YoutubeExtractionWorkerWriteFence) {
@@ -275,7 +277,7 @@ export function createYoutubeExtractionWorkerRpcAdapter(client: RestrictedRpcCli
         worker_id: input.workerId,
         lease_generation: input.leaseGeneration,
         permit_generation: input.permitGeneration,
-        lease_seconds: 120,
+        lease_seconds: YOUTUBE_EXTRACTION_WORKER_LEASE_SECONDS,
       }), "heartbeat permit");
     },
     async resolveDraft(input: {

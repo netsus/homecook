@@ -112,7 +112,7 @@ async function waitForPostgrest(url, token) {
       "POST",
       `${url}/rpc/claim_youtube_extraction_job`,
       "-d",
-      "{\"worker_id\":\"worker-alpha\",\"allowed_snapshot_digest\":\"0000000000000000000000000000000000000000000000000000000000000000\",\"lease_seconds\":120}",
+      "{\"worker_id\":\"worker-alpha\",\"allowed_snapshot_digest\":\"0000000000000000000000000000000000000000000000000000000000000000\",\"lease_seconds\":300}",
     ]);
     if ((response.stdout ?? "").trim().match(/^[1-5][0-9]{2}$/u)) return;
     await new Promise((resolve) => setTimeout(resolve, 500));

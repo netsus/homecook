@@ -42,6 +42,7 @@
   - exact enqueue/worker/permit/delivery/seen/credential-rotation RPC, roles, RLS/ACL, pre-request 및 expected-schema manifest
 - worker/release:
   - request-independent extraction service, fenced claim/heartbeat/start/finalize/fail loop, global permit, deterministic worker artifact
+  - frozen timing contract인 300초 lease / 30초 heartbeat를 app adapter와 standalone runtime이 하나의 timing manifest에서 소비하며, installer artifact가 해당 수치와 파일 SHA를 fail-closed 검증
   - same release SHA·schema identity·policy snapshot attestation을 검증하는 `mac-production:*` worker installer/runbook/credential rotation dry-run 경로
   - `com.homecook.youtube-extraction-worker` launchd template와 install/start/stop/restart/status/drain/uninstall/rollback rehearsal 계약
 - Schema Change:

@@ -20,6 +20,8 @@ import {
   runYoutubeExtractionWorkerPollLoop,
   sanitizeYoutubeExtractionChildEnvironment,
   verifyStandaloneYoutubeI031Preflight,
+  YOUTUBE_EXTRACTION_WORKER_HEARTBEAT_INTERVAL_MS,
+  YOUTUBE_EXTRACTION_WORKER_LEASE_SECONDS,
 } from "../scripts/lib/youtube-extraction-worker-runtime.mjs";
 
 const servers: Server[] = [];
@@ -34,6 +36,11 @@ afterEach(async () => {
 });
 
 describe("YTASYNC-WORKER standalone runner", () => {
+  it("locks the frozen worker timing contract to five minutes and thirty seconds", () => {
+    expect(YOUTUBE_EXTRACTION_WORKER_LEASE_SECONDS).toBe(300);
+    expect(YOUTUBE_EXTRACTION_WORKER_HEARTBEAT_INTERVAL_MS).toBe(30_000);
+  });
+
   it("requires the exact i031 CLI version, ChatGPT login, and tool preflight", async () => {
     const calls: Array<[string, string[]]> = [];
     const runCommand = vi.fn(async (command: string, args: string[]) => {
@@ -261,7 +268,7 @@ describe("YTASYNC-WORKER standalone runner", () => {
       job_id: "11111111-1111-4111-8111-111111111111",
       worker_id: "worker-1",
       lease_generation: 7,
-      lease_seconds: 120,
+      lease_seconds: 300,
     });
 
     expect(requests).toEqual([{
@@ -271,7 +278,7 @@ describe("YTASYNC-WORKER standalone runner", () => {
         job_id: "11111111-1111-4111-8111-111111111111",
         worker_id: "worker-1",
         lease_generation: 7,
-        lease_seconds: 120,
+        lease_seconds: 300,
       },
     }]);
   });
@@ -388,6 +395,15 @@ describe("YTASYNC-WORKER standalone runner", () => {
         lease_generation: 4,
         permit_generation: 9,
       });
+    for (const { name, args } of calls.filter(({ name }) => [
+      "claim_youtube_extraction_job",
+      "claim_youtube_extractor_permit",
+      "heartbeat_youtube_extraction_job",
+      "heartbeat_youtube_extractor_permit",
+    ].includes(name))) {
+      expect(args, `${name} must use the frozen five-minute lease`)
+        .toMatchObject({ lease_seconds: 300 });
+    }
   });
 
   it("requeues without starting an attempt when permit claim returns claimed false with a generation", async () => {

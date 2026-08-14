@@ -179,6 +179,10 @@ describe("YTASYNC-OPS deterministic artifact", () => {
       "scripts/youtube-extraction-worker-runner.mjs",
     ]));
     expect(manifestA.artifact_sha256).toMatch(/^[0-9a-f]{64}$/u);
+    expect(manifestA).toMatchObject({
+      lease_seconds: 300,
+      heartbeat_interval_seconds: 30,
+    });
     expect(manifestA.expected_schema_sha256).toBe(sha256File(
       join(process.cwd(), "scripts/manifests/youtube-extraction-expected-schema.json"),
     ));
@@ -279,6 +283,26 @@ describe("YTASYNC-OPS deterministic artifact", () => {
       ],
     }))
       .toThrow(/required file is missing/i);
+  });
+
+  it("rejects a self-consistent artifact that drifts from the frozen timing contract", () => {
+    const privateDir = createTempDir("yta-artifact-timing-drift-private-");
+    const inputs = createReleaseInputs(privateDir);
+    const manifestPath = inputs.manifestPath;
+    const original = JSON.parse(readFileSync(manifestPath, "utf8"));
+    const driftedBase = {
+      ...original,
+      lease_seconds: 120,
+      artifact_sha256: undefined,
+    };
+    chmodSync(manifestPath, 0o600);
+    writeModeFile(manifestPath, `${JSON.stringify({
+      ...driftedBase,
+      artifact_sha256: sha256Text(stableStringify(driftedBase)),
+    }, null, 2)}\n`, 0o444);
+
+    expect(() => verifyYoutubeExtractionWorkerArtifact(manifestPath))
+      .toThrow(/timing contract is invalid/i);
   });
 
   it("rejects a self-consistent artifact that shortens the declared runtime bundle closure", () => {
@@ -1043,6 +1067,7 @@ describe("YTASYNC-OPS preflight, drain, rollback, credential", () => {
     const privateDir = createTempDir("yta-worker-non-dry-run-");
     const fixtureRoot = createTempDir("yta-worker-fixture-root-");
     for (const relativePath of [
+      "lib/server/youtube-extraction-worker-timing.json",
       "scripts/youtube-extraction-worker-runner.mjs",
       "scripts/lib/youtube-extraction-worker-artifact.mjs",
       "scripts/lib/youtube-extraction-worker-ops.mjs",

@@ -14,9 +14,15 @@ import {
 import { tmpdir } from "node:os";
 import path from "node:path";
 
+import workerTiming from
+  "../../lib/server/youtube-extraction-worker-timing.json" with { type: "json" };
+
 const LOOPBACK_HOSTS = new Set(["127.0.0.1", "localhost", "[::1]", "::1"]);
 const MAX_RESULT_BYTES = 2 * 1024 * 1024;
 const DEFAULT_EXTRACTION_TIMEOUT_MS = 20 * 60 * 1000;
+export const YOUTUBE_EXTRACTION_WORKER_LEASE_SECONDS = workerTiming.lease_seconds;
+export const YOUTUBE_EXTRACTION_WORKER_HEARTBEAT_INTERVAL_MS =
+  workerTiming.heartbeat_interval_seconds * 1000;
 const I031_CODEX_CLI_VERSION = "0.144.0-alpha.4";
 const CHILD_ENV_ALLOWLIST = new Set([
   "APIFY_TOKEN",
@@ -427,8 +433,8 @@ export function createYoutubeExtractionWorkerRuntime({
   allowedSnapshotDigest,
   rpc,
   extractor,
-  heartbeatIntervalMs = 30_000,
-  leaseSeconds = 120,
+  heartbeatIntervalMs = YOUTUBE_EXTRACTION_WORKER_HEARTBEAT_INTERVAL_MS,
+  leaseSeconds = YOUTUBE_EXTRACTION_WORKER_LEASE_SECONDS,
 } = {}) {
   const normalizedWorkerId = requiredString(workerId, "workerId");
   const digest = requiredString(allowedSnapshotDigest, "allowedSnapshotDigest");

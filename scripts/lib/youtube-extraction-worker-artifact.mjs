@@ -23,6 +23,9 @@ import {
   resolve,
 } from "node:path";
 
+import workerTiming from
+  "../../lib/server/youtube-extraction-worker-timing.json" with { type: "json" };
+
 export const YOUTUBE_EXTRACTION_WORKER_LABEL =
   "com.homecook.youtube-extraction-worker";
 export const YOUTUBE_EXTRACTION_WORKER_ARTIFACT_SCHEMA =
@@ -48,8 +51,13 @@ export const DEFAULT_YOUTUBE_EXTRACTION_WORKER_EXTRACTOR_MODE =
   "i031_codex_vision";
 export const DEFAULT_YOUTUBE_EXTRACTION_WORKER_PIPELINE_IDENTITY =
   "9adc7876a02c2da55a92e3a65369bf4e803c78efb9a791717201eedc242c1908";
+export const YOUTUBE_EXTRACTION_WORKER_LEASE_SECONDS = 300;
+export const YOUTUBE_EXTRACTION_WORKER_HEARTBEAT_INTERVAL_SECONDS = 30;
+const WORKER_TIMING_RELATIVE_PATH =
+  "lib/server/youtube-extraction-worker-timing.json";
 
 const DEFAULT_INCLUDED_PATHS = Object.freeze([
+  WORKER_TIMING_RELATIVE_PATH,
   "lib/server/youtube-i031-runtime/bundle",
   "scripts/youtube-extraction-worker-runner.mjs",
   "scripts/lib/youtube-extraction-worker-artifact.mjs",
@@ -65,6 +73,7 @@ export const YOUTUBE_EXTRACTION_WORKER_ENTRYPOINT_RELATIVE_PATH =
 export const YOUTUBE_EXTRACTION_WORKER_LAUNCHD_TEMPLATE_RELATIVE_PATH =
   "scripts/templates/com.homecook.youtube-extraction-worker.plist.template";
 export const YOUTUBE_EXTRACTION_WORKER_REQUIRED_ARTIFACT_FILES = Object.freeze([
+  WORKER_TIMING_RELATIVE_PATH,
   "lib/server/youtube-i031-runtime/bundle/manifest.json",
   "lib/server/youtube-i031-runtime/bundle/worker.mjs",
   "scripts/lib/youtube-extraction-worker-artifact.mjs",
@@ -409,6 +418,7 @@ export function buildYoutubeExtractionWorkerArtifactManifest({
   pipelineIdentity = DEFAULT_YOUTUBE_EXTRACTION_WORKER_PIPELINE_IDENTITY,
   includedPaths = DEFAULT_INCLUDED_PATHS,
 } = {}) {
+  assertWorkerTimingContract(workerTiming);
   const normalizedRootDir = ensureAbsolutePath(rootDir, "rootDir");
   const normalizedReleaseSha = ensureReleaseSha(releaseSha);
   const normalizedSchemaIdentity = ensureNonEmptyString(
@@ -451,6 +461,9 @@ export function buildYoutubeExtractionWorkerArtifactManifest({
     pipeline_identity: normalizedPipelineIdentity,
     allowed_snapshot_digest: normalizedAllowedSnapshotDigest,
     expected_schema_sha256: expectedSchemaSha,
+    lease_seconds: YOUTUBE_EXTRACTION_WORKER_LEASE_SECONDS,
+    heartbeat_interval_seconds:
+      YOUTUBE_EXTRACTION_WORKER_HEARTBEAT_INTERVAL_SECONDS,
     entrypoint_relative_path: YOUTUBE_EXTRACTION_WORKER_ENTRYPOINT_RELATIVE_PATH,
     launchd_template_relative_path:
       YOUTUBE_EXTRACTION_WORKER_LAUNCHD_TEMPLATE_RELATIVE_PATH,
@@ -744,6 +757,18 @@ export function verifyYoutubeExtractionWorkerArtifact(path) {
     throw new Error("worker artifact file inventory is invalid.");
   }
   const artifactRoot = dirname(normalizedPath);
+  const materializedTiming = readJsonFile(
+    resolve(artifactRoot, WORKER_TIMING_RELATIVE_PATH),
+    "worker timing contract",
+  );
+  assertWorkerTimingContract(materializedTiming);
+  if (
+    value.lease_seconds !== YOUTUBE_EXTRACTION_WORKER_LEASE_SECONDS
+    || value.heartbeat_interval_seconds
+      !== YOUTUBE_EXTRACTION_WORKER_HEARTBEAT_INTERVAL_SECONDS
+  ) {
+    throw new Error("worker artifact timing contract is invalid.");
+  }
   const manifestFiles = new Set();
   for (const file of value.files) {
     if (
@@ -795,6 +820,24 @@ export function verifyYoutubeExtractionWorkerArtifact(path) {
     throw new Error("worker artifact expected schema digest is invalid.");
   }
   return value;
+}
+
+function assertWorkerTimingContract(value) {
+  if (
+    value?.schema !== "homecook.youtube-extraction-worker-timing"
+    || value.version !== 1
+    || value.lease_seconds !== YOUTUBE_EXTRACTION_WORKER_LEASE_SECONDS
+    || value.heartbeat_interval_seconds
+      !== YOUTUBE_EXTRACTION_WORKER_HEARTBEAT_INTERVAL_SECONDS
+    || JSON.stringify(Object.keys(value).sort()) !== JSON.stringify([
+      "heartbeat_interval_seconds",
+      "lease_seconds",
+      "schema",
+      "version",
+    ])
+  ) {
+    throw new Error("worker timing contract is invalid.");
+  }
 }
 
 function assertRuntimeBundleClosure(artifactRoot, inventoryEntries) {
