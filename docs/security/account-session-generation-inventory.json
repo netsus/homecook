@@ -2025,7 +2025,7 @@
       "kind": "rpc",
       "operation": "call",
       "target": "finalize_youtube_extraction_job",
-      "line": 218,
+      "line": 227,
       "source_file": "lib/server/youtube-extraction-worker-rpc.ts",
       "route": null,
       "owner_scope": "system",
@@ -2039,7 +2039,7 @@
       "kind": "rpc",
       "operation": "call",
       "target": "resolve_youtube_extraction_job_draft",
-      "line": 273,
+      "line": 289,
       "source_file": "lib/server/youtube-extraction-worker-rpc.ts",
       "route": null,
       "owner_scope": "system",
@@ -2053,7 +2053,7 @@
       "kind": "rpc",
       "operation": "call",
       "target": "resolve_youtube_extraction_worker_methods",
-      "line": 121,
+      "line": 128,
       "source_file": "lib/server/youtube-extraction-worker-rpc.ts",
       "route": null,
       "owner_scope": "system",
@@ -2067,7 +2067,7 @@
       "kind": "rpc",
       "operation": "call",
       "target": "start_youtube_extraction_attempt",
-      "line": 204,
+      "line": 213,
       "source_file": "lib/server/youtube-extraction-worker-rpc.ts",
       "route": null,
       "owner_scope": "system",
@@ -2081,7 +2081,7 @@
       "kind": "rpc",
       "operation": "call",
       "target": "update_youtube_extraction_job_title",
-      "line": 132,
+      "line": 140,
       "source_file": "lib/server/youtube-extraction-worker-rpc.ts",
       "route": null,
       "owner_scope": "system",
@@ -2170,6 +2170,6 @@
       "on_delete": "cascade"
     }
   ],
-  "generated_at": "2026-08-13T20:16:38.560Z",
-  "checksum": "fb7528652725e0d6931263c280a04de26e1fc72bebf940d4abef53cce1fa6ee8"
+  "generated_at": "2026-08-14T00:18:26.506Z",
+  "checksum": "a48691fa66b9d359df4e2ff729120222e28b74630638363ab1f4e6e4d95f0ad5"
 }
