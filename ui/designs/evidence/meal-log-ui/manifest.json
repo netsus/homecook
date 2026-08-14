@@ -1,8 +1,8 @@
 {
-  "captured_at": "2026-08-14T03:53:52.569Z",
+  "captured_at": "2026-08-14T04:48:49.550Z",
   "generated_by": "tests/e2e/slice-meal-log-ui.spec.ts",
-  "implementation_head": "5816920358c9d588c128b1459e80c7ae0c5bd78e",
-  "implementation_tree": "5861ddd4f3762d5c4f27fcca5488e3101122d481",
+  "implementation_head": "53b0ea6eb3d917588f678c008217b7874daac7b6",
+  "implementation_tree": "49137afc7a080913f154c4a861e0413ce7be6826",
   "viewport_matrix": [
     {
       "label": "mobile-default",
@@ -41,307 +41,307 @@
   ],
   "captures": [
     {
-      "captured_at": "2026-08-14T03:53:11.149Z",
+      "captured_at": "2026-08-14T04:48:31.709Z",
       "file": "MEAL_LOG-mobile-default-default.png",
       "state": "default",
       "viewport": "mobile-default"
     },
     {
-      "captured_at": "2026-08-14T03:53:12.128Z",
+      "captured_at": "2026-08-14T04:48:32.357Z",
       "file": "MEAL_LOG-mobile-default-loading.png",
       "state": "loading",
       "viewport": "mobile-default"
     },
     {
-      "captured_at": "2026-08-14T03:53:12.514Z",
+      "captured_at": "2026-08-14T04:48:32.609Z",
       "file": "MEAL_LOG-mobile-default-empty.png",
       "state": "empty",
       "viewport": "mobile-default"
     },
     {
-      "captured_at": "2026-08-14T03:53:13.146Z",
+      "captured_at": "2026-08-14T04:48:32.841Z",
       "file": "MEAL_LOG-mobile-default-error.png",
       "state": "error",
       "viewport": "mobile-default"
     },
     {
-      "captured_at": "2026-08-14T03:53:13.624Z",
+      "captured_at": "2026-08-14T04:48:33.093Z",
       "file": "MEAL_LOG-mobile-default-unauthorized.png",
       "state": "unauthorized",
       "viewport": "mobile-default"
     },
     {
-      "captured_at": "2026-08-14T03:53:14.277Z",
+      "captured_at": "2026-08-14T04:48:33.326Z",
       "file": "MEAL_LOG-mobile-default-partial.png",
       "state": "partial",
       "viewport": "mobile-default"
     },
     {
-      "captured_at": "2026-08-14T03:53:14.924Z",
+      "captured_at": "2026-08-14T04:48:33.568Z",
       "file": "MEAL_LOG-mobile-default-unavailable.png",
       "state": "unavailable",
       "viewport": "mobile-default"
     },
     {
-      "captured_at": "2026-08-14T03:53:15.337Z",
+      "captured_at": "2026-08-14T04:48:33.834Z",
       "file": "MEAL_LOG-mobile-default-deleted-column.png",
       "state": "deleted-column",
       "viewport": "mobile-default"
     },
     {
-      "captured_at": "2026-08-14T03:53:15.860Z",
+      "captured_at": "2026-08-14T04:48:34.223Z",
       "file": "MEAL_LOG-mobile-default-add-sheet-recent.png",
       "state": "add-sheet-recent",
       "viewport": "mobile-default"
     },
     {
-      "captured_at": "2026-08-14T03:53:16.785Z",
+      "captured_at": "2026-08-14T04:48:34.647Z",
       "file": "MEAL_LOG-mobile-default-add-sheet-search.png",
       "state": "add-sheet-search",
       "viewport": "mobile-default"
     },
     {
-      "captured_at": "2026-08-14T03:53:17.386Z",
+      "captured_at": "2026-08-14T04:48:34.964Z",
       "file": "MEAL_LOG-mobile-default-missing-batch.png",
       "state": "missing-batch",
       "viewport": "mobile-default"
     },
     {
-      "captured_at": "2026-08-14T03:53:17.776Z",
+      "captured_at": "2026-08-14T04:48:35.279Z",
       "file": "MEAL_LOG-mobile-default-unrecoverable-batch.png",
       "state": "unrecoverable-batch",
       "viewport": "mobile-default"
     },
     {
-      "captured_at": "2026-08-14T03:53:18.247Z",
+      "captured_at": "2026-08-14T04:48:35.634Z",
       "file": "MEAL_LOG-mobile-default-edit.png",
       "state": "edit",
       "viewport": "mobile-default"
     },
     {
-      "captured_at": "2026-08-14T03:53:18.839Z",
+      "captured_at": "2026-08-14T04:48:35.884Z",
       "file": "MEAL_LOG-mobile-default-delete-confirm.png",
       "state": "delete-confirm",
       "viewport": "mobile-default"
     },
     {
-      "captured_at": "2026-08-14T03:53:19.486Z",
+      "captured_at": "2026-08-14T04:48:36.348Z",
       "file": "MEAL_LOG-mobile-default-pending.png",
       "state": "pending",
       "viewport": "mobile-default"
     },
     {
-      "captured_at": "2026-08-14T03:53:20.324Z",
+      "captured_at": "2026-08-14T04:48:36.884Z",
       "file": "MEAL_LOG-mobile-default-replay.png",
       "state": "replay",
       "viewport": "mobile-default"
     },
     {
-      "captured_at": "2026-08-14T03:53:21.024Z",
+      "captured_at": "2026-08-14T04:48:37.259Z",
       "file": "MEAL_LOG-mobile-default-conflict.png",
       "state": "conflict",
       "viewport": "mobile-default"
     },
     {
-      "captured_at": "2026-08-14T03:53:21.686Z",
+      "captured_at": "2026-08-14T04:48:37.732Z",
       "file": "MEAL_LOG-mobile-narrow-default.png",
       "state": "default",
       "viewport": "mobile-narrow"
     },
     {
-      "captured_at": "2026-08-14T03:53:23.003Z",
+      "captured_at": "2026-08-14T04:48:38.338Z",
       "file": "MEAL_LOG-mobile-narrow-loading.png",
       "state": "loading",
       "viewport": "mobile-narrow"
     },
     {
-      "captured_at": "2026-08-14T03:53:24.311Z",
+      "captured_at": "2026-08-14T04:48:38.557Z",
       "file": "MEAL_LOG-mobile-narrow-empty.png",
       "state": "empty",
       "viewport": "mobile-narrow"
     },
     {
-      "captured_at": "2026-08-14T03:53:25.577Z",
+      "captured_at": "2026-08-14T04:48:38.847Z",
       "file": "MEAL_LOG-mobile-narrow-error.png",
       "state": "error",
       "viewport": "mobile-narrow"
     },
     {
-      "captured_at": "2026-08-14T03:53:26.763Z",
+      "captured_at": "2026-08-14T04:48:39.057Z",
       "file": "MEAL_LOG-mobile-narrow-unauthorized.png",
       "state": "unauthorized",
       "viewport": "mobile-narrow"
     },
     {
-      "captured_at": "2026-08-14T03:53:27.729Z",
+      "captured_at": "2026-08-14T04:48:39.273Z",
       "file": "MEAL_LOG-mobile-narrow-partial.png",
       "state": "partial",
       "viewport": "mobile-narrow"
     },
     {
-      "captured_at": "2026-08-14T03:53:28.311Z",
+      "captured_at": "2026-08-14T04:48:39.489Z",
       "file": "MEAL_LOG-mobile-narrow-unavailable.png",
       "state": "unavailable",
       "viewport": "mobile-narrow"
     },
     {
-      "captured_at": "2026-08-14T03:53:29.029Z",
+      "captured_at": "2026-08-14T04:48:39.823Z",
       "file": "MEAL_LOG-mobile-narrow-deleted-column.png",
       "state": "deleted-column",
       "viewport": "mobile-narrow"
     },
     {
-      "captured_at": "2026-08-14T03:53:29.766Z",
+      "captured_at": "2026-08-14T04:48:40.145Z",
       "file": "MEAL_LOG-mobile-narrow-add-sheet-recent.png",
       "state": "add-sheet-recent",
       "viewport": "mobile-narrow"
     },
     {
-      "captured_at": "2026-08-14T03:53:30.660Z",
+      "captured_at": "2026-08-14T04:48:40.569Z",
       "file": "MEAL_LOG-mobile-narrow-add-sheet-search.png",
       "state": "add-sheet-search",
       "viewport": "mobile-narrow"
     },
     {
-      "captured_at": "2026-08-14T03:53:31.533Z",
+      "captured_at": "2026-08-14T04:48:40.828Z",
       "file": "MEAL_LOG-mobile-narrow-missing-batch.png",
       "state": "missing-batch",
       "viewport": "mobile-narrow"
     },
     {
-      "captured_at": "2026-08-14T03:53:33.653Z",
+      "captured_at": "2026-08-14T04:48:41.096Z",
       "file": "MEAL_LOG-mobile-narrow-unrecoverable-batch.png",
       "state": "unrecoverable-batch",
       "viewport": "mobile-narrow"
     },
     {
-      "captured_at": "2026-08-14T03:53:34.588Z",
+      "captured_at": "2026-08-14T04:48:41.355Z",
       "file": "MEAL_LOG-mobile-narrow-edit.png",
       "state": "edit",
       "viewport": "mobile-narrow"
     },
     {
-      "captured_at": "2026-08-14T03:53:35.327Z",
+      "captured_at": "2026-08-14T04:48:41.597Z",
       "file": "MEAL_LOG-mobile-narrow-delete-confirm.png",
       "state": "delete-confirm",
       "viewport": "mobile-narrow"
     },
     {
-      "captured_at": "2026-08-14T03:53:36.360Z",
+      "captured_at": "2026-08-14T04:48:42.038Z",
       "file": "MEAL_LOG-mobile-narrow-pending.png",
       "state": "pending",
       "viewport": "mobile-narrow"
     },
     {
-      "captured_at": "2026-08-14T03:53:37.419Z",
+      "captured_at": "2026-08-14T04:48:42.613Z",
       "file": "MEAL_LOG-mobile-narrow-replay.png",
       "state": "replay",
       "viewport": "mobile-narrow"
     },
     {
-      "captured_at": "2026-08-14T03:53:38.229Z",
+      "captured_at": "2026-08-14T04:48:42.981Z",
       "file": "MEAL_LOG-mobile-narrow-conflict.png",
       "state": "conflict",
       "viewport": "mobile-narrow"
     },
     {
-      "captured_at": "2026-08-14T03:53:39.106Z",
+      "captured_at": "2026-08-14T04:48:43.497Z",
       "file": "MEAL_LOG-desktop-default.png",
       "state": "default",
       "viewport": "desktop"
     },
     {
-      "captured_at": "2026-08-14T03:53:40.095Z",
+      "captured_at": "2026-08-14T04:48:44.113Z",
       "file": "MEAL_LOG-desktop-loading.png",
       "state": "loading",
       "viewport": "desktop"
     },
     {
-      "captured_at": "2026-08-14T03:53:40.727Z",
+      "captured_at": "2026-08-14T04:48:44.355Z",
       "file": "MEAL_LOG-desktop-empty.png",
       "state": "empty",
       "viewport": "desktop"
     },
     {
-      "captured_at": "2026-08-14T03:53:41.703Z",
+      "captured_at": "2026-08-14T04:48:44.589Z",
       "file": "MEAL_LOG-desktop-error.png",
       "state": "error",
       "viewport": "desktop"
     },
     {
-      "captured_at": "2026-08-14T03:53:42.111Z",
+      "captured_at": "2026-08-14T04:48:44.913Z",
       "file": "MEAL_LOG-desktop-unauthorized.png",
       "state": "unauthorized",
       "viewport": "desktop"
     },
     {
-      "captured_at": "2026-08-14T03:53:42.930Z",
+      "captured_at": "2026-08-14T04:48:45.179Z",
       "file": "MEAL_LOG-desktop-partial.png",
       "state": "partial",
       "viewport": "desktop"
     },
     {
-      "captured_at": "2026-08-14T03:53:43.754Z",
+      "captured_at": "2026-08-14T04:48:45.547Z",
       "file": "MEAL_LOG-desktop-unavailable.png",
       "state": "unavailable",
       "viewport": "desktop"
     },
     {
-      "captured_at": "2026-08-14T03:53:44.658Z",
+      "captured_at": "2026-08-14T04:48:45.864Z",
       "file": "MEAL_LOG-desktop-deleted-column.png",
       "state": "deleted-column",
       "viewport": "desktop"
     },
     {
-      "captured_at": "2026-08-14T03:53:45.270Z",
+      "captured_at": "2026-08-14T04:48:46.230Z",
       "file": "MEAL_LOG-desktop-add-sheet-recent.png",
       "state": "add-sheet-recent",
       "viewport": "desktop"
     },
     {
-      "captured_at": "2026-08-14T03:53:45.929Z",
+      "captured_at": "2026-08-14T04:48:46.689Z",
       "file": "MEAL_LOG-desktop-add-sheet-search.png",
       "state": "add-sheet-search",
       "viewport": "desktop"
     },
     {
-      "captured_at": "2026-08-14T03:53:47.032Z",
+      "captured_at": "2026-08-14T04:48:47.099Z",
       "file": "MEAL_LOG-desktop-missing-batch.png",
       "state": "missing-batch",
       "viewport": "desktop"
     },
     {
-      "captured_at": "2026-08-14T03:53:47.677Z",
+      "captured_at": "2026-08-14T04:48:47.413Z",
       "file": "MEAL_LOG-desktop-unrecoverable-batch.png",
       "state": "unrecoverable-batch",
       "viewport": "desktop"
     },
     {
-      "captured_at": "2026-08-14T03:53:48.363Z",
+      "captured_at": "2026-08-14T04:48:47.728Z",
       "file": "MEAL_LOG-desktop-edit.png",
       "state": "edit",
       "viewport": "desktop"
     },
     {
-      "captured_at": "2026-08-14T03:53:49.387Z",
+      "captured_at": "2026-08-14T04:48:48.017Z",
       "file": "MEAL_LOG-desktop-delete-confirm.png",
       "state": "delete-confirm",
       "viewport": "desktop"
     },
     {
-      "captured_at": "2026-08-14T03:53:50.350Z",
+      "captured_at": "2026-08-14T04:48:48.405Z",
       "file": "MEAL_LOG-desktop-pending.png",
       "state": "pending",
       "viewport": "desktop"
     },
     {
-      "captured_at": "2026-08-14T03:53:51.649Z",
+      "captured_at": "2026-08-14T04:48:49.088Z",
       "file": "MEAL_LOG-desktop-replay.png",
       "state": "replay",
       "viewport": "desktop"
     },
     {
-      "captured_at": "2026-08-14T03:53:52.512Z",
+      "captured_at": "2026-08-14T04:48:49.506Z",
       "file": "MEAL_LOG-desktop-conflict.png",
       "state": "conflict",
       "viewport": "desktop"
