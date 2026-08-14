@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 
@@ -89,5 +89,45 @@ describe("MEAL_LOG day-first screen", () => {
     start.focus();
     await user.keyboard("{Enter}");
     await waitFor(() => expect(start.getAttribute("aria-checked")).toBe("true"));
+  });
+
+  it("keeps the latest keyboard date when an older navigation completes afterward", async () => {
+    const user = userEvent.setup();
+    const { deferredNavigation } = renderMealLogShell({ deferNavigation: true });
+    if (!deferredNavigation) throw new Error("Deferred navigation controller is required.");
+
+    const radios = await screen.findAllByRole("radio");
+    const start = radios[0];
+    const end = radios[6];
+    start.focus();
+
+    await user.keyboard("{End}");
+    await waitFor(() => expect(end.getAttribute("aria-checked")).toBe("true"));
+    await waitFor(() => expect(document.activeElement).toBe(end));
+    expect(deferredNavigation.requests).toHaveLength(1);
+
+    await user.keyboard("{Home}");
+    await waitFor(() => expect(start.getAttribute("aria-checked")).toBe("true"));
+    await waitFor(() => expect(document.activeElement).toBe(start));
+
+    await act(() => deferredNavigation.complete(0));
+
+    await waitFor(() => expect(deferredNavigation.requests).toHaveLength(2));
+    expect(deferredNavigation.requests[1]).toMatchObject({
+      href: "/planner?segment=log&date=2026-08-10",
+      method: "push",
+    });
+    expect(start.getAttribute("aria-checked")).toBe("true");
+    expect(document.activeElement).toBe(start);
+
+    await act(() => deferredNavigation.complete(1));
+    await user.keyboard("{ArrowLeft}");
+
+    expect(start.getAttribute("aria-checked")).toBe("true");
+    expect(document.activeElement).toBe(start);
+    expect(deferredNavigation.currentHref()).toBe(
+      "/planner?segment=log&date=2026-08-10",
+    );
+    expect(deferredNavigation.requests).toHaveLength(2);
   });
 });

@@ -204,6 +204,15 @@ test.describe("meal-log-ui Stage 4", () => {
     await page.keyboard.press("ArrowLeft");
     await expect(radios.nth(0)).toHaveAttribute("aria-checked", "true");
     await expect(radios.nth(0)).toBeFocused();
+    await expect(page).toHaveURL(new RegExp(`date=${DATE}`));
+    expect(await rail.evaluate((element) => {
+      const railRect = element.getBoundingClientRect();
+      const selectedRect = element.querySelector<HTMLElement>("[role='radio'][aria-checked='true']")?.getBoundingClientRect();
+      return selectedRect !== undefined
+        && selectedRect.left >= railRect.left
+        && selectedRect.right <= railRect.right;
+    })).toBe(true);
+    expect(await page.evaluate(() => ({ x: window.scrollX, y: window.scrollY }))).toEqual(pageScroll);
 
     await radios.nth(1).focus();
     await page.keyboard.press("Space");

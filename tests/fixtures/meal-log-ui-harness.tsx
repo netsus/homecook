@@ -106,6 +106,7 @@ vi.mock("@/components/shared/profile-summary-button", () => ({
 
 export function renderMealLogShell({
   empty = false,
+  deferNavigation = false,
   failDate,
   includeCookedBatch = false,
   recentCookedWithoutProjection = false,
@@ -113,6 +114,7 @@ export function renderMealLogShell({
   paginatedSources = false,
 }: {
   empty?: boolean;
+  deferNavigation?: boolean;
   failDate?: string;
   includeCookedBatch?: boolean;
   recentCookedWithoutProjection?: boolean;
@@ -121,9 +123,22 @@ export function renderMealLogShell({
 } = {}) {
   navigationMocks.push.mockReset();
   navigationMocks.replace.mockReset();
-  navigationMocks.searchParams.mockReturnValue(
-    new URLSearchParams("segment=log&date=2026-08-10"),
+  let currentHref = "/planner?segment=log&date=2026-08-10";
+  const deferredRequests: Array<{
+    href: string;
+    method: "push" | "replace";
+  }> = [];
+  navigationMocks.searchParams.mockImplementation(
+    () => new URL(currentHref, "http://localhost").searchParams,
   );
+  if (deferNavigation) {
+    navigationMocks.push.mockImplementation((href: string) => {
+      deferredRequests.push({ href, method: "push" });
+    });
+    navigationMocks.replace.mockImplementation((href: string) => {
+      deferredRequests.push({ href, method: "replace" });
+    });
+  }
   const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
     const path = String(input);
     const url = new URL(path, "http://localhost");
@@ -231,8 +246,21 @@ export function renderMealLogShell({
     });
   });
   vi.stubGlobal("fetch", fetchMock);
+  const rendered = render(<PlannerWeekScreen initialAuthenticated />);
   return {
-    ...render(<PlannerWeekScreen initialAuthenticated />),
+    ...rendered,
+    deferredNavigation: deferNavigation
+      ? {
+          complete(index: number) {
+            const request = deferredRequests[index];
+            if (!request) throw new Error(`Deferred navigation ${index} does not exist.`);
+            currentHref = request.href;
+            rendered.rerender(<PlannerWeekScreen initialAuthenticated />);
+          },
+          currentHref: () => currentHref,
+          requests: deferredRequests,
+        }
+      : null,
     fetchMock,
     navigationMocks,
   };

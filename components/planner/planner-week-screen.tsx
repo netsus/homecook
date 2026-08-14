@@ -53,6 +53,16 @@ import type { PlannerColumnData, PlannerMealData } from "@/types/planner";
 
 type AuthState = "checking" | "authenticated" | "unauthorized";
 
+type PendingShellNavigation = {
+  generation: number;
+  href: string;
+  location: {
+    date: string;
+    segment: PlannerShellSegment;
+  };
+  method: "push" | "replace";
+};
+
 export interface PlannerWeekScreenProps {
   initialAuthenticated?: boolean;
 }
@@ -279,10 +289,9 @@ export function PlannerWeekScreen({
     useState<HTMLOListElement | null>(null);
   const previousSegmentRef = useRef(activeSegment);
   const hasLoadedPlannerRef = useRef(false);
-  const pendingNavigationRef = useRef<{
-    date: string;
-    segment: PlannerShellSegment;
-  } | null>(null);
+  const navigationGenerationRef = useRef(0);
+  const pendingNavigationRef = useRef<PendingShellNavigation | null>(null);
+  const latestNavigationRef = useRef<PendingShellNavigation | null>(null);
   const requestedRangeRef = useRef<string | null>(null);
   const selectedDateTitleRef = useRef<HTMLHeadingElement | null>(null);
 
@@ -324,9 +333,19 @@ export function PlannerWeekScreen({
       method: "push" | "replace" = "push",
     ) => {
       const currentLocation = readPlannerShellLocation(searchParams, selectedDate);
+      const pendingNavigation = pendingNavigationRef.current;
+      const latestNavigation = latestNavigationRef.current;
       if (
+        !pendingNavigation &&
         currentLocation.date === location.date &&
         currentLocation.segment === location.segment
+      ) {
+        return;
+      }
+      if (
+        pendingNavigation &&
+        latestNavigation?.location.date === location.date &&
+        latestNavigation.location.segment === location.segment
       ) {
         return;
       }
@@ -334,7 +353,15 @@ export function PlannerWeekScreen({
         new URLSearchParams(searchParams.toString()),
         location,
       );
-      pendingNavigationRef.current = location;
+      const navigation = {
+        generation: ++navigationGenerationRef.current,
+        href,
+        location,
+        method,
+      } satisfies PendingShellNavigation;
+      latestNavigationRef.current = navigation;
+      if (pendingNavigation) return;
+      pendingNavigationRef.current = navigation;
       router[method](href);
     },
     [router, searchParams, selectedDate],
@@ -505,12 +532,22 @@ export function PlannerWeekScreen({
     const pendingNavigation = pendingNavigationRef.current;
     if (pendingNavigation) {
       if (
-        location.date !== pendingNavigation.date ||
-        location.segment !== pendingNavigation.segment
+        location.date !== pendingNavigation.location.date ||
+        location.segment !== pendingNavigation.location.segment
       ) {
         return;
       }
       pendingNavigationRef.current = null;
+      const latestNavigation = latestNavigationRef.current;
+      if (
+        latestNavigation &&
+        latestNavigation.generation > pendingNavigation.generation
+      ) {
+        pendingNavigationRef.current = latestNavigation;
+        router[latestNavigation.method](latestNavigation.href);
+        return;
+      }
+      latestNavigationRef.current = null;
     }
 
     if (location.segment !== activeSegment) {
@@ -539,6 +576,7 @@ export function PlannerWeekScreen({
     rangeEndDate,
     rangeStartDate,
     requestPlannerRange,
+    router,
     searchParams,
     selectedDate,
     selectedDateKey,
