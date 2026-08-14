@@ -25,6 +25,7 @@ type ImportMode =
   | "initial"
   | "offline"
   | "policy-changed"
+  | "planner-success"
   | "review"
   | "submitting";
 
@@ -225,16 +226,22 @@ async function installImportRoutes(page: Page, mode: ImportMode) {
   });
   await page.route(`**/api/v1/recipes/youtube/extraction-jobs/${JOB_ID}`, async (route) => {
     const retryableFailure = mode === "accepted-retry";
+    const plannerSuccess = mode === "planner-success";
     await route.fulfill({
       json: {
         success: true,
         data: {
           job_id: JOB_ID,
-          status: retryableFailure ? "failed" : "queued",
+          status: retryableFailure ? "failed" : plannerSuccess ? "succeeded" : "queued",
           submitted_at: "2026-08-14T01:00:00.000Z",
-          started_at: retryableFailure ? "2026-08-14T01:00:01.000Z" : null,
-          completed_at: retryableFailure ? "2026-08-14T01:03:00.000Z" : null,
-          result: null,
+          started_at: retryableFailure || plannerSuccess ? "2026-08-14T01:00:01.000Z" : null,
+          completed_at: retryableFailure || plannerSuccess ? "2026-08-14T01:03:00.000Z" : null,
+          result: plannerSuccess ? {
+            extraction_id: EXTRACTION_ID,
+            review_path: `/menu/add/youtube?extractionId=${EXTRACTION_ID}`,
+            recipe_id: null,
+            recipe_path: null,
+          } : null,
           error: retryableFailure ? {
             code: "QUOTA_EXCEEDED",
             message: "오늘 추출 한도를 모두 사용했어요. 나중에 다시 시도해 주세요.",
@@ -264,7 +271,7 @@ async function installImportRoutes(page: Page, mode: ImportMode) {
       },
     });
   });
-  if (mode === "review") {
+  if (mode === "review" || mode === "planner-success") {
     await page.route(`**/api/v1/recipes/youtube/extractions/${EXTRACTION_ID}`, async (route) => {
       await route.fulfill({
         json: {
@@ -507,6 +514,27 @@ test("completed session re-entry can register the reviewed recipe", async ({ pag
   await expect(page.getByText("레시피가 등록됐어요")).toBeVisible();
 });
 
+test("polling success preserves planner context into review and its meal CTA", async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await setE2EAuthOverride(page);
+  await installImportRoutes(page, "planner-success");
+  await page.goto(
+    `/menu/add/youtube?youtubeUrl=${encodeURIComponent(YOUTUBE_URL)}&date=2026-08-21&columnId=dinner-column&slot=dinner`,
+  );
+
+  await expect(page).toHaveURL(new RegExp(
+    `extractionId=${EXTRACTION_ID}.*date=2026-08-21.*columnId=dinner-column.*slot=dinner`,
+  ));
+  await expect(page.getByRole("button", { name: "이 끼니에 추가" })).toBeVisible();
+  await expect(page.getByLabel("식사 추가 대상 8/21 dinner")).toBeVisible();
+  await captureEvidence(
+    page,
+    testInfo,
+    path.join(IMPORT_EVIDENCE, "mobile-390-planner-context-review.png"),
+    true,
+  );
+});
+
 test("app shell groups terminal outcomes and keeps the badge until list exposure", async ({ page }, testInfo) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.setViewportSize({ width: 390, height: 844 });
@@ -605,6 +633,40 @@ test("real reload and logout-login restore badge list and exact destination", as
     `/menu/add/youtube?extractionId=${EXTRACTION_ID}`,
   );
   await captureEvidence(page, testInfo, path.join(SHELL_EVIDENCE, "mobile-390-relogin-recovery.png"));
+});
+
+test("archive stays visible while online recovery discovers new unseen work", async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await setE2EAuthOverride(page);
+  await installDiscoveryRoutes(page);
+  const unseenItems: ReturnType<typeof notificationItem>[] = [
+    notificationItem({ status: "succeeded", title: "기존 감자 수프" }),
+  ];
+  await installNotificationRoutes(page, unseenItems);
+  await page.goto("/");
+  await page.getByRole("button", { name: "YouTube 추출 알림 1개" }).click();
+  await page.getByRole("tab", { name: "지난 알림" }).click();
+  await expect(page.getByRole("heading", { name: "감자 수프" })).toBeVisible();
+
+  unseenItems.push(notificationItem({
+    code: "QUOTA_EXCEEDED",
+    status: "failed",
+    title: "새로 끝난 두부조림",
+  }));
+  await page.evaluate(() => window.dispatchEvent(new Event("online")));
+
+  await expect(page.getByRole("tab", { name: "지난 알림" })).toHaveAttribute("aria-selected", "true");
+  await expect(page.getByRole("heading", { name: "감자 수프" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "새로 끝난 두부조림" })).toHaveCount(0);
+  await expect(page.locator('[data-youtube-extraction-trigger="header"]')).toHaveAttribute(
+    "aria-label",
+    "YouTube 추출 알림 2개",
+  );
+  await captureEvidence(
+    page,
+    testInfo,
+    path.join(SHELL_EVIDENCE, "mobile-390-archive-background-unseen.png"),
+  );
 });
 
 test("desktop toast remains clear of discovery controls", async ({ page }, testInfo) => {
