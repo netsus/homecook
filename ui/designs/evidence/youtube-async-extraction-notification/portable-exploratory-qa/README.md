@@ -3,7 +3,7 @@
 ## 목적
 - acceptance checklist를 기반으로 desktop/mobile 사용자 흐름과 edge case를 탐색한다.
 - 기능 버그뿐 아니라 디자인, 접근성, copy, affordance, 복구 UX 문제도 함께 기록한다.
-- 이 bundle은 code head `64d78154b1390e7f413bb1880305d171c4e31034`, tree `e33bc796629d14d11243d9647b1a993478808298`에서 `2026-08-14T01:24:07Z`에 다시 잠그고, 3217의 66개 Playwright 실행 결과로 보고서를 채웠다.
+- 이 bundle은 code head `346cefa8cc59cc46551fd28194c443a72eca3be6`, tree `c422438f3f2170c41f9f836f780185834ac6e90c`에서 `2026-08-14T02:25:31Z`에 다시 잠그고, 3217의 69개 Playwright 실행 결과로 보고서를 채웠다.
 
 ## 입력 자료
 - 체크리스트: `ui/designs/evidence/youtube-async-extraction-notification/portable-exploratory-qa/exploratory-checklist.json`

@@ -1,9 +1,9 @@
 {
-  "captured_at": "2026-08-14T01:24:07Z",
+  "captured_at": "2026-08-14T02:25:31Z",
   "evidence_scope": "youtube-async-extraction-notification Stage 4 frontend",
   "implementation_base": "25e8da8b04c2322f68d8f54837135399d7586da7",
-  "implementation_head": "64d78154b1390e7f413bb1880305d171c4e31034",
-  "implementation_tree": "e33bc796629d14d11243d9647b1a993478808298",
+  "implementation_head": "346cefa8cc59cc46551fd28194c443a72eca3be6",
+  "implementation_tree": "c422438f3f2170c41f9f836f780185834ac6e90c",
   "generator": "tests/e2e/youtube-async-extraction-notification.spec.ts",
   "base_url": "http://127.0.0.1:3217",
   "remote_supabase_access_count": 0,
@@ -132,16 +132,16 @@
     }
   ],
   "verification": {
-    "focused_vitest": "47 notification/import UI tests and 10 migration contract tests passed",
-    "youtube_async_regression": "57 backend worker/installer tests and 42 isolated PostgreSQL/PostgREST integration tests passed; duplicate same-worker permit claims, explicit job-to-permit lock order, concurrent heartbeat/finalize, expired fences, post-release exact replay, quota accounting, secret provenance, and durable failure recording are covered",
-    "playwright": "22 deterministic scenarios passed; 66 cross-project executions passed on isolated port 3217; 24 exact-code-head screenshots captured",
+    "focused_vitest": "71 focused frontend, migration-contract, worker, and provenance tests passed",
+    "youtube_async_regression": "58 backend worker/runtime tests, 21 release-installer tests, and 54 isolated PostgreSQL/PostgREST integration tests passed; queued schema/authorization drift rejection, catalog fingerprint drift matrix, duplicate same-worker permit claims, explicit job-to-permit lock order, concurrent start/heartbeat/finalize, expired fences, post-release exact replay, quota accounting, external secret-root provenance, and durable failure recording are covered",
+    "playwright": "23 deterministic scenarios passed; 69 cross-project executions passed on isolated port 3217; 24 exact-code-head screenshots captured",
     "axe": "0 violations on accepted CTA, grouped and individual toast, unauthorized notice, and 320px reflow surfaces with color-contrast enabled",
     "exploratory_qa": "97/100; 42/46 covered; 4 independent authority or real-worker/DB items intentionally not covered",
     "lint_typecheck": "passed on exact code head",
     "official_frontend_pr_gate": "passed on isolated port 3217: lint, typecheck, 2,741 product tests, build, 62 smoke passed/10 skipped, 8 a11y passed/1 skipped, and 12 visual passed",
     "security_e2e": "12 passed on isolated port 3217",
-    "full_vitest": "6,133 passed and 445 skipped",
-    "visual_verdict": "97/100 pass"
+    "full_vitest": "6,137 passed and 457 skipped",
+    "visual_verdict": "98/100 pass"
   },
   "limitations": [
     "This is mock-API browser evidence and does not replace real local Supabase worker crash/reclaim or cross-user DB verification.",

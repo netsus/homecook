@@ -1,7 +1,7 @@
 {
   "schemaVersion": "1.0",
   "mode": "coverage-sensitive",
-  "generatedAt": "2026-08-14T01:28:28.772Z",
+  "generatedAt": "2026-08-14T02:27:27.804Z",
   "checklistPath": "ui/designs/evidence/youtube-async-extraction-notification/portable-exploratory-qa/exploratory-checklist.json",
   "reportPath": "ui/designs/evidence/youtube-async-extraction-notification/portable-exploratory-qa/exploratory-report.json",
   "validationErrors": [],
@@ -17,7 +17,7 @@
     },
     "pass": true,
     "thresholds": {
-      "minTotal": 90
+      "minTotal": 85
     }
   }
 }

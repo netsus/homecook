@@ -128,18 +128,18 @@
 ## Design Status
 
 - [ ] 임시 UI (temporary) — Stage 1 설계 계약만 잠겼고 실제 구현 evidence는 없음
-- [x] 리뷰 대기 (pending-review) — 최신 product-design/backend/security findings를 수정한 Stage 4 code head `64d78154b1390e7f413bb1880305d171c4e31034`의 390/320/desktop evidence와 portable exploratory QA 97점이 생성됐으며 새 PR head의 독립 backend/security 및 authority 재검토 대기 중
+- [x] 리뷰 대기 (pending-review) — 최신 product-design/backend/security findings를 수정한 Stage 4 code head `346cefa8cc59cc46551fd28194c443a72eca3be6`의 390/320/desktop evidence와 portable exploratory QA 97점이 생성됐으며 새 PR head의 독립 backend/security 및 authority 재검토 대기 중
 - [ ] 확정 (confirmed) — Stage 5와 별도 final authority가 current frontend head를 blocker 0으로 승인한 뒤 전환
 - [ ] N/A — BE-only 슬라이스
 
 ### Stage 4 Frontend Evidence
 
-- Implementation base/code head/tree: `25e8da8b04c2322f68d8f54837135399d7586da7` → `64d78154b1390e7f413bb1880305d171c4e31034` / `e33bc796629d14d11243d9647b1a993478808298`
+- Implementation base/code head/tree: `25e8da8b04c2322f68d8f54837135399d7586da7` → `346cefa8cc59cc46551fd28194c443a72eca3be6` / `c422438f3f2170c41f9f836f780185834ac6e90c`
 - Screenshot manifest: `ui/designs/evidence/youtube-async-extraction-notification/manifest.json`
-- Visual verdict: `ui/designs/evidence/youtube-async-extraction-notification/visual-verdict.json` — `97/100`, pass (구현 task 판정이며 독립 authority 승인 아님)
+- Visual verdict: `ui/designs/evidence/youtube-async-extraction-notification/visual-verdict.json` — `98/100`, pass (구현 task 판정이며 독립 authority 승인 아님)
 - Exploratory QA: `ui/designs/evidence/youtube-async-extraction-notification/exploratory-qa.json` 및 tracked `portable-exploratory-qa/` raw bundle — `97/100`, 42/46 covered, finding 0
-- Deterministic browser QA: `tests/e2e/youtube-async-extraction-notification.spec.ts` — port `3217`, 22 scenarios와 3-project 66 executions passed, notification CTA review-heading focus, consumed exact title/CTA, 탭 양끝 순환, 실제 reload·logout→login 복구, archive 유지 중 background unseen badge 갱신을 명시하는 390/320/desktop screenshot 24개 regenerated
-- Focused component/integration QA: notification/import 47 passed; migration contract 10 passed; backend worker/installer 57 passed; 격리 PostgreSQL/PostgREST 42 passed(동일 worker live permit 중복 claim 거부, job→permit lock order, heartbeat/finalize concurrent 40P01 0 포함); full Vitest 6,133 passed/445 skipped; product 2,741 passed/175 skipped; lint/typecheck/build passed; official frontend gate smoke 62/10 skipped, a11y 8/1 skipped, visual 12 passed; contract-only security-function authorization gate passed.
+- Deterministic browser QA: `tests/e2e/youtube-async-extraction-notification.spec.ts` — port `3217`, 23 scenarios와 3-project 69 executions passed, panel 내부 focus의 conditional unauthorized handoff와 외부 focus 보존, notification CTA review-heading focus, planner 사용자 표시명 `저녁`, consumed exact title/CTA, 탭 양끝 순환, 실제 reload·logout→login 복구, archive 유지 중 background unseen badge 갱신을 명시하는 390/320/desktop screenshot 24개 regenerated
+- Focused component/integration QA: frontend·migration contract·worker provenance 71 passed; backend worker/runtime 58 passed; release installer 21 passed; 격리 PostgreSQL/PostgREST 54 passed(catalog schema/authorization drift의 enqueue+claim fail-closed, 동일 worker live permit 중복 claim 거부, job→permit lock order, start/heartbeat/finalize concurrent deadlock 0 포함); full Vitest 6,137 passed/457 skipped; product 2,741 passed/175 skipped; lint/typecheck/build passed; official frontend gate smoke 62/10 skipped, a11y 8/1 skipped, visual 12 passed; contract-only security-function authorization gate passed.
 - Boundary: Supabase Cloud/linked/remote/credential access 0, 운영 local Supabase/app `3100`/user data/port/volume/env/secret/launchd mutation 0. Stage 5/final authority/Stage 6와 Manual Only는 미완료다.
 
 ## Source Links
