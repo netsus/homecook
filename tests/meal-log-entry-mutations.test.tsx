@@ -29,11 +29,11 @@ describe("MEAL_LOG entry mutations", () => {
     const selector = within(dialog).getByRole("combobox", { name: "옮길 끼니 (필수)" });
     expect((selector as HTMLSelectElement).value).toBe("");
     await waitFor(() => expect(document.activeElement).toBe(selector));
-    expect((within(dialog).getByRole("button", { name: "수정 저장" }) as HTMLButtonElement).disabled)
-      .toBe(true);
+    const saveButton = within(dialog).getByRole("button", { name: "수정 저장" }) as HTMLButtonElement;
+    expect(saveButton.disabled).toBe(true);
+    expect(saveButton.className).toContain("disabled:opacity-50");
     await user.selectOptions(selector, "20000000-0000-4000-8000-000000000002");
-    expect((within(dialog).getByRole("button", { name: "수정 저장" }) as HTMLButtonElement).disabled)
-      .toBe(false);
+    expect(saveButton.disabled).toBe(false);
   });
 
   it("restores the invoking edit action after cancel and moves successful deleted edits to the destination section", async () => {

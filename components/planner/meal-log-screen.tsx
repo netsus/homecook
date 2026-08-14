@@ -295,7 +295,7 @@ function EntryDialog({
         {error ? <p className="mt-3 text-sm text-[var(--danger-strong)]" ref={errorRef} role="alert" tabIndex={-1}>{error}</p> : null}
         <div className="mt-5 grid gap-2 min-[360px]:grid-cols-2">
           <button className="min-h-11 rounded-[var(--radius-control)] border border-[var(--line-strong)] px-4 font-bold" disabled={pending} onClick={onClose} ref={cancelRef} type="button">취소</button>
-          <button className={`min-h-11 rounded-[var(--radius-control)] px-4 font-bold ${state.type === "delete" ? "text-[var(--danger-strong)]" : "bg-[var(--brand-primary-text)] text-[var(--text-inverse)]"}`} disabled={pending || (state.type === "edit" && (!columnId || amount <= 0 || !unit.trim()))} onClick={() => void mutate()} type="button">{pending ? "처리 중…" : state.type === "delete" ? "삭제" : "수정 저장"}</button>
+          <button className={`min-h-11 rounded-[var(--radius-control)] px-4 font-bold disabled:opacity-50 ${state.type === "delete" ? "text-[var(--danger-strong)]" : "bg-[var(--brand-primary-text)] text-[var(--text-inverse)]"}`} disabled={pending || (state.type === "edit" && (!columnId || amount <= 0 || !unit.trim()))} onClick={() => void mutate()} type="button">{pending ? "처리 중…" : state.type === "delete" ? "삭제" : "수정 저장"}</button>
         </div>
       </div>
     </div>
@@ -356,16 +356,13 @@ export function MealLogScreen({ date, onDateChange }: MealLogScreenProps) {
   useEffect(() => {
     const rail = dateRailRef.current;
     const selectedRadio = dateRadioRefs.current.get(date);
-    const selectedItem = selectedRadio?.parentElement;
-    if (!rail || !selectedRadio || !selectedItem) return;
-    const selectedLeft = selectedItem.offsetLeft;
-    const selectedRight = selectedLeft + selectedItem.offsetWidth;
-    const visibleLeft = rail.scrollLeft;
-    const visibleRight = visibleLeft + rail.clientWidth;
-    if (selectedLeft < visibleLeft) {
-      rail.scrollLeft = selectedLeft;
-    } else if (selectedRight > visibleRight) {
-      rail.scrollLeft = selectedRight - rail.clientWidth;
+    if (!rail || !selectedRadio) return;
+    const railRect = rail.getBoundingClientRect();
+    const selectedRect = selectedRadio.getBoundingClientRect();
+    if (selectedRect.left < railRect.left) {
+      rail.scrollLeft += selectedRect.left - railRect.left;
+    } else if (selectedRect.right > railRect.right) {
+      rail.scrollLeft += selectedRect.right - railRect.right;
     }
   }, [date, dates]);
 

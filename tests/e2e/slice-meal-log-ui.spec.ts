@@ -161,6 +161,9 @@ test.describe("meal-log-ui Stage 4", () => {
     const rail = page.getByRole("radiogroup", { name: "식사 기록 날짜 선택" });
     const radios = rail.getByRole("radio");
     await expect(radios).toHaveCount(7);
+    await rail.evaluate((element) => {
+      element.style.scrollSnapType = "none";
+    });
     await expect(rail.locator("[role='radio'][aria-checked='true']")).toHaveCount(1);
     const selected = radios.nth(0);
     await expect(selected).toHaveAttribute("tabindex", "0");
@@ -172,6 +175,14 @@ test.describe("meal-log-ui Stage 4", () => {
     await expect(radios.nth(6)).toHaveAttribute("aria-checked", "true");
     await expect(radios.nth(6)).toBeFocused();
     expect(await rail.evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
+    expect(await rail.evaluate(async (element) => {
+      await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+      const railRect = element.getBoundingClientRect();
+      const selectedRect = element.querySelector<HTMLElement>("[role='radio'][aria-checked='true']")?.getBoundingClientRect();
+      return selectedRect !== undefined
+        && selectedRect.left >= railRect.left
+        && selectedRect.right <= railRect.right;
+    })).toBe(true);
     expect(await page.evaluate(() => ({ x: window.scrollX, y: window.scrollY }))).toEqual(pageScroll);
 
     const endUrl = page.url();
@@ -181,9 +192,18 @@ test.describe("meal-log-ui Stage 4", () => {
     await page.keyboard.press("Home");
     await expect(radios.nth(0)).toHaveAttribute("aria-checked", "true");
     await expect(radios.nth(0)).toBeFocused();
-    const startUrl = page.url();
+    expect(await rail.evaluate(async (element) => {
+      await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+      const railRect = element.getBoundingClientRect();
+      const selectedRect = element.querySelector<HTMLElement>("[role='radio'][aria-checked='true']")?.getBoundingClientRect();
+      return selectedRect !== undefined
+        && selectedRect.left >= railRect.left
+        && selectedRect.right <= railRect.right;
+    })).toBe(true);
+    expect(await page.evaluate(() => ({ x: window.scrollX, y: window.scrollY }))).toEqual(pageScroll);
     await page.keyboard.press("ArrowLeft");
-    expect(page.url()).toBe(startUrl);
+    await expect(radios.nth(0)).toHaveAttribute("aria-checked", "true");
+    await expect(radios.nth(0)).toBeFocused();
 
     await radios.nth(1).focus();
     await page.keyboard.press("Space");
@@ -204,6 +224,9 @@ test.describe("meal-log-ui Stage 4", () => {
     let editDialog = page.getByRole("dialog", { name: "식사 기록 수정" });
     let selector = editDialog.getByRole("combobox", { name: "옮길 끼니 (필수)" });
     await expect(selector).toBeFocused();
+    const saveButton = editDialog.getByRole("button", { name: "수정 저장" });
+    await expect(saveButton).toBeDisabled();
+    await expect(saveButton).toHaveCSS("opacity", "0.5");
     await page.keyboard.press("Shift+Tab");
     await expect(editDialog.getByRole("button", { name: "취소" })).toBeFocused();
     await page.keyboard.press("Tab");
@@ -403,7 +426,9 @@ test.describe("meal-log-ui Stage 4", () => {
           const selector = dialog.getByRole("combobox", { name: "옮길 끼니 (필수)" });
           await expect(selector).toHaveValue("");
           await expect(selector).toBeFocused();
-          await expect(dialog.getByRole("button", { name: "수정 저장" })).toBeDisabled();
+          const saveButton = dialog.getByRole("button", { name: "수정 저장" });
+          await expect(saveButton).toBeDisabled();
+          await expect(saveButton).toHaveCSS("opacity", "0.5");
         } else if (state === "delete-confirm" || state === "conflict") {
           await page.getByRole("button", { name: /달걀 샐러드 식사 기록 삭제/u }).click();
           const dialog = page.getByRole("alertdialog", { name: "식사 기록 삭제 확인" });
