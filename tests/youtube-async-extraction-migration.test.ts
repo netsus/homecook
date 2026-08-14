@@ -128,15 +128,22 @@ describe("YTASYNC-DB/SEC migration contract", () => {
     const sql = readFileSync(migrationPath, "utf8").toLowerCase();
     for (const signature of [
       "read_youtube_extraction_worker_catalog(uuid, text, bigint)",
-      "access_youtube_extraction_worker_cache(uuid, text, bigint, text, jsonb)",
-      "record_youtube_extraction_worker_event(uuid, text, bigint, text, jsonb)",
-      "reserve_youtube_extraction_worker_quota(uuid, text, bigint, text, integer)",
-      "update_youtube_extraction_job_title(uuid, text, bigint, text)",
+      "access_youtube_extraction_worker_cache(uuid, text, bigint, bigint, text, jsonb)",
+      "record_youtube_extraction_worker_event(uuid, text, bigint, bigint, text, jsonb)",
+      "reserve_youtube_extraction_worker_quota(uuid, text, bigint, bigint, text, integer)",
+      "update_youtube_extraction_job_title(uuid, text, bigint, bigint, text)",
       "requeue_youtube_extraction_job_without_attempt(uuid, text, bigint, integer, integer)",
+      "resolve_youtube_extraction_worker_methods(uuid, text, bigint, bigint, text[])",
+      "resolve_youtube_extraction_job_draft(uuid, text, bigint, bigint, text, jsonb)",
+      "fail_or_retry_youtube_extraction_job(uuid, text, bigint, bigint, text)",
+      "heartbeat_youtube_extraction_job(uuid, text, bigint, bigint, integer)",
+      "heartbeat_youtube_extractor_permit(uuid, text, bigint, bigint, integer)",
     ]) {
       expect(sql, signature).toContain(signature);
     }
-    expect(sql).toContain("youtube_extraction_job_fence_is_active");
+    expect(sql).toContain("youtube_extraction_worker_write_fence_is_active");
+    expect(sql).toContain("permit.permit_generation = p_permit_generation");
+    expect(sql).toContain("permit.expires_at >= clock_timestamp()");
     expect(sql).toContain("greatest(1, min_delay_seconds)");
     expect(sql).toContain("least(30, max_delay_seconds)");
     for (const functionName of [

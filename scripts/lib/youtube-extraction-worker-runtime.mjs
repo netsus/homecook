@@ -172,12 +172,13 @@ function providerVideoTitle(runtimeResult) {
   return normalized.length > 0 && normalized.length <= 160 ? normalized : null;
 }
 
-function createFencedWorkerRpcClient({ rpc, claim, workerId }) {
+function createFencedWorkerRpcClient({ rpc, claim, workerId, permitGeneration }) {
   const fence = {
     job_id: claim.job_id,
     worker_id: workerId,
     lease_generation: claim.lease_generation,
   };
+  const writeFence = { ...fence, permit_generation: permitGeneration };
   return {
     async readCatalog() {
       const catalog = resultRow(await rpc("read_youtube_extraction_worker_catalog", fence),
@@ -192,7 +193,7 @@ function createFencedWorkerRpcClient({ rpc, claim, workerId }) {
         throw new Error("cache operation is invalid");
       }
       const row = resultRow(await rpc("access_youtube_extraction_worker_cache", {
-        ...fence,
+        ...writeFence,
         cache_operation: operation,
         payload,
       }), "access worker cache");
@@ -204,7 +205,7 @@ function createFencedWorkerRpcClient({ rpc, claim, workerId }) {
         throw new Error("quota reservation is invalid");
       }
       const row = resultRow(await rpc("reserve_youtube_extraction_worker_quota", {
-        ...fence,
+        ...writeFence,
         provider,
         units,
       }), "reserve worker quota");
@@ -215,7 +216,7 @@ function createFencedWorkerRpcClient({ rpc, claim, workerId }) {
     async recordEvent(kind, payload) {
       if (!EVENT_KINDS.has(kind) || !record(payload)) throw new Error("event is invalid");
       const row = resultRow(await rpc("record_youtube_extraction_worker_event", {
-        ...fence,
+        ...writeFence,
         event_kind: kind,
         payload,
       }), "record worker event");
@@ -233,7 +234,7 @@ function createFencedWorkerRpcClient({ rpc, claim, workerId }) {
         throw new Error("method labels are invalid");
       }
       const row = resultRow(await rpc("resolve_youtube_extraction_worker_methods", {
-        ...fence,
+        ...writeFence,
         method_labels: methodLabels.map((label) => label.trim()),
       }), "resolve worker methods");
       if (!row || row.applied !== true) throw new Error("YOUTUBE_EXTRACTION_FENCE_LOST");
@@ -243,7 +244,7 @@ function createFencedWorkerRpcClient({ rpc, claim, workerId }) {
       const normalized = providerVideoTitle({ videoTitle: title });
       if (!normalized) throw new Error("provider video title is invalid");
       requireFencedWrite(await rpc("update_youtube_extraction_job_title", {
-        ...fence,
+        ...writeFence,
         title: normalized,
       }), "update job title");
     },
@@ -453,7 +454,7 @@ export function createYoutubeExtractionWorkerRuntime({
         worker_id: normalizedWorkerId,
         lease_seconds: leaseSeconds,
       }), "claim permit");
-      if (!permit || typeof permit.permit_generation !== "number") {
+      if (!permit || permit.claimed !== true || typeof permit.permit_generation !== "number") {
         const requeued = await rpc("requeue_youtube_extraction_job_without_attempt", {
           job_id: claim.job_id,
           worker_id: normalizedWorkerId,
@@ -483,10 +484,13 @@ export function createYoutubeExtractionWorkerRuntime({
             job_id: claim.job_id,
             worker_id: normalizedWorkerId,
             lease_generation: leaseGeneration,
+            permit_generation: permitGeneration,
             lease_seconds: leaseSeconds,
           }).then((result) => successBoolean(result, "heartbeat job")),
           rpc("heartbeat_youtube_extractor_permit", {
+            job_id: claim.job_id,
             worker_id: normalizedWorkerId,
+            lease_generation: leaseGeneration,
             permit_generation: permitGeneration,
             lease_seconds: leaseSeconds,
           }).then((result) => successBoolean(result, "heartbeat permit")),
@@ -520,6 +524,7 @@ export function createYoutubeExtractionWorkerRuntime({
           rpc,
           claim,
           workerId: normalizedWorkerId,
+          permitGeneration,
         });
         const catalog = await workerRpcClient.readCatalog();
 
@@ -588,6 +593,7 @@ export function createYoutubeExtractionWorkerRuntime({
           job_id: claim.job_id,
           worker_id: normalizedWorkerId,
           lease_generation: leaseGeneration,
+          permit_generation: permitGeneration,
           youtube_video_id: claim.youtube_video_id,
           runtime_result: withoutPersistence(runtimeResult),
         }), "resolve draft");
@@ -610,6 +616,7 @@ export function createYoutubeExtractionWorkerRuntime({
           job_id: claim.job_id,
           worker_id: normalizedWorkerId,
           lease_generation: leaseGeneration,
+          permit_generation: permitGeneration,
           error_code: classifyFailure(error),
         });
         const failureRow = record(Array.isArray(failureTransition?.data)

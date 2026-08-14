@@ -277,6 +277,60 @@ describe("YTASYNC-OPS launchd contract", () => {
       .toThrow(/symbolic link/iu);
   });
 
+  it.each(["symlink", "0644"] as const)(
+    "rejects a %s provider secret before reading it or invoking i031 commands",
+    (provenance) => {
+      const privateDir = createTempDir(`yta-worker-provider-${provenance}-`);
+      const inputs = createReleaseInputs(privateDir);
+      const homeDir = join(privateDir, "worker-home");
+      const authDir = join(homeDir, ".codex");
+      const configPath = join(privateDir, ".env.production.local");
+      const providerTarget = join(privateDir, "provider.env");
+      const providerPath = provenance === "symlink"
+        ? join(privateDir, "provider-link.env")
+        : providerTarget;
+      const commandMarker = join(privateDir, "codex-invoked");
+      const codexBin = join(privateDir, "fake-codex");
+      mkdirSync(authDir, { recursive: true });
+      writeModeFile(join(authDir, "auth.json"), "{}\n");
+      writeModeFile(codexBin, [
+        "#!/bin/sh",
+        `touch ${JSON.stringify(commandMarker)}`,
+        "if [ \"$1\" = \"--version\" ]; then echo 'codex 0.144.0-alpha.4'; else echo 'Logged in using ChatGPT'; fi",
+        "",
+      ].join("\n"), 0o700);
+      writeModeFile(providerTarget, [
+        "YOUTUBE_API_KEY=fixture-key",
+        `YOUTUBE_I031_CODEX_BIN=${codexBin}`,
+        "",
+      ].join("\n"), provenance === "0644" ? 0o644 : 0o600);
+      if (provenance === "symlink") symlinkSync(providerTarget, providerPath);
+      writeModeFile(configPath, [
+        "HOMECOOK_YOUTUBE_WORKER_DATA_API_URL=http://127.0.0.1:54321/rest/v1",
+        `HOMECOOK_YOUTUBE_WORKER_PROVIDER_SECRET_FILE=${providerPath}`,
+        "HOMECOOK_YOUTUBE_WORKER_ID=fixture-worker",
+        "",
+      ].join("\n"));
+
+      const result = spawnSync(process.execPath, [
+        "scripts/youtube-extraction-worker-mac-production.mjs",
+        "preflight",
+        "--config", configPath,
+        "--manifest", inputs.manifestPath,
+        "--credential", inputs.credentialPath,
+        "--app-descriptor", inputs.appPath,
+        "--policy", inputs.policyPath,
+        "--expected-schema", inputs.expectedSchemaPath,
+        "--home-dir", homeDir,
+        "--user-id", String(process.getuid?.() ?? 0),
+      ], { cwd: process.cwd(), encoding: "utf8" });
+
+      expect(result.status).not.toBe(0);
+      expect(result.stderr).toMatch(provenance === "symlink" ? /symbolic link/iu : /mode/iu);
+      expect(existsSync(commandMarker)).toBe(false);
+    },
+  );
+
   it("renders a plist that runs the worker via env -i and never embeds token contents", () => {
     const homeDir = createTempDir("yta-worker-home-");
     const privateDir = createTempDir("yta-worker-private-");
@@ -946,7 +1000,7 @@ describe("YTASYNC-OPS preflight, drain, rollback, credential", () => {
             policy_snapshot_digest: inputs.digest,
             result_affecting_options: {},
           },
-          claim_youtube_extractor_permit: { permit_generation: 3 },
+          claim_youtube_extractor_permit: { claimed: true, permit_generation: 3 },
           start_youtube_extraction_attempt: { applied: true },
           heartbeat_youtube_extraction_job: { updated: true },
           heartbeat_youtube_extractor_permit: { updated: true },

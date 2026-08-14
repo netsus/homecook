@@ -59,6 +59,7 @@ describe("YTASYNC-WORKER restricted RPC adapter", () => {
       jobId: "11111111-1111-4111-8111-111111111111",
       workerId: "worker-1",
       leaseGeneration: 7,
+      permitGeneration: 9,
     })).toBe(true);
     expect(await adapter.releasePermit({ workerId: "worker-1", permitGeneration: 9 }))
       .toBe(true);
@@ -124,6 +125,7 @@ describe("YTASYNC-WORKER restricted RPC adapter", () => {
       workerId: "worker-1",
       leaseGeneration: 7,
     };
+    const writeFence = { ...fence, permitGeneration: 9 };
 
     await expect(adapter.readCatalog(fence)).resolves.toMatchObject({ applied: true });
     for (const operation of [
@@ -138,27 +140,27 @@ describe("YTASYNC-WORKER restricted RPC adapter", () => {
       "visual_touch",
     ] as const) {
       await expect(adapter.accessCache({
-        ...fence,
+        ...writeFence,
         operation,
         payload: { id: "22222222-2222-4222-8222-222222222222" },
       })).resolves.toMatchObject({ applied: true });
     }
     await expect(adapter.reserveQuota({
-      ...fence,
+      ...writeFence,
       provider: "external_transcript_api",
       units: 1,
     })).resolves.toMatchObject({ reserved: true });
     await expect(adapter.recordEvent({
-      ...fence,
+      ...writeFence,
       kind: "visual",
       payload: { status: "success" },
     })).resolves.toMatchObject({ recorded: true });
     await expect(adapter.resolveMethods({
-      ...fence,
+      ...writeFence,
       methodLabels: ["끓이기"],
     })).resolves.toMatchObject({ methods: [] });
     await expect(adapter.updateTitle({
-      ...fence,
+      ...writeFence,
       title: "김치찌개",
     })).resolves.toBe(true);
 
@@ -166,6 +168,7 @@ describe("YTASYNC-WORKER restricted RPC adapter", () => {
       job_id: fence.jobId,
       worker_id: fence.workerId,
       lease_generation: fence.leaseGeneration,
+      permit_generation: 9,
       title: "김치찌개",
     });
     expect(rpc.mock.calls.filter(([name]) =>

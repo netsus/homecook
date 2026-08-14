@@ -43,6 +43,16 @@
       "safe_search_path": ["pg_catalog", "pg_temp"]
     },
     {
+      "signature": "private.youtube_extraction_worker_write_fence_is_active(uuid, text, bigint, bigint)",
+      "control_class": "application-controlled",
+      "effect": "read-only",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "owner": "youtube_extraction_worker_rpc_owner",
+      "security_mode": "invoker",
+      "safe_search_path": ["pg_catalog", "pg_temp"]
+    },
+    {
       "signature": "private.youtube_extraction_policy_options_valid(jsonb)",
       "control_class": "application-controlled",
       "effect": "read-only",
@@ -61,7 +71,7 @@
       "safe_search_path": ["pg_catalog", "pg_temp"]
     },
     {
-      "signature": "public.access_youtube_extraction_worker_cache(uuid, text, bigint, text, jsonb)",
+      "signature": "public.access_youtube_extraction_worker_cache(uuid, text, bigint, bigint, text, jsonb)",
       "control_class": "application-controlled",
       "effect": "mutation",
       "exposure": "service-internal",
@@ -111,7 +121,7 @@
       "safe_search_path": ["pg_catalog", "pg_temp"]
     },
     {
-      "signature": "public.fail_or_retry_youtube_extraction_job(uuid, text, bigint, text)",
+      "signature": "public.fail_or_retry_youtube_extraction_job(uuid, text, bigint, bigint, text)",
       "control_class": "application-controlled",
       "effect": "mutation",
       "exposure": "service-internal",
@@ -131,7 +141,7 @@
       "safe_search_path": ["pg_catalog", "pg_temp"]
     },
     {
-      "signature": "public.heartbeat_youtube_extraction_job(uuid, text, bigint, integer)",
+      "signature": "public.heartbeat_youtube_extraction_job(uuid, text, bigint, bigint, integer)",
       "control_class": "application-controlled",
       "effect": "mutation",
       "exposure": "service-internal",
@@ -141,7 +151,7 @@
       "safe_search_path": ["pg_catalog", "pg_temp"]
     },
     {
-      "signature": "public.heartbeat_youtube_extractor_permit(text, bigint, integer)",
+      "signature": "public.heartbeat_youtube_extractor_permit(uuid, text, bigint, bigint, integer)",
       "control_class": "application-controlled",
       "effect": "mutation",
       "exposure": "service-internal",
@@ -221,7 +231,7 @@
       "safe_search_path": ["pg_catalog", "pg_temp"]
     },
     {
-      "signature": "public.record_youtube_extraction_worker_event(uuid, text, bigint, text, jsonb)",
+      "signature": "public.record_youtube_extraction_worker_event(uuid, text, bigint, bigint, text, jsonb)",
       "control_class": "application-controlled",
       "effect": "mutation",
       "exposure": "service-internal",
@@ -251,7 +261,7 @@
       "safe_search_path": ["pg_catalog", "pg_temp"]
     },
     {
-      "signature": "public.reserve_youtube_extraction_worker_quota(uuid, text, bigint, text, integer)",
+      "signature": "public.reserve_youtube_extraction_worker_quota(uuid, text, bigint, bigint, text, integer)",
       "control_class": "application-controlled",
       "effect": "mutation",
       "exposure": "service-internal",
@@ -261,7 +271,7 @@
       "safe_search_path": ["pg_catalog", "pg_temp"]
     },
     {
-      "signature": "public.resolve_youtube_extraction_job_draft(uuid, text, bigint, text, jsonb)",
+      "signature": "public.resolve_youtube_extraction_job_draft(uuid, text, bigint, bigint, text, jsonb)",
       "control_class": "application-controlled",
       "effect": "read-only",
       "exposure": "service-internal",
@@ -271,7 +281,7 @@
       "safe_search_path": ["pg_catalog", "pg_temp"]
     },
     {
-      "signature": "public.resolve_youtube_extraction_worker_methods(uuid, text, bigint, text[])",
+      "signature": "public.resolve_youtube_extraction_worker_methods(uuid, text, bigint, bigint, text[])",
       "control_class": "application-controlled",
       "effect": "mutation",
       "exposure": "service-internal",
@@ -301,7 +311,7 @@
       "safe_search_path": ["pg_catalog", "pg_temp"]
     },
     {
-      "signature": "public.update_youtube_extraction_job_title(uuid, text, bigint, text)",
+      "signature": "public.update_youtube_extraction_job_title(uuid, text, bigint, bigint, text)",
       "control_class": "application-controlled",
       "effect": "mutation",
       "exposure": "service-internal",

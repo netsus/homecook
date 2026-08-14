@@ -13,6 +13,8 @@ import {
   loadYoutubeExtractionWorkerRuntimeInputs,
   parseLaunchctlPrintStatus,
   rotateYoutubeExtractionWorkerCredential,
+  validateYoutubeExtractionWorkerConfigPath,
+  validateYoutubeExtractionWorkerSecretFile,
   writeCredentialMetadata,
 } from "./lib/youtube-extraction-worker-ops.mjs";
 import { ensureAbsolutePath } from "./lib/youtube-extraction-worker-artifact.mjs";
@@ -133,9 +135,16 @@ function print(result) {
 }
 
 async function runI031Preflight(options) {
-  const workerConfig = await readWorkerEnvironment(options.configPath);
-  const providerEnvironment = await readWorkerProviderEnvironment(
+  const configPath = validateYoutubeExtractionWorkerConfigPath(options.configPath, {
+    expectedUserId: options.userId,
+  });
+  const workerConfig = await readWorkerEnvironment(configPath);
+  const providerSecretPath = validateYoutubeExtractionWorkerSecretFile(
     workerConfig.HOMECOOK_YOUTUBE_WORKER_PROVIDER_SECRET_FILE,
+    { expectedUserId: options.userId },
+  );
+  const providerEnvironment = await readWorkerProviderEnvironment(
+    providerSecretPath,
   );
   const result = await verifyStandaloneYoutubeI031Preflight({
     workerEnv: sanitizeYoutubeExtractionChildEnvironment(
@@ -193,6 +202,9 @@ async function runLifecycle(action, options) {
 }
 
 function runReleasePreflight(options) {
+  validateYoutubeExtractionWorkerSecretFile(options.credentialPath, {
+    expectedUserId: options.userId,
+  });
   const inputs = loadYoutubeExtractionWorkerRuntimeInputs({
     appDescriptorPath: options.appDescriptorPath,
     workerArtifactPath: options.workerArtifactPath,
