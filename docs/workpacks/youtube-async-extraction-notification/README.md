@@ -128,18 +128,18 @@
 ## Design Status
 
 - [ ] 임시 UI (temporary) — Stage 1 설계 계약만 잠겼고 실제 구현 evidence는 없음
-- [x] 리뷰 대기 (pending-review) — Stage 4 code head `d3c40e841651486ddae27b0e685f6f5b2a70ff79`의 global toast coordination, disabled import CTA, ACL-principal readiness와 canonical worker artifact findings를 수정하고 390/320/desktop evidence와 portable exploratory QA 97점을 재잠갔으며 새 독립 design/backend/security 재검토 대기 중
+- [x] 리뷰 대기 (pending-review) — Stage 4 code head `02f462dee413871aafaec57fad360c3e85cdd8ea`의 narrow toast arbitration, panel/list 한국어 어절 보존, canonical 12-file worker runtime closure와 nanoid high advisory findings를 수정하고 390/320/desktop evidence와 portable exploratory QA 97점을 재잠갔으며 새 독립 design/backend/security 재검토 대기 중
 - [ ] 확정 (confirmed) — Stage 5와 별도 final authority가 current frontend head를 blocker 0으로 승인한 뒤 전환
 - [ ] N/A — BE-only 슬라이스
 
 ### Stage 4 Frontend Evidence
 
-- Implementation base/code head/tree: `25e8da8b04c2322f68d8f54837135399d7586da7` → `d3c40e841651486ddae27b0e685f6f5b2a70ff79` / `f217d39850b533ec0b6d27636d51cec50b659e77`
+- Implementation base/code head/tree: `25e8da8b04c2322f68d8f54837135399d7586da7` → `02f462dee413871aafaec57fad360c3e85cdd8ea` / `f20e2b27a26d53bccc56123aa40ae100f39b0e6d`
 - Screenshot manifest: `ui/designs/evidence/youtube-async-extraction-notification/manifest.json`
-- Visual verdict: `ui/designs/evidence/youtube-async-extraction-notification/visual-verdict.json` — `98/100`, pass (구현 task 판정이며 독립 authority 승인 아님)
+- Visual verdict: `ui/designs/evidence/youtube-async-extraction-notification/visual-verdict.json` — `94/100`, pass (구현 task 판정이며 독립 authority 승인 아님)
 - Exploratory QA: `ui/designs/evidence/youtube-async-extraction-notification/exploratory-qa.json` 및 tracked `portable-exploratory-qa/` raw bundle — `97/100`, 42/46 covered, finding 0
-- Deterministic browser QA: `tests/e2e/youtube-async-extraction-notification.spec.ts` — port `3217`, 25 scenarios와 3-project 75 executions passed, Growth/YouTube toast의 390/320 비겹침·click ownership·읽기 순서, initial/submitting/enabled CTA 시각 차이, 한국어 단어 보존과 기존 focus/reload/archive/planner 회귀를 명시하는 390/320/desktop screenshot 27개 regenerated
-- Focused component/integration QA: frontend component/contract 89 passed; installer/migration 35 passed; Stage 3 route 18 passed; combined worker/runtime/installer 86 passed; 격리 random-port PostgreSQL/PostgREST 55 passed(모든 대상 ACL principal drift의 enqueue+claim fail-closed와 revoke recovery, catalog drift, permit/lock/fence 회귀 포함); full Vitest 6,151 passed/458 skipped; product 2,741 passed/175 skipped; lint/typecheck/build passed; official frontend gate와 contract-only security-function authorization gate passed. 공개 enqueue는 duplicate-key-safe descriptor/schema reader와 exact artifact membership/hash verifier를 공유하고, canonical required artifact path를 고정하며 secret root는 filesystem root부터 모든 lexical ancestor symlink를 거부한다.
+- Deterministic browser QA: `tests/e2e/youtube-async-extraction-notification.spec.ts` — port `3217`, 27 scenarios와 3-project 81 executions passed. 320px는 YouTube 한 채널만 완전 표시하고 dismiss 뒤 Growth로 인계하며, 390/desktop은 두 채널 비겹침·각 CTA ownership·읽기 순서를 유지한다. panel/list 한국어 어절 보존과 기존 focus/reload/archive/planner 회귀를 포함하는 390/320/desktop screenshot 29개를 재생성했다.
+- Focused component/integration QA: current finding focused Vitest 69 passed; combined worker/runtime/installer 86 passed; 격리 random-port PostgreSQL/PostgREST 55 passed(모든 대상 ACL principal drift의 enqueue+claim fail-closed와 revoke recovery, catalog drift, permit/lock/fence 회귀 포함); full Vitest 6,155 passed/458 skipped; product 2,741 passed/175 skipped; lint/typecheck/build passed; official frontend gate, 12 security E2E, contract-only security-function authorization gate, `pnpm audit --audit-level high`가 통과했다. worker artifact verifier는 canonical outer inventory와 bundle manifest의 12-file closure/path/SHA/actual bytes를 모두 대조하며, 공개 enqueue의 exact release metadata와 secret-root lexical ancestor fail-closed 경계를 유지한다.
 - Boundary: Supabase Cloud/linked/remote/credential access 0, 운영 local Supabase/app `3100`/user data/port/volume/env/secret/launchd mutation 0. Stage 5/final authority/Stage 6와 Manual Only는 미완료다.
 
 ## Source Links

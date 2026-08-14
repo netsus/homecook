@@ -1,9 +1,9 @@
 {
-  "score": 98,
+  "score": 94,
   "verdict": "pass",
   "category_match": true,
   "differences": [],
-  "reasoning": "확정 artifact의 YT_IMPORT visual language와 app-shell drawer 패턴을 유지하면서 exact code head d3c40e841651486ddae27b0e685f6f5b2a70ff79, tree f217d39850b533ec0b6d27636d51cec50b659e77의 27개 screenshot을 비교했다. Growth와 YouTube 알림은 하나의 bottom presentation slot 안에서 YouTube→Growth 순서로 쌓여 390/320에서 서로 겹치지 않고 각 닫기 control의 hit ownership을 유지한다. 고정 한국어 toast 문구는 break-keep으로 '있어요' 같은 단어가 고아 줄바꿈되지 않으며 긴 예외 token만 anywhere wrapping한다. YT_IMPORT의 initial/submitting CTA는 neutral fill·text·border와 pressed transform 제거로 enabled brand CTA와 즉시 구별된다. 기존 planner '저녁', consumed exact title/CTA, 320px 200% failure CTA, desktop drawer, UNAUTHORIZED focus handoff, 복원 heading focus와 탭 순환도 그대로 유지된다. 이 판정은 구현 task의 visual-verdict이며 독립 authority 승인을 대신하지 않는다.",
+  "reasoning": "확정 artifact의 YT_IMPORT visual language와 app-shell drawer 패턴을 유지하면서 exact code head 02f462dee413871aafaec57fad360c3e85cdd8ea, tree f20e2b27a26d53bccc56123aa40ae100f39b0e6d의 29개 screenshot을 비교했다. 320px에서는 YouTube 알림 한 채널만 완전히 표시해 HOME 검색·필터·하단 navigation을 가리지 않고, 닫기 뒤 Growth 알림이 동일 slot을 이어받는다. 390px와 desktop에서는 두 채널이 겹치지 않으며 각 CTA와 닫기 control의 hit ownership, YouTube→Growth 읽기 순서를 유지한다. 고정 한국어 toast와 panel/list 문구는 break-keep으로 '한도를', '사용했어요', '주세요' 같은 어절이 분리되지 않으며 긴 예외 token만 anywhere wrapping한다. YT_IMPORT의 initial/submitting CTA는 neutral fill·text·border와 pressed transform 제거로 enabled brand CTA와 즉시 구별된다. 기존 planner '저녁', consumed exact title/CTA, 320px 200% failure CTA, desktop drawer, UNAUTHORIZED focus handoff, 복원 heading focus와 탭 순환도 그대로 유지된다. 이 판정은 구현 task의 visual-verdict이며 독립 authority 승인을 대신하지 않는다.",
   "suggestions": [
     "실기기 safe-area와 가상 키보드 가림은 Manual Only 검증에서 다시 확인한다."
   ]
