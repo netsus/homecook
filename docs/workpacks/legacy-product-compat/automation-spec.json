@@ -39,6 +39,8 @@
     ],
     "verify_commands": [
       "pnpm exec vitest run tests/legacy-product-compat.test.ts tests/legacy-cooking-idempotency-rollout.test.ts tests/cooking-version-dispatch-compat.test.ts tests/compatibility-tombstone-gates.test.ts",
+      "pnpm verify:local-supabase-runtime:isolated",
+      "pnpm test:prepared-food-planner-entry:postgres",
       "pnpm verify:backend",
       "pnpm validate:real-smoke-presence -- --slice legacy-product-compat"
     ],
@@ -51,7 +53,11 @@
       "v1 key/no-key/replay/mismatch planner and standalone matrix",
       "seeded v2 read/cancel/complete and rollback fixture",
       "v1 cursor and telemetry outage matrix",
-      "isolated-local create/reset plus merged-exact read-only inventory"
+      "isolated-local create/reset runner scripts/run-isolated-local-supabase-runtime-gate.mjs",
+      "prepared-food owner fixture tests/prepared-food-planner-entry-postgres.integration.test.ts plus tests/fixtures/prepared-food-planner-entry-postgres-harness.ts",
+      "bootstrap lib/server/user-bootstrap.ts ensureUserBootstrapState plus bootstrap_legacy_auth_callback_identity owner match for meal_plan_columns",
+      "fixture absent blocks Stage 2",
+      "merged-exact read-only inventory"
     ]
   },
   "frontend": {
@@ -64,10 +70,7 @@
       "legacy-detail-delete-pending-delete-error-row-retained",
       "v1-optional-key-and-pre-gate-no-key-decode",
       "v1-missing-key-428-post-full-release-zero",
-      "current-and-immediate-previous-stored-version-dispatch",
-      "flag-off-existing-v2-drain-and-rollback",
-      "cross-version-existing-404-409",
-      "telemetry-unavailable-partial-stale-query-error-removal-fail-closed"
+      "current-and-immediate-previous-stored-version-dispatch"
     ],
     "verify_commands": [
       "pnpm exec vitest run tests/planner-shell-legacy-product.test.tsx tests/legacy-product-compat-client.test.tsx",
@@ -137,11 +140,12 @@
     "r2-activation-or-destructive-tombstone-performed-by-slice13",
     "compatibility-telemetry-leaks-secret-or-other-owner-private-payload",
     "isolated-local-mutation-boundary-or-merged-exact-read-only-boundary-violated",
+    "fixture-absent-blocks-stage-2",
     "current-head-check-pending-absent-stale-failed-or-cancelled"
   ],
   "max_fix_rounds": {
     "backend": 4,
     "frontend": 4
   },
-  "notes": "Stage 1 is docs/test-only with implementation and evaluation not_started, verification pending and auto_merge false. Primary tracked plan d4d0fb39e80eeffc8b1e73ad92f0d91a35a9b6adc57a556ea8c9ec6ecffa951d has 1,018 lines; 45f02013fbc1c3af1936d596605230d0cbac7839a783224aa9535844e4bda7dc with 1,056 lines is a historical local-first overlay only. Current operations authority is docs/engineering/supabase-local-only-operations.md. #10 and #12 runtime dependency fulfilled; broader Manual/server-Mac/OAuth, capability, R/R+1/R+2 and activation remain pending. #13 adds no API, field, status, error, action, screen or design authority and uses only the exact #10/#7/#11 final references."
+  "notes": "Stage 1 is docs/test-only with implementation and evaluation not_started, verification pending and auto_merge false. Primary tracked plan d4d0fb39e80eeffc8b1e73ad92f0d91a35a9b6adc57a556ea8c9ec6ecffa951d has 1,018 lines; 45f02013fbc1c3af1936d596605230d0cbac7839a783224aa9535844e4bda7dc with 1,056 lines is a historical local-first overlay only. Current operations authority is docs/engineering/supabase-local-only-operations.md. #10 and #12 runtime dependency fulfilled; broader Manual/server-Mac/OAuth, capability, R/R+1/R+2 and activation remain pending. #13 adds no API, field, status, error, action, screen or design authority and uses only the exact #10/#7/#11 final references. Stage 2 reuses the repository-owned isolated reset runner and prepared-food owner fixture baseline, requires meal_plan_columns owner match from the existing bootstrap flow, and treats the missing #13 exact fixture matrix as fixture absent blocks Stage 2."
 }

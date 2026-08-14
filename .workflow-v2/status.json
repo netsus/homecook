@@ -2690,7 +2690,7 @@
     {
       "id": "legacy-product-compat",
       "preset": "vertical-slice-strict",
-      "branch": "docs/legacy-product-compat-stage1-relock-author-20260815",
+      "branch": "docs/legacy-product-compat-stage1-relock-20260815",
       "pr_path": "pending",
       "lifecycle": "planned",
       "approval_state": "not_started",
@@ -2698,7 +2698,7 @@
       "required_checks": [
         "pnpm validate:source-of-truth-sync",
         "pnpm validate:workflow-v2",
-        "BRANCH_NAME=docs/legacy-product-compat-stage1-relock-author-20260815 pnpm validate:workpack -- --slice legacy-product-compat",
+        "BRANCH_NAME=docs/legacy-product-compat-stage1-relock-20260815 pnpm validate:workpack -- --slice legacy-product-compat",
         "node scripts/validate-automation-spec.mjs --slice legacy-product-compat",
         "pnpm validate:omo-bookkeeping",
         "pnpm exec vitest run tests/legacy-product-compat-stage1-relock.test.ts tests/workflow-v2-docs.test.ts tests/omo-automation-spec.test.ts tests/omo-bookkeeping.test.ts tests/omo-doc-gate.test.ts tests/source-of-truth-sync.test.ts",

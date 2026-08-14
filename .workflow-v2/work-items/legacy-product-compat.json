@@ -10,7 +10,7 @@
   "goal": "기존 planner/product/cooking 계약을 보존하고 호환 telemetry와 rollback evidence가 불완전하면 row endpoint parser cursor removal을 mutation/removal 0으로 막는다.",
   "owners": {
     "claude": "forbidden; do not invoke",
-    "codex": "fresh separate tasks for Stage 1 author, internal 1.5, security/compatibility, five-axis, Stage 2/3, Stage 4/5/6 and closeout; no self-approval",
+    "codex": "fresh separate tasks for Stage 1 author, independent design-impact review (predecessor task 01a00203-3c1d-78b3-ac78-fbb63b960c60 is historical evidence only), internal 1.5, security/compatibility, five-axis, Stage 2/3, Stage 4/5/6 and closeout; no self-approval",
     "workers": []
   },
   "dependencies": [
@@ -74,7 +74,7 @@
     "required_checks": [
       "pnpm validate:source-of-truth-sync",
       "pnpm validate:workflow-v2",
-      "BRANCH_NAME=docs/legacy-product-compat-stage1-relock-author-20260815 pnpm validate:workpack -- --slice legacy-product-compat",
+      "BRANCH_NAME=docs/legacy-product-compat-stage1-relock-20260815 pnpm validate:workpack -- --slice legacy-product-compat",
       "node scripts/validate-automation-spec.mjs --slice legacy-product-compat",
       "pnpm validate:omo-bookkeeping",
       "pnpm exec vitest run tests/legacy-product-compat-stage1-relock.test.ts tests/workflow-v2-docs.test.ts tests/omo-automation-spec.test.ts tests/omo-bookkeeping.test.ts tests/omo-doc-gate.test.ts tests/source-of-truth-sync.test.ts",
@@ -87,7 +87,7 @@
     "verify_commands": [
       "pnpm validate:source-of-truth-sync",
       "pnpm validate:workflow-v2",
-      "BRANCH_NAME=docs/legacy-product-compat-stage1-relock-author-20260815 pnpm validate:workpack -- --slice legacy-product-compat",
+      "BRANCH_NAME=docs/legacy-product-compat-stage1-relock-20260815 pnpm validate:workpack -- --slice legacy-product-compat",
       "node scripts/validate-automation-spec.mjs --slice legacy-product-compat",
       "pnpm validate:omo-bookkeeping",
       "pnpm exec vitest run tests/legacy-product-compat-stage1-relock.test.ts tests/workflow-v2-docs.test.ts tests/omo-automation-spec.test.ts tests/omo-bookkeeping.test.ts tests/omo-doc-gate.test.ts tests/source-of-truth-sync.test.ts",
@@ -100,7 +100,7 @@
     "stage1_current_commands": [
       "pnpm validate:source-of-truth-sync",
       "pnpm validate:workflow-v2",
-      "BRANCH_NAME=docs/legacy-product-compat-stage1-relock-author-20260815 pnpm validate:workpack -- --slice legacy-product-compat",
+      "BRANCH_NAME=docs/legacy-product-compat-stage1-relock-20260815 pnpm validate:workpack -- --slice legacy-product-compat",
       "node scripts/validate-automation-spec.mjs --slice legacy-product-compat",
       "pnpm validate:omo-bookkeeping",
       "pnpm exec vitest run tests/legacy-product-compat-stage1-relock.test.ts tests/workflow-v2-docs.test.ts tests/omo-automation-spec.test.ts tests/omo-bookkeeping.test.ts tests/omo-doc-gate.test.ts tests/source-of-truth-sync.test.ts",
@@ -112,6 +112,8 @@
     ],
     "stage2_future_commands": [
       "pnpm exec vitest run tests/legacy-product-compat.test.ts tests/legacy-cooking-idempotency-rollout.test.ts tests/cooking-version-dispatch-compat.test.ts tests/compatibility-tombstone-gates.test.ts",
+      "pnpm verify:local-supabase-runtime:isolated",
+      "pnpm test:prepared-food-planner-entry:postgres",
       "pnpm verify:backend",
       "pnpm validate:real-smoke-presence -- --slice legacy-product-compat"
     ],
@@ -131,6 +133,7 @@
       "destructive tombstone/removal requires new explicit user approval and merged official contract-evolution"
     ],
     "evaluator_commands": [
+      "fresh independent design-impact review of the successor exact Stage 1 projection; predecessor task 01a00203-3c1d-78b3-ac78-fbb63b960c60 APPROVE 0/0/0 is historical evidence only",
       "fresh separate Codex internal 1.5 review of the exact-six Stage 1 projection; author does not approve its own changes",
       "separate Codex security authorization and compatibility review",
       "separate Codex five-axis review",
@@ -150,6 +153,8 @@
       "authority-required-false-and-exact-slice10-slice7-slice11-final-references",
       "planned-not-started-pending-not-started-auto-merge-false",
       "stage1-current-stage2-future-stage4-future-manual-only-command-separation",
+      "independent-design-impact-review-current-gate-predecessor-01a00203-3c1d-78b3-ac78-fbb63b960c60-historical-only",
+      "repository-owned-isolated-reset-prepared-food-owner-fixture-bootstrap-meal-plan-columns-owner-match-and-fixture-absent-stage2-blocker",
       "no-new-api-field-status-error-action-screen-migration-or-direct-dml"
     ]
   },
@@ -173,5 +178,5 @@
     "New API field status error action screen migration RPC RLS or direct DML"
   ],
   "open_questions": [],
-  "notes": "Roadmap remains docs while canonical workflow lifecycle is planned. implementation/evaluation are not_started, approval is not_started, verification is pending and auto_merge_eligible is false. #10/#12 runtime dependency fulfilled, while broader Manual/server-Mac/OAuth, device/AT/full WCAG, capability, R/R+1/R+2, production and activation remain pending. Primary tracked plan d4d0fb39e80eeffc8b1e73ad92f0d91a35a9b6adc57a556ea8c9ec6ecffa951d has 1,018 lines; 45f02013fbc1c3af1936d596605230d0cbac7839a783224aa9535844e4bda7dc with 1,056 lines is a historical local-first overlay only. Current operations authority is docs/engineering/supabase-local-only-operations.md. Stage 1 current commands are docs/semantic validators, lint, typecheck, audit, branch and diff only; Stage 2/4 runtime, Manual and activation evidence are future. The author does not self-approve."
+  "notes": "Roadmap remains docs while canonical workflow lifecycle is planned. implementation/evaluation are not_started, approval is not_started, verification is pending and auto_merge_eligible is false. #10/#12 runtime dependency fulfilled, while broader Manual/server-Mac/OAuth, device/AT/full WCAG, capability, R/R+1/R+2, production and activation remain pending. Primary tracked plan d4d0fb39e80eeffc8b1e73ad92f0d91a35a9b6adc57a556ea8c9ec6ecffa951d has 1,018 lines; 45f02013fbc1c3af1936d596605230d0cbac7839a783224aa9535844e4bda7dc with 1,056 lines is a historical local-first overlay only. Current operations authority is docs/engineering/supabase-local-only-operations.md. Stage 1 current commands are docs/semantic validators, lint, typecheck, audit, branch and diff only; Stage 2 uses the repository-owned isolated reset and prepared-food owner fixture baselines, requires meal_plan_columns owner match from the existing bootstrap flow, and stops when the #13 exact fixture matrix is absent. Stage 4 owns only client/user states, optional key, 428 handling, stored-version dispatch and delete recovery. Manual and activation evidence are future. The author does not self-approve."
 }

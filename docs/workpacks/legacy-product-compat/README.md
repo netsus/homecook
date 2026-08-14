@@ -6,7 +6,8 @@
 
 ## Branches
 
-- Stage 1 relock author: `docs/legacy-product-compat-stage1-relock-author-20260815`
+- tracked/current Stage 1 relock: official remote branch `docs/legacy-product-compat-stage1-relock-20260815`
+- predecessor author branch/SHA는 historical review evidence일 뿐 active projection으로 사용하지 않는다.
 - Stage 2 backend: 별도 fresh Codex task/branch에서 시작
 - Stage 4 frontend: 별도 fresh Codex task/branch에서 시작
 
@@ -119,12 +120,12 @@
 
 ## Design Status
 
-- [ ] 임시 UI (temporary)
+- [x] 임시 UI (temporary)
 - [ ] 리뷰 대기 (pending-review)
-- [x] 확정 (confirmed) — #10/#7/#11의 기존 final authority를 회귀 기준으로 소비
+- [ ] 확정 (confirmed)
 - [ ] N/A — BE-only
 
-이 `confirmed`는 predecessor design evidence의 상태다. #13 runtime, Stage 5/6, Manual, Ready, merge, production 또는 activation을 승인하지 않는다.
+#10/#7/#11의 세 final authority reference는 predecessor evidence로만 유지한다. `authority_required=false`는 새 visual composition이 없는 #13 범위에 그대로 적용하지만, Stage 1의 현재 Design Status는 `temporary`이며 #13 runtime, Stage 5/6, Manual, Ready, merge, production 또는 activation을 승인하지 않는다.
 
 ## Source Links
 
@@ -146,7 +147,11 @@
 - current and immediate-previous clients fixture: 동일 stored `contract_version`을 명시적으로 dispatch하고 body-shape fallback을 금지한다.
 - seeded v2 read/cancel/complete and rollback fixture: creation flag-off에서도 existing attempt drain을 보존하고 rollback이 신규 write만 닫는지 검증한다.
 - v1 cursor와 telemetry outage fixture: in-flight v1 page와 unavailable/partial/stale/query-error를 각각 재현한다.
-- mutation-capable fixture는 pinned isolated stack의 isolated-local create/reset에서만 생성/초기화한다.
+- pinned isolated Supabase reset baseline은 `pnpm verify:local-supabase-runtime:isolated`가 소유하며 실제 runner는 `scripts/run-isolated-local-supabase-runtime-gate.mjs`다. 이 runner가 임시 project에서 전체 migration과 `supabase/seed.sql`을 `db reset --local --yes`로 적용하고 종료 시 owned resource를 정리한다.
+- 기존 owner A/B product planner fixture baseline은 `pnpm test:prepared-food-planner-entry:postgres`와 `tests/prepared-food-planner-entry-postgres.integration.test.ts`, `tests/fixtures/prepared-food-planner-entry-postgres-harness.ts`다. #13 Stage 2는 이를 재사용하되 v1 key/cursor/telemetry matrix를 이 fixture가 이미 제공한다고 간주하지 않는다.
+- bootstrap owning flow는 authenticated request의 `lib/server/user-bootstrap.ts` `ensureUserBootstrapState`와 full-local OAuth callback의 `bootstrap_legacy_auth_callback_identity` (`supabase/migrations/20260730140000_hybrid_internal_operations_facades.sql`)다. owner A/B 각각 `meal_plan_columns` 기본 3개가 자기 `user_id`로 준비되고 product planner column의 `user_id`가 요청 owner와 owner match인지 검증한다.
+- mutation-capable fixture는 위 pinned isolated stack의 isolated-local create/reset에서만 생성/초기화한다. 운영 full-local target에서 `pnpm local:reset:demo`를 실행하지 않는다.
+- Stage 2 전용 4개 test target 또는 owner A/B·key/no-key/replay/mismatch·seeded-v2·cursor·telemetry fixture가 없으면 `fixture absent blocks Stage 2`로 판정한다. 일반 demo seed나 predecessor fixture green으로 대체하지 않는다.
 - merged-exact read-only inventory는 controlled full-local target에서 row/endpoint/caller/cursor/telemetry 존재만 읽고 mutation/reset을 수행하지 않는다.
 - remote Supabase/Vercel/production/server-Mac/OAuth/capability/activation write는 이 workpack의 자동화 대상이 아니다.
 
@@ -169,11 +174,13 @@
 
 - 현재 author task는 exact-six docs와 semantic relock test, SOT/workflow/workpack/automation/OMO validators, lint, typecheck, high audit, diff/branch/commit policy만 검증한다.
 - implementation, component/integration/E2E/browser, telemetry observation, isolated-local mutation, merged-exact inventory, Manual/device/server evidence는 아직 실행하지 않는다.
+- independent design-impact review는 current Stage 1 gate다. predecessor task `01a00203-3c1d-78b3-ac78-fbb63b960c60`의 APPROVE 0/0/0은 historical evidence이며 successor exact commit은 fresh independent re-review가 필요하다.
 - fresh independent internal 1.5와 이후 security/compatibility, five-axis, Stage 3/5/6 review는 별도 task가 소유한다. 이 author task는 자기 변경을 승인하지 않는다.
 
 ## Delivery Checklist
 
-- [x] Stage 1 exact-six docs and semantic relock test authored <!-- omo:id=delivery-legacy-compat-stage1-docs;stage=2;scope=shared;review=3,6 -->
+Stage 1 exact-six docs and semantic relock test authored 사실은 이 문단과 Stage 1 evidence에만 남긴다. Stage 2/4 runtime checklist metadata로 투영하지 않는다.
+
 - [ ] Stage 2 v1 cursor compatibility barrier implemented and tested <!-- omo:id=delivery-legacy-compat-stage2-cursor;stage=2;scope=backend;review=3,6 -->
 - [ ] Stage 2 planner/standalone idempotency phases and mutation-zero cases implemented and tested <!-- omo:id=delivery-legacy-compat-stage2-idempotency;stage=2;scope=backend;review=3,6 -->
 - [ ] Stage 2 telemetry freshness and fail-closed tombstone/removal barrier implemented and tested <!-- omo:id=delivery-legacy-compat-stage2-telemetry-barrier;stage=2;scope=backend;review=3,6 -->

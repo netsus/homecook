@@ -9,8 +9,12 @@ import { evaluateDocGate } from "../scripts/lib/omo-doc-gate.mjs";
 
 const root = process.cwd();
 const sliceId = "legacy-product-compat";
-const authorBranch =
+const trackedBranch =
+  "docs/legacy-product-compat-stage1-relock-20260815";
+const predecessorAuthorBranch =
   "docs/legacy-product-compat-stage1-relock-author-20260815";
+const designImpactReviewTask =
+  "01a00203-3c1d-78b3-ac78-fbb63b960c60";
 const approvedPlanPath =
   "docs/workpacks/planner-shell/evidence/cooking-meal-log-and-product-search-master-plan-20260722.md";
 const approvedPlanSha =
@@ -33,6 +37,13 @@ function read(relativePath: string) {
 
 function readJson(relativePath: string) {
   return JSON.parse(read(relativePath));
+}
+
+function readSection(markdown: string, heading: string) {
+  const start = markdown.indexOf(heading);
+  if (start < 0) return "";
+  const next = markdown.indexOf("\n## ", start + heading.length);
+  return markdown.slice(start, next < 0 ? undefined : next);
 }
 
 describe("legacy-product-compat fresh Stage 1 exact-six relock", () => {
@@ -128,10 +139,21 @@ describe("legacy-product-compat fresh Stage 1 exact-six relock", () => {
     };
     expect(workItem.status).toEqual(honestStatus);
     expect(status).toMatchObject({
-      branch: authorBranch,
+      branch: trackedBranch,
       pr_path: "pending",
       ...honestStatus,
     });
+
+    const activeBranchProjection = [
+      readme,
+      JSON.stringify(workItem),
+      JSON.stringify(status),
+    ].join("\n");
+    expect(activeBranchProjection).toContain(trackedBranch);
+    expect(activeBranchProjection).not.toContain(predecessorAuthorBranch);
+    for (const command of workItem.verification.stage1_current_commands) {
+      expect(command).not.toContain(predecessorAuthorBranch);
+    }
   });
 
   it("P1-3 passes the Stage 1 doc gate and locks the required user-facing states", () => {
@@ -250,6 +272,23 @@ describe("legacy-product-compat fresh Stage 1 exact-six relock", () => {
     expect(workItem.verification.stage4_future_commands).toEqual(
       automation.frontend.verify_commands,
     );
+
+    for (const required of [
+      "pnpm verify:local-supabase-runtime:isolated",
+      "scripts/run-isolated-local-supabase-runtime-gate.mjs",
+      "pnpm test:prepared-food-planner-entry:postgres",
+      "tests/fixtures/prepared-food-planner-entry-postgres-harness.ts",
+      "tests/prepared-food-planner-entry-postgres.integration.test.ts",
+      "lib/server/user-bootstrap.ts",
+      "ensureUserBootstrapState",
+      "bootstrap_legacy_auth_callback_identity",
+      "supabase/migrations/20260730140000_hybrid_internal_operations_facades.sql",
+      "meal_plan_columns",
+      "owner match",
+      "fixture absent blocks Stage 2",
+    ]) {
+      expect(fixtures).toContain(required);
+    }
   });
 
   it("P1-6 splits Stage 2 server and Stage 4 client ownership with unique OMO ids", () => {
@@ -291,6 +330,18 @@ describe("legacy-product-compat fresh Stage 1 exact-six relock", () => {
         }),
       ]),
     );
+    const forbiddenNonRuntimeMetadata =
+      /Stage 1|stage1|exact-six|semantic relock|docs authored|internal ?1\.5|review bookkeeping|evaluator handoff|design-impact review|five-axis review|security review/iu;
+    for (const item of checklist.items.filter(
+      (candidate) => Number(candidate.metadata?.stage) === 2
+        || Number(candidate.metadata?.stage) === 4,
+    )) {
+      expect(item.text).not.toMatch(forbiddenNonRuntimeMetadata);
+    }
+    const checklistIds = checklist.items.map((item) =>
+      String(item.metadata?.id ?? "")
+    );
+    expect(checklistIds).not.toContain("delivery-legacy-compat-stage1-docs");
   });
 
   it("P1-7 fails closed on incomplete telemetry and reuses the exact final authority refs", () => {
@@ -322,5 +373,41 @@ describe("legacy-product-compat fresh Stage 1 exact-six relock", () => {
       expect.arrayContaining(authorityRefs),
     );
     expect(projection).not.toContain("ui/designs/authority/COOK_MODE-authority.md");
+
+    expect(automation.frontend.required_states).toEqual([
+      "loading-empty-error-read-only-unauthorized",
+      "legacy-detail-delete-pending-delete-error-row-retained",
+      "v1-optional-key-and-pre-gate-no-key-decode",
+      "v1-missing-key-428-post-full-release-zero",
+      "current-and-immediate-previous-stored-version-dispatch",
+    ]);
+    expect(automation.frontend.required_states.join("\n")).not.toMatch(
+      /telemetry|tombstone|removal|fail-closed/iu,
+    );
+  });
+
+  it("keeps Stage 1 design status temporary while retaining predecessor authorities", () => {
+    const designStatus = readSection(readme, "## Design Status");
+    expect(designStatus).toContain("- [x] 임시 UI (temporary)");
+    expect(designStatus).toContain("- [ ] 확정 (confirmed)");
+    expect(designStatus).toContain("predecessor evidence");
+    expect(automation.frontend.design_authority.authority_required).toBe(false);
+    expect(automation.frontend.design_authority.authority_report_paths).toEqual(
+      authorityRefs,
+    );
+  });
+
+  it("requires an independent design-impact review in every active Stage 1 gate projection", () => {
+    const currentGate = readSection(readme, "## Stage 1 Current Gate");
+    expect(currentGate).toContain("independent design-impact review");
+    expect(currentGate).toContain(designImpactReviewTask);
+    expect(workItem.owners.codex).toContain("independent design-impact review");
+    expect(workItem.owners.codex).toContain(designImpactReviewTask);
+    expect(workItem.verification.evaluator_commands).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining("independent design-impact review"),
+        expect.stringContaining(designImpactReviewTask),
+      ]),
+    );
   });
 });

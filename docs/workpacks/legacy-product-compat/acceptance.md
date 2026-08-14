@@ -39,12 +39,19 @@
 
 ## Data Setup / Preconditions
 
+- exact isolated-local reset baseline: `pnpm verify:local-supabase-runtime:isolated` → `scripts/run-isolated-local-supabase-runtime-gate.mjs`가 임시 Supabase project에 migration + `supabase/seed.sql`을 적용하고 owned resource를 정리한다.
+- existing owner fixture baseline: `pnpm test:prepared-food-planner-entry:postgres` → `tests/prepared-food-planner-entry-postgres.integration.test.ts` + `tests/fixtures/prepared-food-planner-entry-postgres-harness.ts`를 사용한다.
+- bootstrap owning flow: authenticated route의 `lib/server/user-bootstrap.ts` `ensureUserBootstrapState`와 full-local OAuth callback RPC `bootstrap_legacy_auth_callback_identity` (`supabase/migrations/20260730140000_hybrid_internal_operations_facades.sql`)가 owner별 `meal_plan_columns` 기본 3개를 만든다.
+- owner readiness: owner A/B의 `public.users`와 `meal_plan_columns.user_id`가 각 auth owner와 일치하고, product planner entry가 참조하는 column도 request owner와 owner match여야 한다. other-owner column은 기존 403/nondisclosure 계약을 유지한다.
+- #13 전용 Stage 2 test target 4개와 exact compatibility matrix fixture 중 하나라도 없으면 `fixture absent blocks Stage 2`다. 기존 prepared-food fixture는 bootstrap/owner baseline이지 v1 key/cursor/telemetry 완료 evidence가 아니다.
+- `pnpm local:reset:demo`는 운영 full-local target에서 금지한다. mutation fixture는 위 pinned isolated-local runner 또는 같은 소유권·cleanup을 증명한 후속 #13 isolated harness에서만 만든다.
+
 - [ ] owner A legacy row + pinned old version과 owner B legacy row + pinned old version fixture가 분리된다 <!-- omo:id=accept-legacy-compat-owner-fixtures;stage=2;scope=shared;review=3,6 -->
 - [ ] v1 key/no-key/replay/mismatch fixture가 planner and standalone을 모두 포함한다 <!-- omo:id=accept-legacy-compat-key-fixtures;stage=2;scope=backend;review=3,6 -->
 - [ ] current and immediate-previous clients fixture가 동일 stored version을 명시적으로 dispatch한다 <!-- omo:id=accept-legacy-compat-client-fixtures;stage=4;scope=frontend;review=5,6 -->
 - [ ] seeded v2 read/cancel/complete and rollback fixture가 신규 write 0과 existing drain을 구분한다 <!-- omo:id=accept-legacy-compat-v2-fixtures;stage=2;scope=shared;review=3,6 -->
 - [ ] v1 cursor와 telemetry outage fixture가 unavailable/partial/stale/query-error를 각각 재현한다 <!-- omo:id=accept-legacy-compat-telemetry-fixtures;stage=2;scope=backend;review=3,6 -->
-- [ ] mutation fixture는 isolated-local create/reset에서만 만들고 controlled full-local은 merged-exact read-only inventory로 제한한다 <!-- omo:id=accept-legacy-compat-local-only-fixtures;stage=2;scope=shared;review=3,6 -->
+- [ ] mutation fixture는 `pnpm verify:local-supabase-runtime:isolated` 소유의 isolated-local create/reset에서만 만들고 controlled full-local은 merged-exact read-only inventory로 제한한다 <!-- omo:id=accept-legacy-compat-local-only-fixtures;stage=2;scope=shared;review=3,6 -->
 - [ ] #10 PR #1331 merge `2185b59d1b460dac916aa4a4a4a5e061c8b795f0`와 #12 PR #1361 merge `4264fe6bd5b3429029ba895a6b79cd32a5d3fa35`의 runtime dependency fulfilled 상태를 입력으로 사용한다 <!-- omo:id=accept-legacy-compat-runtime-predecessors;stage=2;scope=shared;review=3,6 -->
 
 ## Manual QA
