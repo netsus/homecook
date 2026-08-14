@@ -17,9 +17,9 @@ import { SocialLoginButtons } from "@/components/auth/social-login-buttons";
 import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-tab";
 import { LegacyProductPlanSection } from "@/components/planner/legacy-product-plan-section";
 import {
-  MealLogUnavailableState,
   PlannerSegmentTabs,
 } from "@/components/planner/planner-shell-segments";
+import { MealLogScreen } from "@/components/planner/meal-log-screen";
 import { ContentState } from "@/components/shared/content-state";
 import { ProfileSummaryButton } from "@/components/shared/profile-summary-button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -290,7 +290,9 @@ export function PlannerWeekScreen({
     () => buildDateKeys(rangeStartDate, rangeEndDate),
     [rangeEndDate, rangeStartDate],
   );
-  const selectedDate = dateKeys.includes(selectedDateKey)
+  const selectedDate = activeSegment === "log"
+    ? selectedDateKey
+    : dateKeys.includes(selectedDateKey)
     ? selectedDateKey
     : dateKeys[0] ?? selectedDateKey;
   const overviewDates = useMemo(
@@ -641,7 +643,7 @@ export function PlannerWeekScreen({
       </div>
 
       {activeSegment === "log" ? (
-        <MealLogUnavailableState />
+        <MealLogScreen date={selectedDate} onDateChange={handleDateSelect} />
       ) : (
         <div
           aria-labelledby="planner-plan-tab"
