@@ -145,6 +145,9 @@ describe("YouTube async extraction Stage 1 contract", () => {
   });
 
   it("records the final frozen plan provenance without rewriting the plan artifact", () => {
+    const serializedWorkItem = JSON.stringify(workItem);
+    const exactTuple = "official tuple requirements 1.7.32 screen 1.5.36 Flow 1.3.34 DB 1.3.34 API 1.2.39";
+
     expect(readme).toContain(
       "/Users/cwj/01_vibe_coding/homecook/.omx/plans/youtube-background-extraction-notification-plan-20260808.md",
     );
@@ -157,6 +160,22 @@ describe("YouTube async extraction Stage 1 contract", () => {
       "b560b60ff758171e1d52ad56b2a63a2e1877cd762d1f691c9cea32c753f8d332",
     );
     expect(readme).not.toContain("873 lines");
+
+    expect(workItem.dependencies).toContain(exactTuple);
+    expect(serializedWorkItem).toContain(
+      "7906f9ec975f309c310b2275714873cebb78e109770f885f09878e5c6bbed57a",
+    );
+    expect(serializedWorkItem).toContain("991");
+    expect(serializedWorkItem).toContain("019ffb44-5614-7af3-86a9-4ebd50977123");
+    expect(serializedWorkItem).toContain("approved-plan-sha256-and-991-line-lock");
+    expect(serializedWorkItem).not.toContain("1.7.31");
+    expect(serializedWorkItem).not.toContain("1.5.35");
+    expect(serializedWorkItem).not.toContain("1.3.33");
+    expect(serializedWorkItem).not.toContain("1.2.38");
+    expect(serializedWorkItem).not.toContain(
+      "b560b60ff758171e1d52ad56b2a63a2e1877cd762d1f691c9cea32c753f8d332",
+    );
+    expect(serializedWorkItem).not.toContain("873 lines");
   });
 
   it("rebaselines the backend evidence to the merged local-only repair contract", () => {

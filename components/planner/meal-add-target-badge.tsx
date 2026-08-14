@@ -9,6 +9,13 @@ export interface MealAddTargetBadgeProps {
   testId?: string;
 }
 
+const PLANNER_SLOT_DISPLAY_NAMES: Readonly<Record<string, string>> = {
+  breakfast: "아침",
+  dinner: "저녁",
+  lunch: "점심",
+  snack: "간식",
+};
+
 /** `YYYY-MM-DD` + slot -> meal-add target label used across planner entry surfaces. */
 export function formatMealAddTargetLabel(planDate: string, slotName: string) {
   if (!planDate && !slotName) return "플래너";
@@ -16,7 +23,8 @@ export function formatMealAddTargetLabel(planDate: string, slotName: string) {
   const [, m, d] = planDate.split("-").map(Number);
   const dateLabel = Number.isFinite(m) && Number.isFinite(d) ? `${m}/${d}` : "날짜 미지정";
 
-  return slotName ? `${dateLabel} ${slotName}` : dateLabel;
+  const slotLabel = PLANNER_SLOT_DISPLAY_NAMES[slotName] ?? slotName;
+  return slotLabel ? `${dateLabel} ${slotLabel}` : dateLabel;
 }
 
 /**

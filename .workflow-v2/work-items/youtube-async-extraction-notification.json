@@ -16,8 +16,8 @@
   "dependencies": [
     "33-youtube-i031-direct-extraction merged",
     "official contract PR #1343 merged at 25e10a7805f5bf171d4c1fbd94a573560b715786",
-    "official tuple requirements 1.7.31 screen 1.5.35 Flow 1.3.33 DB 1.3.33 API 1.2.38",
-    "approved plan task 019ff4f7-806c-7151-b646-cab784606cde SHA-256 b560b60ff758171e1d52ad56b2a63a2e1877cd762d1f691c9cea32c753f8d332",
+    "official tuple requirements 1.7.32 screen 1.5.36 Flow 1.3.34 DB 1.3.34 API 1.2.39",
+    "approved plan task 019ffb44-5614-7af3-86a9-4ebd50977123 SHA-256 7906f9ec975f309c310b2275714873cebb78e109770f885f09878e5c6bbed57a, 991 lines",
     "contract reviewer PASS task 019ff598-233b-72c1-92f5-4372596ede7a",
     "this Stage 1 docs workpack independently approved and merged before Stage 2"
   ],
@@ -48,7 +48,7 @@
       "docs/design/anchor-screens.md",
       "ui/designs/YT_IMPORT_BACKGROUND.md",
       "ui/designs/APP_SHELL_YOUTUBE_NOTIFICATIONS.md",
-      "/Users/cwj/01_vibe_coding/homecook/.omx/plans/youtube-background-extraction-notification-plan-20260808.md#sha256-b560b60ff758171e1d52ad56b2a63a2e1877cd762d1f691c9cea32c753f8d332"
+      "/Users/cwj/01_vibe_coding/homecook/.omx/plans/youtube-background-extraction-notification-plan-20260808.md#sha256-7906f9ec975f309c310b2275714873cebb78e109770f885f09878e5c6bbed57a-lines-991"
     ]
   },
   "workflow": {
@@ -131,7 +131,7 @@
     ],
     "artifact_assertions": [
       "official-contract-pr-and-five-document-tuple-locked",
-      "approved-plan-sha256-and-873-line-lock",
+      "approved-plan-sha256-and-991-line-lock",
       "exact-stage-ownership-and-no-self-approval",
       "stage2-db-api-worker-tdd-before-implementation",
       "exact-public-api-db-worker-security-and-quick-import-compatibility",

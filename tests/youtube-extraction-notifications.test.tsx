@@ -210,6 +210,29 @@ describe("YouTube extraction notification center", () => {
     );
   });
 
+  it("hands panel focus to the login notice when an open list becomes unauthorized", async () => {
+    vi.mocked(api.fetchYoutubeExtractionNotifications)
+      .mockResolvedValueOnce({
+        success: true,
+        data: { items: [successItem], next_cursor: null },
+        error: null,
+      })
+      .mockResolvedValueOnce({
+        success: false,
+        data: null,
+        error: { code: "UNAUTHORIZED", message: "로그인이 필요해요.", fields: [] },
+      });
+    const user = userEvent.setup();
+    renderCenter();
+
+    await user.click(await screen.findByRole("button", { name: "YouTube 추출 알림 1개" }));
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "알림 닫기" }));
+    await user.click(screen.getByRole("tab", { name: "지난 알림" }));
+
+    const heading = await screen.findByRole("heading", { name: "로그인이 필요해요" });
+    expect(document.activeElement).toBe(heading);
+  });
+
   it("marks only the exact owner-scoped job seen after the browser observes registration success", async () => {
     const unrelatedItem = {
       ...successItem,

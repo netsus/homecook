@@ -237,6 +237,8 @@ export function YoutubeExtractionNotificationCenter({
   const registrationAckRetryRef = useRef(new Set<string>());
   const unseenTabRef = useRef<HTMLButtonElement>(null);
   const archiveTabRef = useRef<HTMLButtonElement>(null);
+  const authNoticeHeadingRef = useRef<HTMLHeadingElement>(null);
+  const handoffPanelFocusToAuthNoticeRef = useRef(false);
   const displayedItems = view === "archive" ? archiveItems : items;
   const displayedNextCursor = view === "archive" ? archiveNextCursor : unseenNextCursor;
 
@@ -299,6 +301,9 @@ export function YoutubeExtractionNotificationCenter({
     if (!options.background) setLoading(false);
     if (!result.success || !result.data) {
       if (result.error?.code === "UNAUTHORIZED") {
+        handoffPanelFocusToAuthNoticeRef.current = Boolean(
+          dialogRef.current?.contains(document.activeElement),
+        );
         setAuthExpired(true);
         setAuthenticatedLocal(false);
         setItems([]);
@@ -458,6 +463,12 @@ export function YoutubeExtractionNotificationCenter({
     );
     (previousTrigger?.isConnected ? previousTrigger : fallbackTrigger)?.focus();
   }, [open]);
+
+  useEffect(() => {
+    if (!authExpired || !handoffPanelFocusToAuthNoticeRef.current) return;
+    handoffPanelFocusToAuthNoticeRef.current = false;
+    authNoticeHeadingRef.current?.focus();
+  }, [authExpired]);
 
   useEffect(() => {
     const queueRegisteredSessionAck = (event: Event) => {
@@ -697,7 +708,7 @@ export function YoutubeExtractionNotificationCenter({
       <aside aria-label="로그인 안내" aria-live="polite" className="fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+84px)] z-50 mx-auto max-w-sm rounded-[var(--radius-card)] border border-[var(--wave1-border)] bg-[var(--surface)] p-4 shadow-[var(--shadow-floating)] sm:bottom-5 sm:left-auto sm:right-5 sm:mx-0 sm:w-[360px]">
         <div className="flex items-start gap-3">
           <div className="min-w-0 flex-1">
-            <p className="font-bold text-[var(--foreground)]">로그인이 필요해요</p>
+            <h2 className="font-bold text-[var(--foreground)]" ref={authNoticeHeadingRef} tabIndex={-1}>로그인이 필요해요</h2>
             <p className="mt-1 text-sm text-[var(--muted)]">로그인하면 추출 작업을 이어서 확인할 수 있어요.</p>
           </div>
           <button aria-label="로그인 안내 닫기" className="-m-2 inline-flex min-h-11 min-w-11 items-center justify-center rounded-full text-lg text-[var(--muted)]" onClick={() => setAuthExpired(false)} type="button">×</button>

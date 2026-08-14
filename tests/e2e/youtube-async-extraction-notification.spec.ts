@@ -525,7 +525,7 @@ test("polling success preserves planner context into review and its meal CTA", a
   await expect(page).toHaveURL(new RegExp(
     `extractionId=${EXTRACTION_ID}.*date=2026-08-21.*columnId=dinner-column.*slot=dinner`,
   ));
-  await expect(page.getByLabel("식사 추가 대상 8/21 dinner")).toBeVisible();
+  await expect(page.getByLabel("식사 추가 대상 8/21 저녁")).toBeVisible();
   await page.getByRole("button", { name: "등록" }).click();
   await expect(page.getByRole("heading", { name: "레시피가 등록됐어요" })).toBeVisible();
   await expect(page.getByRole("button", { name: "이 끼니에 추가" })).toBeVisible();
@@ -667,6 +667,51 @@ test("notification tabs wrap in both directions and support Home and End", async
   await expect(archiveTab).toBeFocused();
   await page.keyboard.press("Home");
   await expect(unseenTab).toBeFocused();
+});
+
+test("an open notification panel hands focus to unauthorized guidance", async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await setE2EAuthOverride(page);
+  await installDiscoveryRoutes(page);
+  const item = notificationItem({ status: "succeeded", title: "감자 수프" });
+  await page.route("**/api/v1/users/me/youtube-extraction-jobs**", async (route) => {
+    const url = new URL(route.request().url());
+    if (url.pathname.endsWith("/delivered") || url.pathname.endsWith("/seen")) {
+      await route.fulfill({
+        json: { success: true, data: { delivered_count: 1, seen_count: 1 }, error: null },
+      });
+      return;
+    }
+    if (url.searchParams.get("view") === "archive") {
+      await route.fulfill({
+        status: 401,
+        json: {
+          success: false,
+          data: null,
+          error: { code: "UNAUTHORIZED", message: "로그인이 필요해요.", fields: [] },
+        },
+      });
+      return;
+    }
+    await route.fulfill({
+      json: { success: true, data: { items: [item], next_cursor: null }, error: null },
+    });
+  });
+
+  await page.goto("/");
+  await page.getByRole("button", { name: "YouTube 추출 알림 1개" }).click();
+  await expect(page.getByRole("button", { name: "알림 닫기" })).toBeFocused();
+  await page.getByRole("tab", { name: "지난 알림" }).click();
+
+  const guidanceHeading = page.getByRole("heading", { name: "로그인이 필요해요" });
+  await expect(guidanceHeading).toBeVisible();
+  await expect(guidanceHeading).toBeFocused();
+  await expect(page.getByRole("link", { name: "로그인하고 돌아오기" })).toBeVisible();
+  await captureEvidence(
+    page,
+    testInfo,
+    path.join(SHELL_EVIDENCE, "mobile-390-unauthorized-focus-handoff.png"),
+  );
 });
 
 test("archive stays visible while online recovery discovers new unseen work", async ({ page }, testInfo) => {
