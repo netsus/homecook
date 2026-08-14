@@ -28,11 +28,46 @@ describe("MEAL_LOG entry mutations", () => {
     expect(within(dialog).getByText("기존 위치: 삭제된 끼니 간식")).toBeTruthy();
     const selector = within(dialog).getByRole("combobox", { name: "옮길 끼니 (필수)" });
     expect((selector as HTMLSelectElement).value).toBe("");
+    await waitFor(() => expect(document.activeElement).toBe(selector));
     expect((within(dialog).getByRole("button", { name: "수정 저장" }) as HTMLButtonElement).disabled)
       .toBe(true);
     await user.selectOptions(selector, "20000000-0000-4000-8000-000000000002");
     expect((within(dialog).getByRole("button", { name: "수정 저장" }) as HTMLButtonElement).disabled)
       .toBe(false);
+  });
+
+  it("restores the invoking edit action after cancel and moves successful deleted edits to the destination section", async () => {
+    const user = userEvent.setup();
+    renderMealLogShell();
+    const invoker = await screen.findByRole("button", { name: /간식의 플레인 요거트 식사 기록 수정/u });
+
+    await user.click(invoker);
+    await user.click(within(screen.getByRole("dialog", { name: "식사 기록 수정" }))
+      .getByRole("button", { name: "취소" }));
+    await waitFor(() => expect(document.activeElement).toBe(invoker));
+
+    await user.click(invoker);
+    const dialog = screen.getByRole("dialog", { name: "식사 기록 수정" });
+    await user.selectOptions(
+      within(dialog).getByRole("combobox", { name: "옮길 끼니 (필수)" }),
+      "20000000-0000-4000-8000-000000000002",
+    );
+    await user.click(within(dialog).getByRole("button", { name: "수정 저장" }));
+
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "식사 기록 수정" })).toBeNull());
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByRole("heading", { name: "점심" })));
+  });
+
+  it("moves focus to the origin section after a successful delete", async () => {
+    const user = userEvent.setup();
+    renderMealLogShell();
+
+    await user.click(await screen.findByRole("button", { name: /아침의 달걀 식사 기록 삭제/u }));
+    await user.click(within(screen.getByRole("alertdialog", { name: "식사 기록 삭제 확인" }))
+      .getByRole("button", { name: "삭제" }));
+
+    await waitFor(() => expect(screen.queryByRole("alertdialog", { name: "식사 기록 삭제 확인" })).toBeNull());
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByRole("heading", { name: "아침" })));
   });
 
   it("keeps the edit dialog open while a mutation is pending", async () => {

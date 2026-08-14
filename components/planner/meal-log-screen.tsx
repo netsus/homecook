@@ -54,6 +54,10 @@ function longDate(date: string) {
   return `${Number(date.slice(5, 7))}월 ${Number(date.slice(8, 10))}일 ${WEEKDAYS[value.getUTCDay()]}요일`;
 }
 
+function deletedSectionHeadingId(slotName: string) {
+  return `meal-log-deleted-${slotName.replaceAll(" ", "-")}`;
+}
+
 function number(value: number | null, unit: string) {
   return value === null ? "정보 준비 중" : `${new Intl.NumberFormat("ko-KR", { maximumFractionDigits: 1 }).format(value)}${unit}`;
 }
@@ -137,7 +141,7 @@ function ActiveSection({ section, onAdd, onDelete, onEdit }: {
   return (
     <section aria-labelledby={`meal-log-section-${section.meal_plan_column_id}`} className="min-w-0 rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)] p-4">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 className="font-extrabold" id={`meal-log-section-${section.meal_plan_column_id}`}>{section.slot_name_snapshot}</h2>
+        <h2 className="font-extrabold" id={`meal-log-section-${section.meal_plan_column_id}`} tabIndex={-1}>{section.slot_name_snapshot}</h2>
         {section.entries.length > 0 ? <p className="text-sm font-bold">{number(section.subtotal.calories_kcal, " kcal")}</p> : null}
       </div>
       {section.incomplete_count > 0 ? <p className="mt-1 text-xs font-bold">일부 정보 없음 {section.incomplete_count}건</p> : null}
@@ -161,11 +165,11 @@ function DeletedSection({ section, onDelete, onEdit }: {
   onDelete: (entry: MealLogEntry) => void;
   onEdit: (entry: MealLogEntry) => void;
 }) {
-  const headingId = `meal-log-deleted-${section.slot_name_snapshot.replaceAll(" ", "-")}`;
+  const headingId = deletedSectionHeadingId(section.slot_name_snapshot);
   return (
     <section aria-labelledby={headingId} className="rounded-[var(--radius-card)] border border-dashed border-[var(--line-strong)] bg-[var(--surface)] p-4">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 className="font-extrabold" id={headingId}>삭제된 끼니의 기록 · {section.slot_name_snapshot}</h2>
+        <h2 className="font-extrabold" id={headingId} tabIndex={-1}>삭제된 끼니의 기록 · {section.slot_name_snapshot}</h2>
         <p className="text-sm font-bold">{number(section.subtotal.calories_kcal, " kcal")}</p>
       </div>
       <p className="mt-1 text-xs text-[var(--text-2)]">새 음식 추가 없음</p>
@@ -191,7 +195,8 @@ function EntryDialog({
   onComplete: () => Promise<void>;
 }) {
   const panelRef = useRef<HTMLDivElement | null>(null);
-  const initialRef = useRef<HTMLButtonElement | null>(null);
+  const cancelRef = useRef<HTMLButtonElement | null>(null);
+  const selectorRef = useRef<HTMLSelectElement | null>(null);
   const errorRef = useRef<HTMLParagraphElement | null>(null);
   const entry = state.entry;
   const deletedOrigin = entry.meal_plan_column_id === null;
@@ -201,11 +206,11 @@ function EntryDialog({
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const operation = useRef<{ fingerprint: string; key: string } | null>(null);
-  useDialogBoundary({
+  const { setReturnFocusTarget } = useDialogBoundary({
     closeOnEscape: !pending,
     dialogRef: panelRef,
     fallbackFocusRef,
-    initialFocusRef: initialRef,
+    initialFocusRef: deletedOrigin && state.type === "edit" ? selectorRef : cancelRef,
     onClose,
   });
   useEffect(() => {
@@ -241,6 +246,12 @@ function EntryDialog({
         await updateMealLogEntry(entry.id, input, operation.current.key);
       }
       await onComplete();
+      const successTargetId = state.type === "edit"
+        ? `meal-log-section-${columnId}`
+        : entry.meal_plan_column_id
+          ? `meal-log-section-${entry.meal_plan_column_id}`
+          : deletedSectionHeadingId(entry.slot_name_snapshot);
+      setReturnFocusTarget(document.getElementById(successTargetId) ?? fallbackFocusRef.current);
       onClose();
     } catch (reason) {
       if (isMealLogApiError(reason) && reason.status === 409) {
@@ -269,7 +280,7 @@ function EntryDialog({
           <div className="mt-4 space-y-3">
             {deletedOrigin ? <p className="text-sm font-bold">기존 위치: 삭제된 끼니 {entry.slot_name_snapshot}</p> : null}
             <label className="block text-sm font-bold">옮길 끼니{deletedOrigin ? " (필수)" : ""}
-              <select className="mt-1 min-h-11 w-full rounded-[var(--radius-control)] border border-[var(--line-strong)] px-3 font-normal" onChange={(event) => setColumnId(event.target.value)} required={deletedOrigin} value={columnId}>
+              <select className="mt-1 min-h-11 w-full rounded-[var(--radius-control)] border border-[var(--line-strong)] px-3 font-normal" onChange={(event) => setColumnId(event.target.value)} ref={selectorRef} required={deletedOrigin} value={columnId}>
                 {deletedOrigin ? <option value="">선택해 주세요</option> : null}
                 {day.active_columns.map((column) => <option key={column.id} value={column.id}>{column.name}</option>)}
               </select>
@@ -283,7 +294,7 @@ function EntryDialog({
         ) : <p className="mt-3 text-sm leading-6">요리한 음식이면 이 기록의 섭취 event만 되돌리고 기록은 목록에서 사라져요.</p>}
         {error ? <p className="mt-3 text-sm text-[var(--danger-strong)]" ref={errorRef} role="alert" tabIndex={-1}>{error}</p> : null}
         <div className="mt-5 grid gap-2 min-[360px]:grid-cols-2">
-          <button className="min-h-11 rounded-[var(--radius-control)] border border-[var(--line-strong)] px-4 font-bold" disabled={pending} onClick={onClose} ref={initialRef} type="button">취소</button>
+          <button className="min-h-11 rounded-[var(--radius-control)] border border-[var(--line-strong)] px-4 font-bold" disabled={pending} onClick={onClose} ref={cancelRef} type="button">취소</button>
           <button className={`min-h-11 rounded-[var(--radius-control)] px-4 font-bold ${state.type === "delete" ? "text-[var(--danger-strong)]" : "bg-[var(--brand-primary-text)] text-[var(--text-inverse)]"}`} disabled={pending || (state.type === "edit" && (!columnId || amount <= 0 || !unit.trim()))} onClick={() => void mutate()} type="button">{pending ? "처리 중…" : state.type === "delete" ? "삭제" : "수정 저장"}</button>
         </div>
       </div>
@@ -298,6 +309,8 @@ export function MealLogScreen({ date, onDateChange }: MealLogScreenProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [dialog, setDialog] = useState<DialogState>(null);
+  const dateRailRef = useRef<HTMLOListElement | null>(null);
+  const dateRadioRefs = useRef(new Map<string, HTMLButtonElement>());
   const headingRef = useRef<HTMLHeadingElement | null>(null);
   const requestRef = useRef(0);
   const weekLoadRef = useRef<{
@@ -340,6 +353,38 @@ export function MealLogScreen({ date, onDateChange }: MealLogScreenProps) {
     void loadWeek();
   }, [loadWeek]);
 
+  useEffect(() => {
+    const rail = dateRailRef.current;
+    const selectedRadio = dateRadioRefs.current.get(date);
+    const selectedItem = selectedRadio?.parentElement;
+    if (!rail || !selectedRadio || !selectedItem) return;
+    const selectedLeft = selectedItem.offsetLeft;
+    const selectedRight = selectedLeft + selectedItem.offsetWidth;
+    const visibleLeft = rail.scrollLeft;
+    const visibleRight = visibleLeft + rail.clientWidth;
+    if (selectedLeft < visibleLeft) {
+      rail.scrollLeft = selectedLeft;
+    } else if (selectedRight > visibleRight) {
+      rail.scrollLeft = selectedRight - rail.clientWidth;
+    }
+  }, [date, dates]);
+
+  function handleDateRadioKeyDown(event: React.KeyboardEvent<HTMLButtonElement>, index: number) {
+    const activationKey = event.key === " " || event.key === "Enter";
+    const movementKey = ["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key);
+    if (!activationKey && !movementKey) return;
+    event.preventDefault();
+
+    let targetIndex = index;
+    if (event.key === "ArrowLeft") targetIndex = Math.max(0, index - 1);
+    if (event.key === "ArrowRight") targetIndex = Math.min(dates.length - 1, index + 1);
+    if (event.key === "Home") targetIndex = 0;
+    if (event.key === "End") targetIndex = dates.length - 1;
+    const targetDate = activationKey ? dates[index] : dates[targetIndex];
+    if (targetDate !== date) onDateChange(targetDate);
+    requestAnimationFrame(() => dateRadioRefs.current.get(targetDate)?.focus());
+  }
+
   async function reloadSelected() {
     const next = await fetchMealLogDay(date);
     setDays((current) => ({ ...current, [date]: next }));
@@ -365,18 +410,18 @@ export function MealLogScreen({ date, onDateChange }: MealLogScreenProps) {
 
   return (
     <main aria-labelledby="planner-log-tab meal-log-title" className="mx-auto max-w-5xl px-4 py-4 lg:py-6" id="planner-log-panel" role="tabpanel" tabIndex={0}>
-      <section aria-label="식사 기록 날짜 선택" className="rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)] p-3">
+      <section aria-label="식사 기록 날짜 탐색" className="rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)] p-3">
         <div className="grid grid-cols-[44px_minmax(0,1fr)_44px] items-center gap-2">
           <button aria-label="이전 7일" className="h-11 w-11 rounded-full border border-[var(--line-strong)] text-xl" onClick={() => onDateChange(shiftDate(date, -7))} type="button">‹</button>
           <p className="text-center text-sm font-extrabold">{compactDate(dates[0])}–{compactDate(dates[6])}</p>
           <button aria-label="다음 7일" className="h-11 w-11 rounded-full border border-[var(--line-strong)] text-xl" onClick={() => onDateChange(shiftDate(date, 7))} type="button">›</button>
         </div>
-        <ol className="mt-2 flex snap-x gap-1 overflow-x-auto pb-1">
-          {dates.map((item) => {
+        <ol aria-label="식사 기록 날짜 선택" className="mt-2 flex snap-x gap-1 overflow-x-auto overscroll-x-contain pb-1" ref={dateRailRef} role="radiogroup">
+          {dates.map((item, index) => {
             const value = new Date(`${item}T00:00:00.000Z`);
             return (
               <li className="w-11 shrink-0 snap-start" key={item}>
-                <button aria-current={item === date ? "date" : undefined} aria-label={`${compactDate(item)} ${WEEKDAYS[value.getUTCDay()]}요일 선택${days[item]?.entries.length ? ", 기록 있음" : ""}`} className={`flex min-h-11 w-11 flex-col items-center justify-center rounded-[var(--radius-control)] text-xs font-bold ${item === date ? "bg-[var(--brand-primary-text)] text-[var(--text-inverse)]" : "text-[var(--text-2)]"}`} onClick={() => onDateChange(item)} type="button">
+                <button aria-checked={item === date} aria-label={`${compactDate(item)} ${WEEKDAYS[value.getUTCDay()]}요일 선택${days[item]?.entries.length ? ", 기록 있음" : ""}`} className={`flex min-h-11 w-11 flex-col items-center justify-center rounded-[var(--radius-control)] text-xs font-bold ${item === date ? "bg-[var(--brand-primary-text)] text-[var(--text-inverse)]" : "text-[var(--text-2)]"}`} onClick={() => onDateChange(item)} onKeyDown={(event) => handleDateRadioKeyDown(event, index)} ref={(node) => { if (node) dateRadioRefs.current.set(item, node); else dateRadioRefs.current.delete(item); }} role="radio" tabIndex={item === date ? 0 : -1} type="button">
                   <span>{WEEKDAYS[value.getUTCDay()]}</span><span>{Number(item.slice(8))}</span>{days[item]?.entries.length ? <span aria-hidden="true">•</span> : null}
                 </button>
               </li>

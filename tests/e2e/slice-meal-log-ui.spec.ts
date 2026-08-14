@@ -89,7 +89,7 @@ function entry(state: FixtureState, deleted = false) {
 function day(state: FixtureState, date = DATE) {
   const isEmpty = state === "empty" || date !== DATE;
   const visible = isEmpty ? [] : [entry(state)];
-  const deleted = state === "deleted-column" ? [entry(state, true)] : [];
+  const deleted = state === "deleted-column" || state === "edit" ? [entry(state, true)] : [];
   const zero = { calculation_status: "complete", calories_kcal: 0, carbohydrate_g: 0, protein_g: 0, fat_g: 0, sodium_mg: 0 };
   return {
     date,
@@ -129,7 +129,136 @@ async function stabilize(page: Page) {
   await page.addStyleTag({ content: "*,*::before,*::after{animation:none!important;transition:none!important;caret-color:transparent!important}nextjs-portal,[data-next-badge-root],[aria-label='Open Next.js Dev Tools']{display:none!important}" });
 }
 
+async function prepareInteractiveMealLogPage(page: Page) {
+  const mutation = { outcome: "success" as "conflict" | "failure" | "success" };
+  await page.context().addCookies([{ name: "homecook.e2e-auth-override", value: "authenticated", url: "http://127.0.0.1:3100", sameSite: "Lax" }]);
+  await page.addInitScript(() => window.localStorage.setItem("homecook.e2e-auth-override", "authenticated"));
+  await installAccountLibraryVisualRoutes(page);
+  await page.route("**/api/v1/meal-log?*", async (route) => fulfillMealLog(route, "deleted-column"));
+  await page.route("**/api/v1/meal-log/entries/**", async (route) => {
+    if (mutation.outcome === "conflict") {
+      await route.fulfill({ status: 409, json: { success: false, data: null, error: { code: "CONFLICT", message: "현재 기록이 먼저 변경됐어요.", fields: [] } } });
+      return;
+    }
+    if (mutation.outcome === "failure") {
+      await route.fulfill({ status: 500, json: { success: false, data: null, error: { code: "INTERNAL_ERROR", message: "요청을 처리하지 못했어요.", fields: [] } } });
+      return;
+    }
+    await route.fulfill({ json: success({ entry: entry("deleted-column", true) }) });
+  });
+  await page.goto(`/planner?segment=log&date=${DATE}`);
+  await expect(page.getByRole("heading", { name: "8월 10일 월요일 식사 기록" })).toBeVisible();
+  return mutation;
+}
+
 test.describe("meal-log-ui Stage 4", () => {
+  test("meal-log-ui date rail uses a single-selection keyboard radiogroup without moving the page", async ({ browser }, testInfo) => {
+    test.skip(testInfo.project.name !== "desktop-chrome", "exact 320px rail 검증을 한 프로젝트에서 수행한다.");
+    const context = await browser.newContext({ deviceScaleFactor: 1, viewport: { width: 320, height: 693 } });
+    const page = await context.newPage();
+    await prepareInteractiveMealLogPage(page);
+
+    const rail = page.getByRole("radiogroup", { name: "식사 기록 날짜 선택" });
+    const radios = rail.getByRole("radio");
+    await expect(radios).toHaveCount(7);
+    await expect(rail.locator("[role='radio'][aria-checked='true']")).toHaveCount(1);
+    const selected = radios.nth(0);
+    await expect(selected).toHaveAttribute("tabindex", "0");
+    await expect(radios.nth(1)).toHaveAttribute("tabindex", "-1");
+
+    await selected.focus();
+    const pageScroll = await page.evaluate(() => ({ x: window.scrollX, y: window.scrollY }));
+    await page.keyboard.press("End");
+    await expect(radios.nth(6)).toHaveAttribute("aria-checked", "true");
+    await expect(radios.nth(6)).toBeFocused();
+    expect(await rail.evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
+    expect(await page.evaluate(() => ({ x: window.scrollX, y: window.scrollY }))).toEqual(pageScroll);
+
+    const endUrl = page.url();
+    await page.keyboard.press("ArrowRight");
+    await expect(radios.nth(6)).toBeFocused();
+    expect(page.url()).toBe(endUrl);
+    await page.keyboard.press("Home");
+    await expect(radios.nth(0)).toHaveAttribute("aria-checked", "true");
+    await expect(radios.nth(0)).toBeFocused();
+    const startUrl = page.url();
+    await page.keyboard.press("ArrowLeft");
+    expect(page.url()).toBe(startUrl);
+
+    await radios.nth(1).focus();
+    await page.keyboard.press("Space");
+    await expect(radios.nth(1)).toHaveAttribute("aria-checked", "true");
+    await radios.nth(0).focus();
+    await page.keyboard.press("Enter");
+    await expect(radios.nth(0)).toHaveAttribute("aria-checked", "true");
+    expect(await page.evaluate(() => ({ x: window.scrollX, y: window.scrollY }))).toEqual(pageScroll);
+    await context.close();
+  });
+
+  test("meal-log-ui edit and delete dialogs preserve focus across every exit", async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== "desktop-chrome", "keyboard focus lifecycle을 desktop Chromium에서 수행한다.");
+    const mutation = await prepareInteractiveMealLogPage(page);
+    const editInvoker = page.getByRole("button", { name: /야식의 플레인 요거트 식사 기록 수정/u });
+
+    await editInvoker.click();
+    let editDialog = page.getByRole("dialog", { name: "식사 기록 수정" });
+    let selector = editDialog.getByRole("combobox", { name: "옮길 끼니 (필수)" });
+    await expect(selector).toBeFocused();
+    await page.keyboard.press("Shift+Tab");
+    await expect(editDialog.getByRole("button", { name: "취소" })).toBeFocused();
+    await page.keyboard.press("Tab");
+    await expect(selector).toBeFocused();
+    await page.keyboard.press("Escape");
+    await expect(editDialog).toHaveCount(0);
+    await expect(editInvoker).toBeFocused();
+
+    await editInvoker.click();
+    editDialog = page.getByRole("dialog", { name: "식사 기록 수정" });
+    await editDialog.getByRole("button", { name: "취소" }).click();
+    await expect(editInvoker).toBeFocused();
+
+    mutation.outcome = "failure";
+    await editInvoker.click();
+    editDialog = page.getByRole("dialog", { name: "식사 기록 수정" });
+    selector = editDialog.getByRole("combobox", { name: "옮길 끼니 (필수)" });
+    await selector.selectOption(LUNCH_ID);
+    await editDialog.getByRole("button", { name: "수정 저장" }).click();
+    await expect(editDialog.getByRole("alert")).toBeFocused();
+    await editDialog.getByRole("button", { name: "취소" }).click();
+    await expect(editInvoker).toBeFocused();
+
+    mutation.outcome = "conflict";
+    await editInvoker.click();
+    editDialog = page.getByRole("dialog", { name: "식사 기록 수정" });
+    selector = editDialog.getByRole("combobox", { name: "옮길 끼니 (필수)" });
+    await selector.selectOption(LUNCH_ID);
+    await editDialog.getByRole("button", { name: "수정 저장" }).click();
+    await expect(editDialog.getByRole("alert")).toBeFocused();
+    await page.keyboard.press("Escape");
+    await expect(editDialog).toHaveCount(0);
+    await expect(editInvoker).toBeFocused();
+
+    mutation.outcome = "success";
+    await editInvoker.click();
+    editDialog = page.getByRole("dialog", { name: "식사 기록 수정" });
+    await editDialog.getByRole("combobox", { name: "옮길 끼니 (필수)" }).selectOption(LUNCH_ID);
+    await editDialog.getByRole("button", { name: "수정 저장" }).click();
+    await expect(editDialog).toHaveCount(0);
+    await expect(page.getByRole("heading", { name: "점심" })).toBeFocused();
+
+    const deleteInvoker = page.getByRole("button", { name: /야식의 플레인 요거트 식사 기록 삭제/u });
+    await deleteInvoker.click();
+    const deleteDialog = page.getByRole("alertdialog", { name: "식사 기록 삭제 확인" });
+    await expect(deleteDialog.getByRole("button", { name: "취소" })).toBeFocused();
+    await page.keyboard.press("Shift+Tab");
+    await expect(deleteDialog.getByRole("button", { name: "삭제" })).toBeFocused();
+    await page.keyboard.press("Tab");
+    await expect(deleteDialog.getByRole("button", { name: "취소" })).toBeFocused();
+    await deleteDialog.getByRole("button", { name: "삭제" }).click();
+    await expect(deleteDialog).toHaveCount(0);
+    await expect(page.getByRole("heading", { name: "삭제된 끼니의 기록 · 야식" })).toBeFocused();
+  });
+
   test("meal-log-ui captures the contracted viewport and state matrix", async ({ browser }, testInfo) => {
     test.skip(testInfo.project.name !== "desktop-chrome", "한 프로젝트에서 exact viewport를 직접 설정한다.");
     test.setTimeout(360_000);
@@ -260,9 +389,21 @@ test.describe("meal-log-ui Stage 4", () => {
           } else {
             await expect(dialog.getByText(state === "missing-batch" ? /무게 입력 필요/u : /원래 무게 확인 불가/u)).toBeVisible();
           }
+        } else if (state === "deleted-column") {
+          const deletedSection = page.getByRole("region", { name: "삭제된 끼니의 기록 · 야식" });
+          await deletedSection.scrollIntoViewIfNeeded();
+          await expect(deletedSection.getByRole("heading", { name: "삭제된 끼니의 기록 · 야식" })).toBeVisible();
+          await expect(deletedSection.getByRole("button", { name: /먹은 음식 추가/u })).toHaveCount(0);
+          await expect(deletedSection.getByRole("button", { name: /식사 기록 수정/u })).toHaveCount(1);
+          await expect(deletedSection.getByRole("button", { name: /식사 기록 삭제/u })).toHaveCount(1);
         } else if (state === "edit") {
-          await page.getByRole("button", { name: /달걀 샐러드 식사 기록 수정/u }).click();
-          await expect(page.getByRole("dialog", { name: "식사 기록 수정" })).toBeVisible();
+          await page.getByRole("button", { name: /야식의 플레인 요거트 식사 기록 수정/u }).click();
+          const dialog = page.getByRole("dialog", { name: "식사 기록 수정" });
+          await expect(dialog.getByText("기존 위치: 삭제된 끼니 야식")).toBeVisible();
+          const selector = dialog.getByRole("combobox", { name: "옮길 끼니 (필수)" });
+          await expect(selector).toHaveValue("");
+          await expect(selector).toBeFocused();
+          await expect(dialog.getByRole("button", { name: "수정 저장" })).toBeDisabled();
         } else if (state === "delete-confirm" || state === "conflict") {
           await page.getByRole("button", { name: /달걀 샐러드 식사 기록 삭제/u }).click();
           const dialog = page.getByRole("alertdialog", { name: "식사 기록 삭제 확인" });
