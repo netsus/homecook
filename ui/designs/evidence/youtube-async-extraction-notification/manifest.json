@@ -1,9 +1,9 @@
 {
-  "captured_at": "2026-08-14T02:25:31Z",
+  "captured_at": "2026-08-14T02:41:16Z",
   "evidence_scope": "youtube-async-extraction-notification Stage 4 frontend",
   "implementation_base": "25e8da8b04c2322f68d8f54837135399d7586da7",
-  "implementation_head": "346cefa8cc59cc46551fd28194c443a72eca3be6",
-  "implementation_tree": "c422438f3f2170c41f9f836f780185834ac6e90c",
+  "implementation_head": "803b40ed992658b489fb5bd22a0bfb41d8d06b1d",
+  "implementation_tree": "46b330d9e8f47bf32d83f810391241a02647164f",
   "generator": "tests/e2e/youtube-async-extraction-notification.spec.ts",
   "base_url": "http://127.0.0.1:3217",
   "remote_supabase_access_count": 0,
