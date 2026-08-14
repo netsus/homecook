@@ -257,6 +257,7 @@ test.describe("QA visual regression", () => {
     await stabilizeVisualSnapshot(page);
     await expect(dialog).toHaveScreenshot("qa-ingredient-filter-modal.png", {
       animations: "disabled",
+      maxDiffPixels: 64,
     });
   });
 

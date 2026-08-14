@@ -58,6 +58,7 @@ export default defineConfig({
     command:
       [
         "HOMECOOK_ENABLE_QA_FIXTURES=1",
+        "HOMECOOK_AUTH_AUTHORITY=local",
         "NEXT_PUBLIC_HOMECOOK_ENABLE_QA_FIXTURES=1",
         "NEXT_PUBLIC_ENABLED_AUTH_PROVIDERS=kakao,naver,google",
         "NEXT_PUBLIC_NAVER_SUPABASE_PROVIDER=custom:naver",
