@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 import { useDialogBoundary } from "@/components/shared/use-dialog-boundary";
 import { fetchFoodCatalogSearch, type FoodCatalogSearchItem } from "@/lib/api/food-catalog-search";
@@ -268,7 +269,7 @@ export function MealLogAddSheet({
     }
   }
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-[var(--foreground-alpha-40)] lg:items-center lg:p-6">
       <div
         aria-label="먹은 음식 추가"
@@ -491,6 +492,7 @@ export function MealLogAddSheet({
           </footer>
         ) : null}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
