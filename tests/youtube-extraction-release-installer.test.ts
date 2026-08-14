@@ -44,6 +44,7 @@ import {
   rotateYoutubeExtractionWorkerCredential,
   validateYoutubeExtractionWorkerConfigPath,
   validateYoutubeExtractionWorkerSecretFile,
+  validateYoutubeExtractionWorkerSecretRoot,
   writeCredentialMetadata,
 } from "../scripts/lib/youtube-extraction-worker-ops.mjs";
 
@@ -84,7 +85,7 @@ function createReleaseInputs(privateDir: string, {
   const credentialPath = join(privateDir, "credential.json");
   const appPath = join(privateDir, "app.json");
   const policyPath = join(privateDir, "policy.json");
-  const artifactDir = join(privateDir, "worker-release");
+  const artifactDir = join(createTempDir("yta-worker-release-parent-"), "worker-release");
   writeModeFile(tokenPath, "worker-token\n");
   const materialized = materializeYoutubeExtractionWorkerArtifact({
     rootDir,
@@ -203,12 +204,21 @@ describe("YTASYNC-OPS deterministic artifact", () => {
     ));
     expect(readYoutubeExtractionExpectedSchema(canonicalPath)).toMatchObject({
       catalog_fingerprint_components: expect.arrayContaining([
+        "columns",
+        "constraints",
+        "indexes",
         "table_owners",
         "sequence_owners",
         "schema_owners",
         "owner_role_attributes",
         "memberships",
+        "rpc_function_definitions",
+        "internal_scope_function_definition",
       ]),
+      fence_function_signatures: expect.arrayContaining([
+        "private.youtube_extraction_worker_write_fence_is_active(uuid,text,bigint,bigint)",
+      ]),
+      internal_scope_function_signature: "private.verify_full_local_internal_scope()",
       memberships: [
         {
           member: "authenticator",
@@ -252,6 +262,40 @@ describe("YTASYNC-OPS deterministic artifact", () => {
 });
 
 describe("YTASYNC-OPS launchd contract", () => {
+  it("requires an external 0700 worker secret root and rejects symlink ancestors", () => {
+    const sandbox = createTempDir("yta-worker-secret-root-");
+    const simulatedRepo = join(sandbox, "repo");
+    const externalRoot = join(sandbox, "secrets");
+    mkdirSync(simulatedRepo, { mode: 0o700 });
+    mkdirSync(externalRoot, { mode: 0o700 });
+
+    expect(() => validateYoutubeExtractionWorkerSecretRoot(simulatedRepo, {
+      repoRoot: simulatedRepo,
+    })).toThrow(/outside.*repository/iu);
+
+    chmodSync(externalRoot, 0o755);
+    expect(() => validateYoutubeExtractionWorkerSecretRoot(externalRoot, {
+      repoRoot: simulatedRepo,
+    })).toThrow(/mode 0700/iu);
+    chmodSync(externalRoot, 0o700);
+
+    const realParent = join(externalRoot, "real-parent");
+    const linkedParent = join(externalRoot, "linked-parent");
+    mkdirSync(realParent, { mode: 0o700 });
+    symlinkSync(realParent, linkedParent);
+    const secretPath = join(realParent, "provider.env");
+    writeModeFile(secretPath, "YOUTUBE_API_KEY=fixture-key\n");
+
+    expect(() => validateYoutubeExtractionWorkerSecretFile(
+      join(linkedParent, "provider.env"),
+      { secretRoot: externalRoot, repoRoot: simulatedRepo },
+    )).toThrow(/symbolic link ancestor/iu);
+    expect(validateYoutubeExtractionWorkerSecretFile(secretPath, {
+      secretRoot: externalRoot,
+      repoRoot: simulatedRepo,
+    })).toBe(realpathSync(secretPath));
+  });
+
   it("rejects symlinked or wrong-owner secret inputs and returns canonical paths", () => {
     const privateDir = createTempDir("yta-worker-secret-provenance-");
     const configPath = join(privateDir, ".env.production.local");
@@ -315,6 +359,7 @@ describe("YTASYNC-OPS launchd contract", () => {
       const result = spawnSync(process.execPath, [
         "scripts/youtube-extraction-worker-mac-production.mjs",
         "preflight",
+        "--secret-root", privateDir,
         "--config", configPath,
         "--manifest", inputs.manifestPath,
         "--credential", inputs.credentialPath,
@@ -348,6 +393,7 @@ describe("YTASYNC-OPS launchd contract", () => {
       appDescriptorPath: inputs.appPath,
       currentPolicyPath: inputs.policyPath,
       expectedSchemaPath: inputs.expectedSchemaPath,
+      secretRoot: privateDir,
       homeDir,
       nodeBin: "/opt/homebrew/bin/node",
       rootDir: inputs.artifactDir,
@@ -359,6 +405,8 @@ describe("YTASYNC-OPS launchd contract", () => {
     expect(plist).toContain(`<string>HOME=${homeDir}</string>`);
     expect(plist).toContain("<string>/opt/homebrew/bin/node</string>");
     expect(plist).toContain("<string>run</string>");
+    expect(plist).toContain("<string>--secret-root</string>");
+    expect(plist).toContain(`<string>${realpathSync(privateDir)}</string>`);
     expect(plist).toContain(`<string>${realpathSync(configPath)}</string>`);
     expect(plist).toContain(`<string>${realpathSync(inputs.manifestPath)}</string>`);
     expect(plist).toContain(`<string>${realpathSync(inputs.credentialPath)}</string>`);
@@ -382,6 +430,7 @@ describe("YTASYNC-OPS launchd contract", () => {
       appDescriptorPath: inputs.appPath,
       currentPolicyPath: inputs.policyPath,
       expectedSchemaPath: inputs.expectedSchemaPath,
+      secretRoot: privateDir,
       homeDir: "/Users/tester",
       rootDir: inputs.artifactDir,
       nodeBin: "/usr/bin/node",
@@ -430,6 +479,7 @@ describe("YTASYNC-OPS launchd contract", () => {
       appDescriptorPath: inputs.appPath,
       currentPolicyPath: inputs.policyPath,
       expectedSchemaPath: inputs.expectedSchemaPath,
+      secretRoot: privateDir,
       homeDir: "/Users/tester",
       rootDir: process.cwd(),
       nodeBin: "/usr/bin/node",
@@ -463,6 +513,7 @@ describe("YTASYNC-OPS launchd contract", () => {
       appDescriptorPath: inputs.appPath,
       currentPolicyPath: inputs.policyPath,
       expectedSchemaPath: inputs.expectedSchemaPath,
+      secretRoot: privateDir,
       homeDir: "/Users/tester",
       rootDir: inputs.artifactDir,
       nodeBin: "/usr/bin/node",
@@ -487,6 +538,7 @@ describe("YTASYNC-OPS launchd contract", () => {
       appDescriptorPath: inputs.appPath,
       currentPolicyPath: inputs.policyPath,
       expectedSchemaPath: inputs.expectedSchemaPath,
+      secretRoot: privateDir,
       homeDir: "/Users/tester",
       rootDir: inputs.artifactDir,
       nodeBin: "/usr/bin/node",
@@ -513,6 +565,7 @@ describe("YTASYNC-OPS launchd contract", () => {
       appDescriptorPath: configPath,
       currentPolicyPath: configPath,
       expectedSchemaPath: configPath,
+      secretRoot: privateDir,
       homeDir: "/Users/tester",
       nodeBin: "/usr/bin/node",
       rootDir: "/Users/tester/homecook",
@@ -587,6 +640,7 @@ describe("YTASYNC-OPS preflight, drain, rollback, credential", () => {
     const result = spawnSync(process.execPath, [
       "scripts/youtube-extraction-worker-mac-production.mjs",
       "preflight",
+      "--secret-root", privateDir,
       "--manifest", inputs.manifestPath,
       "--credential", inputs.credentialPath,
       "--app-descriptor", inputs.appPath,
@@ -797,6 +851,8 @@ describe("YTASYNC-OPS preflight, drain, rollback, credential", () => {
         ),
         "run",
         "--dry-run",
+        "--secret-root",
+        privateDir,
         "--config",
         configPath,
         "--manifest",
@@ -811,7 +867,7 @@ describe("YTASYNC-OPS preflight, drain, rollback, credential", () => {
         inputs.expectedSchemaPath,
       ],
       {
-        cwd: privateDir,
+        cwd: inputs.artifactDir,
         encoding: "utf8",
       },
     );
@@ -825,6 +881,8 @@ describe("YTASYNC-OPS preflight, drain, rollback, credential", () => {
       [
         "scripts/youtube-extraction-worker-mac-production.mjs",
         "credential-bootstrap",
+        "--secret-root",
+        privateDir,
         "--token-file",
         inputs.tokenPath,
         "--generation",
@@ -855,7 +913,7 @@ describe("YTASYNC-OPS preflight, drain, rollback, credential", () => {
 
   it("runs an immutable i031 artifact through claim, persistence, finalize, and SIGTERM", async () => {
     const privateDir = createTempDir("yta-worker-non-dry-run-");
-    const fixtureRoot = join(privateDir, "fixture-root");
+    const fixtureRoot = createTempDir("yta-worker-fixture-root-");
     for (const relativePath of [
       "scripts/youtube-extraction-worker-runner.mjs",
       "scripts/lib/youtube-extraction-worker-artifact.mjs",
@@ -1040,6 +1098,7 @@ describe("YTASYNC-OPS preflight, drain, rollback, credential", () => {
     const child = spawn(process.execPath, [
       join(inputs.artifactDir, "scripts/youtube-extraction-worker-runner.mjs"),
       "run",
+      "--secret-root", privateDir,
       "--config", configPath,
       "--manifest", inputs.manifestPath,
       "--credential", inputs.credentialPath,
@@ -1047,7 +1106,7 @@ describe("YTASYNC-OPS preflight, drain, rollback, credential", () => {
       "--policy", inputs.policyPath,
       "--expected-schema", inputs.expectedSchemaPath,
     ], {
-      cwd: privateDir,
+      cwd: fixtureRoot,
       env: {
         ...process.env,
         HOME: realpathSync(fakeHome),

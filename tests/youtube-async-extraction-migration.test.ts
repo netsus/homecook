@@ -63,8 +63,8 @@ describe("YTASYNC-DB/SEC migration contract", () => {
     expect(sql).toContain("grant youtube_extraction_credential_manager to authenticator");
     expect(sql).toContain("with inherit false, set true granted by %i");
     expect(sql).toContain("from %i granted by %i");
-    expect(sql).toContain("grant create on schema private to youtube_extraction_worker_rpc_owner");
-    expect(sql).toContain("revoke create on schema private from youtube_extraction_worker_rpc_owner");
+    expect(sql).toContain("grant create on schema private\n  to youtube_extraction_worker_rpc_owner,\n     youtube_extraction_credential_manager_rpc_owner");
+    expect(sql).toContain("revoke create on schema private\n  from youtube_extraction_worker_rpc_owner,\n       youtube_extraction_credential_manager_rpc_owner");
     expect(sql.match(/set local role youtube_extraction_enqueue_rpc_owner/g)?.length).toBe(1);
     expect(sql.match(/set local role youtube_extraction_worker_rpc_owner/g)?.length).toBe(4);
     expect(sql.match(/set local role youtube_extraction_credential_manager_rpc_owner/g)?.length).toBe(2);
@@ -167,6 +167,9 @@ describe("YTASYNC-DB/SEC migration contract", () => {
     expect(sql).toContain("'catalog_fingerprint'");
     expect(sql).toContain("youtube-extraction-live-catalog-v1");
     for (const component of [
+      "columns",
+      "constraints",
+      "indexes",
       "role_attributes",
       "table_owners",
       "sequence_owners",
@@ -176,9 +179,21 @@ describe("YTASYNC-DB/SEC migration contract", () => {
       "table_privileges",
       "sequence_privileges",
       "rpc_security",
+      "rpc_function_definitions",
+      "internal_scope_function_definition",
     ]) {
       expect(sql, component).toContain(`'${component}'`);
     }
+    expect(sql).toContain("pg_catalog.pg_get_functiondef");
+    expect(sql).toContain("private.verify_full_local_internal_scope()");
+    expect(sql).toContain("function private.assert_youtube_extraction_catalog_ready()");
+
+    const enqueue = sql.split("function public.enqueue_youtube_extraction_job")[1]
+      ?.split("$function$;")[0] ?? "";
+    const preRequest = sql.split("function public.check_youtube_extraction_worker_pre_request")[1]
+      ?.split("$function$;")[0] ?? "";
+    expect(enqueue).toContain("perform private.assert_youtube_extraction_catalog_ready()");
+    expect(preRequest).toContain("perform private.assert_youtube_extraction_catalog_ready()");
     expect(sql).toContain("pg_catalog.pg_get_userbyid(relation.relowner)");
     expect(sql).toContain("pg_catalog.pg_get_userbyid(namespace.nspowner)");
     expect(sql).toContain("v_credential.expires_at <= clock_timestamp() + interval '30 minutes'");
@@ -215,6 +230,19 @@ describe("YTASYNC-DB/SEC migration contract", () => {
     expect(finalize.indexOf("v_job.status = 'succeeded'"))
       .toBeLessThan(permitLock);
     expect(finalize).not.toContain("lease_owner = null");
+  });
+
+  it("locks start attempts in the same job then permit order as every shared writer", () => {
+    const sql = readFileSync(migrationPath, "utf8").toLowerCase();
+    const start = sql.split("function public.start_youtube_extraction_attempt")[1]
+      ?.split("$function$;")[0] ?? "";
+    const jobLock = start.indexOf("from public.youtube_extraction_jobs as job");
+    const permitLock = start.indexOf("from public.youtube_extractor_permits as permit");
+
+    expect(jobLock).toBeGreaterThan(-1);
+    expect(start.slice(jobLock, permitLock)).toContain("for update");
+    expect(permitLock).toBeGreaterThan(jobLock);
+    expect(start.slice(permitLock)).toContain("for update");
   });
 
   it("serializes projection timestamps without millisecond truncation", () => {

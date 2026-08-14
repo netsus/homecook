@@ -15,6 +15,7 @@ import {
   rotateYoutubeExtractionWorkerCredential,
   validateYoutubeExtractionWorkerConfigPath,
   validateYoutubeExtractionWorkerSecretFile,
+  validateYoutubeExtractionWorkerSecretRoot,
   writeCredentialMetadata,
 } from "./lib/youtube-extraction-worker-ops.mjs";
 import { ensureAbsolutePath } from "./lib/youtube-extraction-worker-artifact.mjs";
@@ -75,6 +76,9 @@ function parseArgs(argv) {
         break;
       case "--expected-schema":
         options.expectedSchemaPath = ensureAbsolutePath(value, "expectedSchemaPath");
+        break;
+      case "--secret-root":
+        options.secretRoot = ensureAbsolutePath(value, "secretRoot");
         break;
       case "--launchctl-output":
         options.launchctlOutputPath = ensureAbsolutePath(value, "launchctlOutputPath");
@@ -137,11 +141,12 @@ function print(result) {
 async function runI031Preflight(options) {
   const configPath = validateYoutubeExtractionWorkerConfigPath(options.configPath, {
     expectedUserId: options.userId,
+    secretRoot: options.secretRoot,
   });
   const workerConfig = await readWorkerEnvironment(configPath);
   const providerSecretPath = validateYoutubeExtractionWorkerSecretFile(
     workerConfig.HOMECOOK_YOUTUBE_WORKER_PROVIDER_SECRET_FILE,
-    { expectedUserId: options.userId },
+    { expectedUserId: options.userId, secretRoot: options.secretRoot },
   );
   const providerEnvironment = await readWorkerProviderEnvironment(
     providerSecretPath,
@@ -174,6 +179,7 @@ async function runInstall(options) {
     appDescriptorPath: options.appDescriptorPath,
     currentPolicyPath: options.currentPolicyPath,
     expectedSchemaPath: options.expectedSchemaPath,
+    secretRoot: options.secretRoot,
     homeDir: options.homeDir,
     nodeBin: options.nodeBin,
     rootDir: options.rootDir,
@@ -202,8 +208,12 @@ async function runLifecycle(action, options) {
 }
 
 function runReleasePreflight(options) {
+  validateYoutubeExtractionWorkerSecretRoot(options.secretRoot, {
+    expectedUserId: options.userId,
+  });
   validateYoutubeExtractionWorkerSecretFile(options.credentialPath, {
     expectedUserId: options.userId,
+    secretRoot: options.secretRoot,
   });
   const inputs = loadYoutubeExtractionWorkerRuntimeInputs({
     appDescriptorPath: options.appDescriptorPath,
@@ -212,6 +222,7 @@ function runReleasePreflight(options) {
     credentialPath: options.credentialPath,
     expectedSchemaPath: options.expectedSchemaPath,
     queueStatePath: options.queueStatePath ?? null,
+    secretRoot: options.secretRoot,
   });
   return evaluateYoutubeExtractionWorkerPreflight(inputs);
 }
@@ -230,6 +241,7 @@ function runDrain(options) {
     currentPolicyPath: options.currentPolicyPath,
     credentialPath: options.credentialPath,
     queueStatePath: options.queueStatePath,
+    secretRoot: options.secretRoot,
   });
   return buildYoutubeExtractionWorkerDrainPlan({
     queueState: inputs.queueState,
@@ -260,6 +272,7 @@ function runRollback(options) {
     currentPolicyPath: options.currentPolicyPath,
     credentialPath: options.credentialPath,
     queueStatePath: options.queueStatePath,
+    secretRoot: options.secretRoot,
   });
   return buildYoutubeExtractionWorkerRollbackPlan({
     currentArtifact: inputs.workerArtifact,
@@ -283,9 +296,12 @@ function runCredentialBootstrap(options) {
     releaseSha: options.releaseSha,
     schemaIdentity: options.schemaIdentity,
     allowedSnapshotDigest: options.allowedSnapshotDigest,
+    secretRoot: options.secretRoot,
   });
   if (options.outputPath) {
-    writeCredentialMetadata(options.outputPath, credential);
+    writeCredentialMetadata(options.outputPath, credential, {
+      secretRoot: options.secretRoot,
+    });
   }
   return {
     action: "credential-bootstrap",
@@ -309,9 +325,12 @@ function runCredentialRotate(options) {
     releaseSha: options.releaseSha,
     schemaIdentity: options.schemaIdentity,
     allowedSnapshotDigest: options.allowedSnapshotDigest,
+    secretRoot: options.secretRoot,
   });
   if (options.outputPath) {
-    writeCredentialMetadata(options.outputPath, credential);
+    writeCredentialMetadata(options.outputPath, credential, {
+      secretRoot: options.secretRoot,
+    });
   }
   return {
     action: "credential-rotate",
@@ -335,6 +354,11 @@ async function runHealth(options) {
 
 async function main() {
   const options = parseArgs(process.argv.slice(2));
+  if (!new Set(["status", "stop", "uninstall"]).has(options.command)) {
+    validateYoutubeExtractionWorkerSecretRoot(options.secretRoot, {
+      expectedUserId: options.userId,
+    });
+  }
   let result;
 
   switch (options.command) {

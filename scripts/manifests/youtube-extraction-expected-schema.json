@@ -2,10 +2,13 @@
   "schema": "homecook.youtube-extraction-expected-schema",
   "version": 1,
   "schema_identity": "youtube-extraction-worker-schema-v1",
-  "catalog_fingerprint": "16e47a362dc1d567c7cf7e45110458eb4e3784610b744744cbe3ea956e1f4404",
+  "catalog_fingerprint": "ef5e9ca85acc5a5a77050aa206ca63739b74fa5febf37e2af0113fce87bf5285",
   "catalog_fingerprint_algorithm": "sha256:youtube-extraction-live-catalog-v1",
   "catalog_fingerprint_components": [
     "tables",
+    "columns",
+    "constraints",
+    "indexes",
     "table_owners",
     "sequence_owners",
     "schema_owners",
@@ -18,7 +21,9 @@
     "table_privileges",
     "sequence_privileges",
     "rpc_signatures",
-    "rpc_security"
+    "rpc_security",
+    "rpc_function_definitions",
+    "internal_scope_function_definition"
   ],
   "tables": [
     "private.youtube_extraction_current_policy",
@@ -88,6 +93,11 @@
     "public.start_youtube_extraction_attempt(uuid,text,bigint,bigint)",
     "public.update_youtube_extraction_job_title(uuid,text,bigint,bigint,text)"
   ],
+  "fence_function_signatures": [
+    "private.youtube_extraction_job_fence_is_active(uuid,text,bigint)",
+    "private.youtube_extraction_worker_write_fence_is_active(uuid,text,bigint,bigint)"
+  ],
+  "internal_scope_function_signature": "private.verify_full_local_internal_scope()",
   "initial_policy": {
     "policy_key": "primary",
     "policy_version": 1,

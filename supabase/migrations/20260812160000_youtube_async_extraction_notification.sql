@@ -941,6 +941,8 @@ begin
       raise exception 'YOUTUBE_EXTRACTION_WORKER_UNAUTHORIZED'
         using errcode = '42501';
     end if;
+
+    perform private.assert_youtube_extraction_catalog_ready();
   elsif v_role = 'youtube_extraction_credential_manager' then
     if v_scope is distinct from 'youtube-extraction-credential-manager'
       or v_issuer is distinct from 'https://worker.mumeok.kr'
@@ -991,6 +993,8 @@ begin
     raise exception 'YOUTUBE_EXTRACTION_ENQUEUE_UNAUTHORIZED'
       using errcode = '42501';
   end if;
+
+  perform private.assert_youtube_extraction_catalog_ready();
 
   if video_id is null
     or btrim(video_id) = ''
@@ -1372,6 +1376,22 @@ begin
     or v_requested_permit_generation is null then
     raise exception 'VALIDATION_ERROR'
       using errcode = '22023';
+  end if;
+
+  select job.*
+    into v_job
+  from public.youtube_extraction_jobs as job
+  where job.id = v_requested_job_id
+  for update;
+
+  if not found
+    or v_job.status is distinct from 'processing'
+    or v_job.lease_owner is distinct from v_requested_worker_id
+    or v_job.lease_generation is distinct from v_requested_lease_generation
+    or v_job.lease_expires_at is null
+    or v_job.lease_expires_at < v_now
+    or v_job.attempt_count >= v_job.max_attempts then
+    return jsonb_build_object('started', false);
   end if;
 
   select permit.*
@@ -1911,8 +1931,13 @@ declare
   v_catalog_preimage text;
   v_catalog_fingerprint text;
 begin
-  if coalesce(v_claims ->> 'role', '') is distinct from 'authenticated'
-    or nullif(v_claims ->> 'sub', '') is null then
+  if not (
+    (
+      coalesce(v_claims ->> 'role', '') = 'authenticated'
+      and nullif(v_claims ->> 'sub', '') is not null
+    )
+    or coalesce(v_claims ->> 'role', '') = 'youtube_extraction_worker'
+  ) then
     raise exception 'YOUTUBE_EXTRACTION_ENQUEUE_UNAUTHORIZED'
       using errcode = '42501';
   end if;
@@ -1955,6 +1980,111 @@ begin
           or table_row.tablename like 'youtube_visual_extraction%'
           or table_row.tablename in ('cooking_methods', 'ingredient_synonyms', 'ingredients')
         )
+      )
+    ), ''),
+    'columns',
+    coalesce((
+      select pg_catalog.string_agg(
+        namespace.nspname || '.' || relation.relname || '.' || attribute.attname
+          || '|position=' || attribute.attnum::text
+          || '|type=' || pg_catalog.format_type(attribute.atttypid, attribute.atttypmod)
+          || '|not_null=' || attribute.attnotnull::text
+          || '|identity=' || attribute.attidentity::text
+          || '|generated=' || attribute.attgenerated::text
+          || '|default=' || coalesce(
+            pg_catalog.pg_get_expr(attribute_default.adbin, attribute_default.adrelid),
+            ''
+          ),
+        E'\n'
+        order by namespace.nspname, relation.relname, attribute.attnum
+      )
+      from pg_catalog.pg_attribute as attribute
+      join pg_catalog.pg_class as relation on relation.oid = attribute.attrelid
+      join pg_catalog.pg_namespace as namespace on namespace.oid = relation.relnamespace
+      left join pg_catalog.pg_attrdef as attribute_default
+        on attribute_default.adrelid = attribute.attrelid
+       and attribute_default.adnum = attribute.attnum
+      where attribute.attnum > 0
+        and not attribute.attisdropped
+        and namespace.nspname || '.' || relation.relname in (
+          'private.youtube_extraction_current_policy',
+          'private.youtube_extraction_worker_credentials',
+          'public.cooking_methods',
+          'public.ingredient_synonyms',
+          'public.ingredients',
+          'public.youtube_extraction_candidates',
+          'public.youtube_extraction_jobs',
+          'public.youtube_extraction_sessions',
+          'public.youtube_extractor_permits',
+          'public.youtube_llm_extraction_cache',
+          'public.youtube_llm_extraction_events',
+          'public.youtube_transcript_cache',
+          'public.youtube_transcript_fetch_events',
+          'public.youtube_visual_extraction_cache',
+          'public.youtube_visual_extraction_events'
+        )
+    ), ''),
+    'constraints',
+    coalesce((
+      select pg_catalog.string_agg(
+        namespace.nspname || '.' || relation.relname || '|' || constraint_row.conname
+          || '|type=' || constraint_row.contype::text
+          || '|definition=' || pg_catalog.pg_get_constraintdef(constraint_row.oid, true),
+        E'\n'
+        order by namespace.nspname, relation.relname, constraint_row.conname
+      )
+      from pg_catalog.pg_constraint as constraint_row
+      join pg_catalog.pg_class as relation on relation.oid = constraint_row.conrelid
+      join pg_catalog.pg_namespace as namespace on namespace.oid = relation.relnamespace
+      where namespace.nspname || '.' || relation.relname in (
+        'private.youtube_extraction_current_policy',
+        'private.youtube_extraction_worker_credentials',
+        'public.cooking_methods',
+        'public.ingredient_synonyms',
+        'public.ingredients',
+        'public.youtube_extraction_candidates',
+        'public.youtube_extraction_jobs',
+        'public.youtube_extraction_sessions',
+        'public.youtube_extractor_permits',
+        'public.youtube_llm_extraction_cache',
+        'public.youtube_llm_extraction_events',
+        'public.youtube_transcript_cache',
+        'public.youtube_transcript_fetch_events',
+        'public.youtube_visual_extraction_cache',
+        'public.youtube_visual_extraction_events'
+      )
+    ), ''),
+    'indexes',
+    coalesce((
+      select pg_catalog.string_agg(
+        namespace.nspname || '.' || relation.relname || '|' || index_relation.relname
+          || '|unique=' || index_row.indisunique::text
+          || '|primary=' || index_row.indisprimary::text
+          || '|valid=' || index_row.indisvalid::text
+          || '|definition=' || pg_catalog.pg_get_indexdef(index_row.indexrelid),
+        E'\n'
+        order by namespace.nspname, relation.relname, index_relation.relname
+      )
+      from pg_catalog.pg_index as index_row
+      join pg_catalog.pg_class as relation on relation.oid = index_row.indrelid
+      join pg_catalog.pg_class as index_relation on index_relation.oid = index_row.indexrelid
+      join pg_catalog.pg_namespace as namespace on namespace.oid = relation.relnamespace
+      where namespace.nspname || '.' || relation.relname in (
+        'private.youtube_extraction_current_policy',
+        'private.youtube_extraction_worker_credentials',
+        'public.cooking_methods',
+        'public.ingredient_synonyms',
+        'public.ingredients',
+        'public.youtube_extraction_candidates',
+        'public.youtube_extraction_jobs',
+        'public.youtube_extraction_sessions',
+        'public.youtube_extractor_permits',
+        'public.youtube_llm_extraction_cache',
+        'public.youtube_llm_extraction_events',
+        'public.youtube_transcript_cache',
+        'public.youtube_transcript_fetch_events',
+        'public.youtube_visual_extraction_cache',
+        'public.youtube_visual_extraction_events'
       )
     ), ''),
     'table_owners',
@@ -2318,9 +2448,75 @@ begin
       ) or (
         namespace.nspname = 'private'
         and procedure.proname in (
+          'assert_youtube_extraction_catalog_ready',
           'youtube_extraction_job_fence_is_active',
           'youtube_extraction_worker_write_fence_is_active'
         )
+      )
+    ), ''),
+    'rpc_function_definitions',
+    coalesce((
+      select pg_catalog.string_agg(
+        namespace.nspname || '.' || procedure.proname || '('
+          || pg_catalog.replace(
+            pg_catalog.oidvectortypes(procedure.proargtypes),
+            ', ',
+            ','
+          ) || ')|sha256='
+          || pg_catalog.encode(
+            extensions.digest(
+              pg_catalog.convert_to(
+                case
+                  when procedure.proname in (
+                    'assert_youtube_extraction_catalog_ready',
+                    'read_youtube_extraction_enqueue_readiness'
+                  )
+                    then pg_catalog.regexp_replace(
+                      pg_catalog.pg_get_functiondef(procedure.oid),
+                      '[0-9a-f]{64}',
+                      '<catalog-fingerprint>',
+                      'g'
+                    )
+                  else pg_catalog.pg_get_functiondef(procedure.oid)
+                end,
+                'UTF8'
+              ),
+              'sha256'
+            ),
+            'hex'
+          ),
+        E'\n'
+        order by namespace.nspname, procedure.proname, procedure.proargtypes::text
+      )
+      from pg_catalog.pg_proc as procedure
+      join pg_catalog.pg_namespace as namespace on namespace.oid = procedure.pronamespace
+      where (
+        namespace.nspname = 'public'
+        and (
+          procedure.proname like '%youtube_extraction%'
+          or procedure.proname like '%youtube_extractor_permit%'
+        )
+      ) or (
+        namespace.nspname = 'private'
+        and procedure.proname in (
+          'assert_youtube_extraction_catalog_ready',
+          'youtube_extraction_job_fence_is_active',
+          'youtube_extraction_worker_write_fence_is_active'
+        )
+      )
+    ), ''),
+    'internal_scope_function_definition',
+    coalesce((
+      select pg_catalog.encode(
+        extensions.digest(
+          pg_catalog.convert_to(pg_catalog.pg_get_functiondef(procedure.oid), 'UTF8'),
+          'sha256'
+        ),
+        'hex'
+      )
+      from pg_catalog.pg_proc as procedure
+      where procedure.oid = pg_catalog.to_regprocedure(
+        'private.verify_full_local_internal_scope()'
       )
     ), '')
   );
@@ -2333,7 +2529,7 @@ begin
     'ready', v_policy.enabled
       and v_credential.allowed_snapshot_digest = v_snapshot_digest
       and v_credential.expires_at > clock_timestamp() + interval '30 minutes'
-      and v_catalog_fingerprint = '16e47a362dc1d567c7cf7e45110458eb4e3784610b744744cbe3ea956e1f4404',
+      and v_catalog_fingerprint = 'ef5e9ca85acc5a5a77050aa206ca63739b74fa5febf37e2af0113fce87bf5285',
     'release_sha', v_credential.release_sha,
     'schema_identity', v_credential.schema_identity,
     'catalog_fingerprint', v_catalog_fingerprint,
@@ -2348,6 +2544,24 @@ begin
 exception
   when no_data_found then
     return jsonb_build_object('ready', false);
+end;
+$function$;
+
+create or replace function private.assert_youtube_extraction_catalog_ready()
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $function$
+declare
+  v_readiness jsonb;
+begin
+  v_readiness := public.read_youtube_extraction_enqueue_readiness();
+  if coalesce(v_readiness ->> 'catalog_fingerprint', '')
+    is distinct from 'ef5e9ca85acc5a5a77050aa206ca63739b74fa5febf37e2af0113fce87bf5285' then
+    raise exception 'YOUTUBE_EXTRACTION_SCHEMA_NOT_READY'
+      using errcode = '55000';
+  end if;
 end;
 $function$;
 
@@ -3997,7 +4211,9 @@ grant create on schema public
 
 -- PostgreSQL requires the prospective function owner to hold CREATE on the
 -- containing schema while ALTER OWNER runs. Keep this edge transaction-local.
-grant create on schema private to youtube_extraction_worker_rpc_owner;
+grant create on schema private
+  to youtube_extraction_worker_rpc_owner,
+     youtube_extraction_credential_manager_rpc_owner;
 
 alter function public.check_youtube_extraction_worker_pre_request()
   owner to youtube_extraction_worker_rpc_owner;
@@ -4011,6 +4227,8 @@ alter function public.heartbeat_youtube_extraction_job(uuid, text, bigint, bigin
 alter function public.start_youtube_extraction_attempt(uuid, text, bigint, bigint)
   owner to youtube_extraction_worker_rpc_owner;
 alter function public.read_youtube_extraction_enqueue_readiness()
+  owner to youtube_extraction_credential_manager_rpc_owner;
+alter function private.assert_youtube_extraction_catalog_ready()
   owner to youtube_extraction_credential_manager_rpc_owner;
 alter function public.read_youtube_extraction_job_projection(uuid)
   owner to youtube_extraction_worker_rpc_owner;
@@ -4055,6 +4273,13 @@ alter function public.mark_youtube_extraction_jobs_seen(uuid, uuid[])
 alter function public.rotate_youtube_extraction_worker_credential(
   bigint, bigint, text, timestamptz, text, text, text
 ) owner to youtube_extraction_credential_manager_rpc_owner;
+
+revoke all on function private.assert_youtube_extraction_catalog_ready()
+from public, anon, authenticated, service_role,
+  youtube_extraction_worker, youtube_extraction_credential_manager;
+grant execute on function private.assert_youtube_extraction_catalog_ready()
+to youtube_extraction_enqueue_rpc_owner,
+   youtube_extraction_worker_rpc_owner;
 
 set local role youtube_extraction_enqueue_rpc_owner;
 
@@ -4238,7 +4463,9 @@ revoke create on schema public
        youtube_extraction_worker_rpc_owner,
        youtube_extraction_credential_manager_rpc_owner;
 
-revoke create on schema private from youtube_extraction_worker_rpc_owner;
+revoke create on schema private
+  from youtube_extraction_worker_rpc_owner,
+       youtube_extraction_credential_manager_rpc_owner;
 
 do $$
 begin

@@ -21,6 +21,8 @@
     <string>__MANIFEST_PATH__</string>
     <string>--credential</string>
     <string>__CREDENTIAL_PATH__</string>
+    <string>--secret-root</string>
+    <string>__SECRET_ROOT__</string>
     <string>--app-descriptor</string>
     <string>__APP_DESCRIPTOR_PATH__</string>
     <string>--policy</string>

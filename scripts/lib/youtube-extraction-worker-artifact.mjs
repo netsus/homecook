@@ -717,6 +717,9 @@ export function readYoutubeExtractionExpectedSchema(path) {
   const value = readJsonFile(path, "expected schema manifest");
   const exactFingerprintComponents = [
     "tables",
+    "columns",
+    "constraints",
+    "indexes",
     "table_owners",
     "sequence_owners",
     "schema_owners",
@@ -730,6 +733,12 @@ export function readYoutubeExtractionExpectedSchema(path) {
     "sequence_privileges",
     "rpc_signatures",
     "rpc_security",
+    "rpc_function_definitions",
+    "internal_scope_function_definition",
+  ];
+  const exactFenceFunctionSignatures = [
+    "private.youtube_extraction_job_fence_is_active(uuid,text,bigint)",
+    "private.youtube_extraction_worker_write_fence_is_active(uuid,text,bigint,bigint)",
   ];
   const exactMemberships = [
     {
@@ -763,6 +772,10 @@ export function readYoutubeExtractionExpectedSchema(path) {
     || !isUniqueStringArray(value.tables)
     || !isUniqueStringArray(value.roles)
     || !isUniqueStringArray(value.rpc_signatures)
+    || JSON.stringify(value.fence_function_signatures)
+      !== JSON.stringify(exactFenceFunctionSignatures)
+    || value.internal_scope_function_signature
+      !== "private.verify_full_local_internal_scope()"
     || JSON.stringify(value.memberships) !== JSON.stringify(exactMemberships)
     || typeof value.migration_owner_membership_exception !== "string"
     || !value.initial_policy

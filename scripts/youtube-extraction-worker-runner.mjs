@@ -10,6 +10,7 @@ import {
   readYoutubeExtractionWorkerCredential,
   validateYoutubeExtractionWorkerConfigPath,
   validateYoutubeExtractionWorkerSecretFile,
+  validateYoutubeExtractionWorkerSecretRoot,
 } from "./lib/youtube-extraction-worker-ops.mjs";
 import {
   ensureAbsolutePath,
@@ -72,6 +73,9 @@ function parseArgs(argv) {
       case "--expected-schema":
         options.expectedSchemaPath = ensureAbsolutePath(value, "expectedSchemaPath");
         break;
+      case "--secret-root":
+        options.secretRoot = ensureAbsolutePath(value, "secretRoot");
+        break;
       default:
         throw new Error(`Unknown option: ${token}`);
     }
@@ -89,16 +93,19 @@ async function main() {
   const options = parseArgs(process.argv.slice(2));
   if (options.command !== "run" && options.command !== "health") {
     throw new Error(
-      "Usage: node scripts/youtube-extraction-worker-runner.mjs <run|health> --config <env> --manifest <artifact.json> --credential <credential.json> --app-descriptor <app.json> --policy <policy.json> --expected-schema <schema.json> [--queue-state <queue.json>] [--dry-run]",
+      "Usage: node scripts/youtube-extraction-worker-runner.mjs <run|health> --secret-root <directory> --config <env> --manifest <artifact.json> --credential <credential.json> --app-descriptor <app.json> --policy <policy.json> --expected-schema <schema.json> [--queue-state <queue.json>] [--dry-run]",
     );
   }
 
-  validateYoutubeExtractionWorkerConfigPath(options.configPath);
+  validateYoutubeExtractionWorkerSecretRoot(options.secretRoot);
+  const secretRoot = options.secretRoot;
+  validateYoutubeExtractionWorkerConfigPath(options.configPath, { secretRoot });
   const workerArtifact = verifyYoutubeExtractionWorkerArtifact(
     options.workerArtifactPath,
   );
   const credentialState = readYoutubeExtractionWorkerCredential(
     options.credentialPath,
+    { secretRoot },
   );
   const appDescriptor = options.appDescriptorPath
     ? readYoutubeExtractionAppDescriptor(options.appDescriptorPath)
@@ -162,6 +169,7 @@ async function main() {
   const workerEnvironment = await readWorkerEnvironment(options.configPath);
   const providerSecretFile = validateYoutubeExtractionWorkerSecretFile(
     workerEnvironment.HOMECOOK_YOUTUBE_WORKER_PROVIDER_SECRET_FILE,
+    { secretRoot },
   );
   const providerEnvironment = await readWorkerProviderEnvironment(providerSecretFile);
   const runtimeEnvironment = sanitizeYoutubeExtractionChildEnvironment({

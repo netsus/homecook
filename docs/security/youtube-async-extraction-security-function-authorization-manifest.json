@@ -33,6 +33,16 @@
       "safe_search_path": ["pg_catalog", "pg_temp"]
     },
     {
+      "signature": "private.assert_youtube_extraction_catalog_ready()",
+      "control_class": "application-controlled",
+      "effect": "read-only",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "owner": "youtube_extraction_credential_manager_rpc_owner",
+      "security_mode": "definer",
+      "safe_search_path": ["pg_catalog", "pg_temp"]
+    },
+    {
       "signature": "private.youtube_extraction_job_fence_is_active(uuid, text, bigint)",
       "control_class": "application-controlled",
       "effect": "read-only",

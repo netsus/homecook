@@ -1,5 +1,5 @@
-import { readFileSync, realpathSync } from "node:fs";
-import { dirname, resolve } from "node:path";
+import { existsSync, lstatSync, readFileSync, realpathSync } from "node:fs";
+import { dirname, isAbsolute, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import {
@@ -34,6 +34,7 @@ const TEMPLATE_PATH = resolve(
 );
 
 export const DEFAULT_YOUTUBE_EXTRACTION_WORKER_SECRET_MODE = 0o600;
+export const DEFAULT_YOUTUBE_EXTRACTION_WORKER_SECRET_ROOT_MODE = 0o700;
 export const DEFAULT_YOUTUBE_EXTRACTION_WORKER_LOG_DIR_NAME = "Homecook";
 const EXACT_I031_CODEX_CLI_VERSION = "0.144.0-alpha.4";
 
@@ -70,17 +71,86 @@ function buildPathEnv(nodeBin) {
   ])].join(":");
 }
 
+function isContainedPath(parentPath, childPath) {
+  const relativePath = relative(parentPath, childPath);
+  return relativePath === ""
+    || (!relativePath.startsWith(`..${sep}`) && relativePath !== ".." && !isAbsolute(relativePath));
+}
+
+function assertNoSymlinkBelowRoot(rootPath, candidatePath, label) {
+  const relativePath = relative(rootPath, candidatePath);
+  if (!isContainedPath(rootPath, candidatePath)) {
+    throw new Error(`${label} must be contained by the worker secret root.`);
+  }
+  let currentPath = rootPath;
+  for (const component of relativePath.split(sep).filter(Boolean)) {
+    currentPath = resolve(currentPath, component);
+    if (!existsSync(currentPath)) {
+      throw new Error(`${label} does not exist: ${currentPath}`);
+    }
+    if (lstatSync(currentPath).isSymbolicLink()) {
+      throw new Error(`${label} must not have a symbolic link ancestor: ${currentPath}`);
+    }
+  }
+}
+
+/**
+ * @param {string} secretRoot
+ * @param {{ expectedUserId?: number, repoRoot?: string }} [options]
+ */
+export function validateYoutubeExtractionWorkerSecretRoot(secretRoot, {
+  expectedUserId = process.getuid?.(),
+  repoRoot = process.cwd(),
+} = {}) {
+  const normalizedRoot = ensureAbsolutePath(secretRoot, "worker secret root");
+  if (!existsSync(normalizedRoot)) {
+    throw new Error(`worker secret root does not exist: ${normalizedRoot}`);
+  }
+  const rootStat = lstatSync(normalizedRoot);
+  if (rootStat.isSymbolicLink()) {
+    throw new Error(`worker secret root must not be a symbolic link: ${normalizedRoot}`);
+  }
+  if (!rootStat.isDirectory()) {
+    throw new Error(`worker secret root must be a directory: ${normalizedRoot}`);
+  }
+  if (modeBits(rootStat.mode) !== DEFAULT_YOUTUBE_EXTRACTION_WORKER_SECRET_ROOT_MODE) {
+    throw new Error("worker secret root must use mode 0700.");
+  }
+  if (Number.isInteger(expectedUserId) && rootStat.uid !== expectedUserId) {
+    throw new Error("worker secret root owner must match the worker user.");
+  }
+
+  const canonicalRoot = realpathSync(normalizedRoot);
+  const normalizedRepo = ensureAbsolutePath(repoRoot, "repoRoot");
+  const canonicalRepo = existsSync(normalizedRepo) ? realpathSync(normalizedRepo) : normalizedRepo;
+  if (
+    isContainedPath(canonicalRepo, canonicalRoot)
+    || isContainedPath(canonicalRoot, canonicalRepo)
+  ) {
+    throw new Error("worker secret root must be outside the repository.");
+  }
+  return canonicalRoot;
+}
+
 /**
  * @param {string} configPath
- * @param {{ expectedUserId?: number }} [options]
+ * @param {{ expectedUserId?: number, secretRoot?: string, repoRoot?: string }} [options]
  */
 export function validateYoutubeExtractionWorkerConfigPath(configPath, {
   expectedUserId = process.getuid?.(),
+  secretRoot,
+  repoRoot = process.cwd(),
 } = {}) {
-  const normalizedPath = ensureRegularFile(configPath, "worker config", {
-    mode: DEFAULT_YOUTUBE_EXTRACTION_WORKER_SECRET_MODE,
-    expectedUserId,
-  });
+  const normalizedPath = secretRoot
+    ? validateYoutubeExtractionWorkerSecretFile(configPath, {
+        expectedUserId,
+        secretRoot,
+        repoRoot,
+      })
+    : ensureRegularFile(configPath, "worker config", {
+        mode: DEFAULT_YOUTUBE_EXTRACTION_WORKER_SECRET_MODE,
+        expectedUserId,
+      });
   const lines = readFileSync(normalizedPath, "utf8").split(/\r?\n/u);
   for (const line of lines) {
     const trimmed = line.trim();
@@ -97,12 +167,30 @@ export function validateYoutubeExtractionWorkerConfigPath(configPath, {
 
 /**
  * @param {string} secretFile
- * @param {{ expectedUserId?: number }} [options]
+ * @param {{ expectedUserId?: number, secretRoot?: string, repoRoot?: string }} [options]
  */
 export function validateYoutubeExtractionWorkerSecretFile(secretFile, {
   expectedUserId = process.getuid?.(),
+  secretRoot,
+  repoRoot = process.cwd(),
 } = {}) {
-  return ensureRegularFile(secretFile, "worker secret file", {
+  const normalizedSecret = ensureAbsolutePath(secretFile, "worker secret file");
+  if (secretRoot) {
+    const canonicalRoot = validateYoutubeExtractionWorkerSecretRoot(secretRoot, {
+      expectedUserId,
+      repoRoot,
+    });
+    const normalizedRoot = ensureAbsolutePath(secretRoot, "worker secret root");
+    const lexicalRoot = isContainedPath(normalizedRoot, normalizedSecret)
+      ? normalizedRoot
+      : canonicalRoot;
+    assertNoSymlinkBelowRoot(lexicalRoot, normalizedSecret, "worker secret file");
+    const canonicalSecret = realpathSync(normalizedSecret);
+    if (!isContainedPath(canonicalRoot, canonicalSecret)) {
+      throw new Error("worker secret file must be contained by the worker secret root.");
+    }
+  }
+  return ensureRegularFile(normalizedSecret, "worker secret file", {
     mode: DEFAULT_YOUTUBE_EXTRACTION_WORKER_SECRET_MODE,
     expectedUserId,
   });
@@ -157,6 +245,7 @@ export function buildYoutubeExtractionWorkerServiceTarget({
  *   appDescriptorPath: string,
  *   currentPolicyPath: string,
  *   expectedSchemaPath: string,
+ *   secretRoot?: string,
  *   homeDir?: string,
  *   nodeBin?: string,
  *   rootDir?: string,
@@ -169,22 +258,30 @@ export function renderYoutubeExtractionWorkerPlist({
   appDescriptorPath,
   currentPolicyPath,
   expectedSchemaPath,
+  secretRoot,
   homeDir = process.env.HOME ?? "",
   nodeBin = process.execPath,
   rootDir,
 } = {}) {
-  const normalizedConfigPath = validateYoutubeExtractionWorkerConfigPath(
-    configPath,
-  );
+  const normalizedSecretRoot = secretRoot
+    ? validateYoutubeExtractionWorkerSecretRoot(secretRoot)
+    : undefined;
+  const normalizedConfigPath = validateYoutubeExtractionWorkerConfigPath(configPath, {
+    secretRoot,
+  });
   const normalizedManifestPath = ensureRegularFile(
     manifestPath,
     "worker manifest",
   );
-  const normalizedCredentialPath = ensureRegularFile(
-    credentialPath,
-    "worker credential metadata",
-    { mode: DEFAULT_YOUTUBE_EXTRACTION_WORKER_SECRET_MODE },
-  );
+  const normalizedCredentialPath = normalizedSecretRoot
+    ? validateYoutubeExtractionWorkerSecretFile(credentialPath, {
+        secretRoot,
+      })
+    : ensureRegularFile(
+        credentialPath,
+        "worker credential metadata",
+        { mode: DEFAULT_YOUTUBE_EXTRACTION_WORKER_SECRET_MODE },
+      );
   const normalizedAppDescriptorPath = ensureRegularFile(
     appDescriptorPath,
     "app descriptor",
@@ -222,6 +319,7 @@ export function renderYoutubeExtractionWorkerPlist({
     .replaceAll("__CONFIG_PATH__", normalizedConfigPath)
     .replaceAll("__MANIFEST_PATH__", normalizedManifestPath)
     .replaceAll("__CREDENTIAL_PATH__", normalizedCredentialPath)
+    .replaceAll("__SECRET_ROOT__", normalizedSecretRoot ?? "")
     .replaceAll("__APP_DESCRIPTOR_PATH__", normalizedAppDescriptorPath)
     .replaceAll("__CURRENT_POLICY_PATH__", normalizedCurrentPolicyPath)
     .replaceAll("__EXPECTED_SCHEMA_PATH__", normalizedExpectedSchemaPath)
@@ -304,6 +402,7 @@ function buildLaunchctlPlan(command, args) {
  *   appDescriptorPath: string,
  *   currentPolicyPath: string,
  *   expectedSchemaPath: string,
+ *   secretRoot?: string,
  *   homeDir?: string,
  *   nodeBin?: string,
  *   rootDir?: string,
@@ -319,6 +418,7 @@ export function buildYoutubeExtractionWorkerInstallPlan({
   appDescriptorPath,
   currentPolicyPath,
   expectedSchemaPath,
+  secretRoot,
   homeDir = process.env.HOME ?? "",
   nodeBin = process.execPath,
   rootDir,
@@ -333,6 +433,7 @@ export function buildYoutubeExtractionWorkerInstallPlan({
     currentPolicyPath,
     credentialPath,
     expectedSchemaPath,
+    secretRoot,
   });
   const preflight = evaluateYoutubeExtractionWorkerPreflight({
     ...inputs,
@@ -350,6 +451,7 @@ export function buildYoutubeExtractionWorkerInstallPlan({
     appDescriptorPath,
     currentPolicyPath,
     expectedSchemaPath,
+    secretRoot,
     homeDir,
     nodeBin,
     rootDir,
@@ -471,6 +573,7 @@ export function buildYoutubeExtractionWorkerLifecyclePlan({
  *   releaseSha: string,
  *   schemaIdentity: string,
  *   allowedSnapshotDigest: string,
+ *   secretRoot?: string,
  * }} options
  */
 export function buildYoutubeExtractionWorkerCredentialState({
@@ -481,8 +584,11 @@ export function buildYoutubeExtractionWorkerCredentialState({
   releaseSha,
   schemaIdentity,
   allowedSnapshotDigest,
+  secretRoot,
 } = {}) {
-  const normalizedTokenFile = validateYoutubeExtractionWorkerSecretFile(tokenFile);
+  const normalizedTokenFile = validateYoutubeExtractionWorkerSecretFile(tokenFile, {
+    secretRoot,
+  });
   const normalizedGeneration = ensureInteger(generation, "generation", {
     minimum: 1,
   });
@@ -522,6 +628,7 @@ export function buildYoutubeExtractionWorkerCredentialState({
  *   releaseSha: string,
  *   schemaIdentity: string,
  *   allowedSnapshotDigest: string,
+ *   secretRoot?: string,
  * }} options
  */
 export function rotateYoutubeExtractionWorkerCredential({
@@ -533,6 +640,7 @@ export function rotateYoutubeExtractionWorkerCredential({
   releaseSha,
   schemaIdentity,
   allowedSnapshotDigest,
+  secretRoot,
 } = {}) {
   const normalizedExpected = ensureInteger(
     expectedGeneration,
@@ -557,21 +665,32 @@ export function rotateYoutubeExtractionWorkerCredential({
     releaseSha,
     schemaIdentity,
     allowedSnapshotDigest,
+    secretRoot,
   });
 }
 
 /**
  * @param {string} path
+ * @param {{ secretRoot?: string, expectedUserId?: number }} [options]
  */
-export function readYoutubeExtractionWorkerCredential(path) {
-  const value = readJsonFile(path, "worker credential metadata", {
+export function readYoutubeExtractionWorkerCredential(path, {
+  secretRoot,
+  expectedUserId = process.getuid?.(),
+} = {}) {
+  const normalizedMetadataPath = secretRoot
+    ? validateYoutubeExtractionWorkerSecretFile(path, { secretRoot, expectedUserId })
+    : path;
+  const value = readJsonFile(normalizedMetadataPath, "worker credential metadata", {
     mode: DEFAULT_YOUTUBE_EXTRACTION_WORKER_SECRET_MODE,
-    expectedUserId: process.getuid?.(),
+    expectedUserId,
   });
   if (value.schema !== YOUTUBE_EXTRACTION_WORKER_CREDENTIAL_SCHEMA) {
     throw new Error("worker credential metadata schema is invalid.");
   }
-  const normalizedTokenFile = validateYoutubeExtractionWorkerSecretFile(value.token_file);
+  const normalizedTokenFile = validateYoutubeExtractionWorkerSecretFile(value.token_file, {
+    secretRoot,
+    expectedUserId,
+  });
   if (value.token_file_sha256 !== sha256File(normalizedTokenFile)) {
     throw new Error("worker token file digest does not match metadata.");
   }
@@ -832,6 +951,7 @@ export function buildYoutubeExtractionWorkerHealth({
  *   currentPolicyPath: string,
  *   credentialPath: string,
  *   queueStatePath?: string | null,
+ *   secretRoot?: string,
  * }} options
  */
 export function loadYoutubeExtractionWorkerRuntimeInputs({
@@ -841,6 +961,7 @@ export function loadYoutubeExtractionWorkerRuntimeInputs({
   credentialPath,
   expectedSchemaPath = null,
   queueStatePath = null,
+  secretRoot,
 } = {}) {
   return {
     appDescriptor: readYoutubeExtractionAppDescriptor(appDescriptorPath),
@@ -848,7 +969,7 @@ export function loadYoutubeExtractionWorkerRuntimeInputs({
       ? verifyYoutubeExtractionWorkerArtifact(workerArtifactPath)
       : readYoutubeExtractionWorkerArtifact(workerArtifactPath),
     currentPolicy: readYoutubeExtractionCurrentPolicy(currentPolicyPath),
-    credentialState: readYoutubeExtractionWorkerCredential(credentialPath),
+    credentialState: readYoutubeExtractionWorkerCredential(credentialPath, { secretRoot }),
     expectedSchema: expectedSchemaPath
       ? readYoutubeExtractionExpectedSchema(expectedSchemaPath)
       : null,
@@ -865,9 +986,13 @@ export function loadYoutubeExtractionWorkerRuntimeInputs({
 /**
  * @param {string} path
  * @param {ReturnType<typeof buildYoutubeExtractionWorkerCredentialState>} credentialState
+ * @param {{ secretRoot?: string }} [options]
  */
-export function writeCredentialMetadata(path, credentialState) {
-  return writeJsonFile(path, credentialState, {
+export function writeCredentialMetadata(path, credentialState, { secretRoot } = {}) {
+  const writtenPath = writeJsonFile(path, credentialState, {
     mode: DEFAULT_YOUTUBE_EXTRACTION_WORKER_SECRET_MODE,
   });
+  return secretRoot
+    ? validateYoutubeExtractionWorkerSecretFile(writtenPath, { secretRoot })
+    : writtenPath;
 }
