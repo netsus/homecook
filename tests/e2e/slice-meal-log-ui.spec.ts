@@ -1,5 +1,6 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
+import { execFileSync } from "node:child_process";
 
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page, type Route } from "@playwright/test";
@@ -133,6 +134,12 @@ test.describe("meal-log-ui Stage 4", () => {
   test("meal-log-ui captures the contracted viewport and state matrix", async ({ browser }, testInfo) => {
     test.skip(testInfo.project.name !== "desktop-chrome", "한 프로젝트에서 exact viewport를 직접 설정한다.");
     test.setTimeout(360_000);
+    const worktreeStatus = execFileSync("git", ["status", "--porcelain", "--untracked-files=all"], { encoding: "utf8" }).trim();
+    expect(worktreeStatus, "canonical meal-log evidence requires a clean worktree").toBe("");
+    const implementationHead = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim();
+    const implementationTree = execFileSync("git", ["rev-parse", "HEAD^{tree}"], { encoding: "utf8" }).trim();
+    expect(implementationHead).toMatch(/^[0-9a-f]{40}$/u);
+    expect(implementationTree).toMatch(/^[0-9a-f]{40}$/u);
     await mkdir(EVIDENCE_DIR, { recursive: true });
     const captured: Array<{ file: string; state: FixtureState; viewport: string; captured_at: string }> = [];
     const runtime: {
@@ -288,10 +295,6 @@ test.describe("meal-log-ui Stage 4", () => {
     expect(captured).toHaveLength(51);
     const capturedAt = new Date().toISOString();
     await writeFile(resolve(EVIDENCE_DIR, "runtime-accessibility-layout.json"), `${JSON.stringify(runtime, null, 2)}\n`);
-    const implementationHead = process.env.MEAL_LOG_IMPLEMENTATION_HEAD;
-    const implementationTree = process.env.MEAL_LOG_IMPLEMENTATION_TREE;
-    expect(implementationHead, "MEAL_LOG_IMPLEMENTATION_HEAD must pin the clean implementation commit").toMatch(/^[0-9a-f]{40}$/u);
-    expect(implementationTree, "MEAL_LOG_IMPLEMENTATION_TREE must pin the clean implementation tree").toMatch(/^[0-9a-f]{40}$/u);
     await writeFile(resolve(EVIDENCE_DIR, "manifest.json"), `${JSON.stringify({ captured_at: capturedAt, generated_by: "tests/e2e/slice-meal-log-ui.spec.ts", implementation_head: implementationHead, implementation_tree: implementationTree, viewport_matrix: viewports, required_states: states, captures: captured, limitations: ["Deterministic local mocked routes only.", "Mobile PNGs are viewport-bound captures; desktop PNGs use full-page capture.", "Physical device, screen reader, virtual keyboard, server-Mac, OAuth, AT, R/R+1/R+2 and production remain pending."] }, null, 2)}\n`);
     expect(runtime).toEqual({ axeSeriousOrCritical: 0, axeViolations: [], horizontalOverflow: 0, targetsBelow44: 0, replayKeyReused: true });
   });
