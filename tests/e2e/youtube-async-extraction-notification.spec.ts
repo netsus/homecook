@@ -144,6 +144,48 @@ async function installNotificationFailureRoute(
   });
 }
 
+async function installGrowthToastRoute(page: Page) {
+  await page.route(
+    (url) => url.pathname === "/api/v1/users/me/gamification",
+    async (route) => {
+      await route.fulfill({
+        json: {
+          success: true,
+          data: {
+            achievement_album: { categories: [], summary: { completed_category_count: 0, earned_count: 0, total_count: 0 } },
+            badges: { earned: [], locked: [] },
+            featured_badges: [],
+            grade: { grade_key: "clay", label: "새싹 집밥러", level_max: 4, level_min: 1 },
+            last_updated_at: "2026-08-14T01:05:00.000Z",
+            level: { current_level: 2, progress_percent: 20, total_xp: 120, xp_to_next_level: 80 },
+            notifications: {
+              archive_preview: [],
+              priority_unseen: [{
+                body: "첫 요리를 기록해 15 XP를 받았어요.",
+                category: "cooking",
+                created_at: "2026-08-14T01:05:00.000Z",
+                delivery_channel: "toast",
+                group_key: null,
+                id: "growth-toast-simultaneous",
+                notification_type: "xp_awarded",
+                payload: { event_type: "cooking_completed", xp_delta: 15 },
+                priority: 3,
+                seen_at: null,
+                title: "집밥 경험치 획득",
+                toast_eligible: true,
+              }],
+              unseen: [],
+            },
+            quests: { active: [], completed_recent: [] },
+            tutorial: { active_steps: [], category_key: "tutorial", completed_count: 0, total_count: 6 },
+          },
+          error: null,
+        },
+      });
+    },
+  );
+}
+
 async function installImportRoutes(page: Page, mode: ImportMode) {
   await installNotificationRoutes(page, []);
   let releaseValidation = () => {};
@@ -379,16 +421,87 @@ test.beforeAll(async () => {
 test("import initial and submitting states are visually explicit", async ({ page }, testInfo) => {
   const controls = await openImport(page, "submitting", 390, 844);
   await expect(page.getByLabel("유튜브 URL")).toBeVisible();
-  await expect(page.getByRole("button", { name: "가져오기" })).toBeDisabled();
+  const importButton = page.getByRole("button", { name: "가져오기" });
+  await expect(importButton).toBeDisabled();
+  const initialStyle = await importButton.evaluate((element) => {
+    const style = getComputedStyle(element);
+    return { backgroundColor: style.backgroundColor, color: style.color, opacity: style.opacity, transform: style.transform };
+  });
+  expect(initialStyle.opacity).toBe("1");
+  expect(initialStyle.transform).toBe("none");
   await captureEvidence(page, testInfo, path.join(IMPORT_EVIDENCE, "mobile-390-initial.png"), true);
 
   await page.getByLabel("유튜브 URL").fill(YOUTUBE_URL);
-  await page.getByRole("button", { name: "가져오기" }).click();
-  await expect(page.getByRole("button", { name: "확인 중..." })).toBeDisabled();
+  await expect(importButton).toBeEnabled();
+  const enabledStyle = await importButton.evaluate((element) => {
+    const style = getComputedStyle(element);
+    return { backgroundColor: style.backgroundColor, color: style.color };
+  });
+  expect(enabledStyle.backgroundColor).not.toBe(initialStyle.backgroundColor);
+  expect(enabledStyle.color).not.toBe(initialStyle.color);
+  await captureEvidence(page, testInfo, path.join(IMPORT_EVIDENCE, "mobile-390-enabled-url.png"), true);
+  await importButton.click();
+  const submittingButton = page.getByRole("button", { name: "확인 중..." });
+  await expect(submittingButton).toBeDisabled();
+  const submittingStyle = await submittingButton.evaluate((element) => {
+    const style = getComputedStyle(element);
+    return { backgroundColor: style.backgroundColor, color: style.color, opacity: style.opacity, transform: style.transform };
+  });
+  expect(submittingStyle).toEqual(initialStyle);
   await expect(page.getByLabel("유튜브 URL")).toBeDisabled();
   await captureEvidence(page, testInfo, path.join(IMPORT_EVIDENCE, "mobile-390-submitting.png"), true);
   controls.releaseValidation();
 });
+
+for (const viewport of [
+  { file: "mobile-390-global-toast-coordination.png", height: 844, width: 390 },
+  { file: "mobile-320-global-toast-coordination.png", height: 568, width: 320 },
+]) {
+  test(`global toast presentation keeps simultaneous channels separate at ${viewport.width}px`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width: viewport.width, height: viewport.height });
+    await setE2EAuthOverride(page);
+    await installDiscoveryRoutes(page);
+    await installGrowthToastRoute(page);
+    await installNotificationRoutes(page, [
+      notificationItem({ status: "succeeded", title: "감자 수프" }),
+    ]);
+    await page.goto("/");
+
+    const layer = page.getByTestId("global-toast-presentation-slot");
+    const youtubeToast = page.locator("[data-youtube-notification-toast]");
+    const growthToast = page.getByTestId("growth-toast");
+    await expect(layer).toHaveAttribute("aria-live", "polite");
+    await expect(youtubeToast).toBeVisible();
+    await expect(growthToast).toBeVisible();
+
+    const [youtubeBox, growthBox] = await Promise.all([
+      youtubeToast.boundingBox(),
+      growthToast.boundingBox(),
+    ]);
+    expect(rectanglesAreDisjoint(youtubeBox, growthBox)).toBe(true);
+    for (const box of [youtubeBox, growthBox]) {
+      expect(box).not.toBeNull();
+      expect(box?.x ?? -1).toBeGreaterThanOrEqual(0);
+      expect((box?.x ?? 0) + (box?.width ?? 0)).toBeLessThanOrEqual(viewport.width);
+      expect(box?.y ?? -1).toBeGreaterThanOrEqual(0);
+      expect((box?.y ?? 0) + (box?.height ?? 0)).toBeLessThanOrEqual(viewport.height);
+    }
+
+    const readingOrder = await layer.locator(
+      "[data-youtube-notification-toast], [data-testid='growth-toast']",
+    ).evaluateAll((elements) => elements.map((element) =>
+      element.hasAttribute("data-youtube-notification-toast") ? "youtube" : "growth"));
+    expect(readingOrder).toEqual(["youtube", "growth"]);
+
+    await captureEvidence(page, testInfo, path.join(SHELL_EVIDENCE, viewport.file));
+
+    await growthToast.getByRole("button", { name: "알림 닫기" }).click();
+    await expect(growthToast).toHaveCount(0);
+    await expect(youtubeToast).toBeVisible();
+    await youtubeToast.getByRole("button", { name: "toast 닫기" }).click();
+    await expect(youtubeToast).toHaveCount(0);
+  });
+}
 
 test("policy change preserves the URL in a safe import error state", async ({ page }, testInfo) => {
   await openImport(page, "policy-changed", 390, 844);
@@ -822,7 +935,7 @@ test("shell offline state offers an inline retry without guessing success", asyn
   await captureEvidence(page, testInfo, path.join(SHELL_EVIDENCE, "mobile-390-offline.png"));
 });
 
-test("shell unauthorized state keeps a return-to-login action", async ({ page }, testInfo) => {
+test("shell unauthorized state keeps a return-to-login action", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await setE2EAuthOverride(page);
   await installDiscoveryRoutes(page);

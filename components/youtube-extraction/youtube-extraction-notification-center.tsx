@@ -6,6 +6,10 @@ import Link from "next/link";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
+  GLOBAL_TOAST_YOUTUBE_SLOT_ID,
+  GlobalToastPortal,
+} from "@/components/shared/global-toast-presentation-slot";
+import {
   enqueueYoutubeExtraction,
   fetchYoutubeExtractionJob,
   fetchYoutubeExtractionNotifications,
@@ -32,6 +36,7 @@ import type {
 
 interface YoutubeExtractionNotificationCenterProps {
   initialAuthenticated?: boolean;
+  presentationMode?: "shared" | "standalone";
   resolveAuthenticatedOnClient?: boolean;
 }
 
@@ -201,6 +206,7 @@ function appendUniqueItems(
 
 export function YoutubeExtractionNotificationCenter({
   initialAuthenticated = true,
+  presentationMode = "standalone",
   resolveAuthenticatedOnClient = false,
 }: YoutubeExtractionNotificationCenterProps = {}) {
   const items = useYoutubeExtractionStore((state) => state.items);
@@ -729,7 +735,19 @@ export function YoutubeExtractionNotificationCenter({
           <YoutubeExtractionNotificationTrigger placement="global" />
         </div>
       ) : null}
-      <div aria-live="polite" className="pointer-events-none fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+84px)] z-50 mx-auto flex max-w-sm flex-col gap-2 sm:bottom-auto sm:left-auto sm:right-5 sm:top-[calc(env(safe-area-inset-top)+84px)] sm:mx-0 sm:w-[360px]" data-testid="youtube-notification-toast-stack">
+      <GlobalToastPortal
+        enabled={presentationMode === "shared"}
+        slotId={GLOBAL_TOAST_YOUTUBE_SLOT_ID}
+      >
+        <div
+          aria-live={presentationMode === "shared" ? undefined : "polite"}
+          className={
+            presentationMode === "shared"
+              ? "pointer-events-none flex w-full flex-col gap-2"
+              : "pointer-events-none fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+84px)] z-50 mx-auto flex max-w-sm flex-col gap-2 sm:bottom-auto sm:left-auto sm:right-5 sm:top-[calc(env(safe-area-inset-top)+84px)] sm:mx-0 sm:w-[360px]"
+          }
+          data-testid="youtube-notification-toast-stack"
+        >
         {visibleToastItems.length > 0 ? (() => {
           const item = visibleToastItems[0];
           const grouped = visibleToastItems.length > 1;
@@ -745,11 +763,11 @@ export function YoutubeExtractionNotificationCenter({
               <div className="flex items-start gap-3">
                 <span aria-hidden="true" className={groupedOutcome === "mixed" ? "text-[var(--muted)]" : groupedOutcome === "succeeded" ? "text-[var(--success)]" : "text-[var(--danger)]"} data-outcome={groupedOutcome} data-testid="youtube-notification-toast-icon">{groupedOutcome === "mixed" ? "•" : groupedOutcome === "succeeded" ? "✓" : "!"}</span>
                 <div className="min-w-0 flex-1">
-                  <p className="font-bold text-[var(--foreground)]">{grouped ? `레시피 추출 ${visibleToastItems.length}건이 끝났어요` : copy?.title}</p>
+                  <p className="break-keep font-bold text-[var(--foreground)] [overflow-wrap:anywhere]">{grouped ? `레시피 추출 ${visibleToastItems.length}건이 끝났어요` : copy?.title}</p>
                   {grouped || copy?.body !== copy?.title ? (
-                    <p className="mt-1 break-words text-sm text-[var(--muted)]">{grouped ? "완료·실패 결과를 알림 목록에서 확인해 주세요." : copy?.body}</p>
+                    <p className="mt-1 break-keep text-sm text-[var(--muted)] [overflow-wrap:anywhere]">{grouped ? "완료·실패 결과를 알림 목록에서 확인해 주세요." : copy?.body}</p>
                   ) : null}
-                  {!grouped && itemTitle(item) !== "YouTube 레시피" ? <p className="mt-1 break-words text-xs text-[var(--muted)]">{itemTitle(item)}</p> : null}
+                  {!grouped && itemTitle(item) !== "YouTube 레시피" ? <p className="mt-1 break-keep text-xs text-[var(--muted)] [overflow-wrap:anywhere]">{itemTitle(item)}</p> : null}
                 </div>
                 <button aria-label="toast 닫기" className="-m-2 inline-flex min-h-11 min-w-11 items-center justify-center rounded-full text-lg text-[var(--muted)]" onClick={() => setHiddenToastIds((current) => [...new Set([...current, ...visibleToastItems.map(({ job_id }) => job_id)])])} type="button">×</button>
               </div>
@@ -770,7 +788,8 @@ export function YoutubeExtractionNotificationCenter({
             </article>
           );
         })() : null}
-      </div>
+        </div>
+      </GlobalToastPortal>
 
       {open ? (
         <div className="fixed inset-x-0 bottom-0 z-[500] flex items-end bg-[var(--overlay-35)] p-0 sm:items-stretch sm:justify-end" data-testid="youtube-notification-overlay" onMouseDown={(event) => {

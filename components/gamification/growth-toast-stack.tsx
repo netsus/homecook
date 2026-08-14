@@ -7,6 +7,10 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 
 import { MypageGrowthDetailDialog } from "@/components/mypage/mypage-growth-detail-dialog";
 import {
+  GLOBAL_TOAST_GROWTH_SLOT_ID,
+  GlobalToastPortal,
+} from "@/components/shared/global-toast-presentation-slot";
+import {
   fetchUserGamification,
   markUserGamificationNotificationsSeen,
 } from "@/lib/api/user-gamification";
@@ -62,6 +66,7 @@ interface ToastView {
 
 interface GrowthToastStackProps {
   initialAuthenticated?: boolean;
+  presentationMode?: "shared" | "standalone";
   resolveAuthenticatedOnClient?: boolean;
 }
 
@@ -407,6 +412,7 @@ function GrowthToastVisual({ tone, visual }: { tone: ToastTone; visual: ToastVis
 
 export function GrowthToastStack({
   initialAuthenticated = true,
+  presentationMode = "standalone",
   resolveAuthenticatedOnClient = false,
 }: GrowthToastStackProps = {}) {
   const pathname = usePathname();
@@ -645,27 +651,41 @@ export function GrowthToastStack({
   return (
     <>
       {views.length > 0 ? (
-        <div
-          className="pointer-events-none fixed inset-x-4 bottom-[calc(90px+env(safe-area-inset-bottom))] z-[80] mx-auto flex max-w-[360px] flex-col gap-2 md:inset-x-auto md:right-6 md:bottom-6 md:w-[340px]"
-          data-testid="growth-toast-stack"
+        <GlobalToastPortal
+          enabled={presentationMode === "shared"}
+          slotId={GLOBAL_TOAST_GROWTH_SLOT_ID}
         >
-          {visible.map((view, index) => (
-            <div
-              key={view.id}
-              className={[
-                "pointer-events-auto relative overflow-visible rounded-[var(--radius-card)] border px-3 py-3 pl-4",
-                toneClass(view.tone),
-              ].join(" ")}
-              data-testid="growth-toast"
-              data-group-key={view.groupKey ?? ""}
-              data-notification-id={view.id}
-              data-notification-type={view.type}
-              data-tone={view.tone}
-              onClick={openNotifications}
-              onKeyDown={openNotificationsFromKeyboard}
-              role={view.tone === "level-up" || view.tone === "grade-up" ? "alert" : "status"}
-              tabIndex={0}
-            >
+          <div
+            className={
+              presentationMode === "shared"
+                ? "pointer-events-none flex w-full flex-col gap-2"
+                : "pointer-events-none fixed inset-x-4 bottom-[calc(90px+env(safe-area-inset-bottom))] z-[80] mx-auto flex max-w-[360px] flex-col gap-2 md:inset-x-auto md:right-6 md:bottom-6 md:w-[340px]"
+            }
+            data-testid="growth-toast-stack"
+          >
+            {visible.map((view, index) => (
+              <div
+                key={view.id}
+                className={[
+                  "pointer-events-auto relative overflow-visible rounded-[var(--radius-card)] border px-3 py-3 pl-4",
+                  toneClass(view.tone),
+                ].join(" ")}
+                data-testid="growth-toast"
+                data-group-key={view.groupKey ?? ""}
+                data-notification-id={view.id}
+                data-notification-type={view.type}
+                data-tone={view.tone}
+                onClick={openNotifications}
+                onKeyDown={openNotificationsFromKeyboard}
+                role={
+                  presentationMode === "shared"
+                    ? undefined
+                    : view.tone === "level-up" || view.tone === "grade-up"
+                      ? "alert"
+                      : "status"
+                }
+                tabIndex={0}
+              >
               <span
                 aria-hidden="true"
                 className={[
@@ -698,8 +718,8 @@ export function GrowthToastStack({
                   ×
                 </button>
               </div>
-            </div>
-          ))}
+              </div>
+            ))}
 
           {queued.length > 0 ? (
             <button
@@ -712,7 +732,8 @@ export function GrowthToastStack({
               +{queued.length}개의 새 소식 확인
             </button>
           ) : null}
-        </div>
+          </div>
+        </GlobalToastPortal>
       ) : null}
 
       {isNotificationDialogOpen ? (

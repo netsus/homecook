@@ -6,6 +6,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { GrowthToastStack } from "@/components/gamification/growth-toast-stack";
 import {
+  GLOBAL_TOAST_GROWTH_SLOT_ID,
+  GlobalToastPresentationSlot,
+} from "@/components/shared/global-toast-presentation-slot";
+import {
   HOMECOOK_GAMIFICATION_REFRESH_EVENT,
   ONBOARDING_TUTORIAL_REFRESH_KEY,
 } from "@/lib/gamification-events";
@@ -236,6 +240,39 @@ describe("GrowthToastStack", () => {
     expect(within(toasts[0]).getByTestId("growth-toast-priority-rank").textContent).toBe("1");
     expect(within(toasts[1]).getByTestId("growth-toast-priority-rank").textContent).toBe("2");
     expect(within(toasts[2]).getByTestId("growth-toast-priority-rank").textContent).toBe("3");
+  });
+
+  it("ports growth toasts into the shared global presentation slot when available", async () => {
+    mockFetchUserGamification.mockResolvedValue({
+      notifications: {
+        unseen: [],
+        priority_unseen: [
+          makeNotification({
+            id: "n-growth",
+            notification_type: "xp_awarded",
+            title: "요리 완료 +60 XP",
+            body: "반영됨",
+          }),
+        ],
+      },
+    });
+
+    render(
+      <>
+        <GlobalToastPresentationSlot />
+        <GrowthToastStack presentationMode="shared" />
+      </>,
+    );
+    dispatchRefresh();
+
+    const toast = await screen.findByText("요리 완료 +60 XP");
+    const slot = document.getElementById(GLOBAL_TOAST_GROWTH_SLOT_ID);
+    const stack = screen.getByTestId("growth-toast-stack");
+
+    expect(slot?.contains(toast)).toBe(true);
+    expect(stack.className).toContain("flex");
+    expect(stack.className).not.toContain("fixed");
+    expect(screen.getByTestId("growth-toast").getAttribute("role")).toBeNull();
   });
 
   it("does not fetch gamification while the global stack is mounted for a guest", async () => {

@@ -43,6 +43,18 @@ const officialTuple = [
 ];
 
 describe("YouTube background extraction contract evolution", () => {
+  it("makes the mobile URL import disabled CTA visually distinct without pressed motion", () => {
+    const css = read("app/globals.css");
+    const disabledRule = css.match(
+      /\.yt-mobile-import-shell\s+\.web-button:disabled\s*\{([^}]*)\}/u,
+    );
+
+    expect(disabledRule?.[1]).toContain("background: var(--surface-fill)");
+    expect(disabledRule?.[1]).toContain("color: var(--text-3)");
+    expect(disabledRule?.[1]).toContain("opacity: 1");
+    expect(disabledRule?.[1]).toContain("transform: none");
+  });
+
   it("promotes one consistent additive five-document tuple", () => {
     const source = read("docs/sync/CURRENT_SOURCE_OF_TRUTH.md");
 

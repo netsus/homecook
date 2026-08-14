@@ -6,6 +6,10 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
+  GLOBAL_TOAST_YOUTUBE_SLOT_ID,
+  GlobalToastPresentationSlot,
+} from "@/components/shared/global-toast-presentation-slot";
+import {
   YoutubeExtractionNotificationCenter,
   YoutubeExtractionNotificationTrigger,
 } from "@/components/youtube-extraction/youtube-extraction-notification-center";
@@ -185,6 +189,45 @@ describe("YouTube extraction notification center", () => {
 
     expect(await screen.findByText("YouTube 레시피 추출에 실패했어요")).toBeTruthy();
     expect(screen.getByText("레시피 영상으로 확인되지 않았어요.")).toBeTruthy();
+  });
+
+  it("keeps fixed Korean toast copy intact while allowing unexpected long tokens to wrap", async () => {
+    vi.mocked(api.fetchYoutubeExtractionNotifications).mockResolvedValue({
+      success: true,
+      data: { items: [successItem], next_cursor: null },
+      error: null,
+    });
+
+    renderCenter();
+
+    const copy = await screen.findByText("추출 결과를 확인하고 레시피로 등록할 수 있어요.");
+    expect(copy.className).toContain("break-keep");
+    expect(copy.className).toContain("[overflow-wrap:anywhere]");
+    expect(copy.className).not.toContain("break-words");
+  });
+
+  it("ports the YouTube toast stack into the shared global presentation slot when available", async () => {
+    vi.mocked(api.fetchYoutubeExtractionNotifications).mockResolvedValue({
+      success: true,
+      data: { items: [successItem], next_cursor: null },
+      error: null,
+    });
+
+    render(
+      <>
+        <GlobalToastPresentationSlot />
+        <YoutubeExtractionNotificationCenter initialAuthenticated presentationMode="shared" />
+      </>,
+    );
+
+    const toast = await screen.findByText("레시피 추출이 끝났어요");
+    const slot = document.getElementById(GLOBAL_TOAST_YOUTUBE_SLOT_ID);
+    const stack = screen.getByTestId("youtube-notification-toast-stack");
+
+    expect(slot?.contains(toast)).toBe(true);
+    expect(stack.className).toContain("flex");
+    expect(stack.className).not.toContain("fixed");
+    expect(stack.getAttribute("aria-live")).toBeNull();
   });
 
   it("preserves the user's current focus when a nonmodal unauthorized notice appears", async () => {
