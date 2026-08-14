@@ -146,7 +146,7 @@ query empty: 최근 / 자주 먹은 음식
 - Anchor screen dependency: 없음. 기존 #10 Planner shell 안 segment만 소비한다.
 - Visual artifact: `ui/designs/MEAL_LOG.md`; Stage 4 screenshot evidence는 `ui/designs/evidence/meal-log-ui/`의 390px, 320px, desktop state set과 `manifest.json`이다.
 - Authority status: `required`
-- Notes: canonical design+critique prerequisite는 아래 exact provenance에서 완료됐고 fresh re-review는 `APPROVE 0/0/0`이다. `ui/designs/critiques/MEAL_LOG-critique.md`는 reviewer-owned artifact이므로 이 repair author가 수정하지 않는다. runtime evidence 이후 별도 product-design-authority가 `ui/designs/authority/MEAL_LOG-authority.md`를 작성하며, 이 Stage 1 author does not approve its own changes.
+- Notes: canonical design+critique prerequisite와 Stage 5 review는 각각 별도 task에서 `APPROVE 0/0/0`으로 완료됐다. fresh final authority task `019fff15-9f62-7602-a092-d140ed5e717a`가 exact publication `0faef66e6ad9d69fa31cfba33cd16e1b8dcef4d7` / `d185a3a76ad9da84ae8261b206e4338bcc364cba`와 51 PNG를 독립 검토해 `PASS P0/P1/P2 0/0/0`으로 확정했다. 이 판정은 Stage 6, Ready, merge, Manual Only, production 또는 activation 승인이 아니다.
 
 - generator: task `019ffb5f-b4be-7153-84b8-e4f341bd5ae5`, content head `1b44bb7238cc6d0381805585f371fe12e0cb90f0`, tree `851ceaa34835b7f5288590a3f0b74f7666e50eb7`, normalized integration `d3f76711f98439cd2f4279a53b06775f28d948d8`.
 - superseded historical design repair: task `019ffb73-1f48-7832-8d18-b043209f208a`, content head `910d14e99e71c9a05aa623cbf0a9c3b6f1f9456b`, tree `a578bf1d8da21a3bce230051399c6be1fd9da78c`, normalized integration `f07367a3109b2651d83e4f382b78dc2b85cd96b9`.
@@ -162,8 +162,8 @@ query empty: 최근 / 자주 먹은 음식
 ## Design Status
 
 - [ ] 임시 UI (temporary) — Stage 1 계약 상태
-- [x] 리뷰 대기 (pending-review) — Stage 4 완료 후
-- [ ] 확정 (confirmed) — Stage 5와 required final authority 통과 후
+- [ ] 리뷰 대기 (pending-review) — Stage 4 완료 후
+- [x] 확정 (confirmed) — Stage 5와 required final authority 통과 후
 - [ ] N/A — FE 화면이 있으므로 해당 없음
 
 ## Source Links
@@ -182,7 +182,7 @@ query empty: 최근 / 자주 먹은 음식
 - drifted tuple은 full-local Supabase local-only operating authority만 추가한다. #12 product UI, public endpoint/status/error/field, DB schema, user flow는 바꾸지 않으므로 Contract Evolution은 N/A다.
 - PR head `2b5071e22048d94e476cfde635664a2521a90396` 뒤 latest `origin/master` `c4045705ef72c76f7e7258d10c460f56b6847dd7`(PR #1350 content `a625aefa7baab63f183a9d46e6f12d607d4e017f`)를 parent 2로 normal two-parent merge `0e7fe07a5719dd3f4e9833d163c25c47e8d8e375`에 통합했다. 추가된 YouTube async isolated-local tooling은 #12 product UI, public endpoint/status/error/field/action, DB schema, user flow를 바꾸지 않으므로 #12 Contract Evolution is N/A다.
 - remote #1349 head `bdd0280bddea8ad2caf32c98bd25ac65a70293fe`를 잠근 뒤 security PR #1352 reviewed head `3708cd9fe3e86a85db17946b165ee6456c596af6`가 merge된 latest `origin/master` `fb1119baae72862efefdb1cad13cc811bbd91a1c`를 parent 2로 normal no-ff merge `f79cc89895e19e388422c4799f23cca5c095d6c0`(tree `b1bc3500da9ef9cbd0fb0b75359cac1d4abdd2f9`)에 통합했다. `postcss>nanoid` override `3.3.18`은 #12 제품 계약에 영향이 없고 exact master post-merge checks는 13/13 success, fail/pending/rerun 0이며 high/critical audit 0이다.
-- 이 Stage 1 author는 docs만 작성했다. canonical design+critique prerequisite와 fresh independent internal1.5/security/API/five-axis review는 별도 task에서 `APPROVE 0/0/0`으로 완료됐다. Stage 4 runtime evidence·Stage 5/final authority·Stage 6은 계속 pending이다.
+- 이 Stage 1 author는 docs만 작성했다. canonical design+critique prerequisite와 fresh independent internal1.5/security/API/five-axis review는 별도 task에서 `APPROVE 0/0/0`으로 완료됐다. 이후 Stage 4 runtime evidence, Stage 5와 fresh final authority도 별도 task에서 `PASS/APPROVE P0/P1/P2 0/0/0`으로 완료됐다. Stage 6와 Manual Only는 계속 pending이다.
 
 ## QA / Test Data Plan
 
@@ -220,5 +220,5 @@ query empty: 최근 / 자주 먹은 음식
 - [x] idempotency/revision/own-event/history 회귀 TDD RED와 GREEN 증거 <!-- omo:id=delivery-meal-log-ui-policy-tests;stage=2;scope=shared;review=3,6 -->
 - [x] 기존 #10 Planner shell 안 MEAL_LOG와 add sheet UI 연결 <!-- omo:id=delivery-meal-log-ui-connection;stage=4;scope=frontend;review=5,6 -->
 - [x] required states, focus, 44px, 390/320/desktop 접근성 검증 <!-- omo:id=delivery-meal-log-ui-state-accessibility;stage=4;scope=frontend;review=5,6 -->
-- [ ] fresh design evidence와 independent critic/final authority 승인 <!-- omo:id=delivery-meal-log-ui-design-authority;stage=4;scope=frontend;review=5,6 -->
+- [x] fresh design evidence와 independent critic/final authority 승인 <!-- omo:id=delivery-meal-log-ui-design-authority;stage=4;scope=frontend;review=5,6 -->
 - [ ] local-only target evidence, current-head checks와 post-merge closeout 동기화 <!-- omo:id=delivery-meal-log-ui-closeout;stage=4;scope=shared;review=6 -->

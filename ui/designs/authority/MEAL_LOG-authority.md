@@ -1,147 +1,126 @@
-# MEAL_LOG Stage 4 Authority Precheck
+# MEAL_LOG Final Product Design Authority
 
-> 대상 slice: `meal-log-ui` Stage 4 `authority_precheck`
-> review role: fresh independent `design-reviewer` / authority recheck
-> authority task ID: `019ffe71-8e06-7702-a5f4-9a644fe158c0`
-> reviewed exact PR head/tree: `bc86f79affea8c69c0fdb6223c135c99beedd430` / `9169e20b433b0fa90cba8525a7d1553661a00185`
-> reviewer evidence commit/tree/parent: `fa8c61b01ce233a301cf4f4859bb3515ee109722` / `7be0f9cf0d104719ad78881745b83787d2b3a387` / `bc86f79affea8c69c0fdb6223c135c99beedd430`
-> PR equivalent evidence head/tree/parent: `9740684522372e5ba1e4616d34fdc648aa88b5eb` / `7be0f9cf0d104719ad78881745b83787d2b3a387` / `bc86f79affea8c69c0fdb6223c135c99beedd430`
-> normalized implementation head/tree: `f1630f029af3e306baabb7cb1d6a26ff8eaeb0a7` / `5861ddd4f3762d5c4f27fcca5488e3101122d481`
-> capture source head/tree: `5816920358c9d588c128b1459e80c7ae0c5bd78e` / `5861ddd4f3762d5c4f27fcca5488e3101122d481`
+> 대상 slice: `meal-log-ui` final `final_authority_gate`
+> review role: fresh independent `product-design-authority`
+> authority task ID: `019fff15-9f62-7602-a092-d140ed5e717a`
+> source thread ID: `019ff12c-dc8b-7752-9319-398a68cacb6e`
+> reviewed exact PR publication head/tree: `0faef66e6ad9d69fa31cfba33cd16e1b8dcef4d7` / `d185a3a76ad9da84ae8261b206e4338bcc364cba`
+> publication parent: `cf249342315e40c75c1fc43f61aa7700fdef6b77`
+> normalized implementation head/tree: `bc47612ca9354597c2a925f66362ce5727f80260` / `05d0cd7db20ea70e6fddeb40c8c8ce73a30550c0`
+> capture source head/tree: `6673dacbc99006af7f266abc9cfd28d79f836acc` / `05d0cd7db20ea70e6fddeb40c8c8ce73a30550c0`
 > review date: 2026-08-14
-> evidence:
-> - mobile-default-screenshot: `ui/designs/evidence/meal-log-ui/MEAL_LOG-mobile-default-default.png`
-> - mobile-default-empty-screenshot: `ui/designs/evidence/meal-log-ui/MEAL_LOG-mobile-default-empty.png`
-> - mobile-default-sheet-screenshot: `ui/designs/evidence/meal-log-ui/MEAL_LOG-mobile-default-add-sheet-recent.png`
-> - mobile-narrow-screenshot: `ui/designs/evidence/meal-log-ui/MEAL_LOG-mobile-narrow-default.png`
-> - mobile-narrow-empty-screenshot: `ui/designs/evidence/meal-log-ui/MEAL_LOG-mobile-narrow-empty.png`
-> - mobile-narrow-sheet-screenshot: `ui/designs/evidence/meal-log-ui/MEAL_LOG-mobile-narrow-add-sheet-recent.png`
-> - `ui/designs/evidence/meal-log-ui/MEAL_LOG-mobile-default-loading.png`
-> - `ui/designs/evidence/meal-log-ui/MEAL_LOG-mobile-default-error.png`
-> - `ui/designs/evidence/meal-log-ui/MEAL_LOG-mobile-default-unauthorized.png`
-> - `ui/designs/evidence/meal-log-ui/MEAL_LOG-mobile-default-partial.png`
-> - `ui/designs/evidence/meal-log-ui/MEAL_LOG-mobile-default-unavailable.png`
-> - `ui/designs/evidence/meal-log-ui/MEAL_LOG-mobile-default-deleted-column.png`
-> - `ui/designs/evidence/meal-log-ui/MEAL_LOG-mobile-default-add-sheet-search.png`
-> - `ui/designs/evidence/meal-log-ui/MEAL_LOG-mobile-default-missing-batch.png`
-> - `ui/designs/evidence/meal-log-ui/MEAL_LOG-mobile-default-unrecoverable-batch.png`
-> - `ui/designs/evidence/meal-log-ui/MEAL_LOG-mobile-default-edit.png`
-> - `ui/designs/evidence/meal-log-ui/MEAL_LOG-mobile-default-delete-confirm.png`
-> - `ui/designs/evidence/meal-log-ui/MEAL_LOG-mobile-default-pending.png`
-> - `ui/designs/evidence/meal-log-ui/MEAL_LOG-mobile-default-replay.png`
-> - `ui/designs/evidence/meal-log-ui/MEAL_LOG-mobile-default-conflict.png`
-> - `ui/designs/evidence/meal-log-ui/MEAL_LOG-mobile-narrow-loading.png`
-> - `ui/designs/evidence/meal-log-ui/MEAL_LOG-mobile-narrow-error.png`
-> - `ui/designs/evidence/meal-log-ui/MEAL_LOG-mobile-narrow-unauthorized.png`
-> - `ui/designs/evidence/meal-log-ui/MEAL_LOG-mobile-narrow-partial.png`
-> - `ui/designs/evidence/meal-log-ui/MEAL_LOG-mobile-narrow-unavailable.png`
-> - `ui/designs/evidence/meal-log-ui/MEAL_LOG-mobile-narrow-deleted-column.png`
-> - `ui/designs/evidence/meal-log-ui/MEAL_LOG-mobile-narrow-add-sheet-search.png`
-> - `ui/designs/evidence/meal-log-ui/MEAL_LOG-mobile-narrow-missing-batch.png`
-> - `ui/designs/evidence/meal-log-ui/MEAL_LOG-mobile-narrow-unrecoverable-batch.png`
-> - `ui/designs/evidence/meal-log-ui/MEAL_LOG-mobile-narrow-edit.png`
-> - `ui/designs/evidence/meal-log-ui/MEAL_LOG-mobile-narrow-delete-confirm.png`
-> - `ui/designs/evidence/meal-log-ui/MEAL_LOG-mobile-narrow-pending.png`
-> - `ui/designs/evidence/meal-log-ui/MEAL_LOG-mobile-narrow-replay.png`
-> - `ui/designs/evidence/meal-log-ui/MEAL_LOG-mobile-narrow-conflict.png`
-> - `ui/designs/evidence/meal-log-ui/MEAL_LOG-desktop-default.png`
-> - `ui/designs/evidence/meal-log-ui/MEAL_LOG-desktop-loading.png`
-> - `ui/designs/evidence/meal-log-ui/MEAL_LOG-desktop-empty.png`
-> - `ui/designs/evidence/meal-log-ui/MEAL_LOG-desktop-error.png`
-> - `ui/designs/evidence/meal-log-ui/MEAL_LOG-desktop-unauthorized.png`
-> - `ui/designs/evidence/meal-log-ui/MEAL_LOG-desktop-partial.png`
-> - `ui/designs/evidence/meal-log-ui/MEAL_LOG-desktop-unavailable.png`
-> - `ui/designs/evidence/meal-log-ui/MEAL_LOG-desktop-deleted-column.png`
-> - `ui/designs/evidence/meal-log-ui/MEAL_LOG-desktop-add-sheet-recent.png`
-> - `ui/designs/evidence/meal-log-ui/MEAL_LOG-desktop-add-sheet-search.png`
-> - `ui/designs/evidence/meal-log-ui/MEAL_LOG-desktop-missing-batch.png`
-> - `ui/designs/evidence/meal-log-ui/MEAL_LOG-desktop-unrecoverable-batch.png`
-> - `ui/designs/evidence/meal-log-ui/MEAL_LOG-desktop-edit.png`
-> - `ui/designs/evidence/meal-log-ui/MEAL_LOG-desktop-delete-confirm.png`
-> - `ui/designs/evidence/meal-log-ui/MEAL_LOG-desktop-pending.png`
-> - `ui/designs/evidence/meal-log-ui/MEAL_LOG-desktop-replay.png`
-> - `ui/designs/evidence/meal-log-ui/MEAL_LOG-desktop-conflict.png`
-> - manifest: `ui/designs/evidence/meal-log-ui/manifest.json`
-> - runtime audit: `ui/designs/evidence/meal-log-ui/runtime-accessibility-layout.json`
-> - reviewer evidence: `docs/workpacks/meal-log-ui/evidence/2026-08-14-stage4-authority-finding-rereview.md`
-> - reviewer result: `docs/workpacks/meal-log-ui/evidence/2026-08-14-stage4-authority-finding-rereview-result.json`
-> - design reference: `ui/designs/MEAL_LOG.md`
-> - critique reference: `ui/designs/critiques/MEAL_LOG-critique.md`
 
 ## Verdict
 
-- verdict: `pass`
+- verdict: `PASS`
 - P0/P1/P2: `0/0/0`
-- blocker_count: `0`
-- major_count: `0`
-- minor_count: `0`
-- Stage 4 authority_precheck: `PASS`
-- Stage 5 public review entry: `가능`
-- Design Status: `pending-review` 유지
-- final_authority_gate: `pending`
-- Stage 5 / final authority / Stage 6 approval: 이 보고서의 범위 아님
+- blocker/major/minor: `0/0/0`
+- final_authority_gate: `PASS`
+- Design Status: `confirmed`
+- Stage 6 / Ready / merge / production / activation: 이 판정의 범위가 아니며 승인하지 않음
 
-MEAL_LOG의 17개 상태를 mobile default 390×844, mobile narrow 320×693, desktop 1280×900에서 각각 확인했다. 51개 PNG는 manifest와 파일 집합이 일치하며 모두 실제 시각 검사했다. 기존 세 P1 finding은 exact implementation tree와 runtime evidence에서 해소되어 Stage 5 시작을 막는 authority finding이 없다. 이 판정은 public Stage 5, `final_authority_gate`, Stage 6, `confirmed`, Ready 또는 merge 승인이 아니다.
+Stage 4 작성자·repair 작성자·Stage 5 reviewer와 다른 fresh task가 exact publication head와 product tree, 구현·테스트, 17 states × 3 viewports의 51 PNG를 원본 해상도로 직접 검토했다. 실제 모바일 UX, scroll structure, hierarchy, familiar pattern, touch/focus/a11y, loading/empty/error/unauthorized/partial/unavailable/deleted/add/edit/delete/pending/replay/conflict와 390px/320px/desktop 일관성에서 안정적인 P0/P1/P2 finding은 없다. 공식 계약에 없는 action, status, field 또는 endpoint도 추가되지 않았다.
 
-## Evidence Freshness And Tree Identity
+## Independence And Publication Identity
 
-- original reviewed PR tuple: `bc86f79a… / 9169e20b…`
-- reviewer evidence tuple: `fa8c61b0… / 7be0f9cf…`, parent `bc86f79a…`
-- PR cherry-pick equivalent tuple: `97406845… / 7be0f9cf…`, parent `bc86f79a…`
-- normalized implementation tuple: `f1630f02… / 5861ddd4…`
-- capture source tuple: `58169203… / 5861ddd4…`
-- normalized implementation과 capture source는 exact tree가 동일하고 tree-to-tree diff가 비어 있다.
-- reviewer evidence commit과 PR equivalent commit도 exact tree `7be0f9cf…`가 동일하다.
-- manifest는 capture source `58169203… / 5861ddd4…`를 pin하며 17 states × 3 viewports = 51 captures를 기록한다.
+- 이 task는 Stage 4/repair 작성 task, Stage 5 reviewer task `019ffe80-b210-7921-b8b6-07b0a5d6d5c8`, third repair author task `019ffeea-88ec-7f91-bf18-df5280c2c24d`와 다르다.
+- publication `0faef66e…`는 Stage 5 reviewed head `cf249342…`의 direct child이며, 추가 diff는 Stage 5 reviewer evidence Markdown/JSON뿐이다.
+- normalized implementation과 capture source의 tree는 exact `05d0cd7d…`로 동일하다.
+- publication head의 product implementation과 51-capture source 사이 product-tree 차이는 없다. publication 이후 이 gate에서 제품 코드는 변경하지 않았다.
+- PR #1361 current-head read-only 확인은 12 success + 2 intended skip, fail/pending/rerun 0이었다. 이 결과는 reviewed publication `0faef66e…`에 한정되며, 이후 문서-only authority commit에 CI green을 상속하지 않는다.
+
+## Reviewed Visual Evidence
+
+- manifest: `ui/designs/evidence/meal-log-ui/manifest.json`
+- runtime audit: `ui/designs/evidence/meal-log-ui/runtime-accessibility-layout.json`
+- path rule: `ui/designs/evidence/meal-log-ui/MEAL_LOG-{viewport}-{state}.png`
+- viewports:
+  - `mobile-default`: 390×844, 17 PNG
+  - `mobile-narrow`: 320×693, 17 PNG
+  - `desktop`: 1280 viewport, 17 PNG; state 목적에 따라 viewport/full-content capture 높이가 다름
+- states: `default`, `loading`, `empty`, `error`, `unauthorized`, `partial`, `unavailable`, `deleted-column`, `add-sheet-recent`, `add-sheet-search`, `missing-batch`, `unrecoverable-batch`, `edit`, `delete-confirm`, `pending`, `replay`, `conflict`
+- direct visual review: 51/51, original resolution
+- missing/blank/wrong-state/unintended horizontal crop: 없음
+
+### Representative Evidence
+
+- `ui/designs/evidence/meal-log-ui/MEAL_LOG-mobile-default-default.png`
+- `ui/designs/evidence/meal-log-ui/MEAL_LOG-mobile-narrow-default.png`
+- `ui/designs/evidence/meal-log-ui/MEAL_LOG-desktop-default.png`
+- `ui/designs/evidence/meal-log-ui/MEAL_LOG-mobile-narrow-deleted-column.png`
+- `ui/designs/evidence/meal-log-ui/MEAL_LOG-mobile-narrow-edit.png`
+- `ui/designs/evidence/meal-log-ui/MEAL_LOG-desktop-add-sheet-recent.png`
+- `ui/designs/evidence/meal-log-ui/MEAL_LOG-mobile-default-conflict.png`
 
 ## Scorecard
 
 | 항목 | 판정 | 근거 |
 | --- | --- | --- |
-| Mobile UX | `pass` | 390px와 320px 모두 단일 세로 흐름을 유지하며 page-level horizontal overflow가 없다. |
-| Interaction Clarity | `pass` | 날짜·끼니·추가·편집·삭제·재시도·충돌 문맥과 상태별 다음 행동이 구분된다. |
-| Visual Hierarchy | `pass` | 날짜 선택, 하루 요약, 끼니 section, entry, 상태 안내와 CTA의 우선순위가 안정적이다. |
-| Color / Material Fit | `pass` | 기존 surface, border, brand, muted, danger 토큰 계열을 유지하며 상태를 색만으로 전달하지 않는다. |
-| Familiar App Pattern Fit | `pass` | 일자 기반 식사 기록과 full-height mobile sheet가 익숙한 목록·편집 패턴을 따른다. |
+| Mobile UX / scroll | `pass` | 390px와 320px에서 day-first 단일 세로 흐름, rail-local horizontal scroll, viewport-bound sheet, 고정 action 영역이 유지된다. page-level horizontal overflow는 없다. |
+| Hierarchy / density | `pass` | Planner segment → 날짜 → 하루 영양 → 끼니 → entry/CTA 순서가 명확하며 empty/partial/unavailable이 숫자를 꾸며내지 않는다. |
+| Familiar pattern | `pass` | 일자 radiogroup, 끼니별 목록, mobile full-height sheet, desktop centered dialog, destructive confirmation이 익숙한 앱 패턴을 따른다. |
+| Touch / focus / a11y | `pass` | 44px target, single-selection roving focus, dialog trap/return/error/success focus, danger copy와 비활성 표현이 자동화 및 직접 검토에서 일치한다. |
+| State completeness | `pass` | required 17 states가 세 viewport에 모두 있고, deleted history는 add를 금지하면서 edit/delete를 보존한다. |
+| Contract alignment | `pass` | 화면정의서 v1.5.36 MEAL_LOG와 `ui/designs/MEAL_LOG.md`의 저장 날짜, server total, exact source/evidence, conflict/replay 규칙을 그대로 소비한다. |
 
-## Authority Finding Disposition
+## Stage 5 Closed Findings — Independent Verification
 
-### `P1-ML-AUTH-01` — resolved
+### `P1-ML-S5-01` latest-navigation-wins / 320px rail — confirmed resolved
 
-manifest의 implementation head/tree가 capture source `58169203… / 5861ddd4…`로 고정되어 있다. normalized PR implementation `f1630f02… / 5861ddd4…`와 exact tree identity가 성립하므로 capture가 검토 대상 구현과 동일한 product tree를 증명한다.
+- monotonic generation과 one-in-flight navigation 구현을 읽고, stale End completion이 최신 Home/ArrowLeft 선택·focus·URL을 덮지 못하는 deferred component regression을 확인했다.
+- focused Vitest 6 files / 44 tests가 통과했다.
+- 실제 Chromium 320×693 rail test를 single worker로 10회 반복해 `10/10` 통과했다. selected radio full containment와 page x/y scroll 불변을 포함한다.
 
-### `P1-ML-AUTH-02` — resolved
+### `P1-ML-S5-02` dialog focus lifecycle — confirmed resolved
 
-mobile default, mobile narrow, desktop의 empty 캡처에서 fake `0 kcal` 또는 `0g` nutrient summary가 보이지 않는다. 화면은 설명형 empty copy와 활성 meal add action만 제공하며, 구현·Vitest·Playwright 근거와 일치한다.
+- deleted-origin selector initial focus, Tab/Shift+Tab trap, Escape/cancel invoker restore, failure/conflict alert focus, successful edit destination heading, successful delete origin heading을 구현·테스트에서 대조했다.
+- focused Chromium dialog regression `1/1` 통과했다.
 
-### `P1-ML-AUTH-03` — resolved
+### `P1-ML-S5-03` disabled CTA / deleted-column evidence — confirmed resolved
 
-mobile default와 narrow의 add-sheet 캡처는 viewport 전체 높이에 붙고 상단에 `먹은 음식 추가`, 선택 날짜·끼니, 닫기 action을 함께 보여준다. portal/fixed `100dvh` 구현, viewport-bound Playwright assertion, runtime containment 결과와 일치한다.
+- deleted-origin save는 destination 미선택 시 semantic disabled이고 `disabled:opacity-50`의 computed opacity `0.5`가 테스트로 고정된다.
+- 390px, 320px, desktop의 deleted-column/edit original PNG에서 disabled action이 시각적으로 구분되고, deleted section에 add CTA가 없으며 기존 edit/delete가 유지됨을 직접 확인했다.
 
 ## Findings
 
-### Blocker
+### P0
 
 없음.
 
-### Major
+### P1
 
 없음.
 
-### Minor
+### P2
 
 없음.
 
-## Runtime And Accessibility Evidence Limits
+## Automated Evidence And Limits
 
-- runtime audit: axe serious/critical `0`, horizontal overflow `0`, targets below 44px `0`, replay key reuse `true`
-- 위 결과는 자동화된 scoped evidence이며 full WCAG 적합성이나 실제 보조기술 검증을 뜻하지 않는다.
-- Manual Only: physical device, real screen reader, virtual keyboard, server-Mac, OAuth, assistive technology, `R/R+1/R+2`, production, activation
+- focused Vitest: 6 files / 44 tests passed
+- Chromium 320×693 date rail, single worker repeat: 10/10 passed
+- Chromium dialog/focus/disabled regression: 1/1 passed
+- typecheck: passed
+- lint: passed, warnings 0
+- source-of-truth sync, workflow-v2, workpack, automation spec, authority evidence presence, real-smoke presence, OMO bookkeeping: passed after final bookkeeping edit
+- runtime audit: axe serious/critical 0, violations 0, horizontal overflow 0, targets below 44px 0, replay key reuse true
+- `git diff --check`: passed for reviewed publication diff
+- 자동화 결과는 full WCAG 적합성 또는 실제 보조기술 검증을 뜻하지 않는다.
 
-## Before-Merge Recommendation And Next Action
+## Manual Only
 
-1. 이 authority report를 public Stage 5의 필수 입력으로 사용한다.
-2. fresh Stage 5 `design-reviewer`가 구현 코드와 이 evidence를 독립 검토한다.
-3. Stage 5 approve 후에도 Design Status는 `pending-review`로 유지하고, Stage 4/5와 다른 Codex `product-design-authority` 작업의 `final_authority_gate`를 별도로 수행한다.
-4. `final_authority_gate`가 blocker 0을 독립 판정하기 전에는 Design Status를 `confirmed`로 바꾸지 않는다.
-5. Stage 6, Ready, merge, production, activation은 각각 별도 gate로 남긴다.
+다음은 이 gate에서 수행하거나 완료 주장하지 않았다.
+
+- physical device
+- real screen reader
+- virtual keyboard
+- server-Mac
+- OAuth
+- assistive technology
+- `R/R+1/R+2`
+- production
+- activation
+
+## Stage 6 Handoff
+
+이 authority evidence commit을 정상 방식으로 PR branch에 통합해 새 publication head를 만든 뒤, fresh independent Stage 6 task가 그 exact head/tree와 새 current-head checks를 다시 잠가야 한다. Stage 6는 real user-visible flow와 post-review regression을 검증하되 위 Manual Only 항목, Ready, merge, production, activation을 이 final authority 판정으로 자동 승격하지 않는다.
