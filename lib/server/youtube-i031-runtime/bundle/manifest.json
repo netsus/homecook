@@ -7,7 +7,7 @@
     "lib/server/recipe-extraction-lab/public-source-packets.mjs": "d5bd5b6aee3cdc6f870651c1e7bd8815a11a26455c1faceacfd62d67e2e1c1bc",
     "lib/server/recipe-extraction-lab/source-evidence.mjs": "106c4d861722229d16ea8ad176f09c7aaa11e95c701425d15042ffb1522cd367",
     "scripts/recipe-loop/extract-video-frames.py": "4d9ee41578c8db34f8c5f3cbaa11af7473431435dcfd13ecb4ec09f41b67ee07",
-    "scripts/recipe-loop/lib/codex-vision-client.mjs": "03c6e74002cdcf7718818aaadd1a75aa0e88ae9a49210d09e06fb1a96a3e3deb",
+    "scripts/recipe-loop/lib/codex-vision-client.mjs": "60c871df58ca9a4c304390c1249f3ebafe0771a009d3482d21bb79759b887394",
     "scripts/recipe-loop/lib/codex-vision-keyframes-client.mjs": "bc688304f0c10d895205c0415ec7d25cf052f9528b5409ed193a54537351c263",
     "scripts/recipe-loop/lib/screen-ocr-scout.mjs": "d57f3a610dcd9958a9c96759e011f98722cd60b16e6eb2461bf858593a17608c",
     "scripts/recipe-loop/macos-vision-ocr.swift": "b9a99806eea9866a630fecba851e29b847f9b4f1e4212bede634396bd0d20892",

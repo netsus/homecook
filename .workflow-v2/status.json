@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-08-12T14:27:33Z",
+  "updated_at": "2026-08-14T12:20:00Z",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -2811,9 +2811,9 @@
     {
       "id": "youtube-async-extraction-notification",
       "preset": "vertical-slice-strict",
-      "branch": "docs/youtube-async-extraction-notification",
-      "pr_path": "https://github.com/netsus/homecook/pull/1344",
-      "lifecycle": "planned",
+      "branch": "fix/youtube-async-extraction-notification-final-v4-superseding-draft",
+      "pr_path": "https://github.com/netsus/homecook/pull/1362",
+      "lifecycle": "in_progress",
       "approval_state": "codex_approved",
       "verification_status": "passed",
       "required_checks": [
@@ -2828,10 +2828,10 @@
         "pnpm audit --audit-level high",
         "git diff --check"
       ],
-      "notes": "Canonical closeout owner: .workflow-v2/work-items/youtube-async-extraction-notification.json#closeout. Roadmap is docs while canonical workflow lifecycle remains planned. Stage 1 required checks are local branch files, direct doc gate, automation/workflow/bookkeeping and targeted tests; origin/master validate:workpack is Stage 2 post-merge preflight only. Product code, migration and production installer writes are forbidden. Independent internal 1.5 task 019ff643-988a-7013-9edb-4d4f61986930 closed all three prior findings and returned PASS with P0/P1/P2 0/0/0 at head 50598f7ce7b30dccab148a575738db23bb9f1eed. closeout_phase=collecting closeout_recovery=manual_patch:1 closeout_repair=codex:3|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:Codex_task_019ff643-988a-7013-9edb-4d4f61986930_REVISE,docs/workpacks/youtube-async-extraction-notification/evidence/2026-08-12-stage1-internal1-5-rereview.md last_recovery_at=2026-08-12T14:07:53Z",
+      "notes": "Canonical closeout owner: .workflow-v2/work-items/youtube-async-extraction-notification.json#closeout. Product implementation is complete on 3c1e0d422b0849f7f086d1b7fefc55bac41eee60. Fresh security and final design authority at publication head a76df8f8e3d342968cf920cedb9289b8546018f0 returned PASS with findings 0 after the initial closed-mount focus finding was repaired TDD-first. Fresh Stage 6 task /root/youtube_v4_stage6_closeout approved reviewed exact head eb8d915b44b63611904760375f7c0606e629b6e0 with PASS — Findings 없음 after all started checks reached success or intended Draft skip. Non-manual closeout is complete and PR #1362 remains Draft for manual merge handoff. Production migration, worker credential/install/start/rollout and physical-device verification remain Manual Only. Supabase Cloud/linked/remote is forbidden/N/A; operational full-local was not touched. closeout_phase=completed closeout_recovery=manual_patch:1|manual_handoff closeout_repair=codex:4|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:Codex_task_019ff643-988a-7013-9edb-4d4f61986930_REVISE,docs/workpacks/youtube-async-extraction-notification/evidence/2026-08-12-stage1-internal1-5-rereview.md,tests/youtube-extraction-notifications.test.tsx,ui/designs/authority/YT_IMPORT_BACKGROUND-authority.md,ui/designs/authority/APP_SHELL_YOUTUBE_NOTIFICATIONS-authority.md,docs/workpacks/youtube-async-extraction-notification/evidence/2026-08-14-stage6-closeout-review.md last_recovery_at=2026-08-14T12:20:00Z",
       "evaluation_status": "passed",
-      "evaluation_round": 2,
-      "last_evaluator_result": "PASS with P0/P1/P2 0/0/0 by independent internal 1.5 task 019ff643-988a-7013-9edb-4d4f61986930 at head 50598f7ce7b30dccab148a575738db23bb9f1eed",
+      "evaluation_round": 3,
+      "last_evaluator_result": "PASS — Findings 없음 by fresh Stage 6 task /root/youtube_v4_stage6_closeout at reviewed exact head eb8d915b44b63611904760375f7c0606e629b6e0",
       "auto_merge_eligible": false,
       "blocked_reason_code": null
     }

@@ -2,12 +2,12 @@
 
 ## Decision
 
-기존 `YT_IMPORT`의 URL 입력·검수 visual language는 유지하고, 동기 대기 화면을 background 접수 확인 상태로 바꾼다. 사용자는 `가져오기` primary CTA로 작업을 접수한 뒤 `작업 보기` 또는 다른 앱 화면으로 이동할 수 있다. 이 문서는 design-generator 산출물이자 Stage 4 구현 계약이며, 구현 완료나 design authority PASS를 뜻하지 않는다.
+기존 `YT_IMPORT`의 URL 입력·검수 visual language는 유지하고, 동기 대기 화면을 background 접수 확인 상태로 바꾼다. 사용자는 `가져오기` primary CTA로 작업을 접수한 뒤 기본 CTA인 `나가기`로 이전 화면/HOME에 돌아가거나 보조 CTA `작업 보기`로 진행 상황을 확인할 수 있다. 이 문서는 design-generator 산출물이자 Stage 4 구현 계약이며, 구현 완료나 design authority PASS를 뜻하지 않는다.
 
 - UI risk: `high-risk`
 - Design Status: `temporary`
 - Anchor dependency: 없음. 기존 `YT_IMPORT` shell을 기준으로 하며 `HOME`, `RECIPE_DETAIL`, `PLANNER_WEEK` anchor screen은 수정하지 않는다.
-- Primary CTA: `가져오기`; 접수 뒤 CTA는 `작업 보기`
+- Primary CTA: `가져오기`(접수 전), `나가기`(접수 뒤 이전 화면/HOME). 접수 뒤 `작업 보기`는 secondary CTA다.
 - Mobile baseline: `390px`; narrow 검증: `320px`; desktop 검증: `1280px 이상`
 - Scroll containment: 문서 전체가 한 축으로 스크롤되고 footer/CTA가 입력·오류·safe-area를 가리지 않는다.
 
@@ -36,7 +36,8 @@
 │ ┌──────────────────────────────────┐ │
 │ │ ✓ 추출 작업을 시작했어요         │ │ accepted
 │ │ 다른 화면을 봐도 계속 진행돼요   │ │
-│ │ [작업 보기]                      │ │
+│ │ [          나가기          ]     │ │ primary CTA
+│ │ [         작업 보기         ]     │ │ secondary CTA
 │ └──────────────────────────────────┘ │
 │                                      │
 │ (page-level single scroll)           │
@@ -49,14 +50,14 @@
 
 - 좌우 padding은 role token 최소값까지 줄이되 input/CTA tap target은 44px 이상 유지한다.
 - 긴 URL과 오류 문구는 줄바꿈하며 가로 overflow를 만들지 않는다.
-- `가져오기`와 `작업 보기`는 세로 stack으로 한 줄 전체 폭을 사용한다.
+- 접수 전 `가져오기`, 접수 뒤 `나가기`와 `작업 보기`는 세로 stack으로 한 줄 전체 폭을 사용한다.
 - 200% text에서도 primary CTA와 browser bottom/safe-area가 겹치지 않도록 page-level scroll containment를 유지한다.
 
 ## Desktop Adaptation
 
 - content column은 기존 YT_IMPORT 최대 폭 안에 유지하고 넓은 화면에 form을 과도하게 늘리지 않는다.
 - header, input, CTA, accepted card의 읽기 순서는 mobile과 같다.
-- 키보드 focus order는 back → URL → primary CTA → 작업 보기다.
+- 키보드 focus order는 back → URL → 접수 전 primary CTA 순이며, 접수 뒤에는 `나가기` → `작업 보기`다.
 
 ## State Matrix
 
@@ -64,8 +65,8 @@
 | --- | --- | --- |
 | initial | URL input + 설명 + `가져오기` | valid URL만 submit |
 | submitting/loading | CTA disabled, 짧은 진행 문구 | 중복 submit 차단 |
-| accepted | 접수 완료, 이동 가능 안내 | `작업 보기` |
-| active duplicate | 이미 진행 중인 작업 안내 | 같은 job으로 이동 |
+| accepted | 접수 완료, 이동 가능 안내 | 기본 `나가기`, 보조 `작업 보기` |
+| active duplicate | 이미 진행 중인 작업 안내 | 기본 `나가기`, 보조 CTA로 같은 job 이동 |
 | offline/unknown submit | URL 보존, 성공 추측 금지 | 연결 확인 후 재시도 |
 | `POLICY_CHANGED` | 정책 갱신 안전 오류, terminal 취급 금지 | URL 보존 후 재시도 |
 | validation/error | field 또는 safe outer error | 수정/재시도 |
@@ -78,7 +79,7 @@
 - 오류 summary로 focus를 옮길 때 field focus와 중복 announce하지 않는다.
 - accepted card는 자동 focus를 빼앗지 않는다. 사용자가 submit한 맥락의 status text로 알린다.
 - reduced motion에서는 spinner/transition을 정적 상태 변화로 대체한다.
-- `작업 보기`는 app shell notification list의 해당 job으로 이어지며 back navigation을 보존한다.
+- 기본 CTA `나가기`는 이전 화면/HOME 이동 의미를 보존한다. 보조 CTA `작업 보기`는 app shell notification list의 해당 job으로 이어진다.
 
 ## Evidence Plan
 

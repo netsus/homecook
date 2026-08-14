@@ -1,6 +1,3 @@
-import { createHash } from "node:crypto";
-import { readFileSync } from "node:fs";
-
 import {
   YOUTUBE_ASYNC_POLICY,
   buildYoutubeExtractionFingerprint,
@@ -14,6 +11,12 @@ import {
 import {
   createRouteHandlerClient,
 } from "@/lib/supabase/server";
+import {
+  readYoutubeExtractionAppDescriptor,
+  readYoutubeExtractionExpectedSchema,
+  sha256File,
+  verifyYoutubeExtractionWorkerArtifact,
+} from "@/scripts/lib/youtube-extraction-worker-artifact.mjs";
 
 interface RpcResult {
   data: unknown;
@@ -394,7 +397,12 @@ export function createYoutubeAsyncExtractionHandlers(deps: HandlerDependencies) 
           return failure("INVALID_CURSOR", "목록 커서를 확인해 주세요.", 422);
         }
       }
-      let rows = await deps.listJobs(view, cursor, limit + 1, auth.rpc, deps.now());
+      let rows: ListJobRow[];
+      try {
+        rows = await deps.listJobs(view, cursor, limit + 1, auth.rpc, deps.now());
+      } catch {
+        return failure("QUEUE_UNAVAILABLE", "알림을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.", 503);
+      }
       if (cursor) {
         rows = rows.filter((row) =>
           row.completed_at !== null
@@ -477,14 +485,6 @@ function requireSecret(name: string) {
   return value;
 }
 
-function readJsonRecord(path: string) {
-  const value = JSON.parse(readFileSync(path, "utf8")) as unknown;
-  if (value === null || typeof value !== "object" || Array.isArray(value)) {
-    throw new Error("QUEUE_UNAVAILABLE");
-  }
-  return value as Record<string, unknown>;
-}
-
 export async function loadYoutubeExtractionEnqueueReadiness(
   rpc: Rpc,
   env: Readonly<Record<string, string | undefined>> = process.env,
@@ -497,17 +497,10 @@ export async function loadYoutubeExtractionEnqueueReadiness(
     env.HOMECOOK_YOUTUBE_EXTRACTION_WORKER_MANIFEST_PATH?.trim();
   if (!descriptorPath || !expectedSchemaPath || !workerManifestPath) return null;
   try {
-    const descriptor = readJsonRecord(descriptorPath);
-    const expectedSchemaBytes = readFileSync(expectedSchemaPath);
-    const expectedSchema = JSON.parse(expectedSchemaBytes.toString("utf8")) as unknown;
-    if (expectedSchema === null || typeof expectedSchema !== "object" || Array.isArray(expectedSchema)) {
-      return null;
-    }
-    const expectedSchemaRecord = expectedSchema as Record<string, unknown>;
-    const expectedSchemaSha256 = createHash("sha256")
-      .update(expectedSchemaBytes)
-      .digest("hex");
-    const workerManifest = readJsonRecord(workerManifestPath);
+    const descriptor = readYoutubeExtractionAppDescriptor(descriptorPath);
+    const expectedSchemaRecord = readYoutubeExtractionExpectedSchema(expectedSchemaPath);
+    const expectedSchemaSha256 = sha256File(expectedSchemaPath);
+    const workerManifest = verifyYoutubeExtractionWorkerArtifact(workerManifestPath);
     const result = await rpc("read_youtube_extraction_enqueue_readiness");
     if (result.error || result.data === null || typeof result.data !== "object") return null;
     const row = result.data as Record<string, unknown>;
@@ -623,11 +616,10 @@ export const youtubeAsyncExtractionHandlers = createYoutubeAsyncExtractionHandle
         cursor_job_id: cursor?.jobId ?? null,
         row_limit: limit,
       });
-      return result.error || !Array.isArray(result.data)
-        ? []
-        : result.data as ListJobRow[];
+      if (result.error || !Array.isArray(result.data)) throw new Error("QUEUE_UNAVAILABLE");
+      return result.data as ListJobRow[];
     } catch {
-      return [];
+      throw new Error("QUEUE_UNAVAILABLE");
     }
   },
   async markDelivered(userId, deliveryKeys, rpc) {

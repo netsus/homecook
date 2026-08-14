@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -8,6 +9,7 @@ import { formatMealAddTargetLabel } from "@/components/planner/meal-add-target-b
 import { RecipeIngredientAddModal } from "@/components/recipe/recipe-ingredient-add-modal";
 import { RecipeTagEditor } from "@/components/recipe/recipe-tag-editor";
 import { Button } from "@/components/ui/button";
+import { trackYoutubeExtractionJob } from "@/lib/youtube-extraction-client-state";
 import { NumericStepperCompact } from "@/components/shared/numeric-stepper-compact";
 import { AppBackButton } from "@/components/shared/app-back-button";
 import { ModalHeader } from "@/components/shared/modal-header";
@@ -28,6 +30,11 @@ import {
   registerYoutubeIngredient,
   registerYoutubeIngredientsBulk,
 } from "@/lib/api/youtube-import";
+import {
+  enqueueYoutubeExtraction,
+  fetchYoutubeExtractionJob,
+  fetchYoutubeExtractionSession,
+} from "@/lib/api/youtube-extraction-jobs";
 import type {
   BulkRegistrationRowResult,
 } from "@/lib/api/youtube-import";
@@ -45,6 +52,7 @@ import { COOKING_UNIT_OPTIONS } from "@/lib/recipe-units";
 import { buildReviewedRecipeTagsPayload } from "@/lib/recipe-tag-input";
 import { stripMatchingSectionPrefix } from "@/lib/recipe-section-labels";
 import { YOUTUBE_PREVIEW_ONLY_CLASSIFICATION_REASON } from "@/lib/youtube-import-constants";
+import { useYoutubeExtractionStore } from "@/stores/youtube-extraction-store";
 import type {
   CookingMethodItem,
   ManualRecipeIngredientInput,
@@ -58,19 +66,45 @@ import type {
   YoutubeRecipeExtractData,
   YoutubeQuantityConfirmationStatus,
 } from "@/types/recipe";
+import type { YoutubeExtractionJobData } from "@/types/youtube-extraction";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface YoutubeImportScreenProps {
+  entryContext?: "planner" | "standalone";
+  initialExtractionId?: string;
   initialYoutubeUrl?: string;
   onRequestClose?: () => void;
   planDate: string;
   columnId: string;
   presentation?: "screen" | "embedded";
+  submissionMode?: "background" | "sync";
   slotName: string;
 }
 
-type Step = "url-input" | "preview" | "non-recipe-warning" | "extracting" | "review" | "complete";
+function preservePlannerContext(
+  reviewPath: string,
+  context: { planDate: string; columnId: string; slotName: string },
+) {
+  if (!context.planDate || !context.columnId) return reviewPath;
+  const [pathname, query = ""] = reviewPath.split("?", 2);
+  const params = new URLSearchParams(query);
+  params.set("date", context.planDate);
+  params.set("columnId", context.columnId);
+  if (context.slotName) params.set("slot", context.slotName);
+  return `${pathname}?${params.toString()}`;
+}
+
+type Step =
+  | "url-input"
+  | "preview"
+  | "non-recipe-warning"
+  | "extracting"
+  | "accepted"
+  | "session-loading"
+  | "session-status"
+  | "review"
+  | "complete";
 
 type ModalMode =
   | "none"
@@ -422,6 +456,8 @@ function getYoutubeStepIndex(step: Step) {
   if (step === "preview") return 1;
   if (step === "non-recipe-warning") return 2;
   if (step === "extracting") return 2;
+  if (step === "accepted") return 2;
+  if (step === "session-loading" || step === "session-status") return 3;
   if (step === "review") return 3;
   if (step === "complete") return 4;
   return 0;
@@ -440,7 +476,7 @@ interface AppBarProps {
 function AppBar({ step, onBack, onRegister, canRegister, isRegistering }: AppBarProps) {
   return (
     <div className="shrink-0 border-b border-[var(--line)] bg-[var(--surface)]">
-      <div className="flex h-14 items-center gap-2 px-2">
+      <div className="flex min-h-14 items-center gap-2 px-2 py-2">
         {step !== "complete" && (
           <AppBackButton
             ariaLabel="뒤로 가기"
@@ -448,9 +484,10 @@ function AppBar({ step, onBack, onRegister, canRegister, isRegistering }: AppBar
             onClick={onBack}
           />
         )}
-        <h1 className="min-w-0 flex-1 truncate text-lg font-semibold text-[var(--foreground)]">
+        <h1 className="min-w-0 flex-1 break-keep text-base font-semibold leading-tight text-[var(--foreground)] sm:text-lg">
           {step === "review" ? "추출 결과 확인" : "유튜브 가져오기"}
         </h1>
+        {step !== "review" ? <span aria-hidden="true" className="h-[44px] w-[44px] shrink-0" /> : null}
         {step === "review" && (
           <button
             className={[
@@ -517,7 +554,7 @@ function UrlInputStep({ url, onUrlChange, onSubmit, isValidating, urlError }: Ur
           }}
         />
         {urlError && (
-          <p className="mt-2 text-sm text-[var(--brand)]">{urlError}</p>
+          <p className="mt-2 text-sm text-[var(--brand)]" role="alert">{urlError}</p>
         )}
       </div>
       <div className="mt-4">
@@ -749,9 +786,111 @@ function ExtractionErrorStep({ errorMessage, onRetry, onReenter }: ExtractionErr
   );
 }
 
+interface BackgroundAcceptedStepProps {
+  deduplicated: boolean;
+  job: YoutubeExtractionJobData | null;
+  onExit: () => void;
+  onOpenJobs: () => void;
+  onRetry: () => void;
+  retryError: string | null;
+  videoTitle: string;
+}
+
+function getAcceptedRetryLabel(job: YoutubeExtractionJobData) {
+  if (job.error?.code === "QUOTA_EXCEEDED") return "나중에 다시 시도";
+  if (job.error?.code === "EXTRACTION_EXPIRED") return "다시 추출";
+  return "다시 시도";
+}
+
+function BackgroundAcceptedStep({
+  deduplicated,
+  job,
+  onExit,
+  onOpenJobs,
+  onRetry,
+  retryError,
+  videoTitle,
+}: BackgroundAcceptedStepProps) {
+  const failed = job?.status === "failed" || job?.status === "expired";
+  return (
+    <div aria-live="polite" className="px-4 py-8" data-youtube-extraction-accepted>
+      <div className="mx-auto flex max-w-lg flex-col items-center text-center">
+        <div aria-hidden="true" className="flex h-16 w-16 items-center justify-center rounded-full bg-[var(--brand-soft)] text-3xl text-[var(--brand-deep)]">
+          {failed ? "!" : "✓"}
+        </div>
+        <h2 className="mt-5 break-keep text-xl font-bold text-[var(--foreground)]">
+          {failed
+            ? "추출을 완료하지 못했어요"
+            : deduplicated
+              ? "이미 추출 중이에요"
+              : "추출을 시작했어요. 완료되면 알려드릴게요."}
+        </h2>
+        <p className="mt-3 break-keep text-base text-[var(--text-2)]">
+          {failed
+            ? job.error?.message ?? "레시피를 추출하지 못했어요."
+            : deduplicated
+              ? "같은 영상의 작업이 이미 진행 중이에요. 이 화면을 나가도 계속 처리돼요."
+              : "이 화면을 나가도 추출은 계속돼요."}
+        </p>
+        {retryError ? (
+          <p className="mt-3 w-full rounded-[var(--radius-control)] border border-[var(--danger-border)] bg-[var(--danger-soft)] px-3 py-2 text-left text-sm text-[var(--danger)]" role="alert">
+            {retryError}
+          </p>
+        ) : null}
+        {videoTitle ? <p className="mt-2 max-w-full truncate text-sm font-semibold text-[var(--foreground)]">{videoTitle}</p> : null}
+        <div className="mt-7 flex w-full flex-col gap-3 sm:flex-row sm:justify-center">
+          {failed && job.can_retry ? (
+            <Button className="h-auto min-h-11 w-full whitespace-nowrap px-2 py-3 text-sm leading-tight" onClick={onRetry} style={{ color: "var(--foreground)" }}>
+              {getAcceptedRetryLabel(job)}
+            </Button>
+          ) : null}
+          <Button
+            className="h-auto min-h-11 w-full whitespace-nowrap px-2 py-3 text-sm leading-tight"
+            onClick={onExit}
+            style={failed ? undefined : { color: "var(--foreground)" }}
+            variant={failed ? "neutral" : "primary"}
+          >
+            나가기
+          </Button>
+          <Button className="h-auto min-h-11 w-full whitespace-nowrap px-2 py-3 text-sm leading-tight" onClick={onOpenJobs} variant="neutral">작업 보기</Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ExtractionSessionStatus({
+  error,
+  recipePath,
+}: {
+  error: string | null;
+  recipePath: string | null;
+}) {
+  return (
+    <div className="px-4 py-10 text-center" aria-live="polite">
+      <h2 className="text-xl font-bold text-[var(--foreground)]">
+        {recipePath ? "이미 등록한 레시피예요" : "추출 결과를 열 수 없어요"}
+      </h2>
+      <p className="mt-3 text-base text-[var(--text-2)]">
+        {recipePath ? "등록된 레시피에서 내용을 확인해 주세요." : error}
+      </p>
+      {recipePath ? (
+        <Link className="mt-6 inline-flex min-h-11 items-center rounded-full bg-[var(--brand-primary)] px-5 font-bold text-[var(--foreground)]" href={recipePath}>
+          레시피 보기
+        </Link>
+      ) : (
+        <Link className="mt-6 inline-flex min-h-11 items-center rounded-full bg-[var(--brand-primary)] px-5 font-bold text-[var(--foreground)]" href="/menu/add/youtube">
+          다시 추출
+        </Link>
+      )}
+    </div>
+  );
+}
+
 // ─── Step 3: Review / Edit ────────────────────────────────────────────────────
 
 interface ReviewStepProps {
+  headingRef?: React.Ref<HTMLHeadingElement>;
   title: string;
   onTitleChange: (title: string) => void;
   baseServings: number;
@@ -1136,6 +1275,7 @@ function ReviewCookingStepRow({
 }
 
 function ReviewStep({
+  headingRef,
   title,
   onTitleChange,
   baseServings,
@@ -1176,7 +1316,11 @@ function ReviewStep({
 
   return (
     <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-8">
-      <p className="pt-4 text-base text-[var(--text-2)]">추출 결과를 확인해 주세요</p>
+      {headingRef ? (
+        <h2 className="pt-4 text-base font-normal text-[var(--text-2)]" ref={headingRef} tabIndex={-1}>추출 결과를 확인해 주세요</h2>
+      ) : (
+        <p className="pt-4 text-base text-[var(--text-2)]">추출 결과를 확인해 주세요</p>
+      )}
 
       {thumbnailUrl ? (
         <div
@@ -2322,17 +2466,23 @@ function ServingsInputModal({ onConfirm, onCancel, defaultServings, isCreating, 
 // ─── Main Component ─────────────────────────────────────────────────────────
 
 export function YoutubeImportScreen({
+  entryContext = "planner",
+  initialExtractionId = "",
   initialYoutubeUrl = "",
   onRequestClose,
   planDate,
   columnId,
   presentation = "screen",
+  submissionMode = "background",
   slotName,
 }: YoutubeImportScreenProps) {
   const router = useRouter();
+  const isStandalone = entryContext === "standalone";
   const appReturn = useAppReturn({
     fallback:
-      planDate && columnId
+      isStandalone
+        ? "/"
+        : planDate && columnId
         ? `/planner/${planDate}/${columnId}${slotName ? `?slot=${encodeURIComponent(slotName)}` : ""}`
         : "/planner",
   });
@@ -2340,9 +2490,12 @@ export function YoutubeImportScreen({
   const isEmbedded = presentation === "embedded";
   const internalHistoryDepthRef = useRef(0);
   const bypassPopGuardRef = useRef(false);
+  const openNotificationCenter = useYoutubeExtractionStore((state) => state.setOpen);
 
   // Step state
-  const [currentStep, setCurrentStep] = useState<Step>("url-input");
+  const [currentStep, setCurrentStep] = useState<Step>(
+    initialExtractionId ? "session-loading" : "url-input",
+  );
   const [modalMode, setModalMode] = useState<ModalMode>("none");
 
   // Step 1 state
@@ -2361,6 +2514,13 @@ export function YoutubeImportScreen({
   const [extractionElapsedMs, setExtractionElapsedMs] = useState(0);
   const [extractionError, setExtractionError] = useState<string | null>(null);
   const [extractionAttempt, setExtractionAttempt] = useState(0);
+  const [acceptedJobId, setAcceptedJobId] = useState("");
+  const [acceptedDeduplicated, setAcceptedDeduplicated] = useState(false);
+  const [acceptedJob, setAcceptedJob] = useState<YoutubeExtractionJobData | null>(null);
+  const [acceptedRetryError, setAcceptedRetryError] = useState<string | null>(null);
+  const [sessionRecipePath, setSessionRecipePath] = useState<string | null>(null);
+  const [sessionError, setSessionError] = useState<string | null>(null);
+  const reviewHeadingRef = useRef<HTMLHeadingElement>(null);
   const [draftWarnings, setDraftWarnings] = useState<string[]>([]);
   const [blockingIssues, setBlockingIssues] = useState<string[]>([]);
 
@@ -2583,7 +2743,7 @@ export function YoutubeImportScreen({
     );
   }, []);
 
-  // ─── Extraction (triggered by entering "extracting" step) ──────────
+  // ─── Extraction (triggered by entering "extracting" step) ──────────────
 
   // Ref to avoid double-fire in StrictMode
   const extractionFiredRef = useRef(false);
@@ -2595,38 +2755,87 @@ export function YoutubeImportScreen({
     let cancelled = false;
 
     (async () => {
-      const result = await extractYoutubeRecipe({ youtube_url: youtubeUrl.trim() });
+      if (submissionMode === "sync") {
+        const result = await extractYoutubeRecipe({ youtube_url: youtubeUrl.trim() });
+
+        if (cancelled) return;
+
+        if (!result.success || !result.data) {
+          if (result.error?.code === "NOT_RECIPE_VIDEO") {
+            setClassificationStatus("non_recipe");
+            setClassificationReasons([result.error.message]);
+            setExtractionError(null);
+            pushStep("non-recipe-warning");
+            return;
+          }
+
+          setExtractionError(
+            getApiErrorMessage("레시피를 추출하지 못했어요.", result.error?.message),
+          );
+          return;
+        }
+
+        const data = result.data;
+        const candidates = data.recipe_candidates ?? [];
+        setRecipeCandidates(candidates);
+        setParentExtractionId(candidates.length > 0 ? data.extraction_id : null);
+        setSelectedCandidateId(data.primary_candidate_id ?? candidates[0]?.candidate_id ?? null);
+        setCandidatePromotionError(null);
+        applyExtractDataToReview(data);
+        pushStep("review");
+        return;
+      }
+
+      const result = await enqueueYoutubeExtraction({ youtube_url: youtubeUrl.trim() });
 
       if (cancelled) return;
 
       if (!result.success || !result.data) {
-        if (result.error?.code === "NOT_RECIPE_VIDEO") {
-          setClassificationStatus("non_recipe");
-          setClassificationReasons([result.error.message]);
-          setExtractionError(null);
-          pushStep("non-recipe-warning");
-          return;
-        }
-
-        setExtractionError(
-          getApiErrorMessage("레시피를 추출하지 못했어요.", result.error?.message),
-        );
+        setExtractionError(null);
+        setUrlError(getApiErrorMessage("추출 작업을 접수하지 못했어요.", result.error?.message));
+        setCurrentStep("url-input");
         return;
       }
 
-      const data = result.data;
-      const candidates = data.recipe_candidates ?? [];
-      setRecipeCandidates(candidates);
-      setParentExtractionId(candidates.length > 0 ? data.extraction_id : null);
-      setSelectedCandidateId(data.primary_candidate_id ?? candidates[0]?.candidate_id ?? null);
-      setCandidatePromotionError(null);
-      applyExtractDataToReview(data);
-
-      pushStep("review");
+      setAcceptedJobId(result.data.job_id);
+      setAcceptedDeduplicated(result.data.deduplicated);
+      setAcceptedJob(null);
+      setAcceptedRetryError(null);
+      trackYoutubeExtractionJob(result.data.job_id);
+      pushStep("accepted");
     })();
 
     return () => { cancelled = true; };
-  }, [applyExtractDataToReview, currentStep, extractionAttempt, youtubeUrl, pushStep]);
+  }, [applyExtractDataToReview, currentStep, extractionAttempt, submissionMode, youtubeUrl, pushStep]);
+
+  useEffect(() => {
+    if (currentStep !== "accepted" || !acceptedJobId) return;
+    let current = true;
+    let timer: number | null = null;
+
+    const poll = async () => {
+      const result = await fetchYoutubeExtractionJob(acceptedJobId);
+      if (!current) return;
+      if (result.success && result.data) {
+        setAcceptedJob(result.data);
+        if (result.data.status === "succeeded" && result.data.result?.review_path) {
+          router.replace(preservePlannerContext(result.data.result.review_path, {
+            planDate,
+            columnId,
+            slotName,
+          }));
+          return;
+        }
+      }
+      timer = window.setTimeout(poll, 5000);
+    };
+
+    void poll();
+    return () => {
+      current = false;
+      if (timer) window.clearTimeout(timer);
+    };
+  }, [acceptedJobId, columnId, currentStep, planDate, router, slotName]);
 
   // Helper to initiate extraction from non-recipe warning proceed button
   const triggerExtraction = useCallback(() => {
@@ -2637,6 +2846,46 @@ export function YoutubeImportScreen({
     setExtractionAttempt((attempt) => attempt + 1);
     pushStep("extracting");
   }, [pushStep]);
+
+  useEffect(() => {
+    if (!initialExtractionId) return;
+    let current = true;
+    void fetchYoutubeExtractionSession(initialExtractionId).then((result) => {
+      if (!current) return;
+      if (!result.success || !result.data) {
+        setSessionRecipePath(null);
+        setSessionError(result.error?.message ?? "추출 결과를 불러오지 못했어요.");
+        setCurrentStep("session-status");
+        return;
+      }
+      if (result.data.status === "consumed") {
+        setSessionRecipePath(result.data.recipe_path);
+        setSessionError(null);
+        setCurrentStep("session-status");
+        return;
+      }
+      if (!result.data.draft) {
+        setSessionError("추출 결과를 불러오지 못했어요.");
+        setCurrentStep("session-status");
+        return;
+      }
+      const data = result.data.draft;
+      const candidates = data.recipe_candidates ?? [];
+      setRecipeCandidates(candidates);
+      setParentExtractionId(candidates.length > 0 ? data.extraction_id : null);
+      setSelectedCandidateId(data.primary_candidate_id ?? candidates[0]?.candidate_id ?? null);
+      applyExtractDataToReview(data);
+      setCurrentStep("review");
+    });
+    return () => {
+      current = false;
+    };
+  }, [applyExtractDataToReview, initialExtractionId]);
+
+  useEffect(() => {
+    if (!initialExtractionId || currentStep !== "review") return;
+    reviewHeadingRef.current?.focus({ preventScroll: true });
+  }, [currentStep, initialExtractionId]);
 
   const handleSelectCandidate = useCallback(async (candidateId: string) => {
     const parentId = parentExtractionId ?? extractionId;
@@ -3075,9 +3324,23 @@ export function YoutubeImportScreen({
     triggerExtraction();
   }, [triggerExtraction]);
 
+  const handleAcceptedRetry = useCallback(async () => {
+    if (!acceptedJob?.can_retry) return;
+    setAcceptedRetryError(null);
+    const result = await enqueueYoutubeExtraction({ retry_job_id: acceptedJob.job_id });
+    if (!result.success || !result.data) {
+      setAcceptedRetryError(result.error?.message ?? "다시 시도하지 못했어요.");
+      return;
+    }
+    setAcceptedJobId(result.data.job_id);
+    setAcceptedDeduplicated(result.data.deduplicated);
+    setAcceptedJob(null);
+    trackYoutubeExtractionJob(result.data.job_id);
+  }, [acceptedJob]);
+
   // ─── Render ────────────────────────────────────────────────────────
 
-  const targetLabel = formatTargetLabel(planDate, slotName);
+  const targetLabel = isStandalone ? null : formatTargetLabel(planDate, slotName);
   const desktopStepIndex = getYoutubeStepIndex(currentStep);
   const editingStep = editingStepId
     ? steps.find((step) => step.tempId === editingStepId) ?? null
@@ -3233,10 +3496,36 @@ export function YoutubeImportScreen({
         </section>
       ) : null}
 
+      {currentStep === "accepted" ? (
+        <section className="web-yt-content">
+          <BackgroundAcceptedStep
+            deduplicated={acceptedDeduplicated}
+            job={acceptedJob}
+            onExit={exitImportFlow}
+            onOpenJobs={() => openNotificationCenter(true)}
+            onRetry={handleAcceptedRetry}
+            retryError={acceptedRetryError}
+            videoTitle={videoInfo?.title ?? ""}
+          />
+        </section>
+      ) : null}
+
+      {currentStep === "session-loading" ? (
+        <section className="web-yt-content" aria-busy="true">
+          <p className="py-12 text-center text-[var(--muted)]" aria-live="polite">추출 결과를 불러오는 중이에요…</p>
+        </section>
+      ) : null}
+
+      {currentStep === "session-status" ? (
+        <section className="web-yt-content">
+          <ExtractionSessionStatus error={sessionError} recipePath={sessionRecipePath} />
+        </section>
+      ) : null}
+
       {currentStep === "review" ? (
         <section className="web-yt-content web-yt-review">
           <div>
-            <h2>추출 결과를 확인해 주세요</h2>
+            <h2 ref={reviewHeadingRef} tabIndex={-1}>추출 결과를 확인해 주세요</h2>
             <p>영상에서 찾은 재료와 만들기를 등록 전에 확인해요.</p>
           </div>
           {desktopRegisterRequirements.length > 0 ? (
@@ -3409,17 +3698,21 @@ export function YoutubeImportScreen({
     return (
       <div className="web-menu-add-shell">
         <WebShell>
-          <WebTopNav activeId="planner" />
+          <WebTopNav activeId={isStandalone ? "home" : "planner"} />
           <nav aria-label="유튜브 가져오기 경로" className="web-breadcrumb">
             <button
               className="web-breadcrumb-link"
               onClick={handleBack}
               type="button"
             >
-              Planner
+              {isStandalone ? "Home" : "Planner"}
             </button>
-            <span className="web-breadcrumb-sep">/</span>
-            <span className="web-breadcrumb-link">{targetLabel}</span>
+            {targetLabel ? (
+              <>
+                <span className="web-breadcrumb-sep">/</span>
+                <span className="web-breadcrumb-link">{targetLabel}</span>
+              </>
+            ) : null}
             <span className="web-breadcrumb-sep">/</span>
             <span className="web-breadcrumb-current">유튜브 가져오기</span>
           </nav>
@@ -3456,7 +3749,13 @@ export function YoutubeImportScreen({
 
   if (presentation === "screen") {
     return (
-      <div className="yt-mobile-import-shell flex h-dvh flex-col overflow-hidden">
+      <div
+        className="yt-mobile-import-shell flex h-dvh flex-col overflow-hidden"
+        style={{
+          paddingBottom: "var(--youtube-import-safe-area-bottom, env(safe-area-inset-bottom))",
+          paddingTop: "var(--youtube-import-safe-area-top, env(safe-area-inset-top))",
+        }}
+      >
         <AppBar
           canRegister={canRegister}
           isRegistering={isRegistering}
@@ -3466,12 +3765,14 @@ export function YoutubeImportScreen({
         />
         <div className="yt-mobile-import-scroll min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-4 py-5">
           <div className="mx-auto flex w-full max-w-3xl flex-col gap-4">
-            <div
-              aria-label={`식사 추가 대상 ${targetLabel}`}
-              className="yt-mobile-import-context"
-            >
-              {targetLabel}
-            </div>
+            {targetLabel ? (
+              <div
+                aria-label={`식사 추가 대상 ${targetLabel}`}
+                className="yt-mobile-import-context"
+              >
+                {targetLabel}
+              </div>
+            ) : null}
             {desktopImportCard}
           </div>
         </div>
@@ -3537,8 +3838,31 @@ export function YoutubeImportScreen({
           />
         )}
 
+        {currentStep === "accepted" && (
+          <BackgroundAcceptedStep
+            deduplicated={acceptedDeduplicated}
+            job={acceptedJob}
+            onExit={exitImportFlow}
+            onOpenJobs={() => openNotificationCenter(true)}
+            onRetry={handleAcceptedRetry}
+            retryError={acceptedRetryError}
+            videoTitle={videoInfo?.title ?? ""}
+          />
+        )}
+
+        {currentStep === "session-loading" && (
+          <p aria-busy="true" aria-live="polite" className="py-12 text-center text-[var(--muted)]">
+            추출 결과를 불러오는 중이에요…
+          </p>
+        )}
+
+        {currentStep === "session-status" && (
+          <ExtractionSessionStatus error={sessionError} recipePath={sessionRecipePath} />
+        )}
+
         {currentStep === "review" && (
           <ReviewStep
+            headingRef={reviewHeadingRef}
             title={title}
             onTitleChange={setTitle}
             baseServings={baseServings}

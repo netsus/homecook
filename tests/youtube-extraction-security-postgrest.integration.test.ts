@@ -119,7 +119,7 @@ describe.runIf(enabled).sequential("youtube async extraction PostgREST integrati
           from private.youtube_extraction_current_policy
           where policy_key = 'primary';
         `).split("\n").at(-1),
-        lease_seconds: 120,
+        lease_seconds: 300,
       },
     );
 
@@ -214,7 +214,7 @@ describe.runIf(enabled).sequential("youtube async extraction PostgREST integrati
       {
         worker_id: "worker-alpha",
         allowed_snapshot_digest: "0".repeat(64),
-        lease_seconds: 120,
+        lease_seconds: 300,
       },
     );
 
@@ -256,7 +256,7 @@ describe.runIf(enabled).sequential("youtube async extraction PostgREST integrati
       {
         worker_id: "worker-alpha",
         allowed_snapshot_digest: snapshotDigest,
-        lease_seconds: 120,
+        lease_seconds: 300,
       },
     );
 

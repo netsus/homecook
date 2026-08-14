@@ -5,7 +5,6 @@ import { expect, test, type Page } from "@playwright/test";
 
 const E2E_AUTH_OVERRIDE_KEY = "homecook.e2e-auth-override";
 const E2E_APP_ORIGIN = process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:3100";
-const YOUTUBE_IMPORT_URL = "/recipes/new/youtube";
 const YOUTUBE_REVIEW_URL = "/menu/add/youtube";
 const PUBLIC_RECIPE_URL = "https://www.youtube.com/watch?v=i031test001";
 const EVIDENCE_DIR = path.resolve(
@@ -269,8 +268,8 @@ test.describe("Workpack 33: YouTube i031 direct extraction closeout", () => {
       });
     });
 
-    await page.goto(YOUTUBE_IMPORT_URL);
-    const urlInput = page.getByLabel("유튜브 링크");
+    await page.goto(YOUTUBE_REVIEW_URL);
+    const urlInput = page.getByLabel("유튜브 URL");
     const submitButton = page.getByRole("button", { name: "가져오기" });
 
     await urlInput.fill(PUBLIC_RECIPE_URL);
@@ -370,9 +369,9 @@ test.describe("Workpack 33: YouTube i031 direct extraction closeout", () => {
         });
       });
 
-      await page.goto(YOUTUBE_IMPORT_URL);
+      await page.goto(YOUTUBE_REVIEW_URL);
       await stabilize(page);
-      const urlInput = page.getByLabel("유튜브 링크");
+      const urlInput = page.getByLabel("유튜브 URL");
       const submitButton = page.getByRole("button", { name: "가져오기" });
 
       await urlInput.fill(PUBLIC_RECIPE_URL);

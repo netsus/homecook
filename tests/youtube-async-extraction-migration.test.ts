@@ -63,11 +63,11 @@ describe("YTASYNC-DB/SEC migration contract", () => {
     expect(sql).toContain("grant youtube_extraction_credential_manager to authenticator");
     expect(sql).toContain("with inherit false, set true granted by %i");
     expect(sql).toContain("from %i granted by %i");
-    expect(sql).toContain("grant create on schema private to youtube_extraction_worker_rpc_owner");
-    expect(sql).toContain("revoke create on schema private from youtube_extraction_worker_rpc_owner");
+    expect(sql).toContain("grant create on schema private\n  to youtube_extraction_worker_rpc_owner,\n     youtube_extraction_credential_manager_rpc_owner");
+    expect(sql).toContain("revoke create on schema private\n  from youtube_extraction_worker_rpc_owner,\n       youtube_extraction_credential_manager_rpc_owner");
     expect(sql.match(/set local role youtube_extraction_enqueue_rpc_owner/g)?.length).toBe(1);
     expect(sql.match(/set local role youtube_extraction_worker_rpc_owner/g)?.length).toBe(4);
-    expect(sql.match(/set local role youtube_extraction_credential_manager_rpc_owner/g)?.length).toBe(2);
+    expect(sql.match(/set local role youtube_extraction_credential_manager_rpc_owner/g)?.length).toBe(3);
     expect(sql).toContain("revoke all on table public.youtube_extraction_jobs from public, anon, authenticated, service_role");
     expect(sql).not.toContain(
       "grant select on table private.youtube_extraction_worker_credentials\n  to youtube_extraction_enqueue_rpc_owner",
@@ -107,7 +107,13 @@ describe("YTASYNC-DB/SEC migration contract", () => {
     const manifest = JSON.parse(readFileSync(
       "docs/security/youtube-async-extraction-security-function-authorization-manifest.json",
       "utf8",
-    )) as { functions: Array<{ signature: string; owner?: string }> };
+    )) as {
+      functions: Array<{
+        signature: string;
+        owner?: string;
+        allowed_principals: string[];
+      }>;
+    };
     const owners = Object.fromEntries(
       manifest.functions.map((entry) => [entry.signature, entry.owner]),
     );
@@ -122,21 +128,44 @@ describe("YTASYNC-DB/SEC migration contract", () => {
     ]) {
       expect(owners[signature], signature).toBe("youtube_extraction_worker_rpc_owner");
     }
+
+    const catalogGuard = manifest.functions.find(
+      (entry) => entry.signature === "private.assert_youtube_extraction_catalog_ready()",
+    );
+    expect(catalogGuard?.allowed_principals).toEqual(["supabase_admin"]);
+    expect(readFileSync(migrationPath, "utf8")).toContain(
+      "set local role youtube_extraction_credential_manager_rpc_owner;\n\n" +
+        "revoke all on function private.assert_youtube_extraction_catalog_ready()\n" +
+        "from public, anon, authenticated, service_role,\n" +
+        "  youtube_extraction_worker, youtube_extraction_credential_manager;\n" +
+        "grant execute on function private.assert_youtube_extraction_catalog_ready()\n" +
+        "to youtube_extraction_enqueue_rpc_owner,\n" +
+        "   youtube_extraction_worker_rpc_owner,\n" +
+        "   supabase_admin;\n\n" +
+        "reset role;",
+    );
   });
 
   it("exposes only lease-fenced worker data and permit-contention mutation RPCs", () => {
     const sql = readFileSync(migrationPath, "utf8").toLowerCase();
     for (const signature of [
       "read_youtube_extraction_worker_catalog(uuid, text, bigint)",
-      "access_youtube_extraction_worker_cache(uuid, text, bigint, text, jsonb)",
-      "record_youtube_extraction_worker_event(uuid, text, bigint, text, jsonb)",
-      "reserve_youtube_extraction_worker_quota(uuid, text, bigint, text, integer)",
-      "update_youtube_extraction_job_title(uuid, text, bigint, text)",
+      "access_youtube_extraction_worker_cache(uuid, text, bigint, bigint, text, jsonb)",
+      "record_youtube_extraction_worker_event(uuid, text, bigint, bigint, text, jsonb)",
+      "reserve_youtube_extraction_worker_quota(uuid, text, bigint, bigint, text, integer)",
+      "update_youtube_extraction_job_title(uuid, text, bigint, bigint, text)",
       "requeue_youtube_extraction_job_without_attempt(uuid, text, bigint, integer, integer)",
+      "resolve_youtube_extraction_worker_methods(uuid, text, bigint, bigint, text[])",
+      "resolve_youtube_extraction_job_draft(uuid, text, bigint, bigint, text, jsonb)",
+      "fail_or_retry_youtube_extraction_job(uuid, text, bigint, bigint, text)",
+      "heartbeat_youtube_extraction_job(uuid, text, bigint, bigint, integer)",
+      "heartbeat_youtube_extractor_permit(uuid, text, bigint, bigint, integer)",
     ]) {
       expect(sql, signature).toContain(signature);
     }
-    expect(sql).toContain("youtube_extraction_job_fence_is_active");
+    expect(sql).toContain("youtube_extraction_worker_write_fence_is_active");
+    expect(sql).toContain("permit.permit_generation = p_permit_generation");
+    expect(sql).toContain("permit.expires_at >= clock_timestamp()");
     expect(sql).toContain("greatest(1, min_delay_seconds)");
     expect(sql).toContain("least(30, max_delay_seconds)");
     for (const functionName of [
@@ -160,6 +189,9 @@ describe("YTASYNC-DB/SEC migration contract", () => {
     expect(sql).toContain("'catalog_fingerprint'");
     expect(sql).toContain("youtube-extraction-live-catalog-v1");
     for (const component of [
+      "columns",
+      "constraints",
+      "indexes",
       "role_attributes",
       "table_owners",
       "sequence_owners",
@@ -169,9 +201,21 @@ describe("YTASYNC-DB/SEC migration contract", () => {
       "table_privileges",
       "sequence_privileges",
       "rpc_security",
+      "rpc_function_definitions",
+      "internal_scope_function_definition",
     ]) {
       expect(sql, component).toContain(`'${component}'`);
     }
+    expect(sql).toContain("pg_catalog.pg_get_functiondef");
+    expect(sql).toContain("private.verify_full_local_internal_scope()");
+    expect(sql).toContain("function private.assert_youtube_extraction_catalog_ready()");
+
+    const enqueue = sql.split("function public.enqueue_youtube_extraction_job")[1]
+      ?.split("$function$;")[0] ?? "";
+    const preRequest = sql.split("function public.check_youtube_extraction_worker_pre_request")[1]
+      ?.split("$function$;")[0] ?? "";
+    expect(enqueue).toContain("perform private.assert_youtube_extraction_catalog_ready()");
+    expect(preRequest).toContain("perform private.assert_youtube_extraction_catalog_ready()");
     expect(sql).toContain("pg_catalog.pg_get_userbyid(relation.relowner)");
     expect(sql).toContain("pg_catalog.pg_get_userbyid(namespace.nspowner)");
     expect(sql).toContain("v_credential.expires_at <= clock_timestamp() + interval '30 minutes'");
@@ -192,6 +236,43 @@ describe("YTASYNC-DB/SEC migration contract", () => {
     expect(sql).toContain("clock_timestamp() + interval '5 minutes'");
     expect(sql).toContain("clock_timestamp() + interval '30 minutes'");
     expect(sql).toContain("and not event.cache_hit");
+  });
+
+  it("fences successful finalize replay by the exact original worker and lease generation", () => {
+    const sql = readFileSync(migrationPath, "utf8").toLowerCase();
+    const finalize = sql.split("function public.finalize_youtube_extraction_job")[1]
+      ?.split("$function$;")[0] ?? "";
+    const jobLock = finalize.indexOf("from public.youtube_extraction_jobs as existing_job");
+    const permitLock = finalize.indexOf("from public.youtube_extractor_permits as permit");
+    expect(finalize).toContain("v_job.lease_owner = v_requested_worker_id");
+    expect(finalize).toContain("v_job.lease_generation = v_requested_lease_generation");
+    expect(jobLock).toBeGreaterThan(-1);
+    expect(finalize.slice(jobLock, permitLock)).toContain("for update");
+    expect(permitLock).toBeGreaterThan(jobLock);
+    expect(finalize.indexOf("v_job.status = 'succeeded'"))
+      .toBeLessThan(permitLock);
+    expect(finalize).not.toContain("lease_owner = null");
+  });
+
+  it("locks start attempts in the same job then permit order as every shared writer", () => {
+    const sql = readFileSync(migrationPath, "utf8").toLowerCase();
+    const start = sql.split("function public.start_youtube_extraction_attempt")[1]
+      ?.split("$function$;")[0] ?? "";
+    const jobLock = start.indexOf("from public.youtube_extraction_jobs as job");
+    const permitLock = start.indexOf("from public.youtube_extractor_permits as permit");
+
+    expect(jobLock).toBeGreaterThan(-1);
+    expect(start.slice(jobLock, permitLock)).toContain("for update");
+    expect(permitLock).toBeGreaterThan(jobLock);
+    expect(start.slice(permitLock)).toContain("for update");
+  });
+
+  it("serializes projection timestamps without millisecond truncation", () => {
+    const sql = readFileSync(migrationPath, "utf8").toLowerCase();
+    const list = sql.split("function public.list_youtube_extraction_job_projections")[1]
+      ?.split("$function$;")[0] ?? "";
+    expect(list).toContain("yyyy-mm-dd\"t\"hh24:mi:ss.us\"z\"");
+    expect(list).not.toContain("yyyy-mm-dd\"t\"hh24:mi:ss.ms\"z\"");
   });
 
   it("seeds the exact i031-only policy disabled", () => {

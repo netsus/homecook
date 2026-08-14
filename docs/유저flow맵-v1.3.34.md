@@ -4,13 +4,17 @@
 담당자: 채실장
 날짜: 8월 13일
 
+> **2026-08-15 contract-evolution addendum — 공개 standalone background flow**
+>
+> `/recipes/new/youtube`는 `validate → preview → POST extraction-jobs(202) → accepted → 화면 이탈 → local worker → terminal 전역 알림 → 결과 확인 → 검수/등록` 흐름을 사용한다. return context가 없으면 Home(`/`)으로 이동하고 planner 문맥은 표시하지 않는다. 자동 등록은 하지 않는다. 기존 `/recipes/youtube/extract` `sync_wait`는 다른 동기 consumer 호환을 위해 유지한다. 이 addendum은 아래 Quick Import browser sync/auto-register 흐름을 대체한다.
+
 > **2026-08-13 contract-evolution — local-only 운영·검증 flow**
 >
 > 모든 사용자·worker 흐름은 app/승인 Auth surface → loopback/private full-local Supabase → local PostgreSQL/Auth/Storage/Realtime/PostgREST 순서만 사용한다. 새 session/worktree와 required gate는 remote link/credential 확인 단계를 갖지 않는다. 개발·CI는 pinned isolated local replay, 운영 확인은 backup freshness와 target identity를 먼저 고정한 read-only/controlled local flow다. backup은 off-Mac encrypted copy → clean isolated restore → DB/Auth/Storage semantic·RLS·session·reboot recovery 검증 순서이며 운영 volume destructive reset은 금지한다. exact flow와 forbidden matrix는 `docs/engineering/supabase-local-only-operations.md`가 canonical이다. 제품 사용자 flow와 public API는 변경하지 않는다.
 
 > **2026-08-12 contract-evolution — YouTube enqueue → worker → durable notification → review/register**
 >
-> 사용자는 2026-08-12 기존 `/menu/add/youtube` 검수형 흐름을 이탈 가능한 background job으로 바꾸고, 앱 재로그인·재실행 뒤 성공/실패를 복구하는 flow를 승인했다. 기존 `/recipes/new/youtube` Quick Import의 browser sync/auto-register 흐름은 유지한다. PR #1343 review task `019ff598-233b-72c1-92f5-4372596ede7a`의 Findings 1~4,6을 반영했다. 수정 계획 전체는 독립 plan reviewer task `019ff4f7-806c-7151-b646-cab784606cde`가 `Verdict PASS`, `Findings 없음`, `차단 없음`, exact SHA-256 `b560b60ff758171e1d52ad56b2a63a2e1877cd762d1f691c9cea32c753f8d332`, line count `873`, baseline `origin/master@d38ee2e4a4c8cafc00dce713919c3f3e8df2bdda`로 재승인했다.
+> 사용자는 2026-08-12 기존 `/menu/add/youtube` 검수형 흐름을 이탈 가능한 background job으로 바꾸고, 앱 재로그인·재실행 뒤 성공/실패를 복구하는 flow를 승인했다. `/recipes/new/youtube`의 당시 browser sync/auto-register 유지 결정은 위 2026-08-15 addendum이 대체한다. 수정 계획 전체는 독립 plan reviewer task `019ff4f7-806c-7151-b646-cab784606cde`가 `Verdict PASS`, `Findings 없음`, `차단 없음`, exact SHA-256 `b560b60ff758171e1d52ad56b2a63a2e1877cd762d1f691c9cea32c753f8d332`, line count `873`, baseline `origin/master@d38ee2e4a4c8cafc00dce713919c3f3e8df2bdda`로 재승인했다.
 
 ## 0-YT-ASYNC. Background extraction과 durable 재진입
 
@@ -108,24 +112,24 @@ non-retryable 또는 attempts 소진
 - 타인/없는 job 또는 session은 동일 404로 처리해 존재 여부를 숨긴다.
 - failed/expired safe projection은 API의 exhaustive `code/message/retryable/UI CTA` 표만 사용한다. queued/processing/succeeded의 inner error는 null이고 failed/expired는 non-null이며 outer success wrapper error는 null이다.
 
-### Quick Import `sync_wait` 호환 flow
+### 공개 standalone background flow와 sync 호환
 
 ```text
-/recipes/new/youtube 기존 Quick Import UI
-→ validate / duplicate check
-→ 기존 POST /recipes/youtube/extract
-→ route가 submission_mode=sync_wait job enqueue
-→ worker가 유일 provider executor
-→ 30초 waiter-local start budget
-   ├─ started_at 미기록: waiter만 503 QUEUE_BUSY, 공유 job 유지
-   └─ started_at 기록: i031 20분 + finalize grace 안에서 결과 대기
-→ 성공: 기존 extract response shape → 기존 auto-register/fallback
-→ disconnect/route timeout: worker 계속 → durable 앱 내 알림으로 회복
+/recipes/new/youtube
+→ validate / preview
+→ POST /recipes/youtube/extraction-jobs
+→ 202 accepted + 즉시 이탈
+→ local worker가 유일 provider executor
+→ terminal 전역 toast/badge/list
+→ 결과 확인 → 기존 검수/등록
+
+기존 동기 consumer
+→ POST /recipes/youtube/extract
+→ submission_mode=sync_wait 호환 유지
 ```
 
 - background와 `sync_wait`가 같은 fingerprint면 job을 공유한다. 어느 waiter도 공유 job을 failed/cancelled로 바꾸지 않는다.
-- Quick Import register 성공 뒤 해당 job은 seen 처리하고 현재 화면은 같은 delivery key toast를 억제한다.
-- Quick Import 자체를 이탈 가능한 async UX로 바꾸거나 auto-registered 결과 알림을 추가하려면 별도 승인과 계약이 필요하다.
+- standalone 공개 화면은 자동 등록하지 않으며 결과 CTA가 검수/등록으로 연결된다.
 
 ### Initial bootstrap / later rotation / rollback flow
 
@@ -1786,32 +1790,23 @@ Step 4) [레시피 등록]
 Meal 생성 (status='registered') → MEAL_SCREEN 복귀
 ```
 
-### Quick Import 분기: `/recipes/new/youtube` `2026-05-28 addendum`
+### standalone background 분기: `/recipes/new/youtube` `2026-08-15 superseding addendum`
 
 ```
 /recipes/new/youtube
-  │ URL 붙여넣기 또는 추천 영상 선택
-  │ → GET /recipes/youtube/recipio/check
-  │
-  ├─ duplicate
-  │    └─ 저장된 레시피 카드 표시 → /recipes/{recipe_id}
-  │
-  └─ not duplicate
-       │ → POST /recipes/youtube/validate
-       │ → oEmbed 미리보기 표시
-       │ → POST /recipes/youtube/extract
-       │
-       ├─ 자동 등록 가능
-       │    └─ POST /recipes/youtube/register → /recipes/{recipe_id}
-       │
-       └─ 검수 필요
-            └─ /menu/add/youtube?youtubeUrl=... 로 이동해 기존 Step 3 검수 계속
+  │ URL 붙여넣기
+  │ → POST /recipes/youtube/validate
+  │ → oEmbed 미리보기
+  │ → POST /recipes/youtube/extraction-jobs
+  │ → 202 accepted
+  │ → Home 등 다른 화면으로 이탈
+  │ → local worker terminal
+  │ → 전역 toast/badge/list
+  └─ 결과 확인 → /menu/add/youtube?extractionId=... 검수/등록
 ```
 
-- 자동 등록 가능 조건은 모든 재료 `resolved` + blocking step field 없음 + 기존 register validation 통과다.
-- duplicate 분기에서는 extract/register를 호출하지 않는다.
-- 진행률은 화면 상태 표시이며 서버-side job/status 계약을 새로 만들지 않는다.
-- `non_recipe`, provider error, quota error는 자동 등록하지 않고 재입력/오류 안내를 표시한다.
+- standalone 화면은 자동 등록하지 않는다. 실패/만료는 공식 `can_retry`와 safe CTA를 따른다.
+- return context가 없으면 Home(`/`)으로 이동하고 planner context chip/nav/breadcrumb를 표시하지 않는다.
 
 - **Visual Quantity Enrichment 흐름 (`legacy` only)** `v1.3.12 추가`:
     - `legacy` extract 단계에서 공개 텍스트 추출 + Gemini text structured fallback 이후에도 재료 수량이 부족할 때만 조건부로 `visual_quantity_extractor`를 실행한다. i031 mode에서는 이 provider와 cache를 호출하지 않는다.

@@ -1,5 +1,16 @@
-import { readFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
+import { randomUUID } from "node:crypto";
+import {
+  chmodSync,
+  existsSync,
+  lstatSync,
+  mkdirSync,
+  readFileSync,
+  realpathSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import { dirname, isAbsolute, parse, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import {
@@ -34,11 +45,15 @@ const TEMPLATE_PATH = resolve(
 );
 
 export const DEFAULT_YOUTUBE_EXTRACTION_WORKER_SECRET_MODE = 0o600;
+export const DEFAULT_YOUTUBE_EXTRACTION_WORKER_SECRET_ROOT_MODE = 0o700;
 export const DEFAULT_YOUTUBE_EXTRACTION_WORKER_LOG_DIR_NAME = "Homecook";
 const EXACT_I031_CODEX_CLI_VERSION = "0.144.0-alpha.4";
+const YOUTUBE_EXTRACTION_WORKER_INSTALL_CONFIRMATION =
+  "LOCAL_FULL_PRODUCTION_WORKER_INSTALL";
 
 const WORKER_CONFIG_ALLOWLIST = new Set([
   "HOMECOOK_YOUTUBE_WORKER_AUDIENCE",
+  "HOMECOOK_YOUTUBE_WORKER_DATA_API_KEY_FILE",
   "HOMECOOK_YOUTUBE_WORKER_DATA_API_URL",
   "HOMECOOK_YOUTUBE_WORKER_ISSUER",
   "HOMECOOK_YOUTUBE_WORKER_PROVIDER_SECRET_FILE",
@@ -70,13 +85,102 @@ function buildPathEnv(nodeBin) {
   ])].join(":");
 }
 
+function isContainedPath(parentPath, childPath) {
+  const relativePath = relative(parentPath, childPath);
+  return relativePath === ""
+    || (!relativePath.startsWith(`..${sep}`) && relativePath !== ".." && !isAbsolute(relativePath));
+}
+
+function assertNoSymlinkInLexicalPath(candidatePath, label) {
+  const normalizedPath = ensureAbsolutePath(candidatePath, label);
+  const rootPath = parse(normalizedPath).root;
+  let currentPath = rootPath;
+  for (const component of normalizedPath.slice(rootPath.length).split(sep).filter(Boolean)) {
+    currentPath = resolve(currentPath, component);
+    if (!existsSync(currentPath)) {
+      throw new Error(`${label} does not exist: ${currentPath}`);
+    }
+    if (lstatSync(currentPath).isSymbolicLink()) {
+      throw new Error(`${label} must not have a symbolic link ancestor: ${currentPath}`);
+    }
+  }
+}
+
+function assertNoSymlinkBelowRoot(rootPath, candidatePath, label) {
+  const relativePath = relative(rootPath, candidatePath);
+  if (!isContainedPath(rootPath, candidatePath)) {
+    throw new Error(`${label} must be contained by the worker secret root.`);
+  }
+  let currentPath = rootPath;
+  for (const component of relativePath.split(sep).filter(Boolean)) {
+    currentPath = resolve(currentPath, component);
+    if (!existsSync(currentPath)) {
+      throw new Error(`${label} does not exist: ${currentPath}`);
+    }
+    if (lstatSync(currentPath).isSymbolicLink()) {
+      throw new Error(`${label} must not have a symbolic link ancestor: ${currentPath}`);
+    }
+  }
+}
+
+/**
+ * @param {string} secretRoot
+ * @param {{ expectedUserId?: number, repoRoot?: string }} [options]
+ */
+export function validateYoutubeExtractionWorkerSecretRoot(secretRoot, {
+  expectedUserId = process.getuid?.(),
+  repoRoot = process.cwd(),
+} = {}) {
+  const normalizedRoot = ensureAbsolutePath(secretRoot, "worker secret root");
+  assertNoSymlinkInLexicalPath(normalizedRoot, "worker secret root");
+  if (!existsSync(normalizedRoot)) {
+    throw new Error(`worker secret root does not exist: ${normalizedRoot}`);
+  }
+  const rootStat = lstatSync(normalizedRoot);
+  if (rootStat.isSymbolicLink()) {
+    throw new Error(`worker secret root must not be a symbolic link: ${normalizedRoot}`);
+  }
+  if (!rootStat.isDirectory()) {
+    throw new Error(`worker secret root must be a directory: ${normalizedRoot}`);
+  }
+  if (modeBits(rootStat.mode) !== DEFAULT_YOUTUBE_EXTRACTION_WORKER_SECRET_ROOT_MODE) {
+    throw new Error("worker secret root must use mode 0700.");
+  }
+  if (Number.isInteger(expectedUserId) && rootStat.uid !== expectedUserId) {
+    throw new Error("worker secret root owner must match the worker user.");
+  }
+
+  const canonicalRoot = realpathSync(normalizedRoot);
+  const normalizedRepo = ensureAbsolutePath(repoRoot, "repoRoot");
+  const canonicalRepo = existsSync(normalizedRepo) ? realpathSync(normalizedRepo) : normalizedRepo;
+  if (
+    isContainedPath(canonicalRepo, canonicalRoot)
+    || isContainedPath(canonicalRoot, canonicalRepo)
+  ) {
+    throw new Error("worker secret root must be outside the repository.");
+  }
+  return canonicalRoot;
+}
+
 /**
  * @param {string} configPath
+ * @param {{ expectedUserId?: number, secretRoot?: string, repoRoot?: string }} [options]
  */
-export function validateYoutubeExtractionWorkerConfigPath(configPath) {
-  const normalizedPath = ensureRegularFile(configPath, "worker config", {
-    mode: DEFAULT_YOUTUBE_EXTRACTION_WORKER_SECRET_MODE,
-  });
+export function validateYoutubeExtractionWorkerConfigPath(configPath, {
+  expectedUserId = process.getuid?.(),
+  secretRoot,
+  repoRoot = process.cwd(),
+} = {}) {
+  const normalizedPath = secretRoot
+    ? validateYoutubeExtractionWorkerSecretFile(configPath, {
+        expectedUserId,
+        secretRoot,
+        repoRoot,
+      })
+    : ensureRegularFile(configPath, "worker config", {
+        mode: DEFAULT_YOUTUBE_EXTRACTION_WORKER_SECRET_MODE,
+        expectedUserId,
+      });
   const lines = readFileSync(normalizedPath, "utf8").split(/\r?\n/u);
   for (const line of lines) {
     const trimmed = line.trim();
@@ -93,10 +197,32 @@ export function validateYoutubeExtractionWorkerConfigPath(configPath) {
 
 /**
  * @param {string} secretFile
+ * @param {{ expectedUserId?: number, secretRoot?: string, repoRoot?: string }} [options]
  */
-export function validateYoutubeExtractionWorkerSecretFile(secretFile) {
-  return ensureRegularFile(secretFile, "worker secret file", {
+export function validateYoutubeExtractionWorkerSecretFile(secretFile, {
+  expectedUserId = process.getuid?.(),
+  secretRoot,
+  repoRoot = process.cwd(),
+} = {}) {
+  const normalizedSecret = ensureAbsolutePath(secretFile, "worker secret file");
+  if (secretRoot) {
+    const canonicalRoot = validateYoutubeExtractionWorkerSecretRoot(secretRoot, {
+      expectedUserId,
+      repoRoot,
+    });
+    const normalizedRoot = ensureAbsolutePath(secretRoot, "worker secret root");
+    const lexicalRoot = isContainedPath(normalizedRoot, normalizedSecret)
+      ? normalizedRoot
+      : canonicalRoot;
+    assertNoSymlinkBelowRoot(lexicalRoot, normalizedSecret, "worker secret file");
+    const canonicalSecret = realpathSync(normalizedSecret);
+    if (!isContainedPath(canonicalRoot, canonicalSecret)) {
+      throw new Error("worker secret file must be contained by the worker secret root.");
+    }
+  }
+  return ensureRegularFile(normalizedSecret, "worker secret file", {
     mode: DEFAULT_YOUTUBE_EXTRACTION_WORKER_SECRET_MODE,
+    expectedUserId,
   });
 }
 
@@ -149,6 +275,7 @@ export function buildYoutubeExtractionWorkerServiceTarget({
  *   appDescriptorPath: string,
  *   currentPolicyPath: string,
  *   expectedSchemaPath: string,
+ *   secretRoot?: string,
  *   homeDir?: string,
  *   nodeBin?: string,
  *   rootDir?: string,
@@ -161,22 +288,30 @@ export function renderYoutubeExtractionWorkerPlist({
   appDescriptorPath,
   currentPolicyPath,
   expectedSchemaPath,
+  secretRoot,
   homeDir = process.env.HOME ?? "",
   nodeBin = process.execPath,
   rootDir,
 } = {}) {
-  const normalizedConfigPath = validateYoutubeExtractionWorkerConfigPath(
-    configPath,
-  );
+  const normalizedSecretRoot = secretRoot
+    ? validateYoutubeExtractionWorkerSecretRoot(secretRoot)
+    : undefined;
+  const normalizedConfigPath = validateYoutubeExtractionWorkerConfigPath(configPath, {
+    secretRoot,
+  });
   const normalizedManifestPath = ensureRegularFile(
     manifestPath,
     "worker manifest",
   );
-  const normalizedCredentialPath = ensureRegularFile(
-    credentialPath,
-    "worker credential metadata",
-    { mode: DEFAULT_YOUTUBE_EXTRACTION_WORKER_SECRET_MODE },
-  );
+  const normalizedCredentialPath = normalizedSecretRoot
+    ? validateYoutubeExtractionWorkerSecretFile(credentialPath, {
+        secretRoot,
+      })
+    : ensureRegularFile(
+        credentialPath,
+        "worker credential metadata",
+        { mode: DEFAULT_YOUTUBE_EXTRACTION_WORKER_SECRET_MODE },
+      );
   const normalizedAppDescriptorPath = ensureRegularFile(
     appDescriptorPath,
     "app descriptor",
@@ -194,7 +329,7 @@ export function renderYoutubeExtractionWorkerPlist({
   const artifactRoot = dirname(normalizedManifestPath);
   const normalizedRootDir = rootDir === undefined
     ? artifactRoot
-    : ensureAbsolutePath(rootDir, "rootDir");
+    : realpathSync(ensureAbsolutePath(rootDir, "rootDir"));
   if (normalizedRootDir !== artifactRoot) {
     throw new Error("worker artifact root mismatch");
   }
@@ -214,6 +349,7 @@ export function renderYoutubeExtractionWorkerPlist({
     .replaceAll("__CONFIG_PATH__", normalizedConfigPath)
     .replaceAll("__MANIFEST_PATH__", normalizedManifestPath)
     .replaceAll("__CREDENTIAL_PATH__", normalizedCredentialPath)
+    .replaceAll("__SECRET_ROOT__", normalizedSecretRoot ?? "")
     .replaceAll("__APP_DESCRIPTOR_PATH__", normalizedAppDescriptorPath)
     .replaceAll("__CURRENT_POLICY_PATH__", normalizedCurrentPolicyPath)
     .replaceAll("__EXPECTED_SCHEMA_PATH__", normalizedExpectedSchemaPath)
@@ -296,6 +432,7 @@ function buildLaunchctlPlan(command, args) {
  *   appDescriptorPath: string,
  *   currentPolicyPath: string,
  *   expectedSchemaPath: string,
+ *   secretRoot?: string,
  *   homeDir?: string,
  *   nodeBin?: string,
  *   rootDir?: string,
@@ -311,6 +448,7 @@ export function buildYoutubeExtractionWorkerInstallPlan({
   appDescriptorPath,
   currentPolicyPath,
   expectedSchemaPath,
+  secretRoot,
   homeDir = process.env.HOME ?? "",
   nodeBin = process.execPath,
   rootDir,
@@ -325,6 +463,7 @@ export function buildYoutubeExtractionWorkerInstallPlan({
     currentPolicyPath,
     credentialPath,
     expectedSchemaPath,
+    secretRoot,
   });
   const preflight = evaluateYoutubeExtractionWorkerPreflight({
     ...inputs,
@@ -342,6 +481,7 @@ export function buildYoutubeExtractionWorkerInstallPlan({
     appDescriptorPath,
     currentPolicyPath,
     expectedSchemaPath,
+    secretRoot,
     homeDir,
     nodeBin,
     rootDir,
@@ -369,6 +509,151 @@ export function buildYoutubeExtractionWorkerInstallPlan({
       ]),
     ],
   };
+}
+
+function runLaunchctlStrict(args, spawn) {
+  const result = spawn("/bin/launchctl", args, { encoding: "utf8" });
+  if (result?.status !== 0) {
+    const details = `${result?.stderr ?? ""}\n${result?.stdout ?? ""}`.trim();
+    throw new Error(details || `/bin/launchctl ${args.join(" ")} failed.`);
+  }
+  return result;
+}
+
+function replacePrivateFileAtomically(path, contents, mode = 0o600) {
+  const stagingPath = `${path}.staging-${randomUUID()}`;
+  try {
+    writeFileSync(stagingPath, contents, {
+      encoding: "utf8",
+      flag: "wx",
+      mode,
+    });
+    chmodSync(stagingPath, mode);
+    renameSync(stagingPath, path);
+    chmodSync(path, mode);
+  } finally {
+    rmSync(stagingPath, { force: true });
+  }
+}
+
+/**
+ * Installs and starts the local-only production worker with rollback-safe plist
+ * replacement. Secrets remain in referenced mode-0600 files and are never
+ * returned or passed to launchctl.
+ *
+ * @param {{
+ *   configPath: string,
+ *   manifestPath: string,
+ *   credentialPath: string,
+ *   appDescriptorPath: string,
+ *   currentPolicyPath: string,
+ *   expectedSchemaPath: string,
+ *   secretRoot?: string,
+ *   homeDir?: string,
+ *   nodeBin?: string,
+ *   rootDir?: string,
+ *   userId?: number,
+ *   i031Preflight: {ready: boolean, codexCliVersion: string, chatGptLogin: boolean, toolsReady: boolean},
+ *   confirmation: string,
+ *   spawn?: (command: string, args: readonly string[], options?: Record<string, unknown>) => {
+ *     status: number | null,
+ *     stdout?: string | Buffer,
+ *     stderr?: string | Buffer,
+ *   },
+ * }} options
+ */
+export function installYoutubeExtractionWorkerLaunchAgent({
+  confirmation,
+  spawn,
+  ...options
+} = {}) {
+  if (confirmation !== YOUTUBE_EXTRACTION_WORKER_INSTALL_CONFIRMATION) {
+    throw new Error(
+      `production worker installation requires confirmation ${YOUTUBE_EXTRACTION_WORKER_INSTALL_CONFIRMATION}`,
+    );
+  }
+  if (typeof spawn !== "function") {
+    throw new Error("production worker installation requires an explicit launchctl adapter");
+  }
+
+  const plan = buildYoutubeExtractionWorkerInstallPlan({
+    ...options,
+    dryRun: true,
+  });
+  const plistPath = plan.plist_path;
+  const previous = existsSync(plistPath)
+    ? {
+        contents: readFileSync(plistPath, "utf8"),
+        mode: modeBits(lstatSync(plistPath).mode),
+      }
+    : null;
+  if (previous && previous.mode !== 0o600) {
+    throw new Error("existing worker plist must use mode 0600 before replacement");
+  }
+  const previousStatus = previous
+    ? parseLaunchctlPrintStatus({
+        serviceTarget: plan.service_target,
+        ...spawn("/bin/launchctl", ["print", plan.service_target], {
+          encoding: "utf8",
+        }),
+      })
+    : { loaded: false, state: "unloaded" };
+  mkdirSync(dirname(plistPath), { recursive: true, mode: 0o700 });
+  mkdirSync(dirname(plan.stdout_path), { recursive: true, mode: 0o700 });
+
+  try {
+    spawn("/bin/launchctl", ["bootout", plan.service_target], {
+      encoding: "utf8",
+    });
+    replacePrivateFileAtomically(plistPath, plan.plist_preview, 0o600);
+    runLaunchctlStrict(["bootstrap", `gui/${options.userId ?? process.getuid?.() ?? 0}`, plistPath], spawn);
+    runLaunchctlStrict(["kickstart", "-k", plan.service_target], spawn);
+    const statusResult = runLaunchctlStrict(["print", plan.service_target], spawn);
+    const status = parseLaunchctlPrintStatus({
+      serviceTarget: plan.service_target,
+      status: statusResult.status,
+      stdout: statusResult.stdout,
+      stderr: statusResult.stderr,
+    });
+    if (!status.loaded || status.state !== "running") {
+      throw new Error(`worker did not reach running state: ${status.state}`);
+    }
+    return {
+      changed: true,
+      label: plan.label,
+      plist_path: plistPath,
+      service_target: plan.service_target,
+      running: true,
+      pid: status.pid,
+    };
+  } catch (error) {
+    spawn("/bin/launchctl", ["bootout", plan.service_target], {
+      encoding: "utf8",
+    });
+    try {
+      if (previous) {
+        replacePrivateFileAtomically(plistPath, previous.contents, previous.mode);
+        if (previousStatus.loaded) {
+          runLaunchctlStrict(
+            ["bootstrap", `gui/${options.userId ?? process.getuid?.() ?? 0}`, plistPath],
+            spawn,
+          );
+          if (previousStatus.state === "running") {
+            runLaunchctlStrict(["kickstart", "-k", plan.service_target], spawn);
+          }
+        }
+      } else {
+        rmSync(plistPath, { force: true });
+      }
+    } catch (rollbackError) {
+      const original = error instanceof Error ? error.message : String(error);
+      const rollback = rollbackError instanceof Error
+        ? rollbackError.message
+        : String(rollbackError);
+      throw new Error(`${original}. Automatic rollback failed: ${rollback}`);
+    }
+    throw error;
+  }
 }
 
 /**
@@ -463,6 +748,7 @@ export function buildYoutubeExtractionWorkerLifecyclePlan({
  *   releaseSha: string,
  *   schemaIdentity: string,
  *   allowedSnapshotDigest: string,
+ *   secretRoot?: string,
  * }} options
  */
 export function buildYoutubeExtractionWorkerCredentialState({
@@ -473,8 +759,11 @@ export function buildYoutubeExtractionWorkerCredentialState({
   releaseSha,
   schemaIdentity,
   allowedSnapshotDigest,
+  secretRoot,
 } = {}) {
-  const normalizedTokenFile = validateYoutubeExtractionWorkerSecretFile(tokenFile);
+  const normalizedTokenFile = validateYoutubeExtractionWorkerSecretFile(tokenFile, {
+    secretRoot,
+  });
   const normalizedGeneration = ensureInteger(generation, "generation", {
     minimum: 1,
   });
@@ -514,6 +803,7 @@ export function buildYoutubeExtractionWorkerCredentialState({
  *   releaseSha: string,
  *   schemaIdentity: string,
  *   allowedSnapshotDigest: string,
+ *   secretRoot?: string,
  * }} options
  */
 export function rotateYoutubeExtractionWorkerCredential({
@@ -525,6 +815,7 @@ export function rotateYoutubeExtractionWorkerCredential({
   releaseSha,
   schemaIdentity,
   allowedSnapshotDigest,
+  secretRoot,
 } = {}) {
   const normalizedExpected = ensureInteger(
     expectedGeneration,
@@ -549,27 +840,39 @@ export function rotateYoutubeExtractionWorkerCredential({
     releaseSha,
     schemaIdentity,
     allowedSnapshotDigest,
+    secretRoot,
   });
 }
 
 /**
  * @param {string} path
+ * @param {{ secretRoot?: string, expectedUserId?: number }} [options]
  */
-export function readYoutubeExtractionWorkerCredential(path) {
-  const value = readJsonFile(path, "worker credential metadata", {
+export function readYoutubeExtractionWorkerCredential(path, {
+  secretRoot,
+  expectedUserId = process.getuid?.(),
+} = {}) {
+  const normalizedMetadataPath = secretRoot
+    ? validateYoutubeExtractionWorkerSecretFile(path, { secretRoot, expectedUserId })
+    : path;
+  const value = readJsonFile(normalizedMetadataPath, "worker credential metadata", {
     mode: DEFAULT_YOUTUBE_EXTRACTION_WORKER_SECRET_MODE,
+    expectedUserId,
   });
   if (value.schema !== YOUTUBE_EXTRACTION_WORKER_CREDENTIAL_SCHEMA) {
     throw new Error("worker credential metadata schema is invalid.");
   }
-  validateYoutubeExtractionWorkerSecretFile(value.token_file);
-  if (value.token_file_sha256 !== sha256File(value.token_file)) {
+  const normalizedTokenFile = validateYoutubeExtractionWorkerSecretFile(value.token_file, {
+    secretRoot,
+    expectedUserId,
+  });
+  if (value.token_file_sha256 !== sha256File(normalizedTokenFile)) {
     throw new Error("worker token file digest does not match metadata.");
   }
-  if (value.token_file_mode !== `0${modeBits(readMode(value.token_file)).toString(8)}`) {
+  if (value.token_file_mode !== `0${modeBits(readMode(normalizedTokenFile)).toString(8)}`) {
     throw new Error("worker token file mode does not match metadata.");
   }
-  return value;
+  return { ...value, token_file: normalizedTokenFile };
 }
 
 /**
@@ -823,6 +1126,7 @@ export function buildYoutubeExtractionWorkerHealth({
  *   currentPolicyPath: string,
  *   credentialPath: string,
  *   queueStatePath?: string | null,
+ *   secretRoot?: string,
  * }} options
  */
 export function loadYoutubeExtractionWorkerRuntimeInputs({
@@ -832,6 +1136,7 @@ export function loadYoutubeExtractionWorkerRuntimeInputs({
   credentialPath,
   expectedSchemaPath = null,
   queueStatePath = null,
+  secretRoot,
 } = {}) {
   return {
     appDescriptor: readYoutubeExtractionAppDescriptor(appDescriptorPath),
@@ -839,7 +1144,7 @@ export function loadYoutubeExtractionWorkerRuntimeInputs({
       ? verifyYoutubeExtractionWorkerArtifact(workerArtifactPath)
       : readYoutubeExtractionWorkerArtifact(workerArtifactPath),
     currentPolicy: readYoutubeExtractionCurrentPolicy(currentPolicyPath),
-    credentialState: readYoutubeExtractionWorkerCredential(credentialPath),
+    credentialState: readYoutubeExtractionWorkerCredential(credentialPath, { secretRoot }),
     expectedSchema: expectedSchemaPath
       ? readYoutubeExtractionExpectedSchema(expectedSchemaPath)
       : null,
@@ -856,9 +1161,13 @@ export function loadYoutubeExtractionWorkerRuntimeInputs({
 /**
  * @param {string} path
  * @param {ReturnType<typeof buildYoutubeExtractionWorkerCredentialState>} credentialState
+ * @param {{ secretRoot?: string }} [options]
  */
-export function writeCredentialMetadata(path, credentialState) {
-  return writeJsonFile(path, credentialState, {
+export function writeCredentialMetadata(path, credentialState, { secretRoot } = {}) {
+  const writtenPath = writeJsonFile(path, credentialState, {
     mode: DEFAULT_YOUTUBE_EXTRACTION_WORKER_SECRET_MODE,
   });
+  return secretRoot
+    ? validateYoutubeExtractionWorkerSecretFile(writtenPath, { secretRoot })
+    : writtenPath;
 }

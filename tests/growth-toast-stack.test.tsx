@@ -6,6 +6,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { GrowthToastStack } from "@/components/gamification/growth-toast-stack";
 import {
+  GLOBAL_TOAST_GROWTH_SLOT_ID,
+  GlobalToastPresentationProvider,
+  GlobalToastPresentationSlot,
+} from "@/components/shared/global-toast-presentation-slot";
+import {
   HOMECOOK_GAMIFICATION_REFRESH_EVENT,
   ONBOARDING_TUTORIAL_REFRESH_KEY,
 } from "@/lib/gamification-events";
@@ -17,6 +22,7 @@ const mockFetchUserGamification = vi.fn();
 const mockFetchArchive = vi.fn();
 const mockMarkSeen = vi.fn();
 let desktopMatches = false;
+let narrowMatches = false;
 let mediaListeners: Array<() => void> = [];
 
 vi.mock("next/navigation", () => ({
@@ -155,10 +161,13 @@ function makeGamificationAfterFirstTutorialComplete() {
 
 function setDesktop(isDesktop: boolean) {
   desktopMatches = isDesktop;
+  narrowMatches = false;
   mediaListeners = [];
   window.matchMedia = vi.fn().mockImplementation((query: string) => ({
     get matches() {
-      return desktopMatches && query === "(min-width: 768px)";
+      if (query === "(min-width: 768px)") return desktopMatches;
+      if (query === "(max-width: 359px)") return narrowMatches;
+      return false;
     },
     media: query,
     addEventListener: vi.fn((_event: string, listener: () => void) => {
@@ -170,6 +179,11 @@ function setDesktop(isDesktop: boolean) {
     dispatchEvent: vi.fn(),
     onchange: null,
   }));
+}
+
+function setNarrow() {
+  setDesktop(false);
+  narrowMatches = true;
 }
 
 function resizeToDesktop(isDesktop: boolean) {
@@ -236,6 +250,93 @@ describe("GrowthToastStack", () => {
     expect(within(toasts[0]).getByTestId("growth-toast-priority-rank").textContent).toBe("1");
     expect(within(toasts[1]).getByTestId("growth-toast-priority-rank").textContent).toBe("2");
     expect(within(toasts[2]).getByTestId("growth-toast-priority-rank").textContent).toBe("3");
+  });
+
+  it("ports growth toasts into the shared global presentation slot when available", async () => {
+    mockFetchUserGamification.mockResolvedValue({
+      notifications: {
+        unseen: [],
+        priority_unseen: [
+          makeNotification({
+            id: "n-growth",
+            notification_type: "xp_awarded",
+            title: "요리 완료 +60 XP",
+            body: "반영됨",
+          }),
+        ],
+      },
+    });
+
+    render(
+      <>
+        <GlobalToastPresentationSlot />
+        <GrowthToastStack presentationMode="shared" />
+      </>,
+    );
+    dispatchRefresh();
+
+    const toast = await screen.findByText("요리 완료 +60 XP");
+    const slot = document.getElementById(GLOBAL_TOAST_GROWTH_SLOT_ID);
+    const stack = screen.getByTestId("growth-toast-stack");
+
+    expect(slot?.contains(toast)).toBe(true);
+    expect(stack.className).toContain("flex");
+    expect(stack.className).not.toContain("fixed");
+    expect(screen.getByTestId("growth-toast").getAttribute("role")).toBeNull();
+  });
+
+  it("serializes shared Growth toasts at 320 without starting queued timers or seen writes", async () => {
+    vi.useFakeTimers();
+    setNarrow();
+    mockFetchUserGamification.mockResolvedValue({
+      notifications: {
+        unseen: [],
+        priority_unseen: [
+          makeNotification({ id: "n-first", priority: 1, title: "첫 성장 알림" }),
+          makeNotification({ id: "n-second", priority: 2, title: "두 번째 성장 알림" }),
+        ],
+      },
+    });
+
+    render(
+      <GlobalToastPresentationProvider>
+        <GlobalToastPresentationSlot />
+        <GrowthToastStack presentationMode="shared" />
+      </GlobalToastPresentationProvider>,
+    );
+    dispatchRefresh();
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(screen.getAllByTestId("growth-toast")).toHaveLength(1);
+    expect(screen.getByTestId("growth-toast").textContent).toContain("첫 성장 알림");
+    expect(screen.queryByText("두 번째 성장 알림")).toBeNull();
+    expect(screen.getByTestId("growth-toast-collapsed").textContent).toContain("+1");
+    expect(mockMarkSeen).not.toHaveBeenCalled();
+
+    await act(async () => {
+      vi.advanceTimersByTime(6000);
+    });
+
+    expect(screen.getAllByTestId("growth-toast")).toHaveLength(1);
+    expect(screen.getByTestId("growth-toast").textContent).toContain("두 번째 성장 알림");
+    expect(screen.queryByTestId("growth-toast-collapsed")).toBeNull();
+    expect(mockMarkSeen).toHaveBeenCalledWith(["n-first"]);
+    expect(mockMarkSeen).not.toHaveBeenCalledWith(["n-second"]);
+
+    await act(async () => {
+      vi.advanceTimersByTime(5999);
+    });
+    expect(screen.getByTestId("growth-toast").textContent).toContain("두 번째 성장 알림");
+    expect(mockMarkSeen).not.toHaveBeenCalledWith(["n-second"]);
+
+    await act(async () => {
+      vi.advanceTimersByTime(1);
+    });
+    expect(screen.queryByTestId("growth-toast")).toBeNull();
+    expect(mockMarkSeen).toHaveBeenCalledWith(["n-second"]);
   });
 
   it("does not fetch gamification while the global stack is mounted for a guest", async () => {

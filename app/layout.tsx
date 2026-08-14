@@ -2,6 +2,11 @@ import type { Metadata } from "next";
 import { GrowthToastStack } from "@/components/gamification/growth-toast-stack";
 import { ProviderMemorySync } from "@/components/auth/provider-memory-sync";
 import { QaFixtureToolbar } from "@/components/layout/qa-fixture-toolbar";
+import {
+  GlobalToastPresentationProvider,
+  GlobalToastPresentationSlot,
+} from "@/components/shared/global-toast-presentation-slot";
+import { YoutubeExtractionNotificationCenter } from "@/components/youtube-extraction/youtube-extraction-notification-center";
 import { getPublicSiteOrigin } from "@/lib/legal-info";
 import {
   defaultOpenGraphImagePath,
@@ -73,10 +78,19 @@ export default function RootLayout({
       <body>
         {children}
         <ProviderMemorySync />
-        <GrowthToastStack
-          initialAuthenticated={false}
-          resolveAuthenticatedOnClient
-        />
+        <GlobalToastPresentationProvider>
+          <GlobalToastPresentationSlot />
+          <GrowthToastStack
+            initialAuthenticated={false}
+            presentationMode="shared"
+            resolveAuthenticatedOnClient
+          />
+          <YoutubeExtractionNotificationCenter
+            initialAuthenticated={false}
+            presentationMode="shared"
+            resolveAuthenticatedOnClient
+          />
+        </GlobalToastPresentationProvider>
         <QaFixtureToolbar />
       </body>
     </html>

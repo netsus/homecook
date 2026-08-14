@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 
 import {
@@ -10,15 +11,20 @@ import {
   buildYoutubeExtractionWorkerLifecyclePlan,
   buildYoutubeExtractionWorkerRollbackPlan,
   evaluateYoutubeExtractionWorkerPreflight,
+  installYoutubeExtractionWorkerLaunchAgent,
   loadYoutubeExtractionWorkerRuntimeInputs,
   parseLaunchctlPrintStatus,
   rotateYoutubeExtractionWorkerCredential,
+  validateYoutubeExtractionWorkerConfigPath,
+  validateYoutubeExtractionWorkerSecretFile,
+  validateYoutubeExtractionWorkerSecretRoot,
   writeCredentialMetadata,
 } from "./lib/youtube-extraction-worker-ops.mjs";
 import { ensureAbsolutePath } from "./lib/youtube-extraction-worker-artifact.mjs";
 import {
   readWorkerEnvironment,
   readWorkerProviderEnvironment,
+  sanitizeYoutubeExtractionChildEnvironment,
   verifyStandaloneYoutubeI031Preflight,
 } from "./lib/youtube-extraction-worker-runtime.mjs";
 
@@ -38,6 +44,10 @@ function parseArgs(argv) {
     if (token === "--") continue;
     if (token === "--dry-run") {
       options.dryRun = true;
+      continue;
+    }
+    if (token === "--execute") {
+      options.execute = true;
       continue;
     }
     if (token === "--json") {
@@ -72,6 +82,9 @@ function parseArgs(argv) {
         break;
       case "--expected-schema":
         options.expectedSchemaPath = ensureAbsolutePath(value, "expectedSchemaPath");
+        break;
+      case "--secret-root":
+        options.secretRoot = ensureAbsolutePath(value, "secretRoot");
         break;
       case "--launchctl-output":
         options.launchctlOutputPath = ensureAbsolutePath(value, "launchctlOutputPath");
@@ -118,6 +131,9 @@ function parseArgs(argv) {
       case "--user-id":
         options.userId = Number(value);
         break;
+      case "--confirm-production":
+        options.confirmation = value;
+        break;
       default:
         throw new Error(`Unknown option: ${token}`);
     }
@@ -132,12 +148,24 @@ function print(result) {
 }
 
 async function runI031Preflight(options) {
-  const workerConfig = await readWorkerEnvironment(options.configPath);
-  const providerEnvironment = await readWorkerProviderEnvironment(
+  const configPath = validateYoutubeExtractionWorkerConfigPath(options.configPath, {
+    expectedUserId: options.userId,
+    secretRoot: options.secretRoot,
+  });
+  const workerConfig = await readWorkerEnvironment(configPath);
+  const providerSecretPath = validateYoutubeExtractionWorkerSecretFile(
     workerConfig.HOMECOOK_YOUTUBE_WORKER_PROVIDER_SECRET_FILE,
+    { expectedUserId: options.userId, secretRoot: options.secretRoot },
+  );
+  const providerEnvironment = await readWorkerProviderEnvironment(
+    providerSecretPath,
   );
   const result = await verifyStandaloneYoutubeI031Preflight({
-    workerEnv: { ...process.env, ...providerEnvironment },
+    workerEnv: sanitizeYoutubeExtractionChildEnvironment(
+      { ...process.env, ...providerEnvironment },
+      { HOME: options.homeDir },
+    ),
+    expectedUserId: options.userId,
   });
   return {
     ready: true,
@@ -153,6 +181,27 @@ async function runInstall(options) {
     throw new Error(`worker install preflight failed: ${releasePreflight.blockers.join(",")}`);
   }
   const i031Preflight = await runI031Preflight(options);
+  if (options.execute) {
+    if (options.dryRun) {
+      throw new Error("install accepts either --dry-run or --execute, not both");
+    }
+    return installYoutubeExtractionWorkerLaunchAgent({
+      configPath: options.configPath,
+      manifestPath: options.workerArtifactPath,
+      credentialPath: options.credentialPath,
+      appDescriptorPath: options.appDescriptorPath,
+      currentPolicyPath: options.currentPolicyPath,
+      expectedSchemaPath: options.expectedSchemaPath,
+      secretRoot: options.secretRoot,
+      homeDir: options.homeDir,
+      nodeBin: options.nodeBin,
+      rootDir: options.rootDir,
+      userId: options.userId,
+      i031Preflight,
+      confirmation: options.confirmation,
+      spawn: spawnSync,
+    });
+  }
   return buildYoutubeExtractionWorkerInstallPlan({
     configPath: options.configPath,
     manifestPath: options.workerArtifactPath,
@@ -160,6 +209,7 @@ async function runInstall(options) {
     appDescriptorPath: options.appDescriptorPath,
     currentPolicyPath: options.currentPolicyPath,
     expectedSchemaPath: options.expectedSchemaPath,
+    secretRoot: options.secretRoot,
     homeDir: options.homeDir,
     nodeBin: options.nodeBin,
     rootDir: options.rootDir,
@@ -188,6 +238,13 @@ async function runLifecycle(action, options) {
 }
 
 function runReleasePreflight(options) {
+  validateYoutubeExtractionWorkerSecretRoot(options.secretRoot, {
+    expectedUserId: options.userId,
+  });
+  validateYoutubeExtractionWorkerSecretFile(options.credentialPath, {
+    expectedUserId: options.userId,
+    secretRoot: options.secretRoot,
+  });
   const inputs = loadYoutubeExtractionWorkerRuntimeInputs({
     appDescriptorPath: options.appDescriptorPath,
     workerArtifactPath: options.workerArtifactPath,
@@ -195,6 +252,7 @@ function runReleasePreflight(options) {
     credentialPath: options.credentialPath,
     expectedSchemaPath: options.expectedSchemaPath,
     queueStatePath: options.queueStatePath ?? null,
+    secretRoot: options.secretRoot,
   });
   return evaluateYoutubeExtractionWorkerPreflight(inputs);
 }
@@ -213,6 +271,7 @@ function runDrain(options) {
     currentPolicyPath: options.currentPolicyPath,
     credentialPath: options.credentialPath,
     queueStatePath: options.queueStatePath,
+    secretRoot: options.secretRoot,
   });
   return buildYoutubeExtractionWorkerDrainPlan({
     queueState: inputs.queueState,
@@ -221,15 +280,18 @@ function runDrain(options) {
 }
 
 function runStatus(options) {
+  const serviceTarget = `gui/${options.userId}/com.homecook.youtube-extraction-worker`;
   const rawOutput = options.launchctlOutputPath
     ? {
       status: 0,
       stdout: readFileSync(options.launchctlOutputPath, "utf8"),
       stderr: "",
     }
-    : { stdout: "", stderr: "", status: 113 };
+    : spawnSync("/bin/launchctl", ["print", serviceTarget], {
+      encoding: "utf8",
+    });
   return parseLaunchctlPrintStatus({
-    serviceTarget: `gui/${options.userId}/com.homecook.youtube-extraction-worker`,
+    serviceTarget,
     status: rawOutput.status ?? 113,
     stdout: rawOutput.stdout ?? "",
     stderr: rawOutput.stderr ?? "",
@@ -243,6 +305,7 @@ function runRollback(options) {
     currentPolicyPath: options.currentPolicyPath,
     credentialPath: options.credentialPath,
     queueStatePath: options.queueStatePath,
+    secretRoot: options.secretRoot,
   });
   return buildYoutubeExtractionWorkerRollbackPlan({
     currentArtifact: inputs.workerArtifact,
@@ -266,9 +329,12 @@ function runCredentialBootstrap(options) {
     releaseSha: options.releaseSha,
     schemaIdentity: options.schemaIdentity,
     allowedSnapshotDigest: options.allowedSnapshotDigest,
+    secretRoot: options.secretRoot,
   });
   if (options.outputPath) {
-    writeCredentialMetadata(options.outputPath, credential);
+    writeCredentialMetadata(options.outputPath, credential, {
+      secretRoot: options.secretRoot,
+    });
   }
   return {
     action: "credential-bootstrap",
@@ -292,9 +358,12 @@ function runCredentialRotate(options) {
     releaseSha: options.releaseSha,
     schemaIdentity: options.schemaIdentity,
     allowedSnapshotDigest: options.allowedSnapshotDigest,
+    secretRoot: options.secretRoot,
   });
   if (options.outputPath) {
-    writeCredentialMetadata(options.outputPath, credential);
+    writeCredentialMetadata(options.outputPath, credential, {
+      secretRoot: options.secretRoot,
+    });
   }
   return {
     action: "credential-rotate",
@@ -318,6 +387,11 @@ async function runHealth(options) {
 
 async function main() {
   const options = parseArgs(process.argv.slice(2));
+  if (!new Set(["status", "stop", "uninstall"]).has(options.command)) {
+    validateYoutubeExtractionWorkerSecretRoot(options.secretRoot, {
+      expectedUserId: options.userId,
+    });
+  }
   let result;
 
   switch (options.command) {

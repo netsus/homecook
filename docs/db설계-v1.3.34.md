@@ -4,6 +4,10 @@
 담당자: 채실장
 날짜: 8월 13일
 
+> **2026-08-15 contract-evolution addendum — 공개 YouTube background 활성화의 DB 영향 N/A**
+>
+> `/recipes/new/youtube` standalone 화면도 기존 `youtube_extraction_jobs`, `youtube_extraction_sessions.source_job_id`, terminal delivery/seen RPC와 restricted local worker를 그대로 사용한다. 신규 table/column/status/RPC/RLS/ACL은 없으며 Supabase Cloud/linked/remote target은 계속 forbidden이다. 자동 등록을 제거해도 stored job/session 상태 전이와 ownership authority는 바뀌지 않는다.
+
 > **2026-08-13 contract-evolution — full-local DB authority와 non-destructive gate**
 >
 > application DB, `auth`, `storage`, Realtime/PostgREST의 유일한 authority는 full-local Supabase다. Cloud/linked/remote DB는 migration source, verifier, backup source, rollback target 또는 fallback이 아니다. schema 변경은 versioned migration artifact와 pinned isolated local replay로 검증하며 deploy 목적 `supabase db push`, `--linked`, remote database credential은 금지한다. 실제 full-local 운영 DB는 기본 read-only transaction과 before/after checksum으로 검증하고 destructive reset/volume delete/history rewrite를 금지한다. backup/restore와 forbidden matrix는 `docs/engineering/supabase-local-only-operations.md`를 따른다.
@@ -248,7 +252,7 @@ processing -- lease expired + attempts exhausted --> failed/ATTEMPTS_EXHAUSTED
 - restore manifest는 roles → pre-data → compatible `auth` → `public` → `storage` metadata → post-data/RLS/grants 순서를 고정하고 relation/column classification, count/digest/owner semantic evidence를 포함한다.
 - Auth/application DB/Storage manifest는 동일한 maintenance attempt와 cut line을 공유한다. remote snapshot보다 오래된 local rehearsal row/object를 promote하거나 두 source를 merge하는 경로는 금지한다.
 - Storage bucket privacy/config를 먼저 복원하고 S3 protocol copy 뒤 object path/count/bytes/MIME/SHA-256/DB reference/owner prefix mismatch 0을 확인한다. direct file/Docker volume copy를 금지한다.
-- 첫 local production Auth state mutation 뒤 rollback은 local Auth/session/identity/application/Storage delta를 함께 export/restore하거나 forward-fix한다. remote project와 final encrypted manifest는 최소 14일 보존한다.
+- 첫 local production Auth state mutation 뒤 rollback은 local Auth/session/identity/application/Storage delta를 함께 export/restore하거나 forward-fix한다. immutable encrypted backup과 manifest는 off-Mac 매체에 보존하며 remote project를 source나 fallback으로 사용하지 않는다.
 
 > **2026-07-31 contract-evolution — pantry/shopping product identity와 effective reader**
 >
@@ -377,7 +381,7 @@ select_pantry_effective_ingredients(p_user_id uuid)
 
 ### two-system maintenance barrier
 
-- remote Supabase에는 Auth Hook용 최소 control-plane table/function만 writable 예외로 남긴다. remote application `public` schema와 application Storage bucket은 read-only recovery copy다.
+- **역사 기록(실행 금지):** 2026-07-30 hybrid 설계는 remote Supabase에 Auth Hook용 최소 control-plane table/function을 남기는 방식을 기술했다. 2026-08-13 local-only 계약 이후 이 예외와 remote application recovery copy는 모두 forbidden/N/A이며 신규 session·검증·운영의 prerequisite나 fallback이 아니다.
 - control-plane은 attempt UUID, monotonic revision, fencing token, remote/local ack, lease expiry, quiet-window start/end, abort/resume state를 구조화한다.
 - Before User Created Hook health, Auth Admin quiet window, local exclusive fence, mirror count/digest, Storage owner-signal union-zero, deletion outbox terminal evidence를 같은 attempt에 묶는다.
 - hosted Auth에는 provider linking 전용 hook이 없으므로 remote link freeze를 authority로 주장하지 않는다. Homecook linking UI는 maintenance 동안 닫고, barrier 전후 remote user/identity population+revision digest를 CAS 비교한다. direct/automatic linking 또는 callback race가 owner/epoch/population digest를 바꾸면 attempt를 abort/restart한다. owner/epoch가 그대로인 provider metadata 변화는 local ownership을 바꾸지 않고 remote authority에서 reconcile한다.

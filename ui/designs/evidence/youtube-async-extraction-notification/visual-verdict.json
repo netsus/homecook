@@ -1,0 +1,10 @@
+{
+  "score": 93,
+  "verdict": "pass",
+  "category_match": true,
+  "differences": [],
+  "reasoning": "확정 artifact의 YT_IMPORT visual language와 app-shell drawer 패턴을 유지하면서 capture source 2113dacdbb464f6422424324a38823e8c3d6933a, tree ed823a064774dee538df8cde47c483af08efa7dc의 30개 screenshot을 비교했다. current implementation 3c1e0d422b0849f7f086d1b7fefc55bac41eee60 / ee5e40de5c9de3e5bbbda766d233c7f118a2df3f의 마지막 UI delta는 닫힌 알림 센터 최초 mount의 focus 복귀만 guard하며 rendered markup/style/copy/viewport geometry와 screenshot generator를 바꾸지 않는다. RED-to-GREEN component test가 page focus 보존을 고정하므로 PNG를 재사용했다. 320px에서는 global presentation 전체와 Growth 채널 내부 모두 정확히 한 card만 완전 표시해 HOME 검색·필터·하단 navigation을 가리지 않는다. YouTube dismiss 뒤 첫 Growth, 그 Growth dismiss 뒤 다음 Growth로 순차 인계되며 대기 card는 summary/badge/list로 복구 가능하다. 390px와 desktop에서는 기존 stacking, 각 CTA와 닫기 control의 hit ownership, YouTube→Growth 읽기 순서를 유지한다. 고정 한국어 toast와 panel/list 문구는 break-keep으로 '한도를', '사용했어요', '주세요' 같은 어절이 분리되지 않으며 긴 예외 token만 anywhere wrapping한다. YT_IMPORT의 initial/submitting CTA는 neutral fill·text·border와 pressed transform 제거로 enabled brand CTA와 즉시 구별된다. 기존 planner '저녁', consumed exact title/CTA, 320px 200% failure CTA, desktop drawer, UNAUTHORIZED focus handoff, 복원 heading focus와 탭 순환도 그대로 유지된다. 이 판정은 구현 task의 visual-verdict이며 독립 authority 승인을 대신하지 않는다.",
+  "suggestions": [
+    "실기기 safe-area와 가상 키보드 가림은 Manual Only 검증에서 다시 확인한다."
+  ]
+}

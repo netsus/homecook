@@ -466,6 +466,27 @@ describe("YTASYNC-API route handlers", () => {
     expect(await delivered.json()).toMatchObject({ data: { delivered_count: 1 } });
     expect(await seen.json()).toMatchObject({ data: { seen_count: 1 } });
     expect(markDelivered).toHaveBeenCalledOnce();
-    expect(markSeen).toHaveBeenCalledOnce();
+    expect(markSeen).toHaveBeenCalledWith(
+      "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      ["11111111-1111-4111-8111-111111111111"],
+      expect.any(Function),
+    );
+  });
+
+  it("fails closed when the notification list projection cannot be loaded", async () => {
+    const { handlers } = buildHandlers({
+      listJobs: vi.fn(async () => { throw new Error("projection unavailable"); }),
+    });
+
+    const response = await handlers.list(new Request(
+      "http://localhost/api/v1/recipes/youtube/extraction-jobs?view=unseen-completed",
+    ));
+
+    expect(response.status).toBe(503);
+    expect(await response.json()).toMatchObject({
+      success: false,
+      data: null,
+      error: { code: "QUEUE_UNAVAILABLE" },
+    });
   });
 });

@@ -13,12 +13,17 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
+  buildYoutubeExtractionRuntimeEnvironment,
   createRestrictedPostgrestRpcClient,
   createStandaloneYoutubeI031Extractor,
   createYoutubeExtractionWorkerRuntime,
   normalizeYoutubeExtractionRuntimeError,
+  resolveYoutubeExtractionTempRoot,
   runYoutubeExtractionWorkerPollLoop,
+  sanitizeYoutubeExtractionChildEnvironment,
   verifyStandaloneYoutubeI031Preflight,
+  YOUTUBE_EXTRACTION_WORKER_HEARTBEAT_INTERVAL_MS,
+  YOUTUBE_EXTRACTION_WORKER_LEASE_SECONDS,
 } from "../scripts/lib/youtube-extraction-worker-runtime.mjs";
 
 const servers: Server[] = [];
@@ -33,6 +38,11 @@ afterEach(async () => {
 });
 
 describe("YTASYNC-WORKER standalone runner", () => {
+  it("locks the frozen worker timing contract to five minutes and thirty seconds", () => {
+    expect(YOUTUBE_EXTRACTION_WORKER_LEASE_SECONDS).toBe(300);
+    expect(YOUTUBE_EXTRACTION_WORKER_HEARTBEAT_INTERVAL_MS).toBe(30_000);
+  });
+
   it("requires the exact i031 CLI version, ChatGPT login, and tool preflight", async () => {
     const calls: Array<[string, string[]]> = [];
     const runCommand = vi.fn(async (command: string, args: string[]) => {
@@ -49,6 +59,7 @@ describe("YTASYNC-WORKER standalone runner", () => {
         YOUTUBE_I031_CODEX_BIN: "/opt/homebrew/bin/codex",
       },
       accessPath: vi.fn(async () => undefined),
+      inspectAuthFile: vi.fn(async () => undefined),
       runCommand,
       platform: "darwin",
     })).resolves.toMatchObject({
@@ -70,9 +81,168 @@ describe("YTASYNC-WORKER standalone runner", () => {
         YOUTUBE_I031_CODEX_BIN: "/opt/homebrew/bin/codex",
       },
       accessPath: vi.fn(async () => undefined),
+      inspectAuthFile: vi.fn(async () => undefined),
       runCommand: vi.fn(async () => ({ stdout: "codex-cli 0.145.0\n" })),
       platform: "darwin",
     })).rejects.toMatchObject({ code: "RUNTIME_UNAVAILABLE" });
+  });
+
+  it("passes only provider-required variables to every extraction child", async () => {
+    const childEnv = sanitizeYoutubeExtractionChildEnvironment({
+      HOME: "/tmp/worker-b",
+      PATH: "/usr/bin:/bin",
+      YOUTUBE_API_KEY: "provider-key",
+      APIFY_TOKEN: "provider-fallback",
+      SUPABASE_SERVICE_ROLE_KEY: "forbidden-service-role",
+      HOMECOOK_YOUTUBE_WORKER_SIGNING_KEY: "forbidden-signing",
+      HOMECOOK_USER_TOKEN: "forbidden-user-token",
+    });
+
+    expect(childEnv).toMatchObject({
+      HOME: "/tmp/worker-b",
+      PATH: "/usr/bin:/bin",
+      YOUTUBE_API_KEY: "provider-key",
+      APIFY_TOKEN: "provider-fallback",
+    });
+    expect(childEnv).not.toHaveProperty("SUPABASE_SERVICE_ROLE_KEY");
+    expect(childEnv).not.toHaveProperty("HOMECOOK_YOUTUBE_WORKER_SIGNING_KEY");
+    expect(childEnv).not.toHaveProperty("HOMECOOK_USER_TOKEN");
+  });
+
+  it("pins extraction temp files to the canonical Darwin user temp root", async () => {
+    const tempRoot = await resolveYoutubeExtractionTempRoot({
+      platform: "darwin",
+      runCommand: vi.fn(async () => ({
+        stdout: "/var/folders/ab/canonical-user/T/\n",
+      })),
+    });
+    expect(buildYoutubeExtractionRuntimeEnvironment({
+      processEnvironment: {
+        HOME: "/tmp/worker-home",
+        PATH: "/usr/bin:/bin",
+        TMPDIR: "/tmp/untrusted-launchd-default",
+      },
+      providerEnvironment: { YOUTUBE_API_KEY: "provider-key" },
+      tempRoot,
+    })).toMatchObject({
+      TMPDIR: "/var/folders/ab/canonical-user/T/",
+      YOUTUBE_API_KEY: "provider-key",
+    });
+  });
+
+  it("does not expose forbidden sentinels to the actual extraction child process", async () => {
+    const root = mkdtempSync(join(tmpdir(), "yta-child-env-"));
+    tempDirs.push(root);
+    const bundle = join(root, "lib/server/youtube-i031-runtime/bundle");
+    mkdirSync(bundle, { recursive: true });
+    writeFileSync(join(bundle, "worker.mjs"), `
+      import { writeFile } from "node:fs/promises";
+      const args = Object.fromEntries(process.argv.slice(2).reduce((all, value, index, list) => {
+        if (value.startsWith("--")) all.push([value.slice(2), list[index + 1]]);
+        return all;
+      }, []));
+      await writeFile(args.result, JSON.stringify({
+        workerDataPersisted: true,
+        providerKeyPresent: process.env.YOUTUBE_API_KEY === "provider-key",
+        forbiddenPresent: [
+          process.env.SUPABASE_SERVICE_ROLE_KEY,
+          process.env.HOMECOOK_YOUTUBE_WORKER_SIGNING_KEY,
+          process.env.HOMECOOK_USER_TOKEN
+        ].some(Boolean)
+      }));
+    `);
+    chmodSync(join(bundle, "worker.mjs"), 0o555);
+    const extractor = createStandaloneYoutubeI031Extractor({
+      artifactRoot: root,
+      workerEnv: {
+        NODE_ENV: "test",
+        YOUTUBE_API_KEY: "provider-key",
+        SUPABASE_SERVICE_ROLE_KEY: "forbidden-service-role",
+        HOMECOOK_YOUTUBE_WORKER_SIGNING_KEY: "forbidden-signing",
+        HOMECOOK_USER_TOKEN: "forbidden-user-token",
+      },
+      verifyPreflight: vi.fn(async () => ({
+        codexBin: "/opt/homebrew/bin/codex",
+        codexCliVersion: "0.144.0-alpha.4",
+      })),
+    });
+
+    await expect(extractor.extract({
+      videoId: "abc123DEF45",
+      signal: new AbortController().signal,
+      claimedJob: {
+        jobId: "99999999-9999-4999-8999-999999999999",
+        videoId: "abc123DEF45",
+        workerId: "worker-env",
+        leaseGeneration: 1,
+      },
+      workerRpcClient: {
+        accessCache: vi.fn(),
+        recordEvent: vi.fn(),
+        reserveQuota: vi.fn(),
+        resolveMethods: vi.fn(),
+        updateTitle: vi.fn(),
+      },
+    })).resolves.toMatchObject({
+      providerKeyPresent: true,
+      forbiddenPresent: false,
+    });
+  });
+
+  it("rejects an auth.json whose owner-mode provenance is not exact", async () => {
+    const workerHome = mkdtempSync(join(tmpdir(), "yta-worker-home-"));
+    tempDirs.push(workerHome);
+    const authDir = join(workerHome, ".codex");
+    const authPath = join(authDir, "auth.json");
+    mkdirSync(authDir, { recursive: true });
+    writeFileSync(authPath, "{}\n");
+    chmodSync(authPath, 0o644);
+
+    await expect(verifyStandaloneYoutubeI031Preflight({
+      workerEnv: { HOME: workerHome, YOUTUBE_API_KEY: "provider-key" },
+      expectedUserId: process.getuid?.(),
+      accessPath: vi.fn(async () => undefined),
+      runCommand: vi.fn(),
+      platform: "darwin",
+    })).rejects.toMatchObject({ code: "RUNTIME_UNAVAILABLE" });
+  });
+
+  it("verifies auth.json from the exact requested worker HOME with owner and mode provenance", async () => {
+    const inspectAuthFile = vi.fn(async () => undefined);
+    const commandEnvironments: Array<Record<string, string | undefined> | undefined> = [];
+    const runCommand = vi.fn(async (
+      _command: string,
+      args: string[],
+      options?: { env?: Record<string, string | undefined> },
+    ) => {
+      commandEnvironments.push(options?.env);
+      return args[0] === "--version"
+        ? { stdout: "codex-cli 0.144.0-alpha.4\n" }
+        : args[0] === "login"
+          ? { stdout: "Logged in using ChatGPT\n" }
+          : { stdout: "ok\n" };
+    });
+
+    await verifyStandaloneYoutubeI031Preflight({
+      workerEnv: {
+        HOME: "/tmp/worker-home-b",
+        YOUTUBE_API_KEY: "provider-key",
+      },
+      expectedUserId: 501,
+      inspectAuthFile,
+      accessPath: vi.fn(async () => undefined),
+      runCommand,
+      platform: "darwin",
+    });
+
+    expect(inspectAuthFile).toHaveBeenCalledWith(
+      "/tmp/worker-home-b/.codex/auth.json",
+      501,
+    );
+    for (const environment of commandEnvironments) {
+      expect(environment?.HOME).toBe("/tmp/worker-home-b");
+      expect(environment).not.toHaveProperty("SUPABASE_SERVICE_ROLE_KEY");
+    }
   });
 
   it("normalizes provider failures into a bounded stable retry envelope", () => {
@@ -90,8 +260,13 @@ describe("YTASYNC-WORKER standalone runner", () => {
     });
   });
 
-  it("uses only the restricted bearer token against loopback PostgREST RPC", async () => {
-    const requests: Array<{ authorization: string | undefined; url: string; body: unknown }> = [];
+  it("uses the restricted bearer token and gateway API key against loopback PostgREST RPC", async () => {
+    const requests: Array<{
+      apiKey: string | undefined;
+      authorization: string | undefined;
+      url: string;
+      body: unknown;
+    }> = [];
     const server = createServer((request, response) => {
       let body = "";
       request.setEncoding("utf8");
@@ -100,6 +275,7 @@ describe("YTASYNC-WORKER standalone runner", () => {
       });
       request.on("end", () => {
         requests.push({
+          apiKey: request.headers.apikey as string | undefined,
           authorization: request.headers.authorization,
           url: request.url ?? "",
           body: JSON.parse(body),
@@ -115,23 +291,25 @@ describe("YTASYNC-WORKER standalone runner", () => {
 
     const client = createRestrictedPostgrestRpcClient({
       dataApiUrl: `http://127.0.0.1:${address.port}/rest/v1`,
+      apiKey: "local-publishable-key",
       token: "restricted-worker-token",
     });
     await client.rpc("heartbeat_youtube_extraction_job", {
       job_id: "11111111-1111-4111-8111-111111111111",
       worker_id: "worker-1",
       lease_generation: 7,
-      lease_seconds: 120,
+      lease_seconds: 300,
     });
 
     expect(requests).toEqual([{
+      apiKey: "local-publishable-key",
       authorization: "Bearer restricted-worker-token",
       url: "/rest/v1/rpc/heartbeat_youtube_extraction_job",
       body: {
         job_id: "11111111-1111-4111-8111-111111111111",
         worker_id: "worker-1",
         lease_generation: 7,
-        lease_seconds: 120,
+        lease_seconds: 300,
       },
     }]);
   });
@@ -153,8 +331,8 @@ describe("YTASYNC-WORKER standalone runner", () => {
             frameMode: "hybrid",
           },
         },
-        claim_youtube_extractor_permit: { permit_generation: 9 },
-        start_youtube_extraction_attempt: { applied: true },
+        claim_youtube_extractor_permit: { claimed: true, permit_generation: 9 },
+        start_youtube_extraction_attempt: { started: true },
         read_youtube_extraction_worker_catalog: {
           applied: true,
           ingredients: [],
@@ -228,6 +406,76 @@ describe("YTASYNC-WORKER standalone runner", () => {
       title: "김치찌개",
       worker_permit_generation: 9,
     });
+    for (const { name, args } of calls.filter(({ name }) => [
+      "heartbeat_youtube_extraction_job",
+      "heartbeat_youtube_extractor_permit",
+      "access_youtube_extraction_worker_cache",
+      "reserve_youtube_extraction_worker_quota",
+      "record_youtube_extraction_worker_event",
+      "resolve_youtube_extraction_worker_methods",
+      "update_youtube_extraction_job_title",
+      "resolve_youtube_extraction_job_draft",
+    ].includes(name))) {
+      expect(args, `${name} must carry the live permit fence`).toMatchObject({
+        permit_generation: 9,
+      });
+    }
+    expect(calls.find(({ name }) => name === "heartbeat_youtube_extractor_permit")?.args)
+      .toMatchObject({
+        job_id: "11111111-1111-4111-8111-111111111111",
+        lease_generation: 4,
+        permit_generation: 9,
+      });
+    for (const { name, args } of calls.filter(({ name }) => [
+      "claim_youtube_extraction_job",
+      "claim_youtube_extractor_permit",
+      "heartbeat_youtube_extraction_job",
+      "heartbeat_youtube_extractor_permit",
+    ].includes(name))) {
+      expect(args, `${name} must use the frozen five-minute lease`)
+        .toMatchObject({ lease_seconds: 300 });
+    }
+  });
+
+  it("requeues without starting an attempt when permit claim returns claimed false with a generation", async () => {
+    const digest = "8".repeat(64);
+    const rpc = vi.fn(async (name: string) => ({
+      data: name === "claim_youtube_extraction_job"
+        ? {
+            job_id: "88888888-8888-4888-8888-888888888888",
+            youtube_video_id: "abc123DEF45",
+            lease_generation: 6,
+            policy_snapshot_digest: digest,
+            result_affecting_options: {},
+          }
+        : name === "claim_youtube_extractor_permit"
+          ? { claimed: false, permit_generation: 41, owner_id: "worker-other" }
+          : name === "requeue_youtube_extraction_job_without_attempt"
+            ? { applied: true, requeued: true }
+            : null,
+      error: null,
+    }));
+    const extractor = { extract: vi.fn() };
+    const runtime = createYoutubeExtractionWorkerRuntime({
+      workerId: "worker-contender",
+      allowedSnapshotDigest: digest,
+      rpc,
+      extractor,
+    });
+
+    await expect(runtime.runOnce()).resolves.toBe("permit-unavailable");
+    expect(rpc).toHaveBeenCalledWith("requeue_youtube_extraction_job_without_attempt", {
+      job_id: "88888888-8888-4888-8888-888888888888",
+      worker_id: "worker-contender",
+      lease_generation: 6,
+      min_delay_seconds: 2,
+      max_delay_seconds: 8,
+    });
+    expect(rpc).not.toHaveBeenCalledWith(
+      "start_youtube_extraction_attempt",
+      expect.any(Object),
+    );
+    expect(extractor.extract).not.toHaveBeenCalled();
   });
 
   it("executes the immutable i031 artifact subprocess through fenced finalize", async () => {
@@ -261,7 +509,7 @@ describe("YTASYNC-WORKER standalone runner", () => {
             result_affecting_options: {},
           }
         : name === "claim_youtube_extractor_permit"
-          ? { permit_generation: 1 }
+          ? { claimed: true, permit_generation: 1 }
           : name === "read_youtube_extraction_worker_catalog"
             ? { applied: true, ingredients: [], ingredient_synonyms: [], cooking_methods: [] }
             : name === "record_youtube_extraction_worker_event"
@@ -522,7 +770,7 @@ describe("YTASYNC-WORKER standalone runner", () => {
               result_affecting_options: {},
             }
           : name === "claim_youtube_extractor_permit"
-            ? { permit_generation: 2 }
+            ? { claimed: true, permit_generation: 2 }
             : name === "read_youtube_extraction_worker_catalog"
               ? { applied: true, ingredients: [], ingredient_synonyms: [], cooking_methods: [] }
               : { applied: true, updated: true, released: true },
@@ -575,7 +823,7 @@ describe("YTASYNC-WORKER standalone runner", () => {
         return all;
       }, []));
       await writeFile(args.error, JSON.stringify({
-        code: process.env.TEST_ERROR_CODE,
+        code: ${JSON.stringify(errorCode)},
         retryable: true,
         stage: "provider",
         ignored_secret: "must-not-cross-boundary"
@@ -594,7 +842,7 @@ describe("YTASYNC-WORKER standalone runner", () => {
             result_affecting_options: {},
           }
         : name === "claim_youtube_extractor_permit"
-          ? { permit_generation: 3 }
+          ? { claimed: true, permit_generation: 3 }
           : name === "read_youtube_extraction_worker_catalog"
             ? { applied: true, ingredients: [], ingredient_synonyms: [], cooking_methods: [] }
             : name === "access_youtube_extraction_worker_cache"
@@ -608,7 +856,7 @@ describe("YTASYNC-WORKER standalone runner", () => {
       rpc,
       extractor: createStandaloneYoutubeI031Extractor({
         artifactRoot: root,
-        workerEnv: { NODE_ENV: "test", TEST_ERROR_CODE: errorCode },
+        workerEnv: { NODE_ENV: "test" },
         verifyPreflight: vi.fn(async () => ({
           codexBin: "/opt/homebrew/bin/codex",
           codexCliVersion: "0.144.0-alpha.4",
@@ -621,7 +869,46 @@ describe("YTASYNC-WORKER standalone runner", () => {
       job_id: "66666666-6666-4666-8666-666666666666",
       worker_id: "worker-child-error",
       lease_generation: 3,
+      permit_generation: 3,
       error_code: errorCode,
+    });
+  });
+
+  it.each([
+    ["RPC error", { data: null, error: { code: "DB_UNAVAILABLE", message: "db unavailable" } }],
+    ["lost fence", { data: { applied: false, updated: false }, error: null }],
+  ])("fails closed when durable fail_or_retry reports %s", async (_label, failureResponse) => {
+    const digest = "9".repeat(64);
+    const rpc = vi.fn(async (name: string) => {
+      if (name === "claim_youtube_extraction_job") {
+        return {
+          data: {
+            job_id: "99999999-9999-4999-8999-999999999991",
+            youtube_video_id: "abc123DEF45",
+            lease_generation: 12,
+            policy_snapshot_digest: digest,
+            result_affecting_options: {},
+          },
+          error: null,
+        };
+      }
+      if (name === "claim_youtube_extractor_permit") {
+        return { data: { claimed: true, permit_generation: 18 }, error: null };
+      }
+      if (name === "fail_or_retry_youtube_extraction_job") return failureResponse;
+      return { data: { applied: true, updated: true, released: true }, error: null };
+    });
+    const runtime = createYoutubeExtractionWorkerRuntime({
+      workerId: "worker-fail-closed",
+      allowedSnapshotDigest: digest,
+      rpc,
+      extractor: { extract: vi.fn(async () => { throw new Error("NETWORK_ERROR"); }) },
+    });
+
+    await expect(runtime.runOnce()).rejects.toThrow(/durable failure transition/iu);
+    expect(rpc).toHaveBeenCalledWith("release_youtube_extractor_permit", {
+      worker_id: "worker-fail-closed",
+      permit_generation: 18,
     });
   });
 
@@ -700,7 +987,7 @@ describe("YTASYNC-WORKER standalone runner", () => {
             result_affecting_options: {},
           }
         : name === "claim_youtube_extractor_permit"
-          ? { permit_generation: 11 }
+          ? { claimed: true, permit_generation: 11 }
           : name === "start_youtube_extraction_attempt"
             ? { applied: true }
             : name === "heartbeat_youtube_extraction_job"

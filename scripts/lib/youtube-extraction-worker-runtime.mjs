@@ -1,12 +1,50 @@
 import { execFile, spawn } from "node:child_process";
-import { access, cp, mkdtemp, readFile, rm, stat } from "node:fs/promises";
+import {
+  access,
+  chmod,
+  cp,
+  lstat,
+  mkdtemp,
+  readFile,
+  readdir,
+  realpath,
+  rm,
+  stat,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
+
+import workerTiming from
+  "../../lib/server/youtube-extraction-worker-timing.json" with { type: "json" };
 
 const LOOPBACK_HOSTS = new Set(["127.0.0.1", "localhost", "[::1]", "::1"]);
 const MAX_RESULT_BYTES = 2 * 1024 * 1024;
 const DEFAULT_EXTRACTION_TIMEOUT_MS = 20 * 60 * 1000;
+export const YOUTUBE_EXTRACTION_WORKER_LEASE_SECONDS = workerTiming.lease_seconds;
+export const YOUTUBE_EXTRACTION_WORKER_HEARTBEAT_INTERVAL_MS =
+  workerTiming.heartbeat_interval_seconds * 1000;
 const I031_CODEX_CLI_VERSION = "0.144.0-alpha.4";
+const CHILD_ENV_ALLOWLIST = new Set([
+  "APIFY_TOKEN",
+  "HOME",
+  "HTTPS_PROXY",
+  "HTTP_PROXY",
+  "LANG",
+  "LC_ALL",
+  "LC_CTYPE",
+  "NODE_EXTRA_CA_CERTS",
+  "NO_PROXY",
+  "PATH",
+  "SSL_CERT_DIR",
+  "SSL_CERT_FILE",
+  "TMPDIR",
+  "YOUTUBE_API_KEY",
+  "YOUTUBE_I031_CODEX_BIN",
+  "YOUTUBE_TRANSCRIPT_APIFY_ACTOR_ID",
+  "YOUTUBE_TRANSCRIPT_PAID_TIMEOUT_MS",
+  "HOMECOOK_I031_CODEX_CLI_VERSION",
+  "NODE_ENV",
+]);
 const CACHE_OPERATIONS = new Set([
   "transcript_read",
   "transcript_upsert",
@@ -63,12 +101,64 @@ function positiveInteger(value, label) {
   return value;
 }
 
+export function sanitizeYoutubeExtractionChildEnvironment(environment = {}, overrides = {}) {
+  const sanitized = {};
+  for (const [key, value] of Object.entries({ ...environment, ...overrides })) {
+    if (CHILD_ENV_ALLOWLIST.has(key) && typeof value === "string" && value.length > 0) {
+      sanitized[key] = value;
+    }
+  }
+  return sanitized;
+}
+
+/**
+ * @param {{
+ *   processEnvironment?: Record<string, string | undefined>;
+ *   providerEnvironment?: Record<string, string | undefined>;
+ *   tempRoot?: string;
+ * }} [options]
+ */
+export function buildYoutubeExtractionRuntimeEnvironment({
+  processEnvironment = {},
+  providerEnvironment = {},
+  tempRoot,
+} = {}) {
+  return sanitizeYoutubeExtractionChildEnvironment(
+    { ...processEnvironment, ...providerEnvironment },
+    { TMPDIR: requiredString(tempRoot, "worker temp root") },
+  );
+}
+
+export async function resolveYoutubeExtractionTempRoot({
+  platform = process.platform,
+  runCommand = defaultRunCommand,
+} = {}) {
+  if (platform !== "darwin") {
+    throw new YoutubeExtractionRuntimeError("RUNTIME_UNAVAILABLE", "preflight");
+  }
+  const result = await runCommand("/usr/bin/getconf", ["DARWIN_USER_TEMP_DIR"]);
+  const tempRoot = requiredString(result.stdout, "Darwin user temp root");
+  if (!/^\/var\/folders\/[^/]+\/[^/]+\/T\/$/u.test(tempRoot)) {
+    throw new YoutubeExtractionRuntimeError("RUNTIME_UNAVAILABLE", "preflight");
+  }
+  return tempRoot;
+}
+
+async function inspectWorkerAuthFile(pathname, expectedUserId) {
+  const file = await lstat(pathname);
+  if (!file.isFile() || file.isSymbolicLink()) throw new Error();
+  if (Number.isInteger(expectedUserId) && file.uid !== expectedUserId) throw new Error();
+  if ((file.mode & 0o777) !== 0o600) throw new Error();
+  if (await realpath(pathname) !== path.resolve(pathname)) throw new Error();
+}
+
 function successBoolean(result, operation) {
   if (result?.error) throw new Error(`${operation} failed`);
   if (result?.data === true) return true;
   if (typeof result?.data === "number") return result.data > 0;
   const row = record(result?.data);
   return row?.applied === true
+    || row?.started === true
     || row?.updated === true
     || row?.finalized === true
     || row?.released === true
@@ -133,12 +223,13 @@ function providerVideoTitle(runtimeResult) {
   return normalized.length > 0 && normalized.length <= 160 ? normalized : null;
 }
 
-function createFencedWorkerRpcClient({ rpc, claim, workerId }) {
+function createFencedWorkerRpcClient({ rpc, claim, workerId, permitGeneration }) {
   const fence = {
     job_id: claim.job_id,
     worker_id: workerId,
     lease_generation: claim.lease_generation,
   };
+  const writeFence = { ...fence, permit_generation: permitGeneration };
   return {
     async readCatalog() {
       const catalog = resultRow(await rpc("read_youtube_extraction_worker_catalog", fence),
@@ -153,7 +244,7 @@ function createFencedWorkerRpcClient({ rpc, claim, workerId }) {
         throw new Error("cache operation is invalid");
       }
       const row = resultRow(await rpc("access_youtube_extraction_worker_cache", {
-        ...fence,
+        ...writeFence,
         cache_operation: operation,
         payload,
       }), "access worker cache");
@@ -165,7 +256,7 @@ function createFencedWorkerRpcClient({ rpc, claim, workerId }) {
         throw new Error("quota reservation is invalid");
       }
       const row = resultRow(await rpc("reserve_youtube_extraction_worker_quota", {
-        ...fence,
+        ...writeFence,
         provider,
         units,
       }), "reserve worker quota");
@@ -176,7 +267,7 @@ function createFencedWorkerRpcClient({ rpc, claim, workerId }) {
     async recordEvent(kind, payload) {
       if (!EVENT_KINDS.has(kind) || !record(payload)) throw new Error("event is invalid");
       const row = resultRow(await rpc("record_youtube_extraction_worker_event", {
-        ...fence,
+        ...writeFence,
         event_kind: kind,
         payload,
       }), "record worker event");
@@ -194,7 +285,7 @@ function createFencedWorkerRpcClient({ rpc, claim, workerId }) {
         throw new Error("method labels are invalid");
       }
       const row = resultRow(await rpc("resolve_youtube_extraction_worker_methods", {
-        ...fence,
+        ...writeFence,
         method_labels: methodLabels.map((label) => label.trim()),
       }), "resolve worker methods");
       if (!row || row.applied !== true) throw new Error("YOUTUBE_EXTRACTION_FENCE_LOST");
@@ -204,7 +295,7 @@ function createFencedWorkerRpcClient({ rpc, claim, workerId }) {
       const normalized = providerVideoTitle({ videoTitle: title });
       if (!normalized) throw new Error("provider video title is invalid");
       requireFencedWrite(await rpc("update_youtube_extraction_job_title", {
-        ...fence,
+        ...writeFence,
         title: normalized,
       }), "update job title");
     },
@@ -243,6 +334,8 @@ async function defaultRunCommand(command, args, { env } = {}) {
  *   accessPath?: (pathname: string) => Promise<void>,
  *   runCommand?: (command: string, args: string[], options?: {env?: Record<string, string | undefined>}) => Promise<{stdout?: string, stderr?: string}>,
  *   platform?: NodeJS.Platform,
+ *   expectedUserId?: number,
+ *   inspectAuthFile?: (pathname: string, expectedUserId?: number) => Promise<void>,
  * }} options
  */
 export async function verifyStandaloneYoutubeI031Preflight({
@@ -250,6 +343,8 @@ export async function verifyStandaloneYoutubeI031Preflight({
   accessPath = access,
   runCommand = defaultRunCommand,
   platform = process.platform,
+  expectedUserId = process.getuid?.(),
+  inspectAuthFile = inspectWorkerAuthFile,
 } = {}) {
   try {
     if (platform !== "darwin") throw new Error();
@@ -258,13 +353,14 @@ export async function verifyStandaloneYoutubeI031Preflight({
     const codexBin = path.resolve(
       workerEnv.YOUTUBE_I031_CODEX_BIN ?? "/opt/homebrew/bin/codex",
     );
+    const authPath = path.join(home, ".codex", "auth.json");
     await Promise.all([
       accessPath(codexBin),
-      accessPath(path.join(home, ".codex", "auth.json")),
+      inspectAuthFile(authPath, expectedUserId),
       accessPath("/usr/bin/sandbox-exec"),
       accessPath("/usr/bin/swiftc"),
     ]);
-    const commandEnv = { ...workerEnv, HOME: home };
+    const commandEnv = sanitizeYoutubeExtractionChildEnvironment(workerEnv, { HOME: home });
     const versionResult = await runCommand(codexBin, ["--version"], { env: commandEnv });
     const versionMatch = String(versionResult.stdout ?? "")
       .match(/(?:^|\s)(\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?)(?:\s|$)/u);
@@ -300,12 +396,14 @@ function abortableDelay(milliseconds, signal) {
 /**
  * @param {{
  *   dataApiUrl: string,
+ *   apiKey: string,
  *   token: string,
  *   fetchImpl?: typeof globalThis.fetch,
  * }} options
  */
 export function createRestrictedPostgrestRpcClient({
   dataApiUrl,
+  apiKey,
   token,
   fetchImpl = globalThis.fetch,
 } = {}) {
@@ -317,6 +415,7 @@ export function createRestrictedPostgrestRpcClient({
     throw new Error("worker Data API must end with /rest/v1");
   }
   const bearer = requiredString(token, "restricted worker token");
+  const gatewayApiKey = requiredString(apiKey, "worker Data API key");
   if (typeof fetchImpl !== "function") throw new Error("fetch is unavailable");
 
   return {
@@ -330,6 +429,7 @@ export function createRestrictedPostgrestRpcClient({
         {
           method: "POST",
           headers: {
+            apikey: gatewayApiKey,
             authorization: `Bearer ${bearer}`,
             "content-type": "application/json",
             prefer: "return=representation",
@@ -371,8 +471,8 @@ export function createYoutubeExtractionWorkerRuntime({
   allowedSnapshotDigest,
   rpc,
   extractor,
-  heartbeatIntervalMs = 30_000,
-  leaseSeconds = 120,
+  heartbeatIntervalMs = YOUTUBE_EXTRACTION_WORKER_HEARTBEAT_INTERVAL_MS,
+  leaseSeconds = YOUTUBE_EXTRACTION_WORKER_LEASE_SECONDS,
 } = {}) {
   const normalizedWorkerId = requiredString(workerId, "workerId");
   const digest = requiredString(allowedSnapshotDigest, "allowedSnapshotDigest");
@@ -409,7 +509,7 @@ export function createYoutubeExtractionWorkerRuntime({
         worker_id: normalizedWorkerId,
         lease_seconds: leaseSeconds,
       }), "claim permit");
-      if (!permit || typeof permit.permit_generation !== "number") {
+      if (!permit || permit.claimed !== true || typeof permit.permit_generation !== "number") {
         const requeued = await rpc("requeue_youtube_extraction_job_without_attempt", {
           job_id: claim.job_id,
           worker_id: normalizedWorkerId,
@@ -439,10 +539,13 @@ export function createYoutubeExtractionWorkerRuntime({
             job_id: claim.job_id,
             worker_id: normalizedWorkerId,
             lease_generation: leaseGeneration,
+            permit_generation: permitGeneration,
             lease_seconds: leaseSeconds,
           }).then((result) => successBoolean(result, "heartbeat job")),
           rpc("heartbeat_youtube_extractor_permit", {
+            job_id: claim.job_id,
             worker_id: normalizedWorkerId,
+            lease_generation: leaseGeneration,
             permit_generation: permitGeneration,
             lease_seconds: leaseSeconds,
           }).then((result) => successBoolean(result, "heartbeat permit")),
@@ -476,6 +579,7 @@ export function createYoutubeExtractionWorkerRuntime({
           rpc,
           claim,
           workerId: normalizedWorkerId,
+          permitGeneration,
         });
         const catalog = await workerRpcClient.readCatalog();
 
@@ -544,6 +648,7 @@ export function createYoutubeExtractionWorkerRuntime({
           job_id: claim.job_id,
           worker_id: normalizedWorkerId,
           lease_generation: leaseGeneration,
+          permit_generation: permitGeneration,
           youtube_video_id: claim.youtube_video_id,
           runtime_result: withoutPersistence(runtimeResult),
         }), "resolve draft");
@@ -562,12 +667,19 @@ export function createYoutubeExtractionWorkerRuntime({
       } catch (error) {
         if (shutdownSignal.aborted) return "stopped";
         if (controller.signal.aborted) return "stale-fence";
-        await rpc("fail_or_retry_youtube_extraction_job", {
+        const failureTransition = await rpc("fail_or_retry_youtube_extraction_job", {
           job_id: claim.job_id,
           worker_id: normalizedWorkerId,
           lease_generation: leaseGeneration,
+          permit_generation: permitGeneration,
           error_code: classifyFailure(error),
         });
+        const failureRow = record(Array.isArray(failureTransition?.data)
+          ? failureTransition.data[0]
+          : failureTransition?.data);
+        if (failureTransition?.error || failureRow?.applied !== true || failureRow?.updated !== true) {
+          throw new Error("durable failure transition was not recorded");
+        }
         return "failed";
       } finally {
         if (heartbeatTimer) clearInterval(heartbeatTimer);
@@ -727,6 +839,19 @@ async function readBoundedJson(pathname, maximumBytes) {
   return value;
 }
 
+async function makeExtractionWorkspaceRemovable(directory) {
+  await chmod(directory, 0o700).catch(() => {});
+  const entries = await readdir(directory, { withFileTypes: true }).catch(() => []);
+  await Promise.all(entries.map(async (entry) => {
+    const pathname = path.join(directory, entry.name);
+    if (entry.isDirectory()) {
+      await makeExtractionWorkspaceRemovable(pathname);
+      return;
+    }
+    await chmod(pathname, 0o600).catch(() => {});
+  }));
+}
+
 /**
  * @param {{
  *   artifactRoot: string,
@@ -742,6 +867,7 @@ export function createStandaloneYoutubeI031Extractor({
   verifyPreflight = verifyStandaloneYoutubeI031Preflight,
 } = {}) {
   const root = path.resolve(requiredString(artifactRoot, "artifactRoot"));
+  const childEnvironment = sanitizeYoutubeExtractionChildEnvironment(workerEnv);
   const bundleRoot = path.join(root, "lib/server/youtube-i031-runtime/bundle");
   positiveInteger(timeoutMs, "timeoutMs");
   return {
@@ -776,7 +902,7 @@ export function createStandaloneYoutubeI031Extractor({
         return metadataPublishPromise;
       };
       try {
-        const preflight = await verifyPreflight({ workerEnv });
+        const preflight = await verifyPreflight({ workerEnv: childEnvironment });
         await cp(bundleRoot, workspace, { recursive: true, force: true });
         child = spawn(process.execPath, [
           path.join(workspace, "worker.mjs"),
@@ -791,7 +917,7 @@ export function createStandaloneYoutubeI031Extractor({
         ], {
           cwd: workspace,
           env: {
-            ...workerEnv,
+            ...childEnvironment,
             NODE_ENV: "production",
             YOUTUBE_I031_CODEX_BIN: preflight.codexBin,
             HOMECOOK_I031_CODEX_CLI_VERSION: preflight.codexCliVersion,
@@ -872,6 +998,7 @@ export function createStandaloneYoutubeI031Extractor({
       } finally {
         childRpcBridge?.close();
         terminateProcess(child);
+        await makeExtractionWorkspaceRemovable(workspace);
         await rm(workspace, { recursive: true, force: true });
       }
     },

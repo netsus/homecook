@@ -1,8 +1,8 @@
-import type {
-  ClaimedYoutubeExtractionJob,
-  YoutubeExtractionWorkerFailureCode,
-} from
+import type { ClaimedYoutubeExtractionJob, YoutubeExtractionWorkerFailureCode } from
   "@/lib/server/youtube-async-extraction";
+import workerTiming from "@/lib/server/youtube-extraction-worker-timing.json";
+const YOUTUBE_EXTRACTION_WORKER_LEASE_SECONDS = workerTiming.lease_seconds;
+// Keep inventory line anchors stable; this adapter is itself a fenced write surface.
 
 interface RpcResult { data: unknown; error: unknown }
 interface RestrictedRpcClient {
@@ -58,6 +58,10 @@ interface YoutubeExtractionWorkerFence {
   leaseGeneration: number;
 }
 
+interface YoutubeExtractionWorkerWriteFence extends YoutubeExtractionWorkerFence {
+  permitGeneration: number;
+}
+
 export function createYoutubeExtractionWorkerRpcAdapter(client: RestrictedRpcClient) {
   return {
     async readCatalog(input: YoutubeExtractionWorkerFence) {
@@ -70,7 +74,7 @@ export function createYoutubeExtractionWorkerRpcAdapter(client: RestrictedRpcCli
         },
       ), "read worker catalog");
     },
-    async accessCache(input: YoutubeExtractionWorkerFence & {
+    async accessCache(input: YoutubeExtractionWorkerWriteFence & {
       operation: YoutubeExtractionWorkerCacheOperation;
       payload: Record<string, unknown>;
     }) {
@@ -80,12 +84,13 @@ export function createYoutubeExtractionWorkerRpcAdapter(client: RestrictedRpcCli
           job_id: input.jobId,
           worker_id: input.workerId,
           lease_generation: input.leaseGeneration,
+          permit_generation: input.permitGeneration,
           cache_operation: input.operation,
           payload: input.payload,
         },
       ), "access worker cache");
     },
-    async reserveQuota(input: YoutubeExtractionWorkerFence & {
+    async reserveQuota(input: YoutubeExtractionWorkerWriteFence & {
       provider: "external_transcript_api" | "gemini";
       units: 1;
     }) {
@@ -95,12 +100,13 @@ export function createYoutubeExtractionWorkerRpcAdapter(client: RestrictedRpcCli
           job_id: input.jobId,
           worker_id: input.workerId,
           lease_generation: input.leaseGeneration,
+          permit_generation: input.permitGeneration,
           provider: input.provider,
           units: input.units,
         },
       ), "reserve worker quota");
     },
-    async recordEvent(input: YoutubeExtractionWorkerFence & {
+    async recordEvent(input: YoutubeExtractionWorkerWriteFence & {
       kind: "transcript" | "llm" | "visual";
       payload: Record<string, unknown>;
     }) {
@@ -110,12 +116,13 @@ export function createYoutubeExtractionWorkerRpcAdapter(client: RestrictedRpcCli
           job_id: input.jobId,
           worker_id: input.workerId,
           lease_generation: input.leaseGeneration,
+          permit_generation: input.permitGeneration,
           event_kind: input.kind,
           payload: input.payload,
         },
       ), "record worker event");
     },
-    async resolveMethods(input: YoutubeExtractionWorkerFence & {
+    async resolveMethods(input: YoutubeExtractionWorkerWriteFence & {
       methodLabels: string[];
     }) {
       return fencedRecordResult(await client.rpc(
@@ -124,17 +131,19 @@ export function createYoutubeExtractionWorkerRpcAdapter(client: RestrictedRpcCli
           job_id: input.jobId,
           worker_id: input.workerId,
           lease_generation: input.leaseGeneration,
+          permit_generation: input.permitGeneration,
           method_labels: input.methodLabels,
         },
       ), "resolve worker methods");
     },
-    async updateTitle(input: YoutubeExtractionWorkerFence & { title: string }) {
+    async updateTitle(input: YoutubeExtractionWorkerWriteFence & { title: string }) {
       return booleanResult(await client.rpc(
         "update_youtube_extraction_job_title",
         {
           job_id: input.jobId,
           worker_id: input.workerId,
           lease_generation: input.leaseGeneration,
+          permit_generation: input.permitGeneration,
           title: input.title,
         },
       ), "update job title");
@@ -146,7 +155,7 @@ export function createYoutubeExtractionWorkerRpcAdapter(client: RestrictedRpcCli
       const data = requireSuccess(await client.rpc("claim_youtube_extraction_job", {
         worker_id: workerId,
         allowed_snapshot_digest: allowedSnapshotDigest,
-        lease_seconds: 120,
+        lease_seconds: YOUTUBE_EXTRACTION_WORKER_LEASE_SECONDS,
       }), "claim job");
       const row = record(Array.isArray(data) ? data[0] : data);
       if (!row) return null;
@@ -170,10 +179,10 @@ export function createYoutubeExtractionWorkerRpcAdapter(client: RestrictedRpcCli
     async claimPermit({ workerId }: { workerId: string }) {
       const data = requireSuccess(await client.rpc("claim_youtube_extractor_permit", {
         worker_id: workerId,
-        lease_seconds: 120,
+        lease_seconds: YOUTUBE_EXTRACTION_WORKER_LEASE_SECONDS,
       }), "claim permit");
       const row = record(Array.isArray(data) ? data[0] : data);
-      return row && typeof row.permit_generation === "number"
+      return row?.claimed === true && typeof row.permit_generation === "number"
         ? { permitGeneration: row.permit_generation }
         : null;
     },
@@ -229,12 +238,14 @@ export function createYoutubeExtractionWorkerRpcAdapter(client: RestrictedRpcCli
       jobId: string;
       workerId: string;
       leaseGeneration: number;
+      permitGeneration: number;
       errorCode: YoutubeExtractionWorkerFailureCode;
     }) {
       return booleanResult(await client.rpc("fail_or_retry_youtube_extraction_job", {
         job_id: input.jobId,
         worker_id: input.workerId,
         lease_generation: input.leaseGeneration,
+        permit_generation: input.permitGeneration,
         error_code: input.errorCode,
       }), "fail or retry job");
     },
@@ -248,25 +259,30 @@ export function createYoutubeExtractionWorkerRpcAdapter(client: RestrictedRpcCli
       jobId: string;
       workerId: string;
       leaseGeneration: number;
+      permitGeneration: number;
     }) {
       return booleanResult(await client.rpc("heartbeat_youtube_extraction_job", {
         job_id: input.jobId,
         worker_id: input.workerId,
         lease_generation: input.leaseGeneration,
-        lease_seconds: 120,
+        permit_generation: input.permitGeneration,
+        lease_seconds: YOUTUBE_EXTRACTION_WORKER_LEASE_SECONDS,
       }), "heartbeat job");
     },
-    async heartbeatPermit(input: { workerId: string; permitGeneration: number }) {
+    async heartbeatPermit(input: YoutubeExtractionWorkerWriteFence) {
       return booleanResult(await client.rpc("heartbeat_youtube_extractor_permit", {
+        job_id: input.jobId,
         worker_id: input.workerId,
+        lease_generation: input.leaseGeneration,
         permit_generation: input.permitGeneration,
-        lease_seconds: 120,
+        lease_seconds: YOUTUBE_EXTRACTION_WORKER_LEASE_SECONDS,
       }), "heartbeat permit");
     },
     async resolveDraft(input: {
       jobId: string;
       workerId: string;
       leaseGeneration: number;
+      permitGeneration: number;
       videoId: string;
       runtimeResult: unknown;
     }) {
@@ -274,6 +290,7 @@ export function createYoutubeExtractionWorkerRpcAdapter(client: RestrictedRpcCli
         job_id: input.jobId,
         worker_id: input.workerId,
         lease_generation: input.leaseGeneration,
+        permit_generation: input.permitGeneration,
         youtube_video_id: input.videoId,
         runtime_result: input.runtimeResult,
       }), "resolve draft");

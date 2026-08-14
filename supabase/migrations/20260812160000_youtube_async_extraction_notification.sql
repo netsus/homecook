@@ -941,6 +941,8 @@ begin
       raise exception 'YOUTUBE_EXTRACTION_WORKER_UNAUTHORIZED'
         using errcode = '42501';
     end if;
+
+    perform private.assert_youtube_extraction_catalog_ready();
   elsif v_role = 'youtube_extraction_credential_manager' then
     if v_scope is distinct from 'youtube-extraction-credential-manager'
       or v_issuer is distinct from 'https://worker.mumeok.kr'
@@ -991,6 +993,8 @@ begin
     raise exception 'YOUTUBE_EXTRACTION_ENQUEUE_UNAUTHORIZED'
       using errcode = '42501';
   end if;
+
+  perform private.assert_youtube_extraction_catalog_ready();
 
   if video_id is null
     or btrim(video_id) = ''
@@ -1281,6 +1285,7 @@ create or replace function public.heartbeat_youtube_extraction_job(
   job_id uuid,
   worker_id text,
   lease_generation bigint,
+  permit_generation bigint,
   lease_seconds integer
 )
 returns jsonb
@@ -1294,6 +1299,7 @@ declare
   v_requested_job_id uuid := job_id;
   v_requested_worker_id text := worker_id;
   v_requested_lease_generation bigint := lease_generation;
+  v_requested_permit_generation bigint := permit_generation;
   v_requested_lease_seconds integer := lease_seconds;
 begin
   perform public.check_youtube_extraction_worker_pre_request();
@@ -1301,11 +1307,21 @@ begin
   if v_requested_job_id is null
     or coalesce(btrim(v_requested_worker_id), '') = ''
     or v_requested_lease_generation is null
+    or v_requested_permit_generation is null
     or v_requested_lease_seconds is null
     or v_requested_lease_seconds < 15
     or v_requested_lease_seconds > 3600 then
     raise exception 'VALIDATION_ERROR'
       using errcode = '22023';
+  end if;
+
+  if not private.youtube_extraction_worker_write_fence_is_active(
+    v_requested_job_id,
+    v_requested_worker_id,
+    v_requested_lease_generation,
+    v_requested_permit_generation
+  ) then
+    return jsonb_build_object('applied', false, 'updated', false);
   end if;
 
   update public.youtube_extraction_jobs as job
@@ -1362,6 +1378,22 @@ begin
       using errcode = '22023';
   end if;
 
+  select job.*
+    into v_job
+  from public.youtube_extraction_jobs as job
+  where job.id = v_requested_job_id
+  for update;
+
+  if not found
+    or v_job.status is distinct from 'processing'
+    or v_job.lease_owner is distinct from v_requested_worker_id
+    or v_job.lease_generation is distinct from v_requested_lease_generation
+    or v_job.lease_expires_at is null
+    or v_job.lease_expires_at < v_now
+    or v_job.attempt_count >= v_job.max_attempts then
+    return jsonb_build_object('started', false);
+  end if;
+
   select permit.*
     into strict v_permit
   from public.youtube_extractor_permits as permit
@@ -1372,8 +1404,7 @@ begin
     or v_permit.permit_generation is distinct from v_requested_permit_generation
     or v_permit.expires_at is null
     or v_permit.expires_at < v_now then
-    raise exception 'YOUTUBE_EXTRACTION_PERMIT_STALE'
-      using errcode = '55000';
+    return jsonb_build_object('started', false);
   end if;
 
   update public.youtube_extraction_jobs as job
@@ -1384,6 +1415,8 @@ begin
     and job.status = 'processing'
     and job.lease_owner = v_requested_worker_id
     and job.lease_generation = v_requested_lease_generation
+    and job.lease_expires_at is not null
+    and job.lease_expires_at >= v_now
     and job.attempt_count < job.max_attempts
   returning *
     into v_job;
@@ -1423,6 +1456,51 @@ as $function$
   );
 $function$;
 
+-- signature: private.youtube_extraction_worker_write_fence_is_active(uuid, text, bigint, bigint)
+create or replace function private.youtube_extraction_worker_write_fence_is_active(
+  p_job_id uuid,
+  p_worker_id text,
+  p_lease_generation bigint,
+  p_permit_generation bigint
+)
+returns boolean
+language plpgsql
+volatile
+set search_path = ''
+as $function$
+declare
+  v_job_active boolean := false;
+  v_permit_active boolean := false;
+begin
+  select true
+    into v_job_active
+  from public.youtube_extraction_jobs as job
+  where job.id = p_job_id
+    and job.status = 'processing'
+    and job.lease_owner = p_worker_id
+    and job.lease_generation = p_lease_generation
+    and job.lease_expires_at is not null
+    and job.lease_expires_at >= clock_timestamp()
+  for update of job;
+
+  if not coalesce(v_job_active, false) then
+    return false;
+  end if;
+
+  select true
+    into v_permit_active
+  from public.youtube_extractor_permits as permit
+  where permit.permit_key = 'primary'
+    and permit.owner_id = p_worker_id
+    and permit.permit_generation = p_permit_generation
+    and permit.expires_at is not null
+    and permit.expires_at >= clock_timestamp()
+  for update of permit;
+
+  return coalesce(v_permit_active, false);
+end;
+$function$;
+
 -- signature: public.requeue_youtube_extraction_job_without_attempt(uuid, text, bigint, integer, integer)
 create or replace function public.requeue_youtube_extraction_job_without_attempt(
   job_id uuid,
@@ -1459,7 +1537,9 @@ begin
   where job.id = requeue_youtube_extraction_job_without_attempt.job_id
     and job.status = 'processing'
     and job.lease_owner = requeue_youtube_extraction_job_without_attempt.worker_id
-    and job.lease_generation = requeue_youtube_extraction_job_without_attempt.lease_generation;
+    and job.lease_generation = requeue_youtube_extraction_job_without_attempt.lease_generation
+    and job.lease_expires_at is not null
+    and job.lease_expires_at >= clock_timestamp();
 
   if not found then
     return jsonb_build_object('applied', false, 'requeued', false);
@@ -1468,11 +1548,12 @@ begin
 end;
 $function$;
 
--- signature: public.update_youtube_extraction_job_title(uuid, text, bigint, text)
+-- signature: public.update_youtube_extraction_job_title(uuid, text, bigint, bigint, text)
 create or replace function public.update_youtube_extraction_job_title(
   job_id uuid,
   worker_id text,
   lease_generation bigint,
+  permit_generation bigint,
   title text
 )
 returns jsonb
@@ -1487,14 +1568,18 @@ begin
   if v_title is null then
     raise exception 'VALIDATION_ERROR' using errcode = '22023';
   end if;
+  if not private.youtube_extraction_worker_write_fence_is_active(
+    job_id, worker_id, lease_generation, permit_generation
+  ) then
+    return jsonb_build_object('applied', false, 'updated', false);
+  end if;
   update public.youtube_extraction_jobs as job
   set video_title_snapshot = coalesce(job.video_title_snapshot, v_title),
       updated_at = clock_timestamp()
   where job.id = update_youtube_extraction_job_title.job_id
     and job.status = 'processing'
     and job.lease_owner = update_youtube_extraction_job_title.worker_id
-    and job.lease_generation = update_youtube_extraction_job_title.lease_generation
-    and job.lease_expires_at >= clock_timestamp();
+    and job.lease_generation = update_youtube_extraction_job_title.lease_generation;
   return jsonb_build_object('applied', found, 'updated', found);
 end;
 $function$;
@@ -1527,11 +1612,12 @@ begin
 end;
 $function$;
 
--- signature: public.resolve_youtube_extraction_worker_methods(uuid, text, bigint, text[])
+-- signature: public.resolve_youtube_extraction_worker_methods(uuid, text, bigint, bigint, text[])
 create or replace function public.resolve_youtube_extraction_worker_methods(
   job_id uuid,
   worker_id text,
   lease_generation bigint,
+  permit_generation bigint,
   method_labels text[]
 )
 returns jsonb
@@ -1548,6 +1634,11 @@ declare
   v_is_new boolean;
 begin
   perform public.check_youtube_extraction_worker_pre_request();
+  if not private.youtube_extraction_worker_write_fence_is_active(
+    job_id, worker_id, lease_generation, permit_generation
+  ) then
+    return jsonb_build_object('applied', false, 'methods', v_methods);
+  end if;
   select job.* into v_job from public.youtube_extraction_jobs as job
   where job.id = resolve_youtube_extraction_worker_methods.job_id
     and job.status = 'processing'
@@ -1586,11 +1677,12 @@ begin
 end;
 $function$;
 
--- signature: public.access_youtube_extraction_worker_cache(uuid, text, bigint, text, jsonb)
+-- signature: public.access_youtube_extraction_worker_cache(uuid, text, bigint, bigint, text, jsonb)
 create or replace function public.access_youtube_extraction_worker_cache(
   job_id uuid,
   worker_id text,
   lease_generation bigint,
+  permit_generation bigint,
   cache_operation text,
   payload jsonb
 )
@@ -1604,6 +1696,11 @@ declare
   v_result jsonb;
 begin
   perform public.check_youtube_extraction_worker_pre_request();
+  if not private.youtube_extraction_worker_write_fence_is_active(
+    job_id, worker_id, lease_generation, permit_generation
+  ) then
+    return jsonb_build_object('applied', false);
+  end if;
   select job.* into v_job from public.youtube_extraction_jobs job
   where job.id = access_youtube_extraction_worker_cache.job_id
     and job.status = 'processing'
@@ -1691,11 +1788,12 @@ begin
 end;
 $function$;
 
--- signature: public.record_youtube_extraction_worker_event(uuid, text, bigint, text, jsonb)
+-- signature: public.record_youtube_extraction_worker_event(uuid, text, bigint, bigint, text, jsonb)
 create or replace function public.record_youtube_extraction_worker_event(
   job_id uuid,
   worker_id text,
   lease_generation bigint,
+  permit_generation bigint,
   event_kind text,
   payload jsonb
 )
@@ -1707,6 +1805,11 @@ as $function$
 declare v_job public.youtube_extraction_jobs%rowtype;
 begin
   perform public.check_youtube_extraction_worker_pre_request();
+  if not private.youtube_extraction_worker_write_fence_is_active(
+    job_id, worker_id, lease_generation, permit_generation
+  ) then
+    return jsonb_build_object('applied', false, 'recorded', false);
+  end if;
   select job.* into v_job from public.youtube_extraction_jobs job
   where job.id = record_youtube_extraction_worker_event.job_id
     and job.status = 'processing'
@@ -1742,11 +1845,12 @@ begin
 end;
 $function$;
 
--- signature: public.reserve_youtube_extraction_worker_quota(uuid, text, bigint, text, integer)
+-- signature: public.reserve_youtube_extraction_worker_quota(uuid, text, bigint, bigint, text, integer)
 create or replace function public.reserve_youtube_extraction_worker_quota(
   job_id uuid,
   worker_id text,
   lease_generation bigint,
+  permit_generation bigint,
   provider text,
   units integer
 )
@@ -1762,6 +1866,11 @@ begin
     or provider not in ('external_transcript_api', 'gemini') then
     raise exception 'VALIDATION_ERROR' using errcode = '22023';
   end if;
+  if not private.youtube_extraction_worker_write_fence_is_active(
+    job_id, worker_id, lease_generation, permit_generation
+  ) then
+    return jsonb_build_object('applied', false, 'reserved', false);
+  end if;
   select job.* into v_job from public.youtube_extraction_jobs job
   where job.id = reserve_youtube_extraction_worker_quota.job_id
     and job.status = 'processing'
@@ -1775,14 +1884,14 @@ begin
     where event.user_id = v_job.user_id
       and event.provider = reserve_youtube_extraction_worker_quota.provider
       and not event.cache_hit
-      and (event.status = 'success' or event.reason = 'worker_quota_reserved')
+      and event.reason = 'worker_quota_reserved'
       and event.created_at >= date_trunc('day', clock_timestamp() at time zone 'UTC') at time zone 'UTC';
   else
     select count(*) into v_used from public.youtube_llm_extraction_events as event
     where event.user_id = v_job.user_id
       and event.provider = reserve_youtube_extraction_worker_quota.provider
       and not event.cache_hit
-      and (event.status = 'success' or event.reason = 'worker_quota_reserved')
+      and event.reason = 'worker_quota_reserved'
       and event.created_at >= date_trunc('day', clock_timestamp() at time zone 'UTC') at time zone 'UTC';
   end if;
   if v_used + units > 5 then
@@ -1822,8 +1931,13 @@ declare
   v_catalog_preimage text;
   v_catalog_fingerprint text;
 begin
-  if coalesce(v_claims ->> 'role', '') is distinct from 'authenticated'
-    or nullif(v_claims ->> 'sub', '') is null then
+  if not (
+    (
+      coalesce(v_claims ->> 'role', '') = 'authenticated'
+      and nullif(v_claims ->> 'sub', '') is not null
+    )
+    or coalesce(v_claims ->> 'role', '') = 'youtube_extraction_worker'
+  ) then
     raise exception 'YOUTUBE_EXTRACTION_ENQUEUE_UNAUTHORIZED'
       using errcode = '42501';
   end if;
@@ -1866,6 +1980,111 @@ begin
           or table_row.tablename like 'youtube_visual_extraction%'
           or table_row.tablename in ('cooking_methods', 'ingredient_synonyms', 'ingredients')
         )
+      )
+    ), ''),
+    'columns',
+    coalesce((
+      select pg_catalog.string_agg(
+        namespace.nspname || '.' || relation.relname || '.' || attribute.attname
+          || '|position=' || attribute.attnum::text
+          || '|type=' || pg_catalog.format_type(attribute.atttypid, attribute.atttypmod)
+          || '|not_null=' || attribute.attnotnull::text
+          || '|identity=' || attribute.attidentity::text
+          || '|generated=' || attribute.attgenerated::text
+          || '|default=' || coalesce(
+            pg_catalog.pg_get_expr(attribute_default.adbin, attribute_default.adrelid),
+            ''
+          ),
+        E'\n'
+        order by namespace.nspname, relation.relname, attribute.attnum
+      )
+      from pg_catalog.pg_attribute as attribute
+      join pg_catalog.pg_class as relation on relation.oid = attribute.attrelid
+      join pg_catalog.pg_namespace as namespace on namespace.oid = relation.relnamespace
+      left join pg_catalog.pg_attrdef as attribute_default
+        on attribute_default.adrelid = attribute.attrelid
+       and attribute_default.adnum = attribute.attnum
+      where attribute.attnum > 0
+        and not attribute.attisdropped
+        and namespace.nspname || '.' || relation.relname in (
+          'private.youtube_extraction_current_policy',
+          'private.youtube_extraction_worker_credentials',
+          'public.cooking_methods',
+          'public.ingredient_synonyms',
+          'public.ingredients',
+          'public.youtube_extraction_candidates',
+          'public.youtube_extraction_jobs',
+          'public.youtube_extraction_sessions',
+          'public.youtube_extractor_permits',
+          'public.youtube_llm_extraction_cache',
+          'public.youtube_llm_extraction_events',
+          'public.youtube_transcript_cache',
+          'public.youtube_transcript_fetch_events',
+          'public.youtube_visual_extraction_cache',
+          'public.youtube_visual_extraction_events'
+        )
+    ), ''),
+    'constraints',
+    coalesce((
+      select pg_catalog.string_agg(
+        namespace.nspname || '.' || relation.relname || '|' || constraint_row.conname
+          || '|type=' || constraint_row.contype::text
+          || '|definition=' || pg_catalog.pg_get_constraintdef(constraint_row.oid, true),
+        E'\n'
+        order by namespace.nspname, relation.relname, constraint_row.conname
+      )
+      from pg_catalog.pg_constraint as constraint_row
+      join pg_catalog.pg_class as relation on relation.oid = constraint_row.conrelid
+      join pg_catalog.pg_namespace as namespace on namespace.oid = relation.relnamespace
+      where namespace.nspname || '.' || relation.relname in (
+        'private.youtube_extraction_current_policy',
+        'private.youtube_extraction_worker_credentials',
+        'public.cooking_methods',
+        'public.ingredient_synonyms',
+        'public.ingredients',
+        'public.youtube_extraction_candidates',
+        'public.youtube_extraction_jobs',
+        'public.youtube_extraction_sessions',
+        'public.youtube_extractor_permits',
+        'public.youtube_llm_extraction_cache',
+        'public.youtube_llm_extraction_events',
+        'public.youtube_transcript_cache',
+        'public.youtube_transcript_fetch_events',
+        'public.youtube_visual_extraction_cache',
+        'public.youtube_visual_extraction_events'
+      )
+    ), ''),
+    'indexes',
+    coalesce((
+      select pg_catalog.string_agg(
+        namespace.nspname || '.' || relation.relname || '|' || index_relation.relname
+          || '|unique=' || index_row.indisunique::text
+          || '|primary=' || index_row.indisprimary::text
+          || '|valid=' || index_row.indisvalid::text
+          || '|definition=' || pg_catalog.pg_get_indexdef(index_row.indexrelid),
+        E'\n'
+        order by namespace.nspname, relation.relname, index_relation.relname
+      )
+      from pg_catalog.pg_index as index_row
+      join pg_catalog.pg_class as relation on relation.oid = index_row.indrelid
+      join pg_catalog.pg_class as index_relation on index_relation.oid = index_row.indexrelid
+      join pg_catalog.pg_namespace as namespace on namespace.oid = relation.relnamespace
+      where namespace.nspname || '.' || relation.relname in (
+        'private.youtube_extraction_current_policy',
+        'private.youtube_extraction_worker_credentials',
+        'public.cooking_methods',
+        'public.ingredient_synonyms',
+        'public.ingredients',
+        'public.youtube_extraction_candidates',
+        'public.youtube_extraction_jobs',
+        'public.youtube_extraction_sessions',
+        'public.youtube_extractor_permits',
+        'public.youtube_llm_extraction_cache',
+        'public.youtube_llm_extraction_events',
+        'public.youtube_transcript_cache',
+        'public.youtube_transcript_fetch_events',
+        'public.youtube_visual_extraction_cache',
+        'public.youtube_visual_extraction_events'
       )
     ), ''),
     'table_owners',
@@ -2108,24 +2327,6 @@ begin
       left join pg_catalog.pg_roles as grantee on grantee.oid = privilege.grantee
       where relation.relkind in ('r', 'p')
         and (
-          coalesce(grantee.rolname, 'PUBLIC') like 'youtube_extraction%'
-          or (
-            coalesce(grantee.rolname, 'PUBLIC') in (
-              'PUBLIC', 'anon', 'authenticated', 'service_role'
-            )
-            and (
-              (namespace.nspname = 'private' and relation.relname in (
-                'youtube_extraction_current_policy',
-                'youtube_extraction_worker_credentials'
-              ))
-              or (namespace.nspname = 'public' and relation.relname in (
-                'youtube_extraction_jobs',
-                'youtube_extractor_permits'
-              ))
-            )
-          )
-        )
-        and (
           (namespace.nspname = 'private' and relation.relname like 'youtube_extraction%')
           or (
             namespace.nspname = 'public'
@@ -2160,13 +2361,6 @@ begin
       where relation.relkind = 'S'
         and namespace.nspname in ('private', 'public')
         and relation.relname like 'youtube%'
-        and coalesce(grantee.rolname, 'PUBLIC') in (
-          'PUBLIC', 'anon', 'authenticated', 'service_role',
-          'youtube_extraction_enqueue_rpc_owner',
-          'youtube_extraction_worker', 'youtube_extraction_worker_rpc_owner',
-          'youtube_extraction_credential_manager',
-          'youtube_extraction_credential_manager_rpc_owner'
-        )
     ), ''),
     'rpc_signatures',
     coalesce((
@@ -2228,7 +2422,76 @@ begin
         )
       ) or (
         namespace.nspname = 'private'
-        and procedure.proname = 'youtube_extraction_job_fence_is_active'
+        and procedure.proname in (
+          'assert_youtube_extraction_catalog_ready',
+          'youtube_extraction_job_fence_is_active',
+          'youtube_extraction_worker_write_fence_is_active'
+        )
+      )
+    ), ''),
+    'rpc_function_definitions',
+    coalesce((
+      select pg_catalog.string_agg(
+        namespace.nspname || '.' || procedure.proname || '('
+          || pg_catalog.replace(
+            pg_catalog.oidvectortypes(procedure.proargtypes),
+            ', ',
+            ','
+          ) || ')|sha256='
+          || pg_catalog.encode(
+            extensions.digest(
+              pg_catalog.convert_to(
+                case
+                  when procedure.proname in (
+                    'assert_youtube_extraction_catalog_ready',
+                    'read_youtube_extraction_enqueue_readiness'
+                  )
+                    then pg_catalog.regexp_replace(
+                      pg_catalog.pg_get_functiondef(procedure.oid),
+                      '[0-9a-f]{64}',
+                      '<catalog-fingerprint>',
+                      'g'
+                    )
+                  else pg_catalog.pg_get_functiondef(procedure.oid)
+                end,
+                'UTF8'
+              ),
+              'sha256'
+            ),
+            'hex'
+          ),
+        E'\n'
+        order by namespace.nspname, procedure.proname, procedure.proargtypes::text
+      )
+      from pg_catalog.pg_proc as procedure
+      join pg_catalog.pg_namespace as namespace on namespace.oid = procedure.pronamespace
+      where (
+        namespace.nspname = 'public'
+        and (
+          procedure.proname like '%youtube_extraction%'
+          or procedure.proname like '%youtube_extractor_permit%'
+        )
+      ) or (
+        namespace.nspname = 'private'
+        and procedure.proname in (
+          'assert_youtube_extraction_catalog_ready',
+          'youtube_extraction_job_fence_is_active',
+          'youtube_extraction_worker_write_fence_is_active'
+        )
+      )
+    ), ''),
+    'internal_scope_function_definition',
+    coalesce((
+      select pg_catalog.encode(
+        extensions.digest(
+          pg_catalog.convert_to(pg_catalog.pg_get_functiondef(procedure.oid), 'UTF8'),
+          'sha256'
+        ),
+        'hex'
+      )
+      from pg_catalog.pg_proc as procedure
+      where procedure.oid = pg_catalog.to_regprocedure(
+        'private.verify_full_local_internal_scope()'
       )
     ), '')
   );
@@ -2241,7 +2504,7 @@ begin
     'ready', v_policy.enabled
       and v_credential.allowed_snapshot_digest = v_snapshot_digest
       and v_credential.expires_at > clock_timestamp() + interval '30 minutes'
-      and v_catalog_fingerprint = '42343e34fadbe3ddc4b73026c97cd6606e1f864182be2cd9ff571410289c8bb0',
+      and v_catalog_fingerprint = 'b8561e40e39a97962dab877e3d7c732236bf1bc55c8c985e56b846c50f7f90b1',
     'release_sha', v_credential.release_sha,
     'schema_identity', v_credential.schema_identity,
     'catalog_fingerprint', v_catalog_fingerprint,
@@ -2256,6 +2519,24 @@ begin
 exception
   when no_data_found then
     return jsonb_build_object('ready', false);
+end;
+$function$;
+
+create or replace function private.assert_youtube_extraction_catalog_ready()
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $function$
+declare
+  v_readiness jsonb;
+begin
+  v_readiness := public.read_youtube_extraction_enqueue_readiness();
+  if coalesce(v_readiness ->> 'catalog_fingerprint', '')
+    is distinct from 'b8561e40e39a97962dab877e3d7c732236bf1bc55c8c985e56b846c50f7f90b1' then
+    raise exception 'YOUTUBE_EXTRACTION_SCHEMA_NOT_READY'
+      using errcode = '55000';
+  end if;
 end;
 $function$;
 
@@ -2401,14 +2682,14 @@ begin
       jsonb_build_object(
         'id', job.id,
         'status', job.status,
-        'created_at', to_char(job.created_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'),
+        'created_at', to_char(job.created_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"'),
         'started_at', case
           when job.started_at is null then null
-          else to_char(job.started_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')
+          else to_char(job.started_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"')
         end,
         'completed_at', case
           when job.completed_at is null then null
-          else to_char(job.completed_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')
+          else to_char(job.completed_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"')
         end,
         'error_code', job.error_code,
         'youtube_video_id', job.youtube_video_id,
@@ -2416,11 +2697,11 @@ begin
         'completion_delivery_key', job.completion_delivery_key,
         'completion_delivered_at', case
           when job.completion_delivered_at is null then null
-          else to_char(job.completion_delivered_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')
+          else to_char(job.completion_delivered_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"')
         end,
         'completion_seen_at', case
           when job.completion_seen_at is null then null
-          else to_char(job.completion_seen_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')
+          else to_char(job.completion_seen_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"')
         end,
         'extraction_session', case
           when session_row.id is null then null
@@ -2428,7 +2709,7 @@ begin
             'id', session_row.id,
             'status', session_row.status,
             'recipe_id', session_row.recipe_id,
-            'expires_at', to_char(session_row.expires_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')
+            'expires_at', to_char(session_row.expires_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"')
           )
         end
       )
@@ -2466,6 +2747,7 @@ create or replace function public.resolve_youtube_extraction_job_draft(
   job_id uuid,
   worker_id text,
   lease_generation bigint,
+  permit_generation bigint,
   youtube_video_id text,
   runtime_result jsonb
 )
@@ -2478,6 +2760,7 @@ declare
   v_requested_job_id uuid := job_id;
   v_requested_worker_id text := worker_id;
   v_requested_lease_generation bigint := lease_generation;
+  v_requested_permit_generation bigint := permit_generation;
   v_requested_youtube_video_id text := youtube_video_id;
   v_job public.youtube_extraction_jobs%rowtype;
   v_recipe jsonb;
@@ -2523,6 +2806,7 @@ begin
     or runtime_result is null
     or coalesce(btrim(v_requested_worker_id), '') = ''
     or v_requested_lease_generation is null
+    or v_requested_permit_generation is null
     or jsonb_typeof(runtime_result) <> 'object'
     or jsonb_typeof(runtime_result -> 'identity') <> 'object'
     or jsonb_typeof(runtime_result -> 'recipe') <> 'object'
@@ -2532,6 +2816,16 @@ begin
     or jsonb_array_length(runtime_result #> '{recipe,steps}') > 200 then
     raise exception 'VALIDATION_ERROR'
       using errcode = '22023';
+  end if;
+
+  if not private.youtube_extraction_worker_write_fence_is_active(
+    v_requested_job_id,
+    v_requested_worker_id,
+    v_requested_lease_generation,
+    v_requested_permit_generation
+  ) then
+    raise exception 'YOUTUBE_EXTRACTION_JOB_STALE'
+      using errcode = '55000';
   end if;
 
   select job_row.*
@@ -2756,6 +3050,7 @@ begin
     v_job.id,
     v_requested_worker_id,
     v_requested_lease_generation,
+    v_requested_permit_generation,
     v_method_labels
   );
   if coalesce((v_method_result ->> 'applied')::boolean, false) is not true then
@@ -2901,43 +3196,47 @@ begin
       using errcode = '22023';
   end if;
 
+  select existing_job.*
+    into v_job
+  from public.youtube_extraction_jobs as existing_job
+  where existing_job.id = v_requested_job_id
+  for update;
+
+  if not found then
+    return jsonb_build_object('applied', false, 'finalized', false);
+  end if;
+
+  if v_job.status = 'succeeded'
+    and v_job.lease_owner = v_requested_worker_id
+    and v_job.lease_generation = v_requested_lease_generation
+    and v_job.extraction_session_id is not null then
+    return jsonb_build_object(
+      'applied', true,
+      'finalized', true,
+      'job_id', v_job.id,
+      'extraction_session_id', v_job.extraction_session_id,
+      'completion_delivery_key', v_job.completion_delivery_key
+    );
+  end if;
+
   select permit.*
     into strict v_permit
   from public.youtube_extractor_permits as permit
   where permit.permit_key = 'primary'
   for update;
 
-  if v_permit.owner_id is distinct from v_requested_worker_id
+  v_now := clock_timestamp();
+
+  if v_job.status is distinct from 'processing'
+    or v_job.lease_owner is distinct from v_requested_worker_id
+    or v_job.lease_generation is distinct from v_requested_lease_generation
+    or v_job.lease_expires_at is null
+    or v_job.lease_expires_at < v_now
+    or v_permit.owner_id is distinct from v_requested_worker_id
     or v_permit.permit_generation is distinct from v_permit_generation
     or v_permit.expires_at is null
     or v_permit.expires_at < v_now then
-    return jsonb_build_object('finalized', false);
-  end if;
-
-  update public.youtube_extraction_jobs as job
-  set updated_at = job.updated_at
-  where job.id = v_requested_job_id
-    and job.status = 'processing'
-    and job.lease_owner = v_requested_worker_id
-    and job.lease_generation = v_requested_lease_generation
-  returning *
-    into v_job;
-
-  if not found then
-    select existing_job.*
-      into v_job
-    from public.youtube_extraction_jobs as existing_job
-    where existing_job.id = v_requested_job_id
-      and existing_job.status = 'succeeded'
-      and existing_job.extraction_session_id is not null;
-
-    return case when found then jsonb_build_object(
-      'applied', true,
-      'finalized', true,
-      'job_id', v_job.id,
-      'extraction_session_id', v_job.extraction_session_id,
-      'completion_delivery_key', v_job.completion_delivery_key
-    ) else jsonb_build_object('applied', false, 'finalized', false) end;
+    return jsonb_build_object('applied', false, 'finalized', false);
   end if;
 
   v_session_hash := encode(
@@ -3148,7 +3447,6 @@ begin
         job.completion_delivery_key,
         private.youtube_extraction_completion_delivery_key(job.id, v_now)
       ),
-      lease_owner = null,
       lease_expires_at = null,
       heartbeat_at = null,
       updated_at = v_now
@@ -3170,6 +3468,7 @@ create or replace function public.fail_or_retry_youtube_extraction_job(
   job_id uuid,
   worker_id text,
   lease_generation bigint,
+  permit_generation bigint,
   error_code text
 )
 returns jsonb
@@ -3183,6 +3482,7 @@ declare
   v_requested_job_id uuid := job_id;
   v_requested_worker_id text := worker_id;
   v_requested_lease_generation bigint := lease_generation;
+  v_requested_permit_generation bigint := permit_generation;
   v_error_code text := error_code;
   v_retryable boolean := error_code in (
     'NETWORK_ERROR',
@@ -3196,6 +3496,7 @@ begin
   if v_requested_job_id is null
     or coalesce(btrim(v_requested_worker_id), '') = ''
     or v_requested_lease_generation is null
+    or v_requested_permit_generation is null
     or v_error_code not in (
       'NOT_RECIPE_VIDEO',
       'QUOTA_EXCEEDED',
@@ -3210,12 +3511,23 @@ begin
       using errcode = '22023';
   end if;
 
-  update public.youtube_extraction_jobs
-  set updated_at = updated_at
-  where id = v_requested_job_id
-    and status = 'processing'
-    and lease_owner = v_requested_worker_id
-    and lease_generation = v_requested_lease_generation
+  if not private.youtube_extraction_worker_write_fence_is_active(
+    v_requested_job_id,
+    v_requested_worker_id,
+    v_requested_lease_generation,
+    v_requested_permit_generation
+  ) then
+    return jsonb_build_object('applied', false, 'updated', false);
+  end if;
+
+  update public.youtube_extraction_jobs as job
+  set updated_at = job.updated_at
+  where job.id = v_requested_job_id
+    and job.status = 'processing'
+    and job.lease_owner = v_requested_worker_id
+    and job.lease_generation = v_requested_lease_generation
+    and job.lease_expires_at is not null
+    and job.lease_expires_at >= v_now
   returning *
     into v_job;
 
@@ -3301,7 +3613,6 @@ begin
   for update;
 
   if v_permit.owner_id is not null
-    and v_permit.owner_id is distinct from v_requested_worker_id
     and v_permit.expires_at is not null
     and v_permit.expires_at + interval '60 seconds' > v_now then
     return jsonb_build_object(
@@ -3311,7 +3622,7 @@ begin
     );
   end if;
 
-  update public.youtube_extractor_permits
+  update public.youtube_extractor_permits as permit
   set owner_id = v_requested_worker_id,
       permit_generation = permit_generation + 1,
       heartbeat_at = v_now,
@@ -3329,7 +3640,9 @@ end;
 $function$;
 
 create or replace function public.heartbeat_youtube_extractor_permit(
+  job_id uuid,
   worker_id text,
+  lease_generation bigint,
   permit_generation bigint,
   lease_seconds integer
 )
@@ -3342,12 +3655,16 @@ declare
   v_permit public.youtube_extractor_permits%rowtype;
   v_now timestamptz := clock_timestamp();
   v_requested_worker_id text := worker_id;
+  v_requested_job_id uuid := job_id;
+  v_requested_lease_generation bigint := lease_generation;
   v_requested_permit_generation bigint := permit_generation;
   v_requested_lease_seconds integer := lease_seconds;
 begin
   perform public.check_youtube_extraction_worker_pre_request();
 
-  if coalesce(btrim(v_requested_worker_id), '') = ''
+  if v_requested_job_id is null
+    or coalesce(btrim(v_requested_worker_id), '') = ''
+    or v_requested_lease_generation is null
     or v_requested_permit_generation is null
     or v_requested_lease_seconds is null
     or v_requested_lease_seconds < 15
@@ -3356,12 +3673,23 @@ begin
       using errcode = '22023';
   end if;
 
-  update public.youtube_extractor_permits
+  if not private.youtube_extraction_worker_write_fence_is_active(
+    v_requested_job_id,
+    v_requested_worker_id,
+    v_requested_lease_generation,
+    v_requested_permit_generation
+  ) then
+    return jsonb_build_object('applied', false, 'updated', false);
+  end if;
+
+  update public.youtube_extractor_permits as permit
   set heartbeat_at = v_now,
       expires_at = v_now + make_interval(secs => v_requested_lease_seconds)
-  where permit_key = 'primary'
-    and owner_id = v_requested_worker_id
-    and permit_generation = v_requested_permit_generation
+  where permit.permit_key = 'primary'
+    and permit.owner_id = v_requested_worker_id
+    and permit.permit_generation = v_requested_permit_generation
+    and permit.expires_at is not null
+    and permit.expires_at >= v_now
   returning *
     into v_permit;
 
@@ -3414,6 +3742,8 @@ begin
   where permit.permit_key = 'primary'
     and permit.owner_id = v_requested_worker_id
     and permit.permit_generation = v_requested_permit_generation
+    and permit.expires_at is not null
+    and permit.expires_at >= clock_timestamp()
   returning *
     into v_permit;
 
@@ -3856,7 +4186,9 @@ grant create on schema public
 
 -- PostgreSQL requires the prospective function owner to hold CREATE on the
 -- containing schema while ALTER OWNER runs. Keep this edge transaction-local.
-grant create on schema private to youtube_extraction_worker_rpc_owner;
+grant create on schema private
+  to youtube_extraction_worker_rpc_owner,
+     youtube_extraction_credential_manager_rpc_owner;
 
 alter function public.check_youtube_extraction_worker_pre_request()
   owner to youtube_extraction_worker_rpc_owner;
@@ -3865,11 +4197,13 @@ alter function public.enqueue_youtube_extraction_job(
 ) owner to youtube_extraction_enqueue_rpc_owner;
 alter function public.claim_youtube_extraction_job(text, text, integer)
   owner to youtube_extraction_worker_rpc_owner;
-alter function public.heartbeat_youtube_extraction_job(uuid, text, bigint, integer)
+alter function public.heartbeat_youtube_extraction_job(uuid, text, bigint, bigint, integer)
   owner to youtube_extraction_worker_rpc_owner;
 alter function public.start_youtube_extraction_attempt(uuid, text, bigint, bigint)
   owner to youtube_extraction_worker_rpc_owner;
 alter function public.read_youtube_extraction_enqueue_readiness()
+  owner to youtube_extraction_credential_manager_rpc_owner;
+alter function private.assert_youtube_extraction_catalog_ready()
   owner to youtube_extraction_credential_manager_rpc_owner;
 alter function public.read_youtube_extraction_job_projection(uuid)
   owner to youtube_extraction_worker_rpc_owner;
@@ -3879,29 +4213,31 @@ alter function public.list_youtube_extraction_job_projections(text, timestamptz,
   owner to youtube_extraction_worker_rpc_owner;
 alter function private.youtube_extraction_job_fence_is_active(uuid, text, bigint)
   owner to youtube_extraction_worker_rpc_owner;
+alter function private.youtube_extraction_worker_write_fence_is_active(uuid, text, bigint, bigint)
+  owner to youtube_extraction_worker_rpc_owner;
 alter function public.requeue_youtube_extraction_job_without_attempt(uuid, text, bigint, integer, integer)
   owner to youtube_extraction_worker_rpc_owner;
-alter function public.update_youtube_extraction_job_title(uuid, text, bigint, text)
+alter function public.update_youtube_extraction_job_title(uuid, text, bigint, bigint, text)
   owner to youtube_extraction_worker_rpc_owner;
 alter function public.read_youtube_extraction_worker_catalog(uuid, text, bigint)
   owner to youtube_extraction_worker_rpc_owner;
-alter function public.resolve_youtube_extraction_worker_methods(uuid, text, bigint, text[])
+alter function public.resolve_youtube_extraction_worker_methods(uuid, text, bigint, bigint, text[])
   owner to youtube_extraction_worker_rpc_owner;
-alter function public.access_youtube_extraction_worker_cache(uuid, text, bigint, text, jsonb)
+alter function public.access_youtube_extraction_worker_cache(uuid, text, bigint, bigint, text, jsonb)
   owner to youtube_extraction_worker_rpc_owner;
-alter function public.record_youtube_extraction_worker_event(uuid, text, bigint, text, jsonb)
+alter function public.record_youtube_extraction_worker_event(uuid, text, bigint, bigint, text, jsonb)
   owner to youtube_extraction_worker_rpc_owner;
-alter function public.reserve_youtube_extraction_worker_quota(uuid, text, bigint, text, integer)
+alter function public.reserve_youtube_extraction_worker_quota(uuid, text, bigint, bigint, text, integer)
   owner to youtube_extraction_worker_rpc_owner;
-alter function public.resolve_youtube_extraction_job_draft(uuid, text, bigint, text, jsonb)
+alter function public.resolve_youtube_extraction_job_draft(uuid, text, bigint, bigint, text, jsonb)
   owner to youtube_extraction_worker_rpc_owner;
 alter function public.finalize_youtube_extraction_job(uuid, text, bigint, jsonb)
   owner to youtube_extraction_worker_rpc_owner;
-alter function public.fail_or_retry_youtube_extraction_job(uuid, text, bigint, text)
+alter function public.fail_or_retry_youtube_extraction_job(uuid, text, bigint, bigint, text)
   owner to youtube_extraction_worker_rpc_owner;
 alter function public.claim_youtube_extractor_permit(text, integer)
   owner to youtube_extraction_worker_rpc_owner;
-alter function public.heartbeat_youtube_extractor_permit(text, bigint, integer)
+alter function public.heartbeat_youtube_extractor_permit(uuid, text, bigint, bigint, integer)
   owner to youtube_extraction_worker_rpc_owner;
 alter function public.release_youtube_extractor_permit(text, bigint)
   owner to youtube_extraction_worker_rpc_owner;
@@ -3913,6 +4249,17 @@ alter function public.rotate_youtube_extraction_worker_credential(
   bigint, bigint, text, timestamptz, text, text, text
 ) owner to youtube_extraction_credential_manager_rpc_owner;
 
+set local role youtube_extraction_credential_manager_rpc_owner;
+
+revoke all on function private.assert_youtube_extraction_catalog_ready()
+from public, anon, authenticated, service_role,
+  youtube_extraction_worker, youtube_extraction_credential_manager;
+grant execute on function private.assert_youtube_extraction_catalog_ready()
+to youtube_extraction_enqueue_rpc_owner,
+   youtube_extraction_worker_rpc_owner,
+   supabase_admin;
+
+reset role;
 set local role youtube_extraction_enqueue_rpc_owner;
 
 revoke all on function public.enqueue_youtube_extraction_job(
@@ -3946,9 +4293,9 @@ from public, anon, authenticated, service_role, youtube_extraction_credential_ma
 grant execute on function public.claim_youtube_extraction_job(text, text, integer)
 to youtube_extraction_worker;
 
-revoke all on function public.heartbeat_youtube_extraction_job(uuid, text, bigint, integer)
+revoke all on function public.heartbeat_youtube_extraction_job(uuid, text, bigint, bigint, integer)
 from public, anon, authenticated, service_role, youtube_extraction_credential_manager;
-grant execute on function public.heartbeat_youtube_extraction_job(uuid, text, bigint, integer)
+grant execute on function public.heartbeat_youtube_extraction_job(uuid, text, bigint, bigint, integer)
 to youtube_extraction_worker;
 
 revoke all on function public.start_youtube_extraction_attempt(uuid, text, bigint, bigint)
@@ -3984,39 +4331,41 @@ set local role youtube_extraction_worker_rpc_owner;
 
 revoke all on function private.youtube_extraction_job_fence_is_active(uuid, text, bigint)
 from public, anon, authenticated, service_role, youtube_extraction_worker, youtube_extraction_credential_manager;
+revoke all on function private.youtube_extraction_worker_write_fence_is_active(uuid, text, bigint, bigint)
+from public, anon, authenticated, service_role, youtube_extraction_worker, youtube_extraction_credential_manager;
 
 revoke all on function public.requeue_youtube_extraction_job_without_attempt(uuid, text, bigint, integer, integer)
 from public, anon, authenticated, service_role, youtube_extraction_credential_manager;
 grant execute on function public.requeue_youtube_extraction_job_without_attempt(uuid, text, bigint, integer, integer)
 to youtube_extraction_worker;
-revoke all on function public.update_youtube_extraction_job_title(uuid, text, bigint, text)
+revoke all on function public.update_youtube_extraction_job_title(uuid, text, bigint, bigint, text)
 from public, anon, authenticated, service_role, youtube_extraction_credential_manager;
-grant execute on function public.update_youtube_extraction_job_title(uuid, text, bigint, text)
+grant execute on function public.update_youtube_extraction_job_title(uuid, text, bigint, bigint, text)
 to youtube_extraction_worker;
 revoke all on function public.read_youtube_extraction_worker_catalog(uuid, text, bigint)
 from public, anon, authenticated, service_role, youtube_extraction_credential_manager;
 grant execute on function public.read_youtube_extraction_worker_catalog(uuid, text, bigint)
 to youtube_extraction_worker;
-revoke all on function public.resolve_youtube_extraction_worker_methods(uuid, text, bigint, text[])
+revoke all on function public.resolve_youtube_extraction_worker_methods(uuid, text, bigint, bigint, text[])
 from public, anon, authenticated, service_role, youtube_extraction_credential_manager;
-grant execute on function public.resolve_youtube_extraction_worker_methods(uuid, text, bigint, text[])
+grant execute on function public.resolve_youtube_extraction_worker_methods(uuid, text, bigint, bigint, text[])
 to youtube_extraction_worker;
-revoke all on function public.access_youtube_extraction_worker_cache(uuid, text, bigint, text, jsonb)
+revoke all on function public.access_youtube_extraction_worker_cache(uuid, text, bigint, bigint, text, jsonb)
 from public, anon, authenticated, service_role, youtube_extraction_credential_manager;
-grant execute on function public.access_youtube_extraction_worker_cache(uuid, text, bigint, text, jsonb)
+grant execute on function public.access_youtube_extraction_worker_cache(uuid, text, bigint, bigint, text, jsonb)
 to youtube_extraction_worker;
-revoke all on function public.record_youtube_extraction_worker_event(uuid, text, bigint, text, jsonb)
+revoke all on function public.record_youtube_extraction_worker_event(uuid, text, bigint, bigint, text, jsonb)
 from public, anon, authenticated, service_role, youtube_extraction_credential_manager;
-grant execute on function public.record_youtube_extraction_worker_event(uuid, text, bigint, text, jsonb)
+grant execute on function public.record_youtube_extraction_worker_event(uuid, text, bigint, bigint, text, jsonb)
 to youtube_extraction_worker;
-revoke all on function public.reserve_youtube_extraction_worker_quota(uuid, text, bigint, text, integer)
+revoke all on function public.reserve_youtube_extraction_worker_quota(uuid, text, bigint, bigint, text, integer)
 from public, anon, authenticated, service_role, youtube_extraction_credential_manager;
-grant execute on function public.reserve_youtube_extraction_worker_quota(uuid, text, bigint, text, integer)
+grant execute on function public.reserve_youtube_extraction_worker_quota(uuid, text, bigint, bigint, text, integer)
 to youtube_extraction_worker;
 
-revoke all on function public.resolve_youtube_extraction_job_draft(uuid, text, bigint, text, jsonb)
+revoke all on function public.resolve_youtube_extraction_job_draft(uuid, text, bigint, bigint, text, jsonb)
 from public, anon, authenticated, service_role, youtube_extraction_credential_manager;
-grant execute on function public.resolve_youtube_extraction_job_draft(uuid, text, bigint, text, jsonb)
+grant execute on function public.resolve_youtube_extraction_job_draft(uuid, text, bigint, bigint, text, jsonb)
 to youtube_extraction_worker;
 
 revoke all on function public.finalize_youtube_extraction_job(uuid, text, bigint, jsonb)
@@ -4024,9 +4373,9 @@ from public, anon, authenticated, service_role, youtube_extraction_credential_ma
 grant execute on function public.finalize_youtube_extraction_job(uuid, text, bigint, jsonb)
 to youtube_extraction_worker;
 
-revoke all on function public.fail_or_retry_youtube_extraction_job(uuid, text, bigint, text)
+revoke all on function public.fail_or_retry_youtube_extraction_job(uuid, text, bigint, bigint, text)
 from public, anon, authenticated, service_role, youtube_extraction_credential_manager;
-grant execute on function public.fail_or_retry_youtube_extraction_job(uuid, text, bigint, text)
+grant execute on function public.fail_or_retry_youtube_extraction_job(uuid, text, bigint, bigint, text)
 to youtube_extraction_worker;
 
 revoke all on function public.claim_youtube_extractor_permit(text, integer)
@@ -4034,9 +4383,9 @@ from public, anon, authenticated, service_role, youtube_extraction_credential_ma
 grant execute on function public.claim_youtube_extractor_permit(text, integer)
 to youtube_extraction_worker;
 
-revoke all on function public.heartbeat_youtube_extractor_permit(text, bigint, integer)
+revoke all on function public.heartbeat_youtube_extractor_permit(uuid, text, bigint, bigint, integer)
 from public, anon, authenticated, service_role, youtube_extraction_credential_manager;
-grant execute on function public.heartbeat_youtube_extractor_permit(text, bigint, integer)
+grant execute on function public.heartbeat_youtube_extractor_permit(uuid, text, bigint, bigint, integer)
 to youtube_extraction_worker;
 
 revoke all on function public.release_youtube_extractor_permit(text, bigint)
@@ -4093,7 +4442,9 @@ revoke create on schema public
        youtube_extraction_worker_rpc_owner,
        youtube_extraction_credential_manager_rpc_owner;
 
-revoke create on schema private from youtube_extraction_worker_rpc_owner;
+revoke create on schema private
+  from youtube_extraction_worker_rpc_owner,
+       youtube_extraction_credential_manager_rpc_owner;
 
 do $$
 begin

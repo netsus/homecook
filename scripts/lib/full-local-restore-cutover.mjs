@@ -3,11 +3,17 @@ import { createHash } from "node:crypto";
 const INCLUDED_RELATIONS = new Set([
   "auth.identities",
   "auth.users",
+  "private.full_local_auth_control",
+  "private.full_local_session_observability",
+  "private.remote_auth_identity_epochs",
+  "private.youtube_extraction_current_policy",
+  "private.youtube_extraction_worker_credentials",
   "storage.buckets",
   "storage.objects",
 ]);
 
 const EXCLUDED_RELATIONS = new Set([
+  "private.auth_flow_attempts",
   "auth.audit_log_entries",
   "auth.custom_oauth_providers",
   "auth.flow_state",
@@ -23,6 +29,7 @@ const EXCLUDED_RELATIONS = new Set([
   "auth.refresh_tokens",
   "auth.saml_providers",
   "auth.saml_relay_states",
+  "auth.schema_migrations",
   "auth.sessions",
   "auth.sso_domains",
   "auth.sso_providers",
@@ -32,10 +39,12 @@ const EXCLUDED_RELATIONS = new Set([
   "storage.buckets_vectors",
   "storage.iceberg_namespaces",
   "storage.iceberg_tables",
+  "storage.migrations",
   "storage.s3_multipart_uploads",
   "storage.s3_multipart_uploads_parts",
   "storage.vector_indexes",
   "supabase_functions.hooks",
+  "vault.secrets",
 ]);
 
 const COPY_HEADER = /^COPY\s+((?:"[^"]+"|[a-zA-Z_][\w$]*)\.(?:"[^"]+"|[a-zA-Z_][\w$]*))\s+\(([^)]*)\)\s+FROM\s+stdin;\s*$/;

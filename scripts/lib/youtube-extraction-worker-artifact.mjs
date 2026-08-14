@@ -7,10 +7,10 @@ import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  realpathSync,
   readdirSync,
   renameSync,
   rmSync,
-  statSync,
   writeFileSync,
 } from "node:fs";
 import {
@@ -22,6 +22,9 @@ import {
   relative,
   resolve,
 } from "node:path";
+
+import workerTiming from
+  "../../lib/server/youtube-extraction-worker-timing.json" with { type: "json" };
 
 export const YOUTUBE_EXTRACTION_WORKER_LABEL =
   "com.homecook.youtube-extraction-worker";
@@ -48,8 +51,13 @@ export const DEFAULT_YOUTUBE_EXTRACTION_WORKER_EXTRACTOR_MODE =
   "i031_codex_vision";
 export const DEFAULT_YOUTUBE_EXTRACTION_WORKER_PIPELINE_IDENTITY =
   "9adc7876a02c2da55a92e3a65369bf4e803c78efb9a791717201eedc242c1908";
+export const YOUTUBE_EXTRACTION_WORKER_LEASE_SECONDS = 300;
+export const YOUTUBE_EXTRACTION_WORKER_HEARTBEAT_INTERVAL_SECONDS = 30;
+const WORKER_TIMING_RELATIVE_PATH =
+  "lib/server/youtube-extraction-worker-timing.json";
 
 const DEFAULT_INCLUDED_PATHS = Object.freeze([
+  WORKER_TIMING_RELATIVE_PATH,
   "lib/server/youtube-i031-runtime/bundle",
   "scripts/youtube-extraction-worker-runner.mjs",
   "scripts/lib/youtube-extraction-worker-artifact.mjs",
@@ -60,6 +68,37 @@ const DEFAULT_INCLUDED_PATHS = Object.freeze([
 ]);
 const EXPECTED_SCHEMA_RELATIVE_PATH =
   "scripts/manifests/youtube-extraction-expected-schema.json";
+export const YOUTUBE_EXTRACTION_WORKER_ENTRYPOINT_RELATIVE_PATH =
+  "scripts/youtube-extraction-worker-runner.mjs";
+export const YOUTUBE_EXTRACTION_WORKER_LAUNCHD_TEMPLATE_RELATIVE_PATH =
+  "scripts/templates/com.homecook.youtube-extraction-worker.plist.template";
+export const YOUTUBE_EXTRACTION_WORKER_REQUIRED_ARTIFACT_FILES = Object.freeze([
+  WORKER_TIMING_RELATIVE_PATH,
+  "lib/server/youtube-i031-runtime/bundle/manifest.json",
+  "lib/server/youtube-i031-runtime/bundle/worker.mjs",
+  "scripts/lib/youtube-extraction-worker-artifact.mjs",
+  "scripts/lib/youtube-extraction-worker-ops.mjs",
+  "scripts/lib/youtube-extraction-worker-runtime.mjs",
+  EXPECTED_SCHEMA_RELATIVE_PATH,
+  YOUTUBE_EXTRACTION_WORKER_ENTRYPOINT_RELATIVE_PATH,
+  YOUTUBE_EXTRACTION_WORKER_LAUNCHD_TEMPLATE_RELATIVE_PATH,
+]);
+const YOUTUBE_EXTRACTION_RUNTIME_BUNDLE_RELATIVE_ROOT =
+  "lib/server/youtube-i031-runtime/bundle";
+export const YOUTUBE_EXTRACTION_RUNTIME_BUNDLE_REQUIRED_FILES = Object.freeze([
+  "lib/server/recipe-extraction-lab/candidate-packets.mjs",
+  "lib/server/recipe-extraction-lab/extract.mjs",
+  "lib/server/recipe-extraction-lab/prompt.mjs",
+  "lib/server/recipe-extraction-lab/public-source-packets.mjs",
+  "lib/server/recipe-extraction-lab/source-evidence.mjs",
+  "scripts/recipe-loop/extract-video-frames.py",
+  "scripts/recipe-loop/lib/codex-vision-client.mjs",
+  "scripts/recipe-loop/lib/codex-vision-keyframes-client.mjs",
+  "scripts/recipe-loop/lib/screen-ocr-scout.mjs",
+  "scripts/recipe-loop/macos-vision-ocr.swift",
+  "scripts/recipe-loop/snapshot-video.mjs",
+  "worker.mjs",
+]);
 
 export function ensureNonEmptyString(value, label) {
   if (typeof value !== "string" || value.trim().length === 0) {
@@ -134,7 +173,7 @@ export function modeBits(mode) {
  * @param {string} path
  */
 export function readMode(path) {
-  return modeBits(statSync(path).mode);
+  return modeBits(lstatSync(path).mode);
 }
 
 /**
@@ -152,15 +191,18 @@ export function validateMode(path, expectedMode, label) {
 /**
  * @param {string} path
  * @param {string} label
- * @param {{ mode?: number }} [options]
+ * @param {{ mode?: number, expectedUserId?: number }} [options]
  */
-export function ensureRegularFile(path, label, { mode } = {}) {
+export function ensureRegularFile(path, label, { mode, expectedUserId } = {}) {
   const normalizedPath = ensureAbsolutePath(path, label);
   if (!existsSync(normalizedPath)) {
     throw new Error(`${label} does not exist: ${normalizedPath}`);
   }
 
-  const stat = statSync(normalizedPath);
+  const stat = lstatSync(normalizedPath);
+  if (stat.isSymbolicLink()) {
+    throw new Error(`${label} must not be a symbolic link: ${normalizedPath}`);
+  }
   if (!stat.isFile()) {
     throw new Error(`${label} must be a regular file: ${normalizedPath}`);
   }
@@ -169,7 +211,11 @@ export function ensureRegularFile(path, label, { mode } = {}) {
     validateMode(normalizedPath, mode, label);
   }
 
-  return normalizedPath;
+  if (Number.isInteger(expectedUserId) && stat.uid !== expectedUserId) {
+    throw new Error(`${label} owner must match the worker user.`);
+  }
+
+  return realpathSync(normalizedPath);
 }
 
 /**
@@ -372,6 +418,7 @@ export function buildYoutubeExtractionWorkerArtifactManifest({
   pipelineIdentity = DEFAULT_YOUTUBE_EXTRACTION_WORKER_PIPELINE_IDENTITY,
   includedPaths = DEFAULT_INCLUDED_PATHS,
 } = {}) {
+  assertWorkerTimingContract(workerTiming);
   const normalizedRootDir = ensureAbsolutePath(rootDir, "rootDir");
   const normalizedReleaseSha = ensureReleaseSha(releaseSha);
   const normalizedSchemaIdentity = ensureNonEmptyString(
@@ -393,6 +440,10 @@ export function buildYoutubeExtractionWorkerArtifactManifest({
     "pipelineIdentity",
   );
   const fileManifest = buildFileManifest(normalizedRootDir, includedPaths);
+  assertRequiredArtifactFileInventory(
+    new Set(fileManifest.map((file) => file.path)),
+  );
+  assertRuntimeBundleClosure(normalizedRootDir, fileManifest);
   const expectedSchemaSha = sha256File(resolve(
     normalizedRootDir,
     EXPECTED_SCHEMA_RELATIVE_PATH,
@@ -410,9 +461,12 @@ export function buildYoutubeExtractionWorkerArtifactManifest({
     pipeline_identity: normalizedPipelineIdentity,
     allowed_snapshot_digest: normalizedAllowedSnapshotDigest,
     expected_schema_sha256: expectedSchemaSha,
-    entrypoint_relative_path: "scripts/youtube-extraction-worker-runner.mjs",
+    lease_seconds: YOUTUBE_EXTRACTION_WORKER_LEASE_SECONDS,
+    heartbeat_interval_seconds:
+      YOUTUBE_EXTRACTION_WORKER_HEARTBEAT_INTERVAL_SECONDS,
+    entrypoint_relative_path: YOUTUBE_EXTRACTION_WORKER_ENTRYPOINT_RELATIVE_PATH,
     launchd_template_relative_path:
-      "scripts/templates/com.homecook.youtube-extraction-worker.plist.template",
+      YOUTUBE_EXTRACTION_WORKER_LAUNCHD_TEMPLATE_RELATIVE_PATH,
     files: fileManifest,
   };
   const artifactSha = sha256Text(stableStringify(baseManifest));
@@ -560,10 +614,10 @@ export function buildYoutubeExtractionWorkerQueueState({
 /**
  * @param {string} path
  * @param {string} label
- * @param {{ mode?: number }} [options]
+ * @param {{ mode?: number, expectedUserId?: number }} [options]
  */
-export function readJsonFile(path, label, { mode } = {}) {
-  const normalizedPath = ensureRegularFile(path, label, { mode });
+export function readJsonFile(path, label, { mode, expectedUserId } = {}) {
+  const normalizedPath = ensureRegularFile(path, label, { mode, expectedUserId });
   const source = readFileSync(normalizedPath, "utf8");
   assertNoDuplicateJsonKeys(source, label);
   const parsed = JSON.parse(source);
@@ -667,6 +721,31 @@ export function readYoutubeExtractionWorkerArtifact(path) {
   return value;
 }
 
+function readMaterializedArtifactFileInventory(artifactRoot, manifestPath) {
+  const files = [];
+  const visit = (directory) => {
+    for (const entry of readdirSync(directory, { withFileTypes: true })) {
+      const target = resolve(directory, entry.name);
+      const stat = lstatSync(target);
+      if (stat.isSymbolicLink()) {
+        throw new Error(`worker artifact inventory contains a symbolic link: ${target}`);
+      }
+      if (stat.isDirectory()) {
+        visit(target);
+        continue;
+      }
+      if (!stat.isFile()) {
+        throw new Error(`worker artifact inventory contains an unsupported path: ${target}`);
+      }
+      if (target !== manifestPath) {
+        files.push(normalizeRepoRelativePath(artifactRoot, target));
+      }
+    }
+  };
+  visit(artifactRoot);
+  return files.sort();
+}
+
 export function verifyYoutubeExtractionWorkerArtifact(path) {
   const normalizedPath = ensureRegularFile(path, "worker artifact manifest");
   const value = readYoutubeExtractionWorkerArtifact(normalizedPath);
@@ -678,6 +757,19 @@ export function verifyYoutubeExtractionWorkerArtifact(path) {
     throw new Error("worker artifact file inventory is invalid.");
   }
   const artifactRoot = dirname(normalizedPath);
+  const materializedTiming = readJsonFile(
+    resolve(artifactRoot, WORKER_TIMING_RELATIVE_PATH),
+    "worker timing contract",
+  );
+  assertWorkerTimingContract(materializedTiming);
+  if (
+    value.lease_seconds !== YOUTUBE_EXTRACTION_WORKER_LEASE_SECONDS
+    || value.heartbeat_interval_seconds
+      !== YOUTUBE_EXTRACTION_WORKER_HEARTBEAT_INTERVAL_SECONDS
+  ) {
+    throw new Error("worker artifact timing contract is invalid.");
+  }
+  const manifestFiles = new Set();
   for (const file of value.files) {
     if (
       !file
@@ -689,10 +781,34 @@ export function verifyYoutubeExtractionWorkerArtifact(path) {
       throw new Error("worker artifact file inventory is invalid.");
     }
     const target = resolve(artifactRoot, file.path);
+    const normalizedFilePath = normalizeRepoRelativePath(artifactRoot, target);
+    if (normalizedFilePath !== file.path || manifestFiles.has(file.path)) {
+      throw new Error("worker artifact file inventory is invalid.");
+    }
+    manifestFiles.add(file.path);
     ensureRegularFile(target, `artifact file ${file.path}`);
     if (sha256File(target) !== file.sha256) {
       throw new Error(`worker artifact file drift: ${file.path}`);
     }
+  }
+  assertRuntimeBundleClosure(artifactRoot, value.files);
+  assertRequiredArtifactFileInventory(manifestFiles);
+  assertArtifactRelativePath(
+    value.entrypoint_relative_path,
+    "entrypoint relative path",
+    YOUTUBE_EXTRACTION_WORKER_ENTRYPOINT_RELATIVE_PATH,
+    manifestFiles,
+  );
+  assertArtifactRelativePath(
+    value.launchd_template_relative_path,
+    "launchd template relative path",
+    YOUTUBE_EXTRACTION_WORKER_LAUNCHD_TEMPLATE_RELATIVE_PATH,
+    manifestFiles,
+  );
+  if (JSON.stringify([...manifestFiles].sort()) !== JSON.stringify(
+    readMaterializedArtifactFileInventory(artifactRoot, normalizedPath),
+  )) {
+    throw new Error("worker artifact file inventory is invalid.");
   }
   const expectedSchemaEntry = value.files.find(
     (file) => file.path === EXPECTED_SCHEMA_RELATIVE_PATH,
@@ -706,10 +822,96 @@ export function verifyYoutubeExtractionWorkerArtifact(path) {
   return value;
 }
 
+function assertWorkerTimingContract(value) {
+  if (
+    value?.schema !== "homecook.youtube-extraction-worker-timing"
+    || value.version !== 1
+    || value.lease_seconds !== YOUTUBE_EXTRACTION_WORKER_LEASE_SECONDS
+    || value.heartbeat_interval_seconds
+      !== YOUTUBE_EXTRACTION_WORKER_HEARTBEAT_INTERVAL_SECONDS
+    || JSON.stringify(Object.keys(value).sort()) !== JSON.stringify([
+      "heartbeat_interval_seconds",
+      "lease_seconds",
+      "schema",
+      "version",
+    ])
+  ) {
+    throw new Error("worker timing contract is invalid.");
+  }
+}
+
+function assertRuntimeBundleClosure(artifactRoot, inventoryEntries) {
+  const bundleManifestRelativePath =
+    `${YOUTUBE_EXTRACTION_RUNTIME_BUNDLE_RELATIVE_ROOT}/manifest.json`;
+  const bundleManifestPath = resolve(artifactRoot, bundleManifestRelativePath);
+  const bundleManifest = readJsonFile(
+    bundleManifestPath,
+    "worker runtime bundle manifest",
+  );
+  if (
+    bundleManifest?.schemaVersion !== 1
+    || !bundleManifest.files
+    || typeof bundleManifest.files !== "object"
+    || Array.isArray(bundleManifest.files)
+  ) {
+    throw new Error("worker runtime bundle closure manifest is invalid.");
+  }
+
+  const declaredPaths = Object.keys(bundleManifest.files).sort();
+  const requiredPaths = [...YOUTUBE_EXTRACTION_RUNTIME_BUNDLE_REQUIRED_FILES].sort();
+  if (JSON.stringify(declaredPaths) !== JSON.stringify(requiredPaths)) {
+    throw new Error("worker runtime bundle closure does not match required files.");
+  }
+
+  const inventory = new Map(inventoryEntries.map((entry) => [entry.path, entry.sha256]));
+  const declaredOuterPaths = [...inventory.keys()]
+    .filter((path) => path.startsWith(`${YOUTUBE_EXTRACTION_RUNTIME_BUNDLE_RELATIVE_ROOT}/`))
+    .sort();
+  const requiredOuterPaths = [
+    bundleManifestRelativePath,
+    ...requiredPaths.map((path) =>
+      `${YOUTUBE_EXTRACTION_RUNTIME_BUNDLE_RELATIVE_ROOT}/${path}`),
+  ].sort();
+  if (JSON.stringify(declaredOuterPaths) !== JSON.stringify(requiredOuterPaths)) {
+    throw new Error("worker runtime bundle closure inventory is invalid.");
+  }
+
+  for (const relativePath of requiredPaths) {
+    const declaredSha = bundleManifest.files[relativePath];
+    const outerPath = `${YOUTUBE_EXTRACTION_RUNTIME_BUNDLE_RELATIVE_ROOT}/${relativePath}`;
+    const materializedPath = resolve(artifactRoot, outerPath);
+    if (
+      typeof declaredSha !== "string"
+      || !/^[0-9a-f]{64}$/u.test(declaredSha)
+      || inventory.get(outerPath) !== declaredSha
+      || sha256File(materializedPath) !== declaredSha
+    ) {
+      throw new Error(`worker runtime bundle closure drift: ${relativePath}`);
+    }
+  }
+}
+
+function assertRequiredArtifactFileInventory(manifestFiles) {
+  for (const requiredPath of YOUTUBE_EXTRACTION_WORKER_REQUIRED_ARTIFACT_FILES) {
+    if (!manifestFiles.has(requiredPath)) {
+      throw new Error(`worker artifact required file is missing: ${requiredPath}`);
+    }
+  }
+}
+
+function assertArtifactRelativePath(value, label, expectedPath, manifestFiles) {
+  if (value !== expectedPath || !manifestFiles.has(expectedPath)) {
+    throw new Error(`worker artifact ${label} is invalid.`);
+  }
+}
+
 export function readYoutubeExtractionExpectedSchema(path) {
   const value = readJsonFile(path, "expected schema manifest");
   const exactFingerprintComponents = [
     "tables",
+    "columns",
+    "constraints",
+    "indexes",
     "table_owners",
     "sequence_owners",
     "schema_owners",
@@ -723,6 +925,12 @@ export function readYoutubeExtractionExpectedSchema(path) {
     "sequence_privileges",
     "rpc_signatures",
     "rpc_security",
+    "rpc_function_definitions",
+    "internal_scope_function_definition",
+  ];
+  const exactFenceFunctionSignatures = [
+    "private.youtube_extraction_job_fence_is_active(uuid,text,bigint)",
+    "private.youtube_extraction_worker_write_fence_is_active(uuid,text,bigint,bigint)",
   ];
   const exactMemberships = [
     {
@@ -756,6 +964,10 @@ export function readYoutubeExtractionExpectedSchema(path) {
     || !isUniqueStringArray(value.tables)
     || !isUniqueStringArray(value.roles)
     || !isUniqueStringArray(value.rpc_signatures)
+    || JSON.stringify(value.fence_function_signatures)
+      !== JSON.stringify(exactFenceFunctionSignatures)
+    || value.internal_scope_function_signature
+      !== "private.verify_full_local_internal_scope()"
     || JSON.stringify(value.memberships) !== JSON.stringify(exactMemberships)
     || typeof value.migration_owner_membership_exception !== "string"
     || !value.initial_policy

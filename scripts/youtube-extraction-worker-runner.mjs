@@ -10,6 +10,7 @@ import {
   readYoutubeExtractionWorkerCredential,
   validateYoutubeExtractionWorkerConfigPath,
   validateYoutubeExtractionWorkerSecretFile,
+  validateYoutubeExtractionWorkerSecretRoot,
 } from "./lib/youtube-extraction-worker-ops.mjs";
 import {
   ensureAbsolutePath,
@@ -20,11 +21,13 @@ import {
   readYoutubeExtractionWorkerQueueState,
 } from "./lib/youtube-extraction-worker-artifact.mjs";
 import {
+  buildYoutubeExtractionRuntimeEnvironment,
   createRestrictedPostgrestRpcClient,
   createStandaloneYoutubeI031Extractor,
   createYoutubeExtractionWorkerRuntime,
   readWorkerEnvironment,
   readWorkerProviderEnvironment,
+  resolveYoutubeExtractionTempRoot,
   runYoutubeExtractionWorkerPollLoop,
   verifyStandaloneYoutubeI031Preflight,
 } from "./lib/youtube-extraction-worker-runtime.mjs";
@@ -71,6 +74,9 @@ function parseArgs(argv) {
       case "--expected-schema":
         options.expectedSchemaPath = ensureAbsolutePath(value, "expectedSchemaPath");
         break;
+      case "--secret-root":
+        options.secretRoot = ensureAbsolutePath(value, "secretRoot");
+        break;
       default:
         throw new Error(`Unknown option: ${token}`);
     }
@@ -88,16 +94,19 @@ async function main() {
   const options = parseArgs(process.argv.slice(2));
   if (options.command !== "run" && options.command !== "health") {
     throw new Error(
-      "Usage: node scripts/youtube-extraction-worker-runner.mjs <run|health> --config <env> --manifest <artifact.json> --credential <credential.json> --app-descriptor <app.json> --policy <policy.json> --expected-schema <schema.json> [--queue-state <queue.json>] [--dry-run]",
+      "Usage: node scripts/youtube-extraction-worker-runner.mjs <run|health> --secret-root <directory> --config <env> --manifest <artifact.json> --credential <credential.json> --app-descriptor <app.json> --policy <policy.json> --expected-schema <schema.json> [--queue-state <queue.json>] [--dry-run]",
     );
   }
 
-  validateYoutubeExtractionWorkerConfigPath(options.configPath);
+  validateYoutubeExtractionWorkerSecretRoot(options.secretRoot);
+  const secretRoot = options.secretRoot;
+  validateYoutubeExtractionWorkerConfigPath(options.configPath, { secretRoot });
   const workerArtifact = verifyYoutubeExtractionWorkerArtifact(
     options.workerArtifactPath,
   );
   const credentialState = readYoutubeExtractionWorkerCredential(
     options.credentialPath,
+    { secretRoot },
   );
   const appDescriptor = options.appDescriptorPath
     ? readYoutubeExtractionAppDescriptor(options.appDescriptorPath)
@@ -161,9 +170,22 @@ async function main() {
   const workerEnvironment = await readWorkerEnvironment(options.configPath);
   const providerSecretFile = validateYoutubeExtractionWorkerSecretFile(
     workerEnvironment.HOMECOOK_YOUTUBE_WORKER_PROVIDER_SECRET_FILE,
+    { secretRoot },
+  );
+  const dataApiKeyFile = validateYoutubeExtractionWorkerSecretFile(
+    workerEnvironment.HOMECOOK_YOUTUBE_WORKER_DATA_API_KEY_FILE,
+    { secretRoot },
   );
   const providerEnvironment = await readWorkerProviderEnvironment(providerSecretFile);
-  const runtimeEnvironment = { ...process.env, ...providerEnvironment };
+  validateYoutubeExtractionWorkerSecretRoot(
+    workerEnvironment.HOMECOOK_YOUTUBE_WORKER_RUNTIME_ROOT,
+  );
+  const tempRoot = await resolveYoutubeExtractionTempRoot();
+  const runtimeEnvironment = buildYoutubeExtractionRuntimeEnvironment({
+    processEnvironment: process.env,
+    providerEnvironment,
+    tempRoot,
+  });
   const i031Preflight = await verifyStandaloneYoutubeI031Preflight({
     workerEnv: runtimeEnvironment,
   });
@@ -172,8 +194,11 @@ async function main() {
   }
   const token = readFile(credentialState.token_file, "utf8")
     .then((value) => value.trim());
+  const dataApiKey = readFile(dataApiKeyFile, "utf8")
+    .then((value) => value.trim());
   const restrictedClient = createRestrictedPostgrestRpcClient({
     dataApiUrl: workerEnvironment.HOMECOOK_YOUTUBE_WORKER_DATA_API_URL,
+    apiKey: await dataApiKey,
     token: await token,
   });
   const runtime = createYoutubeExtractionWorkerRuntime({

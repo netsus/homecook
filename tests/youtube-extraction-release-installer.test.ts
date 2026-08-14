@@ -1,16 +1,24 @@
 import {
+  generateKeyPairSync,
+  verify as verifySignature,
+} from "node:crypto";
+import {
   chmodSync,
   cpSync,
   existsSync,
+  lstatSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  realpathSync,
   readdirSync,
   rmSync,
+  symlinkSync,
+  unlinkSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { spawn, spawnSync } from "node:child_process";
 import { createServer } from "node:http";
 
@@ -25,6 +33,10 @@ import {
   materializeYoutubeExtractionWorkerArtifact,
   readYoutubeExtractionExpectedSchema,
   sha256File,
+  sha256Text,
+  stableStringify,
+  verifyYoutubeExtractionWorkerArtifact,
+  YOUTUBE_EXTRACTION_RUNTIME_BUNDLE_REQUIRED_FILES,
   YOUTUBE_EXTRACTION_WORKER_LABEL,
   YOUTUBE_EXTRACTION_WORKER_RELEASE_SCHEMA_IDENTITY,
 } from "../scripts/lib/youtube-extraction-worker-artifact.mjs";
@@ -36,11 +48,19 @@ import {
   buildYoutubeExtractionWorkerLifecyclePlan,
   buildYoutubeExtractionWorkerRollbackPlan,
   evaluateYoutubeExtractionWorkerPreflight,
+  installYoutubeExtractionWorkerLaunchAgent,
   parseLaunchctlPrintStatus,
+  readYoutubeExtractionWorkerCredential,
   renderYoutubeExtractionWorkerPlist,
   rotateYoutubeExtractionWorkerCredential,
+  validateYoutubeExtractionWorkerConfigPath,
+  validateYoutubeExtractionWorkerSecretFile,
+  validateYoutubeExtractionWorkerSecretRoot,
   writeCredentialMetadata,
 } from "../scripts/lib/youtube-extraction-worker-ops.mjs";
+import {
+  issueYoutubeExtractionWorkerCredential,
+} from "../scripts/lib/youtube-extraction-worker-local-credential.mjs";
 
 const tempDirs: string[] = [];
 const GREEN_I031_PREFLIGHT = Object.freeze({
@@ -51,7 +71,7 @@ const GREEN_I031_PREFLIGHT = Object.freeze({
 });
 
 function createTempDir(prefix: string) {
-  const directory = mkdtempSync(join(tmpdir(), prefix));
+  const directory = realpathSync(mkdtempSync(join(tmpdir(), prefix)));
   tempDirs.push(directory);
   return directory;
 }
@@ -79,7 +99,7 @@ function createReleaseInputs(privateDir: string, {
   const credentialPath = join(privateDir, "credential.json");
   const appPath = join(privateDir, "app.json");
   const policyPath = join(privateDir, "policy.json");
-  const artifactDir = join(privateDir, "worker-release");
+  const artifactDir = join(createTempDir("yta-worker-release-parent-"), "worker-release");
   writeModeFile(tokenPath, "worker-token\n");
   const materialized = materializeYoutubeExtractionWorkerArtifact({
     rootDir,
@@ -136,6 +156,272 @@ afterEach(() => {
 });
 
 describe("YTASYNC-OPS deterministic artifact", () => {
+  it("issues an exact ES256 local-only worker credential with a bounded lifetime", () => {
+    const { privateKey, publicKey } = generateKeyPairSync("ec", {
+      namedCurve: "P-256",
+    });
+    const privateJwk = privateKey.export({ format: "jwk" });
+    const issued = issueYoutubeExtractionWorkerCredential({
+      jwtKeys: [{
+        ...privateJwk,
+        alg: "ES256",
+        kid: "local-worker-signing-key",
+        use: "sig",
+      }],
+      generation: 2,
+      releaseSha: "0123456789abcdef0123456789abcdef01234567",
+      schemaIdentity: "youtube-extraction-worker-schema-v1",
+      allowedSnapshotDigest: "a".repeat(64),
+      now: new Date("2026-08-14T12:00:00.000Z"),
+      ttlSeconds: 6 * 24 * 60 * 60,
+      jti: "worker-jti-test-value",
+    });
+    const [headerPart, claimsPart, signaturePart] = issued.token.split(".");
+    const header = JSON.parse(Buffer.from(headerPart, "base64url").toString("utf8"));
+    const claims = JSON.parse(Buffer.from(claimsPart, "base64url").toString("utf8"));
+
+    expect(header).toEqual({
+      alg: "ES256",
+      kid: "local-worker-signing-key",
+      typ: "JWT",
+    });
+    expect(claims).toMatchObject({
+      role: "youtube_extraction_worker",
+      scope: "youtube-extraction-worker",
+      iss: "https://worker.mumeok.kr",
+      aud: "youtube-extraction",
+      generation: 2,
+      release_sha: "0123456789abcdef0123456789abcdef01234567",
+      schema_identity: "youtube-extraction-worker-schema-v1",
+      allowed_snapshot_digest: "a".repeat(64),
+      jti_hash: issued.jtiHash,
+    });
+    expect(claims.exp - claims.iat).toBe(6 * 24 * 60 * 60);
+    expect(verifySignature(
+      "SHA256",
+      Buffer.from(`${headerPart}.${claimsPart}`),
+      { key: publicKey, dsaEncoding: "ieee-p1363" },
+      Buffer.from(signaturePart, "base64url"),
+    )).toBe(true);
+    expect(JSON.stringify(issued.metadata)).not.toContain(issued.token);
+
+    expect(() => issueYoutubeExtractionWorkerCredential({
+      jwtKeys: [{ ...privateJwk, alg: "ES256", kid: "local-worker-signing-key" }],
+      generation: 2,
+      releaseSha: "0123456789abcdef0123456789abcdef01234567",
+      schemaIdentity: "youtube-extraction-worker-schema-v1",
+      allowedSnapshotDigest: "a".repeat(64),
+      now: new Date("2026-08-14T12:00:00.000Z"),
+      ttlSeconds: (7 * 24 * 60 * 60) + 1,
+    })).toThrow(/7 days/iu);
+  });
+
+  it("materializes a local worker credential as create-only mode-0600 files without printing the JWT", () => {
+    const privateDir = createTempDir("yta-local-credential-");
+    const signingDir = createTempDir("yta-local-signing-");
+    const { privateKey } = generateKeyPairSync("ec", { namedCurve: "P-256" });
+    const jwtKeysPath = join(signingDir, "jwt_keys");
+    const tokenPath = join(privateDir, "worker.jwt");
+    const metadataPath = join(privateDir, "credential.json");
+    writeModeFile(jwtKeysPath, JSON.stringify([{
+      ...privateKey.export({ format: "jwk" }),
+      alg: "ES256",
+      kid: "local-worker-signing-key",
+      use: "sig",
+    }]));
+
+    const credentialCliPath = join(
+      process.cwd(),
+      "scripts/youtube-extraction-worker-local-credential.mjs",
+    );
+    const baseArgs = [
+      credentialCliPath,
+      "issue",
+      "--jwt-keys-file", jwtKeysPath,
+      "--secret-root", privateDir,
+      "--token-file", tokenPath,
+      "--metadata-output", metadataPath,
+      "--generation", "2",
+      "--release-sha", "0123456789abcdef0123456789abcdef01234567",
+      "--schema-identity", "youtube-extraction-worker-schema-v1",
+      "--allowed-snapshot-digest", "a".repeat(64),
+      "--ttl-seconds", String(6 * 24 * 60 * 60),
+    ];
+    const denied = spawnSync(process.execPath, [
+      ...baseArgs,
+      "--confirm-production", "wrong",
+    ], { cwd: process.cwd(), encoding: "utf8" });
+    expect(denied.status).toBe(1);
+    expect(denied.stderr).toMatch(/confirmation/iu);
+    expect(existsSync(tokenPath)).toBe(false);
+
+    const repoKeyDir = realpathSync(mkdtempSync(join(process.cwd(), ".yta-repo-key-")));
+    tempDirs.push(repoKeyDir);
+    const repoJwtKeysPath = join(repoKeyDir, "jwt_keys");
+    writeModeFile(repoJwtKeysPath, readFileSync(jwtKeysPath, "utf8"));
+    const repoKeyDenied = spawnSync(process.execPath, [
+      ...baseArgs.map((value) => value === jwtKeysPath ? repoJwtKeysPath : value),
+      "--confirm-production", "LOCAL_FULL_PRODUCTION_WORKER_CREDENTIAL",
+    ], { cwd: process.cwd(), encoding: "utf8" });
+    expect(repoKeyDenied.status).toBe(1);
+    expect(repoKeyDenied.stderr).toMatch(/repository/iu);
+    expect(existsSync(tokenPath)).toBe(false);
+
+    const repoLinkParent = realpathSync(mkdtempSync(join(process.cwd(), ".yta-repo-link-")));
+    tempDirs.push(repoLinkParent);
+    const repoLinkedSigningDir = join(repoLinkParent, "external-signing-dir");
+    symlinkSync(signingDir, repoLinkedSigningDir, "dir");
+    const repoLinkedKeyDenied = spawnSync(process.execPath, [
+      ...baseArgs.map((value) => value === jwtKeysPath
+        ? join(repoLinkedSigningDir, "jwt_keys")
+        : value),
+      "--confirm-production", "LOCAL_FULL_PRODUCTION_WORKER_CREDENTIAL",
+    ], { cwd: process.cwd(), encoding: "utf8" });
+    expect(repoLinkedKeyDenied.status).toBe(1);
+    expect(repoLinkedKeyDenied.stderr).toMatch(/symbolic link|repository/iu);
+    expect(existsSync(tokenPath)).toBe(false);
+
+    const outsideCwdKeyDenied = spawnSync(process.execPath, [
+      ...baseArgs.map((value) => value === jwtKeysPath ? repoJwtKeysPath : value),
+      "--confirm-production", "LOCAL_FULL_PRODUCTION_WORKER_CREDENTIAL",
+    ], { cwd: signingDir, encoding: "utf8" });
+    expect(outsideCwdKeyDenied.status).toBe(1);
+    expect(outsideCwdKeyDenied.stderr).toMatch(/repository/iu);
+    expect(existsSync(tokenPath)).toBe(false);
+
+    const issued = spawnSync(process.execPath, [
+      ...baseArgs,
+      "--confirm-production", "LOCAL_FULL_PRODUCTION_WORKER_CREDENTIAL",
+    ], { cwd: process.cwd(), encoding: "utf8" });
+    expect(issued.status, issued.stderr).toBe(0);
+    const result = JSON.parse(issued.stdout);
+    const token = readFileSync(tokenPath, "utf8").trim();
+    expect(result).toMatchObject({ issued: true, generation: 2 });
+    expect(issued.stdout).not.toContain(token);
+    expect((lstatSync(tokenPath).mode & 0o777)).toBe(0o600);
+    expect((lstatSync(metadataPath).mode & 0o777)).toBe(0o600);
+    expect(readYoutubeExtractionWorkerCredential(metadataPath, {
+      secretRoot: privateDir,
+    })).toMatchObject({ generation: 2, token_file: tokenPath });
+
+    const repeated = spawnSync(process.execPath, [
+      ...baseArgs,
+      "--confirm-production", "LOCAL_FULL_PRODUCTION_WORKER_CREDENTIAL",
+    ], { cwd: process.cwd(), encoding: "utf8" });
+    expect(repeated.status).toBe(1);
+    expect(repeated.stderr).toMatch(/already exists|create-only/iu);
+  });
+
+  it("installs the worker LaunchAgent atomically only after an explicit local-production confirmation", () => {
+    const homeDir = createTempDir("yta-worker-home-");
+    const privateDir = createTempDir("yta-worker-private-");
+    const release = createReleaseInputs(privateDir);
+    const configPath = join(privateDir, "worker.env");
+    writeModeFile(configPath, [
+      "HOMECOOK_YOUTUBE_WORKER_DATA_API_URL=http://127.0.0.1:54321/rest/v1",
+      `HOMECOOK_YOUTUBE_WORKER_PROVIDER_SECRET_FILE=${join(privateDir, "provider.env")}`,
+      "HOMECOOK_YOUTUBE_WORKER_RUNTIME_ROOT=/tmp/homecook-youtube-worker",
+    ].join("\n"));
+    writeModeFile(join(privateDir, "provider.env"), "YOUTUBE_API_KEY=test-provider-key\n");
+    const calls: string[] = [];
+
+    expect(() => installYoutubeExtractionWorkerLaunchAgent({
+      configPath,
+      manifestPath: release.manifestPath,
+      credentialPath: release.credentialPath,
+      appDescriptorPath: release.appPath,
+      currentPolicyPath: release.policyPath,
+      expectedSchemaPath: release.expectedSchemaPath,
+      secretRoot: privateDir,
+      homeDir,
+      rootDir: release.artifactDir,
+      i031Preflight: GREEN_I031_PREFLIGHT,
+      confirmation: "wrong",
+      spawn: () => ({ status: 0, stdout: "", stderr: "" }),
+    })).toThrow(/confirmation/iu);
+
+    const installed = installYoutubeExtractionWorkerLaunchAgent({
+      configPath,
+      manifestPath: release.manifestPath,
+      credentialPath: release.credentialPath,
+      appDescriptorPath: release.appPath,
+      currentPolicyPath: release.policyPath,
+      expectedSchemaPath: release.expectedSchemaPath,
+      secretRoot: privateDir,
+      homeDir,
+      rootDir: release.artifactDir,
+      i031Preflight: GREEN_I031_PREFLIGHT,
+      confirmation: "LOCAL_FULL_PRODUCTION_WORKER_INSTALL",
+      spawn: (_command, args) => {
+        calls.push(args.join(" "));
+        if (args[0] === "print") {
+          return { status: 0, stdout: "state = running\npid = 123\n", stderr: "" };
+        }
+        return { status: 0, stdout: "", stderr: "" };
+      },
+    });
+
+    expect(installed).toMatchObject({ changed: true, running: true, pid: 123 });
+    expect(readFileSync(installed.plist_path, "utf8")).toContain(
+      "com.homecook.youtube-extraction-worker",
+    );
+    expect((lstatSync(installed.plist_path).mode & 0o777)).toBe(0o600);
+    expect(calls).toEqual(expect.arrayContaining([
+      expect.stringContaining("bootstrap"),
+      expect.stringContaining("kickstart -k"),
+      expect.stringContaining("print"),
+    ]));
+  });
+
+  it("restores the previous worker plist when a replacement bootstrap fails", () => {
+    const homeDir = createTempDir("yta-worker-rollback-home-");
+    const privateDir = createTempDir("yta-worker-rollback-private-");
+    const release = createReleaseInputs(privateDir);
+    const configPath = join(privateDir, "worker.env");
+    writeModeFile(configPath, [
+      "HOMECOOK_YOUTUBE_WORKER_DATA_API_URL=http://127.0.0.1:54321/rest/v1",
+      `HOMECOOK_YOUTUBE_WORKER_PROVIDER_SECRET_FILE=${join(privateDir, "provider.env")}`,
+      "HOMECOOK_YOUTUBE_WORKER_RUNTIME_ROOT=/tmp/homecook-youtube-worker",
+    ].join("\n"));
+    writeModeFile(join(privateDir, "provider.env"), "YOUTUBE_API_KEY=test-provider-key\n");
+    const plistPath = join(
+      homeDir,
+      "Library",
+      "LaunchAgents",
+      "com.homecook.youtube-extraction-worker.plist",
+    );
+    mkdirSync(dirname(plistPath), { recursive: true });
+    writeModeFile(plistPath, "previous-plist\n");
+    const launchctlCalls: string[] = [];
+
+    expect(() => installYoutubeExtractionWorkerLaunchAgent({
+      configPath,
+      manifestPath: release.manifestPath,
+      credentialPath: release.credentialPath,
+      appDescriptorPath: release.appPath,
+      currentPolicyPath: release.policyPath,
+      expectedSchemaPath: release.expectedSchemaPath,
+      secretRoot: privateDir,
+      homeDir,
+      rootDir: release.artifactDir,
+      i031Preflight: GREEN_I031_PREFLIGHT,
+      confirmation: "LOCAL_FULL_PRODUCTION_WORKER_INSTALL",
+      spawn: (_command, args) => {
+        launchctlCalls.push(args.join(" "));
+        return {
+          status: args[0] === "bootstrap" || args[0] === "print" ? 1 : 0,
+          stdout: "",
+          stderr: args[0] === "bootstrap" ? "bootstrap failed" : "unloaded",
+        };
+      },
+    })).toThrow(/bootstrap failed/iu);
+
+    expect(readFileSync(plistPath, "utf8")).toBe("previous-plist\n");
+    expect((lstatSync(plistPath).mode & 0o777)).toBe(0o600);
+    expect(launchctlCalls.filter((call) => call.startsWith("bootstrap "))).toHaveLength(1);
+    expect(launchctlCalls.some((call) => call.startsWith("kickstart "))).toBe(false);
+  });
+
   it("rejects relative paths instead of silently resolving them against cwd", () => {
     expect(() => ensureAbsolutePath("relative/worker.json", "workerArtifactPath"))
       .toThrow(/absolute path/i);
@@ -168,6 +454,10 @@ describe("YTASYNC-OPS deterministic artifact", () => {
       "scripts/youtube-extraction-worker-runner.mjs",
     ]));
     expect(manifestA.artifact_sha256).toMatch(/^[0-9a-f]{64}$/u);
+    expect(manifestA).toMatchObject({
+      lease_seconds: 300,
+      heartbeat_interval_seconds: 30,
+    });
     expect(manifestA.expected_schema_sha256).toBe(sha256File(
       join(process.cwd(), "scripts/manifests/youtube-extraction-expected-schema.json"),
     ));
@@ -198,12 +488,21 @@ describe("YTASYNC-OPS deterministic artifact", () => {
     ));
     expect(readYoutubeExtractionExpectedSchema(canonicalPath)).toMatchObject({
       catalog_fingerprint_components: expect.arrayContaining([
+        "columns",
+        "constraints",
+        "indexes",
         "table_owners",
         "sequence_owners",
         "schema_owners",
         "owner_role_attributes",
         "memberships",
+        "rpc_function_definitions",
+        "internal_scope_function_definition",
       ]),
+      fence_function_signatures: expect.arrayContaining([
+        "private.youtube_extraction_worker_write_fence_is_active(uuid,text,bigint,bigint)",
+      ]),
+      internal_scope_function_signature: "private.verify_full_local_internal_scope()",
       memberships: [
         {
           member: "authenticator",
@@ -244,9 +543,266 @@ describe("YTASYNC-OPS deterministic artifact", () => {
     expect(() => readYoutubeExtractionExpectedSchema(schemaPath))
       .toThrow(/expected schema manifest is invalid/i);
   });
+
+  it("rejects self-consistent shortened artifacts that omit canonical required files", () => {
+    expect(() => buildYoutubeExtractionWorkerArtifactManifest({
+      rootDir: process.cwd(),
+      releaseSha: "0123456789abcdef0123456789abcdef01234567",
+      schemaIdentity: YOUTUBE_EXTRACTION_WORKER_RELEASE_SCHEMA_IDENTITY,
+      allowedSnapshotDigest:
+        "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      includedPaths: [
+        "scripts/youtube-extraction-worker-runner.mjs",
+        "scripts/manifests/youtube-extraction-expected-schema.json",
+        "scripts/templates/com.homecook.youtube-extraction-worker.plist.template",
+      ],
+    }))
+      .toThrow(/required file is missing/i);
+  });
+
+  it("rejects a self-consistent artifact that drifts from the frozen timing contract", () => {
+    const privateDir = createTempDir("yta-artifact-timing-drift-private-");
+    const inputs = createReleaseInputs(privateDir);
+    const manifestPath = inputs.manifestPath;
+    const original = JSON.parse(readFileSync(manifestPath, "utf8"));
+    const driftedBase = {
+      ...original,
+      lease_seconds: 120,
+      artifact_sha256: undefined,
+    };
+    chmodSync(manifestPath, 0o600);
+    writeModeFile(manifestPath, `${JSON.stringify({
+      ...driftedBase,
+      artifact_sha256: sha256Text(stableStringify(driftedBase)),
+    }, null, 2)}\n`, 0o444);
+
+    expect(() => verifyYoutubeExtractionWorkerArtifact(manifestPath))
+      .toThrow(/timing contract is invalid/i);
+  });
+
+  it("rejects a self-consistent artifact that shortens the declared runtime bundle closure", () => {
+    const privateDir = createTempDir("yta-short-runtime-bundle-private-");
+    const inputs = createReleaseInputs(privateDir);
+    const manifestPath = inputs.manifestPath;
+    const bundleManifestRelativePath =
+      "lib/server/youtube-i031-runtime/bundle/manifest.json";
+    const omittedInnerPath = "lib/server/recipe-extraction-lab/extract.mjs";
+    const omittedOuterPath =
+      `lib/server/youtube-i031-runtime/bundle/${omittedInnerPath}`;
+    const bundleManifestPath = join(inputs.artifactDir, bundleManifestRelativePath);
+    const omittedMaterializedPath = join(inputs.artifactDir, omittedOuterPath);
+    const bundleManifest = JSON.parse(readFileSync(bundleManifestPath, "utf8"));
+    delete bundleManifest.files[omittedInnerPath];
+    chmodSync(bundleManifestPath, 0o600);
+    writeModeFile(bundleManifestPath, `${JSON.stringify(bundleManifest, null, 2)}\n`, 0o444);
+    makeRemovable(join(
+      inputs.artifactDir,
+      "lib/server/youtube-i031-runtime/bundle/lib/server/recipe-extraction-lab",
+    ));
+    chmodSync(omittedMaterializedPath, 0o600);
+    unlinkSync(omittedMaterializedPath);
+
+    const outerManifest = JSON.parse(readFileSync(manifestPath, "utf8"));
+    const shortenedFiles = outerManifest.files
+      .filter((file: { path: string }) => file.path !== omittedOuterPath)
+      .map((file: { path: string; sha256: string }) => file.path === bundleManifestRelativePath
+        ? { ...file, sha256: sha256File(bundleManifestPath) }
+        : file);
+    const shortenedBase = {
+      ...outerManifest,
+      files: shortenedFiles,
+    };
+    delete shortenedBase.artifact_sha256;
+    chmodSync(manifestPath, 0o600);
+    writeModeFile(manifestPath, `${JSON.stringify({
+      ...shortenedBase,
+      artifact_sha256: sha256Text(stableStringify(shortenedBase)),
+    }, null, 2)}\n`, 0o444);
+
+    expect(() => verifyYoutubeExtractionWorkerArtifact(manifestPath))
+      .toThrow(/runtime bundle.*closure|required runtime bundle file/iu);
+  });
+
+  it("rejects artifacts whose entrypoint or launchd template path is not attested by the inventory", () => {
+    const privateDir = createTempDir("yta-artifact-path-drift-private-");
+    const inputs = createReleaseInputs(privateDir);
+    const manifestPath = join(inputs.artifactDir, "artifact.json");
+    const original = JSON.parse(readFileSync(manifestPath, "utf8"));
+
+    const withEntrypointDrift = {
+      ...original,
+      entrypoint_relative_path: "scripts/lib/youtube-extraction-worker-runtime.mjs",
+    };
+    const entrypointBase = {
+      ...withEntrypointDrift,
+      artifact_sha256: undefined,
+    };
+    chmodSync(manifestPath, 0o600);
+    writeModeFile(
+      manifestPath,
+      `${JSON.stringify({
+        ...withEntrypointDrift,
+        artifact_sha256: sha256Text(stableStringify(entrypointBase)),
+      }, null, 2)}\n`,
+      0o444,
+    );
+    expect(() => verifyYoutubeExtractionWorkerArtifact(manifestPath))
+      .toThrow(/entrypoint relative path is invalid/i);
+
+    const withLaunchdDrift = {
+      ...original,
+      launchd_template_relative_path: "scripts/lib/youtube-extraction-worker-runtime.mjs",
+    };
+    const launchdBase = {
+      ...withLaunchdDrift,
+      artifact_sha256: undefined,
+    };
+    chmodSync(manifestPath, 0o600);
+    writeModeFile(
+      manifestPath,
+      `${JSON.stringify({
+        ...withLaunchdDrift,
+        artifact_sha256: sha256Text(stableStringify(launchdBase)),
+      }, null, 2)}\n`,
+      0o444,
+    );
+    expect(() => verifyYoutubeExtractionWorkerArtifact(manifestPath))
+      .toThrow(/launchd template relative path is invalid/i);
+  });
 });
 
 describe("YTASYNC-OPS launchd contract", () => {
+  it("requires an external 0700 worker secret root and rejects symlink ancestors", () => {
+    const sandbox = createTempDir("yta-worker-secret-root-");
+    const simulatedRepo = join(sandbox, "repo");
+    const externalRoot = join(sandbox, "secrets");
+    mkdirSync(simulatedRepo, { mode: 0o700 });
+    mkdirSync(externalRoot, { mode: 0o700 });
+
+    expect(() => validateYoutubeExtractionWorkerSecretRoot(simulatedRepo, {
+      repoRoot: simulatedRepo,
+    })).toThrow(/outside.*repository/iu);
+
+    chmodSync(externalRoot, 0o755);
+    expect(() => validateYoutubeExtractionWorkerSecretRoot(externalRoot, {
+      repoRoot: simulatedRepo,
+    })).toThrow(/mode 0700/iu);
+    chmodSync(externalRoot, 0o700);
+
+    const realParent = join(externalRoot, "real-parent");
+    const linkedParent = join(externalRoot, "linked-parent");
+    mkdirSync(realParent, { mode: 0o700 });
+    symlinkSync(realParent, linkedParent);
+    const secretPath = join(realParent, "provider.env");
+    writeModeFile(secretPath, "YOUTUBE_API_KEY=fixture-key\n");
+
+    expect(() => validateYoutubeExtractionWorkerSecretFile(
+      join(linkedParent, "provider.env"),
+      { secretRoot: externalRoot, repoRoot: simulatedRepo },
+    )).toThrow(/symbolic link ancestor/iu);
+    expect(validateYoutubeExtractionWorkerSecretFile(secretPath, {
+      secretRoot: externalRoot,
+      repoRoot: simulatedRepo,
+    })).toBe(realpathSync(secretPath));
+  });
+
+  it("rejects a worker secret root reached through any lexical parent symlink", () => {
+    const sandbox = createTempDir("yta-worker-secret-root-parent-link-");
+    const simulatedRepo = join(sandbox, "repo");
+    const realParent = join(sandbox, "real-parent");
+    const linkedParent = join(sandbox, "linked-parent");
+    const realSecretRoot = join(realParent, "secrets");
+    mkdirSync(simulatedRepo, { mode: 0o700 });
+    mkdirSync(realParent, { mode: 0o700 });
+    mkdirSync(realSecretRoot, { mode: 0o700 });
+    symlinkSync(realParent, linkedParent);
+
+    expect(() => validateYoutubeExtractionWorkerSecretRoot(
+      join(linkedParent, "secrets"),
+      { repoRoot: simulatedRepo },
+    )).toThrow(/symbolic link ancestor/iu);
+  });
+
+  it("rejects symlinked or wrong-owner secret inputs and returns canonical paths", () => {
+    const privateDir = createTempDir("yta-worker-secret-provenance-");
+    const configPath = join(privateDir, ".env.production.local");
+    const configLink = join(privateDir, "config-link");
+    writeModeFile(
+      configPath,
+      "HOMECOOK_YOUTUBE_WORKER_DATA_API_URL=http://127.0.0.1:54321/rest/v1\n",
+    );
+    symlinkSync(configPath, configLink);
+
+    expect(() => validateYoutubeExtractionWorkerConfigPath(configLink))
+      .toThrow(/symbolic link/iu);
+    expect(() => validateYoutubeExtractionWorkerSecretFile(configPath, {
+      expectedUserId: (process.getuid?.() ?? 0) + 1,
+    })).toThrow(/owner/iu);
+    expect(validateYoutubeExtractionWorkerSecretFile(configPath))
+      .toBe(realpathSync(configPath));
+
+    const inputs = createReleaseInputs(privateDir);
+    const credentialLink = join(privateDir, "credential-link.json");
+    symlinkSync(inputs.credentialPath, credentialLink);
+    expect(() => readYoutubeExtractionWorkerCredential(credentialLink))
+      .toThrow(/symbolic link/iu);
+  });
+
+  it.each(["symlink", "0644"] as const)(
+    "rejects a %s provider secret before reading it or invoking i031 commands",
+    (provenance) => {
+      const privateDir = createTempDir(`yta-worker-provider-${provenance}-`);
+      const inputs = createReleaseInputs(privateDir);
+      const homeDir = join(privateDir, "worker-home");
+      const authDir = join(homeDir, ".codex");
+      const configPath = join(privateDir, ".env.production.local");
+      const providerTarget = join(privateDir, "provider.env");
+      const providerPath = provenance === "symlink"
+        ? join(privateDir, "provider-link.env")
+        : providerTarget;
+      const commandMarker = join(privateDir, "codex-invoked");
+      const codexBin = join(privateDir, "fake-codex");
+      mkdirSync(authDir, { recursive: true });
+      writeModeFile(join(authDir, "auth.json"), "{}\n");
+      writeModeFile(codexBin, [
+        "#!/bin/sh",
+        `touch ${JSON.stringify(commandMarker)}`,
+        "if [ \"$1\" = \"--version\" ]; then echo 'codex 0.144.0-alpha.4'; else echo 'Logged in using ChatGPT'; fi",
+        "",
+      ].join("\n"), 0o700);
+      writeModeFile(providerTarget, [
+        "YOUTUBE_API_KEY=fixture-key",
+        `YOUTUBE_I031_CODEX_BIN=${codexBin}`,
+        "",
+      ].join("\n"), provenance === "0644" ? 0o644 : 0o600);
+      if (provenance === "symlink") symlinkSync(providerTarget, providerPath);
+      writeModeFile(configPath, [
+        "HOMECOOK_YOUTUBE_WORKER_DATA_API_URL=http://127.0.0.1:54321/rest/v1",
+        `HOMECOOK_YOUTUBE_WORKER_PROVIDER_SECRET_FILE=${providerPath}`,
+        "HOMECOOK_YOUTUBE_WORKER_ID=fixture-worker",
+        "",
+      ].join("\n"));
+
+      const result = spawnSync(process.execPath, [
+        "scripts/youtube-extraction-worker-mac-production.mjs",
+        "preflight",
+        "--secret-root", privateDir,
+        "--config", configPath,
+        "--manifest", inputs.manifestPath,
+        "--credential", inputs.credentialPath,
+        "--app-descriptor", inputs.appPath,
+        "--policy", inputs.policyPath,
+        "--expected-schema", inputs.expectedSchemaPath,
+        "--home-dir", homeDir,
+        "--user-id", String(process.getuid?.() ?? 0),
+      ], { cwd: process.cwd(), encoding: "utf8" });
+
+      expect(result.status).not.toBe(0);
+      expect(result.stderr).toMatch(provenance === "symlink" ? /symbolic link/iu : /mode/iu);
+      expect(existsSync(commandMarker)).toBe(false);
+    },
+  );
+
   it("renders a plist that runs the worker via env -i and never embeds token contents", () => {
     const homeDir = createTempDir("yta-worker-home-");
     const privateDir = createTempDir("yta-worker-private-");
@@ -264,6 +820,7 @@ describe("YTASYNC-OPS launchd contract", () => {
       appDescriptorPath: inputs.appPath,
       currentPolicyPath: inputs.policyPath,
       expectedSchemaPath: inputs.expectedSchemaPath,
+      secretRoot: privateDir,
       homeDir,
       nodeBin: "/opt/homebrew/bin/node",
       rootDir: inputs.artifactDir,
@@ -275,9 +832,11 @@ describe("YTASYNC-OPS launchd contract", () => {
     expect(plist).toContain(`<string>HOME=${homeDir}</string>`);
     expect(plist).toContain("<string>/opt/homebrew/bin/node</string>");
     expect(plist).toContain("<string>run</string>");
-    expect(plist).toContain(`<string>${configPath}</string>`);
-    expect(plist).toContain(`<string>${inputs.manifestPath}</string>`);
-    expect(plist).toContain(`<string>${inputs.credentialPath}</string>`);
+    expect(plist).toContain("<string>--secret-root</string>");
+    expect(plist).toContain(`<string>${realpathSync(privateDir)}</string>`);
+    expect(plist).toContain(`<string>${realpathSync(configPath)}</string>`);
+    expect(plist).toContain(`<string>${realpathSync(inputs.manifestPath)}</string>`);
+    expect(plist).toContain(`<string>${realpathSync(inputs.credentialPath)}</string>`);
     expect(plist).not.toContain("worker-token");
     expect(plist).not.toContain("HOMECOOK_YOUTUBE_WORKER_DATA_API_URL");
     expect(plist).not.toContain("<key>EnvironmentVariables</key>");
@@ -298,6 +857,7 @@ describe("YTASYNC-OPS launchd contract", () => {
       appDescriptorPath: inputs.appPath,
       currentPolicyPath: inputs.policyPath,
       expectedSchemaPath: inputs.expectedSchemaPath,
+      secretRoot: privateDir,
       homeDir: "/Users/tester",
       rootDir: inputs.artifactDir,
       nodeBin: "/usr/bin/node",
@@ -346,6 +906,7 @@ describe("YTASYNC-OPS launchd contract", () => {
       appDescriptorPath: inputs.appPath,
       currentPolicyPath: inputs.policyPath,
       expectedSchemaPath: inputs.expectedSchemaPath,
+      secretRoot: privateDir,
       homeDir: "/Users/tester",
       rootDir: process.cwd(),
       nodeBin: "/usr/bin/node",
@@ -379,6 +940,7 @@ describe("YTASYNC-OPS launchd contract", () => {
       appDescriptorPath: inputs.appPath,
       currentPolicyPath: inputs.policyPath,
       expectedSchemaPath: inputs.expectedSchemaPath,
+      secretRoot: privateDir,
       homeDir: "/Users/tester",
       rootDir: inputs.artifactDir,
       nodeBin: "/usr/bin/node",
@@ -403,6 +965,7 @@ describe("YTASYNC-OPS launchd contract", () => {
       appDescriptorPath: inputs.appPath,
       currentPolicyPath: inputs.policyPath,
       expectedSchemaPath: inputs.expectedSchemaPath,
+      secretRoot: privateDir,
       homeDir: "/Users/tester",
       rootDir: inputs.artifactDir,
       nodeBin: "/usr/bin/node",
@@ -429,6 +992,7 @@ describe("YTASYNC-OPS launchd contract", () => {
       appDescriptorPath: configPath,
       currentPolicyPath: configPath,
       expectedSchemaPath: configPath,
+      secretRoot: privateDir,
       homeDir: "/Users/tester",
       nodeBin: "/usr/bin/node",
       rootDir: "/Users/tester/homecook",
@@ -503,6 +1067,7 @@ describe("YTASYNC-OPS preflight, drain, rollback, credential", () => {
     const result = spawnSync(process.execPath, [
       "scripts/youtube-extraction-worker-mac-production.mjs",
       "preflight",
+      "--secret-root", privateDir,
       "--manifest", inputs.manifestPath,
       "--credential", inputs.credentialPath,
       "--app-descriptor", inputs.appPath,
@@ -713,6 +1278,8 @@ describe("YTASYNC-OPS preflight, drain, rollback, credential", () => {
         ),
         "run",
         "--dry-run",
+        "--secret-root",
+        privateDir,
         "--config",
         configPath,
         "--manifest",
@@ -727,7 +1294,7 @@ describe("YTASYNC-OPS preflight, drain, rollback, credential", () => {
         inputs.expectedSchemaPath,
       ],
       {
-        cwd: privateDir,
+        cwd: inputs.artifactDir,
         encoding: "utf8",
       },
     );
@@ -741,6 +1308,8 @@ describe("YTASYNC-OPS preflight, drain, rollback, credential", () => {
       [
         "scripts/youtube-extraction-worker-mac-production.mjs",
         "credential-bootstrap",
+        "--secret-root",
+        privateDir,
         "--token-file",
         inputs.tokenPath,
         "--generation",
@@ -771,8 +1340,9 @@ describe("YTASYNC-OPS preflight, drain, rollback, credential", () => {
 
   it("runs an immutable i031 artifact through claim, persistence, finalize, and SIGTERM", async () => {
     const privateDir = createTempDir("yta-worker-non-dry-run-");
-    const fixtureRoot = join(privateDir, "fixture-root");
+    const fixtureRoot = createTempDir("yta-worker-fixture-root-");
     for (const relativePath of [
+      "lib/server/youtube-extraction-worker-timing.json",
       "scripts/youtube-extraction-worker-runner.mjs",
       "scripts/lib/youtube-extraction-worker-artifact.mjs",
       "scripts/lib/youtube-extraction-worker-ops.mjs",
@@ -786,6 +1356,12 @@ describe("YTASYNC-OPS preflight, drain, rollback, credential", () => {
     }
     const fixtureBundle = join(fixtureRoot, "lib/server/youtube-i031-runtime/bundle");
     mkdirSync(fixtureBundle, { recursive: true });
+    for (const relativePath of YOUTUBE_EXTRACTION_RUNTIME_BUNDLE_REQUIRED_FILES) {
+      if (relativePath === "worker.mjs") continue;
+      const destination = join(fixtureBundle, relativePath);
+      mkdirSync(join(destination, ".."), { recursive: true });
+      writeModeFile(destination, "// deterministic fixture\n");
+    }
     writeModeFile(join(fixtureBundle, "worker.mjs"), `
       import { writeFile } from "node:fs/promises";
       const args = Object.fromEntries(process.argv.slice(2).reduce((all, value, index, list) => {
@@ -841,7 +1417,22 @@ describe("YTASYNC-OPS preflight, drain, rollback, credential", () => {
       }));
       process.disconnect();
     `, 0o700);
+    const fixtureBundleManifestPath = join(fixtureBundle, "manifest.json");
+    const fixtureBundleManifest = {
+      schemaVersion: 1,
+      files: Object.fromEntries(
+        YOUTUBE_EXTRACTION_RUNTIME_BUNDLE_REQUIRED_FILES.map(
+          (relativePath) => [relativePath, sha256File(join(fixtureBundle, relativePath))],
+        ),
+      ),
+    };
+    writeModeFile(
+      fixtureBundleManifestPath,
+      JSON.stringify(fixtureBundleManifest, null, 2),
+    );
     const providerPath = join(privateDir, "provider.env");
+    const dataApiKeyPath = join(privateDir, "data-api-publishable.key");
+    const runtimePath = join(privateDir, "runtime");
     const configPath = join(privateDir, ".env.production.local");
     const fakeHome = join(privateDir, "home");
     const fakeBin = join(privateDir, "bin");
@@ -895,13 +1486,17 @@ describe("YTASYNC-OPS preflight, drain, rollback, credential", () => {
       `YOUTUBE_I031_CODEX_BIN=${codexBin}`,
       "",
     ].join("\n"));
+    writeModeFile(dataApiKeyPath, "local-publishable-key\n");
+    mkdirSync(runtimePath, { mode: 0o700 });
 
     let observedAuthorization: string | undefined;
+    let observedApiKey: string | undefined;
     const rpcCalls: string[] = [];
     let resolveSucceeded!: () => void;
     const succeeded = new Promise<void>((resolve) => { resolveSucceeded = resolve; });
     const server = createServer((request, response) => {
       observedAuthorization = request.headers.authorization;
+      observedApiKey = request.headers.apikey as string | undefined;
       let body = "";
       request.setEncoding("utf8");
       request.on("data", (chunk) => { body += chunk; });
@@ -916,7 +1511,7 @@ describe("YTASYNC-OPS preflight, drain, rollback, credential", () => {
             policy_snapshot_digest: inputs.digest,
             result_affecting_options: {},
           },
-          claim_youtube_extractor_permit: { permit_generation: 3 },
+          claim_youtube_extractor_permit: { claimed: true, permit_generation: 3 },
           start_youtube_extraction_attempt: { applied: true },
           heartbeat_youtube_extraction_job: { updated: true },
           heartbeat_youtube_extractor_permit: { updated: true },
@@ -947,7 +1542,9 @@ describe("YTASYNC-OPS preflight, drain, rollback, credential", () => {
     if (!address || typeof address === "string") throw new Error("missing test address");
     writeModeFile(configPath, [
       `HOMECOOK_YOUTUBE_WORKER_DATA_API_URL=http://127.0.0.1:${address.port}/rest/v1`,
+      `HOMECOOK_YOUTUBE_WORKER_DATA_API_KEY_FILE=${dataApiKeyPath}`,
       `HOMECOOK_YOUTUBE_WORKER_PROVIDER_SECRET_FILE=${providerPath}`,
+      `HOMECOOK_YOUTUBE_WORKER_RUNTIME_ROOT=${runtimePath}`,
       "HOMECOOK_YOUTUBE_WORKER_ID=test-worker",
       "HOMECOOK_YOUTUBE_WORKER_POLL_INTERVAL_MS=10",
       "",
@@ -956,6 +1553,7 @@ describe("YTASYNC-OPS preflight, drain, rollback, credential", () => {
     const child = spawn(process.execPath, [
       join(inputs.artifactDir, "scripts/youtube-extraction-worker-runner.mjs"),
       "run",
+      "--secret-root", privateDir,
       "--config", configPath,
       "--manifest", inputs.manifestPath,
       "--credential", inputs.credentialPath,
@@ -963,10 +1561,10 @@ describe("YTASYNC-OPS preflight, drain, rollback, credential", () => {
       "--policy", inputs.policyPath,
       "--expected-schema", inputs.expectedSchemaPath,
     ], {
-      cwd: privateDir,
+      cwd: fixtureRoot,
       env: {
         ...process.env,
-        HOME: fakeHome,
+        HOME: realpathSync(fakeHome),
         PATH: fakeBin,
       },
       stdio: ["ignore", "pipe", "pipe"],
@@ -986,6 +1584,7 @@ describe("YTASYNC-OPS preflight, drain, rollback, credential", () => {
       const exitCode = await childExit;
       expect(exitCode, stderr).toBe(0);
       expect(observedAuthorization).toBe("Bearer worker-token");
+      expect(observedApiKey).toBe("local-publishable-key");
       expect(rpcCalls).toEqual(expect.arrayContaining([
         "claim_youtube_extraction_job",
         "read_youtube_extraction_worker_catalog",

@@ -1,5 +1,14 @@
-import { createHash, createHmac } from "node:crypto";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { createHmac } from "node:crypto";
+import {
+  chmodSync,
+  existsSync,
+  lstatSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -16,6 +25,14 @@ import {
   loadYoutubeExtractionEnqueueReadiness,
   parseYoutubeExtractionMutationCount,
 } from "@/lib/server/youtube-async-extraction-routes";
+import {
+  buildYoutubeExtractionAppDescriptor,
+  materializeYoutubeExtractionWorkerArtifact,
+  sha256File,
+  sha256Text,
+  stableStringify,
+  YOUTUBE_EXTRACTION_WORKER_RELEASE_SCHEMA_IDENTITY,
+} from "../scripts/lib/youtube-extraction-worker-artifact.mjs";
 
 const USER_ID = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const JOB_ID = "11111111-1111-4111-8111-111111111111";
@@ -65,70 +82,120 @@ function buildHandlers(overrides: Record<string, unknown> = {}) {
   return { handlers: createYoutubeAsyncExtractionHandlers(deps), deps, rpc };
 }
 
+function makeTreeWritable(path: string) {
+  if (!existsSync(path)) return;
+  const stat = lstatSync(path);
+  if (!stat.isDirectory()) {
+    chmodSync(path, 0o600);
+    return;
+  }
+  chmodSync(path, 0o700);
+  for (const entry of readdirSync(path)) {
+    makeTreeWritable(join(path, entry));
+  }
+}
+
+function createCanonicalReadinessFixture(prefix: string) {
+  const root = mkdtempSync(join(tmpdir(), prefix));
+  const releaseSha = "1".repeat(40);
+  const digest = YOUTUBE_ASYNC_POLICY.snapshotDigest;
+  const schemaIdentity = YOUTUBE_EXTRACTION_WORKER_RELEASE_SCHEMA_IDENTITY;
+  const artifactDir = join(root, "artifact");
+  const materialized = materializeYoutubeExtractionWorkerArtifact({
+    rootDir: process.cwd(),
+    outputDir: artifactDir,
+    releaseSha,
+    schemaIdentity,
+    allowedSnapshotDigest: digest,
+  });
+  makeTreeWritable(artifactDir);
+  const expectedSchemaPath = join(
+    artifactDir,
+    "scripts/manifests/youtube-extraction-expected-schema.json",
+  );
+  const expectedSchema = JSON.parse(readFileSync(expectedSchemaPath, "utf8")) as {
+    catalog_fingerprint: string;
+  };
+  const descriptor = buildYoutubeExtractionAppDescriptor({
+    releaseSha,
+    schemaIdentity,
+    expectedPolicyVersion: 1,
+    expectedPolicySnapshotDigest: digest,
+    artifactSha256: materialized.manifest.artifact_sha256,
+    expectedSchemaSha256: materialized.manifest.expected_schema_sha256,
+  });
+  const descriptorPath = join(root, "app.json");
+  writeFileSync(descriptorPath, JSON.stringify(descriptor));
+  const env = {
+    HOMECOOK_YOUTUBE_EXTRACTION_APP_DESCRIPTOR_PATH: descriptorPath,
+    HOMECOOK_YOUTUBE_EXTRACTION_EXPECTED_SCHEMA_PATH: expectedSchemaPath,
+    HOMECOOK_YOUTUBE_EXTRACTION_WORKER_MANIFEST_PATH: materialized.manifest_path,
+  };
+  const row = {
+    ready: true,
+    release_sha: releaseSha,
+    schema_identity: schemaIdentity,
+    policy_version: 1,
+    policy_snapshot_digest: digest,
+    allowed_snapshot_digest: digest,
+    fingerprint_key_version: "2",
+    previous_fingerprint_key_version: "1",
+    previous_fingerprint_valid_until: "2026-08-14T00:00:00.000Z",
+    credential_expires_at: "2026-08-14T00:00:00.000Z",
+    catalog_fingerprint: expectedSchema.catalog_fingerprint,
+  };
+  return {
+    artifactDir,
+    descriptor,
+    descriptorPath,
+    digest,
+    env,
+    expectedSchemaPath,
+    materialized,
+    root,
+    row,
+  };
+}
+
+async function expectReleaseMetadataQueueUnavailable(
+  fixture: ReturnType<typeof createCanonicalReadinessFixture>,
+) {
+  const readinessRpc = vi.fn(async () => ({ data: fixture.row, error: null }));
+  const { handlers, rpc } = buildHandlers({
+    enqueueReadiness: vi.fn(async () => loadYoutubeExtractionEnqueueReadiness(
+      readinessRpc,
+      fixture.env,
+      new Date("2026-08-13T00:00:00.000Z"),
+    )),
+  });
+  const response = await handlers.enqueue(new Request("http://localhost", {
+    method: "POST",
+    body: JSON.stringify({ youtube_url: "https://youtu.be/abc123DEF45" }),
+  }));
+  expect(response.status).toBe(503);
+  expect((await response.json()).error.code).toBe("QUEUE_UNAVAILABLE");
+  expect(rpc).not.toHaveBeenCalledWith(
+    "enqueue_youtube_extraction_job",
+    expect.anything(),
+  );
+}
+
 describe("YTASYNC Stage 3 API revise RED", () => {
   it("loads the installed app/schema/worker and DB credential gate as one readiness decision", async () => {
-    const root = mkdtempSync(join(tmpdir(), "homecook-yta-app-gate-"));
-    const descriptorPath = join(root, "app.json");
-    const schemaPath = join(root, "schema.json");
-    const workerPath = join(root, "worker.json");
-    const releaseSha = "1".repeat(40);
-    const digest = YOUTUBE_ASYNC_POLICY.snapshotDigest;
-    const schemaIdentity = "youtube-extraction-worker-schema-v1";
-    const artifactDigest = "a".repeat(64);
-    const catalogFingerprint = "b".repeat(64);
-    const env = {
-      HOMECOOK_YOUTUBE_EXTRACTION_APP_DESCRIPTOR_PATH: descriptorPath,
-      HOMECOOK_YOUTUBE_EXTRACTION_EXPECTED_SCHEMA_PATH: schemaPath,
-      HOMECOOK_YOUTUBE_EXTRACTION_WORKER_MANIFEST_PATH: workerPath,
-    };
-    const expectedSchema = JSON.stringify({
-      schema: "homecook.youtube-extraction-expected-schema",
-      version: 1,
-      schema_identity: schemaIdentity,
-      catalog_fingerprint: catalogFingerprint,
-    });
-    const expectedSchemaSha256 = createHash("sha256")
-      .update(expectedSchema)
-      .digest("hex");
-    const descriptor = {
-      schema: "homecook.youtube-extraction-app-descriptor",
-      version: 1,
-      release_sha: releaseSha,
-      schema_identity: schemaIdentity,
-      expected_policy_version: 1,
-      expected_policy_snapshot_digest: digest,
-      artifact_sha256: artifactDigest,
-      expected_schema_sha256: expectedSchemaSha256,
-    };
-    writeFileSync(descriptorPath, JSON.stringify(descriptor));
-    writeFileSync(schemaPath, expectedSchema);
-    writeFileSync(workerPath, JSON.stringify({
-      schema: "homecook.youtube-extraction-worker-artifact",
-      version: 1,
-      deterministic: true,
-      release_sha: releaseSha,
-      schema_identity: schemaIdentity,
-      policy_version: 1,
-      allowed_snapshot_digest: digest,
-      artifact_sha256: artifactDigest,
-      expected_schema_sha256: expectedSchemaSha256,
-    }));
-    const rpc = vi.fn(async () => ({
-      data: {
-        ready: true,
-        release_sha: releaseSha,
-        schema_identity: schemaIdentity,
-        policy_version: 1,
-        policy_snapshot_digest: digest,
-        allowed_snapshot_digest: digest,
-        fingerprint_key_version: "2",
-        previous_fingerprint_key_version: "1",
-        previous_fingerprint_valid_until: "2026-08-14T00:00:00.000Z",
-        credential_expires_at: "2026-08-14T00:00:00.000Z",
-        catalog_fingerprint: catalogFingerprint,
-      },
-      error: null,
-    }));
+    const fixture = createCanonicalReadinessFixture("homecook-yta-app-gate-");
+    const {
+      descriptor,
+      descriptorPath,
+      digest,
+      env,
+      expectedSchemaPath: schemaPath,
+      materialized,
+      root,
+      row,
+    } = fixture;
+    const expectedSchema = readFileSync(schemaPath, "utf8");
+    const workerPath = materialized.manifest_path;
+    const rpc = vi.fn(async () => ({ data: row, error: null }));
     try {
       expect(await loadYoutubeExtractionEnqueueReadiness(
         rpc,
@@ -194,11 +261,11 @@ describe("YTASYNC Stage 3 API revise RED", () => {
         version: 1,
         deterministic: true,
         release_sha: "2".repeat(40),
-        schema_identity: schemaIdentity,
+        schema_identity: descriptor.schema_identity,
         policy_version: 1,
         allowed_snapshot_digest: digest,
-        artifact_sha256: artifactDigest,
-        expected_schema_sha256: expectedSchemaSha256,
+        artifact_sha256: descriptor.artifact_sha256,
+        expected_schema_sha256: descriptor.expected_schema_sha256,
       }));
       expect(await loadYoutubeExtractionEnqueueReadiness(
         rpc,
@@ -206,56 +273,134 @@ describe("YTASYNC Stage 3 API revise RED", () => {
         new Date("2026-08-13T00:00:00.000Z"),
       )).toBeNull();
     } finally {
+      makeTreeWritable(root);
       rmSync(root, { force: true, recursive: true });
     }
   });
 
+  it("fails enqueue closed for an abbreviated expected-schema authority manifest", async () => {
+    const fixture = createCanonicalReadinessFixture("homecook-yta-short-schema-");
+    try {
+      const abbreviatedSchema = JSON.stringify({
+        schema: "homecook.youtube-extraction-expected-schema",
+        version: 1,
+        schema_identity: fixture.descriptor.schema_identity,
+        catalog_fingerprint: fixture.row.catalog_fingerprint,
+      });
+      writeFileSync(fixture.expectedSchemaPath, abbreviatedSchema);
+      const expectedSchemaSha256 = sha256File(fixture.expectedSchemaPath);
+      writeFileSync(fixture.descriptorPath, JSON.stringify({
+        ...fixture.descriptor,
+        expected_schema_sha256: expectedSchemaSha256,
+      }));
+      writeFileSync(fixture.materialized.manifest_path, JSON.stringify({
+        ...fixture.materialized.manifest,
+        expected_schema_sha256: expectedSchemaSha256,
+      }));
+
+      await expectReleaseMetadataQueueUnavailable(fixture);
+    } finally {
+      makeTreeWritable(fixture.root);
+      rmSync(fixture.root, { force: true, recursive: true });
+    }
+  });
+
+  it("fails enqueue closed for an abbreviated worker artifact manifest", async () => {
+    const fixture = createCanonicalReadinessFixture("homecook-yta-short-worker-");
+    try {
+      const worker = fixture.materialized.manifest;
+      writeFileSync(fixture.materialized.manifest_path, JSON.stringify({
+        schema: worker.schema,
+        version: worker.version,
+        deterministic: worker.deterministic,
+        release_sha: worker.release_sha,
+        schema_identity: worker.schema_identity,
+        policy_version: worker.policy_version,
+        allowed_snapshot_digest: worker.allowed_snapshot_digest,
+        artifact_sha256: worker.artifact_sha256,
+        expected_schema_sha256: worker.expected_schema_sha256,
+      }));
+
+      await expectReleaseMetadataQueueUnavailable(fixture);
+    } finally {
+      makeTreeWritable(fixture.root);
+      rmSync(fixture.root, { force: true, recursive: true });
+    }
+  });
+
+  it("fails enqueue closed when release metadata contains a duplicate JSON key", async () => {
+    const fixture = createCanonicalReadinessFixture("homecook-yta-duplicate-json-");
+    try {
+      const descriptor = JSON.stringify(fixture.descriptor).replace(
+        '"version":1',
+        '"version":1,"version":1',
+      );
+      writeFileSync(fixture.descriptorPath, descriptor);
+
+      await expectReleaseMetadataQueueUnavailable(fixture);
+    } finally {
+      makeTreeWritable(fixture.root);
+      rmSync(fixture.root, { force: true, recursive: true });
+    }
+  });
+
+  it("fails enqueue closed when an inventoried worker artifact file drifts", async () => {
+    const fixture = createCanonicalReadinessFixture("homecook-yta-worker-drift-");
+    try {
+      const workerEntrypoint = join(
+        fixture.artifactDir,
+        "scripts/youtube-extraction-worker-runner.mjs",
+      );
+      writeFileSync(workerEntrypoint, `${readFileSync(workerEntrypoint, "utf8")}\n// drift\n`);
+
+      await expectReleaseMetadataQueueUnavailable(fixture);
+    } finally {
+      makeTreeWritable(fixture.root);
+      rmSync(fixture.root, { force: true, recursive: true });
+    }
+  });
+
+  it("fails enqueue closed when the worker inventory omits a materialized file", async () => {
+    const fixture = createCanonicalReadinessFixture("homecook-yta-worker-inventory-");
+    try {
+      const manifestWithoutDigest = Object.fromEntries(
+        Object.entries(fixture.materialized.manifest).filter(
+          ([key]) => key !== "artifact_sha256",
+        ),
+      );
+      const shortenedManifest = {
+        ...manifestWithoutDigest,
+        files: manifestWithoutDigest.files.filter(
+          (file: { path: string }) =>
+            file.path !== "scripts/youtube-extraction-worker-runner.mjs",
+        ),
+      };
+      const artifactSha256 = sha256Text(stableStringify(shortenedManifest));
+      writeFileSync(fixture.materialized.manifest_path, JSON.stringify({
+        ...shortenedManifest,
+        artifact_sha256: artifactSha256,
+      }));
+      writeFileSync(fixture.descriptorPath, JSON.stringify({
+        ...fixture.descriptor,
+        artifact_sha256: artifactSha256,
+      }));
+
+      await expectReleaseMetadataQueueUnavailable(fixture);
+    } finally {
+      makeTreeWritable(fixture.root);
+      rmSync(fixture.root, { force: true, recursive: true });
+    }
+  });
+
   it("fails readiness closed on catalog drift or credential cutoff", async () => {
-    const root = mkdtempSync(join(tmpdir(), "homecook-yta-catalog-gate-"));
-    const descriptorPath = join(root, "app.json");
-    const schemaPath = join(root, "schema.json");
-    const workerPath = join(root, "worker.json");
-    const releaseSha = "1".repeat(40);
-    const digest = YOUTUBE_ASYNC_POLICY.snapshotDigest;
-    const artifactDigest = "a".repeat(64);
-    const catalogFingerprint = "b".repeat(64);
-    const schemaIdentity = "youtube-extraction-worker-schema-v1";
-    const schema = JSON.stringify({
-      schema: "homecook.youtube-extraction-expected-schema",
-      version: 1,
-      schema_identity: schemaIdentity,
-      catalog_fingerprint: catalogFingerprint,
-    });
-    const schemaDigest = createHash("sha256").update(schema).digest("hex");
-    writeFileSync(schemaPath, schema);
-    for (const [path, value] of [
-      [descriptorPath, {
-        schema: "homecook.youtube-extraction-app-descriptor", version: 1,
-        release_sha: releaseSha, schema_identity: schemaIdentity,
-        expected_policy_version: 1, expected_policy_snapshot_digest: digest,
-        artifact_sha256: artifactDigest, expected_schema_sha256: schemaDigest,
-      }],
-      [workerPath, {
-        schema: "homecook.youtube-extraction-worker-artifact", version: 1,
-        deterministic: true, release_sha: releaseSha,
-        schema_identity: schemaIdentity, policy_version: 1,
-        allowed_snapshot_digest: digest, artifact_sha256: artifactDigest,
-        expected_schema_sha256: schemaDigest,
-      }],
-    ] as const) writeFileSync(path, JSON.stringify(value));
-    const env = {
-      HOMECOOK_YOUTUBE_EXTRACTION_APP_DESCRIPTOR_PATH: descriptorPath,
-      HOMECOOK_YOUTUBE_EXTRACTION_EXPECTED_SCHEMA_PATH: schemaPath,
-      HOMECOOK_YOUTUBE_EXTRACTION_WORKER_MANIFEST_PATH: workerPath,
-    };
+    const fixture = createCanonicalReadinessFixture("homecook-yta-catalog-gate-");
+    const { env, expectedSchemaPath: schemaPath, root, row } = fixture;
+    const schema = readFileSync(schemaPath, "utf8");
     const base = {
-      ready: true, release_sha: releaseSha, schema_identity: schemaIdentity,
-      policy_version: 1, policy_snapshot_digest: digest,
-      allowed_snapshot_digest: digest, fingerprint_key_version: "2",
+      ...row,
       previous_fingerprint_key_version: null,
       previous_fingerprint_valid_until: null,
       credential_expires_at: "2026-08-13T00:31:00.000Z",
-      catalog_fingerprint: catalogFingerprint,
     };
     try {
       const cutoffRpc = vi.fn(async () => ({
@@ -287,6 +432,7 @@ describe("YTASYNC Stage 3 API revise RED", () => {
       });
       expect(readFileSync(schemaPath, "utf8")).toBe(schema);
     } finally {
+      makeTreeWritable(root);
       rmSync(root, { force: true, recursive: true });
     }
   });

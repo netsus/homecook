@@ -1,19 +1,19 @@
 # YouTube extraction worker runbook
 
-Status: Stage 2 runnable artifact; production activation Manual Only
-Last updated: 2026-08-13
+Status: runnable artifact; guarded local-only worker install available
+Last updated: 2026-08-14
 
 ## Scope
 
-This runbook covers deterministic standalone artifact build, runnable worker preflight, launchd plist rendering, credential metadata rehearsal, and dry-run lifecycle plans for `com.homecook.youtube-extraction-worker`. The artifact can poll the restricted loopback PostgREST endpoint and execute i031, but this document does not authorize installing or starting it on a production host.
+This runbook covers deterministic standalone artifact build, runnable worker preflight, launchd plist rendering, credential metadata rehearsal, and the rollback-safe local-only install path for `com.homecook.youtube-extraction-worker`. The artifact polls only the restricted loopback PostgREST endpoint and executes i031.
+
+The actual install path is allowed only after the operator separately records the immutable backup, exact full-local target identity, controlled additive migration, restricted credential rotation, same-SHA app/worker attestation, and enabled-policy cutover. The installer requires both `--execute` and the exact confirmation phrase; otherwise it remains a no-write rehearsal.
 
 It does not authorize:
 
-- production or staging install
 - DB migration apply
 - policy enable
 - credential issuance
-- launchctl execution on a real production host
 - queue mutation or rollback execution
 
 ## Inputs
@@ -62,7 +62,29 @@ The manifest is deterministic:
 - read-only materialized files and directories
 - entrypoint that runs from the artifact directory without the repository cwd
 
-## Credential bootstrap and rotation dry-run
+## Local credential issuance and rotation metadata
+
+Why: issue a short-lived restricted worker JWT from this Mac's local Supabase signing key without copying that key into the worker secret directory or printing the JWT.
+
+```bash
+node scripts/youtube-extraction-worker-local-credential.mjs issue \
+  --jwt-keys-file /absolute/private/full-local-supabase/jwt_keys \
+  --secret-root /absolute/private/youtube-extraction \
+  --token-file /absolute/private/youtube-extraction/youtube-worker-v2.jwt \
+  --metadata-output /absolute/private/youtube-extraction/worker-credential-v2.json \
+  --generation 2 \
+  --release-sha 0123456789abcdef0123456789abcdef01234567 \
+  --schema-identity youtube-extraction-worker-schema-v1 \
+  --allowed-snapshot-digest 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef \
+  --ttl-seconds 518400 \
+  --confirm-production LOCAL_FULL_PRODUCTION_WORKER_CREDENTIAL
+```
+
+The signing-key file must be an operator-owned mode-`0600` regular file outside both the repository and worker secret root. Token and metadata outputs are create-only mode-`0600` files in the exact mode-`0700` worker secret root. The maximum lifetime is seven days; issue and rotate the next generation before expiry, then retire the previous token only after the replacement worker is healthy.
+
+The following commands rehearse the metadata shape without issuing a JWT or changing the database.
+
+## Credential metadata dry-run
 
 Why: the repo must validate file provenance without issuing a JWT.
 
@@ -154,9 +176,9 @@ HOMECOOK_YOUTUBE_EXTRACTION_FINGERPRINT_HMAC_KEY_V1=<server-only secret>
 
 Missing or mismatched descriptor, schema, manifest, policy snapshot, release SHA, credential expiry, or key version makes enqueue return `503 QUEUE_UNAVAILABLE` before the write RPC. Rotation adds the previous version secret by its versioned name; it never mixes a null version with a digest.
 
-## launchd dry-run lifecycle
+## launchd lifecycle
 
-Why: rehearse the exact install/start/stop/restart/status/uninstall contract without touching production.
+Why: rehearse the exact lifecycle first, then install only the already-attested local worker with atomic plist replacement and automatic rollback.
 
 Install:
 
@@ -169,9 +191,29 @@ node scripts/youtube-extraction-worker-mac-production.mjs install \
   --app-descriptor /absolute/private/app-descriptor.json \
   --policy /absolute/private/current-policy.json \
   --expected-schema /absolute/private/worker-release/scripts/manifests/youtube-extraction-expected-schema.json \
+  --secret-root /absolute/private \
   --home-dir /Users/operator \
   --root-dir /absolute/private/worker-release
 ```
+
+Actual local-only install, after every prerequisite above is green:
+
+```bash
+node scripts/youtube-extraction-worker-mac-production.mjs install \
+  --execute \
+  --confirm-production LOCAL_FULL_PRODUCTION_WORKER_INSTALL \
+  --config /absolute/private/.env.production.local \
+  --manifest /absolute/private/worker-release/artifact.json \
+  --credential /absolute/private/worker-credential.json \
+  --app-descriptor /absolute/private/app-descriptor.json \
+  --policy /absolute/private/current-policy.json \
+  --expected-schema /absolute/private/worker-release/scripts/manifests/youtube-extraction-expected-schema.json \
+  --secret-root /absolute/private \
+  --home-dir /Users/operator \
+  --root-dir /absolute/private/worker-release
+```
+
+The actual installer writes the plist as mode `0600` through a create-only staging file, unloads only the exact worker label, and requires the replacement service to reach `running`. Any bootstrap, kickstart, or readiness failure restores the previous plist and service. It never applies a migration, enables policy, issues a credential, or copies a secret.
 
 Other lifecycle commands:
 

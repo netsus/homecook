@@ -64,12 +64,13 @@ growth toast와 시각 계층은 가까워도 source collection, delivery key, d
 
 - toast는 한 번에 최대 1개만 완전 표시하고 나머지는 badge/list에서 회복한다.
 - title은 최대 2줄, null 또는 정제 실패는 `YouTube 레시피` fallback을 쓴다.
-- CTA는 card 아래 full-width로 내려 44px tap target과 safe-area를 보존한다.
+- CTA는 card 아래의 내용 폭(content-width) compact control로 두되 최소 44px tap target, 문구 전체 표시, safe-area를 보존한다.
+- YouTube와 growth toast가 동시에 생기면 `320px`에서는 YouTube를 먼저 한 건만 완전 표시하고, 닫힘/자동 종료 뒤 growth를 같은 presentation slot에 넘긴다. 대기 중인 채널은 delivered/seen 타이머를 시작하지 않으며 각 badge/list authority에서 유실 없이 회복한다.
 - panel header/footer를 고정할 경우 body만 스크롤하고 primary CTA가 footer에 가리지 않게 한다.
 
 ## Desktop Adaptation
 
-- toast는 우상단의 제한 폭 stack, panel은 우측 drawer 또는 동일 정보 구조의 popover를 사용한다.
+- toast는 공통 shell의 우하단 제한 폭 stack, panel은 우측 drawer 또는 동일 정보 구조의 popover를 사용한다.
 - 최대 visible toast 수와 간격은 shell token을 따르며 content primary CTA를 덮지 않는다.
 - panel focus trap, Escape close, trigger focus return을 제공한다.
 
@@ -91,6 +92,7 @@ growth toast와 시각 계층은 가까워도 source collection, delivery key, d
 ## Delivered, Seen, Archive
 
 - 실제 toast가 렌더된 delivery key만 delivered batch에 포함한다.
+- 공통 presentation slot은 시각 공간과 `aria-live` 읽기 순서만 중재한다. YouTube/growth의 source collection, delivery key, delivered/seen mutation은 계속 각 채널이 소유한다.
 - delivered 성공은 seen이 아니다. badge는 사용자가 list/card/CTA를 확인해 seen mutation이 성공한 뒤 줄어든다.
 - already-delivered/seen, 없는 값, 타인 값은 UI에서 존재 차이를 드러내지 않는다.
 - archive는 terminal 30일 범위의 durable list이고 infinite cursor order를 바꾸지 않는다.

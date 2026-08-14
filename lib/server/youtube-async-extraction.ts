@@ -376,6 +376,7 @@ interface YoutubeExtractionWorkerAdapter {
     jobId: string;
     workerId: string;
     leaseGeneration: number;
+    permitGeneration: number;
     errorCode: YoutubeExtractionWorkerFailureCode;
   }): Promise<boolean>;
   releasePermit(input: {
@@ -386,9 +387,12 @@ interface YoutubeExtractionWorkerAdapter {
     jobId: string;
     workerId: string;
     leaseGeneration: number;
+    permitGeneration: number;
   }): Promise<boolean>;
   heartbeatPermit(input: {
+    jobId: string;
     workerId: string;
+    leaseGeneration: number;
     permitGeneration: number;
   }): Promise<boolean>;
 }
@@ -459,9 +463,12 @@ export function createYoutubeExtractionWorker({
                 jobId: job.id,
                 workerId,
                 leaseGeneration: job.leaseGeneration,
+                permitGeneration: permit.permitGeneration,
               }),
               adapter.heartbeatPermit({
+                jobId: job.id,
                 workerId,
+                leaseGeneration: job.leaseGeneration,
                 permitGeneration: permit.permitGeneration,
               }),
             ]);
@@ -510,6 +517,7 @@ export function createYoutubeExtractionWorker({
             jobId: job.id,
             workerId,
             leaseGeneration: job.leaseGeneration,
+            permitGeneration: permit.permitGeneration,
             errorCode: classifyYoutubeExtractionWorkerError(error),
           });
           return "failed" as const;

@@ -103,28 +103,28 @@ describe("YouTube async extraction Stage 1 contract", () => {
     expect(readme).toContain(postMergePreflight);
   });
 
-  it("records independent internal 1.5 approval and high-risk authority metadata", () => {
+  it("projects the implemented slice and final high-risk authority metadata", () => {
     expect(workItem.status).toMatchObject({
-      lifecycle: "planned",
+      lifecycle: "in_progress",
       approval_state: "codex_approved",
       verification_status: "passed",
       evaluation_status: "passed",
-      evaluation_round: 2,
+      evaluation_round: 3,
       blocked_reason_code: null,
     });
     expect(status).toMatchObject({
-      lifecycle: "planned",
+      lifecycle: "in_progress",
       approval_state: "codex_approved",
       verification_status: "passed",
       evaluation_status: "passed",
-      evaluation_round: 2,
+      evaluation_round: 3,
       blocked_reason_code: null,
     });
     expect(workItem.status.last_evaluator_result).toContain(
-      "019ff643-988a-7013-9edb-4d4f61986930",
+      "eb8d915b44b63611904760375f7c0606e629b6e0",
     );
     expect(workItem.status.last_evaluator_result).toContain(
-      "50598f7ce7b30dccab148a575738db23bb9f1eed",
+      "PASS — Findings 없음",
     );
     expect(reviewEvidence).toContain("**PASS**");
     expect(reviewEvidence).toContain("P0 0 / P1 0 / P2 0");
@@ -145,6 +145,9 @@ describe("YouTube async extraction Stage 1 contract", () => {
   });
 
   it("records the final frozen plan provenance without rewriting the plan artifact", () => {
+    const serializedWorkItem = JSON.stringify(workItem);
+    const exactTuple = "official tuple requirements 1.7.32 screen 1.5.36 Flow 1.3.34 DB 1.3.34 API 1.2.39";
+
     expect(readme).toContain(
       "/Users/cwj/01_vibe_coding/homecook/.omx/plans/youtube-background-extraction-notification-plan-20260808.md",
     );
@@ -157,6 +160,22 @@ describe("YouTube async extraction Stage 1 contract", () => {
       "b560b60ff758171e1d52ad56b2a63a2e1877cd762d1f691c9cea32c753f8d332",
     );
     expect(readme).not.toContain("873 lines");
+
+    expect(workItem.dependencies).toContain(exactTuple);
+    expect(serializedWorkItem).toContain(
+      "7906f9ec975f309c310b2275714873cebb78e109770f885f09878e5c6bbed57a",
+    );
+    expect(serializedWorkItem).toContain("991");
+    expect(serializedWorkItem).toContain("019ffb44-5614-7af3-86a9-4ebd50977123");
+    expect(serializedWorkItem).toContain("approved-plan-sha256-and-991-line-lock");
+    expect(serializedWorkItem).not.toContain("1.7.31");
+    expect(serializedWorkItem).not.toContain("1.5.35");
+    expect(serializedWorkItem).not.toContain("1.3.33");
+    expect(serializedWorkItem).not.toContain("1.2.38");
+    expect(serializedWorkItem).not.toContain(
+      "b560b60ff758171e1d52ad56b2a63a2e1877cd762d1f691c9cea32c753f8d332",
+    );
+    expect(serializedWorkItem).not.toContain("873 lines");
   });
 
   it("rebaselines the backend evidence to the merged local-only repair contract", () => {

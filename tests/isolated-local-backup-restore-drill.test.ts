@@ -50,6 +50,21 @@ describe("isolated local Supabase backup and restore drill", () => {
     ]);
   });
 
+  it("maps the current two-segment tenant/project Storage prefix without hardcoding its value", () => {
+    expect(mapStorageRowsToPayloadReferences([
+      {
+        bucket_id: "fixture",
+        name: "owner-a/object.bin",
+        version: "version-1",
+      },
+    ], ["tenant-a/project-a/fixture/owner-a/object.bin/version-1"])).toEqual([
+      {
+        path: "tenant-a/project-a/fixture/owner-a/object.bin/version-1",
+        reference: "fixture/owner-a/object.bin",
+      },
+    ]);
+  });
+
   it("fails closed when one database reference cannot resolve one exact payload", () => {
     const rows = [{
       bucket_id: "fixture",

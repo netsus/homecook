@@ -4,7 +4,10 @@ import React from "react";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { MealAddTargetBadge } from "@/components/planner/meal-add-target-badge";
+import {
+  formatMealAddTargetLabel,
+  MealAddTargetBadge,
+} from "@/components/planner/meal-add-target-badge";
 
 describe("MealAddTargetBadge", () => {
   afterEach(() => {
@@ -26,5 +29,9 @@ describe("MealAddTargetBadge", () => {
     expect(icon?.className.baseVal).toContain("shrink-0");
     expect(label?.className).toContain("leading-none");
     expect(badge.textContent).toContain("6/15 저녁");
+  });
+
+  it("keeps the planner slot identifier in routing while localizing its display label", () => {
+    expect(formatMealAddTargetLabel("2026-08-21", "dinner")).toBe("8/21 저녁");
   });
 });

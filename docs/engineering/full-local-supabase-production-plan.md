@@ -362,7 +362,7 @@ Docker Compose의 `environment`나 `.env`에 secret 값을 직접 넣지 않는�
 
 작업:
 
-1. production commit SHA, remote project ref, DB version, Auth provider 설정 digest를 기록한다.
+1. **역사 기록(실행 금지):** 당시 production commit SHA, remote project ref, DB version, Auth provider 설정 digest를 기록하려던 단계다. 현재는 remote project ref를 조회하지 않고 canonical local-only runbook의 full-local target identity와 immutable backup manifest만 기록한다.
 2. remote `auth.*` relation/column inventory를 먼저 만들고 `auth.users`, `auth.identities`, `auth.sessions`, `auth.refresh_tokens`, `auth.flow_state`와 version-gap table의 include/exclude/classification을 기록한다.
 3. owner UUID별 private row와 image reference를 inventory한다.
 4. 현재 로컬 검증 volume은 운영 승격하지 않고 격리 표시한다.

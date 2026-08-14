@@ -10,11 +10,15 @@
 >
 > endpoint 수, path, method, request/response field, wrapper, HTTP status와 public error code는 모두 유지한다. public API 영향은 정확히 N/A이고 이 버전 bump는 내부 운영 authority를 공식 5종에 동기화하기 위한 것이다.
 
+> **2026-08-15 contract-evolution addendum — 공개 YouTube 가져오기 background consumer 전환**
+>
+> `/recipes/new/youtube`는 기존 validate 후 `POST /recipes/youtube/extraction-jobs`의 `202 Accepted`를 소비하고 provider 완료를 기다리지 않는다. terminal 결과는 기존 list/delivered/seen/session-read 계약으로 복구한다. 신규 endpoint/status/error/field는 없고 `POST /recipes/youtube/extract`와 `submission_mode=sync_wait`는 다른 동기 consumer 호환을 위해 유지한다. 이 addendum은 아래 Quick Import UI·auto-register 유지 문장을 대체한다.
+
 > **2026-08-12 contract-evolution — YouTube async job과 durable notification public API**
 >
 > 사용자는 2026-08-12 신규 보호 endpoint 6개와 background job 상태/알림 계약을 명시적으로 승인했다. 기준은 `origin/master@d38ee2e4a4c8cafc00dce713919c3f3e8df2bdda`다. PR #1343 exact head `0d4496e71ba6db81dcaf8283fb3f4905447c55cf`의 독립 review task `019ff598-233b-72c1-92f5-4372596ede7a`가 요구한 retry/consumed/reaper/error 보강을 반영했다. 수정 계획 전체는 독립 plan reviewer task `019ff4f7-806c-7151-b646-cab784606cde`가 `Verdict PASS`, `Findings 없음`, `차단 없음`, exact SHA-256 `b560b60ff758171e1d52ad56b2a63a2e1877cd762d1f691c9cea32c753f8d332`, line count `873`, baseline `origin/master@d38ee2e4a4c8cafc00dce713919c3f3e8df2bdda`로 재승인했다. PR 자체의 exact-head 독립 계약 review와 current-head CI는 별도 merge gate다.
 >
-> 모든 endpoint는 기존 `/api/v1` prefix와 `{ success, data, error }` wrapper를 사용한다. wrapper `error`는 실패 시 `{ code, message, fields[] }`, 성공 시 `null`이다. 신규 public job status는 `queued | processing | succeeded | failed | expired`다. `expired`는 succeeded job의 unconsumed draft session TTL read projection이며 DB job terminal status를 바꾸지 않는다. 기존 `POST /recipes/youtube/extract` success data와 `/recipes/new/youtube` Quick Import UI·auto-register 의미는 유지한다.
+> 모든 endpoint는 기존 `/api/v1` prefix와 `{ success, data, error }` wrapper를 사용한다. wrapper `error`는 실패 시 `{ code, message, fields[] }`, 성공 시 `null`이다. 신규 public job status는 `queued | processing | succeeded | failed | expired`다. `expired`는 succeeded job의 unconsumed draft session TTL read projection이며 DB job terminal status를 바꾸지 않는다. 기존 `POST /recipes/youtube/extract` success data는 유지하고 `/recipes/new/youtube`는 위 addendum대로 background endpoint를 소비한다.
 
 ## 0-YT-ASYNC. 공통 projection과 ownership
 
@@ -246,13 +250,13 @@
 | 401 | `UNAUTHORIZED` | 로그인 필요 |
 | 422 | `VALIDATION_ERROR` | body/UUID/array/limit 오류 |
 
-### 기존 `POST /recipes/youtube/extract`와 Quick Import 호환
+### 기존 `POST /recipes/youtube/extract` 호환과 standalone consumer
 
 - endpoint, request, 성공 `data`, 기존 classification/session/register 의미는 삭제·변경하지 않는다. async-enabled release에서는 route가 `submission_mode=sync_wait` job을 enqueue하고 worker 결과를 기다릴 뿐 provider를 직접 실행하지 않는다.
 - waiter-local start budget은 30초이며 실제 start authority는 `started_at IS NOT NULL`이다. budget 안에 시작하지 못하면 그 HTTP request만 `503 QUEUE_BUSY`를 반환하고 shared job은 queued/processing으로 남는다.
 - provider 시작 뒤 기존 i031 20분 hard timeout + finalize grace를 넘기면 `504 EXTRACTION_TIMEOUT`을 반환한다. client disconnect/timeout은 job을 cancel/failed로 바꾸지 않으며 terminal 결과는 durable notification으로 회복한다.
 - worker terminal 결과는 기존 public code로 매핑한다: non-recipe → 기존 `422 NOT_RECIPE_VIDEO`, quota → 기존 `429 QUOTA_EXCEEDED`, provider/runtime/attempt exhaustion → 기존 `502 PROVIDER_ERROR`. 새 worker internal code를 기존 sync wrapper에 노출하지 않는다.
-- 정상 Quick Import register 성공 뒤 관련 job을 seen 처리하고 같은 delivery key의 현재-screen toast를 억제한다.
+- `/recipes/new/youtube`는 validate·preview 뒤 background enqueue하고 accepted UI에서 이탈을 허용한다. terminal 성공은 전역 알림의 결과 CTA로 검수/등록에 연결하며 자동 등록하지 않는다.
 
 | HTTP | code | 의미 |
 | --- | --- | --- |
@@ -261,7 +265,7 @@
 
 ### Rejected alternatives / 후속 범위
 
-- 기존 동기 endpoint 삭제, Quick Import async UI 전환, 범용 성장 알림 재사용은 이번 public contract에서 기각했다.
+- 기존 동기 endpoint 삭제와 범용 성장 알림 재사용은 기각했다. standalone 공개 화면의 async UI 전환은 2026-08-15 사용자 승인으로 활성화했다.
 - Web Push subscription/outbox/service worker endpoint는 1차 범위가 아니며 별도 승인 전 추가하지 않는다.
 
 > **2026-08-08 contract-evolution 1A — session refresh 내부 계약 교정**
@@ -3507,8 +3511,7 @@ GET /api/v1/recipes/youtube/recipio/check?youtube_url={url}
 | 422 | INVALID_URL | 유튜브 URL 형식 아님 또는 video_id 파싱 실패 |
 | 500 | INTERNAL_ERROR | DB 조회 실패 |
 
-> `/recipes/new/youtube` quick import 화면은 이 endpoint로 중복 확인을 먼저 수행한 뒤, 중복이 없을 때만 기존 §6-1 validate, §6-2 extract, §6-4 register를 순차 호출한다.
-> 자동 등록 조건을 만족하지 않는 draft는 기존 `YT_IMPORT` 검수 화면으로 이동한다.
+> `/recipes/new/youtube` standalone 화면은 validate 미리보기 뒤 §0-YT-ASYNC의 `POST /recipes/youtube/extraction-jobs`를 호출한다. terminal 성공은 전역 알림과 session-read를 거쳐 기존 `YT_IMPORT` 검수/등록 화면으로 이동하며 자동 등록하지 않는다.
 
 ---
 
