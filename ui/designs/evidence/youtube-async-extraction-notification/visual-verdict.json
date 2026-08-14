@@ -3,7 +3,7 @@
   "verdict": "pass",
   "category_match": true,
   "differences": [],
-  "reasoning": "확정 artifact의 YT_IMPORT visual language와 app-shell drawer 패턴을 유지하면서 exact code head 803b40ed992658b489fb5bd22a0bfb41d8d06b1d, tree 46b330d9e8f47bf32d83f810391241a02647164f의 24개 screenshot을 비교했다. planner context badge는 저장 식별자 dinner 대신 사용자 표시명 '저녁'을 명확히 보여준다. consumed individual toast는 핵심 제목 '이미 등록한 레시피예요'와 '레시피 보기' CTA를 한 위계로 표시하고, drawer row도 같은 destination 의미를 유지한다. 320px 200% failure drawer에서 제목·안전 메시지·retry CTA 전체 label과 bounding box가 dialog 및 viewport 안에 보이며, mobile toast는 HOME primary controls를 덮지 않고 desktop archive는 헤더·닫기·스크롤 영역이 분리된다. UNAUTHORIZED 전환 focus handoff, 복원 heading focus와 탭 순환은 브라우저 activeElement assertion으로 보완됐다. blocker 또는 major 시각 차이는 없으며 이 판정은 구현 task 결과일 뿐 독립 authority 승인을 대신하지 않는다.",
+  "reasoning": "확정 artifact의 YT_IMPORT visual language와 app-shell drawer 패턴을 유지하면서 exact code head 1b9824258b679c6944af508ab6d0ec3d11cb223c, tree 00261e7634f1cdc4729855e665501f017b1e57f4의 24개 screenshot을 비교했다. planner context badge는 저장 식별자 dinner 대신 사용자 표시명 '저녁'을 명확히 보여준다. consumed individual toast는 핵심 제목 '이미 등록한 레시피예요'와 '레시피 보기' CTA를 한 위계로 표시하고, drawer row도 같은 destination 의미를 유지한다. 320px 200% failure drawer에서 제목·안전 메시지·retry CTA 전체 label과 bounding box가 dialog 및 viewport 안에 보이며, mobile toast는 HOME primary controls를 덮지 않고 desktop archive는 헤더·닫기·스크롤 영역이 분리된다. UNAUTHORIZED 전환 focus handoff, 복원 heading focus와 탭 순환은 브라우저 activeElement assertion으로 보완됐다. blocker 또는 major 시각 차이는 없으며 이 판정은 구현 task 결과일 뿐 독립 authority 승인을 대신하지 않는다.",
   "suggestions": [
     "실기기 safe-area와 가상 키보드 가림은 Manual Only 검증에서 다시 확인한다."
   ]

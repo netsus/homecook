@@ -1,10 +1,10 @@
 # YouTube async extraction Stage 4 evidence
 
-- exact code head: `803b40ed992658b489fb5bd22a0bfb41d8d06b1d`
-- exact code tree: `46b330d9e8f47bf32d83f810391241a02647164f`
+- exact code head: `1b9824258b679c6944af508ab6d0ec3d11cb223c`
+- exact code tree: `00261e7634f1cdc4729855e665501f017b1e57f4`
 - evidence relation: screenshot과 deterministic browser evidence는 위 code head/tree에서 생성했고, 이후 evidence-only commit은 제품 tree를 변경하지 않는다.
 - isolated app: `http://127.0.0.1:3217`
-- captured: `2026-08-14T02:41:16Z`
+- captured: `2026-08-14T02:53:40Z`
 - remote/cloud Supabase access: `0`
 - operational local Supabase/app 3100 mutation or use: `0`
 

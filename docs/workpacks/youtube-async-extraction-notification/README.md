@@ -128,13 +128,13 @@
 ## Design Status
 
 - [ ] 임시 UI (temporary) — Stage 1 설계 계약만 잠겼고 실제 구현 evidence는 없음
-- [x] 리뷰 대기 (pending-review) — 최신 product-design/backend/security findings를 수정한 Stage 4 code head `803b40ed992658b489fb5bd22a0bfb41d8d06b1d`의 390/320/desktop evidence와 portable exploratory QA 97점이 생성됐으며 새 PR head의 독립 backend/security 및 authority 재검토 대기 중
+- [x] 리뷰 대기 (pending-review) — 최신 product-design/backend/security findings를 수정한 Stage 4 code head `1b9824258b679c6944af508ab6d0ec3d11cb223c`의 390/320/desktop evidence와 portable exploratory QA 97점이 생성됐으며 새 PR head의 독립 backend/security 및 authority 재검토 대기 중
 - [ ] 확정 (confirmed) — Stage 5와 별도 final authority가 current frontend head를 blocker 0으로 승인한 뒤 전환
 - [ ] N/A — BE-only 슬라이스
 
 ### Stage 4 Frontend Evidence
 
-- Implementation base/code head/tree: `25e8da8b04c2322f68d8f54837135399d7586da7` → `803b40ed992658b489fb5bd22a0bfb41d8d06b1d` / `46b330d9e8f47bf32d83f810391241a02647164f`
+- Implementation base/code head/tree: `25e8da8b04c2322f68d8f54837135399d7586da7` → `1b9824258b679c6944af508ab6d0ec3d11cb223c` / `00261e7634f1cdc4729855e665501f017b1e57f4`
 - Screenshot manifest: `ui/designs/evidence/youtube-async-extraction-notification/manifest.json`
 - Visual verdict: `ui/designs/evidence/youtube-async-extraction-notification/visual-verdict.json` — `98/100`, pass (구현 task 판정이며 독립 authority 승인 아님)
 - Exploratory QA: `ui/designs/evidence/youtube-async-extraction-notification/exploratory-qa.json` 및 tracked `portable-exploratory-qa/` raw bundle — `97/100`, 42/46 covered, finding 0

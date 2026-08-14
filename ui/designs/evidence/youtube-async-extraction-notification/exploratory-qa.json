@@ -1,7 +1,7 @@
 {
   "status": "pass",
   "score": 97,
-  "implementation_head": "803b40ed992658b489fb5bd22a0bfb41d8d06b1d",
+  "implementation_head": "1b9824258b679c6944af508ab6d0ec3d11cb223c",
   "base_url": "http://127.0.0.1:3217",
   "devices": [
     "desktop-chrome",
