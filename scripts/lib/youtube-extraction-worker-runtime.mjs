@@ -1,5 +1,16 @@
 import { execFile, spawn } from "node:child_process";
-import { access, cp, lstat, mkdtemp, readFile, realpath, rm, stat } from "node:fs/promises";
+import {
+  access,
+  chmod,
+  cp,
+  lstat,
+  mkdtemp,
+  readFile,
+  readdir,
+  realpath,
+  rm,
+  stat,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
@@ -784,6 +795,19 @@ async function readBoundedJson(pathname, maximumBytes) {
   return value;
 }
 
+async function makeExtractionWorkspaceRemovable(directory) {
+  await chmod(directory, 0o700).catch(() => {});
+  const entries = await readdir(directory, { withFileTypes: true }).catch(() => []);
+  await Promise.all(entries.map(async (entry) => {
+    const pathname = path.join(directory, entry.name);
+    if (entry.isDirectory()) {
+      await makeExtractionWorkspaceRemovable(pathname);
+      return;
+    }
+    await chmod(pathname, 0o600).catch(() => {});
+  }));
+}
+
 /**
  * @param {{
  *   artifactRoot: string,
@@ -930,6 +954,7 @@ export function createStandaloneYoutubeI031Extractor({
       } finally {
         childRpcBridge?.close();
         terminateProcess(child);
+        await makeExtractionWorkspaceRemovable(workspace);
         await rm(workspace, { recursive: true, force: true });
       }
     },

@@ -74,6 +74,22 @@ export const YOUTUBE_EXTRACTION_WORKER_REQUIRED_ARTIFACT_FILES = Object.freeze([
   YOUTUBE_EXTRACTION_WORKER_ENTRYPOINT_RELATIVE_PATH,
   YOUTUBE_EXTRACTION_WORKER_LAUNCHD_TEMPLATE_RELATIVE_PATH,
 ]);
+const YOUTUBE_EXTRACTION_RUNTIME_BUNDLE_RELATIVE_ROOT =
+  "lib/server/youtube-i031-runtime/bundle";
+export const YOUTUBE_EXTRACTION_RUNTIME_BUNDLE_REQUIRED_FILES = Object.freeze([
+  "lib/server/recipe-extraction-lab/candidate-packets.mjs",
+  "lib/server/recipe-extraction-lab/extract.mjs",
+  "lib/server/recipe-extraction-lab/prompt.mjs",
+  "lib/server/recipe-extraction-lab/public-source-packets.mjs",
+  "lib/server/recipe-extraction-lab/source-evidence.mjs",
+  "scripts/recipe-loop/extract-video-frames.py",
+  "scripts/recipe-loop/lib/codex-vision-client.mjs",
+  "scripts/recipe-loop/lib/codex-vision-keyframes-client.mjs",
+  "scripts/recipe-loop/lib/screen-ocr-scout.mjs",
+  "scripts/recipe-loop/macos-vision-ocr.swift",
+  "scripts/recipe-loop/snapshot-video.mjs",
+  "worker.mjs",
+]);
 
 export function ensureNonEmptyString(value, label) {
   if (typeof value !== "string" || value.trim().length === 0) {
@@ -417,6 +433,7 @@ export function buildYoutubeExtractionWorkerArtifactManifest({
   assertRequiredArtifactFileInventory(
     new Set(fileManifest.map((file) => file.path)),
   );
+  assertRuntimeBundleClosure(normalizedRootDir, fileManifest);
   const expectedSchemaSha = sha256File(resolve(
     normalizedRootDir,
     EXPECTED_SCHEMA_RELATIVE_PATH,
@@ -749,6 +766,7 @@ export function verifyYoutubeExtractionWorkerArtifact(path) {
       throw new Error(`worker artifact file drift: ${file.path}`);
     }
   }
+  assertRuntimeBundleClosure(artifactRoot, value.files);
   assertRequiredArtifactFileInventory(manifestFiles);
   assertArtifactRelativePath(
     value.entrypoint_relative_path,
@@ -777,6 +795,57 @@ export function verifyYoutubeExtractionWorkerArtifact(path) {
     throw new Error("worker artifact expected schema digest is invalid.");
   }
   return value;
+}
+
+function assertRuntimeBundleClosure(artifactRoot, inventoryEntries) {
+  const bundleManifestRelativePath =
+    `${YOUTUBE_EXTRACTION_RUNTIME_BUNDLE_RELATIVE_ROOT}/manifest.json`;
+  const bundleManifestPath = resolve(artifactRoot, bundleManifestRelativePath);
+  const bundleManifest = readJsonFile(
+    bundleManifestPath,
+    "worker runtime bundle manifest",
+  );
+  if (
+    bundleManifest?.schemaVersion !== 1
+    || !bundleManifest.files
+    || typeof bundleManifest.files !== "object"
+    || Array.isArray(bundleManifest.files)
+  ) {
+    throw new Error("worker runtime bundle closure manifest is invalid.");
+  }
+
+  const declaredPaths = Object.keys(bundleManifest.files).sort();
+  const requiredPaths = [...YOUTUBE_EXTRACTION_RUNTIME_BUNDLE_REQUIRED_FILES].sort();
+  if (JSON.stringify(declaredPaths) !== JSON.stringify(requiredPaths)) {
+    throw new Error("worker runtime bundle closure does not match required files.");
+  }
+
+  const inventory = new Map(inventoryEntries.map((entry) => [entry.path, entry.sha256]));
+  const declaredOuterPaths = [...inventory.keys()]
+    .filter((path) => path.startsWith(`${YOUTUBE_EXTRACTION_RUNTIME_BUNDLE_RELATIVE_ROOT}/`))
+    .sort();
+  const requiredOuterPaths = [
+    bundleManifestRelativePath,
+    ...requiredPaths.map((path) =>
+      `${YOUTUBE_EXTRACTION_RUNTIME_BUNDLE_RELATIVE_ROOT}/${path}`),
+  ].sort();
+  if (JSON.stringify(declaredOuterPaths) !== JSON.stringify(requiredOuterPaths)) {
+    throw new Error("worker runtime bundle closure inventory is invalid.");
+  }
+
+  for (const relativePath of requiredPaths) {
+    const declaredSha = bundleManifest.files[relativePath];
+    const outerPath = `${YOUTUBE_EXTRACTION_RUNTIME_BUNDLE_RELATIVE_ROOT}/${relativePath}`;
+    const materializedPath = resolve(artifactRoot, outerPath);
+    if (
+      typeof declaredSha !== "string"
+      || !/^[0-9a-f]{64}$/u.test(declaredSha)
+      || inventory.get(outerPath) !== declaredSha
+      || sha256File(materializedPath) !== declaredSha
+    ) {
+      throw new Error(`worker runtime bundle closure drift: ${relativePath}`);
+    }
+  }
 }
 
 function assertRequiredArtifactFileInventory(manifestFiles) {

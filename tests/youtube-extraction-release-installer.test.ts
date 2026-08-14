@@ -9,6 +9,7 @@ import {
   readdirSync,
   rmSync,
   symlinkSync,
+  unlinkSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -30,6 +31,7 @@ import {
   sha256Text,
   stableStringify,
   verifyYoutubeExtractionWorkerArtifact,
+  YOUTUBE_EXTRACTION_RUNTIME_BUNDLE_REQUIRED_FILES,
   YOUTUBE_EXTRACTION_WORKER_LABEL,
   YOUTUBE_EXTRACTION_WORKER_RELEASE_SCHEMA_IDENTITY,
 } from "../scripts/lib/youtube-extraction-worker-artifact.mjs";
@@ -277,6 +279,49 @@ describe("YTASYNC-OPS deterministic artifact", () => {
       ],
     }))
       .toThrow(/required file is missing/i);
+  });
+
+  it("rejects a self-consistent artifact that shortens the declared runtime bundle closure", () => {
+    const privateDir = createTempDir("yta-short-runtime-bundle-private-");
+    const inputs = createReleaseInputs(privateDir);
+    const manifestPath = inputs.manifestPath;
+    const bundleManifestRelativePath =
+      "lib/server/youtube-i031-runtime/bundle/manifest.json";
+    const omittedInnerPath = "lib/server/recipe-extraction-lab/extract.mjs";
+    const omittedOuterPath =
+      `lib/server/youtube-i031-runtime/bundle/${omittedInnerPath}`;
+    const bundleManifestPath = join(inputs.artifactDir, bundleManifestRelativePath);
+    const omittedMaterializedPath = join(inputs.artifactDir, omittedOuterPath);
+    const bundleManifest = JSON.parse(readFileSync(bundleManifestPath, "utf8"));
+    delete bundleManifest.files[omittedInnerPath];
+    chmodSync(bundleManifestPath, 0o600);
+    writeModeFile(bundleManifestPath, `${JSON.stringify(bundleManifest, null, 2)}\n`, 0o444);
+    makeRemovable(join(
+      inputs.artifactDir,
+      "lib/server/youtube-i031-runtime/bundle/lib/server/recipe-extraction-lab",
+    ));
+    chmodSync(omittedMaterializedPath, 0o600);
+    unlinkSync(omittedMaterializedPath);
+
+    const outerManifest = JSON.parse(readFileSync(manifestPath, "utf8"));
+    const shortenedFiles = outerManifest.files
+      .filter((file: { path: string }) => file.path !== omittedOuterPath)
+      .map((file: { path: string; sha256: string }) => file.path === bundleManifestRelativePath
+        ? { ...file, sha256: sha256File(bundleManifestPath) }
+        : file);
+    const shortenedBase = {
+      ...outerManifest,
+      files: shortenedFiles,
+    };
+    delete shortenedBase.artifact_sha256;
+    chmodSync(manifestPath, 0o600);
+    writeModeFile(manifestPath, `${JSON.stringify({
+      ...shortenedBase,
+      artifact_sha256: sha256Text(stableStringify(shortenedBase)),
+    }, null, 2)}\n`, 0o444);
+
+    expect(() => verifyYoutubeExtractionWorkerArtifact(manifestPath))
+      .toThrow(/runtime bundle.*closure|required runtime bundle file/iu);
   });
 
   it("rejects artifacts whose entrypoint or launchd template path is not attested by the inventory", () => {
@@ -1011,10 +1056,12 @@ describe("YTASYNC-OPS preflight, drain, rollback, credential", () => {
     }
     const fixtureBundle = join(fixtureRoot, "lib/server/youtube-i031-runtime/bundle");
     mkdirSync(fixtureBundle, { recursive: true });
-    writeModeFile(join(fixtureBundle, "manifest.json"), JSON.stringify({
-      schema: "homecook.youtube-i031-runtime-bundle",
-      version: 1,
-    }));
+    for (const relativePath of YOUTUBE_EXTRACTION_RUNTIME_BUNDLE_REQUIRED_FILES) {
+      if (relativePath === "worker.mjs") continue;
+      const destination = join(fixtureBundle, relativePath);
+      mkdirSync(join(destination, ".."), { recursive: true });
+      writeModeFile(destination, "// deterministic fixture\n");
+    }
     writeModeFile(join(fixtureBundle, "worker.mjs"), `
       import { writeFile } from "node:fs/promises";
       const args = Object.fromEntries(process.argv.slice(2).reduce((all, value, index, list) => {
@@ -1070,6 +1117,19 @@ describe("YTASYNC-OPS preflight, drain, rollback, credential", () => {
       }));
       process.disconnect();
     `, 0o700);
+    const fixtureBundleManifestPath = join(fixtureBundle, "manifest.json");
+    const fixtureBundleManifest = {
+      schemaVersion: 1,
+      files: Object.fromEntries(
+        YOUTUBE_EXTRACTION_RUNTIME_BUNDLE_REQUIRED_FILES.map(
+          (relativePath) => [relativePath, sha256File(join(fixtureBundle, relativePath))],
+        ),
+      ),
+    };
+    writeModeFile(
+      fixtureBundleManifestPath,
+      JSON.stringify(fixtureBundleManifest, null, 2),
+    );
     const providerPath = join(privateDir, "provider.env");
     const configPath = join(privateDir, ".env.production.local");
     const fakeHome = join(privateDir, "home");
