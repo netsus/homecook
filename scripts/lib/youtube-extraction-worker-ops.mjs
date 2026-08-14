@@ -1,5 +1,5 @@
 import { existsSync, lstatSync, readFileSync, realpathSync } from "node:fs";
-import { dirname, isAbsolute, relative, resolve, sep } from "node:path";
+import { dirname, isAbsolute, parse, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import {
@@ -77,6 +77,21 @@ function isContainedPath(parentPath, childPath) {
     || (!relativePath.startsWith(`..${sep}`) && relativePath !== ".." && !isAbsolute(relativePath));
 }
 
+function assertNoSymlinkInLexicalPath(candidatePath, label) {
+  const normalizedPath = ensureAbsolutePath(candidatePath, label);
+  const rootPath = parse(normalizedPath).root;
+  let currentPath = rootPath;
+  for (const component of normalizedPath.slice(rootPath.length).split(sep).filter(Boolean)) {
+    currentPath = resolve(currentPath, component);
+    if (!existsSync(currentPath)) {
+      throw new Error(`${label} does not exist: ${currentPath}`);
+    }
+    if (lstatSync(currentPath).isSymbolicLink()) {
+      throw new Error(`${label} must not have a symbolic link ancestor: ${currentPath}`);
+    }
+  }
+}
+
 function assertNoSymlinkBelowRoot(rootPath, candidatePath, label) {
   const relativePath = relative(rootPath, candidatePath);
   if (!isContainedPath(rootPath, candidatePath)) {
@@ -103,6 +118,7 @@ export function validateYoutubeExtractionWorkerSecretRoot(secretRoot, {
   repoRoot = process.cwd(),
 } = {}) {
   const normalizedRoot = ensureAbsolutePath(secretRoot, "worker secret root");
+  assertNoSymlinkInLexicalPath(normalizedRoot, "worker secret root");
   if (!existsSync(normalizedRoot)) {
     throw new Error(`worker secret root does not exist: ${normalizedRoot}`);
   }

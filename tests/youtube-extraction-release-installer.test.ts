@@ -57,7 +57,7 @@ const GREEN_I031_PREFLIGHT = Object.freeze({
 });
 
 function createTempDir(prefix: string) {
-  const directory = mkdtempSync(join(tmpdir(), prefix));
+  const directory = realpathSync(mkdtempSync(join(tmpdir(), prefix)));
   tempDirs.push(directory);
   return directory;
 }
@@ -294,6 +294,23 @@ describe("YTASYNC-OPS launchd contract", () => {
       secretRoot: externalRoot,
       repoRoot: simulatedRepo,
     })).toBe(realpathSync(secretPath));
+  });
+
+  it("rejects a worker secret root reached through any lexical parent symlink", () => {
+    const sandbox = createTempDir("yta-worker-secret-root-parent-link-");
+    const simulatedRepo = join(sandbox, "repo");
+    const realParent = join(sandbox, "real-parent");
+    const linkedParent = join(sandbox, "linked-parent");
+    const realSecretRoot = join(realParent, "secrets");
+    mkdirSync(simulatedRepo, { mode: 0o700 });
+    mkdirSync(realParent, { mode: 0o700 });
+    mkdirSync(realSecretRoot, { mode: 0o700 });
+    symlinkSync(realParent, linkedParent);
+
+    expect(() => validateYoutubeExtractionWorkerSecretRoot(
+      join(linkedParent, "secrets"),
+      { repoRoot: simulatedRepo },
+    )).toThrow(/symbolic link ancestor/iu);
   });
 
   it("rejects symlinked or wrong-owner secret inputs and returns canonical paths", () => {
