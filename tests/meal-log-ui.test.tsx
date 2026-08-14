@@ -48,6 +48,8 @@ describe("MEAL_LOG day-first screen", () => {
     const group = await screen.findByRole("radiogroup", { name: "식사 기록 날짜 선택" });
     const radios = screen.getAllByRole("radio");
     expect(group.contains(radios[0])).toBe(true);
+    expect(radios.every((radio) => radio.parentElement?.getAttribute("role") === "none"))
+      .toBe(true);
     expect(radios.filter((radio) => radio.getAttribute("aria-checked") === "true"))
       .toHaveLength(1);
 

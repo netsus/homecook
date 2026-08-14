@@ -420,7 +420,7 @@ export function MealLogScreen({ date, onDateChange }: MealLogScreenProps) {
           {dates.map((item, index) => {
             const value = new Date(`${item}T00:00:00.000Z`);
             return (
-              <li className="w-11 shrink-0 snap-start" key={item}>
+              <li className="w-11 shrink-0 snap-start" key={item} role="none">
                 <button aria-checked={item === date} aria-label={`${compactDate(item)} ${WEEKDAYS[value.getUTCDay()]}요일 선택${days[item]?.entries.length ? ", 기록 있음" : ""}`} className={`flex min-h-11 w-11 flex-col items-center justify-center rounded-[var(--radius-control)] text-xs font-bold ${item === date ? "bg-[var(--brand-primary-text)] text-[var(--text-inverse)]" : "text-[var(--text-2)]"}`} onClick={() => onDateChange(item)} onKeyDown={(event) => handleDateRadioKeyDown(event, index)} ref={(node) => { if (node) dateRadioRefs.current.set(item, node); else dateRadioRefs.current.delete(item); }} role="radio" tabIndex={item === date ? 0 : -1} type="button">
                   <span>{WEEKDAYS[value.getUTCDay()]}</span><span>{Number(item.slice(8))}</span>{days[item]?.entries.length ? <span aria-hidden="true">•</span> : null}
                 </button>
