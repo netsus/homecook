@@ -363,8 +363,11 @@ describe("YTASYNC Stage 3 API revise RED", () => {
   it("fails enqueue closed when the worker inventory omits a materialized file", async () => {
     const fixture = createCanonicalReadinessFixture("homecook-yta-worker-inventory-");
     try {
-      const manifestWithoutDigest = { ...fixture.materialized.manifest };
-      delete manifestWithoutDigest.artifact_sha256;
+      const manifestWithoutDigest = Object.fromEntries(
+        Object.entries(fixture.materialized.manifest).filter(
+          ([key]) => key !== "artifact_sha256",
+        ),
+      );
       const shortenedManifest = {
         ...manifestWithoutDigest,
         files: manifestWithoutDigest.files.filter(
