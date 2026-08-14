@@ -1458,18 +1458,28 @@ describe("YTASYNC-OPS preflight, drain, rollback, credential", () => {
     ]) {
       writeModeFile(join(fakeBin, executable), "#!/bin/sh\necho ok\n", 0o700);
     }
+    const getconfBin = join(fakeBin, "getconf");
+    writeModeFile(
+      getconfBin,
+      "#!/bin/sh\nprintf '/var/folders/zz/homecook/T/\\n'\n",
+      0o700,
+    );
     const fixtureRuntimePath = join(
       fixtureRoot,
       "scripts/lib/youtube-extraction-worker-runtime.mjs",
     );
     const fixtureRuntimeSource = readFileSync(fixtureRuntimePath, "utf8");
     expect(fixtureRuntimeSource).toContain("platform = process.platform,");
+    const fixtureDarwinRuntimeSource = fixtureRuntimeSource
+      .replaceAll("platform = process.platform,", 'platform = "darwin",')
+      .replace('"/usr/bin/getconf"', JSON.stringify(getconfBin));
+    expect(fixtureDarwinRuntimeSource).not.toContain("platform = process.platform,");
+    expect(fixtureDarwinRuntimeSource).not.toContain('"/usr/bin/getconf"');
     expect(fixtureRuntimeSource).toContain('accessPath("/usr/bin/sandbox-exec")');
     expect(fixtureRuntimeSource).toContain('accessPath("/usr/bin/swiftc")');
     writeFileSync(
       fixtureRuntimePath,
-      fixtureRuntimeSource
-        .replace("platform = process.platform,", 'platform = "darwin",')
+      fixtureDarwinRuntimeSource
         .replace(
           'accessPath("/usr/bin/sandbox-exec")',
           `accessPath(${JSON.stringify(join(fakeBin, "sandbox-exec"))})`,
