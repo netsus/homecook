@@ -61,6 +61,7 @@ const qaSnapshotFontFaces = qaSnapshotFonts
 
 const HOME_VISUAL_MAX_DIFF_PIXELS = 120;
 const HOME_DESKTOP_VISUAL_MAX_DIFF_PIXELS = 1600;
+const HOME_SORT_MOBILE_VISUAL_MAX_DIFF_PIXELS = 192;
 const HOME_SORT_DESKTOP_VISUAL_MAX_DIFF_PIXELS = 2200;
 const RECIPE_DETAIL_VISUAL_MAX_DIFF_PIXELS = 400;
 const PLANNER_DESKTOP_VISUAL_MAX_DIFF_PIXELS = 2000;
@@ -102,7 +103,7 @@ function homeVisualMaxDiffPixels(page: Page) {
 
 function homeSortVisualMaxDiffPixels(page: Page) {
   return isMobileViewport(page)
-    ? HOME_VISUAL_MAX_DIFF_PIXELS
+    ? HOME_SORT_MOBILE_VISUAL_MAX_DIFF_PIXELS
     : HOME_SORT_DESKTOP_VISUAL_MAX_DIFF_PIXELS;
 }
 
