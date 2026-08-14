@@ -4274,6 +4274,8 @@ alter function public.rotate_youtube_extraction_worker_credential(
   bigint, bigint, text, timestamptz, text, text, text
 ) owner to youtube_extraction_credential_manager_rpc_owner;
 
+set local role youtube_extraction_credential_manager_rpc_owner;
+
 revoke all on function private.assert_youtube_extraction_catalog_ready()
 from public, anon, authenticated, service_role,
   youtube_extraction_worker, youtube_extraction_credential_manager;
@@ -4282,6 +4284,7 @@ to youtube_extraction_enqueue_rpc_owner,
    youtube_extraction_worker_rpc_owner,
    supabase_admin;
 
+reset role;
 set local role youtube_extraction_enqueue_rpc_owner;
 
 revoke all on function public.enqueue_youtube_extraction_job(

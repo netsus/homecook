@@ -67,7 +67,7 @@ describe("YTASYNC-DB/SEC migration contract", () => {
     expect(sql).toContain("revoke create on schema private\n  from youtube_extraction_worker_rpc_owner,\n       youtube_extraction_credential_manager_rpc_owner");
     expect(sql.match(/set local role youtube_extraction_enqueue_rpc_owner/g)?.length).toBe(1);
     expect(sql.match(/set local role youtube_extraction_worker_rpc_owner/g)?.length).toBe(4);
-    expect(sql.match(/set local role youtube_extraction_credential_manager_rpc_owner/g)?.length).toBe(2);
+    expect(sql.match(/set local role youtube_extraction_credential_manager_rpc_owner/g)?.length).toBe(3);
     expect(sql).toContain("revoke all on table public.youtube_extraction_jobs from public, anon, authenticated, service_role");
     expect(sql).not.toContain(
       "grant select on table private.youtube_extraction_worker_credentials\n  to youtube_extraction_enqueue_rpc_owner",
@@ -134,10 +134,15 @@ describe("YTASYNC-DB/SEC migration contract", () => {
     );
     expect(catalogGuard?.allowed_principals).toEqual(["supabase_admin"]);
     expect(readFileSync(migrationPath, "utf8")).toContain(
-      "grant execute on function private.assert_youtube_extraction_catalog_ready()\n" +
+      "set local role youtube_extraction_credential_manager_rpc_owner;\n\n" +
+        "revoke all on function private.assert_youtube_extraction_catalog_ready()\n" +
+        "from public, anon, authenticated, service_role,\n" +
+        "  youtube_extraction_worker, youtube_extraction_credential_manager;\n" +
+        "grant execute on function private.assert_youtube_extraction_catalog_ready()\n" +
         "to youtube_extraction_enqueue_rpc_owner,\n" +
         "   youtube_extraction_worker_rpc_owner,\n" +
-        "   supabase_admin;",
+        "   supabase_admin;\n\n" +
+        "reset role;",
     );
   });
 
