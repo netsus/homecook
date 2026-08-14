@@ -1658,6 +1658,132 @@ describe.runIf(enabled).sequential("youtube async extraction PostgreSQL integrat
     });
   });
 
+  it("does not let duplicate processes reclaim a live permit with the same worker id", async () => {
+    enablePolicy();
+    const snapshotDigest = policySnapshotDigest();
+    configureWorkerCredential(snapshotDigest);
+    const claims = sqlJson(workerClaims(snapshotDigest));
+    const first = runAsJson(
+      "youtube_extraction_worker",
+      workerClaims(snapshotDigest),
+      `select public.claim_youtube_extractor_permit('${workerId}', 120)::text;`,
+    );
+    const claimSql = `
+      begin;
+      set local role youtube_extraction_worker;
+      set local request.jwt.claims = ${claims};
+      select public.claim_youtube_extractor_permit('${workerId}', 120)::text;
+      commit;
+    `;
+
+    const contenders = await Promise.all([runPsqlAsync(claimSql), runPsqlAsync(claimSql)]);
+    const results = contenders.map((result) => {
+      expect(result.status, result.stderr).toBe(0);
+      return parseJson(result.stdout);
+    });
+
+    expect(first).toMatchObject({ claimed: true, permit_generation: 1 });
+    expect(results).toEqual([
+      { claimed: false, owner_id: workerId, permit_generation: 1 },
+      { claimed: false, owner_id: workerId, permit_generation: 1 },
+    ]);
+  });
+
+  it("keeps heartbeat and finalize on one lock order without a deadlock", async () => {
+    enablePolicy();
+    const snapshotDigest = policySnapshotDigest();
+    configureWorkerCredential(snapshotDigest);
+    insertJob({
+      id: "80000000-0000-4000-8000-000000000026",
+      userId: ownerA,
+      videoId: "lockOrder01",
+      fingerprint: "6".repeat(64),
+      status: "queued",
+    });
+    const claim = runAsJson("youtube_extraction_worker", workerClaims(snapshotDigest), `
+      select public.claim_youtube_extraction_job('${workerId}', '${snapshotDigest}', 120)::text;
+    `);
+    const permit = runAsJson("youtube_extraction_worker", workerClaims(snapshotDigest), `
+      select public.claim_youtube_extractor_permit('${workerId}', 120)::text;
+    `);
+    const claims = sqlJson(workerClaims(snapshotDigest));
+    const jobId = claim.job_id as string;
+    const leaseGeneration = claim.lease_generation as number;
+    const permitGeneration = permit.permit_generation as number;
+    const transaction = (statement: string) => `
+      begin;
+      set local lock_timeout = '3s';
+      set local role youtube_extraction_worker;
+      set local request.jwt.claims = ${claims};
+      ${statement}
+      commit;
+    `;
+    const heartbeatSql = transaction(`
+      select public.heartbeat_youtube_extraction_job(
+        '${jobId}'::uuid, '${workerId}', ${leaseGeneration}, ${permitGeneration}, 120
+      )::text;
+    `);
+    const finalizeSql = transaction(`
+      select public.finalize_youtube_extraction_job(
+        '${jobId}'::uuid,
+        '${workerId}',
+        ${leaseGeneration},
+        (${sqlJson({
+          worker_permit_generation: permitGeneration,
+          draft: {
+            title: "Lock order recipe",
+            extraction_methods: ["description"],
+            ingredients: [],
+            steps: [],
+          },
+        })})::jsonb
+      )::text;
+    `);
+
+    const results = await Promise.all([
+      runPsqlAsync(heartbeatSql),
+      runPsqlAsync(finalizeSql),
+    ]);
+
+    for (const result of results) {
+      expect(result.stderr).not.toContain("40P01");
+      expect(result.stderr).not.toContain("deadlock detected");
+      expect(result.status, result.stderr).toBe(0);
+    }
+    expect(parseJson(psql(`
+      select json_build_object(
+        'terminal_count', count(*) filter (where status = 'succeeded'),
+        'session_count', count(extraction_session_id)
+      )::text
+      from public.youtube_extraction_jobs
+      where id = '${jobId}'::uuid;
+    `))).toEqual({ terminal_count: 1, session_count: 1 });
+  });
+
+  it("defines every shared write fence and finalize lock in explicit job then permit order", () => {
+    const helperDefinition = psql(`
+      select pg_get_functiondef(
+        'private.youtube_extraction_worker_write_fence_is_active(uuid,text,bigint,bigint)'::regprocedure
+      );
+    `).toLowerCase();
+    const finalizeDefinition = psql(`
+      select pg_get_functiondef(
+        'public.finalize_youtube_extraction_job(uuid,text,bigint,jsonb)'::regprocedure
+      );
+    `).toLowerCase();
+    const helperJobLock = helperDefinition.indexOf("from public.youtube_extraction_jobs as job");
+    const helperPermitLock = helperDefinition.indexOf("from public.youtube_extractor_permits as permit");
+    const finalizeJobLock = finalizeDefinition.indexOf("from public.youtube_extraction_jobs as existing_job");
+    const finalizePermitLock = finalizeDefinition.indexOf("from public.youtube_extractor_permits as permit");
+
+    expect(helperDefinition).not.toContain("cross join public.youtube_extractor_permits");
+    expect(helperJobLock).toBeGreaterThan(-1);
+    expect(helperPermitLock).toBeGreaterThan(helperJobLock);
+    expect(finalizeJobLock).toBeGreaterThan(-1);
+    expect(finalizePermitLock).toBeGreaterThan(finalizeJobLock);
+    expect(finalizeDefinition.slice(finalizeJobLock, finalizePermitLock)).toContain("for update");
+  });
+
   it("requeues permit contention with bounded jitter without consuming an attempt", () => {
     enablePolicy();
     const snapshotDigest = policySnapshotDigest();

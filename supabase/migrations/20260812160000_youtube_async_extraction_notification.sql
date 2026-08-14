@@ -1449,25 +1449,35 @@ volatile
 set search_path = ''
 as $function$
 declare
-  v_active boolean;
+  v_job_active boolean := false;
+  v_permit_active boolean := false;
 begin
   select true
-    into v_active
+    into v_job_active
   from public.youtube_extraction_jobs as job
-  cross join public.youtube_extractor_permits as permit
   where job.id = p_job_id
     and job.status = 'processing'
     and job.lease_owner = p_worker_id
     and job.lease_generation = p_lease_generation
     and job.lease_expires_at is not null
     and job.lease_expires_at >= clock_timestamp()
-    and permit.permit_key = 'primary'
+  for update of job;
+
+  if not coalesce(v_job_active, false) then
+    return false;
+  end if;
+
+  select true
+    into v_permit_active
+  from public.youtube_extractor_permits as permit
+  where permit.permit_key = 'primary'
     and permit.owner_id = p_worker_id
     and permit.permit_generation = p_permit_generation
     and permit.expires_at is not null
     and permit.expires_at >= clock_timestamp()
-  for update of job, permit;
-  return coalesce(v_active, false);
+  for update of permit;
+
+  return coalesce(v_permit_active, false);
 end;
 $function$;
 
@@ -3001,12 +3011,16 @@ begin
     into v_job
   from public.youtube_extraction_jobs as existing_job
   where existing_job.id = v_requested_job_id
-    and existing_job.status = 'succeeded'
-    and existing_job.lease_owner = v_requested_worker_id
-    and existing_job.lease_generation = v_requested_lease_generation
-    and existing_job.extraction_session_id is not null;
+  for update;
 
-  if found then
+  if not found then
+    return jsonb_build_object('applied', false, 'finalized', false);
+  end if;
+
+  if v_job.status = 'succeeded'
+    and v_job.lease_owner = v_requested_worker_id
+    and v_job.lease_generation = v_requested_lease_generation
+    and v_job.extraction_session_id is not null then
     return jsonb_build_object(
       'applied', true,
       'finalized', true,
@@ -3022,25 +3036,17 @@ begin
   where permit.permit_key = 'primary'
   for update;
 
-  if v_permit.owner_id is distinct from v_requested_worker_id
+  v_now := clock_timestamp();
+
+  if v_job.status is distinct from 'processing'
+    or v_job.lease_owner is distinct from v_requested_worker_id
+    or v_job.lease_generation is distinct from v_requested_lease_generation
+    or v_job.lease_expires_at is null
+    or v_job.lease_expires_at < v_now
+    or v_permit.owner_id is distinct from v_requested_worker_id
     or v_permit.permit_generation is distinct from v_permit_generation
     or v_permit.expires_at is null
     or v_permit.expires_at < v_now then
-    return jsonb_build_object('applied', false, 'finalized', false);
-  end if;
-
-  update public.youtube_extraction_jobs as job
-  set updated_at = job.updated_at
-  where job.id = v_requested_job_id
-    and job.status = 'processing'
-    and job.lease_owner = v_requested_worker_id
-    and job.lease_generation = v_requested_lease_generation
-    and job.lease_expires_at is not null
-    and job.lease_expires_at >= v_now
-  returning *
-    into v_job;
-
-  if not found then
     return jsonb_build_object('applied', false, 'finalized', false);
   end if;
 
@@ -3418,7 +3424,6 @@ begin
   for update;
 
   if v_permit.owner_id is not null
-    and v_permit.owner_id is distinct from v_requested_worker_id
     and v_permit.expires_at is not null
     and v_permit.expires_at + interval '60 seconds' > v_now then
     return jsonb_build_object(
