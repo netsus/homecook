@@ -1,6 +1,59 @@
 # MEAL_LOG Final Product Design Authority
 
 > 대상 slice: `meal-log-ui` final `final_authority_gate`
+> evidence:
+> - `ui/designs/evidence/meal-log-ui/MEAL_LOG-mobile-default-default.png`
+> - `ui/designs/evidence/meal-log-ui/MEAL_LOG-mobile-default-loading.png`
+> - `ui/designs/evidence/meal-log-ui/MEAL_LOG-mobile-default-empty.png`
+> - `ui/designs/evidence/meal-log-ui/MEAL_LOG-mobile-default-error.png`
+> - `ui/designs/evidence/meal-log-ui/MEAL_LOG-mobile-default-unauthorized.png`
+> - `ui/designs/evidence/meal-log-ui/MEAL_LOG-mobile-default-partial.png`
+> - `ui/designs/evidence/meal-log-ui/MEAL_LOG-mobile-default-unavailable.png`
+> - `ui/designs/evidence/meal-log-ui/MEAL_LOG-mobile-default-deleted-column.png`
+> - `ui/designs/evidence/meal-log-ui/MEAL_LOG-mobile-default-add-sheet-recent.png`
+> - `ui/designs/evidence/meal-log-ui/MEAL_LOG-mobile-default-add-sheet-search.png`
+> - `ui/designs/evidence/meal-log-ui/MEAL_LOG-mobile-default-missing-batch.png`
+> - `ui/designs/evidence/meal-log-ui/MEAL_LOG-mobile-default-unrecoverable-batch.png`
+> - `ui/designs/evidence/meal-log-ui/MEAL_LOG-mobile-default-edit.png`
+> - `ui/designs/evidence/meal-log-ui/MEAL_LOG-mobile-default-delete-confirm.png`
+> - `ui/designs/evidence/meal-log-ui/MEAL_LOG-mobile-default-pending.png`
+> - `ui/designs/evidence/meal-log-ui/MEAL_LOG-mobile-default-replay.png`
+> - `ui/designs/evidence/meal-log-ui/MEAL_LOG-mobile-default-conflict.png`
+> - `ui/designs/evidence/meal-log-ui/MEAL_LOG-mobile-narrow-default.png`
+> - `ui/designs/evidence/meal-log-ui/MEAL_LOG-mobile-narrow-loading.png`
+> - `ui/designs/evidence/meal-log-ui/MEAL_LOG-mobile-narrow-empty.png`
+> - `ui/designs/evidence/meal-log-ui/MEAL_LOG-mobile-narrow-error.png`
+> - `ui/designs/evidence/meal-log-ui/MEAL_LOG-mobile-narrow-unauthorized.png`
+> - `ui/designs/evidence/meal-log-ui/MEAL_LOG-mobile-narrow-partial.png`
+> - `ui/designs/evidence/meal-log-ui/MEAL_LOG-mobile-narrow-unavailable.png`
+> - `ui/designs/evidence/meal-log-ui/MEAL_LOG-mobile-narrow-deleted-column.png`
+> - `ui/designs/evidence/meal-log-ui/MEAL_LOG-mobile-narrow-add-sheet-recent.png`
+> - `ui/designs/evidence/meal-log-ui/MEAL_LOG-mobile-narrow-add-sheet-search.png`
+> - `ui/designs/evidence/meal-log-ui/MEAL_LOG-mobile-narrow-missing-batch.png`
+> - `ui/designs/evidence/meal-log-ui/MEAL_LOG-mobile-narrow-unrecoverable-batch.png`
+> - `ui/designs/evidence/meal-log-ui/MEAL_LOG-mobile-narrow-edit.png`
+> - `ui/designs/evidence/meal-log-ui/MEAL_LOG-mobile-narrow-delete-confirm.png`
+> - `ui/designs/evidence/meal-log-ui/MEAL_LOG-mobile-narrow-pending.png`
+> - `ui/designs/evidence/meal-log-ui/MEAL_LOG-mobile-narrow-replay.png`
+> - `ui/designs/evidence/meal-log-ui/MEAL_LOG-mobile-narrow-conflict.png`
+> - `ui/designs/evidence/meal-log-ui/MEAL_LOG-desktop-default.png`
+> - `ui/designs/evidence/meal-log-ui/MEAL_LOG-desktop-loading.png`
+> - `ui/designs/evidence/meal-log-ui/MEAL_LOG-desktop-empty.png`
+> - `ui/designs/evidence/meal-log-ui/MEAL_LOG-desktop-error.png`
+> - `ui/designs/evidence/meal-log-ui/MEAL_LOG-desktop-unauthorized.png`
+> - `ui/designs/evidence/meal-log-ui/MEAL_LOG-desktop-partial.png`
+> - `ui/designs/evidence/meal-log-ui/MEAL_LOG-desktop-unavailable.png`
+> - `ui/designs/evidence/meal-log-ui/MEAL_LOG-desktop-deleted-column.png`
+> - `ui/designs/evidence/meal-log-ui/MEAL_LOG-desktop-add-sheet-recent.png`
+> - `ui/designs/evidence/meal-log-ui/MEAL_LOG-desktop-add-sheet-search.png`
+> - `ui/designs/evidence/meal-log-ui/MEAL_LOG-desktop-missing-batch.png`
+> - `ui/designs/evidence/meal-log-ui/MEAL_LOG-desktop-unrecoverable-batch.png`
+> - `ui/designs/evidence/meal-log-ui/MEAL_LOG-desktop-edit.png`
+> - `ui/designs/evidence/meal-log-ui/MEAL_LOG-desktop-delete-confirm.png`
+> - `ui/designs/evidence/meal-log-ui/MEAL_LOG-desktop-pending.png`
+> - `ui/designs/evidence/meal-log-ui/MEAL_LOG-desktop-replay.png`
+> - `ui/designs/evidence/meal-log-ui/MEAL_LOG-desktop-conflict.png`
+> - `ui/designs/evidence/meal-log-ui/manifest.json`
 > review role: fresh independent `product-design-authority`
 > authority task ID: `019fff15-9f62-7602-a092-d140ed5e717a`
 > source thread ID: `019ff12c-dc8b-7752-9319-398a68cacb6e`
