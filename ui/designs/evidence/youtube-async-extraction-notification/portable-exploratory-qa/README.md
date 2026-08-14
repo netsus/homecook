@@ -3,14 +3,14 @@
 ## 목적
 - acceptance checklist를 기반으로 desktop/mobile 사용자 흐름과 edge case를 탐색한다.
 - 기능 버그뿐 아니라 디자인, 접근성, copy, affordance, 복구 UX 문제도 함께 기록한다.
-- 이 bundle은 code head `8460a43b21e7f4e4f568a38314411828af28985d`, tree `15eb53b63d0131d7296ce343e23eb4c54d0205ce`에서 `2026-08-13T23:15:15Z`에 다시 잠그고, 3217의 57개 Playwright 실행 결과로 보고서를 채웠다.
+- 이 bundle은 code head `e36391d1ad31dc271250aa18770988c29bb6e23c`, tree `c8f3e09cc5ac63b9eda4328941156ce6ccd4bd94`에서 `2026-08-14T00:30:25Z`에 다시 잠그고, 3217의 63개 Playwright 실행 결과로 보고서를 채웠다.
 
 ## 입력 자료
 - 체크리스트: `ui/designs/evidence/youtube-async-extraction-notification/portable-exploratory-qa/exploratory-checklist.json`
 - 보고서 템플릿: `ui/designs/evidence/youtube-async-extraction-notification/portable-exploratory-qa/exploratory-report.json`
 - 기본 URL: `http://127.0.0.1:3217`
 - 필수 device coverage: `desktop-chrome, mobile-chrome, mobile-ios-small`
-- 시각 증거: 상위 evidence 폴더의 390/320/1280/1440 PNG 22개. import initial/submitting/POLICY_CHANGED, 320px 200% accepted CTA reflow, shell individual draft/consumed/failed copy, mixed grouped toast, consumed/expired/non-retryable/empty/offline/unauthorized, actual reload·logout→login 복구, 390/desktop bell↔toast-close·bell↔back-button rectangle 분리와 desktop bell hit ownership을 포함한다.
+- 시각 증거: 상위 evidence 폴더의 390/320/1280/1440 PNG 24개. import initial/submitting/POLICY_CHANGED, 320px 200% accepted/failure CTA reflow, planner polling 성공 뒤 등록 완료 meal CTA, shell individual draft/consumed/failed copy, mixed grouped toast, archive 유지 중 background unseen badge 복구, consumed/expired/non-retryable/empty/offline/unauthorized, actual reload·logout→login 복구, 390/desktop bell↔toast-close·bell↔back-button rectangle 분리와 desktop bell hit ownership을 포함한다.
 
 ## 권장 데이터 셋업
 - fixture baseline

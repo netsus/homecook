@@ -1,14 +1,14 @@
 {
   "schemaVersion": "1.0",
   "slice": "youtube-async-extraction-notification",
-  "generatedAt": "2026-08-13T23:15:15Z",
+  "generatedAt": "2026-08-14T00:30:25Z",
   "baseUrl": "http://127.0.0.1:3217",
   "devices": [
     "desktop-chrome",
     "mobile-chrome",
     "mobile-ios-small"
   ],
-  "summary": "code head 8460a43b21e7f4e4f568a38314411828af28985d, tree 15eb53b63d0131d7296ce343e23eb4c54d0205ce에서 mock API 기반 격리 앱을 포트 3217로 실행해 desktop 1280/1440, mobile 390, small mobile 320 흐름을 다시 탐색했다. 브라우저가 register 201을 확인한 뒤 owner-scoped unseen first page와 archive fallback을 fresh fetch해 exact extraction만 확인하고 pending ack를 안전하게 유지·제거한다. 개별 성공 title '레시피 추출이 끝났어요'와 draft/consumed/failed exact body, mixed neutral toast, seen 성공 후 badge 감소, 현재 focus를 빼앗지 않는 dismissible unauthorized 안내, accepted retry network 오류와 원래 terminal quota copy의 분리를 확인했다. 390/desktop에서 global bell과 toast 닫기·YT_IMPORT 뒤로가기 실제 DOM rectangle이 겹치지 않고 desktop bell center hit ownership도 유지한다. 실제 browser reload·logout→login 뒤 badge/list/destination을 복구했으며 320px 200% text, non-zero safe-area, keyboard-reduced viewport에서 accepted CTA 내부 스크롤 도달성과 non-overlap을 검증했다. strict child env allowlist, exact HOME 및 config/provider/credential/token no-symlink·UID·0600·canonical-realpath provenance, live lease/permit write fence, permit release 뒤 exact succeeded replay, 1-success=1-unit quota, durable fail-or-retry fail-closed, full-precision cursor, list fail-closed를 focused 및 39개 격리 PostgreSQL/PostgREST test로 확인했다. 총 22개 screenshot과 57개 cross-project 실행을 재생성했으며 remote Supabase와 운영 local app/DB는 사용하지 않았다.",
+  "summary": "code head e36391d1ad31dc271250aa18770988c29bb6e23c, tree c8f3e09cc5ac63b9eda4328941156ce6ccd4bd94에서 mock API 기반 격리 앱을 포트 3217로 실행해 desktop 1280/1440, mobile 390, small mobile 320 흐름을 다시 탐색했다. 브라우저가 register 201을 확인한 뒤 owner-scoped unseen first page와 archive fallback을 fresh fetch해 exact extraction만 확인하고 pending ack를 안전하게 유지·제거한다. 개별 성공 title '레시피 추출이 끝났어요'와 draft/consumed/failed exact body, mixed neutral toast, seen 성공 후 badge 감소, 현재 focus를 빼앗지 않는 dismissible unauthorized 안내, accepted retry network 오류와 원래 terminal quota copy의 분리를 확인했다. archive 탭을 유지한 foreground/online fresh unseen 조회가 visible archive items를 덮지 않고 badge/toast feed를 갱신하며, planner 시작 context는 polling 성공 review URL과 등록 완료 '이 끼니에 추가' CTA까지 유지된다. 390/desktop에서 global bell과 toast 닫기·YT_IMPORT 뒤로가기 실제 DOM rectangle이 겹치지 않고 desktop bell center hit ownership도 유지한다. 실제 browser reload·logout→login 뒤 badge/list/destination을 복구했으며 320px 200% text, non-zero safe-area, keyboard-reduced viewport에서 accepted 및 failure retry CTA 전체 bounding box·label·내부 스크롤 도달성과 non-overlap을 검증했다. strict child env allowlist, exact HOME 및 config/provider/credential/token no-symlink·UID·0600·canonical-realpath provenance, live job lease와 live permit generation을 결합한 모든 mutating RPC write fence, permit release 뒤 exact succeeded replay, 1-success=1-unit quota, durable fail-or-retry fail-closed, full-precision cursor, list fail-closed를 focused 및 39개 격리 PostgreSQL/PostgREST test로 확인했다. 총 24개 screenshot과 63개 cross-project 실행을 재생성했으며 remote Supabase와 운영 local app/DB는 사용하지 않았다.",
   "findings": [],
   "remainingRisks": [
     "이번 authority REVISE findings는 수정했지만 새 exact head의 독립 authority 재검토, Stage 5, final authority, Stage 6 승인은 아직 수행하지 않았다.",

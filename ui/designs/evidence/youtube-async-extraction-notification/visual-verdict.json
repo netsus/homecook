@@ -1,8 +1,11 @@
 {
   "score": 96,
+  "verdict": "pass",
+  "category_match": true,
+  "differences": [],
   "threshold": 90,
   "passed": true,
-  "reasoning": "확정 artifact의 YT_IMPORT visual language와 app-shell drawer 패턴을 유지하면서 exact code head 8460a43b21e7f4e4f568a38314411828af28985d, tree 15eb53b63d0131d7296ce343e23eb4c54d0205ce의 22개 screenshot을 비교했다. mobile toast는 HOME 검색·필터를 덮지 않고 개별 성공 title과 draft/consumed/failed exact body, mixed neutral semantics가 보인다. desktop global bell은 toast 닫기와 YT_IMPORT 뒤로가기에서 분리된 header slot에 있고 실제 hit target도 보존된다. unauthorized 안내는 기존 focus를 빼앗지 않는 닫을 수 있는 nonmodal 패턴이며 검색을 가리지 않는다. compact mobile row, actual reload·logout→login 복구, 320px 200% text·non-zero simulated safe-area·keyboard-reduced viewport에서 앱 제목/알림 trigger/두 CTA의 비겹침과 내부 스크롤 도달성을 확인했다. blocker 또는 major 시각 차이는 없으며 이 판정은 구현 task 결과일 뿐 독립 authority 승인을 대신하지 않는다.",
+  "reasoning": "확정 artifact의 YT_IMPORT visual language와 app-shell drawer 패턴을 유지하면서 exact code head e36391d1ad31dc271250aa18770988c29bb6e23c, tree c8f3e09cc5ac63b9eda4328941156ce6ccd4bd94의 24개 screenshot을 비교했다. 320px 200% failure drawer에서 제목·안전 메시지·'나중에 다시 시도' CTA 전체 label과 bounding box가 dialog 및 viewport 안에 보이고 action은 썸네일 고정 열과 분리돼 전체 폭으로 reflow한다. archive 탭은 visible 목록을 보존하면서 background unseen badge 2개를 노출하고, planner polling 성공은 등록 완료 뒤 '이 끼니에 추가' CTA를 유지한다. mobile toast는 HOME primary controls를 덮지 않고 desktop archive는 헤더·닫기·스크롤 영역이 분리된다. blocker 또는 major 시각 차이는 없으며 이 판정은 구현 task 결과일 뿐 독립 authority 승인을 대신하지 않는다.",
   "suggestions": [
     "실기기 safe-area와 가상 키보드 가림은 Manual Only 검증에서 다시 확인한다."
   ]

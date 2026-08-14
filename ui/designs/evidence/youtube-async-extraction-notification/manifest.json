@@ -1,9 +1,9 @@
 {
-  "captured_at": "2026-08-13T23:15:15Z",
+  "captured_at": "2026-08-14T00:30:25Z",
   "evidence_scope": "youtube-async-extraction-notification Stage 4 frontend",
   "implementation_base": "25e8da8b04c2322f68d8f54837135399d7586da7",
-  "implementation_head": "8460a43b21e7f4e4f568a38314411828af28985d",
-  "implementation_tree": "15eb53b63d0131d7296ce343e23eb4c54d0205ce",
+  "implementation_head": "e36391d1ad31dc271250aa18770988c29bb6e23c",
+  "implementation_tree": "c8f3e09cc5ac63b9eda4328941156ce6ccd4bd94",
   "generator": "tests/e2e/youtube-async-extraction-notification.spec.ts",
   "base_url": "http://127.0.0.1:3217",
   "remote_supabase_access_count": 0,
@@ -49,6 +49,11 @@
       "file": "YT_IMPORT_BACKGROUND/mobile-390-retry-active-projection.png",
       "viewport": { "width": 390, "height": 844 },
       "state": "accepted-retry-replacement-job-active-projection"
+    },
+    {
+      "file": "YT_IMPORT_BACKGROUND/mobile-390-planner-context-review.png",
+      "viewport": { "width": 390, "height": 844 },
+      "state": "polling-success-planner-context-register-complete-meal-cta"
     },
     {
       "file": "YT_IMPORT_BACKGROUND/desktop-1280-active-duplicate.png",
@@ -106,6 +111,11 @@
       "state": "actual-reload-logout-login-badge-list-destination-recovery"
     },
     {
+      "file": "APP_SHELL_YOUTUBE_NOTIFICATIONS/mobile-390-archive-background-unseen.png",
+      "viewport": { "width": 390, "height": 844 },
+      "state": "archive-visible-background-online-unseen-badge-refresh"
+    },
+    {
       "file": "APP_SHELL_YOUTUBE_NOTIFICATIONS/mobile-320-failure-panel.png",
       "viewport": { "width": 320, "height": 844 },
       "state": "failure-title-message-320-200-percent-simulated-safe-area"
@@ -122,15 +132,15 @@
     }
   ],
   "verification": {
-    "focused_vitest": "128 passed across notification/import UI, worker child-environment, durable failure handling, release installer provenance, API list failure, migration fence/cursor, and evidence boundaries",
-    "youtube_async_regression": "55 backend worker/installer tests and 39 isolated PostgreSQL/PostgREST integration tests passed; expired lease writes, post-release exact replay, quota accounting, secret provenance, and durable failure recording are covered",
-    "playwright": "19 deterministic scenarios passed; 57 cross-project executions passed on isolated port 3217; 22 exact-code-head screenshots captured",
+    "focused_vitest": "111 passed across notification/import UI, worker child-environment, durable failure handling, release installer provenance, API list failure, migration fence/cursor, and account-session inventory boundaries; 189 superseding-draft policy tests passed",
+    "youtube_async_regression": "57 backend worker/installer tests and 39 isolated PostgreSQL/PostgREST integration tests passed; expired lease and permit writes, post-release exact replay, quota accounting, secret provenance, and durable failure recording are covered",
+    "playwright": "21 deterministic scenarios passed; 63 cross-project executions passed on isolated port 3217; 24 exact-code-head screenshots captured",
     "axe": "0 violations on accepted CTA, grouped and individual toast, unauthorized notice, and 320px reflow surfaces with color-contrast enabled",
     "exploratory_qa": "97/100; 42/46 covered; 4 independent authority or real-worker/DB items intentionally not covered",
     "lint_typecheck": "passed on exact code head",
     "official_frontend_pr_gate": "passed on isolated port 3217: lint, typecheck, 2,741 product tests, build, 62 smoke passed/10 skipped, 8 a11y passed/1 skipped, and 12 visual passed",
     "security_e2e": "12 passed on isolated port 3217",
-    "full_vitest": "6,124 passed and 442 skipped",
+    "full_vitest": "6,131 passed and 442 skipped",
     "visual_verdict": "96/100 pass"
   },
   "limitations": [
