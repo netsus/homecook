@@ -1,0 +1,67 @@
+{
+  "result": "complete",
+  "stage": 5,
+  "role": "second-repair-author",
+  "task_id": "019ffebd-09a0-7432-8940-4e09ae2b3fb1",
+  "source_coordinator_task_id": "019ff12c-dc8b-7752-9319-398a68cacb6e",
+  "reviewer_task_id": "019ffe80-b210-7921-b8b6-07b0a5d6d5c8",
+  "base_sha": "62ea2a271c79e57d34f84467ef8ab87f124429bd",
+  "base_tree": "9c81b22494ad601e4e96bbeaa9b4d59109088189",
+  "input_verdict": "HOLD",
+  "input_p0_p1_p2": "0/2/0",
+  "implementation_head": "5c0165e402b1839ac57650a78e723cf89b6fdede",
+  "implementation_tree": "f9e258d923d1205542ba967c7a5a3e0be9e0ead1",
+  "implementation_parent": "62ea2a271c79e57d34f84467ef8ab87f124429bd",
+  "repaired_findings": [
+    "P1-ML-S5-01",
+    "P1-ML-S5-03-residual"
+  ],
+  "red": {
+    "unit": "1 file / 1 failed / 6 passed: disabled save lacked disabled:opacity-50",
+    "chromium_rail": "320x693 Home after End failed selected-radio complete containment with scroll snap assistance disabled",
+    "chromium_disabled": "disabled save computed opacity was 1 instead of 0.5"
+  },
+  "green_before_evidence": "focused Vitest 6 files / 43 passed; Chromium rail/dialog 2 passed; typecheck/lint/diff check passed",
+  "manifest": {
+    "path": "ui/designs/evidence/meal-log-ui/manifest.json",
+    "implementation_head": "5c0165e402b1839ac57650a78e723cf89b6fdede",
+    "implementation_tree": "f9e258d923d1205542ba967c7a5a3e0be9e0ead1",
+    "captured_at": "2026-08-14T05:37:19.262Z",
+    "capture_start": "2026-08-14T05:37:01.807Z",
+    "capture_end": "2026-08-14T05:37:19.209Z",
+    "capture_count": 51,
+    "states": 17,
+    "viewports": 3,
+    "manifest_disk_names_match": true,
+    "unique_viewport_state_pairs": 51
+  },
+  "runtime": {
+    "axe_serious_or_critical": 0,
+    "axe_violations": [],
+    "horizontal_overflow": 0,
+    "targets_below_44": 0,
+    "replay_key_reused": true,
+    "mobile_viewport_bound": true
+  },
+  "visual_verification": {
+    "mobile_default_390x844_count": 17,
+    "mobile_narrow_320x693_count": 17,
+    "desktop_1280_viewport_count": 17,
+    "edit_originals_directly_inspected": 3,
+    "disabled_primary_visibly_distinct": true
+  },
+  "full_verify_frontend": "pending clean evidence commit",
+  "assigned_unresolved_findings": [],
+  "manual_only": [
+    "physical device",
+    "screen reader",
+    "virtual keyboard",
+    "server-Mac",
+    "OAuth",
+    "AT",
+    "R/R+1/R+2",
+    "production",
+    "activation"
+  ],
+  "next_handoff": "same Stage 5 reviewer task 019ffe80-b210-7921-b8b6-07b0a5d6d5c8; final authority and Stage 6 remain separate"
+}
