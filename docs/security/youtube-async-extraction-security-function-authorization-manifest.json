@@ -37,7 +37,7 @@
       "control_class": "application-controlled",
       "effect": "read-only",
       "exposure": "service-internal",
-      "allowed_principals": [],
+      "allowed_principals": ["supabase_admin"],
       "owner": "youtube_extraction_credential_manager_rpc_owner",
       "security_mode": "definer",
       "safe_search_path": ["pg_catalog", "pg_temp"]

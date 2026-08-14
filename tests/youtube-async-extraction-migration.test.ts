@@ -107,7 +107,13 @@ describe("YTASYNC-DB/SEC migration contract", () => {
     const manifest = JSON.parse(readFileSync(
       "docs/security/youtube-async-extraction-security-function-authorization-manifest.json",
       "utf8",
-    )) as { functions: Array<{ signature: string; owner?: string }> };
+    )) as {
+      functions: Array<{
+        signature: string;
+        owner?: string;
+        allowed_principals: string[];
+      }>;
+    };
     const owners = Object.fromEntries(
       manifest.functions.map((entry) => [entry.signature, entry.owner]),
     );
@@ -122,6 +128,17 @@ describe("YTASYNC-DB/SEC migration contract", () => {
     ]) {
       expect(owners[signature], signature).toBe("youtube_extraction_worker_rpc_owner");
     }
+
+    const catalogGuard = manifest.functions.find(
+      (entry) => entry.signature === "private.assert_youtube_extraction_catalog_ready()",
+    );
+    expect(catalogGuard?.allowed_principals).toEqual(["supabase_admin"]);
+    expect(readFileSync(migrationPath, "utf8")).toContain(
+      "grant execute on function private.assert_youtube_extraction_catalog_ready()\n" +
+        "to youtube_extraction_enqueue_rpc_owner,\n" +
+        "   youtube_extraction_worker_rpc_owner,\n" +
+        "   supabase_admin;",
+    );
   });
 
   it("exposes only lease-fenced worker data and permit-contention mutation RPCs", () => {
