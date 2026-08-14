@@ -1,6 +1,5 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
-import { execFileSync } from "node:child_process";
 
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page, type Route } from "@playwright/test";
@@ -134,10 +133,9 @@ test.describe("meal-log-ui Stage 4", () => {
   test("meal-log-ui captures the contracted viewport and state matrix", async ({ browser }, testInfo) => {
     test.skip(testInfo.project.name !== "desktop-chrome", "한 프로젝트에서 exact viewport를 직접 설정한다.");
     test.setTimeout(360_000);
-    const worktreeStatus = execFileSync("git", ["status", "--porcelain", "--untracked-files=all"], { encoding: "utf8" }).trim();
-    expect(worktreeStatus, "canonical meal-log evidence requires a clean worktree").toBe("");
-    const implementationHead = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim();
-    const implementationTree = execFileSync("git", ["rev-parse", "HEAD^{tree}"], { encoding: "utf8" }).trim();
+    const implementationHead = process.env.HOMECOOK_PLAYWRIGHT_CLEAN_HEAD ?? "";
+    const implementationTree = process.env.HOMECOOK_PLAYWRIGHT_CLEAN_TREE ?? "";
+    expect(implementationHead, "canonical meal-log evidence requires Playwright to start from a clean worktree").not.toBe("");
     expect(implementationHead).toMatch(/^[0-9a-f]{40}$/u);
     expect(implementationTree).toMatch(/^[0-9a-f]{40}$/u);
     await mkdir(EVIDENCE_DIR, { recursive: true });
