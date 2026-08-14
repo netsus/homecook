@@ -3,14 +3,14 @@
 ## 목적
 - acceptance checklist를 기반으로 desktop/mobile 사용자 흐름과 edge case를 탐색한다.
 - 기능 버그뿐 아니라 디자인, 접근성, copy, affordance, 복구 UX 문제도 함께 기록한다.
-- 이 bundle은 code head `02f462dee413871aafaec57fad360c3e85cdd8ea`, tree `f20e2b27a26d53bccc56123aa40ae100f39b0e6d`에서 `2026-08-14T05:59:57Z`에 다시 잠그고, 3217의 81개 Playwright 실행과 29개 screenshot 결과로 보고서를 채웠다.
+- 이 bundle은 code head `2113dacdbb464f6422424324a38823e8c3d6933a`, tree `ed823a064774dee538df8cde47c483af08efa7dc`에서 `2026-08-14T06:52:00Z`에 다시 잠그고, 3217의 81개 Playwright 실행과 30개 screenshot 결과로 보고서를 채웠다.
 
 ## 입력 자료
 - 체크리스트: `ui/designs/evidence/youtube-async-extraction-notification/portable-exploratory-qa/exploratory-checklist.json`
 - 보고서 템플릿: `ui/designs/evidence/youtube-async-extraction-notification/portable-exploratory-qa/exploratory-report.json`
 - 기본 URL: `http://127.0.0.1:3217`
 - 필수 device coverage: `desktop-chrome, mobile-chrome, mobile-ios-small`
-- 시각 증거: 상위 evidence 폴더의 390/320/1280/1440 PNG 29개. import initial/submitting/enabled/POLICY_CHANGED, 320px YouTube 단일 표시→dismiss 뒤 Growth handoff, 390/desktop 동시 toast 비겹침·각 CTA ownership·읽기 순서, toast와 panel/list 한국어 어절 보존, notification CTA 복원 뒤 review heading focus, 320px 200% accepted/failure CTA reflow, planner polling 성공 뒤 등록 완료 meal CTA, shell individual draft/consumed/failed exact title·CTA, mixed grouped toast, archive 유지 중 background unseen badge 복구, consumed/expired/non-retryable/empty/offline/unauthorized, actual reload·logout→login 복구, 순환 탭 키보드 탐색과 기존 bell rectangle/hit ownership을 포함한다.
+- 시각 증거: 상위 evidence 폴더의 390/320/1280/1440 PNG 30개. import initial/submitting/enabled/POLICY_CHANGED, 320px YouTube 단일 표시→dismiss 뒤 Growth 1→Growth 2 순차 handoff·대기 timer/seen 보존, 390/desktop 동시 toast 비겹침·각 CTA ownership·기존 Growth stacking·읽기 순서, toast와 panel/list 한국어 어절 보존, notification CTA 복원 뒤 review heading focus, 320px 200% accepted/failure CTA reflow, planner polling 성공 뒤 등록 완료 meal CTA, shell individual draft/consumed/failed exact title·CTA, mixed grouped toast, archive 유지 중 background unseen badge 복구, consumed/expired/non-retryable/empty/offline/unauthorized, actual reload·logout→login 복구, 순환 탭 키보드 탐색과 기존 bell rectangle/hit ownership을 포함한다.
 
 ## 권장 데이터 셋업
 - fixture baseline

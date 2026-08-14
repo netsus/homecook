@@ -1,9 +1,9 @@
 {
-  "captured_at": "2026-08-14T05:59:57Z",
+  "captured_at": "2026-08-14T06:52:00Z",
   "evidence_scope": "youtube-async-extraction-notification Stage 4 frontend",
   "implementation_base": "25e8da8b04c2322f68d8f54837135399d7586da7",
-  "implementation_head": "02f462dee413871aafaec57fad360c3e85cdd8ea",
-  "implementation_tree": "f20e2b27a26d53bccc56123aa40ae100f39b0e6d",
+  "implementation_head": "2113dacdbb464f6422424324a38823e8c3d6933a",
+  "implementation_tree": "ed823a064774dee538df8cde47c483af08efa7dc",
   "generator": "tests/e2e/youtube-async-extraction-notification.spec.ts",
   "base_url": "http://127.0.0.1:3217",
   "remote_supabase_access_count": 0,
@@ -88,7 +88,12 @@
     {
       "file": "APP_SHELL_YOUTUBE_NOTIFICATIONS/mobile-320-global-toast-handoff.png",
       "viewport": { "width": 320, "height": 568 },
-      "state": "narrow-youtube-dismiss-hands-slot-to-growth-with-badge-list-recovery"
+      "state": "narrow-youtube-dismiss-hands-slot-to-first-growth-with-badge-list-recovery"
+    },
+    {
+      "file": "APP_SHELL_YOUTUBE_NOTIFICATIONS/mobile-320-growth-toast-sequential-handoff.png",
+      "viewport": { "width": 320, "height": 568 },
+      "state": "narrow-first-growth-dismiss-hands-slot-to-next-growth-with-queued-timer-and-seen-preservation"
     },
     {
       "file": "APP_SHELL_YOUTUBE_NOTIFICATIONS/mobile-390-draft-toast.png",
@@ -157,21 +162,21 @@
     }
   ],
   "verification": {
-    "focused_vitest": "69 exact-head focused frontend, artifact, installer, and dependency-security tests passed, including RED-to-GREEN narrow presentation arbitration, Korean wrapping, canonical 12-file runtime closure, and nanoid override regressions",
-    "youtube_async_regression": "86 combined backend worker/runtime/installer tests and 55 isolated random-port PostgreSQL/PostgREST integration tests passed; all target ACL principals, canonical artifact paths, exact release metadata membership/hash validation, queued schema/authorization drift rejection, catalog fingerprint drift matrix, duplicate same-worker permit claims, explicit job-to-permit lock order, concurrent start/heartbeat/finalize, expired fences, post-release exact replay, quota accounting, lexical secret-root provenance, and durable failure recording are covered",
-    "playwright": "27 deterministic scenarios passed; 81 cross-project executions passed on isolated port 3217; 29 exact-code-head screenshots captured",
+    "focused_vitest": "31 exact-head focused Growth and global-presentation component tests passed, including the RED-to-GREEN 320px single-card grant, queued timer preservation, sequential handoff, and 390px/desktop stacking regressions",
+    "youtube_async_regression": "63 backend worker/runtime/installer tests and 55 isolated random-port PostgreSQL/PostgREST integration tests passed; canonical artifact closure, target ACL principals, release metadata, permit/lock/fence, quota, secret provenance, and durable failure regressions remain covered",
+    "playwright": "27 deterministic scenarios passed; 81 cross-project executions passed on isolated port 3217; 30 exact-code-head screenshots captured",
     "axe": "0 violations on accepted CTA, grouped and individual toast, unauthorized notice, and 320px reflow surfaces with color-contrast enabled",
     "exploratory_qa": "97/100; 42/46 covered; 4 independent authority or real-worker/DB items intentionally not covered",
     "lint_typecheck": "passed on exact code head",
     "official_frontend_pr_gate": "passed on isolated port 3217: lint, typecheck, 2,741 product tests, build, 62 smoke passed/10 skipped, 8 a11y passed/1 skipped, and 12 visual passed",
     "security_e2e": "12 passed on isolated port 3217",
-    "full_vitest": "6,155 passed and 458 skipped",
-    "dependency_audit": "pnpm audit --audit-level high passed; nanoid 3.3.18 resolved; remaining advisories are below high severity",
-    "visual_verdict": "94/100 pass"
+    "full_vitest": "6,156 passed and 458 skipped",
+    "dependency_audit": "pnpm install --frozen-lockfile and pnpm audit --audit-level high passed; nanoid 3.3.18 resolved; remaining advisories are 1 low and 1 moderate",
+    "visual_verdict": "93/100 pass"
   },
   "limitations": [
     "This is mock-API browser evidence and does not replace real local Supabase worker crash/reclaim or cross-user DB verification.",
-    "Independent design review passed with no findings; independent backend/security re-review of the new exact PR head, Stage 5, final authority, and Stage 6 remain pending.",
+    "The latest 320px Growth sequencing finding is repaired; independent design and backend/security re-review of the new exact PR head, Stage 5, final authority, and Stage 6 remain pending.",
     "Physical-device screen reader, safe-area, and virtual-keyboard checks remain Manual Only."
   ]
 }
