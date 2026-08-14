@@ -3,6 +3,7 @@
 > critic task ID: `019ffbc5-0c4a-7b11-afd9-6346a76b762c`
 > review date: `2026-08-14`
 > role: fresh independent design critic; HOLD critic task `019ffbb4-28ab-7410-b1c1-369c7848342e`, repair author task `019ffbbc`와 분리
+> independence: author does not approve its own changes; 이 critic task는 검토 대상 작성·repair task와 별개다.
 > verdict: `APPROVE`
 > grade: `🟢` — P0 `0`, P1 `0`, P2 `0`
 > scope: repaired exact head의 `ui/designs/MEAL_LOG.md` 전체와 HOLD base 대비 한 design-file delta. PR/workpack, implementation, runtime evidence, final authority, Ready/merge 상태는 이 critic이 변경하거나 승인하지 않는다.

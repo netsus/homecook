@@ -342,11 +342,11 @@ describe("meal-log-ui fresh Stage 1 relock", () => {
       "accept-meal-log-ui-no-invention",
       "accept-meal-log-ui-runtime-predecessors",
       "accept-meal-log-ui-design",
+      "accept-meal-log-ui-authority",
       "accept-meal-log-ui-doc-gate-regression",
       "accept-meal-log-ui-stage1-honesty",
     ]));
     for (const pendingId of [
-      "accept-meal-log-ui-authority",
       "accept-meal-log-ui-local-only-boundary",
       "accept-meal-log-ui-reviews",
       "accept-meal-log-ui-ci",
