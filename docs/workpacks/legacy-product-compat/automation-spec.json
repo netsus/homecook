@@ -21,39 +21,43 @@
       "GET /food-products existing v1 cursor dual decode"
     ],
     "invariants": [
-      "legacy-product-row-and-pinned-version-retained",
+      "owner-A-owner-B-legacy-row-and-pinned-old-version-nondisclosure",
       "planner-product-entries-additive-and-separate-from-recipe-meals",
-      "owner-delete-only-and-other-owner-nondisclosure",
-      "no-auto-hide-delete-migrate-or-current-repin",
+      "owner-delete-only-no-auto-hide-delete-migrate-or-current-repin",
       "planner-nutrition-product-writers-and-v1-cursor-retained",
-      "v1-body-response-consumed-ingredient-semantics-retained",
-      "optional-stable-key-before-one-release-no-key-zero",
-      "post-zero-missing-key-428-with-mutation-zero",
-      "key-enforcement-separate-from-v1-route-removal",
-      "stored-contract-version-dispatch-no-body-guess",
-      "flag-off-existing-v2-read-cancel-complete-drain",
-      "rollback-keeps-existing-v2-drain",
-      "telemetry-zero-never-destructive-authority",
+      "planner-and-standalone-v1-body-response-consumed-ingredient-semantics-retained",
+      "malformed-key-400-INVALID_IDEMPOTENCY_KEY-mutation-0",
+      "same-key-same-canonical-payload-durable-replay-additional-mutation-0",
+      "same-key-different-payload-409-IDEMPOTENCY_KEY_REUSED-mutation-0",
+      "pre-gate-no-key-v1-shape-retained",
+      "full-release-no-key-0-before-428-IDEMPOTENCY_KEY_REQUIRED-mutation-0",
+      "stored-contract-version-dispatch-no-body-guess-or-parser-share",
+      "seeded-v2-read-cancel-complete-and-rollback-drain",
+      "telemetry-unavailable-partial-stale-query-error-fail-closed-mutation-removal-0",
       "separate-approved-contract-required-for-tombstone",
-      "no-new-api-field-status-error-migration-or-direct-dml"
+      "no-new-api-field-status-error-action-screen-migration-or-direct-dml"
     ],
     "verify_commands": [
+      "pnpm exec vitest run tests/legacy-product-compat.test.ts tests/legacy-cooking-idempotency-rollout.test.ts tests/cooking-version-dispatch-compat.test.ts tests/compatibility-tombstone-gates.test.ts",
+      "pnpm verify:local-supabase-runtime:isolated",
+      "pnpm test:prepared-food-planner-entry:postgres",
       "pnpm verify:backend",
-      "pnpm validate:source-of-truth-sync",
-      "pnpm validate:workflow-v2",
-      "BRANCH_NAME=docs/legacy-product-compat pnpm validate:workpack -- --slice legacy-product-compat",
-      "node scripts/validate-automation-spec.mjs --slice legacy-product-compat",
-      "pnpm validate:omo-bookkeeping",
-      "git diff --check"
+      "pnpm validate:real-smoke-presence -- --slice legacy-product-compat"
     ],
     "required_test_targets": [
       "tests/legacy-product-compat.test.ts",
       "tests/legacy-cooking-idempotency-rollout.test.ts",
       "tests/cooking-version-dispatch-compat.test.ts",
       "tests/compatibility-tombstone-gates.test.ts",
-      "current-immediate-previous-client-matrix",
-      "seeded-v2-flag-off-drain-evidence",
-      "merged-exact-sha-read-only-inventory"
+      "owner A and owner B legacy row plus pinned old version fixture",
+      "v1 key/no-key/replay/mismatch planner and standalone matrix",
+      "seeded v2 read/cancel/complete and rollback fixture",
+      "v1 cursor and telemetry outage matrix",
+      "isolated-local create/reset runner scripts/run-isolated-local-supabase-runtime-gate.mjs",
+      "prepared-food owner fixture tests/prepared-food-planner-entry-postgres.integration.test.ts plus tests/fixtures/prepared-food-planner-entry-postgres-harness.ts",
+      "bootstrap lib/server/user-bootstrap.ts ensureUserBootstrapState plus bootstrap_legacy_auth_callback_identity owner match for meal_plan_columns",
+      "fixture absent blocks Stage 2",
+      "merged-exact read-only inventory"
     ]
   },
   "frontend": {
@@ -62,69 +66,86 @@
       "existing COOK_MODE legacy-v1 and snapshot-v2 dispatch"
     ],
     "required_states": [
-      "legacy-present-empty-read-error-unauthorized",
-      "legacy-detail-and-delete-pending-error",
-      "v1-optional-key-and-no-key-pre-gate",
-      "v1-missing-key-428-post-zero",
-      "flag-off-existing-v2-drain",
-      "cross-version-404-409",
-      "telemetry-unavailable-fail-closed"
+      "loading-empty-error-read-only-unauthorized",
+      "legacy-detail-delete-pending-delete-error-row-retained",
+      "v1-optional-key-and-pre-gate-no-key-decode",
+      "v1-missing-key-428-post-full-release-zero",
+      "current-and-immediate-previous-stored-version-dispatch"
     ],
     "verify_commands": [
-      "pnpm verify:frontend:pr",
+      "pnpm exec vitest run tests/planner-shell-legacy-product.test.tsx tests/legacy-product-compat-client.test.tsx",
       "pnpm test:e2e:regression:ci --grep legacy-product-compat",
       "pnpm test:e2e:a11y",
       "pnpm test:e2e:visual",
       "pnpm qa:explore -- --slice legacy-product-compat",
       "pnpm verify:frontend"
     ],
-    "playwright_projects": ["mobile-default", "mobile-narrow", "desktop"],
+    "playwright_projects": [
+      "mobile-default",
+      "mobile-narrow",
+      "desktop"
+    ],
     "artifact_assertions": [
-      "planner-legacy-read-detail-delete-only",
-      "current-immediate-previous-version-dispatch",
-      "seeded-v2-flag-off-drain-and-rollback",
-      "no-product-writer-or-planner-nutrition-ui-call",
-      "predecessor-planner-and-cook-mode-authority-remains-green",
-      "390-320-desktop-focus-confirmation-and-no-overflow"
+      "planner-legacy-read-detail-owner-delete-only",
+      "current-and-immediate-previous-clients-optional-key-and-explicit-version-dispatch",
+      "seeded-v2-read-cancel-complete-and-rollback-drain",
+      "loading-empty-error-read-only-unauthorized-and-delete-recovery",
+      "no-product-writer-planner-nutrition-ui-call-or-new-action",
+      "390-320-desktop-focus-Escape-restore-safe-area-and-no-overflow",
+      "exact-three-predecessor-final-authority-references-remain-green"
     ],
     "design_authority": {
       "ui_risk": "low-risk",
-      "anchor_screens": [],
+      "anchor_screens": [
+        "PLANNER_WEEK",
+        "COOK_MODE",
+        "LEFTOVERS"
+      ],
       "required_screens": [],
       "generator_required": false,
       "generator_artifact": null,
       "critic_required": false,
       "critic_artifact": null,
       "authority_required": false,
-      "stage4_evidence_requirements": [],
-      "authority_report_paths": []
+      "stage4_evidence_requirements": [
+        "existing 390px 320px desktop legacy read detail delete state matrix",
+        "existing current immediate-previous COOK_MODE dispatch evidence"
+      ],
+      "authority_report_paths": [
+        "ui/designs/authority/PLANNER_WEEK-authority.md",
+        "ui/designs/authority/recipe-content-snapshot-future-propagation-authority.md",
+        "docs/workpacks/cooked-batch-weight-ui/evidence/2026-08-10-final-authority-p2-repair-rereview.md"
+      ]
     }
   },
   "external_smokes": [
-    "legacy product planner owner read pinned detail and delete",
-    "no add edit auto-migrate current-repin or planner nutrition UI call",
-    "optional stable key old-shape no-key telemetry and post-zero 428",
-    "current immediate-previous v1-v2 explicit dispatch",
-    "flag-off seeded-v2 read cancel complete and rollback drain",
-    "cursor v1 dual decode and compatibility endpoint inventory",
+    "owner A owner B legacy row pinned old version read-only and owner delete",
+    "v1 key/no-key/replay/mismatch planner and standalone",
+    "current and immediate-previous clients stored-version dispatch",
+    "seeded v2 read/cancel/complete and rollback drain",
+    "v1 cursor and telemetry outage unavailable partial stale query-error",
+    "isolated-local create/reset and merged-exact read-only inventory",
     "tombstone denied without separately approved contract"
   ],
   "blocked_conditions": [
-    "stage1-independent-reviews-not-zero",
     "stage1-author-self-approval-or-claude-use",
-    "slice10-or-slice12-runtime-not-green-before-implementation",
-    "legacy-row-endpoint-parser-or-cursor-removed-without-separate-contract",
+    "legacy-row-endpoint-parser-cursor-or-planner-nutrition-removed-without-separate-contract",
     "elapsed-release-or-zero-telemetry-treated-as-delete-authority",
+    "telemetry-unavailable-partial-stale-or-query-error-does-not-fail-closed",
     "product-add-edit-auto-migrate-current-repin-or-new-detail-route-exposed",
     "v1-key-required-before-full-release-no-key-zero",
     "v1-body-response-consumed-ingredient-semantics-changed",
     "version-inferred-from-body-or-parser-shared",
     "flag-off-existing-v2-drain-blocked",
     "r2-activation-or-destructive-tombstone-performed-by-slice13",
-    "compatibility-telemetry-leaks-secret-or-private-payload",
-    "local-first-verifier-not-merged-exact-sha",
+    "compatibility-telemetry-leaks-secret-or-other-owner-private-payload",
+    "isolated-local-mutation-boundary-or-merged-exact-read-only-boundary-violated",
+    "fixture-absent-blocks-stage-2",
     "current-head-check-pending-absent-stale-failed-or-cancelled"
   ],
-  "max_fix_rounds": {"backend": 4, "frontend": 4},
-  "notes": "Stage 1 runs docs validators, focused tests, lint, typecheck, audit and diff only. Runtime/E2E/browser/telemetry/local-first production-rehearsal evidence is future. #13 preserves legacy contracts and records tombstone prerequisites; it does not authorize deletion or R+2 activation. No new design artifact is required because #10/#7/#11 own the affected visual surfaces, but their authority evidence remains a regression gate."
+  "max_fix_rounds": {
+    "backend": 4,
+    "frontend": 4
+  },
+  "notes": "Stage 1 is docs/test-only with implementation and evaluation not_started, verification pending and auto_merge false. Primary tracked plan d4d0fb39e80eeffc8b1e73ad92f0d91a35a9b6adc57a556ea8c9ec6ecffa951d has 1,018 lines; 45f02013fbc1c3af1936d596605230d0cbac7839a783224aa9535844e4bda7dc with 1,056 lines is a historical local-first overlay only. Current operations authority is docs/engineering/supabase-local-only-operations.md. #10 and #12 runtime dependency fulfilled; broader Manual/server-Mac/OAuth, capability, R/R+1/R+2 and activation remain pending. #13 adds no API, field, status, error, action, screen or design authority and uses only the exact #10/#7/#11 final references. Stage 2 reuses the repository-owned isolated reset runner and prepared-food owner fixture baseline, requires meal_plan_columns owner match from the existing bootstrap flow, and treats the missing #13 exact fixture matrix as fixture absent blocks Stage 2."
 }
