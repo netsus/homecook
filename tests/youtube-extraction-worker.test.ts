@@ -13,14 +13,17 @@ describe("YTASYNC-WORKER restricted RPC adapter", () => {
     const rpc = vi.fn(async (
       name: string,
       _args?: Record<string, unknown>,
-    ) => ({
-      data: name === "claim_youtube_extraction_job"
-        ? null
-        : name === "claim_youtube_extractor_permit"
-          ? { claimed: false }
-          : { updated: true },
-      error: null,
-    }));
+    ) => {
+      void _args;
+      return {
+        data: name === "claim_youtube_extraction_job"
+          ? null
+          : name === "claim_youtube_extractor_permit"
+            ? { claimed: false }
+            : { updated: true },
+        error: null,
+      };
+    });
     const adapter = createYoutubeExtractionWorkerRpcAdapter({ rpc });
 
     await adapter.claimJob({
