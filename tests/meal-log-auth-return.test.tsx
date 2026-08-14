@@ -7,6 +7,8 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { renderMealLogShell } from "@/tests/fixtures/meal-log-ui-harness";
 
 const RETURN_CONTEXT_KEY = "homecook.meal-log-return-context.v1";
+const RESTORED_BATCH_ID = "40000000-0000-4000-8000-000000000001";
+const OTHER_BATCH_ID = "40000000-0000-4000-8000-000000000002";
 
 describe("MEAL_LOG unauthorized return-to-action", () => {
   beforeEach(() => window.sessionStorage.clear());
@@ -53,6 +55,273 @@ describe("MEAL_LOG unauthorized return-to-action", () => {
     const restoredInvoker = screen.getByRole("button", { hidden: true, name: "아침에 먹은 음식 추가" });
     await user.click(within(restored).getByRole("button", { name: "닫기" }));
     await waitFor(() => expect(document.activeElement).toBe(restoredInvoker));
+  });
+
+  async function captureCookedBatchDraft(user: ReturnType<typeof userEvent.setup>) {
+    const first = renderMealLogShell({ includeCookedBatch: true, unauthorized: "create" });
+
+    await user.click(await screen.findByRole("button", { name: "아침에 먹은 음식 추가" }));
+    await user.click(await screen.findByRole("button", { name: /된장찌개/u }));
+    await user.click(screen.getByRole("button", { name: "기록 저장" }));
+    await screen.findByRole("heading", { name: "이 화면은 로그인이 필요해요" });
+
+    const context = JSON.parse(window.sessionStorage.getItem(RETURN_CONTEXT_KEY) ?? "null") as {
+      draft: { amount: number; maxAmount: number; name: string };
+    };
+    first.unmount();
+    return context;
+  }
+
+  function storeCookedBatchDraft(context: {
+    draft: { amount: number; maxAmount: number; name: string };
+  }, draft: Partial<typeof context.draft> = {}) {
+    window.sessionStorage.setItem(RETURN_CONTEXT_KEY, JSON.stringify({
+      ...context,
+      draft: { ...context.draft, ...draft },
+    }));
+  }
+
+  it("keeps a restored cooked-batch draft disabled until the latest known available batch replaces its authority", async () => {
+    const user = userEvent.setup();
+    const context = await captureCookedBatchDraft(user);
+    storeCookedBatchDraft(context, { amount: 40, maxAmount: 80, name: "로그인 전 된장찌개" });
+
+    const restored = renderMealLogShell({
+      batchRemainingWeight: 60,
+      deferBatchLoad: true,
+      includeCookedBatch: true,
+    });
+    const dialog = await screen.findByRole("dialog", { name: "먹은 음식 추가" });
+    expect((within(dialog).getByRole("button", { name: "기록 저장" }) as HTMLButtonElement).disabled)
+      .toBe(true);
+
+    restored.releaseBatchLoad();
+    await waitFor(() => expect(
+      (within(dialog).getByRole("spinbutton", { name: "실제 양" }) as HTMLInputElement).max,
+    ).toBe("60"));
+    expect(within(dialog).getByText("된장찌개", { selector: "footer p" })).toBeTruthy();
+    expect((within(dialog).getByRole("button", { name: "기록 저장" }) as HTMLButtonElement).disabled)
+      .toBe(false);
+  });
+
+  it("does not block a new catalog selection while restored cooked-batch authority is still loading", async () => {
+    const user = userEvent.setup();
+    const context = await captureCookedBatchDraft(user);
+    storeCookedBatchDraft(context);
+
+    const restored = renderMealLogShell({ catalogBadges: true, deferBatchLoad: true });
+    const dialog = await screen.findByRole("dialog", { name: "먹은 음식 추가" });
+    await user.click(within(dialog).getByRole("tab", { name: "제품·재료" }));
+    await user.type(within(dialog).getByRole("textbox", { name: "제품·재료 검색" }), "두유");
+    await user.click(within(dialog).getByRole("button", { name: "검색" }));
+    await user.click(await within(dialog).findByRole("button", { name: /공공 두유/u }));
+
+    expect((within(dialog).getByRole("button", { name: "기록 저장" }) as HTMLButtonElement).disabled)
+      .toBe(false);
+    restored.releaseBatchLoad();
+  });
+
+  it("uses the latest reduced cooked-batch remainder as maxAmount and blocks an oversized restored draft", async () => {
+    const user = userEvent.setup();
+    const context = await captureCookedBatchDraft(user);
+    storeCookedBatchDraft(context, { amount: 80, maxAmount: 80 });
+
+    renderMealLogShell({ batchRemainingWeight: 30, includeCookedBatch: true });
+    const dialog = await screen.findByRole("dialog", { name: "먹은 음식 추가" });
+    expect(await within(dialog).findByText("남은 양 30g 이하로 입력해 주세요.")).toBeTruthy();
+    expect((within(dialog).getByRole("spinbutton", { name: "실제 양" }) as HTMLInputElement).max)
+      .toBe("30");
+    expect((within(dialog).getByRole("button", { name: "기록 저장" }) as HTMLButtonElement).disabled)
+      .toBe(true);
+  });
+
+  it("finds a valid restored cooked batch on a later availability=all page without changing the visible first page", async () => {
+    const user = userEvent.setup();
+    const context = await captureCookedBatchDraft(user);
+    storeCookedBatchDraft(context, { amount: 40, maxAmount: 80 });
+
+    const restored = renderMealLogShell({
+      batchPages: [
+        {
+          cursor: null,
+          items: [{ id: OTHER_BATCH_ID, recipeTitle: "카레" }],
+          nextCursor: "batch-page-2",
+          hasNext: true,
+        },
+        {
+          cursor: "batch-page-2",
+          items: [{ id: RESTORED_BATCH_ID, recipeTitle: "된장찌개", remainingWeight: 55 }],
+          nextCursor: null,
+          hasNext: false,
+        },
+      ],
+    });
+    const dialog = await screen.findByRole("dialog", { name: "먹은 음식 추가" });
+
+    await waitFor(() => expect(
+      (within(dialog).getByRole("spinbutton", { name: "실제 양" }) as HTMLInputElement).max,
+    ).toBe("55"));
+    expect(within(dialog).getByRole("button", { name: /카레/u })).toBeTruthy();
+    expect(within(dialog).getByRole("button", { name: "요리한 음식 더 불러오기" })).toBeTruthy();
+    expect((within(dialog).getByRole("button", { name: "기록 저장" }) as HTMLButtonElement).disabled)
+      .toBe(false);
+    expect(restored.fetchMock.mock.calls
+      .filter(([input]) => String(input).includes("/cooked-batches"))
+      .map(([input]) => new URL(String(input), "http://localhost").searchParams.get("cursor")))
+      .toEqual([null, "batch-page-2"]);
+  });
+
+  it("fails closed after one repeated restored-batch cursor without requesting forever", async () => {
+    const user = userEvent.setup();
+    const context = await captureCookedBatchDraft(user);
+    storeCookedBatchDraft(context);
+
+    const restored = renderMealLogShell({
+      batchPages: [
+        {
+          cursor: null,
+          items: [{ id: OTHER_BATCH_ID, recipeTitle: "카레" }],
+          nextCursor: "repeated-cursor",
+          hasNext: true,
+        },
+        {
+          cursor: "repeated-cursor",
+          items: [{ id: OTHER_BATCH_ID, recipeTitle: "카레" }],
+          nextCursor: "repeated-cursor",
+          hasNext: true,
+        },
+      ],
+    });
+    const dialog = await screen.findByRole("dialog", { name: "먹은 음식 추가" });
+
+    await waitFor(() => expect(within(dialog).queryByRole("button", { name: "기록 저장" })).toBeNull());
+    await waitFor(() => expect(restored.fetchMock.mock.calls
+      .filter(([input]) => String(input).includes("/cooked-batches")))
+      .toHaveLength(2));
+    expect(restored.fetchMock.mock.calls
+      .filter(([input]) => String(input).includes("/cooked-batches"))
+      .map(([input]) => new URL(String(input), "http://localhost").searchParams.get("cursor")))
+      .toEqual([null, "repeated-cursor"]);
+  });
+
+  it("fails closed when restored-batch cursors cycle back to a visited page", async () => {
+    const user = userEvent.setup();
+    const context = await captureCookedBatchDraft(user);
+    storeCookedBatchDraft(context);
+
+    const restored = renderMealLogShell({
+      batchPages: [
+        {
+          cursor: null,
+          items: [{ id: OTHER_BATCH_ID, recipeTitle: "카레" }],
+          nextCursor: "cursor-a",
+          hasNext: true,
+        },
+        {
+          cursor: "cursor-a",
+          items: [{ id: OTHER_BATCH_ID, recipeTitle: "카레" }],
+          nextCursor: "cursor-b",
+          hasNext: true,
+        },
+        {
+          cursor: "cursor-b",
+          items: [{ id: OTHER_BATCH_ID, recipeTitle: "카레" }],
+          nextCursor: "cursor-a",
+          hasNext: true,
+        },
+      ],
+    });
+    const dialog = await screen.findByRole("dialog", { name: "먹은 음식 추가" });
+
+    await waitFor(() => expect(within(dialog).queryByRole("button", { name: "기록 저장" })).toBeNull());
+    await waitFor(() => expect(restored.fetchMock.mock.calls
+      .filter(([input]) => String(input).includes("/cooked-batches")))
+      .toHaveLength(3));
+    expect(restored.fetchMock.mock.calls
+      .filter(([input]) => String(input).includes("/cooked-batches"))
+      .map(([input]) => new URL(String(input), "http://localhost").searchParams.get("cursor")))
+      .toEqual([null, "cursor-a", "cursor-b"]);
+  });
+
+  it("fails closed when a later restored-batch page returns an error", async () => {
+    const user = userEvent.setup();
+    const context = await captureCookedBatchDraft(user);
+    storeCookedBatchDraft(context);
+
+    const restored = renderMealLogShell({
+      batchPages: [
+        {
+          cursor: null,
+          items: [{ id: OTHER_BATCH_ID, recipeTitle: "카레" }],
+          nextCursor: "error-cursor",
+          hasNext: true,
+        },
+        {
+          cursor: "error-cursor",
+          items: [],
+          nextCursor: null,
+          hasNext: false,
+          errorStatus: 503,
+        },
+      ],
+    });
+    const dialog = await screen.findByRole("dialog", { name: "먹은 음식 추가" });
+
+    expect((await within(dialog).findByRole("alert")).textContent)
+      .toContain("요리한 음식 페이지를 불러오지 못했어요.");
+    await waitFor(() => expect(within(dialog).queryByRole("button", { name: "기록 저장" })).toBeNull());
+    expect(restored.fetchMock.mock.calls
+      .filter(([input]) => String(input).includes("/cooked-batches"))
+      .map(([input]) => new URL(String(input), "http://localhost").searchParams.get("cursor")))
+      .toEqual([null, "error-cursor"]);
+  });
+
+  it("preserves a new catalog selection after the delayed restored-batch response has settled", async () => {
+    const user = userEvent.setup();
+    const context = await captureCookedBatchDraft(user);
+    storeCookedBatchDraft(context);
+
+    const restored = renderMealLogShell({
+      batchPages: [{ cursor: null, items: [], nextCursor: null, hasNext: false }],
+      catalogBadges: true,
+      deferredBatchCursors: [null],
+    });
+    const dialog = await screen.findByRole("dialog", { name: "먹은 음식 추가" });
+    await user.click(within(dialog).getByRole("tab", { name: "제품·재료" }));
+    await user.type(within(dialog).getByRole("textbox", { name: "제품·재료 검색" }), "두유");
+    await user.click(within(dialog).getByRole("button", { name: "검색" }));
+    await user.click(await within(dialog).findByRole("button", { name: /공공 두유/u }));
+    expect(within(dialog).getByText("공공 두유", { selector: "footer p" })).toBeTruthy();
+    expect((within(dialog).getByRole("button", { name: "기록 저장" }) as HTMLButtonElement).disabled)
+      .toBe(false);
+
+    restored.releaseBatchLoad();
+    await waitFor(() => {
+      expect(restored.settledBatchCursors()).toEqual([null]);
+      expect(within(dialog).getByText("공공 두유", { selector: "footer p" })).toBeTruthy();
+    });
+    expect((within(dialog).getByRole("spinbutton", { name: "실제 양" }) as HTMLInputElement).value)
+      .toBe("100");
+    expect((within(dialog).getByRole("textbox", { name: "단위" }) as HTMLInputElement).value)
+      .toBe("ml");
+    expect((within(dialog).getByRole("button", { name: "기록 저장" }) as HTMLButtonElement).disabled)
+      .toBe(false);
+  });
+
+  it.each([
+    ["missing", { batchWeightStatus: "missing" as const, includeCookedBatch: true }],
+    ["unrecoverable", { batchWeightStatus: "unrecoverable" as const, includeCookedBatch: true }],
+    ["depleted", { batchRemainingWeight: 0, batchStatus: "depleted" as const, includeCookedBatch: true }],
+    ["absent from the latest list", { includeCookedBatch: false }],
+  ])("removes a restored cooked-batch draft when the latest batch is %s", async (_state, options) => {
+    const user = userEvent.setup();
+    const context = await captureCookedBatchDraft(user);
+    storeCookedBatchDraft(context);
+
+    renderMealLogShell(options);
+    const dialog = await screen.findByRole("dialog", { name: "먹은 음식 추가" });
+    await waitFor(() => expect(within(dialog).queryByRole("button", { name: "기록 저장" })).toBeNull());
+    expect(within(dialog).queryByText("된장찌개", { selector: "footer p" })).toBeNull();
   });
 
   it("preserves the edit draft and invoking entry action while hiding it after an edit 401", async () => {

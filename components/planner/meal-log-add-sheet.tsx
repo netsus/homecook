@@ -6,7 +6,7 @@ import { createPortal } from "react-dom";
 
 import { useDialogBoundary } from "@/components/shared/use-dialog-boundary";
 import { fetchFoodCatalogSearch, type FoodCatalogSearchItem } from "@/lib/api/food-catalog-search";
-import { fetchCookedBatches } from "@/lib/api/cooking";
+import { fetchCookedBatches, type CookedBatchListData } from "@/lib/api/cooking";
 import { fetchMealLogRecent, isMealLogApiError } from "@/lib/api/meal-log";
 import type { CookedBatchProjection } from "@/types/cooking";
 import type { MealLogColumn, MealLogRecentItem, MealLogSourceType } from "@/types/meal-log";
@@ -96,6 +96,32 @@ function isUnauthorized(error: unknown) {
     && (error as Error & { status: unknown }).status === 401;
 }
 
+function isAvailableCookedBatch(batch: CookedBatchProjection) {
+  return batch.weight_status === "known"
+    && batch.batch_status === "available"
+    && (batch.remaining_weight_g ?? 0) > 0;
+}
+
+async function findRestoredCookedBatch(
+  firstPage: CookedBatchListData,
+  batchId: string,
+  isActive: () => boolean,
+) {
+  let page = firstPage;
+  const visitedCursors = new Set<string>();
+
+  while (isActive()) {
+    const batch = page.items.find((item) => item.id === batchId);
+    if (batch) return isAvailableCookedBatch(batch) ? batch : null;
+    if (!page.has_next || !page.next_cursor || visitedCursors.has(page.next_cursor)) return null;
+
+    const cursor = page.next_cursor;
+    visitedCursors.add(cursor);
+    page = await fetchCookedBatches({ availability: "all", cursor, limit: 20 });
+  }
+  return null;
+}
+
 export function MealLogAddSheet({
   columns,
   date,
@@ -110,6 +136,9 @@ export function MealLogAddSheet({
   const dialogRef = useRef<HTMLDivElement | null>(null);
   const closeRef = useRef<HTMLButtonElement | null>(null);
   const errorRef = useRef<HTMLParagraphElement | null>(null);
+  const restoredCookedBatchId = initialSelection?.type === "cooked_batch"
+    ? initialSelection.id
+    : null;
   const [tab, setTab] = useState<SourceTab>(
     initialSelection?.type === "cooked_batch" ? "cooked" : initialSelection ? "catalog" : "cooked",
   );
@@ -125,11 +154,17 @@ export function MealLogAddSheet({
   const [catalogHasNext, setCatalogHasNext] = useState(false);
   const [query, setQuery] = useState("");
   const [selection, setSelection] = useState<MealLogSourceSelection | null>(initialSelection ?? null);
+  const [restoredCookedBatchPending, setRestoredCookedBatchPending] = useState(
+    initialSelection?.type === "cooked_batch",
+  );
   const [suggestionConfirmed, setSuggestionConfirmed] = useState(initialSuggestionConfirmed);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState<"batch" | "catalog" | "recent" | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const restoredCookedBatchSelectionPending = restoredCookedBatchPending
+    && selection?.type === "cooked_batch"
+    && selection.id === initialSelection?.id;
 
   useDialogBoundary({
     closeOnEscape: !saving,
@@ -149,7 +184,7 @@ export function MealLogAddSheet({
       fetchMealLogRecent(),
       fetchCookedBatches({ availability: "all", limit: 20 }),
     ])
-      .then(([recentData, batchData]) => {
+      .then(async ([recentData, batchData]) => {
         if (!active) return;
         setRecent(recentData.items);
         setRecentCursor(recentData.next_cursor);
@@ -157,9 +192,30 @@ export function MealLogAddSheet({
         setBatches(batchData.items);
         setBatchCursor(batchData.next_cursor);
         setBatchHasNext(batchData.has_next);
+        if (restoredCookedBatchId) {
+          const batch = await findRestoredCookedBatch(batchData, restoredCookedBatchId, () => active);
+          if (!active) return;
+          setSelection((current) => {
+            if (current?.type !== "cooked_batch" || current.id !== restoredCookedBatchId) return current;
+            if (!batch) return null;
+            return {
+              ...current,
+              brand: null,
+              maxAmount: batch.remaining_weight_g ?? undefined,
+              name: batch.recipe_title,
+              unit: "g",
+            };
+          });
+          setRestoredCookedBatchPending(false);
+        }
       })
       .catch((reason: unknown) => {
         if (!active) return;
+        if (restoredCookedBatchId) {
+          setSelection((current) => current?.type === "cooked_batch"
+            && current.id === restoredCookedBatchId ? null : current);
+          setRestoredCookedBatchPending(false);
+        }
         if (isUnauthorized(reason)) {
           onUnauthorized(initialSelection ?? null, columnId);
           return;
@@ -172,7 +228,7 @@ export function MealLogAddSheet({
     return () => {
       active = false;
     };
-  }, [columnId, initialSelection, onUnauthorized]);
+  }, [columnId, initialSelection, onUnauthorized, restoredCookedBatchId]);
 
   const selectedColumn = useMemo(
     () => columns.find((column) => column.id === columnId),
@@ -304,6 +360,7 @@ export function MealLogAddSheet({
     if (!selection
       || !mutationEnabled
       || !columnId
+      || restoredCookedBatchSelectionPending
       || selection.amount <= 0
       || !suggestionConfirmed
       || (selection.maxAmount !== undefined && selection.amount > selection.maxAmount)
@@ -539,7 +596,7 @@ export function MealLogAddSheet({
               <p className="mt-2 text-sm font-bold text-[var(--danger-strong)]" role="alert">남은 양 {selection.maxAmount}g 이하로 입력해 주세요.</p>
             ) : null}
             <div className="mt-3 grid gap-2 min-[360px]:grid-cols-2">
-              <button className="min-h-11 rounded-[var(--radius-control)] bg-[var(--brand-primary-text)] px-4 font-bold text-[var(--text-inverse)] disabled:opacity-50" disabled={!mutationEnabled || saving || !suggestionConfirmed || selection.amount <= 0 || (selection.maxAmount !== undefined && selection.amount > selection.maxAmount) || !selection.unit.trim()} onClick={() => void submit()} type="button">{saving ? "저장 중…" : "기록 저장"}</button>
+              <button className="min-h-11 rounded-[var(--radius-control)] bg-[var(--brand-primary-text)] px-4 font-bold text-[var(--text-inverse)] disabled:opacity-50" disabled={!mutationEnabled || saving || restoredCookedBatchSelectionPending || !suggestionConfirmed || selection.amount <= 0 || (selection.maxAmount !== undefined && selection.amount > selection.maxAmount) || !selection.unit.trim()} onClick={() => void submit()} type="button">{saving ? "저장 중…" : "기록 저장"}</button>
               <button className="min-h-11 rounded-[var(--radius-control)] border border-[var(--line-strong)] px-4 font-bold" disabled={saving} onClick={onClose} type="button">취소</button>
             </div>
           </footer>

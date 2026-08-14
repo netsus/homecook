@@ -105,6 +105,22 @@ vi.mock("@/components/shared/profile-summary-button", () => ({
   ProfileSummaryButton: () => <button type="button">프로필</button>,
 }));
 
+export interface MealLogBatchPageItemFixture {
+  id: string;
+  recipeTitle: string;
+  remainingWeight?: number | null;
+  weightStatus?: "known" | "missing" | "unrecoverable";
+  batchStatus?: "available" | "depleted";
+}
+
+export interface MealLogBatchPageFixture {
+  cursor: string | null;
+  items: MealLogBatchPageItemFixture[];
+  nextCursor: string | null;
+  hasNext: boolean;
+  errorStatus?: number;
+}
+
 export function renderMealLogShell({
   applyMutationRefresh = false,
   catalogBadges = false,
@@ -118,7 +134,12 @@ export function renderMealLogShell({
   includeCookedBatch = false,
   recentCookedWithoutProjection = false,
   unauthorized = null,
+  batchRemainingWeight = 80,
+  batchStatus = "available",
   batchWeightStatus = "known",
+  batchPages,
+  deferBatchLoad = false,
+  deferredBatchCursors = [],
   paginatedSources = false,
 }: {
   applyMutationRefresh?: boolean;
@@ -133,7 +154,12 @@ export function renderMealLogShell({
   includeCookedBatch?: boolean;
   recentCookedWithoutProjection?: boolean;
   unauthorized?: "read" | "create" | "edit" | "delete" | null;
+  batchRemainingWeight?: number;
+  batchStatus?: "available" | "depleted";
   batchWeightStatus?: "known" | "missing" | "unrecoverable";
+  batchPages?: MealLogBatchPageFixture[];
+  deferBatchLoad?: boolean;
+  deferredBatchCursors?: Array<string | null>;
   paginatedSources?: boolean;
 } = {}) {
   navigationMocks.push.mockReset();
@@ -157,6 +183,19 @@ export function renderMealLogShell({
   let conflictResponses = 0;
   let mutationSucceeded = false;
   let refreshFailureReturned = false;
+  const deferredCursorKeys = new Set([
+    ...deferredBatchCursors,
+    ...(deferBatchLoad ? [null] : []),
+  ].map((cursor) => cursor ?? "__first__"));
+  const batchLoadResolvers = new Map<string, () => void>();
+  const batchLoadBarriers = new Map([...deferredCursorKeys].map((cursorKey) => [
+    cursorKey,
+    new Promise<void>((resolve) => { batchLoadResolvers.set(cursorKey, resolve); }),
+  ]));
+  const releaseBatchLoad = (cursor: string | null = null) => {
+    batchLoadResolvers.get(cursor ?? "__first__")?.();
+  };
+  const settledBatchCursors: Array<string | null> = [];
   let successfulMutation: { entryId: string; method: string; targetColumnId: string | null } | null = null;
   const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const path = String(input);
@@ -224,6 +263,12 @@ export function renderMealLogShell({
           targetColumnId: method === "PATCH" ? body.meal_plan_column_id ?? null : null,
         };
       }
+    }
+    if (path.includes("/cooked-batches")) {
+      const batchCursor = url.searchParams.get("cursor");
+      const cursorKey = batchCursor ?? "__first__";
+      await (batchLoadBarriers.get(cursorKey) ?? Promise.resolve());
+      settledBatchCursors.push(batchCursor);
     }
     const refreshedColumnId = conflictColumnAuthority === "moved"
       ? DINNER_ID
@@ -350,29 +395,56 @@ export function renderMealLogShell({
               }
             : refreshedDay
           : path.includes("/cooked-batches")
-            ? {
-                items: includeCookedBatch || paginatedSources ? [{
-                  id: url.searchParams.has("cursor")
+            ? (() => {
+                const cursor = url.searchParams.get("cursor");
+                const page = batchPages?.find((candidate) => candidate.cursor === cursor);
+                if (batchPages && (!page || page.errorStatus)) {
+                  return new Response(JSON.stringify({
+                    success: false,
+                    data: null,
+                    error: { code: "BATCH_PAGE_FAILED", message: "요리한 음식 페이지를 불러오지 못했어요.", fields: [] },
+                  }), {
+                    headers: { "content-type": "application/json" },
+                    status: page?.errorStatus ?? 500,
+                  });
+                }
+                const pageItems = page?.items ?? (includeCookedBatch || paginatedSources ? [{
+                  id: cursor
                     ? "40000000-0000-4000-8000-000000000002"
                     : "40000000-0000-4000-8000-000000000001",
-                  recipe_id: SOURCE_ID,
-                  recipe_title: url.searchParams.has("cursor") ? "카레" : "된장찌개",
-                  recipe_thumbnail_url: null,
-                  status: "leftover",
-                  cooked_at: "2026-08-09T09:00:00.000Z",
-                  cooking_servings: 2,
-                  finished_weight_g: batchWeightStatus === "known" ? 500 : null,
-                  remaining_weight_g: batchWeightStatus === "known" ? 80 : null,
-                  weight_status: batchWeightStatus,
-                  batch_status: "available",
-                  depleted_reason: null,
-                  revision: 1,
-                  nutrition_calculation_status: batchWeightStatus === "known" ? "complete" : "unavailable",
-                  current_unweighed_closure_event_id: null,
-                }] : [],
-                next_cursor: paginatedSources && !url.searchParams.has("cursor") ? "batch-cursor" : null,
-                has_next: paginatedSources && !url.searchParams.has("cursor"),
-              }
+                  recipeTitle: cursor ? "카레" : "된장찌개",
+                }] : []);
+                return {
+                  items: pageItems.map((item) => {
+                    const weightStatus = item.weightStatus ?? batchWeightStatus;
+                    const currentBatchStatus = item.batchStatus ?? batchStatus;
+                    const remainingWeight = item.remainingWeight === undefined
+                      ? batchRemainingWeight
+                      : item.remainingWeight;
+                    return {
+                      id: item.id,
+                      recipe_id: SOURCE_ID,
+                      recipe_title: item.recipeTitle,
+                      recipe_thumbnail_url: null,
+                      status: "leftover",
+                      cooked_at: "2026-08-09T09:00:00.000Z",
+                      cooking_servings: 2,
+                      finished_weight_g: weightStatus === "known" ? 500 : null,
+                      remaining_weight_g: weightStatus === "known" ? remainingWeight : null,
+                      weight_status: weightStatus,
+                      batch_status: currentBatchStatus,
+                      depleted_reason: currentBatchStatus === "depleted" ? "consumed" : null,
+                      revision: 1,
+                      nutrition_calculation_status: weightStatus === "known" ? "complete" : "unavailable",
+                      current_unweighed_closure_event_id: null,
+                    };
+                  }),
+                  next_cursor: page?.nextCursor
+                    ?? (paginatedSources && !cursor ? "batch-cursor" : null),
+                  has_next: page?.hasNext
+                    ?? (paginatedSources && !cursor),
+                };
+              })()
             : path.includes("/food-catalog/search") && catalogBadges
               ? {
                   items: [
@@ -433,6 +505,7 @@ export function renderMealLogShell({
                   has_next: !url.searchParams.has("cursor"),
                 }
               : { items: [], next_cursor: null, has_next: false };
+    if (data instanceof Response) return data;
     return new Response(JSON.stringify({ success: true, data, error: null }), {
       headers: { "content-type": "application/json" },
       status: 200,
@@ -456,5 +529,7 @@ export function renderMealLogShell({
       : null,
     fetchMock,
     navigationMocks,
+    releaseBatchLoad,
+    settledBatchCursors: () => [...settledBatchCursors],
   };
 }
