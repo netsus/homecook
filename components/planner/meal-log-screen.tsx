@@ -398,8 +398,12 @@ function EntryDialog({
         : entry.meal_plan_column_id
           ? `meal-log-section-${entry.meal_plan_column_id}`
           : deletedSectionHeadingId(entry.slot_name_snapshot);
-      const exactSuccessTargetId = entryActionId(entry.id, state.type);
-      setReturnFocusTarget(() => document.getElementById(exactSuccessTargetId)
+      const exactSuccessTargetId = state.type === "edit" && entry.meal_plan_column_id === columnId
+        ? entryActionId(entry.id, state.type)
+        : null;
+      setReturnFocusTarget(() => (exactSuccessTargetId
+        ? document.getElementById(exactSuccessTargetId)
+        : null)
         ?? document.getElementById(logicalSuccessTargetId)
         ?? fallbackFocusRef.current);
       onClose();

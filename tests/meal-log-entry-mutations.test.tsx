@@ -37,15 +37,24 @@ describe("MEAL_LOG entry mutations", () => {
     expect(saveButton.disabled).toBe(false);
   });
 
-  it("restores the exact edit action after cancel and a successful authoritative section move", async () => {
+  it("restores the exact edit action after cancel", async () => {
     const user = userEvent.setup();
-    renderMealLogShell({ applyMutationRefresh: true });
+    renderMealLogShell();
     const invoker = await screen.findByRole("button", { name: /간식의 플레인 요거트 식사 기록 수정/u });
 
     await user.click(invoker);
     await user.click(within(screen.getByRole("dialog", { name: "식사 기록 수정" }))
       .getByRole("button", { name: "취소" }));
     await waitFor(() => expect(document.activeElement).toBe(invoker));
+  });
+
+  it.each([
+    ["before", false],
+    ["after", true],
+  ])("moves focus to the destination heading when authoritative relocation renders %s restoration", async (_timing, applyMutationRefresh) => {
+    const user = userEvent.setup();
+    renderMealLogShell({ applyMutationRefresh });
+    const invoker = await screen.findByRole("button", { name: /간식의 플레인 요거트 식사 기록 수정/u });
 
     await user.click(invoker);
     const dialog = screen.getByRole("dialog", { name: "식사 기록 수정" });
@@ -56,9 +65,7 @@ describe("MEAL_LOG entry mutations", () => {
     await user.click(within(dialog).getByRole("button", { name: "수정 저장" }));
 
     await waitFor(() => expect(screen.queryByRole("dialog", { name: "식사 기록 수정" })).toBeNull());
-    await waitFor(() => expect(document.activeElement).toBe(
-      screen.getByRole("button", { name: /점심의 플레인 요거트 식사 기록 수정/u }),
-    ));
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByRole("heading", { name: "점심" })));
   });
 
   it("moves focus to the origin section after a successful delete", async () => {
