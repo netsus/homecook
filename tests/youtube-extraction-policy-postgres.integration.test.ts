@@ -1676,11 +1676,6 @@ describe.runIf(enabled).sequential("youtube async extraction PostgreSQL integrat
         '${workerId}', '${snapshotDigest}', 120
       )::text;`,
     );
-    const permit = runAsJson(
-      "youtube_extraction_worker",
-      workerClaims(snapshotDigest),
-      `select public.claim_youtube_extractor_permit('${workerId}', 120)::text;`,
-    );
     const stale = runAsJson(
       "youtube_extraction_worker",
       workerClaims(snapshotDigest),
