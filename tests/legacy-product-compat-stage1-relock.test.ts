@@ -290,7 +290,7 @@ describe("legacy-product-compat fresh Stage 1 exact-six relock", () => {
     );
   });
 
-  it("P1 security repair locks exact scoped completion authority on every Stage 1 surface", () => {
+  it("P1 security repair locks mutation-zero ordering and phased cutover on every Stage 1 surface", () => {
     const surfaces = {
       readme,
       acceptance,
@@ -311,7 +311,18 @@ describe("legacy-product-compat fresh Stage 1 exact-six relock", () => {
       "GRANT EXECUTE only to service_role",
       "public.complete_cooking_session(uuid, uuid, uuid[])",
       "public.complete_standalone_cooking(uuid, uuid, integer, uuid[])",
-      "same Stage 2 migration/transaction as the route cutover",
+      "header/body/canonical payload and server-verified session/lifecycle authority before ensurePublicUserRow, ensureUserBootstrapState, ledger, completion, progress or any writer",
+      "route-level bootstrap writers are removed from planner and standalone completion paths",
+      "MAINTENANCE/QUARANTINED/DELETING and malformed/reused/missing/version/owner rejection",
+      "checksum/delta 0 across users, recipe_books, meal_plan_columns, ledger, completion, progress events/summaries",
+      "additive DB phase creates new scoped RPC/core while old overload remains only for existing optional-key/no-key compatibility",
+      "deploy new route callers to new RPC; prove current head and drain old server instances",
+      "under approved maintenance/write fence and explicit server-Mac/OAuth/manual authority, revoke/drop old 3/4-arg overload execute",
+      "rollback before revoke can return route to old optional-key flow",
+      "after revoke rollback must not restore legacy grants or bypass; instead re-enable last safe new-route/RPC version under fence",
+      "required-key transition cannot activate until old overload revoke/drain evidence",
+      "all remote application/fence/activation remains Manual pending and is not executed by Stage2 automation",
+      "DB transaction atomicity only covers claim/bootstrap/completion/progress/finish",
       "old exact signatures are absent from the callable inventory",
       "REVOKE EXECUTE on both old exact signatures from PUBLIC, anon, authenticated, service_role",
       "old authenticated self-call is denied with mutation 0",
@@ -343,12 +354,20 @@ describe("legacy-product-compat fresh Stage 1 exact-six relock", () => {
         expect(content, `${surface} must lock ${required}`).toContain(required);
       }
     }
+    for (const content of Object.values(surfaces)) {
+      expect(content).not.toContain(
+        "same Stage 2 migration/transaction as the route cutover",
+      );
+      expect(content).not.toContain("same transaction as the route cutover");
+    }
 
     expect(automation.backend.required_test_targets).toEqual(
       expect.arrayContaining([
         "old authenticated self-call and all old-overload principals denied with mutation 0",
         "function inventory privilege test for old overloads and two new signatures",
         "planner and standalone lifecycle error wrapper matrix with mutation 0",
+        "MAINTENANCE/QUARANTINED/DELETING and malformed/reused/missing/version/owner rejection checksum/delta 0 across users, recipe_books, meal_plan_columns, ledger, completion, progress events/summaries",
+        "phased cutover: additive DB core, route deploy/current-head drain, then Manual fenced old-overload revoke/drop with post-revoke forward-only rollback",
       ]),
     );
 
