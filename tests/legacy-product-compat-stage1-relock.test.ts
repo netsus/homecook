@@ -204,7 +204,7 @@ describe("legacy-product-compat fresh Stage 1 exact-six relock", () => {
       "durable replay",
       "additional mutation 0",
       "409 IDEMPOTENCY_KEY_REUSED mutation 0",
-      "pre-gate no-key v1 shape",
+      "pre-gate missing Idempotency-Key remains compatible success with the existing v1 response shape",
       "full-release no-key 0",
       "428 IDEMPOTENCY_KEY_REQUIRED mutation 0",
       "planner and standalone",
@@ -313,20 +313,17 @@ describe("legacy-product-compat fresh Stage 1 exact-six relock", () => {
       "public.complete_standalone_cooking(uuid, uuid, integer, uuid[])",
       "header/body/canonical payload and server-verified session/lifecycle authority before ensurePublicUserRow, ensureUserBootstrapState, ledger, completion, progress or any writer",
       "route-level bootstrap writers are removed from planner and standalone completion paths",
-      "MAINTENANCE/QUARANTINED/DELETING and malformed/reused/missing/version/owner rejection",
+      "MAINTENANCE/QUARANTINED/DELETING and malformed/reused/missing-after-full-release-no-key-0/version/owner rejection",
       "checksum/delta 0 across users, recipe_books, meal_plan_columns, ledger, completion, progress events/summaries",
       "additive DB phase creates new scoped RPC/core while old overload remains only for existing optional-key/no-key compatibility",
-      "deploy new route callers to new RPC; prove current head and drain old server instances",
-      "under approved maintenance/write fence and explicit server-Mac/OAuth/manual authority, revoke/drop old 3/4-arg overload execute",
-      "rollback before revoke can return route to old optional-key flow",
-      "after revoke rollback must not restore legacy grants or bypass; instead re-enable last safe new-route/RPC version under fence",
+      "Stage 2 non-manual owns additive scoped RPC/core + planner and standalone route implementation + isolated-local fixtures + activation-block guard",
+      "rollback before old-overload revoke keeps the maintenance/write fence closed",
+      "traffic resumes only after a last-known-safe route/RPC version satisfying session+lifecycle authority and mutation 0 is deployed/proven and old instances are drained",
+      "rollback never returns to bootstrap-before-authority or any optional-key writer ordering",
+      "after old-overload revoke, rollback never restores legacy grants or bypass",
       "required-key transition cannot activate until old overload revoke/drain evidence",
       "all remote application/fence/activation remains Manual pending and is not executed by Stage2 automation",
       "DB transaction atomicity only covers claim/bootstrap/completion/progress/finish",
-      "old exact signatures are absent from the callable inventory",
-      "REVOKE EXECUTE on both old exact signatures from PUBLIC, anon, authenticated, service_role",
-      "old authenticated self-call is denied with mutation 0",
-      "function inventory privilege test",
       "service-role direct DML is forbidden",
       "claim -> legacy completion -> cooking_completed user_progress_events + user_progress_summary -> durable finish",
       "best-effort post-RPC progress writer is removed",
@@ -336,9 +333,9 @@ describe("legacy-product-compat fresh Stage 1 exact-six relock", () => {
       "snapshot_v2 session ID -> 404 RESOURCE_NOT_FOUND fields=[] mutation 0",
       "stale session/account generation -> 409 ACCOUNT_SESSION_STALE|ACCOUNT_GENERATION_STALE fields=[] mutation 0",
       "malformed Idempotency-Key -> 400 INVALID_IDEMPOTENCY_KEY fields[]=[Idempotency-Key:invalid_uuid] mutation 0",
-      "missing Idempotency-Key after full-release no-key 0 -> 428 IDEMPOTENCY_KEY_REQUIRED fields[]=[Idempotency-Key:required] mutation 0",
+      "pre-gate missing Idempotency-Key remains compatible success with the existing v1 response shape",
+      "only after exact required-key activation following full-release no-key 0 may missing Idempotency-Key return 428 IDEMPOTENCY_KEY_REQUIRED mutation 0",
       "reused Idempotency-Key -> 409 IDEMPOTENCY_KEY_REUSED fields=[] mutation 0",
-      "negative privilege tests deny PUBLIC/anon/authenticated execute and service-role direct DML",
       "POST /cooking/sessions/{id}/complete",
       "POST /cooking/standalone-complete",
       '{"success":false,"data":null,"error":{"code":"ACCOUNT_LIFECYCLE_MAINTENANCE","message":"계정 정비 작업 중이에요. 잠시 후 다시 시도해 주세요.","fields":[]}}',
@@ -363,11 +360,11 @@ describe("legacy-product-compat fresh Stage 1 exact-six relock", () => {
 
     expect(automation.backend.required_test_targets).toEqual(
       expect.arrayContaining([
-        "old authenticated self-call and all old-overload principals denied with mutation 0",
-        "function inventory privilege test for old overloads and two new signatures",
         "planner and standalone lifecycle error wrapper matrix with mutation 0",
-        "MAINTENANCE/QUARANTINED/DELETING and malformed/reused/missing/version/owner rejection checksum/delta 0 across users, recipe_books, meal_plan_columns, ledger, completion, progress events/summaries",
-        "phased cutover: additive DB core, route deploy/current-head drain, then Manual fenced old-overload revoke/drop with post-revoke forward-only rollback",
+        "MAINTENANCE/QUARANTINED/DELETING and malformed/reused/missing-after-full-release-no-key-0/version/owner rejection checksum/delta 0 across users, recipe_books, meal_plan_columns, ledger, completion, progress events/summaries",
+        "additive scoped RPC/core implementation",
+        "planner and standalone route implementation using the scoped RPC/core",
+        "activation-block guard until Manual cutover evidence is complete",
       ]),
     );
 
@@ -413,6 +410,118 @@ describe("legacy-product-compat fresh Stage 1 exact-six relock", () => {
     expect(accountAuthorityResponses).toContain(
       'fail("ACCOUNT_DELETING", "계정 삭제가 진행 중이에요.", 409)',
     );
+  });
+
+  it("P1 fresh review separates pre-gate missing-key success from post-activation 428", () => {
+    const surfaces = [
+      readme,
+      acceptance,
+      automation.backend.invariants.join("\n"),
+    ];
+
+    for (const content of surfaces) {
+      expect(content).toContain(
+        "pre-gate missing Idempotency-Key remains compatible success with the existing v1 response shape",
+      );
+      expect(content).toContain(
+        "only after exact required-key activation following full-release no-key 0 may missing Idempotency-Key return 428 IDEMPOTENCY_KEY_REQUIRED mutation 0",
+      );
+      expect(content).toContain(
+        "MAINTENANCE/QUARANTINED/DELETING and malformed/reused/missing-after-full-release-no-key-0/version/owner rejection",
+      );
+      expect(content).not.toContain(
+        "MAINTENANCE/QUARANTINED/DELETING and malformed/reused/missing/version/owner rejection",
+      );
+    }
+
+    expect(automation.backend.required_test_targets).toEqual(
+      expect.arrayContaining([
+        "pre-gate missing-key planner and standalone compatibility success with existing v1 response shape",
+        "post-activation missing-key planner and standalone 428 IDEMPOTENCY_KEY_REQUIRED with mutation 0",
+      ]),
+    );
+    expect(automation.backend.invariants).toContain(
+      "missing Idempotency-Key only after exact required-key activation following full-release no-key 0 -> 428 IDEMPOTENCY_KEY_REQUIRED fields[]=[Idempotency-Key:required] mutation 0",
+    );
+  });
+
+  it("P1 fresh review keeps rollback fenced and resumes only a proven safe route/RPC", () => {
+    const surfaces = [
+      readme,
+      acceptance,
+      automation.backend.invariants.join("\n"),
+    ];
+
+    for (const content of surfaces) {
+      expect(content).toContain(
+        "rollback before old-overload revoke keeps the maintenance/write fence closed",
+      );
+      expect(content).toContain(
+        "traffic resumes only after a last-known-safe route/RPC version satisfying session+lifecycle authority and mutation 0 is deployed/proven and old instances are drained",
+      );
+      expect(content).toContain(
+        "rollback never returns to bootstrap-before-authority or any optional-key writer ordering",
+      );
+      expect(content).toContain(
+        "after old-overload revoke, rollback never restores legacy grants or bypass",
+      );
+      expect(content).not.toContain(
+        "rollback before revoke can return route to old optional-key flow",
+      );
+    }
+  });
+
+  it("P1 fresh review makes Stage 2 non-manual and classifies cutover operations as Manual Only", () => {
+    const checklist = readWorkpackChecklistContract({
+      rootDir: root,
+      slice: sliceId,
+    });
+    const stage2Text = checklist.items
+      .filter((item) => Number(item.metadata?.stage) === 2)
+      .map((item) => item.text)
+      .join("\n");
+    const stage2Targets = automation.backend.required_test_targets.join("\n");
+    const manualOnly = readSection(acceptance, "### Manual Only");
+    const manualAutomation = automation.external_smokes.join("\n");
+
+    for (const stage2Target of [
+      "additive scoped RPC/core implementation",
+      "planner and standalone route implementation using the scoped RPC/core",
+      "isolated-local compatibility fixtures",
+      "activation-block guard until Manual cutover evidence is complete",
+    ]) {
+      expect(stage2Targets).toContain(stage2Target);
+    }
+
+    const manualOperations = [
+      "controlled full-local/current-head deploy",
+      "old-server drain",
+      "maintenance/write fence",
+      "old overload revoke/drop",
+      "callable inventory/negative privilege evidence",
+      "server-Mac/OAuth",
+      "activation",
+    ];
+    for (const operation of manualOperations) {
+      expect(manualOnly).toContain(operation);
+      expect(manualAutomation).toContain(operation);
+    }
+
+    for (const automatedProjection of [stage2Text, stage2Targets]) {
+      expect(automatedProjection).not.toMatch(
+        /execute (?:the )?maintenance\/write fence|execute (?:the )?old overload revoke\/drop|perform (?:the )?controlled full-local\/current-head deploy|perform (?:the )?old-server drain/iu,
+      );
+      for (const manualOperation of [
+        "controlled full-local/current-head deploy",
+        "old-server drain",
+        "maintenance/write fence",
+        "old overload revoke/drop",
+        "callable inventory/negative privilege evidence",
+        "server-Mac/OAuth",
+      ]) {
+        expect(automatedProjection).not.toContain(manualOperation);
+      }
+    }
   });
 
   it("P1-5 separates deterministic fixtures, isolated-local mutation and merged-exact read-only evidence", () => {
@@ -558,7 +667,7 @@ describe("legacy-product-compat fresh Stage 1 exact-six relock", () => {
       "loading-empty-error-read-only-unauthorized",
       "legacy-detail-delete-pending-delete-error-row-retained",
       "v1-optional-key-and-pre-gate-no-key-decode",
-      "v1-missing-key-428-post-full-release-zero",
+      "v1-missing-key-428-post-exact-activation-following-full-release-zero",
       "current-and-immediate-previous-stored-version-dispatch",
     ]);
     expect(automation.frontend.required_states.join("\n")).not.toMatch(
