@@ -14,7 +14,10 @@ describe("MEAL_LOG add sheet", () => {
     renderMealLogShell();
 
     await user.click(await screen.findByRole("button", { name: "아침에 먹은 음식 추가" }));
-    expect(screen.getByRole("dialog", { name: "먹은 음식 추가" })).toBeTruthy();
+    const dialog = screen.getByRole("dialog", { name: "먹은 음식 추가" });
+    expect(dialog.className.split(" ")).toContain("h-[100dvh]");
+    expect(screen.getByText("8월 10일 · 아침")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "닫기" })).toBeTruthy();
     expect(screen.getByRole("tab", { name: "요리한 음식" })).toBeTruthy();
     expect(screen.getByRole("tab", { name: "제품·재료" })).toBeTruthy();
     expect(screen.getAllByRole("tab")).toHaveLength(2);

@@ -105,12 +105,14 @@ vi.mock("@/components/shared/profile-summary-button", () => ({
 }));
 
 export function renderMealLogShell({
+  empty = false,
   failDate,
   includeCookedBatch = false,
   recentCookedWithoutProjection = false,
   batchWeightStatus = "known",
   paginatedSources = false,
 }: {
+  empty?: boolean;
   failDate?: string;
   includeCookedBatch?: boolean;
   recentCookedWithoutProjection?: boolean;
@@ -164,7 +166,26 @@ export function renderMealLogShell({
       : path.includes("/meal-log/entries")
         ? { entry }
         : path.includes("/meal-log?")
-          ? day
+          ? empty
+            ? {
+                ...day,
+                active_sections: day.active_sections.map((section) => ({
+                  ...section,
+                  entries: [],
+                })),
+                deleted_column_sections: [],
+                entries: [],
+                day_total: {
+                  calculation_status: "complete",
+                  calories_kcal: 0,
+                  carbohydrate_g: 0,
+                  protein_g: 0,
+                  fat_g: 0,
+                  sodium_mg: 0,
+                  incomplete_count: 0,
+                },
+              }
+            : day
           : path.includes("/cooked-batches")
             ? {
                 items: includeCookedBatch || paginatedSources ? [{

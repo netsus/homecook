@@ -138,7 +138,7 @@ function ActiveSection({ section, onAdd, onDelete, onEdit }: {
     <section aria-labelledby={`meal-log-section-${section.meal_plan_column_id}`} className="min-w-0 rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)] p-4">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h2 className="font-extrabold" id={`meal-log-section-${section.meal_plan_column_id}`}>{section.slot_name_snapshot}</h2>
-        <p className="text-sm font-bold">{number(section.subtotal.calories_kcal, " kcal")}</p>
+        {section.entries.length > 0 ? <p className="text-sm font-bold">{number(section.subtotal.calories_kcal, " kcal")}</p> : null}
       </div>
       {section.incomplete_count > 0 ? <p className="mt-1 text-xs font-bold">일부 정보 없음 {section.incomplete_count}건</p> : null}
       <ul className="mt-2 divide-y divide-[var(--line-strong)]">
@@ -391,10 +391,12 @@ export function MealLogScreen({ date, onDateChange }: MealLogScreenProps) {
 
       {!loading && day ? (
         <>
-          <section className="mt-4 rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)] p-4" aria-labelledby="meal-log-summary-title">
-            <h2 className="font-extrabold" id="meal-log-summary-title">오늘 먹은 영양</h2>
-            <NutritionSummary incompleteCount={day.day_total.incomplete_count} nutrition={day.day_total} />
-          </section>
+          {day.entries.length > 0 ? (
+            <section className="mt-4 rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)] p-4" aria-labelledby="meal-log-summary-title">
+              <h2 className="font-extrabold" id="meal-log-summary-title">오늘 먹은 영양</h2>
+              <NutritionSummary incompleteCount={day.day_total.incomplete_count} nutrition={day.day_total} />
+            </section>
+          ) : null}
           {day.entries.length === 0 ? <p className="mt-4 rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)] p-5 text-center text-sm text-[var(--text-2)]">이날 기록한 음식이 없어요. 끼니에서 먹은 음식을 추가해 보세요.</p> : null}
           <div className="mt-4 grid items-start gap-3 lg:grid-cols-2">
             {day.active_sections.map((section) => <ActiveSection key={section.meal_plan_column_id} onAdd={() => setDialog({ type: "add", columnId: section.meal_plan_column_id })} onDelete={(entry) => setDialog({ type: "delete", entry })} onEdit={(entry) => setDialog({ type: "edit", entry })} section={section} />)}

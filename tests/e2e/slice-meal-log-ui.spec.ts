@@ -38,6 +38,15 @@ const states = [
 ] as const;
 type FixtureState = typeof states[number];
 
+const addSheetStates = new Set<FixtureState>([
+  "add-sheet-recent",
+  "add-sheet-search",
+  "missing-batch",
+  "unrecoverable-batch",
+  "pending",
+  "replay",
+]);
+
 const viewports = [
   { label: "mobile-default", width: 390, height: 844 },
   { label: "mobile-narrow", width: 320, height: 693 },
@@ -199,15 +208,27 @@ test.describe("meal-log-ui Stage 4", () => {
             await expect(page.locator("[aria-busy='true']").first()).toBeVisible();
           } else if (state === "error") {
             await expect(page.locator("#planner-log-panel").getByRole("alert")).toBeVisible();
+          } else if (state === "empty") {
+            await expect(page.getByText("이날 기록한 음식이 없어요. 끼니에서 먹은 음식을 추가해 보세요.")).toBeVisible();
+            await expect(page.getByText("0 kcal")).toHaveCount(0);
           } else {
             await expect(page.getByText("오늘 먹은 영양")).toBeVisible();
           }
         }
 
-        if (["add-sheet-recent", "add-sheet-search", "missing-batch", "unrecoverable-batch", "pending", "replay"].includes(state)) {
+        if (addSheetStates.has(state)) {
           await page.getByRole("button", { name: "아침에 먹은 음식 추가" }).click();
           const dialog = page.getByRole("dialog", { name: "먹은 음식 추가" });
           await expect(dialog).toBeVisible();
+          await expect(dialog.getByRole("heading", { name: "먹은 음식 추가" })).toBeVisible();
+          await expect(dialog.getByText("8월 10일 · 아침")).toBeVisible();
+          await expect(dialog.getByRole("button", { name: "닫기" })).toBeVisible();
+          if (viewport.label !== "desktop") {
+            const box = await dialog.boundingBox();
+            expect(box).not.toBeNull();
+            expect(box?.y).toBe(0);
+            expect(box?.height).toBe(viewport.height);
+          }
           if (state === "add-sheet-recent" || state === "add-sheet-search") {
             await dialog.getByRole("tab", { name: "제품·재료" }).click();
             if (state === "add-sheet-search") {
@@ -248,7 +269,10 @@ test.describe("meal-log-ui Stage 4", () => {
 
         await stabilize(page);
         const file = `MEAL_LOG-${viewport.label}-${state}.png`;
-        await page.screenshot({ path: resolve(EVIDENCE_DIR, file), fullPage: true });
+        await page.screenshot({
+          path: resolve(EVIDENCE_DIR, file),
+          fullPage: viewport.label === "desktop",
+        });
         captured.push({ captured_at: new Date().toISOString(), file, state, viewport: viewport.label });
         if (state === "default") {
           const violations = (await new AxeBuilder({ page }).include("#planner-log-panel").analyze()).violations.filter(({ impact }) => impact === "serious" || impact === "critical");
@@ -264,7 +288,11 @@ test.describe("meal-log-ui Stage 4", () => {
     expect(captured).toHaveLength(51);
     const capturedAt = new Date().toISOString();
     await writeFile(resolve(EVIDENCE_DIR, "runtime-accessibility-layout.json"), `${JSON.stringify(runtime, null, 2)}\n`);
-    await writeFile(resolve(EVIDENCE_DIR, "manifest.json"), `${JSON.stringify({ captured_at: capturedAt, generated_by: "tests/e2e/slice-meal-log-ui.spec.ts", implementation_head: process.env.MEAL_LOG_IMPLEMENTATION_HEAD ?? "working-tree", implementation_tree: process.env.MEAL_LOG_IMPLEMENTATION_TREE ?? "working-tree", viewport_matrix: viewports, required_states: states, captures: captured, limitations: ["Deterministic local mocked routes only.", "Physical device, screen reader, virtual keyboard, server-Mac, OAuth, AT, R/R+1/R+2 and production remain pending."] }, null, 2)}\n`);
+    const implementationHead = process.env.MEAL_LOG_IMPLEMENTATION_HEAD;
+    const implementationTree = process.env.MEAL_LOG_IMPLEMENTATION_TREE;
+    expect(implementationHead, "MEAL_LOG_IMPLEMENTATION_HEAD must pin the clean implementation commit").toMatch(/^[0-9a-f]{40}$/u);
+    expect(implementationTree, "MEAL_LOG_IMPLEMENTATION_TREE must pin the clean implementation tree").toMatch(/^[0-9a-f]{40}$/u);
+    await writeFile(resolve(EVIDENCE_DIR, "manifest.json"), `${JSON.stringify({ captured_at: capturedAt, generated_by: "tests/e2e/slice-meal-log-ui.spec.ts", implementation_head: implementationHead, implementation_tree: implementationTree, viewport_matrix: viewports, required_states: states, captures: captured, limitations: ["Deterministic local mocked routes only.", "Mobile PNGs are viewport-bound captures; desktop PNGs use full-page capture.", "Physical device, screen reader, virtual keyboard, server-Mac, OAuth, AT, R/R+1/R+2 and production remain pending."] }, null, 2)}\n`);
     expect(runtime).toEqual({ axeSeriousOrCritical: 0, axeViolations: [], horizontalOverflow: 0, targetsBelow44: 0, replayKeyReused: true });
   });
 });
