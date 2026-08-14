@@ -382,7 +382,7 @@ describe("MEAL_LOG unauthorized return-to-action", () => {
     await waitFor(() => expect(document.activeElement).toBe(screen.getByRole("heading", { name: "아침" })));
   });
 
-  it("focuses the current edit action after a restored deleted-origin edit moves sections", async () => {
+  it("focuses the destination context after a restored deleted-origin edit moves sections", async () => {
     const user = userEvent.setup();
     const first = renderMealLogShell({ unauthorized: "edit" });
 
@@ -404,6 +404,7 @@ describe("MEAL_LOG unauthorized return-to-action", () => {
     await waitFor(() => expect(screen.queryByRole("dialog", { name: "식사 기록 수정" })).toBeNull());
     const currentInvoker = screen.getByRole("button", { name: /점심의 플레인 요거트 식사 기록 수정/u });
     expect(originalInvoker.isConnected).toBe(false);
-    await waitFor(() => expect(document.activeElement).toBe(currentInvoker));
+    expect(currentInvoker.isConnected).toBe(true);
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByRole("heading", { name: "점심" })));
   });
 });
