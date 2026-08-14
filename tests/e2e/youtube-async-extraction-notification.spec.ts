@@ -425,7 +425,13 @@ test("import initial and submitting states are visually explicit", async ({ page
   await expect(importButton).toBeDisabled();
   const initialStyle = await importButton.evaluate((element) => {
     const style = getComputedStyle(element);
-    return { backgroundColor: style.backgroundColor, color: style.color, opacity: style.opacity, transform: style.transform };
+    return {
+      backgroundColor: style.backgroundColor,
+      borderColor: style.borderColor,
+      color: style.color,
+      opacity: style.opacity,
+      transform: style.transform,
+    };
   });
   expect(initialStyle.opacity).toBe("1");
   expect(initialStyle.transform).toBe("none");
@@ -435,9 +441,14 @@ test("import initial and submitting states are visually explicit", async ({ page
   await expect(importButton).toBeEnabled();
   const enabledStyle = await importButton.evaluate((element) => {
     const style = getComputedStyle(element);
-    return { backgroundColor: style.backgroundColor, color: style.color };
+    return {
+      backgroundColor: style.backgroundColor,
+      borderColor: style.borderColor,
+      color: style.color,
+    };
   });
   expect(enabledStyle.backgroundColor).not.toBe(initialStyle.backgroundColor);
+  expect(enabledStyle.borderColor).not.toBe(initialStyle.borderColor);
   expect(enabledStyle.color).not.toBe(initialStyle.color);
   await captureEvidence(page, testInfo, path.join(IMPORT_EVIDENCE, "mobile-390-enabled-url.png"), true);
   await importButton.click();
@@ -445,7 +456,13 @@ test("import initial and submitting states are visually explicit", async ({ page
   await expect(submittingButton).toBeDisabled();
   const submittingStyle = await submittingButton.evaluate((element) => {
     const style = getComputedStyle(element);
-    return { backgroundColor: style.backgroundColor, color: style.color, opacity: style.opacity, transform: style.transform };
+    return {
+      backgroundColor: style.backgroundColor,
+      borderColor: style.borderColor,
+      color: style.color,
+      opacity: style.opacity,
+      transform: style.transform,
+    };
   });
   expect(submittingStyle).toEqual(initialStyle);
   await expect(page.getByLabel("유튜브 URL")).toBeDisabled();
