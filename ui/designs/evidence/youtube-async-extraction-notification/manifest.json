@@ -1,9 +1,9 @@
 {
-  "captured_at": "2026-08-14T02:53:40Z",
+  "captured_at": "2026-08-14T03:35:16Z",
   "evidence_scope": "youtube-async-extraction-notification Stage 4 frontend",
   "implementation_base": "25e8da8b04c2322f68d8f54837135399d7586da7",
-  "implementation_head": "1b9824258b679c6944af508ab6d0ec3d11cb223c",
-  "implementation_tree": "00261e7634f1cdc4729855e665501f017b1e57f4",
+  "implementation_head": "00a908789487bf4efcb66cff0b33c97b15513311",
+  "implementation_tree": "b63d1d7a26d10754d6d6378998f2eaedd7451433",
   "generator": "tests/e2e/youtube-async-extraction-notification.spec.ts",
   "base_url": "http://127.0.0.1:3217",
   "remote_supabase_access_count": 0,
@@ -132,20 +132,20 @@
     }
   ],
   "verification": {
-    "focused_vitest": "71 focused frontend, migration-contract, worker, and provenance tests passed",
-    "youtube_async_regression": "58 backend worker/runtime tests, 21 release-installer tests, and 54 isolated PostgreSQL/PostgREST integration tests passed; queued schema/authorization drift rejection, catalog fingerprint drift matrix, duplicate same-worker permit claims, explicit job-to-permit lock order, concurrent start/heartbeat/finalize, expired fences, post-release exact replay, quota accounting, external secret-root provenance, and durable failure recording are covered",
+    "focused_vitest": "40 Stage 3 release-metadata and installer tests passed, including 6 RED-to-GREEN security regressions",
+    "youtube_async_regression": "86 combined backend worker/runtime/installer tests and 54 isolated PostgreSQL/PostgREST integration tests passed; exact release metadata membership/hash validation, queued schema/authorization drift rejection, catalog fingerprint drift matrix, duplicate same-worker permit claims, explicit job-to-permit lock order, concurrent start/heartbeat/finalize, expired fences, post-release exact replay, quota accounting, lexical secret-root provenance, and durable failure recording are covered",
     "playwright": "23 deterministic scenarios passed; 69 cross-project executions passed on isolated port 3217; 24 exact-code-head screenshots captured",
     "axe": "0 violations on accepted CTA, grouped and individual toast, unauthorized notice, and 320px reflow surfaces with color-contrast enabled",
     "exploratory_qa": "97/100; 42/46 covered; 4 independent authority or real-worker/DB items intentionally not covered",
     "lint_typecheck": "passed on exact code head",
     "official_frontend_pr_gate": "passed on isolated port 3217: lint, typecheck, 2,741 product tests, build, 62 smoke passed/10 skipped, 8 a11y passed/1 skipped, and 12 visual passed",
     "security_e2e": "12 passed on isolated port 3217",
-    "full_vitest": "6,137 passed and 457 skipped",
+    "full_vitest": "6,143 passed and 457 skipped",
     "visual_verdict": "98/100 pass"
   },
   "limitations": [
     "This is mock-API browser evidence and does not replace real local Supabase worker crash/reclaim or cross-user DB verification.",
-    "The latest authority and backend/security REVISE findings are repaired, but independent re-review of the new exact PR head, Stage 5, final authority, and Stage 6 remain pending.",
+    "Independent design review passed with no findings; independent backend/security re-review of the new exact PR head, Stage 5, final authority, and Stage 6 remain pending.",
     "Physical-device screen reader, safe-area, and virtual-keyboard checks remain Manual Only."
   ]
 }
