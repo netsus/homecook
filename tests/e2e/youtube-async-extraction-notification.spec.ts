@@ -710,7 +710,7 @@ test("an open notification panel hands focus to unauthorized guidance", async ({
   await captureEvidence(
     page,
     testInfo,
-    path.join(SHELL_EVIDENCE, "mobile-390-unauthorized-focus-handoff.png"),
+    path.join(SHELL_EVIDENCE, "mobile-390-unauthorized.png"),
   );
 });
 
@@ -836,7 +836,6 @@ test("shell unauthorized state keeps a return-to-login action", async ({ page },
   const [noticeBox, searchBox] = await Promise.all([notice.boundingBox(), search.boundingBox()]);
   expect((noticeBox?.y ?? 0) >= (searchBox?.y ?? 0) + (searchBox?.height ?? 0)
     || (noticeBox?.y ?? 0) + (noticeBox?.height ?? 0) <= (searchBox?.y ?? 0)).toBe(true);
-  await captureEvidence(page, testInfo, path.join(SHELL_EVIDENCE, "mobile-390-unauthorized.png"));
 });
 
 test("failure panel reflows at 200% text with non-zero safe areas at 320", async ({ page }, testInfo) => {
