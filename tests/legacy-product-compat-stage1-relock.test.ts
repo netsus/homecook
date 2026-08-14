@@ -290,6 +290,46 @@ describe("legacy-product-compat fresh Stage 1 exact-six relock", () => {
     );
   });
 
+  it("P1 security repair locks exact scoped completion authority on every Stage 1 surface", () => {
+    const surfaces = {
+      readme,
+      acceptance,
+      automation: JSON.stringify(automation),
+    };
+
+    const requiredPerSurface = [
+      "public.complete_cooking_session(uuid, timestamptz, text, integer, timestamptz, uuid, uuid[], uuid, timestamptz)",
+      "public.complete_standalone_cooking(uuid, timestamptz, text, integer, timestamptz, uuid, integer, uuid[], uuid, timestamptz)",
+      "server-verified JWT sub/session_id/iat",
+      "active expected account generation",
+      "stored contract_version=legacy_v1",
+      "snapshot_v2 session ID",
+      "control_class=application-controlled; effect=mutation; exposure=service-internal; allowed_principals=service_role; owner=postgres",
+      "auth.role() = service_role",
+      "pg_catalog, public, private, pg_temp",
+      "REVOKE ALL FROM PUBLIC, anon, authenticated",
+      "GRANT EXECUTE only to service_role",
+      "service-role direct DML is forbidden",
+      "claim -> legacy completion -> cooking_completed user_progress_events + user_progress_summary -> durable finish",
+      "best-effort post-RPC progress writer is removed",
+      "concurrent/replay/mismatch/rollback mutation counters include user_progress_events and user_progress_summary",
+      "planner product other-owner keeps documented scope-filtered 404 RESOURCE_NOT_FOUND fields=[]",
+      "legacy cooking other-owner keeps 403 FORBIDDEN fields=[]",
+      "snapshot_v2 session ID -> 404 RESOURCE_NOT_FOUND fields=[] mutation 0",
+      "stale session/account generation -> 409 ACCOUNT_SESSION_STALE|ACCOUNT_GENERATION_STALE fields=[] mutation 0",
+      "malformed Idempotency-Key -> 400 INVALID_IDEMPOTENCY_KEY fields[]=[Idempotency-Key:invalid_uuid] mutation 0",
+      "missing Idempotency-Key after full-release no-key 0 -> 428 IDEMPOTENCY_KEY_REQUIRED fields[]=[Idempotency-Key:required] mutation 0",
+      "reused Idempotency-Key -> 409 IDEMPOTENCY_KEY_REUSED fields=[] mutation 0",
+      "negative privilege tests deny PUBLIC/anon/authenticated execute and service-role direct DML",
+    ];
+
+    for (const [surface, content] of Object.entries(surfaces)) {
+      for (const required of requiredPerSurface) {
+        expect(content, `${surface} must lock ${required}`).toContain(required);
+      }
+    }
+  });
+
   it("P1-5 separates deterministic fixtures, isolated-local mutation and merged-exact read-only evidence", () => {
     const fixtures = [
       readme,
