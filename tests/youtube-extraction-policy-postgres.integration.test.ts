@@ -2424,6 +2424,51 @@ describe.runIf(enabled).sequential("youtube async extraction PostgreSQL integrat
     }
   });
 
+  it("fails readiness closed when arbitrary principals gain direct target table or sequence grants", () => {
+    enablePolicy();
+    const snapshotDigest = policySnapshotDigest();
+    configureWorkerCredential(snapshotDigest);
+    const sequenceName = psql(`
+      select format('%I.%I', namespace.nspname, relation.relname)
+      from pg_catalog.pg_class as relation
+      join pg_catalog.pg_namespace as namespace on namespace.oid = relation.relnamespace
+      where relation.relkind = 'S'
+        and namespace.nspname in ('private', 'public')
+        and relation.relname like 'youtube%'
+      order by namespace.nspname, relation.relname
+      limit 1;
+    `);
+    psql(`
+      create role arbitrary_bypassrls_acl_probe nologin bypassrls noinherit;
+    `);
+    try {
+      expectCatalogDriftToBlockEnqueueAndClaim(`
+        grant select on table public.youtube_extraction_jobs
+          to arbitrary_bypassrls_acl_probe;
+        ${sequenceName.length > 0
+          ? `grant usage, select on sequence ${sequenceName}
+          to arbitrary_bypassrls_acl_probe;`
+          : ""}
+      `, snapshotDigest);
+    } finally {
+      psql(`
+        revoke all privileges on table public.youtube_extraction_jobs
+          from arbitrary_bypassrls_acl_probe;
+        ${sequenceName.length > 0
+          ? `revoke all privileges on sequence ${sequenceName}
+          from arbitrary_bypassrls_acl_probe;`
+          : ""}
+        drop role arbitrary_bypassrls_acl_probe;
+      `);
+    }
+
+    const readiness = runAsJson("authenticated", authenticatedClaims(ownerA), `
+      select public.read_youtube_extraction_enqueue_readiness()::text;
+    `);
+    expect(readiness.ready).toBe(true);
+    expect(readiness.catalog_fingerprint).toBe(expectedSchemaDocument.catalog_fingerprint);
+  });
+
   it("fails readiness closed when any principal inherits a restricted worker role", () => {
     enablePolicy();
     const snapshotDigest = policySnapshotDigest();

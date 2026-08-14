@@ -60,6 +60,20 @@ const DEFAULT_INCLUDED_PATHS = Object.freeze([
 ]);
 const EXPECTED_SCHEMA_RELATIVE_PATH =
   "scripts/manifests/youtube-extraction-expected-schema.json";
+export const YOUTUBE_EXTRACTION_WORKER_ENTRYPOINT_RELATIVE_PATH =
+  "scripts/youtube-extraction-worker-runner.mjs";
+export const YOUTUBE_EXTRACTION_WORKER_LAUNCHD_TEMPLATE_RELATIVE_PATH =
+  "scripts/templates/com.homecook.youtube-extraction-worker.plist.template";
+export const YOUTUBE_EXTRACTION_WORKER_REQUIRED_ARTIFACT_FILES = Object.freeze([
+  "lib/server/youtube-i031-runtime/bundle/manifest.json",
+  "lib/server/youtube-i031-runtime/bundle/worker.mjs",
+  "scripts/lib/youtube-extraction-worker-artifact.mjs",
+  "scripts/lib/youtube-extraction-worker-ops.mjs",
+  "scripts/lib/youtube-extraction-worker-runtime.mjs",
+  EXPECTED_SCHEMA_RELATIVE_PATH,
+  YOUTUBE_EXTRACTION_WORKER_ENTRYPOINT_RELATIVE_PATH,
+  YOUTUBE_EXTRACTION_WORKER_LAUNCHD_TEMPLATE_RELATIVE_PATH,
+]);
 
 export function ensureNonEmptyString(value, label) {
   if (typeof value !== "string" || value.trim().length === 0) {
@@ -400,6 +414,9 @@ export function buildYoutubeExtractionWorkerArtifactManifest({
     "pipelineIdentity",
   );
   const fileManifest = buildFileManifest(normalizedRootDir, includedPaths);
+  assertRequiredArtifactFileInventory(
+    new Set(fileManifest.map((file) => file.path)),
+  );
   const expectedSchemaSha = sha256File(resolve(
     normalizedRootDir,
     EXPECTED_SCHEMA_RELATIVE_PATH,
@@ -417,9 +434,9 @@ export function buildYoutubeExtractionWorkerArtifactManifest({
     pipeline_identity: normalizedPipelineIdentity,
     allowed_snapshot_digest: normalizedAllowedSnapshotDigest,
     expected_schema_sha256: expectedSchemaSha,
-    entrypoint_relative_path: "scripts/youtube-extraction-worker-runner.mjs",
+    entrypoint_relative_path: YOUTUBE_EXTRACTION_WORKER_ENTRYPOINT_RELATIVE_PATH,
     launchd_template_relative_path:
-      "scripts/templates/com.homecook.youtube-extraction-worker.plist.template",
+      YOUTUBE_EXTRACTION_WORKER_LAUNCHD_TEMPLATE_RELATIVE_PATH,
     files: fileManifest,
   };
   const artifactSha = sha256Text(stableStringify(baseManifest));
@@ -732,6 +749,19 @@ export function verifyYoutubeExtractionWorkerArtifact(path) {
       throw new Error(`worker artifact file drift: ${file.path}`);
     }
   }
+  assertRequiredArtifactFileInventory(manifestFiles);
+  assertArtifactRelativePath(
+    value.entrypoint_relative_path,
+    "entrypoint relative path",
+    YOUTUBE_EXTRACTION_WORKER_ENTRYPOINT_RELATIVE_PATH,
+    manifestFiles,
+  );
+  assertArtifactRelativePath(
+    value.launchd_template_relative_path,
+    "launchd template relative path",
+    YOUTUBE_EXTRACTION_WORKER_LAUNCHD_TEMPLATE_RELATIVE_PATH,
+    manifestFiles,
+  );
   if (JSON.stringify([...manifestFiles].sort()) !== JSON.stringify(
     readMaterializedArtifactFileInventory(artifactRoot, normalizedPath),
   )) {
@@ -747,6 +777,20 @@ export function verifyYoutubeExtractionWorkerArtifact(path) {
     throw new Error("worker artifact expected schema digest is invalid.");
   }
   return value;
+}
+
+function assertRequiredArtifactFileInventory(manifestFiles) {
+  for (const requiredPath of YOUTUBE_EXTRACTION_WORKER_REQUIRED_ARTIFACT_FILES) {
+    if (!manifestFiles.has(requiredPath)) {
+      throw new Error(`worker artifact required file is missing: ${requiredPath}`);
+    }
+  }
+}
+
+function assertArtifactRelativePath(value, label, expectedPath, manifestFiles) {
+  if (value !== expectedPath || !manifestFiles.has(expectedPath)) {
+    throw new Error(`worker artifact ${label} is invalid.`);
+  }
 }
 
 export function readYoutubeExtractionExpectedSchema(path) {

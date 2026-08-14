@@ -2327,24 +2327,6 @@ begin
       left join pg_catalog.pg_roles as grantee on grantee.oid = privilege.grantee
       where relation.relkind in ('r', 'p')
         and (
-          coalesce(grantee.rolname, 'PUBLIC') like 'youtube_extraction%'
-          or (
-            coalesce(grantee.rolname, 'PUBLIC') in (
-              'PUBLIC', 'anon', 'authenticated', 'service_role'
-            )
-            and (
-              (namespace.nspname = 'private' and relation.relname in (
-                'youtube_extraction_current_policy',
-                'youtube_extraction_worker_credentials'
-              ))
-              or (namespace.nspname = 'public' and relation.relname in (
-                'youtube_extraction_jobs',
-                'youtube_extractor_permits'
-              ))
-            )
-          )
-        )
-        and (
           (namespace.nspname = 'private' and relation.relname like 'youtube_extraction%')
           or (
             namespace.nspname = 'public'
@@ -2379,13 +2361,6 @@ begin
       where relation.relkind = 'S'
         and namespace.nspname in ('private', 'public')
         and relation.relname like 'youtube%'
-        and coalesce(grantee.rolname, 'PUBLIC') in (
-          'PUBLIC', 'anon', 'authenticated', 'service_role',
-          'youtube_extraction_enqueue_rpc_owner',
-          'youtube_extraction_worker', 'youtube_extraction_worker_rpc_owner',
-          'youtube_extraction_credential_manager',
-          'youtube_extraction_credential_manager_rpc_owner'
-        )
     ), ''),
     'rpc_signatures',
     coalesce((
@@ -2529,7 +2504,7 @@ begin
     'ready', v_policy.enabled
       and v_credential.allowed_snapshot_digest = v_snapshot_digest
       and v_credential.expires_at > clock_timestamp() + interval '30 minutes'
-      and v_catalog_fingerprint = '3d15ac526d46e89eb347ab184203f4fe2f179c1964111a9956e4a166a9d7ea45',
+      and v_catalog_fingerprint = 'b8561e40e39a97962dab877e3d7c732236bf1bc55c8c985e56b846c50f7f90b1',
     'release_sha', v_credential.release_sha,
     'schema_identity', v_credential.schema_identity,
     'catalog_fingerprint', v_catalog_fingerprint,
@@ -2558,7 +2533,7 @@ declare
 begin
   v_readiness := public.read_youtube_extraction_enqueue_readiness();
   if coalesce(v_readiness ->> 'catalog_fingerprint', '')
-    is distinct from '3d15ac526d46e89eb347ab184203f4fe2f179c1964111a9956e4a166a9d7ea45' then
+    is distinct from 'b8561e40e39a97962dab877e3d7c732236bf1bc55c8c985e56b846c50f7f90b1' then
     raise exception 'YOUTUBE_EXTRACTION_SCHEMA_NOT_READY'
       using errcode = '55000';
   end if;

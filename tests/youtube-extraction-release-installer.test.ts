@@ -27,6 +27,9 @@ import {
   materializeYoutubeExtractionWorkerArtifact,
   readYoutubeExtractionExpectedSchema,
   sha256File,
+  sha256Text,
+  stableStringify,
+  verifyYoutubeExtractionWorkerArtifact,
   YOUTUBE_EXTRACTION_WORKER_LABEL,
   YOUTUBE_EXTRACTION_WORKER_RELEASE_SCHEMA_IDENTITY,
 } from "../scripts/lib/youtube-extraction-worker-artifact.mjs";
@@ -258,6 +261,69 @@ describe("YTASYNC-OPS deterministic artifact", () => {
     writeModeFile(schemaPath, JSON.stringify(incomplete));
     expect(() => readYoutubeExtractionExpectedSchema(schemaPath))
       .toThrow(/expected schema manifest is invalid/i);
+  });
+
+  it("rejects self-consistent shortened artifacts that omit canonical required files", () => {
+    expect(() => buildYoutubeExtractionWorkerArtifactManifest({
+      rootDir: process.cwd(),
+      releaseSha: "0123456789abcdef0123456789abcdef01234567",
+      schemaIdentity: YOUTUBE_EXTRACTION_WORKER_RELEASE_SCHEMA_IDENTITY,
+      allowedSnapshotDigest:
+        "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      includedPaths: [
+        "scripts/youtube-extraction-worker-runner.mjs",
+        "scripts/manifests/youtube-extraction-expected-schema.json",
+        "scripts/templates/com.homecook.youtube-extraction-worker.plist.template",
+      ],
+    }))
+      .toThrow(/required file is missing/i);
+  });
+
+  it("rejects artifacts whose entrypoint or launchd template path is not attested by the inventory", () => {
+    const privateDir = createTempDir("yta-artifact-path-drift-private-");
+    const inputs = createReleaseInputs(privateDir);
+    const manifestPath = join(inputs.artifactDir, "artifact.json");
+    const original = JSON.parse(readFileSync(manifestPath, "utf8"));
+
+    const withEntrypointDrift = {
+      ...original,
+      entrypoint_relative_path: "scripts/lib/youtube-extraction-worker-runtime.mjs",
+    };
+    const entrypointBase = {
+      ...withEntrypointDrift,
+      artifact_sha256: undefined,
+    };
+    chmodSync(manifestPath, 0o600);
+    writeModeFile(
+      manifestPath,
+      `${JSON.stringify({
+        ...withEntrypointDrift,
+        artifact_sha256: sha256Text(stableStringify(entrypointBase)),
+      }, null, 2)}\n`,
+      0o444,
+    );
+    expect(() => verifyYoutubeExtractionWorkerArtifact(manifestPath))
+      .toThrow(/entrypoint relative path is invalid/i);
+
+    const withLaunchdDrift = {
+      ...original,
+      launchd_template_relative_path: "scripts/lib/youtube-extraction-worker-runtime.mjs",
+    };
+    const launchdBase = {
+      ...withLaunchdDrift,
+      artifact_sha256: undefined,
+    };
+    chmodSync(manifestPath, 0o600);
+    writeModeFile(
+      manifestPath,
+      `${JSON.stringify({
+        ...withLaunchdDrift,
+        artifact_sha256: sha256Text(stableStringify(launchdBase)),
+      }, null, 2)}\n`,
+      0o444,
+    );
+    expect(() => verifyYoutubeExtractionWorkerArtifact(manifestPath))
+      .toThrow(/launchd template relative path is invalid/i);
   });
 });
 
@@ -945,6 +1011,10 @@ describe("YTASYNC-OPS preflight, drain, rollback, credential", () => {
     }
     const fixtureBundle = join(fixtureRoot, "lib/server/youtube-i031-runtime/bundle");
     mkdirSync(fixtureBundle, { recursive: true });
+    writeModeFile(join(fixtureBundle, "manifest.json"), JSON.stringify({
+      schema: "homecook.youtube-i031-runtime-bundle",
+      version: 1,
+    }));
     writeModeFile(join(fixtureBundle, "worker.mjs"), `
       import { writeFile } from "node:fs/promises";
       const args = Object.fromEntries(process.argv.slice(2).reduce((all, value, index, list) => {

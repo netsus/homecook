@@ -2,7 +2,7 @@
   "schema": "homecook.youtube-extraction-expected-schema",
   "version": 1,
   "schema_identity": "youtube-extraction-worker-schema-v1",
-  "catalog_fingerprint": "3d15ac526d46e89eb347ab184203f4fe2f179c1964111a9956e4a166a9d7ea45",
+  "catalog_fingerprint": "b8561e40e39a97962dab877e3d7c732236bf1bc55c8c985e56b846c50f7f90b1",
   "catalog_fingerprint_algorithm": "sha256:youtube-extraction-live-catalog-v1",
   "catalog_fingerprint_components": [
     "tables",
