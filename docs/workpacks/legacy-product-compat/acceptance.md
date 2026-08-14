@@ -24,6 +24,8 @@
 - [ ] malformed UUID key는 400 INVALID_IDEMPOTENCY_KEY mutation 0이다 <!-- omo:id=accept-legacy-compat-invalid-key;stage=2;scope=backend;review=3,6 -->
 - [ ] same key + same canonical payload는 durable replay이며 additional mutation 0이다 <!-- omo:id=accept-legacy-compat-idempotent-replay;stage=2;scope=backend;review=3,6 -->
 - [ ] same key + different canonical payload는 409 IDEMPOTENCY_KEY_REUSED mutation 0이다 <!-- omo:id=accept-legacy-compat-key-mismatch;stage=2;scope=backend;review=3,6 -->
+- [ ] narrow additive migration의 scoped `SECURITY DEFINER` RPC가 owner + account generation + stored legacy_v1 predicate, canonical payload, idempotency ledger claim/finish, durable no-key telemetry와 v1 mutation을 one transaction으로 처리한다. existing planner and standalone public endpoint/body/response는 유지한다 <!-- omo:id=accept-legacy-compat-atomic-v1-rpc;stage=2;scope=backend;review=3,6 -->
+- [ ] generic ledger direct table access is forbidden. service-role direct DML is forbidden. app-memory receipt is forbidden. route-level claim followed by a separate legacy RPC is forbidden. RLS relaxation is forbidden <!-- omo:id=accept-legacy-compat-rpc-boundary;stage=2;scope=backend;review=3,6 -->
 - [ ] 기존 401/403/404/409/422/428과 malformed-key 400 외 새 public status/error를 만들지 않는다 <!-- omo:id=accept-legacy-compat-existing-errors-only;stage=2;scope=shared;review=3,6 -->
 - [ ] other-owner row/private telemetry는 nondisclosed이고 mutation 0이다 <!-- omo:id=accept-legacy-compat-owner-boundary;stage=2;scope=backend;review=3,6 -->
 - [ ] client에 loading/empty/error/read-only/unauthorized 상태가 각각 존재한다 <!-- omo:id=accept-legacy-compat-client-states;stage=4;scope=frontend;review=5,6 -->
@@ -34,8 +36,9 @@
 - [ ] legacy product identity/name/brand/quantity/nutrition version은 pinned old version이며 current repin이 없다 <!-- omo:id=accept-legacy-compat-pinned-version;stage=2;scope=shared;review=3,6 -->
 - [ ] `GET /planner` product entry와 recipe meal은 중복되지 않는다 <!-- omo:id=accept-legacy-compat-planner-separation;stage=2;scope=backend;review=3,6 -->
 - [ ] body-shape inference/parser sharing 없이 stored contract version과 route predicate를 사용한다 <!-- omo:id=accept-legacy-compat-version-server;stage=2;scope=backend;review=3,6 -->
+- [ ] strict stored-version legacy_v1 guard와 other-owner nondisclosure를 RPC 안에서 재검증하고 existing v2 drain/rollback은 기존 namespace에서 유지한다 <!-- omo:id=accept-legacy-compat-strict-v1-and-v2-drain;stage=2;scope=backend;review=3,6 -->
 - [ ] telemetry unavailable, telemetry partial, telemetry stale, telemetry query-error는 모두 tombstone/removal fail-closed with mutation/removal 0이다 <!-- omo:id=accept-legacy-compat-telemetry-fail-closed;stage=2;scope=backend;review=3,6 -->
-- [ ] no new API, field, status, error, action, or screen이며 migration/RPC/RLS/direct DML도 추가하지 않는다 <!-- omo:id=accept-legacy-compat-no-invention;stage=2;scope=shared;review=3,6 -->
+- [ ] no new API, field, status, error, action, or screen 및 no new table or column을 유지한다. narrow additive migration의 scoped `SECURITY DEFINER` RPC 외 generic RPC/RLS/direct DML은 추가하지 않는다 <!-- omo:id=accept-legacy-compat-no-invention;stage=2;scope=shared;review=3,6 -->
 
 ## Data Setup / Preconditions
 
@@ -44,10 +47,13 @@
 - bootstrap owning flow: authenticated route의 `lib/server/user-bootstrap.ts` `ensureUserBootstrapState`와 full-local OAuth callback RPC `bootstrap_legacy_auth_callback_identity` (`supabase/migrations/20260730140000_hybrid_internal_operations_facades.sql`)가 owner별 `meal_plan_columns` 기본 3개를 만든다.
 - owner readiness: owner A/B의 `public.users`와 `meal_plan_columns.user_id`가 각 auth owner와 일치하고, product planner entry가 참조하는 column도 request owner와 owner match여야 한다. other-owner column은 기존 403/nondisclosure 계약을 유지한다.
 - #13 전용 Stage 2 test target 4개와 exact compatibility matrix fixture 중 하나라도 없으면 `fixture absent blocks Stage 2`다. 기존 prepared-food fixture는 bootstrap/owner baseline이지 v1 key/cursor/telemetry 완료 evidence가 아니다.
+- exact matrix는 planner/standalone 각각의 concurrent same-key replay, concurrent mismatch, no-key phase, rollback, owner A/B nondisclosure와 DB-side mutation 0을 포함한다. 모든 mutation fixture는 narrow migration을 적용한 isolated-local reset에서 시작한다.
 - `pnpm local:reset:demo`는 운영 full-local target에서 금지한다. mutation fixture는 위 pinned isolated-local runner 또는 같은 소유권·cleanup을 증명한 후속 #13 isolated harness에서만 만든다.
 
 - [ ] owner A legacy row + pinned old version과 owner B legacy row + pinned old version fixture가 분리된다 <!-- omo:id=accept-legacy-compat-owner-fixtures;stage=2;scope=shared;review=3,6 -->
 - [ ] v1 key/no-key/replay/mismatch fixture가 planner and standalone을 모두 포함한다 <!-- omo:id=accept-legacy-compat-key-fixtures;stage=2;scope=backend;review=3,6 -->
+- [ ] concurrent same-key와 concurrent mismatch fixture가 durable replay/409 및 DB-side mutation 0을 planner and standalone에 대해 각각 검증한다 <!-- omo:id=accept-legacy-compat-concurrent-key-fixtures;stage=2;scope=backend;review=3,6 -->
+- [ ] no-key phase와 rollback fixture가 required-key 전환의 mutation 0, strict stored-version legacy_v1 guard, existing v2 drain을 분리해 검증한다 <!-- omo:id=accept-legacy-compat-no-key-rollback-fixtures;stage=2;scope=backend;review=3,6 -->
 - [ ] current and immediate-previous clients fixture가 동일 stored version을 명시적으로 dispatch한다 <!-- omo:id=accept-legacy-compat-client-fixtures;stage=4;scope=frontend;review=5,6 -->
 - [ ] seeded v2 read/cancel/complete and rollback fixture가 신규 write 0과 existing drain을 구분한다 <!-- omo:id=accept-legacy-compat-v2-fixtures;stage=2;scope=shared;review=3,6 -->
 - [ ] v1 cursor와 telemetry outage fixture가 unavailable/partial/stale/query-error를 각각 재현한다 <!-- omo:id=accept-legacy-compat-telemetry-fixtures;stage=2;scope=backend;review=3,6 -->

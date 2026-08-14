@@ -35,7 +35,10 @@
       "seeded-v2-read-cancel-complete-and-rollback-drain",
       "telemetry-unavailable-partial-stale-query-error-fail-closed-mutation-removal-0",
       "separate-approved-contract-required-for-tombstone",
-      "no-new-api-field-status-error-action-screen-migration-or-direct-dml"
+      "narrow-additive-migration-scoped-security-definer-rpc-only-no-new-table-column",
+      "atomic-owner-account-generation-stored-legacy-v1-canonical-payload-ledger-claim-finish-no-key-telemetry-v1-mutation",
+      "generic-ledger-direct-table-service-role-direct-dml-app-memory-receipt-route-split-rpc-and-rls-relaxation-forbidden",
+      "strict-stored-version-guard-other-owner-nondisclosure-and-existing-v2-drain-rollback-retained"
     ],
     "verify_commands": [
       "pnpm exec vitest run tests/legacy-product-compat.test.ts tests/legacy-cooking-idempotency-rollout.test.ts tests/cooking-version-dispatch-compat.test.ts tests/compatibility-tombstone-gates.test.ts",
@@ -51,6 +54,9 @@
       "tests/compatibility-tombstone-gates.test.ts",
       "owner A and owner B legacy row plus pinned old version fixture",
       "v1 key/no-key/replay/mismatch planner and standalone matrix",
+      "concurrent same-key and mismatch matrix with DB-side mutation 0",
+      "no-key phase and rollback matrix with DB-side mutation 0",
+      "owner A and owner B nondisclosure fixture with isolated-local reset",
       "seeded v2 read/cancel/complete and rollback fixture",
       "v1 cursor and telemetry outage matrix",
       "isolated-local create/reset runner scripts/run-isolated-local-supabase-runtime-gate.mjs",
@@ -135,6 +141,9 @@
     "product-add-edit-auto-migrate-current-repin-or-new-detail-route-exposed",
     "v1-key-required-before-full-release-no-key-zero",
     "v1-body-response-consumed-ingredient-semantics-changed",
+    "new-table-column-or-public-contract-added",
+    "generic-ledger-direct-table-service-role-direct-dml-app-memory-receipt-route-split-rpc-or-rls-relaxation",
+    "stored-version-legacy-v1-guard-or-owner-account-generation-check-bypassed",
     "version-inferred-from-body-or-parser-shared",
     "flag-off-existing-v2-drain-blocked",
     "r2-activation-or-destructive-tombstone-performed-by-slice13",
@@ -147,5 +156,5 @@
     "backend": 4,
     "frontend": 4
   },
-  "notes": "Stage 1 is docs/test-only with implementation and evaluation not_started, verification pending and auto_merge false. Primary tracked plan d4d0fb39e80eeffc8b1e73ad92f0d91a35a9b6adc57a556ea8c9ec6ecffa951d has 1,018 lines; 45f02013fbc1c3af1936d596605230d0cbac7839a783224aa9535844e4bda7dc with 1,056 lines is a historical local-first overlay only. Current operations authority is docs/engineering/supabase-local-only-operations.md. #10 and #12 runtime dependency fulfilled; broader Manual/server-Mac/OAuth, capability, R/R+1/R+2 and activation remain pending. #13 adds no API, field, status, error, action, screen or design authority and uses only the exact #10/#7/#11 final references. Stage 2 reuses the repository-owned isolated reset runner and prepared-food owner fixture baseline, requires meal_plan_columns owner match from the existing bootstrap flow, and treats the missing #13 exact fixture matrix as fixture absent blocks Stage 2."
+  "notes": "Stage 1 is docs/test-only with implementation and evaluation not_started, verification pending and auto_merge false. Primary tracked plan d4d0fb39e80eeffc8b1e73ad92f0d91a35a9b6adc57a556ea8c9ec6ecffa951d has 1,018 lines; 45f02013fbc1c3af1936d596605230d0cbac7839a783224aa9535844e4bda7dc with 1,056 lines is a historical local-first overlay only. Current operations authority is docs/engineering/supabase-local-only-operations.md. #10 and #12 runtime dependency fulfilled; broader Manual/server-Mac/OAuth, capability, R/R+1/R+2 and activation remain pending. #13 adds no API, field, status, error, action, screen, table or column and uses only the exact #10/#7/#11 final references. Stage 2 may make the narrow additive migration that corrects only a scoped SECURITY DEFINER RPC: the RPC keeps owner, account generation, stored legacy_v1, canonical payload, ledger claim/finish, durable no-key telemetry and v1 mutation in one transaction; generic ledger access, service-role direct DML, app-memory receipts, route-split RPC and RLS relaxation are forbidden. Stage 2 reuses the repository-owned isolated reset runner and prepared-food owner fixture baseline, requires meal_plan_columns owner match from the existing bootstrap flow, and treats the missing #13 exact fixture matrix as fixture absent blocks Stage 2."
 }

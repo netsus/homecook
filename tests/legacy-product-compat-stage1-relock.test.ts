@@ -235,6 +235,61 @@ describe("legacy-product-compat fresh Stage 1 exact-six relock", () => {
     ]);
   });
 
+  it("P0 repair permits only the atomic legacy-v1 DB correction", () => {
+    const repairedContract = [
+      readme,
+      acceptance,
+      JSON.stringify(automation),
+    ].join("\n");
+
+    for (const required of [
+      "narrow additive migration",
+      "no new table or column",
+      "scoped SECURITY DEFINER RPC",
+      "owner + account generation + stored legacy_v1 predicate",
+      "canonical payload",
+      "idempotency ledger claim/finish",
+      "durable no-key telemetry",
+      "one transaction",
+      "existing planner and standalone public endpoint/body/response",
+      "strict stored-version legacy_v1 guard",
+      "other-owner nondisclosure",
+      "existing v2 drain/rollback",
+      "concurrent same-key",
+      "concurrent mismatch",
+      "DB-side mutation 0",
+      "isolated-local reset",
+    ]) {
+      expect(repairedContract).toContain(required);
+    }
+
+    for (const forbidden of [
+      "generic ledger direct table access is forbidden",
+      "service-role direct DML is forbidden",
+      "app-memory receipt is forbidden",
+      "route-level claim followed by a separate legacy RPC is forbidden",
+      "RLS relaxation is forbidden",
+    ]) {
+      expect(repairedContract).toContain(forbidden);
+    }
+
+    expect(automation.backend.invariants).toEqual(
+      expect.arrayContaining([
+        "narrow-additive-migration-scoped-security-definer-rpc-only-no-new-table-column",
+        "atomic-owner-account-generation-stored-legacy-v1-canonical-payload-ledger-claim-finish-no-key-telemetry-v1-mutation",
+        "generic-ledger-direct-table-service-role-direct-dml-app-memory-receipt-route-split-rpc-and-rls-relaxation-forbidden",
+        "strict-stored-version-guard-other-owner-nondisclosure-and-existing-v2-drain-rollback-retained",
+      ]),
+    );
+    expect(automation.backend.required_test_targets).toEqual(
+      expect.arrayContaining([
+        "concurrent same-key and mismatch matrix with DB-side mutation 0",
+        "no-key phase and rollback matrix with DB-side mutation 0",
+        "owner A and owner B nondisclosure fixture with isolated-local reset",
+      ]),
+    );
+  });
+
   it("P1-5 separates deterministic fixtures, isolated-local mutation and merged-exact read-only evidence", () => {
     const fixtures = [
       readme,
