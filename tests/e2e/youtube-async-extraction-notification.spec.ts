@@ -525,8 +525,10 @@ test("polling success preserves planner context into review and its meal CTA", a
   await expect(page).toHaveURL(new RegExp(
     `extractionId=${EXTRACTION_ID}.*date=2026-08-21.*columnId=dinner-column.*slot=dinner`,
   ));
-  await expect(page.getByRole("button", { name: "이 끼니에 추가" })).toBeVisible();
   await expect(page.getByLabel("식사 추가 대상 8/21 dinner")).toBeVisible();
+  await page.getByRole("button", { name: "등록" }).click();
+  await expect(page.getByRole("heading", { name: "레시피가 등록됐어요" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "이 끼니에 추가" })).toBeVisible();
   await captureEvidence(
     page,
     testInfo,
@@ -658,7 +660,9 @@ test("archive stays visible while online recovery discovers new unseen work", as
   await expect(page.getByRole("tab", { name: "지난 알림" })).toHaveAttribute("aria-selected", "true");
   await expect(page.getByRole("heading", { name: "감자 수프" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "새로 끝난 두부조림" })).toHaveCount(0);
-  await expect(page.locator('[data-youtube-extraction-trigger="header"]')).toHaveAttribute(
+  await expect(page.locator(
+    '[data-youtube-extraction-trigger="header"], [data-youtube-extraction-trigger="global"]',
+  )).toHaveAttribute(
     "aria-label",
     "YouTube 추출 알림 2개",
   );
