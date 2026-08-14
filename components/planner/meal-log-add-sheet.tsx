@@ -273,7 +273,7 @@ export function MealLogAddSheet({
       <div
         aria-label="먹은 음식 추가"
         aria-modal="true"
-        className="flex h-[100dvh] max-h-[100dvh] w-full max-w-xl flex-col bg-[var(--surface)] outline-none lg:h-auto lg:min-h-0 lg:rounded-[var(--radius-card)] lg:border lg:border-[var(--line-strong)]"
+        className="fixed inset-0 flex h-[100dvh] max-h-[100dvh] w-full flex-col bg-[var(--surface)] outline-none lg:static lg:h-auto lg:min-h-0 lg:max-w-xl lg:rounded-[var(--radius-card)] lg:border lg:border-[var(--line-strong)]"
         ref={dialogRef}
         role="dialog"
         tabIndex={-1}
