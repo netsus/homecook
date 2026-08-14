@@ -1,10 +1,8 @@
-import type {
-  ClaimedYoutubeExtractionJob,
-  YoutubeExtractionWorkerFailureCode,
-} from
+import type { ClaimedYoutubeExtractionJob, YoutubeExtractionWorkerFailureCode } from
   "@/lib/server/youtube-async-extraction";
-import { YOUTUBE_EXTRACTION_WORKER_LEASE_SECONDS } from
-  "@/lib/server/youtube-extraction-worker-timing";
+import workerTiming from "@/lib/server/youtube-extraction-worker-timing.json";
+const YOUTUBE_EXTRACTION_WORKER_LEASE_SECONDS = workerTiming.lease_seconds;
+// Keep inventory line anchors stable; this adapter is itself a fenced write surface.
 
 interface RpcResult { data: unknown; error: unknown }
 interface RestrictedRpcClient {

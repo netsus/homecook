@@ -1,7 +1,5 @@
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 
-import { YOUTUBE_EXTRACTION_WORKER_HEARTBEAT_INTERVAL_MS } from
-  "@/lib/server/youtube-extraction-worker-timing";
 import { normalizeYoutubeUrl } from "@/lib/youtube-url";
 
 type RuntimeEnv = Readonly<Record<string, string | undefined>>;
@@ -404,7 +402,7 @@ export function createYoutubeExtractionWorker({
   extract,
   workerId,
   allowedSnapshotDigest,
-  heartbeatIntervalMs = YOUTUBE_EXTRACTION_WORKER_HEARTBEAT_INTERVAL_MS,
+  heartbeatIntervalMs = 30_000,
 }: {
   adapter: YoutubeExtractionWorkerAdapter;
   extract(input: {
