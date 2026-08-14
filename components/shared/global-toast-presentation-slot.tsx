@@ -1,10 +1,85 @@
 "use client";
 
-import React, { type ReactNode } from "react";
+import React, {
+  createContext,
+  type ReactNode,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { createPortal } from "react-dom";
 
 export const GLOBAL_TOAST_YOUTUBE_SLOT_ID = "global-toast-youtube-channel";
 export const GLOBAL_TOAST_GROWTH_SLOT_ID = "global-toast-growth-channel";
+
+type GlobalToastChannel = "growth" | "youtube";
+
+interface GlobalToastPresentationContextValue {
+  grants: Record<GlobalToastChannel, boolean>;
+  setCandidate: (channel: GlobalToastChannel, active: boolean) => void;
+}
+
+const GlobalToastPresentationContext = createContext<GlobalToastPresentationContextValue>({
+  grants: { growth: true, youtube: true },
+  setCandidate: () => undefined,
+});
+
+export function GlobalToastPresentationProvider({ children }: { children: ReactNode }) {
+  const [narrow, setNarrow] = useState(() => typeof window !== "undefined"
+    && typeof window.matchMedia === "function"
+    && window.matchMedia("(max-width: 359px)").matches);
+  const [candidates, setCandidates] = useState<Record<GlobalToastChannel, boolean>>({
+    growth: false,
+    youtube: false,
+  });
+
+  useEffect(() => {
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") return;
+    const media = window.matchMedia("(max-width: 359px)");
+    const update = () => setNarrow(media.matches);
+    update();
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
+
+  const setCandidate = useCallback((channel: GlobalToastChannel, active: boolean) => {
+    setCandidates((current) => current[channel] === active
+      ? current
+      : { ...current, [channel]: active });
+  }, []);
+
+  const grants = useMemo<Record<GlobalToastChannel, boolean>>(() => narrow
+    ? {
+        growth: !candidates.youtube && candidates.growth,
+        youtube: candidates.youtube,
+      }
+    : { growth: true, youtube: true }, [candidates, narrow]);
+  const value = useMemo(() => ({ grants, setCandidate }), [grants, setCandidate]);
+
+  return (
+    <GlobalToastPresentationContext.Provider value={value}>
+      {children}
+    </GlobalToastPresentationContext.Provider>
+  );
+}
+
+export function useGlobalToastPresentationGrant(
+  channel: GlobalToastChannel,
+  active: boolean,
+  coordinated: boolean,
+) {
+  const { grants, setCandidate } = useContext(GlobalToastPresentationContext);
+
+  useEffect(() => {
+    if (!coordinated) return undefined;
+    setCandidate(channel, active);
+    return () => setCandidate(channel, false);
+  }, [active, channel, coordinated, setCandidate]);
+
+  return coordinated ? grants[channel] : true;
+}
 
 export function GlobalToastPresentationSlot() {
   return (

@@ -473,8 +473,9 @@ test("import initial and submitting states are visually explicit", async ({ page
 for (const viewport of [
   { file: "mobile-390-global-toast-coordination.png", height: 844, width: 390 },
   { file: "mobile-320-global-toast-coordination.png", height: 568, width: 320 },
+  { file: "desktop-1440-global-toast-coordination.png", height: 900, width: 1440 },
 ]) {
-  test(`global toast presentation keeps simultaneous channels separate at ${viewport.width}px`, async ({ page }, testInfo) => {
+  test(`global toast presentation arbitrates simultaneous channels at ${viewport.width}px`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width: viewport.width, height: viewport.height });
     await setE2EAuthOverride(page);
     await installDiscoveryRoutes(page);
@@ -489,14 +490,30 @@ for (const viewport of [
     const growthToast = page.getByTestId("growth-toast");
     await expect(layer).toHaveAttribute("aria-live", "polite");
     await expect(youtubeToast).toBeVisible();
-    await expect(growthToast).toBeVisible();
+    if (viewport.width === 320) {
+      await expect(growthToast).toHaveCount(0);
+    } else {
+      await expect(growthToast).toBeVisible();
+    }
 
-    const [youtubeBox, growthBox] = await Promise.all([
+    const [youtubeBox, growthBox, searchBox, filterBox] = await Promise.all([
       youtubeToast.boundingBox(),
-      growthToast.boundingBox(),
+      viewport.width === 320 ? Promise.resolve(null) : growthToast.boundingBox(),
+      page.getByPlaceholder("레시피 제목 검색").first().boundingBox(),
+      page.getByRole("button", { name: "재료로 검색" }).first().boundingBox(),
     ]);
-    expect(rectanglesAreDisjoint(youtubeBox, growthBox)).toBe(true);
-    for (const box of [youtubeBox, growthBox]) {
+    expect(
+      rectanglesAreDisjoint(youtubeBox, searchBox),
+      JSON.stringify({ searchBox, youtubeBox }),
+    ).toBe(true);
+    expect(
+      rectanglesAreDisjoint(youtubeBox, filterBox),
+      JSON.stringify({ filterBox, youtubeBox }),
+    ).toBe(true);
+    if (viewport.width !== 320) {
+      expect(rectanglesAreDisjoint(youtubeBox, growthBox)).toBe(true);
+    }
+    for (const box of [youtubeBox, ...(viewport.width === 320 ? [] : [growthBox])]) {
       expect(box).not.toBeNull();
       expect(box?.x ?? -1).toBeGreaterThanOrEqual(0);
       expect((box?.x ?? 0) + (box?.width ?? 0)).toBeLessThanOrEqual(viewport.width);
@@ -508,9 +525,33 @@ for (const viewport of [
       "[data-youtube-notification-toast], [data-testid='growth-toast']",
     ).evaluateAll((elements) => elements.map((element) =>
       element.hasAttribute("data-youtube-notification-toast") ? "youtube" : "growth"));
-    expect(readingOrder).toEqual(["youtube", "growth"]);
+    expect(readingOrder).toEqual(viewport.width === 320
+      ? ["youtube"]
+      : ["youtube", "growth"]);
 
     await captureEvidence(page, testInfo, path.join(SHELL_EVIDENCE, viewport.file));
+
+    if (viewport.width === 320) {
+      await expect(page.getByRole("button", { name: "YouTube 추출 알림 1개" })).toBeVisible();
+      await youtubeToast.getByRole("button", { name: "toast 닫기" }).click();
+      await expect(youtubeToast).toHaveCount(0);
+      await expect(growthToast).toBeVisible();
+      const handoffOrder = await layer.locator(
+        "[data-youtube-notification-toast], [data-testid='growth-toast']",
+      ).evaluateAll((elements) => elements.map((element) =>
+        element.hasAttribute("data-youtube-notification-toast") ? "youtube" : "growth"));
+      expect(handoffOrder).toEqual(["growth"]);
+      await captureEvidence(
+        page,
+        testInfo,
+        path.join(SHELL_EVIDENCE, "mobile-320-global-toast-handoff.png"),
+      );
+      await growthToast.getByRole("button", { name: "알림 닫기" }).click();
+      await expect(growthToast).toHaveCount(0);
+      await page.getByRole("button", { name: "YouTube 추출 알림 1개" }).click();
+      await expect(page.getByTestId("youtube-notification-list").getByText("감자 수프")).toBeVisible();
+      return;
+    }
 
     await growthToast.getByRole("button", { name: "알림 닫기" }).click();
     await expect(growthToast).toHaveCount(0);
@@ -519,6 +560,32 @@ for (const viewport of [
     await expect(youtubeToast).toHaveCount(0);
   });
 }
+
+test("simultaneous toast actions keep YouTube and Growth ownership separate", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await setE2EAuthOverride(page);
+  await installDiscoveryRoutes(page);
+  await installGrowthToastRoute(page);
+  await installNotificationRoutes(page, [
+    notificationItem({ status: "succeeded", title: "감자 수프" }),
+  ]);
+  await page.goto("/");
+
+  const youtubeToast = page.locator("[data-youtube-notification-toast]");
+  const growthToast = page.getByTestId("growth-toast");
+  await expect(youtubeToast).toBeVisible();
+  await expect(growthToast).toBeVisible();
+
+  await growthToast.click();
+  await expect(page.getByRole("dialog", { name: "알림 기록" })).toBeVisible();
+  await expect(page).toHaveURL(/\/$/u);
+  await page.getByRole("dialog", { name: "알림 기록" }).getByRole("button", { name: "닫기" }).click();
+  await expect(youtubeToast).toBeVisible();
+
+  await youtubeToast.getByRole("link", { name: "결과 확인" }).click();
+  await expect(page).toHaveURL(new RegExp(`extractionId=${EXTRACTION_ID}`, "u"));
+  await expect(page.getByRole("dialog", { name: "알림 기록" })).toHaveCount(0);
+});
 
 test("policy change preserves the URL in a safe import error state", async ({ page }, testInfo) => {
   await openImport(page, "policy-changed", 390, 844);
@@ -981,7 +1048,31 @@ test("failure panel reflows at 200% text with non-zero safe areas at 320", async
   await expect(dialog).toBeVisible();
   await expect(page.getByRole("button", { name: "알림 닫기" })).toBeFocused();
   await expect(page.getByRole("heading", { name: "두부조림" })).toBeVisible();
-  await expect(page.getByText("오늘 추출 한도를 모두 사용했어요. 나중에 다시 시도해 주세요.")).toBeVisible();
+  const failureMessage = page.getByText(
+    "오늘 추출 한도를 모두 사용했어요. 나중에 다시 시도해 주세요.",
+  );
+  await expect(failureMessage).toBeVisible();
+  const wrapping = await failureMessage.evaluate((element) => {
+    const style = getComputedStyle(element);
+    const textNode = Array.from(element.childNodes).find((node) => node.nodeType === Node.TEXT_NODE);
+    const text = textNode?.textContent ?? "";
+    const phraseLineCounts = ["한도를", "사용했어요", "주세요"].map((phrase) => {
+      const start = text.indexOf(phrase);
+      if (!textNode || start < 0) return 0;
+      const range = document.createRange();
+      range.setStart(textNode, start);
+      range.setEnd(textNode, start + phrase.length);
+      return new Set(Array.from(range.getClientRects()).map((rect) => Math.round(rect.top))).size;
+    });
+    return {
+      overflowWrap: style.overflowWrap,
+      phraseLineCounts,
+      wordBreak: style.wordBreak,
+    };
+  });
+  expect(wrapping.wordBreak).toBe("keep-all");
+  expect(wrapping.overflowWrap).toBe("anywhere");
+  expect(wrapping.phraseLineCounts).toEqual([1, 1, 1]);
   const retry = page.getByRole("button", { name: "나중에 다시 시도" });
   await retry.scrollIntoViewIfNeeded();
   await expect(retry).toBeVisible();

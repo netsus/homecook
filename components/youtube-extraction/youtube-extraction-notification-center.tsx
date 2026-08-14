@@ -8,6 +8,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   GLOBAL_TOAST_YOUTUBE_SLOT_ID,
   GlobalToastPortal,
+  useGlobalToastPresentationGrant,
 } from "@/components/shared/global-toast-presentation-slot";
 import {
   enqueueYoutubeExtraction,
@@ -144,8 +145,8 @@ function NotificationRow({
             {item.status === "succeeded" ? "✓" : "!"}
           </span>
           <div className="min-w-0 flex-1">
-            <h3 className="break-words text-sm font-bold text-[var(--foreground)]">{itemTitle(item)}</h3>
-            <p className="mt-1 text-sm leading-5 text-[var(--muted)]">{copy.body}</p>
+            <h3 className="break-keep text-sm font-bold text-[var(--foreground)] [overflow-wrap:anywhere]">{itemTitle(item)}</h3>
+            <p className="mt-1 break-keep text-sm leading-5 text-[var(--muted)] [overflow-wrap:anywhere]">{copy.body}</p>
             {item.completed_at ? (
               <time
                 aria-label={`완료 시각 ${formatCompletedAt(item.completed_at)}`}
@@ -183,10 +184,10 @@ function ActiveJobRow({ job }: { job: YoutubeExtractionJobData }) {
       <div className="flex items-start gap-3">
         <span aria-hidden="true" className="mt-0.5 text-[var(--brand-deep)]">↻</span>
         <div className="min-w-0 flex-1">
-          <h3 className="text-sm font-bold text-[var(--foreground)]">
+          <h3 className="break-keep text-sm font-bold text-[var(--foreground)] [overflow-wrap:anywhere]">
             {processing ? "레시피 추출 중" : "추출 대기 중"}
           </h3>
-          <p className="mt-1 text-sm leading-5 text-[var(--muted)]">
+          <p className="mt-1 break-keep text-sm leading-5 text-[var(--muted)] [overflow-wrap:anywhere]">
             이 화면을 닫아도 작업은 계속돼요.
           </p>
         </div>
@@ -247,6 +248,22 @@ export function YoutubeExtractionNotificationCenter({
   const handoffPanelFocusToAuthNoticeRef = useRef(false);
   const displayedItems = view === "archive" ? archiveItems : items;
   const displayedNextCursor = view === "archive" ? archiveNextCursor : unseenNextCursor;
+  const toastCandidates = useMemo(
+    () => items
+      .filter((item) => item.seen_at === null
+        && item.delivered_at === null
+        && !hiddenToastIds.includes(item.job_id)),
+    [hiddenToastIds, items],
+  );
+  const toastPresentationGranted = useGlobalToastPresentationGrant(
+    "youtube",
+    toastCandidates.length > 0,
+    presentationMode === "shared",
+  );
+  const visibleToastItems = useMemo(
+    () => toastPresentationGranted ? toastCandidates : [],
+    [toastCandidates, toastPresentationGranted],
+  );
 
   useEffect(() => setAuthenticatedLocal(initialAuthenticated), [initialAuthenticated]);
 
@@ -386,16 +403,13 @@ export function YoutubeExtractionNotificationCenter({
   }, [authenticated, refresh, view]);
 
   useEffect(() => {
-    const keys = items
-      .filter((item) => item.seen_at === null
-        && !hiddenToastIds.includes(item.job_id)
-        && item.delivered_at === null
-        && !deliveredRef.current.has(item.delivery_key))
+    const keys = visibleToastItems
+      .filter((item) => !deliveredRef.current.has(item.delivery_key))
       .map((item) => item.delivery_key);
     if (keys.length === 0) return;
     keys.forEach((key) => deliveredRef.current.add(key));
     void markYoutubeExtractionDelivered(keys);
-  }, [hiddenToastIds, items]);
+  }, [visibleToastItems]);
 
   useEffect(() => {
     if (!open) return;
@@ -610,14 +624,6 @@ export function YoutubeExtractionNotificationCenter({
       window.removeEventListener("online", refreshOnFocus);
     };
   }, [refresh, view]);
-
-  const visibleToastItems = useMemo(
-    () => items
-      .filter((item) => item.seen_at === null
-        && item.delivered_at === null
-        && !hiddenToastIds.includes(item.job_id)),
-    [hiddenToastIds, items],
-  );
 
   useEffect(() => {
     if (visibleToastItems.length === 0) return;

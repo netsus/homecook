@@ -3,12 +3,13 @@
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { MypageGrowthDetailDialog } from "@/components/mypage/mypage-growth-detail-dialog";
 import {
   GLOBAL_TOAST_GROWTH_SLOT_ID,
   GlobalToastPortal,
+  useGlobalToastPresentationGrant,
 } from "@/components/shared/global-toast-presentation-slot";
 import {
   fetchUserGamification,
@@ -418,6 +419,11 @@ export function GrowthToastStack({
   const pathname = usePathname();
   const pathnameRef = useRef(pathname);
   const [views, setViews] = useState<ToastView[]>([]);
+  const presentationGranted = useGlobalToastPresentationGrant(
+    "growth",
+    views.length > 0,
+    presentationMode === "shared",
+  );
   const [gamification, setGamification] = useState<UserGamificationData | null>(null);
   const [isNotificationDialogOpen, setIsNotificationDialogOpen] = useState(false);
   const [visibleMax, setVisibleMax] = useState(MOBILE_VISIBLE_MAX);
@@ -591,8 +597,12 @@ export function GrowthToastStack({
   }, [refresh]);
 
   // Only visible toasts get auto-dismiss timers; queued rows stay unseen.
-  const visible = views.slice(0, visibleMax);
-  const queued = views.slice(visibleMax);
+  const { queued, visible } = useMemo(() => presentationGranted
+    ? {
+        queued: views.slice(visibleMax),
+        visible: views.slice(0, visibleMax),
+      }
+    : { queued: [], visible: [] }, [presentationGranted, views, visibleMax]);
   useEffect(() => {
     const timers = timersRef.current;
     const visibleIds = new Set(visible.map((view) => view.id));

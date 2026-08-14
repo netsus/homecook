@@ -206,6 +206,28 @@ describe("YouTube extraction notification center", () => {
     expect(copy.className).not.toContain("break-words");
   });
 
+  it("keeps notification-list Korean title and body words intact at narrow zoom", async () => {
+    vi.mocked(api.fetchYoutubeExtractionNotifications).mockResolvedValue({
+      success: true,
+      data: { items: [failedItem], next_cursor: null },
+      error: null,
+    });
+    const user = userEvent.setup();
+
+    renderCenter();
+    await screen.findByText("YouTube 레시피 추출에 실패했어요");
+    await user.click(screen.getByRole("button", { name: /YouTube 추출 알림 1개/u }));
+
+    const row = document.querySelector(`[data-youtube-job-id="${failedItem.job_id}"]`);
+    const title = row?.querySelector("h3");
+    const body = row?.querySelector("p");
+    for (const element of [title, body]) {
+      expect(element?.className).toContain("break-keep");
+      expect(element?.className).toContain("[overflow-wrap:anywhere]");
+      expect(element?.className).not.toContain("break-words");
+    }
+  });
+
   it("ports the YouTube toast stack into the shared global presentation slot when available", async () => {
     vi.mocked(api.fetchYoutubeExtractionNotifications).mockResolvedValue({
       success: true,

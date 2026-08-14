@@ -1,16 +1,21 @@
 // @vitest-environment jsdom
 
 import React from "react";
-import { cleanup, render, screen, within } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   GLOBAL_TOAST_GROWTH_SLOT_ID,
   GLOBAL_TOAST_YOUTUBE_SLOT_ID,
+  GlobalToastPresentationProvider,
   GlobalToastPresentationSlot,
+  useGlobalToastPresentationGrant,
 } from "@/components/shared/global-toast-presentation-slot";
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+});
 
 describe("GlobalToastPresentationSlot", () => {
   it("owns one polite live region and a deterministic YouTube-then-growth reading order", () => {
@@ -36,5 +41,67 @@ describe("GlobalToastPresentationSlot", () => {
     expect(layer.className).toContain("pointer-events-none");
     expect(layer.className).toContain("flex-col");
     expect(layer.className).toContain("gap-2");
+  });
+
+  it("grants only YouTube at 320, then releases Growth after YouTube leaves", async () => {
+    vi.stubGlobal("matchMedia", vi.fn().mockReturnValue({
+      addEventListener: vi.fn(),
+      matches: true,
+      removeEventListener: vi.fn(),
+    }));
+
+    function Channel({ active, channel }: { active: boolean; channel: "growth" | "youtube" }) {
+      const granted = useGlobalToastPresentationGrant(channel, active, true);
+      return <output data-testid={`${channel}-grant`}>{String(granted)}</output>;
+    }
+
+    const { rerender } = render(
+      <GlobalToastPresentationProvider>
+        <Channel active channel="youtube" />
+        <Channel active channel="growth" />
+      </GlobalToastPresentationProvider>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId("youtube-grant").textContent).toBe("true");
+      expect(screen.getByTestId("growth-grant").textContent).toBe("false");
+    });
+
+    rerender(
+      <GlobalToastPresentationProvider>
+        <Channel active={false} channel="youtube" />
+        <Channel active channel="growth" />
+      </GlobalToastPresentationProvider>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId("youtube-grant").textContent).toBe("false");
+      expect(screen.getByTestId("growth-grant").textContent).toBe("true");
+    });
+  });
+
+  it("grants both active channels at 390 and desktop widths", async () => {
+    vi.stubGlobal("matchMedia", vi.fn().mockReturnValue({
+      addEventListener: vi.fn(),
+      matches: false,
+      removeEventListener: vi.fn(),
+    }));
+
+    function Channel({ channel }: { channel: "growth" | "youtube" }) {
+      const granted = useGlobalToastPresentationGrant(channel, true, true);
+      return <output data-testid={`${channel}-grant`}>{String(granted)}</output>;
+    }
+
+    render(
+      <GlobalToastPresentationProvider>
+        <Channel channel="youtube" />
+        <Channel channel="growth" />
+      </GlobalToastPresentationProvider>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId("youtube-grant").textContent).toBe("true");
+      expect(screen.getByTestId("growth-grant").textContent).toBe("true");
+    });
   });
 });
