@@ -205,10 +205,15 @@ describe("YTASYNC-DB/SEC migration contract", () => {
     const sql = readFileSync(migrationPath, "utf8").toLowerCase();
     const finalize = sql.split("function public.finalize_youtube_extraction_job")[1]
       ?.split("$function$;")[0] ?? "";
-    expect(finalize).toContain("existing_job.lease_owner = v_requested_worker_id");
-    expect(finalize).toContain("existing_job.lease_generation = v_requested_lease_generation");
-    expect(finalize.indexOf("existing_job.status = 'succeeded'"))
-      .toBeLessThan(finalize.indexOf("select permit.*"));
+    const jobLock = finalize.indexOf("from public.youtube_extraction_jobs as existing_job");
+    const permitLock = finalize.indexOf("from public.youtube_extractor_permits as permit");
+    expect(finalize).toContain("v_job.lease_owner = v_requested_worker_id");
+    expect(finalize).toContain("v_job.lease_generation = v_requested_lease_generation");
+    expect(jobLock).toBeGreaterThan(-1);
+    expect(finalize.slice(jobLock, permitLock)).toContain("for update");
+    expect(permitLock).toBeGreaterThan(jobLock);
+    expect(finalize.indexOf("v_job.status = 'succeeded'"))
+      .toBeLessThan(permitLock);
     expect(finalize).not.toContain("lease_owner = null");
   });
 
