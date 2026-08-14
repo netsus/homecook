@@ -294,7 +294,7 @@ describe("legacy-product-compat fresh Stage 1 exact-six relock", () => {
     const surfaces = {
       readme,
       acceptance,
-      automation: JSON.stringify(automation),
+      automation: automation.backend.invariants.join("\n"),
     };
 
     const requiredPerSurface = [
@@ -309,6 +309,13 @@ describe("legacy-product-compat fresh Stage 1 exact-six relock", () => {
       "pg_catalog, public, private, pg_temp",
       "REVOKE ALL FROM PUBLIC, anon, authenticated",
       "GRANT EXECUTE only to service_role",
+      "public.complete_cooking_session(uuid, uuid, uuid[])",
+      "public.complete_standalone_cooking(uuid, uuid, integer, uuid[])",
+      "same Stage 2 migration/transaction as the route cutover",
+      "old exact signatures are absent from the callable inventory",
+      "REVOKE EXECUTE on both old exact signatures from PUBLIC, anon, authenticated, service_role",
+      "old authenticated self-call is denied with mutation 0",
+      "function inventory privilege test",
       "service-role direct DML is forbidden",
       "claim -> legacy completion -> cooking_completed user_progress_events + user_progress_summary -> durable finish",
       "best-effort post-RPC progress writer is removed",
@@ -321,6 +328,14 @@ describe("legacy-product-compat fresh Stage 1 exact-six relock", () => {
       "missing Idempotency-Key after full-release no-key 0 -> 428 IDEMPOTENCY_KEY_REQUIRED fields[]=[Idempotency-Key:required] mutation 0",
       "reused Idempotency-Key -> 409 IDEMPOTENCY_KEY_REUSED fields=[] mutation 0",
       "negative privilege tests deny PUBLIC/anon/authenticated execute and service-role direct DML",
+      "POST /cooking/sessions/{id}/complete",
+      "POST /cooking/standalone-complete",
+      '{"success":false,"data":null,"error":{"code":"ACCOUNT_LIFECYCLE_MAINTENANCE","message":"계정 정비 작업 중이에요. 잠시 후 다시 시도해 주세요.","fields":[]}}',
+      '{"success":false,"data":null,"error":{"code":"ACCOUNT_CUTOVER_QUARANTINED","message":"계정 복구가 필요해요.","fields":[]}}',
+      '{"success":false,"data":null,"error":{"code":"ACCOUNT_DELETING","message":"계정 삭제가 진행 중이에요.","fields":[]}}',
+      "official API v1.2.39 cross-slice contract; not a public contract change",
+      "400/401/403/404/409/422/428/503 error floor",
+      "all three lifecycle outcomes have mutation 0",
     ];
 
     for (const [surface, content] of Object.entries(surfaces)) {
@@ -328,6 +343,57 @@ describe("legacy-product-compat fresh Stage 1 exact-six relock", () => {
         expect(content, `${surface} must lock ${required}`).toContain(required);
       }
     }
+
+    expect(automation.backend.required_test_targets).toEqual(
+      expect.arrayContaining([
+        "old authenticated self-call and all old-overload principals denied with mutation 0",
+        "function inventory privilege test for old overloads and two new signatures",
+        "planner and standalone lifecycle error wrapper matrix with mutation 0",
+      ]),
+    );
+
+    const legacyPlannerMigration = read(
+      "supabase/migrations/20260512093000_leftover_card_metadata.sql",
+    );
+    const legacyStandaloneMigration = read(
+      "supabase/migrations/20260429103000_15b_cook_standalone_complete.sql",
+    );
+    const plannerRoute = read(
+      "app/api/v1/cooking/sessions/[session_id]/complete/route.ts",
+    );
+    const standaloneRoute = read("app/api/v1/cooking/standalone-complete/route.ts");
+    const sessionAuthority = read(
+      "supabase/migrations/20260802210000_recipe_content_snapshot_future_propagation.sql",
+    );
+    const authorityResponses = read("lib/api/response.ts");
+    const accountAuthorityResponses = read(
+      "app/api/v1/users/me/_account-generation-active.ts",
+    );
+
+    expect(legacyPlannerMigration).toContain(
+      "public.complete_cooking_session(",
+    );
+    expect(legacyStandaloneMigration).toContain(
+      "public.complete_standalone_cooking(",
+    );
+    expect(plannerRoute).toContain('rpc("complete_cooking_session"');
+    expect(standaloneRoute).toContain('rpc("complete_standalone_cooking"');
+    for (const code of [
+      "ACCOUNT_LIFECYCLE_MAINTENANCE",
+      "ACCOUNT_CUTOVER_QUARANTINED",
+      "ACCOUNT_DELETING",
+    ]) {
+      expect(sessionAuthority).toContain(`raise exception '${code}'`);
+    }
+    expect(authorityResponses).toContain(
+      'message: "계정 정비 작업 중이에요. 잠시 후 다시 시도해 주세요.",',
+    );
+    expect(accountAuthorityResponses).toContain(
+      '"ACCOUNT_CUTOVER_QUARANTINED",\n      "계정 복구가 필요해요.",\n      409,',
+    );
+    expect(accountAuthorityResponses).toContain(
+      'fail("ACCOUNT_DELETING", "계정 삭제가 진행 중이에요.", 409)',
+    );
   });
 
   it("P1-5 separates deterministic fixtures, isolated-local mutation and merged-exact read-only evidence", () => {
