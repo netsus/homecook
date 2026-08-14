@@ -129,18 +129,19 @@
 ## Design Status
 
 - [ ] 임시 UI (temporary) — Stage 1 설계 계약만 잠겼고 실제 구현 evidence는 없음
-- [x] 리뷰 대기 (pending-review) — Stage 4 code head `2113dacdbb464f6422424324a38823e8c3d6933a`에서 320px global/Growth 내부 presentation을 모두 한 card로 직렬화하고 대기 timer/seen·badge/list 복구를 보존했다. 기존 보안/artifact/nanoid/한국어 수정을 유지한 채 390/320/desktop evidence와 portable exploratory QA 97점을 재잠갔으며 새 독립 design/backend/security 재검토 대기 중
+- [x] 리뷰 대기 (pending-review) — current implementation head `170921f54fb3649cb4dea973d5c5213665b12529`에서 320px global/Growth 내부 presentation을 모두 한 card로 직렬화하고 대기 timer/seen·badge/list 복구를 보존했다. frozen 300초 lease/30초 heartbeat와 artifact timing provenance도 잠갔으며, UI와 screenshot generator가 capture source 이후 byte-identical이어서 390/320/desktop PNG 30개를 재사용하고 portable exploratory QA 97점과 current-head browser gate를 유지했다. 새 독립 design/backend/security 재검토 대기 중
 - [ ] 확정 (confirmed) — Stage 5와 별도 final authority가 current frontend head를 blocker 0으로 승인한 뒤 전환
 - [ ] N/A — BE-only 슬라이스
 
 ### Stage 4 Frontend Evidence
 
-- Implementation base/code head/tree: `25e8da8b04c2322f68d8f54837135399d7586da7` → `2113dacdbb464f6422424324a38823e8c3d6933a` / `ed823a064774dee538df8cde47c483af08efa7dc`
+- Implementation base/code head/tree: `25e8da8b04c2322f68d8f54837135399d7586da7` → `170921f54fb3649cb4dea973d5c5213665b12529` / `069d5b861744be26ca550f465ea5582c735f49bc`
+- Screenshot capture source: `2113dacdbb464f6422424324a38823e8c3d6933a` / `ed823a064774dee538df8cde47c483af08efa7dc`; current implementation의 UI·screenshot generator byte가 동일해 PNG 30개를 재사용했다.
 - Screenshot manifest: `ui/designs/evidence/youtube-async-extraction-notification/manifest.json`
 - Visual verdict: `ui/designs/evidence/youtube-async-extraction-notification/visual-verdict.json` — `93/100`, pass (구현 task 판정이며 독립 authority 승인 아님)
 - Exploratory QA: `ui/designs/evidence/youtube-async-extraction-notification/exploratory-qa.json` 및 tracked `portable-exploratory-qa/` raw bundle — `97/100`, 42/46 covered, finding 0
 - Deterministic browser QA: `tests/e2e/youtube-async-extraction-notification.spec.ts` — port `3217`, 27 scenarios와 3-project 81 executions passed. 320px는 YouTube→Growth 1→Growth 2를 한 card씩 순차 표시하고 대기 Growth의 timer/seen·badge/list 복구를 보존한다. 390/desktop은 두 채널 비겹침·각 CTA ownership·기존 Growth stacking·읽기 순서를 유지한다. panel/list 한국어 어절 보존과 기존 focus/reload/archive/planner 회귀를 포함하는 390/320/desktop screenshot 30개를 재생성했다.
-- Focused component/integration QA: current finding focused Vitest 31 passed; backend worker/runtime/installer 63 passed; 격리 random-port PostgreSQL/PostgREST 55 passed; full Vitest 6,156 passed/458 skipped; product 2,741 passed/175 skipped; lint/typecheck/build passed; official frontend gate(62 smoke passed/10 skipped, 8 a11y passed/1 skipped, 12 visual passed), 12 security E2E, contract-only security-function authorization gate, frozen-lockfile install, `pnpm audit --audit-level high`가 통과했다. worker artifact verifier와 exact release metadata, permit/lock/fence, secret-root lexical ancestor fail-closed 경계를 유지한다.
+- Focused component/integration QA: current finding focused Vitest 31 passed; backend/worker/runtime/installer/migration focused Vitest 93 passed; 격리 random-port PostgreSQL/PostgREST 56 passed(299/300/301초 reclaim boundary 포함); full Vitest 6,159 passed/459 skipped; product 2,741 passed/175 skipped; lint/typecheck/build passed; official frontend gate(62 smoke passed/10 skipped, 8 a11y passed/1 skipped, 12 visual passed), 12 security E2E, contract-only security-function authorization gate, frozen-lockfile install, `pnpm audit --audit-level high`가 통과했다. worker artifact verifier와 exact release metadata, 300초 lease/30초 heartbeat provenance, permit/lock/fence, secret-root lexical ancestor fail-closed 경계를 유지한다.
 - Boundary: Supabase Cloud/linked/remote/credential access 0, 운영 local Supabase/app `3100`/user data/port/volume/env/secret/launchd mutation 0. Stage 5/final authority/Stage 6와 Manual Only는 미완료다.
 
 ## Source Links

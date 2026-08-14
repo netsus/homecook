@@ -1,8 +1,9 @@
 # YouTube async extraction Stage 4 evidence
 
-- exact code head: `2113dacdbb464f6422424324a38823e8c3d6933a`
-- exact code tree: `ed823a064774dee538df8cde47c483af08efa7dc`
-- evidence relation: screenshot과 deterministic browser evidence는 위 code head/tree에서 생성했고, 이후 evidence-only commit은 제품 tree를 변경하지 않는다.
+- current implementation code head: `170921f54fb3649cb4dea973d5c5213665b12529`
+- current implementation code tree: `069d5b861744be26ca550f465ea5582c735f49bc`
+- screenshot capture source: `2113dacdbb464f6422424324a38823e8c3d6933a` / `ed823a064774dee538df8cde47c483af08efa7dc`
+- evidence relation: current implementation은 capture source 이후 backend lease timing·worker artifact provenance와 lint-only test mock만 바꾸고 UI 및 screenshot generator byte는 바꾸지 않았다. 따라서 30개 PNG byte를 재사용하고 current head에서 frontend·security browser gate를 다시 통과시켰다.
 - isolated app: `http://127.0.0.1:3217`
 - captured: `2026-08-14T06:52:00Z`
 - remote/cloud Supabase access: `0`
