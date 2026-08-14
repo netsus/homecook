@@ -710,10 +710,28 @@ test("failure panel reflows at 200% text with non-zero safe areas at 320", async
   await expect(page.getByRole("button", { name: "알림 닫기" })).toBeFocused();
   await expect(page.getByRole("heading", { name: "두부조림" })).toBeVisible();
   await expect(page.getByText("오늘 추출 한도를 모두 사용했어요. 나중에 다시 시도해 주세요.")).toBeVisible();
-  await captureEvidence(page, testInfo, path.join(SHELL_EVIDENCE, "mobile-320-failure-panel.png"));
   const retry = page.getByRole("button", { name: "나중에 다시 시도" });
   await retry.scrollIntoViewIfNeeded();
   await expect(retry).toBeVisible();
+  const [retryBox, dialogBoxAfterScroll] = await Promise.all([
+    retry.boundingBox(),
+    dialog.boundingBox(),
+  ]);
+  expect(retryBox).not.toBeNull();
+  expect(dialogBoxAfterScroll).not.toBeNull();
+  expect(retryBox!.x).toBeGreaterThanOrEqual(dialogBoxAfterScroll!.x);
+  expect(retryBox!.x + retryBox!.width).toBeLessThanOrEqual(
+    dialogBoxAfterScroll!.x + dialogBoxAfterScroll!.width,
+  );
+  expect(retryBox!.y).toBeGreaterThanOrEqual(dialogBoxAfterScroll!.y);
+  expect(retryBox!.y + retryBox!.height).toBeLessThanOrEqual(
+    dialogBoxAfterScroll!.y + dialogBoxAfterScroll!.height,
+  );
+  expect(retryBox!.height).toBeGreaterThanOrEqual(44);
+  expect(await retry.evaluate((element) => (
+    element.scrollWidth <= element.clientWidth && element.scrollHeight <= element.clientHeight
+  ))).toBe(true);
+  await captureEvidence(page, testInfo, path.join(SHELL_EVIDENCE, "mobile-320-failure-panel.png"));
   await page.keyboard.press("Shift+Tab");
   expect(await dialog.evaluate((element) => element.contains(document.activeElement))).toBe(true);
   const results = await new AxeBuilder({ page })

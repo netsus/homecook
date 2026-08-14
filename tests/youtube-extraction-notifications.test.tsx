@@ -84,6 +84,7 @@ describe("YouTube extraction notification center", () => {
     useYoutubeExtractionStore.getState().setAuthenticated(false);
     useYoutubeExtractionStore.getState().setItems([]);
     useYoutubeExtractionStore.getState().setOpen(false);
+    useYoutubeExtractionStore.getState().setView("unseen-completed");
     vi.mocked(api.fetchYoutubeExtractionNotifications).mockReset();
     vi.mocked(api.fetchYoutubeExtractionNotifications).mockResolvedValue({
       success: true,
@@ -710,6 +711,70 @@ describe("YouTube extraction notification center", () => {
 
     expect(await screen.findByRole("heading", { name: "감자 수프 archive" })).toBeTruthy();
     expect(screen.queryByRole("heading", { name: "YouTube 레시피" })).toBeNull();
+  });
+
+  it.each(["focus", "online"] as const)(
+    "refreshes unseen notifications in the background on %s while preserving the archive view",
+    async (eventName) => {
+      const archiveItem = {
+        ...successItem,
+        seen_at: "2026-08-14T02:00:00.000Z",
+        video_title_snapshot: "감자 수프 archive",
+      };
+      const foregroundItem = {
+        ...failedItem,
+        job_id: "99999999-9999-4999-8999-999999999999",
+        delivery_key: "delivery-foreground",
+        video_title_snapshot: "새로 끝난 두부조림",
+      };
+      let unseenItems: Array<typeof successItem | typeof failedItem> = [successItem];
+      vi.mocked(api.fetchYoutubeExtractionNotifications).mockImplementation(async (view) => ({
+        success: true,
+        data: {
+          items: view === "archive" ? [archiveItem] : unseenItems,
+          next_cursor: null,
+        },
+        error: null,
+      }));
+      const user = userEvent.setup();
+
+      renderCenter();
+      await user.click(await screen.findByRole("button", { name: "YouTube 추출 알림 1개" }));
+      await user.click(screen.getByRole("tab", { name: "지난 알림" }));
+      expect(await screen.findByRole("heading", { name: "감자 수프 archive" })).toBeTruthy();
+
+      unseenItems = [successItem, foregroundItem];
+      act(() => window.dispatchEvent(new Event(eventName)));
+
+      expect(await screen.findByLabelText("YouTube 추출 알림 2개")).toBeTruthy();
+      expect(await screen.findByText("레시피 추출 2건이 끝났어요")).toBeTruthy();
+      expect(screen.getByRole("tab", { name: "지난 알림" }).getAttribute("aria-selected"))
+        .toBe("true");
+      expect(screen.getByRole("heading", { name: "감자 수프 archive" })).toBeTruthy();
+      expect(screen.queryByRole("heading", { name: "새로 끝난 두부조림" })).toBeNull();
+    },
+  );
+
+  it("implements complete keyboard tab semantics for notification views", async () => {
+    const user = userEvent.setup();
+    renderCenter();
+    await user.click(await screen.findByRole("button", { name: "YouTube 추출 알림 2개" }));
+
+    const unseenTab = screen.getByRole("tab", { name: "새 알림" });
+    const archiveTab = screen.getByRole("tab", { name: "지난 알림" });
+    expect(unseenTab.getAttribute("aria-controls")).toBe("youtube-extraction-unseen-panel");
+    expect(unseenTab.getAttribute("tabindex")).toBe("0");
+    expect(archiveTab.getAttribute("tabindex")).toBe("-1");
+    unseenTab.focus();
+
+    await user.keyboard("{ArrowRight}");
+
+    expect(document.activeElement).toBe(archiveTab);
+    expect(archiveTab.getAttribute("aria-selected")).toBe("true");
+    expect(archiveTab.getAttribute("aria-controls")).toBe("youtube-extraction-archive-panel");
+    const panel = screen.getByRole("tabpanel");
+    expect(panel.id).toBe("youtube-extraction-archive-panel");
+    expect(panel.getAttribute("aria-labelledby")).toBe("youtube-extraction-archive-tab");
   });
 
   it("announces and displays the official completed time in current and archive rows", async () => {

@@ -81,6 +81,19 @@ interface YoutubeImportScreenProps {
   slotName: string;
 }
 
+function preservePlannerContext(
+  reviewPath: string,
+  context: { planDate: string; columnId: string; slotName: string },
+) {
+  if (!context.planDate || !context.columnId) return reviewPath;
+  const [pathname, query = ""] = reviewPath.split("?", 2);
+  const params = new URLSearchParams(query);
+  params.set("date", context.planDate);
+  params.set("columnId", context.columnId);
+  if (context.slotName) params.set("slot", context.slotName);
+  return `${pathname}?${params.toString()}`;
+}
+
 type Step =
   | "url-input"
   | "preview"
@@ -2794,7 +2807,11 @@ export function YoutubeImportScreen({
       if (result.success && result.data) {
         setAcceptedJob(result.data);
         if (result.data.status === "succeeded" && result.data.result?.review_path) {
-          router.replace(result.data.result.review_path);
+          router.replace(preservePlannerContext(result.data.result.review_path, {
+            planDate,
+            columnId,
+            slotName,
+          }));
           return;
         }
       }
@@ -2806,7 +2823,7 @@ export function YoutubeImportScreen({
       current = false;
       if (timer) window.clearTimeout(timer);
     };
-  }, [acceptedJobId, currentStep, router]);
+  }, [acceptedJobId, columnId, currentStep, planDate, router, slotName]);
 
   // Helper to initiate extraction from non-recipe warning proceed button
   const triggerExtraction = useCallback(() => {

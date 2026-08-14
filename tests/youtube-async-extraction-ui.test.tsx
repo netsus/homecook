@@ -39,15 +39,21 @@ vi.mock("@/lib/api/youtube-import", () => ({
 
 const youtubeUrl = "https://www.youtube.com/watch?v=abcdefghijk";
 
-function renderImport(props: { initialExtractionId?: string; initialYoutubeUrl?: string } = {}) {
+function renderImport(props: {
+  columnId?: string;
+  initialExtractionId?: string;
+  initialYoutubeUrl?: string;
+  planDate?: string;
+  slotName?: string;
+} = {}) {
   return render(
     <YoutubeImportScreen
-      columnId=""
+      columnId={props.columnId ?? ""}
       initialExtractionId={props.initialExtractionId}
       initialYoutubeUrl={props.initialYoutubeUrl ?? ""}
-      planDate=""
+      planDate={props.planDate ?? ""}
       presentation="screen"
-      slotName=""
+      slotName={props.slotName ?? ""}
     />,
   );
 }
@@ -261,6 +267,51 @@ describe("YT_IMPORT async extraction", () => {
     await waitFor(() => {
       expect(routerReplace).toHaveBeenCalledWith(
         "/menu/add/youtube?extractionId=extraction-ready",
+      );
+    });
+  });
+
+  it("preserves planner context when polling moves a completed job to review", async () => {
+    vi.mocked(asyncApi.enqueueYoutubeExtraction).mockResolvedValue({
+      success: true,
+      data: {
+        job_id: "11111111-1111-4111-8111-111111111111",
+        status: "succeeded",
+        deduplicated: true,
+        submitted_at: "2026-08-14T01:00:00.000Z",
+      },
+      error: null,
+    });
+    vi.mocked(asyncApi.fetchYoutubeExtractionJob).mockResolvedValue({
+      success: true,
+      data: {
+        job_id: "11111111-1111-4111-8111-111111111111",
+        status: "succeeded",
+        submitted_at: "2026-08-14T01:00:00.000Z",
+        started_at: "2026-08-14T01:00:01.000Z",
+        completed_at: "2026-08-14T01:02:00.000Z",
+        result: {
+          extraction_id: "extraction-ready",
+          review_path: "/menu/add/youtube?extractionId=extraction-ready",
+          recipe_id: null,
+          recipe_path: null,
+        },
+        error: null,
+        can_retry: false,
+      },
+      error: null,
+    });
+
+    renderImport({
+      columnId: "dinner-column",
+      initialYoutubeUrl: youtubeUrl,
+      planDate: "2026-08-21",
+      slotName: "dinner",
+    });
+
+    await waitFor(() => {
+      expect(routerReplace).toHaveBeenCalledWith(
+        "/menu/add/youtube?extractionId=extraction-ready&date=2026-08-21&columnId=dinner-column&slot=dinner",
       );
     });
   });

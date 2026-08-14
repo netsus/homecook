@@ -151,19 +151,21 @@ function NotificationRow({
             ) : null}
           </div>
         </div>
-        <div className="mt-3 flex flex-wrap gap-2">
+      </div>
+      {destination || item.can_retry ? (
+        <div className="col-span-2 flex min-w-0 flex-wrap gap-2 sm:col-start-2 sm:col-end-3">
           {destination ? (
-            <Link className="inline-flex min-h-11 w-full items-center justify-center whitespace-nowrap rounded-full bg-[var(--brand-primary)] px-4 text-sm font-bold text-[var(--foreground)] sm:w-auto" href={destination}>
+            <Link className="inline-flex min-h-11 w-full min-w-0 items-center justify-center whitespace-normal break-keep rounded-full bg-[var(--brand-primary)] px-4 py-2 text-center text-sm font-bold leading-5 text-[var(--foreground)] sm:w-auto" href={destination}>
               {item.result?.review_path ? "결과 확인" : "레시피 보기"}
             </Link>
           ) : null}
           {item.can_retry ? (
-            <button className="min-h-11 w-full whitespace-nowrap rounded-full border border-[var(--wave1-border)] px-4 text-sm font-bold sm:w-auto" onClick={() => onRetry(item)} type="button">
+            <button className="min-h-11 w-full min-w-0 whitespace-normal break-keep rounded-full border border-[var(--wave1-border)] px-4 py-2 text-sm font-bold leading-5 sm:w-auto" onClick={() => onRetry(item)} type="button">
               {retryLabel(item)}
             </button>
           ) : null}
         </div>
-      </div>
+      ) : null}
     </article>
   );
 }
@@ -217,7 +219,9 @@ export function YoutubeExtractionNotificationCenter({
   const [retryingId, setRetryingId] = useState<string | null>(null);
   const [hasHeaderTrigger, setHasHeaderTrigger] = useState(false);
   const [activeJobs, setActiveJobs] = useState<YoutubeExtractionJobData[]>([]);
-  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [unseenNextCursor, setUnseenNextCursor] = useState<string | null>(null);
+  const [archiveItems, setArchiveItems] = useState<YoutubeExtractionNotificationItem[]>([]);
+  const [archiveNextCursor, setArchiveNextCursor] = useState<string | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
   const [registrationAckIds, setRegistrationAckIds] = useState<string[]>(
     () => readPendingYoutubeExtractionRegistrationAcks(),
@@ -230,6 +234,10 @@ export function YoutubeExtractionNotificationCenter({
   const deliveredRef = useRef(new Set<string>());
   const registrationAckInFlightRef = useRef(new Set<string>());
   const registrationAckRetryRef = useRef(new Set<string>());
+  const unseenTabRef = useRef<HTMLButtonElement>(null);
+  const archiveTabRef = useRef<HTMLButtonElement>(null);
+  const displayedItems = view === "archive" ? archiveItems : items;
+  const displayedNextCursor = view === "archive" ? archiveNextCursor : unseenNextCursor;
 
   useEffect(() => setAuthenticatedLocal(initialAuthenticated), [initialAuthenticated]);
 
@@ -277,12 +285,17 @@ export function YoutubeExtractionNotificationCenter({
     return () => observer.disconnect();
   }, []);
 
-  const refresh = useCallback(async (nextView: YoutubeExtractionNotificationView) => {
+  const refresh = useCallback(async (
+    nextView: YoutubeExtractionNotificationView,
+    options: { background?: boolean } = {},
+  ) => {
     if (!authenticated) return;
-    setLoading(true);
-    setLoadError(null);
+    if (!options.background) {
+      setLoading(true);
+      setLoadError(null);
+    }
     const result = await fetchYoutubeExtractionNotifications(nextView);
-    setLoading(false);
+    if (!options.background) setLoading(false);
     if (!result.success || !result.data) {
       if (result.error?.code === "UNAUTHORIZED") {
         setAuthExpired(true);
@@ -290,11 +303,18 @@ export function YoutubeExtractionNotificationCenter({
         setItems([]);
         return;
       }
-      setLoadError(result.error?.message ?? "알림을 불러오지 못했어요.");
+      if (!options.background) {
+        setLoadError(result.error?.message ?? "알림을 불러오지 못했어요.");
+      }
       return;
     }
-    setItems(result.data.items);
-    setNextCursor(result.data.next_cursor);
+    if (nextView === "archive") {
+      setArchiveItems(result.data.items);
+      setArchiveNextCursor(result.data.next_cursor);
+    } else {
+      setItems(result.data.items);
+      setUnseenNextCursor(result.data.next_cursor);
+    }
   }, [authenticated, setItems]);
 
   useEffect(() => {
@@ -338,7 +358,7 @@ export function YoutubeExtractionNotificationCenter({
         YOUTUBE_EXTRACTION_JOBS_STORAGE_KEY,
         JSON.stringify(activeIds),
       );
-      if (hasTerminal) await refresh("unseen-completed");
+      if (hasTerminal) await refresh("unseen-completed", { background: view === "archive" });
       if (activeIds.length > 0 && current) {
         timer = window.setTimeout(pollPending, 5000);
       }
@@ -351,7 +371,7 @@ export function YoutubeExtractionNotificationCenter({
       if (timer) window.clearTimeout(timer);
       window.removeEventListener(YOUTUBE_EXTRACTION_JOB_ENQUEUED_EVENT, pollPending);
     };
-  }, [authenticated, refresh]);
+  }, [authenticated, refresh, view]);
 
   useEffect(() => {
     const keys = items
@@ -395,7 +415,9 @@ export function YoutubeExtractionNotificationCenter({
 
   useEffect(() => {
     if (!open) return;
-    const unseenIds = items.filter((item) => item.seen_at === null).map((item) => item.job_id);
+    const unseenIds = displayedItems
+      .filter((item) => item.seen_at === null)
+      .map((item) => item.job_id);
     if (unseenIds.length === 0 || !listRef.current) return;
 
     const expose = async (jobIds: string[]) => {
@@ -425,7 +447,7 @@ export function YoutubeExtractionNotificationCenter({
     listRef.current.querySelectorAll<HTMLElement>("[data-youtube-job-id]")
       .forEach((element) => observer.observe(element));
     return () => observer.disconnect();
-  }, [items, markSeenInStore, open]);
+  }, [displayedItems, markSeenInStore, open]);
 
   useEffect(() => {
     if (open) return;
@@ -557,7 +579,8 @@ export function YoutubeExtractionNotificationCenter({
   useEffect(() => {
     const refreshOnFocus = () => {
       if (document.visibilityState === "visible") {
-        void refresh(view).finally(() => setRegistrationAckRevision((value) => value + 1));
+        void refresh("unseen-completed", { background: view === "archive" })
+          .finally(() => setRegistrationAckRevision((value) => value + 1));
       }
     };
     window.addEventListener("focus", refreshOnFocus);
@@ -594,6 +617,16 @@ export function YoutubeExtractionNotificationCenter({
     void refresh(nextView);
   }, [refresh, setView]);
 
+  const handleTabKeyDown = useCallback((event: React.KeyboardEvent<HTMLButtonElement>) => {
+    if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+    event.preventDefault();
+    const nextView = event.key === "ArrowLeft" || event.key === "Home"
+      ? "unseen-completed"
+      : "archive";
+    handleView(nextView);
+    (nextView === "archive" ? archiveTabRef.current : unseenTabRef.current)?.focus();
+  }, [handleView]);
+
   const handleRetry = useCallback(async (item: YoutubeExtractionNotificationItem) => {
     if (!item.can_retry || retryingId) return;
     setRetryingId(item.job_id);
@@ -621,24 +654,30 @@ export function YoutubeExtractionNotificationCenter({
   }, [markSeenInStore]);
 
   const handleLoadMore = useCallback(async () => {
-    if (!nextCursor || loadingMore) return;
+    if (!displayedNextCursor || loadingMore) return;
     const list = listRef.current;
     const scrollTop = list?.scrollTop ?? 0;
     setLoadingMore(true);
     setLoadError(null);
-    const result = await fetchYoutubeExtractionNotifications(view, { cursor: nextCursor });
+    const result = await fetchYoutubeExtractionNotifications(view, { cursor: displayedNextCursor });
     setLoadingMore(false);
     if (!result.success || !result.data) {
       setLoadError(result.error?.message ?? "알림을 더 불러오지 못했어요.");
       return;
     }
-    setItems(appendUniqueItems(items, result.data.items));
-    setNextCursor(result.data.next_cursor);
+    const page = result.data;
+    if (view === "archive") {
+      setArchiveItems((current) => appendUniqueItems(current, page.items));
+      setArchiveNextCursor(page.next_cursor);
+    } else {
+      setItems(appendUniqueItems(items, page.items));
+      setUnseenNextCursor(page.next_cursor);
+    }
     if (list) {
       list.scrollTop = scrollTop;
       list.focus({ preventScroll: true });
     }
-  }, [items, loadingMore, nextCursor, setItems, view]);
+  }, [displayedNextCursor, items, loadingMore, setItems, view]);
 
   if (authExpired) {
     const returnPath = typeof window === "undefined"
@@ -721,10 +760,10 @@ export function YoutubeExtractionNotificationCenter({
             </div>
             <p className="shrink-0 px-4 pt-3 text-sm text-[var(--muted)]">진행 중 {activeJobs.length} · 새 소식 {items.filter((item) => item.seen_at === null).length}</p>
             <div aria-label="알림 보기" className="grid shrink-0 grid-cols-2 gap-1 border-b border-[var(--wave1-border)] p-2" role="tablist">
-              <button aria-selected={view === "unseen-completed"} className="min-h-11 whitespace-nowrap rounded-full px-3 text-sm font-bold aria-selected:bg-[var(--brand-soft)] aria-selected:text-[var(--foreground)]" onClick={() => handleView("unseen-completed")} role="tab" type="button">새 알림</button>
-              <button aria-selected={view === "archive"} className="min-h-11 whitespace-nowrap rounded-full px-3 text-sm font-bold aria-selected:bg-[var(--brand-soft)] aria-selected:text-[var(--foreground)]" onClick={() => handleView("archive")} role="tab" type="button">지난 알림</button>
+              <button aria-controls="youtube-extraction-unseen-panel" aria-selected={view === "unseen-completed"} className="min-h-11 whitespace-nowrap rounded-full px-3 text-sm font-bold aria-selected:bg-[var(--brand-soft)] aria-selected:text-[var(--foreground)]" id="youtube-extraction-unseen-tab" onClick={() => handleView("unseen-completed")} onKeyDown={handleTabKeyDown} ref={unseenTabRef} role="tab" tabIndex={view === "unseen-completed" ? 0 : -1} type="button">새 알림</button>
+              <button aria-controls="youtube-extraction-archive-panel" aria-selected={view === "archive"} className="min-h-11 whitespace-nowrap rounded-full px-3 text-sm font-bold aria-selected:bg-[var(--brand-soft)] aria-selected:text-[var(--foreground)]" id="youtube-extraction-archive-tab" onClick={() => handleView("archive")} onKeyDown={handleTabKeyDown} ref={archiveTabRef} role="tab" tabIndex={view === "archive" ? 0 : -1} type="button">지난 알림</button>
             </div>
-            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-4 focus:outline-none" data-testid="youtube-notification-list" ref={listRef} tabIndex={-1}>
+            <div aria-labelledby={view === "archive" ? "youtube-extraction-archive-tab" : "youtube-extraction-unseen-tab"} className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-4 focus:outline-none" data-testid="youtube-notification-list" id={view === "archive" ? "youtube-extraction-archive-panel" : "youtube-extraction-unseen-panel"} ref={listRef} role="tabpanel" tabIndex={-1}>
               {seenMutationError ? <div className="py-3 text-center"><p className="text-sm text-[var(--danger)]" role="status">확인 상태를 저장하지 못했어요.</p><button className="mt-2 min-h-11 rounded-full border border-[var(--wave1-border)] px-4 text-sm font-bold" onClick={() => {
                 const unseenIds = items.filter((item) => item.seen_at === null).map((item) => item.job_id);
                 void markYoutubeExtractionSeen(unseenIds).then((result) => {
@@ -737,13 +776,13 @@ export function YoutubeExtractionNotificationCenter({
               {loading ? <p aria-live="polite" className="py-8 text-center text-sm text-[var(--muted)]">알림을 불러오는 중이에요…</p> : null}
               {loadError ? <div className="py-8 text-center"><p role="status">{loadError}</p><button className="mt-3 min-h-11 rounded-full border px-4 font-bold" onClick={() => refresh(view)} type="button">다시 불러오기</button></div> : null}
               {!loading && !loadError && view === "unseen-completed" ? activeJobs.map((job) => <ActiveJobRow job={job} key={job.job_id} />) : null}
-              {!loading && !loadError && items.length === 0 && (view === "archive" || activeJobs.length === 0) ? (
+              {!loading && !loadError && displayedItems.length === 0 && (view === "archive" || activeJobs.length === 0) ? (
                 <p className="py-12 text-center text-sm text-[var(--muted)]">
                   {view === "archive" ? "완료된 추출 작업이 없어요." : "표시할 알림이 없어요."}
                 </p>
               ) : null}
-              {!loading && !loadError ? items.map((item) => <NotificationRow item={item} key={item.job_id} onRetry={handleRetry} />) : null}
-              {!loading && !loadError && nextCursor ? (
+              {!loading && !loadError ? displayedItems.map((item) => <NotificationRow item={item} key={item.job_id} onRetry={handleRetry} />) : null}
+              {!loading && !loadError && displayedNextCursor ? (
                 <button className="my-4 min-h-11 w-full rounded-full border border-[var(--wave1-border)] px-4 text-sm font-bold text-[var(--foreground)]" disabled={loadingMore} onClick={handleLoadMore} type="button">
                   {loadingMore ? "불러오는 중…" : "알림 더 보기"}
                 </button>
