@@ -214,11 +214,19 @@ query empty: 최근 / 자주 먹은 음식
 
 ## Delivery Checklist
 
-> Stage 1 exact-six artifacts와 roadmap/status projection은 작성됐지만, 아래 runtime closeout 항목은 evidence가 생기기 전까지 unchecked다.
+> Stage 4/Ready evidence로 닫힌 항목만 checked다. Stage 6, current-head CI, post-merge, controlled full-local, Manual Only, activation은 아래 successor projection에 unchecked로 남겨 완료를 주장하지 않는다.
 
 - [x] 기존 #9 API와 typed adapter 계약 및 shared policy tests 고정 <!-- omo:id=delivery-meal-log-ui-shared-contract;stage=2;scope=shared;review=3,6 -->
 - [x] idempotency/revision/own-event/history 회귀 TDD RED와 GREEN 증거 <!-- omo:id=delivery-meal-log-ui-policy-tests;stage=2;scope=shared;review=3,6 -->
 - [x] 기존 #10 Planner shell 안 MEAL_LOG와 add sheet UI 연결 <!-- omo:id=delivery-meal-log-ui-connection;stage=4;scope=frontend;review=5,6 -->
 - [x] required states, focus, 44px, 390/320/desktop 접근성 검증 <!-- omo:id=delivery-meal-log-ui-state-accessibility;stage=4;scope=frontend;review=5,6 -->
 - [x] fresh design evidence와 independent critic/final authority 승인 <!-- omo:id=delivery-meal-log-ui-design-authority;stage=4;scope=frontend;review=5,6 -->
-- [ ] local-only target evidence, current-head checks와 post-merge closeout 동기화 <!-- omo:id=delivery-meal-log-ui-closeout;stage=4;scope=shared;review=6 -->
+- [x] Ready handoff에 local deterministic evidence 범위와 후속 Stage 6/local-only/CI/Manual/activation 경계를 분리해 기록 <!-- omo:id=delivery-meal-log-ui-closeout;stage=4;scope=shared;review=6 -->
+
+> Successor closeout projection — 아래는 이 Stage 4/Ready 작업이 닫지 않는다.
+>
+> - [ ] independent Stage 6 closeout
+> - [ ] exact current-head CI 전체 green/intended skip
+> - [ ] post-merge QA/Policy/Security/Vercel closeout
+> - [ ] pinned isolated-local 및 controlled full-local read-only evidence
+> - [ ] Manual/server-Mac/OAuth/device/AT, capability R/R+1/R+2, production, activation evidence

@@ -44,7 +44,7 @@
 - [x] canonical MEAL_LOG design and independent critique pass before Stage 2 — exact generator/repair/re-review provenance above, `APPROVE 0/0/0` <!-- omo:id=accept-meal-log-ui-design;stage=2;scope=shared;review=3,6 -->
 - [x] 390px/320px/desktop evidence and fresh manifest cover all required states <!-- omo:id=accept-meal-log-ui-evidence;stage=4;scope=frontend;review=5,6 -->
 - [x] authority report approves density, strip/sheet containment, focus, 44px and no overflow <!-- omo:id=accept-meal-log-ui-authority;stage=4;scope=frontend;review=5,6 -->
-- [ ] pinned isolated-local fixtures and any controlled full-local read-only smoke keep target identity/checksum evidence separate <!-- omo:id=accept-meal-log-ui-local-only-boundary;stage=4;scope=shared;review=6 -->
+- [x] Ready evidence identifies its local deterministic target and explicitly excludes pinned isolated-local or controlled full-local completion claims <!-- omo:id=accept-meal-log-ui-ready-target-boundary;stage=4;scope=shared;review=6 -->
 
 ## Manual QA
 
@@ -64,7 +64,14 @@
 ### Playwright
 
 - [x] user flow, route/scroll/focus, mutation, replay and conflict are fixed in browser tests <!-- omo:id=accept-meal-log-ui-playwright-flow;stage=4;scope=frontend;review=5,6 -->
-- [ ] current-head checks and post-merge QA/Policy/Security/Vercel are green/intended skip <!-- omo:id=accept-meal-log-ui-ci;stage=4;scope=shared;review=6 -->
+- [x] Ready handoff pins the exact publication head while leaving current-head and post-merge results to their owning successor gates <!-- omo:id=accept-meal-log-ui-ready-ci-boundary;stage=4;scope=shared;review=6 -->
+
+### Stage 6 / Post-merge Pending
+
+> - [ ] independent Stage 6 closeout
+> - [ ] exact current-head CI 전체 green/intended skip
+> - [ ] post-merge QA/Policy/Security/Vercel closeout
+> - [ ] pinned isolated-local fixtures and controlled full-local read-only target identity/checksum evidence
 
 ### Manual Only
 
