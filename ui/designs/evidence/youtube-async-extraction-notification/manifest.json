@@ -1,9 +1,9 @@
 {
-  "captured_at": "2026-08-14T03:35:16Z",
+  "captured_at": "2026-08-14T04:48:44Z",
   "evidence_scope": "youtube-async-extraction-notification Stage 4 frontend",
   "implementation_base": "25e8da8b04c2322f68d8f54837135399d7586da7",
-  "implementation_head": "00a908789487bf4efcb66cff0b33c97b15513311",
-  "implementation_tree": "b63d1d7a26d10754d6d6378998f2eaedd7451433",
+  "implementation_head": "d3c40e841651486ddae27b0e685f6f5b2a70ff79",
+  "implementation_tree": "f217d39850b533ec0b6d27636d51cec50b659e77",
   "generator": "tests/e2e/youtube-async-extraction-notification.spec.ts",
   "base_url": "http://127.0.0.1:3217",
   "remote_supabase_access_count": 0,
@@ -13,7 +13,12 @@
     {
       "file": "YT_IMPORT_BACKGROUND/mobile-390-initial.png",
       "viewport": { "width": 390, "height": 844 },
-      "state": "initial-url-entry"
+      "state": "initial-url-entry-explicit-disabled-action"
+    },
+    {
+      "file": "YT_IMPORT_BACKGROUND/mobile-390-enabled-url.png",
+      "viewport": { "width": 390, "height": 844 },
+      "state": "valid-url-enabled-action-contrast"
     },
     {
       "file": "YT_IMPORT_BACKGROUND/mobile-390-submitting.png",
@@ -64,6 +69,16 @@
       "file": "APP_SHELL_YOUTUBE_NOTIFICATIONS/mobile-390-success-toast.png",
       "viewport": { "width": 390, "height": 844 },
       "state": "grouped-terminal-toast-unseen-badge"
+    },
+    {
+      "file": "APP_SHELL_YOUTUBE_NOTIFICATIONS/mobile-390-global-toast-coordination.png",
+      "viewport": { "width": 390, "height": 844 },
+      "state": "youtube-and-growth-toast-shared-slot-non-overlap-reading-order"
+    },
+    {
+      "file": "APP_SHELL_YOUTUBE_NOTIFICATIONS/mobile-320-global-toast-coordination.png",
+      "viewport": { "width": 320, "height": 568 },
+      "state": "small-mobile-youtube-and-growth-toast-non-overlap-click-ownership"
     },
     {
       "file": "APP_SHELL_YOUTUBE_NOTIFICATIONS/mobile-390-draft-toast.png",
@@ -132,15 +147,15 @@
     }
   ],
   "verification": {
-    "focused_vitest": "40 Stage 3 release-metadata and installer tests passed, including 6 RED-to-GREEN security regressions",
-    "youtube_async_regression": "86 combined backend worker/runtime/installer tests and 54 isolated PostgreSQL/PostgREST integration tests passed; exact release metadata membership/hash validation, queued schema/authorization drift rejection, catalog fingerprint drift matrix, duplicate same-worker permit claims, explicit job-to-permit lock order, concurrent start/heartbeat/finalize, expired fences, post-release exact replay, quota accounting, lexical secret-root provenance, and durable failure recording are covered",
-    "playwright": "23 deterministic scenarios passed; 69 cross-project executions passed on isolated port 3217; 24 exact-code-head screenshots captured",
+    "focused_vitest": "89 exact-head frontend component/contract tests, 35 installer/migration tests, and 18 Stage 3 route tests passed, including RED-to-GREEN global-toast, disabled-action, ACL-principal, and shortened-artifact regressions",
+    "youtube_async_regression": "86 combined backend worker/runtime/installer tests and 55 isolated random-port PostgreSQL/PostgREST integration tests passed; all target ACL principals, canonical artifact paths, exact release metadata membership/hash validation, queued schema/authorization drift rejection, catalog fingerprint drift matrix, duplicate same-worker permit claims, explicit job-to-permit lock order, concurrent start/heartbeat/finalize, expired fences, post-release exact replay, quota accounting, lexical secret-root provenance, and durable failure recording are covered",
+    "playwright": "25 deterministic scenarios passed; 75 cross-project executions passed on isolated port 3217; 27 exact-code-head screenshots captured",
     "axe": "0 violations on accepted CTA, grouped and individual toast, unauthorized notice, and 320px reflow surfaces with color-contrast enabled",
     "exploratory_qa": "97/100; 42/46 covered; 4 independent authority or real-worker/DB items intentionally not covered",
     "lint_typecheck": "passed on exact code head",
     "official_frontend_pr_gate": "passed on isolated port 3217: lint, typecheck, 2,741 product tests, build, 62 smoke passed/10 skipped, 8 a11y passed/1 skipped, and 12 visual passed",
     "security_e2e": "12 passed on isolated port 3217",
-    "full_vitest": "6,143 passed and 457 skipped",
+    "full_vitest": "6,151 passed and 458 skipped",
     "visual_verdict": "98/100 pass"
   },
   "limitations": [

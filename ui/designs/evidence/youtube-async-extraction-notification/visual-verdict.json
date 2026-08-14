@@ -3,7 +3,7 @@
   "verdict": "pass",
   "category_match": true,
   "differences": [],
-  "reasoning": "확정 artifact의 YT_IMPORT visual language와 app-shell drawer 패턴을 유지하면서 exact code head 00a908789487bf4efcb66cff0b33c97b15513311, tree b63d1d7a26d10754d6d6378998f2eaedd7451433의 24개 screenshot을 비교했다. planner context badge는 저장 식별자 dinner 대신 사용자 표시명 '저녁'을 명확히 보여준다. consumed individual toast는 핵심 제목 '이미 등록한 레시피예요'와 '레시피 보기' CTA를 한 위계로 표시하고, drawer row도 같은 destination 의미를 유지한다. 320px 200% failure drawer에서 제목·안전 메시지·retry CTA 전체 label과 bounding box가 dialog 및 viewport 안에 보이며, mobile toast는 HOME primary controls를 덮지 않고 desktop archive는 헤더·닫기·스크롤 영역이 분리된다. UNAUTHORIZED 전환 focus handoff, 복원 heading focus와 탭 순환은 브라우저 activeElement assertion으로 보완됐다. 독립 디자인 검토는 이전 publication head에서 PASS/findings 없음이었고 이후 UI 변경이 없어 blocker 또는 major 시각 차이는 없으며 이 판정은 구현 task 결과일 뿐 독립 authority 승인을 대신하지 않는다.",
+  "reasoning": "확정 artifact의 YT_IMPORT visual language와 app-shell drawer 패턴을 유지하면서 exact code head d3c40e841651486ddae27b0e685f6f5b2a70ff79, tree f217d39850b533ec0b6d27636d51cec50b659e77의 27개 screenshot을 비교했다. Growth와 YouTube 알림은 하나의 bottom presentation slot 안에서 YouTube→Growth 순서로 쌓여 390/320에서 서로 겹치지 않고 각 닫기 control의 hit ownership을 유지한다. 고정 한국어 toast 문구는 break-keep으로 '있어요' 같은 단어가 고아 줄바꿈되지 않으며 긴 예외 token만 anywhere wrapping한다. YT_IMPORT의 initial/submitting CTA는 neutral fill·text·border와 pressed transform 제거로 enabled brand CTA와 즉시 구별된다. 기존 planner '저녁', consumed exact title/CTA, 320px 200% failure CTA, desktop drawer, UNAUTHORIZED focus handoff, 복원 heading focus와 탭 순환도 그대로 유지된다. 이 판정은 구현 task의 visual-verdict이며 독립 authority 승인을 대신하지 않는다.",
   "suggestions": [
     "실기기 safe-area와 가상 키보드 가림은 Manual Only 검증에서 다시 확인한다."
   ]

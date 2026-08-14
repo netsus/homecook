@@ -128,18 +128,18 @@
 ## Design Status
 
 - [ ] 임시 UI (temporary) — Stage 1 설계 계약만 잠겼고 실제 구현 evidence는 없음
-- [x] 리뷰 대기 (pending-review) — 독립 디자인 검토는 publication head `36ee40184f8b912e78a2bd30439ebbf151d4aef3`에서 PASS/findings 없음이며, 최신 security findings를 수정한 Stage 4 code head `00a908789487bf4efcb66cff0b33c97b15513311`의 390/320/desktop evidence와 portable exploratory QA 97점을 재잠그고 독립 backend/security 재검토 대기 중
+- [x] 리뷰 대기 (pending-review) — Stage 4 code head `d3c40e841651486ddae27b0e685f6f5b2a70ff79`의 global toast coordination, disabled import CTA, ACL-principal readiness와 canonical worker artifact findings를 수정하고 390/320/desktop evidence와 portable exploratory QA 97점을 재잠갔으며 새 독립 design/backend/security 재검토 대기 중
 - [ ] 확정 (confirmed) — Stage 5와 별도 final authority가 current frontend head를 blocker 0으로 승인한 뒤 전환
 - [ ] N/A — BE-only 슬라이스
 
 ### Stage 4 Frontend Evidence
 
-- Implementation base/code head/tree: `25e8da8b04c2322f68d8f54837135399d7586da7` → `00a908789487bf4efcb66cff0b33c97b15513311` / `b63d1d7a26d10754d6d6378998f2eaedd7451433`
+- Implementation base/code head/tree: `25e8da8b04c2322f68d8f54837135399d7586da7` → `d3c40e841651486ddae27b0e685f6f5b2a70ff79` / `f217d39850b533ec0b6d27636d51cec50b659e77`
 - Screenshot manifest: `ui/designs/evidence/youtube-async-extraction-notification/manifest.json`
 - Visual verdict: `ui/designs/evidence/youtube-async-extraction-notification/visual-verdict.json` — `98/100`, pass (구현 task 판정이며 독립 authority 승인 아님)
 - Exploratory QA: `ui/designs/evidence/youtube-async-extraction-notification/exploratory-qa.json` 및 tracked `portable-exploratory-qa/` raw bundle — `97/100`, 42/46 covered, finding 0
-- Deterministic browser QA: `tests/e2e/youtube-async-extraction-notification.spec.ts` — port `3217`, 23 scenarios와 3-project 69 executions passed, panel 내부 focus의 conditional unauthorized handoff와 외부 focus 보존, notification CTA review-heading focus, planner 사용자 표시명 `저녁`, consumed exact title/CTA, 탭 양끝 순환, 실제 reload·logout→login 복구, archive 유지 중 background unseen badge 갱신을 명시하는 390/320/desktop screenshot 24개 regenerated
-- Focused component/integration QA: release metadata/secret-root RED 6개를 포함한 Stage 3+installer 40 passed; combined worker/runtime/installer 86 passed; 격리 PostgreSQL/PostgREST 54 passed(catalog schema/authorization drift의 enqueue+claim fail-closed, 동일 worker live permit 중복 claim 거부, job→permit lock order, start/heartbeat/finalize concurrent deadlock 0 포함); full Vitest 6,143 passed/457 skipped; product 2,741 passed/175 skipped; lint/typecheck/build passed; official frontend gate smoke 62/10 skipped, a11y 8/1 skipped, visual 12 passed; contract-only security-function authorization gate passed. 공개 enqueue는 duplicate-key-safe descriptor/schema reader와 exact artifact membership/hash verifier를 공유하고, secret root는 filesystem root부터 모든 lexical ancestor symlink를 거부한다.
+- Deterministic browser QA: `tests/e2e/youtube-async-extraction-notification.spec.ts` — port `3217`, 25 scenarios와 3-project 75 executions passed, Growth/YouTube toast의 390/320 비겹침·click ownership·읽기 순서, initial/submitting/enabled CTA 시각 차이, 한국어 단어 보존과 기존 focus/reload/archive/planner 회귀를 명시하는 390/320/desktop screenshot 27개 regenerated
+- Focused component/integration QA: frontend component/contract 89 passed; installer/migration 35 passed; Stage 3 route 18 passed; combined worker/runtime/installer 86 passed; 격리 random-port PostgreSQL/PostgREST 55 passed(모든 대상 ACL principal drift의 enqueue+claim fail-closed와 revoke recovery, catalog drift, permit/lock/fence 회귀 포함); full Vitest 6,151 passed/458 skipped; product 2,741 passed/175 skipped; lint/typecheck/build passed; official frontend gate와 contract-only security-function authorization gate passed. 공개 enqueue는 duplicate-key-safe descriptor/schema reader와 exact artifact membership/hash verifier를 공유하고, canonical required artifact path를 고정하며 secret root는 filesystem root부터 모든 lexical ancestor symlink를 거부한다.
 - Boundary: Supabase Cloud/linked/remote/credential access 0, 운영 local Supabase/app `3100`/user data/port/volume/env/secret/launchd mutation 0. Stage 5/final authority/Stage 6와 Manual Only는 미완료다.
 
 ## Source Links
