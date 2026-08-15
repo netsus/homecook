@@ -1841,11 +1841,11 @@
       "line": 681,
       "source_file": "app/api/v1/recipes/[id]/route.ts",
       "route": "/api/v1/recipes/[id]",
-      "owner_scope": "public",
-      "persists_personal_state": false,
-      "guard_mode": "not_applicable",
-      "expected_generation": "not_applicable",
-      "activation_phase": "always"
+      "owner_scope": "authenticated-user",
+      "persists_personal_state": true,
+      "guard_mode": "protected-rpc-or-mutated-table-before-trigger",
+      "expected_generation": "joint-promote-server-verified-session-binding",
+      "activation_phase": "f0-expand-legacy-guard"
     },
     {
       "key": "rpc|app/api/v1/recipes/[id]/route.ts|write_recipe_future_plan_change|2",
@@ -1855,11 +1855,11 @@
       "line": 628,
       "source_file": "app/api/v1/recipes/[id]/route.ts",
       "route": "/api/v1/recipes/[id]",
-      "owner_scope": "public",
-      "persists_personal_state": false,
-      "guard_mode": "not_applicable",
-      "expected_generation": "not_applicable",
-      "activation_phase": "always"
+      "owner_scope": "authenticated-user",
+      "persists_personal_state": true,
+      "guard_mode": "protected-rpc-or-mutated-table-before-trigger",
+      "expected_generation": "joint-promote-server-verified-session-binding",
+      "activation_phase": "f0-expand-legacy-guard"
     },
     {
       "key": "rpc|app/api/v1/recipes/route.ts|create_manual_recipe_with_managed_image|1",
@@ -2179,6 +2179,6 @@
       "on_delete": "cascade"
     }
   ],
-  "generated_at": "2026-08-15T04:51:55.092Z",
-  "checksum": "6cff26a665c89f82bd544ca3598a7943d97f19320eccbd301b787e3844d4323f"
+  "generated_at": "2026-08-15T05:11:40.529Z",
+  "checksum": "89a477ed46e9790605c76e6ace5199808a55559261b48874c2f9f15f28ee2ded"
 }

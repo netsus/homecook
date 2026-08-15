@@ -172,10 +172,31 @@ function assertRouteClassification(routeKey) {
   return metadata;
 }
 
-function ownerScopeForWrite(sourceFile) {
+function routeMethodAtIndex(source, index) {
+  let method = null;
+  const prefix = source.slice(0, index ?? 0);
+  for (const match of prefix.matchAll(
+    /export\s+async\s+function\s+(GET|POST|PATCH|PUT|DELETE)\s*\(/gu,
+  )) {
+    method = match[1];
+  }
+  return method;
+}
+
+function ownerScopeForWrite(sourceFile, method = null) {
   const normalized = normalizePath(path.relative(REPO_ROOT, sourceFile));
   if (normalized.endsWith("/route.ts")) {
     const route = routeFromFile(sourceFile);
+    const methodMetadata = method
+      ? ROUTE_METADATA_BY_KEY[`${method} ${route}`]
+      : null;
+    if (methodMetadata) {
+      return {
+        source_file: normalized,
+        route,
+        ...methodMetadata,
+      };
+    }
     const directMetadata = ROUTE_FILE_METADATA_BY_ROUTE[route];
     if (directMetadata) {
       return {
@@ -285,7 +306,10 @@ function collectMutatingRpcEntries(source, sourceFile) {
     }
 
     ordinal += 1;
-    const ownership = ownerScopeForWrite(sourceFile);
+    const ownership = ownerScopeForWrite(
+      sourceFile,
+      routeMethodAtIndex(source, match.index),
+    );
     entries.push({
       key: `rpc|${ownership.source_file}|${target}|${ordinal}`,
       kind: "rpc",
@@ -307,7 +331,10 @@ function collectDirectDmlEntries(source, sourceFile) {
 
   while ((match = regex.exec(source)) !== null) {
     ordinal += 1;
-    const ownership = ownerScopeForWrite(sourceFile);
+    const ownership = ownerScopeForWrite(
+      sourceFile,
+      routeMethodAtIndex(source, match.index),
+    );
     entries.push({
       key: `direct_dml|${ownership.source_file}|${match[1]}|${match[3]}|${ordinal}`,
       kind: "direct_dml",

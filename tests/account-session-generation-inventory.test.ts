@@ -190,6 +190,8 @@ describe("account session generation inventory", () => {
         activation_phase: "always",
       }),
       ...[
+        ["app/api/v1/recipes/[id]/route.ts", "write_recipe_future_plan_change"],
+        ["app/api/v1/recipes/[id]/route.ts", "write_personal_recipe_core"],
         ["app/api/v1/cooked-batches/[id]/weight/route.ts", "mutate_cooked_batch_weight"],
         ["app/api/v1/cooked-batches/[id]/adjust/route.ts", "adjust_cooked_batch"],
         ["app/api/v1/cooked-batches/[id]/close-unweighed/route.ts", "close_unweighed_cooked_batch"],
@@ -203,6 +205,7 @@ describe("account session generation inventory", () => {
         operation: "call",
         source_file,
         target,
+        owner_scope: "authenticated-user",
         persists_personal_state: true,
       })),
     ]));
