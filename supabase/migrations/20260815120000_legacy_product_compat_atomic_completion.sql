@@ -99,6 +99,7 @@ as $function$
 declare
   v_authority jsonb;
   v_session public.cooking_sessions%rowtype;
+  v_recipe public.recipes%rowtype;
   v_recipe_id uuid;
   v_servings integer;
   v_consumed uuid[];
@@ -183,13 +184,18 @@ begin
       raise exception 'CONFLICT' using errcode = '55000';
     end if;
   else
-    select recipe.id into v_recipe_id
+    select recipe.* into v_recipe
     from public.recipes as recipe
     where recipe.id = p_recipe_id
     for update;
-    if v_recipe_id is null then
+    if v_recipe.id is null or v_recipe.deleted_at is not null then
       raise exception 'RESOURCE_NOT_FOUND' using errcode = 'P0002';
     end if;
+    if v_recipe.visibility = 'private'
+      and v_recipe.created_by is distinct from p_owner_uuid then
+      raise exception 'RESOURCE_NOT_FOUND' using errcode = 'P0002';
+    end if;
+    v_recipe_id := v_recipe.id;
     v_servings := p_cooking_servings;
   end if;
 

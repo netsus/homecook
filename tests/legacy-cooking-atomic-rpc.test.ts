@@ -53,6 +53,29 @@ describe("legacy cooking atomic compatibility RPC", () => {
     expect(sql).toMatch(/p_idempotency_key is null[\s\S]*record_internal_operational_event[\s\S]*legacy_cooking_completion_missing_idempotency_key/iu);
   });
 
+  it("rejects deleted and other-owner private standalone recipes before claim or bootstrap", () => {
+    const sql = readMigration();
+    const standaloneRecipeRead = sql.indexOf("select recipe.* into v_recipe");
+    const deletedGuard = sql.indexOf("v_recipe.deleted_at is not null", standaloneRecipeRead);
+    const privateGuard = sql.indexOf("v_recipe.visibility = 'private'", standaloneRecipeRead);
+    const ownerGuard = sql.indexOf(
+      "v_recipe.created_by is distinct from p_owner_uuid",
+      standaloneRecipeRead,
+    );
+    const claim = sql.indexOf("claim_cooked_batch_operation", standaloneRecipeRead);
+    const bootstrap = sql.indexOf(
+      "bootstrap_account_generation_identity",
+      standaloneRecipeRead,
+    );
+
+    expect(standaloneRecipeRead).toBeGreaterThanOrEqual(0);
+    expect(deletedGuard).toBeGreaterThan(standaloneRecipeRead);
+    expect(privateGuard).toBeGreaterThan(deletedGuard);
+    expect(ownerGuard).toBeGreaterThan(privateGuard);
+    expect(claim).toBeGreaterThan(ownerGuard);
+    expect(bootstrap).toBeGreaterThan(claim);
+  });
+
   it("locks both new functions to postgres-owned service_role execution", () => {
     const sql = readMigration();
 
