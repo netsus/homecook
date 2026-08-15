@@ -16,6 +16,7 @@ const hashB = "b".repeat(64);
 const cutover = "d2000000-0000-4000-8000-000000000001";
 const recipeA = "d3000000-0000-4000-8000-000000000001";
 const recipeConcurrent = "d3000000-0000-4000-8000-000000000002";
+const recipeMismatch = "d3000000-0000-4000-8000-000000000003";
 const ingredient = "d4000000-0000-4000-8000-000000000001";
 const plannerColumn = "d5000000-0000-4000-8000-000000000001";
 const plannerMeal = "d6000000-0000-4000-8000-000000000001";
@@ -23,6 +24,7 @@ const plannerSession = "d7000000-0000-4000-8000-000000000001";
 const otherSession = "d7000000-0000-4000-8000-000000000002";
 const plannerKey = "d8000000-0000-4000-8000-000000000001";
 const concurrentKey = "d8000000-0000-4000-8000-000000000002";
+const mismatchKey = "d8000000-0000-4000-8000-000000000003";
 
 function psql(sql: string, expectSuccess = true) {
   const result = spawnSync(
@@ -103,12 +105,12 @@ function plannerCall({
   `);
 }
 
-function standaloneCall(recipe: string, key: string | null) {
+function standaloneCall(recipe: string, key: string | null, servings = 2) {
   return serviceSql(`
     select 'JSON:' || public.complete_standalone_cooking(
       ${authority(ownerA)},
       '${recipe}'::uuid,
-      2,
+      ${servings},
       '{}'::uuid[],
       ${key ? `'${key}'::uuid` : "null::uuid"},
       '2026-08-15T02:10:00.000Z'::timestamptz
@@ -128,6 +130,7 @@ function ownerDigest(owner: string) {
       'meals', (select coalesce(jsonb_agg(jsonb_build_array(id,status,cooked_at) order by id),'[]'::jsonb) from public.meals where user_id='${owner}'),
       'progress', (select coalesce(jsonb_agg(jsonb_build_array(event_type,source_key,xp_delta,occurred_at) order by id),'[]'::jsonb) from public.user_progress_events where user_id='${owner}'),
       'summary', (select coalesce(jsonb_agg(jsonb_build_array(total_xp,current_level,event_counts,last_updated_at) order by user_id),'[]'::jsonb) from public.user_progress_summary where user_id='${owner}')
+      ,'telemetry', (select coalesce(jsonb_agg(jsonb_build_array(event_type,source,actor_user_id,target_user_id,http_status,error_code,metadata_json) order by id),'[]'::jsonb) from public.operational_events where actor_user_id='${owner}' or target_user_id='${owner}')
     )::text,'UTF8'),'sha256'),'hex');
   `).stdout);
 }
@@ -175,7 +178,8 @@ describe.runIf(enabled)("legacy product compatibility PostgreSQL", () => {
       insert into public.recipes(id,title,base_servings,source_type,created_by)
       values
         ('${recipeA}','호환 플래너 레시피',2,'manual','${ownerA}'),
-        ('${recipeConcurrent}','호환 독립 레시피',2,'manual','${ownerA}');
+        ('${recipeConcurrent}','호환 독립 레시피',2,'manual','${ownerA}'),
+        ('${recipeMismatch}','호환 키 충돌 레시피',2,'manual','${ownerA}');
       insert into public.recipe_ingredients(
         recipe_id,ingredient_id,amount,unit,ingredient_type,sort_order,scalable
       ) values('${recipeA}','${ingredient}',100,'g','QUANT',0,true);
@@ -259,7 +263,90 @@ describe.runIf(enabled)("legacy product compatibility PostgreSQL", () => {
     expect(ownerDigest(ownerB)).toBe(beforeB);
   });
 
+  it("rejects maintenance, quarantined, deleting, and stale-session calls with mutation zero", () => {
+    const cases = [
+      {
+        prepare: `set session_replication_role=replica; update public.account_generation_capability_state set state='cutover_maintenance', revision=revision+1 where singleton; set session_replication_role=origin`,
+        restore: `set session_replication_role=replica; update public.account_generation_capability_state set state='generation_active', revision=revision+1 where singleton; set session_replication_role=origin`,
+        call: plannerCall({ owner: ownerB, session: otherSession }),
+        code: "ACCOUNT_LIFECYCLE_MAINTENANCE",
+        owner: ownerB,
+      },
+      {
+        prepare: `update public.user_account_lifecycles set status='quarantined' where owner_uuid='${ownerB}'`,
+        restore: `update public.user_account_lifecycles set status='active' where owner_uuid='${ownerB}'`,
+        call: plannerCall({ owner: ownerB, session: otherSession }),
+        code: "ACCOUNT_CUTOVER_QUARANTINED",
+        owner: ownerB,
+      },
+      {
+        prepare: `update public.user_account_lifecycles set status='deleting' where owner_uuid='${ownerB}'`,
+        restore: `update public.user_account_lifecycles set status='active' where owner_uuid='${ownerB}'`,
+        call: plannerCall({ owner: ownerB, session: otherSession }),
+        code: "ACCOUNT_DELETING",
+        owner: ownerB,
+      },
+      {
+        prepare: `update public.user_session_generation_bindings set binding_state='revoked', revoked_at=clock_timestamp() where owner_uuid='${ownerB}'`,
+        restore: `update public.user_session_generation_bindings set binding_state='active', revoked_at=null where owner_uuid='${ownerB}'`,
+        call: plannerCall({ owner: ownerB, session: otherSession }),
+        code: "ACCOUNT_SESSION_STALE",
+        owner: ownerB,
+      },
+    ];
+
+    for (const scenario of cases) {
+      psql(scenario.prepare);
+      const before = ownerDigest(scenario.owner);
+      const result = psql(scenario.call, false);
+      expect(result.status).not.toBe(0);
+      expect(result.stderr).toContain(scenario.code);
+      expect(ownerDigest(scenario.owner)).toBe(before);
+      psql(scenario.restore);
+    }
+  });
+
+  it("serializes concurrent same-key mismatches to one success and one zero-mutation conflict", async () => {
+    const receiptBefore = Number(lastLine(psql(`
+      select count(*) from public.mutation_idempotency_keys
+      where owner_uuid='${ownerA}' and operation_scope='legacy_standalone_complete';
+    `).stdout));
+    const progressBefore = Number(lastLine(psql(`
+      select count(*) from public.user_progress_events
+      where user_id='${ownerA}' and event_type='cooking_completed';
+    `).stdout));
+
+    const results = await Promise.allSettled([
+      psqlAsync(standaloneCall(recipeMismatch, mismatchKey, 2)),
+      psqlAsync(standaloneCall(recipeMismatch, mismatchKey, 3)),
+    ]);
+    const fulfilled = results.filter((result) => result.status === "fulfilled");
+    const rejected = results.filter((result) => result.status === "rejected");
+
+    expect(fulfilled).toHaveLength(1);
+    expect(rejected).toHaveLength(1);
+    expect(String((rejected[0] as PromiseRejectedResult).reason)).toContain(
+      "IDEMPOTENCY_KEY_REUSED",
+    );
+    expect(Number(lastLine(psql(`
+      select count(*) from public.leftover_dishes
+      where user_id='${ownerA}' and recipe_id='${recipeMismatch}';
+    `).stdout))).toBe(1);
+    expect(Number(lastLine(psql(`
+      select count(*) from public.mutation_idempotency_keys
+      where owner_uuid='${ownerA}' and operation_scope='legacy_standalone_complete';
+    `).stdout))).toBe(receiptBefore + 1);
+    expect(Number(lastLine(psql(`
+      select count(*) from public.user_progress_events
+      where user_id='${ownerA}' and event_type='cooking_completed';
+    `).stdout))).toBe(progressBefore + 1);
+  });
+
   it("keeps no-key standalone compatibility and serializes concurrent same-key completion", async () => {
+    const receiptBefore = Number(lastLine(psql(`
+      select count(*) from public.mutation_idempotency_keys
+      where owner_uuid='${ownerA}' and operation_scope='legacy_standalone_complete';
+    `).stdout));
     const noKey = JSON.parse(jsonLine(psql(standaloneCall(recipeA, null)).stdout));
     expect(noKey).toMatchObject({ pantry_removed: 0 });
 
@@ -275,6 +362,9 @@ describe.runIf(enabled)("legacy product compatibility PostgreSQL", () => {
         (select count(*) from public.user_progress_events where user_id='${ownerA}' and event_type='cooking_completed' and source_key like 'cooking_completed:%')
       );
     `).stdout);
-    expect(counts.split(":").slice(0, 2)).toEqual(["1", "1"]);
+    expect(counts.split(":").slice(0, 2)).toEqual([
+      "1",
+      String(receiptBefore + 1),
+    ]);
   });
 });
