@@ -197,10 +197,11 @@
 ## Stage 2 Current Evidence
 
 - Author task: `019ff12c-dc8b-7752-9319-398a68cacb6e`; branch `feature/be-legacy-product-compat`; Draft PR #1369.
-- RED commit `e0b5bca9199cec72c1b51835e9124a0cd1b86f19` 뒤 implementation commit `a405ffb20a3f1e6e6e1d87df12cc209c474bd6f3`, mutation-zero PostgreSQL repair commit `3e902b3d261aeade62fc3cdd11f2890a2e431a84`를 normal commits로 유지한다.
-- Focused Vitest `8 files / 53 tests`, disposable PostgreSQL `6/6`, canonical isolated Supabase reset/Data API `200`, prepared-food owner PostgreSQL `11/11`, product `2,756 pass / 175 intended skip`, build와 security E2E `12/12`가 GREEN이다.
-- exact RPC owner/ACL/search-path를 포함한 `legacy-product-compat` security manifest `6` functions와 source/workpack/workflow/OMO/real-smoke/branch validators, lint, typecheck, audit high/critical `0/0`, diff check가 통과했다.
-- Production/staging/remote application writes는 `0/0/0`이다. independent Stage 3, current-head CI terminal green, Ready/merge/OMO, controlled full-local deploy/drain/fence, old overload revoke/drop, deployed callable inventory, server-Mac/OAuth와 required-key/production activation은 pending이다.
+- RED commit `e0b5bca9199cec72c1b51835e9124a0cd1b86f19` 뒤 implementation `a405ffb20a3f1e6e6e1d87df12cc209c474bd6f3`, mutation-zero PostgreSQL repair `3e902b3d261aeade62fc3cdd11f2890a2e431a84`, internal authority inventory repair `59cc07aca6d15ee623acb51e1e5e3803c04405dc`, private/deleted recipe authority repair `07cdc639e37f23156027c668fec408b63bba58b9`, indirect RPC inventory repair `8ad430cecaba42ed1ed80f2b19806664fb5ce784`를 normal commits로 유지한다.
+- Focused Vitest `8 files / 54 tests`, disposable PostgreSQL `11/11`, internal authority `3 files / 34 tests`, canonical isolated Supabase reset/Data API `200`, prepared-food owner PostgreSQL `11/11`, product `2,756 pass / 175 intended skip`, full Vitest `6,103 pass / 414 intended skip`, build와 security E2E `12/12`가 GREEN이다.
+- exact RPC owner/ACL/search-path를 포함한 `legacy-product-compat` security manifest `6` functions, hybrid authority inventory와 account-session generation inventory `67 routes / 101 write surfaces / 3 inbound FKs`, source/workpack/workflow/OMO/real-smoke/branch validators, lint, typecheck, audit high/critical `0/0`, diff check가 통과했다.
+- Frozen head `ad795cbc29981fb1e7ebe82232a977802364d268`의 independent Stage 3 code/quality task `01a003ae-1569-7091-b087-3a55e5ccc8fb`와 security/DB task `01a003ae-1566-7f73-996d-52c44ffecd14`는 authority inventory와 PostgreSQL matrix/private-recipe boundary findings로 `REQUEST_CHANGES`였다. 위 successor repairs 뒤 fresh exact-head re-review는 pending이며 author가 이를 승인하지 않는다.
+- Production/staging/remote application writes는 `0/0/0`이다. fresh independent Stage 3 approval, current-head CI terminal green, Ready/merge/OMO, controlled full-local deploy/drain/fence, old overload revoke/drop, deployed callable inventory, server-Mac/OAuth와 required-key/production activation은 pending이다.
 - 상세 증거: `docs/workpacks/legacy-product-compat/evidence/2026-08-15-stage2-backend-implementation.md`.
 
 ## Delivery Checklist
