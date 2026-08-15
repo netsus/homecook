@@ -1,0 +1,73 @@
+{
+  "schema_version": 1,
+  "slice": "legacy-product-compat",
+  "migrations": [
+    "supabase/migrations/20260811120000_full_local_session_observability.sql",
+    "supabase/migrations/20260815120000_legacy_product_compat_atomic_completion.sql"
+  ],
+  "deployment_state": "pre-deployment",
+  "baseline_application_contract_count": 74,
+  "functions": [
+    {
+      "signature": "private.ensure_legacy_cooking_bootstrap(uuid, timestamp with time zone)",
+      "control_class": "application-controlled",
+      "effect": "mutation",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "owner": "postgres",
+      "security_mode": "invoker",
+      "safe_search_path": ["pg_catalog", "public", "private", "extensions", "pg_temp"]
+    },
+    {
+      "signature": "private.complete_legacy_cooking_core(text, uuid, timestamp with time zone, text, integer, timestamp with time zone, uuid, uuid, integer, uuid[], uuid, timestamp with time zone)",
+      "control_class": "application-controlled",
+      "effect": "mutation",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "owner": "postgres",
+      "security_mode": "invoker",
+      "safe_search_path": ["pg_catalog", "public", "private", "extensions", "pg_temp"]
+    },
+    {
+      "signature": "public.complete_cooking_session(uuid, timestamp with time zone, text, integer, timestamp with time zone, uuid, uuid[], uuid, timestamp with time zone)",
+      "control_class": "application-controlled",
+      "effect": "mutation",
+      "exposure": "service-internal",
+      "allowed_principals": ["service_role"],
+      "owner": "postgres",
+      "security_mode": "definer",
+      "safe_search_path": ["pg_catalog", "public", "private", "pg_temp"]
+    },
+    {
+      "signature": "public.complete_standalone_cooking(uuid, timestamp with time zone, text, integer, timestamp with time zone, uuid, integer, uuid[], uuid, timestamp with time zone)",
+      "control_class": "application-controlled",
+      "effect": "mutation",
+      "exposure": "service-internal",
+      "allowed_principals": ["service_role"],
+      "owner": "postgres",
+      "security_mode": "definer",
+      "safe_search_path": ["pg_catalog", "public", "private", "pg_temp"]
+    },
+    {
+      "signature": "private.verify_full_local_internal_scope_pre_legacy_compat()",
+      "control_class": "application-controlled",
+      "effect": "read-only",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "owner": "postgres",
+      "security_mode": "definer",
+      "safe_search_path": ["pg_catalog", "public", "private", "pg_temp"]
+    },
+    {
+      "signature": "private.verify_full_local_internal_scope()",
+      "control_class": "application-controlled",
+      "effect": "read-only",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "owner": "postgres",
+      "security_mode": "definer",
+      "safe_search_path": ["pg_catalog", "public", "private", "pg_temp"],
+      "replaces_additive": "cooked-batch-weight-ledger"
+    }
+  ]
+}

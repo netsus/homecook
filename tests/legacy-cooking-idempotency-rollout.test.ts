@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { executeLegacyCookingMutation } from "@/lib/server/legacy-product-compat";
+import {
+  executeLegacyCookingMutation,
+  getLegacyCookingIdempotencyPhase,
+} from "@/lib/server/legacy-product-compat";
 import { MemoryLegacyCompatibilityReceiptStore } from "./fixtures/legacy-product-compat-harness";
 
 const KEY = "550e8400-e29b-41d4-a716-446655440501";
@@ -86,3 +89,11 @@ describe.each(["planner_complete", "standalone_complete"] as const)(
     });
   },
 );
+
+describe("legacy cooking required-key activation guard", () => {
+  it("stays optional even when an unapproved runtime flag is present", () => {
+    expect(getLegacyCookingIdempotencyPhase({
+      HOMECOOK_LEGACY_COOKING_IDEMPOTENCY_REQUIRED: "true",
+    })).toBe("optional");
+  });
+});

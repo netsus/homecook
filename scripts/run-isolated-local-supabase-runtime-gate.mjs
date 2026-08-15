@@ -18,6 +18,9 @@ import {
 } from "./lib/local-supabase-isolated-runtime.mjs";
 
 const repositoryRoot = process.cwd();
+const integrationTest =
+  process.env.HOMECOOK_ISOLATED_RUNTIME_INTEGRATION_TEST?.trim() ?? "";
+const skipReset = process.env.HOMECOOK_ISOLATED_RUNTIME_SKIP_RESET === "1";
 
 function run(
   command,
@@ -69,10 +72,48 @@ try {
   }), { cwd: isolated.rootDir, env: commandEnv, timeoutMs: 300_000 });
   assertOwnedDockerResources(isolated.projectId, { env: commandEnv });
   assertNoIsolatedDockerOom(isolated.projectId, { env: commandEnv });
-  run("pnpm", buildSupabaseCliArgs(["db", "reset", "--local", "--yes"], {
-    workdir: isolated.rootDir,
-    cliPackage: RUNTIME_SUPABASE_CLI_PACKAGE,
-  }), { cwd: isolated.rootDir, env: commandEnv, timeoutMs: 300_000 });
+  if (!skipReset) {
+    run("pnpm", buildSupabaseCliArgs(["db", "reset", "--local", "--yes"], {
+      workdir: isolated.rootDir,
+      cliPackage: RUNTIME_SUPABASE_CLI_PACKAGE,
+    }), { cwd: isolated.rootDir, env: commandEnv, timeoutMs: 300_000 });
+  }
+  if (integrationTest) {
+    const statusResult = run(
+      "pnpm",
+      buildSupabaseCliArgs(["status", "--output", "env"], {
+        workdir: isolated.rootDir,
+        cliPackage: RUNTIME_SUPABASE_CLI_PACKAGE,
+      }),
+      { cwd: isolated.rootDir, env: commandEnv, capture: true },
+    );
+    const databaseUrl = String(statusResult.stdout).match(
+      /^DB_URL=['"]?([^'"\n]+)['"]?$/mu,
+    )?.[1];
+    if (!databaseUrl) {
+      throw new Error("isolated Supabase DB_URL is unavailable");
+    }
+    run(
+      "pnpm",
+      [
+        "exec",
+        "vitest",
+        "run",
+        integrationTest,
+        "--pool=forks",
+        "--maxWorkers=1",
+        "--testTimeout=30000",
+      ],
+      {
+        cwd: repositoryRoot,
+        env: {
+          ...commandEnv,
+          HOMECOOK_ISOLATED_RUNTIME_DATABASE_URL: databaseUrl,
+        },
+        timeoutMs: 120_000,
+      },
+    );
+  }
   const dataApi = startIsolatedDataApi(isolated, { env: commandEnv });
   const dataApiStatus = await waitForIsolatedDataApi({
     beforeAttempt: () => assertNoIsolatedDockerOom(

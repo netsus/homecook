@@ -87,7 +87,8 @@
       "all three lifecycle outcomes have mutation 0"
     ],
     "verify_commands": [
-      "pnpm exec vitest run tests/legacy-product-compat.test.ts tests/legacy-cooking-idempotency-rollout.test.ts tests/cooking-version-dispatch-compat.test.ts tests/compatibility-tombstone-gates.test.ts",
+      "pnpm exec vitest run tests/legacy-product-compat.test.ts tests/legacy-cooking-idempotency-rollout.test.ts tests/cooking-version-dispatch-compat.test.ts tests/compatibility-tombstone-gates.test.ts tests/legacy-cooking-complete-routes.test.ts tests/legacy-cooking-atomic-rpc.test.ts tests/cook-planner-complete.backend.test.ts tests/cook-standalone-complete.backend.test.ts",
+      "pnpm test:legacy-product-compat:postgres",
       "pnpm verify:local-supabase-runtime:isolated",
       "pnpm test:prepared-food-planner-entry:postgres",
       "pnpm verify:backend",
@@ -98,6 +99,10 @@
       "tests/legacy-cooking-idempotency-rollout.test.ts",
       "tests/cooking-version-dispatch-compat.test.ts",
       "tests/compatibility-tombstone-gates.test.ts",
+      "tests/legacy-cooking-complete-routes.test.ts",
+      "tests/legacy-cooking-atomic-rpc.test.ts",
+      "tests/legacy-product-compat-postgres.integration.test.ts",
+      "scripts/run-legacy-product-compat-postgres-integration.mjs",
       "owner A and owner B legacy row plus pinned old version fixture",
       "v1 key/no-key/replay/mismatch planner and standalone matrix",
       "concurrent same-key and mismatch matrix with DB-side mutation 0",
