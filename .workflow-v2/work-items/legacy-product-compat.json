@@ -54,12 +54,13 @@
     "plan_loop": "required",
     "review_loop": "required",
     "external_smokes": [
-      "owner A owner B legacy row pinned old version read-only and owner delete",
-      "v1 key/no-key/replay/mismatch planner and standalone",
-      "current and immediate-previous clients stored-version dispatch",
-      "seeded v2 read/cancel/complete and rollback drain",
-      "v1 cursor and telemetry outage unavailable partial stale query-error",
-      "isolated-local create/reset and merged-exact read-only inventory",
+      "controlled full-local/current-head deploy of a last-known-safe route/RPC satisfying session+lifecycle authority and mutation 0",
+      "old-server drain before traffic resumes",
+      "maintenance/write fence remains closed throughout rollback and cutover",
+      "old overload revoke/drop after approved fenced drain",
+      "callable inventory/negative privilege evidence for old and new exact signatures",
+      "server-Mac/OAuth approved execution evidence",
+      "separately approved exact required-key activation only after full-release no-key 0 and all Manual cutover evidence",
       "tombstone denied without separately approved contract"
     ],
     "execution_mode": "manual",
@@ -97,41 +98,6 @@
       "pnpm validate:branch",
       "git diff --check"
     ],
-    "stage1_current_commands": [
-      "pnpm validate:source-of-truth-sync",
-      "pnpm validate:workflow-v2",
-      "BRANCH_NAME=docs/legacy-product-compat-stage1-relock-20260815 pnpm validate:workpack -- --slice legacy-product-compat",
-      "node scripts/validate-automation-spec.mjs --slice legacy-product-compat",
-      "pnpm validate:omo-bookkeeping",
-      "pnpm exec vitest run tests/legacy-product-compat-stage1-relock.test.ts tests/workflow-v2-docs.test.ts tests/omo-automation-spec.test.ts tests/omo-bookkeeping.test.ts tests/omo-doc-gate.test.ts tests/source-of-truth-sync.test.ts",
-      "pnpm lint",
-      "pnpm typecheck",
-      "pnpm audit --audit-level high",
-      "pnpm validate:branch",
-      "git diff --check"
-    ],
-    "stage2_future_commands": [
-      "pnpm exec vitest run tests/legacy-product-compat.test.ts tests/legacy-cooking-idempotency-rollout.test.ts tests/cooking-version-dispatch-compat.test.ts tests/compatibility-tombstone-gates.test.ts",
-      "pnpm verify:local-supabase-runtime:isolated",
-      "pnpm test:prepared-food-planner-entry:postgres",
-      "pnpm verify:backend",
-      "pnpm validate:real-smoke-presence -- --slice legacy-product-compat"
-    ],
-    "stage4_future_commands": [
-      "pnpm exec vitest run tests/planner-shell-legacy-product.test.tsx tests/legacy-product-compat-client.test.tsx",
-      "pnpm test:e2e:regression:ci --grep legacy-product-compat",
-      "pnpm test:e2e:a11y",
-      "pnpm test:e2e:visual",
-      "pnpm qa:explore -- --slice legacy-product-compat",
-      "pnpm verify:frontend"
-    ],
-    "manual_only_evidence": [
-      "physical keyboard VoiceOver TalkBack real 390px and 320px device safe-area virtual-keyboard and full WCAG evidence",
-      "server-Mac and OAuth evidence",
-      "merged-exact server-production/local-rehearsal execution beyond controlled read-only inventory",
-      "capability R/R+1/R+2 production and activation remain pending",
-      "destructive tombstone/removal requires new explicit user approval and merged official contract-evolution"
-    ],
     "evaluator_commands": [
       "fresh independent design-impact review of the successor exact Stage 1 projection; predecessor task 01a00203-3c1d-78b3-ac78-fbb63b960c60 APPROVE 0/0/0 is historical evidence only",
       "fresh separate Codex internal 1.5 review of the exact-six Stage 1 projection; author does not approve its own changes",
@@ -155,7 +121,14 @@
       "stage1-current-stage2-future-stage4-future-manual-only-command-separation",
       "independent-design-impact-review-current-gate-predecessor-01a00203-3c1d-78b3-ac78-fbb63b960c60-historical-only",
       "repository-owned-isolated-reset-prepared-food-owner-fixture-bootstrap-meal-plan-columns-owner-match-and-fixture-absent-stage2-blocker",
-      "no-new-api-field-status-error-action-screen-migration-or-direct-dml"
+      "pre-gate missing Idempotency-Key remains compatible success with the existing v1 response shape",
+      "full-release no-key 0 is telemetry evidence only; missing Idempotency-Key remains compatible success until a separately approved exact required-key activation",
+      "only after separately approved exact required-key activation following full-release no-key 0 may missing Idempotency-Key return 428 IDEMPOTENCY_KEY_REQUIRED mutation 0",
+      "MAINTENANCE/QUARANTINED/DELETING and malformed/reused/missing-post-exact-required-key-activation-following-full-release-no-key-0/version/owner rejection",
+      "Stage 2 automated owns scoped additive RPC/core + planner and standalone route implementation + isolated-local fixtures + activation-block guard",
+      "narrow additive migration with scoped SECURITY DEFINER RPC/core and no new table/column/public contract",
+      "Manual evidence owns controlled full-local/current-head deploy, old-server drain, maintenance/write fence, old overload revoke/drop, callable inventory/negative privilege, server-Mac/OAuth and activation",
+      "no-new-api-field-status-error-action-screen-table-column-generic-rpc-rls-relaxation-or-direct-dml-beyond-scoped-additive-rpc-migration"
     ]
   },
   "status": {
@@ -175,8 +148,8 @@
     "New product detail route or mutable-current nutrition repin",
     "Snapshot-v2 personal recipe capability R/R+1/R+2 production or activation write",
     "PLANNER_WEEK COOK_MODE LEFTOVERS HOME MEAL_LOG composition changes",
-    "New API field status error action screen migration RPC RLS or direct DML"
+    "New API field status error action or screen; new table/column, generic RPC, RLS relaxation, or direct DML beyond the required narrow additive scoped RPC migration"
   ],
   "open_questions": [],
-  "notes": "Roadmap remains docs while canonical workflow lifecycle is planned. implementation/evaluation are not_started, approval is not_started, verification is pending and auto_merge_eligible is false. #10/#12 runtime dependency fulfilled, while broader Manual/server-Mac/OAuth, device/AT/full WCAG, capability, R/R+1/R+2, production and activation remain pending. Primary tracked plan d4d0fb39e80eeffc8b1e73ad92f0d91a35a9b6adc57a556ea8c9ec6ecffa951d has 1,018 lines; 45f02013fbc1c3af1936d596605230d0cbac7839a783224aa9535844e4bda7dc with 1,056 lines is a historical local-first overlay only. Current operations authority is docs/engineering/supabase-local-only-operations.md. Stage 1 current commands are docs/semantic validators, lint, typecheck, audit, branch and diff only; Stage 2 uses the repository-owned isolated reset and prepared-food owner fixture baselines, requires meal_plan_columns owner match from the existing bootstrap flow, and stops when the #13 exact fixture matrix is absent. Stage 4 owns only client/user states, optional key, 428 handling, stored-version dispatch and delete recovery. Manual and activation evidence are future. The author does not self-approve."
+  "notes": "Roadmap remains docs while canonical workflow lifecycle is planned. implementation/evaluation are not_started, approval is not_started, verification is pending and auto_merge_eligible is false. #10/#12 runtime dependency fulfilled, while broader Manual/server-Mac/OAuth, device/AT/full WCAG, capability, R/R+1/R+2, production and activation remain pending. Primary tracked plan d4d0fb39e80eeffc8b1e73ad92f0d91a35a9b6adc57a556ea8c9ec6ecffa951d has 1,018 lines; 45f02013fbc1c3af1936d596605230d0cbac7839a783224aa9535844e4bda7dc with 1,056 lines is a historical local-first overlay only. Current operations authority is docs/engineering/supabase-local-only-operations.md. Stage 1 required_checks and verify_commands are docs/semantic validators, lint, typecheck, audit, branch and diff only. Stage 2 automated owns the narrow additive scoped SECURITY DEFINER RPC/core, planner and standalone route implementation, repository-owned isolated fixtures and activation-block guard; no new table, column or public contract is allowed. Manual evidence owns controlled full-local/current-head deploy, old-server drain, maintenance/write fence, old overload revoke/drop, callable inventory/negative privilege, server-Mac/OAuth and activation, and none is complete. Full-release no-key 0 is telemetry evidence only, so missing key remains compatible success until a separately approved exact required-key activation. Stage 4 owns only client/user states, optional key, post-exact-activation 428 handling, stored-version dispatch and delete recovery. The author does not self-approve."
 }

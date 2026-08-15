@@ -25,6 +25,10 @@ const localOnlyAuthority =
   "docs/engineering/supabase-local-only-operations.md";
 const stage1TestCommand =
   "pnpm exec vitest run tests/legacy-product-compat-stage1-relock.test.ts tests/workflow-v2-docs.test.ts tests/omo-automation-spec.test.ts tests/omo-bookkeeping.test.ts tests/omo-doc-gate.test.ts tests/source-of-truth-sync.test.ts";
+const missingKeyIntermediateState =
+  "full-release no-key 0 is telemetry evidence only; missing Idempotency-Key remains compatible success until a separately approved exact required-key activation";
+const postActivationMissingKeyRejection =
+  "MAINTENANCE/QUARANTINED/DELETING and malformed/reused/missing-post-exact-required-key-activation-following-full-release-no-key-0/version/owner rejection";
 const authorityRefs = [
   "ui/designs/authority/PLANNER_WEEK-authority.md",
   "ui/designs/authority/recipe-content-snapshot-future-propagation-authority.md",
@@ -151,7 +155,7 @@ describe("legacy-product-compat fresh Stage 1 exact-six relock", () => {
     ].join("\n");
     expect(activeBranchProjection).toContain(trackedBranch);
     expect(activeBranchProjection).not.toContain(predecessorAuthorBranch);
-    for (const command of workItem.verification.stage1_current_commands) {
+    for (const command of workItem.verification.required_checks) {
       expect(command).not.toContain(predecessorAuthorBranch);
     }
   });
@@ -313,7 +317,7 @@ describe("legacy-product-compat fresh Stage 1 exact-six relock", () => {
       "public.complete_standalone_cooking(uuid, uuid, integer, uuid[])",
       "header/body/canonical payload and server-verified session/lifecycle authority before ensurePublicUserRow, ensureUserBootstrapState, ledger, completion, progress or any writer",
       "route-level bootstrap writers are removed from planner and standalone completion paths",
-      "MAINTENANCE/QUARANTINED/DELETING and malformed/reused/missing-after-full-release-no-key-0/version/owner rejection",
+      postActivationMissingKeyRejection,
       "checksum/delta 0 across users, recipe_books, meal_plan_columns, ledger, completion, progress events/summaries",
       "additive DB phase creates new scoped RPC/core while old overload remains only for existing optional-key/no-key compatibility",
       "Stage 2 non-manual owns additive scoped RPC/core + planner and standalone route implementation + isolated-local fixtures + activation-block guard",
@@ -334,7 +338,7 @@ describe("legacy-product-compat fresh Stage 1 exact-six relock", () => {
       "stale session/account generation -> 409 ACCOUNT_SESSION_STALE|ACCOUNT_GENERATION_STALE fields=[] mutation 0",
       "malformed Idempotency-Key -> 400 INVALID_IDEMPOTENCY_KEY fields[]=[Idempotency-Key:invalid_uuid] mutation 0",
       "pre-gate missing Idempotency-Key remains compatible success with the existing v1 response shape",
-      "only after exact required-key activation following full-release no-key 0 may missing Idempotency-Key return 428 IDEMPOTENCY_KEY_REQUIRED mutation 0",
+      "only after separately approved exact required-key activation following full-release no-key 0 may missing Idempotency-Key return 428 IDEMPOTENCY_KEY_REQUIRED mutation 0",
       "reused Idempotency-Key -> 409 IDEMPOTENCY_KEY_REUSED fields=[] mutation 0",
       "POST /cooking/sessions/{id}/complete",
       "POST /cooking/standalone-complete",
@@ -361,7 +365,7 @@ describe("legacy-product-compat fresh Stage 1 exact-six relock", () => {
     expect(automation.backend.required_test_targets).toEqual(
       expect.arrayContaining([
         "planner and standalone lifecycle error wrapper matrix with mutation 0",
-        "MAINTENANCE/QUARANTINED/DELETING and malformed/reused/missing-after-full-release-no-key-0/version/owner rejection checksum/delta 0 across users, recipe_books, meal_plan_columns, ledger, completion, progress events/summaries",
+        `${postActivationMissingKeyRejection} checksum/delta 0 across users, recipe_books, meal_plan_columns, ledger, completion, progress events/summaries`,
         "additive scoped RPC/core implementation",
         "planner and standalone route implementation using the scoped RPC/core",
         "activation-block guard until Manual cutover evidence is complete",
@@ -417,18 +421,19 @@ describe("legacy-product-compat fresh Stage 1 exact-six relock", () => {
       readme,
       acceptance,
       automation.backend.invariants.join("\n"),
+      workItem.verification.artifact_assertions.join("\n"),
     ];
 
     for (const content of surfaces) {
       expect(content).toContain(
         "pre-gate missing Idempotency-Key remains compatible success with the existing v1 response shape",
       );
+      expect(content).toContain(missingKeyIntermediateState);
       expect(content).toContain(
-        "only after exact required-key activation following full-release no-key 0 may missing Idempotency-Key return 428 IDEMPOTENCY_KEY_REQUIRED mutation 0",
+        "only after separately approved exact required-key activation following full-release no-key 0 may missing Idempotency-Key return 428 IDEMPOTENCY_KEY_REQUIRED mutation 0",
       );
-      expect(content).toContain(
-        "MAINTENANCE/QUARANTINED/DELETING and malformed/reused/missing-after-full-release-no-key-0/version/owner rejection",
-      );
+      expect(content).toContain(postActivationMissingKeyRejection);
+      expect(content).not.toContain("missing-after-full-release-no-key-0");
       expect(content).not.toContain(
         "MAINTENANCE/QUARANTINED/DELETING and malformed/reused/missing/version/owner rejection",
       );
@@ -437,11 +442,11 @@ describe("legacy-product-compat fresh Stage 1 exact-six relock", () => {
     expect(automation.backend.required_test_targets).toEqual(
       expect.arrayContaining([
         "pre-gate missing-key planner and standalone compatibility success with existing v1 response shape",
-        "post-activation missing-key planner and standalone 428 IDEMPOTENCY_KEY_REQUIRED with mutation 0",
+        "post-exact-activation missing-key planner and standalone 428 IDEMPOTENCY_KEY_REQUIRED with mutation 0",
       ]),
     );
     expect(automation.backend.invariants).toContain(
-      "missing Idempotency-Key only after exact required-key activation following full-release no-key 0 -> 428 IDEMPOTENCY_KEY_REQUIRED fields[]=[Idempotency-Key:required] mutation 0",
+      "missing Idempotency-Key only after separately approved exact required-key activation following full-release no-key 0 -> 428 IDEMPOTENCY_KEY_REQUIRED fields[]=[Idempotency-Key:required] mutation 0",
     );
   });
 
@@ -483,6 +488,8 @@ describe("legacy-product-compat fresh Stage 1 exact-six relock", () => {
     const stage2Targets = automation.backend.required_test_targets.join("\n");
     const manualOnly = readSection(acceptance, "### Manual Only");
     const manualAutomation = automation.external_smokes.join("\n");
+    const workItemStage2 = workItem.verification.artifact_assertions.join("\n");
+    const workItemManual = workItem.workflow.external_smokes.join("\n");
 
     for (const stage2Target of [
       "additive scoped RPC/core implementation",
@@ -505,7 +512,16 @@ describe("legacy-product-compat fresh Stage 1 exact-six relock", () => {
     for (const operation of manualOperations) {
       expect(manualOnly).toContain(operation);
       expect(manualAutomation).toContain(operation);
+      expect(workItemManual).toContain(operation);
     }
+
+    expect(workItemStage2).toContain(
+      "Stage 2 automated owns scoped additive RPC/core + planner and standalone route implementation + isolated-local fixtures + activation-block guard",
+    );
+    expect(workItemStage2).not.toContain(
+      "no-new-api-field-status-error-action-screen-migration-or-direct-dml",
+    );
+    expect(workItemStage2).not.toContain("migration RPC Out of Scope");
 
     for (const automatedProjection of [stage2Text, stage2Targets]) {
       expect(automatedProjection).not.toMatch(
@@ -522,6 +538,28 @@ describe("legacy-product-compat fresh Stage 1 exact-six relock", () => {
         expect(automatedProjection).not.toContain(manualOperation);
       }
     }
+  });
+
+  it("P1 fresh review keeps the canonical work item inside the existing schema", () => {
+    const schema = readJson(
+      "docs/engineering/workflow-v2/schemas/work-item.schema.json",
+    );
+    const allowedVerificationKeys = Object.keys(
+      schema.properties.verification.properties,
+    ).sort();
+    const actualVerificationKeys = Object.keys(workItem.verification).sort();
+
+    expect(actualVerificationKeys).toEqual(allowedVerificationKeys);
+    expect(workItem.workflow.execution_mode).toBe("manual");
+    expect(workItem.workflow.external_smokes.join("\n")).toContain(
+      "controlled full-local/current-head deploy",
+    );
+    expect(workItem.out_of_scope.join("\n")).not.toContain(
+      "New API field status error action screen migration RPC RLS or direct DML",
+    );
+    expect(workItem.verification.artifact_assertions.join("\n")).toContain(
+      "narrow additive migration with scoped SECURITY DEFINER RPC/core and no new table/column/public contract",
+    );
   });
 
   it("P1-5 separates deterministic fixtures, isolated-local mutation and merged-exact read-only evidence", () => {
@@ -546,20 +584,20 @@ describe("legacy-product-compat fresh Stage 1 exact-six relock", () => {
     ]) {
       expect(fixtures).toContain(required);
     }
-    expect(workItem.verification.stage1_current_commands).toEqual(
+    expect(workItem.verification.required_checks).toEqual(
       workItem.verification.verify_commands,
     );
-    expect(workItem.verification.stage1_current_commands).toContain(
+    expect(workItem.verification.required_checks).toContain(
       stage1TestCommand,
     );
     expect(status.required_checks).toEqual(
-      workItem.verification.stage1_current_commands,
+      workItem.verification.required_checks,
     );
-    expect(workItem.verification.stage2_future_commands).toEqual(
-      automation.backend.verify_commands,
+    expect(automation.backend.verify_commands).toContain(
+      "pnpm verify:local-supabase-runtime:isolated",
     );
-    expect(workItem.verification.stage4_future_commands).toEqual(
-      automation.frontend.verify_commands,
+    expect(automation.frontend.verify_commands).toContain(
+      "pnpm verify:frontend",
     );
 
     for (const required of [
