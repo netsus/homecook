@@ -540,6 +540,13 @@ describe("legacy-product-compat fresh Stage 1 exact-six relock", () => {
     }
   });
 
+  it("preserves the full automation external smoke projection in the work item", () => {
+    expect(automation.external_smokes).toHaveLength(13);
+    expect(workItem.workflow.external_smokes).toEqual(
+      automation.external_smokes,
+    );
+  });
+
   it("P1 fresh review keeps the canonical work item inside the existing schema", () => {
     const schema = readJson(
       "docs/engineering/workflow-v2/schemas/work-item.schema.json",

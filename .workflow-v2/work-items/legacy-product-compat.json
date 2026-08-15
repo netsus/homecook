@@ -54,6 +54,11 @@
     "plan_loop": "required",
     "review_loop": "required",
     "external_smokes": [
+      "owner A owner B legacy row pinned old version read-only and owner delete",
+      "v1 key/no-key/replay/mismatch planner and standalone",
+      "current and immediate-previous clients stored-version dispatch",
+      "seeded v2 read/cancel/complete and rollback drain",
+      "v1 cursor and telemetry outage unavailable partial stale query-error",
       "controlled full-local/current-head deploy of a last-known-safe route/RPC satisfying session+lifecycle authority and mutation 0",
       "old-server drain before traffic resumes",
       "maintenance/write fence remains closed throughout rollback and cutover",
