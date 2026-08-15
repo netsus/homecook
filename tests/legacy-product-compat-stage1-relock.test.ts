@@ -10,6 +10,8 @@ import { evaluateDocGate } from "../scripts/lib/omo-doc-gate.mjs";
 const root = process.cwd();
 const sliceId = "legacy-product-compat";
 const trackedBranch =
+  "feature/be-legacy-product-compat";
+const stage1TrackedBranch =
   "docs/legacy-product-compat-stage1-relock-20260815";
 const predecessorAuthorBranch =
   "docs/legacy-product-compat-stage1-relock-author-20260815";
@@ -132,7 +134,7 @@ describe("legacy-product-compat fresh Stage 1 exact-six relock", () => {
     );
 
     const honestStatus = {
-      lifecycle: "planned",
+      lifecycle: "in_progress",
       approval_state: "not_started",
       verification_status: "pending",
       evaluation_status: "not_started",
@@ -144,7 +146,7 @@ describe("legacy-product-compat fresh Stage 1 exact-six relock", () => {
     expect(workItem.status).toEqual(honestStatus);
     expect(status).toMatchObject({
       branch: trackedBranch,
-      pr_path: "pending",
+      pr_path: "https://github.com/netsus/homecook/pull/1369",
       ...honestStatus,
     });
 
@@ -154,6 +156,7 @@ describe("legacy-product-compat fresh Stage 1 exact-six relock", () => {
       JSON.stringify(status),
     ].join("\n");
     expect(activeBranchProjection).toContain(trackedBranch);
+    expect(readme).toContain(stage1TrackedBranch);
     expect(activeBranchProjection).not.toContain(predecessorAuthorBranch);
     for (const command of workItem.verification.required_checks) {
       expect(command).not.toContain(predecessorAuthorBranch);
@@ -396,8 +399,10 @@ describe("legacy-product-compat fresh Stage 1 exact-six relock", () => {
     expect(legacyStandaloneMigration).toContain(
       "public.complete_standalone_cooking(",
     );
-    expect(plannerRoute).toContain('rpc("complete_cooking_session"');
-    expect(standaloneRoute).toContain('rpc("complete_standalone_cooking"');
+    expect(plannerRoute).toContain('"complete_cooking_session"');
+    expect(plannerRoute).toContain("callFuturePropagationRpc(");
+    expect(standaloneRoute).toContain('"complete_standalone_cooking"');
+    expect(standaloneRoute).toContain("callFuturePropagationRpc(");
     for (const code of [
       "ACCOUNT_LIFECYCLE_MAINTENANCE",
       "ACCOUNT_CUTOVER_QUARANTINED",

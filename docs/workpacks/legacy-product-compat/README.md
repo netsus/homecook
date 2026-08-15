@@ -8,7 +8,7 @@
 
 - tracked/current Stage 1 relock: official remote branch `docs/legacy-product-compat-stage1-relock-20260815`
 - predecessor author branch/SHA는 historical review evidence일 뿐 active projection으로 사용하지 않는다.
-- Stage 2 backend: 별도 fresh Codex task/branch에서 시작
+- Stage 2 backend: `feature/be-legacy-product-compat`, Draft PR #1369; author task `019ff12c-dc8b-7752-9319-398a68cacb6e`는 자기 변경을 승인하지 않는다.
 - Stage 4 frontend: 별도 fresh Codex task/branch에서 시작
 
 ## Official Sources
@@ -178,7 +178,7 @@
 - v1과 v2 ID는 각 version route로만 처리하며 cross-version ID는 기존 404/409를 반환하고 parser fallback을 하지 않는다.
 - telemetry 0과 elapsed release는 evidence일 뿐 deletion authority가 아니다.
 - tombstone/removal은 새 explicit user approval, official contract-evolution, retention/privacy, rollback/recovery와 독립 security/compatibility review가 있어야 한다.
-- Stage 1 implementation/evaluation은 `not_started`, verification은 `pending`, auto-merge는 `false`다.
+- Stage 2 backend author implementation과 local verification은 GREEN이다. canonical lifecycle은 `in_progress`, approval/evaluation은 `not_started`, verification은 independent Stage 3/current-head CI 전까지 `pending`, auto-merge는 `false`다.
 
 ## Primary User Path
 
@@ -194,16 +194,25 @@
 - independent design-impact review는 current Stage 1 gate다. predecessor task `01a00203-3c1d-78b3-ac78-fbb63b960c60`의 APPROVE 0/0/0은 historical evidence이며 successor exact commit은 fresh independent re-review가 필요하다.
 - fresh independent internal 1.5와 이후 security/compatibility, five-axis, Stage 3/5/6 review는 별도 task가 소유한다. 이 author task는 자기 변경을 승인하지 않는다.
 
+## Stage 2 Current Evidence
+
+- Author task: `019ff12c-dc8b-7752-9319-398a68cacb6e`; branch `feature/be-legacy-product-compat`; Draft PR #1369.
+- RED commit `e0b5bca9199cec72c1b51835e9124a0cd1b86f19` 뒤 implementation commit `a405ffb20a3f1e6e6e1d87df12cc209c474bd6f3`, mutation-zero PostgreSQL repair commit `3e902b3d261aeade62fc3cdd11f2890a2e431a84`를 normal commits로 유지한다.
+- Focused Vitest `8 files / 53 tests`, disposable PostgreSQL `6/6`, canonical isolated Supabase reset/Data API `200`, prepared-food owner PostgreSQL `11/11`, product `2,756 pass / 175 intended skip`, build와 security E2E `12/12`가 GREEN이다.
+- exact RPC owner/ACL/search-path를 포함한 `legacy-product-compat` security manifest `6` functions와 source/workpack/workflow/OMO/real-smoke/branch validators, lint, typecheck, audit high/critical `0/0`, diff check가 통과했다.
+- Production/staging/remote application writes는 `0/0/0`이다. independent Stage 3, current-head CI terminal green, Ready/merge/OMO, controlled full-local deploy/drain/fence, old overload revoke/drop, deployed callable inventory, server-Mac/OAuth와 required-key/production activation은 pending이다.
+- 상세 증거: `docs/workpacks/legacy-product-compat/evidence/2026-08-15-stage2-backend-implementation.md`.
+
 ## Delivery Checklist
 
 Stage 1 exact-six docs and semantic relock test authored 사실은 이 문단과 Stage 1 evidence에만 남긴다. Stage 2/4 runtime checklist metadata로 투영하지 않는다.
 
-- [ ] Stage 2 v1 cursor compatibility barrier implemented and tested <!-- omo:id=delivery-legacy-compat-stage2-cursor;stage=2;scope=backend;review=3,6 -->
-- [ ] Stage 2 planner/standalone idempotency phases and mutation-zero cases implemented and tested <!-- omo:id=delivery-legacy-compat-stage2-idempotency;stage=2;scope=backend;review=3,6 -->
-- [ ] Stage 2 additive scoped RPC/core and planner/standalone route callers implemented with authority-before-writer ordering <!-- omo:id=delivery-legacy-compat-stage2-atomic-route;stage=2;scope=backend;review=3,6 -->
-- [ ] Stage 2 activation-block guard prevents activation until separately owned Manual cutover evidence is complete <!-- omo:id=delivery-legacy-compat-stage2-activation-block;stage=2;scope=backend;review=3,6 -->
-- [ ] Stage 2 telemetry freshness and fail-closed tombstone/removal barrier implemented and tested <!-- omo:id=delivery-legacy-compat-stage2-telemetry-barrier;stage=2;scope=backend;review=3,6 -->
-- [ ] Stage 2 owner/pinned-version and isolated-local fixture boundaries verified <!-- omo:id=delivery-legacy-compat-stage2-owner-fixtures;stage=2;scope=shared;review=3,6 -->
+- [x] Stage 2 v1 cursor compatibility barrier implemented and tested <!-- omo:id=delivery-legacy-compat-stage2-cursor;stage=2;scope=backend;review=3,6 -->
+- [x] Stage 2 planner/standalone idempotency phases and mutation-zero cases implemented and tested <!-- omo:id=delivery-legacy-compat-stage2-idempotency;stage=2;scope=backend;review=3,6 -->
+- [x] Stage 2 additive scoped RPC/core and planner/standalone route callers implemented with authority-before-writer ordering <!-- omo:id=delivery-legacy-compat-stage2-atomic-route;stage=2;scope=backend;review=3,6 -->
+- [x] Stage 2 activation-block guard prevents activation until separately owned Manual cutover evidence is complete <!-- omo:id=delivery-legacy-compat-stage2-activation-block;stage=2;scope=backend;review=3,6 -->
+- [x] Stage 2 telemetry freshness and fail-closed tombstone/removal barrier implemented and tested <!-- omo:id=delivery-legacy-compat-stage2-telemetry-barrier;stage=2;scope=backend;review=3,6 -->
+- [x] Stage 2 owner/pinned-version and isolated-local fixture boundaries verified <!-- omo:id=delivery-legacy-compat-stage2-owner-fixtures;stage=2;scope=shared;review=3,6 -->
 - [ ] Stage 4 current/immediate-previous clients send optional key and preserve pre-gate no-key decode <!-- omo:id=delivery-legacy-compat-stage4-optional-key;stage=4;scope=frontend;review=5,6 -->
 - [ ] Stage 4 loading/empty/error/read-only/unauthorized and version-dispatch states verified <!-- omo:id=delivery-legacy-compat-stage4-states;stage=4;scope=frontend;review=5,6 -->
 - [ ] Stage 4 owner delete pending/error retention and no extra product action verified <!-- omo:id=delivery-legacy-compat-stage4-delete;stage=4;scope=frontend;review=5,6 -->
