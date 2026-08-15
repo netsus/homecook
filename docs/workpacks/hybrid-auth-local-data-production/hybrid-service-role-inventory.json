@@ -1,7 +1,7 @@
 {
   "generated_from": "scripts/lib/hybrid-authority-inventory.mjs",
   "user_service_role_violation_count": 0,
-  "user_direct_service_role_count": 9,
+  "user_direct_service_role_count": 11,
   "internal_operation_violation_count": 0,
   "internal_operation_allowlist": {
     "createAuthCallbackOperationsClient": [
@@ -22,7 +22,9 @@
     "createSnapshotV2SessionInternalClient": [
       "app/api/v1/cooking/session-attempts/[id]/cancel/route.ts",
       "app/api/v1/cooking/session-attempts/[id]/cook-mode/route.ts",
-      "app/api/v1/cooking/session-attempts/route.ts"
+      "app/api/v1/cooking/session-attempts/route.ts",
+      "app/api/v1/cooking/sessions/[session_id]/complete/route.ts",
+      "app/api/v1/cooking/standalone-complete/route.ts"
     ],
     "createFutureMealWriteInternalClient": [
       "app/api/v1/meals/[meal_id]/route.ts",
@@ -78,6 +80,12 @@
         "GET"
       ],
       "app/api/v1/cooking/session-attempts/[id]/cancel/route.ts": [
+        "POST"
+      ],
+      "app/api/v1/cooking/sessions/[session_id]/complete/route.ts": [
+        "POST"
+      ],
+      "app/api/v1/cooking/standalone-complete/route.ts": [
         "POST"
       ]
     },
@@ -138,6 +146,26 @@
       "file": "app/api/v1/cooking/session-attempts/route.ts",
       "column": 25,
       "line": 56,
+      "allowed": true,
+      "factory": "createSnapshotV2SessionInternalClient",
+      "functionName": "POST",
+      "kind": "internal-operation-call"
+    },
+    {
+      "classification": "user",
+      "file": "app/api/v1/cooking/sessions/[session_id]/complete/route.ts",
+      "column": 25,
+      "line": 110,
+      "allowed": true,
+      "factory": "createSnapshotV2SessionInternalClient",
+      "functionName": "POST",
+      "kind": "internal-operation-call"
+    },
+    {
+      "classification": "user",
+      "file": "app/api/v1/cooking/standalone-complete/route.ts",
+      "column": 25,
+      "line": 94,
       "allowed": true,
       "factory": "createSnapshotV2SessionInternalClient",
       "functionName": "POST",
@@ -436,6 +464,20 @@
       "file": "app/api/v1/cooking/session-attempts/route.ts",
       "column": 25,
       "line": 56,
+      "kind": "service-role-call"
+    },
+    {
+      "classification": "user",
+      "file": "app/api/v1/cooking/sessions/[session_id]/complete/route.ts",
+      "column": 25,
+      "line": 110,
+      "kind": "service-role-call"
+    },
+    {
+      "classification": "user",
+      "file": "app/api/v1/cooking/standalone-complete/route.ts",
+      "column": 25,
+      "line": 94,
       "kind": "service-role-call"
     },
     {

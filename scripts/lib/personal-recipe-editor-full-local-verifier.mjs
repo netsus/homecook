@@ -47,6 +47,8 @@ const APPROVED_VERIFIED_SESSION_SERVICE_ROLE_ROUTE_COUNTS = new Map([
   ["app/api/v1/cooking/session-attempts/[id]/cancel/route.ts", 1],
   ["app/api/v1/cooking/session-attempts/[id]/cook-mode/route.ts", 1],
   ["app/api/v1/cooking/session-attempts/route.ts", 1],
+  ["app/api/v1/cooking/sessions/[session_id]/complete/route.ts", 1],
+  ["app/api/v1/cooking/standalone-complete/route.ts", 1],
   ["app/api/v1/meals/[meal_id]/route.ts", 2],
   ["app/api/v1/meals/route.ts", 1],
   ["app/api/v1/shopping/lists/route.ts", 1],

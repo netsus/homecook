@@ -232,7 +232,7 @@ const sourceEvidence = {
   recipe_patch_handler_count: 1,
   recipebook_surface_personal_editor_marker_count: 0,
   public_service_role_entry_count: 0,
-  user_direct_service_role_count: 9,
+  user_direct_service_role_count: 11,
   user_service_role_violation_count: 0,
 };
 
@@ -322,6 +322,8 @@ function createSourceEvidenceFixtureRepository(extraFiles: Record<string, string
     "app/api/v1/cooking/session-attempts/[id]/cancel/route.ts",
     "app/api/v1/cooking/session-attempts/[id]/cook-mode/route.ts",
     "app/api/v1/cooking/session-attempts/route.ts",
+    "app/api/v1/cooking/sessions/[session_id]/complete/route.ts",
+    "app/api/v1/cooking/standalone-complete/route.ts",
     "app/api/v1/meals/[meal_id]/route.ts",
     "app/api/v1/meals/route.ts",
     "app/api/v1/recipes/[id]/future-plan-impact/route.ts",
