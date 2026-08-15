@@ -11,6 +11,7 @@
 - Mutation-zero evidence repair: `3e902b3d261aeade62fc3cdd11f2890a2e431a84`, parent `a405ffb20a3f1e6e6e1d87df12cc209c474bd6f3`, tree `2aa81430ec9d0932cd0cdd6295490592ffe0a919`.
 - Internal authority inventory repair: `59cc07aca6d15ee623acb51e1e5e3803c04405dc`, parent `ad795cbc29981fb1e7ebe82232a977802364d268`, tree `83922d5a4d0b2fa6372efb593f6a0066712ce493`.
 - Private/deleted recipe authority repair: `07cdc639e37f23156027c668fec408b63bba58b9`; indirect RPC inventory repair: `8ad430cecaba42ed1ed80f2b19806664fb5ce784`. Both are normal successor commits and do not rewrite reviewed history.
+- Mixed-method route inventory repair: `636fc330f807fb37755a77448bbd87d722c70af2`; concurrent progress event/summary proof: `836f63902ca1d051cf4eb7c2b2a66229ca2d1835`.
 - Production/staging/remote application writes: `0/0/0`; Claude, Ready, merge and activation were not used.
 
 ## RED → GREEN
@@ -45,6 +46,8 @@
 - `pnpm verify:backend`: lint, typecheck, product `239 files passed / 12 skipped`, `2,756 tests passed / 175 intended skipped`, production build and security E2E `12/12`.
 - `pnpm test`: `577 files passed / 30 skipped`, `6,103 tests passed / 414 intended skipped`.
 - Internal authority verification: `3 files / 34 tests`; account-session generation inventory: `67 routes / 101 write surfaces / 3 auth.users inbound FKs`.
+- Mixed-route regression first failed because `write_recipe_future_plan_change` and `write_personal_recipe_core` were classified as public/non-personal, then passed after enclosing PATCH/DELETE method metadata took precedence while GET view-count writers retained the public fallback.
+- The isolated PostgreSQL `11/11` rerun also asserts both `user_progress_events` and `user_progress_summary.event_counts.cooking_completed` advance exactly once for planner/standalone same-key and mismatch concurrency.
 - `node scripts/validate-security-function-authorization.mjs --contract-only`: #13 `6` pre-deployment functions classified with exact owner, ACL, security mode and search path.
 - Source-of-truth, workflow-v2, workpack, automation-spec, OMO bookkeeping, real-smoke and branch validators passed. Commit policy passed all branch commits.
 - `pnpm audit --audit-level high`: exit `0`, high/critical `0/0`; residual pre-existing low/moderate `1/1`.
@@ -55,6 +58,7 @@
 - Frozen head `ad795cbc29981fb1e7ebe82232a977802364d268` independent code/quality task `01a003ae-1569-7091-b087-3a55e5ccc8fb` returned `REQUEST_CHANGES`: missing authority inventory, incomplete planner/standalone PostgreSQL matrix and test-only compatibility model concern.
 - Frozen head security/DB task `01a003ae-1566-7f73-996d-52c44ffecd14` returned `REQUEST_CHANGES`: other-owner private/deleted standalone recipe completion, missing authority inventory and stale PR evidence.
 - Successor commits repair the actionable runtime, inventory and fixture findings. Fresh independent Stage 3 code/quality and security/DB reviews must use new Codex App task IDs and the exact successor PR head. The author does not self-approve.
+- Successor review task `01a003ca-fc74-7103-ba18-0997f8a61c92` ended at the Codex usage limit before verdict after identifying the mixed-route/progress-counter candidates; task `01a003ca-fc72-7c22-943e-bda5b4d47cdf` reached approval wait before its isolated PostgreSQL rerun. Replacement tasks could not start because the same account-wide limit applied. These are not approvals and do not advance Stage 3.
 - Current-head checks must all become terminal success or intended skip before any Ready/merge transition.
 - Stage 4~6, OMO closeout and Discord Stage completion remain pending.
 - Controlled full-local/current-head deploy, old-server drain, maintenance/write fence, old overload revoke/drop, deployed callable inventory/negative privilege, server-Mac/OAuth, merged-exact rehearsal and required-key/capability/R/R+1/R+2/production activation remain Manual Only and were not run.
