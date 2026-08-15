@@ -164,6 +164,20 @@ function ownerDigest(owner: string) {
   `).stdout);
 }
 
+function cookingProgressCounts(owner: string) {
+  const counts = lastLine(psql(`
+    select concat_ws(':',
+      (select count(*) from public.user_progress_events
+        where user_id='${owner}' and event_type='cooking_completed'),
+      coalesce((select (event_counts ->> 'cooking_completed')::integer
+        from public.user_progress_summary where user_id='${owner}'), 0)
+    );
+  `).stdout).split(":").map(Number);
+
+  expect(counts).toHaveLength(2);
+  return counts;
+}
+
 describe.runIf(enabled)("legacy product compatibility PostgreSQL", () => {
   beforeAll(() => {
     psql(`
@@ -403,6 +417,7 @@ describe.runIf(enabled)("legacy product compatibility PostgreSQL", () => {
   });
 
   it("serializes planner concurrent same-key replay and mismatch", async () => {
+    const sameKeyProgressBefore = cookingProgressCounts(ownerA);
     const [left, right] = await Promise.all([
       psqlAsync(plannerCall({
         session: plannerConcurrentSession,
@@ -418,7 +433,11 @@ describe.runIf(enabled)("legacy product compatibility PostgreSQL", () => {
       select count(*) from public.leftover_dishes
       where user_id='${ownerA}' and recipe_id='${recipePlannerConcurrent}';
     `).stdout))).toBe(1);
+    expect(cookingProgressCounts(ownerA)).toEqual(
+      sameKeyProgressBefore.map((count) => count + 1),
+    );
 
+    const mismatchProgressBefore = cookingProgressCounts(ownerA);
     const mismatchResults = await Promise.allSettled([
       psqlAsync(plannerCall({
         session: plannerMismatchSession,
@@ -441,6 +460,9 @@ describe.runIf(enabled)("legacy product compatibility PostgreSQL", () => {
       select count(*) from public.leftover_dishes
       where user_id='${ownerA}' and recipe_id='${recipePlannerMismatch}';
     `).stdout))).toBe(1);
+    expect(cookingProgressCounts(ownerA)).toEqual(
+      mismatchProgressBefore.map((count) => count + 1),
+    );
   });
 
   it("keeps planner no-key compatibility before activation", () => {
@@ -497,10 +519,7 @@ describe.runIf(enabled)("legacy product compatibility PostgreSQL", () => {
       select count(*) from public.mutation_idempotency_keys
       where owner_uuid='${ownerA}' and operation_scope='legacy_standalone_complete';
     `).stdout));
-    const progressBefore = Number(lastLine(psql(`
-      select count(*) from public.user_progress_events
-      where user_id='${ownerA}' and event_type='cooking_completed';
-    `).stdout));
+    const progressBefore = cookingProgressCounts(ownerA);
 
     const results = await Promise.allSettled([
       psqlAsync(standaloneCall(recipeMismatch, mismatchKey, 2)),
@@ -522,10 +541,9 @@ describe.runIf(enabled)("legacy product compatibility PostgreSQL", () => {
       select count(*) from public.mutation_idempotency_keys
       where owner_uuid='${ownerA}' and operation_scope='legacy_standalone_complete';
     `).stdout))).toBe(receiptBefore + 1);
-    expect(Number(lastLine(psql(`
-      select count(*) from public.user_progress_events
-      where user_id='${ownerA}' and event_type='cooking_completed';
-    `).stdout))).toBe(progressBefore + 1);
+    expect(cookingProgressCounts(ownerA)).toEqual(
+      progressBefore.map((count) => count + 1),
+    );
   });
 
   it("keeps no-key standalone compatibility and serializes concurrent same-key completion", async () => {
@@ -535,6 +553,7 @@ describe.runIf(enabled)("legacy product compatibility PostgreSQL", () => {
     `).stdout));
     const noKey = JSON.parse(jsonLine(psql(standaloneCall(recipeA, null)).stdout));
     expect(noKey).toMatchObject({ pantry_removed: 0 });
+    const progressBefore = cookingProgressCounts(ownerA);
 
     const [left, right] = await Promise.all([
       psqlAsync(standaloneCall(recipeConcurrent, concurrentKey)),
@@ -544,13 +563,15 @@ describe.runIf(enabled)("legacy product compatibility PostgreSQL", () => {
     const counts = lastLine(psql(`
       select concat_ws(':',
         (select count(*) from public.leftover_dishes where user_id='${ownerA}' and recipe_id='${recipeConcurrent}'),
-        (select count(*) from public.mutation_idempotency_keys where owner_uuid='${ownerA}' and operation_scope='legacy_standalone_complete'),
-        (select count(*) from public.user_progress_events where user_id='${ownerA}' and event_type='cooking_completed' and source_key like 'cooking_completed:%')
+        (select count(*) from public.mutation_idempotency_keys where owner_uuid='${ownerA}' and operation_scope='legacy_standalone_complete')
       );
     `).stdout);
-    expect(counts.split(":").slice(0, 2)).toEqual([
+    expect(counts.split(":")).toEqual([
       "1",
       String(receiptBefore + 1),
     ]);
+    expect(cookingProgressCounts(ownerA)).toEqual(
+      progressBefore.map((count) => count + 1),
+    );
   });
 });
