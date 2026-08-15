@@ -266,14 +266,21 @@ function collectMutatingRpcEntries(source, sourceFile) {
     ),
     ...Array.from(
       source.matchAll(/callCookedBatchRpc\(\s*[^,]+,\s*["'`]([^"'`]+)["'`]/gu),
-      (match) => ({ match, helper: true }),
+      (match) => ({ match, helper: "cooked-batch" }),
+    ),
+    ...Array.from(
+      source.matchAll(/callFuturePropagationRpc\(\s*[^,]+,\s*["'`]([^"'`]+)["'`]/gu),
+      (match) => ({ match, helper: "future-propagation" }),
     ),
   ].sort((left, right) => (left.match.index ?? 0) - (right.match.index ?? 0));
   let ordinal = 0;
 
   for (const { match, helper } of matches) {
     const target = match[1];
-    if (helper ? COOKED_BATCH_READ_RPC_TARGETS.has(target) : !MUTATING_RPC_PATTERN.test(target)) {
+    const isMutation = helper === "cooked-batch"
+      ? !COOKED_BATCH_READ_RPC_TARGETS.has(target)
+      : MUTATING_RPC_PATTERN.test(target);
+    if (!isMutation) {
       continue;
     }
 
