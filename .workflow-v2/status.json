@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-08-20T09:55:36Z",
+  "updated_at": "2026-08-20T10:13:31Z",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -2693,8 +2693,8 @@
       "branch": "feature/fe-legacy-product-compat",
       "pr_path": "https://github.com/netsus/homecook/pull/1371",
       "lifecycle": "in_progress",
-      "approval_state": "needs_revision",
-      "verification_status": "pending",
+      "approval_state": "codex_approved",
+      "verification_status": "passed",
       "required_checks": [
         "pnpm validate:source-of-truth-sync",
         "pnpm validate:workflow-v2",
@@ -2718,10 +2718,10 @@
         "BASE_REF=origin/master pnpm validate:commits",
         "git diff --check"
       ],
-      "notes": "Stage 2/3 backend checkpoint merged via PR #1369 as 50e31293e6740b3fdc56d022e12d3b9fe8be4cf7. Stage 4 task 01a01e01-0a0e-7f70-97dd-2e6c8f0012af and Draft PR #1371 implemented optional stable legacy completion keys, payload/target-safe rotation, duplicate delete locking and nested focus restoration without public contract or composition changes. Focused Vitest 10 files/133, legacy 17/17, Playwright 14/14 and retained full gates are green. Stage 5 P1 repair commit 31a2b9394df031a7dee84e692cbd399d77044853 moves the existing delete error into the active confirmation role=alert and restores dialog focus. Independent Stage 5 task 01a01e3b-663e-7252-9c3c-0c7b30251c0e reviewed exact 387f1d688204061c28b60c415135a70e42a07042 / tree e0d887e487ad237a87fa6b3d67238d2dac045ce7 with drift 0 and returned APPROVE P0/P1/P2 0/0/0, blocker/major/minor 0/0/0. Design Status is confirmed because authority_required=false and no new visual composition exists. Approval needs_revision, evaluation not_started, verification pending and auto_merge_eligible=false. Production/staging/remote writes are 0/0/0; Canonical closeout phase is collecting with non-Manual acceptance 40/40, Design confirmed, required checks and external smokes pending, merge gate needs_revision and all_checks_green=false. Stage 6 repair commit a9f4288aa9607f90a37de91e2d0158a187c13d3d adds canonical retry handling. Exact d0dfe94a3ea57260b16abd2369b9d4a719d82a55 full verify:frontend is GREEN: product 2757/175, build 81, Lighthouse 2x3, regression 963/180, a11y 18/15, visual 22/23, security 12/12. Fresh Stage 6 re-review, successor PR checks, Ready/merge, Manual/device/AT/full WCAG, controlled deploy/drain/fence/revoke, server-Mac/OAuth and activation remain pending. closeout_phase=collecting closeout_repair=codex:6|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:docs/workpacks/legacy-product-compat/evidence/2026-08-15-stage2-backend-implementation.md,docs/workpacks/legacy-product-compat/omo-report.md,docs/workpacks/legacy-product-compat/evidence/2026-08-20-stage4-frontend-implementation.md,docs/workpacks/legacy-product-compat/evidence/2026-08-20-stage5-frontend-review.md,docs/workpacks/legacy-product-compat/evidence/2026-08-20-stage6-finding-repair.md,GitHub PR #1371 last_recovery_at=2026-08-20T09:49:30Z",
-      "evaluation_status": "not_started",
-      "evaluation_round": 0,
-      "last_evaluator_result": null,
+      "notes": "Stage 2/3 backend checkpoint merged via PR #1369 as 50e31293e6740b3fdc56d022e12d3b9fe8be4cf7. Stage 4 task 01a01e01-0a0e-7f70-97dd-2e6c8f0012af and Draft PR #1371 implemented optional stable legacy completion keys, stored-version dispatch, delete recovery and focus safety. Independent Stage 5 task 01a01e3b-663e-7252-9c3c-0c7b30251c0e approved 0/0/0. Stage 6 task 01a01e68-fb28-7841-8815-c7685d56cc35 first returned REQUEST_CHANGES 0/2/1, then exact 6387052439623cebef90176944aa5aee7f5ca17a re-review returned 0/0/1 for the PR QA Evidence label only. The PR-body-only label repair preserved the head and passed Ready-mode validation; the same reviewer finalized APPROVE P0/P1/P2 0/0/0, blocker/major/minor 0/0/0, drift 0 and unresolved IDs none on tree 4d415e7d81c1bfeada5147f034b6b4c34fd66c89. Design confirmed; checks 12 success plus 2 intended Draft skips; merge state CLEAN. Lifecycle in_progress, approval codex_approved, verification passed, evaluation passed round 1 and auto_merge_eligible=false. Canonical closeout phase projecting, non-Manual acceptance 40/40, Manual 0/7, required checks passed, external smokes pending and all_checks_green=true. Internal 6.5, Ready/merge and all Manual/device/AT/full WCAG/server-Mac/OAuth/cutover/activation remain pending. closeout_phase=projecting closeout_repair=codex:7|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:docs/workpacks/legacy-product-compat/evidence/2026-08-15-stage2-backend-implementation.md,docs/workpacks/legacy-product-compat/omo-report.md,docs/workpacks/legacy-product-compat/evidence/2026-08-20-stage4-frontend-implementation.md,docs/workpacks/legacy-product-compat/evidence/2026-08-20-stage5-frontend-review.md,docs/workpacks/legacy-product-compat/evidence/2026-08-20-stage6-finding-repair.md,docs/workpacks/legacy-product-compat/evidence/2026-08-20-stage6-final-review.md,GitHub PR #1371 last_recovery_at=2026-08-20T10:13:31Z",
+      "evaluation_status": "passed",
+      "evaluation_round": 1,
+      "last_evaluator_result": "docs/workpacks/legacy-product-compat/evidence/2026-08-20-stage6-final-review.md",
       "auto_merge_eligible": false,
       "blocked_reason_code": null
     },

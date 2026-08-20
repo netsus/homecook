@@ -135,11 +135,12 @@ describe("legacy-product-compat fresh Stage 1 exact-six relock", () => {
 
     const honestStatus = {
       lifecycle: "in_progress",
-      approval_state: "needs_revision",
-      verification_status: "pending",
-      evaluation_status: "not_started",
-      evaluation_round: 0,
-      last_evaluator_result: null,
+      approval_state: "codex_approved",
+      verification_status: "passed",
+      evaluation_status: "passed",
+      evaluation_round: 1,
+      last_evaluator_result:
+        "docs/workpacks/legacy-product-compat/evidence/2026-08-20-stage6-final-review.md",
       auto_merge_eligible: false,
       blocked_reason_code: null,
     };

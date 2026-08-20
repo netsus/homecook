@@ -73,7 +73,7 @@
     "blocker_major_minor": [0, 0, 0]
   },
   "stage6_finding_repair": {
-    "status": "author_repair_in_progress_pending_fresh_re_review",
+    "status": "superseded_by_independent_stage6_final_review",
     "approved": false,
     "reviewer_task_id": "01a01e68-fb28-7841-8815-c7685d56cc35",
     "verdict": "REQUEST_CHANGES",
@@ -85,8 +85,29 @@
     "canonical_retry_red": "client/store 4 failed / 12 passed",
     "canonical_retry_green": "client/store 16/16; focused runtime/routes 97/97; exact Playwright 14/14; lint; typecheck",
     "acceptance_reconciliation": "40/40 non-Manual checked; 7 Manual Only unchecked",
-    "closeout_phase": "collecting",
+    "closeout_phase": "projecting",
     "full_verify": "GREEN exact d0dfe94a3ea57260b16abd2369b9d4a719d82a55 / tree 73dc173871f448d98c236eeb6bda2766690f803e: product 2757/175; build 81; Lighthouse 2x3; regression 963/180; a11y 18/15; visual 22/23; security 12/12"
+  },
+  "stage6_final_review": {
+    "approved": true,
+    "reviewer_task_id": "01a01e68-fb28-7841-8815-c7685d56cc35",
+    "reviewed_head": "6387052439623cebef90176944aa5aee7f5ca17a",
+    "reviewed_tree": "4d415e7d81c1bfeada5147f034b6b4c34fd66c89",
+    "reviewed_head_drift": 0,
+    "verdict": "APPROVE",
+    "p0_p1_p2": [0, 0, 0],
+    "blocker_major_minor": [0, 0, 0],
+    "unresolved_finding_ids": [],
+    "prior_lineage": [
+      "initial REQUEST_CHANGES 0/2/1",
+      "exact-head re-review REQUEST_CHANGES 0/0/1 for PR QA Evidence label only",
+      "PR-body-only label repair preserved head and passed Ready-mode validators",
+      "final APPROVE 0/0/0 on the same exact head"
+    ],
+    "design_status": "confirmed",
+    "checks": "12 success + 2 intended Draft skips; pending/failure/rerun 0/0/0",
+    "merge_state": "CLEAN",
+    "next": "fresh separate internal 6.5 before Ready"
   },
   "checklist_updates": [
     { "id": "delivery-legacy-compat-stage4-optional-key", "status": "checked", "evidence_refs": ["tests/legacy-product-compat-client.test.tsx", "tests/legacy-product-compat-store.test.ts"] },
@@ -107,8 +128,7 @@
   "contested_fix_ids": [],
   "rebuttals": [],
   "pending": [
-    "Draft PR current-head checks",
-    "fresh independent Stage 6 closeout review",
+    "fresh separate internal 6.5 closeout reconcile",
     "Ready transition and merge",
     "physical device, screen reader, virtual keyboard, full WCAG",
     "controlled full-local deploy/drain/fence/revoke, server-Mac/OAuth",
