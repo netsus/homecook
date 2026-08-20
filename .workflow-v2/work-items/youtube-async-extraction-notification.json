@@ -16,8 +16,8 @@
   "dependencies": [
     "33-youtube-i031-direct-extraction merged",
     "official contract PR #1343 merged at 25e10a7805f5bf171d4c1fbd94a573560b715786",
-    "official tuple requirements 1.7.31 screen 1.5.35 Flow 1.3.33 DB 1.3.33 API 1.2.38",
-    "approved plan task 019ff4f7-806c-7151-b646-cab784606cde SHA-256 b560b60ff758171e1d52ad56b2a63a2e1877cd762d1f691c9cea32c753f8d332",
+    "official tuple requirements 1.7.32 screen 1.5.36 Flow 1.3.34 DB 1.3.34 API 1.2.39",
+    "approved plan task 019ffb44-5614-7af3-86a9-4ebd50977123 SHA-256 7906f9ec975f309c310b2275714873cebb78e109770f885f09878e5c6bbed57a, 991 lines",
     "contract reviewer PASS task 019ff598-233b-72c1-92f5-4372596ede7a",
     "this Stage 1 docs workpack independently approved and merged before Stage 2"
   ],
@@ -48,7 +48,7 @@
       "docs/design/anchor-screens.md",
       "ui/designs/YT_IMPORT_BACKGROUND.md",
       "ui/designs/APP_SHELL_YOUTUBE_NOTIFICATIONS.md",
-      "/Users/cwj/01_vibe_coding/homecook/.omx/plans/youtube-background-extraction-notification-plan-20260808.md#sha256-b560b60ff758171e1d52ad56b2a63a2e1877cd762d1f691c9cea32c753f8d332"
+      "/Users/cwj/01_vibe_coding/homecook/.omx/plans/youtube-background-extraction-notification-plan-20260808.md#sha256-7906f9ec975f309c310b2275714873cebb78e109770f885f09878e5c6bbed57a-lines-991"
     ]
   },
   "workflow": {
@@ -131,7 +131,7 @@
     ],
     "artifact_assertions": [
       "official-contract-pr-and-five-document-tuple-locked",
-      "approved-plan-sha256-and-873-line-lock",
+      "approved-plan-sha256-and-991-line-lock",
       "exact-stage-ownership-and-no-self-approval",
       "stage2-db-api-worker-tdd-before-implementation",
       "exact-public-api-db-worker-security-and-quick-import-compatibility",
@@ -148,67 +148,80 @@
     ]
   },
   "status": {
-    "lifecycle": "planned",
+    "lifecycle": "in_progress",
     "approval_state": "codex_approved",
     "verification_status": "passed",
     "evaluation_status": "passed",
-    "evaluation_round": 2,
-    "last_evaluator_result": "PASS with P0/P1/P2 0/0/0 by independent internal 1.5 task 019ff643-988a-7013-9edb-4d4f61986930 at head 50598f7ce7b30dccab148a575738db23bb9f1eed",
+    "evaluation_round": 3,
+    "last_evaluator_result": "PASS — Findings 없음 by fresh Stage 6 task /root/youtube_v4_stage6_closeout at reviewed exact head eb8d915b44b63611904760375f7c0606e629b6e0",
     "auto_merge_eligible": false,
     "blocked_reason_code": null
   },
   "closeout": {
-    "phase": "collecting",
+    "phase": "completed",
     "docs_projection": {
-      "roadmap_lifecycle": "planned",
-      "design_status": "temporary",
-      "delivery_checklist": "pending",
-      "design_authority": "pending",
-      "acceptance": "pending",
+      "roadmap_lifecycle": "in_progress",
+      "design_status": "confirmed",
+      "delivery_checklist": "complete",
+      "design_authority": "passed",
+      "acceptance": "complete",
       "automation_spec_metadata": "synced"
     },
     "verification_projection": {
       "required_checks": "passed",
       "external_smokes": "pending",
-      "authority_reports": [],
+      "authority_reports": [
+        "ui/designs/authority/YT_IMPORT_BACKGROUND-authority.md",
+        "ui/designs/authority/APP_SHELL_YOUTUBE_NOTIFICATIONS-authority.md"
+      ],
       "actual_verification_refs": [
         "docs/workpacks/youtube-async-extraction-notification/evidence/2026-08-12-stage1-internal1-5-rereview.md",
         "Independent internal 1.5 task 019ff643-988a-7013-9edb-4d4f61986930 approved reviewed head 50598f7ce7b30dccab148a575738db23bb9f1eed with findings 0",
-        "Reviewed-head local Stage 1 gate passed with targeted Vitest 78/78 and GitHub success 9 / intended Draft skip 5 / pending or failure 0"
+        "Reviewed-head local Stage 1 gate passed with targeted Vitest 78/78 and GitHub success 9 / intended Draft skip 5 / pending or failure 0",
+        "Implementation 3c1e0d422b0849f7f086d1b7fefc55bac41eee60: full Vitest 6160 passed / 459 skipped, product 2741 passed / 175 skipped, lint, typecheck and build passed",
+        "Isolated random-port PostgreSQL/PostgREST 56 passed including 299/300/301-second reclaim boundary; operational full-local and remote Supabase access 0",
+        "Fresh publication-head security and final design authority at a76df8f8e3d342968cf920cedb9289b8546018f0: PASS — Findings 없음",
+        "GitHub PR #1362 publication head a76df8f8e3d342968cf920cedb9289b8546018f0: all started checks terminal success or intended Draft skip",
+        "docs/workpacks/youtube-async-extraction-notification/evidence/2026-08-14-stage6-closeout-review.md",
+        "Fresh Stage 6 task /root/youtube_v4_stage6_closeout approved exact head eb8d915b44b63611904760375f7c0606e629b6e0 with PASS — Findings 없음"
       ]
     },
     "merge_gate_projection": {
-      "current_head_sha": null,
+      "current_head_sha": "eb8d915b44b63611904760375f7c0606e629b6e0",
       "approval_state": "codex_approved",
-      "all_checks_green": false
+      "all_checks_green": true
     },
     "recovery_summary": {
       "manual_patch_count": 1,
-      "manual_handoff": false,
+      "manual_handoff": true,
       "stale_lock_count": 0,
       "ci_resync_count": 0,
       "artifact_missing": false,
-      "last_recovery_at": "2026-08-12T14:07:53Z"
+      "last_recovery_at": "2026-08-14T12:20:00Z"
     },
     "repair_summary": {
-      "codex_repairable_count": 3,
+      "codex_repairable_count": 4,
       "claude_repairable_count": 0,
       "manual_decision_required_count": 0,
       "human_escalation_count": 0,
       "post_merge_stale_count": 0,
-      "latest_reason_code": "internal-1.5-revise-three-closed",
+      "latest_reason_code": "stage6-reviewed-head-pass-zero-findings",
       "evidence_sources": [
         "Codex_task_019ff643-988a-7013-9edb-4d4f61986930_REVISE",
-        "docs/workpacks/youtube-async-extraction-notification/evidence/2026-08-12-stage1-internal1-5-rereview.md"
+        "docs/workpacks/youtube-async-extraction-notification/evidence/2026-08-12-stage1-internal1-5-rereview.md",
+        "tests/youtube-extraction-notifications.test.tsx",
+        "ui/designs/authority/YT_IMPORT_BACKGROUND-authority.md",
+        "ui/designs/authority/APP_SHELL_YOUTUBE_NOTIFICATIONS-authority.md",
+        "docs/workpacks/youtube-async-extraction-notification/evidence/2026-08-14-stage6-closeout-review.md"
       ]
     },
     "projection_state": {
-      "docs_synced_at": "2026-08-12T14:27:33Z",
-      "status_synced_at": "2026-08-12T14:27:33Z",
-      "pr_body_synced_at": "2026-08-12T14:14:23Z"
+      "docs_synced_at": "2026-08-14T12:20:00Z",
+      "status_synced_at": "2026-08-14T12:20:00Z",
+      "pr_body_synced_at": "2026-08-14T12:20:00Z"
     }
   },
-  "notes": "Canonical closeout owner: .workflow-v2/work-items/youtube-async-extraction-notification.json#closeout. Roadmap is docs while canonical workflow lifecycle remains planned. Stage 1 required_checks, verify_commands and stage1_current_commands are the same executable local pre-merge gate; origin/master validate:workpack is isolated in stage2_post_merge_preflight and full_lifecycle_checks. Product code, migration, runtime writes and installer execution are forbidden. Independent internal 1.5 task 019ff643-988a-7013-9edb-4d4f61986930 closed all three prior findings and returned PASS with P0/P1/P2 0/0/0 at head 50598f7ce7b30dccab148a575738db23bb9f1eed. closeout_phase=collecting closeout_recovery=manual_patch:1 closeout_repair=codex:3|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:Codex_task_019ff643-988a-7013-9edb-4d4f61986930_REVISE,docs/workpacks/youtube-async-extraction-notification/evidence/2026-08-12-stage1-internal1-5-rereview.md last_recovery_at=2026-08-12T14:07:53Z",
+  "notes": "Canonical closeout owner: .workflow-v2/work-items/youtube-async-extraction-notification.json#closeout. Product implementation is complete on 3c1e0d422b0849f7f086d1b7fefc55bac41eee60. Fresh security and final design authority at publication head a76df8f8e3d342968cf920cedb9289b8546018f0 returned PASS with findings 0 after the initial closed-mount focus finding was repaired TDD-first. Fresh Stage 6 task /root/youtube_v4_stage6_closeout approved reviewed exact head eb8d915b44b63611904760375f7c0606e629b6e0 with PASS — Findings 없음 after all started checks reached success or intended Draft skip. Non-manual closeout is complete and PR #1362 remains Draft for manual merge handoff. Production migration, worker credential/install/start/rollout and physical-device verification remain Manual Only. Supabase Cloud/linked/remote is forbidden/N/A; operational full-local was not touched. closeout_phase=completed closeout_recovery=manual_patch:1|manual_handoff closeout_repair=codex:4|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:Codex_task_019ff643-988a-7013-9edb-4d4f61986930_REVISE,docs/workpacks/youtube-async-extraction-notification/evidence/2026-08-12-stage1-internal1-5-rereview.md,tests/youtube-extraction-notifications.test.tsx,ui/designs/authority/YT_IMPORT_BACKGROUND-authority.md,ui/designs/authority/APP_SHELL_YOUTUBE_NOTIFICATIONS-authority.md,docs/workpacks/youtube-async-extraction-notification/evidence/2026-08-14-stage6-closeout-review.md last_recovery_at=2026-08-14T12:20:00Z",
   "out_of_scope": [
     "Web Push subscription service worker VAPID or push outbox",
     "Quick Import async UI conversion or public response change",

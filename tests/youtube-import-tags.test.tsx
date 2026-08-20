@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { YoutubeImportScreen } from "@/components/recipe/youtube-import-screen";
 import { fetchCookingMethods } from "@/lib/api/cooking-methods";
+import * as asyncApi from "@/lib/api/youtube-extraction-jobs";
 import * as youtubeApi from "@/lib/api/youtube-import";
 
 const mockRouterReplace = vi.fn();
@@ -31,6 +32,10 @@ vi.mock("@/lib/api/youtube-import", () => ({
   registerYoutubeRecipe: vi.fn(),
   registerYoutubeIngredient: vi.fn(),
   registerYoutubeIngredientsBulk: vi.fn(),
+}));
+
+vi.mock("@/lib/api/youtube-extraction-jobs", () => ({
+  fetchYoutubeExtractionSession: vi.fn(),
 }));
 
 function installMatchMedia(matchesDesktop = false) {
@@ -68,7 +73,7 @@ function mockYoutubeDraft(tags = ["유튜브레시피", "디저트"]) {
     },
     error: null,
   });
-  vi.mocked(youtubeApi.extractYoutubeRecipe).mockResolvedValue({
+  const extractionResult: Awaited<ReturnType<typeof youtubeApi.extractYoutubeRecipe>> = {
     success: true,
     data: {
       extraction_id: "ext-tags",
@@ -123,6 +128,17 @@ function mockYoutubeDraft(tags = ["유튜브레시피", "디저트"]) {
       new_cooking_methods: [],
     },
     error: null,
+  };
+  vi.mocked(youtubeApi.extractYoutubeRecipe).mockResolvedValue(extractionResult);
+  vi.mocked(asyncApi.fetchYoutubeExtractionSession).mockResolvedValue({
+    success: true,
+    data: {
+      status: "draft",
+      draft: extractionResult.data,
+      recipe_id: null,
+      recipe_path: null,
+    },
+    error: null,
   });
 }
 
@@ -147,6 +163,7 @@ describe("YoutubeImportScreen tag review", () => {
     });
     vi.mocked(youtubeApi.validateYoutubeUrl).mockReset();
     vi.mocked(youtubeApi.extractYoutubeRecipe).mockReset();
+    vi.mocked(asyncApi.fetchYoutubeExtractionSession).mockReset();
     vi.mocked(youtubeApi.registerYoutubeRecipe).mockReset();
     vi.mocked(youtubeApi.registerYoutubeRecipe).mockResolvedValue({
       success: true,
@@ -172,7 +189,7 @@ describe("YoutubeImportScreen tag review", () => {
     render(
       <YoutubeImportScreen
         columnId="column-breakfast"
-        initialYoutubeUrl="https://www.youtube.com/watch?v=recipe12345"
+        initialExtractionId="ext-tags"
         planDate="2026-04-18"
         slotName="아침"
       />,
@@ -194,7 +211,7 @@ describe("YoutubeImportScreen tag review", () => {
     render(
       <YoutubeImportScreen
         columnId="column-breakfast"
-        initialYoutubeUrl="https://www.youtube.com/watch?v=recipe12345"
+        initialExtractionId="ext-tags"
         planDate="2026-04-18"
         slotName="아침"
       />,

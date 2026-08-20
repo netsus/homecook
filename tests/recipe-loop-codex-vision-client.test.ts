@@ -278,6 +278,7 @@ describe("recipe-loop codex-vision provider", () => {
     const outputPath = path.join(workdir, "selector.raw.md");
     const logPath = path.join(workdir, "selector.log");
     const authPath = path.join(workdir, "auth.json");
+    const codexBinary = "/Users/example/.homecook/tools/codex/bin/codex";
     writeFileSync(imagePath, "fake-image", "utf8");
     writeFileSync(authPath, "{}", "utf8");
     let safeCwd = "";
@@ -294,9 +295,11 @@ describe("recipe-loop codex-vision provider", () => {
       sandboxExecPath: "/usr/bin/sandbox-exec",
       sandboxAvailable: true,
       codexAuthPath: authPath,
+      codexBinary,
       runCommandImpl: async (command: string, args: string[], options: { cwd: string; input: string }) => {
         expect(command).toBe("/usr/bin/sandbox-exec");
-        expect(args).toContain("codex");
+        expect(args).toContain(codexBinary);
+        expect(args).not.toContain("codex");
         expect(args).toContain("--ignore-user-config");
         expect(args).toContain("--skip-git-repo-check");
         const disabledFeatures = args.flatMap((arg, index) => arg === "--disable" ? [args[index + 1]] : []);

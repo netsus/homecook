@@ -1,0 +1,30 @@
+{
+  "status": "pass",
+  "score": 97,
+  "implementation_head": "3c1e0d422b0849f7f086d1b7fefc55bac41eee60",
+  "base_url": "http://127.0.0.1:3217",
+  "devices": [
+    "desktop-chrome",
+    "mobile-chrome",
+    "mobile-ios-small"
+  ],
+  "coverage": {
+    "covered": 42,
+    "total": 46,
+    "blocked": 0,
+    "validation_errors": 0
+  },
+  "findings": [],
+  "portable_bundle": "portable-exploratory-qa",
+  "not_covered": [
+    "independent backend/security re-review of the repaired exact head, Stage 5, and final authority",
+    "independent verifier role",
+    "same-SHA real local Supabase app/worker rehearsal",
+    "real worker crash/reclaim and real cross-user database scenarios"
+  ],
+  "forbidden_operations": {
+    "remote_or_cloud_supabase": 0,
+    "operational_local_supabase_mutations": 0,
+    "operational_app_port_3100": 0
+  }
+}

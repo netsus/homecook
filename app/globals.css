@@ -3227,6 +3227,20 @@ button {
   color: var(--text-inverse);
 }
 
+.yt-mobile-import-shell .web-button:disabled {
+  cursor: not-allowed;
+  border-color: var(--line-strong);
+  background: var(--surface-fill);
+  color: var(--text-3);
+  opacity: 1;
+  transform: none;
+  box-shadow: none;
+}
+
+.yt-mobile-import-shell .web-button:disabled:active {
+  transform: none;
+}
+
 .yt-mobile-import-shell .web-button-secondary {
   border: 1px solid var(--brand);
   background: var(--surface);

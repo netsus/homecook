@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 
-import { RecipioYoutubeImportScreen } from "@/components/recipe/recipio-youtube-import-screen";
+import { YoutubeImportScreen } from "@/components/recipe/youtube-import-screen";
 import { resolveNextPath } from "@/lib/auth/callback";
 import { readE2EAuthOverrideCookie } from "@/lib/auth/e2e-auth-override";
 import { isYoutubeImportEnabled } from "@/lib/feature-flags";
@@ -15,15 +15,15 @@ export const metadata = {
 
 export const dynamic = "force-dynamic";
 
-interface RecipioYoutubeImportPageProps {
+interface YoutubeImportPageProps {
   searchParams: Promise<{
     youtubeUrl?: string;
   }>;
 }
 
-export default async function RecipioYoutubeImportPage({
+export default async function YoutubeImportPage({
   searchParams,
-}: RecipioYoutubeImportPageProps) {
+}: YoutubeImportPageProps) {
   if (!isYoutubeImportEnabled()) {
     notFound();
   }
@@ -48,5 +48,15 @@ export default async function RecipioYoutubeImportPage({
     redirect(`/login?next=${encodeURIComponent(returnPath)}`);
   }
 
-  return <RecipioYoutubeImportScreen initialYoutubeUrl={youtubeUrl ?? ""} />;
+  return (
+    <main>
+      <YoutubeImportScreen
+        entryContext="standalone"
+        initialYoutubeUrl={youtubeUrl ?? ""}
+        planDate=""
+        columnId=""
+        slotName=""
+      />
+    </main>
+  );
 }

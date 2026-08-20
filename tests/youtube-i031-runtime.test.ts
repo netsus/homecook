@@ -330,6 +330,34 @@ describe("YouTube i031 exact runtime", () => {
     });
   });
 
+  it("keeps provider metadata and paid fallback behind the worker RPC fence", async () => {
+    const bundleRoot = path.join(
+      process.cwd(),
+      "lib/server/youtube-i031-runtime/bundle",
+    );
+    const [workerSource, snapshotSource] = await Promise.all([
+      readFile(path.join(bundleRoot, "worker.mjs"), "utf8"),
+      readFile(path.join(bundleRoot, "scripts/recipe-loop/snapshot-video.mjs"), "utf8"),
+    ]);
+
+    const snapshotStart = snapshotSource.indexOf("export async function snapshotVideo(");
+    const runtimeSource = snapshotSource.slice(snapshotStart);
+    expect(runtimeSource.indexOf("await onVideoMetadata(video)"))
+      .toBeLessThan(runtimeSource.indexOf("fetchAuthorComments(apiKey"));
+    const fallbackStart = runtimeSource.indexOf(
+      "if (!captions.available && useApifyFallback",
+    );
+    const fallbackEnd = runtimeSource.indexOf("const source = {", fallbackStart);
+    const fallbackSource = runtimeSource.slice(fallbackStart, fallbackEnd);
+    expect(fallbackSource.indexOf("reserveQuota(\"external_transcript_api\", 1)"))
+      .toBeLessThan(fallbackSource.indexOf("fetchApifyCaptions(env, videoId)"));
+    expect(workerSource).toContain("workerRpcClient.resolveMethods(methodLabels(");
+    expect(workerSource).toContain('event_type: "success"');
+    expect(workerSource).not.toContain("cache_hit: llmCache.cacheHit");
+    expect(workerSource).not.toContain("cache_hit: visualCache.cacheHit");
+    expect(workerSource).not.toMatch(/updateTitle\([^)]*recipe\.title/u);
+  });
+
   it("enforces one concurrent run and releases the slot after cleanup", async () => {
     let finishFirst!: (value: YoutubeI031WorkerOutput) => void;
     const firstWorker = new Promise<YoutubeI031WorkerOutput>((resolve) => {

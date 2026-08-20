@@ -105,7 +105,6 @@ services:
       PGRST_ADMIN_SERVER_PORT: "3001"
       PGRST_DB_ANON_ROLE: anon
       PGRST_DB_SCHEMAS: public,storage
-      PGRST_JWT_AUD: authenticated
     networks:
       - data-internal
     restart: unless-stopped

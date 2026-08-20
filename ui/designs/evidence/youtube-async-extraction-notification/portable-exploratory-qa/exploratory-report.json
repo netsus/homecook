@@ -1,0 +1,296 @@
+{
+  "schemaVersion": "1.0",
+  "slice": "youtube-async-extraction-notification",
+  "generatedAt": "2026-08-14T06:52:00Z",
+  "baseUrl": "http://127.0.0.1:3217",
+  "devices": [
+    "desktop-chrome",
+    "mobile-chrome",
+    "mobile-ios-small"
+  ],
+  "summary": "capture source 2113dacdbb464f6422424324a38823e8c3d6933a / ed823a064774dee538df8cde47c483af08efa7dc에서 mock API 기반 격리 앱을 포트 3217로 실행해 desktop 1280/1440, mobile 390, small mobile 320 흐름을 탐색했다. current implementation 3c1e0d422b0849f7f086d1b7fefc55bac41eee60 / ee5e40de5c9de3e5bbbda766d233c7f118a2df3f의 마지막 UI delta는 닫힌 알림 센터 최초 mount의 focus guard뿐이며 rendered markup/style/copy/viewport geometry와 screenshot generator를 바꾸지 않아 30개 PNG를 재사용했다. RED-to-GREEN component test는 page focus 보존과 기존 open→close 복귀를 함께 고정한다. 320px global presentation은 YouTube 또는 Growth card 하나만 grant한다. YouTube dismiss 뒤 첫 Growth, 첫 Growth dismiss/만료 뒤 다음 Growth로 순차 인계하고, 대기 Growth는 렌더·announcement·timer·seen mutation을 시작하지 않아 summary/badge/list 복구를 보존한다. 390px와 desktop은 기존 두 채널, Growth stacking, CTA ownership, YouTube→Growth 읽기 순서를 유지한다. 고정 한국어 copy, disabled import CTA, focus handoff, reload/relogin, archive recovery, planner context, 200% text/safe-area CTA 및 기존 보안 경계를 회귀 검증했다. canonical artifact closure, worker fence/ACL/secret provenance, 300초 lease와 30초 heartbeat는 93개 focused test 및 56개 random-port PostgreSQL/PostgREST 검증으로 다시 잠갔다. 총 30개 screenshot과 81개 cross-project 실행 증거를 유지했으며 remote Supabase와 운영 local app/DB는 사용하지 않았다.",
+  "findings": [],
+  "remainingRisks": [
+    "최근 320px Growth 순차 표시 finding은 수정했지만 새 exact head의 독립 design/backend/security 재검토, Stage 5, final authority, Stage 6 승인은 아직 수행하지 않았다.",
+    "실제 local Supabase worker crash/reclaim과 실제 사용자 세션의 cross-user DB 격리는 별도 verifier 범위이며, 이번에는 격리 PostgreSQL/PostgREST 및 fixture browser만 사용했다.",
+    "physical device VoiceOver/TalkBack, 실제 safe-area와 virtual-keyboard 가림은 Manual Only다."
+  ],
+  "checklistCoverage": [
+    {
+      "item_id": "happy-path-1",
+      "status": "covered",
+      "notes": "exact enqueue union은 API adapter Vitest와 starting backend head의 기존 Stage 3 contract evidence로 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "happy-path-2",
+      "status": "covered",
+      "notes": "최초 enqueue와 retry 성공이 같은 helper로 새 job ID를 sessionStorage/event projection에 등록하고 hard refresh poll로 복구됨을 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "happy-path-3",
+      "status": "covered",
+      "notes": "notification CTA로 extractionId review를 복원한 뒤 review heading이 activeElement가 되고, 일반 초기 URL 입력 focus는 유지됨을 browser 시나리오로 확인했다. 완료 session 검수·등록과 backend finalize evidence도 함께 회귀 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "happy-path-4",
+      "status": "covered",
+      "notes": "실제 browser reload, guest reload, authenticated reload 순서로 badge·목록·exact destination 복구를 확인하고 delivered_at이 있는 unseen 항목은 restart/relogin toast에서 제외했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "happy-path-5",
+      "status": "covered",
+      "notes": "draft 결과 확인, consumed individual toast의 exact title '이미 등록한 레시피예요'와 CTA '레시피 보기', 등록 redirect를 component/browser에서 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "happy-path-6",
+      "status": "covered",
+      "notes": "Quick Import public 201 응답은 exact 유지한다. 브라우저가 201을 관측한 뒤 extraction ID를 sessionStorage에 보존하고 owner-scoped public unseen list에서 exact related job만 찾아 seen 처리하며, seen 전달 실패는 등록 성공 UX를 바꾸지 않고 online/focus reconciliation으로 재시도한다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "state-policy-1",
+      "status": "covered",
+      "notes": "starting backend head의 Stage 3 transition evidence와 current product regression을 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "state-policy-2",
+      "status": "covered",
+      "notes": "Stage 3 reaper/claim evidence를 재사용하고 processing write는 live lease를 요구한다. 동일 worker ID도 live permit과 grace window 안에서는 재claim할 수 없고 heartbeat만 갱신하며, permit release 뒤 successful finalize replay도 exact retained worker_id+lease_generation에만 idempotent임을 격리 PostgreSQL에서 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "state-policy-3",
+      "status": "covered",
+      "notes": "job 및 permit lease 만료 뒤 heartbeat/start/requeue/finalize/fail-retry가 모두 applied false 또는 0으로 닫히며, stale worker가 연장하거나 상태를 바꾸지 못함을 격리 PostgreSQL matrix로 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "state-policy-4",
+      "status": "covered",
+      "notes": "active duplicate response를 exact union으로 렌더하며 backend dual-read evidence는 starting head에서 유지된다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "state-policy-5",
+      "status": "covered",
+      "notes": "starting backend head의 atomic snapshot evidence를 product regression으로 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "state-policy-6",
+      "status": "covered",
+      "notes": "POLICY_CHANGED 409를 terminal success로 추측하지 않고 입력을 보존하는 FE 경계를 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "state-policy-7",
+      "status": "covered",
+      "notes": "expired fresh action과 consumed recipe destination 우선순위를 component test로 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "state-policy-8",
+      "status": "covered",
+      "notes": "여러 terminal 결과는 한 grouped toast로 렌더하고 실제 대표한 delivery key만 delivered 처리한다. 개별 성공 toast는 exact title과 state body를 함께 렌더한다. delivered_at 항목은 재생하지 않고, 6초 opener 해제 뒤 drawer close는 안정적 shell trigger로 focus를 돌린다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "state-policy-9",
+      "status": "covered",
+      "notes": "can_retry=false failure에는 toast/list 어디에도 retry CTA가 없음을 component test로 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "error-permission-1",
+      "status": "covered",
+      "notes": "401 시 private store를 비우고 generic LOGIN return-to-action만 남기는 동작을 unit test로 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "error-permission-2",
+      "status": "covered",
+      "notes": "owner nondisclosure는 starting backend head의 Stage 3 evidence로 확인했고 FE는 server error body를 확장하지 않는다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "error-permission-3",
+      "status": "covered",
+      "notes": "client는 URL 또는 extraction_id exact branch만 전송하며 unknown policy/digest 필드를 만들지 않음을 adapter test로 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "error-permission-4",
+      "status": "covered",
+      "notes": "POLICY_CHANGED 안전 문구와 URL 보존, terminal 알림 미생성을 component test로 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "error-permission-5",
+      "status": "covered",
+      "notes": "320px offline browser evidence에서 URL과 재시도 동선을 보존하고 local success를 만들지 않음을 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "error-permission-6",
+      "status": "covered",
+      "notes": "6개 public failure code의 공식 label/retry gate를 exact union 및 component matrix로 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "error-permission-7",
+      "status": "covered",
+      "notes": "disconnect 뒤 active job polling/foreground recovery가 shared job mutation 없이 재개됨을 component test로 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "error-permission-8",
+      "status": "covered",
+      "notes": "loading, empty, error, offline, read-only, unauthorized와 안전 복구 CTA를 component matrix에서 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "data-integrity-1",
+      "status": "covered",
+      "notes": "source_job exactly-once는 starting backend head의 Stage 3 evidence로 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "data-integrity-2",
+      "status": "covered",
+      "notes": "FE sessionStorage에는 job ID만 저장하며 raw URL/provider payload/token을 저장하지 않음을 code review로 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "data-integrity-3",
+      "status": "covered",
+      "notes": "client request는 caller user UUID를 전송하지 않고 cookie session 기반 public route만 사용한다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "data-integrity-4",
+      "status": "covered",
+      "notes": "FE diff에 fingerprint HMAC 또는 secret 취급 로직이 없고 backend 경계는 starting head 그대로다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "data-integrity-5",
+      "status": "covered",
+      "notes": "restricted worker privilege는 Stage 3 evidence를 유지한다. Codex/Python/ffmpeg/extraction child는 strict allowlist 환경만 상속하고 service-role/signing/user-token sentinel을 받지 않는다. config/provider secret/credential metadata/token은 lstat no-symlink, expected UID, 0600, canonical realpath를 모두 만족해야 함을 focused test로 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "data-integrity-6",
+      "status": "covered",
+      "notes": "successful finalize replay도 retained worker_id+lease_generation exact fence를 요구해 stale generation이 항상 거부되고 permit release 뒤에도 exact generation replay만 idempotent임을 SQL 및 격리 integration test로 확인했다. shared job/permit write는 모두 job→permit 순서로 잠그며 concurrent heartbeat/finalize 두 연결에서 40P01 0과 terminal exactly one을 확인했다. fail_or_retry RPC error/applied=false는 production/common worker 모두 durable failure 미기록으로 보고 fail closed한다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "data-integrity-7",
+      "status": "covered",
+      "notes": "새 FE source/evidence에 credential, cookie, token, provider payload를 기록하지 않음을 diff review로 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "data-integrity-8",
+      "status": "covered",
+      "notes": "nullable title은 `YouTube 레시피`로 fallback하며 private title은 authenticated list에서만 표시함을 unit test로 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "design-accessibility-1",
+      "status": "covered",
+      "notes": "390 accepted, 320 offline, 1280 duplicate 캡처와 browser geometry에서 CTA·copy·overflow를 확인했다. URL import initial/submitting/enabled의 fill·text·border·opacity·pressed transform을 같은 viewport에서 비교해 disabled intent를 고정했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "design-accessibility-2",
+      "status": "covered",
+      "notes": "390 grouped toast, 320 failure sheet, 1440 cursor archive 캡처에서 badge/list/archive, active projection, stacking과 page overflow 0을 확인했다. Growth/YouTube 동시 toast는 390/320에서 shared slot 안의 rectangle 비겹침, 각 닫기 click ownership, YouTube→Growth DOM 읽기 순서를 assertion으로 고정했다. 기존 bell↔toast close 및 bell↔back button 분리도 유지한다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "design-accessibility-3",
+      "status": "covered",
+      "notes": "aria-live polite/atomic, exact CTA, icon+text, 완료 시각의 접근성 copy, notification CTA review-heading focus, drawer focus return과 primary CTA 4.5:1 이상 대비를 component와 axe browser audit로 확인했다. 알림 tabs는 roving tabIndex/tabpanel 연결과 ArrowLeft/Right wraparound, Home/End를 제공한다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "design-accessibility-4",
+      "status": "covered",
+      "notes": "320px, 200% text, 24px/34px simulated safe-area, reduced motion, Tab/Escape/focus restore와 internal scroll containment를 browser test로 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "design-accessibility-5",
+      "status": "not-covered",
+      "notes": "현재 구현 task의 visual-verdict만 pass이며 수정 exact head에 대한 독립 authority 재검토/Stage 5/final authority는 대기 중이다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "manual-qa-1",
+      "status": "not-covered",
+      "notes": "독립 verifier와 final authority는 이 Stage 4 구현 task가 수행하지 않는다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "manual-qa-2",
+      "status": "not-covered",
+      "notes": "운영 local Supabase/app3100은 금지되어 사용하지 않았고 mock API 기반 same-head app만 3217에서 검증했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "manual-qa-3",
+      "status": "not-covered",
+      "notes": "FE 시나리오는 검증했으나 worker crash/reclaim과 cross-user real DB는 별도 backend/verifier 증거 범위다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "heuristic-mobile-readability",
+      "status": "covered",
+      "notes": "390/320 캡처와 200% text audit에서 버튼·상태 문구가 읽히고 겹치지 않음을 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "heuristic-small-viewport-cta",
+      "status": "covered",
+      "notes": "320x844, 200% text와 non-zero safe-area에서 실패 제목·메시지가 함께 보이고 primary CTA와 sheet close/tab/list가 내부 스크롤로 도달 가능하다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "heuristic-duplicate-cta",
+      "status": "covered",
+      "notes": "accepted/duplicate/toast/list 각 맥락에서 primary action은 한 번만 노출된다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "heuristic-information-hierarchy",
+      "status": "covered",
+      "notes": "상태 메시지와 작업 보기/결과 확인/나중에 다시 시도 CTA가 같은 카드 또는 row에 배치된다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "heuristic-copy-sanity",
+      "status": "covered",
+      "notes": "공식 failure label과 확정 design artifact 문구를 사용하며 320px wrapping을 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "heuristic-empty-noop",
+      "status": "covered",
+      "notes": "empty/loading에는 무의미한 CTA가 없고 retry는 can_retry=true일 때만 노출된다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "heuristic-placeholder-polish",
+      "status": "covered",
+      "notes": "기존 브랜드 token, Lucide icon, shared card/sheet pattern을 사용해 임시 placeholder 표현을 제거했다.",
+      "linked_findings": []
+    }
+  ]
+}

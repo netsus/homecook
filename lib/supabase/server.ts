@@ -828,6 +828,15 @@ export function createYoutubeExtractionInternalClient() {
     : null;
 }
 
+export function createYoutubeAsyncExtractionInternalClient() {
+  const client = createScopedDataServiceRoleClient("youtube-extraction");
+  return client
+    ? {
+        rpc: client.rpc.bind(client),
+      }
+    : null;
+}
+
 const ADMIN_DATA_TABLES = new Set([
   "admin_audit_logs",
   "admin_members",

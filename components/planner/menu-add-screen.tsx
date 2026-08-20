@@ -617,6 +617,7 @@ export function MenuAddScreen({
           planDate={planDate}
           columnId={columnId}
           presentation="screen"
+          submissionMode="sync"
           slotName={slotName}
         />
       );
@@ -826,6 +827,7 @@ export function MenuAddScreen({
                       planDate={planDate}
                       columnId={columnId}
                       presentation="embedded"
+                      submissionMode="sync"
                       slotName={slotName}
                     />
                   ) : (

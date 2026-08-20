@@ -4,6 +4,8 @@
 
 사용자가 `/menu/add/youtube`에서 YouTube 레시피 추출을 접수한 뒤 기다림 화면에 머물지 않고 다른 화면으로 이동해도 작업이 이어지게 한다. 성공·실패 결과는 앱 재실행과 재로그인 뒤에도 badge, toast, durable list로 복구하고, 성공 결과는 기존 검수·등록 또는 이미 등록된 레시피로 안전하게 이어진다.
 
+> 2026-08-15 사용자 승인으로 `/recipes/new/youtube` standalone 공개 진입면도 같은 background+notification 흐름을 사용한다. planner 문맥은 숨기고 return context가 없으면 Home(`/`)으로 이동하며 자동 등록하지 않는다. 기존 sync endpoint는 다른 consumer 호환용으로 유지한다.
+
 ## Branches
 
 - Stage 1 문서: `docs/youtube-async-extraction-notification`
@@ -18,7 +20,7 @@
   - 기존 `/menu/add/youtube`의 URL 입력 뒤 background 접수 완료·active duplicate·offline·`POLICY_CHANGED`·작업 보기 흐름 (`YT_IMPORT_BACKGROUND`)
   - app shell의 YouTube 작업 전용 toast, badge, unseen/archive list/panel, success/failure/expired/consumed destination (`APP_SHELL_YOUTUBE_NOTIFICATIONS`)
   - 기존 `/menu/add/youtube?extractionId=<uuid>` 검수 재진입과 consumed recipe 이동
-  - `/recipes/new/youtube` Quick Import UI·sync response·auto-register 의미는 유지
+  - `/recipes/new/youtube` standalone background accepted/leave/notification/review 흐름과 Home fallback
 - 신규 보호 API 6개:
   - `POST /api/v1/recipes/youtube/extraction-jobs`
   - `GET /api/v1/recipes/youtube/extraction-jobs/{job_id}`
@@ -42,6 +44,7 @@
   - exact enqueue/worker/permit/delivery/seen/credential-rotation RPC, roles, RLS/ACL, pre-request 및 expected-schema manifest
 - worker/release:
   - request-independent extraction service, fenced claim/heartbeat/start/finalize/fail loop, global permit, deterministic worker artifact
+  - frozen timing contract인 300초 lease / 30초 heartbeat를 app adapter와 standalone runtime이 하나의 timing manifest에서 소비하며, installer artifact가 해당 수치와 파일 SHA를 fail-closed 검증
   - same release SHA·schema identity·policy snapshot attestation을 검증하는 `mac-production:*` worker installer/runbook/credential rotation dry-run 경로
   - `com.homecook.youtube-extraction-worker` launchd template와 install/start/stop/restart/status/drain/uninstall/rollback rehearsal 계약
 - Schema Change:
@@ -51,7 +54,6 @@
 ## Out of Scope
 
 - Web Push permission, subscription, service worker, VAPID, push outbox
-- `/recipes/new/youtube` Quick Import의 이탈 가능한 async UI 전환 또는 공개 응답 변경
 - 기존 동기 endpoint 삭제/deprecation
 - `user_progress_notifications`와 YouTube 작업 알림 authority 통합
 - 외부 managed queue 또는 Supabase Edge Function에서 전체 추출 실행
@@ -66,8 +68,9 @@
 | --- | --- | --- |
 | `33-youtube-i031-direct-extraction` | merged | [x] |
 | 공식 contract PR `#1343` merge `25e10a7805f5bf171d4c1fbd94a573560b715786` | merged | [x] |
-| 공식 tuple `1.7.31 / 1.5.35 / 1.3.33 / 1.3.33 / 1.2.38` | current | [x] |
+| 공식 tuple `1.7.32 / 1.5.36 / 1.3.34 / 1.3.34 / 1.2.39` | current | [x] |
 | 최종 동결 계획 SHA-256 `7906f9ec975f309c310b2275714873cebb78e109770f885f09878e5c6bbed57a`, 991 lines, review task `019ffb44-5614-7af3-86a9-4ebd50977123` | independent PASS / Findings 없음 | [x] |
+| Phase 1.5 local-only repair PR #1350, exact head `a625aefa7baab63f183a9d46e6f12d607d4e017f`, merge `c4045705ef72c76f7e7258d10c460f56b6847dd7` | independent PASS / Findings 없음, merged | [x] |
 
 > 제품 구현은 이 Stage 1 docs PR이 independent internal 1.5에서 approve되고 `master`에 merge된 뒤에만 시작한다.
 
@@ -105,7 +108,7 @@
 
 ## Frontend Delivery Mode
 
-- Design Status는 Stage 1에서 `temporary`다. 기존 YT_IMPORT visual language와 app shell 패턴을 재사용하되 새 핵심 flow이므로 high-risk evidence 없이는 `confirmed`로 올리지 않는다.
+- Design Status는 Stage 4 evidence 생성으로 `pending-review`다. 기존 YT_IMPORT visual language와 app shell 패턴을 재사용하되 새 핵심 flow이므로 Stage 5와 별도 final authority 없이는 `confirmed`로 올리지 않는다.
 - 필수 상태: `loading / empty / error / offline / read-only / unauthorized`.
 - 추가 상태: accepted, active duplicate, succeeded draft, consumed success, failed retryable, failed non-retryable, expired, grouped terminal notifications, archive.
 - 비로그인 shell과 보호 CTA는 private count/title/thumbnail을 렌더하지 않고 LOGIN + allowlisted return-to-action을 유지한다.
@@ -121,15 +124,26 @@
 - Before screenshot paths:
   - YT_IMPORT: `ui/designs/evidence/33-youtube-i031-direct-extraction/mobile-390-loading.png`, `mobile-320-loading.png`, `desktop-1280-loading.png`
   - app shell notification baseline: `ui/designs/evidence/34c-growth-notification-ui/mobile-390.png`, `mobile-320.png`, `desktop-1440.png` (layout 참고만 사용하며 data authority는 재사용하지 않음)
-- Authority status: `required`, Stage 4 authority precheck와 Stage 5 뒤 별도 final authority `pass`가 필요하다.
+- Authority status: `pass`, fresh independent final authority `/root/youtube_focus_design_rereview`가 publication head `a76df8f8e3d342968cf920cedb9289b8546018f0`의 implementation `3c1e0d422b0849f7f086d1b7fefc55bac41eee60`을 blocker/major/minor `0/0/0`으로 승인했다.
 - Authority report targets: `ui/designs/authority/YT_IMPORT_BACKGROUND-authority.md`, `ui/designs/authority/APP_SHELL_YOUTUBE_NOTIFICATIONS-authority.md`
 
 ## Design Status
 
-- [x] 임시 UI (temporary) — Stage 1 설계 계약만 잠겼고 실제 구현 evidence는 없음
-- [ ] 리뷰 대기 (pending-review) — Stage 4 구현·390/320/desktop evidence·exploratory QA 완료 뒤 전환
-- [ ] 확정 (confirmed) — Stage 5와 별도 final authority가 current frontend head를 blocker 0으로 승인한 뒤 전환
+- [ ] 임시 UI (temporary) — Stage 1 설계 계약만 잠겼고 실제 구현 evidence는 없음
+- [ ] 리뷰 대기 (pending-review) — current implementation head `3c1e0d422b0849f7f086d1b7fefc55bac41eee60`의 독립 final authority 완료로 종료
+- [x] 확정 (confirmed) — fresh authority가 최초 closed mount focus finding의 RED-to-GREEN 수리, 실제 open→close/disconnected-opener 복귀, 320/390/desktop PNG 30개 재사용 근거를 재검토하고 `PASS — Findings 없음`, blocker/major/minor `0/0/0`으로 승인했다
 - [ ] N/A — BE-only 슬라이스
+
+### Stage 4 Frontend Evidence
+
+- Implementation base/code head/tree: `25e8da8b04c2322f68d8f54837135399d7586da7` → `3c1e0d422b0849f7f086d1b7fefc55bac41eee60` / `ee5e40de5c9de3e5bbbda766d233c7f118a2df3f`
+- Screenshot capture source: `2113dacdbb464f6422424324a38823e8c3d6933a` / `ed823a064774dee538df8cde47c483af08efa7dc`; current focus guard는 rendered markup/style/copy/geometry와 screenshot generator를 바꾸지 않아 PNG 30개를 재사용했다.
+- Screenshot manifest: `ui/designs/evidence/youtube-async-extraction-notification/manifest.json`
+- Visual verdict: `ui/designs/evidence/youtube-async-extraction-notification/visual-verdict.json` — `93/100`, pass (구현 task 판정이며 독립 authority 승인 아님)
+- Exploratory QA: `ui/designs/evidence/youtube-async-extraction-notification/exploratory-qa.json` 및 tracked `portable-exploratory-qa/` raw bundle — `97/100`, 42/46 covered, finding 0
+- Deterministic browser QA: `tests/e2e/youtube-async-extraction-notification.spec.ts` — port `3217`, 27 scenarios와 3-project 81 executions passed. 320px는 YouTube→Growth 1→Growth 2를 한 card씩 순차 표시하고 대기 Growth의 timer/seen·badge/list 복구를 보존한다. 390/desktop은 두 채널 비겹침·각 CTA ownership·기존 Growth stacking·읽기 순서를 유지한다. panel/list 한국어 어절 보존과 기존 focus/reload/archive/planner 회귀를 포함하는 390/320/desktop screenshot 30개를 재생성했다.
+- Focused component/integration QA: current focus finding 관련 5-file Vitest 89 passed; backend/worker/runtime/installer/migration focused Vitest 93 passed; 격리 random-port PostgreSQL/PostgREST 56 passed(299/300/301초 reclaim boundary 포함); full Vitest 6,160 passed/459 skipped; product 2,741 passed/175 skipped; lint/typecheck/build passed; official frontend gate(62 smoke passed/10 skipped, 8 a11y passed/1 skipped, 12 visual passed), 12 security E2E, contract-only security-function authorization gate, frozen-lockfile install, `pnpm audit --audit-level high`가 통과했다. worker artifact verifier와 exact release metadata, 300초 lease/30초 heartbeat provenance, permit/lock/fence, secret-root lexical ancestor fail-closed 경계를 유지한다.
+- Boundary: Supabase Cloud/linked/remote/credential access 0, 운영 local Supabase/app `3100`/user data/port/volume/env/secret/launchd mutation 0. Stage 5 코드 재검토, final authority와 exact-head Stage 6는 모두 `PASS — Findings 없음`으로 완료됐다. Manual Only는 미완료다.
 
 ## Source Links
 
@@ -189,7 +203,7 @@
 7. `attempt_count`는 provider permit을 얻고 실제 provider를 시작할 때만 증가한다. exhausted lease는 reaper가 terminal로 닫고 재claim하지 않는다.
 8. delivered는 toast 렌더, seen은 사용자 확인이다. toast만으로 unseen/badge를 지우지 않는다.
 9. `can_retry=false`면 toast/list/deep link 어디에도 retry CTA나 POST가 없다.
-10. Quick Import UI와 public response는 유지하고 async-enabled release에서 provider executor는 worker 하나뿐이다.
+10. `/recipes/new/youtube`는 standalone background accepted/leave/notification UX를 사용하고 기존 sync endpoint response는 다른 consumer 호환용으로 유지하며 provider executor는 worker 하나뿐이다.
 11. raw URL/transcript/frame/provider payload, user access/refresh token, cookie, HMAC key, signing/service-role key를 job/worker artifact/env/argv/plist/log에 저장하지 않는다.
 12. rollout/rollback은 queue drain, permit, release SHA/schema/policy snapshot을 함께 검증한다. queue가 남은 상태에서 worker와 direct sync provider를 동시에 실행하지 않는다.
 
@@ -236,7 +250,7 @@ Stage 2A→2B→2C는 의존 순서다. 하나의 backend PR로 유지하면 RED
 
 ## Contract Evolution Candidates
 
-- 없음. 공식 계약 PR #1343이 이 슬라이스의 public/DB/UI/Flow 계약을 이미 승인·병합했다. Web Push, Quick Import async UI, sync endpoint deprecation, multi-host worker는 Out of Scope이며 별도 사용자 승인과 contract-evolution 전에는 acceptance에 포함하지 않는다.
+- 없음. 공식 계약 PR #1343과 2026-08-15 standalone background activation addendum이 현재 public/DB/UI/Flow 계약이다. Web Push, sync endpoint deprecation, multi-host worker는 Out of Scope다.
 
 ## Primary User Path
 
@@ -250,17 +264,17 @@ Stage 2A→2B→2C는 의존 순서다. 하나의 backend PR로 유지하면 RED
 
 > 체크는 해당 Stage의 테스트·review·runtime evidence가 생긴 뒤에만 한다. Stage 1 작성 작업은 아래 구현 항목을 미리 체크하지 않는다.
 
-- [ ] DB schema, policy snapshot, queue/permit/credential authority와 exact RPC가 공식 계약대로 구현된다 <!-- omo:id=delivery-yta-db-authority;stage=2;scope=backend;review=3,6 -->
-- [ ] 6개 신규 public endpoint와 기존 Quick Import `sync_wait` 호환 계약이 구현된다 <!-- omo:id=delivery-yta-api-contract;stage=2;scope=backend;review=3,6 -->
-- [ ] request-independent extraction service와 fenced worker/finalize가 구현된다 <!-- omo:id=delivery-yta-worker-runtime;stage=2;scope=backend;review=3,6 -->
-- [ ] same-release worker artifact와 installer/rotation/rollback dry-run 경로가 구현된다 <!-- omo:id=delivery-yta-worker-installer;stage=2;scope=backend;review=3,6 -->
-- [ ] owner/RLS/ACL/nondisclosure와 secret boundary가 PostgreSQL/PostgREST 테스트로 고정된다 <!-- omo:id=delivery-yta-security-tests;stage=2;scope=shared;review=3,6 -->
-- [ ] retry/dedupe/policy rotation/lease/permit/finalize/consumed-TTL 상태가 TDD로 고정된다 <!-- omo:id=delivery-yta-state-tests;stage=2;scope=shared;review=3,6 -->
-- [ ] `YT_IMPORT_BACKGROUND` submit/duplicate/offline/re-entry UI가 연결된다 <!-- omo:id=delivery-yta-import-ui;stage=4;scope=frontend;review=5,6 -->
-- [ ] `APP_SHELL_YOUTUBE_NOTIFICATIONS` toast/badge/list/archive/seen UI가 연결된다 <!-- omo:id=delivery-yta-shell-ui;stage=4;scope=frontend;review=5,6 -->
-- [ ] loading/empty/error/offline/read-only/unauthorized 및 retry gate가 구현된다 <!-- omo:id=delivery-yta-state-ui;stage=4;scope=frontend;review=5,6 -->
-- [ ] 390/320/desktop visual·a11y·scroll/focus evidence가 생성된다 <!-- omo:id=delivery-yta-design-evidence;stage=4;scope=frontend;review=5,6 -->
-- [ ] deterministic E2E와 exploratory QA/eval이 분리되어 current frontend head에서 통과한다 <!-- omo:id=delivery-yta-qa-split;stage=4;scope=frontend;review=5,6 -->
-- [ ] fixture/real DB/restricted worker/external smoke와 Manual Only 경계가 evidence에 구분된다 <!-- omo:id=delivery-yta-evidence-split;stage=4;scope=shared;review=6 -->
-- [ ] Stage 5와 final authority가 두 screen을 blocker 0으로 승인한다 <!-- omo:id=delivery-yta-final-authority;stage=4;scope=frontend;review=5,6 -->
-- [ ] Stage 6가 non-manual closeout, canonical bookkeeping, current-head checks를 승인한다 <!-- omo:id=delivery-yta-closeout;stage=4;scope=shared;review=6 -->
+- [x] DB schema, policy snapshot, queue/permit/credential authority와 exact RPC가 공식 계약대로 구현된다 <!-- omo:id=delivery-yta-db-authority;stage=2;scope=backend;review=3,6 -->
+- [x] 6개 신규 public endpoint와 기존 Quick Import `sync_wait` 호환 계약이 구현된다 <!-- omo:id=delivery-yta-api-contract;stage=2;scope=backend;review=3,6 -->
+- [x] request-independent extraction service와 fenced worker/finalize가 구현된다 <!-- omo:id=delivery-yta-worker-runtime;stage=2;scope=backend;review=3,6 -->
+- [x] same-release worker artifact와 installer/rotation/rollback dry-run 경로가 구현된다 <!-- omo:id=delivery-yta-worker-installer;stage=2;scope=backend;review=3,6 -->
+- [x] owner/RLS/ACL/nondisclosure와 secret boundary가 PostgreSQL/PostgREST 테스트로 고정된다 <!-- omo:id=delivery-yta-security-tests;stage=2;scope=shared;review=3,6 -->
+- [x] retry/dedupe/policy rotation/lease/permit/finalize/consumed-TTL 상태가 TDD로 고정된다 <!-- omo:id=delivery-yta-state-tests;stage=2;scope=shared;review=3,6 -->
+- [x] `YT_IMPORT_BACKGROUND` submit/duplicate/offline/re-entry UI가 연결된다 <!-- omo:id=delivery-yta-import-ui;stage=4;scope=frontend;review=5,6 -->
+- [x] `APP_SHELL_YOUTUBE_NOTIFICATIONS` toast/badge/list/archive/seen UI가 연결된다 <!-- omo:id=delivery-yta-shell-ui;stage=4;scope=frontend;review=5,6 -->
+- [x] loading/empty/error/offline/read-only/unauthorized 및 retry gate가 구현된다 <!-- omo:id=delivery-yta-state-ui;stage=4;scope=frontend;review=5,6 -->
+- [x] 390/320/desktop visual·a11y·scroll/focus evidence가 생성된다 <!-- omo:id=delivery-yta-design-evidence;stage=4;scope=frontend;review=5,6 -->
+- [x] deterministic E2E와 exploratory QA/eval이 분리되어 current frontend head에서 통과한다 <!-- omo:id=delivery-yta-qa-split;stage=4;scope=frontend;review=5,6 -->
+- [x] fixture/격리 real DB/restricted worker/외부 smoke와 Manual Only 경계가 evidence에 구분된다. 운영 local stack과 remote target은 사용하지 않았다 <!-- omo:id=delivery-yta-evidence-split;stage=4;scope=shared;review=6 -->
+- [x] fresh Stage 5 코드 재검토는 코드 finding 0, final authority는 두 screen blocker/major/minor 0으로 승인했다 <!-- omo:id=delivery-yta-final-authority;stage=4;scope=frontend;review=5,6 -->
+- [x] fresh Stage 6가 reviewed exact head `eb8d915b44b63611904760375f7c0606e629b6e0`의 non-manual closeout, canonical bookkeeping과 started checks 전부 success/intended skip을 `PASS — Findings 없음`으로 승인했다 <!-- omo:id=delivery-yta-closeout;stage=4;scope=shared;review=6 -->

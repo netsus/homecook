@@ -1,0 +1,6 @@
+{
+  "schema": "homecook.youtube-extraction-worker-timing",
+  "version": 1,
+  "lease_seconds": 300,
+  "heartbeat_interval_seconds": 30
+}

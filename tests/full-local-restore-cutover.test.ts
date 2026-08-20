@@ -205,6 +205,61 @@ hook-a
     expect(result.sql).not.toContain("supabase_functions.hooks");
   });
 
+  it("excludes local Auth and Storage migration ledgers from restored user data", () => {
+    const result = buildSanitizedPlatformData([
+      "COPY auth.schema_migrations (version) FROM stdin;",
+      "202608140001",
+      "\\.",
+      "COPY storage.migrations (id, name) FROM stdin;",
+      "61\\tlatest",
+      "\\.",
+      "COPY vault.secrets (id, name, secret) FROM stdin;",
+      "00000000-0000-4000-8000-000000000001\\tinternal\\tnever-copy",
+      "\\.",
+      "",
+    ].join("\n"));
+
+    expect(result.sql).not.toContain("auth.schema_migrations");
+    expect(result.sql).not.toContain("storage.migrations");
+    expect(result.sql).not.toContain("vault.secrets");
+    expect(result.manifest.relations).toEqual(expect.arrayContaining([
+      expect.objectContaining({ relation: "auth.schema_migrations", action: "exclude" }),
+      expect.objectContaining({ relation: "storage.migrations", action: "exclude" }),
+      expect.objectContaining({ relation: "vault.secrets", action: "exclude" }),
+    ]));
+  });
+
+  it("preserves durable full-local authority state while excluding transient auth-flow attempts", () => {
+    const result = buildSanitizedPlatformData([
+      "COPY private.auth_flow_attempts (attempt_hash) FROM stdin;",
+      "transient-hash",
+      "\\.",
+      "COPY private.full_local_auth_control (singleton, authority) FROM stdin;",
+      "t\\tlocal",
+      "\\.",
+      "COPY private.full_local_session_observability (singleton, unexpected_account_session_stale_count) FROM stdin;",
+      "t\\t0",
+      "\\.",
+      "COPY private.remote_auth_identity_epochs (issuer, owner_uuid) FROM stdin;",
+      "local\\t00000000-0000-4000-8000-000000000001",
+      "\\.",
+      "COPY private.youtube_extraction_current_policy (policy_key, enabled) FROM stdin;",
+      "primary\\tf",
+      "\\.",
+      "COPY private.youtube_extraction_worker_credentials (credential_name, current_generation) FROM stdin;",
+      "primary\\t2",
+      "\\.",
+      "",
+    ].join("\n"));
+
+    expect(result.sql).not.toContain("private.auth_flow_attempts");
+    expect(result.sql).toContain("COPY private.full_local_auth_control");
+    expect(result.sql).toContain("COPY private.full_local_session_observability");
+    expect(result.sql).toContain("COPY private.remote_auth_identity_epochs");
+    expect(result.sql).toContain("COPY private.youtube_extraction_current_policy");
+    expect(result.sql).toContain("COPY private.youtube_extraction_worker_credentials");
+  });
+
   it("inventories relation and column names without exposing row values", () => {
     expect(inventoryPlatformDataRelations(platformData)).toEqual(expect.arrayContaining([
       {

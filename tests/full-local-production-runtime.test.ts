@@ -487,6 +487,7 @@ describe("full-local production runtime static contract", () => {
     for (const image of Object.values(fullLocalImageRefsForPlatform("linux/arm64"))) {
       expect(compose).toContain(image);
     }
+    expect(compose).not.toMatch(/PGRST_JWT_AUD/u);
     expect(compose).toMatch(
       /auth:[\s\S]*postgres:[\s\S]*condition:\s*service_healthy/u,
     );

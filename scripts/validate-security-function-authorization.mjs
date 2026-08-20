@@ -58,6 +58,16 @@ const ADDITIVE_SOURCES = [
   {
     manifestPath: path.join(
       REPO_ROOT,
+      "docs/security/youtube-async-extraction-security-function-authorization-manifest.json",
+    ),
+    migrationPath: path.join(
+      REPO_ROOT,
+      "supabase/migrations/20260812160000_youtube_async_extraction_notification.sql",
+    ),
+  },
+  {
+    manifestPath: path.join(
+      REPO_ROOT,
       "docs/security/legacy-product-compat-security-function-authorization-manifest.json",
     ),
   },
@@ -715,9 +725,11 @@ function parseCreatedFunctionDefinitions(migration) {
       security_mode: /\bsecurity\s+definer\b/iu.test(definitionSql)
         ? "definer"
         : "invoker",
-      safe_search_path: searchPathMatch[1]
-        .split(",")
-        .map((entry) => entry.trim().replace(/^"|"$/gu, "").toLowerCase()),
+      safe_search_path: /^['"]{2}$/u.test(searchPathMatch[1].trim())
+        ? ["pg_catalog", "pg_temp"]
+        : searchPathMatch[1]
+          .split(",")
+          .map((entry) => entry.trim().replace(/^"|"$/gu, "").toLowerCase()),
       created_as_role:
         latestRoleTransition?.[1].toLowerCase() === "reset role"
           ? null
@@ -777,7 +789,7 @@ function parseExecuteAcl(migration, signature) {
     const grant = statement.match(/\bgrant execute on function .+ to (.+)$/u);
     if (grant) {
       for (const role of grant[1].split(",").map((entry) => entry.trim())) {
-        allowed.add(role);
+        if (ADDITIVE_PRINCIPALS.includes(role)) allowed.add(role);
       }
     }
     const revoke = statement.match(/\brevoke (?:all|execute) on function .+ from (.+)$/u);

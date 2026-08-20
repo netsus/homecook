@@ -14,6 +14,16 @@
 - 사용자 승인으로 공식 계약을 바꾸는 경우에도 구현보다 문서가 먼저다. 관련 공식 문서와 이 파일의 버전/경로를 같은 `contract-evolution` PR에서 먼저 갱신한다.
 - Supabase target과 gate의 canonical 운영 계약은 `docs/engineering/supabase-local-only-operations.md`다.
 
+## Public YouTube Import Background Activation `2026-08-15`
+
+사용자는 내부 테스트 중인 `https://app.mumeok.kr/recipes/new/youtube`에서 기존 동기 Quick Import 대신 durable background extraction과 앱 내 완료 알림을 실제로 사용하도록 명시 승인했다. 이 결정은 아래 2026-08-12 계약의 Quick Import UI 비변경 문장을 대체한다.
+
+- standalone 공개 화면은 URL 검증·미리보기 뒤 기존 `POST /recipes/youtube/extraction-jobs`로 접수하며 provider 완료를 기다리지 않는다.
+- 접수 뒤 `나가기`는 안전한 return context가 없으면 Home(`/`)으로 이동한다. planner chip/breadcrumb/nav active state를 표시하지 않는다.
+- 성공·실패는 기존 전역 toast/badge/durable list로 알리고 성공 CTA는 기존 검수/등록 화면으로 연결한다. 자동 등록은 하지 않는다.
+- 기존 `POST /recipes/youtube/extract`와 `submission_mode=sync_wait` 호환은 삭제하지 않으며 다른 승인된 동기 consumer를 위해 유지한다.
+- 신규 endpoint/status/error/DB table/RPC는 없다. full-local Supabase와 same-release restricted worker만 사용하며 Supabase Cloud/linked/remote target은 계속 forbidden이다.
+
 ## Supabase Local-Only Operations Contract-Evolution `2026-08-13`
 
 | 문서 | 변경 내용 |
@@ -50,7 +60,7 @@
 > exact head `57319a1c2552f1dad517a78786716be0596ddb3d`는 독립 reviewer task `019ff598-233b-72c1-92f5-4372596ede7a`가 공식 5종, CSoT, 승인 계획, full-local security/runtime 경계와 관련 tests/validators/current-head CI를 재검토해 `PASS`, Findings 0, 차단 0으로 확정했다. reviewer evidence successor는 계약 의미를 바꾸지 않는다.
 > enqueue/retry와 policy 전환 경합은 old/new 중 한 complete snapshot만 허용하며 mixed snapshot은 fail closed한다.
 >
-> public contract 영향은 `/api/v1` 보호 endpoint 6개, `202 Accepted`, job 상태·error·cursor·dedupe의 additive 추가다. 기존 `POST /recipes/youtube/extract`의 browser success data, `/recipes/new/youtube` Quick Import UI·sync·auto-register 의미와 기존 register/session ownership contract는 유지한다.
+> public contract 영향은 `/api/v1` 보호 endpoint 6개, `202 Accepted`, job 상태·error·cursor·dedupe의 additive 추가다. 기존 `POST /recipes/youtube/extract`의 browser success data와 register/session ownership contract는 유지한다. `/recipes/new/youtube`의 UI·제출 방식은 위 2026-08-15 activation이 background+notification으로 대체한다.
 >
 > rejected alternatives는 기존 동기 POST에 화면 이탈만 추가, 초기 외부 managed queue/Edge Function 전체 실행, 성장 전용 `user_progress_notifications` 재사용, 1차 Web Push 동시 도입이다. 선택은 Supabase durable DB queue + 동일 승인 SHA의 별도 restricted worker + terminal job 기반 앱 내 알림이다.
 >

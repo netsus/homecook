@@ -521,7 +521,9 @@ test.describe("QA accessibility smoke", () => {
       .fill("https://www.youtube.com/watch?v=recipe12345");
     await page.getByRole("button", { name: "가져오기" }).click();
     await expect(
-      page.getByRole("heading", { name: "추출 결과를 확인해 주세요" }),
+      page.getByRole("heading", {
+        name: "추출을 시작했어요. 완료되면 알려드릴게요.",
+      }),
     ).toBeVisible();
     await expectNoAxeViolations(page, {
       allowPrototypeDesktopColorContrast: true,

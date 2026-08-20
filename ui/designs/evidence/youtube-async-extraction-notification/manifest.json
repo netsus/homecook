@@ -1,0 +1,185 @@
+{
+  "captured_at": "2026-08-14T06:52:00Z",
+  "evidence_scope": "youtube-async-extraction-notification Stage 4 frontend",
+  "implementation_base": "25e8da8b04c2322f68d8f54837135399d7586da7",
+  "implementation_head": "3c1e0d422b0849f7f086d1b7fefc55bac41eee60",
+  "implementation_tree": "ee5e40de5c9de3e5bbbda766d233c7f118a2df3f",
+  "capture_source_head": "2113dacdbb464f6422424324a38823e8c3d6933a",
+  "capture_source_tree": "ed823a064774dee538df8cde47c483af08efa7dc",
+  "capture_reuse_reason": "The current implementation adds only a closed-mount focus guard after the existing capture: rendered markup, styles, copy, viewport geometry, and the screenshot generator are unchanged. A RED-to-GREEN component regression proves the non-visual focus behavior, so the 30 PNG bytes remain valid and are reused.",
+  "generator": "tests/e2e/youtube-async-extraction-notification.spec.ts",
+  "base_url": "http://127.0.0.1:3217",
+  "remote_supabase_access_count": 0,
+  "operational_local_supabase_mutation_count": 0,
+  "operational_app_3100_use_count": 0,
+  "captures": [
+    {
+      "file": "YT_IMPORT_BACKGROUND/mobile-390-initial.png",
+      "viewport": { "width": 390, "height": 844 },
+      "state": "initial-url-entry-explicit-disabled-action"
+    },
+    {
+      "file": "YT_IMPORT_BACKGROUND/mobile-390-enabled-url.png",
+      "viewport": { "width": 390, "height": 844 },
+      "state": "valid-url-enabled-action-contrast"
+    },
+    {
+      "file": "YT_IMPORT_BACKGROUND/mobile-390-submitting.png",
+      "viewport": { "width": 390, "height": 844 },
+      "state": "submitting-validation-in-flight"
+    },
+    {
+      "file": "YT_IMPORT_BACKGROUND/mobile-390-policy-changed.png",
+      "viewport": { "width": 390, "height": 844 },
+      "state": "policy-changed-url-preserved"
+    },
+    {
+      "file": "YT_IMPORT_BACKGROUND/mobile-390-accepted.png",
+      "viewport": { "width": 390, "height": 844 },
+      "state": "accepted-active-job-projected-whole-word-wrap"
+    },
+    {
+      "file": "YT_IMPORT_BACKGROUND/mobile-320-accepted-200-keyboard.png",
+      "viewport": { "width": 320, "height": 568 },
+      "state": "accepted-200-percent-keyboard-reduced-safe-area-cta-reflow"
+    },
+    {
+      "file": "YT_IMPORT_BACKGROUND/mobile-320-offline.png",
+      "viewport": { "width": 320, "height": 568 },
+      "state": "offline-input-preserved"
+    },
+    {
+      "file": "YT_IMPORT_BACKGROUND/mobile-390-quota-retry.png",
+      "viewport": { "width": 390, "height": 844 },
+      "state": "quota-exceeded-exact-retry-copy-whole-word-wrap"
+    },
+    {
+      "file": "YT_IMPORT_BACKGROUND/mobile-390-retry-active-projection.png",
+      "viewport": { "width": 390, "height": 844 },
+      "state": "accepted-retry-replacement-job-active-projection"
+    },
+    {
+      "file": "YT_IMPORT_BACKGROUND/mobile-390-planner-context-review.png",
+      "viewport": { "width": 390, "height": 844 },
+      "state": "polling-success-planner-context-register-complete-meal-cta"
+    },
+    {
+      "file": "YT_IMPORT_BACKGROUND/desktop-1280-active-duplicate.png",
+      "viewport": { "width": 1280, "height": 800 },
+      "state": "active-duplicate"
+    },
+    {
+      "file": "APP_SHELL_YOUTUBE_NOTIFICATIONS/mobile-390-success-toast.png",
+      "viewport": { "width": 390, "height": 844 },
+      "state": "grouped-terminal-toast-unseen-badge"
+    },
+    {
+      "file": "APP_SHELL_YOUTUBE_NOTIFICATIONS/mobile-390-global-toast-coordination.png",
+      "viewport": { "width": 390, "height": 844 },
+      "state": "youtube-and-growth-toast-shared-slot-non-overlap-reading-order"
+    },
+    {
+      "file": "APP_SHELL_YOUTUBE_NOTIFICATIONS/desktop-1440-global-toast-coordination.png",
+      "viewport": { "width": 1440, "height": 900 },
+      "state": "desktop-youtube-and-growth-shared-slot-non-overlap-reading-order-and-action-ownership"
+    },
+    {
+      "file": "APP_SHELL_YOUTUBE_NOTIFICATIONS/mobile-320-global-toast-coordination.png",
+      "viewport": { "width": 320, "height": 568 },
+      "state": "narrow-single-youtube-presentation-primary-controls-non-overlap-reading-order"
+    },
+    {
+      "file": "APP_SHELL_YOUTUBE_NOTIFICATIONS/mobile-320-global-toast-handoff.png",
+      "viewport": { "width": 320, "height": 568 },
+      "state": "narrow-youtube-dismiss-hands-slot-to-first-growth-with-badge-list-recovery"
+    },
+    {
+      "file": "APP_SHELL_YOUTUBE_NOTIFICATIONS/mobile-320-growth-toast-sequential-handoff.png",
+      "viewport": { "width": 320, "height": 568 },
+      "state": "narrow-first-growth-dismiss-hands-slot-to-next-growth-with-queued-timer-and-seen-preservation"
+    },
+    {
+      "file": "APP_SHELL_YOUTUBE_NOTIFICATIONS/mobile-390-draft-toast.png",
+      "viewport": { "width": 390, "height": 844 },
+      "state": "individual-draft-exact-body-primary-controls-non-overlap"
+    },
+    {
+      "file": "APP_SHELL_YOUTUBE_NOTIFICATIONS/mobile-390-consumed-toast.png",
+      "viewport": { "width": 390, "height": 844 },
+      "state": "individual-consumed-exact-title-and-recipe-cta"
+    },
+    {
+      "file": "APP_SHELL_YOUTUBE_NOTIFICATIONS/mobile-390-failed-toast.png",
+      "viewport": { "width": 390, "height": 844 },
+      "state": "individual-failed-exact-safe-body"
+    },
+    {
+      "file": "APP_SHELL_YOUTUBE_NOTIFICATIONS/mobile-390-consumed.png",
+      "viewport": { "width": 390, "height": 844 },
+      "state": "consumed-already-registered-recipe"
+    },
+    {
+      "file": "APP_SHELL_YOUTUBE_NOTIFICATIONS/mobile-390-expired-non-retryable.png",
+      "viewport": { "width": 390, "height": 844 },
+      "state": "expired-retryable-and-failed-non-retryable"
+    },
+    {
+      "file": "APP_SHELL_YOUTUBE_NOTIFICATIONS/mobile-390-empty.png",
+      "viewport": { "width": 390, "height": 844 },
+      "state": "unseen-shell-empty"
+    },
+    {
+      "file": "APP_SHELL_YOUTUBE_NOTIFICATIONS/mobile-390-offline.png",
+      "viewport": { "width": 390, "height": 844 },
+      "state": "shell-offline-inline-retry"
+    },
+    {
+      "file": "APP_SHELL_YOUTUBE_NOTIFICATIONS/mobile-390-unauthorized.png",
+      "viewport": { "width": 390, "height": 844 },
+      "state": "shell-unauthorized-dismissible-non-overlap-return-to-login"
+    },
+    {
+      "file": "APP_SHELL_YOUTUBE_NOTIFICATIONS/mobile-390-relogin-recovery.png",
+      "viewport": { "width": 390, "height": 844 },
+      "state": "actual-reload-logout-login-badge-list-destination-recovery"
+    },
+    {
+      "file": "APP_SHELL_YOUTUBE_NOTIFICATIONS/mobile-390-archive-background-unseen.png",
+      "viewport": { "width": 390, "height": 844 },
+      "state": "archive-visible-background-online-unseen-badge-refresh"
+    },
+    {
+      "file": "APP_SHELL_YOUTUBE_NOTIFICATIONS/mobile-320-failure-panel.png",
+      "viewport": { "width": 320, "height": 844 },
+      "state": "failure-title-message-320-200-percent-simulated-safe-area"
+    },
+    {
+      "file": "APP_SHELL_YOUTUBE_NOTIFICATIONS/desktop-1440-archive.png",
+      "viewport": { "width": 1440, "height": 900 },
+      "state": "cursor-archive-dedupe-scroll-focus-and-retryable-failure"
+    },
+    {
+      "file": "APP_SHELL_YOUTUBE_NOTIFICATIONS/desktop-1440-draft-toast.png",
+      "viewport": { "width": 1440, "height": 900 },
+      "state": "desktop-toast-primary-controls-non-overlap"
+    }
+  ],
+  "verification": {
+    "focused_vitest": "31 exact-head focused Growth and global-presentation component tests passed, including the RED-to-GREEN 320px single-card grant, queued timer preservation, sequential handoff, and 390px/desktop stacking regressions",
+    "youtube_async_regression": "93 focused backend/worker/runtime/installer/migration tests and 56 isolated random-port PostgreSQL/PostgREST integration tests passed; the 299/300/301-second reclaim boundary, 30-second heartbeat provenance, canonical artifact closure, target ACL principals, release metadata, permit/lock/fence, quota, secret provenance, and durable failure regressions remain covered",
+    "playwright": "27 deterministic scenarios passed; 81 cross-project executions passed on isolated port 3217; 30 exact-code-head screenshots captured",
+    "axe": "0 violations on accepted CTA, grouped and individual toast, unauthorized notice, and 320px reflow surfaces with color-contrast enabled",
+    "exploratory_qa": "97/100; 42/46 covered; 4 independent authority or real-worker/DB items intentionally not covered",
+    "lint_typecheck": "passed on exact code head",
+    "official_frontend_pr_gate": "passed on isolated port 3217: lint, typecheck, 2,741 product tests, build, 62 smoke passed/10 skipped, 8 a11y passed/1 skipped, and 12 visual passed",
+    "security_e2e": "12 passed on isolated port 3217",
+    "full_vitest": "6,160 passed and 459 skipped",
+    "dependency_audit": "pnpm install --frozen-lockfile and pnpm audit --audit-level high passed; nanoid 3.3.18 resolved; remaining advisories are 1 low and 1 moderate",
+    "visual_verdict": "93/100 pass"
+  },
+  "limitations": [
+    "This is mock-API browser evidence and does not replace real local Supabase worker crash/reclaim or cross-user DB verification.",
+    "The latest 320px Growth sequencing and frozen 300-second lease findings are repaired; independent design and backend/security re-review of the new exact PR head, Stage 5, final authority, and Stage 6 remain pending.",
+    "Physical-device screen reader, safe-area, and virtual-keyboard checks remain Manual Only."
+  ]
+}

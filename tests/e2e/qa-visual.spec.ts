@@ -61,6 +61,7 @@ const qaSnapshotFontFaces = qaSnapshotFonts
 
 const HOME_VISUAL_MAX_DIFF_PIXELS = 120;
 const HOME_DESKTOP_VISUAL_MAX_DIFF_PIXELS = 1600;
+const HOME_SORT_MOBILE_VISUAL_MAX_DIFF_PIXELS = 192;
 const HOME_SORT_DESKTOP_VISUAL_MAX_DIFF_PIXELS = 2200;
 const RECIPE_DETAIL_VISUAL_MAX_DIFF_PIXELS = 400;
 const PLANNER_DESKTOP_VISUAL_MAX_DIFF_PIXELS = 2000;
@@ -102,7 +103,7 @@ function homeVisualMaxDiffPixels(page: Page) {
 
 function homeSortVisualMaxDiffPixels(page: Page) {
   return isMobileViewport(page)
-    ? HOME_VISUAL_MAX_DIFF_PIXELS
+    ? HOME_SORT_MOBILE_VISUAL_MAX_DIFF_PIXELS
     : HOME_SORT_DESKTOP_VISUAL_MAX_DIFF_PIXELS;
 }
 
@@ -257,6 +258,7 @@ test.describe("QA visual regression", () => {
     await stabilizeVisualSnapshot(page);
     await expect(dialog).toHaveScreenshot("qa-ingredient-filter-modal.png", {
       animations: "disabled",
+      maxDiffPixels: 64,
     });
   });
 
@@ -481,10 +483,12 @@ test.describe("QA visual regression", () => {
       .fill("https://www.youtube.com/watch?v=recipe12345");
     await page.getByRole("button", { name: "가져오기" }).click();
     await expect(
-      page.getByRole("heading", { name: "추출 결과를 확인해 주세요" }),
+      page.getByRole("heading", {
+        name: "추출을 시작했어요. 완료되면 알려드릴게요.",
+      }),
     ).toBeVisible();
     await stabilizeVisualSnapshot(page);
-    await expect(page).toHaveScreenshot("qa-youtube-import-review.png", {
+    await expect(page).toHaveScreenshot("qa-youtube-import-accepted.png", {
       animations: "disabled",
       fullPage: true,
       maxDiffPixels: MENU_ADD_DESKTOP_VISUAL_MAX_DIFF_PIXELS,

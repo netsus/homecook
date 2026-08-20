@@ -43,6 +43,40 @@ const officialTuple = [
 ];
 
 describe("YouTube background extraction contract evolution", () => {
+  it("routes the public YouTube import surface through background submission", () => {
+    const page = read("app/recipes/new/youtube/page.tsx");
+
+    expect(page).toContain('import { YoutubeImportScreen } from "@/components/recipe/youtube-import-screen";');
+    expect(page).toContain("<YoutubeImportScreen");
+    expect(page).toContain('entryContext="standalone"');
+    expect(page).not.toContain("RecipioYoutubeImportScreen");
+  });
+
+  it("seeds the global notification center from the server-owned session", () => {
+    const layout = read("app/layout.tsx");
+    const notificationCenter = read(
+      "components/youtube-extraction/youtube-extraction-notification-center.tsx",
+    );
+
+    expect(layout).toContain("initialAuthenticated={false}");
+    expect(layout).toContain("resolveAuthenticatedOnClient");
+    expect(notificationCenter).toContain('fetchYoutubeExtractionNotifications("unseen-completed")');
+    expect(notificationCenter).not.toContain('import { fetchUserProfile } from "@/lib/api/mypage";');
+    expect(notificationCenter).not.toContain("supabase.auth.getSession()");
+  });
+
+  it("makes the mobile URL import disabled CTA visually distinct without pressed motion", () => {
+    const css = read("app/globals.css");
+    const disabledRule = css.match(
+      /\.yt-mobile-import-shell\s+\.web-button:disabled\s*\{([^}]*)\}/u,
+    );
+
+    expect(disabledRule?.[1]).toContain("background: var(--surface-fill)");
+    expect(disabledRule?.[1]).toContain("color: var(--text-3)");
+    expect(disabledRule?.[1]).toContain("opacity: 1");
+    expect(disabledRule?.[1]).toContain("transform: none");
+  });
+
   it("promotes one consistent additive five-document tuple", () => {
     const source = read("docs/sync/CURRENT_SOURCE_OF_TRUTH.md");
 
@@ -99,7 +133,7 @@ describe("YouTube background extraction contract evolution", () => {
     expect(source).toContain("origin/master@d38ee2e4a4c8cafc00dce713919c3f3e8df2bdda");
   });
 
-  it("locks the six public endpoints, states, wrappers, dedupe, and Quick Import compatibility", () => {
+  it("locks the six public endpoints, states, wrappers, dedupe, and standalone background consumer", () => {
     const api = read(officialTuple[4]);
     const endpoints = [
       "POST /recipes/youtube/extraction-jobs",
@@ -121,7 +155,8 @@ describe("YouTube background extraction contract evolution", () => {
     expect(api).toContain("deduplicated=true");
     expect(api).toContain("503 QUEUE_BUSY");
     expect(api).toContain("504 EXTRACTION_TIMEOUT");
-    expect(api).toContain("Quick Import UI·auto-register 의미는 유지");
+    expect(api).toContain("standalone 공개 화면의 async UI 전환은 2026-08-15 사용자 승인으로 활성화했다");
+    expect(api).toContain("자동 등록하지 않는다");
     expect(api).toContain("엔드포인트 전체 목록 (108개) `v1.2.39`");
     expect(api).toContain("active 107개 + 삭제된 `2-4` tombstone 1개");
   });
@@ -380,7 +415,7 @@ describe("YouTube background extraction contract evolution", () => {
       "success/failure/expired",
       "offline",
       "aria-live=\"polite\"",
-      "Quick Import 비변경",
+      "standalone background",
     ]) {
       expect(screens).toContain(token);
     }
@@ -634,7 +669,6 @@ describe("YouTube background extraction contract evolution", () => {
       "keyframeTotalLimit: EXACT.keyframeTotalLimit",
       "keyframesPerRecipe: EXACT.keyframeTotalLimit",
       "screenOcrMode: EXACT.screenOcrMode",
-      "{ useApifyFallback: true }",
       "useVisual: true",
       'sourceMode: "source-text"',
       'recipeMode: "single"',
@@ -644,6 +678,8 @@ describe("YouTube background extraction contract evolution", () => {
     ]) {
       expect(worker).toContain(runtimeMarker);
     }
+    expect(worker).toMatch(/useApifyFallback:\s*true/u);
+    expect(worker).toContain("workerRpcClient");
     expect(worker).toContain("noCache: true");
     expect(worker).toContain('runType: "cold"');
     expect(worker).toContain("timeoutMs: TOTAL_TIMEOUT_MS");

@@ -60,7 +60,22 @@ export function mapStorageRowsToPayloadReferences(rows, physicalPaths) {
         `stub/${base}-$v-${version}`,
         `stub/stub/${base}-$v-${version}`,
       ];
-      const matchingPaths = physicalPaths.filter((path) => candidates.includes(path));
+      const matchingPaths = physicalPaths.filter((path) =>
+        candidates.includes(path)
+        || candidates.some((candidate) => {
+          const suffix = `/${candidate}`;
+          if (!path.endsWith(suffix)) return false;
+          const prefix = path.slice(0, -suffix.length).split("/");
+          return prefix.length === 2
+            && prefix.every((segment) => {
+              try {
+                safeStorageSegment(segment, "tenant/project prefix");
+                return true;
+              } catch {
+                return false;
+              }
+            });
+        }));
       if (matchingPaths.length !== 1) {
         throw new Error("Database reference must resolve one exact Storage payload");
       }

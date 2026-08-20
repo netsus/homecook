@@ -78,6 +78,7 @@ const ROUTE_METADATA_BY_KEY = {
   "POST /api/v1/recipes/tag-suggestions": { owner_scope: "authenticated-user", persists_personal_state: false },
   "POST /api/v1/recipes/youtube/candidate-drafts": { owner_scope: "authenticated-user", persists_personal_state: true },
   "POST /api/v1/recipes/youtube/extract": { owner_scope: "authenticated-user", persists_personal_state: true },
+  "POST /api/v1/recipes/youtube/extraction-jobs": { owner_scope: "authenticated-user", persists_personal_state: true },
   "POST /api/v1/recipes/youtube/ingredient-registration": { owner_scope: "authenticated-user", persists_personal_state: true },
   "POST /api/v1/recipes/youtube/register": { owner_scope: "authenticated-user", persists_personal_state: true },
   "POST /api/v1/recipes/youtube/validate": { owner_scope: "authenticated-user", persists_personal_state: false },
@@ -88,6 +89,8 @@ const ROUTE_METADATA_BY_KEY = {
   "PATCH /api/v1/shopping/lists/[list_id]/items/reorder": { owner_scope: "authenticated-user", persists_personal_state: true },
   "POST /api/v1/users/me/gamification/notifications/seen": { owner_scope: "authenticated-user", persists_personal_state: true },
   "POST /api/v1/users/me/gamification/tutorial-quests/[quest_key]/dismiss": { owner_scope: "authenticated-user", persists_personal_state: true },
+  "POST /api/v1/users/me/youtube-extraction-jobs/delivered": { owner_scope: "authenticated-user", persists_personal_state: true },
+  "POST /api/v1/users/me/youtube-extraction-jobs/seen": { owner_scope: "authenticated-user", persists_personal_state: true },
   "POST /api/v1/users/me/cutover-quarantine-resolution": { owner_scope: "authenticated-user", persists_personal_state: true },
   "PATCH /api/v1/users/me": { owner_scope: "authenticated-user", persists_personal_state: true },
   "DELETE /api/v1/users/me": { owner_scope: "authenticated-user", persists_personal_state: true },
@@ -114,6 +117,7 @@ const LIB_FILE_OWNER_SCOPE = {
   "lib/server/user-growth-activity.ts": "authenticated-user",
   "lib/server/user-progress.ts": "authenticated-user",
   "lib/server/youtube-import.ts": "authenticated-user",
+  "lib/server/youtube-extraction-worker-rpc.ts": "system",
 };
 
 const ROUTE_FILE_METADATA_BY_ROUTE = {

@@ -104,6 +104,12 @@ describe("local Mac production environment", () => {
         "DATA_SUPABASE_URL=http://127.0.0.1:54321",
         "DATA_SUPABASE_PUBLISHABLE_KEY=data-anon-secret",
         "DATA_SUPABASE_SECRET_KEY=data-secret",
+        "HOMECOOK_ENABLE_YOUTUBE_ASYNC_EXTRACTION=1",
+        "HOMECOOK_YOUTUBE_EXTRACTION_APP_DESCRIPTOR_PATH=/Users/tester/.homecook/youtube/app.json",
+        "HOMECOOK_YOUTUBE_EXTRACTION_EXPECTED_SCHEMA_PATH=/Users/tester/.homecook/youtube/schema.json",
+        "HOMECOOK_YOUTUBE_EXTRACTION_WORKER_MANIFEST_PATH=/Users/tester/.homecook/youtube/artifact.json",
+        "HOMECOOK_YOUTUBE_EXTRACTION_FINGERPRINT_HMAC_KEY_V1=fingerprint-secret-that-is-at-least-32-bytes",
+        "HOMECOOK_YOUTUBE_EXTRACTION_CURSOR_HMAC_KEY_V1=cursor-secret-that-is-at-least-32-bytes",
         "GEMINI_API_KEY=gemini-secret",
         "GH_TOKEN=must-not-copy",
         "HOMECOOK_MAINTENANCE_WORKER_SECRET=must-not-copy",
@@ -136,6 +142,22 @@ describe("local Mac production environment", () => {
 
     expect(result.contents).toContain("NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321");
     expect(result.contents).toContain("SUPABASE_SERVICE_ROLE_KEY=service-secret");
+    expect(result.contents).toContain("HOMECOOK_ENABLE_YOUTUBE_ASYNC_EXTRACTION=1");
+    expect(result.contents).toContain(
+      "HOMECOOK_YOUTUBE_EXTRACTION_APP_DESCRIPTOR_PATH=/Users/tester/.homecook/youtube/app.json",
+    );
+    expect(result.contents).toContain(
+      "HOMECOOK_YOUTUBE_EXTRACTION_EXPECTED_SCHEMA_PATH=/Users/tester/.homecook/youtube/schema.json",
+    );
+    expect(result.contents).toContain(
+      "HOMECOOK_YOUTUBE_EXTRACTION_WORKER_MANIFEST_PATH=/Users/tester/.homecook/youtube/artifact.json",
+    );
+    expect(result.contents).toContain(
+      "HOMECOOK_YOUTUBE_EXTRACTION_FINGERPRINT_HMAC_KEY_V1=fingerprint-secret-that-is-at-least-32-bytes",
+    );
+    expect(result.contents).toContain(
+      "HOMECOOK_YOUTUBE_EXTRACTION_CURSOR_HMAC_KEY_V1=cursor-secret-that-is-at-least-32-bytes",
+    );
     expect(result.contents).toContain("NEXT_PUBLIC_APP_URL=http://127.0.0.1:3100");
     expect(result.contents).toContain("NEXT_PUBLIC_SITE_URL=http://127.0.0.1:3100");
     expect(result.contents).toContain("HOMECOOK_PRODUCTION_EXPOSURE=local-only");

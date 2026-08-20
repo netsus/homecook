@@ -7,7 +7,6 @@ const E2E_AUTH_OVERRIDE_KEY = "homecook.e2e-auth-override";
 const E2E_AUTH_OVERRIDE_COOKIE = E2E_AUTH_OVERRIDE_KEY;
 const E2E_APP_ORIGIN = process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:3100";
 const YOUTUBE_IMPORT_URL = "/menu/add/youtube";
-const RECIPIO_IMPORT_URL = "/recipes/new/youtube";
 const EVIDENCE_DIR = path.resolve(
   process.cwd(),
   "ui/designs/evidence/32-youtube-visual-quantity-enrichment",
@@ -341,9 +340,9 @@ test.describe("Slice 32: YouTube visual quantity enrichment", () => {
       });
     });
 
-    await page.goto(RECIPIO_IMPORT_URL);
+    await page.goto(YOUTUBE_IMPORT_URL);
     await stabilize(page);
-    await page.getByLabel("유튜브 링크").fill("https://www.youtube.com/watch?v=visual12345");
+    await page.getByLabel("유튜브 URL").fill("https://www.youtube.com/watch?v=visual12345");
     await page.getByRole("button", { name: "가져오기" }).click();
 
     await expect(page.getByText("검수가 필요해요")).toBeVisible();

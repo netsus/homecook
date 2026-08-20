@@ -619,6 +619,17 @@
       "activation_phase": "f0-expand-legacy-guard"
     },
     {
+      "key": "POST /api/v1/recipes/youtube/extraction-jobs",
+      "route": "/api/v1/recipes/youtube/extraction-jobs",
+      "source_file": "app/api/v1/recipes/youtube/extraction-jobs/route.ts",
+      "method": "POST",
+      "owner_scope": "authenticated-user",
+      "persists_personal_state": true,
+      "guard_mode": "protected-rpc-or-database-before-trigger",
+      "expected_generation": "joint-promote-server-verified-session-binding",
+      "activation_phase": "f0-expand-legacy-guard"
+    },
+    {
       "key": "POST /api/v1/recipes/youtube/ingredient-registration",
       "route": "/api/v1/recipes/youtube/ingredient-registration",
       "source_file": "app/api/v1/recipes/youtube/ingredient-registration/route.ts",
@@ -699,6 +710,28 @@
       "key": "POST /api/v1/users/me/gamification/tutorial-quests/[quest_key]/dismiss",
       "route": "/api/v1/users/me/gamification/tutorial-quests/[quest_key]/dismiss",
       "source_file": "app/api/v1/users/me/gamification/tutorial-quests/[quest_key]/dismiss/route.ts",
+      "method": "POST",
+      "owner_scope": "authenticated-user",
+      "persists_personal_state": true,
+      "guard_mode": "protected-rpc-or-database-before-trigger",
+      "expected_generation": "joint-promote-server-verified-session-binding",
+      "activation_phase": "f0-expand-legacy-guard"
+    },
+    {
+      "key": "POST /api/v1/users/me/youtube-extraction-jobs/delivered",
+      "route": "/api/v1/users/me/youtube-extraction-jobs/delivered",
+      "source_file": "app/api/v1/users/me/youtube-extraction-jobs/delivered/route.ts",
+      "method": "POST",
+      "owner_scope": "authenticated-user",
+      "persists_personal_state": true,
+      "guard_mode": "protected-rpc-or-database-before-trigger",
+      "expected_generation": "joint-promote-server-verified-session-binding",
+      "activation_phase": "f0-expand-legacy-guard"
+    },
+    {
+      "key": "POST /api/v1/users/me/youtube-extraction-jobs/seen",
+      "route": "/api/v1/users/me/youtube-extraction-jobs/seen",
+      "source_file": "app/api/v1/users/me/youtube-extraction-jobs/seen/route.ts",
       "method": "POST",
       "owner_scope": "authenticated-user",
       "persists_personal_state": true,
@@ -2100,11 +2133,81 @@
       "activation_phase": "always"
     },
     {
+      "key": "rpc|lib/server/youtube-extraction-worker-rpc.ts|finalize_youtube_extraction_job|4",
+      "kind": "rpc",
+      "operation": "call",
+      "target": "finalize_youtube_extraction_job",
+      "line": 227,
+      "source_file": "lib/server/youtube-extraction-worker-rpc.ts",
+      "route": null,
+      "owner_scope": "system",
+      "persists_personal_state": false,
+      "guard_mode": "not_applicable",
+      "expected_generation": "not_applicable",
+      "activation_phase": "always"
+    },
+    {
+      "key": "rpc|lib/server/youtube-extraction-worker-rpc.ts|resolve_youtube_extraction_job_draft|5",
+      "kind": "rpc",
+      "operation": "call",
+      "target": "resolve_youtube_extraction_job_draft",
+      "line": 289,
+      "source_file": "lib/server/youtube-extraction-worker-rpc.ts",
+      "route": null,
+      "owner_scope": "system",
+      "persists_personal_state": false,
+      "guard_mode": "not_applicable",
+      "expected_generation": "not_applicable",
+      "activation_phase": "always"
+    },
+    {
+      "key": "rpc|lib/server/youtube-extraction-worker-rpc.ts|resolve_youtube_extraction_worker_methods|1",
+      "kind": "rpc",
+      "operation": "call",
+      "target": "resolve_youtube_extraction_worker_methods",
+      "line": 128,
+      "source_file": "lib/server/youtube-extraction-worker-rpc.ts",
+      "route": null,
+      "owner_scope": "system",
+      "persists_personal_state": false,
+      "guard_mode": "not_applicable",
+      "expected_generation": "not_applicable",
+      "activation_phase": "always"
+    },
+    {
+      "key": "rpc|lib/server/youtube-extraction-worker-rpc.ts|start_youtube_extraction_attempt|3",
+      "kind": "rpc",
+      "operation": "call",
+      "target": "start_youtube_extraction_attempt",
+      "line": 213,
+      "source_file": "lib/server/youtube-extraction-worker-rpc.ts",
+      "route": null,
+      "owner_scope": "system",
+      "persists_personal_state": false,
+      "guard_mode": "not_applicable",
+      "expected_generation": "not_applicable",
+      "activation_phase": "always"
+    },
+    {
+      "key": "rpc|lib/server/youtube-extraction-worker-rpc.ts|update_youtube_extraction_job_title|2",
+      "kind": "rpc",
+      "operation": "call",
+      "target": "update_youtube_extraction_job_title",
+      "line": 140,
+      "source_file": "lib/server/youtube-extraction-worker-rpc.ts",
+      "route": null,
+      "owner_scope": "system",
+      "persists_personal_state": false,
+      "guard_mode": "not_applicable",
+      "expected_generation": "not_applicable",
+      "activation_phase": "always"
+    },
+    {
       "key": "rpc|lib/server/youtube-import.ts|consume_youtube_ingredient_registration_rate_limit|1",
       "kind": "rpc",
       "operation": "call",
       "target": "consume_youtube_ingredient_registration_rate_limit",
-      "line": 10745,
+      "line": 10715,
       "source_file": "lib/server/youtube-import.ts",
       "route": null,
       "owner_scope": "authenticated-user",
@@ -2118,7 +2221,7 @@
       "kind": "rpc",
       "operation": "call",
       "target": "register_youtube_ingredient",
-      "line": 10772,
+      "line": 10742,
       "source_file": "lib/server/youtube-import.ts",
       "route": null,
       "owner_scope": "authenticated-user",
@@ -2132,7 +2235,7 @@
       "kind": "rpc",
       "operation": "call",
       "target": "register_youtube_recipe_from_session",
-      "line": 10903,
+      "line": 10873,
       "source_file": "lib/server/youtube-import.ts",
       "route": null,
       "owner_scope": "authenticated-user",
@@ -2179,6 +2282,6 @@
       "on_delete": "cascade"
     }
   ],
-  "generated_at": "2026-08-15T05:11:40.529Z",
-  "checksum": "89a477ed46e9790605c76e6ace5199808a55559261b48874c2f9f15f28ee2ded"
+  "generated_at": "2026-08-20T16:28:05.977Z",
+  "checksum": "9ce4ca178fd19f85f5fd32564a7cd618ed5097c0e0a35421af0b2cd973ae1af9"
 }
