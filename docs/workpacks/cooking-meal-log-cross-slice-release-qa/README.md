@@ -48,16 +48,19 @@ F0와 #1~#13에서 병합된 계정 세대, 제품 검색·재료 연결, 개인
 
 automated/runtime predecessor gate: satisfied at the frozen base above. This does not close the overall release: overall lifecycle is not complete while Manual/server-Mac/OAuth/device/AT/full-WCAG, local-production/rehearsal/backup-restore/cutover, and capability/R/R+1/R+2/required-key/activation evidence remains pending.
 
-Stage 2 entry still requires this relock PR merge, separate internal 1.5/security-DB-operations/five-axis/design-authority-plan zero-finding reviews, and terminal current-head checks. A later predecessor repair or evidence invalidation fails the gate closed and requires this table to be relocked again.
+Stage 2 entry still requires this relock PR merge and the documented post-merge preflight. The four separate Stage 1 review gates are approved on the exact reviewed head below, but a later predecessor repair or evidence invalidation fails the gate closed and requires this table to be relocked again.
 
 ## Stage 1 Current Gate
 
 - Draft PR: `https://github.com/netsus/homecook/pull/1373`
-- internal 1.5 `01a01f2e-ae07-7f42-88be-87727228702a`: `REQUEST_CHANGES 0/2/1`; this author repair addresses all three findings.
-- security/DB/operations `01a01f2e-b2ed-7f32-bbaf-204b58613435`: `APPROVE 0/0/0`; preserved unchanged.
-- five-axis `01a01f2e-ba20-7022-8b3b-5b90d15572d0`: `REQUEST_CHANGES 0/3/1`; this author repair addresses all four findings.
-- design-authority-plan `01a01f2e-bf69-7f23-9c7c-7982855195bc`: `REQUEST_CHANGES 0/2/1`; this author repair restores the complete 8-screen reuse contract.
-- reviewer verdict, doc validators and RED/GREEN counts are Stage 1 narrative/current-gate evidence, not Stage 2 runtime checklist IDs. Fresh same-task exact-head re-reviews remain required.
+- exact reviewed identity: head `2c33b38cf9f3badb72d610ad7a47abe70bf8907f`, tree `23fab93ab372174b9f531cf3414b348b1a724894`.
+- internal1.5 `01a01f2e-ae07-7f42-88be-87727228702a`: `APPROVE 0/0/0`, drift `0`.
+- security/DB/operations `01a01f2e-b2ed-7f32-bbaf-204b58613435`: `APPROVE 0/0/0`, drift `0`.
+- five-axis `01a01f2e-ba20-7022-8b3b-5b90d15572d0`: `APPROVE 0/0/0`, drift `0`.
+- design-authority-plan `01a01f2e-bf69-7f23-9c7c-7982855195bc`: `APPROVE 0/0/0`, drift `0`.
+- retained machine-readable evidence: `docs/workpacks/cooking-meal-log-cross-slice-release-qa/evidence/2026-08-21-stage1-final-independent-approvals.json`.
+- lifecycle/approval/verification/evaluation은 `planned / codex_approved / passed / passed`다. Stage 2 remains not started; runtime/full 8-lane 287041/Manual/activation evidence와 모든 runtime acceptance item은 pending이다.
+- 이 projection successor는 네 reviewer의 exact-head verdict를 기록할 뿐 새 리뷰나 자기 승인을 만들지 않는다. successor current-head CI와 final drift confirmation은 별도 reviewer 확인 대상이다.
 - repair budget: docs repair budget max 3; backend/frontend inline repair rounds `0/0`. Runtime defect는 separate failing-test-first TDD repair PR로 이동하고 full rerun after its merge가 필요하다.
 
 ## Backend First Contract

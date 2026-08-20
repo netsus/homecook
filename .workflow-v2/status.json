@@ -2756,8 +2756,8 @@
       "branch": "docs/cooking-meal-log-cross-slice-relock",
       "pr_path": "https://github.com/netsus/homecook/pull/1373",
       "lifecycle": "planned",
-      "approval_state": "not_started",
-      "verification_status": "pending",
+      "approval_state": "codex_approved",
+      "verification_status": "passed",
       "required_checks": [
         "pnpm validate:source-of-truth-sync",
         "pnpm validate:workflow-v2",
@@ -2771,10 +2771,10 @@
         "pnpm audit --audit-level high",
         "git diff --check"
       ],
-      "notes": "Draft PR #1373 remains planned/not_started/pending/not_started. Third repair uses actual production-route list1/list20 service-boundary measurements with derived N+1 growth and loop/callback negatives. Validator semantics now cover artifact type, pinned-isolated/remote-zero DB, local/remote-zero security with mutation inventory, rollback invariants and one shared generated_at. Lane-specific env allowlists remove ambient migration/skip/filter/PG/cloud/link/credential overrides. Final validation binds git HEAD, expected/artifact head, clean worktree and canonical repo attempt root, rejecting outside/stale/dirty execution. Fresh #14 authority ownership, predecessor reuse provenance, budgets 3/0/0, official/local-only/Manual bounds and HOME semantic no-op are preserved. No remote/linked/cloud, full-local/server-Mac/production or Manual operation is authorized.",
-      "evaluation_status": "not_started",
-      "evaluation_round": 0,
-      "last_evaluator_result": null,
+      "notes": "Canonical closeout owner: .workflow-v2/work-items/cooking-meal-log-cross-slice-release-qa.json#closeout. Roadmap is docs while lifecycle remains planned. Four independent Stage 1 tasks approved exact head 2c33b38cf9f3badb72d610ad7a47abe70bf8907f / tree 23fab93ab372174b9f531cf3414b348b1a724894 with APPROVE 0/0/0, drift 0 and unresolved required findings 0. Stage 2 remains not started; runtime/full 8-lane 287041/Manual/activation, Delivery Checklist, acceptance and design authority remain pending. auto_merge remains false. closeout_phase=collecting closeout_recovery=manual_patch:3 closeout_repair=codex:3|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:Codex_task_01a01f2e-ae07-7f42-88be-87727228702a,Codex_task_01a01f2e-b2ed-7f32-bbaf-204b58613435,Codex_task_01a01f2e-ba20-7022-8b3b-5b90d15572d0,Codex_task_01a01f2e-bf69-7f23-9c7c-7982855195bc,docs/workpacks/cooking-meal-log-cross-slice-release-qa/evidence/2026-08-21-stage1-final-independent-approvals.json",
+      "evaluation_status": "passed",
+      "evaluation_round": 3,
+      "last_evaluator_result": "APPROVE 0/0/0 drift 0 by four independent Stage 1 tasks at 2c33b38cf9f3badb72d610ad7a47abe70bf8907f",
       "auto_merge_eligible": false,
       "blocked_reason_code": null
     },

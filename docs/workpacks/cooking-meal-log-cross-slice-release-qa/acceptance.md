@@ -4,12 +4,14 @@
 
 ## Stage 1 Current Gate Evidence
 
-- Draft PR: `https://github.com/netsus/homecook/pull/1373`; lifecycle/approval/verification/evaluation은 `planned / not_started / pending / not_started`다.
-- internal 1.5 task `01a01f2e-ae07-7f42-88be-87727228702a`: `REQUEST_CHANGES 0/2/1`; ownership, Stage 1 narrative, live PR path finding을 이 author repair가 수리한다.
-- security/DB/operations task `01a01f2e-b2ed-7f32-bbaf-204b58613435`: `APPROVE 0/0/0`; 그 계약과 판정을 변경하지 않는다.
-- five-axis task `01a01f2e-ba20-7022-8b3b-5b90d15572d0`: `REQUEST_CHANGES 0/3/1`; owning tests, final evidence SHA, repair budget, machine evidence를 이 author repair가 수리한다.
-- design-authority-plan task `01a01f2e-bf69-7f23-9c7c-7982855195bc`: `REQUEST_CHANGES 0/2/1`; 8-screen required matrix와 merged reuse index를 이 author repair가 수리한다.
-- 위 reviewer/validator 결과는 Stage 1 bookkeeping이며 Stage 2/4 runtime acceptance item이 아니다. 이 author는 repair만 수행하고 같은 task들의 fresh exact-head re-review를 승인으로 대체하지 않는다.
+- Draft PR: `https://github.com/netsus/homecook/pull/1373`; lifecycle/approval/verification/evaluation은 `planned / codex_approved / passed / passed`다.
+- exact reviewed identity: head `2c33b38cf9f3badb72d610ad7a47abe70bf8907f`, tree `23fab93ab372174b9f531cf3414b348b1a724894`.
+- internal1.5 task `01a01f2e-ae07-7f42-88be-87727228702a`: `APPROVE 0/0/0`, drift `0`.
+- security/DB/operations task `01a01f2e-b2ed-7f32-bbaf-204b58613435`: `APPROVE 0/0/0`, drift `0`.
+- five-axis task `01a01f2e-ba20-7022-8b3b-5b90d15572d0`: `APPROVE 0/0/0`, drift `0`.
+- design-authority-plan task `01a01f2e-bf69-7f23-9c7c-7982855195bc`: `APPROVE 0/0/0`, drift `0`.
+- retained evidence: `docs/workpacks/cooking-meal-log-cross-slice-release-qa/evidence/2026-08-21-stage1-final-independent-approvals.json`.
+- 위 verdict는 Stage 1 bookkeeping/current gate evidence다. Stage 2 remains not started이며 runtime/full 8-lane 287041/Manual/activation 완료나 아래 Stage 2/4 acceptance 체크를 주장하지 않는다.
 
 ## Happy Path
 

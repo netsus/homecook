@@ -195,6 +195,18 @@ const securityEvidencePath = `${attemptEvidenceRoot}/security.json`;
 const performanceEvidencePath = `${attemptEvidenceRoot}/performance.json`;
 const queryCountEvidencePath = `${attemptEvidenceRoot}/query-count.json`;
 const rollbackEvidencePath = `${attemptEvidenceRoot}/rollback.json`;
+const stage1ApprovalEvidencePath =
+  "docs/workpacks/cooking-meal-log-cross-slice-release-qa/evidence/2026-08-21-stage1-final-independent-approvals.json";
+const stage1ReviewedHead =
+  "2c33b38cf9f3badb72d610ad7a47abe70bf8907f";
+const stage1ReviewedTree =
+  "23fab93ab372174b9f531cf3414b348b1a724894";
+const stage1ApprovalTasks = [
+  ["internal1.5", "01a01f2e-ae07-7f42-88be-87727228702a"],
+  ["security/DB/operations", "01a01f2e-b2ed-7f32-bbaf-204b58613435"],
+  ["five-axis", "01a01f2e-ba20-7022-8b3b-5b90d15572d0"],
+  ["design-authority-plan", "01a01f2e-bf69-7f23-9c7c-7982855195bc"],
+] as const;
 
 function read(relativePath: string) {
   return readFileSync(join(root, relativePath), "utf8");
@@ -252,11 +264,12 @@ describe("cooking meal-log cross-slice Stage 1 relock", () => {
     );
     expect(workItem.status).toEqual({
       lifecycle: "planned",
-      approval_state: "not_started",
-      verification_status: "pending",
-      evaluation_status: "not_started",
-      evaluation_round: 0,
-      last_evaluator_result: null,
+      approval_state: "codex_approved",
+      verification_status: "passed",
+      evaluation_status: "passed",
+      evaluation_round: 3,
+      last_evaluator_result:
+        `APPROVE 0/0/0 drift 0 by four independent Stage 1 tasks at ${stage1ReviewedHead}`,
       auto_merge_eligible: false,
       blocked_reason_code: null,
     });
@@ -266,6 +279,104 @@ describe("cooking meal-log cross-slice Stage 1 relock", () => {
       ...workItem.status,
     });
     expect(readme).toContain(trackedBranch);
+  });
+
+  it("projects four independent exact-head Stage 1 approvals without promoting runtime", () => {
+    expect(existsSync(join(root, stage1ApprovalEvidencePath))).toBe(true);
+    if (!existsSync(join(root, stage1ApprovalEvidencePath))) {
+      return;
+    }
+    const approvalEvidence = readJson(stage1ApprovalEvidencePath);
+
+    expect(approvalEvidence).toMatchObject({
+      artifact_type: "stage1_final_independent_approvals",
+      slice: sliceId,
+      pr_path: "https://github.com/netsus/homecook/pull/1373",
+      reviewed_head: stage1ReviewedHead,
+      reviewed_tree: stage1ReviewedTree,
+      projection_boundary: {
+        stage1_approved: true,
+        stage2_started: false,
+        runtime_complete: false,
+        full_8_lane_287041_complete: false,
+        manual_complete: false,
+        activation_complete: false,
+        auto_merge: false,
+      },
+    });
+    expect(approvalEvidence.reviews).toHaveLength(4);
+    expect(
+      approvalEvidence.reviews.map(
+        (review: { role: string; task_id: string }) => [
+          review.role,
+          review.task_id,
+        ],
+      ),
+    ).toEqual(stage1ApprovalTasks);
+    for (const review of approvalEvidence.reviews) {
+      expect(review).toMatchObject({
+        verdict: "APPROVE",
+        counts: { p0: 0, p1: 0, p2: 0 },
+        drift_count: 0,
+        unresolved_required_findings: [],
+      });
+    }
+
+    expect(workItem.docs_refs.governing_docs).toContain(
+      stage1ApprovalEvidencePath,
+    );
+    expect(workItem.status).toEqual({
+      lifecycle: "planned",
+      approval_state: "codex_approved",
+      verification_status: "passed",
+      evaluation_status: "passed",
+      evaluation_round: 3,
+      last_evaluator_result:
+        `APPROVE 0/0/0 drift 0 by four independent Stage 1 tasks at ${stage1ReviewedHead}`,
+      auto_merge_eligible: false,
+      blocked_reason_code: null,
+    });
+    expect(status).toMatchObject(workItem.status);
+    expect(workItem.closeout).toMatchObject({
+      phase: "collecting",
+      docs_projection: {
+        roadmap_lifecycle: "planned",
+        design_status: "temporary",
+        delivery_checklist: "pending",
+        design_authority: "pending",
+        acceptance: "pending",
+        automation_spec_metadata: "synced",
+      },
+      verification_projection: {
+        required_checks: "passed",
+        external_smokes: "pending",
+      },
+      merge_gate_projection: {
+        current_head_sha: null,
+        approval_state: "codex_approved",
+        all_checks_green: false,
+      },
+    });
+
+    for (const value of [
+      stage1ApprovalEvidencePath,
+      stage1ReviewedHead,
+      stage1ReviewedTree,
+      ...stage1ApprovalTasks.flatMap(([role, taskId]) => [role, taskId]),
+      "APPROVE 0/0/0",
+      "drift 0",
+      "Stage 2 remains not started",
+    ]) {
+      expect(exactSix).toContain(value);
+    }
+    expect(roadmap).toMatch(
+      /\| `cooking-meal-log-cross-slice-release-qa` \| docs \|[^\n]*Stage 1[^\n]*APPROVE[^\n]*Stage 2[^\n]*pending/u,
+    );
+    expect(
+      readWorkpackChecklistContract({ rootDir: root, slice: sliceId }).items
+        .filter((item) => !item.manualOnly)
+        .every((item) => item.checked === false),
+    ).toBe(true);
   });
 
   it("pins every predecessor automated/runtime merge without promoting Manual state", () => {
