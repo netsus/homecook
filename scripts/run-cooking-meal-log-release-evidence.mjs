@@ -428,6 +428,12 @@ if (!args.attemptId || !args.headSha) {
 if (!new Set(["proof", "full"]).has(args.profile)) {
   throw new Error("--profile must be proof or full");
 }
+const verifiedRepositoryRoot = resolve(
+  gitOutput(["rev-parse", "--show-toplevel"]),
+);
+if (verifiedRepositoryRoot !== resolve(repositoryRoot)) {
+  throw new Error("evidence producer must run from the verified repository root");
+}
 const actualHead = gitOutput(["rev-parse", "HEAD"]);
 if (actualHead !== args.headSha) {
   throw new Error("--head-sha must equal the current exact HEAD");
@@ -448,6 +454,7 @@ if (gitOutput(["status", "--porcelain"]) !== "") {
 
 const attemptStartedAt = new Date().toISOString();
 const attemptDir = createAttemptDirectory({
+  repositoryRoot: verifiedRepositoryRoot,
   artifactRoot: args.artifactRoot,
   attemptId: args.attemptId,
 });

@@ -5,6 +5,8 @@ import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  readdirSync,
+  realpathSync,
   rmSync,
   symlinkSync,
   writeFileSync,
@@ -47,9 +49,51 @@ afterEach(() => {
 });
 
 function createRoot() {
-  const root = mkdtempSync(join(tmpdir(), "cml14-evidence-test-"));
+  const root = realpathSync(
+    mkdtempSync(join(tmpdir(), "cml14-evidence-test-")),
+  );
   roots.push(root);
   return root;
+}
+
+function canonicalAttemptRoot(repositoryRoot: string) {
+  return join(
+    repositoryRoot,
+    ".artifacts/cooking-meal-log-cross-slice-release-qa/attempts",
+  );
+}
+
+function runProducerSymlinkFixture(
+  variant: "artifacts-component" | "slice-component" | "canonical-root",
+) {
+  const repositoryRoot = createRoot();
+  const externalRoot = createRoot();
+  const artifactRoot = canonicalAttemptRoot(repositoryRoot);
+
+  if (variant === "artifacts-component") {
+    symlinkSync(externalRoot, join(repositoryRoot, ".artifacts"), "dir");
+  } else if (variant === "slice-component") {
+    mkdirSync(join(repositoryRoot, ".artifacts"));
+    symlinkSync(
+      externalRoot,
+      join(repositoryRoot, ".artifacts/cooking-meal-log-cross-slice-release-qa"),
+      "dir",
+    );
+  } else {
+    mkdirSync(join(artifactRoot, ".."), { recursive: true });
+    symlinkSync(externalRoot, artifactRoot, "dir");
+  }
+
+  let error: unknown = null;
+  try {
+    createAttemptDirectory({ repositoryRoot, artifactRoot, attemptId });
+  } catch (caught) {
+    error = caught;
+  }
+  return {
+    externalEntries: readdirSync(externalRoot),
+    rejected: error instanceof Error,
+  };
 }
 
 function baseArtifact(
@@ -83,8 +127,10 @@ function createValidAttempt({
   directoryAttemptId?: string;
   root?: string;
 } = {}) {
+  const artifactRoot = canonicalAttemptRoot(root);
   const attemptDir = createAttemptDirectory({
-    artifactRoot: root,
+    repositoryRoot: root,
+    artifactRoot,
     attemptId: directoryAttemptId,
   });
   const identity = {
@@ -160,7 +206,7 @@ function createValidAttempt({
     profile: "full",
   });
 
-  return { root, attemptDir };
+  return { root, artifactRoot, attemptDir };
 }
 
 function runGit(repositoryRoot: string, args: string[]) {
@@ -216,12 +262,13 @@ function runFinalValidator(
 
   if (variant === "canonical-root-symlink") {
     const externalRoot = createRoot();
-    attemptDir = createValidAttempt({
+    const externalAttempt = createValidAttempt({
       artifactHeadSha: fixtureHeadSha,
       root: externalRoot,
-    }).attemptDir;
+    });
+    attemptDir = externalAttempt.attemptDir;
     mkdirSync(join(canonicalRoot, ".."), { recursive: true });
-    symlinkSync(externalRoot, canonicalRoot, "dir");
+    symlinkSync(externalAttempt.artifactRoot, canonicalRoot, "dir");
     attemptDir = join(canonicalRoot, attemptId);
   } else if (variant === "attempt-symlink") {
     const externalRoot = createRoot();
@@ -274,16 +321,40 @@ function rehashManifest(attemptDir: string, fileName: string) {
 describe("cooking meal-log release evidence safety", () => {
   it("creates one attempt directory and rejects traversal or reuse", () => {
     const root = createRoot();
-    const created = createAttemptDirectory({ artifactRoot: root, attemptId });
+    const artifactRoot = canonicalAttemptRoot(root);
+    const created = createAttemptDirectory({
+      repositoryRoot: root,
+      artifactRoot,
+      attemptId,
+    });
 
-    expect(created).toBe(join(root, attemptId));
-    expect(() => createAttemptDirectory({ artifactRoot: root, attemptId }))
+    expect(created).toBe(join(artifactRoot, attemptId));
+    expect(() => createAttemptDirectory({
+      repositoryRoot: root,
+      artifactRoot,
+      attemptId,
+    }))
       .toThrow(/already exists/i);
     expect(() => createAttemptDirectory({
-      artifactRoot: root,
+      repositoryRoot: root,
+      artifactRoot,
       attemptId: "../escape",
     })).toThrow(/attempt id/i);
   });
+
+  it.each([
+    "artifacts-component",
+    "slice-component",
+    "canonical-root",
+  ] as const)(
+    "rejects producer %s symlink before external target mutation",
+    (variant) => {
+      expect(runProducerSymlinkFixture(variant)).toEqual({
+        externalEntries: [],
+        rejected: true,
+      });
+    },
+  );
 
   it("parses nonzero Vitest counts and rejects skipped-only success", () => {
     const parsed = parseVitestTextSummary(`
@@ -454,6 +525,35 @@ describe("cooking meal-log release evidence safety", () => {
     expect(result.stderr).toMatch(
       /canonical attempt root|repository|clean worktree|current git HEAD/i,
     );
+  });
+
+  it("requires the producer to run from the verified Git repository root", () => {
+    const producerPath = join(
+      process.cwd(),
+      "scripts/run-cooking-meal-log-release-evidence.mjs",
+    );
+    const { headSha: fixtureHeadSha, repositoryRoot } =
+      createValidatorRepository();
+    const nestedDirectory = join(repositoryRoot, "nested");
+    mkdirSync(nestedDirectory);
+
+    const result = spawnSync(
+      process.execPath,
+      [
+        producerPath,
+        "--attempt-id",
+        attemptId,
+        "--head-sha",
+        fixtureHeadSha,
+        "--profile",
+        "proof",
+        "--dry-run",
+      ],
+      { cwd: nestedDirectory, encoding: "utf8" },
+    );
+
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toMatch(/repository root/i);
   });
 
   it.each([

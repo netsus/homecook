@@ -67,6 +67,11 @@ const SAFE_ENV_KEYS = [
 
 const SHA_PATTERN = /^[0-9a-f]{40}$/u;
 const ATTEMPT_PATTERN = /^[a-z0-9][a-z0-9._-]{2,95}$/u;
+const CANONICAL_ATTEMPT_ROOT_COMPONENTS = [
+  ".artifacts",
+  "cooking-meal-log-cross-slice-release-qa",
+  "attempts",
+];
 
 function sha256(value) {
   return createHash("sha256").update(value).digest("hex");
@@ -148,21 +153,126 @@ function assertAttemptDirectory(attemptDir, expectedAttemptId) {
   return normalizedAttempt;
 }
 
-export function createAttemptDirectory({ artifactRoot, attemptId }) {
-  assertAttemptId(attemptId);
+function lstatIfExists(filePath) {
+  try {
+    return lstatSync(filePath);
+  } catch (error) {
+    if (error?.code === "ENOENT") return null;
+    throw error;
+  }
+}
+
+function assertRealDirectoryIdentity(directoryPath, expectedRealPath, label) {
+  assertActualDirectory(directoryPath, label);
+  const actualRealPath = realpathSync(directoryPath);
+  if (actualRealPath !== expectedRealPath) {
+    throw new Error(`${label} realpath identity mismatch`);
+  }
+  return actualRealPath;
+}
+
+function canonicalAttemptRoot(repositoryRoot) {
+  return resolve(repositoryRoot, ...CANONICAL_ATTEMPT_ROOT_COMPONENTS);
+}
+
+function createCanonicalAttemptRoot(repositoryRoot, artifactRoot) {
+  const normalizedRepository = resolve(repositoryRoot);
   const normalizedRoot = resolve(artifactRoot);
-  mkdirSync(normalizedRoot, { recursive: true, mode: 0o700 });
-  if (lstatSync(normalizedRoot).isSymbolicLink()) {
-    throw new Error("artifact root must not be a symlink");
+  const expectedRoot = canonicalAttemptRoot(normalizedRepository);
+  if (normalizedRoot !== expectedRoot) {
+    throw new Error("artifact root must equal the canonical repository path");
   }
+
+  assertActualDirectory(normalizedRepository, "repository root");
+  const realRepository = realpathSync(normalizedRepository);
+  if (realRepository !== normalizedRepository) {
+    throw new Error("repository root must be a verified canonical path");
+  }
+
+  let currentPath = normalizedRepository;
+  let currentRealPath = realRepository;
+  for (const component of CANONICAL_ATTEMPT_ROOT_COMPONENTS) {
+    assertRealDirectoryIdentity(
+      currentPath,
+      currentRealPath,
+      "canonical evidence parent",
+    );
+    const nextPath = join(currentPath, component);
+    const existing = lstatIfExists(nextPath);
+    if (existing === null) {
+      mkdirSync(nextPath, { mode: 0o700 });
+    } else if (!existing.isDirectory() || existing.isSymbolicLink()) {
+      throw new Error(
+        "canonical evidence path component must be an actual directory",
+      );
+    }
+
+    const nextRealPath = join(currentRealPath, component);
+    assertRealDirectoryIdentity(
+      nextPath,
+      nextRealPath,
+      "canonical evidence path component",
+    );
+    assertStrictContainment(
+      realRepository,
+      nextRealPath,
+      "canonical evidence path component",
+    );
+    assertRealDirectoryIdentity(
+      currentPath,
+      currentRealPath,
+      "canonical evidence parent",
+    );
+    currentPath = nextPath;
+    currentRealPath = nextRealPath;
+  }
+  return {
+    normalizedRoot,
+    realRoot: currentRealPath,
+  };
+}
+
+export function createAttemptDirectory({
+  repositoryRoot,
+  artifactRoot,
+  attemptId,
+}) {
+  assertAttemptId(attemptId);
+  const { normalizedRoot, realRoot } = createCanonicalAttemptRoot(
+    repositoryRoot,
+    artifactRoot,
+  );
   const attemptDir = resolve(normalizedRoot, attemptId);
-  if (dirname(attemptDir) !== normalizedRoot) {
-    throw new Error("attempt id escapes the artifact root");
+  if (
+    dirname(attemptDir) !== normalizedRoot
+    || basename(attemptDir) !== attemptId
+  ) {
+    throw new Error("attempt id must name a direct canonical attempt child");
   }
-  if (existsSync(attemptDir)) {
+  if (lstatIfExists(attemptDir) !== null) {
     throw new Error(`attempt directory already exists: ${attemptId}`);
   }
+
+  assertRealDirectoryIdentity(
+    normalizedRoot,
+    realRoot,
+    "canonical attempt root",
+  );
   mkdirSync(attemptDir, { mode: 0o700 });
+  const normalizedAttempt = assertAttemptDirectory(attemptDir, attemptId);
+  const realAttempt = realpathSync(normalizedAttempt);
+  assertStrictContainment(realRoot, realAttempt, "created attempt directory");
+  if (
+    dirname(realAttempt) !== realRoot
+    || basename(realAttempt) !== attemptId
+  ) {
+    throw new Error("created attempt directory identity mismatch");
+  }
+  assertRealDirectoryIdentity(
+    normalizedRoot,
+    realRoot,
+    "canonical attempt root",
+  );
   return attemptDir;
 }
 
@@ -299,10 +409,7 @@ export function validateGitBinding({
   if (String(statusOutput ?? "").trim().length > 0) {
     throw new Error("final evidence validation requires a clean worktree");
   }
-  const canonicalRoot = resolve(
-    repositoryRoot,
-    ".artifacts/cooking-meal-log-cross-slice-release-qa/attempts",
-  );
+  const canonicalRoot = canonicalAttemptRoot(repositoryRoot);
   const normalizedAttempt = assertAttemptDirectory(
     attemptDir,
     expectedAttemptId,
