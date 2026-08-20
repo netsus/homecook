@@ -59,8 +59,8 @@
 - core smoke: `62 passed / 10 intended skip`
 - core accessibility: `8 passed / 1 intended skip`
 - core visual: `12/12 passed`
-- `pnpm verify:frontend:pr`: pass after one test-helper repair rerun
-- clean-head `pnpm verify:frontend`: pass — Lighthouse `2 URLs × 3 runs`; complete regression `963 passed / 180 intended skip`; full accessibility `18/15`; full visual `22/23`; security `12/12`
+- `pnpm verify:frontend:pr`: successor projection head `ef2f92d7cea10c0731cdbcdd9850b5b02e7d2207`에서 pass; product `2,757/175`, build 81 pages, smoke `62/10`, core a11y `8/1`, core visual `12/12`
+- clean-head `pnpm verify:frontend` at `a591ebafa619a992b52a9a576e41e7a45b18f011`: pass — Lighthouse `2 URLs × 3 runs`; complete regression `963 passed / 180 intended skip`; full accessibility `18/15`; full visual `22/23`; security `12/12`
 - `pnpm audit --audit-level high`: exit `0`; high/critical `0/0`, residual pre-existing low/moderate `1/1`
 - `git diff --check`: pass
 

@@ -36,8 +36,8 @@
     "core_smoke": "62 passed / 10 intended skip",
     "core_accessibility": "8 passed / 1 intended skip",
     "core_visual": "12/12 passed",
-    "verify_frontend_pr": "passed",
-    "verify_frontend": "clean-head passed: Lighthouse 2 URLs x 3; complete regression 963/180; accessibility 18/15; visual 22/23; security 12/12",
+    "verify_frontend_pr": "successor projection head ef2f92d7cea10c0731cdbcdd9850b5b02e7d2207 passed: product 2757/175; build 81; smoke 62/10; core a11y 8/1; core visual 12/12",
+    "verify_frontend": "clean-head a591ebafa619a992b52a9a576e41e7a45b18f011 passed: Lighthouse 2 URLs x 3; complete regression 963/180; accessibility 18/15; visual 22/23; security 12/12",
     "audit": "high/critical 0/0; residual pre-existing low/moderate 1/1",
     "exploratory_qa": "N/A low-risk authority_required=false; exact deterministic browser matrix covers required behavior"
   },
