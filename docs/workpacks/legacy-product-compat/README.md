@@ -127,7 +127,7 @@
 - UI risk: `low-risk` regression on existing authorities
 - Anchor screen dependency: `PLANNER_WEEK`, `COOK_MODE`, `LEFTOVERS`
 - Visual artifact: existing predecessor evidence only; #13 creates no new design-generator/critic artifact
-- Authority status: `not-required` (`authority_required=false`)
+- Authority status: `not-required`
 - Final references:
   - `ui/designs/authority/PLANNER_WEEK-authority.md`
   - `ui/designs/authority/recipe-content-snapshot-future-propagation-authority.md`

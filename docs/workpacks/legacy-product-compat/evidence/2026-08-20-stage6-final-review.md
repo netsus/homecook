@@ -53,4 +53,13 @@ The Stage 6 approval projection was synchronized to Draft PR #1371 on projection
 - canonical repair: `manual_patch_count=0`, `stale_lock_count=0`, `ci_resync_count=1`, `artifact_missing=false`, `last_recovery_at=2026-08-20T10:28:03Z`; projection timestamps `2026-08-20T10:28:46Z`.
 - unchanged: phase `projecting`, approval `codex_approved`, verification/evaluation `passed`, external smokes pending, auto-merge false, Manual `0/7`.
 
+## Ready-only Design Authority projection repair
+
+- Ready transition input: exact `a1ccfad6788b705d53b88b3b2d2040d7b70cf956`; the coordinator returned PR #1371 to Draft without changing the head.
+- RED: `PR_IS_DRAFT=false node scripts/validate-closeout-sync.mjs -- --slice legacy-product-compat` failed because the README Design Authority value did not exactly match canonical `not-required`.
+- root cause: the README line encoded ``Authority status: `not-required` (`authority_required=false`)``; the projection parser treated the parenthetical as part of the status value.
+- repair: the status line is exact ``Authority status: `not-required```; Design Status remains `confirmed`, and the separate Design Status prose continues to retain `authority_required=false`, no new visual composition, and no new authority artifact.
+- recovery classification: this is a deterministic README projection edit, not a same-SHA GitHub check rerun or resync. Canonical `ci_resync_count` remains `1`; `manual_patch_count=0`, `stale_lock_count=0`, and `last_recovery_at=2026-08-20T10:28:03Z` remain unchanged.
+- unchanged: Stage 5/6 approvals, phase `projecting`, lifecycle `in_progress`, verification/evaluation `passed`, external smokes pending, auto-merge false, and Manual `0/7`.
+
 Internal 6.5 must run in a fresh separate task before Ready. Ready/merge/Discord and all server-Mac/OAuth, physical-device/AT/full-WCAG, controlled deploy/drain/fence/revoke, capability, R/R+1/R+2, required-key, production activation and tombstone obligations remain pending.
