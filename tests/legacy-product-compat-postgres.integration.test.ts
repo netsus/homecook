@@ -24,6 +24,7 @@ const recipeStandaloneRollback = "d3000000-0000-4000-8000-000000000007";
 const recipePrivateB = "d3000000-0000-4000-8000-000000000008";
 const recipeDeletedB = "d3000000-0000-4000-8000-000000000009";
 const recipePlannerNoKey = "d3000000-0000-4000-8000-00000000000a";
+const recipePublicB = "d3000000-0000-4000-8000-00000000000b";
 const snapshotContent = "da000000-0000-4000-8000-000000000001";
 const ingredient = "d4000000-0000-4000-8000-000000000001";
 const plannerColumn = "d5000000-0000-4000-8000-000000000001";
@@ -229,7 +230,8 @@ describe.runIf(enabled)("legacy product compatibility PostgreSQL", () => {
         ('${recipeStandaloneRollback}','호환 독립 롤백 레시피',2,'manual','${ownerA}','public',null),
         ('${recipePrivateB}','타인 비공개 레시피',2,'manual','${ownerB}','private',null),
         ('${recipeDeletedB}','타인 삭제 레시피',2,'manual','${ownerB}','public','2026-08-15T01:30:00Z'),
-        ('${recipePlannerNoKey}','호환 플래너 no-key 레시피',2,'manual','${ownerA}','public',null);
+        ('${recipePlannerNoKey}','호환 플래너 no-key 레시피',2,'manual','${ownerA}','public',null),
+        ('${recipePublicB}','비활성 소유자 공개 레시피',2,'manual','${ownerB}','public',null);
       insert into public.recipe_ingredients(
         recipe_id,ingredient_id,amount,unit,ingredient_type,sort_order,scalable
       ) values('${recipeA}','${ingredient}',100,'g','QUANT',0,true);
@@ -352,6 +354,22 @@ describe.runIf(enabled)("legacy product compatibility PostgreSQL", () => {
       expect(result.stderr).toContain("RESOURCE_NOT_FOUND");
       expect(ownerDigest(ownerA)).toBe(beforeA);
       expect(ownerDigest(ownerB)).toBe(beforeB);
+    }
+  });
+
+  it("rejects another inactive owner's public recipe before every writer", () => {
+    for (const status of ["quarantined", "deleting"]) {
+      psql(`update public.user_account_lifecycles set status='${status}' where owner_uuid='${ownerB}'`);
+      const beforeA = ownerDigest(ownerA);
+      const beforeB = ownerDigest(ownerB);
+
+      const result = psql(standaloneCall(recipePublicB, null), false);
+
+      expect(result.status).not.toBe(0);
+      expect(result.stderr).toContain("RESOURCE_NOT_FOUND");
+      expect(ownerDigest(ownerA)).toBe(beforeA);
+      expect(ownerDigest(ownerB)).toBe(beforeB);
+      psql(`update public.user_account_lifecycles set status='active' where owner_uuid='${ownerB}'`);
     }
   });
 

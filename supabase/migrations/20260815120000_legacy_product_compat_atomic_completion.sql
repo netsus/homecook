@@ -100,6 +100,7 @@ declare
   v_authority jsonb;
   v_session public.cooking_sessions%rowtype;
   v_recipe public.recipes%rowtype;
+  v_recipe_owner_lifecycle_status text;
   v_recipe_id uuid;
   v_servings integer;
   v_consumed uuid[];
@@ -194,6 +195,18 @@ begin
     if v_recipe.visibility = 'private'
       and v_recipe.created_by is distinct from p_owner_uuid then
       raise exception 'RESOURCE_NOT_FOUND' using errcode = 'P0002';
+    end if;
+    if v_recipe.created_by is distinct from p_owner_uuid then
+      select recipe_owner_lifecycle.status
+      into v_recipe_owner_lifecycle_status
+      from public.user_account_lifecycles as recipe_owner_lifecycle
+      where recipe_owner_lifecycle.owner_uuid = v_recipe.created_by
+      order by recipe_owner_lifecycle.account_generation desc
+      limit 1;
+      if v_recipe_owner_lifecycle_status is not null
+        and v_recipe_owner_lifecycle_status is distinct from 'active' then
+        raise exception 'RESOURCE_NOT_FOUND' using errcode = 'P0002';
+      end if;
     end if;
     v_recipe_id := v_recipe.id;
     v_servings := p_cooking_servings;

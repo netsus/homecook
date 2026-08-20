@@ -76,6 +76,24 @@ describe("legacy cooking atomic compatibility RPC", () => {
     expect(bootstrap).toBeGreaterThan(claim);
   });
 
+  it("applies the recipe-owner lifecycle visibility upper bound before claim", () => {
+    const sql = readMigration();
+    const standaloneRecipeRead = sql.indexOf("select recipe.* into v_recipe");
+    const lifecycleRead = sql.indexOf(
+      "from public.user_account_lifecycles as recipe_owner_lifecycle",
+      standaloneRecipeRead,
+    );
+    const activeGuard = sql.indexOf(
+      "v_recipe_owner_lifecycle_status is distinct from 'active'",
+      lifecycleRead,
+    );
+    const claim = sql.indexOf("claim_cooked_batch_operation", standaloneRecipeRead);
+
+    expect(lifecycleRead).toBeGreaterThan(standaloneRecipeRead);
+    expect(activeGuard).toBeGreaterThan(lifecycleRead);
+    expect(claim).toBeGreaterThan(activeGuard);
+  });
+
   it("locks both new functions to postgres-owned service_role execution", () => {
     const sql = readMigration();
 
