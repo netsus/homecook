@@ -94,7 +94,7 @@
       "pnpm verify:backend",
       "pnpm validate:source-of-truth-sync",
       "pnpm validate:workflow-v2",
-      "BRANCH_NAME=docs/cooking-meal-log-cross-slice-relock pnpm validate:workpack -- --slice cooking-meal-log-cross-slice-release-qa",
+      "BRANCH_NAME=feature/be-cooking-meal-log-cross-slice-release-qa pnpm validate:workpack -- --slice cooking-meal-log-cross-slice-release-qa",
       "node scripts/validate-automation-spec.mjs --slice cooking-meal-log-cross-slice-release-qa",
       "pnpm validate:omo-bookkeeping",
       "pnpm validate:closeout-sync -- --slice cooking-meal-log-cross-slice-release-qa",
