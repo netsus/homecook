@@ -333,6 +333,7 @@ export function ManualRecipeCreateScreen({
   const [steps, setSteps] = useState<TempStep[]>([]);
   const [modalMode, setModalMode] = useState<ModalMode>("none");
   const [isSaving, setIsSaving] = useState(false);
+  const [isCreateOutcomeUnknown, setIsCreateOutcomeUnknown] = useState(false);
   const [showValidationErrors, setShowValidationErrors] = useState(false);
   const [createdRecipeId, setCreatedRecipeId] = useState<string | null>(null);
   const [createdRecipeTitle, setCreatedRecipeTitle] = useState<string>("");
@@ -359,6 +360,8 @@ export function ManualRecipeCreateScreen({
   const processedUploadFileRef = useRef<File | null>(null);
   const isManagedReadUrlRefreshRetryRef = useRef(false);
   const uploadedImageRef = useRef<UploadedRecipeImage | null>(null);
+  const createOwnedImageObjectIdRef = useRef<string | null>(null);
+  const createOutcomeUnknownRef = useRef(false);
   const isMountedRef = useRef(true);
   const cleanupRetryActionRef = useRef<
     | { kind: "remove" }
@@ -501,6 +504,11 @@ export function ManualRecipeCreateScreen({
     requestCancel,
     stay,
   } = editorShell;
+  const isImageLifecycleLocked = (
+    isSaving
+    || isCreateOutcomeUnknown
+    || editorShell.isSubmitting
+  );
   const openDiscardDialogRef = useRef(openDiscardDialog);
   openDiscardDialogRef.current = openDiscardDialog;
 
@@ -536,7 +544,7 @@ export function ManualRecipeCreateScreen({
   }, []);
 
   const handleBack = useCallback(() => {
-    if (imageStatus === "uploading") {
+    if (imageStatus === "uploading" || createOutcomeUnknownRef.current) {
       return;
     }
 
@@ -551,6 +559,7 @@ export function ManualRecipeCreateScreen({
     if (
       editorShell.isSubmitting
       || editorShell.cleanupState !== "idle"
+      || createOutcomeUnknownRef.current
     ) {
       event.preventDefault();
       return;
@@ -745,7 +754,14 @@ export function ManualRecipeCreateScreen({
 
     return () => {
       isMountedRef.current = false;
-      cancelManagedUploadBestEffort(uploadedImageRef.current);
+      const currentImage = uploadedImageRef.current;
+      if (
+        !currentImage
+        || !isManagedRecipeImage(currentImage)
+        || currentImage.image_object_id !== createOwnedImageObjectIdRef.current
+      ) {
+        cancelManagedUploadBestEffort(currentImage);
+      }
     };
   }, [cancelManagedUploadBestEffort]);
 
@@ -1223,7 +1239,7 @@ export function ManualRecipeCreateScreen({
   }, []);
 
   const handleSave = useCallback(async () => {
-    if (isUploading) {
+    if (isUploading || createOutcomeUnknownRef.current) {
       return;
     }
 
@@ -1253,6 +1269,9 @@ export function ManualRecipeCreateScreen({
               : { thumbnail_url: activeImage.thumbnail_url }
           )
         : {};
+      if (activeImage && isManagedRecipeImage(activeImage)) {
+        createOwnedImageObjectIdRef.current = activeImage.image_object_id;
+      }
       const response = await createManualRecipe({
         title: title.trim(),
         base_servings: baseServings,
@@ -1278,6 +1297,38 @@ export function ManualRecipeCreateScreen({
           duration_text: step.duration_text,
         })),
       });
+
+      const createSucceeded = Boolean(response?.success && response.data);
+      const createOutcomeUnknown = Boolean(
+        !response
+        || (
+          !response.success
+          && (
+            response.error?.code === "NETWORK_ERROR"
+            || response.error?.code === "INVALID_RESPONSE"
+          )
+        )
+      );
+      const createFailedDefinitively = Boolean(
+        response
+        && !response.success
+        && !createOutcomeUnknown
+      );
+
+      if (createSucceeded || createFailedDefinitively) {
+        createOwnedImageObjectIdRef.current = null;
+      }
+      createOutcomeUnknownRef.current = createOutcomeUnknown;
+      if (isMountedRef.current) {
+        setIsCreateOutcomeUnknown(createOutcomeUnknown);
+      }
+
+      if (!isMountedRef.current) {
+        if (createFailedDefinitively && activeImage) {
+          cancelManagedUploadBestEffort(activeImage);
+        }
+        return;
+      }
 
       if (!response) {
         throw new Error("저장하지 못했어요. 내용을 유지했으니 다시 시도해 주세요.");
@@ -1324,6 +1375,7 @@ export function ManualRecipeCreateScreen({
     ingredients,
     steps,
     refreshManagedReadUrlIfExpired,
+    cancelManagedUploadBestEffort,
     editorDraft,
     releaseHistoryGuard,
   ]);
@@ -1409,7 +1461,7 @@ export function ManualRecipeCreateScreen({
 
       <RecipeEditorImageSection
         actionsDisabled={
-          imageCleanupState === "running" || editorShell.isSubmitting
+          imageCleanupState === "running" || isImageLifecycleLocked
         }
         fileInputRef={imageInputRef}
         imageError={imageError}
@@ -1482,7 +1534,7 @@ export function ManualRecipeCreateScreen({
     <div className="web-manual-footer">
       <WebButton
         className="web-manual-save-button"
-        disabled={isSaving || isUploading}
+        disabled={isImageLifecycleLocked || isUploading}
         fullWidth
         onClick={() => void editorShell.submit("save-private")}
         size="lg"
@@ -1612,7 +1664,7 @@ export function ManualRecipeCreateScreen({
           onBack={handleBack}
           onSave={() => void editorShell.submit("save-private")}
           isSaving={isSaving}
-          isUploading={isUploading}
+          isUploading={isUploading || isCreateOutcomeUnknown}
         />
         {editorShell.submitError || editorShell.hasCleanupFailure ? (
           <div
@@ -1677,7 +1729,7 @@ export function ManualRecipeCreateScreen({
           {/* Image Upload */}
           <RecipeEditorImageSection
             actionsDisabled={
-              imageCleanupState === "running" || editorShell.isSubmitting
+              imageCleanupState === "running" || isImageLifecycleLocked
             }
             fileInputRef={imageInputRef}
             imageError={imageError}
