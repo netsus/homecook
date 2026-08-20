@@ -16,19 +16,25 @@ async function installPlannerShellRoutes(
   {
     columnCount = 3,
     deleteMode = "success",
+    emptyPlanner = false,
+    plannerMode = "success",
   }: {
     columnCount?: 1 | 3 | 5;
     deleteMode?: "error" | "pending" | "success";
+    emptyPlanner?: boolean;
+    plannerMode?: "error" | "pending" | "success";
   } = {},
 ) {
   let deleted = false;
   let releasePendingDelete: (() => void) | null = null;
+  let releasePendingPlanner: (() => void) | null = null;
   const requests = {
     mealLog: 0,
     nutrition: 0,
     plannerRanges: [] as string[],
     productMethods: [] as string[],
     releasePendingDelete: () => releasePendingDelete?.(),
+    releasePendingPlanner: () => releasePendingPlanner?.(),
   };
   await page.route("**/api/v1/meal-log?*", async (route) => {
     requests.mealLog += 1;
@@ -68,6 +74,22 @@ async function installPlannerShellRoutes(
   });
 
   await page.route("**/api/v1/planner?*", async (route) => {
+    if (plannerMode === "pending") {
+      await new Promise<void>((resolve) => {
+        releasePendingPlanner = resolve;
+      });
+    }
+    if (plannerMode === "error") {
+      await route.fulfill({
+        status: 500,
+        json: {
+          data: null,
+          error: { code: "INTERNAL_ERROR", fields: [], message: "플래너 조회 실패" },
+          success: false,
+        },
+      });
+      return;
+    }
     const url = new URL(route.request().url());
     requests.plannerRanges.push(
       `${url.searchParams.get("start_date")}:${url.searchParams.get("end_date")}`,
@@ -76,7 +98,7 @@ async function installPlannerShellRoutes(
       json: {
         data: {
           columns,
-          meals: [
+          meals: emptyPlanner ? [] : [
             {
               column_id: "column-breakfast",
               id: "meal-registered",
@@ -115,7 +137,7 @@ async function installPlannerShellRoutes(
                 ]
               : []),
           ],
-          product_entries: deleted
+          product_entries: deleted || emptyPlanner
             ? []
             : [
                 {
@@ -237,7 +259,7 @@ test.describe("planner-shell Stage 4", () => {
     expect(pageHasHorizontalOverflow).toBe(false);
   });
 
-  test("planner-shell guest keeps the requested segment/date for login @smoke-core", async ({
+  test("legacy-product-compat guest keeps the requested segment/date for login @smoke-core", async ({
     page,
   }) => {
     await page.addInitScript(
@@ -430,6 +452,42 @@ test.describe("planner-shell Stage 4", () => {
     await expect(page.getByTestId("legacy-product-legacy-product-1"))
       .toBeAttached();
     expect(requests.productMethods).toEqual(["DELETE"]);
+  });
+
+  test("legacy-product-compat preserves planner loading before the read-only row", async ({
+    page,
+  }) => {
+    await setAuthenticated(page);
+    const requests = await installPlannerShellRoutes(page, { plannerMode: "pending" });
+    await page.goto(`/planner?date=${PLAN_DATE}`);
+
+    await expect(page.getByTestId("planner-loading-state")).toBeVisible();
+    requests.releasePendingPlanner();
+    await expect(page.getByRole("heading", { name: "기존 완제품 계획" }))
+      .toBeVisible();
+  });
+
+  test("legacy-product-compat preserves the planner empty state", async ({ page }) => {
+    await setAuthenticated(page);
+    await installPlannerShellRoutes(page, { emptyPlanner: true });
+    await page.goto(`/planner?date=${PLAN_DATE}`);
+
+    await expect(page.getByText("비어 있음", { exact: true }).first()).toBeVisible();
+    await expect(page.getByRole("heading", { name: "기존 완제품 계획" }))
+      .toHaveCount(0);
+  });
+
+  test("legacy-product-compat preserves the planner load error and retry action", async ({
+    page,
+  }) => {
+    await setAuthenticated(page);
+    await installPlannerShellRoutes(page, { plannerMode: "error" });
+    await page.goto(`/planner?date=${PLAN_DATE}`);
+
+    await expect(page.getByRole("heading", {
+      name: "플래너를 불러오지 못했어요",
+    })).toBeVisible();
+    await expect(page.getByRole("button", { name: "다시 시도" })).toBeVisible();
   });
 
   test("planner-shell keeps 320px targets, 200% text, and bottom actions usable", async ({
