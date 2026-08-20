@@ -50,7 +50,7 @@ automated/runtime predecessor gate: satisfied at the frozen base above. This doe
 
 Stage 2 entry still requires this relock PR merge and the documented post-merge preflight. The four separate Stage 1 review gates are approved on the exact reviewed head below, but a later predecessor repair or evidence invalidation fails the gate closed and requires this table to be relocked again.
 
-## Stage 1 Current Gate
+## Stage 1 Historical Gate
 
 - Draft PR: `https://github.com/netsus/homecook/pull/1373`
 - exact reviewed identity: head `2c33b38cf9f3badb72d610ad7a47abe70bf8907f`, tree `23fab93ab372174b9f531cf3414b348b1a724894`.
@@ -59,9 +59,17 @@ Stage 2 entry still requires this relock PR merge and the documented post-merge 
 - five-axis `01a01f2e-ba20-7022-8b3b-5b90d15572d0`: `APPROVE 0/0/0`, drift `0`.
 - design-authority-plan `01a01f2e-bf69-7f23-9c7c-7982855195bc`: `APPROVE 0/0/0`, drift `0`.
 - retained machine-readable evidence: `docs/workpacks/cooking-meal-log-cross-slice-release-qa/evidence/2026-08-21-stage1-final-independent-approvals.json`.
-- lifecycle/approval/verification/evaluation은 `planned / codex_approved / passed / passed`다. Stage 2 remains not started; runtime/full 8-lane 287041/Manual/activation evidence와 모든 runtime acceptance item은 pending이다.
+- Stage 1 historical approval/verification/evaluation은 `codex_approved / passed / passed`다. 이 값은 PR #1373의 과거 승인 증거이며 활성 Stage 2/3 승인 상태가 아니다.
 - 이 projection successor는 네 reviewer의 exact-head verdict를 기록할 뿐 새 리뷰나 자기 승인을 만들지 않는다. successor current-head CI와 final drift confirmation은 별도 reviewer 확인 대상이다.
 - repair budget: docs repair budget max 3; backend/frontend inline repair rounds `0/0`. Runtime defect는 separate failing-test-first TDD repair PR로 이동하고 full rerun after its merge가 필요하다.
+
+## Active Stage 2/3 Gate
+
+- 활성 lifecycle/approval/verification/evaluation은 `in_progress / codex_approved / passed / passed`다.
+- 활성 Draft PR은 `https://github.com/netsus/homecook/pull/1377`이고 approved content head는 `c5c475477a26dde3889aec3161c37765ee084d92`이다. current-head checks는 `8 success + 5 intended skip`, bad/pending `0`이다.
+- independent Stage 3 approval task `01a02137-5389-7420-a31d-7e42d1bb94dc`는 APPROVE P0/P1/P2 `0/0/0`, drift `0`을 반환했다. `CML14-S3-P1-001`과 `CML14-S3-P1-002`는 CLOSED다.
+- 이 approval projection successor의 current-head checks와 final drift-only review pending이며, 그 전에는 Ready/merge하지 않는다.
+- complete owning DB lanes, actual performance thresholds, Stage 4 `FINAL_EVIDENCE_SHA`/full profile, controlled full-local, Stage 4~6, Manual and activation remain pending.
 
 ## Backend First Contract
 
@@ -136,7 +144,8 @@ Stage 2 entry still requires this relock PR merge and the documented post-merge 
 | `MEAL_LOG` | `ui/designs/MEAL_LOG.md` | `ui/designs/critiques/MEAL_LOG-critique.md` | `ui/designs/authority/MEAL_LOG-authority.md` |
 
 - #12 status: MEAL_LOG design, critique, authority, runtime and OMO evidence are merged; they are no longer future reservations.
-- Authority status: fresh #14 exact-head screenshots and a separate final authority report remain required; this author does not approve them.
+- Authority status: `required`
+- Fresh #14 exact-head screenshots and a separate final authority report remain pending; this author does not approve them.
 
 ## Design Status
 
@@ -166,6 +175,17 @@ Stage 2 entry still requires this relock PR merge and the documented post-merge 
 - Stage 4: real local stack + real Chrome, owner A/B and the eight screens at 390/320/desktop; unavailable runtime or authority is a blocker rather than a fixture substitution.
 - bootstrap expectations remain predecessor-owned (`users`, `recipe_books`, `meal_plan_columns`, account generation/session binding). Missing schema/seed/bootstrap blocks verification.
 
+## Stage 2 Current Evidence
+
+- successor author task `01a020fd-56ef-73a3-9aa3-7a8d44a8541c` on start head `721e562b2f62b5f3efb2fb435e9bc1126297b3e8` rechecked the predecessor/repair ancestry with drift `0`.
+- deterministic F0/#1~#13 focused regressions are green: `26 files / 137 tests`; backend gate is green with product `2,757 passed / 175 intended skipped`, build and security E2E `12/12`.
+- actual route query-count is `list1=1`, `list20=1`, item-level N+1 `0`; version/rollback/tombstone compatibility is `32/32`.
+- successor task sandbox의 Docker preflight 두 번은 capability 경계로 실패했지만, 부모가 같은 branch/HEAD에서 `pnpm verify:local-supabase-runtime:isolated`를 exit `0`으로 재실행했다. CLI `2.110.0`, migration SHA-256 `f2f429121f32d6917e43766f7351e918bcfe40852618793ab5d6105e2735ab0d`, ephemeral project `hcg_88821_e41204`, full migrations+seed+reset, Data API `200`, cleanup을 확인했다.
+- retained author evidence: `docs/workpacks/cooking-meal-log-cross-slice-release-qa/evidence/2026-08-21-stage2-verification-author.md`.
+- clean head `cb775ed9d9885e7465358bc929794aa9ee90c5ec`의 create-only attempt `stage2-proof-cb775ed9-20260821`은 `profile=proof`, artifact `5`, exact head/profile/clean validator를 통과했다. `.artifacts/cooking-meal-log-cross-slice-release-qa/attempts/stage2-proof-cb775ed9-20260821/`은 retained local evidence이며 final evidence가 아니다.
+- proof는 대표 DB lane `20/20`, security `24/24`, query-count `1/1`, rollback `32/32`, performance runner contract `2/2`를 기록한다. performance는 `proof_only`, DB는 대표 lane 한 개뿐이다.
+- Stage 2 remains `in_progress`: complete owning DB lanes와 actual performance thresholds, controlled full-local, Stage 3~6, Manual and activation are pending.
+
 ## Key Rules
 
 - official tuple is v1.7.32/v1.5.36/v1.3.34/DB v1.3.34/API v1.2.39; this relock is not Contract Evolution.
@@ -185,8 +205,8 @@ Stage 2 entry still requires this relock PR merge and the documented post-merge 
 Stage 1 approval is complete (`codex_approved`); runtime Delivery Checklist and Stage 2 remain pending.
 
 - [ ] pinned isolated local DB/API/security/performance verification is green on the exact head <!-- omo:id=delivery-cooking-cross-stage2-isolated;stage=2;scope=backend;review=3,6 -->
-- [ ] predecessor runtime merge map is rechecked and no retained evidence is stale <!-- omo:id=delivery-cooking-cross-stage2-predecessors;stage=2;scope=shared;review=3,6 -->
-- [ ] defects, if any, use a separate failing-test-first TDD repair PR and full rerun after its merge <!-- omo:id=delivery-cooking-cross-stage2-repair-boundary;stage=2;scope=shared;review=3,6 -->
+- [x] predecessor runtime merge map is rechecked and no retained evidence is stale <!-- omo:id=delivery-cooking-cross-stage2-predecessors;stage=2;scope=shared;review=3,6 -->
+- [x] defects, if any, use a separate failing-test-first TDD repair PR and full rerun after its merge <!-- omo:id=delivery-cooking-cross-stage2-repair-boundary;stage=2;scope=shared;review=3,6 -->
 - [ ] controlled full-local use stays read-only or records separate mutation authority <!-- omo:id=delivery-cooking-cross-stage2-local-authority;stage=2;scope=backend;review=3,6 -->
 - [ ] eight-screen real Chrome 390/320/desktop evidence is captured on the exact repaired head <!-- omo:id=delivery-cooking-cross-stage4-browser;stage=4;scope=frontend;review=5,6 -->
 - [ ] loading/empty/error/read-only/unauthorized and contracted edge states are verified <!-- omo:id=delivery-cooking-cross-stage4-states;stage=4;scope=frontend;review=5,6 -->

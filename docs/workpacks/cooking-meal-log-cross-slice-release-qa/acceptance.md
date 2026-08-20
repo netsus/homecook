@@ -11,23 +11,23 @@
 - five-axis task `01a01f2e-ba20-7022-8b3b-5b90d15572d0`: `APPROVE 0/0/0`, drift `0`.
 - design-authority-plan task `01a01f2e-bf69-7f23-9c7c-7982855195bc`: `APPROVE 0/0/0`, drift `0`.
 - retained evidence: `docs/workpacks/cooking-meal-log-cross-slice-release-qa/evidence/2026-08-21-stage1-final-independent-approvals.json`.
-- 위 verdict는 Stage 1 bookkeeping/current gate evidence다. Stage 2 remains not started이며 runtime/full 8-lane 287041/Manual/activation 완료나 아래 Stage 2/4 acceptance 체크를 주장하지 않는다.
+- 위 verdict는 Stage 1 bookkeeping/current gate evidence다. Stage 2 verification-only는 base `afb1b31aa6c95ba974f7484d31fa123439d5fcd6`에서 시작됐지만 evidence 수집 전이며, runtime/full 8-lane 287041/Manual/activation 완료나 아래 Stage 2/4 acceptance 체크를 아직 주장하지 않는다.
 
 ## Happy Path
 
-- [ ] F0/#1~#13 automated/runtime merge evidence is rechecked at the frozen base before Stage 2 evidence collection <!-- omo:id=accept-cooking-cross-happy-predecessors;stage=2;scope=shared;review=3,6 -->
-- [ ] pinned isolated local verification passes without product or production mutation <!-- omo:id=accept-cooking-cross-happy-isolated;stage=2;scope=backend;review=3,6 -->
+- [x] F0/#1~#13 automated/runtime merge evidence is rechecked at the frozen base before Stage 2 evidence collection <!-- omo:id=accept-cooking-cross-happy-predecessors;stage=2;scope=shared;review=3,6 -->
+- [x] pinned isolated local verification passes without product or production mutation <!-- omo:id=accept-cooking-cross-happy-isolated;stage=2;scope=backend;review=3,6 -->
 - [ ] backend/isolated/security/performance/rollback evidence is rerun on `FINAL_EVIDENCE_SHA` <!-- omo:id=accept-cooking-cross-final-backend-bundle;stage=2;scope=backend;review=3,6 -->
 - [ ] browser/design evidence is rerun on the same `FINAL_EVIDENCE_SHA` <!-- omo:id=accept-cooking-cross-final-browser-bundle;stage=4;scope=frontend;review=5,6 -->
 - [ ] API responses retain the existing `{ success, data, error }` wrapper and v1.2.39 types <!-- omo:id=accept-cooking-cross-happy-api-envelope;stage=2;scope=backend;review=3,6 -->
 
 ## State / Policy
 
-- [ ] automated/runtime predecessor gate: satisfied remains distinct from overall lifecycle is not complete <!-- omo:id=accept-cooking-cross-state-separation;stage=2;scope=shared;review=3,6 -->
-- [ ] Stage 2 remains verification-only and does not implement a repair or Contract Evolution <!-- omo:id=accept-cooking-cross-state-verification-only;stage=2;scope=shared;review=3,6 -->
-- [ ] current/immediate-previous v1/v2 dispatch, rollback drain and legacy retention stay available until their existing gates permit removal <!-- omo:id=accept-cooking-cross-state-version-rollback;stage=2;scope=shared;review=3,6 -->
+- [x] automated/runtime predecessor gate: satisfied remains distinct from overall lifecycle is not complete <!-- omo:id=accept-cooking-cross-state-separation;stage=2;scope=shared;review=3,6 -->
+- [x] Stage 2 remains verification-only and does not implement a repair or Contract Evolution <!-- omo:id=accept-cooking-cross-state-verification-only;stage=2;scope=shared;review=3,6 -->
+- [x] current/immediate-previous v1/v2 dispatch, rollback drain and legacy retention stay available until their existing gates permit removal <!-- omo:id=accept-cooking-cross-state-version-rollback;stage=2;scope=shared;review=3,6 -->
 - [ ] completed shopping and historical rows remain read-only under their official contracts <!-- omo:id=accept-cooking-cross-state-read-only;stage=2;scope=shared;review=3,6 -->
-- [ ] no endpoint, field, status, error, action, screen, migration, or dependency is introduced <!-- omo:id=accept-cooking-cross-state-no-invention;stage=2;scope=shared;review=3,6 -->
+- [x] no endpoint, field, status, error, action, screen, migration, or dependency is introduced <!-- omo:id=accept-cooking-cross-state-no-invention;stage=2;scope=shared;review=3,6 -->
 
 ## Error / Permission
 
@@ -51,27 +51,27 @@
 
 ## Data Setup / Preconditions
 
-- [ ] focused predecessor tests and exact merge evidence have no stale or different-head reference <!-- omo:id=accept-cooking-cross-precondition-evidence;stage=2;scope=shared;review=3,6 -->
-- [ ] pinned isolated local runtime uses no production volume, port, env or secret mount <!-- omo:id=accept-cooking-cross-precondition-isolation;stage=2;scope=backend;review=3,6 -->
+- [x] focused predecessor tests and exact merge evidence have no stale or different-head reference <!-- omo:id=accept-cooking-cross-precondition-evidence;stage=2;scope=shared;review=3,6 -->
+- [x] pinned isolated local runtime uses no production volume, port, env or secret mount <!-- omo:id=accept-cooking-cross-precondition-isolation;stage=2;scope=backend;review=3,6 -->
 - [ ] required schema, seed, owner A/B and predecessor bootstrap rows exist before runtime verification <!-- omo:id=accept-cooking-cross-precondition-bootstrap;stage=2;scope=backend;review=3,6 -->
 - [ ] controlled full-local read-only use records exact target identity, backup freshness and before/after checksum equality <!-- omo:id=accept-cooking-cross-precondition-controlled-local;stage=2;scope=backend;review=3,6 -->
-- [ ] Cloud/linked/remote Supabase is forbidden/N/A and is never a target, prerequisite, verifier or fallback <!-- omo:id=accept-cooking-cross-precondition-local-only;stage=2;scope=backend;review=3,6 -->
+- [x] Cloud/linked/remote Supabase is forbidden/N/A and is never a target, prerequisite, verifier or fallback <!-- omo:id=accept-cooking-cross-precondition-local-only;stage=2;scope=backend;review=3,6 -->
 
 ## Automation Split
 
 ### Vitest / deterministic local
 
-- [ ] focused F0/#1~#13 runtime regressions are green on the exact repaired head <!-- omo:id=accept-cooking-cross-automation-runtime;stage=2;scope=backend;review=3,6 -->
+- [x] focused F0/#1~#13 runtime regressions are green on the exact repaired head <!-- omo:id=accept-cooking-cross-automation-runtime;stage=2;scope=backend;review=3,6 -->
 - [ ] repo-owned producer creates one new create-only `.artifacts/cooking-meal-log-cross-slice-release-qa/attempts/<attempt_id>/` bound to `FINAL_EVIDENCE_SHA` without deleting or reusing older attempts <!-- omo:id=accept-cooking-cross-automation-attempt;stage=2;scope=backend;review=3,6 -->
-- [ ] every lane runs with a lane-specific allowlist and cannot inherit migration/test replacement, skip/filter/testNamePattern, PG/DB, cloud/link/credential ambient overrides <!-- omo:id=accept-cooking-cross-automation-env;stage=2;scope=backend;review=3,6 -->
-- [ ] Stage 6 full validator rejects `profile=proof`, stale head, existing/missing/partial attempt and manifest/hash drift <!-- omo:id=accept-cooking-cross-automation-final-validator;stage=2;scope=backend;review=3,6 -->
-- [ ] final validator runs `git rev-parse HEAD`, requires clean worktree and canonical attempt root, and rejects outside-repo, stale-head and dirty-repo execution <!-- omo:id=accept-cooking-cross-automation-git-binding;stage=2;scope=backend;review=3,6 -->
-- [ ] artifact type and semantic payload fields are exact and every artifact timestamp equals the manifest single shared generated_at <!-- omo:id=accept-cooking-cross-automation-semantic;stage=2;scope=backend;review=3,6 -->
+- [x] every lane runs with a lane-specific allowlist and cannot inherit migration/test replacement, skip/filter/testNamePattern, PG/DB, cloud/link/credential ambient overrides <!-- omo:id=accept-cooking-cross-automation-env;stage=2;scope=backend;review=3,6 -->
+- [x] Stage 6 full validator rejects `profile=proof`, stale head, existing/missing/partial attempt and manifest/hash drift <!-- omo:id=accept-cooking-cross-automation-final-validator;stage=2;scope=backend;review=3,6 -->
+- [x] final validator runs `git rev-parse HEAD`, requires clean worktree and canonical attempt root, and rejects outside-repo, stale-head and dirty-repo execution <!-- omo:id=accept-cooking-cross-automation-git-binding;stage=2;scope=backend;review=3,6 -->
+- [x] artifact type and semantic payload fields are exact and every artifact timestamp equals the manifest single shared generated_at <!-- omo:id=accept-cooking-cross-automation-semantic;stage=2;scope=backend;review=3,6 -->
 - [ ] pinned isolated owning PostgreSQL runners produce `db-security.json` with every required lane `passed > 0`, `skipped = 0`, `pending = 0`, `failed = 0` <!-- omo:id=accept-cooking-cross-automation-local-stack;stage=2;scope=backend;review=3,6 -->
-- [ ] isolated security producer creates `security.json` with nonzero authorization evidence and remote/linked/cloud access `0` <!-- omo:id=accept-cooking-cross-automation-security;stage=2;scope=backend;review=3,6 -->
+- [x] isolated security producer creates `security.json` with nonzero authorization evidence and remote/linked/cloud access `0` <!-- omo:id=accept-cooking-cross-automation-security;stage=2;scope=backend;review=3,6 -->
 - [ ] attempt `performance.json` records Recall@20 >= 0.90, Precision@20 >= 0.75, DB p95 <= 300ms and route p95 <= 600ms <!-- omo:id=accept-cooking-cross-automation-performance;stage=2;scope=backend;review=3,6 -->
-- [ ] `actual-route-service-boundary` producer executes real route control flow for list1/list20, derives N+1 growth, and loop/callback regression fixtures fail closed <!-- omo:id=accept-cooking-cross-automation-query-count;stage=2;scope=backend;review=3,6 -->
-- [ ] attempt `rollback.json` proves current/immediate-previous, seeded-v2 drain, replay, tombstone and required-key rollback matrix with `passed > 0`, `skipped = 0`, `pending = 0`, `failed = 0` <!-- omo:id=accept-cooking-cross-automation-rollback;stage=2;scope=backend;review=3,6 -->
+- [x] `actual-route-service-boundary` producer executes real route control flow for list1/list20, derives N+1 growth, and loop/callback regression fixtures fail closed <!-- omo:id=accept-cooking-cross-automation-query-count;stage=2;scope=backend;review=3,6 -->
+- [x] attempt `rollback.json` proves current/immediate-previous, seeded-v2 drain, replay, tombstone and required-key rollback matrix with `passed > 0`, `skipped = 0`, `pending = 0`, `failed = 0` <!-- omo:id=accept-cooking-cross-automation-rollback;stage=2;scope=backend;review=3,6 -->
 
 ### Playwright / authority
 
