@@ -1,5 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
+import { installCompletedYoutubeExtractionRoutes } from "./helpers/youtube-background-extraction";
+
 /**
  * Slice 27: YouTube Import Quality Uplift — E2E tests
  *
@@ -115,15 +117,7 @@ async function installValidateRoute(page: Page) {
 
 /** Extract route returning all-resolved ingredients (simulating improved parser quality). */
 async function installAllResolvedExtractRoute(page: Page) {
-  await page.route("**/api/v1/recipes/youtube/extract", async (route) => {
-    if (route.request().method() !== "POST") {
-      await route.continue();
-      return;
-    }
-    await route.fulfill({
-      json: {
-        success: true,
-        data: {
+  await installCompletedYoutubeExtractionRoutes(page, {
           extraction_id: "ext-quality-27",
           title: "백종원 김치찌개",
           base_servings: 2,
@@ -175,10 +169,6 @@ async function installAllResolvedExtractRoute(page: Page) {
             },
           ],
           new_cooking_methods: [],
-        },
-        error: null,
-      },
-    });
   });
 }
 

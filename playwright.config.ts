@@ -87,6 +87,10 @@ export default defineConfig({
         "LOCAL_SUPABASE_INTERNAL_URL=http://127.0.0.1:54321",
         "DATA_SUPABASE_URL=http://127.0.0.1:54321",
         "DATA_SUPABASE_PUBLISHABLE_KEY=qa-local-publishable-key",
+        // Deterministic loopback-only fixtures; these values are not real secrets.
+        "DATA_SUPABASE_SECRET_KEY=qa-test-only-not-a-real-data-secret",
+        "HOMECOOK_SESSION_ATTESTATION_HMAC_KEY_V1=qa-test-only-attestation-hmac-key-0001",
+        "HOMECOOK_SESSION_GENERATION_HMAC_KEY_V1=qa-test-only-generation-hmac-key-0001",
         "NEXT_PUBLIC_HOMECOOK_ENABLE_QA_FIXTURES=1",
         "NEXT_PUBLIC_ENABLED_AUTH_PROVIDERS=kakao,naver,google",
         "NEXT_PUBLIC_NAVER_SUPABASE_PROVIDER=custom:naver",

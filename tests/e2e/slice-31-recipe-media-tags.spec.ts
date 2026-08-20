@@ -5,6 +5,11 @@ import { expect, test, type Browser, type Page } from "@playwright/test";
 
 import { buildUnavailableRecipeNutrition } from "@/lib/nutrition/recipe-nutrition-presentation";
 
+import {
+  installCompletedYoutubeExtractionRoutes,
+  installEmptyYoutubeNotificationRoutes,
+} from "./helpers/youtube-background-extraction";
+
 const E2E_AUTH_OVERRIDE_KEY = "homecook.e2e-auth-override";
 const E2E_AUTH_OVERRIDE_COOKIE = E2E_AUTH_OVERRIDE_KEY;
 const BASE_URL = process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:3100";
@@ -31,6 +36,7 @@ async function preparePage(
   });
   const page = await context.newPage();
   await setAuthOverride(page);
+  await installEmptyYoutubeNotificationRoutes(page);
   return { context, page };
 }
 
@@ -99,7 +105,49 @@ async function installCookingMethodRoutes(page: Page) {
 
 async function installYoutubeRoutes(page: Page) {
   const thumbnailUrl = createFoodThumbDataUri("찌개", "#FFC6CA");
+  const draft = {
+    extraction_id: "slice31-extract",
+    title: "김치찌개 자세한 레시피",
+    base_servings: 2,
+    thumbnail_url: thumbnailUrl,
+    tags: ["한식", "찌개", "저녁"],
+    extraction_methods: ["description", "ocr"],
+    draft_warnings: [],
+    blocking_issues: [],
+    ingredients: [
+      {
+        ingredient_id: "ingredient-kimchi",
+        standard_name: "김치",
+        amount: 200,
+        unit: "g",
+        ingredient_type: "QUANT",
+        display_text: "김치 200g",
+        sort_order: 1,
+        scalable: true,
+        confidence: 0.95,
+        resolution_status: "resolved",
+      },
+    ],
+    steps: [
+      {
+        step_number: 1,
+        instruction: "김치를 한입 크기로 썬다",
+        cooking_method: {
+          id: "method-prep",
+          code: "prep",
+          label: "손질",
+          color_key: "gray",
+          is_new: false,
+        },
+        duration_text: null,
+        is_incomplete: false,
+        missing_fields: [],
+      },
+    ],
+    new_cooking_methods: [],
+  };
   await installCookingMethodRoutes(page);
+  await installCompletedYoutubeExtractionRoutes(page, draft);
 
   await page.route("**/api/v1/ingredients*", async (route) => {
     await route.fulfill({
@@ -151,47 +199,7 @@ async function installYoutubeRoutes(page: Page) {
     await route.fulfill({
       json: {
         success: true,
-        data: {
-          extraction_id: "slice31-extract",
-          title: "김치찌개 자세한 레시피",
-          base_servings: 2,
-          thumbnail_url: thumbnailUrl,
-          tags: ["한식", "찌개", "저녁"],
-          extraction_methods: ["description", "ocr"],
-          draft_warnings: [],
-          blocking_issues: [],
-          ingredients: [
-            {
-              ingredient_id: "ingredient-kimchi",
-              standard_name: "김치",
-              amount: 200,
-              unit: "g",
-              ingredient_type: "QUANT",
-              display_text: "김치 200g",
-              sort_order: 1,
-              scalable: true,
-              confidence: 0.95,
-              resolution_status: "resolved",
-            },
-          ],
-          steps: [
-            {
-              step_number: 1,
-              instruction: "김치를 한입 크기로 썬다",
-              cooking_method: {
-                id: "method-prep",
-                code: "prep",
-                label: "손질",
-                color_key: "gray",
-                is_new: false,
-              },
-              duration_text: null,
-              is_incomplete: false,
-              missing_fields: [],
-            },
-          ],
-          new_cooking_methods: [],
-        },
+        data: draft,
         error: null,
       },
     });

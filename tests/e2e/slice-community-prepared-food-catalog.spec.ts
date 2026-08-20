@@ -3,6 +3,8 @@ import path from "node:path";
 
 import { expect, test, type Browser, type Page } from "@playwright/test";
 
+import { installEmptyYoutubeNotificationRoutes } from "./helpers/youtube-background-extraction";
+
 const BASE_URL = process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:3100";
 const AUTH_KEY = "homecook.e2e-auth-override";
 const PLAN_DATE = "2026-07-18";
@@ -56,6 +58,7 @@ function createProduct(overrides: Record<string, unknown> = {}) {
 }
 
 async function setAuthenticated(page: Page) {
+  await installEmptyYoutubeNotificationRoutes(page);
   await page.context().addCookies([
     { name: AUTH_KEY, value: "authenticated", url: BASE_URL, sameSite: "Lax" },
   ]);

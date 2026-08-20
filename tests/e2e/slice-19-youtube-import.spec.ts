@@ -1,5 +1,7 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 
+import { installCompletedYoutubeExtractionRoutes } from "./helpers/youtube-background-extraction";
+
 const E2E_AUTH_OVERRIDE_KEY = "homecook.e2e-auth-override";
 const E2E_AUTH_OVERRIDE_COOKIE = E2E_AUTH_OVERRIDE_KEY;
 const E2E_APP_ORIGIN = process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:3100";
@@ -162,21 +164,7 @@ async function installValidateErrorRoute(page: Page) {
 
 async function installExtractRoute(page: Page, delayMs = 1500) {
   let callCount = 0;
-
-  await page.route("**/api/v1/recipes/youtube/extract", async (route) => {
-    if (route.request().method() !== "POST") {
-      await route.continue();
-      return;
-    }
-    callCount += 1;
-    // Add delay so the extraction progress UI is visible before results arrive
-    if (delayMs > 0) {
-      await new Promise((resolve) => setTimeout(resolve, delayMs));
-    }
-    await route.fulfill({
-      json: {
-        success: true,
-        data: {
+  const draft = {
           extraction_id: "ext-001",
           title: "백종원 김치찌개",
           base_servings: 2,
@@ -236,11 +224,28 @@ async function installExtractRoute(page: Page, delayMs = 1500) {
             },
           ],
           new_cooking_methods: [],
-        },
-        error: null,
-      },
+  };
+
+  await installCompletedYoutubeExtractionRoutes(page, draft);
+  await page.route("**/api/v1/recipes/youtube/extract", async (route) => {
+    callCount += 1;
+    if (delayMs > 0) {
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+    }
+    await route.fulfill({
+      json: { success: true, data: draft, error: null },
     });
   });
+  await page.route(
+    (url) => url.pathname === "/api/v1/recipes/youtube/extraction-jobs",
+    async (route) => {
+      callCount += 1;
+      if (delayMs > 0) {
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+      }
+      await route.fallback();
+    },
+  );
 
   return {
     getCallCount: () => callCount,
@@ -248,18 +253,14 @@ async function installExtractRoute(page: Page, delayMs = 1500) {
 }
 
 async function installExtractErrorRoute(page: Page) {
-  await page.route("**/api/v1/recipes/youtube/extract", async (route) => {
-    if (route.request().method() !== "POST") {
-      await route.continue();
-      return;
-    }
+  await page.route("**/api/v1/recipes/youtube/extraction-jobs", async (route) => {
     await route.fulfill({
-      status: 500,
+      status: 503,
       json: {
         success: false,
         data: null,
         error: {
-          code: "EXTRACTION_FAILED",
+          code: "QUEUE_UNAVAILABLE",
           message: "서버 오류가 발생했어요",
           fields: [],
         },
@@ -486,7 +487,7 @@ test.describe("Slice 19: YouTube Import", () => {
     await expect(page.locator("text=올바른 유튜브 URL을 입력해 주세요")).toBeVisible({ timeout: 5000 });
   });
 
-  test("extraction error: shows retry and reenter options", async ({ page }) => {
+  test("enqueue error keeps the URL available for retry", async ({ page }) => {
     await setAuthOverride(page, "authenticated");
     await installCookingMethodsRoute(page);
     await installValidateRoute(page, { is_recipe_video: true });
@@ -496,13 +497,13 @@ test.describe("Slice 19: YouTube Import", () => {
     await page.locator('input[type="url"]').fill("https://www.youtube.com/watch?v=fail999999");
     await page.click('button:has-text("가져오기")');
 
-    // Should show extraction error
-    await expect(page.locator("text=레시피 추출에 실패했어요")).toBeVisible({ timeout: 10000 });
-    await expect(page.locator("text=서버 오류가 발생했어요")).toBeVisible();
-
-    // Click "다른 영상 입력" to go back to step 1
-    await page.click('button:has-text("다른 영상 입력")');
-    await expect(page.getByRole("heading", { name: YOUTUBE_IMPORT_SCREEN_HEADING })).toBeVisible();
+    await expect(page.locator(".web-menu-add-error")).toContainText(
+      "서버 오류가 발생했어요",
+    );
+    await expect(page.locator('input[type="url"]')).toHaveValue(
+      "https://www.youtube.com/watch?v=fail999999",
+    );
+    await expect(page.getByRole("button", { name: "가져오기" })).toBeEnabled();
   });
 
   test("register error: shows error modal with retry", async ({ page }) => {
@@ -777,27 +778,14 @@ test.describe("Slice 19: YouTube Import", () => {
     await installIngredientsRoute(page);
     await installValidateRoute(page, { is_recipe_video: true });
 
-    // Return extract data with empty ingredients and steps
-    await page.route("**/api/v1/recipes/youtube/extract", async (route) => {
-      if (route.request().method() !== "POST") {
-        await route.continue();
-        return;
-      }
-      await route.fulfill({
-        json: {
-          success: true,
-          data: {
-            extraction_id: "ext-empty",
-            title: "빈 레시피",
-            base_servings: 2,
-            extraction_methods: ["description"],
-            ingredients: [],
-            steps: [],
-            new_cooking_methods: [],
-          },
-          error: null,
-        },
-      });
+    await installCompletedYoutubeExtractionRoutes(page, {
+      extraction_id: "ext-empty",
+      title: "빈 레시피",
+      base_servings: 2,
+      extraction_methods: ["description"],
+      ingredients: [],
+      steps: [],
+      new_cooking_methods: [],
     });
 
     await page.goto(YOUTUBE_IMPORT_URL);
@@ -824,15 +812,7 @@ test.describe("Slice 19: YouTube Import", () => {
     await installIngredientsRoute(page);
     await installValidateRoute(page, { is_recipe_video: true });
 
-    await page.route("**/api/v1/recipes/youtube/extract", async (route) => {
-      if (route.request().method() !== "POST") {
-        await route.continue();
-        return;
-      }
-      await route.fulfill({
-        json: {
-          success: true,
-          data: {
+    await installCompletedYoutubeExtractionRoutes(page, {
             extraction_id: "ext-needs-review",
             title: "확인 필요한 레시피",
             base_servings: 2,
@@ -882,10 +862,6 @@ test.describe("Slice 19: YouTube Import", () => {
               },
             ],
             new_cooking_methods: [],
-          },
-          error: null,
-        },
-      });
     });
 
     let registerBody: Record<string, unknown> | null = null;
@@ -935,15 +911,7 @@ test.describe("Slice 19: YouTube Import", () => {
     await installValidateRoute(page, { is_recipe_video: true });
     await installRegisterRoute(page);
 
-    await page.route("**/api/v1/recipes/youtube/extract", async (route) => {
-      if (route.request().method() !== "POST") {
-        await route.continue();
-        return;
-      }
-      await route.fulfill({
-        json: {
-          success: true,
-          data: {
+    await installCompletedYoutubeExtractionRoutes(page, {
             extraction_id: "ext-incomplete-step",
             title: "스텝 확인 레시피",
             base_servings: 2,
@@ -976,10 +944,6 @@ test.describe("Slice 19: YouTube Import", () => {
               },
             ],
             new_cooking_methods: [],
-          },
-          error: null,
-        },
-      });
     });
 
     await page.goto(YOUTUBE_IMPORT_URL);
@@ -1007,17 +971,7 @@ test.describe("Slice 19: YouTube Import", () => {
     await installValidateRoute(page, { is_recipe_video: true });
     await installRegisterRoute(page);
 
-    // Custom extract route returning base_servings: null
-    await page.route("**/api/v1/recipes/youtube/extract", async (route) => {
-      if (route.request().method() !== "POST") {
-        await route.continue();
-        return;
-      }
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      await route.fulfill({
-        json: {
-          success: true,
-          data: {
+    await installCompletedYoutubeExtractionRoutes(page, {
             extraction_id: "ext-null-servings",
             title: "인분 없는 레시피",
             base_servings: null,
@@ -1044,10 +998,6 @@ test.describe("Slice 19: YouTube Import", () => {
               },
             ],
             new_cooking_methods: [],
-          },
-          error: null,
-        },
-      });
     });
 
     await page.goto(YOUTUBE_IMPORT_URL);

@@ -4,6 +4,7 @@ import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Locator, type Page, type Route } from "@playwright/test";
 
 import { installAccountLibraryVisualRoutes, setE2EAuthOverride } from "./helpers/mock-routes";
+import { installEmptyYoutubeNotificationRoutes } from "./helpers/youtube-background-extraction";
 
 const SESSION_ID = "550e8400-e29b-41d4-a716-446655440000";
 const RECIPE_ID = "550e8400-e29b-41d4-a716-446655440001";
@@ -126,6 +127,7 @@ const completion = {
 };
 
 async function installCookModeRoute(page: Page, candidates = snapshot.pantry_candidates) {
+  await installEmptyYoutubeNotificationRoutes(page);
   await page.route("**/api/v1/cooking/session-attempts/*/cook-mode", async (route) => {
     await route.fulfill({
       json: { success: true, data: { ...snapshot, pantry_candidates: candidates }, error: null },
