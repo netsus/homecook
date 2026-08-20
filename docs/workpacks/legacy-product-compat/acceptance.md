@@ -4,7 +4,7 @@
 
 > Stage 2/3 backend checkpoint는 PR #1369 merge `50e31293e6740b3fdc56d022e12d3b9fe8be4cf7`로 merged-green이다. Stage 4 author task `01a01e01-0a0e-7f70-97dd-2e6c8f0012af`의 local implementation과 browser evidence는 Draft PR #1371에서 GREEN이다. Independent Stage 5 task `01a01e3b-663e-7252-9c3c-0c7b30251c0e`는 exact `387f1d688204061c28b60c415135a70e42a07042` / tree `e0d887e487ad237a87fa6b3d67238d2dac045ce7`, drift `0`에서 APPROVE P0/P1/P2 `0/0/0`, blocker/major/minor `0/0/0`을 반환했다. 현재 lifecycle은 `in_progress`, approval은 Stage 6 `needs_revision`, evaluation은 `not_started`, verification은 `pending`, auto-merge는 `false`이며 Stage 6 fresh re-review, Manual/activation/tombstone authority는 없다.
 
-> Stage 6 repair reconciliation은 retained Stage 2/3 evidence(`10 files / 76`, PostgreSQL `13/13`, authority `3 files / 34`, isolated Supabase, prepared-food owner `11/11`, PR #1369 exact independent APPROVE/merge)를 30개 backend/shared ID에 다시 매핑했다. 따라서 non-Manual acceptance는 `40/40` checked이며 Manual Only `7`개는 unchecked다. Stage 6 task `01a01e68-fb28-7841-8815-c7685d56cc35`의 `REQUEST_CHANGES 0/2/1` fresh re-review와 repaired current-head full gate는 pending이다.
+> Stage 6 repair reconciliation은 retained Stage 2/3 evidence(`10 files / 76`, PostgreSQL `13/13`, authority `3 files / 34`, isolated Supabase, prepared-food owner `11/11`, PR #1369 exact independent APPROVE/merge)를 30개 backend/shared ID에 다시 매핑했다. 따라서 non-Manual acceptance는 `40/40` checked이며 Manual Only `7`개는 unchecked다. Exact `d0dfe94a3ea57260b16abd2369b9d4a719d82a55`의 full `verify:frontend`는 GREEN이며 Stage 6 task `01a01e68-fb28-7841-8815-c7685d56cc35`의 `REQUEST_CHANGES 0/2/1` fresh re-review는 pending이다.
 
 ## Happy Path
 

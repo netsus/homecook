@@ -225,8 +225,9 @@
 - Independent Stage 6 task `01a01e68-fb28-7841-8815-c7685d56cc35`는 exact `45ae210e3cf0d9852497cc0c11e4ecd6003359d8`에서 `REQUEST_CHANGES P0/P1/P2=0/2/1`을 반환했다. 이 author pass는 reviewer verdict를 승인으로 바꾸지 않는다.
 - Runtime repair commit `a9f4288aa9607f90a37de91e2d0158a187c13d3d`은 shared sort+dedupe canonicalizer를 planner/standalone fingerprint와 실제 request serialization에 적용한다. reorder/duplicate RED 4건 뒤 client/store `16/16`, focused runtime/routes `97/97`, exact legacy Playwright `14/14`, lint/typecheck가 GREEN이다.
 - Retained Stage 2/3 evidence를 ID별로 재대조해 acceptance non-Manual `40/40`을 checked로 맞췄다. Manual Only `7`개는 unchecked/pending이다.
-- `.workflow-v2/work-items/legacy-product-compat.json#closeout`을 canonical owner로 추가하고 phase `collecting`, roadmap `in_progress`, Design `confirmed`, acceptance/delivery `complete`, required checks/external smokes pending, Stage 6 `needs_revision`, all checks green `false`로 잠근다.
-- Stage 6 fresh re-review, repaired current-head full `verify:frontend`, successor PR checks, Ready/merge, Manual/cutover/activation은 pending이다.
+- `.workflow-v2/work-items/legacy-product-compat.json#closeout`을 canonical owner로 추가하고 phase `collecting`, roadmap `in_progress`, Design `confirmed`, acceptance/delivery `complete`, required checks/external smokes pending, Stage 6 `needs_revision`, all checks green `false`로 잠근다. Repaired local full gate는 GREEN이지만 successor PR current-head checks와 fresh review가 남아 overall verification은 승격하지 않는다.
+- Exact `d0dfe94a3ea57260b16abd2369b9d4a719d82a55`에서 `verify:frontend:pr`와 full `verify:frontend`가 GREEN이다: product `2,757/175`, build `81`, Lighthouse `2 URLs x 3`, regression `963/180`, a11y `18/15`, visual `22/23`, security `12/12`.
+- Stage 6 fresh re-review, successor PR checks, Ready/merge, Manual/cutover/activation은 pending이다.
 - 상세 증거: `docs/workpacks/legacy-product-compat/evidence/2026-08-20-stage6-finding-repair.md`.
 
 ## Delivery Checklist

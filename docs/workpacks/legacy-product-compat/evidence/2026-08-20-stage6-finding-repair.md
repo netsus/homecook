@@ -76,18 +76,23 @@ Manual Only `7` items remain unchecked. No cutover, revoke/drop, server-Mac/OAut
 - owner: `.workflow-v2/work-items/legacy-product-compat.json#closeout`
 - phase: `collecting`
 - docs: roadmap `in_progress`, Design `confirmed`, delivery/acceptance complete, authority not required, automation synced
-- verification: required checks pending until repaired full gate; external smokes pending
+- verification: repaired local full gate passed on exact `d0dfe94a3ea57260b16abd2369b9d4a719d82a55`; canonical required checks and external smokes remain pending until successor PR checks and the independent re-review
 - merge gate: Stage 6 `needs_revision`, all checks green false
-- overall tracked status remains `in_progress / not_started / pending / not_started`, auto-merge false
+- overall tracked status remains `in_progress / needs_revision / pending / not_started`, auto-merge false
+
+## Repaired-head verification
+
+- exact verified head/tree: `d0dfe94a3ea57260b16abd2369b9d4a719d82a55` / `73dc173871f448d98c236eeb6bda2766690f803e`
+- `pnpm verify:frontend:pr`: GREEN — product `239 files passed / 12 skipped`, `2,757 tests passed / 175 skipped`; build `81`; smoke `62/10`; core a11y `8/1`; core visual `12/12`.
+- `pnpm verify:frontend`: GREEN — lint; typecheck; product `2,757/175`; build `81`; Lighthouse `2 URLs x 3 runs`; regression `963/180`; a11y `18/15`; visual `22/23`; security `12/12`.
+- gate-generated tracked screenshots and nine untracked candidates were restored/removed after the run; no user file was touched.
 
 ## P2 — PR body
 
-PR Design/Accessibility is aligned with independent Stage 5 APPROVE and Design confirmed. Test Plan and Actual Verification must reference the repaired current-head full gate before Stage 6 re-review. Stage 6, Ready/merge and Manual remain pending.
+PR Design/Accessibility is aligned with independent Stage 5 APPROVE and Design confirmed. Test Plan and Actual Verification reference the exact repaired-head full gate above. Stage 6, Ready/merge and Manual remain pending.
 
 ## Pending
 
-- projection tests and canonical closeout validators
-- repaired current-head `verify:frontend:pr` and full `verify:frontend`
 - successor Draft PR checks
 - fresh independent Stage 6 re-review
 - Ready/merge/Discord and every Manual/cutover/activation obligation

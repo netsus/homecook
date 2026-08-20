@@ -86,7 +86,7 @@
     "canonical_retry_green": "client/store 16/16; focused runtime/routes 97/97; exact Playwright 14/14; lint; typecheck",
     "acceptance_reconciliation": "40/40 non-Manual checked; 7 Manual Only unchecked",
     "closeout_phase": "collecting",
-    "full_verify": "pending repaired current head"
+    "full_verify": "GREEN exact d0dfe94a3ea57260b16abd2369b9d4a719d82a55 / tree 73dc173871f448d98c236eeb6bda2766690f803e: product 2757/175; build 81; Lighthouse 2x3; regression 963/180; a11y 18/15; visual 22/23; security 12/12"
   },
   "checklist_updates": [
     { "id": "delivery-legacy-compat-stage4-optional-key", "status": "checked", "evidence_refs": ["tests/legacy-product-compat-client.test.tsx", "tests/legacy-product-compat-store.test.ts"] },
