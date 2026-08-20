@@ -48,6 +48,26 @@ const stage2AuthorCheckedIds = [
   "delivery-cooking-cross-stage2-predecessors",
   "delivery-cooking-cross-stage2-repair-boundary",
 ];
+
+function buildSyntheticStage1BaseChecklistContract() {
+  const current = readWorkpackChecklistContract({
+    rootDir: root,
+    slice: sliceId,
+  });
+  const resetNonManualChecks = <T extends { checked: boolean; manualOnly: boolean }>(
+    items: T[],
+  ) =>
+    items.map((item) =>
+      item.manualOnly ? item : { ...item, checked: false },
+    );
+
+  return {
+    ...current,
+    deliveryItems: resetNonManualChecks(current.deliveryItems),
+    acceptanceItems: resetNonManualChecks(current.acceptanceItems),
+    items: resetNonManualChecks(current.items),
+  };
+}
 const approvedPlanPath =
   "docs/workpacks/planner-shell/evidence/cooking-meal-log-and-product-search-master-plan-20260722.md";
 const approvedPlanSha =
@@ -907,14 +927,35 @@ describe("cooking meal-log cross-slice Stage 1 relock", () => {
   });
 
   it("keeps the Stage 2 checkpoint valid in the non-Draft Ready closeout gate", () => {
+    const currentChecklistContract = readWorkpackChecklistContract({
+      rootDir: root,
+      slice: sliceId,
+    });
+    const stage1BaseChecklistContract =
+      buildSyntheticStage1BaseChecklistContract();
+    expect(stage1BaseChecklistContract.errors).toEqual([]);
+    expect(
+      stage1BaseChecklistContract.items.map((item) => item.metadata?.id),
+    ).toEqual(currentChecklistContract.items.map((item) => item.metadata?.id));
+    expect(
+      stage1BaseChecklistContract.items.filter(
+        (item) => !item.manualOnly && item.checked,
+      ),
+    ).toEqual([]);
+
     const results = validateCloseoutSync({
       rootDir: root,
+      changedFiles: [
+        "docs/workpacks/cooking-meal-log-cross-slice-release-qa/README.md",
+        "docs/workpacks/cooking-meal-log-cross-slice-release-qa/acceptance.md",
+      ],
       env: {
         ...process.env,
-        BASE_REF: "master",
+        BASE_REF: "missing-shallow-base",
         BRANCH_NAME: stage2Branch,
         PR_IS_DRAFT: "false",
       },
+      readBaseChecklistContract: () => stage1BaseChecklistContract,
     });
     expect(results).toEqual([]);
   });
