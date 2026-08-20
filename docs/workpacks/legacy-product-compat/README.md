@@ -8,8 +8,8 @@
 
 - tracked/current Stage 1 relock: official remote branch `docs/legacy-product-compat-stage1-relock-20260815`
 - predecessor author branch/SHA는 historical review evidence일 뿐 active projection으로 사용하지 않는다.
-- Stage 2 backend: `feature/be-legacy-product-compat`, Draft PR #1369; author task `019ff12c-dc8b-7752-9319-398a68cacb6e`는 자기 변경을 승인하지 않는다.
-- Stage 4 frontend: 별도 fresh Codex task/branch에서 시작
+- Stage 2 backend: PR #1369 merge `50e31293e6740b3fdc56d022e12d3b9fe8be4cf7`; author task `019ff12c-dc8b-7752-9319-398a68cacb6e`와 독립 Stage 3 review가 merged-green checkpoint를 닫았다.
+- Stage 4 frontend: `feature/fe-legacy-product-compat`, Draft PR #1371; author task `01a01e01-0a0e-7f70-97dd-2e6c8f0012af`는 Stage 5/6을 승인하지 않는다.
 
 ## Official Sources
 
@@ -127,7 +127,7 @@
 - UI risk: `low-risk` regression on existing authorities
 - Anchor screen dependency: `PLANNER_WEEK`, `COOK_MODE`, `LEFTOVERS`
 - Visual artifact: existing predecessor evidence only; #13 creates no new design-generator/critic artifact
-- Authority status: `not-required` (`authority_required=false`)
+- Authority status: `not-required`
 - Final references:
   - `ui/designs/authority/PLANNER_WEEK-authority.md`
   - `ui/designs/authority/recipe-content-snapshot-future-propagation-authority.md`
@@ -136,12 +136,12 @@
 
 ## Design Status
 
-- [x] 임시 UI (temporary)
+- [ ] 임시 UI (temporary)
 - [ ] 리뷰 대기 (pending-review)
-- [ ] 확정 (confirmed)
+- [x] 확정 (confirmed)
 - [ ] N/A — BE-only
 
-#10/#7/#11의 세 final authority reference는 predecessor evidence로만 유지한다. `authority_required=false`는 새 visual composition이 없는 #13 범위에 그대로 적용하지만, Stage 1의 현재 Design Status는 `temporary`이며 #13 runtime, Stage 5/6, Manual, Ready, merge, production 또는 activation을 승인하지 않는다.
+#10/#7/#11의 세 final authority reference는 predecessor evidence로만 유지한다. `authority_required=false`는 새 visual composition이 없는 #13 범위에 그대로 적용한다. Independent Stage 5 task `01a01e3b-663e-7252-9c3c-0c7b30251c0e`가 exact head/tree `387f1d688204061c28b60c415135a70e42a07042` / `e0d887e487ad237a87fa6b3d67238d2dac045ce7`, drift `0`에서 APPROVE P0/P1/P2 `0/0/0`, blocker/major/minor `0/0/0`을 반환했으므로 Design Status는 `confirmed`다. 이는 Stage 6, Manual, Ready, merge, production 또는 activation을 승인하지 않는다.
 
 ## Source Links
 
@@ -204,8 +204,33 @@
 - First successor code/quality task `01a003ca-fc74-7103-ba18-0997f8a61c92`는 model usage limit으로 verdict 전에 종료됐지만 mixed-route inventory와 progress summary counter 후보를 남겼고, 위 두 normal commits가 이를 수리했다. Security/DB task `01a003ca-fc72-7c22-943e-bda5b4d47cdf`는 command approval 뒤 재개되어 frozen `be65e6df1559de10e1098a4cd0f9ba69dccb9deb`를 `REQUEST_CHANGES P0/P1/P2=0/0/1`로 판정했다. Runtime/security finding은 `0`; 유일한 P2는 이 상위 roadmap과 PR evidence projection drift였다. PR SHA typo와 이 repo projection을 successor에서 수리한 뒤 새 exact-head 독립 판정은 계속 pending이다.
 - Exact `b6c5be3186b5b851ab493b78fef199a02ae33b05` security/DB task `01a01d94-6623-7130-a6c5-b71a39edbd08`는 `APPROVE P0/P1/P2=0/0/0`이었다. Code/quality task `01a01d94-6124-7eb1-bd0f-bdbda74d3f5b`는 `REQUEST_CHANGES 0/1/2`: inactive owner public recipe upper bound, actual seeded-v2/required-key runtime evidence, terminal PR-body projection이었다. Runtime/evidence findings는 `ae517053`와 `d6032a59`로 수리했고 PR body는 successor terminal checks 뒤 갱신한다. Fresh exact-head re-review는 pending이다.
 - Exact `74f148e10027d269941ec873e49c9e4bd9ee5f8d` code/quality re-review는 `APPROVE 0/0/0`이었다. Security/DB re-review는 `REQUEST_CHANGES 0/1/1`: source recipe owner lifecycle transition concurrency와 work-item/status 8-file rail drift였다. `09c579b0`가 canonical multi-owner lock ordering과 concurrent quarantine fixture를 추가하고 `c320c157`이 10-file rail을 동기화했다. Fresh exact-head re-review는 pending이다.
-- Production/staging/remote application writes는 `0/0/0`이다. fresh independent Stage 3 approval, current-head CI terminal green, Ready/merge/OMO, controlled full-local deploy/drain/fence, old overload revoke/drop, deployed callable inventory, server-Mac/OAuth와 required-key/production activation은 pending이다.
+- Stage 2/3 backend checkpoint는 PR #1369 merge `50e31293e6740b3fdc56d022e12d3b9fe8be4cf7`와 `docs/workpacks/legacy-product-compat/omo-report.md` 기준 merged-green이다. Production/staging/remote application writes는 `0/0/0`이며 controlled full-local deploy/drain/fence, old overload revoke/drop, deployed callable inventory, server-Mac/OAuth와 required-key/production activation은 pending이다.
 - 상세 증거: `docs/workpacks/legacy-product-compat/evidence/2026-08-15-stage2-backend-implementation.md`.
+
+## Stage 4 Current Evidence
+
+- Author task: `01a01e01-0a0e-7f70-97dd-2e6c8f0012af`; branch `feature/fe-legacy-product-compat`; Draft PR #1371.
+- implementation commit `3ca8320cd61b0a74e4ac682ce9c7661b0a675341`은 optional stable key, same-payload retry reuse/different-payload rotation, duplicate delete lock와 nested focus restore를 구현했다. browser evidence commit `c7920dc89a69579429a15198a0bd4769646154b3`은 loading/empty/error/read-only/unauthorized와 390px/320px/desktop matrix를 #13 grep scope에 잠갔다.
+- TDD RED `5 failures`와 same-target reader reload RED `2 failures` 뒤 focused Vitest `10 files / 133 tests`, legacy focused `3 files / 17 tests`, exact Playwright `14/14`, lint, typecheck, build, product Vitest `2,757 pass / 175 intended skip`, Lighthouse `2 URLs × 3`, complete regression `963 pass / 180 intended skip`, full a11y `18 pass / 15 intended skip`, full visual `22 pass / 23 intended skip`, security `12/12`, audit high/critical `0/0`가 GREEN이다.
+- exploratory QA/qa eval은 `low-risk`, `authority_required=false`, 새 화면·visual composition 없음, exact mocked-route browser matrix가 존재하므로 N/A다. 기존 세 final authority reference를 그대로 재사용하며 새 authority artifact를 만들지 않는다.
+- Stage 5 P1 finding repair commit `31a2b9394df031a7dee84e692cbd399d77044853`은 delete failure alert를 planner body에서 active confirmation dialog로 옮기고 failure focus를 dialog close control로 복원했다. component RED `1/6`, Playwright RED `1/1` 뒤 component `6/6`, legacy focused `17/17`, exact legacy Playwright `14/14`, `verify:frontend:pr`가 GREEN이다. 이는 author repair이며 Stage 5 approval이 아니다.
+- Independent Stage 5 task `01a01e3b-663e-7252-9c3c-0c7b30251c0e`는 exact repaired projection `387f1d688204061c28b60c415135a70e42a07042` / tree `e0d887e487ad237a87fa6b3d67238d2dac045ce7`를 drift `0`으로 검토해 APPROVE P0/P1/P2 `0/0/0`, blocker/major/minor `0/0/0`을 확정했다.
+- 전체 lifecycle은 `in_progress`, approval은 `codex_approved`, evaluation/verification은 `passed`, auto-merge는 `false`다. Internal 6.5, Ready/merge, Manual/server-Mac/OAuth/device/AT/full WCAG, controlled cutover와 activation은 pending이다.
+- 상세 증거: `docs/workpacks/legacy-product-compat/evidence/2026-08-20-stage4-frontend-implementation.md`.
+- Stage 5 finding repair 증거: `docs/workpacks/legacy-product-compat/evidence/2026-08-20-stage5-finding-repair.md`.
+- Stage 5 approval 증거: `docs/workpacks/legacy-product-compat/evidence/2026-08-20-stage5-frontend-review.md`.
+
+## Stage 6 Approved Projection
+
+- Independent Stage 6 task `01a01e68-fb28-7841-8815-c7685d56cc35`는 exact `45ae210e3cf0d9852497cc0c11e4ecd6003359d8`에서 `REQUEST_CHANGES P0/P1/P2=0/2/1`을 반환했다. 이 author pass는 reviewer verdict를 승인으로 바꾸지 않는다.
+- Runtime repair commit `a9f4288aa9607f90a37de91e2d0158a187c13d3d`은 shared sort+dedupe canonicalizer를 planner/standalone fingerprint와 실제 request serialization에 적용한다. reorder/duplicate RED 4건 뒤 client/store `16/16`, focused runtime/routes `97/97`, exact legacy Playwright `14/14`, lint/typecheck가 GREEN이다.
+- Retained Stage 2/3 evidence를 ID별로 재대조해 acceptance non-Manual `40/40`을 checked로 맞췄다. Manual Only `7`개는 unchecked/pending이다.
+- `.workflow-v2/work-items/legacy-product-compat.json#closeout`을 canonical owner로 두고 Stage 6 승인 후 phase `projecting`, roadmap `in_progress`, Design `confirmed`, acceptance/delivery `complete`, required checks `passed`, external smokes pending, approval `codex_approved`, all checks green `true`로 투영한다.
+- Exact `d0dfe94a3ea57260b16abd2369b9d4a719d82a55`에서 `verify:frontend:pr`와 full `verify:frontend`가 GREEN이다: product `2,757/175`, build `81`, Lighthouse `2 URLs x 3`, regression `963/180`, a11y `18/15`, visual `22/23`, security `12/12`.
+- 같은 Stage 6 task는 exact `6387052439623cebef90176944aa5aee7f5ca17a` / tree `4d415e7d81c1bfeada5147f034b6b4c34fd66c89`, drift `0`에서 PR-body label P2만 남긴 `REQUEST_CHANGES 0/0/1` 뒤 body-only repair를 확인하고 최종 `APPROVE P0/P1/P2=0/0/0`, blocker/major/minor `0/0/0`, unresolved IDs none을 반환했다. Checks는 `12` success + `2` intended Draft skip, merge state는 `CLEAN`이다.
+- Internal 6.5, Ready/merge, Manual/cutover/activation은 pending이다.
+- 상세 증거: `docs/workpacks/legacy-product-compat/evidence/2026-08-20-stage6-finding-repair.md`.
+- Stage 6 final review: `docs/workpacks/legacy-product-compat/evidence/2026-08-20-stage6-final-review.md`.
 
 ## Delivery Checklist
 
@@ -217,9 +242,9 @@ Stage 1 exact-six docs and semantic relock test authored 사실은 이 문단과
 - [x] Stage 2 activation-block guard prevents activation until separately owned Manual cutover evidence is complete <!-- omo:id=delivery-legacy-compat-stage2-activation-block;stage=2;scope=backend;review=3,6 -->
 - [x] Stage 2 telemetry freshness and fail-closed tombstone/removal barrier implemented and tested <!-- omo:id=delivery-legacy-compat-stage2-telemetry-barrier;stage=2;scope=backend;review=3,6 -->
 - [x] Stage 2 owner/pinned-version and isolated-local fixture boundaries verified <!-- omo:id=delivery-legacy-compat-stage2-owner-fixtures;stage=2;scope=shared;review=3,6 -->
-- [ ] Stage 4 current/immediate-previous clients send optional key and preserve pre-gate no-key decode <!-- omo:id=delivery-legacy-compat-stage4-optional-key;stage=4;scope=frontend;review=5,6 -->
-- [ ] Stage 4 loading/empty/error/read-only/unauthorized and version-dispatch states verified <!-- omo:id=delivery-legacy-compat-stage4-states;stage=4;scope=frontend;review=5,6 -->
-- [ ] Stage 4 owner delete pending/error retention and no extra product action verified <!-- omo:id=delivery-legacy-compat-stage4-delete;stage=4;scope=frontend;review=5,6 -->
-- [ ] Stage 4 focus/Escape/restore and 390px/320px/desktop responsive evidence verified <!-- omo:id=delivery-legacy-compat-stage4-focus-responsive;stage=4;scope=frontend;review=5,6 -->
+- [x] Stage 4 current/immediate-previous clients send optional key and preserve pre-gate no-key decode <!-- omo:id=delivery-legacy-compat-stage4-optional-key;stage=4;scope=frontend;review=5,6 -->
+- [x] Stage 4 loading/empty/error/read-only/unauthorized and version-dispatch states verified <!-- omo:id=delivery-legacy-compat-stage4-states;stage=4;scope=frontend;review=5,6 -->
+- [x] Stage 4 owner delete pending/error retention and no extra product action verified <!-- omo:id=delivery-legacy-compat-stage4-delete;stage=4;scope=frontend;review=5,6 -->
+- [x] Stage 4 focus/Escape/restore and 390px/320px/desktop responsive evidence verified <!-- omo:id=delivery-legacy-compat-stage4-focus-responsive;stage=4;scope=frontend;review=5,6 -->
 
 Stage 1 review bookkeeping is prose/evaluator handoff, not a Stage 2-owned checklist item. Runtime review checkboxes begin only with the Stage 2 and Stage 4 implementation ownership shown above.

@@ -1,4 +1,5 @@
 import { withE2EAuthOverrideHeaders } from "@/lib/auth/e2e-auth-override";
+import { canonicalizeLegacyConsumedIngredientIds } from "@/lib/cooking/legacy-completion-payload";
 import type { ApiError, ApiResponse } from "@/types/api";
 import type {
   CookingSessionCancelData,
@@ -457,13 +458,22 @@ export async function fetchCookMode(
 export async function completeCookingSession(
   sessionId: string,
   body: { consumed_ingredient_ids: string[] },
+  idempotencyKey: string,
 ): Promise<CookingSessionCompleteData> {
+  const canonicalBody = {
+    consumed_ingredient_ids: canonicalizeLegacyConsumedIngredientIds(
+      body.consumed_ingredient_ids,
+    ),
+  };
   return requestCooking<CookingSessionCompleteData>(
     `/api/v1/cooking/sessions/${sessionId}/complete`,
     {
       method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(body),
+      headers: {
+        "content-type": "application/json",
+        "Idempotency-Key": idempotencyKey,
+      },
+      body: JSON.stringify(canonicalBody),
     },
   );
 }
@@ -494,13 +504,22 @@ export async function completeStandaloneCooking(body: {
   recipe_id: string;
   cooking_servings: number;
   consumed_ingredient_ids: string[];
-}): Promise<CookingStandaloneCompleteData> {
+}, idempotencyKey: string): Promise<CookingStandaloneCompleteData> {
+  const canonicalBody = {
+    ...body,
+    consumed_ingredient_ids: canonicalizeLegacyConsumedIngredientIds(
+      body.consumed_ingredient_ids,
+    ),
+  };
   return requestCooking<CookingStandaloneCompleteData>(
     "/api/v1/cooking/standalone-complete",
     {
       method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(body),
+      headers: {
+        "content-type": "application/json",
+        "Idempotency-Key": idempotencyKey,
+      },
+      body: JSON.stringify(canonicalBody),
     },
   );
 }

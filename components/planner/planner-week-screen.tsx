@@ -280,7 +280,6 @@ export function PlannerWeekScreen({
     useState<PlannerShellSegment>(initialLocation.segment);
   const [selectedDateKey, setSelectedDateKey] = useState(initialLocation.date);
   const [deletingProductId, setDeletingProductId] = useState<string | null>(null);
-  const [legacyDeleteError, setLegacyDeleteError] = useState<string | null>(null);
   const panelScrollPositions = useRef<Record<PlannerShellSegment, number>>({
     log: 0,
     plan: 0,
@@ -440,7 +439,6 @@ export function PlannerWeekScreen({
 
   async function handleLegacyProductDelete(entryId: string) {
     setDeletingProductId(entryId);
-    setLegacyDeleteError(null);
     try {
       await deleteProductPlannerEntry(entryId);
       await loadPlanner();
@@ -458,9 +456,6 @@ export function PlannerWeekScreen({
         setAuthState("unauthorized");
         return;
       }
-      setLegacyDeleteError(
-        error instanceof Error ? error.message : "완제품 계획을 삭제하지 못했어요.",
-      );
       throw error;
     } finally {
       setDeletingProductId(null);
@@ -934,11 +929,6 @@ export function PlannerWeekScreen({
           </section>
 
           <div className="mt-4">
-            {legacyDeleteError ? (
-              <p className="mb-3 text-sm text-[var(--danger)]" role="alert">
-                {legacyDeleteError}
-              </p>
-            ) : null}
             <LegacyProductPlanSection
               entries={productEntries}
               fallbackFocusRef={selectedDateTitleRef}

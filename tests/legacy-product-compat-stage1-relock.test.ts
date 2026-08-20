@@ -10,7 +10,7 @@ import { evaluateDocGate } from "../scripts/lib/omo-doc-gate.mjs";
 const root = process.cwd();
 const sliceId = "legacy-product-compat";
 const trackedBranch =
-  "feature/be-legacy-product-compat";
+  "feature/fe-legacy-product-compat";
 const stage1TrackedBranch =
   "docs/legacy-product-compat-stage1-relock-20260815";
 const predecessorAuthorBranch =
@@ -135,18 +135,19 @@ describe("legacy-product-compat fresh Stage 1 exact-six relock", () => {
 
     const honestStatus = {
       lifecycle: "in_progress",
-      approval_state: "not_started",
-      verification_status: "pending",
-      evaluation_status: "not_started",
-      evaluation_round: 0,
-      last_evaluator_result: null,
+      approval_state: "codex_approved",
+      verification_status: "passed",
+      evaluation_status: "passed",
+      evaluation_round: 1,
+      last_evaluator_result:
+        "docs/workpacks/legacy-product-compat/evidence/2026-08-20-stage6-final-review.md",
       auto_merge_eligible: false,
       blocked_reason_code: null,
     };
     expect(workItem.status).toEqual(honestStatus);
     expect(status).toMatchObject({
       branch: trackedBranch,
-      pr_path: "https://github.com/netsus/homecook/pull/1369",
+      pr_path: "https://github.com/netsus/homecook/pull/1371",
       ...honestStatus,
     });
 
@@ -744,10 +745,10 @@ describe("legacy-product-compat fresh Stage 1 exact-six relock", () => {
     );
   });
 
-  it("keeps Stage 1 design status temporary while retaining predecessor authorities", () => {
+  it("projects independent Stage 5 confirmation while retaining predecessor authorities", () => {
     const designStatus = readSection(readme, "## Design Status");
-    expect(designStatus).toContain("- [x] 임시 UI (temporary)");
-    expect(designStatus).toContain("- [ ] 확정 (confirmed)");
+    expect(designStatus).toContain("- [ ] 리뷰 대기 (pending-review)");
+    expect(designStatus).toContain("- [x] 확정 (confirmed)");
     expect(designStatus).toContain("predecessor evidence");
     expect(automation.frontend.design_authority.authority_required).toBe(false);
     expect(automation.frontend.design_authority.authority_report_paths).toEqual(
