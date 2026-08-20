@@ -1,5 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
+import { installCompletedYoutubeExtractionRoutes } from "./helpers/youtube-background-extraction";
+
 const E2E_AUTH_OVERRIDE_KEY = "homecook.e2e-auth-override";
 const E2E_AUTH_OVERRIDE_COOKIE = E2E_AUTH_OVERRIDE_KEY;
 const E2E_APP_ORIGIN = process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:3100";
@@ -98,20 +100,7 @@ async function installValidateRoute(page: Page, videoId: string) {
 }
 
 async function installAuthorCommentExtractRoute(page: Page, delayMs = 0) {
-  await page.route("**/api/v1/recipes/youtube/extract", async (route) => {
-    if (route.request().method() !== "POST") {
-      await route.continue();
-      return;
-    }
-
-    if (delayMs > 0) {
-      await new Promise((resolve) => setTimeout(resolve, delayMs));
-    }
-
-    await route.fulfill({
-      json: {
-        success: true,
-        data: {
+  await installCompletedYoutubeExtractionRoutes(page, {
           extraction_id: "ext-29-author-comment-e2e",
           title: "작성자 댓글 오이 김밥",
           base_servings: 1,
@@ -163,24 +152,11 @@ async function installAuthorCommentExtractRoute(page: Page, delayMs = 0) {
             },
           ],
           new_cooking_methods: [],
-        },
-        error: null,
-      },
-    });
-  });
+  }, { enqueueDelayMs: delayMs });
 }
 
 async function installDescriptionExtractRoute(page: Page) {
-  await page.route("**/api/v1/recipes/youtube/extract", async (route) => {
-    if (route.request().method() !== "POST") {
-      await route.continue();
-      return;
-    }
-
-    await route.fulfill({
-      json: {
-        success: true,
-        data: {
+  await installCompletedYoutubeExtractionRoutes(page, {
           extraction_id: "ext-29-description-ready-e2e",
           title: "설명란 김밥",
           base_servings: 1,
@@ -212,10 +188,6 @@ async function installDescriptionExtractRoute(page: Page) {
             },
           ],
           new_cooking_methods: [],
-        },
-        error: null,
-      },
-    });
   });
 }
 

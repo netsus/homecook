@@ -5,10 +5,14 @@ import {
   RECIPE_ID,
   RECIPE_PATH,
 } from "./helpers/mock-routes";
+import { installEmptyYoutubeNotificationRoutes } from "./helpers/youtube-background-extraction";
 
 const E2E_AUTH_OVERRIDE_KEY = "homecook.e2e-auth-override";
 
 async function setAuthOverride(page: Page, value: "authenticated" | "guest") {
+  if (value === "authenticated") {
+    await installEmptyYoutubeNotificationRoutes(page);
+  }
   await page.addInitScript(
     ({ key, state }) => {
       window.localStorage.setItem(key, state);

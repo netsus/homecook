@@ -1,10 +1,15 @@
 import { expect, test, type Page } from "@playwright/test";
 
+import { installEmptyYoutubeNotificationRoutes } from "./helpers/youtube-background-extraction";
+
 const E2E_AUTH_OVERRIDE_KEY = "homecook.e2e-auth-override";
 const E2E_AUTH_OVERRIDE_COOKIE = E2E_AUTH_OVERRIDE_KEY;
 const E2E_APP_ORIGIN = process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:3100";
 
 async function setAuthOverride(page: Page, value: "authenticated" | "guest") {
+  if (value === "authenticated") {
+    await installEmptyYoutubeNotificationRoutes(page);
+  }
   await page.context().addCookies([
     {
       name: E2E_AUTH_OVERRIDE_COOKIE,
@@ -559,7 +564,13 @@ test.describe("MYPAGE screen", () => {
   test("switches to shopping history tab and shows records", async ({ page }) => {
     await setAuthOverride(page, "authenticated");
     await installMypageRoutes(page);
+    const notificationListResponse = page.waitForResponse((response) => {
+      const url = new URL(response.url());
+      return response.request().method() === "GET"
+        && url.pathname === "/api/v1/users/me/youtube-extraction-jobs";
+    });
     await gotoMypageReady(page);
+    expect((await notificationListResponse).status()).toBe(200);
 
     await expect(page.getByText("집밥러")).toBeVisible();
     await openShoppingSurface(page);

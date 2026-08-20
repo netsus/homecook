@@ -1,5 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
+import { installCompletedYoutubeExtractionRoutes } from "./helpers/youtube-background-extraction";
+
 /**
  * Slice 27b: YouTube Source Fallback — E2E tests
  *
@@ -113,15 +115,7 @@ async function installValidateRoute(page: Page) {
 
 /** Extract route returning partial draft: ingredients but no steps (no-provider path). */
 async function installPartialDraftExtractRoute(page: Page) {
-  await page.route("**/api/v1/recipes/youtube/extract", async (route) => {
-    if (route.request().method() !== "POST") {
-      await route.continue();
-      return;
-    }
-    await route.fulfill({
-      json: {
-        success: true,
-        data: {
+  await installCompletedYoutubeExtractionRoutes(page, {
           extraction_id: "ext-27b-partial",
           title: "김치찌개 부분 추출 레시피",
           base_servings: 2,
@@ -156,24 +150,12 @@ async function installPartialDraftExtractRoute(page: Page) {
           ],
           steps: [],
           new_cooking_methods: [],
-        },
-        error: null,
-      },
-    });
   });
 }
 
 /** Extract route returning caption-enriched data: description + caption. */
 async function installCaptionExtractRoute(page: Page) {
-  await page.route("**/api/v1/recipes/youtube/extract", async (route) => {
-    if (route.request().method() !== "POST") {
-      await route.continue();
-      return;
-    }
-    await route.fulfill({
-      json: {
-        success: true,
-        data: {
+  await installCompletedYoutubeExtractionRoutes(page, {
           extraction_id: "ext-27b-caption",
           title: "김치찌개 자막 보충 레시피",
           base_servings: 2,
@@ -213,10 +195,6 @@ async function installCaptionExtractRoute(page: Page) {
             },
           ],
           new_cooking_methods: [],
-        },
-        error: null,
-      },
-    });
   });
 }
 

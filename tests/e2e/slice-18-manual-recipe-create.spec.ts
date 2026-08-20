@@ -2,6 +2,8 @@ import { expect, test, type Locator, type Page } from "@playwright/test";
 
 import { buildUnavailableRecipeNutrition } from "@/lib/nutrition/recipe-nutrition-presentation";
 
+import { installEmptyYoutubeNotificationRoutes } from "./helpers/youtube-background-extraction";
+
 const E2E_AUTH_OVERRIDE_KEY = "homecook.e2e-auth-override";
 const E2E_AUTH_OVERRIDE_COOKIE = E2E_AUTH_OVERRIDE_KEY;
 const E2E_APP_ORIGIN = process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:3100";
@@ -32,6 +34,9 @@ interface ManualRecipeCreateData {
 }
 
 async function setAuthOverride(page: Page, value: "authenticated" | "guest") {
+  if (value === "authenticated") {
+    await installEmptyYoutubeNotificationRoutes(page);
+  }
   await page.context().addCookies([
     {
       name: E2E_AUTH_OVERRIDE_COOKIE,

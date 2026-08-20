@@ -28,6 +28,23 @@ describe("Playwright QA server configuration", () => {
     );
   });
 
+  it("supplies explicit test-only credentials for the loopback Data authority", () => {
+    const config = readFileSync(
+      resolve(process.cwd(), "playwright.config.ts"),
+      "utf8",
+    );
+
+    expect(config).toContain(
+      "DATA_SUPABASE_SECRET_KEY=qa-test-only-not-a-real-data-secret",
+    );
+    expect(config).toContain(
+      "HOMECOOK_SESSION_ATTESTATION_HMAC_KEY_V1=qa-test-only-attestation-hmac-key-0001",
+    );
+    expect(config).toContain(
+      "HOMECOOK_SESSION_GENERATION_HMAC_KEY_V1=qa-test-only-generation-hmac-key-0001",
+    );
+  });
+
   it("allows only a tiny absolute pixel variance for the ingredient modal", () => {
     const visualSpec = readFileSync(
       resolve(process.cwd(), "tests/e2e/qa-visual.spec.ts"),

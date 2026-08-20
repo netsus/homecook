@@ -7,6 +7,7 @@ import { expect, test, type Page, type Route } from "@playwright/test";
 import {
   installAccountLibraryVisualRoutes,
 } from "./helpers/mock-routes";
+import { installEmptyYoutubeNotificationRoutes } from "./helpers/youtube-background-extraction";
 
 const EVIDENCE_DIR = resolve("ui/designs/evidence/meal-log-ui");
 const DATE = "2026-08-10";
@@ -131,6 +132,7 @@ async function stabilize(page: Page) {
 
 async function prepareInteractiveMealLogPage(page: Page) {
   const mutation = { outcome: "success" as "conflict" | "failure" | "success" };
+  await installEmptyYoutubeNotificationRoutes(page);
   await page.context().addCookies([{ name: "homecook.e2e-auth-override", value: "authenticated", url: "http://127.0.0.1:3100", sameSite: "Lax" }]);
   await page.addInitScript(() => window.localStorage.setItem("homecook.e2e-auth-override", "authenticated"));
   await installAccountLibraryVisualRoutes(page);
@@ -312,6 +314,7 @@ test.describe("meal-log-ui Stage 4", () => {
     for (const viewport of viewports) {
       const context = await browser.newContext({ deviceScaleFactor: 1, viewport: { width: viewport.width, height: viewport.height } });
       const page = await context.newPage();
+      await installEmptyYoutubeNotificationRoutes(page);
       await context.addCookies([{ name: "homecook.e2e-auth-override", value: "authenticated", url: "http://127.0.0.1:3100", sameSite: "Lax" }]);
       await context.addInitScript(() => {
         const state = new URLSearchParams(window.location.search).get("fixtureState");

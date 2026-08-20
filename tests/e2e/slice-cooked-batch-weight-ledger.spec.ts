@@ -1,9 +1,10 @@
-import { mkdir } from "node:fs/promises";
-import { dirname, resolve } from "node:path";
+import { resolve } from "node:path";
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Locator, type Page, type Route } from "@playwright/test";
 
 import { installAccountLibraryVisualRoutes, setE2EAuthOverride } from "./helpers/mock-routes";
+import { installEmptyYoutubeNotificationRoutes } from "./helpers/youtube-background-extraction";
+import { captureEvidenceScreenshot } from "./helpers/evidence-capture";
 
 const SESSION_ID = "550e8400-e29b-41d4-a716-446655440000";
 const RECIPE_ID = "550e8400-e29b-41d4-a716-446655440001";
@@ -126,6 +127,7 @@ const completion = {
 };
 
 async function installCookModeRoute(page: Page, candidates = snapshot.pantry_candidates) {
+  await installEmptyYoutubeNotificationRoutes(page);
   await page.route("**/api/v1/cooking/session-attempts/*/cook-mode", async (route) => {
     await route.fulfill({
       json: { success: true, data: { ...snapshot, pantry_candidates: candidates }, error: null },
@@ -536,8 +538,10 @@ test.describe("cooked-batch-weight-ledger", () => {
           .evaluate((button) => button.matches(":hover")),
       ).toBe(false);
       const path = resolve(evidenceDirectory, filename);
-      await mkdir(dirname(path), { recursive: true });
-      await page.screenshot({ animations: "disabled", fullPage: false, path });
+      await captureEvidenceScreenshot(page, testInfo, path, {
+        animations: "disabled",
+        fullPage: false,
+      });
       expect(await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth)).toBe(false);
       const box = await dialog.boundingBox();
       expect(box?.width).toBeLessThanOrEqual(width);

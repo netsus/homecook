@@ -1,7 +1,9 @@
-import { mkdir } from "node:fs/promises";
 import path from "node:path";
 
 import { expect, test, type Page } from "@playwright/test";
+
+import { installCompletedYoutubeExtractionRoutes } from "./helpers/youtube-background-extraction";
+import { captureEvidenceScreenshot } from "./helpers/evidence-capture";
 
 const E2E_AUTH_OVERRIDE_KEY = "homecook.e2e-auth-override";
 const E2E_AUTH_OVERRIDE_COOKIE = E2E_AUTH_OVERRIDE_KEY;
@@ -121,20 +123,9 @@ async function installCommonYoutubeRoutes(page: Page) {
   });
 }
 
-async function installVisualExtractRoute(page: Page) {
-  await page.route("**/api/v1/recipes/youtube/extract", async (route) => {
-    if (route.request().method() !== "POST") {
-      await route.continue();
-      return;
-    }
-
-    await route.fulfill({
-      json: {
-        success: true,
-        data: createVisualQuantityDraft(),
-        error: null,
-      },
-    });
+async function installVisualExtractRoute(page: Page, keepQueued = false) {
+  await installCompletedYoutubeExtractionRoutes(page, createVisualQuantityDraft(), {
+    keepQueued,
   });
 }
 
@@ -238,7 +229,7 @@ function createVisualQuantityDraft() {
 }
 
 test.describe("Slice 32: YouTube visual quantity enrichment", () => {
-  test("review screen shows quantity provenance and registers confirmed suggestions", async ({ page }) => {
+  test("review screen shows quantity provenance and registers confirmed suggestions", async ({ page }, testInfo) => {
     const registerBodies: unknown[] = [];
     await page.route("**/api/v1/recipes/youtube/register", async (route) => {
       registerBodies.push(await route.request().postDataJSON());
@@ -253,11 +244,14 @@ test.describe("Slice 32: YouTube visual quantity enrichment", () => {
 
     await openYoutubeReview(page);
 
-    await mkdir(EVIDENCE_DIR, { recursive: true });
-    await page.screenshot({
-      path: path.join(EVIDENCE_DIR, "review-quantity-confirm-desktop.png"),
-      fullPage: true,
-    });
+    await captureEvidenceScreenshot(
+      page,
+      testInfo,
+      path.join(EVIDENCE_DIR, "review-quantity-confirm-desktop.png"),
+      {
+        fullPage: true,
+      },
+    );
 
     const registerButton = page.getByRole("button", { name: "등록" });
     await expect(registerButton).toBeDisabled();
@@ -323,12 +317,12 @@ test.describe("Slice 32: YouTube visual quantity enrichment", () => {
     });
   });
 
-  test("quick import falls back to review when quantity confirmation is required", async ({ page }) => {
+  test("background import defers quantity review without auto-registering", async ({ page }) => {
     let registerCalled = false;
     await setAuthOverride(page);
     await installCommonYoutubeRoutes(page);
     await installRecipioDuplicateRoute(page);
-    await installVisualExtractRoute(page);
+    await installVisualExtractRoute(page, true);
     await page.route("**/api/v1/recipes/youtube/register", async (route) => {
       registerCalled = true;
       await route.fulfill({
@@ -345,12 +339,12 @@ test.describe("Slice 32: YouTube visual quantity enrichment", () => {
     await page.getByLabel("유튜브 URL").fill("https://www.youtube.com/watch?v=visual12345");
     await page.getByRole("button", { name: "가져오기" }).click();
 
-    await expect(page.getByText("검수가 필요해요")).toBeVisible();
-    await expect(page.getByText("수량 확인이 필요한 재료가 있어요.")).toBeVisible();
-    await expect(page.getByRole("link", { name: "검수 화면에서 마무리" })).toHaveAttribute(
-      "href",
-      `/menu/add/youtube?youtubeUrl=${encodeURIComponent("https://www.youtube.com/watch?v=visual12345")}`,
-    );
+    await expect(
+      page.getByRole("heading", {
+        name: "추출을 시작했어요. 완료되면 알려드릴게요.",
+      }),
+    ).toBeVisible();
+    await expect(page.getByText("검수가 필요해요")).toHaveCount(0);
     expect(registerCalled).toBe(false);
   });
 });

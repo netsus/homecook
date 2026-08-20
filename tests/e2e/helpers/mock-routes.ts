@@ -2,6 +2,8 @@ import type { Page } from "@playwright/test";
 import type { LeftoverListItemData } from "@/types/leftover";
 import type { RecipeCardItem, RecipeDetail } from "@/types/recipe";
 
+import { installEmptyYoutubeNotificationRoutes } from "./youtube-background-extraction";
+
 import {
   getMockIngredientList,
   getMockRecipeList,
@@ -656,7 +658,16 @@ function buildShoppingVisualDetail({
 export async function setE2EAuthOverride(
   page: Page,
   value: "authenticated" | "guest" = "authenticated",
+  options: {
+    notificationRouteOwner?: "auth-helper" | "caller";
+  } = {},
 ) {
+  if (
+    value === "authenticated"
+    && options.notificationRouteOwner !== "caller"
+  ) {
+    await installEmptyYoutubeNotificationRoutes(page);
+  }
   await page.context().addCookies([
     {
       name: E2E_AUTH_OVERRIDE_KEY,
