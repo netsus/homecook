@@ -26,6 +26,7 @@ interface CookModeStoreState {
   data: CookingSessionCookModeData | null;
   errorMessage: string | null;
   errorCode: string | null;
+  completionAttempt: { key: string; payload: string } | null;
   loadCookMode: (sessionId: string) => Promise<void>;
   complete: (consumedIngredientIds: string[]) => Promise<void>;
   cancel: () => Promise<void>;
@@ -38,6 +39,7 @@ function buildInitialState() {
     data: null as CookingSessionCookModeData | null,
     errorMessage: null as string | null,
     errorCode: null as string | null,
+    completionAttempt: null as { key: string; payload: string } | null,
   };
 }
 
@@ -45,7 +47,13 @@ export const useCookModeStore = create<CookModeStoreState>((set, get) => ({
   ...buildInitialState(),
 
   loadCookMode: async (sessionId: string) => {
-    set({ screenState: "loading", sessionId, errorMessage: null, errorCode: null });
+    set({
+      screenState: "loading",
+      sessionId,
+      errorMessage: null,
+      errorCode: null,
+      completionAttempt: null,
+    });
 
     try {
       const data = await fetchCookMode(sessionId);
@@ -77,13 +85,21 @@ export const useCookModeStore = create<CookModeStoreState>((set, get) => ({
     const { sessionId } = get();
     if (!sessionId) return;
 
-    set({ screenState: "completing" });
+    const payload = JSON.stringify({
+      consumed_ingredient_ids: consumedIngredientIds,
+    });
+    const previousAttempt = get().completionAttempt;
+    const completionAttempt = previousAttempt?.payload === payload
+      ? previousAttempt
+      : { key: crypto.randomUUID(), payload };
+
+    set({ screenState: "completing", completionAttempt });
 
     try {
       await completeCookingSession(sessionId, {
         consumed_ingredient_ids: consumedIngredientIds,
-      });
-      set({ screenState: "completed" });
+      }, completionAttempt.key);
+      set({ screenState: "completed", completionAttempt: null });
     } catch (error) {
       if (isCookingApiError(error) && error.status === 401) {
         set({ screenState: "ready" });

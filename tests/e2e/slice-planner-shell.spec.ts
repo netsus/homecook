@@ -13,14 +13,22 @@ async function setAuthenticated(page: Page) {
 
 async function installPlannerShellRoutes(
   page: Page,
-  { columnCount = 3 }: { columnCount?: 1 | 3 | 5 } = {},
+  {
+    columnCount = 3,
+    deleteMode = "success",
+  }: {
+    columnCount?: 1 | 3 | 5;
+    deleteMode?: "error" | "pending" | "success";
+  } = {},
 ) {
   let deleted = false;
+  let releasePendingDelete: (() => void) | null = null;
   const requests = {
     mealLog: 0,
     nutrition: 0,
     plannerRanges: [] as string[],
     productMethods: [] as string[],
+    releasePendingDelete: () => releasePendingDelete?.(),
   };
   await page.route("**/api/v1/meal-log?*", async (route) => {
     requests.mealLog += 1;
@@ -150,6 +158,26 @@ async function installPlannerShellRoutes(
     requests.productMethods.push(route.request().method());
     if (route.request().method() !== "DELETE") {
       await route.fulfill({ status: 405, json: {} });
+      return;
+    }
+    if (deleteMode === "pending") {
+      await new Promise<void>((resolve) => {
+        releasePendingDelete = resolve;
+      });
+    }
+    if (deleteMode === "error") {
+      await route.fulfill({
+        status: 500,
+        json: {
+          data: null,
+          error: {
+            code: "INTERNAL_ERROR",
+            fields: [],
+            message: "완제품 계획을 삭제하지 못했어요.",
+          },
+          success: false,
+        },
+      });
       return;
     }
     deleted = true;
@@ -310,6 +338,98 @@ test.describe("planner-shell Stage 4", () => {
     await expect(invoker).toHaveCount(0);
     expect(requests.productMethods).toEqual(["DELETE"]);
     expect(requests.nutrition).toBe(0);
+  });
+
+  test("legacy-product-compat traps nested focus and restores it at 390px, 320px, and desktop", async ({
+    page,
+  }) => {
+    await setAuthenticated(page);
+    await installPlannerShellRoutes(page);
+
+    for (const viewport of [
+      { height: 844, width: 390 },
+      { height: 693, width: 320 },
+      { height: 900, width: 1280 },
+    ]) {
+      await page.setViewportSize(viewport);
+      await page.goto(`/planner?date=${PLAN_DATE}`);
+
+      const invoker = page.getByRole("button", {
+        name: "플레인 요거트 상세 보기",
+      });
+      await invoker.click();
+      const detail = page.getByRole("dialog", { name: "플레인 요거트" });
+      await expect(detail.getByRole("button", { name: "닫기" })).toBeFocused();
+      expect(await page.evaluate(() => (
+        document.documentElement.scrollWidth
+        <= document.documentElement.clientWidth + 1
+      ))).toBe(true);
+      expect(await detail.evaluate((element) => {
+        const rect = element.getBoundingClientRect();
+        return rect.left >= -1 && rect.right <= window.innerWidth + 1;
+      })).toBe(true);
+
+      const deleteInvoker = detail.getByRole("button", { name: "계획에서 삭제" });
+      await deleteInvoker.click();
+      const confirm = page.getByRole("dialog", { name: "완제품 계획 삭제" });
+      await expect(confirm.getByRole("button", { name: "닫기" })).toBeFocused();
+      await page.keyboard.press("Shift+Tab");
+      await expect(confirm.getByRole("button", { name: "삭제" })).toBeFocused();
+      await page.keyboard.press("Escape");
+      await expect(confirm).toHaveCount(0);
+      await expect(deleteInvoker).toBeFocused();
+      await page.keyboard.press("Escape");
+      await expect(detail).toHaveCount(0);
+      await expect(invoker).toBeFocused();
+    }
+  });
+
+  test("legacy-product-compat blocks duplicate delete while pending", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ height: 844, width: 390 });
+    await setAuthenticated(page);
+    const requests = await installPlannerShellRoutes(page, {
+      deleteMode: "pending",
+    });
+    await page.goto(`/planner?date=${PLAN_DATE}`);
+
+    await page.getByRole("button", { name: "플레인 요거트 상세 보기" }).click();
+    await page.getByRole("button", { name: "계획에서 삭제" }).click();
+    const confirm = page.getByRole("dialog", { name: "완제품 계획 삭제" });
+    await confirm.getByRole("button", { name: "삭제" }).click();
+    await expect(confirm.getByRole("button", { name: "삭제 중" })).toBeDisabled();
+    expect(requests.productMethods).toEqual(["DELETE"]);
+
+    requests.releasePendingDelete();
+    await expect(page.getByRole("button", {
+      name: "플레인 요거트 상세 보기",
+    })).toHaveCount(0);
+    expect(requests.productMethods).toEqual(["DELETE"]);
+  });
+
+  test("legacy-product-compat keeps pinned row and detail after delete error", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ height: 693, width: 320 });
+    await setAuthenticated(page);
+    const requests = await installPlannerShellRoutes(page, { deleteMode: "error" });
+    await page.goto(`/planner?date=${PLAN_DATE}`);
+
+    const invoker = page.getByRole("button", { name: "플레인 요거트 상세 보기" });
+    await invoker.click();
+    await page.getByRole("button", { name: "계획에서 삭제" }).click();
+    const confirm = page.getByRole("dialog", { name: "완제품 계획 삭제" });
+    await confirm.getByRole("button", { name: "삭제" }).click();
+
+    await expect(page.getByRole("alert")).toContainText(
+      "완제품 계획을 삭제하지 못했어요.",
+    );
+    await expect(confirm).toBeVisible();
+    await expect(page.getByTestId("legacy-product-detail-sheet")).toBeAttached();
+    await expect(page.getByTestId("legacy-product-legacy-product-1"))
+      .toBeAttached();
+    expect(requests.productMethods).toEqual(["DELETE"]);
   });
 
   test("planner-shell keeps 320px targets, 200% text, and bottom actions usable", async ({

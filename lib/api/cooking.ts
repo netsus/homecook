@@ -457,12 +457,16 @@ export async function fetchCookMode(
 export async function completeCookingSession(
   sessionId: string,
   body: { consumed_ingredient_ids: string[] },
+  idempotencyKey: string,
 ): Promise<CookingSessionCompleteData> {
   return requestCooking<CookingSessionCompleteData>(
     `/api/v1/cooking/sessions/${sessionId}/complete`,
     {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: {
+        "content-type": "application/json",
+        "Idempotency-Key": idempotencyKey,
+      },
       body: JSON.stringify(body),
     },
   );
@@ -494,12 +498,15 @@ export async function completeStandaloneCooking(body: {
   recipe_id: string;
   cooking_servings: number;
   consumed_ingredient_ids: string[];
-}): Promise<CookingStandaloneCompleteData> {
+}, idempotencyKey: string): Promise<CookingStandaloneCompleteData> {
   return requestCooking<CookingStandaloneCompleteData>(
     "/api/v1/cooking/standalone-complete",
     {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: {
+        "content-type": "application/json",
+        "Idempotency-Key": idempotencyKey,
+      },
       body: JSON.stringify(body),
     },
   );

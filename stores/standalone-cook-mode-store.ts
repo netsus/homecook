@@ -22,6 +22,7 @@ interface StandaloneCookModeStoreState {
   data: CookingStandaloneCookModeData | null;
   errorMessage: string | null;
   errorCode: string | null;
+  completionAttempt: { key: string; payload: string } | null;
   loadStandaloneCookMode: (recipeId: string, servings: number) => Promise<void>;
   complete: (consumedIngredientIds: string[]) => Promise<void>;
 }
@@ -34,6 +35,7 @@ function buildInitialState() {
     data: null as CookingStandaloneCookModeData | null,
     errorMessage: null as string | null,
     errorCode: null as string | null,
+    completionAttempt: null as { key: string; payload: string } | null,
   };
 }
 
@@ -48,6 +50,7 @@ export const useStandaloneCookModeStore = create<StandaloneCookModeStoreState>(
         servings,
         errorMessage: null,
         errorCode: null,
+        completionAttempt: null,
       });
 
       try {
@@ -78,15 +81,22 @@ export const useStandaloneCookModeStore = create<StandaloneCookModeStoreState>(
       const { recipeId, servings } = get();
       if (!recipeId) return;
 
-      set({ screenState: "completing" });
+      const body = {
+        recipe_id: recipeId,
+        cooking_servings: servings,
+        consumed_ingredient_ids: consumedIngredientIds,
+      };
+      const payload = JSON.stringify(body);
+      const previousAttempt = get().completionAttempt;
+      const completionAttempt = previousAttempt?.payload === payload
+        ? previousAttempt
+        : { key: crypto.randomUUID(), payload };
+
+      set({ screenState: "completing", completionAttempt });
 
       try {
-        await completeStandaloneCooking({
-          recipe_id: recipeId,
-          cooking_servings: servings,
-          consumed_ingredient_ids: consumedIngredientIds,
-        });
-        set({ screenState: "completed" });
+        await completeStandaloneCooking(body, completionAttempt.key);
+        set({ screenState: "completed", completionAttempt: null });
       } catch (error) {
         if (isCookingApiError(error) && error.status === 401) {
           set({ screenState: "ready" });
