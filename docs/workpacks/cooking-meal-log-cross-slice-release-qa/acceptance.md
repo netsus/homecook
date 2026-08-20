@@ -11,7 +11,7 @@
 - five-axis task `01a01f2e-ba20-7022-8b3b-5b90d15572d0`: `APPROVE 0/0/0`, drift `0`.
 - design-authority-plan task `01a01f2e-bf69-7f23-9c7c-7982855195bc`: `APPROVE 0/0/0`, drift `0`.
 - retained evidence: `docs/workpacks/cooking-meal-log-cross-slice-release-qa/evidence/2026-08-21-stage1-final-independent-approvals.json`.
-- 위 verdict는 Stage 1 bookkeeping/current gate evidence다. Stage 2 remains not started이며 runtime/full 8-lane 287041/Manual/activation 완료나 아래 Stage 2/4 acceptance 체크를 주장하지 않는다.
+- 위 verdict는 Stage 1 bookkeeping/current gate evidence다. Stage 2 verification-only는 base `afb1b31aa6c95ba974f7484d31fa123439d5fcd6`에서 시작됐지만 evidence 수집 전이며, runtime/full 8-lane 287041/Manual/activation 완료나 아래 Stage 2/4 acceptance 체크를 아직 주장하지 않는다.
 
 ## Happy Path
 

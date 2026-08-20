@@ -2753,9 +2753,9 @@
     {
       "id": "cooking-meal-log-cross-slice-release-qa",
       "preset": "vertical-slice-strict",
-      "branch": "docs/cooking-meal-log-cross-slice-relock",
+      "branch": "feature/be-cooking-meal-log-cross-slice-release-qa",
       "pr_path": "https://github.com/netsus/homecook/pull/1373",
-      "lifecycle": "planned",
+      "lifecycle": "in_progress",
       "approval_state": "codex_approved",
       "verification_status": "passed",
       "required_checks": [
