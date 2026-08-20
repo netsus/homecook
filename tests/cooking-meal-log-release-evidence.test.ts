@@ -237,6 +237,10 @@ describe("cooking meal-log release evidence safety", () => {
       join(process.cwd(), "tests/meal-log-core-postgres.integration.test.ts"),
       "utf8",
     );
+    const isolatedRunner = readFileSync(
+      join(process.cwd(), "scripts/run-isolated-local-supabase-runtime-gate.mjs"),
+      "utf8",
+    );
 
     expect(runner).toContain(
       'HOMECOOK_ISOLATED_RUNTIME_INTEGRATION_TEST =\n  "tests/meal-log-core-postgres.integration.test.ts"',
@@ -246,6 +250,9 @@ describe("cooking meal-log release evidence safety", () => {
     );
     expect(integration).toContain("HOMECOOK_ISOLATED_RUNTIME_PROJECT_ID");
     expect(integration).toContain("`supabase_db_${isolatedProjectId}`");
+    expect(isolatedRunner).toContain(
+      "HOMECOOK_MEAL_LOG_PG: process.env.HOMECOOK_MEAL_LOG_PG ?? \"0\"",
+    );
   });
 
   it("rejects stale head, missing files, skipped evidence, and proof profile", () => {

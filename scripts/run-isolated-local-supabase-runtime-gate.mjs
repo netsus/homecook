@@ -110,6 +110,7 @@ try {
           ...commandEnv,
           HOMECOOK_ISOLATED_RUNTIME_DATABASE_URL: databaseUrl,
           HOMECOOK_ISOLATED_RUNTIME_PROJECT_ID: isolated.projectId,
+          HOMECOOK_MEAL_LOG_PG: process.env.HOMECOOK_MEAL_LOG_PG ?? "0",
         },
         timeoutMs: 120_000,
       },
