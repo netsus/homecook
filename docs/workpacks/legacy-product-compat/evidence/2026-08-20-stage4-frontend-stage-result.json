@@ -12,6 +12,8 @@
     "implementation_tree": "f2108955c1bf17a2bba3f3bbb8570c6c6200f6fc",
     "browser_evidence_head": "c7920dc89a69579429a15198a0bd4769646154b3",
     "browser_evidence_tree": "a2d10a217425e3dac0e54139f730181b3c9a5e04",
+    "retry_path_repair_head": "d0748d8c6f60e235d5b42c7ed77bdf7ea3b245a7",
+    "retry_path_repair_tree": "6e041c45e4dcc4f09737fca1200f72ce914d1706",
     "draft_pr": 1371,
     "draft_pr_url": "https://github.com/netsus/homecook/pull/1371",
     "history_rewrite": false
@@ -26,8 +28,8 @@
     "contract_evolution_candidate": null
   },
   "verification": {
-    "tdd_red": "3 files / 5 intended failures plus nested focus Playwright RED",
-    "focused_vitest": "10 files / 131 tests passed; legacy final 3 files / 15 tests passed",
+    "tdd_red": "3 files / 5 intended failures, nested focus Playwright RED, plus same-target reader reload 2 intended failures",
+    "focused_vitest": "10 files / 133 tests passed; legacy final 3 files / 17 tests passed",
     "legacy_playwright": "14/14 passed across desktop-chrome and mobile-chrome; exact 390x844, 320x693, 1280x900 loop",
     "product_vitest": "239 files passed / 12 intended skip; 2,757 tests passed / 175 intended skip",
     "build": "passed; 81 static pages",
@@ -35,6 +37,7 @@
     "core_accessibility": "8 passed / 1 intended skip",
     "core_visual": "12/12 passed",
     "verify_frontend_pr": "passed",
+    "verify_frontend": "clean-head passed: Lighthouse 2 URLs x 3; complete regression 963/180; accessibility 18/15; visual 22/23; security 12/12",
     "audit": "high/critical 0/0; residual pre-existing low/moderate 1/1",
     "exploratory_qa": "N/A low-risk authority_required=false; exact deterministic browser matrix covers required behavior"
   },
