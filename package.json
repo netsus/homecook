@@ -173,6 +173,8 @@
     "test:lighthouse:run": "lhci autorun --config=./lighthouserc.js",
     "test:all": "pnpm lint && pnpm typecheck && pnpm test:product && pnpm test:harness && pnpm test:e2e:regression",
     "verify:backend": "pnpm lint && pnpm typecheck && pnpm test:product && pnpm build && pnpm test:e2e:security",
+    "verify:cooking-meal-log-release:produce": "node scripts/run-cooking-meal-log-release-evidence.mjs",
+    "verify:cooking-meal-log-release:validate": "node scripts/validate-cooking-meal-log-release-evidence.mjs",
     "verify:security-functions": "node scripts/validate-security-function-authorization.mjs && pnpm test:security-functions:postgres",
     "verify:security-functions:data-api": "node scripts/run-security-function-data-api-negative-smoke.mjs",
     "verify:security-functions:isolated": "node scripts/run-isolated-security-function-gate.mjs",

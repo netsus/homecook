@@ -2,116 +2,201 @@
 
 ## Goal
 
-F0와 #1~#13에서 닫은 계정 세대, 제품 검색·재료 연결, private recipe/snapshot, 미래 계획, cooked batch, meal log, Planner/COOK_MODE/legacy 계약을 하나의 verification-only 최종 release gate로 재검증한다. exact repaired head에서 서버 MacBook local production·isolated local rehearsal DB/API/browser/security/performance/design/rollback evidence와 모든 started check가 green이어야 하며, 발견한 defect는 이 slice에서 inline 수정하지 않고 별도 TDD repair PR로 봉합한 뒤 전체 증거를 다시 만든다.
+F0와 #1~#13에서 병합된 계정 세대, 제품 검색·재료 연결, 개인 레시피·snapshot, cooked batch, meal log, Planner/COOK_MODE와 legacy runtime을 하나의 verification-only 최종 release gate에서 재검증한다. exact repaired head에서 pinned isolated local gate와 권한이 있는 controlled full-local read-only evidence를 모으고, 결함은 이 slice에서 고치지 않고 separate failing-test-first TDD repair PR 뒤 전체 증거를 다시 만든다.
 
-## Official Sources
+## Branches
 
-- `docs/요구사항기준선-v1.7.25.md`
-- `docs/화면정의서-v1.5.29.md`
-- `docs/유저flow맵-v1.3.27.md`
-- `docs/db설계-v1.3.26.md`
-- `docs/api문서-v1.2.29.md`
-- approved plan SHA-256 `45f02013fbc1c3af1936d596605230d0cbac7839a783224aa9535844e4bda7dc`, 1,056 lines
+- Stage 1 relock: `docs/cooking-meal-log-cross-slice-relock`
+- Stage 2/3 verification: 별도 fresh Codex task와 verification branch
+- Stage 4~6 browser/authority/closeout: 역할별 별도 fresh Codex task와 branch
 
-## Verification-Only Boundary
+## In Scope
 
-- this slice adds no endpoint, field, status, error, migration, runtime feature, UI composition or dependency.
-- F0 and #1~#13 Stage 1 docs are merged. Runtime verification starts only after all predecessor implementation/closeout PRs are merged and their current-head checks are green.
-- each train's evidence may be reused only when it records the exact release/head/window and still applies to the final repaired head. Stale, absent, fixture-only or different-head evidence is not a final pass.
-- any runtime defect opens a small separate TDD repair PR. After merge, affected server-production/local-rehearsal DB, browser, security, performance, design and rollback evidence is rerun on the new exact head.
-- production-safe verification never permits writes outside the server MacBook local production stack or isolated local rehearsal. Remote provider/DB/Storage writes remain zero unless a future contract-evolution explicitly permits them.
-
-## Final Evidence Contract
-
-### Security function and principal inventory
-
-- inventory every application-owned trusted-schema function and every SECURITY DEFINER exact signature regardless of schema. Each signature maps 1:1 to control class, effect, exposure and exact principals.
-- application-controlled mutations keep PUBLIC/anon execution false and a safe search path with `pg_temp` last and no writable untrusted schema. Owner-self, service-only, taxonomy server-only and `auth-hook-internal` remain distinct.
-- re-run anonymous checksum-unchanged/`42501` negatives for the application mutation set, authenticated A/B isolation, taxonomy direct denial plus verified server success, no-key fallback denial and new-signature ACL/search-path lint.
-- provider/extension-managed functions retain immutable owner, extension/version, ACL, `proconfig` and exposure baselines. Non-exposed provider schemas remain absent from the Data API and actual anon/authenticated RPC attempts fail; an exposed provider mutation blocks release until a supported mitigation exists.
-- F0 Hook wrapper/guard verifies exact `supabase_auth_admin` schema USAGE and EXECUTE only, dedicated NOLOGIN guard-owner SELECT-only privileges, no non-admin membership/`SET ROLE`, legacy/maintenance/generation-active behavior and fail-closed email/OAuth admission.
-
-### Account generation, cutover and image cleanup
-
-- every personal writer and account delete verifies the JWT session binding and expected account generation under the common owner lifecycle lock; G1 delayed/revoked requests cannot write into G2.
-- fresh/replay cutover covers volatile shared fence, maintenance 503, Auth Hook admission freeze, auth/public/personal staging, final count+digest CAS, quarantine classification/resolution and atomic canonical promote. Failed pre-promote attempts leave canonical rows at zero and remain retryable in legacy mode.
-- account cleanup follows the real FK order `pointer → event/meal log/idempotency → claim → session-meal/session → Meal → batch → private content/nutrition snapshot → private recipe → private product references/link/version/profile/product`. Public/shared rows remain owner-neutral or anonymized as contracted.
-- personal images remain private and generation-bound. Quota, lease/takeover/finalize CAS, server cancel, first-404 awaiting recheck, permanent tombstone, ordered scanner/recheck/drain/owner-zero/Auth-delete/complete and dead-letter blockers are replayed.
-- legacy image visibility migration preserves current/immediate-previous readers and old-path rollback. Legacy orphan inventory is positive-reference/report-only and enqueues or deletes zero objects.
-
-### Recipe, snapshot, product and planner
-
-- public recipe fork keeps the original immutable; owner private create/PATCH/soft DELETE uses the single-RPC owner→recipe boundary and private/deleted tags never leak through RLS, PostgREST, tag/theme/search/cache/usage paths.
-- content snapshot is the logical authority and pins one exact nutrition snapshot without a duplicate nutrition vector. Compatibility direct values are null-or-equal rollback mirrors until the separately approved contract step; old binaries below the rollback floor are rejected afterward.
-- future-plan preview binds owner/session generation, base revision, proposed content hash, target Meal revisions and active claims. `replace_all` is all-or-nothing 409 on stale/claim; `keep` preserves existing pins; completed shopping remains read-only.
-- the 287,041-row local product catalog keeps no-runtime-provider-search, source/moderation/owner boundaries and stable integer-tuple cursors. Unified food search is one server-ranked typed-union cursor without client merge.
-- approved primary product→ingredient projection preserves product identity and exact nutrition version while enabling effective pantry matching; no brand product identifier is inserted into ingredient synonyms.
-- `PLANNER_WEEK` separates `요리 계획 | 식사 기록`, removes new product-planner/nutrition UI producers and preserves legacy pinned product read/detail/owner-delete without automatic expiry.
-
-### Cooking, batch and meal log
-
-- `/sessions` legacy-v1 and `/session-attempts` snapshot-v2 dispatch only by stored contract version. Optional stable-key rollout, no-key-zero before mutation-zero 428, flag-off R/R+1 seeded-v2 drain, rollback drain and strict-v1 tombstone prerequisites remain separate.
-- planner start and recipe propagation use the same owner→recipe→Meal lock order and active claim. v2 completion validates exact owner pantry row/product/effective ingredient and removes only selected rows.
-- cooked batch pins content only. Missing/known/unrecoverable weight, append-only quantity/lifecycle events, adjustment bounds, weighted/unweighed consumed/discarded/mixed closure, non-reversible `marked_unrecoverable`, concurrent consume and full replay all match the ledger projection.
-- each meal-log batch entry points to its own active consumption event. PATCH/DELETE reverses only that event regardless of order, retains other entries and recomputes the entire batch projection.
-- day/meal aggregates use exact batch, product-version/basis or ingredient profile/conversion evidence. Missing conversion returns 422 instead of guessed nutrition; record-time IANA timezone and local date never regroup after a device timezone change.
-- only consumed/consumed-unweighed first depletion grants eaten/auto-hide/XP once. Discarded/mixed states do not; reversal preserves earned activity while source uniqueness blocks a second grant.
-
-### Real DB, browser, performance and legacy
-
-- fresh local Supabase full migrations, replay, real Postgres/RLS/PostgREST/Auth/Storage, user A/B isolation and target digests must pass. Isolated or fixture-only evidence is supplemental, not a substitute.
-- search 287,041 rows, product relation, personal recipe propagation, batch ledger and meal-log aggregate form one end-to-end evidence chain with measured SQL/route latency, EXPLAIN and no item-level N+1 or unexplained regression.
-- real Chrome covers `ACCOUNT_QUARANTINE`, `HOME`, `RECIPE_DETAIL`, `MANUAL_RECIPE_CREATE`, `PLANNER_WEEK`, `COOK_MODE`, `LEFTOVERS` and `MEAL_LOG` at 390px, 320px and desktop, including loading/empty/error/unauthorized/read-only/partial/unavailable/conflict/replay and keyboard/focus/44px/landmark behavior.
-- legacy product rows, planner nutrition/v1 cursor readers, current/immediate-previous cooking clients, old-path image readers and rollback floors stay available until their own separately approved irreversible gates. Elapsed time or telemetry zero is evidence only.
-- final closeout requires blocker 0, fresh independent security/DB/operations, performance/code, design authority and Stage 5/6 approvals, plus every started current-head check terminal success or policy-justified skip.
-
-## Release State Matrix
-
-| State | Required behavior |
-| --- | --- |
-| predecessor runtime incomplete | final verification does not start; Stage 1 docs remain planned lifecycle |
-| stale or different-head evidence | reject the evidence and rerun on the exact repaired head |
-| runtime defect found | stop closeout, open separate failing-test-first repair PR, merge, then rerun affected and final gates |
-| server-production or isolated-rehearsal verifier unavailable | fail closed; do not substitute a fixture or claim pass |
-| telemetry unavailable/zero | retain compatibility surfaces; no destructive inference |
-| browser state unavailable | record blocker; do not replace real Chrome with fixture screenshots |
-| current-head check pending/fail/cancel/absent | do not merge or close the release |
-| Manual Only operation not authorized | keep it explicitly unchecked; do not install, write or delete |
-
-## Dependencies
-
-- Stage 1 docs predecessors: F0 PR #1073, #1 PR #1074, #2 PR #1076, #3 PR #1077, #4 PR #1078, #5 PR #1079, #6 PR #1080, #7 PR #1081, #8 PR #1082, #9 PR #1083, #10 PR #1084, #11 PR #1085, #12 PR #1086 and #13 PR #1087 are merged.
-- runtime Stage 2+ waits for F0 and #1~#13 implementation/closeout to be merged and current-head green according to the exact DAG.
-- no successor workpack exists inside the approved 15-pack Stage 0 set. Runtime release trains still begin with F0 implementation after all Stage 1 docs close.
-
-## Design / Accessibility
-
-- UI risk is high because this is the final release gate across all three official anchors `HOME`, `RECIPE_DETAIL`, `PLANNER_WEEK` and the required high-risk/new surfaces.
-- no new generator or critic artifact is created: the slice reuses each predecessor's canonical screen designs and critic decisions only after that predecessor has actually merged them, without changing composition.
-- `ui/designs/MEAL_LOG.md`, `ui/designs/critiques/MEAL_LOG-critique.md` and `ui/designs/authority/MEAL_LOG-authority.md` are future #12-owned artifacts. Stage 0 only reserves these paths and does not claim they exist or are merged; #14 Stage 2 fails closed until #12 creates and merges all three and its implementation/current-head gate is green.
-- fresh exact-head authority is mandatory. Screenshot/evidence manifests cover `ACCOUNT_QUARANTINE`, `HOME`, `RECIPE_DETAIL`, `MANUAL_RECIPE_CREATE`, `PLANNER_WEEK`, `COOK_MODE`, `LEFTOVERS`, `MEAL_LOG` at mobile-default 390px, mobile-narrow 320px and desktop.
-- the final authority report references concrete PNG/Figma/runtime evidence and verifies responsive wrapping, destructive hierarchy, focus restoration, keyboard order, 44px targets, screen-reader landmarks and fail-closed CTA states.
+- 화면: 기존 `ACCOUNT_QUARANTINE`, `HOME`, `RECIPE_DETAIL`, `MANUAL_RECIPE_CREATE`, `PLANNER_WEEK`, `COOK_MODE`, `LEFTOVERS`, `MEAL_LOG`의 exact-head 검증만 수행한다.
+- API: 공식 `docs/api문서-v1.2.39.md`의 F0/#1~#13 기존 endpoint와 `{ success, data, error }` 계약을 그대로 검증한다.
+- 상태 전이: 기존 account generation, personal recipe/snapshot, v1/v2 cooking, batch ledger, meal-log event, legacy rollback 상태를 변경 없이 재검증한다.
+- DB 영향: Stage 2 기본 경로는 pinned isolated local replay와 controlled full-local read-only/checksum verification이다.
+- Schema Change: 없음. 이 slice는 migration과 runtime repair를 소유하지 않는다.
 
 ## Out of Scope
 
-- inline runtime repair, new API/DB/UI contract, new dependency or official contract evolution.
-- R+2 activation, v1/product/planner/image-path tombstone, retention cleanup or legacy orphan deletion.
-- external provider mutation, server MacBook launchd install/secret setup or destructive data operation without its separate authority.
-- medical guidance, new nutrition inference, external search SaaS or runtime provider fetch.
+- no endpoint, field, status, error, action, screen, migration, or dependency를 추가하거나 변경하지 않는다.
+- inline runtime repair, 공식 문서 Contract Evolution, capability/R/R+1/R+2/required-key/activation을 수행하지 않는다.
+- Cloud/linked/remote Supabase is forbidden/N/A이며 verifier, credential, fallback 또는 target으로 요구하지 않는다.
+- 권한 없는 local-production mutation, server-Mac 설치·secret rotation, destructive tombstone·legacy orphan delete를 수행하지 않는다.
+
+## Dependencies
+
+기준은 `origin/master@c5b213152b4a6554f4eaa8714b2292ec2e074e0d`, tree `6e09dfa998c999ab27a8f84faeb42e40b7c7e636`이다. 아래 merge는 retained README/status/work-item/OMO evidence와 git/GitHub object로 확인한 non-Manual automated/runtime delivery다.
+
+| Order | Slice | automated/runtime merge | broader state |
+| --- | --- | --- | --- |
+| F0 | `account-session-generation-foundation` | PR #1090 `a10293e0cf17c4c19204e870024e8fe745e362e3` | Manual/activation pending |
+| #1 | `prepared-food-search-relevance` | PR #1105 `19f25aae4806d2de584f4508bce88643c176705a` | original apply provenance Manual pending |
+| #2 | `product-ingredient-link-foundation` | PR #1256 `5e9773f5e715e7d63132d7f6b8fadcaafd4b76a0` | full-local/query-plan/activation pending |
+| #3 | `recipe-visibility-read-hardening` | PR #1228 `8085914cb26e9b927fc973c99318c15d9dee86ce` | server-Mac/activation/old-path delete pending |
+| #4 | `recipe-snapshot-authority-foundation` | PR #1267 `5413b6adc42d0e8c45dc55cafad2b076b9bd61a0` | overall lifecycle `in_progress` |
+| #5 | `personal-recipe-editor-decoupling` | PR #1272 `bb870dd0cba5ac52b6d9ad223db2a2935c00bcb9` | overall lifecycle `in_progress` |
+| #6 | `personal-recipe-customization-write-core` | PR #1274 `05683e4d1cf95c4cc3b9a41eb3fa7857b58a3d2d` | terminal release/activation pending |
+| #7 | `recipe-content-snapshot-future-propagation` | PR #1281 `2173737e8ea2eec2297e1cc0227ce4f2c27c50b9` | overall lifecycle `in_progress` |
+| #8 | `cooked-batch-weight-ledger` | PR #1311 `c16102a3072e929e45bb24a69464cd3110d03db5` | OMO runtime merged-green; broader pending |
+| #9 | `meal-log-core` | PR #1319 `8ba3fa5a2a198eb4f9c19d59cea5f6ccc52fdd4f` | backend checkpoint merged; broader pending |
+| #10 | `planner-shell` | PR #1331 `2185b59d1b460dac916aa4a4a4a5e061c8b795f0` | OMO runtime merged-green; broader pending |
+| #11 | `cooked-batch-weight-ui` | PR #1323 `7c7d25a1d4deb930ddcf85611bb57f5fe14f00a0` | runtime merged-green; broader pending |
+| #12 | `meal-log-ui` | repair PR #1364 `358450e44da691256b0eeb51d8ae131a520b6cbd` | OMO runtime merged-green; broader pending |
+| #13 | `legacy-product-compat` | PR #1371 `da52e64d84eef7593bd60898018c2b65acad0f46` | OMO runtime merged-green; broader pending |
+
+automated/runtime predecessor gate: satisfied at the frozen base above. This does not close the overall release: overall lifecycle is not complete while Manual/server-Mac/OAuth/device/AT/full-WCAG, local-production/rehearsal/backup-restore/cutover, and capability/R/R+1/R+2/required-key/activation evidence remains pending.
+
+Stage 2 entry still requires this relock PR merge and the documented post-merge preflight. The four separate Stage 1 review gates are approved on the exact reviewed head below, but a later predecessor repair or evidence invalidation fails the gate closed and requires this table to be relocked again.
 
 ## Stage 1 Current Gate
 
-- run SOT/workflow/workpack/automation/bookkeeping validators, focused workflow-doc tests, lint, typecheck, dependency audit and exact-six diff/parity only.
-- DB migrations, Postgres/RLS/Auth/Storage, targeted product tests, full backend/frontend, E2E/browser, exploratory/eval, performance, local production/rehearsal authority and Manual Only operations are future runtime release evidence.
-- `verification.required_checks` is the canonical full-lifecycle minimum; `verification.verify_commands` is only the Stage 1 executable subset.
+- Draft PR: `https://github.com/netsus/homecook/pull/1373`
+- exact reviewed identity: head `2c33b38cf9f3badb72d610ad7a47abe70bf8907f`, tree `23fab93ab372174b9f531cf3414b348b1a724894`.
+- internal1.5 `01a01f2e-ae07-7f42-88be-87727228702a`: `APPROVE 0/0/0`, drift `0`.
+- security/DB/operations `01a01f2e-b2ed-7f32-bbaf-204b58613435`: `APPROVE 0/0/0`, drift `0`.
+- five-axis `01a01f2e-ba20-7022-8b3b-5b90d15572d0`: `APPROVE 0/0/0`, drift `0`.
+- design-authority-plan `01a01f2e-bf69-7f23-9c7c-7982855195bc`: `APPROVE 0/0/0`, drift `0`.
+- retained machine-readable evidence: `docs/workpacks/cooking-meal-log-cross-slice-release-qa/evidence/2026-08-21-stage1-final-independent-approvals.json`.
+- lifecycle/approval/verification/evaluation은 `planned / codex_approved / passed / passed`다. Stage 2 remains not started; runtime/full 8-lane 287041/Manual/activation evidence와 모든 runtime acceptance item은 pending이다.
+- 이 projection successor는 네 reviewer의 exact-head verdict를 기록할 뿐 새 리뷰나 자기 승인을 만들지 않는다. successor current-head CI와 final drift confirmation은 별도 reviewer 확인 대상이다.
+- repair budget: docs repair budget max 3; backend/frontend inline repair rounds `0/0`. Runtime defect는 separate failing-test-first TDD repair PR로 이동하고 full rerun after its merge가 필요하다.
+
+## Backend First Contract
+
+- request/query/path, response wrapper, status, error, ownership, idempotency and state transitions remain exactly those in official API v1.2.39 and predecessor workpacks.
+- Stage 2 is verification-only. It starts with deterministic tests and pinned isolated local Supabase, and may use controlled full-local read-only transactions only after exact target identity, backup freshness and authority are recorded.
+- Stage 2 must not execute Manual Only or local-production mutations. A necessary mutation becomes an explicit blocker until separately authorized.
+- any defect stops release verification, opens a separate failing-test-first TDD repair PR, merges it with independent review/current-head green, and reruns affected plus final evidence on the repaired exact head.
+
+### Final Evidence SHA Contract
+
+- Stage 4의 8-screen runtime artifacts가 commit된 clean head를 하나의 `FINAL_EVIDENCE_SHA`로 고정한다. producer는 broad path를 지우지 않고 create-only `.artifacts/cooking-meal-log-cross-slice-release-qa/attempts/<attempt_id>/`를 새로 만든다.
+- `pnpm verify:cooking-meal-log-release:produce -- --attempt-id "$HOMECOOK_CML14_ATTEMPT_ID" --head-sha "$FINAL_EVIDENCE_SHA" --profile full`이 pinned isolated local owning runner, security, performance, query-count, rollback을 실행한다.
+- `pnpm verify:cooking-meal-log-release:validate -- --attempt-dir ".artifacts/cooking-meal-log-cross-slice-release-qa/attempts/$HOMECOOK_CML14_ATTEMPT_ID" --attempt-id "$HOMECOOK_CML14_ATTEMPT_ID" --expected-head "$FINAL_EVIDENCE_SHA" --profile full`이 Stage 6 final bundle을 fail closed한다.
+- attempt evidence paths:
+  - manifest: `.artifacts/cooking-meal-log-cross-slice-release-qa/attempts/<attempt_id>/manifest.json`
+  - DB: `.artifacts/cooking-meal-log-cross-slice-release-qa/attempts/<attempt_id>/db-security.json`
+  - security: `.artifacts/cooking-meal-log-cross-slice-release-qa/attempts/<attempt_id>/security.json`
+  - performance: `.artifacts/cooking-meal-log-cross-slice-release-qa/attempts/<attempt_id>/performance.json`
+  - query count: `.artifacts/cooking-meal-log-cross-slice-release-qa/attempts/<attempt_id>/query-count.json`
+  - rollback: `.artifacts/cooking-meal-log-cross-slice-release-qa/attempts/<attempt_id>/rollback.json`
+- 모든 JSON은 같은 `attempt_id`, `head_sha == FINAL_EVIDENCE_SHA`, ISO `generated_at`, profile을 갖고 `passed > 0`, `skipped = 0`, `pending = 0`, `failed = 0`이어야 한다. manifest는 exact artifact byte count/SHA-256을 pin한다.
+- timestamp model은 attempt 시작 시각 하나를 모든 artifact와 manifest에 쓰는 `single shared generated_at`이다. artifact별 다른 시각은 hash가 맞아도 거부한다.
+- DB payload는 `pinned_isolated_local=true`, `remote_linked_cloud_access=0`; security payload는 `isolated_local=true`, `remote_access=0`, nonempty `mutation_inventory`, classified authorization/Data API negative count를 요구한다. rollback payload는 `current_and_previous=true`, `seeded_v2_drain=true`, `tombstone_fail_closed=true`를 모두 요구한다.
+- owning runner child process는 `lane-specific allowlist` 환경만 받는다. ambient migration replacement, integration skip/filter/testNamePattern, PG/DATABASE_URL, Supabase cloud/link/token/credential 값은 전달하지 않는다.
+- validator는 explicit attempt만 읽고 `latest` fallback을 사용하지 않는다. 과거 head의 stale artifact, partial/missing attempt, existing attempt overwrite, symlink/path traversal은 final gate를 통과할 수 없다.
+- final validator 자체가 repository 안에서 `git rev-parse HEAD`를 실행하고 `--expected-head`/artifact head와 비교하며 `git status --porcelain --untracked-files=all`의 clean worktree를 요구한다. canonical attempt root 밖 `/tmp` evidence, stale expected head, tracked/untracked dirty state는 거부한다.
+- `--profile proof`는 Stage 1에서 대표 pinned isolated runner와 모든 artifact/validator 안전장치를 검증하기 위한 비최종 profile이다. Stage 6 `--profile full` validator는 proof artifact를 거부한다.
+- performance thresholds: Recall@20 >= 0.90, Precision@20 >= 0.75, DB p95 <= 300ms, route p95 <= 600ms.
+- N+1 ceiling: `list20_query_count <= list1_query_count + 1`, `item-level N+1 = 0`; input item 수에 비례하는 SQL/HTTP fan-out은 blocker다.
+- query evidence는 source-string count가 아니라 `actual-route-service-boundary` instrumentation이다. production `GET /food-catalog/search` control flow를 1-item/20-item 입력으로 각각 실행해 DB/RPC callback을 측정하고 growth에서 `item_level_n_plus_one`을 계산한다. loop/callback negative fixture는 1→20 growth를 만들어 validator가 fail closed하는지 고정한다.
+- complete backend/isolated/security/performance/rollback + browser/design bundle must be terminal green on `FINAL_EVIDENCE_SHA` before Stage 6. 이후 repair가 필요하면 별도 TDD PR merge 뒤 새 SHA를 고정하고 전체를 다시 실행한다.
+
+## Frontend Delivery Mode
+
+- no new UI composition is delivered. Existing predecessor UI and canonical design artifacts are reused.
+- required states remain `loading / empty / error / read-only / unauthorized` plus partial/unavailable/conflict/replay/quarantine/legacy compatibility where already contracted.
+- fresh real Chrome evidence at 390px, 320px and desktop is Stage 4 evidence, not Stage 1 evidence.
+- fixture screenshots never substitute for authorized real local stack evidence.
+
+### Per-screen exact state matrix
+
+| Screen | Required exact states |
+| --- | --- |
+| `ACCOUNT_QUARANTINE` | loading, error, unauthorized, maintenance, cleanup_pending, pending, replay, conflict, auth-absent support-only |
+| `HOME` | loading, empty, error, recipe-only, private/quarantined/deleted nondisclosure |
+| `RECIPE_DETAIL` | loading, error, unauthorized, public read-only, owner edit/delete, future-impact conflict |
+| `MANUAL_RECIPE_CREATE` | loading, error, unauthorized, validation, dirty-state, managed-image pending/cancel/error |
+| `PLANNER_WEEK` | loading, empty, error, unauthorized, completed-shopping read-only, legacy-product read-only/delete |
+| `COOK_MODE` | loading, error, unauthorized, maintenance, cancelled read-only, completed read-only, missing, unrecoverable |
+| `LEFTOVERS` | loading, empty, error, unauthorized, pending, replay, conflict, missing, unrecoverable, depleted read-only |
+| `MEAL_LOG` | loading, empty, error, unauthorized, partial, unavailable, deleted-column, missing, unrecoverable, pending, replay, conflict |
+
+## Design Authority
+
+- UI risk: `high-risk` final cross-slice verification
+- Anchor screen dependency: `HOME`, `RECIPE_DETAIL`, `PLANNER_WEEK`
+- Visual artifact: `ui/designs/evidence/cooking-meal-log-cross-slice-release-qa/manifest.json` plus 390/320/desktop PNG paths declared in `automation-spec.json`
+- New generator/critic composition: 없음. `generator_required=false`, `critic_required=false`는 아래 merged predecessor artifacts를 재사용한다는 뜻이며 artifact가 N/A라는 뜻이 아니다.
+- schema의 단일 `generator_artifact`/`critic_artifact`는 index primary pointer인 `ACCOUNT_QUARANTINE` design/critique를 가리키고, complete 8-screen index는 `frontend.artifact_assertions`와 아래 표가 소유한다.
+- HOME의 기존 의미는 `ui/designs/HOME.md`의 Empty/Error `--brand CTA`, rail `overflow-x: auto`, page overflow `0`, `document.documentElement.scrollWidth === clientWidth` 규칙을 재사용한다. `required_screens` 복원 시 `omo-doc-gate`가 exact `primary CTA`/`scroll containment` vocabulary를 강제함을 재현한 뒤, 같은 파일에 semantic-no-op discoverability addendum만 추가했다.
+- HOME addendum은 새 composition, behavior, interaction, screenshot 또는 authority verdict를 만들지 않는다. `ui/designs/HOME.md`는 요청 범위의 explicit extra file이며 design-authority-plan task `01a01f2e-bf69-7f23-9c7c-7982855195bc`의 fresh exact-head re-review 대상이다.
+
+| Screen | Merged design | Current critique | Final authority |
+| --- | --- | --- | --- |
+| `ACCOUNT_QUARANTINE` | `ui/designs/ACCOUNT_QUARANTINE.md` | `ui/designs/critiques/ACCOUNT_QUARANTINE-critique.md` | `ui/designs/authority/ACCOUNT_QUARANTINE-authority.md` |
+| `HOME` | `ui/designs/HOME.md` | `ui/designs/critiques/HOME-service-about-guide-critique.md` | `ui/designs/authority/HOME-service-brand-image-assets-authority.md` |
+| `RECIPE_DETAIL` | `ui/designs/RECIPE_DETAIL.md` | `ui/designs/critiques/recipe-content-snapshot-future-propagation-design-critic.md` | `ui/designs/authority/recipe-content-snapshot-future-propagation-authority.md` |
+| `MANUAL_RECIPE_CREATE` | `ui/designs/MANUAL_RECIPE_CREATE.md` | `ui/designs/critiques/MANUAL_RECIPE_CREATE-critique.md` | `ui/designs/authority/DESIGN_POLISH_SLICE5_MANUAL_YOUTUBE-authority.md` |
+| `PLANNER_WEEK` | `ui/designs/PLANNER_WEEK.md` | `ui/designs/critiques/PLANNER_WEEK-critique.md` | `ui/designs/authority/PLANNER_WEEK-authority.md` |
+| `COOK_MODE` | `ui/designs/COOK_MODE.md` | `ui/designs/critiques/COOK_MODE-cooked-batch-weight-ui-critique.md` | `docs/workpacks/cooked-batch-weight-ui/evidence/2026-08-10-final-authority-p2-repair-rereview.md` |
+| `LEFTOVERS` | `ui/designs/LEFTOVERS.md` | `ui/designs/critiques/LEFTOVERS-cooked-batch-weight-ui-critique.md` | `docs/workpacks/cooked-batch-weight-ui/evidence/2026-08-10-final-authority-p2-repair-rereview.md` |
+| `MEAL_LOG` | `ui/designs/MEAL_LOG.md` | `ui/designs/critiques/MEAL_LOG-critique.md` | `ui/designs/authority/MEAL_LOG-authority.md` |
+
+- #12 status: MEAL_LOG design, critique, authority, runtime and OMO evidence are merged; they are no longer future reservations.
+- Authority status: fresh #14 exact-head screenshots and a separate final authority report remain required; this author does not approve them.
+
+## Design Status
+
+- [x] 임시 UI (temporary) — #14 fresh exact-head evidence/authority가 아직 없음
+- [ ] 리뷰 대기 (pending-review) — Stage 4 evidence 생성 후
+- [ ] 확정 (confirmed) — independent Stage 5/final authority blocker 0 후
+- [ ] N/A — 이 slice는 high-risk UI 검증을 포함하므로 적용하지 않음
+
+## Source Links
+
+- `docs/sync/CURRENT_SOURCE_OF_TRUTH.md`
+- `docs/요구사항기준선-v1.7.32.md`
+- `docs/화면정의서-v1.5.36.md`
+- `docs/유저flow맵-v1.3.34.md`
+- `docs/db설계-v1.3.34.md`
+- `docs/api문서-v1.2.39.md`
+- `docs/engineering/supabase-local-only-operations.md`
+- `docs/engineering/workflow-v2/omo-canonical-closeout-state.md`
+- approved plan: `docs/workpacks/planner-shell/evidence/cooking-meal-log-and-product-search-master-plan-20260722.md`, SHA-256 `d4d0fb39e80eeffc8b1e73ad92f0d91a35a9b6adc57a556ea8c9ec6ecffa951d`, 1,018 lines
+
+## QA / Test Data Plan
+
+- Stage 1: exact-six projection test, SOT/workflow/workpack/automation/OMO/closeout validators, lint, typecheck, audit and diff only.
+- Stage 2 deterministic: existing focused F0/#1~#13 tests and `pnpm verify:local-supabase-runtime:isolated`; production volume/port/env/secret must not be shared.
+- owning focused map은 `automation-spec.json.backend.required_test_targets`에서 F0/#1~#13 exact merge SHA와 한 개 이상의 실제 regression target을 1:1로 연결한다. 특히 #3 visibility, #4 snapshot authority, #5 editor decoupling, #6 customization write core를 별도 command로 실행한다.
+- controlled full-local: read-only transaction, target identity, backup freshness and before/after checksum equality only after authority. Mutation, reset, volume delete and migration-history rewrite are prohibited.
+- Stage 4: real local stack + real Chrome, owner A/B and the eight screens at 390/320/desktop; unavailable runtime or authority is a blocker rather than a fixture substitution.
+- bootstrap expectations remain predecessor-owned (`users`, `recipe_books`, `meal_plan_columns`, account generation/session binding). Missing schema/seed/bootstrap blocks verification.
+
+## Key Rules
+
+- official tuple is v1.7.32/v1.5.36/v1.3.34/DB v1.3.34/API v1.2.39; this relock is not Contract Evolution.
+- full-local is the only Supabase authority. Cloud/linked/remote Supabase target, credential, verifier and fallback are forbidden/N/A.
+- evidence is exact-head and time-bounded. Stale, absent, different-head or fixture-only evidence cannot close a gate.
+- automated/runtime merged-green and overall lifecycle pending are separate facts; neither is promoted into the other.
+- Manual Only and irreversible operations stay unchecked until their own authority and evidence exist.
+
+## Primary User Path
+
+1. Stage 2 verifier confirms the relock reviews/current-head gate and the frozen predecessor runtime merge map.
+2. It runs deterministic and pinned isolated local verification without changing product or production state.
+3. Authorized Stage 4/5/6 tasks collect exact repaired-head real browser/authority/closeout evidence; any defect leaves this slice and returns only after a separate TDD repair merge.
 
 ## Delivery Checklist
 
-- [x] Stage 1 exact-six docs authored
-- [ ] independent internal1.5/security-DB-operations/five-axis/design-authority-plan reviews approved with zero findings
-- [ ] every check started for the Stage 1 PR current head is terminal green or intended skip
-- [ ] post-merge master QA/Policy/Security/Vercel green
-- [ ] all predecessor runtime/current-head gates green before Stage 2
-- [ ] any defect repaired through a separate TDD PR and final evidence rerun on the repaired head
-- [ ] exact-head DB/API/browser/performance/legacy/rollback/authority evidence and Stage 5/6 reviews green
-- [ ] Manual Only and irreversible operations remain separately authorized
+Stage 1 approval is complete (`codex_approved`); runtime Delivery Checklist and Stage 2 remain pending.
+
+- [ ] pinned isolated local DB/API/security/performance verification is green on the exact head <!-- omo:id=delivery-cooking-cross-stage2-isolated;stage=2;scope=backend;review=3,6 -->
+- [ ] predecessor runtime merge map is rechecked and no retained evidence is stale <!-- omo:id=delivery-cooking-cross-stage2-predecessors;stage=2;scope=shared;review=3,6 -->
+- [ ] defects, if any, use a separate failing-test-first TDD repair PR and full rerun after its merge <!-- omo:id=delivery-cooking-cross-stage2-repair-boundary;stage=2;scope=shared;review=3,6 -->
+- [ ] controlled full-local use stays read-only or records separate mutation authority <!-- omo:id=delivery-cooking-cross-stage2-local-authority;stage=2;scope=backend;review=3,6 -->
+- [ ] eight-screen real Chrome 390/320/desktop evidence is captured on the exact repaired head <!-- omo:id=delivery-cooking-cross-stage4-browser;stage=4;scope=frontend;review=5,6 -->
+- [ ] loading/empty/error/read-only/unauthorized and contracted edge states are verified <!-- omo:id=delivery-cooking-cross-stage4-states;stage=4;scope=frontend;review=5,6 -->
+- [ ] fresh exploratory QA/eval and final authority report have blocker 0 <!-- omo:id=delivery-cooking-cross-stage4-authority;stage=4;scope=frontend;review=5,6 -->
+- [ ] current-head checks and independent Stage 6 closeout are terminal green <!-- omo:id=delivery-cooking-cross-stage4-closeout;stage=4;scope=shared;review=6 -->
+
+## Manual Only
+
+- [ ] physical device, VoiceOver/TalkBack and full WCAG verification
+- [ ] server-Mac OAuth and controlled local-production/rehearsal evidence requiring operator authority
+- [ ] off-Mac encrypted backup, clean restore, RPO/RTO and reboot recovery evidence
+- [ ] cutover, capability, R/R+1/R+2, required-key and production activation
+- [ ] any local-production mutation, destructive tombstone or legacy orphan deletion

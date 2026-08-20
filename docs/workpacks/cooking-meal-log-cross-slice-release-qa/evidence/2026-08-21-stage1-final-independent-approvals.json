@@ -1,0 +1,164 @@
+{
+  "artifact_type": "stage1_final_independent_approvals",
+  "slice": "cooking-meal-log-cross-slice-release-qa",
+  "recorded_at": "2026-08-20T15:47:38Z",
+  "pr_path": "https://github.com/netsus/homecook/pull/1373",
+  "reviewed_head": "2c33b38cf9f3badb72d610ad7a47abe70bf8907f",
+  "reviewed_tree": "23fab93ab372174b9f531cf3414b348b1a724894",
+  "reviews": [
+    {
+      "role": "internal1.5",
+      "task_id": "01a01f2e-ae07-7f42-88be-87727228702a",
+      "verdict": "APPROVE",
+      "counts": {
+        "p0": 0,
+        "p1": 0,
+        "p2": 0
+      },
+      "drift_count": 0,
+      "unresolved_required_findings": []
+    },
+    {
+      "role": "security/DB/operations",
+      "task_id": "01a01f2e-b2ed-7f32-bbaf-204b58613435",
+      "verdict": "APPROVE",
+      "counts": {
+        "p0": 0,
+        "p1": 0,
+        "p2": 0
+      },
+      "drift_count": 0,
+      "unresolved_required_findings": []
+    },
+    {
+      "role": "five-axis",
+      "task_id": "01a01f2e-ba20-7022-8b3b-5b90d15572d0",
+      "verdict": "APPROVE",
+      "counts": {
+        "p0": 0,
+        "p1": 0,
+        "p2": 0
+      },
+      "drift_count": 0,
+      "unresolved_required_findings": []
+    },
+    {
+      "role": "design-authority-plan",
+      "task_id": "01a01f2e-bf69-7f23-9c7c-7982855195bc",
+      "verdict": "APPROVE",
+      "counts": {
+        "p0": 0,
+        "p1": 0,
+        "p2": 0
+      },
+      "drift_count": 0,
+      "unresolved_required_findings": []
+    }
+  ],
+  "ready_confirmation": {
+    "reviewed_head": "a61ec360d959d4be720a94f08b8b833ae50deab6",
+    "reviewed_tree": "ad19c9186326dad58d8023f70543f641c2d82264",
+    "approval_state": "codex_approved",
+    "ready": "YES",
+    "checks": {
+      "unique_contexts": 14,
+      "success": 12,
+      "intended_skips": 2,
+      "bad": 0
+    },
+    "reviews": [
+      {
+        "role": "internal1.5",
+        "task_id": "01a01f2e-ae07-7f42-88be-87727228702a",
+        "verdict": "APPROVE",
+        "counts": {
+          "p0": 0,
+          "p1": 0,
+          "p2": 0
+        },
+        "drift_count": 0,
+        "unresolved_required_findings": [],
+        "ready": "YES"
+      },
+      {
+        "role": "security/DB/operations",
+        "task_id": "01a01f2e-b2ed-7f32-bbaf-204b58613435",
+        "verdict": "APPROVE",
+        "counts": {
+          "p0": 0,
+          "p1": 0,
+          "p2": 0
+        },
+        "drift_count": 0,
+        "unresolved_required_findings": [],
+        "ready": "YES"
+      },
+      {
+        "role": "five-axis",
+        "task_id": "01a01f2e-ba20-7022-8b3b-5b90d15572d0",
+        "verdict": "APPROVE",
+        "counts": {
+          "p0": 0,
+          "p1": 0,
+          "p2": 0
+        },
+        "drift_count": 0,
+        "unresolved_required_findings": [],
+        "ready": "YES"
+      },
+      {
+        "role": "design-authority-plan",
+        "task_id": "01a01f2e-bf69-7f23-9c7c-7982855195bc",
+        "verdict": "APPROVE",
+        "counts": {
+          "p0": 0,
+          "p1": 0,
+          "p2": 0
+        },
+        "drift_count": 0,
+        "unresolved_required_findings": [],
+        "ready": "YES"
+      }
+    ]
+  },
+  "closed_finding_lineage": [
+    "CML14-I15-P1-001",
+    "CML14-I15-P1-002",
+    "CML14-I15-P2-001",
+    "CML14-I15R-P1-001",
+    "CML14-I15R-P1-002",
+    "CML14-I15F-P1-001",
+    "CML14-I15T-P1-001",
+    "CML14-FIVE-P1-001",
+    "CML14-FIVE-P1-002",
+    "CML14-FIVE-P1-003",
+    "CML14-FIVE-P1-004",
+    "CML14-FIVE-P1-005",
+    "CML14-FIVE-P2-001",
+    "CML14-SDO-RR-P1-001",
+    "CML14-SDO-RR-P1-002",
+    "CML14-SDO-FINAL-P1-001",
+    "CML14-SDO-FINAL-P1-003",
+    "CML14-SDO-FINAL-P2-001",
+    "CML14-SDO-SYMLINK-P1-001",
+    "P1-CML14-EVID-01",
+    "P1-CML14-EVID-02",
+    "P2-CML14-EVID-03",
+    "P1-CML14-EVID-04",
+    "P2-CML14-EVID-05",
+    "P1-DA14-01",
+    "P1-DA14-02",
+    "P2-DA14-03",
+    "P1-DA14-RR-01",
+    "P2-DA14-RR-02"
+  ],
+  "projection_boundary": {
+    "stage1_approved": true,
+    "stage2_started": false,
+    "runtime_complete": false,
+    "full_8_lane_287041_complete": false,
+    "manual_complete": false,
+    "activation_complete": false,
+    "auto_merge": false
+  }
+}
