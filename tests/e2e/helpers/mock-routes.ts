@@ -1421,6 +1421,66 @@ export async function installMenuAddVisualRoutes(page: Page) {
 export async function installYoutubeImportVisualRoutes(page: Page) {
   await installMenuAddVisualRoutes(page);
 
+  const extractionJobId = "11111111-1111-4111-8111-111111111111";
+
+  await page.route("**/api/v1/users/me/youtube-extraction-jobs**", async (route) => {
+    const pathname = new URL(route.request().url()).pathname;
+    if (pathname.endsWith("/delivered")) {
+      await route.fulfill({
+        json: { success: true, data: { delivered_count: 0 }, error: null },
+      });
+      return;
+    }
+    if (pathname.endsWith("/seen")) {
+      await route.fulfill({
+        json: { success: true, data: { seen_count: 0 }, error: null },
+      });
+      return;
+    }
+    await route.fulfill({
+      json: {
+        success: true,
+        data: { items: [], next_cursor: null },
+        error: null,
+      },
+    });
+  });
+
+  await page.route("**/api/v1/recipes/youtube/extraction-jobs**", async (route) => {
+    if (route.request().method() === "POST") {
+      await route.fulfill({
+        status: 202,
+        json: {
+          success: true,
+          data: {
+            job_id: extractionJobId,
+            status: "queued",
+            deduplicated: false,
+            submitted_at: "2026-08-14T01:00:00.000Z",
+          },
+          error: null,
+        },
+      });
+      return;
+    }
+    await route.fulfill({
+      json: {
+        success: true,
+        data: {
+          job_id: extractionJobId,
+          status: "queued",
+          submitted_at: "2026-08-14T01:00:00.000Z",
+          started_at: null,
+          completed_at: null,
+          result: null,
+          error: null,
+          can_retry: false,
+        },
+        error: null,
+      },
+    });
+  });
+
   await page.route("**/api/v1/recipes/youtube/validate", async (route) => {
     if (route.request().method() !== "POST") {
       await route.continue();
