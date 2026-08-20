@@ -10,7 +10,7 @@ import { evaluateDocGate } from "../scripts/lib/omo-doc-gate.mjs";
 const root = process.cwd();
 const sliceId = "legacy-product-compat";
 const trackedBranch =
-  "feature/be-legacy-product-compat";
+  "feature/fe-legacy-product-compat";
 const stage1TrackedBranch =
   "docs/legacy-product-compat-stage1-relock-20260815";
 const predecessorAuthorBranch =
@@ -146,7 +146,7 @@ describe("legacy-product-compat fresh Stage 1 exact-six relock", () => {
     expect(workItem.status).toEqual(honestStatus);
     expect(status).toMatchObject({
       branch: trackedBranch,
-      pr_path: "https://github.com/netsus/homecook/pull/1369",
+      pr_path: "https://github.com/netsus/homecook/pull/1371",
       ...honestStatus,
     });
 
@@ -744,9 +744,9 @@ describe("legacy-product-compat fresh Stage 1 exact-six relock", () => {
     );
   });
 
-  it("keeps Stage 1 design status temporary while retaining predecessor authorities", () => {
+  it("projects Stage 4 pending review while retaining predecessor authorities", () => {
     const designStatus = readSection(readme, "## Design Status");
-    expect(designStatus).toContain("- [x] 임시 UI (temporary)");
+    expect(designStatus).toContain("- [x] 리뷰 대기 (pending-review)");
     expect(designStatus).toContain("- [ ] 확정 (confirmed)");
     expect(designStatus).toContain("predecessor evidence");
     expect(automation.frontend.design_authority.authority_required).toBe(false);

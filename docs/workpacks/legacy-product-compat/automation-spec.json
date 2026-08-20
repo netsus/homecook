@@ -142,7 +142,7 @@
       "current-and-immediate-previous-stored-version-dispatch"
     ],
     "verify_commands": [
-      "pnpm exec vitest run tests/planner-shell-legacy-product.test.tsx tests/legacy-product-compat-client.test.tsx",
+      "pnpm exec vitest run tests/planner-shell-legacy-product.test.tsx tests/legacy-product-compat-client.test.tsx tests/legacy-product-compat-store.test.ts",
       "pnpm test:e2e:regression:ci --grep legacy-product-compat",
       "pnpm test:e2e:a11y",
       "pnpm test:e2e:visual",

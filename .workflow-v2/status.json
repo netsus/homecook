@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-08-12T14:27:33Z",
+  "updated_at": "2026-08-20T07:32:45Z",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -2690,8 +2690,8 @@
     {
       "id": "legacy-product-compat",
       "preset": "vertical-slice-strict",
-      "branch": "feature/be-legacy-product-compat",
-      "pr_path": "https://github.com/netsus/homecook/pull/1369",
+      "branch": "feature/fe-legacy-product-compat",
+      "pr_path": "https://github.com/netsus/homecook/pull/1371",
       "lifecycle": "in_progress",
       "approval_state": "not_started",
       "verification_status": "pending",
@@ -2708,13 +2708,17 @@
         "pnpm test:prepared-food-planner-entry:postgres",
         "node scripts/validate-security-function-authorization.mjs --contract-only",
         "pnpm verify:backend",
+        "pnpm exec vitest run tests/planner-shell-legacy-product.test.tsx tests/legacy-product-compat-client.test.tsx tests/legacy-product-compat-store.test.ts tests/cooking-session-version-dispatch.test.tsx tests/cooking-snapshot-v2-api.test.ts",
+        "pnpm test:e2e:regression:ci --grep legacy-product-compat",
+        "pnpm verify:frontend:pr",
+        "pnpm verify:frontend",
         "pnpm validate:real-smoke-presence -- --slice legacy-product-compat",
         "pnpm audit --audit-level high",
         "pnpm validate:branch",
         "BASE_REF=origin/master pnpm validate:commits",
         "git diff --check"
       ],
-      "notes": "Stage 2 backend author task 019ff12c-dc8b-7752-9319-398a68cacb6e completed local implementation evidence on Draft PR #1369. Successor repairs ae517053090fdd1d270e38690833ec23a84bf43a, d6032a598b2ea2336dc5f7d02035ec3e40b33850, 09c579b09451218940c951c2342d1eafeec3a26c and c320c157b3703d81a27ecf83dc071082a70de0f8 close inactive recipe-owner visibility, actual route evidence, concurrent lifecycle serialization and workflow rail findings. Expanded focused 10 files/76 tests, disposable PostgreSQL 13/13, canonical isolated reset/Data API 200, prepared-food owner PostgreSQL 11/11, full Vitest 6106 pass/416 intended skip, product 2756 pass/175 intended skip, build and security E2E 12/12 are green. Exact 74f148e1 code/quality re-review approved 0/0/0; security/DB REQUEST_CHANGES 0/1/1 is repaired and awaits fresh exact-head re-review plus terminal successor CI/PR-body projection. Approval/evaluation remain not_started and verification remains pending. Production/staging/remote writes are 0/0/0; controlled full-local deploy, drain/fence, old overload revoke/drop, deployed callable inventory, server-Mac/OAuth, Stage 4~6, OMO and activation remain pending. The author does not self-approve.",
+      "notes": "Stage 2/3 backend checkpoint merged via PR #1369 as 50e31293e6740b3fdc56d022e12d3b9fe8be4cf7. Fresh Stage 4 task 01a01e01-0a0e-7f70-97dd-2e6c8f0012af on feature/fe-legacy-product-compat and Draft PR #1371 implemented optional stable legacy completion keys, retry stability, duplicate delete locking and nested focus restoration without public contract or composition changes. Focused Vitest 10 files/131, final legacy 3 files/15, exact Playwright 14/14, product 2757/175, build and core smoke/a11y/visual are green. Design Status is pending-review with authority_required=false and exact predecessor references retained. Approval/evaluation remain not_started, verification pending and auto_merge_eligible=false. Production/staging/remote writes are 0/0/0; fresh Stage 5/6, current-head checks, Ready/merge, Manual/device/AT/full WCAG, controlled deploy/drain/fence/revoke, server-Mac/OAuth and activation remain pending. The Stage 4 author does not self-approve.",
       "evaluation_status": "not_started",
       "evaluation_round": 0,
       "last_evaluator_result": null,

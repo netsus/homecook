@@ -90,6 +90,10 @@
       "pnpm test:prepared-food-planner-entry:postgres",
       "node scripts/validate-security-function-authorization.mjs --contract-only",
       "pnpm verify:backend",
+      "pnpm exec vitest run tests/planner-shell-legacy-product.test.tsx tests/legacy-product-compat-client.test.tsx tests/legacy-product-compat-store.test.ts tests/cooking-session-version-dispatch.test.tsx tests/cooking-snapshot-v2-api.test.ts",
+      "pnpm test:e2e:regression:ci --grep legacy-product-compat",
+      "pnpm verify:frontend:pr",
+      "pnpm verify:frontend",
       "pnpm validate:real-smoke-presence -- --slice legacy-product-compat",
       "pnpm audit --audit-level high",
       "pnpm validate:branch",
@@ -109,6 +113,10 @@
       "pnpm test:prepared-food-planner-entry:postgres",
       "node scripts/validate-security-function-authorization.mjs --contract-only",
       "pnpm verify:backend",
+      "pnpm exec vitest run tests/planner-shell-legacy-product.test.tsx tests/legacy-product-compat-client.test.tsx tests/legacy-product-compat-store.test.ts tests/cooking-session-version-dispatch.test.tsx tests/cooking-snapshot-v2-api.test.ts",
+      "pnpm test:e2e:regression:ci --grep legacy-product-compat",
+      "pnpm verify:frontend:pr",
+      "pnpm verify:frontend",
       "pnpm validate:real-smoke-presence -- --slice legacy-product-compat",
       "pnpm audit --audit-level high",
       "pnpm validate:branch",
@@ -134,8 +142,8 @@
       "stage2-cursor-idempotency-telemetry-and-stage4-key-states-delete-focus-responsive-split",
       "telemetry-unavailable-partial-stale-query-error-removal-fail-closed",
       "authority-required-false-and-exact-slice10-slice7-slice11-final-references",
-      "in-progress-stage2-author-green-pending-not-started-auto-merge-false",
-      "stage1-retained-stage2-current-stage4-future-manual-only-command-separation",
+      "stage2-stage3-backend-merged-green-stage4-local-green-pending-review-auto-merge-false",
+      "stage1-retained-stage2-stage3-merged-stage4-draft-stage5-stage6-and-manual-pending",
       "independent-design-impact-review-current-gate-predecessor-01a00203-3c1d-78b3-ac78-fbb63b960c60-historical-only",
       "repository-owned-isolated-reset-prepared-food-owner-fixture-bootstrap-meal-plan-columns-owner-match-and-fixture-absent-stage2-blocker",
       "pre-gate missing Idempotency-Key remains compatible success with the existing v1 response shape",
@@ -168,5 +176,5 @@
     "New API field status error action or screen; new table/column, generic RPC, RLS relaxation, or direct DML beyond the required narrow additive scoped RPC migration"
   ],
   "open_questions": [],
-  "notes": "Stage 2 backend author task 019ff12c-dc8b-7752-9319-398a68cacb6e completed local implementation evidence on branch feature/be-legacy-product-compat and Draft PR #1369. Successor repairs ae517053090fdd1d270e38690833ec23a84bf43a, d6032a598b2ea2336dc5f7d02035ec3e40b33850, 09c579b09451218940c951c2342d1eafeec3a26c and c320c157b3703d81a27ecf83dc071082a70de0f8 close inactive recipe-owner visibility, actual route evidence, concurrent lifecycle serialization and workflow rail findings. Expanded focused 10 files/76 tests, disposable PostgreSQL 13/13, canonical isolated reset/Data API 200, prepared-food owner PostgreSQL 11/11, full Vitest 6106 pass/416 intended skip, product 2756 pass/175 intended skip, build and security E2E 12/12 are green. Exact 74f148e1 code/quality re-review approved 0/0/0; security/DB REQUEST_CHANGES 0/1/1 is repaired and awaits fresh exact-head re-review plus terminal successor CI/PR-body projection. Lifecycle is in_progress; approval/evaluation are not_started, verification remains pending and auto_merge_eligible=false. #10/#12 runtime dependencies remain fulfilled. Production/staging/remote writes are 0/0/0. Controlled full-local deploy, drain/fence, old overload revoke/drop, deployed callable inventory, server-Mac/OAuth, Stage 4~6, OMO, capability, R/R+1/R+2 and activation remain pending. The author does not self-approve."
+  "notes": "Stage 2/3 backend checkpoint merged via PR #1369 as 50e31293e6740b3fdc56d022e12d3b9fe8be4cf7. Fresh Stage 4 task 01a01e01-0a0e-7f70-97dd-2e6c8f0012af on feature/fe-legacy-product-compat and Draft PR #1371 implemented optional stable legacy completion keys, same-payload retry reuse/different-payload rotation, duplicate delete locking and nested focus restoration without changing public contracts or screen composition. Focused Vitest 10 files/131, final legacy 3 files/15, exact Playwright 14/14, product 2757/175, build, core smoke 62/10, core a11y 8/1 and core visual 12/12 are green. Design Status is pending-review with authority_required=false and the exact three predecessor references retained. Lifecycle remains in_progress; approval/evaluation are not_started, verification pending and auto_merge_eligible=false. Production/staging/remote writes are 0/0/0. Fresh Stage 5/6, Draft current-head checks, Ready/merge, controlled full-local deploy/drain/fence/revoke, device/AT/full WCAG, server-Mac/OAuth, capability, R/R+1/R+2, required-key and production activation remain pending. The Stage 4 author does not self-approve."
 }
