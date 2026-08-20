@@ -15,8 +15,14 @@ const stage2Base = "afb1b31aa6c95ba974f7484d31fa123439d5fcd6";
 const stage2AuthorEvidencePath =
   "docs/workpacks/cooking-meal-log-cross-slice-release-qa/evidence/2026-08-21-stage2-verification-author.md";
 const stage2AuthorCheckedIds = [
+  "accept-cooking-cross-automation-env",
+  "accept-cooking-cross-automation-final-validator",
+  "accept-cooking-cross-automation-git-binding",
   "accept-cooking-cross-automation-query-count",
+  "accept-cooking-cross-automation-rollback",
   "accept-cooking-cross-automation-runtime",
+  "accept-cooking-cross-automation-security",
+  "accept-cooking-cross-automation-semantic",
   "accept-cooking-cross-happy-isolated",
   "accept-cooking-cross-happy-predecessors",
   "accept-cooking-cross-precondition-evidence",
@@ -25,6 +31,7 @@ const stage2AuthorCheckedIds = [
   "accept-cooking-cross-state-no-invention",
   "accept-cooking-cross-state-separation",
   "accept-cooking-cross-state-verification-only",
+  "accept-cooking-cross-state-version-rollback",
   "delivery-cooking-cross-stage2-predecessors",
   "delivery-cooking-cross-stage2-repair-boundary",
 ];
@@ -443,7 +450,9 @@ describe("cooking meal-log cross-slice Stage 1 relock", () => {
       },
     });
     expect(workItem.notes).toContain(stage2AuthorEvidencePath);
-    expect(workItem.notes).toContain("deterministic regressions 137/137");
+    expect(workItem.notes).toContain("deterministic 137/137");
+    expect(workItem.notes).toContain("stage2-proof-cb775ed9-20260821");
+    expect(workItem.notes).toContain("retained local non-final evidence");
     expect(status.notes).toContain(stage2AuthorEvidencePath);
     expect(status.notes).toContain("pinned isolated local exit 0");
 

@@ -173,7 +173,9 @@ Stage 2 entry still requires this relock PR merge and the documented post-merge 
 - actual route query-count is `list1=1`, `list20=1`, item-level N+1 `0`; version/rollback/tombstone compatibility is `32/32`.
 - successor task sandbox의 Docker preflight 두 번은 capability 경계로 실패했지만, 부모가 같은 branch/HEAD에서 `pnpm verify:local-supabase-runtime:isolated`를 exit `0`으로 재실행했다. CLI `2.110.0`, migration SHA-256 `f2f429121f32d6917e43766f7351e918bcfe40852618793ab5d6105e2735ab0d`, ephemeral project `hcg_88821_e41204`, full migrations+seed+reset, Data API `200`, cleanup을 확인했다.
 - retained author evidence: `docs/workpacks/cooking-meal-log-cross-slice-release-qa/evidence/2026-08-21-stage2-verification-author.md`.
-- Stage 2 remains `in_progress`: non-final proof/owning DB artifact와 final threshold evidence, controlled full-local, Stage 3~6, Manual and activation are pending.
+- clean head `cb775ed9d9885e7465358bc929794aa9ee90c5ec`의 create-only attempt `stage2-proof-cb775ed9-20260821`은 `profile=proof`, artifact `5`, exact head/profile/clean validator를 통과했다. `.artifacts/cooking-meal-log-cross-slice-release-qa/attempts/stage2-proof-cb775ed9-20260821/`은 retained local evidence이며 final evidence가 아니다.
+- proof는 대표 DB lane `20/20`, security `24/24`, query-count `1/1`, rollback `32/32`, performance runner contract `2/2`를 기록한다. performance는 `proof_only`, DB는 대표 lane 한 개뿐이다.
+- Stage 2 remains `in_progress`: complete owning DB lanes와 actual performance thresholds, controlled full-local, Stage 3~6, Manual and activation are pending.
 
 ## Key Rules
 

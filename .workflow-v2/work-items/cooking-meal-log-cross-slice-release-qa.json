@@ -250,7 +250,8 @@
       "actual_verification_refs": [
         "docs/workpacks/cooking-meal-log-cross-slice-release-qa/evidence/2026-08-21-stage1-final-independent-approvals.json",
         "docs/workpacks/cooking-meal-log-cross-slice-release-qa/evidence/2026-08-21-stage2-verification-author.md",
-        "Stage 2 author task 01a020fd-56ef-73a3-9aa3-7a8d44a8541c: deterministic 137/137, backend product 2757 pass plus 175 intended skip, security E2E 12/12, parent isolated local exit 0; proof artifacts pending",
+        "Stage 2 author task 01a020fd-56ef-73a3-9aa3-7a8d44a8541c: deterministic 137/137, backend product 2757 pass plus 175 intended skip, security E2E 12/12, parent isolated local exit 0",
+        ".artifacts/cooking-meal-log-cross-slice-release-qa/attempts/stage2-proof-cb775ed9-20260821/ profile=proof artifact_count=5 exact head/profile/clean validator pass; retained local non-final evidence",
         "internal1.5 task 01a01f2e-ae07-7f42-88be-87727228702a APPROVE 0/0/0 drift 0 Ready YES at a61ec360d959d4be720a94f08b8b833ae50deab6",
         "security/DB/operations task 01a01f2e-b2ed-7f32-bbaf-204b58613435 APPROVE 0/0/0 drift 0 Ready YES at a61ec360d959d4be720a94f08b8b833ae50deab6",
         "five-axis task 01a01f2e-ba20-7022-8b3b-5b90d15572d0 APPROVE 0/0/0 drift 0 Ready YES at a61ec360d959d4be720a94f08b8b833ae50deab6",
@@ -276,7 +277,7 @@
       "manual_decision_required_count": 0,
       "human_escalation_count": 0,
       "post_merge_stale_count": 0,
-      "latest_reason_code": "stage2-deterministic-and-isolated-green-proof-pending",
+      "latest_reason_code": "stage2-nonfinal-proof-green-full-evidence-pending",
       "evidence_sources": [
         "Codex_task_01a01f2e-ae07-7f42-88be-87727228702a",
         "Codex_task_01a01f2e-b2ed-7f32-bbaf-204b58613435",
@@ -284,7 +285,8 @@
         "Codex_task_01a01f2e-bf69-7f23-9c7c-7982855195bc",
         "docs/workpacks/cooking-meal-log-cross-slice-release-qa/evidence/2026-08-21-stage1-final-independent-approvals.json",
         "Codex_task_01a020fd-56ef-73a3-9aa3-7a8d44a8541c",
-        "docs/workpacks/cooking-meal-log-cross-slice-release-qa/evidence/2026-08-21-stage2-verification-author.md"
+        "docs/workpacks/cooking-meal-log-cross-slice-release-qa/evidence/2026-08-21-stage2-verification-author.md",
+        ".artifacts/cooking-meal-log-cross-slice-release-qa/attempts/stage2-proof-cb775ed9-20260821/"
       ]
     },
     "projection_state": {
@@ -305,5 +307,5 @@
     "Physical-device actual-screen-reader full-WCAG and true-production-scale claims during Stage 1"
   ],
   "open_questions": [],
-  "notes": "Canonical closeout owner: .workflow-v2/work-items/cooking-meal-log-cross-slice-release-qa.json#closeout. Lifecycle is in_progress on Stage 2 branch feature/be-cooking-meal-log-cross-slice-release-qa. Stage 1 approvals remain historical exact-head evidence. Stage 2 author task 01a020fd-56ef-73a3-9aa3-7a8d44a8541c verified predecessor drift 0, deterministic regressions 137/137, backend product 2757 pass plus 175 intended skip, build, security E2E 12/12 and actual route query-count list1=1/list20=1/N+1=0. Parent execution supplied pinned isolated local exit 0 with CLI 2.110.0, migration digest f2f429121f32d6917e43766f7351e918bcfe40852618793ab5d6105e2735ab0d and Data API 200. Non-final proof/owning DB and performance threshold artifacts, Stage 3~6, Manual and activation remain pending; auto_merge stays false and closeout stays collecting. closeout_phase=collecting closeout_recovery=manual_patch:3 closeout_repair=codex:3|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:Codex_task_01a01f2e-ae07-7f42-88be-87727228702a,Codex_task_01a01f2e-b2ed-7f32-bbaf-204b58613435,Codex_task_01a01f2e-ba20-7022-8b3b-5b90d15572d0,Codex_task_01a01f2e-bf69-7f23-9c7c-7982855195bc,docs/workpacks/cooking-meal-log-cross-slice-release-qa/evidence/2026-08-21-stage1-final-independent-approvals.json,Codex_task_01a020fd-56ef-73a3-9aa3-7a8d44a8541c,docs/workpacks/cooking-meal-log-cross-slice-release-qa/evidence/2026-08-21-stage2-verification-author.md"
+  "notes": "Canonical closeout owner: .workflow-v2/work-items/cooking-meal-log-cross-slice-release-qa.json#closeout. Lifecycle is in_progress on Stage 2 branch feature/be-cooking-meal-log-cross-slice-release-qa. Stage 2 deterministic 137/137, backend product 2757 pass plus 175 intended skip, security E2E 12/12, pinned isolated local exit 0 and query-count list1=1/list20=1/N+1=0 are green. Clean head cb775ed9d9885e7465358bc929794aa9ee90c5ec proof attempt stage2-proof-cb775ed9-20260821 passed producer and validator with profile proof, artifact count 5 and exact head/profile/clean binding. The .artifacts path is retained local non-final evidence. Complete owning DB lanes, actual performance thresholds, Stage 4 FINAL_EVIDENCE_SHA/full profile, Stage 3~6, controlled full-local, Manual and activation remain pending; auto_merge stays false and closeout stays collecting. closeout_phase=collecting closeout_recovery=manual_patch:3 closeout_repair=codex:3|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:Codex_task_01a01f2e-ae07-7f42-88be-87727228702a,Codex_task_01a01f2e-b2ed-7f32-bbaf-204b58613435,Codex_task_01a01f2e-ba20-7022-8b3b-5b90d15572d0,Codex_task_01a01f2e-bf69-7f23-9c7c-7982855195bc,docs/workpacks/cooking-meal-log-cross-slice-release-qa/evidence/2026-08-21-stage1-final-independent-approvals.json,Codex_task_01a020fd-56ef-73a3-9aa3-7a8d44a8541c,docs/workpacks/cooking-meal-log-cross-slice-release-qa/evidence/2026-08-21-stage2-verification-author.md,.artifacts/cooking-meal-log-cross-slice-release-qa/attempts/stage2-proof-cb775ed9-20260821/"
 }

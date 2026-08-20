@@ -49,9 +49,22 @@
 - Classification: recovered task-capability precondition, not a product/runtime defect.
 - Stage 2 remains `in_progress`; the non-final proof attempt, owning `db-security.json` lanes, security/performance threshold artifacts and final Stage 6 bundle remain pending.
 
+## Clean-head non-final proof attempt
+
+- Exact clean head/tree: `cb775ed9d9885e7465358bc929794aa9ee90c5ec` / `a9f9d6545357feec57eef29df2457315110aef76`.
+- Attempt: `.artifacts/cooking-meal-log-cross-slice-release-qa/attempts/stage2-proof-cb775ed9-20260821/`.
+- Profile: `proof`; generated at `2026-08-20T21:19:12.356Z`.
+- Producer completed and validator accepted artifact count `5`, exact attempt/head/profile, canonical attempt root and clean worktree.
+- Manifest SHA-256: `f0136a01b63f881993db88994157284a49786a1ff657d3e2e6b16578d7fa0806`.
+- `db-security.json`: `20/20`, representative `account-session-generation` lane only, pinned isolated local true, remote/linked/cloud access `0`; SHA-256 `77b87d27187ad284ca91983e65000fe3e4abd3361aec11933e36192c01d1d0e1`.
+- `security.json`: `24/24`, proof-only classified inventory `24`, one negative boundary, remote access `0`; SHA-256 `fc90aa99b2031b8de5b809a59611e7a182ed29e56b7aee0913ebe921d649fb04`.
+- `performance.json`: runner contract `2/2`, `proof_only=true`; SHA-256 `6876ee4de73da24e38fb3dc7e59817e67b2a3338ff8c4deb44a591403341f44b`.
+- `query-count.json`: `1/1`, actual route boundary `list1=1`, `list20=1`, item-level N+1 `0`; SHA-256 `3f99f5ebec855318527546a6b6d265b42654c41adf8747d8262803da2c666d4e`.
+- `rollback.json`: `32/32`, current/immediate-previous, seeded-v2 drain and tombstone fail-closed true; SHA-256 `f51331187cbb7f6be4c8aca9829ecbc57e8e11a1f45e3920c6a2628c36b91731`.
+- `.artifacts/**` is retained local evidence. This proof attempt is non-final and does not satisfy every owning DB lane, actual performance thresholds, Stage 4 `FINAL_EVIDENCE_SHA`, full profile or Stage 6 final bundle.
+
 ## Parent continuation
 
-1. Commit the unstaged test/evidence/projection changes and obtain a clean exact successor head.
-2. On the clean successor head, run the non-final `proof` producer with a new create-only attempt ID, then validate it as `profile=proof`; do not use it as Stage 6 full evidence.
-3. Only after that gate passes, project the remaining Stage 2 artifact/security/bootstrap checklist items and create the Draft PR.
-4. A different fresh Codex task performs Stage 3 review; this author does not self-approve, mark Ready, merge or send Discord.
+1. Commit the proof projection changes and create the Draft PR from the exact successor head.
+2. Keep complete owning DB lanes, actual performance thresholds and the Stage 4/6 final full bundle pending.
+3. A different fresh Codex task performs Stage 3 review; this author does not self-approve, mark Ready, merge or send Discord.
