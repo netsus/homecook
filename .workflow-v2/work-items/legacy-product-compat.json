@@ -224,9 +224,9 @@
       ]
     },
     "projection_state": {
-      "docs_synced_at": "2026-08-20T10:13:31Z",
-      "status_synced_at": "2026-08-20T10:13:31Z",
-      "pr_body_synced_at": "pending-stage6-approval-projection"
+      "docs_synced_at": "2026-08-20T10:18:44Z",
+      "status_synced_at": "2026-08-20T10:18:44Z",
+      "pr_body_synced_at": "2026-08-20T10:18:44Z"
     }
   },
   "out_of_scope": [

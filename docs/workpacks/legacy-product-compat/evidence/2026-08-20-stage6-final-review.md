@@ -39,4 +39,6 @@
 - merge gate: reviewed head `6387052439623cebef90176944aa5aee7f5ca17a`, approval `codex_approved`, all checks green `true`
 - auto-merge: `false`
 
+The Stage 6 approval projection was synchronized to Draft PR #1371 on projection successor `c68980b379a8850f2fbb828540736afb00b8fc96`; Ready-mode PR-body, template, and real-smoke presence validators passed before publication.
+
 Internal 6.5 must run in a fresh separate task before Ready. Ready/merge/Discord and all server-Mac/OAuth, physical-device/AT/full-WCAG, controlled deploy/drain/fence/revoke, capability, R/R+1/R+2, required-key, production activation and tombstone obligations remain pending.
