@@ -1,0 +1,59 @@
+{
+  "result": "pass",
+  "stage": 4,
+  "role": "independent-design-reviewer-authority-recheck",
+  "task_id": "019ffe71-8e06-7702-a5f4-9a644fe158c0",
+  "source_thread_id": "019ff12c-dc8b-7752-9319-398a68cacb6e",
+  "reviewed_pr_head": "bc86f79affea8c69c0fdb6223c135c99beedd430",
+  "reviewed_pr_tree": "9169e20b433b0fa90cba8525a7d1553661a00185",
+  "normalized_implementation_head": "f1630f029af3e306baabb7cb1d6a26ff8eaeb0a7",
+  "normalized_implementation_tree": "5861ddd4f3762d5c4f27fcca5488e3101122d481",
+  "capture_source_head": "5816920358c9d588c128b1459e80c7ae0c5bd78e",
+  "capture_source_tree": "5861ddd4f3762d5c4f27fcca5488e3101122d481",
+  "evidence_head": "bc86f79affea8c69c0fdb6223c135c99beedd430",
+  "evidence_tree": "9169e20b433b0fa90cba8525a7d1553661a00185",
+  "upstream_evidence_head": "8675ae474d8a273844f5702ba2b3c5a205a1ebcf",
+  "visual_evidence": {
+    "manifest": "ui/designs/evidence/meal-log-ui/manifest.json",
+    "runtime_audit": "ui/designs/evidence/meal-log-ui/runtime-accessibility-layout.json",
+    "png_count": 51,
+    "states": 17,
+    "viewports": 3,
+    "all_visually_inspected": true,
+    "mobile_viewport_bound": true
+  },
+  "findings": {
+    "P0": 0,
+    "P1": 0,
+    "P2": 0
+  },
+  "resolved_finding_ids": [
+    "P1-ML-AUTH-01",
+    "P1-ML-AUTH-02",
+    "P1-ML-AUTH-03"
+  ],
+  "verification": {
+    "focused_vitest": "6 files / 27 tests passed",
+    "source_of_truth_sync": "passed",
+    "workflow_v2": "passed",
+    "workpack": "passed",
+    "automation_spec": "passed",
+    "omo_bookkeeping": "passed",
+    "authority_evidence_presence": "passed",
+    "real_smoke_presence": "passed",
+    "commit_messages": "passed, 20 commits",
+    "git_diff_check": "passed"
+  },
+  "manual_only": [
+    "physical device",
+    "screen reader",
+    "virtual keyboard",
+    "server-Mac",
+    "OAuth",
+    "assistive technology",
+    "R/R+1/R+2",
+    "production",
+    "activation"
+  ],
+  "next_handoff": "fresh Stage 5 design review; final authority and Stage 6 remain separate"
+}

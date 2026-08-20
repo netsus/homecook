@@ -1041,7 +1041,7 @@ describe("CookModeScreen", () => {
     await waitFor(() => {
       expect(completeCookingSession).toHaveBeenCalledWith("session-1", {
         consumed_ingredient_ids: ["ing-1"],
-      });
+      }, expect.stringMatching(/^[0-9a-f-]{36}$/i));
     });
   });
 
@@ -1103,7 +1103,7 @@ describe("CookModeScreen", () => {
     await waitFor(() => {
       expect(completeCookingSession).toHaveBeenCalledWith("session-1", {
         consumed_ingredient_ids: ["ing-1", "ing-2", "ing-3"],
-      });
+      }, expect.stringMatching(/^[0-9a-f-]{36}$/i));
     });
   });
 
@@ -1207,7 +1207,7 @@ describe("CookModeScreen", () => {
     await waitFor(() => {
       expect(completeCookingSession).toHaveBeenCalledWith("session-1", {
         consumed_ingredient_ids: [],
-      });
+      }, expect.stringMatching(/^[0-9a-f-]{36}$/i));
     });
   });
 

@@ -1,0 +1,110 @@
+{
+  "result": "pass",
+  "gate": "final_authority_gate",
+  "role": "fresh-independent-product-design-authority",
+  "task_id": "019fff15-9f62-7602-a092-d140ed5e717a",
+  "source_thread_id": "019ff12c-dc8b-7752-9319-398a68cacb6e",
+  "independent_from_task_ids": [
+    "019ffe80-b210-7921-b8b6-07b0a5d6d5c8",
+    "019ffeea-88ec-7f91-bf18-df5280c2c24d"
+  ],
+  "review_scope": {
+    "slice": "meal-log-ui",
+    "screen_id": "MEAL_LOG",
+    "pr_number": 1361,
+    "pr_branch": "feature/fe-meal-log-ui-superseding-draft"
+  },
+  "reviewed_publication_head": "0faef66e6ad9d69fa31cfba33cd16e1b8dcef4d7",
+  "reviewed_publication_tree": "d185a3a76ad9da84ae8261b206e4338bcc364cba",
+  "reviewed_publication_parent": "cf249342315e40c75c1fc43f61aa7700fdef6b77",
+  "normalized_implementation_head": "bc47612ca9354597c2a925f66362ce5727f80260",
+  "normalized_implementation_tree": "05d0cd7db20ea70e6fddeb40c8c8ce73a30550c0",
+  "capture_source_head": "6673dacbc99006af7f266abc9cfd28d79f836acc",
+  "capture_source_tree": "05d0cd7db20ea70e6fddeb40c8c8ce73a30550c0",
+  "authority_verdict": "PASS",
+  "design_status": "confirmed",
+  "findings": {
+    "P0": 0,
+    "P1": 0,
+    "P2": 0,
+    "blocker": 0,
+    "major": 0,
+    "minor": 0
+  },
+  "resolved_finding_ids": [
+    "P1-ML-S5-01",
+    "P1-ML-S5-02",
+    "P1-ML-S5-03"
+  ],
+  "visual_evidence": {
+    "manifest": "ui/designs/evidence/meal-log-ui/manifest.json",
+    "runtime_audit": "ui/designs/evidence/meal-log-ui/runtime-accessibility-layout.json",
+    "path_rule": "ui/designs/evidence/meal-log-ui/MEAL_LOG-{viewport}-{state}.png",
+    "viewports": {
+      "mobile-default": "390x844",
+      "mobile-narrow": "320x693",
+      "desktop": "1280 viewport"
+    },
+    "states": [
+      "default",
+      "loading",
+      "empty",
+      "error",
+      "unauthorized",
+      "partial",
+      "unavailable",
+      "deleted-column",
+      "add-sheet-recent",
+      "add-sheet-search",
+      "missing-batch",
+      "unrecoverable-batch",
+      "edit",
+      "delete-confirm",
+      "pending",
+      "replay",
+      "conflict"
+    ],
+    "png_count": 51,
+    "all_reviewed_at_original_resolution": true,
+    "axe_serious_or_critical": 0,
+    "axe_violations": [],
+    "horizontal_overflow": 0,
+    "targets_below_44": 0,
+    "replay_key_reused": true
+  },
+  "verification": {
+    "focused_vitest": "6 files / 44 tests passed",
+    "deferred_navigation_regression": "passed",
+    "chromium_320_date_rail_single_worker": "10/10 passed",
+    "chromium_dialog_regression": "1/1 passed",
+    "typecheck": "passed",
+    "lint": "passed with zero warnings",
+    "source_of_truth_sync": "passed",
+    "workflow_v2": "passed",
+    "workpack": "passed",
+    "automation_spec": "passed",
+    "authority_evidence_presence": "passed",
+    "real_smoke_presence": "passed",
+    "omo_bookkeeping_after_edit": "passed",
+    "post_bookkeeping_validation": "source-of-truth sync, workflow-v2, workpack, automation spec, authority evidence presence, real-smoke presence, typecheck, lint and diff check passed",
+    "commit_policy": "passed after authority commit and rechecked after evidence-only amend",
+    "reviewed_publication_ci": "12 success / 2 intended skipped / 0 pending or failed"
+  },
+  "manual_only": [
+    "physical device",
+    "real screen reader",
+    "virtual keyboard",
+    "server-Mac",
+    "OAuth",
+    "assistive technology",
+    "R/R+1/R+2",
+    "production",
+    "activation"
+  ],
+  "stage6": {
+    "status": "pending",
+    "approved_or_performed": false,
+    "next_handoff": "fresh independent Stage 6 after normal integration of this authority evidence commit; lock the resulting exact publication head/tree and rerun current-head checks"
+  },
+  "forbidden_mutations_performed": false
+}

@@ -14,10 +14,26 @@
       "GET /food-catalog/search existing typed union search"
     ],
     "invariants": [
+      "current-official-tuple-v1.7.32-v1.5.36-v1.3.34-v1.3.34-v1.2.39",
+      "base-drift-c12afbcc-and-latest-master-c4045705-integrated-by-normal-merges",
+      "security-pr1352-reviewed-3708cd9f-latest-master-fb1119ba-normal-no-ff-merge-f79cc898-tree-b1bc3500-postmerge-13-of-13-audit-high-critical-zero",
+      "youtube-async-isolated-local-tooling-a625aefa-has-no-meal-log-product-contract-impact",
+      "full-local-authority-drift-has-no-meal-log-product-contract-impact",
+      "approved-cooking-plan-sha256-d4d0fb39-and-1018-line-lock",
+      "slice9-source-checkpoint-security-merges-and-postmerge-14-of-14-recorded",
+      "slice10-pr1331-stage4-through-6-runtime-and-omo-merged-green",
+      "slice12-ui-only-no-contract-capability-or-activation-change",
+      "canonical-design-prerequisite-complete-generator-019ffb5f-head-1b44bb72-tree-851ceaa3",
+      "canonical-design-repair-019ffb73-head-910d14e9-tree-a578bf1d",
+      "canonical-design-rereview-019ffb81-head-1da1a186-tree-c09dd364-approve-0-0-0",
+      "superseded historical design provenance remains audit history",
+      "current-p1-ml-05-repair-task-019ffbbc-d4f1-7730-be56-0d8d6d28ce8c-design-head-e2959ef523e57770a4cb2b490f7b00a972ab8845-tree-7932fc6d026d9f2c0aa963041efcf315be12c9e9-blob-9bade6235acd9c6f60d128216260d9c0408718c2",
+      "current-design-review-task-019ffbc5-0c4a-7b11-afd9-6346a76b762c-critique-commit-4e1bdaae2335fd41bb46db1ede5d835a2f164faa-tree-467f698b61775eea81487aaddf2aeac91bea1e00-APPROVE-P0-P1-P2-0-0-0",
+      "every edit save from a deleted/null origin requires explicit current active owner meal column selection regardless of quantity/source/date/timezone fields; save fail-closed until selection; server replaces meal_plan_column_id + slot_name_snapshot. DELETE remains no relocation",
       "stored-local-date-no-current-timezone-regroup",
-      "day-total-equals-active-subtotals-with-incomplete-count",
-      "deleted-column-history-read-only-no-new-entry",
-      "soft-deleted-entry-absent-from-read-and-active-aggregate",
+      "day-total-equals-all-visible-non-deleted-section-subtotals-with-incomplete-count",
+      "deleted-column-no-new-target-existing-entry-edit-delete-preserved",
+      "soft-deleted-entry-absent-from-read-and-aggregate",
       "exact-one-cooked-batch-food-product-ingredient",
       "owner-generation-visibility-and-nondisclosure",
       "single-server-union-order-cursor-no-client-merge",
@@ -31,12 +47,14 @@
       "pnpm verify:backend",
       "pnpm validate:source-of-truth-sync",
       "pnpm validate:workflow-v2",
-      "BRANCH_NAME=docs/meal-log-ui pnpm validate:workpack -- --slice meal-log-ui",
+      "BRANCH_NAME=docs/meal-log-ui-stage1-relock-current pnpm validate:workpack -- --slice meal-log-ui",
       "node scripts/validate-automation-spec.mjs --slice meal-log-ui",
       "pnpm validate:omo-bookkeeping",
+      "pnpm exec vitest run tests/meal-log-ui-stage1-relock.test.ts tests/workflow-v2-docs.test.ts tests/omo-automation-spec.test.ts tests/omo-bookkeeping.test.ts tests/omo-doc-gate.test.ts tests/source-of-truth-sync.test.ts",
       "git diff --check"
     ],
     "required_test_targets": [
+      "tests/meal-log-ui-stage1-relock.test.ts",
       "tests/meal-log-ui-api-contract.test.ts",
       "stored-date-subtotal-total-incomplete-evidence",
       "three-source-exact-evidence-and-search-union-evidence",
@@ -62,14 +80,15 @@
       "pnpm test:e2e:a11y",
       "pnpm test:e2e:visual",
       "pnpm qa:explore -- --slice meal-log-ui",
-      "pnpm verify:frontend"
+      "pnpm verify:frontend",
+      "pnpm validate:real-smoke-presence -- --slice meal-log-ui"
     ],
     "playwright_projects": ["mobile-default", "mobile-narrow", "desktop"],
     "artifact_assertions": [
       "day-first-stored-local-date-and-no-weekly-analysis",
-      "meal-subtotals-day-total-and-incomplete-truth",
-      "deleted-column-read-only-history",
-      "soft-deleted-entry-absent-from-read-and-active-aggregate",
+      "meal-subtotals-all-visible-section-day-total-and-incomplete-truth",
+      "deleted-column-no-add-existing-entry-edit-delete-history",
+      "soft-deleted-entry-absent-from-read-and-aggregate",
       "recent-search-three-source-add-sheet",
       "exact-evidence-create-edit-delete-and-replay",
       "fresh-manifest-head-sha-capture-times",
@@ -147,12 +166,12 @@
     "recent frequent and single-cursor typed-union visibility",
     "timezone nullable-instant and historical no-regroup",
     "partial unavailable never zero or complete",
-    "390px 320px desktop visual accessibility authority evidence"
+    "390px 320px desktop visual accessibility and product-design-authority evidence"
   ],
   "blocked_conditions": [
     "stage1-independent-reviews-not-zero",
     "stage1-author-self-approval-or-claude-use",
-    "slice9-runtime-or-slice10-shell-not-green-before-implementation",
+    "stage1-independent-current-head-rereviews-not-zero-before-implementation",
     "new-route-tab-api-source-field-status-or-client-total-invented",
     "history-regrouped-by-current-timezone",
     "deleted-column-accepts-new-entry",
@@ -161,10 +180,10 @@
     "missing-unrecoverable-batch-gram-save-enabled",
     "mutable-current-product-profile-silently-repinned",
     "batch-edit-delete-targets-another-event",
-    "canonical-design-critic-authority-or-fresh-evidence-missing",
-    "local-first-verifier-not-merged-exact-sha",
+    "stage4-runtime-evidence-stage5-or-final-authority-missing",
+    "local-only-target-boundary-or-isolated-local-controlled-full-local-read-only-evidence-missing",
     "current-head-check-pending-absent-stale-failed-or-cancelled"
   ],
   "max_fix_rounds": {"backend": 3, "frontend": 6},
-  "notes": "Stage 1 runs docs validators, focused tests, lint, typecheck, audit and diff only. Component/E2E/visual/a11y/browser/local-first production-rehearsal evidence is future. #12 consumes #9 backend inside #10 shell, reuses #1 search and #8 batch authority, and does not change HOME or Planner plan rows."
+  "notes": "Declared closeout metadata projection: runtime delivery merged/completed. Final reviewed/source head c9b7ef56febc485df69d5ffd144dfab8ffa1330a follows PR #1361 merge 4264fe6bd5b3429029ba895a6b79cd32a5d3fa35 and PR #1364 merge 358450e44da691256b0eeb51d8ae131a520b6cbd with tree 0682a30d9d5aba11ae7e0ae706e2b13797d0d167. Final postmerge raw 13 = 12 success + 1 intended skip with bad/pending/rerun 0. OMO report closeout PR #1365 merged as 4f3e8522ebbb6faaf48509154f04bc3e9d7d9d98 with report tree 270e6f8c8d7b1fe2cb3c77233ad44f1753f452e8; retained evidence is docs/workpacks/meal-log-ui/omo-report.md. Manual/device/AT/full WCAG/server-Mac/OAuth/merged-exact rehearsal/R/R+1/R+2/production activation remain pending. auto_merge_eligible=false and #12 remains UI-only. Official contract, endpoint, schema, migration, capability, and activation are unchanged."
 }

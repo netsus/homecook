@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, type RefObject } from "react";
+import { useCallback, useEffect, useRef, type RefObject } from "react";
 
 const FOCUSABLE_SELECTOR = [
   "button:not([disabled])",
@@ -10,6 +10,8 @@ const FOCUSABLE_SELECTOR = [
   "textarea:not([disabled])",
   "[tabindex]:not([tabindex='-1'])",
 ].join(",");
+
+type ReturnFocusTarget = HTMLElement | (() => HTMLElement | null) | null;
 
 function focusableElements(dialog: HTMLElement) {
   return Array.from(dialog.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR))
@@ -32,11 +34,17 @@ export function useDialogBoundary({
   onClose: () => void;
 }) {
   const closeRef = useRef(onClose);
-  const returnFocusRef = useRef<HTMLElement | null>(null);
+  const closeOnEscapeRef = useRef(closeOnEscape);
+  const invokerFocusRef = useRef<HTMLElement | null>(null);
+  const requestedReturnFocusRef = useRef<ReturnFocusTarget>(null);
+  const setReturnFocusTarget = useCallback((target: ReturnFocusTarget) => {
+    requestedReturnFocusRef.current = target;
+  }, []);
 
   useEffect(() => {
     closeRef.current = onClose;
-  }, [onClose]);
+    closeOnEscapeRef.current = closeOnEscape;
+  }, [closeOnEscape, onClose]);
 
   useEffect(() => {
     if (!active) return;
@@ -48,7 +56,7 @@ export function useDialogBoundary({
       : null;
     const fallbackFocusTarget = fallbackFocusRef?.current ?? null;
     if (activeElement && !dialog.contains(activeElement)) {
-      returnFocusRef.current = activeElement;
+      invokerFocusRef.current = activeElement;
     }
     const previousOverflow = document.body.style.overflow;
     const isolated: Array<{
@@ -88,7 +96,7 @@ export function useDialogBoundary({
         event.preventDefault();
         event.stopPropagation();
         event.stopImmediatePropagation();
-        if (closeOnEscape) {
+        if (closeOnEscapeRef.current) {
           closeRef.current();
         }
         return;
@@ -122,15 +130,20 @@ export function useDialogBoundary({
         else element.setAttribute("aria-hidden", ariaHidden);
       }
       requestAnimationFrame(() => {
-        const returnTarget = returnFocusRef.current;
+        const requestedTarget = typeof requestedReturnFocusRef.current === "function"
+          ? requestedReturnFocusRef.current()
+          : requestedReturnFocusRef.current;
+        const returnTarget = invokerFocusRef.current;
         if (!dialog.isConnected) {
-          const target = returnTarget?.isConnected
-            ? returnTarget
-            : fallbackFocusTarget;
+          const target = requestedTarget?.isConnected
+            ? requestedTarget
+            : returnTarget?.isConnected ? returnTarget : fallbackFocusTarget;
           target?.focus();
-          returnFocusRef.current = null;
+          invokerFocusRef.current = null;
         }
       });
     };
-  }, [active, closeOnEscape, dialogRef, fallbackFocusRef, initialFocusRef]);
+  }, [active, dialogRef, fallbackFocusRef, initialFocusRef]);
+
+  return { setReturnFocusTarget };
 }

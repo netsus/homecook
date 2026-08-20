@@ -50,6 +50,10 @@ const GREEN_I031_PREFLIGHT = Object.freeze({
   toolsReady: true,
 });
 
+function futureIso(days: number) {
+  return new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
+}
+
 function createTempDir(prefix: string) {
   const directory = mkdtempSync(join(tmpdir(), prefix));
   tempDirs.push(directory);
@@ -526,7 +530,7 @@ describe("YTASYNC-OPS preflight, drain, rollback, credential", () => {
       generation: 1,
       jtiHash:
         "abcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcd",
-      expiresAt: "2026-08-19T00:00:00.000Z",
+      expiresAt: futureIso(7),
       releaseSha,
       schemaIdentity: YOUTUBE_EXTRACTION_WORKER_RELEASE_SCHEMA_IDENTITY,
       allowedSnapshotDigest: digest,
@@ -618,7 +622,7 @@ describe("YTASYNC-OPS preflight, drain, rollback, credential", () => {
       generation: 1,
       jtiHash:
         "abcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcd",
-      expiresAt: "2026-08-19T00:00:00.000Z",
+      expiresAt: futureIso(7),
       releaseSha: "0123456789abcdef0123456789abcdef01234567",
       schemaIdentity: YOUTUBE_EXTRACTION_WORKER_RELEASE_SCHEMA_IDENTITY,
       allowedSnapshotDigest:
@@ -668,7 +672,7 @@ describe("YTASYNC-OPS preflight, drain, rollback, credential", () => {
       generation: 1,
       jtiHash:
         "abcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcd",
-      expiresAt: "2026-08-19T00:00:00.000Z",
+      expiresAt: futureIso(7),
       releaseSha: "0123456789abcdef0123456789abcdef01234567",
       schemaIdentity: YOUTUBE_EXTRACTION_WORKER_RELEASE_SCHEMA_IDENTITY,
       allowedSnapshotDigest:
@@ -686,7 +690,7 @@ describe("YTASYNC-OPS preflight, drain, rollback, credential", () => {
         nextGeneration: 3,
         jtiHash:
           "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-        expiresAt: "2026-08-26T00:00:00.000Z",
+        expiresAt: futureIso(14),
         releaseSha: "0123456789abcdef0123456789abcdef01234567",
         schemaIdentity: YOUTUBE_EXTRACTION_WORKER_RELEASE_SCHEMA_IDENTITY,
         allowedSnapshotDigest:

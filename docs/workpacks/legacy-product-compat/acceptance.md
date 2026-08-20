@@ -1,61 +1,99 @@
 # Acceptance Checklist
 
-> Stage 1 locks future compatibility and evidence. Unchecked items do not claim runtime telemetry, a compatibility release, activation or tombstone authority exists.
+> 이 Stage 1 relock은 공식 tuple `v1.7.32 / v1.5.36 / v1.3.34 / DB v1.3.34 / API v1.2.39`와 primary tracked plan SHA-256 `d4d0fb39e80eeffc8b1e73ad92f0d91a35a9b6adc57a556ea8c9ec6ecffa951d` (1,018 lines)를 잠근다. `45f02013fbc1c3af1936d596605230d0cbac7839a783224aa9535844e4bda7dc` (1,056 lines)는 historical local-first overlay only이며, current operations authority는 `docs/engineering/supabase-local-only-operations.md`다.
 
-## Legacy Product Planner
+> Stage 2/3 backend checkpoint는 PR #1369 merge `50e31293e6740b3fdc56d022e12d3b9fe8be4cf7`로 merged-green이다. Stage 4 author task `01a01e01-0a0e-7f70-97dd-2e6c8f0012af`의 local implementation과 browser evidence는 Draft PR #1371에서 GREEN이다. Independent Stage 5 task `01a01e3b-663e-7252-9c3c-0c7b30251c0e`는 exact `387f1d688204061c28b60c415135a70e42a07042` / tree `e0d887e487ad237a87fa6b3d67238d2dac045ce7`, drift `0`에서 APPROVE P0/P1/P2 `0/0/0`, blocker/major/minor `0/0/0`을 반환했다. Stage 6 task `01a01e68-fb28-7841-8815-c7685d56cc35`는 exact `6387052439623cebef90176944aa5aee7f5ca17a` / tree `4d415e7d81c1bfeada5147f034b6b4c34fd66c89`, drift `0`에서 최종 APPROVE P0/P1/P2 `0/0/0`, blocker/major/minor `0/0/0`, unresolved IDs none을 반환했다. 현재 lifecycle은 `in_progress`, approval은 `codex_approved`, evaluation/verification은 `passed`, auto-merge는 `false`이며 internal 6.5, Ready/merge, Manual/activation/tombstone authority는 남아 있다.
 
-- [ ] `GET /planner` keeps additive legacy product entries separate from recipe meals <!-- omo:id=accept-legacy-compat-planner-read;stage=4;scope=shared;review=3,5,6 -->
-- [ ] card/detail use pinned name, brand, quantity and nutrition version without current repin <!-- omo:id=accept-legacy-compat-pinned-version;stage=4;scope=shared;review=3,5,6 -->
-- [ ] same-screen detail is read-only and owner delete is the only UI mutation <!-- omo:id=accept-legacy-compat-delete-only;stage=4;scope=shared;review=3,5,6 -->
-- [ ] no add/edit/copy/shop/cook/leftover/XP/status or meal-log migration action exists <!-- omo:id=accept-legacy-compat-no-expansion;stage=4;scope=shared;review=3,5,6 -->
-- [ ] elapsed release never auto-hides/deletes rows or read/delete paths <!-- omo:id=accept-legacy-compat-no-expiry;stage=4;scope=shared;review=3,5,6 -->
-- [ ] other-owner/private rows and telemetry remain nondisclosed <!-- omo:id=accept-legacy-compat-owner;stage=4;scope=shared;review=3,5,6 -->
+> Stage 6 repair reconciliation은 retained Stage 2/3 evidence(`10 files / 76`, PostgreSQL `13/13`, authority `3 files / 34`, isolated Supabase, prepared-food owner `11/11`, PR #1369 exact independent APPROVE/merge)를 30개 backend/shared ID에 다시 매핑했다. 따라서 non-Manual acceptance는 `40/40` checked이며 Manual Only `7`개는 unchecked다. Exact `d0dfe94a3ea57260b16abd2369b9d4a719d82a55`의 full `verify:frontend`와 final reviewed head의 `12` success + `2` intended Draft skip이 GREEN이다. Stage 6는 승인됐지만 internal 6.5 전이므로 phase `projecting`, roadmap `in_progress`, external smokes/Manual `0/7`은 pending이다.
 
-## Endpoint / Cursor Floor
+## Happy Path
 
-- [ ] current UI has no product POST/PATCH producer or `GET /planner/nutrition` call <!-- omo:id=accept-legacy-compat-ui-producers;stage=4;scope=frontend;review=5,6 -->
-- [ ] legacy planner GET/delete and `GET /planner/nutrition` remain until separate approved tombstone <!-- omo:id=accept-legacy-compat-endpoint-floor;stage=4;scope=shared;review=3,5,6 -->
-- [ ] v1 cursor dual decode completes old cursor pages and new first pages may issue v2 <!-- omo:id=accept-legacy-compat-cursor;stage=4;scope=backend;review=3,6 -->
-- [ ] no API field/status/error/migration or wrapper change is introduced <!-- omo:id=accept-legacy-compat-no-invention;stage=2;scope=shared;review=3,5,6 -->
+- [x] owner A의 legacy row가 recipe meal과 분리되어 read-only card로 보이고 pinned old version detail을 유지한다 <!-- omo:id=accept-legacy-compat-planner-read;stage=4;scope=frontend;review=5,6 -->
+- [x] 같은 화면의 existing owner delete만 동작하고 성공 시 row가 제거된다 <!-- omo:id=accept-legacy-compat-owner-delete;stage=4;scope=frontend;review=5,6 -->
+- [x] planner and standalone current/immediate-previous clients가 stored `contract_version`으로 v1 또는 seeded v2 reader를 선택한다 <!-- omo:id=accept-legacy-compat-version-dispatch;stage=4;scope=frontend;review=5,6 -->
+- [x] seeded v2 read/cancel/complete and rollback drain이 creation flag-off에서도 보존된다 <!-- omo:id=accept-legacy-compat-seeded-v2-client-drain;stage=4;scope=frontend;review=5,6 -->
 
-## v1 Stable Key
+## State / Policy
 
-- [ ] planner and standalone v1 clients send optional stable UUID keys first <!-- omo:id=accept-legacy-compat-key-client;stage=4;scope=shared;review=3,5,6 -->
-- [ ] pre-gate no-key retains old v1 body/response and consumed_ingredient_ids <!-- omo:id=accept-legacy-compat-v1-shape;stage=4;scope=shared;review=3,5,6 -->
-- [ ] one full release old-shape/no-key 0 precedes mutation-zero 428 enforcement <!-- omo:id=accept-legacy-compat-key-zero;stage=4;scope=shared;review=3,5,6 -->
-- [ ] key enforcement does not remove v1 route/body/parser <!-- omo:id=accept-legacy-compat-key-vs-remove;stage=4;scope=shared;review=3,5,6 -->
-- [ ] strict v1 removal also requires new-start block, active terminal 0 and separate tombstone contract <!-- omo:id=accept-legacy-compat-v1-tombstone;stage=4;scope=shared;review=3,5,6 -->
+- [x] v1 cursor page는 기존 의미로 완료되고 새 first page만 v2 cursor를 발급할 수 있다 <!-- omo:id=accept-legacy-compat-cursor-server;stage=2;scope=backend;review=3,6 -->
+- [x] planner and standalone에서 `pre-gate missing Idempotency-Key remains compatible success with the existing v1 response shape`이며 generic `consumed_ingredient_ids`를 보존한다 <!-- omo:id=accept-legacy-compat-no-key-server;stage=2;scope=backend;review=3,6 -->
+- [x] `full-release no-key 0 is telemetry evidence only; missing Idempotency-Key remains compatible success until a separately approved exact required-key activation`이다 <!-- omo:id=accept-legacy-compat-no-key-intermediate-server;stage=2;scope=backend;review=3,6 -->
+- [x] `only after separately approved exact required-key activation following full-release no-key 0 may missing Idempotency-Key return 428 IDEMPOTENCY_KEY_REQUIRED mutation 0`이다 <!-- omo:id=accept-legacy-compat-required-key-server;stage=2;scope=backend;review=3,6 -->
+- [x] elapsed release나 telemetry 0만으로 row/endpoint/parser/cursor를 숨기거나 제거하지 않는다 <!-- omo:id=accept-legacy-compat-no-expiry;stage=2;scope=shared;review=3,6 -->
+- [x] v1 route/body/parser removal은 new-start block, active terminal 0과 별도 approved contract-evolution/tombstone를 요구한다 <!-- omo:id=accept-legacy-compat-removal-prerequisites;stage=2;scope=shared;review=3,6 -->
 
-## Version Dispatch / Drain
+## Error / Permission
 
-- [ ] current and immediate-previous clients dispatch by stored contract_version only <!-- omo:id=accept-legacy-compat-version-dispatch;stage=4;scope=shared;review=3,5,6 -->
-- [ ] cross-version IDs fail 404/409 without body-shape parser fallback <!-- omo:id=accept-legacy-compat-cross-version;stage=4;scope=shared;review=3,5,6 -->
-- [ ] dormant adapter preserves v1 and drains seeded existing v2 read/cancel/complete <!-- omo:id=accept-legacy-compat-seeded-drain;stage=4;scope=shared;review=3,5,6 -->
-- [ ] flag-off R/R+1 records new v2/personal mutation 0 <!-- omo:id=accept-legacy-compat-flag-off;stage=4;scope=shared;review=3,5,6 -->
-- [ ] rollback closes new writes but keeps existing v2 drain <!-- omo:id=accept-legacy-compat-rollback;stage=4;scope=shared;review=3,5,6 -->
-- [ ] #13 does not activate R+2 joint creation <!-- omo:id=accept-legacy-compat-no-activation;stage=2;scope=shared;review=3,5,6 -->
+- [x] malformed UUID key는 400 INVALID_IDEMPOTENCY_KEY mutation 0이다 <!-- omo:id=accept-legacy-compat-invalid-key;stage=2;scope=backend;review=3,6 -->
+- [x] same key + same canonical payload는 durable replay이며 additional mutation 0이다 <!-- omo:id=accept-legacy-compat-idempotent-replay;stage=2;scope=backend;review=3,6 -->
+- [x] same key + different canonical payload는 409 IDEMPOTENCY_KEY_REUSED mutation 0이다 <!-- omo:id=accept-legacy-compat-key-mismatch;stage=2;scope=backend;review=3,6 -->
+- [x] narrow additive migration의 scoped `SECURITY DEFINER` RPC가 exact identity signature `public.complete_cooking_session(uuid, timestamptz, text, integer, timestamptz, uuid, uuid[], uuid, timestamptz)`와 `public.complete_standalone_cooking(uuid, timestamptz, text, integer, timestamptz, uuid, integer, uuid[], uuid, timestamptz)`로만 존재한다. `header/body/canonical payload and server-verified session/lifecycle authority before ensurePublicUserRow, ensureUserBootstrapState, ledger, completion, progress or any writer`이며 route-level bootstrap writers are removed from planner and standalone completion paths. 필요 시 route preflight는 read-only이고 RPC 안에서 재검증한다. server-verified JWT sub/session_id/iat, auth identity epoch와 active expected account generation을 `public.assert_recipe_future_session_authority`로 같은 transaction에 재검증하고 caller owner/generation만 신뢰하지 않는다. 모든 rejectable authority/idempotency/version check 뒤 한 DB RPC가 bootstrap + claim -> legacy completion -> cooking_completed user_progress_events + user_progress_summary -> durable finish를 처리하고 best-effort post-RPC progress writer is removed다. DB transaction atomicity only covers claim/bootstrap/completion/progress/finish이며 existing planner and standalone public endpoint/body/response는 유지한다 <!-- omo:id=accept-legacy-compat-atomic-v1-rpc;stage=2;scope=backend;review=3,6 -->
+- [x] 두 exact RPC의 Stage 2 declared metadata/ACL implementation은 `control_class=application-controlled; effect=mutation; exposure=service-internal; allowed_principals=service_role; owner=postgres`, `SECURITY DEFINER`, `auth.role() = service_role`, safe `pg_catalog, public, private, pg_temp`다. 새 RPC 생성 시 `REVOKE ALL FROM PUBLIC, anon, authenticated` 후 `GRANT EXECUTE only to service_role`; generic ledger direct table access, app-memory receipt, route-level claim followed by a separate legacy RPC, RLS relaxation은 forbidden이며 service-role direct DML is forbidden이다. deployed callable inventory evidence는 Manual Only다 <!-- omo:id=accept-legacy-compat-rpc-boundary;stage=2;scope=backend;review=3,6 -->
+- [x] `Stage 2 non-manual owns additive scoped RPC/core + planner and standalone route implementation + isolated-local fixtures + activation-block guard`. additive DB phase creates new scoped RPC/core while old overload remains only for existing optional-key/no-key compatibility. old overload `public.complete_cooking_session(uuid, uuid, uuid[])`와 `public.complete_standalone_cooking(uuid, uuid, integer, uuid[])`는 Manual cutover 전 optional-key/no-key compatibility를 위해 남고, activation-block guard는 external smoke가 완료되기 전 required-key activation을 막는다 <!-- omo:id=accept-legacy-compat-legacy-overload-cutover;stage=2;scope=backend;review=3,6 -->
+- [x] public fields[]/status mapping은 existing `400/401/403/404/409/422/428/503 error floor`만 사용한다. malformed Idempotency-Key -> 400 INVALID_IDEMPOTENCY_KEY fields[]=[Idempotency-Key:invalid_uuid] mutation 0; `pre-gate missing Idempotency-Key remains compatible success with the existing v1 response shape`; `full-release no-key 0 is telemetry evidence only; missing Idempotency-Key remains compatible success until a separately approved exact required-key activation`; `only after separately approved exact required-key activation following full-release no-key 0 may missing Idempotency-Key return 428 IDEMPOTENCY_KEY_REQUIRED mutation 0`이고 그때 fields[]=[Idempotency-Key:required]다. reused Idempotency-Key -> 409 IDEMPOTENCY_KEY_REUSED fields=[] mutation 0; stale session/account generation -> 409 ACCOUNT_SESSION_STALE|ACCOUNT_GENERATION_STALE fields=[] mutation 0. `POST /cooking/sessions/{id}/complete`와 `POST /cooking/standalone-complete`는 `{"success":false,"data":null,"error":{"code":"ACCOUNT_LIFECYCLE_MAINTENANCE","message":"계정 정비 작업 중이에요. 잠시 후 다시 시도해 주세요.","fields":[]}}` (503), `{"success":false,"data":null,"error":{"code":"ACCOUNT_CUTOVER_QUARANTINED","message":"계정 복구가 필요해요.","fields":[]}}` (409), `{"success":false,"data":null,"error":{"code":"ACCOUNT_DELETING","message":"계정 삭제가 진행 중이에요.","fields":[]}}` (409)를 exact wrapper로 반환하고 all three lifecycle outcomes have mutation 0이다. 이는 official API v1.2.39 cross-slice contract; not a public contract change다. malformed body는 422 `VALIDATION_ERROR fields[]`, unauthenticated는 401 `UNAUTHORIZED fields=[]`이며 새 public status/error/field는 만들지 않는다 <!-- omo:id=accept-legacy-compat-existing-errors-only;stage=2;scope=shared;review=3,6 -->
+- [x] `stored contract_version=legacy_v1`만 complete한다. snapshot_v2 session ID -> 404 RESOURCE_NOT_FOUND fields=[] mutation 0; legacy cooking other-owner keeps 403 FORBIDDEN fields=[]; planner product other-owner keeps documented scope-filtered 404 RESOURCE_NOT_FOUND fields=[]이며 legacy cooking에 404를 새로 발명하지 않는다 <!-- omo:id=accept-legacy-compat-owner-boundary;stage=2;scope=backend;review=3,6 -->
+- [x] client에 loading/empty/error/read-only/unauthorized 상태가 각각 존재한다 <!-- omo:id=accept-legacy-compat-client-states;stage=4;scope=frontend;review=5,6 -->
+- [x] delete pending은 중복 destructive action을 막고 error는 pinned row/detail을 유지한다 <!-- omo:id=accept-legacy-compat-delete-recovery;stage=4;scope=frontend;review=5,6 -->
 
-## Evidence / Tombstone Barrier
+## Data Integrity
 
-- [ ] evidence pins release IDs, head SHAs, window and current/immediate-previous clients <!-- omo:id=accept-legacy-compat-evidence-freshness;stage=4;scope=shared;review=3,5,6 -->
-- [ ] telemetry covers v1 key/no-key, active v1, seeded v2 drain, legacy callers and cursor decode <!-- omo:id=accept-legacy-compat-telemetry;stage=4;scope=shared;review=3,5,6 -->
-- [ ] telemetry excludes credentials, raw auth and other-owner private payload <!-- omo:id=accept-legacy-compat-telemetry-security;stage=4;scope=shared;review=3,5,6 -->
-- [ ] zero telemetry or elapsed release is evidence, never deletion authority <!-- omo:id=accept-legacy-compat-zero-not-authority;stage=4;scope=shared;review=3,5,6 -->
-- [ ] destructive removal requires new approval, official contract, retention, rollback and recovery evidence <!-- omo:id=accept-legacy-compat-manual-tombstone;stage=4;scope=shared;review=3,5,6 -->
+- [x] legacy product identity/name/brand/quantity/nutrition version은 pinned old version이며 current repin이 없다 <!-- omo:id=accept-legacy-compat-pinned-version;stage=2;scope=shared;review=3,6 -->
+- [x] `GET /planner` product entry와 recipe meal은 중복되지 않는다 <!-- omo:id=accept-legacy-compat-planner-separation;stage=2;scope=backend;review=3,6 -->
+- [x] body-shape inference/parser sharing 없이 stored contract version과 route predicate를 사용한다 <!-- omo:id=accept-legacy-compat-version-server;stage=2;scope=backend;review=3,6 -->
+- [x] strict stored-version legacy_v1 guard와 other-owner nondisclosure를 RPC 안에서 재검증하고 existing v2 drain/rollback은 기존 namespace에서 유지한다 <!-- omo:id=accept-legacy-compat-strict-v1-and-v2-drain;stage=2;scope=backend;review=3,6 -->
+- [x] telemetry unavailable, telemetry partial, telemetry stale, telemetry query-error는 모두 tombstone/removal fail-closed with mutation/removal 0이다 <!-- omo:id=accept-legacy-compat-telemetry-fail-closed;stage=2;scope=backend;review=3,6 -->
+- [x] no new API, field, status, error, action, or screen 및 no new table or column을 유지한다. narrow additive migration의 scoped `SECURITY DEFINER` RPC 외 generic RPC/RLS/direct DML은 추가하지 않는다 <!-- omo:id=accept-legacy-compat-no-invention;stage=2;scope=shared;review=3,6 -->
 
-## Verification
+## Data Setup / Preconditions
 
-- [ ] Stage 1 claims only docs validators/tests/lint/typecheck/audit/diff <!-- omo:id=accept-legacy-compat-stage1-honesty;stage=2;scope=shared;review=3,6 -->
-- [ ] implementation records failing compatibility tests before code <!-- omo:id=accept-legacy-compat-tdd-red;stage=2;scope=shared;review=3,5,6 -->
-- [ ] independent internal1.5/security/five-axis/design-impact/Stage3/5/6 findings are zero <!-- omo:id=accept-legacy-compat-reviews;stage=2;scope=shared;review=3,5,6 -->
-- [ ] current-head checks and post-merge QA/Policy/Security/Vercel are green/intended skip <!-- omo:id=accept-legacy-compat-ci;stage=2;scope=shared;review=3,6 -->
+- exact isolated-local reset baseline: `pnpm verify:local-supabase-runtime:isolated` → `scripts/run-isolated-local-supabase-runtime-gate.mjs`가 임시 Supabase project에 migration + `supabase/seed.sql`을 적용하고 owned resource를 정리한다.
+- existing owner fixture baseline: `pnpm test:prepared-food-planner-entry:postgres` → `tests/prepared-food-planner-entry-postgres.integration.test.ts` + `tests/fixtures/prepared-food-planner-entry-postgres-harness.ts`를 사용한다.
+- bootstrap owning flow: authenticated route의 `lib/server/user-bootstrap.ts` `ensureUserBootstrapState`와 full-local OAuth callback RPC `bootstrap_legacy_auth_callback_identity` (`supabase/migrations/20260730140000_hybrid_internal_operations_facades.sql`)가 owner별 `meal_plan_columns` 기본 3개를 만든다.
+- owner readiness: owner A/B의 `public.users`와 `meal_plan_columns.user_id`가 각 auth owner와 일치하고, product planner entry가 참조하는 column도 request owner와 owner match여야 한다. other-owner column은 기존 403/nondisclosure 계약을 유지한다.
+- #13 전용 Stage 2 test target 4개와 exact compatibility matrix fixture 중 하나라도 없으면 `fixture absent blocks Stage 2`다. 기존 prepared-food fixture는 bootstrap/owner baseline이지 v1 key/cursor/telemetry 완료 evidence가 아니다.
+- exact matrix는 planner/standalone 각각의 concurrent same-key replay, concurrent mismatch, no-key phase, rollback, owner A/B nondisclosure와 `MAINTENANCE/QUARANTINED/DELETING and malformed/reused/missing-post-exact-required-key-activation-following-full-release-no-key-0/version/owner rejection`을 포함한다. pre-gate와 full-release no-key 0 뒤 activation 전 missing key는 compatible success target으로 별도 검증한다. reject case마다 `checksum/delta 0 across users, recipe_books, meal_plan_columns, ledger, completion, progress events/summaries`를 확인한다. 모든 mutation fixture는 narrow migration을 적용한 isolated-local reset에서 시작한다.
+- `pnpm local:reset:demo`는 운영 full-local target에서 금지한다. mutation fixture는 위 pinned isolated-local runner 또는 같은 소유권·cleanup을 증명한 후속 #13 isolated harness에서만 만든다.
+
+- [x] owner A legacy row + pinned old version과 owner B legacy row + pinned old version fixture가 분리된다 <!-- omo:id=accept-legacy-compat-owner-fixtures;stage=2;scope=shared;review=3,6 -->
+- [x] v1 key/no-key/replay/mismatch fixture가 planner and standalone을 모두 포함한다 <!-- omo:id=accept-legacy-compat-key-fixtures;stage=2;scope=backend;review=3,6 -->
+- [x] concurrent same-key와 concurrent mismatch fixture가 durable replay/409 및 DB-side mutation 0을 planner and standalone에 대해 각각 검증하고, concurrent/replay/mismatch/rollback mutation counters include user_progress_events and user_progress_summary다 <!-- omo:id=accept-legacy-compat-concurrent-key-fixtures;stage=2;scope=backend;review=3,6 -->
+- [x] no-key phase와 rollback fixture가 required-key 전환의 mutation 0, strict stored-version legacy_v1 guard, existing v2 drain을 분리해 검증한다 <!-- omo:id=accept-legacy-compat-no-key-rollback-fixtures;stage=2;scope=backend;review=3,6 -->
+- [x] current and immediate-previous clients fixture가 동일 stored version을 명시적으로 dispatch한다 <!-- omo:id=accept-legacy-compat-client-fixtures;stage=4;scope=frontend;review=5,6 -->
+- [x] seeded v2 read/cancel/complete and rollback fixture가 신규 write 0과 existing drain을 구분한다 <!-- omo:id=accept-legacy-compat-v2-fixtures;stage=2;scope=shared;review=3,6 -->
+- [x] v1 cursor와 telemetry outage fixture가 unavailable/partial/stale/query-error를 각각 재현한다 <!-- omo:id=accept-legacy-compat-telemetry-fixtures;stage=2;scope=backend;review=3,6 -->
+- [x] mutation fixture는 `pnpm verify:local-supabase-runtime:isolated` 소유의 isolated-local create/reset에서만 만들고 controlled full-local/current-head target 접근을 차단한다 <!-- omo:id=accept-legacy-compat-local-only-fixtures;stage=2;scope=shared;review=3,6 -->
+- [x] #10 PR #1331 merge `2185b59d1b460dac916aa4a4a4a5e061c8b795f0`와 #12 PR #1361 merge `4264fe6bd5b3429029ba895a6b79cd32a5d3fa35`의 runtime dependency fulfilled 상태를 입력으로 사용한다 <!-- omo:id=accept-legacy-compat-runtime-predecessors;stage=2;scope=shared;review=3,6 -->
 
 ## Manual QA
 
-- verifier: separate Codex reviewers
-- environment: current/immediate-previous clients, seeded v2 fixture, 390px/320px/desktop, merged-exact-SHA server-production/local-rehearsal read-only
-- scenarios: legacy read/detail/delete, no writers, optional/no-key/428, v1/v2 dispatch, flag-off drain, rollback, unavailable telemetry
+- verifier: Stage 2/4 author와 다른 fresh Codex reviewer 및 후속 Manual verifier
+- environment: current/immediate-previous clients, owner A/B, seeded v2, 390px/320px/desktop, pinned isolated local, controlled merged-exact read-only local target
+- scenarios: legacy read/detail/delete, optional/no-key/replay/mismatch/428, stored-version dispatch, seeded drain/rollback, v1 cursor, telemetry outage
+- boundary: Manual/server-Mac/OAuth/device/AT/full WCAG, capability, R/R+1/R+2, production/activation은 pending이다.
 
-## Manual Only
+## Automation Split
 
-- [ ] no destructive tombstone/removal without a new explicit user approval and merged official contract-evolution
+### Vitest / Stage 2
+
+- [x] server tests가 additive scoped RPC/core, planner/standalone route implementation, cursor/idempotency/telemetry barrier, isolated-local fixtures와 activation-block guard를 deterministic하게 잠근다. pre-gate와 full-release no-key 0 뒤 activation 전 missing-key compatible success, post-exact-activation missing-key 428을 분리하며, `MAINTENANCE/QUARANTINED/DELETING and malformed/reused/missing-post-exact-required-key-activation-following-full-release-no-key-0/version/owner rejection`의 `checksum/delta 0 across users, recipe_books, meal_plan_columns, ledger, completion, progress events/summaries`를 확인한다. Stage 2 automated target은 cutover external smoke를 실행하거나 activation 완료를 주장하지 않는다 <!-- omo:id=accept-legacy-compat-vitest-server;stage=2;scope=backend;review=3,6 -->
+- [x] isolated-local fixtures가 owned ephemeral stack만 사용하고 controlled full-local/current-head target에는 접근하지 않는다 <!-- omo:id=accept-legacy-compat-local-smoke-split;stage=2;scope=shared;review=3,6 -->
+
+### Vitest and Playwright / Stage 4
+
+- [x] optional-key client와 pre-gate no-key decode, current/immediate-previous dispatch를 component test가 잠근다 <!-- omo:id=accept-legacy-compat-component-client;stage=4;scope=frontend;review=5,6 -->
+- [x] read/detail/delete, loading/empty/error/read-only/unauthorized를 browser test가 잠근다 <!-- omo:id=accept-legacy-compat-playwright-states;stage=4;scope=frontend;review=5,6 -->
+- [x] delete confirmation, keyboard focus trap, Escape, focus restore, 390px/320px/desktop responsive/overflow를 browser evidence가 잠근다 <!-- omo:id=accept-legacy-compat-playwright-focus;stage=4;scope=frontend;review=5,6 -->
+
+### Manual Only
+
+- [ ] physical keyboard, VoiceOver/TalkBack, real device safe-area/virtual-keyboard와 full WCAG evidence
+- [ ] controlled full-local/current-head deploy와 old-server drain; `rollback before old-overload revoke keeps the maintenance/write fence closed`, `traffic resumes only after a last-known-safe route/RPC version satisfying session+lifecycle authority and mutation 0 is deployed/proven and old instances are drained`, `rollback never returns to bootstrap-before-authority or any optional-key writer ordering`을 증명한다
+- [ ] maintenance/write fence 아래 old overload revoke/drop과 `REVOKE EXECUTE on both old exact signatures from PUBLIC, anon, authenticated, service_role`; `after old-overload revoke, rollback never restores legacy grants or bypass`를 증명한다
+- [ ] callable inventory/negative privilege evidence: old exact signatures absent, new two exact signatures만 service_role execute, old authenticated self-call과 old overload replay/rollback mutation 0
+- [ ] server-Mac/OAuth와 merged-exact server-production/local-rehearsal의 승인된 실행
+- [ ] capability, R/R+1/R+2, production/activation 결정과 실행
+- [ ] destructive tombstone/removal을 위한 새 explicit user approval, official contract-evolution, retention/privacy, rollback/recovery evidence
+
+`required-key transition cannot activate until old overload revoke/drain evidence`. `all remote application/fence/activation remains Manual pending and is not executed by Stage2 automation`.
+
+Stage 1 독립 review bookkeeping은 이 acceptance의 Stage 2 checkbox가 아니다. fresh internal 1.5와 후속 review 결과는 evaluator handoff에서 별도로 기록하며 author는 자기 변경을 승인하지 않는다.

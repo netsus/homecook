@@ -16,8 +16,9 @@
   "dependencies": [
     "security-definer-mutation-authorization hotfix merged and deployed",
     "cooking-meal-log contract-evolution merged as PR #1072",
-    "meal-log-core Stage 1 docs merged as PR #1083; its runtime is the backend implementation predecessor",
-    "planner-shell Stage 1 docs merged as PR #1084; its runtime is the frontend shell implementation predecessor",
+    "meal-log-core #9 PR #1319 exact head be93bfc47281e2795c59c0fd1052a4ecf6085837 merged as 8ba3fa5a2a198eb4f9c19d59cea5f6ccc52fdd4f; checkpoint projection 4597ca835ba81307d0bdf9e1b1c41806b17e7a68, security repair 16cfce44d32d5b618742a0e20460df4772a19142 and historical post-merge raw 14/14 success are backend predecessor evidence, while broader Manual/server-Mac/OAuth, pinned isolated-local and controlled full-local read-only evidence, capability R/R+1/R+2 and activation remain pending",
+    "planner-shell #10 PR #1331 merged as 2185b59d1b460dac916aa4a4a4a5e061c8b795f0; Stage 4~6 merged-green runtime and OMO completion are recorded in docs/workpacks/planner-shell/omo-report.md, while broader Manual/server-Mac/OAuth, physical-device/AT, production and activation remain pending",
+    "Stage 2 implementation dependency is available; independent internal1.5, security/API, five-axis and canonical design reviews are APPROVE 0/0/0",
     "prepared-food-search-relevance #1 supplies the typed union search contract",
     "cooked-batch-weight-ledger #8 supplies cooked batch authority",
     "cooked-batch-weight-ui #11 is a sibling consumer of the same batch authority",
@@ -26,11 +27,11 @@
   "docs_refs": {
     "source_of_truth": [
       "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
-      "docs/요구사항기준선-v1.7.25.md",
-      "docs/화면정의서-v1.5.29.md",
-      "docs/유저flow맵-v1.3.27.md",
-      "docs/db설계-v1.3.26.md",
-      "docs/api문서-v1.2.29.md"
+      "docs/요구사항기준선-v1.7.32.md",
+      "docs/화면정의서-v1.5.36.md",
+      "docs/유저flow맵-v1.3.34.md",
+      "docs/db설계-v1.3.34.md",
+      "docs/api문서-v1.2.39.md"
     ],
     "governing_docs": [
       "AGENTS.md",
@@ -55,7 +56,7 @@
       "ui/designs/MEAL_LOG.md",
       "ui/designs/critiques/MEAL_LOG-critique.md",
       "ui/designs/authority/MEAL_LOG-authority.md",
-      "/Users/shj/2025/2026/homecook1/.omx/plans/cooking-meal-log-and-product-search-master-plan-20260722.md#sha256-45f02013fbc1c3af1936d596605230d0cbac7839a783224aa9535844e4bda7dc"
+      "docs/workpacks/planner-shell/evidence/cooking-meal-log-and-product-search-master-plan-20260722.md"
     ]
   },
   "workflow": {
@@ -81,9 +82,10 @@
     "required_checks": [
       "pnpm validate:source-of-truth-sync",
       "pnpm validate:workflow-v2",
-      "BRANCH_NAME=docs/meal-log-ui pnpm validate:workpack -- --slice meal-log-ui",
+      "BRANCH_NAME=docs/meal-log-ui-stage1-relock-current pnpm validate:workpack -- --slice meal-log-ui",
       "node scripts/validate-automation-spec.mjs --slice meal-log-ui",
       "pnpm validate:omo-bookkeeping",
+      "pnpm exec vitest run tests/meal-log-ui-stage1-relock.test.ts tests/workflow-v2-docs.test.ts tests/omo-automation-spec.test.ts tests/omo-bookkeeping.test.ts tests/omo-doc-gate.test.ts tests/source-of-truth-sync.test.ts",
       "pnpm exec vitest run tests/meal-log-ui.test.tsx tests/meal-log-add-sheet.test.tsx tests/meal-log-entry-mutations.test.tsx tests/meal-log-ui-history.test.tsx",
       "pnpm verify:backend",
       "pnpm verify:frontend:pr",
@@ -96,40 +98,81 @@
       "pnpm validate:exploratory-qa-evidence -- --slice meal-log-ui",
       "pnpm validate:authority-evidence-presence -- --slice meal-log-ui",
       "pnpm validate:closeout-sync -- --slice meal-log-ui",
-      "node scripts/verify-meal-log-ui-local-first.mjs --mode post-merge-read-only",
+      "pnpm validate:real-smoke-presence -- --slice meal-log-ui",
       "git diff --check"
     ],
     "verify_commands": [
       "pnpm validate:source-of-truth-sync",
       "pnpm validate:workflow-v2",
-      "BRANCH_NAME=docs/meal-log-ui pnpm validate:workpack -- --slice meal-log-ui",
+      "BRANCH_NAME=docs/meal-log-ui-stage1-relock-current pnpm validate:workpack -- --slice meal-log-ui",
       "node scripts/validate-automation-spec.mjs --slice meal-log-ui",
       "pnpm validate:omo-bookkeeping",
-      "pnpm exec vitest run tests/workflow-v2-docs.test.ts tests/omo-automation-spec.test.ts tests/omo-bookkeeping.test.ts tests/omo-doc-gate.test.ts tests/source-of-truth-sync.test.ts",
+      "pnpm exec vitest run tests/meal-log-ui-stage1-relock.test.ts tests/workflow-v2-docs.test.ts tests/omo-automation-spec.test.ts tests/omo-bookkeeping.test.ts tests/omo-doc-gate.test.ts tests/source-of-truth-sync.test.ts",
       "pnpm lint",
       "pnpm typecheck",
       "pnpm audit --audit-level high",
       "git diff --check"
     ],
+    "stage1_current_commands": [
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "BRANCH_NAME=docs/meal-log-ui-stage1-relock-current pnpm validate:workpack -- --slice meal-log-ui",
+      "node scripts/validate-automation-spec.mjs --slice meal-log-ui",
+      "pnpm validate:omo-bookkeeping",
+      "pnpm exec vitest run tests/meal-log-ui-stage1-relock.test.ts tests/workflow-v2-docs.test.ts tests/omo-automation-spec.test.ts tests/omo-bookkeeping.test.ts tests/omo-doc-gate.test.ts tests/source-of-truth-sync.test.ts",
+      "pnpm lint",
+      "pnpm typecheck",
+      "pnpm audit --audit-level high",
+      "git diff --check"
+    ],
+    "stage4_future_commands": [
+      "pnpm exec vitest run tests/meal-log-ui.test.tsx tests/meal-log-add-sheet.test.tsx tests/meal-log-entry-mutations.test.tsx tests/meal-log-ui-history.test.tsx",
+      "pnpm test:e2e:regression:ci --grep meal-log-ui",
+      "pnpm test:e2e:a11y",
+      "pnpm test:e2e:visual",
+      "pnpm qa:explore -- --slice meal-log-ui",
+      "pnpm verify:frontend",
+      "pnpm validate:real-smoke-presence -- --slice meal-log-ui"
+    ],
+    "manual_only_evidence": [
+      "Manual physical keyboard/screen reader/device proof: physical keyboard focus order and restore, VoiceOver or TalkBack announcements, and real 390px and 320px device safe-area and virtual-keyboard occlusion",
+      "pinned isolated-local deterministic gate and controlled full-local read-only exact-head evidence",
+      "server-Mac and OAuth environment evidence",
+      "meal-log-core and planner-shell capability R/R+1/R+2, production and activation remain pending and are not performed by #12"
+    ],
     "evaluator_commands": [
-      "separate Codex internal 1.5 review of five core artifacts plus roadmap and status",
+      "fresh independent Codex internal 1.5 review of the Stage 1 relock candidate",
       "separate Codex security authorization and API boundary review",
       "separate Codex five-axis review",
-      "separate Codex design critic review of the new MEAL_LOG contract",
       "separate Codex product-design-authority review of 390px 320px desktop runtime evidence",
       "separate Codex Stage 3 Stage 6 and closeout reviews"
     ],
     "artifact_assertions": [
-      "approved-plan-sha256-and-1056-line-lock",
+      "current-official-tuple-v1.7.32-v1.5.36-v1.3.34-v1.3.34-v1.2.39",
+      "approved-cooking-plan-sha256-d4d0fb39-and-1018-line-lock",
+      "stage1-initial-base-16cfce44-c12afbcc-drift-and-latest-master-c4045705-integrated-by-normal-merges",
+      "security-pr1352-reviewed-3708cd9f-latest-master-fb1119ba-normal-no-ff-merge-f79cc898-tree-b1bc3500-postmerge-13-of-13-audit-high-critical-zero",
+      "youtube-async-isolated-local-tooling-a625aefa-has-no-meal-log-product-contract-impact",
+      "full-local-authority-drift-has-no-meal-log-product-contract-impact",
+      "slice9-source-checkpoint-security-merges-and-postmerge-14-of-14",
+      "slice10-pr1331-stage4-through-6-runtime-and-omo-merged-green",
+      "slice12-ui-only-and-stage2-after-remaining-independent-reviews-design-prerequisite-complete",
+      "design-generator-task-019ffb5f-b4be-7153-84b8-e4f341bd5ae5-head-1b44bb7238cc6d0381805585f371fe12e0cb90f0-tree-851ceaa34835b7f5288590a3f0b74f7666e50eb7",
+      "design-repair-task-019ffb73-1f48-7832-8d18-b043209f208a-head-910d14e99e71c9a05aa623cbf0a9c3b6f1f9456b-tree-a578bf1d8da21a3bce230051399c6be1fd9da78c",
+      "design-rereview-task-019ffb81-4bad-7353-b92b-add4924a4a40-head-1da1a186b99044d12fc9a940321a9bbefe44ae07-tree-c09dd364c8523ffc975836ab5df2c9db9388e3fe-APPROVE-0-0-0",
+      "superseded historical design provenance remains audit history",
+      "current-p1-ml-05-repair-task-019ffbbc-d4f1-7730-be56-0d8d6d28ce8c-design-head-e2959ef523e57770a4cb2b490f7b00a972ab8845-tree-7932fc6d026d9f2c0aa963041efcf315be12c9e9-blob-9bade6235acd9c6f60d128216260d9c0408718c2",
+      "current-design-review-task-019ffbc5-0c4a-7b11-afd9-6346a76b762c-critique-commit-4e1bdaae2335fd41bb46db1ede5d835a2f164faa-tree-467f698b61775eea81487aaddf2aeac91bea1e00-APPROVE-P0-P1-P2-0-0-0",
+      "every edit save from a deleted/null origin requires explicit current active owner meal column selection regardless of quantity/source/date/timezone fields; save fail-closed until selection; server replaces meal_plan_column_id + slot_name_snapshot. DELETE remains no relocation",
       "stage1-five-core-artifacts-plus-roadmap-and-status-projections",
       "roadmap-docs-workflow-lifecycle-planned-separation",
       "existing-planner-route-and-two-segment-labels-only",
       "day-first-stored-local-date-no-current-timezone-regroup",
       "core-four-plus-sodium-no-goal-or-medical-interpretation",
       "active-columns-separated-from-plan-rows",
-      "deleted-column-snapshot-read-only-history",
-      "soft-deleted-entry-absent-from-read-and-active-aggregate",
-      "day-total-equals-active-subtotals-with-incomplete-count",
+      "deleted-column-no-new-target-existing-entry-edit-delete-preserved",
+      "soft-deleted-entry-absent-from-read-and-aggregate",
+      "day-total-equals-all-visible-non-deleted-section-subtotals-with-incomplete-count",
       "unavailable-never-zero-or-complete",
       "full-height-add-sheet-two-exact-source-labels",
       "owner-generation-recent-frequent-and-server-typed-union",
@@ -151,14 +194,72 @@
     ]
   },
   "status": {
-    "lifecycle": "planned",
-    "approval_state": "not_started",
-    "verification_status": "pending",
+    "lifecycle": "merged",
+    "approval_state": "dual_approved",
+    "verification_status": "passed",
     "evaluation_status": "not_started",
     "evaluation_round": 0,
     "last_evaluator_result": null,
     "auto_merge_eligible": false,
     "blocked_reason_code": null
+  },
+  "closeout": {
+    "phase": "completed",
+    "docs_projection": {
+      "roadmap_lifecycle": "merged",
+      "design_status": "confirmed",
+      "delivery_checklist": "complete",
+      "design_authority": "passed",
+      "acceptance": "complete",
+      "automation_spec_metadata": "synced"
+    },
+    "verification_projection": {
+      "required_checks": "passed",
+      "external_smokes": "pending",
+      "authority_reports": [
+        "ui/designs/authority/MEAL_LOG-authority.md"
+      ],
+      "actual_verification_refs": [
+        "Stage 6 task 01a000d1-d3da-77c3-ace5-a405f6a7a41b: APPROVE P0/P1/P2 0/0/0",
+        "PR #1361 runtime source merged as 4264fe6bd5b3429029ba895a6b79cd32a5d3fa35",
+        "PR #1364 final reviewed/source head c9b7ef56febc485df69d5ffd144dfab8ffa1330a merged as 358450e44da691256b0eeb51d8ae131a520b6cbd with tree 0682a30d9d5aba11ae7e0ae706e2b13797d0d167",
+        "Final postmerge raw 13 = 12 success + 1 intended skip with bad/pending/rerun 0",
+        "OMO report closeout PR #1365 merged as 4f3e8522ebbb6faaf48509154f04bc3e9d7d9d98 with report tree 270e6f8c8d7b1fe2cb3c77233ad44f1753f452e8; retained evidence docs/workpacks/meal-log-ui/omo-report.md",
+        "Runtime delivery is merged/completed; Manual/device/AT/full WCAG/server-Mac/OAuth/merged-exact rehearsal/R/R+1/R+2/production activation remain pending"
+      ]
+    },
+    "merge_gate_projection": {
+      "current_head_sha": "c9b7ef56febc485df69d5ffd144dfab8ffa1330a",
+      "approval_state": "dual_approved",
+      "all_checks_green": true
+    },
+    "recovery_summary": {
+      "manual_patch_count": 0,
+      "manual_handoff": false,
+      "stale_lock_count": 0,
+      "ci_resync_count": 0,
+      "artifact_missing": false,
+      "last_recovery_at": "2026-08-15T02:40:39+09:00"
+    },
+    "repair_summary": {
+      "codex_repairable_count": 9,
+      "claude_repairable_count": 0,
+      "manual_decision_required_count": 0,
+      "human_escalation_count": 0,
+      "post_merge_stale_count": 0,
+      "latest_reason_code": "post-merge-focus-regression-repaired",
+      "evidence_sources": [
+        "docs/workpacks/meal-log-ui/omo-report.md",
+        "PR #1361 runtime merge",
+        "PR #1364 post-merge focus repair",
+        "PR #1365 OMO report closeout"
+      ]
+    },
+    "projection_state": {
+      "docs_synced_at": "2026-08-14T19:31:55Z",
+      "status_synced_at": "2026-08-14T19:31:55Z",
+      "pr_body_synced_at": "pending-pr-body"
+    }
   },
   "out_of_scope": [
     "New Planner route tab API field status source or client-computed authoritative total",
@@ -169,8 +270,8 @@
     "Client-side product and ingredient result merge or brand-more pagination",
     "Mutable-current product profile repin or ingredient conversion estimate",
     "Deleted-column new entry or historical regroup by current timezone",
-    "Unapproved server-production migration or write or feature activation"
+    "Unapproved full-local mutation or destructive reset, non-local target access, or feature activation"
   ],
   "open_questions": [],
-  "notes": "Roadmap moves to docs while workflow lifecycle remains planned. Approval stays not_started until separate Codex internal1.5, security/API, five-axis and design reviews reach zero findings. Stage 1 current commands are docs validators/tests/lint/typecheck/audit/diff; component/E2E/visual/a11y/browser/server-production/local-rehearsal evidence is future. Implementation waits for #9 runtime and #10 shell, consumes #1 search and #8 batch authority, may link the eligible #11 weight action, and leaves #13/#14 as successors."
+  "notes": "Canonical runtime delivery closeout is completed without changing the official product contract. Final reviewed/source head c9b7ef56febc485df69d5ffd144dfab8ffa1330a follows PR #1361 merge 4264fe6bd5b3429029ba895a6b79cd32a5d3fa35 and merged through repair PR #1364 as 358450e44da691256b0eeb51d8ae131a520b6cbd with tree 0682a30d9d5aba11ae7e0ae706e2b13797d0d167. Final postmerge raw 13 = 12 success + 1 intended skip with bad/pending/rerun 0. OMO report closeout PR #1365 merged as 4f3e8522ebbb6faaf48509154f04bc3e9d7d9d98 with report tree 270e6f8c8d7b1fe2cb3c77233ad44f1753f452e8; retained evidence is docs/workpacks/meal-log-ui/omo-report.md. Runtime delivery is merged/completed while Manual/device/AT/full WCAG/server-Mac/OAuth/merged-exact rehearsal/R/R+1/R+2/production activation remain pending. auto_merge_eligible remains false. #12 owns UI only and adds no endpoint, schema, migration, capability, or activation."
 }
