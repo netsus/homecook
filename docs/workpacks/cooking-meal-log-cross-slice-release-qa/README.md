@@ -182,7 +182,7 @@ Stage 2 entry still requires this relock PR merge and the documented post-merge 
 
 ## Delivery Checklist
 
-Stage 1 exact-six authoring is complete on this branch; approval is intentionally not started.
+Stage 1 approval is complete (`codex_approved`); runtime Delivery Checklist and Stage 2 remain pending.
 
 - [ ] pinned isolated local DB/API/security/performance verification is green on the exact head <!-- omo:id=delivery-cooking-cross-stage2-isolated;stage=2;scope=backend;review=3,6 -->
 - [ ] predecessor runtime merge map is rechecked and no retained evidence is stale <!-- omo:id=delivery-cooking-cross-stage2-predecessors;stage=2;scope=shared;review=3,6 -->

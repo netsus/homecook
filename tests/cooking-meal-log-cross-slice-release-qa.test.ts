@@ -207,6 +207,37 @@ const stage1ApprovalTasks = [
   ["five-axis", "01a01f2e-ba20-7022-8b3b-5b90d15572d0"],
   ["design-authority-plan", "01a01f2e-bf69-7f23-9c7c-7982855195bc"],
 ] as const;
+const closedStage1FindingLineage = [
+  "CML14-I15-P1-001",
+  "CML14-I15-P1-002",
+  "CML14-I15-P2-001",
+  "CML14-I15R-P1-001",
+  "CML14-I15R-P1-002",
+  "CML14-I15F-P1-001",
+  "CML14-I15T-P1-001",
+  "CML14-FIVE-P1-001",
+  "CML14-FIVE-P1-002",
+  "CML14-FIVE-P1-003",
+  "CML14-FIVE-P1-004",
+  "CML14-FIVE-P1-005",
+  "CML14-FIVE-P2-001",
+  "CML14-SDO-RR-P1-001",
+  "CML14-SDO-RR-P1-002",
+  "CML14-SDO-FINAL-P1-001",
+  "CML14-SDO-FINAL-P1-003",
+  "CML14-SDO-FINAL-P2-001",
+  "CML14-SDO-SYMLINK-P1-001",
+  "P1-CML14-EVID-01",
+  "P1-CML14-EVID-02",
+  "P2-CML14-EVID-03",
+  "P1-CML14-EVID-04",
+  "P2-CML14-EVID-05",
+  "P1-DA14-01",
+  "P1-DA14-02",
+  "P2-DA14-03",
+  "P1-DA14-RR-01",
+  "P2-DA14-RR-02",
+] as const;
 
 function read(relativePath: string) {
   return readFileSync(join(root, relativePath), "utf8");
@@ -305,6 +336,9 @@ describe("cooking meal-log cross-slice Stage 1 relock", () => {
       },
     });
     expect(approvalEvidence.reviews).toHaveLength(4);
+    expect(approvalEvidence.closed_finding_lineage).toEqual(
+      closedStage1FindingLineage,
+    );
     expect(
       approvalEvidence.reviews.map(
         (review: { role: string; task_id: string }) => [
@@ -377,6 +411,10 @@ describe("cooking meal-log cross-slice Stage 1 relock", () => {
         .filter((item) => !item.manualOnly)
         .every((item) => item.checked === false),
     ).toBe(true);
+    expect(readme).toContain(
+      "Stage 1 approval is complete (`codex_approved`); runtime Delivery Checklist and Stage 2 remain pending.",
+    );
+    expect(readme).not.toContain("approval is intentionally not started");
   });
 
   it("pins every predecessor automated/runtime merge without promoting Manual state", () => {
