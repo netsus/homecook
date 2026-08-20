@@ -4,7 +4,11 @@ import path from "node:path";
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page, type TestInfo } from "@playwright/test";
 
-import { installDiscoveryRoutes, setE2EAuthOverride } from "./helpers/mock-routes";
+import {
+  installDiscoveryRoutes,
+  setE2EAuthOverride as setBaseE2EAuthOverride,
+} from "./helpers/mock-routes";
+import { captureEvidenceScreenshot } from "./helpers/evidence-capture";
 
 const EVIDENCE_ROOT = path.resolve(
   process.cwd(),
@@ -28,6 +32,15 @@ type ImportMode =
   | "planner-success"
   | "review"
   | "submitting";
+
+async function setE2EAuthOverride(
+  page: Page,
+  value: "authenticated" | "guest" = "authenticated",
+) {
+  await setBaseE2EAuthOverride(page, value, {
+    notificationRouteOwner: "caller",
+  });
+}
 
 function notificationItem({
   code,
@@ -425,7 +438,7 @@ async function openImport(
 
 async function captureEvidence(page: Page, testInfo: TestInfo, filePath: string, fullPage = false) {
   if (testInfo.project.name !== "desktop-chrome") return;
-  await page.screenshot({ path: filePath, fullPage });
+  await captureEvidenceScreenshot(page, testInfo, filePath, { fullPage });
 }
 
 function rectanglesAreDisjoint(

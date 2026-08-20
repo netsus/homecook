@@ -1,9 +1,9 @@
-import { mkdir } from "node:fs/promises";
 import path from "node:path";
 
 import { expect, test, type Page } from "@playwright/test";
 
 import { installCompletedYoutubeExtractionRoutes } from "./helpers/youtube-background-extraction";
+import { captureEvidenceScreenshot } from "./helpers/evidence-capture";
 
 const E2E_AUTH_OVERRIDE_KEY = "homecook.e2e-auth-override";
 const E2E_AUTH_OVERRIDE_COOKIE = E2E_AUTH_OVERRIDE_KEY;
@@ -229,7 +229,7 @@ function createVisualQuantityDraft() {
 }
 
 test.describe("Slice 32: YouTube visual quantity enrichment", () => {
-  test("review screen shows quantity provenance and registers confirmed suggestions", async ({ page }) => {
+  test("review screen shows quantity provenance and registers confirmed suggestions", async ({ page }, testInfo) => {
     const registerBodies: unknown[] = [];
     await page.route("**/api/v1/recipes/youtube/register", async (route) => {
       registerBodies.push(await route.request().postDataJSON());
@@ -244,11 +244,14 @@ test.describe("Slice 32: YouTube visual quantity enrichment", () => {
 
     await openYoutubeReview(page);
 
-    await mkdir(EVIDENCE_DIR, { recursive: true });
-    await page.screenshot({
-      path: path.join(EVIDENCE_DIR, "review-quantity-confirm-desktop.png"),
-      fullPage: true,
-    });
+    await captureEvidenceScreenshot(
+      page,
+      testInfo,
+      path.join(EVIDENCE_DIR, "review-quantity-confirm-desktop.png"),
+      {
+        fullPage: true,
+      },
+    );
 
     const registerButton = page.getByRole("button", { name: "등록" });
     await expect(registerButton).toBeDisabled();

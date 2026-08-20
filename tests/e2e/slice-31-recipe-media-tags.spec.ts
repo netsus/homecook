@@ -1,4 +1,3 @@
-import { mkdir } from "node:fs/promises";
 import path from "node:path";
 
 import { expect, test, type Browser, type Page } from "@playwright/test";
@@ -9,6 +8,7 @@ import {
   installCompletedYoutubeExtractionRoutes,
   installEmptyYoutubeNotificationRoutes,
 } from "./helpers/youtube-background-extraction";
+import { captureEvidenceScreenshot } from "./helpers/evidence-capture";
 
 const E2E_AUTH_OVERRIDE_KEY = "homecook.e2e-auth-override";
 const E2E_AUTH_OVERRIDE_COOKIE = E2E_AUTH_OVERRIDE_KEY;
@@ -355,8 +355,6 @@ test.describe("Slice 31: Recipe media and tags evidence", () => {
       "Evidence test creates explicit mobile/narrow contexts once.",
     );
     test.setTimeout(120_000);
-    await mkdir(EVIDENCE_DIR, { recursive: true });
-
     const youtube = await preparePage(browser, MOBILE_VIEWPORT);
     try {
       await installYoutubeRoutes(youtube.page);
@@ -368,10 +366,14 @@ test.describe("Slice 31: Recipe media and tags evidence", () => {
       await youtube.page.getByRole("button", { name: "가져오기" }).click();
       await expect(youtube.page.getByTestId("youtube-draft-thumbnail")).toBeVisible();
       await expect(youtube.page.getByTestId("youtube-draft-tags")).toContainText("한식");
-      await youtube.page.screenshot({
-        fullPage: true,
-        path: path.join(EVIDENCE_DIR, "YT_IMPORT-thumbnail-tag-preview-mobile-screenshot.png"),
-      });
+      await captureEvidenceScreenshot(
+        youtube.page,
+        testInfo,
+        path.join(EVIDENCE_DIR, "YT_IMPORT-thumbnail-tag-preview-mobile-screenshot.png"),
+        {
+          fullPage: true,
+        },
+      );
     } finally {
       void youtube.context.close().catch(() => {});
     }
@@ -400,10 +402,14 @@ test.describe("Slice 31: Recipe media and tags evidence", () => {
         });
       await expect(manual.page.getByTestId("manual-image-preview")).toBeVisible();
       await expect(manual.page.getByTestId("manual-image-replace-button")).toBeVisible();
-      await manual.page.screenshot({
-        fullPage: true,
-        path: path.join(EVIDENCE_DIR, "MANUAL_RECIPE_CREATE-image-upload-mobile-screenshot.png"),
-      });
+      await captureEvidenceScreenshot(
+        manual.page,
+        testInfo,
+        path.join(EVIDENCE_DIR, "MANUAL_RECIPE_CREATE-image-upload-mobile-screenshot.png"),
+        {
+          fullPage: true,
+        },
+      );
       await manual.page.getByLabel("요리 이름").fill("이미지 김치찌개");
       await manual.page.getByRole("button", { name: "+ 재료 추가하기" }).click();
       const ingredientDialog = manual.page.getByRole("dialog", { name: "재료로 검색" });
@@ -426,10 +432,14 @@ test.describe("Slice 31: Recipe media and tags evidence", () => {
       await stabilize(detail.page);
       await expect(detail.page.locator('[data-testid="recipe-youtube-source-note"]:visible')).toBeVisible();
       await expect(detail.page.locator('[data-testid="recipe-detail-tags"]:visible')).toContainText("한식");
-      await detail.page.screenshot({
-        fullPage: true,
-        path: path.join(EVIDENCE_DIR, "RECIPE_DETAIL-source-note-tag-display-mobile-screenshot.png"),
-      });
+      await captureEvidenceScreenshot(
+        detail.page,
+        testInfo,
+        path.join(EVIDENCE_DIR, "RECIPE_DETAIL-source-note-tag-display-mobile-screenshot.png"),
+        {
+          fullPage: true,
+        },
+      );
     } finally {
       void detail.context.close().catch(() => {});
     }
@@ -440,10 +450,14 @@ test.describe("Slice 31: Recipe media and tags evidence", () => {
       await narrow.page.goto("/recipe/recipe-31-youtube");
       await stabilize(narrow.page);
       await expect(narrow.page.locator('[data-testid="recipe-youtube-source-note"]:visible')).toBeVisible();
-      await narrow.page.screenshot({
-        fullPage: true,
-        path: path.join(EVIDENCE_DIR, "RECIPE_DETAIL-narrow-viewport-text-fit-screenshot.png"),
-      });
+      await captureEvidenceScreenshot(
+        narrow.page,
+        testInfo,
+        path.join(EVIDENCE_DIR, "RECIPE_DETAIL-narrow-viewport-text-fit-screenshot.png"),
+        {
+          fullPage: true,
+        },
+      );
     } finally {
       void narrow.context.close().catch(() => {});
     }

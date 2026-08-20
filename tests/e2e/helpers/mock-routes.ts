@@ -658,8 +658,14 @@ function buildShoppingVisualDetail({
 export async function setE2EAuthOverride(
   page: Page,
   value: "authenticated" | "guest" = "authenticated",
+  options: {
+    notificationRouteOwner?: "auth-helper" | "caller";
+  } = {},
 ) {
-  if (value === "authenticated") {
+  if (
+    value === "authenticated"
+    && options.notificationRouteOwner !== "caller"
+  ) {
     await installEmptyYoutubeNotificationRoutes(page);
   }
   await page.context().addCookies([
