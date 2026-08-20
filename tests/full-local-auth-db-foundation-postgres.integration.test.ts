@@ -1219,16 +1219,20 @@ run("full-local Auth isolated PostgreSQL foundation", () => {
       })}
       from authority, control;
     `);
+    const boundedOverlapSnapshot = psql(`
+      select concat_ws(
+        ':', xmin::text, last_token_issued_at::text,
+        local_verified_at::text, binding_expires_at::text
+      )
+      from public.user_session_generation_bindings
+      where session_key_hash = repeat('6', 64);
+    `);
     const lateOlderToken = callOlderToken();
-    expect(lateOlderToken.status).not.toBe(0);
-    expect(lateOlderToken.stderr).toContain("ACCOUNT_SESSION_STALE");
-    expect(lateOlderToken.stderr).toContain(
-      "HOMECOOK_SESSION_AUTHORITY_REASON::superseded_token",
-    );
+    expect(lateOlderToken.status, lateOlderToken.stderr).toBe(0);
     expect(psql(`
       with control as (
         select local_activated_at
-        from private.full_local_auth_control
+      from private.full_local_auth_control
       )
       select concat_ws(
         ':',
@@ -1241,6 +1245,14 @@ run("full-local Auth isolated PostgreSQL foundation", () => {
       cross join control
       where session_key_hash = repeat('6', 64);
     `)).toBe("t:t:t:active");
+    expect(psql(`
+      select concat_ws(
+        ':', xmin::text, last_token_issued_at::text,
+        local_verified_at::text, binding_expires_at::text
+      )
+      from public.user_session_generation_bindings
+      where session_key_hash = repeat('6', 64);
+    `)).toBe(boundedOverlapSnapshot);
 
     expect(psql(`
       update public.user_session_generation_bindings
@@ -1273,6 +1285,111 @@ run("full-local Auth isolated PostgreSQL foundation", () => {
       from public.user_session_generation_bindings
       where session_key_hash = repeat('6', 64);
     `)).toBe(expiredWindowSnapshot);
+  });
+
+  it("keeps a same-session older token inside the 10-second overlap on the current binding without advancing it", () => {
+    expect(psql(`
+      create table if not exists auth.sessions (
+        id uuid primary key,
+        user_id uuid not null references auth.users(id) on delete cascade
+      );
+      insert into auth.sessions (id, user_id)
+      values ('13131313-1313-4313-8313-131313131313', '${owner}'::uuid)
+      on conflict (id) do nothing;
+      select count(*) from auth.sessions where id = '13131313-1313-4313-8313-131313131313'::uuid;
+    `)).toBe("1");
+    const refreshedBinding = psqlResult(`
+      ${serviceClaims}
+      with control as (
+        select local_activated_at
+        from private.full_local_auth_control
+      ), seed_a as (
+        select ${buildV2RecordCall({
+          ownerUuid: owner,
+          identityCreatedAt: "2026-08-01T00:00:00Z",
+          sessionId: "13131313-1313-4313-8313-131313131313",
+          sessionKeyHash: "repeat('3', 64)",
+          sessionIssuedAtSql: "control.local_activated_at + interval '1 second'",
+          lastTokenIssuedAtSql: "control.local_activated_at + interval '1 second'",
+          verifiedAtSql: "control.local_activated_at + interval '2 seconds'",
+          accessTokenExpiresAtSql: "control.local_activated_at + interval '58 minutes'",
+          bindingExpiresAtSql: "control.local_activated_at + interval '30 minutes'",
+        })} as result
+        from control
+      ), renew_b as (
+        select ${buildV2RenewCall({
+          ownerUuid: owner,
+          identityCreatedAt: "2026-08-01T00:00:00Z",
+          sessionId: "13131313-1313-4313-8313-131313131313",
+          sessionKeyHash: "repeat('3', 64)",
+          sessionIssuedAtSql: "control.local_activated_at + interval '3 seconds'",
+          lastTokenIssuedAtSql: "control.local_activated_at + interval '3 seconds'",
+          verifiedAtSql: "clock_timestamp()",
+          accessTokenExpiresAtSql: "control.local_activated_at + interval '59 minutes'",
+          bindingExpiresAtSql: "control.local_activated_at + interval '55 minutes'",
+        })} as result
+        from control, seed_a
+      )
+      select result from renew_b;
+    `);
+    expect(refreshedBinding.status, refreshedBinding.stderr).toBe(0);
+
+    const bindingSnapshotBeforeOverlap = psql(`
+      select concat_ws(
+        ':',
+        xmin::text,
+        session_issued_at::text,
+        last_token_issued_at::text,
+        local_verified_at::text,
+        binding_expires_at::text,
+        binding_state
+      )
+      from public.user_session_generation_bindings
+      where session_key_hash = repeat('3', 64);
+    `);
+
+    const overlapOlderToken = psqlResult(`
+      ${serviceClaims}
+      with control as (
+        select local_activated_at
+        from private.full_local_auth_control
+      ), authority as (
+        select
+          auth_cutover_epoch,
+          owner_uuid,
+          auth_identity_created_at_snapshot,
+          session_key_hash,
+          hmac_key_version
+        from public.user_session_generation_bindings
+        where session_key_hash = repeat('3', 64)
+      )
+      select ${buildV2RenewCall({
+        ownerUuid: owner,
+        identityCreatedAt: "2026-08-01T00:00:00Z",
+        sessionId: "13131313-1313-4313-8313-131313131313",
+        sessionKeyHash: "authority.session_key_hash",
+        sessionIssuedAtSql: "control.local_activated_at + interval '2 seconds'",
+        lastTokenIssuedAtSql: "control.local_activated_at + interval '2 seconds'",
+        verifiedAtSql: "control.local_activated_at + interval '3 seconds'",
+        accessTokenExpiresAtSql: "control.local_activated_at + interval '1 hour'",
+        bindingExpiresAtSql: "control.local_activated_at + interval '30 minutes'",
+      })}
+      from authority, control;
+    `);
+    expect(overlapOlderToken.status, overlapOlderToken.stderr).toBe(0);
+    expect(psql(`
+      select concat_ws(
+        ':',
+        xmin::text,
+        session_issued_at::text,
+        last_token_issued_at::text,
+        local_verified_at::text,
+        binding_expires_at::text,
+        binding_state
+      )
+      from public.user_session_generation_bindings
+      where session_key_hash = repeat('3', 64);
+    `)).toBe(bindingSnapshotBeforeOverlap);
   });
 
   it("does not create a missing binding during protected-request renew", () => {

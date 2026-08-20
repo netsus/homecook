@@ -51,6 +51,23 @@ async function readSupersededTokenMigration() {
   };
 }
 
+async function readBoundedOverlapMigration() {
+  const migrationFiles = await readdir(MIGRATIONS_DIRECTORY);
+  const boundedOverlapMigrationName = migrationFiles.find((file) =>
+    file.includes("full_local_session_bounded_token_overlap"),
+  );
+
+  return {
+    boundedOverlapMigrationName,
+    migration: boundedOverlapMigrationName
+      ? await readFile(
+          `${MIGRATIONS_DIRECTORY}/${boundedOverlapMigrationName}`,
+          "utf8",
+        )
+      : "",
+  };
+}
+
 function clientWithRpc(rpc = vi.fn()) {
   return { client: { rpc }, rpc };
 }
@@ -511,6 +528,38 @@ describe("full-local Auth DB migration contract", () => {
     );
     expect(normalized).toMatch(
       /insert into private\.full_local_session_observability[\s\S]*on conflict \(singleton\) do update[\s\S]*observation_started_at = clock_timestamp\(\)[\s\S]*unexpected_account_session_stale_count = 0[\s\S]*stale_token_mutation_count = 0[\s\S]*first_stale_at = null/iu,
+    );
+  });
+
+  it("adds a later additive migration that converts same-binding stale overlap into a bounded success without touching ACLs", async () => {
+    const { boundedOverlapMigrationName, migration } =
+      await readBoundedOverlapMigration();
+    expect(boundedOverlapMigrationName).toMatch(
+      /^[0-9]{14}_full_local_session_bounded_token_overlap\.sql$/u,
+    );
+
+    const normalized = migration.toLowerCase();
+    expect(normalized).toMatch(
+      /insert into private\.full_local_session_observability[\s\S]*on conflict \(singleton\) do update[\s\S]*observation_started_at = clock_timestamp\(\)[\s\S]*unexpected_account_session_stale_count = 0[\s\S]*stale_token_mutation_count = 0[\s\S]*first_stale_at = null/iu,
+    );
+    expect(normalized).toContain(
+      "create or replace function public.assert_and_renew_full_local_session_authority_v2(",
+    );
+    expect(normalized).toContain("v_bounded_overlap boolean := false");
+    expect(normalized).toMatch(
+      /if p_last_token_issued_at < v_binding\.last_token_issued_at[\s\S]*clock_timestamp\(\)\s*<=\s*v_binding\.local_verified_at\s*\+\s*interval '10 seconds'[\s\S]*v_bounded_overlap := true[\s\S]*else[\s\S]*non_monotonic/iu,
+    );
+    expect(normalized).toMatch(
+      /if not v_bounded_overlap and \([\s\S]*p_access_token_expires_at < v_binding\.binding_expires_at[\s\S]*p_binding_expires_at < v_binding\.binding_expires_at[\s\S]*\) then[\s\S]*non_monotonic/iu,
+    );
+    expect(normalized).toMatch(
+      /if p_session_issued_at <= v_generation_activated_at[\s\S]*lifecycle\.status = 'active'/iu,
+    );
+    expect(normalized).toMatch(
+      /revoke all on function public\.assert_and_renew_full_local_session_authority_v2[\s\S]*from public, anon, authenticated[\s\S]*grant execute on function public\.assert_and_renew_full_local_session_authority_v2[\s\S]*to service_role/iu,
+    );
+    expect(normalized).not.toContain(
+      "homecook_session_authority_reason::superseded_token",
     );
   });
 

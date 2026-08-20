@@ -216,359 +216,79 @@ describe("supabase server helpers", () => {
     );
   });
 
-  it("injects superseded-session recovery only for route handlers and dedupes refreshes for 10 seconds", async () => {
-    vi.useFakeTimers();
-    try {
-      getAuthAuthority.mockReturnValue("local");
-      getSupabaseEnv.mockReturnValue({
-        url: "https://auth.mumeok.kr",
-        anonKey: "local-publishable",
-        authority: "local",
-        issuer: "https://auth.mumeok.kr/auth/v1",
-        jwksUrl: "https://auth.mumeok.kr/auth/v1/.well-known/jwks.json",
-      });
-      getServiceRoleKey.mockReturnValue("local-service-secret");
+  it("does not inject superseded-session recovery for route handlers or server components", async () => {
+    getAuthAuthority.mockReturnValue("local");
+    getSupabaseEnv.mockReturnValue({
+      url: "https://auth.mumeok.kr",
+      anonKey: "local-publishable",
+      authority: "local",
+      issuer: "https://auth.mumeok.kr/auth/v1",
+      jwksUrl: "https://auth.mumeok.kr/auth/v1/.well-known/jwks.json",
+    });
+    getServiceRoleKey.mockReturnValue("local-service-secret");
 
-      const refreshSession = vi.fn().mockResolvedValue({
-        data: {
-          session: {
-            access_token: "replacement-token",
-          },
-        },
-        error: null,
-      });
-      createServerClient.mockReturnValue({
-        auth: {
-          getSession: vi.fn().mockResolvedValue({
-            data: { session: { access_token: "original-token" } },
-            error: null,
-          }),
-          refreshSession,
-        },
-      });
-      createClient.mockImplementation((_url, _key, options) => {
-        if (options?.global?.headers?.["x-homecook-internal-scope"]) {
-          return { rpc: vi.fn(), from: vi.fn(), storage: {} };
-        }
-        return { from: vi.fn(), rpc: vi.fn(), storage: {} };
-      });
-
-      const server = await import("@/lib/supabase/server");
-      await server.createRouteHandlerClient();
-
-      const routeGatewayArgs = createHybridAuthorityFetch.mock.calls.at(-1)?.[0];
-      if (!routeGatewayArgs?.recoverSupersededSession) {
-        throw new Error("missing route recovery callback");
+    const refreshSession = vi.fn();
+    createServerClient.mockReturnValue({
+      auth: {
+        getSession: vi.fn().mockResolvedValue({
+          data: { session: { access_token: "browser-token-b" } },
+          error: null,
+        }),
+        refreshSession,
+      },
+    });
+    createClient.mockImplementation((_url, _key, options) => {
+      if (options?.global?.headers?.["x-homecook-internal-scope"]) {
+        return { rpc: vi.fn(), from: vi.fn(), storage: {} };
       }
+      return { from: vi.fn(), rpc: vi.fn(), storage: {} };
+    });
 
-      const sharedRecovery = routeGatewayArgs.recoverSupersededSession;
-      const tenConcurrent = await Promise.all(
-        Array.from({ length: 10 }, () => sharedRecovery({
-          currentAccessToken: "original-token",
-          sessionKeyHash: "hash-1",
-        })),
-      );
-      expect(tenConcurrent).toEqual(Array(10).fill("replacement-token"));
-      expect(refreshSession).toHaveBeenCalledTimes(1);
+    const server = await import("@/lib/supabase/server");
+    await server.createRouteHandlerClient();
+    const routeGatewayArgs = createHybridAuthorityFetch.mock.calls.at(-1)?.[0];
+    expect(routeGatewayArgs?.recoverSupersededSession).toBeUndefined();
 
-      await vi.advanceTimersByTimeAsync(9_000);
-      await expect(sharedRecovery({
-        currentAccessToken: "original-token",
-        sessionKeyHash: "hash-1",
-      })).resolves.toBe("replacement-token");
-      expect(refreshSession).toHaveBeenCalledTimes(1);
-
-      await vi.advanceTimersByTimeAsync(1_000);
-      await expect(sharedRecovery({
-        currentAccessToken: "original-token",
-        sessionKeyHash: "hash-1",
-      })).resolves.toBe("replacement-token");
-      expect(refreshSession).toHaveBeenCalledTimes(2);
-
-      await server.createServerComponentClient();
-      const componentGatewayArgs = createHybridAuthorityFetch.mock.calls.at(-1)?.[0];
-      expect(componentGatewayArgs?.recoverSupersededSession).toBeUndefined();
-    } finally {
-      vi.useRealTimers();
-    }
+    await server.createServerComponentClient();
+    const componentGatewayArgs = createHybridAuthorityFetch.mock.calls.at(-1)?.[0];
+    expect(componentGatewayArgs?.recoverSupersededSession).toBeUndefined();
+    expect(refreshSession).toHaveBeenCalledTimes(0);
   });
 
-  it.each([
-    [
-      "refresh rejects",
-      () => Promise.reject(new Error("refresh failed")),
-    ],
-    [
-      "refresh returns same token",
-      () => Promise.resolve({
-        data: { session: { access_token: "original-token" } },
-        error: null,
-      }),
-    ],
-    [
-      "refresh returns error payload",
-      () => Promise.resolve({
-        data: { session: null },
-        error: new Error("refresh error"),
-      }),
-    ],
-  ])(
-    "drops failed superseded-session cache entries immediately when %s",
-    async (_label, refreshImpl) => {
-      vi.useFakeTimers();
-      try {
-        getAuthAuthority.mockReturnValue("local");
-        getSupabaseEnv.mockReturnValue({
-          url: "https://auth.mumeok.kr",
-          anonKey: "local-publishable",
-          authority: "local",
-          issuer: "https://auth.mumeok.kr/auth/v1",
-          jwksUrl: "https://auth.mumeok.kr/auth/v1/.well-known/jwks.json",
-        });
-        getServiceRoleKey.mockReturnValue("local-service-secret");
-        const refreshSession = vi.fn()
-          .mockImplementationOnce(refreshImpl)
-          .mockResolvedValue({
-            data: { session: { access_token: "replacement-token" } },
-            error: null,
-          });
-        createServerClient.mockReturnValue({
-          auth: {
-            getSession: vi.fn().mockResolvedValue({
-              data: { session: { access_token: "original-token" } },
-              error: null,
-            }),
-            refreshSession,
-          },
-        });
-        createClient.mockImplementation((_url, _key, options) => {
-          if (options?.global?.headers?.["x-homecook-internal-scope"]) {
-            return { rpc: vi.fn(), from: vi.fn(), storage: {} };
-          }
-          return { from: vi.fn(), rpc: vi.fn(), storage: {} };
-        });
+  it("keeps a browser-refreshed overlap from minting any extra route-handler refreshSession calls", async () => {
+    getAuthAuthority.mockReturnValue("local");
+    getSupabaseEnv.mockReturnValue({
+      url: "https://auth.mumeok.kr",
+      anonKey: "local-publishable",
+      authority: "local",
+      issuer: "https://auth.mumeok.kr/auth/v1",
+      jwksUrl: "https://auth.mumeok.kr/auth/v1/.well-known/jwks.json",
+    });
+    getServiceRoleKey.mockReturnValue("local-service-secret");
 
-        const server = await import("@/lib/supabase/server");
-        await server.createRouteHandlerClient();
-        const sharedRecovery =
-          createHybridAuthorityFetch.mock.calls.at(-1)?.[0]?.recoverSupersededSession;
-        if (!sharedRecovery) {
-          throw new Error("missing route recovery callback");
-        }
-
-        await expect(sharedRecovery({
-          currentAccessToken: "original-token",
-          sessionKeyHash: "hash-immediate-drop",
-        })).resolves.toBeNull();
-        await expect(sharedRecovery({
-          currentAccessToken: "original-token",
-          sessionKeyHash: "hash-immediate-drop",
-        })).resolves.toBe("replacement-token");
-        expect(refreshSession).toHaveBeenCalledTimes(2);
-      } finally {
-        vi.useRealTimers();
-      }
-    },
-  );
-
-  it("fails closed when the superseded-session cache is already at 256 distinct keys", async () => {
-    vi.useFakeTimers();
-    try {
-      getAuthAuthority.mockReturnValue("local");
-      getSupabaseEnv.mockReturnValue({
-        url: "https://auth.mumeok.kr",
-        anonKey: "local-publishable",
-        authority: "local",
-        issuer: "https://auth.mumeok.kr/auth/v1",
-        jwksUrl: "https://auth.mumeok.kr/auth/v1/.well-known/jwks.json",
-      });
-      getServiceRoleKey.mockReturnValue("local-service-secret");
-      const refreshSession = vi.fn().mockResolvedValue({
-        data: { session: { access_token: "replacement-token" } },
-        error: null,
-      });
-      createServerClient.mockReturnValue({
-        auth: {
-          getSession: vi.fn().mockResolvedValue({
-            data: { session: { access_token: "original-token" } },
-            error: null,
-          }),
-          refreshSession,
-        },
-      });
-      createClient.mockImplementation((_url, _key, options) => {
-        if (options?.global?.headers?.["x-homecook-internal-scope"]) {
-          return { rpc: vi.fn(), from: vi.fn(), storage: {} };
-        }
-        return { from: vi.fn(), rpc: vi.fn(), storage: {} };
-      });
-
-      const server = await import("@/lib/supabase/server");
-      await server.createRouteHandlerClient();
-      const sharedRecovery =
-        createHybridAuthorityFetch.mock.calls.at(-1)?.[0]?.recoverSupersededSession;
-      if (!sharedRecovery) {
-        throw new Error("missing route recovery callback");
-      }
-
-      const warmPromises = Array.from({ length: 256 }, (_, index) =>
-        sharedRecovery({
-          currentAccessToken: "original-token",
-          sessionKeyHash: `hash-${index}`,
-        })
-      );
-      await expect(Promise.all(warmPromises)).resolves.toEqual(
-        Array(256).fill("replacement-token"),
-      );
-      await expect(sharedRecovery({
-        currentAccessToken: "original-token",
-        sessionKeyHash: "hash-overflow",
-      })).resolves.toBeNull();
-      expect(refreshSession).toHaveBeenCalledTimes(256);
-
-      await vi.advanceTimersByTimeAsync(10_000);
-      await expect(sharedRecovery({
-        currentAccessToken: "original-token",
-        sessionKeyHash: "hash-overflow",
-      })).resolves.toBe("replacement-token");
-      expect(refreshSession).toHaveBeenCalledTimes(257);
-    } finally {
-      vi.useRealTimers();
-    }
-  });
-
-  it("does not let an expired recovery rejection delete its newer replacement entry", async () => {
-    vi.useFakeTimers();
-    try {
-      getAuthAuthority.mockReturnValue("local");
-      getSupabaseEnv.mockReturnValue({
-        url: "https://auth.mumeok.kr",
-        anonKey: "local-publishable",
-        authority: "local",
-        issuer: "https://auth.mumeok.kr/auth/v1",
-        jwksUrl: "https://auth.mumeok.kr/auth/v1/.well-known/jwks.json",
-      });
-      getServiceRoleKey.mockReturnValue("local-service-secret");
-
-      let rejectExpired!: (error: Error) => void;
-      let resolveReplacement!: (value: unknown) => void;
-      const refreshSession = vi.fn()
-        .mockImplementationOnce(() => new Promise((_resolve, reject) => {
-          rejectExpired = reject;
-        }))
-        .mockImplementationOnce(() => new Promise((resolve) => {
-          resolveReplacement = resolve;
-        }))
-        .mockResolvedValue({
-          data: { session: { access_token: "unexpected-third-token" } },
+    const refreshSession = vi.fn();
+    createServerClient.mockReturnValue({
+      auth: {
+        getSession: vi.fn().mockResolvedValue({
+          data: { session: { access_token: "browser-token-b" } },
           error: null,
-        });
-      createServerClient.mockReturnValue({
-        auth: {
-          getSession: vi.fn().mockResolvedValue({
-            data: { session: { access_token: "original-token" } },
-            error: null,
-          }),
-          refreshSession,
-        },
-      });
-      createClient.mockImplementation((_url, _key, options) => {
-        if (options?.global?.headers?.["x-homecook-internal-scope"]) {
-          return { rpc: vi.fn(), from: vi.fn(), storage: {} };
-        }
-        return { from: vi.fn(), rpc: vi.fn(), storage: {} };
-      });
-
-      const server = await import("@/lib/supabase/server");
-      await server.createRouteHandlerClient();
-      const sharedRecovery =
-        createHybridAuthorityFetch.mock.calls.at(-1)?.[0]?.recoverSupersededSession;
-      if (!sharedRecovery) {
-        throw new Error("missing route recovery callback");
+        }),
+        refreshSession,
+      },
+    });
+    createClient.mockImplementation((_url, _key, options) => {
+      if (options?.global?.headers?.["x-homecook-internal-scope"]) {
+        return { rpc: vi.fn(), from: vi.fn(), storage: {} };
       }
+      return { from: vi.fn(), rpc: vi.fn(), storage: {} };
+    });
 
-      const expired = sharedRecovery({
-        currentAccessToken: "original-token",
-        sessionKeyHash: "hash-late-rejection",
-      });
-      await vi.advanceTimersByTimeAsync(10_000);
-      const replacement = sharedRecovery({
-        currentAccessToken: "original-token",
-        sessionKeyHash: "hash-late-rejection",
-      });
-      rejectExpired(new Error("expired refresh failed late"));
-      await expect(expired).resolves.toBeNull();
+    const server = await import("@/lib/supabase/server");
+    await server.createRouteHandlerClient();
 
-      const joinedReplacement = sharedRecovery({
-        currentAccessToken: "original-token",
-        sessionKeyHash: "hash-late-rejection",
-      });
-      expect(refreshSession).toHaveBeenCalledTimes(2);
-      resolveReplacement({
-        data: { session: { access_token: "replacement-token" } },
-        error: null,
-      });
-      await expect(replacement).resolves.toBe("replacement-token");
-      await expect(joinedReplacement).resolves.toBe("replacement-token");
-    } finally {
-      vi.useRealTimers();
-    }
-  });
-
-  it("does not share a cached recovery across different old tokens in one session", async () => {
-    vi.useFakeTimers();
-    try {
-      getAuthAuthority.mockReturnValue("local");
-      getSupabaseEnv.mockReturnValue({
-        url: "https://auth.mumeok.kr",
-        anonKey: "local-publishable",
-        authority: "local",
-        issuer: "https://auth.mumeok.kr/auth/v1",
-        jwksUrl: "https://auth.mumeok.kr/auth/v1/.well-known/jwks.json",
-      });
-      getServiceRoleKey.mockReturnValue("local-service-secret");
-      const refreshSession = vi.fn()
-        .mockResolvedValueOnce({
-          data: { session: { access_token: "replacement-token-1" } },
-          error: null,
-        })
-        .mockResolvedValueOnce({
-          data: { session: { access_token: "replacement-token-2" } },
-          error: null,
-        });
-      createServerClient.mockReturnValue({
-        auth: {
-          getSession: vi.fn(),
-          refreshSession,
-        },
-      });
-      createClient.mockImplementation((_url, _key, options) => {
-        if (options?.global?.headers?.["x-homecook-internal-scope"]) {
-          return { rpc: vi.fn(), from: vi.fn(), storage: {} };
-        }
-        return { from: vi.fn(), rpc: vi.fn(), storage: {} };
-      });
-
-      const server = await import("@/lib/supabase/server");
-      await server.createRouteHandlerClient();
-      const sharedRecovery =
-        createHybridAuthorityFetch.mock.calls.at(-1)?.[0]?.recoverSupersededSession;
-      if (!sharedRecovery) {
-        throw new Error("missing route recovery callback");
-      }
-
-      await expect(sharedRecovery({
-        currentAccessToken: "old-token-1",
-        sessionKeyHash: "same-session-key-hash",
-      })).resolves.toBe("replacement-token-1");
-      await expect(sharedRecovery({
-        currentAccessToken: "old-token-2",
-        sessionKeyHash: "same-session-key-hash",
-      })).resolves.toBe("replacement-token-2");
-      expect(refreshSession).toHaveBeenCalledTimes(2);
-    } finally {
-      vi.useRealTimers();
-    }
+    const routeGatewayArgs = createHybridAuthorityFetch.mock.calls.at(-1)?.[0];
+    expect(routeGatewayArgs?.recoverSupersededSession).toBeUndefined();
+    expect(refreshSession).toHaveBeenCalledTimes(0);
   });
 
   it("binds each local internal responsibility to an exact gateway scope", async () => {
