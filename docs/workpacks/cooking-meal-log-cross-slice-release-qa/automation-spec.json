@@ -7,7 +7,7 @@
   "merge_policy": "manual",
   "backend": {
     "required_endpoints": [
-      "all official API v1.2.29 routes touched by F0 and successor #1 through #13",
+      "all official API v1.2.39 routes touched by F0 and successor #1 through #13",
       "GET /food-products",
       "GET /food-catalog/search",
       "GET /recipes/pantry-match",
@@ -43,7 +43,10 @@
     ],
     "invariants": [
       "verification-only-no-inline-runtime-contract-or-dependency-change",
-      "all-predecessor-runtime-current-head-gates-before-stage2",
+      "all-predecessor-automated-runtime-merges-retained-at-frozen-base",
+      "overall-manual-activation-lifecycle-remains-pending",
+      "pinned-isolated-local-and-controlled-full-local-read-only-only-with-authority",
+      "cloud-linked-remote-supabase-target-verifier-credential-and-fallback-forbidden-na",
       "exact-repaired-head-evidence-and-separate-tdd-repair-rerun",
       "application-and-provider-function-inventory-complete",
       "application-mutation-public-anon-revoked-and-safe-path",
@@ -71,30 +74,36 @@
       "record-time-timezone-local-date-and-deleted-column-history",
       "consumed-only-first-depletion-xp-and-no-regrant",
       "legacy-product-row-and-reader-floor-without-auto-expiry",
-      "production-staging-provider-mutation-zero",
+      "manual-local-production-mutation-zero-without-separate-authority",
       "current-head-all-started-checks-terminal-green-or-policy-skip"
     ],
     "verify_commands": [
-      "pnpm verify:backend",
-      "pnpm local:reset:demo",
+      "pnpm exec vitest run tests/account-session-generation-foundation.test.ts tests/prepared-food-search-relevance.test.ts tests/product-ingredient-link-foundation.test.ts tests/recipe-content-snapshot-future-propagation.test.ts tests/cooked-batch-weight-ledger.test.ts tests/meal-log-core.test.ts tests/planner-shell-compatibility.test.ts tests/cooked-batch-weight-ui.test.tsx tests/meal-log-ui.test.tsx tests/legacy-product-compat.test.ts",
+      "pnpm verify:local-supabase-runtime:isolated",
       "pnpm verify:security-functions:release",
+      "pnpm verify:backend",
       "pnpm validate:source-of-truth-sync",
       "pnpm validate:workflow-v2",
-      "BRANCH_NAME=docs/cooking-meal-log-cross-slice-release-qa pnpm validate:workpack -- --slice cooking-meal-log-cross-slice-release-qa",
+      "BRANCH_NAME=docs/cooking-meal-log-cross-slice-relock pnpm validate:workpack -- --slice cooking-meal-log-cross-slice-release-qa",
       "node scripts/validate-automation-spec.mjs --slice cooking-meal-log-cross-slice-release-qa",
       "pnpm validate:omo-bookkeeping",
+      "pnpm validate:closeout-sync -- --slice cooking-meal-log-cross-slice-release-qa",
       "git diff --check"
     ],
     "required_test_targets": [
       "tests/cooking-meal-log-cross-slice-release-qa.test.ts",
       "tests/account-session-generation-foundation.test.ts",
-      "tests/product-search-and-effective-ingredient-release.test.ts",
-      "tests/personal-recipe-snapshot-propagation-release.test.ts",
-      "tests/cooking-version-dispatch-and-batch-ledger-release.test.ts",
-      "tests/meal-log-aggregate-and-event-link-release.test.ts",
-      "tests/legacy-rollback-and-tombstone-barrier-release.test.ts",
-      "fresh-local-supabase-migration-replay-and-rls-auth-storage",
-      "merged-exact-sha-local-first-production-rehearsal-inventory",
+      "tests/prepared-food-search-relevance.test.ts",
+      "tests/product-ingredient-link-foundation.test.ts",
+      "tests/recipe-content-snapshot-future-propagation.test.ts",
+      "tests/cooked-batch-weight-ledger.test.ts",
+      "tests/meal-log-core.test.ts",
+      "tests/planner-shell-compatibility.test.ts",
+      "tests/cooked-batch-weight-ui.test.tsx",
+      "tests/meal-log-ui.test.tsx",
+      "tests/legacy-product-compat.test.ts",
+      "pinned-isolated-local-migration-replay-and-rls-auth-storage-data-api",
+      "authorized-controlled-full-local-read-only-inventory-and-checksum",
       "search-287041-explain-route-latency-and-no-n-plus-1"
     ]
   },
@@ -153,7 +162,7 @@
     "design_authority": {
       "ui_risk": "high-risk",
       "anchor_screens": ["HOME", "RECIPE_DETAIL", "PLANNER_WEEK"],
-      "required_screens": ["ACCOUNT_QUARANTINE", "HOME", "RECIPE_DETAIL", "MANUAL_RECIPE_CREATE", "PLANNER_WEEK", "COOK_MODE", "LEFTOVERS", "MEAL_LOG"],
+      "required_screens": [],
       "generator_required": false,
       "generator_artifact": null,
       "critic_required": false,
@@ -192,22 +201,24 @@
     }
   },
   "external_smokes": [
-    "all application-provider function and Auth Hook inventories on exact local production and isolated local rehearsal head",
-    "fresh local migrations replay RLS PostgREST Auth Storage A-B isolation and digests",
-    "account generation cutover quarantine cleanup image lifecycle and owner-signal-zero",
+    "pinned isolated local application-function and Auth Hook inventories",
+    "pinned isolated local migrations replay RLS PostgREST Auth Storage A-B isolation and digests",
+    "authorized controlled full-local read-only account generation quarantine image lifecycle inventory and checksums",
     "search 287041 product relation recipe propagation batch ledger and meal aggregate end-to-end",
     "v1-v2 current-immediate-previous seeded drain rollback and legacy retention matrix",
     "real Chrome eight required screens at 390 320 desktop with accessibility states",
     "independent security DB operations performance code authority Stage5 and Stage6 reviews",
-    "external provider mutation remains intentionally zero while server MacBook local production is the only production authority"
+    "Manual/server-Mac/OAuth/device/AT/full-WCAG and local-production/rehearsal/backup-restore/cutover remain pending until separately authorized",
+    "capability/R/R+1/R+2/required-key/activation remain pending until separately authorized"
   ],
   "blocked_conditions": [
-    "stage1-independent-reviews-not-zero",
+    "stage1-relock-pr-not-merged-or-independent-reviews-not-zero",
     "stage1-author-self-approval-or-claude-use",
-    "predecessor-runtime-or-current-head-gate-not-green-before-stage2",
-    "slice12-meal-log-canonical-design-critique-or-authority-artifact-not-merged-before-stage2",
+    "predecessor-runtime-merge-evidence-regressed-stale-or-different-head",
     "runtime-defect-fixed-inline-or-evidence-not-rerun-on-repaired-head",
     "new-api-db-ui-dependency-or-official-contract-introduced",
+    "cloud-linked-remote-supabase-target-credential-verifier-or-fallback-requested",
+    "manual-authority-missing-for-controlled-full-local-mutation",
     "application-provider-function-or-auth-hook-inventory-incomplete",
     "stale-session-generation-write-or-cutover-cas-fence-quarantine-failure",
     "image-orphan-auto-delete-first-404-terminal-or-dead-letter-bypass",
@@ -219,13 +230,12 @@
     "legacy-row-endpoint-cursor-image-path-orphan-tombstone-without-separate-contract",
     "fixture-only-browser-or-stale-authority-evidence",
     "item-level-n-plus-1-or-unexplained-performance-regression",
-    "production-staging-provider-write-or-unapproved-manual-only-operation",
-    "local-first-verifier-not-merged-exact-sha",
+    "unapproved-manual-only-or-local-production-mutation",
     "current-head-check-pending-absent-stale-failed-or-cancelled"
   ],
   "max_fix_rounds": {
     "backend": 4,
     "frontend": 4
   },
-  "notes": "Stage 1 runs docs validators, focused workflow tests, lint, typecheck, audit and exact-six diff only. Runtime DB/API/browser/performance/telemetry/local-production-rehearsal/authority evidence is future and starts only after all predecessor runtime/current-head gates are green. The slice is verification-only: defects require a separate TDD repair PR and full exact-head evidence rerun. Initial deployment uses server MacBook local production plus isolated local rehearsal; remote verifier/provider barrier/remote migration are N/A until contract-evolution. MEAL_LOG canonical design, critique and authority paths are future #12-owned reservations, not current Stage 0 existence claims; #14 Stage 2 fails closed until #12 actually creates and merges all three and its implementation/current-head gate is green. #14 then reuses predecessor artifacts without a new generator/critic artifact, but fresh 390/320/desktop authority evidence and a final authority report remain mandatory. No external-provider write, R+2 activation, destructive tombstone or legacy orphan deletion is authorized."
+  "notes": "Stage 1 runs exact-six projection tests, SOT/workflow/workpack/automation/OMO/closeout validators, lint, typecheck, audit and diff only. F0/#1-#13 automated/runtime predecessor gate: satisfied at origin/master c5b213152b4a6554f4eaa8714b2292ec2e074e0d, but overall lifecycle is not complete: Manual/server-Mac/OAuth/device/AT/full-WCAG, local-production/rehearsal/backup-restore/cutover and capability/R/R+1/R+2/required-key/activation remain pending. Stage 2 is verification-only, starts only after this relock/reviews merge, uses pinned isolated local first, and must not execute Manual Only or local-production mutations without authority. Cloud/linked/remote Supabase is forbidden/N/A. MEAL_LOG design, critique, authority, runtime and OMO evidence are merged and reused. Defects require a separate failing-test-first TDD repair PR and full rerun on the repaired exact head."
 }
