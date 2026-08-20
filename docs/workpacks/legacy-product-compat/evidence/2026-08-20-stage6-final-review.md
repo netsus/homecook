@@ -41,4 +41,16 @@
 
 The Stage 6 approval projection was synchronized to Draft PR #1371 on projection successor `c68980b379a8850f2fbb828540736afb00b8fc96`; Ready-mode PR-body, template, and real-smoke presence validators passed before publication.
 
+## Internal 6.5 recovery projection repair
+
+- reviewer task: `01a01ebb-fa27-7933-8eae-57203bde9367`
+- reviewed exact head/tree: `bf55e8855ea4da82335c3875858d435b0a6f944e` / `8bb6ce7a1b17eaa0dda3ee08a13bccbb772911fd`
+- verdict: `REQUEST_CHANGES P0/P1/P2=0/0/1`; drift `1`; finding `LPC-I65-P2-001`
+- finding: live PR body retained `rerun 1 recovered`, while canonical recovery still projected `ci_resync_count=0` with stale timestamps.
+- authoritative failed attempt: GitHub Actions run `32358383620`, attempt `1`, exact head `bf55e8855ea4da82335c3875858d435b0a6f944e`, failed because runner port `54322` was already in use.
+- authoritative recovery: attempt `2` completed `success` at `2026-08-20T10:28:03Z`; `security-function-authorization` completed success at `2026-08-20T10:28:02Z`.
+- authoritative PR projection event: PR #1371 `updatedAt=2026-08-20T10:28:46Z` after the same-SHA recovery snapshot was published.
+- canonical repair: `manual_patch_count=0`, `stale_lock_count=0`, `ci_resync_count=1`, `artifact_missing=false`, `last_recovery_at=2026-08-20T10:28:03Z`; projection timestamps `2026-08-20T10:28:46Z`.
+- unchanged: phase `projecting`, approval `codex_approved`, verification/evaluation `passed`, external smokes pending, auto-merge false, Manual `0/7`.
+
 Internal 6.5 must run in a fresh separate task before Ready. Ready/merge/Discord and all server-Mac/OAuth, physical-device/AT/full-WCAG, controlled deploy/drain/fence/revoke, capability, R/R+1/R+2, required-key, production activation and tombstone obligations remain pending.

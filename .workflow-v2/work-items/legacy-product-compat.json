@@ -202,9 +202,9 @@
       "manual_patch_count": 0,
       "manual_handoff": false,
       "stale_lock_count": 0,
-      "ci_resync_count": 0,
+      "ci_resync_count": 1,
       "artifact_missing": false,
-      "last_recovery_at": "2026-08-20T10:13:31Z"
+      "last_recovery_at": "2026-08-20T10:28:03Z"
     },
     "repair_summary": {
       "codex_repairable_count": 7,
@@ -224,9 +224,9 @@
       ]
     },
     "projection_state": {
-      "docs_synced_at": "2026-08-20T10:18:44Z",
-      "status_synced_at": "2026-08-20T10:18:44Z",
-      "pr_body_synced_at": "2026-08-20T10:18:44Z"
+      "docs_synced_at": "2026-08-20T10:28:46Z",
+      "status_synced_at": "2026-08-20T10:28:46Z",
+      "pr_body_synced_at": "2026-08-20T10:28:46Z"
     }
   },
   "out_of_scope": [
@@ -239,5 +239,5 @@
     "New API field status error action or screen; new table/column, generic RPC, RLS relaxation, or direct DML beyond the required narrow additive scoped RPC migration"
   ],
   "open_questions": [],
-  "notes": "Stage 2/3 backend checkpoint merged via PR #1369 as 50e31293e6740b3fdc56d022e12d3b9fe8be4cf7. Stage 4 task 01a01e01-0a0e-7f70-97dd-2e6c8f0012af and Draft PR #1371 implemented optional stable legacy completion keys, payload/target-safe rotation, duplicate delete locking and nested focus restoration without public contract or composition changes. Stage 5 task 01a01e3b-663e-7252-9c3c-0c7b30251c0e approved exact 387f1d688204061c28b60c415135a70e42a07042 with P0/P1/P2 0/0/0. Stage 6 task 01a01e68-fb28-7841-8815-c7685d56cc35 first returned REQUEST_CHANGES 0/2/1, then exact 6387052439623cebef90176944aa5aee7f5ca17a re-review returned 0/0/1 for the PR QA evidence label only. After the PR-body-only label repair and Ready-mode validator pass, the same independent task finalized APPROVE P0/P1/P2 0/0/0, blocker/major/minor 0/0/0, drift 0 and unresolved IDs none on exact tree 4d415e7d81c1bfeada5147f034b6b4c34fd66c89. Design is confirmed; current-head checks are 12 success plus 2 intended Draft skips and merge state CLEAN. Lifecycle remains in_progress; approval codex_approved, evaluation passed round 1, verification passed and auto_merge_eligible=false. Canonical closeout phase is projecting with non-Manual acceptance 40/40, Manual 0/7, required checks passed, external smokes pending and merge gate all_checks_green=true. Internal 6.5, Ready/merge, controlled full-local deploy/drain/fence/revoke, device/AT/full WCAG, server-Mac/OAuth, capability, R/R+1/R+2, required-key and production activation remain pending."
+  "notes": "Stage 2/3 backend checkpoint merged via PR #1369 as 50e31293e6740b3fdc56d022e12d3b9fe8be4cf7. Stage 4 task 01a01e01-0a0e-7f70-97dd-2e6c8f0012af and Draft PR #1371 implemented optional stable legacy completion keys, payload/target-safe rotation, duplicate delete locking and nested focus restoration without public contract or composition changes. Stage 5 task 01a01e3b-663e-7252-9c3c-0c7b30251c0e approved exact 387f1d688204061c28b60c415135a70e42a07042 with P0/P1/P2 0/0/0. Stage 6 task 01a01e68-fb28-7841-8815-c7685d56cc35 first returned REQUEST_CHANGES 0/2/1, then exact 6387052439623cebef90176944aa5aee7f5ca17a re-review returned 0/0/1 for the PR QA evidence label only. After the PR-body-only label repair and Ready-mode validator pass, the same independent task finalized APPROVE P0/P1/P2 0/0/0, blocker/major/minor 0/0/0, drift 0 and unresolved IDs none on exact tree 4d415e7d81c1bfeada5147f034b6b4c34fd66c89. Design is confirmed; current-head checks are 12 success plus 2 intended Draft skips and merge state CLEAN. Lifecycle remains in_progress; approval codex_approved, evaluation passed round 1, verification passed and auto_merge_eligible=false. Canonical closeout phase is projecting with non-Manual acceptance 40/40, Manual 0/7, required checks passed, external smokes pending and merge gate all_checks_green=true. Internal 6.5 task 01a01ebb-fa27-7933-8eae-57203bde9367 reviewed exact bf55e8855ea4da82335c3875858d435b0a6f944e / tree 8bb6ce7a1b17eaa0dda3ee08a13bccbb772911fd and returned REQUEST_CHANGES 0/0/1, drift 1, finding LPC-I65-P2-001 because same-SHA CI recovery was missing from canonical recovery_summary. GitHub Actions run 32358383620 attempt 1 failed on runner port 54322 collision; attempt 2 completed success at 2026-08-20T10:28:03Z and the recovery PR projection updated at 2026-08-20T10:28:46Z. Canonical recovery now records ci_resync_count 1 with manual_patch/stale_lock 0/0. Internal 6.5 re-review, Ready/merge, controlled full-local deploy/drain/fence/revoke, device/AT/full WCAG, server-Mac/OAuth, capability, R/R+1/R+2, required-key and production activation remain pending."
 }
