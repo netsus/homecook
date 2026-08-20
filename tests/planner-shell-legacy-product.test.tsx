@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import React from "react";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -160,8 +160,12 @@ describe("legacy product plan compatibility", () => {
     await user.click(screen.getByRole("button", { name: "계획에서 삭제" }));
     await user.click(screen.getByRole("button", { name: "삭제" }));
 
-    expect(screen.getByRole("dialog", { name: "완제품 계획 삭제" }))
-      .toBeTruthy();
+    const dialog = screen.getByRole("dialog", { name: "완제품 계획 삭제" });
+    const alert = within(dialog).getByRole("alert");
+    expect(alert.hidden).toBe(false);
+    expect(alert.getAttribute("aria-hidden")).toBeNull();
+    expect(alert.textContent).toContain("삭제 실패");
+    expect(dialog.contains(document.activeElement)).toBe(true);
   });
 
   it("blocks duplicate destructive calls while delete is pending", async () => {

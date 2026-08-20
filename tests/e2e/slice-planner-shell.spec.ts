@@ -444,9 +444,13 @@ test.describe("planner-shell Stage 4", () => {
     const confirm = page.getByRole("dialog", { name: "완제품 계획 삭제" });
     await confirm.getByRole("button", { name: "삭제" }).click();
 
-    await expect(page.getByRole("alert")).toContainText(
+    await expect(confirm.getByRole("alert")).toBeVisible();
+    await expect(confirm.getByRole("alert")).toContainText(
       "완제품 계획을 삭제하지 못했어요.",
     );
+    expect(await confirm.evaluate((dialog) => (
+      dialog.contains(document.activeElement)
+    ))).toBe(true);
     await expect(confirm).toBeVisible();
     await expect(page.getByTestId("legacy-product-detail-sheet")).toBeAttached();
     await expect(page.getByTestId("legacy-product-legacy-product-1"))

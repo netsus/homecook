@@ -50,6 +50,7 @@ export function LegacyProductPlanSection({
   );
   const [restoringDelete, setRestoringDelete] = useState(false);
   const [deletePending, setDeletePending] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const deleteInFlightRef = useRef(false);
   const deleteLocked = isDeleting || deletePending;
 
@@ -89,13 +90,17 @@ export function LegacyProductPlanSection({
   async function confirmDelete() {
     if (!deletingEntry || deleteInFlightRef.current) return;
     deleteInFlightRef.current = true;
+    setDeleteError(null);
     setDeletePending(true);
     try {
       await onDelete(deletingEntry.id);
       setDeletingEntry(null);
       setSelectedEntry(null);
-    } catch {
-      // The parent owns the user-facing API error; keep confirmation context open.
+    } catch (error) {
+      setDeleteError(
+        error instanceof Error ? error.message : "완제품 계획을 삭제하지 못했어요.",
+      );
+      deleteCloseRef.current?.focus();
     } finally {
       deleteInFlightRef.current = false;
       setDeletePending(false);
@@ -128,6 +133,7 @@ export function LegacyProductPlanSection({
               key={entry.id}
               onClick={(event) => {
                 setRestoringDelete(false);
+                setDeleteError(null);
                 detailInvokerRef.current = event.currentTarget;
                 setDetailReturnFocusTarget(() => detailInvokerRef.current);
                 setSelectedEntry(entry);
@@ -158,7 +164,10 @@ export function LegacyProductPlanSection({
             <button
               className="min-h-11 w-full rounded-[var(--radius-control)] border border-[var(--danger)] px-4 text-sm font-bold text-[var(--danger)]"
               disabled={deleteLocked}
-              onClick={() => setDeletingEntry(selectedEntry)}
+              onClick={() => {
+                setDeleteError(null);
+                setDeletingEntry(selectedEntry);
+              }}
               ref={detailDeleteRef}
               type="button"
             >
@@ -209,12 +218,18 @@ export function LegacyProductPlanSection({
               cancelDisabled={deleteLocked}
               confirmDisabled={deleteLocked}
               confirmLabel={deleteLocked ? "삭제 중" : "삭제"}
-              onCancel={() => setDeletingEntry(null)}
+              onCancel={() => {
+                setDeleteError(null);
+                setDeletingEntry(null);
+              }}
               onConfirm={() => void confirmDelete()}
             />
           }
           onClose={() => {
-            if (!deleteLocked) setDeletingEntry(null);
+            if (!deleteLocked) {
+              setDeleteError(null);
+              setDeletingEntry(null);
+            }
           }}
           panelRef={deletePanelRef}
           testId="legacy-product-delete-confirm"
@@ -223,6 +238,14 @@ export function LegacyProductPlanSection({
           <p className="text-sm text-[var(--foreground)]">
             <strong>{deletingEntry.product_name}</strong> 계획을 삭제할까요?
           </p>
+          {deleteError ? (
+            <p
+              className="mt-3 rounded-[var(--radius-control)] border border-[var(--danger-border)] bg-[var(--danger-soft)] px-3 py-2 text-sm text-[var(--danger-strong)]"
+              role="alert"
+            >
+              {deleteError}
+            </p>
+          ) : null}
         </AppConfirmDialog>
       ) : null}
     </>
