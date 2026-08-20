@@ -2754,7 +2754,7 @@
       "id": "cooking-meal-log-cross-slice-release-qa",
       "preset": "vertical-slice-strict",
       "branch": "docs/cooking-meal-log-cross-slice-relock",
-      "pr_path": "pending",
+      "pr_path": "https://github.com/netsus/homecook/pull/1373",
       "lifecycle": "planned",
       "approval_state": "not_started",
       "verification_status": "pending",
@@ -2771,7 +2771,7 @@
         "pnpm audit --audit-level high",
         "git diff --check"
       ],
-      "notes": "Roadmap is docs while workflow lifecycle stays planned/not_started/pending/not_started. F0/#1-#13 automated/runtime predecessor gate: satisfied at origin/master c5b213152b4a6554f4eaa8714b2292ec2e074e0d, but overall lifecycle is not complete: Manual/server-Mac/OAuth/device/AT/full-WCAG, local-production/rehearsal/backup-restore/cutover and capability/R/R+1/R+2/required-key/activation remain pending. Stage 2 starts only after this relock and separate internal 1.5/security-DB-operations/five-axis/design-authority-plan reviews merge. It is verification-only, uses pinned isolated local first, and Stage 2 must not execute Manual Only or local-production mutations without authority. Cloud/linked/remote Supabase is forbidden/N/A. MEAL_LOG design/runtime/OMO and #13 runtime/OMO evidence are merged. Defects require a separate failing-test-first TDD repair PR and exact-head rerun.",
+      "notes": "Live Draft PR #1373 remains lifecycle planned, approval not_started, verification pending and evaluation not_started. Stage 1 current gate: internal1.5 01a01f2e-ae07-7f42-88be-87727228702a REQUEST_CHANGES 0/2/1; security/DB/operations 01a01f2e-b2ed-7f32-bbaf-204b58613435 APPROVE 0/0/0; five-axis 01a01f2e-ba20-7022-8b3b-5b90d15572d0 REQUEST_CHANGES 0/3/1; design-authority-plan 01a01f2e-bf69-7f23-9c7c-7982855195bc REQUEST_CHANGES 0/2/1. These are Stage 1 narrative facts, not runtime checklist IDs. Docs repair budget max 3; backend/frontend inline fix rounds 0/0. F0/#1-#13 automated/runtime predecessor gate is satisfied at c5b21315 while overall Manual/activation lifecycle remains pending. Stage 2 is verification-only; defects require a separate failing-test-first TDD repair PR and full rerun after its merge. After Stage 4 artifacts one FINAL_EVIDENCE_SHA must receive the complete backend/isolated/security/performance/rollback + browser/design bundle before Stage 6. Eight screens reuse merged non-null design/critique/authority pointers. HOME extra file is a semantic-no-op exact-keyword discoverability addendum for existing brand CTA and rail-local/page-overflow-zero rules; fresh design-plan re-review is required. Cloud/linked/remote Supabase and unapproved local-production mutation remain forbidden/N/A.",
       "evaluation_status": "not_started",
       "evaluation_round": 0,
       "last_evaluator_result": null,

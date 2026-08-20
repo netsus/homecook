@@ -48,6 +48,8 @@
       "pinned-isolated-local-and-controlled-full-local-read-only-only-with-authority",
       "cloud-linked-remote-supabase-target-verifier-credential-and-fallback-forbidden-na",
       "exact-repaired-head-evidence-and-separate-tdd-repair-rerun",
+      "final-evidence-sha-after-stage4-artifacts-and-full-cross-lane-rerun-before-stage6",
+      "docs-repair-budget-max-3-and-backend-frontend-inline-fix-rounds-zero",
       "application-and-provider-function-inventory-complete",
       "application-mutation-public-anon-revoked-and-safe-path",
       "provider-baseline-immutable-and-data-api-negative",
@@ -79,8 +81,18 @@
     ],
     "verify_commands": [
       "pnpm exec vitest run tests/account-session-generation-foundation.test.ts tests/prepared-food-search-relevance.test.ts tests/product-ingredient-link-foundation.test.ts tests/recipe-content-snapshot-future-propagation.test.ts tests/cooked-batch-weight-ledger.test.ts tests/meal-log-core.test.ts tests/planner-shell-compatibility.test.ts tests/cooked-batch-weight-ui.test.tsx tests/meal-log-ui.test.tsx tests/legacy-product-compat.test.ts",
+      "pnpm exec vitest run tests/recipe-visibility-read-hardening.test.ts tests/recipe-visibility-routes.test.ts tests/recipe-visibility-security.test.ts tests/recipe-visibility-consumers.test.tsx",
+      "pnpm exec vitest run tests/recipe-snapshot-authority.test.ts tests/recipe-snapshot-security.test.ts tests/recipe-snapshot-consumers.test.tsx tests/recipe-snapshot-readers.test.ts",
+      "pnpm exec vitest run tests/personal-recipe-editor-contract.test.ts tests/personal-recipe-editor-permissions.test.ts tests/personal-recipe-editor-shell.test.tsx tests/personal-recipe-editor-full-local-verifier.test.ts",
+      "pnpm exec vitest run tests/personal-recipe-customization-write-core.test.ts tests/personal-recipe-customization-write-security.test.ts tests/personal-recipe-customization-write-idempotency.test.ts tests/personal-recipe-customization-write-account-delete.test.ts",
+      "mkdir -p .artifacts/cooking-meal-log-cross-slice-release-qa",
       "pnpm verify:local-supabase-runtime:isolated",
+      "pnpm exec vitest run tests/account-session-generation-postgres.integration.test.ts tests/recipe-visibility-read-hardening-postgres.integration.test.ts tests/recipe-snapshot-authority-postgres.integration.test.ts tests/personal-recipe-customization-write-core-postgres.integration.test.ts tests/recipe-content-snapshot-future-propagation-postgres.integration.test.ts tests/cooked-batch-weight-ledger-postgres.integration.test.ts tests/meal-log-core-postgres.integration.test.ts tests/legacy-product-compat-postgres.integration.test.ts --reporter=json --outputFile=.artifacts/cooking-meal-log-cross-slice-release-qa/db-security-vitest.json",
       "pnpm verify:security-functions:release",
+      "pnpm perf:prepared-food-search-relevance",
+      "node -e \"const fs=require('node:fs');const j=JSON.parse(fs.readFileSync('.artifacts/prepared-food-search-relevance/performance-summary.json','utf8'));if(!(j.recall_at_20>=0.90&&j.precision_at_20>=0.75&&j.db_p95_ms<=300&&j.route_p95_ms<=600))process.exit(1)\"",
+      "node -e \"const fs=require('node:fs');const j=JSON.parse(fs.readFileSync('.artifacts/cooking-meal-log-cross-slice-release-qa/query-count-summary.json','utf8'));if(!(j.list20_query_count<=j.list1_query_count+1&&j.item_level_n_plus_one===0))process.exit(1)\"",
+      "pnpm exec vitest run tests/cooking-version-dispatch-compat.test.ts tests/compatibility-tombstone-gates.test.ts tests/snapshot-v2-session-attempts.test.ts tests/snapshot-v2-complete.test.ts tests/legacy-product-compat.test.ts --reporter=json --outputFile=.artifacts/cooking-meal-log-cross-slice-release-qa/rollback-vitest.json",
       "pnpm verify:backend",
       "pnpm validate:source-of-truth-sync",
       "pnpm validate:workflow-v2",
@@ -91,20 +103,26 @@
       "git diff --check"
     ],
     "required_test_targets": [
+      "F0 account-session-generation-foundation@a10293e0cf17c4c19204e870024e8fe745e362e3 -> tests/account-session-generation-foundation.test.ts",
+      "#1 prepared-food-search-relevance@19f25aae4806d2de584f4508bce88643c176705a -> tests/prepared-food-search-relevance.test.ts",
+      "#2 product-ingredient-link-foundation@5e9773f5e715e7d63132d7f6b8fadcaafd4b76a0 -> tests/product-ingredient-link-foundation.test.ts",
+      "#3 recipe-visibility-read-hardening@8085914cb26e9b927fc973c99318c15d9dee86ce -> tests/recipe-visibility-read-hardening.test.ts",
+      "#4 recipe-snapshot-authority-foundation@5413b6adc42d0e8c45dc55cafad2b076b9bd61a0 -> tests/recipe-snapshot-authority.test.ts",
+      "#5 personal-recipe-editor-decoupling@bb870dd0cba5ac52b6d9ad223db2a2935c00bcb9 -> tests/personal-recipe-editor-contract.test.ts",
+      "#6 personal-recipe-customization-write-core@05683e4d1cf95c4cc3b9a41eb3fa7857b58a3d2d -> tests/personal-recipe-customization-write-core.test.ts",
+      "#7 recipe-content-snapshot-future-propagation@2173737e8ea2eec2297e1cc0227ce4f2c27c50b9 -> tests/recipe-content-snapshot-future-propagation.test.ts",
+      "#8 cooked-batch-weight-ledger@c16102a3072e929e45bb24a69464cd3110d03db5 -> tests/cooked-batch-weight-ledger.test.ts",
+      "#9 meal-log-core@8ba3fa5a2a198eb4f9c19d59cea5f6ccc52fdd4f -> tests/meal-log-core.test.ts",
+      "#10 planner-shell@2185b59d1b460dac916aa4a4a4a5e061c8b795f0 -> tests/planner-shell-compatibility.test.ts",
+      "#11 cooked-batch-weight-ui@7c7d25a1d4deb930ddcf85611bb57f5fe14f00a0 -> tests/cooked-batch-weight-ui.test.tsx",
+      "#12 meal-log-ui@358450e44da691256b0eeb51d8ae131a520b6cbd -> tests/meal-log-ui.test.tsx",
+      "#13 legacy-product-compat@da52e64d84eef7593bd60898018c2b65acad0f46 -> tests/legacy-product-compat.test.ts",
       "tests/cooking-meal-log-cross-slice-release-qa.test.ts",
-      "tests/account-session-generation-foundation.test.ts",
-      "tests/prepared-food-search-relevance.test.ts",
-      "tests/product-ingredient-link-foundation.test.ts",
-      "tests/recipe-content-snapshot-future-propagation.test.ts",
-      "tests/cooked-batch-weight-ledger.test.ts",
-      "tests/meal-log-core.test.ts",
-      "tests/planner-shell-compatibility.test.ts",
-      "tests/cooked-batch-weight-ui.test.tsx",
-      "tests/meal-log-ui.test.tsx",
-      "tests/legacy-product-compat.test.ts",
-      "pinned-isolated-local-migration-replay-and-rls-auth-storage-data-api",
-      "authorized-controlled-full-local-read-only-inventory-and-checksum",
-      "search-287041-explain-route-latency-and-no-n-plus-1"
+      ".artifacts/cooking-meal-log-cross-slice-release-qa/db-security-vitest.json skipped-failed=0-0",
+      ".artifacts/prepared-food-search-relevance/performance-summary.json Recall@20 >= 0.90 Precision@20 >= 0.75 DB p95 <= 300ms route p95 <= 600ms",
+      ".artifacts/cooking-meal-log-cross-slice-release-qa/query-count-summary.json list20_query_count <= list1_query_count + 1 item-level N+1 = 0",
+      ".artifacts/cooking-meal-log-cross-slice-release-qa/rollback-vitest.json skipped-failed=0-0",
+      ".artifacts/cooking-meal-log-cross-slice-release-qa/final-evidence-sha.txt equals git rev-parse FINAL_EVIDENCE_SHA"
     ]
   },
   "frontend": {
@@ -119,19 +137,14 @@
       "MEAL_LOG:day-aggregate-source-add-edit-delete-and-deleted-column-history"
     ],
     "required_states": [
-      "loading",
-      "empty",
-      "error",
-      "unauthorized",
-      "read-only",
-      "partial",
-      "unavailable",
-      "pending",
-      "replay",
-      "conflict",
-      "quarantined",
-      "legacy-compatible",
-      "rollback-drain"
+      "ACCOUNT_QUARANTINE=loading|error|unauthorized|maintenance|cleanup_pending|pending|replay|conflict|auth-absent-support-only",
+      "HOME=loading|empty|error|recipe-only|private-quarantined-deleted-nondisclosure",
+      "RECIPE_DETAIL=loading|error|unauthorized|public-read-only|owner-edit-delete|future-impact-conflict",
+      "MANUAL_RECIPE_CREATE=loading|error|unauthorized|validation|dirty-state|managed-image-pending-cancel-error",
+      "PLANNER_WEEK=loading|empty|error|unauthorized|completed-shopping-read-only|legacy-product-read-only-delete",
+      "COOK_MODE=loading|error|unauthorized|maintenance|cancelled-read-only|completed-read-only|missing|unrecoverable",
+      "LEFTOVERS=loading|empty|error|unauthorized|pending|replay|conflict|missing|unrecoverable|depleted-read-only",
+      "MEAL_LOG=loading|empty|error|unauthorized|partial|unavailable|deleted-column|missing|unrecoverable|pending|replay|conflict"
     ],
     "verify_commands": [
       "pnpm verify:frontend:pr",
@@ -143,7 +156,9 @@
       "pnpm qa:eval -- --checklist .artifacts/qa/cooking-meal-log-cross-slice-release-qa/latest/exploratory-checklist.json --report .artifacts/qa/cooking-meal-log-cross-slice-release-qa/latest/exploratory-report.json",
       "pnpm validate:exploratory-qa-evidence -- --slice cooking-meal-log-cross-slice-release-qa",
       "pnpm validate:authority-evidence-presence -- --slice cooking-meal-log-cross-slice-release-qa",
-      "pnpm validate:closeout-sync -- --slice cooking-meal-log-cross-slice-release-qa"
+      "pnpm validate:closeout-sync -- --slice cooking-meal-log-cross-slice-release-qa",
+      "test -z \"$(git status --porcelain)\" && mkdir -p .artifacts/cooking-meal-log-cross-slice-release-qa && git rev-parse HEAD > .artifacts/cooking-meal-log-cross-slice-release-qa/final-evidence-sha.txt",
+      "test \"$(cat .artifacts/cooking-meal-log-cross-slice-release-qa/final-evidence-sha.txt)\" = \"$(git rev-parse HEAD)\""
     ],
     "playwright_projects": ["mobile-default", "mobile-narrow", "desktop"],
     "artifact_assertions": [
@@ -157,16 +172,28 @@
       "leftovers-weighted-unweighed-depletion-reasons",
       "meal-log-day-meal-aggregate-and-exact-source-mutations",
       "keyboard-focus-44px-landmarks-wrap-and-overflow",
-      "fresh-exact-head-exploratory-eval-and-authority-report"
+      "fresh-exact-head-exploratory-eval-and-authority-report",
+      "design-reuse:ACCOUNT_QUARANTINE|design=ui/designs/ACCOUNT_QUARANTINE.md|critic=ui/designs/critiques/ACCOUNT_QUARANTINE-critique.md|authority=ui/designs/authority/ACCOUNT_QUARANTINE-authority.md",
+      "design-reuse:HOME|design=ui/designs/HOME.md|critic=ui/designs/critiques/HOME-service-about-guide-critique.md|authority=ui/designs/authority/HOME-service-brand-image-assets-authority.md",
+      "home-reuse-existing-primary-cta=ui/designs/HOME.md#Empty-Error---brand-CTA",
+      "home-reuse-existing-scroll-containment=ui/designs/HOME.md#rail-overflow-x-auto|page-overflow-0|document-scrollWidth-clientWidth",
+      "home-discoverability-addendum-semantic-no-op=no-new-composition-behavior-interaction-authority-verdict",
+      "design-reuse:RECIPE_DETAIL|design=ui/designs/RECIPE_DETAIL.md|critic=ui/designs/critiques/recipe-content-snapshot-future-propagation-design-critic.md|authority=ui/designs/authority/recipe-content-snapshot-future-propagation-authority.md",
+      "design-reuse:MANUAL_RECIPE_CREATE|design=ui/designs/MANUAL_RECIPE_CREATE.md|critic=ui/designs/critiques/MANUAL_RECIPE_CREATE-critique.md|authority=ui/designs/authority/DESIGN_POLISH_SLICE5_MANUAL_YOUTUBE-authority.md",
+      "design-reuse:PLANNER_WEEK|design=ui/designs/PLANNER_WEEK.md|critic=ui/designs/critiques/PLANNER_WEEK-critique.md|authority=ui/designs/authority/PLANNER_WEEK-authority.md",
+      "design-reuse:COOK_MODE|design=ui/designs/COOK_MODE.md|critic=ui/designs/critiques/COOK_MODE-cooked-batch-weight-ui-critique.md|authority=docs/workpacks/cooked-batch-weight-ui/evidence/2026-08-10-final-authority-p2-repair-rereview.md",
+      "design-reuse:LEFTOVERS|design=ui/designs/LEFTOVERS.md|critic=ui/designs/critiques/LEFTOVERS-cooked-batch-weight-ui-critique.md|authority=docs/workpacks/cooked-batch-weight-ui/evidence/2026-08-10-final-authority-p2-repair-rereview.md",
+      "design-reuse:MEAL_LOG|design=ui/designs/MEAL_LOG.md|critic=ui/designs/critiques/MEAL_LOG-critique.md|authority=ui/designs/authority/MEAL_LOG-authority.md",
+      "final-evidence-sha=.artifacts/cooking-meal-log-cross-slice-release-qa/final-evidence-sha.txt-after-stage4-artifacts-before-stage6"
     ],
     "design_authority": {
       "ui_risk": "high-risk",
       "anchor_screens": ["HOME", "RECIPE_DETAIL", "PLANNER_WEEK"],
-      "required_screens": [],
+      "required_screens": ["ACCOUNT_QUARANTINE", "HOME", "RECIPE_DETAIL", "MANUAL_RECIPE_CREATE", "PLANNER_WEEK", "COOK_MODE", "LEFTOVERS", "MEAL_LOG"],
       "generator_required": false,
-      "generator_artifact": null,
+      "generator_artifact": "ui/designs/ACCOUNT_QUARANTINE.md",
       "critic_required": false,
-      "critic_artifact": null,
+      "critic_artifact": "ui/designs/critiques/ACCOUNT_QUARANTINE-critique.md",
       "authority_required": true,
       "stage4_evidence_requirements": [
         "ui/designs/evidence/cooking-meal-log-cross-slice-release-qa/ACCOUNT_QUARANTINE-mobile-default.png",
@@ -193,9 +220,24 @@
         "ui/designs/evidence/cooking-meal-log-cross-slice-release-qa/MEAL_LOG-mobile-default.png",
         "ui/designs/evidence/cooking-meal-log-cross-slice-release-qa/MEAL_LOG-mobile-narrow.png",
         "ui/designs/evidence/cooking-meal-log-cross-slice-release-qa/MEAL_LOG-desktop.png",
+        "ui/designs/evidence/cooking-meal-log-cross-slice-release-qa/ACCOUNT_QUARANTINE-state-matrix.json",
+        "ui/designs/evidence/cooking-meal-log-cross-slice-release-qa/HOME-state-matrix.json",
+        "ui/designs/evidence/cooking-meal-log-cross-slice-release-qa/RECIPE_DETAIL-state-matrix.json",
+        "ui/designs/evidence/cooking-meal-log-cross-slice-release-qa/MANUAL_RECIPE_CREATE-state-matrix.json",
+        "ui/designs/evidence/cooking-meal-log-cross-slice-release-qa/PLANNER_WEEK-state-matrix.json",
+        "ui/designs/evidence/cooking-meal-log-cross-slice-release-qa/COOK_MODE-state-matrix.json",
+        "ui/designs/evidence/cooking-meal-log-cross-slice-release-qa/LEFTOVERS-state-matrix.json",
+        "ui/designs/evidence/cooking-meal-log-cross-slice-release-qa/MEAL_LOG-state-matrix.json",
         "ui/designs/evidence/cooking-meal-log-cross-slice-release-qa/manifest.json"
       ],
       "authority_report_paths": [
+        "ui/designs/authority/ACCOUNT_QUARANTINE-authority.md",
+        "ui/designs/authority/HOME-service-brand-image-assets-authority.md",
+        "ui/designs/authority/recipe-content-snapshot-future-propagation-authority.md",
+        "ui/designs/authority/DESIGN_POLISH_SLICE5_MANUAL_YOUTUBE-authority.md",
+        "ui/designs/authority/PLANNER_WEEK-authority.md",
+        "docs/workpacks/cooked-batch-weight-ui/evidence/2026-08-10-final-authority-p2-repair-rereview.md",
+        "ui/designs/authority/MEAL_LOG-authority.md",
         "ui/designs/authority/cooking-meal-log-cross-slice-release-qa-authority.md"
       ]
     }
@@ -234,8 +276,8 @@
     "current-head-check-pending-absent-stale-failed-or-cancelled"
   ],
   "max_fix_rounds": {
-    "backend": 4,
-    "frontend": 4
+    "backend": 0,
+    "frontend": 0
   },
-  "notes": "Stage 1 runs exact-six projection tests, SOT/workflow/workpack/automation/OMO/closeout validators, lint, typecheck, audit and diff only. F0/#1-#13 automated/runtime predecessor gate: satisfied at origin/master c5b213152b4a6554f4eaa8714b2292ec2e074e0d, but overall lifecycle is not complete: Manual/server-Mac/OAuth/device/AT/full-WCAG, local-production/rehearsal/backup-restore/cutover and capability/R/R+1/R+2/required-key/activation remain pending. Stage 2 is verification-only, starts only after this relock/reviews merge, uses pinned isolated local first, and must not execute Manual Only or local-production mutations without authority. Cloud/linked/remote Supabase is forbidden/N/A. MEAL_LOG design, critique, authority, runtime and OMO evidence are merged and reused. Defects require a separate failing-test-first TDD repair PR and full rerun on the repaired exact head."
+  "notes": "Stage 1 runs exact-six projection tests, SOT/workflow/workpack/automation/OMO/closeout validators, lint, typecheck, audit and diff only; docs repair budget max 3. F0/#1-#13 automated/runtime predecessor gate: satisfied at origin/master c5b213152b4a6554f4eaa8714b2292ec2e074e0d, but overall lifecycle is not complete: Manual/server-Mac/OAuth/device/AT/full-WCAG, local-production/rehearsal/backup-restore/cutover and capability/R/R+1/R+2/required-key/activation remain pending. Stage 2 is verification-only, uses pinned isolated local first, and backend/frontend inline fix rounds are 0/0. Defects require a separate failing-test-first TDD repair PR and full rerun after its merge. After Stage 4 artifacts, one FINAL_EVIDENCE_SHA must receive the complete backend/isolated/security/performance/rollback + browser/design bundle before Stage 6. Cloud/linked/remote Supabase is forbidden/N/A. generator_required=false and critic_required=false reuse the non-null merged 8-screen artifact index; no new generator/critic composition is authorized."
 }

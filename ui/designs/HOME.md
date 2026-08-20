@@ -11,6 +11,8 @@
 
 > **2026-07-13 HOME 서비스명 lockup superseding addendum:** HOME에 한해 mobile `HomeAppBar`와 desktop HOME `WebTopNav`의 브랜드 영역을 `무먹` 아래 작은 `무엇을 먹든`이 놓이는 세로 2단 lockup으로 확장한다. 오른쪽 inline 배치는 사용하지 않는다. 다른 화면 AppBar/WebTopNav/좁은 내비게이션은 `무먹` 단독을 유지한다. mobile 320px에서 보조 이름 한 줄·WCAG AA 대비·중복 낭독 방지, desktop nav 높이/탭 위치/interaction 보존을 잠근다. 기존 evidence는 수정하지 않고 `service-brand-home-lockup` Stage 4의 390/320/1280 before/after와 별도 authority report로 검증한다.
 
+> **#14 merged-artifact reuse discoverability (semantic no-op):** 기존 HOME 상태 hierarchy의 `primary CTA`는 이미 정의된 empty `[필터 초기화]`와 error `[다시 시도]`의 `--brand CTA`다. 기존 `scroll containment`는 guide/theme rail 내부의 localized `overflow-x: auto`만 허용하고 page-level horizontal overflow `0` 및 `document.documentElement.scrollWidth === clientWidth`를 유지하는 규칙이다. 이 addendum은 기존 CTA/rail/page-overflow 규칙에 validator가 찾는 이름을 붙일 뿐 새 composition, behavior, interaction 또는 authority verdict를 추가·변경하지 않는다.
+
 ---
 
 ## 레이아웃 와이어프레임 (v1.4.0 — H1 carousel strip)

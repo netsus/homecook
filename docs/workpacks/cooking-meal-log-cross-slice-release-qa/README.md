@@ -50,12 +50,35 @@ automated/runtime predecessor gate: satisfied at the frozen base above. This doe
 
 Stage 2 entry still requires this relock PR merge, separate internal 1.5/security-DB-operations/five-axis/design-authority-plan zero-finding reviews, and terminal current-head checks. A later predecessor repair or evidence invalidation fails the gate closed and requires this table to be relocked again.
 
+## Stage 1 Current Gate
+
+- Draft PR: `https://github.com/netsus/homecook/pull/1373`
+- internal 1.5 `01a01f2e-ae07-7f42-88be-87727228702a`: `REQUEST_CHANGES 0/2/1`; this author repair addresses all three findings.
+- security/DB/operations `01a01f2e-b2ed-7f32-bbaf-204b58613435`: `APPROVE 0/0/0`; preserved unchanged.
+- five-axis `01a01f2e-ba20-7022-8b3b-5b90d15572d0`: `REQUEST_CHANGES 0/3/1`; this author repair addresses all four findings.
+- design-authority-plan `01a01f2e-bf69-7f23-9c7c-7982855195bc`: `REQUEST_CHANGES 0/2/1`; this author repair restores the complete 8-screen reuse contract.
+- reviewer verdict, doc validators and RED/GREEN counts are Stage 1 narrative/current-gate evidence, not Stage 2 runtime checklist IDs. Fresh same-task exact-head re-reviews remain required.
+- repair budget: docs repair budget max 3; backend/frontend inline repair rounds `0/0`. Runtime defect는 separate failing-test-first TDD repair PR로 이동하고 full rerun after its merge가 필요하다.
+
 ## Backend First Contract
 
 - request/query/path, response wrapper, status, error, ownership, idempotency and state transitions remain exactly those in official API v1.2.39 and predecessor workpacks.
 - Stage 2 is verification-only. It starts with deterministic tests and pinned isolated local Supabase, and may use controlled full-local read-only transactions only after exact target identity, backup freshness and authority are recorded.
 - Stage 2 must not execute Manual Only or local-production mutations. A necessary mutation becomes an explicit blocker until separately authorized.
 - any defect stops release verification, opens a separate failing-test-first TDD repair PR, merges it with independent review/current-head green, and reruns affected plus final evidence on the repaired exact head.
+
+### Final Evidence SHA Contract
+
+- Stage 4의 8-screen runtime artifacts가 commit된 clean head를 하나의 `FINAL_EVIDENCE_SHA`로 고정하고 `.artifacts/cooking-meal-log-cross-slice-release-qa/final-evidence-sha.txt`에 기록한다.
+- Stage 2/3의 backend/isolated/security/performance/rollback bundle과 Stage 4/5의 browser/design bundle을 모두 이 commit에서 다시 실행한다. earlier Stage 2 head의 green만으로 Stage 6에 들어가지 않는다.
+- machine evidence paths:
+  - DB/security: `.artifacts/cooking-meal-log-cross-slice-release-qa/db-security-vitest.json`
+  - performance: `.artifacts/prepared-food-search-relevance/performance-summary.json`
+  - query count: `.artifacts/cooking-meal-log-cross-slice-release-qa/query-count-summary.json`
+  - rollback: `.artifacts/cooking-meal-log-cross-slice-release-qa/rollback-vitest.json`
+- performance thresholds: Recall@20 >= 0.90, Precision@20 >= 0.75, DB p95 <= 300ms, route p95 <= 600ms.
+- N+1 ceiling: `list20_query_count <= list1_query_count + 1`, `item-level N+1 = 0`; input item 수에 비례하는 SQL/HTTP fan-out은 blocker다.
+- complete backend/isolated/security/performance/rollback + browser/design bundle must be terminal green on `FINAL_EVIDENCE_SHA` before Stage 6. 이후 repair가 필요하면 별도 TDD PR merge 뒤 새 SHA를 고정하고 전체를 다시 실행한다.
 
 ## Frontend Delivery Mode
 
@@ -64,12 +87,40 @@ Stage 2 entry still requires this relock PR merge, separate internal 1.5/securit
 - fresh real Chrome evidence at 390px, 320px and desktop is Stage 4 evidence, not Stage 1 evidence.
 - fixture screenshots never substitute for authorized real local stack evidence.
 
+### Per-screen exact state matrix
+
+| Screen | Required exact states |
+| --- | --- |
+| `ACCOUNT_QUARANTINE` | loading, error, unauthorized, maintenance, cleanup_pending, pending, replay, conflict, auth-absent support-only |
+| `HOME` | loading, empty, error, recipe-only, private/quarantined/deleted nondisclosure |
+| `RECIPE_DETAIL` | loading, error, unauthorized, public read-only, owner edit/delete, future-impact conflict |
+| `MANUAL_RECIPE_CREATE` | loading, error, unauthorized, validation, dirty-state, managed-image pending/cancel/error |
+| `PLANNER_WEEK` | loading, empty, error, unauthorized, completed-shopping read-only, legacy-product read-only/delete |
+| `COOK_MODE` | loading, error, unauthorized, maintenance, cancelled read-only, completed read-only, missing, unrecoverable |
+| `LEFTOVERS` | loading, empty, error, unauthorized, pending, replay, conflict, missing, unrecoverable, depleted read-only |
+| `MEAL_LOG` | loading, empty, error, unauthorized, partial, unavailable, deleted-column, missing, unrecoverable, pending, replay, conflict |
+
 ## Design Authority
 
 - UI risk: `high-risk` final cross-slice verification
 - Anchor screen dependency: `HOME`, `RECIPE_DETAIL`, `PLANNER_WEEK`
 - Visual artifact: `ui/designs/evidence/cooking-meal-log-cross-slice-release-qa/manifest.json` plus 390/320/desktop PNG paths declared in `automation-spec.json`
-- Reused artifacts: `ui/designs/ACCOUNT_QUARANTINE.md`, `ui/designs/PLANNER_WEEK.md`, `ui/designs/COOK_MODE.md`, `ui/designs/MEAL_LOG.md`, `ui/designs/critiques/MEAL_LOG-critique.md`, `ui/designs/authority/MEAL_LOG-authority.md`
+- New generator/critic composition: 없음. `generator_required=false`, `critic_required=false`는 아래 merged predecessor artifacts를 재사용한다는 뜻이며 artifact가 N/A라는 뜻이 아니다.
+- schema의 단일 `generator_artifact`/`critic_artifact`는 index primary pointer인 `ACCOUNT_QUARANTINE` design/critique를 가리키고, complete 8-screen index는 `frontend.artifact_assertions`와 아래 표가 소유한다.
+- HOME의 기존 의미는 `ui/designs/HOME.md`의 Empty/Error `--brand CTA`, rail `overflow-x: auto`, page overflow `0`, `document.documentElement.scrollWidth === clientWidth` 규칙을 재사용한다. `required_screens` 복원 시 `omo-doc-gate`가 exact `primary CTA`/`scroll containment` vocabulary를 강제함을 재현한 뒤, 같은 파일에 semantic-no-op discoverability addendum만 추가했다.
+- HOME addendum은 새 composition, behavior, interaction, screenshot 또는 authority verdict를 만들지 않는다. `ui/designs/HOME.md`는 요청 범위의 explicit extra file이며 design-authority-plan task `01a01f2e-bf69-7f23-9c7c-7982855195bc`의 fresh exact-head re-review 대상이다.
+
+| Screen | Merged design | Current critique | Final authority |
+| --- | --- | --- | --- |
+| `ACCOUNT_QUARANTINE` | `ui/designs/ACCOUNT_QUARANTINE.md` | `ui/designs/critiques/ACCOUNT_QUARANTINE-critique.md` | `ui/designs/authority/ACCOUNT_QUARANTINE-authority.md` |
+| `HOME` | `ui/designs/HOME.md` | `ui/designs/critiques/HOME-service-about-guide-critique.md` | `ui/designs/authority/HOME-service-brand-image-assets-authority.md` |
+| `RECIPE_DETAIL` | `ui/designs/RECIPE_DETAIL.md` | `ui/designs/critiques/recipe-content-snapshot-future-propagation-design-critic.md` | `ui/designs/authority/recipe-content-snapshot-future-propagation-authority.md` |
+| `MANUAL_RECIPE_CREATE` | `ui/designs/MANUAL_RECIPE_CREATE.md` | `ui/designs/critiques/MANUAL_RECIPE_CREATE-critique.md` | `ui/designs/authority/DESIGN_POLISH_SLICE5_MANUAL_YOUTUBE-authority.md` |
+| `PLANNER_WEEK` | `ui/designs/PLANNER_WEEK.md` | `ui/designs/critiques/PLANNER_WEEK-critique.md` | `ui/designs/authority/PLANNER_WEEK-authority.md` |
+| `COOK_MODE` | `ui/designs/COOK_MODE.md` | `ui/designs/critiques/COOK_MODE-cooked-batch-weight-ui-critique.md` | `docs/workpacks/cooked-batch-weight-ui/evidence/2026-08-10-final-authority-p2-repair-rereview.md` |
+| `LEFTOVERS` | `ui/designs/LEFTOVERS.md` | `ui/designs/critiques/LEFTOVERS-cooked-batch-weight-ui-critique.md` | `docs/workpacks/cooked-batch-weight-ui/evidence/2026-08-10-final-authority-p2-repair-rereview.md` |
+| `MEAL_LOG` | `ui/designs/MEAL_LOG.md` | `ui/designs/critiques/MEAL_LOG-critique.md` | `ui/designs/authority/MEAL_LOG-authority.md` |
+
 - #12 status: MEAL_LOG design, critique, authority, runtime and OMO evidence are merged; they are no longer future reservations.
 - Authority status: fresh #14 exact-head screenshots and a separate final authority report remain required; this author does not approve them.
 
@@ -96,6 +147,7 @@ Stage 2 entry still requires this relock PR merge, separate internal 1.5/securit
 
 - Stage 1: exact-six projection test, SOT/workflow/workpack/automation/OMO/closeout validators, lint, typecheck, audit and diff only.
 - Stage 2 deterministic: existing focused F0/#1~#13 tests and `pnpm verify:local-supabase-runtime:isolated`; production volume/port/env/secret must not be shared.
+- owning focused map은 `automation-spec.json.backend.required_test_targets`에서 F0/#1~#13 exact merge SHA와 한 개 이상의 실제 regression target을 1:1로 연결한다. 특히 #3 visibility, #4 snapshot authority, #5 editor decoupling, #6 customization write core를 별도 command로 실행한다.
 - controlled full-local: read-only transaction, target identity, backup freshness and before/after checksum equality only after authority. Mutation, reset, volume delete and migration-history rewrite are prohibited.
 - Stage 4: real local stack + real Chrome, owner A/B and the eight screens at 390/320/desktop; unavailable runtime or authority is a blocker rather than a fixture substitution.
 - bootstrap expectations remain predecessor-owned (`users`, `recipe_books`, `meal_plan_columns`, account generation/session binding). Missing schema/seed/bootstrap blocks verification.
@@ -120,7 +172,7 @@ Stage 1 exact-six authoring is complete on this branch; approval is intentionall
 
 - [ ] pinned isolated local DB/API/security/performance verification is green on the exact head <!-- omo:id=delivery-cooking-cross-stage2-isolated;stage=2;scope=backend;review=3,6 -->
 - [ ] predecessor runtime merge map is rechecked and no retained evidence is stale <!-- omo:id=delivery-cooking-cross-stage2-predecessors;stage=2;scope=shared;review=3,6 -->
-- [ ] defects, if any, use a separate failing-test-first TDD repair PR and full rerun <!-- omo:id=delivery-cooking-cross-stage2-repair-boundary;stage=2;scope=shared;review=3,6 -->
+- [ ] defects, if any, use a separate failing-test-first TDD repair PR and full rerun after its merge <!-- omo:id=delivery-cooking-cross-stage2-repair-boundary;stage=2;scope=shared;review=3,6 -->
 - [ ] controlled full-local use stays read-only or records separate mutation authority <!-- omo:id=delivery-cooking-cross-stage2-local-authority;stage=2;scope=backend;review=3,6 -->
 - [ ] eight-screen real Chrome 390/320/desktop evidence is captured on the exact repaired head <!-- omo:id=delivery-cooking-cross-stage4-browser;stage=4;scope=frontend;review=5,6 -->
 - [ ] loading/empty/error/read-only/unauthorized and contracted edge states are verified <!-- omo:id=delivery-cooking-cross-stage4-states;stage=4;scope=frontend;review=5,6 -->

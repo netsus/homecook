@@ -2,11 +2,21 @@
 
 > Stage 1 locks a future verification-only gate. Every runtime item remains unchecked until exact-head evidence exists. The contract authority is official v1.7.32/v1.5.36/v1.3.34/DB v1.3.34/API v1.2.39 plus the retained 1,018 lines plan at SHA-256 `d4d0fb39e80eeffc8b1e73ad92f0d91a35a9b6adc57a556ea8c9ec6ecffa951d`.
 
+## Stage 1 Current Gate Evidence
+
+- Draft PR: `https://github.com/netsus/homecook/pull/1373`; lifecycle/approval/verification/evaluation은 `planned / not_started / pending / not_started`다.
+- internal 1.5 task `01a01f2e-ae07-7f42-88be-87727228702a`: `REQUEST_CHANGES 0/2/1`; ownership, Stage 1 narrative, live PR path finding을 이 author repair가 수리한다.
+- security/DB/operations task `01a01f2e-b2ed-7f32-bbaf-204b58613435`: `APPROVE 0/0/0`; 그 계약과 판정을 변경하지 않는다.
+- five-axis task `01a01f2e-ba20-7022-8b3b-5b90d15572d0`: `REQUEST_CHANGES 0/3/1`; owning tests, final evidence SHA, repair budget, machine evidence를 이 author repair가 수리한다.
+- design-authority-plan task `01a01f2e-bf69-7f23-9c7c-7982855195bc`: `REQUEST_CHANGES 0/2/1`; 8-screen required matrix와 merged reuse index를 이 author repair가 수리한다.
+- 위 reviewer/validator 결과는 Stage 1 bookkeeping이며 Stage 2/4 runtime acceptance item이 아니다. 이 author는 repair만 수행하고 같은 task들의 fresh exact-head re-review를 승인으로 대체하지 않는다.
+
 ## Happy Path
 
 - [ ] F0/#1~#13 automated/runtime merge evidence is rechecked at the frozen base before Stage 2 evidence collection <!-- omo:id=accept-cooking-cross-happy-predecessors;stage=2;scope=shared;review=3,6 -->
 - [ ] pinned isolated local verification passes without product or production mutation <!-- omo:id=accept-cooking-cross-happy-isolated;stage=2;scope=backend;review=3,6 -->
-- [ ] authorized exact repaired-head DB/API/browser/security/performance/design/rollback evidence shares one commit identity <!-- omo:id=accept-cooking-cross-happy-exact-head;stage=4;scope=frontend;review=5,6 -->
+- [ ] backend/isolated/security/performance/rollback evidence is rerun on `FINAL_EVIDENCE_SHA` <!-- omo:id=accept-cooking-cross-final-backend-bundle;stage=2;scope=backend;review=3,6 -->
+- [ ] browser/design evidence is rerun on the same `FINAL_EVIDENCE_SHA` <!-- omo:id=accept-cooking-cross-final-browser-bundle;stage=4;scope=frontend;review=5,6 -->
 - [ ] API responses retain the existing `{ success, data, error }` wrapper and v1.2.39 types <!-- omo:id=accept-cooking-cross-happy-api-envelope;stage=2;scope=backend;review=3,6 -->
 
 ## State / Policy
@@ -39,7 +49,6 @@
 
 ## Data Setup / Preconditions
 
-- [ ] Stage 1 relock PR and separate internal 1.5/security-DB-operations/five-axis/design-authority-plan reviews are merged with zero findings <!-- omo:id=accept-cooking-cross-precondition-stage1;stage=2;scope=shared;review=3,6 -->
 - [ ] focused predecessor tests and exact merge evidence have no stale or different-head reference <!-- omo:id=accept-cooking-cross-precondition-evidence;stage=2;scope=shared;review=3,6 -->
 - [ ] pinned isolated local runtime uses no production volume, port, env or secret mount <!-- omo:id=accept-cooking-cross-precondition-isolation;stage=2;scope=backend;review=3,6 -->
 - [ ] required schema, seed, owner A/B and predecessor bootstrap rows exist before runtime verification <!-- omo:id=accept-cooking-cross-precondition-bootstrap;stage=2;scope=backend;review=3,6 -->
@@ -50,10 +59,11 @@
 
 ### Vitest / deterministic local
 
-- [ ] Stage 1 exact-six projection and workflow validator tests are green <!-- omo:id=accept-cooking-cross-automation-stage1;stage=2;scope=shared;review=3,6 -->
 - [ ] focused F0/#1~#13 runtime regressions are green on the exact repaired head <!-- omo:id=accept-cooking-cross-automation-runtime;stage=2;scope=backend;review=3,6 -->
-- [ ] fresh isolated local migration/replay/RLS/Auth/Storage/Data API security gates are green <!-- omo:id=accept-cooking-cross-automation-local-stack;stage=2;scope=backend;review=3,6 -->
-- [ ] SQL/route latency, EXPLAIN and query counts show no item-level N+1 or unexplained regression <!-- omo:id=accept-cooking-cross-automation-performance;stage=2;scope=backend;review=3,6 -->
+- [ ] fresh isolated local migration/replay/RLS/Auth/Storage/Data API security gates produce `.artifacts/cooking-meal-log-cross-slice-release-qa/db-security-vitest.json` with owning integration skipped/failed `0/0` <!-- omo:id=accept-cooking-cross-automation-local-stack;stage=2;scope=backend;review=3,6 -->
+- [ ] `pnpm perf:prepared-food-search-relevance` produces `.artifacts/prepared-food-search-relevance/performance-summary.json` with Recall@20 >= 0.90, Precision@20 >= 0.75, DB p95 <= 300ms and route p95 <= 600ms <!-- omo:id=accept-cooking-cross-automation-performance;stage=2;scope=backend;review=3,6 -->
+- [ ] `.artifacts/cooking-meal-log-cross-slice-release-qa/query-count-summary.json` proves `list20_query_count <= list1_query_count + 1` and `item-level N+1 = 0` <!-- omo:id=accept-cooking-cross-automation-query-count;stage=2;scope=backend;review=3,6 -->
+- [ ] `.artifacts/cooking-meal-log-cross-slice-release-qa/rollback-vitest.json` proves current/immediate-previous, seeded-v2 drain, replay, tombstone and required-key rollback matrix failed/skipped `0/0` <!-- omo:id=accept-cooking-cross-automation-rollback;stage=2;scope=backend;review=3,6 -->
 
 ### Playwright / authority
 
@@ -63,12 +73,14 @@
 - [ ] HOME remains recipe-only and private/quarantined/deleted content never leaks <!-- omo:id=accept-cooking-cross-browser-home-privacy;stage=4;scope=frontend;review=5,6 -->
 - [ ] Planner keeps cooking plan separate from meal log and legacy product history read/delete-only <!-- omo:id=accept-cooking-cross-browser-planner-separation;stage=4;scope=frontend;review=5,6 -->
 - [ ] exploratory QA/eval and final authority report pin the same repaired head with blocker 0 <!-- omo:id=accept-cooking-cross-browser-authority;stage=4;scope=frontend;review=5,6 -->
+- [ ] after Stage 4 artifacts, `.artifacts/cooking-meal-log-cross-slice-release-qa/final-evidence-sha.txt` records one clean `FINAL_EVIDENCE_SHA` <!-- omo:id=accept-cooking-cross-final-sha;stage=4;scope=shared;review=6 -->
+- [ ] complete backend/isolated/security/performance/rollback + browser/design bundle is rerun on `FINAL_EVIDENCE_SHA` before Stage 6 <!-- omo:id=accept-cooking-cross-final-stage6-bundle;stage=4;scope=shared;review=6 -->
 - [ ] every started current-head check is success or policy-justified skip and independent Stage 6 has zero findings <!-- omo:id=accept-cooking-cross-browser-closeout;stage=4;scope=shared;review=6 -->
 
 ### Repair boundary
 
 - [ ] a discovered defect stops verification and moves to a separate failing-test-first TDD repair PR <!-- omo:id=accept-cooking-cross-repair-separate;stage=2;scope=shared;review=3,6 -->
-- [ ] affected and final evidence is rerun after the repair merge on the new exact head <!-- omo:id=accept-cooking-cross-repair-rerun;stage=2;scope=shared;review=3,6 -->
+- [ ] affected and final evidence gets a full rerun after its merge on the new exact head <!-- omo:id=accept-cooking-cross-repair-rerun;stage=2;scope=shared;review=3,6 -->
 
 ## Manual QA
 

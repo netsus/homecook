@@ -4,6 +4,7 @@ import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+import { readWorkpackChecklistContract } from "../scripts/lib/omo-checklist-contract.mjs";
 import { evaluateDocGate } from "../scripts/lib/omo-doc-gate.mjs";
 
 const root = process.cwd();
@@ -39,6 +40,162 @@ const predecessorRuntimeMerges = [
   ["#12", "358450e44da691256b0eeb51d8ae131a520b6cbd"],
   ["#13", "da52e64d84eef7593bd60898018c2b65acad0f46"],
 ] as const;
+const predecessorRegressionMap = [
+  [
+    "F0",
+    "account-session-generation-foundation",
+    "a10293e0cf17c4c19204e870024e8fe745e362e3",
+    "tests/account-session-generation-foundation.test.ts",
+  ],
+  [
+    "#1",
+    "prepared-food-search-relevance",
+    "19f25aae4806d2de584f4508bce88643c176705a",
+    "tests/prepared-food-search-relevance.test.ts",
+  ],
+  [
+    "#2",
+    "product-ingredient-link-foundation",
+    "5e9773f5e715e7d63132d7f6b8fadcaafd4b76a0",
+    "tests/product-ingredient-link-foundation.test.ts",
+  ],
+  [
+    "#3",
+    "recipe-visibility-read-hardening",
+    "8085914cb26e9b927fc973c99318c15d9dee86ce",
+    "tests/recipe-visibility-read-hardening.test.ts",
+  ],
+  [
+    "#4",
+    "recipe-snapshot-authority-foundation",
+    "5413b6adc42d0e8c45dc55cafad2b076b9bd61a0",
+    "tests/recipe-snapshot-authority.test.ts",
+  ],
+  [
+    "#5",
+    "personal-recipe-editor-decoupling",
+    "bb870dd0cba5ac52b6d9ad223db2a2935c00bcb9",
+    "tests/personal-recipe-editor-contract.test.ts",
+  ],
+  [
+    "#6",
+    "personal-recipe-customization-write-core",
+    "05683e4d1cf95c4cc3b9a41eb3fa7857b58a3d2d",
+    "tests/personal-recipe-customization-write-core.test.ts",
+  ],
+  [
+    "#7",
+    "recipe-content-snapshot-future-propagation",
+    "2173737e8ea2eec2297e1cc0227ce4f2c27c50b9",
+    "tests/recipe-content-snapshot-future-propagation.test.ts",
+  ],
+  [
+    "#8",
+    "cooked-batch-weight-ledger",
+    "c16102a3072e929e45bb24a69464cd3110d03db5",
+    "tests/cooked-batch-weight-ledger.test.ts",
+  ],
+  [
+    "#9",
+    "meal-log-core",
+    "8ba3fa5a2a198eb4f9c19d59cea5f6ccc52fdd4f",
+    "tests/meal-log-core.test.ts",
+  ],
+  [
+    "#10",
+    "planner-shell",
+    "2185b59d1b460dac916aa4a4a4a5e061c8b795f0",
+    "tests/planner-shell-compatibility.test.ts",
+  ],
+  [
+    "#11",
+    "cooked-batch-weight-ui",
+    "7c7d25a1d4deb930ddcf85611bb57f5fe14f00a0",
+    "tests/cooked-batch-weight-ui.test.tsx",
+  ],
+  [
+    "#12",
+    "meal-log-ui",
+    "358450e44da691256b0eeb51d8ae131a520b6cbd",
+    "tests/meal-log-ui.test.tsx",
+  ],
+  [
+    "#13",
+    "legacy-product-compat",
+    "da52e64d84eef7593bd60898018c2b65acad0f46",
+    "tests/legacy-product-compat.test.ts",
+  ],
+] as const;
+const requiredScreens = [
+  "ACCOUNT_QUARANTINE",
+  "HOME",
+  "RECIPE_DETAIL",
+  "MANUAL_RECIPE_CREATE",
+  "PLANNER_WEEK",
+  "COOK_MODE",
+  "LEFTOVERS",
+  "MEAL_LOG",
+] as const;
+const designReuseIndex = [
+  [
+    "ACCOUNT_QUARANTINE",
+    "ui/designs/ACCOUNT_QUARANTINE.md",
+    "ui/designs/critiques/ACCOUNT_QUARANTINE-critique.md",
+    "ui/designs/authority/ACCOUNT_QUARANTINE-authority.md",
+  ],
+  [
+    "HOME",
+    "ui/designs/HOME.md",
+    "ui/designs/critiques/HOME-service-about-guide-critique.md",
+    "ui/designs/authority/HOME-service-brand-image-assets-authority.md",
+  ],
+  [
+    "RECIPE_DETAIL",
+    "ui/designs/RECIPE_DETAIL.md",
+    "ui/designs/critiques/recipe-content-snapshot-future-propagation-design-critic.md",
+    "ui/designs/authority/recipe-content-snapshot-future-propagation-authority.md",
+  ],
+  [
+    "MANUAL_RECIPE_CREATE",
+    "ui/designs/MANUAL_RECIPE_CREATE.md",
+    "ui/designs/critiques/MANUAL_RECIPE_CREATE-critique.md",
+    "ui/designs/authority/DESIGN_POLISH_SLICE5_MANUAL_YOUTUBE-authority.md",
+  ],
+  [
+    "PLANNER_WEEK",
+    "ui/designs/PLANNER_WEEK.md",
+    "ui/designs/critiques/PLANNER_WEEK-critique.md",
+    "ui/designs/authority/PLANNER_WEEK-authority.md",
+  ],
+  [
+    "COOK_MODE",
+    "ui/designs/COOK_MODE.md",
+    "ui/designs/critiques/COOK_MODE-cooked-batch-weight-ui-critique.md",
+    "docs/workpacks/cooked-batch-weight-ui/evidence/2026-08-10-final-authority-p2-repair-rereview.md",
+  ],
+  [
+    "LEFTOVERS",
+    "ui/designs/LEFTOVERS.md",
+    "ui/designs/critiques/LEFTOVERS-cooked-batch-weight-ui-critique.md",
+    "docs/workpacks/cooked-batch-weight-ui/evidence/2026-08-10-final-authority-p2-repair-rereview.md",
+  ],
+  [
+    "MEAL_LOG",
+    "ui/designs/MEAL_LOG.md",
+    "ui/designs/critiques/MEAL_LOG-critique.md",
+    "ui/designs/authority/MEAL_LOG-authority.md",
+  ],
+] as const;
+const finalEvidenceShaPath =
+  ".artifacts/cooking-meal-log-cross-slice-release-qa/final-evidence-sha.txt";
+const dbEvidencePath =
+  ".artifacts/cooking-meal-log-cross-slice-release-qa/db-security-vitest.json";
+const rollbackEvidencePath =
+  ".artifacts/cooking-meal-log-cross-slice-release-qa/rollback-vitest.json";
+const queryCountEvidencePath =
+  ".artifacts/cooking-meal-log-cross-slice-release-qa/query-count-summary.json";
+const performanceEvidencePath =
+  ".artifacts/prepared-food-search-relevance/performance-summary.json";
 
 function read(relativePath: string) {
   return readFileSync(join(root, relativePath), "utf8");
@@ -106,7 +263,7 @@ describe("cooking meal-log cross-slice Stage 1 relock", () => {
     });
     expect(status).toMatchObject({
       branch: trackedBranch,
-      pr_path: "pending",
+      pr_path: "https://github.com/netsus/homecook/pull/1373",
       ...workItem.status,
     });
     expect(readme).toContain(trackedBranch);
@@ -180,6 +337,165 @@ describe("cooking meal-log cross-slice Stage 1 relock", () => {
     );
     expect(status.required_checks).toEqual(
       workItem.verification.required_checks,
+    );
+  });
+
+  it("maps every predecessor merge to an owning focused regression command", () => {
+    const expectedMappings = predecessorRegressionMap.map(
+      ([order, id, merge, target]) =>
+        `${order} ${id}@${merge} -> ${target}`,
+    );
+    const actualMappings = automation.backend.required_test_targets.filter(
+      (target: string) => /^(?:F0|#\d+) /u.test(target),
+    );
+    expect(actualMappings).toEqual(expectedMappings);
+
+    const commands = automation.backend.verify_commands.join("\n");
+    for (const [, , , target] of predecessorRegressionMap) {
+      expect(existsSync(join(root, target)), target).toBe(true);
+      expect(commands).toContain(target);
+    }
+  });
+
+  it("keeps Stage 1 bookkeeping narrative out of runtime acceptance ownership", () => {
+    const checklist = readWorkpackChecklistContract({
+      rootDir: root,
+      slice: sliceId,
+    });
+    const runtimeItems = checklist.items.filter(
+      (item) => !item.manualOnly,
+    );
+    for (const item of runtimeItems) {
+      expect(item.text).not.toMatch(
+        /Stage 1|internal 1\.5|five-axis|design-authority-plan|validator|exact-six projection/iu,
+      );
+    }
+
+    expect(acceptance).toContain("## Stage 1 Current Gate Evidence");
+    expect(acceptance).toContain("01a01f2e-ae07-7f42-88be-87727228702a");
+    expect(acceptance).toContain("01a01f2e-b2ed-7f32-bbaf-204b58613435");
+    expect(acceptance).toContain("01a01f2e-ba20-7022-8b3b-5b90d15572d0");
+    expect(acceptance).toContain("01a01f2e-bf69-7f23-9c7c-7982855195bc");
+  });
+
+  it("splits backend and browser evidence ownership around one final evidence SHA", () => {
+    const checklist = readWorkpackChecklistContract({
+      rootDir: root,
+      slice: sliceId,
+    });
+    const byId = (id: string) =>
+      checklist.items.find(
+        (item) => String(item.metadata?.id ?? "") === id,
+      );
+    expect(byId("accept-cooking-cross-final-backend-bundle")).toMatchObject({
+      metadata: { stage: 2, scope: "backend", review: [3, 6] },
+    });
+    expect(byId("accept-cooking-cross-final-browser-bundle")).toMatchObject({
+      metadata: { stage: 4, scope: "frontend", review: [5, 6] },
+    });
+    expect(byId("accept-cooking-cross-final-stage6-bundle")).toMatchObject({
+      metadata: { stage: 4, scope: "shared", review: [6] },
+    });
+
+    const projection = [
+      readme,
+      acceptance,
+      JSON.stringify(automation),
+      JSON.stringify(workItem),
+    ].join("\n");
+    for (const required of [
+      "FINAL_EVIDENCE_SHA",
+      finalEvidenceShaPath,
+      "after Stage 4 artifacts",
+      "complete backend/isolated/security/performance/rollback + browser/design bundle",
+      "before Stage 6",
+    ]) {
+      expect(projection).toContain(required);
+    }
+  });
+
+  it("sets a docs-only repair budget and zero inline runtime fix rounds", () => {
+    expect(automation.max_fix_rounds).toEqual({ backend: 0, frontend: 0 });
+    expect(automation.notes).toContain("docs repair budget max 3");
+    expect(workItem.workflow.max_fix_rounds).toEqual({
+      docs: 3,
+      backend: 0,
+      frontend: 0,
+    });
+    expect(exactSix).toContain("separate failing-test-first TDD repair PR");
+    expect(exactSix).toContain("full rerun after its merge");
+  });
+
+  it("defines machine-checkable DB performance rollback and N+1 evidence", () => {
+    const projection = [
+      acceptance,
+      JSON.stringify(automation),
+      JSON.stringify(workItem),
+    ].join("\n");
+    for (const path of [
+      finalEvidenceShaPath,
+      dbEvidencePath,
+      rollbackEvidencePath,
+      queryCountEvidencePath,
+      performanceEvidencePath,
+    ]) {
+      expect(projection).toContain(path);
+    }
+    for (const threshold of [
+      "DB p95 <= 300ms",
+      "route p95 <= 600ms",
+      "Recall@20 >= 0.90",
+      "Precision@20 >= 0.75",
+      "list20_query_count <= list1_query_count + 1",
+      "item-level N+1 = 0",
+    ]) {
+      expect(projection).toContain(threshold);
+    }
+  });
+
+  it("locks the eight-screen state and merged design reuse matrices", () => {
+    const authority = automation.frontend.design_authority;
+    expect(authority.required_screens).toEqual(requiredScreens);
+    expect(authority.generator_required).toBe(false);
+    expect(authority.critic_required).toBe(false);
+    expect(authority.generator_artifact).toBe(
+      "ui/designs/ACCOUNT_QUARANTINE.md",
+    );
+    expect(authority.critic_artifact).toBe(
+      "ui/designs/critiques/ACCOUNT_QUARANTINE-critique.md",
+    );
+
+    for (const [screen, design, critique, finalAuthority] of designReuseIndex) {
+      const indexEntry =
+        `design-reuse:${screen}|design=${design}|critic=${critique}|authority=${finalAuthority}`;
+      expect(automation.frontend.artifact_assertions).toContain(indexEntry);
+      expect(workItem.verification.artifact_assertions).toContain(indexEntry);
+      expect(automation.frontend.required_states).toEqual(
+        expect.arrayContaining([expect.stringMatching(new RegExp(`^${screen}=`))]),
+      );
+      for (const artifact of [design, critique, finalAuthority]) {
+        expect(existsSync(join(root, artifact)), artifact).toBe(true);
+        expect(workItem.docs_refs.governing_docs).toContain(artifact);
+      }
+    }
+
+    const home = read("ui/designs/HOME.md");
+    expect(home).toContain("--brand CTA");
+    expect(home).toContain("overflow-x: auto");
+    expect(home).toContain("document.documentElement.scrollWidth === clientWidth");
+    expect(home).toContain("primary CTA");
+    expect(home).toContain("scroll containment");
+    expect(home).toContain(
+      "새 composition, behavior, interaction 또는 authority verdict를 추가·변경하지 않는다",
+    );
+    expect(automation.frontend.artifact_assertions).toContain(
+      "home-reuse-existing-primary-cta=ui/designs/HOME.md#Empty-Error---brand-CTA",
+    );
+    expect(automation.frontend.artifact_assertions).toContain(
+      "home-reuse-existing-scroll-containment=ui/designs/HOME.md#rail-overflow-x-auto|page-overflow-0|document-scrollWidth-clientWidth",
+    );
+    expect(automation.frontend.artifact_assertions).toContain(
+      "home-discoverability-addendum-semantic-no-op=no-new-composition-behavior-interaction-authority-verdict",
     );
   });
 
