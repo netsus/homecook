@@ -25,4 +25,3 @@
 - 운영 full-local Supabase `54322`, app `3100`, 실제 env/secret/launchd 접근·변경: `0`.
 - production migration apply, initial policy enable, worker credential 발급·설치·start/reboot, public rollout/rollback, physical-device assistive technology는 Manual Only로 미체크 유지한다.
 - 이 승인은 non-manual implementation과 closeout bookkeeping 및 manual merge handoff 준비만 닫는다. Ready 전환, merge, self-approve는 수행하지 않는다.
-
