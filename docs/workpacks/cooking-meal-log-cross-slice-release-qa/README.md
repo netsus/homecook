@@ -69,13 +69,19 @@ Stage 2 entry still requires this relock PR merge, separate internal 1.5/securit
 
 ### Final Evidence SHA Contract
 
-- Stage 4의 8-screen runtime artifacts가 commit된 clean head를 하나의 `FINAL_EVIDENCE_SHA`로 고정하고 `.artifacts/cooking-meal-log-cross-slice-release-qa/final-evidence-sha.txt`에 기록한다.
-- Stage 2/3의 backend/isolated/security/performance/rollback bundle과 Stage 4/5의 browser/design bundle을 모두 이 commit에서 다시 실행한다. earlier Stage 2 head의 green만으로 Stage 6에 들어가지 않는다.
-- machine evidence paths:
-  - DB/security: `.artifacts/cooking-meal-log-cross-slice-release-qa/db-security-vitest.json`
-  - performance: `.artifacts/prepared-food-search-relevance/performance-summary.json`
-  - query count: `.artifacts/cooking-meal-log-cross-slice-release-qa/query-count-summary.json`
-  - rollback: `.artifacts/cooking-meal-log-cross-slice-release-qa/rollback-vitest.json`
+- Stage 4의 8-screen runtime artifacts가 commit된 clean head를 하나의 `FINAL_EVIDENCE_SHA`로 고정한다. producer는 broad path를 지우지 않고 create-only `.artifacts/cooking-meal-log-cross-slice-release-qa/attempts/<attempt_id>/`를 새로 만든다.
+- `pnpm verify:cooking-meal-log-release:produce -- --attempt-id "$HOMECOOK_CML14_ATTEMPT_ID" --head-sha "$FINAL_EVIDENCE_SHA" --profile full`이 pinned isolated local owning runner, security, performance, query-count, rollback을 실행한다.
+- `pnpm verify:cooking-meal-log-release:validate -- --attempt-dir ".artifacts/cooking-meal-log-cross-slice-release-qa/attempts/$HOMECOOK_CML14_ATTEMPT_ID" --attempt-id "$HOMECOOK_CML14_ATTEMPT_ID" --expected-head "$FINAL_EVIDENCE_SHA" --profile full`이 Stage 6 final bundle을 fail closed한다.
+- attempt evidence paths:
+  - manifest: `.artifacts/cooking-meal-log-cross-slice-release-qa/attempts/<attempt_id>/manifest.json`
+  - DB: `.artifacts/cooking-meal-log-cross-slice-release-qa/attempts/<attempt_id>/db-security.json`
+  - security: `.artifacts/cooking-meal-log-cross-slice-release-qa/attempts/<attempt_id>/security.json`
+  - performance: `.artifacts/cooking-meal-log-cross-slice-release-qa/attempts/<attempt_id>/performance.json`
+  - query count: `.artifacts/cooking-meal-log-cross-slice-release-qa/attempts/<attempt_id>/query-count.json`
+  - rollback: `.artifacts/cooking-meal-log-cross-slice-release-qa/attempts/<attempt_id>/rollback.json`
+- 모든 JSON은 같은 `attempt_id`, `head_sha == FINAL_EVIDENCE_SHA`, ISO `generated_at`, profile을 갖고 `passed > 0`, `skipped = 0`, `pending = 0`, `failed = 0`이어야 한다. manifest는 exact artifact byte count/SHA-256을 pin한다.
+- validator는 explicit attempt만 읽고 `latest` fallback을 사용하지 않는다. 과거 head의 stale artifact, partial/missing attempt, existing attempt overwrite, symlink/path traversal은 final gate를 통과할 수 없다.
+- `--profile proof`는 Stage 1에서 대표 pinned isolated runner와 모든 artifact/validator 안전장치를 검증하기 위한 비최종 profile이다. Stage 6 `--profile full` validator는 proof artifact를 거부한다.
 - performance thresholds: Recall@20 >= 0.90, Precision@20 >= 0.75, DB p95 <= 300ms, route p95 <= 600ms.
 - N+1 ceiling: `list20_query_count <= list1_query_count + 1`, `item-level N+1 = 0`; input item 수에 비례하는 SQL/HTTP fan-out은 blocker다.
 - complete backend/isolated/security/performance/rollback + browser/design bundle must be terminal green on `FINAL_EVIDENCE_SHA` before Stage 6. 이후 repair가 필요하면 별도 TDD PR merge 뒤 새 SHA를 고정하고 전체를 다시 실행한다.

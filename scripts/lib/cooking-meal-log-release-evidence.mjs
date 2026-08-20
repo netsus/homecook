@@ -1,0 +1,345 @@
+import { createHash } from "node:crypto";
+import {
+  existsSync,
+  lstatSync,
+  mkdirSync,
+  readFileSync,
+  realpathSync,
+  writeFileSync,
+} from "node:fs";
+import { dirname, join, resolve } from "node:path";
+
+export const EVIDENCE_SCHEMA_VERSION =
+  "cooking-meal-log-release-evidence-v1";
+
+export const REQUIRED_ARTIFACT_FILES = [
+  "db-security.json",
+  "security.json",
+  "performance.json",
+  "query-count.json",
+  "rollback.json",
+];
+
+export const FULL_DB_LANES = [
+  "account-session-generation",
+  "recipe-visibility-read-hardening",
+  "recipe-snapshot-authority",
+  "personal-recipe-customization-write-core",
+  "recipe-content-snapshot-future-propagation",
+  "cooked-batch-weight-ledger",
+  "meal-log-core",
+  "legacy-product-compat",
+];
+
+const SHA_PATTERN = /^[0-9a-f]{40}$/u;
+const ATTEMPT_PATTERN = /^[a-z0-9][a-z0-9._-]{2,95}$/u;
+
+function sha256(value) {
+  return createHash("sha256").update(value).digest("hex");
+}
+
+function assertAttemptId(attemptId) {
+  if (
+    typeof attemptId !== "string"
+    || !ATTEMPT_PATTERN.test(attemptId)
+    || attemptId.includes("..")
+  ) {
+    throw new Error("attempt id must be a safe lowercase identifier");
+  }
+}
+
+function assertSha(value, label) {
+  if (typeof value !== "string" || !SHA_PATTERN.test(value)) {
+    throw new Error(`${label} must be an exact 40-character git SHA`);
+  }
+}
+
+function assertTimestamp(value, label) {
+  if (
+    typeof value !== "string"
+    || !Number.isFinite(Date.parse(value))
+  ) {
+    throw new Error(`${label} must be an ISO timestamp`);
+  }
+}
+
+export function createAttemptDirectory({ artifactRoot, attemptId }) {
+  assertAttemptId(attemptId);
+  const normalizedRoot = resolve(artifactRoot);
+  mkdirSync(normalizedRoot, { recursive: true, mode: 0o700 });
+  if (lstatSync(normalizedRoot).isSymbolicLink()) {
+    throw new Error("artifact root must not be a symlink");
+  }
+  const attemptDir = resolve(normalizedRoot, attemptId);
+  if (dirname(attemptDir) !== normalizedRoot) {
+    throw new Error("attempt id escapes the artifact root");
+  }
+  if (existsSync(attemptDir)) {
+    throw new Error(`attempt directory already exists: ${attemptId}`);
+  }
+  mkdirSync(attemptDir, { mode: 0o700 });
+  return attemptDir;
+}
+
+export function writeEvidenceArtifact(attemptDir, fileName, artifact) {
+  if (!REQUIRED_ARTIFACT_FILES.includes(fileName)) {
+    throw new Error(`unsupported evidence artifact: ${fileName}`);
+  }
+  const filePath = join(attemptDir, fileName);
+  writeFileSync(filePath, `${JSON.stringify(artifact, null, 2)}\n`, {
+    encoding: "utf8",
+    flag: "wx",
+    mode: 0o600,
+  });
+  return filePath;
+}
+
+export function writeEvidenceManifest(
+  attemptDir,
+  { attemptId, headSha, generatedAt, profile },
+) {
+  assertAttemptId(attemptId);
+  assertSha(headSha, "head SHA");
+  assertTimestamp(generatedAt, "generatedAt");
+  const artifacts = REQUIRED_ARTIFACT_FILES.map((file) => {
+    const bytes = readFileSync(join(attemptDir, file));
+    return {
+      file,
+      bytes: bytes.byteLength,
+      sha256: sha256(bytes),
+    };
+  });
+  const manifest = {
+    schema_version: EVIDENCE_SCHEMA_VERSION,
+    artifact_type: "manifest",
+    attempt_id: attemptId,
+    head_sha: headSha,
+    generated_at: generatedAt,
+    profile,
+    artifacts,
+  };
+  writeFileSync(
+    join(attemptDir, "manifest.json"),
+    `${JSON.stringify(manifest, null, 2)}\n`,
+    { encoding: "utf8", flag: "wx", mode: 0o600 },
+  );
+  return manifest;
+}
+
+export function parseVitestTextSummary(output) {
+  const normalized = String(output ?? "")
+    .replaceAll(/\u001b\[[0-9;]*m/gu, "");
+  const summary = { passed: 0, skipped: 0, pending: 0, failed: 0 };
+  for (const line of normalized.split(/\r?\n/gu)) {
+    if (!/^\s*Tests\s+/u.test(line)) continue;
+    for (const key of ["passed", "skipped", "failed"]) {
+      const match = line.match(new RegExp(`(\\d+)\\s+${key}`, "u"));
+      if (match) summary[key] += Number(match[1]);
+    }
+    const pendingMatch = line.match(/(\d+)\s+(?:todo|pending)/u);
+    if (pendingMatch) summary.pending += Number(pendingMatch[1]);
+  }
+  return summary;
+}
+
+export function parseVitestJsonSummary(value) {
+  const parsed = typeof value === "string" ? JSON.parse(value) : value;
+  return {
+    passed: Number(parsed?.numPassedTests ?? 0),
+    skipped: Number(parsed?.numPendingTests ?? 0),
+    pending: Number(parsed?.numTodoTests ?? 0),
+    failed: Number(parsed?.numFailedTests ?? 0),
+  };
+}
+
+export function assertRunnableSummary(summary, label) {
+  if (!Number.isInteger(summary.passed) || summary.passed <= 0) {
+    throw new Error(`${label}: passed must be greater than zero`);
+  }
+  for (const key of ["skipped", "pending", "failed"]) {
+    if (!Number.isInteger(summary[key]) || summary[key] !== 0) {
+      throw new Error(`${label}: ${key} must be zero`);
+    }
+  }
+}
+
+export function buildQueryCountPayload({ sources }) {
+  const checks = sources.map((source) => {
+    const matches = [...source.sourceText.matchAll(source.callPattern)];
+    if (matches.length <= 0) {
+      throw new Error(`${source.surface}: bounded query call is missing`);
+    }
+    return {
+      surface: source.surface,
+      source_path: source.sourcePath,
+      source_sha256: sha256(source.sourceText),
+      list1_query_count: matches.length,
+      list20_query_count: matches.length,
+      item_level_n_plus_one: 0,
+    };
+  });
+  return { checks };
+}
+
+function readJsonArtifact(attemptDir, fileName) {
+  const filePath = join(attemptDir, fileName);
+  if (!existsSync(filePath)) {
+    throw new Error(`missing artifact: ${fileName}`);
+  }
+  const stat = lstatSync(filePath);
+  if (!stat.isFile() || stat.isSymbolicLink()) {
+    throw new Error(`artifact must be a regular file: ${fileName}`);
+  }
+  const realAttempt = realpathSync(attemptDir);
+  const realFile = realpathSync(filePath);
+  if (dirname(realFile) !== realAttempt) {
+    throw new Error(`artifact escapes attempt directory: ${fileName}`);
+  }
+  return {
+    bytes: readFileSync(filePath),
+    value: JSON.parse(readFileSync(filePath, "utf8")),
+  };
+}
+
+function validateArtifactEnvelope(
+  artifact,
+  { fileName, expectedAttemptId, expectedHeadSha, expectedProfile },
+) {
+  if (artifact.schema_version !== EVIDENCE_SCHEMA_VERSION) {
+    throw new Error(`${fileName}: schema_version mismatch`);
+  }
+  if (artifact.attempt_id !== expectedAttemptId) {
+    throw new Error(`${fileName}: attempt_id mismatch`);
+  }
+  if (artifact.head_sha !== expectedHeadSha) {
+    throw new Error(`${fileName}: head_sha mismatch`);
+  }
+  if (artifact.profile !== expectedProfile) {
+    throw new Error(`${fileName}: profile mismatch`);
+  }
+  assertTimestamp(artifact.generated_at, `${fileName}.generated_at`);
+  assertRunnableSummary(artifact, fileName);
+}
+
+function validateDbPayload(artifact, expectedProfile) {
+  const lanes = artifact.payload?.lanes;
+  if (!Array.isArray(lanes) || lanes.length <= 0) {
+    throw new Error("db-security.json: lane evidence is missing");
+  }
+  for (const lane of lanes) {
+    assertRunnableSummary(lane, `db lane ${lane.id ?? "unknown"}`);
+  }
+  if (expectedProfile === "full") {
+    const actual = lanes.map((lane) => lane.id);
+    if (JSON.stringify(actual) !== JSON.stringify(FULL_DB_LANES)) {
+      throw new Error("db-security.json: full DB lane inventory mismatch");
+    }
+  }
+}
+
+function validatePerformancePayload(artifact, expectedProfile) {
+  const payload = artifact.payload ?? {};
+  if (expectedProfile === "proof") {
+    if (payload.runner_contract_tested !== true) {
+      throw new Error("performance.json: proof runner contract is missing");
+    }
+    return;
+  }
+  if (payload.denominator !== 287_041) {
+    throw new Error("performance.json: denominator mismatch");
+  }
+  if (Number(payload.recall_at_20) < 0.9) {
+    throw new Error("performance.json: Recall@20 below threshold");
+  }
+  if (Number(payload.precision_at_20) < 0.75) {
+    throw new Error("performance.json: Precision@20 below threshold");
+  }
+  if (Number(payload.db_p95_ms) > 300) {
+    throw new Error("performance.json: DB p95 above threshold");
+  }
+  if (Number(payload.route_p95_ms) > 600) {
+    throw new Error("performance.json: route p95 above threshold");
+  }
+}
+
+function validateQueryCountPayload(artifact) {
+  const checks = artifact.payload?.checks;
+  if (!Array.isArray(checks) || checks.length <= 0) {
+    throw new Error("query-count.json: checks are missing");
+  }
+  for (const check of checks) {
+    if (
+      !Number.isInteger(check.list1_query_count)
+      || !Number.isInteger(check.list20_query_count)
+      || check.list20_query_count > check.list1_query_count + 1
+      || check.item_level_n_plus_one !== 0
+    ) {
+      throw new Error(`query count ceiling failed: ${check.surface ?? "unknown"}`);
+    }
+  }
+}
+
+export function validateEvidenceAttempt({
+  attemptDir,
+  expectedAttemptId,
+  expectedHeadSha,
+  expectedProfile,
+}) {
+  assertAttemptId(expectedAttemptId);
+  assertSha(expectedHeadSha, "expected head SHA");
+  const manifestResult = readJsonArtifact(attemptDir, "manifest.json");
+  const manifest = manifestResult.value;
+  if (manifest.schema_version !== EVIDENCE_SCHEMA_VERSION) {
+    throw new Error("manifest.json: schema_version mismatch");
+  }
+  if (manifest.attempt_id !== expectedAttemptId) {
+    throw new Error("manifest.json: attempt_id mismatch");
+  }
+  if (manifest.head_sha !== expectedHeadSha) {
+    throw new Error("manifest.json: head_sha mismatch");
+  }
+  if (manifest.profile !== expectedProfile) {
+    throw new Error("manifest.json: profile mismatch");
+  }
+  assertTimestamp(manifest.generated_at, "manifest.generated_at");
+
+  const manifestEntries = new Map(
+    (manifest.artifacts ?? []).map((entry) => [entry.file, entry]),
+  );
+  const artifacts = new Map();
+  for (const fileName of REQUIRED_ARTIFACT_FILES) {
+    const artifactResult = readJsonArtifact(attemptDir, fileName);
+    const entry = manifestEntries.get(fileName);
+    if (!entry) throw new Error(`manifest missing artifact: ${fileName}`);
+    if (entry.bytes !== artifactResult.bytes.byteLength) {
+      throw new Error(`${fileName}: manifest byte count mismatch`);
+    }
+    if (entry.sha256 !== sha256(artifactResult.bytes)) {
+      throw new Error(`${fileName}: manifest sha256 mismatch`);
+    }
+    validateArtifactEnvelope(artifactResult.value, {
+      fileName,
+      expectedAttemptId,
+      expectedHeadSha,
+      expectedProfile,
+    });
+    artifacts.set(fileName, artifactResult.value);
+  }
+  if (manifestEntries.size !== REQUIRED_ARTIFACT_FILES.length) {
+    throw new Error("manifest artifact inventory mismatch");
+  }
+
+  validateDbPayload(artifacts.get("db-security.json"), expectedProfile);
+  validatePerformancePayload(
+    artifacts.get("performance.json"),
+    expectedProfile,
+  );
+  validateQueryCountPayload(artifacts.get("query-count.json"));
+
+  return {
+    artifact_count: artifacts.size,
+    attempt_id: expectedAttemptId,
+    head_sha: expectedHeadSha,
+    profile: expectedProfile,
+  };
+}

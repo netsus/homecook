@@ -60,10 +60,13 @@
 ### Vitest / deterministic local
 
 - [ ] focused F0/#1~#13 runtime regressions are green on the exact repaired head <!-- omo:id=accept-cooking-cross-automation-runtime;stage=2;scope=backend;review=3,6 -->
-- [ ] fresh isolated local migration/replay/RLS/Auth/Storage/Data API security gates produce `.artifacts/cooking-meal-log-cross-slice-release-qa/db-security-vitest.json` with owning integration skipped/failed `0/0` <!-- omo:id=accept-cooking-cross-automation-local-stack;stage=2;scope=backend;review=3,6 -->
-- [ ] `pnpm perf:prepared-food-search-relevance` produces `.artifacts/prepared-food-search-relevance/performance-summary.json` with Recall@20 >= 0.90, Precision@20 >= 0.75, DB p95 <= 300ms and route p95 <= 600ms <!-- omo:id=accept-cooking-cross-automation-performance;stage=2;scope=backend;review=3,6 -->
-- [ ] `.artifacts/cooking-meal-log-cross-slice-release-qa/query-count-summary.json` proves `list20_query_count <= list1_query_count + 1` and `item-level N+1 = 0` <!-- omo:id=accept-cooking-cross-automation-query-count;stage=2;scope=backend;review=3,6 -->
-- [ ] `.artifacts/cooking-meal-log-cross-slice-release-qa/rollback-vitest.json` proves current/immediate-previous, seeded-v2 drain, replay, tombstone and required-key rollback matrix failed/skipped `0/0` <!-- omo:id=accept-cooking-cross-automation-rollback;stage=2;scope=backend;review=3,6 -->
+- [ ] repo-owned producer creates one new create-only `.artifacts/cooking-meal-log-cross-slice-release-qa/attempts/<attempt_id>/` bound to `FINAL_EVIDENCE_SHA` without deleting or reusing older attempts <!-- omo:id=accept-cooking-cross-automation-attempt;stage=2;scope=backend;review=3,6 -->
+- [ ] Stage 6 full validator rejects `profile=proof`, stale head, existing/missing/partial attempt and manifest/hash drift <!-- omo:id=accept-cooking-cross-automation-final-validator;stage=2;scope=backend;review=3,6 -->
+- [ ] pinned isolated owning PostgreSQL runners produce `db-security.json` with every required lane `passed > 0`, `skipped = 0`, `pending = 0`, `failed = 0` <!-- omo:id=accept-cooking-cross-automation-local-stack;stage=2;scope=backend;review=3,6 -->
+- [ ] isolated security producer creates `security.json` with nonzero authorization evidence and remote/linked/cloud access `0` <!-- omo:id=accept-cooking-cross-automation-security;stage=2;scope=backend;review=3,6 -->
+- [ ] attempt `performance.json` records Recall@20 >= 0.90, Precision@20 >= 0.75, DB p95 <= 300ms and route p95 <= 600ms <!-- omo:id=accept-cooking-cross-automation-performance;stage=2;scope=backend;review=3,6 -->
+- [ ] deterministic producer creates attempt `query-count.json` before validation and proves `list20_query_count <= list1_query_count + 1` with `item-level N+1 = 0` <!-- omo:id=accept-cooking-cross-automation-query-count;stage=2;scope=backend;review=3,6 -->
+- [ ] attempt `rollback.json` proves current/immediate-previous, seeded-v2 drain, replay, tombstone and required-key rollback matrix with `passed > 0`, `skipped = 0`, `pending = 0`, `failed = 0` <!-- omo:id=accept-cooking-cross-automation-rollback;stage=2;scope=backend;review=3,6 -->
 
 ### Playwright / authority
 
@@ -73,7 +76,7 @@
 - [ ] HOME remains recipe-only and private/quarantined/deleted content never leaks <!-- omo:id=accept-cooking-cross-browser-home-privacy;stage=4;scope=frontend;review=5,6 -->
 - [ ] Planner keeps cooking plan separate from meal log and legacy product history read/delete-only <!-- omo:id=accept-cooking-cross-browser-planner-separation;stage=4;scope=frontend;review=5,6 -->
 - [ ] exploratory QA/eval and final authority report pin the same repaired head with blocker 0 <!-- omo:id=accept-cooking-cross-browser-authority;stage=4;scope=frontend;review=5,6 -->
-- [ ] after Stage 4 artifacts, `.artifacts/cooking-meal-log-cross-slice-release-qa/final-evidence-sha.txt` records one clean `FINAL_EVIDENCE_SHA` <!-- omo:id=accept-cooking-cross-final-sha;stage=4;scope=shared;review=6 -->
+- [ ] after Stage 4 artifacts, attempt `manifest.json` and every evidence JSON record one clean `head_sha == FINAL_EVIDENCE_SHA`, matching `attempt_id` and `generated_at` <!-- omo:id=accept-cooking-cross-final-sha;stage=4;scope=shared;review=6 -->
 - [ ] complete backend/isolated/security/performance/rollback + browser/design bundle is rerun on `FINAL_EVIDENCE_SHA` before Stage 6 <!-- omo:id=accept-cooking-cross-final-stage6-bundle;stage=4;scope=shared;review=6 -->
 - [ ] every started current-head check is success or policy-justified skip and independent Stage 6 has zero findings <!-- omo:id=accept-cooking-cross-browser-closeout;stage=4;scope=shared;review=6 -->
 

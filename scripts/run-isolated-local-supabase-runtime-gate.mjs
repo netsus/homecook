@@ -109,6 +109,7 @@ try {
         env: {
           ...commandEnv,
           HOMECOOK_ISOLATED_RUNTIME_DATABASE_URL: databaseUrl,
+          HOMECOOK_ISOLATED_RUNTIME_PROJECT_ID: isolated.projectId,
         },
         timeoutMs: 120_000,
       },

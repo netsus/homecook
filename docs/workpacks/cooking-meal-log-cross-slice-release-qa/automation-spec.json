@@ -85,14 +85,8 @@
       "pnpm exec vitest run tests/recipe-snapshot-authority.test.ts tests/recipe-snapshot-security.test.ts tests/recipe-snapshot-consumers.test.tsx tests/recipe-snapshot-readers.test.ts",
       "pnpm exec vitest run tests/personal-recipe-editor-contract.test.ts tests/personal-recipe-editor-permissions.test.ts tests/personal-recipe-editor-shell.test.tsx tests/personal-recipe-editor-full-local-verifier.test.ts",
       "pnpm exec vitest run tests/personal-recipe-customization-write-core.test.ts tests/personal-recipe-customization-write-security.test.ts tests/personal-recipe-customization-write-idempotency.test.ts tests/personal-recipe-customization-write-account-delete.test.ts",
-      "mkdir -p .artifacts/cooking-meal-log-cross-slice-release-qa",
-      "pnpm verify:local-supabase-runtime:isolated",
-      "pnpm exec vitest run tests/account-session-generation-postgres.integration.test.ts tests/recipe-visibility-read-hardening-postgres.integration.test.ts tests/recipe-snapshot-authority-postgres.integration.test.ts tests/personal-recipe-customization-write-core-postgres.integration.test.ts tests/recipe-content-snapshot-future-propagation-postgres.integration.test.ts tests/cooked-batch-weight-ledger-postgres.integration.test.ts tests/meal-log-core-postgres.integration.test.ts tests/legacy-product-compat-postgres.integration.test.ts --reporter=json --outputFile=.artifacts/cooking-meal-log-cross-slice-release-qa/db-security-vitest.json",
-      "pnpm verify:security-functions:release",
-      "pnpm perf:prepared-food-search-relevance",
-      "node -e \"const fs=require('node:fs');const j=JSON.parse(fs.readFileSync('.artifacts/prepared-food-search-relevance/performance-summary.json','utf8'));if(!(j.recall_at_20>=0.90&&j.precision_at_20>=0.75&&j.db_p95_ms<=300&&j.route_p95_ms<=600))process.exit(1)\"",
-      "node -e \"const fs=require('node:fs');const j=JSON.parse(fs.readFileSync('.artifacts/cooking-meal-log-cross-slice-release-qa/query-count-summary.json','utf8'));if(!(j.list20_query_count<=j.list1_query_count+1&&j.item_level_n_plus_one===0))process.exit(1)\"",
-      "pnpm exec vitest run tests/cooking-version-dispatch-compat.test.ts tests/compatibility-tombstone-gates.test.ts tests/snapshot-v2-session-attempts.test.ts tests/snapshot-v2-complete.test.ts tests/legacy-product-compat.test.ts --reporter=json --outputFile=.artifacts/cooking-meal-log-cross-slice-release-qa/rollback-vitest.json",
+      "pnpm verify:cooking-meal-log-release:produce -- --attempt-id \"$HOMECOOK_CML14_ATTEMPT_ID\" --head-sha \"$FINAL_EVIDENCE_SHA\" --profile full",
+      "pnpm verify:cooking-meal-log-release:validate -- --attempt-dir \".artifacts/cooking-meal-log-cross-slice-release-qa/attempts/$HOMECOOK_CML14_ATTEMPT_ID\" --attempt-id \"$HOMECOOK_CML14_ATTEMPT_ID\" --expected-head \"$FINAL_EVIDENCE_SHA\" --profile full",
       "pnpm verify:backend",
       "pnpm validate:source-of-truth-sync",
       "pnpm validate:workflow-v2",
@@ -118,11 +112,13 @@
       "#12 meal-log-ui@358450e44da691256b0eeb51d8ae131a520b6cbd -> tests/meal-log-ui.test.tsx",
       "#13 legacy-product-compat@da52e64d84eef7593bd60898018c2b65acad0f46 -> tests/legacy-product-compat.test.ts",
       "tests/cooking-meal-log-cross-slice-release-qa.test.ts",
-      ".artifacts/cooking-meal-log-cross-slice-release-qa/db-security-vitest.json skipped-failed=0-0",
-      ".artifacts/prepared-food-search-relevance/performance-summary.json Recall@20 >= 0.90 Precision@20 >= 0.75 DB p95 <= 300ms route p95 <= 600ms",
-      ".artifacts/cooking-meal-log-cross-slice-release-qa/query-count-summary.json list20_query_count <= list1_query_count + 1 item-level N+1 = 0",
-      ".artifacts/cooking-meal-log-cross-slice-release-qa/rollback-vitest.json skipped-failed=0-0",
-      ".artifacts/cooking-meal-log-cross-slice-release-qa/final-evidence-sha.txt equals git rev-parse FINAL_EVIDENCE_SHA"
+      "tests/cooking-meal-log-release-evidence.test.ts",
+      ".artifacts/cooking-meal-log-cross-slice-release-qa/attempts/<attempt_id>/manifest.json create-only attempt/head/generated/hash inventory",
+      ".artifacts/cooking-meal-log-cross-slice-release-qa/attempts/<attempt_id>/db-security.json passed > 0 skipped = 0 pending = 0 failed = 0",
+      ".artifacts/cooking-meal-log-cross-slice-release-qa/attempts/<attempt_id>/security.json passed > 0 skipped = 0 pending = 0 failed = 0",
+      ".artifacts/cooking-meal-log-cross-slice-release-qa/attempts/<attempt_id>/performance.json Recall@20 >= 0.90 Precision@20 >= 0.75 DB p95 <= 300ms route p95 <= 600ms",
+      ".artifacts/cooking-meal-log-cross-slice-release-qa/attempts/<attempt_id>/query-count.json list20_query_count <= list1_query_count + 1 item-level N+1 = 0",
+      ".artifacts/cooking-meal-log-cross-slice-release-qa/attempts/<attempt_id>/rollback.json passed > 0 skipped = 0 pending = 0 failed = 0"
     ]
   },
   "frontend": {
@@ -156,9 +152,7 @@
       "pnpm qa:eval -- --checklist .artifacts/qa/cooking-meal-log-cross-slice-release-qa/latest/exploratory-checklist.json --report .artifacts/qa/cooking-meal-log-cross-slice-release-qa/latest/exploratory-report.json",
       "pnpm validate:exploratory-qa-evidence -- --slice cooking-meal-log-cross-slice-release-qa",
       "pnpm validate:authority-evidence-presence -- --slice cooking-meal-log-cross-slice-release-qa",
-      "pnpm validate:closeout-sync -- --slice cooking-meal-log-cross-slice-release-qa",
-      "test -z \"$(git status --porcelain)\" && mkdir -p .artifacts/cooking-meal-log-cross-slice-release-qa && git rev-parse HEAD > .artifacts/cooking-meal-log-cross-slice-release-qa/final-evidence-sha.txt",
-      "test \"$(cat .artifacts/cooking-meal-log-cross-slice-release-qa/final-evidence-sha.txt)\" = \"$(git rev-parse HEAD)\""
+      "pnpm validate:closeout-sync -- --slice cooking-meal-log-cross-slice-release-qa"
     ],
     "playwright_projects": ["mobile-default", "mobile-narrow", "desktop"],
     "artifact_assertions": [
@@ -184,7 +178,7 @@
       "design-reuse:COOK_MODE|design=ui/designs/COOK_MODE.md|critic=ui/designs/critiques/COOK_MODE-cooked-batch-weight-ui-critique.md|authority=docs/workpacks/cooked-batch-weight-ui/evidence/2026-08-10-final-authority-p2-repair-rereview.md",
       "design-reuse:LEFTOVERS|design=ui/designs/LEFTOVERS.md|critic=ui/designs/critiques/LEFTOVERS-cooked-batch-weight-ui-critique.md|authority=docs/workpacks/cooked-batch-weight-ui/evidence/2026-08-10-final-authority-p2-repair-rereview.md",
       "design-reuse:MEAL_LOG|design=ui/designs/MEAL_LOG.md|critic=ui/designs/critiques/MEAL_LOG-critique.md|authority=ui/designs/authority/MEAL_LOG-authority.md",
-      "final-evidence-sha=.artifacts/cooking-meal-log-cross-slice-release-qa/final-evidence-sha.txt-after-stage4-artifacts-before-stage6"
+      "final-evidence-attempt=.artifacts/cooking-meal-log-cross-slice-release-qa/attempts/<attempt_id>/manifest.json-after-stage4-artifacts-before-stage6"
     ],
     "design_authority": {
       "ui_risk": "high-risk",
@@ -231,13 +225,6 @@
         "ui/designs/evidence/cooking-meal-log-cross-slice-release-qa/manifest.json"
       ],
       "authority_report_paths": [
-        "ui/designs/authority/ACCOUNT_QUARANTINE-authority.md",
-        "ui/designs/authority/HOME-service-brand-image-assets-authority.md",
-        "ui/designs/authority/recipe-content-snapshot-future-propagation-authority.md",
-        "ui/designs/authority/DESIGN_POLISH_SLICE5_MANUAL_YOUTUBE-authority.md",
-        "ui/designs/authority/PLANNER_WEEK-authority.md",
-        "docs/workpacks/cooked-batch-weight-ui/evidence/2026-08-10-final-authority-p2-repair-rereview.md",
-        "ui/designs/authority/MEAL_LOG-authority.md",
         "ui/designs/authority/cooking-meal-log-cross-slice-release-qa-authority.md"
       ]
     }
@@ -257,6 +244,7 @@
     "stage1-relock-pr-not-merged-or-independent-reviews-not-zero",
     "stage1-author-self-approval-or-claude-use",
     "predecessor-runtime-merge-evidence-regressed-stale-or-different-head",
+    "proof-profile-stale-head-existing-missing-partial-or-hash-drift-used-as-final-evidence",
     "runtime-defect-fixed-inline-or-evidence-not-rerun-on-repaired-head",
     "new-api-db-ui-dependency-or-official-contract-introduced",
     "cloud-linked-remote-supabase-target-credential-verifier-or-fallback-requested",

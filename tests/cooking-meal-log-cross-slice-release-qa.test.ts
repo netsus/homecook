@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 
 import { readWorkpackChecklistContract } from "../scripts/lib/omo-checklist-contract.mjs";
 import { evaluateDocGate } from "../scripts/lib/omo-doc-gate.mjs";
+import { validateAuthorityEvidencePresence } from "../scripts/lib/validate-authority-evidence-presence.mjs";
 
 const root = process.cwd();
 const sliceId = "cooking-meal-log-cross-slice-release-qa";
@@ -186,16 +187,14 @@ const designReuseIndex = [
     "ui/designs/authority/MEAL_LOG-authority.md",
   ],
 ] as const;
-const finalEvidenceShaPath =
-  ".artifacts/cooking-meal-log-cross-slice-release-qa/final-evidence-sha.txt";
-const dbEvidencePath =
-  ".artifacts/cooking-meal-log-cross-slice-release-qa/db-security-vitest.json";
-const rollbackEvidencePath =
-  ".artifacts/cooking-meal-log-cross-slice-release-qa/rollback-vitest.json";
-const queryCountEvidencePath =
-  ".artifacts/cooking-meal-log-cross-slice-release-qa/query-count-summary.json";
-const performanceEvidencePath =
-  ".artifacts/prepared-food-search-relevance/performance-summary.json";
+const attemptEvidenceRoot =
+  ".artifacts/cooking-meal-log-cross-slice-release-qa/attempts/<attempt_id>";
+const manifestEvidencePath = `${attemptEvidenceRoot}/manifest.json`;
+const dbEvidencePath = `${attemptEvidenceRoot}/db-security.json`;
+const securityEvidencePath = `${attemptEvidenceRoot}/security.json`;
+const performanceEvidencePath = `${attemptEvidenceRoot}/performance.json`;
+const queryCountEvidencePath = `${attemptEvidenceRoot}/query-count.json`;
+const rollbackEvidencePath = `${attemptEvidenceRoot}/rollback.json`;
 
 function read(relativePath: string) {
   return readFileSync(join(root, relativePath), "utf8");
@@ -367,7 +366,7 @@ describe("cooking meal-log cross-slice Stage 1 relock", () => {
     );
     for (const item of runtimeItems) {
       expect(item.text).not.toMatch(
-        /Stage 1|internal 1\.5|five-axis|design-authority-plan|validator|exact-six projection/iu,
+        /Stage 1|internal 1\.5|five-axis|design-authority-plan|exact-six projection/iu,
       );
     }
 
@@ -405,7 +404,7 @@ describe("cooking meal-log cross-slice Stage 1 relock", () => {
     ].join("\n");
     for (const required of [
       "FINAL_EVIDENCE_SHA",
-      finalEvidenceShaPath,
+      manifestEvidencePath,
       "after Stage 4 artifacts",
       "complete backend/isolated/security/performance/rollback + browser/design bundle",
       "before Stage 6",
@@ -433,8 +432,9 @@ describe("cooking meal-log cross-slice Stage 1 relock", () => {
       JSON.stringify(workItem),
     ].join("\n");
     for (const path of [
-      finalEvidenceShaPath,
+      manifestEvidencePath,
       dbEvidencePath,
+      securityEvidencePath,
       rollbackEvidencePath,
       queryCountEvidencePath,
       performanceEvidencePath,
@@ -464,6 +464,9 @@ describe("cooking meal-log cross-slice Stage 1 relock", () => {
     expect(authority.critic_artifact).toBe(
       "ui/designs/critiques/ACCOUNT_QUARANTINE-critique.md",
     );
+    expect(authority.authority_report_paths).toEqual([
+      "ui/designs/authority/cooking-meal-log-cross-slice-release-qa-authority.md",
+    ]);
 
     for (const [screen, design, critique, finalAuthority] of designReuseIndex) {
       const indexEntry =
@@ -497,6 +500,67 @@ describe("cooking meal-log cross-slice Stage 1 relock", () => {
     expect(automation.frontend.artifact_assertions).toContain(
       "home-discoverability-addendum-semantic-no-op=no-new-composition-behavior-interaction-authority-verdict",
     );
+  });
+
+  it("uses attempt-scoped repo-owned producers and a fail-closed final validator", () => {
+    const packageJson = readJson("package.json");
+    expect(packageJson.scripts).toMatchObject({
+      "verify:cooking-meal-log-release:produce":
+        "node scripts/run-cooking-meal-log-release-evidence.mjs",
+      "verify:cooking-meal-log-release:validate":
+        "node scripts/validate-cooking-meal-log-release-evidence.mjs",
+    });
+
+    const commands = automation.backend.verify_commands.join("\n");
+    expect(commands).toContain("verify:cooking-meal-log-release:produce");
+    expect(commands).toContain("verify:cooking-meal-log-release:validate");
+    expect(commands).toContain("--attempt-id");
+    expect(commands).toContain("--head-sha");
+    expect(commands).toContain("--expected-head");
+    expect(commands).not.toContain(
+      "tests/account-session-generation-postgres.integration.test.ts tests/recipe-visibility-read-hardening-postgres.integration.test.ts",
+    );
+
+    const projection = [
+      readme,
+      acceptance,
+      JSON.stringify(automation),
+      JSON.stringify(workItem),
+    ].join("\n");
+    for (const required of [
+      attemptEvidenceRoot,
+      "attempt_id",
+      "head_sha",
+      "generated_at",
+      "passed > 0",
+      "skipped = 0",
+      "pending = 0",
+      "failed = 0",
+      "create-only",
+      "stale artifact",
+    ]) {
+      expect(projection).toContain(required);
+    }
+  });
+
+  it("keeps non-Draft authority validation owned only by the fresh #14 report", () => {
+    const results = validateAuthorityEvidencePresence({
+      rootDir: root,
+      env: {
+        ...process.env,
+        BRANCH_NAME: `feature/fe-${sliceId}`,
+        PR_IS_DRAFT: "false",
+      },
+    });
+    const serialized = JSON.stringify(results);
+    expect(serialized).toContain(
+      "ui/designs/authority/cooking-meal-log-cross-slice-release-qa-authority.md",
+    );
+    for (const predecessorAuthority of designReuseIndex.map(
+      ([, , , authority]) => authority,
+    )) {
+      expect(serialized).not.toContain(predecessorAuthority);
+    }
   });
 
   it("keeps Stage 2 verification-only and all mutations authority-gated", () => {

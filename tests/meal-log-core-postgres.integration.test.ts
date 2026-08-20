@@ -3,6 +3,9 @@ import { spawn, spawnSync } from "node:child_process";
 import { beforeAll, describe, expect, test } from "vitest";
 
 const enabled = process.env.HOMECOOK_MEAL_LOG_PG === "1";
+const isolatedProjectId =
+  process.env.HOMECOOK_ISOLATED_RUNTIME_PROJECT_ID?.trim() ?? "homecook";
+const postgresContainer = `supabase_db_${isolatedProjectId}`;
 
 const owner = "93000000-0000-4000-8000-000000000001";
 const identity = "2026-08-10T00:00:00.000Z";
@@ -60,7 +63,7 @@ const ingredientReplacementProfile = "93700000-0000-4000-8000-000000000011";
 
 function psql(sql: string, expectSuccess = true) {
   const result = spawnSync("docker", [
-    "exec", "-i", "supabase_db_homecook", "psql", "-U", "postgres", "-d", "postgres",
+    "exec", "-i", postgresContainer, "psql", "-U", "postgres", "-d", "postgres",
     "-At", "-v", "ON_ERROR_STOP=1", "-c", sql,
   ], { encoding: "utf8" });
   if (expectSuccess) expect(result.status, result.stderr).toBe(0);
@@ -70,7 +73,7 @@ function psql(sql: string, expectSuccess = true) {
 function psqlAsync(sql: string) {
   return new Promise<{ status: number | null; stdout: string; stderr: string }>((resolve, reject) => {
     const child = spawn("docker", [
-      "exec", "-i", "supabase_db_homecook", "psql", "-U", "postgres", "-d", "postgres",
+      "exec", "-i", postgresContainer, "psql", "-U", "postgres", "-d", "postgres",
       "-At", "-v", "ON_ERROR_STOP=1", "-c", sql,
     ]);
     let stdout = "";
