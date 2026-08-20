@@ -215,10 +215,19 @@
 - exploratory QA/qa eval은 `low-risk`, `authority_required=false`, 새 화면·visual composition 없음, exact mocked-route browser matrix가 존재하므로 N/A다. 기존 세 final authority reference를 그대로 재사용하며 새 authority artifact를 만들지 않는다.
 - Stage 5 P1 finding repair commit `31a2b9394df031a7dee84e692cbd399d77044853`은 delete failure alert를 planner body에서 active confirmation dialog로 옮기고 failure focus를 dialog close control로 복원했다. component RED `1/6`, Playwright RED `1/1` 뒤 component `6/6`, legacy focused `17/17`, exact legacy Playwright `14/14`, `verify:frontend:pr`가 GREEN이다. 이는 author repair이며 Stage 5 approval이 아니다.
 - Independent Stage 5 task `01a01e3b-663e-7252-9c3c-0c7b30251c0e`는 exact repaired projection `387f1d688204061c28b60c415135a70e42a07042` / tree `e0d887e487ad237a87fa6b3d67238d2dac045ce7`를 drift `0`으로 검토해 APPROVE P0/P1/P2 `0/0/0`, blocker/major/minor `0/0/0`을 확정했다.
-- 전체 lifecycle은 `in_progress`, approval/evaluation은 `not_started`, verification은 `pending`, auto-merge는 `false`다. Stage 6, successor Draft current-head checks, Ready/merge, Manual/server-Mac/OAuth/device/AT/full WCAG, controlled cutover와 activation은 pending이다.
+- 전체 lifecycle은 `in_progress`, approval은 Stage 6 `needs_revision`, evaluation은 `not_started`, verification은 `pending`, auto-merge는 `false`다. Stage 6 fresh re-review, successor Draft current-head checks, Ready/merge, Manual/server-Mac/OAuth/device/AT/full WCAG, controlled cutover와 activation은 pending이다.
 - 상세 증거: `docs/workpacks/legacy-product-compat/evidence/2026-08-20-stage4-frontend-implementation.md`.
 - Stage 5 finding repair 증거: `docs/workpacks/legacy-product-compat/evidence/2026-08-20-stage5-finding-repair.md`.
 - Stage 5 approval 증거: `docs/workpacks/legacy-product-compat/evidence/2026-08-20-stage5-frontend-review.md`.
+
+## Stage 6 Current Repair Evidence
+
+- Independent Stage 6 task `01a01e68-fb28-7841-8815-c7685d56cc35`는 exact `45ae210e3cf0d9852497cc0c11e4ecd6003359d8`에서 `REQUEST_CHANGES P0/P1/P2=0/2/1`을 반환했다. 이 author pass는 reviewer verdict를 승인으로 바꾸지 않는다.
+- Runtime repair commit `a9f4288aa9607f90a37de91e2d0158a187c13d3d`은 shared sort+dedupe canonicalizer를 planner/standalone fingerprint와 실제 request serialization에 적용한다. reorder/duplicate RED 4건 뒤 client/store `16/16`, focused runtime/routes `97/97`, exact legacy Playwright `14/14`, lint/typecheck가 GREEN이다.
+- Retained Stage 2/3 evidence를 ID별로 재대조해 acceptance non-Manual `40/40`을 checked로 맞췄다. Manual Only `7`개는 unchecked/pending이다.
+- `.workflow-v2/work-items/legacy-product-compat.json#closeout`을 canonical owner로 추가하고 phase `collecting`, roadmap `in_progress`, Design `confirmed`, acceptance/delivery `complete`, required checks/external smokes pending, Stage 6 `needs_revision`, all checks green `false`로 잠근다.
+- Stage 6 fresh re-review, repaired current-head full `verify:frontend`, successor PR checks, Ready/merge, Manual/cutover/activation은 pending이다.
+- 상세 증거: `docs/workpacks/legacy-product-compat/evidence/2026-08-20-stage6-finding-repair.md`.
 
 ## Delivery Checklist
 

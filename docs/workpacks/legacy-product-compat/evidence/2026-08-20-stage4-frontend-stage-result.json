@@ -72,6 +72,22 @@
     "p0_p1_p2": [0, 0, 0],
     "blocker_major_minor": [0, 0, 0]
   },
+  "stage6_finding_repair": {
+    "status": "author_repair_in_progress_pending_fresh_re_review",
+    "approved": false,
+    "reviewer_task_id": "01a01e68-fb28-7841-8815-c7685d56cc35",
+    "verdict": "REQUEST_CHANGES",
+    "p0_p1_p2": [0, 2, 1],
+    "starting_head": "45ae210e3cf0d9852497cc0c11e4ecd6003359d8",
+    "starting_tree": "cc2c610b63cf4aeab06083d40a1db824c1610366",
+    "runtime_repair_commit": "a9f4288aa9607f90a37de91e2d0158a187c13d3d",
+    "runtime_repair_tree": "f68bd0283eb45e976cc73c140cb6399243839267",
+    "canonical_retry_red": "client/store 4 failed / 12 passed",
+    "canonical_retry_green": "client/store 16/16; focused runtime/routes 97/97; exact Playwright 14/14; lint; typecheck",
+    "acceptance_reconciliation": "40/40 non-Manual checked; 7 Manual Only unchecked",
+    "closeout_phase": "collecting",
+    "full_verify": "pending repaired current head"
+  },
   "checklist_updates": [
     { "id": "delivery-legacy-compat-stage4-optional-key", "status": "checked", "evidence_refs": ["tests/legacy-product-compat-client.test.tsx", "tests/legacy-product-compat-store.test.ts"] },
     { "id": "delivery-legacy-compat-stage4-states", "status": "checked", "evidence_refs": ["tests/e2e/slice-planner-shell.spec.ts", "tests/cooking-session-version-dispatch.test.tsx"] },

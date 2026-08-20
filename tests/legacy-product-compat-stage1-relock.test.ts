@@ -135,7 +135,7 @@ describe("legacy-product-compat fresh Stage 1 exact-six relock", () => {
 
     const honestStatus = {
       lifecycle: "in_progress",
-      approval_state: "not_started",
+      approval_state: "needs_revision",
       verification_status: "pending",
       evaluation_status: "not_started",
       evaluation_round: 0,
