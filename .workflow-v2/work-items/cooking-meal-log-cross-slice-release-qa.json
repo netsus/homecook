@@ -227,7 +227,7 @@
     "verification_status": "passed",
     "evaluation_status": "passed",
     "evaluation_round": 3,
-    "last_evaluator_result": "APPROVE 0/0/0 drift 0 by four independent Stage 1 tasks at 2c33b38cf9f3badb72d610ad7a47abe70bf8907f",
+    "last_evaluator_result": "APPROVE 0/0/0 drift 0 Ready YES by four independent Stage 1 tasks at a61ec360d959d4be720a94f08b8b833ae50deab6",
     "auto_merge_eligible": false,
     "blocked_reason_code": null
   },
@@ -247,16 +247,16 @@
       "authority_reports": [],
       "actual_verification_refs": [
         "docs/workpacks/cooking-meal-log-cross-slice-release-qa/evidence/2026-08-21-stage1-final-independent-approvals.json",
-        "internal1.5 task 01a01f2e-ae07-7f42-88be-87727228702a APPROVE 0/0/0 drift 0 at 2c33b38cf9f3badb72d610ad7a47abe70bf8907f",
-        "security/DB/operations task 01a01f2e-b2ed-7f32-bbaf-204b58613435 APPROVE 0/0/0 drift 0 at 2c33b38cf9f3badb72d610ad7a47abe70bf8907f",
-        "five-axis task 01a01f2e-ba20-7022-8b3b-5b90d15572d0 APPROVE 0/0/0 drift 0 at 2c33b38cf9f3badb72d610ad7a47abe70bf8907f",
-        "design-authority-plan task 01a01f2e-bf69-7f23-9c7c-7982855195bc APPROVE 0/0/0 drift 0 at 2c33b38cf9f3badb72d610ad7a47abe70bf8907f"
+        "internal1.5 task 01a01f2e-ae07-7f42-88be-87727228702a APPROVE 0/0/0 drift 0 Ready YES at a61ec360d959d4be720a94f08b8b833ae50deab6",
+        "security/DB/operations task 01a01f2e-b2ed-7f32-bbaf-204b58613435 APPROVE 0/0/0 drift 0 Ready YES at a61ec360d959d4be720a94f08b8b833ae50deab6",
+        "five-axis task 01a01f2e-ba20-7022-8b3b-5b90d15572d0 APPROVE 0/0/0 drift 0 Ready YES at a61ec360d959d4be720a94f08b8b833ae50deab6",
+        "design-authority-plan task 01a01f2e-bf69-7f23-9c7c-7982855195bc APPROVE 0/0/0 drift 0 Ready YES at a61ec360d959d4be720a94f08b8b833ae50deab6"
       ]
     },
     "merge_gate_projection": {
-      "current_head_sha": null,
+      "current_head_sha": "a61ec360d959d4be720a94f08b8b833ae50deab6",
       "approval_state": "codex_approved",
-      "all_checks_green": false
+      "all_checks_green": true
     },
     "recovery_summary": {
       "manual_patch_count": 3,
@@ -283,8 +283,8 @@
     },
     "projection_state": {
       "docs_synced_at": "2026-08-20T15:47:38Z",
-      "status_synced_at": "2026-08-20T15:47:38Z",
-      "pr_body_synced_at": null
+      "status_synced_at": "2026-08-20T16:28:35Z",
+      "pr_body_synced_at": "2026-08-20T16:28:35Z"
     }
   },
   "out_of_scope": [
@@ -299,5 +299,5 @@
     "Physical-device actual-screen-reader full-WCAG and true-production-scale claims during Stage 1"
   ],
   "open_questions": [],
-  "notes": "Canonical closeout owner: .workflow-v2/work-items/cooking-meal-log-cross-slice-release-qa.json#closeout. Roadmap is docs while lifecycle remains planned. Four independent Stage 1 tasks approved exact head 2c33b38cf9f3badb72d610ad7a47abe70bf8907f / tree 23fab93ab372174b9f531cf3414b348b1a724894 with APPROVE 0/0/0, drift 0 and unresolved required findings 0. Stage 1 approval/verification/evaluation project as codex_approved/passed/passed; auto_merge stays false. Stage 2 remains not started and runtime/full 8-lane 287041/Manual/activation evidence, Delivery Checklist, acceptance and design authority remain pending. Existing tooling/security evidence, official/local-only boundary, predecessor map, HOME semantic no-op and docs/runtime repair budgets 3/0/0 are preserved. closeout_phase=collecting closeout_recovery=manual_patch:3 closeout_repair=codex:3|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:Codex_task_01a01f2e-ae07-7f42-88be-87727228702a,Codex_task_01a01f2e-b2ed-7f32-bbaf-204b58613435,Codex_task_01a01f2e-ba20-7022-8b3b-5b90d15572d0,Codex_task_01a01f2e-bf69-7f23-9c7c-7982855195bc,docs/workpacks/cooking-meal-log-cross-slice-release-qa/evidence/2026-08-21-stage1-final-independent-approvals.json"
+  "notes": "Canonical closeout owner: .workflow-v2/work-items/cooking-meal-log-cross-slice-release-qa.json#closeout. Roadmap is docs while lifecycle remains planned. Four independent Stage 1 tasks returned APPROVE 0/0/0, drift 0 and Ready YES on reviewed head a61ec360d959d4be720a94f08b8b833ae50deab6 / tree ad19c9186326dad58d8023f70543f641c2d82264. Its Draft current-head checks were 12 success plus 2 intended skips with bad 0, so canonical merge_gate_projection records that reviewed head and all_checks_green=true. Stage 1 approval/verification/evaluation remain codex_approved/passed/passed; auto_merge stays false and closeout stays collecting. Stage 2 remains not started and runtime/full 8-lane 287041/Manual/activation evidence, Delivery Checklist, acceptance and design authority remain pending. Existing tooling/security evidence, official/local-only boundary, predecessor map, HOME semantic no-op and docs/runtime repair budgets 3/0/0 are preserved. closeout_phase=collecting closeout_recovery=manual_patch:3 closeout_repair=codex:3|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:Codex_task_01a01f2e-ae07-7f42-88be-87727228702a,Codex_task_01a01f2e-b2ed-7f32-bbaf-204b58613435,Codex_task_01a01f2e-ba20-7022-8b3b-5b90d15572d0,Codex_task_01a01f2e-bf69-7f23-9c7c-7982855195bc,docs/workpacks/cooking-meal-log-cross-slice-release-qa/evidence/2026-08-21-stage1-final-independent-approvals.json"
 }

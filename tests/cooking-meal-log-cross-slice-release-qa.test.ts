@@ -201,6 +201,10 @@ const stage1ReviewedHead =
   "2c33b38cf9f3badb72d610ad7a47abe70bf8907f";
 const stage1ReviewedTree =
   "23fab93ab372174b9f531cf3414b348b1a724894";
+const readyReviewedHead =
+  "a61ec360d959d4be720a94f08b8b833ae50deab6";
+const readyReviewedTree =
+  "ad19c9186326dad58d8023f70543f641c2d82264";
 const stage1ApprovalTasks = [
   ["internal1.5", "01a01f2e-ae07-7f42-88be-87727228702a"],
   ["security/DB/operations", "01a01f2e-b2ed-7f32-bbaf-204b58613435"],
@@ -300,7 +304,7 @@ describe("cooking meal-log cross-slice Stage 1 relock", () => {
       evaluation_status: "passed",
       evaluation_round: 3,
       last_evaluator_result:
-        `APPROVE 0/0/0 drift 0 by four independent Stage 1 tasks at ${stage1ReviewedHead}`,
+        `APPROVE 0/0/0 drift 0 Ready YES by four independent Stage 1 tasks at ${readyReviewedHead}`,
       auto_merge_eligible: false,
       blocked_reason_code: null,
     });
@@ -336,6 +340,35 @@ describe("cooking meal-log cross-slice Stage 1 relock", () => {
       },
     });
     expect(approvalEvidence.reviews).toHaveLength(4);
+    expect(approvalEvidence.ready_confirmation).toMatchObject({
+      reviewed_head: readyReviewedHead,
+      reviewed_tree: readyReviewedTree,
+      approval_state: "codex_approved",
+      ready: "YES",
+      checks: {
+        unique_contexts: 14,
+        success: 12,
+        intended_skips: 2,
+        bad: 0,
+      },
+    });
+    expect(
+      approvalEvidence.ready_confirmation.reviews.map(
+        (review: { role: string; task_id: string }) => [
+          review.role,
+          review.task_id,
+        ],
+      ),
+    ).toEqual(stage1ApprovalTasks);
+    for (const review of approvalEvidence.ready_confirmation.reviews) {
+      expect(review).toMatchObject({
+        verdict: "APPROVE",
+        counts: { p0: 0, p1: 0, p2: 0 },
+        drift_count: 0,
+        unresolved_required_findings: [],
+        ready: "YES",
+      });
+    }
     expect(approvalEvidence.closed_finding_lineage).toEqual(
       closedStage1FindingLineage,
     );
@@ -366,7 +399,7 @@ describe("cooking meal-log cross-slice Stage 1 relock", () => {
       evaluation_status: "passed",
       evaluation_round: 3,
       last_evaluator_result:
-        `APPROVE 0/0/0 drift 0 by four independent Stage 1 tasks at ${stage1ReviewedHead}`,
+        `APPROVE 0/0/0 drift 0 Ready YES by four independent Stage 1 tasks at ${readyReviewedHead}`,
       auto_merge_eligible: false,
       blocked_reason_code: null,
     });
@@ -386,11 +419,15 @@ describe("cooking meal-log cross-slice Stage 1 relock", () => {
         external_smokes: "pending",
       },
       merge_gate_projection: {
-        current_head_sha: null,
+        current_head_sha: readyReviewedHead,
         approval_state: "codex_approved",
-        all_checks_green: false,
+        all_checks_green: true,
       },
     });
+    expect(workItem.notes).toContain(readyReviewedHead);
+    expect(workItem.notes).toContain("Ready YES");
+    expect(status.notes).toContain(readyReviewedHead);
+    expect(status.notes).toContain("Ready YES");
 
     for (const value of [
       stage1ApprovalEvidencePath,
