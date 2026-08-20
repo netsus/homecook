@@ -12,6 +12,7 @@
 - Internal authority inventory repair: `59cc07aca6d15ee623acb51e1e5e3803c04405dc`, parent `ad795cbc29981fb1e7ebe82232a977802364d268`, tree `83922d5a4d0b2fa6372efb593f6a0066712ce493`.
 - Private/deleted recipe authority repair: `07cdc639e37f23156027c668fec408b63bba58b9`; indirect RPC inventory repair: `8ad430cecaba42ed1ed80f2b19806664fb5ce784`. Both are normal successor commits and do not rewrite reviewed history.
 - Mixed-method route inventory repair: `636fc330f807fb37755a77448bbd87d722c70af2`; concurrent progress event/summary proof: `836f63902ca1d051cf4eb7c2b2a66229ca2d1835`.
+- Inactive recipe-owner visibility repair: `ae517053090fdd1d270e38690833ec23a84bf43a`; actual seeded-v2/required-key route evidence repair: `d6032a598b2ea2336dc5f7d02035ec3e40b33850`.
 - Production/staging/remote application writes: `0/0/0`; Claude, Ready, merge and activation were not used.
 
 ## RED → GREEN
@@ -19,7 +20,7 @@
 - Initial four compatibility targets failed because the three production compatibility modules did not exist.
 - Route matrix began at `16 failed`; the additive RPC static contract began at `4 failed`; the activation-block and missing-key telemetry assertions each reproduced one focused RED.
 - Central security registration reproduced `1 failed / 4 passed` until the six-function #13 manifest and validator source were added.
-- The final focused suite is `8 files / 54 tests` GREEN. It covers pinned legacy projection/delete, stored-version dispatch, seeded-v2 drain policy, cursor/removal fail-closed gates, route authority/error mapping, exact migration signatures/ordering/ACL, deleted/other-owner private recipe rejection before writers, optional-key compatibility and hard activation blocking.
+- The expanded focused suite is `10 files / 76 tests` GREEN. It covers pinned legacy projection/delete, stored-version dispatch, actual seeded-v2 start/read/cancel/complete routes, cursor/removal fail-closed gates, actual legacy route required-key seam, route authority/error mapping, exact migration signatures/ordering/ACL, deleted/private/inactive-owner public recipe rejection before writers, optional-key compatibility and hard activation blocking.
 
 ## Implemented backend authority
 
@@ -31,10 +32,11 @@
 
 ## Disposable PostgreSQL evidence
 
-- `pnpm test:legacy-product-compat:postgres`: `11/11`.
+- `pnpm test:legacy-product-compat:postgres`: `12/12`.
 - Exact new signatures are postgres-owned `SECURITY DEFINER`, executable only by `service_role`; PUBLIC/anon/authenticated are denied.
 - Planner and standalone completion, durable replay, concurrent same-key and concurrent mismatch prove one durable result with additional mutation `0` or exactly one `IDEMPOTENCY_KEY_REUSED` loser as appropriate.
 - Other-owner private/deleted recipes, maintenance, quarantined, deleting, revoked-session and stored `snapshot_v2` cases retain identical digests across user/bootstrap, receipt, pantry, recipe, leftover/session/session-meal/meal, progress summary/event and operational telemetry writers.
+- Public recipes whose other owner is quarantined or deleting are nondisclosed before claim/bootstrap and retain identical owner A/B mutation digests.
 - Planner and standalone no-key calls remain compatible success before activation.
 - A deliberately failing downstream progress writer proves the whole planner and standalone transaction rolls back, including claim/bootstrap/completion/progress effects.
 - The owned isolated project reached Data API `200` and removed its containers/resources on exit.
@@ -44,10 +46,10 @@
 - `pnpm verify:local-supabase-runtime:isolated`: all migrations plus seed applied, reset replay passed, Data API `200`, cleanup complete.
 - `pnpm test:prepared-food-planner-entry:postgres`: `11/11` owner/bootstrap baseline.
 - `pnpm verify:backend`: lint, typecheck, product `239 files passed / 12 skipped`, `2,756 tests passed / 175 intended skipped`, production build and security E2E `12/12`.
-- `pnpm test`: `577 files passed / 30 skipped`, `6,103 tests passed / 414 intended skipped`.
+- `pnpm test`: `577 files passed / 30 skipped`, `6,106 tests passed / 415 intended skipped`.
 - Internal authority verification: `3 files / 34 tests`; account-session generation inventory: `67 routes / 101 write surfaces / 3 auth.users inbound FKs`.
 - Mixed-route regression first failed because `write_recipe_future_plan_change` and `write_personal_recipe_core` were classified as public/non-personal, then passed after enclosing PATCH/DELETE method metadata took precedence while GET view-count writers retained the public fallback.
-- The isolated PostgreSQL `11/11` rerun also asserts both `user_progress_events` and `user_progress_summary.event_counts.cooking_completed` advance exactly once for planner/standalone same-key and mismatch concurrency.
+- The isolated PostgreSQL `12/12` rerun also asserts both `user_progress_events` and `user_progress_summary.event_counts.cooking_completed` advance exactly once for planner/standalone same-key and mismatch concurrency.
 - `node scripts/validate-security-function-authorization.mjs --contract-only`: #13 `6` pre-deployment functions classified with exact owner, ACL, security mode and search path.
 - Source-of-truth, workflow-v2, workpack, automation-spec, OMO bookkeeping, real-smoke and branch validators passed. Commit policy passed all branch commits.
 - `pnpm audit --audit-level high`: exit `0`, high/critical `0/0`; residual pre-existing low/moderate `1/1`.
@@ -59,6 +61,7 @@
 - Frozen head security/DB task `01a003ae-1566-7f73-996d-52c44ffecd14` returned `REQUEST_CHANGES`: other-owner private/deleted standalone recipe completion, missing authority inventory and stale PR evidence.
 - Successor commits repair the actionable runtime, inventory and fixture findings. Fresh independent Stage 3 code/quality and security/DB reviews must use new Codex App task IDs and the exact successor PR head. The author does not self-approve.
 - Successor code/quality task `01a003ca-fc74-7103-ba18-0997f8a61c92` ended at the Codex usage limit before verdict after identifying the mixed-route/progress-counter candidates. Security/DB task `01a003ca-fc72-7c22-943e-bda5b4d47cdf` resumed after its approval wait, independently passed focused `54`, authority `23`, isolated PostgreSQL `11/11` and the security validators on frozen head `be65e6df1559de10e1098a4cd0f9ba69dccb9deb`, and found no runtime/security defect. It returned `REQUEST_CHANGES P0/P1/P2=0/0/1` only because the roadmap still said `53 / 6/6` and the PR body contained a mistyped repair SHA while the PR had drifted to `4bb7f65cc96682c332699f180936cef2e6d731a4`. The PR typo and repo projections are repaired on the successor; this frozen review is not current-head approval.
+- Exact-head security/DB task `01a01d94-6623-7130-a6c5-b71a39edbd08` approved `b6c5be3186b5b851ab493b78fef199a02ae33b05` with `P0/P1/P2=0/0/0`. Exact-head code/quality task `01a01d94-6124-7eb1-bd0f-bdbda74d3f5b` returned `REQUEST_CHANGES 0/1/2`; the two code/evidence findings are repaired by `ae517053` and `d6032a59`, while its terminal PR-body projection finding is repaired only after successor CI finishes. Fresh exact-head re-review remains required.
 - Current-head checks must all become terminal success or intended skip before any Ready/merge transition.
 - Stage 4~6, OMO closeout and Discord Stage completion remain pending.
 - Controlled full-local/current-head deploy, old-server drain, maintenance/write fence, old overload revoke/drop, deployed callable inventory/negative privilege, server-Mac/OAuth, merged-exact rehearsal and required-key/capability/R/R+1/R+2/production activation remain Manual Only and were not run.
