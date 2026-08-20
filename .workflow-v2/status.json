@@ -2756,7 +2756,7 @@
       "branch": "feature/be-cooking-meal-log-cross-slice-release-qa",
       "pr_path": "https://github.com/netsus/homecook/pull/1377",
       "lifecycle": "in_progress",
-      "approval_state": "needs_revision",
+      "approval_state": "codex_approved",
       "verification_status": "passed",
       "required_checks": [
         "pnpm validate:source-of-truth-sync",
@@ -2771,10 +2771,10 @@
         "pnpm audit --audit-level high",
         "git diff --check"
       ],
-      "notes": "Canonical closeout owner: .workflow-v2/work-items/cooking-meal-log-cross-slice-release-qa.json#closeout. Stage 1 PR #1373 approvals remain retained historical evidence. Active Stage 2 Draft PR #1377 is reviewed at a23a97aa5f4032e3e4bd3fec2fadd86ce996c823 with 8 success plus 5 intended skip and bad/pending 0. Stage 3 task 01a02119-a472-7433-ac9d-c3d5496bf1a4 returned REQUEST_CHANGES P0/P1/P2 0/1/0 required_fix_id CML14-S3-P1-001, so approval is needs_revision and evaluation is fixable pending fresh re-review. Deterministic/isolated/non-final proof evidence remains green; complete owning DB lanes, actual thresholds, Stage 4 FINAL_EVIDENCE_SHA/full profile, Stage 3 approval, Stage 4~6, controlled full-local, Manual and activation remain pending. closeout_phase=collecting closeout_recovery=manual_patch:3|stale_lock:1 closeout_repair=codex:4|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:Codex_task_01a01f2e-ae07-7f42-88be-87727228702a,Codex_task_01a01f2e-b2ed-7f32-bbaf-204b58613435,Codex_task_01a01f2e-ba20-7022-8b3b-5b90d15572d0,Codex_task_01a01f2e-bf69-7f23-9c7c-7982855195bc,docs/workpacks/cooking-meal-log-cross-slice-release-qa/evidence/2026-08-21-stage1-final-independent-approvals.json,Codex_task_01a020fd-56ef-73a3-9aa3-7a8d44a8541c,docs/workpacks/cooking-meal-log-cross-slice-release-qa/evidence/2026-08-21-stage2-verification-author.md,.artifacts/cooking-meal-log-cross-slice-release-qa/attempts/stage2-proof-cb775ed9-20260821/,Codex_task_01a02119-a472-7433-ac9d-c3d5496bf1a4,GitHub_PR_1377_head_a23a97aa5f4032e3e4bd3fec2fadd86ce996c823 last_recovery_at=2026-08-20T21:41:31Z",
-      "evaluation_status": "fixable",
-      "evaluation_round": 4,
-      "last_evaluator_result": "REQUEST_CHANGES P0/P1/P2 0/1/0 required_fix_id CML14-S3-P1-001 by Stage 3 task 01a02119-a472-7433-ac9d-c3d5496bf1a4 at a23a97aa5f4032e3e4bd3fec2fadd86ce996c823",
+      "notes": "Canonical closeout owner: .workflow-v2/work-items/cooking-meal-log-cross-slice-release-qa.json#closeout. Stage 1 PR #1373 approvals remain retained historical evidence. Active partial Stage 2 Draft PR #1377 is approved at content head c5c475477a26dde3889aec3161c37765ee084d92 with 8 success plus 5 intended skip and bad/pending 0. Stage 3 task 01a02137-5389-7420-a31d-7e42d1bb94dc returned APPROVE P0/P1/P2 0/0/0 drift 0; CML14-S3-P1-001 and CML14-S3-P1-002 are CLOSED. Approval is codex_approved and evaluation is passed; approval projection successor checks pending; final drift-only review pending. Deterministic/isolated/non-final proof evidence remains green; complete owning DB lanes, actual thresholds, Stage 4 FINAL_EVIDENCE_SHA/full profile, Stage 4~6, controlled full-local, Manual and activation remain pending. closeout_phase=collecting closeout_recovery=manual_patch:3|stale_lock:2 closeout_repair=codex:5|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:Codex_task_01a01f2e-ae07-7f42-88be-87727228702a,Codex_task_01a01f2e-b2ed-7f32-bbaf-204b58613435,Codex_task_01a01f2e-ba20-7022-8b3b-5b90d15572d0,Codex_task_01a01f2e-bf69-7f23-9c7c-7982855195bc,docs/workpacks/cooking-meal-log-cross-slice-release-qa/evidence/2026-08-21-stage1-final-independent-approvals.json,Codex_task_01a020fd-56ef-73a3-9aa3-7a8d44a8541c,docs/workpacks/cooking-meal-log-cross-slice-release-qa/evidence/2026-08-21-stage2-verification-author.md,.artifacts/cooking-meal-log-cross-slice-release-qa/attempts/stage2-proof-cb775ed9-20260821/,Codex_task_01a02119-a472-7433-ac9d-c3d5496bf1a4,GitHub_PR_1377_head_a23a97aa5f4032e3e4bd3fec2fadd86ce996c823,Codex_task_01a02129-5945-7381-8aca-ff7673d0b5f3,Codex_task_01a0212d-74d9-7392-8eab-7b2723de940c,Codex_task_01a02137-5389-7420-a31d-7e42d1bb94dc,GitHub_PR_1377_head_c5c475477a26dde3889aec3161c37765ee084d92 last_recovery_at=2026-08-20T22:12:22Z",
+      "evaluation_status": "passed",
+      "evaluation_round": 5,
+      "last_evaluator_result": "APPROVE P0/P1/P2 0/0/0 drift 0 by Stage 3 task 01a02137-5389-7420-a31d-7e42d1bb94dc at c5c475477a26dde3889aec3161c37765ee084d92",
       "auto_merge_eligible": false,
       "blocked_reason_code": null
     },

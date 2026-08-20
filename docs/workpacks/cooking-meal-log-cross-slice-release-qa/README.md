@@ -65,9 +65,10 @@ Stage 2 entry still requires this relock PR merge and the documented post-merge 
 
 ## Active Stage 2/3 Gate
 
-- 활성 lifecycle/approval/verification/evaluation은 `in_progress / needs_revision / passed / fixable`이다.
-- 활성 Draft PR은 `https://github.com/netsus/homecook/pull/1377`이고 repair successor head는 `25802dc7242ead54a758c167c0ed86470b147957`이다. current-head checks는 `8 success + 5 intended skip`, bad/pending `0`이다.
-- fresh Stage 3 re-review task `01a02129-5945-7381-8aca-ff7673d0b5f3`가 `CML14-S3-P1-002`를 요청했으며, human-facing projection repair 뒤 re-review가 pending이다.
+- 활성 lifecycle/approval/verification/evaluation은 `in_progress / codex_approved / passed / passed`다.
+- 활성 Draft PR은 `https://github.com/netsus/homecook/pull/1377`이고 approved content head는 `c5c475477a26dde3889aec3161c37765ee084d92`이다. current-head checks는 `8 success + 5 intended skip`, bad/pending `0`이다.
+- independent Stage 3 approval task `01a02137-5389-7420-a31d-7e42d1bb94dc`는 APPROVE P0/P1/P2 `0/0/0`, drift `0`을 반환했다. `CML14-S3-P1-001`과 `CML14-S3-P1-002`는 CLOSED다.
+- 이 approval projection successor의 current-head checks와 final drift-only review pending이며, 그 전에는 Ready/merge하지 않는다.
 - complete owning DB lanes, actual performance thresholds, Stage 4 `FINAL_EVIDENCE_SHA`/full profile, controlled full-local, Stage 4~6, Manual and activation remain pending.
 
 ## Backend First Contract

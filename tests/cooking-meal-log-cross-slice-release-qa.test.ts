@@ -20,8 +20,10 @@ const stage3RereviewerTask = "01a02129-5945-7381-8aca-ff7673d0b5f3";
 const stage3RereviewRequiredFix = "CML14-S3-P1-002";
 const stage3RepairSuccessorHead =
   "25802dc7242ead54a758c167c0ed86470b147957";
-const repairProjectionSyncedAt = "2026-08-20T21:41:31Z";
-const unsyncedPrBodyMarker = "stage3-repair-pr-body-sync-pending";
+const stage3ApprovalReviewerTask = "01a02137-5389-7420-a31d-7e42d1bb94dc";
+const stage3ApprovedContentHead =
+  "c5c475477a26dde3889aec3161c37765ee084d92";
+const approvalProjectionSyncedAt = "2026-08-20T22:12:22Z";
 const stage2AuthorEvidencePath =
   "docs/workpacks/cooking-meal-log-cross-slice-release-qa/evidence/2026-08-21-stage2-verification-author.md";
 const stage2AuthorCheckedIds = [
@@ -327,18 +329,18 @@ describe("cooking meal-log cross-slice Stage 1 relock", () => {
     expect(approvedPlan.toString("utf8").match(/\n/gu)).toHaveLength(1_018);
   });
 
-  it("keeps Stage 1 history while the current Stage 3 repair is active", () => {
+  it("keeps Stage 1 history while the approved Stage 2 checkpoint awaits drift review", () => {
     expect(roadmap).toMatch(
       /\| `cooking-meal-log-cross-slice-release-qa` \| in-progress \|/u,
     );
     expect(workItem.status).toEqual({
       lifecycle: "in_progress",
-      approval_state: "needs_revision",
+      approval_state: "codex_approved",
       verification_status: "passed",
-      evaluation_status: "fixable",
-      evaluation_round: 4,
+      evaluation_status: "passed",
+      evaluation_round: 5,
       last_evaluator_result:
-        `REQUEST_CHANGES P0/P1/P2 0/1/0 required_fix_id ${stage3RequiredFix} by Stage 3 task ${stage3ReviewerTask} at ${stage2ReviewedHead}`,
+        `APPROVE P0/P1/P2 0/0/0 drift 0 by Stage 3 task ${stage3ApprovalReviewerTask} at ${stage3ApprovedContentHead}`,
       auto_merge_eligible: false,
       blocked_reason_code: null,
     });
@@ -351,12 +353,71 @@ describe("cooking meal-log cross-slice Stage 1 relock", () => {
     expect(exactSix).toContain(stage2Base);
     expect(readme).toContain("## Stage 1 Historical Gate");
     expect(readme).toContain(
-      "활성 lifecycle/approval/verification/evaluation은 `in_progress / needs_revision / passed / fixable`",
+      "활성 lifecycle/approval/verification/evaluation은 `in_progress / codex_approved / passed / passed`",
     );
     expect(readme).toContain(stage2PrPath);
-    expect(readme).toContain(stage3RepairSuccessorHead);
-    expect(readme).toContain(stage3RereviewerTask);
-    expect(readme).toContain(stage3RereviewRequiredFix);
+    expect(readme).toContain(stage3ApprovedContentHead);
+    expect(readme).toContain(stage3ApprovalReviewerTask);
+  });
+
+  it("projects the independent Stage 3 approval without promoting later gates", () => {
+    const approvalResult =
+      `APPROVE P0/P1/P2 0/0/0 drift 0 by Stage 3 task ${stage3ApprovalReviewerTask} at ${stage3ApprovedContentHead}`;
+
+    expect(workItem.status).toEqual({
+      lifecycle: "in_progress",
+      approval_state: "codex_approved",
+      verification_status: "passed",
+      evaluation_status: "passed",
+      evaluation_round: 5,
+      last_evaluator_result: approvalResult,
+      auto_merge_eligible: false,
+      blocked_reason_code: null,
+    });
+    expect(status).toMatchObject({
+      branch: stage2Branch,
+      pr_path: stage2PrPath,
+      ...workItem.status,
+    });
+    expect(workItem.closeout).toMatchObject({
+      merge_gate_projection: {
+        current_head_sha: stage3ApprovedContentHead,
+        approval_state: "codex_approved",
+        all_checks_green: true,
+      },
+      repair_summary: {
+        latest_reason_code: "stage3-approved-partial-checkpoint-projection",
+      },
+      projection_state: {
+        docs_synced_at: approvalProjectionSyncedAt,
+        status_synced_at: approvalProjectionSyncedAt,
+        pr_body_synced_at: approvalProjectionSyncedAt,
+      },
+    });
+    expect(
+      workItem.closeout.verification_projection.actual_verification_refs,
+    ).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining(stage3ApprovalReviewerTask),
+        expect.stringContaining("APPROVE P0/P1/P2 0/0/0"),
+        expect.stringContaining("CML14-S3-P1-001 CLOSED"),
+        expect.stringContaining("CML14-S3-P1-002 CLOSED"),
+      ]),
+    );
+    expect(workItem.closeout.repair_summary.evidence_sources).toEqual(
+      expect.arrayContaining([
+        `Codex_task_${stage3ApprovalReviewerTask}`,
+        `GitHub_PR_1377_head_${stage3ApprovedContentHead}`,
+      ]),
+    );
+    expect(readme).toContain(
+      "활성 lifecycle/approval/verification/evaluation은 `in_progress / codex_approved / passed / passed`",
+    );
+    expect(readme).toContain(stage3ApprovedContentHead);
+    expect(readme).toContain(stage3ApprovalReviewerTask);
+    expect(readme).toContain("APPROVE P0/P1/P2 `0/0/0`");
+    expect(readme).toContain("CML14-S3-P1-001`과 `CML14-S3-P1-002`는 CLOSED");
+    expect(readme).toContain("final drift-only review pending");
   });
 
   it("preserves Stage 1 approvals while only proven Stage 2 items advance", () => {
@@ -437,12 +498,12 @@ describe("cooking meal-log cross-slice Stage 1 relock", () => {
     );
     expect(workItem.status).toEqual({
       lifecycle: "in_progress",
-      approval_state: "needs_revision",
+      approval_state: "codex_approved",
       verification_status: "passed",
-      evaluation_status: "fixable",
-      evaluation_round: 4,
+      evaluation_status: "passed",
+      evaluation_round: 5,
       last_evaluator_result:
-        `REQUEST_CHANGES P0/P1/P2 0/1/0 required_fix_id ${stage3RequiredFix} by Stage 3 task ${stage3ReviewerTask} at ${stage2ReviewedHead}`,
+        `APPROVE P0/P1/P2 0/0/0 drift 0 by Stage 3 task ${stage3ApprovalReviewerTask} at ${stage3ApprovedContentHead}`,
       auto_merge_eligible: false,
       blocked_reason_code: null,
     });
@@ -462,15 +523,15 @@ describe("cooking meal-log cross-slice Stage 1 relock", () => {
         external_smokes: "pending",
       },
       merge_gate_projection: {
-        current_head_sha: stage2ReviewedHead,
-        approval_state: "needs_revision",
+        current_head_sha: stage3ApprovedContentHead,
+        approval_state: "codex_approved",
         all_checks_green: true,
       },
     });
     expect(workItem.closeout.projection_state).toEqual({
-      docs_synced_at: repairProjectionSyncedAt,
-      status_synced_at: repairProjectionSyncedAt,
-      pr_body_synced_at: unsyncedPrBodyMarker,
+      docs_synced_at: approvalProjectionSyncedAt,
+      status_synced_at: approvalProjectionSyncedAt,
+      pr_body_synced_at: approvalProjectionSyncedAt,
     });
     expect(
       workItem.closeout.verification_projection.actual_verification_refs,
@@ -481,6 +542,11 @@ describe("cooking meal-log cross-slice Stage 1 relock", () => {
         expect.stringContaining(stage3ReviewerTask),
         expect.stringContaining(stage3RequiredFix),
         expect.stringContaining("REQUEST_CHANGES"),
+        expect.stringContaining(stage3RereviewerTask),
+        expect.stringContaining(stage3RereviewRequiredFix),
+        expect.stringContaining(stage3RepairSuccessorHead),
+        expect.stringContaining(stage3ApprovalReviewerTask),
+        expect.stringContaining("APPROVE P0/P1/P2 0/0/0"),
       ]),
     );
     expect(workItem.notes).toContain(stage2AuthorEvidencePath);
@@ -492,7 +558,8 @@ describe("cooking meal-log cross-slice Stage 1 relock", () => {
       "Deterministic/isolated/non-final proof evidence remains green",
     );
     expect(status.notes).toContain("Stage 2 Draft PR #1377");
-    expect(status.notes).toContain(stage3RequiredFix);
+    expect(status.notes).toContain(stage3ApprovalReviewerTask);
+    expect(status.notes).toContain("final drift-only review pending");
 
     for (const value of [
       stage1ApprovalEvidencePath,
