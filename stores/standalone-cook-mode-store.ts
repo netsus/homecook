@@ -5,6 +5,7 @@ import {
   fetchStandaloneCookMode,
   isCookingApiError,
 } from "@/lib/api/cooking";
+import { canonicalizeLegacyConsumedIngredientIds } from "@/lib/cooking/legacy-completion-payload";
 import type { CookingStandaloneCookModeData } from "@/types/cooking";
 
 export type StandaloneCookModeScreenState =
@@ -85,10 +86,12 @@ export const useStandaloneCookModeStore = create<StandaloneCookModeStoreState>(
       const { recipeId, servings } = get();
       if (!recipeId) return;
 
+      const canonicalConsumedIngredientIds =
+        canonicalizeLegacyConsumedIngredientIds(consumedIngredientIds);
       const body = {
         recipe_id: recipeId,
         cooking_servings: servings,
-        consumed_ingredient_ids: consumedIngredientIds,
+        consumed_ingredient_ids: canonicalConsumedIngredientIds,
       };
       const payload = JSON.stringify(body);
       const previousAttempt = get().completionAttempt;

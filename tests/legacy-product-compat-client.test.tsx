@@ -9,6 +9,8 @@ import {
 import { getCookingSessionCookModeHref } from "@/lib/cooking/session-version-dispatch";
 
 const KEY = "550e8400-e29b-41d4-a716-446655440013";
+const INGREDIENT_A = "550e8400-e29b-41d4-a716-446655440601";
+const INGREDIENT_B = "550e8400-e29b-41d4-a716-446655440602";
 
 function successResponse(data: unknown) {
   return {
@@ -37,12 +39,15 @@ describe("legacy product compatibility clients", () => {
 
     const result = await completeLegacyPlanner(
       "session-1",
-      { consumed_ingredient_ids: ["ingredient-1"] },
+      { consumed_ingredient_ids: [INGREDIENT_B, INGREDIENT_A, INGREDIENT_A] },
       KEY,
     );
 
     const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(new Headers(init.headers).get("Idempotency-Key")).toBe(KEY);
+    expect(JSON.parse(String(init.body))).toEqual({
+      consumed_ingredient_ids: [INGREDIENT_A, INGREDIENT_B],
+    });
     expect(result).toEqual({
       session_id: "session-1",
       status: "completed",
@@ -66,13 +71,18 @@ describe("legacy product compatibility clients", () => {
       {
         recipe_id: "recipe-1",
         cooking_servings: 2,
-        consumed_ingredient_ids: ["ingredient-1"],
+        consumed_ingredient_ids: [INGREDIENT_B, INGREDIENT_A, INGREDIENT_A],
       },
       KEY,
     );
 
     const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(new Headers(init.headers).get("Idempotency-Key")).toBe(KEY);
+    expect(JSON.parse(String(init.body))).toEqual({
+      recipe_id: "recipe-1",
+      cooking_servings: 2,
+      consumed_ingredient_ids: [INGREDIENT_A, INGREDIENT_B],
+    });
     expect(result).toEqual({
       leftover_dish_id: "leftover-2",
       pantry_removed: 1,

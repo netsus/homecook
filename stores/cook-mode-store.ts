@@ -6,6 +6,7 @@ import {
   fetchCookMode,
   isCookingApiError,
 } from "@/lib/api/cooking";
+import { canonicalizeLegacyConsumedIngredientIds } from "@/lib/cooking/legacy-completion-payload";
 import type {
   CookingSessionCookModeData,
 } from "@/types/cooking";
@@ -87,8 +88,10 @@ export const useCookModeStore = create<CookModeStoreState>((set, get) => ({
     const { sessionId } = get();
     if (!sessionId) return;
 
+    const canonicalConsumedIngredientIds =
+      canonicalizeLegacyConsumedIngredientIds(consumedIngredientIds);
     const payload = JSON.stringify({
-      consumed_ingredient_ids: consumedIngredientIds,
+      consumed_ingredient_ids: canonicalConsumedIngredientIds,
     });
     const previousAttempt = get().completionAttempt;
     const completionAttempt = previousAttempt?.payload === payload
@@ -99,7 +102,7 @@ export const useCookModeStore = create<CookModeStoreState>((set, get) => ({
 
     try {
       await completeCookingSession(sessionId, {
-        consumed_ingredient_ids: consumedIngredientIds,
+        consumed_ingredient_ids: canonicalConsumedIngredientIds,
       }, completionAttempt.key);
       set({ screenState: "completed", completionAttempt: null });
     } catch (error) {
