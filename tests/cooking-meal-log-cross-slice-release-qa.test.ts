@@ -10,7 +10,24 @@ import { validateAuthorityEvidencePresence } from "../scripts/lib/validate-autho
 
 const root = process.cwd();
 const sliceId = "cooking-meal-log-cross-slice-release-qa";
-const trackedBranch = "docs/cooking-meal-log-cross-slice-relock";
+const stage2Branch = "feature/be-cooking-meal-log-cross-slice-release-qa";
+const stage2Base = "afb1b31aa6c95ba974f7484d31fa123439d5fcd6";
+const stage2AuthorEvidencePath =
+  "docs/workpacks/cooking-meal-log-cross-slice-release-qa/evidence/2026-08-21-stage2-verification-author.md";
+const stage2AuthorCheckedIds = [
+  "accept-cooking-cross-automation-query-count",
+  "accept-cooking-cross-automation-runtime",
+  "accept-cooking-cross-happy-isolated",
+  "accept-cooking-cross-happy-predecessors",
+  "accept-cooking-cross-precondition-evidence",
+  "accept-cooking-cross-precondition-isolation",
+  "accept-cooking-cross-precondition-local-only",
+  "accept-cooking-cross-state-no-invention",
+  "accept-cooking-cross-state-separation",
+  "accept-cooking-cross-state-verification-only",
+  "delivery-cooking-cross-stage2-predecessors",
+  "delivery-cooking-cross-stage2-repair-boundary",
+];
 const approvedPlanPath =
   "docs/workpacks/planner-shell/evidence/cooking-meal-log-and-product-search-master-plan-20260722.md";
 const approvedPlanSha =
@@ -293,12 +310,12 @@ describe("cooking meal-log cross-slice Stage 1 relock", () => {
     expect(approvedPlan.toString("utf8").match(/\n/gu)).toHaveLength(1_018);
   });
 
-  it("keeps the Stage 1 exact-six lifecycle projection honest", () => {
+  it("keeps the approved Stage 1 evidence while Stage 2 is in progress", () => {
     expect(roadmap).toMatch(
-      /\| `cooking-meal-log-cross-slice-release-qa` \| docs \|/u,
+      /\| `cooking-meal-log-cross-slice-release-qa` \| in-progress \|/u,
     );
     expect(workItem.status).toEqual({
-      lifecycle: "planned",
+      lifecycle: "in_progress",
       approval_state: "codex_approved",
       verification_status: "passed",
       evaluation_status: "passed",
@@ -309,14 +326,15 @@ describe("cooking meal-log cross-slice Stage 1 relock", () => {
       blocked_reason_code: null,
     });
     expect(status).toMatchObject({
-      branch: trackedBranch,
+      branch: stage2Branch,
       pr_path: "https://github.com/netsus/homecook/pull/1373",
       ...workItem.status,
     });
-    expect(readme).toContain(trackedBranch);
+    expect(exactSix).toContain(stage2Branch);
+    expect(exactSix).toContain(stage2Base);
   });
 
-  it("projects four independent exact-head Stage 1 approvals without promoting runtime", () => {
+  it("preserves Stage 1 approvals while only proven Stage 2 items advance", () => {
     expect(existsSync(join(root, stage1ApprovalEvidencePath))).toBe(true);
     if (!existsSync(join(root, stage1ApprovalEvidencePath))) {
       return;
@@ -393,7 +411,7 @@ describe("cooking meal-log cross-slice Stage 1 relock", () => {
       stage1ApprovalEvidencePath,
     );
     expect(workItem.status).toEqual({
-      lifecycle: "planned",
+      lifecycle: "in_progress",
       approval_state: "codex_approved",
       verification_status: "passed",
       evaluation_status: "passed",
@@ -407,7 +425,7 @@ describe("cooking meal-log cross-slice Stage 1 relock", () => {
     expect(workItem.closeout).toMatchObject({
       phase: "collecting",
       docs_projection: {
-        roadmap_lifecycle: "planned",
+        roadmap_lifecycle: "in_progress",
         design_status: "temporary",
         delivery_checklist: "pending",
         design_authority: "pending",
@@ -424,10 +442,10 @@ describe("cooking meal-log cross-slice Stage 1 relock", () => {
         all_checks_green: true,
       },
     });
-    expect(workItem.notes).toContain(readyReviewedHead);
-    expect(workItem.notes).toContain("Ready YES");
-    expect(status.notes).toContain(readyReviewedHead);
-    expect(status.notes).toContain("Ready YES");
+    expect(workItem.notes).toContain(stage2AuthorEvidencePath);
+    expect(workItem.notes).toContain("deterministic regressions 137/137");
+    expect(status.notes).toContain(stage2AuthorEvidencePath);
+    expect(status.notes).toContain("pinned isolated local exit 0");
 
     for (const value of [
       stage1ApprovalEvidencePath,
@@ -436,18 +454,26 @@ describe("cooking meal-log cross-slice Stage 1 relock", () => {
       ...stage1ApprovalTasks.flatMap(([role, taskId]) => [role, taskId]),
       "APPROVE 0/0/0",
       "drift 0",
-      "Stage 2 remains not started",
+      "Stage 2 verification-only",
+      stage2Base,
     ]) {
       expect(exactSix).toContain(value);
     }
     expect(roadmap).toMatch(
-      /\| `cooking-meal-log-cross-slice-release-qa` \| docs \|[^\n]*Stage 1[^\n]*APPROVE[^\n]*Stage 2[^\n]*pending/u,
+      /\| `cooking-meal-log-cross-slice-release-qa` \| in-progress \|[^\n]*Stage 2 verification-only[^\n]*pinned isolated local evidence[^\n]*수집 중/u,
     );
-    expect(
-      readWorkpackChecklistContract({ rootDir: root, slice: sliceId }).items
-        .filter((item) => !item.manualOnly)
-        .every((item) => item.checked === false),
-    ).toBe(true);
+    const checkedIds = readWorkpackChecklistContract({
+      rootDir: root,
+      slice: sliceId,
+    }).items
+      .filter((item) => !item.manualOnly && item.checked)
+      .map((item) => item.metadata?.id)
+      .sort();
+    expect(checkedIds).toEqual(stage2AuthorCheckedIds);
+    expect(exactSix).toContain(stage2AuthorEvidencePath);
+    expect(acceptance).toMatch(
+      /\[x\] pinned isolated local verification passes without product or production mutation/u,
+    );
     expect(readme).toContain(
       "Stage 1 approval is complete (`codex_approved`); runtime Delivery Checklist and Stage 2 remain pending.",
     );

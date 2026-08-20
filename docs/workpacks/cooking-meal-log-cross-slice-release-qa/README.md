@@ -166,6 +166,15 @@ Stage 2 entry still requires this relock PR merge and the documented post-merge 
 - Stage 4: real local stack + real Chrome, owner A/B and the eight screens at 390/320/desktop; unavailable runtime or authority is a blocker rather than a fixture substitution.
 - bootstrap expectations remain predecessor-owned (`users`, `recipe_books`, `meal_plan_columns`, account generation/session binding). Missing schema/seed/bootstrap blocks verification.
 
+## Stage 2 Current Evidence
+
+- successor author task `01a020fd-56ef-73a3-9aa3-7a8d44a8541c` on start head `721e562b2f62b5f3efb2fb435e9bc1126297b3e8` rechecked the predecessor/repair ancestry with drift `0`.
+- deterministic F0/#1~#13 focused regressions are green: `26 files / 137 tests`; backend gate is green with product `2,757 passed / 175 intended skipped`, build and security E2E `12/12`.
+- actual route query-count is `list1=1`, `list20=1`, item-level N+1 `0`; version/rollback/tombstone compatibility is `32/32`.
+- successor task sandbox의 Docker preflight 두 번은 capability 경계로 실패했지만, 부모가 같은 branch/HEAD에서 `pnpm verify:local-supabase-runtime:isolated`를 exit `0`으로 재실행했다. CLI `2.110.0`, migration SHA-256 `f2f429121f32d6917e43766f7351e918bcfe40852618793ab5d6105e2735ab0d`, ephemeral project `hcg_88821_e41204`, full migrations+seed+reset, Data API `200`, cleanup을 확인했다.
+- retained author evidence: `docs/workpacks/cooking-meal-log-cross-slice-release-qa/evidence/2026-08-21-stage2-verification-author.md`.
+- Stage 2 remains `in_progress`: non-final proof/owning DB artifact와 final threshold evidence, controlled full-local, Stage 3~6, Manual and activation are pending.
+
 ## Key Rules
 
 - official tuple is v1.7.32/v1.5.36/v1.3.34/DB v1.3.34/API v1.2.39; this relock is not Contract Evolution.
@@ -185,8 +194,8 @@ Stage 2 entry still requires this relock PR merge and the documented post-merge 
 Stage 1 approval is complete (`codex_approved`); runtime Delivery Checklist and Stage 2 remain pending.
 
 - [ ] pinned isolated local DB/API/security/performance verification is green on the exact head <!-- omo:id=delivery-cooking-cross-stage2-isolated;stage=2;scope=backend;review=3,6 -->
-- [ ] predecessor runtime merge map is rechecked and no retained evidence is stale <!-- omo:id=delivery-cooking-cross-stage2-predecessors;stage=2;scope=shared;review=3,6 -->
-- [ ] defects, if any, use a separate failing-test-first TDD repair PR and full rerun after its merge <!-- omo:id=delivery-cooking-cross-stage2-repair-boundary;stage=2;scope=shared;review=3,6 -->
+- [x] predecessor runtime merge map is rechecked and no retained evidence is stale <!-- omo:id=delivery-cooking-cross-stage2-predecessors;stage=2;scope=shared;review=3,6 -->
+- [x] defects, if any, use a separate failing-test-first TDD repair PR and full rerun after its merge <!-- omo:id=delivery-cooking-cross-stage2-repair-boundary;stage=2;scope=shared;review=3,6 -->
 - [ ] controlled full-local use stays read-only or records separate mutation authority <!-- omo:id=delivery-cooking-cross-stage2-local-authority;stage=2;scope=backend;review=3,6 -->
 - [ ] eight-screen real Chrome 390/320/desktop evidence is captured on the exact repaired head <!-- omo:id=delivery-cooking-cross-stage4-browser;stage=4;scope=frontend;review=5,6 -->
 - [ ] loading/empty/error/read-only/unauthorized and contracted edge states are verified <!-- omo:id=delivery-cooking-cross-stage4-states;stage=4;scope=frontend;review=5,6 -->
