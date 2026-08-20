@@ -608,6 +608,21 @@ describe("legacy-product-compat fresh Stage 1 exact-six relock", () => {
     expect(automation.backend.verify_commands).toContain(
       "pnpm verify:local-supabase-runtime:isolated",
     );
+    expect(automation.backend.verify_commands.join("\n")).toContain(
+      "tests/snapshot-v2-session-attempts.test.ts",
+    );
+    expect(automation.backend.verify_commands.join("\n")).toContain(
+      "tests/snapshot-v2-complete.test.ts",
+    );
+    expect(automation.backend.required_test_targets).toEqual(
+      expect.arrayContaining([
+        "tests/snapshot-v2-session-attempts.test.ts",
+        "tests/snapshot-v2-complete.test.ts",
+      ]),
+    );
+    expect(read("tests/legacy-cooking-complete-routes.test.ts")).toContain(
+      "returns exact 428 from the actual route when the approved phase is required",
+    );
     expect(automation.frontend.verify_commands).toContain(
       "pnpm verify:frontend",
     );

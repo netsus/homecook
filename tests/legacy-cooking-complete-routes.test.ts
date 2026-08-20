@@ -6,6 +6,7 @@ const readVerifiedAccountGenerationSession = vi.fn();
 const ensurePublicUserRow = vi.fn();
 const ensureUserBootstrapState = vi.fn();
 const awardUserProgressEvent = vi.fn();
+const getLegacyCookingIdempotencyPhase = vi.fn(() => "optional");
 
 vi.mock("@/lib/supabase/server", () => ({
   createRouteHandlerClient,
@@ -25,6 +26,16 @@ vi.mock("@/lib/server/user-bootstrap", () => ({
 vi.mock("@/lib/server/user-progress", () => ({
   awardUserProgressEvent,
 }));
+
+vi.mock("@/lib/server/legacy-product-compat", async (importOriginal) => {
+  const actual = await importOriginal<
+    typeof import("@/lib/server/legacy-product-compat")
+  >();
+  return {
+    ...actual,
+    getLegacyCookingIdempotencyPhase,
+  };
+});
 
 const OWNER_ID = "550e8400-e29b-41d4-a716-446655440101";
 const SESSION_ID = "550e8400-e29b-41d4-a716-446655440102";
@@ -167,6 +178,8 @@ describe.each(cases)("legacy $name cooking completion route", (routeCase) => {
     ensurePublicUserRow.mockReset();
     ensureUserBootstrapState.mockReset();
     awardUserProgressEvent.mockReset();
+    getLegacyCookingIdempotencyPhase.mockReset();
+    getLegacyCookingIdempotencyPhase.mockReturnValue("optional");
   });
 
   it("uses the exact service-only RPC with verified session authority", async () => {
@@ -199,6 +212,27 @@ describe.each(cases)("legacy $name cooking completion route", (routeCase) => {
       routeCase.functionName,
       routeCase.expectedArgs(null),
     );
+  });
+
+  it("returns exact 428 from the actual route when the approved phase is required", async () => {
+    getLegacyCookingIdempotencyPhase.mockReturnValue("required");
+    const rpc = setup({ data: routeCase.successData });
+
+    const response = await routeCase.invoke(routeCase.request(null));
+
+    expect(response.status).toBe(428);
+    expect(await response.json()).toEqual({
+      success: false,
+      data: null,
+      error: {
+        code: "IDEMPOTENCY_KEY_REQUIRED",
+        message: "요청 키가 필요해요.",
+        fields: [{ field: "Idempotency-Key", reason: "required" }],
+      },
+    });
+    expect(rpc).not.toHaveBeenCalled();
+    expect(createRouteHandlerClient).not.toHaveBeenCalled();
+    expect(readVerifiedAccountGenerationSession).not.toHaveBeenCalled();
   });
 
   it("rejects a malformed Idempotency-Key before session or database work", async () => {
