@@ -100,7 +100,10 @@ declare
   v_authority jsonb;
   v_session public.cooking_sessions%rowtype;
   v_recipe public.recipes%rowtype;
+  v_recipe_owner_uuid_prelock uuid;
   v_recipe_owner_lifecycle_status text;
+  v_lock_owner_uuid uuid;
+  v_lock_owner_lifecycle_status text;
   v_recipe_id uuid;
   v_servings integer;
   v_consumed uuid[];
@@ -137,6 +140,45 @@ begin
     select distinct ingredient_id as id
     from unnest(p_consumed_ingredient_ids) as consumed(ingredient_id)
   ) as ids;
+
+  if p_mode = 'standalone' then
+    select recipe.created_by
+    into v_recipe_owner_uuid_prelock
+    from public.recipes as recipe
+    where recipe.id = p_recipe_id;
+
+    perform pg_catalog.pg_advisory_xact_lock_shared(
+      pg_catalog.hashtextextended('homecook-account-generation-cutover', 0)
+    );
+    for v_lock_owner_uuid in
+      select locked_owner.owner_uuid
+      from (
+        select distinct owner_uuid
+        from unnest(array[p_owner_uuid, v_recipe_owner_uuid_prelock])
+          as owner_ids(owner_uuid)
+        where owner_uuid is not null
+      ) as locked_owner
+      order by locked_owner.owner_uuid::text collate "C"
+    loop
+      perform pg_catalog.pg_advisory_xact_lock(
+        pg_catalog.hashtextextended(
+          'homecook-account-owner:' || v_lock_owner_uuid::text,
+          0
+        )
+      );
+      v_lock_owner_lifecycle_status := null;
+      select recipe_owner_lifecycle.status
+      into v_lock_owner_lifecycle_status
+      from public.user_account_lifecycles as recipe_owner_lifecycle
+      where recipe_owner_lifecycle.owner_uuid = v_lock_owner_uuid
+      order by recipe_owner_lifecycle.account_generation desc
+      limit 1
+      for share;
+      if v_lock_owner_uuid = v_recipe_owner_uuid_prelock then
+        v_recipe_owner_lifecycle_status := v_lock_owner_lifecycle_status;
+      end if;
+    end loop;
+  end if;
 
   v_authority := public.assert_recipe_future_session_authority(
     p_owner_uuid,
@@ -192,21 +234,17 @@ begin
     if v_recipe.id is null or v_recipe.deleted_at is not null then
       raise exception 'RESOURCE_NOT_FOUND' using errcode = 'P0002';
     end if;
+    if v_recipe.created_by is distinct from v_recipe_owner_uuid_prelock then
+      raise exception 'RESOURCE_NOT_FOUND' using errcode = 'P0002';
+    end if;
     if v_recipe.visibility = 'private'
       and v_recipe.created_by is distinct from p_owner_uuid then
       raise exception 'RESOURCE_NOT_FOUND' using errcode = 'P0002';
     end if;
-    if v_recipe.created_by is distinct from p_owner_uuid then
-      select recipe_owner_lifecycle.status
-      into v_recipe_owner_lifecycle_status
-      from public.user_account_lifecycles as recipe_owner_lifecycle
-      where recipe_owner_lifecycle.owner_uuid = v_recipe.created_by
-      order by recipe_owner_lifecycle.account_generation desc
-      limit 1;
-      if v_recipe_owner_lifecycle_status is not null
-        and v_recipe_owner_lifecycle_status is distinct from 'active' then
-        raise exception 'RESOURCE_NOT_FOUND' using errcode = 'P0002';
-      end if;
+    if v_recipe.created_by is distinct from p_owner_uuid
+      and v_recipe_owner_lifecycle_status is not null
+      and v_recipe_owner_lifecycle_status is distinct from 'active' then
+      raise exception 'RESOURCE_NOT_FOUND' using errcode = 'P0002';
     end if;
     v_recipe_id := v_recipe.id;
     v_servings := p_cooking_servings;

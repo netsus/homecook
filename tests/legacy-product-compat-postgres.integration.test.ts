@@ -80,6 +80,20 @@ function psqlAsync(sql: string) {
   });
 }
 
+async function waitForSleepingActivity(applicationName: string) {
+  for (let attempt = 0; attempt < 80; attempt += 1) {
+    const sleeping = Number(lastLine(psql(`
+      select count(*)
+      from pg_catalog.pg_stat_activity
+      where application_name='${applicationName}'
+        and wait_event='PgSleep';
+    `).stdout));
+    if (sleeping === 1) return;
+    await new Promise((resolve) => setTimeout(resolve, 25));
+  }
+  throw new Error(`timed out waiting for ${applicationName}`);
+}
+
 function lastLine(output: string) {
   return output.trim().split("\n").map((line) => line.trim()).filter(Boolean).at(-1) ?? "";
 }
@@ -369,6 +383,43 @@ describe.runIf(enabled)("legacy product compatibility PostgreSQL", () => {
       expect(result.stderr).toContain("RESOURCE_NOT_FOUND");
       expect(ownerDigest(ownerA)).toBe(beforeA);
       expect(ownerDigest(ownerB)).toBe(beforeB);
+      psql(`update public.user_account_lifecycles set status='active' where owner_uuid='${ownerB}'`);
+    }
+  });
+
+  it("serializes another owner's quarantine before public recipe completion", async () => {
+    const applicationName = "legacy_owner_quarantine_race";
+    const transition = psqlAsync(`
+      set application_name='${applicationName}';
+      begin;
+      select pg_catalog.pg_advisory_xact_lock(
+        pg_catalog.hashtextextended('homecook-account-owner:${ownerB}', 0)
+      );
+      update public.user_account_lifecycles
+      set status='quarantined'
+      where owner_uuid='${ownerB}';
+      select pg_catalog.pg_sleep(2);
+      commit;
+      select 'JSON:' || jsonb_build_object('status','quarantined')::text;
+    `);
+
+    await waitForSleepingActivity(applicationName);
+    const beforeA = ownerDigest(ownerA);
+    const beforeB = ownerDigest(ownerB);
+    const completion = psqlAsync(standaloneCall(recipePublicB, null));
+    const [transitionResult, completionResult] = await Promise.allSettled([
+      transition,
+      completion,
+    ]);
+
+    try {
+      expect(transitionResult.status).toBe("fulfilled");
+      expect(completionResult.status).toBe("rejected");
+      expect(String((completionResult as PromiseRejectedResult).reason))
+        .toContain("RESOURCE_NOT_FOUND");
+      expect(ownerDigest(ownerA)).toBe(beforeA);
+      expect(ownerDigest(ownerB)).toBe(beforeB);
+    } finally {
       psql(`update public.user_account_lifecycles set status='active' where owner_uuid='${ownerB}'`);
     }
   });

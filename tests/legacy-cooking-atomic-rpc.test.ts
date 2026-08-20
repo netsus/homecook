@@ -78,18 +78,29 @@ describe("legacy cooking atomic compatibility RPC", () => {
 
   it("applies the recipe-owner lifecycle visibility upper bound before claim", () => {
     const sql = readMigration();
+    const core = sql.indexOf("create or replace function private.complete_legacy_cooking_core");
+    const globalLock = sql.indexOf(
+      "pg_advisory_xact_lock_shared",
+      core,
+    );
+    const ownerLock = sql.indexOf("homecook-account-owner:", core);
     const standaloneRecipeRead = sql.indexOf("select recipe.* into v_recipe");
     const lifecycleRead = sql.indexOf(
       "from public.user_account_lifecycles as recipe_owner_lifecycle",
-      standaloneRecipeRead,
+      core,
     );
+    const lifecycleLock = sql.indexOf("for share", lifecycleRead);
     const activeGuard = sql.indexOf(
       "v_recipe_owner_lifecycle_status is distinct from 'active'",
       lifecycleRead,
     );
     const claim = sql.indexOf("claim_cooked_batch_operation", standaloneRecipeRead);
 
-    expect(lifecycleRead).toBeGreaterThan(standaloneRecipeRead);
+    expect(globalLock).toBeGreaterThan(core);
+    expect(ownerLock).toBeGreaterThan(globalLock);
+    expect(lifecycleRead).toBeGreaterThan(ownerLock);
+    expect(lifecycleLock).toBeGreaterThan(lifecycleRead);
+    expect(standaloneRecipeRead).toBeGreaterThan(lifecycleLock);
     expect(activeGuard).toBeGreaterThan(lifecycleRead);
     expect(claim).toBeGreaterThan(activeGuard);
   });
