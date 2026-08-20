@@ -91,6 +91,8 @@ Manual Only `7` items remain unchecked. No cutover, revoke/drop, server-Mac/OAut
 
 PR Design/Accessibility is aligned with independent Stage 5 APPROVE and Design confirmed. Test Plan and Actual Verification reference the exact repaired-head full gate above. Stage 6, Ready/merge and Manual remain pending.
 
+- PR body was projected and validated on docs successor `6d76ee60693075d3b703d1c3ef189c0bc919a9e0`: required template sections pass, Ready-mode real-smoke presence passes, and the full non-Manual `40/40` plus Manual `0/7` split is explicit.
+
 ## Pending
 
 - successor Draft PR checks
