@@ -52,6 +52,19 @@
       "docs/workpacks/cooked-batch-weight-ui/evidence/2026-08-10-final-authority-p2-repair-rereview.md"
     ]
   },
+  "stage5_finding_repair": {
+    "status": "author_repaired_pending_fresh_re_review",
+    "approved": false,
+    "finding_id": "stage5-p1-delete-error-behind-dialog",
+    "input_head": "deacb8038641f6ec3f2c63abc3c506eb74aed4cc",
+    "input_tree": "20e47a9f600e1bebc8528d2213649419c838e398",
+    "repair_commit": "31a2b9394df031a7dee84e692cbd399d77044853",
+    "repair_tree": "6873b140bb0471ed4995339a193845820c263e5e",
+    "component_red": "1 failed / 5 passed: active dialog alert absent",
+    "playwright_red": "1 failed: active dialog alert not visible",
+    "green": "component 6/6; legacy focused 17/17; exact Playwright 14/14; lint; typecheck; verify:frontend:pr",
+    "full_verify_split": "retained clean full gate at a591ebafa619a992b52a9a576e41e7a45b18f011; current repair uses focused/exact/fast gates"
+  },
   "checklist_updates": [
     { "id": "delivery-legacy-compat-stage4-optional-key", "status": "checked", "evidence_refs": ["tests/legacy-product-compat-client.test.tsx", "tests/legacy-product-compat-store.test.ts"] },
     { "id": "delivery-legacy-compat-stage4-states", "status": "checked", "evidence_refs": ["tests/e2e/slice-planner-shell.spec.ts", "tests/cooking-session-version-dispatch.test.tsx"] },

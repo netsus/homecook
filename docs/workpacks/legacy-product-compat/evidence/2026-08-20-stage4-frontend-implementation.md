@@ -97,3 +97,14 @@ Production/staging/remote application writes are `0/0/0`. Claude was not used.
 - finding: current FE branch/PR projection에서 workpack validation command 3곳만 이전 BE branch를 가리켰다.
 - repair: work-item required/verify command와 status required command를 `BRANCH_NAME=feature/fe-legacy-product-compat`로 동기화했다.
 - post-repair validators: workflow-v2, workpack, automation, OMO, source-of-truth와 relock/governance `65/65`를 다시 실행한다.
+
+## Stage 5 P1 finding repair
+
+- Stage 5 finding: delete failure alert가 active confirmation dialog 뒤 planner body에 렌더링되어 사용자에게 보이지 않았다.
+- repair commit: `31a2b9394df031a7dee84e692cbd399d77044853`; parent `deacb8038641f6ec3f2c63abc3c506eb74aed4cc`; tree `6873b140bb0471ed4995339a193845820c263e5e`.
+- repair: existing thrown `Error.message`를 confirmation local state로 보존하고 dialog 내부 `role="alert"`로 렌더링한다. 실패 시 기존 close button ref로 focus를 dialog 안에 복원한다. planner body alert state는 제거했다.
+- RED: component `1 failed / 5 passed`; scoped Playwright `1 failed / 0 passed`.
+- GREEN: component `6/6`; legacy focused `17/17`; exact legacy Playwright `14/14`; lint/typecheck; current repair `verify:frontend:pr` GREEN.
+- inherited/current split: clean full `verify:frontend`은 Stage 4 head `a591ebafa619a992b52a9a576e41e7a45b18f011`의 retained evidence다. Stage 5 repair는 focused + exact viewport + fast frontend gate를 current repair tree에서 실행했다. full gate를 current repair에서 재주장하지 않는다.
+- unchanged: pinned row/detail, duplicate pending lock, Escape/focus restore, Design Status `pending-review`, `authority_required=false`, public contract와 visual composition.
+- status: author repair complete; fresh Stage 5 re-review pending. 이 작업은 Stage 5를 승인하지 않는다.

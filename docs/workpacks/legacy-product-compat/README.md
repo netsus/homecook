@@ -213,8 +213,10 @@
 - implementation commit `3ca8320cd61b0a74e4ac682ce9c7661b0a675341`은 optional stable key, same-payload retry reuse/different-payload rotation, duplicate delete lock와 nested focus restore를 구현했다. browser evidence commit `c7920dc89a69579429a15198a0bd4769646154b3`은 loading/empty/error/read-only/unauthorized와 390px/320px/desktop matrix를 #13 grep scope에 잠갔다.
 - TDD RED `5 failures`와 same-target reader reload RED `2 failures` 뒤 focused Vitest `10 files / 133 tests`, legacy focused `3 files / 17 tests`, exact Playwright `14/14`, lint, typecheck, build, product Vitest `2,757 pass / 175 intended skip`, Lighthouse `2 URLs × 3`, complete regression `963 pass / 180 intended skip`, full a11y `18 pass / 15 intended skip`, full visual `22 pass / 23 intended skip`, security `12/12`, audit high/critical `0/0`가 GREEN이다.
 - exploratory QA/qa eval은 `low-risk`, `authority_required=false`, 새 화면·visual composition 없음, exact mocked-route browser matrix가 존재하므로 N/A다. 기존 세 final authority reference를 그대로 재사용하며 새 authority artifact를 만들지 않는다.
+- Stage 5 P1 finding repair commit `31a2b9394df031a7dee84e692cbd399d77044853`은 delete failure alert를 planner body에서 active confirmation dialog로 옮기고 failure focus를 dialog close control로 복원했다. component RED `1/6`, Playwright RED `1/1` 뒤 component `6/6`, legacy focused `17/17`, exact legacy Playwright `14/14`, `verify:frontend:pr`가 GREEN이다. 이는 author repair이며 Stage 5 approval이 아니다.
 - 전체 lifecycle은 `in_progress`, approval/evaluation은 `not_started`, verification은 `pending`, auto-merge는 `false`다. fresh Stage 5와 Stage 6, Draft current-head checks, Ready/merge, Manual/server-Mac/OAuth/device/AT/full WCAG, controlled cutover와 activation은 pending이다.
 - 상세 증거: `docs/workpacks/legacy-product-compat/evidence/2026-08-20-stage4-frontend-implementation.md`.
+- Stage 5 finding repair 증거: `docs/workpacks/legacy-product-compat/evidence/2026-08-20-stage5-finding-repair.md`.
 
 ## Delivery Checklist
 
