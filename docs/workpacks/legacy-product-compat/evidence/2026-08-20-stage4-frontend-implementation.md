@@ -77,12 +77,12 @@ The first full-gate attempt ran before the projection commit and the clean-head-
   - `ui/designs/authority/PLANNER_WEEK-authority.md`
   - `ui/designs/authority/recipe-content-snapshot-future-propagation-authority.md`
   - `docs/workpacks/cooked-batch-weight-ui/evidence/2026-08-10-final-authority-p2-repair-rereview.md`
-- Design Status: `pending-review`, not `confirmed`.
+- Design Status: independent Stage 5 approval 뒤 `confirmed`; `authority_required=false`이며 새 authority artifact 없음.
 
 ## Pending and not claimed
 
 - Draft PR #1371 current-head checks and complete template refresh after projection commit
-- fresh Stage 5 lightweight design review and independent Stage 6 closeout review
+- independent Stage 6 closeout review
 - Ready transition, merge, final workpack closeout, Discord
 - physical device/keyboard/screen reader/virtual keyboard/full WCAG
 - controlled full-local/current-head deploy, old-server drain, maintenance/write fence, old overload revoke/drop, callable inventory/negative privilege, server-Mac/OAuth
@@ -107,4 +107,4 @@ Production/staging/remote application writes are `0/0/0`. Claude was not used.
 - GREEN: component `6/6`; legacy focused `17/17`; exact legacy Playwright `14/14`; lint/typecheck; current repair `verify:frontend:pr` GREEN.
 - inherited/current split: clean full `verify:frontend`은 Stage 4 head `a591ebafa619a992b52a9a576e41e7a45b18f011`의 retained evidence다. Stage 5 repair는 focused + exact viewport + fast frontend gate를 current repair tree에서 실행했다. full gate를 current repair에서 재주장하지 않는다.
 - unchanged: pinned row/detail, duplicate pending lock, Escape/focus restore, Design Status `pending-review`, `authority_required=false`, public contract와 visual composition.
-- status: author repair complete; fresh Stage 5 re-review pending. 이 작업은 Stage 5를 승인하지 않는다.
+- status: author repair 뒤 independent Stage 5 task `01a01e3b-663e-7252-9c3c-0c7b30251c0e`가 exact `387f1d688204061c28b60c415135a70e42a07042` / tree `e0d887e487ad237a87fa6b3d67238d2dac045ce7`, drift `0`에서 APPROVE `0/0/0`, blocker/major/minor `0/0/0`을 반환했다. Stage 6은 pending이다.

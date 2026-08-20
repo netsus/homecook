@@ -7,7 +7,7 @@
 - repair author task: `01a01e01-0a0e-7f70-97dd-2e6c8f0012af`
 - reviewed input head/tree: `deacb8038641f6ec3f2c63abc3c506eb74aed4cc` / `20e47a9f600e1bebc8528d2213649419c838e398`
 - repair commit/tree/parent: `31a2b9394df031a7dee84e692cbd399d77044853` / `6873b140bb0471ed4995339a193845820c263e5e` / `deacb8038641f6ec3f2c63abc3c506eb74aed4cc`
-- Stage 5 approval: not claimed; fresh re-review pending
+- Stage 5 approval: independent task `01a01e3b-663e-7252-9c3c-0c7b30251c0e` APPROVE at exact `387f1d688204061c28b60c415135a70e42a07042` / tree `e0d887e487ad237a87fa6b3d67238d2dac045ce7`, drift `0`
 
 ## Finding
 
@@ -37,6 +37,6 @@ Delete failure kept the confirmation open, row and pinned detail intact, but the
 
 - no new public status, error, action, screen, route, field, endpoint, dependency, or visual redesign
 - pinned row/detail, duplicate pending block, Escape, nested focus restore and 390/320/desktop overflow contract retained
-- Design Status remains `pending-review`; `authority_required=false`
-- Stage 5 and Stage 6 remain independent pending reviews
+- Design Status is `confirmed`; `authority_required=false`, 새 authority artifact 없음
+- Stage 6 remains an independent pending review
 - Manual/device/AT/server-Mac/OAuth/cutover/activation remain pending

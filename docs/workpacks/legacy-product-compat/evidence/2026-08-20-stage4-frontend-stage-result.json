@@ -2,7 +2,7 @@
   "result": "done",
   "stage": 4,
   "role": "fresh-frontend-implementer",
-  "summary_markdown": "Legacy planner/standalone completion clients now send a stable optional UUID key without changing the v1 response decoder. Existing stored-version dispatch, seeded snapshot-v2 drain, PLANNER_WEEK legacy read/detail/delete-only composition, five states, pending/error retention and focus/responsive behavior are locked by focused Vitest and Playwright. Stage 5/6, Manual and activation remain pending.",
+  "summary_markdown": "Legacy planner/standalone completion clients send a stable optional UUID key without changing the v1 response decoder. Existing stored-version dispatch, seeded snapshot-v2 drain, PLANNER_WEEK legacy read/detail/delete-only composition, five states, pending/error retention and focus/responsive behavior are locked by focused Vitest and Playwright. Independent Stage 5 approved exact reviewed head/tree with findings 0; Stage 6, Manual and activation remain pending.",
   "source": {
     "task_id": "01a01e01-0a0e-7f70-97dd-2e6c8f0012af",
     "base_sha": "9da127e806743e78ec103292907ec42bda566338",
@@ -45,7 +45,7 @@
     "ui_risk": "low-risk",
     "authority_required": false,
     "new_visual_composition": false,
-    "design_status": "pending-review",
+    "design_status": "confirmed",
     "authority_report_paths": [
       "ui/designs/authority/PLANNER_WEEK-authority.md",
       "ui/designs/authority/recipe-content-snapshot-future-propagation-authority.md",
@@ -53,8 +53,8 @@
     ]
   },
   "stage5_finding_repair": {
-    "status": "author_repaired_pending_fresh_re_review",
-    "approved": false,
+    "status": "approved_by_independent_stage5",
+    "approved": true,
     "finding_id": "stage5-p1-delete-error-behind-dialog",
     "input_head": "deacb8038641f6ec3f2c63abc3c506eb74aed4cc",
     "input_tree": "20e47a9f600e1bebc8528d2213649419c838e398",
@@ -63,7 +63,14 @@
     "component_red": "1 failed / 5 passed: active dialog alert absent",
     "playwright_red": "1 failed: active dialog alert not visible",
     "green": "component 6/6; legacy focused 17/17; exact Playwright 14/14; lint; typecheck; verify:frontend:pr",
-    "full_verify_split": "retained clean full gate at a591ebafa619a992b52a9a576e41e7a45b18f011; current repair uses focused/exact/fast gates"
+    "full_verify_split": "retained clean full gate at a591ebafa619a992b52a9a576e41e7a45b18f011; current repair uses focused/exact/fast gates",
+    "reviewer_task_id": "01a01e3b-663e-7252-9c3c-0c7b30251c0e",
+    "reviewed_head": "387f1d688204061c28b60c415135a70e42a07042",
+    "reviewed_tree": "e0d887e487ad237a87fa6b3d67238d2dac045ce7",
+    "reviewed_head_drift": 0,
+    "verdict": "APPROVE",
+    "p0_p1_p2": [0, 0, 0],
+    "blocker_major_minor": [0, 0, 0]
   },
   "checklist_updates": [
     { "id": "delivery-legacy-compat-stage4-optional-key", "status": "checked", "evidence_refs": ["tests/legacy-product-compat-client.test.tsx", "tests/legacy-product-compat-store.test.ts"] },
@@ -85,7 +92,6 @@
   "rebuttals": [],
   "pending": [
     "Draft PR current-head checks",
-    "fresh Stage 5 lightweight design review",
     "fresh independent Stage 6 closeout review",
     "Ready transition and merge",
     "physical device, screen reader, virtual keyboard, full WCAG",

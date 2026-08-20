@@ -137,11 +137,11 @@
 ## Design Status
 
 - [ ] 임시 UI (temporary)
-- [x] 리뷰 대기 (pending-review)
-- [ ] 확정 (confirmed)
+- [ ] 리뷰 대기 (pending-review)
+- [x] 확정 (confirmed)
 - [ ] N/A — BE-only
 
-#10/#7/#11의 세 final authority reference는 predecessor evidence로만 유지한다. `authority_required=false`는 새 visual composition이 없는 #13 범위에 그대로 적용한다. Stage 4 local implementation/evidence가 GREEN이므로 Design Status는 `pending-review`이며 Stage 5/6, Manual, Ready, merge, production 또는 activation을 승인하지 않는다.
+#10/#7/#11의 세 final authority reference는 predecessor evidence로만 유지한다. `authority_required=false`는 새 visual composition이 없는 #13 범위에 그대로 적용한다. Independent Stage 5 task `01a01e3b-663e-7252-9c3c-0c7b30251c0e`가 exact head/tree `387f1d688204061c28b60c415135a70e42a07042` / `e0d887e487ad237a87fa6b3d67238d2dac045ce7`, drift `0`에서 APPROVE P0/P1/P2 `0/0/0`, blocker/major/minor `0/0/0`을 반환했으므로 Design Status는 `confirmed`다. 이는 Stage 6, Manual, Ready, merge, production 또는 activation을 승인하지 않는다.
 
 ## Source Links
 
@@ -214,9 +214,11 @@
 - TDD RED `5 failures`와 same-target reader reload RED `2 failures` 뒤 focused Vitest `10 files / 133 tests`, legacy focused `3 files / 17 tests`, exact Playwright `14/14`, lint, typecheck, build, product Vitest `2,757 pass / 175 intended skip`, Lighthouse `2 URLs × 3`, complete regression `963 pass / 180 intended skip`, full a11y `18 pass / 15 intended skip`, full visual `22 pass / 23 intended skip`, security `12/12`, audit high/critical `0/0`가 GREEN이다.
 - exploratory QA/qa eval은 `low-risk`, `authority_required=false`, 새 화면·visual composition 없음, exact mocked-route browser matrix가 존재하므로 N/A다. 기존 세 final authority reference를 그대로 재사용하며 새 authority artifact를 만들지 않는다.
 - Stage 5 P1 finding repair commit `31a2b9394df031a7dee84e692cbd399d77044853`은 delete failure alert를 planner body에서 active confirmation dialog로 옮기고 failure focus를 dialog close control로 복원했다. component RED `1/6`, Playwright RED `1/1` 뒤 component `6/6`, legacy focused `17/17`, exact legacy Playwright `14/14`, `verify:frontend:pr`가 GREEN이다. 이는 author repair이며 Stage 5 approval이 아니다.
-- 전체 lifecycle은 `in_progress`, approval/evaluation은 `not_started`, verification은 `pending`, auto-merge는 `false`다. fresh Stage 5와 Stage 6, Draft current-head checks, Ready/merge, Manual/server-Mac/OAuth/device/AT/full WCAG, controlled cutover와 activation은 pending이다.
+- Independent Stage 5 task `01a01e3b-663e-7252-9c3c-0c7b30251c0e`는 exact repaired projection `387f1d688204061c28b60c415135a70e42a07042` / tree `e0d887e487ad237a87fa6b3d67238d2dac045ce7`를 drift `0`으로 검토해 APPROVE P0/P1/P2 `0/0/0`, blocker/major/minor `0/0/0`을 확정했다.
+- 전체 lifecycle은 `in_progress`, approval/evaluation은 `not_started`, verification은 `pending`, auto-merge는 `false`다. Stage 6, successor Draft current-head checks, Ready/merge, Manual/server-Mac/OAuth/device/AT/full WCAG, controlled cutover와 activation은 pending이다.
 - 상세 증거: `docs/workpacks/legacy-product-compat/evidence/2026-08-20-stage4-frontend-implementation.md`.
 - Stage 5 finding repair 증거: `docs/workpacks/legacy-product-compat/evidence/2026-08-20-stage5-finding-repair.md`.
+- Stage 5 approval 증거: `docs/workpacks/legacy-product-compat/evidence/2026-08-20-stage5-frontend-review.md`.
 
 ## Delivery Checklist
 

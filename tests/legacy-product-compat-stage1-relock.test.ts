@@ -744,10 +744,10 @@ describe("legacy-product-compat fresh Stage 1 exact-six relock", () => {
     );
   });
 
-  it("projects Stage 4 pending review while retaining predecessor authorities", () => {
+  it("projects independent Stage 5 confirmation while retaining predecessor authorities", () => {
     const designStatus = readSection(readme, "## Design Status");
-    expect(designStatus).toContain("- [x] 리뷰 대기 (pending-review)");
-    expect(designStatus).toContain("- [ ] 확정 (confirmed)");
+    expect(designStatus).toContain("- [ ] 리뷰 대기 (pending-review)");
+    expect(designStatus).toContain("- [x] 확정 (confirmed)");
     expect(designStatus).toContain("predecessor evidence");
     expect(automation.frontend.design_authority.authority_required).toBe(false);
     expect(automation.frontend.design_authority.authority_report_paths).toEqual(
