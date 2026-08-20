@@ -51,7 +51,7 @@
 - `pnpm test`: `577 files passed / 30 skipped`, `6,106 tests passed / 416 intended skipped`.
 - Internal authority verification: `3 files / 34 tests`; account-session generation inventory: `67 routes / 101 write surfaces / 3 auth.users inbound FKs`.
 - Mixed-route regression first failed because `write_recipe_future_plan_change` and `write_personal_recipe_core` were classified as public/non-personal, then passed after enclosing PATCH/DELETE method metadata took precedence while GET view-count writers retained the public fallback.
-- The isolated PostgreSQL `12/12` rerun also asserts both `user_progress_events` and `user_progress_summary.event_counts.cooking_completed` advance exactly once for planner/standalone same-key and mismatch concurrency.
+- The isolated PostgreSQL `13/13` rerun also asserts both `user_progress_events` and `user_progress_summary.event_counts.cooking_completed` advance exactly once for planner/standalone same-key and mismatch concurrency.
 - `node scripts/validate-security-function-authorization.mjs --contract-only`: #13 `6` pre-deployment functions classified with exact owner, ACL, security mode and search path.
 - Source-of-truth, workflow-v2, workpack, automation-spec, OMO bookkeeping, real-smoke and branch validators passed. Commit policy passed all branch commits.
 - `pnpm audit --audit-level high`: exit `0`, high/critical `0/0`; residual pre-existing low/moderate `1/1`.
