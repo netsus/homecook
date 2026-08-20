@@ -80,10 +80,15 @@ Stage 2 entry still requires this relock PR merge, separate internal 1.5/securit
   - query count: `.artifacts/cooking-meal-log-cross-slice-release-qa/attempts/<attempt_id>/query-count.json`
   - rollback: `.artifacts/cooking-meal-log-cross-slice-release-qa/attempts/<attempt_id>/rollback.json`
 - 모든 JSON은 같은 `attempt_id`, `head_sha == FINAL_EVIDENCE_SHA`, ISO `generated_at`, profile을 갖고 `passed > 0`, `skipped = 0`, `pending = 0`, `failed = 0`이어야 한다. manifest는 exact artifact byte count/SHA-256을 pin한다.
+- timestamp model은 attempt 시작 시각 하나를 모든 artifact와 manifest에 쓰는 `single shared generated_at`이다. artifact별 다른 시각은 hash가 맞아도 거부한다.
+- DB payload는 `pinned_isolated_local=true`, `remote_linked_cloud_access=0`; security payload는 `isolated_local=true`, `remote_access=0`, nonempty `mutation_inventory`, classified authorization/Data API negative count를 요구한다. rollback payload는 `current_and_previous=true`, `seeded_v2_drain=true`, `tombstone_fail_closed=true`를 모두 요구한다.
+- owning runner child process는 `lane-specific allowlist` 환경만 받는다. ambient migration replacement, integration skip/filter/testNamePattern, PG/DATABASE_URL, Supabase cloud/link/token/credential 값은 전달하지 않는다.
 - validator는 explicit attempt만 읽고 `latest` fallback을 사용하지 않는다. 과거 head의 stale artifact, partial/missing attempt, existing attempt overwrite, symlink/path traversal은 final gate를 통과할 수 없다.
+- final validator 자체가 repository 안에서 `git rev-parse HEAD`를 실행하고 `--expected-head`/artifact head와 비교하며 `git status --porcelain --untracked-files=all`의 clean worktree를 요구한다. canonical attempt root 밖 `/tmp` evidence, stale expected head, tracked/untracked dirty state는 거부한다.
 - `--profile proof`는 Stage 1에서 대표 pinned isolated runner와 모든 artifact/validator 안전장치를 검증하기 위한 비최종 profile이다. Stage 6 `--profile full` validator는 proof artifact를 거부한다.
 - performance thresholds: Recall@20 >= 0.90, Precision@20 >= 0.75, DB p95 <= 300ms, route p95 <= 600ms.
 - N+1 ceiling: `list20_query_count <= list1_query_count + 1`, `item-level N+1 = 0`; input item 수에 비례하는 SQL/HTTP fan-out은 blocker다.
+- query evidence는 source-string count가 아니라 `actual-route-service-boundary` instrumentation이다. production `GET /food-catalog/search` control flow를 1-item/20-item 입력으로 각각 실행해 DB/RPC callback을 측정하고 growth에서 `item_level_n_plus_one`을 계산한다. loop/callback negative fixture는 1→20 growth를 만들어 validator가 fail closed하는지 고정한다.
 - complete backend/isolated/security/performance/rollback + browser/design bundle must be terminal green on `FINAL_EVIDENCE_SHA` before Stage 6. 이후 repair가 필요하면 별도 TDD PR merge 뒤 새 SHA를 고정하고 전체를 다시 실행한다.
 
 ## Frontend Delivery Mode

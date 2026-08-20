@@ -53,6 +53,7 @@
       "scripts/run-meal-log-core-postgres-integration.mjs",
       "scripts/run-isolated-local-supabase-runtime-gate.mjs",
       "tests/cooking-meal-log-release-evidence.test.ts",
+      "tests/cooking-meal-log-query-count.integration.test.ts",
       "tests/cooking-meal-log-cross-slice-release-qa.test.ts",
       "tests/meal-log-core-postgres.integration.test.ts",
       "docs/workpacks/account-session-generation-foundation/README.md",
@@ -194,6 +195,11 @@
       ".artifacts/cooking-meal-log-cross-slice-release-qa/attempts/<attempt_id>/rollback.json-passed > 0-skipped = 0-pending = 0-failed = 0",
       "every-json-attempt_id-head_sha==FINAL_EVIDENCE_SHA-generated_at-profile-match",
       "explicit-attempt-only-no-latest-fallback-stale-artifact-cannot-satisfy-final-gate",
+      "actual-route-service-boundary-list1-list20-measurement-loop-callback-negative-growth",
+      "artifact-type-and-semantic-payload-pinned-local-remote-zero-rollback-invariants",
+      "single-shared-generated_at-across-manifest-and-all-artifacts",
+      "lane-specific-allowlist-removes-ambient-migration-skip-filter-cloud-link-credential-overrides",
+      "validator-git-rev-parse-HEAD-clean-worktree-canonical-attempt-root-binding",
       "complete backend/isolated/security/performance/rollback + browser/design bundle-rerun-on-final-evidence-sha",
       "eight-screen-real-chrome-390-320-desktop-evidence",
       "eight-screen-merged-design-current-critique-final-authority-reuse-index",
@@ -236,5 +242,5 @@
     "Physical-device actual-screen-reader full-WCAG and true-production-scale claims during Stage 1"
   ],
   "open_questions": [],
-  "notes": "Roadmap is docs while lifecycle stays planned/not_started/pending/not_started on live Draft PR #1373. Second re-review findings replace the skipped-only direct PostgreSQL command with repo-owned create-only attempt producer and fail-closed final validator. The producer runs pinned isolated owning DB lanes plus security, performance, deterministic query-count and rollback evidence under .artifacts/cooking-meal-log-cross-slice-release-qa/attempts/<attempt_id>/. Every JSON and manifest pins attempt_id, head_sha==FINAL_EVIDENCE_SHA, generated_at and profile; counts require passed > 0 with skipped/pending/failed 0. Explicit attempt selection, create-only files, exact head/profile, required artifact inventory and manifest byte/SHA-256 checks prevent stale gitignored evidence from satisfying Stage 6. design_authority.authority_report_paths contains only the fresh #14 report while predecessor authorities remain reuse provenance in governing_docs and artifact assertions. Docs/runtime budgets remain 3/0/0; official/local-only/Manual bounds, predecessor mapping, HOME semantic no-op and security approval remain unchanged. No remote/linked/cloud, full-local/server-Mac/production or Manual operations are authorized."
+  "notes": "Roadmap is docs and lifecycle remains planned/not_started/pending/not_started on Draft PR #1373. Third repair replaces source-string N+1 claims with actual production-route service-boundary measurement for list1/list20 and derived growth; loop/callback fixtures prove false-pass regressions become nonzero. Final validation now enforces exact artifact_type, DB pinned-isolated/remote-zero semantics, security local/remote-zero/nonempty mutation inventory, all rollback invariants, and one shared generated_at. Owning runner children receive a lane-specific allowlist that strips ambient migration replacement, skip/filter/testNamePattern, PG/DB and cloud/link/credential overrides. The final validator itself binds git rev-parse HEAD, expected/artifact head, clean tracked/untracked worktree and canonical repo attempt root, rejecting outside-repo, stale-head and dirty execution. Fresh #14 authority ownership, predecessor reuse index, docs/runtime budgets 3/0/0, official/local-only/Manual boundaries, exact predecessor map and HOME semantic no-op remain unchanged. No remote/linked/cloud, full-local/server-Mac/production or Manual operation is authorized."
 }

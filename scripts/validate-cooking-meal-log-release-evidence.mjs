@@ -1,9 +1,12 @@
 #!/usr/bin/env node
 
+import { spawnSync } from "node:child_process";
 import { resolve } from "node:path";
 
 import {
+  buildLaneEnvironment,
   validateEvidenceAttempt,
+  validateGitBinding,
 } from "./lib/cooking-meal-log-release-evidence.mjs";
 
 function parseArgs(argv) {
@@ -35,6 +38,33 @@ if (!args.attemptDir || !args.attemptId || !args.expectedHead) {
 if (!new Set(["proof", "full"]).has(args.profile)) {
   throw new Error("--profile must be proof or full");
 }
+
+function gitOutput(gitArgs) {
+  const result = spawnSync("git", gitArgs, {
+    cwd: process.cwd(),
+    encoding: "utf8",
+    env: buildLaneEnvironment({ ambient: process.env }),
+  });
+  if (result.status !== 0) {
+    throw new Error("final evidence validator must run inside the repository");
+  }
+  return result.stdout.trim();
+}
+
+const repositoryRoot = gitOutput(["rev-parse", "--show-toplevel"]);
+const actualHeadSha = gitOutput(["rev-parse", "HEAD"]);
+const statusOutput = gitOutput([
+  "status",
+  "--porcelain",
+  "--untracked-files=all",
+]);
+validateGitBinding({
+  repositoryRoot,
+  attemptDir: resolve(args.attemptDir),
+  expectedHeadSha: args.expectedHead,
+  actualHeadSha,
+  statusOutput,
+});
 
 const result = validateEvidenceAttempt({
   attemptDir: resolve(args.attemptDir),

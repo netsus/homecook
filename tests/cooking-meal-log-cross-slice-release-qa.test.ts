@@ -538,6 +538,16 @@ describe("cooking meal-log cross-slice Stage 1 relock", () => {
       "failed = 0",
       "create-only",
       "stale artifact",
+      "actual-route-service-boundary",
+      "loop/callback",
+      "pinned_isolated_local=true",
+      "remote_linked_cloud_access=0",
+      "mutation_inventory",
+      "current_and_previous=true",
+      "single shared generated_at",
+      "git rev-parse HEAD",
+      "clean worktree",
+      "lane-specific allowlist",
     ]) {
       expect(projection).toContain(required);
     }

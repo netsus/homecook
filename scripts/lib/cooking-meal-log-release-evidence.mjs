@@ -7,7 +7,7 @@ import {
   realpathSync,
   writeFileSync,
 } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { dirname, join, relative, resolve, sep } from "node:path";
 
 export const EVIDENCE_SCHEMA_VERSION =
   "cooking-meal-log-release-evidence-v1";
@@ -29,6 +29,40 @@ export const FULL_DB_LANES = [
   "cooked-batch-weight-ledger",
   "meal-log-core",
   "legacy-product-compat",
+];
+
+export const ROLLBACK_INVARIANTS = [
+  "current_and_previous",
+  "seeded_v2_drain",
+  "tombstone_fail_closed",
+];
+
+const ARTIFACT_TYPES = {
+  "db-security.json": "db-security",
+  "security.json": "security",
+  "performance.json": "performance",
+  "query-count.json": "query-count",
+  "rollback.json": "rollback",
+};
+
+const SAFE_ENV_KEYS = [
+  "PATH",
+  "HOME",
+  "USER",
+  "LOGNAME",
+  "SHELL",
+  "TERM",
+  "TMPDIR",
+  "TMP",
+  "TEMP",
+  "LANG",
+  "LC_ALL",
+  "TZ",
+  "CI",
+  "DOCKER_HOST",
+  "XDG_RUNTIME_DIR",
+  "PNPM_HOME",
+  "COREPACK_HOME",
 ];
 
 const SHA_PATTERN = /^[0-9a-f]{40}$/u;
@@ -163,22 +197,68 @@ export function assertRunnableSummary(summary, label) {
   }
 }
 
-export function buildQueryCountPayload({ sources }) {
-  const checks = sources.map((source) => {
-    const matches = [...source.sourceText.matchAll(source.callPattern)];
-    if (matches.length <= 0) {
-      throw new Error(`${source.surface}: bounded query call is missing`);
+export function buildLaneEnvironment({ ambient = {}, extra = {} } = {}) {
+  const environment = {};
+  for (const key of SAFE_ENV_KEYS) {
+    if (typeof ambient[key] === "string" && ambient[key].length > 0) {
+      environment[key] = ambient[key];
     }
-    return {
-      surface: source.surface,
-      source_path: source.sourcePath,
-      source_sha256: sha256(source.sourceText),
-      list1_query_count: matches.length,
-      list20_query_count: matches.length,
-      item_level_n_plus_one: 0,
-    };
-  });
-  return { checks };
+  }
+  for (const [key, value] of Object.entries(extra)) {
+    if (typeof value === "string" && value.length > 0) {
+      environment[key] = value;
+    }
+  }
+  return environment;
+}
+
+export async function measureQueryCountGrowth({ surface, execute }) {
+  const measurements = {};
+  for (const size of [1, 20]) {
+    let queryCount = 0;
+    await execute(size, () => {
+      queryCount += 1;
+    });
+    measurements[size] = queryCount;
+  }
+  return {
+    surface,
+    list1_query_count: measurements[1],
+    list20_query_count: measurements[20],
+    item_level_n_plus_one: Math.max(
+      0,
+      measurements[20] - measurements[1],
+    ),
+  };
+}
+
+export function validateGitBinding({
+  repositoryRoot,
+  attemptDir,
+  expectedHeadSha,
+  actualHeadSha,
+  statusOutput,
+}) {
+  assertSha(expectedHeadSha, "expected head SHA");
+  if (actualHeadSha !== expectedHeadSha) {
+    throw new Error("current git HEAD does not match --expected-head");
+  }
+  if (String(statusOutput ?? "").trim().length > 0) {
+    throw new Error("final evidence validation requires a clean worktree");
+  }
+  const canonicalRoot = resolve(
+    repositoryRoot,
+    ".artifacts/cooking-meal-log-cross-slice-release-qa/attempts",
+  );
+  const normalizedAttempt = resolve(attemptDir);
+  const fromRoot = relative(canonicalRoot, normalizedAttempt);
+  if (
+    fromRoot.length === 0
+    || fromRoot === ".."
+    || fromRoot.startsWith(`..${sep}`)
+  ) {
+    throw new Error("attempt directory must be inside the canonical attempt root");
+  }
 }
 
 function readJsonArtifact(attemptDir, fileName) {
@@ -203,7 +283,13 @@ function readJsonArtifact(attemptDir, fileName) {
 
 function validateArtifactEnvelope(
   artifact,
-  { fileName, expectedAttemptId, expectedHeadSha, expectedProfile },
+  {
+    fileName,
+    expectedAttemptId,
+    expectedGeneratedAt,
+    expectedHeadSha,
+    expectedProfile,
+  },
 ) {
   if (artifact.schema_version !== EVIDENCE_SCHEMA_VERSION) {
     throw new Error(`${fileName}: schema_version mismatch`);
@@ -218,10 +304,22 @@ function validateArtifactEnvelope(
     throw new Error(`${fileName}: profile mismatch`);
   }
   assertTimestamp(artifact.generated_at, `${fileName}.generated_at`);
+  if (artifact.generated_at !== expectedGeneratedAt) {
+    throw new Error(`${fileName}: generated_at must equal manifest generated_at`);
+  }
+  if (artifact.artifact_type !== ARTIFACT_TYPES[fileName]) {
+    throw new Error(`${fileName}: artifact_type mismatch`);
+  }
   assertRunnableSummary(artifact, fileName);
 }
 
 function validateDbPayload(artifact, expectedProfile) {
+  if (artifact.payload?.pinned_isolated_local !== true) {
+    throw new Error("db-security.json: pinned_isolated_local must be true");
+  }
+  if (artifact.payload?.remote_linked_cloud_access !== 0) {
+    throw new Error("db-security.json: remote_linked_cloud_access must be zero");
+  }
   const lanes = artifact.payload?.lanes;
   if (!Array.isArray(lanes) || lanes.length <= 0) {
     throw new Error("db-security.json: lane evidence is missing");
@@ -234,6 +332,33 @@ function validateDbPayload(artifact, expectedProfile) {
     if (JSON.stringify(actual) !== JSON.stringify(FULL_DB_LANES)) {
       throw new Error("db-security.json: full DB lane inventory mismatch");
     }
+  }
+}
+
+function validateSecurityPayload(artifact) {
+  const payload = artifact.payload ?? {};
+  if (payload.isolated_local !== true) {
+    throw new Error("security.json: isolated_local must be true");
+  }
+  if (payload.remote_access !== 0) {
+    throw new Error("security.json: remote_access must be zero");
+  }
+  if (
+    !Array.isArray(payload.mutation_inventory)
+    || payload.mutation_inventory.length <= 0
+    || payload.mutation_inventory.some(
+      (signature) => typeof signature !== "string" || signature.length === 0,
+    )
+  ) {
+    throw new Error("security.json: mutation_inventory must be nonempty");
+  }
+  if (Number(payload.authorization_inventory_classified) <= 0) {
+    throw new Error(
+      "security.json: authorization_inventory_classified must be nonzero",
+    );
+  }
+  if (Number(payload.data_api_negatives) <= 0) {
+    throw new Error("security.json: data_api_negatives must be nonzero");
   }
 }
 
@@ -263,6 +388,11 @@ function validatePerformancePayload(artifact, expectedProfile) {
 }
 
 function validateQueryCountPayload(artifact) {
+  if (artifact.payload?.measurement_kind !== "actual-route-service-boundary") {
+    throw new Error(
+      "query-count.json: actual route/service-boundary measurement is required",
+    );
+  }
   const checks = artifact.payload?.checks;
   if (!Array.isArray(checks) || checks.length <= 0) {
     throw new Error("query-count.json: checks are missing");
@@ -271,10 +401,20 @@ function validateQueryCountPayload(artifact) {
     if (
       !Number.isInteger(check.list1_query_count)
       || !Number.isInteger(check.list20_query_count)
+      || check.list1_query_count <= 0
+      || check.list20_query_count <= 0
       || check.list20_query_count > check.list1_query_count + 1
       || check.item_level_n_plus_one !== 0
     ) {
       throw new Error(`query count ceiling failed: ${check.surface ?? "unknown"}`);
+    }
+  }
+}
+
+function validateRollbackPayload(artifact) {
+  for (const invariant of ROLLBACK_INVARIANTS) {
+    if (artifact.payload?.[invariant] !== true) {
+      throw new Error(`rollback.json: ${invariant} must be true`);
     }
   }
 }
@@ -320,6 +460,7 @@ export function validateEvidenceAttempt({
     validateArtifactEnvelope(artifactResult.value, {
       fileName,
       expectedAttemptId,
+      expectedGeneratedAt: manifest.generated_at,
       expectedHeadSha,
       expectedProfile,
     });
@@ -330,11 +471,13 @@ export function validateEvidenceAttempt({
   }
 
   validateDbPayload(artifacts.get("db-security.json"), expectedProfile);
+  validateSecurityPayload(artifacts.get("security.json"));
   validatePerformancePayload(
     artifacts.get("performance.json"),
     expectedProfile,
   );
   validateQueryCountPayload(artifacts.get("query-count.json"));
+  validateRollbackPayload(artifacts.get("rollback.json"));
 
   return {
     artifact_count: artifacts.size,

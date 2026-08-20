@@ -14,7 +14,7 @@ import {
   EVIDENCE_SCHEMA_VERSION,
   FULL_DB_LANES,
   assertRunnableSummary,
-  buildQueryCountPayload,
+  buildLaneEnvironment,
   createAttemptDirectory,
   parseVitestJsonSummary,
   parseVitestTextSummary,
@@ -93,6 +93,7 @@ function gitOutput(args) {
   const result = spawnSync("git", args, {
     cwd: repositoryRoot,
     encoding: "utf8",
+    env: buildLaneEnvironment({ ambient: process.env }),
   });
   if (result.status !== 0) {
     throw new Error(`git ${args.join(" ")} failed`);
@@ -113,7 +114,7 @@ function runCaptured({
   command,
   args,
   label,
-  env = process.env,
+  env = buildLaneEnvironment({ ambient: process.env }),
   timeoutMs = 900_000,
 }) {
   const startedAt = Date.now();
@@ -135,7 +136,7 @@ function runCaptured({
   return { output, startedAt };
 }
 
-function runVitestJson({ attemptDir, files, label }) {
+function runVitestJson({ attemptDir, extraEnv = {}, files, label }) {
   const rawPath = join(attemptDir, "raw", `${label}.json`);
   runCaptured({
     attemptDir,
@@ -151,6 +152,7 @@ function runVitestJson({ attemptDir, files, label }) {
       `--outputFile=${rawPath}`,
     ],
     label,
+    env: buildLaneEnvironment({ ambient: process.env, extra: extraEnv }),
   });
   const summary = parseVitestJsonSummary(readFileSync(rawPath, "utf8"));
   assertRunnableSummary(summary, label);
@@ -160,6 +162,7 @@ function runVitestJson({ attemptDir, files, label }) {
 function envelope({
   artifactType,
   attemptId,
+  generatedAt,
   headSha,
   profile,
   summary,
@@ -170,14 +173,20 @@ function envelope({
     artifact_type: artifactType,
     attempt_id: attemptId,
     head_sha: headSha,
-    generated_at: new Date().toISOString(),
+    generated_at: generatedAt,
     profile,
     ...summary,
     payload,
   };
 }
 
-function produceDbEvidence({ attemptDir, attemptId, headSha, profile }) {
+function produceDbEvidence({
+  attemptDir,
+  attemptId,
+  generatedAt,
+  headSha,
+  profile,
+}) {
   const selected = profile === "proof" ? dbRunners.slice(0, 1) : dbRunners;
   const lanes = selected.map(([id, scriptPath]) => {
     const result = runCaptured({
@@ -202,6 +211,7 @@ function produceDbEvidence({ attemptDir, attemptId, headSha, profile }) {
   writeEvidenceArtifact(attemptDir, "db-security.json", envelope({
     artifactType: "db-security",
     attemptId,
+    generatedAt,
     headSha,
     profile,
     summary,
@@ -213,7 +223,13 @@ function produceDbEvidence({ attemptDir, attemptId, headSha, profile }) {
   }));
 }
 
-function produceSecurityEvidence({ attemptDir, attemptId, headSha, profile }) {
+function produceSecurityEvidence({
+  attemptDir,
+  attemptId,
+  generatedAt,
+  headSha,
+  profile,
+}) {
   let summary;
   let payload;
   if (profile === "proof") {
@@ -225,6 +241,11 @@ function produceSecurityEvidence({ attemptDir, attemptId, headSha, profile }) {
     payload = {
       proof_only: true,
       isolated_local: true,
+      mutation_inventory: [
+        "proof:recipe-visibility-security-function-inventory",
+      ],
+      authorization_inventory_classified: summary.passed,
+      data_api_negatives: 1,
       remote_access: 0,
     };
   } else {
@@ -242,16 +263,38 @@ function produceSecurityEvidence({ attemptDir, attemptId, headSha, profile }) {
     if (checked <= 0) {
       throw new Error("security-release: nonzero mutation evidence is missing");
     }
+    const mutationInventory = [...new Set(
+      [...result.output.matchAll(/"signature"\s*:\s*"([^"]+)"/gu)]
+        .map((match) => match[1]),
+    )];
+    const classified = Number(
+      result.output.match(/valid for local;\s*(\d+)\s+additive/iu)?.[1]
+        ?? 0,
+    );
+    const dataApiNegatives = [
+      ...result.output.matchAll(/"status"\s*:\s*406/gu),
+    ].length;
+    if (
+      mutationInventory.length <= 0
+      || classified <= 0
+      || dataApiNegatives <= 0
+    ) {
+      throw new Error("security-release: semantic safety inventory is missing");
+    }
     summary = { passed: checked, skipped: 0, pending: 0, failed: 0 };
     payload = {
       isolated_local: true,
       anon_mutation_signatures_checked: checked,
+      mutation_inventory: mutationInventory,
+      authorization_inventory_classified: classified,
+      data_api_negatives: dataApiNegatives,
       remote_access: 0,
     };
   }
   writeEvidenceArtifact(attemptDir, "security.json", envelope({
     artifactType: "security",
     attemptId,
+    generatedAt,
     headSha,
     profile,
     summary,
@@ -262,6 +305,7 @@ function produceSecurityEvidence({ attemptDir, attemptId, headSha, profile }) {
 function producePerformanceEvidence({
   attemptDir,
   attemptId,
+  generatedAt,
   headSha,
   profile,
 }) {
@@ -300,6 +344,7 @@ function producePerformanceEvidence({
   writeEvidenceArtifact(attemptDir, "performance.json", envelope({
     artifactType: "performance",
     attemptId,
+    generatedAt,
     headSha,
     profile,
     summary,
@@ -307,38 +352,35 @@ function producePerformanceEvidence({
   }));
 }
 
-function produceQueryCountEvidence({ attemptDir, attemptId, headSha, profile }) {
-  const sources = [
-    {
-      surface: "food-catalog-search",
-      sourcePath: "app/api/v1/food-catalog/search/route.ts",
-      callPattern: /db\.rpc\("search_food_catalog_ranked"/gu,
+function produceQueryCountEvidence({
+  attemptDir,
+  attemptId,
+  generatedAt,
+  headSha,
+  profile,
+}) {
+  const measurementPath = join(
+    attemptDir,
+    "raw/query-count-measurement.json",
+  );
+  const summary = runVitestJson({
+    attemptDir,
+    extraEnv: {
+      HOMECOOK_CML14_QUERY_COUNT: "1",
+      HOMECOOK_CML14_QUERY_COUNT_OUTPUT: measurementPath,
     },
-    {
-      surface: "meal-log",
-      sourcePath: "lib/server/meal-log.ts",
-      callPattern: /client\.rpc\(name, args\)/gu,
-    },
-    {
-      surface: "cooked-batches",
-      sourcePath: "lib/server/cooked-batches.ts",
-      callPattern: /client\.rpc\(functionName, args\)/gu,
-    },
-  ].map((source) => ({
-    ...source,
-    sourceText: readFileSync(join(repositoryRoot, source.sourcePath), "utf8"),
-  }));
-  const payload = buildQueryCountPayload({ sources });
-  const summary = {
-    passed: payload.checks.length,
-    skipped: 0,
-    pending: 0,
-    failed: 0,
-  };
+    files: ["tests/cooking-meal-log-query-count.integration.test.ts"],
+    label: "query-count",
+  });
+  const payload = JSON.parse(readFileSync(measurementPath, "utf8"));
+  if (payload.measurement_kind !== "actual-route-service-boundary") {
+    throw new Error("query-count: actual route measurement is missing");
+  }
   assertRunnableSummary(summary, "query-count");
   writeEvidenceArtifact(attemptDir, "query-count.json", envelope({
     artifactType: "query-count",
     attemptId,
+    generatedAt,
     headSha,
     profile,
     summary,
@@ -346,7 +388,13 @@ function produceQueryCountEvidence({ attemptDir, attemptId, headSha, profile }) 
   }));
 }
 
-function produceRollbackEvidence({ attemptDir, attemptId, headSha, profile }) {
+function produceRollbackEvidence({
+  attemptDir,
+  attemptId,
+  generatedAt,
+  headSha,
+  profile,
+}) {
   const summary = runVitestJson({
     attemptDir,
     files: [
@@ -361,6 +409,7 @@ function produceRollbackEvidence({ attemptDir, attemptId, headSha, profile }) {
   writeEvidenceArtifact(attemptDir, "rollback.json", envelope({
     artifactType: "rollback",
     attemptId,
+    generatedAt,
     headSha,
     profile,
     summary,
@@ -404,11 +453,18 @@ const attemptDir = createAttemptDirectory({
 });
 mkdirSync(join(attemptDir, "raw"), { mode: 0o700 });
 
-produceDbEvidence({ attemptDir, attemptId: args.attemptId, headSha: args.headSha, profile: args.profile });
-produceSecurityEvidence({ attemptDir, attemptId: args.attemptId, headSha: args.headSha, profile: args.profile });
-producePerformanceEvidence({ attemptDir, attemptId: args.attemptId, headSha: args.headSha, profile: args.profile });
-produceQueryCountEvidence({ attemptDir, attemptId: args.attemptId, headSha: args.headSha, profile: args.profile });
-produceRollbackEvidence({ attemptDir, attemptId: args.attemptId, headSha: args.headSha, profile: args.profile });
+const productionContext = {
+  attemptDir,
+  attemptId: args.attemptId,
+  generatedAt: attemptStartedAt,
+  headSha: args.headSha,
+  profile: args.profile,
+};
+produceDbEvidence(productionContext);
+produceSecurityEvidence(productionContext);
+producePerformanceEvidence(productionContext);
+produceQueryCountEvidence(productionContext);
+produceRollbackEvidence(productionContext);
 writeEvidenceManifest(attemptDir, {
   attemptId: args.attemptId,
   headSha: args.headSha,

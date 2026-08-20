@@ -49,6 +49,10 @@
       "cloud-linked-remote-supabase-target-verifier-credential-and-fallback-forbidden-na",
       "exact-repaired-head-evidence-and-separate-tdd-repair-rerun",
       "final-evidence-sha-after-stage4-artifacts-and-full-cross-lane-rerun-before-stage6",
+      "actual-route-service-boundary-list1-list20-measurement-and-derived-n-plus-one",
+      "artifact-type-semantic-payload-and-single-shared-generated-at-validation",
+      "lane-specific-allowlist-blocks-ambient-runner-plan-overrides",
+      "final-validator-git-head-clean-worktree-and-canonical-attempt-root-binding",
       "docs-repair-budget-max-3-and-backend-frontend-inline-fix-rounds-zero",
       "application-and-provider-function-inventory-complete",
       "application-mutation-public-anon-revoked-and-safe-path",
@@ -113,6 +117,7 @@
       "#13 legacy-product-compat@da52e64d84eef7593bd60898018c2b65acad0f46 -> tests/legacy-product-compat.test.ts",
       "tests/cooking-meal-log-cross-slice-release-qa.test.ts",
       "tests/cooking-meal-log-release-evidence.test.ts",
+      "tests/cooking-meal-log-query-count.integration.test.ts",
       ".artifacts/cooking-meal-log-cross-slice-release-qa/attempts/<attempt_id>/manifest.json create-only attempt/head/generated/hash inventory",
       ".artifacts/cooking-meal-log-cross-slice-release-qa/attempts/<attempt_id>/db-security.json passed > 0 skipped = 0 pending = 0 failed = 0",
       ".artifacts/cooking-meal-log-cross-slice-release-qa/attempts/<attempt_id>/security.json passed > 0 skipped = 0 pending = 0 failed = 0",
@@ -245,6 +250,10 @@
     "stage1-author-self-approval-or-claude-use",
     "predecessor-runtime-merge-evidence-regressed-stale-or-different-head",
     "proof-profile-stale-head-existing-missing-partial-or-hash-drift-used-as-final-evidence",
+    "source-string-or-hardcoded-n-plus-one-evidence-without-actual-route-measurement",
+    "artifact-type-semantic-payload-or-shared-timestamp-mismatch",
+    "ambient-runner-override-or-cloud-linked-credential-inheritance",
+    "validator-outside-repo-stale-head-or-dirty-worktree",
     "runtime-defect-fixed-inline-or-evidence-not-rerun-on-repaired-head",
     "new-api-db-ui-dependency-or-official-contract-introduced",
     "cloud-linked-remote-supabase-target-credential-verifier-or-fallback-requested",
@@ -267,5 +276,5 @@
     "backend": 0,
     "frontend": 0
   },
-  "notes": "Stage 1 runs exact-six projection tests, SOT/workflow/workpack/automation/OMO/closeout validators, lint, typecheck, audit and diff only; docs repair budget max 3. F0/#1-#13 automated/runtime predecessor gate: satisfied at origin/master c5b213152b4a6554f4eaa8714b2292ec2e074e0d, but overall lifecycle is not complete: Manual/server-Mac/OAuth/device/AT/full-WCAG, local-production/rehearsal/backup-restore/cutover and capability/R/R+1/R+2/required-key/activation remain pending. Stage 2 is verification-only, uses pinned isolated local first, and backend/frontend inline fix rounds are 0/0. Defects require a separate failing-test-first TDD repair PR and full rerun after its merge. After Stage 4 artifacts, one FINAL_EVIDENCE_SHA must receive the complete backend/isolated/security/performance/rollback + browser/design bundle before Stage 6. Cloud/linked/remote Supabase is forbidden/N/A. generator_required=false and critic_required=false reuse the non-null merged 8-screen artifact index; no new generator/critic composition is authorized."
+  "notes": "Stage 1 uses docs repair budget max 3 and backend/frontend inline fix rounds 0/0. The verification-only full producer runs pinned isolated owning lanes with lane-specific env allowlists, actual route-boundary list1/list20 query measurement, semantic payload envelopes and one shared timestamp. The final validator binds repository HEAD, clean worktree, explicit canonical attempt, every artifact head/type/payload/count/hash and FINAL_EVIDENCE_SHA before Stage 6. F0/#1-#13 automated/runtime green remains distinct from Manual/activation pending. Cloud/linked/remote Supabase and product/runtime/Manual mutation are forbidden. generator_required=false and critic_required=false reuse the non-null merged 8-screen index while current authority ownership remains the fresh #14 report only."
 }

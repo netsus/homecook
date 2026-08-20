@@ -61,11 +61,14 @@
 
 - [ ] focused F0/#1~#13 runtime regressions are green on the exact repaired head <!-- omo:id=accept-cooking-cross-automation-runtime;stage=2;scope=backend;review=3,6 -->
 - [ ] repo-owned producer creates one new create-only `.artifacts/cooking-meal-log-cross-slice-release-qa/attempts/<attempt_id>/` bound to `FINAL_EVIDENCE_SHA` without deleting or reusing older attempts <!-- omo:id=accept-cooking-cross-automation-attempt;stage=2;scope=backend;review=3,6 -->
+- [ ] every lane runs with a lane-specific allowlist and cannot inherit migration/test replacement, skip/filter/testNamePattern, PG/DB, cloud/link/credential ambient overrides <!-- omo:id=accept-cooking-cross-automation-env;stage=2;scope=backend;review=3,6 -->
 - [ ] Stage 6 full validator rejects `profile=proof`, stale head, existing/missing/partial attempt and manifest/hash drift <!-- omo:id=accept-cooking-cross-automation-final-validator;stage=2;scope=backend;review=3,6 -->
+- [ ] final validator runs `git rev-parse HEAD`, requires clean worktree and canonical attempt root, and rejects outside-repo, stale-head and dirty-repo execution <!-- omo:id=accept-cooking-cross-automation-git-binding;stage=2;scope=backend;review=3,6 -->
+- [ ] artifact type and semantic payload fields are exact and every artifact timestamp equals the manifest single shared generated_at <!-- omo:id=accept-cooking-cross-automation-semantic;stage=2;scope=backend;review=3,6 -->
 - [ ] pinned isolated owning PostgreSQL runners produce `db-security.json` with every required lane `passed > 0`, `skipped = 0`, `pending = 0`, `failed = 0` <!-- omo:id=accept-cooking-cross-automation-local-stack;stage=2;scope=backend;review=3,6 -->
 - [ ] isolated security producer creates `security.json` with nonzero authorization evidence and remote/linked/cloud access `0` <!-- omo:id=accept-cooking-cross-automation-security;stage=2;scope=backend;review=3,6 -->
 - [ ] attempt `performance.json` records Recall@20 >= 0.90, Precision@20 >= 0.75, DB p95 <= 300ms and route p95 <= 600ms <!-- omo:id=accept-cooking-cross-automation-performance;stage=2;scope=backend;review=3,6 -->
-- [ ] deterministic producer creates attempt `query-count.json` before validation and proves `list20_query_count <= list1_query_count + 1` with `item-level N+1 = 0` <!-- omo:id=accept-cooking-cross-automation-query-count;stage=2;scope=backend;review=3,6 -->
+- [ ] `actual-route-service-boundary` producer executes real route control flow for list1/list20, derives N+1 growth, and loop/callback regression fixtures fail closed <!-- omo:id=accept-cooking-cross-automation-query-count;stage=2;scope=backend;review=3,6 -->
 - [ ] attempt `rollback.json` proves current/immediate-previous, seeded-v2 drain, replay, tombstone and required-key rollback matrix with `passed > 0`, `skipped = 0`, `pending = 0`, `failed = 0` <!-- omo:id=accept-cooking-cross-automation-rollback;stage=2;scope=backend;review=3,6 -->
 
 ### Playwright / authority

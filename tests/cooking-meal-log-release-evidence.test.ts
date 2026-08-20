@@ -15,11 +15,14 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   FULL_DB_LANES,
   REQUIRED_ARTIFACT_FILES,
+  ROLLBACK_INVARIANTS,
   assertRunnableSummary,
-  buildQueryCountPayload,
+  buildLaneEnvironment,
   createAttemptDirectory,
+  measureQueryCountGrowth,
   parseVitestTextSummary,
   validateEvidenceAttempt,
+  validateGitBinding,
   writeEvidenceArtifact,
   writeEvidenceManifest,
 } from "../scripts/lib/cooking-meal-log-release-evidence.mjs";
@@ -28,6 +31,12 @@ const headSha = "a".repeat(40);
 const generatedAt = "2026-08-20T12:00:00.000Z";
 const attemptId = "cml14-proof-20260820t120000z";
 const roots: string[] = [];
+
+type MutableArtifact = {
+  artifact_type: string;
+  generated_at: string;
+  payload: Record<string, unknown>;
+};
 
 afterEach(() => {
   for (const root of roots.splice(0)) {
@@ -77,11 +86,19 @@ function createValidAttempt() {
         pending: 0,
         failed: 0,
       })),
+      pinned_isolated_local: true,
+      remote_linked_cloud_access: 0,
     },
   ));
   writeEvidenceArtifact(attemptDir, "security.json", baseArtifact(
     "security",
-    { isolated_local: true, remote_access: 0 },
+    {
+      isolated_local: true,
+      remote_access: 0,
+      mutation_inventory: ["public.example(uuid)"],
+      authorization_inventory_classified: 1,
+      data_api_negatives: 1,
+    },
   ));
   writeEvidenceArtifact(attemptDir, "performance.json", baseArtifact(
     "performance",
@@ -96,6 +113,7 @@ function createValidAttempt() {
   writeEvidenceArtifact(attemptDir, "query-count.json", baseArtifact(
     "query-count",
     {
+      measurement_kind: "actual-route-service-boundary",
       checks: [
         {
           surface: "food-catalog-search",
@@ -108,7 +126,11 @@ function createValidAttempt() {
   ));
   writeEvidenceArtifact(attemptDir, "rollback.json", baseArtifact(
     "rollback",
-    { current_and_previous: true, seeded_v2_drain: true },
+    {
+      current_and_previous: true,
+      seeded_v2_drain: true,
+      tombstone_fail_closed: true,
+    },
   ));
   writeEvidenceManifest(attemptDir, {
     attemptId,
@@ -163,26 +185,102 @@ describe("cooking meal-log release evidence safety", () => {
     )).toBeUndefined();
   });
 
-  it("produces deterministic query-count evidence from bounded route calls", () => {
-    const payload = buildQueryCountPayload({
-      sources: [
-        {
-          surface: "food-catalog-search",
-          sourcePath: "app/api/v1/food-catalog/search/route.ts",
-          sourceText: 'const result = await db.rpc("search_food_catalog_ranked", {});',
-          callPattern: /db\.rpc\("search_food_catalog_ranked"/gu,
-        },
-      ],
+  it("derives query growth from actual measured boundary callbacks", async () => {
+    const constant = await measureQueryCountGrowth({
+      surface: "constant",
+      execute: async (_size: number, recordQuery: () => void) => {
+        recordQuery();
+      },
+    });
+    expect(constant).toMatchObject({
+      list1_query_count: 1,
+      list20_query_count: 1,
+      item_level_n_plus_one: 0,
     });
 
-    expect(payload.checks).toEqual([
-      expect.objectContaining({
-        surface: "food-catalog-search",
-        list1_query_count: 1,
-        list20_query_count: 1,
-        item_level_n_plus_one: 0,
-      }),
-    ]);
+    const loop = await measureQueryCountGrowth({
+      surface: "loop-regression",
+      execute: async (size: number, recordQuery: () => void) => {
+        for (let index = 0; index < size; index += 1) recordQuery();
+      },
+    });
+    expect(loop).toMatchObject({
+      list1_query_count: 1,
+      list20_query_count: 20,
+      item_level_n_plus_one: 19,
+    });
+
+    const callback = await measureQueryCountGrowth({
+      surface: "callback-regression",
+      execute: async (size: number, recordQuery: () => void) => {
+        Array.from({ length: size }).forEach(() => recordQuery());
+      },
+    });
+    expect(callback.item_level_n_plus_one).toBe(19);
+  });
+
+  it("builds a minimal lane environment and removes hostile ambient overrides", () => {
+    const environment = buildLaneEnvironment({
+      ambient: {
+        PATH: "/safe/bin",
+        HOME: "/safe/home",
+        DATABASE_URL: "postgres://remote.invalid",
+        PGHOST: "remote.invalid",
+        SUPABASE_ACCESS_TOKEN: "secret",
+        HOMECOOK_ISOLATED_RUNTIME_SKIP_RESET: "1",
+        HOMECOOK_RECIPE_SNAPSHOT_FOLLOWUP_MIGRATIONS: "/tmp/evil.sql",
+        HOMECOOK_RECIPE_SNAPSHOT_ACTIVE_SECURITY_TEST_NAME_PATTERN: ".*",
+      },
+      extra: {
+        HOMECOOK_CML14_QUERY_COUNT_OUTPUT: "/tmp/query.json",
+      },
+    });
+
+    expect(environment).toEqual({
+      PATH: "/safe/bin",
+      HOME: "/safe/home",
+      HOMECOOK_CML14_QUERY_COUNT_OUTPUT: "/tmp/query.json",
+    });
+    const producer = readFileSync(
+      join(process.cwd(), "scripts/run-cooking-meal-log-release-evidence.mjs"),
+      "utf8",
+    );
+    expect(producer).not.toContain("env = process.env");
+    expect(producer).toContain("buildLaneEnvironment({ ambient: process.env");
+  });
+
+  it("binds validation to the repository head, clean tree, and canonical attempt root", () => {
+    const repositoryRoot = "/repo";
+    const attemptDir =
+      "/repo/.artifacts/cooking-meal-log-cross-slice-release-qa/attempts/a1";
+    expect(() => validateGitBinding({
+      repositoryRoot,
+      attemptDir,
+      expectedHeadSha: headSha,
+      actualHeadSha: headSha,
+      statusOutput: "",
+    })).not.toThrow();
+    expect(() => validateGitBinding({
+      repositoryRoot,
+      attemptDir,
+      expectedHeadSha: headSha,
+      actualHeadSha: "b".repeat(40),
+      statusOutput: "",
+    })).toThrow(/current git head/i);
+    expect(() => validateGitBinding({
+      repositoryRoot,
+      attemptDir,
+      expectedHeadSha: headSha,
+      actualHeadSha: headSha,
+      statusOutput: " M tracked.ts",
+    })).toThrow(/clean worktree/i);
+    expect(() => validateGitBinding({
+      repositoryRoot,
+      attemptDir: "/tmp/outside-attempt",
+      expectedHeadSha: headSha,
+      actualHeadSha: headSha,
+      statusOutput: "",
+    })).toThrow(/canonical attempt root/i);
   });
 
   it("accepts a complete exact-head full attempt", () => {
@@ -224,8 +322,10 @@ describe("cooking meal-log release evidence safety", () => {
       ],
       { cwd: process.cwd(), encoding: "utf8" },
     );
-    expect(result.status, result.stderr).toBe(0);
-    expect(result.stdout).toContain('"artifact_count":5');
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toMatch(
+      /canonical attempt root|repository|clean worktree|current git HEAD/i,
+    );
   });
 
   it("runs meal-log PostgreSQL through the pinned isolated Supabase owner", () => {
@@ -343,5 +443,84 @@ describe("cooking meal-log release evidence safety", () => {
       expectedHeadSha: headSha,
       expectedProfile: "full",
     })).toThrow(/manifest (?:byte count|sha256)/i);
+  });
+
+  it("rejects semantic payload bypasses even when the manifest is rehashed", () => {
+    const cases: Array<{
+      file: string;
+      mutate: (artifact: MutableArtifact) => void;
+      message: RegExp;
+    }> = [
+      {
+        file: "db-security.json",
+        mutate: (artifact) => { artifact.artifact_type = "rollback"; },
+        message: /artifact_type/i,
+      },
+      {
+        file: "db-security.json",
+        mutate: (artifact) => { artifact.payload.pinned_isolated_local = false; },
+        message: /pinned_isolated_local/i,
+      },
+      {
+        file: "db-security.json",
+        mutate: (artifact) => { artifact.payload.remote_linked_cloud_access = 1; },
+        message: /remote_linked_cloud_access/i,
+      },
+      {
+        file: "security.json",
+        mutate: (artifact) => { artifact.payload.isolated_local = false; },
+        message: /isolated_local/i,
+      },
+      {
+        file: "security.json",
+        mutate: (artifact) => { artifact.payload.remote_access = 1; },
+        message: /remote_access/i,
+      },
+      {
+        file: "security.json",
+        mutate: (artifact) => { artifact.payload.mutation_inventory = []; },
+        message: /mutation_inventory/i,
+      },
+      ...ROLLBACK_INVARIANTS.map((invariant) => ({
+        file: "rollback.json",
+        mutate: (artifact: MutableArtifact) => {
+          artifact.payload[invariant] = false;
+        },
+        message: new RegExp(invariant, "i"),
+      })),
+    ];
+
+    for (const testCase of cases) {
+      const { attemptDir } = createValidAttempt();
+      const artifactPath = join(attemptDir, testCase.file);
+      const artifact = JSON.parse(
+        readFileSync(artifactPath, "utf8"),
+      ) as MutableArtifact;
+      testCase.mutate(artifact);
+      writeFileSync(artifactPath, `${JSON.stringify(artifact, null, 2)}\n`);
+      rehashManifest(attemptDir, testCase.file);
+      expect(() => validateEvidenceAttempt({
+        attemptDir,
+        expectedAttemptId: attemptId,
+        expectedHeadSha: headSha,
+        expectedProfile: "full",
+      }), testCase.file).toThrow(testCase.message);
+    }
+  });
+
+  it("requires one shared generated_at across manifest and every artifact", () => {
+    const { attemptDir } = createValidAttempt();
+    const artifactPath = join(attemptDir, "security.json");
+    const artifact = JSON.parse(readFileSync(artifactPath, "utf8"));
+    artifact.generated_at = "2026-08-20T12:00:01.000Z";
+    writeFileSync(artifactPath, `${JSON.stringify(artifact, null, 2)}\n`);
+    rehashManifest(attemptDir, "security.json");
+
+    expect(() => validateEvidenceAttempt({
+      attemptDir,
+      expectedAttemptId: attemptId,
+      expectedHeadSha: headSha,
+      expectedProfile: "full",
+    })).toThrow(/generated_at.*manifest/i);
   });
 });
