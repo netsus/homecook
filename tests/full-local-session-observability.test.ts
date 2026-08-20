@@ -11,6 +11,8 @@ const MIGRATION_PATH =
   "supabase/migrations/20260811120000_full_local_session_observability.sql";
 const FOLLOWUP_MIGRATION_PATH =
   "supabase/migrations/20260812143000_full_local_session_superseded_token_window.sql";
+const BOUNDED_OVERLAP_MIGRATION_PATH =
+  "supabase/migrations/20260820120000_full_local_session_bounded_token_overlap.sql";
 const MANIFEST_PATH =
   "docs/security/full-local-auth-db-security-function-authorization-manifest.json";
 
@@ -112,6 +114,35 @@ describe("full-local session observability contract", () => {
     expect(sql).toContain("HOMECOOK_SESSION_AUTHORITY_REASON::superseded_token");
   });
 
+  it("adds a later bounded-overlap migration without widening public error surface or grants", async () => {
+    const sql = await readFile(BOUNDED_OVERLAP_MIGRATION_PATH, "utf8");
+
+    expect(sql).toMatch(
+      /insert into private\.full_local_session_observability[\s\S]*on conflict \(singleton\) do update/i,
+    );
+    expect(sql).toMatch(/observation_started_at = clock_timestamp\(\)/i);
+    expect(sql).toMatch(/unexpected_account_session_stale_count = 0/i);
+    expect(sql).toMatch(/stale_token_mutation_count = 0/i);
+    expect(sql).toMatch(/first_stale_at = null/i);
+    expect(sql).toMatch(
+      /create or replace function public\.assert_and_renew_full_local_session_authority_v2\(/i,
+    );
+    expect(sql).toMatch(/v_bounded_overlap boolean := false/i);
+    expect(sql).toMatch(
+      /clock_timestamp\(\)\s*<=\s*v_binding\.local_verified_at\s*\+\s*interval '10 seconds'/i,
+    );
+    expect(sql).toMatch(/v_bounded_overlap := true/i);
+    expect(sql).toMatch(/raise exception 'ACCOUNT_SESSION_STALE'/i);
+    expect(sql).toMatch(/raise exception 'ACCOUNT_GENERATION_STALE'/i);
+    expect(sql).not.toContain("HOMECOOK_SESSION_AUTHORITY_REASON::superseded_token");
+    expect(sql).toMatch(
+      /revoke all on function public\.assert_and_renew_full_local_session_authority_v2[\s\S]*from public, anon, authenticated/i,
+    );
+    expect(sql).toMatch(
+      /grant execute on function public\.assert_and_renew_full_local_session_authority_v2[\s\S]*to service_role/i,
+    );
+  });
+
   it("adds bounded internal stale reasons without changing public errors", async () => {
     const sql = await readFile(MIGRATION_PATH, "utf8");
 
@@ -142,6 +173,7 @@ describe("full-local session observability contract", () => {
 
     expect(manifest.migrations).toContain(MIGRATION_PATH);
     expect(manifest.migrations).toContain(FOLLOWUP_MIGRATION_PATH);
+    expect(manifest.migrations).toContain(BOUNDED_OVERLAP_MIGRATION_PATH);
     for (const signature of [
       "private.assert_full_local_session_observability_scope()",
       "public.record_full_local_session_stale_observation(text)",

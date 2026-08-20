@@ -242,7 +242,6 @@ export function createHybridAuthorityFetch({
   loadRemoteJwks,
   assertSessionAuthority,
   recordSessionAuthorityFailure,
-  recoverSupersededSession,
   auth,
   attestationSecret,
   sessionBindingSecret,
@@ -267,10 +266,6 @@ export function createHybridAuthorityFetch({
   recordSessionAuthorityFailure?: (
     reason: SessionAuthorityFailureReason,
   ) => Promise<void>;
-  recoverSupersededSession?: (input: {
-    currentAccessToken: string;
-    sessionKeyHash: string;
-  }) => Promise<string | null>;
   auth: RemoteAuthGatewayEnv;
   attestationSecret: string;
   sessionBindingSecret?: string;
@@ -287,7 +282,6 @@ export function createHybridAuthorityFetch({
     const request = new Request(input, init);
     const authorityPath = downstreamAuthorityPath(new URL(request.url).pathname);
     const accessToken = (await getAccessToken())?.trim();
-    let latestSessionKeyHash: string | null = null;
 
     const observeUnexpectedFailure = async (
       reason: SessionAuthorityFailureReason | undefined,
@@ -364,7 +358,6 @@ export function createHybridAuthorityFetch({
         remoteVerifiedAt: new Date(now * 1_000).toISOString(),
         ttlSeconds: validated.claims.expiresAt - now,
       });
-      latestSessionKeyHash = binding.session_key_hash;
       const sessionIssuedAt = new Date(
         validated.claims.issuedAt * 1_000,
       ).toISOString();
@@ -447,50 +440,10 @@ export function createHybridAuthorityFetch({
         verified = await verifyAccessToken(accessToken);
       } catch (error) {
         const authorityError = toPublicAuthorityError(error);
-        if (
-          authorityError instanceof HybridSessionAuthorityError
-          && authorityError.internalReason === "superseded_token"
-        ) {
-          let replacementToken: string | null = null;
-          try {
-            replacementToken = latestSessionKeyHash
-              ? (await recoverSupersededSession?.({
-                  currentAccessToken: accessToken,
-                  sessionKeyHash: latestSessionKeyHash,
-                }))?.trim() ?? null
-              : null;
-          } catch {
-            replacementToken = null;
-          }
-          if (
-            replacementToken
-            && replacementToken !== accessToken
-          ) {
-            try {
-              verified = await verifyAccessToken(replacementToken);
-            } catch (replacementError) {
-              const replacementAuthorityError = toPublicAuthorityError(
-                replacementError,
-              );
-              if (
-                replacementAuthorityError
-                instanceof HybridLifecycleMaintenanceError
-              ) {
-                throw replacementAuthorityError;
-              }
-              await observeUnexpectedFailure("non_monotonic");
-              throw new HybridSessionAuthorityError("non_monotonic");
-            }
-          } else {
-            await observeUnexpectedFailure("non_monotonic");
-            throw new HybridSessionAuthorityError("non_monotonic");
-          }
-        } else {
-          if (authorityError instanceof HybridSessionAuthorityError) {
-            await observeUnexpectedFailure(authorityError.internalReason);
-          }
-          throw authorityError;
+        if (authorityError instanceof HybridSessionAuthorityError) {
+          await observeUnexpectedFailure(authorityError.internalReason);
         }
+        throw authorityError;
       }
       const headers = new Headers(request.headers);
       headers.set("Authorization", `Bearer ${verified.token}`);
