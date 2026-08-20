@@ -620,6 +620,10 @@ describe("legacy-product-compat fresh Stage 1 exact-six relock", () => {
         "tests/snapshot-v2-complete.test.ts",
       ]),
     );
+    const expandedRuntimeCommand = automation.backend.verify_commands[0];
+    expect(workItem.verification.required_checks).toContain(expandedRuntimeCommand);
+    expect(workItem.verification.verify_commands).toContain(expandedRuntimeCommand);
+    expect(status.required_checks).toContain(expandedRuntimeCommand);
     expect(read("tests/legacy-cooking-complete-routes.test.ts")).toContain(
       "returns exact 428 from the actual route when the approved phase is required",
     );

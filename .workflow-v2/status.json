@@ -2702,7 +2702,7 @@
         "node scripts/validate-automation-spec.mjs --slice legacy-product-compat",
         "pnpm validate:omo-bookkeeping",
         "pnpm exec vitest run tests/legacy-product-compat-stage1-relock.test.ts tests/workflow-v2-docs.test.ts tests/omo-automation-spec.test.ts tests/omo-bookkeeping.test.ts tests/omo-doc-gate.test.ts tests/source-of-truth-sync.test.ts",
-        "pnpm exec vitest run tests/legacy-product-compat.test.ts tests/legacy-cooking-idempotency-rollout.test.ts tests/cooking-version-dispatch-compat.test.ts tests/compatibility-tombstone-gates.test.ts tests/legacy-cooking-complete-routes.test.ts tests/legacy-cooking-atomic-rpc.test.ts tests/cook-planner-complete.backend.test.ts tests/cook-standalone-complete.backend.test.ts",
+        "pnpm exec vitest run tests/legacy-product-compat.test.ts tests/legacy-cooking-idempotency-rollout.test.ts tests/cooking-version-dispatch-compat.test.ts tests/compatibility-tombstone-gates.test.ts tests/legacy-cooking-complete-routes.test.ts tests/legacy-cooking-atomic-rpc.test.ts tests/cook-planner-complete.backend.test.ts tests/cook-standalone-complete.backend.test.ts tests/snapshot-v2-session-attempts.test.ts tests/snapshot-v2-complete.test.ts",
         "pnpm test:legacy-product-compat:postgres",
         "pnpm verify:local-supabase-runtime:isolated",
         "pnpm test:prepared-food-planner-entry:postgres",
