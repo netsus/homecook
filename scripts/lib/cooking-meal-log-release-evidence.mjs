@@ -7,7 +7,7 @@ import {
   realpathSync,
   writeFileSync,
 } from "node:fs";
-import { dirname, join, relative, resolve, sep } from "node:path";
+import { basename, dirname, join, relative, resolve, sep } from "node:path";
 
 export const EVIDENCE_SCHEMA_VERSION =
   "cooking-meal-log-release-evidence-v1";
@@ -95,6 +95,57 @@ function assertTimestamp(value, label) {
   ) {
     throw new Error(`${label} must be an ISO timestamp`);
   }
+}
+
+function assertActualDirectory(directoryPath, label) {
+  let stat;
+  try {
+    stat = lstatSync(directoryPath);
+  } catch {
+    throw new Error(`${label} must exist as an actual directory`);
+  }
+  if (!stat.isDirectory() || stat.isSymbolicLink()) {
+    throw new Error(`${label} must be an actual directory, not a symlink`);
+  }
+}
+
+function assertStrictContainment(rootPath, candidatePath, label) {
+  const fromRoot = relative(rootPath, candidatePath);
+  if (
+    fromRoot.length === 0
+    || fromRoot === ".."
+    || fromRoot.startsWith(`..${sep}`)
+  ) {
+    throw new Error(`${label} must be strictly inside its canonical root`);
+  }
+}
+
+function assertDirectoryComponents(repositoryRoot, directoryPath) {
+  const normalizedRepository = resolve(repositoryRoot);
+  const normalizedDirectory = resolve(directoryPath);
+  const fromRepository = relative(normalizedRepository, normalizedDirectory);
+  if (
+    fromRepository === ".."
+    || fromRepository.startsWith(`..${sep}`)
+  ) {
+    throw new Error("canonical evidence path must remain inside the repository");
+  }
+
+  assertActualDirectory(normalizedRepository, "repository root");
+  let currentPath = normalizedRepository;
+  for (const component of fromRepository.split(sep).filter(Boolean)) {
+    currentPath = join(currentPath, component);
+    assertActualDirectory(currentPath, "canonical evidence path component");
+  }
+}
+
+function assertAttemptDirectory(attemptDir, expectedAttemptId) {
+  const normalizedAttempt = resolve(attemptDir);
+  assertActualDirectory(normalizedAttempt, "attempt directory");
+  if (basename(normalizedAttempt) !== expectedAttemptId) {
+    throw new Error("attempt directory basename must equal --attempt-id");
+  }
+  return normalizedAttempt;
 }
 
 export function createAttemptDirectory({ artifactRoot, attemptId }) {
@@ -235,10 +286,12 @@ export async function measureQueryCountGrowth({ surface, execute }) {
 export function validateGitBinding({
   repositoryRoot,
   attemptDir,
+  expectedAttemptId,
   expectedHeadSha,
   actualHeadSha,
   statusOutput,
 }) {
+  assertAttemptId(expectedAttemptId);
   assertSha(expectedHeadSha, "expected head SHA");
   if (actualHeadSha !== expectedHeadSha) {
     throw new Error("current git HEAD does not match --expected-head");
@@ -250,14 +303,33 @@ export function validateGitBinding({
     repositoryRoot,
     ".artifacts/cooking-meal-log-cross-slice-release-qa/attempts",
   );
-  const normalizedAttempt = resolve(attemptDir);
-  const fromRoot = relative(canonicalRoot, normalizedAttempt);
+  const normalizedAttempt = assertAttemptDirectory(
+    attemptDir,
+    expectedAttemptId,
+  );
+  assertStrictContainment(
+    canonicalRoot,
+    normalizedAttempt,
+    "attempt directory",
+  );
+  if (dirname(normalizedAttempt) !== canonicalRoot) {
+    throw new Error("attempt directory must be a direct canonical attempt child");
+  }
+
+  assertDirectoryComponents(repositoryRoot, canonicalRoot);
+  assertDirectoryComponents(repositoryRoot, normalizedAttempt);
+  const realCanonicalRoot = realpathSync(canonicalRoot);
+  const realAttempt = realpathSync(normalizedAttempt);
+  assertStrictContainment(
+    realCanonicalRoot,
+    realAttempt,
+    "real attempt directory",
+  );
   if (
-    fromRoot.length === 0
-    || fromRoot === ".."
-    || fromRoot.startsWith(`..${sep}`)
+    dirname(realAttempt) !== realCanonicalRoot
+    || basename(realAttempt) !== expectedAttemptId
   ) {
-    throw new Error("attempt directory must be inside the canonical attempt root");
+    throw new Error("real attempt directory must match the canonical attempt id");
   }
 }
 
@@ -427,7 +499,11 @@ export function validateEvidenceAttempt({
 }) {
   assertAttemptId(expectedAttemptId);
   assertSha(expectedHeadSha, "expected head SHA");
-  const manifestResult = readJsonArtifact(attemptDir, "manifest.json");
+  const normalizedAttempt = assertAttemptDirectory(
+    attemptDir,
+    expectedAttemptId,
+  );
+  const manifestResult = readJsonArtifact(normalizedAttempt, "manifest.json");
   const manifest = manifestResult.value;
   if (manifest.schema_version !== EVIDENCE_SCHEMA_VERSION) {
     throw new Error("manifest.json: schema_version mismatch");
@@ -448,7 +524,7 @@ export function validateEvidenceAttempt({
   );
   const artifacts = new Map();
   for (const fileName of REQUIRED_ARTIFACT_FILES) {
-    const artifactResult = readJsonArtifact(attemptDir, fileName);
+    const artifactResult = readJsonArtifact(normalizedAttempt, fileName);
     const entry = manifestEntries.get(fileName);
     if (!entry) throw new Error(`manifest missing artifact: ${fileName}`);
     if (entry.bytes !== artifactResult.bytes.byteLength) {

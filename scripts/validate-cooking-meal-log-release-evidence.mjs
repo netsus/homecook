@@ -61,6 +61,7 @@ const statusOutput = gitOutput([
 validateGitBinding({
   repositoryRoot,
   attemptDir: resolve(args.attemptDir),
+  expectedAttemptId: args.attemptId,
   expectedHeadSha: args.expectedHead,
   actualHeadSha,
   statusOutput,

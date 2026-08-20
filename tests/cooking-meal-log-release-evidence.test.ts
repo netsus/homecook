@@ -2,9 +2,11 @@ import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
 import {
   existsSync,
+  mkdirSync,
   mkdtempSync,
   readFileSync,
   rmSync,
+  symlinkSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -53,12 +55,13 @@ function createRoot() {
 function baseArtifact(
   artifactType: string,
   payload: Record<string, unknown> = {},
+  identity: { attemptId?: string; headSha?: string } = {},
 ) {
   return {
     schema_version: "cooking-meal-log-release-evidence-v1",
     artifact_type: artifactType,
-    attempt_id: attemptId,
-    head_sha: headSha,
+    attempt_id: identity.attemptId ?? attemptId,
+    head_sha: identity.headSha ?? headSha,
     generated_at: generatedAt,
     profile: "full",
     passed: 1,
@@ -69,12 +72,25 @@ function baseArtifact(
   };
 }
 
-function createValidAttempt() {
-  const root = createRoot();
+function createValidAttempt({
+  artifactAttemptId = attemptId,
+  artifactHeadSha = headSha,
+  directoryAttemptId = attemptId,
+  root = createRoot(),
+}: {
+  artifactAttemptId?: string;
+  artifactHeadSha?: string;
+  directoryAttemptId?: string;
+  root?: string;
+} = {}) {
   const attemptDir = createAttemptDirectory({
     artifactRoot: root,
-    attemptId,
+    attemptId: directoryAttemptId,
   });
+  const identity = {
+    attemptId: artifactAttemptId,
+    headSha: artifactHeadSha,
+  };
 
   writeEvidenceArtifact(attemptDir, "db-security.json", baseArtifact(
     "db-security",
@@ -89,6 +105,7 @@ function createValidAttempt() {
       pinned_isolated_local: true,
       remote_linked_cloud_access: 0,
     },
+    identity,
   ));
   writeEvidenceArtifact(attemptDir, "security.json", baseArtifact(
     "security",
@@ -99,6 +116,7 @@ function createValidAttempt() {
       authorization_inventory_classified: 1,
       data_api_negatives: 1,
     },
+    identity,
   ));
   writeEvidenceArtifact(attemptDir, "performance.json", baseArtifact(
     "performance",
@@ -109,6 +127,7 @@ function createValidAttempt() {
       db_p95_ms: 250,
       route_p95_ms: 500,
     },
+    identity,
   ));
   writeEvidenceArtifact(attemptDir, "query-count.json", baseArtifact(
     "query-count",
@@ -123,6 +142,7 @@ function createValidAttempt() {
         },
       ],
     },
+    identity,
   ));
   writeEvidenceArtifact(attemptDir, "rollback.json", baseArtifact(
     "rollback",
@@ -131,15 +151,112 @@ function createValidAttempt() {
       seeded_v2_drain: true,
       tombstone_fail_closed: true,
     },
+    identity,
   ));
   writeEvidenceManifest(attemptDir, {
-    attemptId,
-    headSha,
+    attemptId: artifactAttemptId,
+    headSha: artifactHeadSha,
     generatedAt,
     profile: "full",
   });
 
   return { root, attemptDir };
+}
+
+function runGit(repositoryRoot: string, args: string[]) {
+  const result = spawnSync("git", args, {
+    cwd: repositoryRoot,
+    encoding: "utf8",
+  });
+  if (result.status !== 0) {
+    throw new Error(`git ${args.join(" ")} failed: ${result.stderr}`);
+  }
+  return result.stdout.trim();
+}
+
+function createValidatorRepository() {
+  const temporaryRoot = createRoot();
+  runGit(temporaryRoot, ["init", "--quiet"]);
+  writeFileSync(join(temporaryRoot, ".gitignore"), ".artifacts/\n");
+  runGit(temporaryRoot, ["add", ".gitignore"]);
+  runGit(temporaryRoot, [
+    "-c",
+    "user.name=Homecook Test",
+    "-c",
+    "user.email=homecook-test@example.invalid",
+    "commit",
+    "--quiet",
+    "-m",
+    "test fixture",
+  ]);
+  const repositoryRoot = runGit(temporaryRoot, [
+    "rev-parse",
+    "--show-toplevel",
+  ]);
+  return {
+    headSha: runGit(repositoryRoot, ["rev-parse", "HEAD"]),
+    repositoryRoot,
+  };
+}
+
+function runFinalValidator(
+  variant: "attempt-symlink" | "canonical-root-symlink" | "basename-mismatch",
+) {
+  const validatorPath = join(
+    process.cwd(),
+    "scripts/validate-cooking-meal-log-release-evidence.mjs",
+  );
+  const { headSha: fixtureHeadSha, repositoryRoot } =
+    createValidatorRepository();
+  const canonicalRoot = join(
+    repositoryRoot,
+    ".artifacts/cooking-meal-log-cross-slice-release-qa/attempts",
+  );
+  let attemptDir: string;
+
+  if (variant === "canonical-root-symlink") {
+    const externalRoot = createRoot();
+    attemptDir = createValidAttempt({
+      artifactHeadSha: fixtureHeadSha,
+      root: externalRoot,
+    }).attemptDir;
+    mkdirSync(join(canonicalRoot, ".."), { recursive: true });
+    symlinkSync(externalRoot, canonicalRoot, "dir");
+    attemptDir = join(canonicalRoot, attemptId);
+  } else if (variant === "attempt-symlink") {
+    const externalRoot = createRoot();
+    const externalAttempt = createValidAttempt({
+      artifactHeadSha: fixtureHeadSha,
+      root: externalRoot,
+    }).attemptDir;
+    mkdirSync(canonicalRoot, { recursive: true });
+    attemptDir = join(canonicalRoot, attemptId);
+    symlinkSync(externalAttempt, attemptDir, "dir");
+  } else {
+    mkdirSync(canonicalRoot, { recursive: true });
+    attemptDir = createValidAttempt({
+      artifactAttemptId: attemptId,
+      artifactHeadSha: fixtureHeadSha,
+      directoryAttemptId: "different-attempt-id",
+      root: canonicalRoot,
+    }).attemptDir;
+  }
+
+  return spawnSync(
+    process.execPath,
+    [
+      validatorPath,
+      "--attempt-dir",
+      attemptDir,
+      "--attempt-id",
+      attemptId,
+      "--expected-head",
+      fixtureHeadSha,
+      "--profile",
+      "full",
+    ],
+    { cwd: repositoryRoot, encoding: "utf8" },
+  );
 }
 
 function rehashManifest(attemptDir: string, fileName: string) {
@@ -250,12 +367,18 @@ describe("cooking meal-log release evidence safety", () => {
   });
 
   it("binds validation to the repository head, clean tree, and canonical attempt root", () => {
-    const repositoryRoot = "/repo";
-    const attemptDir =
-      "/repo/.artifacts/cooking-meal-log-cross-slice-release-qa/attempts/a1";
+    const repositoryRoot = createRoot();
+    const bindingAttemptId = "attempt-a1";
+    const attemptDir = join(
+      repositoryRoot,
+      ".artifacts/cooking-meal-log-cross-slice-release-qa/attempts",
+      bindingAttemptId,
+    );
+    mkdirSync(attemptDir, { recursive: true });
     expect(() => validateGitBinding({
       repositoryRoot,
       attemptDir,
+      expectedAttemptId: bindingAttemptId,
       expectedHeadSha: headSha,
       actualHeadSha: headSha,
       statusOutput: "",
@@ -263,6 +386,7 @@ describe("cooking meal-log release evidence safety", () => {
     expect(() => validateGitBinding({
       repositoryRoot,
       attemptDir,
+      expectedAttemptId: bindingAttemptId,
       expectedHeadSha: headSha,
       actualHeadSha: "b".repeat(40),
       statusOutput: "",
@@ -270,17 +394,21 @@ describe("cooking meal-log release evidence safety", () => {
     expect(() => validateGitBinding({
       repositoryRoot,
       attemptDir,
+      expectedAttemptId: bindingAttemptId,
       expectedHeadSha: headSha,
       actualHeadSha: headSha,
       statusOutput: " M tracked.ts",
     })).toThrow(/clean worktree/i);
+    const outsideAttempt = join(createRoot(), "outside-attempt");
+    mkdirSync(outsideAttempt);
     expect(() => validateGitBinding({
       repositoryRoot,
-      attemptDir: "/tmp/outside-attempt",
+      attemptDir: outsideAttempt,
+      expectedAttemptId: "outside-attempt",
       expectedHeadSha: headSha,
       actualHeadSha: headSha,
       statusOutput: "",
-    })).toThrow(/canonical attempt root/i);
+    })).toThrow(/canonical root/i);
   });
 
   it("accepts a complete exact-head full attempt", () => {
@@ -326,6 +454,17 @@ describe("cooking meal-log release evidence safety", () => {
     expect(result.stderr).toMatch(
       /canonical attempt root|repository|clean worktree|current git HEAD/i,
     );
+  });
+
+  it.each([
+    "attempt-symlink",
+    "canonical-root-symlink",
+    "basename-mismatch",
+  ] as const)("rejects final-validator %s path substitution", (variant) => {
+    const result = runFinalValidator(variant);
+
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toMatch(/attempt|canonical|directory|symlink/i);
   });
 
   it("runs meal-log PostgreSQL through the pinned isolated Supabase owner", () => {
