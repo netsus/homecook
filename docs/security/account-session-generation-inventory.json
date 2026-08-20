@@ -1554,6 +1554,20 @@
       "activation_phase": "f0-expand-legacy-guard"
     },
     {
+      "key": "rpc|app/api/v1/cooking/session-attempts/[id]/cancel/route.ts|cancel_snapshot_v2_cooking_session|1",
+      "kind": "rpc",
+      "operation": "call",
+      "target": "cancel_snapshot_v2_cooking_session",
+      "line": 51,
+      "source_file": "app/api/v1/cooking/session-attempts/[id]/cancel/route.ts",
+      "route": "/api/v1/cooking/session-attempts/[id]/cancel",
+      "owner_scope": "authenticated-user",
+      "persists_personal_state": true,
+      "guard_mode": "protected-rpc-or-mutated-table-before-trigger",
+      "expected_generation": "joint-promote-server-verified-session-binding",
+      "activation_phase": "f0-expand-legacy-guard"
+    },
+    {
       "key": "rpc|app/api/v1/cooking/session-attempts/[id]/complete/route.ts|complete_snapshot_v2_cooking_session|1",
       "kind": "rpc",
       "operation": "call",
@@ -1568,11 +1582,25 @@
       "activation_phase": "f0-expand-legacy-guard"
     },
     {
+      "key": "rpc|app/api/v1/cooking/session-attempts/route.ts|start_snapshot_v2_cooking_session|1",
+      "kind": "rpc",
+      "operation": "call",
+      "target": "start_snapshot_v2_cooking_session",
+      "line": 63,
+      "source_file": "app/api/v1/cooking/session-attempts/route.ts",
+      "route": "/api/v1/cooking/session-attempts",
+      "owner_scope": "authenticated-user",
+      "persists_personal_state": true,
+      "guard_mode": "protected-rpc-or-mutated-table-before-trigger",
+      "expected_generation": "joint-promote-server-verified-session-binding",
+      "activation_phase": "f0-expand-legacy-guard"
+    },
+    {
       "key": "rpc|app/api/v1/cooking/sessions/[session_id]/complete/route.ts|complete_cooking_session|1",
       "kind": "rpc",
       "operation": "call",
       "target": "complete_cooking_session",
-      "line": 123,
+      "line": 115,
       "source_file": "app/api/v1/cooking/sessions/[session_id]/complete/route.ts",
       "route": "/api/v1/cooking/sessions/[session_id]/complete",
       "owner_scope": "authenticated-user",
@@ -1586,7 +1614,7 @@
       "kind": "rpc",
       "operation": "call",
       "target": "complete_standalone_cooking",
-      "line": 111,
+      "line": 99,
       "source_file": "app/api/v1/cooking/standalone-complete/route.ts",
       "route": "/api/v1/cooking/standalone-complete",
       "owner_scope": "authenticated-user",
@@ -1694,6 +1722,48 @@
       "activation_phase": "f0-expand-legacy-guard"
     },
     {
+      "key": "rpc|app/api/v1/meals/[meal_id]/route.ts|write_future_meal_with_snapshot_authority|1",
+      "kind": "rpc",
+      "operation": "call",
+      "target": "write_future_meal_with_snapshot_authority",
+      "line": 268,
+      "source_file": "app/api/v1/meals/[meal_id]/route.ts",
+      "route": "/api/v1/meals/[meal_id]",
+      "owner_scope": "authenticated-user",
+      "persists_personal_state": true,
+      "guard_mode": "protected-rpc-or-mutated-table-before-trigger",
+      "expected_generation": "joint-promote-server-verified-session-binding",
+      "activation_phase": "f0-expand-legacy-guard"
+    },
+    {
+      "key": "rpc|app/api/v1/meals/[meal_id]/route.ts|write_future_meal_with_snapshot_authority|2",
+      "kind": "rpc",
+      "operation": "call",
+      "target": "write_future_meal_with_snapshot_authority",
+      "line": 350,
+      "source_file": "app/api/v1/meals/[meal_id]/route.ts",
+      "route": "/api/v1/meals/[meal_id]",
+      "owner_scope": "authenticated-user",
+      "persists_personal_state": true,
+      "guard_mode": "protected-rpc-or-mutated-table-before-trigger",
+      "expected_generation": "joint-promote-server-verified-session-binding",
+      "activation_phase": "f0-expand-legacy-guard"
+    },
+    {
+      "key": "rpc|app/api/v1/meals/route.ts|write_future_meal_with_snapshot_authority|1",
+      "kind": "rpc",
+      "operation": "call",
+      "target": "write_future_meal_with_snapshot_authority",
+      "line": 704,
+      "source_file": "app/api/v1/meals/route.ts",
+      "route": "/api/v1/meals",
+      "owner_scope": "authenticated-user",
+      "persists_personal_state": true,
+      "guard_mode": "protected-rpc-or-mutated-table-before-trigger",
+      "expected_generation": "joint-promote-server-verified-session-binding",
+      "activation_phase": "f0-expand-legacy-guard"
+    },
+    {
       "key": "rpc|app/api/v1/planner/columns/[column_id]/route.ts|delete_owned_planner_column|1",
       "kind": "rpc",
       "operation": "call",
@@ -1764,6 +1834,34 @@
       "activation_phase": "always"
     },
     {
+      "key": "rpc|app/api/v1/recipes/[id]/route.ts|write_personal_recipe_core|3",
+      "kind": "rpc",
+      "operation": "call",
+      "target": "write_personal_recipe_core",
+      "line": 681,
+      "source_file": "app/api/v1/recipes/[id]/route.ts",
+      "route": "/api/v1/recipes/[id]",
+      "owner_scope": "authenticated-user",
+      "persists_personal_state": true,
+      "guard_mode": "protected-rpc-or-mutated-table-before-trigger",
+      "expected_generation": "joint-promote-server-verified-session-binding",
+      "activation_phase": "f0-expand-legacy-guard"
+    },
+    {
+      "key": "rpc|app/api/v1/recipes/[id]/route.ts|write_recipe_future_plan_change|2",
+      "kind": "rpc",
+      "operation": "call",
+      "target": "write_recipe_future_plan_change",
+      "line": 628,
+      "source_file": "app/api/v1/recipes/[id]/route.ts",
+      "route": "/api/v1/recipes/[id]",
+      "owner_scope": "authenticated-user",
+      "persists_personal_state": true,
+      "guard_mode": "protected-rpc-or-mutated-table-before-trigger",
+      "expected_generation": "joint-promote-server-verified-session-binding",
+      "activation_phase": "f0-expand-legacy-guard"
+    },
+    {
       "key": "rpc|app/api/v1/recipes/route.ts|create_manual_recipe_with_managed_image|1",
       "kind": "rpc",
       "operation": "call",
@@ -1799,6 +1897,20 @@
       "line": 317,
       "source_file": "app/api/v1/shopping/lists/[list_id]/complete/route.ts",
       "route": "/api/v1/shopping/lists/[list_id]/complete",
+      "owner_scope": "authenticated-user",
+      "persists_personal_state": true,
+      "guard_mode": "protected-rpc-or-mutated-table-before-trigger",
+      "expected_generation": "joint-promote-server-verified-session-binding",
+      "activation_phase": "f0-expand-legacy-guard"
+    },
+    {
+      "key": "rpc|app/api/v1/shopping/lists/route.ts|create_shopping_list_with_snapshot_authority|1",
+      "kind": "rpc",
+      "operation": "call",
+      "target": "create_shopping_list_with_snapshot_authority",
+      "line": 1053,
+      "source_file": "app/api/v1/shopping/lists/route.ts",
+      "route": "/api/v1/shopping/lists",
       "owner_scope": "authenticated-user",
       "persists_personal_state": true,
       "guard_mode": "protected-rpc-or-mutated-table-before-trigger",
@@ -2067,6 +2179,6 @@
       "on_delete": "cascade"
     }
   ],
-  "generated_at": "2026-08-11T08:03:34.045Z",
-  "checksum": "2b5512c4c6631b36b50c8a54634f8d3c2e8bc95a2d1ec103195bb91e1b303576"
+  "generated_at": "2026-08-15T05:11:40.529Z",
+  "checksum": "89a477ed46e9790605c76e6ace5199808a55559261b48874c2f9f15f28ee2ded"
 }

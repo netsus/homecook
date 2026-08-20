@@ -2,7 +2,7 @@
 
 > 이 Stage 1 relock은 공식 tuple `v1.7.32 / v1.5.36 / v1.3.34 / DB v1.3.34 / API v1.2.39`와 primary tracked plan SHA-256 `d4d0fb39e80eeffc8b1e73ad92f0d91a35a9b6adc57a556ea8c9ec6ecffa951d` (1,018 lines)를 잠근다. `45f02013fbc1c3af1936d596605230d0cbac7839a783224aa9535844e4bda7dc` (1,056 lines)는 historical local-first overlay only이며, current operations authority는 `docs/engineering/supabase-local-only-operations.md`다.
 
-> 체크는 해당 Stage의 실제 자동화/evidence가 생긴 뒤에만 한다. 현재 implementation/evaluation은 `not_started`, verification은 `pending`, auto-merge는 `false`이며 Manual/activation/tombstone authority는 없다.
+> Stage 2 author implementation과 local evidence는 Draft PR #1369에서 GREEN이다. 아래 acceptance 체크는 fresh independent Stage 3가 exact current head를 승인한 뒤에만 승격한다. 현재 lifecycle은 `in_progress`, approval/evaluation은 `not_started`, verification은 `pending`, auto-merge는 `false`이며 Manual/activation/tombstone authority는 없다.
 
 ## Happy Path
 

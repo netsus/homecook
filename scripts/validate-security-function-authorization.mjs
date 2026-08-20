@@ -58,6 +58,12 @@ const ADDITIVE_SOURCES = [
   {
     manifestPath: path.join(
       REPO_ROOT,
+      "docs/security/legacy-product-compat-security-function-authorization-manifest.json",
+    ),
+  },
+  {
+    manifestPath: path.join(
+      REPO_ROOT,
       "docs/security/hybrid-internal-operations-security-function-authorization-manifest.json",
     ),
     migrationPath: path.join(
