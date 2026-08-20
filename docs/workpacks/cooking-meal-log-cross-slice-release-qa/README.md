@@ -50,7 +50,7 @@ automated/runtime predecessor gate: satisfied at the frozen base above. This doe
 
 Stage 2 entry still requires this relock PR merge and the documented post-merge preflight. The four separate Stage 1 review gates are approved on the exact reviewed head below, but a later predecessor repair or evidence invalidation fails the gate closed and requires this table to be relocked again.
 
-## Stage 1 Current Gate
+## Stage 1 Historical Gate
 
 - Draft PR: `https://github.com/netsus/homecook/pull/1373`
 - exact reviewed identity: head `2c33b38cf9f3badb72d610ad7a47abe70bf8907f`, tree `23fab93ab372174b9f531cf3414b348b1a724894`.
@@ -59,9 +59,16 @@ Stage 2 entry still requires this relock PR merge and the documented post-merge 
 - five-axis `01a01f2e-ba20-7022-8b3b-5b90d15572d0`: `APPROVE 0/0/0`, drift `0`.
 - design-authority-plan `01a01f2e-bf69-7f23-9c7c-7982855195bc`: `APPROVE 0/0/0`, drift `0`.
 - retained machine-readable evidence: `docs/workpacks/cooking-meal-log-cross-slice-release-qa/evidence/2026-08-21-stage1-final-independent-approvals.json`.
-- lifecycle/approval/verification/evaluation은 `in_progress / codex_approved / passed / passed`다. Stage 2 verification-only는 base `afb1b31aa6c95ba974f7484d31fa123439d5fcd6`에서 시작됐고 evidence는 수집 중이다. runtime/full 8-lane 287041/Manual/activation evidence와 아직 검증되지 않은 acceptance item은 pending이다.
+- Stage 1 historical approval/verification/evaluation은 `codex_approved / passed / passed`다. 이 값은 PR #1373의 과거 승인 증거이며 활성 Stage 2/3 승인 상태가 아니다.
 - 이 projection successor는 네 reviewer의 exact-head verdict를 기록할 뿐 새 리뷰나 자기 승인을 만들지 않는다. successor current-head CI와 final drift confirmation은 별도 reviewer 확인 대상이다.
 - repair budget: docs repair budget max 3; backend/frontend inline repair rounds `0/0`. Runtime defect는 separate failing-test-first TDD repair PR로 이동하고 full rerun after its merge가 필요하다.
+
+## Active Stage 2/3 Gate
+
+- 활성 lifecycle/approval/verification/evaluation은 `in_progress / needs_revision / passed / fixable`이다.
+- 활성 Draft PR은 `https://github.com/netsus/homecook/pull/1377`이고 repair successor head는 `25802dc7242ead54a758c167c0ed86470b147957`이다. current-head checks는 `8 success + 5 intended skip`, bad/pending `0`이다.
+- fresh Stage 3 re-review task `01a02129-5945-7381-8aca-ff7673d0b5f3`가 `CML14-S3-P1-002`를 요청했으며, human-facing projection repair 뒤 re-review가 pending이다.
+- complete owning DB lanes, actual performance thresholds, Stage 4 `FINAL_EVIDENCE_SHA`/full profile, controlled full-local, Stage 4~6, Manual and activation remain pending.
 
 ## Backend First Contract
 

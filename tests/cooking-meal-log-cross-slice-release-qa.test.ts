@@ -16,6 +16,10 @@ const stage2PrPath = "https://github.com/netsus/homecook/pull/1377";
 const stage2ReviewedHead = "a23a97aa5f4032e3e4bd3fec2fadd86ce996c823";
 const stage3ReviewerTask = "01a02119-a472-7433-ac9d-c3d5496bf1a4";
 const stage3RequiredFix = "CML14-S3-P1-001";
+const stage3RereviewerTask = "01a02129-5945-7381-8aca-ff7673d0b5f3";
+const stage3RereviewRequiredFix = "CML14-S3-P1-002";
+const stage3RepairSuccessorHead =
+  "25802dc7242ead54a758c167c0ed86470b147957";
 const repairProjectionSyncedAt = "2026-08-20T21:41:31Z";
 const unsyncedPrBodyMarker = "stage3-repair-pr-body-sync-pending";
 const stage2AuthorEvidencePath =
@@ -345,6 +349,14 @@ describe("cooking meal-log cross-slice Stage 1 relock", () => {
     });
     expect(exactSix).toContain(stage2Branch);
     expect(exactSix).toContain(stage2Base);
+    expect(readme).toContain("## Stage 1 Historical Gate");
+    expect(readme).toContain(
+      "활성 lifecycle/approval/verification/evaluation은 `in_progress / needs_revision / passed / fixable`",
+    );
+    expect(readme).toContain(stage2PrPath);
+    expect(readme).toContain(stage3RepairSuccessorHead);
+    expect(readme).toContain(stage3RereviewerTask);
+    expect(readme).toContain(stage3RereviewRequiredFix);
   });
 
   it("preserves Stage 1 approvals while only proven Stage 2 items advance", () => {
