@@ -89,4 +89,39 @@ describe("legacy cooking completion attempt keys", () => {
     expect(cookingApi.completeStandaloneCooking.mock.calls[1]?.[1])
       .not.toBe(cookingApi.completeStandaloneCooking.mock.calls[0]?.[1]);
   });
+
+  it("keeps the planner completion key across a same-session reader reload", async () => {
+    cookingApi.completeCookingSession
+      .mockRejectedValueOnce(new Error("network failed"))
+      .mockResolvedValueOnce({ status: "completed" });
+    cookingApi.fetchCookMode.mockResolvedValue({ session_id: "session-1" });
+    useCookModeStore.setState({ sessionId: "session-1", screenState: "ready" });
+
+    await useCookModeStore.getState().complete(["ingredient-1"]);
+    const firstKey = cookingApi.completeCookingSession.mock.calls[0]?.[2];
+    await useCookModeStore.getState().loadCookMode("session-1");
+    await useCookModeStore.getState().complete(["ingredient-1"]);
+
+    expect(cookingApi.completeCookingSession.mock.calls[1]?.[2]).toBe(firstKey);
+  });
+
+  it("keeps the standalone completion key across a same-recipe reader reload", async () => {
+    cookingApi.completeStandaloneCooking
+      .mockRejectedValueOnce(new Error("network failed"))
+      .mockResolvedValueOnce({ leftover_dish_id: "leftover-1" });
+    cookingApi.fetchStandaloneCookMode.mockResolvedValue({ recipe: {} });
+    useStandaloneCookModeStore.setState({
+      recipeId: "recipe-1",
+      servings: 2,
+      screenState: "ready",
+    });
+
+    await useStandaloneCookModeStore.getState().complete(["ingredient-1"]);
+    const firstKey = cookingApi.completeStandaloneCooking.mock.calls[0]?.[1];
+    await useStandaloneCookModeStore.getState()
+      .loadStandaloneCookMode("recipe-1", 2);
+    await useStandaloneCookModeStore.getState().complete(["ingredient-1"]);
+
+    expect(cookingApi.completeStandaloneCooking.mock.calls[1]?.[1]).toBe(firstKey);
+  });
 });

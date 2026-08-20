@@ -44,13 +44,17 @@ export const useStandaloneCookModeStore = create<StandaloneCookModeStoreState>(
     ...buildInitialState(),
 
     loadStandaloneCookMode: async (recipeId: string, servings: number) => {
+      const current = get();
       set({
         screenState: "loading",
         recipeId,
         servings,
         errorMessage: null,
         errorCode: null,
-        completionAttempt: null,
+        completionAttempt:
+          current.recipeId === recipeId && current.servings === servings
+            ? current.completionAttempt
+            : null,
       });
 
       try {

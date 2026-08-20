@@ -47,12 +47,14 @@ export const useCookModeStore = create<CookModeStoreState>((set, get) => ({
   ...buildInitialState(),
 
   loadCookMode: async (sessionId: string) => {
+    const current = get();
     set({
       screenState: "loading",
       sessionId,
       errorMessage: null,
       errorCode: null,
-      completionAttempt: null,
+      completionAttempt:
+        current.sessionId === sessionId ? current.completionAttempt : null,
     });
 
     try {
