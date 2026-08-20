@@ -144,7 +144,8 @@ Stage 2 entry still requires this relock PR merge and the documented post-merge 
 | `MEAL_LOG` | `ui/designs/MEAL_LOG.md` | `ui/designs/critiques/MEAL_LOG-critique.md` | `ui/designs/authority/MEAL_LOG-authority.md` |
 
 - #12 status: MEAL_LOG design, critique, authority, runtime and OMO evidence are merged; they are no longer future reservations.
-- Authority status: fresh #14 exact-head screenshots and a separate final authority report remain required; this author does not approve them.
+- Authority status: `required`
+- Fresh #14 exact-head screenshots and a separate final authority report remain pending; this author does not approve them.
 
 ## Design Status
 

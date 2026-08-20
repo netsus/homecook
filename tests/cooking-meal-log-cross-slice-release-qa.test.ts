@@ -7,6 +7,7 @@ import { describe, expect, it } from "vitest";
 import { readWorkpackChecklistContract } from "../scripts/lib/omo-checklist-contract.mjs";
 import { evaluateDocGate } from "../scripts/lib/omo-doc-gate.mjs";
 import { validateAuthorityEvidencePresence } from "../scripts/lib/validate-authority-evidence-presence.mjs";
+import { validateCloseoutSync } from "../scripts/lib/validate-closeout-sync.mjs";
 
 const root = process.cwd();
 const sliceId = "cooking-meal-log-cross-slice-release-qa";
@@ -903,6 +904,19 @@ describe("cooking meal-log cross-slice Stage 1 relock", () => {
     )) {
       expect(serialized).not.toContain(predecessorAuthority);
     }
+  });
+
+  it("keeps the Stage 2 checkpoint valid in the non-Draft Ready closeout gate", () => {
+    const results = validateCloseoutSync({
+      rootDir: root,
+      env: {
+        ...process.env,
+        BASE_REF: "master",
+        BRANCH_NAME: stage2Branch,
+        PR_IS_DRAFT: "false",
+      },
+    });
+    expect(results).toEqual([]);
   });
 
   it("keeps Stage 2 verification-only and all mutations authority-gated", () => {
