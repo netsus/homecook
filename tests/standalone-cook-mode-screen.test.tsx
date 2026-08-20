@@ -493,7 +493,7 @@ describe("StandaloneCookModeScreen", () => {
         recipe_id: "recipe-1",
         cooking_servings: 2,
         consumed_ingredient_ids: ["ing-1"],
-      });
+      }, expect.stringMatching(/^[0-9a-f-]{36}$/i));
     });
   });
 

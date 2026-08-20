@@ -176,10 +176,31 @@ function assertRouteClassification(routeKey) {
   return metadata;
 }
 
-function ownerScopeForWrite(sourceFile) {
+function routeMethodAtIndex(source, index) {
+  let method = null;
+  const prefix = source.slice(0, index ?? 0);
+  for (const match of prefix.matchAll(
+    /export\s+async\s+function\s+(GET|POST|PATCH|PUT|DELETE)\s*\(/gu,
+  )) {
+    method = match[1];
+  }
+  return method;
+}
+
+function ownerScopeForWrite(sourceFile, method = null) {
   const normalized = normalizePath(path.relative(REPO_ROOT, sourceFile));
   if (normalized.endsWith("/route.ts")) {
     const route = routeFromFile(sourceFile);
+    const methodMetadata = method
+      ? ROUTE_METADATA_BY_KEY[`${method} ${route}`]
+      : null;
+    if (methodMetadata) {
+      return {
+        source_file: normalized,
+        route,
+        ...methodMetadata,
+      };
+    }
     const directMetadata = ROUTE_FILE_METADATA_BY_ROUTE[route];
     if (directMetadata) {
       return {
@@ -270,19 +291,29 @@ function collectMutatingRpcEntries(source, sourceFile) {
     ),
     ...Array.from(
       source.matchAll(/callCookedBatchRpc\(\s*[^,]+,\s*["'`]([^"'`]+)["'`]/gu),
-      (match) => ({ match, helper: true }),
+      (match) => ({ match, helper: "cooked-batch" }),
+    ),
+    ...Array.from(
+      source.matchAll(/callFuturePropagationRpc\(\s*[^,]+,\s*["'`]([^"'`]+)["'`]/gu),
+      (match) => ({ match, helper: "future-propagation" }),
     ),
   ].sort((left, right) => (left.match.index ?? 0) - (right.match.index ?? 0));
   let ordinal = 0;
 
   for (const { match, helper } of matches) {
     const target = match[1];
-    if (helper ? COOKED_BATCH_READ_RPC_TARGETS.has(target) : !MUTATING_RPC_PATTERN.test(target)) {
+    const isMutation = helper === "cooked-batch"
+      ? !COOKED_BATCH_READ_RPC_TARGETS.has(target)
+      : MUTATING_RPC_PATTERN.test(target);
+    if (!isMutation) {
       continue;
     }
 
     ordinal += 1;
-    const ownership = ownerScopeForWrite(sourceFile);
+    const ownership = ownerScopeForWrite(
+      sourceFile,
+      routeMethodAtIndex(source, match.index),
+    );
     entries.push({
       key: `rpc|${ownership.source_file}|${target}|${ordinal}`,
       kind: "rpc",
@@ -304,7 +335,10 @@ function collectDirectDmlEntries(source, sourceFile) {
 
   while ((match = regex.exec(source)) !== null) {
     ordinal += 1;
-    const ownership = ownerScopeForWrite(sourceFile);
+    const ownership = ownerScopeForWrite(
+      sourceFile,
+      routeMethodAtIndex(source, match.index),
+    );
     entries.push({
       key: `direct_dml|${ownership.source_file}|${match[1]}|${match[3]}|${ordinal}`,
       kind: "direct_dml",

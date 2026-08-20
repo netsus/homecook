@@ -1,0 +1,646 @@
+import { spawn, spawnSync } from "node:child_process";
+
+import { beforeAll, describe, expect, it } from "vitest";
+
+const databaseUrl = process.env.HOMECOOK_ISOLATED_RUNTIME_DATABASE_URL ?? "";
+const enabled = databaseUrl.length > 0;
+
+const ownerA = "d1000000-0000-4000-8000-000000000001";
+const ownerB = "d1000000-0000-4000-8000-000000000002";
+const identityA = "2026-08-15T00:00:00.000Z";
+const identityB = "2026-08-15T00:01:00.000Z";
+const issuedA = "2026-08-15T01:00:00.000Z";
+const issuedB = "2026-08-15T01:01:00.000Z";
+const hashA = "a".repeat(64);
+const hashB = "b".repeat(64);
+const cutover = "d2000000-0000-4000-8000-000000000001";
+const recipeA = "d3000000-0000-4000-8000-000000000001";
+const recipeConcurrent = "d3000000-0000-4000-8000-000000000002";
+const recipeMismatch = "d3000000-0000-4000-8000-000000000003";
+const recipePlannerConcurrent = "d3000000-0000-4000-8000-000000000004";
+const recipePlannerMismatch = "d3000000-0000-4000-8000-000000000005";
+const recipePlannerRollback = "d3000000-0000-4000-8000-000000000006";
+const recipeStandaloneRollback = "d3000000-0000-4000-8000-000000000007";
+const recipePrivateB = "d3000000-0000-4000-8000-000000000008";
+const recipeDeletedB = "d3000000-0000-4000-8000-000000000009";
+const recipePlannerNoKey = "d3000000-0000-4000-8000-00000000000a";
+const recipePublicB = "d3000000-0000-4000-8000-00000000000b";
+const snapshotContent = "da000000-0000-4000-8000-000000000001";
+const ingredient = "d4000000-0000-4000-8000-000000000001";
+const plannerColumn = "d5000000-0000-4000-8000-000000000001";
+const plannerMeal = "d6000000-0000-4000-8000-000000000001";
+const plannerConcurrentMeal = "d6000000-0000-4000-8000-000000000002";
+const plannerMismatchMeal = "d6000000-0000-4000-8000-000000000003";
+const plannerRollbackMeal = "d6000000-0000-4000-8000-000000000004";
+const plannerNoKeyMeal = "d6000000-0000-4000-8000-000000000005";
+const plannerSession = "d7000000-0000-4000-8000-000000000001";
+const otherSession = "d7000000-0000-4000-8000-000000000002";
+const plannerConcurrentSession = "d7000000-0000-4000-8000-000000000003";
+const plannerMismatchSession = "d7000000-0000-4000-8000-000000000004";
+const plannerRollbackSession = "d7000000-0000-4000-8000-000000000005";
+const plannerNoKeySession = "d7000000-0000-4000-8000-000000000006";
+const snapshotV2Session = "d7000000-0000-4000-8000-000000000007";
+const plannerKey = "d8000000-0000-4000-8000-000000000001";
+const concurrentKey = "d8000000-0000-4000-8000-000000000002";
+const mismatchKey = "d8000000-0000-4000-8000-000000000003";
+const plannerConcurrentKey = "d8000000-0000-4000-8000-000000000004";
+const plannerMismatchKey = "d8000000-0000-4000-8000-000000000005";
+const plannerRollbackKey = "d8000000-0000-4000-8000-000000000006";
+const standaloneRollbackKey = "d8000000-0000-4000-8000-000000000007";
+
+function psql(sql: string, expectSuccess = true) {
+  const result = spawnSync(
+    "psql",
+    [databaseUrl, "-At", "-v", "ON_ERROR_STOP=1", "-c", sql],
+    { encoding: "utf8" },
+  );
+  if (expectSuccess) {
+    expect(result.status, result.stderr).toBe(0);
+  }
+  return result;
+}
+
+function psqlAsync(sql: string) {
+  return new Promise<string>((resolve, reject) => {
+    const child = spawn(
+      "psql",
+      [databaseUrl, "-At", "-v", "ON_ERROR_STOP=1", "-c", sql],
+    );
+    let stdout = "";
+    let stderr = "";
+    child.stdout.setEncoding("utf8");
+    child.stderr.setEncoding("utf8");
+    child.stdout.on("data", (chunk: string) => { stdout += chunk; });
+    child.stderr.on("data", (chunk: string) => { stderr += chunk; });
+    child.on("error", reject);
+    child.on("close", (code) => {
+      if (code === 0) resolve(jsonLine(stdout));
+      else reject(new Error(stderr || `psql exited ${code}`));
+    });
+  });
+}
+
+async function waitForSleepingActivity(applicationName: string) {
+  for (let attempt = 0; attempt < 80; attempt += 1) {
+    const sleeping = Number(lastLine(psql(`
+      select count(*)
+      from pg_catalog.pg_stat_activity
+      where application_name='${applicationName}'
+        and wait_event='PgSleep';
+    `).stdout));
+    if (sleeping === 1) return;
+    await new Promise((resolve) => setTimeout(resolve, 25));
+  }
+  throw new Error(`timed out waiting for ${applicationName}`);
+}
+
+function lastLine(output: string) {
+  return output.trim().split("\n").map((line) => line.trim()).filter(Boolean).at(-1) ?? "";
+}
+
+function jsonLine(output: string) {
+  const lines = output.trim().split("\n").map((line) => line.trim());
+  const marked = lines.find((line) => line.includes("JSON:"));
+  return marked?.slice((marked.indexOf("JSON:")) + "JSON:".length)
+    ?? lines.find((line) => line.startsWith("{"))
+    ?? "null";
+}
+
+function serviceSql(statement: string) {
+  return `
+    set request.jwt.claim.role = 'service_role';
+    ${statement}
+  `;
+}
+
+function authority(owner: string) {
+  return owner === ownerA
+    ? `'${ownerA}'::uuid,'${identityA}'::timestamptz,'${hashA}'::text,1,'${issuedA}'::timestamptz`
+    : `'${ownerB}'::uuid,'${identityB}'::timestamptz,'${hashB}'::text,1,'${issuedB}'::timestamptz`;
+}
+
+function plannerCall({
+  consumed = true,
+  key = plannerKey,
+  owner = ownerA,
+  session = plannerSession,
+}: {
+  consumed?: boolean;
+  key?: string | null;
+  owner?: string;
+  session?: string;
+} = {}) {
+  return serviceSql(`
+    select 'JSON:' || public.complete_cooking_session(
+      ${authority(owner)},
+      '${session}'::uuid,
+      ${consumed ? `array['${ingredient}'::uuid]` : "'{}'::uuid[]"},
+      ${key ? `'${key}'::uuid` : "null::uuid"},
+      '2026-08-15T02:00:00.000Z'::timestamptz
+    )::text;
+  `);
+}
+
+function standaloneCall(
+  recipe: string,
+  key: string | null,
+  servings = 2,
+  owner = ownerA,
+) {
+  return serviceSql(`
+    select 'JSON:' || public.complete_standalone_cooking(
+      ${authority(owner)},
+      '${recipe}'::uuid,
+      ${servings},
+      '{}'::uuid[],
+      ${key ? `'${key}'::uuid` : "null::uuid"},
+      '2026-08-15T02:10:00.000Z'::timestamptz
+    )::text;
+  `);
+}
+
+function ownerDigest(owner: string) {
+  return lastLine(psql(`
+    select encode(extensions.digest(convert_to(jsonb_build_object(
+      'users', (select coalesce(jsonb_agg(jsonb_build_array(id,settings_json,updated_at) order by id),'[]'::jsonb) from public.users where id='${owner}'),
+      'books', (select coalesce(jsonb_agg(jsonb_build_array(id,book_type,sort_order) order by id),'[]'::jsonb) from public.recipe_books where user_id='${owner}'),
+      'columns', (select coalesce(jsonb_agg(jsonb_build_array(id,name,sort_order) order by id),'[]'::jsonb) from public.meal_plan_columns where user_id='${owner}'),
+      'receipts', (select coalesce(jsonb_agg(jsonb_build_array(id,operation_scope,key_hash,payload_hash,state,durable_result) order by id),'[]'::jsonb) from public.mutation_idempotency_keys where owner_uuid='${owner}'),
+      'leftovers', (select coalesce(jsonb_agg(jsonb_build_array(id,recipe_id,cooked_at) order by id),'[]'::jsonb) from public.leftover_dishes where user_id='${owner}'),
+      'pantry', (select coalesce(jsonb_agg(jsonb_build_array(id,ingredient_id) order by id),'[]'::jsonb) from public.pantry_items where user_id='${owner}'),
+      'recipes', (select coalesce(jsonb_agg(jsonb_build_array(id,visibility,deleted_at,cook_count) order by id),'[]'::jsonb) from public.recipes where created_by='${owner}'),
+      'sessions', (select coalesce(jsonb_agg(jsonb_build_array(id,status,completed_at) order by id),'[]'::jsonb) from public.cooking_sessions where user_id='${owner}'),
+      'session_meals', (select coalesce(jsonb_agg(jsonb_build_array(session_meal.session_id,session_meal.meal_id,session_meal.is_cooked,session_meal.cooked_at) order by session_meal.session_id,session_meal.meal_id),'[]'::jsonb) from public.cooking_session_meals as session_meal join public.cooking_sessions as session on session.id=session_meal.session_id where session.user_id='${owner}'),
+      'meals', (select coalesce(jsonb_agg(jsonb_build_array(id,status,cooked_at) order by id),'[]'::jsonb) from public.meals where user_id='${owner}'),
+      'progress', (select coalesce(jsonb_agg(jsonb_build_array(event_type,source_key,xp_delta,occurred_at) order by id),'[]'::jsonb) from public.user_progress_events where user_id='${owner}'),
+      'summary', (select coalesce(jsonb_agg(jsonb_build_array(total_xp,current_level,event_counts,last_updated_at) order by user_id),'[]'::jsonb) from public.user_progress_summary where user_id='${owner}')
+      ,'telemetry', (select coalesce(jsonb_agg(jsonb_build_array(event_type,source,actor_user_id,target_user_id,http_status,error_code,metadata_json) order by id),'[]'::jsonb) from public.operational_events where actor_user_id='${owner}' or target_user_id='${owner}')
+    )::text,'UTF8'),'sha256'),'hex');
+  `).stdout);
+}
+
+function cookingProgressCounts(owner: string) {
+  const counts = lastLine(psql(`
+    select concat_ws(':',
+      (select count(*) from public.user_progress_events
+        where user_id='${owner}' and event_type='cooking_completed'),
+      coalesce((select (event_counts ->> 'cooking_completed')::integer
+        from public.user_progress_summary where user_id='${owner}'), 0)
+    );
+  `).stdout).split(":").map(Number);
+
+  expect(counts).toHaveLength(2);
+  return counts;
+}
+
+describe.runIf(enabled)("legacy product compatibility PostgreSQL", () => {
+  beforeAll(() => {
+    psql(`
+      update private.full_local_auth_control
+      set authority='local',local_issuer='https://auth.mumeok.kr/auth/v1',
+          cutover_epoch=2,hmac_key_version=1,flows_open=true,
+          local_activated_at='2026-08-14T00:00:00Z',updated_at=clock_timestamp()
+      where singleton;
+      insert into public.account_generation_cutover_attempts(
+        id,state,capability_revision,result_json
+      ) values('${cutover}','promoted',2,'{}'::jsonb);
+      update public.account_generation_capability_state
+      set state='generation_active',revision=revision+1,
+          current_cutover_attempt_id='${cutover}',activated_at='2026-08-14T00:00:00Z'
+      where singleton;
+      select public.set_account_generation_internal_writer_marker('${cutover}',true);
+
+      insert into auth.users(id,created_at,email,raw_app_meta_data,raw_user_meta_data) values
+        ('${ownerA}','${identityA}','legacy-a@example.invalid','{"provider":"google"}','{"sub":"legacy-a"}'),
+        ('${ownerB}','${identityB}','legacy-b@example.invalid','{"provider":"google"}','{"sub":"legacy-b"}');
+      insert into public.users(id,nickname,email,social_provider,social_id,settings_json) values
+        ('${ownerA}','legacy-a','legacy-a@example.invalid','google','legacy-a','{}'),
+        ('${ownerB}','legacy-b','legacy-b@example.invalid','google','legacy-b','{}');
+      insert into public.user_account_generation_watermarks(owner_uuid,last_account_generation)
+      values('${ownerA}',1),('${ownerB}',1);
+      insert into public.user_account_lifecycles(
+        owner_uuid,account_generation,auth_identity_created_at_snapshot,origin,status,activated_at
+      ) values
+        ('${ownerA}',1,'${identityA}','runtime','active','2026-08-15T00:30:00Z'),
+        ('${ownerB}',1,'${identityB}','runtime','active','2026-08-15T00:31:00Z');
+      insert into public.user_session_generation_bindings(
+        session_key_hash,hmac_key_version,owner_uuid,expected_account_generation,
+        auth_identity_created_at_snapshot,binding_state,auth_authority,local_issuer,
+        local_verified_at,auth_cutover_epoch,session_issued_at,binding_expires_at
+      ) values
+        ('${hashA}',1,'${ownerA}',1,'${identityA}','active','local','https://auth.mumeok.kr/auth/v1','${issuedA}',2,'${issuedA}','2099-01-01T00:00:00Z'),
+        ('${hashB}',1,'${ownerB}',1,'${identityB}','active','local','https://auth.mumeok.kr/auth/v1','${issuedB}',2,'${issuedB}','2099-01-01T00:00:00Z');
+
+      insert into public.ingredients(id,standard_name,category,default_unit)
+      values('${ingredient}','호환 재료','other','g');
+      insert into public.recipes(id,title,base_servings,source_type,created_by,visibility,deleted_at)
+      values
+        ('${recipeA}','호환 플래너 레시피',2,'manual','${ownerA}','public',null),
+        ('${recipeConcurrent}','호환 독립 레시피',2,'manual','${ownerA}','public',null),
+        ('${recipeMismatch}','호환 키 충돌 레시피',2,'manual','${ownerA}','public',null),
+        ('${recipePlannerConcurrent}','호환 플래너 동시 레시피',2,'manual','${ownerA}','public',null),
+        ('${recipePlannerMismatch}','호환 플래너 충돌 레시피',2,'manual','${ownerA}','public',null),
+        ('${recipePlannerRollback}','호환 플래너 롤백 레시피',2,'manual','${ownerA}','public',null),
+        ('${recipeStandaloneRollback}','호환 독립 롤백 레시피',2,'manual','${ownerA}','public',null),
+        ('${recipePrivateB}','타인 비공개 레시피',2,'manual','${ownerB}','private',null),
+        ('${recipeDeletedB}','타인 삭제 레시피',2,'manual','${ownerB}','public','2026-08-15T01:30:00Z'),
+        ('${recipePlannerNoKey}','호환 플래너 no-key 레시피',2,'manual','${ownerA}','public',null),
+        ('${recipePublicB}','비활성 소유자 공개 레시피',2,'manual','${ownerB}','public',null);
+      insert into public.recipe_ingredients(
+        recipe_id,ingredient_id,amount,unit,ingredient_type,sort_order,scalable
+      ) values('${recipeA}','${ingredient}',100,'g','QUANT',0,true);
+      insert into public.recipe_content_snapshots(
+        id,owner_user_id,recipe_id,title,base_servings,
+        ingredients_json,steps_json,content_hash,schema_version
+      ) values(
+        '${snapshotContent}',null,'${recipeA}','호환 snapshot-v2',2,
+        '[]','[]',repeat('d',64),1
+      );
+      insert into public.meal_plan_columns(id,user_id,name,sort_order)
+      values('${plannerColumn}','${ownerA}','기존 열',10);
+      insert into public.meals(
+        id,user_id,recipe_id,plan_date,column_id,planned_servings,status
+      ) values
+        ('${plannerMeal}','${ownerA}','${recipeA}','2026-08-16','${plannerColumn}',2,'shopping_done'),
+        ('${plannerConcurrentMeal}','${ownerA}','${recipePlannerConcurrent}','2026-08-17','${plannerColumn}',2,'shopping_done'),
+        ('${plannerMismatchMeal}','${ownerA}','${recipePlannerMismatch}','2026-08-18','${plannerColumn}',2,'shopping_done'),
+        ('${plannerRollbackMeal}','${ownerA}','${recipePlannerRollback}','2026-08-19','${plannerColumn}',2,'shopping_done'),
+        ('${plannerNoKeyMeal}','${ownerA}','${recipePlannerNoKey}','2026-08-20','${plannerColumn}',2,'shopping_done');
+      insert into public.cooking_sessions(id,user_id,status,contract_version)
+      values
+        ('${plannerSession}','${ownerA}','in_progress','legacy_v1'),
+        ('${otherSession}','${ownerB}','in_progress','legacy_v1'),
+        ('${plannerConcurrentSession}','${ownerA}','in_progress','legacy_v1'),
+        ('${plannerMismatchSession}','${ownerA}','in_progress','legacy_v1'),
+        ('${plannerRollbackSession}','${ownerA}','in_progress','legacy_v1'),
+        ('${plannerNoKeySession}','${ownerA}','in_progress','legacy_v1');
+      insert into public.cooking_sessions(
+        id,user_id,status,contract_version,session_kind,recipe_id,
+        recipe_content_snapshot_id,cooking_servings,base_recipe_revision
+      ) values(
+        '${snapshotV2Session}','${ownerA}','in_progress','snapshot_v2',
+        'standalone','${recipeA}','${snapshotContent}',2,1
+      );
+      insert into public.cooking_session_meals(
+        session_id,meal_id,recipe_id,cooking_servings
+      ) values
+        ('${plannerSession}','${plannerMeal}','${recipeA}',2),
+        ('${plannerConcurrentSession}','${plannerConcurrentMeal}','${recipePlannerConcurrent}',2),
+        ('${plannerMismatchSession}','${plannerMismatchMeal}','${recipePlannerMismatch}',2),
+        ('${plannerRollbackSession}','${plannerRollbackMeal}','${recipePlannerRollback}',2),
+        ('${plannerNoKeySession}','${plannerNoKeyMeal}','${recipePlannerNoKey}',2);
+      insert into public.pantry_items(user_id,ingredient_id)
+      values('${ownerA}','${ingredient}');
+      select public.set_account_generation_internal_writer_marker('${cutover}',false);
+    `);
+  });
+
+  it("exposes only the two new exact service-role signatures", () => {
+    for (const signature of [
+      "public.complete_cooking_session(uuid,timestamp with time zone,text,integer,timestamp with time zone,uuid,uuid[],uuid,timestamp with time zone)",
+      "public.complete_standalone_cooking(uuid,timestamp with time zone,text,integer,timestamp with time zone,uuid,integer,uuid[],uuid,timestamp with time zone)",
+    ]) {
+      const row = JSON.parse(lastLine(psql(`
+        select jsonb_build_object(
+          'owner', owner.rolname,
+          'definer', procedure.prosecdef,
+          'public', pg_catalog.has_function_privilege('public',procedure.oid,'execute'),
+          'anon', pg_catalog.has_function_privilege('anon',procedure.oid,'execute'),
+          'authenticated', pg_catalog.has_function_privilege('authenticated',procedure.oid,'execute'),
+          'service_role', pg_catalog.has_function_privilege('service_role',procedure.oid,'execute')
+        )
+        from pg_catalog.pg_proc as procedure
+        join pg_catalog.pg_roles as owner on owner.oid=procedure.proowner
+        where procedure.oid='${signature}'::regprocedure;
+      `).stdout));
+      expect(row).toEqual({
+        owner: "postgres",
+        definer: true,
+        public: false,
+        anon: false,
+        authenticated: false,
+        service_role: true,
+      });
+    }
+  });
+
+  it("atomically completes planner cooking and replays without any additional mutation", () => {
+    const first = JSON.parse(jsonLine(psql(plannerCall()).stdout));
+    expect(first).toMatchObject({
+      session_id: plannerSession,
+      status: "completed",
+      meals_updated: 1,
+      leftover_dish_id: plannerSession,
+      pantry_removed: 1,
+    });
+    const afterFirst = ownerDigest(ownerA);
+
+    const replay = JSON.parse(jsonLine(psql(plannerCall()).stdout));
+    expect(replay).toEqual(first);
+    expect(ownerDigest(ownerA)).toBe(afterFirst);
+
+    const mismatch = psql(plannerCall({ consumed: false }), false);
+    expect(mismatch.status).not.toBe(0);
+    expect(mismatch.stderr).toContain("IDEMPOTENCY_KEY_REUSED");
+    expect(ownerDigest(ownerA)).toBe(afterFirst);
+  });
+
+  it("rejects another owner's legacy session before bootstrap, receipt, completion, or progress writes", () => {
+    const beforeA = ownerDigest(ownerA);
+    const beforeB = ownerDigest(ownerB);
+
+    const result = psql(plannerCall({ session: otherSession }), false);
+
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain("FORBIDDEN");
+    expect(ownerDigest(ownerA)).toBe(beforeA);
+    expect(ownerDigest(ownerB)).toBe(beforeB);
+  });
+
+  it("rejects another owner's private and deleted recipes with mutation zero", () => {
+    for (const recipe of [recipePrivateB, recipeDeletedB]) {
+      const beforeA = ownerDigest(ownerA);
+      const beforeB = ownerDigest(ownerB);
+
+      const result = psql(standaloneCall(recipe, null), false);
+
+      expect(result.status).not.toBe(0);
+      expect(result.stderr).toContain("RESOURCE_NOT_FOUND");
+      expect(ownerDigest(ownerA)).toBe(beforeA);
+      expect(ownerDigest(ownerB)).toBe(beforeB);
+    }
+  });
+
+  it("rejects another inactive owner's public recipe before every writer", () => {
+    for (const status of ["quarantined", "deleting"]) {
+      psql(`update public.user_account_lifecycles set status='${status}' where owner_uuid='${ownerB}'`);
+      const beforeA = ownerDigest(ownerA);
+      const beforeB = ownerDigest(ownerB);
+
+      const result = psql(standaloneCall(recipePublicB, null), false);
+
+      expect(result.status).not.toBe(0);
+      expect(result.stderr).toContain("RESOURCE_NOT_FOUND");
+      expect(ownerDigest(ownerA)).toBe(beforeA);
+      expect(ownerDigest(ownerB)).toBe(beforeB);
+      psql(`update public.user_account_lifecycles set status='active' where owner_uuid='${ownerB}'`);
+    }
+  });
+
+  it("serializes another owner's quarantine before public recipe completion", async () => {
+    const applicationName = "legacy_owner_quarantine_race";
+    const transition = psqlAsync(`
+      set application_name='${applicationName}';
+      begin;
+      select pg_catalog.pg_advisory_xact_lock(
+        pg_catalog.hashtextextended('homecook-account-owner:${ownerB}', 0)
+      );
+      update public.user_account_lifecycles
+      set status='quarantined'
+      where owner_uuid='${ownerB}';
+      select pg_catalog.pg_sleep(2);
+      commit;
+      select 'JSON:' || jsonb_build_object('status','quarantined')::text;
+    `);
+
+    await waitForSleepingActivity(applicationName);
+    const beforeA = ownerDigest(ownerA);
+    const beforeB = ownerDigest(ownerB);
+    const completion = psqlAsync(standaloneCall(recipePublicB, null));
+    const [transitionResult, completionResult] = await Promise.allSettled([
+      transition,
+      completion,
+    ]);
+
+    try {
+      expect(transitionResult.status).toBe("fulfilled");
+      expect(completionResult.status).toBe("rejected");
+      expect(String((completionResult as PromiseRejectedResult).reason))
+        .toContain("RESOURCE_NOT_FOUND");
+      expect(ownerDigest(ownerA)).toBe(beforeA);
+      expect(ownerDigest(ownerB)).toBe(beforeB);
+    } finally {
+      psql(`update public.user_account_lifecycles set status='active' where owner_uuid='${ownerB}'`);
+    }
+  });
+
+  it("rejects maintenance, quarantined, deleting, and stale-session calls with mutation zero", () => {
+    const authorityCases = [
+      {
+        prepare: `set session_replication_role=replica; update public.account_generation_capability_state set state='cutover_maintenance', revision=revision+1 where singleton; set session_replication_role=origin`,
+        restore: `set session_replication_role=replica; update public.account_generation_capability_state set state='generation_active', revision=revision+1 where singleton; set session_replication_role=origin`,
+        call: plannerCall({ owner: ownerB, session: otherSession }),
+        code: "ACCOUNT_LIFECYCLE_MAINTENANCE",
+        owner: ownerB,
+      },
+      {
+        prepare: `update public.user_account_lifecycles set status='quarantined' where owner_uuid='${ownerB}'`,
+        restore: `update public.user_account_lifecycles set status='active' where owner_uuid='${ownerB}'`,
+        call: plannerCall({ owner: ownerB, session: otherSession }),
+        code: "ACCOUNT_CUTOVER_QUARANTINED",
+        owner: ownerB,
+      },
+      {
+        prepare: `update public.user_account_lifecycles set status='deleting' where owner_uuid='${ownerB}'`,
+        restore: `update public.user_account_lifecycles set status='active' where owner_uuid='${ownerB}'`,
+        call: plannerCall({ owner: ownerB, session: otherSession }),
+        code: "ACCOUNT_DELETING",
+        owner: ownerB,
+      },
+      {
+        prepare: `update public.user_session_generation_bindings set binding_state='revoked', revoked_at=clock_timestamp() where owner_uuid='${ownerB}'`,
+        restore: `update public.user_session_generation_bindings set binding_state='active', revoked_at=null where owner_uuid='${ownerB}'`,
+        call: plannerCall({ owner: ownerB, session: otherSession }),
+        code: "ACCOUNT_SESSION_STALE",
+        owner: ownerB,
+      },
+    ];
+
+    for (const scenario of authorityCases) {
+      for (const call of [
+        scenario.call,
+        standaloneCall(recipePrivateB, null, 2, ownerB),
+      ]) {
+        psql(scenario.prepare);
+        const before = ownerDigest(scenario.owner);
+        const result = psql(call, false);
+        expect(result.status).not.toBe(0);
+        expect(result.stderr).toContain(scenario.code);
+        expect(ownerDigest(scenario.owner)).toBe(before);
+        psql(scenario.restore);
+      }
+    }
+  });
+
+  it("rejects a stored snapshot-v2 session with mutation zero", () => {
+    const before = ownerDigest(ownerA);
+
+    const result = psql(plannerCall({
+      session: snapshotV2Session,
+      key: null,
+    }), false);
+
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain("RESOURCE_NOT_FOUND");
+    expect(ownerDigest(ownerA)).toBe(before);
+  });
+
+  it("serializes planner concurrent same-key replay and mismatch", async () => {
+    const sameKeyProgressBefore = cookingProgressCounts(ownerA);
+    const [left, right] = await Promise.all([
+      psqlAsync(plannerCall({
+        session: plannerConcurrentSession,
+        key: plannerConcurrentKey,
+      })),
+      psqlAsync(plannerCall({
+        session: plannerConcurrentSession,
+        key: plannerConcurrentKey,
+      })),
+    ]);
+    expect(JSON.parse(left)).toEqual(JSON.parse(right));
+    expect(Number(lastLine(psql(`
+      select count(*) from public.leftover_dishes
+      where user_id='${ownerA}' and recipe_id='${recipePlannerConcurrent}';
+    `).stdout))).toBe(1);
+    expect(cookingProgressCounts(ownerA)).toEqual(
+      sameKeyProgressBefore.map((count) => count + 1),
+    );
+
+    const mismatchProgressBefore = cookingProgressCounts(ownerA);
+    const mismatchResults = await Promise.allSettled([
+      psqlAsync(plannerCall({
+        session: plannerMismatchSession,
+        key: plannerMismatchKey,
+      })),
+      psqlAsync(plannerCall({
+        consumed: false,
+        session: plannerMismatchSession,
+        key: plannerMismatchKey,
+      })),
+    ]);
+    expect(mismatchResults.filter((result) => result.status === "fulfilled"))
+      .toHaveLength(1);
+    const rejected = mismatchResults.filter(
+      (result): result is PromiseRejectedResult => result.status === "rejected",
+    );
+    expect(rejected).toHaveLength(1);
+    expect(String(rejected[0].reason)).toContain("IDEMPOTENCY_KEY_REUSED");
+    expect(Number(lastLine(psql(`
+      select count(*) from public.leftover_dishes
+      where user_id='${ownerA}' and recipe_id='${recipePlannerMismatch}';
+    `).stdout))).toBe(1);
+    expect(cookingProgressCounts(ownerA)).toEqual(
+      mismatchProgressBefore.map((count) => count + 1),
+    );
+  });
+
+  it("keeps planner no-key compatibility before activation", () => {
+    const result = JSON.parse(jsonLine(psql(plannerCall({
+      session: plannerNoKeySession,
+      key: null,
+    })).stdout));
+
+    expect(result).toMatchObject({
+      session_id: plannerNoKeySession,
+      status: "completed",
+      meals_updated: 1,
+    });
+  });
+
+  it("rolls back planner and standalone completion when a downstream writer fails", () => {
+    psql(`
+      create or replace function private.reject_legacy_progress_test()
+      returns trigger language plpgsql as $$
+      begin
+        if new.event_type = 'cooking_completed' then
+          raise exception 'TEST_ROLLBACK';
+        end if;
+        return new;
+      end;
+      $$;
+      create trigger reject_legacy_progress
+      before insert on public.user_progress_events
+      for each row execute function private.reject_legacy_progress_test();
+    `);
+
+    try {
+      for (const call of [
+        plannerCall({
+          session: plannerRollbackSession,
+          key: plannerRollbackKey,
+        }),
+        standaloneCall(recipeStandaloneRollback, standaloneRollbackKey),
+      ]) {
+        const before = ownerDigest(ownerA);
+        const result = psql(call, false);
+        expect(result.status).not.toBe(0);
+        expect(result.stderr).toContain("TEST_ROLLBACK");
+        expect(ownerDigest(ownerA)).toBe(before);
+      }
+    } finally {
+      psql("drop trigger if exists reject_legacy_progress on public.user_progress_events;");
+      psql("drop function if exists private.reject_legacy_progress_test();");
+    }
+  });
+
+  it("serializes concurrent same-key mismatches to one success and one zero-mutation conflict", async () => {
+    const receiptBefore = Number(lastLine(psql(`
+      select count(*) from public.mutation_idempotency_keys
+      where owner_uuid='${ownerA}' and operation_scope='legacy_standalone_complete';
+    `).stdout));
+    const progressBefore = cookingProgressCounts(ownerA);
+
+    const results = await Promise.allSettled([
+      psqlAsync(standaloneCall(recipeMismatch, mismatchKey, 2)),
+      psqlAsync(standaloneCall(recipeMismatch, mismatchKey, 3)),
+    ]);
+    const fulfilled = results.filter((result) => result.status === "fulfilled");
+    const rejected = results.filter((result) => result.status === "rejected");
+
+    expect(fulfilled).toHaveLength(1);
+    expect(rejected).toHaveLength(1);
+    expect(String((rejected[0] as PromiseRejectedResult).reason)).toContain(
+      "IDEMPOTENCY_KEY_REUSED",
+    );
+    expect(Number(lastLine(psql(`
+      select count(*) from public.leftover_dishes
+      where user_id='${ownerA}' and recipe_id='${recipeMismatch}';
+    `).stdout))).toBe(1);
+    expect(Number(lastLine(psql(`
+      select count(*) from public.mutation_idempotency_keys
+      where owner_uuid='${ownerA}' and operation_scope='legacy_standalone_complete';
+    `).stdout))).toBe(receiptBefore + 1);
+    expect(cookingProgressCounts(ownerA)).toEqual(
+      progressBefore.map((count) => count + 1),
+    );
+  });
+
+  it("keeps no-key standalone compatibility and serializes concurrent same-key completion", async () => {
+    const receiptBefore = Number(lastLine(psql(`
+      select count(*) from public.mutation_idempotency_keys
+      where owner_uuid='${ownerA}' and operation_scope='legacy_standalone_complete';
+    `).stdout));
+    const noKey = JSON.parse(jsonLine(psql(standaloneCall(recipeA, null)).stdout));
+    expect(noKey).toMatchObject({ pantry_removed: 0 });
+    const progressBefore = cookingProgressCounts(ownerA);
+
+    const [left, right] = await Promise.all([
+      psqlAsync(standaloneCall(recipeConcurrent, concurrentKey)),
+      psqlAsync(standaloneCall(recipeConcurrent, concurrentKey)),
+    ]);
+    expect(JSON.parse(left)).toEqual(JSON.parse(right));
+    const counts = lastLine(psql(`
+      select concat_ws(':',
+        (select count(*) from public.leftover_dishes where user_id='${ownerA}' and recipe_id='${recipeConcurrent}'),
+        (select count(*) from public.mutation_idempotency_keys where owner_uuid='${ownerA}' and operation_scope='legacy_standalone_complete')
+      );
+    `).stdout);
+    expect(counts.split(":")).toEqual([
+      "1",
+      String(receiptBefore + 1),
+    ]);
+    expect(cookingProgressCounts(ownerA)).toEqual(
+      progressBefore.map((count) => count + 1),
+    );
+  });
+});

@@ -1,0 +1,172 @@
+{
+  "result": "blocked",
+  "stage": 4,
+  "role": "fresh-frontend-implementer",
+  "summary_markdown": "MEAL_LOG UI, 51장 runtime evidence, focused/full frontend GREEN은 완료했다. 첫 implementation commit subject가 Conventional Commit prefix를 빠뜨려 validate:commits가 실패하며, 이를 고치는 amend/history replacement가 위임에서 금지되어 push/Draft PR 전에 중단했다.",
+  "commit": {
+    "subject": "feat(meal-log): make actual intake visible without weakening meal-log authority",
+    "body_markdown": "기존 Planner shell과 #9 adapter만 사용해 locked MEAL_LOG 계약을 구현한다. 첫 implementation commit의 실제 subject는 Conventional Commit prefix가 없어 별도 교정 권한이 필요하다.\n\nConstraint: 기존 API, schema, route, status, dependency를 변경하지 않는다.\nConfidence: high\nScope-risk: moderate\nDirective: Stage 5와 product-design-authority는 fresh task가 current head를 검토해야 한다.\nTested: focused Vitest 6 files / 33 tests; verify:frontend; local three-viewport runtime evidence\nNot-tested: physical device, screen reader, virtual keyboard, server-Mac, OAuth, AT, R/R+1/R+2, production activation"
+  },
+  "pr": {
+    "title": "feat(meal-log): make actual intake visible without weakening meal-log authority",
+    "body_markdown": "## Summary\n- 기존 Planner shell의 MEAL_LOG placeholder를 locked day-first 기록 화면과 add sheet로 교체\n- #9 adapter 계약을 그대로 소비하고 새 API/schema/route/dependency를 추가하지 않음\n- loading/empty/error/unauthorized/partial/unavailable/deleted/pending/replay/conflict와 return-to-action을 구현\n\n## Actual Verification\n- TDD initial RED: 4 files / 4 tests failed\n- implementation-focused GREEN: 6 files / 33 tests passed\n- current closeout-focused GREEN: 6 files / 39 tests passed\n- product Vitest: 239 files / 2,767 tests passed; 12 files / 175 tests intended skip\n- full Playwright regression: 943 passed / 176 intended skip\n- accessibility: 18 passed / 15 intended skip\n- visual: 22 passed / 23 intended skip\n- security: 12 passed\n- build: 81 static pages; Lighthouse 2 URLs x 3 runs\n- audit: high/critical 0/0\n- local runtime evidence: 17 states x 3 viewports = 51 PNGs; axe serious/critical 0; overflow 0; targets below 44px 0\n\n## Pending\n- commit subject correction and Draft current-head checks\n- fresh Stage 5 and product-design-authority\n- isolated-local/external smoke, physical device, screen reader, virtual keyboard, server-Mac, OAuth, AT, R/R+1/R+2, production activation\n- Stage 6, Ready/merge, Discord\n\n## Risk\n- current history fails validate:commits because implementation commit 93413b7400cb793198dd2eb2720bb96a0933a403 lacks a Conventional Commit prefix; no Draft PR was opened"
+  },
+  "checks_run": [
+    "pnpm exec vitest run tests/meal-log-ui.test.tsx tests/meal-log-add-sheet.test.tsx tests/meal-log-entry-mutations.test.tsx tests/meal-log-ui-history.test.tsx tests/planner-week-screen.test.tsx tests/meal-log-ui-stage1-relock.test.ts",
+    "pnpm test:e2e:regression:ci --grep meal-log-ui",
+    "pnpm verify:frontend",
+    "pnpm audit --audit-level high",
+    "pnpm validate:source-of-truth-sync",
+    "pnpm validate:workflow-v2",
+    "BRANCH_NAME=docs/meal-log-ui-stage1-relock-current pnpm validate:workpack -- --slice meal-log-ui",
+    "node scripts/validate-automation-spec.mjs --slice meal-log-ui",
+    "pnpm validate:omo-bookkeeping",
+    "git diff --check",
+    "pnpm validate:commits (expected blocker)"
+  ],
+  "next_route": "orchestrator-authorized commit subject correction, then push and Draft PR before fresh Stage 5 and authority tasks",
+  "claimed_scope": {
+    "files": [
+      "components/planner/meal-log-add-sheet.tsx",
+      "components/planner/meal-log-screen.tsx",
+      "components/planner/planner-week-screen.tsx",
+      "tests/e2e/slice-meal-log-ui.spec.ts",
+      "tests/e2e/slice-planner-shell.spec.ts",
+      "tests/fixtures/meal-log-ui-harness.tsx",
+      "tests/meal-log-add-sheet.test.tsx",
+      "tests/meal-log-entry-mutations.test.tsx",
+      "tests/meal-log-ui-history.test.tsx",
+      "tests/meal-log-ui-stage1-relock.test.ts",
+      "tests/meal-log-ui.test.tsx",
+      "tests/planner-week-screen.test.tsx",
+      "docs/workpacks/meal-log-ui/README.md",
+      "docs/workpacks/meal-log-ui/acceptance.md",
+      "docs/workpacks/meal-log-ui/evidence/2026-08-14-stage4-frontend-implementation.md",
+      "docs/workpacks/meal-log-ui/evidence/2026-08-14-stage4-frontend-stage-result.json",
+      "ui/designs/evidence/meal-log-ui/"
+    ],
+    "endpoints": [],
+    "routes": [
+      "existing Planner route 식사 기록 segment with MEAL_LOG"
+    ],
+    "states": [
+      "day-strip-default-loading-empty-error-unauthorized",
+      "complete-partial-unavailable-day-and-meal-totals",
+      "active-and-deleted-column-sections",
+      "add-sheet-recent-frequent-and-search",
+      "cooked-batch-known-missing-unrecoverable",
+      "product-ingredient-typed-union-source-badges",
+      "create-edit-delete-pending-replay-conflict"
+    ],
+    "invariants": [
+      "stored-local-date-no-current-timezone-regroup",
+      "server-projected-totals-only",
+      "deleted-column-no-new-target-existing-entry-edit-delete-preserved",
+      "uuid-idempotency-expected-revision-whole-operation",
+      "batch-own-event-reversal-replacement-or-soft-delete",
+      "single-server-union-order-cursor-no-client-merge",
+      "no-new-api-source-field-status-or-client-total"
+    ]
+  },
+  "changed_files": [
+    "components/planner/meal-log-add-sheet.tsx",
+    "components/planner/meal-log-screen.tsx",
+    "components/planner/planner-week-screen.tsx",
+    "docs/workpacks/meal-log-ui/README.md",
+    "docs/workpacks/meal-log-ui/acceptance.md",
+    "docs/workpacks/meal-log-ui/evidence/2026-08-14-stage4-frontend-implementation.md",
+    "docs/workpacks/meal-log-ui/evidence/2026-08-14-stage4-frontend-stage-result.json",
+    "tests/e2e/slice-meal-log-ui.spec.ts",
+    "tests/e2e/slice-planner-shell.spec.ts",
+    "tests/fixtures/meal-log-ui-harness.tsx",
+    "tests/meal-log-add-sheet.test.tsx",
+    "tests/meal-log-entry-mutations.test.tsx",
+    "tests/meal-log-ui-history.test.tsx",
+    "tests/meal-log-ui-stage1-relock.test.ts",
+    "tests/meal-log-ui.test.tsx",
+    "tests/planner-week-screen.test.tsx",
+    "ui/designs/evidence/meal-log-ui/"
+  ],
+  "tests_touched": [
+    "tests/e2e/slice-meal-log-ui.spec.ts",
+    "tests/e2e/slice-planner-shell.spec.ts",
+    "tests/meal-log-add-sheet.test.tsx",
+    "tests/meal-log-entry-mutations.test.tsx",
+    "tests/meal-log-ui-history.test.tsx",
+    "tests/meal-log-ui-stage1-relock.test.ts",
+    "tests/meal-log-ui.test.tsx",
+    "tests/planner-week-screen.test.tsx"
+  ],
+  "artifacts_written": [
+    "docs/workpacks/meal-log-ui/evidence/2026-08-14-stage4-frontend-implementation.md",
+    "docs/workpacks/meal-log-ui/evidence/2026-08-14-stage4-frontend-stage-result.json",
+    "ui/designs/evidence/meal-log-ui/manifest.json",
+    "ui/designs/evidence/meal-log-ui/runtime-accessibility-layout.json",
+    "ui/designs/evidence/meal-log-ui/ (51 PNGs)"
+  ],
+  "checklist_updates": [
+    {"id": "delivery-meal-log-ui-connection", "status": "checked", "evidence_refs": ["components/planner/meal-log-screen.tsx", "tests/meal-log-ui.test.tsx"]},
+    {"id": "delivery-meal-log-ui-state-accessibility", "status": "checked", "evidence_refs": ["ui/designs/evidence/meal-log-ui/manifest.json", "ui/designs/evidence/meal-log-ui/runtime-accessibility-layout.json"]},
+    {"id": "accept-meal-log-ui-shell", "status": "checked", "evidence_refs": ["components/planner/planner-week-screen.tsx"]},
+    {"id": "accept-meal-log-ui-day-strip", "status": "checked", "evidence_refs": ["tests/meal-log-ui.test.tsx"]},
+    {"id": "accept-meal-log-ui-entry-display", "status": "checked", "evidence_refs": ["tests/meal-log-ui.test.tsx"]},
+    {"id": "accept-meal-log-ui-sheet-context", "status": "checked", "evidence_refs": ["tests/meal-log-add-sheet.test.tsx"]},
+    {"id": "accept-meal-log-ui-source-switch", "status": "checked", "evidence_refs": ["tests/meal-log-add-sheet.test.tsx"]},
+    {"id": "accept-meal-log-ui-recent", "status": "checked", "evidence_refs": ["tests/meal-log-add-sheet.test.tsx"]},
+    {"id": "accept-meal-log-ui-date-authority", "status": "checked", "evidence_refs": ["tests/meal-log-ui-history.test.tsx"]},
+    {"id": "accept-meal-log-ui-totals", "status": "checked", "evidence_refs": ["tests/meal-log-ui.test.tsx"]},
+    {"id": "accept-meal-log-ui-deleted-column", "status": "checked", "evidence_refs": ["tests/meal-log-ui-history.test.tsx"]},
+    {"id": "accept-meal-log-ui-idempotency", "status": "checked", "evidence_refs": ["tests/meal-log-entry-mutations.test.tsx"]},
+    {"id": "accept-meal-log-ui-batch-event", "status": "checked", "evidence_refs": ["tests/meal-log-entry-mutations.test.tsx"]},
+    {"id": "accept-meal-log-ui-evidence-pin", "status": "checked", "evidence_refs": ["tests/meal-log-entry-mutations.test.tsx"]},
+    {"id": "accept-meal-log-ui-timezone", "status": "checked", "evidence_refs": ["tests/meal-log-entry-mutations.test.tsx"]},
+    {"id": "accept-meal-log-ui-states", "status": "checked", "evidence_refs": ["tests/e2e/slice-meal-log-ui.spec.ts"]},
+    {"id": "accept-meal-log-ui-error-preserve", "status": "checked", "evidence_refs": ["tests/meal-log-ui.test.tsx"]},
+    {"id": "accept-meal-log-ui-batch-card", "status": "checked", "evidence_refs": ["tests/meal-log-add-sheet.test.tsx"]},
+    {"id": "accept-meal-log-ui-conversion", "status": "checked", "evidence_refs": ["tests/meal-log-add-sheet.test.tsx"]},
+    {"id": "accept-meal-log-ui-auth", "status": "checked", "evidence_refs": ["tests/e2e/slice-meal-log-ui.spec.ts"]},
+    {"id": "accept-meal-log-ui-delete-confirm", "status": "checked", "evidence_refs": ["tests/meal-log-entry-mutations.test.tsx"]},
+    {"id": "accept-meal-log-ui-evidence", "status": "checked", "evidence_refs": ["ui/designs/evidence/meal-log-ui/manifest.json"]},
+    {"id": "accept-meal-log-ui-playwright-flow", "status": "checked", "evidence_refs": ["tests/e2e/slice-meal-log-ui.spec.ts"]}
+  ],
+  "contested_fix_ids": [],
+  "rebuttals": [],
+  "source": {
+    "task_id": "019ffd0f-124b-70f3-9861-4efc2d3d40b6",
+    "base_sha": "21d3bcd7e0cece1961b0aabc43a133c9cd02b868",
+    "branch": "feature/fe-meal-log-ui",
+    "implementation_head": "93413b7400cb793198dd2eb2720bb96a0933a403",
+    "implementation_tree": "7210d5037e35e514e860fe7786e120b6cba829e4",
+    "draft_pr": null,
+    "history_rewrite": false
+  },
+  "verification": {
+    "focused_vitest": "implementation-focused 6 files / 33 tests passed; current closeout-focused 6 files / 39 tests passed",
+    "planner_shell_playwright": "2 passed",
+    "canonical_playwright": "1 passed / 1 intended skip",
+    "product_vitest": "239 files / 2,767 tests passed; 12 files / 175 tests intended skip",
+    "build": "passed; 81 static pages",
+    "lighthouse": "2 URLs x 3 runs passed",
+    "full_regression": "943 passed / 176 intended skip",
+    "accessibility": "18 passed / 15 intended skip",
+    "visual": "22 passed / 23 intended skip",
+    "security": "12 passed",
+    "audit": "high 0 / critical 0; residual low 1 / moderate 1",
+    "commit_validator": "blocked: implementation subject lacks Conventional Commit prefix"
+  },
+  "blocker": {
+    "commit": "93413b7400cb793198dd2eb2720bb96a0933a403",
+    "subject": "Make actual intake visible without weakening meal-log authority",
+    "required_subject": "feat(meal-log): make actual intake visible without weakening meal-log authority",
+    "forbidden_repairs": ["amend", "history replacement", "reset", "rebase", "force push"]
+  },
+  "pending": [
+    "authorized commit subject correction",
+    "push and Draft PR",
+    "Draft current-head terminal checks",
+    "fresh Stage 5",
+    "fresh product-design-authority",
+    "Stage 6 and post-merge closeout",
+    "physical device, screen reader, virtual keyboard, isolated-local smoke, server-Mac, OAuth, AT, R/R+1/R+2, production and activation"
+  ]
+}

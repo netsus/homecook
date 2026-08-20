@@ -1,0 +1,223 @@
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+const cookingApi = vi.hoisted(() => ({
+  completeCookingSession: vi.fn(),
+  completeStandaloneCooking: vi.fn(),
+  fetchCookMode: vi.fn(),
+  fetchStandaloneCookMode: vi.fn(),
+  isCookingApiError: (error: unknown) =>
+    error instanceof Error && "status" in error && "code" in error,
+}));
+
+vi.mock("@/lib/api/cooking", () => cookingApi);
+
+import {
+  resetCookModeStore,
+  useCookModeStore,
+} from "@/stores/cook-mode-store";
+import {
+  resetStandaloneCookModeStore,
+  useStandaloneCookModeStore,
+} from "@/stores/standalone-cook-mode-store";
+
+const INGREDIENT_A = "550e8400-e29b-41d4-a716-446655440601";
+const INGREDIENT_B = "550e8400-e29b-41d4-a716-446655440602";
+
+describe("legacy cooking completion attempt keys", () => {
+  beforeEach(() => {
+    cookingApi.completeCookingSession.mockReset();
+    cookingApi.completeStandaloneCooking.mockReset();
+    resetCookModeStore();
+    resetStandaloneCookModeStore();
+  });
+
+  it("reuses the planner completion key for the same payload after a retryable failure", async () => {
+    cookingApi.completeCookingSession
+      .mockRejectedValueOnce(new Error("network failed"))
+      .mockResolvedValueOnce({ status: "completed" });
+    useCookModeStore.setState({ sessionId: "session-1", screenState: "ready" });
+
+    await useCookModeStore.getState().complete(["ingredient-1"]);
+    await useCookModeStore.getState().complete(["ingredient-1"]);
+
+    expect(cookingApi.completeCookingSession).toHaveBeenCalledTimes(2);
+    const firstKey = cookingApi.completeCookingSession.mock.calls[0]?.[2];
+    const secondKey = cookingApi.completeCookingSession.mock.calls[1]?.[2];
+    expect(firstKey).toMatch(/^[0-9a-f-]{36}$/i);
+    expect(secondKey).toBe(firstKey);
+  });
+
+  it("reuses the standalone completion key for the same payload after a retryable failure", async () => {
+    cookingApi.completeStandaloneCooking
+      .mockRejectedValueOnce(new Error("network failed"))
+      .mockResolvedValueOnce({ leftover_dish_id: "leftover-1" });
+    useStandaloneCookModeStore.setState({
+      recipeId: "recipe-1",
+      servings: 2,
+      screenState: "ready",
+    });
+
+    await useStandaloneCookModeStore.getState().complete(["ingredient-1"]);
+    await useStandaloneCookModeStore.getState().complete(["ingredient-1"]);
+
+    expect(cookingApi.completeStandaloneCooking).toHaveBeenCalledTimes(2);
+    const firstKey = cookingApi.completeStandaloneCooking.mock.calls[0]?.[1];
+    const secondKey = cookingApi.completeStandaloneCooking.mock.calls[1]?.[1];
+    expect(firstKey).toMatch(/^[0-9a-f-]{36}$/i);
+    expect(secondKey).toBe(firstKey);
+  });
+
+  it("rotates the planner completion key when the canonical payload changes", async () => {
+    cookingApi.completeCookingSession.mockRejectedValue(new Error("network failed"));
+    useCookModeStore.setState({ sessionId: "session-1", screenState: "ready" });
+
+    await useCookModeStore.getState().complete(["ingredient-1"]);
+    await useCookModeStore.getState().complete(["ingredient-2"]);
+
+    expect(cookingApi.completeCookingSession.mock.calls[1]?.[2])
+      .not.toBe(cookingApi.completeCookingSession.mock.calls[0]?.[2]);
+  });
+
+  it("rotates the standalone completion key when the canonical payload changes", async () => {
+    cookingApi.completeStandaloneCooking.mockRejectedValue(new Error("network failed"));
+    useStandaloneCookModeStore.setState({
+      recipeId: "recipe-1",
+      servings: 2,
+      screenState: "ready",
+    });
+
+    await useStandaloneCookModeStore.getState().complete(["ingredient-1"]);
+    await useStandaloneCookModeStore.getState().complete(["ingredient-2"]);
+
+    expect(cookingApi.completeStandaloneCooking.mock.calls[1]?.[1])
+      .not.toBe(cookingApi.completeStandaloneCooking.mock.calls[0]?.[1]);
+  });
+
+  it("keeps the planner completion key across a same-session reader reload", async () => {
+    cookingApi.completeCookingSession
+      .mockRejectedValueOnce(new Error("network failed"))
+      .mockResolvedValueOnce({ status: "completed" });
+    cookingApi.fetchCookMode.mockResolvedValue({ session_id: "session-1" });
+    useCookModeStore.setState({ sessionId: "session-1", screenState: "ready" });
+
+    await useCookModeStore.getState().complete(["ingredient-1"]);
+    const firstKey = cookingApi.completeCookingSession.mock.calls[0]?.[2];
+    await useCookModeStore.getState().loadCookMode("session-1");
+    await useCookModeStore.getState().complete(["ingredient-1"]);
+
+    expect(cookingApi.completeCookingSession.mock.calls[1]?.[2]).toBe(firstKey);
+  });
+
+  it("keeps the standalone completion key across a same-recipe reader reload", async () => {
+    cookingApi.completeStandaloneCooking
+      .mockRejectedValueOnce(new Error("network failed"))
+      .mockResolvedValueOnce({ leftover_dish_id: "leftover-1" });
+    cookingApi.fetchStandaloneCookMode.mockResolvedValue({ recipe: {} });
+    useStandaloneCookModeStore.setState({
+      recipeId: "recipe-1",
+      servings: 2,
+      screenState: "ready",
+    });
+
+    await useStandaloneCookModeStore.getState().complete(["ingredient-1"]);
+    const firstKey = cookingApi.completeStandaloneCooking.mock.calls[0]?.[1];
+    await useStandaloneCookModeStore.getState()
+      .loadStandaloneCookMode("recipe-1", 2);
+    await useStandaloneCookModeStore.getState().complete(["ingredient-1"]);
+
+    expect(cookingApi.completeStandaloneCooking.mock.calls[1]?.[1]).toBe(firstKey);
+  });
+
+  it("reuses the planner key for reordered duplicates and sends canonical IDs", async () => {
+    cookingApi.completeCookingSession
+      .mockRejectedValueOnce(new Error("network failed"))
+      .mockResolvedValueOnce({ status: "completed" });
+    useCookModeStore.setState({ sessionId: "session-1", screenState: "ready" });
+
+    await useCookModeStore.getState().complete([
+      INGREDIENT_B,
+      INGREDIENT_A,
+      INGREDIENT_A,
+    ]);
+    await useCookModeStore.getState().complete([INGREDIENT_A, INGREDIENT_B]);
+
+    expect(cookingApi.completeCookingSession.mock.calls[1]?.[2])
+      .toBe(cookingApi.completeCookingSession.mock.calls[0]?.[2]);
+    expect(cookingApi.completeCookingSession.mock.calls.map((call) => call[1]))
+      .toEqual([
+        { consumed_ingredient_ids: [INGREDIENT_A, INGREDIENT_B] },
+        { consumed_ingredient_ids: [INGREDIENT_A, INGREDIENT_B] },
+      ]);
+  });
+
+  it("reuses the standalone key for reordered duplicates and sends canonical IDs", async () => {
+    cookingApi.completeStandaloneCooking
+      .mockRejectedValueOnce(new Error("network failed"))
+      .mockResolvedValueOnce({ leftover_dish_id: "leftover-1" });
+    useStandaloneCookModeStore.setState({
+      recipeId: "recipe-1",
+      servings: 2,
+      screenState: "ready",
+    });
+
+    await useStandaloneCookModeStore.getState().complete([
+      INGREDIENT_B,
+      INGREDIENT_A,
+      INGREDIENT_A,
+    ]);
+    await useStandaloneCookModeStore.getState().complete([INGREDIENT_A, INGREDIENT_B]);
+
+    expect(cookingApi.completeStandaloneCooking.mock.calls[1]?.[1])
+      .toBe(cookingApi.completeStandaloneCooking.mock.calls[0]?.[1]);
+    expect(cookingApi.completeStandaloneCooking.mock.calls.map((call) => call[0]))
+      .toEqual([
+        {
+          recipe_id: "recipe-1",
+          cooking_servings: 2,
+          consumed_ingredient_ids: [INGREDIENT_A, INGREDIENT_B],
+        },
+        {
+          recipe_id: "recipe-1",
+          cooking_servings: 2,
+          consumed_ingredient_ids: [INGREDIENT_A, INGREDIENT_B],
+        },
+      ]);
+  });
+
+  it("resets the planner attempt for a different session", async () => {
+    cookingApi.completeCookingSession.mockRejectedValue(new Error("network failed"));
+    cookingApi.fetchCookMode.mockResolvedValue({ session_id: "session-2" });
+    useCookModeStore.setState({ sessionId: "session-1", screenState: "ready" });
+
+    await useCookModeStore.getState().complete([INGREDIENT_A]);
+    const firstKey = cookingApi.completeCookingSession.mock.calls[0]?.[2];
+    await useCookModeStore.getState().loadCookMode("session-2");
+    await useCookModeStore.getState().complete([INGREDIENT_A]);
+
+    expect(cookingApi.completeCookingSession.mock.calls[1]?.[2]).not.toBe(firstKey);
+  });
+
+  it.each([
+    ["recipe-2", 2],
+    ["recipe-1", 3],
+  ])("resets the standalone attempt for target %s at %i servings", async (
+    nextRecipeId,
+    nextServings,
+  ) => {
+    cookingApi.completeStandaloneCooking.mockRejectedValue(new Error("network failed"));
+    cookingApi.fetchStandaloneCookMode.mockResolvedValue({ recipe: {} });
+    useStandaloneCookModeStore.setState({
+      recipeId: "recipe-1",
+      servings: 2,
+      screenState: "ready",
+    });
+
+    await useStandaloneCookModeStore.getState().complete([INGREDIENT_A]);
+    const firstKey = cookingApi.completeStandaloneCooking.mock.calls[0]?.[1];
+    await useStandaloneCookModeStore.getState()
+      .loadStandaloneCookMode(nextRecipeId, nextServings);
+    await useStandaloneCookModeStore.getState().complete([INGREDIENT_A]);
+
+    expect(cookingApi.completeStandaloneCooking.mock.calls[1]?.[1]).not.toBe(firstKey);
+  });
+});

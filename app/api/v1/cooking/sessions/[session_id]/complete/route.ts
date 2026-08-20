@@ -3,14 +3,22 @@ import {
   isUuid,
   parseCookingSessionCompleteBody,
 } from "@/lib/server/cooking";
+import { readVerifiedAccountGenerationSession } from
+  "@/lib/server/account-generation/session-authority";
 import {
-  ensurePublicUserRow,
-  ensureUserBootstrapState,
-  formatBootstrapErrorMessage,
-  type UserBootstrapDbClient,
-} from "@/lib/server/user-bootstrap";
-import { awardUserProgressEvent, type UserProgressDbClient } from "@/lib/server/user-progress";
-import { createRouteHandlerClient } from "@/lib/supabase/server";
+  buildSessionAuthorityRpcArgs,
+  callFuturePropagationRpc,
+  type FuturePropagationRpcClient,
+} from "@/lib/server/recipe-content-snapshot-future-propagation";
+import {
+  getLegacyCookingIdempotencyPhase,
+  readOptionalLegacyIdempotencyKey,
+} from
+  "@/lib/server/legacy-product-compat";
+import {
+  createRouteHandlerClient,
+  createSnapshotV2SessionInternalClient,
+} from "@/lib/supabase/server";
 import type {
   CookingSessionCompleteBody,
   CookingSessionCompleteData,
@@ -20,33 +28,6 @@ interface RouteContext {
   params: Promise<{
     session_id: string;
   }>;
-}
-
-interface QueryError {
-  message: string;
-}
-
-interface CompleteRpcErrorData {
-  error_code: "RESOURCE_NOT_FOUND" | "FORBIDDEN" | "CONFLICT";
-  message?: string;
-}
-
-type CompleteRpcData = CookingSessionCompleteData | CompleteRpcErrorData;
-
-interface CompleteRpcResult {
-  data: CompleteRpcData | null;
-  error: QueryError | null;
-}
-
-interface CookingCompleteDbClient {
-  rpc(
-    fn: "complete_cooking_session",
-    args: {
-      p_session_id: string;
-      p_user_id: string;
-      p_consumed_ingredient_ids: string[];
-    },
-  ): Promise<CompleteRpcResult>;
 }
 
 async function requireUser(routeClient: Awaited<ReturnType<typeof createRouteHandlerClient>>) {
@@ -62,20 +43,17 @@ async function readCompleteBody(request: Request) {
   }
 }
 
-function isRpcErrorData(data: CompleteRpcData): data is CompleteRpcErrorData {
-  return "error_code" in data;
-}
-
-function failForRpcError(data: CompleteRpcErrorData) {
-  if (data.error_code === "RESOURCE_NOT_FOUND") {
-    return fail("RESOURCE_NOT_FOUND", data.message ?? "요리 세션을 찾을 수 없어요.", 404);
+function isCompleteData(value: unknown): value is CookingSessionCompleteData {
+  if (!value || typeof value !== "object") {
+    return false;
   }
-
-  if (data.error_code === "FORBIDDEN") {
-    return fail("FORBIDDEN", data.message ?? "내 요리 세션만 완료할 수 있어요.", 403);
-  }
-
-  return fail("CONFLICT", data.message ?? "완료할 수 없는 요리 세션이에요.", 409);
+  const data = value as Record<string, unknown>;
+  return typeof data.session_id === "string"
+    && data.status === "completed"
+    && Number.isSafeInteger(data.meals_updated)
+    && typeof data.leftover_dish_id === "string"
+    && Number.isSafeInteger(data.pantry_removed)
+    && Number.isSafeInteger(data.cook_count);
 }
 
 export async function POST(request: Request, context: RouteContext) {
@@ -99,6 +77,21 @@ export async function POST(request: Request, context: RouteContext) {
     return fail("VALIDATION_ERROR", "요청 값을 확인해 주세요.", 422, parsed.fields);
   }
 
+  const idempotency = readOptionalLegacyIdempotencyKey(request);
+  if (!idempotency.ok) {
+    return fail("INVALID_IDEMPOTENCY_KEY", "요청 키를 확인해 주세요.", 400, [
+      { field: "Idempotency-Key", reason: "invalid_uuid" },
+    ]);
+  }
+  if (
+    idempotency.key === null
+    && getLegacyCookingIdempotencyPhase() === "required"
+  ) {
+    return fail("IDEMPOTENCY_KEY_REQUIRED", "요청 키가 필요해요.", 428, [
+      { field: "Idempotency-Key", reason: "required" },
+    ]);
+  }
+
   const routeClient = await createRouteHandlerClient();
   const user = await requireUser(routeClient);
 
@@ -106,44 +99,34 @@ export async function POST(request: Request, context: RouteContext) {
     return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
   }
 
-  const dbClient = routeClient as unknown as
-    CookingCompleteDbClient & UserBootstrapDbClient & UserProgressDbClient;
-
-  try {
-    await ensurePublicUserRow(dbClient, user);
-    await ensureUserBootstrapState(dbClient, user.id);
-  } catch (bootstrapError) {
-    return fail(
-      "INTERNAL_ERROR",
-      formatBootstrapErrorMessage(bootstrapError, "요리 세션을 완료하지 못했어요."),
-      500,
-    );
+  const verifiedSession = await readVerifiedAccountGenerationSession(routeClient);
+  if (
+    !verifiedSession.ok
+    || verifiedSession.sessionAuthority.ownerUuid !== user.id
+  ) {
+    return fail("ACCOUNT_SESSION_STALE", "세션을 다시 확인해 주세요.", 409);
   }
 
-  const completeResult = await dbClient.rpc("complete_cooking_session", {
-    p_session_id: sessionId,
-    p_user_id: user.id,
-    p_consumed_ingredient_ids: parsed.data.consumed_ingredient_ids,
-  });
-
-  if (completeResult.error || !completeResult.data) {
+  const serviceClient = createSnapshotV2SessionInternalClient();
+  if (!serviceClient) {
     return fail("INTERNAL_ERROR", "요리 세션을 완료하지 못했어요.", 500);
   }
 
-  if (isRpcErrorData(completeResult.data)) {
-    return failForRpcError(completeResult.data);
+  const result = await callFuturePropagationRpc(
+    serviceClient as FuturePropagationRpcClient,
+    "complete_cooking_session",
+    {
+      ...buildSessionAuthorityRpcArgs(verifiedSession.sessionAuthority),
+      p_session_id: sessionId,
+      p_consumed_ingredient_ids: parsed.data.consumed_ingredient_ids,
+      p_idempotency_key: idempotency.key,
+    },
+  );
+  if (!result.ok) {
+    return result.response;
   }
 
-  try {
-    await awardUserProgressEvent(dbClient, {
-      userId: user.id,
-      eventType: "cooking_completed",
-      sourceTable: "leftover_dishes",
-      sourceId: completeResult.data.leftover_dish_id,
-    });
-  } catch {
-    // Progress is a secondary reward ledger; cooking completion remains authoritative.
-  }
-
-  return ok<CookingSessionCompleteData>(completeResult.data);
+  return isCompleteData(result.data)
+    ? ok<CookingSessionCompleteData>(result.data)
+    : fail("INTERNAL_ERROR", "요리 세션을 완료하지 못했어요.", 500);
 }

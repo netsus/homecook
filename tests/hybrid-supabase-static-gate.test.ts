@@ -18,6 +18,8 @@ const APPROVED_USER_SERVICE_ROLE_FILES = [
   "app/api/v1/cooking/session-attempts/[id]/cancel/route.ts",
   "app/api/v1/cooking/session-attempts/[id]/cook-mode/route.ts",
   "app/api/v1/cooking/session-attempts/route.ts",
+  "app/api/v1/cooking/sessions/[session_id]/complete/route.ts",
+  "app/api/v1/cooking/standalone-complete/route.ts",
   "app/api/v1/meals/[meal_id]/route.ts",
   "app/api/v1/meals/[meal_id]/route.ts",
   "app/api/v1/meals/route.ts",
@@ -82,6 +84,16 @@ describe("hybrid authority AST/static gate", () => {
       {
         factory: "createSnapshotV2SessionInternalClient",
         file: "app/api/v1/cooking/session-attempts/route.ts",
+        functionName: "POST",
+      },
+      {
+        factory: "createSnapshotV2SessionInternalClient",
+        file: "app/api/v1/cooking/sessions/[session_id]/complete/route.ts",
+        functionName: "POST",
+      },
+      {
+        factory: "createSnapshotV2SessionInternalClient",
+        file: "app/api/v1/cooking/standalone-complete/route.ts",
         functionName: "POST",
       },
       {

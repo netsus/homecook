@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import React from "react";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -160,7 +160,36 @@ describe("legacy product plan compatibility", () => {
     await user.click(screen.getByRole("button", { name: "계획에서 삭제" }));
     await user.click(screen.getByRole("button", { name: "삭제" }));
 
-    expect(screen.getByRole("dialog", { name: "완제품 계획 삭제" }))
-      .toBeTruthy();
+    const dialog = screen.getByRole("dialog", { name: "완제품 계획 삭제" });
+    const alert = within(dialog).getByRole("alert");
+    expect(alert.hidden).toBe(false);
+    expect(alert.getAttribute("aria-hidden")).toBeNull();
+    expect(alert.textContent).toContain("삭제 실패");
+    expect(dialog.contains(document.activeElement)).toBe(true);
+  });
+
+  it("blocks duplicate destructive calls while delete is pending", async () => {
+    let resolveDelete!: () => void;
+    const onDelete = vi.fn(() => new Promise<void>((resolve) => {
+      resolveDelete = resolve;
+    }));
+    const user = userEvent.setup();
+    render(
+      <LegacyProductPlanSection
+        entries={[createLegacyEntry()]}
+        isDeleting={false}
+        onDelete={onDelete}
+        selectedDate="2026-07-23"
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "플레인 요거트 상세 보기" }));
+    await user.click(screen.getByRole("button", { name: "계획에서 삭제" }));
+    const confirm = screen.getByRole("button", { name: "삭제" });
+    fireEvent.click(confirm);
+    fireEvent.click(confirm);
+
+    expect(onDelete).toHaveBeenCalledTimes(1);
+    resolveDelete();
   });
 });

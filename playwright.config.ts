@@ -1,4 +1,24 @@
+import { execFileSync } from "node:child_process";
+
 import { defineConfig, devices } from "@playwright/test";
+
+const initialWorktreeStatus = execFileSync(
+  "git",
+  ["status", "--porcelain", "--untracked-files=all"],
+  { encoding: "utf8" },
+).trim();
+if (initialWorktreeStatus === "") {
+  process.env.HOMECOOK_PLAYWRIGHT_CLEAN_HEAD = execFileSync(
+    "git",
+    ["rev-parse", "HEAD"],
+    { encoding: "utf8" },
+  ).trim();
+  process.env.HOMECOOK_PLAYWRIGHT_CLEAN_TREE = execFileSync(
+    "git",
+    ["rev-parse", "HEAD^{tree}"],
+    { encoding: "utf8" },
+  ).trim();
+}
 
 const DEFAULT_PLAYWRIGHT_BASE_URL = "http://127.0.0.1:3100";
 const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? DEFAULT_PLAYWRIGHT_BASE_URL;

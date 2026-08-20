@@ -63,6 +63,8 @@ const INTERNAL_OPERATION_ALLOWLIST = new Map([
       "app/api/v1/cooking/session-attempts/route.ts",
       "app/api/v1/cooking/session-attempts/[id]/cook-mode/route.ts",
       "app/api/v1/cooking/session-attempts/[id]/cancel/route.ts",
+      "app/api/v1/cooking/sessions/[session_id]/complete/route.ts",
+      "app/api/v1/cooking/standalone-complete/route.ts",
     ]),
   ],
   [
@@ -147,6 +149,14 @@ const INTERNAL_OPERATION_FUNCTION_ALLOWLIST = new Map([
       ],
       [
         "app/api/v1/cooking/session-attempts/[id]/cancel/route.ts",
+        new Set(["POST"]),
+      ],
+      [
+        "app/api/v1/cooking/sessions/[session_id]/complete/route.ts",
+        new Set(["POST"]),
+      ],
+      [
+        "app/api/v1/cooking/standalone-complete/route.ts",
         new Set(["POST"]),
       ],
     ]),
