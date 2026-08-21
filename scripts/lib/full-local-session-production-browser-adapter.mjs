@@ -576,6 +576,10 @@ export async function createProductionBrowserCanaryAdapter({
         const elapsedMs = ensureDate(now).getTime() - Date.parse(state.freshLoginCompletedAtObserved);
         const remainingMs = Math.max(0, T65_WAIT_MS - elapsedMs);
         if (remainingMs > 0) await waitForDuration(remainingMs);
+        await state.page.bringToFront();
+        assertPlannerLanding(state.page.url(), plannerPageUrl);
+        await state.page.reload({ waitUntil: "domcontentloaded" });
+        assertPlannerLanding(state.page.url(), plannerPageUrl);
       }
       return createObservedSessionSnapshot();
     },

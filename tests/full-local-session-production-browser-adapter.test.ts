@@ -30,9 +30,15 @@ function createBrowserFixture(initialUrl = "https://app.mumeok.kr/login?next=%2F
   }
 
   const page = {
+    async bringToFront() {
+      calls.push({ kind: "bring-to-front" });
+    },
     async goto(target: string, options?: Record<string, unknown>) {
       currentUrl = target;
       calls.push({ kind: "goto", options, target });
+    },
+    async reload(options?: Record<string, unknown>) {
+      calls.push({ kind: "reload", options, target: currentUrl });
     },
     url() {
       return currentUrl;
@@ -254,6 +260,14 @@ describe("production browser canary adapter", () => {
     expect(clientCalls.every((call) => call.apiKey === "pk-live-public-captured-in-memory")).toBe(true);
     expect(clientCalls.every((call) => (call.options as { isSingleton?: boolean }).isSingleton === false)).toBe(true);
     expect(browserFixture.calls.find((call) => call.kind === "add-cookies")).toBeTruthy();
+    expect(browserFixture.calls).toEqual(expect.arrayContaining([
+      { kind: "bring-to-front" },
+      {
+        kind: "reload",
+        options: { waitUntil: "domcontentloaded" },
+        target: "https://app.mumeok.kr/planner",
+      },
+    ]));
     expect(await adapter.plannerRead(newSession)).toBe("PASS");
     const plannerWrite = await adapter.plannerWrite(newSession);
     expect(plannerWrite.status).toBe("PASS");
@@ -351,6 +365,30 @@ describe("production browser canary adapter", () => {
       `https://auth.mumeok.kr|${FALLBACK_PUBLIC_ANON_KEY}`,
     ]);
     expect(fetchCalls[0]?.url).toContain("/api/v1/planner?");
+    await adapter.close();
+  });
+
+  it("fails before reload when the t65 page drifts away from the exact planner URL", async () => {
+    const browserFixture = createBrowserFixture();
+    const adapter = await createProductionBrowserCanaryAdapter({
+      createBrowserClientImpl: (() => {
+        throw new Error("must not create auth client after page drift");
+      }) as never,
+      launchBrowser: (async () => browserFixture.browser) as never,
+      phase: "milestone-a-t65",
+      waitForDuration: async () => {
+        browserFixture.context.setUrl("https://app.mumeok.kr/unexpected");
+      },
+      waitForManualLogin: async () => {
+        browserFixture.context.emitRequest("https://auth.mumeok.kr/auth/v1/authorize", {
+          apikey: "pk-live-public-captured-in-memory",
+        });
+        browserFixture.context.setUrl("https://app.mumeok.kr/planner");
+      },
+    });
+
+    await expect(adapter.openSession()).rejects.toThrow(/exact app\.mumeok\.kr planner page/iu);
+    expect(browserFixture.calls.some((call) => call.kind === "reload")).toBe(false);
     await adapter.close();
   });
 
