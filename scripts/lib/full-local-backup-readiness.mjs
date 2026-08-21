@@ -5,10 +5,10 @@ import { lstatSync, realpathSync, statSync } from "node:fs";
 import { verifyFullLocalBackupKeyRecoveryIssuerAttestation } from "./full-local-backup-key-recovery.mjs";
 
 export const FULL_LOCAL_BACKUP_READINESS_FORMAT =
-  "homecook-full-local-backup-readiness-v4";
+  "homecook-full-local-backup-readiness-v5";
 export const FULL_LOCAL_BACKUP_MAX_AGE_HOURS = 24;
-export const PLATFORM_BACKUP_FORMAT_V4 = "homecook-full-local-platform-v4";
-export const RESTORE_MANIFEST_FORMAT_V4 = "homecook-full-local-restore-v4";
+export const PLATFORM_BACKUP_FORMAT_V5 = "homecook-full-local-platform-v5";
+export const RESTORE_MANIFEST_FORMAT_V5 = "homecook-full-local-restore-v5";
 
 const SHA256 = /^[0-9a-f]{64}$/u;
 
@@ -34,43 +34,52 @@ function exactPath(value, label) {
 
 function requireSupportedPlatformBackupFormat(format) {
   if (format === "homecook-full-local-platform-v1") {
-    fail("unsupported legacy platform backup format v1; create a new v4 backup");
+    fail("unsupported legacy platform backup format v1; create a new v5 backup");
   }
   if (format === "homecook-full-local-platform-v2") {
-    fail("unsupported legacy platform backup format v2; create a new v4 backup");
+    fail("unsupported legacy platform backup format v2; create a new v5 backup");
   }
   if (format === "homecook-full-local-platform-v3") {
-    fail("unsupported legacy platform backup format v3; create a new v4 backup");
+    fail("unsupported legacy platform backup format v3; create a new v5 backup");
   }
-  if (format !== PLATFORM_BACKUP_FORMAT_V4) {
+  if (format === "homecook-full-local-platform-v4") {
+    fail("unsupported legacy platform backup format v4; create a new v5 backup");
+  }
+  if (format !== PLATFORM_BACKUP_FORMAT_V5) {
     fail("platform backup format is invalid");
   }
 }
 
 function requireSupportedRestoreManifestFormat(format) {
   if (format === "homecook-full-local-restore-v1") {
-    fail("unsupported legacy restore manifest format v1; rerun restore to create a v4 manifest");
+    fail("unsupported legacy restore manifest format v1; rerun restore to create a v5 manifest");
   }
   if (format === "homecook-full-local-restore-v2") {
-    fail("unsupported legacy restore manifest format v2; rerun restore to create a v4 manifest");
+    fail("unsupported legacy restore manifest format v2; rerun restore to create a v5 manifest");
   }
   if (format === "homecook-full-local-restore-v3") {
-    fail("unsupported legacy restore manifest format v3; rerun restore to create a v4 manifest");
+    fail("unsupported legacy restore manifest format v3; rerun restore to create a v5 manifest");
   }
-  if (format !== RESTORE_MANIFEST_FORMAT_V4) {
+  if (format === "homecook-full-local-restore-v4") {
+    fail("unsupported legacy restore manifest format v4; rerun restore to create a v5 manifest");
+  }
+  if (format !== RESTORE_MANIFEST_FORMAT_V5) {
     fail("restore manifest format is invalid");
   }
 }
 
 function requireSupportedReadinessFormat(format) {
   if (format === "homecook-full-local-backup-readiness-v1") {
-    fail("unsupported legacy readiness format v1; regenerate readiness evidence as v4");
+    fail("unsupported legacy readiness format v1; regenerate readiness evidence as v5");
   }
   if (format === "homecook-full-local-backup-readiness-v2") {
-    fail("unsupported legacy readiness format v2; regenerate readiness evidence as v4");
+    fail("unsupported legacy readiness format v2; regenerate readiness evidence as v5");
   }
   if (format === "homecook-full-local-backup-readiness-v3") {
-    fail("unsupported legacy readiness format v3; regenerate readiness evidence as v4");
+    fail("unsupported legacy readiness format v3; regenerate readiness evidence as v5");
+  }
+  if (format === "homecook-full-local-backup-readiness-v4") {
+    fail("unsupported legacy readiness format v4; regenerate readiness evidence as v5");
   }
   if (format !== FULL_LOCAL_BACKUP_READINESS_FORMAT) {
     fail("evidence format is invalid");
@@ -197,9 +206,10 @@ export function buildFullLocalBackupReadinessEvidence({
     || restoreManifest?.restore_execution
       !== "clean-isolated-restore-platform-v1"
     || restoreManifest?.fresh_target_attested !== true
-    || restoreManifest?.restored_data_sha256
-      !== components?.data_sha256
+    || !SHA256.test(restoreManifest?.restored_data_sha256)
     || restoreManifest?.source_data_sha256 !== components?.data_sha256
+    || !SHA256.test(restoreManifest?.restored_data_semantic_sha256)
+    || restoreManifest.restored_data_semantic_sha256 !== backupManifest?.data_semantic_sha256
     || !SHA256.test(restoreManifest?.source_data_semantic_sha256)
     || restoreManifest.source_data_semantic_sha256 !== backupManifest?.data_semantic_sha256
     || restoreManifest?.source_roles_sha256 !== components?.roles_sha256
@@ -285,6 +295,8 @@ export function buildFullLocalBackupReadinessEvidence({
       auth_identities: restoreManifest.auth_identities,
       auth_users: restoreManifest.auth_users,
       database_digest: restoreManifest.database_digest,
+      database_data_semantic_sha256:
+        restoreManifest.restored_data_semantic_sha256,
       database_data_sha256: restoreManifest.restored_data_sha256,
       database_reference_count: restoreManifest.storage_reference_count,
       execution: restoreManifest.restore_execution,
@@ -391,7 +403,9 @@ export function verifyFullLocalBackupReadiness({
     || !SHA256.test(evidence?.restore?.manifest_sha256)
     || evidence?.restore?.fresh_target_attested !== true
     || !SHA256.test(evidence?.restore?.database_data_sha256)
-    || evidence.restore.database_data_sha256 !== evidence?.backup?.data_sha256
+    || !SHA256.test(evidence?.restore?.database_data_semantic_sha256)
+    || evidence?.restore?.database_data_semantic_sha256
+      !== evidence?.backup?.data_semantic_sha256
     || !SHA256.test(evidence?.backup?.data_semantic_sha256)
     || !SHA256.test(evidence?.restore?.source_data_semantic_sha256)
     || evidence?.restore?.source_data_sha256 !== evidence?.backup?.data_sha256
