@@ -10,6 +10,7 @@ import { MOCK_RECIPE_DETAIL } from "../../lib/mock/recipes";
 import type { RecipeDetail, RecipeEditDraft } from "../../types/recipe";
 
 const PINNED_TITLE = "삭제 전 두부찌개";
+const PENDING_ACTION_KEY = "homecook.pending-recipe-action";
 
 interface FutureImpactPreviewRequest {
   base_recipe_revision: number;
@@ -28,6 +29,23 @@ function cloneRecipeDetail(overrides: Partial<RecipeDetail> = {}): RecipeDetail 
     revision: 12,
     ...overrides,
   })) as RecipeDetail;
+}
+
+function cloneOwnerRecipeDetail(overrides: Partial<RecipeDetail> = {}): RecipeDetail {
+  return cloneRecipeDetail({
+    edit_context: {
+      base_recipe_revision: 12,
+      draft: {
+        title: "내 김치찌개",
+        description: null,
+        base_servings: 2,
+        ingredients: [],
+        steps: [],
+      },
+      image_object_id: null,
+    },
+    ...overrides,
+  });
 }
 
 async function installPinnedHistoryRoutes(page: Page) {
@@ -298,7 +316,7 @@ test.describe("personal-recipe-customization-write-core", () => {
   test("deletes an owner recipe through confirm dialog with stable retry key and safe error copy", async ({
     page,
   }) => {
-    const recipe = cloneRecipeDetail();
+    const recipe = cloneOwnerRecipeDetail();
     let deleted = false;
     let deleteCalls = 0;
     const deleteKeys: string[] = [];
@@ -413,6 +431,74 @@ test.describe("personal-recipe-customization-write-core", () => {
       /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu,
     );
   });
+
+  for (const scenario of [
+    { code: "UNAUTHORIZED", label: "401 unauthorized", status: 401 },
+    { code: "ACCOUNT_SESSION_STALE", label: "409 stale session", status: 409 },
+  ] as const) {
+    test(`reopens delete confirmation after simulated login return for ${scenario.label} without duplicate deletion`, async ({
+      page,
+    }) => {
+      const recipe = cloneRecipeDetail();
+      let deleteCalls = 0;
+
+      await page.route(`**/api/v1/recipes/${RECIPE_ID}`, async (route) => {
+        if (route.request().method() === "DELETE") {
+          deleteCalls += 1;
+          await route.fulfill({
+            status: scenario.status,
+            json: {
+              success: false,
+              data: null,
+              error: {
+                code: scenario.code,
+                message: scenario.code === "UNAUTHORIZED"
+                  ? "로그인이 필요해요."
+                  : "세션을 다시 확인해 주세요.",
+                fields: [],
+              },
+            },
+          });
+          return;
+        }
+
+        await route.fulfill({
+          json: {
+            success: true,
+            data: recipe,
+            error: null,
+          },
+        });
+      });
+
+      await page.addInitScript(
+        ({ action, key }) => {
+          window.localStorage.setItem(key, JSON.stringify(action));
+        },
+        {
+          action: {
+            type: "recipe-delete",
+            recipeId: RECIPE_ID,
+            redirectTo: RECIPE_PATH,
+            createdAt: 1,
+          },
+          key: PENDING_ACTION_KEY,
+        },
+      );
+
+      await page.goto(RECIPE_PATH);
+
+      const deleteDialog = page.getByRole("dialog", { name: "정말 레시피를 삭제할까요?" });
+      await expect(deleteDialog).toBeVisible();
+      await expect(deleteDialog.getByRole("button", { name: "삭제" })).toBeEnabled();
+      await expect.poll(() => deleteCalls).toBe(0);
+      await expect.poll(() => page.evaluate((key) => window.localStorage.getItem(key), PENDING_ACTION_KEY)).toBeNull();
+
+      await deleteDialog.getByRole("button", { name: "닫기" }).click();
+      await expect(deleteDialog).toHaveCount(0);
+      expect(deleteCalls).toBe(0);
+    });
+  }
 
   test("hides a soft-deleted recipe from new detail access while pinned readers stay readable", async ({
     page,

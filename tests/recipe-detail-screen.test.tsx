@@ -33,6 +33,7 @@ const mockRouterReplace = vi.fn();
 const createSnapshotV2CookingSession = vi.fn();
 const fetchRecipeFutureImpact = vi.fn();
 const patchRecipeWithFutureStrategy = vi.fn();
+const deletePersonalRecipe = vi.fn();
 const globalsCss = readFileSync(join(process.cwd(), "app/globals.css"), "utf8");
 const navigationMocks = vi.hoisted(() => ({
   searchParams: vi.fn(() => new URLSearchParams()),
@@ -71,6 +72,17 @@ vi.mock("@/lib/api/cooking", () => ({
 vi.mock("@/lib/api/recipe-future-impact", () => ({
   fetchRecipeFutureImpact: (...args: unknown[]) => fetchRecipeFutureImpact(...args),
   patchRecipeWithFutureStrategy: (...args: unknown[]) => patchRecipeWithFutureStrategy(...args),
+}));
+
+vi.mock("@/lib/api/personal-recipe", () => ({
+  deletePersonalRecipe: (...args: unknown[]) => deletePersonalRecipe(...args),
+  isPersonalRecipeApiError: (error: unknown) =>
+    typeof error === "object"
+    && error !== null
+    && "status" in error
+    && typeof Reflect.get(error, "status") === "number"
+    && "code" in error
+    && typeof Reflect.get(error, "code") === "string",
 }));
 
 vi.mock("@/lib/api/mypage", () => ({
@@ -260,6 +272,7 @@ describe("recipe detail screen", () => {
     createSnapshotV2CookingSession.mockReset();
     fetchRecipeFutureImpact.mockReset();
     patchRecipeWithFutureStrategy.mockReset();
+    deletePersonalRecipe.mockReset();
     navigationMocks.searchParams.mockReset();
     navigationMocks.searchParams.mockReturnValue(new URLSearchParams());
     useAuthGateStore.setState({ isOpen: false, action: null });
@@ -676,6 +689,151 @@ describe("recipe detail screen", () => {
         image_object_id: null,
       },
     });
+  });
+
+  it.each([
+    { code: "UNAUTHORIZED", label: "401 unauthorized owner delete", status: 401 },
+    { code: "ACCOUNT_SESSION_STALE", label: "409 stale owner delete", status: 409 },
+  ])("reopens the auth gate for $label without auto-deleting", async ({
+    code,
+    status,
+  }) => {
+    fetchJson.mockResolvedValue(buildRecipeDetail({
+      edit_context: {
+        base_recipe_revision: 12,
+        draft: {
+          title: "내 김치찌개",
+          description: null,
+          base_servings: 2,
+          ingredients: [],
+          steps: [],
+        },
+        image_object_id: null,
+      },
+    }));
+    deletePersonalRecipe.mockRejectedValue(Object.assign(
+      new Error("다시 로그인해 주세요."),
+      { code, status },
+    ));
+
+    render(
+      <RecipeDetailScreen
+        initialAuthenticated
+        recipeId={MOCK_RECIPE_DETAIL.id}
+        recipeSnapshotUiMode="snapshot_v2"
+      />,
+    );
+
+    await userEvent.click(await screen.findByRole("button", { name: "삭제" }));
+    await userEvent.click(screen.getByRole("button", { name: "삭제" }));
+
+    await waitFor(() => {
+      expect(deletePersonalRecipe).toHaveBeenCalledWith(
+        MOCK_RECIPE_DETAIL.id,
+        expect.any(String),
+      );
+    });
+    expect(
+      screen.queryByRole("dialog", { name: "정말 레시피를 삭제할까요?" }),
+    ).toBeNull();
+    expect(
+      await screen.findByRole("dialog", { name: "로그인이 필요한 작업이에요" }),
+    ).toBeTruthy();
+    expect(useAuthGateStore.getState().action).toEqual({
+      type: "recipe-delete",
+      recipeId: MOCK_RECIPE_DETAIL.id,
+      redirectTo: `/recipe/${MOCK_RECIPE_DETAIL.id}`,
+      createdAt: expect.any(Number),
+    });
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("keeps non-session 409 delete failures inside the confirmation dialog", async () => {
+    fetchJson.mockResolvedValue(buildRecipeDetail({
+      edit_context: {
+        base_recipe_revision: 12,
+        draft: {
+          title: "내 김치찌개",
+          description: null,
+          base_servings: 2,
+          ingredients: [],
+          steps: [],
+        },
+        image_object_id: null,
+      },
+    }));
+    deletePersonalRecipe.mockRejectedValue(Object.assign(
+      new Error("세대를 다시 확인해 주세요."),
+      { code: "ACCOUNT_GENERATION_STALE", status: 409 },
+    ));
+
+    render(
+      <RecipeDetailScreen
+        initialAuthenticated
+        recipeId={MOCK_RECIPE_DETAIL.id}
+        recipeSnapshotUiMode="snapshot_v2"
+      />,
+    );
+
+    await userEvent.click(await screen.findByRole("button", { name: "삭제" }));
+    const deleteDialog = screen.getByRole("dialog", { name: "정말 레시피를 삭제할까요?" });
+    await userEvent.click(within(deleteDialog).getByRole("button", { name: "삭제" }));
+
+    await waitFor(() => {
+      expect(within(deleteDialog).getByRole("alert").textContent).toBe(
+        "레시피를 삭제하지 못했어요. 잠시 후 다시 시도해 주세요.",
+      );
+    });
+    expect(
+      screen.queryByRole("dialog", { name: "로그인이 필요한 작업이에요" }),
+    ).toBeNull();
+    expect(useAuthGateStore.getState().action).toBeNull();
+  });
+
+  it("reopens the delete confirmation after login return without auto-submitting deletion", async () => {
+    fetchJson.mockResolvedValue(buildRecipeDetail({
+      edit_context: {
+        base_recipe_revision: 12,
+        draft: {
+          title: "내 김치찌개",
+          description: null,
+          base_servings: 2,
+          ingredients: [],
+          steps: [],
+        },
+        image_object_id: null,
+      },
+    }));
+    window.localStorage.setItem(
+      PENDING_ACTION_KEY,
+      JSON.stringify({
+        type: "recipe-delete",
+        recipeId: MOCK_RECIPE_DETAIL.id,
+        redirectTo: `/recipe/${MOCK_RECIPE_DETAIL.id}`,
+        createdAt: 1,
+      }),
+    );
+
+    render(
+      <RecipeDetailScreen
+        initialAuthenticated
+        recipeId={MOCK_RECIPE_DETAIL.id}
+        recipeSnapshotUiMode="snapshot_v2"
+      />,
+    );
+
+    const deleteDialog = await screen.findByRole("dialog", { name: "정말 레시피를 삭제할까요?" });
+    expect(deletePersonalRecipe).not.toHaveBeenCalled();
+    expect(window.localStorage.getItem(PENDING_ACTION_KEY)).toBeNull();
+    await act(async () => {
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    });
+    expect(deleteDialog.contains(document.activeElement)).toBe(true);
+    await userEvent.click(within(deleteDialog).getByRole("button", { name: "닫기" }));
+    expect(
+      screen.queryByRole("dialog", { name: "정말 레시피를 삭제할까요?" }),
+    ).toBeNull();
+    expect(deletePersonalRecipe).not.toHaveBeenCalled();
   });
 
   it.each([

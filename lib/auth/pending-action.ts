@@ -1,6 +1,11 @@
 import type { RecipeEditContext } from "@/types/recipe";
 
-export type PendingRecipeActionType = "like" | "save" | "planner" | "recipe-edit-save";
+export type PendingRecipeActionType =
+  | "like"
+  | "save"
+  | "planner"
+  | "recipe-delete"
+  | "recipe-edit-save";
 
 interface PendingRecipeActionBase {
   recipeId: string;
@@ -9,7 +14,7 @@ interface PendingRecipeActionBase {
 }
 
 export type PendingRecipeAction = PendingRecipeActionBase & (
-  | { type: "like" | "save" | "planner" }
+  | { type: "like" | "save" | "planner" | "recipe-delete" }
   | { type: "recipe-edit-save"; editContext: RecipeEditContext }
 );
 
@@ -141,7 +146,10 @@ export function parsePendingAction(raw: string) {
     const value = JSON.parse(raw) as Partial<PendingRecipeAction>;
 
     if (
-      (value.type === "like" || value.type === "save" || value.type === "planner") &&
+      (value.type === "like"
+        || value.type === "save"
+        || value.type === "planner"
+        || value.type === "recipe-delete") &&
       typeof value.recipeId === "string" &&
       typeof value.redirectTo === "string" &&
       Number.isFinite(value.createdAt)
