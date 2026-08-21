@@ -57,6 +57,7 @@ async function createAuthServerClient({
   allowCookieWrites: boolean;
 }) {
   const cookieStore = await cookies();
+  getAuthAuthority();
   const { url, anonKey } = getAuthSupabaseEnv();
   getDataSupabaseEnv();
   const authFetch = createRemoteRefreshAuthorityFetch({

@@ -16,6 +16,86 @@ function parseEnvExample(text: string) {
   );
 }
 
+const TRAILING_DOT_CONTROL_CASES = [
+  ["literal tab numeric port", ".\t:54321"],
+  ["literal CR numeric port", ".\r:54321"],
+  ["literal LF numeric port", ".\n:54321"],
+  ["encoded tab numeric port", "%2e\t:54321"],
+  ["encoded CR numeric port", "%2E\r:54321"],
+  ["encoded LF numeric port", "%2e\n:54321"],
+  ["literal tab empty port", ".\t:"],
+  ["literal CR empty port", ".\r:"],
+  ["literal LF empty port", ".\n:"],
+  ["encoded tab empty port", "%2e\t:"],
+  ["encoded CR empty port", "%2E\r:"],
+  ["encoded LF empty port", "%2e\n:"],
+] as const;
+
+const UNICODE_DOT_ENCODINGS = [
+  ["U+3002", "\u3002"],
+  ["U+3002 encoded", "%E3%80%82"],
+  ["U+FF0E", "\uFF0E"],
+  ["U+FF0E encoded", "%EF%BC%8E"],
+  ["U+FF61", "\uFF61"],
+  ["U+FF61 encoded", "%EF%BD%A1"],
+] as const;
+const NONCANONICAL_DOT_HOST_SEGMENT_CASES = [
+  ["percent-encoded literal dot", "project.supabase.co%2e.evil.com"],
+  ["uppercase percent-encoded literal dot", "project.supabase.co%2E.evil.com"],
+  ["Unicode U+3002", "project.supabase.co\u3002evil.com"],
+  ["percent-encoded Unicode U+3002", "project.supabase.co%E3%80%82evil.com"],
+  ["Unicode U+FF0E", "project.supabase.co\uFF0Eevil.com"],
+  ["percent-encoded Unicode U+FF0E", "project.supabase.co%EF%BC%8Eevil.com"],
+  ["Unicode U+FF61", "project.supabase.co\uFF61evil.com"],
+  ["percent-encoded Unicode U+FF61", "project.supabase.co%EF%BD%A1evil.com"],
+] as const;
+const RAW_PORT_VARIANTS = [
+  ["without port", ""],
+  ["numeric port", ":54321"],
+  ["empty port", ":"],
+] as const;
+const UNICODE_TRAILING_DOT_CASES = UNICODE_DOT_ENCODINGS.flatMap(
+  ([dotName, dot]) => RAW_PORT_VARIANTS.map(
+    ([portName, port]) => [`${dotName} ${portName}`, `${dot}${port}`] as const,
+  ),
+);
+const RAW_EDGE_WHITESPACE_CASES = [
+  ["leading space", " ", ""],
+  ["trailing space", "", " "],
+  ["leading tab", "\t", ""],
+  ["trailing tab", "", "\t"],
+  ["leading CR", "\r", ""],
+  ["trailing CR", "", "\r"],
+  ["leading LF", "\n", ""],
+  ["trailing LF", "", "\n"],
+] as const;
+const NONCANONICAL_SCHEME_FORMS = [
+  ["opaque", "http:"],
+  ["single slash", "http:/"],
+  ["triple slash", "http:///"],
+  ["backslashes", "http:\\\\"],
+  ["mixed slash", "http:/\\"],
+] as const;
+const NONCANONICAL_PORT_VARIANTS = [
+  ["numeric port", ":54321"],
+  ["empty port", ":"],
+] as const;
+const NONCANONICAL_UNICODE_AUTH_URL_CASES = NONCANONICAL_SCHEME_FORMS.flatMap(
+  ([formName, prefix]) => UNICODE_DOT_ENCODINGS.flatMap(
+    ([dotName, dot]) => NONCANONICAL_PORT_VARIANTS.map(
+      ([portName, port]) => [
+        `${formName} ${dotName} ${portName}`,
+        `${prefix}127.0.0.1${dot}${port}`,
+      ] as const,
+    ),
+  ),
+);
+const NONLOWERCASE_AUTH_URL_CASES = [
+  ["uppercase HTTP", "HTTP://127.0.0.1:54321"],
+  ["mixed HTTP", "Http://127.0.0.1:54321"],
+  ["mixed HTTPS", "hTtPs://auth.mumeok.kr"],
+] as const;
+
 describe("local-only Supabase environment boundary", () => {
   beforeEach(() => {
     vi.resetModules();
@@ -84,6 +164,313 @@ describe("local-only Supabase environment boundary", () => {
     expect(() => getAuthSupabaseEnv()).toThrow(/hosted|Cloud|local-only/iu);
   });
 
+  it.each([
+    "http://127.0.0.1.:54321",
+    "http://127.0.0.1%2e:54321",
+    "http://127.0.0.1.:",
+    "http://127.0.0.1%2e:",
+    "https://project.supabase.co.",
+    "https://project.supabase.co%2E",
+    "https://project.supabase.co.:",
+    "https://project.supabase.co%2e:",
+    "https://project.supabase.in.",
+    "https://project.supabase.in%2e",
+    "http://localhost.:54321",
+    "http://localhost%2E:54321",
+    "http://localhost.:",
+    "http://localhost%2e:",
+    "https://auth.mumeok.kr.",
+    "https://auth.mumeok.kr%2e",
+    "https://auth.mumeok.kr.:",
+    "https://auth.mumeok.kr%2E:",
+  ])("rejects trailing-dot Auth hostname %s", async (url) => {
+    process.env.NEXT_PUBLIC_AUTH_SUPABASE_URL = url;
+    process.env.NEXT_PUBLIC_AUTH_SUPABASE_PUBLISHABLE_KEY = "local-publishable";
+
+    const { getAuthSupabaseEnv, hasAuthSupabasePublicEnv } = await import(
+      "@/lib/supabase/auth-env"
+    );
+
+    expect(() => getAuthSupabaseEnv()).toThrow(/hostname.*trailing dot/iu);
+    expect(hasAuthSupabasePublicEnv()).toBe(false);
+  });
+
+  it.each(NONCANONICAL_DOT_HOST_SEGMENT_CASES)(
+    "rejects public Auth hostname with noncanonical dot segment %s",
+    async (_name, hostname) => {
+      process.env.NEXT_PUBLIC_AUTH_SUPABASE_URL = `https://${hostname}`;
+      process.env.NEXT_PUBLIC_AUTH_SUPABASE_PUBLISHABLE_KEY =
+        "local-publishable";
+
+      const { getAuthSupabaseEnv, hasAuthSupabasePublicEnv } = await import(
+        "@/lib/supabase/auth-env"
+      );
+
+      expect(() => getAuthSupabaseEnv()).toThrow(
+        /hostname.*literal dot|noncanonical dot/iu,
+      );
+      expect(hasAuthSupabasePublicEnv()).toBe(false);
+    },
+  );
+
+  it.each(TRAILING_DOT_CONTROL_CASES)(
+    "rejects public Auth raw control boundary %s",
+    async (_name, suffix) => {
+      process.env.NEXT_PUBLIC_AUTH_SUPABASE_URL =
+        `https://project.supabase.co${suffix}`;
+      process.env.NEXT_PUBLIC_AUTH_SUPABASE_PUBLISHABLE_KEY =
+        "local-publishable";
+
+      const { getAuthSupabaseEnv, hasAuthSupabasePublicEnv } = await import(
+        "@/lib/supabase/auth-env"
+      );
+
+      expect(() => getAuthSupabaseEnv()).toThrow(
+        /ASCII control|whitespace/iu,
+      );
+      expect(hasAuthSupabasePublicEnv()).toBe(false);
+    },
+  );
+
+  it.each(UNICODE_TRAILING_DOT_CASES)(
+    "rejects public Auth Unicode trailing dot %s",
+    async (_name, suffix) => {
+      process.env.NEXT_PUBLIC_AUTH_SUPABASE_URL =
+        `https://auth.mumeok.kr${suffix}`;
+      process.env.NEXT_PUBLIC_AUTH_SUPABASE_PUBLISHABLE_KEY =
+        "local-publishable";
+
+      const { getAuthSupabaseEnv, hasAuthSupabasePublicEnv } = await import(
+        "@/lib/supabase/auth-env"
+      );
+
+      expect(() => getAuthSupabaseEnv()).toThrow(/hostname.*trailing dot/iu);
+      expect(hasAuthSupabasePublicEnv()).toBe(false);
+    },
+  );
+
+  it.each(RAW_EDGE_WHITESPACE_CASES)(
+    "rejects public Auth raw URL %s",
+    async (_name, prefix, suffix) => {
+      process.env.NEXT_PUBLIC_AUTH_SUPABASE_URL =
+        `${prefix}http://127.0.0.1:54321${suffix}`;
+      process.env.NEXT_PUBLIC_AUTH_SUPABASE_PUBLISHABLE_KEY =
+        "local-publishable";
+
+      const { getAuthSupabaseEnv, hasAuthSupabasePublicEnv } = await import(
+        "@/lib/supabase/auth-env"
+      );
+
+      expect(() => getAuthSupabaseEnv()).toThrow(
+        /ASCII control|whitespace/iu,
+      );
+      expect(hasAuthSupabasePublicEnv()).toBe(false);
+    },
+  );
+
+  it.each([
+    ...NONCANONICAL_UNICODE_AUTH_URL_CASES,
+    ...NONLOWERCASE_AUTH_URL_CASES,
+  ])("rejects public Auth noncanonical URL %s", async (_name, url) => {
+    process.env.NEXT_PUBLIC_AUTH_SUPABASE_URL = url;
+    process.env.NEXT_PUBLIC_AUTH_SUPABASE_PUBLISHABLE_KEY = "local-publishable";
+
+    const { getAuthSupabaseEnv, hasAuthSupabasePublicEnv } = await import(
+      "@/lib/supabase/auth-env"
+    );
+
+    expect(() => getAuthSupabaseEnv()).toThrow(
+      /exact lowercase http:\/\/ or https:\/\//iu,
+    );
+    expect(hasAuthSupabasePublicEnv()).toBe(false);
+  });
+
+  it.each([
+    "http://127.0.0.1.:54481",
+    "http://127.0.0.1%2e:54481",
+    "http://127.0.0.1.:",
+    "http://127.0.0.1%2E:",
+    "http://localhost.:54481",
+    "http://localhost%2E:54481",
+    "http://localhost.:",
+    "http://localhost%2e:",
+    "https://project.supabase.co.:443",
+    "https://project.supabase.co%2e:443",
+    "https://project.supabase.co.:",
+    "https://project.supabase.co%2E:",
+    "https://auth.mumeok.kr.:443",
+    "https://auth.mumeok.kr%2E:443",
+    "https://auth.mumeok.kr.:",
+    "https://auth.mumeok.kr%2e:",
+  ])("rejects trailing-dot internal Auth hostname %s", async (url) => {
+    process.env.HOMECOOK_AUTH_AUTHORITY = "local";
+    process.env.NEXT_PUBLIC_AUTH_SUPABASE_URL = "http://127.0.0.1:54321";
+    process.env.NEXT_PUBLIC_AUTH_SUPABASE_PUBLISHABLE_KEY = "local-publishable";
+    process.env.LOCAL_SUPABASE_INTERNAL_URL = url;
+
+    const { getAuthSupabaseServerEnv } = await import(
+      "@/lib/supabase/auth-env"
+    );
+
+    expect(() => getAuthSupabaseServerEnv()).toThrow(
+      /LOCAL_SUPABASE_INTERNAL_URL.*hostname.*trailing dot/iu,
+    );
+  });
+
+  it.each(NONCANONICAL_DOT_HOST_SEGMENT_CASES)(
+    "rejects internal Auth hostname with noncanonical dot segment %s",
+    async (_name, hostname) => {
+      process.env.HOMECOOK_AUTH_AUTHORITY = "local";
+      process.env.NEXT_PUBLIC_AUTH_SUPABASE_URL = "http://127.0.0.1:54321";
+      process.env.NEXT_PUBLIC_AUTH_SUPABASE_PUBLISHABLE_KEY =
+        "local-publishable";
+      process.env.LOCAL_SUPABASE_INTERNAL_URL = `https://${hostname}`;
+
+      const { getAuthSupabaseServerEnv } = await import(
+        "@/lib/supabase/auth-env"
+      );
+
+      expect(() => getAuthSupabaseServerEnv()).toThrow(
+        /LOCAL_SUPABASE_INTERNAL_URL.*hostname.*literal dot|noncanonical dot/iu,
+      );
+    },
+  );
+
+  it.each(TRAILING_DOT_CONTROL_CASES)(
+    "rejects internal Auth raw control boundary %s",
+    async (_name, suffix) => {
+      process.env.HOMECOOK_AUTH_AUTHORITY = "local";
+      process.env.NEXT_PUBLIC_AUTH_SUPABASE_URL = "http://127.0.0.1:54321";
+      process.env.NEXT_PUBLIC_AUTH_SUPABASE_PUBLISHABLE_KEY =
+        "local-publishable";
+      process.env.LOCAL_SUPABASE_INTERNAL_URL = `http://127.0.0.1${suffix}`;
+
+      const { getAuthSupabaseServerEnv } = await import(
+        "@/lib/supabase/auth-env"
+      );
+
+      expect(() => getAuthSupabaseServerEnv()).toThrow(
+        /LOCAL_SUPABASE_INTERNAL_URL.*(?:ASCII control|whitespace)/iu,
+      );
+    },
+  );
+
+  it.each(UNICODE_TRAILING_DOT_CASES)(
+    "rejects internal Auth Unicode trailing dot %s",
+    async (_name, suffix) => {
+      process.env.HOMECOOK_AUTH_AUTHORITY = "local";
+      process.env.NEXT_PUBLIC_AUTH_SUPABASE_URL = "http://127.0.0.1:54321";
+      process.env.NEXT_PUBLIC_AUTH_SUPABASE_PUBLISHABLE_KEY =
+        "local-publishable";
+      process.env.LOCAL_SUPABASE_INTERNAL_URL = `http://127.0.0.1${suffix}`;
+
+      const { getAuthSupabaseServerEnv } = await import(
+        "@/lib/supabase/auth-env"
+      );
+
+      expect(() => getAuthSupabaseServerEnv()).toThrow(
+        /LOCAL_SUPABASE_INTERNAL_URL.*hostname.*trailing dot/iu,
+      );
+    },
+  );
+
+  it.each(RAW_EDGE_WHITESPACE_CASES)(
+    "rejects internal Auth raw URL %s",
+    async (_name, prefix, suffix) => {
+      process.env.HOMECOOK_AUTH_AUTHORITY = "local";
+      process.env.NEXT_PUBLIC_AUTH_SUPABASE_URL = "http://127.0.0.1:54321";
+      process.env.NEXT_PUBLIC_AUTH_SUPABASE_PUBLISHABLE_KEY =
+        "local-publishable";
+      process.env.LOCAL_SUPABASE_INTERNAL_URL =
+        `${prefix}http://127.0.0.1:54481${suffix}`;
+
+      const { getAuthSupabaseServerEnv } = await import(
+        "@/lib/supabase/auth-env"
+      );
+
+      expect(() => getAuthSupabaseServerEnv()).toThrow(
+        /LOCAL_SUPABASE_INTERNAL_URL.*(?:ASCII control|whitespace)/iu,
+      );
+    },
+  );
+
+  it.each([
+    ...NONCANONICAL_UNICODE_AUTH_URL_CASES,
+    ...NONLOWERCASE_AUTH_URL_CASES,
+  ])("rejects internal Auth noncanonical URL %s", async (_name, url) => {
+    process.env.HOMECOOK_AUTH_AUTHORITY = "local";
+    process.env.NEXT_PUBLIC_AUTH_SUPABASE_URL = "http://127.0.0.1:54321";
+    process.env.NEXT_PUBLIC_AUTH_SUPABASE_PUBLISHABLE_KEY = "local-publishable";
+    process.env.LOCAL_SUPABASE_INTERNAL_URL = url;
+
+    const { getAuthSupabaseServerEnv } = await import(
+      "@/lib/supabase/auth-env"
+    );
+
+    expect(() => getAuthSupabaseServerEnv()).toThrow(
+      /LOCAL_SUPABASE_INTERNAL_URL.*exact lowercase http:\/\/ or https:\/\//iu,
+    );
+  });
+
+  it("preserves canonical lowercase HTTP, HTTPS, and bracketed IPv6", async () => {
+    process.env.HOMECOOK_AUTH_AUTHORITY = "local";
+    process.env.NEXT_PUBLIC_AUTH_SUPABASE_URL = "https://auth.mumeok.kr";
+    process.env.NEXT_PUBLIC_AUTH_SUPABASE_PUBLISHABLE_KEY = "local-publishable";
+    process.env.LOCAL_SUPABASE_INTERNAL_URL = "https://[::1]:54481";
+
+    const { getAuthSupabaseEnv, getAuthSupabaseServerEnv } = await import(
+      "@/lib/supabase/auth-env"
+    );
+
+    expect(getAuthSupabaseEnv().url).toBe("https://auth.mumeok.kr");
+    expect(getAuthSupabaseServerEnv().url).toBe("https://[::1]:54481");
+
+    process.env.NEXT_PUBLIC_AUTH_SUPABASE_URL = "http://127.0.0.1:54321";
+    process.env.LOCAL_SUPABASE_INTERNAL_URL = "http://localhost:54481";
+    expect(getAuthSupabaseEnv().url).toBe("http://127.0.0.1:54321");
+    expect(getAuthSupabaseServerEnv().url).toBe("http://localhost:54481");
+  });
+
+  it("allows browser Auth env without the server-only Auth authority", async () => {
+    process.env.NEXT_PUBLIC_AUTH_SUPABASE_URL = "http://127.0.0.1:54321";
+    process.env.NEXT_PUBLIC_AUTH_SUPABASE_PUBLISHABLE_KEY = "local-publishable";
+
+    const {
+      getAuthIssuer,
+      getAuthSupabaseEnv,
+      hasAuthSupabasePublicEnv,
+    } = await import("@/lib/supabase/auth-env");
+
+    expect(getAuthIssuer()).toBe("http://127.0.0.1:54321/auth/v1");
+    expect(getAuthSupabaseEnv()).toEqual({
+      issuer: "http://127.0.0.1:54321/auth/v1",
+      jwksUrl: "http://127.0.0.1:54321/auth/v1/.well-known/jwks.json",
+      publishableKey: "local-publishable",
+      url: "http://127.0.0.1:54321",
+    });
+    expect(hasAuthSupabasePublicEnv()).toBe(true);
+  });
+
+  it.each([undefined, "remote"])(
+    "keeps the server Auth env fail-closed for authority %s",
+    async (authority) => {
+      if (authority) {
+        process.env.HOMECOOK_AUTH_AUTHORITY = authority;
+      }
+      process.env.NEXT_PUBLIC_AUTH_SUPABASE_URL = "http://127.0.0.1:54321";
+      process.env.NEXT_PUBLIC_AUTH_SUPABASE_PUBLISHABLE_KEY = "local-publishable";
+      process.env.LOCAL_SUPABASE_INTERNAL_URL = "http://127.0.0.1:54481";
+
+      const { getAuthSupabaseServerEnv } = await import(
+        "@/lib/supabase/auth-env"
+      );
+
+      expect(() => getAuthSupabaseServerEnv()).toThrow(
+        /HOMECOOK_AUTH_AUTHORITY.*local|local-only/iu,
+      );
+    },
+  );
+
   it("allows HTTP only for exact loopback Auth and Data origins", async () => {
     process.env.HOMECOOK_AUTH_AUTHORITY = "local";
     process.env.HOMECOOK_DATA_AUTHORITY = "local";
@@ -136,6 +523,9 @@ describe("local-only Supabase environment boundary", () => {
 
     expect(getAuthSupabaseEnv().url).toBe("https://auth.mumeok.kr");
     expect(getAuthSupabaseServerEnv().url).toBe("http://127.0.0.1:54481");
+
+    process.env.LOCAL_SUPABASE_INTERNAL_URL = "http://[::1]:54481";
+    expect(getAuthSupabaseServerEnv().url).toBe("http://[::1]:54481");
   });
 
   it("rejects non-loopback Data origins in every runtime mode", async () => {

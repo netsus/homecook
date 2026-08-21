@@ -4,6 +4,8 @@ const LOCAL_INTERNAL_URL_ENV = "LOCAL_SUPABASE_INTERNAL_URL";
 
 const LOOPBACK_HOSTS = new Set(["127.0.0.1", "localhost", "::1", "[::1]"]);
 const HOSTED_SUPABASE_SUFFIXES = [".supabase.co", ".supabase.in"];
+const RAW_TRAILING_DOT_PATTERN = /(?:\.|%2e|\u3002|%e3%80%82|\uff0e|%ef%bc%8e|\uff61|%ef%bd%a1)$/iu;
+const RAW_NONCANONICAL_DOT_PATTERN = /(?:%2e|\u3002|%e3%80%82|\uff0e|%ef%bc%8e|\uff61|%ef%bd%a1)/iu;
 
 export type AuthAuthority = "local";
 
@@ -26,6 +28,14 @@ function requireNonEmpty(value: string | undefined, name: string) {
   return normalized;
 }
 
+function requireRawNonEmpty(value: string | undefined, name: string) {
+  if (value === undefined || value.length === 0) {
+    throw new Error(`${name} 환경 변수가 필요해요.`);
+  }
+
+  return value;
+}
+
 function isLoopbackHostname(hostname: string) {
   return LOOPBACK_HOSTS.has(hostname);
 }
@@ -34,12 +44,49 @@ function isHostedSupabaseHostname(hostname: string) {
   return HOSTED_SUPABASE_SUFFIXES.some((suffix) => hostname.endsWith(suffix));
 }
 
+function rejectRawTrailingDotHostname(value: string, name: string) {
+  const schemeEnd = value.indexOf("://");
+  if (schemeEnd < 0) {
+    return;
+  }
+
+  const authorityAndRest = value.slice(schemeEnd + 3);
+  const authorityEnd = authorityAndRest.search(/[/?#]/u);
+  const authority = authorityEnd < 0
+    ? authorityAndRest
+    : authorityAndRest.slice(0, authorityEnd);
+  const hostAndPort = authority.slice(authority.lastIndexOf("@") + 1);
+  const closingBracket = hostAndPort.startsWith("[")
+    ? hostAndPort.indexOf("]")
+    : -1;
+  const rawHostname = closingBracket >= 0
+    ? hostAndPort.slice(0, closingBracket + 1)
+    : hostAndPort.split(":", 1)[0];
+  if (RAW_TRAILING_DOT_PATTERN.test(rawHostname)) {
+    throw new Error(`${name} hostname에는 trailing dot을 사용할 수 없어요.`);
+  }
+  if (RAW_NONCANONICAL_DOT_PATTERN.test(rawHostname)) {
+    throw new Error(`${name} hostname에는 literal dot만 사용할 수 있어요.`);
+  }
+}
+
 function parseUrl(value: string, name: string) {
+  if (/[\u0000-\u0020\u007f]/u.test(value)) {
+    throw new Error(`${name} 값에 ASCII control 또는 whitespace를 넣을 수 없어요.`);
+  }
+  if (!/^(?:http|https):\/\/[^/\\]/u.test(value)) {
+    throw new Error(`${name} 값은 exact lowercase http:// or https:// prefix가 필요해요.`);
+  }
+  rejectRawTrailingDotHostname(value, name);
   let parsed: URL;
   try {
     parsed = new URL(value);
   } catch {
     throw new Error(`${name} 값은 유효한 URL이어야 해요.`);
+  }
+
+  if (parsed.hostname.endsWith(".")) {
+    throw new Error(`${name} hostname에는 trailing dot을 사용할 수 없어요.`);
   }
 
   if (
@@ -87,8 +134,7 @@ export interface AuthSupabaseEnv {
 }
 
 export function getAuthIssuer() {
-  getAuthAuthority();
-  const url = normalizeLocalPublicAuthUrl(requireNonEmpty(
+  const url = normalizeLocalPublicAuthUrl(requireRawNonEmpty(
     process.env.NEXT_PUBLIC_AUTH_SUPABASE_URL,
     AUTH_URL_ENV,
   ));
@@ -123,10 +169,11 @@ export function getAuthSupabaseEnv(): AuthSupabaseEnv {
 }
 
 export function getAuthSupabaseServerEnv(): AuthSupabaseEnv {
+  getAuthAuthority();
   const publicEnv = getAuthSupabaseEnv();
   return {
     ...publicEnv,
-    url: normalizeLoopbackAuthUrl(requireNonEmpty(
+    url: normalizeLoopbackAuthUrl(requireRawNonEmpty(
       process.env[LOCAL_INTERNAL_URL_ENV],
       LOCAL_INTERNAL_URL_ENV,
     )),
