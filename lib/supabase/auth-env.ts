@@ -4,6 +4,7 @@ const LOCAL_INTERNAL_URL_ENV = "LOCAL_SUPABASE_INTERNAL_URL";
 
 const LOOPBACK_HOSTS = new Set(["127.0.0.1", "localhost", "::1", "[::1]"]);
 const HOSTED_SUPABASE_SUFFIXES = [".supabase.co", ".supabase.in"];
+const RAW_TRAILING_DOT_PATTERN = /(?:\.|%2e|\u3002|%e3%80%82|\uff0e|%ef%bc%8e|\uff61|%ef%bd%a1)$/iu;
 
 export type AuthAuthority = "local";
 
@@ -24,6 +25,14 @@ function requireNonEmpty(value: string | undefined, name: string) {
   }
 
   return normalized;
+}
+
+function requireRawNonEmpty(value: string | undefined, name: string) {
+  if (value === undefined || value.length === 0) {
+    throw new Error(`${name} 환경 변수가 필요해요.`);
+  }
+
+  return value;
 }
 
 function isLoopbackHostname(hostname: string) {
@@ -52,7 +61,7 @@ function rejectRawTrailingDotHostname(value: string, name: string) {
   const rawHostname = closingBracket >= 0
     ? hostAndPort.slice(0, closingBracket + 1)
     : hostAndPort.split(":", 1)[0];
-  if (/(?:\.|%2e)$/iu.test(rawHostname)) {
+  if (RAW_TRAILING_DOT_PATTERN.test(rawHostname)) {
     throw new Error(`${name} hostname에는 trailing dot을 사용할 수 없어요.`);
   }
 }
@@ -67,6 +76,10 @@ function parseUrl(value: string, name: string) {
     parsed = new URL(value);
   } catch {
     throw new Error(`${name} 값은 유효한 URL이어야 해요.`);
+  }
+
+  if (parsed.hostname.endsWith(".")) {
+    throw new Error(`${name} hostname에는 trailing dot을 사용할 수 없어요.`);
   }
 
   if (
@@ -114,7 +127,7 @@ export interface AuthSupabaseEnv {
 }
 
 export function getAuthIssuer() {
-  const url = normalizeLocalPublicAuthUrl(requireNonEmpty(
+  const url = normalizeLocalPublicAuthUrl(requireRawNonEmpty(
     process.env.NEXT_PUBLIC_AUTH_SUPABASE_URL,
     AUTH_URL_ENV,
   ));
@@ -153,7 +166,7 @@ export function getAuthSupabaseServerEnv(): AuthSupabaseEnv {
   const publicEnv = getAuthSupabaseEnv();
   return {
     ...publicEnv,
-    url: normalizeLoopbackAuthUrl(requireNonEmpty(
+    url: normalizeLoopbackAuthUrl(requireRawNonEmpty(
       process.env[LOCAL_INTERNAL_URL_ENV],
       LOCAL_INTERNAL_URL_ENV,
     )),

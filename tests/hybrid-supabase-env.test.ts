@@ -31,6 +31,35 @@ const TRAILING_DOT_CONTROL_CASES = [
   ["encoded LF empty port", "%2e\n:"],
 ] as const;
 
+const UNICODE_DOT_ENCODINGS = [
+  ["U+3002", "\u3002"],
+  ["U+3002 encoded", "%E3%80%82"],
+  ["U+FF0E", "\uFF0E"],
+  ["U+FF0E encoded", "%EF%BC%8E"],
+  ["U+FF61", "\uFF61"],
+  ["U+FF61 encoded", "%EF%BD%A1"],
+] as const;
+const RAW_PORT_VARIANTS = [
+  ["without port", ""],
+  ["numeric port", ":54321"],
+  ["empty port", ":"],
+] as const;
+const UNICODE_TRAILING_DOT_CASES = UNICODE_DOT_ENCODINGS.flatMap(
+  ([dotName, dot]) => RAW_PORT_VARIANTS.map(
+    ([portName, port]) => [`${dotName} ${portName}`, `${dot}${port}`] as const,
+  ),
+);
+const RAW_EDGE_WHITESPACE_CASES = [
+  ["leading space", " ", ""],
+  ["trailing space", "", " "],
+  ["leading tab", "\t", ""],
+  ["trailing tab", "", "\t"],
+  ["leading CR", "\r", ""],
+  ["trailing CR", "", "\r"],
+  ["leading LF", "\n", ""],
+  ["trailing LF", "", "\n"],
+] as const;
+
 describe("local-only Supabase environment boundary", () => {
   beforeEach(() => {
     vi.resetModules();
@@ -149,6 +178,42 @@ describe("local-only Supabase environment boundary", () => {
     },
   );
 
+  it.each(UNICODE_TRAILING_DOT_CASES)(
+    "rejects public Auth Unicode trailing dot %s",
+    async (_name, suffix) => {
+      process.env.NEXT_PUBLIC_AUTH_SUPABASE_URL =
+        `https://auth.mumeok.kr${suffix}`;
+      process.env.NEXT_PUBLIC_AUTH_SUPABASE_PUBLISHABLE_KEY =
+        "local-publishable";
+
+      const { getAuthSupabaseEnv, hasAuthSupabasePublicEnv } = await import(
+        "@/lib/supabase/auth-env"
+      );
+
+      expect(() => getAuthSupabaseEnv()).toThrow(/hostname.*trailing dot/iu);
+      expect(hasAuthSupabasePublicEnv()).toBe(false);
+    },
+  );
+
+  it.each(RAW_EDGE_WHITESPACE_CASES)(
+    "rejects public Auth raw URL %s",
+    async (_name, prefix, suffix) => {
+      process.env.NEXT_PUBLIC_AUTH_SUPABASE_URL =
+        `${prefix}http://127.0.0.1:54321${suffix}`;
+      process.env.NEXT_PUBLIC_AUTH_SUPABASE_PUBLISHABLE_KEY =
+        "local-publishable";
+
+      const { getAuthSupabaseEnv, hasAuthSupabasePublicEnv } = await import(
+        "@/lib/supabase/auth-env"
+      );
+
+      expect(() => getAuthSupabaseEnv()).toThrow(
+        /ASCII control|whitespace/iu,
+      );
+      expect(hasAuthSupabasePublicEnv()).toBe(false);
+    },
+  );
+
   it.each([
     "http://127.0.0.1.:54481",
     "http://127.0.0.1%2e:54481",
@@ -189,6 +254,45 @@ describe("local-only Supabase environment boundary", () => {
       process.env.NEXT_PUBLIC_AUTH_SUPABASE_PUBLISHABLE_KEY =
         "local-publishable";
       process.env.LOCAL_SUPABASE_INTERNAL_URL = `http://127.0.0.1${suffix}`;
+
+      const { getAuthSupabaseServerEnv } = await import(
+        "@/lib/supabase/auth-env"
+      );
+
+      expect(() => getAuthSupabaseServerEnv()).toThrow(
+        /LOCAL_SUPABASE_INTERNAL_URL.*(?:ASCII control|whitespace)/iu,
+      );
+    },
+  );
+
+  it.each(UNICODE_TRAILING_DOT_CASES)(
+    "rejects internal Auth Unicode trailing dot %s",
+    async (_name, suffix) => {
+      process.env.HOMECOOK_AUTH_AUTHORITY = "local";
+      process.env.NEXT_PUBLIC_AUTH_SUPABASE_URL = "http://127.0.0.1:54321";
+      process.env.NEXT_PUBLIC_AUTH_SUPABASE_PUBLISHABLE_KEY =
+        "local-publishable";
+      process.env.LOCAL_SUPABASE_INTERNAL_URL = `http://127.0.0.1${suffix}`;
+
+      const { getAuthSupabaseServerEnv } = await import(
+        "@/lib/supabase/auth-env"
+      );
+
+      expect(() => getAuthSupabaseServerEnv()).toThrow(
+        /LOCAL_SUPABASE_INTERNAL_URL.*hostname.*trailing dot/iu,
+      );
+    },
+  );
+
+  it.each(RAW_EDGE_WHITESPACE_CASES)(
+    "rejects internal Auth raw URL %s",
+    async (_name, prefix, suffix) => {
+      process.env.HOMECOOK_AUTH_AUTHORITY = "local";
+      process.env.NEXT_PUBLIC_AUTH_SUPABASE_URL = "http://127.0.0.1:54321";
+      process.env.NEXT_PUBLIC_AUTH_SUPABASE_PUBLISHABLE_KEY =
+        "local-publishable";
+      process.env.LOCAL_SUPABASE_INTERNAL_URL =
+        `${prefix}http://127.0.0.1:54481${suffix}`;
 
       const { getAuthSupabaseServerEnv } = await import(
         "@/lib/supabase/auth-env"
