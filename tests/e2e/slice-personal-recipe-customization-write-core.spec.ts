@@ -295,6 +295,125 @@ test.describe("personal-recipe-customization-write-core", () => {
     );
   });
 
+  test("deletes an owner recipe through confirm dialog with stable retry key and safe error copy", async ({
+    page,
+  }) => {
+    const recipe = cloneRecipeDetail();
+    let deleted = false;
+    let deleteCalls = 0;
+    const deleteKeys: string[] = [];
+    const deleteGateControl: { release: null | (() => void) } = { release: null };
+    const deleteGate = new Promise<void>((resolve) => {
+      deleteGateControl.release = () => resolve();
+    });
+
+    await page.route(`**/api/v1/recipes/${RECIPE_ID}`, async (route) => {
+      if (route.request().method() === "DELETE") {
+        deleteCalls += 1;
+        deleteKeys.push(route.request().headers()["idempotency-key"] ?? "");
+
+        if (deleteCalls === 1) {
+          await deleteGate;
+          await route.fulfill({
+            status: 500,
+            json: {
+              success: false,
+              data: null,
+              error: {
+                code: "INTERNAL_ERROR",
+                message: "민감한 내부 실패 원문",
+                fields: [],
+              },
+            },
+          });
+          return;
+        }
+
+        deleted = true;
+        await route.fulfill({
+          json: {
+            success: true,
+            data: { id: RECIPE_ID, deleted_at: "2026-08-21T10:00:00.000+09:00" },
+            error: null,
+          },
+        });
+        return;
+      }
+
+      if (deleted) {
+        await route.fulfill({
+          status: 404,
+          json: {
+            success: false,
+            data: null,
+            error: {
+              code: "RESOURCE_NOT_FOUND",
+              message: "레시피를 찾을 수 없어요.",
+              fields: [],
+            },
+          },
+        });
+        return;
+      }
+
+      await route.fulfill({
+        json: {
+          success: true,
+          data: recipe,
+          error: null,
+        },
+      });
+    });
+
+    await page.goto(`${RECIPE_PATH}?qaFutureImpact=1`);
+
+    const deleteInvoker = page.getByRole("button", { name: "삭제", exact: true }).first();
+    await deleteInvoker.click();
+
+    const deleteDialog = page.getByRole("dialog", { name: "정말 레시피를 삭제할까요?" });
+    await expect(deleteDialog).toBeVisible();
+    await expect(deleteDialog.getByRole("button", { name: "닫기" })).toBeFocused();
+    await page.keyboard.press("Shift+Tab");
+    await expect(deleteDialog.getByRole("button", { name: "삭제" })).toBeFocused();
+    await page.keyboard.press("Tab");
+    await expect(deleteDialog.getByRole("button", { name: "닫기" })).toBeFocused();
+    await page.keyboard.press("Escape");
+    await expect(deleteDialog).toHaveCount(0);
+    await expect(deleteInvoker).toBeFocused();
+
+    await deleteInvoker.click();
+    await page.getByRole("button", { name: "삭제" }).click();
+    await expect(page.getByRole("button", { name: "삭제 중" })).toBeDisabled();
+    expect(deleteCalls).toBe(1);
+
+    if (!deleteGateControl.release) {
+      throw new Error("delete release handler should be captured before submitting");
+    }
+    deleteGateControl.release();
+
+    const dialogAfterError = page.getByRole("dialog", { name: "정말 레시피를 삭제할까요?" });
+    await expect(dialogAfterError.getByRole("alert")).toContainText(
+      "레시피를 삭제하지 못했어요. 잠시 후 다시 시도해 주세요.",
+    );
+    await expect(dialogAfterError.getByText("민감한 내부 실패 원문")).toHaveCount(0);
+    await dialogAfterError.getByRole("button", { name: "삭제" }).click();
+
+    await expect(dialogAfterError).toHaveCount(0);
+    await expect(
+      page.getByRole("heading", { name: "이 레시피를 찾을 수 없어요" }),
+    ).toBeVisible();
+    await expect(
+      page.getByText("삭제되었거나 공개되지 않은 레시피예요. 검색에서 다른 레시피를 찾아보세요."),
+    ).toBeVisible();
+    await expect(page).toHaveURL(new RegExp(`${RECIPE_PATH.replaceAll("/", "\\/")}\\?qaFutureImpact=1$`));
+
+    expect(deleteCalls).toBe(2);
+    expect(deleteKeys[0]).toBe(deleteKeys[1]);
+    expect(deleteKeys[0]).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu,
+    );
+  });
+
   test("hides a soft-deleted recipe from new detail access while pinned readers stay readable", async ({
     page,
   }) => {
