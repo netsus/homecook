@@ -462,6 +462,16 @@ if (!postgresBin) {
         "-f",
         "supabase/migrations/20260820120000_full_local_session_bounded_token_overlap.sql",
       ]);
+      runRequired(path.join(postgresBin, "psql"), [
+        ...connectionArgs,
+        "-f",
+        "supabase/migrations/20260821170000_full_local_public_pre_request_entrypoint.sql",
+      ]);
+      runRequired(path.join(postgresBin, "psql"), [
+        ...connectionArgs,
+        "-f",
+        "supabase/migrations/20260821170000_full_local_public_pre_request_entrypoint.sql",
+      ]);
     }
 
     const test = commandResult("pnpm", [

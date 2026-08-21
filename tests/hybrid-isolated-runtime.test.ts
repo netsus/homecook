@@ -9,6 +9,11 @@ import {
   createGatewayConfig,
 } from "@/infra/hybrid-supabase/loopback-gateway.mjs";
 
+const publicPreRequestMigration = readFileSync(
+  "supabase/migrations/20260821170000_full_local_public_pre_request_entrypoint.sql",
+  "utf8",
+);
+
 describe("isolated hybrid integration runtime", () => {
   it("does not publish Postgres, PostgREST or Storage host ports", () => {
     const compose = readFileSync(
@@ -396,6 +401,21 @@ composeRun("isolated hybrid integration runtime measured", () => {
             "utf8",
           ),
         });
+        run("docker", [
+          ...composeArgs,
+          "exec",
+          "-T",
+          "postgres",
+          "psql",
+          "-v",
+          "ON_ERROR_STOP=1",
+          "-U",
+          "supabase_admin",
+          "-d",
+          "homecook_hybrid_test",
+        ], {
+          input: publicPreRequestMigration,
+        });
 
         const bootstrapReady = run("docker", [
           ...composeArgs,
@@ -409,7 +429,7 @@ composeRun("isolated hybrid integration runtime measured", () => {
           "-d",
           "homecook_hybrid_test",
           "-c",
-          "select (to_regprocedure('private.verify_hybrid_request_authority()') is not null and has_schema_privilege('service_role', 'public', 'USAGE'))::integer;",
+          "select (to_regprocedure('private.verify_hybrid_request_authority()') is not null and to_regprocedure('public.verify_hybrid_request_authority_pre_request()') is not null and exists (select 1 from pg_roles cross join lateral unnest(rolconfig) as config where rolname = 'authenticator' and config = 'pgrst.db_pre_request=public.verify_hybrid_request_authority_pre_request') and has_schema_privilege('service_role', 'public', 'USAGE'))::integer;",
         ]).trim();
         expect(bootstrapReady).toBe("1");
       } finally {
@@ -583,6 +603,21 @@ composeRun("isolated hybrid integration runtime measured", () => {
         "homecook_hybrid_test",
       ], {
         input: readFileSync("infra/hybrid-supabase/runtime-bootstrap.sql", "utf8"),
+      });
+      run("docker", [
+        ...composeArgs,
+        "exec",
+        "-T",
+        "postgres",
+        "psql",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "supabase_admin",
+        "-d",
+        "homecook_hybrid_test",
+      ], {
+        input: publicPreRequestMigration,
       });
       run("docker", [
         ...composeArgs,

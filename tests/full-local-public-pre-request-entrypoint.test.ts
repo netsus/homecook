@@ -17,6 +17,14 @@ const productionCompose = readFileSync(
   "infra/hybrid-supabase/docker-compose.production.yml",
   "utf8",
 );
+const postgresRunner = readFileSync(
+  "scripts/run-account-session-generation-postgres-integration.mjs",
+  "utf8",
+);
+const hybridRuntimeTest = readFileSync(
+  "tests/hybrid-isolated-runtime.test.ts",
+  "utf8",
+);
 const manifest = JSON.parse(readFileSync(
   "docs/security/account-session-generation-security-function-authorization-manifest.json",
   "utf8",
@@ -96,6 +104,34 @@ describe("full-local public PostgREST pre-request entrypoint", () => {
     }
   });
 
+  it("applies the canonical migration after every runtime bootstrap path", () => {
+    const boundedMigration =
+      "supabase/migrations/20260820120000_full_local_session_bounded_token_overlap.sql";
+    expect(postgresRunner).toContain(boundedMigration);
+    expect(postgresRunner).toContain(migrationPath);
+    expect(postgresRunner.indexOf(boundedMigration))
+      .toBeLessThan(postgresRunner.indexOf(migrationPath));
+    expect(postgresRunner.split(migrationPath)).toHaveLength(3);
+
+    const runtimeMount =
+      "./runtime-bootstrap.sql:/docker-entrypoint-initdb.d/zy-homecook-runtime-bootstrap.sql:ro";
+    const migrationMount =
+      `../../${migrationPath}:/docker-entrypoint-initdb.d/zzz-homecook-public-pre-request.sql:ro`;
+    expect(compose).toContain(runtimeMount);
+    expect(compose).toContain(migrationMount);
+    expect(compose.indexOf(runtimeMount)).toBeLessThan(compose.indexOf(migrationMount));
+    expect(compose).toContain(
+      "to_regprocedure('public.verify_hybrid_request_authority_pre_request()') is not null",
+    );
+    expect(compose.indexOf(migrationMount))
+      .toBeLessThan(compose.indexOf("\n  postgrest:\n"));
+    expect(hybridRuntimeTest).toContain(
+      "const publicPreRequestMigration = readFileSync(",
+    );
+    expect(hybridRuntimeTest.split("input: publicPreRequestMigration"))
+      .toHaveLength(3);
+  });
+
   it("classifies the self-blocking wrapper as service-internal", () => {
     expect(manifest.migrations).toContain(migrationPath);
     expect(manifest.functions).toContainEqual({
@@ -104,6 +140,7 @@ describe("full-local public PostgREST pre-request entrypoint", () => {
       effect: "read-only",
       exposure: "service-internal",
       allowed_principals: ["anon", "authenticated", "service_role"],
+      owner: "postgres",
       security_mode: "definer",
       safe_search_path: ["pg_catalog", "public", "private", "pg_temp"],
     });

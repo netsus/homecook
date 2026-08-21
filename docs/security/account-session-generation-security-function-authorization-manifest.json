@@ -346,6 +346,7 @@
       "effect": "read-only",
       "exposure": "service-internal",
       "allowed_principals": ["anon", "authenticated", "service_role"],
+      "owner": "postgres",
       "security_mode": "definer",
       "safe_search_path": ["pg_catalog", "public", "private", "pg_temp"]
     },
