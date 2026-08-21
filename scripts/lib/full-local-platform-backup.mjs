@@ -21,7 +21,7 @@ import {
   digestSemanticPlatformDataSql,
 } from "./full-local-restore-cutover.mjs";
 
-export const PLATFORM_BACKUP_FORMAT = "homecook-full-local-platform-v2";
+export const PLATFORM_BACKUP_FORMAT = "homecook-full-local-platform-v3";
 export const PLATFORM_BACKUP_AUTH_FORMAT = "homecook-full-local-platform-auth-v1";
 export const PLATFORM_BACKUP_KEY_ENV = "HOMECOOK_FULL_LOCAL_BACKUP_KEY";
 export const PLATFORM_BACKUP_KEYCHAIN_ACCOUNT = "platform-backup-encryption-key";
@@ -508,7 +508,10 @@ function validDatabaseProvenance(provenance) {
 
 export function verifyPlatformBackupMetadata(metadata, observed) {
   if (metadata?.format === "homecook-full-local-platform-v1") {
-    throw new Error("Platform backup format is unsupported legacy v1; create a new v2 backup");
+    throw new Error("Platform backup format is unsupported legacy v1; create a new v3 backup");
+  }
+  if (metadata?.format === "homecook-full-local-platform-v2") {
+    throw new Error("Platform backup format is unsupported legacy v2; create a new v3 backup");
   }
   if (metadata?.format !== PLATFORM_BACKUP_FORMAT) {
     throw new Error("Platform backup format is invalid");

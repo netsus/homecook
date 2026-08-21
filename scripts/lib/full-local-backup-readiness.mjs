@@ -7,8 +7,8 @@ import { verifyFullLocalBackupKeyRecoveryIssuerAttestation } from "./full-local-
 export const FULL_LOCAL_BACKUP_READINESS_FORMAT =
   "homecook-full-local-backup-readiness-v1";
 export const FULL_LOCAL_BACKUP_MAX_AGE_HOURS = 24;
-export const PLATFORM_BACKUP_FORMAT_V2 = "homecook-full-local-platform-v2";
-export const RESTORE_MANIFEST_FORMAT_V2 = "homecook-full-local-restore-v2";
+export const PLATFORM_BACKUP_FORMAT_V3 = "homecook-full-local-platform-v3";
+export const RESTORE_MANIFEST_FORMAT_V3 = "homecook-full-local-restore-v3";
 
 const SHA256 = /^[0-9a-f]{64}$/u;
 
@@ -34,18 +34,24 @@ function exactPath(value, label) {
 
 function requireSupportedPlatformBackupFormat(format) {
   if (format === "homecook-full-local-platform-v1") {
-    fail("unsupported legacy platform backup format v1; create a new v2 backup");
+    fail("unsupported legacy platform backup format v1; create a new v3 backup");
   }
-  if (format !== PLATFORM_BACKUP_FORMAT_V2) {
+  if (format === "homecook-full-local-platform-v2") {
+    fail("unsupported legacy platform backup format v2; create a new v3 backup");
+  }
+  if (format !== PLATFORM_BACKUP_FORMAT_V3) {
     fail("platform backup format is invalid");
   }
 }
 
 function requireSupportedRestoreManifestFormat(format) {
   if (format === "homecook-full-local-restore-v1") {
-    fail("unsupported legacy restore manifest format v1; rerun restore to create a v2 manifest");
+    fail("unsupported legacy restore manifest format v1; rerun restore to create a v3 manifest");
   }
-  if (format !== RESTORE_MANIFEST_FORMAT_V2) {
+  if (format === "homecook-full-local-restore-v2") {
+    fail("unsupported legacy restore manifest format v2; rerun restore to create a v3 manifest");
+  }
+  if (format !== RESTORE_MANIFEST_FORMAT_V3) {
     fail("restore manifest format is invalid");
   }
 }

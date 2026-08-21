@@ -213,12 +213,80 @@ function canonicalizePgDumpRestrictPair(sql) {
   return lines.filter((_line, index) => index !== restrictIndex && index !== unrestrictIndex).join("\n");
 }
 
+function parsePlatformDataSemanticInput(sql) {
+  const normalizedSql = canonicalizePgDumpRestrictPair(sql);
+  const lines = normalizedSql.split("\n");
+  const nonCopyLines = [];
+  const copyBlocks = [];
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index];
+    if (!line.startsWith("COPY ")) {
+      nonCopyLines.push(line);
+      continue;
+    }
+
+    const match = line.match(COPY_HEADER);
+    if (!match) {
+      throw new Error(`Unsupported COPY header: ${line}`);
+    }
+
+    const relation = normalizeIdentifier(match[1]);
+    const columns = match[2]
+      .split(",")
+      .map((column) => normalizeIdentifier(column.trim()))
+      .filter(Boolean);
+    const rows = [];
+    let terminated = false;
+
+    for (index += 1; index < lines.length; index += 1) {
+      if (lines[index] === "\\.") {
+        terminated = true;
+        break;
+      }
+      rows.push(lines[index]);
+    }
+
+    if (!terminated) {
+      throw new Error(`Unterminated COPY block: ${relation}`);
+    }
+
+    copyBlocks.push({ columns, relation, rows });
+  }
+
+  return {
+    copyBlocks,
+    nonCopySql: nonCopyLines.join("\n"),
+  };
+}
+
 export function digestSemanticPlatformDataSql(sql) {
   if (typeof sql !== "string") {
     throw new TypeError("Platform data SQL must be a string");
   }
+
+  const { copyBlocks, nonCopySql } = parsePlatformDataSemanticInput(sql);
+  const seenRelations = new Set();
+  const canonicalCopyBlocks = copyBlocks
+    .slice()
+    .sort((left, right) => left.relation.localeCompare(right.relation))
+    .map((block) => {
+      if (seenRelations.has(block.relation)) {
+        throw new Error(`Duplicate platform data relation is not allowed: ${block.relation}`);
+      }
+      seenRelations.add(block.relation);
+      return {
+        columns: block.columns,
+        relation: block.relation,
+        rows: block.rows,
+      };
+    });
+
   return createHash("sha256")
-    .update(canonicalizePgDumpRestrictPair(sql))
+    .update(stableJson({
+      copy_blocks: canonicalCopyBlocks,
+      non_copy_sql: nonCopySql,
+    }))
     .digest("hex");
 }
 
@@ -446,11 +514,16 @@ export function buildSanitizedPlatformData(sql) {
     }
   }
 
-  const relationClassification = relations.map(({ action, columns, relation }) => ({
-    action,
-    columns,
-    relation,
-  }));
+  const relationClassification = relations
+    .map(({ action, columns, relation }) => ({
+      action,
+      columns,
+      relation,
+    }))
+    .sort((left, right) =>
+      left.relation.localeCompare(right.relation)
+      || stableJson(left).localeCompare(stableJson(right)),
+    );
   const sanitizedSql = output.join("\n");
 
   return {
