@@ -42,5 +42,6 @@ process.env.HOMECOOK_RECIPE_SNAPSHOT_FOLLOWUP_TARGET_MIGRATION =
 process.env.HOMECOOK_RECIPE_SNAPSHOT_FOLLOWUP_INTEGRATION_TEST =
   "tests/recipe-content-snapshot-future-propagation-postgres.integration.test.ts";
 process.env.HOMECOOK_PERSONAL_RECIPE_SECURITY_FUNCTIONS = "1";
+process.env.HOMECOOK_RECIPE_FUTURE_PROPAGATION_SECURITY_FUNCTIONS = "1";
 
 await import("./run-recipe-snapshot-authority-postgres-integration.mjs");
