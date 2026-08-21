@@ -15,7 +15,10 @@ import {
   createAccountLifecycleInternalRpcClient,
   createServerComponentClient,
 } from "@/lib/supabase/server";
-import { hasSupabasePublicEnv } from "@/lib/supabase/env";
+import {
+  getAuthAuthority,
+  hasSupabasePublicEnv,
+} from "@/lib/supabase/env";
 
 export interface AccountQuarantineGateResult {
   state: AccountQuarantineGateState;
@@ -67,6 +70,12 @@ Promise<AccountQuarantineGateResult> {
         : "not-applicable",
       hasSession: false,
     };
+  }
+
+  try {
+    getAuthAuthority();
+  } catch {
+    return { state: "error", hasSession: false };
   }
 
   const serviceRoleClient = createAccountLifecycleInternalRpcClient();

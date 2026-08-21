@@ -4,6 +4,7 @@ const mocks = vi.hoisted(() => ({
   bootstrapIdentity: vi.fn(),
   createServerComponentClient: vi.fn(),
   createAccountLifecycleInternalRpcClient: vi.fn(),
+  getAuthAuthority: vi.fn(),
   hasSupabasePublicEnv: vi.fn(),
   readCapability: vi.fn(),
   readReplaySession: vi.fn(),
@@ -17,6 +18,7 @@ vi.mock("@/lib/supabase/server", () => ({
 }));
 
 vi.mock("@/lib/supabase/env", () => ({
+  getAuthAuthority: mocks.getAuthAuthority,
   hasSupabasePublicEnv: mocks.hasSupabasePublicEnv,
 }));
 
@@ -48,6 +50,7 @@ describe("account quarantine server gate", () => {
     mocks.createAccountLifecycleInternalRpcClient.mockReturnValue(
       serviceRoleClient,
     );
+    mocks.getAuthAuthority.mockReturnValue("local");
     mocks.hasSupabasePublicEnv.mockReturnValue(true);
     mocks.readCapability.mockResolvedValue({
       ok: true,
@@ -103,6 +106,41 @@ describe("account quarantine server gate", () => {
       .not.toHaveBeenCalled();
     expect(mocks.readCapability).not.toHaveBeenCalled();
   });
+
+  it.each([
+    ["missing", "legacy"],
+    ["missing", "cutover_maintenance"],
+    ["remote", "legacy"],
+    ["remote", "cutover_maintenance"],
+  ] as const)(
+    "rejects %s Auth authority before the %s capability early return",
+    async (authority, capabilityState) => {
+      mocks.getAuthAuthority.mockImplementation(() => {
+        throw new Error(
+          `HOMECOOK_AUTH_AUTHORITY ${authority} local-only`,
+        );
+      });
+      mocks.readCapability.mockResolvedValue({
+        ok: true,
+        state: capabilityState,
+        revision: 1,
+      });
+
+      const { readAccountQuarantineGate } = await import(
+        "@/lib/server/account-generation/quarantine-gate"
+      );
+
+      await expect(readAccountQuarantineGate()).resolves.toEqual({
+        state: "error",
+        hasSession: false,
+      });
+      expect(mocks.createAccountLifecycleInternalRpcClient)
+        .not.toHaveBeenCalled();
+      expect(mocks.readCapability).not.toHaveBeenCalled();
+      expect(serviceRoleClient.rpc).not.toHaveBeenCalled();
+      expect(mocks.createServerComponentClient).not.toHaveBeenCalled();
+    },
+  );
 
   it("keeps legacy capability invisible without reading auth or bootstrap state", async () => {
     mocks.readCapability.mockResolvedValue({
