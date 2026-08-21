@@ -8,6 +8,12 @@ const migrationPath = `supabase/migrations/${migrationName}`;
 const migration = existsSync(migrationPath)
   ? readFileSync(migrationPath, "utf8")
   : "";
+const hardeningMigrationName =
+  "20260821180000_full_local_missing_scope_fail_closed.sql";
+const hardeningMigrationPath = `supabase/migrations/${hardeningMigrationName}`;
+const hardeningMigration = existsSync(hardeningMigrationPath)
+  ? readFileSync(hardeningMigrationPath, "utf8")
+  : "";
 const wrapper = "public.verify_hybrid_request_authority_pre_request";
 const compose = readFileSync(
   "infra/hybrid-supabase/docker-compose.integration.yml",
@@ -79,6 +85,58 @@ describe("full-local public PostgREST pre-request entrypoint", () => {
     );
   });
 
+  it("fails closed on missing scopes before delegating exactly once", () => {
+    expect(existsSync(hardeningMigrationPath)).toBe(true);
+    expect(hardeningMigration).toContain(
+      `create or replace function ${wrapper}()`,
+    );
+    expect(hardeningMigration).toMatch(/returns void\s+language plpgsql/iu);
+    expect(hardeningMigration).toMatch(/security definer/iu);
+    expect(hardeningMigration).toMatch(
+      /set search_path = pg_catalog, public, private, pg_temp/iu,
+    );
+    expect(hardeningMigration).toMatch(
+      new RegExp(`alter function ${wrapper.replaceAll(".", "\\.")}\\(\\)\\s+owner to postgres`, "iu"),
+    );
+    expect(hardeningMigration).toMatch(
+      new RegExp(`revoke all on function ${wrapper.replaceAll(".", "\\.")}\\(\\)\\s+from public, anon, authenticated, service_role`, "iu"),
+    );
+    expect(hardeningMigration).toMatch(
+      new RegExp(`grant execute on function ${wrapper.replaceAll(".", "\\.")}\\(\\)\\s+to anon, authenticated, service_role`, "iu"),
+    );
+    expect(hardeningMigration).toMatch(
+      new RegExp(`alter role authenticator set pgrst\\.db_pre_request\\s*=\\s*'${wrapper.replaceAll(".", "\\.")}'`, "iu"),
+    );
+    expect(hardeningMigration).toMatch(/notify pgrst,\s*'reload config'/iu);
+    expect(hardeningMigration).toMatch(
+      /current_setting\('request\.jwt\.claims',\s*true\)/iu,
+    );
+    expect(hardeningMigration).toMatch(
+      /current_setting\('request\.headers',\s*true\)/iu,
+    );
+    expect(hardeningMigration).toMatch(
+      /v_role\s*=\s*'service_role'[\s\S]*btrim\(coalesce\(v_headers\s*->>\s*'x-homecook-internal-scope',\s*''\)\)\s*=\s*''/iu,
+    );
+    expect(hardeningMigration).toMatch(
+      /v_role\s*=\s*'anon'[\s\S]*btrim\(coalesce\(v_headers\s*->>\s*'x-homecook-public-read-scope',\s*''\)\)\s*=\s*''/iu,
+    );
+    expect(hardeningMigration.match(/raise exception 'ACCOUNT_SESSION_STALE'/giu))
+      .toHaveLength(2);
+    expect(hardeningMigration.match(/using errcode = '55000'/giu))
+      .toHaveLength(2);
+    expect(
+      hardeningMigration.match(
+        /perform private\.verify_hybrid_request_authority\(\)/giu,
+      ),
+    ).toHaveLength(1);
+    expect(hardeningMigration).not.toMatch(
+      /admin-data|auth-flow|request-authority|recipe-detail|recipe-cook-mode/iu,
+    );
+    expect(hardeningMigration).not.toMatch(
+      /grant\s+(?:usage|execute)[\s\S]*private\.verify_hybrid_request_authority/iu,
+    );
+  });
+
   it("keeps the wrapper RPC path outside every authority allowlist", () => {
     const allMigrations = readdirSync("supabase/migrations")
       .filter((file) => file.endsWith(".sql"))
@@ -133,10 +191,26 @@ describe("full-local public PostgREST pre-request entrypoint", () => {
     );
     expect(hybridRuntimeTest.split("input: publicPreRequestMigration"))
       .toHaveLength(3);
+
+    expect(postgresRunner.indexOf(migrationPath))
+      .toBeLessThan(postgresRunner.indexOf(hardeningMigrationPath));
+    expect(postgresRunner.split(hardeningMigrationPath)).toHaveLength(3);
+    const hardeningMount =
+      `../../${hardeningMigrationPath}:/docker-entrypoint-initdb.d/zzzz-homecook-missing-scope-fail-closed.sql:ro`;
+    expect(compose).toContain(hardeningMount);
+    expect(compose.indexOf(migrationMount)).toBeLessThan(
+      compose.indexOf(hardeningMount),
+    );
+    expect(hybridRuntimeTest).toContain(
+      "const missingScopeHardeningMigration = readFileSync(",
+    );
+    expect(hybridRuntimeTest.split("input: missingScopeHardeningMigration"))
+      .toHaveLength(3);
   });
 
   it("classifies the self-blocking wrapper as service-internal", () => {
     expect(manifest.migrations).toContain(migrationPath);
+    expect(manifest.migrations).toContain(hardeningMigrationPath);
     expect(manifest.functions).toContainEqual({
       signature: `${wrapper}()`,
       control_class: "application-controlled",

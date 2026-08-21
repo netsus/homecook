@@ -20,6 +20,7 @@ services:
             and (select count(*) from pg_catalog.pg_namespace where nspname in ('auth', 'storage', 'extensions')) = 3
             and exists (select 1 from pg_catalog.pg_extension where extname = 'pgcrypto')
             and to_regprocedure('public.verify_hybrid_request_authority_pre_request()') is not null
+            and obj_description('public.verify_hybrid_request_authority_pre_request()'::regprocedure, 'pg_proc') = 'PostgREST pre-request entrypoint v2: missing scopes fail closed before private authority delegation.'
           )::integer")" = "1"
       interval: 1s
       timeout: 3s
@@ -32,6 +33,7 @@ services:
       - ./runtime-bootstrap.sql:/docker-entrypoint-initdb.d/zy-homecook-runtime-bootstrap.sql:ro
       - ./hybrid-role-passwords.sh:/docker-entrypoint-initdb.d/zz-homecook-role-passwords.sh:ro
       - ../../supabase/migrations/20260821170000_full_local_public_pre_request_entrypoint.sql:/docker-entrypoint-initdb.d/zzz-homecook-public-pre-request.sql:ro
+      - ../../supabase/migrations/20260821180000_full_local_missing_scope_fail_closed.sql:/docker-entrypoint-initdb.d/zzzz-homecook-missing-scope-fail-closed.sql:ro
 
   postgrest:
     image: postgrest/postgrest:v14.12
