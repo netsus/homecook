@@ -2,7 +2,10 @@
 
 import React from "react";
 
-import { ModalFooterActions } from "@/components/shared/modal-footer-actions";
+import {
+  ModalFooterActions,
+  type ModalFooterConfirmTone,
+} from "@/components/shared/modal-footer-actions";
 import { ModalHeader } from "@/components/shared/modal-header";
 
 interface AppOverlayBaseProps {
@@ -36,6 +39,7 @@ interface AppModalFooterActionsProps {
   confirmAriaLabel?: string;
   confirmDisabled?: boolean;
   confirmLabel: string;
+  confirmTone?: ModalFooterConfirmTone;
   confirmTestId?: string;
   onCancel: () => void;
   onConfirm: () => void;

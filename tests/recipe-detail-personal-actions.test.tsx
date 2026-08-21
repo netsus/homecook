@@ -147,6 +147,7 @@ describe("recipe detail personal actions", () => {
     expect(dialogSource).toContain("기존 계획, 요리, 기록은 그대로 남아요.");
     expect(dialogSource).toContain("role=\"alert\"");
     expect(dialogSource).toContain('confirmLabel={submitting ? "삭제 중" : "삭제"}');
+    expect(dialogSource).toContain('confirmTone="danger"');
 
     expect(apiSource).toContain("Idempotency-Key");
     expect(apiSource).toContain("method: \"DELETE\"");
