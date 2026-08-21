@@ -70,6 +70,9 @@ function parseUrl(value: string, name: string) {
   if (/[\u0000-\u0020\u007f]/u.test(value)) {
     throw new Error(`${name} 값에 ASCII control 또는 whitespace를 넣을 수 없어요.`);
   }
+  if (!/^(?:http|https):\/\/[^/\\]/u.test(value)) {
+    throw new Error(`${name} 값은 exact lowercase http:// or https:// prefix가 필요해요.`);
+  }
   rejectRawTrailingDotHostname(value, name);
   let parsed: URL;
   try {
