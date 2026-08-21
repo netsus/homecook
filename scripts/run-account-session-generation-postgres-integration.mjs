@@ -472,6 +472,16 @@ if (!postgresBin) {
         "-f",
         "supabase/migrations/20260821170000_full_local_public_pre_request_entrypoint.sql",
       ]);
+      runRequired(path.join(postgresBin, "psql"), [
+        ...connectionArgs,
+        "-f",
+        "supabase/migrations/20260821180000_full_local_missing_scope_fail_closed.sql",
+      ]);
+      runRequired(path.join(postgresBin, "psql"), [
+        ...connectionArgs,
+        "-f",
+        "supabase/migrations/20260821180000_full_local_missing_scope_fail_closed.sql",
+      ]);
     }
 
     const test = commandResult("pnpm", [

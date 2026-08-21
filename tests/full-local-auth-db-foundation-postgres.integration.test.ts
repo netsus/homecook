@@ -433,6 +433,150 @@ run("full-local Auth isolated PostgreSQL foundation", () => {
     expect(directRpc.stderr).toContain("ACCOUNT_SESSION_STALE");
   });
 
+  it("fails closed on missing scopes without narrowing valid scoped requests", () => {
+    const serviceMissing = psqlResult(`
+      begin;
+      set local role service_role;
+      select set_config('request.jwt.claims', '{"role":"service_role"}', true);
+      select set_config('request.headers', '{}', true);
+      select set_config('request.method', 'GET', true);
+      select set_config('request.path', '/users', true);
+      select public.verify_hybrid_request_authority_pre_request();
+      rollback;
+    `);
+    expect(serviceMissing.status).not.toBe(0);
+    expect(serviceMissing.stderr).toContain("ACCOUNT_SESSION_STALE");
+
+    for (const scope of ["", "   "]) {
+      const serviceBlank = psqlResult(`
+        begin;
+        set local role service_role;
+        select set_config('request.jwt.claims', '{"role":"service_role"}', true);
+        select set_config(
+          'request.headers',
+          '{"x-homecook-internal-scope":"${scope}"}',
+          true
+        );
+        select set_config('request.method', 'GET', true);
+        select set_config('request.path', '/users', true);
+        select public.verify_hybrid_request_authority_pre_request();
+        rollback;
+      `);
+      expect(serviceBlank.status).not.toBe(0);
+      expect(serviceBlank.stderr).toContain("ACCOUNT_SESSION_STALE");
+    }
+
+    const serviceValid = psqlResult(`
+      begin;
+      set local role service_role;
+      select set_config('request.jwt.claims', '{"role":"service_role"}', true);
+      select set_config(
+        'request.headers',
+        '{"x-homecook-internal-scope":"admin-data"}',
+        true
+      );
+      select set_config('request.method', 'GET', true);
+      select set_config('request.path', '/users', true);
+      select public.verify_hybrid_request_authority_pre_request();
+      rollback;
+    `);
+    expect(serviceValid.status).toBe(0);
+
+    const serviceWrong = psqlResult(`
+      begin;
+      set local role service_role;
+      select set_config('request.jwt.claims', '{"role":"service_role"}', true);
+      select set_config(
+        'request.headers',
+        '{"x-homecook-internal-scope":"wrong-scope"}',
+        true
+      );
+      select set_config('request.method', 'GET', true);
+      select set_config('request.path', '/users', true);
+      select public.verify_hybrid_request_authority_pre_request();
+      rollback;
+    `);
+    expect(serviceWrong.status).not.toBe(0);
+    expect(serviceWrong.stderr).toContain("ACCOUNT_SESSION_STALE");
+
+    for (const headers of [
+      '{}',
+      '{"x-homecook-public-read-scope":""}',
+      '{"x-homecook-public-read-scope":"   "}',
+    ]) {
+      const anonMissing = psqlResult(`
+        begin;
+        update private.full_local_auth_control
+        set authority = 'local',
+            local_issuer = 'https://auth.mumeok.kr/auth/v1',
+            local_activated_at = clock_timestamp();
+        set local role anon;
+        select set_config('request.jwt.claims', '{"role":"anon"}', true);
+        select set_config('request.headers', '${headers}', true);
+        select set_config('request.method', 'GET', true);
+        select set_config('request.path', '/recipes', true);
+        select public.verify_hybrid_request_authority_pre_request();
+        rollback;
+      `);
+      expect(anonMissing.status).not.toBe(0);
+      expect(anonMissing.stderr).toContain("ACCOUNT_SESSION_STALE");
+    }
+
+    const anonValid = psqlResult(`
+      begin;
+      update private.full_local_auth_control
+      set authority = 'local',
+          local_issuer = 'https://auth.mumeok.kr/auth/v1',
+          local_activated_at = clock_timestamp();
+      set local role anon;
+      select set_config('request.jwt.claims', '{"role":"anon"}', true);
+      select set_config(
+        'request.headers',
+        '{"x-homecook-public-read-scope":"recipes"}',
+        true
+      );
+      select set_config('request.method', 'GET', true);
+      select set_config('request.path', '/recipes', true);
+      select public.verify_hybrid_request_authority_pre_request();
+      rollback;
+    `);
+    expect(anonValid.status).toBe(0);
+
+    const anonWrong = psqlResult(`
+      begin;
+      update private.full_local_auth_control
+      set authority = 'local',
+          local_issuer = 'https://auth.mumeok.kr/auth/v1',
+          local_activated_at = clock_timestamp();
+      set local role anon;
+      select set_config('request.jwt.claims', '{"role":"anon"}', true);
+      select set_config(
+        'request.headers',
+        '{"x-homecook-public-read-scope":"wrong-scope"}',
+        true
+      );
+      select set_config('request.method', 'GET', true);
+      select set_config('request.path', '/recipes', true);
+      select public.verify_hybrid_request_authority_pre_request();
+      rollback;
+    `);
+    expect(anonWrong.status).not.toBe(0);
+    expect(anonWrong.stderr).toContain("ACCOUNT_SESSION_STALE");
+
+    const authenticatedMissing = psqlResult(`
+      begin;
+      set local role authenticated;
+      select set_config('request.jwt.claims', '{"role":"authenticated"}', true);
+      select set_config('request.headers', '{}', true);
+      select set_config('request.method', 'GET', true);
+      select set_config('request.path', '/users', true);
+      select public.verify_hybrid_request_authority_pre_request();
+      rollback;
+    `);
+    expect(authenticatedMissing.status).not.toBe(0);
+    expect(authenticatedMissing.stderr).toContain("ACCOUNT_SESSION_STALE");
+  });
+
   it("starts remote and keeps both control tables inaccessible directly", () => {
     expect(psql(`
       ${serviceClaims}
