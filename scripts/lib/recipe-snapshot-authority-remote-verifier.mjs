@@ -301,6 +301,38 @@ const FUTURE_PROPAGATION_MEAL_CONTENT_PIN_TRIGGER_ROW = [
   "false",
 ];
 
+const BASELINE_COOKING_SESSION_VALIDATION_TRIGGER_ROW = [
+  "public.cooking_sessions",
+  "validate_cooking_session_snapshot_v2_on_session",
+  "public.validate_cooking_session_snapshot_v2_association()",
+  "true",
+  "true",
+];
+
+const BASELINE_COOKING_SESSION_MEAL_VALIDATION_TRIGGER_ROW = [
+  "public.cooking_session_meals",
+  "validate_cooking_session_snapshot_v2_on_session_meal",
+  "public.validate_cooking_session_snapshot_v2_association()",
+  "true",
+  "true",
+];
+
+const COOKED_BATCH_COOKING_SESSION_VALIDATION_TRIGGER_ROW = [
+  "public.cooking_sessions",
+  "validate_cooking_session_snapshot_v2_on_session",
+  "private.validate_active_cooking_session_snapshot_v2_association()",
+  "true",
+  "true",
+];
+
+const COOKED_BATCH_COOKING_SESSION_MEAL_VALIDATION_TRIGGER_ROW = [
+  "public.cooking_session_meals",
+  "validate_cooking_session_snapshot_v2_on_session_meal",
+  "private.validate_active_cooking_session_snapshot_v2_association()",
+  "true",
+  "true",
+];
+
 const EXPECTED_TRIGGER_ROWS = [
   ["public.recipe_nutrition_snapshots", "recipe_nutrition_snapshot_validate_ownership", "public.validate_recipe_nutrition_snapshot_ownership()", "false", "false"],
   ["public.recipe_content_snapshots", "recipe_content_snapshot_validate_ownership", "public.validate_recipe_content_snapshot_ownership()", "false", "false"],
@@ -309,8 +341,8 @@ const EXPECTED_TRIGGER_ROWS = [
   ["public.meals", "recipe_content_snapshot_mirror", "public.recipe_content_snapshot_mirror()", "false", "false"],
   BASELINE_MEAL_CONTENT_PIN_TRIGGER_ROW,
   ["public.cooking_sessions", "cooking_session_snapshot_v2_immutable_mutation_guard", "public.protect_cooking_session_snapshot_v2_mutation()", "false", "false"],
-  ["public.cooking_sessions", "validate_cooking_session_snapshot_v2_on_session", "public.validate_cooking_session_snapshot_v2_association()", "true", "true"],
-  ["public.cooking_session_meals", "validate_cooking_session_snapshot_v2_on_session_meal", "public.validate_cooking_session_snapshot_v2_association()", "true", "true"],
+  BASELINE_COOKING_SESSION_VALIDATION_TRIGGER_ROW,
+  BASELINE_COOKING_SESSION_MEAL_VALIDATION_TRIGGER_ROW,
   ["public.cooking_session_meal_claims", "cooking_session_meal_claim_validate", "public.validate_cooking_session_meal_claim()", "false", "false"],
 ];
 
@@ -982,21 +1014,35 @@ function replaceExpectedInventoryRow({ sql, baselineRow, replacementRow }) {
   return nextSql;
 }
 
-function buildPostMergeReadOnlySql({ includeRecipeFuturePropagation }) {
-  if (!includeRecipeFuturePropagation) {
-    return POST_MERGE_READ_ONLY_SQL;
+function buildPostMergeReadOnlySql({
+  includeCookedBatchWeightLedger,
+  includeRecipeFuturePropagation,
+}) {
+  let sql = POST_MERGE_READ_ONLY_SQL;
+  if (includeRecipeFuturePropagation) {
+    sql = replaceExpectedInventoryRow({
+      sql,
+      baselineRow: BASELINE_COOKING_SESSION_SHAPE_CHECK_ROW,
+      replacementRow: FUTURE_PROPAGATION_COOKING_SESSION_SHAPE_CHECK_ROW,
+    });
+    sql = replaceExpectedInventoryRow({
+      sql,
+      baselineRow: BASELINE_MEAL_CONTENT_PIN_TRIGGER_ROW,
+      replacementRow: FUTURE_PROPAGATION_MEAL_CONTENT_PIN_TRIGGER_ROW,
+    });
   }
-
-  const checkSql = replaceExpectedInventoryRow({
-    sql: POST_MERGE_READ_ONLY_SQL,
-    baselineRow: BASELINE_COOKING_SESSION_SHAPE_CHECK_ROW,
-    replacementRow: FUTURE_PROPAGATION_COOKING_SESSION_SHAPE_CHECK_ROW,
-  });
-  const sql = replaceExpectedInventoryRow({
-    sql: checkSql,
-    baselineRow: BASELINE_MEAL_CONTENT_PIN_TRIGGER_ROW,
-    replacementRow: FUTURE_PROPAGATION_MEAL_CONTENT_PIN_TRIGGER_ROW,
-  });
+  if (includeCookedBatchWeightLedger) {
+    sql = replaceExpectedInventoryRow({
+      sql,
+      baselineRow: BASELINE_COOKING_SESSION_VALIDATION_TRIGGER_ROW,
+      replacementRow: COOKED_BATCH_COOKING_SESSION_VALIDATION_TRIGGER_ROW,
+    });
+    sql = replaceExpectedInventoryRow({
+      sql,
+      baselineRow: BASELINE_COOKING_SESSION_MEAL_VALIDATION_TRIGGER_ROW,
+      replacementRow: COOKED_BATCH_COOKING_SESSION_MEAL_VALIDATION_TRIGGER_ROW,
+    });
+  }
   assertRecipeSnapshotAuthorityReadOnlyVerificationSql({
     sql,
     fieldName: "recipe snapshot authority future propagation verification SQL",
@@ -1005,6 +1051,7 @@ function buildPostMergeReadOnlySql({ includeRecipeFuturePropagation }) {
 }
 
 export function buildRecipeSnapshotAuthorityRemoteVerificationPlan({
+  includeCookedBatchWeightLedger = false,
   mode,
   includeRecipeFuturePropagation = false,
 }) {
@@ -1019,7 +1066,10 @@ export function buildRecipeSnapshotAuthorityRemoteVerificationPlan({
     readOnly: true,
     requiresMergedOriginMaster: true,
     requiresCleanTrackedTree: true,
-    sql: buildPostMergeReadOnlySql({ includeRecipeFuturePropagation }),
+    sql: buildPostMergeReadOnlySql({
+      includeCookedBatchWeightLedger,
+      includeRecipeFuturePropagation,
+    }),
   };
 }
 

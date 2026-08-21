@@ -28,6 +28,8 @@ process.env.HOMECOOK_RECIPE_SNAPSHOT_FOLLOWUP_TARGET_MIGRATION =
   "supabase/migrations/20260809120000_cooked_batch_weight_ledger.sql";
 process.env.HOMECOOK_RECIPE_SNAPSHOT_FOLLOWUP_INTEGRATION_TEST =
   "tests/cooked-batch-weight-ledger-postgres.integration.test.ts";
+process.env.HOMECOOK_RECIPE_FUTURE_PROPAGATION_SECURITY_FUNCTIONS = "1";
+process.env.HOMECOOK_COOKED_BATCH_SECURITY_FUNCTIONS = "1";
 // The inherited security inventory remains active after the #8 migration. Its
 // personal-editor Storage/runtime observations own a different workpack's full
 // schema and ACL projection and intentionally do not accept the later follow-up

@@ -23,9 +23,14 @@ const TARGET = "self-hosted-local-auth-db-storage-single-authority";
 const INCLUDE_PERSONAL_RECIPE_FUNCTIONS =
   process.env.HOMECOOK_PERSONAL_RECIPE_SECURITY_FUNCTIONS === "1";
 const INCLUDE_RECIPE_FUTURE_PROPAGATION_FUNCTIONS =
-  process.env.HOMECOOK_RECIPE_SNAPSHOT_FOLLOWUP_TARGET_MIGRATION?.endsWith(
-    "_recipe_content_snapshot_future_propagation.sql",
-  ) ?? false;
+  process.env.HOMECOOK_RECIPE_FUTURE_PROPAGATION_SECURITY_FUNCTIONS === "1"
+  || (
+    process.env.HOMECOOK_RECIPE_SNAPSHOT_FOLLOWUP_TARGET_MIGRATION?.endsWith(
+      "_recipe_content_snapshot_future_propagation.sql",
+    ) ?? false
+  );
+const INCLUDE_COOKED_BATCH_WEIGHT_LEDGER =
+  process.env.HOMECOOK_COOKED_BATCH_SECURITY_FUNCTIONS === "1";
 const SAFE_ENVIRONMENT_KEYS = ["PATH", "LANG", "LC_ALL", "HOME"];
 
 const REQUIRED_CHECKS = [
@@ -306,6 +311,7 @@ export function buildRecipeSnapshotAuthorityFullLocalVerificationPlan({ mode }) 
     );
   }
   const snapshotPlan = buildRecipeSnapshotAuthorityRemoteVerificationPlan({
+    includeCookedBatchWeightLedger: INCLUDE_COOKED_BATCH_WEIGHT_LEDGER,
     mode: "post-merge-read-only",
     includeRecipeFuturePropagation:
       INCLUDE_RECIPE_FUTURE_PROPAGATION_FUNCTIONS,

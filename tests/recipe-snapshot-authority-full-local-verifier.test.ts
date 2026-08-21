@@ -341,9 +341,12 @@ describe("recipe snapshot authority full-local verifier", () => {
       process.env.HOMECOOK_RECIPE_SNAPSHOT_FOLLOWUP_TARGET_MIGRATION;
     const previousPersonalFlag =
       process.env.HOMECOOK_PERSONAL_RECIPE_SECURITY_FUNCTIONS;
+    const previousFutureFlag =
+      process.env.HOMECOOK_RECIPE_FUTURE_PROPAGATION_SECURITY_FUNCTIONS;
     process.env.HOMECOOK_RECIPE_SNAPSHOT_FOLLOWUP_TARGET_MIGRATION =
       "supabase/migrations/20260802210000_recipe_content_snapshot_future_propagation.sql";
     process.env.HOMECOOK_PERSONAL_RECIPE_SECURITY_FUNCTIONS = "1";
+    process.env.HOMECOOK_RECIPE_FUTURE_PROPAGATION_SECURITY_FUNCTIONS = "1";
 
     try {
       const moduleUrl =
@@ -378,6 +381,12 @@ describe("recipe snapshot authority full-local verifier", () => {
       } else {
         process.env.HOMECOOK_PERSONAL_RECIPE_SECURITY_FUNCTIONS =
           previousPersonalFlag;
+      }
+      if (previousFutureFlag === undefined) {
+        delete process.env.HOMECOOK_RECIPE_FUTURE_PROPAGATION_SECURITY_FUNCTIONS;
+      } else {
+        process.env.HOMECOOK_RECIPE_FUTURE_PROPAGATION_SECURITY_FUNCTIONS =
+          previousFutureFlag;
       }
     }
   });
