@@ -1,6 +1,6 @@
 # Acceptance Checklist
 
-> PR #1274 merged the Stage 3 backend runtime checkpoint, but overall acceptance remains in progress. Unchecked items are not claims that the integrated pinned-reader path, route/service tests, server-production/local-rehearsal DB state, #7/#8 integrated E2E, terminal workpack closeout review or `personal_recipe_v2` R+2 activation already exist.
+> PR #1274 merged the Stage 3 backend runtime checkpoint, but overall acceptance remains in progress. Route/service automation is complete, yet the unchecked items are not claims that the integrated pinned-reader path, full soft-deleted reader path, server-production/local-rehearsal DB state, #7/#8 integrated fork/save-as-new E2E, terminal workpack closeout review or `personal_recipe_v2` R+2 activation already exist. The API v1.2.39 summary/body mismatch around `origin_recipe_id` and the save-as-new discriminator is still pending explicit Contract Evolution. See [`evidence/2026-08-22-terminal-automation-progress.md`](./evidence/2026-08-22-terminal-automation-progress.md) for the commit-by-commit closeout ledger.
 
 ## Create / Fork / Identity
 
@@ -39,6 +39,7 @@
 
 - [x] owner DELETE records `deleted_at` idempotently and never hard deletes or detaches snapshot/FK rows <!-- omo:id=accept-personal-soft-delete;stage=2;scope=backend;review=3,6 -->
 - [ ] soft-deleted recipe disappears from new search/select/book/snapshot/write while pinned Meal/shopping/session/batch/log readers still work <!-- omo:id=accept-personal-deleted-readers;stage=2;scope=shared;review=3,6 -->
+  - Partial reader evidence exists for planner/cook-session/leftovers only; shopping/batch/meal-log remain open. Route/service automation is complete, but this broader reader proof is still open.
 - [x] hard delete succeeds only in exact-generation account cleanup after dependent/history-critical private rows <!-- omo:id=accept-personal-account-hard-delete;stage=2;scope=backend;review=3,6 -->
 - [x] owner-null public/shared recipes and snapshots survive private account cleanup and creator identity is only anonymized per contract <!-- omo:id=accept-personal-shared-preservation;stage=2;scope=backend;review=3,6 -->
 - [x] no user-facing restore endpoint/UI exists; any future internal restore must use the same guarded recipe-lock RPC <!-- omo:id=accept-personal-no-restore;stage=2;scope=shared;review=3,6 -->
@@ -75,12 +76,13 @@
 
 ### Vitest / PostgreSQL
 
-- [ ] route/service tests cover request wrapper, official errors, identity modes, provenance and replay <!-- omo:id=accept-personal-vitest;stage=2;scope=backend;review=3,6 -->
+- [x] route/service tests cover request wrapper, official errors, identity modes, provenance and replay <!-- omo:id=accept-personal-vitest;stage=2;scope=backend;review=3,6 -->
 - [x] DB tests cover RLS/ACL/direct-DML denial, common locks, revision races, cleanup and immutable snapshots <!-- omo:id=accept-personal-db-tests;stage=2;scope=backend;review=3,6 -->
 
 ### E2E / Release
 
 - [ ] after #5/#7/#8 integration, E2E proves public fork/new ID, same-ID edit, explicit new ID, delete/history and rollback behavior <!-- omo:id=accept-personal-e2e;stage=2;scope=shared;review=3,6 -->
+  - Composed E2E evidence exists (`same-ID save` + partial pinned readers + capability-off drain), but public fork/new ID and save-as-new/new ID are still unimplemented, so the full gate stays open.
 - [x] current-head PR checks and post-merge QA/Policy/Security/Vercel are terminal green or intended skip <!-- omo:id=accept-personal-ci;stage=2;scope=shared;review=3,6 -->
 
 ### Manual Only
