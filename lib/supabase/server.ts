@@ -490,6 +490,11 @@ export function createAuthCallbackInternalDataClient() {
   };
 }
 
+export function createLocalDevSessionBootstrapInternalClient() {
+  const client = createScopedDataServiceRoleClient("auth-callback");
+  return client ? { rpc: client.rpc.bind(client) } : null;
+}
+
 export function createAuthFlowInternalDataClient() {
   const client = createScopedDataServiceRoleClient("auth-flow");
   return client ? { rpc: client.rpc.bind(client) } : null;

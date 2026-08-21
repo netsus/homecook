@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import React from "react";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 
 import { SocialLoginButtonsDeferred } from "@/components/auth/social-login-buttons-deferred";
@@ -58,6 +58,7 @@ export function LoginScreen({
   lastProvider = null,
   nextPath = "/",
 }: LoginScreenProps) {
+  const localPasswordBootstrapPendingRef = useRef(false);
   const safeErrorCopy: Record<string, string> = {
     oauth_failed: "로그인에 실패했어요. 다시 시도해 주세요.",
     email_required: "로그인하려면 이메일 제공 동의가 필요해요. 동의 항목을 확인한 뒤 다시 시도해 주세요.",
@@ -70,6 +71,9 @@ export function LoginScreen({
   const viewMode = useViewMode();
   const gateContext = resolveGateContext(safeNextPath);
   const errorCopy = authError ? safeErrorCopy[authError] : null;
+  const handleLocalPasswordBootstrapPendingChange = (pending: boolean) => {
+    localPasswordBootstrapPendingRef.current = pending;
+  };
 
   useEffect(() => {
     if (!hasSupabasePublicEnv()) {
@@ -82,7 +86,11 @@ export function LoginScreen({
     void supabase.auth
       .getSession()
       .then((result: { data: { session: { user?: unknown } | null } }) => {
-        if (!mounted || !result.data.session) {
+        if (
+          !mounted
+          || !result.data.session
+          || localPasswordBootstrapPendingRef.current
+        ) {
           return;
         }
 
@@ -93,7 +101,7 @@ export function LoginScreen({
       data: { subscription },
     } = supabase.auth.onAuthStateChange(
       (_event: AuthChangeEvent, session: Session | null) => {
-        if (session) {
+        if (session && !localPasswordBootstrapPendingRef.current) {
           window.location.replace(safeNextPath);
         }
       },
@@ -129,6 +137,9 @@ export function LoginScreen({
           <SocialLoginButtonsDeferred
             lastProvider={lastProvider}
             nextPath={safeNextPath}
+            onLocalPasswordBootstrapPendingChange={
+              handleLocalPasswordBootstrapPendingChange
+            }
           />
         </div>
         <p className="text-center text-xs leading-5 text-[var(--text-3)]">

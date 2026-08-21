@@ -34,6 +34,7 @@ export interface SocialLoginButtonsProps {
   expectedProvider?: AuthProviderId | null;
   lastProvider?: AuthProviderId | null;
   nextPath: string;
+  onLocalPasswordBootstrapPendingChange?: (pending: boolean) => void;
   pendingAction?: PendingRecipeAction | null;
   onStarted?: () => void;
 }
@@ -41,6 +42,7 @@ export interface SocialLoginButtonsProps {
 export function SocialLoginButtons({
   lastProvider = null,
   nextPath,
+  onLocalPasswordBootstrapPendingChange,
   pendingAction,
   onStarted,
 }: SocialLoginButtonsProps) {
@@ -207,6 +209,9 @@ export function SocialLoginButtons({
       {!qaFixtureMode ? (
         <LocalDevLoginPanel
           nextPath={nextPath}
+          onLocalPasswordBootstrapPendingChange={
+            onLocalPasswordBootstrapPendingChange
+          }
           onStarted={onStarted}
           pendingAction={pendingAction}
         />

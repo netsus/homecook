@@ -29,6 +29,7 @@ const INTERNAL_ALLOWLIST_FILES = new Set([
   "lib/server/account-generation/quarantine-gate.ts",
   "lib/server/admin-auth.ts",
   "lib/server/admin-events.ts",
+  "lib/server/full-local-auth/local-dev-session-bootstrap.ts",
   "lib/server/recipe-snapshot-entrypoint.ts",
   "lib/supabase/server.ts",
 ]);
@@ -37,6 +38,10 @@ const INTERNAL_OPERATION_ALLOWLIST = new Map([
   [
     "createAuthCallbackOperationsClient",
     new Set(["app/auth/callback/route.ts"]),
+  ],
+  [
+    "createLocalDevSessionBootstrapInternalClient",
+    new Set(["lib/server/full-local-auth/local-dev-session-bootstrap.ts"]),
   ],
   [
     "createAdminDataInternalClient",
@@ -217,6 +222,7 @@ const BROWSER_CLIENT_FACTORY_NAMES = new Set([
 ]);
 const SERVICE_ROLE_FACTORY_NAMES = new Set([
   "createServiceRoleClient",
+  "createLocalDevSessionBootstrapInternalClient",
   "createFutureMealWriteInternalClient",
   "createShoppingCreateInternalClient",
   "createSnapshotV2SessionInternalClient",
