@@ -5,6 +5,7 @@ const LOCAL_INTERNAL_URL_ENV = "LOCAL_SUPABASE_INTERNAL_URL";
 const LOOPBACK_HOSTS = new Set(["127.0.0.1", "localhost", "::1", "[::1]"]);
 const HOSTED_SUPABASE_SUFFIXES = [".supabase.co", ".supabase.in"];
 const RAW_TRAILING_DOT_PATTERN = /(?:\.|%2e|\u3002|%e3%80%82|\uff0e|%ef%bc%8e|\uff61|%ef%bd%a1)$/iu;
+const RAW_NONCANONICAL_DOT_PATTERN = /(?:%2e|\u3002|%e3%80%82|\uff0e|%ef%bc%8e|\uff61|%ef%bd%a1)/iu;
 
 export type AuthAuthority = "local";
 
@@ -63,6 +64,9 @@ function rejectRawTrailingDotHostname(value: string, name: string) {
     : hostAndPort.split(":", 1)[0];
   if (RAW_TRAILING_DOT_PATTERN.test(rawHostname)) {
     throw new Error(`${name} hostname에는 trailing dot을 사용할 수 없어요.`);
+  }
+  if (RAW_NONCANONICAL_DOT_PATTERN.test(rawHostname)) {
+    throw new Error(`${name} hostname에는 literal dot만 사용할 수 있어요.`);
   }
 }
 
