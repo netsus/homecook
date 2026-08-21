@@ -107,6 +107,55 @@ describe("account session generation security function inventory", () => {
     }
   });
 
+  it("fails closed when the public pre-request wrapper owner is missing", async () => {
+    const fixtureRoot = await mkdtemp(
+      path.join(tmpdir(), "homecook-security-function-owner-"),
+    );
+    const fixtureManifestPath = path.join(fixtureRoot, "manifest.json");
+    const manifest = JSON.parse(
+      readFileSync(ADDITIVE_MANIFEST_PATH, "utf8"),
+    ) as { functions: Array<Record<string, unknown>> };
+    await writeFile(
+      fixtureManifestPath,
+      `${JSON.stringify({
+        ...manifest,
+        functions: manifest.functions.map((entry) => {
+          if (
+            entry.signature
+            !== "public.verify_hybrid_request_authority_pre_request()"
+          ) return entry;
+          const withoutOwner = { ...entry };
+          delete withoutOwner.owner;
+          return withoutOwner;
+        }),
+      }, null, 2)}\n`,
+    );
+
+    try {
+      const result = spawnSync(
+        "node",
+        ["scripts/validate-security-function-authorization.mjs", "--contract-only"],
+        {
+          encoding: "utf8",
+          env: {
+            ...process.env,
+            SECURITY_FUNCTION_ADDITIVE_MANIFEST_PATH: fixtureManifestPath,
+            SECURITY_FUNCTION_DATABASE_URL:
+              "postgresql://postgres:postgres@127.0.0.1:1/postgres",
+          },
+        },
+      );
+      const output = `${result.stdout}\n${result.stderr}`;
+
+      expect(result.status).not.toBe(0);
+      expect(output).toContain(
+        "public pre-request entrypoint owner must be postgres",
+      );
+    } finally {
+      await rm(fixtureRoot, { recursive: true, force: true });
+    }
+  });
+
   it("fails closed when the historical inventory drifts in contract-only mode", async () => {
     const fixtureRoot = await mkdtemp(
       path.join(tmpdir(), "homecook-security-function-inventory-"),

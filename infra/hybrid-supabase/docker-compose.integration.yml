@@ -19,6 +19,7 @@ services:
             (select count(*) from pg_catalog.pg_roles where rolname in ('service_role', 'authenticated', 'anon', 'authenticator', 'supabase_storage_admin')) = 5
             and (select count(*) from pg_catalog.pg_namespace where nspname in ('auth', 'storage', 'extensions')) = 3
             and exists (select 1 from pg_catalog.pg_extension where extname = 'pgcrypto')
+            and to_regprocedure('public.verify_hybrid_request_authority_pre_request()') is not null
           )::integer")" = "1"
       interval: 1s
       timeout: 3s
@@ -28,7 +29,9 @@ services:
     tmpfs:
       - /var/lib/postgresql/data
     volumes:
+      - ./runtime-bootstrap.sql:/docker-entrypoint-initdb.d/zy-homecook-runtime-bootstrap.sql:ro
       - ./hybrid-role-passwords.sh:/docker-entrypoint-initdb.d/zz-homecook-role-passwords.sh:ro
+      - ../../supabase/migrations/20260821170000_full_local_public_pre_request_entrypoint.sql:/docker-entrypoint-initdb.d/zzz-homecook-public-pre-request.sql:ro
 
   postgrest:
     image: postgrest/postgrest:v14.12
@@ -37,7 +40,7 @@ services:
         condition: service_healthy
     environment:
       PGRST_DB_ANON_ROLE: anon
-      PGRST_DB_PRE_REQUEST: private.verify_hybrid_request_authority
+      PGRST_DB_PRE_REQUEST: public.verify_hybrid_request_authority_pre_request
       PGRST_DB_SCHEMAS: public,storage
       PGRST_DB_URI: postgres://authenticator:${HYBRID_TEST_POSTGRES_PASSWORD:-hybrid-test-only}@postgres:5432/homecook_hybrid_test
       PGRST_APP_SETTINGS_AUTH_EXPECTED_ISSUER: ${HYBRID_TEST_AUTH_ISSUER:-http://auth-stub:4100/auth/v1}

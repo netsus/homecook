@@ -56,7 +56,7 @@ services:
         condition: service_healthy
     environment:
       PGRST_DB_ANON_ROLE: anon
-      PGRST_DB_PRE_REQUEST: private.verify_hybrid_request_authority
+      PGRST_DB_PRE_REQUEST: public.verify_hybrid_request_authority_pre_request
       PGRST_DB_SCHEMAS: public,storage
       PGRST_DB_URI: postgres://authenticator:${HYBRID_POSTGRES_PASSWORD:?HYBRID_POSTGRES_PASSWORD is required}@postgres:5432/${HYBRID_POSTGRES_DB:?HYBRID_POSTGRES_DB is required}
       PGRST_APP_SETTINGS_AUTH_EXPECTED_ISSUER: ${AUTH_SUPABASE_EXPECTED_ISSUER:?AUTH_SUPABASE_EXPECTED_ISSUER is required}
