@@ -128,6 +128,9 @@ describe("full-local public PostgREST pre-request entrypoint", () => {
     expect(hybridRuntimeTest).toContain(
       "const publicPreRequestMigration = readFileSync(",
     );
+    expect(hybridRuntimeTest).not.toMatch(
+      /input:\s*readFileSync\(\s*["']infra\/hybrid-supabase\/runtime-bootstrap\.sql["']/gu,
+    );
     expect(hybridRuntimeTest.split("input: publicPreRequestMigration"))
       .toHaveLength(3);
   });

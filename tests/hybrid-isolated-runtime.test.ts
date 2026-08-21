@@ -379,28 +379,10 @@ composeRun("isolated hybrid integration runtime measured", () => {
           "-d",
           "homecook_hybrid_test",
           "-c",
-          "select ((select count(*) from pg_catalog.pg_roles where rolname in ('service_role', 'authenticated', 'anon', 'authenticator', 'supabase_storage_admin')) = 5 and (select count(*) from pg_catalog.pg_namespace where nspname in ('auth', 'storage', 'extensions')) = 3 and exists (select 1 from pg_catalog.pg_extension where extname = 'pgcrypto'))::integer;",
+          "select ((select count(*) from pg_catalog.pg_roles where rolname in ('service_role', 'authenticated', 'anon', 'authenticator', 'supabase_storage_admin')) = 5 and (select count(*) from pg_catalog.pg_namespace where nspname in ('auth', 'storage', 'extensions')) = 3 and exists (select 1 from pg_catalog.pg_extension where extname = 'pgcrypto') and to_regprocedure('public.verify_hybrid_request_authority_pre_request()') is not null and exists (select 1 from pg_roles cross join lateral unnest(rolconfig) as config where rolname = 'authenticator' and config = 'pgrst.db_pre_request=public.verify_hybrid_request_authority_pre_request'))::integer;",
         ]).trim();
         expect(initComplete).toBe("1");
 
-        run("docker", [
-          ...composeArgs,
-          "exec",
-          "-T",
-          "postgres",
-          "psql",
-          "-v",
-          "ON_ERROR_STOP=1",
-          "-U",
-          "supabase_admin",
-          "-d",
-          "homecook_hybrid_test",
-        ], {
-          input: readFileSync(
-            "infra/hybrid-supabase/runtime-bootstrap.sql",
-            "utf8",
-          ),
-        });
         run("docker", [
           ...composeArgs,
           "exec",
@@ -589,21 +571,6 @@ composeRun("isolated hybrid integration runtime measured", () => {
         env: runtimeEnv,
       });
 
-      run("docker", [
-        ...composeArgs,
-        "exec",
-        "-T",
-        "postgres",
-        "psql",
-        "-v",
-        "ON_ERROR_STOP=1",
-        "-U",
-        "supabase_admin",
-        "-d",
-        "homecook_hybrid_test",
-      ], {
-        input: readFileSync("infra/hybrid-supabase/runtime-bootstrap.sql", "utf8"),
-      });
       run("docker", [
         ...composeArgs,
         "exec",
