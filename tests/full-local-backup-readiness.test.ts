@@ -35,6 +35,7 @@ function validBackupMetadata() {
       schema_sha256: "0".repeat(64),
     },
     created_at: "2026-08-13T07:00:00.000Z",
+    format: "homecook-full-local-platform-v2",
     database: {
       provenance: {
         compose_project: "homecook-full-local-isolated",
@@ -44,6 +45,7 @@ function validBackupMetadata() {
       },
     },
     manifest: {
+      data_semantic_sha256: "9".repeat(64),
       relation_classification_digest: "4".repeat(64),
       unclassified: [],
     },
@@ -99,6 +101,7 @@ function validEvidence() {
       archive_sha256: SHA,
       created_at: "2026-08-13T07:00:00.000Z",
       data_sha256: "e".repeat(64),
+      data_semantic_sha256: "9".repeat(64),
       metadata_sha256: METADATA_SHA,
       relation_classification_digest: "4".repeat(64),
       roles_sha256: "f".repeat(64),
@@ -139,6 +142,7 @@ function validEvidence() {
       manifest_sha256: "6".repeat(64),
       source_archive_sha256: SHA,
       source_data_sha256: "e".repeat(64),
+      source_data_semantic_sha256: "9".repeat(64),
       source_roles_sha256: "f".repeat(64),
       source_schema_sha256: "0".repeat(64),
       storage_bucket_count: 1,
@@ -158,7 +162,7 @@ function validEvidence() {
 describe("full-local backup readiness", () => {
   it("authenticates and decrypts both primary and off-Mac archives at every gate", async () => {
     const evidence = validEvidence();
-    const metadata = { format: "homecook-full-local-platform-v1" };
+    const metadata = { format: "homecook-full-local-platform-v2" };
     const verifyArchive = vi.fn(async () => metadata);
 
     await expect(authenticateFullLocalBackupArchives({ evidence, verifyArchive }))
@@ -226,7 +230,7 @@ describe("full-local backup readiness", () => {
         created_at: "2026-08-13T07:20:00.000Z",
         compose_project: "homecook-full-local-restore-drill",
         database_digest: "2".repeat(64),
-        format: "homecook-full-local-restore-v1",
+        format: "homecook-full-local-restore-v2",
         fresh_target_attested: true,
         postgres_volume: "homecook-full-local-restore-postgres",
         public_relation_count: 1,
@@ -235,6 +239,7 @@ describe("full-local backup readiness", () => {
         restored_data_sha256: "e".repeat(64),
         source_archive_sha256: SHA,
         source_data_sha256: "e".repeat(64),
+        source_data_semantic_sha256: "9".repeat(64),
         source_roles_sha256: "f".repeat(64),
         source_schema_sha256: "0".repeat(64),
         storage_digest: "3".repeat(64),
@@ -279,6 +284,76 @@ describe("full-local backup readiness", () => {
     }));
   });
 
+  it("rejects legacy v1 backup metadata and restore manifests explicitly after the v2 upgrade", () => {
+    expect(() => buildFullLocalBackupReadinessEvidence({
+      archivePath: "/Volumes/homecook-off-mac/platform.tar.gz.enc",
+      archiveSha256: SHA,
+      backupMetadata: { ...validBackupMetadata(), format: "homecook-full-local-platform-v1" },
+      now: "2026-08-13T07:30:00.000Z",
+      keyRecoveryEscrowEnvelope: RECOVERY_ENVELOPE,
+      keyRecoveryManifest: validRecoveryManifest(),
+      keyRecoveryManifestPath: "/Volumes/homecook-key-escrow/recovery.json",
+      keyRecoveryManifestSha256: "7".repeat(64),
+      offMacCopyPath: "/Volumes/homecook-off-mac/platform-copy.tar.gz.enc",
+      offMacCopySha256: SHA,
+      restoreManifestPath: "/Volumes/homecook-restore/restore.json",
+      restoreManifestSha256: "6".repeat(64),
+      restoreManifest: {
+        ...validEvidence().restore,
+        created_at: "2026-08-13T07:20:00.000Z",
+        compose_project: "homecook-full-local-restore-drill",
+        format: "homecook-full-local-restore-v2",
+        postgres_volume: "homecook-full-local-restore-postgres",
+        restore_execution: "clean-isolated-restore-platform-v1",
+        restored_data_sha256: "e".repeat(64),
+        source_archive_sha256: SHA,
+        source_data_sha256: "e".repeat(64),
+        source_data_semantic_sha256: "9".repeat(64),
+        source_roles_sha256: "f".repeat(64),
+        source_schema_sha256: "0".repeat(64),
+        storage_payload_catalog_sha256: "d".repeat(64),
+        storage_payload_object_count: 1,
+        storage_payload_total_bytes: 36,
+        storage_reference_count: 1,
+        storage_volume: "homecook-full-local-restore-storage",
+      },
+    })).toThrow(/unsupported legacy|platform-v1|v2/iu);
+
+    expect(() => buildFullLocalBackupReadinessEvidence({
+      archivePath: "/Volumes/homecook-off-mac/platform.tar.gz.enc",
+      archiveSha256: SHA,
+      backupMetadata: validBackupMetadata(),
+      now: "2026-08-13T07:30:00.000Z",
+      keyRecoveryEscrowEnvelope: RECOVERY_ENVELOPE,
+      keyRecoveryManifest: validRecoveryManifest(),
+      keyRecoveryManifestPath: "/Volumes/homecook-key-escrow/recovery.json",
+      keyRecoveryManifestSha256: "7".repeat(64),
+      offMacCopyPath: "/Volumes/homecook-off-mac/platform-copy.tar.gz.enc",
+      offMacCopySha256: SHA,
+      restoreManifestPath: "/Volumes/homecook-restore/restore.json",
+      restoreManifestSha256: "6".repeat(64),
+      restoreManifest: {
+        ...validEvidence().restore,
+        created_at: "2026-08-13T07:20:00.000Z",
+        compose_project: "homecook-full-local-restore-drill",
+        format: "homecook-full-local-restore-v1",
+        postgres_volume: "homecook-full-local-restore-postgres",
+        restore_execution: "clean-isolated-restore-platform-v1",
+        restored_data_sha256: "e".repeat(64),
+        source_archive_sha256: SHA,
+        source_data_sha256: "e".repeat(64),
+        source_data_semantic_sha256: "9".repeat(64),
+        source_roles_sha256: "f".repeat(64),
+        source_schema_sha256: "0".repeat(64),
+        storage_payload_catalog_sha256: "d".repeat(64),
+        storage_payload_object_count: 1,
+        storage_payload_total_bytes: 36,
+        storage_reference_count: 1,
+        storage_volume: "homecook-full-local-restore-storage",
+      },
+    })).toThrow(/unsupported legacy|restore-v1|v2/iu);
+  });
+
   it.each([
     ["stale backup", { backup: { created_at: "2026-08-11T07:00:00.000Z" } }],
     ["missing Storage payload proof", { restore: { storage_payload_included: false } }],
@@ -286,6 +361,9 @@ describe("full-local backup readiness", () => {
     ["unproven restore execution", { restore: { execution: "verification-only" } }],
     ["missing fresh target attestation", { restore: { fresh_target_attested: false } }],
     ["wrong restored DB/Auth data", { restore: { database_data_sha256: "c".repeat(64) } }],
+    ["missing backup semantic digest", { backup: { data_semantic_sha256: null } }],
+    ["missing restore semantic digest", { restore: { source_data_semantic_sha256: null } }],
+    ["tampered restore semantic digest", { restore: { source_data_semantic_sha256: "c".repeat(64) } }],
     ["missing Auth digest", { restore: { auth_identity_digest: null } }],
     ["wrong archive roles component", { restore: { source_roles_sha256: "c".repeat(64) } }],
     ["wrong authenticated metadata binding", { backup: { metadata_sha256: "c".repeat(64) } }],

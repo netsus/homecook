@@ -36,7 +36,10 @@ import {
   selectExactFullLocalServiceImages,
   selectFullLocalProductionResources,
 } from "@/scripts/lib/full-local-production-resources.mjs";
-import { buildPlatformServiceRestoreAttestation } from "@/scripts/lib/full-local-restore-cutover.mjs";
+import {
+  buildPlatformServiceRestoreAttestation,
+  digestSemanticPlatformDataSql,
+} from "@/scripts/lib/full-local-restore-cutover.mjs";
 import { buildPlatformServiceSchemaCatalogSql } from "@/scripts/lib/full-local-platform-backup.mjs";
 
 const temporaryDirectories: string[] = [];
@@ -680,7 +683,7 @@ describe("full-local platform backup boundary", () => {
         source_identity: "isolated-supabase-cli-local",
       },
       components,
-      format: "homecook-full-local-platform-v1",
+      format: "homecook-full-local-platform-v2",
       storage_payload: {
         catalog_sha256: "f".repeat(64),
         object_count: 1,
@@ -695,6 +698,7 @@ describe("full-local platform backup boundary", () => {
       },
       storage_payload_included: true,
       manifest: {
+        data_semantic_sha256: "9".repeat(64),
         relation_classification_digest: "d".repeat(64),
         service_ledgers: serviceLedgers,
         transient_promote_count: 0,
@@ -703,6 +707,7 @@ describe("full-local platform backup boundary", () => {
     };
     expect(verifyPlatformBackupMetadata(metadata, {
       data_sha256: "a".repeat(64),
+      data_semantic_sha256: "9".repeat(64),
       roles_sha256: "b".repeat(64),
       schema_sha256: "c".repeat(64),
       storage_payload_sha256: "e".repeat(64),
@@ -710,15 +715,15 @@ describe("full-local platform backup boundary", () => {
     expect(() => verifyPlatformBackupMetadata({
       ...metadata,
       manifest: { ...metadata.manifest, transient_promote_count: 1 },
-    }, metadata.components)).toThrow("transient");
+    }, { ...metadata.components, data_semantic_sha256: "9".repeat(64) })).toThrow("transient");
     expect(() => verifyPlatformBackupMetadata({
       ...metadata,
       storage_payload_included: false,
-    }, metadata.components)).toThrow(/Storage payload/iu);
+    }, { ...metadata.components, data_semantic_sha256: "9".repeat(64) })).toThrow(/Storage payload/iu);
     expect(() => verifyPlatformBackupMetadata({
       ...metadata,
       service_restore_attestation: null,
-    }, metadata.components)).toThrow(/service restore attestation/iu);
+    }, { ...metadata.components, data_semantic_sha256: "9".repeat(64) })).toThrow(/service restore attestation/iu);
     expect(() => verifyPlatformBackupMetadata({
       ...metadata,
       database: {
@@ -729,14 +734,14 @@ describe("full-local platform backup boundary", () => {
         },
         source_identity: "docker-compose:incomplete",
       },
-    }, metadata.components)).toThrow(/database provenance/iu);
+    }, { ...metadata.components, data_semantic_sha256: "9".repeat(64) })).toThrow(/database provenance/iu);
     expect(() => verifyPlatformBackupMetadata({
       ...metadata,
       service_restore_attestation: {
         ...metadata.service_restore_attestation,
         schema_catalog_sha256: "0".repeat(64),
       },
-    }, metadata.components)).toThrow(/service restore attestation/iu);
+    }, { ...metadata.components, data_semantic_sha256: "9".repeat(64) })).toThrow(/service restore attestation/iu);
   });
 
   it("authenticates the encrypted archive before decryption", () => {
@@ -765,6 +770,7 @@ describe("full-local platform backup boundary", () => {
 
   it("removes decrypted plaintext when verification consumers fail", async () => {
     const remove = vi.fn();
+    const dataSql = "COPY auth.users (id) FROM stdin;\nuser-a\n\\.\n";
     const metadata = {
       database: {
         provenance: { adapter: "isolated-supabase-cli-local" },
@@ -776,7 +782,7 @@ describe("full-local platform backup boundary", () => {
         schema_sha256: "c".repeat(64),
         storage_payload_sha256: "e".repeat(64),
       },
-      format: "homecook-full-local-platform-v1",
+      format: "homecook-full-local-platform-v2",
       storage_payload: {
         catalog_sha256: "f".repeat(64),
         object_count: 0,
@@ -786,6 +792,7 @@ describe("full-local platform backup boundary", () => {
       },
       storage_payload_included: true,
       manifest: {
+        data_semantic_sha256: digestSemanticPlatformDataSql(dataSql),
         relation_classification_digest: "d".repeat(64),
         transient_promote_count: 0,
         unclassified: [],
@@ -814,6 +821,8 @@ describe("full-local platform backup boundary", () => {
               archiveBytes: Buffer.from("encrypted-platform-archive"),
               backupKey: "test-backup-key-with-enough-entropy",
             }))
+          : path.endsWith("data.sanitized.sql")
+            ? dataSql
           : JSON.stringify(metadata),
         readBuffer: () => Buffer.from("encrypted-platform-archive"),
         remove,
@@ -828,5 +837,33 @@ describe("full-local platform backup boundary", () => {
       "/private/tmp/homecook-platform-verified",
       { force: true, recursive: true },
     );
+  });
+
+  it("rejects legacy v1 backup metadata explicitly after the v2 semantic-digest schema change", () => {
+    expect(() => verifyPlatformBackupMetadata({
+      format: "homecook-full-local-platform-v1",
+      manifest: {
+        data_semantic_sha256: "9".repeat(64),
+        relation_classification_digest: "d".repeat(64),
+        service_ledgers: {
+          auth_schema_migrations: {
+            digest_sha256: "3".repeat(64),
+            row_count: 1,
+          },
+          storage_migrations: {
+            digest_sha256: "4".repeat(64),
+            row_count: 1,
+          },
+        },
+        transient_promote_count: 0,
+        unclassified: [],
+      },
+    }, {
+      data_sha256: "a".repeat(64),
+      data_semantic_sha256: "9".repeat(64),
+      roles_sha256: "b".repeat(64),
+      schema_sha256: "c".repeat(64),
+      storage_payload_sha256: "e".repeat(64),
+    })).toThrow(/unsupported legacy|v1|v2/iu);
   });
 });

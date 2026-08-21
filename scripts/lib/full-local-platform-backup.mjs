@@ -18,9 +18,10 @@ import { basename, dirname, isAbsolute, join, relative, resolve } from "node:pat
 import {
   buildPlatformServiceRestoreAttestation,
   buildSanitizedPlatformData,
+  digestSemanticPlatformDataSql,
 } from "./full-local-restore-cutover.mjs";
 
-export const PLATFORM_BACKUP_FORMAT = "homecook-full-local-platform-v1";
+export const PLATFORM_BACKUP_FORMAT = "homecook-full-local-platform-v2";
 export const PLATFORM_BACKUP_AUTH_FORMAT = "homecook-full-local-platform-auth-v1";
 export const PLATFORM_BACKUP_KEY_ENV = "HOMECOOK_FULL_LOCAL_BACKUP_KEY";
 export const PLATFORM_BACKUP_KEYCHAIN_ACCOUNT = "platform-backup-encryption-key";
@@ -506,6 +507,9 @@ function validDatabaseProvenance(provenance) {
 }
 
 export function verifyPlatformBackupMetadata(metadata, observed) {
+  if (metadata?.format === "homecook-full-local-platform-v1") {
+    throw new Error("Platform backup format is unsupported legacy v1; create a new v2 backup");
+  }
   if (metadata?.format !== PLATFORM_BACKUP_FORMAT) {
     throw new Error("Platform backup format is invalid");
   }
@@ -518,6 +522,12 @@ export function verifyPlatformBackupMetadata(metadata, observed) {
   }
   if (!validSha256(metadata.manifest?.relation_classification_digest)) {
     throw new Error("Platform backup relation classification digest is invalid");
+  }
+  if (
+    !validSha256(metadata.manifest?.data_semantic_sha256)
+    || metadata.manifest.data_semantic_sha256 !== observed?.data_semantic_sha256
+  ) {
+    throw new Error("Platform backup semantic data digest is invalid");
   }
   if (
     typeof metadata.database?.source_identity !== "string"
@@ -842,6 +852,9 @@ export async function withVerifiedPlatformBackup({
     const metadata = JSON.parse(dependencies.read(join(staging, "manifest.json")));
     const observed = {
       data_sha256: dependencies.hashFile(join(staging, "data.sanitized.sql")),
+      data_semantic_sha256: digestSemanticPlatformDataSql(
+        dependencies.read(join(staging, "data.sanitized.sql")),
+      ),
       roles_sha256: dependencies.hashFile(join(staging, "roles.sql")),
       schema_sha256: dependencies.hashFile(join(staging, "schema.sql")),
       storage_payload_sha256: dependencies.hashFile(join(staging, "storage.payload.tar")),

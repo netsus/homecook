@@ -7,6 +7,8 @@ import { verifyFullLocalBackupKeyRecoveryIssuerAttestation } from "./full-local-
 export const FULL_LOCAL_BACKUP_READINESS_FORMAT =
   "homecook-full-local-backup-readiness-v1";
 export const FULL_LOCAL_BACKUP_MAX_AGE_HOURS = 24;
+export const PLATFORM_BACKUP_FORMAT_V2 = "homecook-full-local-platform-v2";
+export const RESTORE_MANIFEST_FORMAT_V2 = "homecook-full-local-restore-v2";
 
 const SHA256 = /^[0-9a-f]{64}$/u;
 
@@ -28,6 +30,24 @@ function exactPath(value, label) {
     fail(`${label} must be an absolute path`);
   }
   return resolve(value);
+}
+
+function requireSupportedPlatformBackupFormat(format) {
+  if (format === "homecook-full-local-platform-v1") {
+    fail("unsupported legacy platform backup format v1; create a new v2 backup");
+  }
+  if (format !== PLATFORM_BACKUP_FORMAT_V2) {
+    fail("platform backup format is invalid");
+  }
+}
+
+function requireSupportedRestoreManifestFormat(format) {
+  if (format === "homecook-full-local-restore-v1") {
+    fail("unsupported legacy restore manifest format v1; rerun restore to create a v2 manifest");
+  }
+  if (format !== RESTORE_MANIFEST_FORMAT_V2) {
+    fail("restore manifest format is invalid");
+  }
 }
 
 export function fullLocalBackupMetadataSha256(metadata) {
@@ -74,6 +94,8 @@ export async function authenticateFullLocalBackupArchives({
   }
   const primary = await verifyArchive(evidence?.backup?.archive_path);
   const offMac = await verifyArchive(evidence?.off_mac_copy?.archive_path);
+  requireSupportedPlatformBackupFormat(primary?.format);
+  requireSupportedPlatformBackupFormat(offMac?.format);
   if (JSON.stringify(primary) !== JSON.stringify(offMac)) {
     fail("primary and off-Mac authenticated backup metadata differ");
   }
@@ -101,6 +123,8 @@ export function buildFullLocalBackupReadinessEvidence({
   });
   const components = backupMetadata?.components;
   const backupManifest = backupMetadata?.manifest;
+  requireSupportedPlatformBackupFormat(backupMetadata?.format);
+  requireSupportedRestoreManifestFormat(restoreManifest?.format);
   const metadataSha256 = fullLocalBackupMetadataSha256(backupMetadata);
   const provenance = backupMetadata?.database?.provenance;
   const storageSourcePrefix = `docker-compose-volume:${provenance?.compose_project}:`;
@@ -111,6 +135,7 @@ export function buildFullLocalBackupReadinessEvidence({
     : null;
   if (
     !SHA256.test(archiveSha256)
+    || !SHA256.test(backupManifest?.data_semantic_sha256)
     || keyRecoveryManifest?.format
       !== "homecook-full-local-backup-key-recovery-v1"
     || keyRecoveryManifest?.archive_sha256 !== archiveSha256
@@ -139,7 +164,6 @@ export function buildFullLocalBackupReadinessEvidence({
     || !SHA256.test(keyRecoveryManifestSha256)
     || offMacCopySha256 !== archiveSha256
     || backupMetadata?.storage_payload_included !== true
-    || restoreManifest?.format !== "homecook-full-local-restore-v1"
     || typeof restoreManifestPath !== "string"
     || !isAbsolute(restoreManifestPath)
     || !SHA256.test(restoreManifestSha256)
@@ -149,6 +173,8 @@ export function buildFullLocalBackupReadinessEvidence({
     || restoreManifest?.restored_data_sha256
       !== components?.data_sha256
     || restoreManifest?.source_data_sha256 !== components?.data_sha256
+    || !SHA256.test(restoreManifest?.source_data_semantic_sha256)
+    || restoreManifest.source_data_semantic_sha256 !== backupManifest?.data_semantic_sha256
     || restoreManifest?.source_roles_sha256 !== components?.roles_sha256
     || restoreManifest?.source_schema_sha256 !== components?.schema_sha256
     || restoreManifest?.relation_classification_digest
@@ -199,6 +225,7 @@ export function buildFullLocalBackupReadinessEvidence({
       archive_path: exactPath(archivePath, "backup archive"),
       archive_sha256: archiveSha256,
       created_at: backupMetadata.created_at,
+      data_semantic_sha256: backupManifest.data_semantic_sha256,
       data_sha256: components.data_sha256,
       metadata_sha256: metadataSha256,
       relation_classification_digest: backupManifest.relation_classification_digest,
@@ -244,6 +271,7 @@ export function buildFullLocalBackupReadinessEvidence({
       manifest_sha256: restoreManifestSha256,
       source_archive_sha256: restoreManifest.source_archive_sha256,
       source_data_sha256: restoreManifest.source_data_sha256,
+      source_data_semantic_sha256: restoreManifest.source_data_semantic_sha256,
       source_roles_sha256: restoreManifest.source_roles_sha256,
       source_schema_sha256: restoreManifest.source_schema_sha256,
       storage_bucket_count: restoreManifest.storage_bucket_count,
@@ -339,7 +367,10 @@ export function verifyFullLocalBackupReadiness({
     || evidence?.restore?.fresh_target_attested !== true
     || !SHA256.test(evidence?.restore?.database_data_sha256)
     || evidence.restore.database_data_sha256 !== evidence?.backup?.data_sha256
+    || !SHA256.test(evidence?.backup?.data_semantic_sha256)
+    || !SHA256.test(evidence?.restore?.source_data_semantic_sha256)
     || evidence?.restore?.source_data_sha256 !== evidence?.backup?.data_sha256
+    || evidence?.restore?.source_data_semantic_sha256 !== evidence?.backup?.data_semantic_sha256
     || !SHA256.test(evidence?.backup?.roles_sha256)
     || evidence?.restore?.source_roles_sha256 !== evidence.backup.roles_sha256
     || !SHA256.test(evidence?.backup?.schema_sha256)
