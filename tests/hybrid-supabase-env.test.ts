@@ -87,14 +87,22 @@ describe("local-only Supabase environment boundary", () => {
   it.each([
     "http://127.0.0.1.:54321",
     "http://127.0.0.1%2e:54321",
+    "http://127.0.0.1.:",
+    "http://127.0.0.1%2e:",
     "https://project.supabase.co.",
     "https://project.supabase.co%2E",
+    "https://project.supabase.co.:",
+    "https://project.supabase.co%2e:",
     "https://project.supabase.in.",
     "https://project.supabase.in%2e",
     "http://localhost.:54321",
     "http://localhost%2E:54321",
+    "http://localhost.:",
+    "http://localhost%2e:",
     "https://auth.mumeok.kr.",
     "https://auth.mumeok.kr%2e",
+    "https://auth.mumeok.kr.:",
+    "https://auth.mumeok.kr%2E:",
   ])("rejects trailing-dot Auth hostname %s", async (url) => {
     process.env.NEXT_PUBLIC_AUTH_SUPABASE_URL = url;
     process.env.NEXT_PUBLIC_AUTH_SUPABASE_PUBLISHABLE_KEY = "local-publishable";
@@ -110,12 +118,20 @@ describe("local-only Supabase environment boundary", () => {
   it.each([
     "http://127.0.0.1.:54481",
     "http://127.0.0.1%2e:54481",
+    "http://127.0.0.1.:",
+    "http://127.0.0.1%2E:",
     "http://localhost.:54481",
     "http://localhost%2E:54481",
+    "http://localhost.:",
+    "http://localhost%2e:",
     "https://project.supabase.co.:443",
     "https://project.supabase.co%2e:443",
+    "https://project.supabase.co.:",
+    "https://project.supabase.co%2E:",
     "https://auth.mumeok.kr.:443",
     "https://auth.mumeok.kr%2E:443",
+    "https://auth.mumeok.kr.:",
+    "https://auth.mumeok.kr%2e:",
   ])("rejects trailing-dot internal Auth hostname %s", async (url) => {
     process.env.HOMECOOK_AUTH_AUTHORITY = "local";
     process.env.NEXT_PUBLIC_AUTH_SUPABASE_URL = "http://127.0.0.1:54321";

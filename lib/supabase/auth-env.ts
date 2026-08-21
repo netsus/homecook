@@ -46,7 +46,13 @@ function rejectRawTrailingDotHostname(value: string, name: string) {
     ? authorityAndRest
     : authorityAndRest.slice(0, authorityEnd);
   const hostAndPort = authority.slice(authority.lastIndexOf("@") + 1);
-  if (/(?:\.|%2e)(?::[0-9]+)?$/iu.test(hostAndPort)) {
+  const closingBracket = hostAndPort.startsWith("[")
+    ? hostAndPort.indexOf("]")
+    : -1;
+  const rawHostname = closingBracket >= 0
+    ? hostAndPort.slice(0, closingBracket + 1)
+    : hostAndPort.split(":", 1)[0];
+  if (/(?:\.|%2e)$/iu.test(rawHostname)) {
     throw new Error(`${name} hostname에는 trailing dot을 사용할 수 없어요.`);
   }
 }
