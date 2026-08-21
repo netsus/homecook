@@ -34,7 +34,7 @@ describe("isolated hybrid integration runtime", () => {
     expect(compose).toMatch(/PGRST_JWT_AUD:\s*authenticated/);
     expect(compose).toMatch(/PGRST_JWT_SECRET:.*COMBINED_JWKS/);
     expect(compose).toMatch(
-      /PGRST_DB_PRE_REQUEST:\s*private\.verify_hybrid_request_authority/,
+      /PGRST_DB_PRE_REQUEST:\s*public\.verify_hybrid_request_authority_pre_request/,
     );
     expect(compose).toMatch(
       /PGRST_DB_URI:\s*postgres:\/\/authenticator:/,

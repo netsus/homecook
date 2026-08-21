@@ -379,6 +379,60 @@ run("full-local Auth isolated PostgreSQL foundation", () => {
     expect(database).toMatch(/^homecook_[a-z0-9_]+$/u);
   });
 
+  it("routes PostgREST pre-request authority through a self-blocking public entrypoint", () => {
+    expect(psql(`
+      select concat_ws(
+        ':',
+        procedure.prosecdef,
+        owner.rolname,
+        has_function_privilege(
+          'anon',
+          'public.verify_hybrid_request_authority_pre_request()',
+          'EXECUTE'
+        ),
+        has_function_privilege(
+          'authenticated',
+          'public.verify_hybrid_request_authority_pre_request()',
+          'EXECUTE'
+        ),
+        has_function_privilege(
+          'service_role',
+          'public.verify_hybrid_request_authority_pre_request()',
+          'EXECUTE'
+        ),
+        has_function_privilege(
+          'public',
+          'public.verify_hybrid_request_authority_pre_request()',
+          'EXECUTE'
+        )
+      )
+      from pg_proc as procedure
+      join pg_roles as owner on owner.oid = procedure.proowner
+      where procedure.oid =
+        'public.verify_hybrid_request_authority_pre_request()'::regprocedure;
+    `)).toBe("t:postgres:t:t:t:f");
+
+    expect(psql(`
+      select config
+      from pg_roles
+      cross join lateral unnest(rolconfig) as config
+      where rolname = 'authenticator'
+        and config = 'pgrst.db_pre_request=public.verify_hybrid_request_authority_pre_request';
+    `)).toBe(
+      "pgrst.db_pre_request=public.verify_hybrid_request_authority_pre_request",
+    );
+
+    const directRpc = psqlResult(`
+      set request.jwt.claims = '{"role":"service_role"}';
+      set request.headers = '{}';
+      set request.method = 'POST';
+      set request.path = '/rpc/verify_hybrid_request_authority_pre_request';
+      select public.verify_hybrid_request_authority_pre_request();
+    `);
+    expect(directRpc.status).not.toBe(0);
+    expect(directRpc.stderr).toContain("ACCOUNT_SESSION_STALE");
+  });
+
   it("starts remote and keeps both control tables inaccessible directly", () => {
     expect(psql(`
       ${serviceClaims}
