@@ -115,6 +115,7 @@ describe("local dev login panel", () => {
   it("creates a local account on first use, keeps the pending action, and redirects", async () => {
     const user = userEvent.setup();
     const onStarted = vi.fn();
+    const onLocalPasswordBootstrapPendingChange = vi.fn();
 
     signInWithPassword
       .mockResolvedValueOnce({
@@ -133,6 +134,7 @@ describe("local dev login panel", () => {
     render(
       <LocalDevLoginPanel
         nextPath="/recipe/recipe-1"
+        onLocalPasswordBootstrapPendingChange={onLocalPasswordBootstrapPendingChange}
         onStarted={onStarted}
         pendingAction={pendingAction}
       />,
@@ -154,8 +156,12 @@ describe("local dev login panel", () => {
       },
     });
     expect(savePendingAction).toHaveBeenCalledWith(pendingAction);
+    expect(onLocalPasswordBootstrapPendingChange).toHaveBeenCalledWith(true);
     expect(onStarted).toHaveBeenCalledTimes(1);
     expect(assign).toHaveBeenCalledWith("/recipe/recipe-1");
+    expect(onLocalPasswordBootstrapPendingChange.mock.invocationCallOrder[0]).toBeLessThan(
+      signInWithPassword.mock.invocationCallOrder[0],
+    );
     expect(
       signInWithPassword.mock.invocationCallOrder[
         signInWithPassword.mock.invocationCallOrder.length - 1
@@ -204,6 +210,7 @@ describe("local dev login panel", () => {
   it("blocks navigation when the server bootstrap rejects the local session", async () => {
     const user = userEvent.setup();
     const onStarted = vi.fn();
+    const onLocalPasswordBootstrapPendingChange = vi.fn();
 
     signInWithPassword.mockResolvedValue({
       data: { session: { access_token: "token" }, user: { id: "user-1" } },
@@ -217,6 +224,7 @@ describe("local dev login panel", () => {
     render(
       <LocalDevLoginPanel
         nextPath="/planner"
+        onLocalPasswordBootstrapPendingChange={onLocalPasswordBootstrapPendingChange}
         onStarted={onStarted}
       />,
     );
@@ -228,6 +236,14 @@ describe("local dev login panel", () => {
     });
     expect(assign).not.toHaveBeenCalled();
     expect(onStarted).not.toHaveBeenCalled();
+    expect(onLocalPasswordBootstrapPendingChange).toHaveBeenNthCalledWith(1, true);
+    expect(onLocalPasswordBootstrapPendingChange).toHaveBeenNthCalledWith(2, false);
+    expect(onLocalPasswordBootstrapPendingChange.mock.invocationCallOrder[0]).toBeLessThan(
+      signInWithPassword.mock.invocationCallOrder[0],
+    );
+    expect(bootstrapLocalDevSessionAction.mock.invocationCallOrder[0]).toBeLessThan(
+      onLocalPasswordBootstrapPendingChange.mock.invocationCallOrder[1],
+    );
     expect(
       screen.getByText("로컬 세션 준비를 완료하지 못했어요. 다시 로그인해 주세요."),
     ).not.toBeNull();

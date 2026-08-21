@@ -7,6 +7,9 @@
     "createAuthCallbackOperationsClient": [
       "app/auth/callback/route.ts"
     ],
+    "createLocalDevSessionBootstrapInternalClient": [
+      "lib/server/full-local-auth/local-dev-session-bootstrap.ts"
+    ],
     "createAdminDataInternalClient": [
       "app/admin/layout.tsx",
       "lib/server/admin-auth.ts"
@@ -342,6 +345,16 @@
       "kind": "internal-operation-call"
     },
     {
+      "classification": "internal",
+      "file": "lib/server/full-local-auth/local-dev-session-bootstrap.ts",
+      "column": 25,
+      "line": 100,
+      "allowed": true,
+      "factory": "createLocalDevSessionBootstrapInternalClient",
+      "functionName": "bootstrapLocalDevSessionAuthority",
+      "kind": "internal-operation-call"
+    },
+    {
       "classification": "user",
       "file": "lib/server/hybrid-auth/logout.ts",
       "column": 29,
@@ -441,6 +454,7 @@
     "lib/server/account-generation/quarantine-gate.ts",
     "lib/server/admin-auth.ts",
     "lib/server/admin-events.ts",
+    "lib/server/full-local-auth/local-dev-session-bootstrap.ts",
     "lib/server/recipe-snapshot-entrypoint.ts",
     "lib/supabase/server.ts"
   ],
@@ -506,6 +520,13 @@
       "file": "app/api/v1/shopping/lists/route.ts",
       "column": 25,
       "line": 1048,
+      "kind": "service-role-call"
+    },
+    {
+      "classification": "internal",
+      "file": "lib/server/full-local-auth/local-dev-session-bootstrap.ts",
+      "column": 25,
+      "line": 100,
       "kind": "service-role-call"
     },
     {

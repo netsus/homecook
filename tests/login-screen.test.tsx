@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 
 import React from "react";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { LoginScreen } from "@/components/auth/login-screen";
@@ -16,14 +17,28 @@ vi.mock("@/components/auth/social-login-buttons-deferred", () => ({
     expectedProvider,
     lastProvider,
     nextPath,
+    onLocalPasswordBootstrapPendingChange,
   }: {
     expectedProvider?: string | null;
     lastProvider?: string | null;
     nextPath: string;
+    onLocalPasswordBootstrapPendingChange?: (pending: boolean) => void;
   }) => (
     <div>
       social-buttons:{nextPath}:{expectedProvider ?? "none"}:
       {lastProvider ?? "none"}
+      <button
+        onClick={() => onLocalPasswordBootstrapPendingChange?.(true)}
+        type="button"
+      >
+        local-bootstrap-pending
+      </button>
+      <button
+        onClick={() => onLocalPasswordBootstrapPendingChange?.(false)}
+        type="button"
+      >
+        local-bootstrap-cleared
+      </button>
     </div>
   ),
 }));
@@ -197,6 +212,80 @@ describe("login screen", () => {
     render(<LoginScreen nextPath="/planner" />);
 
     await vi.waitFor(() => {
+      expect(replace).toHaveBeenCalledWith("/planner");
+    });
+  });
+
+  it("blocks session redirects while local password bootstrap is pending and recovers after failure", async () => {
+    const user = userEvent.setup();
+    let resolveSession: (value: {
+      data: { session: { user: { id: string } } | null };
+    }) => void = () => {
+      throw new Error("local bootstrap test session resolver was not installed");
+    };
+    let authStateHandler: (
+      event: string,
+      session: { user: { id: string } } | null,
+    ) => void = () => {
+      throw new Error("local bootstrap test auth handler was not installed");
+    };
+
+    getSession.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveSession = resolve;
+        }),
+    );
+    onAuthStateChange.mockImplementation((handler) => {
+      authStateHandler = handler;
+      return {
+        data: {
+          subscription: {
+            unsubscribe: vi.fn(),
+          },
+        },
+      };
+    });
+
+    render(<LoginScreen nextPath="/planner" />);
+
+    await user.click(
+      screen.getByRole("button", { name: "local-bootstrap-pending" }),
+    );
+
+    resolveSession({
+      data: {
+        session: {
+          user: {
+            id: "user-1",
+          },
+        },
+      },
+    });
+    await Promise.resolve();
+    await Promise.resolve();
+
+    authStateHandler("SIGNED_IN", {
+      user: {
+        id: "user-1",
+      },
+    });
+
+    await waitFor(() => {
+      expect(replace).not.toHaveBeenCalled();
+    });
+
+    await user.click(
+      screen.getByRole("button", { name: "local-bootstrap-cleared" }),
+    );
+
+    authStateHandler("SIGNED_IN", {
+      user: {
+        id: "user-1",
+      },
+    });
+
+    await waitFor(() => {
       expect(replace).toHaveBeenCalledWith("/planner");
     });
   });

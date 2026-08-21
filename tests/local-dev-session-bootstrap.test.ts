@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const isLocalDevAuthEnabled = vi.fn();
 const getAuthAuthority = vi.fn();
 const createAuthRouteHandlerClient = vi.fn();
-const createAuthCallbackOperationsClient = vi.fn();
+const createLocalDevSessionBootstrapInternalClient = vi.fn();
 const readAuthCallbackAccountGenerationCapability = vi.fn();
 const prepareFullLocalSessionAuthority = vi.fn();
 const bootstrapAuthCallbackAccountGenerationIdentity = vi.fn();
@@ -19,7 +19,7 @@ vi.mock("@/lib/supabase/auth-env", () => ({
 
 vi.mock("@/lib/supabase/server", () => ({
   createAuthRouteHandlerClient,
-  createAuthCallbackOperationsClient,
+  createLocalDevSessionBootstrapInternalClient,
 }));
 
 vi.mock("@/lib/server/account-generation/auth-callback", () => ({
@@ -38,7 +38,7 @@ describe("local dev session bootstrap", () => {
     isLocalDevAuthEnabled.mockReset();
     getAuthAuthority.mockReset();
     createAuthRouteHandlerClient.mockReset();
-    createAuthCallbackOperationsClient.mockReset();
+    createLocalDevSessionBootstrapInternalClient.mockReset();
     readAuthCallbackAccountGenerationCapability.mockReset();
     prepareFullLocalSessionAuthority.mockReset();
     bootstrapAuthCallbackAccountGenerationIdentity.mockReset();
@@ -66,7 +66,7 @@ describe("local dev session bootstrap", () => {
         getUser,
       },
     });
-    createAuthCallbackOperationsClient.mockReturnValue({ rpc: vi.fn() });
+    createLocalDevSessionBootstrapInternalClient.mockReturnValue({ rpc: vi.fn() });
     readAuthCallbackAccountGenerationCapability.mockResolvedValue({
       ok: true,
       state: "generation_active",
@@ -115,7 +115,8 @@ describe("local dev session bootstrap", () => {
     const routeClient = await createAuthRouteHandlerClient.mock.results[0]?.value;
     const getSession = routeClient.auth.getSession as ReturnType<typeof vi.fn>;
     const getUser = routeClient.auth.getUser as ReturnType<typeof vi.fn>;
-    const serviceRoleClient = createAuthCallbackOperationsClient.mock.results[0]?.value;
+    const serviceRoleClient =
+      createLocalDevSessionBootstrapInternalClient.mock.results[0]?.value;
     const prepared = await prepareFullLocalSessionAuthority.mock.results[0]?.value;
 
     expect(getSession).toHaveBeenCalledTimes(1);
@@ -214,7 +215,7 @@ describe("local dev session bootstrap", () => {
   });
 
   it("fails with maintenance when the scoped auth-callback client is unavailable", async () => {
-    createAuthCallbackOperationsClient.mockReturnValue(null);
+    createLocalDevSessionBootstrapInternalClient.mockReturnValue(null);
     const { bootstrapLocalDevSessionAuthority } = await import(
       "@/lib/server/full-local-auth/local-dev-session-bootstrap"
     );
@@ -268,10 +269,35 @@ describe("local dev session bootstrap", () => {
     });
   });
 
-  it("fails closed when account bootstrap fails", async () => {
+  it.each([
+    [
+      "ACCOUNT_CUTOVER_QUARANTINED",
+      "계정 복구가 필요해요.",
+    ],
+    [
+      "ACCOUNT_CUTOVER_UNCLASSIFIED",
+      "계정 상태를 다시 확인해 주세요.",
+    ],
+    [
+      "ACCOUNT_DELETING",
+      "계정 삭제가 진행 중이에요.",
+    ],
+    [
+      "ACCOUNT_DELETION_PENDING",
+      "계정 삭제를 마무리하고 있어요.",
+    ],
+    [
+      "ACCOUNT_GENERATION_STALE",
+      "계정 상태를 다시 확인해 주세요.",
+    ],
+    [
+      "ACCOUNT_SESSION_STALE",
+      "로컬 세션 준비를 완료하지 못했어요. 다시 로그인해 주세요.",
+    ],
+  ])("preserves the bootstrap error code %s", async (errorCode, message) => {
     bootstrapAuthCallbackAccountGenerationIdentity.mockResolvedValue({
       ok: false,
-      errorCode: "ACCOUNT_DELETION_PENDING",
+      errorCode,
     });
     const { bootstrapLocalDevSessionAuthority } = await import(
       "@/lib/server/full-local-auth/local-dev-session-bootstrap"
@@ -279,7 +305,8 @@ describe("local dev session bootstrap", () => {
 
     await expect(bootstrapLocalDevSessionAuthority()).resolves.toMatchObject({
       ok: false,
-      code: "ACCOUNT_SESSION_STALE",
+      code: errorCode,
+      message,
     });
   });
 
@@ -295,6 +322,75 @@ describe("local dev session bootstrap", () => {
     await expect(bootstrapLocalDevSessionAuthority()).resolves.toMatchObject({
       ok: false,
       code: "ACCOUNT_SESSION_STALE",
+    });
+  });
+
+  it("fails with maintenance when reading auth authority throws", async () => {
+    getAuthAuthority.mockImplementation(() => {
+      throw new Error("authority unavailable");
+    });
+    const { bootstrapLocalDevSessionAuthority } = await import(
+      "@/lib/server/full-local-auth/local-dev-session-bootstrap"
+    );
+
+    await expect(bootstrapLocalDevSessionAuthority()).resolves.toMatchObject({
+      ok: false,
+      code: "ACCOUNT_LIFECYCLE_MAINTENANCE",
+    });
+  });
+
+  it("fails closed when reading the live cookie session rejects", async () => {
+    createAuthRouteHandlerClient.mockResolvedValue({
+      auth: {
+        getSession: vi.fn(async () => {
+          throw new Error("session rejected");
+        }),
+        getUser: vi.fn(),
+      },
+    });
+    const { bootstrapLocalDevSessionAuthority } = await import(
+      "@/lib/server/full-local-auth/local-dev-session-bootstrap"
+    );
+
+    await expect(bootstrapLocalDevSessionAuthority()).resolves.toMatchObject({
+      ok: false,
+      code: "ACCOUNT_SESSION_STALE",
+    });
+  });
+
+  it("fails closed when reading the live user rejects", async () => {
+    createAuthRouteHandlerClient.mockResolvedValue({
+      auth: {
+        getSession: vi.fn(async () => ({
+          data: { session: { access_token: "access-token" } },
+          error: null,
+        })),
+        getUser: vi.fn(async () => {
+          throw new Error("user rejected");
+        }),
+      },
+    });
+    const { bootstrapLocalDevSessionAuthority } = await import(
+      "@/lib/server/full-local-auth/local-dev-session-bootstrap"
+    );
+
+    await expect(bootstrapLocalDevSessionAuthority()).resolves.toMatchObject({
+      ok: false,
+      code: "ACCOUNT_SESSION_STALE",
+    });
+  });
+
+  it("fails with maintenance when the internal bootstrap client factory throws", async () => {
+    createLocalDevSessionBootstrapInternalClient.mockImplementation(() => {
+      throw new Error("internal unavailable");
+    });
+    const { bootstrapLocalDevSessionAuthority } = await import(
+      "@/lib/server/full-local-auth/local-dev-session-bootstrap"
+    );
+
+    await expect(bootstrapLocalDevSessionAuthority()).resolves.toMatchObject({
+      ok: false,
+      code: "ACCOUNT_LIFECYCLE_MAINTENANCE",
     });
   });
 });

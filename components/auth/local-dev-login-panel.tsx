@@ -19,6 +19,7 @@ import { hasSupabasePublicEnv } from "@/lib/supabase/env";
 interface LocalDevLoginPanelProps {
   nextPath: string;
   pendingAction?: PendingRecipeAction | null;
+  onLocalPasswordBootstrapPendingChange?: (pending: boolean) => void;
   onStarted?: () => void;
 }
 
@@ -34,6 +35,7 @@ function isAlreadyRegisteredError(error: unknown) {
 
 export function LocalDevLoginPanel({
   nextPath,
+  onLocalPasswordBootstrapPendingChange,
   pendingAction,
   onStarted,
 }: LocalDevLoginPanelProps) {
@@ -46,6 +48,7 @@ export function LocalDevLoginPanel({
   }
 
   const handleLocalLogin = (accountId: "main" | "other") => {
+    onLocalPasswordBootstrapPendingChange?.(true);
     startTransition(async () => {
       try {
         setErrorMessage(null);
@@ -98,6 +101,7 @@ export function LocalDevLoginPanel({
         onStarted?.();
         window.location.assign(nextPath);
       } catch (error) {
+        onLocalPasswordBootstrapPendingChange?.(false);
         setErrorMessage(
           error instanceof Error ? error.message : "로컬 테스트 계정 로그인을 시작하지 못했어요.",
         );

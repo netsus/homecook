@@ -334,6 +334,8 @@ describe("supabase server helpers", () => {
 
     const server = await import("@/lib/supabase/server");
     const callbackClient = server.createAuthCallbackOperationsClient();
+    const localDevBootstrapClient =
+      server.createLocalDevSessionBootstrapInternalClient();
     server.createAuthRefreshInternalDataClient();
     server.createSessionLogoutInternalDataClient();
     const observabilityClient =
@@ -354,6 +356,7 @@ describe("supabase server helpers", () => {
 
     expect(createClient.mock.calls.map((call) =>
       call[2]?.global?.headers?.["x-homecook-internal-scope"])).toEqual([
+      "auth-callback",
       "auth-callback",
       "auth-refresh",
       "session-logout",
@@ -410,6 +413,8 @@ describe("supabase server helpers", () => {
     });
     expect(callbackClient).not.toHaveProperty("from");
     expect(callbackClient).toEqual({ rpc: expect.any(Function) });
+    expect(localDevBootstrapClient).not.toHaveProperty("from");
+    expect(localDevBootstrapClient).toEqual({ rpc: expect.any(Function) });
     expect(() => adminClient?.from("recipes")).toThrow(
       "Internal Data scope denied table: recipes",
     );

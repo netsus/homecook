@@ -27,7 +27,11 @@ const APPROVED_USER_SERVICE_ROLE_FILES = [
   "lib/server/youtube-import.ts",
   "lib/server/youtube-import.ts",
 ];
-const APPROVED_SERVICE_ROLE_FILES = [...APPROVED_USER_SERVICE_ROLE_FILES];
+const APPROVED_SERVICE_ROLE_FILES = [
+  ...APPROVED_USER_SERVICE_ROLE_FILES.slice(0, 9),
+  "lib/server/full-local-auth/local-dev-session-bootstrap.ts",
+  ...APPROVED_USER_SERVICE_ROLE_FILES.slice(9),
+];
 
 function fixtureRepository(files: Record<string, string>) {
   const root = mkdtempSync(join(tmpdir(), "homecook-authority-inventory-"));
@@ -180,6 +184,11 @@ describe("hybrid authority AST/static gate", () => {
         factory: "createOperationalEventInternalClient",
         file: "lib/server/admin-events.ts",
         functionName: "recordOperationalEventFromServiceRole",
+      },
+      {
+        factory: "createLocalDevSessionBootstrapInternalClient",
+        file: "lib/server/full-local-auth/local-dev-session-bootstrap.ts",
+        functionName: "bootstrapLocalDevSessionAuthority",
       },
       {
         factory: "createSessionLogoutInternalDataClient",
