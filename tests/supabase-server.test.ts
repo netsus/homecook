@@ -124,7 +124,7 @@ describe("supabase server helpers", () => {
   });
 
   it.each(["missing", "remote"])(
-    "fails closed before creating server Auth clients when authority is %s",
+    "marks the request dynamic and fails closed before creating server Auth clients when authority is %s",
     async (authority) => {
       getAuthAuthority.mockImplementation(() => {
         throw new Error(
@@ -140,7 +140,10 @@ describe("supabase server helpers", () => {
       await expect(server.createAuthServerComponentClient()).rejects.toThrow(
         /HOMECOOK_AUTH_AUTHORITY.*local-only/iu,
       );
-      expect(cookies).not.toHaveBeenCalled();
+      expect(cookies).toHaveBeenCalledTimes(2);
+      expect(cookies.mock.invocationCallOrder[0]).toBeLessThan(
+        getAuthAuthority.mock.invocationCallOrder[0],
+      );
       expect(createServerClient).not.toHaveBeenCalled();
     },
   );
