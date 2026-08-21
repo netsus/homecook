@@ -34,7 +34,25 @@ function isHostedSupabaseHostname(hostname: string) {
   return HOSTED_SUPABASE_SUFFIXES.some((suffix) => hostname.endsWith(suffix));
 }
 
+function rejectRawTrailingDotHostname(value: string, name: string) {
+  const schemeEnd = value.indexOf("://");
+  if (schemeEnd < 0) {
+    return;
+  }
+
+  const authorityAndRest = value.slice(schemeEnd + 3);
+  const authorityEnd = authorityAndRest.search(/[/?#]/u);
+  const authority = authorityEnd < 0
+    ? authorityAndRest
+    : authorityAndRest.slice(0, authorityEnd);
+  const hostAndPort = authority.slice(authority.lastIndexOf("@") + 1);
+  if (/(?:\.|%2e)(?::[0-9]+)?$/iu.test(hostAndPort)) {
+    throw new Error(`${name} hostname에는 trailing dot을 사용할 수 없어요.`);
+  }
+}
+
 function parseUrl(value: string, name: string) {
+  rejectRawTrailingDotHostname(value, name);
   let parsed: URL;
   try {
     parsed = new URL(value);
@@ -56,9 +74,6 @@ function parseUrl(value: string, name: string) {
 
 function normalizeLocalPublicAuthUrl(value: string) {
   const parsed = parseUrl(value, AUTH_URL_ENV);
-  if (parsed.hostname.endsWith(".")) {
-    throw new Error(`${AUTH_URL_ENV} hostname에는 trailing dot을 사용할 수 없어요.`);
-  }
   if (isHostedSupabaseHostname(parsed.hostname)) {
     throw new Error(`${AUTH_URL_ENV}는 Supabase Cloud hosted URL을 사용할 수 없어요.`);
   }

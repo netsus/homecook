@@ -85,10 +85,16 @@ describe("local-only Supabase environment boundary", () => {
   });
 
   it.each([
+    "http://127.0.0.1.:54321",
+    "http://127.0.0.1%2e:54321",
     "https://project.supabase.co.",
+    "https://project.supabase.co%2E",
     "https://project.supabase.in.",
+    "https://project.supabase.in%2e",
     "http://localhost.:54321",
+    "http://localhost%2E:54321",
     "https://auth.mumeok.kr.",
+    "https://auth.mumeok.kr%2e",
   ])("rejects trailing-dot Auth hostname %s", async (url) => {
     process.env.NEXT_PUBLIC_AUTH_SUPABASE_URL = url;
     process.env.NEXT_PUBLIC_AUTH_SUPABASE_PUBLISHABLE_KEY = "local-publishable";
@@ -99,6 +105,30 @@ describe("local-only Supabase environment boundary", () => {
 
     expect(() => getAuthSupabaseEnv()).toThrow(/hostname.*trailing dot/iu);
     expect(hasAuthSupabasePublicEnv()).toBe(false);
+  });
+
+  it.each([
+    "http://127.0.0.1.:54481",
+    "http://127.0.0.1%2e:54481",
+    "http://localhost.:54481",
+    "http://localhost%2E:54481",
+    "https://project.supabase.co.:443",
+    "https://project.supabase.co%2e:443",
+    "https://auth.mumeok.kr.:443",
+    "https://auth.mumeok.kr%2E:443",
+  ])("rejects trailing-dot internal Auth hostname %s", async (url) => {
+    process.env.HOMECOOK_AUTH_AUTHORITY = "local";
+    process.env.NEXT_PUBLIC_AUTH_SUPABASE_URL = "http://127.0.0.1:54321";
+    process.env.NEXT_PUBLIC_AUTH_SUPABASE_PUBLISHABLE_KEY = "local-publishable";
+    process.env.LOCAL_SUPABASE_INTERNAL_URL = url;
+
+    const { getAuthSupabaseServerEnv } = await import(
+      "@/lib/supabase/auth-env"
+    );
+
+    expect(() => getAuthSupabaseServerEnv()).toThrow(
+      /LOCAL_SUPABASE_INTERNAL_URL.*hostname.*trailing dot/iu,
+    );
   });
 
   it("allows browser Auth env without the server-only Auth authority", async () => {
@@ -193,6 +223,9 @@ describe("local-only Supabase environment boundary", () => {
 
     expect(getAuthSupabaseEnv().url).toBe("https://auth.mumeok.kr");
     expect(getAuthSupabaseServerEnv().url).toBe("http://127.0.0.1:54481");
+
+    process.env.LOCAL_SUPABASE_INTERNAL_URL = "http://[::1]:54481";
+    expect(getAuthSupabaseServerEnv().url).toBe("http://[::1]:54481");
   });
 
   it("rejects non-loopback Data origins in every runtime mode", async () => {
