@@ -3,6 +3,7 @@ import { expect, test, type Page } from "@playwright/test";
 import {
   RECIPE_ID,
   RECIPE_PATH,
+  installAccountLibraryVisualRoutes,
   installRecipeDetailRoutes,
   setE2EAuthOverride,
 } from "./helpers/mock-routes";
@@ -11,6 +12,12 @@ import type { RecipeDetail, RecipeEditDraft } from "../../types/recipe";
 
 const PINNED_TITLE = "삭제 전 두부찌개";
 const PENDING_ACTION_KEY = "homecook.pending-recipe-action";
+const PINNED_MEAL_LOG_DATE = "2026-08-21";
+const PINNED_SHOPPING_LIST_ID = "list-pinned";
+const PINNED_SHOPPING_TITLE = `${PINNED_TITLE}~장보기`;
+const PINNED_MEAL_LOG_ENTRY_ID = "10000000-0000-4000-8000-000000000001";
+const PINNED_MEAL_LOG_COLUMN_ID = "20000000-0000-4000-8000-000000000001";
+const PINNED_BATCH_ID = "40000000-0000-4000-8000-000000000001";
 
 interface FutureImpactPreviewRequest {
   base_recipe_revision: number;
@@ -21,6 +28,10 @@ interface FutureImpactPatchRequest extends FutureImpactPreviewRequest {
   future_plan_strategy: "keep" | "replace_all";
   impact_token: string;
   image_object_id: string | null;
+}
+
+function isMobileViewport(page: Page) {
+  return (page.viewportSize()?.width ?? 1024) < 1024;
 }
 
 function cloneRecipeDetail(overrides: Partial<RecipeDetail> = {}): RecipeDetail {
@@ -49,6 +60,8 @@ function cloneOwnerRecipeDetail(overrides: Partial<RecipeDetail> = {}): RecipeDe
 }
 
 async function installPinnedHistoryRoutes(page: Page) {
+  await installAccountLibraryVisualRoutes(page);
+
   await page.route("**/api/v1/planner?*", async (route) => {
     const now = new Date();
     const planDate = [
@@ -148,6 +161,170 @@ async function installPinnedHistoryRoutes(page: Page) {
               source_planned_servings: 2,
             },
           ],
+        },
+        error: null,
+      },
+    });
+  });
+
+  await page.route("**/api/v1/shopping/preview", async (route) => {
+    await route.fulfill({
+      json: {
+        success: true,
+        data: {
+          eligible_meals: [],
+        },
+        error: null,
+      },
+    });
+  });
+
+  await page.route("**/api/v1/shopping/lists**", async (route) => {
+    const url = new URL(route.request().url());
+    if (url.pathname === `/api/v1/shopping/lists/${PINNED_SHOPPING_LIST_ID}`) {
+      await route.fulfill({
+        json: {
+          success: true,
+          data: {
+            id: PINNED_SHOPPING_LIST_ID,
+            title: PINNED_SHOPPING_TITLE,
+            date_range_start: "2026-08-20",
+            date_range_end: "2026-08-20",
+            is_completed: true,
+            completed_at: "2026-08-20T10:00:00.000Z",
+            created_at: "2026-08-20T00:00:00.000Z",
+            updated_at: "2026-08-20T10:00:00.000Z",
+            recipes: [
+              {
+                recipe_id: "recipe-deleted",
+                recipe_name: PINNED_TITLE,
+                recipe_thumbnail: null,
+                shopping_servings: 2,
+                planned_servings_total: 2,
+              },
+            ],
+            items: [
+              {
+                id: "item-pinned-1",
+                ingredient_id: "ingredient-tofu",
+                display_text: "두부 1모",
+                amounts_json: [{ amount: 1, unit: "모" }],
+                is_checked: true,
+                is_pantry_excluded: false,
+                added_to_pantry: true,
+                sort_order: 0,
+              },
+            ],
+          },
+          error: null,
+        },
+      });
+      return;
+    }
+
+    await route.fulfill({
+      json: {
+        success: true,
+        data: {
+          items: [
+            {
+              id: PINNED_SHOPPING_LIST_ID,
+              title: PINNED_SHOPPING_TITLE,
+              date_range_start: "2026-08-20",
+              date_range_end: "2026-08-20",
+              is_completed: true,
+              completed_at: "2026-08-20T10:00:00.000Z",
+              item_count: 1,
+              created_at: "2026-08-20T00:00:00.000Z",
+            },
+          ],
+          next_cursor: null,
+          has_next: false,
+        },
+        error: null,
+      },
+    });
+  });
+
+  await page.route("**/api/v1/meal-log?*", async (route) => {
+    const date = new URL(route.request().url()).searchParams.get("date") ?? PINNED_MEAL_LOG_DATE;
+    const zero = {
+      calculation_status: "complete",
+      calories_kcal: 0,
+      carbohydrate_g: 0,
+      protein_g: 0,
+      fat_g: 0,
+      sodium_mg: 0,
+    };
+    const subtotal = {
+      calculation_status: "complete",
+      calories_kcal: 410,
+      carbohydrate_g: 18,
+      protein_g: 20,
+      fat_g: 24,
+      sodium_mg: 520,
+    };
+
+    await route.fulfill({
+      json: {
+        success: true,
+        data: {
+          date,
+          active_columns: [{ id: PINNED_MEAL_LOG_COLUMN_ID, name: "아침", sort_order: 0 }],
+          active_sections: [
+            {
+              meal_plan_column_id: PINNED_MEAL_LOG_COLUMN_ID,
+              slot_name_snapshot: "아침",
+              sort_order: 0,
+              entries: [],
+              subtotal: zero,
+              incomplete_count: 0,
+            },
+          ],
+          deleted_column_sections: [
+            {
+              slot_name_snapshot: "저녁",
+              entries: [
+                {
+                  id: PINNED_MEAL_LOG_ENTRY_ID,
+                  revision: 3,
+                  consumed_at: null,
+                  consumed_local_date: PINNED_MEAL_LOG_DATE,
+                  timezone_name_snapshot: "Asia/Seoul",
+                  meal_plan_column_id: null,
+                  slot_name_snapshot: "저녁",
+                  source: { type: "cooked_batch", id: PINNED_BATCH_ID },
+                  quantity: { amount: 1, unit: "그릇" },
+                  display_name: PINNED_TITLE,
+                  display_brand: null,
+                  nutrition: subtotal,
+                  created_at: "2026-08-20T19:00:00.000Z",
+                  updated_at: "2026-08-20T19:00:00.000Z",
+                },
+              ],
+              subtotal,
+              incomplete_count: 0,
+            },
+          ],
+          entries: [
+            {
+              id: PINNED_MEAL_LOG_ENTRY_ID,
+              revision: 3,
+              consumed_at: null,
+              consumed_local_date: PINNED_MEAL_LOG_DATE,
+              timezone_name_snapshot: "Asia/Seoul",
+              meal_plan_column_id: null,
+              slot_name_snapshot: "저녁",
+              source: { type: "cooked_batch", id: PINNED_BATCH_ID },
+              quantity: { amount: 1, unit: "그릇" },
+              display_name: PINNED_TITLE,
+              display_brand: null,
+              nutrition: subtotal,
+              created_at: "2026-08-20T19:00:00.000Z",
+              updated_at: "2026-08-20T19:00:00.000Z",
+            },
+          ],
+          day_total: { ...subtotal, incomplete_count: 0 },
         },
         error: null,
       },
@@ -538,6 +715,46 @@ test.describe("personal-recipe-customization-write-core", () => {
     await page.goto("/leftovers");
     await expect(
       page.getByTestId("leftover-card").filter({ hasText: PINNED_TITLE }),
+    ).toBeVisible();
+  });
+
+  test("keeps shopping and meal-log readers readable while new shopping preview omits the deleted recipe", async ({
+    page,
+  }) => {
+    await installPinnedHistoryRoutes(page);
+
+    await page.goto("/shopping/flow");
+    await expect(page.getByText("장보기 대상이 없어요")).toBeVisible();
+    await expect(page.getByText(PINNED_TITLE)).toHaveCount(0);
+
+    await page.goto("/mypage");
+    await expect(page.locator("main").getByText("집밥러").first()).toBeVisible();
+    if (isMobileViewport(page)) {
+      await page.getByRole("button", { name: /장보기 기록/ }).click();
+    } else {
+      await page.getByRole("tab", { name: "장보기 기록" }).click();
+    }
+    await expect(page.getByRole("heading", { name: "장보기 기록" })).toBeVisible();
+    await expect(page.getByTestId("shopping-card-list-pinned")).toBeVisible();
+
+    await page.getByTestId("shopping-card-list-pinned").click();
+    if (isMobileViewport(page)) {
+      await page.waitForURL(/\/shopping\/lists\/list-pinned/);
+      await expect(page.getByTestId("shopping-detail-mobile")).toBeVisible();
+    } else {
+      await expect(page.getByTestId("shopping-detail-embedded")).toBeVisible();
+    }
+    await expect(page.getByText("완료된 장보기 기록은 수정할 수 없어요")).toBeVisible();
+
+    await page.goto(`/planner?segment=log&date=${PINNED_MEAL_LOG_DATE}`);
+    await expect(
+      page.getByRole("heading", { name: "8월 21일 금요일 식사 기록" }),
+    ).toBeVisible();
+    await expect(page.getByText("삭제된 끼니의 기록 · 저녁")).toBeVisible();
+    await expect(page.getByText(PINNED_TITLE, { exact: true }).first()).toBeVisible();
+    await expect(page.getByText("1그릇 · 요리한 음식")).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: `저녁의 ${PINNED_TITLE} 식사 기록 수정` }),
     ).toBeVisible();
   });
 
