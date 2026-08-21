@@ -3,6 +3,7 @@
 import React from "react";
 import { useState, useTransition } from "react";
 
+import { bootstrapLocalDevSessionAction } from "@/app/login/local-dev-session-bootstrap-action";
 import {
   getLocalDevAuthAccounts,
   getLocalDevAuthCredentials,
@@ -87,6 +88,11 @@ export function LocalDevLoginPanel({
 
         if (signInResult.error) {
           throw signInResult.error;
+        }
+
+        const bootstrapResult = await bootstrapLocalDevSessionAction();
+        if (!bootstrapResult.ok) {
+          throw new Error(bootstrapResult.message);
         }
 
         onStarted?.();

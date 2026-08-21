@@ -15,6 +15,7 @@ const hasSupabasePublicEnv = vi.fn();
 const savePendingAction = vi.fn();
 const signInWithPassword = vi.fn();
 const signUp = vi.fn();
+const bootstrapLocalDevSessionAction = vi.fn();
 
 vi.mock("@/lib/auth/local-dev-auth", () => ({
   isLocalDevAuthEnabled: () => isLocalDevAuthEnabled(),
@@ -39,6 +40,10 @@ vi.mock("@/lib/supabase/browser", () => ({
   }),
 }));
 
+vi.mock("@/app/login/local-dev-session-bootstrap-action", () => ({
+  bootstrapLocalDevSessionAction: () => bootstrapLocalDevSessionAction(),
+}));
+
 describe("local dev login panel", () => {
   const assign = vi.fn();
   const pendingAction: PendingRecipeAction = {
@@ -56,6 +61,7 @@ describe("local dev login panel", () => {
     savePendingAction.mockReset();
     signInWithPassword.mockReset();
     signUp.mockReset();
+    bootstrapLocalDevSessionAction.mockReset();
 
     isLocalDevAuthEnabled.mockReturnValue(true);
     getLocalDevAuthAccounts.mockReturnValue([
@@ -82,6 +88,7 @@ describe("local dev login panel", () => {
       nickname: "로컬 테스트 계정",
     });
     hasSupabasePublicEnv.mockReturnValue(true);
+    bootstrapLocalDevSessionAction.mockResolvedValue({ ok: true });
 
     Object.defineProperty(window, "location", {
       configurable: true,
@@ -136,6 +143,7 @@ describe("local dev login panel", () => {
     await waitFor(() => {
       expect(signInWithPassword).toHaveBeenCalledTimes(2);
     });
+    expect(bootstrapLocalDevSessionAction).toHaveBeenCalledTimes(1);
     expect(signUp).toHaveBeenCalledWith({
       email: "local-tester@homecook.local",
       password: "homecook-local-dev",
@@ -148,6 +156,14 @@ describe("local dev login panel", () => {
     expect(savePendingAction).toHaveBeenCalledWith(pendingAction);
     expect(onStarted).toHaveBeenCalledTimes(1);
     expect(assign).toHaveBeenCalledWith("/recipe/recipe-1");
+    expect(
+      signInWithPassword.mock.invocationCallOrder[
+        signInWithPassword.mock.invocationCallOrder.length - 1
+      ],
+    ).toBeLessThan(bootstrapLocalDevSessionAction.mock.invocationCallOrder[0]);
+    expect(bootstrapLocalDevSessionAction.mock.invocationCallOrder[0]).toBeLessThan(
+      assign.mock.invocationCallOrder[0],
+    );
   });
 
   it("can sign in with the secondary demo account", async () => {
@@ -181,6 +197,39 @@ describe("local dev login panel", () => {
         password: "homecook-local-peer",
       });
     });
+    expect(bootstrapLocalDevSessionAction).toHaveBeenCalledTimes(1);
     expect(assign).toHaveBeenCalledWith("/planner");
+  });
+
+  it("blocks navigation when the server bootstrap rejects the local session", async () => {
+    const user = userEvent.setup();
+    const onStarted = vi.fn();
+
+    signInWithPassword.mockResolvedValue({
+      data: { session: { access_token: "token" }, user: { id: "user-1" } },
+      error: null,
+    });
+    bootstrapLocalDevSessionAction.mockResolvedValue({
+      ok: false,
+      message: "로컬 세션 준비를 완료하지 못했어요. 다시 로그인해 주세요.",
+    });
+
+    render(
+      <LocalDevLoginPanel
+        nextPath="/planner"
+        onStarted={onStarted}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "로컬 테스트 계정으로 시작" }));
+
+    await waitFor(() => {
+      expect(bootstrapLocalDevSessionAction).toHaveBeenCalledTimes(1);
+    });
+    expect(assign).not.toHaveBeenCalled();
+    expect(onStarted).not.toHaveBeenCalled();
+    expect(
+      screen.getByText("로컬 세션 준비를 완료하지 못했어요. 다시 로그인해 주세요."),
+    ).not.toBeNull();
   });
 });
