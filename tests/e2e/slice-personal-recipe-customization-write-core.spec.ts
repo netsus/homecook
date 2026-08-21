@@ -8,16 +8,21 @@ import {
   setE2EAuthOverride,
 } from "./helpers/mock-routes";
 import { MOCK_RECIPE_DETAIL } from "../../lib/mock/recipes";
+import type { CookedBatchProjection } from "../../types/cooking";
 import type { RecipeDetail, RecipeEditDraft } from "../../types/recipe";
 
 const PINNED_TITLE = "삭제 전 두부찌개";
+const LEGACY_LEFTOVER_TITLE = "기존 남은 반찬";
 const PENDING_ACTION_KEY = "homecook.pending-recipe-action";
 const PINNED_MEAL_LOG_DATE = "2026-08-21";
 const PINNED_SHOPPING_LIST_ID = "list-pinned";
 const PINNED_SHOPPING_TITLE = `${PINNED_TITLE}~장보기`;
 const PINNED_MEAL_LOG_ENTRY_ID = "10000000-0000-4000-8000-000000000001";
 const PINNED_MEAL_LOG_COLUMN_ID = "20000000-0000-4000-8000-000000000001";
+const PINNED_DELETED_RECIPE_ID = "30000000-0000-4000-8000-000000000001";
 const PINNED_BATCH_ID = "40000000-0000-4000-8000-000000000001";
+const PINNED_BATCH_FINISHED_WEIGHT_G = 720;
+const PINNED_BATCH_REMAINING_WEIGHT_G = 380;
 
 interface FutureImpactPreviewRequest {
   base_recipe_revision: number;
@@ -61,6 +66,23 @@ function cloneOwnerRecipeDetail(overrides: Partial<RecipeDetail> = {}): RecipeDe
 
 async function installPinnedHistoryRoutes(page: Page) {
   await installAccountLibraryVisualRoutes(page);
+  const pinnedCookedBatch: CookedBatchProjection = {
+    id: PINNED_BATCH_ID,
+    recipe_id: PINNED_DELETED_RECIPE_ID,
+    recipe_title: PINNED_TITLE,
+    recipe_thumbnail_url: null,
+    status: "leftover",
+    cooked_at: "2026-08-20T09:00:00.000Z",
+    cooking_servings: 2,
+    finished_weight_g: PINNED_BATCH_FINISHED_WEIGHT_G,
+    remaining_weight_g: PINNED_BATCH_REMAINING_WEIGHT_G,
+    weight_status: "known",
+    batch_status: "available",
+    depleted_reason: null,
+    revision: 7,
+    nutrition_calculation_status: "complete",
+    current_unweighed_closure_event_id: null,
+  };
 
   await page.route("**/api/v1/planner?*", async (route) => {
     const now = new Date();
@@ -141,6 +163,20 @@ async function installPinnedHistoryRoutes(page: Page) {
     });
   });
 
+  await page.route("**/api/v1/cooked-batches?*", async (route) => {
+    await route.fulfill({
+      json: {
+        success: true,
+        data: {
+          items: [pinnedCookedBatch],
+          next_cursor: null,
+          has_next: false,
+        },
+        error: null,
+      },
+    });
+  });
+
   await page.route("**/api/v1/leftovers?*", async (route) => {
     await route.fulfill({
       json: {
@@ -149,8 +185,8 @@ async function installPinnedHistoryRoutes(page: Page) {
           items: [
             {
               id: "leftover-pinned",
-              recipe_id: "recipe-deleted",
-              recipe_title: PINNED_TITLE,
+              recipe_id: "legacy-leftover",
+              recipe_title: LEGACY_LEFTOVER_TITLE,
               recipe_thumbnail_url: null,
               status: "leftover",
               cooked_at: "2026-08-20T09:00:00.000Z",
@@ -713,9 +749,21 @@ test.describe("personal-recipe-customization-write-core", () => {
     await expect(page.getByTestId("cook-mode-title")).toContainText(PINNED_TITLE);
 
     await page.goto("/leftovers");
+    const cookedBatchCard = page.locator(
+      `[data-testid="cooked-batch-card"][aria-label="중량·잔량 기록 ${PINNED_TITLE}"]`,
+    );
+    await expect(cookedBatchCard).toBeVisible();
+    await expect(cookedBatchCard.getByRole("heading", { name: PINNED_TITLE })).toBeVisible();
+    await expect(cookedBatchCard.getByText("완성 중량")).toBeVisible();
+    await expect(cookedBatchCard.getByText(`${PINNED_BATCH_FINISHED_WEIGHT_G}g`)).toBeVisible();
+    await expect(cookedBatchCard.getByText("남은 양")).toBeVisible();
+    await expect(cookedBatchCard.getByText(`${PINNED_BATCH_REMAINING_WEIGHT_G}g`)).toBeVisible();
+    await expect(
+      page.getByTestId("leftover-card").filter({ hasText: LEGACY_LEFTOVER_TITLE }),
+    ).toBeVisible();
     await expect(
       page.getByTestId("leftover-card").filter({ hasText: PINNED_TITLE }),
-    ).toBeVisible();
+    ).toHaveCount(0);
   });
 
   test("keeps shopping and meal-log readers readable while new shopping preview omits the deleted recipe", async ({
