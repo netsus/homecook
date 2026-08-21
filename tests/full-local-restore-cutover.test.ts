@@ -101,6 +101,63 @@ ${platformData}\\unrestrict Beta456
     });
   });
 
+  it("treats reordered included COPY blocks as the same semantic dataset and relation set", () => {
+    const reorderedPlatformData = `-- platform data
+COPY storage.objects (id, bucket_id, name) FROM stdin;
+object-a\trecipe-images\tuser-a/a.jpg
+\\.
+COPY public.users (id, nickname) FROM stdin;
+user-a\t무먹러
+\\.
+COPY auth.identities (id, user_id, provider) FROM stdin;
+identity-a\tuser-a\tgoogle
+\\.
+COPY auth.refresh_tokens (id, token) FROM stdin;
+refresh-a\tsecret
+\\.
+COPY storage.buckets (id, name, public) FROM stdin;
+recipe-images\trecipe-images\tf
+\\.
+COPY auth.users (id, email) FROM stdin;
+user-a\ta@example.com
+\\.
+COPY auth.sessions (id, user_id) FROM stdin;
+session-a\tuser-a
+\\.
+COPY auth.flow_state (id, auth_code) FROM stdin;
+flow-a\tsecret
+\\.
+`;
+    const source = buildSanitizedPlatformData(platformData);
+    const restored = buildSanitizedPlatformData(reorderedPlatformData);
+
+    expect(restored.manifest.data_semantic_sha256)
+      .toBe(source.manifest.data_semantic_sha256);
+    expect(restored.manifest.relation_classification_digest)
+      .toBe(source.manifest.relation_classification_digest);
+    expect(restored.sql).not.toBe(source.sql);
+    expect(verifyRestoredPlatformDataSnapshot({
+      restoredDataSql: reorderedPlatformData,
+      sourceDataSha256: createHash("sha256").update(source.sql).digest("hex"),
+      sourceDataSemanticSha256: source.manifest.data_semantic_sha256,
+      sourceRelationClassificationDigest:
+        source.manifest.relation_classification_digest,
+    })).toEqual({
+      restored_data_sha256: createHash("sha256").update(restored.sql).digest("hex"),
+      restored_data_semantic_sha256: source.manifest.data_semantic_sha256,
+      restored_relation_classification_digest:
+        source.manifest.relation_classification_digest,
+    });
+  });
+
+  it("fails closed when an included relation appears more than once", () => {
+    expect(() => buildSanitizedPlatformData(`${platformData}
+COPY auth.users (id, email) FROM stdin;
+user-b\tb@example.com
+\\.
+`)).toThrow(/duplicate|relation/i);
+  });
+
   it("fails closed when pg_dump restrict nonce metadata is missing, duplicated, mismatched, or unsafe", () => {
     expect(() => buildSanitizedPlatformData(`\\restrict Alpha123
 ${platformData}`)).toThrow(/restrict|unrestrict|semantic/iu);

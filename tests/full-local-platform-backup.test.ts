@@ -683,7 +683,7 @@ describe("full-local platform backup boundary", () => {
         source_identity: "isolated-supabase-cli-local",
       },
       components,
-      format: "homecook-full-local-platform-v2",
+      format: "homecook-full-local-platform-v3",
       storage_payload: {
         catalog_sha256: "f".repeat(64),
         object_count: 1,
@@ -782,7 +782,7 @@ describe("full-local platform backup boundary", () => {
         schema_sha256: "c".repeat(64),
         storage_payload_sha256: "e".repeat(64),
       },
-      format: "homecook-full-local-platform-v2",
+      format: "homecook-full-local-platform-v3",
       storage_payload: {
         catalog_sha256: "f".repeat(64),
         object_count: 0,
@@ -839,7 +839,7 @@ describe("full-local platform backup boundary", () => {
     );
   });
 
-  it("rejects legacy v1 backup metadata explicitly after the v2 semantic-digest schema change", () => {
+  it("rejects legacy v1/v2 backup metadata explicitly after the v3 semantic-canonicalization change", () => {
     expect(() => verifyPlatformBackupMetadata({
       format: "homecook-full-local-platform-v1",
       manifest: {
@@ -864,6 +864,32 @@ describe("full-local platform backup boundary", () => {
       roles_sha256: "b".repeat(64),
       schema_sha256: "c".repeat(64),
       storage_payload_sha256: "e".repeat(64),
-    })).toThrow(/unsupported legacy|v1|v2/iu);
+    })).toThrow(/unsupported legacy|v1|v3/iu);
+
+    expect(() => verifyPlatformBackupMetadata({
+      format: "homecook-full-local-platform-v2",
+      manifest: {
+        data_semantic_sha256: "9".repeat(64),
+        relation_classification_digest: "d".repeat(64),
+        service_ledgers: {
+          auth_schema_migrations: {
+            digest_sha256: "3".repeat(64),
+            row_count: 1,
+          },
+          storage_migrations: {
+            digest_sha256: "4".repeat(64),
+            row_count: 1,
+          },
+        },
+        transient_promote_count: 0,
+        unclassified: [],
+      },
+    }, {
+      data_sha256: "a".repeat(64),
+      data_semantic_sha256: "9".repeat(64),
+      roles_sha256: "b".repeat(64),
+      schema_sha256: "c".repeat(64),
+      storage_payload_sha256: "e".repeat(64),
+    })).toThrow(/unsupported legacy|v2|v3/iu);
   });
 });
