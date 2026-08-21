@@ -84,6 +84,23 @@ describe("local-only Supabase environment boundary", () => {
     expect(() => getAuthSupabaseEnv()).toThrow(/hosted|Cloud|local-only/iu);
   });
 
+  it.each([
+    "https://project.supabase.co.",
+    "https://project.supabase.in.",
+    "http://localhost.:54321",
+    "https://auth.mumeok.kr.",
+  ])("rejects trailing-dot Auth hostname %s", async (url) => {
+    process.env.NEXT_PUBLIC_AUTH_SUPABASE_URL = url;
+    process.env.NEXT_PUBLIC_AUTH_SUPABASE_PUBLISHABLE_KEY = "local-publishable";
+
+    const { getAuthSupabaseEnv, hasAuthSupabasePublicEnv } = await import(
+      "@/lib/supabase/auth-env"
+    );
+
+    expect(() => getAuthSupabaseEnv()).toThrow(/hostname.*trailing dot/iu);
+    expect(hasAuthSupabasePublicEnv()).toBe(false);
+  });
+
   it("allows browser Auth env without the server-only Auth authority", async () => {
     process.env.NEXT_PUBLIC_AUTH_SUPABASE_URL = "http://127.0.0.1:54321";
     process.env.NEXT_PUBLIC_AUTH_SUPABASE_PUBLISHABLE_KEY = "local-publishable";

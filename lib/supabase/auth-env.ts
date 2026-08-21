@@ -56,6 +56,9 @@ function parseUrl(value: string, name: string) {
 
 function normalizeLocalPublicAuthUrl(value: string) {
   const parsed = parseUrl(value, AUTH_URL_ENV);
+  if (parsed.hostname.endsWith(".")) {
+    throw new Error(`${AUTH_URL_ENV} hostname에는 trailing dot을 사용할 수 없어요.`);
+  }
   if (isHostedSupabaseHostname(parsed.hostname)) {
     throw new Error(`${AUTH_URL_ENV}는 Supabase Cloud hosted URL을 사용할 수 없어요.`);
   }
