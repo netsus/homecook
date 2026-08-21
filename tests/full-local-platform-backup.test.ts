@@ -683,7 +683,7 @@ describe("full-local platform backup boundary", () => {
         source_identity: "isolated-supabase-cli-local",
       },
       components,
-      format: "homecook-full-local-platform-v3",
+      format: "homecook-full-local-platform-v4",
       storage_payload: {
         catalog_sha256: "f".repeat(64),
         object_count: 1,
@@ -742,6 +742,18 @@ describe("full-local platform backup boundary", () => {
         schema_catalog_sha256: "0".repeat(64),
       },
     }, { ...metadata.components, data_semantic_sha256: "9".repeat(64) })).toThrow(/service restore attestation/iu);
+    expect(() => verifyPlatformBackupMetadata({
+      ...metadata,
+      format: "homecook-full-local-platform-v1",
+    }, { ...metadata.components, data_semantic_sha256: "9".repeat(64) })).toThrow(/unsupported legacy v1|v4/iu);
+    expect(() => verifyPlatformBackupMetadata({
+      ...metadata,
+      format: "homecook-full-local-platform-v2",
+    }, { ...metadata.components, data_semantic_sha256: "9".repeat(64) })).toThrow(/unsupported legacy v2|v4/iu);
+    expect(() => verifyPlatformBackupMetadata({
+      ...metadata,
+      format: "homecook-full-local-platform-v3",
+    }, { ...metadata.components, data_semantic_sha256: "9".repeat(64) })).toThrow(/unsupported legacy v3|v4/iu);
   });
 
   it("authenticates the encrypted archive before decryption", () => {
@@ -782,7 +794,7 @@ describe("full-local platform backup boundary", () => {
         schema_sha256: "c".repeat(64),
         storage_payload_sha256: "e".repeat(64),
       },
-      format: "homecook-full-local-platform-v3",
+      format: "homecook-full-local-platform-v4",
       storage_payload: {
         catalog_sha256: "f".repeat(64),
         object_count: 0,

@@ -50,6 +50,8 @@ const EXCLUDED_RELATIONS = new Set([
 const COPY_HEADER = /^COPY\s+((?:"[^"]+"|[a-zA-Z_][\w$]*)\.(?:"[^"]+"|[a-zA-Z_][\w$]*))\s+\(([^)]*)\)\s+FROM\s+stdin;\s*$/;
 const PGDUMP_RESTRICT_LINE = /^\\restrict\s+([A-Za-z0-9]+)\s*$/u;
 const PGDUMP_UNRESTRICT_LINE = /^\\unrestrict\s+([A-Za-z0-9]+)\s*$/u;
+const PGDUMP_TABLE_DATA_COMMENT =
+  /^-- Data for Name: [^;]+; Type: TABLE DATA; Schema: [^;]+; Owner: [^;]+$/u;
 const SAFE_DOCKER_RESOURCE_NAME = /^[a-z0-9][a-z0-9_.-]{2,127}$/u;
 const SHA256_HEX = /^[0-9a-f]{64}$/u;
 const DIGEST_PIN = /^.+@sha256:[0-9a-f]{64}$/u;
@@ -222,6 +224,9 @@ function parsePlatformDataSemanticInput(sql) {
   for (let index = 0; index < lines.length; index += 1) {
     const line = lines[index];
     if (!line.startsWith("COPY ")) {
+      if (PGDUMP_TABLE_DATA_COMMENT.test(line)) {
+        continue;
+      }
       nonCopyLines.push(line);
       continue;
     }

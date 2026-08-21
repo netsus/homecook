@@ -59,7 +59,7 @@ import {
   withRecoveredBackupKeyCreateOnlyRegistration,
 } from "./lib/full-local-backup-key-recovery.mjs";
 import {
-  RESTORE_MANIFEST_FORMAT_V3,
+  RESTORE_MANIFEST_FORMAT_V4,
   assertPrivateArtifactParent,
   assertRegularReadinessArtifact,
   authenticateFullLocalBackupArchives,
@@ -1325,7 +1325,7 @@ function writeRestoreManifest({
     ...semantic,
     compose_project: runtime.config.FULL_LOCAL_COMPOSE_PROJECT_NAME,
     created_at: new Date().toISOString(),
-    format: RESTORE_MANIFEST_FORMAT_V3,
+    format: RESTORE_MANIFEST_FORMAT_V4,
     fresh_target_attested: true,
     postgres_volume: runtime.config.FULL_LOCAL_POSTGRES_VOLUME_NAME,
     relation_classification_digest: metadata.manifest.relation_classification_digest,
