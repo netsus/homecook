@@ -683,7 +683,7 @@ describe("full-local platform backup boundary", () => {
         source_identity: "isolated-supabase-cli-local",
       },
       components,
-      format: "homecook-full-local-platform-v4",
+      format: "homecook-full-local-platform-v5",
       storage_payload: {
         catalog_sha256: "f".repeat(64),
         object_count: 1,
@@ -745,15 +745,19 @@ describe("full-local platform backup boundary", () => {
     expect(() => verifyPlatformBackupMetadata({
       ...metadata,
       format: "homecook-full-local-platform-v1",
-    }, { ...metadata.components, data_semantic_sha256: "9".repeat(64) })).toThrow(/unsupported legacy v1|v4/iu);
+    }, { ...metadata.components, data_semantic_sha256: "9".repeat(64) })).toThrow(/unsupported legacy v1|v5/iu);
     expect(() => verifyPlatformBackupMetadata({
       ...metadata,
       format: "homecook-full-local-platform-v2",
-    }, { ...metadata.components, data_semantic_sha256: "9".repeat(64) })).toThrow(/unsupported legacy v2|v4/iu);
+    }, { ...metadata.components, data_semantic_sha256: "9".repeat(64) })).toThrow(/unsupported legacy v2|v5/iu);
     expect(() => verifyPlatformBackupMetadata({
       ...metadata,
       format: "homecook-full-local-platform-v3",
-    }, { ...metadata.components, data_semantic_sha256: "9".repeat(64) })).toThrow(/unsupported legacy v3|v4/iu);
+    }, { ...metadata.components, data_semantic_sha256: "9".repeat(64) })).toThrow(/unsupported legacy v3|v5/iu);
+    expect(() => verifyPlatformBackupMetadata({
+      ...metadata,
+      format: "homecook-full-local-platform-v4",
+    }, { ...metadata.components, data_semantic_sha256: "9".repeat(64) })).toThrow(/unsupported legacy v4|v5/iu);
   });
 
   it("authenticates the encrypted archive before decryption", () => {
@@ -794,7 +798,7 @@ describe("full-local platform backup boundary", () => {
         schema_sha256: "c".repeat(64),
         storage_payload_sha256: "e".repeat(64),
       },
-      format: "homecook-full-local-platform-v4",
+      format: "homecook-full-local-platform-v5",
       storage_payload: {
         catalog_sha256: "f".repeat(64),
         object_count: 0,
