@@ -87,6 +87,19 @@ describe("pending action", () => {
     ).toBeNull();
   });
 
+  it("preserves the internal recipe-delete intent for auth return without widening public action types", () => {
+    const action = {
+      type: "recipe-delete" as const,
+      recipeId: "recipe-1",
+      redirectTo: "/recipe/recipe-1",
+      createdAt: 123,
+    };
+
+    savePendingAction(action);
+
+    expect(readPendingAction()).toEqual(action);
+  });
+
   it("preserves an exact owner edit draft for the existing recipe return-to-action flow", () => {
     const editContext = {
       base_recipe_revision: 12,

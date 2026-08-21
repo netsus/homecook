@@ -918,6 +918,13 @@ export function RecipeDetailScreen({
     setIsDeleteDialogOpen(true);
   }, []);
 
+  const openDeletePersonalRecipeLoginGate = useCallback(() => {
+    deleteKeyRef.current = null;
+    setDeletePersonalRecipeError(null);
+    setIsDeleteDialogOpen(false);
+    openAuthGate({ recipeId, type: "recipe-delete" });
+  }, [openAuthGate, recipeId]);
+
   const showDeletedRecipeFallback = useCallback(() => {
     deleteKeyRef.current = null;
     setDeletePersonalRecipeError(null);
@@ -942,6 +949,14 @@ export function RecipeDetailScreen({
       await deletePersonalRecipe(recipeId, idempotencyKey);
       showDeletedRecipeFallback();
     } catch (error) {
+      if (
+        isPersonalRecipeApiError(error)
+        && (error.status === 401 || (error.status === 409 && error.code === "ACCOUNT_SESSION_STALE"))
+      ) {
+        openDeletePersonalRecipeLoginGate();
+        return;
+      }
+
       if (isPersonalRecipeApiError(error) && error.status === 404) {
         showDeletedRecipeFallback();
         return;
@@ -953,7 +968,12 @@ export function RecipeDetailScreen({
     } finally {
       setIsDeletingPersonalRecipe(false);
     }
-  }, [isDeletingPersonalRecipe, recipeId, showDeletedRecipeFallback]);
+  }, [
+    isDeletingPersonalRecipe,
+    openDeletePersonalRecipeLoginGate,
+    recipeId,
+    showDeletedRecipeFallback,
+  ]);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -999,7 +1019,20 @@ export function RecipeDetailScreen({
       void openPlannerAddSheet({ source: "return-to-action" });
       return;
     }
-  }, [handleLikeToggle, isAuthenticated, openPlannerAddSheet, openSaveModal, recipe, recipeId, recipeSnapshotUiMode]);
+
+    if (pendingAction.type === "recipe-delete") {
+      openDeletePersonalRecipeDialog();
+    }
+  }, [
+    handleLikeToggle,
+    isAuthenticated,
+    openDeletePersonalRecipeDialog,
+    openPlannerAddSheet,
+    openSaveModal,
+    recipe,
+    recipeId,
+    recipeSnapshotUiMode,
+  ]);
 
   const handleShare = async () => {
     if (!recipe) {
