@@ -87,7 +87,6 @@ export interface AuthSupabaseEnv {
 }
 
 export function getAuthIssuer() {
-  getAuthAuthority();
   const url = normalizeLocalPublicAuthUrl(requireNonEmpty(
     process.env.NEXT_PUBLIC_AUTH_SUPABASE_URL,
     AUTH_URL_ENV,
@@ -123,6 +122,7 @@ export function getAuthSupabaseEnv(): AuthSupabaseEnv {
 }
 
 export function getAuthSupabaseServerEnv(): AuthSupabaseEnv {
+  getAuthAuthority();
   const publicEnv = getAuthSupabaseEnv();
   return {
     ...publicEnv,

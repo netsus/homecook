@@ -123,6 +123,28 @@ describe("supabase server helpers", () => {
       "abcdef0123456789abcdef0123456789";
   });
 
+  it.each(["missing", "remote"])(
+    "fails closed before creating server Auth clients when authority is %s",
+    async (authority) => {
+      getAuthAuthority.mockImplementation(() => {
+        throw new Error(
+          `HOMECOOK_AUTH_AUTHORITY ${authority} local-only`,
+        );
+      });
+
+      const server = await import("@/lib/supabase/server");
+
+      await expect(server.createAuthRouteHandlerClient()).rejects.toThrow(
+        /HOMECOOK_AUTH_AUTHORITY.*local-only/iu,
+      );
+      await expect(server.createAuthServerComponentClient()).rejects.toThrow(
+        /HOMECOOK_AUTH_AUTHORITY.*local-only/iu,
+      );
+      expect(cookies).not.toHaveBeenCalled();
+      expect(createServerClient).not.toHaveBeenCalled();
+    },
+  );
+
   it("does not throw when server-page auth reads trigger cookie writes", async () => {
     cookieSet.mockImplementation(() => {
       throw new Error(

@@ -56,6 +56,7 @@ async function createAuthServerClient({
 }: {
   allowCookieWrites: boolean;
 }) {
+  getAuthAuthority();
   const cookieStore = await cookies();
   const { url, anonKey } = getAuthSupabaseEnv();
   getDataSupabaseEnv();
