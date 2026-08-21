@@ -13,6 +13,8 @@ import { assertExactLoopbackPostgresUrl } from "./lib/exact-loopback-postgres-ur
 import { parseFunctionSearchPath } from "./lib/security-function-config.mjs";
 
 const REPO_ROOT = process.cwd();
+const PUBLIC_PRE_REQUEST_ENTRYPOINT_SIGNATURE =
+  "public.verify_hybrid_request_authority_pre_request()";
 const MIGRATION_PATH = path.join(
   REPO_ROOT,
   "supabase/migrations/20260723090000_security_definer_mutation_authorization_hotfix.sql",
@@ -879,6 +881,12 @@ function assertAdditiveContract(
 
   for (const entry of functions) {
     const definition = definitionMap.get(entry.signature);
+    if (
+      entry.signature === PUBLIC_PRE_REQUEST_ENTRYPOINT_SIGNATURE
+      && entry.owner !== "postgres"
+    ) {
+      throw new Error("public pre-request entrypoint owner must be postgres");
+    }
     if (entry.control_class !== "application-controlled"
       || !new Set(["read-only", "mutation", "trigger/internal", "auth-hook"]).has(entry.effect)
       || !new Set([

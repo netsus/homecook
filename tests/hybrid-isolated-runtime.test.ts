@@ -9,6 +9,11 @@ import {
   createGatewayConfig,
 } from "@/infra/hybrid-supabase/loopback-gateway.mjs";
 
+const publicPreRequestMigration = readFileSync(
+  "supabase/migrations/20260821170000_full_local_public_pre_request_entrypoint.sql",
+  "utf8",
+);
+
 describe("isolated hybrid integration runtime", () => {
   it("does not publish Postgres, PostgREST or Storage host ports", () => {
     const compose = readFileSync(
@@ -34,7 +39,7 @@ describe("isolated hybrid integration runtime", () => {
     expect(compose).toMatch(/PGRST_JWT_AUD:\s*authenticated/);
     expect(compose).toMatch(/PGRST_JWT_SECRET:.*COMBINED_JWKS/);
     expect(compose).toMatch(
-      /PGRST_DB_PRE_REQUEST:\s*private\.verify_hybrid_request_authority/,
+      /PGRST_DB_PRE_REQUEST:\s*public\.verify_hybrid_request_authority_pre_request/,
     );
     expect(compose).toMatch(
       /PGRST_DB_URI:\s*postgres:\/\/authenticator:/,
@@ -374,7 +379,7 @@ composeRun("isolated hybrid integration runtime measured", () => {
           "-d",
           "homecook_hybrid_test",
           "-c",
-          "select ((select count(*) from pg_catalog.pg_roles where rolname in ('service_role', 'authenticated', 'anon', 'authenticator', 'supabase_storage_admin')) = 5 and (select count(*) from pg_catalog.pg_namespace where nspname in ('auth', 'storage', 'extensions')) = 3 and exists (select 1 from pg_catalog.pg_extension where extname = 'pgcrypto'))::integer;",
+          "select ((select count(*) from pg_catalog.pg_roles where rolname in ('service_role', 'authenticated', 'anon', 'authenticator', 'supabase_storage_admin')) = 5 and (select count(*) from pg_catalog.pg_namespace where nspname in ('auth', 'storage', 'extensions')) = 3 and exists (select 1 from pg_catalog.pg_extension where extname = 'pgcrypto') and to_regprocedure('public.verify_hybrid_request_authority_pre_request()') is not null and exists (select 1 from pg_roles cross join lateral unnest(rolconfig) as config where rolname = 'authenticator' and config = 'pgrst.db_pre_request=public.verify_hybrid_request_authority_pre_request'))::integer;",
         ]).trim();
         expect(initComplete).toBe("1");
 
@@ -391,10 +396,7 @@ composeRun("isolated hybrid integration runtime measured", () => {
           "-d",
           "homecook_hybrid_test",
         ], {
-          input: readFileSync(
-            "infra/hybrid-supabase/runtime-bootstrap.sql",
-            "utf8",
-          ),
+          input: publicPreRequestMigration,
         });
 
         const bootstrapReady = run("docker", [
@@ -409,7 +411,7 @@ composeRun("isolated hybrid integration runtime measured", () => {
           "-d",
           "homecook_hybrid_test",
           "-c",
-          "select (to_regprocedure('private.verify_hybrid_request_authority()') is not null and has_schema_privilege('service_role', 'public', 'USAGE'))::integer;",
+          "select (to_regprocedure('private.verify_hybrid_request_authority()') is not null and to_regprocedure('public.verify_hybrid_request_authority_pre_request()') is not null and exists (select 1 from pg_roles cross join lateral unnest(rolconfig) as config where rolname = 'authenticator' and config = 'pgrst.db_pre_request=public.verify_hybrid_request_authority_pre_request') and has_schema_privilege('service_role', 'public', 'USAGE'))::integer;",
         ]).trim();
         expect(bootstrapReady).toBe("1");
       } finally {
@@ -582,7 +584,7 @@ composeRun("isolated hybrid integration runtime measured", () => {
         "-d",
         "homecook_hybrid_test",
       ], {
-        input: readFileSync("infra/hybrid-supabase/runtime-bootstrap.sql", "utf8"),
+        input: publicPreRequestMigration,
       });
       run("docker", [
         ...composeArgs,
