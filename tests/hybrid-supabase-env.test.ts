@@ -39,6 +39,16 @@ const UNICODE_DOT_ENCODINGS = [
   ["U+FF61", "\uFF61"],
   ["U+FF61 encoded", "%EF%BD%A1"],
 ] as const;
+const NONCANONICAL_DOT_HOST_SEGMENT_CASES = [
+  ["percent-encoded literal dot", "project.supabase.co%2e.evil.com"],
+  ["uppercase percent-encoded literal dot", "project.supabase.co%2E.evil.com"],
+  ["Unicode U+3002", "project.supabase.co\u3002evil.com"],
+  ["percent-encoded Unicode U+3002", "project.supabase.co%E3%80%82evil.com"],
+  ["Unicode U+FF0E", "project.supabase.co\uFF0Eevil.com"],
+  ["percent-encoded Unicode U+FF0E", "project.supabase.co%EF%BC%8Eevil.com"],
+  ["Unicode U+FF61", "project.supabase.co\uFF61evil.com"],
+  ["percent-encoded Unicode U+FF61", "project.supabase.co%EF%BD%A1evil.com"],
+] as const;
 const RAW_PORT_VARIANTS = [
   ["without port", ""],
   ["numeric port", ":54321"],
@@ -185,6 +195,24 @@ describe("local-only Supabase environment boundary", () => {
     expect(hasAuthSupabasePublicEnv()).toBe(false);
   });
 
+  it.each(NONCANONICAL_DOT_HOST_SEGMENT_CASES)(
+    "rejects public Auth hostname with noncanonical dot segment %s",
+    async (_name, hostname) => {
+      process.env.NEXT_PUBLIC_AUTH_SUPABASE_URL = `https://${hostname}`;
+      process.env.NEXT_PUBLIC_AUTH_SUPABASE_PUBLISHABLE_KEY =
+        "local-publishable";
+
+      const { getAuthSupabaseEnv, hasAuthSupabasePublicEnv } = await import(
+        "@/lib/supabase/auth-env"
+      );
+
+      expect(() => getAuthSupabaseEnv()).toThrow(
+        /hostname.*literal dot|noncanonical dot/iu,
+      );
+      expect(hasAuthSupabasePublicEnv()).toBe(false);
+    },
+  );
+
   it.each(TRAILING_DOT_CONTROL_CASES)(
     "rejects public Auth raw control boundary %s",
     async (_name, suffix) => {
@@ -288,6 +316,25 @@ describe("local-only Supabase environment boundary", () => {
       /LOCAL_SUPABASE_INTERNAL_URL.*hostname.*trailing dot/iu,
     );
   });
+
+  it.each(NONCANONICAL_DOT_HOST_SEGMENT_CASES)(
+    "rejects internal Auth hostname with noncanonical dot segment %s",
+    async (_name, hostname) => {
+      process.env.HOMECOOK_AUTH_AUTHORITY = "local";
+      process.env.NEXT_PUBLIC_AUTH_SUPABASE_URL = "http://127.0.0.1:54321";
+      process.env.NEXT_PUBLIC_AUTH_SUPABASE_PUBLISHABLE_KEY =
+        "local-publishable";
+      process.env.LOCAL_SUPABASE_INTERNAL_URL = `https://${hostname}`;
+
+      const { getAuthSupabaseServerEnv } = await import(
+        "@/lib/supabase/auth-env"
+      );
+
+      expect(() => getAuthSupabaseServerEnv()).toThrow(
+        /LOCAL_SUPABASE_INTERNAL_URL.*hostname.*literal dot|noncanonical dot/iu,
+      );
+    },
+  );
 
   it.each(TRAILING_DOT_CONTROL_CASES)(
     "rejects internal Auth raw control boundary %s",
