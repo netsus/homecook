@@ -150,6 +150,53 @@ flow-a\tsecret
     });
   });
 
+  it("ignores exact pg_dump TABLE DATA metadata comments when COPY relations reorder", () => {
+    const sourceWithPgDumpComments = `-- platform data
+-- Data for Name: auth.users; Type: TABLE DATA; Schema: auth; Owner: postgres
+COPY auth.users (id, email) FROM stdin;
+user-a\ta@example.com
+\\.
+-- Data for Name: public.users; Type: TABLE DATA; Schema: public; Owner: postgres
+COPY public.users (id, nickname) FROM stdin;
+user-a\t무먹러
+\\.
+`;
+    const restoredWithPgDumpComments = `-- platform data
+-- Data for Name: public.users; Type: TABLE DATA; Schema: public; Owner: postgres
+COPY public.users (id, nickname) FROM stdin;
+user-a\t무먹러
+\\.
+-- Data for Name: auth.users; Type: TABLE DATA; Schema: auth; Owner: postgres
+COPY auth.users (id, email) FROM stdin;
+user-a\ta@example.com
+\\.
+`;
+
+    const source = buildSanitizedPlatformData(sourceWithPgDumpComments);
+    const restored = buildSanitizedPlatformData(restoredWithPgDumpComments);
+
+    expect(restored.manifest.data_semantic_sha256)
+      .toBe(source.manifest.data_semantic_sha256);
+  });
+
+  it("still binds arbitrary non-pg_dump comments into the semantic digest", () => {
+    const source = buildSanitizedPlatformData(`-- platform data
+-- application note: primary owner row
+COPY auth.users (id, email) FROM stdin;
+user-a\ta@example.com
+\\.
+`);
+    const restored = buildSanitizedPlatformData(`-- platform data
+-- application note: drifted owner row
+COPY auth.users (id, email) FROM stdin;
+user-a\ta@example.com
+\\.
+`);
+
+    expect(restored.manifest.data_semantic_sha256)
+      .not.toBe(source.manifest.data_semantic_sha256);
+  });
+
   it("fails closed when an included relation appears more than once", () => {
     expect(() => buildSanitizedPlatformData(`${platformData}
 COPY auth.users (id, email) FROM stdin;
