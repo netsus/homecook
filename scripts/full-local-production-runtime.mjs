@@ -35,6 +35,8 @@ import {
   validateFullLocalProductionConfig,
 } from "./lib/full-local-production-runtime.mjs";
 import {
+  buildPlatformServiceSchemaCatalogSql,
+  digestPlatformServiceSchemaCatalog,
   buildPlatformBackupAuthentication,
   buildDockerStorageVolumeCaptureInvocation,
   buildDockerStorageVolumeRestoreInvocation,
@@ -63,16 +65,19 @@ import {
   fullLocalBackupMetadataSha256,
 } from "./lib/full-local-backup-readiness.mjs";
 import {
+  selectExactFullLocalServiceImages,
   selectFullLocalProductionResources,
 } from "./lib/full-local-production-resources.mjs";
 import {
   assertFreshRestoreExecutionApproved,
   assertFreshRestoreAllowed,
   assertRestoredStorageVolumeProvenance,
+  buildPlatformServiceRestoreAttestation,
   buildBootstrapAwareDatabaseResetSql,
   buildComposeLabeledStorageVolumeCreateArgs,
   buildCutoverPreflight,
   buildPlatformRestoreSql,
+  buildSanitizedPlatformData,
   executeBootstrapAwarePlatformRestore,
   verifyRestoredPlatformDataSnapshot,
   compareRestoreReplayManifests,
@@ -895,10 +900,12 @@ function sha256File(path) {
   return digest;
 }
 
-export function dockerResourceInventory(type, { execute = run } = {}) {
+export function dockerResourceInventory(type, { all = false, execute = run } = {}) {
   const ids = execute(
     "docker",
-    [type, "ls", "--quiet"],
+    type === "container" && all
+      ? [type, "ls", "--all", "--quiet"]
+      : [type, "ls", "--quiet"],
     { failure: `Docker ${type} inventory listing failed.` },
   ).trim().split("\n").filter(Boolean);
   if (ids.length === 0) return [];
@@ -1375,6 +1382,46 @@ function restoredPlatformDataSnapshot(runtime, metadata) {
   });
 }
 
+function restoredServiceRestoreAttestation(runtime, metadata, serviceImages) {
+  if (!metadata.service_restore_attestation) {
+    fail("Verified platform backup is missing service restore attestation.");
+  }
+  const schemaCatalog = composeWithInput(runtime, [
+    "exec",
+    "-T",
+    "postgres",
+    "psql",
+    "--tuples-only",
+    "--no-align",
+    "--username",
+    "supabase_admin",
+    "--dbname",
+    "postgres",
+  ], buildPlatformServiceSchemaCatalogSql());
+  const serviceLedgerSql = compose(runtime, [
+    "exec",
+    "-T",
+    "postgres",
+    "pg_dump",
+    "--data-only",
+    "--username",
+    "supabase_admin",
+    "--dbname",
+    "postgres",
+    "--table",
+    "auth.schema_migrations",
+    "--table",
+    "storage.migrations",
+  ]);
+  return buildPlatformServiceRestoreAttestation({
+    components: metadata.components,
+    expected: metadata.service_restore_attestation,
+    schemaCatalogSha256: digestPlatformServiceSchemaCatalog(schemaCatalog.trim()),
+    serviceImages,
+    serviceLedgers: buildSanitizedPlatformData(serviceLedgerSql).manifest.service_ledgers,
+  });
+}
+
 function restoredStorageRows(runtime) {
   const sql = `
     select coalesce(json_agg(json_build_object(
@@ -1699,6 +1746,7 @@ async function restorePlatformBackup(args) {
       PLATFORM_BACKUP_KEYCHAIN_ACCOUNT,
     ),
     execute: async (attemptToken) => {
+      let bootstrapServiceImages = null;
       const restoreRuntime = Object.freeze({
         ...runtime,
         env: {
@@ -1734,6 +1782,11 @@ async function restorePlatformBackup(args) {
             bootstrapServices: async () => {
               compose(restoreRuntime, ["up", "-d"]);
               await waitForRuntimeHealthy(restoreRuntime);
+              bootstrapServiceImages = selectExactFullLocalServiceImages({
+                composeProject: restoreRuntime.config.FULL_LOCAL_COMPOSE_PROJECT_NAME,
+                containers: dockerResourceInventory("container", { all: true }),
+                expectedImages: metadata.service_restore_attestation?.service_images,
+              });
             },
             replayDatabase: () => composeWithInput(restoreRuntime, [
               "exec",
@@ -1772,6 +1825,11 @@ async function restorePlatformBackup(args) {
               compose(restoreRuntime, ["up", "-d", "postgres"]);
               await waitForServiceHealthy(restoreRuntime, "postgres");
             },
+            verifyRestoreAttestation: () => restoredServiceRestoreAttestation(
+              restoreRuntime,
+              metadata,
+              bootstrapServiceImages,
+            ),
             startServices: async () => {
               compose(restoreRuntime, ["up", "-d"]);
               await waitForRuntimeHealthy(restoreRuntime);
@@ -1835,7 +1893,7 @@ async function restorePlatformBackup(args) {
             name: runtime.config.FULL_LOCAL_STORAGE_VOLUME_NAME,
           },
         ],
-        inventoryContainers: () => dockerResourceInventory("container"),
+        inventoryContainers: () => dockerResourceInventory("container", { all: true }),
         inventoryVolumes: () => dockerResourceInventory("volume"),
         removeArtifact: removeAttemptCreatedArtifact,
         removeContainer: (containerId) => run("docker", ["rm", "--force", containerId], {

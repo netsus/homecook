@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 
 const INCLUDED_RELATIONS = new Set([
   "auth.identities",
+  "auth.schema_migrations",
   "auth.users",
   "private.full_local_auth_control",
   "private.full_local_session_observability",
@@ -9,6 +10,7 @@ const INCLUDED_RELATIONS = new Set([
   "private.youtube_extraction_current_policy",
   "private.youtube_extraction_worker_credentials",
   "storage.buckets",
+  "storage.migrations",
   "storage.objects",
 ]);
 
@@ -29,7 +31,6 @@ const EXCLUDED_RELATIONS = new Set([
   "auth.refresh_tokens",
   "auth.saml_providers",
   "auth.saml_relay_states",
-  "auth.schema_migrations",
   "auth.sessions",
   "auth.sso_domains",
   "auth.sso_providers",
@@ -39,7 +40,6 @@ const EXCLUDED_RELATIONS = new Set([
   "storage.buckets_vectors",
   "storage.iceberg_namespaces",
   "storage.iceberg_tables",
-  "storage.migrations",
   "storage.s3_multipart_uploads",
   "storage.s3_multipart_uploads_parts",
   "storage.vector_indexes",
@@ -49,6 +49,12 @@ const EXCLUDED_RELATIONS = new Set([
 
 const COPY_HEADER = /^COPY\s+((?:"[^"]+"|[a-zA-Z_][\w$]*)\.(?:"[^"]+"|[a-zA-Z_][\w$]*))\s+\(([^)]*)\)\s+FROM\s+stdin;\s*$/;
 const SAFE_DOCKER_RESOURCE_NAME = /^[a-z0-9][a-z0-9_.-]{2,127}$/u;
+const SHA256_HEX = /^[0-9a-f]{64}$/u;
+const DIGEST_PIN = /^.+@sha256:[0-9a-f]{64}$/u;
+const SERVICE_LEDGER_KEYS = Object.freeze({
+  "auth.schema_migrations": "auth_schema_migrations",
+  "storage.migrations": "storage_migrations",
+});
 
 function stableJson(value) {
   if (Array.isArray(value)) {
@@ -62,6 +68,88 @@ function stableJson(value) {
 
 function digest(value) {
   return createHash("sha256").update(stableJson(value)).digest("hex");
+}
+
+function validSha256(value) {
+  return typeof value === "string" && SHA256_HEX.test(value);
+}
+
+function validPinnedDigest(value) {
+  return typeof value === "string" && DIGEST_PIN.test(value);
+}
+
+function normalizeServiceLedgers(serviceLedgers) {
+  if (!serviceLedgers || typeof serviceLedgers !== "object" || Array.isArray(serviceLedgers)) {
+    throw new Error("Platform service restore attestation requires exact service ledger digests");
+  }
+  const normalized = {};
+  for (const key of Object.values(SERVICE_LEDGER_KEYS)) {
+    const ledger = serviceLedgers[key];
+    if (
+      !ledger
+      || !validSha256(ledger.digest_sha256)
+      || !Number.isSafeInteger(ledger.row_count)
+      || ledger.row_count < 0
+    ) {
+      throw new Error("Platform service restore attestation requires exact service ledger digests");
+    }
+    normalized[key] = Object.freeze({
+      digest_sha256: ledger.digest_sha256,
+      row_count: ledger.row_count,
+    });
+  }
+  return Object.freeze(normalized);
+}
+
+/**
+ * @param {{
+ *   components: Record<string, string>,
+ *   expected?: unknown,
+ *   schemaCatalogSha256: string,
+ *   serviceImages: { auth: string, storage: string },
+ *   serviceLedgers: Record<string, { digest_sha256: string, row_count: number }>,
+ * }} input
+ */
+export function buildPlatformServiceRestoreAttestation({
+  components,
+  expected = undefined,
+  schemaCatalogSha256,
+  serviceImages,
+  serviceLedgers,
+}) {
+  const componentKeys = [
+    "data_sha256",
+    "roles_sha256",
+    "schema_sha256",
+    "storage_payload_sha256",
+  ];
+  const normalizedComponents = {};
+  for (const key of componentKeys) {
+    if (!validSha256(components?.[key])) {
+      throw new Error("Platform service restore attestation requires exact component digests");
+    }
+    normalizedComponents[key] = components[key];
+  }
+  if (
+    !validSha256(schemaCatalogSha256)
+    || !validPinnedDigest(serviceImages?.auth)
+    || !validPinnedDigest(serviceImages?.storage)
+  ) {
+    throw new Error("Platform service restore attestation requires exact service schema and image digests");
+  }
+  const observed = Object.freeze({
+    component_set_sha256: digest(normalizedComponents),
+    schema_catalog_sha256: schemaCatalogSha256,
+    service_images: Object.freeze({
+      auth: serviceImages.auth,
+      storage: serviceImages.storage,
+    }),
+    service_ledgers: normalizeServiceLedgers(serviceLedgers),
+  });
+  if (expected !== undefined && stableJson(observed) !== stableJson(expected)) {
+    throw new Error("Platform service restore attestation mismatch");
+  }
+  return observed;
 }
 
 function normalizeIdentifier(identifier) {
@@ -169,6 +257,7 @@ export async function executeBootstrapAwarePlatformRestore({
   startPostgres,
   startServices,
   stopServices,
+  verifyRestoreAttestation = async () => true,
   verifyResources,
   verifyRestoredPlatform,
 }) {
@@ -179,6 +268,7 @@ export async function executeBootstrapAwarePlatformRestore({
     startPostgres,
     resetDatabase,
     replayDatabase,
+    verifyRestoreAttestation,
     startServices,
     verifyResources,
   ];
@@ -248,6 +338,7 @@ export function buildSanitizedPlatformData(sql) {
   const lines = sql.split("\n");
   const output = [];
   const relations = [];
+  const serviceLedgers = {};
 
   for (let index = 0; index < lines.length; index += 1) {
     const line = lines[index];
@@ -286,6 +377,17 @@ export function buildSanitizedPlatformData(sql) {
     }
 
     relations.push({ action, columns, relation, row_count: rowCount });
+    const serviceLedgerKey = SERVICE_LEDGER_KEYS[relation];
+    if (action === "include" && serviceLedgerKey) {
+      serviceLedgers[serviceLedgerKey] = Object.freeze({
+        digest_sha256: digest({
+          columns,
+          relation,
+          rows: block.slice(1, -1),
+        }),
+        row_count: rowCount,
+      });
+    }
     if (action === "include") {
       output.push(...block);
     }
@@ -301,6 +403,7 @@ export function buildSanitizedPlatformData(sql) {
     manifest: {
       relation_classification_digest: digest(relationClassification),
       relations,
+      service_ledgers: Object.freeze(serviceLedgers),
       transient_promote_count: 0,
       unclassified: [],
     },
