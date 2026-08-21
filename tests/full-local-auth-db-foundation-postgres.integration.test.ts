@@ -18,9 +18,12 @@ const inventoryOnly =
 const includePersonalRecipeFunctions =
   process.env.HOMECOOK_PERSONAL_RECIPE_SECURITY_FUNCTIONS === "1";
 const includeRecipeFuturePropagationFunctions =
-  process.env.HOMECOOK_RECIPE_SNAPSHOT_FOLLOWUP_TARGET_MIGRATION?.endsWith(
-    "_recipe_content_snapshot_future_propagation.sql",
-  ) ?? false;
+  process.env.HOMECOOK_RECIPE_FUTURE_PROPAGATION_SECURITY_FUNCTIONS === "1"
+  || (
+    process.env.HOMECOOK_RECIPE_SNAPSHOT_FOLLOWUP_TARGET_MIGRATION?.endsWith(
+      "_recipe_content_snapshot_future_propagation.sql",
+    ) ?? false
+  );
 const recipeFuturePropagationFunctionCount = includeRecipeFuturePropagationFunctions
   ? (JSON.parse(readFileSync(join(
       process.cwd(),

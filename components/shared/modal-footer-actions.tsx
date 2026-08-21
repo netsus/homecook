@@ -2,11 +2,14 @@
 
 import React from "react";
 
+export type ModalFooterConfirmTone = "primary" | "danger";
+
 interface ModalFooterActionsProps {
   cancelAriaLabel?: string;
   cancelLabel?: string;
   cancelTestId?: string;
   confirmAriaLabel?: string;
+  confirmTone?: ModalFooterConfirmTone;
   confirmLabel: string;
   confirmTestId?: string;
   onCancel: () => void;
@@ -21,6 +24,7 @@ export function ModalFooterActions({
   cancelLabel = "취소",
   cancelTestId,
   confirmAriaLabel,
+  confirmTone = "primary",
   confirmLabel,
   confirmTestId,
   onCancel,
@@ -28,6 +32,11 @@ export function ModalFooterActions({
   confirmDisabled,
   cancelDisabled,
 }: ModalFooterActionsProps) {
+  const confirmButtonClassName =
+    confirmTone === "danger"
+      ? "flex h-[var(--control-height-lg)] flex-[2] items-center justify-center whitespace-nowrap rounded-[var(--radius-sm)] bg-[var(--danger)] px-4 text-sm font-bold text-[var(--text-inverse)] shadow-[var(--wave1-shadow-natural)] transition-colors hover:bg-[var(--danger-strong)] active:bg-[var(--danger-strong)] disabled:opacity-50"
+      : "flex h-[var(--control-height-lg)] flex-[2] items-center justify-center whitespace-nowrap rounded-[var(--radius-sm)] bg-[var(--wave1-mint-contrast)] px-4 text-sm font-bold text-[var(--wave1-surface)] shadow-[var(--wave1-shadow-natural)] transition-colors hover:bg-[var(--wave1-mint-contrast-deep)] disabled:opacity-50";
+
   return (
     <div className="flex gap-2.5">
       <button
@@ -42,7 +51,7 @@ export function ModalFooterActions({
       </button>
       <button
         aria-label={confirmAriaLabel}
-        className="flex h-[var(--control-height-lg)] flex-[2] items-center justify-center whitespace-nowrap rounded-[var(--radius-sm)] bg-[var(--wave1-mint-contrast)] px-4 text-sm font-bold text-[var(--wave1-surface)] shadow-[var(--wave1-shadow-natural)] transition-colors hover:bg-[var(--wave1-mint-contrast-deep)] disabled:opacity-50"
+        className={confirmButtonClassName}
         data-testid={confirmTestId}
         disabled={confirmDisabled}
         onClick={onConfirm}

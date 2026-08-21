@@ -66,7 +66,15 @@ Schema Change:
 | `36e-recipe-tags-frontend` | merged before #6 implementation | existing tag primitives are reused |
 | #7 and #8 | successors | future impact integration and joint snapshot-v2 activation remain blocked |
 
-> PR #1274 merged the #6 backend runtime checkpoint, but roadmap/workflow lifecycle remains `in-progress`. The checkpoint does not activate `personal_recipe_v2`: route/service and integrated E2E, #7/#8 integration, server MacBook/local rehearsal, terminal workpack closeout review and R+2 service-owner approval remain pending.
+> PR #1274 merged the #6 backend runtime checkpoint, but roadmap/workflow lifecycle remains `in-progress`. The checkpoint does not activate `personal_recipe_v2`: route/service automation and the soft-deleted reader path are complete, but integrated E2E, #7/#8 integration, server MacBook/local rehearsal, terminal workpack closeout review and R+2 service-owner approval remain pending.
+
+Latest closeout evidence is recorded at [`evidence/2026-08-22-terminal-automation-progress.md`](./evidence/2026-08-22-terminal-automation-progress.md). It captures route/service runtime counts from `121a0e2b` (`8` tests, combined `24`), composed E2E counts from `58efacdb` (`same-ID save`, partial pinned readers, capability-off drain; missing fork/save-new/delete wiring), delete-dialog progress from `5d537b9d` (`owner delete UI` E2E `8`), `916cb41b` (`reauth pending intent` unit `81` / E2E `4`) and `7543ee90` (`danger tone` tests `15` / screenshot E2E `2`), the exact review/design approvals at head `7543ee9075d8b5050a08576ec50451eb78d9c8f6`, and the open API v1.2.39 contract ambiguity. It does not claim integrated fork/save-as-new E2E, merged-exact server-production/local-rehearsal, terminal Stage 6, or activation.
+
+Truth projection:
+
+- route/service automation: complete
+- soft-deleted readers: complete; deleted new detail and new shopping preview are excluded, and pinned Meal/planner/shopping history/detail/cook-session/cooked-batch/meal-log readers remain readable
+- integrated E2E: partial only; same-ID save, partial pinned readers and capability-off drain proven, but public fork/new ID and save-as-new/new ID remain unimplemented
 
 ## Backend First Contract
 
@@ -91,6 +99,7 @@ Schema Change:
 - `DELETE /recipes/{id}` requires Authorization and UUID `Idempotency-Key`; it uses one owner+recipe-lock RPC to record `deleted_at` idempotently and preserves all history anchors.
 - response envelope remains `{ success, data, error }`; error remains `{ code, message, fields[] }`.
 - #6 adds no endpoint. It does not own `POST /recipes/{id}/future-plan-impact` or `/cooking/session-attempts`.
+- API v1.2.39 still has a contract mismatch to resolve: the summary text describes `origin_recipe_id` for fork behavior, but the detailed §7-1 body omits `origin_recipe_id`; the full product provenance draft and save-as-new discriminator remain draft until explicit Contract Evolution.
 
 ### Transaction and authorization order
 
@@ -160,7 +169,8 @@ No stable capability-off public error code is invented. Before approved activati
 ### Stage 3 backend merge checkpoint
 
 - PR #1274 merged dormant #6 backend code after independent Stage 3 approval and current-head Ready checks. Exact retained results are recorded in the Stage 2 and Stage 3 closeout evidence files below.
-- Disposable PostgreSQL and repository/static validation are complete for #6. Route/service and browser/integrated E2E, server MacBook/local rehearsal, terminal workpack closeout review, #7/#8 integration and activation remain pending and are not claimed here.
+- Disposable PostgreSQL and repository/static validation are complete for #6. Route/service runtime tests now have exact closeout evidence, and the full soft-deleted reader path is now closed. Integrated fork/save-as-new E2E, server MacBook/local rehearsal, terminal workpack closeout review, #7/#8 integration and activation remain pending and are not claimed here.
+- Pinned-reader evidence now covers planner, shopping history/detail, cook-session, cooked-batch and meal-log paths.
 
 ### Future fixtures
 

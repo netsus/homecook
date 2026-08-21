@@ -8,6 +8,7 @@ import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 
 import { LoginGateModal } from "@/components/auth/login-gate-modal";
 import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-tab";
+import { PersonalRecipeDeleteDialog } from "@/components/recipe/personal-recipe-delete-dialog";
 import { PlannerAddSheet } from "@/components/recipe/planner-add-sheet";
 import type { PlannerAddSheetState } from "@/components/recipe/planner-add-sheet";
 import { RecipeDetailPersonalActions } from "@/components/recipe/recipe-detail-personal-actions";
@@ -33,6 +34,10 @@ import {
   clearPendingAction,
   readPendingAction,
 } from "@/lib/auth/pending-action";
+import {
+  deletePersonalRecipe,
+  isPersonalRecipeApiError,
+} from "@/lib/api/personal-recipe";
 import {
   createCustomRecipeBook,
   fetchSaveableRecipeBooks,
@@ -200,6 +205,9 @@ export function RecipeDetailScreen({
   const [snapshotStartState, setSnapshotStartState] = useState<"idle" | "pending">("idle");
   const [isPersonalEditorOpen, setIsPersonalEditorOpen] = useState(false);
   const [personalEditResumeContext, setPersonalEditResumeContext] = useState<RecipeEditContext | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isDeletingPersonalRecipe, setIsDeletingPersonalRecipe] = useState(false);
+  const [deletePersonalRecipeError, setDeletePersonalRecipeError] = useState<string | null>(null);
   const router = useRouter();
   const openAuthGate = useAuthGateStore((state) => state.open);
   const isDesktopViewport = useDesktopViewport();
@@ -211,6 +219,7 @@ export function RecipeDetailScreen({
   const currentRecipeIdRef = React.useRef(recipeId);
   const snapshotStartLatchRef = React.useRef(false);
   const personalEditorOpenerRef = React.useRef<HTMLElement | null>(null);
+  const deleteKeyRef = React.useRef<string | null>(null);
   currentRecipeIdRef.current = recipeId;
 
   useEffect(() => {
@@ -893,6 +902,79 @@ export function RecipeDetailScreen({
     setIsPersonalEditorOpen(true);
   }, []);
 
+  const closeDeletePersonalRecipeDialog = useCallback(() => {
+    if (isDeletingPersonalRecipe) {
+      return;
+    }
+
+    deleteKeyRef.current = null;
+    setDeletePersonalRecipeError(null);
+    setIsDeleteDialogOpen(false);
+  }, [isDeletingPersonalRecipe]);
+
+  const openDeletePersonalRecipeDialog = useCallback(() => {
+    deleteKeyRef.current = null;
+    setDeletePersonalRecipeError(null);
+    setIsDeleteDialogOpen(true);
+  }, []);
+
+  const openDeletePersonalRecipeLoginGate = useCallback(() => {
+    deleteKeyRef.current = null;
+    setDeletePersonalRecipeError(null);
+    setIsDeleteDialogOpen(false);
+    openAuthGate({ recipeId, type: "recipe-delete" });
+  }, [openAuthGate, recipeId]);
+
+  const showDeletedRecipeFallback = useCallback(() => {
+    deleteKeyRef.current = null;
+    setDeletePersonalRecipeError(null);
+    setIsDeleteDialogOpen(false);
+    setRecipe(null);
+    setDetailErrorKind("not-found");
+    setDetailState("error");
+    router.refresh();
+  }, [router]);
+
+  const handleDeletePersonalRecipe = useCallback(async () => {
+    if (isDeletingPersonalRecipe) {
+      return;
+    }
+
+    setIsDeletingPersonalRecipe(true);
+    setDeletePersonalRecipeError(null);
+    const idempotencyKey = deleteKeyRef.current ?? crypto.randomUUID();
+    deleteKeyRef.current = idempotencyKey;
+
+    try {
+      await deletePersonalRecipe(recipeId, idempotencyKey);
+      showDeletedRecipeFallback();
+    } catch (error) {
+      if (
+        isPersonalRecipeApiError(error)
+        && (error.status === 401 || (error.status === 409 && error.code === "ACCOUNT_SESSION_STALE"))
+      ) {
+        openDeletePersonalRecipeLoginGate();
+        return;
+      }
+
+      if (isPersonalRecipeApiError(error) && error.status === 404) {
+        showDeletedRecipeFallback();
+        return;
+      }
+
+      setDeletePersonalRecipeError(
+        "레시피를 삭제하지 못했어요. 잠시 후 다시 시도해 주세요.",
+      );
+    } finally {
+      setIsDeletingPersonalRecipe(false);
+    }
+  }, [
+    isDeletingPersonalRecipe,
+    openDeletePersonalRecipeLoginGate,
+    recipeId,
+    showDeletedRecipeFallback,
+  ]);
+
   useEffect(() => {
     if (!isAuthenticated) {
       return;
@@ -937,7 +1019,20 @@ export function RecipeDetailScreen({
       void openPlannerAddSheet({ source: "return-to-action" });
       return;
     }
-  }, [handleLikeToggle, isAuthenticated, openPlannerAddSheet, openSaveModal, recipe, recipeId, recipeSnapshotUiMode]);
+
+    if (pendingAction.type === "recipe-delete") {
+      openDeletePersonalRecipeDialog();
+    }
+  }, [
+    handleLikeToggle,
+    isAuthenticated,
+    openDeletePersonalRecipeDialog,
+    openPlannerAddSheet,
+    openSaveModal,
+    recipe,
+    recipeId,
+    recipeSnapshotUiMode,
+  ]);
 
   const handleShare = async () => {
     if (!recipe) {
@@ -1139,6 +1234,7 @@ export function RecipeDetailScreen({
             selectedServings={selectedServings}
             isNutritionRefreshing={nutritionRequestState === "loading"}
             canEditPersonalRecipe={canEditPersonalRecipe}
+            onDeletePersonalRecipe={openDeletePersonalRecipeDialog}
             onEditPersonalRecipe={openPersonalEditor}
           />
         </div>
@@ -1861,7 +1957,7 @@ export function RecipeDetailScreen({
           accessState={canEditPersonalRecipe ? "owner-private" : "unknown"}
           capabilityEnabled={canEditPersonalRecipe}
           isAuthenticated={isAuthenticated}
-          onDelete={() => undefined}
+          onDelete={openDeletePersonalRecipeDialog}
           onEdit={openPersonalEditor}
           onFork={() => undefined}
         />
@@ -1940,6 +2036,15 @@ export function RecipeDetailScreen({
       />
       {feedback ? <FeedbackToast message={feedback.message} tone={feedback.tone} /> : null}
       <LoginGateModal />
+      <PersonalRecipeDeleteDialog
+        errorMessage={deletePersonalRecipeError}
+        isOpen={isDeleteDialogOpen}
+        onClose={closeDeletePersonalRecipeDialog}
+        onConfirm={() => {
+          void handleDeletePersonalRecipe();
+        }}
+        submitting={isDeletingPersonalRecipe}
+      />
       {isPersonalEditorOpen && canEditPersonalRecipe && activePersonalEditContext ? (
         <RecipeDetailPersonalEditor
           editContext={{
@@ -1974,6 +2079,7 @@ function RecipeDetailWebView({
   isCookPending,
   likeCountLabel,
   onCook,
+  onDeletePersonalRecipe,
   onEditPersonalRecipe,
   onOpenLightbox,
   onProtectedAction,
@@ -1996,6 +2102,7 @@ function RecipeDetailWebView({
   isCookPending: boolean;
   likeCountLabel: string;
   onCook: () => void;
+  onDeletePersonalRecipe: () => void;
   onEditPersonalRecipe: () => void;
   onOpenLightbox: (index: number) => void;
   onProtectedAction: (type: "like" | "save" | "planner") => void;
@@ -2298,7 +2405,7 @@ function RecipeDetailWebView({
                     accessState={canEditPersonalRecipe ? "owner-private" : "unknown"}
                     capabilityEnabled={canEditPersonalRecipe}
                     isAuthenticated={isAuthenticated}
-                    onDelete={() => undefined}
+                    onDelete={onDeletePersonalRecipe}
                     onEdit={onEditPersonalRecipe}
                     onFork={() => undefined}
                   />
@@ -2322,7 +2429,7 @@ function RecipeDetailWebView({
           accessState={canEditPersonalRecipe ? "owner-private" : "unknown"}
           capabilityEnabled={canEditPersonalRecipe}
           isAuthenticated={isAuthenticated}
-          onDelete={() => undefined}
+          onDelete={onDeletePersonalRecipe}
           onEdit={onEditPersonalRecipe}
           onFork={() => undefined}
         />

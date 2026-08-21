@@ -113,4 +113,44 @@ describe("recipe detail personal actions", () => {
     expect(source).toContain("isPersonalEditorOpen && canEditPersonalRecipe && activePersonalEditContext");
     expect(source).toContain("createSnapshotV2CookingSession");
   });
+
+  it("wires owner delete through a dedicated confirm dialog and stable request flow", () => {
+    const screenSource = readFileSync(
+      join(process.cwd(), "components/recipe/recipe-detail-screen.tsx"),
+      "utf8",
+    );
+    const dialogSource = readFileSync(
+      join(process.cwd(), "components/recipe/personal-recipe-delete-dialog.tsx"),
+      "utf8",
+    );
+    const apiSource = readFileSync(
+      join(process.cwd(), "lib/api/personal-recipe.ts"),
+      "utf8",
+    );
+
+    expect(screenSource).toContain("PersonalRecipeDeleteDialog");
+    expect(screenSource).toContain("deletePersonalRecipe");
+    expect(screenSource).toContain("const deleteKeyRef = React.useRef<string | null>(null)");
+    expect(screenSource).toContain("const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)");
+    expect(screenSource).toContain("const [isDeletingPersonalRecipe, setIsDeletingPersonalRecipe] = useState(false)");
+    expect(screenSource).toContain("const [deletePersonalRecipeError, setDeletePersonalRecipeError] = useState<string | null>(null)");
+    expect(screenSource).toContain("onDelete={openDeletePersonalRecipeDialog}");
+    expect(screenSource).not.toContain("onDelete={() => undefined}");
+    expect(screenSource).toContain("deleteKeyRef.current ?? crypto.randomUUID()");
+    expect(screenSource).toContain("router.refresh()");
+    expect(screenSource).toContain("setDetailErrorKind(\"not-found\")");
+
+    expect(dialogSource).toContain("AppConfirmDialog");
+    expect(dialogSource).toContain("AppModalFooterActions");
+    expect(dialogSource).toContain("useDialogBoundary");
+    expect(dialogSource).toContain("정말 레시피를 삭제할까요?");
+    expect(dialogSource).toContain("기존 계획, 요리, 기록은 그대로 남아요.");
+    expect(dialogSource).toContain("role=\"alert\"");
+    expect(dialogSource).toContain('confirmLabel={submitting ? "삭제 중" : "삭제"}');
+    expect(dialogSource).toContain('confirmTone="danger"');
+
+    expect(apiSource).toContain("Idempotency-Key");
+    expect(apiSource).toContain("method: \"DELETE\"");
+    expect(apiSource).toContain("/api/v1/recipes/");
+  });
 });
