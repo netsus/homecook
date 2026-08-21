@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { spawnSync } from "node:child_process";
-import { createHash, randomBytes } from "node:crypto";
+import { randomBytes } from "node:crypto";
 import {
   chmodSync,
   closeSync,
@@ -21,6 +21,8 @@ import { dirname, isAbsolute, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import {
+  buildPlatformServiceSchemaCatalogSql,
+  digestPlatformServiceSchemaCatalog,
   buildPlatformBackupAuthentication,
   buildDockerStorageVolumeCaptureInvocation,
   buildPinnedSupabaseCliInvocation,
@@ -50,6 +52,7 @@ import { mapStorageRowsToPayloadReferences } from "./lib/isolated-local-backup-r
 import {
   makePostgresRoleDumpIdempotent,
   parseFullLocalProductionConfig,
+  selectExactFullLocalServiceImages,
   selectFullLocalProductionResources,
 } from "./lib/full-local-production-resources.mjs";
 
@@ -213,7 +216,7 @@ function productionResourceController(args) {
     cleanup: () => rmSync(root, { force: true, recursive: true }),
     database: {
       dumpComponents: (staging) => {
-        Object.assign(provenance, readProductionDatabaseProvenance(resources));
+        Object.assign(provenance, readProductionDatabaseProvenance(resources, config, productionContainers));
         dumpFullLocalProductionDatabase({
           container: resources.postgresContainerId,
           staging,
@@ -525,7 +528,7 @@ function dumpFullLocalProductionDatabase({ container, staging }) {
   }
 }
 
-function readProductionDatabaseProvenance(resources) {
+function readProductionDatabaseProvenance(resources, config, containers) {
   const catalog = run("docker", [
     "exec",
     resources.postgresContainerId,
@@ -537,8 +540,16 @@ function readProductionDatabaseProvenance(resources) {
     "--dbname",
     "postgres",
     "--command",
-    "select nspname from pg_namespace order by nspname;",
+    buildPlatformServiceSchemaCatalogSql(),
   ], { failure: "Production schema catalog provenance failed." });
+  const serviceImages = selectExactFullLocalServiceImages({
+    composeProject: resources.composeProject,
+    containers,
+    expectedImages: {
+      auth: config.FULL_LOCAL_AUTH_IMAGE,
+      storage: config.FULL_LOCAL_STORAGE_IMAGE,
+    },
+  });
   const identity = run("docker", [
     "exec",
     resources.postgresContainerId,
@@ -558,15 +569,17 @@ function readProductionDatabaseProvenance(resources) {
     fail("Production database identity provenance is invalid.");
   }
   return Object.freeze({
+    auth_image: serviceImages.auth,
     compose_project: resources.composeProject,
     container_id: resources.postgresContainerId,
     container_name: resources.postgresContainerName,
     database: identity[0],
     image: resources.postgresImage,
     postgres_volume: resources.postgresVolumeName,
-    schema_catalog_sha256: createHash("sha256").update(catalog, "utf8").digest("hex"),
+    schema_catalog_sha256: digestPlatformServiceSchemaCatalog(catalog.trim()),
     schema_count: Number(identity[2]),
     server_version_num: identity[1],
+    storage_image: serviceImages.storage,
   });
 }
 

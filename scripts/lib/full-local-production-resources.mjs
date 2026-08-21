@@ -72,6 +72,57 @@ function exactVolume({ composeProject, expectedComposeVolume, name, volumes }) {
   return volume;
 }
 
+function exactRunningServiceContainer({ composeProject, containers, service }) {
+  const matches = containers.filter((container) =>
+    container?.Config?.Labels?.["com.docker.compose.project"] === composeProject
+    && container?.Config?.Labels?.["com.docker.compose.service"] === service);
+  if (matches.length !== 1) {
+    throw new Error(`Expected one exact production ${service} container`);
+  }
+  const [container] = matches;
+  if (
+    container?.State?.Running !== true
+    || (container?.State?.Health && container.State.Health.Status !== "healthy")
+  ) {
+    throw new Error(`Production ${service} container is not healthy`);
+  }
+  return container;
+}
+
+export function selectExactFullLocalServiceImages({
+  composeProject,
+  containers,
+  expectedImages,
+}) {
+  if (!Array.isArray(containers) || typeof composeProject !== "string" || !composeProject) {
+    throw new TypeError("Compose project and complete Docker container inventory are required");
+  }
+  const auth = exactRunningServiceContainer({ composeProject, containers, service: "auth" });
+  const storage = exactRunningServiceContainer({ composeProject, containers, service: "storage" });
+  const observed = Object.freeze({
+    auth: auth.Config?.Image,
+    storage: storage.Config?.Image,
+  });
+  if (
+    typeof observed.auth !== "string"
+    || typeof observed.storage !== "string"
+    || !/@sha256:[0-9a-f]{64}$/u.test(observed.auth)
+    || !/@sha256:[0-9a-f]{64}$/u.test(observed.storage)
+  ) {
+    throw new Error("Production service image provenance is invalid");
+  }
+  if (
+    expectedImages
+    && (
+      expectedImages.auth !== observed.auth
+      || expectedImages.storage !== observed.storage
+    )
+  ) {
+    throw new Error("Production service image provenance mismatch");
+  }
+  return observed;
+}
+
 export function selectFullLocalProductionResources({ config, containers, volumes }) {
   if (!Array.isArray(containers) || !Array.isArray(volumes)) {
     throw new TypeError("Complete Docker container and volume inventories are required");

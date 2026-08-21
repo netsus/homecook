@@ -15,7 +15,10 @@ import {
 import { tmpdir } from "node:os";
 import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
 
-import { buildSanitizedPlatformData } from "./full-local-restore-cutover.mjs";
+import {
+  buildPlatformServiceRestoreAttestation,
+  buildSanitizedPlatformData,
+} from "./full-local-restore-cutover.mjs";
 
 export const PLATFORM_BACKUP_FORMAT = "homecook-full-local-platform-v1";
 export const PLATFORM_BACKUP_AUTH_FORMAT = "homecook-full-local-platform-auth-v1";
@@ -36,6 +39,16 @@ const BUNDLE_ENTRIES = Object.freeze([
   "storage.payload.tar",
 ]);
 
+function stableJson(value) {
+  if (Array.isArray(value)) {
+    return `[${value.map(stableJson).join(",")}]`;
+  }
+  if (value && typeof value === "object") {
+    return `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${stableJson(value[key])}`).join(",")}}`;
+  }
+  return JSON.stringify(value);
+}
+
 function defaultRun(command, args, options = {}) {
   const result = spawnSync(command, args, {
     cwd: options.cwd,
@@ -52,6 +65,80 @@ function defaultRun(command, args, options = {}) {
 
 function defaultHashFile(path) {
   return createHash("sha256").update(readFileSync(path)).digest("hex");
+}
+
+export function buildPlatformServiceSchemaCatalogSql() {
+  return `
+with scoped_relations as (
+  select
+    n.nspname as schema_name,
+    c.relname as relation_name,
+    c.relkind as relation_kind,
+    coalesce((
+      select json_agg(json_build_object(
+        'column_name', a.attname,
+        'data_type', pg_catalog.format_type(a.atttypid, a.atttypmod),
+        'is_not_null', a.attnotnull,
+        'identity', coalesce(nullif(a.attidentity, ''), null),
+        'generated', coalesce(nullif(a.attgenerated, ''), null),
+        'default_expr', pg_get_expr(d.adbin, d.adrelid)
+      ) order by a.attnum)
+      from pg_attribute a
+      left join pg_attrdef d
+        on d.adrelid = a.attrelid
+       and d.adnum = a.attnum
+      where a.attrelid = c.oid
+        and a.attnum > 0
+        and not a.attisdropped
+    ), '[]'::json) as columns,
+    coalesce((
+      select json_agg(json_build_object(
+        'constraint_name', con.conname,
+        'constraint_type', con.contype,
+        'definition', pg_get_constraintdef(con.oid, true)
+      ) order by con.conname)
+      from pg_constraint con
+      where con.conrelid = c.oid
+    ), '[]'::json) as constraints,
+    coalesce((
+      select json_agg(json_build_object(
+        'index_name', ic.relname,
+        'definition', pg_get_indexdef(i.indexrelid, 0, true),
+        'is_unique', i.indisunique,
+        'is_primary', i.indisprimary
+      ) order by ic.relname)
+      from pg_index i
+      join pg_class ic on ic.oid = i.indexrelid
+      where i.indrelid = c.oid
+    ), '[]'::json) as indexes
+  from pg_class c
+  join pg_namespace n on n.oid = c.relnamespace
+  where n.nspname in ('auth', 'storage')
+    and c.relkind in ('r', 'p')
+)
+select coalesce(json_agg(json_build_object(
+  'schema_name', schema_name,
+  'relation_name', relation_name,
+  'relation_kind', relation_kind,
+  'columns', columns,
+  'constraints', constraints,
+  'indexes', indexes
+) order by schema_name, relation_name), '[]'::json)::text
+from scoped_relations;
+`;
+}
+
+export function digestPlatformServiceSchemaCatalog(rawCatalog) {
+  if (typeof rawCatalog !== "string" || rawCatalog.trim().length === 0) {
+    throw new Error("Platform service schema catalog is invalid");
+  }
+  let parsed;
+  try {
+    parsed = JSON.parse(rawCatalog);
+  } catch {
+    throw new Error("Platform service schema catalog is invalid");
+  }
+  return createHash("sha256").update(stableJson(parsed)).digest("hex");
 }
 
 function defaults() {
@@ -397,6 +484,7 @@ function validDatabaseProvenance(provenance) {
   if (provenance?.adapter === "isolated-supabase-cli-local") return true;
   return (
     provenance?.adapter === undefined
+    && /@sha256:[0-9a-f]{64}$/u.test(provenance?.auth_image)
     && typeof provenance?.compose_project === "string"
     && provenance.compose_project.length > 0
     && typeof provenance?.container_id === "string"
@@ -413,6 +501,7 @@ function validDatabaseProvenance(provenance) {
     && provenance.schema_count > 0
     && typeof provenance?.server_version_num === "string"
     && /^\d+$/u.test(provenance.server_version_num)
+    && /@sha256:[0-9a-f]{64}$/u.test(provenance?.storage_image)
   );
 }
 
@@ -436,6 +525,26 @@ export function verifyPlatformBackupMetadata(metadata, observed) {
     || !validDatabaseProvenance(metadata.database?.provenance)
   ) {
     throw new Error("Platform backup database provenance is invalid");
+  }
+  if (metadata.database.provenance?.adapter === undefined) {
+    try {
+      buildPlatformServiceRestoreAttestation({
+        components: metadata.components,
+        expected: metadata.service_restore_attestation,
+        schemaCatalogSha256: metadata.database.provenance.schema_catalog_sha256,
+        serviceImages: {
+          auth: metadata.database.provenance.auth_image,
+          storage: metadata.database.provenance.storage_image,
+        },
+        serviceLedgers: metadata.manifest?.service_ledgers,
+      });
+    } catch (error) {
+      throw new Error(
+        error instanceof Error && error.message.includes("Platform service restore attestation")
+          ? error.message
+          : "Platform backup service restore attestation is invalid",
+      );
+    }
   }
   if (
     metadata.storage_payload_included !== true
@@ -597,6 +706,17 @@ export function createEncryptedPlatformBackup({
             source_identity: "isolated-supabase-cli-local",
           },
       manifest: sanitized.manifest,
+      service_restore_attestation: database && database.provenance?.adapter === undefined
+        ? buildPlatformServiceRestoreAttestation({
+            components,
+            schemaCatalogSha256: database.provenance.schema_catalog_sha256,
+            serviceImages: {
+              auth: database.provenance.auth_image,
+              storage: database.provenance.storage_image,
+            },
+            serviceLedgers: sanitized.manifest.service_ledgers,
+          })
+        : undefined,
       storage_payload: storagePayload,
       storage_payload_included: true,
     };

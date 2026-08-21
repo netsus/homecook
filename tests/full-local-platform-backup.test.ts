@@ -33,8 +33,11 @@ import {
 } from "@/scripts/lib/full-local-platform-backup.mjs";
 import {
   makePostgresRoleDumpIdempotent,
+  selectExactFullLocalServiceImages,
   selectFullLocalProductionResources,
 } from "@/scripts/lib/full-local-production-resources.mjs";
+import { buildPlatformServiceRestoreAttestation } from "@/scripts/lib/full-local-restore-cutover.mjs";
+import { buildPlatformServiceSchemaCatalogSql } from "@/scripts/lib/full-local-platform-backup.mjs";
 
 const temporaryDirectories: string[] = [];
 
@@ -132,6 +135,82 @@ describe("full-local platform backup boundary", () => {
       postgresContainerName: "homecook-full-local-isolated-postgres-1",
       storageVolumeName: "homecook-full-local-storage",
     });
+  });
+
+  it("inspects exact live auth and storage service digests and blocks config drift", () => {
+    expect(selectExactFullLocalServiceImages({
+      composeProject: "homecook-full-local-isolated",
+      containers: [
+        {
+          Config: {
+            Image: `supabase/gotrue@sha256:${"1".repeat(64)}`,
+            Labels: {
+              "com.docker.compose.project": "homecook-full-local-isolated",
+              "com.docker.compose.service": "auth",
+            },
+          },
+          State: { Health: { Status: "healthy" }, Running: true },
+        },
+        {
+          Config: {
+            Image: `supabase/storage-api@sha256:${"2".repeat(64)}`,
+            Labels: {
+              "com.docker.compose.project": "homecook-full-local-isolated",
+              "com.docker.compose.service": "storage",
+            },
+          },
+          State: { Health: { Status: "healthy" }, Running: true },
+        },
+      ],
+      expectedImages: {
+        auth: `supabase/gotrue@sha256:${"1".repeat(64)}`,
+        storage: `supabase/storage-api@sha256:${"2".repeat(64)}`,
+      },
+    })).toEqual({
+      auth: `supabase/gotrue@sha256:${"1".repeat(64)}`,
+      storage: `supabase/storage-api@sha256:${"2".repeat(64)}`,
+    });
+
+    expect(() => selectExactFullLocalServiceImages({
+      composeProject: "homecook-full-local-isolated",
+      containers: [
+        {
+          Config: {
+            Image: `supabase/gotrue@sha256:${"9".repeat(64)}`,
+            Labels: {
+              "com.docker.compose.project": "homecook-full-local-isolated",
+              "com.docker.compose.service": "auth",
+            },
+          },
+          State: { Health: { Status: "healthy" }, Running: true },
+        },
+        {
+          Config: {
+            Image: `supabase/storage-api@sha256:${"2".repeat(64)}`,
+            Labels: {
+              "com.docker.compose.project": "homecook-full-local-isolated",
+              "com.docker.compose.service": "storage",
+            },
+          },
+          State: { Health: { Status: "healthy" }, Running: true },
+        },
+      ],
+      expectedImages: {
+        auth: `supabase/gotrue@sha256:${"1".repeat(64)}`,
+        storage: `supabase/storage-api@sha256:${"2".repeat(64)}`,
+      },
+    })).toThrow(/service image provenance mismatch/iu);
+  });
+
+  it("builds a service schema catalog digest query stronger than namespace-only inventory", () => {
+    const sql = buildPlatformServiceSchemaCatalogSql();
+
+    expect(sql).toContain("pg_attribute");
+    expect(sql).toContain("pg_constraint");
+    expect(sql).toContain("pg_index");
+    expect(sql).toContain("pg_class");
+    expect(sql).toContain("auth");
+    expect(sql).toContain("storage");
   });
 
   it("makes production role creation safe for a clean image that already owns pinned roles", () => {
@@ -558,17 +637,49 @@ describe("full-local platform backup boundary", () => {
   });
 
   it("fails closed unless DB and complete Storage payload checksums are bound", () => {
+    const components = {
+      data_sha256: "a".repeat(64),
+      roles_sha256: "b".repeat(64),
+      schema_sha256: "c".repeat(64),
+      storage_payload_sha256: "e".repeat(64),
+    };
+    const serviceLedgers = {
+      auth_schema_migrations: {
+        digest_sha256: "3".repeat(64),
+        row_count: 1,
+      },
+      storage_migrations: {
+        digest_sha256: "4".repeat(64),
+        row_count: 1,
+      },
+    };
     const metadata = {
+      service_restore_attestation: buildPlatformServiceRestoreAttestation({
+        components,
+        schemaCatalogSha256: "f".repeat(64),
+        serviceImages: {
+          auth: `supabase/gotrue@sha256:${"1".repeat(64)}`,
+          storage: `supabase/storage-api@sha256:${"2".repeat(64)}`,
+        },
+        serviceLedgers,
+      }),
       database: {
-        provenance: { adapter: "isolated-supabase-cli-local" },
+        provenance: {
+          auth_image: `supabase/gotrue@sha256:${"1".repeat(64)}`,
+          compose_project: "homecook-full-local-isolated",
+          container_id: "postgres-id",
+          container_name: "homecook-full-local-isolated-postgres-1",
+          database: "postgres",
+          image: `public.ecr.aws/supabase/postgres@sha256:${"a".repeat(64)}`,
+          postgres_volume: "homecook-full-local-postgres",
+          schema_catalog_sha256: "f".repeat(64),
+          schema_count: 7,
+          server_version_num: "170004",
+          storage_image: `supabase/storage-api@sha256:${"2".repeat(64)}`,
+        },
         source_identity: "isolated-supabase-cli-local",
       },
-      components: {
-        data_sha256: "a".repeat(64),
-        roles_sha256: "b".repeat(64),
-        schema_sha256: "c".repeat(64),
-        storage_payload_sha256: "e".repeat(64),
-      },
+      components,
       format: "homecook-full-local-platform-v1",
       storage_payload: {
         catalog_sha256: "f".repeat(64),
@@ -585,6 +696,7 @@ describe("full-local platform backup boundary", () => {
       storage_payload_included: true,
       manifest: {
         relation_classification_digest: "d".repeat(64),
+        service_ledgers: serviceLedgers,
         transient_promote_count: 0,
         unclassified: [],
       },
@@ -605,11 +717,8 @@ describe("full-local platform backup boundary", () => {
     }, metadata.components)).toThrow(/Storage payload/iu);
     expect(() => verifyPlatformBackupMetadata({
       ...metadata,
-      database: {
-        provenance: { adapter: "remote-or-unreviewed-adapter" },
-        source_identity: "remote-or-unreviewed-adapter",
-      },
-    }, metadata.components)).toThrow(/database provenance/iu);
+      service_restore_attestation: null,
+    }, metadata.components)).toThrow(/service restore attestation/iu);
     expect(() => verifyPlatformBackupMetadata({
       ...metadata,
       database: {
@@ -621,6 +730,13 @@ describe("full-local platform backup boundary", () => {
         source_identity: "docker-compose:incomplete",
       },
     }, metadata.components)).toThrow(/database provenance/iu);
+    expect(() => verifyPlatformBackupMetadata({
+      ...metadata,
+      service_restore_attestation: {
+        ...metadata.service_restore_attestation,
+        schema_catalog_sha256: "0".repeat(64),
+      },
+    }, metadata.components)).toThrow(/service restore attestation/iu);
   });
 
   it("authenticates the encrypted archive before decryption", () => {

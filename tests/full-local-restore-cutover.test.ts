@@ -7,6 +7,7 @@ import {
   assertFreshRestoreExecutionApproved,
   assertFreshRestoreAllowed,
   assertRestoredStorageVolumeProvenance,
+  buildPlatformServiceRestoreAttestation,
   buildBootstrapAwareDatabaseResetSql,
   buildComposeLabeledStorageVolumeCreateArgs,
   buildPlatformRestoreSql,
@@ -125,6 +126,10 @@ describe("full-local platform restore boundary", () => {
       startPostgres: async () => calls.push("start-postgres"),
       startServices: async () => calls.push("start-services"),
       stopServices: async () => calls.push("stop-services"),
+      verifyRestoreAttestation: async () => {
+        calls.push("verify-restore-attestation");
+        return true;
+      },
       verifyResources: async () => calls.push("verify-resources"),
       verifyRestoredPlatform: async () => {
         calls.push("verify-restored-platform");
@@ -139,6 +144,7 @@ describe("full-local platform restore boundary", () => {
       "start-postgres",
       "reset-database",
       "replay-database",
+      "verify-restore-attestation",
       "start-services",
       "verify-resources",
       "verify-restored-platform",
@@ -205,7 +211,7 @@ hook-a
     expect(result.sql).not.toContain("supabase_functions.hooks");
   });
 
-  it("excludes local Auth and Storage migration ledgers from restored user data", () => {
+  it("keeps exact local Auth and Storage migration ledgers for fail-closed service attestation", () => {
     const result = buildSanitizedPlatformData([
       "COPY auth.schema_migrations (version) FROM stdin;",
       "202608140001",
@@ -219,14 +225,100 @@ hook-a
       "",
     ].join("\n"));
 
-    expect(result.sql).not.toContain("auth.schema_migrations");
-    expect(result.sql).not.toContain("storage.migrations");
+    expect(result.sql).toContain("COPY auth.schema_migrations");
+    expect(result.sql).toContain("COPY storage.migrations");
     expect(result.sql).not.toContain("vault.secrets");
     expect(result.manifest.relations).toEqual(expect.arrayContaining([
-      expect.objectContaining({ relation: "auth.schema_migrations", action: "exclude" }),
-      expect.objectContaining({ relation: "storage.migrations", action: "exclude" }),
+      expect.objectContaining({ relation: "auth.schema_migrations", action: "include" }),
+      expect.objectContaining({ relation: "storage.migrations", action: "include" }),
       expect.objectContaining({ relation: "vault.secrets", action: "exclude" }),
     ]));
+    expect(result.manifest.service_ledgers).toEqual({
+      auth_schema_migrations: {
+        digest_sha256: expect.stringMatching(/^[0-9a-f]{64}$/u),
+        row_count: 1,
+      },
+      storage_migrations: {
+        digest_sha256: expect.stringMatching(/^[0-9a-f]{64}$/u),
+        row_count: 1,
+      },
+    });
+  });
+
+  it("fails closed on any service-ledger, schema-catalog, image, or component attestation drift", () => {
+    const expected = buildPlatformServiceRestoreAttestation({
+      components: {
+        data_sha256: "a".repeat(64),
+        roles_sha256: "b".repeat(64),
+        schema_sha256: "c".repeat(64),
+        storage_payload_sha256: "d".repeat(64),
+      },
+      schemaCatalogSha256: "e".repeat(64),
+      serviceImages: {
+        auth: `supabase/gotrue@sha256:${"1".repeat(64)}`,
+        storage: `supabase/storage-api@sha256:${"2".repeat(64)}`,
+      },
+      serviceLedgers: {
+        auth_schema_migrations: {
+          digest_sha256: "3".repeat(64),
+          row_count: 2,
+        },
+        storage_migrations: {
+          digest_sha256: "4".repeat(64),
+          row_count: 1,
+        },
+      },
+    });
+
+    expect(buildPlatformServiceRestoreAttestation({
+      components: {
+        data_sha256: "a".repeat(64),
+        roles_sha256: "b".repeat(64),
+        schema_sha256: "c".repeat(64),
+        storage_payload_sha256: "d".repeat(64),
+      },
+      expected,
+      schemaCatalogSha256: "e".repeat(64),
+      serviceImages: {
+        auth: `supabase/gotrue@sha256:${"1".repeat(64)}`,
+        storage: `supabase/storage-api@sha256:${"2".repeat(64)}`,
+      },
+      serviceLedgers: {
+        auth_schema_migrations: {
+          digest_sha256: "3".repeat(64),
+          row_count: 2,
+        },
+        storage_migrations: {
+          digest_sha256: "4".repeat(64),
+          row_count: 1,
+        },
+      },
+    })).toEqual(expected);
+
+    expect(() => buildPlatformServiceRestoreAttestation({
+      components: {
+        data_sha256: "a".repeat(64),
+        roles_sha256: "b".repeat(64),
+        schema_sha256: "c".repeat(64),
+        storage_payload_sha256: "d".repeat(64),
+      },
+      expected,
+      schemaCatalogSha256: "e".repeat(64),
+      serviceImages: {
+        auth: `supabase/gotrue@sha256:${"9".repeat(64)}`,
+        storage: `supabase/storage-api@sha256:${"2".repeat(64)}`,
+      },
+      serviceLedgers: {
+        auth_schema_migrations: {
+          digest_sha256: "3".repeat(64),
+          row_count: 2,
+        },
+        storage_migrations: {
+          digest_sha256: "4".repeat(64),
+          row_count: 1,
+        },
+      },
+    })).toThrow(/service restore attestation mismatch/iu);
   });
 
   it("preserves durable full-local authority state while excluding transient auth-flow attempts", () => {

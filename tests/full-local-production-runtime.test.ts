@@ -124,6 +124,15 @@ describe("full-local production runtime static contract", () => {
     expect(restorePath).toMatch(
       /await waitForRuntimeHealthy\(restoreRuntime\);[\s\S]*liveFullLocalProductionResources\(restoreRuntime\);[\s\S]*writeRestoreManifest/iu,
     );
+    expect(restorePath).toMatch(
+      /replayDatabase:[\s\S]*verifyRestoreAttestation:[\s\S]*startServices:/iu,
+    );
+    expect(restorePath).toMatch(
+      /inventoryContainers:\s*\(\)\s*=>\s*dockerResourceInventory\("container",\s*\{\s*all:\s*true\s*\}\)/iu,
+    );
+    expect(restorePath).toMatch(
+      /bootstrapServices:[\s\S]*selectExactFullLocalServiceImages[\s\S]*service_restore_attestation[\s\S]*stopServices:/iu,
+    );
   });
 
   it("returns an empty Docker inventory without invoking inspect with zero ids", async () => {
@@ -147,6 +156,23 @@ describe("full-local production runtime static contract", () => {
     expect(calls).toEqual([
       ["container", "ls", "--quiet"],
       ["volume", "ls", "--quiet"],
+    ]);
+  });
+
+  it("uses container ls --all for cleanup inventory so stopped restore artifacts are still removable", async () => {
+    const runtimeCli = await import("../scripts/full-local-production-runtime.mjs");
+    const calls: string[][] = [];
+
+    expect(runtimeCli.dockerResourceInventory("container", {
+      all: true,
+      execute: (_command: string, args: string[]) => {
+        calls.push(args);
+        return "";
+      },
+    })).toEqual([]);
+
+    expect(calls).toEqual([
+      ["container", "ls", "--all", "--quiet"],
     ]);
   });
 
