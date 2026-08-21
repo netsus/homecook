@@ -48,6 +48,8 @@ const EXCLUDED_RELATIONS = new Set([
 ]);
 
 const COPY_HEADER = /^COPY\s+((?:"[^"]+"|[a-zA-Z_][\w$]*)\.(?:"[^"]+"|[a-zA-Z_][\w$]*))\s+\(([^)]*)\)\s+FROM\s+stdin;\s*$/;
+const PGDUMP_RESTRICT_LINE = /^\\restrict\s+([A-Za-z0-9]+)\s*$/u;
+const PGDUMP_UNRESTRICT_LINE = /^\\unrestrict\s+([A-Za-z0-9]+)\s*$/u;
 const SAFE_DOCKER_RESOURCE_NAME = /^[a-z0-9][a-z0-9_.-]{2,127}$/u;
 const SHA256_HEX = /^[0-9a-f]{64}$/u;
 const DIGEST_PIN = /^.+@sha256:[0-9a-f]{64}$/u;
@@ -167,6 +169,57 @@ function classifyRelation(relation) {
     return "exclude";
   }
   throw new Error(`Unclassified platform restore relation: ${relation}`);
+}
+
+function canonicalizePgDumpRestrictPair(sql) {
+  const lines = sql.split("\n");
+  let restrictIndex = null;
+  let unrestrictIndex = null;
+  let restrictKey = null;
+  let unrestrictKey = null;
+
+  for (const [index, line] of lines.entries()) {
+    if (line.startsWith("\\restrict")) {
+      const match = line.match(PGDUMP_RESTRICT_LINE);
+      if (!match || restrictIndex !== null) {
+        throw new Error("Platform data semantic digest requires one safe matching pg_dump restrict/unrestrict pair");
+      }
+      restrictIndex = index;
+      restrictKey = match[1];
+      continue;
+    }
+    if (line.startsWith("\\unrestrict")) {
+      const match = line.match(PGDUMP_UNRESTRICT_LINE);
+      if (!match || unrestrictIndex !== null) {
+        throw new Error("Platform data semantic digest requires one safe matching pg_dump restrict/unrestrict pair");
+      }
+      unrestrictIndex = index;
+      unrestrictKey = match[1];
+    }
+  }
+
+  if (restrictIndex === null && unrestrictIndex === null) {
+    return sql;
+  }
+  if (
+    restrictIndex === null
+    || unrestrictIndex === null
+    || restrictIndex >= unrestrictIndex
+    || restrictKey !== unrestrictKey
+  ) {
+    throw new Error("Platform data semantic digest requires one safe matching pg_dump restrict/unrestrict pair");
+  }
+
+  return lines.filter((_line, index) => index !== restrictIndex && index !== unrestrictIndex).join("\n");
+}
+
+export function digestSemanticPlatformDataSql(sql) {
+  if (typeof sql !== "string") {
+    throw new TypeError("Platform data SQL must be a string");
+  }
+  return createHash("sha256")
+    .update(canonicalizePgDumpRestrictPair(sql))
+    .digest("hex");
 }
 
 export function assertFreshRestoreAllowed({
@@ -398,22 +451,25 @@ export function buildSanitizedPlatformData(sql) {
     columns,
     relation,
   }));
+  const sanitizedSql = output.join("\n");
 
   return {
     manifest: {
+      data_semantic_sha256: digestSemanticPlatformDataSql(sanitizedSql),
       relation_classification_digest: digest(relationClassification),
       relations,
       service_ledgers: Object.freeze(serviceLedgers),
       transient_promote_count: 0,
       unclassified: [],
     },
-    sql: output.join("\n"),
+    sql: sanitizedSql,
   };
 }
 
 export function verifyRestoredPlatformDataSnapshot({
   restoredDataSql,
   sourceDataSha256,
+  sourceDataSemanticSha256,
   sourceRelationClassificationDigest,
 }) {
   const restored = buildSanitizedPlatformData(restoredDataSql);
@@ -421,7 +477,10 @@ export function verifyRestoredPlatformDataSnapshot({
     .update(restored.sql)
     .digest("hex");
   if (
-    restoredDataSha256 !== sourceDataSha256
+    !validSha256(sourceDataSha256)
+    || !validSha256(sourceDataSemanticSha256)
+    || !validSha256(sourceRelationClassificationDigest)
+    || restored.manifest.data_semantic_sha256 !== sourceDataSemanticSha256
     || restored.manifest.relation_classification_digest
       !== sourceRelationClassificationDigest
   ) {
@@ -429,6 +488,7 @@ export function verifyRestoredPlatformDataSnapshot({
   }
   return Object.freeze({
     restored_data_sha256: restoredDataSha256,
+    restored_data_semantic_sha256: restored.manifest.data_semantic_sha256,
     restored_relation_classification_digest:
       restored.manifest.relation_classification_digest,
   });
@@ -462,6 +522,7 @@ export function compareRestoreReplayManifests(first, second) {
     "database_digest",
     "relation_classification_digest",
     "source_data_sha256",
+    "source_data_semantic_sha256",
     "source_roles_sha256",
     "source_schema_sha256",
     "storage_digest",

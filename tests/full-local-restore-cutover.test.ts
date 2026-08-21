@@ -55,19 +55,66 @@ describe("full-local platform restore boundary", () => {
     expect(verifyRestoredPlatformDataSnapshot({
       restoredDataSql: platformData,
       sourceDataSha256,
+      sourceDataSemanticSha256: sanitized.manifest.data_semantic_sha256,
       sourceRelationClassificationDigest:
         sanitized.manifest.relation_classification_digest,
     })).toEqual({
       restored_data_sha256: sourceDataSha256,
+      restored_data_semantic_sha256: sanitized.manifest.data_semantic_sha256,
       restored_relation_classification_digest:
         sanitized.manifest.relation_classification_digest,
     });
     expect(() => verifyRestoredPlatformDataSnapshot({
       restoredDataSql: platformData.replace("a@example.com", "drift@example.com"),
       sourceDataSha256,
+      sourceDataSemanticSha256: sanitized.manifest.data_semantic_sha256,
       sourceRelationClassificationDigest:
         sanitized.manifest.relation_classification_digest,
     })).toThrow(/archive|DB|data/iu);
+  });
+
+  it("keeps the raw digest but canonicalizes one matching pg_dump restrict nonce pair semantically", () => {
+    const plain = buildSanitizedPlatformData(platformData);
+    const pg17Source = `\\restrict Alpha123
+${platformData}\\unrestrict Alpha123
+`;
+    const pg17Restored = `\\restrict Beta456
+${platformData}\\unrestrict Beta456
+`;
+    const source = buildSanitizedPlatformData(pg17Source);
+    const restoredRawSha256 = createHash("sha256").update(buildSanitizedPlatformData(pg17Restored).sql).digest("hex");
+
+    expect(source.manifest.data_semantic_sha256).toBe(plain.manifest.data_semantic_sha256);
+    expect(source.manifest.data_semantic_sha256).toMatch(/^[0-9a-f]{64}$/u);
+    expect(buildSanitizedPlatformData(pg17Restored).manifest.data_semantic_sha256)
+      .toBe(source.manifest.data_semantic_sha256);
+    expect(restoredRawSha256).not.toBe(createHash("sha256").update(source.sql).digest("hex"));
+    expect(verifyRestoredPlatformDataSnapshot({
+      restoredDataSql: pg17Restored,
+      sourceDataSha256: createHash("sha256").update(source.sql).digest("hex"),
+      sourceDataSemanticSha256: source.manifest.data_semantic_sha256,
+      sourceRelationClassificationDigest: source.manifest.relation_classification_digest,
+    })).toEqual({
+      restored_data_sha256: restoredRawSha256,
+      restored_data_semantic_sha256: source.manifest.data_semantic_sha256,
+      restored_relation_classification_digest: source.manifest.relation_classification_digest,
+    });
+  });
+
+  it("fails closed when pg_dump restrict nonce metadata is missing, duplicated, mismatched, or unsafe", () => {
+    expect(() => buildSanitizedPlatformData(`\\restrict Alpha123
+${platformData}`)).toThrow(/restrict|unrestrict|semantic/iu);
+    expect(() => buildSanitizedPlatformData(`\\restrict Alpha123
+\\restrict Beta456
+${platformData}\\unrestrict Beta456
+\\unrestrict Alpha123
+`)).toThrow(/restrict|unrestrict|semantic/iu);
+    expect(() => buildSanitizedPlatformData(`\\restrict Alpha123
+${platformData}\\unrestrict Beta456
+`)).toThrow(/restrict|unrestrict|semantic/iu);
+    expect(() => buildSanitizedPlatformData(`\\restrict alpha-123
+${platformData}\\unrestrict alpha-123
+`)).toThrow(/restrict|unrestrict|semantic/iu);
   });
 
   it("restores only into brand-new PostgreSQL and Storage volumes", () => {
@@ -406,6 +453,7 @@ hook-a
       database_digest: "db-a",
       relation_classification_digest: "class-a",
       source_data_sha256: "data-a",
+      source_data_semantic_sha256: "semantic-a",
       source_roles_sha256: "roles-a",
       source_schema_sha256: "schema-a",
       storage_digest: "storage-a",

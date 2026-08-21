@@ -59,6 +59,7 @@ import {
   withRecoveredBackupKeyCreateOnlyRegistration,
 } from "./lib/full-local-backup-key-recovery.mjs";
 import {
+  RESTORE_MANIFEST_FORMAT_V2,
   assertPrivateArtifactParent,
   assertRegularReadinessArtifact,
   authenticateFullLocalBackupArchives,
@@ -1324,7 +1325,7 @@ function writeRestoreManifest({
     ...semantic,
     compose_project: runtime.config.FULL_LOCAL_COMPOSE_PROJECT_NAME,
     created_at: new Date().toISOString(),
-    format: "homecook-full-local-restore-v1",
+    format: RESTORE_MANIFEST_FORMAT_V2,
     fresh_target_attested: true,
     postgres_volume: runtime.config.FULL_LOCAL_POSTGRES_VOLUME_NAME,
     relation_classification_digest: metadata.manifest.relation_classification_digest,
@@ -1333,6 +1334,7 @@ function writeRestoreManifest({
     source_archive_sha256: archiveSha256,
     source_backup_created_at: metadata.created_at,
     source_data_sha256: metadata.components.data_sha256,
+    source_data_semantic_sha256: metadata.manifest.data_semantic_sha256,
     source_roles_sha256: metadata.components.roles_sha256,
     source_schema_sha256: metadata.components.schema_sha256,
     storage_volume: runtime.config.FULL_LOCAL_STORAGE_VOLUME_NAME,
@@ -1377,6 +1379,7 @@ function restoredPlatformDataSnapshot(runtime, metadata) {
   return verifyRestoredPlatformDataSnapshot({
     restoredDataSql,
     sourceDataSha256: metadata.components.data_sha256,
+    sourceDataSemanticSha256: metadata.manifest.data_semantic_sha256,
     sourceRelationClassificationDigest:
       metadata.manifest.relation_classification_digest,
   });
