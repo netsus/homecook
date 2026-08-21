@@ -51,6 +51,7 @@ export function PersonalRecipeDeleteDialog({
           cancelDisabled={submitting}
           confirmDisabled={submitting}
           confirmLabel={submitting ? "삭제 중" : "삭제"}
+          confirmTone="danger"
           onCancel={onClose}
           onConfirm={onConfirm}
         />
