@@ -16,6 +16,21 @@ function parseEnvExample(text: string) {
   );
 }
 
+const TRAILING_DOT_CONTROL_CASES = [
+  ["literal tab numeric port", ".\t:54321"],
+  ["literal CR numeric port", ".\r:54321"],
+  ["literal LF numeric port", ".\n:54321"],
+  ["encoded tab numeric port", "%2e\t:54321"],
+  ["encoded CR numeric port", "%2E\r:54321"],
+  ["encoded LF numeric port", "%2e\n:54321"],
+  ["literal tab empty port", ".\t:"],
+  ["literal CR empty port", ".\r:"],
+  ["literal LF empty port", ".\n:"],
+  ["encoded tab empty port", "%2e\t:"],
+  ["encoded CR empty port", "%2E\r:"],
+  ["encoded LF empty port", "%2e\n:"],
+] as const;
+
 describe("local-only Supabase environment boundary", () => {
   beforeEach(() => {
     vi.resetModules();
@@ -115,6 +130,25 @@ describe("local-only Supabase environment boundary", () => {
     expect(hasAuthSupabasePublicEnv()).toBe(false);
   });
 
+  it.each(TRAILING_DOT_CONTROL_CASES)(
+    "rejects public Auth raw control boundary %s",
+    async (_name, suffix) => {
+      process.env.NEXT_PUBLIC_AUTH_SUPABASE_URL =
+        `https://project.supabase.co${suffix}`;
+      process.env.NEXT_PUBLIC_AUTH_SUPABASE_PUBLISHABLE_KEY =
+        "local-publishable";
+
+      const { getAuthSupabaseEnv, hasAuthSupabasePublicEnv } = await import(
+        "@/lib/supabase/auth-env"
+      );
+
+      expect(() => getAuthSupabaseEnv()).toThrow(
+        /ASCII control|whitespace/iu,
+      );
+      expect(hasAuthSupabasePublicEnv()).toBe(false);
+    },
+  );
+
   it.each([
     "http://127.0.0.1.:54481",
     "http://127.0.0.1%2e:54481",
@@ -146,6 +180,25 @@ describe("local-only Supabase environment boundary", () => {
       /LOCAL_SUPABASE_INTERNAL_URL.*hostname.*trailing dot/iu,
     );
   });
+
+  it.each(TRAILING_DOT_CONTROL_CASES)(
+    "rejects internal Auth raw control boundary %s",
+    async (_name, suffix) => {
+      process.env.HOMECOOK_AUTH_AUTHORITY = "local";
+      process.env.NEXT_PUBLIC_AUTH_SUPABASE_URL = "http://127.0.0.1:54321";
+      process.env.NEXT_PUBLIC_AUTH_SUPABASE_PUBLISHABLE_KEY =
+        "local-publishable";
+      process.env.LOCAL_SUPABASE_INTERNAL_URL = `http://127.0.0.1${suffix}`;
+
+      const { getAuthSupabaseServerEnv } = await import(
+        "@/lib/supabase/auth-env"
+      );
+
+      expect(() => getAuthSupabaseServerEnv()).toThrow(
+        /LOCAL_SUPABASE_INTERNAL_URL.*(?:ASCII control|whitespace)/iu,
+      );
+    },
+  );
 
   it("allows browser Auth env without the server-only Auth authority", async () => {
     process.env.NEXT_PUBLIC_AUTH_SUPABASE_URL = "http://127.0.0.1:54321";

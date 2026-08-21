@@ -58,6 +58,9 @@ function rejectRawTrailingDotHostname(value: string, name: string) {
 }
 
 function parseUrl(value: string, name: string) {
+  if (/[\u0000-\u0020\u007f]/u.test(value)) {
+    throw new Error(`${name} 값에 ASCII control 또는 whitespace를 넣을 수 없어요.`);
+  }
   rejectRawTrailingDotHostname(value, name);
   let parsed: URL;
   try {
