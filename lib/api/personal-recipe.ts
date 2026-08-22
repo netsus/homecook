@@ -2,10 +2,23 @@
 
 import { withE2EAuthOverrideHeaders } from "@/lib/auth/e2e-auth-override";
 import type { ApiResponse } from "@/types/api";
+import type { RecipeEditDraft } from "@/types/recipe";
 
 export interface PersonalRecipeDeleteResult {
   id: string;
   deleted_at: string;
+}
+
+export interface PersonalRecipeCreateResult {
+  id: string;
+  revision: number;
+}
+
+export interface PersonalRecipeCreateInput {
+  originRecipeId: string;
+  baseRecipeRevision: number;
+  draft: RecipeEditDraft;
+  imageObjectId: string | null;
 }
 
 export interface PersonalRecipeApiError extends Error {
@@ -41,5 +54,24 @@ export function deletePersonalRecipe(recipeId: string, idempotencyKey: string) {
   return request<PersonalRecipeDeleteResult>(`/api/v1/recipes/${recipeId}`, {
     method: "DELETE",
     headers: { "Idempotency-Key": idempotencyKey },
+  });
+}
+
+export function createPersonalRecipeFromSource(
+  input: PersonalRecipeCreateInput,
+  idempotencyKey = crypto.randomUUID(),
+) {
+  return request<PersonalRecipeCreateResult>("/api/v1/recipes", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "Idempotency-Key": idempotencyKey,
+    },
+    body: JSON.stringify({
+      origin_recipe_id: input.originRecipeId,
+      base_recipe_revision: input.baseRecipeRevision,
+      draft: input.draft,
+      image_object_id: input.imageObjectId,
+    }),
   });
 }

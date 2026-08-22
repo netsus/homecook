@@ -100,6 +100,19 @@ describe("pending action", () => {
     expect(readPendingAction()).toEqual(action);
   });
 
+  it("stores public fork login intent without carrying projected draft context", () => {
+    const action = {
+      type: "recipe-fork" as const,
+      recipeId: "recipe-1",
+      redirectTo: "/recipe/recipe-1",
+      createdAt: 123,
+    };
+
+    savePendingAction(action);
+
+    expect(readPendingAction()).toEqual(action);
+  });
+
   it("preserves an exact owner edit draft for the existing recipe return-to-action flow", () => {
     const editContext = {
       base_recipe_revision: 12,

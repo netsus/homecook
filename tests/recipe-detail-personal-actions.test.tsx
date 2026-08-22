@@ -107,10 +107,13 @@ describe("recipe detail personal actions", () => {
     );
 
     expect(source).toContain("<RecipeDetailPersonalActions");
-    expect(source).toContain("capabilityEnabled={canEditPersonalRecipe}");
-    expect(source).toContain('accessState={canEditPersonalRecipe ? "owner-private" : "unknown"}');
+    expect(source).toContain("capabilityEnabled={personalRecipeCapabilityEnabled}");
+    expect(source).toContain("accessState={personalRecipeAccessState}");
+    expect(source).toContain("type: \"recipe-fork\"");
+    expect(source).toContain("setPersonalEditorMode(\"fork\")");
     expect(source).toContain("<RecipeDetailPersonalEditor");
-    expect(source).toContain("isPersonalEditorOpen && canEditPersonalRecipe && activePersonalEditContext");
+    expect(source).toContain("isPersonalEditorOpen && activePersonalEditorContext");
+    expect(source).toContain("mode={personalEditorMode}");
     expect(source).toContain("createSnapshotV2CookingSession");
   });
 

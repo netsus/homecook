@@ -4,6 +4,7 @@ export type PendingRecipeActionType =
   | "like"
   | "save"
   | "planner"
+  | "recipe-fork"
   | "recipe-delete"
   | "recipe-edit-save";
 
@@ -14,7 +15,7 @@ interface PendingRecipeActionBase {
 }
 
 export type PendingRecipeAction = PendingRecipeActionBase & (
-  | { type: "like" | "save" | "planner" | "recipe-delete" }
+  | { type: "like" | "save" | "planner" | "recipe-fork" | "recipe-delete" }
   | { type: "recipe-edit-save"; editContext: RecipeEditContext }
 );
 
@@ -149,6 +150,7 @@ export function parsePendingAction(raw: string) {
       (value.type === "like"
         || value.type === "save"
         || value.type === "planner"
+        || value.type === "recipe-fork"
         || value.type === "recipe-delete") &&
       typeof value.recipeId === "string" &&
       typeof value.redirectTo === "string" &&

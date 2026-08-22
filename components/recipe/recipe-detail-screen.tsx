@@ -169,6 +169,7 @@ export function RecipeDetailScreen({
   recipeId,
   authError,
   initialAuthenticated = false,
+  initialForkContext,
   recipeSnapshotUiMode = "legacy_v1",
 }: RecipeDetailScreenProps) {
   const [detailState, setDetailState] = useState<DetailState>("loading");
@@ -206,6 +207,7 @@ export function RecipeDetailScreen({
   const [plannerServings, setPlannerServings] = useState(1);
   const [snapshotStartState, setSnapshotStartState] = useState<"idle" | "pending">("idle");
   const [isPersonalEditorOpen, setIsPersonalEditorOpen] = useState(false);
+  const [personalEditorMode, setPersonalEditorMode] = useState<"edit" | "fork">("edit");
   const [personalEditResumeContext, setPersonalEditResumeContext] = useState<RecipeEditContext | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isDeletingPersonalRecipe, setIsDeletingPersonalRecipe] = useState(false);
@@ -900,9 +902,36 @@ export function RecipeDetailScreen({
     personalEditorOpenerRef.current = document.activeElement instanceof HTMLElement
       ? document.activeElement
       : null;
+    setPersonalEditorMode("edit");
     setPersonalEditResumeContext(null);
     setIsPersonalEditorOpen(true);
   }, []);
+
+  const openPersonalForkEditor = useCallback(() => {
+    personalEditorOpenerRef.current = document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : null;
+    if (!initialForkContext || recipeSnapshotUiMode !== "snapshot_v2") {
+      setFeedback({
+        message: "레시피를 다시 불러온 뒤 내 레시피로 수정을 시작해 주세요.",
+        tone: "error",
+      });
+      return;
+    }
+
+    setPersonalEditorMode("fork");
+    setPersonalEditResumeContext(null);
+    setIsPersonalEditorOpen(true);
+  }, [initialForkContext, recipeSnapshotUiMode]);
+
+  const handlePersonalForkAction = useCallback((payload: { requiresLogin: boolean }) => {
+    if (payload.requiresLogin) {
+      openAuthGate({ recipeId, type: "recipe-fork" });
+      return;
+    }
+
+    openPersonalForkEditor();
+  }, [openAuthGate, openPersonalForkEditor, recipeId]);
 
   const closeDeletePersonalRecipeDialog = useCallback(() => {
     if (isDeletingPersonalRecipe) {
@@ -993,7 +1022,18 @@ export function RecipeDetailScreen({
     if (pendingAction.type === "recipe-edit-save") {
       if (recipeSnapshotUiMode === "snapshot_v2" && recipe.edit_context) {
         personalEditorOpenerRef.current = null;
+        setPersonalEditorMode("edit");
         setPersonalEditResumeContext(pendingAction.editContext);
+        setIsPersonalEditorOpen(true);
+      }
+      return;
+    }
+
+    if (pendingAction.type === "recipe-fork") {
+      if (recipeSnapshotUiMode === "snapshot_v2" && initialForkContext) {
+        personalEditorOpenerRef.current = null;
+        setPersonalEditorMode("fork");
+        setPersonalEditResumeContext(null);
         setIsPersonalEditorOpen(true);
       }
       return;
@@ -1031,6 +1071,7 @@ export function RecipeDetailScreen({
     openDeletePersonalRecipeDialog,
     openPlannerAddSheet,
     openSaveModal,
+    initialForkContext,
     recipe,
     recipeId,
     recipeSnapshotUiMode,
@@ -1206,7 +1247,23 @@ export function RecipeDetailScreen({
     },
     imageObjectId: null,
       } : undefined;
-  const canEditPersonalRecipe = isAuthenticated && Boolean(activePersonalEditContext);
+  const personalRecipeAccessState = recipeSnapshotUiMode !== "snapshot_v2"
+    ? "unknown"
+    : activePersonalEditContext && isAuthenticated
+      ? "owner-private"
+      : activePersonalEditContext
+        ? "unknown"
+        : "public";
+  const personalRecipeCapabilityEnabled = recipeSnapshotUiMode === "snapshot_v2";
+  const activePersonalEditorContext = personalEditorMode === "edit"
+    ? activePersonalEditContext
+      ? {
+          base_recipe_revision: activePersonalEditContext.baseRecipeRevision,
+          draft: activePersonalEditContext.draft,
+          image_object_id: activePersonalEditContext.imageObjectId,
+        }
+      : null
+    : initialForkContext ?? null;
 
   return (
     <>
@@ -1235,9 +1292,10 @@ export function RecipeDetailScreen({
             scaledIngredients={scaledIngredients}
             selectedServings={selectedServings}
             isNutritionRefreshing={nutritionRequestState === "loading"}
-            canEditPersonalRecipe={canEditPersonalRecipe}
+            personalRecipeAccessState={personalRecipeAccessState}
             onDeletePersonalRecipe={openDeletePersonalRecipeDialog}
             onEditPersonalRecipe={openPersonalEditor}
+            onForkPersonalRecipe={handlePersonalForkAction}
           />
         </div>
       ) : null}
@@ -1956,12 +2014,12 @@ export function RecipeDetailScreen({
           </button>
         </div>
         <RecipeDetailPersonalActions
-          accessState={canEditPersonalRecipe ? "owner-private" : "unknown"}
-          capabilityEnabled={canEditPersonalRecipe}
+          accessState={personalRecipeAccessState}
+          capabilityEnabled={personalRecipeCapabilityEnabled}
           isAuthenticated={isAuthenticated}
           onDelete={openDeletePersonalRecipeDialog}
           onEdit={openPersonalEditor}
-          onFork={() => undefined}
+          onFork={handlePersonalForkAction}
         />
       </div>
       ) : null}
@@ -2047,24 +2105,26 @@ export function RecipeDetailScreen({
         }}
         submitting={isDeletingPersonalRecipe}
       />
-      {isPersonalEditorOpen && canEditPersonalRecipe && activePersonalEditContext ? (
+      {isPersonalEditorOpen && activePersonalEditorContext ? (
         <RecipeDetailPersonalEditor
-          editContext={{
-            base_recipe_revision: activePersonalEditContext.baseRecipeRevision,
-            draft: activePersonalEditContext.draft,
-            image_object_id: activePersonalEditContext.imageObjectId,
-          }}
+          editContext={activePersonalEditorContext}
+          mode={personalEditorMode}
           onClose={() => {
             setIsPersonalEditorOpen(false);
             setPersonalEditResumeContext(null);
           }}
-          onSaved={() => {
+          onSaved={(result) => {
+            setIsPersonalEditorOpen(false);
             setPersonalEditResumeContext(null);
+            if (result.id !== recipeId) {
+              router.push(`/recipe/${result.id}`);
+              return;
+            }
             void loadRecipe();
           }}
           recipeId={recipeId}
           returnFocusRef={personalEditorOpenerRef}
-          resumeContext={personalEditResumeContext}
+          resumeContext={personalEditorMode === "edit" ? personalEditResumeContext : null}
         />
       ) : null}
     </>
@@ -2072,7 +2132,6 @@ export function RecipeDetailScreen({
 }
 
 function RecipeDetailWebView({
-  canEditPersonalRecipe,
   cookActionLabel,
   cookCountLabel,
   isAuthenticated,
@@ -2083,7 +2142,9 @@ function RecipeDetailWebView({
   onCook,
   onDeletePersonalRecipe,
   onEditPersonalRecipe,
+  onForkPersonalRecipe,
   onOpenLightbox,
+  personalRecipeAccessState,
   onProtectedAction,
   onRetryNutrition,
   onSelectedServingsChange,
@@ -2095,7 +2156,6 @@ function RecipeDetailWebView({
   scaledIngredients,
   selectedServings,
 }: {
-  canEditPersonalRecipe: boolean;
   cookActionLabel: string;
   cookCountLabel: string;
   isAuthenticated: boolean;
@@ -2106,7 +2166,9 @@ function RecipeDetailWebView({
   onCook: () => void;
   onDeletePersonalRecipe: () => void;
   onEditPersonalRecipe: () => void;
+  onForkPersonalRecipe: (payload: { requiresLogin: boolean }) => void;
   onOpenLightbox: (index: number) => void;
+  personalRecipeAccessState: "unknown" | "public" | "owner-private";
   onProtectedAction: (type: "like" | "save" | "planner") => void;
   onRetryNutrition: () => void;
   onSelectedServingsChange: (value: number | ((current: number) => number)) => void;
@@ -2404,12 +2466,12 @@ function RecipeDetailWebView({
                     {cookActionLabel}
                   </WebButton>
                   <RecipeDetailPersonalActions
-                    accessState={canEditPersonalRecipe ? "owner-private" : "unknown"}
-                    capabilityEnabled={canEditPersonalRecipe}
+                    accessState={personalRecipeAccessState}
+                    capabilityEnabled
                     isAuthenticated={isAuthenticated}
                     onDelete={onDeletePersonalRecipe}
                     onEdit={onEditPersonalRecipe}
-                    onFork={() => undefined}
+                    onFork={onForkPersonalRecipe}
                   />
                 </div>
                 <p className="web-recipe-rail-note">
@@ -2428,12 +2490,12 @@ function RecipeDetailWebView({
         </WebButton>
         <WebButton disabled={isCookPending} onClick={onCook} variant="secondary">{cookActionLabel}</WebButton>
         <RecipeDetailPersonalActions
-          accessState={canEditPersonalRecipe ? "owner-private" : "unknown"}
-          capabilityEnabled={canEditPersonalRecipe}
+          accessState={personalRecipeAccessState}
+          capabilityEnabled
           isAuthenticated={isAuthenticated}
           onDelete={onDeletePersonalRecipe}
           onEdit={onEditPersonalRecipe}
-          onFork={() => undefined}
+          onFork={onForkPersonalRecipe}
         />
       </WebCTA>
     </WebShell>
