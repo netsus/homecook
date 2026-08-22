@@ -686,6 +686,7 @@ describe.runIf(enabled)("recipe visibility isolated PostgreSQL boundary", () => 
         ...result,
         lifecycle_count: 0,
         role_matrix_ok: true,
+        guard_unsafe_membership_count: 0,
         reader_missing_select_count: 0,
         anon_direct_mutation_count: 0,
         authenticated_direct_mutation_count: 0,
@@ -731,8 +732,12 @@ describe.runIf(enabled)("recipe visibility isolated PostgreSQL boundary", () => 
       ${plan.sql}
       rollback;
     `)) as Record<string, unknown>;
-    expect(guardMembershipDrift.guard_membership_count).toBe(1);
-    expect(guardMembershipDrift.guard_unsafe_membership_count).toBe(1);
+    expect(guardMembershipDrift.guard_membership_count).toBe(
+      Number(result.guard_membership_count) + 1,
+    );
+    expect(guardMembershipDrift.guard_unsafe_membership_count).toBe(
+      Number(result.guard_unsafe_membership_count) + 1,
+    );
 
     const policyDrift = JSON.parse(psql(`
       begin;
