@@ -617,6 +617,7 @@ function valuesSql(rows) {
 }
 
 function buildSecurityInventoryExpression({
+  includeCookedBatchPolicyCutover,
   includeSnapshotTables,
   includePersonalRecipeFunctions,
   includeRecipeFuturePropagationFunctions,
@@ -636,8 +637,13 @@ function buildSecurityInventoryExpression({
   const rlsTables = includeSnapshotTables
     ? [...CORE_RLS_TABLES, ...SNAPSHOT_RLS_TABLES]
     : CORE_RLS_TABLES;
+  const snapshotPolicies = includeCookedBatchPolicyCutover
+    ? SNAPSHOT_POLICY_CONTRACT.filter(
+        (policy) => policy.name !== "leftover_dishes_insert_own",
+      )
+    : SNAPSHOT_POLICY_CONTRACT;
   const policies = includeSnapshotTables
-    ? [...CORE_POLICY_CONTRACT, ...SNAPSHOT_POLICY_CONTRACT]
+    ? [...CORE_POLICY_CONTRACT, ...snapshotPolicies]
     : CORE_POLICY_CONTRACT;
   const functionValues = valuesSql(functions.map((entry) => [
     entry.lookupSignature,
@@ -999,11 +1005,13 @@ const SECURITY_ZERO_KEYS = SECURITY_RESULT_KEYS.filter((key) =>
 );
 
 export function buildFullLocalSecurityInventoryExpression({
+  includeCookedBatchPolicyCutover = false,
   includeSnapshotTables = false,
   includePersonalRecipeFunctions = false,
   includeRecipeFuturePropagationFunctions = false,
 } = {}) {
   return buildSecurityInventoryExpression({
+    includeCookedBatchPolicyCutover,
     includeSnapshotTables,
     includePersonalRecipeFunctions,
     includeRecipeFuturePropagationFunctions,
@@ -1019,6 +1027,7 @@ export function buildRecipeSnapshotAuthorityFullLocalSecurityInventorySql(
 export function assertRecipeSnapshotAuthorityFullLocalSecurityInventoryResult(
   result,
   {
+    includeCookedBatchPolicyCutover = false,
     includeSnapshotTables = false,
     includePersonalRecipeFunctions = false,
     includeRecipeFuturePropagationFunctions = false,
@@ -1035,14 +1044,19 @@ export function assertRecipeSnapshotAuthorityFullLocalSecurityInventoryResult(
   const expectedTableCount = includeSnapshotTables
     ? CORE_RLS_TABLES.length + SNAPSHOT_RLS_TABLES.length
     : CORE_RLS_TABLES.length;
+  const snapshotPolicies = includeCookedBatchPolicyCutover
+    ? SNAPSHOT_POLICY_CONTRACT.filter(
+        (policy) => policy.name !== "leftover_dishes_insert_own",
+      )
+    : SNAPSHOT_POLICY_CONTRACT;
   const expectedPolicyCount = includeSnapshotTables
-    ? CORE_POLICY_CONTRACT.length + SNAPSHOT_POLICY_CONTRACT.length
+    ? CORE_POLICY_CONTRACT.length + snapshotPolicies.length
     : CORE_POLICY_CONTRACT.length;
   const expectedSnapshotTableAclCount = includeSnapshotTables
     ? SNAPSHOT_TABLE_ACL_CONTRACT.length
     : 0;
   const expectedPolicies = includeSnapshotTables
-    ? [...CORE_POLICY_CONTRACT, ...SNAPSHOT_POLICY_CONTRACT]
+    ? [...CORE_POLICY_CONTRACT, ...snapshotPolicies]
     : CORE_POLICY_CONTRACT;
   const policyInventory = result?._policy_expression_inventory;
   const snapshotTableAclInventory = result?._snapshot_table_acl_inventory;
