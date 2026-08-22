@@ -117,6 +117,7 @@ const SOURCE_EVIDENCE_KEYS = [
   "legacy_recipe_post_handler_count",
   "mypage_surface_personal_editor_marker_count",
   "personal_create_active_entry",
+  "recipe_collection_internal_post_operation_count",
   "recipe_collection_personal_editor_marker_count",
   "recipe_collection_personal_origin_field_count",
   "recipe_delete_handler_count",
@@ -565,6 +566,13 @@ export function buildPersonalRecipeEditorFullLocalPsqlRequest(options) {
 
 export function collectPersonalRecipeEditorSourceEvidence(repositoryRoot) {
   const inventory = inventoryHybridAuthorityPaths(repositoryRoot);
+  const approvedRecipeCollectionInternalOperationCount =
+    inventory.internalOperationEntries.filter((entry) =>
+      entry.allowed
+      && entry.factory === "createRecipeFuturePropagationInternalClient"
+      && entry.file === "app/api/v1/recipes/route.ts"
+      && entry.functionName === "postRecipe"
+    ).length;
   const appSourceFiles = listSourceFiles(join(repositoryRoot, "app"));
   const mypageSourceFiles = listSourceFiles(
     join(repositoryRoot, "components/mypage"),
@@ -651,6 +659,8 @@ export function collectPersonalRecipeEditorSourceEvidence(repositoryRoot) {
       ),
     personal_create_active_entry:
       !/activeEntry:\s*false/u.test(personalCreateCase),
+    recipe_collection_internal_post_operation_count:
+      approvedRecipeCollectionInternalOperationCount,
     recipe_collection_personal_editor_marker_count:
       recipeCollectionRouteSource.match(
         /\b(?:personal-create|personal-edit|public-fork|personal_recipe_v2)\b/gu,
@@ -698,8 +708,9 @@ export function assertPersonalRecipeEditorSourceEvidence(evidence) {
     && evidence.legacy_recipe_post_handler_count === 1
     && evidence.mypage_surface_personal_editor_marker_count === 0
     && evidence.personal_create_active_entry === false
+    && evidence.recipe_collection_internal_post_operation_count === 1
     && evidence.recipe_collection_personal_editor_marker_count === 0
-    && evidence.recipe_collection_personal_origin_field_count === 0
+    && evidence.recipe_collection_personal_origin_field_count === 7
     && evidence.recipe_delete_handler_count === 1
     && evidence.recipe_patch_handler_count === 1
     && evidence.recipebook_surface_personal_editor_marker_count === 0
