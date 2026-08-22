@@ -51,6 +51,10 @@ const fullLocalPolicyExpressionInventory = [
     using: "auth.uid() = user_id", check: "",
   },
   {
+    schema: "public", table: "leftover_dishes", name: "leftover_dishes_insert_own",
+    using: "", check: "auth.uid() = user_id",
+  },
+  {
     schema: "public", table: "leftover_dishes", name: "leftover_dishes_update_own",
     using: "auth.uid() = user_id", check: "auth.uid() = user_id",
   },
@@ -153,7 +157,7 @@ const localResult = {
         acl: "authenticated:SELECT:false,service_role:SELECT:false",
       },
     ],
-    required_policy_count: 11,
+    required_policy_count: 12,
     policy_missing_count: 0,
     policy_drift_count: 0,
     unexpected_policy_count: 0,

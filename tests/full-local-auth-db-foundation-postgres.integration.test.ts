@@ -2663,7 +2663,7 @@ activeInventoryRun("active full-local snapshot security inventory", () => {
     expect(database).toMatch(/^homecook_[a-z0-9_]+$/u);
   });
 
-  it("accepts the active 12-table, 2 snapshot ACL, and 11-policy inventory", () => {
+  it("accepts the active 12-table, 2 snapshot ACL, and 12-policy inventory", () => {
     const { api, result } = securityInventoryAfter("", options);
     expect(result._snapshot_table_acl_inventory).toEqual([
       {
@@ -2690,13 +2690,13 @@ activeInventoryRun("active full-local snapshot security inventory", () => {
       required_snapshot_table_acl_count: 2,
       snapshot_table_acl_missing_count: 0,
       snapshot_table_acl_drift_count: 0,
-      required_policy_count: 11,
+      required_policy_count: 12,
       function_acl_drift_count: 0,
       rls_owner_drift_count: 0,
       rls_force_drift_count: 0,
       policy_drift_count: 0,
     });
-    expect(result._policy_expression_inventory).toHaveLength(11);
+    expect(result._policy_expression_inventory).toHaveLength(12);
     const policyInventory = result._policy_expression_inventory as Array<{
       name: string;
       schema: string;

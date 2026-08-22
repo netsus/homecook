@@ -57,6 +57,11 @@ describe("recipe snapshot authority PostgreSQL gate", () => {
       "20260803091000_full_local_optional_nbf_authority.sql",
       "20260803092000_recipe_future_internal_scope.sql",
       "20260803093000_full_local_read_only_request_authority.sql",
+      "20260809100000_full_local_session_refresh_authority.sql",
+      "20260809110000_full_local_request_transaction_and_youtube_scope.sql",
+      "20260811120000_full_local_session_observability.sql",
+      "20260812143000_full_local_session_superseded_token_window.sql",
+      "20260820120000_full_local_session_bounded_token_overlap.sql",
     ];
     let previousIndex = -1;
     for (const migration of activeFullLocalMigrations) {
