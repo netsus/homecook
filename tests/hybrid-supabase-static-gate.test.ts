@@ -211,6 +211,11 @@ describe("hybrid authority AST/static gate", () => {
         functionName: "readRecipeSnapshotEntrypointContext",
       },
       {
+        factory: "createRecipeFuturePropagationInternalClient",
+        file: "lib/server/recipe-snapshot-entrypoint.ts",
+        functionName: "readRecipeSnapshotForkContext",
+      },
+      {
         factory: "createYoutubeExtractionInternalClient",
         file: "lib/server/youtube-import.ts",
         functionName: "handleYoutubeExtract",
@@ -239,6 +244,7 @@ describe("hybrid authority AST/static gate", () => {
         "app/api/v1/recipes/[id]/route.ts": ["DELETE", "PATCH"],
         "lib/server/recipe-snapshot-entrypoint.ts": [
           "readRecipeSnapshotEntrypointContext",
+          "readRecipeSnapshotForkContext",
           "readRecipeSnapshotUiMode",
         ],
       },

@@ -1293,6 +1293,7 @@ export function RecipeDetailScreen({
             selectedServings={selectedServings}
             isNutritionRefreshing={nutritionRequestState === "loading"}
             personalRecipeAccessState={personalRecipeAccessState}
+            personalRecipeCapabilityEnabled={personalRecipeCapabilityEnabled}
             onDeletePersonalRecipe={openDeletePersonalRecipeDialog}
             onEditPersonalRecipe={openPersonalEditor}
             onForkPersonalRecipe={handlePersonalForkAction}
@@ -2145,6 +2146,7 @@ function RecipeDetailWebView({
   onForkPersonalRecipe,
   onOpenLightbox,
   personalRecipeAccessState,
+  personalRecipeCapabilityEnabled,
   onProtectedAction,
   onRetryNutrition,
   onSelectedServingsChange,
@@ -2169,6 +2171,7 @@ function RecipeDetailWebView({
   onForkPersonalRecipe: (payload: { requiresLogin: boolean }) => void;
   onOpenLightbox: (index: number) => void;
   personalRecipeAccessState: "unknown" | "public" | "owner-private";
+  personalRecipeCapabilityEnabled: boolean;
   onProtectedAction: (type: "like" | "save" | "planner") => void;
   onRetryNutrition: () => void;
   onSelectedServingsChange: (value: number | ((current: number) => number)) => void;
@@ -2467,7 +2470,7 @@ function RecipeDetailWebView({
                   </WebButton>
                   <RecipeDetailPersonalActions
                     accessState={personalRecipeAccessState}
-                    capabilityEnabled
+                    capabilityEnabled={personalRecipeCapabilityEnabled}
                     isAuthenticated={isAuthenticated}
                     onDelete={onDeletePersonalRecipe}
                     onEdit={onEditPersonalRecipe}
@@ -2491,7 +2494,7 @@ function RecipeDetailWebView({
         <WebButton disabled={isCookPending} onClick={onCook} variant="secondary">{cookActionLabel}</WebButton>
         <RecipeDetailPersonalActions
           accessState={personalRecipeAccessState}
-          capabilityEnabled
+          capabilityEnabled={personalRecipeCapabilityEnabled}
           isAuthenticated={isAuthenticated}
           onDelete={onDeletePersonalRecipe}
           onEdit={onEditPersonalRecipe}

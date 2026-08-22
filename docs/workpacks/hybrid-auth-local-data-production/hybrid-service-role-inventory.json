@@ -76,6 +76,7 @@
       ],
       "lib/server/recipe-snapshot-entrypoint.ts": [
         "readRecipeSnapshotEntrypointContext",
+        "readRecipeSnapshotForkContext",
         "readRecipeSnapshotUiMode"
       ]
     },
@@ -382,7 +383,7 @@
       "classification": "internal",
       "file": "lib/server/recipe-snapshot-entrypoint.ts",
       "column": 9,
-      "line": 166,
+      "line": 195,
       "allowed": true,
       "factory": "createRecipeFuturePropagationInternalClient",
       "functionName": "readRecipeSnapshotUiMode",
@@ -392,10 +393,20 @@
       "classification": "internal",
       "file": "lib/server/recipe-snapshot-entrypoint.ts",
       "column": 9,
-      "line": 190,
+      "line": 219,
       "allowed": true,
       "factory": "createRecipeFuturePropagationInternalClient",
       "functionName": "readRecipeSnapshotEntrypointContext",
+      "kind": "internal-operation-call"
+    },
+    {
+      "classification": "internal",
+      "file": "lib/server/recipe-snapshot-entrypoint.ts",
+      "column": 9,
+      "line": 257,
+      "allowed": true,
+      "factory": "createRecipeFuturePropagationInternalClient",
+      "functionName": "readRecipeSnapshotForkContext",
       "kind": "internal-operation-call"
     },
     {

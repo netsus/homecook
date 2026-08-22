@@ -141,6 +141,7 @@ const INTERNAL_OPERATION_FUNCTION_ALLOWLIST = new Map([
         "lib/server/recipe-snapshot-entrypoint.ts",
         new Set([
           "readRecipeSnapshotEntrypointContext",
+          "readRecipeSnapshotForkContext",
           "readRecipeSnapshotUiMode",
         ]),
       ],

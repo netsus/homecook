@@ -600,17 +600,17 @@ export function collectPersonalRecipeEditorSourceEvidence(repositoryRoot) {
     detailSource.match(/\bcapabilityEnabled\b/gu)?.length ?? 0;
   const literalCapabilityOffOccurrenceCount =
     detailSource.match(/capabilityEnabled=\{false\}/gu)?.length ?? 0;
-  const hasServerProjectedOwnerEditBoundary =
-    /const\s+activePersonalEditContext\s*=\s*recipeSnapshotUiMode\s*===\s*"snapshot_v2"\s*&&\s*recipe\.edit_context/gu.test(
+  const hasServerProjectedPersonalCapabilityBoundary =
+    /const\s+personalRecipeCapabilityEnabled\s*=\s*recipeSnapshotUiMode\s*===\s*"snapshot_v2";/gu.test(
       detailSource,
     )
-    && /const\s+canEditPersonalRecipe\s*=\s*isAuthenticated\s*&&\s*Boolean\(activePersonalEditContext\);/gu.test(
+    && /const\s+activePersonalEditorContext\s*=\s*personalEditorMode\s*===\s*"edit"[\s\S]*:\s*initialForkContext\s*\?\?\s*null;/gu.test(
       detailSource,
     );
   const projectedCapabilityOffOccurrenceCount =
-    hasServerProjectedOwnerEditBoundary
+    hasServerProjectedPersonalCapabilityBoundary
       ? detailSource.match(
-        /capabilityEnabled=\{canEditPersonalRecipe\}/gu,
+        /capabilityEnabled=\{personalRecipeCapabilityEnabled\}/gu,
       )?.length ?? 0
       : 0;
   const capabilityOffOccurrenceCount =
