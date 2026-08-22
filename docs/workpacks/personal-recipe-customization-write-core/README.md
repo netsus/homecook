@@ -1,6 +1,6 @@
 # personal-recipe-customization-write-core
 
-> Stage 3 backend runtime merge checkpoint; overall workpack remains in progress. Approved master plan SHA-256 `45f02013fbc1c3af1936d596605230d0cbac7839a783224aa9535844e4bda7dc` (1,056 lines). The Stage 1 historical baseline remains requirements v1.7.25, screens v1.5.29, flow v1.3.27, DB v1.3.26, API v1.2.29; active authority is the current tuple in `docs/sync/CURRENT_SOURCE_OF_TRUTH.md`.
+> Stage 3 backend runtime merge checkpoint; overall workpack remains in progress. Approved master plan SHA-256 `45f02013fbc1c3af1936d596605230d0cbac7839a783224aa9535844e4bda7dc` (1,056 lines). The Stage 1 historical baseline remains requirements v1.7.25, screens v1.5.29, flow v1.3.27, DB v1.3.26, API v1.2.29; active authority is the current tuple in `docs/sync/CURRENT_SOURCE_OF_TRUTH.md`. 2026-08-22 contract-evolution is approved and the new official tuple is v1.7.33 / v1.5.37 / v1.3.35 / v1.3.35 / v1.2.40, but implementation, E2E, Stage 6 and Manual / R+2 activation remain pending.
 
 ## Goal
 
@@ -43,7 +43,7 @@ Schema Change:
 ## Out of Scope
 
 - `POST /recipes/{id}/future-plan-impact`, `recipe_change_previews`, `impact_token`, `replace_all|keep`, Meal pin·shopping reconcile·active claim 처리와 최종 public PATCH integration (#7)
-- alternate/partial public `PATCH /recipes/{id}` body 또는 #7 전 외부 PATCH activation. 최종 body는 official `base_recipe_revision + full draft + future_plan_strategy + impact_token + optional image_object_id` 그대로다.
+- alternate/partial public `PATCH /recipes/{id}` body 또는 #7 전 외부 PATCH activation. #6의 새 `POST /recipes` personal-derived branch는 strict union `origin_recipe_id + base_recipe_revision + draft + image_object_id`로 잠겼고, #7 전 외부 PATCH activation은 계속 금지된다.
 - snapshot-v2 session-attempt start/cancel/read, exact pantry completion, cooked-batch ledger와 R/R+1/R+2 activation (#7/#8)
 - editor shell, `RECIPE_DETAIL` CTA, navigation, loading/empty/error/read-only UI와 design evidence (#5)
 - 기존 planner-bound/manual create를 자동 private로 바꾸거나 public/manual legacy row를 rewrite하는 migration
@@ -86,7 +86,7 @@ Schema Change:
 
 ### Public API boundary
 
-- `POST /recipes` retains the existing manual surface. Under `personal_recipe_v2`, an accessible public `origin_recipe_id` creates a new private fork and returns the new private recipe ID/detail destination. An owner-private save-as-new also returns a new private ID. `image_object_id` attaches atomically.
+- `POST /recipes` is now a strict request union. The legacy manual variant keeps the existing manual surface and rejects personal-only fields. The personal-derived variant requires UUID `Idempotency-Key` plus exact `origin_recipe_id`, `base_recipe_revision`, `draft`, `image_object_id`; the server derives fork vs save_as_new and returns exact `{ id, revision }` only.
 - `PATCH /recipes/{id}` keeps the official final request and response contract. #6 implements only the dormant recipe-local write core; it does not expose a smaller body or externally enable PATCH before #7 supplies preview/token/target validation and the full common transaction.
 - `DELETE /recipes/{id}` requires Authorization and UUID `Idempotency-Key`; it uses one owner+recipe-lock RPC to record `deleted_at` idempotently and preserves all history anchors.
 - response envelope remains `{ success, data, error }`; error remains `{ code, message, fields[] }`.
@@ -151,7 +151,7 @@ No stable capability-off public error code is invented. Before approved activati
 ## Primary User Path
 
 1. After the approved capability gate, a user starts from #5's public recipe fork entry and submits the accessible public source plus a UUID `Idempotency-Key`; the server derives owner/private authority.
-2. #6's single RPC verifies session generation, locks the source, preserves its digest/revision, and returns one new owner-private recipe ID with fixed `origin_recipe_id`.
+2. #6's single RPC verifies session generation, locks the source, preserves its digest/revision, and accepts the strict `POST /recipes` personal-derived branch with `origin_recipe_id`, `base_recipe_revision`, `draft`, `image_object_id`, then returns exact `{ id, revision }` only.
 3. On a later owner edit, #7 first completes the official impact preview/token flow and delegates the recipe-local commit to #6; normal save keeps the same ID and advances revision once.
 4. Only the explicit save-as-new path creates another private ID. A later owner delete records `deleted_at`, hides new selection, and leaves all pinned history readable.
 

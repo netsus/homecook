@@ -1,11 +1,11 @@
 # Current Source of Truth
 
 ## Official Files
-- `docs/요구사항기준선-v1.7.32.md`
-- `docs/화면정의서-v1.5.36.md`
-- `docs/유저flow맵-v1.3.34.md`
-- `docs/db설계-v1.3.34.md`
-- `docs/api문서-v1.2.39.md`
+- `docs/요구사항기준선-v1.7.33.md`
+- `docs/화면정의서-v1.5.37.md`
+- `docs/유저flow맵-v1.3.35.md`
+- `docs/db설계-v1.3.35.md`
+- `docs/api문서-v1.2.40.md`
 
 ## Notes
 - 위 5개 파일이 현재 공식 기준 문서다.
@@ -13,6 +13,18 @@
 - 구현 중 문서 충돌이 보이면 먼저 충돌 항목을 정리하고 작업 범위를 다시 확정한다.
 - 사용자 승인으로 공식 계약을 바꾸는 경우에도 구현보다 문서가 먼저다. 관련 공식 문서와 이 파일의 버전/경로를 같은 `contract-evolution` PR에서 먼저 갱신한다.
 - Supabase target과 gate의 canonical 운영 계약은 `docs/engineering/supabase-local-only-operations.md`다.
+
+## Personal Recipe Write Contract-Evolution Approval `2026-08-22`
+
+| 문서 | 변경 내용 |
+|------|----------|
+| 요구사항 v1.7.33 | `POST /recipes` strict request union, legacy manual compatibility, personal-derived exact keys, server-derived fork/save_as_new, exact success `{id, revision}`, snapshot_v2 fork intent projection N/A/public API 비노출 |
+| 화면정의서 v1.5.37 | `RECIPE_DETAIL` fork editor, same-ID owner save, secondary `새 레시피로 저장`, snapshot_v2 fork_context projection N/A/public API 비노출 |
+| 유저 Flow맵 v1.3.35 | 공개 fork intent, login resume, personal-derived `POST /recipes`, same-ID PATCH vs explicit save-as-new 분기 |
+| DB v1.3.35 | schema 영향 N/A, 기존 recipes authority 재사용, base_recipe_revision request authority only |
+| API v1.2.40 | `POST /recipes` strict union, legacy manual vs personal-derived variant, `{id, revision}` success payload, no new endpoint/status/error |
+
+> 사용자는 2026-08-22에 #6 `personal-recipe-customization-write-core`를 위한 위 exact contract-evolution을 승인했다. official tuple은 위 v1.7.33 / v1.5.37 / v1.3.35 / v1.3.35 / v1.2.40이며, 구현·E2E·Stage 6·Manual/R+2 activation은 여전히 pending이다.
 
 ## Public YouTube Import Background Activation `2026-08-15`
 

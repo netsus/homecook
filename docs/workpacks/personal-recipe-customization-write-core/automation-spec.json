@@ -5,13 +5,14 @@
   "merge_policy": "manual",
   "backend": {
     "required_endpoints": [
-      "POST /recipes existing manual surface plus dormant owner-private create public-fork and save-as-new behavior",
+      "POST /recipes strict union: legacy manual surface plus personal-derived branch with exact origin_recipe_id/base_recipe_revision/draft/image_object_id and server-derived fork/save-as-new",
       "PATCH /recipes/{id} official final impact-token contract; #6 provides dormant recipe-local core only and #7 owns public integration",
       "DELETE /recipes/{id} owner-private idempotent soft delete",
       "no new public endpoint in #6"
     ],
     "invariants": [
       "public-source-row-revision-content-immutable-on-fork",
+      "personal-derived-post-recipes-uses-server-derived-operation-and-returns-id-revision-only",
       "public-fork-new-owner-private-id-with-fixed-origin-recipe-id",
       "personal-create-and-explicit-save-as-new-create-new-private-id",
       "normal-personal-save-keeps-id-and-advances-monotonic-revision",
@@ -154,5 +155,5 @@
     "backend": 6,
     "frontend": 1
   },
-  "notes": "Stage 3 backend runtime merge checkpoint, not terminal workpack closeout. Dormant backend implementation head 5b96e9be94f36822944deb194581517731c3a4ab was independently approved by code/quality task 019fc23c-6129-7de3-a075-89828d6f35bf and security/DB task 019fc23c-6129-7de3-a075-8961262f7bb3, each APPROVE with P0/P1/P2 0/0/0. PR #1274 final head a27be0c7e9a72dfd25d6c7a31cb0b9ae401ead9e reached latest unique Ready contexts 15/15 success and squash-merged as 05683e4d1cf95c4cc3b9a41eb3fa7857b58a3d2d. Exact-merge post-merge verification returned POSTMERGE_VERIFIED YES with P0/P1/P2 0/0/0; production/staging/remote writes remained 0/0/0 and capability stayed off. The first historical Ready policy failure was a PR-body structured environment/scope omission repaired without a head change; later policy runs passed. Overall lifecycle remains in_progress. Design Status is N/A. Route/service and named integrated E2E, server MacBook/local rehearsal, terminal workpack closeout review, #7/#8 and R+2 activation remain pending."
+  "notes": "Stage 3 backend runtime merge checkpoint, not terminal workpack closeout. 2026-08-22 contract-evolution is approved and the active official tuple is v1.7.33 / v1.5.37 / v1.3.35 / v1.3.35 / v1.2.40. Dormant backend implementation head 5b96e9be94f36822944deb194581517731c3a4ab was independently approved by code/quality task 019fc23c-6129-7de3-a075-89828d6f35bf and security/DB task 019fc23c-6129-7de3-a075-8961262f7bb3, each APPROVE with P0/P1/P2 0/0/0. PR #1274 final head a27be0c7e9a72dfd25d6c7a31cb0b9ae401ead9e reached latest unique Ready contexts 15/15 success and squash-merged as 05683e4d1cf95c4cc3b9a41eb3fa7857b58a3d2d. Exact-merge post-merge verification returned POSTMERGE_VERIFIED YES with P0/P1/P2 0/0/0; production/staging/remote writes remained 0/0/0 and capability stayed off. The first historical Ready policy failure was a PR-body structured environment/scope omission repaired without a head change; later policy runs passed. Overall lifecycle remains in_progress. Design Status is N/A. Route/service and named integrated E2E, server MacBook/local rehearsal, terminal workpack closeout review, #7/#8 and R+2 activation remain pending."
 }
