@@ -10,7 +10,7 @@
 
 > **2026-08-22 contract-evolution addendum — personal recipe fork / save-as-new flow**
 >
-> 공개 `RECIPE_DETAIL`에서 `내 레시피로 수정`은 원본을 변경하지 않는 fork intent를 만든다. `POST /recipes`의 personal-derived branch는 `origin_recipe_id + base_recipe_revision + draft + image_object_id`를 서버에 보내고, 서버는 public source면 fork, owner-private current면 save_as_new, other-owner/deleted/quarantined면 404, stale base revision이면 no-write conflict로 처리한다. 비로그인은 fork intent를 유지한 채 로그인 후 같은 editor로 복귀하고, `새 레시피로 저장`만 새 private ID를 만든다. `snapshot_v2` server-only mode는 기존 `RECIPE_DETAIL` consumer에 ephemeral `fork_context`를 재투영할 수 있지만 public API나 새 route는 아니다.
+> 공개 `RECIPE_DETAIL`에서 `내 레시피로 수정`은 원본을 변경하지 않는 fork intent를 만든다. `POST /recipes`의 personal-derived branch는 `origin_recipe_id + base_recipe_revision + draft + image_object_id`를 서버에 보내고, 서버는 public source면 fork, owner-private current면 save_as_new, other-owner/deleted/quarantined면 404, stale base revision이면 no-write conflict로 처리한다. 비로그인은 recipeId만 저장한 fork intent로 로그인 후 같은 action에 복귀하며, `draft`, `image_object_id`, `base_recipe_revision`, raw `fork_context`는 저장하지 않는다. 로그인 복귀 시 기존 `RECIPE_DETAIL` page loader가 canonical public source를 다시 읽어 fresh ephemeral `fork_context`를 재투영하고, source가 inaccessible/deleted/quarantined/stale이면 fail closed한다. `새 레시피로 저장`만 새 private ID를 만든다. `snapshot_v2` server-only mode는 기존 `RECIPE_DETAIL` consumer에 ephemeral `fork_context`를 재투영할 수 있지만 public API나 새 route는 아니다.
 
 > **2026-08-13 contract-evolution — local-only 운영·검증 flow**
 >
@@ -410,7 +410,7 @@ flowchart LR
 ### 진입 조건
 
 - Planner 하단 tab은 유지하고 내부 segment에서 `요리 계획 | 식사 기록`을 선택한다.
-- 비로그인 사용자는 protected action의 날짜·끼니·recipe/draft를 보존한 채 로그인 후 같은 action으로 복귀한다.
+- 비로그인 사용자는 protected action의 날짜·끼니·recipe/draft를 보존한 채 로그인 후 같은 action으로 복귀한다. 단, 공개 recipe fork intent는 예외로 recipeId만 저장하고 draft/base revision/image metadata/fork context는 저장하지 않으며, 로그인 복귀 시 loader가 canonical public source에서 fresh fork context를 다시 만든다.
 - `요리 계획`과 `식사 기록`은 별도 read/write model이다. `cook_done`이나 계획 인분을 실제 섭취로 자동 변환하지 않는다.
 
 ### 요리 계획 flow
@@ -444,7 +444,7 @@ flowchart LR
 ### 공개 recipe fork
 
 1. 공개 `RECIPE_DETAIL`에서 `내 레시피로 수정`을 선택한다.
-2. 비로그인은 fork intent를 보존해 로그인 후 editor로 복귀한다.
+2. 비로그인은 recipeId만 저장한 fork intent로 로그인 후 같은 action으로 복귀한다. 로그인 복귀 시 기존 `RECIPE_DETAIL` loader가 canonical public source를 다시 읽어 fresh ephemeral `fork_context`를 만들고, source가 inaccessible/deleted/quarantined/stale이면 fail closed한다.
 3. 저장하면 공개 원본은 불변이고 `origin_recipe_id`를 가진 새 owner-private recipe ID가 생긴다. server는 `POST /recipes`의 personal-derived branch에서 `base_recipe_revision`과 canonical `draft`를 다시 검증한다.
 4. 저장 성공 뒤 새 private `RECIPE_DETAIL`로 이동한다.
 
