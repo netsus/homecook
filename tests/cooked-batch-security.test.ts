@@ -292,22 +292,31 @@ describe("cooked batch database security contract", () => {
     );
     expect(inventory).not.toContain("COOKED_BATCH_FULL_LOCAL_REPLACEMENTS");
 
-    const runner = readFileSync(
+    const baseRunner = readFileSync(
+      join(
+        process.cwd(),
+        "scripts/run-recipe-snapshot-authority-postgres-integration.mjs",
+      ),
+      "utf8",
+    );
+    const cookedBatchRunner = readFileSync(
       join(
         process.cwd(),
         "scripts/run-cooked-batch-weight-ledger-postgres-integration.mjs",
       ),
       "utf8",
     );
-    const canonicalMigrationPosition = runner.indexOf(
+    expect(baseRunner).toContain(
       "20260809100000_full_local_session_refresh_authority.sql",
     );
-    const cookedBatchMigrationPosition = runner.indexOf(
-      "20260809120000_cooked_batch_weight_ledger.sql",
+    expect(baseRunner).toContain(
+      "20260820120000_full_local_session_bounded_token_overlap.sql",
     );
-    expect(canonicalMigrationPosition).toBeGreaterThanOrEqual(0);
-    expect(cookedBatchMigrationPosition).toBeGreaterThan(
-      canonicalMigrationPosition,
+    expect(cookedBatchRunner).not.toContain(
+      "20260809100000_full_local_session_refresh_authority.sql",
+    );
+    expect(cookedBatchRunner).toContain(
+      "20260809120000_cooked_batch_weight_ledger.sql",
     );
   });
 
