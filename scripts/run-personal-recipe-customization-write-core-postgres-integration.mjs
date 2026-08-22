@@ -19,7 +19,7 @@ process.env.HOMECOOK_RECIPE_SNAPSHOT_FOLLOWUP_MIGRATIONS = [
   "supabase/migrations/20260731110000_product_ingredient_link_contract_runtime.sql",
 ].join(path.delimiter);
 process.env.HOMECOOK_RECIPE_SNAPSHOT_FOLLOWUP_TARGET_MIGRATION =
-  "supabase/migrations/20260802130000_personal_recipe_customization_write_core.sql";
+  "supabase/migrations/20260822170000_personal_recipe_customization_write_core_derived_create.sql";
 process.env.HOMECOOK_RECIPE_SNAPSHOT_POST_TARGET_MIGRATIONS = [
   "supabase/migrations/20260802210000_recipe_content_snapshot_future_propagation.sql",
   "supabase/migrations/20260803100000_recipe_future_scoped_internal_rpc_clients.sql",

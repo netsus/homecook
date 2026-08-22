@@ -17,7 +17,7 @@ process.env.HOMECOOK_RECIPE_SNAPSHOT_FOLLOWUP_MIGRATIONS = [
   "supabase/migrations/20260724180000_recipe_image_attach_cas.sql",
   "supabase/migrations/20260730210000_product_ingredient_link_foundation.sql",
   "supabase/migrations/20260731110000_product_ingredient_link_contract_runtime.sql",
-  "supabase/migrations/20260802130000_personal_recipe_customization_write_core.sql",
+  "supabase/migrations/20260822170000_personal_recipe_customization_write_core_derived_create.sql",
   "supabase/migrations/20260802210000_recipe_content_snapshot_future_propagation.sql",
   "supabase/migrations/20260804100000_recipe_snapshot_entrypoint_projection.sql",
   "supabase/migrations/20260803101000_recipe_content_snapshot_future_propagation.sql",

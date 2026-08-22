@@ -138,6 +138,45 @@ function buildManualCreateBody() {
   };
 }
 
+function buildDerivedCreateBody() {
+  return {
+    origin_recipe_id: originRecipeId,
+    base_recipe_revision: 12,
+    draft: {
+      title: "기존 레시피에서 저장",
+      description: "개인 버전",
+      base_servings: 2,
+      ingredients: [
+        {
+          ingredient_id: "550e8400-e29b-41d4-a716-446655440101",
+          amount: 1,
+          unit: "개",
+          ingredient_type: "QUANT",
+          display_text: "양파 1개",
+          component_label: null,
+          scalable: true,
+          food_product_id: null,
+          food_product_nutrition_version_id: null,
+        },
+      ],
+      steps: [
+        {
+          step_number: 1,
+          instruction: "볶아주세요.",
+          cooking_method_id: "550e8400-e29b-41d4-a716-446655440201",
+          cooking_method_ids: ["550e8400-e29b-41d4-a716-446655440201"],
+          ingredients_used: [],
+          component_label: null,
+          heat_level: "medium",
+          duration_seconds: 60,
+          duration_text: "1분",
+        },
+      ],
+    },
+    image_object_id: managedImageObjectId,
+  };
+}
+
 function setupCreateRouteClient({
   rpc,
 }: {
@@ -235,7 +274,7 @@ describe("personal recipe customization write routes", () => {
     });
   });
 
-  it("keeps dormant personal create, public fork, and save-as-new markers out of POST /recipes RPC payloads", async () => {
+  it("rejects mixed legacy create with dormant personal fork markers", async () => {
     const rpc = vi.fn(async () => ({
       data: {
         id: recipeId,
@@ -262,37 +301,18 @@ describe("personal recipe customization write routes", () => {
     );
     const body = await response.json();
 
-    expect(response.status).toBe(201);
+    expect(response.status).toBe(422);
     expect(body).toEqual({
-      success: true,
-      data: {
-        id: recipeId,
-        title: "개인 레시피 초안",
-        source_type: "manual",
-        created_by: user.id,
-        base_servings: 2,
+      success: false,
+      data: null,
+      error: {
+        code: "VALIDATION_ERROR",
+        message: "요청 값을 확인해 주세요.",
+        fields: [{ field: "body", reason: "mixed_create_modes" }],
       },
-      error: null,
     });
-    expect(readVerifiedAccountGenerationSession).toHaveBeenCalledTimes(1);
-    expect(rpc).toHaveBeenCalledWith(
-      "create_manual_recipe_with_managed_image",
-      expect.objectContaining({
-        p_owner_uuid: user.id,
-        p_image_object_id: managedImageObjectId,
-        p_title: "개인 레시피 초안",
-      }),
-    );
-
-    const firstCall = rpc.mock.calls[0] as unknown as
-      [string, unknown] | undefined;
-    const payloadArg = firstCall?.[1];
-    expect(payloadArg).toBeDefined();
-    const payload = (payloadArg ?? {}) as Record<string, unknown>;
-    expect(payload).not.toHaveProperty("p_origin_recipe_id");
-    expect(payload).not.toHaveProperty("p_save_as_new");
-    expect(payload).not.toHaveProperty("p_operation");
-    expect(payload).not.toHaveProperty("p_source_recipe_id");
+    expect(readVerifiedAccountGenerationSession).not.toHaveBeenCalled();
+    expect(rpc).not.toHaveBeenCalled();
   });
 
   it("returns ACCOUNT_SESSION_STALE before POST /recipes mutation when verified session ownership drifts", async () => {
@@ -330,6 +350,153 @@ describe("personal recipe customization write routes", () => {
       },
     });
     expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it("rejects personal-derived POST without Idempotency-Key before session, nutrition, or delegated mutation", async () => {
+    createRouteHandlerClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn(async () => ({ data: { user } })),
+      },
+    });
+
+    const { POST } = await importCreateRoute();
+    const response = await POST(
+      new Request("http://localhost:3000/api/v1/recipes", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(buildDerivedCreateBody()),
+      }),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(428);
+    expect(body).toEqual({
+      success: false,
+      data: null,
+      error: {
+        code: "IDEMPOTENCY_KEY_REQUIRED",
+        message: "요청 키가 필요해요.",
+        fields: [{ field: "Idempotency-Key", reason: "required" }],
+      },
+    });
+    expect(readVerifiedAccountGenerationSession).not.toHaveBeenCalled();
+    expect(calculateRecipeDraftNutrition).not.toHaveBeenCalled();
+    expect(callFuturePropagationRpc).not.toHaveBeenCalled();
+  });
+
+  it("rejects mixed legacy and personal-derived POST fields with the official validation surface", async () => {
+    createRouteHandlerClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn(async () => ({ data: { user } })),
+      },
+    });
+
+    const { POST } = await importCreateRoute();
+    const response = await POST(
+      new Request("http://localhost:3000/api/v1/recipes", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "Idempotency-Key": idempotencyKey,
+        },
+        body: JSON.stringify({
+          ...buildDerivedCreateBody(),
+          title: "legacy 혼합",
+        }),
+      }),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(422);
+    expect(body).toEqual({
+      success: false,
+      data: null,
+      error: {
+        code: "VALIDATION_ERROR",
+        message: "요청 값을 확인해 주세요.",
+        fields: [{ field: "body", reason: "mixed_create_modes" }],
+      },
+    });
+    expect(readVerifiedAccountGenerationSession).not.toHaveBeenCalled();
+    expect(calculateRecipeDraftNutrition).not.toHaveBeenCalled();
+    expect(callFuturePropagationRpc).not.toHaveBeenCalled();
+  });
+
+  it("delegates public fork or owner save-as-new POST through session, nutrition, and write_personal_recipe_core", async () => {
+    const order: string[] = [];
+    const serviceClient = {};
+    createRouteHandlerClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn(async () => ({ data: { user } })),
+      },
+    });
+    createRecipeFuturePropagationInternalClient.mockReturnValue(serviceClient);
+    readVerifiedAccountGenerationSession.mockImplementation(async () => {
+      order.push("session");
+      return { ok: true, sessionAuthority };
+    });
+    calculateRecipeDraftNutrition.mockImplementation(async () => {
+      order.push("nutrition");
+      return {
+        nutritionSnapshot: { calculation_version: "v1" },
+        predecessorGuard: { recipe_ingredients: [] },
+      };
+    });
+    callFuturePropagationRpc.mockImplementation(async () => {
+      order.push("rpc");
+      return {
+        ok: true,
+        data: {
+          id: recipeId,
+          revision: 1,
+        },
+      };
+    });
+
+    const { POST } = await importCreateRoute();
+    const response = await POST(
+      new Request("http://localhost:3000/api/v1/recipes", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "Idempotency-Key": idempotencyKey,
+        },
+        body: JSON.stringify(buildDerivedCreateBody()),
+      }),
+    );
+
+    expect(order).toEqual(["session", "nutrition", "rpc"]);
+    expect(response.status).toBe(201);
+    await expect(response.json()).resolves.toEqual({
+      success: true,
+      data: {
+        id: recipeId,
+        revision: 1,
+      },
+      error: null,
+    });
+    expect(callFuturePropagationRpc).toHaveBeenCalledWith(
+      serviceClient,
+      "write_personal_recipe_core",
+      {
+        p_owner_uuid: user.id,
+        p_auth_identity_created_at_snapshot: sessionAuthority.authIdentityCreatedAt,
+        p_session_key_hash: sessionAuthority.sessionKeyHash,
+        p_hmac_key_version: sessionAuthority.hmacKeyVersion,
+        p_session_issued_at: sessionAuthority.sessionIssuedAt,
+        p_operation: "fork",
+        p_recipe_id: null,
+        p_source_recipe_id: originRecipeId,
+        p_base_recipe_revision: 12,
+        p_draft: buildDerivedCreateBody().draft,
+        p_nutrition_snapshot: { calculation_version: "v1" },
+        p_nutrition_predecessor_guard: { recipe_ingredients: [] },
+        p_tags: null,
+        p_image_object_id: managedImageObjectId,
+        p_expected_cleanup_generation: 0,
+        p_idempotency_key: idempotencyKey,
+      },
+    );
   });
 
   it("rejects PATCH without Idempotency-Key before session, nutrition, or delegated mutation", async () => {

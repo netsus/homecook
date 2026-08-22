@@ -47,7 +47,7 @@ const SNAPSHOT_MIGRATION_PATH = join(
 );
 const PERSONAL_RECIPE_MIGRATION_PATH = join(
   REPOSITORY_ROOT,
-  "supabase/migrations/20260802130000_personal_recipe_customization_write_core.sql",
+  "supabase/migrations/20260822170000_personal_recipe_customization_write_core_derived_create.sql",
 );
 const RECIPE_FUTURE_PROPAGATION_BASE_MIGRATION_PATH = join(
   REPOSITORY_ROOT,

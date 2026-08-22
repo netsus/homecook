@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 
 const migrationPath = join(
   process.cwd(),
-  "supabase/migrations/20260802130000_personal_recipe_customization_write_core.sql",
+  "supabase/migrations/20260822170000_personal_recipe_customization_write_core_derived_create.sql",
 );
 const postgresRunnerPath = join(
   process.cwd(),
@@ -103,6 +103,20 @@ describe("personal recipe customization write core", () => {
     expect(sql).not.toMatch(/update public\.meals|update public\.shopping/i);
   });
 
+  it("locks POST /recipes to the strict legacy-or-derived contract", () => {
+    const createRoute = readFileSync(
+      join(process.cwd(), "app/api/v1/recipes/route.ts"),
+      "utf8",
+    );
+
+    expect(createRoute).toMatch(/mixed_create_modes/i);
+    expect(createRoute).toMatch(/origin_recipe_id/i);
+    expect(createRoute).toMatch(/base_recipe_revision/i);
+    expect(createRoute).toMatch(/readRequiredIdempotencyKey/i);
+    expect(createRoute).toMatch(/calculateRecipeDraftNutrition/i);
+    expect(createRoute).toMatch(/write_personal_recipe_core/i);
+  });
+
   it("pins the current successor migration chain for active full-local inventory", () => {
     const runner = readFileSync(postgresRunnerPath, "utf8");
 
@@ -110,7 +124,7 @@ describe("personal recipe customization write core", () => {
     expect(runner).toContain(
       "process.env.HOMECOOK_RECIPE_SNAPSHOT_POST_TARGET_MIGRATIONS = [",
     );
-    const followupTarget = "20260802130000_personal_recipe_customization_write_core.sql";
+    const followupTarget = "20260822170000_personal_recipe_customization_write_core_derived_create.sql";
     const prerequisiteOrder = [
       "20260425000000_08b_add_pantry_items_table.sql",
       "20260426090000_09_shopping_tables.sql",
