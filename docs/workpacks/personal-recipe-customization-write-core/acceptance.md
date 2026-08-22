@@ -1,6 +1,6 @@
 # Acceptance Checklist
 
-> PR #1274 merged the Stage 3 backend runtime checkpoint, but overall acceptance remains in progress. Unchecked items are not claims that the integrated pinned-reader path, route/service tests, server-production/local-rehearsal DB state, #7/#8 integrated E2E, terminal workpack closeout review or `personal_recipe_v2` R+2 activation already exist.
+> PR #1274 merged the Stage 3 backend runtime checkpoint, but overall acceptance remains in progress. Unchecked items are not claims that the integrated pinned-reader path, route/service tests, server-production/local-rehearsal DB state, #7/#8 integrated E2E, terminal workpack closeout review or `personal_recipe_v2` R+2 activation already exist. 2026-08-22 contract-evolution is approved and the active official tuple is now v1.7.33 / v1.5.37 / v1.3.35 / v1.3.35 / v1.2.40, but implementation and closeout remain pending.
 
 ## Create / Fork / Identity
 
