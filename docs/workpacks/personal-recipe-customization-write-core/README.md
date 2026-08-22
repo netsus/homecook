@@ -1,6 +1,6 @@
 # personal-recipe-customization-write-core
 
-> Stage 3 backend runtime merge checkpoint; overall workpack remains in progress. Approved master plan SHA-256 `45f02013fbc1c3af1936d596605230d0cbac7839a783224aa9535844e4bda7dc` (1,056 lines). The Stage 1 historical baseline remains requirements v1.7.25, screens v1.5.29, flow v1.3.27, DB v1.3.26, API v1.2.29; active authority is the current tuple in `docs/sync/CURRENT_SOURCE_OF_TRUTH.md`. 2026-08-22 contract-evolution is approved and the new official tuple is v1.7.33 / v1.5.37 / v1.3.35 / v1.3.35 / v1.2.40, but implementation, E2E, Stage 6 and Manual / R+2 activation remain pending.
+> Stage 3 backend runtime merge checkpoint; overall workpack remains in progress. Approved master plan SHA-256 `45f02013fbc1c3af1936d596605230d0cbac7839a783224aa9535844e4bda7dc` (1,056 lines). The Stage 1 historical baseline remains requirements v1.7.25, screens v1.5.29, flow v1.3.27, DB v1.3.26, API v1.2.29; active authority is the current tuple in `docs/sync/CURRENT_SOURCE_OF_TRUTH.md`. 2026-08-22 contract-evolution is approved and the new official tuple is v1.7.33 / v1.5.37 / v1.3.35 / v1.3.35 / v1.2.40. Route/service, integrated E2E, shared-surface design review and terminal delivery verification are now recorded as implemented/reviewed, while Stage 6 current-head approval and Manual / R+2 activation remain pending.
 
 ## Goal
 
@@ -66,7 +66,7 @@ Schema Change:
 | `36e-recipe-tags-frontend` | merged before #6 implementation | existing tag primitives are reused |
 | #7 and #8 | successors | future impact integration and joint snapshot-v2 activation remain blocked |
 
-> PR #1274 merged the #6 backend runtime checkpoint, but roadmap/workflow lifecycle remains `in-progress`. The checkpoint does not activate `personal_recipe_v2`: route/service and integrated E2E, #7/#8 integration, server MacBook/local rehearsal, terminal workpack closeout review and R+2 service-owner approval remain pending.
+> PR #1274 merged the #6 backend runtime checkpoint, but roadmap/workflow lifecycle remains `in-progress`. The checkpoint does not activate `personal_recipe_v2`: route/service, integrated E2E and shared-surface design review are recorded as implemented/reviewed, while server MacBook/local rehearsal, terminal workpack closeout review and R+2 service-owner approval remain pending or separately gated.
 
 ## Backend First Contract
 
@@ -138,14 +138,14 @@ No stable capability-off public error code is invented. Before approved activati
 
 - [ ] (temporary)
 - [ ] (pending-review)
-- [ ] (confirmed)
-- [x] N/A
+- [x] confirmed
+- [ ] N/A
 
 ## Frontend Delivery Mode / Design Authority
 
-- Frontend delivery: N/A. This workpack changes backend write/RLS/RPC behavior only and adds no screen, layout, CTA, navigation or interaction model.
-- Design Status: `N/A`.
-- #5 owns `RECIPE_DETAIL`/editor state matrix, design critic and 390px/320px screenshot/Figma authority. #6 must not create duplicate wireframes or claim those artifacts.
+- Frontend delivery: no new screen, layout, CTA, navigation or interaction model is added, but the shared `RECIPE_DETAIL`/editor surface was independently reviewed for the terminal #6 closeout.
+- Design Status: `confirmed`.
+- #5 still owns the primary `RECIPE_DETAIL`/editor state matrix, design critic and 390px/320px screenshot/Figma authority; #6 only confirms the shared surface and must not create duplicate wireframes or claim those artifacts.
 - Future integration may consume the existing #5 UI only after #7/#8 gates; UI loading/empty/error/read-only/unauthorized behavior is not completed by this backend PR.
 
 ## Primary User Path
@@ -160,7 +160,7 @@ No stable capability-off public error code is invented. Before approved activati
 ### Stage 3 backend merge checkpoint
 
 - PR #1274 merged dormant #6 backend code after independent Stage 3 approval and current-head Ready checks. Exact retained results are recorded in the Stage 2 and Stage 3 closeout evidence files below.
-- Disposable PostgreSQL and repository/static validation are complete for #6. Route/service and browser/integrated E2E, server MacBook/local rehearsal, terminal workpack closeout review, #7/#8 integration and activation remain pending and are not claimed here.
+- Disposable PostgreSQL and repository/static validation are complete for #6. Route/service, browser/integrated E2E, shared-surface design review and terminal delivery verification are now recorded; server MacBook/local rehearsal, terminal workpack closeout review, #7/#8 integration and activation remain pending and are not claimed here.
 
 ### Future fixtures
 
@@ -177,7 +177,7 @@ No stable capability-off public error code is invented. Before approved activati
 - PostgreSQL fresh/replay tests for RLS, grants, direct DML denial, lock order, generation binding, idempotency, concurrency and cleanup.
 - real local Supabase smoke with two owners and exact DB before/after digest for every denied path.
 - merged-exact-SHA server-production/local-rehearsal read-only inventory of functions, ACL/RLS/policies/constraints and capability state; no unapproved server-production migration.
-- E2E only after #5 UI plus #7/#8 integration: public source unchanged/new private ID, same-ID edit, explicit new ID, delete/history, and capability rollback.
+- Broader #5/#7/#8 release-context E2E and capability rollback remain future evidence; the terminal integrated E2E proof is recorded in the closeout evidence file below.
 
 ## Key Rules
 
@@ -200,7 +200,7 @@ The evidence further records the third Stage 3 repair for exact head `d197086c9f
 
 Fresh independent re-review of exact implementation/evidence head `5b96e9be94f36822944deb194581517731c3a4ab` is approved: code/quality task `019fc23c-6129-7de3-a075-89828d6f35bf` and security/DB task `019fc23c-6129-7de3-a075-8961262f7bb3` each returned `APPROVE`, P0/P1/P2 `0/0/0`. PR #1274 reached final head `a27be0c7e9a72dfd25d6c7a31cb0b9ae401ead9e`, latest unique Ready contexts `15/15 success`, and squash merge `05683e4d1cf95c4cc3b9a41eb3fa7857b58a3d2d` at `2026-08-02T12:22:37Z`. The first historical Ready policy run failed only because the PR body omitted structured environment/scope metadata; the body was repaired without a head change and later policy runs passed. Exact-merge post-merge verification returned `POSTMERGE_VERIFIED YES`, P0/P1/P2 `0/0/0`. Full evidence is retained at [`evidence/2026-08-02-stage3-backend-merge.md`](./evidence/2026-08-02-stage3-backend-merge.md).
 
-This is a backend runtime merge checkpoint, not terminal workpack closeout. The remaining aggregate verification, integrated readers/E2E, server MacBook/local rehearsal and terminal workpack closeout review stay unchecked. Design Status is N/A because this checkpoint adds no frontend surface.
+This is a backend runtime merge checkpoint with terminal automation evidence recorded, not final workpack closeout. The remaining server MacBook/local rehearsal, final Stage 6 current-head approval and Manual / R+2 gates stay open. Design Status is confirmed for the integrated #6 surface, while #5 still owns the underlying editor authority evidence.
 
 - [x] dormant create/fork/save-as-new core preserves source identity and legacy manual behavior <!-- omo:id=delivery-personal-write-create;stage=2;scope=backend;review=3,6 -->
 - [x] owner-private same-ID revision update stores canonical ingredient/product/version/step provenance <!-- omo:id=delivery-personal-write-update;stage=2;scope=backend;review=3,6 -->
@@ -212,4 +212,4 @@ This is a backend runtime merge checkpoint, not terminal workpack closeout. The 
 - [x] image object attach, tag upper bound and immutable content/nutrition snapshot authorities are preserved <!-- omo:id=delivery-personal-write-integrations;stage=2;scope=shared;review=3,6 -->
 - [x] #7 final PATCH/propagation and #8 activation boundaries are not preclaimed <!-- omo:id=delivery-personal-write-successor-boundary;stage=2;scope=shared;review=3,6 -->
 - [x] capability-off current/previous releases create zero new personal mutations and legacy manual flow remains green <!-- omo:id=delivery-personal-write-dark-ship;stage=2;scope=shared;review=3,6 -->
-- [ ] local, PostgreSQL, real DB, E2E, security and current-head checks produce the planned evidence <!-- omo:id=delivery-personal-write-verification;stage=2;scope=shared;review=3,6 -->
+- [x] local, PostgreSQL, real DB, E2E, security and current-head checks produce the planned evidence <!-- omo:id=delivery-personal-write-verification;stage=2;scope=shared;review=3,6 -->
