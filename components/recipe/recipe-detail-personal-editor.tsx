@@ -216,7 +216,7 @@ export function RecipeDetailPersonalEditor({
     <div
       aria-labelledby="recipe-detail-personal-editor-title"
       aria-modal="true"
-      className="fixed inset-0 z-40 overflow-y-auto bg-[var(--surface-fill)] px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-[calc(1rem+env(safe-area-inset-top))]"
+      className="fixed inset-0 z-[120] overflow-y-auto bg-[var(--surface-fill)] px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-[calc(1rem+env(safe-area-inset-top))]"
       data-testid="recipe-detail-personal-editor"
       ref={dialogRef}
       role="dialog"
@@ -373,7 +373,7 @@ export function RecipeDetailPersonalEditor({
                   />
                 ) : null}
                 <button
-                  className="min-h-11 w-full rounded-[var(--radius-control)] border border-[var(--line-strong)] px-4 font-bold text-[var(--foreground)] disabled:cursor-not-allowed disabled:opacity-50"
+                  className="min-h-11 w-full rounded-[var(--radius-control)] border border-[var(--line)] bg-transparent px-4 font-semibold text-[var(--text-2)] disabled:cursor-not-allowed disabled:opacity-50"
                   disabled={isCreatingDerivedRecipe || draft.title.trim() === ""}
                   onClick={() => {
                     void submitDerivedRecipe();

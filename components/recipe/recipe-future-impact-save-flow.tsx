@@ -124,7 +124,7 @@ export function RecipeFutureImpactSaveFlow({
   }
 
   return <>
-    <button className="min-h-11 rounded-[var(--radius-control)] border border-[var(--brand)] px-4 font-bold text-[var(--brand)] disabled:cursor-not-allowed disabled:opacity-50" disabled={actionDisabled} onClick={() => void preview()} type="button">변경사항 저장</button>
+    <button className="min-h-11 w-full rounded-[var(--radius-control)] border border-[var(--brand)] bg-[var(--brand)] px-4 font-bold text-[var(--text-inverse)] disabled:cursor-not-allowed disabled:opacity-50" disabled={actionDisabled} onClick={() => void preview()} type="button">변경사항 저장</button>
     {open ? <RecipeFutureImpactDialog errorCode={errorCode} impact={impact} loading={loading} onClose={() => { if (!submitting) updateOpen(false); }} onLogin={() => {
       const previewDraft = previewDraftRef.current;
       if (!previewDraft) return;

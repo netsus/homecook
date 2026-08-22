@@ -109,6 +109,10 @@ describe("recipe detail personal actions", () => {
       join(process.cwd(), "components/recipe/recipe-detail-personal-editor.tsx"),
       "utf8",
     );
+    const impactSource = readFileSync(
+      join(process.cwd(), "components/recipe/recipe-future-impact-save-flow.tsx"),
+      "utf8",
+    );
 
     expect(screenSource).toContain("<RecipeDetailPersonalActions");
     expect(screenSource).toContain("capabilityEnabled={personalRecipeCapabilityEnabled}");
@@ -120,6 +124,11 @@ describe("recipe detail personal actions", () => {
     expect(screenSource).toContain("mode={personalEditorMode}");
     expect(screenSource).toContain("createSnapshotV2CookingSession");
     expect(editorSource).toContain("type: \"recipe-save-as-new\"");
+    expect(editorSource).toContain("fixed inset-0 z-[120]");
+    expect(editorSource).toContain("font-semibold text-[var(--text-2)]");
+    expect(impactSource).toContain("w-full");
+    expect(impactSource).toContain("bg-[var(--brand)]");
+    expect(impactSource).toContain("text-[var(--text-inverse)]");
   });
 
   it("keeps the QA future-impact fallback behind an explicit query plus client fixture gate", () => {
@@ -131,7 +140,7 @@ describe("recipe detail personal actions", () => {
     expect(source).toContain("const searchParams = new URLSearchParams(window.location.search);");
     expect(source.match(/isQaFixtureClientModeEnabled\(\)/gu)?.length ?? 0).toBeGreaterThanOrEqual(1);
     expect(source).toContain('searchParams.get("qaFutureImpact") === "1"');
-    expect(source).toContain('searchParams.get("qaFutureImpact") === "1"');
+    expect(source).not.toContain('searchParams.get("qaForkContext")');
     expect(source).toContain("const qaForkContext = useMemo(() => (");
   });
 
