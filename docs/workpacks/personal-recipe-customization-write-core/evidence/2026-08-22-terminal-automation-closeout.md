@@ -34,9 +34,14 @@
 - terminal delivery verification is recorded as implemented and reviewed
 - Design Status is confirmed for the integrated #6 surface while #5 still owns the underlying editor authority baseline
 
+## Final Stage 6 approval
+
+- Fresh task `/root/wp6_stage6_replacement` reviewed exact head `3b4a62e15acb95e1fc7248331dfe050de8f694d7`, tree `8ca5e379f584ec5a35d614e5a0bbd856c3b90d86`.
+- Verdict: `APPROVE`, P0/P1/P2 `0/0/0`, findings none.
+- The reviewer explicitly confirmed PR #1393 is Ready/mergeable for the automated scope while the overall workpack remains `in_progress` for external gates.
+
 ## Remaining pending gates
 
-- final Stage 6 current-head approval remains pending until the closeout commit is rechecked
 - merged-exact server-production/local-rehearsal remains pending
 - manual QA remains pending
 - production migration/apply remains forbidden and unrun

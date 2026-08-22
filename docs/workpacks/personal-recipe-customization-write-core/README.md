@@ -1,6 +1,6 @@
 # personal-recipe-customization-write-core
 
-> Stage 3 backend runtime merge checkpoint; overall workpack remains in progress. Approved master plan SHA-256 `45f02013fbc1c3af1936d596605230d0cbac7839a783224aa9535844e4bda7dc` (1,056 lines). The Stage 1 historical baseline remains requirements v1.7.25, screens v1.5.29, flow v1.3.27, DB v1.3.26, API v1.2.29; active authority is the current tuple in `docs/sync/CURRENT_SOURCE_OF_TRUTH.md`. 2026-08-22 contract-evolution is approved and the new official tuple is v1.7.33 / v1.5.37 / v1.3.35 / v1.3.35 / v1.2.40. Route/service, integrated E2E, shared-surface design review and terminal delivery verification are now recorded as implemented/reviewed, while Stage 6 current-head approval and Manual / R+2 activation remain pending.
+> Stage 3 backend runtime checkpoint plus terminal automated closeout; overall workpack remains in progress. Approved master plan SHA-256 `45f02013fbc1c3af1936d596605230d0cbac7839a783224aa9535844e4bda7dc` (1,056 lines). The Stage 1 historical baseline remains requirements v1.7.25, screens v1.5.29, flow v1.3.27, DB v1.3.26, API v1.2.29; active authority is the current tuple in `docs/sync/CURRENT_SOURCE_OF_TRUTH.md`. 2026-08-22 contract-evolution is approved and the new official tuple is v1.7.33 / v1.5.37 / v1.3.35 / v1.3.35 / v1.2.40. Route/service, integrated E2E, security/design authority and Stage 6 current-head review are complete for the automated scope, while merged-exact rehearsal, Manual and R+2 activation remain pending.
 
 ## Goal
 
@@ -66,7 +66,7 @@ Schema Change:
 | `36e-recipe-tags-frontend` | merged before #6 implementation | existing tag primitives are reused |
 | #7 and #8 | successors | future impact integration and joint snapshot-v2 activation remain blocked |
 
-> PR #1274 merged the #6 backend runtime checkpoint, but roadmap/workflow lifecycle remains `in-progress`. The checkpoint does not activate `personal_recipe_v2`: route/service, integrated E2E and shared-surface design review are recorded as implemented/reviewed, while server MacBook/local rehearsal, terminal workpack closeout review and R+2 service-owner approval remain pending or separately gated.
+> PR #1274 merged the #6 backend runtime checkpoint, and the successor automated closeout is independently approved, but roadmap/workflow lifecycle remains `in-progress`. Neither checkpoint activates `personal_recipe_v2`: server MacBook/local rehearsal, Manual and R+2 service-owner approval remain separately gated.
 
 ## Backend First Contract
 
@@ -160,7 +160,7 @@ No stable capability-off public error code is invented. Before approved activati
 ### Stage 3 backend merge checkpoint
 
 - PR #1274 merged dormant #6 backend code after independent Stage 3 approval and current-head Ready checks. Exact retained results are recorded in the Stage 2 and Stage 3 closeout evidence files below.
-- Disposable PostgreSQL and repository/static validation are complete for #6. Route/service, browser/integrated E2E, shared-surface design review and terminal delivery verification are now recorded; server MacBook/local rehearsal, terminal workpack closeout review, #7/#8 integration and activation remain pending and are not claimed here.
+- Disposable PostgreSQL and repository/static validation are complete for #6. Route/service, browser/integrated E2E, shared-surface design review and Stage 6 terminal automated review are recorded; server MacBook/local rehearsal, #7/#8 release gates and activation remain pending and are not claimed here.
 
 ### Future fixtures
 
@@ -200,7 +200,7 @@ The evidence further records the third Stage 3 repair for exact head `d197086c9f
 
 Fresh independent re-review of exact implementation/evidence head `5b96e9be94f36822944deb194581517731c3a4ab` is approved: code/quality task `019fc23c-6129-7de3-a075-89828d6f35bf` and security/DB task `019fc23c-6129-7de3-a075-8961262f7bb3` each returned `APPROVE`, P0/P1/P2 `0/0/0`. PR #1274 reached final head `a27be0c7e9a72dfd25d6c7a31cb0b9ae401ead9e`, latest unique Ready contexts `15/15 success`, and squash merge `05683e4d1cf95c4cc3b9a41eb3fa7857b58a3d2d` at `2026-08-02T12:22:37Z`. The first historical Ready policy run failed only because the PR body omitted structured environment/scope metadata; the body was repaired without a head change and later policy runs passed. Exact-merge post-merge verification returned `POSTMERGE_VERIFIED YES`, P0/P1/P2 `0/0/0`. Full evidence is retained at [`evidence/2026-08-02-stage3-backend-merge.md`](./evidence/2026-08-02-stage3-backend-merge.md).
 
-This is a backend runtime merge checkpoint with terminal automation evidence recorded, not final workpack closeout. The remaining server MacBook/local rehearsal, final Stage 6 current-head approval and Manual / R+2 gates stay open. Design Status is confirmed for the integrated #6 surface, while #5 still owns the underlying editor authority evidence.
+This is an automated terminal closeout, not final overall workpack closeout. Fresh Stage 6 task `/root/wp6_stage6_replacement` approved exact head `3b4a62e15acb95e1fc7248331dfe050de8f694d7` with P0/P1/P2 `0/0/0` and confirmed the automated PR scope is Ready/mergeable. Server MacBook/local rehearsal and Manual / R+2 gates stay open. Design Status is confirmed for the integrated #6 surface, while #5 still owns the underlying editor authority baseline.
 
 - [x] dormant create/fork/save-as-new core preserves source identity and legacy manual behavior <!-- omo:id=delivery-personal-write-create;stage=2;scope=backend;review=3,6 -->
 - [x] owner-private same-ID revision update stores canonical ingredient/product/version/step provenance <!-- omo:id=delivery-personal-write-update;stage=2;scope=backend;review=3,6 -->

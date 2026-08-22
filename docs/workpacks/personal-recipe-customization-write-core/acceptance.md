@@ -1,6 +1,6 @@
 # Acceptance Checklist
 
-> PR #1274 merged the Stage 3 backend runtime checkpoint, but overall acceptance remains in progress. Unchecked items are not claims that the merged-exact server-production/local-rehearsal verifier, final Stage 6 current-head closeout or `personal_recipe_v2` R+2 activation already exist. 2026-08-22 contract-evolution is approved and the active official tuple is now v1.7.33 / v1.5.37 / v1.3.35 / v1.3.35 / v1.2.40, and the route/service, integrated E2E, soft-delete/readers and shared-surface design evidence recorded in the latest closeout pass are now reflected below.
+> PR #1274 merged the Stage 3 backend runtime checkpoint, and the successor automated scope has Stage 6 current-head approval, but overall acceptance remains in progress. Unchecked items are not claims that the merged-exact server-production/local-rehearsal verifier or `personal_recipe_v2` R+2 activation already exist. 2026-08-22 contract-evolution is approved and the active official tuple is now v1.7.33 / v1.5.37 / v1.3.35 / v1.3.35 / v1.2.40.
 
 ## Create / Fork / Identity
 
@@ -63,7 +63,7 @@
 - [x] fresh/replay PostgreSQL tests prove policies, grants, triggers, functions, idempotency and lock/concurrency behavior <!-- omo:id=accept-personal-postgres;stage=2;scope=backend;review=3,6 -->
 - [x] real local Supabase role matrix and before/after digests prove all denied paths are unchanged <!-- omo:id=accept-personal-real-db;stage=2;scope=backend;review=3,6 -->
 - [ ] merged-exact-SHA server-production/local-rehearsal verifier is read-only and production capability remains off until the approved release gate <!-- omo:id=accept-personal-remote;stage=2;scope=shared;review=3,6 -->
-- [ ] independent internal1.5, security/DB, five-axis, Stage 3 and closeout reviews have zero unresolved required findings <!-- omo:id=accept-personal-independent-review;stage=2;scope=shared;review=3,6 -->
+- [x] independent internal1.5, security/DB, five-axis, Stage 3 and closeout reviews have zero unresolved required findings <!-- omo:id=accept-personal-independent-review;stage=2;scope=shared;review=3,6 -->
 
 ## Manual QA
 
