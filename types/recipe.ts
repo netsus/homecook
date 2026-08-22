@@ -187,6 +187,8 @@ export interface RecipeEditContext {
   image_object_id: string | null;
 }
 
+export type RecipeForkContext = RecipeEditContext;
+
 export type RecipeSnapshotUiMode = "legacy_v1" | "snapshot_v2";
 
 export type RecipePhotoRole = "primary" | "alternate" | "step" | "unknown";

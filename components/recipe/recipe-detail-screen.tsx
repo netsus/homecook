@@ -74,6 +74,7 @@ import type {
   RecipeBookSummary,
   RecipeDetail,
   RecipeEditContext,
+  RecipeForkContext,
   RecipeIngredient,
   RecipeLikeData,
   RecipeSnapshotUiMode,
@@ -159,6 +160,7 @@ interface RecipeDetailScreenProps {
   recipeId: string;
   authError?: string | null;
   initialAuthenticated?: boolean;
+  initialForkContext?: RecipeForkContext;
   recipeSnapshotUiMode?: RecipeSnapshotUiMode;
 }
 

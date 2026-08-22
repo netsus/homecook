@@ -55,7 +55,7 @@ const RECIPE_FUTURE_PROPAGATION_BASE_MIGRATION_PATH = join(
 );
 const RECIPE_SNAPSHOT_ENTRYPOINT_MIGRATION_PATH = join(
   REPOSITORY_ROOT,
-  "supabase/migrations/20260804100000_recipe_snapshot_entrypoint_projection.sql",
+  "supabase/migrations/20260822173000_recipe_snapshot_public_fork_context.sql",
 );
 let RECIPE_FUTURE_PROPAGATION_MIGRATION_PATH;
 const SNAPSHOT_CONSUMER_READ_MIGRATION_PATH = join(

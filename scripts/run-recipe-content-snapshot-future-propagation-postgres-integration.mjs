@@ -36,6 +36,7 @@ process.env.HOMECOOK_RECIPE_SNAPSHOT_FOLLOWUP_MIGRATIONS = [
     ? [BASE_FUTURE_PROPAGATION_MIGRATION]
     : []),
   ENTRYPOINT_PROJECTION_MIGRATION,
+  "supabase/migrations/20260822173000_recipe_snapshot_public_fork_context.sql",
 ].join(path.delimiter);
 process.env.HOMECOOK_RECIPE_SNAPSHOT_FOLLOWUP_TARGET_MIGRATION =
   contentPropagationMigration;

@@ -141,6 +141,10 @@ const ADDITIVE_SOURCES = [
         REPO_ROOT,
         "supabase/migrations/20260804100000_recipe_snapshot_entrypoint_projection.sql",
       ),
+      path.join(
+        REPO_ROOT,
+        "supabase/migrations/20260822173000_recipe_snapshot_public_fork_context.sql",
+      ),
     ],
   },
   {

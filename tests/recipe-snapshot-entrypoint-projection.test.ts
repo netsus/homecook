@@ -55,6 +55,16 @@ function ownerProjection() {
   };
 }
 
+function publicForkProjection() {
+  return {
+    revision: 12,
+    fork_context: {
+      ...ownerProjection().edit_context,
+      image_object_id: null,
+    },
+  };
+}
+
 describe("recipe snapshot server-only entrypoint projection", () => {
   beforeEach(() => {
     vi.resetModules();
@@ -125,6 +135,62 @@ describe("recipe snapshot server-only entrypoint projection", () => {
       p_session_issued_at: authority.sessionIssuedAt,
       p_session_key_hash: authority.sessionKeyHash,
     });
+  });
+
+  it("accepts only the exact public fork projection without a borrowed image identity", async () => {
+    const rpc = vi.fn(async () => ({ data: publicForkProjection(), error: null }));
+    createRecipeFuturePropagationInternalClient.mockReturnValue({ rpc });
+    const { readRecipeSnapshotForkContext } = await import(
+      "@/lib/server/recipe-snapshot-entrypoint"
+    );
+    const authority = {
+      authIdentityCreatedAt: "2026-08-01T00:00:00.000Z",
+      hmacKeyVersion: 1,
+      ownerUuid: "550e8400-e29b-41d4-a716-446655440001",
+      sessionIssuedAt: "2026-08-03T00:00:00.000Z",
+      sessionKeyHash: "a".repeat(64),
+    };
+
+    await expect(readRecipeSnapshotForkContext({
+      recipeId: "550e8400-e29b-41d4-a716-446655440002",
+      sessionAuthority: authority,
+    })).resolves.toEqual(publicForkProjection().fork_context);
+  });
+
+  it.each([
+    ownerProjection(),
+    {
+      ...publicForkProjection(),
+      fork_context: {
+        ...publicForkProjection().fork_context,
+        image_object_id: imageObjectId,
+      },
+    },
+    {
+      ...publicForkProjection(),
+      fork_context: {
+        ...publicForkProjection().fork_context,
+        base_recipe_revision: 11,
+      },
+    },
+  ])("rejects owner, image-bearing, or cross-revision data as public fork context", async (data) => {
+    createRecipeFuturePropagationInternalClient.mockReturnValue({
+      rpc: vi.fn(async () => ({ data, error: null })),
+    });
+    const { readRecipeSnapshotForkContext } = await import(
+      "@/lib/server/recipe-snapshot-entrypoint"
+    );
+
+    await expect(readRecipeSnapshotForkContext({
+      recipeId: "550e8400-e29b-41d4-a716-446655440002",
+      sessionAuthority: {
+        authIdentityCreatedAt: "2026-08-01T00:00:00.000Z",
+        hmacKeyVersion: 1,
+        ownerUuid: "550e8400-e29b-41d4-a716-446655440001",
+        sessionIssuedAt: "2026-08-03T00:00:00.000Z",
+        sessionKeyHash: "a".repeat(64),
+      },
+    })).rejects.toThrow("recipe snapshot fork context is invalid");
   });
 
   it.each([
@@ -198,5 +264,21 @@ describe("recipe snapshot server-only entrypoint projection", () => {
     expect(sql).toMatch(/image_object\.owner_uuid = recipe\.created_by[\s\S]*image_object\.account_generation[\s\S]*v_session_authority[\s\S]*image_object\.visibility = 'private'[\s\S]*image_object\.state = 'attached_private'/i);
     expect(sql).toMatch(/recipe\.created_by = p_owner_uuid[\s\S]*recipe\.visibility = 'private'[\s\S]*recipe\.deleted_at is null/i);
     expect(sql).not.toMatch(/thumbnail_url[\s\S]*image_object_id/i);
+  });
+
+  it("extends the existing reader object with a capability-gated public fork branch", () => {
+    const sql = readFileSync(join(
+      process.cwd(),
+      "supabase/migrations/20260822173000_recipe_snapshot_public_fork_context.sql",
+    ), "utf8");
+
+    expect(sql).toMatch(/create or replace function public\.read_recipe_snapshot_entrypoint_context/i);
+    expect(sql).toMatch(/recipe\.created_by = p_owner_uuid[\s\S]*recipe\.visibility = 'private'/i);
+    expect(sql).toMatch(/current_setting\('homecook\.personal_recipe_v2',[\s\S]*current_setting\('homecook\.snapshot_v2_creation'/i);
+    expect(sql).toMatch(/recipe\.visibility = 'public'[\s\S]*recipe_visibility_guard\.is_owner_publicly_visible\(recipe\.created_by\)/i);
+    expect(sql).toContain("'fork_context'");
+    expect(sql).toMatch(/'image_object_id',[\s\S]*else null/i);
+    expect(sql).not.toContain("thumbnail_url");
+    expect(sql).not.toContain("operation");
   });
 });

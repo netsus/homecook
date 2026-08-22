@@ -23,6 +23,7 @@ process.env.HOMECOOK_RECIPE_SNAPSHOT_FOLLOWUP_MIGRATIONS = [
   "supabase/migrations/20260803101000_recipe_content_snapshot_future_propagation.sql",
   "supabase/migrations/20260803100000_recipe_future_scoped_internal_rpc_clients.sql",
   "supabase/migrations/20260809100000_full_local_session_refresh_authority.sql",
+  "supabase/migrations/20260822173000_recipe_snapshot_public_fork_context.sql",
 ].join(path.delimiter);
 process.env.HOMECOOK_RECIPE_SNAPSHOT_FOLLOWUP_TARGET_MIGRATION =
   "supabase/migrations/20260809120000_cooked_batch_weight_ledger.sql";

@@ -31,6 +31,7 @@ process.env.HOMECOOK_RECIPE_SNAPSHOT_POST_TARGET_MIGRATIONS = [
   "supabase/migrations/20260811120000_full_local_session_observability.sql",
   "supabase/migrations/20260812143000_full_local_session_superseded_token_window.sql",
   "supabase/migrations/20260820120000_full_local_session_bounded_token_overlap.sql",
+  "supabase/migrations/20260822173000_recipe_snapshot_public_fork_context.sql",
 ].join(path.delimiter);
 process.env.HOMECOOK_RECIPE_SNAPSHOT_FOLLOWUP_INTEGRATION_TEST =
   "tests/personal-recipe-customization-write-core-postgres.integration.test.ts";
