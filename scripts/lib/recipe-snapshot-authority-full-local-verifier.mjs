@@ -258,6 +258,8 @@ function buildFullLocalSql(snapshotSql) {
     "  ),",
     "  'full_local_security_inventory', (" +
       buildFullLocalSecurityInventoryExpression({
+        includeCookedBatchPolicyCutover:
+          INCLUDE_COOKED_BATCH_WEIGHT_LEDGER,
         includeSnapshotTables: true,
         includePersonalRecipeFunctions: INCLUDE_PERSONAL_RECIPE_FUNCTIONS,
         includeRecipeFuturePropagationFunctions:
@@ -408,6 +410,8 @@ export function assertRecipeSnapshotAuthorityFullLocalResult(result) {
         assertRecipeSnapshotAuthorityFullLocalSecurityInventoryResult(
           result.full_local_security_inventory,
           {
+            includeCookedBatchPolicyCutover:
+              INCLUDE_COOKED_BATCH_WEIGHT_LEDGER,
             includeSnapshotTables: true,
             includePersonalRecipeFunctions: INCLUDE_PERSONAL_RECIPE_FUNCTIONS,
             includeRecipeFuturePropagationFunctions:

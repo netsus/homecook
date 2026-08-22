@@ -24,6 +24,8 @@ const includeRecipeFuturePropagationFunctions =
       "_recipe_content_snapshot_future_propagation.sql",
     ) ?? false
   );
+const includeCookedBatchPolicyCutover =
+  process.env.HOMECOOK_COOKED_BATCH_SECURITY_FUNCTIONS === "1";
 const recipeFuturePropagationFunctionCount = includeRecipeFuturePropagationFunctions
   ? (JSON.parse(readFileSync(join(
       process.cwd(),
@@ -2652,6 +2654,7 @@ run("full-local Auth isolated PostgreSQL foundation", () => {
 
 activeInventoryRun("active full-local snapshot security inventory", () => {
   const options = {
+    includeCookedBatchPolicyCutover,
     includeSnapshotTables: true,
     includePersonalRecipeFunctions,
     includeRecipeFuturePropagationFunctions,
@@ -2663,8 +2666,9 @@ activeInventoryRun("active full-local snapshot security inventory", () => {
     expect(database).toMatch(/^homecook_[a-z0-9_]+$/u);
   });
 
-  it("accepts the active 12-table, 2 snapshot ACL, and 12-policy inventory", () => {
+  it("accepts the active 12-table, 2 snapshot ACL, and exact policy inventory", () => {
     const { api, result } = securityInventoryAfter("", options);
+    const expectedPolicyCount = includeCookedBatchPolicyCutover ? 11 : 12;
     expect(result._snapshot_table_acl_inventory).toEqual([
       {
         schema: "public",
@@ -2690,13 +2694,15 @@ activeInventoryRun("active full-local snapshot security inventory", () => {
       required_snapshot_table_acl_count: 2,
       snapshot_table_acl_missing_count: 0,
       snapshot_table_acl_drift_count: 0,
-      required_policy_count: 12,
+      required_policy_count: expectedPolicyCount,
       function_acl_drift_count: 0,
       rls_owner_drift_count: 0,
       rls_force_drift_count: 0,
       policy_drift_count: 0,
     });
-    expect(result._policy_expression_inventory).toHaveLength(12);
+    expect(result._policy_expression_inventory).toHaveLength(
+      expectedPolicyCount,
+    );
     const policyInventory = result._policy_expression_inventory as Array<{
       name: string;
       schema: string;
