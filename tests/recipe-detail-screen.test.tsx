@@ -1072,6 +1072,28 @@ describe("recipe detail screen", () => {
     expect(window.localStorage.getItem(PENDING_ACTION_KEY)).toBeNull();
   });
 
+  it("keeps the public fork editor behind the explicit QA query boundary when server fork context is absent", async () => {
+    process.env.NEXT_PUBLIC_HOMECOOK_ENABLE_QA_FIXTURES = "1";
+    window.history.pushState({}, "", `/recipe/${MOCK_RECIPE_DETAIL.id}?qaForkContext=1`);
+    fetchJson.mockResolvedValue(buildRecipeDetail({ edit_context: undefined }));
+
+    render(
+      <RecipeDetailScreen
+        initialAuthenticated
+        recipeId={MOCK_RECIPE_DETAIL.id}
+        recipeSnapshotUiMode="snapshot_v2"
+      />,
+    );
+
+    expect(
+      await screen.findByRole("button", { name: "내 레시피로 수정" }),
+    ).toBeTruthy();
+    await userEvent.click(screen.getByRole("button", { name: "내 레시피로 수정" }));
+    expect(
+      await screen.findByRole("textbox", { name: "레시피 제목" }),
+    ).toBeTruthy();
+  });
+
   it("adds explicit save-as-new alongside the owner edit flow", async () => {
     fetchJson.mockResolvedValue(buildRecipeDetail({
       edit_context: {

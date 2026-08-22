@@ -526,6 +526,273 @@ test.describe("personal-recipe-customization-write-core", () => {
     );
   });
 
+  test("creates a new private recipe from authenticated public fork and keeps the public source unchanged", async ({
+    page,
+  }) => {
+    const sourceRecipe = cloneRecipeDetail({ edit_context: undefined, revision: 12 });
+    const derivedRecipeId = "recipe-derived-fork";
+    const createdKeys: string[] = [];
+    const createBodies: unknown[] = [];
+
+    await page.route(`**/api/v1/recipes/${RECIPE_ID}`, async (route) => {
+      await route.fulfill({
+        json: {
+          success: true,
+          data: sourceRecipe,
+          error: null,
+        },
+      });
+    });
+
+    await page.route("**/api/v1/recipes", async (route) => {
+      if (route.request().method() !== "POST") {
+        await route.fallback();
+        return;
+      }
+
+      createdKeys.push(route.request().headers()["idempotency-key"] ?? "");
+      createBodies.push(await route.request().postDataJSON());
+      await route.fulfill({
+        json: {
+          success: true,
+          data: { id: derivedRecipeId, revision: 1 },
+          error: null,
+        },
+      });
+    });
+
+    await page.route(`**/api/v1/recipes/${derivedRecipeId}`, async (route) => {
+      await route.fulfill({
+        json: {
+          success: true,
+          data: cloneOwnerRecipeDetail({
+            id: derivedRecipeId,
+            title: "공개 김치찌개에서 만든 내 레시피",
+            revision: 1,
+          }),
+          error: null,
+        },
+      });
+    });
+
+    await page.goto(`${RECIPE_PATH}?qaForkContext=1`);
+    await page.getByRole("button", { name: "내 레시피로 수정" }).click();
+    const title = await page.getByRole("textbox", { name: "레시피 제목" });
+    await title.fill("공개 김치찌개에서 만든 내 레시피");
+    await page.getByRole("button", { name: "내 레시피로 저장" }).click();
+
+    await expect(page).toHaveURL(new RegExp(`/recipe/${derivedRecipeId}$`));
+    await expect(
+      page.getByRole("heading", { name: "공개 김치찌개에서 만든 내 레시피" }),
+    ).toBeVisible();
+
+    expect(createdKeys).toHaveLength(1);
+    expect(createdKeys[0]).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu,
+    );
+    expect(Object.keys(createBodies[0] as Record<string, unknown>).sort()).toEqual([
+      "base_recipe_revision",
+      "draft",
+      "image_object_id",
+      "origin_recipe_id",
+    ]);
+    expect(createBodies).toEqual([
+      {
+        origin_recipe_id: RECIPE_ID,
+        base_recipe_revision: 12,
+        draft: {
+          title: "공개 김치찌개에서 만든 내 레시피",
+          description: sourceRecipe.description,
+          base_servings: sourceRecipe.base_servings,
+          ingredients: sourceRecipe.ingredients.map((ingredient) => ({
+            ingredient_id: ingredient.ingredient_id,
+            amount: ingredient.amount,
+            unit: ingredient.unit,
+            ingredient_type: ingredient.ingredient_type,
+            display_text: ingredient.display_text,
+            component_label: ingredient.component_label ?? null,
+            scalable: ingredient.scalable,
+            food_product_id: null,
+            food_product_nutrition_version_id: null,
+          })),
+          steps: sourceRecipe.steps.map((step) => ({
+            step_number: step.step_number,
+            instruction: step.instruction,
+            cooking_method_id: step.cooking_method?.id ?? "00000000-0000-4000-8000-000000000000",
+            cooking_method_ids: step.cooking_methods?.map((method) => method.id)
+              ?? (step.cooking_method ? [step.cooking_method.id] : []),
+            ingredients_used: step.ingredients_used.map((ingredient) => ({
+              ingredient_id: ingredient.ingredient_id,
+              amount: ingredient.amount,
+              unit: ingredient.unit,
+              cut_size: ingredient.cut_size ?? null,
+            })),
+            component_label: step.component_label ?? null,
+            heat_level: step.heat_level,
+            duration_seconds: step.duration_seconds,
+            duration_text: step.duration_text,
+          })),
+        },
+        image_object_id: null,
+      },
+    ]);
+    expect((createBodies[0] as Record<string, unknown>).operation).toBeUndefined();
+    expect((createBodies[0] as Record<string, unknown>).owner).toBeUndefined();
+    expect((createBodies[0] as Record<string, unknown>).tags).toBeUndefined();
+  });
+
+  test("keeps same-id owner save and explicit save-as-new as separate destinations", async ({
+    page,
+  }) => {
+    const ownerRecipe = cloneOwnerRecipeDetail();
+    const derivedRecipeId = "recipe-owner-copy";
+    let ownerDetailReads = 0;
+    const patchBodies: unknown[] = [];
+    const patchKeys: string[] = [];
+    const createBodies: unknown[] = [];
+    const createKeys: string[] = [];
+
+    await page.route(`**/api/v1/recipes/${RECIPE_ID}`, async (route) => {
+      if (route.request().method() === "PATCH") {
+        patchKeys.push(route.request().headers()["idempotency-key"] ?? "");
+        patchBodies.push(await route.request().postDataJSON());
+        ownerRecipe.title = "같은 ID 저장 완료";
+        ownerRecipe.revision = 13;
+        ownerRecipe.edit_context = {
+          ...(ownerRecipe.edit_context ?? {
+            base_recipe_revision: 12,
+            draft: {
+              title: "내 김치찌개",
+              description: null,
+              base_servings: 2,
+              ingredients: [],
+              steps: [],
+            },
+            image_object_id: null,
+          }),
+          base_recipe_revision: 13,
+          draft: {
+            ...(ownerRecipe.edit_context?.draft ?? {
+              title: "같은 ID 저장 완료",
+              description: null,
+              base_servings: 2,
+              ingredients: [],
+              steps: [],
+            }),
+            title: "같은 ID 저장 완료",
+          },
+        };
+        await route.fulfill({
+          json: {
+            success: true,
+            data: { id: RECIPE_ID, revision: 13 },
+            error: null,
+          },
+        });
+        return;
+      }
+
+      ownerDetailReads += 1;
+
+      await route.fulfill({
+        json: {
+          success: true,
+          data: ownerRecipe,
+          error: null,
+        },
+      });
+    });
+
+    await page.route(`**/api/v1/recipes/${RECIPE_ID}/future-plan-impact`, async (route) => {
+      await route.fulfill({
+        json: {
+          success: true,
+          data: {
+            impact_token: "impact-owner",
+            expires_at: "2026-08-21T16:00:00.000+09:00",
+            proposed_content_hash: "b".repeat(64),
+            future_meal_count: 0,
+            date_range: { from: "2026-08-21", to: "2026-08-21" },
+            incomplete_shopping_list_count: 0,
+            completed_shopping_list_count: 0,
+            active_cooking_claim_count: 0,
+            replace_all_allowed: true,
+          },
+          error: null,
+        },
+      });
+    });
+
+    await page.route("**/api/v1/recipes", async (route) => {
+      if (route.request().method() !== "POST") {
+        await route.fallback();
+        return;
+      }
+
+      createKeys.push(route.request().headers()["idempotency-key"] ?? "");
+      createBodies.push(await route.request().postDataJSON());
+      await route.fulfill({
+        json: {
+          success: true,
+          data: { id: derivedRecipeId, revision: 1 },
+          error: null,
+        },
+      });
+    });
+
+    await page.route(`**/api/v1/recipes/${derivedRecipeId}`, async (route) => {
+      await route.fulfill({
+        json: {
+          success: true,
+          data: cloneOwnerRecipeDetail({
+            id: derivedRecipeId,
+            title: "내 김치찌개 사본",
+            revision: 1,
+          }),
+          error: null,
+        },
+      });
+    });
+
+    await page.goto(`${RECIPE_PATH}?qaFutureImpact=1`);
+    await page.getByRole("button", { name: "편집", exact: true }).click();
+    await page.getByRole("textbox", { name: "레시피 제목" }).fill("같은 ID 저장 완료");
+    await page.getByRole("button", { name: "변경사항 저장" }).click();
+    await page.getByRole("radio", { name: /기존 계획 유지/ }).click();
+    await page.getByRole("button", { name: "저장" }).click();
+    await expect.poll(() => ownerDetailReads).toBeGreaterThan(1);
+    await expect(page).toHaveURL(new RegExp(`${RECIPE_PATH.replaceAll("/", "\\/")}\\?qaFutureImpact=1$`));
+    await expect(page.getByRole("heading", { name: "같은 ID 저장 완료" })).toBeVisible();
+
+    await page.getByRole("button", { name: "편집", exact: true }).click();
+    await page.getByRole("textbox", { name: "레시피 제목" }).fill("내 김치찌개 사본");
+    await page.getByRole("button", { name: "새 레시피로 저장" }).click();
+    await expect(page).toHaveURL(new RegExp(`/recipe/${derivedRecipeId}$`));
+    await expect(page.getByRole("heading", { name: "내 김치찌개 사본" })).toBeVisible();
+
+    expect(patchBodies).toHaveLength(1);
+    expect(createBodies).toHaveLength(1);
+    expect(patchKeys[0]).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu,
+    );
+    expect(createKeys[0]).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu,
+    );
+    expect(Object.keys(createBodies[0] as Record<string, unknown>).sort()).toEqual([
+      "base_recipe_revision",
+      "draft",
+      "image_object_id",
+      "origin_recipe_id",
+    ]);
+    expect(createBodies[0]).toMatchObject({
+      origin_recipe_id: RECIPE_ID,
+      base_recipe_revision: 12,
+      image_object_id: null,
+    });
+    expect((createBodies[0] as Record<string, unknown>).operation).toBeUndefined();
+    expect((createBodies[0] as Record<string, unknown>).visibility).toBeUndefined();
+  });
+
   test("deletes an owner recipe through confirm dialog with stable retry key and safe error copy", async ({
     page,
   }) => {

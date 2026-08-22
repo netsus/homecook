@@ -201,6 +201,7 @@ export function RecipeDetailScreen({
   const [plannerAddError, setPlannerAddError] = useState<string | null>(null);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
   const [showQaFutureImpact, setShowQaFutureImpact] = useState(false);
+  const [showQaForkContext, setShowQaForkContext] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const [selectedPlanDate, setSelectedPlanDate] = useState("");
   const [selectedPlanColumnId, setSelectedPlanColumnId] = useState("");
@@ -228,9 +229,15 @@ export function RecipeDetailScreen({
   currentRecipeIdRef.current = recipeId;
 
   useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search);
+    const qaFixtureClientMode = isQaFixtureClientModeEnabled();
     setShowQaFutureImpact(
-      isQaFixtureClientModeEnabled()
-        && new URLSearchParams(window.location.search).get("qaFutureImpact") === "1",
+      qaFixtureClientMode
+        && searchParams.get("qaFutureImpact") === "1",
+    );
+    setShowQaForkContext(
+      qaFixtureClientMode
+        && searchParams.get("qaForkContext") === "1",
     );
   }, []);
 
@@ -909,11 +916,56 @@ export function RecipeDetailScreen({
     setIsPersonalEditorOpen(true);
   }, []);
 
+  const qaForkContext = useMemo(() => (
+    showQaForkContext
+      && recipe
+      && !recipe.edit_context
+      ? {
+          base_recipe_revision: recipe.revision,
+          draft: {
+            title: recipe.title,
+            description: recipe.description,
+            base_servings: recipe.base_servings,
+            ingredients: recipe.ingredients.map((ingredient) => ({
+              ingredient_id: ingredient.ingredient_id,
+              amount: ingredient.amount,
+              unit: ingredient.unit,
+              ingredient_type: ingredient.ingredient_type,
+              display_text: ingredient.display_text,
+              component_label: ingredient.component_label ?? null,
+              scalable: ingredient.scalable,
+              food_product_id: null,
+              food_product_nutrition_version_id: null,
+            })),
+            steps: recipe.steps.map((step) => ({
+              step_number: step.step_number,
+              instruction: step.instruction,
+              cooking_method_id: step.cooking_method?.id ?? "00000000-0000-4000-8000-000000000000",
+              cooking_method_ids: step.cooking_methods?.map((method) => method.id)
+                ?? (step.cooking_method ? [step.cooking_method.id] : []),
+              ingredients_used: step.ingredients_used.map((ingredient) => ({
+                ingredient_id: ingredient.ingredient_id,
+                amount: ingredient.amount,
+                unit: ingredient.unit,
+                cut_size: ingredient.cut_size ?? null,
+              })),
+              component_label: step.component_label ?? null,
+              heat_level: step.heat_level,
+              duration_seconds: step.duration_seconds,
+              duration_text: step.duration_text,
+            })),
+          },
+          image_object_id: null,
+        }
+      : null
+  ), [recipe, showQaForkContext]);
+
   const openPersonalForkEditor = useCallback(() => {
     personalEditorOpenerRef.current = document.activeElement instanceof HTMLElement
       ? document.activeElement
       : null;
-    if (!initialForkContext || recipeSnapshotUiMode !== "snapshot_v2") {
+    const forkContext = initialForkContext ?? qaForkContext;
+    if (!forkContext || (recipeSnapshotUiMode !== "snapshot_v2" && !showQaForkContext)) {
       setFeedback({
         message: "레시피를 다시 불러온 뒤 내 레시피로 수정을 시작해 주세요.",
         tone: "error",
@@ -925,7 +977,7 @@ export function RecipeDetailScreen({
     setPersonalEditResumeContext(null);
     setPersonalEditResumeAction(null);
     setIsPersonalEditorOpen(true);
-  }, [initialForkContext, recipeSnapshotUiMode]);
+  }, [initialForkContext, qaForkContext, recipeSnapshotUiMode, showQaForkContext]);
 
   const handlePersonalForkAction = useCallback((payload: { requiresLogin: boolean }) => {
     if (payload.requiresLogin) {
@@ -1060,7 +1112,8 @@ export function RecipeDetailScreen({
       : null
   ), [recipe?.edit_context, recipeSnapshotUiMode]);
   const activePersonalEditContext = serverProjectedPersonalEditContext ?? qaFutureImpactEditContext;
-  const personalRecipeCapabilityEnabled = recipeSnapshotUiMode === "snapshot_v2" || showQaFutureImpact;
+  const personalRecipeCapabilityEnabled =
+    recipeSnapshotUiMode === "snapshot_v2" || showQaFutureImpact || showQaForkContext;
   const personalRecipeAccessState = !personalRecipeCapabilityEnabled
     ? "unknown"
     : activePersonalEditContext && isAuthenticated
@@ -1105,7 +1158,7 @@ export function RecipeDetailScreen({
     }
 
     if (pendingAction.type === "recipe-fork") {
-      if (recipeSnapshotUiMode === "snapshot_v2" && initialForkContext) {
+      if ((recipeSnapshotUiMode === "snapshot_v2" || showQaForkContext) && (initialForkContext ?? qaForkContext)) {
         personalEditorOpenerRef.current = null;
         setPersonalEditorMode("fork");
         setPersonalEditResumeContext(null);
@@ -1148,9 +1201,11 @@ export function RecipeDetailScreen({
     openPlannerAddSheet,
     openSaveModal,
     initialForkContext,
+    qaForkContext,
     recipe,
     recipeId,
     recipeSnapshotUiMode,
+    showQaForkContext,
     activePersonalEditContext,
     serverProjectedPersonalEditContext,
   ]);
@@ -1289,7 +1344,7 @@ export function RecipeDetailScreen({
           image_object_id: activePersonalEditContext.imageObjectId,
         }
       : null
-    : initialForkContext ?? null;
+    : initialForkContext ?? qaForkContext ?? null;
 
   return (
     <>

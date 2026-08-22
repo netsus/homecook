@@ -128,11 +128,11 @@ describe("recipe detail personal actions", () => {
       "utf8",
     );
 
-    expect(
-      source.match(/new URLSearchParams\(window\.location\.search\)\.get\("qaFutureImpact"\) === "1"/gu),
-    ).toHaveLength(1);
+    expect(source).toContain("const searchParams = new URLSearchParams(window.location.search);");
     expect(source.match(/isQaFixtureClientModeEnabled\(\)/gu)?.length ?? 0).toBeGreaterThanOrEqual(1);
-    expect(source).toContain('new URLSearchParams(window.location.search).get("qaFutureImpact") === "1"');
+    expect(source).toContain('searchParams.get("qaFutureImpact") === "1"');
+    expect(source).toContain('searchParams.get("qaForkContext") === "1"');
+    expect(source).toContain("const qaForkContext = useMemo(() => (");
   });
 
   it("wires owner delete through a dedicated confirm dialog and stable request flow", () => {
