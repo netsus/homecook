@@ -575,7 +575,7 @@ test.describe("personal-recipe-customization-write-core", () => {
       });
     });
 
-    await page.goto(`${RECIPE_PATH}?qaForkContext=1`);
+    await page.goto(`${RECIPE_PATH}?qaFutureImpact=1`);
     await page.getByRole("button", { name: "내 레시피로 수정" }).click();
     const title = await page.getByRole("textbox", { name: "레시피 제목" });
     await title.fill("공개 김치찌개에서 만든 내 레시피");
@@ -786,7 +786,7 @@ test.describe("personal-recipe-customization-write-core", () => {
     ]);
     expect(createBodies[0]).toMatchObject({
       origin_recipe_id: RECIPE_ID,
-      base_recipe_revision: 12,
+      base_recipe_revision: 13,
       image_object_id: null,
     });
     expect((createBodies[0] as Record<string, unknown>).operation).toBeUndefined();

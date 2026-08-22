@@ -816,6 +816,17 @@ describe("recipe detail screen", () => {
     window.history.pushState({}, "", `/recipe/${MOCK_RECIPE_DETAIL.id}?qaFutureImpact=1`);
     fetchJson.mockResolvedValue(buildRecipeDetail({
       revision: 12,
+      edit_context: {
+        base_recipe_revision: 12,
+        draft: {
+          title: "QA owner recipe",
+          description: null,
+          base_servings: 2,
+          ingredients: [],
+          steps: [],
+        },
+        image_object_id: null,
+      },
     }));
 
     render(
@@ -1074,7 +1085,7 @@ describe("recipe detail screen", () => {
 
   it("keeps the public fork editor behind the explicit QA query boundary when server fork context is absent", async () => {
     process.env.NEXT_PUBLIC_HOMECOOK_ENABLE_QA_FIXTURES = "1";
-    window.history.pushState({}, "", `/recipe/${MOCK_RECIPE_DETAIL.id}?qaForkContext=1`);
+    window.history.pushState({}, "", `/recipe/${MOCK_RECIPE_DETAIL.id}?qaFutureImpact=1`);
     fetchJson.mockResolvedValue(buildRecipeDetail({ edit_context: undefined }));
 
     render(

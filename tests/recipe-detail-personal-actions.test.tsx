@@ -131,7 +131,7 @@ describe("recipe detail personal actions", () => {
     expect(source).toContain("const searchParams = new URLSearchParams(window.location.search);");
     expect(source.match(/isQaFixtureClientModeEnabled\(\)/gu)?.length ?? 0).toBeGreaterThanOrEqual(1);
     expect(source).toContain('searchParams.get("qaFutureImpact") === "1"');
-    expect(source).toContain('searchParams.get("qaForkContext") === "1"');
+    expect(source).toContain('searchParams.get("qaFutureImpact") === "1"');
     expect(source).toContain("const qaForkContext = useMemo(() => (");
   });
 

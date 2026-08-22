@@ -609,12 +609,15 @@ export function collectPersonalRecipeEditorSourceEvidence(repositoryRoot) {
         /const\s+personalRecipeCapabilityEnabled\s*=\s*recipeSnapshotUiMode\s*===\s*"snapshot_v2"\s*\|\|\s*showQaFutureImpact;/gu.test(
           detailSource,
         )
-        && /isQaFixtureClientModeEnabled\(\)[\s\S]*new\s+URLSearchParams\(window\.location\.search\)\.get\("qaFutureImpact"\)\s*===\s*"1"/gu.test(
+        && /const\s+searchParams\s*=\s*new\s+URLSearchParams\(window\.location\.search\);[\s\S]*const\s+qaFixtureClientMode\s*=\s*isQaFixtureClientModeEnabled\(\);[\s\S]*setShowQaFutureImpact\(\s*qaFixtureClientMode\s*&&\s*searchParams\.get\("qaFutureImpact"\)\s*===\s*"1"/gu.test(
           detailSource,
         )
       )
     )
-    && /const\s+activePersonalEditorContext\s*=\s*personalEditorMode\s*===\s*"edit"[\s\S]*:\s*initialForkContext\s*\?\?\s*null;/gu.test(
+    && /const\s+qaForkContext\s*=\s*useMemo\([\s\S]*showQaFutureImpact[\s\S]*!recipe\.edit_context/gu.test(
+      detailSource,
+    )
+    && /const\s+activePersonalEditorContext\s*=\s*personalEditorMode\s*===\s*"edit"[\s\S]*:\s*initialForkContext\s*\?\?\s*qaForkContext\s*\?\?\s*null;/gu.test(
       detailSource,
     );
   const projectedCapabilityOffOccurrenceCount =
