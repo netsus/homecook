@@ -89,7 +89,7 @@ describe("cooked batch API v1.2.36 Contract Evolution", () => {
   it("preserves the API v1.2.36 contract after a later official API version is promoted", () => {
     const source = read("docs/sync/CURRENT_SOURCE_OF_TRUTH.md");
 
-    expect(source).toContain("`docs/api문서-v1.2.39.md`");
+    expect(source).toContain("`docs/api문서-v1.2.40.md`");
     expect(source).toContain("| API v1.2.36 | 공통 owner-only `CookedBatchProjection`");
     expect(source).toContain("Cooked Batch Weight Ledger Contract-Evolution `2026-08-08`");
     expect(source).toContain("요구사항 `v1.7.29` · 화면 `v1.5.33` · Flow `v1.3.31` · DB `v1.3.31`");

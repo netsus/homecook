@@ -9,6 +9,17 @@ function read(relativePath: string) {
   return readFileSync(join(rootDir, relativePath), "utf8");
 }
 
+function extractCurrentEndpointTable(apiDoc: string) {
+  const start = apiDoc.indexOf("## 엔드포인트 전체 목록");
+  expect(start).toBeGreaterThanOrEqual(0);
+
+  const headingText = apiDoc.slice(start);
+  const totalMatch = headingText.match(/\n> \*\*v1\.2\.\d+ 총계\*\*/);
+  expect(totalMatch?.index).toBeGreaterThanOrEqual(0);
+
+  return headingText.slice(0, totalMatch?.index);
+}
+
 describe("legacy auth API contract cleanup", () => {
   it("removes the legacy auth login/profile route handlers from the public API surface", () => {
     expect(existsSync(join(rootDir, "app/api/v1/auth/login/route.ts"))).toBe(false);
@@ -21,10 +32,8 @@ describe("legacy auth API contract cleanup", () => {
     expect(apiDocMatch?.[1]).toBeTruthy();
 
     const apiDocPath = apiDocMatch?.[1] ?? "";
-    const apiVersion = apiDocPath.match(/v[0-9]+(?:\.[0-9]+)*/)?.[0] ?? "";
     const apiDoc = read(apiDocPath);
-    const endpointList = apiDoc.slice(apiDoc.indexOf("## 엔드포인트 전체 목록"));
-    const endpointTable = endpointList.split(`\n> **${apiVersion} 총계**`)[0];
+    const endpointTable = extractCurrentEndpointTable(apiDoc);
 
     expect(endpointTable).not.toContain("/auth/login");
     expect(endpointTable).not.toContain("/auth/profile");

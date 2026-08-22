@@ -23,11 +23,11 @@ describe("Supabase local-only operations contract", () => {
 
     expect(agents).toContain("docs/engineering/supabase-local-only-operations.md");
     expect(sourceOfTruth).toContain("docs/engineering/supabase-local-only-operations.md");
-    expect(sourceOfTruth).toContain("docs/요구사항기준선-v1.7.32.md");
-    expect(sourceOfTruth).toContain("docs/화면정의서-v1.5.36.md");
-    expect(sourceOfTruth).toContain("docs/유저flow맵-v1.3.34.md");
-    expect(sourceOfTruth).toContain("docs/db설계-v1.3.34.md");
-    expect(sourceOfTruth).toContain("docs/api문서-v1.2.39.md");
+    expect(sourceOfTruth).toContain("docs/요구사항기준선-v1.7.33.md");
+    expect(sourceOfTruth).toContain("docs/화면정의서-v1.5.37.md");
+    expect(sourceOfTruth).toContain("docs/유저flow맵-v1.3.35.md");
+    expect(sourceOfTruth).toContain("docs/db설계-v1.3.35.md");
+    expect(sourceOfTruth).toContain("docs/api문서-v1.2.40.md");
     expect(canonical).toContain("Remote forbidden matrix");
     expect(canonical).toContain("PR #1346 blocker disposition");
     expect(canonical).toContain("Required local gate acceptance");
