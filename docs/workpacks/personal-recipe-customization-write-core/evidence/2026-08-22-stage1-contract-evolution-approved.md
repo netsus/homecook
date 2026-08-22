@@ -15,9 +15,9 @@
   - `docs/db설계-v1.3.35.md`
   - `docs/api문서-v1.2.40.md`
 - Line counts:
-  - requirements `1557`
+  - requirements `1556`
   - screens `2092`
-  - flow `2301`
+  - flow `2300`
   - DB `3277`
   - API `5577`
 - SHA-256:
