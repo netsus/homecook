@@ -700,8 +700,8 @@ function shoppingCreateSql(options: {
       ${authArgs()},
       '${owner}'::uuid,
       '${options.title}',
-      current_date,
-      current_date + 14,
+      date '2026-08-02',
+      date '2026-08-02' + 14,
       false,
       array[${mealArray}],
       '[]'::jsonb,
@@ -1034,8 +1034,8 @@ describeIf("recipe content snapshot future propagation PostgreSQL", () => {
         id, user_id, title, date_range_start, date_range_end,
         is_completed, completed_at
       ) values
-        ('${incompleteShopping}', '${owner}', '미완료', current_date, current_date + 14, false, null),
-        ('${completedShopping}', '${owner}', '완료 기록', current_date - 14, current_date - 1, true, now());
+        ('${incompleteShopping}', '${owner}', '미완료', date '2026-08-02', date '2026-08-02' + 14, false, null),
+        ('${completedShopping}', '${owner}', '완료 기록', date '2026-08-02' - 14, date '2026-08-02' - 1, true, now());
       insert into public.shopping_list_recipes (
         shopping_list_id, recipe_id, shopping_servings, planned_servings_total
       ) values
@@ -1067,17 +1067,17 @@ describeIf("recipe content snapshot future propagation PostgreSQL", () => {
         id, user_id, recipe_id, plan_date, column_id, planned_servings, status,
         shopping_list_id
       ) values
-        ('${eligibleMeal}', '${owner}', '${recipeId}', current_date + 5, '${plannerColumn}', 2, 'registered', '${incompleteShopping}'),
-        ('${secondEligibleMeal}', '${owner}', '${recipeId}', current_date + 6, '${plannerColumn}', 2, 'registered', null),
-        ('${pastMeal}', '${owner}', '${recipeId}', current_date - 5, '${plannerColumn}', 2, 'registered', '${completedShopping}'),
-        ('${cookedMeal}', '${owner}', '${recipeId}', current_date + 7, '${plannerColumn}', 2, 'registered', '${completedShopping}'),
-        ('${cancelMeal}', '${owner}', '${recipeId}', current_date + 8, '${plannerColumn}', 2, 'registered', null),
-        ('${concurrentMeal}', '${owner}', '${recipeId}', current_date + 9, '${plannerColumn}', 2, 'registered', null),
-        ('${replayMeal}', '${owner}', '${recipeId}', current_date + 10, '${plannerColumn}', 2, 'registered', null),
-        ('${multiRecipeMealA}', '${owner}', '${recipeId}', current_date + 11, '${plannerColumn}', 2, 'registered', null),
-        ('${multiRecipeMealB}', '${owner}', '${recipeId}', current_date + 12, '${plannerColumn}', 2, 'registered', null),
-        ('${multiRecipeMealC}', '${owner}', '${secondRecipeId}', current_date + 11, '${plannerColumn}', 2, 'registered', null),
-        ('${multiRecipeMealD}', '${owner}', '${secondRecipeId}', current_date + 12, '${plannerColumn}', 2, 'registered', null);
+        ('${eligibleMeal}', '${owner}', '${recipeId}', date '2026-08-02' + 5, '${plannerColumn}', 2, 'registered', '${incompleteShopping}'),
+        ('${secondEligibleMeal}', '${owner}', '${recipeId}', date '2026-08-02' + 6, '${plannerColumn}', 2, 'registered', null),
+        ('${pastMeal}', '${owner}', '${recipeId}', date '2026-08-02' - 5, '${plannerColumn}', 2, 'registered', '${completedShopping}'),
+        ('${cookedMeal}', '${owner}', '${recipeId}', date '2026-08-02' + 7, '${plannerColumn}', 2, 'registered', '${completedShopping}'),
+        ('${cancelMeal}', '${owner}', '${recipeId}', date '2026-08-02' + 8, '${plannerColumn}', 2, 'registered', null),
+        ('${concurrentMeal}', '${owner}', '${recipeId}', date '2026-08-02' + 9, '${plannerColumn}', 2, 'registered', null),
+        ('${replayMeal}', '${owner}', '${recipeId}', date '2026-08-02' + 10, '${plannerColumn}', 2, 'registered', null),
+        ('${multiRecipeMealA}', '${owner}', '${recipeId}', date '2026-08-02' + 11, '${plannerColumn}', 2, 'registered', null),
+        ('${multiRecipeMealB}', '${owner}', '${recipeId}', date '2026-08-02' + 12, '${plannerColumn}', 2, 'registered', null),
+        ('${multiRecipeMealC}', '${owner}', '${secondRecipeId}', date '2026-08-02' + 11, '${plannerColumn}', 2, 'registered', null),
+        ('${multiRecipeMealD}', '${owner}', '${secondRecipeId}', date '2026-08-02' + 12, '${plannerColumn}', 2, 'registered', null);
       update public.meals set status = 'shopping_done' where id = '${cookedMeal}';
       update public.meals set status = 'cook_done', cooked_at = now()
       where id = '${cookedMeal}';
@@ -1872,7 +1872,7 @@ describeIf("recipe content snapshot future propagation PostgreSQL", () => {
         '93000000-0000-4000-8000-000000000012',
         '${owner}',
         '${recipeId}',
-        current_date + 13,
+        date '2026-08-02' + 13,
         2,
         'registered',
         null
