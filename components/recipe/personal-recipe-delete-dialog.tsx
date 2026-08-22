@@ -44,6 +44,7 @@ export function PersonalRecipeDeleteDialog({
   return (
     <AppConfirmDialog
       ariaLabelledBy="personal-recipe-delete-dialog-title"
+      backdropLayerClassName="z-[120]"
       closeButtonRef={closeButtonRef}
       closeDisabled={submitting}
       footer={

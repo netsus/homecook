@@ -172,6 +172,7 @@ describe("recipe detail personal actions", () => {
 
     expect(dialogSource).toContain("AppConfirmDialog");
     expect(dialogSource).toContain("AppModalFooterActions");
+    expect(dialogSource).toContain('backdropLayerClassName="z-[120]"');
     expect(dialogSource).toContain("useDialogBoundary");
     expect(dialogSource).toContain("정말 레시피를 삭제할까요?");
     expect(dialogSource).toContain("기존 계획, 요리, 기록은 그대로 남아요.");
