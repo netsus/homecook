@@ -59,6 +59,22 @@
 | retained closeout docs/handoff | role-separated | author / reviewer / security / design / Stage 6 evidence preserved |
 | time accounting | unresolved | no actor interval or dispatch timing retained |
 
+## Role Separation Provenance
+
+Task paths below are orchestration provenance only. The repo-retained closeout docs and handoff logs are the canonical human-readable evidence surface for the workpack.
+
+| Role | Codex task path | Evidence role |
+| --- | --- | --- |
+| report author | `/root/wp6_omo_report_author` | wrote the original OMO report projection |
+| report repair author | `/root/wp6_omo_report_repair` | removed unsupported time estimate and added time accounting |
+| independent report reviewer | `/root/wp6_omo_report_review` | held the unresolved review findings |
+| CI fixture rereviewer | `/root/wp6_ci_fixture_rereview` | approved the independent rerereview |
+| Stage 5 | `/root/wp6_stage5_rereview` | Stage 5 review provenance |
+| final security | `/root/wp6_final_security_review` | final security authority provenance |
+| final design authority | `/root/wp6_final_design_rereview_v2` | final design authority provenance |
+| Stage 6 | `/root/wp6_stage6_replacement` | final Stage 6 approval provenance |
+| internal6.5 | `/root/wp6_internal65_drift_review` | drift review provenance |
+
 ## Time Accounting
 
 - Quantitative wall-clock minute total은 보고하지 않는다.
@@ -94,4 +110,4 @@
 
 - 이 보고서는 backfilled estimate가 아니다. 시간은 `N/A/unresolved`로 남기고, exact SHA/check/run facts만 보존한다.
 - `human_escalation=0`과 `manual_decision_required=0`은 이번 보고서 작성 및 검증 과정에서 새 인간 판단이 필요하지 않았다는 뜻이다. 작업 전체의 Manual/activation pending 상태를 없앤다는 뜻은 아니다.
-- role-separated author/reviewer/security/design/Stage 6 evidence는 retained closeout docs와 handoff 로그에 남아 있고, 각 Codex task ID가 provenance boundary다. 이 보고서는 그 projection만 요약한다.
+- role-separated author/reviewer/security/design/Stage 6 evidence는 위 Role Separation Provenance 표의 Codex task path로 구분된다. retained closeout docs와 handoff 로그는 repo evidence boundary다. 이 보고서는 그 projection만 요약한다.
