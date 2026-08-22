@@ -6,7 +6,8 @@ export type PendingRecipeActionType =
   | "planner"
   | "recipe-fork"
   | "recipe-delete"
-  | "recipe-edit-save";
+  | "recipe-edit-save"
+  | "recipe-save-as-new";
 
 interface PendingRecipeActionBase {
   recipeId: string;
@@ -16,7 +17,7 @@ interface PendingRecipeActionBase {
 
 export type PendingRecipeAction = PendingRecipeActionBase & (
   | { type: "like" | "save" | "planner" | "recipe-fork" | "recipe-delete" }
-  | { type: "recipe-edit-save"; editContext: RecipeEditContext }
+  | { type: "recipe-edit-save" | "recipe-save-as-new"; editContext: RecipeEditContext }
 );
 
 export const PENDING_ACTION_KEY = "homecook.pending-recipe-action";
@@ -160,7 +161,7 @@ export function parsePendingAction(raw: string) {
     }
 
     if (
-      value.type === "recipe-edit-save"
+      (value.type === "recipe-edit-save" || value.type === "recipe-save-as-new")
       && typeof value.recipeId === "string"
       && typeof value.redirectTo === "string"
       && Number.isFinite(value.createdAt)

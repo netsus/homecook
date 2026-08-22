@@ -601,8 +601,18 @@ export function collectPersonalRecipeEditorSourceEvidence(repositoryRoot) {
   const literalCapabilityOffOccurrenceCount =
     detailSource.match(/capabilityEnabled=\{false\}/gu)?.length ?? 0;
   const hasServerProjectedPersonalCapabilityBoundary =
-    /const\s+personalRecipeCapabilityEnabled\s*=\s*recipeSnapshotUiMode\s*===\s*"snapshot_v2";/gu.test(
-      detailSource,
+    (
+      /const\s+personalRecipeCapabilityEnabled\s*=\s*recipeSnapshotUiMode\s*===\s*"snapshot_v2";/gu.test(
+        detailSource,
+      )
+      || (
+        /const\s+personalRecipeCapabilityEnabled\s*=\s*recipeSnapshotUiMode\s*===\s*"snapshot_v2"\s*\|\|\s*showQaFutureImpact;/gu.test(
+          detailSource,
+        )
+        && /isQaFixtureClientModeEnabled\(\)[\s\S]*new\s+URLSearchParams\(window\.location\.search\)\.get\("qaFutureImpact"\)\s*===\s*"1"/gu.test(
+          detailSource,
+        )
+      )
     )
     && /const\s+activePersonalEditorContext\s*=\s*personalEditorMode\s*===\s*"edit"[\s\S]*:\s*initialForkContext\s*\?\?\s*null;/gu.test(
       detailSource,

@@ -138,6 +138,31 @@ describe("pending action", () => {
     expect(readPendingAction()).toEqual(action);
   });
 
+  it("preserves an exact owner draft for the derived save-as-new return flow", () => {
+    const editContext = {
+      base_recipe_revision: 12,
+      draft: {
+        title: "세션 만료 전 새 레시피 김치찌개",
+        description: null,
+        base_servings: 2,
+        ingredients: [],
+        steps: [],
+      },
+      image_object_id: "550e8400-e29b-41d4-a716-446655440099",
+    };
+    const action = {
+      type: "recipe-save-as-new" as const,
+      recipeId: "recipe-1",
+      redirectTo: "/recipe/recipe-1",
+      createdAt: 123,
+      editContext,
+    };
+
+    savePendingAction(action);
+
+    expect(readPendingAction()).toEqual(action);
+  });
+
   it("rejects a malformed owner edit return context", () => {
     window.localStorage.setItem(PENDING_ACTION_KEY, JSON.stringify({
       type: "recipe-edit-save",

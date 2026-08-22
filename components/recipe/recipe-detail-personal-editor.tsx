@@ -25,6 +25,7 @@ interface RecipeDetailPersonalEditorProps {
   onSaved: (result: { id: string; revision: number }) => void;
   recipeId: string;
   returnFocusRef?: React.RefObject<HTMLElement | null>;
+  resumeAction?: "same-id-save" | "save-as-new" | null;
   resumeContext?: RecipeEditContext | null;
 }
 
@@ -90,6 +91,7 @@ export function RecipeDetailPersonalEditor({
   onSaved,
   recipeId,
   returnFocusRef,
+  resumeAction = null,
   resumeContext = null,
 }: RecipeDetailPersonalEditorProps) {
   const initialDraft = useMemo(
@@ -105,6 +107,7 @@ export function RecipeDetailPersonalEditor({
   const openAuthGate = useAuthGateStore((state) => state.open);
   const authGateOpen = useAuthGateStore((state) => state.isOpen);
   const saveContext = resumeContext ?? editContext;
+  const resumeSaveAsNew = mode === "edit" && resumeAction === "save-as-new";
   const initialShellDraft = useMemo(
     () => toEditorShellDraft(initialDraft, editContext.image_object_id),
     [editContext.image_object_id, initialDraft],
@@ -136,7 +139,7 @@ export function RecipeDetailPersonalEditor({
   useEffect(() => {
     createKeyRef.current = null;
     setCreateDerivedRecipeError(null);
-  }, [draft, mode, recipeId, saveContext.base_recipe_revision, saveContext.image_object_id]);
+  }, [draft, mode, recipeId, resumeAction, saveContext.base_recipe_revision, saveContext.image_object_id]);
 
   useLayoutEffect(() => {
     const explicitReturnTarget = returnFocusRef?.current ?? null;
@@ -196,7 +199,7 @@ export function RecipeDetailPersonalEditor({
             image_object_id: saveContext.image_object_id,
           },
           recipeId,
-          type: "recipe-edit-save",
+          type: "recipe-save-as-new",
         });
         return;
       }
@@ -348,25 +351,27 @@ export function RecipeDetailPersonalEditor({
 
             {mode === "edit" ? (
               <div className="space-y-3">
-                <RecipeFutureImpactSaveFlow
-                  actionDisabled={!hasChanges || draft.title.trim() === ""}
-                  baseRecipeRevision={saveContext.base_recipe_revision}
-                  draft={draft}
-                  enabled
-                  imageObjectId={saveContext.image_object_id}
-                  onDialogOpenChange={setImpactDialogOpen}
-                  onSaved={(result) => {
-                    onClose();
-                    onSaved(result);
-                  }}
-                  onUnauthorized={(pendingEditContext) => openAuthGate({
-                    editContext: pendingEditContext,
-                    recipeId,
-                    type: "recipe-edit-save",
-                  })}
-                  recipeId={recipeId}
-                  resumePreview={Boolean(resumeContext)}
-                />
+                {!resumeSaveAsNew ? (
+                  <RecipeFutureImpactSaveFlow
+                    actionDisabled={!hasChanges || draft.title.trim() === ""}
+                    baseRecipeRevision={saveContext.base_recipe_revision}
+                    draft={draft}
+                    enabled
+                    imageObjectId={saveContext.image_object_id}
+                    onDialogOpenChange={setImpactDialogOpen}
+                    onSaved={(result) => {
+                      onClose();
+                      onSaved(result);
+                    }}
+                    onUnauthorized={(pendingEditContext) => openAuthGate({
+                      editContext: pendingEditContext,
+                      recipeId,
+                      type: "recipe-edit-save",
+                    })}
+                    recipeId={recipeId}
+                    resumePreview={resumeAction === "same-id-save" && Boolean(resumeContext)}
+                  />
+                ) : null}
                 <button
                   className="min-h-11 w-full rounded-[var(--radius-control)] border border-[var(--line-strong)] px-4 font-bold text-[var(--foreground)] disabled:cursor-not-allowed disabled:opacity-50"
                   disabled={isCreatingDerivedRecipe || draft.title.trim() === ""}

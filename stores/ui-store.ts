@@ -9,8 +9,8 @@ import type {
 import type { RecipeEditContext } from "@/types/recipe";
 
 type AuthGateOpenPayload =
-  | { recipeId: string; type: Exclude<PendingRecipeActionType, "recipe-edit-save"> }
-  | { editContext: RecipeEditContext; recipeId: string; type: "recipe-edit-save" };
+  | { recipeId: string; type: Exclude<PendingRecipeActionType, "recipe-edit-save" | "recipe-save-as-new"> }
+  | { editContext: RecipeEditContext; recipeId: string; type: "recipe-edit-save" | "recipe-save-as-new" };
 
 interface AuthGateState {
   isOpen: boolean;
@@ -28,7 +28,9 @@ export const useAuthGateStore = create<AuthGateState>((set) => ({
       redirectTo: `/recipe/${payload.recipeId}`,
       createdAt: Date.now(),
     };
-    const action: PendingRecipeAction = payload.type === "recipe-edit-save"
+    const action: PendingRecipeAction = (
+      payload.type === "recipe-edit-save" || payload.type === "recipe-save-as-new"
+    )
       ? { ...common, type: payload.type, editContext: payload.editContext }
       : { ...common, type: payload.type };
     set({ isOpen: true, action });

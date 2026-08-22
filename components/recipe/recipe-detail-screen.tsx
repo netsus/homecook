@@ -209,6 +209,7 @@ export function RecipeDetailScreen({
   const [isPersonalEditorOpen, setIsPersonalEditorOpen] = useState(false);
   const [personalEditorMode, setPersonalEditorMode] = useState<"edit" | "fork">("edit");
   const [personalEditResumeContext, setPersonalEditResumeContext] = useState<RecipeEditContext | null>(null);
+  const [personalEditResumeAction, setPersonalEditResumeAction] = useState<"same-id-save" | "save-as-new" | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isDeletingPersonalRecipe, setIsDeletingPersonalRecipe] = useState(false);
   const [deletePersonalRecipeError, setDeletePersonalRecipeError] = useState<string | null>(null);
@@ -904,6 +905,7 @@ export function RecipeDetailScreen({
       : null;
     setPersonalEditorMode("edit");
     setPersonalEditResumeContext(null);
+    setPersonalEditResumeAction(null);
     setIsPersonalEditorOpen(true);
   }, []);
 
@@ -921,6 +923,7 @@ export function RecipeDetailScreen({
 
     setPersonalEditorMode("fork");
     setPersonalEditResumeContext(null);
+    setPersonalEditResumeAction(null);
     setIsPersonalEditorOpen(true);
   }, [initialForkContext, recipeSnapshotUiMode]);
 
@@ -1006,6 +1009,66 @@ export function RecipeDetailScreen({
     showDeletedRecipeFallback,
   ]);
 
+  const qaFutureImpactEditContext = useMemo(() => (
+    recipe && showQaFutureImpact
+      ? {
+          baseRecipeRevision: 12,
+          draft: {
+            title: recipe.title,
+            description: recipe.description,
+            base_servings: recipe.base_servings,
+            ingredients: recipe.ingredients.map((ingredient) => ({
+              ingredient_id: ingredient.ingredient_id,
+              amount: ingredient.amount,
+              unit: ingredient.unit,
+              ingredient_type: ingredient.ingredient_type,
+              display_text: ingredient.display_text,
+              component_label: ingredient.component_label ?? null,
+              scalable: ingredient.scalable,
+              food_product_id: null,
+              food_product_nutrition_version_id: null,
+            })),
+            steps: recipe.steps.map((step) => ({
+              step_number: step.step_number,
+              instruction: step.instruction,
+              cooking_method_id: step.cooking_method?.id ?? "00000000-0000-4000-8000-000000000000",
+              cooking_method_ids: step.cooking_methods?.map((method) => method.id)
+                ?? (step.cooking_method ? [step.cooking_method.id] : []),
+              ingredients_used: step.ingredients_used.map((ingredient) => ({
+                ingredient_id: ingredient.ingredient_id,
+                amount: ingredient.amount,
+                unit: ingredient.unit,
+                cut_size: ingredient.cut_size ?? null,
+              })),
+              component_label: step.component_label ?? null,
+              heat_level: step.heat_level,
+              duration_seconds: step.duration_seconds,
+              duration_text: step.duration_text,
+            })),
+          },
+          imageObjectId: null,
+        }
+      : null
+  ), [recipe, showQaFutureImpact]);
+  const serverProjectedPersonalEditContext = useMemo(() => (
+    recipeSnapshotUiMode === "snapshot_v2" && recipe?.edit_context
+      ? {
+          baseRecipeRevision: recipe.edit_context.base_recipe_revision,
+          draft: recipe.edit_context.draft,
+          imageObjectId: recipe.edit_context.image_object_id,
+        }
+      : null
+  ), [recipe?.edit_context, recipeSnapshotUiMode]);
+  const activePersonalEditContext = serverProjectedPersonalEditContext ?? qaFutureImpactEditContext;
+  const personalRecipeCapabilityEnabled = recipeSnapshotUiMode === "snapshot_v2" || showQaFutureImpact;
+  const personalRecipeAccessState = !personalRecipeCapabilityEnabled
+    ? "unknown"
+    : activePersonalEditContext && isAuthenticated
+      ? "owner-private"
+      : activePersonalEditContext
+        ? "unknown"
+        : "public";
+
   useEffect(() => {
     if (!isAuthenticated) {
       return;
@@ -1020,10 +1083,22 @@ export function RecipeDetailScreen({
     clearPendingAction();
 
     if (pendingAction.type === "recipe-edit-save") {
-      if (recipeSnapshotUiMode === "snapshot_v2" && recipe.edit_context) {
+      if (serverProjectedPersonalEditContext) {
         personalEditorOpenerRef.current = null;
         setPersonalEditorMode("edit");
         setPersonalEditResumeContext(pendingAction.editContext);
+        setPersonalEditResumeAction("same-id-save");
+        setIsPersonalEditorOpen(true);
+      }
+      return;
+    }
+
+    if (pendingAction.type === "recipe-save-as-new") {
+      if (activePersonalEditContext) {
+        personalEditorOpenerRef.current = null;
+        setPersonalEditorMode("edit");
+        setPersonalEditResumeContext(pendingAction.editContext);
+        setPersonalEditResumeAction("save-as-new");
         setIsPersonalEditorOpen(true);
       }
       return;
@@ -1034,6 +1109,7 @@ export function RecipeDetailScreen({
         personalEditorOpenerRef.current = null;
         setPersonalEditorMode("fork");
         setPersonalEditResumeContext(null);
+        setPersonalEditResumeAction(null);
         setIsPersonalEditorOpen(true);
       }
       return;
@@ -1075,6 +1151,8 @@ export function RecipeDetailScreen({
     recipe,
     recipeId,
     recipeSnapshotUiMode,
+    activePersonalEditContext,
+    serverProjectedPersonalEditContext,
   ]);
 
   const handleShare = async () => {
@@ -1203,58 +1281,6 @@ export function RecipeDetailScreen({
   const shouldRenderWebView = isDesktopViewport;
   const shouldRenderAppView = !isDesktopViewport;
   const shouldRenderLegacyWebView = false;
-  const activePersonalEditContext = recipeSnapshotUiMode === "snapshot_v2"
-    && recipe.edit_context
-    ? {
-        baseRecipeRevision: recipe.edit_context.base_recipe_revision,
-        draft: recipe.edit_context.draft,
-        imageObjectId: recipe.edit_context.image_object_id,
-      }
-    : showQaFutureImpact ? {
-    baseRecipeRevision: 12,
-    draft: {
-      title: recipe.title,
-      description: recipe.description,
-      base_servings: recipe.base_servings,
-      ingredients: recipe.ingredients.map((ingredient) => ({
-        ingredient_id: ingredient.ingredient_id,
-        amount: ingredient.amount,
-        unit: ingredient.unit,
-        ingredient_type: ingredient.ingredient_type,
-        display_text: ingredient.display_text,
-        component_label: ingredient.component_label ?? null,
-        scalable: ingredient.scalable,
-        food_product_id: null,
-        food_product_nutrition_version_id: null,
-      })),
-      steps: recipe.steps.map((step) => ({
-        step_number: step.step_number,
-        instruction: step.instruction,
-        cooking_method_id: step.cooking_method?.id ?? "00000000-0000-4000-8000-000000000000",
-        cooking_method_ids: step.cooking_methods?.map((method) => method.id)
-          ?? (step.cooking_method ? [step.cooking_method.id] : []),
-        ingredients_used: step.ingredients_used.map((ingredient) => ({
-          ingredient_id: ingredient.ingredient_id,
-          amount: ingredient.amount,
-          unit: ingredient.unit,
-          cut_size: ingredient.cut_size ?? null,
-        })),
-        component_label: step.component_label ?? null,
-        heat_level: step.heat_level,
-        duration_seconds: step.duration_seconds,
-        duration_text: step.duration_text,
-      })),
-    },
-    imageObjectId: null,
-      } : undefined;
-  const personalRecipeAccessState = recipeSnapshotUiMode !== "snapshot_v2"
-    ? "unknown"
-    : activePersonalEditContext && isAuthenticated
-      ? "owner-private"
-      : activePersonalEditContext
-        ? "unknown"
-        : "public";
-  const personalRecipeCapabilityEnabled = recipeSnapshotUiMode === "snapshot_v2";
   const activePersonalEditorContext = personalEditorMode === "edit"
     ? activePersonalEditContext
       ? {
@@ -2113,10 +2139,12 @@ export function RecipeDetailScreen({
           onClose={() => {
             setIsPersonalEditorOpen(false);
             setPersonalEditResumeContext(null);
+            setPersonalEditResumeAction(null);
           }}
           onSaved={(result) => {
             setIsPersonalEditorOpen(false);
             setPersonalEditResumeContext(null);
+            setPersonalEditResumeAction(null);
             if (result.id !== recipeId) {
               router.push(`/recipe/${result.id}`);
               return;
@@ -2125,6 +2153,7 @@ export function RecipeDetailScreen({
           }}
           recipeId={recipeId}
           returnFocusRef={personalEditorOpenerRef}
+          resumeAction={personalEditorMode === "edit" ? personalEditResumeAction : null}
           resumeContext={personalEditorMode === "edit" ? personalEditResumeContext : null}
         />
       ) : null}

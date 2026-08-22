@@ -430,7 +430,7 @@ test.describe("personal-recipe-customization-write-core", () => {
     page,
   }) => {
     const updatedTitle = "같은 ID로 저장된 김치찌개";
-    const recipe = cloneRecipeDetail();
+    const recipe = cloneOwnerRecipeDetail();
     const previewPayloadRef: { current: FutureImpactPreviewRequest | null } = {
       current: null,
     };

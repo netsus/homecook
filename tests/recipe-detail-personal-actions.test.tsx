@@ -101,20 +101,38 @@ describe("recipe detail personal actions", () => {
   });
 
   it("gates the actual owner editor on the server-projected edit context", () => {
+    const screenSource = readFileSync(
+      join(process.cwd(), "components/recipe/recipe-detail-screen.tsx"),
+      "utf8",
+    );
+    const editorSource = readFileSync(
+      join(process.cwd(), "components/recipe/recipe-detail-personal-editor.tsx"),
+      "utf8",
+    );
+
+    expect(screenSource).toContain("<RecipeDetailPersonalActions");
+    expect(screenSource).toContain("capabilityEnabled={personalRecipeCapabilityEnabled}");
+    expect(screenSource).toContain("accessState={personalRecipeAccessState}");
+    expect(screenSource).toContain("type: \"recipe-fork\"");
+    expect(screenSource).toContain("setPersonalEditorMode(\"fork\")");
+    expect(screenSource).toContain("<RecipeDetailPersonalEditor");
+    expect(screenSource).toContain("isPersonalEditorOpen && activePersonalEditorContext");
+    expect(screenSource).toContain("mode={personalEditorMode}");
+    expect(screenSource).toContain("createSnapshotV2CookingSession");
+    expect(editorSource).toContain("type: \"recipe-save-as-new\"");
+  });
+
+  it("keeps the QA future-impact fallback behind an explicit query plus client fixture gate", () => {
     const source = readFileSync(
       join(process.cwd(), "components/recipe/recipe-detail-screen.tsx"),
       "utf8",
     );
 
-    expect(source).toContain("<RecipeDetailPersonalActions");
-    expect(source).toContain("capabilityEnabled={personalRecipeCapabilityEnabled}");
-    expect(source).toContain("accessState={personalRecipeAccessState}");
-    expect(source).toContain("type: \"recipe-fork\"");
-    expect(source).toContain("setPersonalEditorMode(\"fork\")");
-    expect(source).toContain("<RecipeDetailPersonalEditor");
-    expect(source).toContain("isPersonalEditorOpen && activePersonalEditorContext");
-    expect(source).toContain("mode={personalEditorMode}");
-    expect(source).toContain("createSnapshotV2CookingSession");
+    expect(
+      source.match(/new URLSearchParams\(window\.location\.search\)\.get\("qaFutureImpact"\) === "1"/gu),
+    ).toHaveLength(1);
+    expect(source.match(/isQaFixtureClientModeEnabled\(\)/gu)?.length ?? 0).toBeGreaterThanOrEqual(1);
+    expect(source).toContain('new URLSearchParams(window.location.search).get("qaFutureImpact") === "1"');
   });
 
   it("wires owner delete through a dedicated confirm dialog and stable request flow", () => {
