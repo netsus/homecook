@@ -20,6 +20,24 @@ async function capture(page: Page, width: 390 | 320, name: string) {
   expect(overflow).toBe(false);
 }
 
+async function installOwnerRecipeDetailRoutes(page: Page) {
+  await installRecipeDetailRoutes(page, {
+    recipeDetail: {
+      edit_context: {
+        base_recipe_revision: 1,
+        draft: {
+          title: "김치찌개",
+          description: null,
+          base_servings: 2,
+          ingredients: [],
+          steps: [],
+        },
+        image_object_id: null,
+      },
+    },
+  });
+}
+
 async function openImpactFromEditedOwnerRecipe(page: Page, title: string) {
   await page.getByRole("button", { name: "편집" }).click();
   const titleInput = page.getByRole("textbox", { name: "레시피 제목" });
@@ -39,7 +57,7 @@ test.describe("recipe-content-snapshot-future-propagation", () => {
 
   test("captures impact dialog at 390px and 320px", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
-    await installRecipeDetailRoutes(page);
+    await installOwnerRecipeDetailRoutes(page);
     await page.route("**/api/v1/recipes/*/future-plan-impact", async (route) => route.fulfill({ json: { success: true, data: { impact_token: "qa-impact-token", expires_at: "2026-08-04T01:00:00.000Z", proposed_content_hash: "a".repeat(64), future_meal_count: 3, date_range: { from: "2026-08-04", to: "2026-08-10" }, incomplete_shopping_list_count: 2, completed_shopping_list_count: 1, active_cooking_claim_count: 1, replace_all_allowed: false }, error: null } }));
     await page.goto(`${RECIPE_PATH}?qaFutureImpact=1`);
     const opener = await openImpactFromEditedOwnerRecipe(page, "내 매콤 김치찌개");
@@ -67,7 +85,7 @@ test.describe("recipe-content-snapshot-future-propagation", () => {
   test("isolates the owner editor focus and background at 390px and 320px", async ({ page }) => {
     for (const width of [390, 320] as const) {
       await page.setViewportSize({ width, height: width === 390 ? 844 : 568 });
-      await installRecipeDetailRoutes(page);
+      await installOwnerRecipeDetailRoutes(page);
       await page.goto(`${RECIPE_PATH}?qaFutureImpact=1&editorWidth=${width}`);
       const backgroundCook = page.getByRole("button", { name: "요리하기" });
       const backgroundCookHandle = await backgroundCook.elementHandle();
@@ -86,10 +104,15 @@ test.describe("recipe-content-snapshot-future-propagation", () => {
       const title = editor.getByRole("textbox", { name: "레시피 제목" });
       await title.fill(`초점 격리 김치찌개 ${width}`);
       const save = editor.getByRole("button", { name: "변경사항 저장" });
+      const saveAsNew = editor.getByRole("button", { name: "새 레시피로 저장" });
       const close = editor.getByRole("button", { name: "편집 닫기" });
       await save.focus();
       await page.keyboard.press("Tab");
+      await expect(saveAsNew).toBeFocused();
+      await page.keyboard.press("Tab");
       await expect(close).toBeFocused();
+      await page.keyboard.press("Shift+Tab");
+      await expect(saveAsNew).toBeFocused();
       await page.keyboard.press("Shift+Tab");
       await expect(save).toBeFocused();
 
@@ -104,7 +127,7 @@ test.describe("recipe-content-snapshot-future-propagation", () => {
 
   test("keeps stale saves open and moves focus to the exact recheck action", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
-    await installRecipeDetailRoutes(page);
+    await installOwnerRecipeDetailRoutes(page);
     await page.route("**/api/v1/recipes/*/future-plan-impact", async (route) => route.fulfill({ json: { success: true, data: { impact_token: "qa-impact-token", expires_at: "2026-08-04T01:00:00.000Z", proposed_content_hash: "a".repeat(64), future_meal_count: 1, date_range: { from: "2026-08-04", to: "2026-08-04" }, incomplete_shopping_list_count: 1, completed_shopping_list_count: 1, active_cooking_claim_count: 0, replace_all_allowed: true }, error: null } }));
     await page.route("**/api/v1/recipes/*", async (route) => {
       if (route.request().method() !== "PATCH") return route.fallback();
@@ -121,7 +144,7 @@ test.describe("recipe-content-snapshot-future-propagation", () => {
 
   test("routes an expired impact preview to login while keeping the edited draft", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
-    await installRecipeDetailRoutes(page);
+    await installOwnerRecipeDetailRoutes(page);
     await page.route("**/api/v1/recipes/*/future-plan-impact", async (route) => route.fulfill({
       status: 401,
       json: {

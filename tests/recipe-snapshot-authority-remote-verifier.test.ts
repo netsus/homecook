@@ -295,6 +295,37 @@ describe("recipe snapshot authority remote verifier", () => {
     );
   });
 
+  it("selects the cooked-batch active-session trigger inventory only when requested", async () => {
+    const verifier = await import(
+      "../scripts/lib/recipe-snapshot-authority-remote-verifier.mjs"
+    );
+    const baselinePlan = verifier.buildRecipeSnapshotAuthorityRemoteVerificationPlan({
+      mode: "post-merge-read-only",
+      includeRecipeFuturePropagation: true,
+    });
+    const cookedBatchPlan = verifier.buildRecipeSnapshotAuthorityRemoteVerificationPlan({
+      mode: "post-merge-read-only",
+      includeRecipeFuturePropagation: true,
+      includeCookedBatchWeightLedger: true,
+    });
+
+    expect(baselinePlan.sql).toContain(
+      "public.validate_cooking_session_snapshot_v2_association()",
+    );
+    expect(baselinePlan.sql).not.toContain(
+      "private.validate_active_cooking_session_snapshot_v2_association()",
+    );
+    expect(cookedBatchPlan.sql).toContain(
+      "private.validate_active_cooking_session_snapshot_v2_association()",
+    );
+    expect(cookedBatchPlan.sql).not.toContain(
+      "('public.cooking_sessions', 'validate_cooking_session_snapshot_v2_on_session', 'public.validate_cooking_session_snapshot_v2_association()'",
+    );
+    expect(cookedBatchPlan.sql).not.toContain(
+      "('public.cooking_session_meals', 'validate_cooking_session_snapshot_v2_on_session_meal', 'public.validate_cooking_session_snapshot_v2_association()'",
+    );
+  });
+
   it("detects unexpected owned inventory instead of checking only missing rows", async () => {
     const verifier = await import(
       "../scripts/lib/recipe-snapshot-authority-remote-verifier.mjs"

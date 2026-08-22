@@ -38,6 +38,16 @@ import {
   type RecipeNutritionServiceClient,
 } from "@/lib/server/recipe-nutrition-service";
 import {
+  buildSessionAuthorityRpcArgs,
+  calculateRecipeDraftNutrition,
+  callFuturePropagationRpc,
+  projectRecipePatchData,
+  readRequiredIdempotencyKey,
+  RecipeDraftNutritionValidationError,
+  type FuturePropagationRpcClient,
+  type RecipeDraftNutritionClient,
+} from "@/lib/server/recipe-content-snapshot-future-propagation";
+import {
   createHybridAuthorityRouteError,
   withHybridAuthorityRouteError,
 } from "@/lib/server/hybrid-auth/route-error";
@@ -51,13 +61,16 @@ import {
   readRecipeCardUserStatuses,
   type RecipeCardUserStatusDbClient,
 } from "@/lib/server/recipe-card-user-status";
-import { createRouteHandlerClient } from "@/lib/supabase/server";
+import {
+  createRecipeFuturePropagationInternalClient,
+  createRouteHandlerClient,
+} from "@/lib/supabase/server";
 import type {
-  ManualRecipeCreateBody,
   ManualRecipeCreateData,
   ManualRecipeIngredientInput,
   ManualRecipeStepInput,
   RecipeCardItem,
+  RecipeEditDraft,
   RecipeListData,
   RecipeListQuery,
   RecipeSortKey,
@@ -239,8 +252,34 @@ interface ParsedManualRecipeCreate {
   reviewedTags: string[] | null;
 }
 
+interface ParsedDerivedRecipeCreate {
+  originRecipeId: string;
+  baseRecipeRevision: number;
+  draft: RecipeEditDraft;
+  imageObjectId: string | null;
+}
+
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const INITIAL_IMAGE_CLEANUP_GENERATION = 0;
+const LEGACY_CREATE_KEYS = [
+  "title",
+  "base_servings",
+  "thumbnail_url",
+  "tags",
+  "ingredients",
+  "steps",
+] as const;
+const DERIVED_CREATE_KEYS = [
+  "origin_recipe_id",
+  "base_recipe_revision",
+  "draft",
+  "image_object_id",
+] as const;
+const DERIVED_CREATE_MODE_KEYS = [
+  "origin_recipe_id",
+  "base_recipe_revision",
+  "draft",
+] as const;
 
 function isServiceOwnedRecipeImageUrl(value: string) {
   const configuredUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
@@ -286,6 +325,15 @@ function isUuid(value: string) {
 
 function isPositiveInteger(value: unknown) {
   return typeof value === "number" && Number.isInteger(value) && value > 0;
+}
+
+function isNonNegativeInteger(value: unknown) {
+  return typeof value === "number" && Number.isInteger(value) && value >= 0;
+}
+
+function hasOnlyKeys(value: Record<string, unknown>, allowed: readonly string[]) {
+  const allowedKeys = new Set(allowed);
+  return Object.keys(value).every((key) => allowedKeys.has(key));
 }
 
 function normalizeNullableString(value: unknown) {
@@ -570,6 +618,490 @@ function parseManualRecipeCreateBody(rawBody: unknown) {
   return { fields, parsed };
 }
 
+function normalizeDraftStepIngredientsUsed(
+  value: unknown,
+  stepField: string,
+  ingredientIds: Set<string>,
+  fields: ValidationField[],
+) {
+  if (!Array.isArray(value)) {
+    fields.push({ field: stepField, reason: "invalid_array" });
+    return [];
+  }
+
+  return value.map((item, index) => {
+    const fieldBase = `${stepField}[${index}]`;
+    if (!isRecord(item)) {
+      fields.push({ field: fieldBase, reason: "invalid_object" });
+      return {
+        ingredient_id: "",
+        amount: null,
+        unit: null,
+        cut_size: null,
+      };
+    }
+
+    if (!hasOnlyKeys(item, ["ingredient_id", "amount", "unit", "cut_size"])) {
+      fields.push({ field: fieldBase, reason: "unknown_field" });
+    }
+
+    const ingredientId =
+      typeof item.ingredient_id === "string" ? item.ingredient_id.trim() : "";
+    if (!ingredientId) {
+      fields.push({ field: `${fieldBase}.ingredient_id`, reason: "required" });
+    } else if (!isUuid(ingredientId)) {
+      fields.push({ field: `${fieldBase}.ingredient_id`, reason: "invalid_uuid" });
+    } else if (!ingredientIds.has(ingredientId)) {
+      fields.push({
+        field: `${fieldBase}.ingredient_id`,
+        reason: "not_in_recipe_ingredients",
+      });
+    }
+
+    const amount =
+      typeof item.amount === "number" && Number.isFinite(item.amount)
+        ? item.amount
+        : item.amount === null || item.amount === undefined
+          ? null
+          : Number.NaN;
+    if (amount !== null && (!(typeof amount === "number") || amount <= 0)) {
+      fields.push({ field: `${fieldBase}.amount`, reason: "positive_number_required" });
+    }
+
+    const unit = normalizeNullableString(item.unit);
+    if (item.unit !== undefined && item.unit !== null && unit === null) {
+      fields.push({ field: `${fieldBase}.unit`, reason: "invalid_string" });
+    }
+
+    const cutSize = normalizeNullableString(item.cut_size);
+    if (item.cut_size !== undefined && item.cut_size !== null && cutSize === null) {
+      fields.push({ field: `${fieldBase}.cut_size`, reason: "invalid_string" });
+    }
+
+    return {
+      ingredient_id: ingredientId,
+      amount: Number.isNaN(amount) ? null : amount,
+      unit,
+      cut_size: cutSize,
+    };
+  });
+}
+
+function parseStrictRecipeEditDraft(
+  value: unknown,
+  fields: ValidationField[],
+): RecipeEditDraft | null {
+  if (!isRecord(value)) {
+    fields.push({ field: "draft", reason: "invalid_draft" });
+    return null;
+  }
+
+  if (
+    !hasOnlyKeys(value, [
+      "title",
+      "description",
+      "base_servings",
+      "ingredients",
+      "steps",
+    ])
+  ) {
+    fields.push({ field: "draft", reason: "unknown_field" });
+  }
+
+  const title = typeof value.title === "string" ? value.title.trim() : "";
+  if (!title) {
+    fields.push({ field: "draft.title", reason: "required" });
+  } else if (title.length > 200) {
+    fields.push({ field: "draft.title", reason: "max_length" });
+  }
+
+  const description = normalizeNullableString(value.description);
+  if (value.description !== undefined && value.description !== null && description === null) {
+    fields.push({ field: "draft.description", reason: "invalid_string" });
+  }
+
+  if (!isPositiveInteger(value.base_servings)) {
+    fields.push({ field: "draft.base_servings", reason: "positive_integer_required" });
+  }
+
+  if (!Array.isArray(value.ingredients) || value.ingredients.length === 0) {
+    fields.push({ field: "draft.ingredients", reason: "required" });
+  }
+
+  const ingredientIds = new Set<string>();
+  const draftIngredients = Array.isArray(value.ingredients)
+    ? value.ingredients.map((item, index) => {
+        const fieldBase = `draft.ingredients[${index}]`;
+        if (!isRecord(item)) {
+          fields.push({ field: fieldBase, reason: "invalid_object" });
+          return {
+            ingredient_id: "",
+            amount: null,
+            unit: null,
+            ingredient_type: "QUANT" as const,
+            display_text: null,
+            component_label: null,
+            scalable: true,
+            food_product_id: null,
+            food_product_nutrition_version_id: null,
+          };
+        }
+
+        if (
+          !hasOnlyKeys(item, [
+            "ingredient_id",
+            "amount",
+            "unit",
+            "ingredient_type",
+            "display_text",
+            "component_label",
+            "scalable",
+            "food_product_id",
+            "food_product_nutrition_version_id",
+          ])
+        ) {
+          fields.push({ field: fieldBase, reason: "unknown_field" });
+        }
+
+        const ingredientId =
+          typeof item.ingredient_id === "string" ? item.ingredient_id.trim() : "";
+        if (!ingredientId) {
+          fields.push({ field: `${fieldBase}.ingredient_id`, reason: "required" });
+        } else if (!isUuid(ingredientId)) {
+          fields.push({ field: `${fieldBase}.ingredient_id`, reason: "invalid_uuid" });
+        } else if (ingredientIds.has(ingredientId)) {
+          fields.push({ field: `${fieldBase}.ingredient_id`, reason: "duplicate" });
+        } else {
+          ingredientIds.add(ingredientId);
+        }
+
+        const ingredientType = item.ingredient_type;
+        if (ingredientType !== "QUANT" && ingredientType !== "TO_TASTE") {
+          fields.push({ field: `${fieldBase}.ingredient_type`, reason: "invalid_enum" });
+        }
+
+        const amount =
+          typeof item.amount === "number" && Number.isFinite(item.amount)
+            ? item.amount
+            : item.amount === null || item.amount === undefined
+              ? null
+              : Number.NaN;
+        const unit = normalizeNullableString(item.unit);
+        if (item.unit !== undefined && item.unit !== null && unit === null) {
+          fields.push({ field: `${fieldBase}.unit`, reason: "invalid_string" });
+        }
+
+        if (ingredientType === "QUANT") {
+          if (amount === null || Number.isNaN(amount) || amount <= 0) {
+            fields.push({ field: `${fieldBase}.amount`, reason: "positive_number_required" });
+          }
+          if (!unit) {
+            fields.push({ field: `${fieldBase}.unit`, reason: "required" });
+          }
+        } else if (ingredientType === "TO_TASTE") {
+          if (amount !== null) {
+            fields.push({ field: `${fieldBase}.amount`, reason: "must_be_null" });
+          }
+          if (unit !== null) {
+            fields.push({ field: `${fieldBase}.unit`, reason: "must_be_null" });
+          }
+        }
+
+        const displayText = normalizeNullableString(item.display_text);
+        if (
+          item.display_text !== undefined
+          && item.display_text !== null
+          && displayText === null
+        ) {
+          fields.push({ field: `${fieldBase}.display_text`, reason: "invalid_string" });
+        }
+
+        const componentLabel = normalizeNullableString(item.component_label);
+        if (
+          item.component_label !== undefined
+          && item.component_label !== null
+          && componentLabel === null
+        ) {
+          fields.push({ field: `${fieldBase}.component_label`, reason: "invalid_string" });
+        }
+
+        if (typeof item.scalable !== "boolean") {
+          fields.push({ field: `${fieldBase}.scalable`, reason: "required_boolean" });
+        } else if (ingredientType === "TO_TASTE" && item.scalable !== false) {
+          fields.push({ field: `${fieldBase}.scalable`, reason: "must_be_false" });
+        }
+
+        const foodProductId = normalizeNullableString(item.food_product_id);
+        const foodProductVersionId = normalizeNullableString(
+          item.food_product_nutrition_version_id,
+        );
+        if (foodProductId !== null && !isUuid(foodProductId)) {
+          fields.push({ field: `${fieldBase}.food_product_id`, reason: "invalid_uuid" });
+        }
+        if (foodProductVersionId !== null && !isUuid(foodProductVersionId)) {
+          fields.push({
+            field: `${fieldBase}.food_product_nutrition_version_id`,
+            reason: "invalid_uuid",
+          });
+        }
+        if ((foodProductId === null) !== (foodProductVersionId === null)) {
+          fields.push({
+            field: `${fieldBase}.food_product_nutrition_version_id`,
+            reason: "paired_uuid_required",
+          });
+        }
+
+        const normalizedIngredientType: RecipeEditDraft["ingredients"][number]["ingredient_type"] =
+          ingredientType === "TO_TASTE" ? "TO_TASTE" : "QUANT";
+
+        return {
+          ingredient_id: ingredientId,
+          amount: Number.isNaN(amount) ? null : amount,
+          unit,
+          ingredient_type: normalizedIngredientType,
+          display_text: displayText,
+          component_label: componentLabel,
+          scalable: typeof item.scalable === "boolean" ? item.scalable : true,
+          food_product_id: foodProductId,
+          food_product_nutrition_version_id: foodProductVersionId,
+        };
+      })
+    : [];
+
+  if (!Array.isArray(value.steps) || value.steps.length === 0) {
+    fields.push({ field: "draft.steps", reason: "required" });
+  }
+
+  const stepNumbers = new Set<number>();
+  const draftSteps = Array.isArray(value.steps)
+    ? value.steps.map((item, index) => {
+        const fieldBase = `draft.steps[${index}]`;
+        if (!isRecord(item)) {
+          fields.push({ field: fieldBase, reason: "invalid_object" });
+          return {
+            step_number: Number.NaN,
+            instruction: "",
+            cooking_method_id: "",
+            cooking_method_ids: [],
+            ingredients_used: [],
+            component_label: null,
+            heat_level: null,
+            duration_seconds: null,
+            duration_text: null,
+          };
+        }
+
+        if (
+          !hasOnlyKeys(item, [
+            "step_number",
+            "instruction",
+            "cooking_method_id",
+            "cooking_method_ids",
+            "ingredients_used",
+            "component_label",
+            "heat_level",
+            "duration_seconds",
+            "duration_text",
+          ])
+        ) {
+          fields.push({ field: fieldBase, reason: "unknown_field" });
+        }
+
+        const stepNumber = item.step_number;
+        if (!isPositiveInteger(stepNumber)) {
+          fields.push({ field: `${fieldBase}.step_number`, reason: "positive_integer_required" });
+        } else if (stepNumbers.has(Number(stepNumber))) {
+          fields.push({ field: `${fieldBase}.step_number`, reason: "duplicate" });
+        } else {
+          stepNumbers.add(Number(stepNumber));
+        }
+
+        const instruction =
+          typeof item.instruction === "string" ? item.instruction.trim() : "";
+        if (!instruction) {
+          fields.push({ field: `${fieldBase}.instruction`, reason: "required" });
+        }
+
+        const cookingMethodId =
+          typeof item.cooking_method_id === "string"
+            ? item.cooking_method_id.trim()
+            : "";
+        if (!cookingMethodId) {
+          fields.push({ field: `${fieldBase}.cooking_method_id`, reason: "required" });
+        } else if (!isUuid(cookingMethodId)) {
+          fields.push({ field: `${fieldBase}.cooking_method_id`, reason: "invalid_uuid" });
+        }
+
+        let cookingMethodIds: string[] = [];
+        if (!Array.isArray(item.cooking_method_ids) || item.cooking_method_ids.length === 0) {
+          fields.push({ field: `${fieldBase}.cooking_method_ids`, reason: "required" });
+        } else {
+          cookingMethodIds = item.cooking_method_ids.map((value, methodIndex) => {
+            const normalized = typeof value === "string" ? value.trim() : "";
+            if (!normalized || !isUuid(normalized)) {
+              fields.push({
+                field: `${fieldBase}.cooking_method_ids[${methodIndex}]`,
+                reason: "invalid_uuid",
+              });
+            }
+            return normalized;
+          });
+          if (new Set(cookingMethodIds).size !== cookingMethodIds.length) {
+            fields.push({ field: `${fieldBase}.cooking_method_ids`, reason: "duplicate" });
+          }
+          if (cookingMethodId && !cookingMethodIds.includes(cookingMethodId)) {
+            fields.push({
+              field: `${fieldBase}.cooking_method_ids`,
+              reason: "must_include_primary",
+            });
+          }
+        }
+
+        const ingredientsUsed = normalizeDraftStepIngredientsUsed(
+          item.ingredients_used,
+          `${fieldBase}.ingredients_used`,
+          ingredientIds,
+          fields,
+        );
+
+        const componentLabel = normalizeNullableString(item.component_label);
+        if (
+          item.component_label !== undefined
+          && item.component_label !== null
+          && componentLabel === null
+        ) {
+          fields.push({ field: `${fieldBase}.component_label`, reason: "invalid_string" });
+        }
+
+        const heatLevel = normalizeNullableString(item.heat_level);
+        if (
+          item.heat_level !== undefined
+          && item.heat_level !== null
+          && heatLevel === null
+        ) {
+          fields.push({ field: `${fieldBase}.heat_level`, reason: "invalid_string" });
+        }
+
+        const durationSeconds = item.duration_seconds;
+        if (
+          durationSeconds !== null
+          && durationSeconds !== undefined
+          && !isNonNegativeInteger(durationSeconds)
+        ) {
+          fields.push({
+            field: `${fieldBase}.duration_seconds`,
+            reason: "non_negative_integer_required",
+          });
+        }
+
+        const durationText = normalizeNullableString(item.duration_text);
+        if (
+          item.duration_text !== undefined
+          && item.duration_text !== null
+          && durationText === null
+        ) {
+          fields.push({ field: `${fieldBase}.duration_text`, reason: "invalid_string" });
+        }
+
+        return {
+          step_number: typeof stepNumber === "number" ? stepNumber : Number.NaN,
+          instruction,
+          cooking_method_id: cookingMethodId,
+          cooking_method_ids: cookingMethodIds,
+          ingredients_used: ingredientsUsed,
+          component_label: componentLabel,
+          heat_level: heatLevel,
+          duration_seconds:
+            typeof durationSeconds === "number" && Number.isFinite(durationSeconds)
+              ? durationSeconds
+              : null,
+          duration_text: durationText,
+        };
+      })
+    : [];
+
+  if (draftSteps.length > 0 && !stepNumbers.has(1)) {
+    fields.push({ field: "draft.steps[0].step_number", reason: "must_start_at_1" });
+  }
+
+  if (fields.length > 0) {
+    return null;
+  }
+
+  return {
+    title,
+    description,
+    base_servings: value.base_servings as number,
+    ingredients: draftIngredients,
+    steps: draftSteps,
+  };
+}
+
+function parseDerivedRecipeCreateBody(rawBody: unknown) {
+  const fields: ValidationField[] = [];
+
+  if (!isRecord(rawBody)) {
+    return {
+      fields: [{ field: "body", reason: "invalid_object" }],
+      parsed: null,
+    };
+  }
+
+  const hasLegacyKeys = LEGACY_CREATE_KEYS.some((key) => key in rawBody);
+  const hasDerivedKeys = DERIVED_CREATE_MODE_KEYS.some((key) => key in rawBody);
+
+  if (hasLegacyKeys && hasDerivedKeys) {
+    return {
+      fields: [{ field: "body", reason: "mixed_create_modes" }],
+      parsed: null,
+    };
+  }
+
+  if (!hasOnlyKeys(rawBody, DERIVED_CREATE_KEYS)) {
+    fields.push({ field: "body", reason: "unknown_field" });
+  }
+
+  const originRecipeId =
+    typeof rawBody.origin_recipe_id === "string"
+      ? rawBody.origin_recipe_id.trim()
+      : "";
+  if (!originRecipeId) {
+    fields.push({ field: "origin_recipe_id", reason: "required" });
+  } else if (!isUuid(originRecipeId)) {
+    fields.push({ field: "origin_recipe_id", reason: "invalid_uuid" });
+  }
+
+  if (!isPositiveInteger(rawBody.base_recipe_revision)) {
+    fields.push({ field: "base_recipe_revision", reason: "invalid_integer" });
+  }
+
+  let imageObjectId: string | null = null;
+  if (rawBody.image_object_id !== undefined && rawBody.image_object_id !== null) {
+    if (
+      typeof rawBody.image_object_id === "string"
+      && isUuid(rawBody.image_object_id.trim())
+    ) {
+      imageObjectId = rawBody.image_object_id.trim();
+    } else {
+      fields.push({ field: "image_object_id", reason: "invalid_uuid" });
+    }
+  }
+
+  const draft = parseStrictRecipeEditDraft(rawBody.draft, fields);
+
+  return fields.length > 0 || !draft
+    ? { fields, parsed: null }
+    : {
+        fields,
+        parsed: {
+          originRecipeId,
+          baseRecipeRevision: rawBody.base_recipe_revision as number,
+          draft,
+          imageObjectId,
+        } satisfies ParsedDerivedRecipeCreate,
+      };
+}
+
 function toManualRecipeCreateData(row: ManualRecipeRow): ManualRecipeCreateData {
   return {
     id: row.id,
@@ -730,6 +1262,30 @@ function buildManualRecipeRpcPayload(
 async function requireUser(routeClient: Awaited<ReturnType<typeof createRouteHandlerClient>>) {
   const authResult = await routeClient.auth.getUser();
   return authResult.data.user;
+}
+
+async function readRecipeMutationAuthority(
+  routeClient: Awaited<ReturnType<typeof createRouteHandlerClient>>,
+  user: { created_at: string; id: string },
+) {
+  const verifiedSession = await readVerifiedAccountGenerationSession(
+    routeClient,
+    user,
+  );
+  if (
+    !verifiedSession.ok
+    || verifiedSession.sessionAuthority.ownerUuid !== user.id
+  ) {
+    return {
+      ok: false as const,
+      response: fail("ACCOUNT_SESSION_STALE", "세션을 다시 확인해 주세요.", 409),
+    };
+  }
+
+  return {
+    ok: true as const,
+    sessionAuthority: verifiedSession.sessionAuthority,
+  };
 }
 
 function createEmptyRecipeList(): RecipeListData {
@@ -1209,14 +1765,119 @@ async function postRecipe(request: Request) {
     return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
   }
 
-  let body: ManualRecipeCreateBody;
+  let body: unknown;
 
   try {
-    body = (await request.json()) as ManualRecipeCreateBody;
+    body = await request.json();
   } catch {
     return fail("VALIDATION_ERROR", "요청 본문을 확인해 주세요.", 422, [
       { field: "body", reason: "invalid_json" },
     ]);
+  }
+
+  const isDerivedCreate = isRecord(body)
+    && DERIVED_CREATE_MODE_KEYS.some((key) => key in body);
+  const dbClient = routeClient as unknown as
+    ManualRecipeDbClient & UserBootstrapDbClient & UserGrowthActivityDbClient;
+
+  if (isDerivedCreate) {
+    const { fields, parsed } = parseDerivedRecipeCreateBody(body);
+    if (!parsed) {
+      return fail("VALIDATION_ERROR", "요청 값을 확인해 주세요.", 422, fields);
+    }
+
+    const idempotency = readRequiredIdempotencyKey(request, "Idempotency-Key");
+    if (!idempotency.ok) {
+      return idempotency.response;
+    }
+
+    const authority = await readRecipeMutationAuthority(routeClient, user);
+    if (!authority.ok) {
+      return authority.response;
+    }
+
+    try {
+      await ensurePublicUserRow(dbClient, user);
+      await ensureUserBootstrapState(dbClient, user.id);
+    } catch (bootstrapError) {
+      return fail(
+        "INTERNAL_ERROR",
+        formatBootstrapErrorMessage(bootstrapError, "레시피를 등록하지 못했어요."),
+        500,
+      );
+    }
+
+    const serviceClient = createRecipeFuturePropagationInternalClient();
+    if (!serviceClient) {
+      return fail("INTERNAL_ERROR", "레시피를 등록하지 못했어요.", 500);
+    }
+
+    let nutrition;
+    try {
+      nutrition = await calculateRecipeDraftNutrition(
+        serviceClient as unknown as RecipeDraftNutritionClient,
+        {
+          recipeId: parsed.originRecipeId,
+          baseRecipeRevision: parsed.baseRecipeRevision,
+          draft: parsed.draft,
+        },
+      );
+    } catch (error) {
+      if (error instanceof RecipeDraftNutritionValidationError) {
+        return fail("VALIDATION_ERROR", "레시피 영양 입력을 확인해 주세요.", 422, [
+          { field: "draft.ingredients", reason: "invalid_nutrition_input" },
+        ]);
+      }
+      return fail("INTERNAL_ERROR", "레시피 영양 정보를 확인하지 못했어요.", 500);
+    }
+
+    const result = await callFuturePropagationRpc(
+      serviceClient as unknown as FuturePropagationRpcClient,
+      "write_personal_recipe_core",
+      {
+        ...buildSessionAuthorityRpcArgs(authority.sessionAuthority),
+        p_operation: "fork",
+        p_recipe_id: null,
+        p_source_recipe_id: parsed.originRecipeId,
+        p_base_recipe_revision: parsed.baseRecipeRevision,
+        p_draft: parsed.draft,
+        p_nutrition_snapshot: nutrition.nutritionSnapshot,
+        p_nutrition_predecessor_guard: nutrition.predecessorGuard,
+        p_tags: null,
+        p_image_object_id: parsed.imageObjectId,
+        p_expected_cleanup_generation: parsed.imageObjectId
+          ? INITIAL_IMAGE_CLEANUP_GENERATION
+          : null,
+        p_idempotency_key: idempotency.key,
+      },
+    );
+    if (!result.ok) {
+      return result.response;
+    }
+
+    const data = projectRecipePatchData(result.data);
+    if (!data) {
+      return fail("INTERNAL_ERROR", "레시피를 등록하지 못했어요.", 500);
+    }
+
+    try {
+      await recordUserGrowthActivityEvent(dbClient, {
+        userId: user.id,
+        activityType: "recipe_registered",
+        category: "recipe",
+        sourceKey: `recipe_registered:${data.id}`,
+        sourceTable: "recipes",
+        sourceId: data.id,
+        sourceMeta: {
+          source_type: "manual",
+          origin_recipe_id: parsed.originRecipeId,
+        },
+      });
+    } catch {
+      // Activity history is secondary; derived personal recipe creation remains authoritative.
+    }
+
+    return ok(data, { status: 201 });
   }
 
   const { fields, parsed } = parseManualRecipeCreateBody(body);
@@ -1231,8 +1892,6 @@ async function postRecipe(request: Request) {
         supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL ?? "",
       })
     : null;
-  const dbClient = routeClient as unknown as
-    ManualRecipeDbClient & UserBootstrapDbClient & UserGrowthActivityDbClient;
   const capability = await readAccountGenerationCapability(dbClient);
   if (!capability.ok) {
     return fail("INTERNAL_ERROR", "계정 상태를 확인하지 못했어요.", 500);

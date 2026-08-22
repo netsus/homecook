@@ -49,10 +49,10 @@ describe("recipe snapshot entrypoint security function inventory", () => {
       });
     }
     expect(validator).toContain(
-      "20260804100000_recipe_snapshot_entrypoint_projection.sql",
+      "20260822173000_recipe_snapshot_public_fork_context.sql",
     );
     expect(fullLocalInventory).toContain(
-      "20260804100000_recipe_snapshot_entrypoint_projection.sql",
+      "20260822173000_recipe_snapshot_public_fork_context.sql",
     );
   });
 });

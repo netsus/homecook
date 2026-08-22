@@ -1,6 +1,13 @@
 import type { RecipeEditContext } from "@/types/recipe";
 
-export type PendingRecipeActionType = "like" | "save" | "planner" | "recipe-edit-save";
+export type PendingRecipeActionType =
+  | "like"
+  | "save"
+  | "planner"
+  | "recipe-fork"
+  | "recipe-delete"
+  | "recipe-edit-save"
+  | "recipe-save-as-new";
 
 interface PendingRecipeActionBase {
   recipeId: string;
@@ -9,8 +16,8 @@ interface PendingRecipeActionBase {
 }
 
 export type PendingRecipeAction = PendingRecipeActionBase & (
-  | { type: "like" | "save" | "planner" }
-  | { type: "recipe-edit-save"; editContext: RecipeEditContext }
+  | { type: "like" | "save" | "planner" | "recipe-fork" | "recipe-delete" }
+  | { type: "recipe-edit-save" | "recipe-save-as-new"; editContext: RecipeEditContext }
 );
 
 export const PENDING_ACTION_KEY = "homecook.pending-recipe-action";
@@ -141,7 +148,11 @@ export function parsePendingAction(raw: string) {
     const value = JSON.parse(raw) as Partial<PendingRecipeAction>;
 
     if (
-      (value.type === "like" || value.type === "save" || value.type === "planner") &&
+      (value.type === "like"
+        || value.type === "save"
+        || value.type === "planner"
+        || value.type === "recipe-fork"
+        || value.type === "recipe-delete") &&
       typeof value.recipeId === "string" &&
       typeof value.redirectTo === "string" &&
       Number.isFinite(value.createdAt)
@@ -150,7 +161,7 @@ export function parsePendingAction(raw: string) {
     }
 
     if (
-      value.type === "recipe-edit-save"
+      (value.type === "recipe-edit-save" || value.type === "recipe-save-as-new")
       && typeof value.recipeId === "string"
       && typeof value.redirectTo === "string"
       && Number.isFinite(value.createdAt)

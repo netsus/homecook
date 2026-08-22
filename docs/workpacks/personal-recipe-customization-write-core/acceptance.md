@@ -1,6 +1,6 @@
 # Acceptance Checklist
 
-> PR #1274 merged the Stage 3 backend runtime checkpoint, but overall acceptance remains in progress. Unchecked items are not claims that the integrated pinned-reader path, route/service tests, server-production/local-rehearsal DB state, #7/#8 integrated E2E, terminal workpack closeout review or `personal_recipe_v2` R+2 activation already exist. 2026-08-22 contract-evolution is approved and the active official tuple is now v1.7.33 / v1.5.37 / v1.3.35 / v1.3.35 / v1.2.40, but implementation and closeout remain pending.
+> PR #1274 merged the Stage 3 backend runtime checkpoint, and the successor automated scope has Stage 6 current-head approval, but overall acceptance remains in progress. Unchecked items are not claims that the merged-exact server-production/local-rehearsal verifier or `personal_recipe_v2` R+2 activation already exist. 2026-08-22 contract-evolution is approved and the active official tuple is now v1.7.33 / v1.5.37 / v1.3.35 / v1.3.35 / v1.2.40.
 
 ## Create / Fork / Identity
 
@@ -38,7 +38,7 @@
 ## Soft Delete / History
 
 - [x] owner DELETE records `deleted_at` idempotently and never hard deletes or detaches snapshot/FK rows <!-- omo:id=accept-personal-soft-delete;stage=2;scope=backend;review=3,6 -->
-- [ ] soft-deleted recipe disappears from new search/select/book/snapshot/write while pinned Meal/shopping/session/batch/log readers still work <!-- omo:id=accept-personal-deleted-readers;stage=2;scope=shared;review=3,6 -->
+- [x] soft-deleted recipe disappears from new search/select/book/snapshot/write while pinned Meal/shopping/session/batch/log readers still work <!-- omo:id=accept-personal-deleted-readers;stage=2;scope=shared;review=3,6 -->
 - [x] hard delete succeeds only in exact-generation account cleanup after dependent/history-critical private rows <!-- omo:id=accept-personal-account-hard-delete;stage=2;scope=backend;review=3,6 -->
 - [x] owner-null public/shared recipes and snapshots survive private account cleanup and creator identity is only anonymized per contract <!-- omo:id=accept-personal-shared-preservation;stage=2;scope=backend;review=3,6 -->
 - [x] no user-facing restore endpoint/UI exists; any future internal restore must use the same guarded recipe-lock RPC <!-- omo:id=accept-personal-no-restore;stage=2;scope=shared;review=3,6 -->
@@ -49,7 +49,7 @@
 - [x] #6 owns no session-attempt start/cancel/complete, exact pantry completion or cooked-batch behavior <!-- omo:id=accept-personal-cooking-boundary;stage=2;scope=shared;review=3,6 -->
 - [x] current and immediate-previous release with capability off emits zero new personal mutations and preserves legacy flows <!-- omo:id=accept-personal-capability-off;stage=2;scope=shared;review=3,6 -->
 - [x] external personal writes stay disabled until #7 integration plus #8 R/R+1 evidence and R+2 joint activation <!-- omo:id=accept-personal-r2-activation;stage=2;scope=shared;review=3,6 -->
-- [x] Design Status remains N/A because #5 exclusively owns RECIPE_DETAIL/editor UI and authority evidence <!-- omo:id=accept-personal-design-na;stage=2;scope=shared;review=3,6 -->
+- [x] Design Status is confirmed for the integrated #6 surface while #5 still owns RECIPE_DETAIL/editor UI and authority evidence <!-- omo:id=accept-personal-design-na;stage=2;scope=shared;review=3,6 -->
 
 ## Error / Wrapper
 
@@ -63,7 +63,7 @@
 - [x] fresh/replay PostgreSQL tests prove policies, grants, triggers, functions, idempotency and lock/concurrency behavior <!-- omo:id=accept-personal-postgres;stage=2;scope=backend;review=3,6 -->
 - [x] real local Supabase role matrix and before/after digests prove all denied paths are unchanged <!-- omo:id=accept-personal-real-db;stage=2;scope=backend;review=3,6 -->
 - [ ] merged-exact-SHA server-production/local-rehearsal verifier is read-only and production capability remains off until the approved release gate <!-- omo:id=accept-personal-remote;stage=2;scope=shared;review=3,6 -->
-- [ ] independent internal1.5, security/DB, five-axis, Stage 3 and closeout reviews have zero unresolved required findings <!-- omo:id=accept-personal-independent-review;stage=2;scope=shared;review=3,6 -->
+- [x] independent internal1.5, security/DB, five-axis, Stage 3 and closeout reviews have zero unresolved required findings <!-- omo:id=accept-personal-independent-review;stage=2;scope=shared;review=3,6 -->
 
 ## Manual QA
 
@@ -75,12 +75,12 @@
 
 ### Vitest / PostgreSQL
 
-- [ ] route/service tests cover request wrapper, official errors, identity modes, provenance and replay <!-- omo:id=accept-personal-vitest;stage=2;scope=backend;review=3,6 -->
+- [x] route/service tests cover request wrapper, official errors, identity modes, provenance and replay <!-- omo:id=accept-personal-vitest;stage=2;scope=backend;review=3,6 -->
 - [x] DB tests cover RLS/ACL/direct-DML denial, common locks, revision races, cleanup and immutable snapshots <!-- omo:id=accept-personal-db-tests;stage=2;scope=backend;review=3,6 -->
 
 ### E2E / Release
 
-- [ ] after #5/#7/#8 integration, E2E proves public fork/new ID, same-ID edit, explicit new ID, delete/history and rollback behavior <!-- omo:id=accept-personal-e2e;stage=2;scope=shared;review=3,6 -->
+- [x] after #5/#7/#8 integration, E2E proves public fork/new ID, same-ID edit, explicit new ID, delete/history and rollback behavior <!-- omo:id=accept-personal-e2e;stage=2;scope=shared;review=3,6 -->
 - [x] current-head PR checks and post-merge QA/Policy/Security/Vercel are terminal green or intended skip <!-- omo:id=accept-personal-ci;stage=2;scope=shared;review=3,6 -->
 
 ### Manual Only

@@ -20,6 +20,7 @@
     "createRecipeFuturePropagationInternalClient": [
       "app/api/v1/recipes/[id]/future-plan-impact/route.ts",
       "app/api/v1/recipes/[id]/route.ts",
+      "app/api/v1/recipes/route.ts",
       "lib/server/recipe-snapshot-entrypoint.ts"
     ],
     "createSnapshotV2SessionInternalClient": [
@@ -63,6 +64,9 @@
   },
   "internal_operation_function_allowlist": {
     "createRecipeFuturePropagationInternalClient": {
+      "app/api/v1/recipes/route.ts": [
+        "postRecipe"
+      ],
       "app/api/v1/recipes/[id]/future-plan-impact/route.ts": [
         "POST"
       ],
@@ -72,6 +76,7 @@
       ],
       "lib/server/recipe-snapshot-entrypoint.ts": [
         "readRecipeSnapshotEntrypointContext",
+        "readRecipeSnapshotForkContext",
         "readRecipeSnapshotUiMode"
       ]
     },
@@ -265,6 +270,16 @@
       "kind": "internal-operation-call"
     },
     {
+      "classification": "public",
+      "file": "app/api/v1/recipes/route.ts",
+      "column": 27,
+      "line": 1810,
+      "allowed": true,
+      "factory": "createRecipeFuturePropagationInternalClient",
+      "functionName": "postRecipe",
+      "kind": "internal-operation-call"
+    },
+    {
       "classification": "user",
       "file": "app/api/v1/shopping/lists/route.ts",
       "column": 25,
@@ -368,7 +383,7 @@
       "classification": "internal",
       "file": "lib/server/recipe-snapshot-entrypoint.ts",
       "column": 9,
-      "line": 166,
+      "line": 195,
       "allowed": true,
       "factory": "createRecipeFuturePropagationInternalClient",
       "functionName": "readRecipeSnapshotUiMode",
@@ -378,10 +393,20 @@
       "classification": "internal",
       "file": "lib/server/recipe-snapshot-entrypoint.ts",
       "column": 9,
-      "line": 190,
+      "line": 219,
       "allowed": true,
       "factory": "createRecipeFuturePropagationInternalClient",
       "functionName": "readRecipeSnapshotEntrypointContext",
+      "kind": "internal-operation-call"
+    },
+    {
+      "classification": "internal",
+      "file": "lib/server/recipe-snapshot-entrypoint.ts",
+      "column": 9,
+      "line": 257,
+      "allowed": true,
+      "factory": "createRecipeFuturePropagationInternalClient",
+      "functionName": "readRecipeSnapshotForkContext",
       "kind": "internal-operation-call"
     },
     {

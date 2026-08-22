@@ -124,7 +124,7 @@ const ADDITIVE_SOURCES = [
     ),
     migrationPath: path.join(
       REPO_ROOT,
-      "supabase/migrations/20260802130000_personal_recipe_customization_write_core.sql",
+      "supabase/migrations/20260822170000_personal_recipe_customization_write_core_derived_create.sql",
     ),
   },
   {
@@ -140,6 +140,10 @@ const ADDITIVE_SOURCES = [
       path.join(
         REPO_ROOT,
         "supabase/migrations/20260804100000_recipe_snapshot_entrypoint_projection.sql",
+      ),
+      path.join(
+        REPO_ROOT,
+        "supabase/migrations/20260822173000_recipe_snapshot_public_fork_context.sql",
       ),
     ],
   },

@@ -1,12 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const createRouteHandlerClient = vi.fn();
+const createRecipeFuturePropagationInternalClient = vi.fn();
 const ensurePublicUserRow = vi.fn();
 const ensureUserBootstrapState = vi.fn();
 const recalculateRecipeNutritionSnapshot = vi.fn();
 const readAccountGenerationCapability = vi.fn();
 const readVerifiedAccountGenerationSession = vi.fn();
 const recordUserGrowthActivityEvent = vi.fn();
+const calculateRecipeDraftNutrition = vi.fn();
+const callFuturePropagationRpc = vi.fn();
 const formatBootstrapErrorMessage = vi.fn((error: unknown, fallbackMessage: string) => {
   if (error instanceof Error) {
     return `formatted: ${error.message}`;
@@ -16,6 +19,7 @@ const formatBootstrapErrorMessage = vi.fn((error: unknown, fallbackMessage: stri
 });
 
 vi.mock("@/lib/supabase/server", () => ({
+  createRecipeFuturePropagationInternalClient,
   createRouteHandlerClient,
 }));
 
@@ -44,6 +48,21 @@ vi.mock("@/lib/server/admin-events", () => ({
 vi.mock("@/lib/server/user-growth-activity", () => ({
   recordUserGrowthActivityEvent,
 }));
+
+vi.mock(
+  "@/lib/server/recipe-content-snapshot-future-propagation",
+  async (importOriginal) => {
+    const actual = await importOriginal<
+      typeof import("@/lib/server/recipe-content-snapshot-future-propagation")
+    >();
+
+    return {
+      ...actual,
+      calculateRecipeDraftNutrition,
+      callFuturePropagationRpc,
+    };
+  },
+);
 
 interface QueryResult<T> {
   data: T;
@@ -102,6 +121,45 @@ function buildValidBody() {
   };
 }
 
+function buildDerivedBody() {
+  return {
+    origin_recipe_id: "550e8400-e29b-41d4-a716-446655440999",
+    base_recipe_revision: 12,
+    draft: {
+      title: "공개 레시피 개인 저장본",
+      description: "내 입맛대로 수정",
+      base_servings: 2,
+      ingredients: [
+        {
+          ingredient_id: "550e8400-e29b-41d4-a716-446655440201",
+          amount: 1,
+          unit: "개",
+          ingredient_type: "QUANT",
+          display_text: "양파 1개",
+          component_label: null,
+          scalable: true,
+          food_product_id: null,
+          food_product_nutrition_version_id: null,
+        },
+      ],
+      steps: [
+        {
+          step_number: 1,
+          instruction: "볶아주세요.",
+          cooking_method_id: "550e8400-e29b-41d4-a716-446655440301",
+          cooking_method_ids: ["550e8400-e29b-41d4-a716-446655440301"],
+          ingredients_used: [],
+          component_label: null,
+          heat_level: "medium",
+          duration_seconds: 60,
+          duration_text: "1분",
+        },
+      ],
+    },
+    image_object_id: "550e8400-e29b-41d4-a716-446655440998",
+  };
+}
+
 async function importRecipesRoute() {
   return import("@/app/api/v1/recipes/route");
 }
@@ -110,12 +168,15 @@ describe("personal recipe editor endpoint contract boundaries", () => {
   beforeEach(() => {
     vi.resetModules();
     createRouteHandlerClient.mockReset();
+    createRecipeFuturePropagationInternalClient.mockReset();
     ensurePublicUserRow.mockReset();
     ensureUserBootstrapState.mockReset();
     recalculateRecipeNutritionSnapshot.mockReset();
     readAccountGenerationCapability.mockReset();
     readVerifiedAccountGenerationSession.mockReset();
     recordUserGrowthActivityEvent.mockReset();
+    calculateRecipeDraftNutrition.mockReset();
+    callFuturePropagationRpc.mockReset();
     formatBootstrapErrorMessage.mockClear();
 
     ensurePublicUserRow.mockResolvedValue({});
@@ -145,9 +206,20 @@ describe("personal recipe editor endpoint contract boundaries", () => {
       duplicate: false,
       error: null,
     });
+    calculateRecipeDraftNutrition.mockResolvedValue({
+      nutritionSnapshot: { calculation_version: "v1" },
+      predecessorGuard: { recipe_ingredients: [] },
+    });
+    callFuturePropagationRpc.mockResolvedValue({
+      ok: true,
+      data: {
+        id: "550e8400-e29b-41d4-a716-446655440997",
+        revision: 7,
+      },
+    });
   });
 
-  it("ignores client-supplied owner, visibility, and origin fields when POST /recipes builds the official payload", async () => {
+  it("keeps legacy manual POST on the official manual payload only", async () => {
     const rpc = vi.fn(async () => ({
       data: {
         id: "recipe-private-1",
@@ -184,12 +256,7 @@ describe("personal recipe editor endpoint contract boundaries", () => {
     const response = await POST(new Request("http://localhost:3000/api/v1/recipes", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        ...buildValidBody(),
-        visibility: "public",
-        created_by: "user-2",
-        origin_recipe_id: "550e8400-e29b-41d4-a716-446655440999",
-      }),
+      body: JSON.stringify(buildValidBody()),
     }));
     const body = await response.json();
 
@@ -226,28 +293,125 @@ describe("personal recipe editor endpoint contract boundaries", () => {
     expect(payload).not.toHaveProperty("p_origin_recipe_id");
   });
 
-  it("keeps parser and RPC payload builders on the official create fields only", async () => {
+  it("rejects mixed create modes and allows the strict personal-derived payload only", async () => {
+    const mixedRpc = vi.fn();
+    createRouteHandlerClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })),
+      },
+      rpc: mixedRpc,
+      from: vi.fn((table: string) => {
+        if (table === "ingredients") {
+          return createLookupTable([
+            { id: "550e8400-e29b-41d4-a716-446655440201" },
+          ]);
+        }
+        if (table === "cooking_methods") {
+          return createLookupTable([
+            { id: "550e8400-e29b-41d4-a716-446655440301", label: "볶기" },
+          ]);
+        }
+        throw new Error(`unexpected table: ${table}`);
+      }),
+    });
+    createRecipeFuturePropagationInternalClient.mockReturnValue({});
+
+    const { POST } = await importRecipesRoute();
+    const mixedResponse = await POST(new Request("http://localhost:3000/api/v1/recipes", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "Idempotency-Key": "550e8400-e29b-41d4-a716-446655440997",
+      },
+      body: JSON.stringify({
+        ...buildValidBody(),
+        origin_recipe_id: "550e8400-e29b-41d4-a716-446655440999",
+      }),
+    }));
+
+    expect(mixedResponse.status).toBe(422);
+    await expect(mixedResponse.json()).resolves.toEqual({
+      success: false,
+      data: null,
+      error: {
+        code: "VALIDATION_ERROR",
+        message: "요청 값을 확인해 주세요.",
+        fields: [{ field: "body", reason: "mixed_create_modes" }],
+      },
+    });
+    expect(mixedRpc).not.toHaveBeenCalled();
+    expect(calculateRecipeDraftNutrition).not.toHaveBeenCalled();
+    expect(callFuturePropagationRpc).not.toHaveBeenCalled();
+
+    const derivedResponse = await POST(new Request("http://localhost:3000/api/v1/recipes", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "Idempotency-Key": "550e8400-e29b-41d4-a716-446655440997",
+      },
+      body: JSON.stringify(buildDerivedBody()),
+    }));
+
+    expect(derivedResponse.status).toBe(201);
+    await expect(derivedResponse.json()).resolves.toEqual({
+      success: true,
+      data: {
+        id: "550e8400-e29b-41d4-a716-446655440997",
+        revision: 7,
+      },
+      error: null,
+    });
+    expect(callFuturePropagationRpc).toHaveBeenCalledWith(
+      {},
+      "write_personal_recipe_core",
+      expect.objectContaining({
+        p_operation: "fork",
+        p_recipe_id: null,
+        p_source_recipe_id: "550e8400-e29b-41d4-a716-446655440999",
+        p_base_recipe_revision: 12,
+        p_draft: buildDerivedBody().draft,
+        p_image_object_id: "550e8400-e29b-41d4-a716-446655440998",
+        p_idempotency_key: "550e8400-e29b-41d4-a716-446655440997",
+      }),
+    );
+  });
+
+  it("keeps the strict create-mode union and delegated derived writer on the official fields only", async () => {
     const { readFileSync } = await import("node:fs");
     const source = readFileSync("app/api/v1/recipes/route.ts", "utf8");
 
-    const parseSection = source.slice(
+    const manualParseSection = source.slice(
       source.indexOf("function parseManualRecipeCreateBody"),
-      source.indexOf("function toManualRecipeCreateData"),
+      source.indexOf("function parseDerivedRecipeCreateBody"),
+    );
+    const derivedParseSection = source.slice(
+      source.indexOf("function parseDerivedRecipeCreateBody"),
+      source.indexOf("function buildManualRecipeRpcPayload"),
     );
     const payloadSection = source.slice(
       source.indexOf("function buildManualRecipeRpcPayload"),
       source.indexOf("async function requireUser"),
     );
+    const delegatedCreateSection = source.slice(
+      source.indexOf("async function postRecipe"),
+      source.indexOf("export async function PATCH"),
+    );
 
-    expect(parseSection).not.toContain("rawBody.visibility");
-    expect(parseSection).not.toContain("rawBody.created_by");
-    expect(parseSection).not.toContain("rawBody.origin_recipe_id");
+    expect(manualParseSection).not.toContain("rawBody.visibility");
+    expect(manualParseSection).not.toContain("rawBody.created_by");
+    expect(derivedParseSection).toContain('field: "body", reason: "mixed_create_modes"');
+    expect(derivedParseSection).toContain("rawBody.origin_recipe_id");
+    expect(derivedParseSection).toContain("rawBody.base_recipe_revision");
+    expect(derivedParseSection).toContain("rawBody.image_object_id");
     expect(payloadSection).toContain("p_title");
     expect(payloadSection).toContain("p_base_servings");
     expect(payloadSection).toContain("p_ingredients");
     expect(payloadSection).toContain("p_steps");
-    expect(payloadSection).not.toContain("origin_recipe_id");
     expect(payloadSection).not.toContain("visibility");
     expect(payloadSection).not.toContain("created_by");
+    expect(delegatedCreateSection).toContain('"write_personal_recipe_core"');
+    expect(delegatedCreateSection).toContain("p_source_recipe_id");
+    expect(delegatedCreateSection).toContain("p_base_recipe_revision");
+    expect(delegatedCreateSection).toContain("p_idempotency_key");
   });
 });

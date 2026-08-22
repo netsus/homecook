@@ -31,16 +31,18 @@ process.env.HOMECOOK_RECIPE_SNAPSHOT_FOLLOWUP_MIGRATIONS = [
   "supabase/migrations/20260724180000_recipe_image_attach_cas.sql",
   "supabase/migrations/20260730210000_product_ingredient_link_foundation.sql",
   "supabase/migrations/20260731110000_product_ingredient_link_contract_runtime.sql",
-  "supabase/migrations/20260802130000_personal_recipe_customization_write_core.sql",
+  "supabase/migrations/20260822170000_personal_recipe_customization_write_core_derived_create.sql",
   ...(contentPropagationMigration !== BASE_FUTURE_PROPAGATION_MIGRATION
     ? [BASE_FUTURE_PROPAGATION_MIGRATION]
     : []),
   ENTRYPOINT_PROJECTION_MIGRATION,
+  "supabase/migrations/20260822173000_recipe_snapshot_public_fork_context.sql",
 ].join(path.delimiter);
 process.env.HOMECOOK_RECIPE_SNAPSHOT_FOLLOWUP_TARGET_MIGRATION =
   contentPropagationMigration;
 process.env.HOMECOOK_RECIPE_SNAPSHOT_FOLLOWUP_INTEGRATION_TEST =
   "tests/recipe-content-snapshot-future-propagation-postgres.integration.test.ts";
 process.env.HOMECOOK_PERSONAL_RECIPE_SECURITY_FUNCTIONS = "1";
+process.env.HOMECOOK_RECIPE_FUTURE_PROPAGATION_SECURITY_FUNCTIONS = "1";
 
 await import("./run-recipe-snapshot-authority-postgres-integration.mjs");

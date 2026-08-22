@@ -34,6 +34,11 @@ const FOLLOWUP_MIGRATIONS = (process.env.HOMECOOK_RECIPE_SNAPSHOT_FOLLOWUP_MIGRA
   .filter(Boolean);
 const FOLLOWUP_TARGET_MIGRATION =
   process.env.HOMECOOK_RECIPE_SNAPSHOT_FOLLOWUP_TARGET_MIGRATION ?? "";
+const POST_TARGET_MIGRATIONS = (
+  process.env.HOMECOOK_RECIPE_SNAPSHOT_POST_TARGET_MIGRATIONS ?? ""
+)
+  .split(path.delimiter)
+  .filter(Boolean);
 const FOLLOWUP_INTEGRATION_TEST =
   process.env.HOMECOOK_RECIPE_SNAPSHOT_FOLLOWUP_INTEGRATION_TEST ?? "";
 const SKIP_ACTIVE_SECURITY_INVENTORY =
@@ -41,6 +46,22 @@ const SKIP_ACTIVE_SECURITY_INVENTORY =
 const ACTIVE_SECURITY_TEST_NAME_PATTERN =
   process.env.HOMECOOK_RECIPE_SNAPSHOT_ACTIVE_SECURITY_TEST_NAME_PATTERN ?? "";
 const TEST_TIMEOUT_MS = 30_000;
+
+if (
+  FOLLOWUP_TARGET_MIGRATION
+  && POST_TARGET_MIGRATIONS.includes(FOLLOWUP_TARGET_MIGRATION)
+) {
+  throw new Error(
+    "HOMECOOK_RECIPE_SNAPSHOT_POST_TARGET_MIGRATIONS must not duplicate the follow-up target migration",
+  );
+}
+
+if (new Set(POST_TARGET_MIGRATIONS).size !== POST_TARGET_MIGRATIONS.length) {
+  throw new Error(
+    "HOMECOOK_RECIPE_SNAPSHOT_POST_TARGET_MIGRATIONS must not contain duplicate migrations",
+  );
+}
+
 const REPLAY_FIXTURE_SQL = String.raw`
 insert into auth.users (id, created_at, email)
 values (
@@ -169,6 +190,7 @@ $function$;
 create role anon nologin;
 create role authenticated nologin;
 create role service_role nologin bypassrls;
+create role supabase_admin nologin bypassrls;
 create role supabase_auth_admin nologin;
 create role authenticator noinherit login;
 grant anon, authenticated to authenticator;
@@ -968,6 +990,13 @@ esac
             FOLLOWUP_TARGET_MIGRATION,
           ]);
         }
+      }
+      for (const migration of POST_TARGET_MIGRATIONS) {
+        runRequired(path.join(postgresBin, "psql"), [
+          ...connectionArgs,
+          "-f",
+          migration,
+        ]);
       }
       if (FOLLOWUP_INTEGRATION_TEST) {
         const followupResult = commandResult(

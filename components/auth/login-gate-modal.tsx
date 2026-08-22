@@ -38,6 +38,14 @@ export function LoginGateModal() {
       return "다시 로그인하면 수정한 내용으로 저장을 계속할 수 있어요.";
     }
 
+    if (action.type === "recipe-save-as-new") {
+      return "다시 로그인하면 새 레시피 저장을 계속할 수 있어요.";
+    }
+
+    if (action.type === "recipe-delete") {
+      return "다시 로그인하면 삭제 확인으로 돌아가요. 삭제는 마지막 확인 뒤에만 진행돼요.";
+    }
+
     return "로그인하면 원래 하려던 작업으로 자동 이동해요.";
   }, [action]);
 

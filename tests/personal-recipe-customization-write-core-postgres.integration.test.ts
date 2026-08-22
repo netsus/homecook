@@ -302,7 +302,7 @@ function writerSql(options: {
   sourceRecipeId?: string | null;
   revision?: number | null;
   draftTitle?: string;
-  tags?: Array<{ normalized_key: string; label: string }>;
+  tags?: Array<{ normalized_key: string; label: string }> | null;
   imageObjectId?: string;
   foodProductId?: string;
   foodProductVersionId?: string;
@@ -326,7 +326,9 @@ function writerSql(options: {
       foodProductVersionId: options.foodProductVersionId,
       ignoredAuthority: options.ignoredAuthority,
     })}'::jsonb`;
-  const tags = JSON.stringify(options.tags ?? []).replaceAll("'", "''");
+  const tags = options.tags === null
+    ? "null"
+    : `'${JSON.stringify(options.tags ?? []).replaceAll("'", "''")}'::jsonb`;
   const imageObjectId = options.imageObjectId
     ? `'${options.imageObjectId}'::uuid`
     : "null";
@@ -346,7 +348,7 @@ function writerSql(options: {
       ${revision},
       ${payload},
       '${nutritionSnapshot()}'::jsonb,
-      '${tags}'::jsonb,
+      ${tags},
       ${imageObjectId},
       ${options.expectedCleanupGeneration ?? 0},
       '${options.key}'::uuid,
@@ -847,6 +849,7 @@ describe.skipIf(!enabled)("personal recipe write PostgreSQL", () => {
       },
       writerCallSql({
         operation: "fork", sourceRecipeId: ownerPublicRecipe,
+        revision: 1,
         key: "85000000-0000-4000-8000-000000000027", draftTitle: "hidden race fork",
       }),
     ]);
@@ -876,6 +879,7 @@ describe.skipIf(!enabled)("personal recipe write PostgreSQL", () => {
       for (const request of [
         writerSql({
           operation: "fork", sourceRecipeId: hiddenRecipe,
+          revision: 1,
           key: `85000000-0000-4000-8000-${String(keySuffix++).padStart(12, "0")}`,
           draftTitle: "hidden fork",
         }),
@@ -931,10 +935,11 @@ describe.skipIf(!enabled)("personal recipe write PostgreSQL", () => {
 
       const writer = spawnPsql(`
         begin;
-        set local application_name = '${writerApplication}';
+        set application_name = '${writerApplication}';
         ${writerCallSql({
           operation: "fork",
           sourceRecipeId: ownerPublicRecipe,
+          revision: 1,
           key: `85000000-0000-4000-8000-${String(keySuffix++).padStart(12, "0")}`,
           draftTitle: title,
         })}
@@ -945,7 +950,7 @@ describe.skipIf(!enabled)("personal recipe write PostgreSQL", () => {
 
       const transition = spawnPsql(`
         begin;
-        set local application_name = '${transitionApplication}';
+        set application_name = '${transitionApplication}';
         ${ownerLockSql(ownerC)}
         update public.user_account_lifecycles
         set status = '${status}', revision = revision + 1, updated_at = now()
@@ -982,6 +987,7 @@ describe.skipIf(!enabled)("personal recipe write PostgreSQL", () => {
       expectSqlFailure(writerSql({
         operation: "fork",
         sourceRecipeId: ownerPublicRecipe,
+        revision: 1,
         key: `85000000-0000-4000-8000-${String(keySuffix++).padStart(12, "0")}`,
         draftTitle: `hidden after ${status}`,
       }), /RESOURCE_NOT_FOUND/);
@@ -1002,9 +1008,11 @@ describe.skipIf(!enabled)("personal recipe write PostgreSQL", () => {
 
   it("forks without changing the public source and saves updates on the same ID", () => {
     const sourceBefore = psql(`select title || ':' || revision::text from public.recipes where id = '${publicRecipe}';`);
+    const sourceRevision = Number(sourceBefore.split(":").at(-1));
     const forked = JSON.parse(psql(writerSql({
       operation: "fork",
       sourceRecipeId: publicRecipe,
+      revision: sourceRevision,
       key: "85000000-0000-4000-8000-000000000003",
       draftTitle: "공개 원본을 포크한 개인식",
     })));
@@ -1036,6 +1044,37 @@ describe.skipIf(!enabled)("personal recipe write PostgreSQL", () => {
     expect(psql(`select revision::text from public.recipes where id = '${forked.data.id}';`)).toBe("2");
   });
 
+  it("requires the current source revision for both fork and save-as-new", () => {
+    expectSqlFailure(
+      writerSql({
+        operation: "fork",
+        sourceRecipeId: publicRecipe,
+        revision: 999,
+        key: "85000000-0000-4000-8000-000000000104",
+        draftTitle: "stale public fork",
+      }),
+      /RECIPE_REVISION_CONFLICT/,
+    );
+
+    const source = JSON.parse(psql(writerSql({
+      operation: "create",
+      key: "85000000-0000-4000-8000-000000000105",
+      draftTitle: "save-as-new revision source",
+    })));
+
+    expectSqlFailure(
+      writerSql({
+        operation: "save_as_new",
+        sourceRecipeId: source.data.id,
+        revision: 999,
+        key: "85000000-0000-4000-8000-000000000106",
+        draftTitle: "stale private copy",
+      }),
+      /RECIPE_REVISION_CONFLICT/,
+    );
+    expect(psql(`select revision::text from public.recipes where id = '${source.data.id}';`)).toBe("1");
+  });
+
   it("creates a new ID only for save-as-new and soft-deletes idempotently", () => {
     const source = JSON.parse(psql(writerSql({
       operation: "create",
@@ -1045,6 +1084,7 @@ describe.skipIf(!enabled)("personal recipe write PostgreSQL", () => {
     const copy = JSON.parse(psql(writerSql({
       operation: "save_as_new",
       sourceRecipeId: source.data.id,
+      revision: 1,
       key: "85000000-0000-4000-8000-000000000007",
       draftTitle: "새 레시피로 저장",
     })));
@@ -1065,6 +1105,38 @@ describe.skipIf(!enabled)("personal recipe write PostgreSQL", () => {
     expect(replay).toEqual(deleted);
     expect(psql(`select (deleted_at is not null)::text || ':' || revision::text from public.recipes where id = '${copy.data.id}';`)).toBe("true:2");
     expect(psql(`select count(*)::text from public.recipe_content_snapshots where recipe_id = '${copy.data.id}';`)).toBe("1");
+  });
+
+  it("preserves reviewed tags from the source on save-as-new when the client cannot author tags", () => {
+    const source = JSON.parse(psql(writerSql({
+      operation: "create",
+      key: "85000000-0000-4000-8000-000000000107",
+      draftTitle: "태그 보존 원본",
+      tags: [{ normalized_key: "copied-tag", label: "복제 태그" }],
+    })));
+
+    expect(psql(`
+      select concat(recipe_tag.visibility, ':', tag.kind, ':', recipe_tag.source, ':', tag.normalized_key)
+      from public.recipe_tags as recipe_tag
+      join public.tags as tag on tag.id = recipe_tag.tag_id
+      where recipe_tag.recipe_id = '${source.data.id}';
+    `)).toBe("private:user:user_selected:copied-tag");
+
+    const copy = JSON.parse(psql(writerSql({
+      operation: "save_as_new",
+      sourceRecipeId: source.data.id,
+      revision: 1,
+      key: "85000000-0000-4000-8000-000000000108",
+      draftTitle: "태그 보존 복사본",
+      tags: null,
+    })));
+
+    expect(psql(`
+      select concat(recipe_tag.visibility, ':', tag.kind, ':', recipe_tag.source, ':', tag.normalized_key)
+      from public.recipe_tags as recipe_tag
+      join public.tags as tag on tag.id = recipe_tag.tag_id
+      where recipe_tag.recipe_id = '${copy.data.id}';
+    `)).toBe("private:user:user_selected:copied-tag");
   });
 
   it("serializes writer and soft delete in both directions on two connections", async () => {
@@ -1171,7 +1243,7 @@ describe.skipIf(!enabled)("personal recipe write PostgreSQL", () => {
 
     const cleanupFirstDelete = spawnPsql(`
       begin;
-      set local application_name = '${cleanupFirstDeleteApp}';
+      set application_name = '${cleanupFirstDeleteApp}';
       ${ownerLockSql(ownerK)}
       select public.set_account_generation_internal_writer_marker('${cutoverAttempt}', true);
       update public.user_account_lifecycles
@@ -1190,10 +1262,11 @@ describe.skipIf(!enabled)("personal recipe write PostgreSQL", () => {
 
     const cleanupFirstWriter = spawnPsql(`
       begin;
-      set local application_name = '${cleanupFirstWriterApp}';
+      set application_name = '${cleanupFirstWriterApp}';
       ${writerCallSql({
         operation: "fork",
         sourceRecipeId: cleanupFirstPublicRecipe,
+        revision: 1,
         key: cleanupFirstKey,
         draftTitle: "must not survive cleanup-first",
       })}
@@ -1278,51 +1351,67 @@ describe.skipIf(!enabled)("personal recipe write PostgreSQL", () => {
       select 'FULL_CLEANUP_MARKER_LOCKED';
     `);
     await markerReady;
+    let markerReleased = false;
+    const releaseMarkerControl = async () => {
+      if (markerReleased) {
+        return;
+      }
+      markerReleased = true;
+      markerControl.stdin.write("commit;\n\\q\n");
+      await markerControlExit;
+    };
 
-    const writerFirst = spawnPsql(`
-      begin;
-      set local application_name = '${writerFirstApplication}';
-      ${writerCallSql({
-        operation: "fork",
-        sourceRecipeId: writerFirstPublicRecipe,
-        key: "85000000-0000-4000-8000-000000000121",
-        draftTitle: "writer survives before full cleanup",
-      })}
-      commit;
-    `);
-    const writerFirstOutcome = waitForExit(writerFirst);
-    expect(await waitForApplicationLock(writerFirstApplication)).toBe(true);
+    try {
+      const writerFirst = spawnPsql(`
+        begin;
+        set application_name = '${writerFirstApplication}';
+        ${writerCallSql({
+          operation: "fork",
+          sourceRecipeId: writerFirstPublicRecipe,
+          revision: 1,
+          key: "85000000-0000-4000-8000-000000000121",
+          draftTitle: "writer survives before full cleanup",
+        })}
+        commit;
+      `);
+      const writerFirstOutcome = waitForExit(writerFirst);
+      expect(await waitForApplicationLock(writerFirstApplication)).toBe(true);
 
-    const writerFirstDelete = spawnPsql(`
-      begin;
-      set local application_name = '${writerFirstDeleteApplication}';
-      ${cleanupCallSql(ownerL)}
-      commit;
-    `);
-    const writerFirstDeleteOutcome = waitForExit(writerFirstDelete);
-    expect(await waitForApplicationLock(writerFirstDeleteApplication)).toBe(true);
-    const writerFirstGraph = concurrentLockGraph(
-      writerFirstApplication,
-      writerFirstDeleteApplication,
-    );
+      const writerFirstDelete = spawnPsql(`
+        begin;
+        set application_name = '${writerFirstDeleteApplication}';
+        ${cleanupCallSql(ownerL)}
+        commit;
+      `);
+      const writerFirstDeleteOutcome = waitForExit(writerFirstDelete);
+      expect(await waitForApplicationLock(writerFirstDeleteApplication)).toBe(true);
+      const writerFirstGraph = concurrentLockGraph(
+        writerFirstApplication,
+        writerFirstDeleteApplication,
+      );
 
-    markerControl.stdin.write("commit;\n\\q\n");
-    const [writerFirstResult, writerFirstDeleteResult] = await Promise.all([
-      writerFirstOutcome,
-      writerFirstDeleteOutcome,
-    ]);
-    await markerControlExit;
+      await releaseMarkerControl();
+      const [writerFirstResult, writerFirstDeleteResult] = await Promise.all([
+        writerFirstOutcome,
+        writerFirstDeleteOutcome,
+      ]);
 
-    const writerFirstErrors = `${writerFirstResult.stderr}\n${writerFirstDeleteResult.stderr}`;
-    expect(writerFirstGraph.cleanup_blocker_count).toBeGreaterThan(0);
-    expect(writerFirstErrors).not.toMatch(/40P01|deadlock detected/i);
-    expect(writerFirstResult.status, writerFirstResult.stderr).toBe(0);
-    expect(writerFirstDeleteResult.status, writerFirstDeleteResult.stderr).toBe(0);
-    expect(psql("select count(*)::text from public.recipes where title = 'writer survives before full cleanup';")).toBe("1");
-    expect(psql(`
-      select concat_ws(':', visibility, (created_by is null)::text, title, revision)
-      from public.recipes where id = '${writerFirstPublicRecipe}';
-    `)).toBe("public:true:writer-first 공개 원본:1");
+      const writerFirstErrors =
+        `${writerFirstResult.stderr}\n${writerFirstDeleteResult.stderr}`;
+      expect(writerFirstGraph.cleanup_blocker_count).toBeGreaterThan(0);
+      expect(writerFirstErrors).not.toMatch(/40P01|deadlock detected/i);
+      expect(writerFirstResult.status, writerFirstResult.stderr).toBe(0);
+      expect(writerFirstDeleteResult.status, writerFirstDeleteResult.stderr).toBe(0);
+      expect(
+        psql("select count(*)::text from public.recipes where title = 'writer survives before full cleanup';"),
+      ).toBe("1");
+      expect(psql(`
+        select concat_ws(':', visibility, (created_by is null)::text, title, revision)
+        from public.recipes where id = '${writerFirstPublicRecipe}';
+      `)).toBe("public:true:writer-first 공개 원본:1");
+    } finally {
+      await releaseMarkerControl();
+    }
   });
 
   it("rejects a G1 writer after an in-flight G2 transition and clears the F0 marker", async () => {

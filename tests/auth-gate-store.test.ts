@@ -39,4 +39,20 @@ describe("auth gate store", () => {
       action: null,
     });
   });
+
+  it("stores the internal recipe-delete auth return intent on the same recipe path", () => {
+    useAuthGateStore.getState().open({
+      recipeId: "recipe-1",
+      type: "recipe-delete",
+    });
+
+    expect(useAuthGateStore.getState()).toMatchObject({
+      isOpen: true,
+      action: {
+        recipeId: "recipe-1",
+        type: "recipe-delete",
+        redirectTo: "/recipe/recipe-1",
+      },
+    });
+  });
 });

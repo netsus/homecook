@@ -2,11 +2,15 @@
 
 import React from "react";
 
-import { ModalFooterActions } from "@/components/shared/modal-footer-actions";
+import {
+  ModalFooterActions,
+  type ModalFooterConfirmTone,
+} from "@/components/shared/modal-footer-actions";
 import { ModalHeader } from "@/components/shared/modal-header";
 
 interface AppOverlayBaseProps {
   ariaLabelledBy: string;
+  backdropLayerClassName?: string;
   badge?: React.ReactNode;
   bodyClassName?: string;
   children: React.ReactNode;
@@ -36,6 +40,7 @@ interface AppModalFooterActionsProps {
   confirmAriaLabel?: string;
   confirmDisabled?: boolean;
   confirmLabel: string;
+  confirmTone?: ModalFooterConfirmTone;
   confirmTestId?: string;
   onCancel: () => void;
   onConfirm: () => void;
@@ -52,18 +57,21 @@ interface AppStepperProps {
 }
 
 function AppOverlayBackdrop({
+  backdropLayerClassName = "z-50",
   children,
   onClose,
   variant,
 }: {
   children: React.ReactNode;
+  backdropLayerClassName?: string;
   onClose: () => void;
   variant: "bottom" | "center";
 }) {
   return (
     <div
       className={[
-        "fixed inset-0 z-50 flex bg-[var(--overlay-40)]",
+        "fixed inset-0 flex bg-[var(--overlay-40)]",
+        backdropLayerClassName,
         variant === "bottom"
           ? "items-end justify-center"
           : "items-center justify-center p-4",
@@ -77,6 +85,7 @@ function AppOverlayBackdrop({
 
 export function AppBottomSheet({
   ariaLabelledBy,
+  backdropLayerClassName,
   badge,
   bodyClassName,
   children,
@@ -98,7 +107,7 @@ export function AppBottomSheet({
   titleTabIndex,
 }: AppOverlayBaseProps) {
   return (
-    <AppOverlayBackdrop onClose={onClose} variant="bottom">
+    <AppOverlayBackdrop backdropLayerClassName={backdropLayerClassName} onClose={onClose} variant="bottom">
       <div
         aria-labelledby={ariaLabelledBy}
         aria-modal="true"
@@ -167,6 +176,7 @@ export function AppBottomSheet({
 
 export function AppCenterDialog({
   ariaLabelledBy,
+  backdropLayerClassName,
   badge,
   children,
   closeDisabled,
@@ -183,7 +193,7 @@ export function AppCenterDialog({
   titleTabIndex,
 }: AppOverlayBaseProps) {
   return (
-    <AppOverlayBackdrop onClose={onClose} variant="center">
+    <AppOverlayBackdrop backdropLayerClassName={backdropLayerClassName} onClose={onClose} variant="center">
       <div
         aria-labelledby={ariaLabelledBy}
         aria-modal="true"

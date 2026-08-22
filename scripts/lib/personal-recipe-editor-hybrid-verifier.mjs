@@ -286,7 +286,7 @@ export function assertPersonalRecipeEditorHybridSourceEvidence(evidence) {
     && evidence.mypage_surface_personal_editor_marker_count === 0
     && evidence.personal_create_active_entry === false
     && evidence.recipe_collection_personal_editor_marker_count === 0
-    && evidence.recipe_collection_personal_origin_field_count === 0
+    && evidence.recipe_collection_personal_origin_field_count === 7
     && evidence.recipe_delete_handler_count === 1
     && evidence.recipe_patch_handler_count === 1
     && evidence.recipebook_surface_personal_editor_marker_count === 0

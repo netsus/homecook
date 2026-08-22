@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useLayoutEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import {
   PersonalRecipeEditorShell,
@@ -10,16 +10,22 @@ import {
 } from "@/components/recipe/personal-recipe-editor-shell";
 import { RecipeFutureImpactSaveFlow } from "@/components/recipe/recipe-future-impact-save-flow";
 import { useDialogBoundary } from "@/components/shared/use-dialog-boundary";
+import {
+  createPersonalRecipeFromSource,
+  isPersonalRecipeApiError,
+} from "@/lib/api/personal-recipe";
 import { createRecipeEditorImageDraft, type RecipeEditorDraft } from "@/lib/personal-recipe-editor";
 import type { RecipeEditContext, RecipeEditDraft } from "@/types/recipe";
 import { useAuthGateStore } from "@/stores/ui-store";
 
 interface RecipeDetailPersonalEditorProps {
   editContext: RecipeEditContext;
+  mode: "edit" | "fork";
   onClose: () => void;
-  onSaved: () => void;
+  onSaved: (result: { id: string; revision: number }) => void;
   recipeId: string;
   returnFocusRef?: React.RefObject<HTMLElement | null>;
+  resumeAction?: "same-id-save" | "save-as-new" | null;
   resumeContext?: RecipeEditContext | null;
 }
 
@@ -80,10 +86,12 @@ function toEditorShellDraft(
 
 export function RecipeDetailPersonalEditor({
   editContext,
+  mode,
   onClose,
   onSaved,
   recipeId,
   returnFocusRef,
+  resumeAction = null,
   resumeContext = null,
 }: RecipeDetailPersonalEditorProps) {
   const initialDraft = useMemo(
@@ -94,9 +102,12 @@ export function RecipeDetailPersonalEditor({
     resumeContext?.draft ?? editContext.draft,
   ));
   const [impactDialogOpen, setImpactDialogOpen] = useState(false);
+  const [isCreatingDerivedRecipe, setIsCreatingDerivedRecipe] = useState(false);
+  const [createDerivedRecipeError, setCreateDerivedRecipeError] = useState<string | null>(null);
   const openAuthGate = useAuthGateStore((state) => state.open);
   const authGateOpen = useAuthGateStore((state) => state.isOpen);
   const saveContext = resumeContext ?? editContext;
+  const resumeSaveAsNew = mode === "edit" && resumeAction === "save-as-new";
   const initialShellDraft = useMemo(
     () => toEditorShellDraft(initialDraft, editContext.image_object_id),
     [editContext.image_object_id, initialDraft],
@@ -112,7 +123,7 @@ export function RecipeDetailPersonalEditor({
   const controller = usePersonalRecipeEditorShell({
     accessState: "ready",
     cleanupState: "idle",
-    context: "personal-edit",
+    context: mode === "fork" ? "public-fork" : "personal-edit",
     draft: shellDraft,
     initialDraft: initialShellDraft,
     onCancel: onClose,
@@ -123,6 +134,12 @@ export function RecipeDetailPersonalEditor({
     onRetryCleanup: () => undefined,
     onSubmit: async () => undefined,
   });
+  const createKeyRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    createKeyRef.current = null;
+    setCreateDerivedRecipeError(null);
+  }, [draft, mode, recipeId, resumeAction, saveContext.base_recipe_revision, saveContext.image_object_id]);
 
   useLayoutEffect(() => {
     const explicitReturnTarget = returnFocusRef?.current ?? null;
@@ -147,11 +164,59 @@ export function RecipeDetailPersonalEditor({
     onClose: controller.requestCancel,
   });
 
+  const submitDerivedRecipe = async () => {
+    if (isCreatingDerivedRecipe || draft.title.trim() === "") {
+      return;
+    }
+
+    setIsCreatingDerivedRecipe(true);
+    setCreateDerivedRecipeError(null);
+    const idempotencyKey = createKeyRef.current ?? crypto.randomUUID();
+    createKeyRef.current = idempotencyKey;
+
+    try {
+      const result = await createPersonalRecipeFromSource({
+        originRecipeId: recipeId,
+        baseRecipeRevision: saveContext.base_recipe_revision,
+        draft,
+        imageObjectId: saveContext.image_object_id,
+      }, idempotencyKey);
+      onSaved(result);
+    } catch (error) {
+      if (
+        isPersonalRecipeApiError(error)
+        && (error.status === 401 || (error.status === 409 && error.code === "ACCOUNT_SESSION_STALE"))
+      ) {
+        if (mode === "fork") {
+          openAuthGate({ recipeId, type: "recipe-fork" });
+          return;
+        }
+
+        openAuthGate({
+          editContext: {
+            base_recipe_revision: saveContext.base_recipe_revision,
+            draft,
+            image_object_id: saveContext.image_object_id,
+          },
+          recipeId,
+          type: "recipe-save-as-new",
+        });
+        return;
+      }
+
+      setCreateDerivedRecipeError(
+        "새 레시피를 저장하지 못했어요. 내용을 유지했으니 다시 시도해 주세요.",
+      );
+    } finally {
+      setIsCreatingDerivedRecipe(false);
+    }
+  };
+
   return (
     <div
       aria-labelledby="recipe-detail-personal-editor-title"
       aria-modal="true"
-      className="fixed inset-0 z-40 overflow-y-auto bg-[var(--surface-fill)] px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-[calc(1rem+env(safe-area-inset-top))]"
+      className="fixed inset-0 z-[120] overflow-y-auto bg-[var(--surface-fill)] px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-[calc(1rem+env(safe-area-inset-top))]"
       data-testid="recipe-detail-personal-editor"
       ref={dialogRef}
       role="dialog"
@@ -159,14 +224,18 @@ export function RecipeDetailPersonalEditor({
     >
       <div className="mx-auto max-w-2xl rounded-[var(--radius-lg)] bg-[var(--surface)] p-4 shadow-[var(--shadow-2)]">
         <PersonalRecipeEditorShell
-          context="personal-edit"
+          context={mode === "fork" ? "public-fork" : "personal-edit"}
           controller={controller}
           presentation="integrated"
         >
           <header className="flex items-center justify-between gap-3">
             <div>
-              <p className="text-sm font-semibold text-[var(--brand)]">내 레시피</p>
-              <h2 className="text-xl font-bold text-[var(--foreground)]" id="recipe-detail-personal-editor-title">레시피 편집</h2>
+              <p className="text-sm font-semibold text-[var(--brand)]">
+                {mode === "fork" ? "공개 레시피" : "내 레시피"}
+              </p>
+              <h2 className="text-xl font-bold text-[var(--foreground)]" id="recipe-detail-personal-editor-title">
+                {mode === "fork" ? "내 레시피로 수정" : "레시피 편집"}
+              </h2>
             </div>
             <button
               aria-label="편집 닫기"
@@ -270,25 +339,62 @@ export function RecipeDetailPersonalEditor({
               ))}
             </section>
 
-            <RecipeFutureImpactSaveFlow
-              actionDisabled={!hasChanges || draft.title.trim() === ""}
-              baseRecipeRevision={saveContext.base_recipe_revision}
-              draft={draft}
-              enabled
-              imageObjectId={saveContext.image_object_id}
-              onDialogOpenChange={setImpactDialogOpen}
-              onSaved={() => {
-                onClose();
-                onSaved();
-              }}
-              onUnauthorized={(pendingEditContext) => openAuthGate({
-                editContext: pendingEditContext,
-                recipeId,
-                type: "recipe-edit-save",
-              })}
-              recipeId={recipeId}
-              resumePreview={Boolean(resumeContext)}
-            />
+            {createDerivedRecipeError ? (
+              <div
+                className="rounded-[var(--radius-md)] border border-[var(--danger)] bg-[color-mix(in_srgb,var(--danger)_10%,white)] p-3 text-sm text-[var(--foreground)] outline-none"
+                role="alert"
+                tabIndex={-1}
+              >
+                {createDerivedRecipeError}
+              </div>
+            ) : null}
+
+            {mode === "edit" ? (
+              <div className="space-y-3">
+                {!resumeSaveAsNew ? (
+                  <RecipeFutureImpactSaveFlow
+                    actionDisabled={!hasChanges || draft.title.trim() === ""}
+                    baseRecipeRevision={saveContext.base_recipe_revision}
+                    draft={draft}
+                    enabled
+                    imageObjectId={saveContext.image_object_id}
+                    onDialogOpenChange={setImpactDialogOpen}
+                    onSaved={(result) => {
+                      onClose();
+                      onSaved(result);
+                    }}
+                    onUnauthorized={(pendingEditContext) => openAuthGate({
+                      editContext: pendingEditContext,
+                      recipeId,
+                      type: "recipe-edit-save",
+                    })}
+                    recipeId={recipeId}
+                    resumePreview={resumeAction === "same-id-save" && Boolean(resumeContext)}
+                  />
+                ) : null}
+                <button
+                  className="min-h-11 w-full rounded-[var(--radius-control)] border border-[var(--line)] bg-transparent px-4 font-semibold text-[var(--text-2)] disabled:cursor-not-allowed disabled:opacity-50"
+                  disabled={isCreatingDerivedRecipe || draft.title.trim() === ""}
+                  onClick={() => {
+                    void submitDerivedRecipe();
+                  }}
+                  type="button"
+                >
+                  {isCreatingDerivedRecipe ? "새 레시피 저장 중..." : "새 레시피로 저장"}
+                </button>
+              </div>
+            ) : (
+              <button
+                className="min-h-11 w-full rounded-[var(--radius-control)] border border-[var(--brand)] bg-[var(--brand)] px-4 font-bold text-[var(--text-inverse)] disabled:cursor-not-allowed disabled:opacity-50"
+                disabled={isCreatingDerivedRecipe || draft.title.trim() === ""}
+                onClick={() => {
+                  void submitDerivedRecipe();
+                }}
+                type="button"
+              >
+                {isCreatingDerivedRecipe ? "내 레시피 저장 중..." : "내 레시피로 저장"}
+              </button>
+            )}
           </div>
         </PersonalRecipeEditorShell>
       </div>

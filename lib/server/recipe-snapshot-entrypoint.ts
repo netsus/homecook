@@ -9,12 +9,18 @@ import type {
   RecipeEditDraft,
   RecipeEditIngredientDraft,
   RecipeEditStepDraft,
+  RecipeForkContext,
   RecipeSnapshotUiMode,
 } from "@/types/recipe";
 
 export interface RecipeSnapshotEntrypointContext {
   revision: number;
   edit_context: RecipeEditContext;
+}
+
+export interface RecipeSnapshotForkEntrypointContext {
+  revision: number;
+  fork_context: RecipeForkContext;
 }
 
 interface RpcClient {
@@ -158,6 +164,29 @@ function parseEntrypointContext(value: unknown): RecipeSnapshotEntrypointContext
   return value as unknown as RecipeSnapshotEntrypointContext;
 }
 
+function parseForkEntrypointContext(
+  value: unknown,
+): RecipeSnapshotForkEntrypointContext | null {
+  if (
+    !isRecord(value)
+    || !hasExactKeys(value, ["revision", "fork_context"])
+    || !isPositiveInteger(value.revision)
+    || !isRecord(value.fork_context)
+    || !hasExactKeys(value.fork_context, [
+      "base_recipe_revision",
+      "draft",
+      "image_object_id",
+    ])
+    || value.fork_context.base_recipe_revision !== value.revision
+    || !isDraft(value.fork_context.draft)
+    || value.fork_context.image_object_id !== null
+  ) {
+    return null;
+  }
+
+  return value as unknown as RecipeSnapshotForkEntrypointContext;
+}
+
 export async function readRecipeSnapshotUiMode(
   client?: RpcClient | null,
 ): Promise<RecipeSnapshotUiMode> {
@@ -211,4 +240,42 @@ export async function readRecipeSnapshotEntrypointContext({
     throw new Error("recipe snapshot entrypoint context is invalid");
   }
   return parsed;
+}
+
+export async function readRecipeSnapshotForkContext({
+  recipeId,
+  sessionAuthority,
+  client,
+}: {
+  recipeId: string;
+  sessionAuthority: AccountGenerationBootstrapSessionAuthority;
+  client?: RpcClient | null;
+}): Promise<RecipeForkContext> {
+  let resolvedClient: RpcClient | null;
+  try {
+    resolvedClient = client === undefined
+      ? createRecipeFuturePropagationInternalClient()
+      : client;
+  } catch {
+    throw new Error("recipe snapshot fork context is unavailable");
+  }
+  if (!resolvedClient) {
+    throw new Error("recipe snapshot fork context is unavailable");
+  }
+
+  const result = await resolvedClient.rpc(
+    "read_recipe_snapshot_entrypoint_context",
+    {
+      ...buildSessionAuthorityRpcArgs(sessionAuthority),
+      p_recipe_id: recipeId,
+    },
+  );
+  if (result.error) {
+    throw new Error("recipe snapshot fork context is unavailable");
+  }
+  const parsed = parseForkEntrypointContext(result.data);
+  if (!parsed) {
+    throw new Error("recipe snapshot fork context is invalid");
+  }
+  return parsed.fork_context;
 }

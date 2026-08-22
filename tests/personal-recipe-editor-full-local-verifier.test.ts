@@ -223,11 +223,12 @@ const sourceEvidence = {
   capability_on_occurrence_count: 0,
   capability_off_occurrence_count: 3,
   internal_operation_violation_count: 0,
+  recipe_collection_internal_post_operation_count: 1,
   legacy_recipe_post_handler_count: 1,
   mypage_surface_personal_editor_marker_count: 0,
   personal_create_active_entry: false,
   recipe_collection_personal_editor_marker_count: 0,
-  recipe_collection_personal_origin_field_count: 0,
+  recipe_collection_personal_origin_field_count: 7,
   recipe_delete_handler_count: 1,
   recipe_patch_handler_count: 1,
   recipebook_surface_personal_editor_marker_count: 0,
@@ -628,10 +629,14 @@ describe("personal recipe editor full-local verifier", () => {
       { ...sourceEvidence, capability_on_occurrence_count: 1 },
       { ...sourceEvidence, capability_off_occurrence_count: 0 },
       { ...sourceEvidence, personal_create_active_entry: true },
+      { ...sourceEvidence, recipe_collection_internal_post_operation_count: 0 },
+      { ...sourceEvidence, recipe_collection_internal_post_operation_count: 2 },
       { ...sourceEvidence, recipe_patch_handler_count: 0 },
       { ...sourceEvidence, recipe_patch_handler_count: 2 },
       { ...sourceEvidence, recipe_delete_handler_count: 0 },
       { ...sourceEvidence, recipe_delete_handler_count: 2 },
+      { ...sourceEvidence, recipe_collection_personal_origin_field_count: 6 },
+      { ...sourceEvidence, recipe_collection_personal_origin_field_count: 8 },
       { ...sourceEvidence, public_service_role_entry_count: 1 },
       { ...sourceEvidence, public_service_role_entry_count: 2 },
       { ...sourceEvidence, extra: 0 },
@@ -692,6 +697,36 @@ export async function __testExtraPublicServiceRoleCall() {
         sourceEvidence.public_service_role_entry_count,
       );
       expect(evidence.user_service_role_violation_count).toBe(1);
+      expect(() => assertPersonalRecipeEditorSourceEvidence(evidence)).toThrow(
+        /personal recipe editor source evidence failed closed/i,
+      );
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("treats extra recipe collection internal client calls outside postRecipe as violations", () => {
+    const routeSource = readFileSync(
+      "app/api/v1/recipes/route.ts",
+      "utf8",
+    );
+    const root = createSourceEvidenceFixtureRepository({
+      "app/api/v1/recipes/route.ts": `${routeSource}
+
+function __testExtraDerivedCreateInternalClientCall() {
+  const client = createRecipeFuturePropagationInternalClient();
+  return client;
+}
+`,
+    });
+
+    try {
+      const evidence = collectPersonalRecipeEditorSourceEvidence(root);
+
+      expect(evidence.recipe_collection_internal_post_operation_count).toBe(
+        sourceEvidence.recipe_collection_internal_post_operation_count,
+      );
+      expect(evidence.internal_operation_violation_count).toBe(1);
       expect(() => assertPersonalRecipeEditorSourceEvidence(evidence)).toThrow(
         /personal recipe editor source evidence failed closed/i,
       );

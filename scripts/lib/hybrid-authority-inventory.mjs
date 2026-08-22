@@ -57,6 +57,7 @@ const INTERNAL_OPERATION_ALLOWLIST = new Map([
   [
     "createRecipeFuturePropagationInternalClient",
     new Set([
+      "app/api/v1/recipes/route.ts",
       "app/api/v1/recipes/[id]/future-plan-impact/route.ts",
       "app/api/v1/recipes/[id]/route.ts",
       "lib/server/recipe-snapshot-entrypoint.ts",
@@ -125,6 +126,10 @@ const INTERNAL_OPERATION_FUNCTION_ALLOWLIST = new Map([
     "createRecipeFuturePropagationInternalClient",
     new Map([
       [
+        "app/api/v1/recipes/route.ts",
+        new Set(["postRecipe"]),
+      ],
+      [
         "app/api/v1/recipes/[id]/future-plan-impact/route.ts",
         new Set(["POST"]),
       ],
@@ -136,6 +141,7 @@ const INTERNAL_OPERATION_FUNCTION_ALLOWLIST = new Map([
         "lib/server/recipe-snapshot-entrypoint.ts",
         new Set([
           "readRecipeSnapshotEntrypointContext",
+          "readRecipeSnapshotForkContext",
           "readRecipeSnapshotUiMode",
         ]),
       ],

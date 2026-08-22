@@ -8,6 +8,7 @@ import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 
 import { LoginGateModal } from "@/components/auth/login-gate-modal";
 import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-tab";
+import { PersonalRecipeDeleteDialog } from "@/components/recipe/personal-recipe-delete-dialog";
 import { PlannerAddSheet } from "@/components/recipe/planner-add-sheet";
 import type { PlannerAddSheetState } from "@/components/recipe/planner-add-sheet";
 import { RecipeDetailPersonalActions } from "@/components/recipe/recipe-detail-personal-actions";
@@ -33,6 +34,10 @@ import {
   clearPendingAction,
   readPendingAction,
 } from "@/lib/auth/pending-action";
+import {
+  deletePersonalRecipe,
+  isPersonalRecipeApiError,
+} from "@/lib/api/personal-recipe";
 import {
   createCustomRecipeBook,
   fetchSaveableRecipeBooks,
@@ -69,6 +74,7 @@ import type {
   RecipeBookSummary,
   RecipeDetail,
   RecipeEditContext,
+  RecipeForkContext,
   RecipeIngredient,
   RecipeLikeData,
   RecipeSnapshotUiMode,
@@ -154,6 +160,7 @@ interface RecipeDetailScreenProps {
   recipeId: string;
   authError?: string | null;
   initialAuthenticated?: boolean;
+  initialForkContext?: RecipeForkContext;
   recipeSnapshotUiMode?: RecipeSnapshotUiMode;
 }
 
@@ -162,6 +169,7 @@ export function RecipeDetailScreen({
   recipeId,
   authError,
   initialAuthenticated = false,
+  initialForkContext,
   recipeSnapshotUiMode = "legacy_v1",
 }: RecipeDetailScreenProps) {
   const [detailState, setDetailState] = useState<DetailState>("loading");
@@ -199,7 +207,12 @@ export function RecipeDetailScreen({
   const [plannerServings, setPlannerServings] = useState(1);
   const [snapshotStartState, setSnapshotStartState] = useState<"idle" | "pending">("idle");
   const [isPersonalEditorOpen, setIsPersonalEditorOpen] = useState(false);
+  const [personalEditorMode, setPersonalEditorMode] = useState<"edit" | "fork">("edit");
   const [personalEditResumeContext, setPersonalEditResumeContext] = useState<RecipeEditContext | null>(null);
+  const [personalEditResumeAction, setPersonalEditResumeAction] = useState<"same-id-save" | "save-as-new" | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isDeletingPersonalRecipe, setIsDeletingPersonalRecipe] = useState(false);
+  const [deletePersonalRecipeError, setDeletePersonalRecipeError] = useState<string | null>(null);
   const router = useRouter();
   const openAuthGate = useAuthGateStore((state) => state.open);
   const isDesktopViewport = useDesktopViewport();
@@ -211,12 +224,15 @@ export function RecipeDetailScreen({
   const currentRecipeIdRef = React.useRef(recipeId);
   const snapshotStartLatchRef = React.useRef(false);
   const personalEditorOpenerRef = React.useRef<HTMLElement | null>(null);
+  const deleteKeyRef = React.useRef<string | null>(null);
   currentRecipeIdRef.current = recipeId;
 
   useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search);
+    const qaFixtureClientMode = isQaFixtureClientModeEnabled();
     setShowQaFutureImpact(
-      isQaFixtureClientModeEnabled()
-        && new URLSearchParams(window.location.search).get("qaFutureImpact") === "1",
+      qaFixtureClientMode
+        && searchParams.get("qaFutureImpact") === "1",
     );
   }, []);
 
@@ -889,9 +905,185 @@ export function RecipeDetailScreen({
     personalEditorOpenerRef.current = document.activeElement instanceof HTMLElement
       ? document.activeElement
       : null;
+    setPersonalEditorMode("edit");
     setPersonalEditResumeContext(null);
+    setPersonalEditResumeAction(null);
     setIsPersonalEditorOpen(true);
   }, []);
+
+  const qaForkContext = useMemo(() => (
+    showQaFutureImpact
+      && recipe
+      && !recipe.edit_context
+      ? {
+          base_recipe_revision: recipe.revision,
+          draft: {
+            title: recipe.title,
+            description: recipe.description,
+            base_servings: recipe.base_servings,
+            ingredients: recipe.ingredients.map((ingredient) => ({
+              ingredient_id: ingredient.ingredient_id,
+              amount: ingredient.amount,
+              unit: ingredient.unit,
+              ingredient_type: ingredient.ingredient_type,
+              display_text: ingredient.display_text,
+              component_label: ingredient.component_label ?? null,
+              scalable: ingredient.scalable,
+              food_product_id: null,
+              food_product_nutrition_version_id: null,
+            })),
+            steps: recipe.steps.map((step) => ({
+              step_number: step.step_number,
+              instruction: step.instruction,
+              cooking_method_id: step.cooking_method?.id ?? "00000000-0000-4000-8000-000000000000",
+              cooking_method_ids: step.cooking_methods?.map((method) => method.id)
+                ?? (step.cooking_method ? [step.cooking_method.id] : []),
+              ingredients_used: step.ingredients_used.map((ingredient) => ({
+                ingredient_id: ingredient.ingredient_id,
+                amount: ingredient.amount,
+                unit: ingredient.unit,
+                cut_size: ingredient.cut_size ?? null,
+              })),
+              component_label: step.component_label ?? null,
+              heat_level: step.heat_level,
+              duration_seconds: step.duration_seconds,
+              duration_text: step.duration_text,
+            })),
+          },
+          image_object_id: null,
+        }
+      : null
+  ), [recipe, showQaFutureImpact]);
+
+  const openPersonalForkEditor = useCallback(() => {
+    personalEditorOpenerRef.current = document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : null;
+    const forkContext = initialForkContext ?? qaForkContext;
+    if (!forkContext || (recipeSnapshotUiMode !== "snapshot_v2" && !showQaFutureImpact)) {
+      setFeedback({
+        message: "레시피를 다시 불러온 뒤 내 레시피로 수정을 시작해 주세요.",
+        tone: "error",
+      });
+      return;
+    }
+
+    setPersonalEditorMode("fork");
+    setPersonalEditResumeContext(null);
+    setPersonalEditResumeAction(null);
+    setIsPersonalEditorOpen(true);
+  }, [initialForkContext, qaForkContext, recipeSnapshotUiMode, showQaFutureImpact]);
+
+  const handlePersonalForkAction = useCallback((payload: { requiresLogin: boolean }) => {
+    if (payload.requiresLogin) {
+      openAuthGate({ recipeId, type: "recipe-fork" });
+      return;
+    }
+
+    openPersonalForkEditor();
+  }, [openAuthGate, openPersonalForkEditor, recipeId]);
+
+  const closeDeletePersonalRecipeDialog = useCallback(() => {
+    if (isDeletingPersonalRecipe) {
+      return;
+    }
+
+    deleteKeyRef.current = null;
+    setDeletePersonalRecipeError(null);
+    setIsDeleteDialogOpen(false);
+  }, [isDeletingPersonalRecipe]);
+
+  const openDeletePersonalRecipeDialog = useCallback(() => {
+    deleteKeyRef.current = null;
+    setDeletePersonalRecipeError(null);
+    setIsDeleteDialogOpen(true);
+  }, []);
+
+  const openDeletePersonalRecipeLoginGate = useCallback(() => {
+    deleteKeyRef.current = null;
+    setDeletePersonalRecipeError(null);
+    setIsDeleteDialogOpen(false);
+    openAuthGate({ recipeId, type: "recipe-delete" });
+  }, [openAuthGate, recipeId]);
+
+  const showDeletedRecipeFallback = useCallback(() => {
+    deleteKeyRef.current = null;
+    setDeletePersonalRecipeError(null);
+    setIsDeleteDialogOpen(false);
+    setRecipe(null);
+    setDetailErrorKind("not-found");
+    setDetailState("error");
+    router.refresh();
+  }, [router]);
+
+  const handleDeletePersonalRecipe = useCallback(async () => {
+    if (isDeletingPersonalRecipe) {
+      return;
+    }
+
+    setIsDeletingPersonalRecipe(true);
+    setDeletePersonalRecipeError(null);
+    const idempotencyKey = deleteKeyRef.current ?? crypto.randomUUID();
+    deleteKeyRef.current = idempotencyKey;
+
+    try {
+      await deletePersonalRecipe(recipeId, idempotencyKey);
+      showDeletedRecipeFallback();
+    } catch (error) {
+      if (
+        isPersonalRecipeApiError(error)
+        && (error.status === 401 || (error.status === 409 && error.code === "ACCOUNT_SESSION_STALE"))
+      ) {
+        openDeletePersonalRecipeLoginGate();
+        return;
+      }
+
+      if (isPersonalRecipeApiError(error) && error.status === 404) {
+        showDeletedRecipeFallback();
+        return;
+      }
+
+      setDeletePersonalRecipeError(
+        "레시피를 삭제하지 못했어요. 잠시 후 다시 시도해 주세요.",
+      );
+    } finally {
+      setIsDeletingPersonalRecipe(false);
+    }
+  }, [
+    isDeletingPersonalRecipe,
+    openDeletePersonalRecipeLoginGate,
+    recipeId,
+    showDeletedRecipeFallback,
+  ]);
+
+  const qaFutureImpactEditContext = useMemo(() => (
+    recipe && showQaFutureImpact && recipe.edit_context
+      ? {
+          baseRecipeRevision: recipe.edit_context.base_recipe_revision,
+          draft: recipe.edit_context.draft,
+          imageObjectId: recipe.edit_context.image_object_id,
+        }
+      : null
+  ), [recipe, showQaFutureImpact]);
+  const serverProjectedPersonalEditContext = useMemo(() => (
+    recipeSnapshotUiMode === "snapshot_v2" && recipe?.edit_context
+      ? {
+          baseRecipeRevision: recipe.edit_context.base_recipe_revision,
+          draft: recipe.edit_context.draft,
+          imageObjectId: recipe.edit_context.image_object_id,
+        }
+      : null
+  ), [recipe?.edit_context, recipeSnapshotUiMode]);
+  const activePersonalEditContext = serverProjectedPersonalEditContext ?? qaFutureImpactEditContext;
+  const personalRecipeCapabilityEnabled =
+    recipeSnapshotUiMode === "snapshot_v2" || showQaFutureImpact;
+  const personalRecipeAccessState = !personalRecipeCapabilityEnabled
+    ? "unknown"
+    : activePersonalEditContext && isAuthenticated
+      ? "owner-private"
+      : activePersonalEditContext
+        ? "unknown"
+        : "public";
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -907,9 +1099,33 @@ export function RecipeDetailScreen({
     clearPendingAction();
 
     if (pendingAction.type === "recipe-edit-save") {
-      if (recipeSnapshotUiMode === "snapshot_v2" && recipe.edit_context) {
+      if (serverProjectedPersonalEditContext) {
         personalEditorOpenerRef.current = null;
+        setPersonalEditorMode("edit");
         setPersonalEditResumeContext(pendingAction.editContext);
+        setPersonalEditResumeAction("same-id-save");
+        setIsPersonalEditorOpen(true);
+      }
+      return;
+    }
+
+    if (pendingAction.type === "recipe-save-as-new") {
+      if (activePersonalEditContext) {
+        personalEditorOpenerRef.current = null;
+        setPersonalEditorMode("edit");
+        setPersonalEditResumeContext(pendingAction.editContext);
+        setPersonalEditResumeAction("save-as-new");
+        setIsPersonalEditorOpen(true);
+      }
+      return;
+    }
+
+    if (pendingAction.type === "recipe-fork") {
+      if ((recipeSnapshotUiMode === "snapshot_v2" || showQaFutureImpact) && (initialForkContext ?? qaForkContext)) {
+        personalEditorOpenerRef.current = null;
+        setPersonalEditorMode("fork");
+        setPersonalEditResumeContext(null);
+        setPersonalEditResumeAction(null);
         setIsPersonalEditorOpen(true);
       }
       return;
@@ -937,7 +1153,25 @@ export function RecipeDetailScreen({
       void openPlannerAddSheet({ source: "return-to-action" });
       return;
     }
-  }, [handleLikeToggle, isAuthenticated, openPlannerAddSheet, openSaveModal, recipe, recipeId, recipeSnapshotUiMode]);
+
+    if (pendingAction.type === "recipe-delete") {
+      openDeletePersonalRecipeDialog();
+    }
+  }, [
+    handleLikeToggle,
+    isAuthenticated,
+    openDeletePersonalRecipeDialog,
+    openPlannerAddSheet,
+    openSaveModal,
+    initialForkContext,
+    qaForkContext,
+    recipe,
+    recipeId,
+    recipeSnapshotUiMode,
+    activePersonalEditContext,
+    serverProjectedPersonalEditContext,
+    showQaFutureImpact,
+  ]);
 
   const handleShare = async () => {
     if (!recipe) {
@@ -1065,51 +1299,15 @@ export function RecipeDetailScreen({
   const shouldRenderWebView = isDesktopViewport;
   const shouldRenderAppView = !isDesktopViewport;
   const shouldRenderLegacyWebView = false;
-  const activePersonalEditContext = recipeSnapshotUiMode === "snapshot_v2"
-    && recipe.edit_context
-    ? {
-        baseRecipeRevision: recipe.edit_context.base_recipe_revision,
-        draft: recipe.edit_context.draft,
-        imageObjectId: recipe.edit_context.image_object_id,
-      }
-    : showQaFutureImpact ? {
-    baseRecipeRevision: 12,
-    draft: {
-      title: recipe.title,
-      description: recipe.description,
-      base_servings: recipe.base_servings,
-      ingredients: recipe.ingredients.map((ingredient) => ({
-        ingredient_id: ingredient.ingredient_id,
-        amount: ingredient.amount,
-        unit: ingredient.unit,
-        ingredient_type: ingredient.ingredient_type,
-        display_text: ingredient.display_text,
-        component_label: ingredient.component_label ?? null,
-        scalable: ingredient.scalable,
-        food_product_id: null,
-        food_product_nutrition_version_id: null,
-      })),
-      steps: recipe.steps.map((step) => ({
-        step_number: step.step_number,
-        instruction: step.instruction,
-        cooking_method_id: step.cooking_method?.id ?? "00000000-0000-4000-8000-000000000000",
-        cooking_method_ids: step.cooking_methods?.map((method) => method.id)
-          ?? (step.cooking_method ? [step.cooking_method.id] : []),
-        ingredients_used: step.ingredients_used.map((ingredient) => ({
-          ingredient_id: ingredient.ingredient_id,
-          amount: ingredient.amount,
-          unit: ingredient.unit,
-          cut_size: ingredient.cut_size ?? null,
-        })),
-        component_label: step.component_label ?? null,
-        heat_level: step.heat_level,
-        duration_seconds: step.duration_seconds,
-        duration_text: step.duration_text,
-      })),
-    },
-    imageObjectId: null,
-      } : undefined;
-  const canEditPersonalRecipe = isAuthenticated && Boolean(activePersonalEditContext);
+  const activePersonalEditorContext = personalEditorMode === "edit"
+    ? activePersonalEditContext
+      ? {
+          base_recipe_revision: activePersonalEditContext.baseRecipeRevision,
+          draft: activePersonalEditContext.draft,
+          image_object_id: activePersonalEditContext.imageObjectId,
+        }
+      : null
+    : initialForkContext ?? qaForkContext ?? null;
 
   return (
     <>
@@ -1138,8 +1336,11 @@ export function RecipeDetailScreen({
             scaledIngredients={scaledIngredients}
             selectedServings={selectedServings}
             isNutritionRefreshing={nutritionRequestState === "loading"}
-            canEditPersonalRecipe={canEditPersonalRecipe}
+            personalRecipeAccessState={personalRecipeAccessState}
+            personalRecipeCapabilityEnabled={personalRecipeCapabilityEnabled}
+            onDeletePersonalRecipe={openDeletePersonalRecipeDialog}
             onEditPersonalRecipe={openPersonalEditor}
+            onForkPersonalRecipe={handlePersonalForkAction}
           />
         </div>
       ) : null}
@@ -1858,12 +2059,12 @@ export function RecipeDetailScreen({
           </button>
         </div>
         <RecipeDetailPersonalActions
-          accessState={canEditPersonalRecipe ? "owner-private" : "unknown"}
-          capabilityEnabled={canEditPersonalRecipe}
+          accessState={personalRecipeAccessState}
+          capabilityEnabled={personalRecipeCapabilityEnabled}
           isAuthenticated={isAuthenticated}
-          onDelete={() => undefined}
+          onDelete={openDeletePersonalRecipeDialog}
           onEdit={openPersonalEditor}
-          onFork={() => undefined}
+          onFork={handlePersonalForkAction}
         />
       </div>
       ) : null}
@@ -1940,24 +2141,38 @@ export function RecipeDetailScreen({
       />
       {feedback ? <FeedbackToast message={feedback.message} tone={feedback.tone} /> : null}
       <LoginGateModal />
-      {isPersonalEditorOpen && canEditPersonalRecipe && activePersonalEditContext ? (
+      <PersonalRecipeDeleteDialog
+        errorMessage={deletePersonalRecipeError}
+        isOpen={isDeleteDialogOpen}
+        onClose={closeDeletePersonalRecipeDialog}
+        onConfirm={() => {
+          void handleDeletePersonalRecipe();
+        }}
+        submitting={isDeletingPersonalRecipe}
+      />
+      {isPersonalEditorOpen && activePersonalEditorContext ? (
         <RecipeDetailPersonalEditor
-          editContext={{
-            base_recipe_revision: activePersonalEditContext.baseRecipeRevision,
-            draft: activePersonalEditContext.draft,
-            image_object_id: activePersonalEditContext.imageObjectId,
-          }}
+          editContext={activePersonalEditorContext}
+          mode={personalEditorMode}
           onClose={() => {
             setIsPersonalEditorOpen(false);
             setPersonalEditResumeContext(null);
+            setPersonalEditResumeAction(null);
           }}
-          onSaved={() => {
+          onSaved={(result) => {
+            setIsPersonalEditorOpen(false);
             setPersonalEditResumeContext(null);
+            setPersonalEditResumeAction(null);
+            if (result.id !== recipeId) {
+              router.push(`/recipe/${result.id}`);
+              return;
+            }
             void loadRecipe();
           }}
           recipeId={recipeId}
           returnFocusRef={personalEditorOpenerRef}
-          resumeContext={personalEditResumeContext}
+          resumeAction={personalEditorMode === "edit" ? personalEditResumeAction : null}
+          resumeContext={personalEditorMode === "edit" ? personalEditResumeContext : null}
         />
       ) : null}
     </>
@@ -1965,7 +2180,6 @@ export function RecipeDetailScreen({
 }
 
 function RecipeDetailWebView({
-  canEditPersonalRecipe,
   cookActionLabel,
   cookCountLabel,
   isAuthenticated,
@@ -1974,8 +2188,12 @@ function RecipeDetailWebView({
   isCookPending,
   likeCountLabel,
   onCook,
+  onDeletePersonalRecipe,
   onEditPersonalRecipe,
+  onForkPersonalRecipe,
   onOpenLightbox,
+  personalRecipeAccessState,
+  personalRecipeCapabilityEnabled,
   onProtectedAction,
   onRetryNutrition,
   onSelectedServingsChange,
@@ -1987,7 +2205,6 @@ function RecipeDetailWebView({
   scaledIngredients,
   selectedServings,
 }: {
-  canEditPersonalRecipe: boolean;
   cookActionLabel: string;
   cookCountLabel: string;
   isAuthenticated: boolean;
@@ -1996,8 +2213,12 @@ function RecipeDetailWebView({
   isCookPending: boolean;
   likeCountLabel: string;
   onCook: () => void;
+  onDeletePersonalRecipe: () => void;
   onEditPersonalRecipe: () => void;
+  onForkPersonalRecipe: (payload: { requiresLogin: boolean }) => void;
   onOpenLightbox: (index: number) => void;
+  personalRecipeAccessState: "unknown" | "public" | "owner-private";
+  personalRecipeCapabilityEnabled: boolean;
   onProtectedAction: (type: "like" | "save" | "planner") => void;
   onRetryNutrition: () => void;
   onSelectedServingsChange: (value: number | ((current: number) => number)) => void;
@@ -2295,12 +2516,12 @@ function RecipeDetailWebView({
                     {cookActionLabel}
                   </WebButton>
                   <RecipeDetailPersonalActions
-                    accessState={canEditPersonalRecipe ? "owner-private" : "unknown"}
-                    capabilityEnabled={canEditPersonalRecipe}
+                    accessState={personalRecipeAccessState}
+                    capabilityEnabled={personalRecipeCapabilityEnabled}
                     isAuthenticated={isAuthenticated}
-                    onDelete={() => undefined}
+                    onDelete={onDeletePersonalRecipe}
                     onEdit={onEditPersonalRecipe}
-                    onFork={() => undefined}
+                    onFork={onForkPersonalRecipe}
                   />
                 </div>
                 <p className="web-recipe-rail-note">
@@ -2319,12 +2540,12 @@ function RecipeDetailWebView({
         </WebButton>
         <WebButton disabled={isCookPending} onClick={onCook} variant="secondary">{cookActionLabel}</WebButton>
         <RecipeDetailPersonalActions
-          accessState={canEditPersonalRecipe ? "owner-private" : "unknown"}
-          capabilityEnabled={canEditPersonalRecipe}
+          accessState={personalRecipeAccessState}
+          capabilityEnabled={personalRecipeCapabilityEnabled}
           isAuthenticated={isAuthenticated}
-          onDelete={() => undefined}
+          onDelete={onDeletePersonalRecipe}
           onEdit={onEditPersonalRecipe}
-          onFork={() => undefined}
+          onFork={onForkPersonalRecipe}
         />
       </WebCTA>
     </WebShell>

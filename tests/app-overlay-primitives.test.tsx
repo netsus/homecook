@@ -73,6 +73,39 @@ describe("app overlay primitives", () => {
     expect(handleConfirm).toHaveBeenCalledTimes(1);
   });
 
+  it("keeps the shared footer primary confirm as mint by default and allows a danger confirm tone", () => {
+    const { rerender } = render(
+      <AppModalFooterActions
+        confirmLabel="확인"
+        onCancel={vi.fn()}
+        onConfirm={vi.fn()}
+      />,
+    );
+
+    const defaultConfirm = screen.getByRole("button", { name: "확인" });
+    expect(defaultConfirm.className).toContain("bg-[var(--wave1-mint-contrast)]");
+    expect(defaultConfirm.className).toContain(
+      "hover:bg-[var(--wave1-mint-contrast-deep)]",
+    );
+    expect(defaultConfirm.className).toContain("disabled:opacity-50");
+
+    rerender(
+      <AppModalFooterActions
+        confirmLabel="삭제"
+        confirmTone="danger"
+        onCancel={vi.fn()}
+        onConfirm={vi.fn()}
+      />,
+    );
+
+    const dangerConfirm = screen.getByRole("button", { name: "삭제" });
+    expect(dangerConfirm.className).toContain("bg-[var(--danger)]");
+    expect(dangerConfirm.className).toContain("text-[var(--text-inverse)]");
+    expect(dangerConfirm.className).toContain("hover:bg-[var(--danger-strong)]");
+    expect(dangerConfirm.className).toContain("active:bg-[var(--danger-strong)]");
+    expect(dangerConfirm.className).toContain("disabled:opacity-50");
+  });
+
   it("keeps stepper controls the same fixed touch size", async () => {
     const handleChange = vi.fn();
     const user = userEvent.setup();

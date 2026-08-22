@@ -146,6 +146,11 @@ describe("hybrid authority AST/static gate", () => {
         functionName: "POST",
       },
       {
+        factory: "createRecipeFuturePropagationInternalClient",
+        file: "app/api/v1/recipes/route.ts",
+        functionName: "postRecipe",
+      },
+      {
         factory: "createShoppingCreateInternalClient",
         file: "app/api/v1/shopping/lists/route.ts",
         functionName: "POST",
@@ -206,6 +211,11 @@ describe("hybrid authority AST/static gate", () => {
         functionName: "readRecipeSnapshotEntrypointContext",
       },
       {
+        factory: "createRecipeFuturePropagationInternalClient",
+        file: "lib/server/recipe-snapshot-entrypoint.ts",
+        functionName: "readRecipeSnapshotForkContext",
+      },
+      {
         factory: "createYoutubeExtractionInternalClient",
         file: "lib/server/youtube-import.ts",
         functionName: "handleYoutubeExtract",
@@ -229,10 +239,12 @@ describe("hybrid authority AST/static gate", () => {
 
     expect(inventory.internalOperationFunctionAllowlist).toMatchObject({
       createRecipeFuturePropagationInternalClient: {
+        "app/api/v1/recipes/route.ts": ["postRecipe"],
         "app/api/v1/recipes/[id]/future-plan-impact/route.ts": ["POST"],
         "app/api/v1/recipes/[id]/route.ts": ["DELETE", "PATCH"],
         "lib/server/recipe-snapshot-entrypoint.ts": [
           "readRecipeSnapshotEntrypointContext",
+          "readRecipeSnapshotForkContext",
           "readRecipeSnapshotUiMode",
         ],
       },
