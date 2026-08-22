@@ -1115,7 +1115,7 @@
       "kind": "direct_dml",
       "operation": "insert",
       "target": "recipe_ingredients",
-      "line": 1452,
+      "line": 2111,
       "source_file": "app/api/v1/recipes/route.ts",
       "route": "/api/v1/recipes",
       "owner_scope": "authenticated-user",
@@ -1129,7 +1129,7 @@
       "kind": "direct_dml",
       "operation": "insert",
       "target": "recipe_steps",
-      "line": 1464,
+      "line": 2123,
       "source_file": "app/api/v1/recipes/route.ts",
       "route": "/api/v1/recipes",
       "owner_scope": "authenticated-user",
@@ -1143,7 +1143,7 @@
       "kind": "direct_dml",
       "operation": "insert",
       "target": "recipes",
-      "line": 1431,
+      "line": 2090,
       "source_file": "app/api/v1/recipes/route.ts",
       "route": "/api/v1/recipes",
       "owner_scope": "authenticated-user",
@@ -1895,11 +1895,11 @@
       "activation_phase": "f0-expand-legacy-guard"
     },
     {
-      "key": "rpc|app/api/v1/recipes/route.ts|create_manual_recipe_with_managed_image|1",
+      "key": "rpc|app/api/v1/recipes/route.ts|create_manual_recipe_with_managed_image|2",
       "kind": "rpc",
       "operation": "call",
       "target": "create_manual_recipe_with_managed_image",
-      "line": 1355,
+      "line": 2014,
       "source_file": "app/api/v1/recipes/route.ts",
       "route": "/api/v1/recipes",
       "owner_scope": "authenticated-user",
@@ -1909,11 +1909,25 @@
       "activation_phase": "f0-expand-legacy-guard"
     },
     {
-      "key": "rpc|app/api/v1/recipes/route.ts|create_manual_recipe|2",
+      "key": "rpc|app/api/v1/recipes/route.ts|create_manual_recipe|3",
       "kind": "rpc",
       "operation": "call",
       "target": "create_manual_recipe",
-      "line": 1367,
+      "line": 2026,
+      "source_file": "app/api/v1/recipes/route.ts",
+      "route": "/api/v1/recipes",
+      "owner_scope": "authenticated-user",
+      "persists_personal_state": true,
+      "guard_mode": "protected-rpc-or-mutated-table-before-trigger",
+      "expected_generation": "joint-promote-server-verified-session-binding",
+      "activation_phase": "f0-expand-legacy-guard"
+    },
+    {
+      "key": "rpc|app/api/v1/recipes/route.ts|write_personal_recipe_core|1",
+      "kind": "rpc",
+      "operation": "call",
+      "target": "write_personal_recipe_core",
+      "line": 1834,
       "source_file": "app/api/v1/recipes/route.ts",
       "route": "/api/v1/recipes",
       "owner_scope": "authenticated-user",
@@ -2282,6 +2296,6 @@
       "on_delete": "cascade"
     }
   ],
-  "generated_at": "2026-08-20T16:28:05.977Z",
-  "checksum": "9ce4ca178fd19f85f5fd32564a7cd618ed5097c0e0a35421af0b2cd973ae1af9"
+  "generated_at": "2026-08-22T08:45:43.517Z",
+  "checksum": "ac288b2562cb214ce2e900e2d0d8af5e6d938201df167e538fa5df8f3416dd9b"
 }

@@ -168,7 +168,7 @@ const sourceEvidence = {
   mypage_surface_personal_editor_marker_count: 0,
   personal_create_active_entry: false,
   recipe_collection_personal_editor_marker_count: 0,
-  recipe_collection_personal_origin_field_count: 0,
+  recipe_collection_personal_origin_field_count: 7,
   recipe_delete_handler_count: 1,
   recipe_patch_handler_count: 1,
   recipebook_surface_personal_editor_marker_count: 0,
@@ -309,7 +309,7 @@ describe("personal recipe editor hybrid verifier", () => {
       },
       {
         ...sourceEvidence,
-        recipe_collection_personal_origin_field_count: 1,
+        recipe_collection_personal_origin_field_count: 6,
       },
       { ...sourceEvidence, recipe_patch_handler_count: 0 },
       { ...sourceEvidence, recipe_patch_handler_count: 2 },

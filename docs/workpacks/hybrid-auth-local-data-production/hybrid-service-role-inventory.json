@@ -20,6 +20,7 @@
     "createRecipeFuturePropagationInternalClient": [
       "app/api/v1/recipes/[id]/future-plan-impact/route.ts",
       "app/api/v1/recipes/[id]/route.ts",
+      "app/api/v1/recipes/route.ts",
       "lib/server/recipe-snapshot-entrypoint.ts"
     ],
     "createSnapshotV2SessionInternalClient": [
@@ -63,6 +64,9 @@
   },
   "internal_operation_function_allowlist": {
     "createRecipeFuturePropagationInternalClient": {
+      "app/api/v1/recipes/route.ts": [
+        "postRecipe"
+      ],
       "app/api/v1/recipes/[id]/future-plan-impact/route.ts": [
         "POST"
       ],
@@ -262,6 +266,16 @@
       "allowed": true,
       "factory": "createRecipeImageInternalClient",
       "functionName": "POST",
+      "kind": "internal-operation-call"
+    },
+    {
+      "classification": "public",
+      "file": "app/api/v1/recipes/route.ts",
+      "column": 27,
+      "line": 1810,
+      "allowed": true,
+      "factory": "createRecipeFuturePropagationInternalClient",
+      "functionName": "postRecipe",
       "kind": "internal-operation-call"
     },
     {
