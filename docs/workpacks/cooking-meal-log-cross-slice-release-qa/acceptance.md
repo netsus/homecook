@@ -1,6 +1,6 @@
 # Acceptance Checklist
 
-> Stage 1 locks a future verification-only gate. Every runtime item remains unchecked until exact-head evidence exists. The contract authority is official v1.7.32/v1.5.36/v1.3.34/DB v1.3.34/API v1.2.39 plus the retained 1,018 lines plan at SHA-256 `d4d0fb39e80eeffc8b1e73ad92f0d91a35a9b6adc57a556ea8c9ec6ecffa951d`.
+> Stage 1 locks a future verification-only gate. Every runtime item remains unchecked until exact-head evidence exists. The contract authority is official v1.7.33/v1.5.37/v1.3.35/DB v1.3.35/API v1.2.40 plus the retained 1,018 lines plan at SHA-256 `d4d0fb39e80eeffc8b1e73ad92f0d91a35a9b6adc57a556ea8c9ec6ecffa951d`.
 
 ## Stage 1 Current Gate Evidence
 
@@ -19,7 +19,7 @@
 - [x] pinned isolated local verification passes without product or production mutation <!-- omo:id=accept-cooking-cross-happy-isolated;stage=2;scope=backend;review=3,6 -->
 - [ ] backend/isolated/security/performance/rollback evidence is rerun on `FINAL_EVIDENCE_SHA` <!-- omo:id=accept-cooking-cross-final-backend-bundle;stage=2;scope=backend;review=3,6 -->
 - [ ] browser/design evidence is rerun on the same `FINAL_EVIDENCE_SHA` <!-- omo:id=accept-cooking-cross-final-browser-bundle;stage=4;scope=frontend;review=5,6 -->
-- [ ] API responses retain the existing `{ success, data, error }` wrapper and v1.2.39 types <!-- omo:id=accept-cooking-cross-happy-api-envelope;stage=2;scope=backend;review=3,6 -->
+- [ ] API responses retain the existing `{ success, data, error }` wrapper and v1.2.40 types <!-- omo:id=accept-cooking-cross-happy-api-envelope;stage=2;scope=backend;review=3,6 -->
 
 ## State / Policy
 
@@ -28,6 +28,7 @@
 - [x] current/immediate-previous v1/v2 dispatch, rollback drain and legacy retention stay available until their existing gates permit removal <!-- omo:id=accept-cooking-cross-state-version-rollback;stage=2;scope=shared;review=3,6 -->
 - [ ] completed shopping and historical rows remain read-only under their official contracts <!-- omo:id=accept-cooking-cross-state-read-only;stage=2;scope=shared;review=3,6 -->
 - [x] no endpoint, field, status, error, action, screen, migration, or dependency is introduced <!-- omo:id=accept-cooking-cross-state-no-invention;stage=2;scope=shared;review=3,6 -->
+- [x] approved disposable isolated Stage 4 rehearsal is the only runtime/activation carve-out and production/non-disposable mutation remains forbidden <!-- omo:id=accept-cooking-cross-state-stage4-carveout;stage=2;scope=shared;review=3,6 -->
 
 ## Error / Permission
 
@@ -95,6 +96,7 @@
 - verifier: separate Codex Stage 2/3, Stage 4 evidence, Stage 5 authority and Stage 6 closeout tasks
 - environment: exact repaired head, pinned isolated local Supabase, separately authorized controlled full-local target, real Chrome 390/320/desktop
 - scenarios: security inventory; account/session/image lifecycle; recipe/snapshot/product; v1/v2 cooking; batch/meal-log; legacy/rollback; current-head CI
+- Stage 4 browser/authority evidence is collected only in the approved disposable isolated rehearsal project. It uses fresh ownership-attested disposable project only, loopback-only transport, JWKS loopback only, DNS/TLS/public request 0, and the reserved production-shaped HTTPS issuer claim; direct UPDATE, fixture state injection, and migration shortcut are forbidden. It must clean up owned artifacts only and remains `rehearsal_only`; it does not satisfy Manual/server-Mac/OAuth/device/AT/full-WCAG or capability activation.
 
 ### Manual Only
 

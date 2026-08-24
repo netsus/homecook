@@ -13,7 +13,7 @@ F0와 #1~#13에서 병합된 계정 세대, 제품 검색·재료 연결, 개인
 ## In Scope
 
 - 화면: 기존 `ACCOUNT_QUARANTINE`, `HOME`, `RECIPE_DETAIL`, `MANUAL_RECIPE_CREATE`, `PLANNER_WEEK`, `COOK_MODE`, `LEFTOVERS`, `MEAL_LOG`의 exact-head 검증만 수행한다.
-- API: 공식 `docs/api문서-v1.2.39.md`의 F0/#1~#13 기존 endpoint와 `{ success, data, error }` 계약을 그대로 검증한다.
+- API: 공식 `docs/api문서-v1.2.40.md`의 F0/#1~#13 기존 endpoint와 `{ success, data, error }` 계약을 그대로 검증한다.
 - 상태 전이: 기존 account generation, personal recipe/snapshot, v1/v2 cooking, batch ledger, meal-log event, legacy rollback 상태를 변경 없이 재검증한다.
 - DB 영향: Stage 2 기본 경로는 pinned isolated local replay와 controlled full-local read-only/checksum verification이다.
 - Schema Change: 없음. 이 slice는 migration과 runtime repair를 소유하지 않는다.
@@ -21,9 +21,19 @@ F0와 #1~#13에서 병합된 계정 세대, 제품 검색·재료 연결, 개인
 ## Out of Scope
 
 - no endpoint, field, status, error, action, screen, migration, or dependency를 추가하거나 변경하지 않는다.
-- inline runtime repair, 공식 문서 Contract Evolution, capability/R/R+1/R+2/required-key/activation을 수행하지 않는다.
+- inline runtime repair, 공식 문서 Contract Evolution, capability/R/R+1/R+2/required-key/activation을 수행하지 않는다. 이 slice의 runtime/activation 예외는 아래 승인된 disposable isolated Stage 4 rehearsal project뿐이며, production/non-disposable mutation은 계속 금지된다.
 - Cloud/linked/remote Supabase is forbidden/N/A이며 verifier, credential, fallback 또는 target으로 요구하지 않는다.
 - 권한 없는 local-production mutation, server-Mac 설치·secret rotation, destructive tombstone·legacy orphan delete를 수행하지 않는다.
+
+## Approved Contract Evolution Scope
+
+- 사용자 승인일: 2026-08-24
+- official 5 product docs CSoT impact: N/A; current official tuple `v1.7.33 / v1.5.37 / v1.3.35 / v1.3.35 / v1.2.40`는 유지한다.
+- Stage 4는 fresh ownership-attested disposable isolated project only, loopback transport only, remote/linked/cloud access 0이다.
+- reserved non-resolving production-shaped HTTPS issuer claim은 `https://auth.stage4.homecook.invalid/auth/v1`이며, 실제 transport/JWKS는 loopback만 사용하고 DNS/TLS/public request는 0이다.
+- canonical cutover/capability transition procedures는 real transition semantics(CAS/digest/quarantine/session)로 수행하며 direct UPDATE, fixture state injection, migration shortcut은 허용하지 않는다.
+- evidence는 `rehearsal_only`이며 Manual/server-Mac/OAuth/R/R+1/R+2/required-key/production activation을 만족시키지 않는다.
+- exact-head create-only evidence, cleanup-owned-only teardown, fail-closed semantics를 지킨다.
 
 ## Dependencies
 
@@ -73,7 +83,7 @@ Stage 2 entry still requires this relock PR merge and the documented post-merge 
 
 ## Backend First Contract
 
-- request/query/path, response wrapper, status, error, ownership, idempotency and state transitions remain exactly those in official API v1.2.39 and predecessor workpacks.
+- request/query/path, response wrapper, status, error, ownership, idempotency and state transitions remain exactly those in official API v1.2.40 and predecessor workpacks.
 - Stage 2 is verification-only. It starts with deterministic tests and pinned isolated local Supabase, and may use controlled full-local read-only transactions only after exact target identity, backup freshness and authority are recorded.
 - Stage 2 must not execute Manual Only or local-production mutations. A necessary mutation becomes an explicit blocker until separately authorized.
 - any defect stops release verification, opens a separate failing-test-first TDD repair PR, merges it with independent review/current-head green, and reruns affected plus final evidence on the repaired exact head.
@@ -157,11 +167,11 @@ Stage 2 entry still requires this relock PR merge and the documented post-merge 
 ## Source Links
 
 - `docs/sync/CURRENT_SOURCE_OF_TRUTH.md`
-- `docs/요구사항기준선-v1.7.32.md`
-- `docs/화면정의서-v1.5.36.md`
-- `docs/유저flow맵-v1.3.34.md`
-- `docs/db설계-v1.3.34.md`
-- `docs/api문서-v1.2.39.md`
+- `docs/요구사항기준선-v1.7.33.md`
+- `docs/화면정의서-v1.5.37.md`
+- `docs/유저flow맵-v1.3.35.md`
+- `docs/db설계-v1.3.35.md`
+- `docs/api문서-v1.2.40.md`
 - `docs/engineering/supabase-local-only-operations.md`
 - `docs/engineering/workflow-v2/omo-canonical-closeout-state.md`
 - approved plan: `docs/workpacks/planner-shell/evidence/cooking-meal-log-and-product-search-master-plan-20260722.md`, SHA-256 `d4d0fb39e80eeffc8b1e73ad92f0d91a35a9b6adc57a556ea8c9ec6ecffa951d`, 1,018 lines
@@ -172,7 +182,7 @@ Stage 2 entry still requires this relock PR merge and the documented post-merge 
 - Stage 2 deterministic: existing focused F0/#1~#13 tests and `pnpm verify:local-supabase-runtime:isolated`; production volume/port/env/secret must not be shared.
 - owning focused map은 `automation-spec.json.backend.required_test_targets`에서 F0/#1~#13 exact merge SHA와 한 개 이상의 실제 regression target을 1:1로 연결한다. 특히 #3 visibility, #4 snapshot authority, #5 editor decoupling, #6 customization write core를 별도 command로 실행한다.
 - controlled full-local: read-only transaction, target identity, backup freshness and before/after checksum equality only after authority. Mutation, reset, volume delete and migration-history rewrite are prohibited.
-- Stage 4: real local stack + real Chrome, owner A/B and the eight screens at 390/320/desktop; unavailable runtime or authority is a blocker rather than a fixture substitution.
+- Stage 4: approved disposable isolated rehearsal only. real local stack + real Chrome, owner A/B and the eight screens at 390/320/desktop; loopback-only transport, reserved production-shaped HTTPS issuer claim, cleanup-owned-only teardown and fail-closed evidence handling are required. unavailable runtime or authority is a blocker rather than a fixture substitution.
 - bootstrap expectations remain predecessor-owned (`users`, `recipe_books`, `meal_plan_columns`, account generation/session binding). Missing schema/seed/bootstrap blocks verification.
 
 ## Stage 2 Current Evidence
@@ -191,7 +201,7 @@ Stage 2 entry still requires this relock PR merge and the documented post-merge 
 
 ## Key Rules
 
-- official tuple is v1.7.32/v1.5.36/v1.3.34/DB v1.3.34/API v1.2.39; this relock is not Contract Evolution.
+- official tuple is v1.7.33/v1.5.37/v1.3.35/DB v1.3.35/API v1.2.40; this relock is not Contract Evolution.
 - full-local is the only Supabase authority. Cloud/linked/remote Supabase target, credential, verifier and fallback are forbidden/N/A.
 - evidence is exact-head and time-bounded. Stale, absent, different-head or fixture-only evidence cannot close a gate.
 - automated/runtime merged-green and overall lifecycle pending are separate facts; neither is promoted into the other.

@@ -45,6 +45,7 @@ const stage2AuthorCheckedIds = [
   "accept-cooking-cross-precondition-local-only",
   "accept-cooking-cross-state-no-invention",
   "accept-cooking-cross-state-separation",
+  "accept-cooking-cross-state-stage4-carveout",
   "accept-cooking-cross-state-verification-only",
   "accept-cooking-cross-state-version-rollback",
   "delivery-cooking-cross-stage2-isolated",
@@ -79,11 +80,11 @@ const localOnlyAuthority =
   "docs/engineering/supabase-local-only-operations.md";
 const officialSources = [
   "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
-  "docs/요구사항기준선-v1.7.32.md",
-  "docs/화면정의서-v1.5.36.md",
-  "docs/유저flow맵-v1.3.34.md",
-  "docs/db설계-v1.3.34.md",
-  "docs/api문서-v1.2.39.md",
+  "docs/요구사항기준선-v1.7.33.md",
+  "docs/화면정의서-v1.5.37.md",
+  "docs/유저flow맵-v1.3.35.md",
+  "docs/db설계-v1.3.35.md",
+  "docs/api문서-v1.2.40.md",
 ];
 const predecessorRuntimeMerges = [
   ["F0", "a10293e0cf17c4c19204e870024e8fe745e362e3"],
@@ -594,6 +595,11 @@ describe("cooking meal-log cross-slice Stage 1 relock", () => {
       "drift 0",
       "Stage 2 verification-only",
       stage2Base,
+      "v1.7.33",
+      "v1.5.37",
+      "v1.3.35",
+      "DB v1.3.35",
+      "API v1.2.40",
     ]) {
       expect(exactSix).toContain(value);
     }
@@ -632,6 +638,37 @@ describe("cooking meal-log cross-slice Stage 1 relock", () => {
     ]) {
       expect(exactSix).toContain(required);
     }
+  });
+
+  it("records the approved Stage 4 isolated HTTPS issuer carve-out as docs-governance only", () => {
+    for (const required of [
+      "official 5 product docs CSoT impact: N/A",
+      "approved disposable isolated rehearsal only",
+      "fresh ownership-attested disposable project only",
+      "reserved production-shaped HTTPS issuer claim",
+      "loopback-only transport",
+      "JWKS loopback only",
+      "DNS/TLS/public request 0",
+      "rehearsal_only",
+      "cleanup-owned-only",
+      "fail-closed",
+      "canonical real transition procedures",
+      "production/non-disposable mutation remains forbidden",
+    ]) {
+      expect(exactSix).toContain(required);
+    }
+    expect(readme).toContain("Approved Contract Evolution Scope");
+    expect(acceptance).toContain("rehearsal_only");
+    expect(roadmap).toContain("approved disposable isolated rehearsal only");
+    expect(JSON.stringify(automation)).toContain(
+      "stage4-disposable-isolated-rehearsal-only",
+    );
+    expect(JSON.stringify(automation)).toContain(
+      "fresh-ownership-attested-disposable-isolated-project-only",
+    );
+    expect(JSON.stringify(automation)).toContain(
+      "canonical-real-transition-procedures-use-cas-digest-quarantine-session-semantics",
+    );
   });
 
   it("treats MEAL_LOG predecessor design evidence as merged, not future", () => {

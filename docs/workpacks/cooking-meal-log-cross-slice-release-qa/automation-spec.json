@@ -7,7 +7,7 @@
   "merge_policy": "manual",
   "backend": {
     "required_endpoints": [
-      "all official API v1.2.39 routes touched by F0 and successor #1 through #13",
+      "all official API v1.2.40 routes touched by F0 and successor #1 through #13",
       "GET /food-products",
       "GET /food-catalog/search",
       "GET /recipes/pantry-match",
@@ -45,7 +45,16 @@
       "verification-only-no-inline-runtime-contract-or-dependency-change",
       "all-predecessor-automated-runtime-merges-retained-at-frozen-base",
       "overall-manual-activation-lifecycle-remains-pending",
+      "stage4-disposable-isolated-rehearsal-only-with-reserved-production-shaped-https-issuer-claim",
+      "fresh-ownership-attested-disposable-isolated-project-only",
+      "loopback-only-transport-and-remote-linked-cloud-access-zero",
+      "jwks-loopback-only-and-dns-tls-public-request-zero",
+      "rehearsal_only-never-satisfies-manual-server-mac-oauth-r-rplus1-r-rplus2-required-key-production-activation",
+      "production-non-disposable-mutation-remains-forbidden",
+      "exact-head-create-only-evidence-cleanup-owned-only-fail-closed",
       "pinned-isolated-local-and-controlled-full-local-read-only-only-with-authority",
+      "canonical-real-transition-procedures-use-cas-digest-quarantine-session-semantics",
+      "no-direct-update-fixture-state-injection-or-migration-shortcut",
       "cloud-linked-remote-supabase-target-verifier-credential-and-fallback-forbidden-na",
       "exact-repaired-head-evidence-and-separate-tdd-repair-rerun",
       "final-evidence-sha-after-stage4-artifacts-and-full-cross-lane-rerun-before-stage6",
@@ -276,5 +285,5 @@
     "backend": 0,
     "frontend": 0
   },
-  "notes": "Stage 1 uses docs repair budget max 3 and backend/frontend inline fix rounds 0/0. The verification-only full producer runs pinned isolated owning lanes with lane-specific env allowlists, actual route-boundary list1/list20 query measurement, semantic payload envelopes and one shared timestamp. The final validator binds repository HEAD, clean worktree, explicit canonical attempt, every artifact head/type/payload/count/hash and FINAL_EVIDENCE_SHA before Stage 6. F0/#1-#13 automated/runtime green remains distinct from Manual/activation pending. Cloud/linked/remote Supabase and product/runtime/Manual mutation are forbidden. generator_required=false and critic_required=false reuse the non-null merged 8-screen index while current authority ownership remains the fresh #14 report only."
+  "notes": "Stage 1 uses docs repair budget max 3 and backend/frontend inline fix rounds 0/0. The verification-only full producer runs pinned isolated owning lanes with lane-specific env allowlists, actual route-boundary list1/list20 query measurement, semantic payload envelopes and one shared timestamp. The final validator binds repository HEAD, clean worktree, explicit canonical attempt, every artifact head/type/payload/count/hash and FINAL_EVIDENCE_SHA before Stage 6. F0/#1-#13 automated/runtime green remains distinct from Manual/activation pending. Cloud/linked/remote Supabase and product/runtime/Manual mutation are forbidden. Stage 4 browser/authority evidence is rehearsal_only in the approved disposable isolated rehearsal project, with fresh ownership-attested disposable isolated project only, loopback-only transport, JWKS loopback only, DNS/TLS/public request 0, the reserved production-shaped HTTPS issuer claim, canonical real transition procedures, and no direct UPDATE/fixture state injection/migration shortcut; official 5 docs CSoT impact is N/A. generator_required=false and critic_required=false reuse the non-null merged 8-screen index while current authority ownership remains the fresh #14 report only."
 }
