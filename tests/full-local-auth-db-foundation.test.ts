@@ -10,6 +10,8 @@ import {
 
 const MIGRATION_PATH =
   "supabase/migrations/20260801120000_full_local_auth_db_foundation.sql";
+const ACCOUNT_CUTOVER_AUTHORITY_RESTORE_MIGRATION_PATH =
+  "supabase/migrations/20260824173000_full_local_account_cutover_authority_restore.sql";
 const SESSION_ISSUE_TIME_PRECISION_MIGRATION_PATH =
   "supabase/migrations/20260803090000_full_local_session_issue_time_precision.sql";
 const MIGRATIONS_DIRECTORY = "supabase/migrations";
@@ -605,5 +607,62 @@ describe("full-local Auth DB migration contract", () => {
       "v_binding.session_issued_at is distinct from p_session_issued_at",
     );
     expect(migration).toContain("'already_revoked'");
+  });
+
+  it("restores canonical account cutover snapshot and promote authority after the hybrid maintenance stub", async () => {
+    const stubMigration = await readFile(
+      "supabase/migrations/20260730090000_hybrid_auth_remote_identity_epoch_mirror.sql",
+      "utf8",
+    );
+    const restoreMigration = await readFile(
+      ACCOUNT_CUTOVER_AUTHORITY_RESTORE_MIGRATION_PATH,
+      "utf8",
+    );
+
+    expect(stubMigration).toContain(
+      "raise exception 'ACCOUNT_LIFECYCLE_MAINTENANCE'",
+    );
+    expect(restoreMigration).toContain(
+      "create or replace function public.set_account_generation_cutover_snapshot(",
+    );
+    expect(restoreMigration).toContain(
+      "create or replace function public.promote_account_generation_cutover(",
+    );
+    expect(restoreMigration).toContain(
+      "cutover snapshot compare-and-swap failed",
+    );
+    expect(restoreMigration).toContain(
+      "authoritative cutover population digest changed",
+    );
+    expect(restoreMigration).toContain(
+      "pg_catalog.pg_advisory_xact_lock(",
+    );
+    expect(restoreMigration).toContain(
+      "extensions.digest(",
+    );
+    expect(restoreMigration).toContain(
+      "lock table auth.users in share row exclusive mode",
+    );
+    expect(restoreMigration).toContain(
+      "verified provider auth barrier is required",
+    );
+    expect(restoreMigration).toContain(
+      "account generation joint activation gate is unavailable",
+    );
+    expect(restoreMigration).toContain(
+      "owner_signal_union_zero",
+    );
+    expect(restoreMigration).toMatch(
+      /revoke all on function public\.set_account_generation_cutover_snapshot\([\s\S]+?from public, anon, authenticated;/u,
+    );
+    expect(restoreMigration).toMatch(
+      /grant execute on function public\.set_account_generation_cutover_snapshot\([\s\S]+?to service_role;/u,
+    );
+    expect(restoreMigration).toMatch(
+      /revoke all on function public\.promote_account_generation_cutover\([\s\S]+?from public, anon, authenticated;/u,
+    );
+    expect(restoreMigration).toMatch(
+      /grant execute on function public\.promote_account_generation_cutover\([\s\S]+?to service_role;/u,
+    );
   });
 });
