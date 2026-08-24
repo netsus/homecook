@@ -63,7 +63,11 @@ export function SnapshotV2CookModeView({
         )
       ) : null}
 
-      <main className="min-h-0 flex-1 overflow-y-auto px-4 pb-24">
+      <main
+        aria-label="요리 내용"
+        className="min-h-0 flex-1 overflow-y-auto px-4 pb-24"
+        tabIndex={0}
+      >
         <CookModeWholeBoard density="mobile" recipe={data.recipe} />
       </main>
 

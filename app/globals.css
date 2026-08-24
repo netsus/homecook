@@ -10,8 +10,8 @@
   --brand-primary: #00A1FF;
   --brand-primary-hover: #0087d7;
   --brand-primary-text: #0072bd;
-  --brand-primary-accessible: #00A1FF;
-  --brand-primary-accessible-hover: #0087d7;
+  --brand-primary-accessible: #0072bd;
+  --brand-primary-accessible-hover: #0066a8;
   --brand-primary-soft: rgba(0, 161, 255, 0.08);
   --brand-primary-border: #8BD2FF;
   --brand-primary-rgb: 0, 161, 255;
@@ -36,7 +36,7 @@
   --line:       rgba(0, 0, 0, 0.08);
   --brand:      var(--brand-primary);
   --brand-deep: var(--brand-primary-hover);
-  --brand-contrast: var(--brand-primary);
+  --brand-contrast: var(--brand-primary-accessible);
   --brand-contrast-deep: var(--brand-primary-accessible-hover);
   --brand-soft: var(--brand-primary-soft);
   --brand-border: var(--brand-primary-border);
@@ -225,7 +225,7 @@
   --chip-height: 36px;
   --chip-height-lg: 44px;
   --input-height: 44px;
-  --app-back-button-size: 32px;
+  --app-back-button-size: 44px;
   --app-back-button-icon-size: 20px;
   --app-back-button-radius: var(--radius-full);
   --app-back-button-color: var(--foreground);
@@ -1009,7 +1009,7 @@
 
 .home-mobile-discovery-kicker {
   margin: 0;
-  color: var(--brand);
+  color: var(--brand-contrast);
   font-size: 14px;
   font-weight: 600;
   line-height: 1.35;
@@ -1035,7 +1035,7 @@
 }
 
 .home-app-brand-primary {
-  color: var(--brand);
+  color: var(--brand-contrast);
   font-size: 18px;
   font-weight: 700;
   line-height: 1;
@@ -1089,8 +1089,8 @@
 .profile-summary .web-profile-button {
   position: relative;
   display: inline-flex;
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   align-items: center;
   justify-content: center;
   overflow: hidden;
@@ -1379,6 +1379,7 @@
 
 .home-mobile-search-bar input {
   width: 100%;
+  min-height: 44px;
   min-width: 0;
   border: 0;
   outline: 0;
@@ -1401,7 +1402,7 @@
   border: 1px solid var(--brand);
   border-radius: 8px;
   background: transparent;
-  color: var(--brand);
+  color: var(--brand-contrast);
   padding: 0 8px;
   font-size: 14px;
   font-weight: 600;
@@ -3618,7 +3619,7 @@ button {
   }
 
   .web-chip-active {
-    background: var(--web-brand);
+    background: var(--web-brand-accessible);
     color: var(--web-text-inverse);
   }
 
@@ -5888,7 +5889,7 @@ button {
   }
 
   .web-icon-action-brand {
-    color: var(--web-brand);
+    color: var(--web-brand-accessible);
   }
 
   .web-recipe-nutrition-section {
@@ -6777,7 +6778,7 @@ button {
     --surface-subtle: var(--web-divider);
     --wave1-mint: var(--web-brand);
     --wave1-mint-deep: var(--web-brand-deep);
-    --wave1-mint-contrast: var(--web-brand);
+    --wave1-mint-contrast: var(--web-brand-accessible);
     --wave1-mint-contrast-deep: var(--web-brand-deep);
     --wave1-mint-soft: var(--web-brand-wash);
     --shadow: var(--web-shadow-card);
@@ -13249,8 +13250,8 @@ button {
   }
 
   .web-button-primary {
-    border-color: var(--brand);
-    background: var(--brand);
+    border-color: var(--brand-primary-accessible);
+    background: var(--brand-primary-accessible);
     color: var(--text-inverse);
   }
 

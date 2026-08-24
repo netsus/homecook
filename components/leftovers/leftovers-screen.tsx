@@ -1371,7 +1371,7 @@ function MobileAppBar({
     >
       <Link
         aria-label="뒤로 가기"
-        className="absolute left-4 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-start text-[var(--foreground)]"
+        className="absolute left-2.5 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center text-[var(--foreground)]"
         href={backHref}
       >
         <svg
@@ -1391,7 +1391,7 @@ function MobileAppBar({
         {title}
       </h1>
       <Link
-        className="absolute right-4 top-1/2 flex h-7 -translate-y-1/2 items-center justify-center rounded-full border border-[var(--line-strong)] bg-[var(--surface)] px-3 text-[12px] font-extrabold text-[var(--brand)]"
+        className="absolute right-2.5 top-1/2 flex min-h-11 -translate-y-1/2 items-center justify-center rounded-full border border-[var(--line-strong)] bg-[var(--surface)] px-3 text-[12px] font-extrabold text-[var(--brand-contrast)]"
         href={actionHref}
       >
         {actionLabel}

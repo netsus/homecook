@@ -94,8 +94,10 @@ export function MobileCookModeView({
         </header>
 
         <main
+          aria-label="요리 내용"
           className="min-h-0 flex-1 overflow-y-auto px-4 pb-5"
           data-testid={contentTestId}
+          tabIndex={0}
         >
           <CookModeWholeBoard density="mobile" recipe={recipe} />
         </main>

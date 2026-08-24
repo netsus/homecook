@@ -1567,11 +1567,13 @@ describe("recipe detail screen", () => {
     expect(ctaBar?.contains(cookButton)).toBe(true);
     expect(ctaBar?.className).toContain("bottom-0");
     expect(ctaBar?.className).toContain("pb-[calc(82px+env(safe-area-inset-bottom))]");
-    expect(plannerButton.className).toContain("bg-[var(--brand)]");
-    expect(plannerButton.className).toContain("text-[var(--text-inverse)]");
+    expect(plannerButton.className).toContain(
+      "bg-[var(--brand-primary-accessible)]",
+    );
+    expect(plannerButton.className).toContain("[color:var(--text-inverse)]");
     expect(cookButton.className).toContain("border-[var(--brand)]");
     expect(cookButton.className).toContain("bg-transparent");
-    expect(cookButton.className).toContain("text-[var(--brand)]");
+    expect(cookButton.className).toContain("text-[var(--brand-contrast)]");
     expect(screen.queryByText("Recipe Snapshot")).toBeNull();
     expect(screen.queryByText("Slice Note")).toBeNull();
   });

@@ -189,7 +189,7 @@ function AppBar({ onBack, onSave, isSaving, isUploading = false }: AppBarProps) 
           className={[
             "h-[var(--control-height-md)] shrink-0 rounded-[var(--radius-control)] px-3 text-sm font-bold lg:px-4 lg:text-base",
             !isDisabled
-              ? "bg-[var(--brand)] text-[var(--text-inverse)] shadow-[0_8px_18px_var(--brand-shadow-color)] hover:bg-[var(--brand-deep)]"
+              ? "bg-[var(--brand-primary-accessible)] text-[var(--text-inverse)] shadow-[0_8px_18px_var(--brand-shadow-color)] hover:bg-[var(--brand-contrast-deep)]"
               : "cursor-not-allowed bg-[var(--surface-subtle)] text-[var(--text-4)]",
           ].join(" ")}
           onClick={onSave}
@@ -1770,7 +1770,7 @@ export function ManualRecipeCreateScreen({
               onRemove={handleRemoveIngredient}
             />
             <button
-              className="mt-2 flex h-11 w-fit items-center justify-center rounded-[var(--radius-control)] border border-[var(--brand)] bg-[var(--surface)] px-4 text-[13px] font-bold text-[var(--brand)] hover:bg-[var(--brand-soft)]"
+              className="mt-2 flex h-11 w-fit items-center justify-center rounded-[var(--radius-control)] border border-[var(--brand)] bg-[var(--surface)] px-4 text-[13px] font-bold text-[var(--brand-contrast)] hover:bg-[var(--brand-soft)]"
               onClick={() => setModalMode("ingredient-add")}
               type="button"
             >

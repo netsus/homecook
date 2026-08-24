@@ -1727,6 +1727,7 @@ function HomeTagRail({
   if (tagState === "loading") {
     return (
       <div
+        aria-label="태그 불러오는 중"
         className={
           variant === "webAside"
             ? "web-home-aside-chip-row"
@@ -1734,7 +1735,7 @@ function HomeTagRail({
             ? "web-filter-chip-row"
             : "home-mobile-tag-rail"
         }
-        aria-label="태그 불러오는 중"
+        role="status"
       >
         {Array.from({ length: 4 }).map((_, index) => (
           <span
@@ -1791,7 +1792,7 @@ function HomeTagRail({
       : "home-mobile-tag-rail";
 
   return (
-    <div className={containerClass} aria-label="태그 필터">
+    <div aria-label="태그 필터" className={containerClass} role="group">
       {tagOptions.map((tag) => {
         const isActive = activeTagKey === tag.normalized_key;
 

@@ -670,7 +670,7 @@ export function PlannerWeekScreen({
       >
         <div className="mx-auto flex min-h-[52px] max-w-5xl items-center justify-between px-[16px] lg:min-h-[64px]">
           <div>
-            <p className="hidden text-xs font-bold text-[var(--brand)] lg:block">PLANNER</p>
+            <p className="hidden text-xs font-bold text-[var(--brand-contrast)] lg:block">PLANNER</p>
             <h1 className="text-lg font-extrabold text-[var(--foreground)]">플래너</h1>
           </div>
           <div className="lg:hidden">
@@ -709,7 +709,7 @@ export function PlannerWeekScreen({
                   {formatRangeLabel(rangeStartDate, rangeEndDate)}
                 </p>
                 <button
-                  className="mt-1 min-h-11 rounded-[var(--radius-control)] px-[12px] text-xs font-bold [word-break:keep-all] text-[var(--brand)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)] disabled:text-[var(--text-3)]"
+                  className="mt-1 min-h-11 rounded-[var(--radius-control)] px-[12px] text-xs font-bold [word-break:keep-all] text-[var(--brand-contrast)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)] disabled:text-[var(--text-3)]"
                   disabled={isCurrentRange}
                   onClick={resetRange}
                   type="button"
@@ -743,7 +743,7 @@ export function PlannerWeekScreen({
                       className={[
                         "flex min-h-[44px] w-[44px] flex-col items-center justify-center rounded-[var(--radius-control)] px-[2px] py-[4px] text-center outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)]",
                         selected
-                          ? "bg-[var(--brand)] text-[var(--text-inverse)]"
+                          ? "bg-[var(--brand-primary-accessible)] [color:var(--text-inverse)]"
                           : "text-[var(--text-2)]",
                       ].join(" ")}
                       onClick={() => handleDateSelect(dateKey)}
@@ -780,8 +780,9 @@ export function PlannerWeekScreen({
 
           <div className="mt-4 flex flex-wrap gap-2">
             <Link
-              className="inline-flex min-h-11 items-center justify-center rounded-[var(--radius-control)] bg-[var(--brand)] px-5 text-sm font-bold text-[var(--text-inverse)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)] focus-visible:ring-offset-2"
+              className="inline-flex min-h-11 items-center justify-center rounded-[var(--radius-control)] bg-[var(--brand-primary-accessible)] px-5 text-sm font-bold [color:var(--text-inverse)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)] focus-visible:ring-offset-2"
               href="/shopping/flow"
+              style={{ color: "var(--text-inverse)" }}
             >
               장보기
             </Link>
@@ -801,7 +802,7 @@ export function PlannerWeekScreen({
           >
             <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
               <div>
-                <p className="text-xs font-bold text-[var(--brand)]">선택한 날짜</p>
+                <p className="text-xs font-bold text-[var(--brand-contrast)]">선택한 날짜</p>
                 <h2
                   className="mt-1 text-xl font-extrabold"
                   id="selected-planner-date-title"
@@ -837,7 +838,7 @@ export function PlannerWeekScreen({
               >
                 <p>{errorMessage}</p>
                 <button
-                  className="mt-2 min-h-11 font-bold text-[var(--brand)]"
+                  className="mt-2 min-h-11 font-bold text-[var(--brand-contrast)]"
                   onClick={retryPlannerLoad}
                   type="button"
                 >
@@ -897,7 +898,7 @@ export function PlannerWeekScreen({
                                 ) : (
                                   <span
                                     aria-hidden="true"
-                                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-[var(--brand-soft)] font-bold text-[var(--brand)]"
+                                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-[var(--brand-soft)] font-bold text-[var(--brand-contrast)]"
                                   >
                                     {column.name.charAt(0)}
                                   </span>
