@@ -967,7 +967,7 @@ export function readYoutubeExtractionExpectedSchema(path) {
     || JSON.stringify(value.fence_function_signatures)
       !== JSON.stringify(exactFenceFunctionSignatures)
     || value.internal_scope_function_signature
-      !== "private.verify_full_local_internal_scope()"
+      !== "private.youtube_extraction_internal_scope_contract_v1()"
     || JSON.stringify(value.memberships) !== JSON.stringify(exactMemberships)
     || typeof value.migration_owner_membership_exception !== "string"
     || !value.initial_policy

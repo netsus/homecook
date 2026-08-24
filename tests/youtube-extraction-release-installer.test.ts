@@ -506,7 +506,8 @@ describe("YTASYNC-OPS deterministic artifact", () => {
       fence_function_signatures: expect.arrayContaining([
         "private.youtube_extraction_worker_write_fence_is_active(uuid,text,bigint,bigint)",
       ]),
-      internal_scope_function_signature: "private.verify_full_local_internal_scope()",
+      internal_scope_function_signature:
+        "private.youtube_extraction_internal_scope_contract_v1()",
       memberships: [
         {
           member: "authenticator",

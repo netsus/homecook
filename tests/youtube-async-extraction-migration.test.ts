@@ -3,8 +3,55 @@ import { existsSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 const migrationPath = "supabase/migrations/20260812160000_youtube_async_extraction_notification.sql";
+const catalogRepairPath =
+  "supabase/migrations/20260825120000_youtube_extraction_catalog_after_internal_scope.sql";
+const previousCatalogFingerprint =
+  "b8561e40e39a97962dab877e3d7c732236bf1bc55c8c985e56b846c50f7f90b1";
+const currentCatalogFingerprint =
+  "a0740a9e9789d0176d55bac206f3bc7a7ed2b5dc9eb31737317d072512477d6c";
 
 describe("YTASYNC-DB/SEC migration contract", () => {
+  it("re-attests the catalog after the internal scope function changes", () => {
+    expect(existsSync(catalogRepairPath)).toBe(true);
+    const sql = readFileSync(catalogRepairPath, "utf8").toLowerCase();
+    expect(sql.trimStart().startsWith("begin;")).toBe(true);
+    expect(sql.trimEnd().endsWith("commit;")).toBe(true);
+    expect(sql).toContain(
+      "set local role youtube_extraction_credential_manager_rpc_owner",
+    );
+    expect(sql).toContain(previousCatalogFingerprint);
+    expect(sql).toContain(currentCatalogFingerprint);
+    expect(sql).toContain("pg_catalog.pg_get_functiondef");
+    expect(sql).toContain("public.read_youtube_extraction_enqueue_readiness()");
+    expect(sql).toContain("private.assert_youtube_extraction_catalog_ready()");
+    expect(sql).toContain("catalog fingerprint source drifted");
+    expect(sql).toContain("v_previous_occurrences");
+    expect(sql).toContain("v_current_occurrences");
+    expect(sql).toContain("v_previous_occurrences = 0 and v_current_occurrences = 1");
+    expect(sql).not.toMatch(/drop\s+(?:function|table|column|schema)/u);
+
+    const expectedSchema = JSON.parse(readFileSync(
+      "scripts/manifests/youtube-extraction-expected-schema.json",
+      "utf8",
+    )) as { catalog_fingerprint?: unknown };
+    expect(expectedSchema.catalog_fingerprint).toBe(currentCatalogFingerprint);
+
+    const validator = readFileSync(
+      "scripts/validate-security-function-authorization.mjs",
+      "utf8",
+    );
+    expect(validator).toContain(catalogRepairPath);
+
+    const postgresHarness = readFileSync(
+      "scripts/run-youtube-async-extraction-postgres-integration.mjs",
+      "utf8",
+    );
+    expect(postgresHarness).toContain(catalogRepairPath);
+    expect(postgresHarness).toContain(
+      "verify_full_local_internal_scope_pre_legacy_compat",
+    );
+  });
+
   it("is additive and creates the exact durable authority surfaces", () => {
     expect(existsSync(migrationPath)).toBe(true);
     const sql = readFileSync(migrationPath, "utf8").toLowerCase();
