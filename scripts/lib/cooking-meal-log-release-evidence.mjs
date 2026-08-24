@@ -78,6 +78,7 @@ const SAFE_ENV_KEYS = [
 
 const SHA_PATTERN = /^[0-9a-f]{40}$/u;
 const ATTEMPT_PATTERN = /^[a-z0-9][a-z0-9._-]{2,95}$/u;
+const POSTGRES_URL_PATTERN = /postgres(?:ql)?:\/\/[^\s"'`<>]+/giu;
 const CANONICAL_ATTEMPT_ROOT_COMPONENTS = [
   ".artifacts",
   "cooking-meal-log-cross-slice-release-qa",
@@ -293,6 +294,24 @@ export function writeEvidenceArtifact(attemptDir, fileName, artifact) {
   }
   const filePath = join(attemptDir, fileName);
   writeFileSync(filePath, `${JSON.stringify(artifact, null, 2)}\n`, {
+    encoding: "utf8",
+    flag: "wx",
+    mode: 0o600,
+  });
+  return filePath;
+}
+
+export function sanitizeRawLaneLog(value) {
+  return String(value ?? "").replace(
+    POSTGRES_URL_PATTERN,
+    "[REDACTED_DATABASE_URL]",
+  );
+}
+
+export function writeRawLaneLog({ attemptDir, label, stdout, stderr }) {
+  const filePath = join(attemptDir, "raw", `${label}.log`);
+  const output = `${stdout ?? ""}${stderr ?? ""}`;
+  writeFileSync(filePath, sanitizeRawLaneLog(output), {
     encoding: "utf8",
     flag: "wx",
     mode: 0o600,

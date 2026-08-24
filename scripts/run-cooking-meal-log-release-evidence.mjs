@@ -23,6 +23,7 @@ import {
   projectPerformanceEvidencePayload,
   writeEvidenceArtifact,
   writeEvidenceManifest,
+  writeRawLaneLog,
 } from "./lib/cooking-meal-log-release-evidence.mjs";
 
 const repositoryRoot = process.cwd();
@@ -129,7 +130,12 @@ function runCaptured({
     timeout: timeoutMs,
   });
   const output = `${result.stdout ?? ""}${result.stderr ?? ""}`;
-  writeCreateOnly(join(attemptDir, "raw", `${label}.log`), output);
+  writeRawLaneLog({
+    attemptDir,
+    label,
+    stdout: result.stdout,
+    stderr: result.stderr,
+  });
   if (result.error?.code === "ETIMEDOUT") {
     throw new Error(`${label}: command timed out`);
   }
