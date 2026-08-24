@@ -1930,7 +1930,7 @@ export function RecipeDetailScreen({
                       <span className="flex min-w-0 items-center gap-2 font-medium text-[var(--foreground)]">
                         <span>{ingredient.standard_name}</span>
                         {ingredient.ingredient_type === "TO_TASTE" ? (
-                          <span className="rounded-full border border-[var(--brand-border)] bg-[var(--brand-soft)] px-2 py-0.5 text-[10px] font-semibold text-[var(--brand)]">
+                          <span className="rounded-full border border-[var(--brand-border)] bg-[var(--brand-soft)] px-2 py-0.5 text-[10px] font-semibold text-[var(--brand-contrast)]">
                             취향껏
                           </span>
                         ) : null}
@@ -2042,7 +2042,7 @@ export function RecipeDetailScreen({
       <div className="wave1-recipe-cta-bar fixed inset-x-0 bottom-0 z-20 flex flex-col gap-2 border-t border-[var(--line-strong)] bg-[var(--surface)] px-4 pb-[calc(82px+env(safe-area-inset-bottom))] pt-2 shadow-[0_-8px_24px_var(--shadow-color-soft)] lg:hidden">
         <div className="flex gap-2">
           <button
-            className="min-h-[var(--control-height-md)] flex-1 rounded-[var(--radius-card)] border border-[var(--brand)] bg-[var(--brand)] px-3 text-[15px] font-bold text-[var(--text-inverse)]"
+            className="min-h-[var(--control-height-md)] flex-1 rounded-[var(--radius-card)] border border-[var(--brand)] bg-[var(--brand-primary-accessible)] px-3 text-[15px] font-bold [color:var(--text-inverse)]"
             onClick={() => handleProtectedAction("planner")}
             type="button"
           >
@@ -2050,7 +2050,7 @@ export function RecipeDetailScreen({
           </button>
           <button
             aria-label={cookActionLabel}
-            className="min-h-[var(--control-height-md)] flex-1 rounded-[var(--radius-card)] border border-[var(--brand)] bg-transparent px-3 text-[15px] font-bold text-[var(--brand)]"
+            className="min-h-[var(--control-height-md)] flex-1 rounded-[var(--radius-card)] border border-[var(--brand)] bg-transparent px-3 text-[15px] font-bold text-[var(--brand-contrast)]"
             disabled={snapshotStartState === "pending"}
             onClick={() => void handleCook()}
             type="button"
@@ -2907,7 +2907,7 @@ function RecipePhotoLightbox({
 
 function resolveCookingMethodDark(input?: Parameters<typeof getCookingMethodColor>[0]) {
   const base = getCookingMethodColor(input);
-  return `color-mix(in srgb, ${base} 52%, var(--foreground))`;
+  return `color-mix(in srgb, ${base} 45%, var(--foreground))`;
 }
 
 function Wave1HeroMetricButton({

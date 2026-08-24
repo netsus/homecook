@@ -66,7 +66,7 @@ export function PlannerSegmentTabs({
             className={[
               "min-h-11 rounded-[calc(var(--radius-control)-4px)] px-[12px] text-sm font-bold [word-break:keep-all] outline-none transition-colors focus-visible:ring-2 focus-visible:ring-[var(--brand)] focus-visible:ring-offset-2",
               isActive
-                ? "bg-[var(--surface)] text-[var(--brand)] shadow-[var(--shadow-sm)]"
+                ? "bg-[var(--surface)] text-[var(--brand-contrast)] shadow-[var(--shadow-sm)]"
                 : "text-[var(--text-2)]",
             ].join(" ")}
             id={`planner-${segment.id}-tab`}

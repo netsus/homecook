@@ -51,7 +51,7 @@ export function MealAddTargetBadge({
 
   return (
     <span
-      className={`inline-flex min-h-7 items-center gap-1.5 whitespace-nowrap rounded-[var(--radius-chip)] bg-[var(--brand-soft)] px-3 py-0 text-[13px] font-bold leading-none text-[var(--brand)] ${className ?? ""}`.trim()}
+      className={`inline-flex min-h-7 items-center gap-1.5 whitespace-nowrap rounded-[var(--radius-chip)] bg-[var(--brand-soft)] px-3 py-0 text-[13px] font-bold leading-none text-[var(--brand-contrast)] ${className ?? ""}`.trim()}
       data-testid={testId}
     >
       <CalendarGlyph className="block h-3.5 w-3.5 shrink-0" />
