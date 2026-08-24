@@ -70,6 +70,35 @@ async function readBoundedOverlapMigration() {
   };
 }
 
+function escapeRegExp(text: string) {
+  return text.replaceAll(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function normalizeSqlBlock(block: string) {
+  return block.replaceAll("\r\n", "\n").trim();
+}
+
+function extractSingleCreateOrReplaceFunctionBlock(
+  migration: string,
+  functionName: string,
+) {
+  const blockPattern = new RegExp(
+    String.raw`create or replace function public\.${escapeRegExp(functionName)}\([\s\S]+?\$function\$;`,
+    "gu",
+  );
+  const matches = [...migration.matchAll(blockPattern)].map((match) =>
+    normalizeSqlBlock(match[0]),
+  );
+
+  if (matches.length !== 1) {
+    throw new Error(
+      `Expected exactly one create or replace function block for ${functionName}, found ${matches.length}`,
+    );
+  }
+
+  return matches[0];
+}
+
 function clientWithRpc(rpc = vi.fn()) {
   return { client: { rpc }, rpc };
 }
@@ -283,6 +312,76 @@ describe("full-local Auth flow ledger", () => {
 });
 
 describe("full-local Auth DB migration contract", () => {
+  it("extracts only the requested create-or-replace function block", () => {
+    const migration = `
+create or replace function public.other_function()
+returns void
+language plpgsql
+as $function$
+begin
+  null;
+end;
+$function$;
+
+create or replace function public.target_function()
+returns void
+language plpgsql
+security definer
+set search_path = pg_catalog, public, pg_temp
+as $function$
+begin
+  perform 1;
+end;
+$function$;
+`;
+
+    expect(
+      extractSingleCreateOrReplaceFunctionBlock(migration, "target_function"),
+    ).toContain("create or replace function public.target_function()");
+  });
+
+  it("fails when the requested create-or-replace function block is missing", () => {
+    expect(() =>
+      extractSingleCreateOrReplaceFunctionBlock(
+        "create or replace function public.other_function() returns void language plpgsql as $function$ begin null; end; $function$;",
+        "target_function",
+      ),
+    ).toThrow(
+      "Expected exactly one create or replace function block for target_function, found 0",
+    );
+  });
+
+  it("fails when the requested create-or-replace function block appears more than once", () => {
+    const duplicateMigration = `
+create or replace function public.target_function()
+returns void
+language plpgsql
+as $function$
+begin
+  null;
+end;
+$function$;
+
+create or replace function public.target_function()
+returns void
+language plpgsql
+as $function$
+begin
+  perform 1;
+end;
+$function$;
+`;
+
+    expect(() =>
+      extractSingleCreateOrReplaceFunctionBlock(
+        duplicateMigration,
+        "target_function",
+      ),
+    ).toThrow(
+      "Expected exactly one create or replace function block for target_function, found 2",
+    );
+  });
+
   it("compares privileged operator grants from explicit ACLs, not effective superuser access", async () => {
     const validator = await readFile(SECURITY_FUNCTION_VALIDATOR_PATH, "utf8");
 
@@ -614,14 +713,36 @@ describe("full-local Auth DB migration contract", () => {
       "supabase/migrations/20260730090000_hybrid_auth_remote_identity_epoch_mirror.sql",
       "utf8",
     );
+    const canonicalMigration = await readFile(
+      "supabase/migrations/20260723140000_account_session_generation_foundation.sql",
+      "utf8",
+    );
     const restoreMigration = await readFile(
       ACCOUNT_CUTOVER_AUTHORITY_RESTORE_MIGRATION_PATH,
       "utf8",
+    );
+    const restoredSnapshotBlock = extractSingleCreateOrReplaceFunctionBlock(
+      restoreMigration,
+      "set_account_generation_cutover_snapshot",
+    );
+    const canonicalSnapshotBlock = extractSingleCreateOrReplaceFunctionBlock(
+      canonicalMigration,
+      "set_account_generation_cutover_snapshot",
+    );
+    const restoredPromoteBlock = extractSingleCreateOrReplaceFunctionBlock(
+      restoreMigration,
+      "promote_account_generation_cutover",
+    );
+    const canonicalPromoteBlock = extractSingleCreateOrReplaceFunctionBlock(
+      canonicalMigration,
+      "promote_account_generation_cutover",
     );
 
     expect(stubMigration).toContain(
       "raise exception 'ACCOUNT_LIFECYCLE_MAINTENANCE'",
     );
+    expect(restoredSnapshotBlock).toBe(canonicalSnapshotBlock);
+    expect(restoredPromoteBlock).toBe(canonicalPromoteBlock);
     expect(restoreMigration).toContain(
       "create or replace function public.set_account_generation_cutover_snapshot(",
     );
