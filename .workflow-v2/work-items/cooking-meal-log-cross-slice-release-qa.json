@@ -246,7 +246,9 @@
     "verification_projection": {
       "required_checks": "passed",
       "external_smokes": "pending",
-      "authority_reports": [],
+      "authority_reports": [
+        "ui/designs/authority/cooking-meal-log-cross-slice-release-qa-authority.md"
+      ],
       "actual_verification_refs": [
         "docs/workpacks/cooking-meal-log-cross-slice-release-qa/evidence/2026-08-21-stage1-final-independent-approvals.json",
         "docs/workpacks/cooking-meal-log-cross-slice-release-qa/evidence/2026-08-21-stage2-verification-author.md",

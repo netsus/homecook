@@ -947,6 +947,8 @@ describe("cooking meal-log cross-slice Stage 1 relock", () => {
   });
 
   it("keeps non-Draft authority validation owned only by the fresh #14 report", () => {
+    const authorityReportPath =
+      "ui/designs/authority/cooking-meal-log-cross-slice-release-qa-authority.md";
     const results = validateAuthorityEvidencePresence({
       rootDir: root,
       env: {
@@ -955,9 +957,12 @@ describe("cooking meal-log cross-slice Stage 1 relock", () => {
         PR_IS_DRAFT: "false",
       },
     });
-    const serialized = JSON.stringify(results);
-    expect(serialized).toContain(
-      "ui/designs/authority/cooking-meal-log-cross-slice-release-qa-authority.md",
+    expect(results).toEqual([]);
+    expect(
+      workItem.closeout.verification_projection.authority_reports,
+    ).toEqual([authorityReportPath]);
+    const serialized = JSON.stringify(
+      workItem.closeout.verification_projection.authority_reports,
     );
     for (const predecessorAuthority of designReuseIndex.map(
       ([, , , authority]) => authority,
