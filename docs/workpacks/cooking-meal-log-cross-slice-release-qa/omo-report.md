@@ -37,7 +37,7 @@
 | Codex task/session timestamps | 역할별 task start/complete와 완료 이벤트 `duration_ms` 합산; actor별 동시 진행 허용 |
 | PR metadata | #1373/#1377 Stage 1~3, #1407~#1409 별도 repair, #1412 successor/Ready/merge 구간 복원 |
 | git objects | source/reviewed/final head, tree, parent, authored timestamp와 merge lineage 재검증 |
-| retained result evidence | Stage 1 approvals, Stage 2 proof/full preflight, Stage 4/5/final authority, repo-retained `docs/workpacks/cooking-meal-log-cross-slice-release-qa/evidence/2026-08-25-stage6-frontend-closeout-result.json` 확인; raw a2 attempt 경로는 historical breadcrumb로만 사용 |
+| retained result evidence | Stage 1 approvals, Stage 2 proof/full preflight, Stage 4/5/final authority, repo-retained `docs/workpacks/cooking-meal-log-cross-slice-release-qa/evidence/2026-08-25-stage6-frontend-closeout-result.json` 확인; raw a2는 별도 worktree의 gitignored local artifact로 실재하지만 tracked/portable evidence로 사용하지 않음 |
 | PR #1412 body | same-tree proof, Actual Verification, Ready/internal 6.5, Manual pending 경계 확인 |
 | GitHub check-runs | Ready head `20 = 19 success + 1 intended skip`; merge commit `13/13 success` 확인 |
 
@@ -50,10 +50,10 @@ Stage 1 author의 actor별 종료 시각과 일부 coordinator 구간은 독립 
 | Codex task lineage | Stage 1~6.5 역할 분리 task 25개 이상 | 1~6.5 |
 | GitHub PR/CI | lifecycle PR 7개, merge 6개, final Ready checks 20, post-merge checks 13 | 1~6.5, post-merge |
 | git history | Stage/repair/projection key commits와 exact merge object | 1~6.5 |
-| workpack evidence | retained Stage 1/2/4/5/6 result 7개; raw a2 attempt 경로는 historical breadcrumb | 1~6 |
+| workpack evidence | retained Stage 1/2/4/5/6 result 7개; raw a2는 별도 worktree에서 읽을 수 있는 gitignored local artifact이며 유일한 tracked/portable retained substitute는 Stage 6 closeout result JSON | 1~6 |
 | browser/authority evidence | 8 screens x 3 viewports, 62/62 states, privacy 9/9, authority verdicts | 4, 5 |
 
-> `artifact-missing accepted`: raw a2 attempt 디렉터리 `.artifacts/cooking-meal-log-cross-slice-release-qa/attempts/cml14-stage6-0fe74aa0-20260825-full-a2/`는 현재 checkout과 Codex worktrees에서 열 수 없어 historical breadcrumb일 뿐이다. 현재 retained substitute는 repo 안의 `docs/workpacks/cooking-meal-log-cross-slice-release-qa/evidence/2026-08-25-stage6-frontend-closeout-result.json`이며, 아래 a2 수치와 hash는 이 JSON에 보존된 요약을 인용한다.
+> canonical work item의 `artifact_missing=false`와 일치한다. raw a2 attempt 디렉터리는 PR exact tree와 현재 checkout에는 없지만 `/Users/shj/.codex/worktrees/c26f/homecook1/.artifacts/cooking-meal-log-cross-slice-release-qa/attempts/cml14-stage6-0fe74aa0-20260825-full-a2/`에 gitignored local artifact로 실제 존재하고 읽을 수 있다. 이는 durable/tracked evidence가 아니며, 유일한 tracked/portable retained substitute는 repo 안의 `docs/workpacks/cooking-meal-log-cross-slice-release-qa/evidence/2026-08-25-stage6-frontend-closeout-result.json`이다. 아래 a2 수치와 hash는 이 JSON에 보존된 요약을 인용한다.
 
 ## Stage Time
 
@@ -170,7 +170,7 @@ Stage 1 author의 actor별 종료 시각과 일부 coordinator 구간은 독립 
 | Stage 4 source | `112a8e8763571a8b4c8c105efbe9a3f1f9a4af2a`, tree `70a20f8c63720800ae8073fe84e24629e1956886` |
 | Stage 5/final authority | reviewed head `25f314e7524382da174fc9075604b6450061e72e`, tree `255347d7e0d4f71596c0180c2b137a9ce8e17413`; APPROVE/PASS blocker 0 |
 | Stage 6 | reviewed head `0fe74aa08ab94048fbdc6703217ed9f715ad8cd1`, tree `213b57d86251f908450444d76b1c6a729f15524e`; APPROVE 0/0/0 |
-| full a2 bundle | raw attempt ID/path `cml14-stage6-0fe74aa0-20260825-full-a2`는 현재 checkout과 Codex worktrees에 없는 historical breadcrumb다. 현재 retained substitute `docs/workpacks/cooking-meal-log-cross-slice-release-qa/evidence/2026-08-25-stage6-frontend-closeout-result.json`이 bundle/manifest SHA-256 `28c92157…` / `d41be9c3…`, 734 passed, gap 0 요약을 보존한다 |
+| full a2 bundle | raw attempt ID/path `cml14-stage6-0fe74aa0-20260825-full-a2`는 PR exact tree/현재 checkout에는 없지만 별도 `c26f` worktree에 gitignored local artifact로 실제 존재하고 읽을 수 있다. durable/tracked evidence는 아니며, 유일한 tracked/portable retained substitute `docs/workpacks/cooking-meal-log-cross-slice-release-qa/evidence/2026-08-25-stage6-frontend-closeout-result.json`이 bundle/manifest SHA-256 `28c92157…` / `d41be9c3…`, 734 passed, gap 0 요약을 보존한다 |
 | Internal 6.5 | head `4006c5af514708bdf29bb81e6d5ff91000abf449`, tree `ffa4a3ae50bd027b9aabe1b49a97c6db74ef4489`; APPROVE 0/0/0 |
 | Ready head | `7906c53f9c6d4230afd2f8db1b7675d187d90efb`, same tree `ffa4a3ae…`, parent diff 0; raw `20 = 19 success + 1 intended full-regression skip` |
 | Merge | PR #1412 merge `a72c01006f5cca9d7f067e4bdc329d28d6821e0c`; parents `312edcab…` + `7906c53f…`; tree `b92ba87c…` |
@@ -185,7 +185,7 @@ Ready head의 유일한 intended skip은 empty same-tree head rotation에서 pat
 | Stage 4 focused harness/auth/finalizer | 8 files, 406/406 passed |
 | Stage 4 successor policy | 10 files, 189/189 passed |
 | Stage 6 targeted | 91/91 passed |
-| full a2 DB/security/performance/query/rollback | retained substitute Stage 6 closeout result JSON 기준 `639 / 8 / 54 / 1 / 32`; total 734 passed, skipped/pending/failed `0/0/0`. raw attempt 디렉터리는 현재 retained evidence가 아님 |
+| full a2 DB/security/performance/query/rollback | tracked/portable retained substitute인 Stage 6 closeout result JSON 기준 `639 / 8 / 54 / 1 / 32`; total 734 passed, skipped/pending/failed `0/0/0`. raw attempt 디렉터리는 별도 worktree에서 읽을 수 있지만 gitignored local artifact이므로 durable/tracked evidence가 아님 |
 | performance | Recall@20 `1`, Precision@20 `0.9211`, DB p95 `40.71ms`, route p95 `14.16ms` |
 | query/rollback | list1/list20 `1/1`, item-level N+1 `0`; rollback invariants pass |
 | browser/authority | 8 screens x 3 viewports, 62/62 states, privacy 9/9, quality 0/0/0 |
@@ -214,7 +214,7 @@ Ready head의 유일한 intended skip은 empty same-tree head rotation에서 pat
 - 가장 큰 active 구간은 Stage 1의 340.4분이다. 복잡한 cross-slice release 계약을 10개 commit으로 잠그고 네 독립 reviewer가 병렬로 반복 검토했기 때문이다. reviewer 완료 이벤트는 36개, 합계 160.447분이다.
 - Stage 4~6.5는 task 완료 이벤트 기반 actor 합계 353.9분이다. 역할 분리와 overlap을 보존하므로 같은 벽시계 분을 서로 다른 actor가 실제 작업한 경우 각각 포함한다.
 - 별도 repair PR 세 개를 inline evidence 수정으로 숨기지 않고 merge한 뒤 source final evidence를 다시 만들었고, clean successor는 source tree를 정확히 보존했다.
-- Stage 6 a1은 raw PostgreSQL URL redaction 경계에서 blocked 됐고, repair/security review 뒤 a2 attempt가 734 passed와 residual 0으로 완료됐다. raw a2 attempt 디렉터리는 현재 checkout/worktrees에 없으므로 historical breadcrumb로만 취급하며, repo-retained Stage 6 closeout result JSON이 그 요약을 대체 보존한다.
+- Stage 6 a1은 raw PostgreSQL URL redaction 경계에서 blocked 됐고, repair/security review 뒤 a2 attempt가 734 passed와 residual 0으로 완료됐다. raw a2 attempt는 PR exact tree/현재 checkout에는 없지만 별도 `c26f` worktree에 gitignored local artifact로 실제 존재하고 읽을 수 있다. durable/tracked evidence는 아니며, 유일한 tracked/portable retained substitute인 Stage 6 closeout result JSON이 그 요약을 보존한다.
 - Ready head는 19 success + 1 intended skip이었고, merge commit에서는 full-regression까지 포함해 13/13 success였다.
 - human escalation과 manual decision required는 각각 1회다. 이는 disposable isolated Stage 4 rehearsal-only Contract Evolution 결정이며 실제 production/Manual/capability activation 승인이 아니다. Claude는 사용하지 않았다.
 - 자동화 green은 Manual/device/OAuth/AT/full-WCAG/local-production/capability/activation 완료를 의미하지 않는다.
