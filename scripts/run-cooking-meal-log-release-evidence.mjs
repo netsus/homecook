@@ -20,6 +20,7 @@ import {
   parseVitestJsonSummary,
   parseVitestTextSummary,
   normalizePartitionedLaneSummary,
+  projectPerformanceEvidencePayload,
   writeEvidenceArtifact,
   writeEvidenceManifest,
 } from "./lib/cooking-meal-log-release-evidence.mjs";
@@ -337,13 +338,16 @@ function producePerformanceEvidence({
     if (statSync(performanceSourcePath).mtimeMs + 1_000 < result.startedAt) {
       throw new Error("performance-full: stale summary artifact rejected");
     }
-    payload = JSON.parse(readFileSync(performanceSourcePath, "utf8"));
+    const sourcePayload = JSON.parse(
+      readFileSync(performanceSourcePath, "utf8"),
+    );
+    payload = projectPerformanceEvidencePayload(sourcePayload);
     const passed = Number(payload.labeled_query_count ?? 0);
     summary = { passed, skipped: 0, pending: 0, failed: 0 };
     assertRunnableSummary(summary, "performance-full");
     writeCreateOnly(
       join(attemptDir, "raw", "performance-source.json"),
-      `${JSON.stringify(payload, null, 2)}\n`,
+      `${JSON.stringify(sourcePayload, null, 2)}\n`,
     );
   }
   writeEvidenceArtifact(attemptDir, "performance.json", envelope({
