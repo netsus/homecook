@@ -17,11 +17,7 @@ const routeClient = {
       data: { user: actorId ? { id: actorId } : null },
     })),
   },
-  rpc: vi.fn(),
-};
-
-const serviceClient = {
-  async rpc(name: string, args: Record<string, unknown>) {
+  rpc: vi.fn(async (name: string, args: Record<string, unknown>) => {
     const response = await fetch(`${postgrestUrl}/rpc/${name}`, {
       method: "POST",
       headers: {
@@ -41,12 +37,11 @@ const serviceClient = {
       };
     }
     return { data: body, error: null };
-  },
+  }),
 };
 
 vi.mock("@/lib/supabase/server", () => ({
   createRouteHandlerClient: vi.fn(async () => routeClient),
-  createServiceRoleClient: vi.fn(() => serviceClient),
 }));
 
 function percentile95(values: number[]) {
