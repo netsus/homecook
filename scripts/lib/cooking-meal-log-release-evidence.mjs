@@ -371,6 +371,41 @@ export function normalizePartitionedLaneSummary({
   };
 }
 
+export function projectPerformanceEvidencePayload(source) {
+  if (
+    !source
+    || typeof source !== "object"
+    || Array.isArray(source)
+    || source.schema_version
+      !== "prepared-food-search-relevance-performance-v1"
+    || !source.denominator
+    || typeof source.denominator !== "object"
+    || Array.isArray(source.denominator)
+  ) {
+    throw new Error("performance source payload shape mismatch");
+  }
+  const payload = {
+    source_schema_version: source.schema_version,
+    denominator: source.denominator.visible_public,
+    labeled_query_count: source.labeled_query_count,
+    recall_at_20: source.recall_at_20,
+    precision_at_20: source.precision_at_20,
+    db_p95_ms: source.db_p95_ms,
+    route_p95_ms: source.route_p95_ms,
+    external_requests: source.external_requests,
+    external_writes: source.external_writes,
+  };
+  if (
+    !Object.values(payload).every(
+      (value) => typeof value === "string"
+        || (typeof value === "number" && Number.isFinite(value)),
+    )
+  ) {
+    throw new Error("performance source payload values are invalid");
+  }
+  return payload;
+}
+
 export function parseVitestJsonSummary(value) {
   const parsed = typeof value === "string" ? JSON.parse(value) : value;
   return {
@@ -607,6 +642,9 @@ function validatePerformancePayload(artifact, expectedProfile) {
   }
   if (Number(payload.route_p95_ms) > 600) {
     throw new Error("performance.json: route p95 above threshold");
+  }
+  if (payload.external_requests !== 0 || payload.external_writes !== 0) {
+    throw new Error("performance.json: external access must be zero");
   }
 }
 

@@ -26,6 +26,7 @@ import {
   createAttemptDirectory,
   measureQueryCountGrowth,
   normalizePartitionedLaneSummary,
+  projectPerformanceEvidencePayload,
   parseVitestTextSummary,
   validateEvidenceAttempt,
   validateGitBinding,
@@ -177,6 +178,8 @@ function createValidAttempt({
       precision_at_20: 0.8,
       db_p95_ms: 250,
       route_p95_ms: 500,
+      external_requests: 0,
+      external_writes: 0,
     },
     identity,
   ));
@@ -400,6 +403,36 @@ describe("cooking meal-log release evidence safety", () => {
       label: "snapshot-partitions",
       summary: { passed: 113, skipped: 65, pending: 0, failed: 1 },
     })).toThrow(/failed/i);
+  });
+
+  it("projects the full search summary into the canonical performance payload", () => {
+    expect(projectPerformanceEvidencePayload({
+      schema_version: "prepared-food-search-relevance-performance-v1",
+      denominator: { visible_public: 287_041 },
+      labeled_query_count: 54,
+      recall_at_20: 1,
+      precision_at_20: 0.921,
+      db_p95_ms: 40,
+      route_p95_ms: 21,
+      external_requests: 0,
+      external_writes: 0,
+      hardware: { platform: "darwin" },
+    })).toEqual({
+      source_schema_version:
+        "prepared-food-search-relevance-performance-v1",
+      denominator: 287_041,
+      labeled_query_count: 54,
+      recall_at_20: 1,
+      precision_at_20: 0.921,
+      db_p95_ms: 40,
+      route_p95_ms: 21,
+      external_requests: 0,
+      external_writes: 0,
+    });
+    expect(() => projectPerformanceEvidencePayload({
+      schema_version: "prepared-food-search-relevance-performance-v1",
+      denominator: 287_041,
+    })).toThrow(/shape mismatch/i);
   });
 
   it("derives query growth from actual measured boundary callbacks", async () => {
@@ -769,6 +802,11 @@ describe("cooking meal-log release evidence safety", () => {
         file: "security.json",
         mutate: (artifact) => { artifact.payload.mutation_inventory = []; },
         message: /mutation_inventory/i,
+      },
+      {
+        file: "performance.json",
+        mutate: (artifact) => { artifact.payload.external_requests = 1; },
+        message: /external access/i,
       },
       ...ROLLBACK_INVARIANTS.map((invariant) => ({
         file: "rollback.json",
