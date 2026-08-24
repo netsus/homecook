@@ -62,10 +62,16 @@ const ADDITIVE_SOURCES = [
       REPO_ROOT,
       "docs/security/youtube-async-extraction-security-function-authorization-manifest.json",
     ),
-    migrationPath: path.join(
-      REPO_ROOT,
-      "supabase/migrations/20260812160000_youtube_async_extraction_notification.sql",
-    ),
+    migrationPaths: [
+      path.join(
+        REPO_ROOT,
+        "supabase/migrations/20260812160000_youtube_async_extraction_notification.sql",
+      ),
+      path.join(
+        REPO_ROOT,
+        "supabase/migrations/20260825120000_youtube_extraction_catalog_after_internal_scope.sql",
+      ),
+    ],
   },
   {
     manifestPath: path.join(

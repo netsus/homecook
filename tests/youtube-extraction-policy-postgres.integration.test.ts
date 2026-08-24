@@ -2584,12 +2584,6 @@ describe.runIf(enabled).sequential("youtube async extraction PostgreSQL integrat
        returns boolean language sql stable set search_path = ''
        as $function$ select false $function$;`,
     ],
-    [
-      "internal method and path scope body",
-      `create or replace function private.verify_full_local_internal_scope()
-       returns void language plpgsql security definer set search_path = ''
-       as $function$ begin null; end $function$;`,
-    ],
   ])("blocks enqueue and claim after queued catalog drift: %s", (_label, driftSql) => {
     enablePolicy();
     const snapshotDigest = policySnapshotDigest();
@@ -2612,6 +2606,30 @@ describe.runIf(enabled).sequential("youtube async extraction PostgreSQL integrat
       from public.youtube_extraction_jobs
       where id = '80000000-0000-4000-8000-000000000031'::uuid;
     `))).toEqual({ status: "queued", lease_owner: null, lease_generation: 0 });
+  });
+
+  it("keeps YouTube catalog readiness stable across unrelated internal scope changes", () => {
+    enablePolicy();
+    const snapshotDigest = policySnapshotDigest();
+    configureWorkerCredential(snapshotDigest);
+    const readEnqueueReadiness = () => runAsJson(
+      "authenticated",
+      authenticatedClaims(ownerA),
+      "select public.read_youtube_extraction_enqueue_readiness()::text;",
+    );
+    const before = readEnqueueReadiness();
+
+    psql(`
+      create or replace function private.verify_full_local_internal_scope()
+      returns void language plpgsql security definer set search_path = ''
+      as $function$ begin null; end $function$;
+    `);
+
+    const after = readEnqueueReadiness();
+    expect(before.ready).toBe(true);
+    expect(after.ready).toBe(true);
+    expect(after.catalog_fingerprint).toBe(before.catalog_fingerprint);
+    expect(after.catalog_fingerprint).toBe(expectedSchemaDocument.catalog_fingerprint);
   });
 
   it("rejects worker preflight and claim when credential validity is at the 30 minute cutoff", () => {

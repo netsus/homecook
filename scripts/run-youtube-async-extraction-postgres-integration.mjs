@@ -2,7 +2,14 @@
 
 import { createHmac } from "node:crypto";
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, readdirSync, rmSync } from "node:fs";
+import {
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -327,6 +334,54 @@ function bootstrapSql() {
   `;
 }
 
+function postYoutubeInternalScopeSql() {
+  return `
+    do $scope_fixture$
+    begin
+      if pg_catalog.to_regprocedure(
+        'private.verify_full_local_internal_scope_pre_legacy_compat()'
+      ) is null then
+        alter function private.verify_full_local_internal_scope()
+          rename to verify_full_local_internal_scope_pre_legacy_compat;
+      end if;
+    end;
+    $scope_fixture$;
+
+    create or replace function private.verify_full_local_internal_scope()
+    returns void
+    language plpgsql security definer
+    set search_path = pg_catalog, public, private, pg_temp
+    as $function$
+    declare
+      v_headers jsonb := coalesce(
+        nullif(current_setting('request.headers', true), ''), '{}'
+      )::jsonb;
+      v_scope text := v_headers ->> 'x-homecook-internal-scope';
+      v_method text := upper(coalesce(current_setting('request.method', true), ''));
+      v_path text := coalesce(current_setting('request.path', true), '');
+    begin
+      if v_scope = 'snapshot-v2-session'
+        and v_method = 'POST'
+        and v_path in (
+          '/rpc/complete_cooking_session',
+          '/rpc/complete_standalone_cooking'
+        ) then
+        return;
+      end if;
+      perform private.verify_full_local_internal_scope_pre_legacy_compat();
+    end;
+    $function$;
+
+    alter function private.verify_full_local_internal_scope_pre_legacy_compat()
+      owner to postgres;
+    alter function private.verify_full_local_internal_scope() owner to postgres;
+    revoke all on function private.verify_full_local_internal_scope_pre_legacy_compat()
+      from public, anon, authenticated, service_role;
+    revoke all on function private.verify_full_local_internal_scope()
+      from public, anon, authenticated, service_role;
+  `;
+}
+
 const postgresBin = findPostgresBin();
 if (!postgresBin) {
   process.stderr.write("POSTGRES_RUNTIME_UNAVAILABLE: youtube async extraction integration cannot run.\n");
@@ -339,6 +394,7 @@ if (!postgresBin) {
   const pgPort = await reservePort();
   const postgrestPort = await reservePort();
   const postgrestContainer = `homecook-yta-postgrest-${Date.now()}`;
+  const migrationBundlePath = path.join(root, "youtube-async-migration-bundle.sql");
   let postgresStarted = false;
   let postgrestStarted = false;
 
@@ -391,10 +447,21 @@ if (!postgresBin) {
       "-c",
       bootstrapSql(),
     ]);
+    writeFileSync(migrationBundlePath, [
+      readFileSync(
+        "supabase/migrations/20260812160000_youtube_async_extraction_notification.sql",
+        "utf8",
+      ),
+      postYoutubeInternalScopeSql(),
+      readFileSync(
+        "supabase/migrations/20260825120000_youtube_extraction_catalog_after_internal_scope.sql",
+        "utf8",
+      ),
+    ].join("\n"), { encoding: "utf8", mode: 0o600 });
     runRequired(path.join(postgresBin, "psql"), [
       ...connectionArgs,
       "-f",
-      "supabase/migrations/20260812160000_youtube_async_extraction_notification.sql",
+      migrationBundlePath,
     ]);
 
     const allowedSnapshotDigest = commandResult(path.join(postgresBin, "psql"), [
@@ -515,8 +582,7 @@ if (!postgresBin) {
         HOMECOOK_YTA_PGHOST: socketDirectory,
         HOMECOOK_YTA_PGPORT: String(pgPort),
         HOMECOOK_YTA_PGDATABASE: database,
-        HOMECOOK_YTA_MIGRATION_PATH:
-          "supabase/migrations/20260812160000_youtube_async_extraction_notification.sql",
+        HOMECOOK_YTA_MIGRATION_PATH: migrationBundlePath,
         HOMECOOK_YTA_POSTGREST_INTEGRATION: postgrestStarted ? "1" : "0",
         HOMECOOK_YTA_POSTGREST_URL: `http://127.0.0.1:${postgrestPort}`,
         HOMECOOK_YTA_WORKER_JWT: workerToken,
