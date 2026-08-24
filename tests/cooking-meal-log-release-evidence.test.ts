@@ -18,12 +18,14 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import {
   FULL_DB_LANES,
+  FULL_DB_LANE_PARTITION_SKIPS,
   REQUIRED_ARTIFACT_FILES,
   ROLLBACK_INVARIANTS,
   assertRunnableSummary,
   buildLaneEnvironment,
   createAttemptDirectory,
   measureQueryCountGrowth,
+  normalizePartitionedLaneSummary,
   parseVitestTextSummary,
   validateEvidenceAttempt,
   validateGitBinding,
@@ -147,6 +149,9 @@ function createValidAttempt({
         skipped: 0,
         pending: 0,
         failed: 0,
+        partition_skipped: FULL_DB_LANE_PARTITION_SKIPS[
+          id as keyof typeof FULL_DB_LANE_PARTITION_SKIPS
+        ],
       })),
       pinned_isolated_local: true,
       remote_linked_cloud_access: 0,
@@ -371,6 +376,30 @@ describe("cooking meal-log release evidence safety", () => {
       { passed: 3, skipped: 0, pending: 0, failed: 0 },
       "green",
     )).toBeUndefined();
+  });
+
+  it("normalizes only the exact mode-partition skip count", () => {
+    expect(normalizePartitionedLaneSummary({
+      expectedPartitionSkipped: 65,
+      label: "snapshot-partitions",
+      summary: { passed: 114, skipped: 65, pending: 0, failed: 0 },
+    })).toEqual({
+      passed: 114,
+      skipped: 0,
+      pending: 0,
+      failed: 0,
+      partition_skipped: 65,
+    });
+    expect(() => normalizePartitionedLaneSummary({
+      expectedPartitionSkipped: 65,
+      label: "snapshot-partitions",
+      summary: { passed: 114, skipped: 66, pending: 0, failed: 0 },
+    })).toThrow(/partition skipped count mismatch/i);
+    expect(() => normalizePartitionedLaneSummary({
+      expectedPartitionSkipped: 65,
+      label: "snapshot-partitions",
+      summary: { passed: 113, skipped: 65, pending: 0, failed: 1 },
+    })).toThrow(/failed/i);
   });
 
   it("derives query growth from actual measured boundary callbacks", async () => {
@@ -624,6 +653,27 @@ describe("cooking meal-log release evidence safety", () => {
       expectedHeadSha: headSha,
       expectedProfile: "full",
     })).toThrow(/skipped/i);
+
+    const partitionDrift = createValidAttempt();
+    const partitionDbPath = join(
+      partitionDrift.attemptDir,
+      "db-security.json",
+    );
+    const partitionDb = JSON.parse(
+      readFileSync(partitionDbPath, "utf8"),
+    );
+    partitionDb.payload.lanes[2].partition_skipped = 64;
+    writeFileSync(
+      partitionDbPath,
+      `${JSON.stringify(partitionDb, null, 2)}\n`,
+    );
+    rehashManifest(partitionDrift.attemptDir, "db-security.json");
+    expect(() => validateEvidenceAttempt({
+      attemptDir: partitionDrift.attemptDir,
+      expectedAttemptId: attemptId,
+      expectedHeadSha: headSha,
+      expectedProfile: "full",
+    })).toThrow(/partition skipped count mismatch/i);
 
     const proof = createValidAttempt();
     for (const file of REQUIRED_ARTIFACT_FILES) {
