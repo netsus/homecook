@@ -31,6 +31,8 @@ const stage2AuthorCheckedIds = [
   "accept-cooking-cross-automation-env",
   "accept-cooking-cross-automation-final-validator",
   "accept-cooking-cross-automation-git-binding",
+  "accept-cooking-cross-automation-local-stack",
+  "accept-cooking-cross-automation-performance",
   "accept-cooking-cross-automation-query-count",
   "accept-cooking-cross-automation-rollback",
   "accept-cooking-cross-automation-runtime",
@@ -45,6 +47,7 @@ const stage2AuthorCheckedIds = [
   "accept-cooking-cross-state-separation",
   "accept-cooking-cross-state-verification-only",
   "accept-cooking-cross-state-version-rollback",
+  "delivery-cooking-cross-stage2-isolated",
   "delivery-cooking-cross-stage2-predecessors",
   "delivery-cooking-cross-stage2-repair-boundary",
 ];
@@ -595,7 +598,7 @@ describe("cooking meal-log cross-slice Stage 1 relock", () => {
       expect(exactSix).toContain(value);
     }
     expect(roadmap).toMatch(
-      /\| `cooking-meal-log-cross-slice-release-qa` \| in-progress \|[^\n]*Stage 2 verification-only[^\n]*pinned isolated local evidence[^\n]*수집 중/u,
+      /\| `cooking-meal-log-cross-slice-release-qa` \| in-progress \|[^\n]*Stage 2 verification-only[^\n]*pinned isolated local full preflight는 green[^\n]*Stage 3 rereview/u,
     );
     const checkedIds = readWorkpackChecklistContract({
       rootDir: root,

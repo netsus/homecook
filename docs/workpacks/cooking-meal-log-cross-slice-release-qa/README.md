@@ -69,7 +69,7 @@ Stage 2 entry still requires this relock PR merge and the documented post-merge 
 - 활성 Draft PR은 `https://github.com/netsus/homecook/pull/1377`이고 approved content head는 `c5c475477a26dde3889aec3161c37765ee084d92`이다. current-head checks는 `8 success + 5 intended skip`, bad/pending `0`이다.
 - independent Stage 3 approval task `01a02137-5389-7420-a31d-7e42d1bb94dc`는 APPROVE P0/P1/P2 `0/0/0`, drift `0`을 반환했다. `CML14-S3-P1-001`과 `CML14-S3-P1-002`는 CLOSED다.
 - 이 approval projection successor의 current-head checks와 final drift-only review pending이며, 그 전에는 Ready/merge하지 않는다.
-- complete owning DB lanes, actual performance thresholds, Stage 4 `FINAL_EVIDENCE_SHA`/full profile, controlled full-local, Stage 4~6, Manual and activation remain pending.
+- owning DB lanes and actual performance thresholds are green; fresh Stage 3 review of this preflight, Stage 4 `FINAL_EVIDENCE_SHA` same-head rerun/browser bundle, controlled full-local, Stage 4~6, Manual and activation remain pending.
 
 ## Backend First Contract
 
@@ -184,7 +184,10 @@ Stage 2 entry still requires this relock PR merge and the documented post-merge 
 - retained author evidence: `docs/workpacks/cooking-meal-log-cross-slice-release-qa/evidence/2026-08-21-stage2-verification-author.md`.
 - clean head `cb775ed9d9885e7465358bc929794aa9ee90c5ec`의 create-only attempt `stage2-proof-cb775ed9-20260821`은 `profile=proof`, artifact `5`, exact head/profile/clean validator를 통과했다. `.artifacts/cooking-meal-log-cross-slice-release-qa/attempts/stage2-proof-cb775ed9-20260821/`은 retained local evidence이며 final evidence가 아니다.
 - proof는 대표 DB lane `20/20`, security `24/24`, query-count `1/1`, rollback `32/32`, performance runner contract `2/2`를 기록한다. performance는 `proof_only`, DB는 대표 lane 한 개뿐이다.
-- Stage 2 remains `in_progress`: complete owning DB lanes와 actual performance thresholds, controlled full-local, Stage 3~6, Manual and activation are pending.
+- fresh preflight evidence: `docs/workpacks/cooking-meal-log-cross-slice-release-qa/evidence/2026-08-24-stage2-full-preflight.md` on exact `master` head `60da67d2e01932c39abf7242bc4e335bb24afcd4` records create-only attempt `stage2-full-master-60da67d2-20260824` with validator artifact count `5`; DB `639/639`, security `8/8`, performance `54/54`, query-count `1/1`, rollback `32/32`, each with skipped/pending/failed `0`.
+- the same preflight records raw skip partition `270`, performance denominator `287041`, Recall@20 `1`, Precision@20 `0.9210526316`, DB p95 `40.439917ms`, route p95 `15.53ms`, external `0/0`, query list1/list20 `1/1`, N+1 `0`, and security classified/data-negative/remote `213/4/0`.
+- repair PRs `#1395`–`#1401` are recorded here only as Codex-resolved preflight repairs; this is still non-final evidence and does not claim Stage 4/final authority.
+- Stage 2 remains `in_progress` on the remaining Stage 3~6/Manual path; owning DB lanes and actual performance thresholds are green, and fresh Stage 3 review of this preflight plus Stage 4 `FINAL_EVIDENCE_SHA` same-head rerun/browser bundle and controlled full-local remain pending.
 
 ## Key Rules
 
@@ -204,7 +207,7 @@ Stage 2 entry still requires this relock PR merge and the documented post-merge 
 
 Stage 1 approval is complete (`codex_approved`); runtime Delivery Checklist and Stage 2 remain pending.
 
-- [ ] pinned isolated local DB/API/security/performance verification is green on the exact head <!-- omo:id=delivery-cooking-cross-stage2-isolated;stage=2;scope=backend;review=3,6 -->
+- [x] pinned isolated local DB/API/security/performance verification is green on the exact head <!-- omo:id=delivery-cooking-cross-stage2-isolated;stage=2;scope=backend;review=3,6 -->
 - [x] predecessor runtime merge map is rechecked and no retained evidence is stale <!-- omo:id=delivery-cooking-cross-stage2-predecessors;stage=2;scope=shared;review=3,6 -->
 - [x] defects, if any, use a separate failing-test-first TDD repair PR and full rerun after its merge <!-- omo:id=delivery-cooking-cross-stage2-repair-boundary;stage=2;scope=shared;review=3,6 -->
 - [ ] controlled full-local use stays read-only or records separate mutation authority <!-- omo:id=delivery-cooking-cross-stage2-local-authority;stage=2;scope=backend;review=3,6 -->
