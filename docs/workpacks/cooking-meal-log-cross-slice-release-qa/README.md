@@ -184,6 +184,9 @@ Stage 2 entry still requires this relock PR merge and the documented post-merge 
 - retained author evidence: `docs/workpacks/cooking-meal-log-cross-slice-release-qa/evidence/2026-08-21-stage2-verification-author.md`.
 - clean head `cb775ed9d9885e7465358bc929794aa9ee90c5ec`의 create-only attempt `stage2-proof-cb775ed9-20260821`은 `profile=proof`, artifact `5`, exact head/profile/clean validator를 통과했다. `.artifacts/cooking-meal-log-cross-slice-release-qa/attempts/stage2-proof-cb775ed9-20260821/`은 retained local evidence이며 final evidence가 아니다.
 - proof는 대표 DB lane `20/20`, security `24/24`, query-count `1/1`, rollback `32/32`, performance runner contract `2/2`를 기록한다. performance는 `proof_only`, DB는 대표 lane 한 개뿐이다.
+- fresh preflight evidence: `docs/workpacks/cooking-meal-log-cross-slice-release-qa/evidence/2026-08-24-stage2-full-preflight.md` on exact `master` head `60da67d2e01932c39abf7242bc4e335bb24afcd4` records create-only attempt `stage2-full-master-60da67d2-20260824` with validator artifact count `5`; DB `639/639`, security `8/8`, performance `54/54`, query-count `1/1`, rollback `32/32`, each with skipped/pending/failed `0`.
+- the same preflight records raw skip partition `270`, performance denominator `287041`, Recall@20 `1`, Precision@20 `0.9210526316`, DB p95 `540.439917ms`, route p95 `15.53ms`, external `0/0`, query list1/list20 `1/1`, N+1 `0`, and security classified/data-negative/remote `213/4/0`.
+- repair PRs `#1395`–`#1401` are recorded here only as Codex-resolved preflight repairs; this is still non-final evidence and does not claim Stage 4/final authority.
 - Stage 2 remains `in_progress`: complete owning DB lanes와 actual performance thresholds, controlled full-local, Stage 3~6, Manual and activation are pending.
 
 ## Key Rules
