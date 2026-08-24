@@ -71,6 +71,10 @@ const ADDITIVE_SOURCES = [
         REPO_ROOT,
         "supabase/migrations/20260825120000_youtube_extraction_catalog_after_internal_scope.sql",
       ),
+      path.join(
+        REPO_ROOT,
+        "supabase/migrations/20260825130000_youtube_extraction_shared_dependency_contract.sql",
+      ),
     ],
   },
   {

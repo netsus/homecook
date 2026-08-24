@@ -5,10 +5,14 @@ import { describe, expect, it } from "vitest";
 const migrationPath = "supabase/migrations/20260812160000_youtube_async_extraction_notification.sql";
 const catalogRepairPath =
   "supabase/migrations/20260825120000_youtube_extraction_catalog_after_internal_scope.sql";
+const sharedDependencyRepairPath =
+  "supabase/migrations/20260825130000_youtube_extraction_shared_dependency_contract.sql";
 const previousCatalogFingerprint =
   "b8561e40e39a97962dab877e3d7c732236bf1bc55c8c985e56b846c50f7f90b1";
 const currentCatalogFingerprint =
   "a0740a9e9789d0176d55bac206f3bc7a7ed2b5dc9eb31737317d072512477d6c";
+const sharedDependencyCatalogFingerprint =
+  "605c4e37ccd34313f00d4687c5340d8ea8ccdf958eb297805bbae871438775cc";
 
 describe("YTASYNC-DB/SEC migration contract", () => {
   it("re-attests the catalog after the internal scope function changes", () => {
@@ -34,7 +38,9 @@ describe("YTASYNC-DB/SEC migration contract", () => {
       "scripts/manifests/youtube-extraction-expected-schema.json",
       "utf8",
     )) as { catalog_fingerprint?: unknown };
-    expect(expectedSchema.catalog_fingerprint).toBe(currentCatalogFingerprint);
+    expect(expectedSchema.catalog_fingerprint).toBe(
+      sharedDependencyCatalogFingerprint,
+    );
 
     const validator = readFileSync(
       "scripts/validate-security-function-authorization.mjs",
@@ -47,9 +53,35 @@ describe("YTASYNC-DB/SEC migration contract", () => {
       "utf8",
     );
     expect(postgresHarness).toContain(catalogRepairPath);
+    expect(postgresHarness).toContain(sharedDependencyRepairPath);
     expect(postgresHarness).toContain(
       "verify_full_local_internal_scope_pre_legacy_compat",
     );
+  });
+
+  it("narrows shared dependencies without weakening YouTube-owned drift gates", () => {
+    expect(existsSync(sharedDependencyRepairPath)).toBe(true);
+    const sql = readFileSync(sharedDependencyRepairPath, "utf8").toLowerCase();
+    expect(sql.trimStart().startsWith("begin;")).toBe(true);
+    expect(sql.trimEnd().endsWith("commit;")).toBe(true);
+    expect(sql).toContain(currentCatalogFingerprint);
+    expect(sql).toContain(sharedDependencyCatalogFingerprint);
+    expect(sql).toContain(
+      "private.youtube_extraction_shared_dependency_contract_v1()",
+    );
+    expect(sql).toContain("youtube_worker_catalog_ingredients_select");
+    expect(sql).toContain("youtube_worker_catalog_ingredient_synonyms_select");
+    expect(sql).toContain("youtube_worker_catalog_cooking_methods_all");
+    expect(sql).toContain("has_table_privilege");
+    expect(sql).toContain("shared_dependency_contract");
+    expect(sql).toContain("set local role youtube_extraction_credential_manager_rpc_owner");
+    expect(sql).not.toMatch(/drop\s+(?:function|table|column|schema)/u);
+
+    const validator = readFileSync(
+      "scripts/validate-security-function-authorization.mjs",
+      "utf8",
+    );
+    expect(validator).toContain(sharedDependencyRepairPath);
   });
 
   it("is additive and creates the exact durable authority surfaces", () => {

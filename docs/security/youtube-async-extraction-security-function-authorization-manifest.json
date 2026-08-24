@@ -63,6 +63,16 @@
       "safe_search_path": ["pg_catalog", "pg_temp"]
     },
     {
+      "signature": "private.youtube_extraction_shared_dependency_contract_v1()",
+      "control_class": "application-controlled",
+      "effect": "read-only",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "owner": "postgres",
+      "security_mode": "definer",
+      "safe_search_path": ["pg_catalog", "pg_temp"]
+    },
+    {
       "signature": "private.youtube_extraction_worker_write_fence_is_active(uuid, text, bigint, bigint)",
       "control_class": "application-controlled",
       "effect": "read-only",

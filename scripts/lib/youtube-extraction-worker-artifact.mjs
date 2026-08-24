@@ -926,6 +926,7 @@ export function readYoutubeExtractionExpectedSchema(path) {
     "rpc_signatures",
     "rpc_security",
     "rpc_function_definitions",
+    "shared_dependency_contract",
     "internal_scope_function_definition",
   ];
   const exactFenceFunctionSignatures = [
@@ -968,6 +969,8 @@ export function readYoutubeExtractionExpectedSchema(path) {
       !== JSON.stringify(exactFenceFunctionSignatures)
     || value.internal_scope_function_signature
       !== "private.youtube_extraction_internal_scope_contract_v1()"
+    || value.shared_dependency_contract_function_signature
+      !== "private.youtube_extraction_shared_dependency_contract_v1()"
     || JSON.stringify(value.memberships) !== JSON.stringify(exactMemberships)
     || typeof value.migration_owner_membership_exception !== "string"
     || !value.initial_policy
