@@ -451,6 +451,33 @@ describe("local-only Supabase environment boundary", () => {
     expect(hasAuthSupabasePublicEnv()).toBe(true);
   });
 
+  it("allows the approved Stage 4 reserved HTTPS issuer while keeping JWKS transport on loopback", async () => {
+    process.env.HOMECOOK_STAGE4_CAPTURE_MODE = "1";
+    process.env.NEXT_PUBLIC_AUTH_SUPABASE_URL = "http://127.0.0.1:54321";
+    process.env.NEXT_PUBLIC_AUTH_SUPABASE_PUBLISHABLE_KEY = "local-publishable";
+    process.env.AUTH_SUPABASE_EXPECTED_ISSUER =
+      "https://auth.stage4.homecook.invalid/auth/v1";
+    process.env.AUTH_SUPABASE_JWKS_URL =
+      "http://127.0.0.1:54321/auth/v1/.well-known/jwks.json";
+
+    const {
+      getAuthIssuer,
+      getAuthSupabaseEnv,
+      hasAuthSupabasePublicEnv,
+    } = await import("@/lib/supabase/auth-env");
+
+    expect(getAuthIssuer()).toBe(
+      "https://auth.stage4.homecook.invalid/auth/v1",
+    );
+    expect(getAuthSupabaseEnv()).toEqual({
+      issuer: "https://auth.stage4.homecook.invalid/auth/v1",
+      jwksUrl: "http://127.0.0.1:54321/auth/v1/.well-known/jwks.json",
+      publishableKey: "local-publishable",
+      url: "http://127.0.0.1:54321",
+    });
+    expect(hasAuthSupabasePublicEnv()).toBe(true);
+  });
+
   it.each([undefined, "remote"])(
     "keeps the server Auth env fail-closed for authority %s",
     async (authority) => {

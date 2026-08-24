@@ -107,6 +107,58 @@ describe("loopback session-authority gateway", () => {
     expect(localUpstreamFetch).not.toHaveBeenCalled();
   });
 
+  it("fetches JWKS from the explicit transport URL while validating the reserved issuer", async () => {
+    const token = accessToken();
+    const jwksUrl = "http://127.0.0.1:54321/auth/v1/.well-known/jwks.json";
+    const authUrl = "http://127.0.0.1:54321";
+    const remoteLivenessFetch = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url === jwksUrl) {
+        return new Response(JSON.stringify({ keys: [REMOTE_JWK] }), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        });
+      }
+      if (url === `${authUrl}/auth/v1/user`) {
+        return new Response(JSON.stringify({
+          id: OWNER_UUID,
+          created_at: "2026-07-28T00:00:00.000Z",
+        }), { status: 200, headers: { "content-type": "application/json" } });
+      }
+      throw new Error(`unexpected Auth transport: ${url}`);
+    });
+    const authorityFetch = createHybridAuthorityFetch({
+      getAccessToken: async () => token,
+      remoteLivenessFetch,
+      localUpstreamFetch: vi.fn().mockResolvedValue(
+        new Response("{}", { status: 200 }),
+      ),
+      assertSessionAuthority: vi.fn().mockResolvedValue(undefined),
+      auth: {
+        issuer: ISSUER,
+        jwksUrl,
+        url: authUrl,
+        publishableKey: "local-publishable",
+      },
+      attestationSecret: SECRET,
+      sessionBindingSecret: SECRET,
+      nowSeconds: () => 1_800_000_100,
+    });
+
+    await expect(authorityFetch(
+      "http://127.0.0.1:8000/rest/v1/users",
+      { method: "GET" },
+    )).resolves.toMatchObject({ status: 200 });
+    expect(remoteLivenessFetch).toHaveBeenCalledWith(
+      jwksUrl,
+      expect.objectContaining({ method: "GET" }),
+    );
+    expect(remoteLivenessFetch).toHaveBeenCalledWith(
+      `${authUrl}/auth/v1/user`,
+      expect.objectContaining({ method: "GET" }),
+    );
+  });
+
   it("parses superseded_token as an internal-only reason without marking it unexpected", () => {
     expect(readSessionAuthorityFailureReason({
       details: "HOMECOOK_SESSION_AUTHORITY_REASON::superseded_token",

@@ -158,6 +158,18 @@ async function createAuthedUsersMeDbClient(fallbackMessage: string) {
 
   try {
     await ensurePublicUserRow(dbClient, user);
+  } catch (bootstrapError) {
+    return {
+      response: fail(
+        "INTERNAL_ERROR",
+        formatBootstrapErrorMessage(bootstrapError, fallbackMessage),
+        500,
+      ),
+      dbClient: null,
+      user: null,
+    };
+  }
+  try {
     await ensureUserBootstrapState(dbClient, user.id);
   } catch (bootstrapError) {
     return {
