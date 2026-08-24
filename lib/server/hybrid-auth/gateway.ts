@@ -281,7 +281,14 @@ export function createHybridAuthorityFetch({
   return async (input, init) => {
     const request = new Request(input, init);
     const authorityPath = downstreamAuthorityPath(new URL(request.url).pathname);
-    const accessToken = (await getAccessToken())?.trim();
+    let accessToken: string | undefined;
+    try {
+      accessToken = (await getAccessToken())?.trim();
+    } catch {
+      return createHybridAuthorityErrorResponse(
+        new HybridLifecycleMaintenanceError(),
+      );
+    }
 
     const observeUnexpectedFailure = async (
       reason: SessionAuthorityFailureReason | undefined,
