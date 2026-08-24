@@ -86,6 +86,7 @@
     "full-local-production:launch-agent:status": "node scripts/full-local-launch-agent.mjs status",
     "full-local-production:launch-agent:uninstall": "node scripts/full-local-launch-agent.mjs uninstall",
     "test:recipe-visibility-read-hardening:focused": "vitest run tests/recipe-visibility-*.test.ts tests/recipe-image-*.test.ts --exclude '**/*.integration.test.ts' --exclude '**/*.live.test.ts'",
+    "test:full-local-core-owner-read-rls:postgres": "node scripts/run-full-local-core-owner-read-rls-postgres-integration.mjs",
     "test:product-superseding-draft-policy:focused": "vitest run tests/product-branch-context.test.ts tests/check-workpack-docs.test.ts tests/closeout-sync-validator.test.ts tests/exploratory-qa-evidence.test.ts tests/authority-evidence-presence.test.ts tests/real-smoke-presence.test.ts tests/omo-github.test.ts tests/wave1-prototype-lock-validator.test.ts tests/pr-ready-validator.test.ts tests/git-policy.test.ts",
     "test:recipe-visibility-read-hardening:postgres": "node scripts/run-recipe-visibility-read-hardening-postgres-integration.mjs",
     "test:recipe-snapshot-authority:postgres": "node scripts/run-recipe-snapshot-authority-postgres-integration.mjs",
