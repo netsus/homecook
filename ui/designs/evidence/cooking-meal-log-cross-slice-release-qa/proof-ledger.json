@@ -1,0 +1,681 @@
+{
+  "source_head_sha": "a9f027cae1011eced3f42f36b833f60dbd7f284a",
+  "private_nondisclosure": {
+    "status": "passed",
+    "facets": [
+      "private-owner-visible",
+      "private-other-owner-denied",
+      "private-public-list-absent",
+      "quarantined-public-list-absent",
+      "deleted-public-list-absent",
+      "public-detail-nondisclosure",
+      "search-nondisclosure",
+      "tag-theme-nondisclosure",
+      "cache-seo-nondisclosure"
+    ],
+    "evidence": [
+      {
+        "kind": "postgres",
+        "path": "ui/designs/evidence/cooking-meal-log-cross-slice-release-qa/proof/762b68ebb9f8c28770a7ab7f976a4c14715b012294e6733b7dedcd8917866cd1-recipe-visibility-quarantine-surfaces-postgres.integration.test.ts",
+        "result": "passed",
+        "sha256": "762b68ebb9f8c28770a7ab7f976a4c14715b012294e6733b7dedcd8917866cd1",
+        "source_head_sha": "a9f027cae1011eced3f42f36b833f60dbd7f284a",
+        "assertion": "real PostgreSQL quarantine/private/deleted visibility and stored-payload preservation"
+      }
+    ]
+  },
+  "screens": {
+    "ACCOUNT_QUARANTINE": {
+      "states": {
+        "loading": [
+          {
+            "kind": "playwright",
+            "path": "ui/designs/evidence/cooking-meal-log-cross-slice-release-qa/proof/d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194-playwright-state-report.json",
+            "result": "passed",
+            "sha256": "d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194",
+            "source_head_sha": "a9f027cae1011eced3f42f36b833f60dbd7f284a",
+            "assertion": "ACCOUNT_QUARANTINE:loading"
+          }
+        ],
+        "error": [
+          {
+            "kind": "playwright",
+            "path": "ui/designs/evidence/cooking-meal-log-cross-slice-release-qa/proof/d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194-playwright-state-report.json",
+            "result": "passed",
+            "sha256": "d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194",
+            "source_head_sha": "a9f027cae1011eced3f42f36b833f60dbd7f284a",
+            "assertion": "ACCOUNT_QUARANTINE:error"
+          }
+        ],
+        "unauthorized": [
+          {
+            "kind": "playwright",
+            "path": "ui/designs/evidence/cooking-meal-log-cross-slice-release-qa/proof/d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194-playwright-state-report.json",
+            "result": "passed",
+            "sha256": "d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194",
+            "source_head_sha": "a9f027cae1011eced3f42f36b833f60dbd7f284a",
+            "assertion": "ACCOUNT_QUARANTINE:unauthorized"
+          }
+        ],
+        "maintenance": [
+          {
+            "kind": "playwright",
+            "path": "ui/designs/evidence/cooking-meal-log-cross-slice-release-qa/proof/d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194-playwright-state-report.json",
+            "result": "passed",
+            "sha256": "d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194",
+            "source_head_sha": "a9f027cae1011eced3f42f36b833f60dbd7f284a",
+            "assertion": "ACCOUNT_QUARANTINE:maintenance"
+          }
+        ],
+        "cleanup_pending": [
+          {
+            "kind": "playwright",
+            "path": "ui/designs/evidence/cooking-meal-log-cross-slice-release-qa/proof/d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194-playwright-state-report.json",
+            "result": "passed",
+            "sha256": "d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194",
+            "source_head_sha": "a9f027cae1011eced3f42f36b833f60dbd7f284a",
+            "assertion": "ACCOUNT_QUARANTINE:cleanup_pending"
+          }
+        ],
+        "pending": [
+          {
+            "kind": "playwright",
+            "path": "ui/designs/evidence/cooking-meal-log-cross-slice-release-qa/proof/d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194-playwright-state-report.json",
+            "result": "passed",
+            "sha256": "d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194",
+            "source_head_sha": "a9f027cae1011eced3f42f36b833f60dbd7f284a",
+            "assertion": "ACCOUNT_QUARANTINE:pending"
+          }
+        ],
+        "replay": [
+          {
+            "kind": "playwright",
+            "path": "ui/designs/evidence/cooking-meal-log-cross-slice-release-qa/proof/d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194-playwright-state-report.json",
+            "result": "passed",
+            "sha256": "d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194",
+            "source_head_sha": "a9f027cae1011eced3f42f36b833f60dbd7f284a",
+            "assertion": "ACCOUNT_QUARANTINE:replay"
+          }
+        ],
+        "conflict": [
+          {
+            "kind": "playwright",
+            "path": "ui/designs/evidence/cooking-meal-log-cross-slice-release-qa/proof/d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194-playwright-state-report.json",
+            "result": "passed",
+            "sha256": "d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194",
+            "source_head_sha": "a9f027cae1011eced3f42f36b833f60dbd7f284a",
+            "assertion": "ACCOUNT_QUARANTINE:conflict"
+          }
+        ],
+        "auth-absent-support-only": [
+          {
+            "kind": "playwright",
+            "path": "ui/designs/evidence/cooking-meal-log-cross-slice-release-qa/proof/d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194-playwright-state-report.json",
+            "result": "passed",
+            "sha256": "d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194",
+            "source_head_sha": "a9f027cae1011eced3f42f36b833f60dbd7f284a",
+            "assertion": "ACCOUNT_QUARANTINE:auth-absent-support-only"
+          }
+        ]
+      }
+    },
+    "HOME": {
+      "states": {
+        "loading": [
+          {
+            "kind": "vitest",
+            "path": "ui/designs/evidence/cooking-meal-log-cross-slice-release-qa/proof/a241983cb0d4b8c33113eaa5cc1ff70110de69a9e977ce0090c3f08ca081cdd9-vitest-state-report.json",
+            "result": "passed",
+            "sha256": "a241983cb0d4b8c33113eaa5cc1ff70110de69a9e977ce0090c3f08ca081cdd9",
+            "source_head_sha": "a9f027cae1011eced3f42f36b833f60dbd7f284a",
+            "assertion": "HOME:loading"
+          }
+        ],
+        "empty": [
+          {
+            "kind": "playwright",
+            "path": "ui/designs/evidence/cooking-meal-log-cross-slice-release-qa/proof/d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194-playwright-state-report.json",
+            "result": "passed",
+            "sha256": "d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194",
+            "source_head_sha": "a9f027cae1011eced3f42f36b833f60dbd7f284a",
+            "assertion": "HOME:empty"
+          }
+        ],
+        "error": [
+          {
+            "kind": "playwright",
+            "path": "ui/designs/evidence/cooking-meal-log-cross-slice-release-qa/proof/d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194-playwright-state-report.json",
+            "result": "passed",
+            "sha256": "d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194",
+            "source_head_sha": "a9f027cae1011eced3f42f36b833f60dbd7f284a",
+            "assertion": "HOME:error"
+          }
+        ],
+        "recipe-only": [
+          {
+            "kind": "playwright",
+            "path": "ui/designs/evidence/cooking-meal-log-cross-slice-release-qa/proof/d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194-playwright-state-report.json",
+            "result": "passed",
+            "sha256": "d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194",
+            "source_head_sha": "a9f027cae1011eced3f42f36b833f60dbd7f284a",
+            "assertion": "HOME:recipe-only"
+          }
+        ],
+        "private-quarantined-deleted-nondisclosure": [
+          {
+            "kind": "postgres",
+            "path": "ui/designs/evidence/cooking-meal-log-cross-slice-release-qa/proof/762b68ebb9f8c28770a7ab7f976a4c14715b012294e6733b7dedcd8917866cd1-recipe-visibility-quarantine-surfaces-postgres.integration.test.ts",
+            "result": "passed",
+            "sha256": "762b68ebb9f8c28770a7ab7f976a4c14715b012294e6733b7dedcd8917866cd1",
+            "source_head_sha": "a9f027cae1011eced3f42f36b833f60dbd7f284a",
+            "assertion": "HOME:private-quarantined-deleted-nondisclosure"
+          }
+        ]
+      }
+    },
+    "RECIPE_DETAIL": {
+      "states": {
+        "loading": [
+          {
+            "kind": "vitest",
+            "path": "ui/designs/evidence/cooking-meal-log-cross-slice-release-qa/proof/a241983cb0d4b8c33113eaa5cc1ff70110de69a9e977ce0090c3f08ca081cdd9-vitest-state-report.json",
+            "result": "passed",
+            "sha256": "a241983cb0d4b8c33113eaa5cc1ff70110de69a9e977ce0090c3f08ca081cdd9",
+            "source_head_sha": "a9f027cae1011eced3f42f36b833f60dbd7f284a",
+            "assertion": "RECIPE_DETAIL:loading"
+          }
+        ],
+        "error": [
+          {
+            "kind": "playwright",
+            "path": "ui/designs/evidence/cooking-meal-log-cross-slice-release-qa/proof/d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194-playwright-state-report.json",
+            "result": "passed",
+            "sha256": "d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194",
+            "source_head_sha": "a9f027cae1011eced3f42f36b833f60dbd7f284a",
+            "assertion": "RECIPE_DETAIL:error"
+          }
+        ],
+        "unauthorized": [
+          {
+            "kind": "playwright",
+            "path": "ui/designs/evidence/cooking-meal-log-cross-slice-release-qa/proof/d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194-playwright-state-report.json",
+            "result": "passed",
+            "sha256": "d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194",
+            "source_head_sha": "a9f027cae1011eced3f42f36b833f60dbd7f284a",
+            "assertion": "RECIPE_DETAIL:unauthorized"
+          }
+        ],
+        "public-read-only": [
+          {
+            "kind": "playwright",
+            "path": "ui/designs/evidence/cooking-meal-log-cross-slice-release-qa/proof/d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194-playwright-state-report.json",
+            "result": "passed",
+            "sha256": "d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194",
+            "source_head_sha": "a9f027cae1011eced3f42f36b833f60dbd7f284a",
+            "assertion": "RECIPE_DETAIL:public-read-only"
+          }
+        ],
+        "owner-edit-delete": [
+          {
+            "kind": "vitest",
+            "path": "ui/designs/evidence/cooking-meal-log-cross-slice-release-qa/proof/a241983cb0d4b8c33113eaa5cc1ff70110de69a9e977ce0090c3f08ca081cdd9-vitest-state-report.json",
+            "result": "passed",
+            "sha256": "a241983cb0d4b8c33113eaa5cc1ff70110de69a9e977ce0090c3f08ca081cdd9",
+            "source_head_sha": "a9f027cae1011eced3f42f36b833f60dbd7f284a",
+            "assertion": "RECIPE_DETAIL:owner-edit-delete"
+          }
+        ],
+        "future-impact-conflict": [
+          {
+            "kind": "vitest",
+            "path": "ui/designs/evidence/cooking-meal-log-cross-slice-release-qa/proof/a241983cb0d4b8c33113eaa5cc1ff70110de69a9e977ce0090c3f08ca081cdd9-vitest-state-report.json",
+            "result": "passed",
+            "sha256": "a241983cb0d4b8c33113eaa5cc1ff70110de69a9e977ce0090c3f08ca081cdd9",
+            "source_head_sha": "a9f027cae1011eced3f42f36b833f60dbd7f284a",
+            "assertion": "RECIPE_DETAIL:future-impact-conflict"
+          }
+        ]
+      }
+    },
+    "MANUAL_RECIPE_CREATE": {
+      "states": {
+        "loading": [
+          {
+            "kind": "vitest",
+            "path": "ui/designs/evidence/cooking-meal-log-cross-slice-release-qa/proof/a241983cb0d4b8c33113eaa5cc1ff70110de69a9e977ce0090c3f08ca081cdd9-vitest-state-report.json",
+            "result": "passed",
+            "sha256": "a241983cb0d4b8c33113eaa5cc1ff70110de69a9e977ce0090c3f08ca081cdd9",
+            "source_head_sha": "a9f027cae1011eced3f42f36b833f60dbd7f284a",
+            "assertion": "MANUAL_RECIPE_CREATE:loading"
+          }
+        ],
+        "error": [
+          {
+            "kind": "playwright",
+            "path": "ui/designs/evidence/cooking-meal-log-cross-slice-release-qa/proof/d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194-playwright-state-report.json",
+            "result": "passed",
+            "sha256": "d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194",
+            "source_head_sha": "a9f027cae1011eced3f42f36b833f60dbd7f284a",
+            "assertion": "MANUAL_RECIPE_CREATE:error"
+          }
+        ],
+        "unauthorized": [
+          {
+            "kind": "playwright",
+            "path": "ui/designs/evidence/cooking-meal-log-cross-slice-release-qa/proof/d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194-playwright-state-report.json",
+            "result": "passed",
+            "sha256": "d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194",
+            "source_head_sha": "a9f027cae1011eced3f42f36b833f60dbd7f284a",
+            "assertion": "MANUAL_RECIPE_CREATE:unauthorized"
+          }
+        ],
+        "validation": [
+          {
+            "kind": "playwright",
+            "path": "ui/designs/evidence/cooking-meal-log-cross-slice-release-qa/proof/d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194-playwright-state-report.json",
+            "result": "passed",
+            "sha256": "d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194",
+            "source_head_sha": "a9f027cae1011eced3f42f36b833f60dbd7f284a",
+            "assertion": "MANUAL_RECIPE_CREATE:validation"
+          }
+        ],
+        "dirty-state": [
+          {
+            "kind": "vitest",
+            "path": "ui/designs/evidence/cooking-meal-log-cross-slice-release-qa/proof/a241983cb0d4b8c33113eaa5cc1ff70110de69a9e977ce0090c3f08ca081cdd9-vitest-state-report.json",
+            "result": "passed",
+            "sha256": "a241983cb0d4b8c33113eaa5cc1ff70110de69a9e977ce0090c3f08ca081cdd9",
+            "source_head_sha": "a9f027cae1011eced3f42f36b833f60dbd7f284a",
+            "assertion": "MANUAL_RECIPE_CREATE:dirty-state"
+          }
+        ],
+        "managed-image-pending-cancel-error": [
+          {
+            "kind": "vitest",
+            "path": "ui/designs/evidence/cooking-meal-log-cross-slice-release-qa/proof/a241983cb0d4b8c33113eaa5cc1ff70110de69a9e977ce0090c3f08ca081cdd9-vitest-state-report.json",
+            "result": "passed",
+            "sha256": "a241983cb0d4b8c33113eaa5cc1ff70110de69a9e977ce0090c3f08ca081cdd9",
+            "source_head_sha": "a9f027cae1011eced3f42f36b833f60dbd7f284a",
+            "assertion": "MANUAL_RECIPE_CREATE:managed-image-pending-cancel-error"
+          }
+        ]
+      }
+    },
+    "PLANNER_WEEK": {
+      "states": {
+        "loading": [
+          {
+            "kind": "playwright",
+            "path": "ui/designs/evidence/cooking-meal-log-cross-slice-release-qa/proof/d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194-playwright-state-report.json",
+            "result": "passed",
+            "sha256": "d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194",
+            "source_head_sha": "a9f027cae1011eced3f42f36b833f60dbd7f284a",
+            "assertion": "PLANNER_WEEK:loading"
+          }
+        ],
+        "empty": [
+          {
+            "kind": "playwright",
+            "path": "ui/designs/evidence/cooking-meal-log-cross-slice-release-qa/proof/d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194-playwright-state-report.json",
+            "result": "passed",
+            "sha256": "d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194",
+            "source_head_sha": "a9f027cae1011eced3f42f36b833f60dbd7f284a",
+            "assertion": "PLANNER_WEEK:empty"
+          }
+        ],
+        "error": [
+          {
+            "kind": "playwright",
+            "path": "ui/designs/evidence/cooking-meal-log-cross-slice-release-qa/proof/d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194-playwright-state-report.json",
+            "result": "passed",
+            "sha256": "d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194",
+            "source_head_sha": "a9f027cae1011eced3f42f36b833f60dbd7f284a",
+            "assertion": "PLANNER_WEEK:error"
+          }
+        ],
+        "unauthorized": [
+          {
+            "kind": "playwright",
+            "path": "ui/designs/evidence/cooking-meal-log-cross-slice-release-qa/proof/d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194-playwright-state-report.json",
+            "result": "passed",
+            "sha256": "d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194",
+            "source_head_sha": "a9f027cae1011eced3f42f36b833f60dbd7f284a",
+            "assertion": "PLANNER_WEEK:unauthorized"
+          }
+        ],
+        "completed-shopping-read-only": [
+          {
+            "kind": "playwright",
+            "path": "ui/designs/evidence/cooking-meal-log-cross-slice-release-qa/proof/d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194-playwright-state-report.json",
+            "result": "passed",
+            "sha256": "d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194",
+            "source_head_sha": "a9f027cae1011eced3f42f36b833f60dbd7f284a",
+            "assertion": "PLANNER_WEEK:completed-shopping-read-only"
+          }
+        ],
+        "legacy-product-read-only-delete": [
+          {
+            "kind": "playwright",
+            "path": "ui/designs/evidence/cooking-meal-log-cross-slice-release-qa/proof/d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194-playwright-state-report.json",
+            "result": "passed",
+            "sha256": "d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194",
+            "source_head_sha": "a9f027cae1011eced3f42f36b833f60dbd7f284a",
+            "assertion": "PLANNER_WEEK:legacy-product-read-only-delete"
+          }
+        ]
+      }
+    },
+    "COOK_MODE": {
+      "states": {
+        "loading": [
+          {
+            "kind": "playwright",
+            "path": "ui/designs/evidence/cooking-meal-log-cross-slice-release-qa/proof/d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194-playwright-state-report.json",
+            "result": "passed",
+            "sha256": "d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194",
+            "source_head_sha": "a9f027cae1011eced3f42f36b833f60dbd7f284a",
+            "assertion": "COOK_MODE:loading"
+          }
+        ],
+        "error": [
+          {
+            "kind": "playwright",
+            "path": "ui/designs/evidence/cooking-meal-log-cross-slice-release-qa/proof/d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194-playwright-state-report.json",
+            "result": "passed",
+            "sha256": "d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194",
+            "source_head_sha": "a9f027cae1011eced3f42f36b833f60dbd7f284a",
+            "assertion": "COOK_MODE:error"
+          }
+        ],
+        "unauthorized": [
+          {
+            "kind": "playwright",
+            "path": "ui/designs/evidence/cooking-meal-log-cross-slice-release-qa/proof/d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194-playwright-state-report.json",
+            "result": "passed",
+            "sha256": "d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194",
+            "source_head_sha": "a9f027cae1011eced3f42f36b833f60dbd7f284a",
+            "assertion": "COOK_MODE:unauthorized"
+          }
+        ],
+        "maintenance": [
+          {
+            "kind": "playwright",
+            "path": "ui/designs/evidence/cooking-meal-log-cross-slice-release-qa/proof/d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194-playwright-state-report.json",
+            "result": "passed",
+            "sha256": "d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194",
+            "source_head_sha": "a9f027cae1011eced3f42f36b833f60dbd7f284a",
+            "assertion": "COOK_MODE:maintenance"
+          }
+        ],
+        "cancelled-read-only": [
+          {
+            "kind": "playwright",
+            "path": "ui/designs/evidence/cooking-meal-log-cross-slice-release-qa/proof/d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194-playwright-state-report.json",
+            "result": "passed",
+            "sha256": "d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194",
+            "source_head_sha": "a9f027cae1011eced3f42f36b833f60dbd7f284a",
+            "assertion": "COOK_MODE:cancelled-read-only"
+          }
+        ],
+        "completed-read-only": [
+          {
+            "kind": "playwright",
+            "path": "ui/designs/evidence/cooking-meal-log-cross-slice-release-qa/proof/d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194-playwright-state-report.json",
+            "result": "passed",
+            "sha256": "d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194",
+            "source_head_sha": "a9f027cae1011eced3f42f36b833f60dbd7f284a",
+            "assertion": "COOK_MODE:completed-read-only"
+          }
+        ],
+        "missing": [
+          {
+            "kind": "playwright",
+            "path": "ui/designs/evidence/cooking-meal-log-cross-slice-release-qa/proof/d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194-playwright-state-report.json",
+            "result": "passed",
+            "sha256": "d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194",
+            "source_head_sha": "a9f027cae1011eced3f42f36b833f60dbd7f284a",
+            "assertion": "COOK_MODE:missing"
+          }
+        ],
+        "unrecoverable": [
+          {
+            "kind": "playwright",
+            "path": "ui/designs/evidence/cooking-meal-log-cross-slice-release-qa/proof/d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194-playwright-state-report.json",
+            "result": "passed",
+            "sha256": "d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194",
+            "source_head_sha": "a9f027cae1011eced3f42f36b833f60dbd7f284a",
+            "assertion": "COOK_MODE:unrecoverable"
+          }
+        ]
+      }
+    },
+    "LEFTOVERS": {
+      "states": {
+        "loading": [
+          {
+            "kind": "playwright",
+            "path": "ui/designs/evidence/cooking-meal-log-cross-slice-release-qa/proof/d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194-playwright-state-report.json",
+            "result": "passed",
+            "sha256": "d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194",
+            "source_head_sha": "a9f027cae1011eced3f42f36b833f60dbd7f284a",
+            "assertion": "LEFTOVERS:loading"
+          }
+        ],
+        "empty": [
+          {
+            "kind": "playwright",
+            "path": "ui/designs/evidence/cooking-meal-log-cross-slice-release-qa/proof/d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194-playwright-state-report.json",
+            "result": "passed",
+            "sha256": "d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194",
+            "source_head_sha": "a9f027cae1011eced3f42f36b833f60dbd7f284a",
+            "assertion": "LEFTOVERS:empty"
+          }
+        ],
+        "error": [
+          {
+            "kind": "playwright",
+            "path": "ui/designs/evidence/cooking-meal-log-cross-slice-release-qa/proof/d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194-playwright-state-report.json",
+            "result": "passed",
+            "sha256": "d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194",
+            "source_head_sha": "a9f027cae1011eced3f42f36b833f60dbd7f284a",
+            "assertion": "LEFTOVERS:error"
+          }
+        ],
+        "unauthorized": [
+          {
+            "kind": "playwright",
+            "path": "ui/designs/evidence/cooking-meal-log-cross-slice-release-qa/proof/d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194-playwright-state-report.json",
+            "result": "passed",
+            "sha256": "d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194",
+            "source_head_sha": "a9f027cae1011eced3f42f36b833f60dbd7f284a",
+            "assertion": "LEFTOVERS:unauthorized"
+          }
+        ],
+        "pending": [
+          {
+            "kind": "playwright",
+            "path": "ui/designs/evidence/cooking-meal-log-cross-slice-release-qa/proof/d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194-playwright-state-report.json",
+            "result": "passed",
+            "sha256": "d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194",
+            "source_head_sha": "a9f027cae1011eced3f42f36b833f60dbd7f284a",
+            "assertion": "LEFTOVERS:pending"
+          }
+        ],
+        "replay": [
+          {
+            "kind": "playwright",
+            "path": "ui/designs/evidence/cooking-meal-log-cross-slice-release-qa/proof/d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194-playwright-state-report.json",
+            "result": "passed",
+            "sha256": "d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194",
+            "source_head_sha": "a9f027cae1011eced3f42f36b833f60dbd7f284a",
+            "assertion": "LEFTOVERS:replay"
+          }
+        ],
+        "conflict": [
+          {
+            "kind": "playwright",
+            "path": "ui/designs/evidence/cooking-meal-log-cross-slice-release-qa/proof/d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194-playwright-state-report.json",
+            "result": "passed",
+            "sha256": "d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194",
+            "source_head_sha": "a9f027cae1011eced3f42f36b833f60dbd7f284a",
+            "assertion": "LEFTOVERS:conflict"
+          }
+        ],
+        "missing": [
+          {
+            "kind": "playwright",
+            "path": "ui/designs/evidence/cooking-meal-log-cross-slice-release-qa/proof/d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194-playwright-state-report.json",
+            "result": "passed",
+            "sha256": "d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194",
+            "source_head_sha": "a9f027cae1011eced3f42f36b833f60dbd7f284a",
+            "assertion": "LEFTOVERS:missing"
+          }
+        ],
+        "unrecoverable": [
+          {
+            "kind": "playwright",
+            "path": "ui/designs/evidence/cooking-meal-log-cross-slice-release-qa/proof/d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194-playwright-state-report.json",
+            "result": "passed",
+            "sha256": "d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194",
+            "source_head_sha": "a9f027cae1011eced3f42f36b833f60dbd7f284a",
+            "assertion": "LEFTOVERS:unrecoverable"
+          }
+        ],
+        "depleted-read-only": [
+          {
+            "kind": "playwright",
+            "path": "ui/designs/evidence/cooking-meal-log-cross-slice-release-qa/proof/d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194-playwright-state-report.json",
+            "result": "passed",
+            "sha256": "d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194",
+            "source_head_sha": "a9f027cae1011eced3f42f36b833f60dbd7f284a",
+            "assertion": "LEFTOVERS:depleted-read-only"
+          }
+        ]
+      }
+    },
+    "MEAL_LOG": {
+      "states": {
+        "loading": [
+          {
+            "kind": "playwright",
+            "path": "ui/designs/evidence/cooking-meal-log-cross-slice-release-qa/proof/d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194-playwright-state-report.json",
+            "result": "passed",
+            "sha256": "d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194",
+            "source_head_sha": "a9f027cae1011eced3f42f36b833f60dbd7f284a",
+            "assertion": "MEAL_LOG:loading"
+          }
+        ],
+        "empty": [
+          {
+            "kind": "playwright",
+            "path": "ui/designs/evidence/cooking-meal-log-cross-slice-release-qa/proof/d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194-playwright-state-report.json",
+            "result": "passed",
+            "sha256": "d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194",
+            "source_head_sha": "a9f027cae1011eced3f42f36b833f60dbd7f284a",
+            "assertion": "MEAL_LOG:empty"
+          }
+        ],
+        "error": [
+          {
+            "kind": "playwright",
+            "path": "ui/designs/evidence/cooking-meal-log-cross-slice-release-qa/proof/d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194-playwright-state-report.json",
+            "result": "passed",
+            "sha256": "d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194",
+            "source_head_sha": "a9f027cae1011eced3f42f36b833f60dbd7f284a",
+            "assertion": "MEAL_LOG:error"
+          }
+        ],
+        "unauthorized": [
+          {
+            "kind": "playwright",
+            "path": "ui/designs/evidence/cooking-meal-log-cross-slice-release-qa/proof/d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194-playwright-state-report.json",
+            "result": "passed",
+            "sha256": "d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194",
+            "source_head_sha": "a9f027cae1011eced3f42f36b833f60dbd7f284a",
+            "assertion": "MEAL_LOG:unauthorized"
+          }
+        ],
+        "partial": [
+          {
+            "kind": "playwright",
+            "path": "ui/designs/evidence/cooking-meal-log-cross-slice-release-qa/proof/d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194-playwright-state-report.json",
+            "result": "passed",
+            "sha256": "d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194",
+            "source_head_sha": "a9f027cae1011eced3f42f36b833f60dbd7f284a",
+            "assertion": "MEAL_LOG:partial"
+          }
+        ],
+        "unavailable": [
+          {
+            "kind": "playwright",
+            "path": "ui/designs/evidence/cooking-meal-log-cross-slice-release-qa/proof/d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194-playwright-state-report.json",
+            "result": "passed",
+            "sha256": "d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194",
+            "source_head_sha": "a9f027cae1011eced3f42f36b833f60dbd7f284a",
+            "assertion": "MEAL_LOG:unavailable"
+          }
+        ],
+        "deleted-column": [
+          {
+            "kind": "playwright",
+            "path": "ui/designs/evidence/cooking-meal-log-cross-slice-release-qa/proof/d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194-playwright-state-report.json",
+            "result": "passed",
+            "sha256": "d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194",
+            "source_head_sha": "a9f027cae1011eced3f42f36b833f60dbd7f284a",
+            "assertion": "MEAL_LOG:deleted-column"
+          }
+        ],
+        "missing": [
+          {
+            "kind": "playwright",
+            "path": "ui/designs/evidence/cooking-meal-log-cross-slice-release-qa/proof/d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194-playwright-state-report.json",
+            "result": "passed",
+            "sha256": "d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194",
+            "source_head_sha": "a9f027cae1011eced3f42f36b833f60dbd7f284a",
+            "assertion": "MEAL_LOG:missing"
+          }
+        ],
+        "unrecoverable": [
+          {
+            "kind": "playwright",
+            "path": "ui/designs/evidence/cooking-meal-log-cross-slice-release-qa/proof/d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194-playwright-state-report.json",
+            "result": "passed",
+            "sha256": "d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194",
+            "source_head_sha": "a9f027cae1011eced3f42f36b833f60dbd7f284a",
+            "assertion": "MEAL_LOG:unrecoverable"
+          }
+        ],
+        "pending": [
+          {
+            "kind": "playwright",
+            "path": "ui/designs/evidence/cooking-meal-log-cross-slice-release-qa/proof/d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194-playwright-state-report.json",
+            "result": "passed",
+            "sha256": "d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194",
+            "source_head_sha": "a9f027cae1011eced3f42f36b833f60dbd7f284a",
+            "assertion": "MEAL_LOG:pending"
+          }
+        ],
+        "replay": [
+          {
+            "kind": "playwright",
+            "path": "ui/designs/evidence/cooking-meal-log-cross-slice-release-qa/proof/d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194-playwright-state-report.json",
+            "result": "passed",
+            "sha256": "d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194",
+            "source_head_sha": "a9f027cae1011eced3f42f36b833f60dbd7f284a",
+            "assertion": "MEAL_LOG:replay"
+          }
+        ],
+        "conflict": [
+          {
+            "kind": "playwright",
+            "path": "ui/designs/evidence/cooking-meal-log-cross-slice-release-qa/proof/d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194-playwright-state-report.json",
+            "result": "passed",
+            "sha256": "d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194",
+            "source_head_sha": "a9f027cae1011eced3f42f36b833f60dbd7f284a",
+            "assertion": "MEAL_LOG:conflict"
+          }
+        ]
+      }
+    }
+  }
+}

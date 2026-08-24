@@ -1,0 +1,218 @@
+{
+  "fixture_routes": false,
+  "generated_at": "2026-08-24T16:02:52.182Z",
+  "observed_state_candidate": "empty",
+  "pending_states": [],
+  "verified_states": [
+    "loading",
+    "empty",
+    "error",
+    "unauthorized",
+    "partial",
+    "unavailable",
+    "deleted-column",
+    "missing",
+    "unrecoverable",
+    "pending",
+    "replay",
+    "conflict"
+  ],
+  "quality": {
+    "axe_serious_or_critical": 0,
+    "horizontal_overflow_observations": 0,
+    "quality_status": "passed",
+    "touch_target_failures": 0
+  },
+  "real_local_stack": true,
+  "required_states": [
+    "loading",
+    "empty",
+    "error",
+    "unauthorized",
+    "partial",
+    "unavailable",
+    "deleted-column",
+    "missing",
+    "unrecoverable",
+    "pending",
+    "replay",
+    "conflict"
+  ],
+  "screen": "MEAL_LOG",
+  "source_head_sha": "a9f027cae1011eced3f42f36b833f60dbd7f284a",
+  "viewport_observations": [
+    {
+      "actual_url": "http://127.0.0.1:3103/planner?segment=log",
+      "file": "MEAL_LOG-mobile-default.png",
+      "metrics": {
+        "client_width": 390,
+        "horizontal_overflow_px": 0,
+        "scroll_width": 390,
+        "touch_target_failures": [],
+        "serious_or_critical_axe": []
+      },
+      "observed_state": "empty",
+      "viewport": {
+        "height": 844,
+        "label": "mobile-default",
+        "width": 390
+      }
+    },
+    {
+      "actual_url": "http://127.0.0.1:3103/planner?segment=log",
+      "file": "MEAL_LOG-mobile-narrow.png",
+      "metrics": {
+        "client_width": 320,
+        "horizontal_overflow_px": 0,
+        "scroll_width": 320,
+        "touch_target_failures": [],
+        "serious_or_critical_axe": []
+      },
+      "observed_state": "empty",
+      "viewport": {
+        "height": 568,
+        "label": "mobile-narrow",
+        "width": 320
+      }
+    },
+    {
+      "actual_url": "http://127.0.0.1:3103/planner?segment=log",
+      "file": "MEAL_LOG-desktop.png",
+      "metrics": {
+        "client_width": 1440,
+        "horizontal_overflow_px": 0,
+        "scroll_width": 1440,
+        "touch_target_failures": [],
+        "serious_or_critical_axe": []
+      },
+      "observed_state": "empty",
+      "viewport": {
+        "height": 1000,
+        "label": "desktop",
+        "width": 1440
+      }
+    }
+  ],
+  "state_evidence": {
+    "loading": [
+      {
+        "kind": "playwright",
+        "path": "ui/designs/evidence/cooking-meal-log-cross-slice-release-qa/proof/d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194-playwright-state-report.json",
+        "result": "passed",
+        "sha256": "d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194",
+        "source_head_sha": "a9f027cae1011eced3f42f36b833f60dbd7f284a",
+        "assertion": "MEAL_LOG:loading"
+      }
+    ],
+    "empty": [
+      {
+        "kind": "playwright",
+        "path": "ui/designs/evidence/cooking-meal-log-cross-slice-release-qa/proof/d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194-playwright-state-report.json",
+        "result": "passed",
+        "sha256": "d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194",
+        "source_head_sha": "a9f027cae1011eced3f42f36b833f60dbd7f284a",
+        "assertion": "MEAL_LOG:empty"
+      }
+    ],
+    "error": [
+      {
+        "kind": "playwright",
+        "path": "ui/designs/evidence/cooking-meal-log-cross-slice-release-qa/proof/d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194-playwright-state-report.json",
+        "result": "passed",
+        "sha256": "d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194",
+        "source_head_sha": "a9f027cae1011eced3f42f36b833f60dbd7f284a",
+        "assertion": "MEAL_LOG:error"
+      }
+    ],
+    "unauthorized": [
+      {
+        "kind": "playwright",
+        "path": "ui/designs/evidence/cooking-meal-log-cross-slice-release-qa/proof/d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194-playwright-state-report.json",
+        "result": "passed",
+        "sha256": "d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194",
+        "source_head_sha": "a9f027cae1011eced3f42f36b833f60dbd7f284a",
+        "assertion": "MEAL_LOG:unauthorized"
+      }
+    ],
+    "partial": [
+      {
+        "kind": "playwright",
+        "path": "ui/designs/evidence/cooking-meal-log-cross-slice-release-qa/proof/d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194-playwright-state-report.json",
+        "result": "passed",
+        "sha256": "d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194",
+        "source_head_sha": "a9f027cae1011eced3f42f36b833f60dbd7f284a",
+        "assertion": "MEAL_LOG:partial"
+      }
+    ],
+    "unavailable": [
+      {
+        "kind": "playwright",
+        "path": "ui/designs/evidence/cooking-meal-log-cross-slice-release-qa/proof/d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194-playwright-state-report.json",
+        "result": "passed",
+        "sha256": "d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194",
+        "source_head_sha": "a9f027cae1011eced3f42f36b833f60dbd7f284a",
+        "assertion": "MEAL_LOG:unavailable"
+      }
+    ],
+    "deleted-column": [
+      {
+        "kind": "playwright",
+        "path": "ui/designs/evidence/cooking-meal-log-cross-slice-release-qa/proof/d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194-playwright-state-report.json",
+        "result": "passed",
+        "sha256": "d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194",
+        "source_head_sha": "a9f027cae1011eced3f42f36b833f60dbd7f284a",
+        "assertion": "MEAL_LOG:deleted-column"
+      }
+    ],
+    "missing": [
+      {
+        "kind": "playwright",
+        "path": "ui/designs/evidence/cooking-meal-log-cross-slice-release-qa/proof/d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194-playwright-state-report.json",
+        "result": "passed",
+        "sha256": "d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194",
+        "source_head_sha": "a9f027cae1011eced3f42f36b833f60dbd7f284a",
+        "assertion": "MEAL_LOG:missing"
+      }
+    ],
+    "unrecoverable": [
+      {
+        "kind": "playwright",
+        "path": "ui/designs/evidence/cooking-meal-log-cross-slice-release-qa/proof/d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194-playwright-state-report.json",
+        "result": "passed",
+        "sha256": "d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194",
+        "source_head_sha": "a9f027cae1011eced3f42f36b833f60dbd7f284a",
+        "assertion": "MEAL_LOG:unrecoverable"
+      }
+    ],
+    "pending": [
+      {
+        "kind": "playwright",
+        "path": "ui/designs/evidence/cooking-meal-log-cross-slice-release-qa/proof/d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194-playwright-state-report.json",
+        "result": "passed",
+        "sha256": "d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194",
+        "source_head_sha": "a9f027cae1011eced3f42f36b833f60dbd7f284a",
+        "assertion": "MEAL_LOG:pending"
+      }
+    ],
+    "replay": [
+      {
+        "kind": "playwright",
+        "path": "ui/designs/evidence/cooking-meal-log-cross-slice-release-qa/proof/d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194-playwright-state-report.json",
+        "result": "passed",
+        "sha256": "d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194",
+        "source_head_sha": "a9f027cae1011eced3f42f36b833f60dbd7f284a",
+        "assertion": "MEAL_LOG:replay"
+      }
+    ],
+    "conflict": [
+      {
+        "kind": "playwright",
+        "path": "ui/designs/evidence/cooking-meal-log-cross-slice-release-qa/proof/d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194-playwright-state-report.json",
+        "result": "passed",
+        "sha256": "d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194",
+        "source_head_sha": "a9f027cae1011eced3f42f36b833f60dbd7f284a",
+        "assertion": "MEAL_LOG:conflict"
+      }
+    ]
+  }
+}
