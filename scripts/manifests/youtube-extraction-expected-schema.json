@@ -2,7 +2,7 @@
   "schema": "homecook.youtube-extraction-expected-schema",
   "version": 1,
   "schema_identity": "youtube-extraction-worker-schema-v1",
-  "catalog_fingerprint": "a0740a9e9789d0176d55bac206f3bc7a7ed2b5dc9eb31737317d072512477d6c",
+  "catalog_fingerprint": "605c4e37ccd34313f00d4687c5340d8ea8ccdf958eb297805bbae871438775cc",
   "catalog_fingerprint_algorithm": "sha256:youtube-extraction-live-catalog-v1",
   "catalog_fingerprint_components": [
     "tables",
@@ -23,6 +23,7 @@
     "rpc_signatures",
     "rpc_security",
     "rpc_function_definitions",
+    "shared_dependency_contract",
     "internal_scope_function_definition"
   ],
   "tables": [
@@ -98,6 +99,7 @@
     "private.youtube_extraction_worker_write_fence_is_active(uuid,text,bigint,bigint)"
   ],
   "internal_scope_function_signature": "private.youtube_extraction_internal_scope_contract_v1()",
+  "shared_dependency_contract_function_signature": "private.youtube_extraction_shared_dependency_contract_v1()",
   "initial_policy": {
     "policy_key": "primary",
     "policy_version": 1,

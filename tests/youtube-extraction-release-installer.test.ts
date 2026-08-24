@@ -501,6 +501,7 @@ describe("YTASYNC-OPS deterministic artifact", () => {
         "owner_role_attributes",
         "memberships",
         "rpc_function_definitions",
+        "shared_dependency_contract",
         "internal_scope_function_definition",
       ]),
       fence_function_signatures: expect.arrayContaining([
@@ -508,6 +509,8 @@ describe("YTASYNC-OPS deterministic artifact", () => {
       ]),
       internal_scope_function_signature:
         "private.youtube_extraction_internal_scope_contract_v1()",
+      shared_dependency_contract_function_signature:
+        "private.youtube_extraction_shared_dependency_contract_v1()",
       memberships: [
         {
           member: "authenticator",

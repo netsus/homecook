@@ -2539,6 +2539,168 @@ describe.runIf(enabled).sequential("youtube async extraction PostgreSQL integrat
     }
   });
 
+  it("keeps readiness stable across unrelated shared catalog column/index/constraint/ACL additions", () => {
+    enablePolicy();
+    const snapshotDigest = policySnapshotDigest();
+    configureWorkerCredential(snapshotDigest);
+    const readEnqueueReadiness = () => runAsJson(
+      "authenticated",
+      authenticatedClaims(ownerA),
+      "select public.read_youtube_extraction_enqueue_readiness()::text;",
+    );
+    const before = readEnqueueReadiness();
+
+    psql(`
+      alter table public.ingredients
+        add column if not exists integration_probe_note text;
+      alter table public.ingredients
+        add constraint ingredients_integration_probe_note_check
+        check (
+          integration_probe_note is null
+          or length(integration_probe_note) <= 64
+        );
+      create index if not exists ingredients_integration_probe_note_idx
+        on public.ingredients (integration_probe_note)
+        where integration_probe_note is not null;
+      grant select on table public.ingredients to supabase_admin;
+    `);
+
+    try {
+      const after = readEnqueueReadiness();
+      expect(before.ready).toBe(true);
+      expect(after.ready).toBe(true);
+      expect(after.catalog_fingerprint).toBe(before.catalog_fingerprint);
+      expect(after.catalog_fingerprint).toBe(expectedSchemaDocument.catalog_fingerprint);
+    } finally {
+      psql(`
+        revoke select on table public.ingredients from supabase_admin;
+        drop index if exists public.ingredients_integration_probe_note_idx;
+        alter table public.ingredients
+          drop constraint if exists ingredients_integration_probe_note_check,
+          drop column if exists integration_probe_note;
+      `);
+    }
+  });
+
+  it("fails readiness closed when a required shared catalog column contract drifts", () => {
+    enablePolicy();
+    const snapshotDigest = policySnapshotDigest();
+    configureWorkerCredential(snapshotDigest);
+
+    psql(`
+      alter table public.ingredients
+        alter column standard_name type text;
+    `);
+
+    try {
+      const readiness = runAsJson("authenticated", authenticatedClaims(ownerA), `
+        select public.read_youtube_extraction_enqueue_readiness()::text;
+      `);
+      expect(readiness.ready).toBe(false);
+      expect(readiness.catalog_fingerprint).not.toBe(expectedSchemaDocument.catalog_fingerprint);
+    } finally {
+      psql(`
+        alter table public.ingredients
+          alter column standard_name type varchar(100);
+      `);
+    }
+  });
+
+  it("fails readiness closed when a required shared worker catalog policy drifts", () => {
+    enablePolicy();
+    const snapshotDigest = policySnapshotDigest();
+    configureWorkerCredential(snapshotDigest);
+
+    psql(`
+      drop policy if exists youtube_worker_catalog_ingredients_select
+        on public.ingredients;
+    `);
+
+    try {
+      const readiness = runAsJson("authenticated", authenticatedClaims(ownerA), `
+        select public.read_youtube_extraction_enqueue_readiness()::text;
+      `);
+      expect(readiness.ready).toBe(false);
+      expect(readiness.catalog_fingerprint).not.toBe(expectedSchemaDocument.catalog_fingerprint);
+    } finally {
+      psql(`
+        create policy youtube_worker_catalog_ingredients_select on public.ingredients
+          for select to youtube_extraction_worker_rpc_owner using (true);
+      `);
+    }
+  });
+
+  it("fails readiness closed when a required shared worker catalog grant drifts", () => {
+    enablePolicy();
+    const snapshotDigest = policySnapshotDigest();
+    configureWorkerCredential(snapshotDigest);
+
+    psql(`
+      revoke select on table public.ingredients
+        from youtube_extraction_worker_rpc_owner;
+    `);
+
+    try {
+      const readiness = runAsJson("authenticated", authenticatedClaims(ownerA), `
+        select public.read_youtube_extraction_enqueue_readiness()::text;
+      `);
+      expect(readiness.ready).toBe(false);
+      expect(readiness.catalog_fingerprint).not.toBe(expectedSchemaDocument.catalog_fingerprint);
+    } finally {
+      psql(`
+        grant select on table public.ingredients
+          to youtube_extraction_worker_rpc_owner;
+      `);
+    }
+  });
+
+  it("normalizes reviewed legacy API-role ACLs but blocks arbitrary legacy-table grants", () => {
+    enablePolicy();
+    const snapshotDigest = policySnapshotDigest();
+    configureWorkerCredential(snapshotDigest);
+    const readEnqueueReadiness = () => runAsJson(
+      "authenticated",
+      authenticatedClaims(ownerA),
+      "select public.read_youtube_extraction_enqueue_readiness()::text;",
+    );
+    const before = readEnqueueReadiness();
+
+    psql(`
+      grant select on table public.youtube_extraction_sessions to authenticated;
+    `);
+    try {
+      const compatible = readEnqueueReadiness();
+      expect(compatible.ready).toBe(true);
+      expect(compatible.catalog_fingerprint).toBe(before.catalog_fingerprint);
+    } finally {
+      psql(`
+        revoke select on table public.youtube_extraction_sessions from authenticated;
+      `);
+    }
+
+    psql(`
+      create role youtube_legacy_acl_probe nologin noinherit;
+      grant select on table public.youtube_extraction_sessions
+        to youtube_legacy_acl_probe;
+    `);
+    try {
+      const drifted = readEnqueueReadiness();
+      expect(drifted.ready).toBe(false);
+      expect(drifted.catalog_fingerprint).not.toBe(before.catalog_fingerprint);
+    } finally {
+      psql(`
+        revoke all privileges on table public.youtube_extraction_sessions
+          from youtube_legacy_acl_probe;
+        drop role youtube_legacy_acl_probe;
+      `);
+    }
+
+    expect(readEnqueueReadiness()).toMatchObject({
+      ready: true,
+      catalog_fingerprint: before.catalog_fingerprint,
+    });
+  });
+
   it.each([
     [
       "column type",
