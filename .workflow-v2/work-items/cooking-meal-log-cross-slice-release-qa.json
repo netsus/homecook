@@ -52,6 +52,7 @@
       "docs/workpacks/cooking-meal-log-cross-slice-release-qa/evidence/2026-08-25-stage4-frontend-stage-result.json",
       "docs/workpacks/cooking-meal-log-cross-slice-release-qa/evidence/2026-08-25-stage5-final-rereview-result.json",
       "docs/workpacks/cooking-meal-log-cross-slice-release-qa/evidence/2026-08-25-final-authority-gate-result.json",
+      "docs/workpacks/cooking-meal-log-cross-slice-release-qa/evidence/2026-08-25-stage6-frontend-closeout-result.json",
       "package.json",
       "scripts/lib/cooking-meal-log-release-evidence.mjs",
       "scripts/run-cooking-meal-log-release-evidence.mjs",
@@ -231,8 +232,8 @@
     "approval_state": "codex_approved",
     "verification_status": "pending",
     "evaluation_status": "passed",
-    "evaluation_round": 7,
-    "last_evaluator_result": "Stage 5 task 01a034d3-69db-70f2-b297-8f7e716b44f4 APPROVE 0/0/2 and final authority task 01a034da-9a1f-76c0-bef4-47b1a1f481c7 PASS 0/0/2 at 25f314e7524382da174fc9075604b6450061e72e; P2 M01/M02 remain unwaived",
+    "evaluation_round": 8,
+    "last_evaluator_result": "Stage 6 task 01a03507-fc40-7591-8244-e08bf96efc6c APPROVE P0/P1/P2 0/0/0 at 0fe74aa08ab94048fbdc6703217ed9f715ad8cd1; CML14-S6-P1-001 CLOSED; Ready/internal 6.5 pending",
     "auto_merge_eligible": false,
     "blocked_reason_code": null
   },
@@ -259,6 +260,10 @@
         "docs/workpacks/cooking-meal-log-cross-slice-release-qa/evidence/2026-08-25-stage4-frontend-stage-result.json",
         "docs/workpacks/cooking-meal-log-cross-slice-release-qa/evidence/2026-08-25-stage5-final-rereview-result.json",
         "docs/workpacks/cooking-meal-log-cross-slice-release-qa/evidence/2026-08-25-final-authority-gate-result.json",
+        "docs/workpacks/cooking-meal-log-cross-slice-release-qa/evidence/2026-08-25-stage6-frontend-closeout-result.json",
+        "Stage 6 producer task 01a03513-400d-71e1-8276-2d32b66d9618 produced exact full a2 attempt cml14-stage6-0fe74aa0-20260825-full-a2 with bundle/manifest SHA-256 28c92157919eae6134122d09b016c63afb96fe345ae2ff246c00ad265ce02028 / d41be9c3118d0d187c77dd6fa6577c53c0ddea2925ba1602aa729962cae9c5d2, 734 passed, gaps 0, remote 0, raw PostgreSQL URL 0 and owned residual 0",
+        "Security reviewer task 01a0352f-5141-7b41-bf73-02b45ecf8dd3 APPROVE 0/0/0 after redaction repair author task 01a03523-7719-7382-aa20-e28540dda91c",
+        "Stage 6 task 01a03507-fc40-7591-8244-e08bf96efc6c APPROVE P0/P1/P2 0/0/0 at 0fe74aa08ab94048fbdc6703217ed9f715ad8cd1 / tree 213b57d86251f908450444d76b1c6a729f15524e; CML14-S6-P1-001 CLOSED; Ready/internal 6.5 pending",
         "Stage 4 author task 01a033bd-a723-7052-a42c-b830d10057af completed source content 112a8e8763571a8b4c8c105efbe9a3f1f9a4af2a / tree 70a20f8c63720800ae8073fe84e24629e1956886 with 8 screens, 62/62 states, pending 0, privacy 9/9, quality 0/0/0, remote 0 and retained eval 96 PASS",
         "Clean successor author task 01a034a0-5120-7bd3-a2a6-278f1015dfee normalized the source final content without changing tree 70a20f8c63720800ae8073fe84e24629e1956886",
         "Authority precheck task 01a034ac-ad44-7d52-a981-3f57da096346 conditional-pass 0/0/2; report ui/designs/authority/cooking-meal-log-cross-slice-release-qa-authority.md",
@@ -279,25 +284,25 @@
       ]
     },
     "merge_gate_projection": {
-      "current_head_sha": "25f314e7524382da174fc9075604b6450061e72e",
+      "current_head_sha": "0fe74aa08ab94048fbdc6703217ed9f715ad8cd1",
       "approval_state": "codex_approved",
       "all_checks_green": false
     },
     "recovery_summary": {
-      "manual_patch_count": 4,
+      "manual_patch_count": 5,
       "manual_handoff": false,
       "stale_lock_count": 2,
-      "ci_resync_count": 0,
+      "ci_resync_count": 1,
       "artifact_missing": false,
-      "last_recovery_at": "2026-08-24T17:55:49Z"
+      "last_recovery_at": "2026-08-24T19:41:12Z"
     },
     "repair_summary": {
-      "codex_repairable_count": 7,
+      "codex_repairable_count": 9,
       "claude_repairable_count": 0,
       "manual_decision_required_count": 0,
       "human_escalation_count": 0,
       "post_merge_stale_count": 0,
-      "latest_reason_code": "stage4-stage5-final-authority-closeout-projection",
+      "latest_reason_code": "stage6-approved-closeout-projection",
       "evidence_sources": [
         "Codex_task_01a01f2e-ae07-7f42-88be-87727228702a",
         "Codex_task_01a01f2e-b2ed-7f32-bbaf-204b58613435",
@@ -325,13 +330,20 @@
         "GitHub_PR_1412_head_25f314e7524382da174fc9075604b6450061e72e",
         "docs/workpacks/cooking-meal-log-cross-slice-release-qa/evidence/2026-08-25-stage4-frontend-stage-result.json",
         "docs/workpacks/cooking-meal-log-cross-slice-release-qa/evidence/2026-08-25-stage5-final-rereview-result.json",
-        "docs/workpacks/cooking-meal-log-cross-slice-release-qa/evidence/2026-08-25-final-authority-gate-result.json"
+        "docs/workpacks/cooking-meal-log-cross-slice-release-qa/evidence/2026-08-25-final-authority-gate-result.json",
+        "Codex_task_01a03523-7719-7382-aa20-e28540dda91c",
+        "Codex_task_01a0352f-5141-7b41-bf73-02b45ecf8dd3",
+        "Codex_task_01a03513-400d-71e1-8276-2d32b66d9618",
+        "Codex_task_01a03507-fc40-7591-8244-e08bf96efc6c",
+        "GitHub_PR_1412_head_0fe74aa08ab94048fbdc6703217ed9f715ad8cd1",
+        ".artifacts/cooking-meal-log-cross-slice-release-qa/attempts/cml14-stage6-0fe74aa0-20260825-full-a2/",
+        "docs/workpacks/cooking-meal-log-cross-slice-release-qa/evidence/2026-08-25-stage6-frontend-closeout-result.json"
       ]
     },
     "projection_state": {
-      "docs_synced_at": "2026-08-24T17:55:49Z",
-      "status_synced_at": "2026-08-24T17:55:49Z",
-      "pr_body_synced_at": "2026-08-24T17:55:49Z"
+      "docs_synced_at": "2026-08-24T19:41:12Z",
+      "status_synced_at": "2026-08-24T19:41:12Z",
+      "pr_body_synced_at": "2026-08-24T19:41:12Z"
     }
   },
   "out_of_scope": [
@@ -346,5 +358,5 @@
     "Physical-device actual-screen-reader full-WCAG and true-production-scale claims during Stage 1"
   ],
   "open_questions": [],
-  "notes": "Canonical closeout owner: .workflow-v2/work-items/cooking-meal-log-cross-slice-release-qa.json#closeout. Historical Stage 1~3 evidence remains retained. Active Draft PR #1412 is feature/fe-cooking-meal-log-cross-slice-release-qa-superseding-draft. Stage 4 author 01a033bd-a723-7052-a42c-b830d10057af completed source content 112a8e8763571a8b4c8c105efbe9a3f1f9a4af2a / tree 70a20f8c63720800ae8073fe84e24629e1956886; clean successor author 01a034a0-5120-7bd3-a2a6-278f1015dfee preserved that tree. Authority precheck 01a034ac-ad44-7d52-a981-3f57da096346 returned conditional-pass 0/0/2. Prior Stage 5 HOLD 01a034b6-7dd6-70d2-8c15-7ca52695d011 was repaired by 01a034c5-ce22-7fa3-968d-a4fd90eecd0f. Fresh Stage 5 01a034d3-69db-70f2-b297-8f7e716b44f4 returned APPROVE 0/0/2 with product UI findings 0, and final authority 01a034da-9a1f-76c0-bef4-47b1a1f481c7 returned PASS 0/0/2 with blocker/major 0/0 at reviewed head/tree 25f314e7524382da174fc9075604b6450061e72e / 255347d7e0d4f71596c0180c2b137a9ce8e17413. Design is confirmed; CML14-AUTH-PRE-M01/M02 remain explicit and unwaived. Stage 6, Ready, merge, controlled full-local, Manual/server-Mac/OAuth/device/AT/full-WCAG/local-production/backup-restore/cutover/capability/R/R+1/R+2/required-key/activation remain pending; auto_merge stays false. The closeout projection commit supersedes the reviewed head, so its current-head CI must start and complete before Stage 6. closeout_phase=projecting closeout_recovery=manual_patch:4|stale_lock:2 closeout_repair=codex:7|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:Codex_task_01a033bd-a723-7052-a42c-b830d10057af,Codex_task_01a034a0-5120-7bd3-a2a6-278f1015dfee,Codex_task_01a034ac-ad44-7d52-a981-3f57da096346,Codex_task_01a034b6-7dd6-70d2-8c15-7ca52695d011,Codex_task_01a034c5-ce22-7fa3-968d-a4fd90eecd0f,Codex_task_01a034d3-69db-70f2-b297-8f7e716b44f4,Codex_task_01a034da-9a1f-76c0-bef4-47b1a1f481c7,GitHub_PR_1412_head_25f314e7524382da174fc9075604b6450061e72e last_recovery_at=2026-08-24T17:55:49Z"
+  "notes": "Canonical closeout owner file: .workflow-v2/work-items/cooking-meal-log-cross-slice-release-qa.json, JSON field: closeout. Historical Stage 1~5 and final authority evidence remains retained. Active Draft PR #1412 Stage 6 reviewer 01a03507-fc40-7591-8244-e08bf96efc6c returned APPROVE P0/P1/P2 0/0/0 at exact head/tree 0fe74aa08ab94048fbdc6703217ed9f715ad8cd1 / 213b57d86251f908450444d76b1c6a729f15524e and closed CML14-S6-P1-001. Producer 01a03513-400d-71e1-8276-2d32b66d9618 full a2 bundle has 734 passed, gaps 0, bundle/manifest SHA-256 28c92157919eae6134122d09b016c63afb96fe345ae2ff246c00ad265ce02028 / d41be9c3118d0d187c77dd6fa6577c53c0ddea2925ba1602aa729962cae9c5d2, remote 0, raw PostgreSQL URL 0 and owned residual 0. Design is confirmed; CML14-AUTH-PRE-M01/M02 remain explicit and unwaived. Exactly four Stage 6-owned checklist IDs are projected checked. Stage 2 residual, controlled full-local, Ready/internal 6.5, merge, Manual/server-Mac/OAuth/device/AT/full-WCAG/local-production/backup-restore/cutover/capability/R/R+1/R+2/required-key/activation remain pending; auto_merge stays false. The closeout projection commit requires fresh current-head CI. closeout_phase=projecting closeout_recovery=manual_patch:5|stale_lock:2|ci_resync:1 closeout_repair=codex:9|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:Codex_task_01a03523-7719-7382-aa20-e28540dda91c,Codex_task_01a0352f-5141-7b41-bf73-02b45ecf8dd3,Codex_task_01a03513-400d-71e1-8276-2d32b66d9618,Codex_task_01a03507-fc40-7591-8244-e08bf96efc6c,GitHub_PR_1412_head_0fe74aa08ab94048fbdc6703217ed9f715ad8cd1 last_recovery_at=2026-08-24T19:41:12Z"
 }

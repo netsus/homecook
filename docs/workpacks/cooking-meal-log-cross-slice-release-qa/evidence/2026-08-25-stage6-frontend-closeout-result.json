@@ -1,0 +1,113 @@
+{
+  "result": "pass",
+  "stage": 6,
+  "role": "fresh-independent-frontend-closeout-reviewer",
+  "task_id": "01a03507-fc40-7591-8244-e08bf96efc6c",
+  "source_thread_id": "019ff12c-dc8b-7752-9319-398a68cacb6e",
+  "producer_task_id": "01a03513-400d-71e1-8276-2d32b66d9618",
+  "security_reviewer_task_id": "01a0352f-5141-7b41-bf73-02b45ecf8dd3",
+  "redaction_repair_author_task_id": "01a03523-7719-7382-aa20-e28540dda91c",
+  "review_scope": {
+    "slice": "cooking-meal-log-cross-slice-release-qa",
+    "pr_number": 1412,
+    "pr_branch": "feature/fe-cooking-meal-log-cross-slice-release-qa-superseding-draft"
+  },
+  "reviewed_head": "0fe74aa08ab94048fbdc6703217ed9f715ad8cd1",
+  "reviewed_tree": "213b57d86251f908450444d76b1c6a729f15524e",
+  "authority_verdict": "APPROVE",
+  "findings": {
+    "P0": 0,
+    "P1": 0,
+    "P2": 0
+  },
+  "resolved_finding_ids": [
+    "CML14-S6-P1-001"
+  ],
+  "retained_nonblocking_unwaived_ids": [
+    "CML14-AUTH-PRE-M01",
+    "CML14-AUTH-PRE-M02"
+  ],
+  "full_bundle": {
+    "attempt_id": "cml14-stage6-0fe74aa0-20260825-full-a2",
+    "attempt_path": ".artifacts/cooking-meal-log-cross-slice-release-qa/attempts/cml14-stage6-0fe74aa0-20260825-full-a2",
+    "profile": "full",
+    "bundle_sha256": "28c92157919eae6134122d09b016c63afb96fe345ae2ff246c00ad265ce02028",
+    "manifest_sha256": "d41be9c3118d0d187c77dd6fa6577c53c0ddea2925ba1602aa729962cae9c5d2",
+    "artifact_count": 5,
+    "db_security_passed": 639,
+    "security_passed": 8,
+    "performance_passed": 54,
+    "query_count_passed": 1,
+    "rollback_passed": 32,
+    "total_passed": 734,
+    "skipped": 0,
+    "pending": 0,
+    "failed": 0,
+    "recall_at_20": 1,
+    "precision_at_20": 0.9211,
+    "db_p95_ms": 40.71,
+    "route_p95_ms": 14.16,
+    "list1_query_count": 1,
+    "list20_query_count": 1,
+    "item_level_n_plus_one": 0,
+    "remote_access_or_write": 0,
+    "raw_postgres_url_count": 0,
+    "redaction_marker_count": 3,
+    "attempt_symlink_count": 0,
+    "attempt_owned_residual_count": 0
+  },
+  "verification": {
+    "focused": "42/42 passed",
+    "successor_policy": "189/189 passed",
+    "validators": "SOT/workflow/workpack/automation/bookkeeping/closeout/authority/exploratory/real-smoke passed",
+    "lint": "passed",
+    "typecheck": "passed",
+    "audit": "high/critical 0",
+    "reviewed_head_ci": "12 success + 2 intended skip; pending/failure 0"
+  },
+  "checklist_updates": [
+    {
+      "id": "delivery-cooking-cross-stage4-closeout",
+      "status": "checked",
+      "evidence_refs": [
+        "docs/workpacks/cooking-meal-log-cross-slice-release-qa/evidence/2026-08-25-stage6-frontend-closeout-result.json"
+      ]
+    },
+    {
+      "id": "accept-cooking-cross-final-sha",
+      "status": "checked",
+      "evidence_refs": [
+        ".artifacts/cooking-meal-log-cross-slice-release-qa/attempts/cml14-stage6-0fe74aa0-20260825-full-a2/manifest.json"
+      ]
+    },
+    {
+      "id": "accept-cooking-cross-final-stage6-bundle",
+      "status": "checked",
+      "evidence_refs": [
+        ".artifacts/cooking-meal-log-cross-slice-release-qa/attempts/cml14-stage6-0fe74aa0-20260825-full-a2"
+      ]
+    },
+    {
+      "id": "accept-cooking-cross-browser-closeout",
+      "status": "checked",
+      "evidence_refs": [
+        "docs/workpacks/cooking-meal-log-cross-slice-release-qa/evidence/2026-08-25-stage6-frontend-closeout-result.json"
+      ]
+    }
+  ],
+  "contested_fix_ids": [],
+  "rebuttals": [],
+  "ready_gate": {
+    "status": "pending",
+    "internal_6_5_status": "pending",
+    "auto_merge_eligible": false
+  },
+  "manual_only": [
+    "Stage 2 residual and controlled full-local",
+    "physical device and actual keyboard/virtual keyboard",
+    "VoiceOver/TalkBack/assistive technology/full-WCAG",
+    "server-Mac/OAuth/local-production/backup-restore/cutover",
+    "capability/R/R+1/R+2/required-key/production activation"
+  ],
+  "forbidden_mutations_performed": false
+}

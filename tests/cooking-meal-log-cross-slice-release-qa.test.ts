@@ -27,11 +27,14 @@ const stage3ApprovedContentHead =
 const activeBranch =
   "feature/fe-cooking-meal-log-cross-slice-release-qa-superseding-draft";
 const activePrPath = "https://github.com/netsus/homecook/pull/1412";
-const finalReviewedHead = "25f314e7524382da174fc9075604b6450061e72e";
-const finalReviewedTree = "255347d7e0d4f71596c0180c2b137a9ce8e17413";
 const stage5ReviewerTask = "01a034d3-69db-70f2-b297-8f7e716b44f4";
 const finalAuthorityTask = "01a034da-9a1f-76c0-bef4-47b1a1f481c7";
-const approvalProjectionSyncedAt = "2026-08-24T17:55:49Z";
+const stage6ReviewerTask = "01a03507-fc40-7591-8244-e08bf96efc6c";
+const stage6ReviewedHead = "0fe74aa08ab94048fbdc6703217ed9f715ad8cd1";
+const stage6ReviewedTree = "213b57d86251f908450444d76b1c6a729f15524e";
+const stage6ResultPath =
+  "docs/workpacks/cooking-meal-log-cross-slice-release-qa/evidence/2026-08-25-stage6-frontend-closeout-result.json";
+const approvalProjectionSyncedAt = "2026-08-24T19:41:12Z";
 const stage2AuthorEvidencePath =
   "docs/workpacks/cooking-meal-log-cross-slice-release-qa/evidence/2026-08-21-stage2-verification-author.md";
 const stage2AuthorCheckedIds = [
@@ -72,7 +75,11 @@ const stage4ProjectedCheckedIds = [
   "accept-cooking-cross-final-browser-bundle",
   "delivery-cooking-cross-stage4-authority",
   "delivery-cooking-cross-stage4-browser",
+  "delivery-cooking-cross-stage4-closeout",
   "delivery-cooking-cross-stage4-states",
+  "accept-cooking-cross-final-sha",
+  "accept-cooking-cross-final-stage6-bundle",
+  "accept-cooking-cross-browser-closeout",
 ];
 
 function buildSyntheticStage1BaseChecklistContract() {
@@ -402,7 +409,7 @@ describe("cooking meal-log cross-slice Stage 1 relock", () => {
     expect(approvedPlan.toString("utf8").match(/\n/gu)).toHaveLength(1_018);
   });
 
-  it("keeps Stage 1 history while projecting the reviewed Stage 4 and authority checkpoint", () => {
+  it("keeps Stage 1 history while projecting the approved Stage 6 checkpoint", () => {
     expect(roadmap).toMatch(
       /\| `cooking-meal-log-cross-slice-release-qa` \| in-progress \|/u,
     );
@@ -411,9 +418,9 @@ describe("cooking meal-log cross-slice Stage 1 relock", () => {
       approval_state: "codex_approved",
       verification_status: "pending",
       evaluation_status: "passed",
-      evaluation_round: 7,
+      evaluation_round: 8,
       last_evaluator_result:
-        `Stage 5 task ${stage5ReviewerTask} APPROVE 0/0/2 and final authority task ${finalAuthorityTask} PASS 0/0/2 at ${finalReviewedHead}; P2 M01/M02 remain unwaived`,
+        `Stage 6 task ${stage6ReviewerTask} APPROVE P0/P1/P2 0/0/0 at ${stage6ReviewedHead}; CML14-S6-P1-001 CLOSED; Ready/internal 6.5 pending`,
       auto_merge_eligible: false,
       blocked_reason_code: null,
     });
@@ -433,16 +440,16 @@ describe("cooking meal-log cross-slice Stage 1 relock", () => {
     expect(readme).toContain(stage3ApprovalReviewerTask);
   });
 
-  it("projects independent Stage 5 and final authority without promoting Stage 6", () => {
+  it("projects independent Stage 6 without promoting Ready or merge", () => {
     const approvalResult =
-      `Stage 5 task ${stage5ReviewerTask} APPROVE 0/0/2 and final authority task ${finalAuthorityTask} PASS 0/0/2 at ${finalReviewedHead}; P2 M01/M02 remain unwaived`;
+      `Stage 6 task ${stage6ReviewerTask} APPROVE P0/P1/P2 0/0/0 at ${stage6ReviewedHead}; CML14-S6-P1-001 CLOSED; Ready/internal 6.5 pending`;
 
     expect(workItem.status).toEqual({
       lifecycle: "in_progress",
       approval_state: "codex_approved",
       verification_status: "pending",
       evaluation_status: "passed",
-      evaluation_round: 7,
+      evaluation_round: 8,
       last_evaluator_result: approvalResult,
       auto_merge_eligible: false,
       blocked_reason_code: null,
@@ -454,12 +461,12 @@ describe("cooking meal-log cross-slice Stage 1 relock", () => {
     });
     expect(workItem.closeout).toMatchObject({
       merge_gate_projection: {
-        current_head_sha: finalReviewedHead,
+        current_head_sha: stage6ReviewedHead,
         approval_state: "codex_approved",
         all_checks_green: false,
       },
       repair_summary: {
-        latest_reason_code: "stage4-stage5-final-authority-closeout-projection",
+        latest_reason_code: "stage6-approved-closeout-projection",
       },
       projection_state: {
         docs_synced_at: approvalProjectionSyncedAt,
@@ -473,15 +480,18 @@ describe("cooking meal-log cross-slice Stage 1 relock", () => {
       expect.arrayContaining([
         expect.stringContaining(stage5ReviewerTask),
         expect.stringContaining(finalAuthorityTask),
-        expect.stringContaining(finalReviewedHead),
-        expect.stringContaining(finalReviewedTree),
+        expect.stringContaining(stage6ReviewerTask),
+        expect.stringContaining(stage6ReviewedHead),
+        expect.stringContaining(stage6ReviewedTree),
+        expect.stringContaining("734 passed"),
       ]),
     );
     expect(workItem.closeout.repair_summary.evidence_sources).toEqual(
       expect.arrayContaining([
         `Codex_task_${stage5ReviewerTask}`,
         `Codex_task_${finalAuthorityTask}`,
-        `GitHub_PR_1412_head_${finalReviewedHead}`,
+        `Codex_task_${stage6ReviewerTask}`,
+        `GitHub_PR_1412_head_${stage6ReviewedHead}`,
       ]),
     );
     expect(readme).toContain(
@@ -491,10 +501,10 @@ describe("cooking meal-log cross-slice Stage 1 relock", () => {
     expect(readme).toContain(stage3ApprovalReviewerTask);
     expect(readme).toContain("APPROVE P0/P1/P2 `0/0/0`");
     expect(readme).toContain("CML14-S3-P1-001`과 `CML14-S3-P1-002`는 CLOSED");
-    expect(readme).toContain("Stage 6, Ready, merge");
+    expect(readme).toContain("Ready/internal 6.5/merge");
   });
 
-  it("preserves Stage 1 to 3 history while only proven Stage 4 items advance", () => {
+  it("preserves Stage 1 to 5 history while only approved Stage 6 items advance", () => {
     expect(existsSync(join(root, stage1ApprovalEvidencePath))).toBe(true);
     if (!existsSync(join(root, stage1ApprovalEvidencePath))) {
       return;
@@ -575,9 +585,9 @@ describe("cooking meal-log cross-slice Stage 1 relock", () => {
       approval_state: "codex_approved",
       verification_status: "pending",
       evaluation_status: "passed",
-      evaluation_round: 7,
+      evaluation_round: 8,
       last_evaluator_result:
-        `Stage 5 task ${stage5ReviewerTask} APPROVE 0/0/2 and final authority task ${finalAuthorityTask} PASS 0/0/2 at ${finalReviewedHead}; P2 M01/M02 remain unwaived`,
+        `Stage 6 task ${stage6ReviewerTask} APPROVE P0/P1/P2 0/0/0 at ${stage6ReviewedHead}; CML14-S6-P1-001 CLOSED; Ready/internal 6.5 pending`,
       auto_merge_eligible: false,
       blocked_reason_code: null,
     });
@@ -597,7 +607,7 @@ describe("cooking meal-log cross-slice Stage 1 relock", () => {
         external_smokes: "pending",
       },
       merge_gate_projection: {
-        current_head_sha: finalReviewedHead,
+        current_head_sha: stage6ReviewedHead,
         approval_state: "codex_approved",
         all_checks_green: false,
       },
@@ -630,9 +640,9 @@ describe("cooking meal-log cross-slice Stage 1 relock", () => {
     expect(actualVerificationRefs).toContain(stage2AuthorEvidencePath);
     expect(actualVerificationRefs).toContain("deterministic 137/137");
     expect(actualVerificationRefs).toContain("stage2-proof-cb775ed9-20260821");
-    expect(status.notes).toContain(stage5ReviewerTask);
-    expect(status.notes).toContain(finalAuthorityTask);
-    expect(status.notes).toContain("Stage 6, Ready, merge");
+    expect(actualVerificationRefs).toContain(stage6ResultPath);
+    expect(status.notes).toContain(stage6ReviewerTask);
+    expect(status.notes).toContain("Ready/internal 6.5");
     expect(status.notes).toContain("closeout_phase=projecting");
 
     for (const value of [
@@ -653,7 +663,7 @@ describe("cooking meal-log cross-slice Stage 1 relock", () => {
       expect(exactSix).toContain(value);
     }
     expect(roadmap).toMatch(
-      /\| `cooking-meal-log-cross-slice-release-qa` \| in-progress \|[^\n]*PR #1412[^\n]*Stage 5 `APPROVE 0\/0\/2`[^\n]*final authority `PASS 0\/0\/2`/u,
+      /\| `cooking-meal-log-cross-slice-release-qa` \| in-progress \|[^\n]*PR #1412[^\n]*Stage 5 `APPROVE 0\/0\/2`[^\n]*final authority `PASS 0\/0\/2`[^\n]*Stage 6 `APPROVE 0\/0\/0`/u,
     );
     const checkedIds = readWorkpackChecklistContract({
       rootDir: root,
@@ -670,7 +680,7 @@ describe("cooking meal-log cross-slice Stage 1 relock", () => {
       /\[x\] pinned isolated local verification passes without product or production mutation/u,
     );
     expect(readme).toContain(
-      "Stage 1~5와 final authority의 proven projection을 반영한다.",
+      "Stage 1~6과 final authority의 proven projection을 반영한다.",
     );
     expect(readme).not.toContain("approval is intentionally not started");
   });
@@ -1022,7 +1032,7 @@ describe("cooking meal-log cross-slice Stage 1 relock", () => {
     }
   });
 
-  it("keeps the Stage 4 projection valid while the PR remains Draft", () => {
+  it("keeps the approved Stage 6 projection valid while the PR remains Draft", () => {
     const currentChecklistContract = readWorkpackChecklistContract({
       rootDir: root,
       slice: sliceId,
