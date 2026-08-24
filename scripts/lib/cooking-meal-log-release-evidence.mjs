@@ -31,6 +31,17 @@ export const FULL_DB_LANES = [
   "legacy-product-compat",
 ];
 
+export const FULL_DB_LANE_PARTITION_SKIPS = Object.freeze({
+  "account-session-generation": 0,
+  "recipe-visibility-read-hardening": 0,
+  "recipe-snapshot-authority": 65,
+  "personal-recipe-customization-write-core": 65,
+  "recipe-content-snapshot-future-propagation": 65,
+  "cooked-batch-weight-ledger": 75,
+  "meal-log-core": 0,
+  "legacy-product-compat": 0,
+});
+
 export const ROLLBACK_INVARIANTS = [
   "current_and_previous",
   "seeded_v2_drain",
@@ -337,6 +348,29 @@ export function parseVitestTextSummary(output) {
   return summary;
 }
 
+export function normalizePartitionedLaneSummary({
+  expectedPartitionSkipped,
+  label,
+  summary,
+}) {
+  if (
+    !Number.isInteger(expectedPartitionSkipped)
+    || expectedPartitionSkipped < 0
+    || summary?.skipped !== expectedPartitionSkipped
+  ) {
+    throw new Error(`${label}: partition skipped count mismatch`);
+  }
+  const normalized = {
+    ...summary,
+    skipped: 0,
+  };
+  assertRunnableSummary(normalized, label);
+  return {
+    ...normalized,
+    partition_skipped: expectedPartitionSkipped,
+  };
+}
+
 export function parseVitestJsonSummary(value) {
   const parsed = typeof value === "string" ? JSON.parse(value) : value;
   return {
@@ -504,6 +538,16 @@ function validateDbPayload(artifact, expectedProfile) {
     throw new Error("db-security.json: lane evidence is missing");
   }
   for (const lane of lanes) {
+    const expectedPartitionSkipped =
+      FULL_DB_LANE_PARTITION_SKIPS[lane.id];
+    if (
+      !Number.isInteger(expectedPartitionSkipped)
+      || lane.partition_skipped !== expectedPartitionSkipped
+    ) {
+      throw new Error(
+        `db lane ${lane.id ?? "unknown"}: partition skipped count mismatch`,
+      );
+    }
     assertRunnableSummary(lane, `db lane ${lane.id ?? "unknown"}`);
   }
   if (expectedProfile === "full") {

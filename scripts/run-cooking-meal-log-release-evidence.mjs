@@ -12,12 +12,14 @@ import { join, resolve } from "node:path";
 
 import {
   EVIDENCE_SCHEMA_VERSION,
+  FULL_DB_LANE_PARTITION_SKIPS,
   FULL_DB_LANES,
   assertRunnableSummary,
   buildLaneEnvironment,
   createAttemptDirectory,
   parseVitestJsonSummary,
   parseVitestTextSummary,
+  normalizePartitionedLaneSummary,
   writeEvidenceArtifact,
   writeEvidenceManifest,
 } from "./lib/cooking-meal-log-release-evidence.mjs";
@@ -195,8 +197,11 @@ function produceDbEvidence({
       args: [scriptPath],
       label: `db-${id}`,
     });
-    const summary = parseVitestTextSummary(result.output);
-    assertRunnableSummary(summary, `db-${id}`);
+    const summary = normalizePartitionedLaneSummary({
+      expectedPartitionSkipped: FULL_DB_LANE_PARTITION_SKIPS[id],
+      label: `db-${id}`,
+      summary: parseVitestTextSummary(result.output),
+    });
     return { id, ...summary };
   });
   const summary = lanes.reduce(
