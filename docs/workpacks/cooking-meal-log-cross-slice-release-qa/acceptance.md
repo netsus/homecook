@@ -69,7 +69,7 @@
 - [x] artifact type and semantic payload fields are exact and every artifact timestamp equals the manifest single shared generated_at <!-- omo:id=accept-cooking-cross-automation-semantic;stage=2;scope=backend;review=3,6 -->
 - [x] pinned isolated owning PostgreSQL runners produce `db-security.json` with every required lane `passed > 0`, `skipped = 0`, `pending = 0`, `failed = 0` <!-- omo:id=accept-cooking-cross-automation-local-stack;stage=2;scope=backend;review=3,6 -->
 - [x] isolated security producer creates `security.json` with nonzero authorization evidence and remote/linked/cloud access `0` <!-- omo:id=accept-cooking-cross-automation-security;stage=2;scope=backend;review=3,6 -->
-- [ ] attempt `performance.json` records Recall@20 >= 0.90, Precision@20 >= 0.75, DB p95 <= 300ms and route p95 <= 600ms <!-- omo:id=accept-cooking-cross-automation-performance;stage=2;scope=backend;review=3,6 -->
+- [x] attempt `performance.json` records Recall@20 >= 0.90, Precision@20 >= 0.75, DB p95 <= 300ms and route p95 <= 600ms <!-- omo:id=accept-cooking-cross-automation-performance;stage=2;scope=backend;review=3,6 -->
 - [x] `actual-route-service-boundary` producer executes real route control flow for list1/list20, derives N+1 growth, and loop/callback regression fixtures fail closed <!-- omo:id=accept-cooking-cross-automation-query-count;stage=2;scope=backend;review=3,6 -->
 - [x] attempt `rollback.json` proves current/immediate-previous, seeded-v2 drain, replay, tombstone and required-key rollback matrix with `passed > 0`, `skipped = 0`, `pending = 0`, `failed = 0` <!-- omo:id=accept-cooking-cross-automation-rollback;stage=2;scope=backend;review=3,6 -->
 
