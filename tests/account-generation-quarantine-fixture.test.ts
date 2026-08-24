@@ -34,6 +34,29 @@ describe("account quarantine QA fixture gate", () => {
     });
   });
 
+  it("isolates the account quarantine fixture from all shared product fixtures", async () => {
+    vi.stubEnv("HOMECOOK_ENABLE_QA_FIXTURES", "0");
+    vi.stubEnv("HOMECOOK_ENABLE_ACCOUNT_QUARANTINE_QA_FIXTURE", "1");
+    cookieGet.mockImplementation((name: string) => name
+      === "homecook.qa-account-quarantine-state"
+      ? { value: "unauthorized" }
+      : undefined);
+    const { readQaFixtureAccountQuarantineGate } = await import(
+      "@/lib/server/account-generation/quarantine-fixture"
+    );
+    const {
+      isDiscoveryFilterManualMockEnabled,
+      isQaFixtureModeEnabled,
+    } = await import("@/lib/mock/recipes");
+
+    await expect(readQaFixtureAccountQuarantineGate()).resolves.toEqual({
+      state: "unauthorized",
+      hasSession: false,
+    });
+    expect(isQaFixtureModeEnabled()).toBe(false);
+    expect(isDiscoveryFilterManualMockEnabled()).toBe(false);
+  });
+
   it("defaults existing authenticated E2E flows to legacy non-exposure", async () => {
     cookieGet.mockImplementation((name: string) => name
       === "homecook.e2e-auth-override"

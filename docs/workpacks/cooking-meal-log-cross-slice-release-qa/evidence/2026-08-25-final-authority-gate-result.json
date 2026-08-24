@@ -1,0 +1,72 @@
+{
+  "result": "pass",
+  "gate": "final_authority_gate",
+  "role": "fresh-independent-product-design-authority",
+  "task_id": "01a034da-9a1f-76c0-bef4-47b1a1f481c7",
+  "source_thread_id": "019ff12c-dc8b-7752-9319-398a68cacb6e",
+  "independent_from_task_ids": [
+    "01a033bd-a723-7052-a42c-b830d10057af",
+    "01a034a0-5120-7bd3-a2a6-278f1015dfee",
+    "01a034b6-7dd6-70d2-8c15-7ca52695d011",
+    "01a034c5-ce22-7fa3-968d-a4fd90eecd0f",
+    "01a034d3-69db-70f2-b297-8f7e716b44f4"
+  ],
+  "review_scope": {
+    "slice": "cooking-meal-log-cross-slice-release-qa",
+    "pr_number": 1412,
+    "pr_branch": "feature/fe-cooking-meal-log-cross-slice-release-qa-superseding-draft"
+  },
+  "reviewed_publication_head": "25f314e7524382da174fc9075604b6450061e72e",
+  "reviewed_publication_tree": "255347d7e0d4f71596c0180c2b137a9ce8e17413",
+  "source_final_head": "112a8e8763571a8b4c8c105efbe9a3f1f9a4af2a",
+  "source_final_tree": "70a20f8c63720800ae8073fe84e24629e1956886",
+  "authority_verdict": "PASS",
+  "design_status": "confirmed",
+  "findings": {"P0":0,"P1":0,"P2":2,"blocker":0,"major":0,"minor":2,"product_ui":0},
+  "required_fix_ids": [],
+  "resolved_finding_ids": [
+    "CML14-S5-GATE-P1-001",
+    "CML14-S5-GATE-P1-002",
+    "CML14-S5-GATE-P1-003"
+  ],
+  "p2_notes": [
+    {"id":"CML14-AUTH-PRE-M01","status":"open-nonblocking-unwaived","note":"COOK_MODE and MEAL_LOG generic PNGs remain viewport/layout evidence rather than default-state proof."},
+    {"id":"CML14-AUTH-PRE-M02","status":"open-nonblocking-unwaived","note":"Eval 96 PASS remains retained source exact-tree evidence and is not represented as a fresh successor eval."}
+  ],
+  "visual_evidence": {
+    "manifest": "ui/designs/evidence/cooking-meal-log-cross-slice-release-qa/manifest.json",
+    "authority_report": "ui/designs/authority/cooking-meal-log-cross-slice-release-qa-authority.md",
+    "png_count": 24,
+    "verified_states": 62,
+    "pending_states": 0,
+    "privacy_facets": "9/9",
+    "axe_serious_or_critical": 0,
+    "touch_target_failures": 0,
+    "horizontal_overflow": 0,
+    "evidence_tree": "8d35ce58dbea1e5e9deb86abe1c7f7346a30912e",
+    "authority_report_blob": "720a80f1afb95e47282b5db169dfb3a2ee185936"
+  },
+  "verification": {
+    "current_head_ci": "12 success + 2 intended skip; pending/failure 0/0",
+    "authority_closeout_validators": "passed",
+    "focused_vitest": "20/20 passed",
+    "remote_linked_cloud_access": 0,
+    "rehearsal_only": true
+  },
+  "checklist_updates": [
+    {"id":"delivery-cooking-cross-stage4-authority","status":"checked","evidence_refs":["ui/designs/authority/cooking-meal-log-cross-slice-release-qa-authority.md","docs/workpacks/cooking-meal-log-cross-slice-release-qa/evidence/2026-08-25-final-authority-gate-result.json"]},
+    {"id":"accept-cooking-cross-browser-authority","status":"checked","evidence_refs":["ui/designs/authority/cooking-meal-log-cross-slice-release-qa-authority.md","docs/workpacks/cooking-meal-log-cross-slice-release-qa/evidence/2026-08-25-final-authority-gate-result.json"]}
+  ],
+  "manual_only": [
+    "physical device and actual keyboard/virtual keyboard",
+    "VoiceOver/TalkBack/assistive technology/full-WCAG",
+    "server-Mac/OAuth/local-production/backup-restore/cutover",
+    "capability/R/R+1/R+2/required-key/production activation"
+  ],
+  "stage6": {
+    "status": "pending",
+    "approved_or_performed": false,
+    "next_handoff": "fresh independent Stage 6 at the closeout projection publication head after its current-head checks complete"
+  },
+  "forbidden_mutations_performed": false
+}

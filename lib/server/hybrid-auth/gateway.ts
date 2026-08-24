@@ -19,6 +19,7 @@ import {
 
 interface RemoteAuthGatewayEnv {
   issuer: string;
+  jwksUrl?: string;
   url: string;
   publishableKey: string;
 }
@@ -205,7 +206,7 @@ async function readRemoteJwks({
   let response: Response;
   try {
     response = await fetch(
-      `${auth.issuer}/.well-known/jwks.json`,
+      auth.jwksUrl ?? `${auth.issuer}/.well-known/jwks.json`,
       {
         cache: "no-store",
         headers: { accept: "application/json" },

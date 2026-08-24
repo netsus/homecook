@@ -206,6 +206,7 @@ function createGuardedLocalFetch({
     getAccessToken,
     auth: {
       issuer: authEnv.issuer,
+      jwksUrl: authEnv.jwksUrl,
       url: authEnv.url,
       publishableKey: authEnv.anonKey,
     },

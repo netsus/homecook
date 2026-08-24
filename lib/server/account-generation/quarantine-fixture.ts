@@ -25,7 +25,10 @@ const FIXTURE_STATES = new Set<AccountQuarantineGateState>([
 
 function isQaFixtureModeEnabled() {
   return process.env.NODE_ENV !== "production"
-    && process.env.HOMECOOK_ENABLE_QA_FIXTURES === "1";
+    && (
+      process.env.HOMECOOK_ENABLE_QA_FIXTURES === "1"
+      || process.env.HOMECOOK_ENABLE_ACCOUNT_QUARANTINE_QA_FIXTURE === "1"
+    );
 }
 
 export async function readQaFixtureAccountQuarantineGate():

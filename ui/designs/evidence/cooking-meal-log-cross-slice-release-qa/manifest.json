@@ -1,0 +1,290 @@
+{
+  "artifacts": [
+    {
+      "bytes": 78379,
+      "file": "ACCOUNT_QUARANTINE-mobile-default.png",
+      "sha256": "d777162c369d4028aedc1eb23011f6d1b2f91030fcd89a588fe6ac220a2f444e"
+    },
+    {
+      "bytes": 75740,
+      "file": "ACCOUNT_QUARANTINE-mobile-narrow.png",
+      "sha256": "87a823e61577137b2f09d219f92100ae9643ddee420bef47da1bc44044026a13"
+    },
+    {
+      "bytes": 45371,
+      "file": "ACCOUNT_QUARANTINE-desktop.png",
+      "sha256": "58849d40a3e533d5f890a884bd473b8b749da7b39ec7fb469ac25dc3a819e910"
+    },
+    {
+      "bytes": 317923,
+      "file": "HOME-mobile-default.png",
+      "sha256": "f6baca94c77f4ea47ed2baf733675bd1025322d11d3c9dd04f05e6998d87bfec"
+    },
+    {
+      "bytes": 80799,
+      "file": "HOME-mobile-narrow.png",
+      "sha256": "8a1b20160e7351c064d33ca8c75e6112494eca847f3971226545aa769b12ef31"
+    },
+    {
+      "bytes": 329818,
+      "file": "HOME-desktop.png",
+      "sha256": "fe975864eaf0a892b488efcd1d4d880caee7d94a33962bf98206dd08a40b15e9"
+    },
+    {
+      "bytes": 682459,
+      "file": "RECIPE_DETAIL-mobile-default.png",
+      "sha256": "6c94f1cd5f306086aa37aac8b89637b59e1e4bcb63eaf09023e6e6ea232a4ec8"
+    },
+    {
+      "bytes": 467126,
+      "file": "RECIPE_DETAIL-mobile-narrow.png",
+      "sha256": "16c195f3804fb0830c930e32ddb43c10357e2e1a90406a64f42c52d57f8a0e32"
+    },
+    {
+      "bytes": 364251,
+      "file": "RECIPE_DETAIL-desktop.png",
+      "sha256": "77b1127b47852eedbca92e7626e7eef66e4d8d3d989cf5ef6b4cc03bd6ebd78b"
+    },
+    {
+      "bytes": 81477,
+      "file": "MANUAL_RECIPE_CREATE-mobile-default.png",
+      "sha256": "94172cec7a45d38414fb15ea5e1551e046df3172a50fc26b60c6a0acc2caf784"
+    },
+    {
+      "bytes": 49692,
+      "file": "MANUAL_RECIPE_CREATE-mobile-narrow.png",
+      "sha256": "4f4fefe908eed45727b2bbb0c7d01fa8f6e4c8f93a9f040c4026cdf27b32d698"
+    },
+    {
+      "bytes": 56516,
+      "file": "MANUAL_RECIPE_CREATE-desktop.png",
+      "sha256": "2523825675536dfe891d3d34da09fee7519129b9fb2946e72a7919f835344827"
+    },
+    {
+      "bytes": 85286,
+      "file": "PLANNER_WEEK-mobile-default.png",
+      "sha256": "097ff6f15e87b126ff9dd32df32f29250c1283910a791bb157b0911cd44115be"
+    },
+    {
+      "bytes": 78357,
+      "file": "PLANNER_WEEK-mobile-narrow.png",
+      "sha256": "951afeafee55dc602d2179257fe5ca9b705ca8e15fbc3bc236439fe9dac1194b"
+    },
+    {
+      "bytes": 46103,
+      "file": "PLANNER_WEEK-desktop.png",
+      "sha256": "3142d972da76575562b130f5adbe88630e3ac5082545bdf999e491a5dc56af53"
+    },
+    {
+      "bytes": 41845,
+      "file": "COOK_MODE-mobile-default.png",
+      "sha256": "d2b63aba8809d7aae4f45f176b0187cb87785584a91f975fd8938c4a7b44d62c"
+    },
+    {
+      "bytes": 78979,
+      "file": "COOK_MODE-mobile-narrow.png",
+      "sha256": "e2c505a6954f9be36b61854ffc67cead4be6f670e23ecf0aa3fa5fa3587e9eb1"
+    },
+    {
+      "bytes": 70949,
+      "file": "COOK_MODE-desktop.png",
+      "sha256": "e57731450848bed4883a88cdf91e93748cb47efe002fe90ae3e9db9bb85c7958"
+    },
+    {
+      "bytes": 96244,
+      "file": "LEFTOVERS-mobile-default.png",
+      "sha256": "905262f6fba2fe5b295fc632c75c7dd96fe7f7c73d343078e962070e77973b63"
+    },
+    {
+      "bytes": 69946,
+      "file": "LEFTOVERS-mobile-narrow.png",
+      "sha256": "f900a2bb86d2a11a2f0e857cc933c2ae6b0a632706a13c53b81fb0524b129e5b"
+    },
+    {
+      "bytes": 66552,
+      "file": "LEFTOVERS-desktop.png",
+      "sha256": "a9b31c5255caafdb8d430485e8ae482c08cc6b5b898ff7425b2fe133729524e0"
+    },
+    {
+      "bytes": 58643,
+      "file": "MEAL_LOG-mobile-default.png",
+      "sha256": "cc18cecb5e339f511c2a175c8457f8530200874b9b2f20c762fa68bab4a7733b"
+    },
+    {
+      "bytes": 51872,
+      "file": "MEAL_LOG-mobile-narrow.png",
+      "sha256": "6693d3f808a28457011e541d7a612c67b6e7a70feda499baee894c8a45ebe32c"
+    },
+    {
+      "bytes": 32855,
+      "file": "MEAL_LOG-desktop.png",
+      "sha256": "3989248435ab11643dc7b714428b47bc561497c3a621fa03c35cd643d256fa57"
+    },
+    {
+      "bytes": 6767,
+      "file": "ACCOUNT_QUARANTINE-state-matrix.json",
+      "sha256": "8dbca953d84a7ab6950213f868c7f8bd071c9aee976934261fc4c7bc3c1a20f8"
+    },
+    {
+      "bytes": 4515,
+      "file": "HOME-state-matrix.json",
+      "sha256": "a43e2d431ed68e95b13332ebd53dccdcc434d118b23a379c3706a666119783d2"
+    },
+    {
+      "bytes": 5214,
+      "file": "RECIPE_DETAIL-state-matrix.json",
+      "sha256": "134d7f7873f27d9cf6404e5fdd353eee15eb2767b80b91c84d030b3f8d672363"
+    },
+    {
+      "bytes": 5176,
+      "file": "MANUAL_RECIPE_CREATE-state-matrix.json",
+      "sha256": "1fc458c0a1bbe891a70b938f9ca9df651f1883dc5f8a7e47f6310fab7b67623b"
+    },
+    {
+      "bytes": 5144,
+      "file": "PLANNER_WEEK-state-matrix.json",
+      "sha256": "bb548ed49659f0a6edd9e8655a8903f315fbea8c89cc131a1ab4155e245f6d4c"
+    },
+    {
+      "bytes": 6298,
+      "file": "COOK_MODE-state-matrix.json",
+      "sha256": "baada40b6ea16057fd7bfb1f7bd711ab1a485a8f64fc1e308f84ddec25fcb1a1"
+    },
+    {
+      "bytes": 6996,
+      "file": "LEFTOVERS-state-matrix.json",
+      "sha256": "bd377ce52544d4d93a34dfa551fbf7e71c12d6ef50f81c35e527316d838b3541"
+    },
+    {
+      "bytes": 8020,
+      "file": "MEAL_LOG-state-matrix.json",
+      "sha256": "5fc254d13242935663f6a5563d96077a34e715db55020ea95a1c70818225c82a"
+    }
+  ],
+  "attempt_id": "cml14-stage4-a9f027ca-20260825-proof-a1",
+  "base_url": "http://127.0.0.1:3103",
+  "canonical_promotion": true,
+  "fixture_routes": false,
+  "generated_at": "2026-08-24T16:02:52.182Z",
+  "owner_boundary": {
+    "main_authenticated": true,
+    "main_profile_sha256": "63f0250d257737ba140040cddf69a4ed1d69f0b6ab538fce7fc4d49ac7bc83cc",
+    "other_authenticated": true,
+    "other_profile_sha256": "ee77152e9da0781ed8b429051567ecf0ea8b203bccc6168914ac0cb54f845745",
+    "distinct_profiles": true,
+    "private_nondisclosure": {
+      "evidence": [
+        {
+          "kind": "postgres",
+          "path": "ui/designs/evidence/cooking-meal-log-cross-slice-release-qa/proof/762b68ebb9f8c28770a7ab7f976a4c14715b012294e6733b7dedcd8917866cd1-recipe-visibility-quarantine-surfaces-postgres.integration.test.ts",
+          "result": "passed",
+          "sha256": "762b68ebb9f8c28770a7ab7f976a4c14715b012294e6733b7dedcd8917866cd1",
+          "source_head_sha": "a9f027cae1011eced3f42f36b833f60dbd7f284a",
+          "assertion": "real PostgreSQL quarantine/private/deleted visibility and stored-payload preservation"
+        }
+      ],
+      "facets": [
+        "private-owner-visible",
+        "private-other-owner-denied",
+        "private-public-list-absent",
+        "quarantined-public-list-absent",
+        "deleted-public-list-absent",
+        "public-detail-nondisclosure",
+        "search-nondisclosure",
+        "tag-theme-nondisclosure",
+        "cache-seo-nondisclosure"
+      ],
+      "status": "passed"
+    }
+  },
+  "quality": {
+    "axe_serious_or_critical": 0,
+    "horizontal_overflow_observations": 0,
+    "quality_status": "passed",
+    "touch_target_failures": 0
+  },
+  "real_local_stack": true,
+  "remote_linked_cloud_access": 0,
+  "required_screenshot_count": 24,
+  "source_head_sha": "a9f027cae1011eced3f42f36b833f60dbd7f284a",
+  "stage4_complete": true,
+  "target_attestation": {
+    "auth_public_issuer": "https://auth.stage4.homecook.invalid/auth/v1",
+    "api_url": "http://127.0.0.1:3102",
+    "app_origin": "http://127.0.0.1:3103",
+    "auth_api_url": "http://127.0.0.1:58048",
+    "canonical_activation": {
+      "mode": "rehearsal_only",
+      "cutover": {
+        "hmac_key_version_after": 2,
+        "hmac_key_version_before": 1,
+        "auth_cutover_epoch_after": 2,
+        "auth_cutover_epoch_before": 1,
+        "capability_revision_after": 3,
+        "capability_revision_before": 1
+      },
+      "auth_counts": {
+        "auth_only": 0,
+        "public_only": 0,
+        "intersection": 2
+      },
+      "local_issuer": "https://auth.stage4.homecook.invalid/auth/v1",
+      "owner_counts": {
+        "staged": 2,
+        "unexpected_outside_union": 0
+      },
+      "verification": {
+        "auth_digest_verified": true,
+        "public_digest_verified": true,
+        "staged_owner_digest_verified": true
+      },
+      "auth_authority": "local",
+      "guard_evidence": {
+        "storage_terminal": true,
+        "owner_signal_union_zero": true
+      },
+      "auth_flow_counts": {
+        "expired": 0,
+        "outstanding": 0
+      },
+      "account_generation_capability": "generation_active"
+    },
+    "docker": {
+      "containers": 6,
+      "networks": 1,
+      "volumes": 2
+    },
+    "generated_at": "2026-08-24T16:02:45.915Z",
+    "guarded_data_api_url": "http://127.0.0.1:3101",
+    "guarded_data_api_used": true,
+    "guarded_data_proxy_used": true,
+    "migration_sha256": "54dc6c9c6f842298a196ebd30fb43dc7b999a694d0f26ee8ff94df4294ad8ad8",
+    "negative_probe_passed": true,
+    "pinned_isolated_local": true,
+    "rehearsal_only": true,
+    "ports": {
+      "app": 3103,
+      "auth": 58048,
+      "base": 58047,
+      "data": 3102,
+      "guarded": 3101
+    },
+    "primary_guard_unchanged": true,
+    "project_id": "hcg_49548_0bea75",
+    "qa_fixture_scope": [
+      "ACCOUNT_QUARANTINE:auth-absent"
+    ],
+    "remote_linked_cloud_access": 0,
+    "server_env_sha256": "39fef1e0e419df5fad6c50a9f4c301b0345d3b921fa41d8270deb9ebe06161e4",
+    "server_env_target": "isolated-supabase",
+    "shadow_seed_api_removed": true,
+    "shadow_seed_api_used": true,
+    "source_head_sha": "a9f027cae1011eced3f42f36b833f60dbd7f284a",
+    "supabase_cli_version": "2.109.1"
+  },
+  "finalized_at": "2026-08-24T16:07:44.036Z",
+  "proof_ledger": {
+    "file": "proof-ledger.json",
+    "sha256": "dccbd52f1fd9d241c9895f882710a470681ff82c4eecdbb98197af2f6985b946"
+  }
+}

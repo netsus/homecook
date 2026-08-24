@@ -13,12 +13,22 @@
 - retained evidence: `docs/workpacks/cooking-meal-log-cross-slice-release-qa/evidence/2026-08-21-stage1-final-independent-approvals.json`.
 - 위 verdict는 Stage 1 bookkeeping/current gate evidence다. Stage 2 verification-only는 base `afb1b31aa6c95ba974f7484d31fa123439d5fcd6`에서 시작됐지만 evidence 수집 전이며, runtime/full 8-lane 287041/Manual/activation 완료나 아래 Stage 2/4 acceptance 체크를 아직 주장하지 않는다.
 
+## Stage 4 / Stage 5 / Final Authority / Stage 6 Evidence
+
+- Stage 4 author `01a033bd-a723-7052-a42c-b830d10057af` completed source content head/tree `112a8e8763571a8b4c8c105efbe9a3f1f9a4af2a` / `70a20f8c63720800ae8073fe84e24629e1956886`; successor author `01a034a0-5120-7bd3-a2a6-278f1015dfee` preserved that tree exactly.
+- Reviewed PR #1412 head/tree is `25f314e7524382da174fc9075604b6450061e72e` / `255347d7e0d4f71596c0180c2b137a9ce8e17413`. The evidence subtree and authority report blob remained unchanged after the Stage 5 projection repair.
+- Fresh Stage 5 reviewer `01a034d3-69db-70f2-b297-8f7e716b44f4` returned `APPROVE`, P0/P1/P2 `0/0/2`, product UI findings `0`; final authority `01a034da-9a1f-76c0-bef4-47b1a1f481c7` returned `PASS`, P0/P1/P2 `0/0/2`, blocker/major `0/0`.
+- `CML14-AUTH-PRE-M01` and `CML14-AUTH-PRE-M02` remain explicit and unwaived. Generic COOK_MODE/MEAL_LOG PNGs are viewport/layout evidence rather than default-state proof, and eval `96 PASS` is retained source exact-tree evidence rather than a fresh successor artifact.
+- Stage 6 reviewer `01a03507-fc40-7591-8244-e08bf96efc6c` returned `APPROVE 0/0/0` at exact head/tree `0fe74aa08ab94048fbdc6703217ed9f715ad8cd1` / `213b57d86251f908450444d76b1c6a729f15524e`; `CML14-S6-P1-001` is CLOSED.
+- Full a2 attempt `cml14-stage6-0fe74aa0-20260825-full-a2` has bundle/manifest SHA-256 `28c92157919eae6134122d09b016c63afb96fe345ae2ff246c00ad265ce02028` / `d41be9c3118d0d187c77dd6fa6577c53c0ddea2925ba1602aa729962cae9c5d2`, 734 passed, gaps 0, remote 0, raw PostgreSQL URL 0 and owned residual 0.
+- Ready/internal 6.5, merge, Manual/server-Mac/OAuth/device/AT/full-WCAG/local-production/backup-restore/cutover/capability/R/R+1/R+2/required-key/activation remain pending.
+
 ## Happy Path
 
 - [x] F0/#1~#13 automated/runtime merge evidence is rechecked at the frozen base before Stage 2 evidence collection <!-- omo:id=accept-cooking-cross-happy-predecessors;stage=2;scope=shared;review=3,6 -->
 - [x] pinned isolated local verification passes without product or production mutation <!-- omo:id=accept-cooking-cross-happy-isolated;stage=2;scope=backend;review=3,6 -->
 - [ ] backend/isolated/security/performance/rollback evidence is rerun on `FINAL_EVIDENCE_SHA` <!-- omo:id=accept-cooking-cross-final-backend-bundle;stage=2;scope=backend;review=3,6 -->
-- [ ] browser/design evidence is rerun on the same `FINAL_EVIDENCE_SHA` <!-- omo:id=accept-cooking-cross-final-browser-bundle;stage=4;scope=frontend;review=5,6 -->
+- [x] browser/design evidence is rerun on the same `FINAL_EVIDENCE_SHA` <!-- omo:id=accept-cooking-cross-final-browser-bundle;stage=4;scope=frontend;review=5,6 -->
 - [ ] API responses retain the existing `{ success, data, error }` wrapper and v1.2.40 types <!-- omo:id=accept-cooking-cross-happy-api-envelope;stage=2;scope=backend;review=3,6 -->
 
 ## State / Policy
@@ -35,9 +45,9 @@
 - [ ] every application-owned trusted function and SECURITY DEFINER signature retains exact control/effect/exposure/principal classification <!-- omo:id=accept-cooking-cross-error-function-inventory;stage=2;scope=backend;review=3,6 -->
 - [ ] PUBLIC/anon mutation denial, safe search path, owner A/B isolation and local Data API negative smoke pass <!-- omo:id=accept-cooking-cross-error-function-security;stage=2;scope=backend;review=3,6 -->
 - [ ] stale/revoked/missing session and account generation requests are mutation-zero and cannot write into a new generation <!-- omo:id=accept-cooking-cross-error-session-generation;stage=2;scope=backend;review=3,6 -->
-- [ ] unauthorized, conflict, unavailable and read-only UI states fail closed without context loss <!-- omo:id=accept-cooking-cross-error-ui-states;stage=4;scope=frontend;review=5,6 -->
-- [ ] loading, empty and error states remain reachable on all owning screens <!-- omo:id=accept-cooking-cross-error-base-states;stage=4;scope=frontend;review=5,6 -->
-- [ ] login gate and return-to-action stay consistent with existing Auth behavior <!-- omo:id=accept-cooking-cross-error-return-action;stage=4;scope=frontend;review=5,6 -->
+- [x] unauthorized, conflict, unavailable and read-only UI states fail closed without context loss <!-- omo:id=accept-cooking-cross-error-ui-states;stage=4;scope=frontend;review=5,6 -->
+- [x] loading, empty and error states remain reachable on all owning screens <!-- omo:id=accept-cooking-cross-error-base-states;stage=4;scope=frontend;review=5,6 -->
+- [x] login gate and return-to-action stay consistent with existing Auth behavior <!-- omo:id=accept-cooking-cross-error-return-action;stage=4;scope=frontend;review=5,6 -->
 
 ## Data Integrity
 
@@ -76,15 +86,15 @@
 
 ### Playwright / authority
 
-- [ ] real Chrome uses the authorized real local stack rather than fixture-only substitutes <!-- omo:id=accept-cooking-cross-browser-real-stack;stage=4;scope=frontend;review=5,6 -->
-- [ ] eight required screens have fresh 390/320/desktop exact-head evidence <!-- omo:id=accept-cooking-cross-browser-responsive;stage=4;scope=frontend;review=5,6 -->
-- [ ] keyboard order, focus restore, 44px targets, wrapping/overflow and landmarks pass <!-- omo:id=accept-cooking-cross-browser-accessibility;stage=4;scope=frontend;review=5,6 -->
-- [ ] HOME remains recipe-only and private/quarantined/deleted content never leaks <!-- omo:id=accept-cooking-cross-browser-home-privacy;stage=4;scope=frontend;review=5,6 -->
-- [ ] Planner keeps cooking plan separate from meal log and legacy product history read/delete-only <!-- omo:id=accept-cooking-cross-browser-planner-separation;stage=4;scope=frontend;review=5,6 -->
-- [ ] exploratory QA/eval and final authority report pin the same repaired head with blocker 0 <!-- omo:id=accept-cooking-cross-browser-authority;stage=4;scope=frontend;review=5,6 -->
-- [ ] after Stage 4 artifacts, attempt `manifest.json` and every evidence JSON record one clean `head_sha == FINAL_EVIDENCE_SHA`, matching `attempt_id` and `generated_at` <!-- omo:id=accept-cooking-cross-final-sha;stage=4;scope=shared;review=6 -->
-- [ ] complete backend/isolated/security/performance/rollback + browser/design bundle is rerun on `FINAL_EVIDENCE_SHA` before Stage 6 <!-- omo:id=accept-cooking-cross-final-stage6-bundle;stage=4;scope=shared;review=6 -->
-- [ ] every started current-head check is success or policy-justified skip and independent Stage 6 has zero findings <!-- omo:id=accept-cooking-cross-browser-closeout;stage=4;scope=shared;review=6 -->
+- [x] real Chrome uses the authorized real local stack rather than fixture-only substitutes <!-- omo:id=accept-cooking-cross-browser-real-stack;stage=4;scope=frontend;review=5,6 -->
+- [x] eight required screens have fresh 390/320/desktop exact-head evidence <!-- omo:id=accept-cooking-cross-browser-responsive;stage=4;scope=frontend;review=5,6 -->
+- [x] keyboard order, focus restore, 44px targets, wrapping/overflow and landmarks pass <!-- omo:id=accept-cooking-cross-browser-accessibility;stage=4;scope=frontend;review=5,6 -->
+- [x] HOME remains recipe-only and private/quarantined/deleted content never leaks <!-- omo:id=accept-cooking-cross-browser-home-privacy;stage=4;scope=frontend;review=5,6 -->
+- [x] Planner keeps cooking plan separate from meal log and legacy product history read/delete-only <!-- omo:id=accept-cooking-cross-browser-planner-separation;stage=4;scope=frontend;review=5,6 -->
+- [x] exploratory QA/eval and final authority report pin the same repaired head with blocker 0 <!-- omo:id=accept-cooking-cross-browser-authority;stage=4;scope=frontend;review=5,6 -->
+- [x] after Stage 4 artifacts, attempt `manifest.json` and every evidence JSON record one clean `head_sha == FINAL_EVIDENCE_SHA`, matching `attempt_id` and `generated_at` <!-- omo:id=accept-cooking-cross-final-sha;stage=4;scope=shared;review=6 -->
+- [x] complete backend/isolated/security/performance/rollback + browser/design bundle is rerun on `FINAL_EVIDENCE_SHA` before Stage 6 <!-- omo:id=accept-cooking-cross-final-stage6-bundle;stage=4;scope=shared;review=6 -->
+- [x] every started current-head check is success or policy-justified skip and independent Stage 6 has zero findings <!-- omo:id=accept-cooking-cross-browser-closeout;stage=4;scope=shared;review=6 -->
 
 ### Repair boundary
 

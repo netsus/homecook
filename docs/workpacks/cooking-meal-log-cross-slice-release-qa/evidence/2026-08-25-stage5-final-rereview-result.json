@@ -1,0 +1,70 @@
+{
+  "result": "pass",
+  "stage": 5,
+  "role": "fresh-independent-stage5-design-reviewer",
+  "task_id": "01a034d3-69db-70f2-b297-8f7e716b44f4",
+  "source_thread_id": "019ff12c-dc8b-7752-9319-398a68cacb6e",
+  "prior_reviewer_task_id": "01a034b6-7dd6-70d2-8c15-7ca52695d011",
+  "repair_author_task_id": "01a034c5-ce22-7fa3-968d-a4fd90eecd0f",
+  "review_scope": "frontend",
+  "reviewed_screen_ids": [
+    "ACCOUNT_QUARANTINE",
+    "HOME",
+    "RECIPE_DETAIL",
+    "MANUAL_RECIPE_CREATE",
+    "PLANNER_WEEK",
+    "COOK_MODE",
+    "LEFTOVERS",
+    "MEAL_LOG"
+  ],
+  "reviewed_checklist_ids": [
+    "delivery-cooking-cross-stage4-browser",
+    "delivery-cooking-cross-stage4-states",
+    "delivery-cooking-cross-stage4-authority",
+    "accept-cooking-cross-final-browser-bundle",
+    "accept-cooking-cross-error-ui-states",
+    "accept-cooking-cross-error-base-states",
+    "accept-cooking-cross-error-return-action",
+    "accept-cooking-cross-browser-real-stack",
+    "accept-cooking-cross-browser-responsive",
+    "accept-cooking-cross-browser-accessibility",
+    "accept-cooking-cross-browser-home-privacy",
+    "accept-cooking-cross-browser-planner-separation",
+    "accept-cooking-cross-browser-authority"
+  ],
+  "authority_verdict": "conditional-pass",
+  "design_status_confirmed_eligible": true,
+  "required_fix_ids": [],
+  "waived_fix_ids": [],
+  "resolved_finding_ids": [
+    "CML14-S5-GATE-P1-001",
+    "CML14-S5-GATE-P1-002",
+    "CML14-S5-GATE-P1-003"
+  ],
+  "findings": {"P0":0,"P1":0,"P2":2,"blocker":0,"major":0,"minor":2,"product_ui":0},
+  "p2_notes": [
+    {"id":"CML14-AUTH-PRE-M01","status":"open-nonblocking-unwaived","note":"COOK_MODE and MEAL_LOG generic PNGs are viewport/layout evidence, not default-state proof."},
+    {"id":"CML14-AUTH-PRE-M02","status":"open-nonblocking-unwaived","note":"Eval 96 PASS is retained source exact-tree evidence, not a fresh tracked successor eval artifact."}
+  ],
+  "reviewed_pr_head": "25f314e7524382da174fc9075604b6450061e72e",
+  "reviewed_pr_tree": "255347d7e0d4f71596c0180c2b137a9ce8e17413",
+  "authority_report_paths": [
+    "ui/designs/authority/cooking-meal-log-cross-slice-release-qa-authority.md"
+  ],
+  "evidence_identity": {
+    "evidence_tree": "8d35ce58dbea1e5e9deb86abe1c7f7346a30912e",
+    "authority_report_blob": "720a80f1afb95e47282b5db169dfb3a2ee185936",
+    "app_tree": "8c351ba71bc702a0072d11842ddc3b44d0ab66c8",
+    "components_tree": "e871cded615aeff6ee6aa8117f451a1d8c0abe14"
+  },
+  "verification": {
+    "exact_finding_tests": "30/30 passed",
+    "stage4_focused": "140/140 passed",
+    "successor_policy": "189/189 passed",
+    "current_head_ci": "12 success + 2 intended skip; pending/failure 0/0"
+  },
+  "checklist_updates": [],
+  "contested_fix_ids": [],
+  "rebuttals": [],
+  "next_handoff": "fresh final_authority_gate; Stage 6 remains later and separate"
+}

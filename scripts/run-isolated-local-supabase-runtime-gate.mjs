@@ -12,6 +12,7 @@ import {
   buildIsolatedSupabaseStartArgs,
   buildSupabaseCliArgs,
   createIsolatedSupabaseProject,
+  readPinnedLocalDockerTarget,
   removeIsolatedDockerResources,
   startIsolatedDataApi,
   waitForIsolatedDataApi,
@@ -44,9 +45,21 @@ function run(
   return result;
 }
 
-await ensureDockerRunning();
+const ambientEnv = Object.assign({}, process.env);
+const dockerTarget = readPinnedLocalDockerTarget({ ambient: ambientEnv });
+const pinnedDockerEnv = {
+  ...ambientEnv,
+  DOCKER_HOST: dockerTarget.docker_host,
+};
+delete pinnedDockerEnv.DOCKER_CONTEXT;
+delete pinnedDockerEnv.DOCKER_CERT_PATH;
+delete pinnedDockerEnv.DOCKER_TLS_VERIFY;
+await ensureDockerRunning({ env: pinnedDockerEnv });
 const isolated = await createIsolatedSupabaseProject(repositoryRoot);
-const commandEnv = await isolated.buildCommandEnv();
+const commandEnv = await isolated.buildCommandEnv(
+  pinnedDockerEnv,
+  { dockerHost: dockerTarget.docker_host },
+);
 let started = false;
 try {
   const versionResult = run(

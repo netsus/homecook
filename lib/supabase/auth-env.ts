@@ -1,6 +1,8 @@
 const AUTH_URL_ENV = "NEXT_PUBLIC_AUTH_SUPABASE_URL";
 const AUTH_KEY_ENV = "NEXT_PUBLIC_AUTH_SUPABASE_PUBLISHABLE_KEY";
 const LOCAL_INTERNAL_URL_ENV = "LOCAL_SUPABASE_INTERNAL_URL";
+const STAGE4_CAPTURE_MODE_ENV = "HOMECOOK_STAGE4_CAPTURE_MODE";
+const STAGE4_RESERVED_ISSUER = "https://auth.stage4.homecook.invalid/auth/v1";
 
 const LOOPBACK_HOSTS = new Set(["127.0.0.1", "localhost", "::1", "[::1]"]);
 const HOSTED_SUPABASE_SUFFIXES = [".supabase.co", ".supabase.in"];
@@ -101,6 +103,29 @@ function parseUrl(value: string, name: string) {
   return parsed;
 }
 
+function parsePathUrl(value: string, name: string) {
+  if (/[\u0000-\u0020\u007f]/u.test(value)) {
+    throw new Error(`${name} 값에 ASCII control 또는 whitespace를 넣을 수 없어요.`);
+  }
+  if (!/^(?:http|https):\/\/[^/\\]/u.test(value)) {
+    throw new Error(`${name} 값은 exact lowercase http:// or https:// prefix가 필요해요.`);
+  }
+  rejectRawTrailingDotHostname(value, name);
+  let parsed: URL;
+  try {
+    parsed = new URL(value);
+  } catch {
+    throw new Error(`${name} 값은 유효한 URL이어야 해요.`);
+  }
+  if (parsed.hostname.endsWith(".")) {
+    throw new Error(`${name} hostname에는 trailing dot을 사용할 수 없어요.`);
+  }
+  if (parsed.username || parsed.password || parsed.search || parsed.hash) {
+    throw new Error(`${name} 값에 인증정보나 query를 넣을 수 없어요.`);
+  }
+  return parsed;
+}
+
 function normalizeLocalPublicAuthUrl(value: string) {
   const parsed = parseUrl(value, AUTH_URL_ENV);
   if (isHostedSupabaseHostname(parsed.hostname)) {
@@ -126,6 +151,62 @@ function normalizeLoopbackAuthUrl(value: string) {
   return parsed.origin;
 }
 
+function normalizeIssuerUrl(value: string, name: string) {
+  const parsed = parsePathUrl(value, name);
+  if (isHostedSupabaseHostname(parsed.hostname)) {
+    throw new Error(`${name}는 Supabase Cloud hosted URL을 사용할 수 없어요.`);
+  }
+  if (parsed.pathname !== "/auth/v1") {
+    throw new Error(`${name}는 exact /auth/v1 issuer URL이어야 해요.`);
+  }
+  if (parsed.protocol === "http:" && !isLoopbackHostname(parsed.hostname)) {
+    throw new Error(`${name}의 HTTP issuer는 loopback이어야 해요.`);
+  }
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+    throw new Error(`${name}는 loopback HTTP 또는 self-hosted HTTPS issuer여야 해요.`);
+  }
+  return parsed.toString();
+}
+
+function normalizeJwksUrl(value: string, name: string) {
+  const parsed = parsePathUrl(value, name);
+  if (isHostedSupabaseHostname(parsed.hostname)) {
+    throw new Error(`${name}는 Supabase Cloud hosted URL을 사용할 수 없어요.`);
+  }
+  if (parsed.pathname !== "/auth/v1/.well-known/jwks.json") {
+    throw new Error(`${name}는 exact JWKS URL이어야 해요.`);
+  }
+  if (parsed.protocol === "http:" && !isLoopbackHostname(parsed.hostname)) {
+    throw new Error(`${name}의 HTTP JWKS URL은 loopback이어야 해요.`);
+  }
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+    throw new Error(`${name}는 loopback HTTP 또는 self-hosted HTTPS JWKS URL이어야 해요.`);
+  }
+  return parsed.toString();
+}
+
+function isStage4ReservedIssuerOverride({
+  configuredIssuer,
+  configuredJwksUrl,
+  publicAuthOrigin,
+}: {
+  configuredIssuer: string;
+  configuredJwksUrl: string | null;
+  publicAuthOrigin: string;
+}) {
+  if (process.env[STAGE4_CAPTURE_MODE_ENV]?.trim() !== "1") {
+    return false;
+  }
+  if (configuredIssuer !== STAGE4_RESERVED_ISSUER || configuredJwksUrl === null) {
+    return false;
+  }
+  const normalizedJwksUrl = normalizeJwksUrl(
+    configuredJwksUrl,
+    "AUTH_SUPABASE_JWKS_URL",
+  );
+  return normalizedJwksUrl === `${publicAuthOrigin}/auth/v1/.well-known/jwks.json`;
+}
+
 export interface AuthSupabaseEnv {
   url: string;
   publishableKey: string;
@@ -139,33 +220,54 @@ export function getAuthIssuer() {
     AUTH_URL_ENV,
   ));
   const derivedIssuer = `${url}/auth/v1`;
-  const configuredIssuer
-    = process.env.AUTH_SUPABASE_EXPECTED_ISSUER?.trim() || derivedIssuer;
-  if (configuredIssuer !== derivedIssuer) {
+  const configuredIssuerRaw = process.env.AUTH_SUPABASE_EXPECTED_ISSUER?.trim();
+  const configuredIssuer = configuredIssuerRaw
+    ? normalizeIssuerUrl(configuredIssuerRaw, "AUTH_SUPABASE_EXPECTED_ISSUER")
+    : derivedIssuer;
+  if (
+    configuredIssuer !== derivedIssuer
+    && !isStage4ReservedIssuerOverride({
+      configuredIssuer,
+      configuredJwksUrl: process.env.AUTH_SUPABASE_JWKS_URL?.trim() || null,
+      publicAuthOrigin: url,
+    })
+  ) {
     throw new Error(
       "AUTH_SUPABASE_EXPECTED_ISSUER는 local Auth issuer와 exact 일치해야 해요.",
     );
   }
-  return derivedIssuer;
+  return configuredIssuer;
 }
 
 export function getAuthSupabaseEnv(): AuthSupabaseEnv {
   const issuer = getAuthIssuer();
-  const url = issuer.slice(0, -"/auth/v1".length);
+  const url = normalizeLocalPublicAuthUrl(requireRawNonEmpty(
+    process.env.NEXT_PUBLIC_AUTH_SUPABASE_URL,
+    AUTH_URL_ENV,
+  ));
   const publishableKey = requireNonEmpty(
     process.env.NEXT_PUBLIC_AUTH_SUPABASE_PUBLISHABLE_KEY,
     AUTH_KEY_ENV,
   );
   const derivedJwksUrl = `${issuer}/.well-known/jwks.json`;
-  const configuredJwksUrl
-    = process.env.AUTH_SUPABASE_JWKS_URL?.trim() || derivedJwksUrl;
-  if (configuredJwksUrl !== derivedJwksUrl) {
+  const configuredJwksRaw = process.env.AUTH_SUPABASE_JWKS_URL?.trim();
+  const configuredJwksUrl = configuredJwksRaw
+    ? normalizeJwksUrl(configuredJwksRaw, "AUTH_SUPABASE_JWKS_URL")
+    : derivedJwksUrl;
+  if (
+    configuredJwksUrl !== derivedJwksUrl
+    && !isStage4ReservedIssuerOverride({
+      configuredIssuer: issuer,
+      configuredJwksUrl,
+      publicAuthOrigin: url,
+    })
+  ) {
     throw new Error(
       "AUTH_SUPABASE_JWKS_URL은 local Auth JWKS URL과 exact 일치해야 해요.",
     );
   }
 
-  return { url, publishableKey, issuer, jwksUrl: derivedJwksUrl };
+  return { url, publishableKey, issuer, jwksUrl: configuredJwksUrl };
 }
 
 export function getAuthSupabaseServerEnv(): AuthSupabaseEnv {

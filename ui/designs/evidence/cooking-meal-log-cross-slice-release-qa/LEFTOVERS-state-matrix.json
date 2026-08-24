@@ -1,0 +1,194 @@
+{
+  "fixture_routes": false,
+  "generated_at": "2026-08-24T16:02:52.182Z",
+  "observed_state_candidate": "empty",
+  "pending_states": [],
+  "verified_states": [
+    "loading",
+    "empty",
+    "error",
+    "unauthorized",
+    "pending",
+    "replay",
+    "conflict",
+    "missing",
+    "unrecoverable",
+    "depleted-read-only"
+  ],
+  "quality": {
+    "axe_serious_or_critical": 0,
+    "horizontal_overflow_observations": 0,
+    "quality_status": "passed",
+    "touch_target_failures": 0
+  },
+  "real_local_stack": true,
+  "required_states": [
+    "loading",
+    "empty",
+    "error",
+    "unauthorized",
+    "pending",
+    "replay",
+    "conflict",
+    "missing",
+    "unrecoverable",
+    "depleted-read-only"
+  ],
+  "screen": "LEFTOVERS",
+  "source_head_sha": "a9f027cae1011eced3f42f36b833f60dbd7f284a",
+  "viewport_observations": [
+    {
+      "actual_url": "http://127.0.0.1:3103/leftovers",
+      "file": "LEFTOVERS-mobile-default.png",
+      "metrics": {
+        "client_width": 390,
+        "horizontal_overflow_px": 0,
+        "scroll_width": 390,
+        "touch_target_failures": [],
+        "serious_or_critical_axe": []
+      },
+      "observed_state": "empty",
+      "viewport": {
+        "height": 844,
+        "label": "mobile-default",
+        "width": 390
+      }
+    },
+    {
+      "actual_url": "http://127.0.0.1:3103/leftovers",
+      "file": "LEFTOVERS-mobile-narrow.png",
+      "metrics": {
+        "client_width": 320,
+        "horizontal_overflow_px": 0,
+        "scroll_width": 320,
+        "touch_target_failures": [],
+        "serious_or_critical_axe": []
+      },
+      "observed_state": "empty",
+      "viewport": {
+        "height": 568,
+        "label": "mobile-narrow",
+        "width": 320
+      }
+    },
+    {
+      "actual_url": "http://127.0.0.1:3103/leftovers",
+      "file": "LEFTOVERS-desktop.png",
+      "metrics": {
+        "client_width": 1440,
+        "horizontal_overflow_px": 0,
+        "scroll_width": 1440,
+        "touch_target_failures": [],
+        "serious_or_critical_axe": []
+      },
+      "observed_state": "empty",
+      "viewport": {
+        "height": 1000,
+        "label": "desktop",
+        "width": 1440
+      }
+    }
+  ],
+  "state_evidence": {
+    "loading": [
+      {
+        "kind": "playwright",
+        "path": "ui/designs/evidence/cooking-meal-log-cross-slice-release-qa/proof/d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194-playwright-state-report.json",
+        "result": "passed",
+        "sha256": "d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194",
+        "source_head_sha": "a9f027cae1011eced3f42f36b833f60dbd7f284a",
+        "assertion": "LEFTOVERS:loading"
+      }
+    ],
+    "empty": [
+      {
+        "kind": "playwright",
+        "path": "ui/designs/evidence/cooking-meal-log-cross-slice-release-qa/proof/d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194-playwright-state-report.json",
+        "result": "passed",
+        "sha256": "d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194",
+        "source_head_sha": "a9f027cae1011eced3f42f36b833f60dbd7f284a",
+        "assertion": "LEFTOVERS:empty"
+      }
+    ],
+    "error": [
+      {
+        "kind": "playwright",
+        "path": "ui/designs/evidence/cooking-meal-log-cross-slice-release-qa/proof/d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194-playwright-state-report.json",
+        "result": "passed",
+        "sha256": "d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194",
+        "source_head_sha": "a9f027cae1011eced3f42f36b833f60dbd7f284a",
+        "assertion": "LEFTOVERS:error"
+      }
+    ],
+    "unauthorized": [
+      {
+        "kind": "playwright",
+        "path": "ui/designs/evidence/cooking-meal-log-cross-slice-release-qa/proof/d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194-playwright-state-report.json",
+        "result": "passed",
+        "sha256": "d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194",
+        "source_head_sha": "a9f027cae1011eced3f42f36b833f60dbd7f284a",
+        "assertion": "LEFTOVERS:unauthorized"
+      }
+    ],
+    "pending": [
+      {
+        "kind": "playwright",
+        "path": "ui/designs/evidence/cooking-meal-log-cross-slice-release-qa/proof/d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194-playwright-state-report.json",
+        "result": "passed",
+        "sha256": "d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194",
+        "source_head_sha": "a9f027cae1011eced3f42f36b833f60dbd7f284a",
+        "assertion": "LEFTOVERS:pending"
+      }
+    ],
+    "replay": [
+      {
+        "kind": "playwright",
+        "path": "ui/designs/evidence/cooking-meal-log-cross-slice-release-qa/proof/d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194-playwright-state-report.json",
+        "result": "passed",
+        "sha256": "d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194",
+        "source_head_sha": "a9f027cae1011eced3f42f36b833f60dbd7f284a",
+        "assertion": "LEFTOVERS:replay"
+      }
+    ],
+    "conflict": [
+      {
+        "kind": "playwright",
+        "path": "ui/designs/evidence/cooking-meal-log-cross-slice-release-qa/proof/d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194-playwright-state-report.json",
+        "result": "passed",
+        "sha256": "d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194",
+        "source_head_sha": "a9f027cae1011eced3f42f36b833f60dbd7f284a",
+        "assertion": "LEFTOVERS:conflict"
+      }
+    ],
+    "missing": [
+      {
+        "kind": "playwright",
+        "path": "ui/designs/evidence/cooking-meal-log-cross-slice-release-qa/proof/d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194-playwright-state-report.json",
+        "result": "passed",
+        "sha256": "d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194",
+        "source_head_sha": "a9f027cae1011eced3f42f36b833f60dbd7f284a",
+        "assertion": "LEFTOVERS:missing"
+      }
+    ],
+    "unrecoverable": [
+      {
+        "kind": "playwright",
+        "path": "ui/designs/evidence/cooking-meal-log-cross-slice-release-qa/proof/d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194-playwright-state-report.json",
+        "result": "passed",
+        "sha256": "d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194",
+        "source_head_sha": "a9f027cae1011eced3f42f36b833f60dbd7f284a",
+        "assertion": "LEFTOVERS:unrecoverable"
+      }
+    ],
+    "depleted-read-only": [
+      {
+        "kind": "playwright",
+        "path": "ui/designs/evidence/cooking-meal-log-cross-slice-release-qa/proof/d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194-playwright-state-report.json",
+        "result": "passed",
+        "sha256": "d681eab03ed53b74248c84e97a2f4989f76a148fb04ce7e788513cb931649194",
+        "source_head_sha": "a9f027cae1011eced3f42f36b833f60dbd7f284a",
+        "assertion": "LEFTOVERS:depleted-read-only"
+      }
+    ]
+  }
+}

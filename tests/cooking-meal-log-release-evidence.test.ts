@@ -32,6 +32,7 @@ import {
   validateGitBinding,
   writeEvidenceArtifact,
   writeEvidenceManifest,
+  writeRawLaneLog,
 } from "../scripts/lib/cooking-meal-log-release-evidence.mjs";
 
 const headSha = "a".repeat(40);
@@ -327,6 +328,54 @@ function rehashManifest(attemptDir: string, fileName: string) {
 }
 
 describe("cooking meal-log release evidence safety", () => {
+  it("redacts PostgreSQL credentials from raw stdout and stderr without changing safe diagnostics or JSON artifacts", () => {
+    const root = createRoot();
+    const attemptDir = join(root, "attempt");
+    mkdirSync(join(attemptDir, "raw"), { recursive: true });
+    const stdout = [
+      "lane=db-meal-log-core passed=734 gaps=0",
+      "database=\u001b[36mpostgresql://user%40local:p%40ss%3Aword@127.0.0.1:54322/postgres?sslmode=disable&application_name=stage%206",
+      "health=http://127.0.0.1:54321/rest/v1/ safe_metric=40.439917ms",
+      "second=postgres://postgres:another-secret@localhost:6543/homecook?password=query-secret",
+      "",
+    ].join("\n");
+    const stderr = [
+      "retry target postgresql://encoded%2Buser:encoded%2Fsecret@%5B::1%5D:5432/postgres?options=-c%20search_path%3Dpublic",
+      "stderr diagnostic retained",
+      "",
+    ].join("\n");
+
+    writeRawLaneLog({ attemptDir, label: "security-fixture", stdout, stderr });
+
+    const rawLog = readFileSync(
+      join(attemptDir, "raw/security-fixture.log"),
+      "utf8",
+    );
+    expect(rawLog).not.toMatch(/postgres(?:ql)?:\/\//iu);
+    expect(rawLog).not.toMatch(
+      /p%40ss%3Aword|another-secret|query-secret|encoded%2Fsecret/iu,
+    );
+    expect(rawLog.match(/\[REDACTED_DATABASE_URL\]/gu)).toHaveLength(3);
+    expect(rawLog).toContain("lane=db-meal-log-core passed=734 gaps=0");
+    expect(rawLog).toContain("health=http://127.0.0.1:54321/rest/v1/");
+    expect(rawLog).toContain("safe_metric=40.439917ms");
+    expect(rawLog).toContain("stderr diagnostic retained");
+
+    const producer = readFileSync(
+      join(process.cwd(), "scripts/run-cooking-meal-log-release-evidence.mjs"),
+      "utf8",
+    );
+    expect(producer).toContain("writeRawLaneLog({");
+    expect(producer).not.toContain(
+      'writeCreateOnly(join(attemptDir, "raw", `${label}.log`), output)',
+    );
+
+    const artifact = baseArtifact("security", { safe_metric: 734 });
+    writeEvidenceArtifact(attemptDir, "security.json", artifact);
+    expect(JSON.parse(readFileSync(join(attemptDir, "security.json"), "utf8")))
+      .toEqual(artifact);
+  });
+
   it("creates one attempt directory and rejects traversal or reuse", () => {
     const root = createRoot();
     const artifactRoot = canonicalAttemptRoot(root);
