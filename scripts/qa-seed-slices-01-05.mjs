@@ -4,6 +4,9 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { createClient } from "@supabase/supabase-js";
+
+import { formatLocalSeedOperationError } from "./lib/local-seed-diagnostics.mjs";
+import { buildLocalDemoSeedClientOptions } from "./lib/local-demo-seed-targets.mjs";
 import { assertLocalOnlySupabaseOperatorEnv } from "./lib/local-only-supabase-operator-env.mjs";
 
 function readFixtureData() {
@@ -76,16 +79,21 @@ function createSupabaseClient() {
   const { serviceRoleKey, url } = assertLocalOnlySupabaseOperatorEnv(process.env);
 
   return createClient(url, serviceRoleKey, {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-    },
+    ...buildLocalDemoSeedClientOptions({
+      directPostgrest:
+        process.env.HOMECOOK_LOCAL_SEED_DATA_API_DIRECT_POSTGREST === "1",
+      url,
+    }),
   });
 }
 
 function assertNoError(result, message) {
   if (result.error) {
-    throw new Error(`${message}: ${result.error.message}`);
+    throw new Error(formatLocalSeedOperationError({
+      codesOnly: process.env.HOMECOOK_LOCAL_SEED_CODES_ONLY === "1",
+      error: result.error,
+      operationLabel: message,
+    }));
   }
 }
 

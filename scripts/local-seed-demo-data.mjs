@@ -4,6 +4,11 @@ import { spawnSync } from "node:child_process";
 
 import { createClient } from "@supabase/supabase-js";
 
+import { formatLocalSeedOperationError } from "./lib/local-seed-diagnostics.mjs";
+import {
+  buildLocalDemoSeedClientOptions,
+  resolveLocalDemoSeedTargets,
+} from "./lib/local-demo-seed-targets.mjs";
 import { readLocalSupabaseEnv } from "./lib/local-supabase-env.mjs";
 import {
   buildDemoPantryBundleItemRows,
@@ -119,7 +124,11 @@ function fail(message) {
 
 function assertNoError(result, message) {
   if (result.error) {
-    throw new Error(`${message}: ${result.error.message}`);
+    throw new Error(formatLocalSeedOperationError({
+      codesOnly: process.env.HOMECOOK_LOCAL_SEED_CODES_ONLY === "1",
+      error: result.error,
+      operationLabel: message,
+    }));
   }
 }
 
@@ -262,7 +271,7 @@ async function ensurePublicUserRow(supabase, account, authUserId) {
   return authUserId;
 }
 
-function runCoreQaSeed(env, { mainUserId, otherUserId, startDate }) {
+function runCoreQaSeed(dataTarget, { mainUserId, otherUserId, startDate }) {
   const args = [
     "scripts/qa-seed-slices-01-05.mjs",
     "--user-id",
@@ -279,8 +288,12 @@ function runCoreQaSeed(env, { mainUserId, otherUserId, startDate }) {
     cwd: process.cwd(),
     env: {
       ...process.env,
-      NEXT_PUBLIC_SUPABASE_URL: env.API_URL,
-      SUPABASE_SERVICE_ROLE_KEY: env.SERVICE_ROLE_KEY,
+      HOMECOOK_AUTH_AUTHORITY: "local",
+      HOMECOOK_DATA_AUTHORITY: "local",
+      HOMECOOK_LOCAL_SEED_DATA_API_DIRECT_POSTGREST:
+        dataTarget.directPostgrest ? "1" : "0",
+      NEXT_PUBLIC_SUPABASE_URL: dataTarget.url,
+      SUPABASE_SERVICE_ROLE_KEY: dataTarget.serviceRoleKey,
     },
     stdio: "inherit",
   });
@@ -527,13 +540,11 @@ async function seedDemoPantryItems(supabase, mainUserId) {
 
   assertNoError(deleteResult, "demo pantry_items 초기화 실패");
 
-  const upsertResult = await supabase
+  const insertResult = await supabase
     .from("pantry_items")
-    .upsert(buildDemoPantryItemRows(mainUserId, ingredientIdByFixtureId), {
-      onConflict: "user_id,ingredient_id",
-    });
+    .insert(buildDemoPantryItemRows(mainUserId, ingredientIdByFixtureId));
 
-  assertNoError(upsertResult, "demo pantry_items 생성 실패");
+  assertNoError(insertResult, "demo pantry_items 생성 실패");
 }
 
 async function refreshRecipeCounters(supabase, recipeId) {
@@ -588,34 +599,45 @@ async function main() {
   const args = parseArgs(process.argv.slice(2));
   const localEnv = readLocalSupabaseEnv();
   const seedWindow = buildSeedWindow(args["start-date"]);
-  const supabase = createClient(localEnv.API_URL, localEnv.SERVICE_ROLE_KEY, {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-    },
+  const targets = resolveLocalDemoSeedTargets({
+    env: process.env,
+    primary: localEnv,
   });
+  const authSupabase = createClient(
+    targets.auth.url,
+    targets.auth.serviceRoleKey,
+    buildLocalDemoSeedClientOptions({ url: targets.auth.url }),
+  );
+  const dataSupabase = createClient(
+    targets.data.url,
+    targets.data.serviceRoleKey,
+    buildLocalDemoSeedClientOptions({
+      directPostgrest: targets.split,
+      url: targets.data.url,
+    }),
+  );
 
-  const usersByEmail = await listAuthUsersByEmail(supabase);
+  const usersByEmail = await listAuthUsersByEmail(authSupabase);
   const authUsers = {};
 
   for (const account of LOCAL_DEMO_ACCOUNTS) {
-    const authUser = await ensureAuthUser(supabase, usersByEmail, account);
+    const authUser = await ensureAuthUser(authSupabase, usersByEmail, account);
 
-    await ensurePublicUserRow(supabase, account, authUser.id);
+    await ensurePublicUserRow(dataSupabase, account, authUser.id);
     authUsers[account.id] = authUser;
   }
 
-  runCoreQaSeed(localEnv, {
+  runCoreQaSeed({ ...targets.data, directPostgrest: targets.split }, {
     mainUserId: authUsers.main.id,
     otherUserId: authUsers.other.id,
     startDate: args["start-date"],
   });
 
-  await upsertExtraRecipes(supabase, EXTRA_DEMO_RECIPES);
+  await upsertExtraRecipes(dataSupabase, EXTRA_DEMO_RECIPES);
 
-  const mainBooks = await listRecipeBooksByUser(supabase, authUsers.main.id);
-  const otherBooks = await listRecipeBooksByUser(supabase, authUsers.other.id);
-  const plannerColumns = await listPlannerColumnsByUser(supabase, authUsers.main.id);
+  const mainBooks = await listRecipeBooksByUser(dataSupabase, authUsers.main.id);
+  const otherBooks = await listRecipeBooksByUser(dataSupabase, authUsers.other.id);
+  const plannerColumns = await listPlannerColumnsByUser(dataSupabase, authUsers.main.id);
   const columnsByName = new Map(plannerColumns.map((column) => [column.name, column]));
 
   const mainSavedBook = mainBooks.find((book) => book.book_type === "saved");
@@ -626,21 +648,21 @@ async function main() {
     fail("demo dataset용 recipe book을 찾지 못했어요. core QA seed 결과를 확인해주세요.");
   }
 
-  await seedExtraRecipeLikes(supabase, authUsers.main.id, authUsers.other.id);
-  await seedExtraBookItems(supabase, {
+  await seedExtraRecipeLikes(dataSupabase, authUsers.main.id, authUsers.other.id);
+  await seedExtraBookItems(dataSupabase, {
     mainSavedBookId: mainSavedBook.id,
     mainCustomBookId: mainCustomBook.id,
     otherSavedBookId: otherSavedBook.id,
   });
-  await seedExtraPlannerMeals(supabase, {
+  await seedExtraPlannerMeals(dataSupabase, {
     mainUserId: authUsers.main.id,
     columnsByName,
     seedWindow,
   });
-  await seedDemoPantryItems(supabase, authUsers.main.id);
+  await seedDemoPantryItems(dataSupabase, authUsers.main.id);
 
   for (const recipe of EXTRA_DEMO_RECIPES) {
-    await refreshRecipeCounters(supabase, recipe.id);
+    await refreshRecipeCounters(dataSupabase, recipe.id);
   }
 
   process.stdout.write(

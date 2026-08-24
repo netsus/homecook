@@ -26,8 +26,6 @@ const PASSTHROUGH_ENV_KEYS = [
   "TMPDIR",
   "TMP",
   "TEMP",
-  "DOCKER_HOST",
-  "DOCKER_CONTEXT",
   "XDG_RUNTIME_DIR",
   "XDG_CACHE_HOME",
   "XDG_CONFIG_HOME",
@@ -39,6 +37,148 @@ const PASSTHROUGH_ENV_KEYS = [
   "NO_COLOR",
   "FORCE_COLOR",
 ];
+const DOCKER_CONTEXT_NAME_PATTERN = /^[A-Za-z0-9_.-]{1,64}$/u;
+
+function localDockerTargetError(message = "Stage 4 requires a verified local Docker target") {
+  const error = new Error(message);
+  error.code = "docker_target_not_local";
+  error.safeFailure = {
+    code: "docker_target_not_local",
+    message: "Stage 4 requires a verified local Docker target",
+  };
+  return error;
+}
+
+function assertLocalDockerUnixEndpoint(value) {
+  if (typeof value !== "string" || value.length === 0 || value !== value.trim()) {
+    throw localDockerTargetError();
+  }
+  let parsed;
+  try {
+    parsed = new URL(value);
+  } catch {
+    throw localDockerTargetError();
+  }
+  if (
+    parsed.protocol !== "unix:"
+    || parsed.username
+    || parsed.password
+    || parsed.hostname
+    || !parsed.pathname.startsWith("/")
+    || parsed.pathname === "/"
+    || parsed.search
+    || parsed.hash
+    || value !== `unix://${parsed.pathname}`
+  ) {
+    throw localDockerTargetError();
+  }
+  return value;
+}
+
+/**
+ * @param {{
+ *   activeContextName?: string | null,
+ *   ambient?: Record<string, string | undefined>,
+ *   inspectedContexts?: Array<{
+ *     Name?: string,
+ *     Endpoints?: { docker?: { Host?: string } },
+ *   }> | null,
+ * }} [options]
+ */
+export function resolvePinnedLocalDockerTarget({
+  activeContextName = null,
+  ambient = {},
+  inspectedContexts = null,
+} = {}) {
+  const hasHost = Object.prototype.hasOwnProperty.call(ambient, "DOCKER_HOST");
+  const hasContext = Object.prototype.hasOwnProperty.call(ambient, "DOCKER_CONTEXT");
+  if (hasHost && hasContext) {
+    throw localDockerTargetError("Stage 4 Docker target selection is ambiguous");
+  }
+  if (hasHost) {
+    return {
+      context_name: null,
+      docker_host: assertLocalDockerUnixEndpoint(ambient.DOCKER_HOST),
+      source: "ambient-host",
+    };
+  }
+
+  const contextName = hasContext ? ambient.DOCKER_CONTEXT : activeContextName;
+  if (
+    typeof contextName !== "string"
+    || !DOCKER_CONTEXT_NAME_PATTERN.test(contextName)
+    || !Array.isArray(inspectedContexts)
+  ) {
+    throw localDockerTargetError();
+  }
+  const matches = inspectedContexts.filter((context) => context?.Name === contextName);
+  if (matches.length !== 1) throw localDockerTargetError();
+  return {
+    context_name: contextName,
+    docker_host: assertLocalDockerUnixEndpoint(
+      matches[0]?.Endpoints?.docker?.Host,
+    ),
+    source: "context",
+  };
+}
+
+function dockerMetadataEnvironment(ambient) {
+  const env = { ...ambient };
+  delete env.DOCKER_HOST;
+  delete env.DOCKER_CONTEXT;
+  return env;
+}
+
+/**
+ * @param {{
+ *   ambient?: Record<string, string | undefined>,
+ *   spawnSyncImpl?: (
+ *     command: string,
+ *     args: string[],
+ *     options?: { encoding?: string, env?: Record<string, string | undefined> },
+ *   ) => { status: number | null, stdout?: string },
+ * }} [options]
+ */
+export function readPinnedLocalDockerTarget({
+  ambient = process.env,
+  spawnSyncImpl = spawnSync,
+} = {}) {
+  if (Object.prototype.hasOwnProperty.call(ambient, "DOCKER_HOST")) {
+    return resolvePinnedLocalDockerTarget({ ambient });
+  }
+  const metadataEnv = dockerMetadataEnvironment(ambient);
+  let contextName = ambient.DOCKER_CONTEXT;
+  if (!Object.prototype.hasOwnProperty.call(ambient, "DOCKER_CONTEXT")) {
+    const shown = spawnSyncImpl("docker", ["context", "show"], {
+      encoding: "utf8",
+      env: metadataEnv,
+    });
+    if (shown.status !== 0) throw localDockerTargetError();
+    contextName = shown.stdout?.trim();
+  }
+  if (typeof contextName !== "string" || !DOCKER_CONTEXT_NAME_PATTERN.test(contextName)) {
+    throw localDockerTargetError();
+  }
+  const inspected = spawnSyncImpl(
+    "docker",
+    ["context", "inspect", contextName],
+    { encoding: "utf8", env: metadataEnv },
+  );
+  if (inspected.status !== 0) throw localDockerTargetError();
+  let inspectedContexts;
+  try {
+    inspectedContexts = JSON.parse(inspected.stdout);
+  } catch {
+    throw localDockerTargetError();
+  }
+  return resolvePinnedLocalDockerTarget({
+    activeContextName: contextName,
+    ambient: Object.prototype.hasOwnProperty.call(ambient, "DOCKER_CONTEXT")
+      ? { DOCKER_CONTEXT: contextName }
+      : {},
+    inspectedContexts,
+  });
+}
 
 const SUPABASE_OPTIONAL_SERVICES = [
   "gotrue",
@@ -308,8 +448,11 @@ export async function createIsolatedSupabaseProject(repoRoot = process.cwd()) {
     projectId,
     rootDir,
     secretFilePath,
-    /** @param {Record<string, string | undefined>} [baseEnv] */
-    async buildCommandEnv(baseEnv = process.env) {
+    /**
+     * @param {Record<string, string | undefined>} [baseEnv]
+     * @param {{ dockerHost?: string }} [options]
+     */
+    async buildCommandEnv(baseEnv = process.env, { dockerHost } = {}) {
       const isolatedEnv = parseEnvironmentFile(
         await readFile(environmentFilePath, "utf8"),
       );
@@ -318,6 +461,9 @@ export async function createIsolatedSupabaseProject(repoRoot = process.cwd()) {
       const commandEnv = {};
       for (const key of PASSTHROUGH_ENV_KEYS) {
         if (typeof baseEnv[key] === "string") commandEnv[key] = baseEnv[key];
+      }
+      if (dockerHost !== undefined) {
+        commandEnv.DOCKER_HOST = assertLocalDockerUnixEndpoint(dockerHost);
       }
       return {
         ...commandEnv,
