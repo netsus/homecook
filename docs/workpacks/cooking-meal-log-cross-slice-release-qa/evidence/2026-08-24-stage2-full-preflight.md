@@ -19,7 +19,7 @@
 - Rollback lane: `32/32` passed; skipped `0`, pending `0`, failed `0`.
 - Raw skip partition: `270` retained separately.
 - Performance denominator: `287041`.
-- Performance metrics: Recall@20 `1`, Precision@20 `0.9210526316`, DB p95 `540.439917ms`, route p95 `15.53ms`.
+- Performance metrics: Recall@20 `1`, Precision@20 `0.9210526316`, DB p95 `40.439917ms`, route p95 `15.53ms`.
 - External boundary: `0/0`.
 - Query-count metrics: `list1=1`, `list20=1`, item-level `N+1=0`.
 - Security classification: `classified=213`, `data negatives=4`, `remote=0`.
@@ -38,7 +38,7 @@
 
 ## Status projection
 
-- Stage 2 overall remains `in_progress / collecting`.
+- Stage 2 overall remains `in_progress / green-on-owned-lanes`; fresh Stage 3 review of this preflight, Stage 4 `FINAL_EVIDENCE_SHA` same-head rerun/browser bundle, controlled full-local, Stage 4~6, Manual and activation remain pending.
 - Design remains `temporary`.
 - `auto_merge` remains `false`.
 - Manual/activation and Stage 3~6 remain pending.
