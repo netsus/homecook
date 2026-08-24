@@ -1379,6 +1379,7 @@
 
 .home-mobile-search-bar input {
   width: 100%;
+  min-height: 44px;
   min-width: 0;
   border: 0;
   outline: 0;

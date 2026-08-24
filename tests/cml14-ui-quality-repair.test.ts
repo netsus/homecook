@@ -68,9 +68,16 @@ describe("#14 Stage 4 UI quality repair regressions", () => {
     );
   });
 
+  it("keeps the HOME search input itself at least 44px high", () => {
+    expect(ruleBody(".home-mobile-search-bar input")).toContain(
+      "min-height: 44px;",
+    );
+  });
+
   it("makes every mobile cook-mode scroll region keyboard focusable and named", () => {
     for (const file of [
       "components/cooking/cook-mode-mobile-ui.tsx",
+      "components/cooking/cook-mode-loading-board.tsx",
       "components/cooking/snapshot-v2-cook-mode-view.tsx",
     ]) {
       const source = readFileSync(file, "utf8");

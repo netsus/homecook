@@ -188,8 +188,10 @@ export function MobileCookModeLoadingBoard({
         </header>
 
         <main
+          aria-label="요리 내용"
           className="min-h-0 flex-1 overflow-y-auto px-4 pb-5"
           data-testid={loadingTestId}
+          tabIndex={0}
         >
           <div className="cook-whole-board cook-whole-board-mobile cook-whole-loading-board-mobile">
             <section className="cook-whole-panel cook-whole-ingredient-panel">
