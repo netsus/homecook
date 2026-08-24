@@ -81,6 +81,32 @@ async function expectAuthorityError(
 }
 
 describe("loopback session-authority gateway", () => {
+  it("normalizes access-token read failures to maintenance without reaching upstream", async () => {
+    const localUpstreamFetch = vi.fn();
+    const authorityFetch = createHybridAuthorityFetch({
+      getAccessToken: async () => {
+        throw new Error("cookie session read failed");
+      },
+      localUpstreamFetch,
+      assertSessionAuthority: vi.fn(),
+      auth: {
+        issuer: ISSUER,
+        url: "http://127.0.0.1:54321",
+        publishableKey: "local-publishable",
+      },
+      attestationSecret: SECRET,
+      sessionBindingSecret: SECRET,
+    });
+
+    const response = await authorityFetch(
+      "http://127.0.0.1:8000/rest/v1/users",
+      { method: "GET" },
+    );
+
+    await expectAuthorityError(response, "ACCOUNT_LIFECYCLE_MAINTENANCE");
+    expect(localUpstreamFetch).not.toHaveBeenCalled();
+  });
+
   it("parses superseded_token as an internal-only reason without marking it unexpected", () => {
     expect(readSessionAuthorityFailureReason({
       details: "HOMECOOK_SESSION_AUTHORITY_REASON::superseded_token",
