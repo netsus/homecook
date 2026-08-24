@@ -5,11 +5,14 @@ import {
   createProductionBrowserCanaryAdapter,
 } from "../scripts/lib/full-local-session-production-browser-adapter.mjs";
 
-function createBrowserFixture(initialUrl = "https://app.mumeok.kr/login?next=%2Fplanner") {
+function createBrowserFixture(
+  initialUrl = "https://app.mumeok.kr/login?next=%2Fplanner",
+  initialCookies?: Array<{ domain: string; name: string; path: string; value: string }>,
+) {
   const calls: Array<Record<string, unknown>> = [];
   const listeners = new Map<string, Set<(payload: unknown) => void>>();
   let currentUrl = initialUrl;
-  let cookies = [
+  let cookies = initialCookies ?? [
     { domain: "app.mumeok.kr", name: "sb-homecook-auth-token", path: "/", value: "old-access" },
     { domain: "app.mumeok.kr", name: "sb-homecook-auth-token.0", path: "/", value: "old-refresh" },
   ];
@@ -57,8 +60,8 @@ function createBrowserFixture(initialUrl = "https://app.mumeok.kr/login?next=%2F
     async close() {
       calls.push({ kind: "context-close" });
     },
-    async cookies() {
-      calls.push({ kind: "cookies" });
+    async cookies(urls?: Array<string>) {
+      calls.push({ kind: "cookies", urls });
       return cookies.map((cookie) => ({ ...cookie }));
     },
     emitRequest(
@@ -389,6 +392,131 @@ describe("production browser canary adapter", () => {
 
     await expect(adapter.openSession()).rejects.toThrow(/exact app\.mumeok\.kr planner page/iu);
     expect(browserFixture.calls.some((call) => call.kind === "reload")).toBe(false);
+    await adapter.close();
+  });
+
+  it("reads session evidence cookies from the app origin without mixing the auth origin", async () => {
+    const browserFixture = createBrowserFixture(
+      "https://app.mumeok.kr/login?next=%2Fplanner",
+      [
+        { domain: "auth.mumeok.kr", name: "sb-homecook-auth-token", path: "/", value: "auth-origin-stale" },
+        { domain: "auth.mumeok.kr", name: "sb-homecook-auth-token.0", path: "/", value: "auth-origin-stale-refresh" },
+        { domain: "app.mumeok.kr", name: "sb-homecook-auth-token", path: "/", value: "app-origin-current" },
+        { domain: "app.mumeok.kr", name: "sb-homecook-auth-token.0", path: "/", value: "app-origin-current-refresh" },
+      ],
+    );
+    const adapter = await createProductionBrowserCanaryAdapter({
+      createBrowserClientImpl: ((url: string, apiKey: string, options: Record<string, unknown>) => {
+        void url;
+        void apiKey;
+        return {
+          auth: {
+            async getSession() {
+              const observedCookies = await (options.cookies as {
+                getAll: () => Promise<Array<{ name: string; value: string }>>;
+              }).getAll();
+              expect(observedCookies).toEqual([
+                { name: "sb-homecook-auth-token", value: "app-origin-current" },
+                { name: "sb-homecook-auth-token.0", value: "app-origin-current-refresh" },
+              ]);
+              return {
+                data: { session: { expires_at: Math.floor(Date.parse("2026-08-11T07:00:00.000Z") / 1_000) } },
+                error: null,
+              };
+            },
+          },
+        };
+      }) as never,
+      launchBrowser: (async () => browserFixture.browser) as never,
+      phase: "milestone-a-24h",
+      waitForManualLogin: async () => {
+        browserFixture.context.emitRequest("https://auth.mumeok.kr/auth/v1/authorize", {
+          apikey: "pk-live-public-captured-in-memory",
+        });
+        browserFixture.context.setUrl("https://app.mumeok.kr/planner");
+      },
+    });
+
+    await adapter.openSession();
+    const cookieReads = browserFixture.calls.filter((call) => call.kind === "cookies");
+    expect(cookieReads).toEqual([
+      { kind: "cookies", urls: ["https://app.mumeok.kr"] },
+      { kind: "cookies", urls: ["https://app.mumeok.kr"] },
+    ]);
+    await adapter.close();
+  });
+
+  it("accepts a parent-domain cookie that the browser sends to the app origin", async () => {
+    const browserFixture = createBrowserFixture(
+      "https://app.mumeok.kr/login?next=%2Fplanner",
+      [
+        {
+          domain: ".mumeok.kr",
+          name: "sb-homecook-auth-token",
+          path: "/",
+          value: "parent-domain-session",
+        },
+      ],
+    );
+    const adapter = await createProductionBrowserCanaryAdapter({
+      createBrowserClientImpl: (() => ({
+        auth: {
+          async getSession() {
+            return {
+              data: { session: { expires_at: Math.floor(Date.parse("2026-08-11T07:00:00.000Z") / 1_000) } },
+              error: null,
+            };
+          },
+        },
+      })) as never,
+      launchBrowser: (async () => browserFixture.browser) as never,
+      phase: "milestone-a-24h",
+      waitForManualLogin: async () => {
+        browserFixture.context.emitRequest("https://auth.mumeok.kr/auth/v1/authorize", {
+          apikey: "pk-live-public-captured-in-memory",
+        });
+        browserFixture.context.setUrl("https://app.mumeok.kr/planner");
+      },
+    });
+
+    await expect(adapter.openSession()).resolves.toMatchObject({
+      bindingCreatedAt: expect.any(String),
+      session: expect.any(Object),
+    });
+    await adapter.close();
+  });
+
+  it("fails closed instead of reading the whole cookie jar when app-scoped reads fail", async () => {
+    const browserFixture = createBrowserFixture();
+    const cookieReadCalls: Array<Array<string> | undefined> = [];
+    browserFixture.context.cookies = async (urls?: Array<string>) => {
+      cookieReadCalls.push(urls);
+      if (urls !== undefined) throw new Error("scoped read unavailable");
+      return browserFixture.getCookies();
+    };
+    const adapter = await createProductionBrowserCanaryAdapter({
+      createBrowserClientImpl: (() => ({
+        auth: {
+          async getSession() {
+            return {
+              data: { session: { expires_at: Math.floor(Date.parse("2026-08-11T07:00:00.000Z") / 1_000) } },
+              error: null,
+            };
+          },
+        },
+      })) as never,
+      launchBrowser: (async () => browserFixture.browser) as never,
+      phase: "milestone-a-24h",
+      waitForManualLogin: async () => {
+        browserFixture.context.emitRequest("https://auth.mumeok.kr/auth/v1/authorize", {
+          apikey: "pk-live-public-captured-in-memory",
+        });
+        browserFixture.context.setUrl("https://app.mumeok.kr/planner");
+      },
+    });
+
+    await expect(adapter.openSession()).rejects.toThrow(/scoped read unavailable/iu);
+    expect(cookieReadCalls).toEqual([["https://app.mumeok.kr"]]);
     await adapter.close();
   });
 

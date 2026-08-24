@@ -103,6 +103,13 @@ function cookieIdentity(cookie) {
   return `${cookie.domain ?? ""}|${cookie.path ?? "/"}|${cookie.name}`;
 }
 
+function cookieDomainMatchesHost(cookieDomain, host) {
+  const normalizedDomain = cookieDomain.replace(/^\./u, "").toLowerCase();
+  const normalizedHost = host.toLowerCase();
+  return normalizedDomain === normalizedHost
+    || normalizedHost.endsWith(`.${normalizedDomain}`);
+}
+
 function normalizeCookieShadowEntry(cookie, appOrigin) {
   if (!cookie || typeof cookie.name !== "string" || typeof cookie.value !== "string") return null;
   const appUrl = new URL(appOrigin);
@@ -131,7 +138,10 @@ function mapSameSite(value) {
 function cookieHeaderFromShadow(cookies, appOrigin) {
   const host = new URL(appOrigin).hostname;
   const values = cookies
-    .filter((cookie) => cookie.domain === host && typeof cookie.value === "string" && cookie.value.length > 0)
+    .filter((cookie) =>
+      cookieDomainMatchesHost(cookie.domain, host)
+      && typeof cookie.value === "string"
+      && cookie.value.length > 0)
     .map((cookie) => `${cookie.name}=${cookie.value}`);
   if (values.length === 0) {
     fail("Production browser canary could not capture an authenticated cookie snapshot.");
@@ -303,15 +313,12 @@ export async function createProductionBrowserCanaryAdapter({
       if (!state.context || typeof state.context.cookies !== "function") {
         fail("Production browser canary cookie reader is unavailable.");
       }
-      let cookies;
-      try {
-        cookies = await state.context.cookies([appOrigin, authOrigin]);
-      } catch {
-        cookies = await state.context.cookies();
-      }
+      const cookies = await state.context.cookies([appOrigin]);
+      const appHost = new URL(appOrigin).hostname;
       state.cookieShadow = cookies
         .map((cookie) => normalizeCookieShadowEntry(cookie, appOrigin))
-        .filter(Boolean);
+        .filter((cookie) =>
+          cookie !== null && cookieDomainMatchesHost(cookie.domain, appHost));
     }
 
     async function getAll() {
