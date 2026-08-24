@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+
 import { describe, expect, it } from "vitest";
 
 import {
@@ -9,6 +11,28 @@ import {
 } from "../scripts/lib/local-demo-pantry-fixture.mjs";
 
 describe("local demo pantry fixture", () => {
+  it("deletes the targeted pantry rows before a plain insert", () => {
+    const source = readFileSync("scripts/local-seed-demo-data.mjs", "utf8");
+    const pantrySeed = source
+      .split("async function seedDemoPantryItems")[1]
+      ?.split("async function refreshRecipeCounters")[0] ?? "";
+    const pantryDelete = pantrySeed.indexOf(
+      '.from("pantry_items")\n    .delete()',
+    );
+    const pantryInsert = pantrySeed.indexOf(
+      '.from("pantry_items")\n    .insert(',
+    );
+
+    expect(pantryDelete).toBeGreaterThanOrEqual(0);
+    expect(pantryInsert).toBeGreaterThan(pantryDelete);
+    expect(pantrySeed).not.toMatch(
+      /\.from\("pantry_items"\)[\s\S]*?\.upsert\(/u,
+    );
+    expect(pantrySeed).not.toContain(
+      'onConflict: "user_id,ingredient_id"',
+    );
+  });
+
   it("seeds pantry ingredients that match the demo recipe", () => {
     expect(DEMO_PANTRY_INGREDIENT_IDS).toEqual([
       "550e8400-e29b-41d4-a716-446655440013",

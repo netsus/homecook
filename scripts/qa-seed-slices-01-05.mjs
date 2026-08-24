@@ -4,6 +4,9 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { createClient } from "@supabase/supabase-js";
+
+import { formatLocalSeedOperationError } from "./lib/local-seed-diagnostics.mjs";
+import { buildLocalDemoSeedClientOptions } from "./lib/local-demo-seed-targets.mjs";
 import { assertLocalOnlySupabaseOperatorEnv } from "./lib/local-only-supabase-operator-env.mjs";
 
 function readFixtureData() {
@@ -76,16 +79,21 @@ function createSupabaseClient() {
   const { serviceRoleKey, url } = assertLocalOnlySupabaseOperatorEnv(process.env);
 
   return createClient(url, serviceRoleKey, {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-    },
+    ...buildLocalDemoSeedClientOptions({
+      directPostgrest:
+        process.env.HOMECOOK_LOCAL_SEED_DATA_API_DIRECT_POSTGREST === "1",
+      url,
+    }),
   });
 }
 
 function assertNoError(result, message) {
   if (result.error) {
-    throw new Error(`${message}: ${result.error.message}`);
+    throw new Error(formatLocalSeedOperationError({
+      codesOnly: process.env.HOMECOOK_LOCAL_SEED_CODES_ONLY === "1",
+      error: result.error,
+      operationLabel: message,
+    }));
   }
 }
 
@@ -391,7 +399,7 @@ async function ensurePlannerColumns(supabase, fixtureData, userId) {
       );
     }
 
-    const insertResult = await supabase
+    let insertResult = await supabase
       .from("meal_plan_columns")
       .insert({
         id: fixtureColumn.id,
@@ -403,11 +411,51 @@ async function ensurePlannerColumns(supabase, fixtureData, userId) {
       .select("id, name, sort_order")
       .single();
 
+    if (insertResult.error?.message?.toLowerCase().includes("duplicate key")) {
+      insertResult = await supabase
+        .from("meal_plan_columns")
+        .insert({
+          id: crypto.randomUUID(),
+          user_id: userId,
+          name: fixtureColumn.name,
+          sort_order: getNextSortOrder(columns),
+          created_at: new Date().toISOString(),
+        })
+        .select("id, name, sort_order")
+        .single();
+    }
+
     assertNoError(insertResult, `meal_plan_columns 생성 실패 (${fixtureColumn.name})`);
     columns.push(insertResult.data);
   }
 
   return columns;
+}
+
+async function markUserBootstrapComplete(supabase, userId) {
+  const readResult = await supabase
+    .from("users")
+    .select("settings_json")
+    .eq("id", userId)
+    .single();
+  assertNoError(readResult, `users bootstrap 조회 실패 (${userId})`);
+  const currentSettings = readResult.data?.settings_json;
+  const settings = currentSettings
+    && typeof currentSettings === "object"
+    && !Array.isArray(currentSettings)
+    ? currentSettings
+    : {};
+  const updateResult = await supabase
+    .from("users")
+    .update({
+      settings_json: {
+        ...settings,
+        user_bootstrap_version: 3,
+      },
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", userId);
+  assertNoError(updateResult, `users bootstrap 완료 실패 (${userId})`);
 }
 
 async function seedRecipeLikes(supabase, recipeId, mainUserId, otherUserId) {
@@ -656,9 +704,28 @@ async function main() {
     name: "다른 유저 저장 레시피",
     bookType: "saved",
   });
+  const otherMyAddedBook = await ensureRecipeBook(supabase, {
+    userId: otherUserId,
+    preferredId: crypto.randomUUID(),
+    name: "내가 추가한 레시피",
+    bookType: "my_added",
+  });
+  const otherLikedBook = await ensureRecipeBook(supabase, {
+    userId: otherUserId,
+    preferredId: crypto.randomUUID(),
+    name: "좋아요한 레시피",
+    bookType: "liked",
+  });
 
   const plannerColumns = await ensurePlannerColumns(supabase, fixtureData, mainUserId);
+  const otherPlannerColumns = await ensurePlannerColumns(
+    supabase,
+    fixtureData,
+    otherUserId,
+  );
   const columnsByName = new Map(plannerColumns.map((column) => [column.name, column]));
+  await markUserBootstrapComplete(supabase, mainUserId);
+  await markUserBootstrapComplete(supabase, otherUserId);
 
   await seedRecipeLikes(
     supabase,
@@ -694,6 +761,7 @@ async function main() {
       `- main custom book: ${mainCustomBook.id}`,
       `- planner columns available: ${plannerColumns.map((column) => column.name).join(", ")}`,
       `- system books checked: ${[mainMyAddedBook.name, mainSavedBook.name, mainLikedBook.name].join(", ")}`,
+      `- other bootstrap checked: ${[otherMyAddedBook.name, otherSavedBook.name, otherLikedBook.name].join(", ")} / ${otherPlannerColumns.length} columns`,
     ].join("\n") + "\n",
   );
 }

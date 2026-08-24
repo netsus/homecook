@@ -23,6 +23,8 @@ import {
   buildIsolatedSupabaseStartArgs,
   buildSupabaseCliArgs,
   createIsolatedSupabaseProject,
+  readPinnedLocalDockerTarget,
+  resolvePinnedLocalDockerTarget,
 } from "../scripts/lib/local-supabase-isolated-runtime.mjs";
 import packageJson from "../package.json";
 
@@ -54,6 +56,9 @@ pop3_port = 54326
 
 [storage]
 enabled = true
+
+[auth]
+site_url = "http://localhost:3000"
 
 [auth.external.google]
 enabled = true
@@ -106,6 +111,7 @@ describe("isolated local Supabase gates", () => {
     const config = buildIsolatedSupabaseConfig(SOURCE_CONFIG, {
       projectId: "hcg_1234_abcd",
       basePort: 58320,
+      authJwtIssuerOverride: "https://auth.stage4.homecook.invalid/auth/v1",
     });
 
     expect(config).toContain('project_id = "hcg_1234_abcd"');
@@ -117,6 +123,7 @@ describe("isolated local Supabase gates", () => {
     }
     expect(config).toContain('client_id = "env(HOMECOOK_ISOLATED_GOOGLE_CLIENT_ID)"');
     expect(config).toContain('secret = "env(HOMECOOK_ISOLATED_GOOGLE_CLIENT_SECRET)"');
+    expect(config).toContain('jwt_issuer = "https://auth.stage4.homecook.invalid/auth/v1"');
     expect(config).not.toContain("SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_SECRET");
   });
 
@@ -195,13 +202,14 @@ describe("isolated local Supabase gates", () => {
       const commandEnv = await isolated.buildCommandEnv({
         PATH: "/usr/bin",
         HOME: "/tmp/homecook-test-home",
-        DOCKER_HOST: "unix:///tmp/docker.sock",
+        DOCKER_HOST: "ssh://root@remote.example/run/docker.sock",
+        DOCKER_CONTEXT: "production",
         SUPABASE_ACCESS_TOKEN: "forbidden-access-token",
         SUPABASE_DB_PASSWORD: "forbidden-db-password",
         SECURITY_FUNCTION_LINKED_ROOT: "/forbidden/linked-root",
         NEXT_PUBLIC_SUPABASE_URL: "https://forbidden-project.supabase.co",
         SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_SECRET: "production-google-secret",
-      });
+      }, { dockerHost: "unix:///tmp/docker.sock" });
 
       expect(commandEnv).toMatchObject({
         PATH: "/usr/bin",
@@ -209,6 +217,7 @@ describe("isolated local Supabase gates", () => {
         DOCKER_HOST: "unix:///tmp/docker.sock",
       });
       expect(commandEnv.HOMECOOK_ISOLATED_GOOGLE_CLIENT_SECRET).toBe(secret);
+      expect(commandEnv).not.toHaveProperty("DOCKER_CONTEXT");
       expect(commandEnv).not.toHaveProperty("SUPABASE_ACCESS_TOKEN");
       expect(commandEnv).not.toHaveProperty("SUPABASE_DB_PASSWORD");
       expect(commandEnv).not.toHaveProperty("SECURITY_FUNCTION_LINKED_ROOT");
@@ -224,6 +233,96 @@ describe("isolated local Supabase gates", () => {
     } finally {
       await isolated.removeFiles();
     }
+  });
+
+  it("pins only an exact local unix Docker endpoint", () => {
+    expect(resolvePinnedLocalDockerTarget({
+      ambient: { DOCKER_HOST: "unix:///Users/test/.docker/run/docker.sock" },
+    })).toEqual({
+      context_name: null,
+      docker_host: "unix:///Users/test/.docker/run/docker.sock",
+      source: "ambient-host",
+    });
+
+    for (const dockerHost of [
+      "",
+      "ssh://root@remote.example/run/docker.sock",
+      "tcp://127.0.0.1:2375",
+      "http://127.0.0.1:2375",
+      "https://remote.example:2376",
+      "unix://",
+      "not-a-docker-endpoint",
+    ]) {
+      expect(() => resolvePinnedLocalDockerTarget({
+        ambient: { DOCKER_HOST: dockerHost },
+      }), dockerHost).toThrow(/local Docker target/iu);
+    }
+    expect(() => resolvePinnedLocalDockerTarget({
+      ambient: {
+        DOCKER_CONTEXT: "desktop-linux",
+        DOCKER_HOST: "unix:///var/run/docker.sock",
+      },
+    })).toThrow(/ambiguous/iu);
+  });
+
+  it("rejects remote active Docker contexts and pins a local inspected context", () => {
+    const remoteContext = [{
+      Endpoints: { docker: { Host: "ssh://root@remote.example" } },
+      Name: "production",
+    }];
+    expect(() => resolvePinnedLocalDockerTarget({
+      activeContextName: "production",
+      ambient: {},
+      inspectedContexts: remoteContext,
+    })).toThrow(/local Docker target/iu);
+    expect(resolvePinnedLocalDockerTarget({
+      activeContextName: "desktop-linux",
+      ambient: {},
+      inspectedContexts: [{
+        Endpoints: {
+          docker: { Host: "unix:///Users/test/.docker/run/docker.sock" },
+        },
+        Name: "desktop-linux",
+      }],
+    })).toEqual({
+      context_name: "desktop-linux",
+      docker_host: "unix:///Users/test/.docker/run/docker.sock",
+      source: "context",
+    });
+    expect(() => resolvePinnedLocalDockerTarget({
+      activeContextName: "",
+      ambient: {},
+      inspectedContexts: [],
+    })).toThrow(/local Docker target/iu);
+  });
+
+  it("reads context metadata without contacting a daemon and returns only a safe target", () => {
+    const calls: string[][] = [];
+    const spawnSyncImpl = (_command: string, args: string[]) => {
+      calls.push(args);
+      if (args[1] === "show") {
+        return { status: 0, stdout: "desktop-linux\n" };
+      }
+      return {
+        status: 0,
+        stdout: JSON.stringify([{
+          Endpoints: {
+            docker: { Host: "unix:///Users/test/.docker/run/docker.sock" },
+          },
+          Name: "desktop-linux",
+        }]),
+      };
+    };
+
+    expect(readPinnedLocalDockerTarget({ ambient: {}, spawnSyncImpl })).toEqual({
+      context_name: "desktop-linux",
+      docker_host: "unix:///Users/test/.docker/run/docker.sock",
+      source: "context",
+    });
+    expect(calls).toEqual([
+      ["context", "show"],
+      ["context", "inspect", "desktop-linux"],
+    ]);
   });
 
   it("accepts only Docker resources labeled for the unique isolated project", () => {
@@ -271,6 +370,15 @@ describe("isolated local Supabase gates", () => {
     expect(runtimeRunner).toContain("services: []");
 
     for (const source of [securityRunner, runtimeRunner]) {
+      expect(source.indexOf("readPinnedLocalDockerTarget({"))
+        .toBeLessThan(source.indexOf("await ensureDockerRunning({"));
+      expect(source.indexOf("await ensureDockerRunning({"))
+        .toBeLessThan(source.indexOf("createIsolatedSupabaseProject("));
+      expect(source).toContain("DOCKER_HOST: dockerTarget.docker_host");
+      expect(source).toContain("delete pinnedDockerEnv.DOCKER_CONTEXT");
+      expect(source).toContain("delete pinnedDockerEnv.DOCKER_CERT_PATH");
+      expect(source).toContain("delete pinnedDockerEnv.DOCKER_TLS_VERIFY");
+      expect(source).toContain("{ dockerHost: dockerTarget.docker_host }");
       expect(source).toContain("assertOwnedDockerResources");
       expect(source).toContain("assertNoIsolatedDockerOom");
       expect(source).toContain("timeoutMs: 300_000");

@@ -6,9 +6,9 @@ function wait(milliseconds) {
   });
 }
 
-function canTalkToDocker() {
+function canTalkToDocker(env) {
   const result = spawnSync("docker", ["info"], {
-    env: process.env,
+    env,
     encoding: "utf8",
     stdio: "ignore",
   });
@@ -16,8 +16,8 @@ function canTalkToDocker() {
   return result.status === 0;
 }
 
-export async function ensureDockerRunning() {
-  if (canTalkToDocker()) {
+export async function ensureDockerRunning({ env = process.env } = {}) {
+  if (canTalkToDocker(env)) {
     return;
   }
 
@@ -26,7 +26,7 @@ export async function ensureDockerRunning() {
   }
 
   const openResult = spawnSync("open", ["-a", "Docker"], {
-    env: process.env,
+    env,
     encoding: "utf8",
   });
 
@@ -39,7 +39,7 @@ export async function ensureDockerRunning() {
   for (let attempt = 0; attempt < 45; attempt += 1) {
     await wait(2000);
 
-    if (canTalkToDocker()) {
+    if (canTalkToDocker(env)) {
       process.stdout.write("Docker가 준비됐어요.\n");
       return;
     }
