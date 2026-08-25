@@ -21,6 +21,7 @@ import {
   writeCredentialMetadata,
 } from "./lib/youtube-extraction-worker-ops.mjs";
 import { ensureAbsolutePath } from "./lib/youtube-extraction-worker-artifact.mjs";
+import { validateLocalMacProductionMutationAuthority } from "./lib/local-mac-production-release.mjs";
 import {
   readWorkerEnvironment,
   readWorkerProviderEnvironment,
@@ -36,6 +37,8 @@ function parseArgs(argv) {
     json: false,
     homeDir: process.env.HOME ?? "",
     nodeBin: process.execPath,
+    lockToken: undefined,
+    releaseManifestPath: undefined,
     userId: process.getuid?.() ?? 0,
   };
 
@@ -110,6 +113,9 @@ function parseArgs(argv) {
       case "--release-sha":
         options.releaseSha = value;
         break;
+      case "--release-manifest":
+        options.releaseManifestPath = ensureAbsolutePath(value, "releaseManifestPath");
+        break;
       case "--schema-identity":
         options.schemaIdentity = value;
         break;
@@ -118,6 +124,9 @@ function parseArgs(argv) {
         break;
       case "--output":
         options.outputPath = ensureAbsolutePath(value, "outputPath");
+        break;
+      case "--lock-token":
+        options.lockToken = value;
         break;
       case "--home-dir":
         options.homeDir = ensureAbsolutePath(value, "homeDir");
@@ -141,6 +150,10 @@ function parseArgs(argv) {
   }
 
   return options;
+}
+
+function requiresReleaseMutationAuthority(options) {
+  return options.command === "install" && options.execute === true;
 }
 
 function print(result) {
@@ -387,6 +400,15 @@ async function runHealth(options) {
 
 async function main() {
   const options = parseArgs(process.argv.slice(2));
+  if (requiresReleaseMutationAuthority(options)) {
+    validateLocalMacProductionMutationAuthority({
+      command: options.command,
+      homeDir: options.homeDir,
+      lockToken: options.lockToken ?? null,
+      releaseManifestPath: options.releaseManifestPath ?? null,
+      rootDir: options.rootDir ?? process.cwd(),
+    });
+  }
   if (!new Set(["status", "stop", "uninstall"]).has(options.command)) {
     validateYoutubeExtractionWorkerSecretRoot(options.secretRoot, {
       expectedUserId: options.userId,

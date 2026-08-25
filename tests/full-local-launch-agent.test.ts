@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process";
 import {
   chmodSync,
   mkdtempSync,
@@ -247,6 +248,26 @@ system/com.apple.xpc.launchd.domain.user.501.100007.Aqua/${DEFAULT_FULL_LOCAL_LA
 });
 
 describe("full-local launch agent install and uninstall", () => {
+  it("blocks CLI mutation commands unless explicit release authority flags are provided", () => {
+    for (const command of ["install", "uninstall"]) {
+      const result = spawnSync(process.execPath, ["scripts/full-local-launch-agent.mjs", command], {
+        cwd: process.cwd(),
+        encoding: "utf8",
+        env: {
+          ...process.env,
+          HOMECOOK_RELEASE_MANIFEST_PATH: "/tmp/ambient-release.json",
+          HOMECOOK_RELEASE_LOCK_TOKEN: "ambient-lock-token",
+        },
+      });
+
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain("--release-manifest");
+      expect(result.stderr).toContain("--lock-token");
+      expect(result.stderr).not.toContain("/tmp/ambient-release.json");
+      expect(result.stderr).not.toContain("ambient-lock-token");
+    }
+  });
+
   it("installs a mode 0600 plist, creates Homecook logs, and bootstraps the service", () => {
     const rootDir = createTempDirectory("full-local-launch-agent-root-");
     const homeDir = createTempDirectory("full-local-launch-agent-home-");

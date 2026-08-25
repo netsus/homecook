@@ -898,6 +898,28 @@ describe("YTASYNC-OPS launchd contract", () => {
     ).toThrow(/manual only/i);
   });
 
+  it("blocks install --execute unless explicit release authority flags are provided", () => {
+    const result = spawnSync(process.execPath, [
+      "scripts/youtube-extraction-worker-mac-production.mjs",
+      "install",
+      "--execute",
+    ], {
+      cwd: process.cwd(),
+      encoding: "utf8",
+      env: {
+        ...process.env,
+        HOMECOOK_RELEASE_MANIFEST_PATH: "/tmp/ambient-release.json",
+        HOMECOOK_RELEASE_LOCK_TOKEN: "ambient-lock-token",
+      },
+    });
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("--release-manifest");
+    expect(result.stderr).toContain("--lock-token");
+    expect(result.stderr).not.toContain("/tmp/ambient-release.json");
+    expect(result.stderr).not.toContain("ambient-lock-token");
+  });
+
   it("rejects a launchd root outside the attested artifact directory", () => {
     const privateDir = createTempDir("yta-worker-root-drift-");
     const configPath = join(privateDir, ".env.production.local");

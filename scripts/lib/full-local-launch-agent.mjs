@@ -139,7 +139,9 @@ export function parseFullLocalLaunchAgentArgs(
     configPath: resolve(cwd, "infra/full-local-supabase/.env.production.local"),
     homeDir: resolve(requireNonEmptyString(homeDir, "homeDir")),
     json: false,
+    lockToken: undefined,
     nodeBin: resolve(requireNonEmptyString(nodeBin, "nodeBin")),
+    releaseManifestPath: undefined,
     rootDir: resolve(cwd),
   };
 
@@ -162,8 +164,12 @@ export function parseFullLocalLaunchAgentArgs(
       options.configPath = resolve(cwd, value);
     } else if (token === "--home-dir") {
       options.homeDir = resolve(value);
+    } else if (token === "--lock-token") {
+      options.lockToken = value;
     } else if (token === "--node-bin") {
       options.nodeBin = resolve(value);
+    } else if (token === "--release-manifest") {
+      options.releaseManifestPath = resolve(value);
     } else if (token === "--root-dir") {
       options.rootDir = resolve(value);
     } else {

@@ -21,6 +21,7 @@ import {
   sha256File,
   verifyYoutubeExtractionWorkerArtifact,
 } from "./youtube-extraction-worker-artifact.mjs";
+import { readLocalMacProductionRepoHeadSha } from "./local-mac-production-release.mjs";
 
 export const LOCAL_MAC_PRODUCTION_LABEL = "com.homecook.production";
 export const DEFAULT_LOCAL_MAC_PRODUCTION_HOST = "127.0.0.1";
@@ -113,16 +114,7 @@ export function readLocalMacProductionReleaseSha({
   rootDir = process.cwd(),
   runCommand = spawnSync,
 } = {}) {
-  const result = runCommand("git", ["rev-parse", "HEAD"], {
-    cwd: resolve(rootDir),
-    encoding: "utf8",
-    stdio: ["ignore", "pipe", "pipe"],
-  });
-  const releaseSha = String(result.stdout ?? "").trim();
-  if (result.status !== 0 || !RELEASE_SHA_PATTERN.test(releaseSha)) {
-    throw new Error("Local Mac production release SHA could not be resolved.");
-  }
-  return releaseSha;
+  return readLocalMacProductionRepoHeadSha({ rootDir, runCommand });
 }
 
 /**
@@ -250,7 +242,9 @@ export function parseLocalMacProductionArgs(argv, {
     host: DEFAULT_LOCAL_MAC_PRODUCTION_HOST,
     nodeBin,
     port: DEFAULT_LOCAL_MAC_PRODUCTION_PORT,
+    releaseManifestPath: undefined,
     rootDir: cwd,
+    lockToken: undefined,
     sourcePath: undefined,
   };
 
@@ -273,6 +267,10 @@ export function parseLocalMacProductionArgs(argv, {
 
     if (arg === "--source-env") {
       options.sourcePath = resolve(value);
+    } else if (arg === "--release-manifest") {
+      options.releaseManifestPath = resolve(value);
+    } else if (arg === "--lock-token") {
+      options.lockToken = value;
     } else if (arg === "--node-bin") {
       options.nodeBin = resolve(value);
     } else if (arg === "--port") {

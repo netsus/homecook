@@ -9,6 +9,7 @@ import {
   uninstallLocalMacProductionLaunchAgent,
   waitForLocalMacProductionReady,
 } from "./lib/local-mac-production.mjs";
+import { validateLocalMacProductionMutationAuthority } from "./lib/local-mac-production-release.mjs";
 
 function printHelp() {
   process.stdout.write(`Usage:
@@ -40,6 +41,14 @@ try {
     printHelp();
     process.exit(0);
   }
+
+  validateLocalMacProductionMutationAuthority({
+    command: options.command,
+    homeDir: process.env.HOME ?? "",
+    lockToken: options.lockToken ?? null,
+    releaseManifestPath: options.releaseManifestPath ?? null,
+    rootDir: options.rootDir,
+  });
 
   if (options.command === "prepare-env") {
     const origin = `http://${options.host}:${options.port}`;

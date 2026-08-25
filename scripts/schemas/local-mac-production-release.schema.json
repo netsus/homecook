@@ -1,0 +1,96 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "homecook.local-mac-production-release.v1",
+  "title": "Homecook local Mac production release manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "promotion_id",
+    "release_tag",
+    "release_manifest_path",
+    "release_sha",
+    "release_tree",
+    "master_sha_at_approval",
+    "approved_at",
+    "approved_by_task_id",
+    "migration_head",
+    "build_id",
+    "backup_readiness_evidence",
+    "previous_release_sha",
+    "required_check_summary",
+    "attestation_digest",
+    "app_launch_agent_enabled",
+    "full_local_launch_agent_enabled",
+    "youtube_worker_launch_agent_enabled"
+  ],
+  "properties": {
+    "schema": {
+      "const": "homecook.local-mac-production-release.v1"
+    },
+    "promotion_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "release_tag": {
+      "type": "string",
+      "pattern": "^prod-\\d{8}\\.\\d+$"
+    },
+    "release_manifest_path": {
+      "type": "string",
+      "minLength": 1
+    },
+    "release_sha": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "release_tree": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "master_sha_at_approval": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "approved_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "approved_by_task_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "migration_head": {
+      "type": "string",
+      "minLength": 1
+    },
+    "build_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "backup_readiness_evidence": {
+      "type": "string",
+      "minLength": 1
+    },
+    "previous_release_sha": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "required_check_summary": {
+      "type": "object"
+    },
+    "attestation_digest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "app_launch_agent_enabled": {
+      "type": "boolean"
+    },
+    "full_local_launch_agent_enabled": {
+      "type": "boolean"
+    },
+    "youtube_worker_launch_agent_enabled": {
+      "type": "boolean"
+    }
+  }
+}

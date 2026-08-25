@@ -12,6 +12,8 @@
     "mac-production:status": "sh scripts/run-local-mac-production.sh status",
     "mac-production:restart": "sh scripts/run-local-mac-production.sh restart",
     "mac-production:uninstall": "sh scripts/run-local-mac-production.sh uninstall",
+    "release:production:plan": "node scripts/promote-local-mac-production-release.mjs plan",
+    "release:production:status": "node scripts/promote-local-mac-production-release.mjs status",
     "agent:plan-loop": "node scripts/agent-plan-loop.mjs",
     "agent:review-loop": "node scripts/agent-review-loop.mjs",
     "omo:start": "node scripts/omo-start.mjs",

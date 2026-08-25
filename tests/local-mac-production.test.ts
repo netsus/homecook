@@ -87,6 +87,28 @@ describe("local Mac production environment", () => {
     expect(result.port).toBe(3100);
   });
 
+  it("blocks direct mutation commands unless explicit release authority flags are provided", () => {
+    const commands = ["prepare-env", "install", "restart", "uninstall"];
+
+    for (const command of commands) {
+      const result = spawnSync(process.execPath, ["scripts/local-mac-production.mjs", command], {
+        cwd: process.cwd(),
+        encoding: "utf8",
+        env: {
+          ...process.env,
+          HOMECOOK_RELEASE_MANIFEST_PATH: "/tmp/ambient-release.json",
+          HOMECOOK_RELEASE_LOCK_TOKEN: "ambient-lock-token",
+        },
+      });
+
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain("--release-manifest");
+      expect(result.stderr).toContain("--lock-token");
+      expect(result.stderr).not.toContain("/tmp/ambient-release.json");
+      expect(result.stderr).not.toContain("ambient-lock-token");
+    }
+  });
+
   it("keeps production keys while removing development and unrelated credentials", () => {
     const result = createProductionEnvContents({
       sourceText: [
