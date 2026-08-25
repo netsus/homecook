@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import React from "react";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -138,6 +138,127 @@ describe("YT_IMPORT async extraction", () => {
     expect(syncApi.extractYoutubeRecipe).not.toHaveBeenCalled();
   });
 
+  it("shows honest queued progress, elapsed time and an estimated range after enqueue", async () => {
+    const submittedAt = new Date().toISOString();
+    vi.mocked(asyncApi.enqueueYoutubeExtraction).mockResolvedValue({
+      success: true,
+      data: {
+        job_id: "11111111-1111-4111-8111-111111111111",
+        status: "queued",
+        deduplicated: false,
+        submitted_at: submittedAt,
+      },
+      error: null,
+    });
+
+    const rendered = renderImport({ initialYoutubeUrl: youtubeUrl });
+
+    expect(await screen.findByText("작업을 준비하고 있어요")).toBeTruthy();
+    expect(screen.getByRole("progressbar", { name: "유튜브 레시피 추출 진행 상태" })
+      .getAttribute("aria-valuetext")).toBe("접수됨 · 분석 대기 중");
+    expect(screen.getByText(/\d+초 경과/u).getAttribute("aria-live")).toBe("off");
+    expect(rendered.container.querySelector("[data-youtube-extraction-accepted]")
+      ?.getAttribute("aria-live")).toBeNull();
+    expect(screen.getByText("예상 소요 시간 약 1~3분")).toBeTruthy();
+  });
+
+  it("uses the server submission time for a deduplicated active job", async () => {
+    const submittedAt = new Date(Date.now() - 120_000).toISOString();
+    vi.mocked(asyncApi.enqueueYoutubeExtraction).mockResolvedValue({
+      success: true,
+      data: {
+        job_id: "11111111-1111-4111-8111-111111111111",
+        status: "queued",
+        deduplicated: true,
+        submitted_at: submittedAt,
+      },
+      error: null,
+    });
+    vi.mocked(asyncApi.fetchYoutubeExtractionJob).mockResolvedValue({
+      success: true,
+      data: {
+        job_id: "11111111-1111-4111-8111-111111111111",
+        status: "queued",
+        submitted_at: submittedAt,
+        started_at: null,
+        completed_at: null,
+        result: null,
+        error: null,
+        can_retry: false,
+      },
+      error: null,
+    });
+
+    renderImport({ initialYoutubeUrl: youtubeUrl });
+
+    expect(await screen.findByText(/2분 0[0-1]초 경과/u)).toBeTruthy();
+  });
+
+  it("uses the server submission time for a fresh accepted job", async () => {
+    const submittedAt = new Date(Date.now() - 7_000).toISOString();
+    vi.mocked(asyncApi.enqueueYoutubeExtraction).mockResolvedValue({
+      success: true,
+      data: {
+        job_id: "11111111-1111-4111-8111-111111111111",
+        status: "queued",
+        deduplicated: false,
+        submitted_at: submittedAt,
+      },
+      error: null,
+    });
+    vi.mocked(asyncApi.fetchYoutubeExtractionJob).mockResolvedValue({
+      success: true,
+      data: {
+        job_id: "11111111-1111-4111-8111-111111111111",
+        status: "queued",
+        submitted_at: submittedAt,
+        started_at: null,
+        completed_at: null,
+        result: null,
+        error: null,
+        can_retry: false,
+      },
+      error: null,
+    });
+
+    renderImport({ initialYoutubeUrl: youtubeUrl });
+
+    expect(await screen.findByText(/7초 경과/u)).toBeTruthy();
+  });
+
+  it("updates the progress copy when the worker starts processing", async () => {
+    vi.mocked(asyncApi.enqueueYoutubeExtraction).mockResolvedValue({
+      success: true,
+      data: {
+        job_id: "11111111-1111-4111-8111-111111111111",
+        status: "queued",
+        deduplicated: false,
+        submitted_at: "2026-08-14T01:00:00.000Z",
+      },
+      error: null,
+    });
+    vi.mocked(asyncApi.fetchYoutubeExtractionJob).mockResolvedValue({
+      success: true,
+      data: {
+        job_id: "11111111-1111-4111-8111-111111111111",
+        status: "processing",
+        submitted_at: "2026-08-14T01:00:00.000Z",
+        started_at: "2026-08-14T01:00:01.000Z",
+        completed_at: null,
+        result: null,
+        error: null,
+        can_retry: false,
+      },
+      error: null,
+    });
+
+    renderImport({ initialYoutubeUrl: youtubeUrl });
+
+    expect(await screen.findByText("영상에서 레시피를 분석하고 있어요")).toBeTruthy();
+    expect(screen.getByRole("progressbar", { name: "유튜브 레시피 추출 진행 상태" })
+      .getAttribute("aria-valuetext")).toBe("영상 분석 중");
+  });
+
   it("keeps the standalone public importer out of planner context and returns home", async () => {
     const user = userEvent.setup();
     vi.mocked(asyncApi.enqueueYoutubeExtraction).mockResolvedValue({
@@ -189,7 +310,8 @@ describe("YT_IMPORT async extraction", () => {
     const leave = await screen.findByRole("button", { name: "나가기" });
     const jobs = screen.getByRole("button", { name: "작업 보기" });
     expect(leave.className).toContain("bg-[var(--wave1-mint-contrast)]");
-    expect(leave.style.color).toBe("var(--foreground)");
+    expect(leave.className).toContain("text-[var(--wave1-surface)]");
+    expect(leave.style.color).toBe("");
     expect(jobs.className).toContain("bg-[var(--wave1-surface-fill)]");
     expect(jobs.className).not.toContain("bg-[var(--wave1-mint-contrast)]");
   });
@@ -491,10 +613,55 @@ describe("YT_IMPORT async extraction", () => {
     expect(screen.queryByRole("button", { name: "다시 시도" })).toBeNull();
   });
 
+  it("stops polling after a terminal failed job", async () => {
+    const timeoutSpy = vi.spyOn(window, "setTimeout");
+    vi.mocked(asyncApi.enqueueYoutubeExtraction).mockResolvedValue({
+      success: true,
+      data: {
+        job_id: "11111111-1111-4111-8111-111111111111",
+        status: "queued",
+        deduplicated: false,
+        submitted_at: new Date().toISOString(),
+      },
+      error: null,
+    });
+    vi.mocked(asyncApi.fetchYoutubeExtractionJob).mockResolvedValue({
+      success: true,
+      data: {
+        job_id: "11111111-1111-4111-8111-111111111111",
+        status: "failed",
+        submitted_at: new Date().toISOString(),
+        started_at: new Date().toISOString(),
+        completed_at: new Date().toISOString(),
+        result: null,
+        error: {
+          code: "EXTRACTION_FAILED",
+          message: "추출을 완료하지 못했어요.",
+          retryable: true,
+        },
+        can_retry: true,
+      },
+      error: null,
+    });
+
+    renderImport({ initialYoutubeUrl: youtubeUrl });
+
+    expect(await screen.findByRole("button", { name: "다시 시도" })).toBeTruthy();
+    expect(timeoutSpy.mock.calls.some(([, delay]) => delay === 5000)).toBe(false);
+    timeoutSpy.mockRestore();
+  });
+
   it("tracks the new accepted retry job for exit and task-view active projection", async () => {
     const user = userEvent.setup();
     const firstJobId = "11111111-1111-4111-8111-111111111111";
     const retryJobId = "55555555-5555-4555-8555-555555555555";
+    const firstSubmittedAt = new Date(Date.now() - 120_000).toISOString();
+    const retrySubmittedAt = new Date().toISOString();
+    type JobResponse = Awaited<ReturnType<typeof asyncApi.fetchYoutubeExtractionJob>>;
+    let resolveFirstJob: ((value: JobResponse) => void) | null = null;
+    const firstJobResponse = new Promise<JobResponse>((resolve) => {
+      resolveFirstJob = resolve;
+    });
     const enqueued = vi.fn();
     window.addEventListener(YOUTUBE_EXTRACTION_JOB_ENQUEUED_EVENT, enqueued);
     vi.mocked(asyncApi.enqueueYoutubeExtraction)
@@ -503,8 +670,8 @@ describe("YT_IMPORT async extraction", () => {
         data: {
           job_id: firstJobId,
           status: "queued",
-          deduplicated: false,
-          submitted_at: "2026-08-14T01:00:00.000Z",
+          deduplicated: true,
+          submitted_at: firstSubmittedAt,
         },
         error: null,
       })
@@ -514,16 +681,34 @@ describe("YT_IMPORT async extraction", () => {
           job_id: retryJobId,
           status: "queued",
           deduplicated: false,
-          submitted_at: "2026-08-14T01:05:00.000Z",
+          submitted_at: retrySubmittedAt,
         },
         error: null,
       });
-    vi.mocked(asyncApi.fetchYoutubeExtractionJob).mockResolvedValue({
+    vi.mocked(asyncApi.fetchYoutubeExtractionJob)
+      .mockImplementation((jobId) => jobId === firstJobId ? firstJobResponse : Promise.resolve({
+        success: true,
+        data: {
+          job_id: retryJobId,
+          status: "queued",
+          submitted_at: retrySubmittedAt,
+          started_at: null,
+          completed_at: null,
+          result: null,
+          error: null,
+          can_retry: false,
+        },
+        error: null,
+      }));
+
+    const rendered = renderImport({ initialYoutubeUrl: youtubeUrl });
+    expect(await screen.findByText(/2분 0[0-1]초 경과/u)).toBeTruthy();
+    await act(async () => resolveFirstJob?.({
       success: true,
       data: {
         job_id: firstJobId,
         status: "failed",
-        submitted_at: "2026-08-14T01:00:00.000Z",
+        submitted_at: firstSubmittedAt,
         started_at: "2026-08-14T01:00:01.000Z",
         completed_at: "2026-08-14T01:03:00.000Z",
         result: null,
@@ -535,15 +720,19 @@ describe("YT_IMPORT async extraction", () => {
         can_retry: true,
       },
       error: null,
-    });
-
-    renderImport({ initialYoutubeUrl: youtubeUrl });
+    }));
     await user.click(await screen.findByRole("button", { name: "나중에 다시 시도" }));
 
-    expect(JSON.parse(
+    await waitFor(() => expect(JSON.parse(
       window.sessionStorage.getItem(YOUTUBE_EXTRACTION_JOBS_STORAGE_KEY) ?? "[]",
-    )).toEqual([firstJobId, retryJobId]);
+    )).toEqual([firstJobId, retryJobId]));
     expect(enqueued).toHaveBeenCalledTimes(2);
+    expect(asyncApi.enqueueYoutubeExtraction).toHaveBeenNthCalledWith(2, {
+      retry_job_id: firstJobId,
+    });
+    await waitFor(() => expect(
+      rendered.container.querySelector('span[aria-live="off"]')?.textContent,
+    ).toBe("0초 경과"));
     expect(screen.getByRole("button", { name: "나가기" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "작업 보기" })).toBeTruthy();
     window.removeEventListener(YOUTUBE_EXTRACTION_JOB_ENQUEUED_EVENT, enqueued);

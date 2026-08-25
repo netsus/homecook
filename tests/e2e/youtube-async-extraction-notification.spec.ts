@@ -217,6 +217,7 @@ async function installGrowthToastRoute(
 }
 
 async function installImportRoutes(page: Page, mode: ImportMode) {
+  const submittedAt = new Date().toISOString();
   await installNotificationRoutes(page, []);
   let releaseValidation = () => {};
   const validationGate = mode === "submitting"
@@ -290,7 +291,7 @@ async function installImportRoutes(page: Page, mode: ImportMode) {
           job_id: retry ? RETRY_JOB_ID : JOB_ID,
           status: "queued",
           deduplicated: mode === "duplicate",
-          submitted_at: "2026-08-14T01:00:00.000Z",
+          submitted_at: submittedAt,
         },
         error: null,
       },
@@ -305,7 +306,7 @@ async function installImportRoutes(page: Page, mode: ImportMode) {
         data: {
           job_id: JOB_ID,
           status: retryableFailure ? "failed" : plannerSuccess ? "succeeded" : "queued",
-          submitted_at: "2026-08-14T01:00:00.000Z",
+          submitted_at: submittedAt,
           started_at: retryableFailure || plannerSuccess ? "2026-08-14T01:00:01.000Z" : null,
           completed_at: retryableFailure || plannerSuccess ? "2026-08-14T01:03:00.000Z" : null,
           result: plannerSuccess ? {
@@ -332,7 +333,7 @@ async function installImportRoutes(page: Page, mode: ImportMode) {
         data: {
           job_id: RETRY_JOB_ID,
           status: "queued",
-          submitted_at: "2026-08-14T01:05:00.000Z",
+          submitted_at: submittedAt,
           started_at: null,
           completed_at: null,
           result: null,
@@ -683,7 +684,8 @@ test("async enqueue is immediately escapable and visually stable at 390", async 
   const leave = page.getByRole("button", { name: "나가기" });
   const jobs = page.getByRole("button", { name: "작업 보기" });
   await expect(leave).toHaveClass(/bg-\[var\(--wave1-mint-contrast\)\]/);
-  await expect(leave).toHaveAttribute("style", /color: var\(--foreground\)/);
+  await expect(leave).toHaveClass(/text-\[var\(--wave1-surface\)\]/);
+  await expect(leave).not.toHaveAttribute("style", /color/u);
   await expect(jobs).toHaveClass(/bg-\[var\(--wave1-surface-fill\)\]/);
   const [bellBox, backBox] = await Promise.all([
     page.locator("[data-youtube-extraction-trigger='global']").boundingBox(),
