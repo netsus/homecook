@@ -21,6 +21,7 @@ const JOB_ID = "11111111-1111-4111-8111-111111111111";
 const RETRY_JOB_ID = "44444444-4444-4444-8444-444444444444";
 const EXTRACTION_ID = "22222222-2222-4222-8222-222222222222";
 const THUMBNAIL = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='320' height='180'%3E%3Crect width='320' height='180' fill='%23dff5ff'/%3E%3Ctext x='160' y='98' text-anchor='middle' font-size='64'%3E🍲%3C/text%3E%3C/svg%3E";
+const REVIEW_PATH = `/menu/add/youtube?extractionId=${EXTRACTION_ID}&youtubeUrl=${encodeURIComponent(YOUTUBE_URL)}`;
 
 type ImportMode =
   | "accepted"
@@ -69,7 +70,7 @@ function notificationItem({
     result: status === "succeeded"
       ? {
           extraction_id: EXTRACTION_ID,
-          review_path: consumed ? null : `/menu/add/youtube?extractionId=${EXTRACTION_ID}`,
+          review_path: consumed ? null : REVIEW_PATH,
           recipe_id: consumed ? "recipe-potato-soup" : null,
           recipe_path: consumed ? "/recipes/recipe-potato-soup" : null,
         }
@@ -309,7 +310,7 @@ async function installImportRoutes(page: Page, mode: ImportMode) {
           completed_at: retryableFailure || plannerSuccess ? "2026-08-14T01:03:00.000Z" : null,
           result: plannerSuccess ? {
             extraction_id: EXTRACTION_ID,
-            review_path: `/menu/add/youtube?extractionId=${EXTRACTION_ID}`,
+            review_path: REVIEW_PATH,
             recipe_id: null,
             recipe_path: null,
           } : null,
@@ -428,7 +429,7 @@ async function openImport(
       ? "/recipes/new/youtube"
       : `/recipes/new/youtube?youtubeUrl=${encodeURIComponent(YOUTUBE_URL)}`
     : mode === "review"
-    ? `/menu/add/youtube?extractionId=${EXTRACTION_ID}`
+    ? REVIEW_PATH
     : mode === "initial" || mode === "submitting"
       ? "/menu/add/youtube"
       : `/menu/add/youtube?youtubeUrl=${encodeURIComponent(YOUTUBE_URL)}`;
@@ -921,7 +922,7 @@ test("real reload and logout-login restore badge list and exact destination", as
   const destination = page.getByTestId("youtube-notification-list").getByRole("link", { name: "결과 확인" });
   await expect(destination).toHaveAttribute(
     "href",
-    `/menu/add/youtube?extractionId=${EXTRACTION_ID}`,
+    REVIEW_PATH,
   );
   await captureEvidence(page, testInfo, path.join(SHELL_EVIDENCE, "mobile-390-relogin-recovery.png"));
   await destination.click();

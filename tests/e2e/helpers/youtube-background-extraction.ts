@@ -1,6 +1,7 @@
 import type { Page } from "@playwright/test";
 
 const JOB_ID = "11111111-1111-4111-8111-111111111111";
+const YOUTUBE_URL = "https://www.youtube.com/watch?v=abcdefghijk";
 
 export async function installEmptyYoutubeNotificationRoutes(page: Page) {
   await page.route(
@@ -76,7 +77,7 @@ export async function installCompletedYoutubeExtractionRoutes(
               ? null
               : {
                   extraction_id: draft.extraction_id,
-                  review_path: `/menu/add/youtube?extractionId=${encodeURIComponent(draft.extraction_id)}`,
+                  review_path: `/menu/add/youtube?extractionId=${encodeURIComponent(draft.extraction_id)}&youtubeUrl=${encodeURIComponent(YOUTUBE_URL)}`,
                   recipe_id: null,
                   recipe_path: null,
                 },

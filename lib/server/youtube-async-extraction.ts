@@ -1,6 +1,6 @@
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 
-import { normalizeYoutubeUrl } from "@/lib/youtube-url";
+import { buildCanonicalYoutubeUrl, normalizeYoutubeUrl } from "@/lib/youtube-url";
 
 type RuntimeEnv = Readonly<Record<string, string | undefined>>;
 
@@ -210,6 +210,7 @@ interface ExtractionSessionProjectionRow {
 export interface YoutubeExtractionJobProjectionRow {
   id: string;
   status: "queued" | "processing" | "succeeded" | "failed";
+  youtube_video_id: string;
   created_at: string;
   started_at: string | null;
   completed_at: string | null;
@@ -247,7 +248,10 @@ export function projectYoutubeExtractionJob(
   const result = row.status === "succeeded" && !expired && session
     ? {
         extraction_id: session.id,
-        review_path: consumed ? null : `/menu/add/youtube?extractionId=${session.id}`,
+        review_path: consumed
+          ? null
+          : `/menu/add/youtube?extractionId=${session.id}`
+            + `&youtubeUrl=${encodeURIComponent(buildCanonicalYoutubeUrl(row.youtube_video_id))}`,
         recipe_id: consumed ? session.recipe_id : null,
         recipe_path: consumed ? `/recipes/${session.recipe_id}` : null,
       }

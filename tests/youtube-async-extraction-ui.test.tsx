@@ -38,6 +38,7 @@ vi.mock("@/lib/api/youtube-import", () => ({
 }));
 
 const youtubeUrl = "https://www.youtube.com/watch?v=abcdefghijk";
+const encodedYoutubeUrl = encodeURIComponent(youtubeUrl);
 
 function renderImport(props: {
   columnId?: string;
@@ -329,7 +330,7 @@ describe("YT_IMPORT async extraction", () => {
         completed_at: "2026-08-14T01:02:00.000Z",
         result: {
           extraction_id: "extraction-ready",
-          review_path: "/menu/add/youtube?extractionId=extraction-ready",
+          review_path: `/menu/add/youtube?extractionId=extraction-ready&youtubeUrl=${encodedYoutubeUrl}`,
           recipe_id: null,
           recipe_path: null,
         },
@@ -343,7 +344,7 @@ describe("YT_IMPORT async extraction", () => {
 
     await waitFor(() => {
       expect(routerReplace).toHaveBeenCalledWith(
-        "/menu/add/youtube?extractionId=extraction-ready",
+        `/menu/add/youtube?extractionId=extraction-ready&youtubeUrl=${encodedYoutubeUrl}`,
       );
     });
   });
@@ -369,7 +370,7 @@ describe("YT_IMPORT async extraction", () => {
         completed_at: "2026-08-14T01:02:00.000Z",
         result: {
           extraction_id: "extraction-ready",
-          review_path: "/menu/add/youtube?extractionId=extraction-ready",
+          review_path: `/menu/add/youtube?extractionId=extraction-ready&youtubeUrl=${encodedYoutubeUrl}`,
           recipe_id: null,
           recipe_path: null,
         },
@@ -388,7 +389,7 @@ describe("YT_IMPORT async extraction", () => {
 
     await waitFor(() => {
       expect(routerReplace).toHaveBeenCalledWith(
-        "/menu/add/youtube?extractionId=extraction-ready&date=2026-08-21&columnId=dinner-column&slot=dinner",
+        `/menu/add/youtube?extractionId=extraction-ready&youtubeUrl=${encodedYoutubeUrl}&date=2026-08-21&columnId=dinner-column&slot=dinner`,
       );
     });
   });
