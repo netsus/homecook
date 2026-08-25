@@ -29,6 +29,7 @@ describe("full-local production runtime release authority", () => {
       );
 
       expect(result.status).toBe(1);
+      expect(result.stderr).toContain(command);
       expect(result.stderr).toContain("--release-manifest");
       expect(result.stderr).toContain("--lock-token");
       expect(result.stderr).not.toContain("/tmp/ambient-release.json");

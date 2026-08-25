@@ -312,6 +312,7 @@ function validateFullLocalProductionMutationAuthority(command, args) {
 
   validateLocalMacProductionMutationAuthority({
     command: "install",
+    commandLabel: command,
     homeDir: process.env.HOME ?? homedir(),
     lockToken: optionValue(args, "--lock-token"),
     releaseManifestPath: optionValue(args, "--release-manifest"),

@@ -360,6 +360,7 @@ export function getLocalMacProductionReleaseStatus({
 /**
  * @param {{
  *   command: string,
+ *   commandLabel?: string,
  *   rootDir?: string,
  *   homeDir?: string,
  *   releaseManifestPath?: string | null,
@@ -370,6 +371,7 @@ export function getLocalMacProductionReleaseStatus({
  */
 export function validateLocalMacProductionMutationAuthority({
   command,
+  commandLabel = command,
   rootDir = process.cwd(),
   homeDir = process.env.HOME ?? "",
   releaseManifestPath = null,
@@ -390,7 +392,7 @@ export function validateLocalMacProductionMutationAuthority({
   );
   if (!releaseManifestPath || !lockToken) {
     throw new Error(
-      `Local Mac production command "${command}" requires --release-manifest <path> `
+      `Local Mac production command "${commandLabel}" requires --release-manifest <path> `
       + `and --lock-token <token>. Ambient environment variables are ignored.`,
     );
   }
@@ -423,7 +425,7 @@ export function validateLocalMacProductionMutationAuthority({
   }
 
   return {
-    command,
+    command: commandLabel,
     ignoredAmbientAuthority,
     lock: sanitizeLockHolder(lockRecord),
     manifest,
