@@ -14,6 +14,13 @@ import {
   validateProductionDataQuality,
 } from "./production-data-quality.mjs";
 import { ensureDockerRunning } from "./local-docker.mjs";
+import {
+  ensureRegularFile,
+  readYoutubeExtractionAppDescriptor,
+  readYoutubeExtractionExpectedSchema,
+  sha256File,
+  verifyYoutubeExtractionWorkerArtifact,
+} from "./youtube-extraction-worker-artifact.mjs";
 
 export const LOCAL_MAC_PRODUCTION_LABEL = "com.homecook.production";
 export const DEFAULT_LOCAL_MAC_PRODUCTION_HOST = "127.0.0.1";
@@ -89,6 +96,86 @@ function ensureNonEmptyString(value, label) {
   }
 
   return value.trim();
+}
+
+const RELEASE_SHA_PATTERN = /^[0-9a-f]{40}$/u;
+
+function readReleaseShaClaim(path, label) {
+  try {
+    const value = JSON.parse(readFileSync(path, "utf8"));
+    return value?.release_sha;
+  } catch {
+    throw new Error(`${label} is unreadable or invalid.`);
+  }
+}
+
+export function readLocalMacProductionReleaseSha({
+  rootDir = process.cwd(),
+  runCommand = spawnSync,
+} = {}) {
+  const result = runCommand("git", ["rev-parse", "HEAD"], {
+    cwd: resolve(rootDir),
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  const releaseSha = String(result.stdout ?? "").trim();
+  if (result.status !== 0 || !RELEASE_SHA_PATTERN.test(releaseSha)) {
+    throw new Error("Local Mac production release SHA could not be resolved.");
+  }
+  return releaseSha;
+}
+
+/**
+ * @param {{ env?: NodeJS.ProcessEnv, releaseSha?: string }} [options]
+ */
+export function verifyYoutubeExtractionAppReleaseAlignment({
+  env = process.env,
+  releaseSha,
+} = {}) {
+  if (env.HOMECOOK_ENABLE_YOUTUBE_ASYNC_EXTRACTION !== "1") {
+    return { enabled: false, releaseSha: null };
+  }
+  const normalizedReleaseSha = ensureNonEmptyString(releaseSha, "releaseSha");
+  if (!RELEASE_SHA_PATTERN.test(normalizedReleaseSha)) {
+    throw new Error("Local Mac production release SHA is invalid.");
+  }
+  const descriptorPath = ensureRegularFile(
+    env.HOMECOOK_YOUTUBE_EXTRACTION_APP_DESCRIPTOR_PATH,
+    "YouTube extraction app descriptor",
+  );
+  const manifestPath = ensureRegularFile(
+    env.HOMECOOK_YOUTUBE_EXTRACTION_WORKER_MANIFEST_PATH,
+    "YouTube extraction worker manifest",
+  );
+  const expectedSchemaPath = ensureRegularFile(
+    env.HOMECOOK_YOUTUBE_EXTRACTION_EXPECTED_SCHEMA_PATH,
+    "YouTube extraction expected schema manifest",
+  );
+  if (
+    readReleaseShaClaim(descriptorPath, "YouTube extraction app descriptor")
+      !== normalizedReleaseSha
+    || readReleaseShaClaim(manifestPath, "YouTube extraction worker manifest")
+      !== normalizedReleaseSha
+  ) {
+    throw new Error("YouTube extraction app release mismatch; refusing LaunchAgent install.");
+  }
+  const descriptor = readYoutubeExtractionAppDescriptor(descriptorPath);
+  const manifest = verifyYoutubeExtractionWorkerArtifact(manifestPath);
+  const expectedSchema = readYoutubeExtractionExpectedSchema(expectedSchemaPath);
+  const expectedSchemaSha = sha256File(expectedSchemaPath);
+  if (
+    descriptor.release_sha !== normalizedReleaseSha
+    || manifest.release_sha !== normalizedReleaseSha
+    || descriptor.release_sha !== manifest.release_sha
+    || descriptor.artifact_sha256 !== manifest.artifact_sha256
+    || descriptor.expected_schema_sha256 !== expectedSchemaSha
+    || manifest.expected_schema_sha256 !== expectedSchemaSha
+    || descriptor.schema_identity !== manifest.schema_identity
+    || expectedSchema.schema_identity !== manifest.schema_identity
+  ) {
+    throw new Error("YouTube extraction app release mismatch; refusing LaunchAgent install.");
+  }
+  return { enabled: true, releaseSha: normalizedReleaseSha };
 }
 
 function ensureLocalOnlyHost(host) {
@@ -732,17 +819,26 @@ export async function activateLocalMacProduction({
   nodeBin = process.execPath,
   host = DEFAULT_LOCAL_MAC_PRODUCTION_HOST,
   port = DEFAULT_LOCAL_MAC_PRODUCTION_PORT,
+  env = process.env,
   loadEnvFiles = loadProductionEnvFiles,
+  readReleaseSha = readLocalMacProductionReleaseSha,
+  verifyYoutubeRelease = verifyYoutubeExtractionAppReleaseAlignment,
   validateDataQuality = validateProductionDataQuality,
   installLaunchAgent = installLocalMacProductionLaunchAgent,
   waitForReady = waitForLocalMacProductionReady,
   uninstallLaunchAgent = uninstallLocalMacProductionLaunchAgent,
 } = {}) {
   loadEnvFiles({ rootDir });
+  if (env.HOMECOOK_ENABLE_YOUTUBE_ASYNC_EXTRACTION === "1") {
+    verifyYoutubeRelease({
+      env,
+      releaseSha: readReleaseSha({ rootDir }),
+    });
+  }
   const validation = await validateDataQuality({
     rootDir,
     env: {
-      ...process.env,
+      ...env,
       NODE_ENV: "production",
       HOMECOOK_VALIDATE_PRODUCTION_DATA: "1",
     },

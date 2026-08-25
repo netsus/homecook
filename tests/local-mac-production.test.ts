@@ -15,6 +15,7 @@ import {
   startLocalMacProductionRuntime,
   verifyFullLocalProductionRuntimeStatus,
   verifyLocalMacProductionPrerequisites,
+  verifyYoutubeExtractionAppReleaseAlignment,
   waitForLocalMacProductionReady,
 } from "../scripts/lib/local-mac-production.mjs";
 import { relayChildLifecycle } from "../scripts/lib/process-signal-relay.mjs";
@@ -355,6 +356,98 @@ describe("local Mac production launch agent", () => {
 
     expect(installCalled).toBe(false);
     expect(validatedRootDir).toBe("/Users/tester/homecook");
+  });
+
+  it("blocks activation before launchd install when YouTube release evidence is stale", async () => {
+    const rootDir = mkdtempSync(join(tmpdir(), "homecook-youtube-release-preflight-"));
+    tempDirs.push(rootDir);
+    const descriptorPath = join(rootDir, "app-descriptor.json");
+    const manifestPath = join(rootDir, "worker-artifact.json");
+    const expectedSchemaPath = join(rootDir, "expected-schema.json");
+    writeFileSync(descriptorPath, JSON.stringify({
+      release_sha: "a".repeat(40),
+      artifact_sha256: "c".repeat(64),
+    }));
+    writeFileSync(manifestPath, JSON.stringify({
+      release_sha: "a".repeat(40),
+      artifact_sha256: "c".repeat(64),
+    }));
+    writeFileSync(expectedSchemaPath, "{}");
+    let installCalled = false;
+
+    await expect(activateLocalMacProduction({
+      rootDir,
+      env: {
+        ...process.env,
+        HOMECOOK_ENABLE_YOUTUBE_ASYNC_EXTRACTION: "1",
+        HOMECOOK_YOUTUBE_EXTRACTION_APP_DESCRIPTOR_PATH: descriptorPath,
+        HOMECOOK_YOUTUBE_EXTRACTION_EXPECTED_SCHEMA_PATH: expectedSchemaPath,
+        HOMECOOK_YOUTUBE_EXTRACTION_WORKER_MANIFEST_PATH: manifestPath,
+      },
+      loadEnvFiles: () => [],
+      readReleaseSha: () => "b".repeat(40),
+      validateDataQuality: async () => ({
+        ok: true,
+        errors: [],
+        warnings: [],
+        db: {
+          skipped: false,
+          skipReason: null,
+          findingCount: 0,
+        },
+      }),
+      installLaunchAgent: () => {
+        installCalled = true;
+        return {
+          changed: true,
+          label: "com.homecook.production",
+          plistPath: "/Users/tester/Library/LaunchAgents/com.homecook.production.plist",
+          stdoutPath: "/Users/tester/.homecook/logs/homecook-production.out.log",
+          stderrPath: "/Users/tester/.homecook/logs/homecook-production.err.log",
+          host: "127.0.0.1",
+          port: 3100,
+        };
+      },
+      waitForReady: async () => ({ status: 200, attempts: 1 }),
+    })).rejects.toThrow("YouTube extraction app release mismatch");
+
+    expect(installCalled).toBe(false);
+  });
+
+  it("rejects self-reported matching YouTube evidence without a verified artifact", () => {
+    const rootDir = mkdtempSync(join(tmpdir(), "homecook-youtube-forged-evidence-"));
+    tempDirs.push(rootDir);
+    const releaseSha = "b".repeat(40);
+    const artifactSha = "c".repeat(64);
+    const schemaSha = "d".repeat(64);
+    const descriptorPath = join(rootDir, "app-descriptor.json");
+    const manifestPath = join(rootDir, "worker-artifact.json");
+    const expectedSchemaPath = join(rootDir, "expected-schema.json");
+    writeFileSync(descriptorPath, JSON.stringify({
+      schema: "homecook.youtube-extraction-app-descriptor",
+      release_sha: releaseSha,
+      schema_identity: "youtube-extraction-worker-schema-v1",
+      artifact_sha256: artifactSha,
+      expected_schema_sha256: schemaSha,
+    }));
+    writeFileSync(manifestPath, JSON.stringify({
+      release_sha: releaseSha,
+      schema_identity: "youtube-extraction-worker-schema-v1",
+      artifact_sha256: artifactSha,
+      expected_schema_sha256: schemaSha,
+    }));
+    writeFileSync(expectedSchemaPath, "{}");
+
+    expect(() => verifyYoutubeExtractionAppReleaseAlignment({
+      env: {
+        ...process.env,
+        HOMECOOK_ENABLE_YOUTUBE_ASYNC_EXTRACTION: "1",
+        HOMECOOK_YOUTUBE_EXTRACTION_APP_DESCRIPTOR_PATH: descriptorPath,
+        HOMECOOK_YOUTUBE_EXTRACTION_EXPECTED_SCHEMA_PATH: expectedSchemaPath,
+        HOMECOOK_YOUTUBE_EXTRACTION_WORKER_MANIFEST_PATH: manifestPath,
+      },
+      releaseSha,
+    })).toThrow("worker artifact");
   });
 
   it("removes a partial launchd install when HTTP readiness fails", async () => {
