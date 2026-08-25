@@ -103,7 +103,9 @@ post-deploy evidence 단계다.
 
 - app, full-local, worker가 같은 SHA/tree/build ID를 보고 있는지 확인한다.
 - local-only Supabase, Docker, auth, JWKS, volume identity, migration head를 재확인한다.
-- repository-managed verification이 failure를 보면 previous release로 되돌리고 이유를 남긴다.
+- repository-managed verification이 failure를 보면 먼저 migration compatibility gate와 rollback plan 유무를 확인한다.
+- migration compatibility gate가 없으면 previous release로 자동 rollback 하지 않고 forward-fix 또는 operator review로 전환한다.
+- rollback은 migration compatibility gate가 명시된 경우에만 수행한다.
 
 ### 5. reboot-verify
 
