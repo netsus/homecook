@@ -30,6 +30,13 @@ describe("release promotion governance docs", () => {
     expect(releaseRunbook).toContain("prod-*");
     expect(releaseRunbook).toContain("production-changing command");
     expect(releaseRunbook).toContain("FileVault");
+    expect(releaseRunbook).toContain("app`, `full-local`, `YouTube worker`");
+    expect(releaseRunbook).toContain("same-user direct shell access");
+    expect(releaseRunbook).toContain("release_manifest_path");
+    expect(releaseRunbook).toContain("release_lock_mode: read | write | none");
+    expect(releaseRunbook).toContain("expected_running_release_sha");
+    expect(releaseRunbook).toContain("tag + attestation");
+    expect(releaseRunbook).toContain("build / install / restart / uninstall / db reset");
 
     expect(gitWorkflow).toContain("`master` merge는 통합 evidence다. production deployment approval은 아니다.");
     expect(gitWorkflow).toContain("prod-*");
@@ -40,6 +47,11 @@ describe("release promotion governance docs", () => {
 
     expect(handoff).toContain("production_mutation: false | release-promoter");
     expect(handoff).toContain("approved_release_sha: <full SHA or N/A>");
+    expect(handoff).toContain("approved_release_tag: <prod tag or N/A>");
+    expect(handoff).toContain("promotion_id: <id or N/A>");
+    expect(handoff).toContain("release_lock_mode: read | write | none");
     expect(handoff).toContain("operator_approval_attestation: <artifact reference or N/A>");
+    expect(handoff).toContain("expected_running_release_sha: <full SHA or N/A>");
+    expect(handoff).toContain("release_manifest_path: <path or N/A>");
   });
 });
