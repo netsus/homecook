@@ -65,6 +65,7 @@ Homecook `<slice>`의 `<stage/role>`을 수행한다.
 - approved_release_sha: <full SHA or N/A>
 - approved_release_tag: <prod tag or N/A>
 - promotion_id: <id or N/A>
+- release_manifest_path: <path or N/A>
 - release_lock_mode: read | write | none
 - operator_approval_attestation: <artifact reference or N/A>
 - expected_running_release_sha: <full SHA or N/A>

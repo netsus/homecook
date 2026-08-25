@@ -7,6 +7,7 @@
 이 문서는 Homecook 서버 Mac production release를 어떻게 승인하고, 어떤 작업만 승격 authority가 수행할 수 있는지 정의한다.
 `master` merge는 통합 evidence일 뿐 release approval이 아니다.
 release 승격은 항상 exact SHA, annotated `prod-*` tag, release manifest, attestation이 모두 일치할 때만 가능하다.
+즉, tag + attestation + manifest가 함께 맞아야 한다.
 
 ## 핵심 원칙
 
@@ -121,6 +122,7 @@ manifest는 non-secret이며 only approved release evidence를 담는다.
 - `schema`
 - `promotion_id`
 - `release_tag`
+- `release_manifest_path`
 - `release_sha`
 - `release_tree`
 - `master_sha_at_approval`
@@ -147,6 +149,7 @@ production_mutation: false | release-promoter
 approved_release_sha: <full SHA or N/A>
 approved_release_tag: <prod tag or N/A>
 promotion_id: <id or N/A>
+release_manifest_path: <path or N/A>
 release_lock_mode: read | write | none
 operator_approval_attestation: <artifact reference or N/A>
 expected_running_release_sha: <full SHA or N/A>
@@ -193,6 +196,7 @@ PR merge만으로 ruleset activation을 주장하지 않는다.
 
 위 절차는 새 머신 bootstrap, disposable isolated rehearsal, 또는 future promotion flow의 prepare-only 참고다.
 운영 중인 서버 Mac의 active release에는 canonical promotion command만 쓴다.
+legacy build / install / restart / uninstall / db reset은 active-server release가 아니라 bootstrap/rehearsal 전용이다.
 
 ## Canonical references
 
