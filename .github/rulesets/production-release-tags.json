@@ -1,0 +1,23 @@
+{
+  "schema": "homecook.github.repository-ruleset.v1",
+  "name": "production-release-tags",
+  "target": "tag",
+  "enforcement": "active",
+  "conditions": {
+    "ref_name": {
+      "include": ["refs/tags/prod-*"]
+    }
+  },
+  "rules": {
+    "restrict_creations": true,
+    "restrict_deletions": true,
+    "restrict_non_fast_forward_updates": true
+  },
+  "bypass_actors": [
+    {
+      "actor_type": "Integration",
+      "actor_id": "github-app/homecook-release-attestation",
+      "mode": "always"
+    }
+  ]
+}

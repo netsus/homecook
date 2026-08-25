@@ -56,6 +56,9 @@ jobs:
       - name: Validate source of truth sync
         run: node scripts/validate-source-of-truth-sync.mjs
 
+      - name: Validate production release ruleset desired state
+        run: node scripts/manage-production-release-rulesets.mjs verify
+
       - name: Validate OMO bookkeeping invariants
         env:
           BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
