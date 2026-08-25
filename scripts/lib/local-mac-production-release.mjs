@@ -661,6 +661,7 @@ export function acquireLocalMacProductionPromotionLock({
 export function getLocalMacProductionReleaseStatus({
   homeDir = process.env.HOME ?? "",
   manifestPath = null,
+  currentHeadSha = null,
   currentBootSessionId = "unknown",
   isProcessRunning = (pid) => {
     if (!Number.isInteger(pid)) {
@@ -703,8 +704,12 @@ export function getLocalMacProductionReleaseStatus({
       rootDir,
     })
     : null;
+  const normalizedCurrentHeadSha = currentHeadSha === null
+    ? null
+    : requireReleaseSha(currentHeadSha, "currentHeadSha");
 
   return {
+    current_head_sha: normalizedCurrentHeadSha,
     lock: {
       corrupt: lockState.corrupt,
       holder,

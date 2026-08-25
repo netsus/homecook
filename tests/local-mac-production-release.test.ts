@@ -305,6 +305,19 @@ describe("local Mac production promotion lock", () => {
     expect(status.lock.corrupt).toBe(true);
     expect(status.lock.holder).toBeNull();
   });
+
+  it("returns the resolved current origin/master head in status output when provided", () => {
+    const currentHeadSha = "f".repeat(40);
+
+    const status = getLocalMacProductionReleaseStatus({
+      currentHeadSha,
+      homeDir: createTempDirectory("homecook-release-status-head-home-"),
+      manifestPath: null,
+      currentBootSessionId: "boot-session-a",
+    });
+
+    expect(status.current_head_sha).toBe(currentHeadSha);
+  });
 });
 
 describe("local Mac production mutation authority", () => {

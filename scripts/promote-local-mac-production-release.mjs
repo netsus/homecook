@@ -8,9 +8,15 @@ import {
 function printHelp() {
   process.stdout.write(`Usage:
   node scripts/promote-local-mac-production-release.mjs plan --release-manifest <path> [--home-dir <path>] [--root-dir <path>] [--json]
+  node scripts/promote-local-mac-production-release.mjs prepare --release-manifest <path> [--home-dir <path>] [--root-dir <path>] [--json]
+  node scripts/promote-local-mac-production-release.mjs promote --release-manifest <path> [--home-dir <path>] [--root-dir <path>] [--json]
   node scripts/promote-local-mac-production-release.mjs status [--release-manifest <path>] [--home-dir <path>] [--root-dir <path>] [--json]
+  node scripts/promote-local-mac-production-release.mjs verify --release-manifest <path> [--home-dir <path>] [--root-dir <path>] [--json]
 
-Both commands are read-only. They validate the exact approved release identity and report the current production promotion lock.
+Currently implemented in this stage: plan, status
+Currently blocked fail-closed in this stage: prepare, promote, verify
+
+The blocked commands intentionally refuse to run until the release-promoter mutation path is implemented.
 `);
 }
 
@@ -72,6 +78,19 @@ function printResult(result, json) {
   process.stdout.write(`stale_candidate: ${result.lock.staleCandidate ? "yes" : "no"}\n`);
 }
 
+function isBlockedStageCommand(command) {
+  return ["prepare", "promote", "verify"].includes(command);
+}
+
+function assertSupportedStageCommand(command) {
+  if (isBlockedStageCommand(command)) {
+    throw new Error(
+      `Command "${command}" is currently blocked fail-closed in this stage. `
+      + "Use plan/status only until the release-promoter mutation path is implemented.",
+    );
+  }
+}
+
 try {
   const options = parseArgs(process.argv.slice(2));
 
@@ -80,11 +99,15 @@ try {
     process.exit(0);
   }
 
+  if (isBlockedStageCommand(options.command)) {
+    assertSupportedStageCommand(options.command);
+  }
+
   if (options.command === "plan" && !options.releaseManifestPath) {
     throw new Error("plan requires --release-manifest <path>.");
   }
 
-  if (!["plan", "status"].includes(options.command)) {
+  if (!["plan", "prepare", "promote", "status", "verify"].includes(options.command)) {
     throw new Error(`Unknown command: ${options.command}`);
   }
 

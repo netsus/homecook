@@ -17,6 +17,9 @@ describe("release promotion governance docs", () => {
     const gitWorkflow = read("docs/engineering/git-workflow.md");
     const agentWorkflow = read("docs/engineering/agent-workflow-overview.md");
     const handoff = read("docs/engineering/codex-task-handoff.md");
+    const packageJson = JSON.parse(read("package.json")) as {
+      scripts?: Record<string, string>;
+    };
 
     expect(agents).toContain("docs/engineering/local-mac-production-release-promotion.md");
     expect(agents).toContain("`master` merge는 통합 evidence일 뿐 deployment approval이 아니다.");
@@ -56,5 +59,11 @@ describe("release promotion governance docs", () => {
     expect(handoff).toContain("operator_approval_attestation: <artifact reference or N/A>");
     expect(handoff).toContain("expected_running_release_sha: <full SHA or N/A>");
     expect(handoff).toContain("release_manifest_path: <path or N/A>");
+
+    expect(packageJson.scripts?.["release:production:plan"]).toBeTruthy();
+    expect(packageJson.scripts?.["release:production:prepare"]).toBeTruthy();
+    expect(packageJson.scripts?.["release:production:promote"]).toBeTruthy();
+    expect(packageJson.scripts?.["release:production:status"]).toBeTruthy();
+    expect(packageJson.scripts?.["release:production:verify"]).toBeTruthy();
   });
 });
