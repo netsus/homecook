@@ -29,6 +29,7 @@ import {
   generateFullLocalSecretBundle,
   materializeFullLocalSecrets,
   parseFullLocalProductCatalogSqlOutput,
+  renderFullLocalProductionConfigTemplate,
   summarizeFullLocalRuntimeStates,
   selectNewlyStartedFullLocalWriterServices,
   validateExternalSecretDirectory,
@@ -596,9 +597,10 @@ function initializeConfig(args) {
   if (existsSync(target) && !hasFlag(args, "--replace")) {
     fail(`Full-local config already exists: ${target}`);
   }
-  const home = homedir().replaceAll("\\", "\\\\");
-  const contents = readFileSync(CONFIG_EXAMPLE, "utf8")
-    .replace("/Users/REPLACE_ME", home);
+  const contents = renderFullLocalProductionConfigTemplate(
+    readFileSync(CONFIG_EXAMPLE, "utf8"),
+    homedir(),
+  );
   writeFileSync(target, contents, { encoding: "utf8", mode: 0o600 });
   chmodSync(target, 0o600);
   return target;

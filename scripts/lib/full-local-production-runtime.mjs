@@ -81,6 +81,13 @@ export const FULL_LOCAL_SECRET_NAMES = Object.freeze([
   "session_generation_hmac_key_v2",
 ]);
 
+export function renderFullLocalProductionConfigTemplate(template, homeDirectory) {
+  return template.replaceAll(
+    "/Users/REPLACE_ME",
+    () => homeDirectory,
+  );
+}
+
 function canonicalPath(path) {
   const suffix = [];
   let ancestor = resolve(path);

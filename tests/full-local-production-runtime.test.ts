@@ -29,6 +29,7 @@ import {
   generateFullLocalSecretBundle,
   materializeFullLocalSecrets,
   parseFullLocalProductCatalogSqlOutput,
+  renderFullLocalProductionConfigTemplate,
   selectNewlyStartedFullLocalWriterServices,
   summarizeFullLocalRuntimeStates,
   validateExternalSecretDirectory,
@@ -85,6 +86,24 @@ function validSecrets() {
 }
 
 describe("full-local production runtime static contract", () => {
+  it("replaces every user-home placeholder in generated production config", () => {
+    const template = [
+      "FULL_LOCAL_SECRET_DIR=/Users/REPLACE_ME/.homecook/secrets",
+      "FULL_LOCAL_BACKUP_READINESS_PATH=/Users/REPLACE_ME/.homecook/state/readiness.json",
+    ].join("\n");
+
+    const rendered = renderFullLocalProductionConfigTemplate(
+      template,
+      "/Users/server-operator",
+    );
+
+    expect(rendered).toBe([
+      "FULL_LOCAL_SECRET_DIR=/Users/server-operator/.homecook/secrets",
+      "FULL_LOCAL_BACKUP_READINESS_PATH=/Users/server-operator/.homecook/state/readiness.json",
+    ].join("\n"));
+    expect(rendered).not.toContain("/Users/REPLACE_ME");
+  });
+
   it("compensates only writer services newly started by this start attempt", () => {
     const container = (project: string, service: string, running: boolean) => ({
       Config: { Labels: {
