@@ -5,19 +5,20 @@
   "enforcement": "active",
   "conditions": {
     "ref_name": {
-      "include": ["refs/tags/prod-*"]
+      "include": ["refs/tags/prod-*"],
+      "exclude": []
     }
   },
-  "rules": {
-    "restrict_creations": true,
-    "restrict_deletions": true,
-    "restrict_non_fast_forward_updates": true
-  },
-  "bypass_actors": [
+  "rules": [
     {
-      "actor_type": "Integration",
-      "actor_id": "github-app/homecook-release-attestation",
-      "mode": "always"
+      "type": "creation"
+    },
+    {
+      "type": "deletion"
+    },
+    {
+      "type": "non_fast_forward"
     }
-  ]
+  ],
+  "bypass_actors": []
 }

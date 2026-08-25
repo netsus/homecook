@@ -11,28 +11,18 @@ on:
         description: Annotated prod tag name (prod-YYYYMMDD.N)
         required: true
         type: string
-      manifest_sha256:
-        description: Release manifest SHA-256 digest
-        required: true
-        type: string
 
 permissions:
   attestations: write
+  artifact-metadata: write
   contents: read
   id-token: write
 
 jobs:
-  operator-approval:
+  verify-release:
     runs-on: ubuntu-latest
-    environment: production-release-approval
-    steps:
-      - name: Approval gate
-        run: echo "Protected environment approval recorded."
-
-  attest-release:
-    runs-on: ubuntu-latest
-    needs:
-      - operator-approval
+    permissions:
+      contents: read
     steps:
       - name: Validate release tag format (prod-YYYYMMDD.N)
         env:
@@ -53,14 +43,39 @@ jobs:
           ref: ${{ inputs.release_sha }}
 
       - name: Verify exact release SHA equals origin/master
+        id: git
         env:
           RELEASE_SHA: ${{ inputs.release_sha }}
         run: |
           git fetch origin master --tags --force
           test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
           test "$(git rev-parse refs/remotes/origin/master^{commit})" = "$RELEASE_SHA"
-          RELEASE_TREE="$(git rev-parse "$RELEASE_SHA^{tree}")"
-          printf 'RELEASE_TREE=%s\n' "$RELEASE_TREE" >> "$GITHUB_ENV"
+          printf 'release_tree=%s\n' "$(git rev-parse "$RELEASE_SHA^{tree}")" >> "$GITHUB_OUTPUT"
+
+      - name: Download current rulesets for prereq verification
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/rulesets-actual"
+          rule_ids="$(gh api repos/${{ github.repository }}/rulesets --paginate --jq '.[].id')"
+          test -n "$rule_ids"
+          for rule_id in $rule_ids; do
+            rule_name="$(gh api repos/${{ github.repository }}/rulesets/"$rule_id" --jq '.name')"
+            gh api repos/${{ github.repository }}/rulesets/"$rule_id" \
+              > "$RUNNER_TEMP/rulesets-actual/$rule_name.json"
+          done
+
+      - name: Verify ruleset prerequisites against desired state
+        run: |
+          node scripts/manage-production-release-rulesets.mjs \
+            verify \
+            --actual-dir "$RUNNER_TEMP/rulesets-actual" \
+            --json \
+            > "$RUNNER_TEMP/rulesets-verify.json"
+          jq -e '
+            .activation_blocked == false
+            and .actual_state == "matched"
+          ' "$RUNNER_TEMP/rulesets-verify.json" > /dev/null
 
       - name: Download current-head check runs
         env:
@@ -74,28 +89,86 @@ jobs:
             > "$RUNNER_TEMP/check-runs.jsonl"
           jq -s '.' "$RUNNER_TEMP/check-runs.jsonl" > "$RUNNER_TEMP/check-runs.json"
 
-      - name: Build terminal check summary attestation document (required_check_summary)
-        env:
-          MANIFEST_SHA256: ${{ inputs.manifest_sha256 }}
-          RELEASE_SHA: ${{ inputs.release_sha }}
-          RELEASE_TAG: ${{ inputs.release_tag }}
+      - name: Build terminal check summary custom predicate and subject manifest
         run: |
           node scripts/build-production-release-attestation.mjs \
             --repository "${{ github.repository }}" \
-            --release-sha "$RELEASE_SHA" \
-            --release-tag "$RELEASE_TAG" \
-            --release-tree "$RELEASE_TREE" \
-            --manifest-digest "$MANIFEST_SHA256" \
+            --release-sha "${{ inputs.release_sha }}" \
+            --release-tag "${{ inputs.release_tag }}" \
+            --release-tree "${{ steps.git.outputs.release_tree }}" \
             --check-runs-json "$RUNNER_TEMP/check-runs.json" \
-            --output "$RUNNER_TEMP/production-release-attestation.json"
+            --subject-output "$RUNNER_TEMP/production-release-subject.json" \
+            --predicate-output "$RUNNER_TEMP/production-release-predicate.json" \
+            > "$RUNNER_TEMP/production-release-build.json"
+          jq -e '
+            .subject_manifest_sha256
+            and .predicate.required_check_summary
+            and .subject.required_check_summary
+          ' "$RUNNER_TEMP/production-release-build.json" > /dev/null
 
-      - name: Upload attestation document
+      - name: Upload subject, predicate, and ruleset verification artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-release-attestation-inputs
+          path: |
+            ${{ runner.temp }}/production-release-build.json
+            ${{ runner.temp }}/production-release-predicate.json
+            ${{ runner.temp }}/production-release-subject.json
+            ${{ runner.temp }}/rulesets-verify.json
+
+  approve-and-tag:
+    runs-on: ubuntu-latest
+    needs:
+      - verify-release
+    environment: production-release-approval
+    permissions:
+      attestations: write
+      artifact-metadata: write
+      contents: write
+      id-token: write
+    steps:
+      - name: Checkout exact release SHA
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: ${{ inputs.release_sha }}
+
+      - name: Download verified release attestation inputs
+        uses: actions/download-artifact@v4
+        with:
+          name: production-release-attestation-inputs
+          path: ${{ runner.temp }}/production-release-attestation-inputs
+
+      - name: Attest release approval manifest with a custom predicate
+        id: attest
+        uses: actions/attest@v4
+        with:
+          subject-path: ${{ runner.temp }}/production-release-attestation-inputs/production-release-subject.json
+          predicate-path: ${{ runner.temp }}/production-release-attestation-inputs/production-release-predicate.json
+          predicate-type: https://github.com/shj/homecook/attestations/production-release/v1
+
+      - name: Create annotated prod tag in the approved job only
+        env:
+          RELEASE_SHA: ${{ inputs.release_sha }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+        run: |
+          git fetch origin --tags --force
+          if git rev-parse "refs/tags/$RELEASE_TAG^{tag}" >/dev/null 2>&1; then
+            echo "release_tag already exists: $RELEASE_TAG" >&2
+            exit 1
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "$RELEASE_TAG" "$RELEASE_SHA" -m "Approved production release $RELEASE_TAG"
+          git push origin refs/tags/"$RELEASE_TAG"
+
+      - name: Upload attestation bundle and approved artifacts
         uses: actions/upload-artifact@v4
         with:
           name: production-release-attestation
-          path: ${{ runner.temp }}/production-release-attestation.json
-
-      - name: Attest release approval document
-        uses: actions/attest@v4
-        with:
-          subject-path: ${{ runner.temp }}/production-release-attestation.json
+          path: |
+            ${{ runner.temp }}/production-release-attestation-inputs/production-release-build.json
+            ${{ runner.temp }}/production-release-attestation-inputs/production-release-predicate.json
+            ${{ runner.temp }}/production-release-attestation-inputs/production-release-subject.json
+            ${{ runner.temp }}/production-release-attestation-inputs/rulesets-verify.json
+            ${{ steps.attest.outputs.bundle-path }}

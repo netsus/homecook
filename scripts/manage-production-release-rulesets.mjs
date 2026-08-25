@@ -5,7 +5,7 @@ import { getProductionReleaseRulesetPlan } from "./lib/production-release-rulese
 function printHelp() {
   process.stdout.write(`Usage:
   node scripts/manage-production-release-rulesets.mjs plan [--root-dir <path>] [--json]
-  node scripts/manage-production-release-rulesets.mjs verify [--root-dir <path>] [--json]
+  node scripts/manage-production-release-rulesets.mjs verify [--root-dir <path>] [--actual-dir <path>] [--json]
   node scripts/manage-production-release-rulesets.mjs apply [--root-dir <path>] [--json] [--execute]
 
 Stage C1 scope:
@@ -18,6 +18,7 @@ Stage C1 scope:
 function parseArgs(argv) {
   const [command, ...rest] = argv;
   const options = {
+    actualDir: null,
     command,
     execute: false,
     json: false,
@@ -45,6 +46,8 @@ function parseArgs(argv) {
 
     if (token === "--root-dir") {
       options.rootDir = value;
+    } else if (token === "--actual-dir") {
+      options.actualDir = value;
     } else {
       throw new Error(`Unknown argument: ${token}`);
     }
@@ -62,6 +65,8 @@ function printResult(result, json) {
 
   process.stdout.write(`mode: ${result.mode}\n`);
   process.stdout.write(`dry_run: ${result.dry_run ? "true" : "false"}\n`);
+  process.stdout.write(`activation_blocked: ${result.activation_blocked ? "true" : "false"}\n`);
+  process.stdout.write(`actual_state: ${result.actual_state}\n`);
   for (const ruleset of result.rulesets) {
     process.stdout.write(`- ${ruleset.name}: ${ruleset.pattern}\n`);
   }
@@ -84,7 +89,10 @@ try {
     );
   }
 
-  const plan = getProductionReleaseRulesetPlan({ rootDir: options.rootDir });
+  const plan = getProductionReleaseRulesetPlan({
+    actualDir: options.actualDir,
+    rootDir: options.rootDir,
+  });
   printResult({
     dry_run: options.command === "apply",
     mode: options.command,

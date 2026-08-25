@@ -3,18 +3,18 @@
 import { readFileSync } from "node:fs";
 
 import {
-  buildGitHubProductionReleaseAttestationDocument,
+  buildGitHubProductionReleaseAttestationArtifacts,
 } from "./lib/github-production-release-attestation.mjs";
 
 function parseArgs(argv) {
   const options = {
     checkRunsPath: null,
-    manifestDigest: null,
-    outputPath: null,
+    predicateOutputPath: null,
     releaseSha: null,
     releaseTag: null,
     releaseTree: null,
     repository: null,
+    subjectOutputPath: null,
   };
 
   for (let index = 0; index < argv.length; index += 1) {
@@ -29,10 +29,8 @@ function parseArgs(argv) {
 
     if (token === "--check-runs-json") {
       options.checkRunsPath = value;
-    } else if (token === "--manifest-digest") {
-      options.manifestDigest = value;
-    } else if (token === "--output") {
-      options.outputPath = value;
+    } else if (token === "--predicate-output") {
+      options.predicateOutputPath = value;
     } else if (token === "--release-sha") {
       options.releaseSha = value;
     } else if (token === "--release-tag") {
@@ -41,6 +39,8 @@ function parseArgs(argv) {
       options.releaseTree = value;
     } else if (token === "--repository") {
       options.repository = value;
+    } else if (token === "--subject-output") {
+      options.subjectOutputPath = value;
     } else {
       throw new Error(`Unknown argument: ${token}`);
     }
@@ -55,22 +55,25 @@ try {
   if (!options.checkRunsPath) {
     throw new Error("--check-runs-json <path> is required.");
   }
-  if (!options.outputPath) {
-    throw new Error("--output <path> is required.");
+  if (!options.subjectOutputPath) {
+    throw new Error("--subject-output <path> is required.");
+  }
+  if (!options.predicateOutputPath) {
+    throw new Error("--predicate-output <path> is required.");
   }
 
   const checkRuns = JSON.parse(readFileSync(options.checkRunsPath, "utf8"));
-  const document = buildGitHubProductionReleaseAttestationDocument({
+  const artifacts = buildGitHubProductionReleaseAttestationArtifacts({
     checkRuns,
-    manifestDigest: options.manifestDigest,
-    outputPath: options.outputPath,
+    predicateOutputPath: options.predicateOutputPath,
     releaseSha: options.releaseSha,
     releaseTag: options.releaseTag,
     releaseTree: options.releaseTree,
     repository: options.repository,
+    subjectOutputPath: options.subjectOutputPath,
   });
 
-  process.stdout.write(`${JSON.stringify(document, null, 2)}\n`);
+  process.stdout.write(`${JSON.stringify(artifacts, null, 2)}\n`);
 } catch (error) {
   process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
   process.exit(1);

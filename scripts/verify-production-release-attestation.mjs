@@ -11,13 +11,13 @@ import {
 
 function parseArgs(argv) {
   const options = {
-    attestationPath: null,
     bundlePath: null,
     json: false,
     releaseManifestPath: null,
     repository: null,
     rootDir: process.cwd(),
     signerWorkflow: null,
+    subjectManifestPath: null,
     trustedRootPath: null,
   };
 
@@ -35,9 +35,7 @@ function parseArgs(argv) {
       throw new Error(`${token} requires a value.`);
     }
 
-    if (token === "--attestation") {
-      options.attestationPath = value;
-    } else if (token === "--bundle") {
+    if (token === "--bundle") {
       options.bundlePath = value;
     } else if (token === "--release-manifest") {
       options.releaseManifestPath = value;
@@ -47,6 +45,8 @@ function parseArgs(argv) {
       options.rootDir = value;
     } else if (token === "--signer-workflow") {
       options.signerWorkflow = value;
+    } else if (token === "--subject-manifest") {
+      options.subjectManifestPath = value;
     } else if (token === "--trusted-root") {
       options.trustedRootPath = value;
     } else {
@@ -71,15 +71,14 @@ try {
   });
 
   const result = verifyGitHubProductionReleaseAttestation({
-    attestationPath: options.attestationPath,
     bundlePath: options.bundlePath,
     gitEvidence: manifest.git_evidence,
     manifest,
-    manifestDigest: manifest.attestation_digest,
     manifestPath: options.releaseManifestPath,
     repository: options.repository,
     rootDir: options.rootDir,
     signerWorkflow: options.signerWorkflow,
+    subjectManifestPath: options.subjectManifestPath,
     trustedRootPath: options.trustedRootPath,
   });
 

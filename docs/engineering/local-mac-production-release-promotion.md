@@ -29,7 +29,7 @@ release identity는 다음을 함께 만족해야 한다.
 | `release_tag` | `prod-YYYYMMDD.N` 형식의 annotated tag |
 | `release_tree` | tag가 가리키는 tree SHA |
 | `release_manifest_path` | 비밀이 없는 release manifest 경로 |
-| `attestation_digest` | GitHub attestation digest |
+| `attestation_digest` | GitHub attestation으로 검증되는 subject manifest SHA-256 |
 | `promotion_id` | 단일 승격 시도 식별자 |
 | `expected_running_release_sha` | 승격 후 실제 돌아야 하는 SHA |
 
@@ -185,6 +185,18 @@ Stage C는 두 단계로 분리한다.
 
 `master`와 `prod-*`는 force update / delete가 막혀야 하고, tag creation은 restricted actor만 가능해야 한다.
 PR merge만으로 ruleset activation을 주장하지 않는다.
+
+C1 validator는 `.github/rulesets/*.json` desired-state와 optional local actual snapshot만 읽는다.
+즉, `pnpm release:github:rulesets:verify`는 actual snapshot이 없으면 `activation_blocked: true`로 fail-closed pending 상태를 기록하지만, network나 admin token 없이도 desired-state drift를 검증할 수 있다.
+C2에서만 GitHub REST readback snapshot을 받아 `--actual-dir <path>` 비교로 `actual_state: matched`를 닫는다.
+
+attestation workflow artifact baseline은 다음 세 가지다.
+
+- `production-release-subject.json`
+- `production-release-predicate.json`
+- `actions/attest@v4`가 만든 JSON bundle
+
+server-side verifier는 위 subject manifest SHA-256, repository, tag, SHA, tree, normalized terminal check summary를 함께 다시 확인한다.
 
 ## Legacy local-first commands
 
