@@ -8,6 +8,8 @@
 기본 접속 주소: `http://127.0.0.1:3100`
 자동 실행 라벨: macOS `launchd`의 `com.homecook.production`
 
+> 이 문서는 서버 Mac의 local-first bootstrap / rehearsal 기준이다. active-server release 승격 authority는 `docs/engineering/local-mac-production-release-promotion.md`가 가진다.
+
 ## 딱 한 줄 요약
 
 현재 production의 뜻은 **서버 MacBook 한 대에서 local Supabase와 Next.js production server를 같이 띄우는 것**이다. 실제 고객은 없고, 검증용 테스트 데이터만 사용한다.
@@ -54,8 +56,10 @@ flowchart LR
 | --- | --- | --- |
 | 개발 | 코드 수정용 빠른 서버 | `pnpm dev` |
 | rehearsal | 배포 직전 격리 로컬 검증 | clean reset 또는 backup restore 뒤 smoke |
-| production build | 배포용 결과물 생성 | `./scripts/run-local-mac-production.sh build` |
-| production install | LaunchAgent 등록 + readiness 확인 | `./scripts/run-local-mac-production.sh install` |
+| production build | 새 머신 bootstrap / 격리 rehearsal용 결과물 생성 | `./scripts/run-local-mac-production.sh build` |
+| production install | 새 머신 bootstrap / 격리 rehearsal용 LaunchAgent 준비 | `./scripts/run-local-mac-production.sh install` |
+
+> 위 `build` / `install` / `db reset` 절차는 active-server deployment authority가 아니다. 새 머신 bootstrap, 격리 rehearsal, future promotion flow 준비 단계에서만 사용한다.
 
 ## 남은 배포 증거
 
@@ -120,7 +124,7 @@ pid: 29719
   - Node.js 실행 파일 경로는 repo가 고정하지 않는다. 새 MacBook에서도 source Mac과 같은 `node -v` 결과를 먼저 기록한 뒤 맞추는 것이 가장 안전하다.
   - Supabase CLI는 `package.json` 의존성으로 추가하지 않고 부팅 wrapper와 이 문서의 exact package version으로 고정한다. 버전을 바꿀 때는 코드·테스트·문서를 같이 갱신한다.
 
-### 2. 코드와 의존성 설치
+### 2. 코드와 의존성 설치 (신규 머신/bootstrap용)
 
 왜 필요한가: 앱 build와 local Supabase helper가 같은 버전을 써야 하기 때문이다.
 
@@ -130,6 +134,8 @@ pnpm install --frozen-lockfile
 ```
 
 ### 3. local Supabase 상태 준비
+
+이 절차는 disposable isolated local stack 또는 신규 머신 bootstrap용이다. 운영 중인 서버 Mac의 production target에는 `db reset`을 실행하지 않는다.
 
 왜 필요한가: production authority가 remote가 아니라 local DB/Auth/Storage이기 때문이다.
 
@@ -186,7 +192,7 @@ pnpm dlx supabase@2.110.0 db reset --local --yes
 - 파일 권한은 `600`이어야 한다.
 - OAuth client secret, service role key, YouTube 관련 키는 새 Mac 기준으로 다시 확인해야 한다. "복사만 하면 된다"고 가정하면 안 된다.
 
-### 6. build 만들기
+### 6. build 만들기 (bootstrap/rehearsal only)
 
 왜 필요한가: LaunchAgent는 `.next/BUILD_ID`가 있는 production build를 전제로 동작한다.
 
@@ -196,7 +202,7 @@ pnpm dlx supabase@2.110.0 db reset --local --yes
 
 이 단계는 내부적으로 ESLint를 한 번 돌린 뒤 `next build --no-lint`를 수행한다.
 
-### 7. LaunchAgent 다시 생성하기
+### 7. LaunchAgent 다시 생성하기 (bootstrap/rehearsal only)
 
 왜 필요한가: LaunchAgent plist 경로와 Node 경로는 Mac마다 다를 수 있기 때문이다.
 
@@ -236,7 +242,9 @@ curl -I 'http://127.0.0.1:3100/api/v1/recipes?limit=1'
 - quiet window는 최초 cutover 1회성 운영 창이다. 같은 작업 안에서 시간이 조금 늘어나도 별도 재승인을 다시 요구하지 않는다. 다만 lock 상실, digest 불일치, 새 auth/external write, DB·서비스 restart/restore, secret 교체, Auth 동결 해제가 발생하면 즉시 중단하고 quiet 관측과 Storage inventory를 처음부터 다시 수집한다.
 - 실패하면 local rollback 또는 clean restore로 되돌린다. 별도 원격 검증기를 기다리는 단계는 없다.
 
-## 운영 명령
+## bootstrap / 회복 명령 (active-server release용 아님)
+
+active-server release 승격은 `docs/engineering/local-mac-production-release-promotion.md`의 promotion command만 사용한다. 아래 명령은 새 머신 bootstrap, 격리 rehearsal, 또는 안전한 회복 확인에만 쓴다.
 
 ### 상태 확인
 
