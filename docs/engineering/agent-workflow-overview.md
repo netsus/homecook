@@ -28,7 +28,7 @@ Claude는 더 이상 사용하지 않는다.
 |---------------|-----------|-------------------|--------------------|----------------------|-------------|
 | `product-backend` | Route Handler, 상태 전이, 권한, schema | `pnpm install --frozen-lockfile && pnpm verify:backend`, 브랜치/커밋 규칙, 실제 동작 확인 | security reviewer 추가 점검 | Design / Accessibility (UI 변경 없음 근거 필요) | Draft → required checks green → Ready for Review → 전체 PR checks green 후 merge |
 | `product-frontend` | 화면 구현, 상태 UI, 로그인 게이트, UX 흐름 | PR 빠른 게이트: `pnpm install --frozen-lockfile && pnpm verify:frontend:pr`, Ready/merge 전 전체 게이트: `pnpm verify:frontend`, 실제 동작 확인 | Stage 5 디자인 리뷰, `product-design-authority`(new-screen / high-risk / anchor extension), performance reviewer, high-risk UI의 exploratory QA | Security / Performance / Design 항목 중 무영향 영역은 근거와 함께 `N/A` 가능 | Draft → 빠른 required checks green → Ready for Review → 전체 PR checks green 후 merge |
-| `docs-governance` | `AGENTS.md`, `docs/engineering/*.md`, PR 템플릿 | 문서 정합성 검토, 관련 unit test 또는 validation script, 필요한 경우만 targeted test | 독립 Codex plan/review 작업, human governance review | Test/E2E, Security, Performance, Design은 `N/A` + 근거 허용 | 필요 시 Draft 생략 가능, 단 merge 전 리뷰 기록 필요 |
+| `docs-governance` | `AGENTS.md`, `docs/engineering/*.md`, release promotion governance runbook, PR 템플릿 | 문서 정합성 검토, 관련 unit test 또는 validation script, 필요한 경우만 targeted test | 독립 Codex plan/review 작업, human governance review | Test/E2E, Security, Performance, Design은 `N/A` + 근거 허용 | 필요 시 Draft 생략 가능, 단 merge 전 리뷰 기록 필요 |
 | `contract-evolution` | 사용자 승인 기반 공식 요구사항/화면/API/DB/Flow 계약 변경, `CURRENT_SOURCE_OF_TRUTH` 갱신, 관련 workpack 재잠금 | 명시적 사용자 승인 기록, 공식 문서·버전 경로 동기화, `CURRENT_SOURCE_OF_TRUTH` sync, 영향 범위 정리, 관련 workpack/acceptance sync, 필요한 최소 validation | `agent-plan-loop`, `agent-review-loop`, human governance review | docs-only PR이면 Test/E2E, Security, Performance, Design은 `N/A` + 근거 허용 | 별도 docs PR merge → 이후 product slice 재개 |
 | `low-risk docs/config` | 오탈자 수정, 주석/설명 보강, 위험도 낮은 config 정리 | 변경 파일 확인, 필요한 최소 validation | 추가 리뷰 선택 | 영향 없는 항목은 `N/A` + 근거 허용 | 작은 PR 허용, 단 PR 본문 근거 기록 |
 
@@ -43,6 +43,7 @@ Claude는 더 이상 사용하지 않는다.
 - `contract-evolution`은 사용자 승인으로 공식 source-of-truth 문서를 바꾸는 경로다. 같은 PR에서 공식 문서, `docs/sync/CURRENT_SOURCE_OF_TRUTH.md`, 관련 workpack/acceptance를 함께 동기화한다.
 - `contract-evolution`이 필요한 슬라이스는 해당 docs PR이 main에 merge되기 전까지 Stage 2/4 product 구현을 시작하지 않는다.
 - `low-risk docs/config`는 리스크가 낮고 제품 계약을 바꾸지 않는 변경만 해당한다.
+- 서버 Mac release promotion governance는 `docs-governance`로 분류한다. `AGENTS.md`, `docs/engineering/current-mac-production-plan.md`, `docs/engineering/local-mac-production-release-promotion.md`, handoff template, release-policy tests가 그 범위에 포함된다.
 - `required_checks`는 이 문서가 단일 소스다. 다른 문서는 change type을 가정하지 않고 이 문서를 참조한다.
 - `required_checks`는 로컬/PR 준비 단계의 최소 검증 세트다. merge gate는 별도로 현재 PR head SHA에 대해 시작된 check 전체가 완료/green인지 확인한다.
 - GitHub Actions는 변경 범위에 따라 무거운 job만 자동 실행한다. policy/PR governance는 기본 유지하고, code CI·frontend QA·security smoke·qa eval은 관련 파일 변경이 있을 때만 뜨는 것을 기본값으로 본다.
