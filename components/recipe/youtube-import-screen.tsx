@@ -788,6 +788,7 @@ function ExtractionErrorStep({ errorMessage, onRetry, onReenter }: ExtractionErr
 
 interface BackgroundAcceptedStepProps {
   deduplicated: boolean;
+  elapsedMs: number;
   job: YoutubeExtractionJobData | null;
   onExit: () => void;
   onOpenJobs: () => void;
@@ -802,8 +803,17 @@ function getAcceptedRetryLabel(job: YoutubeExtractionJobData) {
   return "다시 시도";
 }
 
+function getAcceptedStartTime(
+  submittedAt: string,
+  now = Date.now(),
+) {
+  const parsed = Date.parse(submittedAt);
+  return Number.isFinite(parsed) && parsed <= now ? parsed : now;
+}
+
 function BackgroundAcceptedStep({
   deduplicated,
+  elapsedMs,
   job,
   onExit,
   onOpenJobs,
@@ -812,11 +822,27 @@ function BackgroundAcceptedStep({
   videoTitle,
 }: BackgroundAcceptedStepProps) {
   const failed = job?.status === "failed" || job?.status === "expired";
+  const processing = job?.status === "processing";
+  const elapsedSeconds = Math.max(0, Math.floor(elapsedMs / 1000));
+  const elapsedLabel = elapsedSeconds < 60
+    ? `${elapsedSeconds}초 경과`
+    : `${Math.floor(elapsedSeconds / 60)}분 ${String(elapsedSeconds % 60).padStart(2, "0")}초 경과`;
+  const progressLabel = processing ? "영상 분석 중" : "접수됨 · 분석 대기 중";
+  const progressStages = [
+    { label: "접수됨", state: processing ? "done" : "active" },
+    { label: "분석 중", state: processing ? "active" : "pending" },
+    { label: "결과 준비", state: "pending" },
+  ] as const;
   return (
-    <div aria-live="polite" className="px-4 py-8" data-youtube-extraction-accepted>
+    <div aria-live={failed ? "assertive" : undefined} className="px-4 py-8" data-youtube-extraction-accepted>
       <div className="mx-auto flex max-w-lg flex-col items-center text-center">
         <div aria-hidden="true" className="flex h-16 w-16 items-center justify-center rounded-full bg-[var(--brand-soft)] text-3xl text-[var(--brand-deep)]">
-          {failed ? "!" : "✓"}
+          {failed ? "!" : (
+            <svg className="h-7 w-7 motion-safe:animate-spin" fill="none" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-80" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" fill="currentColor" />
+            </svg>
+          )}
         </div>
         <h2 className="mt-5 break-keep text-xl font-bold text-[var(--foreground)]">
           {failed
@@ -838,16 +864,61 @@ function BackgroundAcceptedStep({
           </p>
         ) : null}
         {videoTitle ? <p className="mt-2 max-w-full truncate text-sm font-semibold text-[var(--foreground)]">{videoTitle}</p> : null}
+        {!failed ? (
+          <div className="mt-6 w-full rounded-[var(--radius-lg)] border border-[var(--line)] bg-[var(--surface-fill)] p-4 text-left">
+            <div className="flex items-center gap-3" role="status">
+              <span aria-hidden="true" className="h-2.5 w-2.5 shrink-0 rounded-full bg-[var(--brand)] motion-safe:animate-pulse" />
+              <p className="text-sm font-semibold text-[var(--foreground)]">
+                {processing ? "영상에서 레시피를 분석하고 있어요" : "작업을 준비하고 있어요"}
+              </p>
+            </div>
+            <div
+              aria-label="유튜브 레시피 추출 진행 상태"
+              aria-valuetext={progressLabel}
+              className="mt-4 grid h-2 grid-cols-3 gap-1"
+              role="progressbar"
+            >
+              {progressStages.map((stage) => (
+                <span
+                  className={[
+                    "rounded-full",
+                    stage.state === "done"
+                      ? "bg-[var(--brand)]"
+                      : stage.state === "active"
+                        ? "bg-[var(--brand)] motion-safe:animate-pulse"
+                        : "bg-[var(--line-strong)]",
+                  ].join(" ")}
+                  key={stage.label}
+                />
+              ))}
+            </div>
+            <div className="mt-2 grid grid-cols-3 gap-1 text-center text-xs text-[var(--text-3)]" aria-hidden="true">
+              {progressStages.map((stage) => (
+                <span className={stage.state === "active" ? "font-semibold text-[var(--foreground)]" : ""} key={stage.label}>
+                  {stage.label}
+                </span>
+              ))}
+            </div>
+            <div className="mt-4 flex flex-col gap-1 text-xs text-[var(--text-2)] sm:flex-row sm:items-center sm:justify-between">
+              <span aria-live="off">{elapsedLabel}</span>
+              <span>예상 소요 시간 약 1~3분</span>
+            </div>
+            {elapsedSeconds >= 180 ? (
+              <p className="mt-3 break-keep text-xs text-[var(--text-3)]">
+                영상 길이나 자막 상태에 따라 조금 더 걸릴 수 있어요.
+              </p>
+            ) : null}
+          </div>
+        ) : null}
         <div className="mt-7 flex w-full flex-col gap-3 sm:flex-row sm:justify-center">
           {failed && job.can_retry ? (
-            <Button className="h-auto min-h-11 w-full whitespace-nowrap px-2 py-3 text-sm leading-tight" onClick={onRetry} style={{ color: "var(--foreground)" }}>
+            <Button className="h-auto min-h-11 w-full whitespace-nowrap px-2 py-3 text-sm leading-tight" onClick={onRetry}>
               {getAcceptedRetryLabel(job)}
             </Button>
           ) : null}
           <Button
             className="h-auto min-h-11 w-full whitespace-nowrap px-2 py-3 text-sm leading-tight"
             onClick={onExit}
-            style={failed ? undefined : { color: "var(--foreground)" }}
             variant={failed ? "neutral" : "primary"}
           >
             나가기
@@ -2569,7 +2640,7 @@ export function YoutubeImportScreen({
 
   // Elapsed time ticker for extraction
   useEffect(() => {
-    if (currentStep !== "extracting") return;
+    if (currentStep !== "extracting" && currentStep !== "accepted") return;
     const interval = setInterval(() => {
       setExtractionElapsedMs(Date.now() - extractionStartTime);
     }, 1000);
@@ -2802,6 +2873,11 @@ export function YoutubeImportScreen({
       setAcceptedDeduplicated(result.data.deduplicated);
       setAcceptedJob(null);
       setAcceptedRetryError(null);
+      const acceptedAt = getAcceptedStartTime(
+        result.data.submitted_at,
+      );
+      setExtractionStartTime(acceptedAt);
+      setExtractionElapsedMs(Math.max(0, Date.now() - acceptedAt));
       trackYoutubeExtractionJob(result.data.job_id);
       pushStep("accepted");
     })();
@@ -2827,6 +2903,13 @@ export function YoutubeImportScreen({
           }));
           return;
         }
+        if (result.data.status === "succeeded") {
+          if (result.data.result?.recipe_path) {
+            router.replace(result.data.result.recipe_path);
+          }
+          return;
+        }
+        if (result.data.status === "failed" || result.data.status === "expired") return;
       }
       timer = window.setTimeout(poll, 5000);
     };
@@ -3336,6 +3419,11 @@ export function YoutubeImportScreen({
     setAcceptedJobId(result.data.job_id);
     setAcceptedDeduplicated(result.data.deduplicated);
     setAcceptedJob(null);
+    const acceptedAt = getAcceptedStartTime(
+      result.data.submitted_at,
+    );
+    setExtractionStartTime(acceptedAt);
+    setExtractionElapsedMs(Math.max(0, Date.now() - acceptedAt));
     trackYoutubeExtractionJob(result.data.job_id);
   }, [acceptedJob]);
 
@@ -3501,6 +3589,7 @@ export function YoutubeImportScreen({
         <section className="web-yt-content">
           <BackgroundAcceptedStep
             deduplicated={acceptedDeduplicated}
+            elapsedMs={extractionElapsedMs}
             job={acceptedJob}
             onExit={exitImportFlow}
             onOpenJobs={() => openNotificationCenter(true)}
@@ -3842,6 +3931,7 @@ export function YoutubeImportScreen({
         {currentStep === "accepted" && (
           <BackgroundAcceptedStep
             deduplicated={acceptedDeduplicated}
+            elapsedMs={extractionElapsedMs}
             job={acceptedJob}
             onExit={exitImportFlow}
             onOpenJobs={() => openNotificationCenter(true)}
