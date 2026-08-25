@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "phase": "milestone-a-t65",
+  "captured_at": "2026-08-24T20:12:21.728Z",
+  "source": {
+    "canonical_base_sha": "312edcab30b89d21b9cecb1844b58e5f0511784a",
+    "implementation_sha": "312edcab30b89d21b9cecb1844b58e5f0511784a",
+    "live_head_sha": "312edcab30b89d21b9cecb1844b58e5f0511784a",
+    "live_branch": "detached",
+    "live_dirty": false,
+    "live_dirty_diff_sha256": "sha256:ce1547e29f2a3b70a693adb3e56ab1d83bba051396e15322f2eb5c8ce60923e2"
+  },
+  "runtime": {
+    "app_origin": "https://app.mumeok.kr",
+    "auth_origin": "https://auth.mumeok.kr",
+    "full_local_status": "PASS",
+    "mac_production_status": "PASS",
+    "launch_agent_status": "PASS",
+    "gotrue_image_digest": "sha256:46cc7cade1221616f0ce8d1c898e275a2b8ad849941edbe0e0f3b4857ac5e3a8",
+    "migration_head": "20260811120000_full_local_session_observability.sql",
+    "migration_head_source": "database_catalog_marker"
+  },
+  "session_policy": {
+    "jwt_exp_seconds": 3600,
+    "inactivity_timeout": null,
+    "timebox": null,
+    "single_per_user": false,
+    "refresh_rotation_enabled": true,
+    "refresh_reuse_interval_seconds": 10
+  },
+  "incident": {
+    "binding_created_at": "2026-08-24T18:56:24.742Z",
+    "binding_expires_at": "2026-08-24T21:01:28.000Z",
+    "first_stale_at": null,
+    "affected_route_classes": [
+      "planner-read",
+      "planner-write",
+      "pantry-read",
+      "youtube-extract"
+    ]
+  },
+  "verification": {
+    "production_domain_contract_gate": "PASS",
+    "refresh_lifecycle_gate": "PASS",
+    "authority_static_contracts": "PASS",
+    "postgres_integration": "PASS",
+    "docker_refresh_smoke": "PASS",
+    "security_function_gate": "PASS",
+    "gotrue_policy_gate": "NOT_RUN",
+    "recent_auth_security_gate": "NOT_RUN",
+    "t65_canary": "PASS",
+    "canary_results": {
+      "pantry_read": "PASS",
+      "planner_read": "PASS",
+      "planner_write": "PASS",
+      "youtube_extract": "PASS"
+    },
+    "account_session_stale_count": 0,
+    "stale_token_mutation_count": 0
+  }
+}

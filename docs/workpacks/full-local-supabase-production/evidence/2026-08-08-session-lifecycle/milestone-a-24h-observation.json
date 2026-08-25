@@ -1,0 +1,37 @@
+{
+  "schema": "homecook.session-lifecycle-24h-observation-closeout",
+  "version": 1,
+  "phase": "milestone-a-24h-observation",
+  "captured_at": "2026-08-25T03:14:32.560Z",
+  "source": {
+    "implementation_sha": "312edcab30b89d21b9cecb1844b58e5f0511784a",
+    "app_worker_exact_sha": "PASS",
+    "live_branch": "detached"
+  },
+  "boundary": {
+    "observation_started_at": "2026-08-21T18:30:14.134962Z",
+    "minimum_hours": 24,
+    "status": "PASS"
+  },
+  "provenance": {
+    "current_phase_canary": "NOT_RUN",
+    "prior_t65_evidence_inherited": "PASS",
+    "prior_t65_evidence_file": "milestone-a-t65.json",
+    "chrome_read_only_checks": "PASS",
+    "chrome_cookie_or_token_read": "NONE"
+  },
+  "verification": {
+    "full_local_runtime": "PASS",
+    "catalog_readiness": "PASS",
+    "planner_read": "PASS",
+    "pantry_read": "PASS",
+    "exact_youtube_background_extraction": "PASS",
+    "account_session_stale_count": 0,
+    "stale_token_mutation_count": 0
+  },
+  "limitations": [
+    "This artifact does not claim a fresh milestone-a-24h login canary.",
+    "Session lifetime authority comes from the inherited fresh-ephemeral T+65 canary.",
+    "This artifact does not claim 7d, 30d, 90d, or recent-auth policy completion."
+  ]
+}
