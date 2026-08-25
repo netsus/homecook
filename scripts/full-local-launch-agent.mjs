@@ -40,7 +40,7 @@ try {
     process.exit(0);
   }
 
-  validateLocalMacProductionMutationAuthority({
+  const mutationAuthority = validateLocalMacProductionMutationAuthority({
     command: options.command,
     homeDir: options.homeDir,
     lockToken: options.lockToken ?? null,
@@ -53,6 +53,7 @@ try {
       installFullLocalLaunchAgent({
         configPath: options.configPath,
         homeDir: options.homeDir,
+        mutationAuthority,
         nodeBin: options.nodeBin,
         rootDir: options.rootDir,
       }),
@@ -75,6 +76,7 @@ try {
     printResult(
       uninstallFullLocalLaunchAgent({
         homeDir: options.homeDir,
+        mutationAuthority,
       }),
       options.json,
     );

@@ -12,15 +12,37 @@ import {
   installLocalMacProductionLaunchAgent,
   parseLocalMacProductionArgs,
   renderLocalMacProductionPlist,
+  restartLocalMacProductionLaunchAgent,
   startLocalMacProductionRuntime,
+  uninstallLocalMacProductionLaunchAgent,
   verifyFullLocalProductionRuntimeStatus,
   verifyLocalMacProductionPrerequisites,
   verifyYoutubeExtractionAppReleaseAlignment,
   waitForLocalMacProductionReady,
 } from "../scripts/lib/local-mac-production.mjs";
+import {
+  createValidatedLocalMacMutationAuthority,
+} from "./helpers/local-mac-production-release-fixtures";
 import { relayChildLifecycle } from "../scripts/lib/process-signal-relay.mjs";
 
 const tempDirs: string[] = [];
+
+function createMutationAuthority({
+  command,
+  homeDir,
+  rootDir,
+}: {
+  command: string;
+  homeDir: string;
+  rootDir: string;
+}) {
+  return createValidatedLocalMacMutationAuthority({
+    command,
+    homeDir,
+    rootDir,
+    lockToken: "44444444-4444-4444-8444-444444444444",
+  }).mutationAuthority;
+}
 
 afterEach(() => {
   while (tempDirs.length > 0) {
@@ -581,6 +603,11 @@ describe("local Mac production launch agent", () => {
     const rootDir = mkdtempSync(join(tmpdir(), "homecook-production-root-"));
     const homeDir = mkdtempSync(join(tmpdir(), "homecook-production-home-"));
     tempDirs.push(rootDir, homeDir);
+    const mutationAuthority = createMutationAuthority({
+      command: "install",
+      homeDir,
+      rootDir,
+    });
 
     const spawnCalls: string[] = [];
     const runtimeStatusChecks: string[] = [];
@@ -594,6 +621,7 @@ describe("local Mac production launch agent", () => {
     }) as typeof import("node:child_process").spawnSync;
 
     const result = installLocalMacProductionLaunchAgent({
+      mutationAuthority,
       rootDir,
       homeDir,
       nodeBin: process.execPath,
@@ -648,11 +676,20 @@ describe("local Mac production launch agent", () => {
   });
 
   it("does not mutate launchctl when the full-local runtime preflight fails", () => {
+    const rootDir = mkdtempSync(join(tmpdir(), "homecook-production-preflight-root-"));
+    const homeDir = mkdtempSync(join(tmpdir(), "homecook-production-preflight-home-"));
+    tempDirs.push(rootDir, homeDir);
+    const mutationAuthority = createMutationAuthority({
+      command: "install",
+      homeDir,
+      rootDir,
+    });
     const spawnCalls: string[] = [];
 
     expect(() => installLocalMacProductionLaunchAgent({
-      rootDir: "/Users/tester/homecook",
-      homeDir: "/Users/tester",
+      mutationAuthority,
+      rootDir,
+      homeDir,
       nodeBin: "/Users/tester/.nvm/node",
       platform: "darwin",
       getuid: () => 501,
@@ -664,7 +701,7 @@ describe("local Mac production launch agent", () => {
       verifyRuntimeStatus: ({ command, args }) => {
         expect(command).toBe("/Users/tester/.nvm/node");
         expect(args).toEqual([
-          "/Users/tester/homecook/scripts/full-local-production-runtime.mjs",
+          `${rootDir}/scripts/full-local-production-runtime.mjs`,
           "status",
         ]);
         throw new Error("Full-local production runtime health check failed");
@@ -672,6 +709,45 @@ describe("local Mac production launch agent", () => {
     })).toThrow("Full-local production runtime health check failed");
 
     expect(spawnCalls).toEqual([]);
+  });
+
+  it("blocks direct helper mutations before launchctl when no validated authority is provided", () => {
+    const installCalls: string[] = [];
+    expect(() => installLocalMacProductionLaunchAgent({
+      rootDir: "/Users/tester/homecook",
+      homeDir: "/Users/tester",
+      nodeBin: "/Users/tester/.nvm/node",
+      platform: "darwin",
+      getuid: () => 501,
+      spawn: ((command: string, args: readonly string[]) => {
+        installCalls.push(`${command} ${args.join(" ")}`);
+        return { status: 0, stdout: "", stderr: "" };
+      }) as typeof import("node:child_process").spawnSync,
+      verifyPrerequisites: () => undefined,
+      verifyRuntimeStatus: () => undefined,
+    })).toThrow(/validated release authority|release authority|--release-manifest/iu);
+    expect(installCalls).toEqual([]);
+
+    const restartCalls: string[] = [];
+    expect(() => restartLocalMacProductionLaunchAgent({
+      getuid: () => 501,
+      spawn: ((command: string, args: readonly string[]) => {
+        restartCalls.push(`${command} ${args.join(" ")}`);
+        return { status: 0, stdout: "", stderr: "" };
+      }) as typeof import("node:child_process").spawnSync,
+    })).toThrow(/validated release authority|release authority|--release-manifest/iu);
+    expect(restartCalls).toEqual([]);
+
+    const uninstallCalls: string[] = [];
+    expect(() => uninstallLocalMacProductionLaunchAgent({
+      homeDir: "/Users/tester",
+      getuid: () => 501,
+      spawn: ((command: string, args: readonly string[]) => {
+        uninstallCalls.push(`${command} ${args.join(" ")}`);
+        return { status: 0, stdout: "", stderr: "" };
+      }) as typeof import("node:child_process").spawnSync,
+    })).toThrow(/validated release authority|release authority|--release-manifest/iu);
+    expect(uninstallCalls).toEqual([]);
   });
 
   it("requires the full-local runtime script and local production config", () => {
@@ -700,6 +776,42 @@ describe("local Mac production launch agent", () => {
     writeFileSync(join(rootDir, "infra/full-local-supabase/.env.production.local"), "");
 
     expect(() => verifyLocalMacProductionPrerequisites({ rootDir, nodeBin })).not.toThrow();
+  });
+
+  it("accepts a validated release authority for direct helper mutations", () => {
+    const rootDir = mkdtempSync(join(tmpdir(), "homecook-production-authority-root-"));
+    const homeDir = mkdtempSync(join(tmpdir(), "homecook-production-authority-home-"));
+    tempDirs.push(rootDir, homeDir);
+    const mutationAuthority = createMutationAuthority({
+      command: "install",
+      homeDir,
+      rootDir,
+    });
+
+    const spawnCalls: string[] = [];
+    const result = installLocalMacProductionLaunchAgent({
+      mutationAuthority,
+      rootDir,
+      homeDir,
+      nodeBin: process.execPath,
+      host: "127.0.0.1",
+      port: 3100,
+      platform: "darwin",
+      getuid: () => 501,
+      spawn: ((command: string, args: readonly string[]) => {
+        spawnCalls.push(`${command} ${args.join(" ")}`);
+        return {
+          status: args[0] === "print" ? 1 : 0,
+          stdout: "",
+          stderr: args[0] === "print" ? "not loaded" : "",
+        };
+      }) as typeof import("node:child_process").spawnSync,
+      verifyPrerequisites: () => undefined,
+      verifyRuntimeStatus: () => undefined,
+    });
+
+    expect(result.changed).toBe(true);
+    expect(spawnCalls).toContain(`launchctl bootstrap gui/501 ${result.plistPath}`);
   });
 });
 

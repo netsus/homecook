@@ -36,6 +36,7 @@ import {
   verifyYoutubeExtractionWorkerArtifact,
   writeJsonFile,
 } from "./youtube-extraction-worker-artifact.mjs";
+import { assertLocalMacProductionMutationAuthority } from "./local-mac-production-release.mjs";
 
 const TEMPLATE_PATH = resolve(
   dirname(fileURLToPath(import.meta.url)),
@@ -555,6 +556,7 @@ function replacePrivateFileAtomically(path, contents, mode = 0o600) {
  *   userId?: number,
  *   i031Preflight: {ready: boolean, codexCliVersion: string, chatGptLogin: boolean, toolsReady: boolean},
  *   confirmation: string,
+ *   mutationAuthority?: object,
  *   spawn?: (command: string, args: readonly string[], options?: Record<string, unknown>) => {
  *     status: number | null,
  *     stdout?: string | Buffer,
@@ -564,6 +566,7 @@ function replacePrivateFileAtomically(path, contents, mode = 0o600) {
  */
 export function installYoutubeExtractionWorkerLaunchAgent({
   confirmation,
+  mutationAuthority,
   spawn,
   ...options
 } = {}) {
@@ -575,6 +578,10 @@ export function installYoutubeExtractionWorkerLaunchAgent({
   if (typeof spawn !== "function") {
     throw new Error("production worker installation requires an explicit launchctl adapter");
   }
+  assertLocalMacProductionMutationAuthority({
+    helperName: "YouTube extraction worker LaunchAgent install",
+    mutationAuthority,
+  });
 
   const plan = buildYoutubeExtractionWorkerInstallPlan({
     ...options,

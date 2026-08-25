@@ -42,7 +42,7 @@ try {
     process.exit(0);
   }
 
-  validateLocalMacProductionMutationAuthority({
+  const mutationAuthority = validateLocalMacProductionMutationAuthority({
     command: options.command,
     homeDir: process.env.HOME ?? "",
     lockToken: options.lockToken ?? null,
@@ -66,6 +66,7 @@ try {
 
   if (options.command === "install") {
     const result = await activateLocalMacProduction({
+      mutationAuthority,
       rootDir: options.rootDir,
       nodeBin: options.nodeBin,
       host: options.host,
@@ -87,7 +88,7 @@ try {
   }
 
   if (options.command === "restart") {
-    restartLocalMacProductionLaunchAgent();
+    restartLocalMacProductionLaunchAgent({ mutationAuthority });
     const ready = await waitForLocalMacProductionReady({
       origin: `http://${options.host}:${options.port}`,
     });
@@ -97,7 +98,7 @@ try {
   }
 
   if (options.command === "uninstall") {
-    const result = uninstallLocalMacProductionLaunchAgent();
+    const result = uninstallLocalMacProductionLaunchAgent({ mutationAuthority });
     process.stdout.write(`Removed ${result.plistPath}.\n`);
     process.exit(0);
   }

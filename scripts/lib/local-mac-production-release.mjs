@@ -1,9 +1,11 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { spawnSync } from "node:child_process";
 import {
   existsSync,
+  lstatSync,
   mkdirSync,
   readFileSync,
+  rmSync,
   writeFileSync,
 } from "node:fs";
 import { resolve } from "node:path";
@@ -14,6 +16,19 @@ const LOCAL_MAC_PRODUCTION_TAG_PATTERN = /^prod-\d{8}\.\d+$/u;
 const RELEASE_SHA_PATTERN = /^[0-9a-f]{40}$/u;
 const DIGEST_PATTERN = /^[0-9a-f]{64}$/u;
 const MUTATION_COMMANDS = new Set(["prepare-env", "install", "restart", "uninstall"]);
+const LOCAL_MAC_PRODUCTION_MUTATION_AUTHORITY_BRAND = Symbol(
+  "homecook.local-mac-production.mutation-authority",
+);
+const LOCK_DIRECTORY_MODE = 0o700;
+const LOCK_METADATA_MODE = 0o600;
+const ZERO_ONLY_CHECK_FIELDS = [
+  "bad",
+  "cancelled",
+  "failed",
+  "pending",
+  "queued",
+  "rerun",
+];
 
 function requireNonEmptyString(value, label) {
   if (typeof value !== "string" || value.trim().length === 0) {
@@ -51,6 +66,17 @@ function requireBoolean(value, label) {
   return value;
 }
 
+function requireInteger(value, label, minimum = 0) {
+  if (!Number.isInteger(value) || value < minimum) {
+    throw new Error(`${label} must be an integer >= ${minimum}.`);
+  }
+  return value;
+}
+
+function modeBits(mode) {
+  return Number(mode) & 0o777;
+}
+
 function sanitizeLockHolder(lockRecord) {
   if (!lockRecord) {
     return null;
@@ -69,12 +95,90 @@ function readJsonFile(path, label) {
   }
 }
 
+function sha256File(path) {
+  return createHash("sha256")
+    .update(readFileSync(path))
+    .digest("hex");
+}
+
 function readLockRecord({ homeDir = process.env.HOME ?? "" } = {}) {
   const paths = getLocalMacProductionReleasePaths(homeDir);
-  if (!existsSync(paths.lockMetadataPath)) {
-    return null;
+  if (!existsSync(paths.lockPath)) {
+    return {
+      corrupt: false,
+      locked: false,
+      lockRecord: null,
+    };
   }
-  return readJsonFile(paths.lockMetadataPath, "Production promotion lock metadata");
+
+  try {
+    const lockPathStat = lstatSync(paths.lockPath);
+    if (
+      lockPathStat.isSymbolicLink()
+      || !lockPathStat.isDirectory()
+      || modeBits(lockPathStat.mode) !== LOCK_DIRECTORY_MODE
+    ) {
+      return {
+        corrupt: true,
+        locked: true,
+        lockRecord: null,
+      };
+    }
+
+    if (!existsSync(paths.lockMetadataPath)) {
+      return {
+        corrupt: true,
+        locked: true,
+        lockRecord: null,
+      };
+    }
+
+    const metadataStat = lstatSync(paths.lockMetadataPath);
+    if (
+      metadataStat.isSymbolicLink()
+      || !metadataStat.isFile()
+      || modeBits(metadataStat.mode) !== LOCK_METADATA_MODE
+    ) {
+      return {
+        corrupt: true,
+        locked: true,
+        lockRecord: null,
+      };
+    }
+
+    const lockRecord = readJsonFile(
+      paths.lockMetadataPath,
+      "Production promotion lock metadata",
+    );
+    if (
+      !lockRecord
+      || typeof lockRecord !== "object"
+      || Array.isArray(lockRecord)
+      || typeof lockRecord.lock_token !== "string"
+      || typeof lockRecord.manifest_path !== "string"
+      || typeof lockRecord.promotion_id !== "string"
+      || typeof lockRecord.release_sha !== "string"
+      || typeof lockRecord.release_tag !== "string"
+    ) {
+      return {
+        corrupt: true,
+        locked: true,
+        lockRecord: null,
+      };
+    }
+
+    return {
+      corrupt: false,
+      locked: true,
+      lockRecord,
+    };
+  } catch {
+    return {
+      corrupt: true,
+      locked: true,
+      lockRecord: null,
+    };
+  }
 }
 
 export function isLocalMacProductionMutationCommand(command) {
@@ -114,15 +218,177 @@ export function readLocalMacProductionRepoHeadSha({
   return releaseSha;
 }
 
+function readGitRevParse({
+  rootDir,
+  runCommand,
+  label,
+  ref,
+}) {
+  const result = runCommand("git", ["rev-parse", ref], {
+    cwd: requireAbsolutePath(rootDir, "rootDir"),
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  const value = String(result.stdout ?? "").trim();
+  if (result.status !== 0 || !RELEASE_SHA_PATTERN.test(value)) {
+    throw new Error(`${label} could not be resolved from git.`);
+  }
+  return value;
+}
+
+/**
+ * @param {{
+ *   releaseSha: string,
+ *   releaseTag: string,
+ *   rootDir?: string,
+ *   runCommand?: typeof spawnSync,
+ * }} [options]
+ */
+export function readLocalMacProductionGitReleaseEvidence({
+  releaseSha,
+  releaseTag,
+  rootDir = process.cwd(),
+  runCommand = spawnSync,
+} = {}) {
+  const normalizedReleaseSha = requireReleaseSha(releaseSha, "releaseSha");
+  const normalizedReleaseTag = requireNonEmptyString(releaseTag, "releaseTag");
+
+  return {
+    originMasterSha: readGitRevParse({
+      rootDir,
+      runCommand,
+      label: "origin/master release SHA",
+      ref: "refs/remotes/origin/master^{commit}",
+    }),
+    releaseTagObjectSha: readGitRevParse({
+      rootDir,
+      runCommand,
+      label: "Release tag object",
+      ref: `refs/tags/${normalizedReleaseTag}^{tag}`,
+    }),
+    releaseTagCommitSha: readGitRevParse({
+      rootDir,
+      runCommand,
+      label: "Release tag commit",
+      ref: `refs/tags/${normalizedReleaseTag}^{commit}`,
+    }),
+    releaseTreeSha: readGitRevParse({
+      rootDir,
+      runCommand,
+      label: "Release tree",
+      ref: `${normalizedReleaseSha}^{tree}`,
+    }),
+  };
+}
+
+function normalizeRequiredCheckSummary(summary) {
+  if (!summary || typeof summary !== "object" || Array.isArray(summary)) {
+    throw new Error("manifest.required_check_summary must be an object.");
+  }
+
+  const normalized = {
+    total: requireInteger(summary.total, "manifest.required_check_summary.total"),
+    success: requireInteger(summary.success, "manifest.required_check_summary.success"),
+    intended_skip: requireInteger(
+      summary.intended_skip,
+      "manifest.required_check_summary.intended_skip",
+    ),
+  };
+
+  for (const field of ZERO_ONLY_CHECK_FIELDS) {
+    if (summary[field] === undefined) {
+      continue;
+    }
+    const count = requireInteger(
+      summary[field],
+      `manifest.required_check_summary.${field}`,
+    );
+    if (count !== 0) {
+      throw new Error(
+        `manifest.required_check_summary must not report ${field} checks for an approved release.`,
+      );
+    }
+    normalized[field] = count;
+  }
+
+  if (normalized.total !== normalized.success + normalized.intended_skip) {
+    throw new Error(
+      "manifest.required_check_summary total must equal success + intended_skip exactly.",
+    );
+  }
+
+  return normalized;
+}
+
+function requireTrustedAttestationVerification({
+  gitEvidence,
+  manifest,
+  manifestDigest,
+  manifestPath,
+  rootDir,
+  verifyAttestation,
+}) {
+  const verifier = typeof verifyAttestation === "function"
+    ? verifyAttestation
+    : null;
+  if (!verifier) {
+    throw new Error(
+      "Trusted release attestation verification is not configured; production mutations are blocked.",
+    );
+  }
+
+  const result = verifier({
+    gitEvidence,
+    manifest,
+    manifestDigest,
+    manifestPath,
+    rootDir,
+  });
+  if (!result || result.verified !== true) {
+    throw new Error("Trusted release attestation verification failed.");
+  }
+
+  return {
+    source: typeof result.source === "string" && result.source.trim().length > 0
+      ? result.source.trim()
+      : "trusted-attestation-verifier",
+    verified: true,
+  };
+}
+
+/**
+ * @param {{
+ *   manifest: Record<string, unknown>,
+ *   manifestPath?: string | null,
+ *   readGitEvidence?: (input: {
+ *     manifestPath?: string | null,
+ *     releaseSha: string,
+ *     releaseTag: string,
+ *     rootDir: string,
+ *   }) => {
+ *     originMasterSha: string,
+ *     releaseTagObjectSha: string,
+ *     releaseTagCommitSha: string,
+ *     releaseTreeSha: string,
+ *   },
+ *   requireAttestation?: boolean,
+ *   rootDir?: string,
+ *   verifyAttestation?: (input: Record<string, unknown>) => { verified: boolean, source?: string },
+ * }} [options]
+ */
 export function validateLocalMacProductionReleaseManifest({
   manifest,
-  currentHeadSha,
   manifestPath,
+  readGitEvidence = readLocalMacProductionGitReleaseEvidence,
+  requireAttestation = false,
+  rootDir = process.cwd(),
+  verifyAttestation,
 } = {}) {
   if (!manifest || typeof manifest !== "object" || Array.isArray(manifest)) {
     throw new Error("Release manifest must be a JSON object.");
   }
 
+  const normalizedRootDir = requireAbsolutePath(rootDir, "rootDir");
   const normalizedManifestPath = manifestPath
     ? requireAbsolutePath(manifestPath, "releaseManifestPath")
     : null;
@@ -158,13 +424,51 @@ export function validateLocalMacProductionReleaseManifest({
     );
   }
 
-  const normalizedCurrentHeadSha = currentHeadSha
-    ? requireReleaseSha(currentHeadSha, "currentHeadSha")
-    : null;
-  if (normalizedCurrentHeadSha && releaseSha !== normalizedCurrentHeadSha) {
+  const gitEvidence = readGitEvidence({
+    manifestPath: normalizedManifestPath,
+    releaseSha,
+    releaseTag,
+    rootDir: normalizedRootDir,
+  });
+  if (
+    !gitEvidence
+    || typeof gitEvidence !== "object"
+    || Array.isArray(gitEvidence)
+  ) {
+    throw new Error("Release manifest git evidence is invalid.");
+  }
+
+  const normalizedGitEvidence = {
+    originMasterSha: requireReleaseSha(
+      gitEvidence.originMasterSha,
+      "gitEvidence.originMasterSha",
+    ),
+    releaseTagObjectSha: requireReleaseSha(
+      gitEvidence.releaseTagObjectSha,
+      "gitEvidence.releaseTagObjectSha",
+    ),
+    releaseTagCommitSha: requireReleaseSha(
+      gitEvidence.releaseTagCommitSha,
+      "gitEvidence.releaseTagCommitSha",
+    ),
+    releaseTreeSha: requireReleaseSha(
+      gitEvidence.releaseTreeSha,
+      "gitEvidence.releaseTreeSha",
+    ),
+  };
+
+  if (releaseSha !== normalizedGitEvidence.originMasterSha) {
     throw new Error(
       "Release manifest exact approved master mismatch: release_sha must equal the current origin/master-approved head.",
     );
+  }
+  if (normalizedGitEvidence.releaseTagCommitSha !== releaseSha) {
+    throw new Error(
+      "Release manifest tag commit mismatch: release_sha must equal the annotated release tag commit exactly.",
+    );
+  }
+  if (normalizedGitEvidence.releaseTreeSha !== releaseTree) {
+    throw new Error("Release manifest tree mismatch: release_tree must equal the tagged release tree.");
   }
 
   const approvedAt = requireNonEmptyString(manifest.approved_at, "manifest.approved_at");
@@ -195,7 +499,7 @@ export function validateLocalMacProductionReleaseManifest({
       manifest.previous_release_sha,
       "manifest.previous_release_sha",
     ),
-    required_check_summary: manifest.required_check_summary,
+    required_check_summary: normalizeRequiredCheckSummary(manifest.required_check_summary),
     attestation_digest: requireDigest(
       manifest.attestation_digest,
       "manifest.attestation_digest",
@@ -214,15 +518,49 @@ export function validateLocalMacProductionReleaseManifest({
     ),
   };
 
-  if (
-    !normalizedManifest.required_check_summary
-    || typeof normalizedManifest.required_check_summary !== "object"
-    || Array.isArray(normalizedManifest.required_check_summary)
-  ) {
-    throw new Error("manifest.required_check_summary must be an object.");
-  }
+  normalizedManifest.git_evidence = normalizedGitEvidence;
+  normalizedManifest.attestation = requireAttestation
+    ? requireTrustedAttestationVerification({
+      gitEvidence: normalizedGitEvidence,
+      manifest: normalizedManifest,
+      manifestDigest: normalizedManifestPath ? sha256File(normalizedManifestPath) : null,
+      manifestPath: normalizedManifestPath,
+      rootDir: normalizedRootDir,
+      verifyAttestation,
+    })
+    : {
+      source: "not-required",
+      verified: false,
+    };
 
   return normalizedManifest;
+}
+
+function brandLocalMacProductionMutationAuthority(payload) {
+  return Object.defineProperty(payload, LOCAL_MAC_PRODUCTION_MUTATION_AUTHORITY_BRAND, {
+    configurable: false,
+    enumerable: false,
+    value: true,
+    writable: false,
+  });
+}
+
+export function assertLocalMacProductionMutationAuthority({
+  helperName = "Local Mac production mutation helper",
+  mutationAuthority,
+} = {}) {
+  if (
+    !mutationAuthority
+    || typeof mutationAuthority !== "object"
+    || mutationAuthority.required !== true
+    || mutationAuthority[LOCAL_MAC_PRODUCTION_MUTATION_AUTHORITY_BRAND] !== true
+  ) {
+    throw new Error(
+      `${helperName} requires a validated release authority. `
+      + "Pass the result of validateLocalMacProductionMutationAuthority(...).",
+    );
+  }
+  return mutationAuthority;
 }
 
 /**
@@ -236,7 +574,11 @@ export function validateLocalMacProductionReleaseManifest({
  *   promoterTaskId?: string,
  *   now?: Date | string | number,
  *   mkdir?: typeof mkdirSync,
+ *   readCurrentHeadSha?: ((options?: { rootDir?: string }) => string),
+ *   rootDir?: string,
  *   writeFile?: typeof writeFileSync,
+ *   readGitEvidence?: typeof readLocalMacProductionGitReleaseEvidence,
+ *   verifyAttestation?: (input: Record<string, unknown>) => { verified: boolean, source?: string },
  * }} [options]
  */
 export function acquireLocalMacProductionPromotionLock({
@@ -249,18 +591,26 @@ export function acquireLocalMacProductionPromotionLock({
   promoterTaskId = manifest?.approved_by_task_id ?? "unknown",
   now = new Date(),
   mkdir = mkdirSync,
+  readCurrentHeadSha = readLocalMacProductionRepoHeadSha,
+  rootDir = process.cwd(),
   writeFile = writeFileSync,
+  readGitEvidence = readLocalMacProductionGitReleaseEvidence,
+  verifyAttestation,
 } = {}) {
+  void readCurrentHeadSha;
   const normalizedManifest = validateLocalMacProductionReleaseManifest({
     manifest,
-    currentHeadSha: manifest?.release_sha,
     manifestPath,
+    readGitEvidence,
+    requireAttestation: true,
+    rootDir,
+    verifyAttestation,
   });
   const paths = getLocalMacProductionReleasePaths(homeDir);
-  mkdir(paths.lockRoot, { recursive: true, mode: 0o700 });
+  mkdir(paths.lockRoot, { recursive: true, mode: LOCK_DIRECTORY_MODE });
 
   try {
-    mkdir(paths.lockPath, { mode: 0o700 });
+    mkdir(paths.lockPath, { mode: LOCK_DIRECTORY_MODE });
   } catch (error) {
     if (error && typeof error === "object" && "code" in error && error.code === "EEXIST") {
       throw new Error("Production promotion lock is already held.");
@@ -280,11 +630,16 @@ export function acquireLocalMacProductionPromotionLock({
     release_tag: normalizedManifest.release_tag,
   };
 
-  writeFile(
-    paths.lockMetadataPath,
-    JSON.stringify(lockRecord, null, 2),
-    { encoding: "utf8", flag: "wx", mode: 0o600 },
-  );
+  try {
+    writeFile(
+      paths.lockMetadataPath,
+      JSON.stringify(lockRecord, null, 2),
+      { encoding: "utf8", flag: "wx", mode: LOCK_METADATA_MODE },
+    );
+  } catch (error) {
+    rmSync(paths.lockPath, { force: true, recursive: true });
+    throw error;
+  }
 
   return {
     holder: sanitizeLockHolder(lockRecord),
@@ -306,7 +661,6 @@ export function acquireLocalMacProductionPromotionLock({
 export function getLocalMacProductionReleaseStatus({
   homeDir = process.env.HOME ?? "",
   manifestPath = null,
-  currentHeadSha = null,
   currentBootSessionId = "unknown",
   isProcessRunning = (pid) => {
     if (!Number.isInteger(pid)) {
@@ -319,18 +673,22 @@ export function getLocalMacProductionReleaseStatus({
       return false;
     }
   },
+  readGitEvidence = readLocalMacProductionGitReleaseEvidence,
+  rootDir = process.cwd(),
 } = {}) {
-  const lockRecord = readLockRecord({ homeDir });
+  const lockState = readLockRecord({ homeDir });
+  const lockRecord = lockState.lockRecord;
   const holder = sanitizeLockHolder(lockRecord);
   const staleCandidate = Boolean(
     lockRecord
+      && !lockState.corrupt
       && (
         (Number.isInteger(lockRecord.pid) && !isProcessRunning(lockRecord.pid))
         || (
           typeof currentBootSessionId === "string"
-          && currentBootSessionId.length > 0
-          && lockRecord.boot_session_id !== currentBootSessionId
-        )
+      && currentBootSessionId.length > 0
+      && lockRecord.boot_session_id !== currentBootSessionId
+    )
       ),
   );
 
@@ -340,17 +698,19 @@ export function getLocalMacProductionReleaseStatus({
         requireAbsolutePath(manifestPath, "releaseManifestPath"),
         "Release manifest",
       ),
-      currentHeadSha,
       manifestPath,
+      readGitEvidence,
+      rootDir,
     })
     : null;
 
   return {
-    current_head_sha: currentHeadSha,
     lock: {
+      corrupt: lockState.corrupt,
       holder,
-      locked: Boolean(lockRecord),
+      locked: lockState.locked,
       lock_path: getLocalMacProductionReleasePaths(homeDir).lockPath,
+      manual_recovery_required: lockState.corrupt,
       staleCandidate,
     },
     manifest,
@@ -367,6 +727,8 @@ export function getLocalMacProductionReleaseStatus({
  *   lockToken?: string | null,
  *   env?: NodeJS.ProcessEnv,
  *   readCurrentHeadSha?: ((options?: { rootDir?: string }) => string),
+ *   readGitEvidence?: typeof readLocalMacProductionGitReleaseEvidence,
+ *   verifyAttestation?: (input: Record<string, unknown>) => { verified: boolean, source?: string },
  * }} options
  */
 export function validateLocalMacProductionMutationAuthority({
@@ -378,13 +740,16 @@ export function validateLocalMacProductionMutationAuthority({
   lockToken = null,
   env = process.env,
   readCurrentHeadSha = readLocalMacProductionRepoHeadSha,
+  readGitEvidence = readLocalMacProductionGitReleaseEvidence,
+  verifyAttestation,
 } = {}) {
   if (!isLocalMacProductionMutationCommand(command)) {
-    return {
+    return brandLocalMacProductionMutationAuthority({
       command,
+      command_key: command,
       manifest: null,
       required: false,
-    };
+    });
   }
 
   const ignoredAmbientAuthority = Boolean(
@@ -397,17 +762,45 @@ export function validateLocalMacProductionMutationAuthority({
     );
   }
 
-  const currentHeadSha = readCurrentHeadSha({ rootDir });
   const normalizedManifestPath = requireAbsolutePath(
     releaseManifestPath,
     "releaseManifestPath",
   );
   const manifest = validateLocalMacProductionReleaseManifest({
     manifest: readJsonFile(normalizedManifestPath, "Release manifest"),
-    currentHeadSha,
     manifestPath: normalizedManifestPath,
+    readGitEvidence: typeof readGitEvidence === "function"
+      ? readGitEvidence
+      : ({ releaseSha, releaseTag, rootDir: evidenceRootDir }) => ({
+        originMasterSha: readCurrentHeadSha({ rootDir: evidenceRootDir }),
+        releaseTagObjectSha: readGitRevParse({
+          rootDir: evidenceRootDir,
+          runCommand: spawnSync,
+          label: "Release tag object",
+          ref: `refs/tags/${releaseTag}^{tag}`,
+        }),
+        releaseTagCommitSha: readGitRevParse({
+          rootDir: evidenceRootDir,
+          runCommand: spawnSync,
+          label: "Release tag commit",
+          ref: `refs/tags/${releaseTag}^{commit}`,
+        }),
+        releaseTreeSha: readGitRevParse({
+          rootDir: evidenceRootDir,
+          runCommand: spawnSync,
+          label: "Release tree",
+          ref: `${releaseSha}^{tree}`,
+        }),
+      }),
+    requireAttestation: true,
+    rootDir,
+    verifyAttestation,
   });
-  const lockRecord = readLockRecord({ homeDir });
+  const lockState = readLockRecord({ homeDir });
+  const lockRecord = lockState.lockRecord;
+  if (lockState.corrupt) {
+    throw new Error("Production promotion lock is corrupt and requires manual recovery.");
+  }
   if (!lockRecord) {
     throw new Error("Production promotion lock is not held.");
   }
@@ -424,11 +817,12 @@ export function validateLocalMacProductionMutationAuthority({
     throw new Error("Release manifest does not match the active production promotion lock.");
   }
 
-  return {
+  return brandLocalMacProductionMutationAuthority({
     command: commandLabel,
+    command_key: command,
     ignoredAmbientAuthority,
     lock: sanitizeLockHolder(lockRecord),
     manifest,
     required: true,
-  };
+  });
 }

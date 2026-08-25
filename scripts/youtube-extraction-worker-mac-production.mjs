@@ -188,7 +188,7 @@ async function runI031Preflight(options) {
   };
 }
 
-async function runInstall(options) {
+async function runInstall(options, mutationAuthority) {
   const releasePreflight = runReleasePreflight(options);
   if (!releasePreflight.ready) {
     throw new Error(`worker install preflight failed: ${releasePreflight.blockers.join(",")}`);
@@ -211,6 +211,7 @@ async function runInstall(options) {
       rootDir: options.rootDir,
       userId: options.userId,
       i031Preflight,
+      mutationAuthority,
       confirmation: options.confirmation,
       spawn: spawnSync,
     });
@@ -400,8 +401,9 @@ async function runHealth(options) {
 
 async function main() {
   const options = parseArgs(process.argv.slice(2));
+  let mutationAuthority = null;
   if (requiresReleaseMutationAuthority(options)) {
-    validateLocalMacProductionMutationAuthority({
+    mutationAuthority = validateLocalMacProductionMutationAuthority({
       command: options.command,
       homeDir: options.homeDir,
       lockToken: options.lockToken ?? null,
@@ -418,7 +420,7 @@ async function main() {
 
   switch (options.command) {
     case "install":
-      result = await runInstall(options);
+      result = await runInstall(options, mutationAuthority);
       break;
     case "start":
     case "stop":
