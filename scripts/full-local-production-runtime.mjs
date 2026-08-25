@@ -888,6 +888,71 @@ function sha256Text(value) {
   return createHash("sha256").update(value).digest("hex");
 }
 
+export function buildRestoredSemanticManifestSummary(parsed) {
+  if (
+    parsed.auth_sessions !== 0
+    || parsed.auth_refresh_tokens !== 0
+    || parsed.auth_flow_state !== 0
+    || parsed.public_users_without_auth !== 0
+    || parsed.storage_unreferenced_objects !== 0
+    || parsed.storage_owner_prefix_mismatches !== 0
+  ) {
+    fail("Restored semantic manifest contains transient Auth rows, missing Storage references, or owner mismatches.");
+  }
+  return Object.freeze({
+    auth_identity_digest: sha256Text(parsed.auth_identity_digest),
+    auth_identities: parsed.auth_identities,
+    auth_users: parsed.auth_users,
+    database_digest: sha256Text(JSON.stringify(parsed.public_relations)),
+    public_relation_count: parsed.public_relations.length,
+    public_users_without_auth: parsed.public_users_without_auth,
+    storage_bucket_count: parsed.storage_buckets,
+    storage_digest: sha256Text(
+      `${parsed.storage_bucket_digest}\n${parsed.storage_object_digest}`,
+    ),
+    storage_object_count: parsed.storage_objects,
+    storage_owner_prefix_mismatch_count: parsed.storage_owner_prefix_mismatches,
+    storage_referenced_object_count: parsed.storage_referenced_objects,
+    storage_unreferenced_object_count: parsed.storage_unreferenced_objects,
+    transient_promote_count: 0,
+  });
+}
+
+export function buildRestoreManifestPayload({
+  archiveSha256,
+  attemptToken,
+  createdAt = new Date().toISOString(),
+  dataSnapshot,
+  metadata,
+  runtimeConfig,
+  semantic,
+}) {
+  return Object.freeze({
+    ...semantic,
+    ...dataSnapshot,
+    compose_project: runtimeConfig.FULL_LOCAL_COMPOSE_PROJECT_NAME,
+    created_at: createdAt,
+    format: RESTORE_MANIFEST_FORMAT_V5,
+    fresh_target_attested: true,
+    postgres_volume: runtimeConfig.FULL_LOCAL_POSTGRES_VOLUME_NAME,
+    relation_classification_digest: metadata.manifest.relation_classification_digest,
+    restore_execution: "clean-isolated-restore-platform-v1",
+    restore_attempt_token: attemptToken,
+    source_archive_sha256: archiveSha256,
+    source_backup_created_at: metadata.created_at,
+    source_data_sha256: metadata.components.data_sha256,
+    source_data_semantic_sha256: metadata.manifest.data_semantic_sha256,
+    source_roles_sha256: metadata.components.roles_sha256,
+    source_schema_sha256: metadata.components.schema_sha256,
+    storage_payload_catalog_sha256: metadata.storage_payload.catalog_sha256,
+    storage_payload_object_count: metadata.storage_payload.object_count,
+    storage_payload_total_bytes: metadata.storage_payload.total_bytes,
+    storage_reference_count: metadata.storage_payload.object_count,
+    storage_volume: runtimeConfig.FULL_LOCAL_STORAGE_VOLUME_NAME,
+    unclassified_count: metadata.manifest.unclassified.length,
+  });
+}
+
 function sha256File(path) {
   const output = run("openssl", ["dgst", "-sha256", "-r", path], {
     failure: "Backup readiness file digest failed.",
@@ -1278,33 +1343,7 @@ function restoredSemanticManifest(runtime) {
     "postgres",
   ], sql).trim();
   const parsed = JSON.parse(output.split("\n").at(-1));
-  if (
-    parsed.auth_sessions !== 0
-    || parsed.auth_refresh_tokens !== 0
-    || parsed.auth_flow_state !== 0
-    || parsed.public_users_without_auth !== 0
-    || parsed.storage_unreferenced_objects !== 0
-    || parsed.storage_owner_prefix_mismatches !== 0
-  ) {
-    fail("Restored semantic manifest contains transient Auth rows, missing Storage references, or owner mismatches.");
-  }
-  return {
-    auth_identity_digest: sha256Text(parsed.auth_identity_digest),
-    auth_identities: parsed.auth_identities,
-    auth_users: parsed.auth_users,
-    database_digest: sha256Text(JSON.stringify(parsed.public_relations)),
-    public_relation_count: parsed.public_relations.length,
-    public_users_without_auth: parsed.public_users_without_auth,
-    storage_bucket_count: parsed.storage_buckets,
-    storage_digest: sha256Text(
-      `${parsed.storage_bucket_digest}\n${parsed.storage_object_digest}`,
-    ),
-    storage_object_count: parsed.storage_objects,
-    storage_owner_prefix_mismatch_count: parsed.storage_owner_prefix_mismatches,
-    storage_referenced_object_count: parsed.storage_referenced_objects,
-    storage_unreferenced_object_count: parsed.storage_unreferenced_objects,
-    transient_promote_count: 0,
-  };
+  return buildRestoredSemanticManifestSummary(parsed);
 }
 
 function writeRestoreManifest({
@@ -1317,25 +1356,17 @@ function writeRestoreManifest({
   runtime,
   semantic,
 }) {
-  const restoreManifest = {
-    ...semantic,
-    compose_project: runtime.config.FULL_LOCAL_COMPOSE_PROJECT_NAME,
-    created_at: new Date().toISOString(),
-    format: RESTORE_MANIFEST_FORMAT_V5,
-    fresh_target_attested: true,
-    postgres_volume: runtime.config.FULL_LOCAL_POSTGRES_VOLUME_NAME,
-    relation_classification_digest: metadata.manifest.relation_classification_digest,
-    restore_execution: "clean-isolated-restore-platform-v1",
-    restore_attempt_token: attemptToken,
-    source_archive_sha256: archiveSha256,
-    source_backup_created_at: metadata.created_at,
-    source_data_sha256: metadata.components.data_sha256,
-    source_data_semantic_sha256: metadata.manifest.data_semantic_sha256,
-    source_roles_sha256: metadata.components.roles_sha256,
-    source_schema_sha256: metadata.components.schema_sha256,
-    storage_volume: runtime.config.FULL_LOCAL_STORAGE_VOLUME_NAME,
-    unclassified_count: metadata.manifest.unclassified.length,
-  };
+  const restoreManifest = buildRestoreManifestPayload({
+    archiveSha256,
+    attemptToken,
+    dataSnapshot: {
+      restored_data_semantic_sha256: semantic.restored_data_semantic_sha256,
+      restored_data_sha256: semantic.restored_data_sha256,
+    },
+    metadata,
+    runtimeConfig: runtime.config,
+    semantic,
+  });
   const manifestContents = `${JSON.stringify(restoreManifest, null, 2)}\n`;
   writeFileSync(manifestPath, manifestContents, {
     encoding: "utf8",
