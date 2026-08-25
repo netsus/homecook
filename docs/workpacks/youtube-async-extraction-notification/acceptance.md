@@ -2,11 +2,11 @@
 
 ## Admin daily enqueue quota exception `2026-08-26`
 
-- [ ] `admin_members` 행이 없는 일반 사용자는 rolling 24시간 10회 enqueue 한도에 따라 10번째까지 성공하고 11번째는 `RATE_LIMITED`다. <!-- omo:id=accept-yta-admin-quota-regular-user;stage=2;scope=backend;review=3,6 -->
-- [ ] `admin_members` 행이 있는 같은 사용자는 10개의 terminal history가 있어도 11번째 enqueue가 새 `queued` job을 만든다. <!-- omo:id=accept-yta-admin-quota-bypass;stage=2;scope=backend;review=3,6 -->
-- [ ] 관리자도 active job 2개가 있으면 3번째 enqueue는 `RATE_LIMITED`다. <!-- omo:id=accept-yta-admin-active-limit;stage=2;scope=backend;review=3,6 -->
-- [ ] enqueue NOLOGIN owner는 `admin_members.user_id` 컬럼과 JWT `sub`와 일치하는 self-row만 조회하며, `anon`/`authenticated`는 `admin_members` 테이블을 직접 조회할 수 없다. <!-- omo:id=accept-yta-admin-quota-rls;stage=2;scope=backend;review=3,6 -->
-- [ ] admin membership policy/grant/function 정의가 expected-schema/catalog fingerprint와 다르면 enqueue/readiness는 fail closed한다. <!-- omo:id=accept-yta-admin-quota-attestation;stage=2;scope=backend;review=3,6 -->
+- [x] `admin_members` 행이 없는 일반 사용자는 rolling 24시간 10회 enqueue 한도에 따라 10번째까지 성공하고 11번째는 `RATE_LIMITED`다. <!-- omo:id=accept-yta-admin-quota-regular-user;stage=2;scope=backend;review=3,6 -->
+- [x] `admin_members` 행이 있는 같은 사용자는 10개의 terminal history가 있어도 11번째 enqueue가 새 `queued` job을 만든다. <!-- omo:id=accept-yta-admin-quota-bypass;stage=2;scope=backend;review=3,6 -->
+- [x] 관리자도 active job 2개가 있으면 3번째 enqueue는 `RATE_LIMITED`다. <!-- omo:id=accept-yta-admin-active-limit;stage=2;scope=backend;review=3,6 -->
+- [x] enqueue NOLOGIN owner는 `admin_members.user_id` 컬럼과 JWT `sub`와 일치하는 self-row만 조회하며, `anon`/`authenticated`는 `admin_members` 테이블을 직접 조회할 수 없다. <!-- omo:id=accept-yta-admin-quota-rls;stage=2;scope=backend;review=3,6 -->
+- [x] admin membership policy/grant/function 정의가 expected-schema/catalog fingerprint와 다르면 enqueue/readiness는 fail closed한다. <!-- omo:id=accept-yta-admin-quota-attestation;stage=2;scope=backend;review=3,6 -->
 
 > 공식 tuple은 `requirements 1.7.33 / screen 1.5.37 / Flow 1.3.35 / DB 1.3.35 / API 1.2.40`다. 체크는 실제 구현·테스트·독립 review evidence 뒤에만 한다. `Manual Only` 항목에는 omo metadata를 붙이지 않으며 자동화 완료와 섞지 않는다.
 

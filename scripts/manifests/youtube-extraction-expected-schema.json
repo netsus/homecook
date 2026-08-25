@@ -2,7 +2,7 @@
   "schema": "homecook.youtube-extraction-expected-schema",
   "version": 1,
   "schema_identity": "youtube-extraction-worker-schema-v1",
-  "catalog_fingerprint": "605c4e37ccd34313f00d4687c5340d8ea8ccdf958eb297805bbae871438775cc",
+  "catalog_fingerprint": "2b0dc95c374e140443e0f46a35ea16bcc6653f0857b7f986ae457eab01c44ff3",
   "catalog_fingerprint_algorithm": "sha256:youtube-extraction-live-catalog-v1",
   "catalog_fingerprint_components": [
     "tables",
@@ -29,6 +29,7 @@
   "tables": [
     "private.youtube_extraction_current_policy",
     "private.youtube_extraction_worker_credentials",
+    "public.admin_members",
     "public.cooking_methods",
     "public.ingredient_synonyms",
     "public.ingredients",
