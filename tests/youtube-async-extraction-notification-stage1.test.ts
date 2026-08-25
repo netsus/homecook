@@ -179,10 +179,13 @@ describe("YouTube async extraction Stage 1 contract", () => {
   });
 
   it("rebaselines the backend evidence to the merged local-only repair contract", () => {
-    const officialTuple = ["1.7.32", "1.5.36", "1.3.34", "1.3.34", "1.2.39"];
-    for (const document of [readme, acceptance, backendEvidence]) {
-      for (const version of officialTuple) expect(document).toContain(version);
+    const currentOfficialTuple = ["1.7.33", "1.5.37", "1.3.35", "1.3.35", "1.2.40"];
+    for (const document of [readme, acceptance]) {
+      for (const version of currentOfficialTuple) expect(document).toContain(version);
     }
+
+    const historicalBackendTuple = ["1.7.32", "1.5.36", "1.3.34", "1.3.34", "1.2.39"];
+    for (const version of historicalBackendTuple) expect(backendEvidence).toContain(version);
 
     for (const document of [readme, backendEvidence]) {
       expect(document).toContain("PR #1350");

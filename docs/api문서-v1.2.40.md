@@ -4,6 +4,10 @@
 담당자: 킴실장
 날짜: 8월 22일
 
+> **2026-08-26 contract-evolution addendum — 관리자 YouTube enqueue daily quota 예외**
+>
+> `POST /api/v1/recipes/youtube/extraction-jobs`와 호환 `sync_wait` enqueue의 rolling 24시간 10회 사용자 한도는 `admin_members` 등록 관리자에게만 적용하지 않는다. active job 2개, provider budget, worker permit, 전역 circuit breaker는 관리자에게도 그대로다. 응답에 admin 여부나 quota 남은 횟수를 추가하지 않으며 endpoint·request·success shape·HTTP status·error code는 변경하지 않는다.
+
 > **2026-08-13 contract-evolution — local-only runtime boundary와 public API N/A**
 >
 > Next `/api/v1`과 승인된 Auth public surface의 내부 target은 full-local Supabase뿐이다. server/runtime/worker는 Cloud project, linked root, remote Data API/DB credential 또는 remote fallback을 사용하지 않는다. PostgREST/Data API/RPC/Realtime/Storage는 loopback/private boundary에 남고 browser direct path는 차단한다. canonical target·gate·forbidden matrix는 `docs/engineering/supabase-local-only-operations.md`다.
@@ -104,7 +108,7 @@
 | 422 | `VALIDATION_ERROR` | exact request union/UUID/추가 field 오류 |
 | 409 | `JOB_NOT_RETRYABLE` | retry 대상이 terminal failed/expired가 아니거나 `can_retry=false` |
 | 409 | `POLICY_CHANGED` | 추출 설정이 바뀌었어요. 다시 시도해 주세요. app expected snapshot과 enabled policy mismatch; insert/dedupe/budget 0 |
-| 429 | `RATE_LIMITED` | 사용자 active/daily enqueue/provider budget 초과 |
+| 429 | `RATE_LIMITED` | active enqueue/provider budget 초과, 또는 일반 사용자의 daily enqueue 한도 초과. `admin_members` 등록 관리자는 daily enqueue 한도에서만 예외 |
 | 503 | `QUEUE_UNAVAILABLE` | expected schema/queue/worker/current-policy circuit breaker가 장기 비정상을 감지해 접수 차단 |
 
 ### `GET /recipes/youtube/extraction-jobs/{job_id}`

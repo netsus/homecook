@@ -5,6 +5,8 @@
 사용자가 `/menu/add/youtube`에서 YouTube 레시피 추출을 접수한 뒤 기다림 화면에 머물지 않고 다른 화면으로 이동해도 작업이 이어지게 한다. 성공·실패 결과는 앱 재실행과 재로그인 뒤에도 badge, toast, durable list로 복구하고, 성공 결과는 기존 검수·등록 또는 이미 등록된 레시피로 안전하게 이어진다.
 
 > 2026-08-15 사용자 승인으로 `/recipes/new/youtube` standalone 공개 진입면도 같은 background+notification 흐름을 사용한다. planner 문맥은 숨기고 return context가 없으면 Home(`/`)으로 이동하며 자동 등록하지 않는다. 기존 sync endpoint는 다른 consumer 호환용으로 유지한다.
+>
+> 2026-08-26 사용자 승인으로 `admin_members` 등록 관리자는 rolling 24시간 10회 enqueue 한도에서만 예외다. active job 2개·worker permit·provider budget·전역 circuit breaker는 모든 사용자에게 유지한다. 관리자 판정은 email/환경변수/hardcoded UUID가 아닌 `admin_members` 행을 단일 소스로 사용한다.
 
 ## Branches
 
@@ -68,7 +70,7 @@
 | --- | --- | --- |
 | `33-youtube-i031-direct-extraction` | merged | [x] |
 | 공식 contract PR `#1343` merge `25e10a7805f5bf171d4c1fbd94a573560b715786` | merged | [x] |
-| 공식 tuple `1.7.32 / 1.5.36 / 1.3.34 / 1.3.34 / 1.2.39` | current | [x] |
+| 공식 tuple `1.7.33 / 1.5.37 / 1.3.35 / 1.3.35 / 1.2.40` | current | [x] |
 | 최종 동결 계획 SHA-256 `7906f9ec975f309c310b2275714873cebb78e109770f885f09878e5c6bbed57a`, 991 lines, review task `019ffb44-5614-7af3-86a9-4ebd50977123` | independent PASS / Findings 없음 | [x] |
 | Phase 1.5 local-only repair PR #1350, exact head `a625aefa7baab63f183a9d46e6f12d607d4e017f`, merge `c4045705ef72c76f7e7258d10c460f56b6847dd7` | independent PASS / Findings 없음, merged | [x] |
 
@@ -103,6 +105,7 @@
 - enqueue route는 `createRouteHandlerClient()`의 refreshed user session으로 exact SECURITY DEFINER RPC를 호출한다. owner는 `auth.uid()`에서만 도출하며 별도 enqueue credential/API role은 없다.
 - fingerprint HMAC은 privacy-preserving dedupe일 뿐 인증/attestation이 아니다. DB는 HMAC secret을 알지 못하고 worker에는 fingerprint key를 전달하지 않는다.
 - transaction advisory shared lock → enabled policy plain SELECT → expected version/digest exact match → key version/window/format → dual-read dedupe → budget → current-write INSERT 순서를 지킨다. mismatch는 `POLICY_CHANGED`와 write/dedupe/budget 0이다.
+- budget은 모든 사용자의 active job 2개를 먼저 적용한다. rolling 24시간 10회는 `admin_members` 행이 없는 일반 사용자에게만 적용한다. enqueue RPC owner는 `admin_members.user_id` 컬럼과 request JWT `sub`와 일치하는 self-row만 볼 수 있으며 direct authenticated table access는 없다.
 - worker는 table/sequence privilege 0인 restricted API role과 exact hardened RPC만 쓴다. `job_id + worker_id + lease_generation`, permit generation, `allowed_snapshot_digest`, credential generation/JTI hash/expiry/release SHA/schema identity를 모두 검증한다.
 - 처리 실행은 at-least-once일 수 있지만 `source_job_id`와 단일 finalize transaction의 session/candidates/job 결과는 idempotent exactly-once projection이어야 한다.
 
@@ -148,11 +151,11 @@
 ## Source Links
 
 - `docs/sync/CURRENT_SOURCE_OF_TRUTH.md`
-- `docs/요구사항기준선-v1.7.32.md` §0-YT-ASYNC
-- `docs/화면정의서-v1.5.36.md` §0-YT-ASYNC
-- `docs/유저flow맵-v1.3.34.md` §0-YT-ASYNC
-- `docs/db설계-v1.3.34.md` §0-YT-ASYNC
-- `docs/api문서-v1.2.39.md` §0-YT-ASYNC
+- `docs/요구사항기준선-v1.7.33.md` §0-YT-ASYNC
+- `docs/화면정의서-v1.5.37.md` §0-YT-ASYNC
+- `docs/유저flow맵-v1.3.35.md` §0-YT-ASYNC
+- `docs/db설계-v1.3.35.md` §0-YT-ASYNC
+- `docs/api문서-v1.2.40.md` §0-YT-ASYNC
 - `docs/engineering/supabase-local-only-operations.md`
 - `docs/workpacks/33-youtube-i031-direct-extraction/README.md`
 - 최종 동결 계획: `/Users/cwj/01_vibe_coding/homecook/.omx/plans/youtube-background-extraction-notification-plan-20260808.md`, SHA-256 `7906f9ec975f309c310b2275714873cebb78e109770f885f09878e5c6bbed57a`, 991 lines

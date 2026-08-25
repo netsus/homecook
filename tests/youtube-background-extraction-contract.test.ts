@@ -501,8 +501,11 @@ describe("YouTube background extraction contract evolution", () => {
     expect(db).toContain("youtube_extraction_current_policy_enqueue_owner_select");
     expect(db).toContain("youtube_extraction_jobs_enqueue_owner_select");
     expect(db).toContain("youtube_extraction_jobs_enqueue_owner_insert");
+    expect(db).toContain("youtube_extraction_admin_members_enqueue_owner_select");
     expect(db).toContain("FOR SELECT USING (user_id=auth.uid())");
     expect(db).toContain("FOR INSERT WITH CHECK (user_id=auth.uid())");
+    expect(db).toContain("admin_members `user_id` column `SELECT`");
+    expect(db).toContain("admin_members table-wide SELECT는 0");
     expect(db).toContain("policy UPDATE와 jobs UPDATE/DELETE/TRUNCATE/REFERENCES/TRIGGER");
     const removedApiRole = "`youtube_extraction_" + "enqueue`";
     const removedScope = "youtube-extraction-" + "enqueue";
@@ -518,6 +521,37 @@ describe("YouTube background extraction contract evolution", () => {
     expect(db).not.toMatch(/HMAC (?:secret|key).*private\.youtube_extraction_current_policy에 저장/);
   });
 
+  it("exempts only admin_members users from the rolling daily enqueue budget", () => {
+    const requirements = read(officialTuple[0]);
+    const db = read(officialTuple[3]);
+    const api = read(officialTuple[4]);
+    const source = read("docs/sync/CURRENT_SOURCE_OF_TRUTH.md");
+    const workpack = read(
+      "docs/workpacks/youtube-async-extraction-notification/README.md",
+    );
+    const acceptance = read(
+      "docs/workpacks/youtube-async-extraction-notification/acceptance.md",
+    );
+
+    for (const text of [requirements, db, api, source, workpack, acceptance]) {
+      expect(text).toContain("admin_members");
+      expect(text).toContain("rolling 24시간 10회");
+      expect(text).toContain("active job 2개");
+    }
+
+    expect(requirements).toContain("hardcoded UUID");
+    expect(requirements).toContain("fail closed");
+    expect(requirements).toContain("control-plane 행위가 아니므로");
+    expect(requirements).toContain("audit write 권한을 추가하지 않는다");
+    expect(db).toContain("admin_members.user_id` self-row column SELECT");
+    expect(db).toContain(
+      "policy plain SELECT, jobs owner-bound SELECT/INSERT, admin_members `user_id` self-row column SELECT",
+    );
+    expect(db).toContain("admin_members의 `user_id` 이외 컬럼 및 table-wide SELECT");
+    expect(api).toContain("endpoint·request·success shape·HTTP status·error code는 변경하지 않는다");
+    expect(source).toContain("화면·Flow·public response shape는 변경 없으며");
+  });
+
   it("serializes policy reads and rotations with one advisory lock authority", () => {
     const db = read(officialTuple[3]);
     const flow = read(officialTuple[2]);
@@ -529,7 +563,9 @@ describe("YouTube background extraction contract evolution", () => {
       expect(text).toContain("UPDATE/CAS");
     }
 
-    expect(db).toContain("policy `SELECT`, jobs `SELECT,INSERT`뿐");
+    expect(db).toContain(
+      "policy `SELECT`, jobs `SELECT,INSERT`, admin_members `user_id` column `SELECT`뿐",
+    );
     expect(db).toContain("policy UPDATE");
     expect(db).toContain("0이다");
     expect(db).not.toMatch(
