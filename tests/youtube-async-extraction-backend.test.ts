@@ -104,6 +104,7 @@ describe("YTASYNC-CONTRACT/API", () => {
     const projected = projectYoutubeExtractionJob({
       id: "11111111-1111-4111-8111-111111111111",
       status: "succeeded",
+      youtube_video_id: "abc123DEF45",
       created_at: "2026-08-12T00:00:00.000Z",
       started_at: "2026-08-12T00:00:02.000Z",
       completed_at: "2026-08-12T00:01:00.000Z",

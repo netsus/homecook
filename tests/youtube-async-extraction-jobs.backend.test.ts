@@ -104,6 +104,7 @@ describe("YTASYNC-API exact job contract", () => {
     const common = {
       id: "11111111-1111-4111-8111-111111111111",
       status: "succeeded" as const,
+      youtube_video_id: "abc123DEF45",
       created_at: "2026-08-12T00:00:00.000Z",
       started_at: "2026-08-12T00:00:01.000Z",
       completed_at: "2026-08-12T00:00:02.000Z",
@@ -128,5 +129,28 @@ describe("YTASYNC-API exact job contract", () => {
         expires_at: "2026-08-12T12:00:00.000Z",
       },
     }, now)).toMatchObject({ status: "expired", can_retry: true });
+  });
+
+  it("carries the canonical source URL into an unconsumed review path", () => {
+    const projected = projectYoutubeExtractionJob({
+      id: "11111111-1111-4111-8111-111111111111",
+      status: "succeeded",
+      youtube_video_id: "abc123DEF45",
+      created_at: "2026-08-12T00:00:00.000Z",
+      started_at: "2026-08-12T00:00:01.000Z",
+      completed_at: "2026-08-12T00:00:02.000Z",
+      error_code: null,
+      extraction_session: {
+        id: "22222222-2222-4222-8222-222222222222",
+        status: "draft",
+        recipe_id: null,
+        expires_at: "2026-08-13T00:00:00.000Z",
+      },
+    }, new Date("2026-08-12T01:00:00.000Z"));
+
+    expect(projected.result?.review_path).toBe(
+      "/menu/add/youtube?extractionId=22222222-2222-4222-8222-222222222222"
+      + "&youtubeUrl=https%3A%2F%2Fwww.youtube.com%2Fwatch%3Fv%3Dabc123DEF45",
+    );
   });
 });

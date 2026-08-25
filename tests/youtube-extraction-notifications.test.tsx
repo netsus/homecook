@@ -28,6 +28,9 @@ vi.mock("@/lib/api/youtube-extraction-jobs", () => ({
   markYoutubeExtractionSeen: vi.fn(),
 }));
 
+const youtubeUrl = "https://www.youtube.com/watch?v=abcdefghijk";
+const encodedYoutubeUrl = encodeURIComponent(youtubeUrl);
+
 const successItem = {
   job_id: "11111111-1111-4111-8111-111111111111",
   status: "succeeded" as const,
@@ -40,7 +43,7 @@ const successItem = {
   seen_at: null,
   result: {
     extraction_id: "extraction-success",
-    review_path: "/menu/add/youtube?extractionId=extraction-success",
+    review_path: `/menu/add/youtube?extractionId=extraction-success&youtubeUrl=${encodedYoutubeUrl}`,
     recipe_id: null,
     recipe_path: null,
   },
@@ -140,6 +143,9 @@ describe("YouTube extraction notification center", () => {
     expect(await screen.findByText("레시피 추출이 끝났어요")).toBeTruthy();
     expect(screen.getByText("추출 결과를 확인하고 레시피로 등록할 수 있어요.")).toBeTruthy();
     expect(screen.getByLabelText("YouTube 추출 알림 1개")).toBeTruthy();
+    expect(screen.getByRole("link", { name: "결과 확인" }).getAttribute("href")).toBe(
+      `/menu/add/youtube?extractionId=extraction-success&youtubeUrl=${encodedYoutubeUrl}`,
+    );
 
     await waitFor(() => {
       expect(api.markYoutubeExtractionDelivered).toHaveBeenCalledWith(["delivery-success"]);
