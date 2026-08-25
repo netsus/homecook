@@ -102,14 +102,14 @@ export function readLocalMacProductionRepoHeadSha({
   rootDir = process.cwd(),
   runCommand = spawnSync,
 } = {}) {
-  const result = runCommand("git", ["rev-parse", "HEAD"], {
+  const result = runCommand("git", ["rev-parse", "origin/master"], {
     cwd: requireAbsolutePath(rootDir, "rootDir"),
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"],
   });
   const releaseSha = String(result.stdout ?? "").trim();
   if (result.status !== 0 || !RELEASE_SHA_PATTERN.test(releaseSha)) {
-    throw new Error("Local Mac production release SHA could not be resolved.");
+    throw new Error("Local Mac production origin/master release SHA could not be resolved.");
   }
   return releaseSha;
 }

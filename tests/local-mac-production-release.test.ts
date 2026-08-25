@@ -8,6 +8,7 @@ import {
   acquireLocalMacProductionPromotionLock,
   getLocalMacProductionReleaseStatus,
   isLocalMacProductionMutationCommand,
+  readLocalMacProductionRepoHeadSha,
   validateLocalMacProductionMutationAuthority,
   validateLocalMacProductionReleaseManifest,
 } from "../scripts/lib/local-mac-production-release.mjs";
@@ -58,6 +59,27 @@ afterEach(() => {
 });
 
 describe("local Mac production release manifest", () => {
+  it("resolves the approved release SHA from origin/master instead of the local checkout head", () => {
+    const invocations: string[][] = [];
+    const releaseSha = "a".repeat(40);
+    const runCommand = ((_: string, args?: readonly string[]) => {
+      invocations.push([...(args ?? [])]);
+      return {
+        status: 0,
+        stdout: `${releaseSha}\n`,
+      };
+    }) as typeof import("node:child_process").spawnSync;
+
+    expect(
+      readLocalMacProductionRepoHeadSha({
+        rootDir: "/repo",
+        runCommand,
+      }),
+    ).toBe(releaseSha);
+
+    expect(invocations).toEqual([["rev-parse", "origin/master"]]);
+  });
+
   it("rejects a manifest when the release tag or approved SHA does not match the exact approved master head", () => {
     expect(() =>
       validateLocalMacProductionReleaseManifest({
