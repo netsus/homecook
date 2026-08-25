@@ -14,6 +14,15 @@
 - 사용자 승인으로 공식 계약을 바꾸는 경우에도 구현보다 문서가 먼저다. 관련 공식 문서와 이 파일의 버전/경로를 같은 `contract-evolution` PR에서 먼저 갱신한다.
 - Supabase target과 gate의 canonical 운영 계약은 `docs/engineering/supabase-local-only-operations.md`다.
 
+## YouTube Admin Daily Enqueue Quota Exception `2026-08-26`
+
+사용자는 `admin_members` 등록 관리자에게 rolling 24시간 10회 YouTube enqueue 한도만 예외로 두도록 명시적으로 승인했다. 이 승인은 현재 official tuple의 요구사항·DB·API addendum과 `youtube-async-extraction-notification` workpack에 반영한다.
+
+- 관리자 신원은 `admin_members` 행 존재만 사용하며 email·환경변수·hardcoded UUID allowlist를 두지 않는다.
+- 관리자에게는 rolling 24시간 10회 enqueue 한도만 적용하지 않는다.
+- active job 2개, worker permit, provider budget, 전역 circuit breaker는 관리자에게도 유지한다.
+- 화면·Flow·public response shape는 변경 없으며, DB 내부 권한과 quota 판정만 최소 변경한다.
+
 > 사용자는 2026-08-24에 #14 `cooking-meal-log-cross-slice-release-qa`의 Stage 4 isolated disposable rehearsal contract-evolution을 승인했다. official 5 product docs CSoT impact는 N/A이며 current official tuple `v1.7.33 / v1.5.37 / v1.3.35 / v1.3.35 / v1.2.40`는 유지한다. 이 계약은 fresh ownership-attested disposable isolated Stage 4 project only, loopback transport only, remote/linked/cloud access 0, reserved non-resolving production-shaped HTTPS issuer claim(`https://auth.stage4.homecook.invalid/auth/v1`), canonical cutover/capability transition procedures, rehearsal_only evidence, exact-head create-only evidence, cleanup-owned-only teardown, fail-closed semantics만 잠근다. Manual/server-Mac/OAuth/R/R+1/R+2/required-key/production activation은 여전히 pending이며, #14 workpack README/acceptance/automation-spec과 roadmap projection만 동기화한다.
 
 ## Personal Recipe Write Contract-Evolution Approval `2026-08-22`

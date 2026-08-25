@@ -4,6 +4,10 @@
 담당자: 채실장
 날짜: 8월 22일
 
+> **2026-08-26 contract-evolution addendum — YouTube enqueue 관리자 daily quota 예외 권한**
+>
+> `public.enqueue_youtube_extraction_job(...)`은 `auth.uid()`에 해당하는 `public.admin_members.user_id` 행 존재를 원자적으로 확인한다. `youtube_extraction_enqueue_rpc_owner` 에게는 `admin_members.user_id` 컬럼 SELECT만 부여하고, request JWT `sub`와 동일한 자신의 행만 볼 수 있는 RLS SELECT policy를 둔다. `anon`/`authenticated`의 테이블 직접 조회는 계속 금지한다. 해당 행이 있는 관리자에게는 rolling 24시간 10회 enqueue 조건만 적용하지 않고, active job 2개 조건은 유지한다. 이 컬럼 권한·RLS policy·function definition은 YouTube expected-schema/catalog fingerprint의 fail-closed 검증 대상이다.
+
 > **2026-08-15 contract-evolution addendum — 공개 YouTube background 활성화의 DB 영향 N/A**
 >
 > `/recipes/new/youtube` standalone 화면도 기존 `youtube_extraction_jobs`, `youtube_extraction_sessions.source_job_id`, terminal delivery/seen RPC와 restricted local worker를 그대로 사용한다. 신규 table/column/status/RPC/RLS/ACL은 없으며 Supabase Cloud/linked/remote target은 계속 forbidden이다. 자동 등록을 제거해도 stored job/session 상태 전이와 ownership authority는 바뀌지 않는다.
@@ -154,7 +158,7 @@ processing -- lease expired + attempts exhausted --> failed/ATTEMPTS_EXHAUSTED
 
 | 역할 | 속성/권한 |
 | --- | --- |
-| `youtube_extraction_enqueue_rpc_owner` | `NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS NOINHERIT`; enqueue SECURITY DEFINER owner, policy/jobs 최소 privilege + matching explicit RLS policy만 보유 |
+| `youtube_extraction_enqueue_rpc_owner` | `NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS NOINHERIT`; enqueue SECURITY DEFINER owner, policy/jobs 최소 privilege + `admin_members.user_id` self-row column SELECT + matching explicit RLS policy만 보유 |
 | `youtube_extraction_worker` | PostgREST API role, `NOLOGIN`; table/sequence privilege 0, exact worker RPC `EXECUTE`만 보유 |
 | `youtube_extraction_worker_rpc_owner` | `NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS NOINHERIT`; worker SECURITY DEFINER 함수 owner, inventory 최소 table/sequence operation + matching explicit RLS policy만 보유 |
 | `youtube_extraction_credential_manager` | PostgREST API role, `NOLOGIN`; table/sequence privilege 0, exact rotation RPC `EXECUTE`만 보유 |
@@ -163,13 +167,13 @@ processing -- lease expired + attempts exhausted --> failed/ATTEMPTS_EXHAUSTED
 - `authenticator`의 additive membership edge는 `authenticator → youtube_extraction_worker`, `authenticator → youtube_extraction_credential_manager` 정확히 두 개다. 각 edge는 `admin=false`, target PostgreSQL version의 PostgREST SET ROLE semantics에 맞는 exact inherit/set option을 사용하고 그 외 owner/상호 membership은 0이다. enqueue 전용 API role/membership은 없다.
 - `authenticator`, 두 API role, `anon`, `authenticated`, `service_role`은 세 RPC owner의 member가 아니며 `SET ROLE ..._rpc_owner`할 수 없다. owner는 로그인/JWT role에 상속되지 않는다.
 - 모든 enqueue/worker/rotation 함수는 exact signature의 hardened `SECURITY DEFINER SET search_path = ''`와 fully qualified object를 사용한다.
-- enqueue RPC exact signature를 `authenticated`에만 `GRANT EXECUTE`하고 `PUBLIC`, `anon`, `service_role`, worker, credential-manager, manager에서 `REVOKE EXECUTE`한다. 이 ACL은 loopback/private Data API 내부의 user-session 호출 권한이며 public 인터넷 노출 허가가 아니다. enqueue owner는 policy plain SELECT, jobs owner-bound SELECT/INSERT와 allowlisted owner-bound budget-consume RPC EXECUTE만 허용하며 broad schema/table ownership, DELETE/TRUNCATE/TRIGGER/REFERENCES와 HMAC secret 접근은 0이다.
-- exact enqueue RLS/ACL inventory는 다음과 같다. 두 table은 ENABLE+FORCE RLS다. `youtube_extraction_current_policy_enqueue_owner_select`는 `TO youtube_extraction_enqueue_rpc_owner FOR SELECT USING (policy_key='primary')`, `youtube_extraction_jobs_enqueue_owner_select`는 `FOR SELECT USING (user_id=auth.uid())`, `youtube_extraction_jobs_enqueue_owner_insert`는 `FOR INSERT WITH CHECK (user_id=auth.uid())`다. owner table ACL은 policy `SELECT`, jobs `SELECT,INSERT`뿐이고 UUID server generation이라 sequence privilege는 0이다. budget은 allowlisted owner-bound consume RPC `EXECUTE`만 사용하며 budget table direct privilege는 0이다. authenticated/API caller는 모든 table/sequence privilege 0이다.
-- `youtube_extraction_enqueue_rpc_owner`는 policy/jobs의 table owner가 아니고 NOBYPASSRLS다. policy UPDATE와 jobs UPDATE/DELETE/TRUNCATE/REFERENCES/TRIGGER, 모든 protected column UPDATE, 다른 schema/table/function, credential/worker secret에 대한 privilege는 0이다. exact policy name/role/command/permissiveness/qual/with_check drift와 owner/API-role grant-option은 validator가 거부한다.
+- enqueue RPC exact signature를 `authenticated`에만 `GRANT EXECUTE`하고 `PUBLIC`, `anon`, `service_role`, worker, credential-manager, manager에서 `REVOKE EXECUTE`한다. 이 ACL은 loopback/private Data API 내부의 user-session 호출 권한이며 public 인터넷 노출 허가가 아니다. enqueue owner는 policy plain SELECT, jobs owner-bound SELECT/INSERT, admin_members `user_id` self-row column SELECT와 allowlisted owner-bound budget-consume RPC EXECUTE만 허용하며 broad schema/table ownership, DELETE/TRUNCATE/TRIGGER/REFERENCES와 HMAC secret 접근은 0이다.
+- exact enqueue RLS/ACL inventory는 다음과 같다. policy/jobs는 ENABLE+FORCE RLS다. `youtube_extraction_current_policy_enqueue_owner_select`는 `TO youtube_extraction_enqueue_rpc_owner FOR SELECT USING (policy_key='primary')`, `youtube_extraction_jobs_enqueue_owner_select`는 `FOR SELECT USING (user_id=auth.uid())`, `youtube_extraction_jobs_enqueue_owner_insert`는 `FOR INSERT WITH CHECK (user_id=auth.uid())`다. RLS-enabled `admin_members`의 `youtube_extraction_admin_members_enqueue_owner_select`는 `TO youtube_extraction_enqueue_rpc_owner FOR SELECT USING (user_id=auth.uid())`다. owner table ACL은 policy `SELECT`, jobs `SELECT,INSERT`, admin_members `user_id` column `SELECT`뿐이고 admin_members table-wide SELECT는 0이다. UUID server generation이라 sequence privilege는 0이다. budget은 allowlisted owner-bound consume RPC `EXECUTE`만 사용하며 budget table direct privilege는 0이다. authenticated/API caller는 모든 table/sequence privilege 0이다.
+- `youtube_extraction_enqueue_rpc_owner`는 policy/jobs/admin_members의 table owner가 아니고 NOBYPASSRLS다. policy UPDATE와 jobs UPDATE/DELETE/TRUNCATE/REFERENCES/TRIGGER, admin_members의 `user_id` 이외 컬럼 및 table-wide SELECT, 모든 protected column UPDATE, 허용되지 않은 schema/table/function, credential/worker secret에 대한 privilege는 0이다. exact policy name/role/command/permissiveness/qual/with_check drift와 owner/API-role grant-option은 validator가 거부한다.
 - worker RPC는 exact signature별 `PUBLIC`, `anon`, `authenticated`, `service_role`, credential-manager role의 `EXECUTE`를 revoke하고 `youtube_extraction_worker`에만 grant한다.
 - rotation RPC는 `PUBLIC`, `anon`, `authenticated`, `service_role`, `youtube_extraction_worker`의 `EXECUTE`를 revoke하고 `youtube_extraction_credential_manager`에만 grant한다.
 - enqueue는 기존 user-session DB pre-request가 검증한 `role=authenticated`, current `sub/session_id/generation`, issuer/audience/expiry를 그대로 사용한다. `createRouteHandlerClient()`가 이 사용자 세션으로 RPC를 호출하고 함수는 `auth.uid()` null을 거부한 뒤 owner를 그 값에서만 도출하며 `user_id` 인자를 받지 않는다. 별도 enqueue credential authority는 없다. `service_role`, worker, credential-manager, manager caller는 function ACL에서 거부한다.
-- release expected-schema manifest는 app descriptor의 exact `expected_policy_version`/`expected_policy_snapshot_digest`, role attributes, `pg_auth_members` exact 두 edge/owner edge 부재, authenticated/API caller table/sequence privilege 0, enqueue owner의 policy SELECT·jobs SELECT/INSERT 최소 privilege/RLS, `pg_proc.proowner/prosecdef/proconfig/proacl`, exact RPC signature를 검증한다. app preflight가 exact current policy snapshot과 일치하기 전 enqueue를 publish하지 않는다. 하나라도 drift면 enqueue/worker claim/rotation readiness는 fail closed다.
+- release expected-schema manifest는 app descriptor의 exact `expected_policy_version`/`expected_policy_snapshot_digest`, role attributes, `pg_auth_members` exact 두 edge/owner edge 부재, authenticated/API caller table/sequence privilege 0, enqueue owner의 policy SELECT·jobs SELECT/INSERT·admin_members `user_id` self-row column SELECT 최소 privilege/RLS, `pg_proc.proowner/prosecdef/proconfig/proacl`, exact RPC signature를 검증한다. app preflight가 exact current policy snapshot과 일치하기 전 enqueue를 publish하지 않는다. 하나라도 drift면 enqueue/worker claim/rotation readiness는 fail closed다.
 
 ### `private.youtube_extraction_worker_credentials`와 pre-request/rotation
 
@@ -2838,7 +2842,7 @@ XP toast와 achievement/badge new 상태 표시를 위한 사용자별 notificat
 | created_at | timestamptz | NOT NULL, default now() | 레코드 생성 시각 |
 
 - **인덱스**: `idx_admin_members_user_id` ON (user_id) — UNIQUE
-- **RLS**: service-role만 접근 가능. anon/authenticated 직접 접근 금지
+- **RLS**: service-role만 전체 접근 가능. anon/authenticated 직접 접근은 금지한다. 예외적으로 NOLOGIN `youtube_extraction_enqueue_rpc_owner`는 `user_id` 컬럼에 한해 request JWT `sub`와 동일한 자신의 관리자 행만 조회한다.
 - **최초 admin 등록**: Supabase SQL (`INSERT INTO admin_members (user_id, role) VALUES ('<operator-uuid>', 'viewer')`) 또는 service-role API로 직접 등록. 환경변수 허용목록(allowlist) 우회 패턴 사용 금지
 
 ## 12-2. operational_events
