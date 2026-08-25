@@ -61,6 +61,7 @@ const DEFAULT_INCLUDED_PATHS = Object.freeze([
   "lib/server/youtube-i031-runtime/bundle",
   "scripts/youtube-extraction-worker-runner.mjs",
   "scripts/lib/youtube-extraction-worker-artifact.mjs",
+  "scripts/lib/local-mac-production-release.mjs",
   "scripts/lib/youtube-extraction-worker-ops.mjs",
   "scripts/lib/youtube-extraction-worker-runtime.mjs",
   "scripts/manifests/youtube-extraction-expected-schema.json",
@@ -76,6 +77,7 @@ export const YOUTUBE_EXTRACTION_WORKER_REQUIRED_ARTIFACT_FILES = Object.freeze([
   WORKER_TIMING_RELATIVE_PATH,
   "lib/server/youtube-i031-runtime/bundle/manifest.json",
   "lib/server/youtube-i031-runtime/bundle/worker.mjs",
+  "scripts/lib/local-mac-production-release.mjs",
   "scripts/lib/youtube-extraction-worker-artifact.mjs",
   "scripts/lib/youtube-extraction-worker-ops.mjs",
   "scripts/lib/youtube-extraction-worker-runtime.mjs",
@@ -335,6 +337,22 @@ function makeArtifactReadOnly(directory) {
   chmodSync(directory, 0o555);
 }
 
+function makeArtifactWritableForCleanup(directory) {
+  if (!existsSync(directory)) {
+    return;
+  }
+  for (const entry of readdirSync(directory, { withFileTypes: true })) {
+    const target = join(directory, entry.name);
+    if (entry.isDirectory()) {
+      makeArtifactWritableForCleanup(target);
+      chmodSync(target, 0o700);
+    } else {
+      chmodSync(target, 0o600);
+    }
+  }
+  chmodSync(directory, 0o700);
+}
+
 /**
  * Materializes the exact manifest bytes into a standalone, read-only directory.
  * @param {{
@@ -382,8 +400,8 @@ export function materializeYoutubeExtractionWorkerArtifact({
       encoding: "utf8",
       mode: 0o444,
     });
-    makeArtifactReadOnly(stagingRoot);
     renameSync(stagingRoot, normalizedOutput);
+    makeArtifactReadOnly(normalizedOutput);
     return {
       root_dir: normalizedOutput,
       manifest_path: resolve(normalizedOutput, "artifact.json"),
@@ -391,6 +409,7 @@ export function materializeYoutubeExtractionWorkerArtifact({
       manifest,
     };
   } catch (error) {
+    makeArtifactWritableForCleanup(stagingRoot);
     rmSync(stagingRoot, { recursive: true, force: true });
     throw error;
   }

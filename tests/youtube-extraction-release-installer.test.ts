@@ -61,6 +61,9 @@ import {
 import {
   issueYoutubeExtractionWorkerCredential,
 } from "../scripts/lib/youtube-extraction-worker-local-credential.mjs";
+import {
+  createValidatedLocalMacMutationAuthority,
+} from "./helpers/local-mac-production-release-fixtures";
 
 const tempDirs: string[] = [];
 const GREEN_I031_PREFLIGHT = Object.freeze({
@@ -69,6 +72,23 @@ const GREEN_I031_PREFLIGHT = Object.freeze({
   chatGptLogin: true,
   toolsReady: true,
 });
+function createReleaseAuthority({
+  homeDir,
+  rootDir,
+  manifestPath,
+}: {
+  homeDir: string;
+  rootDir: string;
+  manifestPath: string;
+}) {
+  return createValidatedLocalMacMutationAuthority({
+    command: "install",
+    homeDir,
+    rootDir,
+    lockToken: "66666666-6666-4666-8666-666666666666",
+    manifestPath,
+  }).mutationAuthority;
+}
 
 function futureIso(days: number) {
   return new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
@@ -320,6 +340,12 @@ describe("YTASYNC-OPS deterministic artifact", () => {
     const homeDir = createTempDir("yta-worker-home-");
     const privateDir = createTempDir("yta-worker-private-");
     const release = createReleaseInputs(privateDir);
+    const manifestPath = join(homeDir, "release.json");
+    const mutationAuthority = createReleaseAuthority({
+      homeDir,
+      rootDir: release.artifactDir,
+      manifestPath,
+    });
     const configPath = join(privateDir, "worker.env");
     writeModeFile(configPath, [
       "HOMECOOK_YOUTUBE_WORKER_DATA_API_URL=http://127.0.0.1:54321/rest/v1",
@@ -330,6 +356,7 @@ describe("YTASYNC-OPS deterministic artifact", () => {
     const calls: string[] = [];
 
     expect(() => installYoutubeExtractionWorkerLaunchAgent({
+      mutationAuthority,
       configPath,
       manifestPath: release.manifestPath,
       credentialPath: release.credentialPath,
@@ -345,6 +372,7 @@ describe("YTASYNC-OPS deterministic artifact", () => {
     })).toThrow(/confirmation/iu);
 
     const installed = installYoutubeExtractionWorkerLaunchAgent({
+      mutationAuthority,
       configPath,
       manifestPath: release.manifestPath,
       credentialPath: release.credentialPath,
@@ -381,6 +409,11 @@ describe("YTASYNC-OPS deterministic artifact", () => {
     const homeDir = createTempDir("yta-worker-rollback-home-");
     const privateDir = createTempDir("yta-worker-rollback-private-");
     const release = createReleaseInputs(privateDir);
+    const mutationAuthority = createReleaseAuthority({
+      homeDir,
+      rootDir: release.artifactDir,
+      manifestPath: join(homeDir, "release.json"),
+    });
     const configPath = join(privateDir, "worker.env");
     writeModeFile(configPath, [
       "HOMECOOK_YOUTUBE_WORKER_DATA_API_URL=http://127.0.0.1:54321/rest/v1",
@@ -399,6 +432,7 @@ describe("YTASYNC-OPS deterministic artifact", () => {
     const launchctlCalls: string[] = [];
 
     expect(() => installYoutubeExtractionWorkerLaunchAgent({
+      mutationAuthority,
       configPath,
       manifestPath: release.manifestPath,
       credentialPath: release.credentialPath,
@@ -426,6 +460,40 @@ describe("YTASYNC-OPS deterministic artifact", () => {
     expect(launchctlCalls.some((call) => call.startsWith("kickstart "))).toBe(false);
   });
 
+  it("blocks the direct install helper before launchctl when no validated authority is provided", () => {
+    const homeDir = createTempDir("yta-worker-no-authority-home-");
+    const privateDir = createTempDir("yta-worker-no-authority-private-");
+    const release = createReleaseInputs(privateDir);
+    const configPath = join(privateDir, "worker.env");
+    writeModeFile(configPath, [
+      "HOMECOOK_YOUTUBE_WORKER_DATA_API_URL=http://127.0.0.1:54321/rest/v1",
+      `HOMECOOK_YOUTUBE_WORKER_PROVIDER_SECRET_FILE=${join(privateDir, "provider.env")}`,
+      "HOMECOOK_YOUTUBE_WORKER_RUNTIME_ROOT=/tmp/homecook-youtube-worker",
+    ].join("\n"));
+    writeModeFile(join(privateDir, "provider.env"), "YOUTUBE_API_KEY=test-provider-key\n");
+    const calls: string[] = [];
+
+    expect(() => installYoutubeExtractionWorkerLaunchAgent({
+      configPath,
+      manifestPath: release.manifestPath,
+      credentialPath: release.credentialPath,
+      appDescriptorPath: release.appPath,
+      currentPolicyPath: release.policyPath,
+      expectedSchemaPath: release.expectedSchemaPath,
+      secretRoot: privateDir,
+      homeDir,
+      rootDir: release.artifactDir,
+      i031Preflight: GREEN_I031_PREFLIGHT,
+      confirmation: "LOCAL_FULL_PRODUCTION_WORKER_INSTALL",
+      spawn: (_command, args) => {
+        calls.push(args.join(" "));
+        return { status: 0, stdout: "", stderr: "" };
+      },
+    })).toThrow(/validated release authority|release authority|--release-manifest/iu);
+
+    expect(calls).toEqual([]);
+  });
+
   it("rejects relative paths instead of silently resolving them against cwd", () => {
     expect(() => ensureAbsolutePath("relative/worker.json", "workerArtifactPath"))
       .toThrow(/absolute path/i);
@@ -451,6 +519,7 @@ describe("YTASYNC-OPS deterministic artifact", () => {
     expect(manifestA.files.map((entry) => entry.path)).toEqual(expect.arrayContaining([
       "lib/server/youtube-i031-runtime/bundle/manifest.json",
       "lib/server/youtube-i031-runtime/bundle/worker.mjs",
+      "scripts/lib/local-mac-production-release.mjs",
       "scripts/lib/youtube-extraction-worker-artifact.mjs",
       "scripts/lib/youtube-extraction-worker-ops.mjs",
       "scripts/lib/youtube-extraction-worker-runtime.mjs",
@@ -896,6 +965,28 @@ describe("YTASYNC-OPS launchd contract", () => {
         dryRun: false,
       }),
     ).toThrow(/manual only/i);
+  });
+
+  it("blocks install --execute unless explicit release authority flags are provided", () => {
+    const result = spawnSync(process.execPath, [
+      "scripts/youtube-extraction-worker-mac-production.mjs",
+      "install",
+      "--execute",
+    ], {
+      cwd: process.cwd(),
+      encoding: "utf8",
+      env: {
+        ...process.env,
+        HOMECOOK_RELEASE_MANIFEST_PATH: "/tmp/ambient-release.json",
+        HOMECOOK_RELEASE_LOCK_TOKEN: "ambient-lock-token",
+      },
+    });
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("--release-manifest");
+    expect(result.stderr).toContain("--lock-token");
+    expect(result.stderr).not.toContain("/tmp/ambient-release.json");
+    expect(result.stderr).not.toContain("ambient-lock-token");
   });
 
   it("rejects a launchd root outside the attested artifact directory", () => {
@@ -1353,6 +1444,7 @@ describe("YTASYNC-OPS preflight, drain, rollback, credential", () => {
       "lib/server/youtube-extraction-worker-timing.json",
       "scripts/youtube-extraction-worker-runner.mjs",
       "scripts/lib/youtube-extraction-worker-artifact.mjs",
+      "scripts/lib/local-mac-production-release.mjs",
       "scripts/lib/youtube-extraction-worker-ops.mjs",
       "scripts/lib/youtube-extraction-worker-runtime.mjs",
       "scripts/manifests/youtube-extraction-expected-schema.json",

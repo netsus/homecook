@@ -10,6 +10,8 @@ import {
 } from "node:fs";
 import { dirname, resolve } from "node:path";
 
+import { assertLocalMacProductionMutationAuthority } from "./local-mac-production-release.mjs";
+
 export const DEFAULT_FULL_LOCAL_LAUNCH_AGENT_LABEL = "com.homecook.full-local.production";
 const LAUNCHCTL_BIN = "/bin/launchctl";
 
@@ -139,7 +141,9 @@ export function parseFullLocalLaunchAgentArgs(
     configPath: resolve(cwd, "infra/full-local-supabase/.env.production.local"),
     homeDir: resolve(requireNonEmptyString(homeDir, "homeDir")),
     json: false,
+    lockToken: undefined,
     nodeBin: resolve(requireNonEmptyString(nodeBin, "nodeBin")),
+    releaseManifestPath: undefined,
     rootDir: resolve(cwd),
   };
 
@@ -162,8 +166,12 @@ export function parseFullLocalLaunchAgentArgs(
       options.configPath = resolve(cwd, value);
     } else if (token === "--home-dir") {
       options.homeDir = resolve(value);
+    } else if (token === "--lock-token") {
+      options.lockToken = value;
     } else if (token === "--node-bin") {
       options.nodeBin = resolve(value);
+    } else if (token === "--release-manifest") {
+      options.releaseManifestPath = resolve(value);
     } else if (token === "--root-dir") {
       options.rootDir = resolve(value);
     } else {
@@ -361,6 +369,7 @@ export function extractFullLocalConfigPathFromPlist(plist) {
 
 /**
  * @param {{
+ *   mutationAuthority?: object,
  *   configPath: string,
  *   getuid?: (() => number) | undefined,
  *   homeDir?: string,
@@ -371,6 +380,7 @@ export function extractFullLocalConfigPathFromPlist(plist) {
  * }} options
  */
 export function installFullLocalLaunchAgent({
+  mutationAuthority,
   configPath,
   getuid = process.getuid?.bind(process),
   homeDir = process.env.HOME ?? "",
@@ -380,6 +390,10 @@ export function installFullLocalLaunchAgent({
   spawn = spawnSync,
 } = {}) {
   requireDarwin(platform);
+  assertLocalMacProductionMutationAuthority({
+    helperName: "Full-local LaunchAgent install",
+    mutationAuthority,
+  });
   const uid = requireUserId(getuid);
   const normalizedRootDir = requireAbsolutePath(rootDir, "rootDir");
   const normalizedNodeBin = requireAbsolutePath(nodeBin, "nodeBin");
@@ -423,6 +437,7 @@ export function installFullLocalLaunchAgent({
 
 /**
  * @param {{
+ *   mutationAuthority?: object,
  *   getuid?: (() => number) | undefined,
  *   homeDir?: string,
  *   platform?: string,
@@ -430,12 +445,17 @@ export function installFullLocalLaunchAgent({
  * }} [options]
  */
 export function uninstallFullLocalLaunchAgent({
+  mutationAuthority,
   getuid = process.getuid?.bind(process),
   homeDir = process.env.HOME ?? "",
   platform = process.platform,
   spawn = spawnSync,
 } = {}) {
   requireDarwin(platform);
+  assertLocalMacProductionMutationAuthority({
+    helperName: "Full-local LaunchAgent uninstall",
+    mutationAuthority,
+  });
   const uid = requireUserId(getuid);
   const paths = getFullLocalLaunchAgentPaths(homeDir);
   spawn(LAUNCHCTL_BIN, ["bootout", `gui/${uid}`, paths.plistPath], {

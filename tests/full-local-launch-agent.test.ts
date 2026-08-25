@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process";
 import {
   chmodSync,
   mkdtempSync,
@@ -23,12 +24,31 @@ import {
   uninstallFullLocalLaunchAgent,
   validateFullLocalLaunchAgentConfigPath,
 } from "../scripts/lib/full-local-launch-agent.mjs";
+import {
+  createValidatedLocalMacMutationAuthority,
+} from "./helpers/local-mac-production-release-fixtures";
 
 const temporaryDirectories: string[] = [];
 const AMBIENT_SECRET = "ambient-secret-should-not-leak";
 const EXPECTED_SANITIZED_PATH = "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin";
 const EXPECTED_USRBIN_NODE_SANITIZED_PATH =
   "/usr/bin:/opt/homebrew/bin:/usr/local/bin:/bin:/usr/sbin:/sbin";
+function createMutationAuthority({
+  command,
+  homeDir,
+  rootDir,
+}: {
+  command: string;
+  homeDir: string;
+  rootDir: string;
+}) {
+  return createValidatedLocalMacMutationAuthority({
+    command,
+    homeDir,
+    rootDir,
+    lockToken: "55555555-5555-4555-8555-555555555555",
+  }).mutationAuthority;
+}
 
 function expectProgramArgumentsOrder(plist: string, entries: string[]) {
   const expected = `<key>ProgramArguments</key>
@@ -247,9 +267,34 @@ system/com.apple.xpc.launchd.domain.user.501.100007.Aqua/${DEFAULT_FULL_LOCAL_LA
 });
 
 describe("full-local launch agent install and uninstall", () => {
+  it("blocks CLI mutation commands unless explicit release authority flags are provided", () => {
+    for (const command of ["install", "uninstall"]) {
+      const result = spawnSync(process.execPath, ["scripts/full-local-launch-agent.mjs", command], {
+        cwd: process.cwd(),
+        encoding: "utf8",
+        env: {
+          ...process.env,
+          HOMECOOK_RELEASE_MANIFEST_PATH: "/tmp/ambient-release.json",
+          HOMECOOK_RELEASE_LOCK_TOKEN: "ambient-lock-token",
+        },
+      });
+
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain("--release-manifest");
+      expect(result.stderr).toContain("--lock-token");
+      expect(result.stderr).not.toContain("/tmp/ambient-release.json");
+      expect(result.stderr).not.toContain("ambient-lock-token");
+    }
+  });
+
   it("installs a mode 0600 plist, creates Homecook logs, and bootstraps the service", () => {
     const rootDir = createTempDirectory("full-local-launch-agent-root-");
     const homeDir = createTempDirectory("full-local-launch-agent-home-");
+    const mutationAuthority = createMutationAuthority({
+      command: "install",
+      homeDir,
+      rootDir,
+    });
     const configPath = join(rootDir, "infra/full-local-supabase/.env.production.local");
     mkdirSync(join(rootDir, "infra/full-local-supabase"), { recursive: true });
     mkdirSync(join(rootDir, "scripts"), { recursive: true });
@@ -262,6 +307,7 @@ describe("full-local launch agent install and uninstall", () => {
 
     const launchctlCalls: string[] = [];
     const result = installFullLocalLaunchAgent({
+      mutationAuthority,
       configPath,
       getuid: () => 501,
       homeDir,
@@ -309,8 +355,43 @@ describe("full-local launch agent install and uninstall", () => {
     ]);
   });
 
+  it("blocks direct helper mutations before launchctl when no validated authority is provided", () => {
+    const installCalls: string[] = [];
+    expect(() => installFullLocalLaunchAgent({
+      configPath: "/Users/tester/homecook/infra/full-local-supabase/.env.production.local",
+      getuid: () => 501,
+      homeDir: "/Users/tester",
+      nodeBin: "/opt/homebrew/bin/node",
+      platform: "darwin",
+      rootDir: "/Users/tester/homecook",
+      spawn: (command, args) => {
+        installCalls.push(`${command} ${args.join(" ")}`);
+        return { status: 0, stdout: "", stderr: "" };
+      },
+    })).toThrow(/validated release authority|release authority|--release-manifest/iu);
+    expect(installCalls).toEqual([]);
+
+    const uninstallCalls: string[] = [];
+    expect(() => uninstallFullLocalLaunchAgent({
+      getuid: () => 501,
+      homeDir: "/Users/tester",
+      platform: "darwin",
+      spawn: (command, args) => {
+        uninstallCalls.push(`${command} ${args.join(" ")}`);
+        return { status: 0, stdout: "", stderr: "" };
+      },
+    })).toThrow(/validated release authority|release authority|--release-manifest/iu);
+    expect(uninstallCalls).toEqual([]);
+  });
+
   it("uninstall only unloads and removes the plist", () => {
     const homeDir = createTempDirectory("full-local-launch-agent-remove-");
+    const rootDir = createTempDirectory("full-local-launch-agent-remove-root-");
+    const mutationAuthority = createMutationAuthority({
+      command: "uninstall",
+      homeDir,
+      rootDir,
+    });
     const paths = getFullLocalLaunchAgentPaths(homeDir);
     mkdirSync(join(homeDir, "Library/LaunchAgents"), { recursive: true });
     writeFileSync(paths.plistPath, "<plist/>", { encoding: "utf8", mode: 0o600 });
@@ -318,6 +399,7 @@ describe("full-local launch agent install and uninstall", () => {
 
     const calls: string[] = [];
     const result = uninstallFullLocalLaunchAgent({
+      mutationAuthority,
       getuid: () => 501,
       homeDir,
       platform: "darwin",

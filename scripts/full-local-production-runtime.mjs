@@ -91,6 +91,7 @@ import {
   upsertNaverCustomProvider,
   validateFullLocalOAuthConfig,
 } from "./lib/full-local-oauth-providers.mjs";
+import { validateLocalMacProductionMutationAuthority } from "./lib/local-mac-production-release.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const INFRA = join(ROOT, "infra/full-local-supabase");
@@ -102,6 +103,14 @@ const KEYCHAIN_CREATOR = join(INFRA, "keychain-create.exp");
 const KEYCHAIN_WRITER = join(INFRA, "keychain-store.exp");
 const KEYCHAIN_CHUNK_SIZE = 96;
 const KEYCHAIN_MAX_CHUNKS = 128;
+const FULL_LOCAL_RELEASE_MUTATION_COMMANDS = new Set([
+  "init-config",
+  "bootstrap-secrets",
+  "start",
+  "stop",
+  "restore-platform",
+  "provision-oauth",
+]);
 
 export const FULL_LOCAL_AUTHORIZATION_CONTRACT_REQUIREMENTS = Object.freeze([
   "authenticated_transaction_read_only",
@@ -294,6 +303,21 @@ function optionValue(args, name) {
 
 function hasFlag(args, name) {
   return args.includes(name);
+}
+
+function validateFullLocalProductionMutationAuthority(command, args) {
+  if (!FULL_LOCAL_RELEASE_MUTATION_COMMANDS.has(command)) {
+    return;
+  }
+
+  validateLocalMacProductionMutationAuthority({
+    command: "install",
+    commandLabel: command,
+    homeDir: process.env.HOME ?? homedir(),
+    lockToken: optionValue(args, "--lock-token"),
+    releaseManifestPath: optionValue(args, "--release-manifest"),
+    rootDir: ROOT,
+  });
 }
 
 function run(command, args, options = {}) {
@@ -2063,6 +2087,7 @@ function runtimeCatalogPayload(gate) {
 
 async function main() {
   const [command, ...args] = process.argv.slice(2);
+  validateFullLocalProductionMutationAuthority(command, args);
   switch (command) {
     case "init-config":
       print({ config: initializeConfig(args), status: "PASS" });

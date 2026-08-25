@@ -21,6 +21,10 @@ import {
   sha256File,
   verifyYoutubeExtractionWorkerArtifact,
 } from "./youtube-extraction-worker-artifact.mjs";
+import {
+  assertLocalMacProductionMutationAuthority,
+  readLocalMacProductionRepoHeadSha,
+} from "./local-mac-production-release.mjs";
 
 export const LOCAL_MAC_PRODUCTION_LABEL = "com.homecook.production";
 export const DEFAULT_LOCAL_MAC_PRODUCTION_HOST = "127.0.0.1";
@@ -113,16 +117,7 @@ export function readLocalMacProductionReleaseSha({
   rootDir = process.cwd(),
   runCommand = spawnSync,
 } = {}) {
-  const result = runCommand("git", ["rev-parse", "HEAD"], {
-    cwd: resolve(rootDir),
-    encoding: "utf8",
-    stdio: ["ignore", "pipe", "pipe"],
-  });
-  const releaseSha = String(result.stdout ?? "").trim();
-  if (result.status !== 0 || !RELEASE_SHA_PATTERN.test(releaseSha)) {
-    throw new Error("Local Mac production release SHA could not be resolved.");
-  }
-  return releaseSha;
+  return readLocalMacProductionRepoHeadSha({ rootDir, runCommand });
 }
 
 /**
@@ -250,7 +245,9 @@ export function parseLocalMacProductionArgs(argv, {
     host: DEFAULT_LOCAL_MAC_PRODUCTION_HOST,
     nodeBin,
     port: DEFAULT_LOCAL_MAC_PRODUCTION_PORT,
+    releaseManifestPath: undefined,
     rootDir: cwd,
+    lockToken: undefined,
     sourcePath: undefined,
   };
 
@@ -273,6 +270,10 @@ export function parseLocalMacProductionArgs(argv, {
 
     if (arg === "--source-env") {
       options.sourcePath = resolve(value);
+    } else if (arg === "--release-manifest") {
+      options.releaseManifestPath = resolve(value);
+    } else if (arg === "--lock-token") {
+      options.lockToken = value;
     } else if (arg === "--node-bin") {
       options.nodeBin = resolve(value);
     } else if (arg === "--port") {
@@ -675,7 +676,23 @@ function runLaunchctl(args, spawn) {
   return result;
 }
 
+/**
+ * @param {{
+ *   mutationAuthority?: object,
+ *   rootDir?: string,
+ *   homeDir?: string,
+ *   nodeBin?: string,
+ *   host?: string,
+ *   port?: number,
+ *   platform?: NodeJS.Platform,
+ *   getuid?: (() => number) | undefined,
+ *   spawn?: typeof spawnSync,
+ *   verifyRuntimeStatus?: typeof verifyFullLocalProductionRuntimeStatus,
+ *   verifyPrerequisites?: typeof verifyLocalMacProductionPrerequisites,
+ * }} [options]
+ */
 export function installLocalMacProductionLaunchAgent({
+  mutationAuthority,
   rootDir = process.cwd(),
   homeDir = process.env.HOME ?? "",
   nodeBin = process.execPath,
@@ -690,6 +707,10 @@ export function installLocalMacProductionLaunchAgent({
   if (platform !== "darwin") {
     throw new Error(`Local Mac production requires macOS. Current platform: ${platform}`);
   }
+  assertLocalMacProductionMutationAuthority({
+    helperName: "Local Mac production LaunchAgent install",
+    mutationAuthority,
+  });
 
   const uid = typeof getuid === "function" ? getuid() : null;
   if (!Number.isInteger(uid)) {
@@ -814,6 +835,7 @@ export async function waitForLocalMacProductionReady({
 }
 
 export async function activateLocalMacProduction({
+  mutationAuthority,
   rootDir = process.cwd(),
   homeDir = process.env.HOME ?? "",
   nodeBin = process.execPath,
@@ -856,6 +878,7 @@ export async function activateLocalMacProduction({
   let installed = null;
   try {
     installed = installLaunchAgent({
+      mutationAuthority,
       rootDir,
       homeDir,
       nodeBin,
@@ -872,7 +895,10 @@ export async function activateLocalMacProduction({
   } catch (error) {
     if (installed) {
       try {
-        uninstallLaunchAgent({ homeDir });
+        uninstallLaunchAgent({
+          homeDir,
+          mutationAuthority,
+        });
       } catch (cleanupError) {
         const originalMessage = error instanceof Error ? error.message : String(error);
         const cleanupMessage =
@@ -884,10 +910,22 @@ export async function activateLocalMacProduction({
   }
 }
 
+/**
+ * @param {{
+ *   mutationAuthority?: object,
+ *   getuid?: (() => number) | undefined,
+ *   spawn?: typeof spawnSync,
+ * }} [options]
+ */
 export function restartLocalMacProductionLaunchAgent({
+  mutationAuthority,
   getuid = process.getuid?.bind(process),
   spawn = spawnSync,
 } = {}) {
+  assertLocalMacProductionMutationAuthority({
+    helperName: "Local Mac production LaunchAgent restart",
+    mutationAuthority,
+  });
   const uid = typeof getuid === "function" ? getuid() : null;
   if (!Number.isInteger(uid)) {
     throw new Error("Unable to resolve the current macOS user id.");
@@ -896,11 +934,24 @@ export function restartLocalMacProductionLaunchAgent({
   runLaunchctl(["kickstart", "-k", `gui/${uid}/${LOCAL_MAC_PRODUCTION_LABEL}`], spawn);
 }
 
+/**
+ * @param {{
+ *   mutationAuthority?: object,
+ *   homeDir?: string,
+ *   getuid?: (() => number) | undefined,
+ *   spawn?: typeof spawnSync,
+ * }} [options]
+ */
 export function uninstallLocalMacProductionLaunchAgent({
+  mutationAuthority,
   homeDir = process.env.HOME ?? "",
   getuid = process.getuid?.bind(process),
   spawn = spawnSync,
 } = {}) {
+  assertLocalMacProductionMutationAuthority({
+    helperName: "Local Mac production LaunchAgent uninstall",
+    mutationAuthority,
+  });
   const uid = typeof getuid === "function" ? getuid() : null;
   if (!Number.isInteger(uid)) {
     throw new Error("Unable to resolve the current macOS user id.");
