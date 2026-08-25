@@ -37,6 +37,9 @@ describe("release promotion governance docs", () => {
     expect(releaseRunbook).toContain("expected_running_release_sha");
     expect(releaseRunbook).toContain("tag + attestation");
     expect(releaseRunbook).toContain("build / install / restart / uninstall / db reset");
+    expect(releaseRunbook).toContain("migration compatibility gate");
+    expect(releaseRunbook).toContain("자동 rollback");
+    expect(releaseRunbook).toContain("forward-fix");
 
     expect(gitWorkflow).toContain("`master` merge는 통합 evidence다. production deployment approval은 아니다.");
     expect(gitWorkflow).toContain("prod-*");
