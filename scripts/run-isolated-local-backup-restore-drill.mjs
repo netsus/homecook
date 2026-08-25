@@ -35,7 +35,11 @@ import {
   verifyIsolatedKeychainRegistration,
 } from "./lib/full-local-backup-key-recovery.mjs";
 import { fullLocalBackupMetadataSha256 } from "./lib/full-local-backup-readiness.mjs";
-import { fullLocalImageRefsForPlatform } from "./lib/full-local-production-runtime.mjs";
+import {
+  buildRestoreManifestPayload,
+  buildRestoredSemanticManifestSummary,
+  fullLocalImageRefsForPlatform,
+} from "./lib/full-local-production-runtime.mjs";
 import {
   makePostgresRoleDumpIdempotent,
   selectFullLocalProductionResources,
@@ -44,17 +48,23 @@ import {
   buildBootstrapAwareDatabaseResetSql,
   buildPlatformRestoreSql,
   executeBootstrapAwarePlatformRestore,
+  verifyRestoredPlatformDataSnapshot,
 } from "./lib/full-local-restore-cutover.mjs";
 import {
   assertIsolatedDrillTarget,
   buildIsolatedDrillPlan,
   mapStorageRowsToPayloadReferences,
+  validateExternalArchiveDrillOptions,
+  writeAuthenticatedJsonArtifact,
 } from "./lib/isolated-local-backup-restore-drill.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const PLATFORM = process.arch === "arm64" ? "linux/arm64" : "linux/amd64";
 const POSTGRES_IMAGE = fullLocalImageRefsForPlatform(PLATFORM).postgres;
 const FIXTURE_PASSWORD = "isolated-production-compatible-fixture-only";
+const EXTERNAL_ARCHIVE_USAGE =
+  "--external-archive <abs> --escrow-envelope <abs> --recovery-credential-file <abs> "
+  + "--recovery-issuer-private-key <abs> --restore-manifest <abs> --recovery-manifest <abs>";
 
 function run(command, args, options = {}) {
   const result = spawnSync(command, args, {
@@ -351,6 +361,260 @@ function seedBootstrapSchemaCollision(container) {
   `, "Isolated bootstrap schema collision fixture failed");
 }
 
+function databaseMetadata(container) {
+  const catalog = database(
+    container,
+    "select nspname from pg_namespace order by nspname;",
+    "Isolated restored schema catalog verification failed",
+  );
+  const identity = database(
+    container,
+    "select current_database(), current_setting('server_version_num'), count(*) from pg_namespace;",
+    "Isolated restored database identity verification failed",
+  ).trim().split("|");
+  if (identity.length !== 3 || identity[0] !== "postgres" || !/^\d+$/u.test(identity[1])) {
+    throw new Error("Isolated restored database identity is invalid");
+  }
+  return Object.freeze({
+    database: identity[0],
+    schema_catalog_sha256: createHash("sha256").update(catalog, "utf8").digest("hex"),
+    schema_count: Number(identity[2]),
+    server_version_num: identity[1],
+  });
+}
+
+function verifyGenericRestoredDatabaseMetadata(container, metadata) {
+  const observed = databaseMetadata(container);
+  const provenance = metadata?.database?.provenance ?? {};
+  for (const [key, label] of [
+    ["database", "database name"],
+    ["schema_catalog_sha256", "schema catalog digest"],
+    ["server_version_num", "server version"],
+  ]) {
+    if (typeof provenance[key] === "string" && provenance[key] !== observed[key]) {
+      throw new Error(`Isolated restored ${label} does not match authenticated backup metadata`);
+    }
+  }
+  if (
+    Number.isSafeInteger(provenance.schema_count)
+    && provenance.schema_count !== observed.schema_count
+  ) {
+    throw new Error("Isolated restored schema count does not match authenticated backup metadata");
+  }
+  return observed;
+}
+
+function restoredDataSnapshot(container, metadata) {
+  const restoredDataSql = run("docker", [
+    "exec",
+    container,
+    "pg_dump",
+    "--data-only",
+    "--username",
+    "supabase_admin",
+    "--dbname",
+    "postgres",
+  ], { failure: "Isolated restored data snapshot verification failed" });
+  return verifyRestoredPlatformDataSnapshot({
+    restoredDataSql,
+    sourceDataSha256: metadata.components.data_sha256,
+    sourceDataSemanticSha256: metadata.manifest.data_semantic_sha256,
+    sourceRelationClassificationDigest:
+      metadata.manifest.relation_classification_digest,
+  });
+}
+
+function restoredSemanticManifest(container) {
+  const sql = String.raw`
+    create temporary table homecook_restore_manifest (
+      relation text primary key,
+      row_count bigint not null,
+      row_digest text not null
+    );
+    do $homecook$
+    declare item record;
+    begin
+      for item in
+        select schemaname, tablename
+        from pg_catalog.pg_tables
+        where schemaname = 'public'
+        order by tablename
+      loop
+        execute format(
+          'insert into homecook_restore_manifest(relation, row_count, row_digest) '
+          || 'select %L, count(*), md5(coalesce(string_agg(row_text, E''\\n'' order by row_text), '''')) '
+          || 'from (select to_jsonb(source_row)::text as row_text from %I.%I source_row) rows',
+          item.schemaname || '.' || item.tablename,
+          item.schemaname,
+          item.tablename
+        );
+      end loop;
+    end
+    $homecook$;
+    create temporary table homecook_storage_url_references as
+    select
+      recipe.created_by as owner_uuid,
+      regexp_replace(
+        split_part(split_part(recipe.thumbnail_url, '?', 1), '#', 1),
+        '^https?://[^/]+/storage/v1/object/(public|sign)/',
+        ''
+      ) as object_key
+    from public.recipes recipe
+    where recipe.thumbnail_url ~ '^https?://[^/]+/storage/v1/object/(public|sign)/'
+    union all
+    select
+      app_user.id as owner_uuid,
+      regexp_replace(
+        split_part(split_part(app_user.profile_image_url, '?', 1), '#', 1),
+        '^https?://[^/]+/storage/v1/object/(public|sign)/',
+        ''
+      ) as object_key
+    from public.users app_user
+    where app_user.profile_image_url ~ '^https?://[^/]+/storage/v1/object/(public|sign)/'
+    union all
+    select
+      recipe_book.user_id as owner_uuid,
+      regexp_replace(
+        split_part(split_part(recipe_book.cover_image_url, '?', 1), '#', 1),
+        '^https?://[^/]+/storage/v1/object/(public|sign)/',
+        ''
+      ) as object_key
+    from public.recipe_books recipe_book
+    where recipe_book.cover_image_url ~ '^https?://[^/]+/storage/v1/object/(public|sign)/'
+    union all
+    select
+      null::uuid as owner_uuid,
+      regexp_replace(
+        split_part(split_part(food_product.image_url, '?', 1), '#', 1),
+        '^https?://[^/]+/storage/v1/object/(public|sign)/',
+        ''
+      ) as object_key
+    from public.food_products food_product
+    where food_product.image_url ~ '^https?://[^/]+/storage/v1/object/(public|sign)/';
+    create temporary table homecook_storage_references as
+    select
+      storage_object.bucket_id,
+      storage_object.name,
+      exists (
+        select 1 from homecook_storage_url_references url_reference
+        where url_reference.object_key = storage_object.bucket_id || '/' || storage_object.name
+      )
+      or exists (
+        select 1 from public.recipe_image_objects managed_object
+        where managed_object.bucket_id = storage_object.bucket_id
+          and managed_object.object_path = storage_object.name
+      ) as referenced,
+      case
+        when split_part(storage_object.name, '/', 1)
+          !~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+          then false
+        else
+          not exists (
+            select 1 from auth.users auth_user
+            where auth_user.id::text = split_part(storage_object.name, '/', 1)
+          )
+          or exists (
+            select 1 from homecook_storage_url_references url_reference
+            where url_reference.object_key = storage_object.bucket_id || '/' || storage_object.name
+              and url_reference.owner_uuid is not null
+              and url_reference.owner_uuid::text <> split_part(storage_object.name, '/', 1)
+          )
+          or exists (
+            select 1 from public.recipe_image_objects managed_object
+            where managed_object.bucket_id = storage_object.bucket_id
+              and managed_object.object_path = storage_object.name
+              and managed_object.owner_uuid::text <> split_part(storage_object.name, '/', 1)
+          )
+      end as owner_prefix_mismatch
+    from storage.objects storage_object;
+    select jsonb_build_object(
+      'auth_identity_digest', (
+        select md5(coalesce(string_agg(value, E'\\n' order by value), ''))
+        from (
+          select concat_ws('|', id::text, created_at::text, coalesce(email, '')) as value
+          from auth.users
+          union all
+          select concat_ws('|', id::text, user_id::text, provider, provider_id) as value
+          from auth.identities
+        ) auth_rows
+      ),
+      'auth_users', (select count(*) from auth.users),
+      'auth_identities', (select count(*) from auth.identities),
+      'auth_sessions', (select count(*) from auth.sessions),
+      'auth_refresh_tokens', (select count(*) from auth.refresh_tokens),
+      'auth_flow_state', (select count(*) from auth.flow_state),
+      'public_relations', (
+        select coalesce(jsonb_agg(to_jsonb(manifest_row) order by relation), '[]'::jsonb)
+        from homecook_restore_manifest manifest_row
+      ),
+      'storage_bucket_digest', (
+        select md5(coalesce(string_agg(to_jsonb(bucket_row)::text, E'\\n' order by id), ''))
+        from storage.buckets bucket_row
+      ),
+      'storage_buckets', (select count(*) from storage.buckets),
+      'storage_objects', (select count(*) from storage.objects),
+      'storage_object_digest', (
+        select md5(coalesce(string_agg(
+          concat_ws(
+            '|',
+            bucket_id,
+            name,
+            coalesce(owner_id::text, ''),
+            coalesce((metadata - 'lastModified')::text, ''),
+            coalesce(user_metadata::text, '')
+          ),
+          E'\\n' order by bucket_id, name
+        ), ''))
+        from storage.objects
+      ),
+      'storage_referenced_objects', (
+        select count(*) from homecook_storage_references where referenced
+      ),
+      'storage_unreferenced_objects', (
+        select count(*) from homecook_storage_references where not referenced
+      ),
+      'storage_owner_prefix_mismatches', (
+        select count(*) from homecook_storage_references where owner_prefix_mismatch
+      ),
+      'public_users_without_auth', (
+        select count(*)
+        from public.users app_user
+        left join auth.users auth_user on auth_user.id = app_user.id
+        where auth_user.id is null
+      )
+    )::text;
+  `;
+  const output = database(
+    container,
+    sql,
+    "Isolated restored semantic manifest verification failed",
+  ).trim();
+  return buildRestoredSemanticManifestSummary(
+    JSON.parse(output.split("\n").at(-1)),
+  );
+}
+
+function buildExternalRestoreManifest({
+  archiveSha256,
+  dataSnapshot,
+  metadata,
+  plan,
+  semantic,
+}) {
+  return buildRestoreManifestPayload({
+    archiveSha256,
+    attemptToken: plan.restore_project_id,
+    dataSnapshot,
+    metadata,
+    runtimeConfig: {
+      FULL_LOCAL_COMPOSE_PROJECT_NAME: plan.restore_project_id,
+      FULL_LOCAL_POSTGRES_VOLUME_NAME: plan.restore_postgres_volume,
+      FULL_LOCAL_STORAGE_VOLUME_NAME: plan.restore_storage_volume,
+    },
+    semantic,
+  });
+}
+
 function cleanupContainer(name) {
   assertIsolatedDrillTarget(name);
   spawnSync("docker", ["rm", "--force", name], {
@@ -368,6 +632,10 @@ function cleanupVolume(name) {
 }
 
 async function executeDrill() {
+  const externalArchiveOptions = validateExternalArchiveDrillOptions({
+    args: process.argv,
+    repositoryRoot: ROOT,
+  });
   const suffix = `${Date.now().toString(36)}${process.pid.toString(36)}`.slice(-8);
   const plan = buildIsolatedDrillPlan({ suffix });
   const root = mkdtempSync(join(tmpdir(), "homecook-backup-drill-"));
@@ -376,122 +644,165 @@ async function executeDrill() {
   const sourceSnapshotDirectory = join(root, "source-snapshot");
   const restoredArchiveDirectory = join(root, "restored-volume");
   const restoredSnapshotDirectory = join(root, "restored-snapshot");
-  const archive = join(root, "platform.tar.gz.enc");
-  const backupKey = randomBytes(48).toString("base64url");
-  const keyRecoveryMode = process.argv.includes("--key-recovery");
+  const archive = externalArchiveOptions?.external_archive ?? join(root, "platform.tar.gz.enc");
+  const keyRecoveryMode = externalArchiveOptions === null && process.argv.includes("--key-recovery");
   const recoveryCredential = randomBytes(48).toString("base64url");
   const recoveryIssuer = generateKeyPairSync("ed25519");
   const escrowEnvelopePath = join(root, "key-escrow", "platform-key.escrow.json");
   let recoveryContext = null;
+  let archiveSha256 = null;
+  let restoreKey = randomBytes(48).toString("base64url");
+  let fixtureArchiveMetadata = null;
+  let restoreManifest = null;
   try {
     const version = run("pnpm", ["dlx", `supabase@${PINNED_SUPABASE_CLI_VERSION}`, "--version"]).trim();
     if (version !== PINNED_SUPABASE_CLI_VERSION) {
       throw new Error("Pinned Supabase CLI version mismatch in isolated drill");
     }
-    createLabeledVolume({
-      composeProject: plan.project_id,
-      composeVolume: "postgres-data",
-      name: plan.source_postgres_volume,
-    });
-    createLabeledVolume({
-      composeProject: plan.project_id,
-      composeVolume: "storage-data",
-      name: plan.source_storage_volume,
-    });
-    startPostgresFixture({
-      composeProject: plan.project_id,
-      container: plan.source_database_container,
-      postgresVolume: plan.source_postgres_volume,
-    });
-    const source = resolveResources(resourceConfig(plan));
-    if (source.postgresContainerName !== plan.source_database_container) {
-      throw new Error("Production resource resolver selected the wrong dual-stack target");
-    }
-    const fixturePayload = seedStorage({
-      container: source.postgresContainerId,
-      fixtureDirectory: join(root, "fixture"),
-      volumeName: source.storageVolumeName,
-    });
-    let sourceRows;
-    const sourceDatabaseProvenance = {};
-    const backupResult = createEncryptedPlatformBackup({
-      backupKey,
-      database: {
-        dumpComponents: (staging) => {
-          Object.assign(sourceDatabaseProvenance, fixtureDatabaseProvenance(source));
-          sourceRows = storageRows(source.postgresContainerId);
-          dumpFixtureDatabase({ container: source.postgresContainerId, staging });
-        },
-        provenance: sourceDatabaseProvenance,
-        sourceIdentity: `docker-compose:${source.composeProject}:${source.postgresContainerName}`,
-      },
-      output: archive,
-      repositoryRoot: ROOT,
-      storage: {
-        beginConsistentCut: () => undefined,
-        captureSource: () => captureVolume({
-          archiveDirectory: sourceArchiveDirectory,
-          snapshotDirectory: sourceSnapshotDirectory,
-          volumeName: source.storageVolumeName,
-        }),
-        endConsistentCut: () => undefined,
-        references: () => mapStorageRowsToPayloadReferences(
-          sourceRows,
-          listStoragePayloadPaths(sourceSnapshotDirectory),
-        ),
-        sourceDirectory: sourceSnapshotDirectory,
-        sourceIdentity: `docker-compose-volume:${source.composeProject}:${source.storageVolumeName}`,
-      },
-    });
-
-    let restoreKey = backupKey;
-    if (keyRecoveryMode) {
-      mkdirSync(dirname(escrowEnvelopePath), { recursive: true, mode: 0o700 });
-      const envelopeContents = `${JSON.stringify(sealFullLocalBackupKeyEscrow({
-        backupKey,
-        recoveryCredential,
-        recoveryIssuerPublicKey: recoveryIssuer.publicKey,
-      }), null, 2)}\n`;
-      writeFileSync(escrowEnvelopePath, envelopeContents, { mode: 0o600 });
-      const escrowAuthentication = buildPlatformBackupAuthentication({
-        archive: escrowEnvelopePath,
-        archiveBytes: Buffer.from(envelopeContents, "utf8"),
-        backupKey,
+    let fixturePayload = null;
+    if (externalArchiveOptions) {
+      const recoveredKey = openFullLocalBackupKeyEscrow({
+        envelope: JSON.parse(readFileSync(externalArchiveOptions.escrow_envelope, "utf8")),
+        recoveryCredential: readFileSync(
+          externalArchiveOptions.recovery_credential_file,
+          "utf8",
+        ).trim(),
       });
-      writeFileSync(
-        platformBackupAuthenticationPath(escrowEnvelopePath),
-        `${JSON.stringify(escrowAuthentication, null, 2)}\n`,
-        { mode: 0o600 },
-      );
       verifyPlatformBackupAuthentication({
-        archive: escrowEnvelopePath,
-        archiveBytes: readFileSync(escrowEnvelopePath),
+        archive: externalArchiveOptions.escrow_envelope,
+        archiveBytes: readFileSync(externalArchiveOptions.escrow_envelope),
         authentication: JSON.parse(readFileSync(
-          platformBackupAuthenticationPath(escrowEnvelopePath),
+          platformBackupAuthenticationPath(externalArchiveOptions.escrow_envelope),
           "utf8",
         )),
-        backupKey,
-      });
-      const recoveredKey = openFullLocalBackupKeyEscrow({
-        envelope: JSON.parse(readFileSync(escrowEnvelopePath, "utf8")),
-        recoveryCredential,
+        backupKey: recoveredKey,
       });
       const keychain = createIsolatedKeychainAdapter({
         directory: join(root, "replacement-keychain"),
       });
-      keychain.register("platform-backup", recoveredKey);
+      keychain.register(externalArchiveOptions.keychain_account, recoveredKey);
       recoveryContext = {
-        envelope_authenticated: recoveredKey === backupKey,
+        envelope_authenticated: true,
         envelope_sha256: createHash("sha256")
-          .update(readFileSync(escrowEnvelopePath))
+          .update(readFileSync(externalArchiveOptions.escrow_envelope))
           .digest("hex"),
         keychain_receipt: verifyIsolatedKeychainRegistration({
-          account: "platform-backup",
+          account: externalArchiveOptions.keychain_account,
           adapter: keychain,
-          expectedKey: backupKey,
+          expectedKey: recoveredKey,
         }),
       };
-      restoreKey = keychain.read("platform-backup");
+      restoreKey = keychain.read(externalArchiveOptions.keychain_account);
+      archiveSha256 = createHash("sha256").update(readFileSync(archive)).digest("hex");
+    } else {
+      const backupKey = randomBytes(48).toString("base64url");
+      restoreKey = backupKey;
+      createLabeledVolume({
+        composeProject: plan.project_id,
+        composeVolume: "postgres-data",
+        name: plan.source_postgres_volume,
+      });
+      createLabeledVolume({
+        composeProject: plan.project_id,
+        composeVolume: "storage-data",
+        name: plan.source_storage_volume,
+      });
+      startPostgresFixture({
+        composeProject: plan.project_id,
+        container: plan.source_database_container,
+        postgresVolume: plan.source_postgres_volume,
+      });
+      const source = resolveResources(resourceConfig(plan));
+      if (source.postgresContainerName !== plan.source_database_container) {
+        throw new Error("Production resource resolver selected the wrong dual-stack target");
+      }
+      fixturePayload = seedStorage({
+        container: source.postgresContainerId,
+        fixtureDirectory: join(root, "fixture"),
+        volumeName: source.storageVolumeName,
+      });
+      let sourceRows;
+      const sourceDatabaseProvenance = {};
+      fixtureArchiveMetadata = createEncryptedPlatformBackup({
+        backupKey,
+        database: {
+          dumpComponents: (staging) => {
+            Object.assign(sourceDatabaseProvenance, fixtureDatabaseProvenance(source));
+            sourceRows = storageRows(source.postgresContainerId);
+            dumpFixtureDatabase({ container: source.postgresContainerId, staging });
+          },
+          provenance: sourceDatabaseProvenance,
+          sourceIdentity: `docker-compose:${source.composeProject}:${source.postgresContainerName}`,
+        },
+        output: archive,
+        repositoryRoot: ROOT,
+        storage: {
+          beginConsistentCut: () => undefined,
+          captureSource: () => captureVolume({
+            archiveDirectory: sourceArchiveDirectory,
+            snapshotDirectory: sourceSnapshotDirectory,
+            volumeName: source.storageVolumeName,
+          }),
+          endConsistentCut: () => undefined,
+          references: () => mapStorageRowsToPayloadReferences(
+            sourceRows,
+            listStoragePayloadPaths(sourceSnapshotDirectory),
+          ),
+          sourceDirectory: sourceSnapshotDirectory,
+          sourceIdentity: `docker-compose-volume:${source.composeProject}:${source.storageVolumeName}`,
+        },
+      });
+      archiveSha256 = fixtureArchiveMetadata.archive_sha256;
+
+      if (keyRecoveryMode) {
+        recoveryContext = null;
+        mkdirSync(dirname(escrowEnvelopePath), { recursive: true, mode: 0o700 });
+        const envelopeContents = `${JSON.stringify(sealFullLocalBackupKeyEscrow({
+          backupKey,
+          recoveryCredential,
+          recoveryIssuerPublicKey: recoveryIssuer.publicKey,
+        }), null, 2)}\n`;
+        writeFileSync(escrowEnvelopePath, envelopeContents, { mode: 0o600 });
+        const escrowAuthentication = buildPlatformBackupAuthentication({
+          archive: escrowEnvelopePath,
+          archiveBytes: Buffer.from(envelopeContents, "utf8"),
+          backupKey,
+        });
+        writeFileSync(
+          platformBackupAuthenticationPath(escrowEnvelopePath),
+          `${JSON.stringify(escrowAuthentication, null, 2)}\n`,
+          { mode: 0o600 },
+        );
+        verifyPlatformBackupAuthentication({
+          archive: escrowEnvelopePath,
+          archiveBytes: readFileSync(escrowEnvelopePath),
+          authentication: JSON.parse(readFileSync(
+            platformBackupAuthenticationPath(escrowEnvelopePath),
+            "utf8",
+          )),
+          backupKey,
+        });
+        const recoveredKey = openFullLocalBackupKeyEscrow({
+          envelope: JSON.parse(readFileSync(escrowEnvelopePath, "utf8")),
+          recoveryCredential,
+        });
+        const keychain = createIsolatedKeychainAdapter({
+          directory: join(root, "replacement-keychain"),
+        });
+        keychain.register("platform-backup", recoveredKey);
+        recoveryContext = {
+          envelope_authenticated: recoveredKey === backupKey,
+          envelope_sha256: createHash("sha256")
+            .update(readFileSync(escrowEnvelopePath))
+            .digest("hex"),
+          keychain_receipt: verifyIsolatedKeychainRegistration({
+            account: "platform-backup",
+            adapter: keychain,
+            expectedKey: backupKey,
+          }),
+        };
+        restoreKey = keychain.read("platform-backup");
+      }
     }
 
     createLabeledVolume({
@@ -574,37 +885,118 @@ async function executeDrill() {
               sourceDirectory: restoredSnapshotDirectory,
               sourceIdentity: metadata.storage_payload.source_identity,
             });
-            const restoredPayload = readFileSync(
-              join(restoredSnapshotDirectory, restoredReferences[0].path),
+            verifyGenericRestoredDatabaseMetadata(
+              restored.postgresContainerId,
+              metadata,
             );
-            if (!restoredPayload.equals(fixturePayload)) {
-              throw new Error("Isolated restored Storage fixture bytes mismatch");
+            const semantic = restoredSemanticManifest(restored.postgresContainerId);
+            const dataSnapshot = restoredDataSnapshot(
+              restored.postgresContainerId,
+              metadata,
+            );
+            if (fixturePayload) {
+              const restoredPayload = readFileSync(
+                join(restoredSnapshotDirectory, restoredReferences[0].path),
+              );
+              if (!restoredPayload.equals(fixturePayload)) {
+                throw new Error("Isolated restored Storage fixture bytes mismatch");
+              }
             }
-            return {
-              archive_authenticated: true,
-              archive_sha256: backupResult.archive_sha256,
-              bootstrap_schema_clean_replay: true,
-              clean_restore_verified: true,
-              cli_version: PINNED_SUPABASE_CLI_VERSION,
-              database_reference_count: restoredReferences.length,
-              destructive_scope: plan.destructive_scope,
-              dev_stack_decoy_ignored: true,
-              object_count: metadata.storage_payload.object_count,
-              payload_catalog_sha256: metadata.storage_payload.catalog_sha256,
-              payload_total_bytes: metadata.storage_payload.total_bytes,
-              metadata_sha256: fullLocalBackupMetadataSha256(metadata),
-              production_resource_resolution: "compose-labels-exact",
-              restored_storage_compose_provenance: true,
-              next_backup_inventory_verified: true,
-              status: "PASS",
-            };
+            return externalArchiveOptions
+              ? buildExternalRestoreManifest({
+                archiveSha256,
+                dataSnapshot,
+                metadata,
+                plan,
+                semantic,
+              })
+              : {
+                archive_authenticated: true,
+                archive_sha256: archiveSha256,
+                bootstrap_schema_clean_replay: true,
+                clean_restore_verified: true,
+                cli_version: PINNED_SUPABASE_CLI_VERSION,
+                database_reference_count: restoredReferences.length,
+                destructive_scope: plan.destructive_scope,
+                dev_stack_decoy_ignored: true,
+                object_count: metadata.storage_payload.object_count,
+                payload_catalog_sha256: metadata.storage_payload.catalog_sha256,
+                payload_total_bytes: metadata.storage_payload.total_bytes,
+                metadata_sha256: fullLocalBackupMetadataSha256(metadata),
+                production_resource_resolution: "compose-labels-exact",
+                restored_storage_compose_provenance: true,
+                next_backup_inventory_verified: true,
+                status: "PASS",
+              };
           },
         });
       },
     });
+
+    if (externalArchiveOptions) {
+      restoreManifest = restoreResult;
+      const restoreArtifact = writeAuthenticatedJsonArtifact({
+        backupKey: restoreKey,
+        outputPath: externalArchiveOptions.restore_manifest.path,
+        payload: restoreManifest,
+      });
+      const recoveryManifest = signFullLocalBackupKeyRecoveryEvidence({
+        evidence: {
+          archive_device_id: externalArchiveOptions.archive_device_id,
+          archive_sha256: restoreManifest.archive_sha256,
+          clean_restore_verified: restoreManifest.clean_restore_verified,
+          created_at: new Date().toISOString(),
+          escrow_device_id: externalArchiveOptions.replacement_device_id,
+          escrow_envelope_path: externalArchiveOptions.escrow_envelope,
+          escrow_envelope_sha256: recoveryContext.envelope_sha256,
+          format: "homecook-full-local-backup-key-recovery-v1",
+          isolated_replacement_environment_verified: true,
+          keychain_reregistered:
+            recoveryContext.keychain_receipt.key_sha256
+              === createHash("sha256").update(restoreKey).digest("hex"),
+          keychain_registration: recoveryContext.keychain_receipt,
+          restored_metadata_sha256: restoreManifest.metadata_sha256,
+          restore_manifest_path: restoreArtifact.path,
+          restore_manifest_sha256: createHash("sha256")
+            .update(restoreArtifact.bytes)
+            .digest("hex"),
+        },
+        privateKey: readFileSync(externalArchiveOptions.recovery_issuer_private_key, "utf8"),
+      });
+      verifyFullLocalBackupKeyRecoveryIssuerAttestation({
+        envelope: JSON.parse(readFileSync(externalArchiveOptions.escrow_envelope, "utf8")),
+        evidence: recoveryManifest,
+      });
+      const recoveryArtifact = writeAuthenticatedJsonArtifact({
+        backupKey: restoreKey,
+        outputPath: externalArchiveOptions.recovery_manifest.path,
+        payload: recoveryManifest,
+      });
+      return {
+        ...restoreManifest,
+        escrow_envelope_authenticated: recoveryContext.envelope_authenticated,
+        escrow_envelope_sha256: recoveryContext.envelope_sha256,
+        keychain_adapter: recoveryContext.keychain_receipt.adapter,
+        keychain_reregistered:
+          recoveryContext.keychain_receipt.key_sha256
+            === createHash("sha256").update(restoreKey).digest("hex"),
+        production_readiness_issued: false,
+        recovery_evidence_derived_from_restore: true,
+        recovery_issuer_attestation_verified: true,
+        recovery_manifest_path: recoveryArtifact.path,
+        recovery_manifest_sha256: createHash("sha256")
+          .update(recoveryArtifact.bytes)
+          .digest("hex"),
+        restore_manifest_path: restoreArtifact.path,
+        restore_manifest_sha256: createHash("sha256")
+          .update(restoreArtifact.bytes)
+          .digest("hex"),
+      };
+    }
+
     if (!keyRecoveryMode) return restoreResult;
     if (
-      restoreResult.archive_sha256 !== backupResult.archive_sha256
+      restoreResult.archive_sha256 !== fixtureArchiveMetadata.archive_sha256
       || restoreResult.metadata_sha256
         !== fullLocalBackupMetadataSha256(authenticatedMetadata)
       || recoveryContext.keychain_receipt.key_sha256
@@ -669,7 +1061,10 @@ async function executeDrill() {
 }
 
 if (!process.argv.includes("--execute")) {
-  process.stderr.write("Use --execute to run the isolated fixture drill.\n");
+  process.stderr.write(
+    "Use --execute to run the isolated fixture drill.\n"
+    + `External archive mode: ${EXTERNAL_ARCHIVE_USAGE}\n`,
+  );
   process.exit(1);
 }
 
