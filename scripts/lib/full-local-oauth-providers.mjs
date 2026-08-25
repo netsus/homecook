@@ -55,8 +55,13 @@ export function validateFullLocalOAuthConfig({ config, secrets }) {
   });
 }
 
-export function materializeFullLocalOAuthSecrets({ secrets, targetDirectory }) {
+export function materializeFullLocalOAuthSecrets({
+  additionalExpectedNames = [],
+  secrets,
+  targetDirectory,
+}) {
   return materializeSecretFilesCreateOnly({
+    allowedNames: [...FULL_LOCAL_OAUTH_SECRET_NAMES, ...additionalExpectedNames],
     names: FULL_LOCAL_OAUTH_SECRET_NAMES,
     readSecret: (name) => requiredSecret(secrets, name),
     targetDirectory,

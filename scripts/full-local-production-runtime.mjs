@@ -28,6 +28,7 @@ import {
   buildFullLocalProductCatalogSql,
   generateFullLocalSecretBundle,
   materializeFullLocalSecrets,
+  materializeFullLocalRuntimeSecrets,
   parseFullLocalProductCatalogSqlOutput,
   renderFullLocalProductionConfigTemplate,
   summarizeFullLocalRuntimeStates,
@@ -87,7 +88,6 @@ import {
 import {
   FULL_LOCAL_OAUTH_KEYCHAIN_ACCOUNTS,
   assertLocalOAuthProvisionApproved,
-  materializeFullLocalOAuthSecrets,
   upsertNaverCustomProvider,
   validateFullLocalOAuthConfig,
 } from "./lib/full-local-oauth-providers.mjs";
@@ -654,15 +654,9 @@ function validateAndMaterialize(args) {
     config: runtime.config,
     secrets: runtime.oauthSecrets,
   });
-  if (oauth.enabled) {
-    materializeFullLocalOAuthSecrets({
-      secrets: runtime.oauthSecrets,
-      targetDirectory: secretDirectory,
-    });
-  }
-  materializeFullLocalSecrets({
-    additionalExpectedNames: oauth.enabled ? Object.keys(runtime.oauthSecrets) : [],
-    readSecret: (name) => runtime.secrets[name],
+  materializeFullLocalRuntimeSecrets({
+    coreSecrets: runtime.secrets,
+    oauthSecrets: oauth.enabled ? runtime.oauthSecrets : {},
     targetDirectory: secretDirectory,
   });
   const validation = validateFullLocalProductionConfig({

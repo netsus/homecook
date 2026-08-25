@@ -557,6 +557,7 @@ export function validateFullLocalProductionConfig({
 
 export function materializeSecretFilesCreateOnly({
   names,
+  allowedNames = names,
   readSecret,
   targetDirectory,
 }) {
@@ -566,8 +567,15 @@ export function materializeSecretFilesCreateOnly({
   if (!Array.isArray(names) || names.length === 0) {
     throw new Error("At least one secret name is required.");
   }
+  if (!Array.isArray(allowedNames) || allowedNames.length < names.length) {
+    throw new Error("Allowed secret names must include every materialized secret.");
+  }
   mkdirSync(targetDirectory, { mode: 0o700, recursive: true });
   chmodSync(targetDirectory, 0o700);
+  const allowedNameSet = new Set(allowedNames);
+  if (readdirSync(targetDirectory).some((name) => !allowedNameSet.has(name))) {
+    throw new Error("The full-local secret directory has missing or unexpected files.");
+  }
   const missingSecrets = [];
   for (const name of names) {
     const value = readSecret(name);
@@ -610,6 +618,7 @@ export function materializeFullLocalSecrets({
   targetDirectory,
 }) {
   materializeSecretFilesCreateOnly({
+    allowedNames: [...FULL_LOCAL_SECRET_NAMES, ...additionalExpectedNames],
     names: FULL_LOCAL_SECRET_NAMES,
     readSecret,
     targetDirectory,
@@ -619,6 +628,29 @@ export function materializeFullLocalSecrets({
     expectedNames: [...FULL_LOCAL_SECRET_NAMES, ...additionalExpectedNames],
   });
   return Object.freeze({ secretCount: FULL_LOCAL_SECRET_NAMES.length });
+}
+
+export function materializeFullLocalRuntimeSecrets({
+  coreSecrets,
+  oauthSecrets = {},
+  targetDirectory,
+}) {
+  const oauthNames = Object.keys(oauthSecrets);
+  const names = [...FULL_LOCAL_SECRET_NAMES, ...oauthNames];
+  if (new Set(names).size !== names.length) {
+    throw new Error("Core and OAuth secret names must not overlap.");
+  }
+  materializeSecretFilesCreateOnly({
+    names,
+    readSecret: (name) =>
+      Object.hasOwn(oauthSecrets, name) ? oauthSecrets[name] : coreSecrets?.[name],
+    targetDirectory,
+  });
+  validateFullLocalSecretFiles({ directory: targetDirectory, expectedNames: names });
+  return Object.freeze({
+    coreSecretCount: FULL_LOCAL_SECRET_NAMES.length,
+    oauthSecretCount: oauthNames.length,
+  });
 }
 
 export function validateFullLocalSecretFiles({ directory, expectedNames }) {
