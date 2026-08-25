@@ -337,6 +337,22 @@ function makeArtifactReadOnly(directory) {
   chmodSync(directory, 0o555);
 }
 
+function makeArtifactWritableForCleanup(directory) {
+  if (!existsSync(directory)) {
+    return;
+  }
+  for (const entry of readdirSync(directory, { withFileTypes: true })) {
+    const target = join(directory, entry.name);
+    if (entry.isDirectory()) {
+      makeArtifactWritableForCleanup(target);
+      chmodSync(target, 0o700);
+    } else {
+      chmodSync(target, 0o600);
+    }
+  }
+  chmodSync(directory, 0o700);
+}
+
 /**
  * Materializes the exact manifest bytes into a standalone, read-only directory.
  * @param {{
@@ -384,8 +400,8 @@ export function materializeYoutubeExtractionWorkerArtifact({
       encoding: "utf8",
       mode: 0o444,
     });
-    makeArtifactReadOnly(stagingRoot);
     renameSync(stagingRoot, normalizedOutput);
+    makeArtifactReadOnly(normalizedOutput);
     return {
       root_dir: normalizedOutput,
       manifest_path: resolve(normalizedOutput, "artifact.json"),
@@ -393,6 +409,7 @@ export function materializeYoutubeExtractionWorkerArtifact({
       manifest,
     };
   } catch (error) {
+    makeArtifactWritableForCleanup(stagingRoot);
     rmSync(stagingRoot, { recursive: true, force: true });
     throw error;
   }
