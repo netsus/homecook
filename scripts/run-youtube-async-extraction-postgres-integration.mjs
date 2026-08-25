@@ -601,6 +601,13 @@ if (!postgresBin) {
         "supabase/migrations/20260826010000_youtube_extraction_admin_daily_quota_exception.sql",
         "utf8",
       ),
+      `-- legacy_admin_acl_restore_fixture
+grant all privileges on public.admin_members to anon, authenticated;
+grant select (role) on public.admin_members to authenticated;`,
+      readFileSync(
+        "supabase/migrations/20260826020000_youtube_extraction_admin_acl_normalization.sql",
+        "utf8",
+      ),
     ].join("\n"), { encoding: "utf8", mode: 0o600 });
     runRequired(path.join(postgresBin, "psql"), [
       ...connectionArgs,

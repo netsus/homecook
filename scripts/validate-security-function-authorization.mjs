@@ -79,6 +79,10 @@ const ADDITIVE_SOURCES = [
         REPO_ROOT,
         "supabase/migrations/20260826010000_youtube_extraction_admin_daily_quota_exception.sql",
       ),
+      path.join(
+        REPO_ROOT,
+        "supabase/migrations/20260826020000_youtube_extraction_admin_acl_normalization.sql",
+      ),
     ],
   },
   {
