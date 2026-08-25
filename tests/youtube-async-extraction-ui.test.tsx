@@ -300,6 +300,44 @@ describe("YT_IMPORT async extraction", () => {
     expect(heading.getAttribute("tabindex")).toBe("-1");
   });
 
+  it("restores an extraction session instead of auto-validating its carried source URL", async () => {
+    const validationCallsBeforeRestore = vi.mocked(syncApi.validateYoutubeUrl).mock.calls.length;
+    vi.mocked(asyncApi.fetchYoutubeExtractionSession).mockResolvedValue({
+      success: true,
+      data: {
+        status: "draft",
+        draft: {
+          extraction_id: "extraction-restored-with-url",
+          title: "복원된 감자 수프",
+          base_servings: 2,
+          thumbnail_url: null,
+          tags: [],
+          suggested_tags: [],
+          extraction_methods: ["description"],
+          draft_warnings: [],
+          blocking_issues: [],
+          ingredients: [],
+          steps: [],
+          new_cooking_methods: [],
+        },
+        recipe_id: null,
+        recipe_path: null,
+      },
+      error: null,
+    });
+
+    renderImport({
+      initialExtractionId: "extraction-restored-with-url",
+      initialYoutubeUrl: youtubeUrl,
+    });
+
+    expect(await screen.findByRole("heading", { name: "추출 결과를 확인해 주세요" }))
+      .toBeTruthy();
+    expect(vi.mocked(syncApi.validateYoutubeUrl).mock.calls.length)
+      .toBe(validationCallsBeforeRestore);
+    expect(screen.queryByRole("button", { name: "레시피 추출하기" })).toBeNull();
+  });
+
   it("does not move focus when the ordinary URL input screen opens", async () => {
     renderImport();
     const input = screen.getByLabelText("유튜브 URL");

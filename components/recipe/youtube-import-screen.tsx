@@ -2684,10 +2684,11 @@ export function YoutubeImportScreen({
   const autoValidatedRef = useRef(false);
   useEffect(() => {
     if (autoValidatedRef.current) return;
+    if (initialExtractionId) return;
     if (!initialYoutubeUrl.trim()) return;
     autoValidatedRef.current = true;
     handleValidate();
-  }, [initialYoutubeUrl, handleValidate]);
+  }, [initialExtractionId, initialYoutubeUrl, handleValidate]);
 
   const applyExtractDataToReview = useCallback((data: YoutubeRecipeExtractData) => {
     setExtractionId(data.extraction_id);
