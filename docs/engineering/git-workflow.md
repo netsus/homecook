@@ -21,6 +21,13 @@
 
 `main`, `master`, `develop`는 기본 장기 브랜치로 유지할 수 있다.
 
+## Release Promotion
+
+- `master` merge는 통합 evidence다. production deployment approval은 아니다.
+- 서버 Mac release는 `origin/master`의 exact approved SHA, annotated `prod-*` tag, release manifest, attestation이 모두 맞을 때만 승격된다.
+- `release/*` 브랜치는 안정화 용도일 수 있지만, production source of truth는 아니다.
+- only `release-promoter` role may run production-changing deployment commands.
+
 ## Protected Base Branch Rule
 
 - `main`, `master`, `develop`는 merge 대상이 되는 protected base branch다.
