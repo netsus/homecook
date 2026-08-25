@@ -238,7 +238,7 @@ export function validateExternalArchiveDrillOptions({
     keychain_account: PLATFORM_BACKUP_ACCOUNT,
     recovery_credential_file: recoveryCredentialFile,
     recovery_issuer_private_key: recoveryIssuerPrivateKey,
-    recovery_manifest,
+    recovery_manifest: recoveryManifest,
     replacement_device_id: String(replacementDevice),
     restore_manifest: restoreManifest,
     escrow_envelope: escrowEnvelope,
