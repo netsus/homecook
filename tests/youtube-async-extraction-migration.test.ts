@@ -7,12 +7,16 @@ const catalogRepairPath =
   "supabase/migrations/20260825120000_youtube_extraction_catalog_after_internal_scope.sql";
 const sharedDependencyRepairPath =
   "supabase/migrations/20260825130000_youtube_extraction_shared_dependency_contract.sql";
+const adminDailyQuotaExceptionPath =
+  "supabase/migrations/20260826010000_youtube_extraction_admin_daily_quota_exception.sql";
 const previousCatalogFingerprint =
   "b8561e40e39a97962dab877e3d7c732236bf1bc55c8c985e56b846c50f7f90b1";
 const currentCatalogFingerprint =
   "a0740a9e9789d0176d55bac206f3bc7a7ed2b5dc9eb31737317d072512477d6c";
 const sharedDependencyCatalogFingerprint =
   "605c4e37ccd34313f00d4687c5340d8ea8ccdf958eb297805bbae871438775cc";
+const adminDailyQuotaCatalogFingerprint =
+  "2b0dc95c374e140443e0f46a35ea16bcc6653f0857b7f986ae457eab01c44ff3";
 
 describe("YTASYNC-DB/SEC migration contract", () => {
   it("re-attests the catalog after the internal scope function changes", () => {
@@ -39,7 +43,7 @@ describe("YTASYNC-DB/SEC migration contract", () => {
       "utf8",
     )) as { catalog_fingerprint?: unknown };
     expect(expectedSchema.catalog_fingerprint).toBe(
-      sharedDependencyCatalogFingerprint,
+      adminDailyQuotaCatalogFingerprint,
     );
 
     const validator = readFileSync(
@@ -82,6 +86,69 @@ describe("YTASYNC-DB/SEC migration contract", () => {
       "utf8",
     );
     expect(validator).toContain(sharedDependencyRepairPath);
+  });
+
+  it("grants an attested self-row admin lookup and bypasses only the daily budget", () => {
+    expect(existsSync(adminDailyQuotaExceptionPath)).toBe(true);
+    const sql = readFileSync(adminDailyQuotaExceptionPath, "utf8").toLowerCase();
+    expect(sql.trimStart().startsWith("begin;")).toBe(true);
+    expect(sql.trimEnd().endsWith("commit;")).toBe(true);
+    expect(sql).toContain(sharedDependencyCatalogFingerprint);
+    expect(sql).toContain(adminDailyQuotaCatalogFingerprint);
+    expect(sql).toContain("grant select (user_id) on public.admin_members");
+    expect(sql).toContain("youtube_extraction_admin_members_enqueue_owner_select");
+    expect(sql).toContain("using (user_id = auth.uid())");
+    expect(sql).toContain("public.admin_members as member");
+    expect(sql).toContain(
+      "v_active_count >= 2 or (not v_is_admin and v_daily_count >= 10)",
+    );
+    expect(sql).toContain("admin_membership_required_column");
+    expect(sql).toContain("admin_membership_owner");
+    expect(sql).toContain("admin_membership_policy");
+    expect(sql).toContain("admin_membership_table_acl");
+    expect(sql).toContain("admin_membership_column_acl");
+    expect(sql).toContain("pg_catalog.aclexplode");
+    expect(sql).toContain("revoke select (%1$i), insert (%1$i), update (%1$i)");
+    expect(sql).toContain("pg_catalog.pg_get_functiondef");
+    expect(sql).toContain("source drifted");
+    expect(sql).not.toMatch(/grant\s+select\s+on\s+public\.admin_members/u);
+    expect(sql).not.toMatch(/drop\s+(?:function|table|column|schema)/u);
+    expect(sql).not.toMatch(/@[a-z0-9.-]+|admin_(?:email|uuid|user_id)\s*=/u);
+
+    const functionCommentIndex = sql.indexOf(
+      "comment on function public.enqueue_youtube_extraction_job",
+    );
+    const firstResetRoleIndex = sql.indexOf("reset role;");
+    const membershipRevokeIndex = sql.indexOf(
+      "revoke youtube_extraction_enqueue_rpc_owner, youtube_extraction_credential_manager_rpc_owner from %i",
+    );
+    expect(functionCommentIndex).toBeGreaterThan(0);
+    expect(functionCommentIndex).toBeLessThan(firstResetRoleIndex);
+    expect(functionCommentIndex).toBeLessThan(membershipRevokeIndex);
+
+    const expectedSchema = JSON.parse(readFileSync(
+      "scripts/manifests/youtube-extraction-expected-schema.json",
+      "utf8",
+    )) as { catalog_fingerprint?: unknown; tables?: unknown[] };
+    expect(expectedSchema.catalog_fingerprint).toBe(
+      adminDailyQuotaCatalogFingerprint,
+    );
+    expect(expectedSchema.tables).toContain("public.admin_members");
+
+    const validator = readFileSync(
+      "scripts/validate-security-function-authorization.mjs",
+      "utf8",
+    );
+    expect(validator).toContain(adminDailyQuotaExceptionPath);
+
+    const postgresHarness = readFileSync(
+      "scripts/run-youtube-async-extraction-postgres-integration.mjs",
+      "utf8",
+    );
+    expect(postgresHarness).toContain(
+      "supabase/migrations/20260527030000_admin_foundation.sql",
+    );
+    expect(postgresHarness).toContain(adminDailyQuotaExceptionPath);
   });
 
   it("is additive and creates the exact durable authority surfaces", () => {

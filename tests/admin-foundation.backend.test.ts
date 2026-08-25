@@ -394,9 +394,13 @@ describe("admin foundation backend", () => {
     expect(sanitized).toEqual({ nested: { safe_count: 2 } });
   });
 
-  it("defines service-role-only admin tables and bootstrap without runtime allowlist bypass", async () => {
+  it("keeps admin control-plane tables service-role-only with one attested enqueue self-row exception", async () => {
     const migration = await readFile(
       "supabase/migrations/20260527030000_admin_foundation.sql",
+      "utf8",
+    );
+    const quotaMigration = await readFile(
+      "supabase/migrations/20260826010000_youtube_extraction_admin_daily_quota_exception.sql",
       "utf8",
     );
     const authHelper = await readFile("lib/server/admin-auth.ts", "utf8");
@@ -407,6 +411,9 @@ describe("admin foundation backend", () => {
     expect(migration).toContain("alter table public.admin_members enable row level security");
     expect(migration).toContain("grant all privileges on public.admin_members to service_role");
     expect(migration).toContain("insert into public.admin_members (user_id, role)");
+    expect(quotaMigration).toContain("grant select (user_id) on public.admin_members");
+    expect(quotaMigration).toContain("using (user_id = auth.uid())");
+    expect(quotaMigration).not.toMatch(/grant\s+select\s+on\s+public\.admin_members/iu);
     expect(authHelper).toContain("createAdminDataInternalClient()");
     expect(authHelper).toContain("admin_members");
     expect(authHelper).not.toMatch(/ADMIN_(EMAIL|USER|ALLOW|ALLOWLIST|UUID|ID)/u);

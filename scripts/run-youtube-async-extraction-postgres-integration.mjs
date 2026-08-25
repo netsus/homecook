@@ -581,6 +581,10 @@ if (!postgresBin) {
     ]);
     writeFileSync(migrationBundlePath, [
       readFileSync(
+        "supabase/migrations/20260527030000_admin_foundation.sql",
+        "utf8",
+      ),
+      readFileSync(
         "supabase/migrations/20260812160000_youtube_async_extraction_notification.sql",
         "utf8",
       ),
@@ -591,6 +595,10 @@ if (!postgresBin) {
       ),
       readFileSync(
         "supabase/migrations/20260825130000_youtube_extraction_shared_dependency_contract.sql",
+        "utf8",
+      ),
+      readFileSync(
+        "supabase/migrations/20260826010000_youtube_extraction_admin_daily_quota_exception.sql",
         "utf8",
       ),
     ].join("\n"), { encoding: "utf8", mode: 0o600 });

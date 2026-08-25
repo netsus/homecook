@@ -285,6 +285,7 @@ function expectCatalogDriftToBlockEnqueueAndClaim(
 
 function resetRuntimeState() {
   psql(`
+    delete from public.admin_members;
     truncate table public.youtube_extraction_candidates restart identity cascade;
     truncate table public.youtube_extraction_sessions restart identity cascade;
     truncate table public.youtube_extraction_jobs restart identity cascade;
@@ -531,6 +532,7 @@ describe.runIf(enabled).sequential("youtube async extraction PostgreSQL integrat
           where format('%I.%I', schemaname, tablename) in (
             'private.youtube_extraction_current_policy',
             'private.youtube_extraction_worker_credentials',
+            'public.admin_members',
             'public.cooking_methods',
             'public.ingredient_synonyms',
             'public.ingredients',
@@ -656,7 +658,51 @@ describe.runIf(enabled).sequential("youtube async extraction PostgreSQL integrat
           has_table_privilege('youtube_extraction_enqueue_rpc_owner', 'public.youtube_extraction_jobs', 'SELECT,INSERT')
           and not has_table_privilege('youtube_extraction_enqueue_rpc_owner', 'public.youtube_extraction_jobs', 'UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER')
           and has_table_privilege('youtube_extraction_enqueue_rpc_owner', 'private.youtube_extraction_current_policy', 'SELECT')
-          and not has_table_privilege('youtube_extraction_enqueue_rpc_owner', 'private.youtube_extraction_current_policy', 'INSERT,UPDATE,DELETE'),
+          and not has_table_privilege('youtube_extraction_enqueue_rpc_owner', 'private.youtube_extraction_current_policy', 'INSERT,UPDATE,DELETE')
+          and has_column_privilege('youtube_extraction_enqueue_rpc_owner', 'public.admin_members', 'user_id', 'SELECT')
+          and not has_table_privilege('youtube_extraction_enqueue_rpc_owner', 'public.admin_members', 'SELECT'),
+        'enqueue_owner_admin_column_grant_count', (
+          select count(*)
+          from information_schema.role_column_grants
+          where grantee = 'youtube_extraction_enqueue_rpc_owner'
+            and table_schema = 'public'
+            and table_name = 'admin_members'
+            and column_name = 'user_id'
+            and privilege_type = 'SELECT'
+        ),
+        'enqueue_owner_admin_column_grant_total_count', (
+          select count(*)
+          from information_schema.role_column_grants
+          where grantee = 'youtube_extraction_enqueue_rpc_owner'
+            and table_schema = 'public'
+            and table_name = 'admin_members'
+        ),
+        'admin_members_unsafe_api_table_privilege_count', (
+          select count(*)
+          from unnest(array[
+            'anon',
+            'authenticated',
+            'youtube_extraction_worker',
+            'youtube_extraction_credential_manager'
+          ]) as role_name
+          where has_table_privilege(
+            role_name,
+            'public.admin_members',
+            'SELECT,INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER'
+          )
+        ),
+        'admin_members_unsafe_api_column_privilege_count', (
+          select count(*)
+          from information_schema.role_column_grants
+          where grantee in (
+            'anon',
+            'authenticated',
+            'youtube_extraction_worker',
+            'youtube_extraction_credential_manager'
+          )
+            and table_schema = 'public'
+            and table_name = 'admin_members'
+        ),
         'enqueue_owner_extra_privilege_count', (
           select count(*)
           from information_schema.role_table_grants
@@ -673,8 +719,21 @@ describe.runIf(enabled).sequential("youtube async extraction PostgreSQL integrat
             and policyname not in (
               'youtube_extraction_current_policy_enqueue_owner_select',
               'youtube_extraction_jobs_enqueue_owner_select',
-              'youtube_extraction_jobs_enqueue_owner_insert'
+              'youtube_extraction_jobs_enqueue_owner_insert',
+              'youtube_extraction_admin_members_enqueue_owner_select'
             )
+        ),
+        'enqueue_owner_admin_policy_count', (
+          select count(*)
+          from pg_catalog.pg_policies
+          where schemaname = 'public'
+            and tablename = 'admin_members'
+            and policyname = 'youtube_extraction_admin_members_enqueue_owner_select'
+            and permissive = 'PERMISSIVE'
+            and cmd = 'SELECT'
+            and roles = array['youtube_extraction_enqueue_rpc_owner']::name[]
+            and qual = '(user_id = auth.uid())'
+            and with_check is null
         ),
         'owner_membership_count', (
           select count(*)
@@ -702,8 +761,13 @@ describe.runIf(enabled).sequential("youtube async extraction PostgreSQL integrat
       unsafe_role_count: 0,
       api_table_privilege_count: 0,
       enqueue_owner_minimum: true,
+      enqueue_owner_admin_column_grant_count: 1,
+      enqueue_owner_admin_column_grant_total_count: 1,
+      admin_members_unsafe_api_table_privilege_count: 0,
+      admin_members_unsafe_api_column_privilege_count: 0,
       enqueue_owner_extra_privilege_count: 0,
       enqueue_owner_extra_policy_count: 0,
+      enqueue_owner_admin_policy_count: 1,
       owner_membership_count: 0,
       admin_membership_count: 0,
     });
@@ -946,6 +1010,116 @@ describe.runIf(enabled).sequential("youtube async extraction PostgreSQL integrat
       from public.youtube_extraction_jobs
       where user_id = '${ownerA}'::uuid;
     `))).toBe("10");
+  });
+
+  it("exempts admin members from only the rolling daily enqueue budget", () => {
+    enablePolicy();
+    const snapshotDigest = policySnapshotDigest();
+    psql(`
+      insert into public.admin_members (user_id, role)
+      values ('${ownerA}'::uuid, 'viewer');
+    `);
+
+    for (let index = 1; index <= 10; index += 1) {
+      const digest = (index + 100).toString(16).padStart(64, "0");
+      const result = runAsJson(
+        "authenticated",
+        authenticatedClaims(ownerA),
+        `select public.enqueue_youtube_extraction_job(
+          'admin${index.toString().padStart(6, "0")}',
+          1,
+          '${snapshotDigest}',
+          '1',
+          '${digest}',
+          null,
+          null,
+          'background_notify'
+        )::text;`,
+      );
+      expect(result).toMatchObject({ status: "queued", deduplicated: false });
+      psql(`
+        update public.youtube_extraction_jobs
+        set status = 'failed',
+            error_code = 'EXTRACTION_FAILED',
+            error_message = '추출을 완료하지 못했어요.',
+            completed_at = now(),
+            completion_delivery_key = 'admin-budget:' || id::text,
+            updated_at = now()
+        where id = '${String(result.job_id)}'::uuid;
+      `);
+    }
+
+    const eleventh = runAsJson(
+      "authenticated",
+      authenticatedClaims(ownerA),
+      `select public.enqueue_youtube_extraction_job(
+        'admin000011',
+        1,
+        '${snapshotDigest}',
+        '1',
+        '${"f1".padStart(64, "0")}',
+        null,
+        null,
+        'background_notify'
+      )::text;`,
+    );
+    expect(eleventh).toMatchObject({ status: "queued", deduplicated: false });
+
+    psql(`
+      update public.youtube_extraction_jobs
+      set status = 'failed',
+          error_code = 'EXTRACTION_FAILED',
+          error_message = '추출을 완료하지 못했어요.',
+          completed_at = now(),
+          completion_delivery_key = 'admin-budget:' || id::text,
+          updated_at = now()
+      where id = '${String(eleventh.job_id)}'::uuid;
+      delete from public.admin_members where user_id = '${ownerA}'::uuid;
+    `);
+
+    expectSqlFailure(`
+      begin;
+      set local role authenticated;
+      set local request.jwt.claims = ${sqlJson(authenticatedClaims(ownerA))};
+      select public.enqueue_youtube_extraction_job(
+        'admin000012', 1, '${snapshotDigest}', '1', '${"f2".padStart(64, "0")}',
+        null, null, 'background_notify'
+      );
+      commit;
+    `, /RATE_LIMITED/u);
+  });
+
+  it("keeps the two-active-job limit for admin members", () => {
+    enablePolicy();
+    const snapshotDigest = policySnapshotDigest();
+    psql(`
+      insert into public.admin_members (user_id, role)
+      values ('${ownerA}'::uuid, 'viewer');
+    `);
+
+    for (let index = 1; index <= 2; index += 1) {
+      const result = runAsJson(
+        "authenticated",
+        authenticatedClaims(ownerA),
+        `select public.enqueue_youtube_extraction_job(
+          'active${index.toString().padStart(5, "0")}', 1, '${snapshotDigest}', '1',
+          '${(index + 200).toString(16).padStart(64, "0")}', null, null,
+          'background_notify'
+        )::text;`,
+      );
+      expect(result).toMatchObject({ status: "queued", deduplicated: false });
+    }
+
+    expectSqlFailure(`
+      begin;
+      set local role authenticated;
+      set local request.jwt.claims = ${sqlJson(authenticatedClaims(ownerA))};
+      select public.enqueue_youtube_extraction_job(
+        'active00003', 1, '${snapshotDigest}', '1', '${"ef".padStart(64, "0")}',
+        null, null, 'background_notify'
+      );
+      commit;
+    `, /RATE_LIMITED/u);
   });
 
   it("rejects a policy snapshot mismatch before any enqueue write", () => {
@@ -2472,6 +2646,65 @@ describe.runIf(enabled).sequential("youtube async extraction PostgreSQL integrat
         from authenticated;
       `);
     }
+  });
+
+  it("fails readiness closed when the administrator membership boundary drifts", () => {
+    enablePolicy();
+    const snapshotDigest = policySnapshotDigest();
+    configureWorkerCredential(snapshotDigest);
+
+    expectCatalogDriftToBlockEnqueueAndClaim(`
+      drop policy youtube_extraction_admin_members_enqueue_owner_select
+        on public.admin_members;
+    `, snapshotDigest);
+    expectCatalogDriftToBlockEnqueueAndClaim(`
+      revoke select (user_id) on public.admin_members
+        from youtube_extraction_enqueue_rpc_owner;
+    `, snapshotDigest);
+    expectCatalogDriftToBlockEnqueueAndClaim(`
+      grant select on public.admin_members
+        to youtube_extraction_enqueue_rpc_owner;
+    `, snapshotDigest);
+    expectCatalogDriftToBlockEnqueueAndClaim(`
+      grant select (role) on public.admin_members
+        to youtube_extraction_enqueue_rpc_owner;
+    `, snapshotDigest);
+    expectCatalogDriftToBlockEnqueueAndClaim(`
+      grant select (user_id) on public.admin_members
+        to authenticated;
+    `, snapshotDigest);
+    expectCatalogDriftToBlockEnqueueAndClaim(`
+      grant select on public.admin_members
+        to anon;
+    `, snapshotDigest);
+    expectCatalogDriftToBlockEnqueueAndClaim(`
+      grant update on public.admin_members
+        to youtube_extraction_enqueue_rpc_owner;
+    `, snapshotDigest);
+    expectCatalogDriftToBlockEnqueueAndClaim(`
+      grant select (user_id) on public.admin_members
+        to youtube_extraction_enqueue_rpc_owner with grant option;
+    `, snapshotDigest);
+    expectCatalogDriftToBlockEnqueueAndClaim(`
+      create policy youtube_extraction_admin_members_unexpected_select
+        on public.admin_members
+        for select
+        to youtube_extraction_enqueue_rpc_owner
+        using (true);
+    `, snapshotDigest);
+    expectCatalogDriftToBlockEnqueueAndClaim(`
+      grant create on schema public to youtube_extraction_enqueue_rpc_owner;
+      alter table public.admin_members
+        owner to youtube_extraction_enqueue_rpc_owner;
+    `, snapshotDigest);
+
+    const readiness = runAsJson("authenticated", authenticatedClaims(ownerA), `
+      select public.read_youtube_extraction_enqueue_readiness()::text;
+    `);
+    expect(readiness.ready).toBe(true);
+    expect(readiness.catalog_fingerprint).toBe(
+      expectedSchemaDocument.catalog_fingerprint,
+    );
   });
 
   it("fails readiness closed when arbitrary principals gain direct target table or sequence grants", () => {
