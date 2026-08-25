@@ -1,9 +1,4 @@
-import {
-  chmodSync,
-  mkdirSync,
-  writeFileSync,
-} from "node:fs";
-import { join } from "node:path";
+import { materializeSecretFilesCreateOnly } from "./full-local-production-runtime.mjs";
 
 export const FULL_LOCAL_OAUTH_KEYCHAIN_ACCOUNTS = Object.freeze({
   google_client_id: "google_client_id",
@@ -61,17 +56,11 @@ export function validateFullLocalOAuthConfig({ config, secrets }) {
 }
 
 export function materializeFullLocalOAuthSecrets({ secrets, targetDirectory }) {
-  mkdirSync(targetDirectory, { recursive: true, mode: 0o700 });
-  chmodSync(targetDirectory, 0o700);
-  for (const name of FULL_LOCAL_OAUTH_SECRET_NAMES) {
-    const path = join(targetDirectory, name);
-    writeFileSync(path, requiredSecret(secrets, name), {
-      encoding: "utf8",
-      mode: 0o600,
-    });
-    chmodSync(path, 0o600);
-  }
-  return FULL_LOCAL_OAUTH_SECRET_NAMES.length;
+  return materializeSecretFilesCreateOnly({
+    names: FULL_LOCAL_OAUTH_SECRET_NAMES,
+    readSecret: (name) => requiredSecret(secrets, name),
+    targetDirectory,
+  });
 }
 
 export function assertLocalOAuthProvisionApproved({ confirmation }) {
