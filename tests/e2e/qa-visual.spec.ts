@@ -78,6 +78,7 @@ const LEFTOVERS_DESKTOP_VISUAL_MAX_DIFF_PIXELS = 2600;
 const FIXED_HOME_VISUAL_NOW = "2026-06-01T10:30:00.000Z";
 const FIXED_PLANNER_VISUAL_NOW = "2026-06-18T10:30:00.000Z";
 const FIXED_LEFTOVERS_VISUAL_NOW = "2026-06-21T10:30:00.000Z";
+const FIXED_YOUTUBE_IMPORT_VISUAL_NOW = "2026-08-14T01:00:48.000Z";
 
 function isMobileViewport(page: Page) {
   return (page.viewportSize()?.width ?? 1280) < 1024;
@@ -464,6 +465,7 @@ test.describe("QA visual regression", () => {
     page,
   }) => {
     test.skip(isMobileViewport(page), "desktop-only youtube import parity baseline");
+    await installFixedVisualClock(page, FIXED_YOUTUBE_IMPORT_VISUAL_NOW);
     await setE2EAuthOverride(page);
     await installYoutubeImportVisualRoutes(page);
 
