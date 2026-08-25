@@ -1,7 +1,11 @@
 import {
+  mkdirSync,
   mkdtempSync,
   readFileSync,
+  rmSync,
   statSync,
+  utimesSync,
+  writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -58,6 +62,31 @@ describe("full-local OAuth credential boundary", () => {
       const path = join(targetDirectory, name);
       expect(readFileSync(path, "utf8")).toBe(secrets[name]);
       expect(statSync(path).mode & 0o777).toBe(0o600);
+    }
+  });
+
+  it("preserves existing provider files when Keychain values already match", () => {
+    const root = mkdtempSync(join(tmpdir(), "homecook-existing-oauth-secrets-"));
+    const targetDirectory = join(root, "runtime");
+    const secrets = credentials();
+    const preservedDate = new Date("2020-01-02T03:04:05.000Z");
+
+    try {
+      mkdirSync(targetDirectory, { mode: 0o700 });
+      for (const name of FULL_LOCAL_OAUTH_SECRET_NAMES) {
+        const path = join(targetDirectory, name);
+        writeFileSync(path, secrets[name], { mode: 0o600 });
+        utimesSync(path, preservedDate, preservedDate);
+      }
+
+      materializeFullLocalOAuthSecrets({ secrets, targetDirectory });
+
+      for (const name of FULL_LOCAL_OAUTH_SECRET_NAMES) {
+        expect(statSync(join(targetDirectory, name)).mtimeMs)
+          .toBe(preservedDate.getTime());
+      }
+    } finally {
+      rmSync(root, { force: true, recursive: true });
     }
   });
 });

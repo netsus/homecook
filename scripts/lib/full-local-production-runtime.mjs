@@ -5,10 +5,12 @@ import {
   randomBytes,
   randomUUID,
   sign,
+  timingSafeEqual,
 } from "node:crypto";
 import {
   chmodSync,
   existsSync,
+  lstatSync,
   mkdirSync,
   readdirSync,
   readFileSync,
@@ -553,30 +555,102 @@ export function validateFullLocalProductionConfig({
   });
 }
 
-export function materializeFullLocalSecrets({
-  additionalExpectedNames = [],
+export function materializeSecretFilesCreateOnly({
+  names,
+  allowedNames = names,
   readSecret,
   targetDirectory,
 }) {
   if (typeof readSecret !== "function") {
     throw new Error("A Keychain secret reader is required.");
   }
+  if (!Array.isArray(names) || names.length === 0) {
+    throw new Error("At least one secret name is required.");
+  }
+  if (!Array.isArray(allowedNames) || allowedNames.length < names.length) {
+    throw new Error("Allowed secret names must include every materialized secret.");
+  }
   mkdirSync(targetDirectory, { mode: 0o700, recursive: true });
   chmodSync(targetDirectory, 0o700);
-  for (const name of FULL_LOCAL_SECRET_NAMES) {
+  const allowedNameSet = new Set(allowedNames);
+  if (readdirSync(targetDirectory).some((name) => !allowedNameSet.has(name))) {
+    throw new Error("The full-local secret directory has missing or unexpected files.");
+  }
+  const missingSecrets = [];
+  for (const name of names) {
     const value = readSecret(name);
     if (typeof value !== "string" || value.length === 0) {
       throw new Error(`Keychain secret ${name} is missing.`);
     }
     const path = join(targetDirectory, name);
-    writeFileSync(path, value, { encoding: "utf8", mode: 0o600 });
+    if (!existsSync(path)) {
+      missingSecrets.push({ name, path, value });
+      continue;
+    }
+    const fileStat = lstatSync(path);
+    if (fileStat.isSymbolicLink() || !fileStat.isFile()) {
+      throw new Error(`Existing secret ${name} must be a regular file.`);
+    }
+    exactMode(fileStat.mode, 0o600, `Existing secret ${name}`);
+    const existing = Buffer.from(readFileSync(path));
+    const expected = Buffer.from(value, "utf8");
+    if (
+      existing.length !== expected.length
+      || !timingSafeEqual(existing, expected)
+    ) {
+      throw new Error(`Existing secret ${name} does not match Keychain.`);
+    }
+  }
+  for (const { path, value } of missingSecrets) {
+    writeFileSync(path, value, {
+      encoding: "utf8",
+      flag: "wx",
+      mode: 0o600,
+    });
     chmodSync(path, 0o600);
   }
+  return names.length;
+}
+
+export function materializeFullLocalSecrets({
+  additionalExpectedNames = [],
+  readSecret,
+  targetDirectory,
+}) {
+  materializeSecretFilesCreateOnly({
+    allowedNames: [...FULL_LOCAL_SECRET_NAMES, ...additionalExpectedNames],
+    names: FULL_LOCAL_SECRET_NAMES,
+    readSecret,
+    targetDirectory,
+  });
   validateFullLocalSecretFiles({
     directory: targetDirectory,
     expectedNames: [...FULL_LOCAL_SECRET_NAMES, ...additionalExpectedNames],
   });
   return Object.freeze({ secretCount: FULL_LOCAL_SECRET_NAMES.length });
+}
+
+export function materializeFullLocalRuntimeSecrets({
+  coreSecrets,
+  oauthSecrets = {},
+  targetDirectory,
+}) {
+  const oauthNames = Object.keys(oauthSecrets);
+  const names = [...FULL_LOCAL_SECRET_NAMES, ...oauthNames];
+  if (new Set(names).size !== names.length) {
+    throw new Error("Core and OAuth secret names must not overlap.");
+  }
+  materializeSecretFilesCreateOnly({
+    names,
+    readSecret: (name) =>
+      Object.hasOwn(oauthSecrets, name) ? oauthSecrets[name] : coreSecrets?.[name],
+    targetDirectory,
+  });
+  validateFullLocalSecretFiles({ directory: targetDirectory, expectedNames: names });
+  return Object.freeze({
+    coreSecretCount: FULL_LOCAL_SECRET_NAMES.length,
+    oauthSecretCount: oauthNames.length,
+  });
 }
 
 export function validateFullLocalSecretFiles({ directory, expectedNames }) {

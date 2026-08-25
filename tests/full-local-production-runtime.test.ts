@@ -1,12 +1,14 @@
 import { spawnSync } from "node:child_process";
 import {
   chmodSync,
+  existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
   rmSync,
   statSync,
   symlinkSync,
+  utimesSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -28,6 +30,7 @@ import {
   fullLocalImageRefsForPlatform,
   generateFullLocalSecretBundle,
   materializeFullLocalSecrets,
+  materializeFullLocalRuntimeSecrets,
   parseFullLocalProductCatalogSqlOutput,
   renderFullLocalProductionConfigTemplate,
   selectNewlyStartedFullLocalWriterServices,
@@ -37,6 +40,7 @@ import {
   validateFullLocalSecretFiles,
   validateLoopbackS3Endpoint,
 } from "../scripts/lib/full-local-production-runtime.mjs";
+import { FULL_LOCAL_OAUTH_SECRET_NAMES } from "../scripts/lib/full-local-oauth-providers.mjs";
 
 function validConfig(overrides: Record<string, string> = {}) {
   const images = fullLocalImageRefsForPlatform("linux/arm64");
@@ -836,6 +840,126 @@ describe("full-local secret delivery", () => {
           expectedNames: FULL_LOCAL_SECRET_NAMES,
         }),
       ).toBe(true);
+    } finally {
+      rmSync(root, { force: true, recursive: true });
+    }
+  });
+
+  it("preserves existing secret files when Keychain values already match", () => {
+    const root = mkdtempSync(join(tmpdir(), "full-local-existing-secrets-"));
+    const directory = join(root, "runtime");
+    const secrets = validSecrets();
+    const preservedDate = new Date("2020-01-02T03:04:05.000Z");
+
+    try {
+      mkdirSync(directory, { mode: 0o700 });
+      for (const name of FULL_LOCAL_SECRET_NAMES) {
+        const path = join(directory, name);
+        writeFileSync(path, secrets[name], { mode: 0o600 });
+        utimesSync(path, preservedDate, preservedDate);
+      }
+
+      materializeFullLocalSecrets({
+        readSecret: (name: string) => secrets[name],
+        targetDirectory: directory,
+      });
+
+      for (const name of FULL_LOCAL_SECRET_NAMES) {
+        expect(statSync(join(directory, name)).mtimeMs).toBe(preservedDate.getTime());
+      }
+    } finally {
+      rmSync(root, { force: true, recursive: true });
+    }
+  });
+
+  it("rejects a mismatched existing secret before creating missing files", () => {
+    const root = mkdtempSync(join(tmpdir(), "full-local-mismatched-secrets-"));
+    const directory = join(root, "runtime");
+    const secrets = validSecrets();
+    const mismatchedPath = join(directory, "jwt_secret");
+
+    try {
+      mkdirSync(directory, { mode: 0o700 });
+      writeFileSync(mismatchedPath, "existing-different-secret", { mode: 0o600 });
+
+      expect(() =>
+        materializeFullLocalSecrets({
+          readSecret: (name: string) => secrets[name],
+          targetDirectory: directory,
+        }),
+      ).toThrow(/existing secret.*does not match/iu);
+
+      expect(existsSync(join(directory, "postgres_password"))).toBe(false);
+      expect(readFileSync(mismatchedPath, "utf8")).toBe("existing-different-secret");
+    } finally {
+      rmSync(root, { force: true, recursive: true });
+    }
+  });
+
+  it("rejects unexpected files before creating any missing secrets", () => {
+    const root = mkdtempSync(join(tmpdir(), "full-local-unexpected-secrets-"));
+    const directory = join(root, "runtime");
+    const secrets = validSecrets();
+
+    try {
+      mkdirSync(directory, { mode: 0o700 });
+      writeFileSync(join(directory, "unexpected-secret"), "unexpected", {
+        mode: 0o600,
+      });
+
+      expect(() =>
+        materializeFullLocalSecrets({
+          readSecret: (name: string) => secrets[name],
+          targetDirectory: directory,
+        }),
+      ).toThrow(/missing or unexpected files/iu);
+
+      expect(existsSync(join(directory, "postgres_password"))).toBe(false);
+    } finally {
+      rmSync(root, { force: true, recursive: true });
+    }
+  });
+
+  it.each([
+    {
+      existingName: "jwt_secret",
+      label: "core mismatch before OAuth creation",
+      missingName: "google_client_id",
+    },
+    {
+      existingName: "google_client_id",
+      label: "OAuth mismatch before core creation",
+      missingName: "postgres_password",
+    },
+  ])("preflights the combined runtime set: $label", ({
+    existingName,
+    missingName,
+  }) => {
+    const root = mkdtempSync(join(tmpdir(), "full-local-combined-secrets-"));
+    const directory = join(root, "runtime");
+    const coreSecrets = validSecrets();
+    const oauthSecrets = Object.fromEntries(
+      FULL_LOCAL_OAUTH_SECRET_NAMES.map((name, index) => [
+        name,
+        `${name}-secure-value-${index}`,
+      ]),
+    );
+
+    try {
+      mkdirSync(directory, { mode: 0o700 });
+      writeFileSync(join(directory, existingName), "existing-different-secret", {
+        mode: 0o600,
+      });
+
+      expect(() =>
+        materializeFullLocalRuntimeSecrets({
+          coreSecrets,
+          oauthSecrets,
+          targetDirectory: directory,
+        }),
+      ).toThrow(/existing secret.*does not match/iu);
+
+      expect(existsSync(join(directory, missingName))).toBe(false);
     } finally {
       rmSync(root, { force: true, recursive: true });
     }
