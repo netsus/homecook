@@ -47,6 +47,16 @@ const RULESET_NAMES = [
   "production-release-tag-creation",
   "production-release-tag-immutability",
 ];
+const WRITABLE_PULL_REQUEST_PARAMETER_KEYS = [
+  "allowed_merge_methods",
+  "dismiss_stale_reviews_on_push",
+  "dismissal_restriction",
+  "require_code_owner_review",
+  "require_last_push_approval",
+  "required_approving_review_count",
+  "required_review_thread_resolution",
+  "required_reviewers",
+];
 const SECRET_NAMES = [
   "HOMECOOK_RELEASE_ATTESTATION_APP_ID",
   "HOMECOOK_RELEASE_ATTESTATION_APP_PRIVATE_KEY",
@@ -295,20 +305,34 @@ function flattenObjectPages(pages, property, label, { partialState = false } = {
   return values;
 }
 
-function apiRuleset(desired) {
+function mutationRules(rules) {
+  return rules.map((rule) => {
+    if (rule.type !== "pull_request") return rule;
+    return {
+      ...rule,
+      parameters: Object.fromEntries(
+        WRITABLE_PULL_REQUEST_PARAMETER_KEYS
+          .filter((key) => Object.prototype.hasOwnProperty.call(rule.parameters, key))
+          .map((key) => [key, rule.parameters[key]]),
+      ),
+    };
+  });
+}
+
+function apiRulesetMutationPayload(desired) {
   return {
     name: desired.name,
     target: desired.target,
     enforcement: desired.enforcement,
     bypass_actors: desired.bypass_actors,
     conditions: desired.conditions,
-    rules: desired.rules,
+    rules: mutationRules(desired.rules),
   };
 }
 
 function rulesetMatches(actual, desired) {
   try {
-    return productionReleaseRulesetsSemanticallyEqual(actual, apiRuleset(desired));
+    return productionReleaseRulesetsSemanticallyEqual(actual, desired);
   } catch {
     return false;
   }
@@ -898,7 +922,7 @@ export async function executeProductionReleaseControls({
     const summary = preflightInventory.summaries.find(
       (entry) => entry.name === desiredRuleset.name,
     );
-    const body = apiRuleset(desiredRuleset);
+    const body = apiRulesetMutationPayload(desiredRuleset);
     if (!summary) {
       mutationStarted = true;
       const created = ghApi(`/repos/${C2_CANONICAL_REPOSITORY}/rulesets`, {

@@ -202,6 +202,58 @@ function normalizeRequiredStatusChecks(value, label) {
     });
 }
 
+function normalizePullRequestRequiredReviewers(value, label) {
+  const reviewers = requireArray(value, label);
+  if (reviewers.length > 15) {
+    throw new Error(`${label} must contain at most 15 team configurations.`);
+  }
+  const reviewerIds = new Set();
+  return reviewers
+    .map((entry, index) => {
+      const configuration = requireObject(entry, `${label}[${index}]`);
+      rejectUnknownKeys(
+        configuration,
+        ["file_patterns", "minimum_approvals", "reviewer"],
+        `${label}[${index}]`,
+      );
+      const filePatterns = requireArray(
+        configuration.file_patterns,
+        `${label}[${index}].file_patterns`,
+      ).map((pattern, patternIndex) => requireNonEmptyString(
+        pattern,
+        `${label}[${index}].file_patterns[${patternIndex}]`,
+      ));
+      if (
+        !Number.isInteger(configuration.minimum_approvals)
+        || configuration.minimum_approvals < 0
+        || configuration.minimum_approvals > 10
+      ) {
+        throw new Error(`${label}[${index}].minimum_approvals must be between 0 and 10.`);
+      }
+      const reviewer = requireObject(
+        configuration.reviewer,
+        `${label}[${index}].reviewer`,
+      );
+      rejectUnknownKeys(reviewer, ["id", "type"], `${label}[${index}].reviewer`);
+      if (reviewer.type !== "Team") {
+        throw new Error(`${label}[${index}].reviewer.type must be Team.`);
+      }
+      if (!Number.isInteger(reviewer.id) || reviewer.id <= 0) {
+        throw new Error(`${label}[${index}].reviewer.id must be a positive integer.`);
+      }
+      if (reviewerIds.has(reviewer.id)) {
+        throw new Error(`${label} contains duplicate reviewer Team id ${reviewer.id}.`);
+      }
+      reviewerIds.add(reviewer.id);
+      return {
+        file_patterns: filePatterns,
+        minimum_approvals: configuration.minimum_approvals,
+        reviewer: { id: reviewer.id, type: reviewer.type },
+      };
+    })
+    .sort((left, right) => left.reviewer.id - right.reviewer.id);
+}
+
 function normalizePullRequestParameters(value, label) {
   const parameters = requireObject(value, label);
   rejectUnknownKeys(parameters, [
@@ -251,13 +303,10 @@ function normalizePullRequestParameters(value, label) {
     normalized.required_approving_review_count = parameters.required_approving_review_count;
   }
   if (parameters.required_reviewers !== undefined) {
-    normalized.required_reviewers = requireArray(
+    normalized.required_reviewers = normalizePullRequestRequiredReviewers(
       parameters.required_reviewers,
       `${label}.required_reviewers`,
-    ).map((entry, index) => canonicalizeJson(requireObject(
-      entry,
-      `${label}.required_reviewers[${index}]`,
-    ))).sort((left, right) => JSON.stringify(left).localeCompare(JSON.stringify(right)));
+    );
   }
   return canonicalizeJson(normalized);
 }
