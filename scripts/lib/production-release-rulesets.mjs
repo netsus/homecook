@@ -11,6 +11,7 @@ import {
 import {
   productionReleaseRulesetConflictsWithCanonicalTarget,
 } from "./production-release-ruleset-patterns.mjs";
+import { resolveTrustedGitExecutable } from "./trusted-production-release-tools.mjs";
 
 export const PRODUCTION_RELEASE_RULESET_SCHEMA =
   "homecook.github.repository-ruleset.v1";
@@ -441,9 +442,9 @@ function normalizeInheritedBypassActors(bypassActors, label, sourceType, target)
     "Team",
     "User",
   ];
-  const actorTypes = ["Enterprise", "Organization"].includes(sourceType)
+  const actorTypes = sourceType === "Enterprise"
     ? [...repositoryActorTypes, "EnterpriseOwner", "EnterpriseRole"]
-    : sourceType === "Repository"
+    : ["Organization", "Repository"].includes(sourceType)
       ? repositoryActorTypes
       : [];
   return requireArray(bypassActors ?? [], label)
@@ -848,13 +849,13 @@ function validateRulesetInventoryConsistency(actualDir, desiredRulesets) {
   }
 }
 
-function readHeadPolicyBinding(rootDir) {
+function readHeadPolicyBinding(rootDir, gitPath) {
   const expressions = [
     "HEAD",
     "HEAD^{tree}",
     ...SNAPSHOT_POLICY_PATHS.map((path) => `HEAD:${path}`),
   ];
-  const result = spawnSync("git", ["-C", rootDir, "rev-parse", ...expressions], {
+  const result = spawnSync(gitPath, ["-C", rootDir, "rev-parse", ...expressions], {
     encoding: "utf8",
   });
   const values = result.stdout?.trim().split("\n") ?? [];
@@ -871,7 +872,7 @@ function readHeadPolicyBinding(rootDir) {
   };
 }
 
-function validateSnapshotCompletion(actualDir, rootDir) {
+function validateSnapshotCompletion(actualDir, rootDir, gitPath) {
   if (!actualDir) return ["missing_snapshot_completion_manifest"];
   const completionPath = resolve(actualDir, SNAPSHOT_COMPLETION_FILE);
   if (!existsSync(completionPath)) return ["missing_snapshot_completion_manifest"];
@@ -883,7 +884,7 @@ function validateSnapshotCompletion(actualDir, rootDir) {
   }
   let headBinding;
   try {
-    headBinding = readHeadPolicyBinding(rootDir);
+    headBinding = readHeadPolicyBinding(rootDir, gitPath);
   } catch {
     return ["snapshot_completion_source_binding_mismatch"];
   }
@@ -1366,6 +1367,7 @@ export function getProductionReleaseRulesetPlan({
   requireCompletionManifest = true,
   rootDir = process.cwd(),
   gitRootDir = rootDir,
+  gitPath = resolveTrustedGitExecutable(),
 } = {}) {
   const workflowPath = resolve(
     rootDir,
@@ -1442,7 +1444,9 @@ export function getProductionReleaseRulesetPlan({
       scope: "effective",
     }),
     ...validateRulesetInventoryConsistency(actualDir, desiredRulesets),
-    ...(requireCompletionManifest ? validateSnapshotCompletion(actualDir, gitRootDir) : []),
+    ...(requireCompletionManifest
+      ? validateSnapshotCompletion(actualDir, gitRootDir, gitPath)
+      : []),
   ];
   if (inventoryBlockers.length > 0) {
     activationBlocked = true;

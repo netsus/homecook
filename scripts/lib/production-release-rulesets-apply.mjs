@@ -26,6 +26,9 @@ import {
 } from "./production-release-ruleset-patterns.mjs";
 import { verifyGitHubAppIdentity } from "./github-app-identity.mjs";
 import { verifyExactTrackedWorktree } from "./exact-git-worktree.mjs";
+import {
+  resolveTrustedProductionReleaseToolPaths,
+} from "./trusted-production-release-tools.mjs";
 
 export const C2_CONFIRMATION = "APPLY_PRODUCTION_RELEASE_GITHUB_CONTROLS";
 export const C2_CANONICAL_REPOSITORY = "netsus/homecook";
@@ -48,6 +51,7 @@ const SECRET_NAMES = [
   "HOMECOOK_RELEASE_ATTESTATION_APP_ID",
   "HOMECOOK_RELEASE_ATTESTATION_APP_PRIVATE_KEY",
 ];
+let activeToolPaths = null;
 const SNAPSHOT_FILES = {
   environment: "production-release-approval-environment.json",
   policies: "production-release-approval-deployment-branch-policies.json",
@@ -86,8 +90,12 @@ function parseJson(text, label, options) {
   }
 }
 
-function run(command, args, { input = undefined } = {}) {
-  const result = spawnSync(command, args, {
+function run(toolPathKey, args, { input = undefined } = {}) {
+  const executable = activeToolPaths?.[toolPathKey];
+  if (!executable || !isAbsolute(executable)) {
+    fail("Trusted production release executable is unavailable.");
+  }
+  const result = spawnSync(executable, args, {
     encoding: "utf8",
     input,
   });
@@ -99,7 +107,7 @@ function run(command, args, { input = undefined } = {}) {
 }
 
 function runGit(rootDir, args) {
-  const result = run("git", ["-C", rootDir, ...args]);
+  const result = run("gitPath", ["-C", rootDir, ...args]);
   if (result.status !== 0) {
     fail("Unable to verify the local Git checkout.");
   }
@@ -186,10 +194,10 @@ function validateSnapshotDirectory(snapshotDir) {
   }
 }
 
-function readDesiredState(rootDir, appId) {
+function readDesiredState(rootDir, appId, gitPath) {
   let plan;
   try {
-    plan = getProductionReleaseRulesetPlan({ rootDir });
+    plan = getProductionReleaseRulesetPlan({ gitPath, rootDir });
   } catch {
     fail("C2 execution requires the approved exact resolved desired state.");
   }
@@ -233,7 +241,7 @@ function ghApi(endpoint, { allowNotFound = false, input = undefined, method = "G
     method,
   ];
   if (input !== undefined) args.push("--input", "-");
-  const result = run("gh", args, {
+  const result = run("ghPath", args, {
     input: input === undefined ? undefined : `${JSON.stringify(input)}\n`,
   });
   if (result.status !== 0) {
@@ -248,7 +256,7 @@ function ghApi(endpoint, { allowNotFound = false, input = undefined, method = "G
 }
 
 function ghPaginated(endpoint, { partialState = false } = {}) {
-  const result = run("gh", [
+  const result = run("ghPath", [
     "api",
     endpoint,
     "--hostname",
@@ -430,7 +438,7 @@ function setEnvironmentSecret(name, { appId, privateKey }) {
     input = privateKey;
   }
   const result = run(
-    "gh",
+    "ghPath",
     [
       "secret",
       "set",
@@ -754,9 +762,22 @@ export async function executeProductionReleaseControls({
   rootDir = process.cwd(),
   gitRootDir = rootDir,
   snapshotDir,
+  toolPaths = null,
 }) {
   let mutationStarted = false;
   try {
+  if (activeToolPaths) fail("Concurrent C2 execution is not supported.");
+  try {
+    activeToolPaths = toolPaths ?? resolveTrustedProductionReleaseToolPaths();
+  } catch {
+    fail("Trusted production release toolchain is unavailable.");
+  }
+  if (
+    !isAbsolute(activeToolPaths.gitPath ?? "")
+    || !isAbsolute(activeToolPaths.ghPath ?? "")
+  ) {
+    fail("Trusted production release toolchain paths must be absolute.");
+  }
   if (
     !/^[0-9a-f]{40,64}$/u.test(expectedSourceHead ?? "")
     || realpathSync(resolve(rootDir)) === realpathSync(resolve(gitRootDir))
@@ -775,14 +796,16 @@ export async function executeProductionReleaseControls({
   }
   let trackedState;
   try {
-    trackedState = verifyExactTrackedWorktree(gitRootDir, head);
+    trackedState = verifyExactTrackedWorktree(gitRootDir, head, {
+      gitPath: activeToolPaths.gitPath,
+    });
   } catch {
     fail("Tracked worktree bytes or modes do not match exact HEAD.");
   }
   if (runGit(gitRootDir, ["rev-parse", `${head}^{tree}`]) !== trackedState.tree) {
     fail("Source repository HEAD tree changed before desired-state parsing.");
   }
-  const desired = readDesiredState(rootDir, appId);
+  const desired = readDesiredState(rootDir, appId, activeToolPaths.gitPath);
   const privateKey = readValidatedPrivateKey(privateKeyFile);
   let appIdentity;
   try {
@@ -858,7 +881,9 @@ export async function executeProductionReleaseControls({
 
   validateSnapshotDirectory(snapshotDir);
   try {
-    const mutationTrackedState = verifyExactTrackedWorktree(gitRootDir, head);
+    const mutationTrackedState = verifyExactTrackedWorktree(gitRootDir, head, {
+      gitPath: activeToolPaths.gitPath,
+    });
     if (mutationTrackedState.tree !== trackedState.tree) {
       fail("Tracked HEAD tree changed before mutation.");
     }
@@ -946,6 +971,7 @@ export async function executeProductionReleaseControls({
     verification = getProductionReleaseRulesetPlan({
       actualDir: snapshotDir,
       gitRootDir,
+      gitPath: activeToolPaths.gitPath,
       requireCompletionManifest: false,
       rootDir,
     });
@@ -961,6 +987,7 @@ export async function executeProductionReleaseControls({
   verification = getProductionReleaseRulesetPlan({
     actualDir: snapshotDir,
     gitRootDir,
+    gitPath: activeToolPaths.gitPath,
     rootDir,
   });
   if (verification.activation_blocked || verification.actual_state !== "matched") {
@@ -996,5 +1023,7 @@ export async function executeProductionReleaseControls({
       "Unexpected C2 apply failure after mutation.",
       { partialState: true },
     );
+  } finally {
+    activeToolPaths = null;
   }
 }

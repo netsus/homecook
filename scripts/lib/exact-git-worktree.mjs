@@ -2,22 +2,27 @@ import { lstatSync, readFileSync, readlinkSync } from "node:fs";
 import { resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
+import { resolveTrustedGitExecutable } from "./trusted-production-release-tools.mjs";
 
-function git(rootDir, args, options = {}) {
-  const result = spawnSync("git", ["-C", rootDir, ...args], options);
+function git(gitPath, rootDir, args, options = {}) {
+  const result = spawnSync(gitPath, ["-C", rootDir, ...args], options);
   if (result.status !== 0) throw new Error("Git plumbing verification failed.");
   return result.stdout;
 }
 
-export function verifyExactTrackedWorktree(rootDir, head) {
-  const tree = String(git(rootDir, ["rev-parse", `${head}^{tree}`], { encoding: "utf8" })).trim();
-  const objectFormat = String(git(rootDir, ["rev-parse", "--show-object-format"], {
+export function verifyExactTrackedWorktree(
+  rootDir,
+  head,
+  { gitPath = resolveTrustedGitExecutable() } = {},
+) {
+  const tree = String(git(gitPath, rootDir, ["rev-parse", `${head}^{tree}`], { encoding: "utf8" })).trim();
+  const objectFormat = String(git(gitPath, rootDir, ["rev-parse", "--show-object-format"], {
     encoding: "utf8",
   })).trim();
   if (!["sha1", "sha256"].includes(objectFormat)) {
     throw new Error("Git object format is unsupported.");
   }
-  const listing = git(rootDir, ["ls-tree", "-rz", "--full-tree", head]);
+  const listing = git(gitPath, rootDir, ["ls-tree", "-rz", "--full-tree", head]);
   const blobs = {};
   for (const record of listing.toString("utf8").split("\0").filter(Boolean)) {
     const match = record.match(/^([0-9]{6}) (blob|commit) ([0-9a-f]+)\t([\s\S]+)$/u);

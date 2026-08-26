@@ -1,4 +1,5 @@
 import {
+  chmodSync,
   copyFileSync,
   existsSync,
   mkdirSync,
@@ -37,6 +38,7 @@ const IMMUTABLE_FIXTURE_PATHS = [
   "scripts/lib/production-release-ruleset-patterns.mjs",
   "scripts/lib/production-release-rulesets-apply.mjs",
   "scripts/lib/production-release-rulesets.mjs",
+  "scripts/lib/trusted-production-release-tools.mjs",
   ".github/rulesets/production-release-master.json",
   ".github/rulesets/production-release-tag-creation.json",
   ".github/rulesets/production-release-tag-immutability.json",
@@ -70,7 +72,7 @@ function approvedEnvironmentReadback(overrides: Record<string, unknown> = {}) {
   };
 }
 
-const FAKE_GH = String.raw`#!/usr/bin/env node
+const FAKE_GH = String.raw`#!${process.execPath}
 const fs = require("node:fs");
 const statePath = process.env.HOMECOOK_C2_MOCK_STATE;
 const state = JSON.parse(fs.readFileSync(statePath, "utf8"));
@@ -236,7 +238,7 @@ if (endpoint === "/repos/netsus/homecook" && method === "GET") {
 }
 `;
 
-const FAKE_GIT = String.raw`#!/usr/bin/env node
+const FAKE_GIT = String.raw`#!${process.execPath}
 const fs = require("node:fs");
 const { spawnSync } = require("node:child_process");
 const { createHash } = require("node:crypto");
@@ -396,6 +398,20 @@ function createImmutableFixture() {
     mkdirSync(join(target, ".."), { recursive: true });
     copyFileSync(join(repoRoot, path), target);
   }
+  const fixtureEntryPath = join(
+    immutableFixtureRoot,
+    "scripts/manage-production-release-rulesets.mjs",
+  );
+  const fixtureEntry = readFileSync(fixtureEntryPath, "utf8").replace(
+    "const toolPaths = trustedToolsModule.resolveTrustedProductionReleaseToolPaths();",
+    `const toolPaths = {
+      ghPath: process.env.HOMECOOK_C2_TEST_GH_PATH,
+      gitPath: process.env.HOMECOOK_C2_TEST_GIT_PATH,
+      nodePath: process.execPath,
+      tarPath: "/usr/bin/tar",
+    };`,
+  );
+  writeFileSync(fixtureEntryPath, fixtureEntry);
   for (const args of [
     ["init", "-q", "-b", "master"],
     ["config", "user.email", "c2-immutable@example.invalid"],
@@ -521,6 +537,8 @@ function runExecute({
         HOMECOOK_C2_EXPECTED_HEAD: sourceHead,
         HOMECOOK_C2_REAL_REPO_ROOT: sourceRepoRoot,
         HOMECOOK_C2_SNAPSHOT_DIR: snapshotDir,
+        HOMECOOK_C2_TEST_GH_PATH: join(binDir, "gh"),
+        HOMECOOK_C2_TEST_GIT_PATH: join(binDir, "git"),
         HOMECOOK_C2_ROOT: sourceRepoRoot,
         NODE_OPTIONS: `${process.env.NODE_OPTIONS ?? ""} --import=${fetchPreloadPath}`.trim(),
         PATH: `${binDir}:${process.env.PATH ?? ""}`,
@@ -1275,14 +1293,6 @@ describe("production release C2 apply", { timeout: 10_000 }, () => {
         actor_id: 99,
         actor_type: "OrganizationAdmin",
         bypass_mode: "always",
-      }, {
-        actor_id: 99,
-        actor_type: "EnterpriseOwner",
-        bypass_mode: "exempt",
-      }, {
-        actor_id: null,
-        actor_type: "EnterpriseRole",
-        bypass_mode: "always",
       }],
     }],
     ["organization repository_id", {
@@ -1427,6 +1437,16 @@ describe("production release C2 apply", { timeout: 10_000 }, () => {
   });
 
   it.each([
+    ["EnterpriseOwner on Organization", "Organization", "branch", {
+      actor_id: null,
+      actor_type: "EnterpriseOwner",
+      bypass_mode: "always",
+    }],
+    ["EnterpriseRole on Organization", "Organization", "branch", {
+      actor_id: 7,
+      actor_type: "EnterpriseRole",
+      bypass_mode: "always",
+    }],
     ["Team without ID", "Organization", "branch", {
       actor_id: null,
       actor_type: "Team",
@@ -1851,6 +1871,71 @@ describe("production release C2 apply", { timeout: 10_000 }, () => {
     }
   });
 
+  it("ignores hostile PATH git, gh, node, and tar executables", () => {
+    const hostileDir = tempDirectory("homecook-c2-hostile-path-");
+    const markerDir = tempDirectory("homecook-c2-hostile-markers-");
+    for (const tool of ["git", "gh", "node", "tar"]) {
+      writeFileSync(
+        join(hostileDir, tool),
+        `#!/bin/sh\n/usr/bin/touch ${JSON.stringify(join(markerDir, tool))}\n/bin/cat >/dev/null\nexit 97\n`,
+        { mode: 0o755 },
+      );
+    }
+    const run = runExecute({
+      env: { PATH: `${hostileDir}:${process.env.PATH ?? ""}` },
+    });
+    expect(run.result.status, run.combined).toBe(0);
+    for (const tool of ["git", "gh", "node", "tar"]) {
+      expect(existsSync(join(markerDir, tool))).toBe(false);
+    }
+    expect(run.state.calls.find((call) =>
+      call.key === "SECRET HOMECOOK_RELEASE_ATTESTATION_APP_PRIVATE_KEY")?.stdin_bytes)
+      .toBe(EPHEMERAL_RSA_PRIVATE_KEY_BYTES);
+  }, 15_000);
+
+  it("uses only verified absolute production tool paths", async () => {
+    const bootstrapSource = readFileSync(
+      join(repoRoot, "scripts/bootstrap-production-release-rulesets.mjs"),
+      "utf8",
+    );
+    const applySource = readFileSync(
+      join(repoRoot, "scripts/lib/production-release-rulesets-apply.mjs"),
+      "utf8",
+    );
+    const exactSource = readFileSync(
+      join(repoRoot, "scripts/lib/exact-git-worktree.mjs"),
+      "utf8",
+    );
+    const rulesetSource = readFileSync(
+      join(repoRoot, "scripts/lib/production-release-rulesets.mjs"),
+      "utf8",
+    );
+    const trustedToolsSource = readFileSync(
+      join(repoRoot, "scripts/lib/trusted-production-release-tools.mjs"),
+      "utf8",
+    );
+    for (const source of [bootstrapSource, applySource, exactSource, rulesetSource]) {
+      expect(source).not.toMatch(/spawnSync\(["'](?:git|gh|tar)["']/u);
+      expect(source).not.toMatch(/run\(\s*["'](?:git|gh|tar)["']/u);
+    }
+    expect(bootstrapSource).toContain("process.execPath");
+    expect(bootstrapSource).toContain("safe mode");
+    expect(trustedToolsSource).toContain('"/opt/homebrew/bin/gh"');
+    expect(trustedToolsSource).toContain('"/usr/local/bin/gh"');
+    expect(trustedToolsSource).toContain('"/usr/bin/gh"');
+    expect(trustedToolsSource).not.toContain("process.env");
+    const unsafeExecutable = join(tempDirectory("homecook-c2-unsafe-tool-"), "gh");
+    writeFileSync(unsafeExecutable, "#!/bin/sh\nexit 0\n", { mode: 0o755 });
+    chmodSync(unsafeExecutable, 0o775);
+    const trustedTools = await import(pathToFileURL(
+      join(repoRoot, "scripts/lib/trusted-production-release-tools.mjs"),
+    ).href);
+    expect(() => trustedTools.verifyTrustedExecutable(unsafeExecutable, {
+      allowedRealpaths: [unsafeExecutable],
+      label: "unsafe test tool",
+    })).toThrow(/safe mode/iu);
+  });
+
   it("documents pinned REST headers and manual admin-bypass action", () => {
     const runbook = readFileSync(
       join(repoRoot, "docs/engineering/local-mac-production-release-promotion.md"),
@@ -1863,6 +1948,10 @@ describe("production release C2 apply", { timeout: 10_000 }, () => {
     expect(runbook).toContain("production-release-snapshot-completion.json");
     expect(runbook).toContain("authoritative C2 evidence");
     expect(runbook).toContain("operator는 completion marker를 수동 작성하지 않는다");
+    expect(runbook).toContain('C2_NODE="/absolute/realpath/to/trusted/node"');
+    expect(runbook).toContain('/usr/bin/git show "$C2_HEAD"');
+    expect(runbook).toContain('/usr/bin/env -u NODE_OPTIONS "$C2_NODE"');
+    expect(runbook).toContain("https://docs.github.com/en/rest/orgs/rules?apiVersion=2026-03-10");
     expect(runbook).not.toContain("deployment-branch-policies.jsonl");
     expect(runbook).not.toContain('"$C2_ACTUAL_DIR/verify.json"');
   });

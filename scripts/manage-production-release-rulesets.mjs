@@ -1,18 +1,21 @@
 #!/usr/bin/env node
 
-import { resolve, sep } from "node:path";
+import { isAbsolute, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
+  accessSync,
+  constants,
   lstatSync,
   readFileSync,
   readlinkSync,
   realpathSync,
+  statSync,
 } from "node:fs";
 import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
 
 const AUTHORITATIVE_EXECUTE_COMMAND =
-  'C2_HEAD="$(/usr/bin/git rev-parse HEAD)"; /usr/bin/git show "$C2_HEAD":scripts/bootstrap-production-release-rulesets.mjs | /usr/bin/env -u NODE_OPTIONS node --input-type=module - --source-repo "$(/usr/bin/git rev-parse --show-toplevel)" --expected-head "$C2_HEAD" apply --execute --confirm APPLY_PRODUCTION_RELEASE_GITHUB_CONTROLS --repo netsus/homecook --snapshot-dir <absolute-create-only-path> --app-id 4724458 --app-private-key-file <absolute-path> --json';
+  'C2_NODE="/absolute/verified/node"; C2_HEAD="$(/usr/bin/git rev-parse HEAD)"; /usr/bin/git show "$C2_HEAD":scripts/bootstrap-production-release-rulesets.mjs | /usr/bin/env -u NODE_OPTIONS "$C2_NODE" --input-type=module - --source-repo "$(/usr/bin/git rev-parse --show-toplevel)" --expected-head "$C2_HEAD" apply --execute --confirm APPLY_PRODUCTION_RELEASE_GITHUB_CONTROLS --repo netsus/homecook --snapshot-dir <absolute-create-only-path> --app-id 4724458 --app-private-key-file <absolute-path> --json';
 const IMMUTABLE_EXECUTION_PATHS = [
   "scripts/bootstrap-production-release-rulesets.mjs",
   "scripts/manage-production-release-rulesets.mjs",
@@ -22,6 +25,7 @@ const IMMUTABLE_EXECUTION_PATHS = [
   "scripts/lib/production-release-ruleset-patterns.mjs",
   "scripts/lib/production-release-rulesets-apply.mjs",
   "scripts/lib/production-release-rulesets.mjs",
+  "scripts/lib/trusted-production-release-tools.mjs",
   ".github/rulesets/production-release-master.json",
   ".github/rulesets/production-release-tag-creation.json",
   ".github/rulesets/production-release-tag-immutability.json",
@@ -101,7 +105,23 @@ function parseArgs(argv) {
   return options;
 }
 
-function getImmutableExecutionContext() {
+function verifyEntryTrustedExecutable(candidate, allowedRealpaths, label) {
+  if (!isAbsolute(candidate)) throw new Error(`${label} path must be absolute.`);
+  const realpath = realpathSync(candidate);
+  const stat = statSync(realpath);
+  accessSync(realpath, constants.X_OK);
+  if (
+    !stat.isFile()
+    || (stat.mode & 0o111) === 0
+    || (stat.mode & 0o022) !== 0
+    || !allowedRealpaths.includes(realpath)
+  ) {
+    throw new Error(`${label} executable failed trusted realpath or safe mode verification.`);
+  }
+  return realpath;
+}
+
+function getImmutableExecutionContext(gitPath) {
   const codeRoot = process.env.HOMECOOK_C2_IMMUTABLE_CODE_ROOT;
   const sourceRepoRoot = process.env.HOMECOOK_C2_SOURCE_REPO_ROOT;
   const expectedHead = process.env.HOMECOOK_C2_IMMUTABLE_HEAD;
@@ -134,19 +154,19 @@ function getImmutableExecutionContext() {
     ...IMMUTABLE_EXECUTION_PATHS.map((path) => `${expectedHead}:${path}`),
   ];
   const gitResult = spawnSync(
-    "/usr/bin/git",
+    gitPath,
     ["-C", resolvedSourceRepoRoot, "rev-parse", ...expressions],
     { encoding: "utf8" },
   );
   const objectIds = gitResult.stdout?.trim().split("\n") ?? [];
   const formatResult = spawnSync(
-    "/usr/bin/git",
+    gitPath,
     ["-C", resolvedSourceRepoRoot, "rev-parse", "--show-object-format"],
     { encoding: "utf8" },
   );
   const objectFormat = formatResult.stdout?.trim();
   const listingResult = spawnSync(
-    "/usr/bin/git",
+    gitPath,
     [
       "-C",
       resolvedSourceRepoRoot,
@@ -236,7 +256,14 @@ try {
   let immutableContext = null;
   if (options.command === "apply" && options.execute) {
     try {
-      immutableContext = getImmutableExecutionContext();
+      const gitPath = verifyEntryTrustedExecutable(
+        "/usr/bin/git",
+        ["/usr/bin/git"],
+        "Git",
+      );
+      const nodeRealpath = realpathSync(process.execPath);
+      verifyEntryTrustedExecutable(process.execPath, [nodeRealpath], "Node.js");
+      immutableContext = getImmutableExecutionContext(gitPath);
     } catch {
       immutableContext = null;
     }
@@ -249,9 +276,11 @@ try {
 
   const rulesetModule = await import("./lib/production-release-rulesets.mjs");
   const applyModule = await import("./lib/production-release-rulesets-apply.mjs");
+  const trustedToolsModule = await import("./lib/trusted-production-release-tools.mjs");
   ProductionReleaseApplyError = applyModule.ProductionReleaseApplyError;
 
   if (options.command === "apply" && options.execute) {
+    const toolPaths = trustedToolsModule.resolveTrustedProductionReleaseToolPaths();
     const result = await applyModule.executeProductionReleaseControls({
       appId: options.appId,
       confirmation: options.confirm,
@@ -261,6 +290,7 @@ try {
       repository: options.repo,
       rootDir: immutableContext.codeRoot,
       snapshotDir: options.snapshotDir,
+      toolPaths,
     });
     printResult(result, options.json);
     process.exit(0);

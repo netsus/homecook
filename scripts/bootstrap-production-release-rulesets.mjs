@@ -1,13 +1,16 @@
 #!/usr/bin/env node
 
 import {
+  accessSync,
   chmodSync,
+  constants,
   lstatSync,
   mkdtempSync,
   readFileSync,
   readlinkSync,
   realpathSync,
   rmSync,
+  statSync,
   unlinkSync,
 } from "node:fs";
 import { createHash } from "node:crypto";
@@ -15,8 +18,9 @@ import { isAbsolute, join, resolve, sep } from "node:path";
 import { spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
 
-const GIT = "/usr/bin/git";
-const TAR = "/usr/bin/tar";
+let GIT = null;
+let NODE = null;
+let TAR = null;
 const ENTRY_PATH = "scripts/manage-production-release-rulesets.mjs";
 const ARCHIVE_PATHS = [
   ENTRY_PATH,
@@ -27,6 +31,7 @@ const ARCHIVE_PATHS = [
   "scripts/lib/production-release-ruleset-patterns.mjs",
   "scripts/lib/production-release-rulesets-apply.mjs",
   "scripts/lib/production-release-rulesets.mjs",
+  "scripts/lib/trusted-production-release-tools.mjs",
   ".github/rulesets/production-release-master.json",
   ".github/rulesets/production-release-tag-creation.json",
   ".github/rulesets/production-release-tag-immutability.json",
@@ -37,6 +42,22 @@ const ARCHIVE_PATHS = [
 function fail(message) {
   process.stderr.write(`${message}\n`);
   process.exitCode = 1;
+}
+
+function verifyTrustedExecutable(candidate, allowedRealpaths, label) {
+  if (!isAbsolute(candidate)) throw new Error(`${label} path must be absolute.`);
+  const realpath = realpathSync(candidate);
+  const stat = statSync(realpath);
+  accessSync(realpath, constants.X_OK);
+  if (
+    !stat.isFile()
+    || (stat.mode & 0o111) === 0
+    || (stat.mode & 0o022) !== 0
+    || !allowedRealpaths.includes(realpath)
+  ) {
+    throw new Error(`${label} executable failed trusted realpath or safe mode verification.`);
+  }
+  return realpath;
 }
 
 function run(command, args, options = {}) {
@@ -147,6 +168,14 @@ function verifyExtractedArchive(sourceRepo, codeRoot, head) {
 
 let codeRoot = null;
 try {
+  GIT = verifyTrustedExecutable("/usr/bin/git", ["/usr/bin/git"], "Git");
+  TAR = verifyTrustedExecutable(
+    "/usr/bin/tar",
+    ["/usr/bin/tar", "/usr/bin/bsdtar"],
+    "tar",
+  );
+  const nodeRealpath = realpathSync(process.execPath);
+  NODE = verifyTrustedExecutable(process.execPath, [nodeRealpath], "Node.js");
   const { expectedHead, forwarded, sourceRepo } = parseBootstrapArgs(process.argv.slice(2));
   const topLevel = realpathSync(
     resolve(run(GIT, ["-C", sourceRepo, "rev-parse", "--show-toplevel"])),
@@ -178,7 +207,7 @@ try {
   verifyExtractedArchive(sourceRepo, codeRoot, head);
 
   const child = spawnSync(
-    process.execPath,
+    NODE,
     [resolve(codeRoot, ENTRY_PATH), ...forwarded],
     {
       env: {
