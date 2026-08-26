@@ -737,6 +737,39 @@ describe("production release rulesets desired state", () => {
     );
   });
 
+  it("reports trusted Snyk scans as N/A without exposing an absent token", () => {
+    const securityReview = read(".github/workflows/security-review.yml");
+    const snykSection = securityReview.match(
+      /^  snyk:\n([\s\S]*?)(?=(?![\s\S]))/mu,
+    )?.[0] ?? "";
+
+    expect(snykSection).toMatch(
+      /- name: Probe Snyk token presence\n\s+id: snyk-token\n\s+env:\n\s+SNYK_TOKEN_PRESENT: \$\{\{ secrets\.SNYK_TOKEN != '' \}\}[\s\S]*?>> "\$GITHUB_OUTPUT"/u,
+    );
+    expect(snykSection).toMatch(
+      /- name: Report Snyk not applicable\n\s+if: steps\.snyk-token\.outputs\.present != 'true'[\s\S]*?N\/A/u,
+    );
+
+    for (const stepName of [
+      "Checkout",
+      "Setup pnpm",
+      "Setup Node",
+      "Install dependencies",
+    ]) {
+      const step = snykSection.match(
+        new RegExp(
+          `- name: ${stepName}\\n([\\s\\S]*?)(?=\\n      - name: |(?![\\s\\S]))`,
+          "u",
+        ),
+      )?.[0] ?? "";
+      expect(step, stepName).toContain("if: steps.snyk-token.outputs.present == 'true'");
+      expect(step, stepName).not.toContain("SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}");
+    }
+
+    expect(snykSection.match(/^\s+SNYK_TOKEN:/gmu)).toHaveLength(1);
+    expect(snykSection).not.toContain("continue-on-error");
+  });
+
   it("rejects mutable external Action refs in trusted-context workflows", () => {
     const trustedWorkflowFiles = [
       ".github/workflows/ci.yml",
