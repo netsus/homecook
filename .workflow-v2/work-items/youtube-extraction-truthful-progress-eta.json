@@ -120,15 +120,15 @@
   },
   "status": {
     "lifecycle": "planned",
-    "approval_state": "not_started",
-    "verification_status": "pending",
-    "evaluation_status": "not_started",
-    "evaluation_round": 0,
-    "last_evaluator_result": null,
+    "approval_state": "codex_approved",
+    "verification_status": "passed",
+    "evaluation_status": "passed",
+    "evaluation_round": 1,
+    "last_evaluator_result": "APPROVE / Findings 0 by /root/stage1_internal_review and Security Findings 0 by /root/stage1_progress_security_exact at authored commit fa75808b4a697ea6415d000fff3d82e1f379a672",
     "auto_merge_eligible": false,
     "blocked_reason_code": null
   },
-  "notes": "Stage 1 docs branch opened on 2026-08-26 for the existing-screen low-risk progress/ETA change only. The current official tuple already locks nullable progress, max90/max95/success100, hidden numeric ETA before promotion, max5 private stage events, stale write 0, progress failure nonfatal, and no new endpoint/WebSocket/SSE/ML/dependency. Supabase Cloud/linked/remote target은 N/A/forbidden이며 operational full-local destructive reset 0을 유지한다. release-promoter and production rollout remain Manual Only.",
+  "notes": "Stage 1 docs branch opened for the existing-screen low-risk progress/ETA change only. Internal 1.5 evidence: docs/workpacks/youtube-extraction-truthful-progress-eta/evidence/2026-08-27-stage1-internal1-5-review.md; authored commit fa75808b4a697ea6415d000fff3d82e1f379a672; APPROVE / Findings 0 and Security Findings 0. The current official tuple already locks nullable progress, max90/max95/success100, hidden numeric ETA before promotion, max5 private stage events, stale write 0, progress failure nonfatal, and no new endpoint/WebSocket/SSE/ML/dependency. Supabase Cloud/linked/remote target은 N/A/forbidden이며 operational full-local destructive reset 0을 유지한다. release-promoter and production rollout remain Manual Only.",
   "out_of_scope": [
     "new public endpoint, status, error, WebSocket or SSE",
     "notification list active progress payload change",

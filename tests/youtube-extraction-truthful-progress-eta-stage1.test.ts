@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 import { describe, expect, it } from "vitest";
@@ -133,18 +133,18 @@ describe("YouTube truthful progress ETA Stage 1 contract", () => {
     );
     expect(workItem.status).toMatchObject({
       lifecycle: "planned",
-      approval_state: "not_started",
-      verification_status: "pending",
-      evaluation_status: "not_started",
-      evaluation_round: 0,
+      approval_state: "codex_approved",
+      verification_status: "passed",
+      evaluation_status: "passed",
+      evaluation_round: 1,
       blocked_reason_code: null,
     });
     expect(status).toMatchObject({
       lifecycle: "planned",
-      approval_state: "not_started",
-      verification_status: "pending",
-      evaluation_status: "not_started",
-      evaluation_round: 0,
+      approval_state: "codex_approved",
+      verification_status: "passed",
+      evaluation_status: "passed",
+      evaluation_round: 1,
       blocked_reason_code: null,
     });
 
@@ -183,5 +183,28 @@ describe("YouTube truthful progress ETA Stage 1 contract", () => {
     expect(scopedContract).not.toContain(
       '"post-rollout-first-30-terminal-jobs-aggregate-review"',
     );
+  });
+
+  it("records independent internal 1.5 approval on the authored Stage 1 commit", () => {
+    const reviewPath =
+      `docs/workpacks/${sliceId}/evidence/2026-08-27-stage1-internal1-5-review.md`;
+
+    expect(workItem.status).toMatchObject({
+      lifecycle: "planned",
+      approval_state: "codex_approved",
+      verification_status: "passed",
+      evaluation_status: "passed",
+      evaluation_round: 1,
+    });
+    expect(status).toMatchObject(workItem.status);
+    expect(workItem.status.last_evaluator_result).toContain("APPROVE / Findings 0");
+    expect(existsSync(resolve(root, reviewPath))).toBe(true);
+
+    const review = read(reviewPath);
+    expect(review).toContain("fa75808b");
+    expect(review).toContain("/root/stage1_internal_review");
+    expect(review).toContain("/root/stage1_progress_security_exact");
+    expect(review).toContain("APPROVE / Findings 0");
+    expect(review).toContain("Security Findings 0");
   });
 });

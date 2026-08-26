@@ -2835,8 +2835,8 @@
       "branch": "docs/youtube-progress-eta-stage1-current",
       "pr_path": "pending",
       "lifecycle": "planned",
-      "approval_state": "not_started",
-      "verification_status": "pending",
+      "approval_state": "codex_approved",
+      "verification_status": "passed",
       "required_checks": [
         "pnpm validate:source-of-truth-sync",
         "pnpm validate:workflow-v2",
@@ -2845,10 +2845,10 @@
         "node --input-type=module -e \"import { evaluateDocGate } from './scripts/lib/omo-doc-gate.mjs'; const result = evaluateDocGate({ slice: 'youtube-extraction-truthful-progress-eta' }); console.log(result.summary); if (result.outcome !== 'pass') process.exit(1);\"",
         "pnpm exec vitest run tests/youtube-extraction-truthful-progress-eta-stage1.test.ts tests/workflow-v2-docs.test.ts tests/omo-automation-spec.test.ts tests/omo-bookkeeping.test.ts tests/omo-doc-gate.test.ts tests/source-of-truth-sync.test.ts"
       ],
-      "notes": "Stage 1 docs branch opened on 2026-08-26. Scope: existing YT_IMPORT_BACKGROUND low-risk progress UI replacement with truthful stage floor and gated ETA range. No new public endpoint/WebSocket/SSE/ML/dependency. Supabase Cloud/linked/remote is forbidden/N/A, operational full-local destructive reset remains 0, and release-promoter plus production rollout stay Manual Only.",
-      "evaluation_status": "not_started",
-      "evaluation_round": 0,
-      "last_evaluator_result": null,
+      "notes": "Stage 1 docs branch approved at authored commit fa75808b4a697ea6415d000fff3d82e1f379a672. Evidence: docs/workpacks/youtube-extraction-truthful-progress-eta/evidence/2026-08-27-stage1-internal1-5-review.md. APPROVE / Findings 0 and Security Findings 0. Scope: existing YT_IMPORT_BACKGROUND low-risk progress UI replacement with truthful stage floor and gated ETA range. No new public endpoint/WebSocket/SSE/ML/dependency. Supabase Cloud/linked/remote is forbidden/N/A, operational full-local destructive reset remains 0, and release-promoter plus production rollout stay Manual Only.",
+      "evaluation_status": "passed",
+      "evaluation_round": 1,
+      "last_evaluator_result": "APPROVE / Findings 0 by /root/stage1_internal_review and Security Findings 0 by /root/stage1_progress_security_exact at authored commit fa75808b4a697ea6415d000fff3d82e1f379a672",
       "auto_merge_eligible": false,
       "blocked_reason_code": null
     }
