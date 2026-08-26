@@ -1963,6 +1963,57 @@ describe("production release C2 apply", { timeout: 10_000 }, () => {
       || call.key.startsWith("PUT /repos/netsus/homecook/rulesets/"))).toEqual([]);
   }, 15_000);
 
+  it("repairs configured dismissal restriction drift and reruns idempotently", () => {
+    const existingRulesets = resolvedRulesets();
+    const existingMaster = existingRulesets.find(
+      (entry) => entry.name === "production-release-master",
+    ) as { rules: Array<{ parameters?: Record<string, unknown>; type: string }> };
+    const existingPullRequest = existingMaster.rules.find(
+      (rule) => rule.type === "pull_request",
+    );
+    existingPullRequest!.parameters!.dismissal_restriction = {
+      allowed_actors: [
+        { id: 9, type: "Team" },
+        { id: 7, type: "User" },
+      ],
+      enabled: true,
+    };
+
+    const repaired = runExecute({
+      state: initialState({ rulesets: existingRulesets }),
+    });
+    expect(repaired.result.status, repaired.combined).toBe(0);
+    const masterUpdate = repaired.state.calls.find((call) =>
+      call.key === "PUT /repos/netsus/homecook/rulesets/101");
+    const updatedPullRequest = (masterUpdate?.payload?.rules as Array<{
+      parameters?: Record<string, unknown>;
+      type?: string;
+    }>).find((rule) => rule.type === "pull_request");
+    expect(updatedPullRequest?.parameters).toEqual({
+      allowed_merge_methods: ["merge", "squash", "rebase"],
+      dismiss_stale_reviews_on_push: true,
+      require_code_owner_review: false,
+      require_last_push_approval: true,
+      required_approving_review_count: 1,
+      required_review_thread_resolution: true,
+      required_reviewers: [],
+    });
+    expect(updatedPullRequest?.parameters).not.toHaveProperty("dismissal_restriction");
+    expect(updatedPullRequest?.parameters)
+      .not.toHaveProperty("require_extra_approval_for_unattributed_changes");
+    const repairedMaster = repaired.state.rulesets.find(
+      (entry) => entry.name === "production-release-master",
+    ) as { rules: Array<{ parameters?: Record<string, unknown>; type: string }> };
+    expect(repairedMaster.rules.find((rule) => rule.type === "pull_request")?.parameters)
+      .not.toHaveProperty("dismissal_restriction");
+
+    const rerun = runExecute({ state: repaired.state });
+    expect(rerun.result.status, rerun.combined).toBe(0);
+    expect(rerun.state.calls.filter((call) =>
+      call.key.startsWith("POST /repos/netsus/homecook/rulesets")
+      || call.key.startsWith("PUT /repos/netsus/homecook/rulesets/"))).toEqual([]);
+  }, 15_000);
+
   it.each([
     ["missing", undefined, 1],
     ["false with writable drift", false, 0],
@@ -1999,6 +2050,70 @@ describe("production release C2 apply", { timeout: 10_000 }, () => {
       /Require an additional approval for unattributed Copilot pull requests/iu,
     );
     expect(run.combined).toMatch(/fresh.*snapshot path/iu);
+    expect(run.state.calls.filter((call) =>
+      call.key.startsWith("POST ")
+      || call.key.startsWith("PUT ")
+      || call.key.startsWith("SECRET "))).toEqual([]);
+    expect(existsSync(run.snapshotDir)).toBe(false);
+  }, 15_000);
+
+  it("keeps the readback-only manual gate ahead of malformed dismissal restriction", () => {
+    const existingRulesets = resolvedRulesets();
+    const existingMaster = existingRulesets.find(
+      (entry) => entry.name === "production-release-master",
+    ) as { rules: Array<{ parameters?: Record<string, unknown>; type: string }> };
+    const existingPullRequest = existingMaster.rules.find(
+      (rule) => rule.type === "pull_request",
+    );
+    existingPullRequest!.parameters!.require_extra_approval_for_unattributed_changes = false;
+    existingPullRequest!.parameters!.dismissal_restriction = {
+      allowed_actors: [],
+      enabled: "true",
+    };
+    const run = runExecute({
+      state: initialState({ rulesets: existingRulesets }),
+    });
+    expect(run.result.status).toBe(1);
+    expect(run.combined).toContain('"manual_action_required": true');
+    expect(run.combined).toContain('"partial_state": false');
+    expect(run.combined).toMatch(
+      /Require an additional approval for unattributed Copilot pull requests/iu,
+    );
+    expect(run.state.calls.filter((call) =>
+      call.key.startsWith("POST ")
+      || call.key.startsWith("PUT ")
+      || call.key.startsWith("SECRET "))).toEqual([]);
+  }, 15_000);
+
+  it.each([
+    ["unknown actor key", {
+      allowed_actors: [{ id: 7, type: "Team", unsupported: true }],
+      enabled: true,
+    }],
+    ["duplicate actor", {
+      allowed_actors: [
+        { id: 7, type: "User" },
+        { id: 7, type: "User" },
+      ],
+      enabled: true,
+    }],
+  ])("rejects malformed dismissal restriction before mutation: %s", (
+    _label,
+    dismissalRestriction,
+  ) => {
+    const existingRulesets = resolvedRulesets();
+    const existingMaster = existingRulesets.find(
+      (entry) => entry.name === "production-release-master",
+    ) as { rules: Array<{ parameters?: Record<string, unknown>; type: string }> };
+    const existingPullRequest = existingMaster.rules.find(
+      (rule) => rule.type === "pull_request",
+    );
+    existingPullRequest!.parameters!.dismissal_restriction = dismissalRestriction;
+    const run = runExecute({
+      state: initialState({ rulesets: existingRulesets }),
+    });
+    expect(run.result.status).toBe(1);
+    expect(run.combined).toContain('"partial_state": false');
     expect(run.state.calls.filter((call) =>
       call.key.startsWith("POST ")
       || call.key.startsWith("PUT ")
@@ -2156,6 +2271,90 @@ describe("production release C2 apply", { timeout: 10_000 }, () => {
     )).toEqual([7, 9]);
     expect(normalizedPullRequest.parameters.required_reviewers[0].file_patterns)
       .toEqual(["src/**", "!src/vendor/**"]);
+  });
+
+  it.each([
+    ["unknown restriction key", {
+      allowed_actors: [],
+      enabled: false,
+      unsupported: true,
+    }, /dismissal_restriction.*unsupported/iu],
+    ["non-boolean enabled", {
+      allowed_actors: [],
+      enabled: "false",
+    }, /dismissal_restriction.*enabled/iu],
+    ["missing enabled", {
+      allowed_actors: [],
+    }, /dismissal_restriction.*enabled/iu],
+    ["non-array actors", {
+      allowed_actors: "Team:7",
+      enabled: true,
+    }, /allowed_actors/iu],
+    ["unknown actor key", {
+      allowed_actors: [{ id: 7, type: "Team", unsupported: true }],
+      enabled: true,
+    }, /allowed_actors.*unsupported/iu],
+    ["unsupported actor type", {
+      allowed_actors: [{ id: 7, type: "DeployKey" }],
+      enabled: true,
+    }, /allowed_actors.*type/iu],
+    ["non-positive actor id", {
+      allowed_actors: [{ id: 0, type: "User" }],
+      enabled: true,
+    }, /allowed_actors.*id/iu],
+    ["fractional actor id", {
+      allowed_actors: [{ id: 7.5, type: "RepositoryRole" }],
+      enabled: true,
+    }, /allowed_actors.*id/iu],
+    ["duplicate actor", {
+      allowed_actors: [
+        { id: 7, type: "IntegrationInstallation" },
+        { id: 7, type: "IntegrationInstallation" },
+      ],
+      enabled: true,
+    }, /duplicate/iu],
+  ])("rejects malformed dismissal restriction: %s", (
+    _label,
+    dismissalRestriction,
+    message,
+  ) => {
+    const ruleset = JSON.parse(
+      readFileSync(join(repoRoot, ".github/rulesets/production-release-master.json"), "utf8"),
+    );
+    const pullRequest = ruleset.rules.find((rule: { type?: string }) =>
+      rule.type === "pull_request");
+    pullRequest.parameters.dismissal_restriction = dismissalRestriction;
+    expect(() => normalizeProductionReleaseRulesetForComparison(ruleset)).toThrow(message);
+  });
+
+  it("canonicalizes dismissal actors as a set while retaining omission", () => {
+    const ruleset = JSON.parse(
+      readFileSync(join(repoRoot, ".github/rulesets/production-release-master.json"), "utf8"),
+    );
+    const omitted = normalizeProductionReleaseRulesetForComparison(ruleset);
+    const omittedPullRequest = omitted.rules.find((rule: { type?: string }) =>
+      rule.type === "pull_request");
+    expect(omittedPullRequest.parameters).not.toHaveProperty("dismissal_restriction");
+
+    const pullRequest = ruleset.rules.find((rule: { type?: string }) =>
+      rule.type === "pull_request");
+    pullRequest.parameters.dismissal_restriction = {
+      allowed_actors: [
+        { id: 9, type: "User" },
+        { id: 7, type: "Team" },
+      ],
+      enabled: true,
+    };
+    const configured = normalizeProductionReleaseRulesetForComparison(ruleset);
+    const configuredPullRequest = configured.rules.find((rule: { type?: string }) =>
+      rule.type === "pull_request");
+    expect(configuredPullRequest.parameters.dismissal_restriction).toEqual({
+      allowed_actors: [
+        { id: 7, type: "Team" },
+        { id: 9, type: "User" },
+      ],
+      enabled: true,
+    });
   });
 
   it("blocks independent verification after snapshot tampering", () => {

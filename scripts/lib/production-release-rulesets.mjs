@@ -254,11 +254,49 @@ function normalizePullRequestRequiredReviewers(value, label) {
     .sort((left, right) => left.reviewer.id - right.reviewer.id);
 }
 
+function normalizePullRequestDismissalRestriction(value, label) {
+  const restriction = requireObject(value, label);
+  rejectUnknownKeys(restriction, ["allowed_actors", "enabled"], label);
+  const actorKeys = new Set();
+  const allowedActors = requireArray(
+    restriction.allowed_actors,
+    `${label}.allowed_actors`,
+  ).map((entry, index) => {
+    const actor = requireObject(entry, `${label}.allowed_actors[${index}]`);
+    rejectUnknownKeys(actor, ["id", "type"], `${label}.allowed_actors[${index}]`);
+    if (!Number.isInteger(actor.id) || actor.id <= 0) {
+      throw new Error(`${label}.allowed_actors[${index}].id must be a positive integer.`);
+    }
+    const type = requireNonEmptyString(
+      actor.type,
+      `${label}.allowed_actors[${index}].type`,
+    );
+    if (!["IntegrationInstallation", "RepositoryRole", "Team", "User"].includes(type)) {
+      throw new Error(`${label}.allowed_actors[${index}].type is unsupported.`);
+    }
+    const actorKey = `${type}:${actor.id}`;
+    if (actorKeys.has(actorKey)) {
+      throw new Error(`${label}.allowed_actors contains duplicate actor ${actorKey}.`);
+    }
+    actorKeys.add(actorKey);
+    return { id: actor.id, type };
+  }).sort((left, right) => {
+    const leftKey = `${left.type}:${left.id}`;
+    const rightKey = `${right.type}:${right.id}`;
+    return leftKey.localeCompare(rightKey);
+  });
+  return {
+    allowed_actors: allowedActors,
+    enabled: requireBoolean(restriction.enabled, `${label}.enabled`),
+  };
+}
+
 function normalizePullRequestParameters(value, label) {
   const parameters = requireObject(value, label);
   rejectUnknownKeys(parameters, [
     "allowed_merge_methods",
     "dismiss_stale_reviews_on_push",
+    "dismissal_restriction",
     "require_code_owner_review",
     "require_extra_approval_for_unattributed_changes",
     "require_last_push_approval",
@@ -306,6 +344,12 @@ function normalizePullRequestParameters(value, label) {
     normalized.required_reviewers = normalizePullRequestRequiredReviewers(
       parameters.required_reviewers,
       `${label}.required_reviewers`,
+    );
+  }
+  if (parameters.dismissal_restriction !== undefined) {
+    normalized.dismissal_restriction = normalizePullRequestDismissalRestriction(
+      parameters.dismissal_restriction,
+      `${label}.dismissal_restriction`,
     );
   }
   return canonicalizeJson(normalized);
