@@ -1319,6 +1319,30 @@ describe("production release C2 apply", () => {
         ref_name: { include: ["refs/heads/[invalid"], exclude: [] },
       },
     }, true],
+    ["FNM_PATHNAME double-star exclusion without slash", {
+      target: "branch",
+      conditions: {
+        ref_name: { include: ["~ALL"], exclude: ["refs/**master"] },
+      },
+    }, true],
+    ["unsupported caret complement", {
+      target: "branch",
+      conditions: {
+        ref_name: { include: ["refs/heads/[^a]aster"], exclude: [] },
+      },
+    }, true],
+    ["supported question and class", {
+      target: "branch",
+      conditions: {
+        ref_name: { include: ["refs/heads/maste?", "refs/heads/m[ae]ster"], exclude: [] },
+      },
+    }, true],
+    ["supported globstar directory form", {
+      target: "branch",
+      conditions: {
+        ref_name: { include: ["refs/**/master"], exclude: [] },
+      },
+    }, true],
   ])("matches canonical target for %s", async (_label, ruleset, expected) => {
     const patternModule = await import(pathToFileURL(
       join(repoRoot, "scripts/lib/production-release-ruleset-patterns.mjs"),
@@ -1326,5 +1350,50 @@ describe("production release C2 apply", () => {
     expect(
       patternModule.productionReleaseRulesetConflictsWithCanonicalTarget(ruleset),
     ).toBe(expected);
+  });
+
+  it("accepts a legal repository-origin push rule end to end", () => {
+    const repositoryRulesets = resolvedRulesets();
+    const pushRule = {
+      id: 990,
+      name: "repository-push-policy",
+      target: "push",
+      source: "netsus/homecook",
+      source_type: "Repository",
+      enforcement: "active",
+      rules: [{ type: "file_path_restriction", parameters: { restricted_file_paths: [".env"] } }],
+      bypass_actors: [],
+    };
+    const run = runExecute({
+      state: initialState({
+        rulesets: [...repositoryRulesets, pushRule],
+        effective_rulesets: [...repositoryRulesets, pushRule],
+      }),
+    });
+    expect(run.result.status, run.combined).toBe(0);
+    expect(run.result.stdout).toContain('"actual_state": "matched"');
+  });
+
+  it("rejects unknown conditions on a repository-origin push rule", () => {
+    const repositoryRulesets = resolvedRulesets();
+    const pushRule = {
+      id: 989,
+      name: "invalid-push-policy",
+      target: "push",
+      source: "netsus/homecook",
+      source_type: "Repository",
+      enforcement: "active",
+      conditions: { unsupported: true },
+      rules: [{ type: "file_path_restriction", parameters: { restricted_file_paths: [".env"] } }],
+      bypass_actors: [],
+    };
+    const run = runExecute({
+      state: initialState({
+        rulesets: [...repositoryRulesets, pushRule],
+        effective_rulesets: [...repositoryRulesets, pushRule],
+      }),
+    });
+    expect(run.result.status).toBe(1);
+    expect(run.combined).toContain('"partial_state": false');
   });
 });

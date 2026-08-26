@@ -713,7 +713,7 @@ function validateRulesetInventory({
       || typeof ruleset.name !== "string"
       || typeof ruleset.target !== "string"
       || typeof ruleset.enforcement !== "string"
-      || !ruleset.conditions
+      || (["branch", "tag"].includes(ruleset.target) && !ruleset.conditions)
       || !Array.isArray(ruleset.rules)
     ) {
       blockers.push(`${scope}_ruleset_inventory_full_detail_missing`);
@@ -772,7 +772,7 @@ function validateRulesetInventory({
         blockers.push(`${scope}_ruleset_inventory_unknown_overlap`);
       }
       try {
-        normalizeProductionReleaseRulesetForComparison(ruleset, label);
+        normalizeRepositoryProductionReleaseRulesetForInventory(ruleset, label);
       } catch {
         blockers.push(`${scope}_ruleset_inventory_full_detail_missing`);
       }
@@ -1135,6 +1135,56 @@ export function normalizeInheritedProductionReleaseRulesetForInventory(
     name: requireNonEmptyString(value.name, `${label}.name`),
     rules: normalizeRules(value.rules, `${label}.rules`),
     target: requireNonEmptyString(value.target, `${label}.target`),
+  });
+}
+
+export function normalizeRepositoryProductionReleaseRulesetForInventory(
+  ruleset,
+  label = "repository production release ruleset",
+) {
+  const value = requireObject(ruleset, label);
+  rejectUnknownKeys(
+    value,
+    [...RULESET_SAFETY_KEYS, ...RULESET_IGNORED_SERVER_KEYS],
+    label,
+  );
+  const target = requireNonEmptyString(value.target, `${label}.target`);
+  if (!["branch", "push", "repository", "tag"].includes(target)) {
+    throw new Error(`${label}.target is unsupported.`);
+  }
+  let conditions;
+  if (["branch", "tag"].includes(target)) {
+    conditions = normalizeConditions(value.conditions, `${label}.conditions`);
+  } else if (value.conditions === undefined) {
+    conditions = {};
+  } else {
+    const conditionObject = requireObject(value.conditions, `${label}.conditions`);
+    if (target === "push") {
+      rejectUnknownKeys(conditionObject, [], `${label}.conditions`);
+      conditions = {};
+    } else if (Object.keys(conditionObject).length === 0) {
+      conditions = {};
+    } else {
+      conditions = normalizeInheritedConditions(
+        conditionObject,
+        `${label}.conditions`,
+        "Organization",
+        "repository",
+      );
+    }
+  }
+  return canonicalizeJson({
+    bypass_actors: normalizeBypassActors(value.bypass_actors, `${label}.bypass_actors`)
+      .map((actor) => ({
+        actor_id: actor.actor_id,
+        actor_type: actor.actor_type,
+        bypass_mode: actor.bypass_mode,
+      })),
+    conditions,
+    enforcement: requireNonEmptyString(value.enforcement, `${label}.enforcement`),
+    name: requireNonEmptyString(value.name, `${label}.name`),
+    rules: normalizeRules(value.rules, `${label}.rules`),
+    target,
   });
 }
 

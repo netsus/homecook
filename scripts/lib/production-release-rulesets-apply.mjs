@@ -16,6 +16,7 @@ import {
   getProductionReleaseRulesetPlan,
   normalizeInheritedProductionReleaseRulesetForInventory,
   normalizeProductionReleaseRulesetForComparison,
+  normalizeRepositoryProductionReleaseRulesetForInventory,
   productionReleaseRulesetsSemanticallyEqual,
 } from "./production-release-rulesets.mjs";
 import {
@@ -600,10 +601,15 @@ function inventoryComparisonProjection(inventory) {
             detail,
             `inherited ruleset ${detail?.name ?? summary.name}`,
           )
-          : normalizeProductionReleaseRulesetForComparison(
-            detail,
-            `ruleset ${detail?.name ?? summary.name}`,
-          ),
+          : RULESET_NAMES.includes(detail?.name)
+            ? normalizeProductionReleaseRulesetForComparison(
+              detail,
+              `ruleset ${detail?.name ?? summary.name}`,
+            )
+            : normalizeRepositoryProductionReleaseRulesetForInventory(
+              detail,
+              `repository ruleset ${detail?.name ?? summary.name}`,
+            ),
         source,
         source_type: sourceType,
       };

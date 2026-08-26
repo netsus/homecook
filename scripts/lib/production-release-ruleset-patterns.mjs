@@ -4,14 +4,18 @@ function parseGlobTokens(pattern) {
     const character = pattern[index];
     if (character === "*") {
       const doubleStar = pattern[index + 1] === "*";
-      tokens.push({ type: doubleStar ? "double-star" : "star" });
-      if (doubleStar) index += 1;
+      const globstarDirectory = doubleStar && pattern[index + 2] === "/";
+      tokens.push({ type: globstarDirectory ? "globstar-directory" : "star" });
+      if (globstarDirectory) index += 2;
+      else if (doubleStar) index += 1;
     } else if (character === "?") {
       tokens.push({ type: "any" });
     } else if (character === "[") {
       const closeIndex = pattern.indexOf("]", index + 1);
       if (closeIndex === -1 || closeIndex === index + 1) return null;
-      tokens.push({ content: pattern.slice(index + 1, closeIndex), type: "class" });
+      const content = pattern.slice(index + 1, closeIndex);
+      if (content.startsWith("^")) return null;
+      tokens.push({ content, type: "class" });
       index = closeIndex;
     } else {
       tokens.push({ character, type: "literal" });
@@ -55,7 +59,7 @@ function globMatches(pattern, value) {
     if (memo.has(key)) return memo.get(key);
     if (valueIndex === value.length) {
       const matched = tokens.slice(tokenIndex).every(
-        (token) => token.type === "star" || token.type === "double-star",
+        (token) => token.type === "star" || token.type === "globstar-directory",
       );
       memo.set(key, matched);
       return matched;
@@ -66,8 +70,8 @@ function globMatches(pattern, value) {
     }
     const token = tokens[tokenIndex];
     let matched;
-    if (token.type === "star" || token.type === "double-star") {
-      const mayConsume = token.type === "double-star" || value[valueIndex] !== "/";
+    if (token.type === "star" || token.type === "globstar-directory") {
+      const mayConsume = token.type === "globstar-directory" || value[valueIndex] !== "/";
       matched = canMatch(tokenIndex + 1, valueIndex)
         || (mayConsume && canMatch(tokenIndex, valueIndex + 1));
     } else {
@@ -95,7 +99,7 @@ function classCanMatchWithoutSlash(content) {
 
 function remainingGlobCanMatchWithoutSlash(tokens, startIndex) {
   return tokens.slice(startIndex).every((token) => {
-    if (token.type === "star" || token.type === "double-star") return true;
+    if (token.type === "star" || token.type === "globstar-directory") return true;
     if (token.type === "literal") return token.character !== "/";
     if (token.type === "any") return true;
     return classCanMatchWithoutSlash(token.content);
@@ -120,8 +124,8 @@ function globCanMatchPrefix(pattern, prefix) {
     }
     const token = tokens[tokenIndex];
     let matched;
-    if (token.type === "star" || token.type === "double-star") {
-      const mayConsume = token.type === "double-star" || prefix[prefixIndex] !== "/";
+    if (token.type === "star" || token.type === "globstar-directory") {
+      const mayConsume = token.type === "globstar-directory" || prefix[prefixIndex] !== "/";
       matched = canMatch(tokenIndex + 1, prefixIndex)
         || (mayConsume && canMatch(tokenIndex, prefixIndex + 1));
     } else {
