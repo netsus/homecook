@@ -1,17 +1,25 @@
 #!/usr/bin/env node
 
 import { getProductionReleaseRulesetPlan } from "./lib/production-release-rulesets.mjs";
+import {
+  C2_CONFIRMATION,
+  executeProductionReleaseControls,
+  ProductionReleaseApplyError,
+} from "./lib/production-release-rulesets-apply.mjs";
 
 function printHelp() {
   process.stdout.write(`Usage:
   node scripts/manage-production-release-rulesets.mjs plan [--root-dir <path>] [--json]
   node scripts/manage-production-release-rulesets.mjs verify [--root-dir <path>] [--actual-dir <path>] [--json]
-  node scripts/manage-production-release-rulesets.mjs apply [--root-dir <path>] [--json] [--execute]
+  node scripts/manage-production-release-rulesets.mjs apply [--root-dir <path>] [--json]
+  node scripts/manage-production-release-rulesets.mjs apply --execute --confirm ${C2_CONFIRMATION} \\
+    --repo netsus/homecook --snapshot-dir <absolute-create-only-path> \\
+    --app-id 4724458 --app-private-key-file <absolute-path>
 
-Stage C1 scope:
+Safety contract:
 - plan / verify are read-only local desired-state validation
 - apply defaults to dry-run
-- apply --execute remains blocked until explicit C2 operator-approved admin execution
+- apply --execute is C2-only and requires all fail-closed execution gates
 `);
 }
 
@@ -19,10 +27,15 @@ function parseArgs(argv) {
   const [command, ...rest] = argv;
   const options = {
     actualDir: null,
+    appId: null,
+    appPrivateKeyFile: null,
     command,
+    confirm: null,
     execute: false,
     json: false,
+    repo: null,
     rootDir: process.cwd(),
+    snapshotDir: null,
   };
 
   for (let index = 0; index < rest.length; index += 1) {
@@ -48,6 +61,16 @@ function parseArgs(argv) {
       options.rootDir = value;
     } else if (token === "--actual-dir") {
       options.actualDir = value;
+    } else if (token === "--app-id") {
+      options.appId = value;
+    } else if (token === "--app-private-key-file") {
+      options.appPrivateKeyFile = value;
+    } else if (token === "--confirm") {
+      options.confirm = value;
+    } else if (token === "--repo") {
+      options.repo = value;
+    } else if (token === "--snapshot-dir") {
+      options.snapshotDir = value;
     } else {
       throw new Error(`Unknown argument: ${token}`);
     }
@@ -84,9 +107,16 @@ try {
   }
 
   if (options.command === "apply" && options.execute) {
-    throw new Error(
-      "C2 explicit operator-approved admin execution is required before apply --execute can call GitHub.",
-    );
+    const result = executeProductionReleaseControls({
+      appId: options.appId,
+      confirmation: options.confirm,
+      privateKeyFile: options.appPrivateKeyFile,
+      repository: options.repo,
+      rootDir: options.rootDir,
+      snapshotDir: options.snapshotDir,
+    });
+    printResult(result, options.json);
+    process.exit(0);
   }
 
   const plan = getProductionReleaseRulesetPlan({
@@ -99,6 +129,15 @@ try {
     ...plan,
   }, options.json);
 } catch (error) {
-  process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
+  const message = error instanceof Error ? error.message : String(error);
+  if (error instanceof ProductionReleaseApplyError && process.argv.includes("--json")) {
+    process.stderr.write(`${JSON.stringify({
+      error: message,
+      partial_state: error.partialState,
+      private_key: { supplied: process.argv.includes("--app-private-key-file") },
+    }, null, 2)}\n`);
+  } else {
+    process.stderr.write(`${message}\n`);
+  }
   process.exit(1);
 }

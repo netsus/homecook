@@ -69,7 +69,7 @@ describe("production release rulesets desired state", () => {
     expect(creationRuleset.name).toBe("production-release-tag-creation");
     expect(creationRuleset.rules).toEqual([{ type: "creation" }]);
     expect(creationRuleset.bypass_actors).toEqual([
-      { actor_id: 0, actor_type: "Integration", bypass_mode: "always" },
+      { actor_id: 4724458, actor_type: "Integration", bypass_mode: "always" },
     ]);
     expect(immutabilityRuleset.name).toBe("production-release-tag-immutability");
     expect(immutabilityRuleset.rules).toEqual([
@@ -199,7 +199,7 @@ describe("production release rulesets desired state", () => {
     }
     expect(tagCreationRuleset.bypass_actors).toEqual([
       {
-        actor_id: 0,
+        actor_id: 4724458,
         actor_type: "Integration",
         bypass_mode: "always",
       },
@@ -218,7 +218,7 @@ describe("production release rulesets desired state", () => {
       ],
       master_only_branches: ["master"],
       prevent_self_review: true,
-      required_reviewers: [{ actor_id: 0, actor_type: "Unresolved" }],
+      required_reviewers: [{ actor_id: 57648890, actor_type: "User" }],
     });
   });
 
@@ -307,8 +307,8 @@ describe("production release rulesets desired state", () => {
     expect(verify.stdout).toContain("production-release-tag-creation");
     expect(verify.stdout).toContain("production-release-tag-immutability");
     expect(verify.stdout).toContain("\"activation_blocked\": true");
-    expect(verify.stdout).toContain("\"actual_state\": \"unresolved_actor\"");
-    expect(verify.stdout).toContain("unresolved_approval_environment_reviewer");
+    expect(verify.stdout).toContain("\"actual_state\": \"missing\"");
+    expect(verify.stdout).not.toContain("unresolved_approval_environment_reviewer");
     expect(verify.stdout).toContain("missing_approval_environment_readback");
 
     const verifyWithActual = spawnSync(
@@ -321,7 +321,7 @@ describe("production release rulesets desired state", () => {
     );
     expect(verifyWithActual.status, verifyWithActual.stderr).toBe(0);
     expect(verifyWithActual.stdout).toContain("\"activation_blocked\": true");
-    expect(verifyWithActual.stdout).toContain("\"actual_state\": \"unresolved_actor\"");
+    expect(verifyWithActual.stdout).toContain("\"actual_state\": \"mismatch\"");
 
     const resolvedRootDir = createTempDirectory("homecook-rulesets-desired-");
     const resolvedActualDir = createTempDirectory("homecook-rulesets-actual-resolved-");
@@ -605,8 +605,8 @@ describe("production release rulesets desired state", () => {
       },
     );
     expect(blocked.status).toBe(1);
-    expect(blocked.stderr).toContain("C2");
-    expect(blocked.stderr).toContain("explicit operator-approved");
+    expect(blocked.stderr).toContain("APPLY_PRODUCTION_RELEASE_GITHUB_CONTROLS");
+    expect(blocked.stderr).toContain("exactly");
   });
 
   it("keeps the attestation workflow least-privilege and approval-gated", () => {

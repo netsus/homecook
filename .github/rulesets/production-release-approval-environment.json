@@ -22,8 +22,8 @@
   "master_only_branches": ["master"],
   "required_reviewers": [
     {
-      "actor_id": 0,
-      "actor_type": "Unresolved"
+      "actor_id": 57648890,
+      "actor_type": "User"
     }
   ]
 }
