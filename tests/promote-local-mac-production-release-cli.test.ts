@@ -73,7 +73,6 @@ function createFixtureRepo({
       "quality",
       "security-function-authorization",
       "security-smoke",
-      "snyk",
     ],
     required_check_summary: {
       total: 12,

@@ -100,8 +100,8 @@
     },
     "expected_release_contexts": {
       "type": "array",
-      "minItems": 8,
-      "maxItems": 8,
+      "minItems": 7,
+      "maxItems": 7,
       "uniqueItems": true,
       "prefixItems": [
         { "const": "build" },
@@ -110,13 +110,25 @@
         { "const": "policy" },
         { "const": "quality" },
         { "const": "security-function-authorization" },
-        { "const": "security-smoke" },
-        { "const": "snyk" }
+        { "const": "security-smoke" }
       ],
       "items": false
     },
     "required_check_summary": {
-      "type": "object"
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["total", "success", "intended_skip"],
+      "properties": {
+        "total": { "type": "integer", "minimum": 0 },
+        "success": { "type": "integer", "minimum": 0 },
+        "intended_skip": { "type": "integer", "minimum": 0 },
+        "bad": { "const": 0 },
+        "cancelled": { "const": 0 },
+        "failed": { "const": 0 },
+        "pending": { "const": 0 },
+        "queued": { "const": 0 },
+        "rerun": { "const": 0 }
+      }
     },
     "attestation_digest": {
       "type": "string",

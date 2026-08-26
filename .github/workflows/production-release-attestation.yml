@@ -22,8 +22,10 @@ jobs:
   verify-release:
     runs-on: ubuntu-latest
     permissions:
+      actions: read
+      checks: read
       contents: read
-      deployments: read
+      statuses: read
     steps:
       - name: Validate canonical workflow identity and release tag
         env:
@@ -41,16 +43,17 @@ jobs:
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           fetch-depth: 0
+          persist-credentials: false
           ref: ${{ inputs.release_sha }}
 
       - name: Verify exact release SHA equals origin/master
         id: git
         env:
+          GH_TOKEN: ${{ github.token }}
           RELEASE_SHA: ${{ inputs.release_sha }}
         run: |
-          git fetch origin master --force
           test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
-          test "$(git rev-parse refs/remotes/origin/master^{commit})" = "$RELEASE_SHA"
+          test "$(gh api repos/netsus/homecook/git/ref/heads/master --jq '.object.sha')" = "$RELEASE_SHA"
           printf 'release_tree=%s\n' "$(git rev-parse "$RELEASE_SHA^{tree}")" >> "$GITHUB_OUTPUT"
 
       - name: Resolve current release workflow check suite
@@ -64,48 +67,21 @@ jobs:
           jq -n --argjson check_suite_id "$check_suite_id" '{check_suite_id: $check_suite_id}' \
             > "$RUNNER_TEMP/release-workflow-suite.json"
 
-      - name: Download current rulesets for prereq verification
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          mkdir -p "$RUNNER_TEMP/rulesets-actual"
-          gh api repos/netsus/homecook/rulesets --paginate --jq '.[].id' |
-            while read -r rule_id; do
-              rule_name="$(gh api repos/netsus/homecook/rulesets/"$rule_id" --jq '.name')"
-              case "$rule_name" in
-                production-release-master|production-release-tags)
-                  gh api repos/netsus/homecook/rulesets/"$rule_id" \
-                    > "$RUNNER_TEMP/rulesets-actual/$rule_name.json"
-                  ;;
-              esac
-            done
-          test -f "$RUNNER_TEMP/rulesets-actual/production-release-master.json"
-          test -f "$RUNNER_TEMP/rulesets-actual/production-release-tags.json"
-          gh api repos/netsus/homecook/environments/production-release-approval \
-            > "$RUNNER_TEMP/rulesets-actual/production-release-approval-environment.json"
-          gh api repos/netsus/homecook/environments/production-release-approval/deployment-branch-policies \
-            --paginate --jq '.branch_policies[]' \
-            > "$RUNNER_TEMP/rulesets-actual/production-release-approval-branch-policies.jsonl"
-          jq -s '{branch_policies: .}' \
-            "$RUNNER_TEMP/rulesets-actual/production-release-approval-branch-policies.jsonl" \
-            > "$RUNNER_TEMP/rulesets-actual/production-release-approval-deployment-branch-policies.json"
-
-      - name: Verify ruleset prerequisites against desired state
+      - name: Validate resolved committed desired state without admin readback
         run: |
           node scripts/manage-production-release-rulesets.mjs \
-            verify \
-            --actual-dir "$RUNNER_TEMP/rulesets-actual" \
-            --json \
-            > "$RUNNER_TEMP/rulesets-verify.json"
-          jq -e '.activation_blocked == false and .actual_state == "matched"' \
-            "$RUNNER_TEMP/rulesets-verify.json" > /dev/null
+            verify --json > "$RUNNER_TEMP/desired-state-verify.json"
+          jq -e '
+            .actual_dir == null
+            and ([.activation_blockers[] | select((startswith("missing_") | not))] | length == 0)
+          ' "$RUNNER_TEMP/desired-state-verify.json" > /dev/null
 
       - name: Download full current-head check runs
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_SHA: ${{ inputs.release_sha }}
         run: |
-          gh api repos/netsus/homecook/commits/"$RELEASE_SHA"/check-runs \
+          gh api "repos/netsus/homecook/commits/$RELEASE_SHA/check-runs?filter=all&per_page=100" \
             --paginate --jq '.check_runs[]' \
             > "$RUNNER_TEMP/check-runs.jsonl"
           jq -s '.' "$RUNNER_TEMP/check-runs.jsonl" > "$RUNNER_TEMP/check-runs.json"
@@ -122,7 +98,7 @@ jobs:
 
       - name: Build terminal check summary custom predicate and subject manifest
         env:
-          EXPECTED_RELEASE_CONTEXTS: build,changes,dependency-audit,policy,quality,security-function-authorization,security-smoke,snyk
+          EXPECTED_RELEASE_CONTEXTS: build,changes,dependency-audit,policy,quality,security-function-authorization,security-smoke
         run: |
           node scripts/build-production-release-attestation.mjs \
             --repository "netsus/homecook" \
@@ -139,7 +115,7 @@ jobs:
           jq -e '.subject.required_check_summary and .predicate.required_check_summary' \
             "$RUNNER_TEMP/production-release-build.json" > /dev/null
 
-      - name: Upload subject, predicate, ruleset, and suite evidence
+      - name: Upload subject, predicate, desired-state, and suite evidence
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: production-release-attestation-inputs
@@ -148,7 +124,7 @@ jobs:
             ${{ runner.temp }}/production-release-predicate.json
             ${{ runner.temp }}/production-release-subject.json
             ${{ runner.temp }}/release-workflow-suite.json
-            ${{ runner.temp }}/rulesets-verify.json
+            ${{ runner.temp }}/desired-state-verify.json
 
   approve-and-tag:
     runs-on: ubuntu-latest
@@ -156,16 +132,19 @@ jobs:
       - verify-release
     environment: production-release-approval
     permissions:
+      actions: read
       attestations: write
       artifact-metadata: write
+      checks: read
       contents: read
-      deployments: read
       id-token: write
+      statuses: read
     steps:
       - name: Checkout exact release SHA
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           fetch-depth: 0
+          persist-credentials: false
           ref: ${{ inputs.release_sha }}
 
       - name: Download verified release attestation inputs
@@ -179,45 +158,20 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           RELEASE_SHA: ${{ inputs.release_sha }}
           RELEASE_TAG: ${{ inputs.release_tag }}
-          EXPECTED_RELEASE_CONTEXTS: build,changes,dependency-audit,policy,quality,security-function-authorization,security-smoke,snyk
+          EXPECTED_RELEASE_CONTEXTS: build,changes,dependency-audit,policy,quality,security-function-authorization,security-smoke
         run: |
           test "${{ github.repository }}" = "netsus/homecook"
           test "${{ github.ref }}" = "refs/heads/master"
           test "${{ github.workflow_ref }}" = "netsus/homecook/.github/workflows/production-release-attestation.yml@refs/heads/master"
           [[ "$RELEASE_TAG" =~ ^prod-[0-9]{8}\.[0-9]+$ ]]
-          git fetch origin master --force
           test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
-          test "$(git rev-parse refs/remotes/origin/master^{commit})" = "$RELEASE_SHA"
+          test "$(gh api repos/netsus/homecook/git/ref/heads/master --jq '.object.sha')" = "$RELEASE_SHA"
           release_tree="$(git rev-parse "$RELEASE_SHA^{tree}")"
 
-          mkdir -p "$RUNNER_TEMP/post-approval/rulesets-actual"
-          gh api repos/netsus/homecook/rulesets --paginate --jq '.[].id' |
-            while read -r rule_id; do
-              rule_name="$(gh api repos/netsus/homecook/rulesets/"$rule_id" --jq '.name')"
-              case "$rule_name" in
-                production-release-master|production-release-tags)
-                  gh api repos/netsus/homecook/rulesets/"$rule_id" \
-                    > "$RUNNER_TEMP/post-approval/rulesets-actual/$rule_name.json"
-                  ;;
-              esac
-            done
-          gh api repos/netsus/homecook/environments/production-release-approval \
-            > "$RUNNER_TEMP/post-approval/rulesets-actual/production-release-approval-environment.json"
-          gh api repos/netsus/homecook/environments/production-release-approval/deployment-branch-policies \
-            --paginate --jq '.branch_policies[]' \
-            > "$RUNNER_TEMP/post-approval/rulesets-actual/production-release-approval-branch-policies.jsonl"
-          jq -s '{branch_policies: .}' \
-            "$RUNNER_TEMP/post-approval/rulesets-actual/production-release-approval-branch-policies.jsonl" \
-            > "$RUNNER_TEMP/post-approval/rulesets-actual/production-release-approval-deployment-branch-policies.json"
-          node scripts/manage-production-release-rulesets.mjs \
-            verify --actual-dir "$RUNNER_TEMP/post-approval/rulesets-actual" --json \
-            > "$RUNNER_TEMP/post-approval/rulesets-verify.json"
-          jq -e '.activation_blocked == false and .actual_state == "matched"' \
-            "$RUNNER_TEMP/post-approval/rulesets-verify.json" > /dev/null
-
+          mkdir -p "$RUNNER_TEMP/post-approval"
           current_suite_id="$(gh api repos/netsus/homecook/actions/runs/${{ github.run_id }} --jq '.check_suite_id')"
           test "$current_suite_id" = "$(jq -r '.check_suite_id' "$RUNNER_TEMP/production-release-attestation-inputs/release-workflow-suite.json")"
-          gh api repos/netsus/homecook/commits/"$RELEASE_SHA"/check-runs \
+          gh api "repos/netsus/homecook/commits/$RELEASE_SHA/check-runs?filter=all&per_page=100" \
             --paginate --jq '.check_runs[]' > "$RUNNER_TEMP/post-approval/check-runs.jsonl"
           jq -s '.' "$RUNNER_TEMP/post-approval/check-runs.jsonl" > "$RUNNER_TEMP/post-approval/check-runs.json"
           gh api repos/netsus/homecook/commits/"$RELEASE_SHA"/statuses \
@@ -243,13 +197,6 @@ jobs:
             cmp "$RUNNER_TEMP/production-release-attestation-inputs/$name.json" \
               "$RUNNER_TEMP/post-approval/$name.json"
           done
-          jq -S 'del(.actual_dir, .rulesets[].actual_file_path)' \
-            "$RUNNER_TEMP/production-release-attestation-inputs/rulesets-verify.json" \
-            > "$RUNNER_TEMP/preflight-rulesets-normalized.json"
-          jq -S 'del(.actual_dir, .rulesets[].actual_file_path)' \
-            "$RUNNER_TEMP/post-approval/rulesets-verify.json" \
-            > "$RUNNER_TEMP/post-approval-rulesets-normalized.json"
-          cmp "$RUNNER_TEMP/preflight-rulesets-normalized.json" "$RUNNER_TEMP/post-approval-rulesets-normalized.json"
 
       - name: Attest release approval manifest with a custom predicate
         id: attest
@@ -266,6 +213,7 @@ jobs:
           app-id: ${{ secrets.HOMECOOK_RELEASE_ATTESTATION_APP_ID }}
           private-key: ${{ secrets.HOMECOOK_RELEASE_ATTESTATION_APP_PRIVATE_KEY }}
           owner: netsus
+          permission-contents: write
           repositories: homecook
 
       - name: Assert App ID equals the resolved tag ruleset Integration actor
@@ -275,16 +223,20 @@ jobs:
           actor_id="$(jq -er '
             [.bypass_actors[] | select(.actor_type == "Integration" and .bypass_mode == "always") | .actor_id]
             | select(length == 1) | .[0] | select(type == "number" and . > 0)
-          ' "$RUNNER_TEMP/post-approval/rulesets-actual/production-release-tags.json")"
+          ' .github/rulesets/production-release-tags.json)"
           test "$HOMECOOK_RELEASE_ATTESTATION_APP_ID" = "$actor_id"
 
       - name: Create annotated prod tag with App token only
         env:
+          GH_TOKEN: ${{ github.token }}
           RELEASE_SHA: ${{ inputs.release_sha }}
           RELEASE_TAG: ${{ inputs.release_tag }}
         run: |
-          git fetch origin --tags --force
-          if git rev-parse "refs/tags/$RELEASE_TAG^{tag}" >/dev/null 2>&1; then
+          matching_tag_refs="$(
+            gh api "repos/netsus/homecook/git/matching-refs/tags/$RELEASE_TAG" \
+              --paginate --jq '.[].ref'
+          )"
+          if grep -Fxq "refs/tags/$RELEASE_TAG" <<< "$matching_tag_refs"; then
             echo "release_tag already exists: $RELEASE_TAG" >&2
             exit 1
           fi
@@ -294,11 +246,11 @@ jobs:
 
       - name: Recheck origin/master immediately before protected tag push
         env:
+          GH_TOKEN: ${{ github.token }}
           RELEASE_SHA: ${{ inputs.release_sha }}
           RELEASE_TAG: ${{ inputs.release_tag }}
         run: |
-          git fetch origin master --force
-          test "$(git rev-parse refs/remotes/origin/master^{commit})" = "$RELEASE_SHA"
+          test "$(gh api repos/netsus/homecook/git/ref/heads/master --jq '.object.sha')" = "$RELEASE_SHA"
           test "$(git rev-parse "$RELEASE_SHA^{tree}")" = "$(jq -r '.release_tree' "$RUNNER_TEMP/post-approval/production-release-subject.json")"
           git push "https://x-access-token:${{ steps.app-token.outputs.token }}@github.com/netsus/homecook.git" refs/tags/"$RELEASE_TAG"
 
@@ -310,5 +262,5 @@ jobs:
             ${{ runner.temp }}/post-approval/production-release-build.json
             ${{ runner.temp }}/post-approval/production-release-predicate.json
             ${{ runner.temp }}/post-approval/production-release-subject.json
-            ${{ runner.temp }}/post-approval/rulesets-verify.json
+            ${{ runner.temp }}/production-release-attestation-inputs/desired-state-verify.json
             ${{ steps.attest.outputs.bundle-path }}

@@ -17,6 +17,15 @@ const APPROVAL_ENVIRONMENT_ACTUAL_FILE =
   "production-release-approval-environment.json";
 const APPROVAL_BRANCH_POLICIES_ACTUAL_FILE =
   "production-release-approval-deployment-branch-policies.json";
+const APPROVAL_ENVIRONMENT_SECRETS_ACTUAL_FILE =
+  "production-release-approval-environment-secrets.json";
+const EXPECTED_APPROVAL_BRANCH_POLICIES = [
+  { name: "master", type: "branch" },
+];
+const EXPECTED_APPROVAL_ENVIRONMENT_SECRET_NAMES = [
+  "HOMECOOK_RELEASE_ATTESTATION_APP_ID",
+  "HOMECOOK_RELEASE_ATTESTATION_APP_PRIVATE_KEY",
+];
 
 const EXPECTED_RULESET_FILES = [
   {
@@ -152,6 +161,12 @@ function normalizeBypassActors(bypassActors, label) {
 
 function normalizeRuleset({ filePath, requireSchema = true, rootDir, ruleset }) {
   const value = requireObject(ruleset, filePath);
+  if (!requireSchema && value.bypass_actors === undefined) {
+    throw new Error(
+      `${filePath}.bypass_actors is required in the C2 admin-visible snapshot; `
+      + "a GitHub API response that omits bypass actors cannot activate release policy.",
+    );
+  }
   const normalizedRules = normalizeRules(value.rules, `${filePath}.rules`);
   const normalizedBypassActors = normalizeBypassActors(
     value.bypass_actors ?? [],
@@ -212,6 +227,13 @@ function validateRulesetFile({ filePath, requiredRuleTypes, rootDir, target }) {
   }
   if (normalized.enforcement !== "active") {
     throw new Error(`${filePath} enforcement must be active.`);
+  }
+  const expectedRef = target === "branch" ? "refs/heads/master" : "refs/tags/prod-*";
+  if (
+    JSON.stringify(normalized.conditions.ref_name.include) !== JSON.stringify([expectedRef])
+    || normalized.conditions.ref_name.exclude.length !== 0
+  ) {
+    throw new Error(`${filePath} must pin only ${expectedRef}.`);
   }
 
   const presentRuleTypes = new Set(normalized.rules.map((rule) => rule.type));
@@ -336,6 +358,48 @@ function validateApprovalEnvironment(rootDir) {
   if (JSON.stringify(branches) !== JSON.stringify(["master"])) {
     throw new Error(`${APPROVAL_ENVIRONMENT_FILE} must be master-only.`);
   }
+  const deploymentBranchPolicies = requireArray(
+    value.deployment_branch_policies,
+    `${APPROVAL_ENVIRONMENT_FILE}.deployment_branch_policies`,
+  ).map((entry, index) => {
+    const policy = requireObject(
+      entry,
+      `${APPROVAL_ENVIRONMENT_FILE}.deployment_branch_policies[${index}]`,
+    );
+    return {
+      name: requireNonEmptyString(
+        policy.name,
+        `${APPROVAL_ENVIRONMENT_FILE}.deployment_branch_policies[${index}].name`,
+      ),
+      type: requireNonEmptyString(
+        policy.type,
+        `${APPROVAL_ENVIRONMENT_FILE}.deployment_branch_policies[${index}].type`,
+      ),
+    };
+  });
+  if (
+    JSON.stringify(deploymentBranchPolicies)
+    !== JSON.stringify(EXPECTED_APPROVAL_BRANCH_POLICIES)
+  ) {
+    throw new Error(
+      `${APPROVAL_ENVIRONMENT_FILE} deployment branch policies must be exactly master branch only.`,
+    );
+  }
+  const environmentSecretNames = requireArray(
+    value.environment_secret_names,
+    `${APPROVAL_ENVIRONMENT_FILE}.environment_secret_names`,
+  ).map((name, index) => requireNonEmptyString(
+    name,
+    `${APPROVAL_ENVIRONMENT_FILE}.environment_secret_names[${index}]`,
+  ));
+  if (
+    JSON.stringify(environmentSecretNames)
+    !== JSON.stringify(EXPECTED_APPROVAL_ENVIRONMENT_SECRET_NAMES)
+  ) {
+    throw new Error(
+      `${APPROVAL_ENVIRONMENT_FILE} environment secrets must be exactly the App ID and private key.`,
+    );
+  }
   const normalized = {
     deployment_branch_policy: {
       custom_branch_policies: requireBoolean(
@@ -347,6 +411,8 @@ function validateApprovalEnvironment(rootDir) {
         `${APPROVAL_ENVIRONMENT_FILE}.deployment_branch_policy.protected_branches`,
       ),
     },
+    deployment_branch_policies: deploymentBranchPolicies,
+    environment_secret_names: environmentSecretNames,
     master_only_branches: branches,
     name: value.name,
     prevent_self_review: requireBoolean(
@@ -369,12 +435,20 @@ function validateApprovalEnvironment(rootDir) {
 
 function loadActualApprovalEnvironment(actualDir, desired) {
   if (!actualDir) {
-    return { matched: false, present: false };
+    return { matched: false, mismatches: [], present: false };
   }
   const environmentPath = resolve(actualDir, APPROVAL_ENVIRONMENT_ACTUAL_FILE);
   const branchPoliciesPath = resolve(actualDir, APPROVAL_BRANCH_POLICIES_ACTUAL_FILE);
-  if (!existsSync(environmentPath) || !existsSync(branchPoliciesPath)) {
-    return { matched: false, present: false };
+  const environmentSecretsPath = resolve(
+    actualDir,
+    APPROVAL_ENVIRONMENT_SECRETS_ACTUAL_FILE,
+  );
+  if (
+    !existsSync(environmentPath)
+    || !existsSync(branchPoliciesPath)
+    || !existsSync(environmentSecretsPath)
+  ) {
+    return { matched: false, mismatches: [], present: false };
   }
   const environment = requireObject(
     readJson(environmentPath, "Production release approval environment readback"),
@@ -383,6 +457,10 @@ function loadActualApprovalEnvironment(actualDir, desired) {
   const branchPolicies = requireObject(
     readJson(branchPoliciesPath, "Production release approval branch policy readback"),
     branchPoliciesPath,
+  );
+  const environmentSecrets = requireObject(
+    readJson(environmentSecretsPath, "Production release approval environment secret readback"),
+    environmentSecretsPath,
   );
   const reviewerRule = requireArray(
     environment.protection_rules,
@@ -394,10 +472,32 @@ function loadActualApprovalEnvironment(actualDir, desired) {
       actor_type: entry?.type,
     }))
     : [];
-  const actualBranches = requireArray(
+  const actualBranchPolicies = requireArray(
     branchPolicies.branch_policies,
     `${branchPoliciesPath}.branch_policies`,
-  ).filter((entry) => entry?.type === "branch").map((entry) => entry?.name);
+  ).map((entry, index) => {
+    const policy = requireObject(entry, `${branchPoliciesPath}.branch_policies[${index}]`);
+    return {
+      name: requireNonEmptyString(
+        policy.name,
+        `${branchPoliciesPath}.branch_policies[${index}].name`,
+      ),
+      type: requireNonEmptyString(
+        policy.type,
+        `${branchPoliciesPath}.branch_policies[${index}].type`,
+      ),
+    };
+  });
+  const actualSecretNames = requireArray(
+    environmentSecrets.secrets,
+    `${environmentSecretsPath}.secrets`,
+  ).map((entry, index) => requireNonEmptyString(
+    requireObject(entry, `${environmentSecretsPath}.secrets[${index}]`).name,
+    `${environmentSecretsPath}.secrets[${index}].name`,
+  )).sort();
+  if (new Set(actualSecretNames).size !== actualSecretNames.length) {
+    throw new Error(`${environmentSecretsPath}.secrets must not contain duplicate names.`);
+  }
   const actual = {
     deployment_branch_policy: {
       custom_branch_policies:
@@ -405,15 +505,41 @@ function loadActualApprovalEnvironment(actualDir, desired) {
       protected_branches:
         environment.deployment_branch_policy?.protected_branches,
     },
-    master_only_branches: actualBranches,
+    deployment_branch_policies: actualBranchPolicies,
+    environment_secret_names: actualSecretNames,
+    master_only_branches: actualBranchPolicies
+      .filter((entry) => entry.type === "branch")
+      .map((entry) => entry.name),
     name: environment.name,
     prevent_self_review: reviewerRule[0]?.prevent_self_review,
     repository: "netsus/homecook",
     required_reviewers: actualReviewers,
     source_ref: "refs/heads/master",
   };
+  const mismatches = [];
+  if (
+    JSON.stringify(actual.deployment_branch_policies)
+    !== JSON.stringify(desired.deployment_branch_policies)
+  ) {
+    mismatches.push("approval_environment_deployment_branch_policy_mismatch");
+  }
+  if (
+    JSON.stringify(actual.environment_secret_names)
+    !== JSON.stringify(desired.environment_secret_names)
+  ) {
+    mismatches.push("approval_environment_secret_inventory_mismatch");
+  }
+  const comparableActual = {
+    ...actual,
+    deployment_branch_policies: desired.deployment_branch_policies,
+    environment_secret_names: desired.environment_secret_names,
+  };
+  if (JSON.stringify(comparableActual) !== JSON.stringify(desired)) {
+    mismatches.push("approval_environment_mismatch");
+  }
   return {
-    matched: JSON.stringify(actual) === JSON.stringify(desired),
+    matched: mismatches.length === 0,
+    mismatches,
     present: true,
   };
 }
@@ -530,7 +656,7 @@ export function getProductionReleaseRulesetPlan({
     }
   } else if (!actualApprovalEnvironment.matched) {
     activationBlocked = true;
-    activationBlockers.push("approval_environment_mismatch");
+    activationBlockers.push(...actualApprovalEnvironment.mismatches);
     if (actualState === "matched") {
       actualState = "approval_environment_mismatch";
     }

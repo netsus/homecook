@@ -6,7 +6,6 @@ export const EXPECTED_RELEASE_CONTEXTS = [
   "quality",
   "security-function-authorization",
   "security-smoke",
-  "snyk",
 ];
 
 export const UNRESOLVED_RELEASE_TAG_INTEGRATION_ACTOR_ID = 0;

@@ -27,6 +27,10 @@ describe("ci path filter", () => {
     });
 
     expect(result).toMatchObject({
+      code: true,
+      dependency_audit: false,
+      security_function_authorization: false,
+      security_smoke: true,
       smoke: true,
       accessibility: true,
       visual: true,
@@ -91,6 +95,10 @@ describe("ci path filter", () => {
     });
 
     expect(result).toEqual({
+      code: true,
+      dependency_audit: false,
+      security_function_authorization: false,
+      security_smoke: true,
       smoke: false,
       accessibility: false,
       visual: false,
@@ -119,6 +127,10 @@ describe("ci path filter", () => {
         eventName: "workflow_dispatch",
       }),
     ).toEqual({
+      code: true,
+      dependency_audit: true,
+      security_function_authorization: true,
+      security_smoke: true,
       smoke: true,
       accessibility: true,
       visual: true,
@@ -133,6 +145,10 @@ describe("ci path filter", () => {
         eventName: "schedule",
       }),
     ).toEqual({
+      code: true,
+      dependency_audit: true,
+      security_function_authorization: true,
+      security_smoke: true,
       smoke: true,
       accessibility: true,
       visual: true,
@@ -140,5 +156,50 @@ describe("ci path filter", () => {
       full_regression: true,
       complete_regression_matrix: true,
     });
+  });
+
+  it("skips expensive required-context jobs for docs-only changes but keeps policy-relevant workflow edits in scope", () => {
+    expect(
+      evaluateCiPathFilters({
+        changedFiles: ["docs/engineering/git-workflow.md"],
+        eventName: "pull_request",
+      }),
+    ).toMatchObject({
+      code: false,
+      dependency_audit: false,
+      security_function_authorization: false,
+      security_smoke: false,
+    });
+
+    expect(
+      evaluateCiPathFilters({
+        changedFiles: [".github/workflows/ci.yml"],
+        eventName: "pull_request",
+      }),
+    ).toMatchObject({
+      code: true,
+      dependency_audit: true,
+      security_function_authorization: true,
+      security_smoke: true,
+    });
+  });
+
+  it("runs the isolated security-function gate only for its authorization surface", () => {
+    expect(
+      evaluateCiPathFilters({
+        changedFiles: ["supabase/migrations/20260826000000_policy.sql"],
+        eventName: "pull_request",
+      }),
+    ).toMatchObject({
+      code: true,
+      security_function_authorization: true,
+    });
+
+    expect(
+      evaluateCiPathFilters({
+        changedFiles: ["components/home/home-screen.tsx"],
+        eventName: "pull_request",
+      }).security_function_authorization,
+    ).toBe(false);
   });
 });

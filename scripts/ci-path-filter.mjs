@@ -31,6 +31,69 @@ const QA_TOOLING_PATTERNS = [
   "tests/playwright-workflow.test.ts",
 ];
 
+const TRUSTED_CONTEXT_WORKFLOW_PATTERNS = [
+  ".github/rulesets/**",
+  ".github/workflows/ci.yml",
+  ".github/workflows/playwright.yml",
+  ".github/workflows/policy.yml",
+  ".github/workflows/production-release-attestation.yml",
+  ".github/workflows/security-review.yml",
+  ".github/workflows/security-smoke.yml",
+  "scripts/ci-path-filter.mjs",
+  "tests/ci-path-filter.test.ts",
+  "tests/production-release-rulesets.test.ts",
+];
+
+const CODE_PATTERNS = [
+  "app/**",
+  "components/**",
+  "hooks/**",
+  "lib/**",
+  "public/**",
+  "scripts/**",
+  "stores/**",
+  "supabase/**",
+  "tests/**",
+  "eslint.config.*",
+  "next.config.*",
+  "package.json",
+  "playwright.config.ts",
+  "pnpm-lock.yaml",
+  "postcss.config.*",
+  "tsconfig.json",
+  "vitest*.config.ts",
+  ...TRUSTED_CONTEXT_WORKFLOW_PATTERNS,
+];
+
+const DEPENDENCY_AUDIT_PATTERNS = [
+  "package.json",
+  "pnpm-lock.yaml",
+  ".github/workflows/security-review.yml",
+  ...TRUSTED_CONTEXT_WORKFLOW_PATTERNS,
+];
+
+const SECURITY_FUNCTION_AUTHORIZATION_PATTERNS = [
+  "supabase/**",
+  "scripts/run-security-function-authorization-postgres-integration.mjs",
+  "scripts/verify-security-function-authorization.mjs",
+  "tests/security-function-authorization*.test.ts",
+  ...TRUSTED_CONTEXT_WORKFLOW_PATTERNS,
+];
+
+const SECURITY_SMOKE_PATTERNS = [
+  "app/**",
+  "components/**",
+  "lib/**",
+  "stores/**",
+  "supabase/**",
+  "tests/e2e/qa-security.spec.ts",
+  "tests/e2e/helpers/**",
+  "package.json",
+  "playwright.config.ts",
+  "pnpm-lock.yaml",
+  ...TRUSTED_CONTEXT_WORKFLOW_PATTERNS,
+];
+
 const BROWSER_QA_IGNORED_PATTERNS = [
   "lib/server/recipe-extraction-lab/**",
 ];
@@ -102,6 +165,10 @@ const FULL_REGRESSION_PATTERNS = [
  * }} CiPathFilterInput
  *
  * @typedef {{
+ *   code: boolean;
+ *   dependency_audit: boolean;
+ *   security_function_authorization: boolean;
+ *   security_smoke: boolean;
  *   smoke: boolean;
  *   accessibility: boolean;
  *   visual: boolean;
@@ -112,6 +179,10 @@ const FULL_REGRESSION_PATTERNS = [
  */
 
 export const CI_PATH_FILTERS = {
+  code: CODE_PATTERNS,
+  dependencyAudit: DEPENDENCY_AUDIT_PATTERNS,
+  securityFunctionAuthorization: SECURITY_FUNCTION_AUTHORIZATION_PATTERNS,
+  securitySmoke: SECURITY_SMOKE_PATTERNS,
   smoke: SMOKE_PATTERNS,
   accessibility: ACCESSIBILITY_PATTERNS,
   visual: VISUAL_PATTERNS,
@@ -212,6 +283,12 @@ export function evaluateCiPathFilters(input = {}) {
   const lighthouse = isManualFullRun || (!draft && (hasFullCiLabel || lighthousePathChanged));
 
   return {
+    code: isManualFullRun || hasAnyMatch(files, CODE_PATTERNS),
+    dependency_audit:
+      isManualFullRun || hasAnyMatch(files, DEPENDENCY_AUDIT_PATTERNS),
+    security_function_authorization:
+      isManualFullRun || hasAnyMatch(files, SECURITY_FUNCTION_AUTHORIZATION_PATTERNS),
+    security_smoke: isManualFullRun || hasAnyMatch(files, SECURITY_SMOKE_PATTERNS),
     smoke: forceCoreSuites || hasAnyMatch(browserQaFiles, SMOKE_PATTERNS),
     accessibility: forceCoreSuites || hasAnyMatch(browserQaFiles, ACCESSIBILITY_PATTERNS),
     visual: forceCoreSuites || hasAnyMatch(browserQaFiles, VISUAL_PATTERNS),

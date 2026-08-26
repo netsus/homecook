@@ -1,6 +1,7 @@
 import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { createRequire } from "node:module";
 
 import { afterEach, describe, expect, it } from "vitest";
 
@@ -58,7 +59,6 @@ function createManifest(overrides: Record<string, unknown> = {}) {
       "quality",
       "security-function-authorization",
       "security-smoke",
-      "snyk",
     ],
     attestation_digest: "d".repeat(64),
     app_launch_agent_enabled: true,
@@ -88,7 +88,7 @@ afterEach(() => {
 });
 
 describe("local Mac production release manifest", () => {
-  it("uses one strict shared prod tag validator and exposes expected contexts in the closed JSON schema", () => {
+  it("uses one strict shared prod tag validator and validates the closed release schema", () => {
     expect(validateProductionReleaseTag("prod-20260826.1")).toBe("prod-20260826.1");
     for (const invalidTag of [
       "xprod-20260826.1",
@@ -108,8 +108,8 @@ describe("local Mac production release manifest", () => {
     expect(schema.required).toContain("expected_release_contexts");
     expect(schema.properties.expected_release_contexts).toMatchObject({
       type: "array",
-      minItems: 8,
-      maxItems: 8,
+      minItems: 7,
+      maxItems: 7,
       uniqueItems: true,
     });
     expect(schema.properties.repository).toEqual({ const: "netsus/homecook" });
@@ -118,6 +118,31 @@ describe("local Mac production release manifest", () => {
       const: "netsus/homecook/.github/workflows/production-release-attestation.yml",
     });
     expect(schema.properties.expected_release_integration_id).toEqual({ const: 15368 });
+
+    const require = createRequire(import.meta.url);
+    const eslintPackage = require.resolve("@eslint/eslintrc/package.json");
+    const Ajv = require(require.resolve("ajv", { paths: [eslintPackage] }));
+    const validateSummary = new Ajv({ allErrors: true }).compile(
+      schema.properties.required_check_summary,
+    );
+    expect(validateSummary({
+      total: 7,
+      success: 5,
+      intended_skip: 2,
+      bad: 0,
+      cancelled: 0,
+      failed: 0,
+      pending: 0,
+      queued: 0,
+      rerun: 0,
+    })).toBe(true);
+    for (const invalidSummary of [
+      { total: -1, success: 0, intended_skip: 0 },
+      { total: 7, success: 7, intended_skip: 0, failed: 1 },
+      { total: 7, success: 7, intended_skip: 0, unexpected: 0 },
+    ]) {
+      expect(validateSummary(invalidSummary), JSON.stringify(validateSummary.errors)).toBe(false);
+    }
   });
 
   it("resolves the approved release SHA from origin/master instead of the local checkout head", () => {

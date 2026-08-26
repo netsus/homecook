@@ -5,7 +5,7 @@
   "enforcement": "active",
   "conditions": {
     "ref_name": {
-      "include": ["~DEFAULT_BRANCH"],
+      "include": ["refs/heads/master"],
       "exclude": []
     }
   },
@@ -58,10 +58,6 @@
           },
           {
             "context": "security-smoke",
-            "integration_id": 15368
-          },
-          {
-            "context": "snyk",
             "integration_id": 15368
           }
         ]

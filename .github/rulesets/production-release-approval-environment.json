@@ -8,6 +8,16 @@
     "protected_branches": false,
     "custom_branch_policies": true
   },
+  "deployment_branch_policies": [
+    {
+      "type": "branch",
+      "name": "master"
+    }
+  ],
+  "environment_secret_names": [
+    "HOMECOOK_RELEASE_ATTESTATION_APP_ID",
+    "HOMECOOK_RELEASE_ATTESTATION_APP_PRIVATE_KEY"
+  ],
   "master_only_branches": ["master"],
   "required_reviewers": [
     {

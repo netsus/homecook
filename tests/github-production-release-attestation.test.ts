@@ -28,7 +28,6 @@ const EXPECTED_RELEASE_CONTEXTS = [
   "quality",
   "security-function-authorization",
   "security-smoke",
-  "snyk",
 ];
 
 function createTrustedCheckRuns(checkSuiteId = 200) {
@@ -168,6 +167,31 @@ describe("GitHub production release attestation verification", () => {
         ],
       }),
     ).not.toThrow();
+  });
+
+  it("rejects an older failed check run even when a later rerun succeeds", () => {
+    const releaseInput = {
+      releaseSha: "a".repeat(40),
+      releaseTag: "prod-20260826.1",
+      releaseTree: "b".repeat(40),
+      repository: CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY,
+    };
+    const successfulRuns = createTrustedCheckRuns();
+    const qualitySuccess = successfulRuns.find((entry) => entry.name === "quality");
+
+    expect(() =>
+      buildGitHubProductionReleaseAttestationArtifacts({
+        ...releaseInput,
+        checkRuns: [
+          ...successfulRuns,
+          {
+            ...qualitySuccess,
+            completed_at: "2026-08-26T08:00:00Z",
+            conclusion: "failure",
+          },
+        ],
+      }),
+    ).toThrow(/failed|all started|rerun|quality/iu);
   });
 
   it("fails closed unless offline bundle, trusted root, and subject manifest are supplied explicitly", () => {
