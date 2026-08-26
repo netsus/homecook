@@ -168,6 +168,7 @@ const FULL_REGRESSION_PATTERNS = [
  *   action?: string;
  *   labels?: Array<string | CiLabel>;
  *   draft?: boolean;
+ *   forceFullRun?: boolean;
  * }} CiPathFilterInput
  *
  * @typedef {{
@@ -269,32 +270,35 @@ export function evaluateCiPathFilters(input = {}) {
     action = "",
     labels = [],
     draft = false,
+    forceFullRun = false,
   } = input;
   const files = [...new Set(changedFiles.map(normalizeFilePath).filter(Boolean))];
   const browserQaFiles = withoutBrowserQaIgnoredFiles(files);
   const labelNames = normalizeLabels(labels);
-  const isManualFullRun = eventName === "workflow_dispatch" || eventName === "schedule";
+  const isFullRun = forceFullRun
+    || eventName === "workflow_dispatch"
+    || eventName === "schedule";
   const isReadyForReview = eventName === "pull_request" && action === "ready_for_review";
   const hasFullCiLabel = labelNames.includes("full-ci");
-  const completeRegressionMatrix = isManualFullRun || hasFullCiLabel;
+  const completeRegressionMatrix = isFullRun || hasFullCiLabel;
   const hasFullRegressionChange = hasAnyMatch(browserQaFiles, FULL_REGRESSION_PATTERNS);
   const fullRegression =
-    isManualFullRun ||
+    isFullRun ||
     hasFullCiLabel ||
     (isReadyForReview && hasFullRegressionChange) ||
     (eventName === "push" && hasFullRegressionChange);
 
-  const forceCoreSuites = isManualFullRun || fullRegression;
+  const forceCoreSuites = isFullRun || fullRegression;
   const lighthousePathChanged = hasAnyMatch(browserQaFiles, LIGHTHOUSE_PATTERNS);
-  const lighthouse = isManualFullRun || (!draft && (hasFullCiLabel || lighthousePathChanged));
+  const lighthouse = isFullRun || (!draft && (hasFullCiLabel || lighthousePathChanged));
 
   return {
-    code: isManualFullRun || hasAnyMatch(files, CODE_PATTERNS),
+    code: isFullRun || hasAnyMatch(files, CODE_PATTERNS),
     dependency_audit:
-      isManualFullRun || hasAnyMatch(files, DEPENDENCY_AUDIT_PATTERNS),
+      isFullRun || hasAnyMatch(files, DEPENDENCY_AUDIT_PATTERNS),
     security_function_authorization:
-      isManualFullRun || hasAnyMatch(files, SECURITY_FUNCTION_AUTHORIZATION_PATTERNS),
-    security_smoke: isManualFullRun || hasAnyMatch(files, SECURITY_SMOKE_PATTERNS),
+      isFullRun || hasAnyMatch(files, SECURITY_FUNCTION_AUTHORIZATION_PATTERNS),
+    security_smoke: isFullRun || hasAnyMatch(files, SECURITY_SMOKE_PATTERNS),
     smoke: forceCoreSuites || hasAnyMatch(browserQaFiles, SMOKE_PATTERNS),
     accessibility: forceCoreSuites || hasAnyMatch(browserQaFiles, ACCESSIBILITY_PATTERNS),
     visual: forceCoreSuites || hasAnyMatch(browserQaFiles, VISUAL_PATTERNS),
@@ -332,9 +336,12 @@ function readGithubEvent() {
 
 function resolveChangedFiles(eventName, event) {
   if (process.env.CI_CHANGED_FILES) {
-    return process.env.CI_CHANGED_FILES.split(/\r?\n|,/)
-      .map((entry) => entry.trim())
-      .filter(Boolean);
+    return {
+      changedFiles: process.env.CI_CHANGED_FILES.split(/\r?\n|,/)
+        .map((entry) => entry.trim())
+        .filter(Boolean),
+      forceFullRun: false,
+    };
   }
 
   if (eventName === "pull_request") {
@@ -350,7 +357,7 @@ function resolveChangedFiles(eventName, event) {
       attemptedGitResolution = true;
       const files = runGit(["diff", "--name-only", `${baseSha}...${headSha}`]);
       if (files !== null) {
-        return files;
+        return { changedFiles: files, forceFullRun: false };
       }
     }
 
@@ -358,7 +365,7 @@ function resolveChangedFiles(eventName, event) {
       attemptedGitResolution = true;
       const files = runGit(["diff", "--name-only", `origin/${baseRef}...HEAD`]);
       if (files !== null) {
-        return files;
+        return { changedFiles: files, forceFullRun: false };
       }
     }
 
@@ -375,21 +382,21 @@ function resolveChangedFiles(eventName, event) {
       throw new Error("push event is missing a usable required after SHA.");
     }
 
-    if (before && after && !/^0+$/.test(before)) {
-      const files = runGit(["diff", "--name-only", `${before}...${after}`]);
-      if (files !== null) {
-        return files;
-      }
+    if (!before) {
+      throw new Error("push event is missing the required before SHA.");
+    }
+    if (/^0+$/.test(before)) {
+      return { changedFiles: [], forceFullRun: true };
     }
 
-    const files = runGit(["diff-tree", "--no-commit-id", "--name-only", "-r", after]);
-    if (files !== null) {
-      return files;
+    const files = runGit(["diff", "--name-only", `${before}...${after}`]);
+    if (files === null) {
+      throw new Error("Unable to resolve push changed files: the full before...after range diff failed.");
     }
-    throw new Error("Unable to resolve push changed files: all git diff attempts failed.");
+    return { changedFiles: files, forceFullRun: false };
   }
 
-  return [];
+  return { changedFiles: [], forceFullRun: false };
 }
 
 function writeGithubOutputs(outputs) {
@@ -406,7 +413,7 @@ function writeGithubOutputs(outputs) {
 function main() {
   const eventName = process.env.GITHUB_EVENT_NAME ?? "pull_request";
   const event = readGithubEvent();
-  const changedFiles = resolveChangedFiles(eventName, event);
+  const { changedFiles, forceFullRun } = resolveChangedFiles(eventName, event);
   const pullRequest = event.pull_request ?? {};
   const outputs = evaluateCiPathFilters({
     changedFiles,
@@ -414,6 +421,7 @@ function main() {
     action: event.action ?? "",
     labels: pullRequest.labels ?? [],
     draft: Boolean(pullRequest.draft),
+    forceFullRun,
   });
 
   process.stdout.write(

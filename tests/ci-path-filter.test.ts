@@ -16,17 +16,19 @@ function runPathFilterCli({
   event,
   eventName,
   gitExitCode,
+  gitScript,
 }: {
   event: Record<string, unknown>;
   eventName: string;
-  gitExitCode: number;
+  gitExitCode?: number;
+  gitScript?: string;
 }) {
   const directory = mkdtempSync(join(tmpdir(), "homecook-ci-path-filter-"));
   temporaryDirectories.push(directory);
   const eventPath = join(directory, "event.json");
   const gitPath = join(directory, "git");
   writeFileSync(eventPath, JSON.stringify(event));
-  writeFileSync(gitPath, `#!/bin/sh\nexit ${gitExitCode}\n`);
+  writeFileSync(gitPath, gitScript ?? `#!/bin/sh\nexit ${gitExitCode ?? 0}\n`);
   chmodSync(gitPath, 0o755);
   const env: NodeJS.ProcessEnv = {
     ...process.env,
@@ -333,4 +335,45 @@ describe("ci path filter", () => {
       expect(result.stdout).toContain("dependency_audit=true");
     },
   );
+
+  it("does not fall back to a tip-only diff when a valid push range fails", () => {
+    const result = runPathFilterCli({
+      event: { before: "a".repeat(40), after: "b".repeat(40) },
+      eventName: "push",
+      gitScript: [
+        "#!/bin/sh",
+        "if [ \"$1\" = \"diff\" ]; then exit 1; fi",
+        "if [ \"$1\" = \"diff-tree\" ]; then exit 0; fi",
+        "exit 2",
+        "",
+      ].join("\n"),
+    });
+
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toMatch(/push|range|changed files|git|diff/iu);
+  });
+
+  it("forces every heavy scope on for a zero-before new-ref push", () => {
+    const result = runPathFilterCli({
+      event: { before: "0".repeat(40), after: "b".repeat(40) },
+      eventName: "push",
+      gitExitCode: 1,
+    });
+
+    expect(result.status, result.stderr).toBe(0);
+    for (const output of [
+      "code",
+      "dependency_audit",
+      "security_function_authorization",
+      "security_smoke",
+      "smoke",
+      "accessibility",
+      "visual",
+      "lighthouse",
+      "full_regression",
+      "complete_regression_matrix",
+    ]) {
+      expect(result.stdout, output).toContain(`${output}=true`);
+    }
+  });
 });
