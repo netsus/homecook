@@ -1,10 +1,14 @@
 import { existsSync, readFileSync } from "node:fs";
 import { basename, resolve } from "node:path";
 import {
+  CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY,
   GITHUB_ACTIONS_APP_INTEGRATION_ID,
   UNRESOLVED_RELEASE_TAG_INTEGRATION_ACTOR_ID,
   normalizeExpectedReleaseContexts,
 } from "./production-release-approval-policy.mjs";
+import {
+  productionReleaseRulesetConflictsWithCanonicalTarget,
+} from "./production-release-ruleset-patterns.mjs";
 
 export const PRODUCTION_RELEASE_RULESET_SCHEMA =
   "homecook.github.repository-ruleset.v1";
@@ -19,6 +23,10 @@ const APPROVAL_BRANCH_POLICIES_ACTUAL_FILE =
   "production-release-approval-deployment-branch-policies.json";
 const APPROVAL_ENVIRONMENT_SECRETS_ACTUAL_FILE =
   "production-release-approval-environment-secrets.json";
+const REPOSITORY_RULESETS_ACTUAL_FILE =
+  "production-release-repository-rulesets.json";
+const EFFECTIVE_RULESETS_ACTUAL_FILE =
+  "production-release-effective-rulesets.json";
 const EXPECTED_APPROVAL_BRANCH_POLICIES = [
   { name: "master", type: "branch" },
 ];
@@ -184,6 +192,9 @@ function normalizeRules(rules, label) {
           requireObject(value.parameters, `${label}[${index}].parameters`),
         );
       if (type === "required_status_checks") {
+        if (!parameters) {
+          throw new Error(`${label}[${index}].parameters is required.`);
+        }
         parameters.required_status_checks = normalizeRequiredStatusChecks(
           parameters.required_status_checks,
           `${label}[${index}].parameters.required_status_checks`,
@@ -196,6 +207,104 @@ function normalizeRules(rules, label) {
       });
     })
     .sort((left, right) => left.type.localeCompare(right.type));
+}
+
+function normalizeStringArray(value, label) {
+  return requireArray(value, label)
+    .map((entry, index) => requireNonEmptyString(entry, `${label}[${index}]`))
+    .sort();
+}
+
+function normalizeInheritedConditions(conditions, label) {
+  const value = requireObject(conditions, label);
+  rejectUnknownKeys(
+    value,
+    ["ref_name", "repository_id", "repository_name", "repository_property"],
+    label,
+  );
+  const normalized = {};
+  if (value.ref_name !== undefined) {
+    normalized.ref_name = normalizeRefName(value.ref_name, `${label}.ref_name`);
+  }
+  if (value.repository_name !== undefined) {
+    const repositoryName = requireObject(
+      value.repository_name,
+      `${label}.repository_name`,
+    );
+    rejectUnknownKeys(
+      repositoryName,
+      ["exclude", "include"],
+      `${label}.repository_name`,
+    );
+    normalized.repository_name = {
+      exclude: normalizeStringArray(
+        repositoryName.exclude ?? [],
+        `${label}.repository_name.exclude`,
+      ),
+      include: normalizeStringArray(
+        repositoryName.include ?? [],
+        `${label}.repository_name.include`,
+      ),
+    };
+  }
+  if (value.repository_id !== undefined) {
+    const repositoryId = requireObject(value.repository_id, `${label}.repository_id`);
+    rejectUnknownKeys(repositoryId, ["repository_ids"], `${label}.repository_id`);
+    normalized.repository_id = {
+      repository_ids: requireArray(
+        repositoryId.repository_ids,
+        `${label}.repository_id.repository_ids`,
+      ).map((id, index) => {
+        if (!Number.isInteger(id) || id <= 0) {
+          throw new Error(`${label}.repository_id.repository_ids[${index}] must be positive.`);
+        }
+        return id;
+      }).sort((left, right) => left - right),
+    };
+  }
+  if (value.repository_property !== undefined) {
+    const repositoryProperty = requireObject(
+      value.repository_property,
+      `${label}.repository_property`,
+    );
+    rejectUnknownKeys(
+      repositoryProperty,
+      ["exclude", "include"],
+      `${label}.repository_property`,
+    );
+    const normalizeProperties = (properties, propertyLabel) =>
+      requireArray(properties, propertyLabel)
+        .map((entry, index) => {
+          const property = requireObject(entry, `${propertyLabel}[${index}]`);
+          rejectUnknownKeys(
+            property,
+            ["name", "property_values"],
+            `${propertyLabel}[${index}]`,
+          );
+          return {
+            name: requireNonEmptyString(
+              property.name,
+              `${propertyLabel}[${index}].name`,
+            ),
+            property_values: normalizeStringArray(
+              property.property_values,
+              `${propertyLabel}[${index}].property_values`,
+            ),
+          };
+        })
+        .sort((left, right) => left.name.localeCompare(right.name));
+    normalized.repository_property = {
+      exclude: normalizeProperties(
+        repositoryProperty.exclude ?? [],
+        `${label}.repository_property.exclude`,
+      ),
+      include: normalizeProperties(
+        repositoryProperty.include ?? [],
+        `${label}.repository_property.include`,
+      ),
+    };
+  }
+  return canonicalizeJson(normalized);
 }
 
 function normalizeBypassActors(bypassActors, label) {
@@ -410,6 +519,138 @@ function loadActualRuleset(actualDir, expectedFilePath) {
     }),
     present: true,
   };
+}
+
+function validateRulesetInventory({
+  actualDir,
+  desiredRulesets,
+  fileName,
+  includesParents,
+  scope,
+}) {
+  const missingBlocker = `missing_${scope}_ruleset_inventory_readback`;
+  if (!actualDir) return [missingBlocker];
+  const inventoryPath = resolve(actualDir, fileName);
+  if (!existsSync(inventoryPath)) return [missingBlocker];
+
+  const blockers = [];
+  let inventory;
+  try {
+    inventory = requireObject(
+      readJson(inventoryPath, `${scope} ruleset inventory`),
+      inventoryPath,
+    );
+    rejectUnknownKeys(
+      inventory,
+      ["includes_parents", "rulesets", "scope"],
+      inventoryPath,
+    );
+  } catch {
+    return [`${scope}_ruleset_inventory_schema_mismatch`];
+  }
+  if (
+    inventory.scope !== scope
+    || inventory.includes_parents !== includesParents
+    || !Array.isArray(inventory.rulesets)
+  ) {
+    return [`${scope}_ruleset_inventory_schema_mismatch`];
+  }
+
+  const ids = new Set();
+  const identities = new Set();
+  const canonicalEntries = new Map(
+    desiredRulesets.map((desired) => [desired.name, []]),
+  );
+  for (const [index, ruleset] of inventory.rulesets.entries()) {
+    const label = `${inventoryPath}.rulesets[${index}]`;
+    if (
+      !ruleset
+      || typeof ruleset !== "object"
+      || Array.isArray(ruleset)
+      || !Number.isInteger(ruleset.id)
+      || ruleset.id <= 0
+      || typeof ruleset.name !== "string"
+      || typeof ruleset.target !== "string"
+      || typeof ruleset.enforcement !== "string"
+      || !ruleset.conditions
+      || !Array.isArray(ruleset.rules)
+      || (scope === "repository" && !Array.isArray(ruleset.bypass_actors))
+    ) {
+      blockers.push(`${scope}_ruleset_inventory_full_detail_missing`);
+      continue;
+    }
+    if (ids.has(ruleset.id)) {
+      blockers.push(`${scope}_ruleset_inventory_duplicate`);
+    }
+    ids.add(ruleset.id);
+
+    const sourceType = ruleset.source_type ?? "Repository";
+    const source = ruleset.source ?? CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY;
+    const identity = `${sourceType}:${source}:${ruleset.name}`;
+    if (identities.has(identity)) {
+      blockers.push(`${scope}_ruleset_inventory_duplicate`);
+    }
+    identities.add(identity);
+    const parent = sourceType !== "Repository"
+      || source !== CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY;
+    const canonical = canonicalEntries.has(ruleset.name);
+    if (scope === "effective" && parent) {
+      if (
+        canonical
+        || productionReleaseRulesetConflictsWithCanonicalTarget(ruleset)
+      ) {
+        blockers.push("effective_ruleset_inventory_parent_conflict");
+      }
+      try {
+        normalizeInheritedProductionReleaseRulesetForInventory(ruleset, label);
+      } catch {
+        blockers.push("effective_ruleset_inventory_schema_mismatch");
+      }
+      continue;
+    }
+    if (scope === "repository" && parent) {
+      blockers.push("repository_ruleset_inventory_schema_mismatch");
+      continue;
+    }
+    if (canonical) {
+      canonicalEntries.get(ruleset.name).push(ruleset);
+    } else {
+      if (productionReleaseRulesetConflictsWithCanonicalTarget(ruleset)) {
+        blockers.push(`${scope}_ruleset_inventory_unknown_overlap`);
+      }
+      try {
+        normalizeInheritedProductionReleaseRulesetForInventory(ruleset, label);
+      } catch {
+        blockers.push(`${scope}_ruleset_inventory_schema_mismatch`);
+      }
+    }
+  }
+
+  for (const desired of desiredRulesets) {
+    const entries = canonicalEntries.get(desired.name);
+    if (entries.length === 0) {
+      blockers.push(`${scope}_ruleset_inventory_canonical_missing`);
+      continue;
+    }
+    if (entries.length > 1) {
+      blockers.push(`${scope}_ruleset_inventory_canonical_duplicate`);
+      continue;
+    }
+    try {
+      const normalized = normalizeRuleset({
+        filePath: `${scope} inventory ${desired.name}`,
+        requireSchema: false,
+        rootDir: actualDir,
+        ruleset: entries[0],
+      });
+      if (!sameRuleset(desired, normalized)) {
+        blockers.push(`${scope}_ruleset_inventory_canonical_mismatch`);
+      }
+    } catch {
+      blockers.push(`${scope}_ruleset_inventory_full_detail_missing`);
+    }
+  }
+  return [...new Set(blockers)].sort();
 }
 
 function validateApprovalEnvironment(rootDir) {
@@ -714,6 +955,31 @@ export function normalizeProductionReleaseRulesetForComparison(value, label = "p
   return rulesetComparisonProjection(normalized);
 }
 
+export function normalizeInheritedProductionReleaseRulesetForInventory(
+  ruleset,
+  label = "inherited production release ruleset",
+) {
+  const value = requireObject(ruleset, label);
+  rejectUnknownKeys(
+    value,
+    [...RULESET_SAFETY_KEYS, ...RULESET_IGNORED_SERVER_KEYS],
+    label,
+  );
+  return canonicalizeJson({
+    bypass_actors: normalizeBypassActors(value.bypass_actors ?? [], `${label}.bypass_actors`)
+      .map((actor) => ({
+        actor_id: actor.actor_id,
+        actor_type: actor.actor_type,
+        bypass_mode: actor.bypass_mode,
+      })),
+    conditions: normalizeInheritedConditions(value.conditions, `${label}.conditions`),
+    enforcement: requireNonEmptyString(value.enforcement, `${label}.enforcement`),
+    name: requireNonEmptyString(value.name, `${label}.name`),
+    rules: normalizeRules(value.rules, `${label}.rules`),
+    target: requireNonEmptyString(value.target, `${label}.target`),
+  });
+}
+
 export function productionReleaseRulesetsSemanticallyEqual(left, right) {
   const normalizedLeft = normalizeProductionReleaseRulesetForComparison(
     left,
@@ -742,12 +1008,14 @@ export function getProductionReleaseRulesetPlan({
   let actualState = "matched";
   let unresolvedActor = false;
   const activationBlockers = [];
+  const desiredRulesets = [];
 
   const rulesets = EXPECTED_RULESET_FILES.map((entry) => {
     const desired = validateRulesetFile({
       ...entry,
       rootDir,
     });
+    desiredRulesets.push(desired);
     const actual = loadActualRuleset(actualDir, entry.filePath);
     const matched = actual.present && actual.normalized
       ? sameRuleset(desired, actual.normalized)
@@ -785,6 +1053,32 @@ export function getProductionReleaseRulesetPlan({
     activationBlocked = true;
     actualState = "unresolved_actor";
     activationBlockers.push("unresolved_release_tag_integration_actor");
+  }
+
+  const inventoryBlockers = [
+    ...validateRulesetInventory({
+      actualDir,
+      desiredRulesets,
+      fileName: REPOSITORY_RULESETS_ACTUAL_FILE,
+      includesParents: false,
+      scope: "repository",
+    }),
+    ...validateRulesetInventory({
+      actualDir,
+      desiredRulesets,
+      fileName: EFFECTIVE_RULESETS_ACTUAL_FILE,
+      includesParents: true,
+      scope: "effective",
+    }),
+  ];
+  if (inventoryBlockers.length > 0) {
+    activationBlocked = true;
+    activationBlockers.push(...inventoryBlockers);
+    if (actualState === "matched") {
+      actualState = inventoryBlockers.some((blocker) => blocker.startsWith("missing_"))
+        ? "missing_ruleset_inventory"
+        : "ruleset_inventory_mismatch";
+    }
   }
 
   const approvalEnvironment = validateApprovalEnvironment(rootDir);

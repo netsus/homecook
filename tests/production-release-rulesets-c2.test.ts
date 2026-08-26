@@ -368,6 +368,18 @@ describe("production release C2 apply", () => {
     expect(run.state.calls.some((call) => call.key.startsWith("POST ") || call.key.startsWith("PUT ") || call.key.startsWith("SECRET "))).toBe(false);
   });
 
+  it("reports unexpected pre-mutation API failure with partial_state false", () => {
+    const run = runExecute({
+      state: initialState({ fail_on: "GET /repos/netsus/homecook" }),
+    });
+    expect(run.result.status).toBe(1);
+    expect(run.combined).toContain('"partial_state": false');
+    expect(run.state.calls.some((call) =>
+      call.key.startsWith("POST ")
+      || call.key.startsWith("PUT ")
+      || call.key.startsWith("SECRET "))).toBe(false);
+  });
+
   it.each([
     [{ HOMECOOK_C2_DIRTY: "true" }, /clean/iu],
     [{ HOMECOOK_C2_HEAD: "a".repeat(40) }, /origin\/master/iu],
@@ -753,6 +765,43 @@ describe("production release C2 apply", () => {
     expect(run.combined).toMatch(/parent|effective/iu);
   });
 
+  it("converges with a non-conflicting inherited organization ruleset", () => {
+    const repositoryRulesets = resolvedRulesets();
+    const inheritedRuleset = {
+      id: 997,
+      name: "organization-release-branch-policy",
+      target: "branch",
+      source_type: "Organization",
+      source: "netsus",
+      enforcement: "active",
+      conditions: {
+        ref_name: {
+          include: ["refs/heads/release/*"],
+          exclude: ["refs/heads/master"],
+        },
+        repository_name: { include: ["homecook"], exclude: [] },
+        repository_id: { repository_ids: [123456789] },
+        repository_property: {
+          include: [{ name: "visibility", property_values: ["private"] }],
+          exclude: [],
+        },
+      },
+      rules: [{
+        type: "pull_request",
+        parameters: { required_approving_review_count: 1 },
+      }],
+    };
+    const run = runExecute({
+      state: initialState({
+        effective_rulesets: [...repositoryRulesets, inheritedRuleset],
+        rulesets: repositoryRulesets,
+      }),
+    });
+    expect(run.result.status, run.combined).toBe(0);
+    const rerun = runExecute({ state: run.state });
+    expect(rerun.result.status, rerun.combined).toBe(0);
+  }, 15_000);
+
   it("fails closed when effective inventory omits canonical repository rulesets", () => {
     const repositoryRulesets = resolvedRulesets();
     const run = runExecute({
@@ -791,6 +840,34 @@ describe("production release C2 apply", () => {
     expect(run.state.effective_inventory_reads).toBe(2);
     expect(existsSync(join(run.snapshotDir, "production-release-effective-rulesets.json")))
       .toBe(true);
+  });
+
+  it("wraps unexpected post-mutation normalization failure as partial state", () => {
+    const repositoryRulesets = resolvedRulesets();
+    const unsupportedInheritedShape = {
+      id: 996,
+      name: "late-non-conflicting-policy",
+      target: "branch",
+      source_type: "Organization",
+      source: "netsus",
+      enforcement: "active",
+      conditions: {
+        ref_name: { include: ["refs/heads/release/*"], exclude: ["refs/heads/master"] },
+        unsupported_condition: { include: ["unsafe"] },
+      },
+      rules: [{ type: "pull_request", parameters: { required_approving_review_count: 1 } }],
+      unsupported_server_field: true,
+    };
+    const run = runExecute({
+      state: initialState({
+        effective_rulesets: repositoryRulesets,
+        effective_state_race: unsupportedInheritedShape,
+        rulesets: repositoryRulesets,
+      }),
+    });
+    expect(run.result.status).toBe(1);
+    expect(run.combined).toContain('"partial_state": true');
+    expect(run.combined).toMatch(/unexpected|normalization|unsupported/iu);
   });
 
   it("applies exact state, captures a validator-matched snapshot, and reruns idempotently", () => {

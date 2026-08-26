@@ -14,6 +14,7 @@ import { createPrivateKey } from "node:crypto";
 
 import {
   getProductionReleaseRulesetPlan,
+  normalizeInheritedProductionReleaseRulesetForInventory,
   normalizeProductionReleaseRulesetForComparison,
   productionReleaseRulesetsSemanticallyEqual,
 } from "./production-release-rulesets.mjs";
@@ -410,8 +411,8 @@ function overlapsProductionTagPattern(pattern) {
 }
 
 function conflictsWithCanonicalTarget(ruleset) {
-  const include = ruleset?.conditions?.ref_name?.include ?? [];
-  if (!Array.isArray(include)) return true;
+  const include = ruleset?.conditions?.ref_name?.include;
+  if (!Array.isArray(include) || include.length === 0) return true;
   if (ruleset.target === "branch") {
     return include.some((entry) =>
       entry === "~DEFAULT_BRANCH" || globMatches(entry, "refs/heads/master"));
@@ -419,7 +420,7 @@ function conflictsWithCanonicalTarget(ruleset) {
   if (ruleset.target === "tag") {
     return include.some(overlapsProductionTagPattern);
   }
-  return false;
+  return true;
 }
 
 function readRulesetInventory({ includeParents = false, partialState = false } = {}) {
@@ -665,14 +666,22 @@ function inventoryComparisonProjection(inventory) {
   return inventory.summaries
     .map((summary) => {
       const detail = inventory.details.get(summary.id);
+      const source = detail?.source ?? summary.source ?? C2_CANONICAL_REPOSITORY;
+      const sourceType = detail?.source_type ?? summary.source_type ?? "Repository";
+      const parent = sourceType !== "Repository" || source !== C2_CANONICAL_REPOSITORY;
       return {
         id: detail?.id ?? summary.id,
-        ruleset: normalizeProductionReleaseRulesetForComparison(
-          detail,
-          `ruleset ${detail?.name ?? summary.name}`,
-        ),
-        source: detail?.source ?? summary.source ?? C2_CANONICAL_REPOSITORY,
-        source_type: detail?.source_type ?? summary.source_type ?? "Repository",
+        ruleset: parent
+          ? normalizeInheritedProductionReleaseRulesetForInventory(
+            detail,
+            `inherited ruleset ${detail?.name ?? summary.name}`,
+          )
+          : normalizeProductionReleaseRulesetForComparison(
+            detail,
+            `ruleset ${detail?.name ?? summary.name}`,
+          ),
+        source,
+        source_type: sourceType,
       };
     })
     .sort((left, right) => {
@@ -751,6 +760,8 @@ export function executeProductionReleaseControls({
   rootDir = process.cwd(),
   snapshotDir,
 }) {
+  let mutationStarted = false;
+  try {
   if (confirmation !== C2_CONFIRMATION) {
     fail(`--confirm must equal ${C2_CONFIRMATION} exactly.`);
   }
@@ -819,6 +830,7 @@ export function executeProductionReleaseControls({
     );
     const body = apiRuleset(desiredRuleset);
     if (!summary) {
+      mutationStarted = true;
       const created = ghApi(`/repos/${C2_CANONICAL_REPOSITORY}/rulesets`, {
         input: body,
         method: "POST",
@@ -829,6 +841,7 @@ export function executeProductionReleaseControls({
     } else {
       const actual = preflightInventory.details.get(summary.id);
       if (!rulesetMatches(actual, desiredRuleset)) {
+        mutationStarted = true;
         ghApi(`/repos/${C2_CANONICAL_REPOSITORY}/rulesets/${summary.id}`, {
           input: body,
           method: "PUT",
@@ -840,6 +853,7 @@ export function executeProductionReleaseControls({
   }
 
   if (!environmentMatches(environment)) {
+    mutationStarted = true;
     ghApi(
       `/repos/${C2_CANONICAL_REPOSITORY}/environments/${ENVIRONMENT_NAME}`,
       { input: environmentPayload(), method: "PUT", partialState: true },
@@ -857,6 +871,7 @@ export function executeProductionReleaseControls({
     }
   }
   if (!normalizedPolicies.some((policy) => policy.name === "master" && policy.type === "branch")) {
+    mutationStarted = true;
     ghApi(
       `/repos/${C2_CANONICAL_REPOSITORY}/environments/${ENVIRONMENT_NAME}/deployment-branch-policies`,
       { input: { name: "master", type: "branch" }, method: "POST", partialState: true },
@@ -864,6 +879,7 @@ export function executeProductionReleaseControls({
     operations.push("created_master_deployment_policy");
   }
   for (const name of SECRET_NAMES) {
+    mutationStarted = true;
     setEnvironmentSecret(name, { appId, privateKey });
     operations.push(`upserted_environment_secret:${name}`);
   }
@@ -902,4 +918,24 @@ export function executeProductionReleaseControls({
     repository: C2_CANONICAL_REPOSITORY,
     snapshot_created: true,
   };
+  } catch (error) {
+    if (!mutationStarted) {
+      if (error instanceof ProductionReleaseApplyError) throw error;
+      throw new ProductionReleaseApplyError(
+        "Unexpected C2 apply failure before mutation.",
+        { partialState: false },
+      );
+    }
+    if (error instanceof ProductionReleaseApplyError) {
+      if (error.partialState) throw error;
+      throw new ProductionReleaseApplyError(error.message, {
+        manualActionRequired: error.manualActionRequired,
+        partialState: true,
+      });
+    }
+    throw new ProductionReleaseApplyError(
+      "Unexpected C2 apply failure after mutation.",
+      { partialState: true },
+    );
+  }
 }

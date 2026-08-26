@@ -468,6 +468,54 @@ describe("production release rulesets desired state", () => {
         ],
       }, null, 2),
     );
+    const repositoryInventoryPath = join(
+      resolvedActualDir,
+      "production-release-repository-rulesets.json",
+    );
+    const effectiveInventoryPath = join(
+      resolvedActualDir,
+      "production-release-effective-rulesets.json",
+    );
+    const repositoryInventory = {
+      scope: "repository",
+      includes_parents: false,
+      rulesets: [
+        "production-release-master",
+        "production-release-tag-creation",
+        "production-release-tag-immutability",
+      ].map((name) => JSON.parse(read(join(resolvedActualDir, `${name}.json`)))),
+    };
+    const inheritedOrganizationRuleset = {
+      id: 999,
+      name: "organization-release-branch-policy",
+      target: "branch",
+      source_type: "Organization",
+      source: "netsus",
+      enforcement: "active",
+      conditions: {
+        ref_name: {
+          include: ["refs/heads/release/*"],
+          exclude: ["refs/heads/master"],
+        },
+        repository_name: { include: ["homecook"], exclude: [] },
+        repository_id: { repository_ids: [123456789] },
+        repository_property: {
+          include: [{ name: "visibility", property_values: ["private"] }],
+          exclude: [],
+        },
+      },
+      rules: [{
+        type: "pull_request",
+        parameters: { required_approving_review_count: 1 },
+      }],
+    };
+    const effectiveInventory = {
+      scope: "effective",
+      includes_parents: true,
+      rulesets: [...repositoryInventory.rulesets, inheritedOrganizationRuleset],
+    };
+    writeFileSync(repositoryInventoryPath, JSON.stringify(repositoryInventory, null, 2));
+    writeFileSync(effectiveInventoryPath, JSON.stringify(effectiveInventory, null, 2));
     const verifyResolved = spawnSync(
       process.execPath,
       [
@@ -487,6 +535,114 @@ describe("production release rulesets desired state", () => {
     expect(verifyResolved.status, verifyResolved.stderr).toBe(0);
     expect(verifyResolved.stdout).toContain("\"activation_blocked\": false");
     expect(verifyResolved.stdout).toContain("\"actual_state\": \"matched\"");
+
+    const verifyResolvedSnapshot = () => spawnSync(
+      process.execPath,
+      [
+        RULESET_SCRIPT,
+        "verify",
+        "--json",
+        "--root-dir",
+        resolvedRootDir,
+        "--actual-dir",
+        resolvedActualDir,
+      ],
+      { cwd: repoRoot, encoding: "utf8" },
+    );
+    for (const [inventoryPath, blocker] of [
+      [repositoryInventoryPath, "missing_repository_ruleset_inventory_readback"],
+      [effectiveInventoryPath, "missing_effective_ruleset_inventory_readback"],
+    ]) {
+      const contents = read(inventoryPath);
+      rmSync(inventoryPath);
+      const verifyMissingInventory = verifyResolvedSnapshot();
+      expect(verifyMissingInventory.status, verifyMissingInventory.stderr).toBe(0);
+      expect(verifyMissingInventory.stdout).toContain("\"activation_blocked\": true");
+      expect(verifyMissingInventory.stdout).toContain(blocker);
+      writeFileSync(inventoryPath, contents);
+    }
+
+    writeFileSync(repositoryInventoryPath, JSON.stringify({
+      ...repositoryInventory,
+      rulesets: [...repositoryInventory.rulesets, repositoryInventory.rulesets[0]],
+    }, null, 2));
+    const verifyDuplicateRepository = verifyResolvedSnapshot();
+    expect(verifyDuplicateRepository.stdout).toContain("\"activation_blocked\": true");
+    expect(verifyDuplicateRepository.stdout).toContain(
+      "repository_ruleset_inventory_canonical_duplicate",
+    );
+    writeFileSync(repositoryInventoryPath, JSON.stringify(repositoryInventory, null, 2));
+
+    writeFileSync(repositoryInventoryPath, JSON.stringify({
+      ...repositoryInventory,
+      rulesets: repositoryInventory.rulesets.map((ruleset, index) =>
+        index === 0
+          ? { id: ruleset.id, name: ruleset.name, target: ruleset.target }
+          : ruleset),
+    }, null, 2));
+    const verifyRepositorySummaryOnly = verifyResolvedSnapshot();
+    expect(verifyRepositorySummaryOnly.stdout).toContain("\"activation_blocked\": true");
+    expect(verifyRepositorySummaryOnly.stdout).toContain(
+      "repository_ruleset_inventory_full_detail_missing",
+    );
+    writeFileSync(repositoryInventoryPath, JSON.stringify(repositoryInventory, null, 2));
+
+    writeFileSync(repositoryInventoryPath, JSON.stringify({
+      ...repositoryInventory,
+      rulesets: [
+        ...repositoryInventory.rulesets,
+        {
+          id: 998,
+          name: "unknown-prod-overlap",
+          target: "tag",
+          enforcement: "active",
+          conditions: { ref_name: { include: ["refs/tags/prod-*"], exclude: [] } },
+          rules: [{ type: "creation" }],
+          bypass_actors: [],
+        },
+      ],
+    }, null, 2));
+    const verifyRepositoryOverlap = verifyResolvedSnapshot();
+    expect(verifyRepositoryOverlap.stdout).toContain("\"activation_blocked\": true");
+    expect(verifyRepositoryOverlap.stdout).toContain(
+      "repository_ruleset_inventory_unknown_overlap",
+    );
+    writeFileSync(repositoryInventoryPath, JSON.stringify(repositoryInventory, null, 2));
+
+    writeFileSync(effectiveInventoryPath, JSON.stringify({
+      ...effectiveInventory,
+      rulesets: effectiveInventory.rulesets.filter(
+        (ruleset) => ruleset.name !== "production-release-tag-immutability",
+      ),
+    }, null, 2));
+    const verifyMissingEffectiveCanonical = verifyResolvedSnapshot();
+    expect(verifyMissingEffectiveCanonical.stdout).toContain("\"activation_blocked\": true");
+    expect(verifyMissingEffectiveCanonical.stdout).toContain(
+      "effective_ruleset_inventory_canonical_missing",
+    );
+
+    writeFileSync(effectiveInventoryPath, JSON.stringify({
+      ...effectiveInventory,
+      rulesets: [
+        ...effectiveInventory.rulesets,
+        {
+          ...inheritedOrganizationRuleset,
+          id: 997,
+          name: "organization-prod-overlap",
+          target: "tag",
+          conditions: {
+            ...inheritedOrganizationRuleset.conditions,
+            ref_name: { include: ["refs/tags/prod-*"], exclude: [] },
+          },
+        },
+      ],
+    }, null, 2));
+    const verifyInheritedConflict = verifyResolvedSnapshot();
+    expect(verifyInheritedConflict.stdout).toContain("\"activation_blocked\": true");
+    expect(verifyInheritedConflict.stdout).toContain(
+      "effective_ruleset_inventory_parent_conflict",
+    );
+    writeFileSync(effectiveInventoryPath, JSON.stringify(effectiveInventory, null, 2));
 
     const approvalReadbackPath = join(
       resolvedActualDir,
