@@ -127,7 +127,8 @@
 - Before screenshot paths:
   - YT_IMPORT: `ui/designs/evidence/33-youtube-i031-direct-extraction/mobile-390-loading.png`, `mobile-320-loading.png`, `desktop-1280-loading.png`
   - app shell notification baseline: `ui/designs/evidence/34c-growth-notification-ui/mobile-390.png`, `mobile-320.png`, `desktop-1440.png` (layout 참고만 사용하며 data authority는 재사용하지 않음)
-- Authority status: `pass`, fresh independent final authority `/root/youtube_focus_design_rereview`가 publication head `a76df8f8e3d342968cf920cedb9289b8546018f0`의 implementation `3c1e0d422b0849f7f086d1b7fefc55bac41eee60`을 blocker/major/minor `0/0/0`으로 승인했다.
+- Authority status: `reviewed`
+- Notes: fresh independent final authority `/root/youtube_focus_design_rereview`가 publication head `a76df8f8e3d342968cf920cedb9289b8546018f0`의 implementation `3c1e0d422b0849f7f086d1b7fefc55bac41eee60`을 verdict `pass`, blocker/major/minor `0/0/0`으로 승인했다.
 - Authority report targets: `ui/designs/authority/YT_IMPORT_BACKGROUND-authority.md`, `ui/designs/authority/APP_SHELL_YOUTUBE_NOTIFICATIONS-authority.md`
 
 ## Design Status

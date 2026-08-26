@@ -20,7 +20,8 @@
 
 ## Verdict
 
-- verdict: `FINAL_AUTHORITY_APPROVED`
+- verdict: `pass`
+- source_decision: `FINAL_AUTHORITY_APPROVED`
 - blocker_count: `0`
 - major_count: `0`
 - minor_count: `0`

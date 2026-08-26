@@ -137,6 +137,10 @@ describe("YouTube async extraction Stage 1 contract", () => {
     expect(workItem.closeout.repair_summary.post_merge_stale_count).toBe(1);
     expect(workItem.notes).toContain("afa3918fca75983e3071d0b4f63d0baa92f6a6f7");
     expect(workItem.notes).not.toContain("remains Draft");
+    expect(readme).toContain("Authority status: `reviewed`");
+    for (const reportPath of automation.frontend.design_authority.authority_report_paths) {
+      expect(read(reportPath)).toContain("verdict: `pass`");
+    }
     expect(read("docs/workpacks/README.md")).toMatch(
       /\| `youtube-async-extraction-notification` \| merged \|[^\n]*non-manual implementation[^\n]*PR #1362/u,
     );
