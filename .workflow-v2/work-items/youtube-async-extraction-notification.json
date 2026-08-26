@@ -148,8 +148,8 @@
     ]
   },
   "status": {
-    "lifecycle": "in_progress",
-    "approval_state": "codex_approved",
+    "lifecycle": "merged",
+    "approval_state": "dual_approved",
     "verification_status": "passed",
     "evaluation_status": "passed",
     "evaluation_round": 3,
@@ -160,7 +160,7 @@
   "closeout": {
     "phase": "completed",
     "docs_projection": {
-      "roadmap_lifecycle": "in_progress",
+      "roadmap_lifecycle": "merged",
       "design_status": "confirmed",
       "delivery_checklist": "complete",
       "design_authority": "passed",
@@ -182,13 +182,14 @@
         "Isolated random-port PostgreSQL/PostgREST 56 passed including 299/300/301-second reclaim boundary; operational full-local and remote Supabase access 0",
         "Fresh publication-head security and final design authority at a76df8f8e3d342968cf920cedb9289b8546018f0: PASS — Findings 없음",
         "GitHub PR #1362 publication head a76df8f8e3d342968cf920cedb9289b8546018f0: all started checks terminal success or intended Draft skip",
+        "GitHub PR #1362 merged from final head aee818a1b6399c02d2f6206311c4666d75a62025 as merge commit afa3918fca75983e3071d0b4f63d0baa92f6a6f7 after all started checks completed successfully or as intended skip",
         "docs/workpacks/youtube-async-extraction-notification/evidence/2026-08-14-stage6-closeout-review.md",
         "Fresh Stage 6 task /root/youtube_v4_stage6_closeout approved exact head eb8d915b44b63611904760375f7c0606e629b6e0 with PASS — Findings 없음"
       ]
     },
     "merge_gate_projection": {
-      "current_head_sha": "eb8d915b44b63611904760375f7c0606e629b6e0",
-      "approval_state": "codex_approved",
+      "current_head_sha": "aee818a1b6399c02d2f6206311c4666d75a62025",
+      "approval_state": "dual_approved",
       "all_checks_green": true
     },
     "recovery_summary": {
@@ -197,31 +198,32 @@
       "stale_lock_count": 0,
       "ci_resync_count": 0,
       "artifact_missing": false,
-      "last_recovery_at": "2026-08-14T12:20:00Z"
+      "last_recovery_at": "2026-08-26T16:09:55Z"
     },
     "repair_summary": {
       "codex_repairable_count": 4,
       "claude_repairable_count": 0,
       "manual_decision_required_count": 0,
       "human_escalation_count": 0,
-      "post_merge_stale_count": 0,
-      "latest_reason_code": "stage6-reviewed-head-pass-zero-findings",
+      "post_merge_stale_count": 1,
+      "latest_reason_code": "post-merge-projection-repair-pr-1362",
       "evidence_sources": [
         "Codex_task_019ff643-988a-7013-9edb-4d4f61986930_REVISE",
         "docs/workpacks/youtube-async-extraction-notification/evidence/2026-08-12-stage1-internal1-5-rereview.md",
         "tests/youtube-extraction-notifications.test.tsx",
         "ui/designs/authority/YT_IMPORT_BACKGROUND-authority.md",
         "ui/designs/authority/APP_SHELL_YOUTUBE_NOTIFICATIONS-authority.md",
-        "docs/workpacks/youtube-async-extraction-notification/evidence/2026-08-14-stage6-closeout-review.md"
+        "docs/workpacks/youtube-async-extraction-notification/evidence/2026-08-14-stage6-closeout-review.md",
+        "GitHub PR #1362 final head aee818a1b6399c02d2f6206311c4666d75a62025 merged as afa3918fca75983e3071d0b4f63d0baa92f6a6f7"
       ]
     },
     "projection_state": {
-      "docs_synced_at": "2026-08-14T12:20:00Z",
-      "status_synced_at": "2026-08-14T12:20:00Z",
+      "docs_synced_at": "2026-08-26T16:09:55Z",
+      "status_synced_at": "2026-08-26T16:09:55Z",
       "pr_body_synced_at": "2026-08-14T12:20:00Z"
     }
   },
-  "notes": "Canonical closeout owner: .workflow-v2/work-items/youtube-async-extraction-notification.json#closeout. Product implementation is complete on 3c1e0d422b0849f7f086d1b7fefc55bac41eee60. Fresh security and final design authority at publication head a76df8f8e3d342968cf920cedb9289b8546018f0 returned PASS with findings 0 after the initial closed-mount focus finding was repaired TDD-first. Fresh Stage 6 task /root/youtube_v4_stage6_closeout approved reviewed exact head eb8d915b44b63611904760375f7c0606e629b6e0 with PASS — Findings 없음 after all started checks reached success or intended Draft skip. Non-manual closeout is complete and PR #1362 remains Draft for manual merge handoff. Production migration, worker credential/install/start/rollout and physical-device verification remain Manual Only. Supabase Cloud/linked/remote is forbidden/N/A; operational full-local was not touched. closeout_phase=completed closeout_recovery=manual_patch:1|manual_handoff closeout_repair=codex:4|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:Codex_task_019ff643-988a-7013-9edb-4d4f61986930_REVISE,docs/workpacks/youtube-async-extraction-notification/evidence/2026-08-12-stage1-internal1-5-rereview.md,tests/youtube-extraction-notifications.test.tsx,ui/designs/authority/YT_IMPORT_BACKGROUND-authority.md,ui/designs/authority/APP_SHELL_YOUTUBE_NOTIFICATIONS-authority.md,docs/workpacks/youtube-async-extraction-notification/evidence/2026-08-14-stage6-closeout-review.md last_recovery_at=2026-08-14T12:20:00Z",
+  "notes": "Canonical closeout owner: .workflow-v2/work-items/youtube-async-extraction-notification.json#closeout. Product implementation is complete on 3c1e0d422b0849f7f086d1b7fefc55bac41eee60. Fresh security and final design authority at publication head a76df8f8e3d342968cf920cedb9289b8546018f0 returned PASS with findings 0 after the initial closed-mount focus finding was repaired TDD-first. Fresh Stage 6 task /root/youtube_v4_stage6_closeout approved reviewed exact head eb8d915b44b63611904760375f7c0606e629b6e0 with PASS — Findings 없음. GitHub PR #1362 final head aee818a1b6399c02d2f6206311c4666d75a62025 completed all started checks successfully or as intended skip and merged as afa3918fca75983e3071d0b4f63d0baa92f6a6f7 on 2026-08-20. Production migration, worker credential/install/start/rollout and physical-device verification remain Manual Only. Supabase Cloud/linked/remote is forbidden/N/A; operational full-local was not touched. closeout_phase=completed closeout_recovery=manual_patch:1|manual_handoff closeout_repair=codex:4|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:1|sources:Codex_task_019ff643-988a-7013-9edb-4d4f61986930_REVISE,docs/workpacks/youtube-async-extraction-notification/evidence/2026-08-12-stage1-internal1-5-rereview.md,tests/youtube-extraction-notifications.test.tsx,ui/designs/authority/YT_IMPORT_BACKGROUND-authority.md,ui/designs/authority/APP_SHELL_YOUTUBE_NOTIFICATIONS-authority.md,docs/workpacks/youtube-async-extraction-notification/evidence/2026-08-14-stage6-closeout-review.md,GitHub PR #1362 final head aee818a1b6399c02d2f6206311c4666d75a62025 merged as afa3918fca75983e3071d0b4f63d0baa92f6a6f7 last_recovery_at=2026-08-26T16:09:55Z",
   "out_of_scope": [
     "Web Push subscription service worker VAPID or push outbox",
     "Quick Import async UI conversion or public response change",
