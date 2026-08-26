@@ -1,11 +1,11 @@
 # Current Source of Truth
 
 ## Official Files
-- `docs/요구사항기준선-v1.7.33.md`
-- `docs/화면정의서-v1.5.37.md`
-- `docs/유저flow맵-v1.3.35.md`
-- `docs/db설계-v1.3.35.md`
-- `docs/api문서-v1.2.40.md`
+- `docs/요구사항기준선-v1.7.34.md`
+- `docs/화면정의서-v1.5.38.md`
+- `docs/유저flow맵-v1.3.36.md`
+- `docs/db설계-v1.3.36.md`
+- `docs/api문서-v1.2.41.md`
 
 ## Notes
 - 위 5개 파일이 현재 공식 기준 문서다.
@@ -13,6 +13,18 @@
 - 구현 중 문서 충돌이 보이면 먼저 충돌 항목을 정리하고 작업 범위를 다시 확정한다.
 - 사용자 승인으로 공식 계약을 바꾸는 경우에도 구현보다 문서가 먼저다. 관련 공식 문서와 이 파일의 버전/경로를 같은 `contract-evolution` PR에서 먼저 갱신한다.
 - Supabase target과 gate의 canonical 운영 계약은 `docs/engineering/supabase-local-only-operations.md`다.
+
+## 2026-08-27 contract-evolution — YouTube 실제 단계 진행바와 남은 시간 범위
+
+사용자는 브라우저 경과시간 기반 3칸 진행 표시와 고정 `약 1~3분` 문구를 worker가 실제로 통과한 단계 기반 progress와 검증된 남은 시간 범위로 교체하도록 승인했다. 승인 계획은 `youtube-extraction-truthful-progress-eta-plan-20260826.md`, SHA-256 `e3bf440a3708b50e2430f1f2fda770fbe2a1f30bdaf3eb79fb6237affd5bbe60`, 독립 검토 결과 `APPROVE / Findings 0`이다.
+
+- 공식 tuple은 requirements `1.7.34`, screen `1.5.38`, Flow `1.3.36`, DB `1.3.36`, API `1.2.41`이다.
+- 공개 단계와 `confirmed_percent` floor는 `queued=0`, `source_fetch=10`, `video_download=25`, `frame_extraction=45`, `model_analysis=65`, `finalizing=90`이다. 시간만으로 증가하지 않는다. active confirmed floor는 최대 90이고 active UI는 95를 넘지 않는다. `succeeded일 때만 100`이다.
+- status success data는 항상 nullable `progress` key를 포함하는 additive 9-key shape다. terminal/legacy active no-snapshot은 null이고 이전 client는 additive key를 무시할 수 있다. API endpoint inventory 108개와 public status/error는 유지된다.
+- DB는 jobs nullable progress snapshot 5컬럼, `private.youtube_extraction_progress_stage_events`, exact fenced report RPC를 additive로 추가해 총 75개 table이 된다. event는 queued를 제외한 stage 진입만 attempt당 최대 5행이며 private/direct access 0이다.
+- numeric ETA는 successful telemetry 50개, duration bucket별 10개, holdout coverage 80% gate 전에는 숨긴다. range 근거가 없으면 `예상 시간 계산 중`, upper 초과는 `delayed=true`와 장기 처리 문구다. delayed는 worker/lease health 신호가 아니다.
+- 신규 endpoint/status/error 없음. 새 public endpoint, WebSocket/SSE, ML, 새 npm/pnpm 의존성은 만들지 않고 기존 5초 polling을 재사용한다. progress 기록 실패는 extraction/finalize를 실패시키지 않으며 ETA 품질이 나빠지면 숫자 ETA만 숨긴다.
+- 이 contract-evolution PR은 공식 계약과 관련 forward pointers만 변경한다. 신규 workpack Stage 1, 제품 코드, migration apply, production worker/app 설치와 rollout은 후속 단계다.
 
 ## YouTube Admin Daily Enqueue Quota Exception `2026-08-26`
 
@@ -23,7 +35,7 @@
 - active job 2개, worker permit, provider budget, 전역 circuit breaker는 관리자에게도 유지한다.
 - 화면·Flow·public response shape는 변경 없으며, DB 내부 권한과 quota 판정만 최소 변경한다.
 
-> 사용자는 2026-08-24에 #14 `cooking-meal-log-cross-slice-release-qa`의 Stage 4 isolated disposable rehearsal contract-evolution을 승인했다. official 5 product docs CSoT impact는 N/A이며 current official tuple `v1.7.33 / v1.5.37 / v1.3.35 / v1.3.35 / v1.2.40`는 유지한다. 이 계약은 fresh ownership-attested disposable isolated Stage 4 project only, loopback transport only, remote/linked/cloud access 0, reserved non-resolving production-shaped HTTPS issuer claim(`https://auth.stage4.homecook.invalid/auth/v1`), canonical cutover/capability transition procedures, rehearsal_only evidence, exact-head create-only evidence, cleanup-owned-only teardown, fail-closed semantics만 잠근다. Manual/server-Mac/OAuth/R/R+1/R+2/required-key/production activation은 여전히 pending이며, #14 workpack README/acceptance/automation-spec과 roadmap projection만 동기화한다.
+> 사용자는 2026-08-24에 #14 `cooking-meal-log-cross-slice-release-qa`의 Stage 4 isolated disposable rehearsal contract-evolution을 승인했다. official 5 product docs CSoT impact는 N/A이며 당시 official tuple은 `v1.7.33 / v1.5.37 / v1.3.35 / v1.3.35 / v1.2.40`였다. 이 계약은 fresh ownership-attested disposable isolated Stage 4 project only, loopback transport only, remote/linked/cloud access 0, reserved non-resolving production-shaped HTTPS issuer claim(`https://auth.stage4.homecook.invalid/auth/v1`), canonical cutover/capability transition procedures, rehearsal_only evidence, exact-head create-only evidence, cleanup-owned-only teardown, fail-closed semantics만 잠근다. Manual/server-Mac/OAuth/R/R+1/R+2/required-key/production activation은 여전히 pending이며, #14 workpack README/acceptance/automation-spec과 roadmap projection만 동기화한다.
 
 ## Personal Recipe Write Contract-Evolution Approval `2026-08-22`
 

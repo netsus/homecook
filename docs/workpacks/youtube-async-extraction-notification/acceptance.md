@@ -8,7 +8,7 @@
 - [x] enqueue NOLOGIN owner는 `admin_members.user_id` 컬럼과 JWT `sub`와 일치하는 self-row만 조회하며, `anon`/`authenticated`는 `admin_members` 테이블을 직접 조회할 수 없다. <!-- omo:id=accept-yta-admin-quota-rls;stage=2;scope=backend;review=3,6 -->
 - [x] admin membership policy/grant/function 정의가 expected-schema/catalog fingerprint와 다르면 enqueue/readiness는 fail closed한다. <!-- omo:id=accept-yta-admin-quota-attestation;stage=2;scope=backend;review=3,6 -->
 
-> 공식 tuple은 `requirements 1.7.33 / screen 1.5.37 / Flow 1.3.35 / DB 1.3.35 / API 1.2.40`다. 체크는 실제 구현·테스트·독립 review evidence 뒤에만 한다. `Manual Only` 항목에는 omo metadata를 붙이지 않으며 자동화 완료와 섞지 않는다.
+> 현재 공식 tuple은 `requirements 1.7.34 / screen 1.5.38 / Flow 1.3.36 / DB 1.3.36 / API 1.2.41`다. 이 선행 workpack의 과거 closeout evidence는 보존하고 successor의 nullable progress field만 additive forward contract로 소비한다. 체크는 실제 구현·테스트·독립 review evidence 뒤에만 한다. `Manual Only` 항목에는 omo metadata를 붙이지 않으며 자동화 완료와 섞지 않는다.
 
 ## Happy Path
 
