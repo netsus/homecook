@@ -75,16 +75,56 @@ jobs:
           printf '%s\n' "$release_tag_object_sha" > "$RUNNER_TEMP/production-release-tag-object.sha"
           printf 'release_tag_object_sha=%s\n' "$release_tag_object_sha" >> "$GITHUB_OUTPUT"
 
-      - name: Resolve current release workflow check suite
-        id: release-suite
+      - name: Collect canonical release workflow check suites
         env:
           GH_TOKEN: ${{ github.token }}
+          RELEASE_SHA: ${{ inputs.release_sha }}
         run: |
-          check_suite_id="$(gh api repos/netsus/homecook/actions/runs/${{ github.run_id }} --jq '.check_suite_id')"
-          [[ "$check_suite_id" =~ ^[1-9][0-9]*$ ]]
-          printf 'check_suite_id=%s\n' "$check_suite_id" >> "$GITHUB_OUTPUT"
-          jq -n --argjson check_suite_id "$check_suite_id" '{check_suite_id: $check_suite_id}' \
-            > "$RUNNER_TEMP/release-workflow-suite.json"
+          gh api repos/netsus/homecook/actions/workflows/production-release-attestation.yml \
+            > "$RUNNER_TEMP/release-workflow.json"
+          canonical_workflow_id="$(jq -er '.id | select(type == "number" and . > 0)' "$RUNNER_TEMP/release-workflow.json")"
+          jq -e '
+            .path == ".github/workflows/production-release-attestation.yml"
+          ' "$RUNNER_TEMP/release-workflow.json" > /dev/null
+          gh api "repos/netsus/homecook/actions/workflows/$canonical_workflow_id/runs?head_sha=$RELEASE_SHA&event=workflow_dispatch&per_page=100" \
+            --paginate --jq '.workflow_runs[]' \
+            > "$RUNNER_TEMP/release-workflow-runs.jsonl"
+          jq -s '.' "$RUNNER_TEMP/release-workflow-runs.jsonl" \
+            > "$RUNNER_TEMP/release-workflow-runs.json"
+          jq -e \
+            --argjson workflow_id "$canonical_workflow_id" \
+            --argjson current_run_id "${{ github.run_id }}" \
+            --arg release_sha "$RELEASE_SHA" '
+              length > 0
+              and all(.[];
+                .workflow_id == $workflow_id
+                and .path == ".github/workflows/production-release-attestation.yml"
+                and .event == "workflow_dispatch"
+                and .head_sha == $release_sha
+                and (.check_suite_id | type == "number")
+                and (.check_suite_id > 0)
+              )
+              and any(.[]; .id == $current_run_id)
+            ' "$RUNNER_TEMP/release-workflow-runs.json" > /dev/null
+          jq -n \
+            --arg schema "homecook.github.production-release-suite-exclusions.v1" \
+            --arg repository "netsus/homecook" \
+            --arg workflow_path ".github/workflows/production-release-attestation.yml" \
+            --arg event "workflow_dispatch" \
+            --arg release_sha "$RELEASE_SHA" \
+            --argjson workflow_id "$canonical_workflow_id" \
+            --slurpfile runs "$RUNNER_TEMP/release-workflow-runs.json" '
+              {
+                schema: $schema,
+                repository: $repository,
+                workflow_id: $workflow_id,
+                workflow_path: $workflow_path,
+                event: $event,
+                release_sha: $release_sha,
+                check_suite_ids: ($runs[0] | map(.check_suite_id) | unique | sort)
+              }
+              | select(.check_suite_ids | length > 0)
+            ' > "$RUNNER_TEMP/release-workflow-suite-ids.json"
 
       - name: Validate resolved committed desired state without admin readback
         run: |
@@ -127,7 +167,7 @@ jobs:
             --release-tree "${{ steps.git.outputs.release_tree }}" \
             --check-runs-json "$RUNNER_TEMP/check-runs.json" \
             --commit-statuses-json "$RUNNER_TEMP/commit-statuses.json" \
-            --excluded-check-suite-id "${{ steps.release-suite.outputs.check_suite_id }}" \
+            --excluded-check-suite-ids-json "$RUNNER_TEMP/release-workflow-suite-ids.json" \
             --expected-contexts "$EXPECTED_RELEASE_CONTEXTS" \
             --subject-output "$RUNNER_TEMP/production-release-subject.json" \
             --predicate-output "$RUNNER_TEMP/production-release-predicate.json" \
@@ -145,7 +185,7 @@ jobs:
             ${{ runner.temp }}/production-release-subject.json
             ${{ runner.temp }}/production-release-tag-object.raw
             ${{ runner.temp }}/production-release-tag-object.sha
-            ${{ runner.temp }}/release-workflow-suite.json
+            ${{ runner.temp }}/release-workflow-suite-ids.json
             ${{ runner.temp }}/desired-state-verify.json
 
   approve-and-tag:
@@ -175,6 +215,61 @@ jobs:
           name: production-release-attestation-inputs
           path: ${{ runner.temp }}/production-release-attestation-inputs
 
+      - name: Recollect canonical release workflow check suites after approval
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_SHA: ${{ inputs.release_sha }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/post-approval"
+          gh api repos/netsus/homecook/actions/workflows/production-release-attestation.yml \
+            > "$RUNNER_TEMP/post-approval/release-workflow.json"
+          canonical_workflow_id="$(jq -er '.id | select(type == "number" and . > 0)' "$RUNNER_TEMP/post-approval/release-workflow.json")"
+          jq -e '
+            .path == ".github/workflows/production-release-attestation.yml"
+          ' "$RUNNER_TEMP/post-approval/release-workflow.json" > /dev/null
+          gh api "repos/netsus/homecook/actions/workflows/$canonical_workflow_id/runs?head_sha=$RELEASE_SHA&event=workflow_dispatch&per_page=100" \
+            --paginate --jq '.workflow_runs[]' \
+            > "$RUNNER_TEMP/post-approval/release-workflow-runs.jsonl"
+          jq -s '.' "$RUNNER_TEMP/post-approval/release-workflow-runs.jsonl" \
+            > "$RUNNER_TEMP/post-approval/release-workflow-runs.json"
+          jq -e \
+            --argjson workflow_id "$canonical_workflow_id" \
+            --argjson current_run_id "${{ github.run_id }}" \
+            --arg release_sha "$RELEASE_SHA" '
+              length > 0
+              and all(.[];
+                .workflow_id == $workflow_id
+                and .path == ".github/workflows/production-release-attestation.yml"
+                and .event == "workflow_dispatch"
+                and .head_sha == $release_sha
+                and (.check_suite_id | type == "number")
+                and (.check_suite_id > 0)
+              )
+              and any(.[]; .id == $current_run_id)
+            ' "$RUNNER_TEMP/post-approval/release-workflow-runs.json" > /dev/null
+          jq -n \
+            --arg schema "homecook.github.production-release-suite-exclusions.v1" \
+            --arg repository "netsus/homecook" \
+            --arg workflow_path ".github/workflows/production-release-attestation.yml" \
+            --arg event "workflow_dispatch" \
+            --arg release_sha "$RELEASE_SHA" \
+            --argjson workflow_id "$canonical_workflow_id" \
+            --slurpfile runs "$RUNNER_TEMP/post-approval/release-workflow-runs.json" '
+              {
+                schema: $schema,
+                repository: $repository,
+                workflow_id: $workflow_id,
+                workflow_path: $workflow_path,
+                event: $event,
+                release_sha: $release_sha,
+                check_suite_ids: ($runs[0] | map(.check_suite_id) | unique | sort)
+              }
+              | select(.check_suite_ids | length > 0)
+            ' > "$RUNNER_TEMP/post-approval/release-workflow-suite-ids.json"
+          cmp \
+            "$RUNNER_TEMP/production-release-attestation-inputs/release-workflow-suite-ids.json" \
+            "$RUNNER_TEMP/post-approval/release-workflow-suite-ids.json"
+
       - name: Re-fetch and rebuild approval evidence after environment approval
         env:
           GH_TOKEN: ${{ github.token }}
@@ -192,9 +287,6 @@ jobs:
           release_tag_object_sha="$(cat "$RUNNER_TEMP/production-release-attestation-inputs/production-release-tag-object.sha")"
           [[ "$release_tag_object_sha" =~ ^[0-9a-f]{40}$ ]]
 
-          mkdir -p "$RUNNER_TEMP/post-approval"
-          current_suite_id="$(gh api repos/netsus/homecook/actions/runs/${{ github.run_id }} --jq '.check_suite_id')"
-          test "$current_suite_id" = "$(jq -r '.check_suite_id' "$RUNNER_TEMP/production-release-attestation-inputs/release-workflow-suite.json")"
           gh api "repos/netsus/homecook/commits/$RELEASE_SHA/check-runs?filter=all&per_page=100" \
             --paginate --jq '.check_runs[]' > "$RUNNER_TEMP/post-approval/check-runs.jsonl"
           jq -s '.' "$RUNNER_TEMP/post-approval/check-runs.jsonl" > "$RUNNER_TEMP/post-approval/check-runs.json"
@@ -210,7 +302,7 @@ jobs:
             --release-tree "$release_tree" \
             --check-runs-json "$RUNNER_TEMP/post-approval/check-runs.json" \
             --commit-statuses-json "$RUNNER_TEMP/post-approval/commit-statuses.json" \
-            --excluded-check-suite-id "$current_suite_id" \
+            --excluded-check-suite-ids-json "$RUNNER_TEMP/post-approval/release-workflow-suite-ids.json" \
             --expected-contexts "$EXPECTED_RELEASE_CONTEXTS" \
             --subject-output "$RUNNER_TEMP/post-approval/production-release-subject.json" \
             --predicate-output "$RUNNER_TEMP/post-approval/production-release-predicate.json" \
@@ -317,6 +409,7 @@ jobs:
             ${{ runner.temp }}/post-approval/production-release-predicate.json
             ${{ runner.temp }}/post-approval/production-release-subject.json
             ${{ runner.temp }}/post-approval/remote-tag-ref.json
+            ${{ runner.temp }}/post-approval/release-workflow-suite-ids.json
             ${{ runner.temp }}/production-release-attestation-inputs/production-release-tag-object.raw
             ${{ runner.temp }}/production-release-attestation-inputs/production-release-tag-object.sha
             ${{ runner.temp }}/production-release-attestation-inputs/desired-state-verify.json

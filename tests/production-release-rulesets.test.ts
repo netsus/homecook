@@ -636,8 +636,19 @@ describe("production release rulesets desired state", () => {
     expect(workflow).toContain("required_check_summary");
     expect(workflow).toContain("commits/\"$RELEASE_SHA\"/statuses");
     expect(workflow).toMatch(/statuses[\s\S]*?--paginate/u);
-    expect(workflow).toContain("actions/runs/${{ github.run_id }}");
-    expect(workflow).toContain("--excluded-check-suite-id");
+    expect(workflow).toContain("--excluded-check-suite-ids-json");
+    expect(workflow).not.toContain("--excluded-check-suite-id ");
+    expect(workflow).toContain("actions/workflows/production-release-attestation.yml");
+    expect(workflow).toContain("head_sha=$RELEASE_SHA");
+    expect(workflow).toContain("event=workflow_dispatch");
+    expect(workflow).toContain("--paginate");
+    expect(workflow).toContain('.path == ".github/workflows/production-release-attestation.yml"');
+    expect(workflow).toContain(".workflow_id == $workflow_id");
+    expect(workflow).toContain("release-workflow-suite-ids.json");
+    expect(workflow).toContain("check_suite_ids");
+    expect(workflow).toMatch(
+      /cmp[\s\S]*?production-release-attestation-inputs\/release-workflow-suite-ids\.json[\s\S]*?post-approval\/release-workflow-suite-ids\.json/u,
+    );
     expect(workflow).toContain("subject-path:");
     expect(workflow).toContain("predicate-path:");
     expect(workflow).not.toContain("gh api repos/netsus/homecook/rulesets");
@@ -852,5 +863,8 @@ describe("production release rulesets desired state", () => {
     expect(runbook).toContain("attestation이 없는 상태");
     expect(runbook).toContain("production deployment authority가 아니며");
     expect(runbook).toContain("다음 `prod-YYYYMMDD.N`");
+    expect(runbook).toContain("self-referential suite exception");
+    expect(runbook).toContain("canonical `production-release-attestation.yml`");
+    expect(runbook).toContain("external bad/pending/rerun");
   });
 });

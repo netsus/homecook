@@ -253,7 +253,8 @@ C2 operator는 다음을 admin readback으로 함께 닫아야 한다.
 - `production-release-tag-immutability`는 update / deletion / non-fast-forward만 포함하고 bypass를 누구에게도 부여하지 않는다. `update`가 fast-forward tag 이동까지 막으므로 exact App을 포함한 어떤 actor도 기존 `prod-*` tag를 이동하거나 삭제할 수 없다.
 - environment `production-release-approval`은 `can_admins_bypass: false`, required reviewer와 prevent-self-review를 갖고 deployment policy가 exact master branch 하나인 master-only여야 한다. admin bypass readback 누락 또는 `true`는 activation blocker다.
 - environment secrets는 App ID와 private key 두 개뿐이다. workflow는 `actions/create-github-app-token`으로 short-lived token을 만들고 tag App token은 `contents:write`만 요청한다. Administration permission과 고정 `HOMECOOK_RELEASE_ATTESTATION_APP_TOKEN`은 사용하지 않는다.
-- workflow 승인 전후 check-runs는 quoted `filter=all&per_page=100` URL과 `--paginate`로 모든 page를 읽는다. 7개 expected context의 latest trusted GitHub Actions App result는 각각 정확히 `success`여야 하며 `skipped`/`neutral`은 expected context를 충족하지 못한다. 추가 non-required check의 `skipped`/`neutral`은 intended skip으로 기록할 수 있다. 제외된 현재 attestation suite 외의 failed/cancelled/pending/queued check는 fail-closed한다.
+- workflow 승인 전후 check-runs는 quoted `filter=all&per_page=100` URL과 `--paginate`로 모든 page를 읽는다. 7개 expected context의 latest trusted GitHub Actions App result는 각각 정확히 `success`여야 하며 `skipped`/`neutral`은 expected context를 충족하지 못한다. 추가 non-required check의 `skipped`/`neutral`은 intended skip으로 기록할 수 있다.
+- `self-referential suite exception`은 canonical `production-release-attestation.yml`의 exact `workflow_dispatch` event와 exact release SHA에 속한 현재/이전 retry `check_suite_id`에만 적용한다. workflow-specific Actions REST를 full pagination으로 읽고 path, workflow id, event, head SHA를 모두 검증한 nonempty unique positive ID 목록만 제외한다. pre/post approval 목록은 evidence JSON으로 업로드하며 exact equality가 깨지면 concurrent drift로 실패한다. 목록 밖의 external bad/pending/rerun, failed, cancelled, queued check는 항상 0이어야 하며 그대로 fail-closed한다.
 - workflow 승인 뒤 `github.ref`, `github.workflow_ref`, exact `origin/master`, tree, 전체 check-runs와 `/statuses` 모든 page를 다시 읽고 preflight subject/predicate evidence와 비교한다. tag push 직전에도 `origin/master`를 다시 확인한다. deterministic raw annotated tag object를 App token으로 먼저 push한 뒤 GitHub ref API가 exact `release_tag_object_sha`와 object type `tag`를 반환해야만 `actions/attest`를 실행한다. remote readback 전 attestation은 금지한다.
 
 attestation workflow artifact baseline은 다음 세 가지다.
@@ -261,6 +262,7 @@ attestation workflow artifact baseline은 다음 세 가지다.
 - `production-release-subject.json`
 - `production-release-predicate.json`
 - `production-release-tag-object.raw`와 exact SHA
+- `release-workflow-suite-ids.json`
 - `actions/attest@v4`가 만든 JSON bundle
 
 server-side verifier는 위 subject manifest SHA-256, repository, tag, `release_tag_object_sha`, release SHA, tree, normalized terminal check summary를 함께 다시 확인한다.

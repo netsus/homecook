@@ -187,7 +187,7 @@ describe("GitHub production release attestation verification", () => {
     ).toThrow(/tag object|40-character|SHA/iu);
   });
 
-  it("excludes only the explicitly supplied current workflow suite and blocks every other non-terminal check or latest bad status", () => {
+  it("excludes only validated canonical release retry suites and blocks every other bad suite", () => {
     const releaseInput = {
       releaseSha: "a".repeat(40),
       releaseTag: "prod-20260826.1",
@@ -196,6 +196,7 @@ describe("GitHub production release attestation verification", () => {
       repository: CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY,
     };
     const currentSuiteId = 777;
+    const priorCanonicalSuiteId = 776;
     const currentSuitePending = {
       app: { id: GITHUB_ACTIONS_APP_INTEGRATION_ID },
       check_suite: { id: currentSuiteId },
@@ -203,12 +204,24 @@ describe("GitHub production release attestation verification", () => {
       status: "in_progress",
       started_at: "2026-08-26T09:02:00Z",
     };
+    const priorCanonicalSuiteFailed = {
+      app: { id: GITHUB_ACTIONS_APP_INTEGRATION_ID },
+      check_suite: { id: priorCanonicalSuiteId },
+      completed_at: "2026-08-26T08:55:00Z",
+      conclusion: "failure",
+      name: "approve-and-tag",
+      status: "completed",
+    };
 
     expect(
       buildGitHubProductionReleaseAttestationArtifacts({
         ...releaseInput,
-        checkRuns: [...createTrustedCheckRuns(), currentSuitePending],
-        excludedCheckSuiteId: currentSuiteId,
+        checkRuns: [
+          ...createTrustedCheckRuns(),
+          priorCanonicalSuiteFailed,
+          currentSuitePending,
+        ],
+        excludedCheckSuiteIds: [priorCanonicalSuiteId, currentSuiteId],
       }).subject.required_check_summary,
     ).toMatchObject({ total: EXPECTED_RELEASE_CONTEXTS.length });
 
@@ -217,6 +230,7 @@ describe("GitHub production release attestation verification", () => {
         ...releaseInput,
         checkRuns: [
           ...createTrustedCheckRuns(),
+          priorCanonicalSuiteFailed,
           currentSuitePending,
           {
             app: { id: GITHUB_ACTIONS_APP_INTEGRATION_ID },
@@ -226,7 +240,7 @@ describe("GitHub production release attestation verification", () => {
             started_at: "2026-08-26T09:03:00Z",
           },
         ],
-        excludedCheckSuiteId: currentSuiteId,
+        excludedCheckSuiteIds: [priorCanonicalSuiteId, currentSuiteId],
       }),
     ).toThrow(/pending|terminal/iu);
 
@@ -251,6 +265,29 @@ describe("GitHub production release attestation verification", () => {
         ],
       }),
     ).not.toThrow();
+  });
+
+  it.each([
+    { excludedCheckSuiteIds: [] },
+    { excludedCheckSuiteIds: [777, 777] },
+    { excludedCheckSuiteIds: [0] },
+    { excludedCheckSuiteIds: [-1] },
+    { excludedCheckSuiteIds: ["777"] },
+    { excludedCheckSuiteIds: [999] },
+  ])("rejects malformed or arbitrary excluded suite IDs: $excludedCheckSuiteIds", ({
+    excludedCheckSuiteIds,
+  }) => {
+    expect(() =>
+      buildGitHubProductionReleaseAttestationArtifacts({
+        checkRuns: createTrustedCheckRuns(),
+        excludedCheckSuiteIds: excludedCheckSuiteIds as unknown as number[],
+        releaseSha: "a".repeat(40),
+        releaseTag: "prod-20260826.1",
+        releaseTagObjectSha: RELEASE_TAG_OBJECT_SHA,
+        releaseTree: "b".repeat(40),
+        repository: CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY,
+      }),
+    ).toThrow(/excluded|suite|unique|positive|observed|nonempty/iu);
   });
 
   it("rejects an older failed check run even when a later rerun succeeds", () => {

@@ -121,15 +121,23 @@ function requireCanonicalString(value, canonical, label) {
   return canonical;
 }
 
-function normalizeExcludedCheckSuiteId(value) {
+function normalizeExcludedCheckSuiteIds(value) {
   if (value === undefined || value === null) {
-    return null;
+    return [];
   }
-  const normalized = Number(value);
-  if (!Number.isSafeInteger(normalized) || normalized <= 0) {
-    throw new Error("excludedCheckSuiteId must be a positive integer.");
+  if (!Array.isArray(value) || value.length === 0) {
+    throw new Error("excludedCheckSuiteIds must be a nonempty array.");
   }
-  return normalized;
+  const normalized = value.map((entry, index) => {
+    if (!Number.isSafeInteger(entry) || entry <= 0) {
+      throw new Error(`excludedCheckSuiteIds[${index}] must be a positive integer.`);
+    }
+    return entry;
+  });
+  if (new Set(normalized).size !== normalized.length) {
+    throw new Error("excludedCheckSuiteIds must contain unique IDs.");
+  }
+  return [...normalized].sort((left, right) => left - right);
 }
 
 function sameCheckSummary(left, right) {
@@ -204,7 +212,7 @@ function normalizeCommitStatusBucket(entry) {
 export function normalizeGitHubProductionReleaseCheckSummary({
   checkRuns = [],
   commitStatuses = [],
-  excludedCheckSuiteId = null,
+  excludedCheckSuiteIds = null,
   expectedContexts = EXPECTED_RELEASE_CONTEXTS,
 } = {}) {
   if (!Array.isArray(checkRuns)) {
@@ -215,9 +223,11 @@ export function normalizeGitHubProductionReleaseCheckSummary({
     "expected_release_contexts",
   );
 
-  const normalizedExcludedCheckSuiteId = normalizeExcludedCheckSuiteId(
-    excludedCheckSuiteId,
+  const normalizedExcludedCheckSuiteIds = normalizeExcludedCheckSuiteIds(
+    excludedCheckSuiteIds,
   );
+  const excludedSuiteIdSet = new Set(normalizedExcludedCheckSuiteIds);
+  const observedExcludedSuiteIds = new Set();
   const byKey = new Map();
   for (const entry of checkRuns) {
     if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
@@ -225,10 +235,11 @@ export function normalizeGitHubProductionReleaseCheckSummary({
     }
     const checkSuiteId = Number(entry.check_suite?.id);
     if (
-      normalizedExcludedCheckSuiteId !== null
+      excludedSuiteIdSet.size > 0
       && Number.isSafeInteger(checkSuiteId)
-      && checkSuiteId === normalizedExcludedCheckSuiteId
+      && excludedSuiteIdSet.has(checkSuiteId)
     ) {
+      observedExcludedSuiteIds.add(checkSuiteId);
       continue;
     }
     const normalized = {
@@ -250,6 +261,14 @@ export function normalizeGitHubProductionReleaseCheckSummary({
     const bucket = byKey.get(normalized.context) ?? [];
     bucket.push(normalized);
     byKey.set(normalized.context, bucket);
+  }
+  const unobservedExcludedSuiteIds = normalizedExcludedCheckSuiteIds.filter(
+    (id) => !observedExcludedSuiteIds.has(id),
+  );
+  if (unobservedExcludedSuiteIds.length > 0) {
+    throw new Error(
+      `excludedCheckSuiteIds were not observed in current check runs: ${unobservedExcludedSuiteIds.join(", ")}.`,
+    );
   }
 
   const statusesByContext = new Map();
@@ -335,7 +354,7 @@ export function normalizeGitHubProductionReleaseCheckSummary({
  * @param {{
  *   checkRuns: Array<Record<string, unknown>>,
  *   commitStatuses?: Array<Record<string, unknown>>,
- *   excludedCheckSuiteId?: number | string | null,
+ *   excludedCheckSuiteIds?: number[] | null,
  *   expectedContexts?: string[],
  *   predicateOutputPath?: string | null,
  *   releaseSha: string,
@@ -349,7 +368,7 @@ export function normalizeGitHubProductionReleaseCheckSummary({
 export function buildGitHubProductionReleaseAttestationArtifacts({
   checkRuns,
   commitStatuses = [],
-  excludedCheckSuiteId = null,
+  excludedCheckSuiteIds = null,
   expectedContexts = EXPECTED_RELEASE_CONTEXTS,
   predicateOutputPath = null,
   releaseSha,
@@ -385,7 +404,7 @@ export function buildGitHubProductionReleaseAttestationArtifacts({
     required_check_summary: normalizeGitHubProductionReleaseCheckSummary({
       checkRuns,
       commitStatuses,
-      excludedCheckSuiteId,
+      excludedCheckSuiteIds,
       expectedContexts,
     }),
   };

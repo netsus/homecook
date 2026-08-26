@@ -11,7 +11,7 @@ function parseArgs(argv) {
   const options = {
     checkRunsPath: null,
     commitStatusesPath: null,
-    excludedCheckSuiteId: null,
+    excludedCheckSuiteIdsPath: null,
     expectedContexts: null,
     predicateOutputPath: null,
     releaseSha: null,
@@ -36,8 +36,8 @@ function parseArgs(argv) {
       options.checkRunsPath = value;
     } else if (token === "--commit-statuses-json") {
       options.commitStatusesPath = value;
-    } else if (token === "--excluded-check-suite-id") {
-      options.excludedCheckSuiteId = value;
+    } else if (token === "--excluded-check-suite-ids-json") {
+      options.excludedCheckSuiteIdsPath = value;
     } else if (token === "--expected-contexts") {
       options.expectedContexts = value;
     } else if (token === "--predicate-output") {
@@ -74,6 +74,9 @@ try {
   if (!options.predicateOutputPath) {
     throw new Error("--predicate-output <path> is required.");
   }
+  if (!options.excludedCheckSuiteIdsPath) {
+    throw new Error("--excluded-check-suite-ids-json <path> is required.");
+  }
 
   const checkRuns = JSON.parse(readFileSync(options.checkRunsPath, "utf8"));
   const commitStatuses = options.commitStatusesPath
@@ -85,10 +88,23 @@ try {
       "expected_release_contexts",
     )
     : undefined;
+  const excludedSuiteEvidence = JSON.parse(
+    readFileSync(options.excludedCheckSuiteIdsPath, "utf8"),
+  );
+  if (
+    !excludedSuiteEvidence
+    || typeof excludedSuiteEvidence !== "object"
+    || Array.isArray(excludedSuiteEvidence)
+  ) {
+    throw new Error("Excluded check suite evidence must be an object.");
+  }
+  if (!Array.isArray(excludedSuiteEvidence.check_suite_ids)) {
+    throw new Error("Excluded check suite evidence check_suite_ids must be an array.");
+  }
   const artifacts = buildGitHubProductionReleaseAttestationArtifacts({
     checkRuns,
     commitStatuses,
-    excludedCheckSuiteId: options.excludedCheckSuiteId,
+    excludedCheckSuiteIds: excludedSuiteEvidence.check_suite_ids,
     expectedContexts,
     predicateOutputPath: options.predicateOutputPath,
     releaseSha: options.releaseSha,
