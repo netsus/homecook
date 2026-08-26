@@ -105,16 +105,16 @@ describe("YouTube async extraction Stage 1 contract", () => {
 
   it("projects the implemented slice and final high-risk authority metadata", () => {
     expect(workItem.status).toMatchObject({
-      lifecycle: "in_progress",
-      approval_state: "codex_approved",
+      lifecycle: "merged",
+      approval_state: "dual_approved",
       verification_status: "passed",
       evaluation_status: "passed",
       evaluation_round: 3,
       blocked_reason_code: null,
     });
     expect(status).toMatchObject({
-      lifecycle: "in_progress",
-      approval_state: "codex_approved",
+      lifecycle: "merged",
+      approval_state: "dual_approved",
       verification_status: "passed",
       evaluation_status: "passed",
       evaluation_round: 3,
@@ -128,6 +128,22 @@ describe("YouTube async extraction Stage 1 contract", () => {
     );
     expect(reviewEvidence).toContain("**PASS**");
     expect(reviewEvidence).toContain("P0 0 / P1 0 / P2 0");
+    expect(workItem.closeout.docs_projection.roadmap_lifecycle).toBe("merged");
+    expect(workItem.closeout.merge_gate_projection).toMatchObject({
+      current_head_sha: "aee818a1b6399c02d2f6206311c4666d75a62025",
+      approval_state: "dual_approved",
+      all_checks_green: true,
+    });
+    expect(workItem.closeout.repair_summary.post_merge_stale_count).toBe(1);
+    expect(workItem.notes).toContain("afa3918fca75983e3071d0b4f63d0baa92f6a6f7");
+    expect(workItem.notes).not.toContain("remains Draft");
+    expect(readme).toContain("Authority status: `reviewed`");
+    for (const reportPath of automation.frontend.design_authority.authority_report_paths) {
+      expect(read(reportPath)).toContain("verdict: `pass`");
+    }
+    expect(read("docs/workpacks/README.md")).toMatch(
+      /\| `youtube-async-extraction-notification` \| merged \|[^\n]*non-manual implementation[^\n]*PR #1362/u,
+    );
 
     expect(automation.frontend.design_authority).toMatchObject({
       ui_risk: "high-risk",
