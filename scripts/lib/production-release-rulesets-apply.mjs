@@ -57,6 +57,8 @@ const WRITABLE_PULL_REQUEST_PARAMETER_KEYS = [
   "required_review_thread_resolution",
   "required_reviewers",
 ];
+const READBACK_ONLY_UNATTRIBUTED_APPROVAL =
+  "require_extra_approval_for_unattributed_changes";
 const SECRET_NAMES = [
   "HOMECOOK_RELEASE_ATTESTATION_APP_ID",
   "HOMECOOK_RELEASE_ATTESTATION_APP_PRIVATE_KEY",
@@ -614,6 +616,34 @@ function validatePreflightRulesetConsistency(
   }
 }
 
+function requireUnattributedApprovalReadback(repositoryRulesets, effectiveRulesets) {
+  const repositorySummaries = repositoryRulesets.summaries.filter(
+    (entry) => entry.name === "production-release-master",
+  );
+  if (repositorySummaries.length === 0) return;
+  for (const inventory of [repositoryRulesets, effectiveRulesets]) {
+    const summaries = inventory.summaries.filter(
+      (entry) => entry.name === "production-release-master",
+    );
+    if (summaries.length !== 1) continue;
+    const ruleset = inventory.details.get(summaries[0].id);
+    const pullRequestRules = Array.isArray(ruleset?.rules)
+      ? ruleset.rules.filter((rule) => rule?.type === "pull_request")
+      : [];
+    const readback = pullRequestRules.length === 1
+      ? pullRequestRules[0]?.parameters?.[READBACK_ONLY_UNATTRIBUTED_APPROVAL]
+      : undefined;
+    if (readback !== true) {
+      fail(
+        "production-release-master readback-only approval is missing or not true. "
+        + "In GitHub UI, restore \"Require an additional approval for unattributed "
+        + "Copilot pull requests\", then rerun C2 apply with a fresh create-only snapshot path.",
+        { manualActionRequired: true, partialState: false },
+      );
+    }
+  }
+}
+
 function validateFullActualState(state, desired, { partialState = true } = {}) {
   requireAdminBypassDisabled(state.environment, { partialState });
   if (!environmentMatches(state.environment)) {
@@ -855,6 +885,10 @@ export async function executeProductionReleaseControls({
   const preflightEffectiveInventory = readRulesetInventory({
     includeParents: true,
   });
+  requireUnattributedApprovalReadback(
+    preflightInventory,
+    preflightEffectiveInventory,
+  );
   validatePreflightRulesetConsistency(
     preflightInventory,
     preflightEffectiveInventory,

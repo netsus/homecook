@@ -1964,6 +1964,49 @@ describe("production release C2 apply", { timeout: 10_000 }, () => {
   }, 15_000);
 
   it.each([
+    ["missing", undefined, 1],
+    ["false with writable drift", false, 0],
+    ["different type", "true", 1],
+  ])("requires manual UI repair before mutation when readback-only approval is %s", (
+    _label,
+    readbackValue,
+    approvingReviewCount,
+  ) => {
+    const existingRulesets = resolvedRulesets();
+    const existingMaster = existingRulesets.find(
+      (entry) => entry.name === "production-release-master",
+    ) as { rules: Array<{ parameters?: Record<string, unknown>; type: string }> };
+    const existingPullRequest = existingMaster.rules.find(
+      (rule) => rule.type === "pull_request",
+    );
+    if (readbackValue === undefined) {
+      delete existingPullRequest!.parameters!
+        .require_extra_approval_for_unattributed_changes;
+    } else {
+      existingPullRequest!.parameters!.require_extra_approval_for_unattributed_changes =
+        readbackValue;
+    }
+    existingPullRequest!.parameters!.required_approving_review_count =
+      approvingReviewCount;
+
+    const run = runExecute({
+      state: initialState({ rulesets: existingRulesets }),
+    });
+    expect(run.result.status).toBe(1);
+    expect(run.combined).toContain('"manual_action_required": true');
+    expect(run.combined).toContain('"partial_state": false');
+    expect(run.combined).toMatch(
+      /Require an additional approval for unattributed Copilot pull requests/iu,
+    );
+    expect(run.combined).toMatch(/fresh.*snapshot path/iu);
+    expect(run.state.calls.filter((call) =>
+      call.key.startsWith("POST ")
+      || call.key.startsWith("PUT ")
+      || call.key.startsWith("SECRET "))).toEqual([]);
+    expect(existsSync(run.snapshotDir)).toBe(false);
+  }, 15_000);
+
+  it.each([
     ["stronger approval count", { required_approving_review_count: 2 }],
     ["different merge methods", { allowed_merge_methods: ["squash"] }],
   ])("fails exact readback for %s", (_label, materializedOverride) => {
