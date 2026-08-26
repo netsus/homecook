@@ -19,6 +19,9 @@ import { pathToFileURL } from "node:url";
 
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
+import { normalizeProductionReleaseRulesetForComparison } from
+  "../scripts/lib/production-release-rulesets.mjs";
+
 const repoRoot = process.cwd();
 const RULESET_SCRIPT = join(repoRoot, "scripts", "manage-production-release-rulesets.mjs");
 const CONFIRMATION = "APPLY_PRODUCTION_RELEASE_GITHUB_CONTROLS";
@@ -121,7 +124,20 @@ const asRestRuleset = (id, payload) => ({
         },
         type: rule.type,
       }
-    : rule),
+    : rule.type === "pull_request" && payload.name === "production-release-master"
+      ? {
+          parameters: {
+            ...rule.parameters,
+            allowed_merge_methods: rule.parameters.allowed_merge_methods
+              ?? ["merge", "squash", "rebase"],
+            require_extra_approval_for_unattributed_changes:
+              rule.parameters.require_extra_approval_for_unattributed_changes ?? true,
+            required_reviewers: rule.parameters.required_reviewers ?? [],
+            ...(state.materialized_master_pull_request_overrides ?? {}),
+          },
+          type: rule.type,
+        }
+      : rule),
   created_at: "2026-08-26T00:00:00Z",
   updated_at: "2026-08-26T00:00:00Z",
   current_user_can_bypass: "never",
@@ -135,6 +151,26 @@ const fail = (message, code = 1) => {
   save();
   process.stderr.write(message + "\n");
   process.exit(code);
+};
+const writablePullRequestParameterKeys = new Set([
+  "allowed_merge_methods",
+  "dismiss_stale_reviews_on_push",
+  "dismissal_restriction",
+  "require_code_owner_review",
+  "require_last_push_approval",
+  "required_approving_review_count",
+  "required_review_thread_resolution",
+  "required_reviewers",
+]);
+const rejectUnsupportedOutboundRuleset = (outbound) => {
+  for (const rule of outbound.rules ?? []) {
+    if (rule.type !== "pull_request") continue;
+    const unsupported = Object.keys(rule.parameters ?? {})
+      .filter((name) => !writablePullRequestParameterKeys.has(name));
+    if (unsupported.length > 0) {
+      fail("HTTP 422: unsupported outbound pull_request parameters: " + unsupported.sort().join(", "));
+    }
+  }
 };
 state.calls ??= [];
 if (args[0] === "secret" && args[1] === "set") {
@@ -192,12 +228,14 @@ if (endpoint === "/repos/netsus/homecook" && method === "GET") {
   if (!ruleset) fail("HTTP 404: ruleset missing");
   reply(ruleset);
 } else if (endpoint === "/repos/netsus/homecook/rulesets" && method === "POST") {
+  rejectUnsupportedOutboundRuleset(payload);
   const id = state.next_id++;
   const ruleset = asRestRuleset(id, payload);
   state.rulesets.push(ruleset);
   markMutation();
   reply(ruleset);
 } else if (/\/rulesets\/[0-9]+$/.test(endpoint) && method === "PUT") {
+  rejectUnsupportedOutboundRuleset(payload);
   const id = Number(endpoint.split("/").at(-1));
   const index = state.rulesets.findIndex((entry) => entry.id === id);
   if (index === -1) fail("HTTP 404: ruleset missing");
@@ -1770,6 +1808,38 @@ describe("production release C2 apply", { timeout: 10_000 }, () => {
       "production-release-tag-creation",
       "production-release-tag-immutability",
     ]);
+    const firstMaster = first.state.rulesets.find(
+      (entry) => entry.name === "production-release-master",
+    ) as { rules: Array<{ parameters?: Record<string, unknown>; type: string }> };
+    const firstPullRequest = firstMaster.rules.find((rule) => rule.type === "pull_request");
+    expect(firstPullRequest?.parameters).toMatchObject({
+      allowed_merge_methods: ["merge", "squash", "rebase"],
+      dismiss_stale_reviews_on_push: true,
+      require_code_owner_review: false,
+      require_extra_approval_for_unattributed_changes: true,
+      require_last_push_approval: true,
+      required_approving_review_count: 1,
+      required_review_thread_resolution: true,
+      required_reviewers: [],
+    });
+    const masterCreate = first.state.calls.find((call) =>
+      call.key === "POST /repos/netsus/homecook/rulesets"
+      && call.payload?.name === "production-release-master");
+    const createdPullRequest = (masterCreate?.payload?.rules as Array<{
+      parameters?: Record<string, unknown>;
+      type?: string;
+    }>).find((rule) => rule.type === "pull_request");
+    expect(createdPullRequest?.parameters).toEqual({
+      allowed_merge_methods: ["merge", "squash", "rebase"],
+      dismiss_stale_reviews_on_push: true,
+      require_code_owner_review: false,
+      require_last_push_approval: true,
+      required_approving_review_count: 1,
+      required_review_thread_resolution: true,
+      required_reviewers: [],
+    });
+    expect(createdPullRequest?.parameters)
+      .not.toHaveProperty("require_extra_approval_for_unattributed_changes");
     for (const ruleset of first.state.rulesets) expect(ruleset).not.toHaveProperty("schema");
     expect(first.state.environment).toMatchObject({ can_admins_bypass: false });
     expect(first.state.policies).toEqual([
@@ -1836,6 +1906,8 @@ describe("production release C2 apply", { timeout: 10_000 }, () => {
       .join("\n");
     expect(snapshotBundle).not.toContain("PRIVATE KEY");
 
+    const allowedMergeMethods = firstPullRequest?.parameters?.allowed_merge_methods as string[];
+    firstPullRequest!.parameters!.allowed_merge_methods = [...allowedMergeMethods].reverse();
     const second = runExecute({ state: first.state });
     expect(second.result.status, second.combined).toBe(0);
     expect(second.state.calls.filter((call) =>
@@ -1843,6 +1915,447 @@ describe("production release C2 apply", { timeout: 10_000 }, () => {
     expect(second.state.calls.filter((call) => call.key.startsWith("SECRET ")))
       .toHaveLength(2);
   }, 15_000);
+
+  it("repairs a drifted ruleset with writable PUT fields and reruns idempotently", () => {
+    const existingRulesets = resolvedRulesets();
+    const existingMaster = existingRulesets.find(
+      (entry) => entry.name === "production-release-master",
+    ) as { rules: Array<{ parameters?: Record<string, unknown>; type: string }> };
+    const existingPullRequest = existingMaster.rules.find(
+      (rule) => rule.type === "pull_request",
+    );
+    existingPullRequest!.parameters!.required_approving_review_count = 0;
+
+    const repaired = runExecute({
+      state: initialState({ rulesets: existingRulesets }),
+    });
+    expect(repaired.result.status, repaired.combined).toBe(0);
+    const masterUpdate = repaired.state.calls.find((call) =>
+      call.key === "PUT /repos/netsus/homecook/rulesets/101");
+    const updatedPullRequest = (masterUpdate?.payload?.rules as Array<{
+      parameters?: Record<string, unknown>;
+      type?: string;
+    }>).find((rule) => rule.type === "pull_request");
+    expect(updatedPullRequest?.parameters).toEqual({
+      allowed_merge_methods: ["merge", "squash", "rebase"],
+      dismiss_stale_reviews_on_push: true,
+      require_code_owner_review: false,
+      require_last_push_approval: true,
+      required_approving_review_count: 1,
+      required_review_thread_resolution: true,
+      required_reviewers: [],
+    });
+    expect(updatedPullRequest?.parameters)
+      .not.toHaveProperty("require_extra_approval_for_unattributed_changes");
+    const repairedMaster = repaired.state.rulesets.find(
+      (entry) => entry.name === "production-release-master",
+    ) as { rules: Array<{ parameters?: Record<string, unknown>; type: string }> };
+    expect(repairedMaster.rules.find((rule) => rule.type === "pull_request")?.parameters)
+      .toMatchObject({
+        require_extra_approval_for_unattributed_changes: true,
+        required_approving_review_count: 1,
+      });
+
+    const rerun = runExecute({ state: repaired.state });
+    expect(rerun.result.status, rerun.combined).toBe(0);
+    expect(rerun.state.calls.filter((call) =>
+      call.key.startsWith("POST /repos/netsus/homecook/rulesets")
+      || call.key.startsWith("PUT /repos/netsus/homecook/rulesets/"))).toEqual([]);
+  }, 15_000);
+
+  it("repairs configured dismissal restriction drift and reruns idempotently", () => {
+    const existingRulesets = resolvedRulesets();
+    const existingMaster = existingRulesets.find(
+      (entry) => entry.name === "production-release-master",
+    ) as { rules: Array<{ parameters?: Record<string, unknown>; type: string }> };
+    const existingPullRequest = existingMaster.rules.find(
+      (rule) => rule.type === "pull_request",
+    );
+    existingPullRequest!.parameters!.dismissal_restriction = {
+      allowed_actors: [
+        { id: 9, type: "Team" },
+        { id: 7, type: "User" },
+      ],
+      enabled: true,
+    };
+
+    const repaired = runExecute({
+      state: initialState({ rulesets: existingRulesets }),
+    });
+    expect(repaired.result.status, repaired.combined).toBe(0);
+    const masterUpdate = repaired.state.calls.find((call) =>
+      call.key === "PUT /repos/netsus/homecook/rulesets/101");
+    const updatedPullRequest = (masterUpdate?.payload?.rules as Array<{
+      parameters?: Record<string, unknown>;
+      type?: string;
+    }>).find((rule) => rule.type === "pull_request");
+    expect(updatedPullRequest?.parameters).toEqual({
+      allowed_merge_methods: ["merge", "squash", "rebase"],
+      dismiss_stale_reviews_on_push: true,
+      require_code_owner_review: false,
+      require_last_push_approval: true,
+      required_approving_review_count: 1,
+      required_review_thread_resolution: true,
+      required_reviewers: [],
+    });
+    expect(updatedPullRequest?.parameters).not.toHaveProperty("dismissal_restriction");
+    expect(updatedPullRequest?.parameters)
+      .not.toHaveProperty("require_extra_approval_for_unattributed_changes");
+    const repairedMaster = repaired.state.rulesets.find(
+      (entry) => entry.name === "production-release-master",
+    ) as { rules: Array<{ parameters?: Record<string, unknown>; type: string }> };
+    expect(repairedMaster.rules.find((rule) => rule.type === "pull_request")?.parameters)
+      .not.toHaveProperty("dismissal_restriction");
+
+    const rerun = runExecute({ state: repaired.state });
+    expect(rerun.result.status, rerun.combined).toBe(0);
+    expect(rerun.state.calls.filter((call) =>
+      call.key.startsWith("POST /repos/netsus/homecook/rulesets")
+      || call.key.startsWith("PUT /repos/netsus/homecook/rulesets/"))).toEqual([]);
+  }, 15_000);
+
+  it.each([
+    ["missing", undefined, 1],
+    ["false with writable drift", false, 0],
+    ["different type", "true", 1],
+  ])("requires manual UI repair before mutation when readback-only approval is %s", (
+    _label,
+    readbackValue,
+    approvingReviewCount,
+  ) => {
+    const existingRulesets = resolvedRulesets();
+    const existingMaster = existingRulesets.find(
+      (entry) => entry.name === "production-release-master",
+    ) as { rules: Array<{ parameters?: Record<string, unknown>; type: string }> };
+    const existingPullRequest = existingMaster.rules.find(
+      (rule) => rule.type === "pull_request",
+    );
+    if (readbackValue === undefined) {
+      delete existingPullRequest!.parameters!
+        .require_extra_approval_for_unattributed_changes;
+    } else {
+      existingPullRequest!.parameters!.require_extra_approval_for_unattributed_changes =
+        readbackValue;
+    }
+    existingPullRequest!.parameters!.required_approving_review_count =
+      approvingReviewCount;
+
+    const run = runExecute({
+      state: initialState({ rulesets: existingRulesets }),
+    });
+    expect(run.result.status).toBe(1);
+    expect(run.combined).toContain('"manual_action_required": true');
+    expect(run.combined).toContain('"partial_state": false');
+    expect(run.combined).toMatch(
+      /Require an additional approval for unattributed Copilot pull requests/iu,
+    );
+    expect(run.combined).toMatch(/fresh.*snapshot path/iu);
+    expect(run.state.calls.filter((call) =>
+      call.key.startsWith("POST ")
+      || call.key.startsWith("PUT ")
+      || call.key.startsWith("SECRET "))).toEqual([]);
+    expect(existsSync(run.snapshotDir)).toBe(false);
+  }, 15_000);
+
+  it("keeps the readback-only manual gate ahead of malformed dismissal restriction", () => {
+    const existingRulesets = resolvedRulesets();
+    const existingMaster = existingRulesets.find(
+      (entry) => entry.name === "production-release-master",
+    ) as { rules: Array<{ parameters?: Record<string, unknown>; type: string }> };
+    const existingPullRequest = existingMaster.rules.find(
+      (rule) => rule.type === "pull_request",
+    );
+    existingPullRequest!.parameters!.require_extra_approval_for_unattributed_changes = false;
+    existingPullRequest!.parameters!.dismissal_restriction = {
+      allowed_actors: [],
+      enabled: "true",
+    };
+    const run = runExecute({
+      state: initialState({ rulesets: existingRulesets }),
+    });
+    expect(run.result.status).toBe(1);
+    expect(run.combined).toContain('"manual_action_required": true');
+    expect(run.combined).toContain('"partial_state": false');
+    expect(run.combined).toMatch(
+      /Require an additional approval for unattributed Copilot pull requests/iu,
+    );
+    expect(run.state.calls.filter((call) =>
+      call.key.startsWith("POST ")
+      || call.key.startsWith("PUT ")
+      || call.key.startsWith("SECRET "))).toEqual([]);
+  }, 15_000);
+
+  it.each([
+    ["unknown actor key", {
+      allowed_actors: [{ id: 7, type: "Team", unsupported: true }],
+      enabled: true,
+    }],
+    ["duplicate actor", {
+      allowed_actors: [
+        { id: 7, type: "User" },
+        { id: 7, type: "User" },
+      ],
+      enabled: true,
+    }],
+  ])("rejects malformed dismissal restriction before mutation: %s", (
+    _label,
+    dismissalRestriction,
+  ) => {
+    const existingRulesets = resolvedRulesets();
+    const existingMaster = existingRulesets.find(
+      (entry) => entry.name === "production-release-master",
+    ) as { rules: Array<{ parameters?: Record<string, unknown>; type: string }> };
+    const existingPullRequest = existingMaster.rules.find(
+      (rule) => rule.type === "pull_request",
+    );
+    existingPullRequest!.parameters!.dismissal_restriction = dismissalRestriction;
+    const run = runExecute({
+      state: initialState({ rulesets: existingRulesets }),
+    });
+    expect(run.result.status).toBe(1);
+    expect(run.combined).toContain('"partial_state": false');
+    expect(run.state.calls.filter((call) =>
+      call.key.startsWith("POST ")
+      || call.key.startsWith("PUT ")
+      || call.key.startsWith("SECRET "))).toEqual([]);
+    expect(existsSync(run.snapshotDir)).toBe(false);
+  }, 15_000);
+
+  it.each([
+    ["stronger approval count", { required_approving_review_count: 2 }],
+    ["different merge methods", { allowed_merge_methods: ["squash"] }],
+  ])("fails exact readback for %s", (_label, materializedOverride) => {
+    const run = runExecute({
+      state: initialState({
+        materialized_master_pull_request_overrides: materializedOverride,
+      }),
+    });
+    expect(run.result.status).toBe(1);
+    expect(run.combined).toContain('"partial_state": true');
+    expect(run.combined).toMatch(/Ruleset readback mismatch/iu);
+    expect(existsSync(join(run.snapshotDir, COMPLETION_FILE))).toBe(false);
+  }, 15_000);
+
+  it("fails closed when GitHub materializes an unknown pull-request security field", () => {
+    const run = runExecute({
+      state: initialState({
+        materialized_master_pull_request_overrides: {
+          future_security_control: true,
+        },
+      }),
+    });
+    expect(run.result.status).toBe(1);
+    expect(run.combined).toContain('"partial_state": true');
+    expect(run.combined).toMatch(/Unexpected C2 apply failure after mutation/iu);
+    expect(existsSync(join(run.snapshotDir, COMPLETION_FILE))).toBe(false);
+  }, 15_000);
+
+  it.each([
+    ["unknown nested reviewer key", [{
+      file_patterns: ["src/**"],
+      minimum_approvals: 1,
+      reviewer: { id: 7, type: "Team", unsupported: true },
+    }]],
+    ["invalid nested reviewer id", [{
+      file_patterns: ["src/**"],
+      minimum_approvals: 1,
+      reviewer: { id: 0, type: "Team" },
+    }]],
+  ])("fails closed on malformed required_reviewers GET readback: %s", (
+    _label,
+    requiredReviewers,
+  ) => {
+    const run = runExecute({
+      state: initialState({
+        materialized_master_pull_request_overrides: {
+          required_reviewers: requiredReviewers,
+        },
+      }),
+    });
+    expect(run.result.status).toBe(1);
+    expect(run.combined).toContain('"partial_state": true');
+    expect(run.combined).toMatch(/Unexpected C2 apply failure after mutation/iu);
+    expect(existsSync(join(run.snapshotDir, COMPLETION_FILE))).toBe(false);
+  }, 15_000);
+
+  it.each([
+    ["unknown configuration key", [{
+      file_patterns: ["src/**"],
+      minimum_approvals: 1,
+      reviewer: { id: 7, type: "Team" },
+      unsupported: true,
+    }], /unsupported/iu],
+    ["non-array file patterns", [{
+      file_patterns: "src/**",
+      minimum_approvals: 1,
+      reviewer: { id: 7, type: "Team" },
+    }], /file_patterns/iu],
+    ["empty file pattern", [{
+      file_patterns: [""],
+      minimum_approvals: 1,
+      reviewer: { id: 7, type: "Team" },
+    }], /file_patterns/iu],
+    ["non-string file pattern", [{
+      file_patterns: [42],
+      minimum_approvals: 1,
+      reviewer: { id: 7, type: "Team" },
+    }], /file_patterns/iu],
+    ["fractional approval count", [{
+      file_patterns: ["src/**"],
+      minimum_approvals: 1.5,
+      reviewer: { id: 7, type: "Team" },
+    }], /minimum_approvals/iu],
+    ["negative approval count", [{
+      file_patterns: ["src/**"],
+      minimum_approvals: -1,
+      reviewer: { id: 7, type: "Team" },
+    }], /minimum_approvals/iu],
+    ["approval count above ten", [{
+      file_patterns: ["src/**"],
+      minimum_approvals: 11,
+      reviewer: { id: 7, type: "Team" },
+    }], /minimum_approvals/iu],
+    ["unknown reviewer key", [{
+      file_patterns: ["src/**"],
+      minimum_approvals: 1,
+      reviewer: { id: 7, type: "Team", unsupported: true },
+    }], /unsupported/iu],
+    ["unsupported reviewer type", [{
+      file_patterns: ["src/**"],
+      minimum_approvals: 1,
+      reviewer: { id: 7, type: "User" },
+    }], /reviewer.*type/iu],
+    ["non-positive reviewer id", [{
+      file_patterns: ["src/**"],
+      minimum_approvals: 1,
+      reviewer: { id: 0, type: "Team" },
+    }], /reviewer.*id/iu],
+    ["fractional reviewer id", [{
+      file_patterns: ["src/**"],
+      minimum_approvals: 1,
+      reviewer: { id: 7.5, type: "Team" },
+    }], /reviewer.*id/iu],
+  ])("rejects malformed required_reviewers: %s", (_label, requiredReviewers, message) => {
+    const ruleset = JSON.parse(
+      readFileSync(join(repoRoot, ".github/rulesets/production-release-master.json"), "utf8"),
+    );
+    const pullRequest = ruleset.rules.find((rule: { type?: string }) =>
+      rule.type === "pull_request");
+    pullRequest.parameters.required_reviewers = requiredReviewers;
+    expect(() => normalizeProductionReleaseRulesetForComparison(ruleset)).toThrow(message);
+  });
+
+  it("sorts reviewer configurations while preserving file-pattern order", () => {
+    const ruleset = JSON.parse(
+      readFileSync(join(repoRoot, ".github/rulesets/production-release-master.json"), "utf8"),
+    );
+    const pullRequest = ruleset.rules.find((rule: { type?: string }) =>
+      rule.type === "pull_request");
+    pullRequest.parameters.required_reviewers = [
+      {
+        file_patterns: ["src/**", "!src/vendor/**"],
+        minimum_approvals: 1,
+        reviewer: { id: 9, type: "Team" },
+      },
+      {
+        file_patterns: ["src/**", "!src/vendor/**"],
+        minimum_approvals: 1,
+        reviewer: { id: 7, type: "Team" },
+      },
+    ];
+    const normalized = normalizeProductionReleaseRulesetForComparison(ruleset);
+    const normalizedPullRequest = normalized.rules.find((rule: { type?: string }) =>
+      rule.type === "pull_request");
+    expect(normalizedPullRequest.parameters.required_reviewers.map(
+      (entry: { reviewer: { id: number } }) => entry.reviewer.id,
+    )).toEqual([7, 9]);
+    expect(normalizedPullRequest.parameters.required_reviewers[0].file_patterns)
+      .toEqual(["src/**", "!src/vendor/**"]);
+  });
+
+  it.each([
+    ["unknown restriction key", {
+      allowed_actors: [],
+      enabled: false,
+      unsupported: true,
+    }, /dismissal_restriction.*unsupported/iu],
+    ["non-boolean enabled", {
+      allowed_actors: [],
+      enabled: "false",
+    }, /dismissal_restriction.*enabled/iu],
+    ["missing enabled", {
+      allowed_actors: [],
+    }, /dismissal_restriction.*enabled/iu],
+    ["non-array actors", {
+      allowed_actors: "Team:7",
+      enabled: true,
+    }, /allowed_actors/iu],
+    ["unknown actor key", {
+      allowed_actors: [{ id: 7, type: "Team", unsupported: true }],
+      enabled: true,
+    }, /allowed_actors.*unsupported/iu],
+    ["unsupported actor type", {
+      allowed_actors: [{ id: 7, type: "DeployKey" }],
+      enabled: true,
+    }, /allowed_actors.*type/iu],
+    ["non-positive actor id", {
+      allowed_actors: [{ id: 0, type: "User" }],
+      enabled: true,
+    }, /allowed_actors.*id/iu],
+    ["fractional actor id", {
+      allowed_actors: [{ id: 7.5, type: "RepositoryRole" }],
+      enabled: true,
+    }, /allowed_actors.*id/iu],
+    ["duplicate actor", {
+      allowed_actors: [
+        { id: 7, type: "IntegrationInstallation" },
+        { id: 7, type: "IntegrationInstallation" },
+      ],
+      enabled: true,
+    }, /duplicate/iu],
+  ])("rejects malformed dismissal restriction: %s", (
+    _label,
+    dismissalRestriction,
+    message,
+  ) => {
+    const ruleset = JSON.parse(
+      readFileSync(join(repoRoot, ".github/rulesets/production-release-master.json"), "utf8"),
+    );
+    const pullRequest = ruleset.rules.find((rule: { type?: string }) =>
+      rule.type === "pull_request");
+    pullRequest.parameters.dismissal_restriction = dismissalRestriction;
+    expect(() => normalizeProductionReleaseRulesetForComparison(ruleset)).toThrow(message);
+  });
+
+  it("canonicalizes dismissal actors as a set while retaining omission", () => {
+    const ruleset = JSON.parse(
+      readFileSync(join(repoRoot, ".github/rulesets/production-release-master.json"), "utf8"),
+    );
+    const omitted = normalizeProductionReleaseRulesetForComparison(ruleset);
+    const omittedPullRequest = omitted.rules.find((rule: { type?: string }) =>
+      rule.type === "pull_request");
+    expect(omittedPullRequest.parameters).not.toHaveProperty("dismissal_restriction");
+
+    const pullRequest = ruleset.rules.find((rule: { type?: string }) =>
+      rule.type === "pull_request");
+    pullRequest.parameters.dismissal_restriction = {
+      allowed_actors: [
+        { id: 9, type: "User" },
+        { id: 7, type: "Team" },
+      ],
+      enabled: true,
+    };
+    const configured = normalizeProductionReleaseRulesetForComparison(ruleset);
+    const configuredPullRequest = configured.rules.find((rule: { type?: string }) =>
+      rule.type === "pull_request");
+    expect(configuredPullRequest.parameters.dismissal_restriction).toEqual({
+      allowed_actors: [
+        { id: 7, type: "Team" },
+        { id: 9, type: "User" },
+      ],
+      enabled: true,
+    });
+  });
 
   it("blocks independent verification after snapshot tampering", () => {
     const run = runExecute();
