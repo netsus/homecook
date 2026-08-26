@@ -1148,6 +1148,9 @@ export function normalizeRepositoryProductionReleaseRulesetForInventory(
     [...RULESET_SAFETY_KEYS, ...RULESET_IGNORED_SERVER_KEYS],
     label,
   );
+  if (!Array.isArray(value.bypass_actors)) {
+    throw new Error(`${label}.bypass_actors is required for repository-origin rulesets.`);
+  }
   const target = requireNonEmptyString(value.target, `${label}.target`);
   if (!["branch", "push", "repository", "tag"].includes(target)) {
     throw new Error(`${label}.target is unsupported.`);
