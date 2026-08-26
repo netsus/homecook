@@ -9,6 +9,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { resolve } from "node:path";
+import { normalizeExpectedReleaseContexts } from "./production-release-approval-policy.mjs";
 
 export const LOCAL_MAC_PRODUCTION_RELEASE_SCHEMA = "homecook.local-mac-production-release.v1";
 
@@ -457,11 +458,6 @@ export function validateLocalMacProductionReleaseManifest({
     ),
   };
 
-  if (releaseSha !== normalizedGitEvidence.originMasterSha) {
-    throw new Error(
-      "Release manifest exact approved master mismatch: release_sha must equal the current origin/master-approved head.",
-    );
-  }
   if (normalizedGitEvidence.releaseTagCommitSha !== releaseSha) {
     throw new Error(
       "Release manifest tag commit mismatch: release_sha must equal the annotated release tag commit exactly.",
@@ -498,6 +494,10 @@ export function validateLocalMacProductionReleaseManifest({
     previous_release_sha: requireReleaseSha(
       manifest.previous_release_sha,
       "manifest.previous_release_sha",
+    ),
+    expected_release_contexts: normalizeExpectedReleaseContexts(
+      manifest.expected_release_contexts,
+      "manifest.expected_release_contexts",
     ),
     required_check_summary: normalizeRequiredCheckSummary(manifest.required_check_summary),
     attestation_digest: requireDigest(

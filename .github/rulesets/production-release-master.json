@@ -31,7 +31,36 @@
       "parameters": {
         "strict_required_status_checks_policy": true,
         "do_not_enforce_on_create": false,
-        "required_status_checks": []
+        "required_status_checks": [
+          {
+            "context": "build",
+            "integration_id": null
+          },
+          {
+            "context": "changes",
+            "integration_id": null
+          },
+          {
+            "context": "policy",
+            "integration_id": null
+          },
+          {
+            "context": "quality",
+            "integration_id": null
+          },
+          {
+            "context": "security-function-authorization",
+            "integration_id": null
+          },
+          {
+            "context": "security-smoke",
+            "integration_id": null
+          },
+          {
+            "context": "template-check",
+            "integration_id": null
+          }
+        ]
       }
     }
   ],

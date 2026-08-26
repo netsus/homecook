@@ -2,6 +2,10 @@ import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import {
+  EXPECTED_RELEASE_CONTEXTS,
+  normalizeExpectedReleaseContexts,
+} from "./production-release-approval-policy.mjs";
 
 export const GITHUB_PRODUCTION_RELEASE_SUBJECT_SCHEMA =
   "homecook.github.production-release-manifest.v1";
@@ -86,6 +90,13 @@ function requireCheckSummary(value, label) {
   return summary;
 }
 
+function requireCommitStatuses(commitStatuses, label) {
+  if (!Array.isArray(commitStatuses)) {
+    throw new Error(`${label} must be an array.`);
+  }
+  return commitStatuses;
+}
+
 function sameCheckSummary(left, right) {
   const leftSummary = requireCheckSummary(left, "leftCheckSummary");
   const rightSummary = requireCheckSummary(right, "rightCheckSummary");
@@ -94,13 +105,8 @@ function sameCheckSummary(left, right) {
   );
 }
 
-function checkKey(entry) {
-  const workflow = requireNonEmptyString(
-    entry.workflow ?? entry.workflow_name ?? entry.app_slug ?? "unknown-workflow",
-    "check.workflow",
-  );
-  const name = requireNonEmptyString(entry.name, "check.name");
-  return `${workflow.toLowerCase()}::${name.toLowerCase()}`;
+function contextKey(value, label) {
+  return requireNonEmptyString(value, label).toLowerCase();
 }
 
 function sortTimestamp(entry) {
@@ -109,6 +115,17 @@ function sortTimestamp(entry) {
     entry.completedAt,
     entry.started_at,
     entry.startedAt,
+  ]
+    .filter((value) => typeof value === "string" && value.trim().length > 0)
+    .map((value) => Date.parse(value))
+    .filter((value) => Number.isFinite(value));
+  return candidates.length > 0 ? Math.max(...candidates) : 0;
+}
+
+function sortCommitStatusTimestamp(entry) {
+  const candidates = [
+    entry.updated_at,
+    entry.created_at,
   ]
     .filter((value) => typeof value === "string" && value.trim().length > 0)
     .map((value) => Date.parse(value))
@@ -138,10 +155,29 @@ function normalizeBucket(entry) {
   return "failed";
 }
 
-export function normalizeGitHubProductionReleaseCheckSummary(checkRuns = []) {
+function normalizeCommitStatusBucket(entry) {
+  const state = requireNonEmptyString(entry.state ?? "error", "commitStatus.state").toLowerCase();
+  if (state === "success") {
+    return "success";
+  }
+  if (state === "pending") {
+    return "pending";
+  }
+  return "failed";
+}
+
+export function normalizeGitHubProductionReleaseCheckSummary({
+  checkRuns = [],
+  commitStatuses = [],
+  expectedContexts = EXPECTED_RELEASE_CONTEXTS,
+} = {}) {
   if (!Array.isArray(checkRuns)) {
     throw new Error("GitHub production release check runs must be an array.");
   }
+  const normalizedExpectedContexts = normalizeExpectedReleaseContexts(
+    expectedContexts,
+    "expected_release_contexts",
+  );
 
   const byKey = new Map();
   for (const entry of checkRuns) {
@@ -150,23 +186,26 @@ export function normalizeGitHubProductionReleaseCheckSummary(checkRuns = []) {
     }
     const normalized = {
       bucket: normalizeBucket(entry),
-      key: checkKey(entry),
+      context: contextKey(entry.name ?? entry.context, "check.context"),
       timestamp: sortTimestamp(entry),
     };
-    const current = byKey.get(normalized.key);
-    if (
-      !current
-      || normalized.timestamp > current.timestamp
-      || (
-        normalized.timestamp === current.timestamp
-        && normalized.bucket === "pending"
-        && current.bucket !== "pending"
-      )
-    ) {
-      byKey.set(normalized.key, normalized);
-    } else if (current.timestamp > normalized.timestamp && current.bucket !== normalized.bucket) {
-      current.rerun = true;
+    const bucket = byKey.get(normalized.context) ?? [];
+    bucket.push(normalized);
+    byKey.set(normalized.context, bucket);
+  }
+
+  for (const entry of requireCommitStatuses(commitStatuses, "commitStatuses")) {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+      throw new Error("Each production release commit status must be an object.");
     }
+    const normalized = {
+      bucket: normalizeCommitStatusBucket(entry),
+      context: contextKey(entry.context, "commitStatus.context"),
+      timestamp: sortCommitStatusTimestamp(entry),
+    };
+    const bucket = byKey.get(normalized.context) ?? [];
+    bucket.push(normalized);
+    byKey.set(normalized.context, bucket);
   }
 
   const summary = {
@@ -181,16 +220,47 @@ export function normalizeGitHubProductionReleaseCheckSummary(checkRuns = []) {
     rerun: 0,
   };
 
-  for (const entry of byKey.values()) {
-    summary.total += 1;
-    summary[entry.bucket] += 1;
-    if (entry.rerun) {
-      summary.rerun += 1;
+  for (const expectedContext of normalizedExpectedContexts) {
+    if (!byKey.has(expectedContext)) {
+      throw new Error(
+        `Production release expected context is missing: ${expectedContext}.`,
+      );
     }
   }
 
-  if (summary.pending > 0 || summary.queued > 0 || summary.failed > 0 || summary.cancelled > 0) {
-    throw new Error("Production release terminal check summary contains pending, failed, or cancelled checks.");
+  for (const context of [...byKey.keys()].sort()) {
+    const entries = (byKey.get(context) ?? [])
+      .sort((left, right) => right.timestamp - left.timestamp);
+    const latestTimestamp = entries[0].timestamp;
+    const latestEntries = entries.filter((entry) => entry.timestamp === latestTimestamp);
+    const latestBuckets = new Set(latestEntries.map((entry) => entry.bucket));
+    if (latestBuckets.size > 1) {
+      throw new Error(
+        `Production release context has an ambiguous latest result: ${context}.`,
+      );
+    }
+    const latestBucket = latestEntries[0].bucket;
+    if (latestBucket === "pending" || latestBucket === "queued") {
+      throw new Error(
+        `Production release terminal check summary contains pending checks for ${context}.`,
+      );
+    }
+    if (latestBucket === "failed" || latestBucket === "cancelled") {
+      throw new Error(
+        `Production release terminal check summary contains failed checks for ${context}.`,
+      );
+    }
+
+    const rerunDetected = entries.some(
+      (entry) => entry.timestamp < latestTimestamp && entry.bucket !== latestBucket,
+    );
+    if (rerunDetected) {
+      throw new Error(
+        `Production release terminal check summary contains rerun checks for ${context}.`,
+      );
+    }
+    summary.total += 1;
+    summary[latestBucket] += 1;
   }
 
   return summary;
@@ -199,6 +269,8 @@ export function normalizeGitHubProductionReleaseCheckSummary(checkRuns = []) {
 /**
  * @param {{
  *   checkRuns: Array<Record<string, unknown>>,
+ *   commitStatuses?: Array<Record<string, unknown>>,
+ *   expectedContexts?: string[],
  *   predicateOutputPath?: string | null,
  *   releaseSha: string,
  *   releaseTag: string,
@@ -209,6 +281,8 @@ export function normalizeGitHubProductionReleaseCheckSummary(checkRuns = []) {
  */
 export function buildGitHubProductionReleaseAttestationArtifacts({
   checkRuns,
+  commitStatuses = [],
+  expectedContexts = EXPECTED_RELEASE_CONTEXTS,
   predicateOutputPath = null,
   releaseSha,
   releaseTag,
@@ -222,7 +296,15 @@ export function buildGitHubProductionReleaseAttestationArtifacts({
     release_tag: requireNonEmptyString(releaseTag, "releaseTag"),
     release_sha: requireSha1(releaseSha, "releaseSha"),
     release_tree: requireSha1(releaseTree, "releaseTree"),
-    required_check_summary: normalizeGitHubProductionReleaseCheckSummary(checkRuns),
+    expected_release_contexts: normalizeExpectedReleaseContexts(
+      expectedContexts,
+      "expected_release_contexts",
+    ),
+    required_check_summary: normalizeGitHubProductionReleaseCheckSummary({
+      checkRuns,
+      commitStatuses,
+      expectedContexts,
+    }),
   };
 
   if (subjectOutputPath) {
@@ -242,6 +324,7 @@ export function buildGitHubProductionReleaseAttestationArtifacts({
     release_tag: subject.release_tag,
     release_sha: subject.release_sha,
     release_tree: subject.release_tree,
+    expected_release_contexts: subject.expected_release_contexts,
     required_check_summary: subject.required_check_summary,
     subject_manifest_sha256: subjectManifestSha256,
   };
@@ -262,6 +345,7 @@ function validateSubjectDocument({
   fileSha256,
   gitEvidence,
   manifest,
+  repository,
 }) {
   if (!document || typeof document !== "object" || Array.isArray(document)) {
     throw new Error("Production release subject manifest must be a JSON object.");
@@ -272,8 +356,8 @@ function validateSubjectDocument({
     );
   }
 
-  if (requireNonEmptyString(document.repository, "subject.repository") !== requireNonEmptyString(manifest.repository ?? document.repository, "manifest.repository")) {
-    // repository identity is enforced by gh attestation verify --repo
+  if (requireNonEmptyString(document.repository, "subject.repository") !== repository) {
+    throw new Error("Production release subject manifest repository does not match the verifier repository.");
   }
   if (requireNonEmptyString(document.release_tag, "subject.release_tag") !== requireNonEmptyString(manifest.release_tag, "manifest.release_tag")) {
     throw new Error("Production release subject manifest tag does not match the release manifest.");
@@ -284,11 +368,23 @@ function validateSubjectDocument({
   if (requireSha1(document.release_tree, "subject.release_tree") !== requireSha1(manifest.release_tree, "manifest.release_tree")) {
     throw new Error("Production release subject manifest tree does not match the release manifest.");
   }
-  if (document.release_sha !== requireSha1(gitEvidence.originMasterSha, "gitEvidence.originMasterSha")) {
-    throw new Error("Production release subject manifest SHA does not match current origin/master evidence.");
-  }
   if (document.release_tree !== requireSha1(gitEvidence.releaseTreeSha, "gitEvidence.releaseTreeSha")) {
     throw new Error("Production release subject manifest tree does not match current git tree evidence.");
+  }
+  if (
+    JSON.stringify(
+      normalizeExpectedReleaseContexts(
+        document.expected_release_contexts,
+        "subject.expected_release_contexts",
+      ),
+    ) !== JSON.stringify(
+      normalizeExpectedReleaseContexts(
+        manifest.expected_release_contexts,
+        "manifest.expected_release_contexts",
+      ),
+    )
+  ) {
+    throw new Error("Production release subject manifest expected context set does not match the release manifest.");
   }
   if (
     !sameCheckSummary(
@@ -307,6 +403,7 @@ function validatePredicateDocument({
   predicate,
   subjectManifestSha256,
   manifest,
+  repository,
 }) {
   if (!predicate || typeof predicate !== "object" || Array.isArray(predicate)) {
     throw new Error("Production release attestation predicate must be a JSON object.");
@@ -316,8 +413,8 @@ function validatePredicateDocument({
       `Production release attestation predicate schema must be ${GITHUB_PRODUCTION_RELEASE_PREDICATE_SCHEMA}.`,
     );
   }
-  if (requireNonEmptyString(predicate.repository, "predicate.repository") !== requireNonEmptyString(manifest.repository ?? predicate.repository, "manifest.repository")) {
-    // repository identity is enforced by gh attestation verify --repo
+  if (requireNonEmptyString(predicate.repository, "predicate.repository") !== repository) {
+    throw new Error("Production release attestation predicate repository does not match the verifier repository.");
   }
   if (requireNonEmptyString(predicate.release_tag, "predicate.release_tag") !== requireNonEmptyString(manifest.release_tag, "manifest.release_tag")) {
     throw new Error("Production release attestation predicate tag does not match the release manifest.");
@@ -327,6 +424,21 @@ function validatePredicateDocument({
   }
   if (requireSha1(predicate.release_tree, "predicate.release_tree") !== requireSha1(manifest.release_tree, "manifest.release_tree")) {
     throw new Error("Production release attestation predicate tree does not match the release manifest.");
+  }
+  if (
+    JSON.stringify(
+      normalizeExpectedReleaseContexts(
+        predicate.expected_release_contexts,
+        "predicate.expected_release_contexts",
+      ),
+    ) !== JSON.stringify(
+      normalizeExpectedReleaseContexts(
+        manifest.expected_release_contexts,
+        "manifest.expected_release_contexts",
+      ),
+    )
+  ) {
+    throw new Error("Production release attestation predicate expected context set does not match the release manifest.");
   }
   if (
     !sameCheckSummary(
@@ -465,10 +577,12 @@ export function verifyGitHubProductionReleaseAttestation({
     fileSha256: localSubjectManifestSha256,
     gitEvidence,
     manifest,
+    repository: normalizedRepository,
   });
   validatePredicateDocument({
     manifest,
     predicate: statement.predicate,
+    repository: normalizedRepository,
     subjectManifestSha256: verifiedSubjectManifestSha256,
   });
 

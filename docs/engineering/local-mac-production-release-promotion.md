@@ -134,6 +134,7 @@ manifest는 non-secret이며 only approved release evidence를 담는다.
 - `build_id`
 - `backup_readiness_evidence`
 - `previous_release_sha`
+- `expected_release_contexts`
 - `required_check_summary`
 - `attestation_digest`
 - `app_launch_agent_enabled`

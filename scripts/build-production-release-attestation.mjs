@@ -5,10 +5,13 @@ import { readFileSync } from "node:fs";
 import {
   buildGitHubProductionReleaseAttestationArtifacts,
 } from "./lib/github-production-release-attestation.mjs";
+import { normalizeExpectedReleaseContexts } from "./lib/production-release-approval-policy.mjs";
 
 function parseArgs(argv) {
   const options = {
     checkRunsPath: null,
+    commitStatusesPath: null,
+    expectedContexts: null,
     predicateOutputPath: null,
     releaseSha: null,
     releaseTag: null,
@@ -29,6 +32,10 @@ function parseArgs(argv) {
 
     if (token === "--check-runs-json") {
       options.checkRunsPath = value;
+    } else if (token === "--commit-statuses-json") {
+      options.commitStatusesPath = value;
+    } else if (token === "--expected-contexts") {
+      options.expectedContexts = value;
     } else if (token === "--predicate-output") {
       options.predicateOutputPath = value;
     } else if (token === "--release-sha") {
@@ -63,8 +70,19 @@ try {
   }
 
   const checkRuns = JSON.parse(readFileSync(options.checkRunsPath, "utf8"));
+  const commitStatuses = options.commitStatusesPath
+    ? JSON.parse(readFileSync(options.commitStatusesPath, "utf8"))
+    : [];
+  const expectedContexts = options.expectedContexts
+    ? normalizeExpectedReleaseContexts(
+      options.expectedContexts.split(",").map((value) => value.trim()).filter(Boolean),
+      "expected_release_contexts",
+    )
+    : undefined;
   const artifacts = buildGitHubProductionReleaseAttestationArtifacts({
     checkRuns,
+    commitStatuses,
+    expectedContexts,
     predicateOutputPath: options.predicateOutputPath,
     releaseSha: options.releaseSha,
     releaseTag: options.releaseTag,

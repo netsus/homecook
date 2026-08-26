@@ -89,7 +89,19 @@ jobs:
             > "$RUNNER_TEMP/check-runs.jsonl"
           jq -s '.' "$RUNNER_TEMP/check-runs.jsonl" > "$RUNNER_TEMP/check-runs.json"
 
+      - name: Download current-head commit statuses
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_SHA: ${{ inputs.release_sha }}
+        run: |
+          gh api \
+            repos/${{ github.repository }}/commits/"$RELEASE_SHA"/status \
+            --jq '.statuses' \
+            > "$RUNNER_TEMP/commit-statuses.json"
+
       - name: Build terminal check summary custom predicate and subject manifest
+        env:
+          EXPECTED_RELEASE_CONTEXTS: build,changes,policy,quality,security-function-authorization,security-smoke,template-check
         run: |
           node scripts/build-production-release-attestation.mjs \
             --repository "${{ github.repository }}" \
@@ -97,6 +109,8 @@ jobs:
             --release-tag "${{ inputs.release_tag }}" \
             --release-tree "${{ steps.git.outputs.release_tree }}" \
             --check-runs-json "$RUNNER_TEMP/check-runs.json" \
+            --commit-statuses-json "$RUNNER_TEMP/commit-statuses.json" \
+            --expected-contexts "$EXPECTED_RELEASE_CONTEXTS" \
             --subject-output "$RUNNER_TEMP/production-release-subject.json" \
             --predicate-output "$RUNNER_TEMP/production-release-predicate.json" \
             > "$RUNNER_TEMP/production-release-build.json"
@@ -151,7 +165,9 @@ jobs:
         env:
           RELEASE_SHA: ${{ inputs.release_sha }}
           RELEASE_TAG: ${{ inputs.release_tag }}
+          HOMECOOK_RELEASE_ATTESTATION_APP_TOKEN: ${{ secrets.HOMECOOK_RELEASE_ATTESTATION_APP_TOKEN }}
         run: |
+          test -n "$HOMECOOK_RELEASE_ATTESTATION_APP_TOKEN"
           git fetch origin --tags --force
           if git rev-parse "refs/tags/$RELEASE_TAG^{tag}" >/dev/null 2>&1; then
             echo "release_tag already exists: $RELEASE_TAG" >&2
@@ -160,7 +176,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git tag -a "$RELEASE_TAG" "$RELEASE_SHA" -m "Approved production release $RELEASE_TAG"
-          git push origin refs/tags/"$RELEASE_TAG"
+          git push "https://x-access-token:$HOMECOOK_RELEASE_ATTESTATION_APP_TOKEN@github.com/${{ github.repository }}.git" refs/tags/"$RELEASE_TAG"
 
       - name: Upload attestation bundle and approved artifacts
         uses: actions/upload-artifact@v4

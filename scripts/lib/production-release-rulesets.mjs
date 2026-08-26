@@ -1,5 +1,9 @@
 import { existsSync, readFileSync } from "node:fs";
 import { basename, resolve } from "node:path";
+import {
+  UNRESOLVED_RELEASE_TAG_INTEGRATION_ACTOR_ID,
+  normalizeExpectedReleaseContexts,
+} from "./production-release-approval-policy.mjs";
 
 export const PRODUCTION_RELEASE_RULESET_SCHEMA =
   "homecook.github.repository-ruleset.v1";
@@ -111,6 +115,8 @@ function normalizeBypassActors(bypassActors, label) {
         actor_id: actorId ?? null,
         actor_type: actorType,
         bypass_mode: bypassMode,
+        unresolved: actorType === "Integration"
+          && actorId === UNRESOLVED_RELEASE_TAG_INTEGRATION_ACTOR_ID,
       };
     })
     .sort((left, right) => {
@@ -122,23 +128,40 @@ function normalizeBypassActors(bypassActors, label) {
 
 function normalizeRuleset({ filePath, requireSchema = true, rootDir, ruleset }) {
   const value = requireObject(ruleset, filePath);
+  const normalizedRules = normalizeRules(value.rules, `${filePath}.rules`);
+  const normalizedBypassActors = normalizeBypassActors(
+    value.bypass_actors ?? [],
+    `${filePath}.bypass_actors`,
+  );
+  const requiredStatusChecksRule = normalizedRules.find(
+    (rule) => rule.type === "required_status_checks",
+  );
+  const requiredStatusChecks = requiredStatusChecksRule?.parameters?.required_status_checks;
+
   return {
     conditions: {
       ref_name: normalizeRefName(value.conditions?.ref_name, `${filePath}.conditions.ref_name`),
     },
     enforcement: requireNonEmptyString(value.enforcement, `${filePath}.enforcement`),
     name: requireNonEmptyString(value.name, `${filePath}.name`),
-    rules: normalizeRules(value.rules, `${filePath}.rules`),
+    required_status_contexts: requiredStatusChecks === undefined
+      ? []
+      : normalizeExpectedReleaseContexts(
+        requiredStatusChecks.map((entry, index) =>
+          requireNonEmptyString(
+            entry?.context,
+            `${filePath}.rules.required_status_checks[${index}].context`,
+          )),
+        `${filePath}.rules.required_status_checks`,
+      ),
+    rules: normalizedRules,
     schema: requireSchema
       ? requireNonEmptyString(value.schema, `${filePath}.schema`)
       : value.schema === undefined
         ? null
         : requireNonEmptyString(value.schema, `${filePath}.schema`),
     target: requireNonEmptyString(value.target, `${filePath}.target`),
-    bypass_actors: normalizeBypassActors(
-      value.bypass_actors ?? [],
-      `${filePath}.bypass_actors`,
-    ),
+    bypass_actors: normalizedBypassActors,
     filePath,
     rootDir: resolve(rootDir),
   };
@@ -172,6 +195,12 @@ function validateRulesetFile({ filePath, requiredRuleTypes, rootDir, target }) {
     if (!presentRuleTypes.has(requiredRuleType)) {
       throw new Error(`${filePath} must include the ${requiredRuleType} rule type.`);
     }
+  }
+  if (normalized.target === "branch") {
+    normalizeExpectedReleaseContexts(
+      normalized.required_status_contexts,
+      `${filePath}.required_status_contexts`,
+    );
   }
 
   return normalized;
@@ -212,16 +241,26 @@ function sameRuleset(left, right) {
     conditions: left.conditions,
     enforcement: left.enforcement,
     name: left.name,
+    required_status_contexts: left.required_status_contexts,
     rules: left.rules,
     target: left.target,
-    bypass_actors: left.bypass_actors,
+    bypass_actors: left.bypass_actors.map((actor) => ({
+      actor_id: actor.actor_id,
+      actor_type: actor.actor_type,
+      bypass_mode: actor.bypass_mode,
+    })),
   }) === JSON.stringify({
     conditions: right.conditions,
     enforcement: right.enforcement,
     name: right.name,
+    required_status_contexts: right.required_status_contexts,
     rules: right.rules,
     target: right.target,
-    bypass_actors: right.bypass_actors,
+    bypass_actors: right.bypass_actors.map((actor) => ({
+      actor_id: actor.actor_id,
+      actor_type: actor.actor_type,
+      bypass_mode: actor.bypass_mode,
+    })),
   });
 }
 
@@ -239,6 +278,7 @@ export function getProductionReleaseRulesetPlan({
 
   let activationBlocked = false;
   let actualState = "matched";
+  let unresolvedActor = false;
 
   const rulesets = EXPECTED_RULESET_FILES.map((entry) => {
     const desired = validateRulesetFile({
@@ -252,10 +292,17 @@ export function getProductionReleaseRulesetPlan({
 
     if (!actual.present) {
       activationBlocked = true;
-      actualState = "missing";
+      if (actualState === "matched") {
+        actualState = "missing";
+      }
     } else if (!matched) {
       activationBlocked = true;
-      actualState = "mismatch";
+      if (actualState === "matched") {
+        actualState = "mismatch";
+      }
+    }
+    if (desired.bypass_actors.some((actor) => actor.unresolved === true)) {
+      unresolvedActor = true;
     }
 
     return {
@@ -268,6 +315,11 @@ export function getProductionReleaseRulesetPlan({
       target: desired.target,
     };
   });
+
+  if (unresolvedActor) {
+    activationBlocked = true;
+    actualState = "unresolved_actor";
+  }
 
   return {
     activation_blocked: activationBlocked,

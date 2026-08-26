@@ -26,6 +26,15 @@ export function createLocalMacProductionReleaseManifest(
     build_id: "build-20260825-01",
     backup_readiness_evidence: "backup-20260825-01",
     previous_release_sha: "c".repeat(40),
+    expected_release_contexts: [
+      "build",
+      "changes",
+      "policy",
+      "quality",
+      "security-function-authorization",
+      "security-smoke",
+      "template-check",
+    ],
     required_check_summary: {
       total: 12,
       success: 10,

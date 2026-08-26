@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { isAbsolute, join } from "node:path";
 import { tmpdir } from "node:os";
 import { spawnSync } from "node:child_process";
 
@@ -9,9 +9,18 @@ import { afterEach, describe, expect, it } from "vitest";
 const repoRoot = process.cwd();
 const RULESET_SCRIPT = join(repoRoot, "scripts", "manage-production-release-rulesets.mjs");
 const temporaryDirectories: string[] = [];
+const EXPECTED_RELEASE_CONTEXTS = [
+  "build",
+  "changes",
+  "policy",
+  "quality",
+  "security-function-authorization",
+  "security-smoke",
+  "template-check",
+];
 
-function read(relativePath: string) {
-  return readFileSync(join(repoRoot, relativePath), "utf8");
+function read(filePath: string) {
+  return readFileSync(isAbsolute(filePath) ? filePath : join(repoRoot, filePath), "utf8");
 }
 
 function createTempDirectory(prefix: string) {
@@ -38,7 +47,12 @@ describe("production release rulesets desired state", () => {
       conditions?: { ref_name?: { exclude?: string[]; include?: string[] } };
       enforcement?: string;
       name?: string;
-      rules?: Array<{ parameters?: Record<string, unknown>; type?: string }>;
+      rules?: Array<{
+        parameters?: {
+          required_status_checks?: Array<{ context?: string; integration_id?: number | null }>;
+        } & Record<string, unknown>;
+        type?: string;
+      }>;
       target?: string;
     };
     const tagRuleset = JSON.parse(
@@ -67,6 +81,14 @@ describe("production release rulesets desired state", () => {
         expect.objectContaining({ type: "required_status_checks" }),
       ]),
     );
+    const requiredStatusChecksRule = branchRuleset.rules?.find(
+      (rule) => rule.type === "required_status_checks",
+    );
+    expect(
+      requiredStatusChecksRule?.parameters?.required_status_checks?.map(
+        (entry) => entry.context,
+      ),
+    ).toEqual(EXPECTED_RELEASE_CONTEXTS);
 
     expect(tagRuleset.name).toBe("production-release-tags");
     expect(tagRuleset.target).toBe("tag");
@@ -100,6 +122,13 @@ describe("production release rulesets desired state", () => {
         ).toBe(true);
       }
     }
+    expect(tagRuleset.bypass_actors).toEqual([
+      {
+        actor_id: 0,
+        actor_type: "Integration",
+        bypass_mode: "always",
+      },
+    ]);
   });
 
   it("ships a read-only ruleset planner/verifier with optional actual-state comparison and a dry-run apply surface", () => {
@@ -138,7 +167,10 @@ describe("production release rulesets desired state", () => {
             parameters: {
               strict_required_status_checks_policy: true,
               do_not_enforce_on_create: false,
-              required_status_checks: [],
+              required_status_checks: EXPECTED_RELEASE_CONTEXTS.map((context) => ({
+                context,
+                integration_id: null,
+              })),
             },
           },
         ],
@@ -171,6 +203,7 @@ describe("production release rulesets desired state", () => {
     expect(verify.stdout).toContain("production-release-master");
     expect(verify.stdout).toContain("production-release-tags");
     expect(verify.stdout).toContain("\"activation_blocked\": true");
+    expect(verify.stdout).toContain("\"actual_state\": \"unresolved_actor\"");
 
     const verifyWithActual = spawnSync(
       process.execPath,
@@ -181,8 +214,95 @@ describe("production release rulesets desired state", () => {
       },
     );
     expect(verifyWithActual.status, verifyWithActual.stderr).toBe(0);
-    expect(verifyWithActual.stdout).toContain("\"activation_blocked\": false");
-    expect(verifyWithActual.stdout).toContain("\"actual_state\": \"matched\"");
+    expect(verifyWithActual.stdout).toContain("\"activation_blocked\": true");
+    expect(verifyWithActual.stdout).toContain("\"actual_state\": \"unresolved_actor\"");
+
+    const resolvedRootDir = createTempDirectory("homecook-rulesets-desired-");
+    const resolvedActualDir = createTempDirectory("homecook-rulesets-actual-resolved-");
+    const rulesetsDir = join(resolvedRootDir, ".github", "rulesets");
+    const workflowsDir = join(resolvedRootDir, ".github", "workflows");
+    mkdirSync(rulesetsDir, { recursive: true });
+    mkdirSync(workflowsDir, { recursive: true });
+    writeFileSync(
+      join(rulesetsDir, "production-release-master.json"),
+      read(".github/rulesets/production-release-master.json"),
+    );
+    writeFileSync(
+      join(rulesetsDir, "production-release-tags.json"),
+      JSON.stringify({
+        schema: "homecook.github.repository-ruleset.v1",
+        name: "production-release-tags",
+        target: "tag",
+        enforcement: "active",
+        conditions: {
+          ref_name: {
+            include: ["refs/tags/prod-*"],
+            exclude: [],
+          },
+        },
+        rules: [
+          { type: "creation" },
+          { type: "deletion" },
+          { type: "non_fast_forward" },
+        ],
+        bypass_actors: [
+          {
+            actor_id: 12345,
+            actor_type: "Integration",
+            bypass_mode: "always",
+          },
+        ],
+      }, null, 2),
+    );
+    writeFileSync(
+      join(workflowsDir, "production-release-attestation.yml"),
+      read(".github/workflows/production-release-attestation.yml"),
+    );
+    writeFileSync(
+      join(resolvedActualDir, "production-release-master.json"),
+      read(join(actualDir, "production-release-master.json")),
+    );
+    writeFileSync(
+      join(resolvedActualDir, "production-release-tags.json"),
+      JSON.stringify({
+        id: 102,
+        name: "production-release-tags",
+        target: "tag",
+        enforcement: "active",
+        conditions: { ref_name: { include: ["refs/tags/prod-*"], exclude: [] } },
+        rules: [
+          { type: "creation" },
+          { type: "deletion" },
+          { type: "non_fast_forward" },
+        ],
+        bypass_actors: [
+          {
+            actor_id: 12345,
+            actor_type: "Integration",
+            bypass_mode: "always",
+          },
+        ],
+      }, null, 2),
+    );
+    const verifyResolved = spawnSync(
+      process.execPath,
+      [
+        RULESET_SCRIPT,
+        "verify",
+        "--json",
+        "--root-dir",
+        resolvedRootDir,
+        "--actual-dir",
+        resolvedActualDir,
+      ],
+      {
+        cwd: repoRoot,
+        encoding: "utf8",
+      },
+    );
+    expect(verifyResolved.status, verifyResolved.stderr).toBe(0);
+    expect(verifyResolved.stdout).toContain("\"activation_blocked\": false");
+    expect(verifyResolved.stdout).toContain("\"actual_state\": \"matched\"");
 
     const dryRun = spawnSync(process.execPath, [RULESET_SCRIPT, "apply", "--json"], {
       cwd: repoRoot,
@@ -216,16 +336,22 @@ describe("production release rulesets desired state", () => {
     expect(workflow).toContain("contents: read");
     expect(workflow).toContain("contents: write");
     expect(workflow).toContain("environment: production-release-approval");
+    expect(workflow).toContain("HOMECOOK_RELEASE_ATTESTATION_APP_TOKEN");
     expect(workflow).toContain("refs/remotes/origin/master^{commit}");
     expect(workflow).toContain("prod-YYYYMMDD.N");
     expect(workflow).toContain("required_check_summary");
+    expect(workflow).toContain("commits/\"$RELEASE_SHA\"/status");
     expect(workflow).toContain("subject-path:");
     expect(workflow).toContain("predicate-path:");
     expect(workflow).toContain("gh api repos/${{ github.repository }}/rulesets");
     expect(workflow).toContain("git tag -a");
-    expect(workflow).toContain("git push origin refs/tags/");
+    expect(workflow).toContain("x-access-token:$HOMECOOK_RELEASE_ATTESTATION_APP_TOKEN@github.com/${{ github.repository }}.git");
+    expect(workflow).toContain("refs/tags/\"$RELEASE_TAG\"");
     expect(workflow).toContain("actions/attest@v4");
     expect(workflow).toContain("custom predicate");
     expect(workflow).toContain("terminal check summary");
+    for (const context of EXPECTED_RELEASE_CONTEXTS) {
+      expect(workflow).toContain(context);
+    }
   });
 });

@@ -44,6 +44,15 @@ function createManifest(overrides: Record<string, unknown> = {}) {
       success: 10,
       intended_skip: 2,
     },
+    expected_release_contexts: [
+      "build",
+      "changes",
+      "policy",
+      "quality",
+      "security-function-authorization",
+      "security-smoke",
+      "template-check",
+    ],
     attestation_digest: "d".repeat(64),
     app_launch_agent_enabled: true,
     full_local_launch_agent_enabled: true,
@@ -190,6 +199,19 @@ describe("local Mac production release manifest", () => {
     ).toThrow(/pending|bad|rerun|check summary/iu);
   });
 
+  it("requires a nonempty expected release context set in the manifest", () => {
+    expect(() =>
+      validateLocalMacProductionReleaseManifest({
+        manifest: createManifest({
+          expected_release_contexts: [],
+          release_manifest_path: "/tmp/release.json",
+        }),
+        manifestPath: "/tmp/release.json",
+        readGitEvidence: () => createGitEvidence(),
+      }),
+    ).toThrow(/expected release context|context set|non-empty/iu);
+  });
+
   it("rejects missing launch-agent enablement fields instead of silently defaulting them", () => {
     expect(() =>
       validateLocalMacProductionReleaseManifest({
@@ -201,6 +223,16 @@ describe("local Mac production release manifest", () => {
         readGitEvidence: () => createGitEvidence(),
       }),
     ).toThrow(/app_launch_agent_enabled/iu);
+  });
+
+  it("still accepts an approved tagged release after origin/master advances later", () => {
+    expect(
+      validateLocalMacProductionReleaseManifest({
+        manifest: createManifest({ release_manifest_path: "/tmp/release.json" }),
+        manifestPath: "/tmp/release.json",
+        readGitEvidence: () => createGitEvidence({ originMasterSha: "f".repeat(40) }),
+      }).release_sha,
+    ).toBe("a".repeat(40));
   });
 });
 

@@ -20,5 +20,11 @@
       "type": "non_fast_forward"
     }
   ],
-  "bypass_actors": []
+  "bypass_actors": [
+    {
+      "actor_id": 0,
+      "actor_type": "Integration",
+      "bypass_mode": "always"
+    }
+  ]
 }
