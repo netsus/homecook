@@ -133,6 +133,7 @@ try {
   if (error instanceof ProductionReleaseApplyError && process.argv.includes("--json")) {
     process.stderr.write(`${JSON.stringify({
       error: message,
+      manual_action_required: error.manualActionRequired,
       partial_state: error.partialState,
       private_key: { supplied: process.argv.includes("--app-private-key-file") },
     }, null, 2)}\n`);

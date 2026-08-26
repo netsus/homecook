@@ -4,6 +4,7 @@
   "repository": "netsus/homecook",
   "source_ref": "refs/heads/master",
   "can_admins_bypass": false,
+  "wait_timer": 0,
   "prevent_self_review": true,
   "deployment_branch_policy": {
     "protected_branches": false,

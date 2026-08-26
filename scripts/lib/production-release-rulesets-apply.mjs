@@ -9,8 +9,12 @@ import {
 } from "node:fs";
 import { isAbsolute, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
+import { createPrivateKey } from "node:crypto";
 
-import { getProductionReleaseRulesetPlan } from "./production-release-rulesets.mjs";
+import {
+  getProductionReleaseRulesetPlan,
+  productionReleaseRulesetsSemanticallyEqual,
+} from "./production-release-rulesets.mjs";
 
 export const C2_CONFIRMATION = "APPLY_PRODUCTION_RELEASE_GITHUB_CONTROLS";
 export const C2_CANONICAL_REPOSITORY = "netsus/homecook";
@@ -18,6 +22,12 @@ export const C2_RELEASE_APP_ID = 4724458;
 export const C2_ENVIRONMENT_REVIEWER_ID = 57648890;
 
 const ENVIRONMENT_NAME = "production-release-approval";
+const GITHUB_API_HEADERS = [
+  "-H",
+  "Accept: application/vnd.github+json",
+  "-H",
+  "X-GitHub-Api-Version: 2026-03-10",
+];
 const RULESET_NAMES = [
   "production-release-master",
   "production-release-tag-creation",
@@ -34,9 +44,10 @@ const SNAPSHOT_FILES = {
 };
 
 export class ProductionReleaseApplyError extends Error {
-  constructor(message, { partialState = false } = {}) {
+  constructor(message, { manualActionRequired = false, partialState = false } = {}) {
     super(message);
     this.name = "ProductionReleaseApplyError";
+    this.manualActionRequired = manualActionRequired;
     this.partialState = partialState;
   }
 }
@@ -113,6 +124,17 @@ function validatePrivateKeyFile(privateKeyFile) {
   if ((permissionBits & 0o400) === 0 || (permissionBits & 0o177) !== 0) {
     fail("The supplied App private-key file mode must be no broader than 0600 and owner-readable.");
   }
+  let key;
+  try {
+    const pem = readFileSync(privateKeyFile);
+    if (pem.length === 0) throw new Error("empty");
+    key = createPrivateKey(pem);
+  } catch {
+    fail("The supplied App private-key file must contain a valid nonempty RSA private key.");
+  }
+  if (key.type !== "private" || key.asymmetricKeyType !== "rsa") {
+    fail("The supplied App private-key file must contain a valid nonempty RSA private key.");
+  }
 }
 
 function validateSnapshotDirectory(snapshotDir) {
@@ -161,7 +183,7 @@ function readDesiredState(rootDir, appId) {
 }
 
 function ghApi(endpoint, { allowNotFound = false, input = undefined, method = "GET", partialState = false } = {}) {
-  const args = ["api", endpoint, "--method", method];
+  const args = ["api", endpoint, ...GITHUB_API_HEADERS, "--method", method];
   if (input !== undefined) args.push("--input", "-");
   const result = run("gh", args, {
     input: input === undefined ? undefined : `${JSON.stringify(input)}\n`,
@@ -178,7 +200,15 @@ function ghApi(endpoint, { allowNotFound = false, input = undefined, method = "G
 }
 
 function ghPaginated(endpoint, { partialState = false } = {}) {
-  const result = run("gh", ["api", endpoint, "--method", "GET", "--paginate", "--slurp"]);
+  const result = run("gh", [
+    "api",
+    endpoint,
+    ...GITHUB_API_HEADERS,
+    "--method",
+    "GET",
+    "--paginate",
+    "--slurp",
+  ]);
   if (result.status !== 0) {
     const detail = result.stderr.trim();
     fail(`GitHub API failed${detail ? `: ${detail}` : "."}`, { partialState });
@@ -186,9 +216,9 @@ function ghPaginated(endpoint, { partialState = false } = {}) {
   return parseJson(result.stdout, "GitHub paginated API", { partialState });
 }
 
-function flattenArrayPages(pages, label) {
+function flattenArrayPages(pages, label, { partialState = false } = {}) {
   if (!Array.isArray(pages) || pages.some((page) => !Array.isArray(page))) {
-    fail(`${label} pagination response is invalid.`);
+    fail(`${label} pagination response is invalid.`, { partialState });
   }
   return pages.flat();
 }
@@ -218,19 +248,12 @@ function apiRuleset(desired) {
   };
 }
 
-function comparableRuleset(value) {
-  return JSON.stringify({
-    name: value.name,
-    target: value.target,
-    enforcement: value.enforcement,
-    bypass_actors: value.bypass_actors ?? [],
-    conditions: value.conditions,
-    rules: value.rules,
-  });
-}
-
 function rulesetMatches(actual, desired) {
-  return comparableRuleset(actual) === comparableRuleset(apiRuleset(desired));
+  try {
+    return productionReleaseRulesetsSemanticallyEqual(actual, apiRuleset(desired));
+  } catch {
+    return false;
+  }
 }
 
 function globMatches(pattern, value) {
@@ -387,6 +410,54 @@ function conflictsWithCanonicalTarget(ruleset) {
   return false;
 }
 
+function readRulesetInventory({ partialState = false } = {}) {
+  const summaries = flattenArrayPages(
+    ghPaginated(
+      `/repos/${C2_CANONICAL_REPOSITORY}/rulesets?includes_parents=false&per_page=100`,
+      { partialState },
+    ),
+    "Repository rulesets",
+    { partialState },
+  );
+  for (const name of RULESET_NAMES) {
+    if (summaries.filter((entry) => entry?.name === name).length > 1) {
+      fail(`Refusing duplicate canonical ruleset name: ${name}.`, { partialState });
+    }
+  }
+  const details = new Map();
+  for (const summary of summaries) {
+    if (!Number.isInteger(summary?.id)) {
+      fail("Repository ruleset summary is missing an exact id.", { partialState });
+    }
+    const detail = ghApi(`/repos/${C2_CANONICAL_REPOSITORY}/rulesets/${summary.id}`, {
+      partialState,
+    });
+    details.set(summary.id, detail);
+    if (!RULESET_NAMES.includes(detail?.name) && conflictsWithCanonicalTarget(detail)) {
+      fail(`Refusing unknown conflicting ruleset target: ${detail?.name ?? "unnamed"}.`, {
+        partialState,
+      });
+    }
+  }
+  return { details, summaries };
+}
+
+function requireCanonicalRemoteMaster(expectedHead, { partialState = false } = {}) {
+  const readback = ghApi(
+    `/repos/${C2_CANONICAL_REPOSITORY}/git/ref/heads/master`,
+    { partialState },
+  );
+  if (
+    readback?.ref !== "refs/heads/master"
+    || readback?.object?.type !== "commit"
+    || readback?.object?.sha !== expectedHead
+  ) {
+    fail("Canonical GitHub remote master must match the exact local HEAD.", {
+      partialState,
+    });
+  }
+}
+
 function environmentMatches(actual) {
   const reviewerRules = (actual?.protection_rules ?? [])
     .filter((rule) => rule?.type === "required_reviewers");
@@ -402,8 +473,7 @@ function environmentMatches(actual) {
     && reviewerRules[0]?.reviewers?.[0]?.type === "User"
     && reviewerRules[0]?.reviewers?.[0]?.reviewer?.id === C2_ENVIRONMENT_REVIEWER_ID
     && (
-      waitTimerRules.length === 0
-      || (waitTimerRules.length === 1 && waitTimerRules[0]?.wait_timer === 0)
+      waitTimerRules.length === 1 && waitTimerRules[0]?.wait_timer === 0
     );
 }
 
@@ -416,7 +486,6 @@ function environmentPayload() {
       protected_branches: false,
       custom_branch_policies: true,
     },
-    can_admins_bypass: false,
   };
 }
 
@@ -486,26 +555,7 @@ export function executeProductionReleaseControls({
     fail("C2 execution requires ADMIN permission on the canonical repository.");
   }
 
-  const summaries = flattenArrayPages(
-    ghPaginated(
-      `/repos/${C2_CANONICAL_REPOSITORY}/rulesets?includes_parents=false&per_page=100`,
-    ),
-    "Repository rulesets",
-  );
-  for (const name of RULESET_NAMES) {
-    if (summaries.filter((entry) => entry?.name === name).length > 1) {
-      fail(`Refusing duplicate canonical ruleset name: ${name}.`);
-    }
-  }
-  const details = new Map();
-  for (const summary of summaries) {
-    if (!Number.isInteger(summary?.id)) fail("Repository ruleset summary is missing an exact id.");
-    const detail = ghApi(`/repos/${C2_CANONICAL_REPOSITORY}/rulesets/${summary.id}`);
-    details.set(summary.id, detail);
-    if (!RULESET_NAMES.includes(detail?.name) && conflictsWithCanonicalTarget(detail)) {
-      fail(`Refusing unknown conflicting ruleset target: ${detail?.name ?? "unnamed"}.`);
-    }
-  }
+  const preflightInventory = readRulesetInventory();
 
   let environment = ghApi(
     `/repos/${C2_CANONICAL_REPOSITORY}/environments/${ENVIRONMENT_NAME}`,
@@ -547,11 +597,13 @@ export function executeProductionReleaseControls({
   }
 
   validateSnapshotDirectory(snapshotDir);
+  requireCanonicalRemoteMaster(head);
 
   const operations = [];
-  const rulesetIds = new Map();
   for (const desiredRuleset of desired.rulesets) {
-    const summary = summaries.find((entry) => entry.name === desiredRuleset.name);
+    const summary = preflightInventory.summaries.find(
+      (entry) => entry.name === desiredRuleset.name,
+    );
     const body = apiRuleset(desiredRuleset);
     if (!summary) {
       const created = ghApi(`/repos/${C2_CANONICAL_REPOSITORY}/rulesets`, {
@@ -560,11 +612,9 @@ export function executeProductionReleaseControls({
         partialState: true,
       });
       if (!Number.isInteger(created?.id)) fail("Created ruleset readback is missing an exact id.", { partialState: true });
-      rulesetIds.set(desiredRuleset.name, created.id);
       operations.push(`created_ruleset:${desiredRuleset.name}`);
     } else {
-      const actual = details.get(summary.id);
-      rulesetIds.set(desiredRuleset.name, summary.id);
+      const actual = preflightInventory.details.get(summary.id);
       if (!rulesetMatches(actual, desiredRuleset)) {
         ghApi(`/repos/${C2_CANONICAL_REPOSITORY}/rulesets/${summary.id}`, {
           input: body,
@@ -591,31 +641,22 @@ export function executeProductionReleaseControls({
     operations.push("created_master_deployment_policy");
   }
   for (const name of SECRET_NAMES) {
-    if (!secretNames.includes(name)) {
-      setEnvironmentSecret(name, { appId, privateKeyFile });
-      operations.push(`registered_environment_secret:${name}`);
-    }
+    setEnvironmentSecret(name, { appId, privateKeyFile });
+    operations.push(`upserted_environment_secret:${name}`);
   }
 
-  const rulesetReadbacks = [];
-  for (const desiredRuleset of desired.rulesets) {
-    const id = rulesetIds.get(desiredRuleset.name);
-    const readback = ghApi(`/repos/${C2_CANONICAL_REPOSITORY}/rulesets/${id}`, {
-      partialState: operations.length > 0,
-    });
-    if (!rulesetMatches(readback, desiredRuleset)) {
-      fail(`Ruleset readback mismatch: ${desiredRuleset.name}.`, { partialState: true });
-    }
-    rulesetReadbacks.push(readback);
-  }
   environment = ghApi(
     `/repos/${C2_CANONICAL_REPOSITORY}/environments/${ENVIRONMENT_NAME}`,
     { partialState: operations.length > 0 },
   );
-  if (!environmentMatches(environment) || environment?.can_admins_bypass !== false) {
-    fail("Approval environment readback mismatch or admin bypass is not false.", {
+  if (environment?.can_admins_bypass !== false) {
+    fail("Approval environment admin bypass readback is missing or true; disable Allow administrators to bypass in GitHub UI, then rerun.", {
+      manualActionRequired: true,
       partialState: true,
     });
+  }
+  if (!environmentMatches(environment)) {
+    fail("Approval environment readback mismatch after apply.", { partialState: true });
   }
   policies = flattenObjectPages(
     ghPaginated(
@@ -635,6 +676,26 @@ export function executeProductionReleaseControls({
     "Environment secrets",
     { partialState: operations.length > 0 },
   );
+
+  const postApplyInventory = readRulesetInventory({ partialState: true });
+  const rulesetReadbacks = [];
+  for (const desiredRuleset of desired.rulesets) {
+    const summaries = postApplyInventory.summaries.filter(
+      (entry) => entry.name === desiredRuleset.name,
+    );
+    if (summaries.length !== 1) {
+      fail(`Ruleset readback is not unique: ${desiredRuleset.name}.`, {
+        partialState: true,
+      });
+    }
+    const readback = postApplyInventory.details.get(summaries[0].id);
+    if (!rulesetMatches(readback, desiredRuleset)) {
+      fail(`Ruleset readback mismatch: ${desiredRuleset.name}.`, { partialState: true });
+    }
+    rulesetReadbacks.push(readback);
+  }
+
+  requireCanonicalRemoteMaster(head, { partialState: true });
 
   for (const ruleset of rulesetReadbacks) writeSnapshot(snapshotDir, `${ruleset.name}.json`, ruleset);
   writeSnapshot(snapshotDir, SNAPSHOT_FILES.environment, environment);

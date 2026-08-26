@@ -90,6 +90,20 @@ function requireBoolean(value, label) {
   return value;
 }
 
+function canonicalizeJson(value) {
+  if (Array.isArray(value)) {
+    return value.map(canonicalizeJson);
+  }
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.keys(value)
+        .sort()
+        .map((key) => [key, canonicalizeJson(value[key])]),
+    );
+  }
+  return value;
+}
+
 function requirePositiveOrUnresolvedInteger(value, label) {
   if (!Number.isInteger(value) || value < 0) {
     throw new Error(`${label} must be an integer >= 0.`);
@@ -114,11 +128,14 @@ function normalizeRules(rules, label) {
       const type = requireNonEmptyString(value.type, `${label}[${index}].type`);
       const parameters = value.parameters === undefined
         ? null
-        : requireObject(value.parameters, `${label}[${index}].parameters`);
-      return {
+        : canonicalizeJson(
+          requireObject(value.parameters, `${label}[${index}].parameters`),
+        );
+      return canonicalizeJson({
+        ...value,
         parameters,
         type,
-      };
+      });
     })
     .sort((left, right) => left.type.localeCompare(right.type));
 }
@@ -181,11 +198,16 @@ function normalizeRuleset({ filePath, requireSchema = true, rootDir, ruleset }) 
     (rule) => rule.type === "required_status_checks",
   );
   const requiredStatusChecks = requiredStatusChecksRule?.parameters?.required_status_checks;
+  const conditions = canonicalizeJson(
+    requireObject(value.conditions, `${filePath}.conditions`),
+  );
+  conditions.ref_name = normalizeRefName(
+    value.conditions?.ref_name,
+    `${filePath}.conditions.ref_name`,
+  );
 
   return {
-    conditions: {
-      ref_name: normalizeRefName(value.conditions?.ref_name, `${filePath}.conditions.ref_name`),
-    },
+    conditions: canonicalizeJson(conditions),
     enforcement: requireNonEmptyString(value.enforcement, `${filePath}.enforcement`),
     name: requireNonEmptyString(value.name, `${filePath}.name`),
     required_status_contexts: requiredStatusChecks === undefined
@@ -463,14 +485,16 @@ function validateApprovalEnvironment(rootDir) {
     repository: value.repository,
     required_reviewers: reviewers,
     source_ref: value.source_ref,
+    wait_timer: value.wait_timer,
   };
   if (
     normalized.can_admins_bypass !== false
+    || normalized.wait_timer !== 0
     || normalized.prevent_self_review !== true
     || normalized.deployment_branch_policy.custom_branch_policies !== true
     || normalized.deployment_branch_policy.protected_branches !== false
   ) {
-    throw new Error(`${APPROVAL_ENVIRONMENT_FILE} must disable admin bypass, require self-review prevention, and use a custom master-only policy.`);
+    throw new Error(`${APPROVAL_ENVIRONMENT_FILE} must disable admin bypass, set wait_timer to 0, require self-review prevention, and use a custom master-only policy.`);
   }
   return normalized;
 }
@@ -508,6 +532,10 @@ function loadActualApprovalEnvironment(actualDir, desired) {
     environment.protection_rules,
     `${environmentPath}.protection_rules`,
   ).filter((rule) => rule?.type === "required_reviewers");
+  const waitTimerRules = requireArray(
+    environment.protection_rules,
+    `${environmentPath}.protection_rules`,
+  ).filter((rule) => rule?.type === "wait_timer");
   const actualReviewers = reviewerRule.length === 1
     ? requireArray(reviewerRule[0].reviewers, `${environmentPath}.reviewers`).map((entry) => ({
       actor_id: entry?.reviewer?.id,
@@ -558,10 +586,14 @@ function loadActualApprovalEnvironment(actualDir, desired) {
     repository: "netsus/homecook",
     required_reviewers: actualReviewers,
     source_ref: "refs/heads/master",
+    wait_timer: waitTimerRules.length === 1 ? waitTimerRules[0]?.wait_timer : null,
   };
   const mismatches = [];
   if (actual.can_admins_bypass !== false) {
     mismatches.push("approval_environment_admin_bypass_mismatch");
+  }
+  if (actual.wait_timer !== 0) {
+    mismatches.push("approval_environment_wait_timer_mismatch");
   }
   if (
     JSON.stringify(actual.deployment_branch_policies)
@@ -616,6 +648,22 @@ function sameRuleset(left, right) {
       bypass_mode: actor.bypass_mode,
     })),
   });
+}
+
+export function productionReleaseRulesetsSemanticallyEqual(left, right) {
+  const normalizedLeft = normalizeRuleset({
+    filePath: "actual production release ruleset",
+    requireSchema: false,
+    rootDir: process.cwd(),
+    ruleset: left,
+  });
+  const normalizedRight = normalizeRuleset({
+    filePath: "desired production release ruleset",
+    requireSchema: false,
+    rootDir: process.cwd(),
+    ruleset: right,
+  });
+  return sameRuleset(normalizedLeft, normalizedRight);
 }
 
 export function getProductionReleaseRulesetPlan({

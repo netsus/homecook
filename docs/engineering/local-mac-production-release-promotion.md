@@ -210,11 +210,11 @@ C2 admin-visible snapshot은 다음 파일을 모두 포함해야 한다.
 - `production-release-master.json`: `refs/heads/master`만 pin하고 `bypass_actors`를 명시한 ruleset detail
 - `production-release-tag-creation.json`: `refs/tags/prod-*`의 creation rule과 단일 resolved `Integration` actor만 명시한 ruleset detail
 - `production-release-tag-immutability.json`: 같은 tag pattern의 update / deletion / non-fast-forward rule과 빈 `bypass_actors`를 명시한 ruleset detail
-- `production-release-approval-environment.json`: `can_admins_bypass: false`, required reviewer, prevent-self-review, custom branch policy readback
+- `production-release-approval-environment.json`: `can_admins_bypass: false`, exact `wait_timer: 0`, required reviewer, prevent-self-review, custom branch policy readback
 - `production-release-approval-deployment-branch-policies.json`: pagination을 닫은 exact `[{"type":"branch","name":"master"}]`; tag/wildcard/extra policy 금지
 - `production-release-approval-environment-secrets.json`: pagination을 닫은 exact secret-name inventory `HOMECOOK_RELEASE_ATTESTATION_APP_ID`, `HOMECOOK_RELEASE_ATTESTATION_APP_PRIVATE_KEY`; legacy `HOMECOOK_RELEASE_ATTESTATION_APP_TOKEN` 또는 extra secret 금지
 
-명시적 C2 admin apply는 clean exact `origin/master` checkout에서만 실행한다. 기본 `apply`는 계속 dry-run이고, 실제 변경은 exact confirmation·canonical repo·ADMIN 권한·resolved desired state·create-only absolute snapshot·0600 이하 private-key file gate가 모두 통과할 때만 허용한다. private key는 CLI 인수의 파일 경로로만 지정되고 secret 등록 시 stdin으로 전달되며, JSON/log/snapshot에는 경로나 값이 남지 않는다.
+명시적 C2 admin apply는 clean exact `origin/master` checkout에서만 실행한다. 기본 `apply`는 계속 dry-run이고, 실제 변경은 exact confirmation·canonical repo·ADMIN 권한·resolved desired state·create-only absolute snapshot·0600 이하의 nonempty valid RSA private-key file gate가 모두 통과할 때만 허용한다. CLI는 first mutation 직전과 snapshot write 직전에 canonical GitHub `refs/heads/master` REST readback을 다시 받아 exact local HEAD와 비교한다. private key는 CLI 인수의 파일 경로로만 지정되고 secret 등록 시 stdin으로 전달되며, JSON/log/snapshot에는 경로나 값이 남지 않는다.
 
 ```bash
 C2_ACTUAL_DIR="$(mktemp -d)"
@@ -232,29 +232,39 @@ jq -e '.activation_blocked == false and .actual_state == "matched"' \
   "$C2_RESULT_FILE" > /dev/null
 ```
 
-CLI는 exact-name ruleset 3개만 POST/PUT하고, 모르는 ruleset은 삭제하지 않는다. canonical ref와 충돌하는 unknown ruleset, canonical name 중복, extra environment branch/tag policy, extra environment secret 이름은 mutation 전에 차단한다. API/secret/readback/snapshot 실패 뒤에는 자동 삭제·완화·rollback하지 않고 `partial_state: true`로 종료하므로, operator는 생성된 설정을 read-only로 확인한 뒤 같은 명령을 새 create-only snapshot 경로로 재실행한다. exact state 재실행은 mutation 없이 성공한다.
+CLI는 exact-name ruleset 3개만 POST/PUT하고, 모르는 ruleset은 삭제하지 않는다. canonical ref와 충돌하는 unknown ruleset, canonical name 중복, extra environment branch/tag policy, extra environment secret 이름은 mutation 전에 차단하며 mutation 뒤 full ruleset inventory를 다시 읽어 concurrent duplicate/unknown drift도 차단한다. 두 exact environment secret은 매 execute마다 stdin으로 다시 upsert한다. REST API/secret/readback/snapshot 실패 뒤에는 자동 삭제·완화·rollback하지 않고 `partial_state: true`로 종료하므로, operator는 생성된 설정을 read-only로 확인한 뒤 같은 명령을 새 create-only snapshot 경로로 재실행한다.
+
+Environment PUT에는 GitHub REST가 문서화하지 않은 `can_admins_bypass`를 보내지 않는다. 다른 environment 필드를 create/update한 뒤 readback의 `can_admins_bypass`가 누락되거나 `true`이면 CLI는 `manual_action_required: true`로 fail closed한다. 이때 repository **Settings → Environments → production-release-approval**에서 **Allow administrators to bypass**를 끄고, 기존 snapshot 경로를 재사용하지 말고 새 create-only 경로로 같은 apply를 다시 실행한다. `can_admins_bypass: false` REST readback 전에는 matched snapshot이나 activation을 주장하지 않는다.
 
 아래 명령은 apply 결과를 독립적으로 다시 수집해야 할 때 사용하는 수동 admin snapshot 예시다. runtime workflow나 tag App token으로 실행하지 않는다.
 
 ```bash
 C2_ACTUAL_DIR="$(mktemp -d)"
+GH_API_ACCEPT_HEADER="Accept: application/vnd.github+json"
+GH_API_VERSION_HEADER="X-GitHub-Api-Version: 2026-03-10"
 
-gh api repos/netsus/homecook/rulesets --paginate --jq '.[].id' |
+gh api -H "$GH_API_ACCEPT_HEADER" -H "$GH_API_VERSION_HEADER" \
+  repos/netsus/homecook/rulesets --paginate --jq '.[].id' |
   while read -r rule_id; do
-    rule_name="$(gh api "repos/netsus/homecook/rulesets/$rule_id" --jq '.name')"
+    rule_name="$(gh api -H "$GH_API_ACCEPT_HEADER" -H "$GH_API_VERSION_HEADER" \
+      "repos/netsus/homecook/rulesets/$rule_id" --jq '.name')"
     case "$rule_name" in
       production-release-master|production-release-tag-creation|production-release-tag-immutability)
-        gh api "repos/netsus/homecook/rulesets/$rule_id" > "$C2_ACTUAL_DIR/$rule_name.json"
+        gh api -H "$GH_API_ACCEPT_HEADER" -H "$GH_API_VERSION_HEADER" \
+          "repos/netsus/homecook/rulesets/$rule_id" > "$C2_ACTUAL_DIR/$rule_name.json"
         ;;
     esac
   done
-gh api repos/netsus/homecook/environments/production-release-approval \
+gh api -H "$GH_API_ACCEPT_HEADER" -H "$GH_API_VERSION_HEADER" \
+  repos/netsus/homecook/environments/production-release-approval \
   > "$C2_ACTUAL_DIR/production-release-approval-environment.json"
-gh api "repos/netsus/homecook/environments/production-release-approval/deployment-branch-policies?per_page=100" \
+gh api -H "$GH_API_ACCEPT_HEADER" -H "$GH_API_VERSION_HEADER" \
+  "repos/netsus/homecook/environments/production-release-approval/deployment-branch-policies?per_page=100" \
   --paginate --jq '.branch_policies[]' > "$C2_ACTUAL_DIR/deployment-branch-policies.jsonl"
 jq -s '{branch_policies: .}' "$C2_ACTUAL_DIR/deployment-branch-policies.jsonl" \
   > "$C2_ACTUAL_DIR/production-release-approval-deployment-branch-policies.json"
-gh api "repos/netsus/homecook/environments/production-release-approval/secrets?per_page=100" \
+gh api -H "$GH_API_ACCEPT_HEADER" -H "$GH_API_VERSION_HEADER" \
+  "repos/netsus/homecook/environments/production-release-approval/secrets?per_page=100" \
   --paginate --jq '.secrets[]' > "$C2_ACTUAL_DIR/environment-secrets.jsonl"
 jq -s '{secrets: .}' "$C2_ACTUAL_DIR/environment-secrets.jsonl" \
   > "$C2_ACTUAL_DIR/production-release-approval-environment-secrets.json"

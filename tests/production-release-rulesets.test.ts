@@ -83,9 +83,10 @@ describe("production release rulesets desired state", () => {
   it("pins environment administrator bypass off in desired state and readback", () => {
     const desired = JSON.parse(
       read(".github/rulesets/production-release-approval-environment.json"),
-    ) as { can_admins_bypass?: boolean };
+    ) as { can_admins_bypass?: boolean; wait_timer?: number };
 
     expect(desired.can_admins_bypass).toBe(false);
+    expect(desired.wait_timer).toBe(0);
   });
 
   it("stores desired branch and prod-tag protections in official REST ruleset shapes", () => {
@@ -134,6 +135,7 @@ describe("production release rulesets desired state", () => {
       can_admins_bypass?: boolean;
       prevent_self_review?: boolean;
       required_reviewers?: Array<{ actor_id?: number; actor_type?: string }>;
+      wait_timer?: number;
     };
 
     expect(branchRuleset.name).toBe("production-release-master");
@@ -219,6 +221,7 @@ describe("production release rulesets desired state", () => {
       master_only_branches: ["master"],
       prevent_self_review: true,
       required_reviewers: [{ actor_id: 57648890, actor_type: "User" }],
+      wait_timer: 0,
     });
   });
 
@@ -368,6 +371,7 @@ describe("production release rulesets desired state", () => {
         repository: "netsus/homecook",
         source_ref: "refs/heads/master",
         can_admins_bypass: false,
+        wait_timer: 0,
         prevent_self_review: true,
         deployment_branch_policy: {
           protected_branches: false,
@@ -436,6 +440,7 @@ describe("production release rulesets desired state", () => {
           custom_branch_policies: true,
         },
         protection_rules: [
+          { type: "wait_timer", wait_timer: 0 },
           {
             type: "required_reviewers",
             prevent_self_review: true,
@@ -517,6 +522,39 @@ describe("production release rulesets desired state", () => {
       expect(verifyAdminBypass.stdout).toContain("\"activation_blocked\": true");
       expect(verifyAdminBypass.stdout).toContain(
         "approval_environment_admin_bypass_mismatch",
+      );
+    }
+    writeFileSync(approvalReadbackPath, JSON.stringify(matchedApprovalReadback, null, 2));
+
+    for (const invalidWaitTimer of [undefined, 10]) {
+      const invalidApprovalReadback = structuredClone(matchedApprovalReadback);
+      invalidApprovalReadback.protection_rules = (
+        invalidApprovalReadback.protection_rules as Array<Record<string, unknown>>
+      ).filter((rule) => rule.type !== "wait_timer");
+      if (invalidWaitTimer !== undefined) {
+        (invalidApprovalReadback.protection_rules as Array<Record<string, unknown>>).unshift({
+          type: "wait_timer",
+          wait_timer: invalidWaitTimer,
+        });
+      }
+      writeFileSync(approvalReadbackPath, JSON.stringify(invalidApprovalReadback, null, 2));
+      const verifyWaitTimer = spawnSync(
+        process.execPath,
+        [
+          RULESET_SCRIPT,
+          "verify",
+          "--json",
+          "--root-dir",
+          resolvedRootDir,
+          "--actual-dir",
+          resolvedActualDir,
+        ],
+        { cwd: repoRoot, encoding: "utf8" },
+      );
+      expect(verifyWaitTimer.status, verifyWaitTimer.stderr).toBe(0);
+      expect(verifyWaitTimer.stdout).toContain("\"activation_blocked\": true");
+      expect(verifyWaitTimer.stdout).toContain(
+        "approval_environment_wait_timer_mismatch",
       );
     }
     writeFileSync(approvalReadbackPath, JSON.stringify(matchedApprovalReadback, null, 2));

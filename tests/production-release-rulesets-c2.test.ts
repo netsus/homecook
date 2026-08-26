@@ -4,6 +4,7 @@ import {
   existsSync,
   mkdirSync,
   mkdtempSync,
+  readdirSync,
   readFileSync,
   rmSync,
   writeFileSync,
@@ -11,13 +12,40 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
+import { generateKeyPairSync } from "node:crypto";
 
 import { afterEach, describe, expect, it } from "vitest";
 
 const repoRoot = process.cwd();
 const RULESET_SCRIPT = join(repoRoot, "scripts", "manage-production-release-rulesets.mjs");
 const CONFIRMATION = "APPLY_PRODUCTION_RELEASE_GITHUB_CONTROLS";
+const EXPECTED_HEAD = "e806916d42a1aab2749d6a9f239cf5043b300250";
+const ACCEPT_HEADER = "Accept: application/vnd.github+json";
+const VERSION_HEADER = "X-GitHub-Api-Version: 2026-03-10";
 const temporaryDirectories: string[] = [];
+const EPHEMERAL_RSA_KEY_PAIR = generateKeyPairSync("rsa", {
+  modulusLength: 1024,
+  privateKeyEncoding: { format: "pem", type: "pkcs8" },
+  publicKeyEncoding: { format: "pem", type: "spki" },
+});
+
+function approvedEnvironmentReadback(overrides: Record<string, unknown> = {}) {
+  return {
+    name: "production-release-approval",
+    can_admins_bypass: false,
+    deployment_branch_policy: { protected_branches: false, custom_branch_policies: true },
+    protection_rules: [
+      { type: "wait_timer", wait_timer: 0 },
+      {
+        type: "required_reviewers",
+        prevent_self_review: true,
+        reviewers: [{ type: "User", reviewer: { id: 57648890 } }],
+      },
+      { type: "branch_policy" },
+    ],
+    ...overrides,
+  };
+}
 
 const FAKE_GH = String.raw`#!/usr/bin/env node
 const fs = require("node:fs");
@@ -54,11 +82,21 @@ const endpoint = args[1];
 const method = option("--method") ?? "GET";
 const key = method + " " + endpoint;
 const payload = stdin.length === 0 ? null : JSON.parse(stdin.toString("utf8"));
-state.calls.push({ key, payload });
+state.calls.push({ args, key, payload });
 if (state.fail_on === key) fail("mock API failure");
 if (endpoint === "/repos/netsus/homecook" && method === "GET") {
   reply({ full_name: "netsus/homecook", permissions: { admin: state.admin !== false } });
+} else if (endpoint === "/repos/netsus/homecook/git/ref/heads/master" && method === "GET") {
+  state.remote_ref_reads = (state.remote_ref_reads ?? 0) + 1;
+  const sequence = state.remote_master_shas ?? ["${EXPECTED_HEAD}"];
+  const sha = sequence[Math.min(state.remote_ref_reads - 1, sequence.length - 1)];
+  reply({ ref: "refs/heads/master", object: { sha, type: "commit" } });
 } else if (endpoint.startsWith("/repos/netsus/homecook/rulesets?")) {
+  state.ruleset_inventory_reads = (state.ruleset_inventory_reads ?? 0) + 1;
+  if (state.ruleset_inventory_reads === 2 && state.ruleset_race && !state.ruleset_race_inserted) {
+    state.rulesets.push(state.ruleset_race);
+    state.ruleset_race_inserted = true;
+  }
   reply([state.rulesets.map(({ id, name, target, enforcement }) => ({ id, name, target, enforcement }))]);
 } else if (/\/rulesets\/[0-9]+$/.test(endpoint) && method === "GET") {
   const id = Number(endpoint.split("/").at(-1));
@@ -80,11 +118,13 @@ if (endpoint === "/repos/netsus/homecook" && method === "GET") {
   if (!state.environment) fail("HTTP 404: environment missing");
   reply(state.environment);
 } else if (endpoint === "/repos/netsus/homecook/environments/production-release-approval" && method === "PUT") {
+  const currentAdminBypass = state.environment?.can_admins_bypass;
   state.environment = {
     name: "production-release-approval",
-    can_admins_bypass: state.omit_admin_bypass ? undefined : payload.can_admins_bypass,
+    can_admins_bypass: state.omit_admin_bypass ? undefined : currentAdminBypass,
     deployment_branch_policy: payload.deployment_branch_policy,
     protection_rules: [
+      { type: "wait_timer", wait_timer: payload.wait_timer },
       {
         type: "required_reviewers",
         prevent_self_review: payload.prevent_self_review,
@@ -114,8 +154,8 @@ const FAKE_GIT = String.raw`#!/usr/bin/env node
 const args = process.argv.slice(2);
 const command = args.join(" ");
 if (command.endsWith("rev-parse --show-toplevel")) process.stdout.write(process.env.HOMECOOK_C2_ROOT + "\n");
-else if (command.endsWith("rev-parse HEAD")) process.stdout.write((process.env.HOMECOOK_C2_HEAD ?? "84f8e3c5e10be7609d2d75cb40013053d8d818a9") + "\n");
-else if (command.endsWith("rev-parse origin/master")) process.stdout.write((process.env.HOMECOOK_C2_ORIGIN_MASTER ?? "84f8e3c5e10be7609d2d75cb40013053d8d818a9") + "\n");
+else if (command.endsWith("rev-parse HEAD")) process.stdout.write((process.env.HOMECOOK_C2_HEAD ?? "${EXPECTED_HEAD}") + "\n");
+else if (command.endsWith("rev-parse origin/master")) process.stdout.write((process.env.HOMECOOK_C2_ORIGIN_MASTER ?? "${EXPECTED_HEAD}") + "\n");
 else if (command.endsWith("rev-parse --abbrev-ref HEAD")) process.stdout.write((process.env.HOMECOOK_C2_BRANCH ?? "master") + "\n");
 else if (command.endsWith("config --get remote.origin.url")) process.stdout.write((process.env.HOMECOOK_C2_ORIGIN_URL ?? "git@github.com:netsus/homecook.git") + "\n");
 else if (command.endsWith("status --porcelain")) process.stdout.write(process.env.HOMECOOK_C2_DIRTY === "true" ? " M dirty\n" : "");
@@ -132,11 +172,15 @@ function initialState(overrides: Record<string, unknown> = {}) {
   return {
     admin: true,
     calls: [],
-    environment: null,
+    environment: approvedEnvironmentReadback(),
     next_id: 101,
-    policies: [],
+    policies: [{ id: 9001, name: "master", type: "branch" }],
+    remote_master_shas: [EXPECTED_HEAD, EXPECTED_HEAD],
     rulesets: [],
-    secrets: [],
+    secrets: [
+      { name: "HOMECOOK_RELEASE_ATTESTATION_APP_ID" },
+      { name: "HOMECOOK_RELEASE_ATTESTATION_APP_PRIVATE_KEY" },
+    ],
     ...overrides,
   };
 }
@@ -144,10 +188,12 @@ function initialState(overrides: Record<string, unknown> = {}) {
 function runExecute({
   args = [],
   env = {},
+  privateKeyPem = EPHEMERAL_RSA_KEY_PAIR.privateKey,
   state = initialState(),
 }: {
   args?: string[];
   env?: Record<string, string>;
+  privateKeyPem?: string | Buffer;
   state?: Record<string, unknown>;
 } = {}) {
   const harnessDir = tempDirectory("homecook-c2-harness-");
@@ -158,7 +204,7 @@ function runExecute({
   mkdirSync(binDir);
   writeFileSync(join(binDir, "gh"), FAKE_GH, { mode: 0o755 });
   writeFileSync(join(binDir, "git"), FAKE_GIT, { mode: 0o755 });
-  writeFileSync(privateKeyPath, "", { mode: 0o600 });
+  writeFileSync(privateKeyPath, privateKeyPem, { mode: 0o600 });
   writeFileSync(statePath, JSON.stringify({ ...state, calls: [] }, null, 2));
   const result = spawnSync(
     process.execPath,
@@ -200,6 +246,8 @@ function runExecute({
       calls: Array<{ args?: string[]; key: string; payload?: Record<string, unknown>; stdin_bytes?: number }>;
       environment: Record<string, unknown> | null;
       policies: Array<Record<string, unknown>>;
+      remote_ref_reads?: number;
+      ruleset_inventory_reads?: number;
       rulesets: Array<Record<string, unknown>>;
       secrets: Array<{ name: string }>;
     },
@@ -239,6 +287,7 @@ describe("production release C2 apply", () => {
     expect(environment.required_reviewers).toEqual([
       { actor_id: 57648890, actor_type: "User" },
     ]);
+    expect(environment.wait_timer).toBe(0);
   });
 
   it("keeps apply dry-run by default and requires exact confirmation for execution", () => {
@@ -272,6 +321,18 @@ describe("production release C2 apply", () => {
     expect(run.result.status).toBe(1);
     expect(run.combined).toMatch(message);
     expect(run.state.calls).toEqual([]);
+  });
+
+  it("rejects a stale local tracking ref when the canonical remote master differs", () => {
+    const run = runExecute({
+      state: initialState({ remote_master_shas: ["a".repeat(40)] }),
+    });
+    expect(run.result.status).toBe(1);
+    expect(run.combined).toMatch(/remote master/iu);
+    expect(run.state.calls.some((call) =>
+      call.key.startsWith("POST ")
+      || call.key.startsWith("PUT ")
+      || call.key.startsWith("SECRET "))).toBe(false);
   });
 
   it("rejects unresolved desired actors before GitHub access", () => {
@@ -349,6 +410,26 @@ describe("production release C2 apply", () => {
     expect(rerun.status).toBe(1);
     expect(output).toMatch(/0600/iu);
     expect(output).not.toContain(run.privateKeyPath);
+  });
+
+  it.each([
+    ["empty", ""],
+    ["malformed", "not-a-private-key"],
+    ["public", EPHEMERAL_RSA_KEY_PAIR.publicKey],
+    ["non-RSA", generateKeyPairSync("ec", {
+      namedCurve: "P-256",
+      privateKeyEncoding: { format: "pem", type: "pkcs8" },
+      publicKeyEncoding: { format: "pem", type: "spki" },
+    }).privateKey],
+  ])("rejects a %s App private key without disclosing it", (_label, privateKeyPem) => {
+    const run = runExecute({ privateKeyPem });
+    expect(run.result.status).toBe(1);
+    expect(run.combined).toMatch(/RSA private key/iu);
+    if (String(privateKeyPem).length > 0) {
+      expect(run.combined).not.toContain(String(privateKeyPem));
+    }
+    expect(run.combined).not.toContain(run.privateKeyPath);
+    expect(run.state.calls).toEqual([]);
   });
 
   it("refuses duplicate canonical rulesets and unknown overlapping rulesets", () => {
@@ -478,6 +559,9 @@ describe("production release C2 apply", () => {
       key: "PUT /repos/netsus/homecook/environments/production-release-approval",
       payload: expect.objectContaining({ wait_timer: 0 }),
     }));
+    const environmentPut = run.state.calls.find((call) =>
+      call.key === "PUT /repos/netsus/homecook/environments/production-release-approval");
+    expect(environmentPut?.payload).not.toHaveProperty("can_admins_bypass");
   });
 
   it("fails closed with partial-state reporting on an API failure and never rolls back", () => {
@@ -489,12 +573,81 @@ describe("production release C2 apply", () => {
     expect(run.state.calls.some((call) => call.key.startsWith("DELETE "))).toBe(false);
   });
 
-  it("fails closed when environment readback cannot prove admin bypass false", () => {
-    const run = runExecute({ state: initialState({ omit_admin_bypass: true }) });
+  it.each([
+    ["missing", null],
+    ["enabled", approvedEnvironmentReadback({ can_admins_bypass: true })],
+  ])("fails closed with manual action when admin bypass is %s", (_label, environment) => {
+    const run = runExecute({ state: initialState({ environment }) });
     expect(run.result.status).toBe(1);
     expect(run.combined).toContain('"partial_state": true');
+    expect(run.combined).toContain('"manual_action_required": true');
     expect(run.combined).toMatch(/admin bypass/iu);
     expect(run.state.calls.some((call) => call.key.startsWith("DELETE "))).toBe(false);
+  });
+
+  it("fails closed when remote master drifts after mutation and before snapshot", () => {
+    const run = runExecute({
+      state: initialState({ remote_master_shas: [EXPECTED_HEAD, "b".repeat(40)] }),
+    });
+    expect(run.result.status).toBe(1);
+    expect(run.combined).toContain('"partial_state": true');
+    expect(run.combined).toMatch(/remote master/iu);
+    expect(existsSync(run.snapshotDir)).toBe(true);
+    expect(readdirSync(run.snapshotDir)).toEqual([]);
+  });
+
+  it.each([
+    ["duplicate", { ...resolvedRulesets()[0], id: 999 }],
+    ["unknown overlap", {
+      id: 999,
+      name: "concurrent-prod-policy",
+      target: "tag",
+      enforcement: "active",
+      conditions: { ref_name: { include: ["refs/tags/prod-*"], exclude: [] } },
+      rules: [{ type: "creation" }],
+      bypass_actors: [],
+    }],
+  ])("fails partial when post-mutation ruleset inventory gains a %s", (_label, rulesetRace) => {
+    const run = runExecute({
+      state: initialState({ ruleset_race: rulesetRace }),
+    });
+    expect(run.result.status).toBe(1);
+    expect(run.combined).toContain('"partial_state": true');
+    expect(run.combined).toMatch(/duplicate|unknown conflicting/iu);
+    expect(run.state.ruleset_inventory_reads).toBe(2);
+  });
+
+  it("treats reordered ruleset keys and server metadata as semantically equal", () => {
+    const reorder = (value: unknown): unknown => {
+      if (Array.isArray(value)) return value.map(reorder);
+      if (value && typeof value === "object") {
+        return Object.fromEntries(
+          Object.entries(value as Record<string, unknown>)
+            .reverse()
+            .map(([key, entry]) => [key, reorder(entry)]),
+        );
+      }
+      return value;
+    };
+    const rulesets = resolvedRulesets().map((ruleset) => ({
+      ...(reorder(ruleset) as Record<string, unknown>),
+      _links: { html: "https://example.invalid/ruleset" },
+      node_id: "server-metadata",
+    }));
+    const run = runExecute({ state: initialState({ rulesets }) });
+    expect(run.result.status, run.combined).toBe(0);
+    expect(run.state.calls.some((call) =>
+      call.key.startsWith("PUT /repos/netsus/homecook/rulesets/"))).toBe(false);
+  });
+
+  it("repairs a canonical ruleset that has an extra unsafe rule", () => {
+    const rulesets = resolvedRulesets();
+    const tagCreation = rulesets.find((entry) => entry.name === "production-release-tag-creation");
+    tagCreation?.rules.push({ type: "update" });
+    const run = runExecute({ state: initialState({ rulesets }) });
+    expect(run.result.status, run.combined).toBe(0);
+    expect(run.state.calls.some((call) =>
+      call.key === "PUT /repos/netsus/homecook/rulesets/102")).toBe(true);
   });
 
   it("applies exact state, captures a validator-matched snapshot, and reruns idempotently", () => {
@@ -523,6 +676,20 @@ describe("production release C2 apply", () => {
       "HOMECOOK_RELEASE_ATTESTATION_APP_ID",
       "HOMECOOK_RELEASE_ATTESTATION_APP_PRIVATE_KEY",
     ]);
+    expect(first.state.remote_ref_reads).toBe(2);
+    expect(first.state.ruleset_inventory_reads).toBe(2);
+    const remoteReadIndexes = first.state.calls
+      .map((call, index) => ({ call, index }))
+      .filter(({ call }) =>
+        call.key === "GET /repos/netsus/homecook/git/ref/heads/master")
+      .map(({ index }) => index);
+    const firstMutationIndex = first.state.calls.findIndex((call) =>
+      call.key.startsWith("POST ")
+      || call.key.startsWith("PUT ")
+      || call.key.startsWith("SECRET "));
+    expect(remoteReadIndexes).toHaveLength(2);
+    expect(remoteReadIndexes[0] + 1).toBe(firstMutationIndex);
+    expect(remoteReadIndexes[1]).toBe(first.state.calls.length - 1);
     const snapshotFiles = [
       "production-release-master.json",
       "production-release-tag-creation.json",
@@ -539,13 +706,11 @@ describe("production release C2 apply", () => {
 
     const second = runExecute({ state: first.state });
     expect(second.result.status, second.combined).toBe(0);
-    expect(
-      second.state.calls.filter((call) =>
-        call.key.startsWith("POST ")
-        || call.key.startsWith("PUT ")
-        || call.key.startsWith("SECRET ")),
-    ).toEqual([]);
-  });
+    expect(second.state.calls.filter((call) =>
+      call.key.startsWith("POST ") || call.key.startsWith("PUT "))).toEqual([]);
+    expect(second.state.calls.filter((call) => call.key.startsWith("SECRET ")))
+      .toHaveLength(2);
+  }, 15_000);
 
   it("redacts the private-key path and content channel from success and failure output", () => {
     const success = runExecute();
@@ -556,6 +721,32 @@ describe("production release C2 apply", () => {
       (call) => call.key === "SECRET HOMECOOK_RELEASE_ATTESTATION_APP_PRIVATE_KEY",
     );
     expect(privateKeyCall?.args).not.toContain(success.privateKeyPath);
-    expect(privateKeyCall).toMatchObject({ stdin_bytes: 0 });
+    expect(privateKeyCall?.stdin_bytes).toBeGreaterThan(0);
+  });
+
+  it("pins official GitHub REST headers on every gh api call", () => {
+    const run = runExecute();
+    expect(run.result.status, run.combined).toBe(0);
+    const apiCalls = run.state.calls.filter((call) => /^GET |^POST |^PUT /u.test(call.key));
+    expect(apiCalls.length).toBeGreaterThan(0);
+    for (const call of apiCalls) {
+      expect(call.args).toEqual(expect.arrayContaining([
+        "-H",
+        ACCEPT_HEADER,
+        "-H",
+        VERSION_HEADER,
+      ]));
+    }
+  });
+
+  it("documents pinned REST headers and manual admin-bypass action", () => {
+    const runbook = readFileSync(
+      join(repoRoot, "docs/engineering/local-mac-production-release-promotion.md"),
+      "utf8",
+    );
+    expect(runbook).toContain(ACCEPT_HEADER);
+    expect(runbook).toContain(VERSION_HEADER);
+    expect(runbook).toContain("Allow administrators to bypass");
+    expect(runbook).toContain("manual_action_required");
   });
 });
