@@ -202,4 +202,23 @@ describe("ci path filter", () => {
       }).security_function_authorization,
     ).toBe(false);
   });
+
+  it.each(["pull_request", "push"])(
+    "treats shared types and hybrid Supabase infrastructure as code on %s",
+    (eventName) => {
+      for (const changedFile of [
+        "types/api.ts",
+        "infra/hybrid-supabase/runtime-bootstrap.sql",
+        "tsconfig.release.json",
+      ]) {
+        expect(
+          evaluateCiPathFilters({
+            changedFiles: [changedFile],
+            eventName,
+          }).code,
+          `${eventName}:${changedFile}`,
+        ).toBe(true);
+      }
+    },
+  );
 });

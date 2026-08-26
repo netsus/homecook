@@ -223,7 +223,7 @@ jobs:
           actor_id="$(jq -er '
             [.bypass_actors[] | select(.actor_type == "Integration" and .bypass_mode == "always") | .actor_id]
             | select(length == 1) | .[0] | select(type == "number" and . > 0)
-          ' .github/rulesets/production-release-tags.json)"
+          ' .github/rulesets/production-release-tag-creation.json)"
           test "$HOMECOOK_RELEASE_ATTESTATION_APP_ID" = "$actor_id"
 
       - name: Create annotated prod tag with App token only

@@ -36,6 +36,45 @@ const ZERO_ONLY_CHECK_FIELDS = [
   "queued",
   "rerun",
 ];
+const REQUIRED_CHECK_SUMMARY_ALLOWED_FIELDS = new Set([
+  "total",
+  "success",
+  "intended_skip",
+  ...ZERO_ONLY_CHECK_FIELDS,
+]);
+const RELEASE_MANIFEST_ALLOWED_FIELDS = new Set([
+  "schema",
+  "repository",
+  "source_ref",
+  "signer_workflow",
+  "signer_digest",
+  "expected_release_integration_id",
+  "promotion_id",
+  "release_tag",
+  "release_manifest_path",
+  "release_sha",
+  "release_tree",
+  "master_sha_at_approval",
+  "approved_at",
+  "approved_by_task_id",
+  "migration_head",
+  "build_id",
+  "backup_readiness_evidence",
+  "previous_release_sha",
+  "expected_release_contexts",
+  "required_check_summary",
+  "attestation_digest",
+  "app_launch_agent_enabled",
+  "full_local_launch_agent_enabled",
+  "youtube_worker_launch_agent_enabled",
+]);
+
+function requireExactAllowedKeys(value, allowedKeys, label) {
+  const unknownKeys = Object.keys(value).filter((key) => !allowedKeys.has(key));
+  if (unknownKeys.length > 0) {
+    throw new Error(`${label} contains unknown fields: ${unknownKeys.sort().join(", ")}.`);
+  }
+}
 
 function requireNonEmptyString(value, label) {
   if (typeof value !== "string" || value.trim().length === 0) {
@@ -292,6 +331,11 @@ function normalizeRequiredCheckSummary(summary) {
   if (!summary || typeof summary !== "object" || Array.isArray(summary)) {
     throw new Error("manifest.required_check_summary must be an object.");
   }
+  requireExactAllowedKeys(
+    summary,
+    REQUIRED_CHECK_SUMMARY_ALLOWED_FIELDS,
+    "manifest.required_check_summary",
+  );
 
   const normalized = {
     total: requireInteger(summary.total, "manifest.required_check_summary.total"),
@@ -394,6 +438,7 @@ export function validateLocalMacProductionReleaseManifest({
   if (!manifest || typeof manifest !== "object" || Array.isArray(manifest)) {
     throw new Error("Release manifest must be a JSON object.");
   }
+  requireExactAllowedKeys(manifest, RELEASE_MANIFEST_ALLOWED_FIELDS, "Release manifest");
 
   const normalizedRootDir = requireAbsolutePath(rootDir, "rootDir");
   const normalizedManifestPath = manifestPath

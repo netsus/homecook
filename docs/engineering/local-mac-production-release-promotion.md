@@ -198,7 +198,7 @@ C1 validator는 `.github/rulesets/*.json` desired-state와 optional local actual
 즉, `pnpm release:github:rulesets:verify`는 actual snapshot이 없으면 `activation_blocked: true`로 fail-closed pending 상태를 기록하지만, network나 admin token 없이도 desired-state drift를 검증할 수 있다.
 C2에서만 GitHub REST readback snapshot을 받아 `--actual-dir <path>` 비교로 `actual_state: matched`를 닫는다.
 
-C1 activation_blocked는 exact Integration actor와 environment reviewer가 확정될 때까지 유지한다. 현재 placeholder actor `0`을 실제 actor로 해석하거나 C2 activation으로 주장하지 않는다.
+C1 activation_blocked는 exact Integration actor와 environment reviewer가 확정되고 environment `can_admins_bypass: false` readback이 확인될 때까지 유지한다. 현재 placeholder actor `0`을 실제 actor로 해석하거나 C2 activation으로 주장하지 않는다. `can_admins_bypass`가 누락되거나 `true`이면 fail-closed blocker다.
 
 C2 admin readback snapshot은 runtime release workflow와 분리된 별도 evidence다.
 C2 operator만 별도 admin credential로 snapshot을 만들고 local verifier gate를 통과시킨 뒤 activation할 수 있다. runtime workflow는 GitHub Administration API를 호출하지 않는다. `GITHUB_TOKEN`은 `actions:read`, `checks:read`, `statuses:read`, `contents:read`로 exact ref/SHA/tree와 전체 started checks만 검증한다. runtime은 C2 actual settings를 self-administer하거나 self-readback했다고 주장하지 않는다.
@@ -206,8 +206,9 @@ C2 operator만 별도 admin credential로 snapshot을 만들고 local verifier g
 C2 admin-visible snapshot은 다음 파일을 모두 포함해야 한다.
 
 - `production-release-master.json`: `refs/heads/master`만 pin하고 `bypass_actors`를 명시한 ruleset detail
-- `production-release-tags.json`: `refs/tags/prod-*`와 단일 resolved `Integration` actor를 명시한 ruleset detail
-- `production-release-approval-environment.json`: required reviewer, prevent-self-review, custom branch policy readback
+- `production-release-tag-creation.json`: `refs/tags/prod-*`의 creation rule과 단일 resolved `Integration` actor만 명시한 ruleset detail
+- `production-release-tag-immutability.json`: 같은 tag pattern의 deletion / non-fast-forward rule과 빈 `bypass_actors`를 명시한 ruleset detail
+- `production-release-approval-environment.json`: `can_admins_bypass: false`, required reviewer, prevent-self-review, custom branch policy readback
 - `production-release-approval-deployment-branch-policies.json`: pagination을 닫은 exact `[{"type":"branch","name":"master"}]`; tag/wildcard/extra policy 금지
 - `production-release-approval-environment-secrets.json`: pagination을 닫은 exact secret-name inventory `HOMECOOK_RELEASE_ATTESTATION_APP_ID`, `HOMECOOK_RELEASE_ATTESTATION_APP_PRIVATE_KEY`; legacy `HOMECOOK_RELEASE_ATTESTATION_APP_TOKEN` 또는 extra secret 금지
 
@@ -220,7 +221,7 @@ gh api repos/netsus/homecook/rulesets --paginate --jq '.[].id' |
   while read -r rule_id; do
     rule_name="$(gh api "repos/netsus/homecook/rulesets/$rule_id" --jq '.name')"
     case "$rule_name" in
-      production-release-master|production-release-tags)
+      production-release-master|production-release-tag-creation|production-release-tag-immutability)
         gh api "repos/netsus/homecook/rulesets/$rule_id" > "$C2_ACTUAL_DIR/$rule_name.json"
         ;;
     esac
@@ -244,10 +245,11 @@ jq -e '.activation_blocked == false and .actual_state == "matched"' \
 C2 operator는 다음을 admin readback으로 함께 닫아야 한다.
 
 - `production-release-master`의 공통 required context는 `build`, `changes`, `dependency-audit`, `policy`, `quality`, `security-function-authorization`, `security-smoke`이며 모두 GitHub Actions App integration id `15368`에 묶인다. `dependency-audit`는 secret 없이 실행되는 security floor다.
-- `snyk`는 optional additional started check다. `SNYK_TOKEN`이 없다는 사실이 required release context 성공으로 대체되거나 `dependency-audit`를 우회할 수 없다.
-- required context 이름은 모든 PR/master SHA에서 항상 생성한다. lightweight scope job은 항상 시작하고, docs-only 등 비관련 변경에서는 heavy `quality`, `build`, `security-function-authorization`, `security-smoke`, `dependency-audit` job이 job-level `if`로 intended skip을 보고한다. workflow-level `paths`는 required-check deadlock 때문에 사용하지 않는다.
-- `production-release-tags`의 단일 `Integration` bypass actor id는 `HOMECOOK_RELEASE_ATTESTATION_APP_ID`와 같아야 한다.
-- environment `production-release-approval`은 required reviewer와 prevent-self-review를 갖고 deployment policy가 exact master branch 하나인 master-only여야 한다.
+- `snyk`는 trusted `push` / `schedule` / `workflow_dispatch`에서만 실행하는 optional additional started check다. pull request에서는 secret-free `dependency-audit`만 실행하며 `SNYK_TOKEN`은 pinned Snyk action step에만 주입한다. `SNYK_TOKEN`이 없다는 사실이 required release context 성공으로 대체되거나 `dependency-audit`를 우회할 수 없다.
+- required context 이름은 모든 PR/master SHA에서 항상 생성한다. lightweight scope job은 항상 시작하고, required job은 `if: always()`로 시작한다. scope가 실패하거나 취소되면 첫 gate가 실패하며, scope가 성공하고 관련 출력이 `false`일 때만 explicit `N/A` 성공을 보고하고 heavy step을 건너뛴다. workflow-level `paths`는 required-check deadlock 때문에 사용하지 않는다.
+- `production-release-tag-creation`의 단일 `Integration` bypass actor id는 `HOMECOOK_RELEASE_ATTESTATION_APP_ID`와 같아야 한다. 이 ruleset에는 creation 외 rule을 두지 않는다.
+- `production-release-tag-immutability`는 deletion / non-fast-forward만 포함하고 bypass를 누구에게도 부여하지 않는다. 따라서 exact App을 포함한 어떤 actor도 기존 `prod-*` tag를 update/delete할 수 없다.
+- environment `production-release-approval`은 `can_admins_bypass: false`, required reviewer와 prevent-self-review를 갖고 deployment policy가 exact master branch 하나인 master-only여야 한다. admin bypass readback 누락 또는 `true`는 activation blocker다.
 - environment secrets는 App ID와 private key 두 개뿐이다. workflow는 `actions/create-github-app-token`으로 short-lived token을 만들고 tag App token은 `contents:write`만 요청한다. Administration permission과 고정 `HOMECOOK_RELEASE_ATTESTATION_APP_TOKEN`은 사용하지 않는다.
 - workflow 승인 전후 check-runs는 quoted `filter=all&per_page=100` URL과 `--paginate`로 모든 page를 읽는다. 제외된 현재 attestation suite 외에는 older failed run 뒤 successful rerun을 포함해 시작된 check 하나라도 failed/cancelled/pending/queued면 fail-closed한다.
 - workflow 승인 뒤 `github.ref`, `github.workflow_ref`, exact `origin/master`, tree, 전체 check-runs와 `/statuses` 모든 page를 다시 읽고 preflight subject/predicate evidence와 비교한다. tag push 직전에도 `origin/master`를 다시 확인한다.

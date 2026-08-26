@@ -289,6 +289,37 @@ describe("local Mac production release manifest", () => {
     ).toThrow(/app_launch_agent_enabled/iu);
   });
 
+  it("rejects unknown top-level manifest fields before they can carry credentials", () => {
+    expect(() =>
+      validateLocalMacProductionReleaseManifest({
+        manifest: createManifest({
+          credentials: { token: "must-not-be-accepted" },
+          release_manifest_path: "/tmp/release.json",
+        }),
+        manifestPath: "/tmp/release.json",
+        readGitEvidence: () => createGitEvidence(),
+      }),
+    ).toThrow(/unknown|allowed|unexpected|credentials/iu);
+  });
+
+  it("rejects unknown required-check summary fields", () => {
+    expect(() =>
+      validateLocalMacProductionReleaseManifest({
+        manifest: createManifest({
+          release_manifest_path: "/tmp/release.json",
+          required_check_summary: {
+            total: 12,
+            success: 10,
+            intended_skip: 2,
+            secret: "must-not-be-accepted",
+          },
+        }),
+        manifestPath: "/tmp/release.json",
+        readGitEvidence: () => createGitEvidence(),
+      }),
+    ).toThrow(/unknown|allowed|unexpected|secret/iu);
+  });
+
   it("still accepts an approved tagged release after origin/master advances later", () => {
     expect(
       validateLocalMacProductionReleaseManifest({

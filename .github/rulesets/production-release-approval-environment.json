@@ -3,6 +3,7 @@
   "name": "production-release-approval",
   "repository": "netsus/homecook",
   "source_ref": "refs/heads/master",
+  "can_admins_bypass": false,
   "prevent_self_review": true,
   "deployment_branch_policy": {
     "protected_branches": false,

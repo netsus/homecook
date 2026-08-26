@@ -39,12 +39,17 @@ const EXPECTED_RULESET_FILES = [
     target: "branch",
   },
   {
-    filePath: ".github/rulesets/production-release-tags.json",
-    requiredRuleTypes: [
-      "creation",
-      "deletion",
-      "non_fast_forward",
-    ],
+    bypassPolicy: "single-integration",
+    exactRuleTypes: ["creation"],
+    filePath: ".github/rulesets/production-release-tag-creation.json",
+    requiredRuleTypes: ["creation"],
+    target: "tag",
+  },
+  {
+    bypassPolicy: "none",
+    exactRuleTypes: ["deletion", "non_fast_forward"],
+    filePath: ".github/rulesets/production-release-tag-immutability.json",
+    requiredRuleTypes: ["deletion", "non_fast_forward"],
     target: "tag",
   },
 ];
@@ -206,7 +211,14 @@ function normalizeRuleset({ filePath, requireSchema = true, rootDir, ruleset }) 
   };
 }
 
-function validateRulesetFile({ filePath, requiredRuleTypes, rootDir, target }) {
+function validateRulesetFile({
+  bypassPolicy = null,
+  exactRuleTypes = null,
+  filePath,
+  requiredRuleTypes,
+  rootDir,
+  target,
+}) {
   const absolutePath = resolve(rootDir, filePath);
   if (!existsSync(absolutePath)) {
     throw new Error(`Required production release ruleset file is missing: ${filePath}`);
@@ -241,6 +253,31 @@ function validateRulesetFile({ filePath, requiredRuleTypes, rootDir, target }) {
     if (!presentRuleTypes.has(requiredRuleType)) {
       throw new Error(`${filePath} must include the ${requiredRuleType} rule type.`);
     }
+  }
+  if (exactRuleTypes) {
+    const normalizedExpectedRuleTypes = [...exactRuleTypes].sort();
+    const normalizedPresentRuleTypes = normalized.rules.map((rule) => rule.type);
+    if (
+      JSON.stringify(normalizedPresentRuleTypes)
+      !== JSON.stringify(normalizedExpectedRuleTypes)
+    ) {
+      throw new Error(
+        `${filePath} rules must be exactly ${normalizedExpectedRuleTypes.join(", ")}.`,
+      );
+    }
+  }
+  if (bypassPolicy === "none" && normalized.bypass_actors.length !== 0) {
+    throw new Error(`${filePath} must not define any bypass actor.`);
+  }
+  if (
+    bypassPolicy === "single-integration"
+    && (
+      normalized.bypass_actors.length !== 1
+      || normalized.bypass_actors[0].actor_type !== "Integration"
+      || normalized.bypass_actors[0].bypass_mode !== "always"
+    )
+  ) {
+    throw new Error(`${filePath} must define exactly one always Integration bypass actor.`);
   }
   if (normalized.target === "branch") {
     normalizeExpectedReleaseContexts(
@@ -401,6 +438,10 @@ function validateApprovalEnvironment(rootDir) {
     );
   }
   const normalized = {
+    can_admins_bypass: requireBoolean(
+      value.can_admins_bypass,
+      `${APPROVAL_ENVIRONMENT_FILE}.can_admins_bypass`,
+    ),
     deployment_branch_policy: {
       custom_branch_policies: requireBoolean(
         deploymentBranchPolicy.custom_branch_policies,
@@ -424,11 +465,12 @@ function validateApprovalEnvironment(rootDir) {
     source_ref: value.source_ref,
   };
   if (
-    normalized.prevent_self_review !== true
+    normalized.can_admins_bypass !== false
+    || normalized.prevent_self_review !== true
     || normalized.deployment_branch_policy.custom_branch_policies !== true
     || normalized.deployment_branch_policy.protected_branches !== false
   ) {
-    throw new Error(`${APPROVAL_ENVIRONMENT_FILE} must require self-review prevention and custom master-only policy.`);
+    throw new Error(`${APPROVAL_ENVIRONMENT_FILE} must disable admin bypass, require self-review prevention, and use a custom master-only policy.`);
   }
   return normalized;
 }
@@ -499,6 +541,7 @@ function loadActualApprovalEnvironment(actualDir, desired) {
     throw new Error(`${environmentSecretsPath}.secrets must not contain duplicate names.`);
   }
   const actual = {
+    can_admins_bypass: environment.can_admins_bypass,
     deployment_branch_policy: {
       custom_branch_policies:
         environment.deployment_branch_policy?.custom_branch_policies,
@@ -517,6 +560,9 @@ function loadActualApprovalEnvironment(actualDir, desired) {
     source_ref: "refs/heads/master",
   };
   const mismatches = [];
+  if (actual.can_admins_bypass !== false) {
+    mismatches.push("approval_environment_admin_bypass_mismatch");
+  }
   if (
     JSON.stringify(actual.deployment_branch_policies)
     !== JSON.stringify(desired.deployment_branch_policies)

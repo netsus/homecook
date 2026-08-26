@@ -1,6 +1,6 @@
 {
   "schema": "homecook.github.repository-ruleset.v1",
-  "name": "production-release-tags",
+  "name": "production-release-tag-immutability",
   "target": "tag",
   "enforcement": "active",
   "conditions": {
@@ -11,20 +11,11 @@
   },
   "rules": [
     {
-      "type": "creation"
-    },
-    {
       "type": "deletion"
     },
     {
       "type": "non_fast_forward"
     }
   ],
-  "bypass_actors": [
-    {
-      "actor_id": 0,
-      "actor_type": "Integration",
-      "bypass_mode": "always"
-    }
-  ]
+  "bypass_actors": []
 }

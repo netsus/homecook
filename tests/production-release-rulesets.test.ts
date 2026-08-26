@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { isAbsolute, join } from "node:path";
 import { tmpdir } from "node:os";
@@ -40,6 +40,53 @@ afterEach(() => {
 });
 
 describe("production release rulesets desired state", () => {
+  it("allows only the release App to create prod tags while nobody can mutate or delete them", () => {
+    const creationPath = join(repoRoot, ".github/rulesets/production-release-tag-creation.json");
+    const immutabilityPath = join(
+      repoRoot,
+      ".github/rulesets/production-release-tag-immutability.json",
+    );
+    expect(existsSync(creationPath)).toBe(true);
+    expect(existsSync(immutabilityPath)).toBe(true);
+    if (!existsSync(creationPath) || !existsSync(immutabilityPath)) {
+      return;
+    }
+    const creationRuleset = JSON.parse(
+      read(creationPath),
+    ) as {
+      bypass_actors?: Array<{ actor_id?: number; actor_type?: string; bypass_mode?: string }>;
+      name?: string;
+      rules?: Array<{ type?: string }>;
+    };
+    const immutabilityRuleset = JSON.parse(
+      read(immutabilityPath),
+    ) as {
+      bypass_actors?: Array<{ actor_id?: number; actor_type?: string; bypass_mode?: string }>;
+      name?: string;
+      rules?: Array<{ type?: string }>;
+    };
+
+    expect(creationRuleset.name).toBe("production-release-tag-creation");
+    expect(creationRuleset.rules).toEqual([{ type: "creation" }]);
+    expect(creationRuleset.bypass_actors).toEqual([
+      { actor_id: 0, actor_type: "Integration", bypass_mode: "always" },
+    ]);
+    expect(immutabilityRuleset.name).toBe("production-release-tag-immutability");
+    expect(immutabilityRuleset.rules).toEqual([
+      { type: "deletion" },
+      { type: "non_fast_forward" },
+    ]);
+    expect(immutabilityRuleset.bypass_actors).toEqual([]);
+  });
+
+  it("pins environment administrator bypass off in desired state and readback", () => {
+    const desired = JSON.parse(
+      read(".github/rulesets/production-release-approval-environment.json"),
+    ) as { can_admins_bypass?: boolean };
+
+    expect(desired.can_admins_bypass).toBe(false);
+  });
+
   it("stores desired branch and prod-tag protections in official REST ruleset shapes", () => {
     const branchRuleset = JSON.parse(
       read(".github/rulesets/production-release-master.json"),
@@ -56,8 +103,18 @@ describe("production release rulesets desired state", () => {
       }>;
       target?: string;
     };
-    const tagRuleset = JSON.parse(
-      read(".github/rulesets/production-release-tags.json"),
+    const tagCreationRuleset = JSON.parse(
+      read(".github/rulesets/production-release-tag-creation.json"),
+    ) as {
+      bypass_actors?: Array<{ actor_id?: number | null; actor_type?: string; bypass_mode?: string }>;
+      conditions?: { ref_name?: { exclude?: string[]; include?: string[] } };
+      enforcement?: string;
+      name?: string;
+      rules?: Array<{ parameters?: Record<string, unknown>; type?: string }>;
+      target?: string;
+    };
+    const tagImmutabilityRuleset = JSON.parse(
+      read(".github/rulesets/production-release-tag-immutability.json"),
     ) as {
       bypass_actors?: Array<{ actor_id?: number | null; actor_type?: string; bypass_mode?: string }>;
       conditions?: { ref_name?: { exclude?: string[]; include?: string[] } };
@@ -73,6 +130,7 @@ describe("production release rulesets desired state", () => {
       deployment_branch_policies?: Array<{ name?: string; type?: string }>;
       environment_secret_names?: string[];
       master_only_branches?: string[];
+      can_admins_bypass?: boolean;
       prevent_self_review?: boolean;
       required_reviewers?: Array<{ actor_id?: number; actor_type?: string }>;
     };
@@ -106,22 +164,21 @@ describe("production release rulesets desired state", () => {
       ),
     ).toEqual(EXPECTED_RELEASE_CONTEXTS.map(() => GITHUB_ACTIONS_APP_INTEGRATION_ID));
 
-    expect(tagRuleset.name).toBe("production-release-tags");
-    expect(tagRuleset.target).toBe("tag");
-    expect(tagRuleset.enforcement).toBe("active");
-    expect(tagRuleset.conditions?.ref_name).toEqual({
+    expect(tagCreationRuleset.name).toBe("production-release-tag-creation");
+    expect(tagCreationRuleset.target).toBe("tag");
+    expect(tagCreationRuleset.enforcement).toBe("active");
+    expect(tagCreationRuleset.conditions?.ref_name).toEqual({
       include: ["refs/tags/prod-*"],
       exclude: [],
     });
-    expect(tagRuleset.rules).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ type: "creation" }),
-        expect.objectContaining({ type: "deletion" }),
-        expect.objectContaining({ type: "non_fast_forward" }),
-      ]),
-    );
+    expect(tagCreationRuleset.rules).toEqual([{ type: "creation" }]);
+    expect(tagImmutabilityRuleset.name).toBe("production-release-tag-immutability");
+    expect(tagImmutabilityRuleset.rules).toEqual([
+      { type: "deletion" },
+      { type: "non_fast_forward" },
+    ]);
 
-    for (const ruleset of [branchRuleset, tagRuleset]) {
+    for (const ruleset of [branchRuleset, tagCreationRuleset, tagImmutabilityRuleset]) {
       expect(
         ruleset.bypass_actors?.some((actor) =>
           actor.actor_type === "RepositoryRole"
@@ -138,14 +195,16 @@ describe("production release rulesets desired state", () => {
         ).toBe(true);
       }
     }
-    expect(tagRuleset.bypass_actors).toEqual([
+    expect(tagCreationRuleset.bypass_actors).toEqual([
       {
         actor_id: 0,
         actor_type: "Integration",
         bypass_mode: "always",
       },
     ]);
+    expect(tagImmutabilityRuleset.bypass_actors).toEqual([]);
     expect(approvalEnvironment).toMatchObject({
+      can_admins_bypass: false,
       deployment_branch_policy: {
         custom_branch_policies: true,
         protected_branches: false,
@@ -208,18 +267,26 @@ describe("production release rulesets desired state", () => {
       }, null, 2),
     );
     writeFileSync(
-      join(actualDir, "production-release-tags.json"),
+      join(actualDir, "production-release-tag-creation.json"),
       JSON.stringify({
         id: 102,
-        name: "production-release-tags",
+        name: "production-release-tag-creation",
         target: "tag",
         enforcement: "active",
         conditions: { ref_name: { include: ["refs/tags/prod-*"], exclude: [] } },
-        rules: [
-          { type: "creation" },
-          { type: "deletion" },
-          { type: "non_fast_forward" },
-        ],
+        rules: [{ type: "creation" }],
+        bypass_actors: [],
+      }, null, 2),
+    );
+    writeFileSync(
+      join(actualDir, "production-release-tag-immutability.json"),
+      JSON.stringify({
+        id: 103,
+        name: "production-release-tag-immutability",
+        target: "tag",
+        enforcement: "active",
+        conditions: { ref_name: { include: ["refs/tags/prod-*"], exclude: [] } },
+        rules: [{ type: "deletion" }, { type: "non_fast_forward" }],
         bypass_actors: [],
       }, null, 2),
     );
@@ -231,7 +298,8 @@ describe("production release rulesets desired state", () => {
     expect(verify.status, verify.stderr).toBe(0);
     expect(verify.stdout).toContain("\"mode\": \"verify\"");
     expect(verify.stdout).toContain("production-release-master");
-    expect(verify.stdout).toContain("production-release-tags");
+    expect(verify.stdout).toContain("production-release-tag-creation");
+    expect(verify.stdout).toContain("production-release-tag-immutability");
     expect(verify.stdout).toContain("\"activation_blocked\": true");
     expect(verify.stdout).toContain("\"actual_state\": \"unresolved_actor\"");
     expect(verify.stdout).toContain("unresolved_approval_environment_reviewer");
@@ -260,10 +328,10 @@ describe("production release rulesets desired state", () => {
       read(".github/rulesets/production-release-master.json"),
     );
     writeFileSync(
-      join(rulesetsDir, "production-release-tags.json"),
+      join(rulesetsDir, "production-release-tag-creation.json"),
       JSON.stringify({
         schema: "homecook.github.repository-ruleset.v1",
-        name: "production-release-tags",
+        name: "production-release-tag-creation",
         target: "tag",
         enforcement: "active",
         conditions: {
@@ -272,11 +340,7 @@ describe("production release rulesets desired state", () => {
             exclude: [],
           },
         },
-        rules: [
-          { type: "creation" },
-          { type: "deletion" },
-          { type: "non_fast_forward" },
-        ],
+        rules: [{ type: "creation" }],
         bypass_actors: [
           {
             actor_id: 12345,
@@ -287,12 +351,17 @@ describe("production release rulesets desired state", () => {
       }, null, 2),
     );
     writeFileSync(
+      join(rulesetsDir, "production-release-tag-immutability.json"),
+      read(".github/rulesets/production-release-tag-immutability.json"),
+    );
+    writeFileSync(
       join(rulesetsDir, "production-release-approval-environment.json"),
       JSON.stringify({
         schema: "homecook.github.production-release-approval-environment.v1",
         name: "production-release-approval",
         repository: "netsus/homecook",
         source_ref: "refs/heads/master",
+        can_admins_bypass: false,
         prevent_self_review: true,
         deployment_branch_policy: {
           protected_branches: false,
@@ -318,18 +387,14 @@ describe("production release rulesets desired state", () => {
       read(join(actualDir, "production-release-master.json")),
     );
     writeFileSync(
-      join(resolvedActualDir, "production-release-tags.json"),
+      join(resolvedActualDir, "production-release-tag-creation.json"),
       JSON.stringify({
         id: 102,
-        name: "production-release-tags",
+        name: "production-release-tag-creation",
         target: "tag",
         enforcement: "active",
         conditions: { ref_name: { include: ["refs/tags/prod-*"], exclude: [] } },
-        rules: [
-          { type: "creation" },
-          { type: "deletion" },
-          { type: "non_fast_forward" },
-        ],
+        rules: [{ type: "creation" }],
         bypass_actors: [
           {
             actor_id: 12345,
@@ -340,9 +405,22 @@ describe("production release rulesets desired state", () => {
       }, null, 2),
     );
     writeFileSync(
+      join(resolvedActualDir, "production-release-tag-immutability.json"),
+      JSON.stringify({
+        id: 103,
+        name: "production-release-tag-immutability",
+        target: "tag",
+        enforcement: "active",
+        conditions: { ref_name: { include: ["refs/tags/prod-*"], exclude: [] } },
+        rules: [{ type: "deletion" }, { type: "non_fast_forward" }],
+        bypass_actors: [],
+      }, null, 2),
+    );
+    writeFileSync(
       join(resolvedActualDir, "production-release-approval-environment.json"),
       JSON.stringify({
         name: "production-release-approval",
+        can_admins_bypass: false,
         deployment_branch_policy: {
           protected_branches: false,
           custom_branch_policies: true,
@@ -395,6 +473,43 @@ describe("production release rulesets desired state", () => {
     expect(verifyResolved.status, verifyResolved.stderr).toBe(0);
     expect(verifyResolved.stdout).toContain("\"activation_blocked\": false");
     expect(verifyResolved.stdout).toContain("\"actual_state\": \"matched\"");
+
+    const approvalReadbackPath = join(
+      resolvedActualDir,
+      "production-release-approval-environment.json",
+    );
+    const matchedApprovalReadback = JSON.parse(read(approvalReadbackPath)) as Record<
+      string,
+      unknown
+    >;
+    for (const invalidAdminBypass of [undefined, true]) {
+      const invalidApprovalReadback = { ...matchedApprovalReadback };
+      if (invalidAdminBypass === undefined) {
+        delete invalidApprovalReadback.can_admins_bypass;
+      } else {
+        invalidApprovalReadback.can_admins_bypass = invalidAdminBypass;
+      }
+      writeFileSync(approvalReadbackPath, JSON.stringify(invalidApprovalReadback, null, 2));
+      const verifyAdminBypass = spawnSync(
+        process.execPath,
+        [
+          RULESET_SCRIPT,
+          "verify",
+          "--json",
+          "--root-dir",
+          resolvedRootDir,
+          "--actual-dir",
+          resolvedActualDir,
+        ],
+        { cwd: repoRoot, encoding: "utf8" },
+      );
+      expect(verifyAdminBypass.status, verifyAdminBypass.stderr).toBe(0);
+      expect(verifyAdminBypass.stdout).toContain("\"activation_blocked\": true");
+      expect(verifyAdminBypass.stdout).toContain(
+        "approval_environment_admin_bypass_mismatch",
+      );
+    }
+    writeFileSync(approvalReadbackPath, JSON.stringify(matchedApprovalReadback, null, 2));
 
     writeFileSync(
       join(resolvedActualDir, "production-release-approval-deployment-branch-policies.json"),
@@ -562,22 +677,64 @@ describe("production release rulesets desired state", () => {
     expect(ci).not.toMatch(/pull_request:[\s\S]*?paths:/u);
     expect(ci).not.toMatch(/push:[\s\S]*?paths:/u);
     expect(ci).toContain("scope:");
-    expect(ci).toContain("if: needs.scope.outputs.code == 'true'");
-    expect(ci).toContain("if: needs.scope.outputs.security_function_authorization == 'true'");
+    expect(ci.match(/if: always\(\)/gu)).toHaveLength(3);
     expect(qa).toContain("changes:");
     expect(policy).toContain("policy:");
     expect(securityReview).toMatch(/pull_request:/u);
     expect(securityReview).not.toContain("paths-ignore:");
     expect(securityReview).toContain("scope:");
-    expect(securityReview).toContain("if: needs.scope.outputs.dependency_audit == 'true'");
+    expect(securityReview).toContain("if: always()");
     expect(securityReview).toContain("dependency-audit:");
     expect(securityReview).toContain("snyk:");
-    expect(securityReview).toContain("SNYK_TOKEN is not configured; skipping Snyk.");
     expect(read(".github/rulesets/production-release-master.json")).not.toContain('"context": "snyk"');
     expect(securitySmoke).not.toMatch(/pull_request:[\s\S]*?paths:/u);
     expect(securitySmoke).not.toMatch(/push:[\s\S]*?paths:/u);
     expect(securitySmoke).toContain("scope:");
-    expect(securitySmoke).toContain("if: needs.scope.outputs.security_smoke == 'true'");
+    expect(securitySmoke).toContain("if: always()");
+  });
+
+  it("fails required jobs closed when scope resolution fails and reports unrelated changes as N/A", () => {
+    const requiredJobs = [
+      { file: ".github/workflows/ci.yml", jobs: ["quality", "build", "security-function-authorization"] },
+      { file: ".github/workflows/security-review.yml", jobs: ["dependency-audit"] },
+      { file: ".github/workflows/security-smoke.yml", jobs: ["security-smoke"] },
+    ];
+
+    for (const { file, jobs } of requiredJobs) {
+      const workflow = read(file);
+      for (const job of jobs) {
+        const section = workflow.match(
+          new RegExp(
+            `^  ${job}:\\n([\\s\\S]*?)(?=^  [a-z0-9-]+:|(?![\\s\\S]))`,
+            "mu",
+          ),
+        )?.[0] ?? "";
+        expect(section, `${file}:${job}`).toContain("if: always()");
+        expect(section, `${file}:${job}`).toMatch(
+          /- name: Fail closed when scope resolution failed[\s\S]*?if: needs\.scope\.result != 'success'[\s\S]*?exit 1/u,
+        );
+        expect(section, `${file}:${job}`).toMatch(
+          /- name: Report not applicable[\s\S]*?if: needs\.scope\.result == 'success' && needs\.scope\.outputs\.[a-z_]+ != 'true'[\s\S]*?N\/A/u,
+        );
+      }
+    }
+  });
+
+  it("keeps pull requests secret-free and runs Snyk only in trusted event contexts", () => {
+    const securityReview = read(".github/workflows/security-review.yml");
+    const snykSection = securityReview.match(
+      /^  snyk:\n([\s\S]*?)(?=(?![\s\S]))/mu,
+    )?.[0] ?? "";
+    const dependencyAuditSection = securityReview.match(
+      /^  dependency-audit:\n([\s\S]*?)(?=^  snyk:)/mu,
+    )?.[0] ?? "";
+
+    expect(dependencyAuditSection).not.toContain("SNYK_TOKEN");
+    expect(snykSection).toContain("github.event_name != 'pull_request'");
+    expect(snykSection).not.toMatch(/^    env:\n[\s\S]*?SNYK_TOKEN:/mu);
+    expect(snykSection).toMatch(
+      /uses: snyk\/actions\/node@[0-9a-f]{40}[\s\S]*?env:\n\s+SNYK_TOKEN: \$\{\{ secrets\.SNYK_TOKEN \}\}/u,
+    );
   });
 
   it("rejects mutable external Action refs in trusted-context workflows", () => {
@@ -623,10 +780,13 @@ describe("production release rulesets desired state", () => {
     expect(runbook).toContain(
       "production-release-approval-environment-secrets.json",
     );
+    expect(runbook).toContain("production-release-tag-creation.json");
+    expect(runbook).toContain("production-release-tag-immutability.json");
+    expect(runbook).toContain("can_admins_bypass: false");
     expect(runbook).toContain('--actual-dir "$C2_ACTUAL_DIR"');
     expect(runbook).toContain('.activation_blocked == false and .actual_state == "matched"');
     expect(runbook).toContain("runtime workflow는 GitHub Administration API를 호출하지 않는다");
     expect(runbook).toContain("tag App token은 `contents:write`만 요청한다");
-    expect(runbook).toContain("`snyk`는 optional additional started check");
+    expect(runbook).toContain("optional additional started check다");
   });
 });
