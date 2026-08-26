@@ -806,6 +806,27 @@ function validateRulesetInventory({
   return [...new Set(blockers)].sort();
 }
 
+function validateRulesetInventoryConsistency(actualDir, desiredRulesets) {
+  if (!actualDir) return [];
+  const repositoryPath = resolve(actualDir, REPOSITORY_RULESETS_ACTUAL_FILE);
+  const effectivePath = resolve(actualDir, EFFECTIVE_RULESETS_ACTUAL_FILE);
+  if (!existsSync(repositoryPath) || !existsSync(effectivePath)) return [];
+  try {
+    const repository = readJson(repositoryPath, "repository ruleset inventory");
+    const effective = readJson(effectivePath, "effective ruleset inventory");
+    if (!Array.isArray(repository.rulesets) || !Array.isArray(effective.rulesets)) {
+      return ["ruleset_inventory_consistency_mismatch"];
+    }
+    return getProductionReleaseInventoryConsistencyBlockers({
+      canonicalNames: desiredRulesets.map((ruleset) => ruleset.name),
+      effectiveRulesets: effective.rulesets,
+      repositoryRulesets: repository.rulesets,
+    });
+  } catch {
+    return ["ruleset_inventory_consistency_mismatch"];
+  }
+}
+
 function validateApprovalEnvironment(rootDir) {
   const absolutePath = resolve(rootDir, APPROVAL_ENVIRONMENT_FILE);
   if (!existsSync(absolutePath)) {
@@ -1177,12 +1198,12 @@ export function normalizeRepositoryProductionReleaseRulesetForInventory(
     }
   }
   return canonicalizeJson({
-    bypass_actors: normalizeBypassActors(value.bypass_actors, `${label}.bypass_actors`)
-      .map((actor) => ({
-        actor_id: actor.actor_id,
-        actor_type: actor.actor_type,
-        bypass_mode: actor.bypass_mode,
-      })),
+    bypass_actors: normalizeInheritedBypassActors(
+      value.bypass_actors,
+      `${label}.bypass_actors`,
+      "Organization",
+      target,
+    ),
     conditions,
     enforcement: requireNonEmptyString(value.enforcement, `${label}.enforcement`),
     name: requireNonEmptyString(value.name, `${label}.name`),
@@ -1201,6 +1222,43 @@ export function productionReleaseRulesetsSemanticallyEqual(left, right) {
     "desired production release ruleset",
   );
   return JSON.stringify(normalizedLeft) === JSON.stringify(normalizedRight);
+}
+
+export function getProductionReleaseInventoryConsistencyBlockers({
+  canonicalNames,
+  effectiveRulesets,
+  repositoryRulesets,
+}) {
+  const blockers = [];
+  for (const name of canonicalNames) {
+    const repositoryEntries = repositoryRulesets.filter((entry) => entry?.name === name);
+    const effectiveEntries = effectiveRulesets.filter((entry) => entry?.name === name);
+    if (repositoryEntries.length === 0 && effectiveEntries.length === 0) continue;
+    if (repositoryEntries.length !== 1 || effectiveEntries.length !== 1) {
+      blockers.push(`ruleset_inventory_consistency_mismatch:${name}`);
+      continue;
+    }
+    const repositoryEntry = repositoryEntries[0];
+    const effectiveEntry = effectiveEntries[0];
+    try {
+      if (
+        repositoryEntry.id !== effectiveEntry.id
+        || repositoryEntry.source_type !== "Repository"
+        || effectiveEntry.source_type !== "Repository"
+        || repositoryEntry.source !== CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY
+        || effectiveEntry.source !== CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY
+        || !productionReleaseRulesetsSemanticallyEqual(
+          repositoryEntry,
+          effectiveEntry,
+        )
+      ) {
+        blockers.push(`ruleset_inventory_consistency_mismatch:${name}`);
+      }
+    } catch {
+      blockers.push(`ruleset_inventory_consistency_mismatch:${name}`);
+    }
+  }
+  return blockers;
 }
 
 export function getProductionReleaseRulesetPlan({
@@ -1281,6 +1339,7 @@ export function getProductionReleaseRulesetPlan({
       includesParents: true,
       scope: "effective",
     }),
+    ...validateRulesetInventoryConsistency(actualDir, desiredRulesets),
   ];
   if (inventoryBlockers.length > 0) {
     activationBlocked = true;

@@ -663,6 +663,19 @@ describe("production release rulesets desired state", () => {
 
     writeFileSync(effectiveInventoryPath, JSON.stringify({
       ...effectiveInventory,
+      rulesets: effectiveInventory.rulesets.map((ruleset) =>
+        ruleset.name === "production-release-master"
+          ? { ...ruleset, id: 9999 }
+          : ruleset),
+    }, null, 2));
+    const verifyCrossInventoryId = verifyResolvedSnapshot();
+    expect(verifyCrossInventoryId.stdout).toContain("\"activation_blocked\": true");
+    expect(verifyCrossInventoryId.stdout).toContain(
+      "ruleset_inventory_consistency_mismatch",
+    );
+
+    writeFileSync(effectiveInventoryPath, JSON.stringify({
+      ...effectiveInventory,
       rulesets: [
         ...effectiveInventory.rulesets,
         {

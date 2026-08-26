@@ -251,14 +251,14 @@ C2_ACTUAL_DIR="$(mktemp -d)"
 GH_API_ACCEPT_HEADER="Accept: application/vnd.github+json"
 GH_API_VERSION_HEADER="X-GitHub-Api-Version: 2026-03-10"
 
-gh api -H "$GH_API_ACCEPT_HEADER" -H "$GH_API_VERSION_HEADER" \
+gh api --hostname github.com -H "$GH_API_ACCEPT_HEADER" -H "$GH_API_VERSION_HEADER" \
   repos/netsus/homecook/rulesets --paginate --jq '.[].id' |
   while read -r rule_id; do
-    rule_name="$(gh api -H "$GH_API_ACCEPT_HEADER" -H "$GH_API_VERSION_HEADER" \
+    rule_name="$(gh api --hostname github.com -H "$GH_API_ACCEPT_HEADER" -H "$GH_API_VERSION_HEADER" \
       "repos/netsus/homecook/rulesets/$rule_id" --jq '.name')"
     case "$rule_name" in
       production-release-master|production-release-tag-creation|production-release-tag-immutability)
-        gh api -H "$GH_API_ACCEPT_HEADER" -H "$GH_API_VERSION_HEADER" \
+        gh api --hostname github.com -H "$GH_API_ACCEPT_HEADER" -H "$GH_API_VERSION_HEADER" \
           "repos/netsus/homecook/rulesets/$rule_id" > "$C2_ACTUAL_DIR/$rule_name.json"
         ;;
     esac
@@ -267,26 +267,26 @@ for includes_parents in false true; do
   scope="repository"
   test "$includes_parents" = "false" || scope="effective"
   inventory_jsonl="$C2_ACTUAL_DIR/production-release-$scope-rulesets.jsonl"
-  gh api -H "$GH_API_ACCEPT_HEADER" -H "$GH_API_VERSION_HEADER" \
+  gh api --hostname github.com -H "$GH_API_ACCEPT_HEADER" -H "$GH_API_VERSION_HEADER" \
     "repos/netsus/homecook/rulesets?includes_parents=$includes_parents&per_page=100" \
     --paginate --jq '.[].id' |
     while read -r rule_id; do
-      gh api -H "$GH_API_ACCEPT_HEADER" -H "$GH_API_VERSION_HEADER" \
+      gh api --hostname github.com -H "$GH_API_ACCEPT_HEADER" -H "$GH_API_VERSION_HEADER" \
         "repos/netsus/homecook/rulesets/$rule_id" >> "$inventory_jsonl"
     done
   jq -s --arg scope "$scope" --argjson includes_parents "$includes_parents" \
     '{scope: $scope, includes_parents: $includes_parents, rulesets: .}' \
     "$inventory_jsonl" > "$C2_ACTUAL_DIR/production-release-$scope-rulesets.json"
 done
-gh api -H "$GH_API_ACCEPT_HEADER" -H "$GH_API_VERSION_HEADER" \
+gh api --hostname github.com -H "$GH_API_ACCEPT_HEADER" -H "$GH_API_VERSION_HEADER" \
   repos/netsus/homecook/environments/production-release-approval \
   > "$C2_ACTUAL_DIR/production-release-approval-environment.json"
-gh api -H "$GH_API_ACCEPT_HEADER" -H "$GH_API_VERSION_HEADER" \
+gh api --hostname github.com -H "$GH_API_ACCEPT_HEADER" -H "$GH_API_VERSION_HEADER" \
   "repos/netsus/homecook/environments/production-release-approval/deployment-branch-policies?per_page=100" \
   --paginate --jq '.branch_policies[]' > "$C2_ACTUAL_DIR/deployment-branch-policies.jsonl"
 jq -s '{branch_policies: .}' "$C2_ACTUAL_DIR/deployment-branch-policies.jsonl" \
   > "$C2_ACTUAL_DIR/production-release-approval-deployment-branch-policies.json"
-gh api -H "$GH_API_ACCEPT_HEADER" -H "$GH_API_VERSION_HEADER" \
+gh api --hostname github.com -H "$GH_API_ACCEPT_HEADER" -H "$GH_API_VERSION_HEADER" \
   "repos/netsus/homecook/environments/production-release-approval/secrets?per_page=100" \
   --paginate --jq '.secrets[]' > "$C2_ACTUAL_DIR/environment-secrets.jsonl"
 jq -s '{secrets: .}' "$C2_ACTUAL_DIR/environment-secrets.jsonl" \

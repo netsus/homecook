@@ -1089,6 +1089,41 @@ describe("production release C2 apply", () => {
       || call.key.startsWith("SECRET "))).toBe(false);
   });
 
+  it.each([
+    ["Team negative ID", { actor_id: -7, actor_type: "Team", bypass_mode: "always" }],
+    ["Integration zero ID", { actor_id: 0, actor_type: "Integration", bypass_mode: "always" }],
+    ["unknown actor", { actor_id: 1, actor_type: "UnknownActor", bypass_mode: "always" }],
+    ["DeployKey non-null ID", { actor_id: 123, actor_type: "DeployKey", bypass_mode: "always" }],
+    ["invalid mode", { actor_id: 1, actor_type: "Team", bypass_mode: "invalid" }],
+  ])("rejects repository-origin bypass actor %s before mutation", (_label, actor) => {
+    const repositoryRulesets = resolvedRulesets();
+    const invalid = {
+      id: 988,
+      name: "repository-invalid-bypass",
+      target: "branch",
+      source_type: "Repository",
+      source: "netsus/homecook",
+      enforcement: "active",
+      conditions: {
+        ref_name: { include: ["refs/heads/release/*"], exclude: ["refs/heads/master"] },
+      },
+      rules: [{ type: "pull_request", parameters: { required_approving_review_count: 1 } }],
+      bypass_actors: [actor],
+    };
+    const run = runExecute({
+      state: initialState({
+        rulesets: [...repositoryRulesets, invalid],
+        effective_rulesets: [...repositoryRulesets, invalid],
+      }),
+    });
+    expect(run.result.status).toBe(1);
+    expect(run.combined).toContain('"partial_state": false');
+    expect(run.state.calls.some((call) =>
+      call.key.startsWith("POST ")
+      || call.key.startsWith("PUT ")
+      || call.key.startsWith("SECRET "))).toBe(false);
+  });
+
   it("fails closed when effective inventory omits canonical repository rulesets", () => {
     const repositoryRulesets = resolvedRulesets();
     const run = runExecute({
@@ -1271,6 +1306,23 @@ describe("production release C2 apply", () => {
     }
   });
 
+  it("pins every gh boundary to github.com despite hostile GH_HOST", () => {
+    const run = runExecute({ env: { GH_HOST: "evil.example" } });
+    expect(run.result.status, run.combined).toBe(0);
+    const apiCalls = run.state.calls.filter((call) => /^GET |^POST |^PUT /u.test(call.key));
+    for (const call of apiCalls) {
+      expect(call.args).toEqual(expect.arrayContaining(["--hostname", "github.com"]));
+    }
+    const secretCalls = run.state.calls.filter((call) => call.key.startsWith("SECRET "));
+    expect(secretCalls).toHaveLength(2);
+    for (const call of secretCalls) {
+      expect(call.args).toEqual(expect.arrayContaining([
+        "--repo",
+        "github.com/netsus/homecook",
+      ]));
+    }
+  });
+
   it("documents pinned REST headers and manual admin-bypass action", () => {
     const runbook = readFileSync(
       join(repoRoot, "docs/engineering/local-mac-production-release-promotion.md"),
@@ -1323,6 +1375,12 @@ describe("production release C2 apply", () => {
       target: "branch",
       conditions: {
         ref_name: { include: ["~ALL"], exclude: ["refs/**master"] },
+      },
+    }, true],
+    ["FNM_PATHNAME ambiguous four-star exclusion", {
+      target: "branch",
+      conditions: {
+        ref_name: { include: ["~ALL"], exclude: ["refs/****/r"] },
       },
     }, true],
     ["unsupported caret complement", {

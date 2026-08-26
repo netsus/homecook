@@ -14,6 +14,7 @@ import { createPrivateKey } from "node:crypto";
 
 import {
   getProductionReleaseRulesetPlan,
+  getProductionReleaseInventoryConsistencyBlockers,
   normalizeInheritedProductionReleaseRulesetForInventory,
   normalizeProductionReleaseRulesetForComparison,
   normalizeRepositoryProductionReleaseRulesetForInventory,
@@ -200,7 +201,15 @@ function readDesiredState(rootDir, appId) {
 }
 
 function ghApi(endpoint, { allowNotFound = false, input = undefined, method = "GET", partialState = false } = {}) {
-  const args = ["api", endpoint, ...GITHUB_API_HEADERS, "--method", method];
+  const args = [
+    "api",
+    endpoint,
+    "--hostname",
+    "github.com",
+    ...GITHUB_API_HEADERS,
+    "--method",
+    method,
+  ];
   if (input !== undefined) args.push("--input", "-");
   const result = run("gh", args, {
     input: input === undefined ? undefined : `${JSON.stringify(input)}\n`,
@@ -220,6 +229,8 @@ function ghPaginated(endpoint, { partialState = false } = {}) {
   const result = run("gh", [
     "api",
     endpoint,
+    "--hostname",
+    "github.com",
     ...GITHUB_API_HEADERS,
     "--method",
     "GET",
@@ -398,7 +409,15 @@ function setEnvironmentSecret(name, { appId, privateKey }) {
   }
   const result = run(
     "gh",
-    ["secret", "set", name, "--repo", C2_CANONICAL_REPOSITORY, "--env", ENVIRONMENT_NAME],
+    [
+      "secret",
+      "set",
+      name,
+      "--repo",
+      `github.com/${C2_CANONICAL_REPOSITORY}`,
+      "--env",
+      ENVIRONMENT_NAME,
+    ],
     { input },
   );
   if (result.status !== 0) {
@@ -478,6 +497,16 @@ function validateRulesetActualState(
 ) {
   inventoryComparisonProjection(repositoryRulesets);
   inventoryComparisonProjection(effectiveRulesets);
+  const consistencyBlockers = getProductionReleaseInventoryConsistencyBlockers({
+    canonicalNames: desired.rulesets.map((ruleset) => ruleset.name),
+    effectiveRulesets: inventoryDetails(effectiveRulesets),
+    repositoryRulesets: inventoryDetails(repositoryRulesets),
+  });
+  if (consistencyBlockers.length > 0) {
+    fail(`Repository/effective ruleset consistency mismatch: ${consistencyBlockers.join(", ")}.`, {
+      partialState,
+    });
+  }
   for (const desiredRuleset of desired.rulesets) {
     const summaries = repositoryRulesets.summaries.filter(
       (entry) => entry.name === desiredRuleset.name,
@@ -521,32 +550,13 @@ function validatePreflightRulesetConsistency(
 ) {
   inventoryComparisonProjection(repositoryRulesets);
   inventoryComparisonProjection(effectiveRulesets);
-  for (const desiredRuleset of desired.rulesets) {
-    const repositoryEntries = repositoryRulesets.summaries.filter(
-      (entry) => entry.name === desiredRuleset.name,
-    );
-    const effectiveEntries = effectiveRulesets.summaries.filter(
-      (entry) => entry.name === desiredRuleset.name,
-    );
-    if (repositoryEntries.length === 0 && effectiveEntries.length === 0) {
-      continue;
-    }
-    if (repositoryEntries.length !== 1 || effectiveEntries.length !== 1) {
-      fail(`Preflight repository/effective canonical inventory mismatch: ${desiredRuleset.name}.`);
-    }
-    const repositoryDetail = repositoryRulesets.details.get(repositoryEntries[0].id);
-    const effectiveDetail = effectiveRulesets.details.get(effectiveEntries[0].id);
-    if (
-      repositoryEntries[0].id !== effectiveEntries[0].id
-      || effectiveDetail?.source_type !== "Repository"
-      || effectiveDetail?.source !== C2_CANONICAL_REPOSITORY
-      || !productionReleaseRulesetsSemanticallyEqual(
-        repositoryDetail,
-        effectiveDetail,
-      )
-    ) {
-      fail(`Preflight repository/effective canonical identity mismatch: ${desiredRuleset.name}.`);
-    }
+  const blockers = getProductionReleaseInventoryConsistencyBlockers({
+    canonicalNames: desired.rulesets.map((ruleset) => ruleset.name),
+    effectiveRulesets: inventoryDetails(effectiveRulesets),
+    repositoryRulesets: inventoryDetails(repositoryRulesets),
+  });
+  if (blockers.length > 0) {
+    fail(`Preflight repository/effective canonical consistency mismatch: ${blockers.join(", ")}.`);
   }
 }
 

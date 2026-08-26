@@ -3,11 +3,15 @@ function parseGlobTokens(pattern) {
   for (let index = 0; index < pattern.length; index += 1) {
     const character = pattern[index];
     if (character === "*") {
-      const doubleStar = pattern[index + 1] === "*";
-      const globstarDirectory = doubleStar && pattern[index + 2] === "/";
+      let runLength = 1;
+      while (pattern[index + runLength] === "*") runLength += 1;
+      const segmentBoundary = index === 0 || pattern[index - 1] === "/";
+      const globstarDirectory = runLength === 2
+        && segmentBoundary
+        && pattern[index + 2] === "/";
+      if (runLength > 1 && !globstarDirectory) return null;
       tokens.push({ type: globstarDirectory ? "globstar-directory" : "star" });
       if (globstarDirectory) index += 2;
-      else if (doubleStar) index += 1;
     } else if (character === "?") {
       tokens.push({ type: "any" });
     } else if (character === "[") {
