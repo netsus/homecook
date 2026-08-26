@@ -1,5 +1,6 @@
 import { existsSync, readFileSync } from "node:fs";
 import { basename, resolve } from "node:path";
+import { createHash } from "node:crypto";
 import {
   CANONICAL_GITHUB_PRODUCTION_RELEASE_REPOSITORY,
   GITHUB_ACTIONS_APP_INTEGRATION_ID,
@@ -27,6 +28,17 @@ const REPOSITORY_RULESETS_ACTUAL_FILE =
   "production-release-repository-rulesets.json";
 const EFFECTIVE_RULESETS_ACTUAL_FILE =
   "production-release-effective-rulesets.json";
+const SNAPSHOT_COMPLETION_FILE = "production-release-snapshot-completion.json";
+const SNAPSHOT_REQUIRED_FILES = [
+  "production-release-master.json",
+  "production-release-tag-creation.json",
+  "production-release-tag-immutability.json",
+  APPROVAL_ENVIRONMENT_ACTUAL_FILE,
+  APPROVAL_BRANCH_POLICIES_ACTUAL_FILE,
+  APPROVAL_ENVIRONMENT_SECRETS_ACTUAL_FILE,
+  REPOSITORY_RULESETS_ACTUAL_FILE,
+  EFFECTIVE_RULESETS_ACTUAL_FILE,
+];
 const EXPECTED_APPROVAL_BRANCH_POLICIES = [
   { name: "master", type: "branch" },
 ];
@@ -604,9 +616,10 @@ function validateRulesetFile({
       normalized.bypass_actors.length !== 1
       || normalized.bypass_actors[0].actor_type !== "Integration"
       || normalized.bypass_actors[0].bypass_mode !== "always"
+      || normalized.bypass_actors[0].actor_id !== 4724458
     )
   ) {
-    throw new Error(`${filePath} must define exactly one always Integration bypass actor.`);
+    throw new Error(`${filePath} must define exact always Integration actor 4724458.`);
   }
   if (normalized.target === "branch") {
     normalizeExpectedReleaseContexts(
@@ -827,6 +840,43 @@ function validateRulesetInventoryConsistency(actualDir, desiredRulesets) {
   }
 }
 
+function validateSnapshotCompletion(actualDir) {
+  if (!actualDir) return ["missing_snapshot_completion_manifest"];
+  const completionPath = resolve(actualDir, SNAPSHOT_COMPLETION_FILE);
+  if (!existsSync(completionPath)) return ["missing_snapshot_completion_manifest"];
+  let completion;
+  try {
+    completion = readJson(completionPath, "snapshot completion manifest");
+  } catch {
+    return ["snapshot_completion_manifest_mismatch"];
+  }
+  if (
+    completion.schema !== "homecook.github.production-release-snapshot-completion.v1"
+    || completion.version !== 1
+    || completion.status !== "verified"
+    || completion.repository !== "netsus/homecook"
+    || completion.app_id !== 4724458
+    || completion.reviewer?.actor_id !== 57648890
+    || completion.reviewer?.actor_type !== "User"
+    || completion.head !== completion.remote_master
+    || !/^[0-9a-f]{40}$/u.test(completion.head ?? "")
+    || !Array.isArray(completion.files)
+    || JSON.stringify(completion.files.map((entry) => entry?.name))
+      !== JSON.stringify(SNAPSHOT_REQUIRED_FILES)
+  ) {
+    return ["snapshot_completion_manifest_mismatch"];
+  }
+  for (const entry of completion.files) {
+    const filePath = resolve(actualDir, entry.name);
+    if (!existsSync(filePath) || !/^[0-9a-f]{64}$/u.test(entry.sha256 ?? "")) {
+      return ["snapshot_completion_digest_mismatch"];
+    }
+    const digest = createHash("sha256").update(readFileSync(filePath)).digest("hex");
+    if (digest !== entry.sha256) return ["snapshot_completion_digest_mismatch"];
+  }
+  return [];
+}
+
 function validateApprovalEnvironment(rootDir) {
   const absolutePath = resolve(rootDir, APPROVAL_ENVIRONMENT_FILE);
   if (!existsSync(absolutePath)) {
@@ -876,6 +926,9 @@ function validateApprovalEnvironment(rootDir) {
   });
   if (reviewers.length !== 1) {
     throw new Error(`${APPROVAL_ENVIRONMENT_FILE} must define exactly one required reviewer.`);
+  }
+  if (reviewers[0].actor_id !== 57648890 || reviewers[0].actor_type !== "User") {
+    throw new Error(`${APPROVAL_ENVIRONMENT_FILE} reviewer must be exact User 57648890.`);
   }
   if (
     (reviewers[0].actor_id === 0) !== (reviewers[0].actor_type === "Unresolved")
@@ -1263,6 +1316,7 @@ export function getProductionReleaseInventoryConsistencyBlockers({
 
 export function getProductionReleaseRulesetPlan({
   actualDir = null,
+  requireCompletionManifest = true,
   rootDir = process.cwd(),
 } = {}) {
   const workflowPath = resolve(
@@ -1340,6 +1394,7 @@ export function getProductionReleaseRulesetPlan({
       scope: "effective",
     }),
     ...validateRulesetInventoryConsistency(actualDir, desiredRulesets),
+    ...(requireCompletionManifest ? validateSnapshotCompletion(actualDir) : []),
   ];
   if (inventoryBlockers.length > 0) {
     activationBlocked = true;

@@ -3,6 +3,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { isAbsolute, join } from "node:path";
 import { tmpdir } from "node:os";
 import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 
 import { afterEach, describe, expect, it } from "vitest";
 
@@ -352,7 +353,7 @@ describe("production release rulesets desired state", () => {
         rules: [{ type: "creation" }],
         bypass_actors: [
           {
-            actor_id: 12345,
+            actor_id: 4724458,
             actor_type: "Integration",
             bypass_mode: "always",
           },
@@ -384,7 +385,7 @@ describe("production release rulesets desired state", () => {
         ],
         master_only_branches: ["master"],
         required_reviewers: [
-          { actor_id: 24680, actor_type: "User" },
+          { actor_id: 57648890, actor_type: "User" },
         ],
       }, null, 2),
     );
@@ -407,7 +408,7 @@ describe("production release rulesets desired state", () => {
         rules: [{ type: "creation" }],
         bypass_actors: [
           {
-            actor_id: 12345,
+            actor_id: 4724458,
             actor_type: "Integration",
             bypass_mode: "always",
           },
@@ -444,7 +445,7 @@ describe("production release rulesets desired state", () => {
             type: "required_reviewers",
             prevent_self_review: true,
             reviewers: [
-              { type: "User", reviewer: { id: 24680 } },
+              { type: "User", reviewer: { id: 57648890 } },
             ],
           },
           { type: "branch_policy" },
@@ -554,6 +555,35 @@ describe("production release rulesets desired state", () => {
     };
     writeFileSync(repositoryInventoryPath, JSON.stringify(repositoryInventory, null, 2));
     writeFileSync(effectiveInventoryPath, JSON.stringify(effectiveInventory, null, 2));
+    const completionFiles = [
+      "production-release-master.json",
+      "production-release-tag-creation.json",
+      "production-release-tag-immutability.json",
+      "production-release-approval-environment.json",
+      "production-release-approval-deployment-branch-policies.json",
+      "production-release-approval-environment-secrets.json",
+      "production-release-repository-rulesets.json",
+      "production-release-effective-rulesets.json",
+    ];
+    writeFileSync(
+      join(resolvedActualDir, "production-release-snapshot-completion.json"),
+      JSON.stringify({
+        schema: "homecook.github.production-release-snapshot-completion.v1",
+        version: 1,
+        status: "verified",
+        repository: "netsus/homecook",
+        head: "a".repeat(40),
+        remote_master: "a".repeat(40),
+        app_id: 4724458,
+        reviewer: { actor_id: 57648890, actor_type: "User" },
+        files: completionFiles.map((name) => ({
+          name,
+          sha256: createHash("sha256")
+            .update(readFileSync(join(resolvedActualDir, name)))
+            .digest("hex"),
+        })),
+      }, null, 2),
+    );
     const verifyResolved = spawnSync(
       process.execPath,
       [

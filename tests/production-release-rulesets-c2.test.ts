@@ -23,6 +23,7 @@ const CONFIRMATION = "APPLY_PRODUCTION_RELEASE_GITHUB_CONTROLS";
 const EXPECTED_HEAD = "e806916d42a1aab2749d6a9f239cf5043b300250";
 const ACCEPT_HEADER = "Accept: application/vnd.github+json";
 const VERSION_HEADER = "X-GitHub-Api-Version: 2026-03-10";
+const COMPLETION_FILE = "production-release-snapshot-completion.json";
 const temporaryDirectories: string[] = [];
 const EPHEMERAL_RSA_KEY_PAIR = generateKeyPairSync("rsa", {
   modulusLength: 1024,
@@ -66,6 +67,14 @@ const markMutation = () => {
   if (state.replace_private_key_after_mutation && !state.private_key_replaced) {
     fs.writeFileSync(process.env.HOMECOOK_C2_PRIVATE_KEY_PATH, "replaced");
     state.private_key_replaced = true;
+  }
+  if (state.precreate_completion_marker && !state.completion_marker_precreated) {
+    fs.writeFileSync(
+      process.env.HOMECOOK_C2_SNAPSHOT_DIR + "/${COMPLETION_FILE}",
+      "attacker-marker",
+      { flag: "wx", mode: 0o600 },
+    );
+    state.completion_marker_precreated = true;
   }
 };
 const asRestRuleset = (id, payload) => ({
@@ -340,6 +349,7 @@ function runExecute({
         ...process.env,
         HOMECOOK_C2_MOCK_STATE: statePath,
         HOMECOOK_C2_PRIVATE_KEY_PATH: privateKeyPath,
+        HOMECOOK_C2_SNAPSHOT_DIR: snapshotDir,
         HOMECOOK_C2_ROOT: repoRoot,
         NODE_OPTIONS: `${process.env.NODE_OPTIONS ?? ""} --import=${fetchPreloadPath}`.trim(),
         PATH: `${binDir}:${process.env.PATH ?? ""}`,
@@ -386,6 +396,14 @@ function resolvedRulesets() {
     source_type: "Repository",
     ...JSON.parse(readFileSync(join(repoRoot, ".github", "rulesets", `${name}.json`), "utf8")),
   }));
+}
+
+function runIndependentVerify(actualDir: string) {
+  return spawnSync(
+    process.execPath,
+    [RULESET_SCRIPT, "verify", "--json", "--actual-dir", actualDir],
+    { cwd: repoRoot, encoding: "utf8" },
+  );
 }
 
 afterEach(() => {
@@ -507,6 +525,44 @@ describe("production release C2 apply", () => {
     expect(run.result.status).toBe(1);
     expect(run.combined).toMatch(/resolved desired state/iu);
     expect(run.state.calls).toEqual([]);
+  });
+
+  it("rejects noncanonical positive App and reviewer identities", () => {
+    const rootDir = tempDirectory("homecook-c2-wrong-actors-");
+    const rulesetDir = join(rootDir, ".github", "rulesets");
+    const workflowDir = join(rootDir, ".github", "workflows");
+    mkdirSync(rulesetDir, { recursive: true });
+    mkdirSync(workflowDir, { recursive: true });
+    for (const name of [
+      "production-release-master",
+      "production-release-tag-creation",
+      "production-release-tag-immutability",
+      "production-release-approval-environment",
+    ]) {
+      copyFileSync(
+        join(repoRoot, ".github", "rulesets", `${name}.json`),
+        join(rulesetDir, `${name}.json`),
+      );
+    }
+    const tagPath = join(rulesetDir, "production-release-tag-creation.json");
+    const tag = JSON.parse(readFileSync(tagPath, "utf8"));
+    tag.bypass_actors[0].actor_id = 12345;
+    writeFileSync(tagPath, JSON.stringify(tag, null, 2));
+    const environmentPath = join(rulesetDir, "production-release-approval-environment.json");
+    const environment = JSON.parse(readFileSync(environmentPath, "utf8"));
+    environment.required_reviewers = [{ actor_id: 57648890, actor_type: "Team" }];
+    writeFileSync(environmentPath, JSON.stringify(environment, null, 2));
+    copyFileSync(
+      join(repoRoot, ".github/workflows/production-release-attestation.yml"),
+      join(workflowDir, "production-release-attestation.yml"),
+    );
+    const plan = spawnSync(
+      process.execPath,
+      [RULESET_SCRIPT, "plan", "--json", "--root-dir", rootDir],
+      { cwd: repoRoot, encoding: "utf8" },
+    );
+    expect(plan.status).toBe(1);
+    expect(plan.stderr).toMatch(/4724458|57648890|exact/iu);
   });
 
   it("rejects overly broad private-key permissions and never prints its path", () => {
@@ -1293,6 +1349,18 @@ describe("production release C2 apply", () => {
     expect(run.state.effective_inventory_reads).toBe(3);
     expect(existsSync(join(run.snapshotDir, "production-release-effective-rulesets.json")))
       .toBe(true);
+    expect(existsSync(join(run.snapshotDir, COMPLETION_FILE))).toBe(false);
+    const independent = runIndependentVerify(run.snapshotDir);
+    expect(independent.status, independent.stderr).toBe(0);
+    expect(independent.stdout).toContain("missing_snapshot_completion_manifest");
+  });
+
+  it("does not overwrite a raced completion marker", () => {
+    const run = runExecute({ state: initialState({ precreate_completion_marker: true }) });
+    expect(run.result.status).toBe(1);
+    expect(run.combined).toContain('"partial_state": true');
+    expect(readFileSync(join(run.snapshotDir, COMPLETION_FILE), "utf8"))
+      .toBe("attacker-marker");
   });
 
   it("wraps unexpected post-mutation normalization failure as partial state", () => {
@@ -1375,6 +1443,18 @@ describe("production release C2 apply", () => {
       "production-release-effective-rulesets.json",
     ];
     expect(snapshotFiles.every((name) => existsSync(join(first.snapshotDir, name)))).toBe(true);
+    const completion = JSON.parse(
+      readFileSync(join(first.snapshotDir, COMPLETION_FILE), "utf8"),
+    );
+    expect(completion).toMatchObject({
+      schema: "homecook.github.production-release-snapshot-completion.v1",
+      version: 1,
+      status: "verified",
+      repository: "netsus/homecook",
+      app_id: 4724458,
+      reviewer: { actor_id: 57648890, actor_type: "User" },
+    });
+    expect(completion.files).toHaveLength(snapshotFiles.length);
     const snapshotBundle = snapshotFiles
       .map((name) => readFileSync(join(first.snapshotDir, name), "utf8"))
       .join("\n");
@@ -1387,6 +1467,16 @@ describe("production release C2 apply", () => {
     expect(second.state.calls.filter((call) => call.key.startsWith("SECRET ")))
       .toHaveLength(2);
   }, 15_000);
+
+  it("blocks independent verification after snapshot tampering", () => {
+    const run = runExecute();
+    expect(run.result.status, run.combined).toBe(0);
+    const target = join(run.snapshotDir, "production-release-master.json");
+    writeFileSync(target, `${readFileSync(target, "utf8")} `);
+    const independent = runIndependentVerify(run.snapshotDir);
+    expect(independent.status, independent.stderr).toBe(0);
+    expect(independent.stdout).toContain("snapshot_completion_digest_mismatch");
+  });
 
   it("redacts the private-key path and content channel from success and failure output", () => {
     const success = runExecute();

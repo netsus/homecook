@@ -10,7 +10,7 @@ import {
 } from "node:fs";
 import { isAbsolute, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
-import { createPrivateKey } from "node:crypto";
+import { createHash, createPrivateKey } from "node:crypto";
 
 import {
   getProductionReleaseRulesetPlan,
@@ -51,6 +51,17 @@ const SNAPSHOT_FILES = {
   policies: "production-release-approval-deployment-branch-policies.json",
   secrets: "production-release-approval-environment-secrets.json",
 };
+const COMPLETION_FILE = "production-release-snapshot-completion.json";
+const COMPLETION_REQUIRED_FILES = [
+  "production-release-master.json",
+  "production-release-tag-creation.json",
+  "production-release-tag-immutability.json",
+  SNAPSHOT_FILES.environment,
+  SNAPSHOT_FILES.policies,
+  SNAPSHOT_FILES.secrets,
+  "production-release-repository-rulesets.json",
+  "production-release-effective-rulesets.json",
+];
 
 export class ProductionReleaseApplyError extends Error {
   constructor(message, { manualActionRequired = false, partialState = false } = {}) {
@@ -171,7 +182,12 @@ function validateSnapshotDirectory(snapshotDir) {
 }
 
 function readDesiredState(rootDir, appId) {
-  const plan = getProductionReleaseRulesetPlan({ rootDir });
+  let plan;
+  try {
+    plan = getProductionReleaseRulesetPlan({ rootDir });
+  } catch {
+    fail("C2 execution requires the approved exact resolved desired state.");
+  }
   if (
     plan.activation_blockers.includes("unresolved_release_tag_integration_actor")
     || plan.activation_blockers.includes("unresolved_approval_environment_reviewer")
@@ -693,6 +709,29 @@ function writeFullActualStateSnapshot(snapshotDir, state) {
   });
 }
 
+function writeSnapshotCompletion(snapshotDir, head) {
+  const files = COMPLETION_REQUIRED_FILES.map((name) => ({
+    name,
+    sha256: createHash("sha256")
+      .update(readFileSync(resolve(snapshotDir, name)))
+      .digest("hex"),
+  }));
+  writeSnapshot(snapshotDir, COMPLETION_FILE, {
+    app_id: C2_RELEASE_APP_ID,
+    files,
+    head,
+    remote_master: head,
+    repository: C2_CANONICAL_REPOSITORY,
+    reviewer: {
+      actor_id: C2_ENVIRONMENT_REVIEWER_ID,
+      actor_type: "User",
+    },
+    schema: "homecook.github.production-release-snapshot-completion.v1",
+    status: "verified",
+    version: 1,
+  });
+}
+
 export async function executeProductionReleaseControls({
   appId,
   confirmation,
@@ -862,7 +901,11 @@ export async function executeProductionReleaseControls({
 
   let verification;
   try {
-    verification = getProductionReleaseRulesetPlan({ actualDir: snapshotDir, rootDir });
+    verification = getProductionReleaseRulesetPlan({
+      actualDir: snapshotDir,
+      requireCompletionManifest: false,
+      rootDir,
+    });
   } catch {
     fail("C2 snapshot verifier rejected the readback; partial GitHub state was not rolled back.", {
       partialState: true,
@@ -870,6 +913,11 @@ export async function executeProductionReleaseControls({
   }
   if (verification.activation_blocked || verification.actual_state !== "matched") {
     fail("C2 snapshot verification failed closed after apply.", { partialState: true });
+  }
+  writeSnapshotCompletion(snapshotDir, head);
+  verification = getProductionReleaseRulesetPlan({ actualDir: snapshotDir, rootDir });
+  if (verification.activation_blocked || verification.actual_state !== "matched") {
+    fail("C2 completion manifest verification failed closed.", { partialState: true });
   }
   return {
     ...verification,
