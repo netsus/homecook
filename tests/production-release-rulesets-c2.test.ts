@@ -121,7 +121,20 @@ const asRestRuleset = (id, payload) => ({
         },
         type: rule.type,
       }
-    : rule),
+    : rule.type === "pull_request" && payload.name === "production-release-master"
+      ? {
+          parameters: {
+            ...rule.parameters,
+            allowed_merge_methods: rule.parameters.allowed_merge_methods
+              ?? ["merge", "squash", "rebase"],
+            require_extra_approval_for_unattributed_changes:
+              rule.parameters.require_extra_approval_for_unattributed_changes ?? true,
+            required_reviewers: rule.parameters.required_reviewers ?? [],
+            ...(state.materialized_master_pull_request_overrides ?? {}),
+          },
+          type: rule.type,
+        }
+      : rule),
   created_at: "2026-08-26T00:00:00Z",
   updated_at: "2026-08-26T00:00:00Z",
   current_user_can_bypass: "never",
@@ -1770,6 +1783,20 @@ describe("production release C2 apply", { timeout: 10_000 }, () => {
       "production-release-tag-creation",
       "production-release-tag-immutability",
     ]);
+    const firstMaster = first.state.rulesets.find(
+      (entry) => entry.name === "production-release-master",
+    ) as { rules: Array<{ parameters?: Record<string, unknown>; type: string }> };
+    const firstPullRequest = firstMaster.rules.find((rule) => rule.type === "pull_request");
+    expect(firstPullRequest?.parameters).toMatchObject({
+      allowed_merge_methods: ["merge", "squash", "rebase"],
+      dismiss_stale_reviews_on_push: true,
+      require_code_owner_review: false,
+      require_extra_approval_for_unattributed_changes: true,
+      require_last_push_approval: true,
+      required_approving_review_count: 1,
+      required_review_thread_resolution: true,
+      required_reviewers: [],
+    });
     for (const ruleset of first.state.rulesets) expect(ruleset).not.toHaveProperty("schema");
     expect(first.state.environment).toMatchObject({ can_admins_bypass: false });
     expect(first.state.policies).toEqual([
@@ -1836,12 +1863,43 @@ describe("production release C2 apply", { timeout: 10_000 }, () => {
       .join("\n");
     expect(snapshotBundle).not.toContain("PRIVATE KEY");
 
+    const allowedMergeMethods = firstPullRequest?.parameters?.allowed_merge_methods as string[];
+    firstPullRequest!.parameters!.allowed_merge_methods = [...allowedMergeMethods].reverse();
     const second = runExecute({ state: first.state });
     expect(second.result.status, second.combined).toBe(0);
     expect(second.state.calls.filter((call) =>
       call.key.startsWith("POST ") || call.key.startsWith("PUT "))).toEqual([]);
     expect(second.state.calls.filter((call) => call.key.startsWith("SECRET ")))
       .toHaveLength(2);
+  }, 15_000);
+
+  it.each([
+    ["stronger approval count", { required_approving_review_count: 2 }],
+    ["different merge methods", { allowed_merge_methods: ["squash"] }],
+  ])("fails exact readback for %s", (_label, materializedOverride) => {
+    const run = runExecute({
+      state: initialState({
+        materialized_master_pull_request_overrides: materializedOverride,
+      }),
+    });
+    expect(run.result.status).toBe(1);
+    expect(run.combined).toContain('"partial_state": true');
+    expect(run.combined).toMatch(/Ruleset readback mismatch/iu);
+    expect(existsSync(join(run.snapshotDir, COMPLETION_FILE))).toBe(false);
+  }, 15_000);
+
+  it("fails closed when GitHub materializes an unknown pull-request security field", () => {
+    const run = runExecute({
+      state: initialState({
+        materialized_master_pull_request_overrides: {
+          future_security_control: true,
+        },
+      }),
+    });
+    expect(run.result.status).toBe(1);
+    expect(run.combined).toContain('"partial_state": true');
+    expect(run.combined).toMatch(/Unexpected C2 apply failure after mutation/iu);
+    expect(existsSync(join(run.snapshotDir, COMPLETION_FILE))).toBe(false);
   }, 15_000);
 
   it("blocks independent verification after snapshot tampering", () => {

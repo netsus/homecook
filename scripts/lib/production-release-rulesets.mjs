@@ -202,6 +202,66 @@ function normalizeRequiredStatusChecks(value, label) {
     });
 }
 
+function normalizePullRequestParameters(value, label) {
+  const parameters = requireObject(value, label);
+  rejectUnknownKeys(parameters, [
+    "allowed_merge_methods",
+    "dismiss_stale_reviews_on_push",
+    "require_code_owner_review",
+    "require_extra_approval_for_unattributed_changes",
+    "require_last_push_approval",
+    "required_approving_review_count",
+    "required_review_thread_resolution",
+    "required_reviewers",
+  ], label);
+  const normalized = canonicalizeJson(parameters);
+  if (parameters.allowed_merge_methods !== undefined) {
+    const methods = normalizeStringArray(
+      parameters.allowed_merge_methods,
+      `${label}.allowed_merge_methods`,
+    );
+    if (
+      methods.length === 0
+      || new Set(methods).size !== methods.length
+      || methods.some((method) => !["merge", "rebase", "squash"].includes(method))
+    ) {
+      throw new Error(`${label}.allowed_merge_methods must contain unique supported methods.`);
+    }
+    normalized.allowed_merge_methods = methods.sort();
+  }
+  for (const key of [
+    "dismiss_stale_reviews_on_push",
+    "require_code_owner_review",
+    "require_extra_approval_for_unattributed_changes",
+    "require_last_push_approval",
+    "required_review_thread_resolution",
+  ]) {
+    if (parameters[key] !== undefined) {
+      normalized[key] = requireBoolean(parameters[key], `${label}.${key}`);
+    }
+  }
+  if (parameters.required_approving_review_count !== undefined) {
+    if (
+      !Number.isInteger(parameters.required_approving_review_count)
+      || parameters.required_approving_review_count < 0
+      || parameters.required_approving_review_count > 10
+    ) {
+      throw new Error(`${label}.required_approving_review_count must be between 0 and 10.`);
+    }
+    normalized.required_approving_review_count = parameters.required_approving_review_count;
+  }
+  if (parameters.required_reviewers !== undefined) {
+    normalized.required_reviewers = requireArray(
+      parameters.required_reviewers,
+      `${label}.required_reviewers`,
+    ).map((entry, index) => canonicalizeJson(requireObject(
+      entry,
+      `${label}.required_reviewers[${index}]`,
+    ))).sort((left, right) => JSON.stringify(left).localeCompare(JSON.stringify(right)));
+  }
+  return canonicalizeJson(normalized);
+}
+
 function normalizeRules(rules, label) {
   return requireArray(rules, label)
     .map((rule, index) => {
@@ -221,6 +281,18 @@ function normalizeRules(rules, label) {
           parameters.required_status_checks,
           `${label}[${index}].parameters.required_status_checks`,
         );
+      } else if (type === "pull_request") {
+        if (!parameters) {
+          throw new Error(`${label}[${index}].parameters is required.`);
+        }
+        return canonicalizeJson({
+          ...value,
+          parameters: normalizePullRequestParameters(
+            parameters,
+            `${label}[${index}].parameters`,
+          ),
+          type,
+        });
       }
       return canonicalizeJson({
         ...value,
